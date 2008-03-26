@@ -115,6 +115,8 @@ int jffs2_scan_medium(struct jffs2_sb_info *c)
 		   apparently */
 		if (jffs2_cleanmarker_oob(c))
 			try_size = c->sector_size;
+		if (c->mtd->type == MTD_NANDFLASH)
+			buf_size = c->sector_size;
 		else
 			try_size = PAGE_SIZE;
 
@@ -459,22 +461,24 @@ static int jffs2_scan_eraseblock (struct jffs2_sb_info *c, struct jffs2_eraseblo
 	jffs2_dbg(1, "%s(): Scanning block at 0x%x\n", __func__, ofs);
 
 #ifdef CONFIG_JFFS2_FS_WRITEBUFFER
-	if (jffs2_cleanmarker_oob(c)) {
+	if (c->mtd->type == MTD_NANDFLASH) {
 		int ret;
 
 		if (mtd_block_isbad(c->mtd, jeb->offset))
 			return BLK_STATE_BADBLOCK;
 
-		ret = jffs2_check_nand_cleanmarker(c, jeb);
-		jffs2_dbg(2, "jffs_check_nand_cleanmarker returned %d\n", ret);
+		if (jffs2_cleanmarker_oob(c)) {
+			ret = jffs2_check_nand_cleanmarker(c, jeb);
+			jffs2_dbg(2, "jffs_check_nand_cleanmarker returned %d\n", ret);
 
-		/* Even if it's not found, we still scan to see
-		   if the block is empty. We use this information
-		   to decide whether to erase it or not. */
-		switch (ret) {
-		case 0:		cleanmarkerfound = 1; break;
-		case 1: 	break;
-		default: 	return ret;
+			/* Even if it's not found, we still scan to see
+			   if the block is empty. We use this information
+			   to decide whether to erase it or not. */
+			switch (ret) {
+			case 0:		cleanmarkerfound = 1; break;
+			case 1: 	break;
+			default: 	return ret;
+			}
 		}
 	}
 #endif
