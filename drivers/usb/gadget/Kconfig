@@ -733,6 +733,12 @@ config USB_FILE_STORAGE
 	  NOTE: This driver is deprecated.  Its replacement is the
 	  Mass Storage Gadget.
 
+config FSL_UTP
+	bool "UTP over Storage Gadget"
+	depends on USB_FILE_STORAGE
+	help
+	  Freescale's extension to MSC protocol
+
 config USB_FILE_STORAGE_TEST
 	bool "File-backed Storage Gadget testing version"
 	depends on USB_FILE_STORAGE
