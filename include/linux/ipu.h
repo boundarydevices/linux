@@ -903,6 +903,7 @@ int32_t ipu_update_channel_offset(ipu_channel_t channel, ipu_buffer_t type,
 
 int32_t ipu_select_buffer(ipu_channel_t channel,
 			  ipu_buffer_t type, uint32_t bufNum);
+int ipu_buffers_ready(ipu_channel_t channel,ipu_buffer_t type);
 int32_t ipu_select_multi_vdi_buffer(uint32_t bufNum);
 
 int32_t ipu_link_channels(ipu_channel_t src_ch, ipu_channel_t dest_ch);

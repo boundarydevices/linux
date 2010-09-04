@@ -1364,6 +1364,28 @@ int32_t ipu_select_buffer(ipu_channel_t channel, ipu_buffer_t type,
 EXPORT_SYMBOL(ipu_select_buffer);
 
 /*!
+ * Return a bitmask of 'readiness' for the specified channel and buffer type
+ *
+ * @param       channel         Input parameter for the logical channel ID.
+ *
+ * @param       type            Input parameter which buffer to initialize.
+ *
+ * @return      Returns [0..3] to indicate whether buffer 0 and/or 1 are ready
+ *
+ */
+int ipu_buffers_ready(ipu_channel_t channel, ipu_buffer_t type)
+{
+	uint32_t dma_chan = channel_2_dma(channel, type);
+
+	if (dma_chan == IDMA_CHAN_INVALID)
+		return 0 ;
+
+	return idma_is_set(IPU_CHA_BUF0_RDY, dma_chan)
+	     |(idma_is_set(IPU_CHA_BUF1_RDY, dma_chan)<<1);
+}
+EXPORT_SYMBOL(ipu_buffers_ready);
+
+/*!
  * This function is called to set a channel's buffer as ready.
  *
  * @param       bufNum          Input parameter for which buffer number set to
