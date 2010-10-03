@@ -909,7 +909,7 @@ static void __exit broadcom_exit(void)
 module_init(broadcom_init);
 module_exit(broadcom_exit);
 
-static struct mdio_device_id broadcom_tbl[] = {
+static struct mdio_device_id __maybe_unused broadcom_tbl[] = {
 	{ 0x00206070, 0xfffffff0 },
 	{ 0x002060e0, 0xfffffff0 },
 	{ 0x002060c0, 0xfffffff0 },
