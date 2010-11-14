@@ -457,9 +457,6 @@ out:
 		mmc_detach_bus(host);
 		mmc_release_host(host);
 	}
-
-	/* Tell PM core that we're done */
-	pm_runtime_put(&host->card->dev);
 }
 
 /*
