@@ -7,6 +7,31 @@ config SUSPEND
 	  powered and thus its contents are preserved, such as the
 	  suspend-to-RAM state (e.g. the ACPI S3 state).
 
+config PM_TEST_SUSPEND
+	bool "Test suspend/resume and wakealarm during bootup"
+	depends on SUSPEND && PM_DEBUG && RTC_CLASS=y
+	---help---
+	This option will let you suspend your machine during bootup, and
+	make it wake up a few seconds later using an RTC wakeup alarm.
+	Enable this with a kernel parameter like "test_suspend=mem".
+
+	You probably want to have your system's RTC driver statically
+	linked, ensuring that it's available when this test runs.
+
+config SUSPEND_DEVICE_TIME_DEBUG
+        bool "Warnning device suspend/resume takes too much time"
+	depends on SUSPEND && PM_DEBUG
+	default n
+	---help---
+	This option will enable a timing function to check device
+        suspend time consumption, If the device takes more time that
+        the threshold(default 0.5 ms), it will print the device and
+        bus name on the console.  You can change the threshold
+        on-the-fly by modify /sys/power/time_threshold the time unit
+        is in microsecond.
+
+	This options only for debug proprose, If in doubt, say N.
+
 config SUSPEND_FREEZER
 	bool "Enable freezer for suspend to RAM/standby" \
 		if ARCH_WANTS_FREEZER_CONTROL || BROKEN
