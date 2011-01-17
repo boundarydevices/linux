@@ -1792,8 +1792,10 @@ static int _clk_csi0_set_rate(struct clk *clk, unsigned long rate)
 
 	div = parent_rate / rate;
 
-	if ((parent_rate / div) != rate)
-		return -EINVAL;
+	if ((parent_rate / div) != rate) {
+		printk(KERN_ERR "%s: unsupported rate: rounding to %lu\n", __func__, (parent_rate / div) );
+		rate = (parent_rate / div);
+	}
 
 	__calc_pre_post_dividers(div, &pre, &post);
 
