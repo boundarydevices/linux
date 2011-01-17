@@ -67,6 +67,7 @@ int clk_register(struct mxc_clk *clk);
 void clk_unregister(struct mxc_clk *clk);
 int clk_get_usecount(struct clk *clk);
 int clk_set_pll_dither(struct clk *clk, unsigned int pll_ppm);
+int clk_is_enabled(struct clk *clk);
 
 /* Clock flags */
 #define RATE_PROPAGATES		(1 << 0)	/* Program children too */

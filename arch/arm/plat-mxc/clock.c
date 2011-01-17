@@ -164,6 +164,24 @@ static int __clk_enable(struct clk *clk)
 	return 0;
 }
 
+int clk_is_enabled(struct clk *clk)
+{
+	unsigned long flags;
+	int ret = 0;
+
+	if (clk == NULL || IS_ERR(clk))
+		return -EINVAL;
+
+	spin_lock_irqsave(&clockfw_lock, flags);
+
+        ret = clk->usecount ;
+
+	spin_unlock_irqrestore(&clockfw_lock, flags);
+
+	return ret ;
+}
+EXPORT_SYMBOL(clk_is_enabled);
+
 /* This function increments the reference count on the clock and enables the
  * clock if not already enabled. The parent clock tree is recursively enabled
  */
