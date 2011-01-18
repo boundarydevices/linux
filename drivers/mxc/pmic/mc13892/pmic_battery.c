@@ -304,7 +304,7 @@ static int pmic_restart_charging(void)
 	pmic_set_chg_misc(BAT_TH_CHECK_DIS, 1);
 	pmic_set_chg_misc(AUTO_CHG_DIS, 0);
 	pmic_set_chg_misc(VI_PROGRAM_EN, 1);
-	pmic_set_chg_current(0x8);
+	pmic_set_chg_current(0x1);
 	pmic_set_chg_misc(RESTART_CHG_STAT, 1);
 	pmic_set_chg_misc(PLIM_DIS, 3);
 	return 0;
@@ -757,6 +757,8 @@ static int pmic_battery_probe(struct platform_device *pdev)
 
 	pmic_stop_coulomb_counter();
 	pmic_calibrate_coulomb_counter();
+	pmic_set_chg_current(0x1);
+	mc13892_charger_update_status(di);
 	goto success;
 
 workqueue_failed:
