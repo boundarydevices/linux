@@ -554,7 +554,12 @@ static struct miscdevice mxc_iim_miscdev = {
 static __devinit int mxc_iim_probe(struct platform_device *pdev)
 {
 	struct resource *res;
+	uint8_t reg = 0;
 	int ret;
+#ifdef CONFIG_ARCH_MX53
+	u8 *iim_reg ;
+	struct clk *iim_clk;
+#endif
 
 	iim_data = pdev->dev.platform_data;
 	iim_data->dev = &pdev->dev;
@@ -597,6 +602,26 @@ static __devinit int mxc_iim_probe(struct platform_device *pdev)
 
 	mutex_init(&(iim_data->mutex));
 	spin_lock_init(&(iim_data->lock));
+
+#ifdef CONFIG_ARCH_MX53
+	iim_reg = ioremap(iim_data->reg_base, iim_data->reg_size);
+
+	iim_clk = clk_get(NULL, "iim_clk");
+	if (IS_ERR(iim_clk)) {
+		dev_err(iim_data->dev, "No IIM clock defined\n");
+		return -ENODEV;
+	}
+	clk_enable(iim_clk);
+
+	/* Blow LVDS_BG_V[2:0] fuse */
+	reg = __raw_readb(iim_reg + 0x1808);
+	__raw_writeb(reg | 0x07, iim_reg + 0x1808);
+
+	clk_disable(iim_clk);
+	clk_put(iim_clk);
+
+	iounmap(iim_reg);
+#endif
 
 	ret = misc_register(&mxc_iim_miscdev);
 	if (ret)
