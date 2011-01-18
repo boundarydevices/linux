@@ -60,7 +60,7 @@
  * Structure containing the MXC specific framebuffer information.
  */
 struct mxcfb_info {
-	char *fb_mode_str;
+	char const *fb_mode_str;
 	int default_bpp;
 	int cur_blank;
 	int next_blank;
@@ -202,7 +202,7 @@ static irqreturn_t mxcfb_irq_handler(int irq, void *dev_id);
 static int mxcfb_blank(int blank, struct fb_info *info);
 static int mxcfb_map_video_memory(struct fb_info *fbi);
 static int mxcfb_unmap_video_memory(struct fb_info *fbi);
-static int mxcfb_option_setup(struct mxc_fb_platform_data *, struct fb_info *info, char *options);
+static int mxcfb_option_setup(int di,struct mxc_fb_platform_data *, struct fb_info *info, char *options);
 
 /*
  * Set fixed framebuffer parameters based on variable settings.
@@ -1902,7 +1902,7 @@ static int mxcfb_probe(struct platform_device *pdev)
 	}
 
 	if (options)
-		mxcfb_option_setup(plat_data, fbi, options);
+		mxcfb_option_setup(pdev->id, plat_data, fbi, options);
 
 	if (!g_dp_in_use) {
 		mxcfbi->ipu_ch_irq = IPU_IRQ_BG_SYNC_EOF;
@@ -2044,12 +2044,14 @@ static struct platform_driver mxcfb_driver = {
 #endif
 };
 
+int use_ldb (int chan);
+
 /*
  * Parse user specified options (`video=trident:')
  * example:
  * 	video=mxcdi0fb:RGB24, 1024x768M-16@60,bpp=16,noaccel
  */
-static int mxcfb_option_setup(struct mxc_fb_platform_data *plat_data, struct fb_info *info, char *options)
+static int mxcfb_option_setup(int di, struct mxc_fb_platform_data *plat_data, struct fb_info *info, char *options)
 {
 	struct mxcfb_info *mxcfbi = info->par;
 	char *opt;
@@ -2087,6 +2089,11 @@ printk(KERN_ERR "%s: pixclock %u picos\n", __func__, mode->pixclock );
 			mode->xres = values[1];
 			mode->yres = values[2];
 			mode->sync = (0 == values[3]) ? FB_SYNC_CLK_LAT_FALL : 0 ;
+#if defined(CONFIG_FB_MXC_LDB) || defined(CONFIG_FB_MXC_LDB_MODULE)
+			if (use_ldb(di)) {
+				mode->sync |= FB_SYNC_EXT ;
+			}
+#endif
 			mode->left_margin = values[8];
 			mode->right_margin = values[9];
 			mode->upper_margin = values[11];
