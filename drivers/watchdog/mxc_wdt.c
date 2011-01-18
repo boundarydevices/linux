@@ -64,7 +64,9 @@
 
 static void __iomem  *wdt_base_reg;
 static int mxc_wdt_users;
+#ifndef CONFIG_ARCH_MX5
 static struct clk *mxc_wdt_clk;
+#endif
 
 static unsigned timer_margin = TIMER_MARGIN_DEFAULT;
 module_param(timer_margin, uint, 0);
@@ -269,8 +271,10 @@ static int __devinit mxc_wdt_probe(struct platform_device *pdev)
 
 	mxc_wdt_miscdev.this_device = &pdev->dev;
 
+#ifndef CONFIG_ARCH_MX5
 	mxc_wdt_clk = clk_get(NULL, "wdog_clk");
 	clk_enable(mxc_wdt_clk);
+#endif
 
 	ret = misc_register(&mxc_wdt_miscdev);
 	if (ret)
