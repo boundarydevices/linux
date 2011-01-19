@@ -1168,5 +1168,19 @@ config RAMOOPS
 	  This enables panic and oops messages to be logged to a circular
 	  buffer in RAM where it can be read back at some later point.
 
+config MX51_GPIO_TRIG
+	tristate "MX51 Triggered GPIO driver"
+	depends on ARCH_MX5
+	default n
+	help
+	  Triggered GPIO driver. Allows sampling of multiple pins on transitions of one.
+
+config MX51_GPIO
+	tristate "MX51 GPIO driver"
+	depends on ARCH_MX5
+	default n
+	help
+	  GPIO driver for i.MX51. Returns transitions on specified pin.
+
 endmenu
 

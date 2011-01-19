@@ -9,6 +9,8 @@ FONTMAPFILE = cp437.uni
 
 obj-y	 += mem.o random.o tty_io.o n_tty.o tty_ioctl.o tty_ldisc.o tty_buffer.o tty_port.o
 
+obj-$(CONFIG_MX51_GPIO_TRIG)	+= mx51-gpio-trig.o
+obj-$(CONFIG_MX51_GPIO)		+= mx51-gpio.o
 obj-$(CONFIG_FM_SI4702)		+= mxc_si4702.o
 obj-$(CONFIG_MXC_IIM)		+= mxc_iim.o
 obj-$(CONFIG_MXS_VIIM)		+= mxs_viim.o
