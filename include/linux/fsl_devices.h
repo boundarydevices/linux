@@ -230,6 +230,8 @@ struct mxc_ir_platform_data {
 
 struct mxc_i2c_platform_data {
 	u32 i2c_clk;
+	char* power_reg;
+	int voltage;
 };
 
 /*

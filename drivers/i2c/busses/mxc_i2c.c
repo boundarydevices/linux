@@ -34,6 +34,8 @@
 #include <linux/io.h>
 #include <linux/fsl_devices.h>
 #include <linux/clk.h>
+#include <linux/err.h>
+#include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <asm/irq.h>
 #include "mxc_i2c_reg.h"
@@ -689,6 +691,21 @@ static int mxci2c_probe(struct platform_device *pdev)
 
 	mxc_i2c->low_power = false;
 
+	if (i2c_plat_data->power_reg) {
+		struct regulator *regulator_i2c;
+		regulator_i2c = regulator_get(&pdev->dev, i2c_plat_data->power_reg);
+		if (IS_ERR(regulator_i2c)) {
+			ret = PTR_ERR(regulator_i2c);
+			printk(KERN_ERR "MXC I2C, could not get regulator\n");
+			goto err1;
+		}
+		regulator_set_voltage(regulator_i2c, i2c_plat_data->voltage, i2c_plat_data->voltage);
+		if (regulator_enable(regulator_i2c) == 0) {
+			printk(KERN_INFO "i2c power on\n");
+			msleep(1);
+		}
+	}
+
 	gpio_i2c_active(id);
 
 	mxc_i2c->clk = clk_get(&pdev->dev, "i2c_clk");
@@ -800,7 +817,7 @@ static void __exit mxc_i2c_exit(void)
 	platform_driver_unregister(&mxci2c_driver);
 }
 
-subsys_initcall(mxc_i2c_init);
+fs_initcall(mxc_i2c_init);
 module_exit(mxc_i2c_exit);
 
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
