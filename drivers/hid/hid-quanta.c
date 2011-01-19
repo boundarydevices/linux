@@ -22,14 +22,17 @@ MODULE_DESCRIPTION("Quanta dual-touch panel");
 MODULE_LICENSE("GPL");
 
 #include "hid-ids.h"
+#define MAX_POINTS	2
 
-struct quanta_data {
+struct point {
 	__u16 x, y;
 	__u8 id;
-	bool valid;		/* valid finger data, or just placeholder? */
-	bool first;		/* is this the first finger in this frame? */
-	bool activity_now;	/* at least one active finger in this frame? */
-	bool activity;		/* at least one active finger previously? */
+	bool pressed ;
+};
+
+struct quanta_data {
+	unsigned num_points ;
+	struct point points[MAX_POINTS];
 };
 
 static int quanta_input_mapping(struct hid_device *hdev, struct hid_input *hi,
@@ -55,6 +58,7 @@ static int quanta_input_mapping(struct hid_device *hdev, struct hid_input *hi,
 			input_set_abs_params(hi->input, ABS_Y,
 						field->logical_minimum,
 						field->logical_maximum, 0, 0);
+                        __set_bit(ABS_MT_TOUCH_MAJOR,hi->input->absbit);
 			return 1;
 		}
 		return 0;
@@ -100,76 +104,63 @@ static int quanta_input_mapped(struct hid_device *hdev, struct hid_input *hi,
 	return 0;
 }
 
-/*
- * this function is called when a whole finger has been parsed,
- * so that it can decide what to send to the input layer.
- */
-static void quanta_filter_event(struct quanta_data *td, struct input_dev *input)
-{
-	
-	td->first = !td->first; /* touchscreen emulation */
-
-	if (!td->valid) {
-		/*
-		 * touchscreen emulation: if no finger in this frame is valid
-		 * and there previously was finger activity, this is a release
-		 */ 
-		if (!td->first && !td->activity_now && td->activity) {
-			input_event(input, EV_KEY, BTN_TOUCH, 0);
-			td->activity = false;
-		}
-		return;
-	}
-
-	input_event(input, EV_ABS, ABS_MT_TRACKING_ID, td->id);
-	input_event(input, EV_ABS, ABS_MT_POSITION_X, td->x);
-	input_event(input, EV_ABS, ABS_MT_POSITION_Y, td->y);
-
-	input_mt_sync(input);
-	td->valid = false;
-
-	/* touchscreen emulation: if first active finger in this frame... */
-	if (!td->activity_now) {
-		/* if there was no previous activity, emit touch event */
-		if (!td->activity) {
-			input_event(input, EV_KEY, BTN_TOUCH, 1);
-			td->activity = true;
-		}
-		td->activity_now = true;
-		/* and in any case this is our preferred finger */
-		input_event(input, EV_ABS, ABS_X, td->x);
-		input_event(input, EV_ABS, ABS_Y, td->y);
-	}
-}
-
-
 static int quanta_event(struct hid_device *hid, struct hid_field *field,
 				struct hid_usage *usage, __s32 value)
 {
 	struct quanta_data *td = hid_get_drvdata(hid);
 
+	// printk (KERN_ERR "%s: %d/%d\n", __func__, usage->hid, value );
 	if (hid->claimed & HID_CLAIMED_INPUT) {
-		struct input_dev *input = field->hidinput->input;
+		struct point *pt = td->points+td->num_points ;
+
+		if ((td->num_points > MAX_POINTS)&&(HID_DG_CONTACTCOUNT != usage->hid)) {
+			printk (KERN_ERR "%s: too many points (%d)\n", __func__, td->num_points );
+			return 0 ;
+		}
 
 		switch (usage->hid) {
 		case HID_DG_INRANGE:
-			td->valid = !!value;
-			break;
-		case HID_GD_X:
-			td->x = value;
-			break;
-		case HID_GD_Y:
-			td->y = value;
-			quanta_filter_event(td, input);
+			pt->pressed = !!value;
 			break;
 		case HID_DG_CONTACTID:
-			td->id = value;
+			pt->id = value;
 			break;
-		case HID_DG_CONTACTCOUNT:
-			/* touch emulation: this is the last field in a frame */
-			td->first = false;
-			td->activity_now = false;
+		case HID_GD_X:
+			pt->x = value;
 			break;
+		case HID_GD_Y:
+			pt->y = value;
+			td->num_points++ ;	/* ordering is important. device sends valid/id/x/y in this order */
+			break;
+		case HID_DG_CONTACTCOUNT: {
+			struct input_dev *input = field->hidinput->input;
+			int i ;
+			int anypressed = 0 ;
+
+			/* This is the last field in a frame */
+			if (value > td->num_points) {
+				printk (KERN_ERR "Invalid contact count %d/%d\n", value, td->num_points );
+				value = td->num_points ;
+			}
+			for (i = 0 ; i < value ; i++) {
+				pt = td->points+i ;
+                                input_event (input, EV_ABS, ABS_MT_TRACKING_ID, pt->id);
+				input_event (input, EV_ABS, ABS_MT_TOUCH_MAJOR, pt->pressed);
+                                input_event (input, EV_ABS, ABS_MT_WIDTH_MAJOR, pt->pressed);
+				if (pt->pressed) {
+					input_event (input, EV_ABS, ABS_MT_POSITION_X, pt->x);
+					input_event (input, EV_ABS, ABS_MT_POSITION_Y, pt->y);
+                                        anypressed = 1 ;
+				} else {
+					input_event (input, EV_ABS, ABS_MT_POSITION_X, 0);
+					input_event (input, EV_ABS, ABS_MT_POSITION_Y, 0);
+				}
+				input_mt_sync(input);
+			}
+			input_event (input, EV_KEY, BTN_TOUCH, anypressed);
+			td->num_points = 0 ;
+			break;
+		}
 		case HID_DG_CONFIDENCE:
 		case HID_DG_TIPSWITCH:
 			/* avoid interference from generic hidinput handling */
@@ -193,15 +184,13 @@ static int quanta_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	int ret;
 	struct quanta_data *td;
 
+	printk (KERN_ERR "%s\n", __func__ );
 	td = kmalloc(sizeof(struct quanta_data), GFP_KERNEL);
 	if (!td) {
 		dev_err(&hdev->dev, "cannot allocate Quanta Touch data\n");
 		return -ENOMEM;
 	}
-	td->valid = false;
-	td->activity = false;
-	td->activity_now = false;
-	td->first = false;
+	td->num_points = 0;
 	hid_set_drvdata(hdev, td);
 
 	ret = hid_parse(hdev);
