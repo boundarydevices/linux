@@ -20,6 +20,7 @@ struct imxi2c_platform_data {
 	int (*init)(struct device *dev);
 	void (*exit)(struct device *dev);
 	int bitrate;
+	void (*i2c_clock_toggle)(void);
 };
 
 #endif /* __ASM_ARCH_I2C_H_ */

@@ -53,11 +53,11 @@
 #define  HIIMR         0x10
 #define  	HIIMR_RDF	0x1
 #define  	HIIMR_TDE	0x2
-#define  	HIIMR_AAS	0x4
-#define  	HIIMR_AL	0x8
+#define  	HIIMR_HIAAS	0x4
+#define  	HIIMR_HIAL	0x8
 #define  	HIIMR_BTD	0x10
-#define  	HIIMR_RDC	0x20
-#define  	HIIMR_TDC	0x40
+#define  	HIIMR_RDC_ZERO	0x20
+#define  	HIIMR_TDC_ZERO	0x40
 #define  	HIIMR_RXAK	0x80
 
 #define  HITDR         0x14
