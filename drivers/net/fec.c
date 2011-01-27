@@ -820,13 +820,23 @@ static struct mii_bus *fec_enet_mii_init(struct platform_device *pdev)
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct fec_enet_private *fep = netdev_priv(dev);
 	int err = -ENXIO, i;
+	unsigned div;
 
 	fep->mii_timeout = 0;
 
 	/*
 	 * Set MII speed to 2.5 MHz (= clk_get_rate() / 2 * phy_speed)
 	 */
-	fep->phy_speed = DIV_ROUND_UP(clk_get_rate(fep->clk), 5000000) << 1;
+	/*
+	 * max rate of 2.5MHz wanted
+	 * rate = clk / (2 * div), so
+	 * 2.5MHz = clk / (2 * div)
+	 * div = clk /(2 * 2.5 MHz)
+	 */
+	div = (clk_get_rate(fep->clk) + 499999) / 500000;
+	if ((div > 0x3f) || !div)
+		div = 0x3f;
+	fep->phy_speed = (div << 1);
 #ifdef CONFIG_ARCH_MXS
 	/* Can't get phy(8720) ID when set to 2.5M on MX28, lower it*/
 	fep->phy_speed <<= 2;
