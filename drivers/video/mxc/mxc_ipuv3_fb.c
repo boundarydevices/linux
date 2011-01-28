@@ -22,7 +22,6 @@
  *
  * @ingroup Framebuffer
  */
-#define DEBUG
 /*!
  * Include files
  */
@@ -2092,10 +2091,11 @@ printk(KERN_ERR "%s: pixclock %u picos\n", __func__, mode->pixclock );
 #if defined(CONFIG_FB_MXC_LDB) || defined(CONFIG_FB_MXC_LDB_MODULE)
 			if (use_ldb(di)) {
 				mode->sync |= FB_SYNC_EXT ;
-				mxcfbi->ipu_int_clk = false;
+				mxcfbi->ipu_int_clk = 0;
 			}
 			else
-                                mxcfbi->ipu_int_clk = true;
+                                mxcfbi->ipu_int_clk = 1;
+printk (KERN_ERR "%s: LDB(%d)\n", __func__, 0 == mxcfbi->ipu_int_clk);
 #else
 			mxcfbi->ipu_int_clk = true;
 #endif
