@@ -22,7 +22,7 @@
  *
  * @ingroup Framebuffer
  */
-
+#define DEBUG
 /*!
  * Include files
  */
@@ -2092,7 +2092,12 @@ printk(KERN_ERR "%s: pixclock %u picos\n", __func__, mode->pixclock );
 #if defined(CONFIG_FB_MXC_LDB) || defined(CONFIG_FB_MXC_LDB_MODULE)
 			if (use_ldb(di)) {
 				mode->sync |= FB_SYNC_EXT ;
+				mxcfbi->ipu_int_clk = false;
 			}
+			else
+                                mxcfbi->ipu_int_clk = true;
+#else
+			mxcfbi->ipu_int_clk = true;
 #endif
 			mode->left_margin = values[8];
 			mode->right_margin = values[9];
