@@ -223,7 +223,7 @@ static void fec_stop(struct net_device *dev);
 #define FEC_MMFR_TA		(2 << 16)
 #define FEC_MMFR_DATA(v)	(v & 0xffff)
 
-#define FEC_MII_TIMEOUT		1000
+#define FEC_MII_TIMEOUT		40000
 
 /* Transmitter timeout */
 #define TX_TIMEOUT (2 * HZ)
@@ -841,6 +841,8 @@ static struct mii_bus *fec_enet_mii_init(struct platform_device *pdev)
 	/* Can't get phy(8720) ID when set to 2.5M on MX28, lower it*/
 	fep->phy_speed <<= 2;
 #endif
+	fep->phy_speed = 0x7e ; /* slow */
+
 	writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
 
 	fep->mii_bus = mdiobus_alloc();
