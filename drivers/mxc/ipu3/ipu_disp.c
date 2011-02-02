@@ -1526,7 +1526,10 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 
 	if (!sig.clk_pol)
 		di_gen |= DI_GEN_POLARITY_DISP_CLK;
-
+	if (sig.int_clk)
+		di_gen &= ~DI_GEN_DI_CLK_EXT ;
+	else
+		di_gen |= DI_GEN_DI_CLK_EXT ;
 	__raw_writel(di_gen, DI_GENERAL(disp));
 
 	if (!ipu_freq_scaling_enabled)
