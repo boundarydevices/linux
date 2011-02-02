@@ -448,8 +448,7 @@ static int mxcfb_set_par(struct fb_info *fbi)
 		}
 		if (fbi->var.vmode & FB_VMODE_ODD_FLD_FIRST) /* PAL */
 			sig_cfg.odd_field_first = true;
-		if (mxc_fbi->ipu_int_clk)
-			sig_cfg.int_clk = true;
+		sig_cfg.int_clk = mxc_fbi->ipu_int_clk ;
 		if (fbi->var.sync & FB_SYNC_HOR_HIGH_ACT)
 			sig_cfg.Hsync_pol = true;
 		if (fbi->var.sync & FB_SYNC_VERT_HIGH_ACT)
