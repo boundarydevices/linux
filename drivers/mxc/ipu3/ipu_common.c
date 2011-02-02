@@ -49,7 +49,7 @@ struct clk *g_ipu_clk;
 struct clk *g_di_clk[2];
 struct clk *g_pixel_clk[2];
 struct clk *g_csi_clk[2];
-static struct mxc_clk mxc_clocks[6];
+static struct mxc_clk mxc_clocks[4];
 unsigned char g_dc_di_assignment[10];
 ipu_channel_t g_ipu_csi_channel[2];
 int g_ipu_irq[2];
@@ -401,18 +401,14 @@ static int ipu_probe(struct platform_device *pdev)
 
 	register_ipu_device();
 
-	strcpy(mxc_clocks[0].name,"di0");
-	mxc_clocks[0].reg_clk = plat_data->di_clk[0];
-	strcpy(mxc_clocks[1].name,"di1");
-	mxc_clocks[1].reg_clk = plat_data->di_clk[1];
-	strcpy(mxc_clocks[2].name,"pixclk_di0");
-	mxc_clocks[2].reg_clk = &pixel_clk[0];
-	strcpy(mxc_clocks[3].name,"pixclk_di1");
-	mxc_clocks[3].reg_clk = &pixel_clk[1];
-	strcpy(mxc_clocks[4].name,"csi0");
-	mxc_clocks[4].reg_clk = plat_data->csi_clk[0];
-	strcpy(mxc_clocks[5].name,"csi1");
-	mxc_clocks[5].reg_clk = plat_data->csi_clk[1];
+	strcpy(mxc_clocks[0].name,"pixclk_di0");
+	mxc_clocks[0].reg_clk = &pixel_clk[0];
+	strcpy(mxc_clocks[1].name,"pixclk_di1");
+	mxc_clocks[1].reg_clk = &pixel_clk[1];
+	strcpy(mxc_clocks[2].name,"csi0");
+	mxc_clocks[2].reg_clk = plat_data->csi_clk[0];
+	strcpy(mxc_clocks[3].name,"csi1");
+	mxc_clocks[3].reg_clk = plat_data->csi_clk[1];
 	for (i = 0 ; i < ARRAY_SIZE(mxc_clocks); i++) {
                 INIT_LIST_HEAD(&mxc_clocks[i].node);
 		if (0 != mxc_clocks[i].reg_clk) {
