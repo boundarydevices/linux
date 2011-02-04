@@ -33,6 +33,12 @@
 #include "serial.h"
 #include "mx53_wp.h"
 
+#if defined(CONFIG_SERIAL_IMX) || defined(CONFIG_SERIAL_IMX_MODULE)
+#define UART_CLOCK "imx-uart"
+#else
+#define UART_CLOCK "mxcintuart"
+#endif
+
 /* External clock values passed-in by the board code */
 static unsigned long external_high_reference, external_low_reference;
 static unsigned long oscillator_reference, ckih2_reference;
@@ -4311,9 +4317,9 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK(NULL, "csi_mclk1", csi0_clk),
 	_REGISTER_CLOCK(NULL, "csi_mclk2", csi1_clk),
 	_REGISTER_CLOCK(NULL, "tve_clk", tve_clk),
-	_REGISTER_CLOCK("mxcintuart.0", NULL, uart1_clk[0]),
-	_REGISTER_CLOCK("mxcintuart.1", NULL, uart2_clk[0]),
-	_REGISTER_CLOCK("mxcintuart.2", NULL, uart3_clk[0]),
+	_REGISTER_CLOCK(UART_CLOCK "0", NULL, uart1_clk[0]),
+	_REGISTER_CLOCK(UART_CLOCK "1", NULL, uart2_clk[0]),
+	_REGISTER_CLOCK(UART_CLOCK "2", NULL, uart3_clk[0]),
 	_REGISTER_CLOCK(NULL, "i2c_clk", i2c_clk[0]),
 	_REGISTER_CLOCK("imx-i2c.1", NULL, i2c_clk[1]),
 	_REGISTER_CLOCK("mxc_pwm.0", NULL, pwm1_clk[0]),
@@ -4371,8 +4377,8 @@ static struct clk_lookup mx51_lookups[] = {
 
 static struct clk_lookup mx53_lookups[] = {
 	_REGISTER_CLOCK(NULL, "pll4", pll4_sw_clk),
-	_REGISTER_CLOCK("mxcintuart.3", NULL, uart4_clk[0]),
-	_REGISTER_CLOCK("mxcintuart.4", NULL, uart5_clk[0]),
+	_REGISTER_CLOCK(UART_CLOCK "3", NULL, uart4_clk[0]),
+	_REGISTER_CLOCK(UART_CLOCK "4", NULL, uart5_clk[0]),
 	_REGISTER_CLOCK("imx-i2c.2", NULL, i2c_clk[2]),
 	_REGISTER_CLOCK(NULL, "usb_phy2_clk", usb_phy_clk[1]),
 	_REGISTER_CLOCK(NULL, "ocram_clk", ocram_clk),

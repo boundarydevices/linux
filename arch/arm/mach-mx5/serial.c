@@ -25,6 +25,12 @@
 #include "serial.h"
 
 #if defined(CONFIG_SERIAL_MXC) || defined(CONFIG_SERIAL_MXC_MODULE)
+#define DRIVERNAME "mxcintuart"
+#elif defined(CONFIG_SERIAL_IMX) || defined(CONFIG_SERIAL_IMX_MODULE)
+#define DRIVERNAME "imx-uart"
+#endif
+
+#ifdef DRIVERNAME
 
 /*!
  * This is an array where each element holds information about a UART port,
@@ -149,7 +155,7 @@ static struct resource mxc_uart_resources1[] = {
 };
 
 static struct platform_device mxc_uart_device1 = {
-	.name = "mxcintuart",
+	.name = DRIVERNAME,
 	.id = 0,
 	.num_resources = ARRAY_SIZE(mxc_uart_resources1),
 	.resource = mxc_uart_resources1,
@@ -171,7 +177,7 @@ static struct resource mxc_uart_resources2[] = {
 };
 
 static struct platform_device mxc_uart_device2 = {
-	.name = "mxcintuart",
+	.name = DRIVERNAME,
 	.id = 1,
        .num_resources = ARRAY_SIZE(mxc_uart_resources2),
 	.resource = mxc_uart_resources2,
@@ -193,7 +199,7 @@ static struct resource mxc_uart_resources3[] = {
 };
 
 static struct platform_device mxc_uart_device3 = {
-	.name = "mxcintuart",
+	.name = DRIVERNAME,
 	.id = 2,
        .num_resources = ARRAY_SIZE(mxc_uart_resources3),
 	.resource = mxc_uart_resources3,
@@ -215,7 +221,7 @@ static struct resource mxc_uart_resources4[] = {
 };
 
 static struct platform_device mxc_uart_device4 = {
-	.name = "mxcintuart",
+	.name = DRIVERNAME,
 	.id = 3,
        .num_resources = ARRAY_SIZE(mxc_uart_resources4),
 	.resource = mxc_uart_resources4,
@@ -237,7 +243,7 @@ static struct resource mxc_uart_resources5[] = {
 };
 
 static struct platform_device mxc_uart_device5 = {
-	.name = "mxcintuart",
+	.name = DRIVERNAME,
 	.id = 4,
        .num_resources = ARRAY_SIZE(mxc_uart_resources5),
 	.resource = mxc_uart_resources5,
