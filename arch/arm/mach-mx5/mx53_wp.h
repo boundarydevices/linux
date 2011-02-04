@@ -35,7 +35,11 @@ enum mx53_cpu_part_number {
   IMX53_CEC_1_2G, /* Consumer AP, CPU freq is up to 1.2GHZ */
 };
 
+#ifdef CONFIG_ARCH_MX53
 void mx53_set_cpu_part_number(enum mx53_cpu_part_number part_num);
+#else
+inline void mx53_set_cpu_part_number(enum mx53_cpu_part_number part_num){}
+#endif
 
 #endif /*__ARCH_ARM_MACH_MX53_WP_H__ */
 
