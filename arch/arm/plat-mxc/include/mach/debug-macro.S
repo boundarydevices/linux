@@ -66,6 +66,9 @@
 		mrc	p15, 0, \rx, c1, c0
 		tst	\rx, #1			@ MMU enabled?
 		ldreq	\rx, =UART_PADDR	@ physical
+#ifdef CONFIG_ARCH_MX53
+		subeq	\rx,\rx,#0x20000000
+#endif
 		ldrne	\rx, =UART_VADDR	@ virtual
 		.endm
 
