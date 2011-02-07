@@ -42,6 +42,19 @@ static struct map_desc mx5_io_desc[] __initdata = {
 	 .type = MT_DEVICE},
 };
 
+#ifdef CONFIG_DEBUG_LL
+void __init mx5_map_uart(void)
+{
+	if (cpu_is_mx53() || cpu_is_mx50()) {
+		mx5_io_desc[0].pfn -= __phys_to_pfn(0x20000000);
+	}
+	iotable_init(mx5_io_desc, 1);
+	if (cpu_is_mx53() || cpu_is_mx50()) {
+		mx5_io_desc[0].pfn += __phys_to_pfn(0x20000000);
+	}
+}
+#endif
+
 /*!
  * This function initializes the memory map. It is called during the
  * system startup to create static physical to virtual memory map for

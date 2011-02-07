@@ -22,6 +22,9 @@ extern void mx31_map_io(void);
 extern void mx35_map_io(void);
 extern void mx37_map_io(void);
 extern void mx5_map_io(void);
+#ifdef CONFIG_DEBUG_LL
+extern void mx5_map_uart(void);
+#endif
 extern void mxc91231_map_io(void);
 extern void mxc_init_irq(void __iomem *);
 extern void tzic_init_irq(void __iomem *);
