@@ -4370,7 +4370,8 @@ static struct clk_lookup lookups[] = {
 };
 
 static struct clk_lookup mx51_lookups[] = {
-	_REGISTER_CLOCK("mxc_i2c_hs.3", NULL, hsi2c_serial_clk),
+	_REGISTER_CLOCK("mxc_i2c_hs.3", "hsi2c_serial_clk", hsi2c_serial_clk),
+	_REGISTER_CLOCK("mxc_i2c_hs.3", "hsi2c_clk", hsi2c_clk),
 	_REGISTER_CLOCK("mxc_sim.0", NULL, sim_clk[0]),
 	_REGISTER_CLOCK("mxc_alsa_spdif.0", NULL, spdif1_clk[0]),
 	_REGISTER_CLOCK(NULL, "mipi_hsp_clk", mipi_hsp_clk),
