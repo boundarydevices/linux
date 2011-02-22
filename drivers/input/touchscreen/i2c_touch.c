@@ -97,7 +97,7 @@ struct pic16f616_ts {
 	struct proc_dir_entry *procentry;
 	struct proc_dir_entry *tstype_procentry;
 };
-const char *client_name = "Pic16F616-ts";
+static const char *client_name = "Pic16F616-ts";
 
 #define NUM_SAMPLES_DEFAULT 64
 static unsigned char num_samples = NUM_SAMPLES_DEFAULT;
