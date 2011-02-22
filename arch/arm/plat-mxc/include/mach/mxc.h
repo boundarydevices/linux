@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007, 2010 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2007, 2011 Freescale Semiconductor, Inc. All Rights Reserved.
  * Copyright (C) 2008 Juergen Beisert (kernel@pengutronix.de)
  *
  * This program is free software; you can redistribute it and/or
@@ -32,6 +32,7 @@
 #define MXC_CPU_MX27		27
 #define MXC_CPU_MX31		31
 #define MXC_CPU_MX35		35
+#define MXC_CPU_MX37            37
 #define MXC_CPU_MX50		50
 #define MXC_CPU_MX51		51
 #define MXC_CPU_MX53		53
@@ -63,6 +64,21 @@
 #define IMX_CHIP_REVISION_3_2_STRING		"3.2"
 #define IMX_CHIP_REVISION_3_3_STRING		"3.3"
 #define IMX_CHIP_REVISION_UNKNOWN_STRING	"unknown"
+#define IMX_BOARD_REV_1		0x000
+#define IMX_BOARD_REV_2		0x100
+#define IMX_BOARD_REV_3		0x200
+
+#ifndef __ASSEMBLY__
+extern unsigned int system_rev;
+#define board_is_rev(rev)	(((system_rev & 0x0F00) == rev) ? 1 : 0)
+#define imx_cpu_ver()		(system_rev & 0xFF)
+#endif
+
+#ifdef CONFIG_ARCH_MX5
+#define board_is_mx53_arm2() (cpu_is_mx53() && board_is_rev(IMX_BOARD_REV_2))
+#define board_is_mx53_evk_a()    (cpu_is_mx53() && board_is_rev(IMX_BOARD_REV_1))
+#define board_is_mx53_evk_b()    (cpu_is_mx53() && board_is_rev(IMX_BOARD_REV_3))
+#endif
 
 #ifndef __ASSEMBLY__
 extern unsigned int __mxc_cpu_type;
@@ -128,6 +144,8 @@ extern unsigned int __mxc_cpu_type;
 # define cpu_is_mx31()		(0)
 #endif
 
+# define cpu_is_mx32()		(0)
+
 #ifdef CONFIG_SOC_IMX35
 # ifdef mxc_cpu_type
 #  undef mxc_cpu_type
@@ -138,6 +156,18 @@ extern unsigned int __mxc_cpu_type;
 # define cpu_is_mx35()		(mxc_cpu_type == MXC_CPU_MX35)
 #else
 # define cpu_is_mx35()		(0)
+#endif
+
+#ifdef CONFIG_SOC_IMX37
+# ifdef mxc_cpu_type
+#  undef mxc_cpu_type
+#  define mxc_cpu_type __mxc_cpu_type
+# else
+#  define mxc_cpu_type MXC_CPU_MX37
+# endif
+# define cpu_is_mx37()          (mxc_cpu_type == MXC_CPU_MX37)
+#else
+# define cpu_is_mx37()          (0)
 #endif
 
 #ifdef CONFIG_SOC_IMX50
@@ -179,10 +209,18 @@ extern unsigned int __mxc_cpu_type;
 #ifndef __ASSEMBLY__
 
 struct cpu_op {
+	u32 pll_reg;
+	u32 pll_rate;
 	u32 cpu_rate;
+	u32 pdr0_reg;
+	u32 pdf;
+	u32 mfi;
+	u32 mfd;
+	u32 mfn;
+	u32 cpu_voltage;
+	u32 cpu_podf;
 };
 
-int tzic_enable_wake(int is_idle);
 enum mxc_cpu_pwr_mode {
 	WAIT_CLOCKED,		/* wfi only */
 	WAIT_UNCLOCKED,		/* WAIT */
@@ -191,10 +229,26 @@ enum mxc_cpu_pwr_mode {
 	STOP_POWER_OFF,		/* STOP + SRPG */
 };
 
+int tzic_enable_wake(int is_idle);
+
+extern void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode);
+extern int tzic_enable_wake(int is_idle);
 extern struct cpu_op *(*get_cpu_op)(int *op);
 #endif
 
+#if defined(CONFIG_ARCH_MX3) || defined(CONFIG_ARCH_MX2)
+/* These are deprecated, use mx[23][157]_setup_weimcs instead. */
+#define CSCR_U(n) (IO_ADDRESS(WEIM_BASE_ADDR + n * 0x10))
+#define CSCR_L(n) (IO_ADDRESS(WEIM_BASE_ADDR + n * 0x10 + 0x4))
+#define CSCR_A(n) (IO_ADDRESS(WEIM_BASE_ADDR + n * 0x10 + 0x8))
+#endif
+
+#define cpu_is_mx5()    (cpu_is_mx51() || cpu_is_mx53() || cpu_is_mx50())
 #define cpu_is_mx3()	(cpu_is_mx31() || cpu_is_mx35())
 #define cpu_is_mx2()	(cpu_is_mx21() || cpu_is_mx27())
 
+#define MXC_PGCR_PCR		1
+#define MXC_SRPGCR_PCR		1
+#define MXC_EMPGCR_PCR		1
+#define MXC_PGSR_PSR		1
 #endif /*  __ASM_ARCH_MXC_H__ */
