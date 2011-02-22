@@ -388,6 +388,11 @@ static int mxci2c_hs_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 			if (r == 0) {
 				dev_err(i2c_hs->dev, "controller timed out\n");
 				ret = -ETIMEDOUT;
+			} else {
+				if (i2c_hs->msg) {
+					/* signal stopped us, wait another jiffy */
+					wait_for_completion_timeout(&i2c_hs->cmd_complete,1);
+				}
 			}
 #endif
 		}
@@ -401,9 +406,9 @@ static int mxci2c_hs_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 			ret = 0;
 		}
 		if (ret) {
-			printk(KERN_ERR "%s: ret=%i %s HICR=%x HISR=%x HITFR=%x HIRFR=%x sent %i of %i\n", __func__, ret, read ? "read" : "write",
+			printk(KERN_ERR "%s: ret=%i %s HICR=%x HISR=%x HITFR=%x HIRFR=%x cmd_err=%x sent %i of %i\n", __func__, ret, read ? "read" : "write",
 					reg_read(i2c_hs, HICR), reg_read(i2c_hs, HISR), reg_read(i2c_hs, HITFR), reg_read(i2c_hs, HIRFR),
-					i2c_hs->index, msg->len);
+					i2c_hs->cmd_err, i2c_hs->index, msg->len);
 			msleep(2);
 			printk(KERN_ERR "%s: HISR=%x\n", __func__, reg_read(i2c_hs, HISR));
 			if ((ret == -EREMOTEIO) || (ret == -ETIMEDOUT)) {
