@@ -454,4 +454,11 @@ config GPIO_TPS65910
 	help
 	  Select this option to enable GPIO driver for the TPS65910
 	  chip family.
+
+config DA9052_GPIO_ENABLE
+	bool "Dialog DA9052 GPIO"
+	depends on PMIC_DIALOG
+	help
+	  Say Y  to enable the GPIO driver for the DA9052 chip
+
 endif
