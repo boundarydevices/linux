@@ -1041,6 +1041,13 @@ config RTC_DRV_LPC32XX
 	  This driver can also be buillt as a module. If so, the module
 	  will be called rtc-lpc32xx.
 
+config RTC_DRV_DA9052
+	tristate "Dialog DA9052 RTC"
+	depends on PMIC_DIALOG
+	help
+	  Say y here to support the RTC found on
+	  Dialog Semiconductor DA9052 PMIC.
+
 config RTC_DRV_TEGRA
 	tristate "NVIDIA Tegra Internal RTC driver"
 	depends on RTC_CLASS && ARCH_TEGRA
