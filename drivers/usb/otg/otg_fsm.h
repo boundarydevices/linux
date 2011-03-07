@@ -1,4 +1,4 @@
-/* Copyright (C) 2007,2008 Freescale Semiconductor, Inc.
+/* Copyright (C) 2006-2011 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -15,11 +15,13 @@
  * 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#undef DEBUG
-#undef VERBOSE
+#if 0
+#define DEBUG 	1
+#define VERBOSE	1
+#endif
 
 #ifdef DEBUG
-#define DBG(fmt, args...) printk(KERN_DEBUG "[%s]  " fmt , \
+#define DBG(fmt, args...) printk(KERN_DEBUG "j=%lu [%s] " fmt "\n", jiffies, \
 				 __func__, ## args)
 #else
 #define DBG(fmt, args...)	do {} while (0)
@@ -147,8 +149,3 @@ static inline void otg_del_timer(struct otg_fsm *fsm, void *timer)
 }
 
 int otg_statemachine(struct otg_fsm *fsm);
-
-/* Defined by device specific driver, for different timer implementation */
-extern struct fsl_otg_timer *a_wait_vrise_tmr, *a_wait_bcon_tmr,
-	*a_aidl_bdis_tmr, *b_ase0_brst_tmr, *b_se0_srp_tmr, *b_srp_fail_tmr,
-	*a_wait_enum_tmr;
