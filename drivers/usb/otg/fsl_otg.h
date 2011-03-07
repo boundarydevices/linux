@@ -1,4 +1,4 @@
-/* Copyright (C) 2007,2008 Freescale Semiconductor, Inc.
+/* Copyright (C) 2005-2011 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -19,7 +19,7 @@
 #include <linux/usb/otg.h>
 #include <linux/ioctl.h>
 
-/* USB Command Register Bit Masks */
+ /* USB Command  Register Bit Masks */
 #define USB_CMD_RUN_STOP		(0x1<<0)
 #define USB_CMD_CTRL_RESET		(0x1<<1)
 #define USB_CMD_PERIODIC_SCHEDULE_EN	(0x1<<4)
@@ -64,7 +64,7 @@
 #define USB_STS_ERR			(0x1<<1)
 #define USB_STS_PORT_CHANGE		(0x1<<2)
 #define USB_STS_FRM_LST_ROLL		(0x1<<3)
-#define USB_STS_SYS_ERR			(0x1<<4)
+#define USB_STS_SYS_ERR		(0x1<<4)
 #define USB_STS_IAA			(0x1<<5)
 #define USB_STS_RESET_RECEIVED		(0x1<<6)
 #define USB_STS_SOF			(0x1<<7)
@@ -151,10 +151,10 @@
 #define PORTSC_PTS_FSLS_SERIAL		(0x3<<30)
 #define PORTSC_PTS_BIT_POS		(30)
 
-#define PORTSC_W1C_BITS			\
-	(PORTSC_CONNECT_STATUS_CHANGE |	\
-	 PORTSC_PORT_EN_DIS_CHANGE    |	\
-	 PORTSC_OVER_CUURENT_CHG)
+#define PORTSC_W1C_BITS                    \
+       (PORTSC_CONNECT_STATUS_CHANGE |     \
+	PORTSC_PORT_EN_DIS_CHANGE    |     \
+	PORTSC_OVER_CUURENT_CHG)
 
 /* OTG Status Control Register Bit Masks */
 #define OTGSC_CTRL_VBUS_DISCHARGE	(0x1<<0)
@@ -194,7 +194,11 @@
 #define  USB_MODE_CTRL_MODE_RSV		(0x1<<0)
 #define  USB_MODE_SETUP_LOCK_OFF	(0x1<<3)
 #define  USB_MODE_STREAM_DISABLE	(0x1<<4)
-#define  USB_MODE_ES			(0x1<<2) /* Endian Select */
+#define  USB_MODE_ES			(0x1<<2) /* (big) Endian Select */
+
+#define MPC8349_OTG_IRQ			(38)
+#define CFG_IMMR_BASE	        	(0xfe000000)
+#define MPC83xx_USB_DR_BASE     	(CFG_IMMR_BASE + 0x23000)
 
 /* control Register Bit Masks */
 #define  USB_CTRL_IOENB			(0x1<<2)
@@ -223,7 +227,7 @@
 /* OTG interrupt enable bit masks */
 #define  OTGSC_INTERRUPT_ENABLE_BITS_MASK  \
 	(OTGSC_INTR_USB_ID_EN            | \
-	OTGSC_INTR_1MS_TIMER_EN		 | \
+	OTGSC_INTR_1MS_TIMER_EN          | \
 	OTGSC_INTR_A_VBUS_VALID_EN       | \
 	OTGSC_INTR_A_SESSION_VALID_EN    | \
 	OTGSC_INTR_B_SESSION_VALID_EN    | \
@@ -298,6 +302,7 @@
 /* SE0 Time Before SRP */
 #define TB_SE0_SRP	(2)	/* b_idle,minimum 2 ms, section:5.3.2 */
 
+
 #define SET_OTG_STATE(otg_ptr, newstate)	((otg_ptr)->state = newstate)
 
 struct usb_dr_mmap {
@@ -343,8 +348,12 @@ struct usb_dr_mmap {
 	u32 pri_ctrl;		/* Priority Control Register */
 	u32 si_ctrl;		/* System Interface Control Register */
 	u8 res10[236];
+#ifdef CONFIG_ARCH_MX5
+	u32 res11[128];
+#endif
 	u32 control;		/* General Purpose Control Register */
 };
+
 
 struct fsl_otg_timer {
 	unsigned long expires;	/* Number of count increase to timeout */
@@ -358,9 +367,8 @@ inline struct fsl_otg_timer *otg_timer_initializer
 (void (*function)(unsigned long), unsigned long expires, unsigned long data)
 {
 	struct fsl_otg_timer *timer;
-
 	timer = kmalloc(sizeof(struct fsl_otg_timer), GFP_KERNEL);
-	if (!timer)
+	if (timer == NULL)
 		return NULL;
 	timer->function = function;
 	timer->expires = expires;
@@ -374,7 +382,7 @@ struct fsl_otg {
 	struct usb_dr_mmap *dr_mem_map;
 	struct delayed_work otg_event;
 
-	/* used for usb host */
+	/*used for usb host */
 	struct work_struct work_wq;
 	u8	host_working;
 
@@ -385,12 +393,12 @@ struct fsl_otg_config {
 	u8 otg_port;
 };
 
-/* For SRP and HNP handle */
-#define FSL_OTG_MAJOR		240
-#define FSL_OTG_NAME		"fsl-usb2-otg"
-/* Command to OTG driver ioctl */
+/*For SRP and HNP handle*/
+#define FSL_OTG_MAJOR	66
+#define FSL_OTG_NAME	"fsl-usb2-otg"
+/*Command to OTG driver(ioctl)*/
 #define OTG_IOCTL_MAGIC		FSL_OTG_MAJOR
-/* if otg work as host, it should return 1, otherwise return 0 */
+/*if otg work as host,it should return 1,otherwise it return 0*/
 #define GET_OTG_STATUS		_IOR(OTG_IOCTL_MAGIC, 1, int)
 #define SET_A_SUSPEND_REQ	_IOW(OTG_IOCTL_MAGIC, 2, int)
 #define SET_A_BUS_DROP		_IOW(OTG_IOCTL_MAGIC, 3, int)
@@ -401,6 +409,4 @@ struct fsl_otg_config {
 #define GET_A_BUS_REQ		_IOR(OTG_IOCTL_MAGIC, 8, int)
 #define GET_B_BUS_REQ		_IOR(OTG_IOCTL_MAGIC, 9, int)
 
-void fsl_otg_add_timer(void *timer);
-void fsl_otg_del_timer(void *timer);
-void fsl_otg_pulse_vbus(void);
+extern const char *state_string(enum usb_otg_state state);
