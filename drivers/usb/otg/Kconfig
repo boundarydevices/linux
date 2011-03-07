@@ -130,4 +130,12 @@ config FSL_USB2_OTG
 	help
 	  Enable this to support Freescale USB OTG transceiver.
 
+config MXC_OTG
+	tristate "USB OTG pin detect support"
+	select USB_OTG_UTILS
+	select USB_OTG
+	depends on USB_GADGET_ARC && USB_EHCI_HCD
+	help
+	  Support for USB OTG PIN detect on MXC platforms.
+
 endif # USB || OTG
