@@ -877,7 +877,7 @@ s32 da9052_get_bat_level(struct da9052_charger_device *chg_device)
 			access_index = 0;
 			break;
 		} else if (bat_temperature >
-			temperature_lookup_ref[DA9052_NO_OF_LOOKUP_TABLE]){
+			temperature_lookup_ref[DA9052_NO_OF_LOOKUP_TABLE - 1]){
 				access_index = DA9052_NO_OF_LOOKUP_TABLE - 1;
 			break;
 		} else if ((bat_temperature >= temperature_lookup_ref[index]) &&
