@@ -19,6 +19,7 @@
 #include <linux/mfd/da9052/da9052.h>
 #include <linux/mfd/da9052/reg.h>
 #include <linux/mfd/da9052/pm.h>
+#define CONFIG_DA9053
 
 static struct regulator_ops da9052_ldo_buck_ops;
 
@@ -143,10 +144,17 @@ struct regulator_info da9052_regulators[] = {
 			DA9052_BUCK_MEM_STEP, DA9052_BUCKMEM_REG,
 			DA9052_BUCKMEM_VBMEM, DA9052_BUCKMEM_BMEMEN),
 
+#ifndef CONFIG_DA9053
 	DA9052_LDO(DA9052_BUCK_PERI, DA9052_BUCK_PERI_VOLT_UPPER,
 			DA9052_BUCK_PERI_VOLT_LOWER,
 			DA9052_BUCK_PERI_STEP_BELOW_3000, DA9052_BUCKPERI_REG,
 			DA9052_BUCKPERI_VBPERI, DA9052_BUCKPERI_BPERIEN),
+#else
+	DA9052_LDO(DA9052_BUCK_PERI, DA9053_BUCK_PERI_VOLT_UPPER,
+			DA9053_BUCK_PERI_VOLT_LOWER,
+			DA9053_BUCK_PERI_STEP, DA9052_BUCKPERI_REG,
+			DA9052_BUCKPERI_VBPERI, DA9052_BUCKPERI_BPERIEN),
+#endif
 };
 
 int da9052_ldo_buck_enable(struct regulator_dev *rdev)
@@ -260,6 +268,7 @@ int da9052_ldo_buck_set_voltage(struct regulator_dev *rdev,
 
 	/* Get the ldo register value */
 	/* Varying step size for BUCK PERI */
+#ifndef CONFIG_DA9053
 	if ((da9052_regulators[id].reg_desc.id == DA9052_BUCK_PERI) &&
 			(min_uV >= DA9052_BUCK_PERI_VALUES_3000)) {
 		ldo_volt = (DA9052_BUCK_PERI_VALUES_3000 -
@@ -267,7 +276,9 @@ int da9052_ldo_buck_set_voltage(struct regulator_dev *rdev,
 			(da9052_regulators[id].step_uV);
 		ldo_volt += (min_uV - DA9052_BUCK_PERI_VALUES_3000)/
 			(DA9052_BUCK_PERI_STEP_ABOVE_3000);
-	} else{
+	} else
+#endif
+	{
 		ldo_volt = (min_uV - da9052_regulators[id].reg_const.min_uV)/
 			(da9052_regulators[id].step_uV);
 		/* Check for maximum value */
@@ -363,6 +374,7 @@ int da9052_ldo_buck_get_voltage(struct regulator_dev *rdev)
 	da9052_unlock(priv->da9052);
 
 	ldo_volt = ssc_msg.data & da9052_regulators[id].mask_bits;
+#ifndef CONFIG_DA9053
 	if (da9052_regulators[id].reg_desc.id == DA9052_BUCK_PERI) {
 		if (ldo_volt >= DA9052_BUCK_PERI_VALUES_UPTO_3000) {
 			ldo_volt_uV = ((DA9052_BUCK_PERI_VALUES_UPTO_3000 *
@@ -376,7 +388,9 @@ int da9052_ldo_buck_get_voltage(struct regulator_dev *rdev)
 				(ldo_volt * da9052_regulators[id].step_uV)
 				+ da9052_regulators[id].reg_const.min_uV;
 		}
-	} else {
+	} else
+#endif
+	{
 		ldo_volt_uV = (ldo_volt * da9052_regulators[id].step_uV) +
 				da9052_regulators[id].reg_const.min_uV;
 	}
@@ -400,6 +414,7 @@ static int da9052_set_suspend_voltage(struct regulator_dev *rdev, int uV)
 		return -EINVAL;
 
 	/* Get the ldo register value */
+#ifndef CONFIG_DA9053
 	/* Varying step size for BUCK PERI */
 	if ((da9052_regulators[id].reg_desc.id == DA9052_BUCK_PERI) &&
 			(uV >= DA9052_BUCK_PERI_VALUES_3000)) {
@@ -408,7 +423,9 @@ static int da9052_set_suspend_voltage(struct regulator_dev *rdev, int uV)
 			(da9052_regulators[id].step_uV);
 		ldo_volt += (uV - DA9052_BUCK_PERI_VALUES_3000)/
 			(DA9052_BUCK_PERI_STEP_ABOVE_3000);
-	} else{
+	} else
+#endif
+	{
 		ldo_volt = (uV - da9052_regulators[id].reg_const.min_uV)/
 			(da9052_regulators[id].step_uV);
 	}
