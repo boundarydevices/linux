@@ -248,50 +248,50 @@ static int ts_thread(void *_ts)
 	ts->interruptCnt=0;
 
 	do {
-		do {
 #ifdef TESTING
-			printk(KERN_ERR "(i2cs)\n");
-//			printk(KERN_ERR "%s: reading from device 0x%x\n",client_name,ts->client.addr);
-			do_gettimeofday(&ts->lastInterruptTime);
+		printk(KERN_ERR "(i2cs)\n");
+//		printk(KERN_ERR "%s: reading from device 0x%x\n",client_name,ts->client.addr);
+		do_gettimeofday(&ts->lastInterruptTime);
 #endif
-			ts->bReady = 0;
-			/* For the 1st access and after a release, make sure the initial register address is selected */
-			ret = i2c_transfer(ts->client->adapter, readSums, 2);
-			if (ret != 2) {
-				printk(KERN_WARNING "%s: i2c_transfer failed\n", client_name);
-				buttons = 0;
-			} else {
-				int i;
-				unsigned char *p = buf;
-				buttons = p[9];
-				if (buttons > 2)
-					buttons = 2;
-				for (i = 0; i < buttons; i++) {
-					points[i].x = ((p[0] << 8) | p[1]) & 0x7ff;
-					points[i].y = ((p[2] << 8) | p[3]) & 0x7ff;
-					i++;
-					p += 4;
-				}
-			}
-
-			if (signal_pending(tsk))
-				break;
-#ifdef TESTING
-			printk(KERN_ERR "%s: buttons = %d, points[0].x = %d, points[0].y = %d\n", client_name, buttons, points[0].x, points[0].y);
-#endif
-			ts_evt_add(ts, buttons, points);
-			msleep(20);
-			if (gpio_get_value(ts->gp))
-				break;
-		} while (1);
-
-		if (buttons) {
+		ts->bReady = 0;
+		/* For the 1st access and after a release, make sure the initial register address is selected */
+		ret = i2c_transfer(ts->client->adapter, readSums, 2);
+		if (ret != 2) {
+			printk(KERN_WARNING "%s: i2c_transfer failed\n", client_name);
+			msleep(1000);
 			buttons = 0;
-			ts_evt_add(ts, buttons, points);
+		} else {
+			int i;
+			unsigned char *p = buf;
+			buttons = p[9];
+			if (buttons > 2)
+				buttons = 2;
+			for (i = 0; i < buttons; i++) {
+				points[i].x = ((p[0] << 8) | p[1]) & 0x7ff;
+				points[i].y = ((p[2] << 8) | p[3]) & 0x7ff;
+				i++;
+				p += 4;
+			}
 		}
-		wait_event_interruptible(ts->sample_waitq, ts->bReady);
+
 		if (signal_pending(tsk))
 			break;
+#ifdef TESTING
+		printk(KERN_ERR "%s: buttons = %d, points[0].x = %d, points[0].y = %d\n", client_name, buttons, points[0].x, points[0].y);
+#endif
+		ts_evt_add(ts, buttons, points);
+		if (buttons)
+			wait_event_interruptible_timeout(ts->sample_waitq, ts->bReady, HZ/20);
+		else
+			wait_event_interruptible(ts->sample_waitq, ts->bReady);
+		if (gpio_get_value(ts->gp)) {
+			if (buttons) {
+				buttons = 0;
+				ts_evt_add(ts, buttons, points);
+			}
+			if (signal_pending(tsk))
+				break;
+		}
 	} while (1);
 
 	ts->rtask = NULL;
