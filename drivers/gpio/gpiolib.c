@@ -1285,6 +1285,7 @@ int gpio_request_array(struct gpio *array, size_t num)
 	return 0;
 
 err_free:
+	pr_err("%s:error requesting %d-0x%x\n", __func__, i, array->gpio);
 	while (i--)
 		gpio_free((--array)->gpio);
 	return err;
