@@ -269,7 +269,6 @@ static int ts_thread(void *_ts)
 			for (i = 0; i < buttons; i++) {
 				points[i].x = ((p[0] << 8) | p[1]) & 0x7ff;
 				points[i].y = ((p[2] << 8) | p[3]) & 0x7ff;
-				i++;
 				p += 4;
 			}
 		}
