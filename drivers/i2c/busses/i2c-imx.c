@@ -123,10 +123,20 @@ struct imx_i2c_struct {
 	unsigned int 		disable_delay;
 	int			stopped;
 	unsigned int		ifdr; /* IMX_I2C_IFDR */
+	void (*i2c_clock_toggle)(void);
 };
 
 /** Functions for IMX I2C adapter driver ***************************************
 *******************************************************************************/
+static void i2c_imx_bus_recovery(struct imx_i2c_struct *i2c_imx)
+{
+	dev_err(&i2c_imx->adapter.dev, "initiating i2c bus recovery\n");
+	if (i2c_imx->i2c_clock_toggle)
+		i2c_imx->i2c_clock_toggle();
+	writeb(0, i2c_imx->base + IMX_I2C_I2CR);
+	writeb(0, i2c_imx->base + IMX_I2C_I2SR);
+	udelay(10);
+}
 
 static int i2c_imx_bus_busy(struct imx_i2c_struct *i2c_imx, int for_busy)
 {
@@ -149,6 +159,7 @@ static int i2c_imx_bus_busy(struct imx_i2c_struct *i2c_imx, int for_busy)
 		if (time_after(jiffies, orig_jiffies + msecs_to_jiffies(500))) {
 			dev_dbg(&i2c_imx->adapter.dev,
 				"<%s> I2C bus is busy\n", __func__);
+			i2c_imx_bus_recovery(i2c_imx);
 			return -ETIMEDOUT;
 		}
 		schedule();
@@ -519,6 +530,8 @@ static int __init i2c_imx_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto fail2;
 	}
+	if (pdata)
+		i2c_imx->i2c_clock_toggle = pdata->i2c_clock_toggle;
 
 	/* Setup i2c_imx driver structure */
 	strcpy(i2c_imx->adapter.name, pdev->name);
