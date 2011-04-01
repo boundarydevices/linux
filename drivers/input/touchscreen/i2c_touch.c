@@ -94,6 +94,7 @@ struct pic16f616_ts {
 #endif
 	int irq;
 	unsigned gp;
+	unsigned buffer_enable_gp;
 	struct proc_dir_entry *procentry;
 	struct proc_dir_entry *tstype_procentry;
 };
@@ -713,6 +714,7 @@ static int ts_detect(struct i2c_client *client,
 struct plat_i2c_generic_data {
 	unsigned irq;
 	unsigned gp;
+	unsigned buffer_enable_gp;
 };
 
 static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
@@ -735,6 +737,9 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	ts->client = client;
 	ts->irq = plat->irq;
 	ts->gp = plat->gp;
+	ts->buffer_enable_gp = plat->buffer_enable_gp;
+	if (ts->buffer_enable_gp > 0)
+		gpio_set_value(ts->buffer_enable_gp);
 	printk(KERN_INFO "%s: %s touchscreen irq=%i, gp=%i\n", __func__, client_name, ts->irq, ts->gp);
 	i2c_set_clientdata(client, ts);
 	err = ts_register(ts);
