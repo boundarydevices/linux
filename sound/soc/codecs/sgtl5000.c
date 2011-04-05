@@ -971,6 +971,11 @@ static int ldo_regulator_is_enabled(struct regulator_dev *dev)
 	return ldo->enabled;
 }
 
+/*
+ * enable internal VDDD power supply. Since register
+ * cache not fill yet, we have to use hw_read and write
+ * instead of snd_soc_read and snd_soc_write.
+ */
 static int ldo_regulator_enable(struct regulator_dev *dev)
 {
 	struct ldo_regulator *ldo = rdev_get_drvdata(dev);
@@ -980,20 +985,6 @@ static int ldo_regulator_enable(struct regulator_dev *dev)
 	if (ldo_regulator_is_enabled(dev))
 		return 0;
 
-	snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
-				SGTL5000_LINREG_SIMPLE_POWERUP|
-				SGTL5000_STARTUP_POWERUP|
-				SGTL5000_REFTOP_POWERUP,
-				0);
-	udelay(10);
-	snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
-				SGTL5000_LINREG_SIMPLE_POWERUP|
-				SGTL5000_STARTUP_POWERUP|
-				SGTL5000_REFTOP_POWERUP,
-				SGTL5000_LINREG_SIMPLE_POWERUP|
-				SGTL5000_STARTUP_POWERUP|
-				SGTL5000_REFTOP_POWERUP);
-	udelay(10);
 	/* set regulator value firstly */
 	reg = (1600 - ldo->voltage / 1000) / 50;
 	reg = clamp(reg, 0x0, 0xf);
@@ -1002,17 +993,17 @@ static int ldo_regulator_enable(struct regulator_dev *dev)
 	ldo->voltage = (1600 - reg * 50) * 1000;
 
 	/* set voltage to register */
-	snd_soc_update_bits(codec, SGTL5000_CHIP_LINREG_CTRL,
-				(0x1 << 4) - 1, reg);
+	codec->write(codec, SGTL5000_CHIP_LINREG_CTRL, reg);
 
-	snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
-				SGTL5000_LINEREG_D_POWERUP,
-				SGTL5000_LINEREG_D_POWERUP);
+	reg = codec->hw_read(codec, SGTL5000_CHIP_ANA_POWER);
+	reg |= SGTL5000_LINEREG_D_POWERUP;
+	codec->write(codec, SGTL5000_CHIP_ANA_POWER, reg);
 
+	reg &= ~SGTL5000_LINREG_SIMPLE_POWERUP;
 	/* when internal ldo enabled, simple digital power can be disabled */
-	snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
-				SGTL5000_LINREG_SIMPLE_POWERUP,
-				0);
+	codec->write(codec, SGTL5000_CHIP_ANA_POWER, reg);
+
+	udelay(10);
 
 	ldo->enabled = 1;
 	return 0;
@@ -1532,6 +1523,22 @@ err_regulator_free:
 
 }
 
+static int sgtl5000_fill_reg_cache(struct snd_soc_codec *codec)
+{
+	int reg;
+	int step = codec->driver->reg_cache_step;
+	u16 *cache = codec->reg_cache;
+
+	for (reg = SGTL5000_DAP_REG_OFFSET;
+		reg <= SGTL5000_MAX_REG_OFFSET; reg += step)
+		cache[reg] = codec->hw_read(codec, reg);
+
+	for (reg = 0; reg <= SGTL5000_CHIP_SHORT_CTRL; reg += step)
+		cache[reg] = codec->hw_read(codec, reg);
+
+	return 0;
+}
+
 static int sgtl5000_probe(struct snd_soc_codec *codec)
 {
 	int ret;
@@ -1547,6 +1554,8 @@ static int sgtl5000_probe(struct snd_soc_codec *codec)
 	ret = sgtl5000_enable_regulators(codec);
 	if (ret)
 		return ret;
+
+	sgtl5000_fill_reg_cache(codec);
 
 	/* power up sgtl5000 */
 	ret = sgtl5000_set_power_regs(codec);
@@ -1640,10 +1649,9 @@ static struct snd_soc_codec_driver sgtl5000_driver = {
 	.suspend = sgtl5000_suspend,
 	.resume = sgtl5000_resume,
 	.set_bias_level = sgtl5000_set_bias_level,
-	.reg_cache_size = ARRAY_SIZE(sgtl5000_regs),
+	.reg_cache_size = SGTL5000_MAX_REG_OFFSET,
 	.reg_word_size = sizeof(u16),
 	.reg_cache_step = 2,
-	.reg_cache_default = sgtl5000_regs,
 	.volatile_register = sgtl5000_volatile_register,
 };
 
