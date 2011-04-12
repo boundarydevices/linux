@@ -33,6 +33,7 @@
 void __iomem *arm_plat_base;
 void __iomem *gpc_base;
 void __iomem *ccm_base;
+extern void init_ddr_settings(void);
 
 static int cpu_silicon_rev = -1;
 void (*set_num_cpu_op)(int num);
@@ -229,6 +230,7 @@ static int __init post_cpu_init(void)
 		arm_plat_base = MX50_IO_ADDRESS(MX50_ARM_BASE_ADDR);
 		iram_init(MX50_IRAM_BASE_ADDR, MX50_IRAM_SIZE);
 	}
+
 	if (cpu_is_mx51() || cpu_is_mx53()) {
 		if (cpu_is_mx51()) {
 			base = MX51_IO_ADDRESS(MX51_AIPS1_BASE_ADDR);
@@ -274,8 +276,11 @@ static int __init post_cpu_init(void)
 	clk_put(gpcclk);
 
 	/* Set ALP bits to 000. Set ALP_EN bit in Arm Memory Controller reg. */
-		reg = 0x8;
+	reg = 0x8;
 	__raw_writel(reg, arm_plat_base + CORTEXA8_PLAT_AMC);
+
+	if (cpu_is_mx50())
+		init_ddr_settings();
 
 	return 0;
 }
