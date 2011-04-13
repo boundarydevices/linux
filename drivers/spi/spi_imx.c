@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2004-2007, 2011 Freescale Semiconductor, Inc. All Rights Reserved.
  * Copyright (C) 2008 Juergen Beisert
  *
  * This program is free software; you can redistribute it and/or
@@ -743,6 +743,9 @@ static struct platform_device_id spi_imx_devtype[] = {
 		.name = "imx35-cspi",
 		.driver_data = SPI_IMX_VER_0_7,
 	}, {
+		.name = "imx50-cspi",
+		.driver_data = SPI_IMX_VER_0_7,
+	}, {
 		.name = "imx51-cspi",
 		.driver_data = SPI_IMX_VER_0_7,
 	}, {
@@ -936,7 +939,7 @@ static void __exit spi_imx_exit(void)
 	platform_driver_unregister(&spi_imx_driver);
 }
 
-module_init(spi_imx_init);
+subsys_initcall(spi_imx_init);
 module_exit(spi_imx_exit);
 
 MODULE_DESCRIPTION("SPI Master Controller driver");
