@@ -360,6 +360,7 @@ struct platform_device *__init imx_add_iim(
 		const struct imx_iim_data *data,
 		const struct mxc_iim_platform_data *pdata);
 
+#include <mach/mxc_gpu.h>
 struct imx_mxc_gpu_data {
 	resource_size_t irq_2d;
 	resource_size_t irq_3d;
@@ -394,7 +395,7 @@ struct imx_perfmon_data {
 
 struct platform_device *__init imx_add_perfmon(
 		const struct imx_perfmon_data *data);
-		const int *pdata);
+		const struct mxc_gpu_platform_data *pdata);
 struct imx_otp_data {
 	resource_size_t iobase;
 	struct mxc_otp_platform_data *pdata;
