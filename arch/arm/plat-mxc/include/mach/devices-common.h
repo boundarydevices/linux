@@ -378,6 +378,15 @@ struct imx_perfmon_data {
 
 struct platform_device *__init imx_add_perfmon(
 		const struct imx_perfmon_data *data);
+
+struct imx_ldb_data {
+	resource_size_t iobase;
+	resource_size_t iosize;
+};
+
+struct platform_device *__init imx_add_ldb(
+	const struct imx_ldb_data *data,
+	struct fsl_mxc_ldb_platform_data *pdata);
 struct imx_perfmon_data {
 	resource_size_t iobase;
 	struct mxs_platform_perfmon_data *pdata;
