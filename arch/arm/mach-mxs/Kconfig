@@ -33,6 +33,7 @@ config MACH_MX23EVK
 	select MXS_HAVE_AMBA_DUART
 	select MXS_HAVE_PLATFORM_AUART
 	select MXS_HAVE_PLATFORM_MXS_MMC
+	select MXS_HAVE_PLATFORM_GPMI_NFC
 	select MXS_HAVE_PLATFORM_MXSFB
 	help
 	  Include support for MX23EVK platform. This includes specific
@@ -46,6 +47,7 @@ config MACH_MX28EVK
 	select MXS_HAVE_PLATFORM_FEC
 	select MXS_HAVE_PLATFORM_FLEXCAN
 	select MXS_HAVE_PLATFORM_MXS_MMC
+	select MXS_HAVE_PLATFORM_GPMI_NFC
 	select MXS_HAVE_PLATFORM_MXSFB
 	select MXS_OCOTP
 	help
