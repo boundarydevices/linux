@@ -15,6 +15,10 @@ extern const struct imx_fec_data imx51_fec_data;
 
 extern const struct imx_imx_i2c_data imx51_imx_i2c_data[];
 #define imx51_add_imx_i2c(id, pdata)	\
+extern const struct imx_srtc_data imx51_imx_srtc_data __initconst;
+#define imx51_add_srtc()	\
+	imx_add_srtc(&imx51_imx_srtc_data)
+
 	imx_add_imx_i2c(&imx51_imx_i2c_data[id], pdata)
 
 extern const struct imx_imx_ssi_data imx51_imx_ssi_data[];
