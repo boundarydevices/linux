@@ -769,6 +769,13 @@ config MFD_TPS65910
 config TPS65911_COMPARATOR
 	tristate
 
+config MFD_MAX17135
+    tristate "MAX17135 PMIC core"
+	depends on I2C
+    help
+      This is the MAX17135 PMIC support. It includes
+      core support for communication with the MAX17135 chip.
+
 endif # MFD_SUPPORT
 
 menu "Multimedia Capabilities Port drivers"
