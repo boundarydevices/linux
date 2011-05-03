@@ -409,6 +409,24 @@ struct imx_perfmon_data {
 	struct mxs_platform_perfmon_data *pdata;
 };
 
+struct imx_pxp_data {
+    resource_size_t iobase;
+    resource_size_t iosize;
+    resource_size_t irq;
+};
+struct platform_device *__init imx_add_imx_pxp(
+	const struct imx_pxp_data *data);
+struct platform_device *__init imx_add_imx_pxp_client(void);
+
+#include <mach/epdc.h>
+struct imx_epdc_data {
+	resource_size_t iobase;
+	resource_size_t iosize;
+	resource_size_t irq;
+};
+struct platform_device *__init imx_add_imx_epdc(
+		const struct imx_epdc_data *data,
+		const struct imx_epdc_fb_platform_data *pdata);
 struct platform_device *__init imx_add_perfmon(
 		const struct imx_perfmon_data *data);
 		const struct mxc_gpu_platform_data *pdata);
