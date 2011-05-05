@@ -141,12 +141,14 @@ fw-shipped-$(CONFIG_USB_SERIAL_XIRCOM) += keyspan_pda/xircom_pgs.fw
 fw-shipped-$(CONFIG_USB_VICAM) += vicam/firmware.fw
 fw-shipped-$(CONFIG_VIDEO_CPIA2) += cpia2/stv0672_vp4.bin
 fw-shipped-$(CONFIG_YAM) += yam/1200.bin yam/9600.bin
-
 ifdef CONFIG_IMX_SDMA
 fw-shipped-$(CONFIG_SOC_IMX50) += imx/sdma/sdma-imx50-to1.bin
 fw-shipped-$(CONFIG_SOC_IMX51) += imx/sdma/sdma-imx51-to3.bin
 fw-shipped-$(CONFIG_SOC_IMX53) += imx/sdma/sdma-imx53-to1.bin
 endif
+fw-shipped-$(CONFIG_FB_MXC_EINK_PANEL) += imx/epdc_E60_V110.fw \
+                imx/epdc_E60_V220.fw \
+                imx/epdc_E97_V110.fw \
 
 fw-shipped-all := $(fw-shipped-y) $(fw-shipped-m) $(fw-shipped-)
 
