@@ -157,8 +157,9 @@ static int i2c_imx_bus_busy(struct imx_i2c_struct *i2c_imx, int for_busy)
 			return -EINTR;
 		}
 		if (time_after(jiffies, orig_jiffies + msecs_to_jiffies(500))) {
-			dev_dbg(&i2c_imx->adapter.dev,
-				"<%s> I2C bus is busy\n", __func__);
+			dev_err(&i2c_imx->adapter.dev,
+				"<%s> I2C bus timed out, i2sr=%x, for_busy=%x\n",
+				__func__, temp, for_busy);
 			i2c_imx_bus_recovery(i2c_imx);
 			return -ETIMEDOUT;
 		}
