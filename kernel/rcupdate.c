@@ -43,7 +43,7 @@
 #include <linux/notifier.h>
 #include <linux/cpu.h>
 #include <linux/mutex.h>
-#include <linux/module.h>
+#include <linux/export.h>
 #include <linux/hardirq.h>
 
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
