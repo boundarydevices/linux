@@ -21,6 +21,7 @@
 #include <linux/list.h>
 #include <linux/mm.h>
 #include <linux/slab.h>
+#include <linux/export.h>
 #include <linux/suspend.h>
 #include <linux/syscore_ops.h>
 #include <linux/ftrace.h>
