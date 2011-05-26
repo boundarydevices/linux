@@ -45,7 +45,6 @@
 #include <linux/list_nulls.h>
 #include <linux/timer.h>
 #include <linux/cache.h>
-#include <linux/module.h>
 #include <linux/lockdep.h>
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>	/* struct sk_buff */
@@ -720,6 +719,7 @@ struct request_sock_ops;
 struct timewait_sock_ops;
 struct inet_hashinfo;
 struct raw_hashinfo;
+struct module;
 
 /*
  * caches using SLAB_DESTROY_BY_RCU should let .next pointer from nulls nodes
