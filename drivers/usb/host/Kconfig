@@ -107,7 +107,7 @@ choice
 	depends on USB_EHCI_ARC_OTG
 	default USB_EHCI_FSL_1504 if ARCH_MX3
 	default USB_EHCI_FSL_1301 if ARCH_MX27
-	default USB_EHCI_FSL_UTMI if (ARCH_MX25 || ARCH_MX35 || ARCH_MX37 || ARCH_MX51 || ARCH_STMP3XXX || ARCH_MXS)
+	default USB_EHCI_FSL_UTMI if (ARCH_MX25 || ARCH_MX35 || ARCH_MX37 || ARCH_MX5 || ARCH_STMP3XXX || ARCH_MXS)
 	---help---
 	  Choose the transceiver to use with the Freescale DR port.
 
@@ -141,7 +141,7 @@ config USB_EHCI_FSL_1504
 
 config USB_EHCI_FSL_UTMI
 	bool "Internal UTMI"
-	depends on (ARCH_MX25 || ARCH_MX35 || ARCH_MX37 || ARCH_MX51 || ARCH_STMP3XXX || ARCH_MXS)
+	depends on (ARCH_MX25 || ARCH_MX35 || ARCH_MX37 || ARCH_MX5 || ARCH_STMP3XXX || ARCH_MXS)
 	---help---
 	  Enable support for the on-chip High Speed UTMI transceiver.
 
