@@ -39,11 +39,11 @@ struct imx_wm5102_data {
 #define DAI_AIF1    0
 
 static int wm5102_set_bias_level(struct snd_soc_card *card,
-				enum snd_soc_bias_level level)
+		struct snd_soc_dapm_context *dapm,
+		enum snd_soc_bias_level level)
 {
 	struct snd_soc_dai *codec_dai = card->rtd[DAI_AIF1].codec_dai;
 	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_dapm_context *dapm = &codec->dapm;
 	struct imx_wm5102_data *wm5102 = card->drvdata;
 	int ret;
 
@@ -80,11 +80,11 @@ static int wm5102_set_bias_level(struct snd_soc_card *card,
 }
 
 static int wm5102_set_bias_level_post(struct snd_soc_card *card,
-				     enum snd_soc_bias_level level)
+		struct snd_soc_dapm_context *dapm,
+		enum snd_soc_bias_level level)
 {
 	struct snd_soc_dai *codec_dai = card->rtd[DAI_AIF1].codec_dai;
 	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_dapm_context *dapm = &codec->dapm;
 	struct imx_wm5102_data *wm5102 = card->drvdata;
 	int ret;
 
