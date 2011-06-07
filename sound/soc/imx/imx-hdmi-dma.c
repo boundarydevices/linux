@@ -1283,9 +1283,10 @@ static int imx_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 
 static u64 hdmi_dmamask = DMA_BIT_MASK(32);
 
-static int imx_hdmi_dma_pcm_new(struct snd_card *card, struct snd_soc_dai *dai,
-				struct snd_pcm *pcm)
+static int imx_hdmi_dma_pcm_new(struct snd_soc_pcm_runtime *rtd)
 {
+	struct snd_card *card = rtd->card->snd_card;
+	struct snd_pcm *pcm = rtd->pcm;
 	int ret = 0;
 
 	if (!card->dev->dma_mask)
