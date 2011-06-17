@@ -28,7 +28,9 @@
 #define gpio_set_value		__gpio_set_value
 #define gpio_cansleep		__gpio_cansleep
 
-#define gpio_to_irq(gpio)	(MXC_GPIO_IRQ_START + (gpio))
+#define __tirq(gpio)		(MXC_GPIO_IRQ_START + (gpio))
+#define gpio_to_irq(gpio)	((__tirq(gpio) < MXC_BOARD_IRQ_START) ? \
+					__tirq(gpio) : __gpio_to_irq(gpio))
 #define irq_to_gpio(irq)	((irq) - MXC_GPIO_IRQ_START)
 
 struct mxc_gpio_port {
