@@ -407,9 +407,9 @@ static int gpio_setup_irq(struct gpio_desc *desc, struct device *dev,
 		INIT_WORK(&pdesc->work, gpio_notify_sysfs);
 	}
 
-	ret = request_irq(irq, gpio_sysfs_irq, irq_flags,
+	ret = request_any_context_irq(irq, gpio_sysfs_irq, irq_flags,
 			"gpiolib", &pdesc->work);
-	if (ret)
+	if (ret < 0)
 		goto free_sd;
 
 	desc->flags |= gpio_flags;
