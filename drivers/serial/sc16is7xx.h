@@ -1,34 +1,3 @@
-enum sc_reg {
-	SC_LCR = 0,
-	SC_RHR,
-	SC_THR,
-	SC_IER,
-	SC_DLL,
-	SC_DLH,
-	SC_IIR,
-	SC_FCR,
-	SC_MCR,
-	SC_LSR,
-	SC_TXLVL,
-	SC_RXLVL,
-	SC_EFCR,
-	SC_MSR,
-	SC_SPR,
-	SC_TCR,
-	SC_TLR,
-	SC_EFR,
-	SC_XON1,
-	SC_XON2,
-	SC_XOFF1,
-	SC_XOFF2,
-	SC_CHAN_REG_CNT,
-	SC_IODIR = SC_CHAN_REG_CNT,
-	SC_IOSTATE_R,
-	SC_IOSTATE_W,
-	SC_IOINTENA,
-	SC_IOCONTROL,
-	SC_REG_CNT,
-};
 
 struct i2c_work;
 
@@ -75,6 +44,10 @@ struct uart_sc16is7xx_chan {
 };
 
 struct uart_sc16is7xx_sc {
+	struct sc16is7xx_access	sc_access;
+
+	void (*gpio_callback)(struct sc16is7xx_gpio *sg, unsigned state);
+	struct sc16is7xx_gpio	*gpio_sg;
 	struct uart_sc16is7xx_chan chan[2];
 	struct i2c_client 	*client;
 	/* thread waits on this, irq wakes up */
@@ -88,6 +61,8 @@ struct uart_sc16is7xx_sc {
 	struct task_struct	*sc_thread;
 	unsigned char		dev_cache[SC_REG_CNT - SC_CHAN_REG_CNT];
 	spinlock_t		work_free_lock;
+	spinlock_t		pending_lock;
+	unsigned		write_pending;
 	struct i2c_work		*work_free;
 #define MAX_WORK 32
 	struct i2c_work		work_entries[MAX_WORK];

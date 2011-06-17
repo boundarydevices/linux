@@ -19,6 +19,8 @@
 #include <linux/interrupt.h>
 #include <linux/ioport.h>
 #include <linux/kthread.h>
+#include <linux/mfd/core.h>
+#include <linux/mfd/sc16is7xx-reg.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/serial_core.h>
@@ -55,7 +57,7 @@ static const unsigned short reg_map[] = {
 [SC_IOSTATE_R] = (0x0B + A_TYPE(SP_0xBF, 0) + _RO + _V),
 [SC_IOSTATE_W] = (0x0B + A_TYPE(SP_0xBF, 0) + _WO),
 [SC_IOINTENA] =  (0x0C + A_TYPE(SP_0xBF, 0)),
-[SC_IOCONTROL] = (0x0E + A_TYPE(SP_0xBF, 0) + _V),
+[SC_IOCONTROL] = (0x0E + A_TYPE(SP_0xBF, 0)),
 [SC_EFCR] =	 (0x0F + A_TYPE(SP_0xBF, 0)),
 
 /*  LCR != 0xBF,  EFR[4]=0 ||  MCR[2]=0 */
@@ -984,6 +986,7 @@ static int check_for_tx_empty(struct uart_sc16is7xx_chan *ch)
 static int serial_sc16is7xx_irq(struct uart_sc16is7xx_chan *ch)
 {
 	unsigned iir;
+	unsigned state;
 	int count;
 	iir = sc_serial_in(ch, SC_IIR);
 	if (iir & UART_IIR_NO_INT) {
@@ -1017,7 +1020,10 @@ static int serial_sc16is7xx_irq(struct uart_sc16is7xx_chan *ch)
 		pr_debug("modem interrupt\n");
 		check_modem_status(ch);
 		break;
-	case 0x0e:
+	case 0x30:
+		state = sc_serial_in(ch, SC_IOSTATE_R);
+		if (ch->sc->gpio_callback)
+			ch->sc->gpio_callback(ch->sc->gpio_sg, state);
 		/* I/O pins change of state */
 		pr_debug("I/O pins change of state, ier=%x\n", ch->actual_ier);
 		break;
@@ -1102,6 +1108,10 @@ static int sc16is7xx_thread(void *_sc)
 
 	if (ret < 0)
 		goto out1;
+	/* default gpios to modem control */
+	ret = sc_serial_out(ch, SC_IOCONTROL, 7);
+	if (ret < 0)
+		goto out1;
 	complete(&sc->init_exit);
 
 	while (!kthread_should_stop()) {
@@ -1126,6 +1136,23 @@ static int sc16is7xx_thread(void *_sc)
 				ch->actual_ier = val;
 				sc_serial_out(ch, SC_IER, val);
 			}
+		}
+		while (sc->write_pending) {
+			unsigned reg;
+			unsigned val;
+			spin_lock(&sc->pending_lock);
+			reg = __ffs(sc->write_pending);
+			sc->write_pending &= ~(1 << reg);
+			val = sc->dev_cache[reg];
+			/*
+			 * due to chip bug, always rewrite output state
+			 * when direction register changes
+			 */
+			if (reg == (SC_IODIR - SC_CHAN_REG_CNT))
+				sc->write_pending |= 1 << (SC_IOSTATE_W - SC_CHAN_REG_CNT);
+			spin_unlock(&sc->pending_lock);
+			reg += SC_CHAN_REG_CNT;
+			sc_serial_out(&sc->chan[0], reg, val);
 		}
 		gp_int = gpio_get_value(sc->gp);
 		pr_debug("sc16is7xx gp_int=%x\n", gp_int);
@@ -1165,12 +1192,90 @@ static irqreturn_t sc16is7xx_interrupt(int irq, void *id)
 
 static const char *client_name = "sc16is7xx-uart";
 
-struct plat_i2c_generic_data {
-	unsigned irq;
-	unsigned gp;
-};
+int access_read(struct sc16is7xx_access *access, enum sc_reg reg)
+{
+	struct uart_sc16is7xx_sc *sc = container_of(access,
+			struct uart_sc16is7xx_sc, sc_access);
+	if ((reg < SC_CHAN_REG_CNT) || (reg >= SC_REG_CNT))
+		return -EINVAL;
 
-#define UPIO_I2C	8
+	if (reg_map[reg] & _V)
+		return sc_serial_in_always(&sc->chan[0], reg);
+	return sc->dev_cache[reg - SC_CHAN_REG_CNT];
+}
+
+int access_write(struct sc16is7xx_access *access, enum sc_reg reg, unsigned value)
+{
+	struct uart_sc16is7xx_sc *sc = container_of(access,
+			struct uart_sc16is7xx_sc, sc_access);
+	int wake = 0;
+	if ((reg < SC_CHAN_REG_CNT) || (reg >= SC_REG_CNT))
+		return -EINVAL;
+	spin_lock(&sc->pending_lock);
+	if (sc->dev_cache[reg - SC_CHAN_REG_CNT] != value) {
+		sc->dev_cache[reg - SC_CHAN_REG_CNT] = value;
+		sc->write_pending |= 1 << (reg - SC_CHAN_REG_CNT);
+		wake = 1;
+	}
+	spin_unlock(&sc->pending_lock);
+	if (wake) {
+		sc->work_ready = 1;
+		wake_up(&sc->work_waitq);
+	}
+	return wake;
+}
+
+int access_modify(struct sc16is7xx_access *access, enum sc_reg reg,
+		unsigned clear_mask, unsigned set_mask)
+{
+	unsigned val, new_val;
+	struct uart_sc16is7xx_sc *sc = container_of(access,
+			struct uart_sc16is7xx_sc, sc_access);
+	int wake = 0;
+	if ((reg < SC_CHAN_REG_CNT) || (reg >= SC_REG_CNT))
+		return -EINVAL;
+	spin_lock(&sc->pending_lock);
+	val = sc->dev_cache[reg - SC_CHAN_REG_CNT];
+	new_val = (val & ~clear_mask) | set_mask;
+	if (val != new_val) {
+		sc->dev_cache[reg - SC_CHAN_REG_CNT] = new_val;
+		sc->write_pending |= 1 << (reg - SC_CHAN_REG_CNT);
+		wake = 1;
+	}
+	spin_unlock(&sc->pending_lock);
+	if (wake) {
+		sc->work_ready = 1;
+		wake_up(&sc->work_waitq);
+	}
+	return wake;
+}
+
+int access_register_gpio_interrupt(struct sc16is7xx_access *access,
+		void (*call_back)(struct sc16is7xx_gpio *sg, unsigned),
+		struct sc16is7xx_gpio *sg)
+{
+	struct uart_sc16is7xx_sc *sc = container_of(access,
+			struct uart_sc16is7xx_sc, sc_access);
+	sc->gpio_callback = call_back;
+	sc->gpio_sg = sg;
+	return 0;
+}
+
+static int sc16is7xx_add_gpio_device(struct uart_sc16is7xx_sc *sc, struct device *parent,
+		const char *name, void *pdata, size_t pdata_size)
+{
+	struct mfd_cell cell = {
+		.name = name,
+		.platform_data = pdata,
+		.data_size = pdata_size,
+	};
+	sc->sc_access.read = access_read;
+	sc->sc_access.write = access_write;
+	sc->sc_access.modify = access_modify;
+	sc->sc_access.register_gpio_interrupt = &access_register_gpio_interrupt;
+
+	return mfd_add_devices(parent, -1, &cell, 1, NULL, 0);
+}
 
 static int sc16is7xx_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
@@ -1179,7 +1284,7 @@ static int sc16is7xx_probe(struct i2c_client *client, const struct i2c_device_id
 	struct uart_sc16is7xx_sc *sc;
 	struct uart_sc16is7xx_chan *ch;
 	struct device *dev = &client->dev;
-	struct plat_i2c_generic_data *plat = client->dev.platform_data;
+	struct sc16is7xx_platform_data *plat = client->dev.platform_data;
 
 	printk(KERN_ERR "%s: %s version 1.0\n", __func__, client_name);
 	sc = kzalloc(sizeof(struct uart_sc16is7xx_sc), GFP_KERNEL);
@@ -1192,6 +1297,7 @@ static int sc16is7xx_probe(struct i2c_client *client, const struct i2c_device_id
 	sc->gp = plat->gp;
 	init_completion(&sc->init_exit);
 	spin_lock_init(&sc->work_free_lock);
+	spin_lock_init(&sc->pending_lock);
 	for (i = 0; i < MAX_WORK - 1; i++) {
 		sc->work_entries[i].next = &sc->work_entries[i + 1];
 	}
@@ -1237,6 +1343,8 @@ static int sc16is7xx_probe(struct i2c_client *client, const struct i2c_device_id
 		ch = &sc->chan[i];
 		uart_add_one_port(&serial_sc16is7xx_reg, &ch->port);
 	}
+	sc16is7xx_add_gpio_device(sc, dev, "sc16is7xx-gpio", plat->gpio_data,
+			sizeof(struct sc16is7xx_gpio_platform_data));
 	pr_err("%s: succeeded\n", __func__);
 	return 0;
 out2:
