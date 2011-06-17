@@ -399,8 +399,8 @@ static int __devinit gpio_keys_setup_key(struct platform_device *pdev,
 	if (!button->can_disable)
 		irqflags |= IRQF_SHARED;
 
-	error = request_irq(irq, gpio_keys_isr, irqflags, desc, bdata);
-	if (error) {
+	error = request_any_context_irq(irq, gpio_keys_isr, irqflags, desc, bdata);
+	if (error < 0) {
 		dev_err(dev, "Unable to claim irq %d; error %d\n",
 			irq, error);
 		goto fail3;
