@@ -28,13 +28,15 @@
 struct sc16is7xx_gpio {
 	struct sc16is7xx_access *access;
 	struct device		*dev;
-	struct mutex		irq_lock;
 	struct gpio_chip	_gc;
 	unsigned		last_state;
-	int 			irq_base;
-	unsigned char		irq_mask;
 	unsigned char		irq_trig_fall;
 	unsigned char		irq_trig_rise;
+#ifdef CONFIG_GPIO_SC16IS7XX_IRQ
+	struct mutex		irq_lock;
+	int 			irq_base;
+	unsigned char		irq_mask;
+#endif
 };
 
 static inline struct sc16is7xx_gpio *gpio_from_chip(struct gpio_chip *gc)
@@ -99,6 +101,7 @@ static s32 sc16is7xx_gpio_dir_out(struct gpio_chip *gc, u32 offset, s32 value)
 	return sc_gpio_dir_out(sg, offset, value);
 }
 
+#ifdef CONFIG_GPIO_SC16IS7XX_IRQ
 static int sc16is7xx_gpio_to_irq(struct gpio_chip *gc, u32 offset)
 {
 	struct sc16is7xx_gpio *sg = gpio_from_chip(gc);
@@ -189,10 +192,50 @@ void sc16is7xx_gpio_irq(struct sc16is7xx_gpio *sg, unsigned state)
 	}
 }
 
+void __devinit sc_setup_irqs(struct sc16is7xx_gpio *sg, int irq_base)
+{
+	int gp;
+	mutex_init(&sg->irq_lock);
+	sg->irq_base = irq_base;
+	sg->_gc.to_irq = sc16is7xx_gpio_to_irq;
+	sg->access->register_gpio_interrupt(sg->access,
+			&sc16is7xx_gpio_irq, sg);
+
+	for (gp = 0; gp < sg->_gc.ngpio; gp++) {
+		int irq = gp + sg->irq_base;
+		set_irq_chip_data(irq, sg);
+		set_irq_chip_and_handler(irq, &sc16is7xx_irq_chip, handle_edge_irq);
+		set_irq_nested_thread(irq, 1);
+#ifdef CONFIG_ARM
+		set_irq_flags(irq, IRQF_VALID);
+#else
+		set_irq_noprobe(irq);
+#endif
+	}
+	pr_info("%s: irq_base=%i\n", __func__, sg->irq_base);
+}
+
+void __devexit sc_teardown_irqs(struct sc16is7xx_gpio *sg)
+{
+	int gp;
+	for (gp = 0; gp < sg->_gc.ngpio; gp++) {
+		int irq = gp + sg->irq_base;
+#ifdef CONFIG_ARM
+		set_irq_flags(irq, 0);
+#endif
+		set_irq_chip_and_handler(irq, NULL, NULL);
+		set_irq_chip_data(irq, NULL);
+	}
+}
+
+#else
+void sc_setup_irqs(struct sc16is7xx_gpio *sg, int irq_base) {}
+void sc_teardown_irqs(struct sc16is7xx_gpio *sg) {}
+#endif
+
 static int __devinit sc16is7xx_gpio_probe(struct platform_device *pdev)
 {
 	int ret;
-	int gp;
 	struct sc16is7xx_gpio *sg;
 	struct sc16is7xx_gpio_platform_data *pdata = pdev->dev.platform_data;
 	if (!pdata)
@@ -202,49 +245,31 @@ static int __devinit sc16is7xx_gpio_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	sg->access = dev_get_drvdata(pdev->dev.parent);
 	sg->dev			= &pdev->dev;
-	mutex_init(&sg->irq_lock);
 	sg->_gc.get		= sc16is7xx_gpio_get;
 	sg->_gc.set		= sc16is7xx_gpio_set;
 	sg->_gc.direction_input	= sc16is7xx_gpio_dir_in;
 	sg->_gc.direction_output = sc16is7xx_gpio_dir_out;
-	sg->_gc.to_irq		= sc16is7xx_gpio_to_irq;
 	sg->_gc.base		= pdata->gpio_base;
 	sg->_gc.ngpio		= 8;
 	sg->_gc.can_sleep	= 1;
 	sg->_gc.dev		= &pdev->dev;
 	sg->_gc.owner		= THIS_MODULE;
 	sg->_gc.label		= "sc16is7xx-gpio";
-	sg->irq_base		= pdata->irq_base;
 	sg->access->write(sg->access, SC_IODIR, 0);
 	sg->access->write(sg->access, SC_IOSTATE_W, 0);
 	sg->access->write(sg->access, SC_IOINTENA, 0);
 	/* latch changes, modem control until configured */
 	sg->access->write(sg->access, SC_IOCONTROL, 7);
 
-	sg->access->register_gpio_interrupt(sg->access,
-			&sc16is7xx_gpio_irq, sg);
 
 	ret = sg->access->read(sg->access, SC_IOSTATE_R);
 	if (!ret)
 		sg->last_state = ret;
 
-	for (gp = 0; gp < sg->_gc.ngpio; gp++) {
-		int irq = gp + sg->irq_base;
-		set_irq_chip_data(irq, sg);
-		set_irq_chip_and_handler(irq, &sc16is7xx_irq_chip,
-				handle_edge_irq);
-		set_irq_nested_thread(irq, 1);
-#ifdef CONFIG_ARM
-		set_irq_flags(irq, IRQF_VALID);
-#else
-		set_irq_noprobe(irq);
-#endif
-	}
-
+	sc_setup_irqs(sg, pdata->irq_base);
 	ret = gpiochip_add(&sg->_gc);
 	if (ret >= 0) {
-		pr_info("%s: _gc.base=%i irq_base=%i\n", __func__, sg->_gc.base,
-				sg->irq_base);
+		pr_info("%s: _gc.base=%i\n", __func__, sg->_gc.base);
 		platform_set_drvdata(pdev, sg);
 		return ret;
 	}
@@ -255,13 +280,17 @@ static int __devinit sc16is7xx_gpio_probe(struct platform_device *pdev)
 
 static int __devexit sc16is7xx_gpio_remove(struct platform_device *pdev)
 {
-	int ret;
 	struct sc16is7xx_gpio *sg = platform_get_drvdata(pdev);
+	int ret = gpiochip_remove(&sg->_gc);
+	if (ret) {
+		dev_err(&pdev->dev, "%s failed, %d\n",
+			"gpiochip_remove()", ret);
+		return ret;
+	}
 
 	sg->access->register_gpio_interrupt(sg->access, NULL, NULL);
-	ret = gpiochip_remove(&sg->_gc);
-	if (ret == 0)
-		kfree(sg);
+	sc_teardown_irqs(sg);
+	kfree(sg);
 	return 0;
 }
 

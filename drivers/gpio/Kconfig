@@ -202,6 +202,13 @@ config GPIO_SC16IS7XX
 	  Say yes here to provide access to the gpio portion of this
 	  I2C dual serial port chip.
 
+config GPIO_SC16IS7XX_IRQ
+	bool "Interrupt controller support for SC16IS7XX"
+	depends on GPIO_SC16IS7XX=y && GENERIC_HARDIRQS
+	help
+	  Say yes here to enable the SC16IS7XX to be used as an interrupt
+	  controller. It requires the driver to be built in the kernel.
+
 config GPIO_TC35892
 	bool "TC35892 GPIOs"
 	depends on MFD_TC35892
