@@ -89,9 +89,4 @@
 	movs \irqnr, \irqnr
 #endif
 	.endm
-
-	@ irq priority table (not used)
-	.macro	irq_prio_table
-	.endm
 #endif
-
