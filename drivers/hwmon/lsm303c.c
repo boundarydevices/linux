@@ -79,9 +79,9 @@ static void compass_poll(struct input_polled_dev *idev)
 {
 	struct lsm303_compass *compass = idev ? idev->private : 0 ;
 	if (compass) {
+		char regs[6];
 		int retval = read_reg(compass->client,SR_REG_M);
 		if (retval & 1) { /* conversion ready */
-			char regs[6];
 			int i ;
 			int err = 0;
 			for (i=0; i <sizeof(regs);i++) {
@@ -113,6 +113,17 @@ static void compass_poll(struct input_polled_dev *idev)
 			}
 		} else {
 			printk (KERN_ERR "%s: not ready: %d\n", __func__, retval );
+			if (retval & 2) {
+				printk (KERN_ERR "%s: locked... try clearing\n", __func__ );
+				retval = i2c_smbus_write_byte_data(compass->client,MR_REG_M,3); /* stop */
+				if (retval) {
+					printk (KERN_ERR "%s: stop err %d\n", __func__, retval );
+				}
+				retval = i2c_smbus_write_byte_data(compass->client,MR_REG_M,0); /* continuous conversion */
+				if (retval) {
+					printk (KERN_ERR "%s: start err %d\n", __func__, retval );
+				}
+			}
 		}
 	} else
 		printk (KERN_ERR "%s: no compass\n", __func__ );
@@ -179,6 +190,11 @@ lsm303_compass_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 				retval = input_register_polled_device(compass->idev);
 				if (0 == retval) {
+                                        retval = i2c_smbus_write_byte_data(client,CRB_REG_M,0x20); /* smallest range */
+					if (retval) {
+                                                printk (KERN_ERR "%s: error %d setting range\n", __func__,retval);
+					}
+
                                         retval = i2c_smbus_write_byte_data(client,MR_REG_M,0); /* continuous conversion */
 					printk (KERN_INFO "%s: LSM303DLH compass driver loaded\n", __func__ );
 				} else {
@@ -208,7 +224,6 @@ static int lsm303_compass_remove(struct i2c_client *client)
 {
 	struct lsm303_compass *compass = i2c_get_clientdata(client);
 
-	printk (KERN_ERR "%s: %p\n", __func__, compass );
 	if (compass && compass->idev) {
                 input_unregister_polled_device(compass->idev);
 		input_free_polled_device(compass->idev);
