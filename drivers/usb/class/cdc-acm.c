@@ -1620,6 +1620,9 @@ static const struct usb_device_id acm_ids[] = {
 	{ USB_INTERFACE_INFO(USB_CLASS_COMM, USB_CDC_SUBCLASS_ACM,
 		USB_CDC_ACM_PROTO_AT_CDMA) },
 
+	/* control interfaces without any protocol set */            /* EFR: */
+	{ USB_INTERFACE_INFO(USB_CLASS_COMM, USB_CDC_SUBCLASS_ACM,   /* EFR: */
+		USB_CDC_PROTO_NONE) },                               /* EFR: */
 	{ }
 };
 
