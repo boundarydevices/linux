@@ -88,7 +88,13 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 		duty_cycles = c;
 
 		writel(duty_cycles, pwm->mmio_base + MX3_PWMSAR);
-		writel(period_cycles, pwm->mmio_base + MX3_PWMPR);
+		if (period_cycles < 2)
+			period_cycles = 2;
+		/*
+		 * manual says - "A value of zero in the PWMPR will result in
+		 * a period of two clock cycles for the output signal.
+		 */
+		writel(period_cycles - 2, pwm->mmio_base + MX3_PWMPR);
 
 		cr = MX3_PWMCR_PRESCALER(prescale) |
 			MX3_PWMCR_STOPEN | MX3_PWMCR_DOZEEN |
