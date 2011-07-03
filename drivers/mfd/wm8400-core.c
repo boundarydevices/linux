@@ -12,6 +12,7 @@
  *
  */
 
+#include <linux/module.h>
 #include <linux/bug.h>
 #include <linux/i2c.h>
 #include <linux/kernel.h>
