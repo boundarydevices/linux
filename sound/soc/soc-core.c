@@ -998,6 +998,7 @@ static int soc_probe_platform(struct snd_soc_card *card,
 	const struct snd_soc_platform_driver *driver = platform->driver;
 
 	platform->card = card;
+	platform->dapm.card = card;
 
 	if (!try_module_get(platform->dev->driver->owner))
 		return -ENODEV;
@@ -1015,6 +1016,7 @@ static int soc_probe_platform(struct snd_soc_card *card,
 	/* mark platform as probed and add to card platform list */
 	platform->probed = 1;
 	list_add(&platform->card_list, &card->platform_dev_list);
+	list_add(&platform->dapm.list, &card->dapm_list);
 
 	return 0;
 
@@ -3389,6 +3391,8 @@ int snd_soc_register_platform(struct device *dev,
 
 	platform->dev = dev;
 	platform->driver = platform_drv;
+	platform->dapm.dev = dev;
+	platform->dapm.platform = platform;
 
 	mutex_lock(&client_mutex);
 	list_add(&platform->list, &platform_list);
