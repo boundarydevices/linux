@@ -23,6 +23,7 @@
 #include <asm/proc-fns.h>
 #include <asm/system.h>
 #include "crm_regs.h"
+#include <asm/mach-types.h>
 
 /*!
  * @defgroup MSL_MX51 i.MX51 Machine Specific Layer (MSL)
