@@ -218,14 +218,12 @@ static int __devinit mxc_cpufreq_driver_init(struct cpufreq_policy *policy)
 	cpu_clk = clk_get(NULL, "cpu_clk");
 	if (IS_ERR(cpu_clk)) {
 		printk(KERN_ERR "%s: failed to get cpu clock\n", __func__);
-		return PTR_ERR(cpu_clk);
 	}
 
 	gp_regulator = regulator_get(NULL, gp_reg_id);
 	if (IS_ERR(gp_regulator)) {
 		clk_put(cpu_clk);
 		printk(KERN_ERR "%s: failed to get gp regulator\n", __func__);
-		return PTR_ERR(gp_regulator);
 	}
 
 	/* Set the current working point. */
