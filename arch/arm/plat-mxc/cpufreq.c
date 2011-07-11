@@ -36,6 +36,7 @@
 #include <mach/clock.h>
 #include <asm/cacheflush.h>
 #include <linux/hrtimer.h>
+#include <asm/mach-types.h>
 
 int cpu_freq_khz_min;
 int cpu_freq_khz_max;
@@ -83,10 +84,12 @@ int set_cpu_freq(int freq)
 
 	/*Set the voltage for the GP domain. */
 	if (freq > org_cpu_rate) {
-		ret = regulator_set_voltage(gp_regulator, gp_volt, gp_volt);
-		if (ret < 0) {
-			printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!\n");
-			return ret;
+		if (!machine_is_nitrogen_a_imx53()) {
+			ret = regulator_set_voltage(gp_regulator, gp_volt, gp_volt);
+			if (ret < 0) {
+				printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!\n");
+				return ret;
+			}
 		}
 	}
 
@@ -97,10 +100,12 @@ int set_cpu_freq(int freq)
 	}
 
 	if (freq < org_cpu_rate) {
-		ret = regulator_set_voltage(gp_regulator, gp_volt, gp_volt);
-		if (ret < 0) {
-			printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!\n");
-			return ret;
+		if (!machine_is_nitrogen_a_imx53()) {
+			ret = regulator_set_voltage(gp_regulator, gp_volt, gp_volt);
+			if (ret < 0) {
+				printk(KERN_DEBUG "COULD NOT SET GP VOLTAGE!!!!\n");
+				return ret;
+			}
 		}
 	}
 
