@@ -35,7 +35,7 @@
 #include <mach/mxc_dvfs.h>
 #include <mach/sdram_autogating.h>
 #include <asm/mach/map.h>
-#include <asm/mach-types.h>
+#include "nitrogen.h"
 #include <asm/cacheflush.h>
 #include <asm/tlb.h>
 #include "crm_regs.h"
@@ -1030,7 +1030,7 @@ static int __devinit busfreq_probe(struct platform_device *pdev)
 	/* for mx53 */
 	if (cpu_is_mx53()) {
 		/* set DDR type */
-		if (machine_is_mx53_evk() || machine_is_mx53_ard())
+		if (machine_is_mx53_evk() || machine_is_mx53_ard() || machine_is_nitrogen_53())
 			mx53_ddr_type = DDR_TYPE_DDR2;
 		else
 			mx53_ddr_type = DDR_TYPE_DDR3;
