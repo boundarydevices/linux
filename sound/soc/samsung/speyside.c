@@ -13,6 +13,7 @@
 #include <sound/soc-dapm.h>
 #include <sound/jack.h>
 #include <linux/gpio.h>
+#include <linux/module.h>
 
 #include "../codecs/wm8915.h"
 #include "../codecs/wm9081.h"
