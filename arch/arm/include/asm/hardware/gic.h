@@ -72,6 +72,12 @@ void save_gic_cpu_state(unsigned int gic_nr, struct gic_cpu_state *gcs);
 void restore_gic_cpu_state(unsigned int gic_nr, struct gic_cpu_state *gcs);
 void save_gic_dist_state(unsigned int gic_nr, struct gic_dist_state *gds);
 void restore_gic_dist_state(unsigned int gic_nr, struct gic_dist_state *gds);
+
+struct gic_chip_data {
+	unsigned int irq_offset;
+	void __iomem *dist_base;
+	void __iomem *cpu_base;
+};
 #endif
 
 #endif
