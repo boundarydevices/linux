@@ -22,6 +22,7 @@
 #include <linux/err.h>
 
 #include <asm/smp_twd.h>
+#include <asm/localtimer.h>
 #include <asm/hardware/gic.h>
 
 /* set up by the platform code */
@@ -43,12 +44,12 @@ static void twd_set_mode(enum clock_event_mode mode,
 		ctrl = TWD_TIMER_CONTROL_ENABLE | TWD_TIMER_CONTROL_IT_ENABLE
 			| TWD_TIMER_CONTROL_PERIODIC;
 		__raw_writel(twd_timer_rate / HZ, twd_base + TWD_TIMER_LOAD);
-		gic_enable_ppi(clk->irq);
+		enable_percpu_irq(clk->irq, 0);
 		break;
 	case CLOCK_EVT_MODE_ONESHOT:
 		/* period set, and timer enabled in 'next_event' hook */
 		ctrl = TWD_TIMER_CONTROL_IT_ENABLE | TWD_TIMER_CONTROL_ONESHOT;
-		gic_enable_ppi(clk->irq);
+		enable_percpu_irq(clk->irq, 0);
 		break;
 	case CLOCK_EVT_MODE_UNUSED:
 	case CLOCK_EVT_MODE_SHUTDOWN:
@@ -142,6 +143,13 @@ static int twd_cpufreq_init(void)
 core_initcall(twd_cpufreq_init);
 
 #endif
+
+void twd_timer_stop(struct clock_event_device *clk)
+{
+	twd_set_mode(CLOCK_EVT_MODE_UNUSED, clk);
+	disable_percpu_irq(clk->irq);
+}
+
 static void __cpuinit twd_calibrate_rate(void)
 {
 	unsigned long count;
@@ -181,6 +189,18 @@ static void __cpuinit twd_calibrate_rate(void)
 	}
 }
 
+static irqreturn_t twd_handler(int irq, void *dev_id)
+{
+	struct clock_event_device *evt = *(struct clock_event_device **)dev_id;
+
+	if (twd_timer_ack()) {
+		evt->event_handler(evt);
+		return IRQ_HANDLED;
+	}
+
+	return IRQ_NONE;
+}
+
 /*
  * Setup the local clock events for a CPU.
  */
@@ -189,10 +209,19 @@ void __cpuinit twd_timer_setup(struct clock_event_device *clk)
 	struct clock_event_device **this_cpu_clk;
 
 	if (!twd_evt) {
+		int err;
 
 		twd_evt = alloc_percpu(struct clock_event_device *);
 		if (!twd_evt) {
 			pr_err("twd: can't allocate memory\n");
+			return;
+		}
+
+		err = request_percpu_irq(clk->irq, twd_handler,
+					 "twd", twd_evt);
+		if (err) {
+			pr_err("twd: can't register interrupt %d (%d)\n",
+			       clk->irq, err);
 			return;
 		}
 	}
@@ -218,6 +247,5 @@ void __cpuinit twd_timer_setup(struct clock_event_device *clk)
 	clockevents_config_and_register(clk, twd_timer_rate,
 					0xf, 0xffffffff);
 
-	/* Make sure our local interrupt controller has this enabled */
-	gic_enable_ppi(clk->irq);
+	enable_percpu_irq(clk->irq, 0);
 }
