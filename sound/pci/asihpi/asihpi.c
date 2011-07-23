@@ -41,7 +41,6 @@
 #include <sound/tlv.h>
 #include <sound/hwdep.h>
 
-
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("AudioScience inc. <support@audioscience.com>");
 MODULE_DESCRIPTION("AudioScience ALSA ASI5000 ASI6000 ASI87xx ASI89xx");
