@@ -1138,7 +1138,7 @@ struct class block_class = {
 	.name		= "block",
 };
 
-static char *block_devnode(struct device *dev, mode_t *mode)
+static char *block_devnode(struct device *dev, umode_t *mode)
 {
 	struct gendisk *disk = dev_to_disk(dev);
 
