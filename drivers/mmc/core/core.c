@@ -24,6 +24,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/pm_runtime.h>
 #include <linux/wakelock.h>
+#include <linux/suspend.h>
 
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
