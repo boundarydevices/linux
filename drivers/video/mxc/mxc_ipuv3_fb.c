@@ -1430,6 +1430,14 @@ static int mxcfb_mmap(struct fb_info *fbi, struct vm_area_struct *vma)
 	return 0;
 }
 
+static int mxcfb_release(struct fb_info *info, int user)
+{
+	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)info->par;
+	if (mxc_fbi->overlay)
+		mxcfb_blank(FB_BLANK_POWERDOWN,info);
+	return 0 ;
+}
+
 /*!
  * This structure contains the pointers to the control functions that are
  * invoked by the core framebuffer driver to perform operations like
@@ -1437,6 +1445,7 @@ static int mxcfb_mmap(struct fb_info *fbi, struct vm_area_struct *vma)
  */
 static struct fb_ops mxcfb_ops = {
 	.owner = THIS_MODULE,
+	.fb_release = mxcfb_release,
 	.fb_set_par = mxcfb_set_par,
 	.fb_check_var = mxcfb_check_var,
 	.fb_setcolreg = mxcfb_setcolreg,
