@@ -198,7 +198,7 @@ static struct resource mxc_uart_resources3[] = {
 	},
 };
 
-static struct platform_device mxc_uart_device3 = {
+struct platform_device mxc_uart_device3 = {
 	.name = DRIVERNAME,
 	.id = 2,
        .num_resources = ARRAY_SIZE(mxc_uart_resources3),
