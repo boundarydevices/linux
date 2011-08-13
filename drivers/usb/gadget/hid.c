@@ -21,6 +21,7 @@
  */
 
 
+#include <linux/err.h>
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include <linux/list.h>
