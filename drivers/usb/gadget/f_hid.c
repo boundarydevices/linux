@@ -630,7 +630,14 @@ int __init hidg_bind_config(struct usb_configuration *c,
 		return -ENOMEM;
 	}
 
-	hidg->func.name    = "hid";
+	if (0 == index) {
+		hidg->func.name    = "hid";
+	} else {
+		char tmp[80];
+		int len = snprintf(tmp,sizeof(tmp),"hid%u", index);
+		hidg->func.name=kzalloc(len+1, GFP_KERNEL);
+		strcpy((char *)hidg->func.name,tmp);
+	}
 	hidg->func.strings = ct_func_strings;
 	hidg->func.bind    = hidg_bind;
 	hidg->func.unbind  = hidg_unbind;
