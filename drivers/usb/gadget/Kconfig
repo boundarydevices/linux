@@ -953,6 +953,12 @@ config USB_G_HID
 	  Say "y" to link the driver statically, or "m" to build a
 	  dynamically linked module called "g_hid".
 
+config USB_HID_KEYBOARD_MOUSE
+	tristate "HID Gadget Keyboard and Mouse"
+	help
+	  The HID gadget Keyboard and Mouse provides a platform descriptor
+	  to allow keyboard and mouse emulation through /dev/hidgx
+
 # put drivers that need isochronous transfer support (for audio
 # or video class gadget drivers), or specific hardware, here.
 config USB_G_WEBCAM
