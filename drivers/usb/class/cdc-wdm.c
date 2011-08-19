@@ -840,13 +840,13 @@ static int wdm_suspend(struct usb_interface *intf, pm_message_t message)
 	dev_dbg(&desc->intf->dev, "wdm%d_suspend\n", intf->minor);
 
 	/* if this is an autosuspend the caller does the locking */
-	if (!(message.event & PM_EVENT_AUTO)) {
+	if (!PMSG_IS_AUTO(message)) {
 		mutex_lock(&desc->rlock);
 		mutex_lock(&desc->wlock);
 	}
 	spin_lock_irq(&desc->iuspin);
 
-	if ((message.event & PM_EVENT_AUTO) &&
+	if (PMSG_IS_AUTO(message) &&
 			(test_bit(WDM_IN_USE, &desc->flags)
 			|| test_bit(WDM_RESPONDING, &desc->flags))) {
 		spin_unlock_irq(&desc->iuspin);
@@ -859,7 +859,7 @@ static int wdm_suspend(struct usb_interface *intf, pm_message_t message)
 		kill_urbs(desc);
 		cancel_work_sync(&desc->rxwork);
 	}
-	if (!(message.event & PM_EVENT_AUTO)) {
+	if (!PMSG_IS_AUTO(message)) {
 		mutex_unlock(&desc->wlock);
 		mutex_unlock(&desc->rlock);
 	}
