@@ -279,12 +279,13 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 }
 
 extern int tick_broadcast_oneshot_active(void);
+extern bool gic_int_pending(unsigned int gic_nr);
 
 void ca9_do_idle(void)
 {
 	do {
 		cpu_do_idle();
-	} while (__raw_readl(gic_cpu_base_addr + GIC_CPU_HIGHPRI) == 1023);
+	} while (!gic_int_pending(0));
 }
 
 void arch_idle_single_core(void)

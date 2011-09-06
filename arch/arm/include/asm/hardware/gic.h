@@ -36,7 +36,6 @@
 #include <linux/irqdomain.h>
 struct device_node;
 
-extern void __iomem *gic_cpu_base_addr;
 extern struct irq_chip gic_arch_extn;
 
 struct gic_dist_state {
