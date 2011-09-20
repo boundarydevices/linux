@@ -152,6 +152,19 @@ static __init void avic_init_gc(unsigned int irq_start)
 	irq_setup_generic_chip(gc, IRQ_MSK(32), 0, IRQ_NOREQUEST, 0);
 }
 
+asmlinkage void __exception_irq_entry avic_handle_irq(struct pt_regs *regs)
+{
+	u32 nivector;
+
+	do {
+		nivector = __raw_readl(avic_base + AVIC_NIVECSR) >> 16;
+		if (nivector == 0xffff)
+			break;
+
+		handle_IRQ(nivector, regs);
+	} while (1);
+}
+
 /*
  * This function initializes the AVIC hardware and disables all the
  * interrupts. It registers the interrupt enable and disable functions

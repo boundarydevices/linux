@@ -100,4 +100,14 @@ extern int mx6q_sabreauto_init_pfuze100(u32 int_gpio);
 extern int mx6q_sabresd_init_pfuze100(u32 int_gpio);
 extern int mx6q_hdmidongle_init_wm8326(void);
 extern void imx_print_silicon_rev(const char *cpu, int srev);
+
+void avic_handle_irq(struct pt_regs *);
+
+#define imx1_handle_irq avic_handle_irq
+#define imx21_handle_irq avic_handle_irq
+#define imx25_handle_irq avic_handle_irq
+#define imx27_handle_irq avic_handle_irq
+#define imx31_handle_irq avic_handle_irq
+#define imx35_handle_irq avic_handle_irq
+
 #endif
