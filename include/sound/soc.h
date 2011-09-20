@@ -329,7 +329,7 @@ enum snd_soc_compress_type {
 };
 
 int snd_soc_codec_set_sysclk(struct snd_soc_codec *codec, int clk_id,
-			     unsigned int freq, int dir);
+			     int source, unsigned int freq, int dir);
 int snd_soc_codec_set_pll(struct snd_soc_codec *codec, int pll_id, int source,
 			  unsigned int freq_in, unsigned int freq_out);
 
@@ -671,7 +671,7 @@ struct snd_soc_codec_driver {
 
 	/* codec wide operations */
 	int (*set_sysclk)(struct snd_soc_codec *codec,
-			  int clk_id, unsigned int freq, int dir);
+			  int clk_id, int source, unsigned int freq, int dir);
 	int (*set_pll)(struct snd_soc_codec *codec, int pll_id, int source,
 		unsigned int freq_in, unsigned int freq_out);
 
