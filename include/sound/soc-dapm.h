@@ -541,4 +541,9 @@ struct snd_soc_dapm_widget_list {
 	struct snd_soc_dapm_widget *widgets[0];
 };
 
+struct snd_soc_dapm_stats {
+	int power_checks;
+	int path_checks;
+};
+
 #endif
