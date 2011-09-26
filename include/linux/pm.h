@@ -433,7 +433,6 @@ struct wakeup_source;
 struct pm_domain_data {
 	struct list_head list_node;
 	struct device *dev;
-	bool need_restore;
 };
 
 struct pm_subsys_data {
@@ -443,7 +442,7 @@ struct pm_subsys_data {
 	struct list_head clock_list;
 #endif
 #ifdef CONFIG_PM_GENERIC_DOMAINS
-	struct pm_domain_data domain_data;
+	struct pm_domain_data *domain_data;
 #endif
 };
 
