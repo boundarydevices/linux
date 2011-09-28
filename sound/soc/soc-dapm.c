@@ -779,6 +779,14 @@ int dapm_reg_event(struct snd_soc_dapm_widget *w,
 }
 EXPORT_SYMBOL_GPL(dapm_reg_event);
 
+static int dapm_widget_power_check(struct snd_soc_dapm_widget *w)
+{
+	if (w->force)
+		return 1;
+	else
+		return w->power_check(w);
+}
+
 /* Generic check to see if a widget should be powered.
  */
 static int dapm_generic_check_power(struct snd_soc_dapm_widget *w)
@@ -848,13 +856,7 @@ static int dapm_supply_check_power(struct snd_soc_dapm_widget *w)
 		if (!path->sink)
 			continue;
 
-		if (path->sink->force) {
-			power = 1;
-			break;
-		}
-
-		if (path->sink->power_check &&
-		    path->sink->power_check(path->sink)) {
+		if (dapm_widget_power_check(path->sink)) {
 			power = 1;
 			break;
 		}
@@ -1242,10 +1244,7 @@ static void dapm_power_one_widget(struct snd_soc_dapm_widget *w,
 		break;
 
 	default:
-		if (!w->force)
-			power = w->power_check(w);
-		else
-			power = 1;
+		power = dapm_widget_power_check(w);
 
 		dapm_widget_set_power(w, power, up_list, down_list);
 		break;
