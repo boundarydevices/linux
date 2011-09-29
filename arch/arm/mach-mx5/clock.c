@@ -2257,7 +2257,8 @@ static struct clk pwm1_clk[] = {
 	 .parent = &ipg_clk,
 	 .enable_reg = MXC_CCM_CCGR2,
 	 .enable_shift = MXC_CCM_CCGRx_CG5_OFFSET,
-	 .enable = _clk_enable_inrun, /*Active only when ARM is running. */
+//	 .enable = _clk_enable_inrun, /*Active only when ARM is running. */
+	 .enable = _clk_enable,
 	 .disable = _clk_disable,
 	 },
 	{
@@ -2281,7 +2282,8 @@ static struct clk pwm2_clk[] = {
 	 .parent = &ipg_clk,
 	 .enable_reg = MXC_CCM_CCGR2,
 	 .enable_shift = MXC_CCM_CCGRx_CG7_OFFSET,
-	 .enable = _clk_enable_inrun, /*Active only when ARM is running. */
+//	 .enable = _clk_enable_inrun, /*Active only when ARM is running. */
+	 .enable = _clk_enable,
 	 .disable = _clk_disable,
 	 },
 	{
@@ -4329,6 +4331,8 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK("imx-i2c.1", NULL, i2c_clk[1]),
 	_REGISTER_CLOCK("mxc_pwm.0", NULL, pwm1_clk[0]),
 	_REGISTER_CLOCK("mxc_pwm.1", NULL, pwm2_clk[0]),
+	_REGISTER_CLOCK("mxc_pwm.0", "high_perf", pwm1_clk[1]),
+	_REGISTER_CLOCK("mxc_pwm.1", "high_perf", pwm2_clk[1]),
 	_REGISTER_CLOCK(NULL, "cspi_main_clk", cspi_main_clk),
 	_REGISTER_CLOCK("mxc_spi.0", NULL, cspi1_clk[0]),
 	_REGISTER_CLOCK("mxc_spi.1", NULL, cspi2_clk[0]),
