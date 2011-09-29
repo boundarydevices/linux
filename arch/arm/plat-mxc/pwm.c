@@ -34,15 +34,15 @@
 #define MX3_PWMSAR                0x0C    /* PWM Sample Register */
 #define MX3_PWMPR                 0x10    /* PWM Period Register */
 #define MX3_PWMCR_PRESCALER(x)    (((x - 1) & 0xFFF) << 4)
-#define MX3_PWMCR_CLKSRC_IPG_HIGH (2 << 16)
-#define MX3_PWMCR_CLKSRC_IPG      (1 << 16)
 #define MX3_PWMCR_EN              (1 << 0)
 
 #define MX3_PWMCR_STOPEN		(1 << 25)
 #define MX3_PWMCR_DOZEEN                (1 << 24)
 #define MX3_PWMCR_WAITEN                (1 << 23)
 #define MX3_PWMCR_DBGEN			(1 << 22)
+#define MX3_PWMCR_CLKSRC(src)		(src << 16)
 #define MX3_PWMCR_CLKSRC_IPG		(1 << 16)
+#define MX3_PWMCR_CLKSRC_IPG_HIGH	(2 << 16)
 #define MX3_PWMCR_CLKSRC_IPG_32k	(3 << 16)
 
 struct pwm_device {
@@ -58,6 +58,7 @@ struct pwm_device {
 	unsigned int	use_count;
 	unsigned int	pwm_id;
 	int		pwmo_invert;
+	int		clk_select;
 	void (*enable_pwm_pad)(void);
 	void (*disable_pwm_pad)(void);
 };
@@ -71,12 +72,11 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 		unsigned long long c;
 		unsigned long period_cycles, duty_cycles, prescale;
 		u32 cr;
-
 		if (pwm->pwmo_invert)
 			duty_ns = period_ns - duty_ns;
 
 		c = clk_get_rate(pwm->clk);
-		c = c * period_ns;
+		c = c * period_ns + 500000000;
 		do_div(c, 1000000000);
 		period_cycles = c;
 
@@ -100,11 +100,7 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 			MX3_PWMCR_STOPEN | MX3_PWMCR_DOZEEN |
 			MX3_PWMCR_WAITEN | MX3_PWMCR_DBGEN;
 
-		if (cpu_is_mx25())
-			cr |= MX3_PWMCR_CLKSRC_IPG;
-		else
-			cr |= MX3_PWMCR_CLKSRC_IPG_HIGH;
-
+		cr |= MX3_PWMCR_CLKSRC(pwm->clk_select);
 		writel(cr, pwm->mmio_base + MX3_PWMCR);
 	} else if (cpu_is_mx1() || cpu_is_mx21()) {
 		/* The PWM subsystem allows for exact frequencies. However,
@@ -125,6 +121,7 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 		 */
 		u32 p;
 		u32 max = readl(pwm->mmio_base + MX1_PWMP);
+		u32 p;
 		if (pwm->pwmo_invert)
 			duty_ns = period_ns - duty_ns;
 		p = max * duty_ns / period_ns;
@@ -218,11 +215,19 @@ void pwm_free(struct pwm_device *pwm)
 }
 EXPORT_SYMBOL(pwm_free);
 
+const static char* clk_names[] = {
+		[PWM_CLK_DEFAULT] = NULL,
+		[PWM_CLK_HIGHPERF] = "high_perf",
+		[PWM_CLK_HIGHFREQ] = NULL,
+		[PWM_CLK_32K] = NULL,
+};
+
 static int __devinit mxc_pwm_probe(struct platform_device *pdev)
 {
 	struct pwm_device *pwm;
 	struct resource *r;
 	struct mxc_pwm_platform_data *plat_data = pdev->dev.platform_data;
+	int clk_select = PWM_CLK_DEFAULT;
 	int ret = 0;
 
 	pwm = kzalloc(sizeof(struct pwm_device), GFP_KERNEL);
@@ -231,7 +236,18 @@ static int __devinit mxc_pwm_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	pwm->clk = clk_get(&pdev->dev, "pwm");
+	if (plat_data != NULL) {
+		pwm->pwmo_invert = plat_data->pwmo_invert;
+		pwm->enable_pwm_pad = plat_data->enable_pwm_pad;
+		pwm->disable_pwm_pad = plat_data->disable_pwm_pad;
+		clk_select = plat_data->clk_select;
+	}
+	if (clk_select == PWM_CLK_DEFAULT)
+		clk_select = (cpu_is_mx25()) ? PWM_CLK_HIGHPERF
+				: PWM_CLK_HIGHFREQ;
+
+
+	pwm->clk = clk_get(&pdev->dev, clk_names[clk_select]);
 
 	if (IS_ERR(pwm->clk)) {
 		ret = PTR_ERR(pwm->clk);
@@ -243,11 +259,7 @@ static int __devinit mxc_pwm_probe(struct platform_device *pdev)
 	pwm->use_count = 0;
 	pwm->pwm_id = pdev->id;
 	pwm->pdev = pdev;
-	if (plat_data != NULL) {
-		pwm->pwmo_invert = plat_data->pwmo_invert;
-		pwm->enable_pwm_pad = plat_data->enable_pwm_pad;
-		pwm->disable_pwm_pad = plat_data->disable_pwm_pad;
-	}
+	pwm->clk_select = clk_select;
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (r == NULL) {
