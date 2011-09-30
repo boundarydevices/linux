@@ -103,7 +103,7 @@ struct mxcfb_update_data {
 	__u32 update_mode;
 	__u32 update_marker;
 	int temp;
-	uint flags;
+	__u32 flags;
 	struct mxcfb_alt_buffer_data alt_buffer_data;
 };
 
