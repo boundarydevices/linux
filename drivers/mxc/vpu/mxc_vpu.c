@@ -333,7 +333,7 @@ static int vpu_ioctl(struct inode *inode, struct file *filp, u_int cmd,
 			if (!wait_event_interruptible_timeout
 			    (vpu_queue, codec_done != 0,
 			     msecs_to_jiffies(timeout))) {
-				printk(KERN_WARNING "VPU blocking: timeout.\n");
+				printk(KERN_DEBUG "VPU blocking: timeout.\n");
 				ret = -ETIME;
 			} else if (signal_pending(current)) {
 				printk(KERN_WARNING
