@@ -207,17 +207,7 @@ static struct platform_driver arizona_micsupp_driver = {
 	},
 };
 
-static int __init arizona_micsupp_init(void)
-{
-	return platform_driver_register(&arizona_micsupp_driver);
-}
-module_init(arizona_micsupp_init);
-
-static void __exit arizona_micsupp_exit(void)
-{
-	platform_driver_unregister(&arizona_micsupp_driver);
-}
-module_exit(arizona_micsupp_exit);
+module_platform_driver(arizona_micsupp_driver);
 
 /* Module information */
 MODULE_AUTHOR("Mark Brown <broonie@opensource.wolfsonmicro.com>");
