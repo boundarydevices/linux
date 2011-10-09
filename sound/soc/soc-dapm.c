@@ -668,6 +668,9 @@ static int is_connected_output_ep(struct snd_soc_dapm_widget *widget)
 	struct snd_soc_dapm_path *path;
 	int con = 0;
 
+	if (widget->outputs >= 0)
+		return widget->outputs;
+
 	DAPM_UPDATE_STAT(widget, path_checks);
 
 	if (widget->id == snd_soc_dapm_supply)
@@ -676,21 +679,29 @@ static int is_connected_output_ep(struct snd_soc_dapm_widget *widget)
 	switch (widget->id) {
 	case snd_soc_dapm_adc:
 	case snd_soc_dapm_aif_out:
-		if (widget->active)
-			return snd_soc_dapm_suspend_check(widget);
+		if (widget->active) {
+			widget->outputs = snd_soc_dapm_suspend_check(widget);
+			return widget->outputs;
+		}
 	default:
 		break;
 	}
 
 	if (widget->connected) {
 		/* connected pin ? */
-		if (widget->id == snd_soc_dapm_output && !widget->ext)
-			return snd_soc_dapm_suspend_check(widget);
+		if (widget->id == snd_soc_dapm_output && !widget->ext) {
+			widget->outputs = snd_soc_dapm_suspend_check(widget);
+			return widget->outputs;
+		}
 
 		/* connected jack or spk ? */
-		if (widget->id == snd_soc_dapm_hp || widget->id == snd_soc_dapm_spk ||
-		    (widget->id == snd_soc_dapm_line && !list_empty(&widget->sources)))
-			return snd_soc_dapm_suspend_check(widget);
+		if (widget->id == snd_soc_dapm_hp ||
+		    widget->id == snd_soc_dapm_spk ||
+		    (widget->id == snd_soc_dapm_line &&
+		     !list_empty(&widget->sources))) {
+			widget->outputs = snd_soc_dapm_suspend_check(widget);
+			return widget->outputs;
+		}
 	}
 
 	list_for_each_entry(path, &widget->sinks, list_source) {
@@ -708,6 +719,8 @@ static int is_connected_output_ep(struct snd_soc_dapm_widget *widget)
 		}
 	}
 
+	widget->outputs = con;
+
 	return con;
 }
 
@@ -720,6 +733,9 @@ static int is_connected_input_ep(struct snd_soc_dapm_widget *widget)
 	struct snd_soc_dapm_path *path;
 	int con = 0;
 
+	if (widget->inputs >= 0)
+		return widget->inputs;
+
 	DAPM_UPDATE_STAT(widget, path_checks);
 
 	if (widget->id == snd_soc_dapm_supply)
@@ -729,29 +745,39 @@ static int is_connected_input_ep(struct snd_soc_dapm_widget *widget)
 	switch (widget->id) {
 	case snd_soc_dapm_dac:
 	case snd_soc_dapm_aif_in:
-		if (widget->active)
-			return snd_soc_dapm_suspend_check(widget);
+		if (widget->active) {
+			widget->inputs = snd_soc_dapm_suspend_check(widget);
+			return widget->inputs;
+		}
 	default:
 		break;
 	}
 
 	if (widget->connected) {
 		/* connected pin ? */
-		if (widget->id == snd_soc_dapm_input && !widget->ext)
-			return snd_soc_dapm_suspend_check(widget);
+		if (widget->id == snd_soc_dapm_input && !widget->ext) {
+			widget->inputs = snd_soc_dapm_suspend_check(widget);
+			return widget->inputs;
+		}
 
 		/* connected VMID/Bias for lower pops */
-		if (widget->id == snd_soc_dapm_vmid)
-			return snd_soc_dapm_suspend_check(widget);
+		if (widget->id == snd_soc_dapm_vmid) {
+			widget->inputs = snd_soc_dapm_suspend_check(widget);
+			return widget->inputs;
+		}
 
 		/* connected jack ? */
 		if (widget->id == snd_soc_dapm_mic ||
-		    (widget->id == snd_soc_dapm_line && !list_empty(&widget->sinks)))
-			return snd_soc_dapm_suspend_check(widget);
+		   (widget->id == snd_soc_dapm_line &&
+		    !list_empty(&widget->sinks))) {
+			widget->inputs = snd_soc_dapm_suspend_check(widget);
+			return widget->inputs;
+		}
 
 		/* signal generator */
 		if (widget->id == snd_soc_dapm_siggen) {
-			return snd_soc_dapm_suspend_check(widget);
+			widget->inputs = snd_soc_dapm_suspend_check(widget);
+			return widget->inputs;
 		}
 	}
 
@@ -769,6 +795,8 @@ static int is_connected_input_ep(struct snd_soc_dapm_widget *widget)
 			con += is_connected_input_ep(path->source);
 		}
 	}
+
+	widget->inputs = con;
 
 	return con;
 }
@@ -1343,6 +1371,8 @@ static int dapm_power_widgets(struct snd_soc_dapm_context *dapm, int event)
 
 	list_for_each_entry(w, &card->widgets, list) {
 		w->power_checked = false;
+		w->inputs = -1;
+		w->outputs = -1;
 	}
 
 	/* Check which widgets we need to power and store them in
