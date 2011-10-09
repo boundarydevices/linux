@@ -323,6 +323,49 @@ static void imx_enable_ms(struct uart_port *port)
 	mod_timer(&sport->timer, jiffies);
 }
 
+//#define DEBUG_RXTX
+#define DBG_TYPE_TX 0
+#define DBG_TYPE_RX 1
+
+#ifdef DEBUG_RXTX
+static unsigned char gdbg_buf[512];
+static unsigned gdbg_pos = 0;
+static unsigned char gdbg_type = 0;
+static char *prefix[] = {
+		"tx data: ",
+		"rx data: ",
+};
+static void dbg_flush(int irq)
+{
+	if (irq != 33)
+		return;
+	if (gdbg_pos) {
+		print_hex_dump_bytes(prefix[gdbg_type],
+				DUMP_PREFIX_OFFSET, gdbg_buf, gdbg_pos);
+		if (gdbg_type == DBG_TYPE_RX)
+			pr_info("\n");
+		gdbg_pos = 0;
+	}
+}
+static void dbg_char(unsigned char c, int irq, char dbg_type)
+{
+	if (irq != 33)
+		return;
+	if ((gdbg_type != dbg_type) || (gdbg_pos >= sizeof(gdbg_buf))) {
+		dbg_flush(irq);
+		gdbg_type = dbg_type;
+	}
+	gdbg_buf[gdbg_pos++] = c;
+}
+#else
+static void dbg_flush(int irq)
+{
+}
+static void dbg_char(unsigned char c, int irq, char dbg_type)
+{
+}
+#endif
+
 static inline void imx_transmit_buffer(struct imx_port *sport)
 {
 	struct circ_buf *xmit = &sport->port.state->xmit;
@@ -332,6 +375,7 @@ static inline void imx_transmit_buffer(struct imx_port *sport)
 		/* send xmit->buf[xmit->tail]
 		 * out the port here */
 		writel(xmit->buf[xmit->tail], sport->port.membase + URTX0);
+		dbg_char((unsigned char)xmit->buf[xmit->tail], sport->port.irq, DBG_TYPE_TX);
 		xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
 		sport->port.icount.tx++;
 	}
@@ -339,8 +383,10 @@ static inline void imx_transmit_buffer(struct imx_port *sport)
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
 		uart_write_wakeup(&sport->port);
 
-	if (uart_circ_empty(xmit))
+	if (uart_circ_empty(xmit)) {
 		imx_stop_tx(&sport->port);
+		dbg_flush(sport->port.irq);
+	}
 }
 
 /*
@@ -407,6 +453,7 @@ static irqreturn_t imx_txint(int irq, void *dev_id)
 	{
 		/* Send next char */
 		writel(sport->port.x_char, sport->port.membase + URTX0);
+		dbg_char(sport->port.x_char, sport->port.irq, DBG_TYPE_TX);
 		goto out;
 	}
 
@@ -458,6 +505,10 @@ static irqreturn_t imx_rxint(int irq, void *dev_id)
 			if (rx & URXD_OVRRUN)
 				sport->port.icount.overrun++;
 
+#ifdef DEBUG_RXTX
+			if (sport->port.irq == 33)
+				pr_info("rx=0x%x error\n", rx);
+#endif
 			if (rx & sport->port.ignore_status_mask) {
 				if (++ignored > 100)
 					goto out;
@@ -478,12 +529,14 @@ static irqreturn_t imx_rxint(int irq, void *dev_id)
 #endif
 		}
 
+		dbg_char(rx, sport->port.irq, DBG_TYPE_RX);
 		tty_insert_flip_char(tty, rx, flg);
 	}
 
 out:
 	spin_unlock_irqrestore(&sport->port.lock,flags);
 	tty_flip_buffer_push(tty);
+	dbg_flush(sport->port.irq);
 	return IRQ_HANDLED;
 }
 
@@ -916,7 +969,6 @@ imx_set_termios(struct uart_port *port, struct ktermios *termios,
 		tty_encode_baud_rate(sport->port.state->port.tty,
 				(speed_t)tdiv64, (speed_t)tdiv64);
 	}
-
 	num -= 1;
 	denom -= 1;
 
@@ -940,6 +992,7 @@ imx_set_termios(struct uart_port *port, struct ktermios *termios,
 		imx_enable_ms(&sport->port);
 
 	spin_unlock_irqrestore(&sport->port.lock, flags);
+	pr_debug("clk=%i div=%i num=%li denom=%li baud=%i\n", sport->port.uartclk, div, num+1, denom+1, baud);
 }
 
 static const char *imx_type(struct uart_port *port)
