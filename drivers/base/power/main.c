@@ -997,7 +997,11 @@ static int __device_suspend(struct device *dev, pm_message_t state, bool async)
 	}
 
  End:
-	dev->power.is_suspended = !error;
+	if (!error) {
+		dev->power.is_suspended = true;
+		if (dev->power.wakeup_path && dev->parent)
+			dev->parent->power.wakeup_path = true;
+	}
 
 	device_unlock(dev);
 
@@ -1103,6 +1107,8 @@ static int device_prepare(struct device *dev, pm_message_t state)
 	int error = 0;
 
 	device_lock(dev);
+
+	dev->power.wakeup_path = device_may_wakeup(dev);
 
 	if (dev->pm_domain) {
 		pm_dev_dbg(dev, state, "preparing power domain ");
