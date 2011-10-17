@@ -1059,6 +1059,9 @@ static int soc_post_component_init(struct snd_soc_card *card,
 	}
 	rtd->card = card;
 
+	/* Make sure all DAPM widgets are instantiated */
+	snd_soc_dapm_new_widgets(&codec->dapm);
+
 	/* machine controls, routes and widgets are not prefixed */
 	temp = codec->name_prefix;
 	codec->name_prefix = NULL;
@@ -1073,9 +1076,6 @@ static int soc_post_component_init(struct snd_soc_card *card,
 		return ret;
 	}
 	codec->name_prefix = temp;
-
-	/* Make sure all DAPM widgets are instantiated */
-	snd_soc_dapm_new_widgets(&codec->dapm);
 
 	/* register the rtd device */
 	rtd->codec = codec;
