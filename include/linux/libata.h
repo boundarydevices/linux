@@ -1263,10 +1263,10 @@ static inline int sata_srst_pmp(struct ata_link *link)
 /*
  * ata_eh_info helpers
  */
-extern void __ata_ehi_push_desc(struct ata_eh_info *ehi, const char *fmt, ...)
-	__attribute__ ((format (printf, 2, 3)));
-extern void ata_ehi_push_desc(struct ata_eh_info *ehi, const char *fmt, ...)
-	__attribute__ ((format (printf, 2, 3)));
+extern __printf(2, 3)
+void __ata_ehi_push_desc(struct ata_eh_info *ehi, const char *fmt, ...);
+extern __printf(2, 3)
+void ata_ehi_push_desc(struct ata_eh_info *ehi, const char *fmt, ...);
 extern void ata_ehi_clear_desc(struct ata_eh_info *ehi);
 
 static inline void ata_ehi_hotplugged(struct ata_eh_info *ehi)
@@ -1280,8 +1280,8 @@ static inline void ata_ehi_hotplugged(struct ata_eh_info *ehi)
 /*
  * port description helpers
  */
-extern void ata_port_desc(struct ata_port *ap, const char *fmt, ...)
-	__attribute__ ((format (printf, 2, 3)));
+extern __printf(2, 3)
+void ata_port_desc(struct ata_port *ap, const char *fmt, ...);
 #ifdef CONFIG_PCI
 extern void ata_port_pbar_desc(struct ata_port *ap, int bar, ssize_t offset,
 			       const char *name);

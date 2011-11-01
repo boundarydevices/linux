@@ -177,8 +177,8 @@ bool ath_hw_keyreset(struct ath_common *common, u16 entry);
 void ath_hw_cycle_counters_update(struct ath_common *common);
 int32_t ath_hw_get_listen_time(struct ath_common *common);
 
-extern __attribute__ ((format (printf, 3, 4))) int
-ath_printk(const char *level, struct ath_common *common, const char *fmt, ...);
+extern __printf(3, 4) void ath_printk(const char *level,
+		struct ath_common *common, const char *fmt, ...);
 
 #define ath_emerg(common, fmt, ...)				\
 	ath_printk(KERN_EMERG, common, fmt, ##__VA_ARGS__)
@@ -261,9 +261,15 @@ enum ATH_DEBUG {
 
 #else
 
+<<<<<<< HEAD
 static inline  __attribute__ ((format (printf, 3, 4))) int
 ath_dbg(struct ath_common *common, enum ATH_DEBUG dbg_mask,
 	const char *fmt, ...)
+=======
+static inline  __attribute__ ((format (printf, 3, 4)))
+void ath_dbg(struct ath_common *common, enum ATH_DEBUG dbg_mask,
+	     const char *fmt, ...)
+>>>>>>> b9075fa... treewide: use __printf not __attribute__((format(printf,...)))
 {
 	return 0;
 }

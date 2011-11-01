@@ -2624,23 +2624,23 @@ static inline const char *netdev_name(const struct net_device *dev)
 	return dev->name;
 }
 
-extern int netdev_printk(const char *level, const struct net_device *dev,
-			 const char *format, ...)
-	__attribute__ ((format (printf, 3, 4)));
-extern int netdev_emerg(const struct net_device *dev, const char *format, ...)
-	__attribute__ ((format (printf, 2, 3)));
-extern int netdev_alert(const struct net_device *dev, const char *format, ...)
-	__attribute__ ((format (printf, 2, 3)));
-extern int netdev_crit(const struct net_device *dev, const char *format, ...)
-	__attribute__ ((format (printf, 2, 3)));
-extern int netdev_err(const struct net_device *dev, const char *format, ...)
-	__attribute__ ((format (printf, 2, 3)));
-extern int netdev_warn(const struct net_device *dev, const char *format, ...)
-	__attribute__ ((format (printf, 2, 3)));
-extern int netdev_notice(const struct net_device *dev, const char *format, ...)
-	__attribute__ ((format (printf, 2, 3)));
-extern int netdev_info(const struct net_device *dev, const char *format, ...)
-	__attribute__ ((format (printf, 2, 3)));
+extern __printf(3, 4)
+int netdev_printk(const char *level, const struct net_device *dev,
+		  const char *format, ...);
+extern __printf(2, 3)
+int netdev_emerg(const struct net_device *dev, const char *format, ...);
+extern __printf(2, 3)
+int netdev_alert(const struct net_device *dev, const char *format, ...);
+extern __printf(2, 3)
+int netdev_crit(const struct net_device *dev, const char *format, ...);
+extern __printf(2, 3)
+int netdev_err(const struct net_device *dev, const char *format, ...);
+extern __printf(2, 3)
+int netdev_warn(const struct net_device *dev, const char *format, ...);
+extern __printf(2, 3)
+int netdev_notice(const struct net_device *dev, const char *format, ...);
+extern __printf(2, 3)
+int netdev_info(const struct net_device *dev, const char *format, ...);
 
 #define MODULE_ALIAS_NETDEV(device) \
 	MODULE_ALIAS("netdev-" device)

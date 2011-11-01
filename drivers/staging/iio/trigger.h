@@ -177,8 +177,7 @@ irqreturn_t iio_pollfunc_store_time(int irq, void *p);
 int iio_triggered_ring_postenable(struct iio_dev *indio_dev);
 int iio_triggered_ring_predisable(struct iio_dev *indio_dev);
 
-struct iio_trigger *iio_allocate_trigger(const char *fmt, ...)
-	__attribute__((format(printf, 1, 2)));
+__printf(1, 2) struct iio_trigger *iio_allocate_trigger(const char *fmt, ...);
 void iio_free_trigger(struct iio_trigger *trig);
 
 #endif /* _IIO_TRIGGER_H_ */

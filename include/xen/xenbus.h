@@ -156,9 +156,9 @@ int xenbus_scanf(struct xenbus_transaction t,
 	__attribute__((format(scanf, 4, 5)));
 
 /* Single printf and write: returns -errno or 0. */
+__printf(4, 5)
 int xenbus_printf(struct xenbus_transaction t,
-		  const char *dir, const char *node, const char *fmt, ...)
-	__attribute__((format(printf, 4, 5)));
+		  const char *dir, const char *node, const char *fmt, ...);
 
 /* Generic read function: NULL-terminated triples of name,
  * sprintf-style type string, and pointer. Returns 0 or errno.*/
@@ -200,11 +200,11 @@ int xenbus_watch_path(struct xenbus_device *dev, const char *path,
 		      struct xenbus_watch *watch,
 		      void (*callback)(struct xenbus_watch *,
 				       const char **, unsigned int));
+__printf(4, 5)
 int xenbus_watch_pathfmt(struct xenbus_device *dev, struct xenbus_watch *watch,
 			 void (*callback)(struct xenbus_watch *,
 					  const char **, unsigned int),
-			 const char *pathfmt, ...)
-	__attribute__ ((format (printf, 4, 5)));
+			 const char *pathfmt, ...);
 
 int xenbus_switch_state(struct xenbus_device *dev, enum xenbus_state new_state);
 int xenbus_grant_ring(struct xenbus_device *dev, unsigned long ring_mfn);

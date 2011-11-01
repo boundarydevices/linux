@@ -44,8 +44,8 @@ int ddebug_add_module(struct _ddebug *tab, unsigned int n,
 
 #if defined(CONFIG_DYNAMIC_DEBUG)
 extern int ddebug_remove_module(const char *mod_name);
-extern int __dynamic_pr_debug(struct _ddebug *descriptor, const char *fmt, ...)
-	__attribute__ ((format (printf, 2, 3)));
+extern __printf(2, 3)
+int __dynamic_pr_debug(struct _ddebug *descriptor, const char *fmt, ...);
 
 #define dynamic_pr_debug(fmt, ...) do {					\
 	static struct _ddebug descriptor				\
