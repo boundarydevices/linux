@@ -39,6 +39,7 @@
 #include <linux/spi/spi_bitbang.h>
 #include <linux/dma-mapping.h>
 #include <linux/fsl_devices.h>
+#include <linux/semaphore.h>
 #include <mach/dma.h>
 
 #define SPI_BUFSIZ		(SMP_CACHE_BYTES + 1)
@@ -75,6 +76,7 @@
 #define MXC_CSPISTAT_RO		6
 
 #define MXC_CSPIPERIOD_32KHZ	(1 << 15)
+static DECLARE_MUTEX(poll_mutex);
 
 /*!
  * @struct mxc_spi_unique_def
@@ -1048,6 +1050,7 @@ int mxc_spi_poll_transfer(struct spi_device *spi, struct spi_transfer *t)
 	u32 fifo_size;
 	int chipselect_status;
 
+	down(&poll_mutex);
 	mxc_spi_chipselect(spi, BITBANG_CS_ACTIVE);
 
 	/* Get the master controller driver data from spi device's master */
@@ -1095,6 +1098,7 @@ int mxc_spi_poll_transfer(struct spi_device *spi, struct spi_transfer *t)
 						     chipselect_status,
 						     (spi->chip_select &
 						      MXC_CSPICTRL_CSMASK) + 1);
+        up(&poll_mutex);
 	return 0;
 }
 
@@ -1530,6 +1534,7 @@ static struct platform_driver mxc_spi_driver = {
 static int __init mxc_spi_init(void)
 {
 	pr_debug("Registering the SPI Controller Driver\n");
+        sema_init(&poll_mutex, 1);
 	return platform_driver_register(&mxc_spi_driver);
 }
 
