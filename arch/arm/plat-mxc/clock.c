@@ -484,10 +484,25 @@ static void mxc_proc_clocks_seq_stop(struct seq_file *file, void *data)
 {
 }
 
+static char const *get_clock_name(struct clk *target)
+{
+	char const *name = "???" ;
+	struct mxc_clk    *clock;
+
+	list_for_each_entry(clock, &clocks, node) {
+		if (clock->reg_clk == target) {
+			name = clock->name ;
+			break;
+		}
+	}
+	return name ;
+}
+
 static int mxc_proc_clocks_seq_show(struct seq_file *file, void *data)
 {
 	int            result;
 	struct mxc_clk     *clock = (struct mxc_clk *) data;
+	char const     *parent_name = get_clock_name(parent);
 	unsigned int   longest_length = (unsigned int) file->private;
 	unsigned long  range_divisor;
 	const char     *range_units;
@@ -504,7 +519,10 @@ static int mxc_proc_clocks_seq_show(struct seq_file *file, void *data)
 		range_units   = "Hz";
 	}
 	result = seq_printf(file,
-		"%s-%-d%*s  %*s  %c%c%c%c%c%c  %3d",
+		"%p:%s%*s->%s-%-d%*s  %*s  %c%c%c%c%c%c  %3d",
+		clock,
+		parent_name,
+                longest_length - strlen(parent_name), "",
 		clock->name,
 		clock->reg_clk->id,
 		longest_length - strlen(clock->name), "",
@@ -520,7 +538,7 @@ static int mxc_proc_clocks_seq_show(struct seq_file *file, void *data)
 	if (result)
 		return result;
 
-	result = seq_printf(file, "  %10lu (%lu%s)\n",
+	result = seq_printf(file, "  %10u (%lu%s)\n",
 		(long unsigned int)rate,
 		rate / range_divisor, range_units);
 
