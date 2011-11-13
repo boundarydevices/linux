@@ -278,6 +278,14 @@ config TOUCHSCREEN_HP7XX
 	  To compile this driver as a module, choose M here: the
 	  module will be called jornada720_ts.
 
+config TOUCHSCREEN_I2C
+	tristate "I2C Touchscreen controller"
+	select I2C
+	help
+	  If you say yes here you get touchscreen support through Boundary Devices 4/5 wire touchscreen card
+	  To compile this driver as a module, choose M here: the
+	  module will be called i2c_touch.
+
 config TOUCHSCREEN_MXC
 	tristate "MXC touchscreen input driver"
 	depends on MXC_MC13783_ADC || MXC_MC13892_ADC
