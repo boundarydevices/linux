@@ -29,6 +29,7 @@ obj-$(CONFIG_TOUCHSCREEN_HP600)		+= hp680_ts_input.o
 obj-$(CONFIG_TOUCHSCREEN_HP7XX)		+= jornada720_ts.o
 obj-$(CONFIG_TOUCHSCREEN_HTCPEN)	+= htcpen.o
 obj-$(CONFIG_TOUCHSCREEN_I2C)		+= i2c_touch.o
+obj-$(CONFIG_TOUCHSCREEN_EP0700M01)	+= ep0700m01.o
 obj-$(CONFIG_TOUCHSCREEN_MXC)		+= mxc_ts.o
 obj-$(CONFIG_TOUCHSCREEN_IMX_ADC)	+= imx_adc_ts.o
 obj-$(CONFIG_TOUCHSCREEN_STMP3XXX)	+= stmp3xxx_ts.o

@@ -286,6 +286,14 @@ config TOUCHSCREEN_I2C
 	  To compile this driver as a module, choose M here: the
 	  module will be called i2c_touch.
 
+config TOUCHSCREEN_EP0700M01
+	tristate "Emerging Display Technologies, 2 point touchscreen"
+	select I2C
+	help
+	  If you say yes here you get touchscreen support through Emerging
+	  Display Technologies' EP0700m01.  To compile this driver as a module,
+	  choose M here: the module will be called i2c_touch.
+
 config TOUCHSCREEN_MXC
 	tristate "MXC touchscreen input driver"
 	depends on MXC_MC13783_ADC || MXC_MC13892_ADC
