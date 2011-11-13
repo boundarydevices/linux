@@ -86,17 +86,26 @@ static struct early_suspend stop_ts_early_suspend_desc = {
 static int ts_thread(void *arg)
 {
 	t_touch_screen ts_sample;
+        int prev_res = 0 ;
 	s32 wait = 0;
 
 	do {
 		int x, y;
 		static int last_x = -1, last_y = -1, last_press = -1;
+		int res_diff ;
 
 		wait_event_interruptible(ts_wait, !ts_suspend);
 		memset(&ts_sample, 0, sizeof(t_touch_screen));
 		if (0 != pmic_adc_get_touch_sample(&ts_sample, !wait))
 			continue;
 		if (!(ts_sample.contact_resistance || wait))
+			continue;
+
+		res_diff = ts_sample.contact_resistance - prev_res;
+		if (0 > res_diff)
+			res_diff = 0-res_diff ;
+		prev_res = ts_sample.contact_resistance ;
+		if ((0 != ts_sample.contact_resistance) && (res_diff > (1024/4)))
 			continue;
 
 		if (ts_sample.x_position == 0 && ts_sample.y_position == 0 &&
@@ -130,6 +139,10 @@ static int ts_thread(void *arg)
 			last_y = y;
 		}
 
+		/* turn contact resistance into pressure (inverse) */
+		if (ts_sample.contact_resistance) {
+			ts_sample.contact_resistance = (~ts_sample.contact_resistance)&1023 ;
+		}
 		/* report pressure */
 		input_report_abs(mxc_inputdev, ABS_PRESSURE,
 				 ts_sample.contact_resistance);
@@ -175,6 +188,10 @@ static int __init mxc_ts_init(void)
 	mxc_inputdev->keybit[BIT_WORD(BTN_TOUCH)] |= BIT_MASK(BTN_TOUCH);
 	mxc_inputdev->absbit[0] =
 	    BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) | BIT_MASK(ABS_PRESSURE);
+
+	input_set_abs_params(mxc_inputdev, ABS_X, 0, 0x7ff, 0, 0);
+	input_set_abs_params(mxc_inputdev, ABS_Y, 0, 0x7ff, 0, 0);
+	input_set_abs_params(mxc_inputdev, ABS_PRESSURE, 0, 0x3ff, 0, 0);
 	retval = input_register_device(mxc_inputdev);
 	if (retval < 0) {
 		input_free_device(mxc_inputdev);
