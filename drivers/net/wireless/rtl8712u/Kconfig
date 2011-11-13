@@ -1,0 +1,6 @@
+config RTL8712U
+	tristate "Realtek 8712 USB WiFi"
+	depends on USB
+	---help---
+	  Help message of RTL8712U
+
