@@ -1099,7 +1099,7 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 		 * we will only use 1/2 fraction for ipu clk,
 		 * so if the clk rate is not fit, try ext clk.
 		 */
-		if (!sig.int_clk &&
+		if (sig.int_clk &&
 			((rounded_pixel_clk >= pixel_clk + pixel_clk/200) ||
 			(rounded_pixel_clk <= pixel_clk - pixel_clk/16)) &&
 			(clk_get(NULL, "pll3") != di_parent)) {
@@ -1116,6 +1116,7 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 					clk_round_rate(g_di_clk[disp], pixel_clk);
 				clk_set_rate(g_di_clk[disp], rounded_pixel_clk);
 				clk_set_parent(g_pixel_clk[disp], g_di_clk[disp]);
+				sig.int_clk = 0 ;
 			}
 		}
 	}
