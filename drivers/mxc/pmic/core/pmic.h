@@ -62,6 +62,7 @@ struct pmic_internal {
 	.pmic_get_revision	= type ## _get_revision,		\
 }
 
+int mxc_spi_poll_transfer(struct spi_device *spi, struct spi_transfer *t);
 /*!
  * This function is called to transfer data to PMIC on SPI.
  *
@@ -80,6 +81,10 @@ static inline int spi_rw(struct spi_device *spi, u8 * buf, size_t len)
 		.cs_change = 0,
 		.delay_usecs = 0,
 	};
+#if 1
+	mxc_spi_poll_transfer(spi, &t);
+	return 0;
+#else
 	struct spi_message m;
 
 	spi_message_init(&m);
@@ -87,6 +92,7 @@ static inline int spi_rw(struct spi_device *spi, u8 * buf, size_t len)
 	if (spi_sync(spi, &m) != 0 || m.status != 0)
 		return PMIC_ERROR;
 	return len - m.actual_length;
+#endif
 }
 
 #ifdef CONFIG_MXC_PMIC_FIXARB
