@@ -1189,5 +1189,21 @@ config GPIO_INPUT_DEFAULT
 	  Enter the compile-time default specification here to avoid
 	  the need to supply one on the kernel command-line
 
+config GPIO_OUTPUT
+	tristate "Generic GPIO output driver"
+	default n
+	help
+	  Allows the creation of /dev entries glued up to platform-specific
+	  GPIO outputs.
+
+config GPIO_OUTPUT_DEFAULT
+	depends on GPIO_OUTPUT
+	string "Generic GPIO output driver default specification"
+	default "93:j35pin3:1,91:j35pin4:1,90:j35pin5:1,4:j35pin6:1"
+	help
+	  Enter the compile-time default specification here to avoid
+	  the need to supply one on the kernel command-line
+
+
 endmenu
 
