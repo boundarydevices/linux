@@ -1101,7 +1101,8 @@ int32_t ipu_init_sync_panel(int disp, uint32_t pixel_clk,
 		 */
 		if (!sig.int_clk &&
 			((rounded_pixel_clk >= pixel_clk + pixel_clk/200) ||
-			(rounded_pixel_clk <= pixel_clk - pixel_clk/200))) {
+			(rounded_pixel_clk <= pixel_clk - pixel_clk/16)) &&
+			(clk_get(NULL, "pll3") != di_parent)) {
 			dev_dbg(g_ipu_dev, "try ipu ext di clk\n");
 			if (clk_get_usecount(di_parent))
 				dev_warn(g_ipu_dev,
