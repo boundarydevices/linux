@@ -1,4 +1,4 @@
-EXTRA_CFLAGS += -O1 -Wno-unused-variable -Wno-unused-value -Wno-unused-label -Wno-unused-parameter -Wno-uninitialized
+EXTRA_CFLAGS += -DCONFIG_PLATFORM_ANDROID -O1 -Wno-unused-variable -Wno-unused-value -Wno-unused-label -Wno-unused-parameter -Wno-uninitialized
 EXTRA_CFLAGS += -I$(src)/include  -Wno-unused -Wno-unused-function
 
 CONFIG_RTL8711                  =       n
@@ -11,10 +11,11 @@ CONFIG_SDIO_HCI                 =       n
 
 CONFIG_MP_INCLUDED              =       y
 
-CONFIG_PLATFORM_I386_PC         =       y
+CONFIG_PLATFORM_I386_PC         =       n
 CONFIG_PLATFORM_ANDROID_X86     =       n
 CONFIG_PLATFORM_ARM_S3C         =       n
 CONFIG_PLATFORM_ARM_PXA         =       n
+CONFIG_PLATFORM_ARM_IMX		=	y
 CONFIG_PLATFORM_MIPS_RMI        =       n
 CONFIG_PLATFORM_RTK_DMP         =       n
 CONFIG_PLATFORM_MIPS_PLM        =       n
@@ -173,8 +174,8 @@ ifeq ($(CONFIG_PLATFORM_ARM_IMX), y)
 EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
 ARCH ?= arm
 CROSS_COMPILE ?= arm-none-linux-gnueabi-
-KVER  := 2.6.31-00872-g86397c9
-KSRC := $(HOME)/tmp/linux-bd
+KVER  ?= 2.6.35.3-00851-ga7991a5
+KSRC ?= $(HOME)/linux-bd
 MODDESTDIR := /lib/modules/$(KVER)
 INSTALL_PREFIX :=
 endif

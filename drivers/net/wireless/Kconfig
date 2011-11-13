@@ -221,7 +221,10 @@ source "drivers/net/wireless/rtl818x/Kconfig"
 
 config RTL8712U
 	tristate "Realtek 8712 USB support"
-	depends on MAC80211 && USB && WLAN_80211 && EXPERIMENTAL
+	depends on MAC80211 && USB && WLAN && EXPERIMENTAL
+	select WIRELESS_EXT
+	select WEXT_PRIV
+
 
 config ADM8211
 	tristate "ADMtek ADM8211 support"
