@@ -546,17 +546,35 @@ static unsigned int spi_find_baudrate(struct mxc_spi *master_data,
 	unsigned int divisor;
 	unsigned int shift = 0;
 
-	/* Calculate required divisor (rounded) */
-	divisor = (master_data->spi_ipg_clk + baud / 2) / baud;
-	while (divisor >>= 1)
-		shift++;
+	/* Calculate required divisor (rounded up) */
+	divisor = (master_data->spi_ipg_clk + baud - 1) / baud;
 
-	if (master_data->spi_ver_def == &spi_ver_0_0) {
-		shift = (shift - 1) * 2;
-	} else if (master_data->spi_ver_def == &spi_ver_2_3) {
-		shift = shift;
+	if (master_data->spi_ver_def == &spi_ver_2_3) {
+		if (!divisor)
+			divisor = 1;
+		while (divisor > 0x10) {
+			if (divisor & 1)
+				divisor++;
+			divisor >>= 1;
+			shift++;
+		}
+		if (shift > master_data->spi_ver_def->max_data_rate) {
+			shift = master_data->spi_ver_def->max_data_rate;
+			divisor = 0x10;
+		}
+		if (0) printk("%s: actual rate is %d (%lu %d,%d), requested %d\n", __func__,
+			(unsigned)((master_data->spi_ipg_clk / divisor) >> shift),
+			master_data->spi_ipg_clk, divisor, shift, baud);
+		shift |= ((divisor - 1) << 4);
+		return shift << master_data->spi_ver_def->data_shift;
 	} else {
-		shift -= 2;
+		while (divisor >>= 1)
+			shift++;
+		if (master_data->spi_ver_def == &spi_ver_0_0) {
+			shift = (shift - 1) * 2;
+		} else {
+			shift -= 2;
+		}
 	}
 
 	if (shift > master_data->spi_ver_def->max_data_rate)
@@ -580,9 +598,15 @@ static void spi_put_tx_data(void *base, unsigned int count,
 	int i = 0;
 
 	/* Perform Tx transaction */
-	for (i = 0; i < count; i++) {
-		data = master_drv_data->transfer.tx_get(master_drv_data);
-		__raw_writel(data, base + MXC_CSPITXDATA);
+	if (master_drv_data->transfer.tx_buf) {
+		for (i = 0; i < count; i++) {
+			data = master_drv_data->transfer.tx_get(master_drv_data);
+			__raw_writel(data, base + MXC_CSPITXDATA);
+		}
+	} else {
+		for (i = 0; i < count; i++) {
+			__raw_writel(0, base + MXC_CSPITXDATA);
+		}
 	}
 
 	ctrl_reg = __raw_readl(base + MXC_CSPICTRL);
@@ -611,14 +635,18 @@ void mxc_spi_chipselect(struct spi_device *spi, int is_active)
 	unsigned int xfer_len;
 	unsigned int cs_value;
 
+	/* Get the master controller driver data from spi device's master */
+	master_drv_data = spi_master_get_devdata(spi->master);
+
 	if (is_active == BITBANG_CS_INACTIVE) {
 		/*Need to deselect the slave */
+		if (master_drv_data->chipselect_inactive)
+			master_drv_data->chipselect_inactive(
+				spi->master->bus_num, 0,
+				(spi->chip_select & MXC_CSPICTRL_CSMASK) + 1);
 		return;
 	}
 
-	/* Get the master controller driver data from spi device's master */
-
-	master_drv_data = spi_master_get_devdata(spi->master);
 	clk_enable(master_drv_data->clk);
 	spi_ver_def = master_drv_data->spi_ver_def;
 
@@ -758,15 +786,19 @@ static irqreturn_t mxc_spi_isr(int irq, void *dev_id)
 	unsigned int status;
 	int fifo_size;
 	unsigned int pass_counter;
+	unsigned rr_mask = (1 << (MXC_CSPISTAT_RR +
+			master_drv_data->spi_ver_def->int_status_dif));
 
 	fifo_size = master_drv_data->spi_ver_def->fifo_size;
 	pass_counter = fifo_size;
 
 	/* Read the interrupt status register to determine the source */
-	status = __raw_readl(master_drv_data->stat_addr);
-	do {
-		u32 rx_tmp =
-		    __raw_readl(master_drv_data->base + MXC_CSPIRXDATA);
+	for (;;) {
+		u32 rx_tmp;
+		status = __raw_readl(master_drv_data->stat_addr);
+		if (!(status & rr_mask))
+			break;
+		rx_tmp = __raw_readl(master_drv_data->base + MXC_CSPIRXDATA);
 
 		if (master_drv_data->transfer.rx_buf)
 			master_drv_data->transfer.rx_get(master_drv_data,
@@ -777,24 +809,17 @@ static irqreturn_t mxc_spi_isr(int irq, void *dev_id)
 		if (pass_counter-- == 0) {
 			break;
 		}
-		status = __raw_readl(master_drv_data->stat_addr);
-	} while (status &
-		 (1 <<
-		  (MXC_CSPISTAT_RR +
-		   master_drv_data->spi_ver_def->int_status_dif)));
+	}
 
 	if (master_drv_data->transfer.rx_count)
 		return ret;
 
 	if (master_drv_data->transfer.count) {
-		if (master_drv_data->transfer.tx_buf) {
-			u32 count = (master_drv_data->transfer.count >
-				     fifo_size) ? fifo_size :
-			    master_drv_data->transfer.count;
-			master_drv_data->transfer.rx_count = count;
-			spi_put_tx_data(master_drv_data->base, count,
+		u32 count = (master_drv_data->transfer.count > fifo_size) ?
+				fifo_size : master_drv_data->transfer.count;
+		master_drv_data->transfer.rx_count = count;
+		spi_put_tx_data(master_drv_data->base, count,
 					master_drv_data);
-		}
 	} else {
 		complete(&master_drv_data->xfer_done);
 	}
@@ -1077,19 +1102,20 @@ int mxc_spi_poll_transfer(struct spi_device *spi, struct spi_transfer *t)
 	count = (t->len > fifo_size) ? fifo_size : t->len;
 	spi_put_tx_data(master_drv_data->base, count, master_drv_data);
 
-	do {
-		timeout++;
-		if (timeout > MAX_CYCLE) {
-			dev_err(master_drv_data->dev, "Read Timeout!\n");
-			break;
-		}
-	} while ((((status = __raw_readl(master_drv_data->test_addr)) &
+	while ((((status = __raw_readl(master_drv_data->test_addr)) &
 		 master_drv_data->spi_ver_def->rx_cnt_mask) >> master_drv_data->
-		spi_ver_def->rx_cnt_off) != count);
+		spi_ver_def->rx_cnt_off) != count)
+		;
 
-	for (i = 0; i < count; i++) {
-		rx_tmp = __raw_readl(master_drv_data->base + MXC_CSPIRXDATA);
-		master_drv_data->transfer.rx_get(master_drv_data, rx_tmp);
+	if (master_drv_data->transfer.rx_buf) {
+		for (i = 0; i < count; i++) {
+			rx_tmp = __raw_readl(master_drv_data->base + MXC_CSPIRXDATA);
+			master_drv_data->transfer.rx_get(master_drv_data, rx_tmp);
+		}
+	} else {
+		for (i = 0; i < count; i++) {
+			__raw_readl(master_drv_data->base + MXC_CSPIRXDATA);
+		}
 	}
 
 	clk_disable(master_drv_data->clk);
