@@ -4624,7 +4624,7 @@ int __init mx51_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 
 	/* move cspi to 24MHz */
 	clk_set_parent(&cspi_main_clk, &lp_apm_clk);
-	clk_set_rate(&cspi_main_clk, 12000000);
+	clk_set_rate(&cspi_main_clk, 24000000);
 	/*move the spdif0 to spdif_xtal_ckl */
 	clk_set_parent(&spdif0_clk[0], &spdif_xtal_clk);
 	/*set the SPDIF dividers to 1 */
@@ -4951,7 +4951,7 @@ int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 
 	/* move cspi to 24MHz */
 	clk_set_parent(&cspi_main_clk, &lp_apm_clk);
-	clk_set_rate(&cspi_main_clk, 12000000);
+	clk_set_rate(&cspi_main_clk, 24000000);
 	/*move the spdif0 to spdif_xtal_ckl */
 	clk_set_parent(&spdif0_clk[0], &spdif_xtal_clk);
 	/*set the SPDIF dividers to 1 */
