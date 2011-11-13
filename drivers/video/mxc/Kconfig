@@ -38,6 +38,13 @@ config FB_MXC_CLAA_WVGA_SYNC_PANEL
 	depends on FB_MXC_SYNC_PANEL
 	tristate "CLAA WVGA Panel"
 
+config FB_MXC_PMIC_LCD
+	depends on FB_MXC_SYNC_PANEL && REGULATOR_DA905X
+	tristate "PMIC LCD power control"
+	help
+	  If you select this option, the regulator named 'VDISPLAY' will
+	  be enabled or disabled when the screen unblanks or blanks
+
 config FB_MXC_SEIKO_WVGA_SYNC_PANEL
 	depends on FB_MXC_SYNC_PANEL
 	tristate "SEIKO WVGA Panel"
