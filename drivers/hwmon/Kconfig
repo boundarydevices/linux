@@ -1215,4 +1215,9 @@ config MXC_MMA8451
 	depends on I2C
 	default y
 
+config MMA7660
+	tristate "MMA7660 device driver"
+	depends on I2C
+	default n
+
 endif # HWMON

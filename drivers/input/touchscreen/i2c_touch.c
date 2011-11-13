@@ -710,7 +710,7 @@ static int ts_detect(struct i2c_client *client,
 	strlcpy(info->type, "pic16f616-ts", I2C_NAME_SIZE);
 	return 0;
 }
-struct plat_i2c_touch_data {
+struct plat_i2c_generic_data {
 	unsigned irq;
 	unsigned gp;
 };
@@ -720,7 +720,7 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	int err = 0;
 	struct pic16f616_ts* ts;
 	struct device *dev = &client->dev;
-	struct plat_i2c_touch_data *plat = client->dev.platform_data;
+	struct plat_i2c_generic_data *plat = client->dev.platform_data;
 	if (gts) {
 		printk(KERN_ERR "%s: Error gts is already allocated\n",client_name);
 		return -ENOMEM;
