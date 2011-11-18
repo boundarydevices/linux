@@ -935,6 +935,83 @@ static struct ethtool_ops ax88772_ethtool_ops = {
 	.set_settings		= ax8817x_set_settings,
 };
 
+static unsigned char g_ethaddr1[ETH_ALEN];
+static unsigned char g_ethaddr2[ETH_ALEN];
+
+static int __init parse_mac(unsigned char *mac, unsigned char const *str_mac)
+{
+	int i = 0;
+	char *end;
+	int ret = -EINVAL;
+
+	for (;;) {
+		mac[i++] = simple_strtoul(str_mac, &end, 16);
+		if (i == 6) {
+			if (!*end || (*end == ' '))
+				ret = 0;
+			break;
+		}
+		str_mac = end + 1;
+		if ((*end != '-') && (*end != ':'))
+			break;
+	}
+	return ret;
+}
+
+static int __init ethaddr1_setup(char *options)
+{
+	if (!strsep(&options, "="))
+		return 1;
+	if (parse_mac(g_ethaddr1, options))
+		memset(g_ethaddr1, 0, ETH_ALEN);
+	return 1;
+}
+
+static int __init ethaddr2_setup(char *options)
+{
+	if (!strsep(&options, "="))
+		return 1;
+	if (parse_mac(g_ethaddr2, options))
+		memset(g_ethaddr2, 0, ETH_ALEN);
+	return 1;
+}
+
+__setup("ethaddr1", ethaddr1_setup);
+__setup("ethaddr2", ethaddr2_setup);
+
+
+
+void ax8817x_get_mac(struct usbnet *dev, void *buf)
+{
+	int ret;
+	if (dev->udev->bus->busnum <= 2) {
+		/* allow mac overrides */
+		unsigned char* p = g_ethaddr1;
+		if (dev->udev->bus->busnum > 1)
+			p = g_ethaddr2;
+		if (is_valid_ether_addr(p)) {
+			memcpy(dev->net->dev_addr, p, ETH_ALEN);
+			memset(p, 0, ETH_ALEN);	/* don't use again */
+			goto out1;
+		}
+	}
+	memset(buf, 0, ETH_ALEN);
+	if ((ret = ax8817x_read_cmd(dev, AX88772_CMD_READ_NODE_ID,
+				0, 0, ETH_ALEN, buf)) < 0) {
+		deverr(dev, "Failed to read MAC address: %d", ret);
+		memset(buf, 0, ETH_ALEN);
+	}
+	if (is_valid_ether_addr(buf)) {
+		memcpy(dev->net->dev_addr, buf, ETH_ALEN);
+		return;
+	}
+	random_ether_addr(dev->net->dev_addr);
+out1:
+	/* Set the MAC address */
+	ax8817x_write_cmd (dev, AX88772_CMD_WRITE_NODE_ID,
+			   0, 0, ETH_ALEN, dev->net->dev_addr);
+}
+
 static int ax88772_bind(struct usbnet *dev, struct usb_interface *intf)
 {
 	int ret;
@@ -1060,14 +1137,7 @@ static int ax88772_bind(struct usbnet *dev, struct usb_interface *intf)
 	}
 
 	/* Get the MAC address */
-	memset(buf, 0, ETH_ALEN);
-	if ((ret = ax8817x_read_cmd(dev, AX88772_CMD_READ_NODE_ID,
-				0, 0, ETH_ALEN, buf)) < 0) {
-		deverr(dev, "Failed to read MAC address: %d", ret);
-		goto out2;
-	}
-	memcpy(dev->net->dev_addr, buf, ETH_ALEN);
-
+	ax8817x_get_mac(dev, buf);
 	if ((ret = ax8817x_write_cmd(dev, AX_CMD_SET_SW_MII,
 				0, 0, 0, NULL)) < 0) {
 		deverr(dev, "Enabling software MII failed: %d", ret);
@@ -1327,14 +1397,7 @@ static int ax88772a_bind(struct usbnet *dev, struct usb_interface *intf)
 	}
 
 	/* Get the MAC address */
-	memset(buf, 0, ETH_ALEN);
-	if ((ret = ax8817x_read_cmd(dev, AX88772_CMD_READ_NODE_ID,
-				0, 0, ETH_ALEN, buf)) < 0) {
-		deverr(dev, "Failed to read MAC address: %d", ret);
-		goto out2;
-	}
-	memcpy(dev->net->dev_addr, buf, ETH_ALEN);
-
+	ax8817x_get_mac(dev, buf);
 	/* make sure the driver can enable sw mii operation */
 	if ((ret = ax8817x_write_cmd(dev, AX_CMD_SET_SW_MII,
 			0, 0, 0, NULL)) < 0) {
@@ -2542,14 +2605,7 @@ static int ax88178_bind(struct usbnet *dev, struct usb_interface *intf)
 	}
 
 	/* Get the MAC address */
-	memset(buf, 0, ETH_ALEN);
-	if ((ret = ax8817x_read_cmd (dev, AX88772_CMD_READ_NODE_ID,
-				     0, 0, ETH_ALEN, buf)) < 0) {
-		deverr(dev, "read AX_CMD_READ_NODE_ID failed: %d", ret);
-		goto error_out;
-	}
-	memcpy(dev->net->dev_addr, buf, ETH_ALEN);
-	/* End of get MAC address */
+	ax8817x_get_mac(dev, buf);
 
 	if ((ret = ax88178_phy_init (dev, ax178dataptr)) < 0)
 		goto error_out;
