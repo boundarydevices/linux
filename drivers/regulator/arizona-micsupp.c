@@ -175,7 +175,7 @@ static __devinit int arizona_micsupp_probe(struct platform_device *pdev)
 
 	micsupp->regulator = regulator_register(&arizona_micsupp,
 						 arizona->dev, init_data,
-						 micsupp);
+						 micsupp, NULL);
 
 	if (IS_ERR(micsupp->regulator)) {
 		ret = PTR_ERR(micsupp->regulator);

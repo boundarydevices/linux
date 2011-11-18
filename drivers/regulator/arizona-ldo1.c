@@ -147,7 +147,7 @@ static __devinit int arizona_ldo1_probe(struct platform_device *pdev)
 
 	ldo1->regulator = regulator_register(&arizona_ldo1,
 					     arizona->dev, init_data,
-					     ldo1);
+					     ldo1, NULL);
 
 	if (IS_ERR(ldo1->regulator)) {
 		ret = PTR_ERR(ldo1->regulator);

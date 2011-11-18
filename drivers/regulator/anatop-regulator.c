@@ -159,7 +159,7 @@ int anatop_regulator_probe(struct platform_device *pdev)
 
 	/* register regulator */
 	rdev = regulator_register(rdesc, &pdev->dev,
-				  initdata, sreg);
+				  initdata, sreg, NULL);
 
 	if (IS_ERR(rdev)) {
 		dev_err(&pdev->dev, "failed to register %s\n",

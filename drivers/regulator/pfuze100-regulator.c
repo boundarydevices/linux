@@ -793,7 +793,7 @@ static int __devinit pfuze100_regulator_probe(struct platform_device *pdev)
 		init_data = &pdata->regulators[i];
 		priv->regulators[i] =
 		    regulator_register(&pfuze100_regulators[init_data->id].desc,
-				       &pdev->dev, init_data->init_data, priv);
+				       &pdev->dev, init_data->init_data, priv, NULL);
 		if (IS_ERR(priv->regulators[i])) {
 			dev_err(&pdev->dev, "failed to register regulator %s\n",
 				pfuze100_regulators[i].desc.name);
