@@ -421,7 +421,7 @@ static int da7210_set_dai_fmt(struct snd_soc_dai *codec_dai, u32 fmt)
 #define DA7210_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE)
 
 /* DAI operations */
-static struct snd_soc_dai_ops da7210_dai_ops = {
+static const struct snd_soc_dai_ops da7210_dai_ops = {
 	.startup	= da7210_startup,
 	.hw_params	= da7210_hw_params,
 	.set_fmt	= da7210_set_dai_fmt,

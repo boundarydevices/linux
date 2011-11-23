@@ -268,7 +268,7 @@ static int ak4642_dai_startup(struct snd_pcm_substream *substream,
 		 * Pre MIC AMP:+20dB
 		 * MIC Power On
 		 * ALC setting:Refer to Table 35
-		 * ALC bit=“1”
+		 * ALC bit=â€œ1â€�
 		 *
 		 * This operation came from example code of
 		 * "ASAHI KASEI AK4642" (japanese) manual p94.
@@ -435,7 +435,7 @@ static int ak4642_dai_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static struct snd_soc_dai_ops ak4642_dai_ops = {
+static const struct snd_soc_dai_ops ak4642_dai_ops = {
 	.startup	= ak4642_dai_startup,
 	.shutdown	= ak4642_dai_shutdown,
 	.set_sysclk	= ak4642_dai_set_sysclk,

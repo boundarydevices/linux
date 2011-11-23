@@ -191,7 +191,7 @@ static int omap_mcpdm_dai_hw_free(struct snd_pcm_substream *substream,
 	return err;
 }
 
-static struct snd_soc_dai_ops omap_mcpdm_dai_ops = {
+static const struct snd_soc_dai_ops omap_mcpdm_dai_ops = {
 	.startup	= omap_mcpdm_dai_startup,
 	.shutdown	= omap_mcpdm_dai_shutdown,
 	.trigger	= omap_mcpdm_dai_trigger,
