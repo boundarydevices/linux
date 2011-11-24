@@ -1,3 +1,4 @@
+#include <linux/bug.h>
 /*
  * swapcache pages are stored in the swapper_space radix tree.  We want to
  * get good packing density in that tree, so the index should be dense in

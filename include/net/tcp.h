@@ -23,6 +23,7 @@
 
 #include <linux/list.h>
 #include <linux/tcp.h>
+#include <linux/bug.h>
 #include <linux/slab.h>
 #include <linux/cache.h>
 #include <linux/percpu.h>
