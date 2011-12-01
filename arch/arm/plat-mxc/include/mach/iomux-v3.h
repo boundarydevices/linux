@@ -57,6 +57,8 @@
 typedef u64 iomux_v3_cfg_t;
 typedef u32 iomux_grp_cfg_t;
 
+#define IOMUX_TO_IRQ_V3(pin)	(MXC_GPIO_IRQ_START + pin)
+
 #define MUX_CTRL_OFS_SHIFT	0
 #define MUX_CTRL_OFS_MASK	((iomux_v3_cfg_t)0xfff << MUX_CTRL_OFS_SHIFT)
 #define MUX_PAD_CTRL_OFS_SHIFT	12
