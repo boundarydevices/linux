@@ -1898,6 +1898,7 @@ static int mxcfb_probe(struct platform_device *pdev)
 {
 	struct fb_info *fbi;
 	struct mxcfb_info *mxcfbi;
+	struct mxc_fb_platform_data *plat_data = pdev->dev.platform_data;
 	struct resource *res;
 	char *options;
 	char name[] = "mxcdi0fb";
@@ -2062,8 +2063,6 @@ static struct platform_driver mxcfb_driver = {
 #endif
 };
 
-int use_ldb (int chan);
-
 /*
  * Parse user specified options (`video=trident:')
  * example:
@@ -2107,17 +2106,6 @@ printk(KERN_ERR "%s: pixclock %u picos\n", __func__, mode->pixclock );
 			mode->xres = values[1];
 			mode->yres = values[2];
 			mode->sync = (0 == values[3]) ? FB_SYNC_CLK_LAT_FALL : 0 ;
-#if defined(CONFIG_FB_MXC_LDB) || defined(CONFIG_FB_MXC_LDB_MODULE)
-			if (use_ldb(di)) {
-				mode->sync |= FB_SYNC_EXT ;
-				mxcfbi->ipu_int_clk = 0;
-			}
-			else
-                                mxcfbi->ipu_int_clk = 1;
-printk (KERN_ERR "%s: LDB(%d)\n", __func__, 0 == mxcfbi->ipu_int_clk);
-#else
-			mxcfbi->ipu_int_clk = true;
-#endif
 			mode->left_margin = values[8];
 			mode->right_margin = values[9];
 			mode->upper_margin = values[11];
