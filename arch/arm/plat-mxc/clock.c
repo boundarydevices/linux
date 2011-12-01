@@ -502,6 +502,7 @@ static int mxc_proc_clocks_seq_show(struct seq_file *file, void *data)
 {
 	int            result;
 	struct mxc_clk     *clock = (struct mxc_clk *) data;
+	struct clk     *parent = clock->reg_clk->parent;
 	char const     *parent_name = get_clock_name(parent);
 	unsigned int   longest_length = (unsigned int) file->private;
 	unsigned long  range_divisor;
