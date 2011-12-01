@@ -2424,6 +2424,16 @@ static struct clk hsi2c_serial_clk = {
 	.disable = _clk_disable,
 };
 
+static struct clk hsi2c_clk = {
+	.id = 0,
+	.parent = &ipg_clk,
+	.enable_reg = MXC_CCM_CCGR1,
+	.enable_shift = MXC_CCM_CCGRx_CG12_OFFSET,
+	.enable = _clk_enable,
+	.disable = _clk_disable,
+	.flags = AHB_HIGH_SET_POINT | CPU_FREQ_TRIG_UPDATE,
+};
+
 static unsigned long _clk_cspi_get_rate(struct clk *clk)
 {
 	u32 reg, prediv, podf;
