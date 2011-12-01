@@ -100,7 +100,6 @@ static struct da9052_tsi_platform_data da9052_tsi = {
 	.num_gpio_tsi_register = 3,
 	.tsi_supply_voltage = 2500,
 	 /* This is the DA9052 LDO number used for powering the TSI */
-	.tsi_ref_source = 9,
 	.max_tsi_delay = TSI_DELAY_4SLOTS,
 	.max_tsi_skip_slot = TSI_SKIP_330SLOTS,
 };
