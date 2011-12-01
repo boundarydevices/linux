@@ -21,11 +21,16 @@
 #include <linux/platform_device.h>
 #include <linux/serial.h>
 #include <mach/hardware.h>
+#include <mach/mxc_uart.h>
 #include "serial.h"
 
 #if defined(CONFIG_SERIAL_MXC) || defined(CONFIG_SERIAL_MXC_MODULE)
-#include <mach/mxc_uart.h>
 #define DRIVERNAME "mxcintuart"
+#elif defined(CONFIG_SERIAL_IMX) || defined(CONFIG_SERIAL_IMX_MODULE)
+#define DRIVERNAME "imx-uart"
+#endif
+
+#ifdef DRIVERNAME
 
 /*!
  * This is an array where each element holds information about a UART port,
@@ -136,22 +141,7 @@ static uart_mxc_port mxc_ports[] = {
 	       .rxd_mux = MXC_UART_RXDMUX,
 	       },
 };
-#endif
 
-#if defined(CONFIG_SERIAL_IMX) || defined(CONFIG_SERIAL_IMX_MODULE)
-#include <mach/imx-uart.h>
-#define DRIVERNAME "imx-uart"
-
-struct imxuart_platform_data mxc_ports[] = {
-	[0] = {	.flags = 0, },
-	[1] = { .flags = 0, },
-	[2] = {	.flags = 0, },
-	[3] = {	.flags = 0, },
-	[4] = {	.flags = 0, },
-};
-#endif
-
-#ifdef DRIVERNAME
 static struct resource mxc_uart_resources1[] = {
 	{
 		.start = UART1_BASE_ADDR,
@@ -187,7 +177,11 @@ static struct resource mxc_uart_resources2[] = {
 };
 
 static struct platform_device mxc_uart_device2 = {
+#if defined(CONFIG_TOUCHSCREEN_IRTOUCH_IMX) || defined(CONFIG_TOUCHSCREEN_IRTOUCH_IMX_MODULE)
+	.name = "irtouch",
+#else
 	.name = DRIVERNAME,
+#endif
 	.id = 1,
        .num_resources = ARRAY_SIZE(mxc_uart_resources2),
 	.resource = mxc_uart_resources2,
@@ -281,11 +275,15 @@ static int __init mxc_init_uart(void)
 	platform_device_register(&mxc_uart_device1);
 	platform_device_register(&mxc_uart_device2);
 	platform_device_register(&mxc_uart_device3);
-#ifndef CONFIG_MACH_NITROGEN_IMX53
+#if 	!defined(CONFIG_MACH_NITROGEN_IMX53) && \
+	!defined(CONFIG_MACH_NITROGEN_A_IMX53) && \
+	!defined(CONFIG_MACH_NITROGEN_V2_IMX53) && \
+	!defined(CONFIG_MACH_NITROGEN_V1_IMX53)
 	if (cpu_is_mx53()) {
 		platform_device_register(&mxc_uart_device4);
 		platform_device_register(&mxc_uart_device5);
 	}
+#endif
 	return 0;
 }
 
