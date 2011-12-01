@@ -119,7 +119,6 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 		 * both the prescaler (/1 .. /128) and then by CLKSEL
 		 * (/2 .. /16).
 		 */
-		u32 p;
 		u32 max = readl(pwm->mmio_base + MX1_PWMP);
 		u32 p;
 		if (pwm->pwmo_invert)
