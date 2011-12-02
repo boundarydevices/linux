@@ -1477,7 +1477,7 @@ static int dac33_soc_remove(struct snd_soc_codec *codec)
 	return 0;
 }
 
-static int dac33_soc_suspend(struct snd_soc_codec *codec, pm_message_t state)
+static int dac33_soc_suspend(struct snd_soc_codec *codec)
 {
 	dac33_set_bias_level(codec, SND_SOC_BIAS_OFF);
 

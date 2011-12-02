@@ -166,8 +166,7 @@ static int ad1836_hw_params(struct snd_pcm_substream *substream,
 }
 
 #ifdef CONFIG_PM
-static int ad1836_soc_suspend(struct snd_soc_codec *codec,
-		pm_message_t state)
+static int ad1836_suspend(struct snd_soc_codec *codec)
 {
 	/* reset clock control mode */
 	u16 adc_ctrl2 = snd_soc_read(codec, AD1836_ADC_CTRL2);
