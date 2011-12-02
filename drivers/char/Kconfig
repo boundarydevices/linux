@@ -347,6 +347,17 @@ config N_HDLC
 	  The module will be called n_hdlc. If you want to do that, say M
 	  here.
 
+config N_9BIT
+	tristate "9-bit line discipline support"
+	depends on SERIAL_NONSTANDARD
+	help
+	  Allows 9-bit communications with tty device drivers. Bytes with
+	  mark parity(parity error) are address bytes. Bytes with space
+	  parity(no error) are data bytes.
+
+	  The module will be called n_9bit. If you want to do that, say M
+	  here.
+
 config RISCOM8
 	tristate "SDL RISCom/8 card support"
 	depends on SERIAL_NONSTANDARD
