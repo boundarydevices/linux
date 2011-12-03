@@ -1862,26 +1862,34 @@ EXPORT_SYMBOL_GPL(snd_soc_bulk_write_raw);
 int snd_soc_update_bits(struct snd_soc_codec *codec, unsigned short reg,
 				unsigned int mask, unsigned int value)
 {
-	int change;
+	bool change;
 	unsigned int old, new;
 	int ret;
 
-	ret = snd_soc_read(codec, reg);
-	if (ret < 0) {
-		pr_err("%s: read of reg 0x%x failed(%d)\n", __func__, reg, ret);
-		return ret;
-	}
-
-	old = ret;
-	new = (old & ~mask) | value;
-	change = old != new;
-	if (change) {
-		ret = snd_soc_write(codec, reg, new);
+	if (codec->using_regmap) {
+		ret = regmap_update_bits_check(codec->control_data, reg,
+					       mask, value, &change);
+	} else {
+		ret = snd_soc_read(codec, reg);
 		if (ret < 0) {
-			pr_err("%s: change of reg 0x%x from %x to %x failed(%d)\n", __func__, reg, old, new, ret);
+			pr_err("%s: read of reg 0x%x failed(%d)\n", __func__, reg, ret);
 			return ret;
 		}
+
+		old = ret;
+		new = (old & ~mask) | (value & mask);
+		change = old != new;
+		if (change) {
+			ret = snd_soc_write(codec, reg, new);
+			if (ret < 0) {
+				pr_err("%s: change of reg 0x%x from %x to %x failed(%d)\n", __func__, reg, old, new, ret);
+				return ret;
+			}
+		}
 	}
+
+	if (ret < 0)
+		return ret;
 
 	return change;
 }
