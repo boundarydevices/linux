@@ -1749,7 +1749,13 @@ static int mxcfb_setup(struct fb_info *fbi, struct platform_device *pdev)
 	if (!mxcfbi->fb_mode_str && plat_data && plat_data->mode_str)
 		mxcfbi->fb_mode_str = plat_data->mode_str;
 
-	if (mxcfbi->fb_mode_str) {
+	if (plat_data && plat_data->mode && (1 == plat_data->num_modes)) {
+		/* explicit mode */
+                fb_videomode_to_var(&fbi->var, plat_data->mode);
+                INIT_LIST_HEAD(&fbi->modelist);
+		fb_add_videomode(plat_data->mode, &fbi->modelist);
+	} else if (mxcfbi->fb_mode_str) {
+		printk (KERN_ERR "%s: mode str == %s\n", __func__, mxcfbi->fb_mode_str);
 		if (mxcfbi->ipu_di >= 0) {
 			const struct fb_videomode *mode = NULL;
 			struct fb_videomode m;
@@ -1865,6 +1871,8 @@ static int mxcfb_setup(struct fb_info *fbi, struct platform_device *pdev)
 			fb_var_to_videomode(&m, &fbi->var);
 			fb_add_videomode(&m, &fbi->modelist);
 		}
+	} else {
+		printk (KERN_ERR "%s: no mode str\n", __func__);
 	}
 
 	mxcfb_check_var(&fbi->var, fbi);
@@ -2122,7 +2130,7 @@ printk(KERN_ERR "%s: pixclock %u picos\n", __func__, mode->pixclock );
 			mode->flag = 0 ;
 			plat_data->mode = mode ;
 			plat_data->num_modes = 1 ;
-
+			mxcfbi->ipu_int_clk = true;
 			if (next[-1]) {
 				char *endptr ;
 				unsigned long v = simple_strtoul(next, &endptr, 0 );
