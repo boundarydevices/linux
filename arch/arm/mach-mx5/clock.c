@@ -1833,7 +1833,7 @@ static int _clk_csi0_set_rate(struct clk *clk, unsigned long rate)
 	div = parent_rate / rate;
 
 	if ((parent_rate / div) != rate) {
-		printk(KERN_ERR "%s: unsupported rate: rounding to %lu\n", __func__, (parent_rate / div) );
+		printk(KERN_ERR "%s: unsupported rate: rounding to %u\n", __func__, (parent_rate / div) );
 		rate = (parent_rate / div);
 	}
 
@@ -4879,6 +4879,8 @@ int __init mx51_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 	return 0;
 }
 
+extern int earlyprintk_active;
+
 int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long ckih1, unsigned long ckih2)
 {
 	__iomem void *base;
@@ -4914,7 +4916,19 @@ int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 			      3 << MXC_CCM_CCGRx_CG14_OFFSET, MXC_CCM_CCGR0);
 	}
 
-	__raw_writel(0, MXC_CCM_CCGR1);
+#ifdef CONFIG_EARLY_PRINTK
+	if (earlyprintk_active) {
+		/*
+		 * leave UART1, 2, and 3 on for serial console
+		 * index 3 & 4 is UART1, 5 & 6 UART2, 7 & 8 UART3
+		 */
+		reg = __raw_readl(MXC_CCM_CCGR1);
+		reg &= 0xfff<<(3*2);
+		__raw_writel(reg, MXC_CCM_CCGR1);
+	} else
+#endif
+		__raw_writel(0, MXC_CCM_CCGR1);
+
 	__raw_writel(0, MXC_CCM_CCGR2);
 	__raw_writel(0, MXC_CCM_CCGR3);
 	__raw_writel(1 << MXC_CCM_CCGRx_CG8_OFFSET, MXC_CCM_CCGR4);
@@ -5129,7 +5143,8 @@ int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 	clk_set_parent(&arm_axi_clk, &axi_b_clk);
 	clk_set_parent(&ipu_clk[0], &axi_b_clk);
 	clk_set_parent(&uart_main_clk, &pll3_sw_clk);
-	clk_set_rate(&uart_main_clk, 54000000);
+
+//	clk_set_rate(&uart_main_clk, 54000000);
 	clk_set_parent(&gpu3d_clk[0], &axi_b_clk);
 	clk_set_parent(&gpu2d_clk, &axi_b_clk);
 
