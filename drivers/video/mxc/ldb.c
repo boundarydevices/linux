@@ -433,7 +433,6 @@ static int ldb_fb_pre_setup(struct fb_info *fbi)
 {
 	int ipu_di = 0;
 	struct clk *di_clk, *ldb_clk_parent;
-	unsigned long ldb_clk_prate = 455000000;
 
 	fbi->mode = (struct fb_videomode *)fb_match_mode(&fbi->var,
 			&fbi->modelist);
@@ -444,6 +443,8 @@ static int ldb_fb_pre_setup(struct fb_info *fbi)
 	}
 
 	if (fbi->fbops->fb_ioctl) {
+		struct clk *pll4_clk;
+		unsigned long pll4_rate = 0;
 		mm_segment_t old_fs;
 
 		old_fs = get_fs();
@@ -489,14 +490,17 @@ static int ldb_fb_pre_setup(struct fb_info *fbi)
 			}
 		}
 
-		/* TODO:Set the correct pll4 rate for all situations */
+		pll4_clk = clk_get(NULL, "pll4");
+		pll4_rate = clk_get_rate(pll4_clk);
+		clk_put(pll4_clk);
+
 		if (ipu_di == 1) {
 			ldb.ldb_di_clk[1] =
 				clk_get(g_ldb_dev, "ldb_di1_clk");
 			di_clk = clk_get(g_ldb_dev, "ipu_di1_clk");
 			ldb_clk_parent =
 				clk_get_parent(ldb.ldb_di_clk[1]);
-			clk_set_rate(ldb_clk_parent, ldb_clk_prate);
+			clk_set_rate(ldb_clk_parent, pll4_rate);
 			clk_set_parent(di_clk, ldb.ldb_di_clk[1]);
 			clk_put(di_clk);
 			clk_put(ldb.ldb_di_clk[1]);
@@ -506,7 +510,7 @@ static int ldb_fb_pre_setup(struct fb_info *fbi)
 			di_clk = clk_get(g_ldb_dev, "ipu_di0_clk");
 			ldb_clk_parent =
 				clk_get_parent(ldb.ldb_di_clk[0]);
-			clk_set_rate(ldb_clk_parent, ldb_clk_prate);
+			clk_set_rate(ldb_clk_parent, pll4_rate);
 			clk_set_parent(di_clk, ldb.ldb_di_clk[0]);
 			clk_put(di_clk);
 			clk_put(ldb.ldb_di_clk[0]);
@@ -515,7 +519,7 @@ static int ldb_fb_pre_setup(struct fb_info *fbi)
 		switch (ldb.chan_mode_opt) {
 		case LDB_SIN_DI0:
 			ldb.ldb_di_clk[0] = clk_get(g_ldb_dev, "ldb_di0_clk");
-			clk_set_rate(ldb.ldb_di_clk[0], ldb_clk_prate/7);
+			clk_set_rate(ldb.ldb_di_clk[0], pll4_rate/7);
 			if (ldb.blank[0] == FB_BLANK_UNBLANK &&
 			    clk_get_usecount(ldb.ldb_di_clk[0]) == 0)
 				clk_enable(ldb.ldb_di_clk[0]);
@@ -523,7 +527,7 @@ static int ldb_fb_pre_setup(struct fb_info *fbi)
 			break;
 		case LDB_SIN_DI1:
 			ldb.ldb_di_clk[1] = clk_get(g_ldb_dev, "ldb_di1_clk");
-			clk_set_rate(ldb.ldb_di_clk[1], ldb_clk_prate/7);
+			clk_set_rate(ldb.ldb_di_clk[1], pll4_rate/7);
 			if (ldb.blank[1] == FB_BLANK_UNBLANK &&
 			    clk_get_usecount(ldb.ldb_di_clk[1]) == 0)
 				clk_enable(ldb.ldb_di_clk[1]);
@@ -532,14 +536,14 @@ static int ldb_fb_pre_setup(struct fb_info *fbi)
 		case LDB_SEP:
 			if (ipu_di == 0) {
 				ldb.ldb_di_clk[0] = clk_get(g_ldb_dev, "ldb_di0_clk");
-				clk_set_rate(ldb.ldb_di_clk[0], ldb_clk_prate/7);
+				clk_set_rate(ldb.ldb_di_clk[0], pll4_rate/7);
 				if (ldb.blank[0] == FB_BLANK_UNBLANK &&
 				    clk_get_usecount(ldb.ldb_di_clk[0]) == 0)
 					clk_enable(ldb.ldb_di_clk[0]);
 				clk_put(ldb.ldb_di_clk[0]);
 			} else {
 				ldb.ldb_di_clk[1] = clk_get(g_ldb_dev, "ldb_di1_clk");
-				clk_set_rate(ldb.ldb_di_clk[1], ldb_clk_prate/7);
+				clk_set_rate(ldb.ldb_di_clk[1], pll4_rate/7);
 				if (ldb.blank[1] == FB_BLANK_UNBLANK &&
 				    clk_get_usecount(ldb.ldb_di_clk[1]) == 0)
 					clk_enable(ldb.ldb_di_clk[1]);
@@ -551,10 +555,10 @@ static int ldb_fb_pre_setup(struct fb_info *fbi)
 			ldb.ldb_di_clk[0] = clk_get(g_ldb_dev, "ldb_di0_clk");
 			ldb.ldb_di_clk[1] = clk_get(g_ldb_dev, "ldb_di1_clk");
 			if (ldb.chan_mode_opt == LDB_DUL_DI0) {
-				clk_set_rate(ldb.ldb_di_clk[0], ldb_clk_prate/7);
+				clk_set_rate(ldb.ldb_di_clk[0], pll4_rate/7);
 			} else {
-				clk_set_rate(ldb.ldb_di_clk[0], 2*ldb_clk_prate/7);
-				clk_set_rate(ldb.ldb_di_clk[1], 2*ldb_clk_prate/7);
+				clk_set_rate(ldb.ldb_di_clk[0], 2*pll4_rate/7);
+				clk_set_rate(ldb.ldb_di_clk[1], 2*pll4_rate/7);
 			}
 			if (ldb.blank[0] == FB_BLANK_UNBLANK) {
 				if (clk_get_usecount(ldb.ldb_di_clk[0]) == 0)
@@ -570,10 +574,10 @@ static int ldb_fb_pre_setup(struct fb_info *fbi)
 			ldb.ldb_di_clk[0] = clk_get(g_ldb_dev, "ldb_di0_clk");
 			ldb.ldb_di_clk[1] = clk_get(g_ldb_dev, "ldb_di1_clk");
 			if (ldb.chan_mode_opt == LDB_DUL_DI1) {
-				clk_set_rate(ldb.ldb_di_clk[1], ldb_clk_prate/7);
+				clk_set_rate(ldb.ldb_di_clk[1], pll4_rate/7);
 			} else {
-				clk_set_rate(ldb.ldb_di_clk[0], 2*ldb_clk_prate/7);
-				clk_set_rate(ldb.ldb_di_clk[1], 2*ldb_clk_prate/7);
+				clk_set_rate(ldb.ldb_di_clk[0], 2*pll4_rate/7);
+				clk_set_rate(ldb.ldb_di_clk[1], 2*pll4_rate/7);
 			}
 			if (ldb.blank[1] == FB_BLANK_UNBLANK) {
 				if (clk_get_usecount(ldb.ldb_di_clk[0]) == 0)
