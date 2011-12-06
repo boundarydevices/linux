@@ -171,5 +171,7 @@ void mxcfb_register_presetup(int disp_port,
 		int (*pre_setup)(struct fb_info *info));
 
 int mxc_elcdif_frame_addr_setup(dma_addr_t phys);
+int use_ldb(int di);
+
 #endif				/* __KERNEL__ */
 #endif

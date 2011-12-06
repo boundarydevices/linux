@@ -1432,6 +1432,20 @@ static struct platform_driver mxcldb_driver = {
 	.resume = ldb_resume,
 };
 
+int use_ldb (int chan) {
+	if (g_enable_ldb != MXC_ENABLE) {
+		return 0 ;
+	}
+	if (0 == chan) {
+		return g_di0_used ;
+	} else if (1 == chan) {
+		return g_di1_used ;
+	}
+	else
+		return 0 ;
+}
+EXPORT_SYMBOL(use_ldb);
+
 /*
  * Parse user specified options (`ldb=')
  * example:

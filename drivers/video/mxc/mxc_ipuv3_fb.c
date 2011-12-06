@@ -2130,7 +2130,16 @@ printk(KERN_ERR "%s: pixclock %u picos\n", __func__, mode->pixclock );
 			mode->flag = 0 ;
 			plat_data->mode = mode ;
 			plat_data->num_modes = 1 ;
+#if defined(CONFIG_FB_MXC_LDB) || defined(CONFIG_FB_MXC_LDB_MODULE)
+			if (use_ldb(di)) {
+				mode->sync |= FB_SYNC_EXT ;
+				mxcfbi->ipu_int_clk = 0;
+			}
+			else
+                                mxcfbi->ipu_int_clk = 1;
+#else
 			mxcfbi->ipu_int_clk = true;
+#endif
 			if (next[-1]) {
 				char *endptr ;
 				unsigned long v = simple_strtoul(next, &endptr, 0 );
