@@ -100,9 +100,13 @@ struct pic16f616_ts {
 };
 static const char *client_name = "Pic16F616-ts";
 
-#define NUM_SAMPLES_DEFAULT 64
-static unsigned char num_samples = NUM_SAMPLES_DEFAULT;
-module_param(num_samples, byte, S_IRUGO | S_IWUSR);
+static unsigned char sample_shift;
+
+static unsigned char combine_samples = CONFIG_TOUCHSCREEN_PIC_COMBINE;
+module_param(combine_samples, byte, S_IRUGO | S_IWUSR);
+
+static unsigned char drop_samples = CONFIG_TOUCHSCREEN_PIC_DROP;
+module_param(drop_samples, byte, S_IRUGO | S_IWUSR);
 
 #define PULLUP_DELAY_DEFAULT 80
 static unsigned char pullup_delay = PULLUP_DELAY_DEFAULT;
@@ -129,7 +133,7 @@ module_param(sample_delay, byte, S_IRUGO | S_IWUSR);
 #define PULLUP_DELAY	0x39
 
 #define SAMPLE_MASK	0x3fffff
-#define SAMPLE_SIZE	1024
+#define MAX_SAMPLE_VAL	1023
 
 struct pic16f616_ts* gts;
 
@@ -464,6 +468,7 @@ static void ts_close(struct input_dev *idev)
 
 static inline int ts_register(struct pic16f616_ts *ts)
 {
+	unsigned mask;
 	struct input_dev *idev;
 	idev = input_allocate_device();
 	if (idev==NULL) {
@@ -480,8 +485,16 @@ static inline int ts_register(struct pic16f616_ts *ts)
 	__set_bit(ABS_Y, idev->absbit);
 	__set_bit(ABS_PRESSURE, idev->absbit);
 
-	input_set_abs_params(idev, ABS_X, 0, num_samples*SAMPLE_SIZE-1, 0, 0);
-	input_set_abs_params(idev, ABS_Y, 0, num_samples*SAMPLE_SIZE-1, 0, 0);
+	mask = combine_samples * MAX_SAMPLE_VAL;
+	mask = fls(mask);
+	sample_shift = 0;
+	if (mask > 16) {
+		sample_shift = mask - 16;
+		mask = 16;
+	}
+	mask = (1 << mask) - 1;
+	input_set_abs_params(idev, ABS_X, 0, mask, 0, 0);
+	input_set_abs_params(idev, ABS_Y, 0, mask, 0, 0);
 	input_set_abs_params(idev, ABS_PRESSURE, 0, 1, 0, 0);
 
 	__set_bit(EV_KEY, idev->evbit);
@@ -522,6 +535,7 @@ static int ts_thread(void *_ts)
 	unsigned int i;
 	unsigned int j = 1<<22;
 	unsigned int pressure = 1;
+	unsigned drop;
 
 	ts->rtask = tsk;
 
@@ -550,7 +564,7 @@ static int ts_thread(void *_ts)
         i2c_master_send(ts->client,buf,2);
 
         buf[0] = SAMPLE_CNT ;
-        buf[1] = num_samples ;		// over-sampling count
+        buf[1] = combine_samples ;		// over-sampling count
         i2c_master_send(ts->client,buf,2);
 
         buf[0] = SAMPLE_DELAY ;
@@ -560,6 +574,7 @@ static int ts_thread(void *_ts)
         buf[0] = DRIVE_DELAY ;
         buf[1] = drive_delay ;
         i2c_master_send(ts->client,buf,2);
+	drop = drop_samples;
 
 	do {
 #ifdef TESTING
@@ -588,12 +603,20 @@ static int ts_thread(void *_ts)
 #ifdef TESTING
 			printk(KERN_ERR "%s: i=%06x j=%06x\n",client_name,i,j);
 #endif
-			if (j & (1<<22)) {
-				/* this is a release notice */
-				ts_event_release(ts);
+			if (drop) {
+				drop--;
 			} else {
-				/* touch is active */
-				ts_evt_add(ts, pressure, i, j & SAMPLE_MASK);
+				if (j & (1<<22)) {
+					/* this is a release notice */
+					ts_event_release(ts);
+					drop = drop_samples;
+				} else {
+					/* touch is active */
+					j &= SAMPLE_MASK;
+					ts_evt_add(ts, pressure,
+						i >> sample_shift,
+						j >> sample_shift);
+				}
 			}
 		} else {
 			printk(KERN_WARNING "%s: sample not valid i=%06x j=%06x interruptCnt=%i\n",client_name,i,j,ts->interruptCnt);
