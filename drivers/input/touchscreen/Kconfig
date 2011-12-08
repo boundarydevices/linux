@@ -87,6 +87,18 @@ config TOUCHSCREEN_AD7879
 	tristate
 	default n
 
+config TOUCHSCREEN_ATMEL_MXT
+	tristate "Atmel mXT I2C Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have Atmel mXT series I2C touchscreen,
+	  such as AT42QT602240/ATMXT224, connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called atmel_mxt_ts.
+
 config TOUCHSCREEN_BITSY
 	tristate "Compaq iPAQ H3600 (Bitsy) touchscreen"
 	depends on SA1100_BITSY
