@@ -558,9 +558,8 @@ static void mxt_input_touchevent(struct mxt_data *data,
 	mxt_input_report(data, id);
 }
 
-static irqreturn_t mxt_interrupt(int irq, void *dev_id)
+static void process_interrupt(struct mxt_data *data)
 {
-	struct mxt_data *data = dev_id;
 	struct mxt_message message;
 	struct mxt_object *object;
 	struct device *dev = &data->client->dev;
@@ -572,7 +571,7 @@ static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 	do {
 		if (mxt_read_message(data, &message)) {
 			dev_err(dev, "Failed to read message\n");
-			goto end;
+			break;
 		}
 
 		reportid = message.reportid;
@@ -580,7 +579,7 @@ static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 		/* whether reportid is thing of MXT_TOUCH_MULTI */
 		object = mxt_get_object(data, MXT_TOUCH_MULTI);
 		if (!object)
-			goto end;
+			break ;
 
 		max_reportid = object->max_reportid;
 		min_reportid = max_reportid - object->num_report_ids + 1;
@@ -591,8 +590,11 @@ static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 		else
 			mxt_dump_message(dev, &message);
 	} while (reportid != 0xff);
+}
 
-end:
+static irqreturn_t mxt_interrupt(int irq, void *dev_id)
+{
+	process_interrupt((struct mxt_data *)dev_id);
 	return IRQ_HANDLED;
 }
 
@@ -1005,6 +1007,7 @@ static void mxt_start(struct mxt_data *data)
 	/* Touch enable */
 	mxt_write_object(data,
 			MXT_TOUCH_MULTI, MXT_TOUCH_CTRL, 0x83);
+	process_interrupt(data);
 }
 
 static void mxt_stop(struct mxt_data *data)
@@ -1012,6 +1015,7 @@ static void mxt_stop(struct mxt_data *data)
 	/* Touch disable */
 	mxt_write_object(data,
 			MXT_TOUCH_MULTI, MXT_TOUCH_CTRL, 0);
+	process_interrupt(data);
 }
 
 static int mxt_input_open(struct input_dev *dev)
