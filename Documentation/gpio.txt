@@ -303,6 +303,9 @@ where 'flags' is currently defined to specify the following properties:
 	* GPIOF_INIT_LOW	- as output, set initial level to LOW
 	* GPIOF_INIT_HIGH	- as output, set initial level to HIGH
 
+	* GPIOF_EXPORT_DIR_FIXED	- export gpio to sysfs, keep direction
+	* GPIOF_EXPORT_DIR_CHANGEABLE	- also export, allow changing direction
+
 since GPIOF_INIT_* are only valid when configured as output, so group valid
 combinations as:
 
