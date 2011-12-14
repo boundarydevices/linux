@@ -208,18 +208,29 @@ static int csi_enc_enabling_tasks(void *private)
 
 	CAMERA_TRACE("IPU:In csi_enc_enabling_tasks\n");
 
-	cam->dummy_frame.vaddress = dma_alloc_coherent(cam->dev,
-			       PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
-			       &cam->dummy_frame.paddress,
-			       GFP_DMA | GFP_KERNEL);
-	if (cam->dummy_frame.vaddress == 0) {
-		pr_err("ERROR: v4l2 capture: Allocate dummy frame "
-		       "failed.\n");
-		return -ENOBUFS;
+	if (cam->dummy_frame.vaddress &&
+		cam->dummy_frame.buffer.length
+		< PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage)) {
+		dma_free_coherent(cam->dev, cam->dummy_frame.buffer.length,
+				  cam->dummy_frame.vaddress,
+				  cam->dummy_frame.paddress);
+		cam->dummy_frame.vaddress = 0;
+	}
+
+	if (!cam->dummy_frame.vaddress) {
+		cam->dummy_frame.vaddress = dma_alloc_coherent(cam->dev,
+				       PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
+				       &cam->dummy_frame.paddress,
+				       GFP_DMA | GFP_KERNEL);
+		if (cam->dummy_frame.vaddress == 0) {
+			pr_err("ERROR: v4l2 capture: Allocate dummy frame "
+			       "failed.\n");
+			return -ENOBUFS;
+		}
+		cam->dummy_frame.buffer.length =
+		    PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage);
 	}
 	cam->dummy_frame.buffer.type = V4L2_BUF_TYPE_PRIVATE;
-	cam->dummy_frame.buffer.length =
-	    PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage);
 	cam->dummy_frame.buffer.m.offset = cam->dummy_frame.paddress;
 
 	ipu_clear_irq(cam->ipu, irq);
@@ -255,12 +266,6 @@ static int csi_enc_disabling_tasks(void *private)
 
 	ipu_channel_free(&cam->ipu_chan);
 
-	if (cam->dummy_frame.vaddress != 0) {
-		dma_free_coherent(cam->dev, cam->dummy_frame.buffer.length,
-				  cam->dummy_frame.vaddress,
-				  cam->dummy_frame.paddress);
-		cam->dummy_frame.vaddress = 0;
-	}
 	err2 = cam_mipi_csi2_disable(cam);
 	return err ? err : err2;
 }
