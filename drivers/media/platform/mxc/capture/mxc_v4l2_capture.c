@@ -2734,6 +2734,7 @@ static int init_camera_struct(cam_data *cam, struct platform_device *pdev)
 
 	/* Default everything to 0 */
 	memset(cam, 0, sizeof(cam_data));
+	cam->dev = &pdev->dev;
 
 	/* get devtype to distinguish if the cpu is imx5 or imx6
 	 * IMX5_V4L2 specify the cpu is imx5
@@ -2830,6 +2831,14 @@ static int init_camera_struct(cam_data *cam, struct platform_device *pdev)
 	spin_lock_init(&cam->queue_int_lock);
 	spin_lock_init(&cam->dqueue_int_lock);
 
+	cam->dummy_frame.vaddress = dma_alloc_coherent(cam->dev,
+			       SZ_8M, &cam->dummy_frame.paddress,
+			       GFP_DMA | GFP_KERNEL);
+	if (cam->dummy_frame.vaddress == 0)
+		pr_err("ERROR: v4l2 capture: Allocate dummy frame "
+		       "failed.\n");
+	cam->dummy_frame.buffer.length = SZ_8M;
+
 	cam->self = kmalloc(sizeof(struct v4l2_int_device), GFP_KERNEL);
 	cam->self->module = THIS_MODULE;
 	sprintf(cam->self->name, "mxc_v4l2_cap%d", camera_id++);
@@ -2898,7 +2907,6 @@ static int mxc_v4l2_probe(struct platform_device *pdev)
 	init_camera_struct(cam, pdev);
 	pdev->dev.release = camera_platform_release;
 
-	cam->dev = &pdev->dev;
 	/* Set up the v4l2 device and register it*/
 	cam->self->priv = cam;
 	v4l2_int_device_register(cam->self);
@@ -2959,6 +2967,13 @@ static int mxc_v4l2_remove(struct platform_device *pdev)
 		pr_info("V4L2 freeing image input device\n");
 		v4l2_int_device_unregister(cam->self);
 		video_unregister_device(cam->video_dev);
+
+		if (cam->dummy_frame.vaddress != 0) {
+			dma_free_coherent(0, cam->dummy_frame.buffer.length,
+					  cam->dummy_frame.vaddress,
+					  cam->dummy_frame.paddress);
+			cam->dummy_frame.vaddress = 0;
+		}
 
 		mxc_free_frame_buf(cam);
 		kfree(cam);
