@@ -20,7 +20,7 @@
 #include <linux/string.h>
 #include <linux/kernel.h>
 
-int __initdata primary_di = { -1 };
+int __initdata primary_di = { 0 };
 static int __init di1_setup(char *__unused)
 {
 	primary_di = 1;
