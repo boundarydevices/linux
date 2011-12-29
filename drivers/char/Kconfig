@@ -1175,12 +1175,19 @@ config MX51_GPIO_TRIG
 	help
 	  Triggered GPIO driver. Allows sampling of multiple pins on transitions of one.
 
-config MX51_GPIO
-	tristate "MX51 GPIO driver"
-	depends on ARCH_MX5
+config GPIO_INPUT
+	tristate "GPIO input driver"
 	default n
 	help
-	  GPIO driver for i.MX51. Returns transitions on specified pin.
+	  Input driver for GPIOs. Returns transitions on specified pin.
+
+config GPIO_INPUT_DEFAULT
+	depends on GPIO_INPUT
+	string "Generic GPIO input driver default specification"
+	default ""
+	help
+	  Enter the compile-time default specification here to avoid
+	  the need to supply one on the kernel command-line
 
 endmenu
 

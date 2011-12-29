@@ -1,6 +1,16 @@
 /*
  * MX51 2XX GPIO driver
  *
+ * The 'gpio' module parameter defines the pins to use. It's a
+ * string of the form:
+ *
+ *	gpo=111:pin111[:initval=0],112:pin112[initval=1]
+ *
+ * where
+ *	111 and 112 are the pin numbers (GPIO numbers),
+ *	pinname is the device name
+ *	the optional :initval specifies the initial setting
+ *
  * Copyright (C) 2008, Boundary Devices
  *
  */
@@ -27,13 +37,30 @@
 #include <asm/uaccess.h>
 #include <asm/system.h>
 #include <asm/mach/irq.h>
+#include <linux/cdev.h>
 #include <linux/proc_fs.h>
 
 #define GPIO_MAJOR 0 //0 means dynmaic assignment
 static int gpio_major = GPIO_MAJOR ;
 
 static char const driverName[] = {
-	"gpio"
+	"gpio_input"
+};
+
+static char gpio_input_spec[256] = {CONFIG_GPIO_INPUT_DEFAULT};
+module_param_string(spec, gpio_input_spec, sizeof(gpio_input_spec), 0644);
+MODULE_PARM_DESC(spec, "Specification for gpio input params");
+
+static struct class *gpio_class = 0;
+static struct list_head pin_list ;
+static int pin_count=0 ;
+
+#define MAXNAMELEN 32
+struct gpio_input_pin_t {
+	struct list_head 	list_head;	// see global dev_list
+	unsigned 		gpio ;
+	char	 		name[MAXNAMELEN];
+	struct cdev 		cdev;
 };
 
 struct gpio_data {
@@ -192,18 +219,89 @@ static const struct file_operations gpio_fops = {
 	.poll		= gpio_poll,
 };
 
-#ifndef MODULE
-static int __init gpio_setup (char *str)
+static void create_devs(void)
 {
-	return 1;
+	char const *next=gpio_input_spec;
+	char const *end=next+strlen(gpio_input_spec);
+	while (next && (next<end)) {
+		char entry[sizeof(gpio_input_spec)];
+		char const *comma=strchr(next,',');
+		char *entryend ;
+		char *colon ;
+		unsigned len ;
+		if (0 == comma)
+			comma=end;
+		len=comma-next ;
+		memcpy(entry,next,len);
+		entry[len]=0;
+		entryend=entry+len ;
+		colon=strchr(entry,':');
+		if (colon && (colon<entryend) && (len<MAXNAMELEN)) {
+			char *pinname ;
+			unsigned gpnum;
+			*colon=0;
+			gpnum=simple_strtoul(entry,0,0);
+			pinname=colon+1 ;
+			colon=strchr(pinname,':');
+			if (gpio_is_valid(gpnum)) {
+				struct gpio_input_pin_t *pin = kzalloc(sizeof(*pin), GFP_KERNEL);
+				if (pin) {
+					int rv ;
+					pin->gpio=gpnum ;
+					strcpy(pin->name,pinname);
+					if (0 == (rv=gpio_request(gpnum,pin->name))) {
+						rv = gpio_direction_input(gpnum);
+						if (0 == rv) {
+							INIT_LIST_HEAD(&pin->list_head);
+							list_add_tail(&pin->list_head, &pin_list);
+							++pin_count ;
+						} else
+							printk (KERN_ERR "%s: error %d setting pin %s as input\n",
+								driverName,rv,pinname);
+					}
+					else {
+						printk (KERN_ERR "%s: error %d allocating %s\n", driverName,rv, pinname);
+						kfree(pin);
+					}
+				}
+			}
+			else
+				printk (KERN_ERR "%s: invalid entry %s\n", __func__, entry);
+		} else
+			printk (KERN_ERR "%s: invalid entry (missing colon) %s: %p.%p\n", __func__, entry,colon,entryend);
+		next=comma+1 ;
+	}
+
+	if (0 < pin_count) {
+		struct gpio_input_pin_t *pin, *next;
+		// find node containing this pdev, kill associated cdev and clear node
+		list_for_each_entry_safe(pin, next, &pin_list, list_head) {
+			int result ;
+			dev_t devnum = MKDEV(gpio_major, pin->gpio);
+			cdev_init(&pin->cdev, &gpio_fops);
+			pin->cdev.owner = THIS_MODULE ;
+			// Register cdev
+			if (0 == (result = cdev_add(&pin->cdev, devnum, 1) )) {
+				device_create(gpio_class, NULL, devnum, NULL, pin->name);
+				printk (KERN_ERR "%s: registered %s, devnum %x\n", driverName, pin->name, devnum );
+			} else {
+				printk (KERN_ERR "%s: couldn't add device: err %d\n", pin->name, result);
+				list_del(&pin->list_head);
+				kobject_put(&pin->cdev.kobj);
+				kfree(pin);
+				--pin_count ;
+			}
+		}
+	}
 }
-#endif
 
 static int __init gpio_init_module (void)
 {
 	int result ;
-        struct proc_dir_entry *pde ;
 
+        INIT_LIST_HEAD(&pin_list);
+
+	printk (KERN_ERR "%s: spec %s\n", __FILE__, gpio_input_spec);
 	result = register_chrdev(gpio_major,driverName,&gpio_fops);
 	if (result<0) {
 		printk (KERN_WARNING __FILE__": Couldn't register device %d.\n", gpio_major);
@@ -212,17 +310,24 @@ static int __init gpio_init_module (void)
 	if (gpio_major==0)
 		gpio_major = result; //dynamic assignment
 
-	printk (KERN_INFO "MX51 GPIO driver. Boundary Devices\n");
-	return 0 ;
+	gpio_class = class_create(THIS_MODULE, driverName);
+	if (IS_ERR(gpio_class)) {
+                unregister_chrdev(gpio_major,driverName);
+		return -EIO ;
+	} else {
+		printk (KERN_INFO "GPIO input driver. Boundary Devices\n");
+		create_devs();
+		return 0 ;
+	}
 }
 
 static void gpio_cleanup_module (void)
 {
+	class_destroy(gpio_class);
         remove_proc_entry("triggers", 0 );
 	unregister_chrdev(gpio_major,driverName);
 }
 
-__setup("pxagpio=", gpio_setup);
 module_init(gpio_init_module);
 module_exit(gpio_cleanup_module);
 
