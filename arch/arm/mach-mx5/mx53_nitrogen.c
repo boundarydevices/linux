@@ -85,6 +85,10 @@
 #include "devices.h"
 #include "usb.h"
 
+#if defined (CONFIG_TOUCHSCREEN_ATMEL_MXT) || defined (CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
+#include <linux/i2c/atmel_mxt_ts.h>
+#endif
+
 //#define REV0		//this board should no longer exist
 
 #define MUX_SION_MASK	((iomux_v3_cfg_t)(IOMUX_CONFIG_SION) << MUX_MODE_SHIFT)
@@ -341,8 +345,10 @@ struct gpio nitrogen53_gpios[] __initdata = {
 	{.label = "eMMC reset",		.gpio = MAKE_GP(5, 2),		.flags = GPIOF_INIT_HIGH},	/* EIM_A25 */
 #define N53_CAMERA_STANDBY			MAKE_GP(5, 20)
 	{.label = "Camera standby",	.gpio = MAKE_GP(5, 20),		.flags = 0},
+#ifndef CONFIG_MACH_MX53_NITROGEN_K
 #define N53_OTG_VBUS				MAKE_GP(6, 6)
 	{.label = "otg-vbus",		.gpio = MAKE_GP(6, 6),		.flags = 0},	/* disable VBUS */
+#endif
 #define N53_PHY_RESET				MAKE_GP(7, 13)
 	{.label = "ICS1893 reset",	.gpio = MAKE_GP(7, 13),		.flags = 0},	/* ICS1893 Ethernet PHY reset */
 #if defined(CONFIG_SERIAL_IMX_RS485)
@@ -972,6 +978,7 @@ static struct mxc_iim_data iim_data = {
 };
 
 
+#ifndef CONFIG_MACH_MX53_NITROGEN_K
 static void mx53_gpio_usbotg_driver_vbus(bool on)
 {
 	/* Enable OTG VBus with GPIO high */
@@ -979,6 +986,7 @@ static void mx53_gpio_usbotg_driver_vbus(bool on)
 	gpio_set_value(N53_OTG_VBUS, on ? 1 : 0);
 	pr_info("%s: on=%d\n", __func__, on);
 }
+#endif
 
 static void mx53_gpio_host1_driver_vbus(bool on)
 {
