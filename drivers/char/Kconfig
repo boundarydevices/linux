@@ -317,6 +317,17 @@ config DEVMEM
 	  memory.
 	  When in doubt, say "Y".
 
+config MAGSTRIPE
+	tristate "Neuron magstripe reader support through GPIO"
+	default n
+	help
+	   This driver enables support for a Neuron MCR-370T-1R-xxxx
+	   insertion-style magnetic stripe card reader, connected via
+	   GPIO. GPIO pin assignments are defined through the device tree.
+	   Only a single instance is currently supported.
+
+	   If compiled as a module, it will be named magdecode.ko
+
 config NVRAM
 	tristate "/dev/nvram support"
 	depends on X86 || HAVE_ARCH_NVRAM_OPS
