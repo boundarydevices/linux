@@ -1298,6 +1298,7 @@ found:
 	if (regulator == NULL) {
 		regulator = ERR_PTR(-ENOMEM);
 		module_put(rdev->owner);
+		goto out;
 	}
 
 	rdev->open_count++;
