@@ -281,6 +281,11 @@ config SND_SOC_SGTL5000
 	tristate
 	depends on I2C
 
+config SND_SOC_SGTL5000_MAX_VOLUME
+	int "max SGTL5000 volume"
+	default 192
+	depends on SND_SOC_SGTL5000
+
 config SND_SOC_AK4647
         tristate
         depends on I2C

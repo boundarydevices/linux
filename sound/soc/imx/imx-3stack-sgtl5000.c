@@ -25,6 +25,7 @@
 #include <linux/irq.h>
 #include <linux/io.h>
 #include <linux/fsl_devices.h>
+#include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -172,6 +173,17 @@ static int imx_3stack_audio_hw_params(struct snd_pcm_substream *substream,
 
 static int imx_3stack_startup(struct snd_pcm_substream *substream)
 {
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		struct imx_3stack_priv *priv = &card_priv;
+		struct regulator *reg_amp;
+		reg_amp = regulator_get(&priv->pdev->dev, "VDD_AMP");
+		if (IS_ERR(reg_amp)) {
+			dev_err(&priv->pdev->dev, "get VDD_AMP error.\n");
+		} else {
+			regulator_enable(reg_amp);
+			regulator_put(reg_amp);
+		}
+	}
 #if defined(CONFIG_MXC_ASRC) || defined(CONFIG_MXC_ASRC_MODULE)
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		if (asrc_ssi_data.output_sample_rate != 0) {
@@ -214,6 +226,16 @@ static void imx_3stack_shutdown(struct snd_pcm_substream *substream)
 #endif
 
 	priv->hw = 0;
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		struct regulator *reg_amp;
+		reg_amp = regulator_get(&priv->pdev->dev, "VDD_AMP");
+		if (IS_ERR(reg_amp)) {
+			dev_err(&priv->pdev->dev, "get VDD_AMP error.\n");
+		} else {
+			regulator_disable(reg_amp);
+			regulator_put(reg_amp);
+		}
+	}
 }
 
 /*
@@ -311,7 +333,7 @@ static void headphone_detect_handler(struct work_struct *work)
 	buf = kmalloc(32, GFP_ATOMIC);
 	if (!buf) {
 		pr_err("%s kmalloc failed\n", __func__);
-		return;
+		return -ENOMEM ;
 	}
 	envp[0] = "NAME=headphone";
 	snprintf(buf, 32, "STATE=%d", hp_status);
@@ -320,11 +342,13 @@ static void headphone_detect_handler(struct work_struct *work)
 	kobject_uevent_env(&pdev->dev.kobj, KOBJ_CHANGE, envp);
 	kfree(buf);
 
-	if (hp_status)
-		set_irq_type(plat->hp_irq, IRQ_TYPE_EDGE_FALLING);
-	else
-		set_irq_type(plat->hp_irq, IRQ_TYPE_EDGE_RISING);
-	enable_irq(plat->hp_irq);
+	if (plat->hp_irq) {
+		if (hp_status)
+			set_irq_type(plat->hp_irq, IRQ_TYPE_EDGE_FALLING);
+		else
+			set_irq_type(plat->hp_irq, IRQ_TYPE_EDGE_RISING);
+		enable_irq(plat->hp_irq);
+	}
 }
 
 static DECLARE_DELAYED_WORK(hp_event, headphone_detect_handler);
@@ -628,19 +652,20 @@ static int __devinit imx_3stack_sgtl5000_probe(struct platform_device *pdev)
 	   cycles after all power rails have been brought up. After this time
 	   communication can start */
 
-	if (plat->hp_status())
-		ret = request_irq(plat->hp_irq,
+	if (plat->hp_irq) {
+		if (plat->hp_status())
+			ret = request_irq(plat->hp_irq,
 				  imx_headphone_detect_handler,
 				  IRQ_TYPE_EDGE_FALLING, pdev->name, priv);
-	else
-		ret = request_irq(plat->hp_irq,
+		else
+			ret = request_irq(plat->hp_irq,
 				  imx_headphone_detect_handler,
 				  IRQ_TYPE_EDGE_RISING, pdev->name, priv);
-	if (ret < 0) {
-		pr_err("%s: request irq failed\n", __func__);
-		goto err_card_reg;
+		if (ret < 0) {
+			pr_err("%s: request irq failed\n", __func__);
+			goto err_card_reg;
+		}
 	}
-
 	setup = kzalloc(sizeof(struct sgtl5000_setup_data), GFP_KERNEL);
 	if (!setup) {
 		pr_err("%s: kzalloc sgtl5000_setup_data failed\n", __func__);
@@ -669,7 +694,8 @@ static int imx_3stack_sgtl5000_remove(struct platform_device *pdev)
 	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;
 	struct imx_3stack_priv *priv = &card_priv;
 
-	free_irq(plat->hp_irq, priv);
+	if (plat->hp_irq)
+		free_irq(plat->hp_irq, priv);
 
 	if (plat->finit)
 		plat->finit();

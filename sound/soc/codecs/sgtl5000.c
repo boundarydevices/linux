@@ -58,6 +58,11 @@ static int sgtl5000_set_bias_level(struct snd_soc_codec *codec,
 #define SGTL5000_MAX_CACHED_REG SGTL5000_CHIP_SHORT_CTRL
 static u16 sgtl5000_regs[(SGTL5000_MAX_CACHED_REG >> 1) + 1];
 
+/* full range is [0xfc..0x3c] (0xfc is loudest) */
+#define VOLMAX CONFIG_SND_SOC_SGTL5000_MAX_VOLUME
+#define FULLVOLUME 0xFC
+#define LOWVOLUME 0x3C
+
 /*
  * Schedule clock to be turned off or turn clock on.
  */
@@ -305,7 +310,7 @@ static int dac_info_volsw(struct snd_kcontrol *kcontrol,
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->count = 2;
 	uinfo->value.integer.min = 0;
-	uinfo->value.integer.max = 0xfc - 0x3c;
+	uinfo->value.integer.max = VOLMAX ;
 	return 0;
 }
 
@@ -318,12 +323,12 @@ static int dac_get_volsw(struct snd_kcontrol *kcontrol,
 	reg = sgtl5000_read(codec, SGTL5000_CHIP_DAC_VOL);
 	l = (reg & SGTL5000_DAC_VOL_LEFT_MASK) >> SGTL5000_DAC_VOL_LEFT_SHIFT;
 	r = (reg & SGTL5000_DAC_VOL_RIGHT_MASK) >> SGTL5000_DAC_VOL_RIGHT_SHIFT;
-	l = l < 0x3c ? 0x3c : l;
-	l = l > 0xfc ? 0xfc : l;
-	r = r < 0x3c ? 0x3c : r;
-	r = r > 0xfc ? 0xfc : r;
-	l = 0xfc - l;
-	r = 0xfc - r;
+	l = l < LOWVOLUME ? LOWVOLUME : l;
+	l = l > FULLVOLUME ? FULLVOLUME : l;
+	r = r < LOWVOLUME ? LOWVOLUME : r;
+	r = r > FULLVOLUME ? FULLVOLUME : r;
+	l = FULLVOLUME - l;
+	r = FULLVOLUME - r;
 
 	ucontrol->value.integer.value[0] = l;
 	ucontrol->value.integer.value[1] = r;
@@ -331,27 +336,29 @@ static int dac_get_volsw(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static unsigned volume_register(int lvol,int rvol)
+{
+        unsigned reg ;
+
+	lvol = lvol < 0 ? 0 : lvol;
+	lvol = lvol > VOLMAX ? VOLMAX : lvol;
+	lvol = FULLVOLUME - lvol;
+	rvol = rvol < 0 ? 0 : rvol;
+	rvol = rvol > VOLMAX ? VOLMAX : rvol;
+	rvol = FULLVOLUME - rvol;
+
+	reg = (lvol << SGTL5000_DAC_VOL_LEFT_SHIFT) |
+	    (rvol << SGTL5000_DAC_VOL_RIGHT_SHIFT);
+	return reg ;
+}
+
 static int dac_put_volsw(struct snd_kcontrol *kcontrol,
 			 struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	int reg, l, r;
-
-	l = ucontrol->value.integer.value[0];
-	r = ucontrol->value.integer.value[1];
-
-	l = l < 0 ? 0 : l;
-	l = l > 0xfc - 0x3c ? 0xfc - 0x3c : l;
-	r = r < 0 ? 0 : r;
-	r = r > 0xfc - 0x3c ? 0xfc - 0x3c : r;
-	l = 0xfc - l;
-	r = 0xfc - r;
-
-	reg = l << SGTL5000_DAC_VOL_LEFT_SHIFT |
-	    r << SGTL5000_DAC_VOL_RIGHT_SHIFT;
-
+	unsigned reg = volume_register(ucontrol->value.integer.value[0],
+                                       ucontrol->value.integer.value[1]);
 	sgtl5000_write(codec, SGTL5000_CHIP_DAC_VOL, reg);
-
 	return 0;
 }
 
@@ -374,13 +381,15 @@ static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 	SOC_DOUBLE("Capture Volume", SGTL5000_CHIP_ANA_ADC_CTRL, 0, 4, 0xf, 0),
 	SOC_ENUM("Capture Vol Reduction", adc_m6db),
 	{.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
-	 .name = "Playback Volume",
+	 .name = "Master Playback Volume",
 	 .access = SNDRV_CTL_ELEM_ACCESS_READWRITE |
 	 SNDRV_CTL_ELEM_ACCESS_VOLATILE,
 	 .info = dac_info_volsw,
 	 .get = dac_get_volsw,
 	 .put = dac_put_volsw,
 	 },
+	SOC_SINGLE("PCM Playback mute left Switch", SGTL5000_CHIP_ADCDAC_CTRL, 2, 1, 1),
+	SOC_SINGLE("PCM Playback mute right Switch", SGTL5000_CHIP_ADCDAC_CTRL, 3, 1, 1),
 	SOC_DOUBLE("Headphone Volume", SGTL5000_CHIP_ANA_HP_CTRL, 0, 8, 0x7f,
 		   1),
 };
@@ -480,7 +489,7 @@ static int sgtl5000_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 		sgtl5000->sysclk = freq;
 		break;
 	case SGTL5000_LRCLK:
-		sgtl5000->lrclk = freq;
+		sgtl5000->lrclk = freq;		/* What is this ???? */
 		break;
 	default:
 		return -EINVAL;
@@ -619,7 +628,8 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 	int i2s_ctl;
 	int div2 = 0;
 	int reg;
-	int sys_fs;
+	u32 sys_fs;
+	u32 sample_rate = params_rate(params);
 
 	pr_debug("%s channels=%d\n", __func__, channels);
 
@@ -636,7 +646,8 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
 		sgtl5000->capture_channels = channels;
 
-	switch (sgtl5000->lrclk) {
+	sys_fs = sample_rate;
+	switch (sys_fs) {
 	case 8000:
 	case 16000:
 		sys_fs = 32000;
@@ -645,43 +656,38 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 	case 22050:
 		sys_fs = 44100;
 		break;
-	default:
-		sys_fs = sgtl5000->lrclk;
-		break;
 	}
 
-	switch (sys_fs / sgtl5000->lrclk) {
+	switch (sys_fs) {
+	case 32000:
+		clk_ctl = SGTL5000_SYS_FS_32k << SGTL5000_SYS_FS_SHIFT;
+		break;
+	case 44100:
+		clk_ctl = SGTL5000_SYS_FS_44_1k << SGTL5000_SYS_FS_SHIFT;
+		break;
+	case 48000:
+		clk_ctl = SGTL5000_SYS_FS_48k << SGTL5000_SYS_FS_SHIFT;
+		break;
+	case 96000:
+		clk_ctl = SGTL5000_SYS_FS_96k << SGTL5000_SYS_FS_SHIFT;
+		break;
+	default:
+		pr_err("%s: sample rate %d not supported\n", __func__,
+		       sample_rate);
+		return -EFAULT;
+	}
+	switch (sys_fs / sample_rate) {
 	case 4:
 		clk_ctl |= SGTL5000_RATE_MODE_DIV_4 << SGTL5000_RATE_MODE_SHIFT;
 		break;
 	case 2:
 		clk_ctl |= SGTL5000_RATE_MODE_DIV_2 << SGTL5000_RATE_MODE_SHIFT;
 		break;
-	default:
-		break;
 	}
 
-	switch (sys_fs) {
-	case 32000:
-		clk_ctl |= SGTL5000_SYS_FS_32k << SGTL5000_SYS_FS_SHIFT;
-		break;
-	case 44100:
-		clk_ctl |= SGTL5000_SYS_FS_44_1k << SGTL5000_SYS_FS_SHIFT;
-		break;
-	case 48000:
-		clk_ctl |= SGTL5000_SYS_FS_48k << SGTL5000_SYS_FS_SHIFT;
-		break;
-	case 96000:
-		clk_ctl |= SGTL5000_SYS_FS_96k << SGTL5000_SYS_FS_SHIFT;
-		break;
-	default:
-		pr_err("%s: sample rate %d not supported\n", __func__,
-		       sgtl5000->lrclk);
-		return -EFAULT;
-	}
 	/* SGTL5000 rev1 has a IC bug to prevent switching to MCLK from PLL. */
 	if (!sgtl5000->master) {
-		sys_fs = sgtl5000->lrclk;
+		sys_fs = sample_rate;
 		clk_ctl = SGTL5000_RATE_MODE_DIV_1 << SGTL5000_RATE_MODE_SHIFT;
 		if (sys_fs * 256 == sgtl5000->sysclk)
 			clk_ctl |= SGTL5000_MCLK_FREQ_256FS << \
@@ -697,30 +703,23 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 			       __func__);
 			return -EINVAL;
 		}
-	} else
-		clk_ctl |= SGTL5000_MCLK_FREQ_PLL << SGTL5000_MCLK_FREQ_SHIFT;
-
-	if ((clk_ctl & SGTL5000_MCLK_FREQ_MASK) == SGTL5000_MCLK_FREQ_PLL) {
-		u64 out, t;
-		unsigned int in, int_div, frac_div;
+	} else {
+		u64 out;
+		if (sys_fs == 44100) {
+			out = 180633600ULL << 11;
+		} else {
+			out = 196608000ULL << 11;
+		}
 		if (sgtl5000->sysclk > 17000000) {
 			div2 = 1;
-			in = sgtl5000->sysclk / 2;
+			out <<= 1;
 		} else {
 			div2 = 0;
-			in = sgtl5000->sysclk;
 		}
-		if (sys_fs == 44100)
-			out = 180633600;
-		else
-			out = 196608000;
-		t = do_div(out, in);
-		int_div = out;
-		t *= 2048;
-		do_div(t, in);
-		frac_div = t;
-		pll_ctl = int_div << SGTL5000_PLL_INT_DIV_SHIFT |
-		    frac_div << SGTL5000_PLL_FRAC_DIV_SHIFT;
+		out += (sgtl5000->sysclk >> 1);		/* round */
+		do_div(out, sgtl5000->sysclk);
+		pll_ctl = (int)out;
+		clk_ctl |= SGTL5000_MCLK_FREQ_PLL << SGTL5000_MCLK_FREQ_SHIFT;
 	}
 
 	i2s_ctl = sgtl5000_read(codec, SGTL5000_CHIP_I2S_CTRL);
@@ -753,8 +752,8 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	pr_debug("\nfs=%d,clk_ctl=%04x,pll_ctl=%04x,i2s_ctl=%04x,div2=%d\n",
-		 sgtl5000->lrclk, clk_ctl, pll_ctl, i2s_ctl, div2);
+	pr_debug("\nfs=%d,sysclk=%d,clk_ctl=%04x,pll_ctl=%x,i2s_ctl=%04x,div2=%d\n",
+		 sample_rate, sgtl5000->sysclk, clk_ctl, pll_ctl, i2s_ctl, div2);
 
 	if ((clk_ctl & SGTL5000_MCLK_FREQ_MASK) == SGTL5000_MCLK_FREQ_PLL) {
 		sgtl5000_write(codec, SGTL5000_CHIP_PLL_CTRL, pll_ctl);
@@ -1158,6 +1157,7 @@ static int sgtl5000_probe(struct platform_device *pdev)
 	sgtl5000_add_widgets(codec);
 
 	sgtl5000_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+	sgtl5000_write(codec, SGTL5000_CHIP_DAC_VOL, volume_register(VOLMAX,VOLMAX));
 
 	return 0;
 }
@@ -1212,6 +1212,7 @@ static __devinit int sgtl5000_i2c_probe(struct i2c_client *client,
 	struct regulator *reg;
 	int ret = 0;
 	u32 val;
+	int retry = 0;
 
 	if (sgtl5000_codec) {
 		dev_err(&client->dev,
@@ -1269,13 +1270,17 @@ static __devinit int sgtl5000_i2c_probe(struct i2c_client *client,
 
 	msleep(1);
 
-	val = sgtl5000_read(codec, SGTL5000_CHIP_ID);
-	if (((val & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
-	    SGTL5000_PARTID_PART_ID) {
-		pr_err("Device with ID register %x is not a SGTL5000\n", val);
-		ret = -ENODEV;
-		goto err_codec_reg;
-	}
+	do {
+		val = sgtl5000_read(codec, SGTL5000_CHIP_ID);
+		if (((val & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT)
+				== SGTL5000_PARTID_PART_ID)
+			break;
+		dev_err(&client->dev, "Device with ID register %x is not a SGTL5000\n", val);
+		if (++retry == 5) {
+			ret = -ENODEV;
+			goto err_codec_reg;
+		}
+	} while (1);
 
 	sgtl5000->rev = (val & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT;
 	dev_info(&client->dev, "SGTL5000 revision %d\n", sgtl5000->rev);
