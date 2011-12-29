@@ -50,8 +50,6 @@ struct tsi_thread_type {
 #define	INACTIVE	1
 
 
-extern u32 da9052_tsi_get_input_dev(u8 off);
-
 ssize_t da9052_tsi_get_calib_display_point(struct da9052_tsi_data *displayPtr);
 
 #endif	/* __LINUX_MFD_DA9052_TSI_FILTER_H */

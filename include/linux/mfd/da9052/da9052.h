@@ -83,6 +83,11 @@ struct da9052_ssc_msg {
 	unsigned char	addr;
 };
 
+struct da9052_modify_msg {
+	unsigned char	clear_mask;
+	unsigned char	set_mask;
+};
+
 struct ssc_cache_entry{
 	 unsigned char	val;
 	 unsigned char	type:4;
@@ -111,9 +116,12 @@ struct da9052_tsi_platform_data {
 	u16	tsi_skip_bit_shift;
 	u16	num_gpio_tsi_register;
 	u16	tsi_supply_voltage;
-	u16	tsi_ref_source;
 	u16	max_tsi_delay;
 	u16	max_tsi_skip_slot;
+#define DA9052_4_WIRE		0
+#define DA9052_5_WIRE_YXSXY	1
+#define DA9052_5_WIRE_XYSXY	2
+	u16	config_index;
 };
 
 
@@ -148,10 +156,17 @@ struct da9052 {
 		struct da9052_ssc_msg *sscmsg, int cnt);
 	int (*write_many)(struct da9052 *da9052,
 		struct da9052_ssc_msg *sscmsg, int cnt);
+	int (*modify_many)(struct da9052 *da9052,
+		struct da9052_ssc_msg *sscmsg,
+		struct da9052_modify_msg *modmsg, int cnt);
 	int (*register_event_notifier)(struct da9052 *da9052,
 		struct da9052_eh_nb *nb);
 	int (*unregister_event_notifier)(struct da9052 *da9052,
 		struct da9052_eh_nb *nb);
+	int (*event_enable)(struct da9052 *da9052, unsigned char eve_type);
+	int (*event_disable)(struct da9052 *da9052, unsigned char eve_type);
+	int (*register_modify)(struct da9052 *da9052, unsigned reg,
+			unsigned clear_mask, unsigned set_mask);
 	int num_regulators;
 	int connecting_device;
 	int irq;

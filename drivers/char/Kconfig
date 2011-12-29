@@ -1239,5 +1239,13 @@ config GPIO_OUTPUT_DEFAULT
 	  the need to supply one on the kernel command-line
 
 
+config DA905X_CHARDEV
+	tristate "DA905x character device"
+	depends on PMIC_DA9052
+	default n
+	help
+	  Defines a character device for a DA905x PMIC, allowing userspace
+	  to read and write registers.
+
 endmenu
 

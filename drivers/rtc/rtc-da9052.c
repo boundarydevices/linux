@@ -44,20 +44,18 @@ void da9052_rtc_notifier(struct da9052_eh_nb *eh_data, unsigned int event)
 
 	da9052_lock(rtc->da9052);
 	ret = rtc->da9052->read(rtc->da9052, &msg);
+	da9052_unlock(rtc->da9052);
 	if (ret != 0) {
-		da9052_unlock(rtc->da9052);
 		return;
 	}
-
-	da9052_unlock(rtc->da9052);
-
-
 	if (msg.data & DA9052_ALARMMI_ALARMTYPE) {
 		da9052_rtc_enable_alarm(rtc->da9052, 0);
-		printk(KERN_INFO "RTC: TIMER ALARM\n");
+		dev_dbg(&rtc->rtc->dev, "RTC: TIMER ALARM\n");
 	} else {
-		kobject_uevent(&rtc->rtc->dev.kobj, KOBJ_CHANGE);
-		printk(KERN_INFO "RTC: TICK ALARM\n");
+		if (rtc->rtc) {
+			kobject_uevent(&rtc->rtc->dev.kobj, KOBJ_CHANGE);
+			dev_dbg(&rtc->rtc->dev, "RTC: TICK ALARM\n");
+		}
 	}
 }
 
@@ -183,12 +181,10 @@ static int da9052_rtc_gettime(struct da9052 *da9052, struct rtc_time *rtc_tm)
 
 	da9052_lock(da9052);
 	ret = da9052->read_many(da9052, msg, loop_index);
+	da9052_unlock(da9052);
 	if (ret != 0) {
-		da9052_unlock(da9052);
 		return ret;
 	}
-	da9052_unlock(da9052);
-
 	rtc_tm->tm_year = msg[--loop_index].data & DA9052_COUNTY_COUNTYEAR;
 	rtc_tm->tm_mon = msg[--loop_index].data & DA9052_COUNTMO_COUNTMONTH;
 	rtc_tm->tm_mday = msg[--loop_index].data & DA9052_COUNTD_COUNTDAY;
@@ -230,11 +226,10 @@ static int da9052_alarm_gettime(struct da9052 *da9052, struct rtc_time *rtc_tm)
 
 	da9052_lock(da9052);
 	ret = da9052->read_many(da9052, msg, loop_index);
+	da9052_unlock(da9052);
 	if (ret != 0) {
-		da9052_unlock(da9052);
 		return ret;
 	}
-	da9052_unlock(da9052);
 
 	rtc_tm->tm_year = msg[--loop_index].data & DA9052_ALARMY_ALARMYEAR;
 	rtc_tm->tm_mon = msg[--loop_index].data & DA9052_ALARMMO_ALARMMONTH;
@@ -257,9 +252,7 @@ static int da9052_alarm_settime(struct da9052 *da9052, struct rtc_time *rtc_tm)
 {
 
 	struct da9052_ssc_msg msg_arr[5];
-	struct da9052_ssc_msg msg;
 	int validate_param = 0;
-	unsigned char loop_index = 0;
 	int ret = 0;
 
 	rtc_tm->tm_sec = 0;
@@ -272,58 +265,35 @@ static int da9052_alarm_settime(struct da9052 *da9052, struct rtc_time *rtc_tm)
 	if (validate_param)
 		return validate_param;
 
-	msg.addr = DA9052_ALARMMI_REG;
-	msg.data = 0;
-
+	msg_arr[0].addr = DA9052_ALARMMI_REG;
 	da9052_lock(da9052);
-	ret = da9052->read(da9052, &msg);
-	if (ret != 0) {
-		da9052_unlock(da9052);
-		return ret;
-	}
+	ret = da9052->read(da9052, &msg_arr[0]);
+	if (ret)
+		goto exit1;
+	msg_arr[4].addr = DA9052_ALARMY_REG;
+	ret = da9052->read(da9052, &msg_arr[4]);
+	if (ret)
+		goto exit1;
 
-	msg.data = msg.data & ~(DA9052_ALARMMI_ALARMMIN);
-	msg.data |= rtc_tm->tm_min;
+	msg_arr[0].data &= ~(DA9052_ALARMMI_ALARMMIN);
+	msg_arr[0].data |= rtc_tm->tm_min;
 
-	msg_arr[loop_index].addr = DA9052_ALARMMI_REG;
-	msg_arr[loop_index].data = 0;
-	msg_arr[loop_index++].data = msg.data;
+	msg_arr[1].addr = DA9052_ALARMH_REG;
+	msg_arr[1].data = rtc_tm->tm_hour;
 
-	msg_arr[loop_index].addr = DA9052_ALARMH_REG;
-	msg_arr[loop_index].data = 0;
-	msg_arr[loop_index++].data = rtc_tm->tm_hour;
+	msg_arr[2].addr = DA9052_ALARMD_REG;
+	msg_arr[2].data = rtc_tm->tm_mday;
 
-	msg_arr[loop_index].addr = DA9052_ALARMD_REG;
-	msg_arr[loop_index].data = 0;
-	msg_arr[loop_index++].data = rtc_tm->tm_mday;
+	msg_arr[3].addr = DA9052_ALARMMO_REG;
+	msg_arr[3].data = rtc_tm->tm_mon;
 
-	msg_arr[loop_index].addr = DA9052_ALARMMO_REG;
-	msg_arr[loop_index].data = 0;
-	msg_arr[loop_index++].data = rtc_tm->tm_mon;
+	msg_arr[4].data &= ~(DA9052_ALARMY_ALARMYEAR);
+	msg_arr[4].data |= rtc_tm->tm_year;
 
-	msg.addr = DA9052_ALARMY_REG;
-	msg.data = 0;
-	ret = da9052->read(da9052, &msg);
-	if (ret != 0) {
-		da9052_unlock(da9052);
-		return ret;
-	}
-
-	msg.data = msg.data & ~(DA9052_ALARMY_ALARMYEAR);
-
-	msg.data |= rtc_tm->tm_year;
-	msg_arr[loop_index].addr = DA9052_ALARMY_REG;
-	msg_arr[loop_index].data = 0;
-	msg_arr[loop_index++].data = msg.data;
-
-	ret = da9052->write_many(da9052, msg_arr, loop_index);
-	if (ret) {
-		da9052_unlock(da9052);
-		return ret;
-	}
-
+	ret = da9052->write_many(da9052, msg_arr, 5);
+exit1:
 	da9052_unlock(da9052);
-	return 0;
+	return ret;
 }
 
 static int da9052_rtc_get_alarm_status(struct da9052 *da9052)
@@ -335,106 +305,17 @@ static int da9052_rtc_get_alarm_status(struct da9052 *da9052)
 	msg.data = 0;
 	da9052_lock(da9052);
 	ret = da9052->read(da9052, &msg);
-	if (ret != 0) {
-			da9052_unlock(da9052);
-	return ret;
-	}
-
 	da9052_unlock(da9052);
-	msg.data &= DA9052_ALARMY_ALARMON;
-
-	return (msg.data > 0) ? 1 : 0;
+	if (ret != 0)
+		return ret;
+	return (msg.data & DA9052_ALARMY_ALARMON) ? 1 : 0;
 }
 
 
 static int da9052_rtc_enable_alarm(struct da9052 *da9052, unsigned char flag)
 {
-	struct da9052_ssc_msg msg;
-	int ret = 0;
-
-	msg.addr = DA9052_ALARMY_REG;
-	da9052_lock(da9052);
-	ret = da9052->read(da9052, &msg);
-	if (ret != 0) {
-		da9052_unlock(da9052);
-		return ret;
-	}
-
-	if (flag)
-		msg.data = msg.data | DA9052_ALARMY_ALARMON;
-	else
-		msg.data = msg.data & ~(DA9052_ALARMY_ALARMON);
-
-	ret = da9052->write(da9052, &msg);
-	if (ret != 0) {
-		da9052_unlock(da9052);
-		return ret;
-	}
-	da9052_unlock(da9052);
-
-	return 0;
-}
-
-
-static ssize_t da9052_rtc_mask_irq(struct da9052 *da9052)
- {
-	unsigned char data = 0;
-	ssize_t ret = 0;
-	struct da9052_ssc_msg ssc_msg;
-
-	ssc_msg.addr = DA9052_IRQMASKA_REG;
-	ssc_msg.data = 0;
-
-	da9052_lock(da9052);
-	ret = da9052->read(da9052, &ssc_msg);
-	if (ret != 0) {
-		da9052_unlock(da9052);
-		return ret;
-	}
-
-	data = ret;
-	ssc_msg.data = data |= DA9052_IRQMASKA_MALRAM;
-
-	ret = da9052->write(da9052, &ssc_msg);
-	if (ret != 0) {
-		da9052_unlock(da9052);
-		return ret;
-	}
-
-	da9052_unlock(da9052);
-	return 0;
-}
-
-
-static ssize_t da9052_rtc_unmask_irq(struct da9052 *da9052)
-{
-	unsigned char data = 0;
-	ssize_t ret = 0;
-	struct da9052_ssc_msg ssc_msg;
-
-	ssc_msg.addr =  DA9052_IRQMASKA_REG;
-	ssc_msg.data =  0;
-
-	da9052_lock(da9052);
-	ret = da9052->read(da9052, &ssc_msg);
-	if (ret != 0) {
-		da9052_unlock(da9052);
-		return ret;
-	}
-
-	ssc_msg.data &= ~DA9052_IRQMASKA_MALRAM;
-	ssc_msg.data |= DA9052_IRQMASKA_MSEQRDY;
-	pr_debug("%s: write REG10 0x%x\n", __func__, ssc_msg.data);
-
-	ret = da9052->write(da9052, &ssc_msg);
-	if (ret != 0) {
-		da9052_unlock(da9052);
-		return ret;
-	}
-
-	da9052_unlock(da9052);
-	return 0;
-
+	return da9052->register_modify(da9052, DA9052_ALARMY_REG,
+			DA9052_ALARMY_ALARMON, (flag) ? DA9052_ALARMY_ALARMON : 0);
 }
 
 static int da9052_rtc_class_ops_gettime
@@ -495,18 +376,11 @@ static int da9052_rtc_update_irq_enable(struct device *dev,
 		unsigned int enabled)
 {
 	struct da9052_rtc *priv = dev_get_drvdata(dev);
-	int ret = -ENODATA;
-
-	da9052_lock(priv->da9052);
-
-	ret = (enabled ? da9052_rtc_unmask_irq : da9052_rtc_mask_irq)
-						(priv->da9052);
-
-	da9052_unlock(priv->da9052);
-	/* enable rtc-alarm */
-	da9052_rtc_enable_alarm(priv->da9052, 1);
-
-	return ret;
+	struct da9052 *da9052 = priv->da9052;
+	if (enabled)
+		return da9052->event_enable(da9052, priv->eh_data.eve_type);
+	else
+		return da9052->event_disable(da9052, priv->eh_data.eve_type);
 }
 
 static int da9052_rtc_alarm_irq_enable(struct device *dev,
@@ -531,12 +405,13 @@ static const struct rtc_class_ops da9052_rtc_ops = {
 #endif
 };
 
-
-static int __devinit da9052_rtc_probe(struct platform_device *pdev)
+__devinit
+static int  da9052_rtc_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct da9052_rtc *priv;
-	struct da9052_ssc_msg ssc_msg;
+	struct da9052_ssc_msg ssc_msg[4];
+	struct da9052_modify_msg mod_msg[4];
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
@@ -562,83 +437,29 @@ static int __devinit da9052_rtc_probe(struct platform_device *pdev)
 	priv->set_osc_trim_freq = 5;
 	/* Enable/Disable TICK Alarm */
 	/* Read ALARM YEAR register */
-	ssc_msg.addr = DA9052_ALARMY_REG;
-	ssc_msg.data = 0;
-
-	da9052_lock(priv->da9052);
-	ret = priv->da9052->read(priv->da9052, &ssc_msg);
-	if (ret != 0) {
-		da9052_unlock(priv->da9052);
-		goto err_ssc_comm;
-	}
-
-	if (priv->enable_tick_alarm)
-		ssc_msg.data = (ssc_msg.data | DA9052_ALARMY_TICKON);
-	else
-		ssc_msg.data =
-		((ssc_msg.data & ~(DA9052_ALARMY_TICKON)));
-
-	ret = priv->da9052->write(priv->da9052, &ssc_msg);
-	if (ret != 0) {
-		da9052_unlock(priv->da9052);
-		goto err_ssc_comm;
-	}
+	ssc_msg[0].addr = DA9052_ALARMY_REG;
+	mod_msg[0].clear_mask = DA9052_ALARMY_TICKON;
+	mod_msg[0].set_mask = (priv->enable_tick_alarm) ? DA9052_ALARMY_TICKON : 0;
 
 	/* Set TICK Alarm to 1 minute or 1 sec */
 	/* Read ALARM MINUTES register */
-	ssc_msg.addr = DA9052_ALARMMI_REG;
-	ssc_msg.data = 0;
-
-	ret = priv->da9052->read(priv->da9052, &ssc_msg);
-	if (ret != 0) {
-		da9052_unlock(priv->da9052);
-		goto err_ssc_comm;
-	}
-
-	if (priv->is_min_alarm)
-		/* Set 1 minute tick type */
-		ssc_msg.data = (ssc_msg.data | DA9052_ALARMMI_TICKTYPE);
-	else
-		/* Set 1 sec tick type */
-		ssc_msg.data = (ssc_msg.data & ~(DA9052_ALARMMI_TICKTYPE));
-
-	ret = priv->da9052->write(priv->da9052, &ssc_msg);
-	if (ret != 0) {
-		da9052_unlock(priv->da9052);
-		goto err_ssc_comm;
-	}
+	ssc_msg[1].addr = DA9052_ALARMMI_REG;
+	mod_msg[1].clear_mask = DA9052_ALARMMI_TICKTYPE;
+	mod_msg[1].set_mask = (priv->is_min_alarm) ? DA9052_ALARMMI_TICKTYPE : 0;
 
 	/* Enable/Disable Clock buffer in Power Down Mode */
-	ssc_msg.addr = DA9052_PDDIS_REG;
-	ssc_msg.data = 0;
-
-	ret = priv->da9052->read(priv->da9052, &ssc_msg);
-	if (ret != 0) {
-		da9052_unlock(priv->da9052);
-		goto err_ssc_comm;
-	}
-
-	if (priv->enable_clk_buffer)
-		ssc_msg.data = (ssc_msg.data | DA9052_PDDIS_OUT32KPD);
-	else
-		ssc_msg.data = (ssc_msg.data & ~(DA9052_PDDIS_OUT32KPD));
-
-	ret = priv->da9052->write(priv->da9052, &ssc_msg);
-	if (ret != 0) {
-		da9052_unlock(priv->da9052);
-		goto err_ssc_comm;
-	}
+	ssc_msg[2].addr = DA9052_PDDIS_REG;
+	mod_msg[2].clear_mask = DA9052_PDDIS_OUT32KPD;
+	mod_msg[2].set_mask = (priv->enable_clk_buffer) ? DA9052_PDDIS_OUT32KPD : 0;
 
 	/* Set clock trim frequency value */
-	ssc_msg.addr = DA9052_OSCTRIM_REG;
-	ssc_msg.data = priv->set_osc_trim_freq;
+	ssc_msg[3].addr = DA9052_OSCTRIM_REG;
+	mod_msg[3].clear_mask = -1;
+	mod_msg[3].set_mask = priv->set_osc_trim_freq;
 
-	ret = priv->da9052->write(priv->da9052, &ssc_msg);
-	if (ret != 0) {
-		da9052_unlock(priv->da9052);
+	ret = priv->da9052->modify_many(priv->da9052, ssc_msg, mod_msg, 4);
+	if (ret)
 		goto err_ssc_comm;
-	}
-	da9052_unlock(priv->da9052);
 	/* disable rtc-alarm */
 	da9052_rtc_enable_alarm(priv->da9052, 0);
 
@@ -651,11 +472,11 @@ static int __devinit da9052_rtc_probe(struct platform_device *pdev)
 	return 0;
 
 err_ssc_comm:
-		priv->da9052->unregister_event_notifier
+	priv->da9052->unregister_event_notifier
 			(priv->da9052, &priv->eh_data);
 err_register_alarm:
-		platform_set_drvdata(pdev, NULL);
-		kfree(priv);
+	platform_set_drvdata(pdev, NULL);
+	kfree(priv);
 
 	return ret;
 }

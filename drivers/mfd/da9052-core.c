@@ -26,6 +26,7 @@
 
 #include <linux/mfd/da9052/da9052.h>
 #include <linux/mfd/da9052/adc.h>
+#include <linux/mfd/da9052/tsi.h>
 
 #define SUCCESS		0
 #define FAILURE		1
@@ -167,6 +168,30 @@ int da9052_ssc_read_many(struct da9052 *da9052, struct da9052_ssc_msg *sscmsg,
 	return ret;
 }
 
+int da9052_ssc_modify_many(struct da9052 *da9052,
+	struct da9052_ssc_msg *sscmsg,
+	struct da9052_modify_msg *modmsg, int cnt)
+{
+	int i;
+	int ret;
+	da9052_lock(da9052);
+	ret = da9052->read_many(da9052, sscmsg, cnt);
+	if (ret) {
+		DA9052_DEBUG("%s: read_many failed\n", __FUNCTION__);
+		goto exit1;
+	}
+	for (i = 0; i < cnt; i++) {
+		sscmsg[i].data &= ~modmsg[i].clear_mask;
+		sscmsg[i].data |= modmsg[i].set_mask;
+	}
+	ret = da9052->write_many(da9052, sscmsg, cnt);
+	if (ret)
+		DA9052_DEBUG("%s: write_many failed\n", __FUNCTION__);
+exit1:
+	da9052_unlock(da9052);
+	return ret;
+}
+
 static irqreturn_t da9052_eh_isr(int irq, void *dev_id)
 {
 	struct da9052 *da9052 = dev_id;
@@ -225,6 +250,38 @@ int eh_unregister_nb(struct da9052 *da9052, struct da9052_eh_nb *nb)
 	return 0;
 }
 
+int reg_modify(struct da9052 *da9052, unsigned reg,
+		unsigned clear_mask, unsigned set_mask)
+{
+	int ret;
+	struct da9052_ssc_msg sscmsg;
+	sscmsg.addr = reg;
+	sscmsg.data = 0;
+	da9052_lock(da9052);
+	ret = da9052_ssc_read(da9052, &sscmsg);
+	if (ret >= 0) {
+		sscmsg.data &= ~clear_mask;
+		sscmsg.data |= set_mask;
+		ret = da9052_ssc_write(da9052, &sscmsg);
+	}
+	da9052_unlock(da9052);
+	return ret;
+}
+
+int eh_enable(struct da9052 *da9052, unsigned char eve_type)
+{
+	pr_debug("da9052 enable 0x%x\n", eve_type);
+	return reg_modify(da9052, DA9052_IRQMASKA_REG + (eve_type >> 3),
+			(1 << (eve_type & 7)), 0);
+}
+
+int eh_disable(struct da9052 *da9052, unsigned char eve_type)
+{
+	pr_debug("da9052 disable 0x%x\n", eve_type);
+	return reg_modify(da9052, DA9052_IRQMASKA_REG + (eve_type >> 3),
+			0, (1 << (eve_type & 7)));
+}
+
 static int process_events(struct da9052 *da9052, int events_sts)
 {
 
@@ -258,10 +315,9 @@ static int process_events(struct da9052 *da9052, int events_sts)
 			/* Move to next priority event */
 			continue;
 
-		if (event == PEN_DOWN_EVE) {
-			if (list_empty(&(eve_nb_array[event].nb_list)))
-				continue;
-		}
+		if (list_empty(&(eve_nb_array[event].nb_list)))
+			continue;
+
 		/* Event bit is set, execute all registered call backs */
 		if (down_interruptible(&eve_nb_array_lock)){
 			printk(KERN_CRIT "Can't acquire eve_nb_array_lock \n");
@@ -288,15 +344,15 @@ void eh_workqueue_isr(struct work_struct *work)
 
 	struct da9052_ssc_msg eve_data[4];
 	int events_sts, ret;
-	unsigned char cnt = 0;
+	unsigned i, j;
 
 	/* nIRQ is asserted, read event registeres to know what happened */
 	events_sts = 0;
 
 	/* Prepare ssc message to read all four event registers */
-	for (cnt = 0; cnt < 4; cnt++) {
-		eve_data[cnt].addr = (DA9052_EVENTA_REG + cnt);
-		eve_data[cnt].data = 0;
+	for (i = 0; i < 4; i++) {
+		eve_data[i].addr = (DA9052_EVENTA_REG + i);
+		eve_data[i].data = 0;
 	}
 
 	/* Now read all event registers */
@@ -310,10 +366,8 @@ void eh_workqueue_isr(struct work_struct *work)
 	}
 
 	/* Collect all events */
-	for (cnt = 0; cnt < 4; cnt++) {
-		pr_debug(" reg[%d]: %x\n", cnt+5, eve_data[cnt].data);
-		events_sts |= ((eve_data[cnt].data&0x00ff) << (8 * cnt));
-	}
+	for (i = 0; i < 4; i++)
+		events_sts |= (eve_data[i].data << (8 * i));
 
 	/* Check if we really got any event */
 	if (events_sts == 0) {
@@ -321,25 +375,21 @@ void eh_workqueue_isr(struct work_struct *work)
 		da9052_unlock(da9052);
 		return;
 	}
-	da9052_unlock(da9052);
-
-	/* Process all events occurred */
-	process_events(da9052, events_sts);
-
-	da9052_lock(da9052);
 	/* Now clear EVENT registers */
-	for (cnt = 0; cnt < 4; cnt++) {
-		if (eve_data[cnt].data) {
-			ret = da9052_ssc_write(da9052, &eve_data[cnt]);
-			if (ret) {
-				enable_irq(da9052->irq);
-				da9052_unlock(da9052);
-				return;
-			}
+	j = 0;
+	for (i = 0; i < 4; i++) {
+		if (eve_data[i].data) {
+			eve_data[j].addr = (DA9052_EVENTA_REG + i);
+			eve_data[j++].data = eve_data[i].data;
 		}
 	}
+	if (j)
+		da9052_ssc_write_many(da9052, eve_data, j);
 	da9052_unlock(da9052);
 
+	pr_debug("da9052 events_sts=%x\n", events_sts);
+	/* Process all events occurred */
+	process_events(da9052, events_sts);
 	/*
 	 * This delay is necessary to avoid hardware fake interrupts
 	 * from DA9052.
@@ -370,6 +420,14 @@ static int da9052_add_subdevice(struct da9052 *da9052, const char *name)
 {
 	return da9052_add_subdevice_pdata(da9052, name, NULL, 0);
 }
+
+static struct da9052 *__da9052_global = 0 ;
+
+struct da9052 *get_da9052(void) {
+	return __da9052_global ;
+}
+
+EXPORT_SYMBOL(get_da9052);
 
 static int add_da9052_devices(struct da9052 *da9052)
 {
@@ -429,7 +487,7 @@ static int add_da9052_devices(struct da9052 *da9052)
 	if (ret)
 		return ret;
 
-	ret = da9052_add_subdevice_pdata(da9052, "da9052-tsi",
+	ret = da9052_add_subdevice_pdata(da9052, DA9052_TSI_DEVICE_NAME,
 				&tsi_data, sizeof(tsi_data));
 	if (ret)
 		return ret;
@@ -439,18 +497,63 @@ static int add_da9052_devices(struct da9052 *da9052)
 	if (ret)
 		return ret;
 
+        __da9052_global = da9052 ;
+
 	return ret;
 }
 
+static ssize_t da9052_reg_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct da9052 *da9052 = dev_get_drvdata(dev);
+	struct da9052_ssc_msg msg[16];
+	int i, j;
+	int reg = 1;
+	int ret;
+	int end;
+	int inc = 8;
+	char *buf_start = buf;
+	char *buf_end = buf + 4096 - (16*3 + 6);
+	do {
+		end = reg + inc;
+		if (end > DA9052_CHIPID_REG)
+			end = DA9052_CHIPID_REG;
+		for (i = 0; reg <= end; i++, reg++) {
+			msg[i].addr = reg;
+		}
+		da9052_lock(da9052);
+		ret = da9052_ssc_read_many(da9052, msg, i);
+		da9052_unlock(da9052);
+		if (ret < 0) {
+			dev_err(dev, "block read failed\n");
+			break;
+		}
+		buf += sprintf(buf, "%3d: ", reg - i);
+		if ((reg - i) == 1)
+			buf += sprintf(buf, "   ");
+		for (j = 0; j < i; j++) {
+			buf += sprintf(buf, " %02x", msg[j].data);
+		}
+		buf += sprintf(buf, "\n");
+		if (buf > buf_end)
+			break;
+		inc = 9;
+	} while (reg <= DA9052_CHIPID_REG);
+	return buf - buf_start;
+}
+
+static DEVICE_ATTR(da9052_reg, 0444, da9052_reg_show, NULL);
+
+
 int da9052_ssc_init(struct da9052 *da9052)
 {
-	int cnt;
+	int i;
 	struct da9052_platform_data *pdata;
-	struct da9052_ssc_msg ssc_msg;
+	struct da9052_ssc_msg ssc_msg[4];
 
 	/* Initialize eve_nb_array */
-	for (cnt = 0; cnt < EVE_CNT; cnt++)
-		INIT_LIST_HEAD(&(eve_nb_array[cnt].nb_list));
+	for (i = 0; i < EVE_CNT; i++)
+		INIT_LIST_HEAD(&(eve_nb_array[i].nb_list));
 
 	/* Initialize mutex required for ADC Manual read */
 	mutex_init(&manconv_lock);
@@ -463,6 +566,7 @@ int da9052_ssc_init(struct da9052 *da9052)
 	da9052->write = da9052_ssc_write;
 	da9052->read_many = da9052_ssc_read_many;
 	da9052->write_many = da9052_ssc_write_many;
+	da9052->modify_many = da9052_ssc_modify_many;
 
 	if (SPI  == da9052->connecting_device && ssc_ops.write == NULL) {
 		/* Assign the read/write pointers to SPI/read/write */
@@ -483,6 +587,9 @@ int da9052_ssc_init(struct da9052 *da9052)
 	/* Assign the EH notifier block register/de-register functions */
 	da9052->register_event_notifier = eh_register_nb;
 	da9052->unregister_event_notifier = eh_unregister_nb;
+	da9052->event_enable = eh_enable;
+	da9052->event_disable = eh_disable;
+	da9052->register_modify = reg_modify;
 
 	/* Initialize ssc lock */
 	mutex_init(&da9052->ssc_lock);
@@ -492,21 +599,20 @@ int da9052_ssc_init(struct da9052 *da9052)
 
 	INIT_WORK(&da9052->eh_isr_work, eh_workqueue_isr);
 
-	ssc_msg.addr = DA9052_IRQMASKA_REG;
-	ssc_msg.data = 0xff;
-	da9052->write(da9052, &ssc_msg);
-	ssc_msg.addr = DA9052_IRQMASKC_REG;
-	ssc_msg.data = 0xff;
-	da9052->write(da9052, &ssc_msg);
+	for (i = 0; i < 4; i++) {
+		ssc_msg[i].addr = DA9052_IRQMASKA_REG + i;
+		ssc_msg[i].data = 0xff;
+	}
+	da9052->write_many(da9052, ssc_msg, 4);
 
 	/* read chip version */
-	ssc_msg.addr = DA9052_CHIPID_REG;
-	da9052->read(da9052, &ssc_msg);
-	pr_info("DA9053 chip ID reg read=0x%x ", ssc_msg.data);
-	if ((ssc_msg.data & DA9052_CHIPID_MRC) == 0x80) {
+	ssc_msg[0].addr = DA9052_CHIPID_REG;
+	da9052->read(da9052, &ssc_msg[0]);
+	pr_info("DA9053 chip ID reg read=0x%x ", ssc_msg[0].data);
+	if ((ssc_msg[0].data & DA9052_CHIPID_MRC) == 0x80) {
 		da9052->chip_version = DA9053_VERSION_AA;
 		pr_info("AA version probed\n");
-	} else if ((ssc_msg.data & DA9052_CHIPID_MRC) == 0xa0) {
+	} else if ((ssc_msg[0].data & DA9052_CHIPID_MRC) == 0xa0) {
 		da9052->chip_version = DA9053_VERSION_BB;
 		pr_info("BB version probed\n");
 	} else {
@@ -519,6 +625,9 @@ int da9052_ssc_init(struct da9052 *da9052)
 		return -EIO;
 	enable_irq_wake(da9052->irq);
 	da9052_data = da9052;
+
+	if (device_create_file(da9052->dev, &dev_attr_da9052_reg) < 0)
+		printk(KERN_WARNING "failed to add da9052 sysfs file\n");
 
 	return 0;
 }

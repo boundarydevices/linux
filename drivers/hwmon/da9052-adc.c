@@ -58,11 +58,27 @@ int da9052_manual_read(struct da9052 *da9052,
 	unsigned int ret;
 	u16 data = 0;
 
+	mutex_lock(&da9052->manconv_lock);
+
+	msg.addr = DA9052_EVENTB_REG ;
+	msg.data = 0 ;
+	da9052_lock(da9052);
+	ret = da9052->read(da9052, &msg);
+	if (0 == ret) {
+		if (msg.data & DA9052_EVENTB_EADCEOM) {
+			ret = da9052->write(da9052, &msg);
+			if (ret)
+                                printk (KERN_ERR "%s: error clearing eventb %d for channel %d\n", __func__, ret, channel);
+		}
+	} else {
+		printk (KERN_ERR "%s: read eventb error %d for channel %d\n", __func__, ret, channel);
+	}
+	da9052_unlock(da9052);
+
 	msg.addr = DA9052_ADCMAN_REG;
 	msg.data = channel;
 	msg.data =  (msg.data | DA9052_ADCMAN_MANCONV);
 
-	mutex_lock(&da9052->manconv_lock);
 	da9052_lock(da9052);
 
 	ret = da9052->write(da9052, &msg);
@@ -98,8 +114,10 @@ int da9052_manual_read(struct da9052 *da9052,
 		if (man_timeout_cnt == 1) {
 			if (!(msg.data & DA9052_ADCMAN_MANCONV))
 				break;
-			else
-				goto err_ssc_comm;
+			else {
+				printk (KERN_ERR "%s: bad return status %x for channel %d\n", __func__, msg.data, channel);
+				break;
+			}
 		}
 	/* Wait until the MAN_CONV bit is cleared to zero */
 	} while (msg.data & DA9052_ADCMAN_MANCONV);

@@ -88,6 +88,10 @@ static int __devinit da9052_onkey_probe(struct platform_device *pdev)
 	if (error)
 		goto fail2;
 
+	error = da9052_onkey->da9052->event_enable(da9052_onkey->da9052,ONKEY_EVE);
+	if (error) {
+		dev_err (&pdev->dev,"Error enabling onkey event\n");
+	}
 	error = input_register_device(da9052_onkey->input);
 	if (error) {
 		dev_err(&pdev->dev, "Unable to register input\
@@ -112,6 +116,7 @@ fail1:
 static int __devexit da9052_onkey_remove(struct platform_device *pdev)
 {
 	struct da9052_onkey_data *da9052_onkey = pdev->dev.platform_data;
+	da9052_onkey->da9052->event_disable(da9052_onkey->da9052,ONKEY_EVE);
 	da9052_onkey->da9052->unregister_event_notifier(da9052_onkey->da9052,
 					&da9052_onkey->eh_data);
 	input_unregister_device(da9052_onkey->input);

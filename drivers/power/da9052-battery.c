@@ -1387,6 +1387,7 @@ static ssize_t da9052_bat_print_status(void *ptr)
 		break;
 		case 4:
 			printk(KERN_INFO "BAT_LOG:\t Charging_Type= DA9052_WALL_CHARGER \n");
+		break;
 		default:
 			printk(KERN_INFO "BAT_LOG:\t Charging_Type= INVALID_CHARGER \n");
 		break;

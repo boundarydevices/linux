@@ -688,6 +688,13 @@ config TOUCHSCREEN_DA9052
           Say y here to support the touchscreen found on
           Dialog Semiconductor DA9052 PMIC
 
+config FIVE_WIRE
+	bool "5-wire touch"
+	depends on TOUCHSCREEN_DA9052
+	help
+	  Say Y here if you have a 5-wire touchscreen.
+
+
 config TOUCHSCREEN_MAX11801
        tristate "MAXIM MAX11801 touchscreen"
        depends on I2C
