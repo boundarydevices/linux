@@ -663,7 +663,7 @@ config SERIAL_SC16IS7XX
 
 config SERIAL_SC16IS7XX_CONSOLE
 	bool "Console on sc16is7xx serial port"
-	depends on SERIAL_SC16IS7XX
+	depends on SERIAL_SC16IS7XX=y
 	select SERIAL_CORE_CONSOLE
 	help
 	  If you have enabled the sc16is7xx, you can make it the console by

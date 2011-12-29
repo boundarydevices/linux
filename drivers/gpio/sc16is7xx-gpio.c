@@ -44,6 +44,10 @@ static inline struct sc16is7xx_gpio *gpio_from_chip(struct gpio_chip *gc)
 	return container_of(gc, struct sc16is7xx_gpio, _gc);
 }
 
+#ifdef CONFIG_GPIO_SC16IS7XX_IRQ
+void sc16is7xx_gpio_irq(struct sc16is7xx_gpio *sg, unsigned state);
+#endif
+
 static s32 sc16is7xx_gpio_get(struct gpio_chip *gc, u32 offset)
 {
 	struct sc16is7xx_gpio *sg = gpio_from_chip(gc);
@@ -57,6 +61,9 @@ static s32 sc16is7xx_gpio_get(struct gpio_chip *gc, u32 offset)
 		ret = sg->access->read(sg->access, SC_IOSTATE_R);
 		if (ret < 0)
 			return ret;
+#ifdef CONFIG_GPIO_SC16IS7XX_IRQ
+		sc16is7xx_gpio_irq(sg, ret);
+#endif
 	}
 	return (ret >> offset) & 1;
 }
@@ -136,6 +143,19 @@ static void sc16is7xx_irq_bus_sync_unlock(unsigned int irq)
 	int_mask = sg->irq_trig_fall | sg->irq_trig_rise;
 	sg->access->modify(sg->access, SC_IODIR, int_mask, 0);
 	sg->access->write(sg->access, SC_IOINTENA, int_mask);
+	if (int_mask) {
+		int ret;
+		int iostate;
+		int mask = 0;
+		if (int_mask & 0xf)
+			mask |= 4;
+		if (int_mask & 0xf0)
+			mask |= 2;
+		ret = sg->access->modify(sg->access, SC_IOCONTROL, mask, 1);
+		iostate = sg->access->read(sg->access, SC_IOSTATE_R);
+		if (iostate >= 0)
+			sc16is7xx_gpio_irq(sg, iostate);
+	}
 	mutex_unlock(&sg->irq_lock);
 }
 
@@ -145,7 +165,8 @@ static int sc16is7xx_irq_set_type(unsigned int irq, unsigned int type)
 	unsigned gp = irq - sg->irq_base;
 	unsigned mask = 1 << gp;
 
-	if (!(type & IRQ_TYPE_EDGE_BOTH)) {
+	type &= IRQ_TYPE_EDGE_BOTH;
+	if (type && (type != IRQ_TYPE_EDGE_BOTH)) {
 		dev_err(sg->dev, "irq %d: unsupported type %d\n", irq, type);
 		return -EINVAL;
 	}
@@ -263,7 +284,7 @@ static int __devinit sc16is7xx_gpio_probe(struct platform_device *pdev)
 
 
 	ret = sg->access->read(sg->access, SC_IOSTATE_R);
-	if (!ret)
+	if (ret >= 0)
 		sg->last_state = ret;
 
 	sc_setup_irqs(sg, pdata->irq_base);

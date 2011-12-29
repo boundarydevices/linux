@@ -204,6 +204,10 @@ static int serial_modify_ier(struct uart_sc16is7xx_chan *ch, unsigned char clear
 	val &= ~clear_mask;
 	val |= set_mask;
 	if (ch->new_ier != val) {
+		unsigned change = (ch->new_ier ^ val);
+		if (change & 0xf0) {
+			serial_modify(ch, SC_EFR, 0,  1 << 4);	//needed to allow writes
+		}
 		ch->new_ier = val;
 		wake = 1;
 	}
@@ -1020,16 +1024,19 @@ static int serial_sc16is7xx_irq(struct uart_sc16is7xx_chan *ch)
 		pr_debug("modem interrupt\n");
 		check_modem_status(ch);
 		break;
+	case 0x10:
+		/* Xoff interupt, lower prority than I/O change (0x30) */
+		pr_debug("Xoff interupt, ier=%x\n", ch->actual_ier);
+//		if (ch->actual_ier & 0x20)
+//			break;
+//		break;
+//Chip bug alert, sometime Xoff Interrupt is given for I/O pin change
 	case 0x30:
 		state = sc_serial_in(ch, SC_IOSTATE_R);
 		if (ch->sc->gpio_callback)
 			ch->sc->gpio_callback(ch->sc->gpio_sg, state);
 		/* I/O pins change of state */
 		pr_debug("I/O pins change of state, ier=%x\n", ch->actual_ier);
-		break;
-	case 0x10:
-		/* Xoff interupt */
-		pr_debug("Xoff interupt, ier=%x\n", ch->actual_ier);
 		break;
 	case 0x20:
 		/* RTS/CTS now inactive */
@@ -1277,6 +1284,77 @@ static int sc16is7xx_add_gpio_device(struct uart_sc16is7xx_sc *sc, struct device
 	return mfd_add_devices(parent, -1, &cell, 1, NULL, 0);
 }
 
+static const char *reg_names[] = {
+	"LCR",
+	"RHR",
+	"THR",
+	"IER",
+	"DLL",
+	"DLH",
+	"IIR",
+	"FCR",
+	"MCR",
+	"LSR",
+	"TXLVL",
+	"RXLVL",
+	"EFCR",
+	"MSR",
+	"SPR",
+	"TCR",
+	"TLR",
+	"EFR",
+	"XON1",
+	"XON2",
+	"XOFF1",
+	"XOFF2",
+	"IOSTATE_R",
+	"IOSTATE_W",
+	"IODIR",
+	"IOINTENA",
+	"IOCONTROL",
+};
+
+static ssize_t sc16is7xx_reg_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct uart_sc16is7xx_sc *sc = serial_sc16is7xx_sc;
+	struct uart_sc16is7xx_chan *ch;
+	int total = 0;
+	int cnt;
+	int reg;
+	int i;
+	if (!sc)
+		return -ENODEV;
+
+	for (i = 0; i < 2; i++) {
+		ch = &sc->chan[i];
+		cnt = sprintf(buf, "Channel %i: ", i);
+		total += cnt;
+		buf += cnt;
+		for (reg = 0; reg < SC_CHAN_REG_CNT; reg++) {
+			cnt = sprintf(buf, "%s=%02x ", reg_names[reg], ch->reg_cache[reg]);
+			total += cnt;
+			buf += cnt;
+		}
+		cnt = sprintf(buf, "\n");
+		total += cnt;
+		buf += cnt;
+	}
+	cnt = sprintf(buf, "IO_Regs: ");
+	total += cnt;
+	buf += cnt;
+	for (reg = SC_CHAN_REG_CNT; reg < SC_REG_CNT; reg++) {
+		cnt = sprintf(buf, "%s=%02x ", reg_names[reg], sc->dev_cache[reg - SC_CHAN_REG_CNT]);
+		total += cnt;
+		buf += cnt;
+	}
+	cnt = sprintf(buf, "\n");
+	total += cnt;
+	return total;
+}
+
+static DEVICE_ATTR(sc16is7xx_reg, 0444, sc16is7xx_reg_show, NULL);
+
 static int sc16is7xx_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int ret;
@@ -1345,6 +1423,11 @@ static int sc16is7xx_probe(struct i2c_client *client, const struct i2c_device_id
 	}
 	sc16is7xx_add_gpio_device(sc, dev, "sc16is7xx-gpio", plat->gpio_data,
 			sizeof(struct sc16is7xx_gpio_platform_data));
+
+	ret = device_create_file(&client->dev, &dev_attr_sc16is7xx_reg);
+	if (ret < 0)
+		printk(KERN_WARNING "failed to add mma7660 sysfs files\n");
+
 	pr_err("%s: succeeded\n", __func__);
 	return 0;
 out2:
