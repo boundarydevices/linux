@@ -508,6 +508,17 @@ config RAW_DRIVER
           Applications should preferably open the device (eg /dev/hda1)
           with the O_DIRECT flag.
 
+config MAGSTRIPE
+	tristate "Neuron magstripe reader support through GPIO"
+	default n
+	help
+	   This driver enables support for a Neuron MCR-370T-1R-xxxx
+	   insertion-style magnetic stripe card reader, connected via
+	   GPIO. GPIO pin assignments are defined through the device tree.
+	   Only a single instance is currently supported.
+
+	   If compiled as a module, it will be named magdecode.ko
+
 config MAX_RAW_DEVS
 	int "Maximum number of RAW devices to support (1-65536)"
 	depends on RAW_DRIVER
