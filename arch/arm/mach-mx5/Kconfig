@@ -59,21 +59,6 @@ config MACH_NITROGEN_VM_IMX51
 	  This includes specific configurations for the board and its peripherals.
 	  See http://boundarydevices.com/NitrogenVM.php for a photo.
 
-config MACH_NITROGEN_P_IMX51
-	bool "Support MX51 Nitrogen P(Portable) platform"
-	select ARCH_MX51
-	help
-	  Include support for Boundary Devices' MX51 Nitrogen platform
-	  This includes specific configurations for the board and its peripherals.
-	  See http://boundarydevices.com/NitrogenP.php for a photo.
-
-config MACH_NITROGEN_EJ_IMX51
-	bool "Support MX51 Nitrogen EJ (Jumpered) platform"
-	select ARCH_MX51
-	help
-	  Include support for Boundary Devices' MX51 Nitrogen EJ platform.
-	  This is an internal testing board that has GP1[22] jumpered to I2C connector.
-
 config MACH_MX53_EVK
 	bool "Support MX53 EVK platform"
 	select ARCH_MX53
