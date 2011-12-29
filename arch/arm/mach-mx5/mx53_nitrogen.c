@@ -2384,9 +2384,9 @@ static int n53k_sdhc_write_protect4(struct device *dev)
 
 static struct mxc_mmc_platform_data n53k_mmc4_data = {
 	.ocr_mask = MMC_VDD_165_195,
-	.caps = MMC_CAP_MMC_HIGHSPEED | MMC_CAP_DATA_DDR | MMC_CAP_4_BIT_DATA,// | MMC_CAP_8_BIT_DATA,
+	.caps = MMC_CAP_MMC_HIGHSPEED | MMC_CAP_4_BIT_DATA | MMC_CAP_8_BIT_DATA,
 	.min_clk = 400000,
-	.max_clk = 1000000,
+	.max_clk = 50000000,
 	.card_inserted_state = 1,
 	.status = n53k_sdhc_get_card_det_status4,
 	.wp_status = n53k_sdhc_write_protect4,
