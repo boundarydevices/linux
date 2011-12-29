@@ -18,6 +18,11 @@ config BOUNDARY_CAMERA_OV5640
 	---help---
 	  If you plan to use the ov5640 Camera with your Boundary Device, say Y here.
 
+config BOUNDARY_CAMERA_HDMI_IN
+	tristate "HDMI input (TFP401) support"
+	---help---
+	  If you plan to use the HDMI camera input with your Boundary Device, say Y here.
+
 endmenu
 
 endif

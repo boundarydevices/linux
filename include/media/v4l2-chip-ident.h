@@ -75,6 +75,9 @@ enum {
 	/* module saa7146: reserved range 300-309 */
 	V4L2_IDENT_SAA7146 = 300,
 
+	/* module tfp401 (HDMI input) */
+	V4L2_IDENT_TFP401 = 401,
+
 	/* Conexant MPEG encoder/decoders: reserved range 400-420 */
 	V4L2_IDENT_CX23418_843 = 403, /* Integrated A/V Decoder on the '418 */
 	V4L2_IDENT_CX23415 = 415,
