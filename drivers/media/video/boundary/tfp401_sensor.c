@@ -228,6 +228,7 @@ static int enable_camera
 				      camera_phys,
 				      camera_phys,
 				      0,
+				      0,
 				      0 );
 	if (err != 0) {
 		printk(KERN_ERR "CSI_MEM output buffer\n");
@@ -331,7 +332,7 @@ static void feed_frames(struct tfp401_data_t *dev)
 
 static void deliver_frame(struct tfp401_data_t *dev,unsigned buf)
 {
-	int was_ready = ipu_check_buffer_busy(CSI_MEM,IPU_OUTPUT_BUFFER,buf);
+	int was_ready = ipu_check_buffer_ready(CSI_MEM,IPU_OUTPUT_BUFFER,buf);
 	struct camera_frame_t *frame = dev->buf_queued[buf];
 	BUG_ON(buf >= ARRAY_SIZE(dev->buf_queued));
 	BUG_ON(!dev->buf_queued[buf]);
