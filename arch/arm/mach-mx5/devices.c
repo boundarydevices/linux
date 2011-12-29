@@ -1108,6 +1108,22 @@ static struct resource mxcsdhc3_resources[] = {
 	},
 };
 
+static struct resource mxcsdhc4_resources[] = {
+	{
+		.start = MMC_SDHC4_BASE_ADDR,
+		.end = MMC_SDHC4_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{
+		.start = MXC_INT_MMC_SDHC4,
+		.end = MXC_INT_MMC_SDHC4,
+		.flags = IORESOURCE_IRQ,
+	},
+	{
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
 struct platform_device mxcsdhc1_device = {
 	.name = "mxsdhci",
 	.id = 0,
@@ -1127,6 +1143,13 @@ struct platform_device mxcsdhc3_device = {
 	.id = 2,
 	.num_resources = ARRAY_SIZE(mxcsdhc3_resources),
 	.resource = mxcsdhc3_resources,
+};
+
+struct platform_device mxcsdhc4_device = {
+	.name = "mxsdhci",
+	.id = 3,
+	.num_resources = ARRAY_SIZE(mxcsdhc4_resources),
+	.resource = mxcsdhc4_resources,
 };
 
 static struct resource pata_fsl_resources[] = {
@@ -1886,6 +1909,8 @@ int __init mxc_init_devices(void)
 		mxcsdhc2_resources[0].end -= MX53_OFFSET;
 		mxcsdhc3_resources[0].start -= MX53_OFFSET;
 		mxcsdhc3_resources[0].end -= MX53_OFFSET;
+		mxcsdhc4_resources[0].start -= MX53_OFFSET;
+		mxcsdhc4_resources[0].end -= MX53_OFFSET;
 		usbotg_host_resources[0].start -= MX53_OFFSET;
 		usbotg_host_resources[0].end -= MX53_OFFSET;
 		usbotg_udc_resources[0].start -= MX53_OFFSET;
