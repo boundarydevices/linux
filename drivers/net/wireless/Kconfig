@@ -226,6 +226,12 @@ config RTL8712U
 	select WEXT_PRIV
 
 
+config RTL8712S
+	tristate "Realtek 8712 SDIO support"
+	depends on MAC80211 && MMC && WLAN && EXPERIMENTAL
+	select WIRELESS_EXT
+	select WEXT_PRIV
+
 config ADM8211
 	tristate "ADMtek ADM8211 support"
 	depends on MAC80211 && PCI && EXPERIMENTAL

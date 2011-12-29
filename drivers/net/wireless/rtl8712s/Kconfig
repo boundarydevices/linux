@@ -1,0 +1,4 @@
+config RTL8712S
+	tristate "Realtek 8712 SDIO WiFi"
+	---help---
+	  Help message of RTL8712S
