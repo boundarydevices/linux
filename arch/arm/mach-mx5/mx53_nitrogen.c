@@ -350,7 +350,6 @@ struct gpio nitrogen53_gpios[] __initdata = {
 	{.label = "Camera reset",	.gpio = MAKE_GP(4, 14),		.flags = 0},
 #define N53_USB_HUB_RESET			MAKE_GP(5, 0)
 	{.label = "USB HUB reset",	.gpio = MAKE_GP(5, 0),		.flags = 0},
-	{.label = "eMMC reset",		.gpio = MAKE_GP(5, 2),		.flags = GPIOF_INIT_HIGH},	/* EIM_A25 */
 #define N53_CAMERA_STANDBY			MAKE_GP(5, 20)
 	{.label = "Camera standby",	.gpio = MAKE_GP(5, 20),		.flags = 0},
 #ifndef CONFIG_MACH_MX53_NITROGEN_K
@@ -1774,8 +1773,6 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 	clk_put(mxc_spdif_data.spdif_core_clk);
 
 	/* SD card detect irqs */
-	mxcsdhc3_device.resource[2].start = gpio_to_irq(N53_SD3_CD);
-	mxcsdhc3_device.resource[2].end = gpio_to_irq(N53_SD3_CD);
 	mxcsdhc1_device.resource[2].start = gpio_to_irq(N53_SD1_CD);
 	mxcsdhc1_device.resource[2].end = gpio_to_irq(N53_SD1_CD);
 
@@ -1882,6 +1879,7 @@ struct gpio nitrogen53_gpios_specific_a[] __initdata = {
 //	{.label = "led0",		.gpio = MAKE_GP(4, 2),		.flags = 0},
 	{.label = "led1",		.gpio = MAKE_GP(4, 3),		.flags = 0},
 //	{.label = "led2",		.gpio = MAKE_GP(4, 4),		.flags = 0},
+	{.label = "eMMC reset",		.gpio = MAKE_GP(5, 2),		.flags = GPIOF_INIT_HIGH},	/* EIM_A25 */
 	{.label = "mic_mux",		.gpio = MAKE_GP(6, 16),		.flags = 0},
 	{.label = "i2c-2-sda",		.gpio = MAKE_GP(7, 11),		.flags = GPIOF_DIR_IN},
 	{.label = "power_down_req",	.gpio = POWER_DOWN,		.flags = GPIOF_INIT_HIGH},
@@ -2017,6 +2015,8 @@ static void __init mxc_board_init_nitrogen_a(void)
 #endif
 	da9052_tsi.config_index = DA9052_5_WIRE_XYSXY;
 
+	mxcsdhc3_device.resource[2].start = gpio_to_irq(N53_SD3_CD);
+	mxcsdhc3_device.resource[2].end = gpio_to_irq(N53_SD3_CD);
 	mxc_board_init(NULL, 0,
 		mxc_i2c1_board_info_a, ARRAY_SIZE(mxc_i2c1_board_info_a),
 		mxc_i2c2_board_info_a, ARRAY_SIZE(mxc_i2c2_board_info_a),
@@ -2176,6 +2176,8 @@ static void __init mxc_board_init_nitrogen(void)
 	}
 	mxc_iomux_v3_setup_multiple_pads(nitrogen53_pads_specific,
 			ARRAY_SIZE(nitrogen53_pads_specific));
+	mxcsdhc3_device.resource[2].start = gpio_to_irq(N53_SD3_CD);
+	mxcsdhc3_device.resource[2].end = gpio_to_irq(N53_SD3_CD);
 	mxc_board_init(NULL, 0,
 		mxc_i2c1_board_info, ARRAY_SIZE(mxc_i2c1_board_info),
 		mxc_i2c2_board_info, ARRAY_SIZE(mxc_i2c2_board_info),
@@ -2227,15 +2229,18 @@ struct gpio n53k_gpios_specific[] __initdata = {
 	{.label = "Camera power down",	.gpio = MAKE_GP(1, 2),		.flags = GPIOF_INIT_HIGH},
 	{.label = "pmic-int",		.gpio = MAKE_GP(2, 21),		.flags = GPIOF_DIR_IN},
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
-	{.label = "wl1271_btfunct2",	.gpio = MAKE_GP(1, 9),		.flags = 0},		/* GPIO_9, (BT_WU) */
+//	{.label = "wl1271_btfunct2",	.gpio = MAKE_GP(1, 9),		.flags = 0},		/* GPIO_9, (BT_WU) */
 #define N53K_WL1271_WL_EN			MAKE_GP(3, 0)
 	{.label = "wl1271_wl_en",	.gpio = MAKE_GP(3, 0),		.flags = 0},		/* EIM_DA0, high active */
 #define N53K_WL1271_BT_EN			MAKE_GP(3, 1)
 	{.label = "wl1271_bt_en",	.gpio = MAKE_GP(3, 1),		.flags = 0},		/* EIM_DA1, high active */
 	{.label = "wl1271_btfunct5",	.gpio = MAKE_GP(3, 9),		.flags = GPIOF_DIR_IN},	/* EIM_DA9, GPIO3[9] - (HOST_WU) */
-#define N53K_WL1271_INT				MAKE_GP(3, 10)
-	{.label = "wl1271_int",		.gpio = MAKE_GP(3, 10),		.flags = GPIOF_DIR_IN},	/* EIM_DA10 */
+//#define N53K_WL1271_INT			MAKE_GP(3, 10)
+//	{.label = "wl1271_int",		.gpio = MAKE_GP(3, 10),		.flags = GPIOF_DIR_IN},	/* EIM_DA10 */
+#define N53K_WL1271_INT				MAKE_GP(7, 9)
+	{.label = "wl1271_int",		.gpio = MAKE_GP(7, 9),		.flags = GPIOF_DIR_IN},	/* EIM_DA10 */
 #endif
+	{.label = "eMMC reset",		.gpio = MAKE_GP(3, 8),		.flags = GPIOF_INIT_HIGH},	/* EIM_DA8, GPIO3[8] - active low reset */
 	{.label = "i2c-2-sda",		.gpio = MAKE_GP(7, 11),		.flags = GPIOF_DIR_IN},
 };
 
@@ -2306,15 +2311,20 @@ static iomux_v3_cfg_t n53k_pads_specific[] __initdata = {
 	MX53_PAD_ATA_DATA5__SD4_DAT5,
 	MX53_PAD_ATA_DATA6__SD4_DAT6,
 	MX53_PAD_ATA_DATA7__SD4_DAT7,
+	MX53_PAD_EIM_DA8__GPIO_3_8,	/* EMMC Reset */
 
+	/* TiWi */
 	MX53_PAD_EIM_DA9__GPIO_3_9,	/* BT_FUNCT5 */
-	MX53_PAD_EIM_DA10__GPIO_3_10,	/* WL1271_irq */
-	MX53_PAD_GPIO_9__GPIO_1_9,	/* BT_FUNCT2 */
+//	MX53_PAD_EIM_DA10__GPIO_3_10,	/* WL1271_irq */
+	MX53_PAD_ATA_CS_0__GPIO_7_9,	/* WL1271_irq */
+//	MX53_PAD_GPIO_9__GPIO_1_9,	/* BT_FUNCT2 */
+	MX53_PAD_GPIO_9__PWMO,		/* pwm1 */
+	MX53_PAD_GPIO_10__OSC32K_32K_OUT,
 
 	MX53_PAD_GPIO_16__I2C3_SDA,	/* gpio7[11] */
 
 	/* UART3 */
-	MX53_PAD_ATA_CS_0__UART3_TXD,
+//	MX53_PAD_ATA_CS_0__UART3_TXD,
 	MX53_PAD_ATA_CS_1__UART3_RXD,
 };
 
@@ -2373,11 +2383,10 @@ static int n53k_sdhc_write_protect4(struct device *dev)
 }
 
 static struct mxc_mmc_platform_data n53k_mmc4_data = {
-	.ocr_mask = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30
-		| MMC_VDD_31_32,
-	.caps = MMC_CAP_4_BIT_DATA | MMC_CAP_8_BIT_DATA | MMC_CAP_DATA_DDR,
+	.ocr_mask = MMC_VDD_165_195,
+	.caps = MMC_CAP_MMC_HIGHSPEED | MMC_CAP_DATA_DDR | MMC_CAP_4_BIT_DATA,// | MMC_CAP_8_BIT_DATA,
 	.min_clk = 400000,
-	.max_clk = 50000000,
+	.max_clk = 1000000,
 	.card_inserted_state = 1,
 	.status = n53k_sdhc_get_card_det_status4,
 	.wp_status = n53k_sdhc_write_protect4,
@@ -2390,6 +2399,7 @@ static void __init n53k_board_init(void)
 	mmc3_data.caps = MMC_CAP_4_BIT_DATA | MMC_CAP_DATA_DDR;
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
 	mmc3_data.status = n53k_sdhc_present;
+	mmc3_data.card_inserted_state = 1;
 #endif
 
 #ifdef CONFIG_KEYBOARD_GPIO
