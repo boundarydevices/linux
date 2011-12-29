@@ -478,7 +478,7 @@ static void tty_ldisc_close(struct tty_struct *tty, struct tty_ldisc *ld)
  *	@tty: tty to recover
  *	@old: previous ldisc
  *
- *	Restore the previous line discipline or N_TTY when a line discipline
+ *	Restore the previous line discipline or default when a line discipline
  *	change fails due to an open error
  */
 
@@ -496,14 +496,14 @@ static void tty_ldisc_restore(struct tty_struct *tty, struct tty_ldisc *old)
 	if (tty_ldisc_open(tty, old) < 0) {
 		tty_ldisc_put(old);
 		/* This driver is always present */
-		new_ldisc = tty_ldisc_get(N_TTY);
+		new_ldisc = tty_ldisc_get(tty->ldisc_default);
 		if (IS_ERR(new_ldisc))
 			panic("n_tty: get");
 		tty_ldisc_assign(tty, new_ldisc);
-		tty_set_termios_ldisc(tty, N_TTY);
+		tty_set_termios_ldisc(tty, tty->ldisc_default);
 		r = tty_ldisc_open(tty, new_ldisc);
 		if (r < 0)
-			panic("Couldn't open N_TTY ldisc for "
+			panic("Couldn't open default ldisc for "
 			      "%s --- error %d.",
 			      tty_name(tty, buf), r);
 	}
@@ -653,7 +653,7 @@ int tty_set_ldisc(struct tty_struct *tty, int ldisc)
 
 	retval = tty_ldisc_open(tty, new_ldisc);
 	if (retval < 0) {
-		/* Back to the old one or N_TTY if we can't */
+		/* Back to the old one or default if we can't */
 		tty_ldisc_put(new_ldisc);
 		tty_ldisc_restore(tty, o_ldisc);
 	}
@@ -733,7 +733,7 @@ static void tty_ldisc_reinit(struct tty_struct *tty, int ldisc)
  *	@tty: tty being hung up
  *
  *	Some tty devices reset their termios when they receive a hangup
- *	event. In that situation we must also switch back to N_TTY properly
+ *	event. In that situation we must also switch back to default properly
  *	before we reset the termios data.
  *
  *	Locking: We can take the ldisc mutex as the rest of the code is
@@ -775,7 +775,7 @@ void tty_ldisc_hangup(struct tty_struct *tty)
 	wake_up_interruptible_poll(&tty->read_wait, POLLIN);
 	/*
 	 * Shutdown the current line discipline, and reset it to
-	 * N_TTY if need be.
+	 * default if need be.
 	 *
 	 * Avoid racing set_ldisc or tty_ldisc_release
 	 */
@@ -790,10 +790,10 @@ void tty_ldisc_hangup(struct tty_struct *tty)
 			tty_ldisc_reinit(tty, tty->termios->c_line);
 			err = tty_ldisc_open(tty, tty->ldisc);
 		}
-		/* If the re-open fails or we reset then go to N_TTY. The
-		   N_TTY open cannot fail */
+		/* If the re-open fails or we reset then go to default. The
+		   default open cannot fail */
 		if (reset || err) {
-			tty_ldisc_reinit(tty, N_TTY);
+			tty_ldisc_reinit(tty, tty->ldisc_default);
 			WARN_ON(tty_ldisc_open(tty, tty->ldisc));
 		}
 		tty_ldisc_enable(tty);
@@ -839,7 +839,7 @@ int tty_ldisc_setup(struct tty_struct *tty, struct tty_struct *o_tty)
  *	@o_tty: pair tty for pty/tty pairs
  *
  *	Called during the final close of a tty/pty pair in order to shut down
- *	the line discpline layer. On exit the ldisc assigned is N_TTY and the
+ *	the line discpline layer. On exit the ldisc assigned is the default and the
  *	ldisc has not been opened.
  */
 
@@ -863,8 +863,8 @@ void tty_ldisc_release(struct tty_struct *tty, struct tty_struct *o_tty)
 	/* Force an oops if we mess this up */
 	tty->ldisc = NULL;
 
-	/* Ensure the next open requests the N_TTY ldisc */
-	tty_set_termios_ldisc(tty, N_TTY);
+	/* Ensure the next open requests the default ldisc */
+	tty_set_termios_ldisc(tty, tty->ldisc_default);
 	mutex_unlock(&tty->ldisc_mutex);
 
 	/* This will need doing differently if we need to lock */
@@ -885,7 +885,7 @@ void tty_ldisc_release(struct tty_struct *tty, struct tty_struct *o_tty)
 
 void tty_ldisc_init(struct tty_struct *tty)
 {
-	struct tty_ldisc *ld = tty_ldisc_get(N_TTY);
+	struct tty_ldisc *ld = tty_ldisc_get(tty->ldisc_default);
 	if (IS_ERR(ld))
 		panic("n_tty: init_tty");
 	tty_ldisc_assign(tty, ld);
