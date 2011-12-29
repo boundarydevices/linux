@@ -104,6 +104,8 @@
 
 #define MX53_PAD_CSI0_D4__AUD3_TXC		IOMUX_PAD(0x3FC, 0xD0, 5, 0x0, 0, PAD_CTRL_4)
 #define MX53_PAD_ATA_BUFFER_EN__UART2_RXD	IOMUX_PAD(0x5FC, 0x27C, 3, 0x880, 3, MX53_UART_PAD_CTRL)
+#define MX53_PAD_ATA_CS_0__UART3_TXD		IOMUX_PAD(0x61C, 0x29C, 4, 0x0, 0, MX53_UART_PAD_CTRL)
+#define MX53_PAD_ATA_CS_1__UART3_RXD		IOMUX_PAD(0x620, 0x2A0, 4, 0x888, 3, MX53_UART_PAD_CTRL)
 #define MX53_PAD_ATA_DA_1__SD4_CMD		IOMUX_PAD(0x614, 0x294, 2, 0x0, 0, MX53_SDHC_PAD_CTRL)
 #define MX53_PAD_ATA_DA_2__SD4_CLK		IOMUX_PAD(0x618, 0x298, 2, 0x0, 0, MX53_SDHC_PAD_CTRL | PAD_CTL_HYS)
 #define MX53_PAD_ATA_DATA12__SD4_DAT0		IOMUX_PAD(0x658, 0x2D4, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
@@ -116,6 +118,10 @@
 #define MX53_PAD_ATA_DATA1__SD3_DAT5		IOMUX_PAD(0x62C, 0x2A8, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
 #define MX53_PAD_ATA_DATA2__SD3_DAT6		IOMUX_PAD(0x630, 0x2AC, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
 #define MX53_PAD_ATA_DATA3__SD3_DAT7		IOMUX_PAD(0x634, 0x2B0, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
+#define MX53_PAD_ATA_DATA4__SD4_DAT4		IOMUX_PAD(0x638, 0x2B4, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
+#define MX53_PAD_ATA_DATA5__SD4_DAT5		IOMUX_PAD(0x63C, 0x2B8, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
+#define MX53_PAD_ATA_DATA6__SD4_DAT6		IOMUX_PAD(0x640, 0x2BC, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
+#define MX53_PAD_ATA_DATA7__SD4_DAT7		IOMUX_PAD(0x644, 0x2C0, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
 #define MX53_PAD_ATA_DATA8__SD3_DAT0		IOMUX_PAD(0x648, 0x2C4, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
 #define MX53_PAD_ATA_DATA9__SD3_DAT1		IOMUX_PAD(0x64C, 0x2C8, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
 #define MX53_PAD_ATA_DIOR__UART2_RTS		IOMUX_PAD(0x604, 0x284, 3, 0x87C, 3, MX53_UART_PAD_CTRL)
@@ -212,6 +218,7 @@
 #define MX53_PAD_EIM_DA14__GPIO_3_14		IOMUX_PAD(0x524, 0x1D4, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_EIM_DA1__GPIO_3_1		IOMUX_PAD(0x4F0, 0x1A0, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_EIM_DA6__GPIO_3_6		IOMUX_PAD(0x504, 0x1B4, 1, 0x0, 0, NO_PAD_CTRL)
+#define MX53_PAD_EIM_DA9__GPIO_3_9		IOMUX_PAD(0x510, 0x1C0, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_EIM_EB1__GPIO_2_29		IOMUX_PAD(0x4E8, 0x198, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_EIM_EB2__GPIO_2_30		IOMUX_PAD(0x45C, 0x114, 1, 0x0, 0, PAD_CTRL_4)
 #define MX53_PAD_EIM_LBA_CSPI2_CS2      	IOMUX_PAD(0x4DC, 0x190, 2, 0x7C8, 1, PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP)
@@ -239,6 +246,7 @@
 #define MX53_PAD_GPIO_7__GPIO_1_7		IOMUX_PAD(0x6C4, 0x334, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_GPIO_8__GPIO_1_8		IOMUX_PAD(0x6C8, 0x338, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_GPIO_9__PWMO			IOMUX_PAD(0x6AC, 0x31C, 4, 0x0, 0, PAD_CTRL_1)
+#define MX53_PAD_GPIO_9__GPIO_1_9		IOMUX_PAD(0x6AC, 0x31C, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_KEY_COL0__FEC_RXD3		IOMUX_PAD(0x34C, 0x24, 6, 0x0, 0, PAD_CTRL_8)
 #define MX53_PAD_KEY_COL2__FEC_RXD2		IOMUX_PAD(0x35C, 0x34, 6, 0x0, 0, PAD_CTRL_8)
 #define MX53_PAD_KEY_COL4__GPIO_4_14		IOMUX_PAD(0x36C, 0x44, 1, 0x0, 0, NO_PAD_CTRL)
@@ -1855,7 +1863,9 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 
 	mxc_register_device(&mxc_sgtl5000_device, &sgtl5000_data);
 	mxc_register_device(&mxc_mlb_device, &mlb_data);
+#ifndef CONFIG_MACH_MX53_NITROGEN_K
 	mx5_set_otghost_vbus_func(mx53_gpio_usbotg_driver_vbus);
+#endif
 	mx5_usb_dr_init();
 	mx5_set_host1_vbus_func(mx53_gpio_host1_driver_vbus);
 	mx5_usbh1_init();
@@ -2464,6 +2474,14 @@ struct gpio n53k_gpios_specific[] __initdata = {
 	{.label = "i2c-2-sda",		.gpio = MAKE_GP(7, 11),		.flags = GPIOF_DIR_IN},
 };
 
+static struct i2c_board_info n53k_i2c0_board_info[] __initdata = {
+	{
+	 .type = "bq27200",
+	 .addr = 0x55,
+	 .platform_data  = &i2c_generic_data,
+	},
+};
+
 static struct i2c_board_info n53k_i2c1_board_info[] __initdata = {
 	{
 	 .type = "lsm303a",
@@ -2476,40 +2494,39 @@ static struct i2c_board_info n53k_i2c1_board_info[] __initdata = {
 	 .platform_data  = &i2c_generic_data,
 	},
 	{
-	 .type = "bq20z75",
-	 .addr = 0x0b,
-	},
-#if defined (CONFIG_TOUCHSCREEN_I2C) || defined (CONFIG_TOUCHSCREEN_I2C_MODULE)
-	{
-	 .type = "Pic16F616-ts",
-	 .addr = 0x22,
-	 .platform_data  = &i2c_generic_data,
-	},
-#endif
-#if defined (CONFIG_TOUCHSCREEN_EP0700M01) || defined (CONFIG_TOUCHSCREEN_EP0700M01_MODULE)
-	{
-	 .type = "ep0700m01-ts",
-	 .addr = 0x38,
-	 .platform_data  = &i2c_generic_data,
-	},
-#endif
-	{
 	 .type = "tfp410",
 	 .addr = 0x38,
 	 .platform_data  = &i2c_tfp410_data,
 	},
 };
 
+#if defined (CONFIG_TOUCHSCREEN_ATMEL_MXT) || defined (CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
+static struct mxt_platform_data mxt224_data = {
+       .x_line         = 18,
+       .y_line         = 12,
+       .x_size         = 1024,
+       .y_size         = 1024,
+       .blen           = 0x1,
+       .threshold      = 0x28,
+       .voltage        = 2800000,              /* 2.8V */
+       .orient         = MXT_VERTICAL_FLIP,
+       .irqflags       = IRQF_TRIGGER_FALLING,
+};
+#endif
+
 static struct i2c_board_info n53k_i2c2_board_info[] __initdata = {
 	{
 	 .type = "sgtl5000-i2c",
 	 .addr = 0x0a,
 	},
+#if defined (CONFIG_TOUCHSCREEN_ATMEL_MXT) || defined (CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
 	{
-	 .type = "sc16is7xx-uart",
-	 .addr = 0x49,
-	 .platform_data  = &i2c_sc16is7xx_data,
+	 .type = "mXT224",
+	 .addr = 0x4b,
+	 .platform_data  = &mxt224_data,
+	 .irq = gpio_to_irq(MAKE_GP(6,6)), 	/* EIM_A23 */
 	},
+#endif
 };
 
 static iomux_v3_cfg_t n53k_pads_specific[] __initdata = {
@@ -2619,7 +2636,8 @@ static void __init n53k_board_init(void)
 	}
 	mxc_iomux_v3_setup_multiple_pads(n53k_pads_specific,
 			ARRAY_SIZE(n53k_pads_specific));
-	mxc_board_init(NULL, 0,
+	mxc_board_init(
+		n53k_i2c0_board_info, ARRAY_SIZE(n53k_i2c0_board_info),
 		n53k_i2c1_board_info, ARRAY_SIZE(n53k_i2c1_board_info),
 		n53k_i2c2_board_info, ARRAY_SIZE(n53k_i2c2_board_info),
 		da9052_irq, &mxci2c2_data);
