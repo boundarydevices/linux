@@ -55,6 +55,9 @@
 
 #define TIOCGRS485      0x542E
 #define TIOCSRS485      0x542F
+#define TIOC_FORCE_TX_PARITY_ERROR		0x5436
+#define TIOC_SET_RX_MASK	_IOW('T', 0x37, struct rx_mask)  /* 32 byte bitmask of valid addresses */
+#define TIOC_SET_RX_TIMEOUT	_IOW('T', 0x38, int)
 
 #define FIONCLEX	0x5450  /* these numbers need to be adjusted. */
 #define FIOCLEX		0x5451

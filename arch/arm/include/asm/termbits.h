@@ -37,6 +37,9 @@ struct ktermios {
 	speed_t c_ospeed;		/* output speed */
 };
 
+struct rx_mask {
+	unsigned long map[256/32];
+};
 
 /* c_cc characters */
 #define VINTR 0
