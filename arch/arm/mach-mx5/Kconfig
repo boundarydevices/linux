@@ -116,32 +116,11 @@ config MACH_NITROGEN_IMX53
 	  Include support for MX53 Nitrogen platform. This includes specific
 	  configurations for the board and its peripherals.
 
-config MACH_NITROGEN_V1_IMX53
-	bool "Support MX53 Nitrogen V1"
-	select ARCH_MX53
-	help
-	  Include support for MX53 Nitrogen V1. This includes specific
-	  configurations for the board and its peripherals.
-
-config MACH_NITROGEN_V2_IMX53
-	bool "Support MX53 Nitrogen V2(DA9050)"
-	select ARCH_MX53
-	help
-	  Include support for MX53 Nitrogen V2 (the first with DA905x support).
-	  This includes specific configurations for the board and its peripherals.
-
 config MACH_NITROGEN_A_IMX53
 	bool "Support MX53 Nitrogen A"
 	select ARCH_MX53
 	help
 	  Include support for MX53 Nitrogen A. This includes specific
-	  configurations for the board and its peripherals.
-
-config MACH_NITROGEN_AP_IMX53
-	bool "Support MX53 Nitrogen A prototype board"
-	select ARCH_MX53
-	help
-	  Include support for MX53 Nitrogen A prototype. This includes specific
 	  configurations for the board and its peripherals.
 
 config MACH_MX50_ARM2
@@ -220,5 +199,4 @@ config LL_DEBUG_UART
 	default 0
 	default 1 if MACH_NITROGEN_IMX53
 	default 2 if MACH_NITROGEN_A_IMX53
-
 endif

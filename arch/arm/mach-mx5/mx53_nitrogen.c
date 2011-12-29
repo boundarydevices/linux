@@ -887,21 +887,6 @@ static void i2c_clock_toggle2_current(void)
 	i2c_clock_toggle(N53_I2C_2_SCL, N53_I2C_2_SDA_CURRENT, pd);
 }
 
-#if defined(CONFIG_MACH_NITROGEN_V1_IMX53)||defined(CONFIG_MACH_NITROGEN_V2_IMX53)
-static void i2c_clock_toggle2_previous(void)
-{
-	const iomux_v3_cfg_t pd[] = {
-		MX53_PAD_GPIO_3__I2C3_SCL, NEW_PAD_CTRL(MX53_PAD_GPIO_3__GPIO_1_3, PAD_CTRL_9) | MUX_SION_MASK,
-		MX53_PAD_GPIO_6__I2C3_SDA, NEW_PAD_CTRL(MX53_PAD_GPIO_6__GPIO_1_6, PAD_CTRL_9) | MUX_SION_MASK,
-	};
-	i2c_clock_toggle(N53_I2C_2_SCL, N53_I2C_2_SDA_PREVIOUS, pd);
-}
-static struct imxi2c_platform_data mxci2c2_previous_data = {
-	.bitrate = 100000,
-	.i2c_clock_toggle = i2c_clock_toggle2_previous,
-};
-#endif
-
 static struct imxi2c_platform_data mxci2c0_data = {
 	.bitrate = 400000,
 	.i2c_clock_toggle = i2c_clock_toggle0,
@@ -1305,7 +1290,7 @@ static struct gpio_keys_button gpio_keys[] = {
 		.debounce_interval = 30,
 	},
 	/* Below this point only applies to new rev of nitrogen53A */
-#if defined(CONFIG_MACH_NITROGEN_A_IMX53) || defined(CONFIG_MACH_NITROGEN_AP_IMX53)
+#if defined(CONFIG_MACH_NITROGEN_A_IMX53)
 	{
 		.type	= EV_KEY,
 		.gpio	= MAKE_GP(3,22),
@@ -1765,7 +1750,7 @@ static void __init mx53_nitrogen_io_init(void)
 
 static void nitrogen_power_off(void)
 {
-#if defined(CONFIG_MACH_NITROGEN_A_IMX53) || defined(CONFIG_MACH_NITROGEN_AP_IMX53)
+#if defined(CONFIG_MACH_NITROGEN_A_IMX53)
 #define POWER_DOWN	MAKE_GP(3, 23)
 	gpio_set_value(POWER_DOWN, 0);
 #endif
@@ -1890,7 +1875,7 @@ static struct sys_timer mxc_timer = {
 };
 
 /*****************************************************************************/
-#if defined(CONFIG_MACH_NITROGEN_A_IMX53) || defined(CONFIG_MACH_NITROGEN_AP_IMX53)
+#if defined(CONFIG_MACH_NITROGEN_A_IMX53)
 struct gpio nitrogen53_gpios_specific_a[] __initdata = {
 	{.label = "pmic-int",		.gpio = MAKE_GP(2, 21),		.flags = GPIOF_DIR_IN},
 	{.label = "Camera power down",	.gpio = MAKE_GP(2, 22),		.flags = GPIOF_INIT_HIGH},	/* EIM_A16 */
@@ -2051,72 +2036,6 @@ MACHINE_START(NITROGEN_A_IMX53, "Boundary Devices Nitrogen_A MX53 Board")
 	.init_irq = mx5_init_irq,
 	.timer = &mxc_timer,
 	.init_machine = mxc_board_init_nitrogen_a,
-MACHINE_END
-#endif
-
-/*****************************************************************************/
-
-#ifdef CONFIG_MACH_NITROGEN_AP_IMX53
-static iomux_v3_cfg_t nitrogen53_pads_specific_ap[] __initdata = {
-	/* ECSPI2, Nitrogen53A only */
-	MX53_PAD_EIM_CS1_CSPI2_MOSI,	/* Nitrogen uses as WL1271_irq */
-	MX53_PAD_EIM_OE_CSPI2_MISO,	/* Nitrogen uses as VGA Hsync */
-	MX53_PAD_EIM_LBA_CSPI2_CS2,
-	MX53_PAD_EIM_CS0_CSPI2_SCLK,
-
-	MX53_PAD_GPIO_16__I2C3_SDA,	/* gpio7[11] */
-
-	/* Nitrogen uses the following pin for UART3, CTS, TXD, RXD */
-	NEW_PAD_CTRL(MX53_PAD_EIM_D23__GPIO_3_23, PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP),	/* board power down gpio */
-
-	MX53_PAD_ATA_CS_0__UART3_TXD,
-	MX53_PAD_ATA_CS_1__UART3_RXD,
-	NEW_PAD_CTRL(MX53_PAD_EIM_D24__GPIO_3_24, PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP),
-	NEW_PAD_CTRL(MX53_PAD_EIM_D25__GPIO_3_25, BUTTON_PAD_CTRL) | MUX_SION_MASK,	/* Menu key */
-
-	MX53_PAD_EIM_D30__UART3_CTS,
-	MX53_PAD_EIM_D31__UART3_RTS,
-	/* PWM1 backlight */
-	MX53_PAD_GPIO_9__PWMO, /* pwm1 */
-};
-
-static void __init mxc_board_init_nitrogen_ap(void)
-{
-	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
-
-	mxc_i2c1_board_info_a[0].addr = 0x19;		/* "lsm303a" has different address on AP */
-#if defined(CONFIG_VIDEO_BOUNDARY_CAMERA) || defined(CONFIG_VIDEO_BOUNDARY_CAMERA_MODULE)
-	camera_data.power_down = MAKE_GP(2, 22);
-#endif
-
-	if (gpio_request_array(nitrogen53_gpios_specific_a,
-			ARRAY_SIZE(nitrogen53_gpios_specific_a))) {
-		printk (KERN_ERR "%s gpio_request_array failed\n", __func__ );
-	}
-#ifdef CONFIG_KEYBOARD_GPIO
-	gpio_keys_platform_data.nbuttons = 4;	/* old rev */
-//	gpio_keys[2].gpio = MAKE_GP(1,4);	/* old rev - menu key, default*/
-#endif
-	mxc_iomux_v3_setup_multiple_pads(nitrogen53_pads_specific_ap,
-			ARRAY_SIZE(nitrogen53_pads_specific_ap));
-	mxc_board_init(NULL, 0,
-		mxc_i2c1_board_info_a, ARRAY_SIZE(mxc_i2c1_board_info_a),
-		mxc_i2c2_board_info_a, ARRAY_SIZE(mxc_i2c2_board_info_a),
-		da9052_irq, &mxci2c2_data);
-
-#if defined (CONFIG_TOUCHSCREEN_I2C) || defined (CONFIG_TOUCHSCREEN_I2C_MODULE) \
- ||  defined (CONFIG_TOUCHSCREEN_EP0700M01) || defined (CONFIG_TOUCHSCREEN_EP0700M01_MODULE)
-	gpio_set_value(N53_I2C_CONNECTOR_BUFFER_ENABLE,1);
-#endif
-	gpio_export(N53_I2C_CONNECTOR_BUFFER_ENABLE, 0);
-}
-
-MACHINE_START(NITROGEN_AP_IMX53, "Boundary Devices Nitrogen_AP prototype MX53 Board")
-	.fixup = fixup_mxc_board,
-	.map_io = mx5_map_io,
-	.init_irq = mx5_init_irq,
-	.timer = &mxc_timer,
-	.init_machine = mxc_board_init_nitrogen_ap,
 MACHINE_END
 #endif
 
@@ -2299,160 +2218,6 @@ MACHINE_START(NITROGEN_IMX53, "Boundary Devices Nitrogen MX53 Board")
 	.init_irq = mx5_init_irq,
 	.timer = &mxc_timer,
 	.init_machine = mxc_board_init_nitrogen,
-MACHINE_END
-#endif
-
-/*****************************************************************************/
-
-#ifdef CONFIG_MACH_NITROGEN_V2_IMX53
-static struct i2c_board_info mxc_i2c1_board_info_v2[] __initdata = {
-#if defined (CONFIG_TOUCHSCREEN_I2C)
-	{
-	 .type = "Pic16F616-ts",
-	 .addr = 0x22,
-	 .platform_data  = &i2c_generic_data,
-	},
-#endif
-	{
-	 .type = "tfp410",
-	 .addr = 0x38,
-	 .platform_data  = &i2c_tfp410_data,
-	},
-};
-
-static struct i2c_board_info mxc_i2c2_board_info_v2[] __initdata = {
-	{
-	 .type = "sgtl5000-i2c",
-	 .addr = 0x0a,
-	},
-	{
-	 .type = "ep0700m01-ts",
-	 .addr = 0x38,
-	 .platform_data  = &i2c_generic_data,
-	},
-};
-
-static iomux_v3_cfg_t nitrogen53_pads_specific_v2[] __initdata = {
-	MX53_PAD_GPIO_6__I2C3_SDA,	/* GPIO1[6] */
-	MX53_PAD_GPIO_16__GPIO_7_11,
-	/* PWM1 backlight */
-	MX53_PAD_GPIO_9__PWMO,		/* pwm1 */
-};
-
-struct gpio nitrogen53_gpios_specific_v2[] __initdata = {
-	{.label = "Camera power down",	.gpio = MAKE_GP(1, 2),		.flags = GPIOF_INIT_HIGH},
-	{.label = "i2c-2-sda",		.gpio = MAKE_GP(1, 6),		.flags = GPIOF_DIR_IN},
-#define N53_I2C_CONNECTOR_BUFFER_ENABLE		MAKE_GP(3, 10)
-	{.label = "I2C conn. buf en",	.gpio = MAKE_GP(3, 10),		.flags = 0},	/* EIM_DA10 */
-	{.label = "pmic-int",		.gpio = MAKE_GP(7, 11),		.flags = GPIOF_DIR_IN},
-};
-
-static void __init mxc_board_init_nitrogen_v2(void)
-{
-	unsigned da9052_irq = gpio_to_irq(MAKE_GP(7, 11));	/* pad GPIO_16 */
-#ifdef CONFIG_KEYBOARD_GPIO
-	gpio_keys_platform_data.nbuttons = 4;
-#endif
-	if (gpio_request_array(nitrogen53_gpios_specific_v2,
-			ARRAY_SIZE(nitrogen53_gpios_specific_v2))) {
-		printk (KERN_ERR "%s gpio_request_array failed\n", __func__ );
-	}
-	mxc_iomux_v3_setup_multiple_pads(nitrogen53_pads_specific_v2,
-			ARRAY_SIZE(nitrogen53_pads_specific_v2));
-	mxc_board_init(NULL, 0,
-		mxc_i2c1_board_info, ARRAY_SIZE(mxc_i2c1_board_info_v2),
-		mxc_i2c2_board_info, ARRAY_SIZE(mxc_i2c2_board_info_v2),
-		da9052_irq, &mxci2c2_previous_data);
-
-#if defined (CONFIG_TOUCHSCREEN_I2C) || defined (CONFIG_TOUCHSCREEN_I2C_MODULE) \
- ||  defined (CONFIG_TOUCHSCREEN_EP0700M01) || defined (CONFIG_TOUCHSCREEN_EP0700M01_MODULE)
-	gpio_set_value(N53_I2C_CONNECTOR_BUFFER_ENABLE,1);
-#endif
-	gpio_export(N53_I2C_CONNECTOR_BUFFER_ENABLE, 0);
-}
-
-MACHINE_START(NITROGEN_V2_IMX53, "Boundary Devices Nitrogen MX53 rev. 2 Board (DA9053)")
-	.fixup = fixup_mxc_board,
-	.map_io = mx5_map_io,
-	.init_irq = mx5_init_irq,
-	.timer = &mxc_timer,
-	.init_machine = mxc_board_init_nitrogen_v2,
-MACHINE_END
-#endif
-
-/*****************************************************************************/
-
-#ifdef CONFIG_MACH_NITROGEN_V1_IMX53
-static struct i2c_board_info mxc_i2c0_board_info_v1[] __initdata = {
-	{
-	 .type = "Pic16F616-ts",
-	 .addr = 0x22,
-	 .platform_data  = &i2c_generic_data,
-	},
-	{
-	 .type = "tfp410",
-	 .addr = 0x38,
-	 .platform_data  = &i2c_tfp410_data,
-	},
-};
-
-static struct i2c_board_info mxc_i2c2_board_info_v1[] __initdata = {
-	{
-	 .type = "sgtl5000-i2c",
-	 .addr = 0x0a,
-	},
-	{
-	 .type = "ep0700m01-ts",
-	 .addr = 0x38,
-	 .platform_data  = &i2c_generic_data,
-	},
-};
-
-static iomux_v3_cfg_t nitrogen53_pads_specific_v1[] __initdata = {
-	MX53_PAD_GPIO_6__I2C3_SDA,	/* GPIO1[6] */
-	MX53_PAD_GPIO_16__GPIO_7_11,
-	/* PWM1 backlight */
-	MX53_PAD_GPIO_9__PWMO,		/* pwm1 */
-};
-
-struct gpio nitrogen53_gpios_specific_v1[] __initdata = {
-	{.label = "Camera power down",	.gpio = MAKE_GP(1, 2),		.flags = GPIOF_INIT_HIGH},
-	{.label = "i2c-2-sda",		.gpio = MAKE_GP(1, 6),		.flags = GPIOF_DIR_IN},
-#define N53_I2C_CONNECTOR_BUFFER_ENABLE		MAKE_GP(3, 10)
-	{.label = "I2C conn. buf en",	.gpio = MAKE_GP(3, 10),		.flags = 0},		/* EIM_DA10 */
-	{.label = "pmic-int",		.gpio = MAKE_GP(7, 11),		.flags = GPIOF_DIR_IN},
-};
-
-static void __init mxc_board_init_nitrogen_v1(void)
-{
-	unsigned da9052_irq = gpio_to_irq(MAKE_GP(7, 11));	/* pad GPIO_16 */
-#ifdef CONFIG_KEYBOARD_GPIO
-	gpio_keys_platform_data.nbuttons = 4;
-#endif
-	if (gpio_request_array(nitrogen53_gpios_specific_v1,
-			ARRAY_SIZE(nitrogen53_gpios_specific_v1))) {
-		printk (KERN_ERR "%s gpio_request_array failed\n", __func__ );
-	}
-	mxc_iomux_v3_setup_multiple_pads(nitrogen53_pads_specific_v1,
-			ARRAY_SIZE(nitrogen53_pads_specific_v1));
-	mxc_board_init(	mxc_i2c0_board_info_v1, ARRAY_SIZE(mxc_i2c0_board_info_v1),
-		NULL, 0,
-		mxc_i2c2_board_info_v1, ARRAY_SIZE(mxc_i2c2_board_info_v1),
-		da9052_irq, &mxci2c2_previous_data);
-
-#if defined (CONFIG_TOUCHSCREEN_I2C) || defined (CONFIG_TOUCHSCREEN_I2C_MODULE) \
- ||  defined (CONFIG_TOUCHSCREEN_EP0700M01) || defined (CONFIG_TOUCHSCREEN_EP0700M01_MODULE)
-	gpio_set_value(N53_I2C_CONNECTOR_BUFFER_ENABLE,1);
-#endif
-	gpio_export(N53_I2C_CONNECTOR_BUFFER_ENABLE, 0);
-}
-
-MACHINE_START(NITROGEN_V1_IMX53, "Boundary Devices Nitrogen MX53 rev. 1 Board")
-	.fixup = fixup_mxc_board,
-	.map_io = mx5_map_io,
-	.init_irq = mx5_init_irq,
-	.timer = &mxc_timer,
-	.init_machine = mxc_board_init_nitrogen_v1,
 MACHINE_END
 #endif
 
