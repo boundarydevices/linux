@@ -231,6 +231,14 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 	struct sdio_func_tuple *this, **prev;
 	unsigned i, ptr = 0;
 
+	unsigned ptr_null_end;
+#define DBG_CIS_BUF_SIZE 4096
+#ifdef DBG_CIS_BUF_SIZE
+	unsigned char *dbg_cis_buf;
+	unsigned di = 0;
+	unsigned ptr_start;
+	dbg_cis_buf = kmalloc(DBG_CIS_BUF_SIZE, GFP_KERNEL);
+#endif
 	/*
 	 * Note that this works for the common CIS (function number 0) as
 	 * well as a function's CIS * since SDIO_CCCR_CIS and SDIO_FBR_CIS
@@ -258,6 +266,10 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 
 	BUG_ON(*prev);
 
+#ifdef DBG_CIS_BUF_SIZE
+	ptr_start = ptr;
+#endif
+	ptr_null_end = (ptr | 0xff) + 1;
 	do {
 		unsigned char tpl_code, tpl_link;
 
@@ -265,9 +277,16 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 		if (ret)
 			break;
 
+#ifdef DBG_CIS_BUF_SIZE
+		if (dbg_cis_buf && (di < DBG_CIS_BUF_SIZE))
+			dbg_cis_buf[di++] = tpl_code;
+#endif
 		/* 0xff means we're done */
 		if (tpl_code == 0xff)
 			break;
+
+		if ((tpl_code == 0x00) && (ptr == ptr_null_end))
+			break;	/* patch for misbehaving rtl8712 card */
 
 		/* null entries have no link field or data */
 		if (tpl_code == 0x00)
@@ -277,19 +296,28 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 		if (ret)
 			break;
 
+#ifdef DBG_CIS_BUF_SIZE
+		if (dbg_cis_buf && (di < DBG_CIS_BUF_SIZE))
+			dbg_cis_buf[di++] = tpl_link;
+#endif
 		/* a size of 0xff also means we're done */
 		if (tpl_link == 0xff)
 			break;
 
 		this = kmalloc(sizeof(*this) + tpl_link, GFP_KERNEL);
-		if (!this)
-			return -ENOMEM;
-
+		if (!this) {
+			ret = -ENOMEM;
+			break;
+		}
 		for (i = 0; i < tpl_link; i++) {
 			ret = mmc_io_rw_direct(card, 0, 0,
 					       ptr + i, 0, &this->data[i]);
 			if (ret)
 				break;
+#ifdef DBG_CIS_BUF_SIZE
+			if (dbg_cis_buf && (di < DBG_CIS_BUF_SIZE))
+				dbg_cis_buf[di++] = this->data[i];
+#endif
 		}
 		if (ret) {
 			kfree(this);
@@ -328,6 +356,12 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 			 * not going to be queued for a driver.
 			 */
 			kfree(this);
+			if (ret) {
+				printk(KERN_WARNING "%s: dropping invalid"
+				       " CIS tuple 0x%02x (%u bytes)\n",
+				       mmc_hostname(card->host),
+				       tpl_code, tpl_link);
+			}
 		}
 
 		ptr += tpl_link;
@@ -340,6 +374,20 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 	if (func)
 		*prev = card->tuples;
 
+#ifdef DBG_CIS_BUF_SIZE
+	printk(KERN_INFO "ptr_start=%x di=%x dbg_cis_buf=%p\n", ptr_start, di, dbg_cis_buf);
+	while (di) {
+		if (dbg_cis_buf[di - 1])
+			break;
+		di--;
+	}
+	if (di) {
+		print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 16, 1,
+				dbg_cis_buf, di, true);
+	}
+	if (dbg_cis_buf)
+		kfree(dbg_cis_buf);
+#endif
 	return ret;
 }
 
