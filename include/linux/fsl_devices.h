@@ -392,6 +392,11 @@ struct mxc_camera_platform_data {
 	u32 mclk;
 	u32 csi;
 	void (*pwdn)(int pwdn);
+	int power_down ;
+	int reset ;
+	char *sensor_name ;
+	int i2c_bus ;
+	int i2c_id ;
 };
 
 /*gpo1-3 is in fixed state by hardware design,

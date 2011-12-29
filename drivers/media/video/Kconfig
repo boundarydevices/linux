@@ -728,6 +728,15 @@ config VIDEO_MXC_OPL
 	  rotation/mirroring implementation. It may be used by eMMA video
 	  capture or output device.
 
+config VIDEO_BOUNDARY_CAMERA
+	tristate "Boundary Devices Video For Linux Camera"
+	depends on VIDEO_DEV && ARCH_MXC
+	default y
+	---help---
+	  This is another video4linux2 capture driver for the i.MX51.
+
+source "drivers/media/video/boundary/Kconfig"
+
 config VIDEO_CPIA
 	tristate "CPiA Video For Linux (DEPRECATED)"
 	depends on VIDEO_V4L1
