@@ -2753,6 +2753,12 @@ void initialize_tty_struct(struct tty_struct *tty,
 	memset(tty, 0, sizeof(struct tty_struct));
 	kref_init(&tty->kref);
 	tty->magic = TTY_MAGIC;
+	tty->ldisc_default = N_TTY;
+#ifdef CONFIG_N_9BIT
+//	pr_err("major=%d idx=%d\n", driver->major, idx);
+	if ((driver->major == 207) && (idx == 2))
+		tty->ldisc_default = N_9BIT;
+#endif
 	tty_ldisc_init(tty);
 	tty->session = NULL;
 	tty->pgrp = NULL;
