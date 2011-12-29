@@ -1106,6 +1106,27 @@ config SENSORS_LIS3_I2C
 	  will be called lis3lv02d and a specific module for the I2C transport
 	  is called lis3lv02d_i2c.
 
+config SENSORS_LSM303_ACCELEROMETER
+	tristate "ST Microelectronics LSM303DLH accelerometer"
+	depends on INPUT && I2C
+	select INPUT_POLLDEV
+	default n
+	help
+	This driver provides support for the LSM303DLH accelerometer.
+
+config SENSORS_LSM303_ACCELEROMETER_RANGE
+	int "LSM303 Accelerometer range (in G's)"
+	default 8
+	depends on SENSORS_LSM303_ACCELEROMETER
+
+config SENSORS_LSM303_COMPASS
+	tristate "ST Microelectronics LSM303DLH magnetometer"
+	depends on INPUT && I2C
+	select INPUT_POLLDEV
+	default n
+	help
+	This driver provides support for the LSM303DLH magnetometer (compass).
+
 config SENSORS_APPLESMC
 	tristate "Apple SMC (Motion sensor, light sensor, keyboard backlight)"
 	depends on INPUT && X86

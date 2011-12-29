@@ -40,6 +40,7 @@ static unsigned const num_identbytes = ARRAY_SIZE(identbytes);
 #define IDENTOFFS 	0x0a
 
 #define DRVNAME		"lsm303c"
+#define DRVDESC		DRVNAME ": Compass"
 
 /* returns 0..0xff for success, negative for failure */
 static s32 read_reg(struct i2c_client *client, u8 address) {
@@ -166,7 +167,7 @@ lsm303_compass_probe(struct i2c_client *client, const struct i2c_device_id *id)
 				compass->idev->poll_interval_max = 2000;
 				input_dev = compass->idev->input;
 
-				input_dev->name       = DRVNAME;
+				input_dev->name       = DRVDESC;
 				input_dev->id.bustype = BUS_HOST;
 				input_dev->id.vendor  = 0;
 				input_dev->dev.parent = &client->dev;
