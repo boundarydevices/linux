@@ -4,6 +4,59 @@
 
 menu "Character devices"
 
+
+config MAGSTRIPE
+	tristate "Magstripe reader support"
+	default n
+	help
+	   This enables support for a Neuron MCR-370T-1R-xxxx insertion-style
+	   magnetic stripe card reader, connected via GPIO. If you say yes, you
+	   will be asked to specify which pins the reader is connected to.
+
+config MAG_FRONT
+	int "Magstripe front switch GPIO pin"
+	depends on MAGSTRIPE
+	range 0 128
+	default 80
+
+config MAG_REAR
+	int "Magstripe rear switch GPIO pin"
+	depends on MAGSTRIPE
+	range 0 128
+	default 73
+
+config MAG_CLOCK
+	int "Magstripe clock line GPIO pin"
+	depends on MAGSTRIPE
+	range 0 128
+	default 72
+
+config MAG_DATA
+	int "Magstripe data line GPIO pin"
+	depends on MAGSTRIPE
+	range 0 128
+	default 71
+
+config MAG_RISING_EDGE
+	bool "Sample magstripe data pin on rising edge"
+	depends on MAGSTRIPE
+	default y
+	help
+	   The magstripe reader works by sampling data on each pulse of a
+	   clock signal. If you say yes here, that sampling will occur on the
+	   rising edge of each clock pulse. Otherwise, it will sample on the
+	   falling edge of the pulse.
+
+config MAG_TIMEOUT
+	int "Magstripe swipe timeout"
+	depends on MAGSTRIPE
+	range 1 100
+	default 10
+	help
+	   The time, in tens of milliseconds, that the driver will wait for
+	   a swipe to progress before stopping and decoding the data it has
+	   already read.
+
 config VT
 	bool "Virtual terminal" if EMBEDDED
 	depends on !S390
@@ -201,6 +254,19 @@ config DIGIEPCA
 	  To compile this driver as a module, choose M here: the
 	  module will be called epca.
 
+config ESPSERIAL
+	tristate "Hayes ESP serial port support"
+	depends on SERIAL_NONSTANDARD && ISA && ISA_DMA_API && BROKEN
+	help
+	  This is a driver which supports Hayes ESP serial ports.  Both single
+	  port cards and multiport cards are supported.  Make sure to read
+	  <file:Documentation/hayes-esp.txt>.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called esp.
+
+	  If unsure, say N.
+
 config MOXA_INTELLIO
 	tristate "Moxa Intellio support"
 	depends on SERIAL_NONSTANDARD && (ISA || EISA || PCI)
@@ -276,18 +342,10 @@ config N_HDLC
 	  Allows synchronous HDLC communications with tty device drivers that
 	  support synchronous HDLC such as the Microgate SyncLink adapter.
 
-	  This driver can be built as a module ( = code which can be
+	  This driver can only be built as a module ( = code which can be
 	  inserted in and removed from the running kernel whenever you want).
 	  The module will be called n_hdlc. If you want to do that, say M
 	  here.
-
-config N_GSM
-	tristate "GSM MUX line discipline support (EXPERIMENTAL)"
-	depends on EXPERIMENTAL
-	depends on NET
-	help
-	  This line discipline provides support for the GSM MUX protocol and
-	  presents the mux as a set of 61 individual tty devices.
 
 config RISCOM8
 	tristate "SDL RISCom/8 card support"
@@ -318,7 +376,7 @@ config SPECIALIX
 
 config SX
 	tristate "Specialix SX (and SI) card support"
-	depends on SERIAL_NONSTANDARD && (PCI || EISA || ISA) && BROKEN
+	depends on SERIAL_NONSTANDARD && (PCI || EISA || ISA)
 	help
 	  This is a driver for the SX and SI multiport serial cards.
 	  Please read the file <file:Documentation/serial/sx.txt> for details.
@@ -329,7 +387,7 @@ config SX
 
 config RIO
 	tristate "Specialix RIO system support"
-	depends on SERIAL_NONSTANDARD && BROKEN
+	depends on SERIAL_NONSTANDARD
 	help
 	  This is a driver for the Specialix RIO, a smart serial card which
 	  drives an outboard box that can support up to 128 ports.  Product
@@ -390,7 +448,7 @@ config NOZOMI
 
 config A2232
 	tristate "Commodore A2232 serial support (EXPERIMENTAL)"
-	depends on EXPERIMENTAL && ZORRO && BROKEN
+	depends on EXPERIMENTAL && ZORRO && BROKEN_ON_SMP
 	---help---
 	  This option supports the 2232 7-port serial card shipped with the
 	  Amiga 2000 and other Zorro-bus machines, dating from 1989.  At
@@ -533,7 +591,7 @@ config BRIQ_PANEL
 
 config BFIN_OTP
 	tristate "Blackfin On-Chip OTP Memory Support"
-	depends on BLACKFIN && (BF51x || BF52x || BF54x)
+	depends on BLACKFIN && (BF52x || BF54x)
 	default y
 	help
 	  If you say Y here, you will get support for a character device
@@ -713,18 +771,10 @@ config VIRTIO_CONSOLE
 	help
 	  Virtio console for use with lguest and other hypervisors.
 
-	  Also serves as a general-purpose serial device for data
-	  transfer between the guest and host.  Character devices at
-	  /dev/vportNpn will be created when corresponding ports are
-	  found, where N is the device number and n is the port number
-	  within that device.  If specified by the host, a sysfs
-	  attribute called 'name' will be populated with a name for
-	  the port which can be used by udev scripts to create a
-	  symlink to the device.
 
 config HVCS
 	tristate "IBM Hypervisor Virtual Console Server support"
-	depends on PPC_PSERIES && HVC_CONSOLE
+	depends on PPC_PSERIES
 	help
 	  Partitionable IBM Power5 ppc64 machines allow hosting of
 	  firmware virtual consoles from one Linux partition by
@@ -1129,14 +1179,6 @@ config MMTIMER
 	  The mmtimer device allows direct userspace access to the
 	  Altix system timer.
 
-config UV_MMTIMER
-	tristate "UV_MMTIMER Memory mapped RTC for SGI UV"
-	depends on X86_UV
-	default m
-	help
-	  The uv_mmtimer device allows direct userspace access to the
-	  UV system timer.
-
 source "drivers/char/tpm/Kconfig"
 
 config TELCLOCK
@@ -1159,14 +1201,6 @@ config DEVPORT
 	default y
 
 source "drivers/s390/char/Kconfig"
-
-config RAMOOPS
-	tristate "Log panic/oops to a RAM buffer"
-	depends on HAS_IOMEM
-	default n
-	help
-	  This enables panic and oops messages to be logged to a circular
-	  buffer in RAM where it can be read back at some later point.
 
 config MX51_GPIO_TRIG
 	tristate "MX51 Triggered GPIO driver"
