@@ -100,6 +100,12 @@
 
 #define MX53_PAD_CSI0_D4__AUD3_TXC		IOMUX_PAD(0x3FC, 0xD0, 5, 0x0, 0, PAD_CTRL_4)
 #define MX53_PAD_ATA_BUFFER_EN__UART2_RXD	IOMUX_PAD(0x5FC, 0x27C, 3, 0x880, 3, MX53_UART_PAD_CTRL)
+#define MX53_PAD_ATA_DA_1__SD4_CMD		IOMUX_PAD(0x614, 0x294, 2, 0x0, 0, MX53_SDHC_PAD_CTRL)
+#define MX53_PAD_ATA_DA_2__SD4_CLK		IOMUX_PAD(0x618, 0x298, 2, 0x0, 0, MX53_SDHC_PAD_CTRL | PAD_CTL_HYS)
+#define MX53_PAD_ATA_DATA12__SD4_DAT0		IOMUX_PAD(0x658, 0x2D4, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
+#define MX53_PAD_ATA_DATA13__SD4_DAT1		IOMUX_PAD(0x65C, 0x2D8, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
+#define MX53_PAD_ATA_DATA14__SD4_DAT2		IOMUX_PAD(0x660, 0x2DC, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
+#define MX53_PAD_ATA_DATA15__SD4_DAT3		IOMUX_PAD(0x664, 0x2E0, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
 #define MX53_PAD_ATA_DATA0__SD3_DAT4		IOMUX_PAD(0x628, 0x2A4, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
 #define MX53_PAD_ATA_DATA10__SD3_DAT2		IOMUX_PAD(0x650, 0x2CC, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
 #define MX53_PAD_ATA_DATA11__SD3_DAT3		IOMUX_PAD(0x654, 0x2D0, 4, 0x0, 0, MX53_SDHC_PAD_CTRL)
@@ -1283,6 +1289,7 @@ static struct gpio_keys_button gpio_keys[] = {
 		.debounce_interval = 30,
 	},
 	/* Below this point only applies to new rev of nitrogen53A */
+#if defined(CONFIG_MACH_NITROGEN_A_IMX53) || defined(CONFIG_MACH_NITROGEN_AP_IMX53)
 	{
 		.type	= EV_KEY,
 		.gpio	= MAKE_GP(3,22),
@@ -1365,6 +1372,7 @@ static struct gpio_keys_button gpio_keys[] = {
 		.active_low = 1,
 		.debounce_interval = 30,
 	},
+#endif
 #endif
 };
 
@@ -1865,7 +1873,27 @@ static struct sys_timer mxc_timer = {
 
 /*****************************************************************************/
 #if defined(CONFIG_MACH_NITROGEN_A_IMX53) || defined(CONFIG_MACH_NITROGEN_AP_IMX53)
-static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
+struct gpio nitrogen53_gpios_specific_a[] __initdata = {
+	{.label = "pmic-int",		.gpio = MAKE_GP(2, 21),		.flags = GPIOF_DIR_IN},
+	{.label = "Camera power down",	.gpio = MAKE_GP(2, 22),		.flags = GPIOF_INIT_HIGH},	/* EIM_A16 */
+//	{.label = "led0",		.gpio = MAKE_GP(4, 2),		.flags = 0},
+	{.label = "led1",		.gpio = MAKE_GP(4, 3),		.flags = 0},
+//	{.label = "led2",		.gpio = MAKE_GP(4, 4),		.flags = 0},
+	{.label = "mic_mux",		.gpio = MAKE_GP(6, 16),		.flags = 0},
+	{.label = "i2c-2-sda",		.gpio = MAKE_GP(7, 11),		.flags = GPIOF_DIR_IN},
+	{.label = "power_down_req",	.gpio = POWER_DOWN,		.flags = GPIOF_INIT_HIGH},
+};
+
+extern struct da9052_tsi_platform_data da9052_tsi;
+
+#if defined (CONFIG_TOUCHSCREEN_I2C) || defined (CONFIG_TOUCHSCREEN_I2C_MODULE)
+static struct plat_i2c_generic_data i2c_pic16f616_data = {
+	.irq = gpio_to_irq(N53_I2C_PIC16F616_INT),
+	.gp = N53_I2C_PIC16F616_INT,
+};
+#endif
+
+static struct i2c_board_info mxc_i2c1_board_info_a[] __initdata = {
 	{
 	 .type = "lsm303a",
 	 .addr = 0x18,			//Nitrogen_AP will override this, so keep 1st in array
@@ -1912,23 +1940,7 @@ static struct i2c_board_info mxc_i2c2_board_info_a[] __initdata = {
 	 .platform_data  = &i2c_sc16is7xx_data,
 	},
 };
-#endif
-/*****************************************************************************/
 
-
-/*****************************************************************************/
-
-#if defined(CONFIG_MACH_NITROGEN_A_IMX53) || defined(CONFIG_MACH_NITROGEN_AP_IMX53)
-struct gpio nitrogen53_gpios_specific_a[] __initdata = {
-	{.label = "pmic-int",		.gpio = MAKE_GP(2, 21),		.flags = GPIOF_DIR_IN},
-	{.label = "Camera power down",	.gpio = MAKE_GP(2, 22),		.flags = GPIOF_INIT_HIGH},	/* EIM_A16 */
-//	{.label = "led0",		.gpio = MAKE_GP(4, 2),		.flags = 0},
-	{.label = "led1",		.gpio = MAKE_GP(4, 3),		.flags = 0},
-//	{.label = "led2",		.gpio = MAKE_GP(4, 4),		.flags = 0},
-	{.label = "mic_mux",		.gpio = MAKE_GP(6, 16),		.flags = 0},
-	{.label = "i2c-2-sda",		.gpio = MAKE_GP(7, 11),		.flags = GPIOF_DIR_IN},
-	{.label = "power_down_req",	.gpio = POWER_DOWN,		.flags = GPIOF_INIT_HIGH},
-};
 #endif
 
 #ifdef CONFIG_MACH_NITROGEN_A_IMX53
