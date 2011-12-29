@@ -68,6 +68,9 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 	u32 empgc1 = 0;
 	int stop_mode = 0;
 
+        if (dont_sleep_yet && (WAIT_UNCLOCKED_POWER_OFF == mode))
+		return ;
+
 	/* always allow platform to issue a deep sleep mode request */
 	plat_lpc = __raw_readl(arm_plat_base + MXC_CORTEXA8_PLAT_LPC) &
 	    ~(MXC_CORTEXA8_PLAT_LPC_DSM);
@@ -167,6 +170,8 @@ void mxc_pg_disable(struct platform_device *pdev)
 }
 
 EXPORT_SYMBOL(mxc_pg_disable);
+
+int dont_sleep_yet = 1 ;
 
 /* To change the idle power mode, need to set arch_idle_mode to a different
  * power mode as in enum mxc_cpu_pwr_mode.
