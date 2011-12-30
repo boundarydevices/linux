@@ -2257,14 +2257,8 @@ static struct i2c_board_info n53k_i2c0_board_info[] __initdata = {
 
 static struct i2c_board_info n53k_i2c1_board_info[] __initdata = {
 	{
-	 .type = "lsm303a",
-	 .addr = 0x18,
-	 .platform_data  = &i2c_generic_data,
-	},
-	{
-	 .type = "lsm303c",
-	 .addr = 0x1e,
-	 .platform_data  = &i2c_generic_data,
+	 .type = "mma8451",
+	 .addr = 0x1c,
 	},
 	{
 	 .type = "tfp410",
