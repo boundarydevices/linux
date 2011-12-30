@@ -2244,6 +2244,7 @@ struct gpio n53k_gpios_specific[] __initdata = {
 #endif
 	{.label = "eMMC reset",		.gpio = MAKE_GP(3, 8),		.flags = GPIOF_INIT_HIGH},	/* EIM_DA8, GPIO3[8] - active low reset */
 	{.label = "i2c-2-sda",		.gpio = MAKE_GP(7, 11),		.flags = GPIOF_DIR_IN},
+	{.label = "USBH1 Power",	.gpio = MAKE_GP(2, 17),		.flags = GPIOF_INIT_HIGH},	/* EIM_A21, active high power enable */
 };
 
 static struct i2c_board_info n53k_i2c0_board_info[] __initdata = {
