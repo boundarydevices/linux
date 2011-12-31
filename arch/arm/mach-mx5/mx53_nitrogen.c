@@ -1062,17 +1062,6 @@ static struct plat_i2c_tfp410_data i2c_tfp410_data = {
 	.gp_i2c_sel = N53_TFP410_I2CMODE
 };
 
-struct sc16is7xx_gpio_platform_data i2c_sc16is7xx_gpio_data = {
-	.gpio_base = -1,
-	.irq_base = MXC_BOARD_IRQ_START,
-};
-
-static struct sc16is7xx_platform_data i2c_sc16is7xx_data = {
-	.irq = gpio_to_irq(N53_SC16IS7XX_INT),
-	.gp = N53_SC16IS7XX_INT,
-	.gpio_data = &i2c_sc16is7xx_gpio_data,
-};
-
 #if defined(CONFIG_MTD)
 static struct mtd_partition mxc_spi_nor_partitions[] = {
 	{
@@ -1930,6 +1919,17 @@ static struct i2c_board_info mxc_i2c1_board_info_a[] __initdata = {
 	 .addr = 0x38,
 	 .platform_data  = &i2c_tfp410_data,
 	},
+};
+
+struct sc16is7xx_gpio_platform_data i2c_sc16is7xx_gpio_data = {
+	.gpio_base = -1,
+	.irq_base = MXC_BOARD_IRQ_START,
+};
+
+static struct sc16is7xx_platform_data i2c_sc16is7xx_data = {
+	.irq = gpio_to_irq(N53_SC16IS7XX_INT),
+	.gp = N53_SC16IS7XX_INT,
+	.gpio_data = &i2c_sc16is7xx_gpio_data,
 };
 
 static struct i2c_board_info mxc_i2c2_board_info_a[] __initdata = {
