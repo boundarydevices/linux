@@ -1177,21 +1177,21 @@ static struct mxc_mmc_platform_data mmc1_data = {
 	.card_inserted_state = 0,
 	.status = sdhc_get_card_det_status1,
 	.wp_status = sdhc_write_protect,
-	.clock_mmc = "esdhc_clk",
 	.power_mmc = NULL,
 };
+
+#define TIWI_REGULATOR_NAME "vwl1271"
 
 static struct mxc_mmc_platform_data mmc3_data = {
 	.ocr_mask = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30
 		| MMC_VDD_31_32,
-	.caps = MMC_CAP_4_BIT_DATA | MMC_CAP_8_BIT_DATA
-		| MMC_CAP_DATA_DDR,
+	.caps = MMC_CAP_4_BIT_DATA | MMC_CAP_DATA_DDR,
 	.min_clk = 400000,
 	.max_clk = 50000000,
-	.card_inserted_state = 0,
+	.card_inserted_state = 1,
 	.status = sdhc_get_card_det_status3,
 	.wp_status = sdhc_write_protect,
-	.clock_mmc = "esdhc_clk",
+	.power_mmc = TIWI_REGULATOR_NAME,
 };
 
 static int mxc_sgtl5000_amp_enable(int enable)
@@ -2133,7 +2133,7 @@ static struct regulator_init_data nitrogen53_vmmc2 = {
 };
 
 static struct fixed_voltage_config nitrogen53_vwlan = {
-	.supply_name		= "vwl1271",
+	.supply_name		= TIWI_REGULATOR_NAME,
 	.microvolts		= 1800000, /* 1.80V */
 	.gpio			= N53_WL1271_WL_EN,
 	.startup_delay		= 70000, /* 70ms */
@@ -2155,19 +2155,12 @@ struct wl12xx_platform_data nitrogen53_wlan_data __initdata = {
 	.board_ref_clock = WL12XX_REFCLOCK_38, /* 38.4 MHz */
 };
 
-static unsigned int sdhc_present(struct device *dev)
-{
-	return 0;
-}
 #endif
 
 static void __init mxc_board_init_nitrogen(void)
 {
 	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
 	mxc_uart_device3.dev.platform_data = &uart_pdata;
-#ifdef CONFIG_WL12XX_PLATFORM_DATA
-	mmc3_data.status = sdhc_present;
-#endif
 
 #ifdef CONFIG_KEYBOARD_GPIO
 	gpio_keys_platform_data.nbuttons = 4;
@@ -2339,7 +2332,7 @@ static struct regulator_init_data n53k_vmmc2 = {
 };
 
 static struct fixed_voltage_config n53k_vwlan = {
-	.supply_name = "vwl1271",
+	.supply_name = TIWI_REGULATOR_NAME,
 	.microvolts = 1800000, /* 1.80V */
 	.gpio = N53K_WL1271_WL_EN,
 	.startup_delay = 70000, /* 70ms */
@@ -2361,10 +2354,6 @@ struct wl12xx_platform_data n53k_wlan_data __initdata = {
 	.board_ref_clock = WL12XX_REFCLOCK_38,		/* 38.4 MHz */
 };
 
-static unsigned int n53k_sdhc_present(struct device *dev)
-{
-	return 0;
-}
 #endif
 
 static unsigned int n53k_sdhc_get_card_det_status4(struct device *dev)
@@ -2392,12 +2381,6 @@ static struct mxc_mmc_platform_data n53k_mmc4_data = {
 static void __init n53k_board_init(void)
 {
 	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
-
-	mmc3_data.caps = MMC_CAP_4_BIT_DATA | MMC_CAP_DATA_DDR;
-#ifdef CONFIG_WL12XX_PLATFORM_DATA
-	mmc3_data.status = n53k_sdhc_present;
-	mmc3_data.card_inserted_state = 1;
-#endif
 
 #ifdef CONFIG_KEYBOARD_GPIO
 	gpio_keys_platform_data.nbuttons = 4;
