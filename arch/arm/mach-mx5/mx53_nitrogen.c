@@ -1154,7 +1154,11 @@ static unsigned int sdhc_get_card_det_status1(struct device *dev)
 
 static unsigned int sdhc_get_card_det_status3(struct device *dev)
 {
+#ifdef CONFIG_WL12XX_PLATFORM_DATA
+	return 0 ;
+#else
 	return gpio_get_value(N53_SD3_CD);
+#endif
 }
 
 static struct mxc_mmc_platform_data mmc1_data = {
@@ -1177,7 +1181,11 @@ static struct mxc_mmc_platform_data mmc3_data = {
 	.caps = MMC_CAP_4_BIT_DATA | MMC_CAP_DATA_DDR,
 	.min_clk = 400000,
 	.max_clk = 50000000,
+#ifdef CONFIG_WL12XX_PLATFORM_DATA
 	.card_inserted_state = 1,
+#else
+	.card_inserted_state = 0,
+#endif
 	.status = sdhc_get_card_det_status3,
 	.wp_status = sdhc_write_protect,
 	.power_mmc = TIWI_REGULATOR_NAME,
