@@ -1631,7 +1631,6 @@ static void __init mxc_board_init(void)
 #ifdef CONFIG_MAGSTRIPE_MODULE
 	platform_device_register(&magstripe_device);
 #endif
-	dont_sleep_yet = 0 ;
 }
 
 static void __init mx51_nitrogen_timer_init(void)

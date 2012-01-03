@@ -1860,8 +1860,6 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 	mxc_register_device(&usb_mass_storage_device, &mass_storage_data);
 	mxc_register_device(&usb_rndis_device, &rndis_data);
 	mxc_register_device(&android_usb_device, &android_usb_data);
-
-	dont_sleep_yet = 0 ;
 }
 
 static void __init mx53_nitrogen_timer_init(void)
