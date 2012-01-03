@@ -2102,11 +2102,6 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	 .type = "sgtl5000-i2c",
 	 .addr = 0x0a,
 	},
-	{
-	 .type = "sc16is7xx-uart",
-	 .addr = 0x49,
-	 .platform_data  = &i2c_sc16is7xx_data,
-	},
 };
 
 static iomux_v3_cfg_t nitrogen53_pads_specific[] __initdata = {
