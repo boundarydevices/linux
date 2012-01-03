@@ -1743,6 +1743,17 @@ static void nitrogen_power_off(void)
 #if defined(CONFIG_MACH_NITROGEN_A_IMX53)
 #define POWER_DOWN	MAKE_GP(3, 23)
 	gpio_set_value(POWER_DOWN, 0);
+#elif defined(CONFIG_MACH_MX53_NITROGEN_K)
+	union i2c_smbus_data data;
+	int ret;
+	struct i2c_adapter *adap = i2c_get_adapter(0);
+	BUG_ON (!adap);
+	data.byte = 0x68 ;
+	while (0 != (ret = i2c_smbus_xfer(adap, 0x48,0,
+					  I2C_SMBUS_WRITE,15,
+					  I2C_SMBUS_BYTE_DATA,&data))) {
+		printk (KERN_ERR "%s: xfer %d:%02x:0x%02x\n", __func__, ret, 15, data.byte );
+	}
 #endif
 	while (1) {
 	}
