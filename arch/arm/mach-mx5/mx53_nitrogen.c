@@ -2252,8 +2252,8 @@ struct gpio n53k_gpios_specific[] __initdata = {
 	{.label = "eMMC reset",		.gpio = MAKE_GP(3, 8),		.flags = GPIOF_INIT_HIGH},	/* EIM_DA8, GPIO3[8] - active low reset */
 	{.label = "i2c-2-sda",		.gpio = MAKE_GP(7, 11),		.flags = GPIOF_DIR_IN},
 	{.label = "USBH1 Power",	.gpio = MAKE_GP(2, 17),		.flags = GPIOF_INIT_HIGH},	/* EIM_A21, active high power enable */
-	{.label = "Barcode Trigger",	.gpio = MAKE_GP(3, 30),		.flags = 0},			/* EIM_D30, active high scanner trigger */
 #if !defined(CONFIG_GPIO_OUTPUT) && !defined(CONFIG_GPIO_OUTPUT_MODULE)
+	{.label = "Barcode Trigger",	.gpio = MAKE_GP(3, 30),		.flags = 0},			/* EIM_D30, active high scanner trigger */
 	{.label = "LED1",		.gpio = MAKE_GP(2, 19),		.flags = GPIOF_INIT_HIGH},	/* EIM_A19, active low, Red LED */
 	{.label = "LED2",		.gpio = MAKE_GP(2, 20),		.flags = GPIOF_INIT_HIGH},	/* EIM_A18, active low, Yellow LED */
 	{.label = "LED3",		.gpio = MAKE_GP(3, 22),		.flags = GPIOF_INIT_HIGH},	/* EIM_D22, active low, Blue LED */
