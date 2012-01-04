@@ -327,7 +327,9 @@ struct gpio nitrogen53_gpios[] __initdata = {
 //	{.label = "Back key",		.gpio = MAKE_GP(3, 26),		.flags = GPIOF_DIR_IN},
 //	{.label = "Search key",		.gpio = MAKE_GP(3, 27),		.flags = GPIOF_DIR_IN},
 //	{.label = "Home key",		.gpio = MAKE_GP(3, 29),		.flags = GPIOF_DIR_IN},
+#ifndef CONFIG_MACH_MX53_NITROGEN_K
 	{.label = "On/Off key",		.gpio = MAKE_GP(3, 30),		.flags = GPIOF_DIR_IN},
+#endif
 #define N53_I2C_1_SDA				MAKE_GP(4, 13)
 	{.label = "i2c-1-sda",		.gpio = MAKE_GP(4, 13),		.flags = GPIOF_DIR_IN},
 #define N53_TFP410_INT				MAKE_GP(4, 15)
@@ -2250,6 +2252,13 @@ struct gpio n53k_gpios_specific[] __initdata = {
 	{.label = "eMMC reset",		.gpio = MAKE_GP(3, 8),		.flags = GPIOF_INIT_HIGH},	/* EIM_DA8, GPIO3[8] - active low reset */
 	{.label = "i2c-2-sda",		.gpio = MAKE_GP(7, 11),		.flags = GPIOF_DIR_IN},
 	{.label = "USBH1 Power",	.gpio = MAKE_GP(2, 17),		.flags = GPIOF_INIT_HIGH},	/* EIM_A21, active high power enable */
+	{.label = "Barcode Trigger",	.gpio = MAKE_GP(3, 30),		.flags = 0},			/* EIM_D30, active high scanner trigger */
+#if !defined(CONFIG_GPIO_OUTPUT) && !defined(CONFIG_GPIO_OUTPUT_MODULE)
+	{.label = "LED1",		.gpio = MAKE_GP(2, 19),		.flags = GPIOF_INIT_HIGH},	/* EIM_A19, active low, Red LED */
+	{.label = "LED2",		.gpio = MAKE_GP(2, 20),		.flags = GPIOF_INIT_HIGH},	/* EIM_A18, active low, Yellow LED */
+	{.label = "LED3",		.gpio = MAKE_GP(3, 22),		.flags = GPIOF_INIT_HIGH},	/* EIM_D22, active low, Blue LED */
+	{.label = "LED4",		.gpio = MAKE_GP(2, 18),		.flags = GPIOF_INIT_HIGH},	/* EIM_A20, active low, Orange LED */
+#endif
 };
 
 static struct i2c_board_info n53k_i2c0_board_info[] __initdata = {
@@ -2328,6 +2337,15 @@ static iomux_v3_cfg_t n53k_pads_specific[] __initdata = {
 	/* UART3 */
 //	MX53_PAD_ATA_CS_0__UART3_TXD,
 	MX53_PAD_ATA_CS_1__UART3_RXD,
+
+	/* Barcode scanner trigger */
+	MX53_PAD_EIM_D30__GPIO_3_30,
+
+	/* LED daughter board */
+	MX53_PAD_EIM_A18__GPIO_2_20,
+	MX53_PAD_EIM_A19__GPIO_2_19,
+	MX53_PAD_EIM_A20__GPIO_2_18,
+	MX53_PAD_EIM_D22__GPIO_3_22,
 };
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
