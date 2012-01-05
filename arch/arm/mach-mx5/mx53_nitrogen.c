@@ -484,7 +484,7 @@ static iomux_v3_cfg_t mx53common_pads[] = {
 
 	/* GPIO6 */
 	MX53_PAD_EIM_A23__GPIO_6_6,	/* USB OTG USB_PWR */
-	MX53_PAD_NANDF_CS3__GPIO_6_16,	/* NitrogenA mic mux */
+	MX53_PAD_NANDF_CS3__GPIO_6_16,	/* NitrogenA mic mux, Nitrogen53K back button */
 
 	/* GPIO7 */
 	MX53_PAD_GPIO_17__GPIO_7_12,	/* I2C Connector interrupt */
@@ -1264,7 +1264,11 @@ static struct gpio_keys_button gpio_keys[] = {
 	},
 	{
 		.type	= EV_KEY,
+#ifndef CONFIG_MACH_MX53_NITROGEN_K
 		.gpio	= MAKE_GP(3,26),
+#else
+		.gpio	= MAKE_GP(6,16),
+#endif
 		.code	= KEY_BACK,		/* 158 (0x9E) */
 		.desc	= "Back Button",
 		.wakeup	= 1,
