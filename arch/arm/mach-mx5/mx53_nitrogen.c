@@ -2258,6 +2258,7 @@ struct gpio n53k_gpios_specific[] __initdata = {
 	{.label = "LED2",		.gpio = MAKE_GP(2, 20),		.flags = GPIOF_INIT_HIGH},	/* EIM_A18, active low, Yellow LED */
 	{.label = "LED3",		.gpio = MAKE_GP(3, 22),		.flags = GPIOF_INIT_HIGH},	/* EIM_D22, active low, Blue LED */
 	{.label = "LED4",		.gpio = MAKE_GP(2, 18),		.flags = GPIOF_INIT_HIGH},	/* EIM_A20, active low, Orange LED */
+	{.label = "flash",		.gpio = MAKE_GP(3, 2),		.flags = 0},			/* EIM_DA2, active high, camera flash */
 #endif
 };
 
@@ -2346,6 +2347,10 @@ static iomux_v3_cfg_t n53k_pads_specific[] __initdata = {
 	MX53_PAD_EIM_A19__GPIO_2_19,
 	MX53_PAD_EIM_A20__GPIO_2_18,
 	MX53_PAD_EIM_D22__GPIO_3_22,
+
+	/* Camera daughter board */
+	MX53_PAD_EIM_DA2__GPIO3_2,		/* flash output (active high) */
+	MX53_PAD_GPIO_7__GPIO1_7,		/* strobe input (from camera) */
 };
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
