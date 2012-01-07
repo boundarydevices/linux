@@ -1712,31 +1712,9 @@ static void __init mx53_nitrogen_io_init(void)
 	mxc_iomux_v3_setup_multiple_pads(mx53common_pads,
 			ARRAY_SIZE(mx53common_pads));
 	pr_info("MX53 Nitrogen board \n");
-
-#if defined(CONFIG_DUMB_BATTERY) || defined (CONFIG_DUMB_BATTERY_MODULE)
-	platform_device_register(&dumb_battery_device);
-#endif
-
-#if defined (CONFIG_DA905X_CHARDEV) || defined (CONFIG_DA905X_CHARDEV_MODULE)
-	platform_device_register(&da905x_chardev_dev);
-#endif
-
-#if defined(CONFIG_GPIO_OUTPUT) || defined (CONFIG_GPIO_OUTPUT_MODULE)
-       platform_device_register(&gpio_output_pdev);
-#endif
-
-#ifdef CONFIG_KEYBOARD_GPIO
-	platform_device_register(&gpio_keys_device);
-#endif
-#if defined(CONFIG_FB_MXC_PMIC_LCD_MODULE) || defined(CONFIG_FB_MXC_PMIC_LCD)
-	platform_device_register(&lcd_pmic_device);
-#endif
 	msleep(5);
 	gpio_set_value(N53_USB_HUB_RESET, 1);		/* release USB Hub reset */
 	gpio_set_value(N53_PHY_RESET, 1);		/* release ICS1893 Ethernet PHY reset */
-#if defined(CONFIG_VIDEO_BOUNDARY_CAMERA) || defined(CONFIG_VIDEO_BOUNDARY_CAMERA_MODULE)
-	init_camera();
-#endif
 
 #if defined (CONFIG_TOUCHSCREEN_I2C) || defined (CONFIG_TOUCHSCREEN_I2C_MODULE) \
  ||  defined (CONFIG_TOUCHSCREEN_EP0700M01) || defined (CONFIG_TOUCHSCREEN_EP0700M01_MODULE)
@@ -1747,9 +1725,6 @@ static void __init mx53_nitrogen_io_init(void)
 	gpio_set_value(CONFIG_SERIAL_IMX_RS485_GPIO,CONFIG_SERIAL_IMX_RS485_GPIO_ACTIVE_HIGH^1);
 #endif
 
-#if defined (CONFIG_BOUNDARY_CAMERA_HDMI_IN) || defined (CONFIG_BOUNDARY_CAMERA_HDMI_IN_MODULE)
-	platform_device_register(&hdmi_input);
-#endif
 }
 
 static void nitrogen_power_off(void)
@@ -1772,6 +1747,22 @@ static void nitrogen_power_off(void)
 	while (1) {
 	}
 }
+
+static void nitrogen_suspend_enter(void)
+{
+	printk (KERN_ERR "%s\n", __func__ );
+}
+
+static void nitrogen_suspend_exit(void)
+{
+	printk (KERN_ERR "%s\n", __func__ );
+}
+
+static struct mxc_pm_platform_data nitrogen_pm_data = {
+	.suspend_enter = nitrogen_suspend_enter,
+	.suspend_exit = nitrogen_suspend_exit,
+};
+
 
 /*!
  * Board specific initialization.
@@ -1814,17 +1805,9 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 	mxc_register_device(&mxcvpu_device, &mxc_vpu_data);
 	mxc_register_device(&gpu_device, &gpu_data);
 	mxc_register_device(&mxcscc_device, NULL);
-
-/*	mxc_register_device(&mx53_lpmode_device, NULL);
-	mxc_register_device(&sdram_autogating_device, NULL);
-*/
+        mxc_register_device(&pm_device, &nitrogen_pm_data);
 	mxc_register_device(&mxc_dvfs_core_device, &dvfs_core_data);
 	mxc_register_device(&busfreq_device, &bus_freq_data);
-
-	/*
-	mxc_register_device(&mxc_dvfs_per_device, &dvfs_per_data);
-	*/
-
 	mxc_register_device(&mxc_iim_device, &iim_data);
 	mxc_register_device(&mxc_pwm1_device, &mxc_pwm1_platform_data);
 	mxc_register_device(&mxc_pwm2_device, NULL);
@@ -1832,17 +1815,26 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 	mxc_register_device(&mxc_pwm1_backlight_device,	&mxc_backlight_data1);
 	mxc_register_device(&mxc_pwm2_backlight_device,	&mxc_backlight_data2);
 #endif
-
-/*	mxc_register_device(&mxc_keypad_device, &keypad_plat_data); */
-
 	mxc_register_device(&mxcsdhc1_device, &mmc1_data);
 	mxc_register_device(&mxcsdhc3_device, &mmc3_data);
 	mxc_register_device(&mxc_ssi1_device, NULL);
 	mxc_register_device(&mxc_ssi2_device, NULL);
-	mxc_register_device(&ahci_fsl_device, &sata_data);
 	mxc_register_device(&mxc_alsa_spdif_device, &mxc_spdif_data);
+	mxc_register_device(&mxc_android_pmem_device, &android_pmem_data);
+	mxc_register_device(&mxc_android_pmem_gpu_device, &android_pmem_gpu_data);
+	mxc_register_device(&usb_mass_storage_device, &mass_storage_data);
+	mxc_register_device(&usb_rndis_device, &rndis_data);
+	mxc_register_device(&android_usb_device, &android_usb_data);
+	mxc_register_device(&ahci_fsl_device, &sata_data);
 	mxc_register_device(&mxc_fec_device, &fec_data);
 	mxc_register_device(&mxc_ptp_device, NULL);
+
+	if (bi0)
+		i2c_register_board_info(0, bi0, bi0_size);
+	if (bi1)
+		i2c_register_board_info(1, bi1, bi1_size);
+	if (bi2)
+		i2c_register_board_info(2, bi2, bi2_size);
 
 #if defined(CONFIG_MTD)
 	spi_register_board_info(mxc_spi_nor_device,
@@ -1850,12 +1842,6 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 #endif
 	spi_register_board_info(spidev,
 				ARRAY_SIZE(spidev));
-	if (bi0)
-		i2c_register_board_info(0, bi0, bi0_size);
-	if (bi1)
-		i2c_register_board_info(1, bi1, bi1_size);
-	if (bi2)
-		i2c_register_board_info(2, bi2, bi2_size);
 
 	pm_power_off = nitrogen_power_off;
 
@@ -1869,11 +1855,33 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 	mx5_usbh1_init();
 	mxc_register_device(&mxc_v4l2_device, NULL);
 	mxc_register_device(&mxc_v4l2out_device, NULL);
-	mxc_register_device(&mxc_android_pmem_device, &android_pmem_data);
-	mxc_register_device(&mxc_android_pmem_gpu_device, &android_pmem_gpu_data);
-	mxc_register_device(&usb_mass_storage_device, &mass_storage_data);
-	mxc_register_device(&usb_rndis_device, &rndis_data);
-	mxc_register_device(&android_usb_device, &android_usb_data);
+
+#if defined(CONFIG_DUMB_BATTERY) || defined (CONFIG_DUMB_BATTERY_MODULE)
+	platform_device_register(&dumb_battery_device);
+#endif
+
+#if defined (CONFIG_DA905X_CHARDEV) || defined (CONFIG_DA905X_CHARDEV_MODULE)
+	platform_device_register(&da905x_chardev_dev);
+#endif
+
+#if defined(CONFIG_GPIO_OUTPUT) || defined (CONFIG_GPIO_OUTPUT_MODULE)
+       platform_device_register(&gpio_output_pdev);
+#endif
+
+#ifdef CONFIG_KEYBOARD_GPIO
+	platform_device_register(&gpio_keys_device);
+#endif
+#if defined(CONFIG_FB_MXC_PMIC_LCD_MODULE) || defined(CONFIG_FB_MXC_PMIC_LCD)
+	platform_device_register(&lcd_pmic_device);
+#endif
+
+#if defined(CONFIG_VIDEO_BOUNDARY_CAMERA) || defined(CONFIG_VIDEO_BOUNDARY_CAMERA_MODULE)
+	init_camera();
+#endif
+
+#if defined (CONFIG_BOUNDARY_CAMERA_HDMI_IN) || defined (CONFIG_BOUNDARY_CAMERA_HDMI_IN_MODULE)
+	platform_device_register(&hdmi_input);
+#endif
 }
 
 static void __init mx53_nitrogen_timer_init(void)
