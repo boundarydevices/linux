@@ -170,8 +170,7 @@ static ssize_t soc_codec_reg_show(struct snd_soc_codec *codec, char *buf,
 static ssize_t codec_reg_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	struct snd_soc_pcm_runtime *rtd =
-			container_of(dev, struct snd_soc_pcm_runtime, dev);
+	struct snd_soc_pcm_runtime *rtd = dev_get_drvdata(dev);
 
 	return soc_codec_reg_show(rtd->codec, buf, PAGE_SIZE, 0);
 }
@@ -181,8 +180,7 @@ static DEVICE_ATTR(codec_reg, 0444, codec_reg_show, NULL);
 static ssize_t pmdown_time_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
-	struct snd_soc_pcm_runtime *rtd =
-			container_of(dev, struct snd_soc_pcm_runtime, dev);
+	struct snd_soc_pcm_runtime *rtd = dev_get_drvdata(dev);
 
 	return sprintf(buf, "%ld\n", rtd->pmdown_time);
 }
@@ -191,8 +189,7 @@ static ssize_t pmdown_time_set(struct device *dev,
 			       struct device_attribute *attr,
 			       const char *buf, size_t count)
 {
-	struct snd_soc_pcm_runtime *rtd =
-			container_of(dev, struct snd_soc_pcm_runtime, dev);
+	struct snd_soc_pcm_runtime *rtd = dev_get_drvdata(dev);
 	int ret;
 
 	ret = strict_strtol(buf, 10, &rtd->pmdown_time);
@@ -887,9 +884,9 @@ static void soc_remove_dai_link(struct snd_soc_card *card, int num, int order)
 
 	/* unregister the rtd device */
 	if (rtd->dev_registered) {
-		device_remove_file(&rtd->dev, &dev_attr_pmdown_time);
-		device_remove_file(&rtd->dev, &dev_attr_codec_reg);
-		device_unregister(&rtd->dev);
+		device_remove_file(rtd->dev, &dev_attr_pmdown_time);
+		device_remove_file(rtd->dev, &dev_attr_codec_reg);
+		device_unregister(rtd->dev);
 		rtd->dev_registered = 0;
 	}
 
@@ -1018,54 +1015,10 @@ err_probe:
 	return ret;
 }
 
-static int soc_probe_platform(struct snd_soc_card *card,
-			   struct snd_soc_platform *platform)
+static void rtd_release(struct device *dev)
 {
-	int ret = 0;
-	const struct snd_soc_platform_driver *driver = platform->driver;
-
-	platform->card = card;
-	platform->dapm.card = card;
-
-	if (!try_module_get(platform->dev->driver->owner))
-		return -ENODEV;
-
-	if (driver->dapm_widgets)
-		snd_soc_dapm_new_controls(&platform->dapm,
-			driver->dapm_widgets, driver->num_dapm_widgets);
-
-	if (driver->probe) {
-		ret = driver->probe(platform);
-		if (ret < 0) {
-			dev_err(platform->dev,
-				"asoc: failed to probe platform %s: %d\n",
-				platform->name, ret);
-			goto err_probe;
-		}
-	}
-
-	if (driver->controls)
-		snd_soc_add_platform_controls(platform, driver->controls,
-				     driver->num_controls);
-	if (driver->dapm_routes)
-		snd_soc_dapm_add_routes(&platform->dapm, driver->dapm_routes,
-					driver->num_dapm_routes);
-
-	/* mark platform as probed and add to card platform list */
-	platform->probed = 1;
-	list_add(&platform->card_list, &card->platform_dev_list);
-	list_add(&platform->dapm.list, &card->dapm_list);
-
-	return 0;
-
-err_probe:
-	module_put(platform->dev->driver->owner);
-
-	return ret;
+	kfree(dev);
 }
-
-static void rtd_release(struct device *dev) {}
-
 
 static int soc_post_component_init(struct snd_soc_card *card,
 				   struct snd_soc_codec *codec,
@@ -1108,11 +1061,17 @@ static int soc_post_component_init(struct snd_soc_card *card,
 
 	/* register the rtd device */
 	rtd->codec = codec;
-	rtd->dev.parent = card->dev;
-	rtd->dev.release = rtd_release;
-	rtd->dev.init_name = name;
+
+	rtd->dev = kzalloc(sizeof(struct device), GFP_KERNEL);
+	if (!rtd->dev)
+		return -ENOMEM;
+	device_initialize(rtd->dev);
+	rtd->dev->parent = card->dev;
+	rtd->dev->release = rtd_release;
+	rtd->dev->init_name = name;
+	dev_set_drvdata(rtd->dev, rtd);
 	mutex_init(&rtd->pcm_mutex);
-	ret = device_register(&rtd->dev);
+	ret = device_add(rtd->dev);
 	if (ret < 0) {
 		dev_err(card->dev,
 			"asoc: failed to register runtime device: %d\n", ret);
@@ -1121,14 +1080,14 @@ static int soc_post_component_init(struct snd_soc_card *card,
 	rtd->dev_registered = 1;
 
 	/* add DAPM sysfs entries for this codec */
-	ret = snd_soc_dapm_sys_add(&rtd->dev);
+	ret = snd_soc_dapm_sys_add(rtd->dev);
 	if (ret < 0)
 		dev_err(codec->dev,
 			"asoc: failed to add codec dapm sysfs entries: %d\n",
 			ret);
 
 	/* add codec sysfs entries */
-	ret = device_create_file(&rtd->dev, &dev_attr_codec_reg);
+	ret = device_create_file(rtd->dev, &dev_attr_codec_reg);
 	if (ret < 0)
 		dev_err(codec->dev,
 			"asoc: failed to add codec sysfs files: %d\n", ret);
@@ -1217,7 +1176,7 @@ static int soc_probe_dai_link(struct snd_soc_card *card, int num, int order)
 	if (ret)
 		return ret;
 
-	ret = device_create_file(&rtd->dev, &dev_attr_pmdown_time);
+	ret = device_create_file(rtd->dev, &dev_attr_pmdown_time);
 	if (ret < 0)
 		printk(KERN_WARNING "asoc: failed to add pmdown_time sysfs\n");
 
@@ -1315,8 +1274,8 @@ static void soc_remove_aux_dev(struct snd_soc_card *card, int num)
 
 	/* unregister the rtd device */
 	if (rtd->dev_registered) {
-		device_remove_file(&rtd->dev, &dev_attr_codec_reg);
-		device_unregister(&rtd->dev);
+		device_remove_file(rtd->dev, &dev_attr_codec_reg);
+		device_del(rtd->dev);
 		rtd->dev_registered = 0;
 	}
 
