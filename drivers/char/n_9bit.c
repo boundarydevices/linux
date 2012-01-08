@@ -235,6 +235,7 @@ static void n_9bit_release(struct n_9bit *n_9bit)
 	/* Ensure that the n_9bitd process is not hanging on select()/poll() */
 	wake_up_interruptible(&tty->read_wait);
 	wake_up_interruptible(&tty->write_wait);
+	del_timer(&n_9bit->rx_eom_timer);
 
 	/* Release transmit and receive buffers */
 	free_list(&n_9bit->rx_free_buf_list);
