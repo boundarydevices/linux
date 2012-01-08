@@ -20,6 +20,7 @@
 #include <linux/input.h>
 #include <linux/interrupt.h>
 #include <linux/slab.h>
+#include <linux/gpio.h>
 
 /* Version */
 #define MXT_VER_20		20
@@ -567,29 +568,47 @@ static void process_interrupt(struct mxt_data *data)
 	u8 reportid;
 	u8 max_reportid;
 	u8 min_reportid;
-
+	int asserted = 0 ;
+	int iterations = 0 ;
 	do {
-		if (mxt_read_message(data, &message)) {
-			dev_err(dev, "Failed to read message\n");
-			break;
+		int level ;
+		do {
+			if (mxt_read_message(data, &message)) {
+				dev_err(dev, "Failed to read message\n");
+				break;
+			}
+
+			reportid = message.reportid;
+
+			/* whether reportid is thing of MXT_TOUCH_MULTI */
+			object = mxt_get_object(data, MXT_TOUCH_MULTI);
+			if (!object)
+				break ;
+
+			max_reportid = object->max_reportid;
+			min_reportid = max_reportid - object->num_report_ids + 1;
+			id = reportid - min_reportid;
+
+			if (reportid >= min_reportid && reportid <= max_reportid)
+				mxt_input_touchevent(data, &message, id);
+			else
+				mxt_dump_message(dev, &message);
+		} while (reportid != 0xff);
+		level = gpio_get_value(irq_to_gpio(data->client->irq));
+		if ((data->pdata->irqflags & IRQF_TRIGGER_FALLING)
+		    ||
+		    (data->pdata->irqflags & IRQF_TRIGGER_LOW)){
+			asserted = (0 == level);
+		} else {
+			asserted = (1 == level);
 		}
+		// printk (KERN_ERR "%s/%s: int status %d/%d\n", __FILE__, __func__, level, asserted);
+		if (asserted)
+			msleep(1); /* in case we're stuck */
+	} while (asserted && (++iterations < 10));
 
-		reportid = message.reportid;
-
-		/* whether reportid is thing of MXT_TOUCH_MULTI */
-		object = mxt_get_object(data, MXT_TOUCH_MULTI);
-		if (!object)
-			break ;
-
-		max_reportid = object->max_reportid;
-		min_reportid = max_reportid - object->num_report_ids + 1;
-		id = reportid - min_reportid;
-
-		if (reportid >= min_reportid && reportid <= max_reportid)
-			mxt_input_touchevent(data, &message, id);
-		else
-			mxt_dump_message(dev, &message);
-	} while (reportid != 0xff);
+	if (asserted)
+		printk (KERN_ERR "%s/%s: touch screen is stuck interrupting\n", __FILE__, __func__);
 }
 
 static irqreturn_t mxt_interrupt(int irq, void *dev_id)
@@ -1104,6 +1123,8 @@ static int __devinit mxt_probe(struct i2c_client *client,
 	error = sysfs_create_group(&client->dev.kobj, &mxt_attr_group);
 	if (error)
 		goto err_unregister_device;
+
+	process_interrupt(data); // poll once to force edge
 
 	return 0;
 
