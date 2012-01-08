@@ -212,6 +212,8 @@
 #define MX53_PAD_EIM_D29__GPIO_3_29		IOMUX_PAD(0x498, 0x150, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_EIM_D30__GPIO_3_30		IOMUX_PAD(0x49C, 0x154, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_EIM_D31__GPIO_3_31		IOMUX_PAD(0x4A0, 0x158, 1, 0x0, 0, NO_PAD_CTRL)
+#undef MX53_PAD_EIM_D31__UART3_RTS
+#define MX53_PAD_EIM_D31__UART3_RTS		IOMUX_PAD(0x4A0, 0x158, 2, 0x884, 3, MX53_UART_PAD_CTRL)
 #define MX53_PAD_EIM_DA0__GPIO_3_0		IOMUX_PAD(0x4EC, 0x19C, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_EIM_DA10__GPIO_3_10		IOMUX_PAD(0x514, 0x1C4, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_EIM_DA11__GPIO_3_11		IOMUX_PAD(0x518, 0x1C8, 1, 0x0, 0, NO_PAD_CTRL)
@@ -2136,11 +2138,17 @@ static iomux_v3_cfg_t nitrogen53_pads_specific[] __initdata = {
 	MX53_PAD_GPIO_16__I2C3_SDA,	/* gpio7[11] */
 	MX53_PAD_EIM_D30__GPIO_3_30,	/* On/Off key */
 
-	/* UART3 */
+	/* UART3  daughter board connector*/
+#ifdef CONFIG_WL12XX_PLATFORM_DATA
 	MX53_PAD_EIM_D24__UART3_TXD,
 	MX53_PAD_EIM_D25__UART3_RXD,
 	MX53_PAD_EIM_D23__UART3_CTS,
 	MX53_PAD_EIM_D31__UART3_RTS,
+#else
+	/* UART3 for J3 4 pin connector*/
+	MX53_PAD_ATA_CS_0__UART3_TXD,
+	MX53_PAD_ATA_CS_1__UART3_RXD,
+#endif
 	/* PWM1 backlight */
 	MX53_PAD_GPIO_9__PWMO, /* pwm1 */
 };
@@ -2186,8 +2194,9 @@ struct wl12xx_platform_data nitrogen53_wlan_data __initdata = {
 static void __init mxc_board_init_nitrogen(void)
 {
 	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
+#ifdef CONFIG_WL12XX_PLATFORM_DATA
 	mxc_uart_device3.dev.platform_data = &uart_pdata;
-
+#endif
 #ifdef CONFIG_KEYBOARD_GPIO
 	gpio_keys_platform_data.nbuttons = 4;
 #endif
