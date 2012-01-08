@@ -20,7 +20,6 @@
 #include <linux/fcntl.h>
 #include <linux/interrupt.h>
 #include <linux/ptrace.h>
-#define DEBUG
 #undef VERSION
 #define VERSION(major,minor,patch) (((((major)<<8)+(minor))<<8)+(patch))
 
@@ -316,7 +315,7 @@ static struct n_9bit *n_9bit_alloc(struct tty_struct *tty)
 	memset(n_9bit, 0, sizeof(*n_9bit));
 	memset(&n_9bit->rx_map, 0xff, sizeof(n_9bit->rx_map));
 	/* 3 millisecond gap denotes end of message */
-	n_9bit->rx_timeout_msec = 3;
+	n_9bit->rx_timeout_msec = 30;
 	n_9bit_buf_list_init(&n_9bit->rx_free_buf_list);
 	n_9bit_buf_list_init(&n_9bit->tx_free_buf_list);
 	n_9bit_buf_list_init(&n_9bit->rx_buf_list);
@@ -368,7 +367,8 @@ static int n_9bit_tty_open(struct tty_struct *tty)
 {
 	struct n_9bit *n_9bit = (struct n_9bit *)tty->disc_data;
 
-	pr_debug("%s: called(device=%s)\n", __func__, tty->name);
+	pr_debug("%s: called(device=%s) termios=%p\n", __func__, tty->name,
+			tty->termios);
 
 	/* There should not be an existing table for this slot. */
 	if (n_9bit) {
@@ -388,8 +388,21 @@ static int n_9bit_tty_open(struct tty_struct *tty)
 	set_bit(TTY_NO_WRITE_SPLIT,&tty->flags);
 #endif
 
-	/* flush receive data from driver */
-	tty_driver_flush_buffer(tty);
+	mutex_lock(&tty->termios_mutex);
+	tty->termios->c_cflag = B38400 | CLOCAL | CREAD | PARENB | CMSPAR | CS8;
+	tty->termios->c_ispeed = 38400;
+	tty->termios->c_ospeed = 38400;
+	/* set raw mode for input */
+	tty->termios->c_lflag &= ~(ICANON | ECHO | ISIG);
+	/* no software flow control */
+	tty->termios->c_iflag &= ~(IXON | IXOFF | IXANY | INLCR | ICRNL |
+		IUCLC | IGNPAR);
+	/* want receive parity error status */
+	tty->termios->c_iflag |= (INPCK | PARMRK);
+	/* raw output */
+	tty->termios->c_oflag &= ~OPOST;
+	mutex_unlock(&tty->termios_mutex);
+
 	pr_debug("%s: success\n", __func__);
 	return 0;
 }
@@ -423,7 +436,6 @@ static void n_9bit_send_frames(struct n_9bit *n_9bit, struct tty_struct *tty)
 
 	/* get current transmit buffer or get new transmit */
 	/* buffer from list of pending transmit buffers */
-
 
 	for (;;) {
 		struct n_9bit_buf *tbuf;
@@ -482,7 +494,6 @@ static void n_9bit_send_frames(struct n_9bit *n_9bit, struct tty_struct *tty)
 			break;
 		}
 	}
-
 
 	/* Clear the re-entry flag */
 	spin_lock_irqsave(&n_9bit->tx_buf_list.spinlock, flags);
@@ -810,7 +821,6 @@ static int n_9bit_tty_ioctl(struct tty_struct *tty, struct file *file,
 		break;
 	}
 	return error;
-
 }
 
 /*
@@ -885,8 +895,7 @@ static int __init n_9bit_init(void)
 		pr_info("N_9BIT: line discipline registered. maxframe=%u\n", maxframe);
 
 	return status;
-
-}	/* end of init_module() */
+}
 
 static void __exit n_9bit_exit(void)
 {
