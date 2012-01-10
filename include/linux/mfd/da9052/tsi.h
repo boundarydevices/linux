@@ -196,7 +196,6 @@ struct da9052_tsi_conf {
 	enum TSI_STATE 			state;
 };
 
-
 struct da9052_tsi_reg {
 	u16	x;
 	u16	y;
@@ -204,19 +203,22 @@ struct da9052_tsi_reg {
 	u16	pressed;
  };
 
-
+#ifdef OLD_WAY
 struct da9052_tsi_reg_fifo {
 	struct semaphore	lock;
 	s32			head;
 	s32 			tail;
 	struct da9052_tsi_reg	data[TSI_REG_DATA_BUF_SIZE];
 };
+#endif
 
 struct da9052_tsi_info {
 	struct  da9052_tsi_conf  tsi_conf;
 	struct regulator	*ts_regulator;
 	struct input_dev	*input_devs[NUM_INPUT_DEVS];
+#ifdef OLD_WAY
 	struct calib_cfg_t	*tsi_calib;
+#endif
 	u32 			tsi_data_poll_interval;
 	u32			tsi_penup_count;
 	u32			tsi_zero_data_cnt;
@@ -225,10 +227,14 @@ struct da9052_tsi_info {
 	u8			datardy_reg_status;
 	u8 			ts_reg_en:1;
 }; 
- 
+
 struct da9052_tsi {
+#ifdef OLD_WAY
 	struct da9052_tsi_reg tsi_fifo[TSI_FIFO_SIZE];
 	struct mutex tsi_fifo_lock;
+	u32 tsi_fifo_start;
+	u32 tsi_fifo_end;
+#endif
 	u8 tsi_sampling;
 	u8 tsi_state;
 #define ST_CUR_IDLE 0
@@ -236,9 +242,9 @@ struct da9052_tsi {
 #define ST_CUR_Y 2
 #define ST_CUR_Z 3
 	u8 cur_state;
-	u32 tsi_fifo_start;
-	u32 tsi_fifo_end;
 	struct da9052_tsi_reg cur_sample;
+	struct da9052_tsi_reg sum;
+	unsigned sum_cnt;
 };
  
  struct da9052_ts_priv {
@@ -247,14 +253,14 @@ struct da9052_tsi {
 	struct da9052_tsi_info tsi_info;
 	struct da9052_eh_nb pd_nb;
 	struct da9052_eh_nb datardy_nb;
-
+#ifdef OLD_WAY
 	struct tsi_thread_type	tsi_reg_proc_thread;
 	struct tsi_thread_type tsi_raw_proc_thread;
-
-	struct da9052_tsi_platform_data *tsi_pdata;
-
 	struct da9052_tsi_reg_fifo	tsi_reg_fifo;
 	struct da9052_tsi_raw_fifo 	tsi_raw_fifo;
+#endif
+	struct da9052_tsi_platform_data *tsi_pdata;
+
 
 	u32 tsi_reg_data_poll_interval;
 	u32 tsi_raw_data_poll_interval;

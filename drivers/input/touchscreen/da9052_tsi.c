@@ -54,67 +54,6 @@ u32 da9052_tsi_get_input_dev(struct da9052_tsi_info *ts, u8 off)
 	return (u32)ts->input_devs[off];
 }
 
-static s32 da9052_tsi_get_rawdata(struct da9052_tsi *tsi, struct da9052_tsi_reg *buf, u8 cnt) {
-	u32 data_cnt = 0;
-	u32 rem_data_cnt = 0;
-
-	mutex_lock(&tsi->tsi_fifo_lock);
-
-	if (tsi->tsi_fifo_start < tsi->tsi_fifo_end) {
-		data_cnt = (tsi->tsi_fifo_end - tsi->tsi_fifo_start);
-
-		if (cnt < data_cnt)
-			data_cnt = cnt;
-
-		memcpy(buf, &tsi->tsi_fifo[tsi->tsi_fifo_start],
-				sizeof(struct da9052_tsi_reg) * data_cnt);
-
-		tsi->tsi_fifo_start += data_cnt;
-
-		if (tsi->tsi_fifo_start == tsi->tsi_fifo_end) {
-			tsi->tsi_fifo_start = 0;
-			tsi->tsi_fifo_end = 0;
-		}
-	} else if (tsi->tsi_fifo_start > tsi->tsi_fifo_end) {
-		data_cnt = ((TSI_FIFO_SIZE - tsi->tsi_fifo_start)
-		+ tsi->tsi_fifo_end);
-
-		if (cnt < data_cnt)
-			data_cnt = cnt;
-
-		if (data_cnt <= (TSI_FIFO_SIZE - tsi->tsi_fifo_start)) {
-			memcpy(buf, &tsi->tsi_fifo[tsi->tsi_fifo_start],
-				sizeof(struct da9052_tsi_reg) * data_cnt);
-
-			tsi->tsi_fifo_start += data_cnt;
-			if (tsi->tsi_fifo_start >= TSI_FIFO_SIZE)
-				tsi->tsi_fifo_start = 0;
-		} else {
-			memcpy(buf, &tsi->tsi_fifo[tsi->tsi_fifo_start],
-				sizeof(struct da9052_tsi_reg)
-				* (TSI_FIFO_SIZE - tsi->tsi_fifo_start));
-
-			rem_data_cnt = (data_cnt -
-				(TSI_FIFO_SIZE - tsi->tsi_fifo_start));
-
-			memcpy(buf, &tsi->tsi_fifo[0],
-				sizeof(struct da9052_tsi_reg) * rem_data_cnt);
-
-			tsi->tsi_fifo_start = rem_data_cnt;
-		}
-
-		if (tsi->tsi_fifo_start == tsi->tsi_fifo_end) {
-				tsi->tsi_fifo_start = 0;
-			tsi->tsi_fifo_end = 0;
-		}
-	} else
-		data_cnt = 0;
-
-	mutex_unlock(&tsi->tsi_fifo_lock);
-
-	return data_cnt;
-}
-
 static ssize_t write_da9052_reg(struct da9052 *da9052, u8 reg_addr, u8 data)
 {
 	ssize_t ret = 0;
@@ -272,20 +211,66 @@ static ssize_t da9052_tsi_config_power_supply(struct da9052_ts_priv *priv,
 }
 #endif
 
-void insert_tsi_point(struct da9052_tsi *tsi, u16 x, u16 y, u16 z, u16 pressed)
+#ifdef OLD_WAY
+void insert_tsi_point(struct da9052_ts_priv *priv, u16 x, u16 y, u16 z)
 {
+	struct da9052_tsi *tsi = &priv->tsi_reg;
 	struct da9052_tsi_reg *pdata;
 	mutex_lock(&tsi->tsi_fifo_lock);
 	pdata = &tsi->tsi_fifo[tsi->tsi_fifo_end];
 	pdata->x = x;
 	pdata->y = y;
 	pdata->z = z;
-	pdata->pressed = pressed;
+	pdata->pressed = 1;
 	incr_with_wrap(tsi->tsi_fifo_end);
 	if (tsi->tsi_fifo_end == tsi->tsi_fifo_start)
 		tsi->tsi_fifo_start++;
 	mutex_unlock(&tsi->tsi_fifo_lock);
 }
+void insert_tsi_release(struct da9052_ts_priv *priv)
+{
+
+}
+#else
+void insert_tsi_point(struct da9052_ts_priv *priv, u16 x, u16 y, u16 z)
+{
+	struct input_dev *ip_dev = (struct input_dev *)
+				da9052_tsi_get_input_dev(&priv->tsi_info,
+						(u8)TSI_INPUT_DEVICE_OFF);
+	priv->tsi_reg.sum.x += x;
+	priv->tsi_reg.sum.y += y;
+	priv->tsi_reg.sum.z += z;
+	priv->tsi_reg.sum_cnt++;
+	if (priv->tsi_reg.sum_cnt >= TSI_AVERAGE_FILTER_SIZE) {
+		x = priv->tsi_reg.sum.x / TSI_AVERAGE_FILTER_SIZE;
+		y = priv->tsi_reg.sum.y / TSI_AVERAGE_FILTER_SIZE;
+		z = priv->tsi_reg.sum.z / TSI_AVERAGE_FILTER_SIZE;
+		priv->tsi_reg.sum.x = 0;
+		priv->tsi_reg.sum.y = 0;
+		priv->tsi_reg.sum.z = 0;
+		priv->tsi_reg.sum_cnt = 0;
+		input_report_abs(ip_dev, ABS_X, x);
+		input_report_abs(ip_dev, ABS_Y, y);
+		input_report_abs(ip_dev, ABS_PRESSURE, z);
+		input_report_key(ip_dev, BTN_TOUCH, 1);
+		input_sync(ip_dev);
+	}
+}
+
+void insert_tsi_release(struct da9052_ts_priv *priv)
+{
+	struct input_dev *ip_dev = (struct input_dev *)
+				da9052_tsi_get_input_dev(&priv->tsi_info,
+						(u8)TSI_INPUT_DEVICE_OFF);
+	priv->tsi_reg.sum.x = 0;
+	priv->tsi_reg.sum.y = 0;
+	priv->tsi_reg.sum.z = 0;
+	priv->tsi_reg.sum_cnt = 0;
+	input_report_abs(ip_dev, ABS_PRESSURE, 0);
+	input_report_key(ip_dev, BTN_TOUCH, 0);
+	input_sync(ip_dev);
+}
+#endif
 
 #define MGP_even(pin,type,mode) ((pin) | ((type) << 2) | (mode) << 3)
 #define MGP_odd(pin,type,mode) (MGP_even(pin,type,mode) << 4)
@@ -753,22 +738,27 @@ static void da9052_tsi_5w_data_ready_handler(struct da9052_eh_nb *eh_data, u32 e
 	case ST_CUR_Z:
 		pdata->z = sample;
 		if (sample < 0x200) {
+			/* touch still detected */
 			da9052_config_5w_measure(priv, ST_CUR_X);
-			pdata->pressed = 1;	/* touch still detected */
-			insert_tsi_point(&priv->tsi_reg, pdata->x, pdata->y,
-					pdata->z, pdata->pressed);
-			pr_debug("%s: x=%x, y=%x, z=%x, pressed=%d\n",
-				__func__, pdata->x, pdata->y, pdata->z, pdata->pressed);
+			insert_tsi_point(priv, pdata->x, pdata->y,
+					pdata->z);
+			pr_debug("%s: x=%x, y=%x, z=%x, pressed\n",
+				__func__, pdata->x, pdata->y, pdata->z);
 		} else {
-			pdata->pressed = 0;	/* touch NOT detected */
+			/* touch NOT detected */
 			da9052_config_5w_measure(priv, ST_CUR_IDLE);
 			tsi_data[0].addr  = DA9052_STATUSC_REG;
 			da9052_lock(priv->da9052);
 			ret = priv->da9052->read_many(priv->da9052, tsi_data, 1);
 			da9052_unlock(priv->da9052);
-			pr_debug("%s: x=%x, y=%x, z=%x, pressed=%d statusc=%x\n",
-				__func__, pdata->x, pdata->y, pdata->z, pdata->pressed,
+			pr_debug("%s: x=%x, y=%x, z=%x, not pressed statusc=%x\n",
+				__func__, pdata->x, pdata->y, pdata->z,
 				tsi_data[0].data);
+			priv->da9052->event_disable(priv->da9052, priv->datardy_nb.eve_type);
+			priv->da9052->event_enable(priv->da9052, priv->pd_nb.eve_type);
+
+			priv->tsi_reg.tsi_state =  WAIT_FOR_PEN_DOWN;
+			insert_tsi_release(priv);
 		}
 		break;
 	}
@@ -812,7 +802,18 @@ static void da9052_tsi_data_ready_handler(struct da9052_eh_nb *eh_data, u32 even
 	if (z < 0x20)
 		pressed = 0;
 	if (pressed)
-		insert_tsi_point(&priv->tsi_reg, x, y, z, pressed);
+		insert_tsi_point(priv, x, y, z);
+	else {
+		/* Disable auto mode */
+		priv->da9052->register_modify(priv->da9052, DA9052_TSICONTA_REG,
+				DA9052_TSICONTA_AUTOTSIEN, 0);
+
+		priv->da9052->event_disable(priv->da9052, priv->datardy_nb.eve_type);
+		priv->da9052->event_enable(priv->da9052, priv->pd_nb.eve_type);
+
+		priv->tsi_reg.tsi_state =  WAIT_FOR_PEN_DOWN;
+		insert_tsi_release(priv);
+	}
 	pr_debug("%s: x=%x, y=%x, z=%x, pressed=%d\n",
 		__func__, x, y, z, pressed);
 }
@@ -1023,6 +1024,7 @@ static ssize_t da9052_tsi_config_state(struct da9052_ts_priv *priv,
 	return 0;
 }
 
+#ifdef OLD_WAY
 static void da9052_tsi_penup_event(struct da9052_ts_priv *priv)
 {
 
@@ -1065,6 +1067,68 @@ exit:
 	clean_tsi_fifos(priv);
 	return;
 }
+
+static s32 da9052_tsi_get_rawdata(struct da9052_tsi *tsi, struct da9052_tsi_reg *buf, u8 cnt) {
+	u32 data_cnt = 0;
+	u32 rem_data_cnt = 0;
+
+	mutex_lock(&tsi->tsi_fifo_lock);
+
+	if (tsi->tsi_fifo_start < tsi->tsi_fifo_end) {
+		data_cnt = (tsi->tsi_fifo_end - tsi->tsi_fifo_start);
+
+		if (cnt < data_cnt)
+			data_cnt = cnt;
+
+		memcpy(buf, &tsi->tsi_fifo[tsi->tsi_fifo_start],
+				sizeof(struct da9052_tsi_reg) * data_cnt);
+
+		tsi->tsi_fifo_start += data_cnt;
+
+		if (tsi->tsi_fifo_start == tsi->tsi_fifo_end) {
+			tsi->tsi_fifo_start = 0;
+			tsi->tsi_fifo_end = 0;
+		}
+	} else if (tsi->tsi_fifo_start > tsi->tsi_fifo_end) {
+		data_cnt = ((TSI_FIFO_SIZE - tsi->tsi_fifo_start)
+		+ tsi->tsi_fifo_end);
+
+		if (cnt < data_cnt)
+			data_cnt = cnt;
+
+		if (data_cnt <= (TSI_FIFO_SIZE - tsi->tsi_fifo_start)) {
+			memcpy(buf, &tsi->tsi_fifo[tsi->tsi_fifo_start],
+				sizeof(struct da9052_tsi_reg) * data_cnt);
+
+			tsi->tsi_fifo_start += data_cnt;
+			if (tsi->tsi_fifo_start >= TSI_FIFO_SIZE)
+				tsi->tsi_fifo_start = 0;
+		} else {
+			memcpy(buf, &tsi->tsi_fifo[tsi->tsi_fifo_start],
+				sizeof(struct da9052_tsi_reg)
+				* (TSI_FIFO_SIZE - tsi->tsi_fifo_start));
+
+			rem_data_cnt = (data_cnt -
+				(TSI_FIFO_SIZE - tsi->tsi_fifo_start));
+
+			memcpy(buf, &tsi->tsi_fifo[0],
+				sizeof(struct da9052_tsi_reg) * rem_data_cnt);
+
+			tsi->tsi_fifo_start = rem_data_cnt;
+		}
+
+		if (tsi->tsi_fifo_start == tsi->tsi_fifo_end) {
+				tsi->tsi_fifo_start = 0;
+			tsi->tsi_fifo_end = 0;
+		}
+	} else
+		data_cnt = 0;
+
+	mutex_unlock(&tsi->tsi_fifo_lock);
+
+	return data_cnt;
+}
+
 
 int da9052_tsi_get_reg_data(struct da9052_ts_priv *priv)
 {
@@ -1154,6 +1218,61 @@ static ssize_t da9052_tsi_reg_proc_thread(void *ptr)
 	complete_and_exit(&priv->tsi_reg_proc_thread.notifier, 0);
 	return 0;
 }
+
+void start_reg_proc_thread(struct da9052_ts_priv *priv)
+{
+	init_completion(&priv->tsi_reg_proc_thread.notifier);
+	priv->tsi_reg_proc_thread.state = ACTIVE;
+	priv->tsi_reg_proc_thread.pid =
+				kernel_thread(da9052_tsi_reg_proc_thread,
+					priv, CLONE_KERNEL | SIGCHLD);
+}
+
+void start_raw_proc_thread(struct da9052_ts_priv *priv)
+{
+	init_completion(&priv->tsi_raw_proc_thread.notifier);
+	priv->tsi_raw_proc_thread.state = ACTIVE;
+	priv->tsi_raw_proc_thread.pid =
+				kernel_thread(da9052_tsi_raw_proc_thread,
+					priv, CLONE_KERNEL | SIGCHLD);
+}
+
+void init_tsi_threads(struct da9052_ts_priv *priv)
+{
+	ts->tsi_calib = get_calib_config();
+	da9052_init_tsi_fifos(priv);
+
+	start_reg_proc_thread(priv);
+	start_raw_proc_thread(priv);
+}
+void tsi_fifo_init(struct da9052_ts_priv *priv)
+{
+	mutex_init(&priv->tsi_reg.tsi_fifo_lock);
+}
+void tsi_fifo_destroy(struct da9052_ts_priv *priv)
+{
+	mutex_destroy(&priv->tsi_reg.tsi_fifo_lock);
+
+	priv->tsi_reg_proc_thread.state = INACTIVE;
+	wait_for_completion(&priv->tsi_reg_proc_thread.notifier);
+
+	priv->tsi_raw_proc_thread.state = INACTIVE;
+	wait_for_completion(&priv->tsi_raw_proc_thread.notifier);
+}
+#else
+void tsi_fifo_init(struct da9052_ts_priv *priv)
+{
+}
+void tsi_fifo_destroy(struct da9052_ts_priv *priv)
+{
+}
+void clean_tsi_fifos(struct da9052_ts_priv *priv)
+{
+}
+void init_tsi_threads(struct da9052_ts_priv *priv)
+{
+}
+#endif
 
 static ssize_t da9052_tsi_suspend(struct platform_device *dev,
 							pm_message_t state)
@@ -1306,7 +1425,6 @@ static ssize_t __devinit da9052_tsi_init_drv(struct da9052_ts_priv *priv, struct
 
 	da9052_tsi_set_sampling_mode(priv, DEFAULT_TSI_SAMPLING_MODE);
 
-	ts->tsi_calib = get_calib_config();
 
 	ret = da9052_tsi_create_input_dev(ts->input_devs, NUM_INPUT_DEVS);
 	if (ret) {
@@ -1314,20 +1432,7 @@ static ssize_t __devinit da9052_tsi_init_drv(struct da9052_ts_priv *priv, struct
 		return ret;
 	}
 
-	da9052_init_tsi_fifos(priv);
-
-	init_completion(&priv->tsi_reg_proc_thread.notifier);
-	priv->tsi_reg_proc_thread.state = ACTIVE;
-	priv->tsi_reg_proc_thread.pid =
-				kernel_thread(da9052_tsi_reg_proc_thread,
-					priv, CLONE_KERNEL | SIGCHLD);
-
-	init_completion(&priv->tsi_raw_proc_thread.notifier);
-	priv->tsi_raw_proc_thread.state = ACTIVE;
-	priv->tsi_raw_proc_thread.pid =
-				kernel_thread(da9052_tsi_raw_proc_thread,
-					priv, CLONE_KERNEL | SIGCHLD);
-
+	init_tsi_threads(priv);
 	ret = da9052_tsi_config_state(priv, DEFAULT_TSI_STATE);
 	if (ret) {
 		for (cnt = 0; cnt < NUM_INPUT_DEVS; cnt++) {
@@ -1354,7 +1459,7 @@ static s32 __devinit da9052_tsi_probe(struct platform_device *pdev)
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
-	mutex_init(&priv->tsi_reg.tsi_fifo_lock);
+	tsi_fifo_init(priv);
 	priv->tsi_reg.tsi_state = WAIT_FOR_PEN_DOWN;
 	priv->da9052 = dev_get_drvdata(pdev->dev.parent);
 	platform_set_drvdata(pdev, priv);
@@ -1417,14 +1522,7 @@ static int __devexit da9052_tsi_remove(struct platform_device *pdev)
 		ts->datardy_reg_status = RESET;
 	}
 
-	mutex_destroy(&priv->tsi_reg.tsi_fifo_lock);
-
-	priv->tsi_reg_proc_thread.state = INACTIVE;
-	wait_for_completion(&priv->tsi_reg_proc_thread.notifier);
-
-	priv->tsi_raw_proc_thread.state = INACTIVE;
-	wait_for_completion(&priv->tsi_raw_proc_thread.notifier);
-
+	tsi_fifo_destroy(priv);
 	for (i = 0; i < NUM_INPUT_DEVS; i++) {
 		input_unregister_device(ts->input_devs[i]);
 	}
