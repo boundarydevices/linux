@@ -43,7 +43,8 @@
 #define _9BIT_MAGIC 0x35952121
 
 /* max frame size for memory allocations */
-static int maxframe = 4096;
+#define MAX_FRAME	(512 + 8)
+static int maxframe = MAX_FRAME;
 
 /*
  * Buffers for individual 9 bit frames
@@ -523,6 +524,11 @@ static void n_9bit_tty_wakeup(struct tty_struct *tty)
 	n_9bit_send_frames(n_9bit, tty);
 }
 
+unsigned short max_size[] = {
+	MAX_FRAME, MAX_FRAME, 0, MAX_FRAME,
+	3, MAX_FRAME, 5, 5
+};
+
 /*
  * Called by tty driver when receive data is available
  * @tty	- pointer to tty instance data
@@ -576,9 +582,21 @@ static void n_9bit_tty_receive_buf(struct tty_struct *tty, const __u8 *data,
 		}
 		if (!count) {
 			if (rbuf) {
-				n_9bit_buf_put(&n_9bit->rx_fill_list, rbuf);
-				n_9bit->rx_eom_timer.expires = jiffies + msecs_to_jiffies(n_9bit->rx_timeout_msec);
-				add_timer(&n_9bit->rx_eom_timer);
+				unsigned type = (rbuf->buf[0] & 0xe0) >> 5;
+				unsigned max = max_size[type];
+				if (max == 0)
+					max = (rbuf->buf[2] << 1) + 4;
+				if (rbuf->count >= max) {
+					/* add 9BIT buffer to list of received frames */
+					n_9bit_buf_put(&n_9bit->rx_buf_list, rbuf);
+					wake = 1;
+					rbuf = NULL;
+					break;
+				} else {
+					n_9bit_buf_put(&n_9bit->rx_fill_list, rbuf);
+					n_9bit->rx_eom_timer.expires = jiffies + msecs_to_jiffies(n_9bit->rx_timeout_msec);
+					add_timer(&n_9bit->rx_eom_timer);
+				}
 			}
 			break;
 		}
