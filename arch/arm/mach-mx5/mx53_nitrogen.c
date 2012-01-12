@@ -2348,17 +2348,15 @@ static iomux_v3_cfg_t n53k_pads_specific[] __initdata = {
 
 	/* TiWi */
 	MX53_PAD_EIM_DA9__GPIO_3_9,	/* BT_FUNCT5 */
-//	MX53_PAD_EIM_DA10__GPIO_3_10,	/* WL1271_irq */
 	MX53_PAD_ATA_CS_0__GPIO_7_9,	/* WL1271_irq */
-//	MX53_PAD_GPIO_9__GPIO_1_9,	/* BT_FUNCT2 */
 	MX53_PAD_GPIO_9__PWMO,		/* pwm1 */
 	MX53_PAD_GPIO_10__OSC32K_32K_OUT,
 
 	MX53_PAD_GPIO_16__I2C3_SDA,	/* gpio7[11] */
 
 	/* UART3 */
-//	MX53_PAD_ATA_CS_0__UART3_TXD,
-	MX53_PAD_ATA_CS_1__UART3_RXD,
+	MX53_PAD_EIM_D24__UART3_TXD,
+	MX53_PAD_EIM_D25__UART3_RXD,
 
 	/* Barcode scanner trigger */
 	MX53_PAD_EIM_D30__GPIO_3_30,
