@@ -1743,8 +1743,14 @@ static void nitrogen_power_off(void)
 	while (0 != (ret = i2c_smbus_xfer(adap, 0x48,0,
 					  I2C_SMBUS_WRITE,15,
 					  I2C_SMBUS_BYTE_DATA,&data))) {
-		printk (KERN_ERR "%s: xfer %d:%02x:0x%02x\n", __func__, ret, 15, data.byte );
+		printk (KERN_ERR "%s: write error %d:%02x:0x%02x\n", __func__, ret, 15, data.byte );
 	}
+	while (0 != (ret = i2c_smbus_xfer(adap, 0x48,0,
+					  I2C_SMBUS_READ,0x1,
+					  I2C_SMBUS_BYTE_DATA,&data))) {
+		printk (KERN_ERR "%s: read error %d:0x%02x\n", __func__, ret, data.byte );
+	}
+	printk (KERN_ERR "%s: read back data: %02x\n", __func__,data.byte);
 #endif
 	while (1) {
 	}
