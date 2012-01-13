@@ -59,6 +59,7 @@ static struct clk *osc;
 static struct clk *pll1_main_clk;
 static struct clk *ddr_clk ;
 static struct clk *sys_clk ;
+int dont_sleep_yet = 1 ;
 
 /* set cpu low power mode before WFI instruction */
 void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
@@ -67,6 +68,9 @@ void mxc_cpu_lp_set(enum mxc_cpu_pwr_mode mode)
 	u32 empgc0 = 0;
 	u32 empgc1 = 0;
 	int stop_mode = 0;
+
+	if (dont_sleep_yet && (WAIT_UNCLOCKED_POWER_OFF == mode))
+		return ;
 
 	/* always allow platform to issue a deep sleep mode request */
 	plat_lpc = __raw_readl(arm_plat_base + MXC_CORTEXA8_PLAT_LPC) &
