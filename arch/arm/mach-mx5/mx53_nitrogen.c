@@ -1914,7 +1914,7 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 
 static void __init mx53_nitrogen_timer_init(void)
 {
-	mx53_clocks_init(32768, 24000000, 22579200, 24576000);
+	mx53_clocks_init(32768, 24000000, 0, 0);
 }
 
 static struct sys_timer mxc_timer = {
