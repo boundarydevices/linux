@@ -1729,21 +1729,41 @@ static void __init mx53_nitrogen_io_init(void)
 
 }
 
+#if defined(CONFIG_MACH_MX53_NITROGEN_K)
+static unsigned char const poweroff_regs[] = {
+	5, 0xff,	/* clear events */
+	6, 0xff,
+	7, 0xff,
+	8, 0xff,
+	9, 0xff,
+	10, 0xff,	/* mask interrupts */
+	11, 0xfe,	/* except nONKEY */
+	12, 0xff,
+	13, 0xff,
+	15, 0x68,	/* power-off */
+	0		/* end-of-list */
+};
+#endif
+
 static void nitrogen_power_off(void)
 {
 #if defined(CONFIG_MACH_NITROGEN_A_IMX53)
 #define POWER_DOWN	MAKE_GP(3, 23)
 	gpio_set_value(POWER_DOWN, 0);
 #elif defined(CONFIG_MACH_MX53_NITROGEN_K)
+	unsigned char const *regs = poweroff_regs ;
+	struct i2c_adapter *adap = i2c_get_adapter(0);
 	union i2c_smbus_data data;
 	int ret;
-	struct i2c_adapter *adap = i2c_get_adapter(0);
 	BUG_ON (!adap);
-	data.byte = 0x68 ;
-	while (0 != (ret = i2c_smbus_xfer(adap, 0x48,0,
-					  I2C_SMBUS_WRITE,15,
-					  I2C_SMBUS_BYTE_DATA,&data))) {
-		printk (KERN_ERR "%s: write error %d:%02x:0x%02x\n", __func__, ret, 15, data.byte );
+	while (0 != *regs) {
+		data.byte = regs[1];
+		while (0 != (ret = i2c_smbus_xfer(adap, 0x48,0,
+						  I2C_SMBUS_WRITE,*regs,
+						  I2C_SMBUS_BYTE_DATA,&data))) {
+			printk (KERN_ERR "%s: write error %d:%02x:0x%02x\n", __func__, ret, *regs, data.byte );
+		}
+		regs += 2 ;
 	}
 	while (0 != (ret = i2c_smbus_xfer(adap, 0x48,0,
 					  I2C_SMBUS_READ,0x1,
