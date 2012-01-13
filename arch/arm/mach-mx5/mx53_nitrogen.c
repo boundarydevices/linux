@@ -2261,12 +2261,12 @@ static void __init mxc_board_init_nitrogen(void)
 
 	gpio_set_value(N53_WL1271_WL_EN, 1);		/* momentarily enable */
 	gpio_set_value(N53_WL1271_BT_EN, 1);
-	msleep(2);
+	mdelay(2);
 	gpio_set_value(N53_WL1271_WL_EN, 0);
 	gpio_set_value(N53_WL1271_BT_EN, 0);
 	gpio_free(N53_WL1271_WL_EN);
 	gpio_free(N53_WL1271_BT_EN);
-	msleep(1);
+	mdelay(1);
 #endif
 }
 
@@ -2485,12 +2485,12 @@ static void __init n53k_board_init(void)
 
 	gpio_set_value(N53K_WL1271_WL_EN, 1);		/* momentarily enable */
 	gpio_set_value(N53K_WL1271_BT_EN, 1);
-	msleep(2);
+	mdelay(2);
 	gpio_set_value(N53K_WL1271_WL_EN, 0);
 	gpio_set_value(N53K_WL1271_BT_EN, 0);
 	gpio_free(N53K_WL1271_WL_EN);
 	gpio_free(N53K_WL1271_BT_EN);
-	msleep(1);
+	mdelay(1);
 #endif
 }
 
