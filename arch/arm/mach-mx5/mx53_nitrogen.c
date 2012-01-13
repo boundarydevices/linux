@@ -1714,7 +1714,7 @@ static void __init mx53_nitrogen_io_init(void)
 	mxc_iomux_v3_setup_multiple_pads(mx53common_pads,
 			ARRAY_SIZE(mx53common_pads));
 	pr_info("MX53 Nitrogen board \n");
-	msleep(5);
+	mdelay(5);
 	gpio_set_value(N53_USB_HUB_RESET, 1);		/* release USB Hub reset */
 	gpio_set_value(N53_PHY_RESET, 1);		/* release ICS1893 Ethernet PHY reset */
 
