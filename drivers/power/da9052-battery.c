@@ -63,8 +63,8 @@ static enum power_supply_property da902_bat_props[] = {
 	POWER_SUPPLY_PROP_TECHNOLOGY,
 	POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,
 	POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN,
-	POWER_SUPPLY_PROP_VOLTAGE_AVG,
-	POWER_SUPPLY_PROP_CURRENT_AVG,
+	POWER_SUPPLY_PROP_VOLTAGE_NOW,
+	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_CAPACITY,
 #if 0
 	/* Not supported in 2.6.28 kernel */
@@ -1204,10 +1204,10 @@ static int da9052_bat_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
 		val->intval = (chg_device->bat_pdata->bat_volt_cutoff * 1000);
 	break;
-	case POWER_SUPPLY_PROP_VOLTAGE_AVG:
+	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		val->intval = (bat_info.bat_voltage * 1000);
 	break;
-	case POWER_SUPPLY_PROP_CURRENT_AVG:
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		val->intval = (bat_info.chg_current * 1000);
 	break;
 	case POWER_SUPPLY_PROP_CAPACITY:
