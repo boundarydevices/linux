@@ -41,3 +41,4 @@ obj-$(CONFIG_LTC1960)		+= ltc1960.o
 obj-$(CONFIG_DUMB_BATTERY)	+= dumb_battery.o
 obj-$(CONFIG_BATTERY_DS2438)	+= ds2438_battery.o
 obj-$(CONFIG_BATTERY_MAX17085)	+= max17085_battery.o
+obj-$(CONFIG_CHARGER_DA9052)	+= da9052-charger.o

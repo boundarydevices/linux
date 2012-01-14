@@ -97,12 +97,10 @@ int da9052_ssc_read(struct da9052 *da9052, struct da9052_ssc_msg *sscmsg)
 	if (da9052->ssc_cache[sscmsg->addr].status == VALID) {
 		/* We have valid cached value, copy this value */
 		sscmsg->data = da9052->ssc_cache[sscmsg->addr].val;
-
 		return 0;
 	}
 
 	ret = ssc_ops.read(da9052, sscmsg);
-
 	/* Update local cache if required */
 	if (!ret) {
 		/* Check if this register is Non-volatile*/
@@ -493,6 +491,11 @@ static int add_da9052_devices(struct da9052 *da9052)
 		return ret;
 
 	ret = da9052_add_subdevice_pdata(da9052, "da9052-bat",
+				&bat_data, sizeof(bat_data));
+	if (ret)
+		return ret;
+
+	ret = da9052_add_subdevice_pdata(da9052, "da9052-chg",
 				&bat_data, sizeof(bat_data));
 	if (ret)
 		return ret;

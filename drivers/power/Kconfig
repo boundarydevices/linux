@@ -138,6 +138,19 @@ config BATTERY_DA9052
 
 	  To compile this driver as a module, choose M here.
 
+config CHARGER_DA9052
+	tristate "Dialog DA9052 Charger"
+	depends on PMIC_DA9052
+	help
+	  Say Y here to enable support for the charge controller
+	  integrated into DA9052 PMIC without battery monitoring.
+	  (i.e. for use with smart batteries).
+	  This driver presents two interfaces into sys/class/power_supply:
+		wall	- the DCIN charger input
+		usb	- USB charger input
+
+	  To compile this driver as a module, choose M here.
+
 config BATTERY_MAX17085
 	tristate "Maxim MAX17085 charger"
 	depends on PMIC_DA9052 && SENSORS_DA9052
