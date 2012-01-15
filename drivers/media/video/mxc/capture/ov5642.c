@@ -2697,7 +2697,6 @@ static int ov5642_probe(struct i2c_client *client,
 	/* Set initial values for the sensor struct. */
 	memset(&ov5642_data, 0, sizeof(ov5642_data));
 
-	plat_data->mclk_name ? plat_data->mclk_name : "undefined");
 	ov5642_data.mclk_name = plat_data->mclk_name ;
 	ov5642_data.mclk = 24000000; /* 6 - 54 MHz, typical 24MHz */
 	ov5642_data.mclk = plat_data->mclk;
