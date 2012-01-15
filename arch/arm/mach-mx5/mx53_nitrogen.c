@@ -2317,6 +2317,29 @@ static struct i2c_board_info n53k_i2c0_board_info[] __initdata = {
 	},
 };
 
+
+#if defined (CONFIG_VIDEO_MXC_CAMERA) || defined (CONFIG_VIDEO_MXC_CAMERA_MODULE)
+
+static void camera_pwdn(int pwdn)
+{
+	gpio_set_value(CAMERA_RESET, (0==pwdn));
+}
+
+static struct mxc_camera_platform_data camera_data = {
+	.io_regulator = "VDD_IO",
+	.analog_regulator = "VDD_A",
+	.mclk_name = "csi_mclk1",
+	.mclk = 26000000,
+	.csi = 0,
+	.pwdn = camera_pwdn,
+	.power_down = MAKE_GP(1, 2),
+	.reset = CAMERA_RESET,
+	.i2c_bus = 1,
+	.i2c_id = 0x3c,
+	.sensor_name = "ov5640",
+};
+#endif
+
 static struct i2c_board_info n53k_i2c1_board_info[] __initdata = {
 	{
 	 .type = "mma8451",
@@ -2327,6 +2350,13 @@ static struct i2c_board_info n53k_i2c1_board_info[] __initdata = {
 	 .addr = 0x38,
 	 .platform_data  = &i2c_tfp410_data,
 	},
+#if defined (CONFIG_VIDEO_MXC_CAMERA) || defined (CONFIG_VIDEO_MXC_CAMERA_MODULE)
+	{
+	 .type = "ov5642",
+	 .addr = 0x3c,
+	 .platform_data  = &camera_data,
+	},
+#endif
 };
 
 #if defined (CONFIG_TOUCHSCREEN_ATMEL_MXT) || defined (CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
