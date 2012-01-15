@@ -97,6 +97,7 @@ struct sensor {
 	int blue;
 	int ae_mode;
 
+	char const *mclk_name ;
 	u32 mclk;
 	int csi;
 } ov5642_data;
@@ -2582,7 +2583,7 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 	ov5642_data.mclk = tgt_xclk;
 
 	pr_debug("   Setting mclk to %d MHz\n", tgt_xclk / 1000000);
-	set_mclk_rate(&ov5642_data.mclk, ov5642_data.csi);
+	set_mclk_rate(&ov5642_data.mclk, ov5642_data.csi, ov5642_data.mclk_name);
 
 	/* Default camera frame rate is set in probe */
 	tgt_fps = sensor->streamcap.timeperframe.denominator /
@@ -2695,6 +2696,9 @@ static int ov5642_probe(struct i2c_client *client,
 
 	/* Set initial values for the sensor struct. */
 	memset(&ov5642_data, 0, sizeof(ov5642_data));
+
+	plat_data->mclk_name ? plat_data->mclk_name : "undefined");
+	ov5642_data.mclk_name = plat_data->mclk_name ;
 	ov5642_data.mclk = 24000000; /* 6 - 54 MHz, typical 24MHz */
 	ov5642_data.mclk = plat_data->mclk;
 	ov5642_data.csi = plat_data->csi;

@@ -57,30 +57,32 @@ void set_mclk_rate(uint32_t *p_mclk_freq)
  * @param	csi         csi 0 or csi 1
  *
  */
-void set_mclk_rate(uint32_t *p_mclk_freq, uint32_t csi)
+void set_mclk_rate(uint32_t *p_mclk_freq, uint32_t csi,char const *mclk_name)
 {
 	struct clk *clk;
 	uint32_t freq = 0;
-	char *mclk;
+	char const *mclk;
 
-	if (cpu_is_mx53()) {
-		if (csi == 0)
-			mclk = "ssi_ext1_clk";
-		else {
-			pr_err("invalid csi num %d\n", csi);
-			return;
-		}
-	} else {
-		if (csi == 0) {
-			mclk = "csi_mclk1";
-		} else if (csi == 1) {
-			mclk = "csi_mclk2";
+	if (0 == mclk_name) {
+		if (cpu_is_mx53()) {
+			if (csi == 0)
+				mclk = "ssi_ext1_clk";
+			else {
+				pr_err("invalid csi num %d\n", csi);
+				return;
+			}
 		} else {
-			pr_err("invalid csi num %d\n", csi);
-			return;
+			if (csi == 0) {
+				mclk = "csi_mclk1";
+			} else if (csi == 1) {
+				mclk = "csi_mclk2";
+			} else {
+				pr_err("invalid csi num %d\n", csi);
+				return;
+			}
 		}
-	}
-
+	} else
+		mclk = mclk_name;
 	clk = clk_get(NULL, mclk);
 
 	freq = clk_round_rate(clk, *p_mclk_freq);

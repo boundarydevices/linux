@@ -202,6 +202,6 @@ typedef struct _cam_data {
 			       || defined(CONFIG_VIDEO_MXC_CSI_CAMERA)
 void set_mclk_rate(uint32_t *p_mclk_freq);
 #else
-void set_mclk_rate(uint32_t *p_mclk_freq, uint32_t csi);
+void set_mclk_rate(uint32_t *p_mclk_freq, uint32_t csi, char const *mclk_name);
 #endif
 #endif				/* __MXC_V4L2_CAPTURE_H__ */

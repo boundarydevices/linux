@@ -391,6 +391,7 @@ struct mxc_camera_platform_data {
 	char *io_regulator;
 	char *analog_regulator;
 	char *gpo_regulator;
+	char *mclk_name;
 	u32 mclk;
 	u32 csi;
 	void (*pwdn)(int pwdn);
