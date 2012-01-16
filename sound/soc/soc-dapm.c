@@ -1428,7 +1428,7 @@ static int dapm_power_widgets(struct snd_soc_dapm_context *dapm, int event)
 			dapm->target_bias_level = SND_SOC_BIAS_ON;
 			break;
 		case SND_SOC_DAPM_STREAM_STOP:
-			if (dapm->codec->active)
+			if (dapm->codec && dapm->codec->active)
 				dapm->target_bias_level = SND_SOC_BIAS_ON;
 			else
 				dapm->target_bias_level = SND_SOC_BIAS_STANDBY;
