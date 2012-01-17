@@ -134,9 +134,13 @@ void sc_queue_work(struct uart_sc16is7xx_chan *ch, struct i2c_work* w)
 		 * The reg_cache changes when queued for non-volatiles,
 		 * and when actually written for volatiles.
 		 */
-		if (reg < SC_CHAN_REG_CNT)
+		if (reg < SC_CHAN_REG_CNT) {
+			if ((reg == SC_LCR) && (w->val == 0xbf)) {
+				pr_err("%s: should not set LCR to 0xbf directly\n");
+				w->val = UART_LCR_WLEN8;
+			}
 			ch->reg_cache[reg] = w->val;
-		else
+		} else
 			ch->sc->dev_cache[reg - SC_CHAN_REG_CNT] = w->val;
 	}
 
@@ -752,9 +756,11 @@ static int sc_serial_in_cnt(struct uart_sc16is7xx_chan *ch, enum sc_reg reg,
 	}
 
 	val = buf[ret - 1];
-	if (reg == SC_LCR)
+	if (reg == SC_LCR) {
 		ch->actual_lcr = val;
-	else if (reg == SC_MCR)
+		if (val == 0xbf)
+			return ret;	/* don't update reg_cache */
+	} else if (reg == SC_MCR)
 		ch->actual_mcr = val;
 	else if (reg == SC_EFR)
 		ch->actual_efr = val;
