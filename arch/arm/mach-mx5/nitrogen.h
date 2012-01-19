@@ -10,6 +10,7 @@
 #define machine_is_nitrogen_53() (machine_is_nitrogen_imx53() \
 				  || machine_is_nitrogen_v1_imx53() \
 				  || machine_is_nitrogen_a_imx53() \
-				  || machine_is_nitrogen_v2_imx53())
+				  || machine_is_nitrogen_v2_imx53() \
+				  || machine_is_mx53_nitrogen_k())
 
 #endif
