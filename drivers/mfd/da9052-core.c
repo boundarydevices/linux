@@ -421,11 +421,6 @@ void eh_workqueue_isr(struct work_struct *work)
 	/* Process all events occurred */
 	if (events_sts)
 		process_events(da9052, events_sts);
-	/*
-	 * This delay is necessary to avoid hardware fake interrupts
-	 * from DA9052.
-	 */
-	udelay(50);
 	/* Enable HOST interrupt */
 	if (da9052->spurious_irq_count < 5) {
 		enable_irq(da9052->irq);
