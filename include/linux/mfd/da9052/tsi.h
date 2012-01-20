@@ -216,13 +216,16 @@ struct da9052_tsi_info {
 	struct  da9052_tsi_conf  tsi_conf;
 	struct regulator	*ts_regulator;
 	struct input_dev	*input_devs[NUM_INPUT_DEVS];
+	struct mutex		point_lock;
+	struct timer_list	release_timer;
+	struct work_struct	release_work;
 #ifdef OLD_WAY
 	struct calib_cfg_t	*tsi_calib;
 #endif
 	u32 			tsi_data_poll_interval;
 	u32			tsi_penup_count;
 	u32			tsi_zero_data_cnt;
-	u8			pen_dwn_event;
+	u8			release_pending;
 	u8			pd_reg_status;	
 	u8			datardy_reg_status;
 	u8 			ts_reg_en:1;

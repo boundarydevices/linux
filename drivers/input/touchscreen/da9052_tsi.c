@@ -232,11 +232,13 @@ void insert_tsi_release(struct da9052_ts_priv *priv)
 
 }
 #else
+
 void insert_tsi_point(struct da9052_ts_priv *priv, u16 x, u16 y, u16 z)
 {
-	struct input_dev *ip_dev = (struct input_dev *)
-				da9052_tsi_get_input_dev(&priv->tsi_info,
-						(u8)TSI_INPUT_DEVICE_OFF);
+	struct da9052_tsi_info *ts = &priv->tsi_info;
+	struct input_dev *ip_dev = (struct input_dev *)da9052_tsi_get_input_dev(
+			ts, (u8)TSI_INPUT_DEVICE_OFF);
+	mutex_lock(&ts->point_lock);
 	priv->tsi_reg.sum.x += x;
 	priv->tsi_reg.sum.y += y;
 	priv->tsi_reg.sum.z += z;
@@ -254,22 +256,59 @@ void insert_tsi_point(struct da9052_ts_priv *priv, u16 x, u16 y, u16 z)
 		input_report_abs(ip_dev, ABS_PRESSURE, z);
 		input_report_key(ip_dev, BTN_TOUCH, 1);
 		input_sync(ip_dev);
+#ifdef CONFIG_FIVE_WIRE
+		ts->release_pending = 1;
+#else
+		if (!ts->release_pending) {
+			ts->release_pending = 1;
+			ts->release_timer.expires = jiffies + msecs_to_jiffies(30);
+			add_timer(&ts->release_timer);
+		} else {
+			mod_timer(&ts->release_timer, jiffies + msecs_to_jiffies(30));
+		}
+#endif
+		pr_debug("%s: x=%x, y=%x, z=%x, pressed\n",
+			__func__, x, y, z);
 	}
+	mutex_unlock(&ts->point_lock);
 }
 
 void insert_tsi_release(struct da9052_ts_priv *priv)
 {
-	struct input_dev *ip_dev = (struct input_dev *)
-				da9052_tsi_get_input_dev(&priv->tsi_info,
-						(u8)TSI_INPUT_DEVICE_OFF);
-	priv->tsi_reg.sum.x = 0;
-	priv->tsi_reg.sum.y = 0;
-	priv->tsi_reg.sum.z = 0;
-	priv->tsi_reg.sum_cnt = 0;
-	input_report_abs(ip_dev, ABS_PRESSURE, 0);
-	input_report_key(ip_dev, BTN_TOUCH, 0);
-	input_sync(ip_dev);
+	struct da9052_tsi_info *ts = &priv->tsi_info;
+	struct input_dev *ip_dev = (struct input_dev *)da9052_tsi_get_input_dev(
+			ts, (u8)TSI_INPUT_DEVICE_OFF);
+	mutex_lock(&ts->point_lock);
+	if (ts->release_pending) {
+		ts->release_pending = 0;
+		del_timer(&ts->release_timer);
+
+		priv->tsi_reg.sum.x = 0;
+		priv->tsi_reg.sum.y = 0;
+		priv->tsi_reg.sum.z = 0;
+		priv->tsi_reg.sum_cnt = 0;
+		input_report_abs(ip_dev, ABS_PRESSURE, 0);
+		input_report_key(ip_dev, BTN_TOUCH, 0);
+		input_sync(ip_dev);
+		pr_debug("%s: released\n", __func__);
+	}
+	mutex_unlock(&ts->point_lock);
 }
+
+static void release_work_rtn(struct work_struct *work)
+{
+	struct da9052_tsi_info *ts = container_of(work, struct da9052_tsi_info, release_work);
+	struct da9052_ts_priv *priv = container_of(ts, struct da9052_ts_priv, tsi_info);
+	insert_tsi_release(priv);
+}
+
+static void release_timer_rtn(unsigned long data)
+{
+	struct da9052_ts_priv *priv = (struct da9052_ts_priv *)data;
+	struct da9052_tsi_info *ts = &priv->tsi_info;
+	schedule_work(&ts->release_work);
+}
+
 #endif
 
 #define MGP_even(pin,type,mode) ((pin) | ((type) << 2) | (mode) << 3)
@@ -742,8 +781,6 @@ static void da9052_tsi_5w_data_ready_handler(struct da9052_eh_nb *eh_data, u32 e
 			da9052_config_5w_measure(priv, ST_CUR_X);
 			insert_tsi_point(priv, pdata->x, pdata->y,
 					pdata->z);
-			pr_debug("%s: x=%x, y=%x, z=%x, pressed\n",
-				__func__, pdata->x, pdata->y, pdata->z);
 		} else {
 			/* touch NOT detected */
 			da9052_config_5w_measure(priv, ST_CUR_IDLE);
@@ -754,8 +791,6 @@ static void da9052_tsi_5w_data_ready_handler(struct da9052_eh_nb *eh_data, u32 e
 			pr_debug("%s: x=%x, y=%x, z=%x, not pressed statusc=%x\n",
 				__func__, pdata->x, pdata->y, pdata->z,
 				tsi_data[0].data);
-			priv->da9052->event_disable(priv->da9052, priv->datardy_nb.eve_type);
-			priv->da9052->event_enable(priv->da9052, priv->pd_nb.eve_type);
 
 			priv->tsi_reg.tsi_state =  WAIT_FOR_PEN_DOWN;
 			insert_tsi_release(priv);
@@ -808,14 +843,10 @@ static void da9052_tsi_data_ready_handler(struct da9052_eh_nb *eh_data, u32 even
 		priv->da9052->register_modify(priv->da9052, DA9052_TSICONTA_REG,
 				DA9052_TSICONTA_AUTOTSIEN, 0);
 
-		priv->da9052->event_disable(priv->da9052, priv->datardy_nb.eve_type);
-		priv->da9052->event_enable(priv->da9052, priv->pd_nb.eve_type);
-
 		priv->tsi_reg.tsi_state =  WAIT_FOR_PEN_DOWN;
+		pr_debug("%s: x=%x, y=%x, z=%x released\n", __func__, x, y, z);
 		insert_tsi_release(priv);
 	}
-	pr_debug("%s: x=%x, y=%x, z=%x, pressed=%d\n",
-		__func__, x, y, z, pressed);
 }
 #endif
 
@@ -849,9 +880,6 @@ static void da9052_tsi_pen_down_handler(struct da9052_eh_nb *eh_data, u32 event)
 	struct da9052_ts_priv *priv =
 		container_of(eh_data, struct da9052_ts_priv, pd_nb);
 	struct da9052_tsi_info *ts = &priv->tsi_info;
-	struct input_dev *ip_dev =
-		(struct input_dev*)da9052_tsi_get_input_dev(&priv->tsi_info,
-		(u8)TSI_INPUT_DEVICE_OFF);
 
 	pr_debug("%s: entry\n", __func__);
 	if (priv->tsi_reg.tsi_state !=  WAIT_FOR_PEN_DOWN)
@@ -867,11 +895,6 @@ static void da9052_tsi_pen_down_handler(struct da9052_eh_nb *eh_data, u32 event)
 	if (da9052_tsi_config_power_supply(priv, ENABLE))
 		goto fail;
 
-	if (priv->da9052->event_disable(priv->da9052, priv->pd_nb.eve_type))
-		goto fail;
-
-	if (priv->da9052->event_enable(priv->da9052, priv->datardy_nb.eve_type))
-		goto fail;
 	priv->tsi_reg.tsi_state =  SAMPLING_ACTIVE;
 #ifdef CONFIG_FIVE_WIRE
 	da9052_config_5w_measure(priv, ST_CUR_X);
@@ -882,12 +905,6 @@ static void da9052_tsi_pen_down_handler(struct da9052_eh_nb *eh_data, u32 event)
 			DA9052_TSICONTA_AUTOTSIEN, DA9052_TSICONTA_AUTOTSIEN))
 		goto fail;
 #endif
-
-	input_sync(ip_dev);
-
-	ts->pen_dwn_event = 1;
-
-
 	goto success;
 
 fail:
@@ -965,16 +982,15 @@ static ssize_t da9052_tsi_config_state(struct da9052_ts_priv *priv,
 		if (ret)
 			return ret;
 
+		da9052_tsi_reg_pendwn_event(priv);
+		da9052_tsi_reg_datardy_event(priv);
 		ret = priv->da9052->event_enable(priv->da9052, priv->pd_nb.eve_type);
 		if (ret)
 			return ret;
 
-		ret = priv->da9052->event_disable(priv->da9052, priv->datardy_nb.eve_type);
+		ret = priv->da9052->event_enable(priv->da9052, priv->datardy_nb.eve_type);
 		if (ret)
 			return ret;
-
-		da9052_tsi_reg_pendwn_event(priv);
-		da9052_tsi_reg_datardy_event(priv);
 
 #if !defined(CONFIG_FIVE_WIRE) || (CONFIG_FIVE_SENSE != TSI_ADC)		/* Enable pen detect*/
 		ret = priv->da9052->register_modify(priv->da9052, DA9052_TSICONTA_REG,
@@ -985,17 +1001,16 @@ static ssize_t da9052_tsi_config_state(struct da9052_ts_priv *priv,
 		break;
 
 	case TSI_IDLE:
-		ts->pen_dwn_event = RESET;
-
-		/* Disable pen detect*/
-		ret = priv->da9052->register_modify(priv->da9052, DA9052_TSICONTA_REG,
-				DA9052_TSICONTA_PENDETEN, 0);
+		ret = priv->da9052->event_disable(priv->da9052, priv->datardy_nb.eve_type);
+		if (ret)
+			return ret;
+		ret = priv->da9052->event_disable(priv->da9052, priv->pd_nb.eve_type);
 		if (ret)
 			return ret;
 
-		/* Disable auto mode */
+		/* Disable pen detect, auto mode */
 		ret = priv->da9052->register_modify(priv->da9052, DA9052_TSICONTA_REG,
-				DA9052_TSICONTA_AUTOTSIEN, 0);
+				DA9052_TSICONTA_PENDETEN | DA9052_TSICONTA_AUTOTSIEN, 0);
 		if (ret)
 			return ret;
 
@@ -1260,6 +1275,7 @@ void tsi_fifo_destroy(struct da9052_ts_priv *priv)
 	wait_for_completion(&priv->tsi_raw_proc_thread.notifier);
 }
 #else
+
 void tsi_fifo_init(struct da9052_ts_priv *priv)
 {
 }
@@ -1394,6 +1410,12 @@ static ssize_t __devinit da9052_tsi_init_drv(struct da9052_ts_priv *priv, struct
 	ssize_t ret = 0;
 	struct da9052_tsi_info  *ts = &priv->tsi_info;
 
+	mutex_init(&ts->point_lock);
+	init_timer(&ts->release_timer);
+	ts->release_timer.data = (unsigned long)priv;
+	ts->release_timer.function = release_timer_rtn;
+	INIT_WORK(&ts->release_work, release_work_rtn);
+
 	ts->ts_regulator = regulator_get(dev, "VDD_A");
 	if (IS_ERR(ts->ts_regulator)) {
 		dev_err(dev, "%s: error getting regulator VDD_A\n", __func__);
@@ -1433,7 +1455,7 @@ static ssize_t __devinit da9052_tsi_init_drv(struct da9052_ts_priv *priv, struct
 	}
 
 	init_tsi_threads(priv);
-	ret = da9052_tsi_config_state(priv, DEFAULT_TSI_STATE);
+	ret = da9052_tsi_config_state(priv, TSI_AUTO_MODE);
 	if (ret) {
 		for (cnt = 0; cnt < NUM_INPUT_DEVS; cnt++) {
 			if (ts->input_devs[cnt] != NULL)
@@ -1522,12 +1544,14 @@ static int __devexit da9052_tsi_remove(struct platform_device *pdev)
 		ts->datardy_reg_status = RESET;
 	}
 
+	del_timer(&ts->release_timer);
 	tsi_fifo_destroy(priv);
 	for (i = 0; i < NUM_INPUT_DEVS; i++) {
 		input_unregister_device(ts->input_devs[i]);
 	}
 
 	platform_set_drvdata(pdev, NULL);
+	kfree(priv);
 	pr_debug("%s: Removing %s\n", __func__, DA9052_TSI_DEVICE_NAME);
 
 	return 0;
