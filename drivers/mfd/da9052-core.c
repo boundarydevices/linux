@@ -266,18 +266,36 @@ int reg_modify(struct da9052 *da9052, unsigned reg,
 	return ret;
 }
 
+int event_modify(struct da9052 *da9052, unsigned char eve_type,
+		unsigned enable)
+{
+	int ret;
+	struct da9052_ssc_msg sscmsg;
+	if (eve_type >= 32)
+		return -EINVAL;
+	sscmsg.addr = DA9052_IRQMASKA_REG + (eve_type >> 3);
+	da9052_lock(da9052);
+	if (enable)
+		__clear_bit(eve_type, &da9052->irq_mask);
+	else
+		__set_bit(eve_type, &da9052->irq_mask);
+	sscmsg.data = da9052->irq_mask >> (eve_type & 0x18);
+
+	ret = da9052_ssc_write(da9052, &sscmsg);
+	da9052_unlock(da9052);
+	return ret;
+}
+
 int eh_enable(struct da9052 *da9052, unsigned char eve_type)
 {
 	pr_debug("da9052 enable 0x%x\n", eve_type);
-	return reg_modify(da9052, DA9052_IRQMASKA_REG + (eve_type >> 3),
-			(1 << (eve_type & 7)), 0);
+	return event_modify(da9052, eve_type, 1);
 }
 
 int eh_disable(struct da9052 *da9052, unsigned char eve_type)
 {
 	pr_debug("da9052 disable 0x%x\n", eve_type);
-	return reg_modify(da9052, DA9052_IRQMASKA_REG + (eve_type >> 3),
-			0, (1 << (eve_type & 7)));
+	return event_modify(da9052, eve_type, 0);
 }
 
 static int process_events(struct da9052 *da9052, int events_sts)
@@ -367,12 +385,9 @@ void eh_workqueue_isr(struct work_struct *work)
 	for (i = 0; i < 4; i++)
 		events_sts |= (eve_data[i].data << (8 * i));
 
-	/* Check if we really got any event */
-	if (events_sts == 0) {
-		enable_irq(da9052->irq);
-		da9052_unlock(da9052);
-		return;
-	}
+	pr_debug("events_sts=%08x irq_mask=%08lx\n", events_sts, da9052->irq_mask);
+	events_sts &= ~da9052->irq_mask;
+
 	/* Now clear EVENT registers */
 	j = 0;
 	for (i = 0; i < 4; i++) {
@@ -381,20 +396,42 @@ void eh_workqueue_isr(struct work_struct *work)
 			eve_data[j++].data = eve_data[i].data;
 		}
 	}
-	if (j)
+	if (events_sts & (1 << TSI_READY_EVE)) {
+		da9052_unlock(da9052);
+		process_events(da9052, (1 << TSI_READY_EVE));
+		events_sts &= ~(1 << TSI_READY_EVE);
+		/*
+		 * Clearing events will allow regs 107,108,109,110 to be
+		 * updated again. Therefore, we most process this event
+		 * before clearing.
+		 */
+		da9052_lock(da9052);
+	}
+	if (j) {
 		da9052_ssc_write_many(da9052, eve_data, j);
+		da9052->spurious_irq_count = 0;
+	} else {
+		da9052->spurious_irq_count++;
+		pr_err("%s: spurious irq(%d)\n", __func__, da9052->irq);
+	}
+
 	da9052_unlock(da9052);
 
 	pr_debug("da9052 events_sts=%x\n", events_sts);
 	/* Process all events occurred */
-	process_events(da9052, events_sts);
+	if (events_sts)
+		process_events(da9052, events_sts);
 	/*
 	 * This delay is necessary to avoid hardware fake interrupts
 	 * from DA9052.
 	 */
 	udelay(50);
 	/* Enable HOST interrupt */
-	enable_irq(da9052->irq);
+	if (da9052->spurious_irq_count < 5) {
+		enable_irq(da9052->irq);
+	} else {
+		pr_err("%s: leaving irq(%d) disabled\n", __func__, da9052->irq);
+	}
 }
 
 static void da9052_eh_restore_irq(struct da9052 *da9052)
@@ -602,6 +639,7 @@ int da9052_ssc_init(struct da9052 *da9052)
 
 	INIT_WORK(&da9052->eh_isr_work, eh_workqueue_isr);
 
+	da9052->irq_mask = 0xffffffff;
 	for (i = 0; i < 4; i++) {
 		ssc_msg[i].addr = DA9052_IRQMASKA_REG + i;
 		ssc_msg[i].data = 0xff;
