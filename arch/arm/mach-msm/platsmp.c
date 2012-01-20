@@ -19,6 +19,7 @@
 #include <asm/hardware/gic.h>
 #include <asm/cacheflush.h>
 #include <asm/mach-types.h>
+#include <asm/smp_plat.h>
 
 #include <mach/msm_iomap.h>
 
