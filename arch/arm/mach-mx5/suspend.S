@@ -292,7 +292,8 @@ mx5x_wfi:
 	beq 1b
 WFI:
 	mov r0,#0x0
-	.long     0xe320f003              @ Opcode for WFI
+	nop
+	/* .long     0xe320f003              @ Opcode for WFI */
 
 	cmp     r6, #SUSPEND_ID_MX51
 	bne      wfi_done
