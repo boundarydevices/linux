@@ -11,6 +11,8 @@
  */
 
 #include <linux/module.h>
+#include <linux/export.h>
+#include <linux/device.h>
 #include <linux/regmap.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
