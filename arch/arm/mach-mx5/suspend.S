@@ -202,10 +202,10 @@ WAIT_SR_ACK:
      * Set DSE of all DDR I/O pads to 0 => HighZ
      * except CKE which must drive during self-refresh
      * according to JEDEC
-	 */
+     */
 
     ldr     r4, =0
-	PM_SET_HIGHZ_PAD IOMUXC_SW_PAD_CTL_PAD_DRAM_DQM3
+    PM_SET_HIGHZ_PAD IOMUXC_SW_PAD_CTL_PAD_DRAM_DQM3
     PM_SET_HIGHZ_PAD IOMUXC_SW_PAD_CTL_PAD_DRAM_SDQS3
     PM_SET_HIGHZ_PAD IOMUXC_SW_PAD_CTL_PAD_DRAM_DQM2
     PM_SET_HIGHZ_PAD IOMUXC_SW_PAD_CTL_PAD_DRAM_SDODT1
@@ -224,9 +224,10 @@ WAIT_SR_ACK:
     PM_SET_HIGHZ_PAD IOMUXC_SW_PAD_CTL_GRP_B1DS
     PM_SET_HIGHZ_PAD IOMUXC_SW_PAD_CTL_GRP_B2DS
     PM_SET_HIGHZ_PAD IOMUXC_SW_PAD_CTL_GRP_B3DS
-	/* use DSE=1 for CKE pin,when DDR is in self-refresh */
-    ldr     r4, =1
+    /* use DSE=1 for CKE pin,when DDR is in self-refresh */
+    ldr     r4, =1<<19
     PM_SET_HIGHZ_PAD IOMUXC_SW_PAD_CTL_GRP_CTLDS
+
 mx5x_wfi:
     /*
      * PLL1 workaround as the following: For mx51 only.
@@ -292,8 +293,8 @@ mx5x_wfi:
 	beq 1b
 WFI:
 	mov r0,#0x0
-	nop
-	/* .long     0xe320f003              @ Opcode for WFI */
+	/* nop */
+	.long     0xe320f003              @ Opcode for WFI
 
 	cmp     r6, #SUSPEND_ID_MX51
 	bne      wfi_done
