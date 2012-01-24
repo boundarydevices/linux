@@ -197,10 +197,10 @@ struct da9052_tsi_conf {
 };
 
 struct da9052_tsi_reg {
-	u16	x;
-	u16	y;
-	u16	z;
-	u16	pressed;
+ 	unsigned x;
+ 	unsigned y;
+ 	unsigned z;
+ 	unsigned pressed;
  };
 
 #ifdef OLD_WAY

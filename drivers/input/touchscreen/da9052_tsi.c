@@ -42,9 +42,28 @@
 static int calibration[7];
 module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
 
-int *da9052_get_calibration(void)
+void da9052_calibrate(unsigned *px, unsigned *py)
 {
-	return calibration ;
+	int x, y, x1, y1;
+	if (calibration[6]) {
+		x1 = *px;
+		y1 = *py;
+
+		x = calibration[0] * x1 +
+			calibration[1] * y1 +
+			calibration[2];
+		x /= calibration[6];
+		if (x < 0)
+			x = 0;
+		y = calibration[3] * x1 +
+			calibration[4] * y1 +
+			calibration[5];
+		y /= calibration[6];
+		if (y < 0)
+			y = 0;
+		*px = x ;
+		*py = y ;
+	}
 }
 
 u32 da9052_tsi_get_input_dev(struct da9052_tsi_info *ts, u8 off)
@@ -212,7 +231,7 @@ static ssize_t da9052_tsi_config_power_supply(struct da9052_ts_priv *priv,
 #endif
 
 #ifdef OLD_WAY
-void insert_tsi_point(struct da9052_ts_priv *priv, u16 x, u16 y, u16 z)
+void insert_tsi_point(struct da9052_ts_priv *priv, unsigned x, unsigned y, unsigned z)
 {
 	struct da9052_tsi *tsi = &priv->tsi_reg;
 	struct da9052_tsi_reg *pdata;
@@ -233,7 +252,7 @@ void insert_tsi_release(struct da9052_ts_priv *priv)
 }
 #else
 
-void insert_tsi_point(struct da9052_ts_priv *priv, u16 x, u16 y, u16 z)
+void insert_tsi_point(struct da9052_ts_priv *priv, unsigned x, unsigned y, unsigned z)
 {
 	struct da9052_tsi_info *ts = &priv->tsi_info;
 	struct input_dev *ip_dev = (struct input_dev *)da9052_tsi_get_input_dev(
@@ -251,6 +270,7 @@ void insert_tsi_point(struct da9052_ts_priv *priv, u16 x, u16 y, u16 z)
 		priv->tsi_reg.sum.y = 0;
 		priv->tsi_reg.sum.z = 0;
 		priv->tsi_reg.sum_cnt = 0;
+		da9052_calibrate(&x, &y);
 		input_report_abs(ip_dev, ABS_X, x);
 		input_report_abs(ip_dev, ABS_Y, y);
 		input_report_abs(ip_dev, ABS_PRESSURE, z);
