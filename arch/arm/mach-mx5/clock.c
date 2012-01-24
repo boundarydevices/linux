@@ -4581,6 +4581,19 @@ static void clk_tree_init(void)
 	}
 }
 
+#define IPU_CONF		0x000
+#define IPU_DISP_GEN		0x0C4
+
+void turn_off_display(int physical_base) {
+	void __iomem *ipuc = ioremap(physical_base, SZ_4K);
+	if (ipuc) {
+		/* clear DI0/DI1 counter release */
+		unsigned reg = __raw_readl(ipuc + IPU_DISP_GEN);
+		__raw_writel(reg & ~(3 << 24), ipuc + IPU_DISP_GEN);
+		__raw_writel(0, ipuc + IPU_CONF);
+		iounmap(ipuc);
+	}
+}
 
 int __init mx51_clocks_init(unsigned long ckil, unsigned long osc, unsigned long ckih1, unsigned long ckih2)
 {
@@ -4590,6 +4603,7 @@ int __init mx51_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 	int wp_cnt = 0;
 	u32 pll1_rate;
 
+	turn_off_display(MX51_IPU_CTRL_BASE_ADDR + ((512 - 32) << 20));
 	pll1_base = ioremap(PLL1_BASE_ADDR, SZ_4K);
 	pll2_base = ioremap(PLL2_BASE_ADDR, SZ_4K);
 	pll3_base = ioremap(PLL3_BASE_ADDR, SZ_4K);
@@ -4622,9 +4636,7 @@ int __init mx51_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 	__raw_writel(0, MXC_CCM_CCGR3);
 	__raw_writel(1 << MXC_CCM_CCGRx_CG8_OFFSET, MXC_CCM_CCGR4);
 
-	/* if ipu enabled, leave enabled, else sleep handshake will fail */
-	reg = __raw_readl(MXC_CCM_CCGR5) & (3 << MXC_CCM_CCGRx_CG5_OFFSET);
-	__raw_writel(reg | 1 << MXC_CCM_CCGRx_CG2_OFFSET |
+	__raw_writel(1 << MXC_CCM_CCGRx_CG2_OFFSET |
 		     1 << MXC_CCM_CCGR5_CG6_1_OFFSET |
 		     1 << MXC_CCM_CCGR5_CG6_2_OFFSET |
 		     3 << MXC_CCM_CCGRx_CG7_OFFSET |
@@ -4910,6 +4922,8 @@ int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 	int i = 0, j = 0, reg;
 	u32 pll1_rate;
 
+	turn_off_display(MX53_IPU_CTRL_BASE_ADDR + ((128 - 32) << 20));
+
 	pll1_base = ioremap(MX53_BASE_ADDR(PLL1_BASE_ADDR), SZ_4K);
 	pll2_base = ioremap(MX53_BASE_ADDR(PLL2_BASE_ADDR), SZ_4K);
 	pll3_base = ioremap(MX53_BASE_ADDR(PLL3_BASE_ADDR), SZ_4K);
@@ -4955,9 +4969,7 @@ int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 	__raw_writel(0, MXC_CCM_CCGR3);
 	__raw_writel(1 << MXC_CCM_CCGRx_CG8_OFFSET, MXC_CCM_CCGR4);
 
-	/* if ipu enabled, leave enabled, else sleep handshake will fail */
-	reg = __raw_readl(MXC_CCM_CCGR5) & (3 << MXC_CCM_CCGRx_CG5_OFFSET);
-	__raw_writel(reg | 1 << MXC_CCM_CCGRx_CG2_OFFSET |
+	__raw_writel(1 << MXC_CCM_CCGRx_CG2_OFFSET |
 		     1 << MXC_CCM_CCGRx_CG6_OFFSET |
 		     3 << MXC_CCM_CCGRx_CG7_OFFSET |
 		     1 << MXC_CCM_CCGRx_CG8_OFFSET |
