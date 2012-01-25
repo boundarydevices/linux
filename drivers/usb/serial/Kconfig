@@ -171,6 +171,10 @@ config USB_SERIAL_FUNSOFT
 	  To compile this driver as a module, choose M here: the
 	  module will be called funsoft.
 
+config USB_SERIAL_FUSION
+	select USB_SERIAL_WWAN
+	tristate "USB Fusion WWAN device"
+
 config USB_SERIAL_VISOR
 	tristate "USB Handspring Visor / Palm m50x / Sony Clie Driver"
 	help
