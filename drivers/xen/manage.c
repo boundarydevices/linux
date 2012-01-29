@@ -128,9 +128,9 @@ static void do_suspend(void)
 	printk(KERN_DEBUG "suspending xenstore...\n");
 	xs_suspend();
 
-	err = dpm_suspend_noirq(PMSG_FREEZE);
+	err = dpm_suspend_end(PMSG_FREEZE);
 	if (err) {
-		printk(KERN_ERR "dpm_suspend_noirq failed: %d\n", err);
+		printk(KERN_ERR "dpm_suspend_end failed: %d\n", err);
 		goto out_resume;
 	}
 
@@ -148,7 +148,7 @@ static void do_suspend(void)
 
 	err = stop_machine(xen_suspend, &si, cpumask_of(0));
 
-	dpm_resume_noirq(si.cancelled ? PMSG_THAW : PMSG_RESTORE);
+	dpm_resume_start(si.cancelled ? PMSG_THAW : PMSG_RESTORE);
 
 	if (err) {
 		printk(KERN_ERR "failed to start xen_suspend: %d\n", err);
