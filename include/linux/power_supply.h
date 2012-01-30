@@ -13,10 +13,11 @@
 #ifndef __LINUX_POWER_SUPPLY_H__
 #define __LINUX_POWER_SUPPLY_H__
 
-#include <linux/device.h>
 #include <linux/wakelock.h>
 #include <linux/workqueue.h>
 #include <linux/leds.h>
+
+struct device;
 
 /*
  * All voltages, currents, charges, energies, time and temperatures in uV,

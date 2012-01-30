@@ -18,6 +18,7 @@
 #include <linux/cpufreq.h>
 
 struct opp;
+struct device;
 
 #if defined(CONFIG_PM_OPP)
 

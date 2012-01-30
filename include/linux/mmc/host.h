@@ -13,6 +13,7 @@
 #include <linux/leds.h>
 #include <linux/sched.h>
 #include <linux/wakelock.h>
+#include <linux/device.h>
 
 #include <linux/mmc/core.h>
 #include <linux/mmc/pm.h>

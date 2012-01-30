@@ -401,7 +401,6 @@ struct fb_cursor {
 
 #include <linux/fs.h>
 #include <linux/init.h>
-#include <linux/device.h>
 #include <linux/workqueue.h>
 #include <linux/notifier.h>
 #include <linux/list.h>

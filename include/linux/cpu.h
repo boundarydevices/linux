@@ -19,6 +19,8 @@
 #include <linux/compiler.h>
 #include <linux/cpumask.h>
 
+struct device;
+
 struct cpu {
 	int node_id;		/* The node which contains the CPU */
 	int hotpluggable;	/* creates sysfs control file if hotpluggable */

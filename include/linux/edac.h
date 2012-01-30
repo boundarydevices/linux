@@ -14,6 +14,12 @@
 
 #include <asm/atomic.h>
 #include <linux/sysdev.h>
+#include <linux/atomic.h>
+#include <linux/kobject.h>
+#include <linux/completion.h>
+#include <linux/workqueue.h>
+
+struct device;
 
 #define EDAC_OPSTATE_INVAL	-1
 #define EDAC_OPSTATE_POLL	0
