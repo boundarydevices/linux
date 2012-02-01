@@ -1889,6 +1889,7 @@ static int sdhci_suspend(struct platform_device *pdev, pm_message_t state)
 		/* Only free irq when not require sdio irq wake up. */
 		if (mmc && !(mmc->pm_flags & MMC_PM_WAKE_SDIO_IRQ))
 			free_irq(host->irq, host);
+		sdhci_set_power(host, -1);
 	}
 
 	return 0;
@@ -1920,6 +1921,7 @@ static int sdhci_resume(struct platform_device *pdev)
 			if (ret)
 				return ret;
 		}
+		sdhci_set_power(host, 7);
 		sdhci_init(host);
 		host->init_flag = 2;
 		mmiowb();
