@@ -15,6 +15,7 @@
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/delay.h>
+#include <linux/kthread.h>
 #include <linux/timer.h>
 #include <linux/uaccess.h>
 #include <linux/jiffies.h>
@@ -46,10 +47,6 @@ u8 tbat_event_occur;
 static int da9052_bat_get_property(struct power_supply *psy,
 					enum power_supply_property psp,
 					union power_supply_propval *val);
-
-s32 monitoring_thread_pid;
-u8 monitoring_thread_state = ACTIVE;
-struct completion monitoring_thread_notifier;
 
 static u16 array_hys_batvoltage[2];
 static u16 bat_volt_arr[3];
@@ -1038,12 +1035,14 @@ static s32 monitoring_thread(void *data)
 
 	set_freezable();
 
-	while (monitoring_thread_state == ACTIVE) {
+	for (;;) {
 		/* Make this thread friendly to system suspend and resume */
 		try_to_freeze();
 
 		set_current_state(TASK_INTERRUPTIBLE);
 		schedule_timeout(chg_device->monitoring_interval);
+		if (kthread_should_stop())
+			break;
 
 #if DA9052_BAT_PROFILE
 		jiffies_count = jiffies;
@@ -1111,9 +1110,6 @@ static s32 monitoring_thread(void *data)
 		if (mon_count == 4)
 			mon_count = 0;
 	}
-
-	complete_and_exit(&monitoring_thread_notifier, 0);
-
 	return 0;
 }
 
@@ -1328,12 +1324,13 @@ static ssize_t da9052_bat_print_status(void *ptr)
 
 	set_freezable();
 
-	while (chg_device->print_bat_status.state == ACTIVE) {
-
+	for (;;) {
 		try_to_freeze();
 
 		set_current_state(TASK_INTERRUPTIBLE);
 		schedule_timeout(msecs_to_jiffies((40*1000)));
+		if (kthread_should_stop())
+			break;
 
 		#if 1
 
@@ -1364,7 +1361,7 @@ static ssize_t da9052_bat_print_status(void *ptr)
 
 		result = da9052_get_bat_status(chg_device, &bat_status);
 		if (result)
-			goto end_monitoring_thread;
+			break;
 
 		switch (bat_status.illegalbattery) {
 		case 1:
@@ -1430,8 +1427,6 @@ static ssize_t da9052_bat_print_status(void *ptr)
 		printk(KERN_INFO "BAT_LOG:\t Charging Current: %d \n\n",
 		bat_info.chg_current);
 	}
-end_monitoring_thread:
-	complete_and_exit(&chg_device->print_bat_status.notifier, 0);
 	return SUCCESS;
 }
 #endif
@@ -1505,23 +1500,16 @@ static s32 __devinit da9052_bat_probe(struct platform_device *pdev)
 		goto err_charger_init;
 
 		ret = power_supply_register(&pdev->dev, &chg_device->psy);
-	 if (ret)
+	if (ret)
 		goto err_charger_init;
 
-	monitoring_thread_state = ACTIVE;
-	init_completion(&monitoring_thread_notifier);
-	monitoring_thread_pid = kernel_thread(monitoring_thread, chg_device,
-						CLONE_KERNEL | SIGCHLD);
-	if (monitoring_thread_pid > 0) {
-		printk(KERN_ERR "Monitoring thread is successfully started,\
-		pid = %d\n", monitoring_thread_pid);
-	}
+	chg_device->monitoring_task = kthread_run(monitoring_thread, chg_device,
+			"da9052bat_monitord");
+	if (!IS_ERR(chg_device->monitoring_task))
+		pr_info("Monitoring thread is successfully started\n");
 #if (DA9052_BAT_STATUS == 1)
-	init_completion(&chg_device->print_bat_status.notifier);
-	chg_device->print_bat_status.state = ACTIVE;
-	chg_device->print_bat_status.pid =
-		kernel_thread(da9052_bat_print_status, chg_device,
-			CLONE_KERNEL | SIGCHLD);
+	chg_device->bat_status_task = kthread_run(da9052_bat_print_status, chg_device,
+			"da9052bat_statusd");
 #endif
 
 	printk(KERN_INFO "Exiting DA9052 battery probe \n");
@@ -1537,13 +1525,12 @@ static int __devexit da9052_bat_remove(struct platform_device *dev)
 	struct da9052_charger_device *chg_device = platform_get_drvdata(dev);
 	s32 ret;
 
-	monitoring_thread_state = INACTIVE;
-	wait_for_completion(&monitoring_thread_notifier);
+	if (!IS_ERR(chg_device->monitoring_task))
+		kthread_stop(chg_device->monitoring_task);
 
 #if (DA9052_BAT_STATUS == 1)
-	/* stop and delete monitoring timer */
-	chg_device->print_bat_status.state = INACTIVE;
-	wait_for_completion(&chg_device->print_bat_status.notifier);
+	if (!IS_ERR(chg_device->bat_status_task))
+		kthread_stop(chg_device->bat_status_task);
 #endif
 
 	/* unregister the events.*/

@@ -239,22 +239,14 @@ struct da9052_bat_device {
 /* Below macro is for testing purpose only */
 #define DA9052_BAT_STATUS  1
 
-#if (DA9052_BAT_STATUS == 1)
-struct bat_thread_type {
-	u8 			pid;
-	u8 			state;
-	struct completion 	notifier;
-	struct task_struct	*thread_task;
-};
-#endif
-
 struct da9052_charger_device {
 	struct da9052_bat_threshold	threshold;
 	struct da9052			*da9052;
 	struct da9052_bat_platform_data	*bat_pdata;
 	struct delayed_work		work;
+	struct task_struct		*monitoring_task;
 #if (DA9052_BAT_STATUS == 1)
-	struct bat_thread_type	print_bat_status;
+	struct task_struct		*bat_status_task;
 #endif
 	struct power_supply		psy;
 	struct da9052_eh_nb		vddlow_eh_data;
