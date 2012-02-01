@@ -1035,6 +1035,7 @@ static void sdhci_set_power(struct sdhci_host *host, unsigned short power)
 	if (host->power == power)
 		return;
 
+	DBG("%s: change power from %i to %i\n", __func__, host->power, power);
 	if (host->regulator_mmc) {
 		if (power == (unsigned short)-1) {
 			regulator_disable(host->regulator_mmc);
@@ -1047,9 +1048,12 @@ static void sdhci_set_power(struct sdhci_host *host, unsigned short power)
 			regulator_set_voltage(host->regulator_mmc,
 					      voltage, voltage);
 
-			if (regulator_enable(host->regulator_mmc) == 0) {
-				DBG("mmc power on\n");
-				msleep(1);
+			if (host->power == (unsigned short)-1) {
+				/* currently disabled */
+				if (!regulator_enable(host->regulator_mmc)) {
+					DBG("mmc power on\n");
+					msleep(1);
+				}
 			}
 		}
 	}
@@ -1968,6 +1972,7 @@ static int __devinit sdhci_probe_slot(struct platform_device
 
 	host->chip = chip;
 	chip->hosts[slot] = host;
+	host->power = (unsigned short)-1;
 
 	/* Get pwr supply for eSDHC */
 	if (NULL != mmc_plat->power_mmc) {
@@ -1977,10 +1982,7 @@ static int __devinit sdhci_probe_slot(struct platform_device
 			ret = PTR_ERR(host->regulator_mmc);
 			goto out1;
 		}
-		if (regulator_enable(host->regulator_mmc) == 0) {
-			DBG("mmc power on\n");
-			msleep(1);
-		}
+		sdhci_set_power(host, 21);
 	}
 
 	/* Active the eSDHC bus */
