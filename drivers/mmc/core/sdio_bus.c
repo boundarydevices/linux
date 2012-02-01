@@ -134,6 +134,9 @@ static int sdio_bus_probe(struct device *dev)
 	 * pm_runtime_get_noresume() in its remove routine.
 	 */
 	if (func->card->host->caps & MMC_CAP_POWER_OFF_CARD) {
+		pm_runtime_get_sync(&func->dev);
+		/* power up the card manually, if PM is disabled */
+		ret = mmc_power_restore_host(func->card->host);
 		ret = pm_runtime_get_sync(dev);
 		if (ret < 0)
 			goto out;
