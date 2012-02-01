@@ -1182,7 +1182,7 @@ static struct mxc_mmc_platform_data mmc1_data = {
 static struct mxc_mmc_platform_data mmc3_data = {
 	.ocr_mask = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30
 		| MMC_VDD_31_32,
-	.caps = MMC_CAP_4_BIT_DATA | MMC_CAP_DATA_DDR,
+	.caps = MMC_CAP_4_BIT_DATA | MMC_CAP_DATA_DDR | MMC_CAP_POWER_OFF_CARD,
 	.min_clk = 400000,
 	.max_clk = 50000000,
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
