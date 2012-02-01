@@ -1882,12 +1882,13 @@ static int sdhci_suspend(struct platform_device *pdev, pm_message_t state)
 	}
 
 	for (i = 0; i < chip->num_slots; i++) {
-		if (!chip->hosts[i])
+		struct sdhci_host *host = chip->hosts[i];
+		if (!host)
 			continue;
-		mmc = chip->hosts[i]->mmc;
+		mmc = host->mmc;
 		/* Only free irq when not require sdio irq wake up. */
 		if (mmc && !(mmc->pm_flags & MMC_PM_WAKE_SDIO_IRQ))
-			free_irq(chip->hosts[i]->irq, chip->hosts[i]);
+			free_irq(host->irq, host);
 	}
 
 	return 0;
@@ -1906,19 +1907,23 @@ static int sdhci_resume(struct platform_device *pdev)
 	DBG("Resuming...\n");
 
 	for (i = 0; i < chip->num_slots; i++) {
-		if (!chip->hosts[i])
+		struct sdhci_host *host = chip->hosts[i];
+		if (!host)
 			continue;
-		mmc = chip->hosts[i]->mmc;
+		mmc = host->mmc;
 		/* Only request irq when not require sdio irq wake up. */
 		if (mmc && !(mmc->pm_flags & MMC_PM_WAKE_SDIO_IRQ)) {
-			ret = request_irq(chip->hosts[i]->irq, sdhci_irq,
+			ret = request_irq(host->irq, sdhci_irq,
 					  IRQF_SHARED,
-					  mmc_hostname(chip->hosts[i]->mmc),
-					  chip->hosts[i]);
+					  mmc_hostname(host->mmc),
+					  host);
 			if (ret)
 				return ret;
 		}
-		ret = mmc_resume_host(chip->hosts[i]->mmc);
+		sdhci_init(host);
+		host->init_flag = 2;
+		mmiowb();
+		ret = mmc_resume_host(host->mmc);
 		if (ret)
 			return ret;
 	}
