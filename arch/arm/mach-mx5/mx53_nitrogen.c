@@ -769,7 +769,6 @@ static struct mxc_pwm_platform_data mxc_pwm1_platform_data = {
 	.clk_select = PWM_CLK_HIGHPERF,
 };
 
-
 /* GPIO_1 lcd backlight(pwm2) */
 static struct platform_pwm_backlight_data mxc_backlight_data1 = {
 	.pwm_id = 1,
@@ -1176,11 +1175,12 @@ static unsigned int sdhc_get_card_det_status1(struct device *dev)
 
 static unsigned int sdhc_get_card_det_status3(struct device *dev)
 {
-#ifdef CONFIG_WL12XX_PLATFORM_DATA
-	return 0 ;
-#else
 	return gpio_get_value(N53_SD3_CD);
-#endif
+}
+
+static unsigned int sdhc_get_card_det_true(struct device *dev)
+{
+	return 0 ;
 }
 
 static struct mxc_mmc_platform_data mmc1_data = {
@@ -1203,11 +1203,7 @@ static struct mxc_mmc_platform_data mmc3_data = {
 	.caps = MMC_CAP_4_BIT_DATA | MMC_CAP_DATA_DDR | MMC_CAP_POWER_OFF_CARD,
 	.min_clk = 400000,
 	.max_clk = 50000000,
-#ifdef CONFIG_WL12XX_PLATFORM_DATA
-	.card_inserted_state = 1,
-#else
 	.card_inserted_state = 0,
-#endif
 	.status = sdhc_get_card_det_status3,
 	.wp_status = sdhc_write_protect,
 	.power_mmc = TIWI_REGULATOR_NAME,
@@ -2085,12 +2081,6 @@ static iomux_v3_cfg_t nitrogen53_pads_specific_a[] __initdata = {
 	MX53_PAD_GPIO_9__PWMO, /* pwm1 */
 };
 
-static unsigned int sdhc_get_card_det_status4(struct device *dev)
-{
-	printk(KERN_ERR "%s\n", __func__ );
-	return 0;
-}
-
 static int sdhc_write_protect4(struct device *dev)
 {
 	printk(KERN_ERR "%s\n", __func__ );
@@ -2103,7 +2093,7 @@ static struct mxc_mmc_platform_data mmc4_data = {
 	.min_clk = 400000,
 	.max_clk = 50000000,
 	.card_inserted_state = 1,
-	.status = sdhc_get_card_det_status4,
+	.status = sdhc_get_card_det_true,
 	.wp_status = sdhc_write_protect4,
 };
 
@@ -2272,6 +2262,12 @@ static void __init mxc_board_init_nitrogen(void)
 	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
 	mxc_uart_device3.dev.platform_data = &uart_pdata;
+	mxc_backlight_data1.dft_brightness = 128;	/* slow clock 50% duty */
+	mmc3_data.card_inserted_state = 1;
+	mmc3_data.status = sdhc_get_card_det_true;
+#else
+	mxcsdhc3_device.resource[2].start = gpio_to_irq(N53_SD3_CD);
+	mxcsdhc3_device.resource[2].end = gpio_to_irq(N53_SD3_CD);
 #endif
 #ifdef CONFIG_KEYBOARD_GPIO
 	gpio_keys_platform_data.nbuttons = 4;
@@ -2282,8 +2278,6 @@ static void __init mxc_board_init_nitrogen(void)
 	}
 	mxc_iomux_v3_setup_multiple_pads(nitrogen53_pads_specific,
 			ARRAY_SIZE(nitrogen53_pads_specific));
-	mxcsdhc3_device.resource[2].start = gpio_to_irq(N53_SD3_CD);
-	mxcsdhc3_device.resource[2].end = gpio_to_irq(N53_SD3_CD);
 	mxc_board_init(NULL, 0,
 		mxc_i2c1_board_info, ARRAY_SIZE(mxc_i2c1_board_info),
 		mxc_i2c2_board_info, ARRAY_SIZE(mxc_i2c2_board_info),
