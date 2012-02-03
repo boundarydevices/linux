@@ -975,7 +975,7 @@ static int wm8960_probe(struct snd_soc_codec *codec)
 	reg = snd_soc_read(codec, WM8960_ROUT2);
 	snd_soc_write(codec, WM8960_ROUT2, reg | 0x100);
 
-	snd_soc_add_controls(codec, wm8960_snd_controls,
+	snd_soc_add_codec_controls(codec, wm8960_snd_controls,
 				     ARRAY_SIZE(wm8960_snd_controls));
 	wm8960_add_widgets(codec);
 

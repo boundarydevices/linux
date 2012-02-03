@@ -513,7 +513,7 @@ static int ssm2602_probe(struct snd_soc_codec *codec)
 	reg = snd_soc_read(codec, SSM2602_ROUT1V);
 	snd_soc_write(codec, SSM2602_ROUT1V, reg | ROUT1V_RLHP_BOTH);
 
-	ret = snd_soc_add_controls(codec, ssm2602_snd_controls,
+	ret = snd_soc_add_codec_controls(codec, ssm2602_snd_controls,
 			ARRAY_SIZE(ssm2602_snd_controls));
 	if (ret)
 		return ret;

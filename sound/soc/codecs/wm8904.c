@@ -1435,11 +1435,11 @@ static int wm8904_add_widgets(struct snd_soc_codec *codec)
 
 	switch (wm8904->devtype) {
 	case WM8904:
-		snd_soc_add_controls(codec, wm8904_adc_snd_controls,
+		snd_soc_add_codec_controls(codec, wm8904_adc_snd_controls,
 				     ARRAY_SIZE(wm8904_adc_snd_controls));
-		snd_soc_add_controls(codec, wm8904_dac_snd_controls,
+		snd_soc_add_codec_controls(codec, wm8904_dac_snd_controls,
 				     ARRAY_SIZE(wm8904_dac_snd_controls));
-		snd_soc_add_controls(codec, wm8904_snd_controls,
+		snd_soc_add_codec_controls(codec, wm8904_snd_controls,
 				     ARRAY_SIZE(wm8904_snd_controls));
 
 		snd_soc_dapm_new_controls(dapm, wm8904_adc_dapm_widgets,
@@ -1460,7 +1460,7 @@ static int wm8904_add_widgets(struct snd_soc_codec *codec)
 		break;
 
 	case WM8912:
-		snd_soc_add_controls(codec, wm8904_dac_snd_controls,
+		snd_soc_add_codec_controls(codec, wm8904_dac_snd_controls,
 				     ARRAY_SIZE(wm8904_dac_snd_controls));
 
 		snd_soc_dapm_new_controls(dapm, wm8904_dac_dapm_widgets,
@@ -2305,7 +2305,7 @@ static void wm8904_handle_retune_mobile_pdata(struct snd_soc_codec *codec)
 	wm8904->retune_mobile_enum.max = wm8904->num_retune_mobile_texts;
 	wm8904->retune_mobile_enum.texts = wm8904->retune_mobile_texts;
 
-	ret = snd_soc_add_controls(codec, &control, 1);
+	ret = snd_soc_add_codec_controls(codec, &control, 1);
 	if (ret != 0)
 		dev_err(codec->dev,
 			"Failed to add ReTune Mobile control: %d\n", ret);
@@ -2318,7 +2318,7 @@ static void wm8904_handle_pdata(struct snd_soc_codec *codec)
 	int ret, i;
 
 	if (!pdata) {
-		snd_soc_add_controls(codec, wm8904_eq_controls,
+		snd_soc_add_codec_controls(codec, wm8904_eq_controls,
 				     ARRAY_SIZE(wm8904_eq_controls));
 		return;
 	}
@@ -2346,7 +2346,7 @@ static void wm8904_handle_pdata(struct snd_soc_codec *codec)
 		wm8904->drc_enum.max = pdata->num_drc_cfgs;
 		wm8904->drc_enum.texts = wm8904->drc_texts;
 
-		ret = snd_soc_add_controls(codec, &control, 1);
+		ret = snd_soc_add_codec_controls(codec, &control, 1);
 		if (ret != 0)
 			dev_err(codec->dev,
 				"Failed to add DRC mode control: %d\n", ret);
@@ -2360,7 +2360,7 @@ static void wm8904_handle_pdata(struct snd_soc_codec *codec)
 	if (pdata->num_retune_mobile_cfgs)
 		wm8904_handle_retune_mobile_pdata(codec);
 	else
-		snd_soc_add_controls(codec, wm8904_eq_controls,
+		snd_soc_add_codec_controls(codec, wm8904_eq_controls,
 				     ARRAY_SIZE(wm8904_eq_controls));
 }
 

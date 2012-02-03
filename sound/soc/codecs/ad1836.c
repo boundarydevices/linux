@@ -248,7 +248,7 @@ static int ad1836_probe(struct snd_soc_codec *codec)
 	snd_soc_write(codec, AD1836_DAC_L3_VOL, 0x3FF);
 	snd_soc_write(codec, AD1836_DAC_R3_VOL, 0x3FF);
 
-	snd_soc_add_controls(codec, ad1836_snd_controls,
+	snd_soc_add_codec_controls(codec, ad1836_snd_controls,
 			     ARRAY_SIZE(ad1836_snd_controls));
 	snd_soc_dapm_new_controls(dapm, ad1836_dapm_widgets,
 				  ARRAY_SIZE(ad1836_dapm_widgets));

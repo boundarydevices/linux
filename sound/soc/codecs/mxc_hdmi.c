@@ -659,7 +659,7 @@ static int mxc_hdmi_codec_soc_probe(struct snd_soc_codec *codec)
 		goto e_clk_get2;
 	}
 
-	ret = snd_soc_add_controls(codec, mxc_hdmi_ctrls,
+	ret = snd_soc_add_codec_controls(codec, mxc_hdmi_ctrls,
 			     ARRAY_SIZE(mxc_hdmi_ctrls));
 	if (ret)
 		goto e_add_ctrls;
