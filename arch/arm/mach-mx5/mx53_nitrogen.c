@@ -269,6 +269,8 @@
 #define MX53_PAD_LVDS1_TX1_P__LVDS1_TX1		IOMUX_PAD(NON_PAD_I, 0x1F8, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_LVDS1_TX2_P__LVDS1_TX2		IOMUX_PAD(NON_PAD_I, 0x1F0, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_LVDS1_TX3_P__LVDS1_TX3		IOMUX_PAD(NON_PAD_I, 0x1EC, 1, 0x0, 0, NO_PAD_CTRL)
+#define MX53_PAD_NANDF_CS0__GPIO6_11_KEY	IOMUX_PAD(0x5B0, 0x238, 1|IOMUX_CONFIG_SION, 0x0, 0, BUTTON_PAD_CTRL)
+#define MX53_PAD_NANDF_CS1__GPIO6_14_KEY	IOMUX_PAD(0x5B4, 0x23C, 1|IOMUX_CONFIG_SION, 0x0, 0, BUTTON_PAD_CTRL)
 #define MX53_PAD_NANDF_CS2__CSI0_MCLK		IOMUX_PAD(0x5B8, 0x240, 5|IOMUX_CONFIG_SION, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_NANDF_CS3__GPIO_6_16		IOMUX_PAD(0x5BC, 0x244, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_SD1_CLK__SD1_CLK		IOMUX_PAD(0x67C, 0x2F4, IOMUX_CONFIG_SION, 0x0, 0, MX53_SDHC_PAD_CTRL | PAD_CTL_HYS)
@@ -486,6 +488,8 @@ static iomux_v3_cfg_t mx53common_pads[] = {
 
 	/* GPIO6 */
 	MX53_PAD_EIM_A23__GPIO_6_6,	/* USB OTG USB_PWR */
+	MX53_PAD_NANDF_CS0__GPIO6_11_KEY, /* 53K volume up */
+	MX53_PAD_NANDF_CS1__GPIO6_14_KEY, /* 53K volume down */
 	MX53_PAD_NANDF_CS3__GPIO_6_16,	/* NitrogenA mic mux, Nitrogen53K back button */
 
 	/* GPIO7 */
@@ -1380,6 +1384,26 @@ static struct gpio_keys_button gpio_keys[] = {
 		.debounce_interval = 30,
 	},
 #endif
+#endif
+#if defined(CONFIG_MACH_MX53_NITROGEN_K)
+	{
+		.type	= EV_KEY,
+		.gpio	= MAKE_GP(6,14),
+		.code	= KEY_VOLUMEUP,
+		.desc	= "Volume+ Button",
+		.wakeup	= 0,
+		.active_low = 1,
+		.debounce_interval = 30,
+	},
+	{
+		.type	= EV_KEY,
+		.gpio	= MAKE_GP(6,11),
+		.code	= KEY_VOLUMEDOWN,
+		.desc	= "Volume- Button",
+		.wakeup	= 0,
+		.active_low = 1,
+		.debounce_interval = 30,
+	},
 #endif
 };
 
@@ -2492,9 +2516,6 @@ static void __init n53k_board_init(void)
 {
 	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
 
-#ifdef CONFIG_KEYBOARD_GPIO
-	gpio_keys_platform_data.nbuttons = 4;
-#endif
 	if (gpio_request_array(n53k_gpios_specific,
 			ARRAY_SIZE(n53k_gpios_specific))) {
 		printk (KERN_ERR "%s gpio_request_array failed\n", __func__ );
