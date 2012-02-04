@@ -9,6 +9,7 @@ struct platform_pwm_backlight_data {
 	unsigned int max_brightness;
 	unsigned int dft_brightness;
 	unsigned int pwm_period_ns;
+	unsigned int usable_range[2];
 	int (*init)(struct device *dev);
 	int (*notify)(struct device *dev, int brightness);
 	void (*exit)(struct device *dev);

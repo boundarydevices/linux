@@ -24,6 +24,7 @@
 struct pwm_bl_data {
 	struct pwm_device	*pwm;
 	struct device		*dev;
+        unsigned int 		usable_range[2];
 	unsigned int		period;
 	int			(*notify)(struct device *,
 					  int brightness);
@@ -40,6 +41,12 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 
 	if (bl->props.fb_blank != FB_BLANK_UNBLANK)
 		brightness = 0;
+
+	if (brightness && (pb->usable_range[0]|pb->usable_range[1])) {
+		unsigned outrange = pb->usable_range[1]-pb->usable_range[0];
+		int outbright = pb->usable_range[0]+(brightness*outrange/max);
+		brightness=outbright;
+	}
 
 	if (pb->notify)
 		brightness = pb->notify(pb->dev, brightness);
@@ -96,6 +103,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		goto err_alloc;
 	}
 
+	memcpy(pb->usable_range,data->usable_range,sizeof(pb->usable_range));
 	pb->period = data->pwm_period_ns;
 	pb->notify = data->notify;
 	pb->dev = &pdev->dev;
