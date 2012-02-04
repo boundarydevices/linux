@@ -775,6 +775,9 @@ static struct platform_pwm_backlight_data mxc_backlight_data1 = {
 	.max_brightness = 256,
 	.dft_brightness = CONFIG_DEFAULT_PWM0_BACKLIGHT,
 	.pwm_period_ns = 1000000000/32768,	/* 30517 */
+#ifdef CONFIG_MACH_MX53_NITROGEN_K
+	.usable_range = {226,256},
+#endif
 };
 #endif
 
