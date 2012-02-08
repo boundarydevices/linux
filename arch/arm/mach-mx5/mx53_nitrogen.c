@@ -61,6 +61,7 @@
 #include <linux/spi/spi.h>
 #include <linux/types.h>
 #include <linux/usb/android_composite.h>
+#include <linux/usb/f_accessory.h>
 #include <linux/wl12xx.h>
 #include <linux/android_pmem.h>
 
@@ -999,9 +1000,15 @@ static void mx53_gpio_host1_driver_vbus(bool on)
 }
 
 static struct resource mxcfb_resources[] = {
-	[0] = {
-	       .flags = IORESOURCE_MEM,
-	       },
+	{
+	 .flags = IORESOURCE_MEM,
+	 },
+	{
+	 .flags = IORESOURCE_MEM,
+	 },
+	{
+	 .flags = IORESOURCE_MEM,
+	 },
 };
 
 static struct mxc_fb_platform_data fb_data[] = {
@@ -1025,18 +1032,20 @@ static int __init mxc_init_fb(void)
 	if (primary_di) {
 		printk(KERN_INFO "DI1 is primary\n");
 		/* DI1 -> DP-BG channel: */
-		mxc_fb_devices[1].num_resources = ARRAY_SIZE(mxcfb_resources);
-		mxc_fb_devices[1].resource = mxcfb_resources;
+		mxc_fb_devices[1].num_resources = 1;
+		mxc_fb_devices[1].resource = &mxcfb_resources[1];
 		mxc_register_device(&mxc_fb_devices[1], &fb_data[1]);
 
 		/* DI0 -> DC channel: */
+		mxc_fb_devices[0].num_resources = 1;
+		mxc_fb_devices[0].resource = &mxcfb_resources[1];
 		mxc_register_device(&mxc_fb_devices[0], &fb_data[0]);
 	} else {
 		printk(KERN_INFO "DI0 is primary\n");
 
 		/* DI0 -> DP-BG channel: */
-		mxc_fb_devices[0].num_resources = ARRAY_SIZE(mxcfb_resources);
-		mxc_fb_devices[0].resource = mxcfb_resources;
+		mxc_fb_devices[0].num_resources = 1;
+		mxc_fb_devices[0].resource = &mxcfb_resources[0];
 		mxc_register_device(&mxc_fb_devices[0], &fb_data[0]);
 
 		/* DI1 -> DC channel: */
@@ -1046,6 +1055,8 @@ static int __init mxc_init_fb(void)
 	/*
 	 * DI0/1 DP-FG channel:
 	 */
+	mxc_fb_devices[2].num_resources = 1;
+	mxc_fb_devices[2].resource = &mxcfb_resources[2];
 	mxc_register_device(&mxc_fb_devices[2], NULL);
 
 	return 0;
@@ -1454,7 +1465,7 @@ __setup("spdif", spdif_setup);
 
 static struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem_adsp",
-	.size = SZ_32M,
+	.size = SZ_64M,
 };
 
 static struct android_pmem_platform_data android_pmem_gpu_data = {
@@ -1476,15 +1487,20 @@ static char *usb_functions_rndis[] = {
 	"rndis",
 };
 
-static char *usb_functions_rndis_adb[] = {
-	"rndis",
+static char *usb_functions_accessory[] = {
+	"accessory",
+};
+
+static char *usb_functions_accessory_adb[] = {
+	"accessory",
 	"adb",
 };
 
 static char *usb_functions_all[] = {
-	"rndis",
 	"usb_mass_storage",
-	"adb"
+	"adb",
+	"rndis",
+	"accessory",
 };
 
 static struct android_usb_product usb_products[] = {
@@ -1499,14 +1515,21 @@ static struct android_usb_product usb_products[] = {
 		.functions	= usb_functions_ums_adb,
 	},
 	{
-		.product_id	= 0x0c03,
+		.product_id	= 0x0c10,
 		.num_functions	= ARRAY_SIZE(usb_functions_rndis),
 		.functions	= usb_functions_rndis,
 	},
 	{
-		.product_id	= 0x0c04,
-		.num_functions	= ARRAY_SIZE(usb_functions_rndis_adb),
-		.functions	= usb_functions_rndis_adb,
+		.vendor_id	= USB_ACCESSORY_VENDOR_ID,
+		.product_id	= USB_ACCESSORY_PRODUCT_ID,
+		.num_functions	= ARRAY_SIZE(usb_functions_accessory),
+		.functions	= usb_functions_accessory,
+	},
+	{
+		.vendor_id	= USB_ACCESSORY_VENDOR_ID,
+		.product_id	= USB_ACCESSORY_ADB_PRODUCT_ID,
+		.num_functions	= ARRAY_SIZE(usb_functions_accessory_adb),
+		.functions	= usb_functions_accessory_adb,
 	},
 };
 
