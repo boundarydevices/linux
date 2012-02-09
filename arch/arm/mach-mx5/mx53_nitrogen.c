@@ -2141,12 +2141,13 @@ MACHINE_END
 #endif
 
 /*****************************************************************************/
-#ifdef CONFIG_MACH_NITROGEN_IMX53
 extern struct platform_device mxc_uart_device3;
+extern struct platform_device mxc_uart_device2;
 static struct imxuart_platform_data uart_pdata = {
 	.flags = IMXUART_HAVE_RTSCTS,
 };
 
+#ifdef CONFIG_MACH_NITROGEN_IMX53
 struct gpio nitrogen53_gpios_specific[] __initdata = {
 	{.label = "Camera power down",	.gpio = MAKE_GP(1, 2),		.flags = GPIOF_INIT_HIGH},
 	{.label = "pmic-int",		.gpio = MAKE_GP(2, 21),		.flags = GPIOF_DIR_IN},
@@ -2510,12 +2511,6 @@ struct wl12xx_platform_data n53k_wlan_data __initdata = {
 
 #endif
 
-static unsigned int n53k_sdhc_get_card_det_status4(struct device *dev)
-{
-	printk(KERN_ERR "%s\n", __func__ );
-	return 0;
-}
-
 static int n53k_sdhc_write_protect4(struct device *dev)
 {
 	printk(KERN_ERR "%s\n", __func__ );
@@ -2528,13 +2523,23 @@ static struct mxc_mmc_platform_data n53k_mmc4_data = {
 	.min_clk = 400000,
 	.max_clk = 50000000,
 	.card_inserted_state = 1,
-	.status = n53k_sdhc_get_card_det_status4,
+	.status = sdhc_get_card_det_true,
 	.wp_status = n53k_sdhc_write_protect4,
 };
 
 static void __init n53k_board_init(void)
 {
 	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
+#ifdef CONFIG_WL12XX_PLATFORM_DATA
+	mxc_uart_device2.dev.platform_data = &uart_pdata;
+	mxc_backlight_data2.dft_brightness = 128;	/* slow clock 50% duty */
+	/* wl1271 is sdhc3 */
+	mmc3_data.card_inserted_state = 1;
+	mmc3_data.status = sdhc_get_card_det_true;
+#else
+	mxcsdhc3_device.resource[2].start = gpio_to_irq(N53_SD3_CD);
+	mxcsdhc3_device.resource[2].end = gpio_to_irq(N53_SD3_CD);
+#endif
 
 	if (gpio_request_array(n53k_gpios_specific,
 			ARRAY_SIZE(n53k_gpios_specific))) {
@@ -2547,6 +2552,7 @@ static void __init n53k_board_init(void)
 		n53k_i2c1_board_info, ARRAY_SIZE(n53k_i2c1_board_info),
 		n53k_i2c2_board_info, ARRAY_SIZE(n53k_i2c2_board_info),
 		da9052_irq, &mxci2c2_data);
+	/* eMMC is sdhc4 */
 	mxc_register_device(&mxcsdhc4_device, &n53k_mmc4_data);
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
 	/* WL12xx WLAN Init */

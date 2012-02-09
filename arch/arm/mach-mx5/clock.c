@@ -5180,7 +5180,7 @@ int __init mx53_clocks_init(unsigned long ckil, unsigned long osc, unsigned long
 	clk_set_parent(&ipu_clk[0], &axi_b_clk);
 	clk_set_parent(&uart_main_clk, &pll3_sw_clk);
 
-//	clk_set_rate(&uart_main_clk, 54000000);
+	clk_set_rate(&uart_main_clk, 54000000);
 	clk_set_parent(&gpu3d_clk[0], &axi_b_clk);
 	clk_set_parent(&gpu2d_clk, &axi_b_clk);
 

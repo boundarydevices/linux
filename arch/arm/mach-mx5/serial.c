@@ -176,7 +176,7 @@ static struct resource mxc_uart_resources2[] = {
 	},
 };
 
-static struct platform_device mxc_uart_device2 = {
+struct platform_device mxc_uart_device2 = {
 #if defined(CONFIG_TOUCHSCREEN_IRTOUCH_IMX) || defined(CONFIG_TOUCHSCREEN_IRTOUCH_IMX_MODULE)
 	.name = "irtouch",
 #else
