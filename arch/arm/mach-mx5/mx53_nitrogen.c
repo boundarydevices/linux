@@ -765,12 +765,15 @@ static struct mxc_w1_config mxc_w1_data = {
 
 #if defined(CONFIG_MXC_PWM) && defined(CONFIG_BACKLIGHT_PWM)
 static struct mxc_pwm_platform_data mxc_pwm1_platform_data = {
-	.pwmo_invert = 0,
-	.clk_select = PWM_CLK_HIGHPERF,
+	.pwmo_invert = 0,	/* GPIO_9 */
+};
+
+static struct mxc_pwm_platform_data mxc_pwm2_platform_data = {
+	.pwmo_invert = 0,	/* GPIO_1 */
 };
 
 /* GPIO_1 lcd backlight(pwm2) */
-static struct platform_pwm_backlight_data mxc_backlight_data1 = {
+static struct platform_pwm_backlight_data mxc_backlight_data_pwm2 = {
 	.pwm_id = 1,
 	.max_brightness = 256,
 	.dft_brightness = CONFIG_DEFAULT_PWM0_BACKLIGHT,
@@ -783,7 +786,7 @@ static struct platform_pwm_backlight_data mxc_backlight_data1 = {
 
 #if defined(CONFIG_MXC_PWM) && defined(CONFIG_BACKLIGHT_PWM)
 /* GPIO_9 backlight (pwm1) */
-static struct platform_pwm_backlight_data mxc_backlight_data2 = {
+static struct platform_pwm_backlight_data mxc_backlight_data_pwm1 = {
 	.pwm_id = 0,
 	.max_brightness = 256,
 	.dft_brightness = CONFIG_DEFAULT_PWM1_BACKLIGHT,
@@ -1884,10 +1887,10 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 	mxc_register_device(&busfreq_device, &bus_freq_data);
 	mxc_register_device(&mxc_iim_device, &iim_data);
 	mxc_register_device(&mxc_pwm1_device, &mxc_pwm1_platform_data);
-	mxc_register_device(&mxc_pwm2_device, NULL);
+	mxc_register_device(&mxc_pwm2_device, &mxc_pwm2_platform_data);
 #if defined(CONFIG_MXC_PWM) && defined(CONFIG_BACKLIGHT_PWM)
-	mxc_register_device(&mxc_pwm1_backlight_device,	&mxc_backlight_data1);
-	mxc_register_device(&mxc_pwm2_backlight_device,	&mxc_backlight_data2);
+	mxc_register_device(&mxc_pwm1_backlight_device,	&mxc_backlight_data_pwm2);
+	mxc_register_device(&mxc_pwm2_backlight_device,	&mxc_backlight_data_pwm1);
 #endif
 	mxc_register_device(&mxcsdhc1_device, &mmc1_data);
 	mxc_register_device(&mxcsdhc3_device, &mmc3_data);
@@ -2263,7 +2266,10 @@ static void __init mxc_board_init_nitrogen(void)
 	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
 	mxc_uart_device3.dev.platform_data = &uart_pdata;
-	mxc_backlight_data1.dft_brightness = 128;	/* slow clock 50% duty */
+	/* PWM2 - GPIO_1 is slow clock */
+	mxc_pwm2_platform_data.clk_select = PWM_CLK_HIGHPERF;
+	mxc_backlight_data_pwm2.dft_brightness = 128;	/* slow clock 50% duty */
+
 	mmc3_data.card_inserted_state = 1;
 	mmc3_data.status = sdhc_get_card_det_true;
 #else
@@ -2532,7 +2538,9 @@ static void __init n53k_board_init(void)
 	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
 	mxc_uart_device2.dev.platform_data = &uart_pdata;
-	mxc_backlight_data2.dft_brightness = 128;	/* slow clock 50% duty */
+	/* PWM1 - GPIO_9 is slow clock */
+	mxc_pwm1_platform_data.clk_select = PWM_CLK_HIGHPERF;
+	mxc_backlight_data_pwm1.dft_brightness = 128;	/* slow clock 50% duty */
 	/* wl1271 is sdhc3 */
 	mmc3_data.card_inserted_state = 1;
 	mmc3_data.status = sdhc_get_card_det_true;
