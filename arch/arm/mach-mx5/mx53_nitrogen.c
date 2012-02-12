@@ -90,6 +90,11 @@
 #include <linux/i2c/atmel_mxt_ts.h>
 #endif
 
+#if defined (CONFIG_BOUNDARY_CAMERA_OV5640) || defined (CONFIG_BOUNDARY_CAMERA_OV5640_MODULE) \
+ || defined (CONFIG_VIDEO_MXC_CAMERA)       || defined (CONFIG_VIDEO_MXC_CAMERA_MODULE)
+#define HAVE_CAMERA
+#endif
+
 //#define REV0		//this board should no longer exist
 
 #define MUX_SION_MASK	((iomux_v3_cfg_t)(IOMUX_CONFIG_SION) << MUX_MODE_SHIFT)
@@ -1675,13 +1680,21 @@ static struct platform_device boundary_camera_interfaces[] = {
 	{ .name = "boundary_camera_csi1", },
 #endif
 };
+#endif
 
-#if defined (CONFIG_BOUNDARY_CAMERA_OV5640) || defined (CONFIG_BOUNDARY_CAMERA_OV5640_MODULE)
+#if defined (HAVE_CAMERA)
+static void camera_pwdn(int pwdn)
+{
+	gpio_set_value(CAMERA_RESET, (0==pwdn));
+}
+
 static struct mxc_camera_platform_data camera_data = {
 	.io_regulator = "VDD_IO",
 	.analog_regulator = "VDD_A",
+	.mclk_name = "csi_mclk1",
 	.mclk = 26000000,
 	.csi = 0,
+	.pwdn = camera_pwdn,
 	.power_down = MAKE_GP(1, 2),
 	.reset = CAMERA_RESET,
 	.i2c_bus = 1,
@@ -1690,6 +1703,7 @@ static struct mxc_camera_platform_data camera_data = {
 };
 #endif
 
+#if defined(CONFIG_VIDEO_BOUNDARY_CAMERA) || defined(CONFIG_VIDEO_BOUNDARY_CAMERA_MODULE)
 static void init_camera(void)
 {
 	struct clk *clk ;
@@ -2189,6 +2203,13 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	 .addr = 0x38,
 	 .platform_data  = &i2c_tfp410_data,
 	},
+#if defined (CONFIG_VIDEO_MXC_CAMERA) || defined (CONFIG_VIDEO_MXC_CAMERA_MODULE)
+	{
+	 .type = "ov5642",
+	 .addr = 0x3c,
+	 .platform_data  = &camera_data,
+	},
+#endif
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
@@ -2368,28 +2389,6 @@ static struct i2c_board_info n53k_i2c0_board_info[] __initdata = {
 	},
 };
 
-
-#if defined (CONFIG_VIDEO_MXC_CAMERA) || defined (CONFIG_VIDEO_MXC_CAMERA_MODULE)
-
-static void camera_pwdn(int pwdn)
-{
-	gpio_set_value(CAMERA_RESET, (0==pwdn));
-}
-
-static struct mxc_camera_platform_data camera_data = {
-	.io_regulator = "VDD_IO",
-	.analog_regulator = "VDD_A",
-	.mclk_name = "csi_mclk1",
-	.mclk = 26000000,
-	.csi = 0,
-	.pwdn = camera_pwdn,
-	.power_down = MAKE_GP(1, 2),
-	.reset = CAMERA_RESET,
-	.i2c_bus = 1,
-	.i2c_id = 0x3c,
-	.sensor_name = "ov5640",
-};
-#endif
 
 static struct i2c_board_info n53k_i2c1_board_info[] __initdata = {
 	{
