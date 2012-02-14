@@ -65,7 +65,7 @@ struct gic_cpu_state {
 };
 
 void gic_init_bases(unsigned int, int, void __iomem *, void __iomem *,
-		    u32 offset);
+		    u32 offset, struct device_node *);
 int gic_of_init(struct device_node *node, struct device_node *parent);
 void gic_secondary_init(unsigned int);
 void gic_handle_irq(struct pt_regs *regs);
@@ -80,7 +80,7 @@ void restore_gic_dist_state(unsigned int gic_nr, struct gic_dist_state *gds);
 static inline void gic_init(unsigned int nr, int start,
 			    void __iomem *dist , void __iomem *cpu)
 {
-	gic_init_bases(nr, start, dist, cpu, 0);
+	gic_init_bases(nr, start, dist, cpu, 0, NULL);
 }
 
 #endif
