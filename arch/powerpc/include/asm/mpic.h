@@ -252,7 +252,7 @@ struct mpic_irq_save {
 struct mpic
 {
 	/* The remapper for this MPIC */
-	struct irq_host		*irqhost;
+	struct irq_domain	*irqhost;
 
 	/* The "linux" controller struct */
 	struct irq_chip		hc_irq;

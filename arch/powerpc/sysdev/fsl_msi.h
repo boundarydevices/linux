@@ -24,7 +24,7 @@
 #define FSL_PIC_IP_IPIC	0x00000002
 
 struct fsl_msi {
-	struct irq_host *irqhost;
+	struct irq_domain *irqhost;
 
 	unsigned long cascade_irq;
 
