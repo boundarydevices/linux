@@ -332,8 +332,8 @@ static int __devinit fsl_of_msi_probe(struct platform_device *dev)
 	}
 	platform_set_drvdata(dev, msi);
 
-	msi->irqhost = irq_alloc_host(dev->dev.of_node, IRQ_DOMAIN_MAP_LINEAR,
-				      NR_MSI_IRQS, &fsl_msi_host_ops, 0);
+	msi->irqhost = irq_domain_add_linear(dev->dev.of_node,
+				      NR_MSI_IRQS, &fsl_msi_host_ops, msi);
 
 	if (msi->irqhost == NULL) {
 		dev_err(&dev->dev, "No memory for MSI irqhost\n");
@@ -356,8 +356,6 @@ static int __devinit fsl_of_msi_probe(struct platform_device *dev)
 	}
 
 	msi->feature = features->fsl_pic_ip;
-
-	msi->irqhost->host_data = msi;
 
 	msi->msi_addr_hi = 0x0;
 	msi->msi_addr_lo = features->msiir_offset + (res.start & 0xfffff);

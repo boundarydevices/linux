@@ -1353,14 +1353,12 @@ struct mpic * __init mpic_alloc(struct device_node *node,
 	mpic->isu_shift = 1 + __ilog2(mpic->isu_size - 1);
 	mpic->isu_mask = (1 << mpic->isu_shift) - 1;
 
-	mpic->irqhost = irq_alloc_host(node, IRQ_DOMAIN_MAP_LINEAR,
+	mpic->irqhost = irq_domain_add_linear(node,
 				       isu_size ? isu_size : mpic->num_sources,
-				       &mpic_host_ops,
-				       flags & MPIC_LARGE_VECTORS ? 2048 : 256);
+				       &mpic_host_ops, mpic);
+
 	if (mpic->irqhost == NULL)
 		return NULL;
-
-	mpic->irqhost->host_data = mpic;
 
 	/* Display version */
 	switch (greg_feature & MPIC_GREG_FEATURE_VERSION_MASK) {
