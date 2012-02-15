@@ -301,6 +301,27 @@ static void soc_cleanup_codec_debugfs(struct snd_soc_codec *codec)
 	debugfs_remove_recursive(codec->debugfs_codec_root);
 }
 
+static void soc_init_platform_debugfs(struct snd_soc_platform *platform)
+{
+	struct dentry *debugfs_card_root = platform->card->debugfs_card_root;
+
+	platform->debugfs_platform_root = debugfs_create_dir(platform->name,
+						       debugfs_card_root);
+	if (!platform->debugfs_platform_root) {
+		dev_warn(platform->dev,
+			"Failed to create platform debugfs directory\n");
+		return;
+	}
+
+	snd_soc_dapm_debugfs_init(&platform->dapm,
+		platform->debugfs_platform_root);
+}
+
+static void soc_cleanup_platform_debugfs(struct snd_soc_platform *platform)
+{
+	debugfs_remove_recursive(platform->debugfs_platform_root);
+}
+
 static ssize_t codec_list_read_file(struct file *file, char __user *user_buf,
 				    size_t count, loff_t *ppos)
 {
@@ -431,6 +452,14 @@ static inline void soc_init_codec_debugfs(struct snd_soc_codec *codec)
 }
 
 static inline void soc_cleanup_codec_debugfs(struct snd_soc_codec *codec)
+{
+}
+
+static inline void soc_init_platform_debugfs(struct snd_soc_platform *platform)
+{
+}
+
+static inline void soc_cleanup_platform_debugfs(struct snd_soc_platform *platform)
 {
 }
 
@@ -923,6 +952,7 @@ static void soc_remove_dai_link(struct snd_soc_card *card, int num, int order)
 		/* Make sure all DAPM widgets are freed */
 		snd_soc_dapm_free(&platform->dapm);
 
+		soc_cleanup_platform_debugfs(platform);
 		platform->probed = 0;
 		list_del(&platform->card_list);
 		module_put(platform->dev->driver->owner);
@@ -1024,6 +1054,54 @@ static int soc_probe_codec(struct snd_soc_card *card,
 err_probe:
 	soc_cleanup_codec_debugfs(codec);
 	module_put(codec->dev->driver->owner);
+
+	return ret;
+}
+
+static int soc_probe_platform(struct snd_soc_card *card,
+			   struct snd_soc_platform *platform)
+{
+	int ret = 0;
+	const struct snd_soc_platform_driver *driver = platform->driver;
+
+	platform->card = card;
+	platform->dapm.card = card;
+
+	if (!try_module_get(platform->dev->driver->owner))
+		return -ENODEV;
+
+	soc_init_platform_debugfs(platform);
+
+	if (driver->dapm_widgets)
+		snd_soc_dapm_new_controls(&platform->dapm,
+			driver->dapm_widgets, driver->num_dapm_widgets);
+
+	if (driver->probe) {
+		ret = driver->probe(platform);
+		if (ret < 0) {
+			dev_err(platform->dev,
+				"asoc: failed to probe platform %s: %d\n",
+				platform->name, ret);
+			goto err_probe;
+		}
+	}
+
+	if (driver->controls)
+		snd_soc_add_platform_controls(platform, driver->controls,
+				     driver->num_controls);
+	if (driver->dapm_routes)
+		snd_soc_dapm_add_routes(&platform->dapm, driver->dapm_routes,
+					driver->num_dapm_routes);
+
+	/* mark platform as probed and add to card platform list */
+	platform->probed = 1;
+	list_add(&platform->card_list, &card->platform_dev_list);
+	list_add(&platform->dapm.list, &card->dapm_list);
+
+	return 0;
+
+err_probe:
+	module_put(platform->dev->driver->owner);
 
 	return ret;
 }
