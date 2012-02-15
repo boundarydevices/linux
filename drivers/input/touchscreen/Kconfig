@@ -357,6 +357,18 @@ config TOUCHSCREEN_EP0700M01
 	  Display Technologies' EP0700m01.  To compile this driver as a module,
 	  choose M here: the module will be called i2c_touch.
 
+config TOUCHSCREEN_EP0700M06
+	tristate "Emerging Displays EP0700M06 based touchscreens"
+	depends on I2C
+	help
+	  Say Y here if you have a EP0700M06 based touchscreen
+	  controller
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called ep0700m06_ts.o
+
 config TOUCHSCREEN_HTCPEN
 	tristate "HTC Shift X9500 touchscreen"
 	depends on ISA
