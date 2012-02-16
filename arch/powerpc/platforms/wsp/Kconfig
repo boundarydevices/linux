@@ -14,6 +14,7 @@ config PPC_PSR2
 	select PPC_WSP
 	select PPC_XICS
 	select PPC_ICP_NATIVE
+	select OF_DYNAMIC
 	default y
 
 endmenu
