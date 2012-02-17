@@ -1013,6 +1013,7 @@ static int soc_probe_codec(struct snd_soc_card *card,
 {
 	int ret = 0;
 	const struct snd_soc_codec_driver *driver = codec->driver;
+	struct snd_soc_dai *dai;
 
 	codec->card = card;
 	codec->dapm.card = card;
@@ -1026,6 +1027,14 @@ static int soc_probe_codec(struct snd_soc_card *card,
 	if (driver->dapm_widgets)
 		snd_soc_dapm_new_controls(&codec->dapm, driver->dapm_widgets,
 					  driver->num_dapm_widgets);
+
+	/* Create DAPM widgets for each DAI stream */
+	list_for_each_entry(dai, &dai_list, list) {
+		if (dai->dev != codec->dev)
+			continue;
+
+		snd_soc_dapm_new_dai_widgets(&codec->dapm, dai);
+	}
 
 	codec->dapm.idle_bias_off = driver->idle_bias_off;
 
@@ -1503,7 +1512,8 @@ static void snd_soc_instantiate_card(struct snd_soc_card *card)
 		}
 	}
 
-	/* We should have a non-codec control add function but we don't */
+	snd_soc_dapm_link_dai_widgets(card);
+
 	if (card->controls)
 		snd_soc_add_card_controls(card, card->controls, card->num_controls);
 
