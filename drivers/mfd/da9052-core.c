@@ -411,8 +411,18 @@ void eh_workqueue_isr(struct work_struct *work)
 		da9052_ssc_write_many(da9052, eve_data, j);
 		da9052->spurious_irq_count = 0;
 	} else {
+		struct da9052_ssc_msg boost;
+		boost.addr = DA9052_BOOST_REG;
+		boost.data = 0;
+		da9052_ssc_read(da9052, &boost);
+		if (boost.data & 0x80) {
+			/* clear boost over voltage/current condition */
+			da9052_ssc_write(da9052, &boost);
+			pr_err("%s: boost over voltage/current\n", __func__);
+		} else {
+			pr_err("%s: spurious irq(%d)\n", __func__, da9052->irq);
+		}
 		da9052->spurious_irq_count++;
-		pr_err("%s: spurious irq(%d)\n", __func__, da9052->irq);
 	}
 
 	da9052_unlock(da9052);
