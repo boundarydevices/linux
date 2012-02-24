@@ -27,6 +27,7 @@
 #include <linux/fec.h>
 #include <linux/fsl_devices.h>
 #include <linux/gpio.h>
+#include <linux/gpio-i2cmux.h>
 #ifdef CONFIG_KEYBOARD_GPIO
 #include <linux/gpio_keys.h>
 #endif
@@ -2360,7 +2361,6 @@ MACHINE_END
 
 /*****************************************************************************/
 #ifdef CONFIG_MACH_MX53_NITROGEN_K
-
 #define CONFIG_K2
 
 struct gpio n53k_gpios_specific[] __initdata = {
@@ -2380,13 +2380,17 @@ struct gpio n53k_gpios_specific[] __initdata = {
 	{.label = "Dispay w3 cs",	.gpio = MAKE_GP(3, 3),		.flags = GPIOF_INIT_HIGH},
 	{.label = "da9053 shutdown",	.gpio = MAKE_GP(3, 4),		.flags = GPIOF_INIT_HIGH},
 	{.label = "ambient int",	.gpio = MAKE_GP(3, 7),		.flags = GPIOF_INIT_HIGH},
-	{.label = "i2c2 hub-EDID",	.gpio = MAKE_GP(3, 8),		.flags = GPIOF_INIT_HIGH},
-	{.label = "i2c2 hub-bq24163",	.gpio = MAKE_GP(3, 9),		.flags = GPIOF_INIT_HIGH},
-	{.label = "i2c2 hub-ambient",	.gpio = MAKE_GP(3, 10),		.flags = GPIOF_INIT_HIGH},
+#define I2C2_HUB_EDID				MAKE_GP(3, 8)
+//	{.label = "i2c2 hub-EDID",	.gpio = MAKE_GP(3, 8),		.flags = GPIOF_INIT_LOW},
+#define I2C2_HUB_BQ24163			MAKE_GP(3, 9)
+//	{.label = "i2c2 hub-bq24163",	.gpio = MAKE_GP(3, 9),		.flags = GPIOF_INIT_LOW},
+#define I2C2_HUB_AMBIENT			MAKE_GP(3, 10)
+//	{.label = "i2c2 hub-ambient",	.gpio = MAKE_GP(3, 10),		.flags = GPIOF_INIT_LOW},
 	{.label = "barcode scan power",	.gpio = MAKE_GP(3, 23),		.flags = GPIOF_INIT_HIGH},
 	{.label = "i2c touchscreen reset", .gpio = MAKE_GP(5, 2),	.flags = GPIOF_INIT_HIGH},
 	{.label = "Led1",		.gpio = MAKE_GP(5, 4),		.flags = GPIOF_INIT_HIGH},
-	{.label = "i2c2 hub-Camera",	.gpio = MAKE_GP(6, 10),		.flags = GPIOF_INIT_HIGH},
+#define I2C2_HUB_CAMERA				MAKE_GP(6, 10)
+//	{.label = "i2c2 hub-Camera",	.gpio = MAKE_GP(6, 10),		.flags = GPIOF_INIT_LOW},
 	{.label = "main power",		.gpio = MAKE_GP(6, 12),		.flags = GPIOF_INIT_HIGH},
 	{.label = "eMMC reset",		.gpio = MAKE_GP(7, 10),		.flags = GPIOF_INIT_HIGH},	/* PATA_CS_1 - active low reset */
 //The gpio_keys.c file will request these, they are here for documentation only
@@ -2433,18 +2437,83 @@ struct gpio n53k_gpios_specific[] __initdata = {
 	{.label = "Camera flash",	.gpio = MAKE_GP(3, 2),		.flags = GPIOF_INIT_LOW},	/* EIM_DA2, active high, camera flash */
 };
 
-static struct i2c_board_info n53k_i2c0_board_info[] __initdata = {
-#ifdef CONFIG_K2
-#else
-	{
-	 .type = "bq27200",
-	 .addr = 0x55,
-	 .platform_data  = &i2c_generic_data,
-	},
-#endif
+/* Middle i2C bus has a switch */
+static const unsigned i2c2_gpiomux_gpios[] = {
+	/* i2c3- i2c6*/
+	I2C2_HUB_EDID, I2C2_HUB_BQ24163, I2C2_HUB_AMBIENT, I2C2_HUB_CAMERA
+};
+
+static const unsigned i2c2_gpiomux_values[] = {
+	1, 2, 4, 8
+};
+
+static struct gpio_i2cmux_platform_data i2c2_i2cmux_data = {
+	.parent		= 1,
+	.base_nr	= 3, /* optional */
+	.values		= i2c2_gpiomux_values,
+	.n_values	= ARRAY_SIZE(i2c2_gpiomux_values),
+	.gpios		= i2c2_gpiomux_gpios,
+	.n_gpios	= ARRAY_SIZE(i2c2_gpiomux_gpios),
+	.idle		= 0,
+};
+
+static struct platform_device i2c2_i2cmux = {
+        .name           = "gpio-i2cmux",
+        .id             = 0,
+        .dev            = {
+                .platform_data  = &i2c2_i2cmux_data,
+        },
 };
 
 
+#ifdef CONFIG_K2
+/* Only pmic da9052 on this bus */
+static struct i2c_board_info n53k_i2c0_board_info[] __initdata = {
+};
+
+/* Nothing directly connected to this bus, goes through switch */
+static struct i2c_board_info n53k_i2c1_board_info[] __initdata = {
+};
+
+/* edid */
+static struct i2c_board_info n53k_i2c3_board_info[] __initdata = {
+};
+
+static struct i2c_board_info n53k_i2c4_board_info[] __initdata = {
+	{
+	 .type = "bq27x00-battery",
+	 .addr = 0x55,
+	},
+	{
+	 .type = "bq24163",
+	 .addr = 0x6b,
+	},
+};
+
+/* Ambient light sensor */
+static struct i2c_board_info n53k_i2c5_board_info[] __initdata = {
+	{
+	 .type = "apds9300",
+	 .addr = 0x39,	/* addr_sel floating */
+	},
+};
+
+static struct i2c_board_info n53k_i2c6_board_info[] __initdata = {
+	{
+	 .type = "ov5642",
+	 .addr = 0x3c,
+	 .platform_data  = &camera_data,
+	},
+};
+#else
+
+static struct i2c_board_info n53k_i2c0_board_info[] __initdata = {
+	{
+	 .type = "bq27x00-battery",
+	 .addr = 0x55,
+	 .platform_data  = &i2c_generic_data,
+	},
+};
 static struct i2c_board_info n53k_i2c1_board_info[] __initdata = {
 #if defined (CONFIG_VIDEO_MXC_CAMERA) || defined (CONFIG_VIDEO_MXC_CAMERA_MODULE)
 	{
@@ -2453,12 +2522,6 @@ static struct i2c_board_info n53k_i2c1_board_info[] __initdata = {
 	 .platform_data  = &camera_data,
 	},
 #endif
-#ifdef CONFIG_K2
-	{
-	 .type = "bq27x00-battery",
-	 .addr = 0x55,
-	},
-#else
 	{
 	 .type = "mma8451",
 	 .addr = 0x1c,
@@ -2468,8 +2531,10 @@ static struct i2c_board_info n53k_i2c1_board_info[] __initdata = {
 	 .addr = 0x38,
 	 .platform_data  = &i2c_tfp410_data,
 	},
-#endif
 };
+#endif
+
+
 
 #if defined (CONFIG_TOUCHSCREEN_ATMEL_MXT) || defined (CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
 static struct mxt_platform_data mxt224_data = {
@@ -2507,11 +2572,6 @@ static struct i2c_board_info n53k_i2c2_board_info[] __initdata = {
 	 .type = "tfp410",
 	 .addr = 0x38,
 	 .platform_data  = &i2c_tfp410_data,
-	},
-	{
-	 .type = "bq27200",
-	 .addr = 0x55,
-	 .platform_data  = &i2c_generic_data,
 	},
 #else
 	{
@@ -2633,7 +2693,7 @@ static int n53k_sdhc_write_protect4(struct device *dev)
 
 static struct mxc_mmc_platform_data n53k_mmc4_data = {
 	.ocr_mask = MMC_VDD_165_195,
-	.caps = MMC_CAP_MMC_HIGHSPEED | MMC_CAP_4_BIT_DATA | MMC_CAP_8_BIT_DATA,
+	.caps = MMC_CAP_MMC_HIGHSPEED | MMC_CAP_4_BIT_DATA | MMC_CAP_8_BIT_DATA,	// MMC_CAP_DATA_DDR causes errors
 	.min_clk = 400000,
 	.max_clk = 50000000,
 	.card_inserted_state = 1,
@@ -2677,6 +2737,15 @@ static void __init n53k_board_init(void)
 		n53k_i2c1_board_info, ARRAY_SIZE(n53k_i2c1_board_info),
 		n53k_i2c2_board_info, ARRAY_SIZE(n53k_i2c2_board_info),
 		da9052_irq, &mxci2c2_data);
+
+#ifdef CONFIG_K2
+	mxc_register_device(&i2c2_i2cmux, &i2c2_i2cmux_data);
+	i2c_register_board_info(3, n53k_i2c3_board_info, ARRAY_SIZE(n53k_i2c3_board_info));
+	i2c_register_board_info(4, n53k_i2c4_board_info, ARRAY_SIZE(n53k_i2c4_board_info));
+	i2c_register_board_info(5, n53k_i2c5_board_info, ARRAY_SIZE(n53k_i2c5_board_info));
+	i2c_register_board_info(6, n53k_i2c6_board_info, ARRAY_SIZE(n53k_i2c6_board_info));
+#endif
+
 	/* eMMC is sdhc4 */
 	mxc_register_device(&mxcsdhc4_device, &n53k_mmc4_data);
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
