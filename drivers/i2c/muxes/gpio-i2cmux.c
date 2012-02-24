@@ -28,7 +28,7 @@ static void gpiomux_set(const struct gpiomux *mux, unsigned val)
 	int i;
 
 	for (i = 0; i < mux->data.n_gpios; i++)
-		gpio_set_value(mux->data.gpios[i], val & (1 << i));
+		gpio_set_value(mux->data.gpios[i], (val >> i) & 1);
 }
 
 static int gpiomux_select(struct i2c_adapter *adap, void *data, u32 chan)
