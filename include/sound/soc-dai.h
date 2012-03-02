@@ -253,10 +253,9 @@ struct snd_soc_dai {
 	unsigned int rate;
 
 	/* parent platform/codec */
-	union {
-		struct snd_soc_platform *platform;
-		struct snd_soc_codec *codec;
-	};
+	struct snd_soc_platform *platform;
+	struct snd_soc_codec *codec;
+
 	struct snd_soc_card *card;
 
 	struct list_head list;
