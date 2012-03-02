@@ -151,6 +151,12 @@ config CHARGER_DA9052
 
 	  To compile this driver as a module, choose M here.
 
+config BQ2416X
+	tristate "TI BQ2416X Charger"
+	depends on I2C
+	help
+	  BQ2416X is a charger for single cell lithium-ion (Li+) batteries.
+
 config BATTERY_MAX17085
 	tristate "Maxim MAX17085 charger"
 	depends on PMIC_DA9052 && SENSORS_DA9052

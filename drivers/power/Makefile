@@ -42,3 +42,4 @@ obj-$(CONFIG_DUMB_BATTERY)	+= dumb_battery.o
 obj-$(CONFIG_BATTERY_DS2438)	+= ds2438_battery.o
 obj-$(CONFIG_BATTERY_MAX17085)	+= max17085_battery.o
 obj-$(CONFIG_CHARGER_DA9052)	+= da9052-charger.o
+obj-$(CONFIG_BQ2416X)		+= bq2416x.o
