@@ -1648,6 +1648,10 @@ static int soc_probe(struct platform_device *pdev)
 	if (!card)
 		return -EINVAL;
 
+	dev_warn(&pdev->dev,
+		 "ASoC machine %s should use snd_soc_register_card()\n",
+		 card->name);
+
 	/* Bodge while we unpick instantiation */
 	card->dev = &pdev->dev;
 
