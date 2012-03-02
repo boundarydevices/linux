@@ -32,6 +32,7 @@
 #include <linux/gpio_keys.h>
 #endif
 #include <linux/i2c.h>
+#include <linux/i2c/bq2416x.h>
 #include <linux/init.h>
 #include <linux/input.h>
 #include <linux/interrupt.h>
@@ -2383,10 +2384,12 @@ struct gpio n53k_gpios_specific[] __initdata = {
 #define I2C2_HUB_EDID				MAKE_GP(3, 8)
 //	{.label = "i2c2 hub-EDID",	.gpio = MAKE_GP(3, 8),		.flags = GPIOF_INIT_LOW},
 #define I2C2_HUB_BQ24163			MAKE_GP(3, 9)
-//	{.label = "i2c2 hub-bq24163",	.gpio = MAKE_GP(3, 9),		.flags = GPIOF_INIT_LOW},
+//	{.label = "i2c2 hub-bq2416x",	.gpio = MAKE_GP(3, 9),		.flags = GPIOF_INIT_LOW},
 #define I2C2_HUB_AMBIENT			MAKE_GP(3, 10)
 //	{.label = "i2c2 hub-ambient",	.gpio = MAKE_GP(3, 10),		.flags = GPIOF_INIT_LOW},
 	{.label = "barcode scan power",	.gpio = MAKE_GP(3, 23),		.flags = GPIOF_INIT_HIGH},
+#define N53K_BQ24163_INT			MAKE_GP(4, 2)
+	{.label = "bq2416x interrupt",	.gpio = MAKE_GP(4, 2),		.flags = GPIOF_DIR_IN},
 	{.label = "i2c touchscreen reset", .gpio = MAKE_GP(5, 2),	.flags = GPIOF_INIT_HIGH},
 	{.label = "Led1",		.gpio = MAKE_GP(5, 4),		.flags = GPIOF_INIT_HIGH},
 #define I2C2_HUB_CAMERA				MAKE_GP(6, 10)
@@ -2479,14 +2482,32 @@ static struct i2c_board_info n53k_i2c1_board_info[] __initdata = {
 static struct i2c_board_info n53k_i2c3_board_info[] __initdata = {
 };
 
+static struct plat_i2c_bq2416x_data i2c_bq2416x_data = {
+	.gp = N53K_BQ24163_INT,
+	.policy = {
+		.charge_mV = 4200,			/* 3500mV - 4440mV, default 3600mV, charge voltage  */
+		.charge_current_limit_mA = 1000,	/* 550mA - 2875mA, default 1000mA */
+		.terminate_current_mA = 150,		/* 50mA - 400mA, default 150mA, Stop charging when current drops to this */
+		.usb_voltage_limit_mV = 4200,		/* 4200mV - 47600mV, default 4200mV, reduce charge current to stay above this */
+		.usb_current_limit_mA = 100,		/* 100mA - 1500mA, default 100mA */
+		.in_voltage_limit_mV = 4200,		/* 4200mV - 47600mV, default 4200mV,  reduce charge current to stay above this */
+		.in_current_limit_mA = 2500,		/* 1500mA or 2500mA, default 1500mA */
+		.charge_timeout_minutes = 6*60,		/* 27 minute, 6 hours, 9 hours, infinite are choices, default 27 minutes */
+		.otg_lock = 0,
+		.prefer_usb_charging = 0,
+		.disable_charging = 0,
+	}
+};
+
 static struct i2c_board_info n53k_i2c4_board_info[] __initdata = {
 	{
-	 .type = "bq27x00-battery",
+	 .type = "bq27200",
 	 .addr = 0x55,
 	},
 	{
-	 .type = "bq24163",
+	 .type = "bq2416x",
 	 .addr = 0x6b,
+	 .platform_data  = &i2c_bq2416x_data,
 	},
 };
 
@@ -2509,7 +2530,7 @@ static struct i2c_board_info n53k_i2c6_board_info[] __initdata = {
 
 static struct i2c_board_info n53k_i2c0_board_info[] __initdata = {
 	{
-	 .type = "bq27x00-battery",
+	 .type = "bq27200",
 	 .addr = 0x55,
 	 .platform_data  = &i2c_generic_data,
 	},
@@ -2575,7 +2596,7 @@ static struct i2c_board_info n53k_i2c2_board_info[] __initdata = {
 	},
 #else
 	{
-	 .type = "bq27x00-battery",
+	 .type = "bq27200",
 	 .addr = 0x55,
 	},
 #endif
@@ -2606,6 +2627,7 @@ static iomux_v3_cfg_t n53k_pads_specific[] __initdata = {
 	/* i2c2 hub */
 	MX53_PAD_EIM_DA8__GPIO_3_8,	/* i2c2 hub - EDID */
 	MX53_PAD_EIM_DA9__GPIO_3_9,	/* i2c2 hub - BQ24163 enable */
+	MX53_PAD_GPIO_12__GPIO4_2,	/* BQ24163 int/status */
 	MX53_PAD_ATA_CS_0__GPIO_7_9,	/* accelerometer int1 on i2c3 */
 	MX53_PAD_EIM_DA3__GPIO3_3,	/* Dispay w3 cs */
 	/* UART3 */
