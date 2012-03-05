@@ -159,6 +159,7 @@ static int bq27x00_battery_current(struct bq27x00_device_info *di)
 			dev_dbg(di->dev, "negative current!\n");
 			curr = -curr;
 		}
+		return (curr * (3570 / 10)) >> 1;	//Rs is 20 milliohms
 	}
 
 	return curr * 1000;
