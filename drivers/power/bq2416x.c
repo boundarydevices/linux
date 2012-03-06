@@ -617,11 +617,85 @@ static ssize_t bq2416x_cache_show(struct device *dev,
 
 static DEVICE_ATTR(bq2416x_cache, 0444, bq2416x_cache_show, NULL);
 
+int check_state_change(struct bq2416x_priv *bq, int v)
+{
+	int ret = 0;
+	switch (v & 7) {
+	case 0:
+		break;
+	case 1:
+		dev_warn(&bq->client->dev, "Thermal Shutdown\n");
+		break;
+	case 2:
+		dev_warn(&bq->client->dev, "Battery Temperature Fault\n");
+		break;
+	case 3:
+		/* Watchdog expired, reinit charger */
+		ret = bq2416x_charger_config(bq);
+		dev_warn(&bq->client->dev, "Watchdog expired\n");
+		break;
+	case 4:
+		dev_warn(&bq->client->dev, "Safety Timer Expired\n");
+		break;
+	case 5:
+		dev_warn(&bq->client->dev, "IN Supply Fault\n");
+		break;
+	case 6:
+		dev_warn(&bq->client->dev, "USB Supply Fault\n");
+		break;
+	case 7:
+		dev_warn(&bq->client->dev, "Battery Fault\n");
+		/*
+		 * When battery fault happens, charge voltage
+		 * is reset to 3.6V, change it back without
+		 * restarting a charge cycle.
+		 */
+		ret = bq2416x_reg_write(bq, BQ24163_BATT_VOLTAGE,
+				bq->write_cache[BQ24163_BATT_VOLTAGE]);
+		break;
+	}
+	return ret;
+}
+
+int check_status_ctl_change(struct bq2416x_priv *bq, int v)
+{
+	int ret = 0;
+	int t = v ^ bq->bq_status_ctl;
+	if (t) {
+		dev_info(&bq->client->dev, "reg 0 (status_ctl) now %x\n", v);
+		if (t & 0x70)
+			power_supply_changed(&bq->battery);
+		if (t & 7) {
+			ret = check_state_change(bq, v);
+			if (ret < 0)
+				v &= ~7;
+		}
+		bq->bq_status_ctl = v;
+	}
+	return ret;
+}
+
+int check_supply_status_change(struct bq2416x_priv *bq, int v)
+{
+	int t = v ^ bq->bq_supply_status;
+	if (t) {
+		dev_info(&bq->client->dev, "reg 1 (supply_status) now %x\n", v);
+		bq->bq_supply_status = v;
+		if (t & 0xc0)
+			power_supply_changed(&bq->ac);
+		if (t & 0x30)
+			power_supply_changed(&bq->usb);
+		if (t & 0x6)
+			power_supply_changed(&bq->battery);
+	}
+	return 0;
+}
+
 static s32 monitoring_thread(void *data)
 {
 	struct bq2416x_priv *bq = (struct bq2416x_priv *)data;
 	int ret;
-	int v, t;
+	int v;
 #ifdef TESTING
 	int prev_val = -1;
 #endif
@@ -644,65 +718,17 @@ static s32 monitoring_thread(void *data)
 #endif
 		v = bq2416x_reg_read(bq, BQ24163_STATUS_CTL);
 		if (v >= 0) {
-			t = v ^ bq->bq_status_ctl;
-			if (t) {
-				dev_info(&bq->client->dev,
-					"reg 0 (status_ctl) now %x\n", v);
-				bq->bq_status_ctl = v;
-				if (t & 0x70)
-					power_supply_changed(&bq->battery);
-			}
-			switch (v & 7) {
-			case 0:
-				break;
-			case 1:
-				dev_warn(&bq->client->dev,
-					"Thermal Shutdown\n");
-				break;
-			case 2:
-				dev_warn(&bq->client->dev,
-					"Battery Temperature Fault\n");
-				break;
-			case 3:
-				/* Watchdog expired, reinit charger */
-				ret = bq2416x_charger_config(bq);
-				dev_warn(&bq->client->dev,
-					"Watchdog expired\n");
-				break;
-			case 4:
-				dev_warn(&bq->client->dev,
-					"Safety Timer Expired\n");
-				break;
-			case 5:
-				dev_warn(&bq->client->dev,
-					"IN Supply Fault\n");
-				break;
-			case 6:
-				dev_warn(&bq->client->dev,
-					"USB Supply Fault\n");
-				break;
-			case 7:
-				dev_warn(&bq->client->dev,
-					"Battery Fault\n");
-				break;
-			}
+			ret = check_status_ctl_change(bq, v);
+			if (ret < 0)
+				timeout = msecs_to_jiffies(1000);
 		} else {
 			timeout = msecs_to_jiffies(1000);
 		}
 		v = bq2416x_reg_read(bq, BQ24163_SUPPLY_STATUS);
 		if (v >= 0) {
-			t = v ^ bq->bq_supply_status;
-			if (t) {
-				dev_info(&bq->client->dev,
-					"reg 1 (supply_status) now %x\n", v);
-				bq->bq_supply_status = v;
-				if (t & 0xc0)
-					power_supply_changed(&bq->ac);
-				if (t & 0x30)
-					power_supply_changed(&bq->usb);
-				if (t & 0x6)
-					power_supply_changed(&bq->battery);
-			}
+			ret = check_supply_status_change(bq, v);
+			if (ret < 0)
+				timeout = msecs_to_jiffies(1000);
 		} else {
 			timeout = msecs_to_jiffies(1000);
 		}
@@ -711,9 +737,9 @@ static s32 monitoring_thread(void *data)
 		v = BIT(7);
 		if (bq->policy.prefer_usb_charging)
 			v |= BIT(3);
-		if (bq2416x_reg_write(bq, BQ24163_STATUS_CTL, v) < 0)
+		ret = bq2416x_reg_write(bq, BQ24163_STATUS_CTL, v);
+		if (ret < 0)
 			timeout = msecs_to_jiffies(1000);
-
 
 		ret = wait_event_freezable_timeout(bq->sample_waitq,
 				bq->bReady, timeout);
