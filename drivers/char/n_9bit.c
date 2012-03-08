@@ -51,7 +51,7 @@ static int maxframe = MAX_FRAME;
  */
 #define DEFAULT_RX_BUF_COUNT 10
 #define MAX_RX_BUF_COUNT 60
-#define DEFAULT_TX_BUF_COUNT 3
+#define DEFAULT_TX_BUF_COUNT 7
 
 struct n_9bit_buf {
 	struct n_9bit_buf *link;
@@ -93,6 +93,7 @@ struct n_9bit {
 	struct n_9bit_buf_list	rx_buf_list;
 	struct n_9bit_buf_list	tx_free_buf_list;
 	struct n_9bit_buf_list	rx_free_buf_list;
+	struct n_9bit_buf_list	auto_response_list;
 };
 
 
@@ -141,6 +142,70 @@ static void n_9bit_buf_put(struct n_9bit_buf_list *list,
 
 }
 
+unsigned short max_size[] = {
+	MAX_FRAME, MAX_FRAME, 0, MAX_FRAME,
+	3, MAX_FRAME, 5, 5
+};
+unsigned get_message_cnt(char *p)
+{
+	unsigned type = (p[0] & 0xe0) >> 5;
+	unsigned max = max_size[type];
+	if (max == 0)
+		max = (p[2] << 1) + 4;
+	return max;
+}
+
+/*
+ * add specified 9BIT buffer to tail of auto response list
+ * @list - pointer to buffer list
+ * @buf	- pointer to buffer
+ */
+static int n_9bit_buf_put_auto(struct n_9bit *n_9bit,
+		struct n_9bit_buf *buf)
+{
+	struct n_9bit_buf *cur;
+	struct n_9bit_buf *last = NULL;
+	struct n_9bit_buf **prev;
+	struct n_9bit_buf_list *list;
+	unsigned long flags;
+	unsigned msg_cnt = get_message_cnt(buf->buf);
+	if (msg_cnt > buf->count) {
+		n_9bit_buf_put(&n_9bit->tx_free_buf_list, buf);
+		return -EINVAL;
+	}
+	list = &n_9bit->auto_response_list;
+	spin_lock_irqsave(&list->spinlock,flags);
+
+	/* 1st scan the list and remove if already present */
+	prev = &list->head;
+	cur = *prev;
+	while (cur) {
+		if (memcmp(cur->buf, buf->buf, msg_cnt) == 0) {
+			/* matches, remove this entry */
+			*prev = cur->link;
+			n_9bit_buf_put(&n_9bit->tx_free_buf_list, cur);
+		} else {
+			prev = &cur->link;
+			last = cur;
+		}
+		cur = *prev;
+	}
+	list->tail = last;
+	if (msg_cnt >= buf->count) {
+		n_9bit_buf_put(&n_9bit->tx_free_buf_list, buf);
+	} else {
+		buf->link=NULL;
+		if (list->tail)
+			list->tail->link = buf;
+		else
+			list->head = buf;
+		list->tail = buf;
+		list->count++;
+	}
+	spin_unlock_irqrestore(&list->spinlock,flags);
+	return 0;
+}
+
 static struct n_9bit_buf* n_9bit_buf_put_head(struct n_9bit_buf_list *list,
 		struct n_9bit_buf *buf)
 {
@@ -182,6 +247,49 @@ static struct n_9bit_buf* n_9bit_buf_get(struct n_9bit_buf_list *list)
 	spin_unlock_irqrestore(&list->spinlock,flags);
 	return buf;
 
+}
+
+/* Returns buffer to transmit if auto response match */
+static struct n_9bit_buf *n_9bit_buf_match_auto(struct n_9bit *n_9bit,
+		struct n_9bit_buf *buf, unsigned msg_cnt)
+{
+	struct n_9bit_buf *cur;
+	struct n_9bit_buf *match = NULL;
+	struct n_9bit_buf **prev;
+	struct n_9bit_buf_list *list;
+	unsigned long flags;
+
+	if (msg_cnt > buf->count) {
+		return NULL;
+	}
+	list = &n_9bit->auto_response_list;
+	spin_lock_irqsave(&list->spinlock,flags);
+
+	/* 1st scan the list for match*/
+	prev = &list->head;
+	cur = *prev;
+	while (cur) {
+		if (memcmp(cur->buf, buf->buf, msg_cnt) == 0) {
+			match = cur;
+			break;
+		}
+		prev = &cur->link;
+		cur = *prev;
+	}
+
+	cur = NULL;
+	if (match) {
+		int cnt = match->count - msg_cnt;
+		if (cnt > 0) {
+			cur = n_9bit_buf_get(&n_9bit->tx_free_buf_list);
+			if (cur) {
+				memcpy(cur->buf, &match->buf[msg_cnt], cnt);
+				cur->count = cnt;
+			}
+		}
+	}
+	spin_unlock_irqrestore(&list->spinlock,flags);
+	return cur;
 }
 
 static void flush_rx_queue(struct tty_struct *tty)
@@ -243,6 +351,7 @@ static void n_9bit_release(struct n_9bit *n_9bit)
 	free_list(&n_9bit->rx_buf_list);
 	free_list(&n_9bit->tx_buf_list);
 	free_list(&n_9bit->rx_fill_list);
+	free_list(&n_9bit->auto_response_list);
 	kfree(n_9bit);
 }
 
@@ -322,6 +431,8 @@ static struct n_9bit *n_9bit_alloc(struct tty_struct *tty)
 	n_9bit_buf_list_init(&n_9bit->rx_buf_list);
 	n_9bit_buf_list_init(&n_9bit->tx_buf_list);
 	n_9bit_buf_list_init(&n_9bit->rx_fill_list);
+	n_9bit_buf_list_init(&n_9bit->auto_response_list);
+
 	init_timer(&n_9bit->rx_eom_timer);
 	n_9bit->rx_eom_timer.data = (unsigned long)tty;
 	n_9bit->rx_eom_timer.function = eom_timer;
@@ -524,11 +635,6 @@ static void n_9bit_tty_wakeup(struct tty_struct *tty)
 	n_9bit_send_frames(n_9bit, tty);
 }
 
-unsigned short max_size[] = {
-	MAX_FRAME, MAX_FRAME, 0, MAX_FRAME,
-	3, MAX_FRAME, 5, 5
-};
-
 /*
  * Called by tty driver when receive data is available
  * @tty	- pointer to tty instance data
@@ -543,6 +649,7 @@ static void n_9bit_tty_receive_buf(struct tty_struct *tty, const __u8 *data,
 {
 	struct n_9bit *n_9bit = tty2n_9bit(tty);
 	struct n_9bit_buf *rbuf = NULL;
+	struct n_9bit_buf *tbuf = NULL;
 	int wake = 0;
 
 	pr_debug("%s: called count=%d\n", __func__, count);
@@ -582,11 +689,10 @@ static void n_9bit_tty_receive_buf(struct tty_struct *tty, const __u8 *data,
 		}
 		if (!count) {
 			if (rbuf) {
-				unsigned type = (rbuf->buf[0] & 0xe0) >> 5;
-				unsigned max = max_size[type];
-				if (max == 0)
-					max = (rbuf->buf[2] << 1) + 4;
+				unsigned max = get_message_cnt(rbuf->buf);
 				if (rbuf->count >= max) {
+					if (!tbuf)
+						tbuf = n_9bit_buf_match_auto(n_9bit, rbuf, max);
 					/* add 9BIT buffer to list of received frames */
 					n_9bit_buf_put(&n_9bit->rx_buf_list, rbuf);
 					wake = 1;
@@ -630,6 +736,10 @@ static void n_9bit_tty_receive_buf(struct tty_struct *tty, const __u8 *data,
 		}
 		*rbuf->buf = (unsigned char)ch;
 		rbuf->count = 1;
+	}
+	if (tbuf) {
+		n_9bit_buf_put(&n_9bit->tx_buf_list, tbuf);
+		n_9bit_send_frames(n_9bit, tty);
 	}
 	/* wake up any blocked reads and perform async signaling */
 	if (wake) {
@@ -760,11 +870,23 @@ static ssize_t n_9bit_tty_write(struct tty_struct *tty, struct file *file,
 
 	if (!error) {
 		/* User's buffer is already in kernel space */
-		memcpy(tbuf->buf, data, count);
-		/* Send the data */
-		tbuf->count = error = count;
-		n_9bit_buf_put(&n_9bit->tx_buf_list, tbuf);
-		n_9bit_send_frames(n_9bit, tty);
+		if (data[0]) {
+			memcpy(tbuf->buf, data, count);
+			/* Send the data */
+			tbuf->count = error = count;
+			n_9bit_buf_put(&n_9bit->tx_buf_list, tbuf);
+			n_9bit_send_frames(n_9bit, tty);
+		} else {
+			/* This is an auto response write */
+			if (count > 1) {
+				count--;
+				memcpy(tbuf->buf, data + 1, count);
+				tbuf->count = count;
+				error = n_9bit_buf_put_auto(n_9bit, tbuf);
+				if (error >= 0)
+					error = count + 1;
+			}
+		}
 	}
 	pr_debug("%s: exit %d\n", __func__, error);
 	return error;
