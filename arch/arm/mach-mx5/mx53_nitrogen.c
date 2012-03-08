@@ -338,8 +338,10 @@ struct gpio nitrogen53_gpios[] __initdata = {
 //	{.label = "Back key",		.gpio = MAKE_GP(3, 26),		.flags = GPIOF_DIR_IN},
 //	{.label = "Search key",		.gpio = MAKE_GP(3, 27),		.flags = GPIOF_DIR_IN},
 //	{.label = "Home key",		.gpio = MAKE_GP(3, 29),		.flags = GPIOF_DIR_IN},
+#if !defined(CONFIG_N_9BIT) && !defined(CONFIG_N_9BIT_MODULE)
 #ifndef CONFIG_MACH_MX53_NITROGEN_K
 	{.label = "On/Off key",		.gpio = MAKE_GP(3, 30),		.flags = GPIOF_DIR_IN},
+#endif
 #endif
 #define N53_I2C_1_SDA				MAKE_GP(4, 13)
 	{.label = "i2c-1-sda",		.gpio = MAKE_GP(4, 13),		.flags = GPIOF_DIR_IN},
