@@ -136,7 +136,7 @@ void sc_queue_work(struct uart_sc16is7xx_chan *ch, struct i2c_work* w)
 		 */
 		if (reg < SC_CHAN_REG_CNT) {
 			if ((reg == SC_LCR) && (w->val == 0xbf)) {
-				pr_err("%s: should not set LCR to 0xbf directly\n");
+				pr_err("%s: should not set LCR to 0xbf directly\n", __func__);
 				w->val = UART_LCR_WLEN8;
 			}
 			ch->reg_cache[reg] = w->val;
@@ -1506,8 +1506,8 @@ static void __exit sc16is7xx_exit(void)
 	uart_unregister_driver(&serial_sc16is7xx_reg);
 }
 
-module_init(sc16is7xx_init)
-module_exit(sc16is7xx_exit)
+module_init(sc16is7xx_init);
+module_exit(sc16is7xx_exit);
 
 MODULE_AUTHOR("Troy Kisky <troy.kisky@boundarydevices.com>");
 MODULE_DESCRIPTION("I2C dual serial ports");
