@@ -1214,7 +1214,7 @@ static struct regulator *_regulator_get(struct device *dev, const char *id,
 {
 	struct regulator_dev *rdev;
 	struct regulator_map *map;
-	struct regulator *regulator = ERR_PTR(-ENODEV);
+	struct regulator *regulator = ERR_PTR(-EPROBE_DEFER);
 	const char *devname = NULL;
 	int ret;
 
@@ -2942,7 +2942,7 @@ struct regulator_dev *regulator_register(struct regulator_desc *regulator_desc,
 
 		if (!r) {
 			dev_err(dev, "Failed to find supply %s\n", supply);
-			ret = -ENODEV;
+			ret = -EPROBE_DEFER;
 			goto scrub;
 		}
 
