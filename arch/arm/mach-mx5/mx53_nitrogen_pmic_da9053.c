@@ -70,19 +70,19 @@ static struct regulator_consumer_supply ldo7_consumers[] = {
 	},
 };
 
-static struct regulator_consumer_supply ldo8_consumers[] = {
+struct regulator_consumer_supply ldo8_consumers[] = {
 	{
 		/* Camera 1.8V  */
 		.supply = "VDD_IO",
-		.dev_name = "1-003c",
+		.dev_name = "1-003c",	/* Nitrogen A/K change this */
 	},
 };
 
-static struct regulator_consumer_supply ldo9_consumers[] = {
+struct regulator_consumer_supply ldo9_consumers[] = {
 	{
 		/* Camera 2.75V */
 		.supply = "VDD_A",
-		.dev_name = "1-003c",
+		.dev_name = "1-003c",	/* Nitrogen A/K change this */
 	},
 #if 1
 	{
