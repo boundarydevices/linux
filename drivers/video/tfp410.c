@@ -61,6 +61,7 @@
 #define TFP410_CTL_2_MSEL_MASK	(0x7<<4)
 #define TFP410_CTL_2_MSEL_INT	(1<<4)
 #define TFP410_CTL_2_MSEL_RSEN	(2<<4)
+#define TFP410_CTL_2_MSEL_HTPLG	(3<<4)
 #define TFP410_CTL_2_TSEL_RSEN	(0<<3)
 #define TFP410_CTL_2_TSEL_HTPLG	(1<<3)
 #define TFP410_CTL_2_RSEN	(1<<2)
@@ -91,22 +92,41 @@ struct tfp410_priv
 	int			interruptCnt;
 	int			irq;
 	unsigned		gp;
+#define TFP_ENABLE_HOTPLUG 1
+#define TFP_ENABLE_RSEN	2
 	int			enabled;
+	int			default_mode;
 	int			displayoff;
 #ifdef TESTING
 	struct timeval	lastInterruptTime;
 #endif
 };
 
-static unsigned char cmd_off[] = {
+static unsigned char cmd_off_rsen[] = {
 	TFP410_CTL_1, TFP410_CTL_1_RSVD | TFP410_CTL_1_VEN | TFP410_CTL_1_HEN |
 		TFP410_CTL_1_DSEL | TFP410_CTL_1_BSEL,
+	TFP410_CTL_2, TFP410_CTL_2_MDI | TFP410_CTL_2_MSEL_INT | TFP410_CTL_2_TSEL_RSEN,
 		0
 };
-static unsigned char cmd_on[] = {
+
+static unsigned char cmd_off_hotplug[] = {
+	TFP410_CTL_1, TFP410_CTL_1_RSVD | TFP410_CTL_1_VEN | TFP410_CTL_1_HEN |
+		TFP410_CTL_1_DSEL | TFP410_CTL_1_BSEL,
+	TFP410_CTL_2, TFP410_CTL_2_MDI | TFP410_CTL_2_MSEL_INT | TFP410_CTL_2_TSEL_HTPLG,
+		0
+};
+
+static unsigned char cmd_on_rsen[] = {
 	TFP410_CTL_1, TFP410_CTL_1_RSVD | TFP410_CTL_1_VEN | TFP410_CTL_1_HEN |
 		TFP410_CTL_1_DSEL | TFP410_CTL_1_BSEL | TFP410_CTL_1_PD,
-	TFP410_CTL_2, TFP410_CTL_2_MSEL_RSEN | TFP410_CTL_2_TSEL_RSEN,
+	TFP410_CTL_2, TFP410_CTL_2_MDI | TFP410_CTL_2_MSEL_INT | TFP410_CTL_2_TSEL_RSEN,
+		0
+};
+
+static unsigned char cmd_on_hotplug[] = {
+	TFP410_CTL_1, TFP410_CTL_1_RSVD | TFP410_CTL_1_VEN | TFP410_CTL_1_HEN |
+		TFP410_CTL_1_DSEL | TFP410_CTL_1_BSEL | TFP410_CTL_1_PD,
+	TFP410_CTL_2, TFP410_CTL_2_MDI | TFP410_CTL_2_MSEL_INT | TFP410_CTL_2_TSEL_HTPLG,
 		0
 };
 /*
@@ -126,22 +146,58 @@ static int tfp410_send_cmds(struct i2c_client *client, unsigned char *p)
 	return result;
 }
 
-static int tfp410_on(struct tfp410_priv *tfp)
+static int tfp410_on(struct tfp410_priv *tfp, int mode)
 {
 	int result;
-	pr_info("tfp410: power up\n");
-	result = tfp410_send_cmds(tfp->client, cmd_on);
-	tfp->enabled = (!result) ? 1 : -1;
+	int hotplug = (mode == TFP_ENABLE_HOTPLUG);
+	pr_info("tfp410: power up %s\n", hotplug ? "hotplug" : "rsen");
+	result = tfp410_send_cmds(tfp->client, hotplug ? cmd_on_hotplug : cmd_on_rsen);
+	if (!result)
+		tfp->enabled = mode;
 	return result;
 }
 
 static int tfp410_off(struct tfp410_priv *tfp)
 {
 	int result;
-	pr_info("tfp410: power down\n");
-	result = tfp410_send_cmds(tfp->client, cmd_off);
-	tfp->enabled = (!result) ? 0 : -1;
+	int hotplug = (tfp->default_mode == TFP_ENABLE_HOTPLUG);
+	pr_info("tfp410: power down %s\n", hotplug ? "hotplug" : "rsen");
+	result = tfp410_send_cmds(tfp->client, hotplug ? cmd_off_hotplug : cmd_off_rsen);
+	if (!result)
+		tfp->enabled = 0;
 	return result;
+}
+
+void tfp410_check_hotplug_rsen(struct tfp410_priv *tfp)
+{
+	int retry;
+	int mode;
+	for (retry = 0; retry < 10; retry++) {
+		int ret = i2c_smbus_read_byte_data(tfp->client, TFP410_CTL_2);
+		if (ret < 0) {
+			struct device *dev = &tfp->client->dev;
+			dev_err(dev, "i2c_smbus_read_byte_data failed(%i)\n", ret);
+			mode = tfp->default_mode;
+			if (retry < 8)
+				continue;
+		} else if (ret & TFP410_CTL_2_HTPLG) {
+			mode = TFP_ENABLE_HOTPLUG;
+			tfp->default_mode = mode;
+		} else if (ret & TFP410_CTL_2_RSEN) {
+			mode = TFP_ENABLE_RSEN;
+			tfp->default_mode = mode;
+		} else {
+			mode = 0;
+		}
+		if ((mode != tfp->enabled) || !(ret & TFP410_CTL_2_MDI)) {
+			if (mode)
+				tfp410_on(tfp, mode);
+			else
+				tfp410_off(tfp);
+		} else {
+			break;
+		}
+	}
 }
 
 struct tfp410_priv *g_tfp;
@@ -243,14 +299,10 @@ static int tfp_thread(void *_tfp)
 		} while (1);
 
 		if (tfp->displayoff)
-			bit = 0;
-		if (bit != tfp->enabled) {
-			if (bit) {
-				tfp410_on(tfp);
-			} else {
-				tfp410_off(tfp);
-			}
-		}
+			tfp410_off(tfp);
+		else
+			tfp410_check_hotplug_rsen(tfp);
+
 		if (signal_pending(tsk))
 			break;
 		wait_event_interruptible(tfp->sample_waitq, tfp->bReady);
@@ -309,7 +361,7 @@ static void tfp_deinit(struct tfp410_priv *tfp)
 static int __devinit tfp_init(struct tfp410_priv *tfp, struct i2c_client *client)
 {
 	/* Initialize the tfp410 chip */
-	int result = tfp410_on(tfp);
+	int result = tfp410_on(tfp, tfp->default_mode);
 	if (result)
 		dev_err(&client->dev, "init failed\n");
 	if (tfp->irq < 0)
@@ -402,7 +454,7 @@ static ssize_t tfp410_enable_store(struct device *dev, struct device_attribute *
 		dev_err(dev, "i2c_smbus_write_byte_data failed(%i)\n", result);
 		return -EIO;
 	}
-	tfp->enabled = (val & 1) ? 1 : 0;
+	tfp->enabled = (val & 1) ? tfp->default_mode : 0;
 	return count;
 }
 
@@ -470,6 +522,7 @@ static int __devinit tfp410_probe(struct i2c_client *client,
 	tfp->gp_i2c_sel = gp_i2c_sel;
 	tfp->irq = (plat) ? plat->irq : -1;
 	tfp->gp = (plat) ? plat->gp : -1;
+	tfp->default_mode = TFP_ENABLE_HOTPLUG;
 	printk(KERN_INFO "%s: tfp410 irq=%i gp=%i\n", __func__, tfp->irq, tfp->gp);
 	if (tfp->irq >= 0) {
 		result = request_irq(tfp->irq, &tfp_interrupt, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, client_name, tfp);
@@ -525,7 +578,7 @@ static int tfp410_suspend(struct i2c_client *client, pm_message_t mesg)
 static int tfp410_resume(struct i2c_client *client)
 {
 	struct tfp410_priv *tfp = i2c_get_clientdata(client);
-	int result = tfp410_on(tfp);
+	int result = tfp410_on(tfp, tfp->default_mode);
 	return result;
 }
 
