@@ -1804,15 +1804,17 @@ extern void gpio_sensor_inactive(unsigned int csi);
 
 static s32 ov5642_write_reg(u16 reg, u8 val)
 {
+	int ret;
 	u8 au8Buf[3] = {0};
 
 	au8Buf[0] = reg >> 8;
 	au8Buf[1] = reg & 0xff;
 	au8Buf[2] = val;
 
-	if (i2c_master_send(ov5642_data.i2c_client, au8Buf, 3) < 0) {
-		pr_err("%s:write reg error:reg=%x,val=%x\n",
-			__func__, reg, val);
+	ret = i2c_master_send(ov5642_data.i2c_client, au8Buf, 3);
+	if (ret < 0) {
+		pr_err("%s:write reg error:reg=%x,val=%x, ret=%d\n",
+			__func__, reg, val, ret);
 		return -1;
 	}
 
