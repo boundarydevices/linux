@@ -1598,12 +1598,18 @@ static int snd_pcm_link(struct snd_pcm_substream *substream, int fd)
 	struct file *file;
 	struct snd_pcm_file *pcm_file;
 	struct snd_pcm_substream *substream1;
+	struct snd_pcm_group *group;
 
 	file = snd_pcm_file_fd(fd);
 	if (!file)
 		return -EBADFD;
 	pcm_file = file->private_data;
 	substream1 = pcm_file->substream;
+	group = kmalloc(sizeof(*group), GFP_KERNEL);
+	if (!group) {
+		res = -ENOMEM;
+		goto _nolock;
+	}
 	down_write(&snd_pcm_link_rwsem);
 	write_lock_irq(&snd_pcm_link_rwlock);
 	if (substream->runtime->status->state == SNDRV_PCM_STATE_OPEN ||
@@ -1616,11 +1622,7 @@ static int snd_pcm_link(struct snd_pcm_substream *substream, int fd)
 		goto _end;
 	}
 	if (!snd_pcm_stream_linked(substream)) {
-		substream->group = kmalloc(sizeof(struct snd_pcm_group), GFP_ATOMIC);
-		if (substream->group == NULL) {
-			res = -ENOMEM;
-			goto _end;
-		}
+		substream->group = group;
 		spin_lock_init(&substream->group->lock);
 		INIT_LIST_HEAD(&substream->group->substreams);
 		list_add_tail(&substream->link_list, &substream->group->substreams);
@@ -1632,8 +1634,11 @@ static int snd_pcm_link(struct snd_pcm_substream *substream, int fd)
  _end:
 	write_unlock_irq(&snd_pcm_link_rwlock);
 	up_write(&snd_pcm_link_rwsem);
-	snd_card_unref(substream1->pcm->card);
+ _nolock:
+ 	snd_card_unref(substream1->pcm->card);
 	fput(file);
+	if (res < 0)
+		kfree(group);
 	return res;
 }
 
