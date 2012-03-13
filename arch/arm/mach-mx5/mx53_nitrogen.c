@@ -2517,6 +2517,7 @@ struct gpio n53k_gpios_specific[] __initdata = {
 #define	N53K_HEADPHONE_DET			MAKE_GP(1, 2)
 	{.label = "headphone detect",	.gpio = MAKE_GP(1, 2),		.flags = GPIOF_DIR_IN},
 	{.label = "Display power",	.gpio = MAKE_GP(2, 16),		.flags = GPIOF_INIT_HIGH},
+#define N53K_CAMERA_POWER_DOWN			MAKE_GP(2, 22)
 	{.label = "Camera power down",	.gpio = MAKE_GP(2, 22),		.flags = GPIOF_INIT_HIGH},
 	{.label = "accelerometer int1",	.gpio = MAKE_GP(2, 23),		.flags = GPIOF_DIR_IN},
 	{.label = "accelerometer int2",	.gpio = MAKE_GP(2, 24),		.flags = GPIOF_DIR_IN},
@@ -2550,6 +2551,7 @@ struct gpio n53k_gpios_specific[] __initdata = {
 #else
 	{.label = "eMMC reset",		.gpio = MAKE_GP(3, 8),		.flags = GPIOF_INIT_HIGH},	/* EIM_DA8, GPIO3[8] - active low reset */
 	{.label = "Dispay w3 cs",	.gpio = MAKE_GP(3, 24),		.flags = GPIOF_INIT_HIGH},
+#define N53K_CAMERA_POWER_DOWN			MAKE_GP(1, 2)
 	{.label = "Camera power down",	.gpio = MAKE_GP(1, 2),		.flags = GPIOF_INIT_HIGH},
 #define N53K_I2C_CONNECTOR_BUFFER_ENABLE	MAKE_GP(3, 10)
 	{.label = "I2C conn. buf en",	.gpio = MAKE_GP(3, 10),		.flags = 0},			/* EIM_DA10 */
@@ -2879,11 +2881,20 @@ static int headphone_det_status_k(void)
 const char n53k_camera_i2c_dev_name[] = "6-003c";
 #endif
 
+static void n53k_camera_pwdn(int pwdn)
+{
+	gpio_set_value(N53K_CAMERA_POWER_DOWN, pwdn ? 1 : 0);
+	gpio_set_value(CAMERA_RESET, (0==pwdn));
+}
+
 static void __init n53k_board_init(void)
 {
 	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
 #ifdef CONFIG_K2
+	camera_data.pwdn = n53k_camera_pwdn;
+	camera_data.power_down = N53K_CAMERA_POWER_DOWN;
 	sgtl5000_data.hp_status = headphone_det_status_k;
+	sgtl5000_data.hp_irq = gpio_to_irq(N53K_HEADPHONE_DET);
 	ldo8_consumers[0].dev_name = n53k_camera_i2c_dev_name;
 	ldo9_consumers[0].dev_name = n53k_camera_i2c_dev_name;
 #else
