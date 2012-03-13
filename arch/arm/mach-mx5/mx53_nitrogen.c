@@ -2536,7 +2536,6 @@ struct gpio n53k_gpios_specific[] __initdata = {
 #define N53K_BQ24163_INT			MAKE_GP(4, 2)
 	{.label = "bq2416x interrupt",	.gpio = MAKE_GP(4, 2),		.flags = GPIOF_DIR_IN},
 	{.label = "i2c touchscreen reset", .gpio = MAKE_GP(5, 2),	.flags = GPIOF_INIT_HIGH},
-	{.label = "Led1",		.gpio = MAKE_GP(5, 4),		.flags = GPIOF_INIT_HIGH},
 #define I2C2_HUB_CAMERA				MAKE_GP(6, 10)
 //	{.label = "i2c2 hub-Camera",	.gpio = MAKE_GP(6, 10),		.flags = GPIOF_INIT_LOW},
 	{.label = "main power",		.gpio = MAKE_GP(6, 12),		.flags = GPIOF_INIT_HIGH},
@@ -2579,11 +2578,14 @@ struct gpio n53k_gpios_specific[] __initdata = {
 #endif
 	{.label = "i2c-2-sda",		.gpio = MAKE_GP(7, 11),		.flags = GPIOF_DIR_IN},
 	{.label = "USBH1 Power",	.gpio = MAKE_GP(2, 17),		.flags = GPIOF_INIT_HIGH},	/* EIM_A21, active high power enable */
+#if !defined(CONFIG_GPIO_OUTPUT) && !defined(CONFIG_GPIO_OUTPUT_MODULE)
 	{.label = "barcode scan trig",	.gpio = MAKE_GP(3, 30),		.flags = GPIOF_INIT_LOW},	/* EIM_D30, active high scanner trigger */
+	{.label = "Led1",		.gpio = MAKE_GP(5, 4),		.flags = GPIOF_INIT_HIGH},
 	{.label = "Led2",		.gpio = MAKE_GP(3, 31),		.flags = GPIOF_INIT_HIGH},	/* EIM_D31, active low, Yellow LED */
 	{.label = "Led3",		.gpio = MAKE_GP(3, 22),		.flags = GPIOF_INIT_HIGH},	/* EIM_D22, active low, Blue LED */
 	{.label = "Led4",		.gpio = MAKE_GP(2, 18),		.flags = GPIOF_INIT_HIGH},	/* EIM_A20, active low, Orange LED */
 	{.label = "Camera flash",	.gpio = MAKE_GP(3, 2),		.flags = GPIOF_INIT_LOW},	/* EIM_DA2, active high, camera flash */
+#endif
 };
 
 /* Middle i2C bus has a switch */
