@@ -1644,9 +1644,12 @@ static struct platform_device boundary_camera_interfaces[] = {
 #endif
 
 #if defined (HAVE_CAMERA)
+static struct mxc_camera_platform_data camera_data;
 static void camera_pwdn(int pwdn)
 {
-	gpio_set_value(CAMERA_RESET, (0==pwdn));
+//	pr_info("pwdn=%d camera_data.power_down=%x camera_data.reset=%x\n", pwdn, camera_data.power_down, camera_data.reset);
+	gpio_set_value(camera_data.power_down, pwdn ? 1 : 0);
+	gpio_set_value(camera_data.reset, (0==pwdn));
 }
 
 static struct mxc_camera_platform_data camera_data = {
@@ -1656,7 +1659,7 @@ static struct mxc_camera_platform_data camera_data = {
 	.mclk = 26000000,
 	.csi = 0,
 	.pwdn = camera_pwdn,
-	.power_down = MAKE_GP(1, 2),
+	.power_down = MAKE_GP(1, 2),	/* Nitrogen53 A/K override */
 	.reset = CAMERA_RESET,
 	.i2c_bus = 1,
 	.i2c_id = 0x3c,
@@ -2231,9 +2234,7 @@ static void __init mxc_board_init_nitrogen_a(void)
 	ldo9_consumers[0].dev_name = n53a_camera_i2c_dev_name;
 	mxci2c2_data.i2c_clock_toggle = n53a_i2c_clock_toggle2;
 
-#if defined(CONFIG_VIDEO_BOUNDARY_CAMERA) || defined(CONFIG_VIDEO_BOUNDARY_CAMERA_MODULE)
 	camera_data.power_down = MAKE_GP(2, 22);
-#endif
 
 	if (gpio_request_array(nitrogen53_gpios_specific_a,
 			ARRAY_SIZE(nitrogen53_gpios_specific_a))) {
@@ -2883,17 +2884,10 @@ static int headphone_det_status_k(void)
 const char n53k_camera_i2c_dev_name[] = "6-003c";
 #endif
 
-static void n53k_camera_pwdn(int pwdn)
-{
-	gpio_set_value(N53K_CAMERA_POWER_DOWN, pwdn ? 1 : 0);
-	gpio_set_value(CAMERA_RESET, (0==pwdn));
-}
-
 static void __init n53k_board_init(void)
 {
 	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
 #ifdef CONFIG_K2
-	camera_data.pwdn = n53k_camera_pwdn;
 	camera_data.power_down = N53K_CAMERA_POWER_DOWN;
 	sgtl5000_data.hp_status = headphone_det_status_k;
 	sgtl5000_data.hp_irq = gpio_to_irq(N53K_HEADPHONE_DET);
