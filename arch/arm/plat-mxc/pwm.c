@@ -83,17 +83,20 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 		prescale = period_cycles / 0x10000 + 1;
 
 		period_cycles /= prescale;
-		/* the chip document says the counter counts up to
-		 * period_cycles + 1 and then is reset to 0, so the
-		 *  actual period of the PWM wave is period_cycles + 2
-		 */
-		c = (unsigned long long)(period_cycles + 2) * duty_ns;
+		c = (unsigned long long)period_cycles * duty_ns;
 		do_div(c, period_ns);
 		duty_cycles = c;
 
 		writel(duty_cycles, pwm->mmio_base + MX3_PWMSAR);
-		writel(period_cycles, pwm->mmio_base + MX3_PWMPR);
-
+		if (period_cycles < 2)
+			period_cycles = 2;
+		/*
+		 * The chip document says the counter counts up to
+		 * period_cycles + 1 and then is reset to 0, so the
+		 * actual period of the PWM wave is period_cycles + 2
+		 */
+		writel(period_cycles - 2, pwm->mmio_base + MX3_PWMPR);
+		pr_info("%s: pwm freq = %d\n", __func__, clk_get_rate(pwm->clk) / (prescale * period_cycles));
 		cr = MX3_PWMCR_PRESCALER(prescale) |
 			MX3_PWMCR_STOPEN | MX3_PWMCR_DOZEEN |
 			MX3_PWMCR_WAITEN | MX3_PWMCR_DBGEN;
