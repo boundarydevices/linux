@@ -4538,6 +4538,45 @@ static struct clk gpmi_nand_clk[] = {
 	},
 };
 
+static struct clk pwm_clk_high[] = {
+	{
+	__INIT_CLK_DEBUG(pwm_clk_high_0)
+	 .parent = &ipg_clk,
+	 .id = 0,
+	 .enable_reg = MXC_CCM_CCGR4,
+	 .enable_shift = MXC_CCM_CCGRx_CG8_OFFSET,
+	 .enable = _clk_enable,
+	 .disable = _clk_disable,
+	 },
+	{
+	__INIT_CLK_DEBUG(pwm_clk_high_1)
+	 .parent = &ipg_clk,
+	 .id = 1,
+	 .enable_reg = MXC_CCM_CCGR4,
+	 .enable_shift = MXC_CCM_CCGRx_CG9_OFFSET,
+	 .enable = _clk_enable,
+	 .disable = _clk_disable,
+	 },
+	{
+	__INIT_CLK_DEBUG(pwm_clk_high_2)
+	 .parent = &ipg_clk,
+	 .id = 2,
+	 .enable_reg = MXC_CCM_CCGR4,
+	 .enable_shift = MXC_CCM_CCGRx_CG10_OFFSET,
+	 .enable = _clk_enable,
+	 .disable = _clk_disable,
+	 },
+	{
+	__INIT_CLK_DEBUG(pwm_clk_high_3)
+	 .parent = &ipg_clk,
+	 .id = 3,
+	 .enable_reg = MXC_CCM_CCGR4,
+	 .enable_shift = MXC_CCM_CCGRx_CG11_OFFSET,
+	 .enable = _clk_enable,
+	 .disable = _clk_disable,
+	 },
+};
+
 static struct clk pwm_clk[] = {
 	{
 	__INIT_CLK_DEBUG(pwm_clk_0)
@@ -5111,6 +5150,10 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK("mxc_pwm.1", NULL, pwm_clk[1]),
 	_REGISTER_CLOCK("mxc_pwm.2", NULL, pwm_clk[2]),
 	_REGISTER_CLOCK("mxc_pwm.3", NULL, pwm_clk[3]),
+	_REGISTER_CLOCK("mxc_pwm.0", "high_perf", pwm_clk_high[0]),
+	_REGISTER_CLOCK("mxc_pwm.1", "high_perf", pwm_clk_high[1]),
+	_REGISTER_CLOCK("mxc_pwm.2", "high_perf", pwm_clk_high[2]),
+	_REGISTER_CLOCK("mxc_pwm.3", "high_perf", pwm_clk_high[3]),
 	_REGISTER_CLOCK(NULL, "pcie_clk", pcie_clk[0]),
 	_REGISTER_CLOCK("fec.0", NULL, enet_clk[0]),
 	_REGISTER_CLOCK(NULL, "imx_sata_clk", sata_clk[0]),

@@ -70,7 +70,8 @@ const struct imx_mxc_pwm_data imx6q_mxc_pwm_data[] __initconst = {
 #endif /* ifdef CONFIG_SOC_IMX6Q */
 
 struct platform_device *__init imx_add_mxc_pwm(
-		const struct imx_mxc_pwm_data *data)
+		const struct imx_mxc_pwm_data *data,
+		const struct mxc_pwm_platform_data *pdata)
 {
 	struct resource res[] = {
 		{
@@ -85,5 +86,5 @@ struct platform_device *__init imx_add_mxc_pwm(
 	};
 
 	return imx_add_platform_device("mxc_pwm", data->id,
-			res, ARRAY_SIZE(res), NULL, 0);
+			res, ARRAY_SIZE(res), pdata, sizeof(*pdata));
 }
