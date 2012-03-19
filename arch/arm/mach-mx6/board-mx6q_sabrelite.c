@@ -450,10 +450,18 @@ static const struct anatop_thermal_platform_data
 		.name = "anatop_thermal",
 };
 
+static const struct imxuart_platform_data mx6_arm2_uart2_data __initconst = {
+	.flags      = IMXUART_HAVE_RTSCTS | IMXUART_SDMA,
+	.dma_req_rx = MX6Q_DMA_REQ_UART3_RX,
+	.dma_req_tx = MX6Q_DMA_REQ_UART3_TX,
+};
+
+
 static inline void mx6q_sabrelite_init_uart(void)
 {
 	imx6q_add_imx_uart(0, NULL);
 	imx6q_add_imx_uart(1, NULL);
+	imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
 }
 
 static int mx6q_sabrelite_fec_phy_init(struct phy_device *phydev)
@@ -933,6 +941,10 @@ static struct regulator_consumer_supply n6q_vwl1271_consumers[] = {
 };
 
 static struct regulator_init_data n6q_vwl1271_init = {
+	.constraints            = {
+		.name           = "VDD_1.8V",
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+	},
 	.num_consumer_supplies = ARRAY_SIZE(n6q_vwl1271_consumers),
 	.consumer_supplies = n6q_vwl1271_consumers,
 };
@@ -1304,7 +1316,7 @@ static void __init mx6_sabrelite_board_init(void)
 	platform_device_register(&n6q_vwl1271_reg_devices);
 
 	gpio_set_value(N6Q_WL1271_WL_EN, 1);		/* momentarily enable */
-//	gpio_set_value(N6Q_WL1271_BT_EN, 1);
+	gpio_set_value(N6Q_WL1271_BT_EN, 1);
 	mdelay(2);
 	gpio_set_value(N6Q_WL1271_WL_EN, 0);
 	gpio_set_value(N6Q_WL1271_BT_EN, 0);
