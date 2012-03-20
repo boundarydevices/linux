@@ -938,6 +938,17 @@ static struct ethtool_ops ax88772_ethtool_ops = {
 static unsigned char g_ethaddr1[ETH_ALEN];
 static unsigned char g_ethaddr2[ETH_ALEN];
 
+struct bus_and_port_to_mac {
+	int bus ;
+	u8  port ;
+	u8  *addr ;
+};
+
+static struct bus_and_port_to_mac const address_map[] = {
+	{ 1, 5, g_ethaddr1 }
+,	{ 1, 3, g_ethaddr2 }
+};
+
 static int __init parse_mac(unsigned char *mac, unsigned char const *str_mac)
 {
 	int i = 0;
@@ -979,21 +990,26 @@ static int __init ethaddr2_setup(char *options)
 __setup("ethaddr1", ethaddr1_setup);
 __setup("ethaddr2", ethaddr2_setup);
 
-
+static u8 *find_mac(int bus, u8 port) {
+	int i ;
+	for (i = 0 ; i < ARRAY_SIZE(address_map); i++) {
+		if ((bus == address_map[i].bus)
+		    &&
+		    (port == address_map[i].port)) {
+			return address_map[i].addr ;
+		}
+	}
+	return 0 ;
+}
 
 void ax8817x_get_mac(struct usbnet *dev, void *buf)
 {
 	int ret;
-	if (dev->udev->bus->busnum <= 2) {
-		/* allow mac overrides */
-		unsigned char* p = g_ethaddr1;
-		if (dev->udev->bus->busnum > 1)
-			p = g_ethaddr2;
-		if (is_valid_ether_addr(p)) {
-			memcpy(dev->net->dev_addr, p, ETH_ALEN);
-			memset(p, 0, ETH_ALEN);	/* don't use again */
-			goto out1;
-		}
+	unsigned char* p = find_mac(dev->udev->bus->busnum,dev->udev->portnum);
+	if (p && is_valid_ether_addr(p)) {
+		memcpy(dev->net->dev_addr, p, ETH_ALEN);
+		p[4]++ ;	/* don't re-use */
+		goto out1;
 	}
 	memset(buf, 0, ETH_ALEN);
 	if ((ret = ax8817x_read_cmd(dev, AX88772_CMD_READ_NODE_ID,
