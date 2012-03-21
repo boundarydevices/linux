@@ -66,6 +66,7 @@
 #include <linux/usb/f_accessory.h>
 #include <linux/wl12xx.h>
 #include <linux/android_pmem.h>
+#include <linux/ektf2k.h>
 
 #include <mach/common.h>
 #include <mach/hardware.h>
@@ -345,8 +346,13 @@ struct gpio nitrogen53_gpios[] __initdata = {
 	{.label = "i2c-1-sda",		.gpio = MAKE_GP(4, 13),		.flags = GPIOF_DIR_IN},
 #define N53_TFP410_INT				MAKE_GP(4, 15)
 	{.label = "tfp410int",		.gpio = MAKE_GP(4, 15),		.flags = GPIOF_DIR_IN},		/* KEY_ROW4 */
+
+#ifdef CONFIG_MACH_MX53_NITROGEN_K
+#define N53_I2C_CONNECTOR_INT			MAKE_GP(6, 6)
+#else
 #define N53_I2C_CONNECTOR_INT			MAKE_GP(7, 12)
-	{.label = "i2c_int",		.gpio = MAKE_GP(7, 12),		.flags = GPIOF_DIR_IN},
+#endif
+	{.label = "i2c_int",		.gpio = N53_I2C_CONNECTOR_INT,	.flags = GPIOF_DIR_IN},
 
 /* Outputs */
 #define CAMERA_STROBE				MAKE_GP(1, 7)
@@ -2508,6 +2514,27 @@ MACHINE_END
 
 /*****************************************************************************/
 #ifdef CONFIG_MACH_MX53_NITROGEN_K
+
+#if defined(CONFIG_TOUCHSCREEN_EKTF2K) || defined(CONFIG_TOUCHSCREEN_EKTF2K_MODULE)
+static int elan_ktf2k_ts_power(int on)
+{
+	pr_info("%s: power %d\n", __func__, on);
+	return 0;
+}
+
+struct elan_ktf2k_i2c_platform_data ts_elan_ktf2k_data[] = {
+	{
+	.version = 0x0001,
+	.abs_x_min = 11,
+	.abs_x_max = 2111,
+	.abs_y_min = 24,
+	.abs_y_max = 1255,
+	.intr_gpio = N53_I2C_CONNECTOR_INT,
+	.power = elan_ktf2k_ts_power,
+	},
+};
+#endif
+
 #define CONFIG_K2
 
 struct gpio n53k_gpios_specific[] __initdata = {
@@ -2731,7 +2758,14 @@ static struct i2c_board_info n53k_i2c2_board_info[] __initdata = {
 	 .type = "mXT224",
 	 .addr = 0x4b,
 	 .platform_data  = &mxt224_data,
-	 .irq = gpio_to_irq(MAKE_GP(6,6)), 	/* EIM_A23 */
+	 .irq = gpio_to_irq(N53_I2C_CONNECTOR_INT),	/* EIM_A23 */
+	},
+#endif
+#if defined(CONFIG_TOUCHSCREEN_EKTF2K) || defined(CONFIG_TOUCHSCREEN_EKTF2K_MODULE)
+	{
+	 I2C_BOARD_INFO(ELAN_KTF2K_NAME, 0x10),
+	 .platform_data = &ts_elan_ktf2k_data,
+	 .irq = gpio_to_irq(N53_I2C_CONNECTOR_INT),	/* EIM_A23 */
 	},
 #endif
 #ifdef CONFIG_K2
