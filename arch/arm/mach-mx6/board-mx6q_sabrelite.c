@@ -862,7 +862,7 @@ static struct fsl_mxc_hdmi_platform_data hdmi_data = {
 
 static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
 	.ipu_id = 0,
-	.disp_id = 0,
+	.disp_id = 1,
 };
 
 static struct fsl_mxc_lcd_platform_data lcdif_data = {
