@@ -755,6 +755,7 @@ static struct mxc_w1_config mxc_w1_data = {
 #if defined(CONFIG_MXC_PWM) && defined(CONFIG_BACKLIGHT_PWM)
 static struct mxc_pwm_platform_data mxc_pwm1_platform_data = {
 	.pwmo_invert = 0,	/* GPIO_9 */
+	.clk_select = PWM_CLK_HIGHPERF,
 };
 
 static struct mxc_pwm_platform_data mxc_pwm2_platform_data = {
