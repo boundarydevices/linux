@@ -719,6 +719,7 @@ static int esdhc_pltfm_init(struct sdhci_host *host, struct sdhci_pltfm_data *pd
 		host->ocr_avail_sd |= MMC_VDD_165_195;
 	if (boarddata->support_8bit)
 		host->mmc->caps |= MMC_CAP_8_BIT_DATA;
+	host->mmc->caps |= boarddata->caps;
 	if (boarddata->keep_power_at_suspend)
 		host->mmc->pm_caps |= MMC_PM_KEEP_POWER;
 	if (cpu_is_mx6()) {
