@@ -855,6 +855,7 @@ static int esdhc_pltfm_init(struct sdhci_host *host, struct sdhci_pltfm_data *pd
 
 	if (boarddata->support_8bit)
 		host->mmc->caps |= MMC_CAP_8_BIT_DATA;
+	host->mmc->caps |= boarddata->caps;
 	if (boarddata->keep_power_at_suspend)
 		host->mmc->pm_caps |= (MMC_PM_KEEP_POWER | \
 					MMC_PM_WAKE_SDIO_IRQ);
