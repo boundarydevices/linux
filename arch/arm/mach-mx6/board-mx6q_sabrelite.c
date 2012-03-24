@@ -427,7 +427,8 @@ static const struct esdhc_platform_data mx6q_sabrelite_sd2_data __initconst = {
 	.always_present = 1,
 	.cd_gpio = -1,
 	.wp_gpio = -1,
-	.keep_power_at_suspend = 1,
+	.keep_power_at_suspend = 0,
+	.caps = MMC_CAP_POWER_OFF_CARD,
 	.platform_pad_change = plt_sd2_pad_change,
 };
 
