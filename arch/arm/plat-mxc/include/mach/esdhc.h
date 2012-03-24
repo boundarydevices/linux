@@ -34,6 +34,7 @@ struct esdhc_platform_data {
 	unsigned int support_18v;
 	unsigned int support_8bit;
 	unsigned int keep_power_at_suspend;
+	unsigned int caps;
 	unsigned int delay_line;
 	int (*platform_pad_change)(unsigned int index, int clock);
 };
