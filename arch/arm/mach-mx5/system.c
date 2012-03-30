@@ -269,13 +269,13 @@ static int __mxs_reset_block(void __iomem *hwreg, int just_enable)
 	return 0;
 }
 
-int mxs_reset_block(void __iomem *hwreg, int just_enable)
+int mxs_reset_block(void __iomem *hwreg)
 {
 	int try = 10;
 	int r;
 
 	while (try--) {
-		r = __mxs_reset_block(hwreg, just_enable);
+		r = __mxs_reset_block(hwreg, false);
 		if (!r)
 			break;
 		pr_debug("%s: try %d failed\n", __func__, 10 - try);
