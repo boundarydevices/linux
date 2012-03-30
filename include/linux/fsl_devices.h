@@ -284,6 +284,8 @@ struct fsl_mxc_camera_platform_data {
 	u32 csi;
 	void (*pwdn)(int pwdn);
 	void (*io_init)(void);
+	int power_down;
+	int reset;
 };
 
 struct fsl_mxc_tvin_platform_data {
