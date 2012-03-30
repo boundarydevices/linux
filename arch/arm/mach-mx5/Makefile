@@ -26,3 +26,6 @@ obj-$(CONFIG_MX51_EFIKA_COMMON) += mx51_efika.o
 obj-$(CONFIG_MACH_MX51_EFIKAMX) += board-mx51_efikamx.o
 obj-$(CONFIG_MACH_MX51_EFIKASB) += board-mx51_efikasb.o
 obj-$(CONFIG_MACH_MX50_RDP) += board-mx50_rdp.o mx50_rdp_pmic_mc13892.o
+obj-$(CONFIG_MACH_MX53_NITROGEN) += board-mx53_nitrogen.o mx53_nitrogen_pmic_da9053.o
+obj-$(CONFIG_MACH_MX53_NITROGEN_A) += board-mx53_nitrogen.o mx53_nitrogen_pmic_da9053.o
+obj-$(CONFIG_MACH_MX53_NITROGEN_K) += board-mx53_nitrogen.o mx53_nitrogen_pmic_da9053.o
