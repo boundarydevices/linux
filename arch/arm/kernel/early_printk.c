@@ -48,8 +48,11 @@ asmlinkage void early_printk(const char *fmt, ...)
 	va_end(ap);
 }
 
+int earlyprintk_active;
+
 static int __init setup_early_printk(char *buf)
 {
+	earlyprintk_active = 1;
 	register_console(&early_console);
 	return 0;
 }
