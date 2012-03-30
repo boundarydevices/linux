@@ -34,8 +34,8 @@ extern const struct imx_imx2_wdt_data imx53_imx2_wdt_data[];
 	imx_add_imx2_wdt(&imx53_imx2_wdt_data[id])
 
 extern const struct imx_mxc_pwm_data imx53_mxc_pwm_data[] __initconst;
-#define imx53_add_mxc_pwm(id)	\
-	imx_add_mxc_pwm(&imx53_mxc_pwm_data[id])
+#define imx53_add_mxc_pwm(id, pdata)	\
+	imx_add_mxc_pwm(&imx53_mxc_pwm_data[id], pdata)
 
 #define imx53_add_mxc_pwm_backlight(id, pdata)                 \
 	platform_device_register_resndata(NULL, "pwm-backlight",\
