@@ -1012,14 +1012,15 @@ static struct spi_board_info spidev[] __initdata = {
 };
 
 static const struct esdhc_platform_data sd1_data __initconst = {
-	.cd_gpio = N53_SD1_CD,
 	.wp_gpio = N53_SD1_WP,
+	.cd_gpio = N53_SD1_CD,
 };
 
 static const struct esdhc_platform_data sd3_data __initconst = {
-	.always_present = 1,
-	.cd_gpio = -1,
 	.wp_gpio = -1,
+	.cd_gpio = -1,
+	.always_present = 1,
+	.support_18v = 1,
 	.keep_power_at_suspend = 0,
 	.caps = MMC_CAP_POWER_OFF_CARD,
 };
