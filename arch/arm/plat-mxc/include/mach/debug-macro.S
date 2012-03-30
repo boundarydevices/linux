@@ -41,7 +41,21 @@
 #ifdef UART_PADDR
 #error "CONFIG_DEBUG_LL is incompatible with multiple archs"
 #endif
+#ifdef CONFIG_ARCH_MX53
+
+#include <mach/hardware.h>
+#if (0 == CONFIG_LL_DEBUG_UART)
+#define UART_PADDR      MX53_UART1_BASE_ADDR
+#elif (1 == CONFIG_LL_DEBUG_UART)
+#define UART_PADDR      MX53_UART2_BASE_ADDR
+#elif (2 == CONFIG_LL_DEBUG_UART)
+#define UART_PADDR      MX53_UART3_BASE_ADDR
+#else
+#error no LL_DEBUG_UART defined
+#endif
+#else
 #define UART_PADDR	MX51_UART1_BASE_ADDR
+#endif
 #endif
 
 #ifdef CONFIG_ARCH_MX6Q
