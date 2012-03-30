@@ -631,6 +631,7 @@ static int mxc_rtc_probe(struct platform_device *pdev)
 	__raw_writel(0xFFFFFFFF, ioaddr + SRTC_LPSR);
 	udelay(100);
 
+	platform_set_drvdata(pdev, pdata);
 	rtc = rtc_device_register(pdev->name, &pdev->dev,
 				  &mxc_rtc_ops, THIS_MODULE);
 	if (IS_ERR(rtc)) {
@@ -639,7 +640,6 @@ static int mxc_rtc_probe(struct platform_device *pdev)
 	}
 
 	pdata->rtc = rtc;
-	platform_set_drvdata(pdev, pdata);
 
 	tv.tv_nsec = 0;
 	tv.tv_sec = __raw_readl(ioaddr + SRTC_LPSCMR);
