@@ -27,6 +27,7 @@
 #include <linux/fsl_devices.h>
 #include <linux/slab.h>
 #include <linux/gpio.h>
+#include <linux/clk.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -54,6 +55,7 @@ struct imx_priv {
 static struct imx_priv card_priv;
 static struct snd_soc_card snd_soc_card_imx;
 
+struct clk *codec_mclk;
 static struct snd_soc_jack hs_jack;
 
 /* Headphones jack detection DAPM pins */
@@ -76,11 +78,23 @@ static struct snd_soc_jack_gpio hs_jack_gpios[] = {
 
 static int imx_hifi_startup(struct snd_pcm_substream *substream)
 {
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+
+	if (!codec_dai->active)
+		clk_enable(codec_mclk);
+
 	return 0;
 }
 
 static void imx_hifi_shutdown(struct snd_pcm_substream *substream)
 {
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+
+	if (!codec_dai->active)
+		clk_disable(codec_mclk);
+
 	return;
 }
 
@@ -241,7 +255,7 @@ static DRIVER_ATTR(headphone, S_IRUGO | S_IWUSR, show_headphone, NULL);
 static int imx_wm8958_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_codec *codec = rtd->codec;
-	int ret, i;
+	int ret;
 
 /* Add imx specific widgets */
 	snd_soc_dapm_new_controls(&codec->dapm, imx_dapm_widgets,
@@ -250,11 +264,12 @@ static int imx_wm8958_init(struct snd_soc_pcm_runtime *rtd)
 	/* Set up imx specific audio path audio_map */
 	snd_soc_dapm_add_routes(&codec->dapm, audio_map, ARRAY_SIZE(audio_map));
 
+	snd_soc_dapm_enable_pin(&codec->dapm, "Headphone Jack");
+
 	snd_soc_dapm_sync(&codec->dapm);
 
-/*headphone detection conflict with the headphone jack*/
-/*
 	if (hs_jack_gpios[0].gpio != -1) {
+		/* Jack detection API stuff */
 		ret = snd_soc_jack_new(codec, "Headphone Jack",
 					   SND_JACK_HEADPHONE, &hs_jack);
 		if (ret)
@@ -272,7 +287,7 @@ static int imx_wm8958_init(struct snd_soc_pcm_runtime *rtd)
 		if (ret)
 			printk(KERN_WARNING "failed to call snd_soc_jack_add_gpios\n");
 	}
-*/
+
 	return 0;
 }
 
@@ -333,6 +348,12 @@ static int __devinit imx_wm8958_probe(struct platform_device *pdev)
 	struct wm8994 *wm8958 = plat->priv;
 	int ret = 0;
 
+	codec_mclk = clk_get(NULL, "clko_clk");
+	if (IS_ERR(codec_mclk)) {
+		printk(KERN_ERR "can't get CLKO clock.\n");
+		return PTR_ERR(codec_mclk);
+	}
+
 	priv->pdev = pdev;
 	priv->wm8958 = wm8958;
 	priv->hp_irq = gpio_to_irq(plat->hp_gpio);
@@ -371,6 +392,9 @@ static int __devexit imx_wm8958_remove(struct platform_device *pdev)
 
 	if (plat->finit)
 		plat->finit();
+
+	clk_disable(codec_mclk);
+	clk_put(codec_mclk);
 
 	return 0;
 }
