@@ -79,7 +79,7 @@ static struct platform_device_id fec_devtype[] = {
 #else
 	{
 		.name = DRIVER_NAME,
-		.driver_data = 0,
+		.driver_data = FEC_QUIRK_ENET_MAC,
 	},
 #endif
 	{
@@ -147,6 +147,19 @@ MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
 #define FEC_ENET_TS_TIMER       ((uint)0x00008000)
 #define FEC_ENET_MII_CLK       ((uint)2500000)
 #define FEC_ENET_HOLD_TIME     ((uint)0x100)  /* 2 internal clock cycle*/
+
+/*
+ * RMII mode to be configured via a gasket
+ */
+#define FEC_MIIGSK_CFGR_FRCONT		(1 << 6)
+#define FEC_MIIGSK_CFGR_LBMODE		(1 << 4)
+#define FEC_MIIGSK_CFGR_EMODE		(1 << 3)
+#define FEC_MIIGSK_CFGR_IF_MODE_MASK	(3 << 0)
+#define FEC_MIIGSK_CFGR_IF_MODE_MII	(0 << 0)
+#define FEC_MIIGSK_CFGR_IF_MODE_RMII	(1 << 0)
+
+#define FEC_MIIGSK_ENR_READY		(1 << 2)
+#define FEC_MIIGSK_ENR_EN		(1 << 1)
 
 #if defined(CONFIG_FEC_1588) && (defined(CONFIG_ARCH_MX28) || \
 				defined(CONFIG_ARCH_MX6))
@@ -904,6 +917,9 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	 */
 	fep->phy_speed = DIV_ROUND_UP(clk_get_rate(fep->clk),
 					(FEC_ENET_MII_CLK << 2)) << 1;
+#ifdef CONFIG_MDIO_ICS1893
+	fep->phy_speed = 0x7e ; /* slow */
+#endif
 
 	/* set hold time to 2 internal clock cycle */
 	if (cpu_is_mx6())
@@ -1432,11 +1448,12 @@ fec_restart(struct net_device *dev, int duplex)
 #else
 				reg = 0x0;
 #endif
-	} else
-		reg = 0x0;
+		} else
+			reg = 0x0;
 
 #ifdef FEC_MIIGSK_ENR
-		if (fep->phy_interface == PHY_INTERFACE_MODE_RMII) {
+		if ((fep->phy_interface == PHY_INTERFACE_MODE_RMII) ||
+				(fep->phy_interface == PHY_INTERFACE_MODE_GMII)) {
 			/* disable the gasket and wait */
 			writel(0, fep->hwp + FEC_MIIGSK_ENR);
 			while (readl(fep->hwp + FEC_MIIGSK_ENR) & 4)
@@ -1446,11 +1463,15 @@ fec_restart(struct net_device *dev, int duplex)
 			 * configure the gasket:
 			 *   RMII, 50 MHz, no loopback, no echo
 			 */
-			writel(1, fep->hwp + FEC_MIIGSK_CFGR);
-
+			val = (fep->phy_interface == PHY_INTERFACE_MODE_RMII) ?
+					FEC_MIIGSK_CFGR_IF_MODE_RMII : 0;
+			if (fep->phy_dev && fep->phy_dev->speed == SPEED_10)
+				val |= 1 << 6;
+			writel(val, fep->hwp + FEC_MIIGSK_CFGR);
 			/* re-enable the gasket */
 			writel(2, fep->hwp + FEC_MIIGSK_ENR);
 		}
+		writel(0, fep->hwp + FEC_MIB_CTRLSTAT); /* enable MIB counters */
 #endif
 	}
 
