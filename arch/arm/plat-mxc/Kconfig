@@ -95,7 +95,7 @@ config DMA_ZONE_SIZE
 
 # set iff we need the 1504 transceiver code
 config ISP1504_MXC
-	bool
+	bool "ISP1504 usb transceiver"
 	default y
 
 # set iff we need the UTMI transceiver code
