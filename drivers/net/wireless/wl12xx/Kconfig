@@ -1,6 +1,7 @@
 menuconfig WL12XX
 	tristate "TI wl12xx driver support"
 	depends on MAC80211 && EXPERIMENTAL
+	select WEXT_PRIV
 	---help---
 	  This will enable TI wl12xx driver support. The drivers make
 	  use of the mac80211 stack.
@@ -41,7 +42,7 @@ config WL1251_SDIO
 
 config WL1271
 	tristate "TI wl1271 support"
-	depends on WL12XX && SPI_MASTER && GENERIC_HARDIRQS
+	depends on WL12XX && GENERIC_HARDIRQS
 	depends on INET
 	select FW_LOADER
 	select CRC7
