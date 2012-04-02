@@ -1172,8 +1172,6 @@ static struct mxc_mmc_platform_data mmc1_data = {
 	.power_mmc = NULL,
 };
 
-#define TIWI_REGULATOR_NAME "vwl1271"
-
 static struct mxc_mmc_platform_data mmc3_data = {
 	.ocr_mask = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30
 		| MMC_VDD_31_32,
@@ -1182,7 +1180,7 @@ static struct mxc_mmc_platform_data mmc3_data = {
 	.max_clk = 50000000,
 	.card_inserted_state = 1,
 	.status = sdhc_get_card_det_true,
-	.power_mmc = TIWI_REGULATOR_NAME,
+	.power_mmc = "vmmc",
 };
 
 static int mxc_sgtl5000_amp_enable(int enable)
@@ -2399,7 +2397,7 @@ static struct regulator_init_data nitrogen53_vmmc2 = {
 };
 
 static struct fixed_voltage_config nitrogen53_vwlan = {
-	.supply_name		= TIWI_REGULATOR_NAME,
+	.supply_name		= "vwl1271",
 	.microvolts		= 1800000, /* 1.80V */
 	.gpio			= N53_WL1271_WL_EN,
 	.startup_delay		= 70000, /* 70ms */
@@ -2869,7 +2867,7 @@ static struct regulator_init_data n53k_vmmc2 = {
 };
 
 static struct fixed_voltage_config n53k_vwlan = {
-	.supply_name = TIWI_REGULATOR_NAME,
+	.supply_name = "vwl1271",
 	.microvolts = 1800000, /* 1.80V */
 	.gpio = N53K_WL1271_WL_EN,
 	.startup_delay = 70000, /* 70ms */
