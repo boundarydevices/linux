@@ -75,8 +75,12 @@ obj-$(CONFIG_MFD_RDC321X)	+= rdc321x-southbridge.o
 obj-$(CONFIG_MFD_JANZ_CMODIO)	+= janz-cmodio.o
 obj-$(CONFIG_MFD_MAX17135)  += max17135-core.o
 
-#ifeq ($(CONFIG_PMIC_DA9052),y)
-da9052-objs			:= da9052-spi.o da9052-i2c.o da9052-core.o
+da9052-objs			:= da9052-core.o
+ifeq ($(CONFIG_PMIC_DA905X_SPI),y)
+da9052-objs			+= da9052-spi.o
+endif
+ifeq ($(CONFIG_PMIC_DA905X_I2C),y)
+da9052-objs			+= da9052-i2c.o
+endif
 obj-$(CONFIG_PMIC_DA9052)	+= da9052.o
-#endif
 
