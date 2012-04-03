@@ -491,12 +491,6 @@ static struct irq_map_entry irq_map[NR_IRQS];
 static unsigned int irq_virq_count = NR_IRQS;
 static struct irq_domain *irq_default_host;
 
-irq_hw_number_t irqd_to_hwirq(struct irq_data *d)
-{
-	return irq_map[d->irq].hwirq;
-}
-EXPORT_SYMBOL_GPL(irqd_to_hwirq);
-
 irq_hw_number_t virq_to_hw(unsigned int virq)
 {
 	return irq_map[virq].hwirq;
