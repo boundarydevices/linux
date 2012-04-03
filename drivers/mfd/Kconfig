@@ -471,8 +471,7 @@ config MFD_PCF50633
 
 config PMIC_DIALOG
 	bool "Support Dialog Semiconductor PMIC"
-	depends on I2C=y
-	depends on SPI=y
+	depends on I2C=y || SPI=y
 	select MFD_CORE
 	help
 	Support for Dialog semiconductor PMIC chips.
@@ -506,6 +505,15 @@ config PMIC_DA9053Bx
 	functionality of the device.
 endchoice
 
+config PMIC_DA905X_SPI
+	bool "Dialog SPI interface"
+	depends on PMIC_DIALOG && SPI=y
+	default y
+
+config PMIC_DA905X_I2C
+	bool "Dialog I2C interface"
+	depends on PMIC_DIALOG && I2C=y
+	default y
 
 config MFD_MC_PMIC
 	tristate "Support Freescale Freescale's PMIC"
