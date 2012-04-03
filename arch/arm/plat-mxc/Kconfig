@@ -64,7 +64,7 @@ endmenu
 ## Freescale private USB driver support
 # set if we need the 1504 transceiver
 config ISP1504_MXC
-	bool
+	bool "ISP1504 usb transceiver"
 	default y
 
 # set if we need the UTMI transceiver
