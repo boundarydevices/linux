@@ -775,6 +775,7 @@ static int __devinit pfuze100_regulator_probe(struct platform_device *pdev)
 	struct pfuze_regulator_platform_data *pdata =
 	    dev_get_platdata(&pdev->dev);
 	struct pfuze_regulator_init_data *init_data;
+	struct regulator_config config = { };
 	int i, ret;
 
 	priv = kzalloc(sizeof(*priv) +
@@ -791,9 +792,12 @@ static int __devinit pfuze100_regulator_probe(struct platform_device *pdev)
 	pfuze_unlock(pfuze100);
 	for (i = 0; i < pdata->num_regulators; i++) {
 		init_data = &pdata->regulators[i];
+		config.dev = &pdev->dev;
+		config.init_data = init_data->init_data;
+		config.driver_data = priv;
 		priv->regulators[i] =
 		    regulator_register(&pfuze100_regulators[init_data->id].desc,
-				       &pdev->dev, init_data->init_data, priv, NULL);
+				       &config);
 		if (IS_ERR(priv->regulators[i])) {
 			dev_err(&pdev->dev, "failed to register regulator %s\n",
 				pfuze100_regulators[i].desc.name);

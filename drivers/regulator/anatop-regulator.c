@@ -134,6 +134,7 @@ int anatop_regulator_probe(struct platform_device *pdev)
 	struct regulator_dev *rdev;
 	struct anatop_regulator *sreg;
 	struct regulator_init_data *initdata;
+	struct regulator_config config = { };
 
 	sreg = platform_get_drvdata(pdev);
 	initdata = pdev->dev.platform_data;
@@ -158,8 +159,10 @@ int anatop_regulator_probe(struct platform_device *pdev)
 			pdev->id);
 
 	/* register regulator */
-	rdev = regulator_register(rdesc, &pdev->dev,
-				  initdata, sreg, NULL);
+	config.dev = &pdev->dev;
+	config.init_data = initdata;
+	config.driver_data = sreg;
+	rdev = regulator_register(rdesc, &config);
 
 	if (IS_ERR(rdev)) {
 		dev_err(&pdev->dev, "failed to register %s\n",

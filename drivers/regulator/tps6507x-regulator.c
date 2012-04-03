@@ -554,6 +554,7 @@ int tps6507x_pmic_probe(struct platform_device *pdev)
 {
 	struct tps6507x_dev *tps6507x_dev = dev_get_drvdata(pdev->dev.parent);
 	struct tps_info *info = &tps6507x_pmic_regs[0];
+	struct regulator_config config = { };
 	struct regulator_init_data *init_data;
 	struct regulator_dev *rdev;
 	struct tps6507x_pmic *tps;
@@ -604,8 +605,11 @@ int tps6507x_pmic_probe(struct platform_device *pdev)
 		tps->desc[i].type = REGULATOR_VOLTAGE;
 		tps->desc[i].owner = THIS_MODULE;
 
-		rdev = regulator_register(&tps->desc[i],
-					tps6507x_dev->dev, init_data, tps, NULL);
+		config.dev = tps6507x_dev->dev;
+		config.init_data = init_data;
+		config.driver_data = tps;
+
+		rdev = regulator_register(&tps->desc[i], &config);
 		if (IS_ERR(rdev)) {
 			dev_err(tps6507x_dev->dev,
 				"failed to register %s regulator\n",

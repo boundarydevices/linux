@@ -545,10 +545,12 @@ static void max17135_setup_timings(struct max17135 *max17135)
 static int max17135_regulator_probe(struct platform_device *pdev)
 {
 	struct regulator_dev *rdev;
+	struct regulator_config config = { };
 
-	rdev = regulator_register(&max17135_reg[pdev->id], &pdev->dev,
-				  pdev->dev.platform_data,
-				  dev_get_drvdata(&pdev->dev), NULL);
+	config.dev = &pdev->dev;
+	config.init_data = pdev->dev.platform_data;
+	config.driver_data = dev_get_drvdata(&pdev->dev);
+	rdev = regulator_register(&max17135_reg[pdev->id], &config);
 
 	if (IS_ERR(rdev)) {
 		dev_err(&pdev->dev, "failed to register %s\n",

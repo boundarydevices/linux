@@ -144,6 +144,7 @@ static __devinit int arizona_micsupp_probe(struct platform_device *pdev)
 	struct arizona *arizona = dev_get_drvdata(pdev->dev.parent);
 	struct arizona_micsupp *micsupp;
 	struct regulator_init_data *init_data;
+	struct regulator_config config = { };
 	int ret;
 
 	micsupp = devm_kzalloc(&pdev->dev, sizeof(*micsupp), GFP_KERNEL);
@@ -173,10 +174,10 @@ static __devinit int arizona_micsupp_probe(struct platform_device *pdev)
 	regmap_update_bits(arizona->regmap, ARIZONA_MIC_CHARGE_PUMP_1,
 			   ARIZONA_CPMIC_BYPASS, 0);
 
-	micsupp->regulator = regulator_register(&arizona_micsupp,
-						 arizona->dev, init_data,
-						 micsupp, NULL);
-
+	config.dev = arizona->dev;
+	config.init_data = init_data;
+	config.driver_data = micsupp;
+	micsupp->regulator = regulator_register(&arizona_micsupp, &config);
 	if (IS_ERR(micsupp->regulator)) {
 		ret = PTR_ERR(micsupp->regulator);
 		dev_err(arizona->dev, "Failed to register mic supply: %d\n",

@@ -112,6 +112,7 @@ static __devinit int arizona_ldo1_probe(struct platform_device *pdev)
 	struct arizona *arizona = dev_get_drvdata(pdev->dev.parent);
 	struct arizona_ldo1 *ldo1;
 	struct regulator_init_data *init_data;
+	struct regulator_config config = { };
 	int ret;
 
 	ldo1 = devm_kzalloc(&pdev->dev, sizeof(*ldo1), GFP_KERNEL);
@@ -145,10 +146,10 @@ static __devinit int arizona_ldo1_probe(struct platform_device *pdev)
 	else
 		init_data = &ldo1->init_data;
 
-	ldo1->regulator = regulator_register(&arizona_ldo1,
-					     arizona->dev, init_data,
-					     ldo1, NULL);
-
+	config.dev = arizona->dev;
+	config.init_data = init_data;
+	config.driver_data = ldo1;
+	ldo1->regulator = regulator_register(&arizona_ldo1, &config);
 	if (IS_ERR(ldo1->regulator)) {
 		ret = PTR_ERR(ldo1->regulator);
 		dev_err(arizona->dev, "Failed to register LDO1 supply: %d\n",

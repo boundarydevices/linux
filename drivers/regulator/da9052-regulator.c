@@ -416,6 +416,7 @@ static struct regulator_ops da9052_ldo_buck_ops = {
 
 static int __devinit da9052_regulator_probe(struct platform_device *pdev)
 {
+	struct regulator_config config = { };
 	struct da9052_regulator_priv *priv;
 	struct da9052_regulator_platform_data *pdata =
 				(pdev->dev.platform_data);
@@ -433,10 +434,13 @@ static int __devinit da9052_regulator_probe(struct platform_device *pdev)
 		init_data = &pdata->regulators[i];
 		init_data->driver_data = da9052;
 		pdev->dev.platform_data = init_data;
+
+		config.dev = &pdev->dev;
+		config.init_data = init_data;
+		config.driver_data = priv;
+
 		priv->regulators[i] = regulator_register(
-				&da9052_regulators[i].reg_desc,
-				&pdev->dev, init_data,
-				priv);
+				&da9052_regulators[i].reg_desc, &config);
 		if (IS_ERR(priv->regulators[i])) {
 			ret = PTR_ERR(priv->regulators[i]);
 			goto err;
