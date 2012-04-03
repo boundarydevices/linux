@@ -1954,9 +1954,9 @@ struct gpio nitrogen53_gpios_specific_a[] __initdata = {
 	{.label = "pmic-int",		.gpio = MAKE_GP(2, 21),		.flags = GPIOF_DIR_IN},
 	{.label = "Camera power down",	.gpio = MAKE_GP(2, 22),		.flags = GPIOF_INIT_HIGH},	/* EIM_A16 */
 //	{.label = "i2c2b sw-camera",		.gpio = MAKE_GP(3, 2),		.flags = GPIOF_INIT_LOW},	/* EIM_DA2 */
-#define N53A_I2C_PIC16F616_INT				MAKE_GP(3, 6)
+#define N53A_I2C_PIC16F616_INT				MAKE_GP(3, 8)
 #if defined (CONFIG_TOUCHSCREEN_I2C) || defined (CONFIG_TOUCHSCREEN_I2C_MODULE)
-	{.label = "i2c_pic_int",		.gpio = MAKE_GP(3, 6),		.flags = GPIOF_DIR_IN},		/* EIM_DA6 */
+	{.label = "i2c_pic_int",		.gpio = MAKE_GP(3, 8),		.flags = GPIOF_DIR_IN},		/* EIM_DA6 */
 #endif
 //	{.label = "i2c2a hub-PIC16F616_TOUCH",	.gpio = MAKE_GP(3, 7),		.flags = GPIOF_INIT_LOW},	/* EIM_DA7 */
 //	{.label = "i2c2a hub-empty",		.gpio = MAKE_GP(3, 9),		.flags = GPIOF_INIT_LOW},	/* EIM_DA9 */
@@ -2193,6 +2193,9 @@ static iomux_v3_cfg_t nitrogen53_pads_specific_a[] __initdata = {
 
 	/* i2c3 switch */
 	MX53_PAD_NANDF_RB0__GPIO6_10,	/* Camera buffer enable */
+
+	/* Pic16F616 touch int */
+	NEW_PAD_CTRL(MX53_PAD_EIM_DA8__GPIO_3_8, BUTTON_100K) | MUX_SION_MASK,
 };
 
 static int sdhc_write_protect4(struct device *dev)
