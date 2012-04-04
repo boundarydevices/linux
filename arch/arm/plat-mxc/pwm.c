@@ -97,7 +97,7 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 		 * actual period of the PWM wave is period_cycles + 2
 		 */
 		writel(period_cycles - 2, pwm->mmio_base + MX3_PWMPR);
-		pr_info("%s: pwm freq = %d\n", __func__, clk_get_rate(pwm->clk) / (prescale * period_cycles));
+		pr_info("%s: pwm freq = %ld\n", __func__, clk_get_rate(pwm->clk) / (prescale * period_cycles));
 		cr = MX3_PWMCR_PRESCALER(prescale) |
 			MX3_PWMCR_STOPEN | MX3_PWMCR_DOZEEN |
 			MX3_PWMCR_WAITEN | MX3_PWMCR_DBGEN;
@@ -149,6 +149,7 @@ int pwm_enable(struct pwm_device *pwm)
 	reg = readl(pwm->mmio_base + MX3_PWMCR);
 	reg |= MX3_PWMCR_EN;
 	writel(reg, pwm->mmio_base + MX3_PWMCR);
+	pr_info("%s:\n", __func__);
 
 	if (pwm->enable_pwm_pad)
 		pwm->enable_pwm_pad();
@@ -163,6 +164,7 @@ void pwm_disable(struct pwm_device *pwm)
 		pwm->disable_pwm_pad();
 
 	writel(0, pwm->mmio_base + MX3_PWMCR);
+	pr_info("%s:\n", __func__);
 
 	if (pwm->clk_enabled) {
 		clk_disable(pwm->clk);
