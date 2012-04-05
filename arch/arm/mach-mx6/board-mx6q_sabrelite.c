@@ -265,7 +265,7 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_DI0_PIN15__IPU1_DI0_PIN15,		/* DE */
 	MX6Q_PAD_DI0_PIN2__IPU1_DI0_PIN2,		/* HSync */
 	MX6Q_PAD_DI0_PIN3__IPU1_DI0_PIN3,		/* VSync */
-	MX6Q_PAD_DI0_PIN4__IPU1_DI0_PIN4,		/* Contrast */
+	MX6Q_PAD_DI0_PIN4__GPIO_4_20,			/* TSC2007 I2C Touch IRQ */
 	MX6Q_PAD_DISP0_DAT0__IPU1_DISP0_DAT_0,
 	MX6Q_PAD_DISP0_DAT1__IPU1_DISP0_DAT_1,
 	MX6Q_PAD_DISP0_DAT2__IPU1_DISP0_DAT_2,
@@ -291,7 +291,7 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_DISP0_DAT22__IPU1_DISP0_DAT_22,
 	MX6Q_PAD_DISP0_DAT23__IPU1_DISP0_DAT_23,
 	MX6Q_PAD_GPIO_7__GPIO_1_7,		/* J7 - Display Connector GP */
-	MX6Q_PAD_GPIO_9__GPIO_1_9,		/* J7 - Display Connector GP */
+	MX6Q_PAD_GPIO_9__GPIO_1_9,		/* J7 - I2C connector interrupt GP */
 	MX6Q_PAD_NANDF_D0__GPIO_2_0,		/* J6 - LVDS Display contrast */
 
 
@@ -648,10 +648,37 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	},
 };
 
+//static struct tsc2007_platform_data tsc2007_info = {
+//	.model			= 2004,
+//	.x_plate_ohms		= 500,
+//};
+
+struct plat_i2c_generic_data {
+	unsigned irq;
+	unsigned gp;
+};
+
+static struct plat_i2c_generic_data ep0_platform_data = {
+	.irq			= gpio_to_irq(MX6Q_SABRELITE_CAP_TCH_INT1),
+	.gp			= MX6Q_SABRELITE_CAP_TCH_INT1,
+};
+
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("egalax_ts", 0x4),
 		.irq = gpio_to_irq(MX6Q_SABRELITE_CAP_TCH_INT1),
+//	}, {
+//		I2C_BOARD_INFO("tsc2004", 0x48),
+//		.platform_data	= &tsc2007_info,
+//		.irq		= gpio_to_irq(MX6Q_SABRELITE_TSC2007_IRQGPIO),
+	}, {
+#if defined(CONFIG_TOUCHSCREEN_EP0700M01) || defined(CONFIG_TOUCHSCREEN_EP0700M01_MODULES)
+		I2C_BOARD_INFO("ep0700m01-ts", 0x38),
+#else
+		I2C_BOARD_INFO("ep0700m06-ts", 0x38),
+#endif
+		.irq		= gpio_to_irq(MX6Q_SABRELITE_CAP_TCH_INT1),
+		.platform_data	= &ep0_platform_data,
 	},
 };
 
