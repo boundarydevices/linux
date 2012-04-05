@@ -481,12 +481,6 @@ struct ab3100_get_set_reg_priv {
 	bool mode;
 };
 
-static int ab3100_get_set_reg_open_file(struct inode *inode, struct file *file)
-{
-	file->private_data = inode->i_private;
-	return 0;
-}
-
 static ssize_t ab3100_get_set_reg(struct file *file,
 				  const char __user *user_buf,
 				  size_t count, loff_t *ppos)
@@ -581,7 +575,7 @@ static ssize_t ab3100_get_set_reg(struct file *file,
 }
 
 static const struct file_operations ab3100_get_set_reg_fops = {
-	.open = ab3100_get_set_reg_open_file,
+	.open = simple_open,
 	.write = ab3100_get_set_reg,
 	.llseek = noop_llseek,
 };

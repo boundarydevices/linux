@@ -1236,14 +1236,6 @@ static int i915_gen6_forcewake_count_info(struct seq_file *m, void *data)
 	return 0;
 }
 
-static int
-i915_wedged_open(struct inode *inode,
-		 struct file *filp)
-{
-	filp->private_data = inode->i_private;
-	return 0;
-}
-
 static ssize_t
 i915_wedged_read(struct file *filp,
 		 char __user *ubuf,
@@ -1294,7 +1286,7 @@ i915_wedged_write(struct file *filp,
 
 static const struct file_operations i915_wedged_fops = {
 	.owner = THIS_MODULE,
-	.open = i915_wedged_open,
+	.open = simple_open,
 	.read = i915_wedged_read,
 	.write = i915_wedged_write,
 	.llseek = default_llseek,
