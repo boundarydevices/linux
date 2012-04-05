@@ -31,6 +31,8 @@
 #include <linux/delay.h>
 #include <linux/input.h>
 
+#define USE_ABS_MT		//build as multi-touch driver, comment out to test using ts_calibrate/ts_test
+
 static int calibration[7] = {0};
 module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
 
@@ -146,21 +148,37 @@ static inline void ts_evt_add(struct ep0700m01_ts *ts, unsigned buttons, struct 
 		ts->touch_count[1] = 0;
 	if (!buttons) {
 		/* send release to user space. */
-		input_event(idev, EV_ABS, ABS_MT_TOUCH_MAJOR, 0);
 		ts->touch_count[0] = 0;
+#ifdef USE_ABS_MT
+		input_event(idev, EV_ABS, ABS_MT_TOUCH_MAJOR, 0);
 		input_mt_sync(idev);
+#else
+		input_report_abs(idev, ABS_PRESSURE, 0);
+		input_report_key(idev, BTN_TOUCH, 0);
+		input_sync(idev);
+#endif
 	} else {
 		for (i = 0; i < buttons; i++) {
 			if (0 < ts->touch_count[i]++) {
+#ifdef USE_ABS_MT
 				input_event(idev, EV_ABS, ABS_MT_POSITION_X, ts->save_points[i].x);
 				input_event(idev, EV_ABS, ABS_MT_POSITION_Y, ts->save_points[i].y);
 				input_event(idev, EV_ABS, ABS_MT_TOUCH_MAJOR, 1);
 				input_mt_sync(idev);
+#else
+				input_report_abs(idev, ABS_X, ts->save_points[i].x);
+				input_report_abs(idev, ABS_Y, ts->save_points[i].y);
+				input_report_abs(idev, ABS_PRESSURE, 1);
+				input_report_key(idev, BTN_TOUCH, 1);
+				input_sync(idev);
+#endif
 			}
 			ts->save_points[i] = q[i];
 		}
 	}
+#ifdef USE_ABS_MT
 	input_sync(idev);
+#endif
 }
 
 static int ts_open(struct input_dev *idev)
@@ -192,9 +210,16 @@ static inline int ts_register(struct ep0700m01_ts *ts)
 	__set_bit(EV_KEY, idev->evbit);
 	__set_bit(BTN_TOUCH, idev->keybit);
 
+#ifdef USE_ABS_MT
 	input_set_abs_params(idev, ABS_MT_POSITION_X, 0, 2047, 0, 0);
 	input_set_abs_params(idev, ABS_MT_POSITION_Y, 0, 2047, 0, 0);
 	input_set_abs_params(idev, ABS_MT_TOUCH_MAJOR, 0, 1, 0, 0);
+#else
+	__set_bit(EV_SYN, idev->evbit);
+	input_set_abs_params(idev, ABS_X, 0, 2047, 0, 0);
+	input_set_abs_params(idev, ABS_Y, 0, 2047, 0, 0);
+	input_set_abs_params(idev, ABS_PRESSURE, 0, 1, 0, 0);
+#endif
 
 	input_set_drvdata(idev, ts);
 	return input_register_device(idev);
