@@ -1959,7 +1959,8 @@ struct gpio nitrogen53_gpios_specific_a[] __initdata = {
 	{.label = "i2c_pic_int",		.gpio = MAKE_GP(3, 8),		.flags = GPIOF_DIR_IN},		/* EIM_DA6 */
 #endif
 //	{.label = "i2c2a hub-PIC16F616_TOUCH",	.gpio = MAKE_GP(3, 7),		.flags = GPIOF_INIT_LOW},	/* EIM_DA7 */
-//	{.label = "i2c2a hub-empty",		.gpio = MAKE_GP(3, 9),		.flags = GPIOF_INIT_LOW},	/* EIM_DA9 */
+//gpio3[9] - must always be high on early board rev, (empty i2c hub without pullups)
+	{.label = "i2c2 empty hub",		.gpio = MAKE_GP(3, 9),		.flags = GPIOF_INIT_LOW},	/* EIM_DA9 */
 //	{.label = "i2c2a hub-TFP410_ACCEL",	.gpio = MAKE_GP(3, 1),		.flags = GPIOF_INIT_LOW},	/* EIM_DA10 */
 //	{.label = "led0",		.gpio = MAKE_GP(4, 2),		.flags = 0},
 	{.label = "led1",		.gpio = MAKE_GP(4, 3),		.flags = 0},
@@ -2011,6 +2012,11 @@ static struct i2c_board_info n53a_i2c3_board_info[] __initdata = {
 };
 
 static struct i2c_board_info n53a_i2c4_board_info[] __initdata = {
+	{
+	 .type = "ov5642",
+	 .addr = 0x3c,
+	 .platform_data  = &camera_data,
+	},
 };
 
 static struct i2c_board_info n53a_i2c5_board_info[] __initdata = {
@@ -2047,14 +2053,6 @@ static struct i2c_board_info n53a_i2c7_board_info[] __initdata = {
 	},
 };
 
-static struct i2c_board_info n53a_i2c8_board_info[] __initdata = {
-	{
-	 .type = "ov5642",
-	 .addr = 0x3c,
-	 .platform_data  = &camera_data,
-	},
-};
-
 #endif
 
 #ifdef CONFIG_MACH_NITROGEN_A_IMX53
@@ -2062,8 +2060,7 @@ static struct i2c_board_info n53a_i2c8_board_info[] __initdata = {
 static const unsigned n53a_i2c2_gpiomux_gpios[] = {
 	/* i2c3- i2c6*/
 	MAKE_GP(3, 7),		/* EIM_DA7 - PIC16F616_TOUCH */
-	MAKE_GP(3, 9),		/* EIM_DA9 - Empty */
-	/* This is also N53_I2C_CONNECTOR_BUFFER_ENABLE same as Nitrogen53 board */
+	MAKE_GP(3, 10),		/* EIM_DA10 - Camera */
 	MAKE_GP(3, 11),		/* EIM_DA11 - TFP410_ACCEL*/
 	MAKE_GP(6, 11)		/* NANDF_CS0 - BATT_EDID */
 };
@@ -2115,35 +2112,6 @@ static struct platform_device n53a_i2c3_i2cmux = {
         .id             = 1,
         .dev            = {
                 .platform_data  = &n53a_i2c3_i2cmux_data,
-        },
-};
-
-/* i2c8, Middle i2C bus also has a buffer for camera */
-
-static const unsigned n53a_i2c2b_gpiomux_gpios[] = {
-	/* i2c8*/
-	MAKE_GP(3, 2)		/* EIM_DA2 - Switch enable for Camera */
-};
-
-static const unsigned n53a_i2c2b_gpiomux_values[] = {
-	1
-};
-
-static struct gpio_i2cmux_platform_data n53a_i2c2b_i2cmux_data = {
-	.parent		= 1,
-	.base_nr	= 8, /* optional */
-	.values		= n53a_i2c2b_gpiomux_values,
-	.n_values	= ARRAY_SIZE(n53a_i2c2b_gpiomux_values),
-	.gpios		= n53a_i2c2b_gpiomux_gpios,
-	.n_gpios	= ARRAY_SIZE(n53a_i2c2b_gpiomux_gpios),
-	.idle		= 0,
-};
-
-static struct platform_device n53a_i2c2b_i2cmux = {
-        .name           = "gpio-i2cmux",
-        .id             = 2,
-        .dev            = {
-                .platform_data  = &n53a_i2c2b_i2cmux_data,
         },
 };
 
@@ -2242,7 +2210,10 @@ static void __init mxc_board_init_nitrogen_a(void)
 	ldo9_consumers[0].dev_name = n53a_camera_i2c_dev_name;
 	mxci2c2_data.i2c_clock_toggle = n53a_i2c_clock_toggle2;
 
+#ifdef HAVE_CAMERA
 	camera_data.power_down = MAKE_GP(2, 22);
+	camera_data.i2c_bus = 4;
+#endif
 
 	if (gpio_request_array(nitrogen53_gpios_specific_a,
 			ARRAY_SIZE(nitrogen53_gpios_specific_a))) {
@@ -2270,9 +2241,6 @@ static void __init mxc_board_init_nitrogen_a(void)
 
 	mxc_register_device(&n53a_i2c3_i2cmux, &n53a_i2c3_i2cmux_data);
 	i2c_register_board_info(7, n53a_i2c7_board_info, ARRAY_SIZE(n53a_i2c7_board_info));
-
-	mxc_register_device(&n53a_i2c2b_i2cmux, &n53a_i2c2b_i2cmux_data);
-	i2c_register_board_info(8, n53a_i2c8_board_info, ARRAY_SIZE(n53a_i2c8_board_info));
 }
 
 MACHINE_START(NITROGEN_A_IMX53, "Boundary Devices Nitrogen_A MX53 Board")
