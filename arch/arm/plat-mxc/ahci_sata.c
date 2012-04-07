@@ -403,6 +403,20 @@ static int sata_init(struct device *dev)
 
 	writel(tmpdata, mmio + HOST_TIMER1MS);
 
+	if (machine_is_nitrogen_imx53()
+	    || machine_is_nitrogen_v2_imx53()
+	    || machine_is_nitrogen_a_imx53()) {
+                struct regulator *reg_1v3 = regulator_get(dev, "VDD_CORE");
+		ret = IS_ERR(reg_1v3);
+		if (ret) {
+			dev_err(dev, "can't get VDD_CORE\n");
+		} else {
+			ret = regulator_enable(reg_1v3);
+			if (ret) {
+				dev_err(dev, "enable VDD_CORE error.\n");
+			}
+		}
+	}
 	if (machine_is_mx53_smd() || machine_is_mx53_loco()
 			|| board_is_mx53_ard_b()) {
 		/* FSL IMX AHCI SATA uses the internal usb phy1 clk */
