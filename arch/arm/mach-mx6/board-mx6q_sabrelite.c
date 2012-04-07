@@ -51,7 +51,7 @@
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
 #include <linux/android_pmem.h>
-//#include <linux/i2c/tsc2007.h>
+#include <linux/i2c/tsc2007.h>
 #include <linux/wl12xx.h>
 
 #include <mach/common.h>
@@ -134,7 +134,7 @@ extern void mx6_cpu_regulator_init(void);
 
 static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	/* AUDMUX */
-//#define NITROGEN6W
+#define NITROGEN6W
 #ifdef NITROGEN6W
 	MX6Q_PAD_CSI0_DAT7__AUDMUX_AUD3_RXD,
 	MX6Q_PAD_CSI0_DAT4__AUDMUX_AUD3_TXC,
@@ -653,10 +653,10 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	},
 };
 
-//static struct tsc2007_platform_data tsc2007_info = {
-//	.model			= 2004,
-//	.x_plate_ohms		= 500,
-//};
+static struct tsc2007_platform_data tsc2007_info = {
+	.model			= 2004,
+	.x_plate_ohms		= 500,
+};
 
 struct plat_i2c_generic_data {
 	unsigned irq;
@@ -672,10 +672,10 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("egalax_ts", 0x4),
 		.irq = gpio_to_irq(MX6Q_SABRELITE_CAP_TCH_INT1),
-//	}, {
-//		I2C_BOARD_INFO("tsc2004", 0x48),
-//		.platform_data	= &tsc2007_info,
-//		.irq		= gpio_to_irq(MX6Q_SABRELITE_TSC2007_IRQGPIO),
+	}, {
+		I2C_BOARD_INFO("tsc2004", 0x48),
+		.platform_data	= &tsc2007_info,
+		.irq		= gpio_to_irq(MX6Q_SABRELITE_TSC2007_IRQGPIO),
 	}, {
 #if defined(CONFIG_TOUCHSCREEN_EP0700M01) || defined(CONFIG_TOUCHSCREEN_EP0700M01_MODULES)
 		I2C_BOARD_INFO("ep0700m01-ts", 0x38),
