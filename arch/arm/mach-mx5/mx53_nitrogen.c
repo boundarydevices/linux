@@ -1172,8 +1172,6 @@ static struct mxc_mmc_platform_data mmc1_data = {
 	.power_mmc = NULL,
 };
 
-#define TIWI_REGULATOR_NAME "vwl1271"
-
 static struct mxc_mmc_platform_data mmc3_data = {
 	.ocr_mask = MMC_VDD_27_28 | MMC_VDD_28_29 | MMC_VDD_29_30
 		| MMC_VDD_31_32,
@@ -1182,7 +1180,7 @@ static struct mxc_mmc_platform_data mmc3_data = {
 	.max_clk = 50000000,
 	.card_inserted_state = 1,
 	.status = sdhc_get_card_det_true,
-	.power_mmc = TIWI_REGULATOR_NAME,
+	.power_mmc = "vmmc",
 };
 
 static int mxc_sgtl5000_amp_enable(int enable)
@@ -1956,12 +1954,13 @@ struct gpio nitrogen53_gpios_specific_a[] __initdata = {
 	{.label = "pmic-int",		.gpio = MAKE_GP(2, 21),		.flags = GPIOF_DIR_IN},
 	{.label = "Camera power down",	.gpio = MAKE_GP(2, 22),		.flags = GPIOF_INIT_HIGH},	/* EIM_A16 */
 //	{.label = "i2c2b sw-camera",		.gpio = MAKE_GP(3, 2),		.flags = GPIOF_INIT_LOW},	/* EIM_DA2 */
-#define N53A_I2C_PIC16F616_INT				MAKE_GP(3, 6)
+#define N53A_I2C_PIC16F616_INT				MAKE_GP(3, 8)
 #if defined (CONFIG_TOUCHSCREEN_I2C) || defined (CONFIG_TOUCHSCREEN_I2C_MODULE)
-	{.label = "i2c_pic_int",		.gpio = MAKE_GP(3, 6),		.flags = GPIOF_DIR_IN},		/* EIM_DA6 */
+	{.label = "i2c_pic_int",		.gpio = MAKE_GP(3, 8),		.flags = GPIOF_DIR_IN},		/* EIM_DA6 */
 #endif
 //	{.label = "i2c2a hub-PIC16F616_TOUCH",	.gpio = MAKE_GP(3, 7),		.flags = GPIOF_INIT_LOW},	/* EIM_DA7 */
-//	{.label = "i2c2a hub-empty",		.gpio = MAKE_GP(3, 9),		.flags = GPIOF_INIT_LOW},	/* EIM_DA9 */
+//gpio3[9] - must always be high on early board rev, (empty i2c hub without pullups)
+	{.label = "i2c2 empty hub",		.gpio = MAKE_GP(3, 9),		.flags = GPIOF_INIT_LOW},	/* EIM_DA9 */
 //	{.label = "i2c2a hub-TFP410_ACCEL",	.gpio = MAKE_GP(3, 1),		.flags = GPIOF_INIT_LOW},	/* EIM_DA10 */
 //	{.label = "led0",		.gpio = MAKE_GP(4, 2),		.flags = 0},
 	{.label = "led1",		.gpio = MAKE_GP(4, 3),		.flags = 0},
@@ -2013,6 +2012,11 @@ static struct i2c_board_info n53a_i2c3_board_info[] __initdata = {
 };
 
 static struct i2c_board_info n53a_i2c4_board_info[] __initdata = {
+	{
+	 .type = "ov5642",
+	 .addr = 0x3c,
+	 .platform_data  = &camera_data,
+	},
 };
 
 static struct i2c_board_info n53a_i2c5_board_info[] __initdata = {
@@ -2049,14 +2053,6 @@ static struct i2c_board_info n53a_i2c7_board_info[] __initdata = {
 	},
 };
 
-static struct i2c_board_info n53a_i2c8_board_info[] __initdata = {
-	{
-	 .type = "ov5642",
-	 .addr = 0x3c,
-	 .platform_data  = &camera_data,
-	},
-};
-
 #endif
 
 #ifdef CONFIG_MACH_NITROGEN_A_IMX53
@@ -2064,8 +2060,7 @@ static struct i2c_board_info n53a_i2c8_board_info[] __initdata = {
 static const unsigned n53a_i2c2_gpiomux_gpios[] = {
 	/* i2c3- i2c6*/
 	MAKE_GP(3, 7),		/* EIM_DA7 - PIC16F616_TOUCH */
-	MAKE_GP(3, 9),		/* EIM_DA9 - Empty */
-	/* This is also N53_I2C_CONNECTOR_BUFFER_ENABLE same as Nitrogen53 board */
+	MAKE_GP(3, 10),		/* EIM_DA10 - Camera */
 	MAKE_GP(3, 11),		/* EIM_DA11 - TFP410_ACCEL*/
 	MAKE_GP(6, 11)		/* NANDF_CS0 - BATT_EDID */
 };
@@ -2120,35 +2115,6 @@ static struct platform_device n53a_i2c3_i2cmux = {
         },
 };
 
-/* i2c8, Middle i2C bus also has a buffer for camera */
-
-static const unsigned n53a_i2c2b_gpiomux_gpios[] = {
-	/* i2c8*/
-	MAKE_GP(3, 2)		/* EIM_DA2 - Switch enable for Camera */
-};
-
-static const unsigned n53a_i2c2b_gpiomux_values[] = {
-	1
-};
-
-static struct gpio_i2cmux_platform_data n53a_i2c2b_i2cmux_data = {
-	.parent		= 1,
-	.base_nr	= 8, /* optional */
-	.values		= n53a_i2c2b_gpiomux_values,
-	.n_values	= ARRAY_SIZE(n53a_i2c2b_gpiomux_values),
-	.gpios		= n53a_i2c2b_gpiomux_gpios,
-	.n_gpios	= ARRAY_SIZE(n53a_i2c2b_gpiomux_gpios),
-	.idle		= 0,
-};
-
-static struct platform_device n53a_i2c2b_i2cmux = {
-        .name           = "gpio-i2cmux",
-        .id             = 2,
-        .dev            = {
-                .platform_data  = &n53a_i2c2b_i2cmux_data,
-        },
-};
-
 /* Nitrogen53A Pads */
 
 static iomux_v3_cfg_t nitrogen53_pads_specific_a[] __initdata = {
@@ -2195,6 +2161,9 @@ static iomux_v3_cfg_t nitrogen53_pads_specific_a[] __initdata = {
 
 	/* i2c3 switch */
 	MX53_PAD_NANDF_RB0__GPIO6_10,	/* Camera buffer enable */
+
+	/* Pic16F616 touch int */
+	NEW_PAD_CTRL(MX53_PAD_EIM_DA8__GPIO_3_8, BUTTON_100K) | MUX_SION_MASK,
 };
 
 static int sdhc_write_protect4(struct device *dev)
@@ -2241,7 +2210,10 @@ static void __init mxc_board_init_nitrogen_a(void)
 	ldo9_consumers[0].dev_name = n53a_camera_i2c_dev_name;
 	mxci2c2_data.i2c_clock_toggle = n53a_i2c_clock_toggle2;
 
+#ifdef HAVE_CAMERA
 	camera_data.power_down = MAKE_GP(2, 22);
+	camera_data.i2c_bus = 4;
+#endif
 
 	if (gpio_request_array(nitrogen53_gpios_specific_a,
 			ARRAY_SIZE(nitrogen53_gpios_specific_a))) {
@@ -2269,9 +2241,6 @@ static void __init mxc_board_init_nitrogen_a(void)
 
 	mxc_register_device(&n53a_i2c3_i2cmux, &n53a_i2c3_i2cmux_data);
 	i2c_register_board_info(7, n53a_i2c7_board_info, ARRAY_SIZE(n53a_i2c7_board_info));
-
-	mxc_register_device(&n53a_i2c2b_i2cmux, &n53a_i2c2b_i2cmux_data);
-	i2c_register_board_info(8, n53a_i2c8_board_info, ARRAY_SIZE(n53a_i2c8_board_info));
 }
 
 MACHINE_START(NITROGEN_A_IMX53, "Boundary Devices Nitrogen_A MX53 Board")
@@ -2399,7 +2368,7 @@ static struct regulator_init_data nitrogen53_vmmc2 = {
 };
 
 static struct fixed_voltage_config nitrogen53_vwlan = {
-	.supply_name		= TIWI_REGULATOR_NAME,
+	.supply_name		= "vwl1271",
 	.microvolts		= 1800000, /* 1.80V */
 	.gpio			= N53_WL1271_WL_EN,
 	.startup_delay		= 70000, /* 70ms */
@@ -2869,7 +2838,7 @@ static struct regulator_init_data n53k_vmmc2 = {
 };
 
 static struct fixed_voltage_config n53k_vwlan = {
-	.supply_name = TIWI_REGULATOR_NAME,
+	.supply_name = "vwl1271",
 	.microvolts = 1800000, /* 1.80V */
 	.gpio = N53K_WL1271_WL_EN,
 	.startup_delay = 70000, /* 70ms */

@@ -376,15 +376,24 @@ config MFD_MC13783
 	  functionality of the device.
 
 config PMIC_DA9052
-	tristate "Dialog DA9052 with SPI/I2C"
-	depends on SPI_MASTER=y
-	depends on I2C=y
+	tristate "Dialog DA905x with SPI/I2C"
+	depends on SPI_MASTER=y || I2C=y
 	select MFD_CORE
 	help
 	 SPI/I2C Support for the  Dialog semiconductor DA9052 PMIC.
 	 This driver provides common support for accessing  the device,
 	 additional drivers must be enabled in order to use the
 	 functionality of the device.
+
+config PMIC_DA905X_SPI
+       bool "Dialog SPI interface"
+       depends on PMIC_DA9052 && SPI_MASTER=y
+       default y
+
+config PMIC_DA905X_I2C
+       bool "Dialog I2C interface"
+       depends on PMIC_DA9052 && I2C=y
+       default y
 
 config PCF50633_ADC
 	tristate "Support for NXP PCF50633 ADC"

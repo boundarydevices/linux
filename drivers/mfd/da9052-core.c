@@ -612,7 +612,8 @@ int da9052_ssc_init(struct da9052 *da9052)
 	da9052->read_many = da9052_ssc_read_many;
 	da9052->write_many = da9052_ssc_write_many;
 	da9052->modify_many = da9052_ssc_modify_many;
-
+	ssc_ops.write = NULL;
+#ifdef CONFIG_PMIC_DA905X_SPI
 	if (SPI  == da9052->connecting_device && ssc_ops.write == NULL) {
 		/* Assign the read/write pointers to SPI/read/write */
 		ssc_ops.write = da9052_spi_write;
@@ -620,13 +621,17 @@ int da9052_ssc_init(struct da9052 *da9052)
 		ssc_ops.write_many = da9052_spi_write_many;
 		ssc_ops.read_many = da9052_spi_read_many;
 	}
-	else if (I2C  == da9052->connecting_device && ssc_ops.write == NULL) {
+#endif
+#ifdef CONFIG_PMIC_DA905X_I2C
+	if (I2C  == da9052->connecting_device && ssc_ops.write == NULL) {
 		/* Assign the read/write pointers to SPI/read/write */
 		ssc_ops.write = da9052_i2c_write;
 		ssc_ops.read = da9052_i2c_read;
 		ssc_ops.write_many = da9052_i2c_write_many;
 		ssc_ops.read_many = da9052_i2c_read_many;
-	} else
+	}
+#endif
+	if (!ssc_ops.write)
 		return -1;
 
 	/* Assign the EH notifier block register/de-register functions */

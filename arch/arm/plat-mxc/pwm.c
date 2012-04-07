@@ -95,7 +95,7 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 		 * a period of two clock cycles for the output signal.
 		 */
 		writel(period_cycles - 2, pwm->mmio_base + MX3_PWMPR);
-
+		pr_info("%s: pwm freq = %d\n", __func__, clk_get_rate(pwm->clk) / (prescale * period_cycles));
 		cr = MX3_PWMCR_PRESCALER(prescale) |
 			MX3_PWMCR_STOPEN | MX3_PWMCR_DOZEEN |
 			MX3_PWMCR_WAITEN | MX3_PWMCR_DBGEN;
