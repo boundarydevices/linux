@@ -29,6 +29,32 @@
 #include <linux/i2c.h>
 #include <linux/i2c/tsc2007.h>
 
+static int calibration[7];
+module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
+
+static void translate(u16 *px, u16 *py)
+{
+	int x, y, x1, y1;
+	if (calibration[6]) {
+		x1 = *px;
+		y1 = *py;
+
+		x = calibration[0] * x1 +
+			calibration[1] * y1 +
+			calibration[2];
+		x /= calibration[6];
+		if (x < 0)
+			x = 0;
+		y = calibration[3] * x1 +
+			calibration[4] * y1 +
+			calibration[5];
+		y /= calibration[6];
+		if (y < 0)
+			y = 0;
+		*px = x ;
+		*py = y ;
+	}
+}
 
 #define TS_POLL_DELAY			1 /* ms delay between samples */
 #define TS_POLL_PERIOD			1 /* ms delay between samples */
@@ -330,6 +356,8 @@ static void tsc2004_work(struct work_struct *work)
 	if (rt) {
 		struct input_dev *input = ts->input;
 
+		translate(&tc.x, &tc.y);
+
 		if (!ts->pendown) {
 			dev_dbg(&ts->client->dev, "DOWN\n");
 
@@ -430,7 +458,7 @@ static int __devinit tsc2004_probe(struct i2c_client *client,
 	snprintf(ts->phys, sizeof(ts->phys),
 		 "%s/input0", dev_name(&client->dev));
 
-	input_dev->name = "TSC2004 Touchscreen";
+	input_dev->name = "tsc2004";
 	input_dev->phys = ts->phys;
 	input_dev->id.bustype = BUS_I2C;
 
