@@ -78,6 +78,118 @@
 #include "devices-imx6q.h"
 #include "crm_regs.h"
 #include "cpu_op-mx6.h"
+#include "board-mx6q_sabresd.h"
+#include "board-mx6dl_sabresd.h"
+
+#define SABRESD_USR_DEF_GRN_LED	IMX_GPIO_NR(1, 1)
+#define SABRESD_USR_DEF_RED_LED	IMX_GPIO_NR(1, 2)
+#define SABRESD_VOLUME_UP	IMX_GPIO_NR(1, 4)
+#define SABRESD_VOLUME_DN	IMX_GPIO_NR(1, 5)
+#define SABRESD_MICROPHONE_DET	IMX_GPIO_NR(1, 9)
+#define SABRESD_CSI0_PWN	IMX_GPIO_NR(1, 16)
+#define SABRESD_CSI0_RST	IMX_GPIO_NR(1, 17)
+#define SABRESD_ACCL_INT	IMX_GPIO_NR(1, 18)
+#define SABRESD_MIPICSI_PWN	IMX_GPIO_NR(1, 19)
+#define SABRESD_MIPICSI_RST	IMX_GPIO_NR(1, 20)
+#define SABRESD_RGMII_RST	IMX_GPIO_NR(1, 25)
+#define SABRESD_RGMII_INT	IMX_GPIO_NR(1, 26)
+#define SABRESD_CHARGE_UOK_B	IMX_GPIO_NR(1, 27)
+#define SABRESD_USBH1_PWR_EN	IMX_GPIO_NR(1, 29)
+#define SABRESD_DISP0_PWR_EN	IMX_GPIO_NR(1, 30)
+
+#define SABRESD_SD3_CD		IMX_GPIO_NR(2, 0)
+#define SABRESD_SD3_WP		IMX_GPIO_NR(2, 1)
+#define SABRESD_SD2_CD		IMX_GPIO_NR(2, 2)
+#define SABRESD_SD2_WP		IMX_GPIO_NR(2, 3)
+#define SABRESD_CHARGE_DOK_B	IMX_GPIO_NR(2, 24)
+#define SABRESD_GPS_RESET	IMX_GPIO_NR(2, 28)
+#define SABRESD_SENSOR_EN	IMX_GPIO_NR(2, 31)
+
+#define SABRESD_GPS_EN	IMX_GPIO_NR(3, 0)
+#define SABRESD_DISP0_RST_B	IMX_GPIO_NR(3, 8)
+#define SABRESD_ALS_INT		IMX_GPIO_NR(3, 9)
+#define SABRESD_CHARGE_CHG_2_B	IMX_GPIO_NR(3, 13)
+#define SABRESD_CHARGE_FLT_2_B	IMX_GPIO_NR(3, 14)
+#define SABRESD_BAR0_INT	IMX_GPIO_NR(3, 15)
+#define SABRESD_eCOMPASS_INT	IMX_GPIO_NR(3, 16)
+#define SABRESD_GPS_PPS		IMX_GPIO_NR(3, 18)
+#define SABRESD_PCIE_PWR_EN	IMX_GPIO_NR(3, 19)
+#define SABRESD_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
+#define SABRESD_USB_H1_PWR	IMX_GPIO_NR(1, 29)
+#define SABRESD_CHARGE_CHG_1_B	IMX_GPIO_NR(3, 23)
+#define SABRESD_TS_INT		IMX_GPIO_NR(3, 26)
+#define SABRESD_DISP0_RD	IMX_GPIO_NR(3, 28)
+#define SABRESD_POWER_OFF	IMX_GPIO_NR(3, 29)
+
+#define SABRESD_CAN1_STBY	IMX_GPIO_NR(4, 5)
+#define SABRESD_ECSPI1_CS0  IMX_GPIO_NR(4, 9)
+#define SABRESD_CODEC_PWR_EN	IMX_GPIO_NR(4, 10)
+#define SABRESD_HDMI_CEC_IN	IMX_GPIO_NR(4, 11)
+#define SABRESD_PCIE_DIS_B	IMX_GPIO_NR(4, 14)
+
+#define SABRESD_DI0_D0_CS	IMX_GPIO_NR(5, 0)
+#define SABRESD_CHARGE_FLT_1_B	IMX_GPIO_NR(5, 2)
+#define SABRESD_PCIE_WAKE_B	IMX_GPIO_NR(5, 20)
+
+#define SABRESD_CAP_TCH_INT1	IMX_GPIO_NR(6, 7)
+#define SABRESD_CAP_TCH_INT0	IMX_GPIO_NR(6, 8)
+#define SABRESD_DISP_RST_B	IMX_GPIO_NR(6, 11)
+#define SABRESD_DISP_PWR_EN	IMX_GPIO_NR(6, 14)
+#define SABRESD_CABC_EN0	IMX_GPIO_NR(6, 15)
+#define SABRESD_CABC_EN1	IMX_GPIO_NR(6, 16)
+#define SABRESD_AUX_3V15_EN	IMX_GPIO_NR(6, 9)
+#define SABRESD_DISP0_WR_REVB	IMX_GPIO_NR(6, 9)
+#define SABRESD_AUX_5V_EN	IMX_GPIO_NR(6, 10)
+#define SABRESD_DI1_D0_CS	IMX_GPIO_NR(6, 31)
+
+#define SABRESD_HEADPHONE_DET	IMX_GPIO_NR(7, 8)
+#define SABRESD_PCIE_RST_B_REVB	IMX_GPIO_NR(7, 12)
+#define SABRESD_PMIC_INT_B	IMX_GPIO_NR(7, 13)
+#define SABRESD_PFUZE_INT	IMX_GPIO_NR(7, 13)
+
+#define SABRESD_EPDC_SDDO_0	IMX_GPIO_NR(2, 22)
+#define SABRESD_EPDC_SDDO_1	IMX_GPIO_NR(3, 10)
+#define SABRESD_EPDC_SDDO_2	IMX_GPIO_NR(3, 12)
+#define SABRESD_EPDC_SDDO_3	IMX_GPIO_NR(3, 11)
+#define SABRESD_EPDC_SDDO_4	IMX_GPIO_NR(2, 27)
+#define SABRESD_EPDC_SDDO_5	IMX_GPIO_NR(2, 30)
+#define SABRESD_EPDC_SDDO_6	IMX_GPIO_NR(2, 23)
+#define SABRESD_EPDC_SDDO_7	IMX_GPIO_NR(2, 26)
+#define SABRESD_EPDC_SDDO_8	IMX_GPIO_NR(2, 24)
+#define SABRESD_EPDC_SDDO_9	IMX_GPIO_NR(3, 15)
+#define SABRESD_EPDC_SDDO_10	IMX_GPIO_NR(3, 16)
+#define SABRESD_EPDC_SDDO_11	IMX_GPIO_NR(3, 23)
+#define SABRESD_EPDC_SDDO_12	IMX_GPIO_NR(3, 19)
+#define SABRESD_EPDC_SDDO_13	IMX_GPIO_NR(3, 13)
+#define SABRESD_EPDC_SDDO_14	IMX_GPIO_NR(3, 14)
+#define SABRESD_EPDC_SDDO_15	IMX_GPIO_NR(5, 2)
+#define SABRESD_EPDC_GDCLK	IMX_GPIO_NR(2, 17)
+#define SABRESD_EPDC_GDSP	IMX_GPIO_NR(2, 16)
+#define SABRESD_EPDC_GDOE	IMX_GPIO_NR(6, 6)
+#define SABRESD_EPDC_GDRL	IMX_GPIO_NR(5, 4)
+#define SABRESD_EPDC_SDCLK	IMX_GPIO_NR(3, 31)
+#define SABRESD_EPDC_SDOEZ	IMX_GPIO_NR(3, 30)
+#define SABRESD_EPDC_SDOED	IMX_GPIO_NR(3, 26)
+#define SABRESD_EPDC_SDOE	IMX_GPIO_NR(3, 27)
+#define SABRESD_EPDC_SDLE	IMX_GPIO_NR(3, 1)
+#define SABRESD_EPDC_SDCLKN	IMX_GPIO_NR(3, 0)
+#define SABRESD_EPDC_SDSHR	IMX_GPIO_NR(2, 29)
+#define SABRESD_EPDC_PWRCOM	IMX_GPIO_NR(2, 28)
+#define SABRESD_EPDC_PWRSTAT	IMX_GPIO_NR(2, 21)
+#define SABRESD_EPDC_PWRCTRL0	IMX_GPIO_NR(2, 20)
+#define SABRESD_EPDC_PWRCTRL1	IMX_GPIO_NR(2, 19)
+#define SABRESD_EPDC_PWRCTRL2	IMX_GPIO_NR(2, 18)
+#define SABRESD_EPDC_PWRCTRL3	IMX_GPIO_NR(3, 28)
+#define SABRESD_EPDC_BDR0	IMX_GPIO_NR(3, 2)
+#define SABRESD_EPDC_BDR1	IMX_GPIO_NR(3, 3)
+#define SABRESD_EPDC_SDCE0	IMX_GPIO_NR(3, 4)
+#define SABRESD_EPDC_SDCE1	IMX_GPIO_NR(3, 5)
+#define SABRESD_EPDC_SDCE2	IMX_GPIO_NR(3, 6)
+#define SABRESD_EPDC_SDCE3	IMX_GPIO_NR(3, 7)
+#define SABRESD_EPDC_SDCE4	IMX_GPIO_NR(3, 8)
+#define SABRESD_EPDC_PMIC_WAKE	IMX_GPIO_NR(3, 20)
+#define SABRESD_EPDC_PMIC_INT	IMX_GPIO_NR(2, 25)
+#define SABRESD_EPDC_VCOM	IMX_GPIO_NR(3, 17)
 
 #define MX6Q_SABRESD_SD2_CD		IMX_GPIO_NR(2, 2)
 #define MX6Q_SABRESD_SD2_WP		IMX_GPIO_NR(2, 3)
@@ -1110,6 +1222,24 @@ static struct mipi_csi2_platform_data mipi_csi2_pdata = {
 	.pixel_clk = "emi_clk",
 };
 
+#define SNVS_LPCR 0x38
+static void mx6_snvs_poweroff(void)
+{
+
+	void __iomem *mx6_snvs_base =  MX6_IO_ADDRESS(MX6Q_SNVS_BASE_ADDR);
+	u32 value;
+	value = readl(mx6_snvs_base + SNVS_LPCR);
+	/*set TOP and DP_EN bit*/
+	writel(value | 0x60, mx6_snvs_base + SNVS_LPCR);
+}
+
+static const struct imx_pcie_platform_data mx6_sabresd_pcie_data __initconst = {
+	.pcie_pwr_en	= SABRESD_PCIE_PWR_EN,
+	.pcie_rst	= SABRESD_PCIE_RST_B_REVB,
+	.pcie_wake_up	= SABRESD_PCIE_WAKE_B,
+	.pcie_dis	= SABRESD_PCIE_DIS_B,
+};
+
 /*!
  * Board specific initialization.
  */
@@ -1190,9 +1320,6 @@ static void __init mx6_sabresd_board_init(void)
 	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
 	imx6q_add_asrc(&imx_asrc_data);
 
-	/* release USB Hub reset */
-	gpio_set_value(MX6Q_SABRESD_USB_HUB_RESET, 1);
-
 	imx6q_add_mxc_pwm(0, NULL);
 	imx6q_add_mxc_pwm(1, NULL);
 	imx6q_add_mxc_pwm(2, NULL);
@@ -1258,6 +1385,9 @@ static void __init mx6_sabresd_board_init(void)
 
 	/* Register charger chips */
 	platform_device_register(&sabresd_max8903_charger_1);
+	pm_power_off = mx6_snvs_poweroff;
+
+	imx6q_add_pcie(&mx6_sabresd_pcie_data);
 }
 
 extern void __iomem *twd_base;

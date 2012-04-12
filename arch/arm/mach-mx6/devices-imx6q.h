@@ -208,3 +208,8 @@ extern const struct imx_pxp_data imx6dl_pxp_data __initconst;
 extern const struct imx_epdc_data imx6dl_epdc_data __initconst;
 #define imx6dl_add_imx_epdc(pdata)	\
 	imx_add_imx_epdc(&imx6dl_epdc_data, pdata)
+extern const struct imx_vdoa_data imx6q_vdoa_data __initconst;
+#define imx6q_add_vdoa() imx_add_vdoa(&imx6q_vdoa_data)
+
+extern const struct imx_pcie_data imx6q_pcie_data __initconst;
+#define imx6q_add_pcie(pdata) imx_add_pcie(&imx6q_pcie_data, pdata)
