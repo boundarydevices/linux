@@ -1570,7 +1570,7 @@ static void __init mx6_arm2_init(void)
 	mxc_register_device(&mxc_android_pmem_gpu_device,
 			    &android_pmem_gpu_data);
 
-	imx6q_add_mxc_pwm(0);
+	imx6q_add_mxc_pwm(0, NULL);
 	imx6q_add_mxc_pwm_backlight(0, &mx6_arm2_pwm_backlight_data);
 
 	if (spdif_en) {
