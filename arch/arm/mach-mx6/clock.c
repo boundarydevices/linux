@@ -5230,7 +5230,9 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 	pll3_pfd_540M.disable(&pll3_pfd_540M);
 	pll3_pfd_720M.disable(&pll3_pfd_720M);
 
+#ifndef CONFIG_DEBUG_LL
 	pll3_usb_otg_main_clk.disable(&pll3_usb_otg_main_clk);
+#endif
 #endif
 	pll4_audio_main_clk.disable(&pll4_audio_main_clk);
 	pll5_video_main_clk.disable(&pll5_video_main_clk);
@@ -5315,7 +5317,19 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 	__raw_writel(3 << MXC_CCM_CCGRx_CG7_OFFSET |
 			1 << MXC_CCM_CCGRx_CG6_OFFSET |
 			1 << MXC_CCM_CCGRx_CG4_OFFSET, MXC_CCM_CCGR4);
+#ifdef CONFIG_DEBUG_LL
+	{
+		/*
+		 * leave UART clocks(index 12,13) on for serial console
+		 */
+		unsigned reg = __raw_readl(MXC_CCM_CCGR5);
+		reg &= 0xf << MXC_CCM_CCGRx_CG12_OFFSET;
+		reg |= 1 << MXC_CCM_CCGRx_CG0_OFFSET;
+		__raw_writel(reg, MXC_CCM_CCGR5);
+	}
+#else
 	__raw_writel(1 << MXC_CCM_CCGRx_CG0_OFFSET, MXC_CCM_CCGR5);
+#endif
 
 	__raw_writel(0, MXC_CCM_CCGR6);
 
