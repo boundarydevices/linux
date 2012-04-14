@@ -1024,7 +1024,7 @@ static struct mxc_pwm_platform_data mxc_pwm0_platform_data = {
 };
 
 
-static int sabrelite_slowclock_check_fb(struct backlight_device *bl,
+static int sabrelite_slowclock_check_fb(struct device *bl,
 					struct fb_info *info)
 {
 	return 0;	/* No associated frame buffer */
