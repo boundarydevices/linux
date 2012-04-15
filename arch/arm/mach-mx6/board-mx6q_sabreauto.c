@@ -1515,8 +1515,8 @@ static void __init mx6_board_init(void)
 	mxc_register_device(&mxc_android_pmem_device, &android_pmem_data);
 	mxc_register_device(&mxc_android_pmem_gpu_device,
 			    &android_pmem_gpu_data);
-	imx6q_add_mxc_pwm(2);
-	imx6q_add_mxc_pwm(3);
+	imx6q_add_mxc_pwm(2, NULL);
+	imx6q_add_mxc_pwm(3, NULL);
 	imx6q_add_mxc_pwm_backlight(2, &mx6_arm2_pwm_backlight_data3);
 	imx6q_add_mxc_pwm_backlight(3, &mx6_arm2_pwm_backlight_data4);
 

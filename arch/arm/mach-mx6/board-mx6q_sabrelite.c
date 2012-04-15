@@ -977,7 +977,6 @@ static void __init sabrelite_add_device_buttons(void) {}
 #endif
 
 #if defined(CONFIG_NITROGEN6W) && defined(CONFIG_WL12XX_PLATFORM_DATA)
-#error got here
 static struct regulator_consumer_supply n6q_vwl1271_consumers[] = {
 	REGULATOR_SUPPLY("vmmc", "sdhci-esdhc-imx.1"),
 };
@@ -1024,11 +1023,19 @@ static struct mxc_pwm_platform_data mxc_pwm0_platform_data = {
 	.clk_select = PWM_CLK_HIGHPERF,
 };
 
+
+static int sabrelite_slowclock_check_fb(struct device *bl,
+					struct fb_info *info)
+{
+	return 0;	/* No associated frame buffer */
+}
+
 static struct platform_pwm_backlight_data mx6_sabrelite_pwm0_backlight_data = {
 	.pwm_id = 0,
 	.max_brightness = 256,
 	.dft_brightness = 128,
 	.pwm_period_ns = 1000000000/32768,	/* 30517 */
+	.check_fb	= sabrelite_slowclock_check_fb,
 };
 #endif
 
@@ -1308,7 +1315,6 @@ static void __init mx6_sabrelite_board_init(void)
 	gpio_set_value(MX6Q_SABRELITE_USB_HUB_RESET, 1);
 
 #if defined(CONFIG_NITROGEN6W) && defined(CONFIG_WL12XX_PLATFORM_DATA)
-#error got here
 	imx6q_add_mxc_pwm(0, &mxc_pwm0_platform_data);
 #else
 	imx6q_add_mxc_pwm(0, NULL);
@@ -1385,7 +1391,7 @@ static void __init mx6_sabrelite_timer_init(void)
 #endif
 	mx6_clocks_init(32768, 24000000, 0, 0);
 
-	uart_clk = clk_get_sys("imx-uart.0", NULL);
+	uart_clk = clk_get_sys("imx-uart.1", NULL);
 	early_console_setup(UART2_BASE_ADDR, uart_clk);
 }
 
