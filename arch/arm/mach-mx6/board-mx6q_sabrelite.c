@@ -158,7 +158,7 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_GPIO_4__GPIO_1_4,		/* Enable */
 
 	/* CCM  */
-	MX6Q_PAD_GPIO_0__CCM_CLKO,		/* SGTL500 sys_mclk */
+	MX6Q_PAD_GPIO_0__CCM_CLKO,		/* SGTL5000 sys_mclk */
 	MX6Q_PAD_GPIO_3__CCM_CLKO2,		/* J5 - Camera MCLK */
 
 	/* ECSPI1 */
