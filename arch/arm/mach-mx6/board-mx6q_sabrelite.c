@@ -660,9 +660,14 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	},
 };
 
+static int tsc2004_pendown_state(void) {
+	return (0 == gpio_get_value(MX6Q_SABRELITE_TSC2007_IRQGPIO));
+}
+
 static struct tsc2007_platform_data tsc2007_info = {
 	.model			= 2004,
 	.x_plate_ohms		= 500,
+	.get_pendown_state	= tsc2004_pendown_state,
 };
 
 struct plat_i2c_generic_data {
