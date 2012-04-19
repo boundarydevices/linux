@@ -131,17 +131,22 @@
 #define MEASURE_FREQ			3276  /* 3276 RTC clocks delay, 100ms */
 #define KELVIN_TO_CEL(t, off) (((t) - (off)))
 #define CEL_TO_KELVIN(t, off) (((t) + (off)))
-#define DEFAULT_RATIO			145
-#define DEFAULT_N40C			1563
-#define REG_VALUE_TO_CEL(ratio, raw) ((raw_n40c - raw) * 100 / ratio - 40)
+
+#define DEFAULT_RAW_25C		1469
+#define DEFAULT_RAW_HOT		1375
+#define DEFAULT_TEMP_HOT	90
+
 #define ANATOP_DEBUG			false
 #define THERMAL_FUSE_NAME		"/sys/fsl_otp/HW_OCOTP_ANA1"
 
 /* variables */
 unsigned long anatop_base;
-unsigned int ratio;
-unsigned int raw_25c, raw_hot, hot_temp, raw_n40c, raw_125c, raw_critical;
+unsigned int raw_critical;
 static struct clk *pll3_clk;
+unsigned raw_25c;
+unsigned long long cvt_to_celsius;
+unsigned long long cvt_to_raw;
+
 static bool full_run = true;
 static bool suspend_flag;
 static unsigned int thermal_irq;
@@ -255,6 +260,7 @@ static int anatop_dump_temperature_register(void)
 			__raw_readl(anatop_base + HW_ANADIG_ANA_MISC1));
 	return 0;
 }
+
 static void anatop_update_alarm(unsigned int alarm_value)
 {
 	if (cooling_device_disable || suspend_flag)
@@ -267,6 +273,21 @@ static void anatop_update_alarm(unsigned int alarm_value)
 
 	return;
 }
+
+int cvt_raw_to_celius(unsigned raw)
+{
+	int change = (raw_25c - raw);
+	change = (int)((change * cvt_to_celsius) >> 32);
+	return 25 + change;
+}
+
+int cvt_celius_to_raw(int celius)
+{
+	int change = (celius - 25);
+	change = (int)((change * cvt_to_raw) >> 32);
+	return raw_25c - change;
+}
+
 static int anatop_thermal_get_temp(struct thermal_zone_device *thermal,
 			    long *temp)
 {
@@ -277,7 +298,7 @@ static int anatop_thermal_get_temp(struct thermal_zone_device *thermal,
 	if (!tz)
 		return -EINVAL;
 
-	if (!ratio || suspend_flag) {
+	if (!raw_25c || suspend_flag) {
 		*temp = KELVIN_TO_CEL(TEMP_ACTIVE, KELVIN_OFFSET);
 		return 0;
 	}
@@ -322,10 +343,10 @@ static int anatop_thermal_get_temp(struct thermal_zone_device *thermal,
 		anatop_dump_temperature_register();
 	/* only the temp between -40C and 125C is valid, this
 	is for save */
-	if (tmp <= raw_n40c && tmp >= raw_125c)
-		tz->temperature = REG_VALUE_TO_CEL(ratio, tmp);
-	else {
-		printk(KERN_WARNING "Invalid temperature, force it to 25C\n");
+	tz->temperature = cvt_raw_to_celius(tmp);
+	if ((tz->temperature < -25) || (tz->temperature > 125)) {
+		pr_warn("Invalid temperature %ld C, force it to 25C\n",
+				tz->temperature);
 		tz->temperature = 25;
 	}
 
@@ -482,7 +503,7 @@ static int anatop_thermal_set_trip_temp(struct thermal_zone_device *thermal,
 		if (tz->trips.critical.flags.valid) {
 			tz->trips.critical.temperature = CEL_TO_KELVIN(
 				*temp, tz->kelvin_offset);
-			raw_critical = raw_25c - ratio * (*temp - 25) / 100;
+			raw_critical = cvt_celius_to_raw(*temp);
 			anatop_update_alarm(raw_critical);
 		}
 		break;
@@ -826,31 +847,48 @@ __setup("no_cooling_device", anatop_thermal_cooling_device_disable);
 
 static int anatop_thermal_counting_ratio(unsigned int fuse_data)
 {
+	unsigned raw25c, raw_hot, hot_temp;
 	int ret = -EINVAL;
 
 	pr_info("Thermal calibration data is 0x%x\n", fuse_data);
-	if (fuse_data == 0 || fuse_data == 0xffffffff || (fuse_data & 0xff) == 0) {
-		pr_info("%s: invalid calibration data, disable cooling!!!\n", __func__);
-		cooling_device_disable = true;
-		ratio = DEFAULT_RATIO;
-		disable_irq(thermal_irq);
-		return ret;
-	}
 
 	ret = 0;
 	/* Fuse data layout:
 	 * [31:20] sensor value @ 25C
 	 * [19:8] sensor value of hot
 	 * [7:0] hot temperature value */
-	raw_25c = fuse_data >> 20;
+	raw25c = fuse_data >> 20;
 	raw_hot = (fuse_data & 0xfff00) >> 8;
 	hot_temp = fuse_data & 0xff;
 
-	ratio = ((raw_25c - raw_hot) * 100) / (hot_temp - 25);
-	raw_n40c = raw_25c + (13 * ratio) / 20;
-	raw_125c = raw_25c - ratio;
+	if ((raw25c <= raw_hot) || (hot_temp <= 25)) {
+		pr_info("%s: invalid calibration data, disable cooling!!! raw25c=%x raw_hot=%x hot_temp=%x\n",
+				__func__, raw25c, raw_hot, hot_temp);
+		cooling_device_disable = true;
+		raw_25c = DEFAULT_RAW_25C;
+		disable_irq(thermal_irq);
+		cvt_to_celsius = (DEFAULT_TEMP_HOT - 25);
+		cvt_to_celsius <<= 32;
+		cvt_to_celsius /= DEFAULT_RAW_25C - DEFAULT_RAW_HOT;
+
+		cvt_to_raw = DEFAULT_RAW_25C - DEFAULT_RAW_HOT;
+		cvt_to_raw <<= 32;
+		cvt_to_raw /= (DEFAULT_TEMP_HOT - 25);
+		return ret;
+	}
+	ret = 0;
+	raw_25c = raw25c;
+	cvt_to_celsius = hot_temp - 25;		/* hot_temp > 25 */
+	cvt_to_celsius <<= 32;
+	do_div(cvt_to_celsius, raw25c - raw_hot);	/* raw25c > raw_hot */
+
+	cvt_to_raw = raw25c - raw_hot;
+	cvt_to_raw <<= 32;
+	do_div(cvt_to_raw, hot_temp - 25);
+	pr_info("%s: raw25c=%d raw_hot=%d hot_temp=%d\n", __func__, raw25c, raw_hot, hot_temp);
+
 	/* Init default critical temp to set alarm */
-	raw_critical = raw_25c - ratio * (KELVIN_TO_CEL(TEMP_CRITICAL, KELVIN_OFFSET) - 25) / 100;
+	raw_critical = cvt_celius_to_raw(KELVIN_TO_CEL(TEMP_CRITICAL, KELVIN_OFFSET));
 	clk_enable(pll3_clk);
 	anatop_update_alarm(raw_critical);
 
@@ -877,6 +915,7 @@ static int anatop_thermal_probe(struct platform_device *pdev)
 	struct resource *res_io, *res_irq, *res_calibration;
 	void __iomem *base, *calibration_addr;
 	struct anatop_device *device;
+	unsigned fuse_data;
 
 	device = kzalloc(sizeof(*device), GFP_KERNEL);
 	if (!device) {
@@ -919,9 +958,13 @@ static int anatop_thermal_probe(struct platform_device *pdev)
 		goto anatop_failed;
 	}
 
-	raw_n40c = DEFAULT_N40C;
 	/* use calibration data to get ratio */
-	anatop_thermal_counting_ratio(__raw_readl(calibration_addr));
+	fuse_data = __raw_readl(calibration_addr);
+#if 1
+	if (!fuse_data)
+		fuse_data = (0x552 << 8) | 58 | (0x58e << 20);
+#endif
+	anatop_thermal_counting_ratio(fuse_data);
 
 	res_irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (res_irq == NULL) {
