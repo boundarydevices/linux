@@ -120,16 +120,19 @@
 #define MEASURE_FREQ			327  /* 327 RTC clocks delay, 10ms */
 #define KELVIN_TO_CEL(t, off) (((t) - (off)))
 #define CEL_TO_KELVIN(t, off) (((t) + (off)))
-#define DEFAULT_RATIO			145
-#define DEFAULT_N25C			1541
-#define REG_VALUE_TO_CEL(ratio, raw) ((raw_n25c - raw) * 100 / ratio - 25)
+
+#define DEFAULT_RAW_25C		1469
+#define DEFAULT_RAW_HOT		1375
+#define DEFAULT_TEMP_HOT	90
+
 #define ANATOP_DEBUG			false
 #define THERMAL_FUSE_NAME		"/sys/fsl_otp/HW_OCOTP_ANA1"
 
 /* variables */
 unsigned long anatop_base;
-unsigned int ratio;
-unsigned int raw_25c, raw_hot, hot_temp, raw_n25c;
+unsigned raw_25c;
+unsigned long long cvt_to_celsius;
+
 static bool full_run = true;
 bool cooling_cpuhotplug;
 bool cooling_device_disable;
@@ -231,6 +234,14 @@ static int anatop_dump_temperature_register(void)
 			__raw_readl(anatop_base + HW_ANADIG_TEMPSENSE1));
 	return 0;
 }
+
+int cvt_raw_to_celius(unsigned raw)
+{
+	int change = (raw_25c - raw);
+	change = (int)((change * cvt_to_celsius) >> 32);
+	return 25 + change;
+}
+
 static int anatop_thermal_get_temp(struct thermal_zone_device *thermal,
 			    long *temp)
 {
@@ -242,7 +253,7 @@ static int anatop_thermal_get_temp(struct thermal_zone_device *thermal,
 	if (!tz)
 		return -EINVAL;
 #ifdef CONFIG_FSL_OTP
-	if (!ratio) {
+	if (!raw_25c) {
 		anatop_thermal_get_calibration_data(&tmp);
 		*temp = KELVIN_TO_CEL(TEMP_ACTIVE, KELVIN_OFFSET);
 		return 0;
@@ -251,7 +262,7 @@ static int anatop_thermal_get_temp(struct thermal_zone_device *thermal,
 	if (!cooling_device_disable)
 		pr_info("%s: can't get calibration data, disable cooling!!!\n", __func__);
 	cooling_device_disable = true;
-	ratio = DEFAULT_RATIO;
+	raw_25c = DEFAULT_RAW_25C;
 #endif
 
 	tz->last_temperature = tz->temperature;
@@ -292,11 +303,10 @@ static int anatop_thermal_get_temp(struct thermal_zone_device *thermal,
 	}
 
 	tmp = tmp / 5;
-	if (tmp <= raw_n25c)
-		tz->temperature = REG_VALUE_TO_CEL(ratio, tmp);
-	else
+	tz->temperature = cvt_raw_to_celius(tmp);
+	if (tz->temperature < -25)
 		tz->temperature = -25;
-	pr_debug("Temperature is %lu C\n", tz->temperature);
+	pr_debug("Temperature is %lu C, raw 0x%x\n", tz->temperature, tmp);
 	/* power down anatop thermal sensor */
 	__raw_writel(BM_ANADIG_TEMPSENSE0_POWER_DOWN,
 			anatop_base + HW_ANADIG_TEMPSENSE0_SET);
@@ -809,8 +819,11 @@ static int anatop_thermal_get_calibration_data(unsigned int *fuse)
 	sys_read(fd, fuse_data, sizeof(fuse_data));
 	sys_close(fd);
 	ret = 0;
-
+#if 0
 	*fuse = simple_strtol(fuse_data, NULL, 0);
+#else
+	*fuse = (0x552 << 8) | 58 | (0x58e << 20);
+#endif
 	pr_info("Thermal: fuse data 0x%x\n", *fuse);
 	anatop_thermal_counting_ratio(*fuse);
 
@@ -818,27 +831,30 @@ static int anatop_thermal_get_calibration_data(unsigned int *fuse)
 }
 static int anatop_thermal_counting_ratio(unsigned int fuse_data)
 {
+	unsigned raw25c, raw_hot, hot_temp;
 	int ret = -EINVAL;
 
-	if (fuse_data == 0 || fuse_data == 0xffffffff) {
-		pr_info("%s: invalid calibration data, disable cooling!!!\n", __func__);
-		cooling_device_disable = true;
-		ratio = DEFAULT_RATIO;
-		return ret;
-	}
-
-	ret = 0;
 	/* Fuse data layout:
 	 * [31:20] sensor value @ 25C
 	 * [19:8] sensor value of hot
 	 * [7:0] hot temperature value */
-	raw_25c = fuse_data >> 20;
+	raw25c = fuse_data >> 20;
 	raw_hot = (fuse_data & 0xfff00) >> 8;
 	hot_temp = fuse_data & 0xff;
 
-	ratio = ((raw_25c - raw_hot) * 100) / (hot_temp - 25);
-	raw_n25c = raw_25c + ratio / 2;
-
+	if ((raw25c <= raw_hot) || (hot_temp <= 25)) {
+		pr_info("%s: invalid calibration data, disable cooling!!! raw25c=%x raw_hot=%x hot_temp=%x\n",
+				__func__, raw25c, raw_hot, hot_temp);
+		cooling_device_disable = true;
+		raw_25c = DEFAULT_RAW_25C;
+		return ret;
+	}
+	ret = 0;
+	raw_25c = raw25c;
+	cvt_to_celsius = hot_temp - 25;		/* hot_temp > 25 */
+	cvt_to_celsius <<= 32;
+	cvt_to_celsius /= raw25c - raw_hot;	/* raw25c > raw_hot */
+	pr_info("%s: raw25c=%d raw_hot=%d hot_temp=%d\n", __func__, raw25c, raw_hot, hot_temp);
 	return ret;
 }
 
@@ -870,8 +886,9 @@ static int anatop_thermal_probe(struct platform_device *pdev)
 		goto anatop_failed;
 	}
 	anatop_base = (unsigned long)base;
-	raw_n25c = DEFAULT_N25C;
-
+	cvt_to_celsius = (DEFAULT_TEMP_HOT - 25);
+	cvt_to_celsius <<= 32;
+	cvt_to_celsius /= DEFAULT_RAW_25C - DEFAULT_RAW_HOT;
 	anatop_thermal_add(device);
 	anatop_thermal_cpufreq_init();
 	pr_info("%s: default cooling device is cpufreq!\n", __func__);
