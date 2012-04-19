@@ -1193,10 +1193,10 @@ static void __init mx6_sabresd_board_init(void)
 	/* release USB Hub reset */
 	gpio_set_value(MX6Q_SABRESD_USB_HUB_RESET, 1);
 
-	imx6q_add_mxc_pwm(0);
-	imx6q_add_mxc_pwm(1);
-	imx6q_add_mxc_pwm(2);
-	imx6q_add_mxc_pwm(3);
+	imx6q_add_mxc_pwm(0, NULL);
+	imx6q_add_mxc_pwm(1, NULL);
+	imx6q_add_mxc_pwm(2, NULL);
+	imx6q_add_mxc_pwm(3, NULL);
 	imx6q_add_mxc_pwm_backlight(0, &mx6_sabresd_pwm_backlight_data);
 
 	imx6q_add_otp();
