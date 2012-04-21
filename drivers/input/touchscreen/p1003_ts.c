@@ -301,7 +301,7 @@ static int __devinit p1003_probe(struct i2c_client *client,
 		goto err_free_wq;
 
 	/* set irq type to edge falling */
-	set_irq_type(p1003->irq, IRQF_TRIGGER_FALLING);
+	irq_set_irq_type(p1003->irq, IRQF_TRIGGER_FALLING);
 	ret = request_irq(p1003->irq, p1003_irq, 0,
 			  client->dev.driver->name, p1003);
 	if (ret < 0) {
