@@ -215,12 +215,20 @@ static int tsc2004_prepare_for_reading(struct tsc2004 *ts)
 {
 	int err;
 	int cmd, data;
+	int retries ;
 
 	/* Reset the TSC, configure for 12 bit */
-	cmd = TSC2004_CMD1(MEAS_X_Y_Z1_Z2, MODE_12BIT, SWRST_TRUE);
-	err = tsc2004_write_cmd(ts, cmd);
+	retries = 0 ;
+	do {
+                /* Reset the TSC, configure for 12 bit */
+                cmd = TSC2004_CMD1(MEAS_X_Y_Z1_Z2, MODE_12BIT, SWRST_TRUE);
+                err = tsc2004_write_cmd(ts, cmd);
+                if (err < 0)
+                        printk (KERN_ERR "%s: write_cmd %d\n", __func__, err );
+	} while ( (err < 0) && (3 < retries++) );
+
 	if (err < 0)
-		return err;
+		return err ;
 
 	/* Enable interrupt for PENIRQ and DAV */
 	cmd = TSC2004_CMD0(CFR2_REG, PND0_FALSE, WRITE_REG);
