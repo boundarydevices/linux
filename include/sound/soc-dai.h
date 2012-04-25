@@ -174,7 +174,9 @@ struct snd_soc_dai_ops {
 	int (*trigger)(struct snd_pcm_substream *, int,
 		struct snd_soc_dai *);
 	int (*ioctl)(struct snd_pcm_substream *, unsigned int, void *,
-		struct snd_soc_dai *);
+			struct snd_soc_dai *);
+	int (*bespoke_trigger)(struct snd_pcm_substream *, int,
+			struct snd_soc_dai *);
 	/*
 	 * For hardware based FIFO caused delay reporting.
 	 * Optional.
