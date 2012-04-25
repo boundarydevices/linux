@@ -2425,6 +2425,8 @@ static void __init mxc_board_init_nitrogen(void)
 	mxcsdhc3_device.resource[2].start = gpio_to_irq(N53_SD3_CD);
 	mxcsdhc3_device.resource[2].end = gpio_to_irq(N53_SD3_CD);
 	mmc3_data.card_inserted_state = 0;
+	mmc3_data.power_mmc = 0;
+	mmc3_data.caps &= ~(MMC_CAP_DATA_DDR | MMC_CAP_POWER_OFF_CARD);
 #endif
 #ifdef CONFIG_KEYBOARD_GPIO
 	gpio_keys_platform_data.nbuttons = 4;
