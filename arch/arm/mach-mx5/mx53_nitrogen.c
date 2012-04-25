@@ -2274,6 +2274,11 @@ struct gpio nitrogen53_gpios_specific[] __initdata = {
 #define N53_I2C_CONNECTOR_BUFFER_ENABLE		MAKE_GP(3, 10)
 	{.label = "I2C conn. buf en",	.gpio = MAKE_GP(3, 10),		.flags = 0},			/* EIM_DA10 */
 	{.label = "wl1271_btfunct2",	.gpio = MAKE_GP(5, 25),		.flags = 0},			/* CSIO0_D7, (BT_WU) */
+#else
+#define N53_AX8817X_RESET_CS0			MAKE_GP(2, 23)
+	{.label = "AX8817X reset cs0",	.gpio = MAKE_GP(2, 23),		.flags = 0},			/* EIM_CS0 */
+#define N53_AX8817X_RESET_CS1			MAKE_GP(2, 24)
+	{.label = "AX8817X reset cs1",	.gpio = MAKE_GP(2, 24),		.flags = 0},			/* EIM_CS1 */
 #endif
 
 #define N53_SD3_CD				MAKE_GP(3, 11)
@@ -2471,6 +2476,12 @@ static void __init mxc_board_init_nitrogen(void)
 	gpio_free(N53_WL1271_WL_EN);
 	gpio_free(N53_WL1271_BT_EN);
 	mdelay(1);
+#endif
+#ifdef N53_AX8817X_RESET_CS0
+	gpio_set_value(N53_AX8817X_RESET_CS0, 1);	/* Enable usb ethernet */
+#endif
+#ifdef N53_AX8817X_RESET_CS1
+	gpio_set_value(N53_AX8817X_RESET_CS1, 1);	/* Enable usb ethernet */
 #endif
 }
 
