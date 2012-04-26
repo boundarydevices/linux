@@ -191,7 +191,7 @@ static inline int tsc2004_read_word_data(struct tsc2004 *tsc, u8 cmd)
 	 * S Addr Wr [A] Comm [A] S Addr Rd [A] [DataLow] A [DataHigh] NA P
 	 * Where DataLow has [D11-D4], DataHigh has [D3-D0 << 4 | Dummy 4bit].
 	 */
-	val = swab16(data) >> 4;
+	val = swab16(data) & 0xfff ;
 
 	dev_dbg(&tsc->client->dev, "data: 0x%x, val: 0x%x\n", data, val);
 
