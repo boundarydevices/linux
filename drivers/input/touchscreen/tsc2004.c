@@ -176,7 +176,7 @@ struct tsc2004 {
 	void			(*clear_penirq)(void);
 };
 
-static inline int tsc2004_read_word_data(struct tsc2004 *tsc, u8 cmd)
+static inline int tsc2004_read_xyz_data(struct tsc2004 *tsc, u8 cmd)
 {
 	s32 data;
 	u16 val;
@@ -187,11 +187,11 @@ static inline int tsc2004_read_word_data(struct tsc2004 *tsc, u8 cmd)
 		return data;
 	}
 
-	/* The protocol and raw data format from i2c interface:
-	 * S Addr Wr [A] Comm [A] S Addr Rd [A] [DataLow] A [DataHigh] NA P
-	 * Where DataLow has [D11-D4], DataHigh has [D3-D0 << 4 | Dummy 4bit].
+	/*
+	 * We need to swap byte order for little-endian cpus.
+	 * 12 bit precision, high 4 bits should be zero
 	 */
-	val = swab16(data) & 0xfff ;
+	val = be16_to_cpu(data) & 0xfff;
 
 	dev_dbg(&tsc->client->dev, "data: 0x%x, val: 0x%x\n", data, val);
 
@@ -202,7 +202,7 @@ static inline int tsc2004_write_word_data(struct tsc2004 *tsc, u8 cmd, u16 data)
 {
 	u16 val;
 
-	val = swab16(data);
+	val = cpu_to_be16(data);
 	return i2c_smbus_write_word_data(tsc->client, cmd, val);
 }
 
@@ -261,19 +261,19 @@ static void tsc2004_read_values(struct tsc2004 *tsc, struct ts_event *tc)
 
 	/* Read X Measurement */
 	cmd = TSC2004_CMD0(X_REG, PND0_FALSE, READ_REG);
-	tc->x = tsc2004_read_word_data(tsc, cmd);
+	tc->x = tsc2004_read_xyz_data(tsc, cmd);
 
 	/* Read Y Measurement */
 	cmd = TSC2004_CMD0(Y_REG, PND0_FALSE, READ_REG);
-	tc->y = tsc2004_read_word_data(tsc, cmd);
+	tc->y = tsc2004_read_xyz_data(tsc, cmd);
 
 	/* Read Z1 Measurement */
 	cmd = TSC2004_CMD0(Z1_REG, PND0_FALSE, READ_REG);
-	tc->z1 = tsc2004_read_word_data(tsc, cmd);
+	tc->z1 = tsc2004_read_xyz_data(tsc, cmd);
 
 	/* Read Z2 Measurement */
 	cmd = TSC2004_CMD0(Z2_REG, PND0_FALSE, READ_REG);
-	tc->z2 = tsc2004_read_word_data(tsc, cmd);
+	tc->z2 = tsc2004_read_xyz_data(tsc, cmd);
 
 
 	tc->x &= MEAS_MASK;
