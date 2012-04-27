@@ -62,20 +62,6 @@ config MACH_MX6Q_ARM2
 	  Include support for i.MX 6Quad Armadillo2 platform. This includes specific
 	  configurations for the board and its peripherals.
 
-choice
-	prompt "SabreLite variant"
-	default SABRELITE_ONLY
-
-	config	NITROGEN6X
-		bool "Support Nitrogen6X platform (no WLAN)"
-
-	config	NITROGEN6W
-		bool "Support Nitrogen6W platform (with WLAN)"
-
-	config	SABRELITE_ONLY
-		bool "Support only SabreLite platform"
-endchoice
-
 config MACH_MX6Q_SABRELITE
 	bool "Support i.MX 6Quad SABRE Lite platform"
 	select ARCH_MX6Q
