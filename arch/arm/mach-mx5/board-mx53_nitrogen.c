@@ -25,8 +25,6 @@
 #if defined(CONFIG_DUMB_BATTERY) || defined (CONFIG_DUMB_BATTERY_MODULE)
 #include <linux/dumb_battery.h>
 #endif
-#include <linux/fec.h>
-#include <linux/fsl_devices.h>
 #include <linux/gpio.h>
 #include <linux/gpio-i2cmux.h>
 #ifdef CONFIG_KEYBOARD_GPIO
@@ -72,7 +70,6 @@
 #include <mach/esdhc.h>
 #include <mach/hardware.h>
 #include <mach/i2c.h>
-#include <mach/imx-uart.h>
 #include <mach/iomux-mx53.h>
 #include <mach/ipu-v3.h>
 #include <mach/memory.h>
@@ -304,6 +301,9 @@ extern void __iomem *arm_plat_base;
 extern void __iomem *gpc_base;
 extern void __iomem *ccm_base;
 extern void __iomem *imx_otg_base;
+
+extern char *lp_reg_id;
+extern char *gp_reg_id;
 
 /*
  * board changes needed for esai1 pins
@@ -827,7 +827,7 @@ static struct imxi2c_platform_data mxci2c2_data = {
 };
 
 static struct mxc_dvfs_platform_data dvfs_core_data = {
-	.reg_id = "DA9052_BUCK_CORE",
+	.reg_id = "cpu_vddgp",
 	.clk1_id = "cpu_clk",
 	.clk2_id = "gpc_dvfs_clk",
 	.gpc_cntr_offset = MXC_GPC_CNTR_OFFSET,
@@ -848,6 +848,10 @@ static struct mxc_dvfs_platform_data dvfs_core_data = {
 	.upcnt_val = 10,
 	.dncnt_val = 10,
 	.delay_time = 30,
+};
+
+static struct mxc_regulator_platform_data n53_regulator_data = {
+	.cpu_reg_id = "cpu_vddgp",
 };
 
 static struct fsl_mxc_tve_platform_data tve_data = {
@@ -1242,13 +1246,6 @@ static struct gpio_keys_platform_data gpio_keys_platform_data = {
 	.nbuttons       = ARRAY_SIZE(gpio_keys),
 };
 
-static struct platform_device gpio_keys_device = {
-	.name   = "gpio-keys",
-	.id     = -1,
-	.dev    = {
-		.platform_data  = &gpio_keys_platform_data,
-	},
-};
 #endif
 
 
@@ -1587,6 +1584,8 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 	clk_put(mxc_spdif_data.spdif_core_clk);
 
 	mx53_nitrogen_io_init();
+	gp_reg_id = n53_regulator_data.cpu_reg_id;
+	lp_reg_id = n53_regulator_data.vcc_reg_id;
 
 	imx53_add_imx2_wdt(0, NULL);
 	imx53_add_ecspi(0, &spi_data);
@@ -1673,7 +1672,7 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 #endif
 
 #ifdef CONFIG_KEYBOARD_GPIO
-	platform_device_register(&gpio_keys_device);
+	imx_add_gpio_keys(&gpio_keys_platform_data);
 #endif
 #if defined(CONFIG_FB_MXC_PMIC_LCD_MODULE) || defined(CONFIG_FB_MXC_PMIC_LCD)
 	platform_device_register(&lcd_pmic_device);
