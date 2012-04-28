@@ -1016,7 +1016,7 @@ static const struct esdhc_platform_data sd1_data __initconst = {
 	.cd_gpio = N53_SD1_CD,
 };
 
-static const struct esdhc_platform_data sd3_data __initconst = {
+static struct esdhc_platform_data sd3_data __initdata = {
 	.wp_gpio = -1,
 	.cd_gpio = -1,
 	.always_present = 1,
