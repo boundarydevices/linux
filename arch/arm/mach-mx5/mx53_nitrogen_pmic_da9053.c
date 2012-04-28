@@ -93,6 +93,13 @@ struct regulator_consumer_supply ldo9_consumers[] = {
 #endif
 };
 
+/* CPU */
+static struct regulator_consumer_supply vbuckcore_consumers[] = {
+	{
+		.supply = "cpu_vddgp",
+	}
+};
+
 /* currently the .state_mem.uV here takes no effects for DA9053
 preset-voltage have to be done in the latest stage during
 suspend*/
@@ -364,6 +371,8 @@ static struct regulator_init_data da9052_regulators_init[] = {
 				.disabled = 0,
 			},
 		},
+		.num_consumer_supplies = ARRAY_SIZE(vbuckcore_consumers),
+		.consumer_supplies = vbuckcore_consumers,
 	},
 	{
 		.constraints = {
@@ -591,8 +600,6 @@ static void da9052_init_ssc_cache(struct da9052 *da9052)
 	da9052->ssc_cache[127].type			= VOLATILE;
 }
 
-
-
 static int __init nitrogen_da9052_init(struct da9052 *da9052)
 {
 	da9052_init_ssc_cache(da9052);
@@ -619,10 +626,6 @@ int __init mx53_nitrogen_init_da9052(unsigned da9052_irq)
 {
 	da9052_i2c_device.irq = da9052_irq;
 	/* Set interrupt as LOW LEVEL interrupt source */
-//	set_irq_type(da9052_irq, IRQF_TRIGGER_LOW);
-#if defined(CONFIG_PMIC_DA9052) || defined(CONFIG_PMIC_DA9052_MODULE)
+	irq_set_irq_type(da9052_irq, IRQF_TRIGGER_LOW);
 	return i2c_register_board_info(0, &da9052_i2c_device, 1);
-#else
-	return 0 ;
-#endif
 }
