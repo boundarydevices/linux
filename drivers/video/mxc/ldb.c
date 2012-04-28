@@ -1514,22 +1514,18 @@ static int __init ldb_setup(char *options)
 	} else
 		return 1;
 
-	if ((strsep(&options, ",") != NULL) &&
-	    !strncmp(options, "ch0_map=", 8)) {
+	if ((strsep(&options, ",") != NULL)) {
+	    if (!strncmp(options, "ch0_map=", 8)) {
 		if (!strncmp(options + 8, "SPWG", 4))
 			g_chan_bit_map[0] = LDB_BIT_MAP_SPWG;
 		else
 			g_chan_bit_map[0] = LDB_BIT_MAP_JEIDA;
-	}
-
-	if (!(g_chan_mode_opt == LDB_SIN_DI0 ||
-	      g_chan_mode_opt == LDB_SIN_DI1) &&
-	    (strsep(&options, ",") != NULL) &&
-	    !strncmp(options, "ch1_map=", 8)) {
+	    } else if (!strncmp(options, "ch1_map=", 8)) {
 		if (!strncmp(options + 8, "SPWG", 4))
 			g_chan_bit_map[1] = LDB_BIT_MAP_SPWG;
 		else
 			g_chan_bit_map[1] = LDB_BIT_MAP_JEIDA;
+	    }
 	}
 
 	return 1;
