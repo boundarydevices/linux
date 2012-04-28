@@ -25,6 +25,7 @@ void mx5_cpu_regulator_init(void)
 {
 	cpu_regulator = regulator_get(NULL, gp_reg_id);
 	if (IS_ERR(cpu_regulator))
-		printk(KERN_ERR "%s: failed to get cpu regulator\n", __func__);
+		printk(KERN_ERR "%s: failed to get cpu regulator %s\n", __func__, gp_reg_id);
 }
 
+late_initcall(mx5_cpu_regulator_init);
