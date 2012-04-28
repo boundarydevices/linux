@@ -247,7 +247,6 @@ int da9052_ldo_buck_set_voltage(struct regulator_dev *rdev,
 	int id = rdev_get_id(rdev);
 	int ret;
 	int ldo_volt = 0;
-	selector;
 
 	/* Below if condition is there for added setvoltage attribute
 	in sysfs */
