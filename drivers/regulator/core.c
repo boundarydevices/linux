@@ -1747,9 +1747,14 @@ static int _regulator_do_set_voltage(struct regulator_dev *rdev,
  */
 int regulator_set_voltage(struct regulator *regulator, int min_uV, int max_uV)
 {
-	struct regulator_dev *rdev = regulator->rdev;
+	struct regulator_dev *rdev;
 	int ret = 0;
 
+	if (IS_ERR_OR_NULL(regulator)) {
+		pr_err("No regulator %p\n", regulator);
+		return -EINVAL;
+	}
+	rdev = regulator->rdev;
 	mutex_lock(&rdev->mutex);
 
 	/* If we're setting the same range as last time the change
