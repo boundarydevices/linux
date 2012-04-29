@@ -875,6 +875,12 @@ static struct fsl_mxc_tve_platform_data tve_data = {
 	.dac_reg = "VVIDEO",
 };
 
+static struct fsl_mxc_lcd_platform_data lcdif_data = {
+	.ipu_id = 0,
+	.disp_id = 0,
+	.default_ifmt = IPU_PIX_FMT_RGB565,
+};
+
 static struct fsl_mxc_ldb_platform_data ldb_data = {
 	.ipu_id = 0,
 	.disp_id = 0,
@@ -1625,10 +1631,12 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 
 	for (i = 0; i < ARRAY_SIZE(fb_data); i++)
 		imx53_add_ipuv3fb(i, &fb_data[i]);
-	imx53_add_vpu();
 
+	imx53_add_lcdif(&lcdif_data);
 	imx53_add_ldb(&ldb_data);
 	imx53_add_tve(&tve_data);
+	imx53_add_vpu();
+
 	/*GPU*/
 	if (mx53_revision() >= IMX_CHIP_REVISION_2_0)
 		gpu_pdata.z160_revision = 1;
