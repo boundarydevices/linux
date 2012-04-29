@@ -37,6 +37,7 @@
 #include <linux/interrupt.h>
 #include <linux/ipu.h>
 #include <linux/irq.h>
+#include <linux/memblock.h>
 #include <linux/mfd/da9052/da9052.h>
 //#include <linux/mfd/sc16is7xx-reg.h>
 #if defined(CONFIG_MTD)
@@ -64,6 +65,7 @@
 //#include <linux/usb/f_accessory.h>
 #include <linux/wl12xx.h>
 //#include <linux/ektf2k.h>
+#include <linux/android_pmem.h>
 
 #include <mach/ahci_sata.h>
 #include <mach/common.h>
@@ -89,6 +91,7 @@
 #include "crm_regs.h"
 #include "devices-imx53.h"
 #include "usb.h"
+#include "android.h"
 
 #if defined (CONFIG_TOUCHSCREEN_ATMEL_MXT) || defined (CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
 #include <linux/i2c/atmel_mxt_ts.h>
@@ -371,7 +374,7 @@ struct gpio nitrogen53_gpios[] __initdata = {
 #define N53_TFP410_I2CMODE			MAKE_GP(2, 29)
 	{.label = "tfp410_i2cmode",	.gpio = MAKE_GP(2, 29),		.flags = GPIOF_INIT_HIGH},	/* EIM_EB1 */
 #define N53_SS1					MAKE_GP(3, 19)
-	{.label = "ecspi_ss1",		.gpio = MAKE_GP(3, 19),		.flags = GPIOF_INIT_HIGH},	/* low active */
+//	{.label = "ecspi_ss1",		.gpio = MAKE_GP(3, 19),		.flags = GPIOF_INIT_HIGH},	/* low active */
 //	{.label = "Shutdown output",	.gpio = MAKE_GP(3, 31),		.flags = 0},
 #define N53_AMP_ENABLE				MAKE_GP(4, 7)	/* KEY_ROW0 */
 	{.label = "speaker_amp",	.gpio = MAKE_GP(4, 7),		.flags = 0},
@@ -664,6 +667,20 @@ static struct imx_ipuv3_platform_data ipu_data = {
 	.rev = 3,
 };
 
+static struct android_pmem_platform_data android_pmem_data = {
+       .name = "pmem_adsp",
+       .size = SZ_64M,
+};
+
+static struct android_pmem_platform_data android_pmem_gpu_data = {
+       .name = "pmem_gpu",
+       .size = SZ_32M,
+};
+
+static struct mxc_gpu_platform_data gpu_pdata __initdata = {
+	.reserved_mem_size = SZ_32M,
+};
+
 static struct fec_platform_data fec_data = {
 	.phy = PHY_INTERFACE_MODE_GMII,
 };
@@ -919,7 +936,6 @@ static struct ipuv3_fb_platform_data fb_data[] = {
 	},
 };
 
-static struct mxc_gpu_platform_data gpu_data __initdata;
 
 struct plat_i2c_generic_data {
 	unsigned irq;
@@ -1317,72 +1333,80 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 {
 	char *str;
 	struct tag *t;
-	struct tag *mem_tag = 0;
-	int total_mem = SZ_1G;
-	int temp_mem = 0;
-	int fb_mem = SZ_32M;
-#if defined(CONFIG_MXC_AMD_GPU) || defined(CONFIG_MXC_AMD_GPU_MODULE)
-	int gpu_mem = SZ_64M;
-#endif
-	pr_info("%s\n", __func__);
+	int i = 0;
+	struct ipuv3_fb_platform_data *pfb = fb_data;
 
 	mxc_set_cpu_type(MXC_CPU_MX53);
 
 	for_each_tag(t, tags) {
 		if (t->hdr.tag == ATAG_CMDLINE) {
-			str = t->u.cmdline.cmdline;
-			str = strstr(str, "mem=");
+			str = strstr(str, "pmem=");
 			if (str != NULL) {
-				str += 4;
-				temp_mem = memparse(str, &str);
+				str += 5;
+				android_pmem_gpu_data.size = memparse(str, &str);
+				if (*str == ',') {
+					str++;
+					android_pmem_data.size = memparse(str, &str);
+				}
 			}
 
-#if defined(CONFIG_MXC_AMD_GPU) || defined(CONFIG_MXC_AMD_GPU_MODULE)
 			str = t->u.cmdline.cmdline;
-			str = strstr(str, "gpu_memory=");
+			str = strstr(str, "fbmem=");
 			if (str != NULL) {
-				str += 11;
-				gpu_mem = memparse(str, &str);
+				str += 6;
+				pfb[i++].res_size[0] = memparse(str, &str);
+				while (*str == ',' &&
+					i < ARRAY_SIZE(fb_data)) {
+					str++;
+					pfb[i++].res_size[0] = memparse(str, &str);
+				}
 			}
-#endif
 			break;
 		}
-	}
-
-	for_each_tag(mem_tag, tags) {
-		if (mem_tag->hdr.tag == ATAG_MEM) {
-			total_mem = mem_tag->u.mem.size;
-			break;
-		}
-	}
-
-	if (temp_mem > 0 && temp_mem < total_mem)
-		total_mem = temp_mem;
-
-	if (mem_tag) {
-		/* reserver memory for fb */
-		int mem_end = mem_tag->u.mem.start + total_mem;
-		mem_end -= fb_mem;
-		total_mem -= fb_mem;
-		fb_data[0].res_base[0] = mem_end;
-		fb_data[0].res_size[0] = fb_mem;
-#if defined(CONFIG_MXC_AMD_GPU) || defined(CONFIG_MXC_AMD_GPU_MODULE)
-		/* reserve memory for gpu */
-		mem_end -= gpu_mem;
-		total_mem -= gpu_mem;
-		gpu_data.reserved_mem_base = mem_end;
-		gpu_data.reserved_mem_size = gpu_mem;
-#endif
-
-#if defined(CONFIG_VIDEO_BOUNDARY_CAMERA) || defined(CONFIG_VIDEO_BOUNDARY_CAMERA_MODULE)
-		mem_end -= MAX_CAMERA_MEM;
-		total_mem -= MAX_CAMERA_MEM;
-		camera_buf_phys = mem_end;
-		printk (KERN_INFO "0x%x bytes of camera mem at 0x%lx\n", MAX_CAMERA_MEM, camera_buf_phys);
-#endif
-		mem_tag->u.mem.size = total_mem ;
 	}
 }
+
+static void __init mem_reserve(void)
+{
+	phys_addr_t phys;
+	int i;
+
+	if (gpu_pdata.reserved_mem_size) {
+		phys = memblock_alloc(gpu_pdata.reserved_mem_size,
+					   SZ_4K);
+		memblock_free(phys, gpu_pdata.reserved_mem_size);
+		memblock_remove(phys, gpu_pdata.reserved_mem_size);
+		gpu_pdata.reserved_mem_base = phys;
+	}
+
+#ifdef CONFIG_ANDROID_PMEM
+	if (android_pmem_data.size) {
+		phys = memblock_alloc(android_pmem_data.size, SZ_4K);
+		memblock_free(phys, android_pmem_data.size);
+		memblock_remove(phys, android_pmem_data.size);
+		android_pmem_data.start = phys;
+	}
+
+	if (android_pmem_gpu_data.size) {
+		phys = memblock_alloc(android_pmem_gpu_data.size, SZ_4K);
+		memblock_free(phys, android_pmem_gpu_data.size);
+		memblock_remove(phys, android_pmem_gpu_data.size);
+		android_pmem_gpu_data.start = phys;
+	}
+#endif
+
+	for (i = 0; i < ARRAY_SIZE(fb_data); i++) {
+		if (fb_data[i].res_size[0]) {
+			/* reserve for background buffer */
+			phys = memblock_alloc(fb_data[i].res_size[0],
+						SZ_4K);
+			memblock_free(phys, fb_data[i].res_size[0]);
+			memblock_remove(phys, fb_data[i].res_size[0]);
+			fb_data[i].res_base[0] = phys;
+		}
+	}
+}
+
 
 #if defined(CONFIG_VIDEO_BOUNDARY_CAMERA) || defined(CONFIG_VIDEO_BOUNDARY_CAMERA_MODULE)
 static struct platform_device boundary_camera_device = {
@@ -1607,10 +1631,10 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 	imx53_add_tve(&tve_data);
 	/*GPU*/
 	if (mx53_revision() >= IMX_CHIP_REVISION_2_0)
-		gpu_data.z160_revision = 1;
+		gpu_pdata.z160_revision = 1;
 	else
-		gpu_data.z160_revision = 0;
-	imx53_add_mxc_gpu(&gpu_data);
+		gpu_pdata.z160_revision = 0;
+	imx53_add_mxc_gpu(&gpu_pdata);
 	/* this call required to release SCC RAM partition held by ROM
 	  * during boot, even if SCC2 driver is not part of the image
 	  */
@@ -1685,6 +1709,10 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 #if defined (CONFIG_BOUNDARY_CAMERA_HDMI_IN) || defined (CONFIG_BOUNDARY_CAMERA_HDMI_IN_MODULE)
 	platform_device_register(&hdmi_input);
 #endif
+	mxc_register_device(&mxc_android_pmem_device, &android_pmem_data);
+	mxc_register_device(&mxc_android_pmem_gpu_device,
+			    &android_pmem_gpu_data);
+
 }
 
 static void __init mx53_nitrogen_timer_init(void)
@@ -2033,6 +2061,7 @@ MACHINE_START(MX53_NITROGEN_A, "Boundary Devices Nitrogen_A MX53 Board")
 	.init_irq = mx5_init_irq,
 	.timer = &mxc_timer,
 	.init_machine = mxc_board_init_nitrogen_a,
+	.reserve = mem_reserve,
 MACHINE_END
 #endif
 
@@ -2257,6 +2286,7 @@ MACHINE_START(MX53_NITROGEN, "Boundary Devices Nitrogen MX53 Board")
 	.init_irq = mx53_init_irq,
 	.timer = &mxc_timer,
 	.init_machine = mxc_board_init_nitrogen,
+	.reserve = mem_reserve,
 MACHINE_END
 #endif
 
@@ -2732,5 +2762,6 @@ MACHINE_START(MX53_NITROGEN_K, "Boundary Devices MX53 Nitrogen_K Board")
 	.init_irq = mx5_init_irq,
 	.timer = &mxc_timer,
 	.init_machine = n53k_board_init,
+	.reserve = mem_reserve,
 MACHINE_END
 #endif

@@ -17,6 +17,16 @@
 #include <mach/imx-uart.h>
 #include <mach/irqs.h>
 
+struct platform_device mxc_android_pmem_device = {
+	.name = "android_pmem",
+	.id = 0,
+};
+
+struct platform_device mxc_android_pmem_gpu_device = {
+	.name = "android_pmem",
+	.id = 1,
+};
+
 static struct resource mxc_hsi2c_resources[] = {
 	{
 		.start = MX51_HSI2C_DMA_BASE_ADDR,
