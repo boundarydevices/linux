@@ -751,7 +751,7 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
 	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
 	int clk_ctl = 0;
 	int sys_fs;	/* sample freq */
-
+	int pll_needed = 0;
 	/*
 	 * sample freq should be divided by frame clock,
 	 * if frame clock lower than 44.1khz, sample feq should set to
@@ -806,87 +806,56 @@ static int sgtl5000_set_clock(struct snd_soc_codec *codec, int frame_rate)
 		return -EINVAL;
 	}
 
-	/*
-	 * calculate the divider of mclk/sample_freq,
-	 * factor of freq =96k can only be 256, since mclk in range (12m,27m)
-	 */
-	switch (sgtl5000->sysclk / sys_fs) {
-	case 256:
-		clk_ctl |= SGTL5000_MCLK_FREQ_256FS <<
-			SGTL5000_MCLK_FREQ_SHIFT;
-		break;
-	case 384:
-		clk_ctl |= SGTL5000_MCLK_FREQ_384FS <<
-			SGTL5000_MCLK_FREQ_SHIFT;
-		break;
-	case 512:
-		clk_ctl |= SGTL5000_MCLK_FREQ_512FS <<
-			SGTL5000_MCLK_FREQ_SHIFT;
-		break;
-	default:
-		/* if mclk not satisify the divider, use pll */
-		if (sgtl5000->master) {
-			clk_ctl |= SGTL5000_MCLK_FREQ_PLL <<
-				SGTL5000_MCLK_FREQ_SHIFT;
+	if (frame_rate * 256 == sgtl5000->sysclk)
+		clk_ctl |= SGTL5000_MCLK_FREQ_256FS << SGTL5000_MCLK_FREQ_SHIFT;
+	else if (frame_rate * 384 == sgtl5000->sysclk && frame_rate != 96000)
+		clk_ctl |= SGTL5000_MCLK_FREQ_384FS << SGTL5000_MCLK_FREQ_SHIFT;
+	else if (frame_rate * 512 == sgtl5000->sysclk && frame_rate != 96000)
+		clk_ctl |= SGTL5000_MCLK_FREQ_512FS << SGTL5000_MCLK_FREQ_SHIFT;
+	else if (!sgtl5000->master) {
+		dev_err(codec->dev, "PLL not supported in slave mode\n");
+		return -EINVAL;
+	} else {
+		u64 out;
+		unsigned div2;
+		unsigned pll_ctl;
+		if (sys_fs == 44100) {
+			out = 180633600ULL << 11;
 		} else {
-			dev_err(codec->dev,
-				"PLL not supported in slave mode\n");
-			return -EINVAL;
+			out = 196608000ULL << 11;
 		}
-	}
-
-	/* if using pll, please check manual 6.4.2 for detail */
-	if ((clk_ctl & SGTL5000_MCLK_FREQ_MASK) == SGTL5000_MCLK_FREQ_PLL) {
-		u64 out, t;
-		int div2;
-		int pll_ctl;
-		unsigned int in, int_div, frac_div;
-
 		if (sgtl5000->sysclk > 17000000) {
-			div2 = 1;
-			in = sgtl5000->sysclk / 2;
+			div2 = SGTL5000_INPUT_FREQ_DIV2;
+			out <<= 1;
 		} else {
 			div2 = 0;
-			in = sgtl5000->sysclk;
 		}
-		if (sys_fs == 44100)
-			out = 180633600;
-		else
-			out = 196608000;
-		t = do_div(out, in);
-		int_div = out;
-		t *= 2048;
-		do_div(t, in);
-		frac_div = t;
-		pll_ctl = int_div << SGTL5000_PLL_INT_DIV_SHIFT |
-		    frac_div << SGTL5000_PLL_FRAC_DIV_SHIFT;
-
+		out += (sgtl5000->sysclk >> 1);		/* round */
+		do_div(out, sgtl5000->sysclk);
+		pll_ctl = (int)out;
+		clk_ctl |= SGTL5000_MCLK_FREQ_PLL << SGTL5000_MCLK_FREQ_SHIFT;
 		snd_soc_write(codec, SGTL5000_CHIP_PLL_CTRL, pll_ctl);
-		if (div2)
-			snd_soc_update_bits(codec,
-				SGTL5000_CHIP_CLK_TOP_CTRL,
-				SGTL5000_INPUT_FREQ_DIV2,
-				SGTL5000_INPUT_FREQ_DIV2);
-		else
-			snd_soc_update_bits(codec,
-				SGTL5000_CHIP_CLK_TOP_CTRL,
-				SGTL5000_INPUT_FREQ_DIV2,
-				0);
-
+		snd_soc_update_bits(codec,
+			SGTL5000_CHIP_CLK_TOP_CTRL,
+			SGTL5000_INPUT_FREQ_DIV2,
+			div2);
 		/* power up pll */
 		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
 			SGTL5000_PLL_POWERUP | SGTL5000_VCOAMP_POWERUP,
 			SGTL5000_PLL_POWERUP | SGTL5000_VCOAMP_POWERUP);
-	} else {
-		/* power down pll */
-		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
-			SGTL5000_PLL_POWERUP | SGTL5000_VCOAMP_POWERUP,
-			0);
+		pll_needed = 1;
+		pr_info("\nfs=%d,sysclk=%d,clk_ctl=%04x,pll_ctl=%x,div2=%x\n",
+			 frame_rate, sgtl5000->sysclk, clk_ctl, pll_ctl, div2);
 	}
-
 	/* if using pll, clk_ctrl must be set after pll power up */
 	snd_soc_write(codec, SGTL5000_CHIP_CLK_CTRL, clk_ctl);
 
+	if (!pll_needed) {
+		/* power down pll */
+		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
+				SGTL5000_PLL_POWERUP | SGTL5000_VCOAMP_POWERUP,
+				0);
+	}
 	return 0;
 }
 
