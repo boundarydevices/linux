@@ -1059,10 +1059,6 @@ static int mxc_sgtl5000_amp_enable(int enable)
 
 static int mxc_sgtl5000_init(void);
 
-static struct imx_ssi_platform_data ssi1_pdata = {
-	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
-};
-
 static struct imx_ssi_platform_data ssi2_pdata = {
 	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
 };
@@ -1076,6 +1072,35 @@ static struct mxc_audio_platform_data sgtl5000_data = {
 	.amp_enable = mxc_sgtl5000_amp_enable,
 	.sysclk = 26000000,
 	.init = mxc_sgtl5000_init,
+};
+
+static struct platform_device mxc_sgtl5000_device = {
+	.name = "imx-sgtl5000",
+};
+
+static struct regulator_consumer_supply sgtl5000_consumer_vddd = {
+	.supply = "VDDD",
+	.dev_name = "2-000a",
+};
+
+static struct regulator_init_data sgtl5000_vddd_reg_initdata = {
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &sgtl5000_consumer_vddd,
+};
+
+static struct fixed_voltage_config sgtl5000_vddd_reg_config = {
+	.supply_name		= "VDDD",
+	.microvolts		= 3300000,
+	.gpio			= -1,
+	.init_data		= &sgtl5000_vddd_reg_initdata,
+};
+
+static struct platform_device sgtl5000_vddd_reg_devices = {
+	.name	= "reg-fixed-voltage",
+	.id	= 2,
+	.dev	= {
+		.platform_data = &sgtl5000_vddd_reg_config,
+	},
 };
 
 static int mxc_sgtl5000_init(void)
@@ -1104,9 +1129,14 @@ static int mxc_sgtl5000_init(void)
 	return 0;
 }
 
-static struct platform_device mxc_sgtl5000_device = {
-	.name = "imx-3stack-sgtl5000",
-};
+static int sgtl5000_init_audio(void)
+{
+	mxc_register_device(&mxc_sgtl5000_device, &sgtl5000_data);
+	imx53_add_imx_ssi(1, &ssi2_pdata);
+	platform_device_register(&sgtl5000_vddd_reg_devices);
+	return 0;
+}
+
 
 static struct mxc_mlb_platform_data mlb_data = {
 	.reg_nvcc = "VCAM",
@@ -1658,12 +1688,11 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 	imx53_add_mxc_pwm_backlight(1, &mxc_backlight_data_pwm1);
 	imx53_add_sdhci_esdhc_imx(0, &sd1_data);
 	imx53_add_sdhci_esdhc_imx(2, &sd3_data);
-	imx53_add_imx_ssi(0, &ssi1_pdata);
-	imx53_add_imx_ssi(1, &ssi2_pdata);
-
+#if 1
 	imx53_add_spdif(&mxc_spdif_data);
 	imx53_add_spdif_dai();
 	imx53_add_spdif_audio_device();
+#endif
 	imx53_add_ahci(0, &sata_data);
 	mxc_register_device(&imx_ahci_device_hwmon, NULL);
 	imx53_add_fec(&fec_data);
@@ -1683,8 +1712,8 @@ static void __init mxc_board_init(struct i2c_board_info *bi0, int bi0_size,
 				ARRAY_SIZE(spidev));
 
 	pm_power_off = nitrogen_power_off;
+	sgtl5000_init_audio();
 
-	mxc_register_device(&mxc_sgtl5000_device, &sgtl5000_data);
 //	mxc_register_device(&mxc_mlb_device, &mlb_data);
 	mx5_usb_dr_init();
 	mx5_set_host1_vbus_func(mx53_gpio_host1_driver_vbus);
@@ -1784,7 +1813,7 @@ static struct i2c_board_info mxc_i2c1_board_info_a[] __initdata = {
 
 static struct i2c_board_info mxc_i2c2_board_info_a[] __initdata = {
 	{
-	 .type = "sgtl5000-i2c",
+	 .type = "sgtl5000",
 	 .addr = 0x0a,
 	},
 };
@@ -2135,7 +2164,7 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
-	 .type = "sgtl5000-i2c",
+	 .type = "sgtl5000",
 	 .addr = 0x0a,
 	},
 };
@@ -2536,7 +2565,7 @@ static struct mxt_platform_data mxt224_data = {
 
 static struct i2c_board_info n53k_i2c2_board_info[] __initdata = {
 	{
-	 .type = "sgtl5000-i2c",
+	 .type = "sgtl5000",
 	 .addr = 0x0a,
 	},
 #if defined (CONFIG_TOUCHSCREEN_ATMEL_MXT) || defined (CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
