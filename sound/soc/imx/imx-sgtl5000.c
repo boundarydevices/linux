@@ -17,6 +17,7 @@
 #include <linux/i2c.h>
 #include <linux/fsl_devices.h>
 #include <linux/gpio.h>
+#include <linux/regulator/consumer.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
@@ -32,6 +33,7 @@ static struct imx_sgtl5000_priv {
 	int sysclk;
 	int hw;
 	struct platform_device *pdev;
+	struct regulator *reg_amp;
 } card_priv;
 
 static struct snd_soc_jack hs_jack;
@@ -100,7 +102,31 @@ static int sgtl5000_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+static int amp_startup(struct snd_pcm_substream *substream)
+{
+	struct imx_sgtl5000_priv *priv = &card_priv;
+	if (IS_ERR(priv->reg_amp))
+		return 0;
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		regulator_enable(priv->reg_amp);
+	return 0;
+}
+
+static void amp_shutdown(struct snd_pcm_substream *substream)
+{
+	struct imx_sgtl5000_priv *priv = &card_priv;
+
+	priv->hw = 0;
+	if (IS_ERR(priv->reg_amp))
+		return;
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		regulator_disable(priv->reg_amp);
+}
+
+
 static struct snd_soc_ops imx_sgtl5000_hifi_ops = {
+	.startup = amp_startup,
+	.shutdown = amp_shutdown,
 	.hw_params = sgtl5000_params,
 };
 
@@ -322,7 +348,10 @@ static int __devinit imx_sgtl5000_probe(struct platform_device *pdev)
 	int ret = 0;
 
 	card_priv.pdev = pdev;
-
+	card_priv.reg_amp = regulator_get(&pdev->dev, "VDD_AMP");
+	if (IS_ERR(card_priv.reg_amp)) {
+		dev_err(&pdev->dev, "get VDD_AMP error.\n");
+	}
 	imx_audmux_config(plat->src_port, plat->ext_port);
 
 	ret = -EINVAL;
@@ -341,6 +370,11 @@ static int imx_sgtl5000_remove(struct platform_device *pdev)
 {
 	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;
 
+	if (!IS_ERR(card_priv.reg_amp)) {
+		regulator_disable(card_priv.reg_amp);
+		regulator_put(card_priv.reg_amp);
+		card_priv.reg_amp = ERR_PTR(-EINVAL);
+	}
 	if (plat->finit)
 		plat->finit();
 
@@ -365,6 +399,9 @@ static int __init imx_sgtl5000_init(void)
 
 	if (machine_is_mx35_3ds() || machine_is_mx6q_sabrelite())
 		imx_sgtl5000_dai[0].codec_name = "sgtl5000.0-000a";
+	else if (machine_is_mx53_nitrogen() || machine_is_mx53_nitrogen_a()
+			|| machine_is_mx53_nitrogen_k())
+		imx_sgtl5000_dai[0].codec_name = "sgtl5000.2-000a";
 	else
 		imx_sgtl5000_dai[0].codec_name = "sgtl5000.1-000a";
 
