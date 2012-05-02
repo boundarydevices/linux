@@ -50,7 +50,7 @@ static struct regulator_consumer_supply ldo4_consumers[] = {
 	{
 		/* audio amp */
 		.supply = "VDD_AMP",
-		.dev_name = "imx-3stack-sgtl5000.0",
+		.dev_name = "imx-sgtl5000.0",
 	},
 };
 
