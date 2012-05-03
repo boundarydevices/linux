@@ -88,6 +88,7 @@
 #define MX6Q_SABRELITE_USB_HUB_RESET	IMX_GPIO_NR(7, 12)
 #define MX6Q_SABRELITE_CAN1_STBY	IMX_GPIO_NR(1, 2)
 #define MX6Q_SABRELITE_CAN1_EN		IMX_GPIO_NR(1, 4)
+#define MX6Q_SABRELITE_CAN1_ERR		IMX_GPIO_NR(1, 7)
 #define MX6Q_SABRELITE_MENU_KEY		IMX_GPIO_NR(2, 1)
 #define MX6Q_SABRELITE_BACK_KEY		IMX_GPIO_NR(2, 2)
 #define MX6Q_SABRELITE_ONOFF_KEY	IMX_GPIO_NR(2, 3)
@@ -102,6 +103,8 @@
 #define N6Q_WL1271_WL_EN		IMX_GPIO_NR(6, 15)
 #define N6Q_WL1271_BT_EN		IMX_GPIO_NR(6, 16)
 
+#define MX6Q_SABRELITE_CAN1_ERR_TEST_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+#define MX6Q_SABRELITE_CAN1_ERR_PADCFG		(PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 #define MX6Q_SABRELITE_WL_IRQ_TEST_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 #define MX6Q_SABRELITE_WL_IRQ_PADCFG	(PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 #define MX6Q_SABRELITE_WL_EN_PADCFG	(PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm)
@@ -192,8 +195,9 @@ static iomux_v3_cfg_t common_pads[] = {
 	MX6Q_PAD_KEY_ROW2__CAN1_RXCAN,
 	MX6Q_PAD_KEY_COL2__CAN1_TXCAN,
 	MX6Q_PAD_GPIO_2__GPIO_1_2,		/* STNDBY */
-	MX6Q_PAD_GPIO_7__GPIO_1_7,		/* NERR */
 	MX6Q_PAD_GPIO_4__GPIO_1_4,		/* Enable */
+	/* NERR */
+	NEW_PAD_CTRL(MX6Q_PAD_GPIO_7__GPIO_1_7, MX6Q_SABRELITE_CAN1_ERR_TEST_PADCFG),
 
 	/* CCM  */
 	MX6Q_PAD_GPIO_0__CCM_CLKO,		/* SGTL5000 sys_mclk */
@@ -809,24 +813,30 @@ static struct ahci_platform_data mx6q_sabrelite_sata_data = {
 };
 
 static struct gpio mx6q_sabrelite_flexcan_gpios[] = {
+	{ MX6Q_SABRELITE_CAN1_ERR, GPIOF_DIR_IN, "flexcan1-err" },
 	{ MX6Q_SABRELITE_CAN1_EN, GPIOF_OUT_INIT_LOW, "flexcan1-en" },
 	{ MX6Q_SABRELITE_CAN1_STBY, GPIOF_OUT_INIT_LOW, "flexcan1-stby" },
 };
 
-static void mx6q_sabrelite_flexcan0_switch(int enable)
+static void mx6q_sabrelite_flexcan0_mc33902_switch(int enable)
 {
-	if (enable) {
-		gpio_set_value(MX6Q_SABRELITE_CAN1_EN, 1);
-		gpio_set_value(MX6Q_SABRELITE_CAN1_STBY, 1);
-	} else {
-		gpio_set_value(MX6Q_SABRELITE_CAN1_EN, 0);
-		gpio_set_value(MX6Q_SABRELITE_CAN1_STBY, 0);
-	}
+	gpio_set_value(MX6Q_SABRELITE_CAN1_EN, enable);
+	gpio_set_value(MX6Q_SABRELITE_CAN1_STBY, enable);
+}
+
+static void mx6q_sabrelite_flexcan0_tja1040_switch(int enable)
+{
+	gpio_set_value(MX6Q_SABRELITE_CAN1_STBY, enable ^ 1);
 }
 
 static const struct flexcan_platform_data
-	mx6q_sabrelite_flexcan0_pdata __initconst = {
-	.transceiver_switch = mx6q_sabrelite_flexcan0_switch,
+	mx6q_sabrelite_flexcan0_mc33902_pdata __initconst = {
+	.transceiver_switch = mx6q_sabrelite_flexcan0_mc33902_switch,
+};
+
+static const struct flexcan_platform_data
+	mx6q_sabrelite_flexcan0_tja1040_pdata __initconst = {
+	.transceiver_switch = mx6q_sabrelite_flexcan0_tja1040_switch,
 };
 
 static struct viv_gpu_platform_data imx6q_gpu_pdata __initdata = {
@@ -1362,10 +1372,22 @@ static void __init mx6_sabrelite_board_init(void)
 
 	ret = gpio_request_array(mx6q_sabrelite_flexcan_gpios,
 			ARRAY_SIZE(mx6q_sabrelite_flexcan_gpios));
-	if (ret)
+	if (ret) {
 		pr_err("failed to request flexcan1-gpios: %d\n", ret);
-	else
-		imx6q_add_flexcan0(&mx6q_sabrelite_flexcan0_pdata);
+	} else {
+		int ret = gpio_get_value(MX6Q_SABRELITE_CAN1_ERR);
+		if (ret == 0) {
+			imx6q_add_flexcan0(&mx6q_sabrelite_flexcan0_tja1040_pdata);
+			pr_info("Flexcan NXP tja1040\n");
+		} else if (ret == 1) {
+			iomux_v3_cfg_t err_pad = NEW_PAD_CTRL(MX6Q_PAD_GPIO_7__GPIO_1_7, MX6Q_SABRELITE_CAN1_ERR_PADCFG);
+			imx6q_add_flexcan0(&mx6q_sabrelite_flexcan0_mc33902_pdata);
+			mxc_iomux_v3_setup_pad(err_pad);
+			pr_info("Flexcan Freescale mc33902\n");
+		} else {
+			pr_info("Flexcan gpio_get_value CAN1_ERR failed\n");
+		}
+	}
 
 	clko2 = clk_get(NULL, "clko2_clk");
 	if (IS_ERR(clko2))
