@@ -199,6 +199,10 @@ static int mxc_audmux_v2_init(void)
 		audmux_base = MX51_IO_ADDRESS(MX51_AUDMUX_BASE_ADDR);
 		ret = 0;
 		return ret;
+	} else {
+		audmux_base = MX53_IO_ADDRESS(MX53_AUDMUX_BASE_ADDR);
+		ret = 0;
+		return ret;
 	}
 #endif
 #if defined(CONFIG_ARCH_MX3)
