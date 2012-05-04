@@ -60,12 +60,11 @@
 #define LDB_BIT_MAP_CH0_JEIDA		0x00000040
 #define LDB_BIT_MAP_CH0_SPWG		0x0
 
-#define LDB_DATA_WIDTH_CH1_MASK		0x00000080
-#define LDB_DATA_WIDTH_CH1_24		0x00000080
-#define LDB_DATA_WIDTH_CH1_18		0x0
-#define LDB_DATA_WIDTH_CH0_MASK		0x00000020
-#define LDB_DATA_WIDTH_CH0_24		0x00000020
-#define LDB_DATA_WIDTH_CH0_18		0x0
+#if defined (CONFIG_MACH_MX53_NITROGEN_K) || \
+    defined (CONFIG_MACH_NITROGEN_IMX53) || \
+    defined (CONFIG_MACH_NITROGEN_A_IMX53)
+#define NITROGEN53
+#endif
 
 #define LDB_CH1_MODE_MASK		0x0000000C
 #define LDB_CH1_MODE_EN_TO_DI1		0x0000000C
@@ -75,6 +74,26 @@
 #define LDB_CH0_MODE_EN_TO_DI1		0x00000003
 #define LDB_CH0_MODE_EN_TO_DI0		0x00000001
 #define LDB_CH0_MODE_DISABLE		0x0
+
+#ifdef NITROGEN53
+#undef LDB_CH1_MODE_MASK
+#define LDB_CH1_MODE_MASK		0x0000000F
+#undef LDB_CH1_MODE_EN_TO_DI1
+#define LDB_CH1_MODE_EN_TO_DI1		0x0000000F
+#define LDB_DATA_WIDTH_CH0_MASK		0x00000080
+#define LDB_DATA_WIDTH_CH0_24		0x00000080
+#define LDB_DATA_WIDTH_CH0_18		0x0
+#define LDB_DATA_WIDTH_CH1_MASK		0x00000020
+#define LDB_DATA_WIDTH_CH1_24		0x00000020
+#define LDB_DATA_WIDTH_CH1_18		0x0
+#else
+#define LDB_DATA_WIDTH_CH1_MASK		0x00000080
+#define LDB_DATA_WIDTH_CH1_24		0x00000080
+#define LDB_DATA_WIDTH_CH1_18		0x0
+#define LDB_DATA_WIDTH_CH0_MASK		0x00000020
+#define LDB_DATA_WIDTH_CH0_24		0x00000020
+#define LDB_DATA_WIDTH_CH0_18		0x0
+#endif
 
 #define LDB_SPLIT_MODE_EN		0x00000010
 
@@ -1514,22 +1533,18 @@ static int __init ldb_setup(char *options)
 	} else
 		return 1;
 
-	if ((strsep(&options, ",") != NULL) &&
-	    !strncmp(options, "ch0_map=", 8)) {
+	if ((strsep(&options, ",") != NULL)) {
+	    if (!strncmp(options, "ch0_map=", 8)) {
 		if (!strncmp(options + 8, "SPWG", 4))
 			g_chan_bit_map[0] = LDB_BIT_MAP_SPWG;
 		else
 			g_chan_bit_map[0] = LDB_BIT_MAP_JEIDA;
-	}
-
-	if (!(g_chan_mode_opt == LDB_SIN_DI0 ||
-	      g_chan_mode_opt == LDB_SIN_DI1) &&
-	    (strsep(&options, ",") != NULL) &&
-	    !strncmp(options, "ch1_map=", 8)) {
+	    } else if (!strncmp(options, "ch1_map=", 8)) {
 		if (!strncmp(options + 8, "SPWG", 4))
 			g_chan_bit_map[1] = LDB_BIT_MAP_SPWG;
 		else
 			g_chan_bit_map[1] = LDB_BIT_MAP_JEIDA;
+	    }
 	}
 
 	return 1;
