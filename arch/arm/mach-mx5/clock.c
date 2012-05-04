@@ -5379,8 +5379,12 @@ static int cpu_clk_set_op(int op)
 		/* Wait for the PLL to lock */
 		getnstimeofday(&nstimeofday);
 		do {
+			int diff;
 			getnstimeofday(&curtime);
-			if ((curtime.tv_nsec - nstimeofday.tv_nsec) > SPIN_DELAY)
+			diff = curtime.tv_nsec - nstimeofday.tv_nsec;
+			if (diff < 0)
+				diff += 1000000000;
+			if (diff > SPIN_DELAY * 5)
 				panic("pll1 relock failed\n");
 			stat = __raw_readl(pll1_base + MXC_PLL_DP_CTL) &
 			    MXC_PLL_DP_CTL_LRF;
