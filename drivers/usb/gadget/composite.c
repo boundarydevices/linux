@@ -323,7 +323,9 @@ static int config_buf(struct usb_configuration *config,
 	struct usb_function		*f;
 	int				status;
 	int				interfaceCount = 0;
-	int				lastIf = 0;
+#ifdef CONFIG_USB_ANDROID
+	int                             lastIf = 0;
+#endif
 	u8 *dest;
 
 	/* write the config descriptor */
@@ -367,6 +369,7 @@ static int config_buf(struct usb_configuration *config,
 		while ((descriptor = *descriptors++) != NULL) {
 			intf = (struct usb_interface_descriptor *)dest;
 			if (intf->bDescriptorType == USB_DT_INTERFACE) {
+#ifdef CONFIG_ANDROID
 				int i;
 				/* assign the correct interface number */
 				if (intf->bAlternateSetting != 0)
@@ -380,6 +383,13 @@ static int config_buf(struct usb_configuration *config,
 						}
 					interfaceCount++;
 				}
+#else
+				/* don't increment bInterfaceNumber for alternate settings */
+				if (intf->bAlternateSetting == 0)
+					intf->bInterfaceNumber = interfaceCount++;
+				else
+					intf->bInterfaceNumber = interfaceCount - 1;
+#endif
 			}
 			dest += intf->bLength;
 		}
