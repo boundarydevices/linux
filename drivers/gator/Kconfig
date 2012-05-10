@@ -3,7 +3,6 @@ config GATOR
 	default m if (ARM || ARM64)
 	depends on PROFILING
 	depends on HIGH_RES_TIMERS
-	depends on LOCAL_TIMERS || !(ARM && SMP)
 	depends on PERF_EVENTS
 	depends on HW_PERF_EVENTS || !(ARM || ARM64)
 	select TRACING
