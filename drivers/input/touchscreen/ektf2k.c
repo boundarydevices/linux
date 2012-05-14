@@ -301,10 +301,17 @@ static uint8_t checksum(uint8_t const *buf, unsigned len)
 
 static void report_touch(struct input_dev *idev, unsigned x, unsigned y)
 {
+#ifdef TOUCHSCREEN_EKTF2K_SINGLE_TOUCH
 	input_event(idev, EV_ABS, ABS_MT_POSITION_X, x);
 	input_event(idev, EV_ABS, ABS_MT_POSITION_Y, y);
 	input_event(idev, EV_ABS, ABS_MT_TOUCH_MAJOR, 1);
 	input_mt_sync(idev);
+#else
+	input_event(idev, EV_ABS, ABS_X, x);
+	input_event(idev, EV_ABS, ABS_Y, y);
+	input_event(idev, EV_ABS, ABS_PRESSURE, 1);
+	input_report_key(idev, BTN_TOUCH, 1);
+#endif
 }
 
 static void process_fingers(struct elan_ktf2k_ts_data *ts, uint8_t *pkt)
@@ -313,9 +320,14 @@ static void process_fingers(struct elan_ktf2k_ts_data *ts, uint8_t *pkt)
 	unsigned count = pkt[2]&0x0f;
 	if (0 == count) {
 		dev_dbg(&ts->client->dev, "[elan] release\n");
+#ifdef TOUCHSCREEN_EKTF2K_SINGLE_TOUCH
 		input_report_abs(idev, ABS_MT_TOUCH_MAJOR, 0);
 		input_report_abs(idev, ABS_MT_WIDTH_MAJOR, 0);
 		input_mt_sync(idev);
+#else
+		input_event(idev, EV_ABS, ABS_PRESSURE, 0);
+		input_report_key(idev, BTN_TOUCH, 0);
+#endif
 	} else {
 		unsigned const fbits = pkt[1]|((pkt[2]&0x30)<<4);
 		int i ;
@@ -509,14 +521,16 @@ static int elan_ktf2k_ts_probe(struct i2c_client *client,
 	input_set_abs_params(ts->input_dev, ABS_Y, 0, REPORTED_TOUCH_RANGE-1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_PRESSURE, 0, 255, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_TOOL_WIDTH, 0, 255, 0, 0);
+#ifdef TOUCHSCREEN_EKTF2K_SINGLE_TOUCH
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, REPORTED_TOUCH_RANGE-1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, REPORTED_TOUCH_RANGE-1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_TRACKING_ID, 0, FINGER_NUM, 0, 0);
-
+#endif
 	__set_bit(EV_ABS, ts->input_dev->evbit);
 	__set_bit(EV_SYN, ts->input_dev->evbit);
 	__set_bit(EV_KEY, ts->input_dev->evbit);
+	__set_bit(BTN_TOUCH, ts->input_dev->keybit);
 
 	err = input_register_device(ts->input_dev);
 	if (err) {
