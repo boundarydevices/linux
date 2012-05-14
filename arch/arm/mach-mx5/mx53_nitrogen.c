@@ -1648,7 +1648,7 @@ static struct platform_device boundary_camera_interfaces[] = {
 };
 #endif
 
-#if defined (HAVE_CAMERA)
+#ifdef HAVE_CAMERA
 static struct mxc_camera_platform_data camera_data;
 static void camera_pwdn(int pwdn)
 {
@@ -1683,7 +1683,7 @@ static void init_camera(void)
 	} else
 		printk(KERN_ERR "%s: Error getting CSI clock\n", __func__ );
 
-#if defined (CONFIG_BOUNDARY_CAMERA_OV5640) || defined (CONFIG_BOUNDARY_CAMERA_OV5640_MODULE)
+#ifdef HAVE_CAMERA
 	mxc_register_device(&boundary_camera_device, &camera_data);
 	for (i = 0 ; i < ARRAY_SIZE(boundary_camera_interfaces); i++ ){
 		mxc_register_device(&boundary_camera_interfaces[i], &camera_data);
@@ -2012,11 +2012,13 @@ static struct i2c_board_info n53a_i2c3_board_info[] __initdata = {
 };
 
 static struct i2c_board_info n53a_i2c4_board_info[] __initdata = {
+#ifdef HAVE_CAMERA
 	{
 	 .type = "ov5642",
 	 .addr = 0x3c,
 	 .platform_data  = &camera_data,
 	},
+#endif
 };
 
 static struct i2c_board_info n53a_i2c5_board_info[] __initdata = {
@@ -2310,7 +2312,7 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	 .addr = 0x38,
 	 .platform_data  = &i2c_tfp410_data,
 	},
-#if defined (CONFIG_VIDEO_MXC_CAMERA) || defined (CONFIG_VIDEO_MXC_CAMERA_MODULE)
+#ifdef HAVE_CAMERA
 	{
 	 .type = "ov5642",
 	 .addr = 0x3c,
@@ -2679,11 +2681,13 @@ static struct i2c_board_info n53k_i2c5_board_info[] __initdata = {
 };
 
 static struct i2c_board_info n53k_i2c6_board_info[] __initdata = {
+#ifdef HAVE_CAMERA
 	{
 	 .type = "ov5642",
 	 .addr = 0x3c,
 	 .platform_data  = &camera_data,
 	},
+#endif
 };
 #else
 
@@ -2695,7 +2699,7 @@ static struct i2c_board_info n53k_i2c0_board_info[] __initdata = {
 	},
 };
 static struct i2c_board_info n53k_i2c1_board_info[] __initdata = {
-#if defined (CONFIG_VIDEO_MXC_CAMERA) || defined (CONFIG_VIDEO_MXC_CAMERA_MODULE)
+#ifdef HAVE_CAMERA
 	{
 	 .type = "ov5642",
 	 .addr = 0x3c,
@@ -2905,7 +2909,9 @@ static void __init n53k_board_init(void)
 {
 	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
 #ifdef CONFIG_K2
+#ifdef HAVE_CAMERA
 	camera_data.power_down = N53K_CAMERA_POWER_DOWN;
+#endif
 	sgtl5000_data.hp_status = headphone_det_status_k;
 	sgtl5000_data.hp_irq = gpio_to_irq(N53K_HEADPHONE_DET);
 	ldo8_consumers[0].dev_name = n53k_camera_i2c_dev_name;
