@@ -313,8 +313,8 @@ void insert_tsi_release(struct da9052_ts_priv *priv)
 		input_report_key(ip_dev, BTN_TOUCH, 0);
 		input_sync(ip_dev);
 		pr_debug("%s: released\n", __func__);
-		priv->drop_samples = drop_samples;
 	}
+	priv->drop_samples = drop_samples;
 	mutex_unlock(&ts->point_lock);
 }
 
