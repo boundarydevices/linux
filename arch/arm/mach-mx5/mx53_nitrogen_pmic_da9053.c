@@ -447,7 +447,7 @@ struct da9052_tsi_platform_data da9052_tsi = {
 	.tsi_skip_bit_shift = 3,
 	.num_gpio_tsi_register = 3,
 #ifdef CONFIG_FIVE_WIRE
-	.config_index = DA9052_5_WIRE_YXSXY,	/* Nitrogen53a rev 2 needs DA9052_5_WIRE_XYSXY, will fix up */
+	.config_index = DA9052_5_WIRE_YXSXY_IO1,	/* Nitrogen53a rev 2 needs DA9052_5_WIRE_XYSXY, will fix up */
 #else
 	.config_index = DA9052_4_WIRE,
 #endif

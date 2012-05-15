@@ -271,7 +271,7 @@ struct da9052_tsi {
 	u8 early_data_flag;
 	u8 debounce_over;
 	u8 win_reference_valid;
-
+	u16 config_index;
 	int os_data_cnt;
 	int raw_data_cnt;
 };

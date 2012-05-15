@@ -2226,7 +2226,7 @@ static void __init mxc_board_init_nitrogen_a(void)
 #ifdef CONFIG_KEYBOARD_GPIO
 	gpio_keys[2].gpio = MAKE_GP(3,31);	/* new rev - menu key */
 #endif
-	da9052_tsi.config_index = DA9052_5_WIRE_XYSXY;
+	da9052_tsi.config_index = DA9052_5_WIRE_XYSXY_IO2;
 
 	mxc_board_init(NULL, 0,
 		mxc_i2c1_board_info_a, ARRAY_SIZE(mxc_i2c1_board_info_a),

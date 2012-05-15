@@ -119,8 +119,12 @@ struct da9052_tsi_platform_data {
 	u16	max_tsi_delay;
 	u16	max_tsi_skip_slot;
 #define DA9052_4_WIRE		0
-#define DA9052_5_WIRE_YXSXY	1
-#define DA9052_5_WIRE_XYSXY	2
+#define DA9052_5_WIRE_YXSXY_IO1	1
+#define DA9052_5_WIRE_XYSXY_IO1	2
+#define DA9052_5_WIRE_YXSXY_IO2	3
+#define DA9052_5_WIRE_XYSXY_IO2	4
+#define DA9052_5_WIRE_ADC_IO1	5
+#define DA9052_5_WIRE_ADC_IO2	6
 	u16	config_index;
 };
 
