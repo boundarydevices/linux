@@ -39,6 +39,12 @@
 static int calibration[7];
 module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
 
+static unsigned char drop_samples = 1;
+module_param(drop_samples, byte, S_IRUGO | S_IWUSR);
+
+static unsigned char ts_mode = 255;
+module_param(ts_mode, byte, S_IRUGO | S_IWUSR);
+
 void da9052_calibrate(unsigned *px, unsigned *py)
 {
 	int x, y, x1, y1;
@@ -261,6 +267,10 @@ void insert_tsi_point(struct da9052_ts_priv *priv, unsigned x, unsigned y, unsig
 		priv->tsi_reg.sum.y = 0;
 		priv->tsi_reg.sum.z = 0;
 		priv->tsi_reg.sum_cnt = 0;
+		if (priv->drop_samples) {
+			priv->drop_samples--;
+			goto exit1;
+		}
 		da9052_calibrate(&x, &y);
 		input_report_abs(ip_dev, ABS_X, x);
 		input_report_abs(ip_dev, ABS_Y, y);
@@ -281,6 +291,7 @@ void insert_tsi_point(struct da9052_ts_priv *priv, unsigned x, unsigned y, unsig
 		pr_debug("%s: x=%x, y=%x, z=%x, pressed\n",
 			__func__, x, y, z);
 	}
+exit1:
 	mutex_unlock(&ts->point_lock);
 }
 
@@ -302,6 +313,7 @@ void insert_tsi_release(struct da9052_ts_priv *priv)
 		input_report_key(ip_dev, BTN_TOUCH, 0);
 		input_sync(ip_dev);
 		pr_debug("%s: released\n", __func__);
+		priv->drop_samples = drop_samples;
 	}
 	mutex_unlock(&ts->point_lock);
 }
@@ -1493,8 +1505,6 @@ static const unsigned char * const cfg_strs[] = {
 		[DA9052_5_WIRE_ADC_IO2] = "ADC_IO2",
 };
 
-unsigned g_default_ts_mode = 0x1000;
-
 static s32 __devinit da9052_tsi_probe(struct platform_device *pdev)
 {
 
@@ -1506,11 +1516,12 @@ static s32 __devinit da9052_tsi_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	tsi_fifo_init(priv);
 	priv->tsi_reg.tsi_state = WAIT_FOR_PEN_DOWN;
+	priv->drop_samples = drop_samples;
 	priv->da9052 = dev_get_drvdata(pdev->dev.parent);
 	platform_set_drvdata(pdev, priv);
 	priv->tsi_pdata = pdata;
-	priv->config_index = (g_default_ts_mode <= DA9052_5_WIRE_ADC_IO2) ?
-			(u16)g_default_ts_mode : pdata->config_index;
+	priv->config_index = (ts_mode <= DA9052_5_WIRE_ADC_IO2) ?
+			ts_mode : pdata->config_index;
 
 	if (priv->config_index) {
 		if (priv->config_index >= DA9052_5_WIRE_ADC_IO1) {
@@ -1590,16 +1601,6 @@ static struct platform_driver da9052_tsi_driver = {
 				.owner	= THIS_MODULE,
 			},
 };
-
-static int __init ts_mode_setup(char *options)
-{
-	unsigned i = simple_strtoul(options, NULL, 0);
-	if (i <= DA9052_5_WIRE_ADC_IO2)
-		g_default_ts_mode = i;
-	return 1;
-}
-
-__setup("ts_mode=", ts_mode_setup);
 
 static int __init da9052_tsi_init(void)
 {
