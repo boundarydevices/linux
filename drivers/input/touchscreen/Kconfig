@@ -331,6 +331,15 @@ config TOUCHSCREEN_EKTF2K
 	  If you say yes here you get touchscreen support through the ELAN
 	  KTF2K I2C controller.
 
+config TOUCHSCREEN_EKTF2K_SINGLE_TOUCH
+	bool "ELAN KTF2K touchscreen as single-touch"
+	default N
+	depends on TOUCHSCREEN_EKTF2K
+	help
+	  If you say yes here you get single-touch touchscreen support
+	  on the ELAN KTF2K I2C controller.
+	  If you say "no", you'll get the normal 10-finger goodness.
+
 config TOUCHSCREEN_MXC
 	tristate "MXC touchscreen input driver"
 	depends on MXC_MC13783_ADC || MXC_MC13892_ADC
