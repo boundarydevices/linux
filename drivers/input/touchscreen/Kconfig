@@ -737,12 +737,45 @@ config TOUCHSCREEN_DA9052
           Say y here to support the touchscreen found on
           Dialog Semiconductor DA9052 PMIC
 
-config FIVE_WIRE
-	bool "5-wire touch"
+choice
+	prompt "Select touchscreen mode"
 	depends on TOUCHSCREEN_DA9052
-	help
-	  Say Y here if you have a 5-wire touchscreen.
+	default DA905X_TS_4_WIRE
 
+config DA905X_TS_4_WIRE
+	bool "4-wire touchscreen"
+
+config DA905X_TS_5_WIRE_YXSXY_IO1
+	bool "5-wire YXSXY IO1"
+
+config DA905X_TS_5_WIRE_XYSXY_IO1
+	bool "5-wire XYSXY IO1"
+
+config DA905X_TS_5_WIRE_YXSXY_IO2
+	bool "5-wire YXSXY IO2"
+
+config DA905X_TS_5_WIRE_XYSXY_IO2
+	bool "5-wire XYSXY IO2"
+
+config DA905X_TS_5_WIRE_ADC_IO1
+	bool "5-wire adc IO1"
+
+config DA905X_TS_5_WIRE_ADC_IO2
+	bool "5-wire adc IO2"
+
+endchoice
+
+config DA905X_TS_MODE
+	int
+	depends on TOUCHSCREEN_DA9052
+	default 0 if DA905X_TS_4_WIRE
+	default 1 if DA905X_TS_5_WIRE_YXSXY_IO1
+	default 2 if DA905X_TS_5_WIRE_XYSXY_IO1
+	default 3 if DA905X_TS_5_WIRE_YXSXY_IO2
+	default 4 if DA905X_TS_5_WIRE_XYSXY_IO2
+	default 5 if DA905X_TS_5_WIRE_ADC_IO1
+	default 6 if DA905X_TS_5_WIRE_ADC_IO2
+	default 7
 
 config TOUCHSCREEN_MAX11801
        tristate "MAXIM MAX11801 touchscreen"

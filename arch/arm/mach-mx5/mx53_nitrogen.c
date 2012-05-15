@@ -1543,12 +1543,6 @@ EXPORT_SYMBOL(get_camera_phys);
 
 #endif
 
-#if (defined(CONFIG_VIDEO_BOUNDARY_CAMERA) || defined(CONFIG_VIDEO_BOUNDARY_CAMERA_MODULE)) \
-    && (defined(CONFIG_TOUCHSCREEN_DA9052) || defined(CONFIG_TOUCHSCREEN_DA9052)) \
-    && defined(CONFIG_FIVE_WIRE)
-    #error cannot simultaneously support camera and DA905x five wire touch
-#endif
-
 /*!
  * Board specific fixup function. It is called by \b setup_arch() in
  * setup.c file very early on during kernel starts. It allows the user to
@@ -2226,7 +2220,9 @@ static void __init mxc_board_init_nitrogen_a(void)
 #ifdef CONFIG_KEYBOARD_GPIO
 	gpio_keys[2].gpio = MAKE_GP(3,31);	/* new rev - menu key */
 #endif
+#if CONFIG_DA905X_TS_MODE == DA9052_5_WIRE_YXSXY_IO1
 	da9052_tsi.config_index = DA9052_5_WIRE_XYSXY_IO2;
+#endif
 
 	mxc_board_init(NULL, 0,
 		mxc_i2c1_board_info_a, ARRAY_SIZE(mxc_i2c1_board_info_a),

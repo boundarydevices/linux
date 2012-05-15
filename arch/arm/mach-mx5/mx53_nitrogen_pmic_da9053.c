@@ -446,11 +446,7 @@ struct da9052_tsi_platform_data da9052_tsi = {
 	.tsi_delay_bit_shift = 6,
 	.tsi_skip_bit_shift = 3,
 	.num_gpio_tsi_register = 3,
-#ifdef CONFIG_FIVE_WIRE
-	.config_index = DA9052_5_WIRE_YXSXY_IO1,	/* Nitrogen53a rev 2 needs DA9052_5_WIRE_XYSXY, will fix up */
-#else
-	.config_index = DA9052_4_WIRE,
-#endif
+	.config_index = CONFIG_DA905X_TS_MODE,
 	.tsi_supply_voltage = 2800,
 	.max_tsi_delay = TSI_DELAY_4SLOTS,
 	.max_tsi_skip_slot = TSI_SKIP_330SLOTS,
