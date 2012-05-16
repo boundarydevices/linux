@@ -446,7 +446,9 @@ struct da9052_tsi_platform_data da9052_tsi = {
 	.tsi_delay_bit_shift = 6,
 	.tsi_skip_bit_shift = 3,
 	.num_gpio_tsi_register = 3,
+#ifdef CONFIG_DA905X_TS_MODE
 	.config_index = CONFIG_DA905X_TS_MODE,
+#endif
 	.tsi_supply_voltage = 2800,
 	.max_tsi_delay = TSI_DELAY_4SLOTS,
 	.max_tsi_skip_slot = TSI_SKIP_330SLOTS,
