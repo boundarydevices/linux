@@ -77,6 +77,7 @@
 #include <mach/mmc.h>
 #include <mach/mxc_dvfs.h>
 #include <mach/mxc_iim.h>
+#include <mach/mxc_rfkill.h>
 
 #include <asm/irq.h>
 #include <asm/mach/arch.h>
@@ -2497,6 +2498,35 @@ MACHINE_END
 /*****************************************************************************/
 #ifdef CONFIG_MACH_MX53_NITROGEN_K
 
+#if defined(CONFIG_WL12XX_PLATFORM_DATA) && \
+    (defined(CONFIG_RFKILL) || defined(CONFIG_RFKILL_MODULE))
+#define BT_RESET	MAKE_GP(2, 2)
+
+static int bt_power_change(int status)
+{
+	gpio_request(BT_RESET, "bt-reset");
+	if (status)
+		gpio_direction_output(BT_RESET, 1);
+	else
+		gpio_direction_output(BT_RESET, 0);
+
+	gpio_free(BT_RESET);
+
+	msleep(100);
+
+	return 0;
+}
+
+static struct platform_device mxc_bt_rfkill = {
+	.name = "mxc_bt_rfkill",
+};
+
+static struct mxc_bt_rfkill_platform_data mxc_bt_rfkill_data = {
+	.power_change = bt_power_change,
+};
+#endif
+
+
 #if defined(CONFIG_TOUCHSCREEN_EKTF2K) || defined(CONFIG_TOUCHSCREEN_EKTF2K_MODULE)
 static int elan_ktf2k_ts_power(int on)
 {
@@ -2958,6 +2988,9 @@ static void __init n53k_board_init(void)
 	gpio_free(N53K_WL1271_WL_EN);
 	gpio_free(N53K_WL1271_BT_EN);
 	mdelay(1);
+#if defined(CONFIG_RFKILL) || defined(CONFIG_RFKILL_MODULE)
+	mxc_register_device(&mxc_bt_rfkill, &mxc_bt_rfkill_data);
+#endif
 #endif
 }
 
