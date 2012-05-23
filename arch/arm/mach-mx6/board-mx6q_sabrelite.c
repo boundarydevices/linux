@@ -170,6 +170,7 @@ static iomux_v3_cfg_t n6w_pads[] = {
 	/* USDHC2 */
 	MX6Q_USDHC_PAD_SETTING(2, 50),
 //	MX6Q_PAD_GPIO_8__ANATOP_ANATOP_32K_OUT,	/* spelling bug made no connect, TiWi Slow clock, use pwm1 */
+	MX6Q_PAD_SD1_CLK__OSC32K_32K_OUT,	/* New rev uses this for slow clock to TiWi */
 
 	NEW_PAD_CTRL(MX6Q_PAD_NANDF_CS1__GPIO_6_14, MX6Q_SABRELITE_WL_IRQ_PADCFG),	/* wl1271 wl_irq */
 
