@@ -47,6 +47,7 @@ static char *fwlog_param;
 static int fwlog_mem_blocks = -1;
 static int bug_on_recovery = -1;
 static int no_recovery     = -1;
+static char *mac_param;
 
 static void __wl1271_op_remove_interface(struct wl1271 *wl,
 					 struct ieee80211_vif *vif,
@@ -5996,6 +5997,26 @@ out:
 	return ret;
 }
 
+static int parse_mac(unsigned char *mac, unsigned char const *str_mac)
+{
+	int i = 0;
+	char *end;
+	int ret = -EINVAL;
+
+	for (;;) {
+		mac[i++] = simple_strtoul(str_mac, &end, 16);
+		if (i == 6) {
+			if (!*end || (*end == ' '))
+				ret = 0;
+			break;
+		}
+		str_mac = end + 1;
+		if ((*end != '-') && (*end != ':'))
+			break;
+	}
+	return ret;
+}
+
 static int wl1271_register_hw(struct wl1271 *wl)
 {
 	int ret;
@@ -6004,7 +6025,21 @@ static int wl1271_register_hw(struct wl1271 *wl)
 	if (wl->mac80211_registered)
 		return 0;
 
-	if (wl->nvs_len >= 12) {
+	if (mac_param){
+		u8 override_mac[ETH_ALEN];
+		memset(override_mac, 0, ETH_ALEN);
+
+		if (0 == parse_mac(override_mac, mac_param)) {
+			oui_addr = override_mac[0] << 16
+				  | override_mac[1] << 8
+				  | override_mac[2];
+                        nic_addr = override_mac[3] << 16
+				  | override_mac[4] << 8
+				  | override_mac[5];
+		} else
+			pr_err("%s: error parsing mac %s\n",
+			       __func__, mac_param);
+	} else if (wl->nvs_len >= 12) {
 		/* NOTE: The wl->nvs->nvs element must be first, in
 		 * order to simplify the casting, we assume it is at
 		 * the beginning of the wl->nvs structure.
@@ -6581,6 +6616,9 @@ MODULE_PARM_DESC(bug_on_recovery, "BUG() on fw recovery");
 
 module_param(no_recovery, int, S_IRUSR | S_IWUSR);
 MODULE_PARM_DESC(no_recovery, "Prevent HW recovery. FW will remain stuck.");
+
+module_param_named(mac, mac_param, charp, S_IRUGO);
+MODULE_PARM_DESC(mac, "mac address override");
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Luciano Coelho <coelho@ti.com>");
