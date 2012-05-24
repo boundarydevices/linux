@@ -199,6 +199,13 @@ config DRM_SAVAGE
 	  Choose this option if you have a Savage3D/4/SuperSavage/Pro/Twister
 	  chipset. If M is selected the module will be called savage.
 
+config DRM_VIVANTE
+	tristate "Vivante GCCore"
+	depends on DRM
+	help
+	  Choose this option if you have a Vivante graphics card.
+	  If M is selected, the module will be called vivante.
+
 source "drivers/gpu/drm/exynos/Kconfig"
 
 source "drivers/gpu/drm/vmwgfx/Kconfig"
