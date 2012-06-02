@@ -2261,6 +2261,7 @@ static void __init mxc_board_init_nitrogen(void)
 	sd3_data.cd_gpio = N53_SD3_CD;
 	sd3_data.wp_gpio = N53_SD3_WP;
 	sd3_data.always_present = 0;
+	sd3_data.support_18v = 0;
 #endif
 #ifdef CONFIG_KEYBOARD_GPIO
 	gpio_keys_platform_data.nbuttons = 4;
