@@ -2384,7 +2384,7 @@ static int mxcfb_probe(struct platform_device *pdev)
 		mxcfbi->ipu_ch_nf_irq = IPU_IRQ_DC_SYNC_NFACK;
 		mxcfbi->ipu_alp_ch_irq = -1;
 		mxcfbi->ipu_ch = MEM_DC_SYNC;
-		mxcfbi->cur_blank = mxcfbi->next_blank = FB_BLANK_POWERDOWN;
+		mxcfbi->cur_blank = mxcfbi->next_blank = FB_BLANK_UNBLANK;
 
 		ret = mxcfb_register(fbi);
 		if (ret < 0)
