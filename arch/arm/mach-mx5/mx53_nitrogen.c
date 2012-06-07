@@ -2305,10 +2305,24 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	 .addr = 0x38,
 	 .platform_data  = &i2c_generic_data,
 	},
+#else
+#if defined(CONFIG_TOUCHSCREEN_FT5X06) \
+ || defined(CONFIG_TOUCHSCREEN_FT5X06_MODULE)
+	{
+	 .type = "ft5x06-ts",
+	 .addr = 0x38,
+	 .platform_data  = &i2c_generic_data,
+	},
+#endif
 #endif
 	{
 	 .type = "tfp410",
+#if defined(CONFIG_TOUCHSCREEN_FT5X06) \
+ || defined(CONFIG_TOUCHSCREEN_FT5X06_MODULE)
+	 .addr = 0x39,
+#else
 	 .addr = 0x38,
+#endif
 	 .platform_data  = &i2c_tfp410_data,
 	},
 #ifdef HAVE_CAMERA
@@ -2448,6 +2462,12 @@ static void __init mxc_board_init_nitrogen(void)
 		mxc_i2c2_board_info, ARRAY_SIZE(mxc_i2c2_board_info),
 		da9052_irq, &mxci2c2_data);
 	mx5_set_otghost_vbus_func(mx53_gpio_usbotg_driver_vbus);
+
+#if defined(CONFIG_TOUCHSCREEN_FT5X06) \
+ || defined(CONFIG_TOUCHSCREEN_FT5X06_MODULE)
+	gpio_direction_output
+		(N53_I2C_CONNECTOR_BUFFER_ENABLE, 1);
+#endif
 
 #if defined (CONFIG_TOUCHSCREEN_I2C) || defined (CONFIG_TOUCHSCREEN_I2C_MODULE) \
  ||  defined (CONFIG_TOUCHSCREEN_EP0700M01) || defined (CONFIG_TOUCHSCREEN_EP0700M01_MODULE)
