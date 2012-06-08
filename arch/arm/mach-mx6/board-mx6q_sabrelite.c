@@ -1079,6 +1079,15 @@ static int imx6q_init_audio(void)
 	return 0;
 }
 
+/* PWM0_PWMO: backlight control on DRGB connector */
+static struct platform_pwm_backlight_data mx6_sabrelite_pwm0_backlight_data = {
+	.pwm_id = 0,
+	.max_brightness = 255,
+	.dft_brightness = 255,
+	.pwm_period_ns = 1000000000/32768,
+};
+
+/* PWM3_PWMO: backlight control on LDB connector */
 static struct platform_pwm_backlight_data mx6_sabrelite_pwm_backlight_data = {
 	.pwm_id = 3,
 	.max_brightness = 255,
@@ -1224,6 +1233,7 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_mxc_pwm(1);
 	imx6q_add_mxc_pwm(2);
 	imx6q_add_mxc_pwm(3);
+	imx6q_add_mxc_pwm_backlight(0, &mx6_sabrelite_pwm0_backlight_data);
 	imx6q_add_mxc_pwm_backlight(3, &mx6_sabrelite_pwm_backlight_data);
 
 	imx6q_add_otp();
