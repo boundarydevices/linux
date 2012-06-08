@@ -62,6 +62,7 @@
 #include <mach/ipu-v3.h>
 #include <mach/mxc_hdmi.h>
 #include <mach/mxc_asrc.h>
+#include <linux/i2c/tsc2007.h>
 
 #include <asm/irq.h>
 #include <asm/setup.h>
@@ -81,6 +82,7 @@
 #define MX6Q_SABRELITE_ECSPI1_CS1	IMX_GPIO_NR(3, 19)
 #define MX6Q_SABRELITE_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
 #define MX6Q_SABRELITE_CAP_TCH_INT1	IMX_GPIO_NR(1, 9)
+#define MX6Q_SABRELITE_DRGB_IRQGPIO	IMX_GPIO_NR(4, 20)
 #define MX6Q_SABRELITE_USB_HUB_RESET	IMX_GPIO_NR(7, 12)
 #define MX6Q_SABRELITE_CAN1_STBY	IMX_GPIO_NR(1, 2)
 #define MX6Q_SABRELITE_CAN1_EN		IMX_GPIO_NR(1, 4)
@@ -268,7 +270,7 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_DI0_PIN15__IPU1_DI0_PIN15,		/* DE */
 	MX6Q_PAD_DI0_PIN2__IPU1_DI0_PIN2,		/* HSync */
 	MX6Q_PAD_DI0_PIN3__IPU1_DI0_PIN3,		/* VSync */
-	MX6Q_PAD_DI0_PIN4__IPU1_DI0_PIN4,		/* Contrast */
+	MX6Q_PAD_DI0_PIN4__GPIO_4_20,			/* I2C Touch IRQ */
 	MX6Q_PAD_DISP0_DAT0__IPU1_DISP0_DAT_0,
 	MX6Q_PAD_DISP0_DAT1__IPU1_DISP0_DAT_1,
 	MX6Q_PAD_DISP0_DAT2__IPU1_DISP0_DAT_2,
@@ -696,10 +698,20 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	},
 };
 
+static struct tsc2007_platform_data tsc2007_info = {
+	.model			= 2004,
+	.x_plate_ohms		= 500,
+};
+
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("egalax_ts", 0x4),
 		.irq = gpio_to_irq(MX6Q_SABRELITE_CAP_TCH_INT1),
+	},
+	{
+		I2C_BOARD_INFO("tsc2004", 0x48),
+		.platform_data	= &tsc2007_info,
+		.irq = gpio_to_irq(MX6Q_SABRELITE_DRGB_IRQGPIO),
 	},
 };
 
