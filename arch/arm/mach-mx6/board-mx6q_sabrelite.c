@@ -1175,6 +1175,13 @@ static int imx6q_init_audio(void)
 	return 0;
 }
 
+static struct platform_pwm_backlight_data mx6_sabrelite_pwm_prgb_backlight_data = {
+	.pwm_id = 0,
+	.max_brightness = 255,
+	.dft_brightness = 255,
+	.pwm_period_ns = 50000,
+};
+
 static struct platform_pwm_backlight_data mx6_sabrelite_pwm_backlight_data = {
 	.pwm_id = 3,
 	.max_brightness = 255,
@@ -1348,6 +1355,7 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_mxc_pwm(0, (nitrogen6w) ? &mxc_pwm0_platform_data : NULL);
 #else
 	imx6q_add_mxc_pwm(0, NULL);
+	imx6q_add_mxc_pwm_backlight(0, &mx6_sabrelite_pwm_prgb_backlight_data);
 #endif
 	imx6q_add_mxc_pwm(1, NULL);
 	imx6q_add_mxc_pwm(2, NULL);
