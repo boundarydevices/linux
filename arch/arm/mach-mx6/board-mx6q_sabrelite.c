@@ -94,9 +94,17 @@
 #define MX6Q_SABRELITE_CSI0_PWN		IMX_GPIO_NR(1, 6)
 #define MX6Q_SABRELITE_ENET_PHY_INT	IMX_GPIO_NR(1, 28)
 
+#define N6_WL1271_WL_IRQ		IMX_GPIO_NR(6, 14)
+#define N6_WL1271_WL_EN			IMX_GPIO_NR(6, 15)
+#define N6_WL1271_BT_EN			IMX_GPIO_NR(6, 16)
+
 #define MX6Q_SABRELITE_SD3_WP_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE |	\
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_MED |	\
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+
+#define N6_IRQ_TEST_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+#define N6_IRQ_PADCFG		(PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+#define N6_EN_PADCFG		(PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm)
 
 void __init early_console_setup(unsigned long base, struct clk *clk);
 static struct clk *sata_clk;
@@ -108,6 +116,32 @@ static int caam_enabled;
 
 extern struct regulator *(*get_cpu_regulator)(void);
 extern void (*put_cpu_regulator)(void);
+
+struct gpio n6w_wl1271_gpios[] __initdata = {
+	{.label = "wl1271_int",		.gpio = N6_WL1271_WL_IRQ,	.flags = GPIOF_DIR_IN},
+	{.label = "wl1271_bt_en",	.gpio = N6_WL1271_BT_EN,	.flags = 0},
+	{.label = "wl1271_wl_en",	.gpio = N6_WL1271_WL_EN,	.flags = 0},
+};
+
+int is_nitrogen6w(void)
+{
+	int ret = gpio_request_array(n6w_wl1271_gpios,
+			ARRAY_SIZE(n6w_wl1271_gpios));
+	if (ret) {
+		printk(KERN_ERR "%s gpio_request_array failed("
+				"%d) for n6w_wl1271_gpios\n", __func__, ret);
+		return ret;
+	}
+	ret = gpio_get_value(N6_WL1271_WL_IRQ);
+	if (ret <= 0) {
+		/* Sabrelite, not nitrogen6w */
+		gpio_free(N6_WL1271_WL_IRQ);
+		gpio_free(N6_WL1271_WL_EN);
+		gpio_free(N6_WL1271_BT_EN);
+		ret = 0;
+	}
+	return ret;
+}
 
 static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	/* AUDMUX */
@@ -200,6 +234,11 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 
 	/* GPIO6 */
 	MX6Q_PAD_EIM_A23__GPIO_6_6,	/* J12 - Boot Mode Select */
+
+	/* NANDF_CS1/2/3 are unused for sabrelite */
+	NEW_PAD_CTRL(MX6Q_PAD_NANDF_CS1__GPIO_6_14, N6_IRQ_TEST_PADCFG),	/* wl1271 wl_irq */
+	NEW_PAD_CTRL(MX6Q_PAD_NANDF_CS2__GPIO_6_15, N6_EN_PADCFG),	/* wl1271 wl_en */
+	NEW_PAD_CTRL(MX6Q_PAD_NANDF_CS3__GPIO_6_16, N6_EN_PADCFG),	/* wl1271 bt_en */
 
 	/* GPIO7 */
 	MX6Q_PAD_GPIO_17__GPIO_7_12,	/* USB Hub Reset */
@@ -1161,6 +1200,10 @@ static void __init mx6_sabrelite_board_init(void)
 
 	mxc_iomux_v3_setup_multiple_pads(mx6q_sabrelite_pads,
 					ARRAY_SIZE(mx6q_sabrelite_pads));
+
+	ret = is_nitrogen6w();
+	printk(KERN_ERR "------------ Board type %s\n",
+               is_nitrogen6w() ? "Nitrogen6X/W" : "Sabre Lite");
 
 #ifdef CONFIG_FEC_1588
 	/* Set GPIO_16 input for IEEE-1588 ts_clk and RMII reference clock
