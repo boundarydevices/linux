@@ -149,6 +149,10 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_SD2_DAT3__AUDMUX_AUD4_TXC,
 	MX6Q_PAD_SD2_DAT2__AUDMUX_AUD4_TXD,
 	MX6Q_PAD_SD2_DAT1__AUDMUX_AUD4_TXFS,
+	MX6Q_PAD_CSI0_DAT7__AUDMUX_AUD3_RXD,
+	MX6Q_PAD_CSI0_DAT4__AUDMUX_AUD3_TXC,
+	MX6Q_PAD_CSI0_DAT5__AUDMUX_AUD3_TXD,
+	MX6Q_PAD_CSI0_DAT6__AUDMUX_AUD3_TXFS,
 
 	/* CAN1  */
 	MX6Q_PAD_KEY_ROW2__CAN1_RXCAN,
@@ -1202,6 +1206,9 @@ static void __init mx6_sabrelite_board_init(void)
 					ARRAY_SIZE(mx6q_sabrelite_pads));
 
 	ret = is_nitrogen6w();
+	if (ret)
+		mx6_sabrelite_audio_data.ext_port = 3;
+
 	printk(KERN_ERR "------------ Board type %s\n",
                is_nitrogen6w() ? "Nitrogen6X/W" : "Sabre Lite");
 
