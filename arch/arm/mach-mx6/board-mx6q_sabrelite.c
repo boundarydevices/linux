@@ -376,22 +376,30 @@ static iomux_v3_cfg_t mx6q_sabrelite_csi0_sensor_pads[] = {
 	MX6Q_PAD_NANDF_WP_B__GPIO_6_9,		/* J16 - MIPI GP */
 };
 
+#define MX6Q_USDHC_PAD_CTRL_50MHZ MX6Q_USDHC_PAD_CTRL
 #define MX6Q_USDHC_PAD_SETTING(id, speed)	\
-mx6q_sd##id##_##speed##mhz[] = {		\
-	MX6Q_PAD_SD##id##_CLK__USDHC##id##_CLK_##speed##MHZ,	\
-	MX6Q_PAD_SD##id##_CMD__USDHC##id##_CMD_##speed##MHZ,	\
-	MX6Q_PAD_SD##id##_DAT0__USDHC##id##_DAT0_##speed##MHZ,	\
-	MX6Q_PAD_SD##id##_DAT1__USDHC##id##_DAT1_##speed##MHZ,	\
-	MX6Q_PAD_SD##id##_DAT2__USDHC##id##_DAT2_##speed##MHZ,	\
-	MX6Q_PAD_SD##id##_DAT3__USDHC##id##_DAT3_##speed##MHZ,	\
-}
+	NEW_PAD_CTRL(_MX6Q_PAD_SD##id##_CLK__USDHC##id##_CLK, MX6Q_USDHC_PAD_CTRL_##speed##MHZ),	\
+	NEW_PAD_CTRL(_MX6Q_PAD_SD##id##_CMD__USDHC##id##_CMD, MX6Q_USDHC_PAD_CTRL_##speed##MHZ),	\
+	NEW_PAD_CTRL(_MX6Q_PAD_SD##id##_DAT0__USDHC##id##_DAT0, MX6Q_USDHC_PAD_CTRL_##speed##MHZ),	\
+	NEW_PAD_CTRL(_MX6Q_PAD_SD##id##_DAT1__USDHC##id##_DAT1, MX6Q_USDHC_PAD_CTRL_##speed##MHZ),	\
+	NEW_PAD_CTRL(_MX6Q_PAD_SD##id##_DAT2__USDHC##id##_DAT2, MX6Q_USDHC_PAD_CTRL_##speed##MHZ),	\
+	NEW_PAD_CTRL(_MX6Q_PAD_SD##id##_DAT3__USDHC##id##_DAT3, MX6Q_USDHC_PAD_CTRL_##speed##MHZ)
 
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 50);
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 100);
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 200);
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(4, 50);
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(4, 100);
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(4, 200);
+#define SD_50		0
+#define SD_100		6
+#define SD_200		12
+
+static iomux_v3_cfg_t mx6q_sd3_pads[] = {
+	MX6Q_USDHC_PAD_SETTING(3, 50),
+	MX6Q_USDHC_PAD_SETTING(3, 100),
+	MX6Q_USDHC_PAD_SETTING(3, 200),
+};
+static iomux_v3_cfg_t mx6q_sd4_pads[] = {
+	MX6Q_USDHC_PAD_SETTING(4, 50),
+	MX6Q_USDHC_PAD_SETTING(4, 100),
+	MX6Q_USDHC_PAD_SETTING(4, 200),
+};
+
 
 enum sd_pad_mode {
 	SD_PAD_MODE_LOW_SPEED,
@@ -399,7 +407,7 @@ enum sd_pad_mode {
 	SD_PAD_MODE_HIGH_SPEED,
 };
 
-static int plt_sd3_pad_change(int clock)
+static int plt_sdx_pad_change(int clock, iomux_v3_cfg_t *sd_cfg)
 {
 	static enum sd_pad_mode pad_mode = SD_PAD_MODE_LOW_SPEED;
 
@@ -408,51 +416,29 @@ static int plt_sd3_pad_change(int clock)
 			return 0;
 
 		pad_mode = SD_PAD_MODE_HIGH_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(mx6q_sd3_200mhz,
-					ARRAY_SIZE(mx6q_sd3_200mhz));
+		return mxc_iomux_v3_setup_multiple_pads(&sd_cfg[SD_200], 6);
 	} else if (clock > 52000000) {
 		if (pad_mode == SD_PAD_MODE_MED_SPEED)
 			return 0;
 
 		pad_mode = SD_PAD_MODE_MED_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(mx6q_sd3_100mhz,
-					ARRAY_SIZE(mx6q_sd3_100mhz));
+		return mxc_iomux_v3_setup_multiple_pads(&sd_cfg[SD_100], 6);
 	} else {
 		if (pad_mode == SD_PAD_MODE_LOW_SPEED)
 			return 0;
 
 		pad_mode = SD_PAD_MODE_LOW_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(mx6q_sd3_50mhz,
-					ARRAY_SIZE(mx6q_sd3_50mhz));
+		return mxc_iomux_v3_setup_multiple_pads(&sd_cfg[SD_50], 6);
 	}
 }
 
+static int plt_sd3_pad_change(int clock)
+{
+	return plt_sdx_pad_change(clock,  mx6q_sd3_pads);
+}
 static int plt_sd4_pad_change(int clock)
 {
-	static enum sd_pad_mode pad_mode = SD_PAD_MODE_LOW_SPEED;
-
-	if (clock > 100000000) {
-		if (pad_mode == SD_PAD_MODE_HIGH_SPEED)
-			return 0;
-
-		pad_mode = SD_PAD_MODE_HIGH_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(mx6q_sd4_200mhz,
-					ARRAY_SIZE(mx6q_sd4_200mhz));
-	} else if (clock > 52000000) {
-		if (pad_mode == SD_PAD_MODE_MED_SPEED)
-			return 0;
-
-		pad_mode = SD_PAD_MODE_MED_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(mx6q_sd4_100mhz,
-					ARRAY_SIZE(mx6q_sd4_100mhz));
-	} else {
-		if (pad_mode == SD_PAD_MODE_LOW_SPEED)
-			return 0;
-
-		pad_mode = SD_PAD_MODE_LOW_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(mx6q_sd4_50mhz,
-					ARRAY_SIZE(mx6q_sd4_50mhz));
-	}
+	return plt_sdx_pad_change(clock,  mx6q_sd4_pads);
 }
 
 static struct esdhc_platform_data mx6q_sabrelite_sd3_data = {
