@@ -188,7 +188,6 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_RGMII_RD3__ENET_RGMII_RD3,
 	MX6Q_PAD_RGMII_RX_CTL__ENET_RGMII_RX_CTL,
 	MX6Q_PAD_ENET_TX_EN__GPIO_1_28,		/* Micrel RGMII Phy Interrupt */
-	MX6Q_PAD_EIM_D23__GPIO_3_23,		/* RGMII reset */
 
 	/* GPIO1 */
 	MX6Q_PAD_ENET_RX_ER__GPIO_1_24,		/* J9 - Microphone Detect */
@@ -318,6 +317,12 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	/* UART2 for debug */
 	MX6Q_PAD_EIM_D26__UART2_TXD,
 	MX6Q_PAD_EIM_D27__UART2_RXD,
+
+	/* UART3 for wl1271 */
+	MX6Q_PAD_EIM_D24__UART3_TXD,
+	MX6Q_PAD_EIM_D25__UART3_RXD,
+	MX6Q_PAD_EIM_D23__UART3_CTS,
+	MX6Q_PAD_EIM_D31__UART3_RTS,
 
 	/* USBOTG ID pin */
 	MX6Q_PAD_GPIO_1__USBOTG_ID,
@@ -485,10 +490,18 @@ static const struct anatop_thermal_platform_data
 		.name = "anatop_thermal",
 };
 
+static const struct imxuart_platform_data mx6_arm2_uart2_data __initconst = {
+	.flags      = IMXUART_HAVE_RTSCTS | IMXUART_SDMA,
+	.dma_req_rx = MX6Q_DMA_REQ_UART3_RX,
+	.dma_req_tx = MX6Q_DMA_REQ_UART3_TX,
+};
+
+
 static inline void mx6q_sabrelite_init_uart(void)
 {
 	imx6q_add_imx_uart(0, NULL);
 	imx6q_add_imx_uart(1, NULL);
+	imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
 }
 
 static int mx6q_sabrelite_fec_phy_init(struct phy_device *phydev)
