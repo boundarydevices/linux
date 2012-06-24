@@ -63,6 +63,7 @@
 #include <mach/mxc_hdmi.h>
 #include <mach/mxc_asrc.h>
 #include <linux/i2c/tsc2007.h>
+#include <linux/wl12xx.h>
 
 #include <asm/irq.h>
 #include <asm/setup.h>
@@ -98,6 +99,10 @@
 #define N6_WL1271_WL_IRQ		IMX_GPIO_NR(6, 14)
 #define N6_WL1271_WL_EN			IMX_GPIO_NR(6, 15)
 #define N6_WL1271_BT_EN			IMX_GPIO_NR(6, 16)
+
+#define MX6Q_SABRELITE_WL_IRQ_TEST_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+#define MX6Q_SABRELITE_WL_IRQ_PADCFG	(PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+#define MX6Q_SABRELITE_WL_EN_PADCFG	(PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm)
 
 #define MX6Q_SABRELITE_SD3_WP_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE |	\
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_MED |	\
@@ -317,6 +322,11 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_EIM_D26__UART2_TXD,
 	MX6Q_PAD_EIM_D27__UART2_RXD,
 
+	/* WL127X pads */
+	NEW_PAD_CTRL(MX6Q_PAD_NANDF_CS1__GPIO_6_14, MX6Q_SABRELITE_WL_IRQ_PADCFG),	/* wl1271 wl_irq */
+	NEW_PAD_CTRL(MX6Q_PAD_NANDF_CS2__GPIO_6_15, MX6Q_SABRELITE_WL_EN_PADCFG),	/* wl1271 wl_en */
+	NEW_PAD_CTRL(MX6Q_PAD_NANDF_CS3__GPIO_6_16, MX6Q_SABRELITE_WL_EN_PADCFG),	/* wl1271 bt_en */
+
 	/* UART3 for wl1271 */
 	MX6Q_PAD_EIM_D24__UART3_TXD,
 	MX6Q_PAD_EIM_D25__UART3_RXD,
@@ -389,6 +399,11 @@ static iomux_v3_cfg_t mx6q_sabrelite_csi0_sensor_pads[] = {
 #define SD_100		6
 #define SD_200		12
 
+static iomux_v3_cfg_t mx6q_sd2_pads[] = {
+	MX6Q_USDHC_PAD_SETTING(2, 50),
+	MX6Q_USDHC_PAD_SETTING(2, 100),
+	MX6Q_USDHC_PAD_SETTING(2, 200),
+};
 static iomux_v3_cfg_t mx6q_sd3_pads[] = {
 	MX6Q_USDHC_PAD_SETTING(3, 50),
 	MX6Q_USDHC_PAD_SETTING(3, 100),
@@ -432,6 +447,10 @@ static int plt_sdx_pad_change(int clock, iomux_v3_cfg_t *sd_cfg)
 	}
 }
 
+static int plt_sd2_pad_change(int clock)
+{
+	return plt_sdx_pad_change(clock,  mx6q_sd2_pads);
+}
 static int plt_sd3_pad_change(int clock)
 {
 	return plt_sdx_pad_change(clock,  mx6q_sd3_pads);
@@ -440,6 +459,15 @@ static int plt_sd4_pad_change(int clock)
 {
 	return plt_sdx_pad_change(clock,  mx6q_sd4_pads);
 }
+
+static const struct esdhc_platform_data mx6q_sabrelite_sd2_data __initconst = {
+	.always_present = 1,
+	.cd_gpio = -1,
+	.wp_gpio = -1,
+	.keep_power_at_suspend = 0,
+	.caps = MMC_CAP_POWER_OFF_CARD,
+	.platform_pad_change = plt_sd2_pad_change,
+};
 
 static struct esdhc_platform_data mx6q_sabrelite_sd3_data = {
 	.cd_gpio = MX6Q_SABRELITE_SD3_CD,
@@ -934,6 +962,44 @@ static void __init sabrelite_add_device_buttons(void)
 static void __init sabrelite_add_device_buttons(void) {}
 #endif
 
+#ifdef CONFIG_WL12XX_PLATFORM_DATA
+struct wl12xx_platform_data n6q_wlan_data __initdata = {
+	.irq = gpio_to_irq(N6_WL1271_WL_IRQ),
+	.board_ref_clock = WL12XX_REFCLOCK_38, /* 38.4 MHz */
+};
+
+static struct regulator_consumer_supply n6q_vwl1271_consumers[] = {
+	REGULATOR_SUPPLY("vmmc", "sdhci-esdhc-imx.1"),
+};
+
+static struct regulator_init_data n6q_vwl1271_init = {
+	.constraints            = {
+		.name           = "VDD_1.8V",
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+	},
+	.num_consumer_supplies = ARRAY_SIZE(n6q_vwl1271_consumers),
+	.consumer_supplies = n6q_vwl1271_consumers,
+};
+
+static struct fixed_voltage_config n6q_vwl1271_reg_config = {
+	.supply_name		= "vwl1271",
+	.microvolts		= 1800000, /* 1.80V */
+	.gpio			= N6_WL1271_WL_EN,
+	.startup_delay		= 70000, /* 70ms */
+	.enable_high		= 1,
+	.enabled_at_boot	= 0,
+	.init_data		= &n6q_vwl1271_init,
+};
+
+static struct platform_device n6q_vwl1271_reg_devices = {
+	.name	= "reg-fixed-voltage",
+	.id	= 4,
+	.dev	= {
+		.platform_data = &n6q_vwl1271_reg_config,
+	},
+};
+#endif
+
 static struct regulator_consumer_supply sabrelite_vmmc_consumers[] = {
 	REGULATOR_SUPPLY("vmmc", "sdhci-esdhc-imx.2"),
 	REGULATOR_SUPPLY("vmmc", "sdhci-esdhc-imx.3"),
@@ -1234,6 +1300,25 @@ static void __init mx6_sabrelite_board_init(void)
 	clk_set_rate(clko2, rate);
 	clk_enable(clko2);
 	imx6q_add_busfreq();
+#ifdef CONFIG_WL12XX_PLATFORM_DATA
+	if (isn6) {
+		imx6q_add_sdhci_usdhc_imx(1, &mx6q_sabrelite_sd2_data);
+		/* WL12xx WLAN Init */
+		if (wl12xx_set_platform_data(&n6q_wlan_data))
+			pr_err("error setting wl12xx data\n");
+		platform_device_register(&n6q_vwl1271_reg_devices);
+
+		gpio_set_value(N6_WL1271_WL_EN, 1);		/* momentarily enable */
+		gpio_set_value(N6_WL1271_BT_EN, 1);
+		mdelay(2);
+		gpio_set_value(N6_WL1271_WL_EN, 0);
+		gpio_set_value(N6_WL1271_BT_EN, 0);
+
+		gpio_free(N6_WL1271_WL_EN);
+		gpio_free(N6_WL1271_BT_EN);
+		mdelay(1);
+	}
+#endif
 }
 
 extern void __iomem *twd_base;
