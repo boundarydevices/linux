@@ -125,3 +125,5 @@ obj-y				+= clk/
 
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/
 obj-$(CONFIG_SWITCH)		+= switch/
+
+obj-$(CONFIG_EXTCON)            += extcon/

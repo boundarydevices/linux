@@ -132,4 +132,6 @@ source "drivers/gpu/ion/Kconfig"
 
 source "drivers/mxc/Kconfig"
 
+source "drivers/extcon/Kconfig"
+
 endmenu
