@@ -466,7 +466,7 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 	}
 }
 
-static const struct esdhc_platform_data mx6q_sabrelite_sd3_data __initconst = {
+static struct esdhc_platform_data mx6q_sabrelite_sd3_data = {
 	.cd_gpio = MX6Q_SABRELITE_SD3_CD,
 	.wp_gpio = MX6Q_SABRELITE_SD3_WP,
 	.keep_power_at_suspend = 1,
@@ -475,7 +475,7 @@ static const struct esdhc_platform_data mx6q_sabrelite_sd3_data __initconst = {
 
 static const struct esdhc_platform_data mx6q_sabrelite_sd4_data __initconst = {
 	.cd_gpio = MX6Q_SABRELITE_SD4_CD,
-	.wp_gpio = MX6Q_SABRELITE_SD4_WP,
+	.wp_gpio = -1,
 	.keep_power_at_suspend = 1,
 	.platform_pad_change = plt_sd_pad_change,
 };
@@ -1201,16 +1201,19 @@ static void __init mx6_sabrelite_board_init(void)
 	struct clk *clko2;
 	struct clk *new_parent;
 	int rate;
+	int isn6 ;
 
 	mxc_iomux_v3_setup_multiple_pads(mx6q_sabrelite_pads,
 					ARRAY_SIZE(mx6q_sabrelite_pads));
 
-	ret = is_nitrogen6w();
-	if (ret)
+	isn6 = is_nitrogen6w();
+	if (isn6) {
 		mx6_sabrelite_audio_data.ext_port = 3;
+		mx6q_sabrelite_sd3_data.wp_gpio = -1 ;
+	}
 
 	printk(KERN_ERR "------------ Board type %s\n",
-               is_nitrogen6w() ? "Nitrogen6X/W" : "Sabre Lite");
+               isn6 ? "Nitrogen6X/W" : "Sabre Lite");
 
 #ifdef CONFIG_FEC_1588
 	/* Set GPIO_16 input for IEEE-1588 ts_clk and RMII reference clock
