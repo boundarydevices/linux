@@ -962,6 +962,10 @@ static void __init sabrelite_add_device_buttons(void)
 static void __init sabrelite_add_device_buttons(void) {}
 #endif
 
+static iomux_v3_cfg_t n6x_sd2_pads[] = {
+	MX6Q_USDHC_PAD_SETTING(2, 50),
+};
+
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
 struct wl12xx_platform_data n6q_wlan_data __initdata = {
 	.irq = gpio_to_irq(N6_WL1271_WL_IRQ),
@@ -1187,6 +1191,8 @@ static void __init mx6_sabrelite_board_init(void)
 
 	isn6 = is_nitrogen6w();
 	if (isn6) {
+	        mxc_iomux_v3_setup_multiple_pads(n6x_sd2_pads,
+						 ARRAY_SIZE(n6x_sd2_pads));
 		mx6_sabrelite_audio_data.ext_port = 3;
 		mx6q_sabrelite_sd3_data.wp_gpio = -1 ;
 	}
