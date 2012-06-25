@@ -230,6 +230,7 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 	int ret;
 	struct sdio_func_tuple *this, **prev;
 	unsigned i, ptr = 0;
+	unsigned ptr_null_end;
 
 	/*
 	 * Note that this works for the common CIS (function number 0) as
@@ -258,6 +259,7 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 
 	BUG_ON(*prev);
 
+	ptr_null_end = (ptr | 0xff) + 1;
 	do {
 		unsigned char tpl_code, tpl_link;
 
@@ -268,6 +270,9 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 		/* 0xff means we're done */
 		if (tpl_code == 0xff)
 			break;
+
+		if ((tpl_code == 0x00) && (ptr == ptr_null_end))
+			break;	/* patch for misbehaving rtl8712 card */
 
 		/* null entries have no link field or data */
 		if (tpl_code == 0x00)
@@ -282,9 +287,10 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 			break;
 
 		this = kmalloc(sizeof(*this) + tpl_link, GFP_KERNEL);
-		if (!this)
-			return -ENOMEM;
-
+		if (!this) {
+			ret = -ENOMEM;
+			break;
+		}
 		for (i = 0; i < tpl_link; i++) {
 			ret = mmc_io_rw_direct(card, 0, 0,
 					       ptr + i, 0, &this->data[i]);
@@ -328,6 +334,12 @@ static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)
 			 * not going to be queued for a driver.
 			 */
 			kfree(this);
+			if (ret) {
+				printk(KERN_WARNING "%s: dropping invalid"
+				       " CIS tuple 0x%02x (%u bytes)\n",
+				       mmc_hostname(card->host),
+				       tpl_code, tpl_link);
+			}
 		}
 
 		ptr += tpl_link;
