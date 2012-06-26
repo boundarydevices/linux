@@ -964,6 +964,7 @@ static void __init sabrelite_add_device_buttons(void) {}
 
 static iomux_v3_cfg_t n6x_sd2_pads[] = {
 	MX6Q_USDHC_PAD_SETTING(2, 50),
+	MX6Q_PAD_SD1_CLK__OSC32K_32K_OUT,
 };
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
