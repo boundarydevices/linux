@@ -212,6 +212,9 @@ struct regulator_desc {
  * @of_node: OpenFirmware node to parse for device tree bindings (may be
  *           NULL).
  * @regmap: regmap to use for core regmap helpers
+ * @ena_gpio: GPIO controlling regulator enable.
+ * @ena_gpio_invert: Sense for GPIO enable control.
+ * @ena_gpio_flags: Flags to use when calling gpio_request_one()
  */
 struct regulator_config {
 	struct device *dev;
@@ -219,6 +222,10 @@ struct regulator_config {
 	void *driver_data;
 	struct device_node *of_node;
 	struct regmap *regmap;
+
+	int ena_gpio;
+	unsigned int ena_gpio_invert:1;
+	unsigned int ena_gpio_flags;
 };
 
 /*
@@ -257,6 +264,10 @@ struct regulator_dev {
 	void *reg_data;		/* regulator_dev data */
 
 	struct dentry *debugfs;
+
+	int ena_gpio;
+	unsigned int ena_gpio_invert:1;
+	unsigned int ena_gpio_state:1;
 };
 
 struct regulator_dev *
