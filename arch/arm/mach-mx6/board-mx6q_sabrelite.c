@@ -709,6 +709,13 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		.irq		= gpio_to_irq(MX6Q_SABRELITE_CAP_TCH_INT1),
 		.platform_data	= &ep0_platform_data,
 	},
+#if defined(CONFIG_TOUCHSCREEN_FT5X06) \
+	|| defined(CONFIG_TOUCHSCREEN_FT5X06_MODULE)
+	{
+		I2C_BOARD_INFO("ft5x06-ts", 0x38),
+		.irq = gpio_to_irq(MX6Q_SABRELITE_CAP_TCH_INT1),
+	},
+#endif
 };
 
 static void imx6q_sabrelite_usbotg_vbus(bool on)
