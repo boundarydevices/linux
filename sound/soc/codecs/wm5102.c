@@ -25,7 +25,6 @@
 #include <sound/jack.h>
 #include <sound/initval.h>
 #include <sound/tlv.h>
-#include <sound/wm5102.h>
 
 #include <linux/mfd/arizona/core.h>
 #include <linux/mfd/arizona/registers.h>
@@ -893,3 +892,4 @@ MODULE_DESCRIPTION("ASoC WM5102 driver");
 MODULE_AUTHOR("Mark Brown <broonie@opensource.wolfsonmicro.com>");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:wm5102-codec");
+
