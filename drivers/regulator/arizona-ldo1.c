@@ -104,6 +104,9 @@ static const struct regulator_init_data arizona_ldo1_dvfs = {
 };
 
 static const struct regulator_init_data arizona_ldo1_default = {
+	.constraints = {
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+	},
 	.num_consumer_supplies = 1,
 };
 
@@ -111,7 +114,6 @@ static __devinit int arizona_ldo1_probe(struct platform_device *pdev)
 {
 	struct arizona *arizona = dev_get_drvdata(pdev->dev.parent);
 	struct arizona_ldo1 *ldo1;
-	struct regulator_init_data *init_data;
 	struct regulator_config config = { };
 	int ret;
 
@@ -141,15 +143,16 @@ static __devinit int arizona_ldo1_probe(struct platform_device *pdev)
 	ldo1->supply.supply = "DCVDD";
 	ldo1->supply.dev_name = dev_name(arizona->dev);
 
-	if (arizona->pdata.ldo1)
-		init_data = arizona->pdata.ldo1;
-	else
-		init_data = &ldo1->init_data;
-
 	config.dev = arizona->dev;
-	config.init_data = init_data;
 	config.driver_data = ldo1;
 	config.regmap = arizona->regmap;
+	config.ena_gpio = arizona->pdata.ldoena;
+
+	if (arizona->pdata.ldo1)
+		config.init_data = arizona->pdata.ldo1;
+	else
+		config.init_data = &ldo1->init_data;
+
 	ldo1->regulator = regulator_register(&arizona_ldo1, &config);
 	if (IS_ERR(ldo1->regulator)) {
 		ret = PTR_ERR(ldo1->regulator);
