@@ -726,11 +726,13 @@ static int fec_enet_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
 {
 	struct fec_enet_private *fep = bus->priv;
 	unsigned long time_left;
+	int ret;
 
 	fep->mii_timeout = 0;
 	init_completion(&fep->mdio_done);
 
 	/* start a read op */
+	clk_enable(fep->clk);
 	writel(FEC_MMFR_ST | FEC_MMFR_OP_READ |
 		FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(regnum) |
 		FEC_MMFR_TA, fep->hwp + FEC_MII_DATA);
@@ -741,10 +743,13 @@ static int fec_enet_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
 	if (time_left == 0) {
 		fep->mii_timeout = 1;
 		printk(KERN_ERR "FEC: MDIO read timeout\n");
+		clk_disable(fep->clk);
 		return -ETIMEDOUT;
 	}
 	/* return value */
-	return FEC_MMFR_DATA(readl(fep->hwp + FEC_MII_DATA));
+	ret = FEC_MMFR_DATA(readl(fep->hwp + FEC_MII_DATA));
+	clk_disable(fep->clk);
+	return ret;
 }
 
 static int fec_enet_mdio_write(struct mii_bus *bus, int mii_id, int regnum,
@@ -756,6 +761,7 @@ static int fec_enet_mdio_write(struct mii_bus *bus, int mii_id, int regnum,
 	fep->mii_timeout = 0;
 	init_completion(&fep->mdio_done);
 
+	clk_enable(fep->clk);
 	/* start a write op */
 	writel(FEC_MMFR_ST | FEC_MMFR_OP_WRITE |
 		FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(regnum) |
@@ -765,6 +771,7 @@ static int fec_enet_mdio_write(struct mii_bus *bus, int mii_id, int regnum,
 	/* wait for end of transfer */
 	time_left = wait_for_completion_timeout(&fep->mdio_done,
 		usecs_to_jiffies(FEC_MII_TIMEOUT));
+	clk_disable(fep->clk);
 	if (time_left == 0) {
 		fep->mii_timeout = 1;
 		printk(KERN_ERR "FEC: MDIO write timeout\n");
