@@ -460,15 +460,10 @@ static int bq20z75_remove(struct i2c_client *client)
 static int bq20z75_suspend(struct i2c_client *client,
 	pm_message_t state)
 {
-	s32 ret;
-
 	/* write to manufacturer access with sleep command */
-	ret = bq20z75_write_word_data(client,
+	bq20z75_write_word_data(client,
 		bq20z75_data[REG_MANUFACTURER_DATA].addr,
 		MANUFACTURER_ACCESS_SLEEP);
-	if (ret < 0)
-		return ret;
-
 	return 0;
 }
 #else
