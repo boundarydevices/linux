@@ -22,6 +22,7 @@ if MFD_SUPPORT
 
 config MFD_CORE
 	tristate
+	select IRQ_DOMAIN
 	default n
 
 config MFD_88PM860X
