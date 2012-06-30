@@ -1951,7 +1951,7 @@ struct gpio nitrogen53_gpios_specific_a[] __initdata = {
 //	{.label = "i2c2b sw-camera",		.gpio = MAKE_GP(3, 2),		.flags = GPIOF_INIT_LOW},	/* EIM_DA2 */
 #define N53A_I2C_PIC16F616_INT				MAKE_GP(3, 8)
 #if defined (CONFIG_TOUCHSCREEN_I2C) || defined (CONFIG_TOUCHSCREEN_I2C_MODULE)
-	{.label = "i2c_pic_int",		.gpio = MAKE_GP(3, 8),		.flags = GPIOF_DIR_IN},		/* EIM_DA6 */
+	{.label = "i2c_pic_int",		.gpio = MAKE_GP(3, 8),		.flags = GPIOF_DIR_IN},		/* EIM_DA8 */
 #endif
 //	{.label = "i2c2a hub-PIC16F616_TOUCH",	.gpio = MAKE_GP(3, 7),		.flags = GPIOF_INIT_LOW},	/* EIM_DA7 */
 //gpio3[9] - must always be high on early board rev, (empty i2c hub without pullups)
