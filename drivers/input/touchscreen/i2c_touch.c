@@ -415,7 +415,7 @@ static inline void ts_evt_add(struct pic16f616_ts *ts, u16 pressure,
 		u16 x, u16 y)
 {
 	struct input_dev *idev = ts->idev;
-	if ((0 != pressure) && (0 != calibration[6])){
+	if (calibration[6]){
 		int tmpx, tmpy ;
 		tmpx = calibration[0]*x + calibration[1]*y + calibration[2];
 		tmpx /= calibration[6];
@@ -427,23 +427,16 @@ static inline void ts_evt_add(struct pic16f616_ts *ts, u16 pressure,
 			tmpy = 0;
 		x = tmpx; y = tmpy;
 	}
-	if (0 == pressure) {
-		input_report_abs(idev, ABS_PRESSURE, pressure);
-		input_report_key(idev, BTN_TOUCH, 0);
+	if (ts->touch_count++) {
+		input_report_abs(idev, ABS_X, ts->save_x);
+		input_report_abs(idev, ABS_Y, ts->save_y);
+		input_report_abs(idev, ABS_PRESSURE, ts->save_pressure);
+		input_report_key(idev, BTN_TOUCH, 1);
 		input_sync(idev);
-		ts->touch_count = 0 ;
-	} else {
-		if (0 < ts->touch_count++) {
-			input_report_abs(idev, ABS_X, ts->save_x);
-			input_report_abs(idev, ABS_Y, ts->save_y);
-			input_report_abs(idev, ABS_PRESSURE, ts->save_pressure);
-			input_report_key(idev, BTN_TOUCH, 1);
-			input_sync(idev);
-		}
-		ts->save_x = x ;
-		ts->save_y = y ;
-		ts->save_pressure = pressure ;
 	}
+	ts->save_x = x ;
+	ts->save_y = y ;
+	ts->save_pressure = pressure ;
 }
 
 static inline void ts_event_release(struct pic16f616_ts *ts)
@@ -452,6 +445,7 @@ static inline void ts_event_release(struct pic16f616_ts *ts)
 	input_report_abs(idev, ABS_PRESSURE, 0);
 	input_report_key(idev, BTN_TOUCH, 0);
 	input_sync(idev);
+	ts->touch_count = 0 ;
 }
 static int ts_open(struct input_dev *idev)
 {
@@ -487,9 +481,10 @@ static inline int ts_register(struct pic16f616_ts *ts)
 	mask = combine_samples * MAX_SAMPLE_VAL;
 	mask = fls(mask);
 	sample_shift = 0;
-	if (mask > 16) {
-		sample_shift = mask - 16;
-		mask = 16;
+#define MAX_BITS 14	/* 16 doesn't work for android */
+	if (mask > MAX_BITS) {
+		sample_shift = mask - MAX_BITS;
+		mask = MAX_BITS;
 	}
 	mask = (1 << mask) - 1;
 	input_set_abs_params(idev, ABS_X, 0, mask, 0, 0);
