@@ -1104,7 +1104,7 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 	return 0;
 }
 
-static int fec_enet_mii_init(struct platform_device *pdev)
+static int fec_enet_mii_init(struct platform_device *pdev, int phy_irq)
 {
 	static struct mii_bus *fec0_mii_bus;
 	struct net_device *ndev = platform_get_drvdata(pdev);
@@ -1169,7 +1169,7 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	}
 
 	for (i = 0; i < PHY_MAX_ADDR; i++)
-		fep->mii_bus->irq[i] = PHY_POLL;
+		fep->mii_bus->irq[i] = phy_irq;
 
 	if (mdiobus_register(fep->mii_bus))
 		goto err_out_free_mdio_irq;
@@ -1832,6 +1832,7 @@ fec_probe(struct platform_device *pdev)
 	struct net_device *ndev;
 	int i, irq, ret = 0;
 	struct resource *r;
+	int phy_irq = PHY_POLL;
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!r)
@@ -1864,8 +1865,11 @@ fec_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, ndev);
 
 	pdata = pdev->dev.platform_data;
-	if (pdata)
+	if (pdata) {
 		fep->phy_interface = pdata->phy;
+		if (pdata->phy_irq)
+			phy_irq = pdata->phy_irq;
+	}
 
 	if (pdata->gpio_irq > 0) {
 		gpio_request(pdata->gpio_irq, "gpio_enet_irq");
@@ -1911,7 +1915,7 @@ fec_probe(struct platform_device *pdev)
 	if (ret)
 		goto failed_init;
 
-	ret = fec_enet_mii_init(pdev);
+	ret = fec_enet_mii_init(pdev, phy_irq);
 	if (ret)
 		goto failed_mii_init;
 
