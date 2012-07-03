@@ -16,6 +16,7 @@
  *		ks8001, ks8737, ks8721, ks8041, ks8051 100/10 phy
  */
 
+#include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/phy.h>
@@ -48,16 +49,34 @@ static int kszphy_ack_interrupt(struct phy_device *phydev)
 	int rc;
 
 	rc = phy_read(phydev, MII_KSZPHY_INTCS);
-
 	return (rc < 0) ? rc : 0;
 }
 
 static int kszphy_set_interrupt(struct phy_device *phydev)
 {
-	int temp;
-	temp = (PHY_INTERRUPT_ENABLED == phydev->interrupts) ?
-		KSZPHY_INTCS_ALL : 0;
-	return phy_write(phydev, MII_KSZPHY_INTCS, temp);
+	int bmcr, new_bmcr;
+	bmcr = phy_read(phydev, MII_BMCR);
+	if (PHY_INTERRUPT_ENABLED == phydev->interrupts) {
+		new_bmcr = bmcr & ~BMCR_PDOWN;
+		if (bmcr != new_bmcr) {
+			unsigned intcs, temp;
+			phy_write(phydev, MII_BMCR, new_bmcr);
+			udelay(100);	/* power up needs delay after */
+			/* force master mode */
+			phy_write(phydev, 0x9, 0x1f00);
+		}
+		return phy_write(phydev, MII_KSZPHY_INTCS, KSZPHY_INTCS_ALL);
+	} else {
+		phy_write(phydev, MII_KSZPHY_INTCS, 0);
+		new_bmcr = bmcr | BMCR_PDOWN;
+		if ((PHY_HALTED == phydev->state) && (bmcr != new_bmcr)) {
+			phy_write(phydev, MII_BMCR, bmcr | BMCR_ANRESTART);
+			/* let phy note link is down before poweroff */
+			udelay(10);
+			phy_write(phydev, MII_BMCR, new_bmcr);
+		}
+		return 0;
+	}
 }
 
 static int kszphy_config_intr(struct phy_device *phydev)
@@ -66,8 +85,10 @@ static int kszphy_config_intr(struct phy_device *phydev)
 
 	/* set the interrupt pin active low */
 	temp = phy_read(phydev, MII_KSZPHY_CTRL);
-	temp &= ~KSZPHY_CTRL_INT_ACTIVE_HIGH;
-	phy_write(phydev, MII_KSZPHY_CTRL, temp);
+	if (temp & KSZPHY_CTRL_INT_ACTIVE_HIGH) {
+		temp &= ~KSZPHY_CTRL_INT_ACTIVE_HIGH;
+		phy_write(phydev, MII_KSZPHY_CTRL, temp);
+	}
 	rc = kszphy_set_interrupt(phydev);
 	return rc < 0 ? rc : 0;
 }
@@ -76,10 +97,12 @@ static int ksz9021_config_intr(struct phy_device *phydev)
 {
 	int temp, rc;
 
-	/* set the interrupt pin active low */
 	temp = phy_read(phydev, MII_KSZPHY_CTRL);
-	temp &= ~KSZ9021_CTRL_INT_ACTIVE_HIGH;
-	phy_write(phydev, MII_KSZPHY_CTRL, temp);
+	if (temp & KSZ9021_CTRL_INT_ACTIVE_HIGH) {
+		/* set the interrupt pin active low */
+		temp &= ~KSZ9021_CTRL_INT_ACTIVE_HIGH;
+		phy_write(phydev, MII_KSZPHY_CTRL, temp);
+	}
 	rc = kszphy_set_interrupt(phydev);
 	return rc < 0 ? rc : 0;
 }
