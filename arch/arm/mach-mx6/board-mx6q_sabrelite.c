@@ -92,6 +92,7 @@
 #define MX6Q_SABRELITE_VOL_DOWN_KEY	IMX_GPIO_NR(4, 5)
 #define MX6Q_SABRELITE_CSI0_RST		IMX_GPIO_NR(1, 8)
 #define MX6Q_SABRELITE_CSI0_PWN		IMX_GPIO_NR(1, 6)
+#define MX6Q_SABRELITE_ENET_PHY_INT	IMX_GPIO_NR(1, 28)
 
 #define MX6Q_SABRELITE_SD3_WP_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE |	\
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_MED |	\
@@ -449,11 +450,15 @@ static inline void mx6q_sabrelite_init_uart(void)
 
 static int mx6q_sabrelite_fec_phy_init(struct phy_device *phydev)
 {
-	/* prefer master mode, disable 1000 Base-T capable */
-	phy_write(phydev, 0x9, 0x1c00);
+	/* prefer master mode */
+	phy_write(phydev, 0x9, 0x1f00);
 
 	/* min rx data delay */
 	phy_write(phydev, 0x0b, 0x8105);
+	phy_write(phydev, 0x0c, 0x0000);
+
+	/* min tx data delay */
+	phy_write(phydev, 0x0b, 0x8106);
 	phy_write(phydev, 0x0c, 0x0000);
 
 	/* max rx/tx clock delay, min rx/tx control delay */
@@ -467,6 +472,7 @@ static int mx6q_sabrelite_fec_phy_init(struct phy_device *phydev)
 static struct fec_platform_data fec_data __initdata = {
 	.init = mx6q_sabrelite_fec_phy_init,
 	.phy = PHY_INTERFACE_MODE_RGMII,
+	.phy_irq = gpio_to_irq(MX6Q_SABRELITE_ENET_PHY_INT)
 };
 
 static int mx6q_sabrelite_spi_cs[] = {
