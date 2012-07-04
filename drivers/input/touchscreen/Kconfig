@@ -187,6 +187,16 @@ config TOUCHSCREEN_EGALAX
 	  To compile this driver as a module, choose M here: the
 	  module will be called egalax_ts.
 
+config TOUCHSCREEN_EGALAX_SINGLE_TOUCH
+	bool "EETI eGalax touchscreen as single-touch"
+	default N
+	depends on TOUCHSCREEN_EGALAX
+	help
+	  If you say yes here you get single-touch touchscreen support
+	  on the eGalax I2C controller.
+	  If you say "no", you'll get the normal multi-touch.
+
+
 config TOUCHSCREEN_FUJITSU
 	tristate "Fujitsu serial touchscreen"
 	select SERIO
@@ -778,4 +788,21 @@ config TOUCHSCREEN_MAX11801
 
         To compile this driver as a module, choose M here: the
 	  module will be called max11801_ts
+
+config TOUCHSCREEN_FT5X06
+	tristate "Focaltech FT5X06 5 point touchscreen"
+	select I2C
+	help
+	  If you say yes here you get touchscreen support through
+	  FocalTech's FT5X06 controller.
+
+config TOUCHSCREEN_FT5X06_SINGLE_TOUCH
+	bool "FT5X06 touchscreen as single-touch"
+	default N
+	depends on TOUCHSCREEN_FT5X06
+	help
+	  If you say yes here you get single-touch touchscreen support
+	  on the FT5X06 I2C controller.
+	  If you say "no", you'll get the normal 5-finger goodness.
+
 endif

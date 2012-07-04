@@ -694,6 +694,13 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		.platform_data	= &tsc2007_info,
 		.irq = gpio_to_irq(MX6Q_SABRELITE_DRGB_IRQGPIO),
 	},
+#if defined(CONFIG_TOUCHSCREEN_FT5X06) \
+	|| defined(CONFIG_TOUCHSCREEN_FT5X06_MODULE)
+	{
+		I2C_BOARD_INFO("ft5x06-ts", 0x38),
+		.irq = gpio_to_irq(MX6Q_SABRELITE_CAP_TCH_INT1),
+	},
+#endif
 };
 
 static void imx6q_sabrelite_usbotg_vbus(bool on)
@@ -970,6 +977,7 @@ static void __init sabrelite_add_device_buttons(void) {}
 
 static iomux_v3_cfg_t n6x_sd2_pads[] = {
 	MX6Q_USDHC_PAD_SETTING(2, 50),
+	MX6Q_PAD_SD1_CLK__OSC32K_32K_OUT,
 };
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
@@ -1257,8 +1265,8 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_anatop_thermal_imx(1, &mx6q_sabrelite_anatop_thermal_data);
 	imx6_init_fec(fec_data);
 	imx6q_add_pm_imx(0, &mx6q_sabrelite_pm_data);
-	imx6q_add_sdhci_usdhc_imx(3, &mx6q_sabrelite_sd4_data);
 	imx6q_add_sdhci_usdhc_imx(2, &mx6q_sabrelite_sd3_data);
+	imx6q_add_sdhci_usdhc_imx(3, &mx6q_sabrelite_sd4_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6q_gpu_pdata);
 	imx6q_sabrelite_init_usb();
 	imx6q_add_ahci(0, &mx6q_sabrelite_sata_data);
