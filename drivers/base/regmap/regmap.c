@@ -22,6 +22,14 @@
 
 #include "internal.h"
 
+/*
+ * Sometimes for failures during very early init the trace
+ * infrastructure isn't available early enough to be used.  For this
+ * sort of problem defining LOG_DEVICE will add printks for basic
+ * register I/O on a specific device.
+ */
+#undef LOG_DEVICE
+
 static int _regmap_update_bits(struct regmap *map, unsigned int reg,
 			       unsigned int mask, unsigned int val,
 			       bool *change);
@@ -886,6 +894,11 @@ int _regmap_write(struct regmap *map, unsigned int reg,
 		}
 	}
 
+#ifdef LOG_DEVICE
+	if (strcmp(dev_name(map->dev), LOG_DEVICE) == 0)
+		dev_info(map->dev, "%x <= %x\n", reg, val);
+#endif
+
 	trace_regmap_reg_write(map->dev, reg, val);
 
 	if (map->format.format_write) {
@@ -1097,6 +1110,12 @@ static int _regmap_read(struct regmap *map, unsigned int reg,
 	ret = _regmap_raw_read(map, reg, map->work_buf, map->format.val_bytes);
 	if (ret == 0) {
 		*val = map->format.parse_val(map->work_buf);
+
+#ifdef LOG_DEVICE
+		if (strcmp(dev_name(map->dev), LOG_DEVICE) == 0)
+			dev_info(map->dev, "%x => %x\n", reg, *val);
+#endif
+
 		trace_regmap_reg_read(map->dev, reg, *val);
 	}
 
