@@ -108,7 +108,7 @@ static const struct regmap_irq wm5102_aod_irqs[] = {
 	},
 };
 
-struct regmap_irq_chip wm5102_aod = {
+const struct regmap_irq_chip wm5102_aod = {
 	.name = "wm5102 AOD",
 	.status_base = ARIZONA_AOD_IRQ1,
 	.mask_base = ARIZONA_AOD_IRQ_MASK_IRQ1,
@@ -228,7 +228,7 @@ static const struct regmap_irq wm5102_irqs[] = {
 	},
 };
 
-struct regmap_irq_chip wm5102_irq = {
+const struct regmap_irq_chip wm5102_irq = {
 	.name = "wm5102 IRQ",
 	.status_base = ARIZONA_INTERRUPT_STATUS_1,
 	.mask_base = ARIZONA_INTERRUPT_STATUS_1_MASK,
