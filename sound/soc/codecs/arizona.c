@@ -804,9 +804,9 @@ static int arizona_calc_fll(struct arizona_fll *fll,
 	/* Apply the division for our remaining calculations */
 	Fref /= div;
 
-	/* Fvco should be 90-100MHz; don't check the upper bound */
+	/* Fvco should be over the targt; don't check the upper bound */
 	div = 1;
-	while (Fout * div < 90000000) {
+	while (Fout * div < 90000000 * fll->vco_mult) {
 		div++;
 		if (div > 7) {
 			arizona_fll_err(fll, "No FLL_OUTDIV for Fout=%uHz\n",
@@ -814,7 +814,7 @@ static int arizona_calc_fll(struct arizona_fll *fll,
 			return -EINVAL;
 		}
 	}
-	target = Fout * div;
+	target = Fout * div / fll->vco_mult;
 	cfg->outdiv = div;
 
 	arizona_fll_dbg(fll, "Fvco=%dHz\n", target);
