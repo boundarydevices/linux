@@ -49,10 +49,22 @@
 #define PORTSC_HSP            BIT(9)
 #define PORTSC_PHCD           BIT(23) /* phy suspend mode */
 #define PORTSC_PTC            (0x0FUL << 16)
+/* PTS and PTW for non lpm version only */
+#define PORTSC_PTS(d)         ((((d) & 0x3) << 30) | (((d) & 0x4) ? BIT(25) : 0))
+#define PORTSC_PTW            BIT(28)
 
 /* DEVLC */
 #define DEVLC_PSPD            (0x03UL << 25)
-#define    DEVLC_PSPD_HS      (0x02UL << 25)
+#define DEVLC_PSPD_HS         (0x02UL << 25)
+#define DEVLC_PTW             BIT(27)
+#define DEVLC_STS             BIT(28)
+#define DEVLC_PTS(d)          (((d) & 0x7) << 29)
+
+/* Encoding for DEVLC_PTS and PORTSC_PTS */
+#define PTS_UTMI              0
+#define PTS_ULPI              2
+#define PTS_SERIAL            3
+#define PTS_HSIC              4
 
 /* OTGSC */
 #define OTGSC_IDPU	      BIT(5)
