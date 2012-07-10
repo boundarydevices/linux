@@ -102,7 +102,7 @@
 
 /**
  * ixgbe_ptp_read - read raw cycle counter (to be used by time counter)
- * @cc - the cyclecounter structure
+ * @cc: the cyclecounter structure
  *
  * this function reads the cyclecounter registers and is called by the
  * cyclecounter structure used to construct a ns counter from the
@@ -123,8 +123,8 @@ static cycle_t ixgbe_ptp_read(const struct cyclecounter *cc)
 
 /**
  * ixgbe_ptp_adjfreq
- * @ptp - the ptp clock structure
- * @ppb - parts per billion adjustment from base
+ * @ptp: the ptp clock structure
+ * @ppb: parts per billion adjustment from base
  *
  * adjust the frequency of the ptp cycle counter by the
  * indicated ppb from the base frequency.
@@ -170,8 +170,8 @@ static int ixgbe_ptp_adjfreq(struct ptp_clock_info *ptp, s32 ppb)
 
 /**
  * ixgbe_ptp_adjtime
- * @ptp - the ptp clock structure
- * @delta - offset to adjust the cycle counter by
+ * @ptp: the ptp clock structure
+ * @delta: offset to adjust the cycle counter by
  *
  * adjust the timer by resetting the timecounter structure.
  */
@@ -198,8 +198,8 @@ static int ixgbe_ptp_adjtime(struct ptp_clock_info *ptp, s64 delta)
 
 /**
  * ixgbe_ptp_gettime
- * @ptp - the ptp clock structure
- * @ts - timespec structure to hold the current time value
+ * @ptp: the ptp clock structure
+ * @ts: timespec structure to hold the current time value
  *
  * read the timecounter and return the correct value on ns,
  * after converting it into a struct timespec.
@@ -224,8 +224,8 @@ static int ixgbe_ptp_gettime(struct ptp_clock_info *ptp, struct timespec *ts)
 
 /**
  * ixgbe_ptp_settime
- * @ptp - the ptp clock structure
- * @ts - the timespec containing the new time for the cycle counter
+ * @ptp: the ptp clock structure
+ * @ts: the timespec containing the new time for the cycle counter
  *
  * reset the timecounter to use a new base value instead of the kernel
  * wall timer value.
@@ -251,9 +251,9 @@ static int ixgbe_ptp_settime(struct ptp_clock_info *ptp,
 
 /**
  * ixgbe_ptp_enable
- * @ptp - the ptp clock structure
- * @rq - the requested feature to change
- * @on - whether to enable or disable the feature
+ * @ptp: the ptp clock structure
+ * @rq: the requested feature to change
+ * @on: whether to enable or disable the feature
  *
  * enable (or disable) ancillary features of the phc subsystem.
  * our driver only supports the PPS feature on the X540
@@ -289,8 +289,8 @@ static int ixgbe_ptp_enable(struct ptp_clock_info *ptp,
 
 /**
  * ixgbe_ptp_check_pps_event
- * @adapter - the private adapter structure
- * @eicr - the interrupt cause register value
+ * @adapter: the private adapter structure
+ * @eicr: the interrupt cause register value
  *
  * This function is called by the interrupt routine when checking for
  * interrupts. It will check and handle a pps event.
@@ -319,8 +319,8 @@ void ixgbe_ptp_check_pps_event(struct ixgbe_adapter *adapter, u32 eicr)
 
 /**
  * ixgbe_ptp_enable_sdp
- * @hw - the hardware private structure
- * @shift - the clock shift for calculating nanoseconds
+ * @hw: the hardware private structure
+ * @shift: the clock shift for calculating nanoseconds
  *
  * this function enables the clock out feature on the sdp0 for the
  * X540 device. It will create a 1second periodic output that can be
@@ -393,7 +393,7 @@ static void ixgbe_ptp_enable_sdp(struct ixgbe_hw *hw, int shift)
 
 /**
  * ixgbe_ptp_disable_sdp
- * @hw - the private hardware structure
+ * @hw: the private hardware structure
  *
  * this function disables the auxiliary SDP clock out feature
  */
@@ -690,7 +690,7 @@ int ixgbe_ptp_hwtstamp_ioctl(struct ixgbe_adapter *adapter,
 
 /**
  * ixgbe_ptp_start_cyclecounter - create the cycle counter from hw
- * @adapter - pointer to the adapter structure
+ * @adapter: pointer to the adapter structure
  *
  * this function initializes the timecounter and cyclecounter
  * structures for use in generated a ns counter from the arbitrary
@@ -826,7 +826,7 @@ void ixgbe_ptp_start_cyclecounter(struct ixgbe_adapter *adapter)
 
 /**
  * ixgbe_ptp_init
- * @adapter - the ixgbe private adapter structure
+ * @adapter: the ixgbe private adapter structure
  *
  * This function performs the required steps for enabling ptp
  * support. If ptp support has already been loaded it simply calls the
