@@ -687,11 +687,6 @@ struct plat_i2c_generic_data {
 	unsigned gp;
 };
 
-static struct plat_i2c_generic_data ep0_platform_data = {
-	.irq			= gpio_to_irq(MX6Q_SABRELITE_CAP_TCH_INT1),
-	.gp			= MX6Q_SABRELITE_CAP_TCH_INT1,
-};
-
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("egalax_ts", 0x4),
@@ -700,14 +695,6 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		I2C_BOARD_INFO("tsc2004", 0x48),
 		.platform_data	= &tsc2007_info,
 		.irq		= gpio_to_irq(MX6Q_SABRELITE_TSC2007_IRQGPIO),
-	}, {
-#if defined(CONFIG_TOUCHSCREEN_EP0700M01) || defined(CONFIG_TOUCHSCREEN_EP0700M01_MODULES)
-		I2C_BOARD_INFO("ep0700m01-ts", 0x38),
-#else
-		I2C_BOARD_INFO("ep0700m06-ts", 0x38),
-#endif
-		.irq		= gpio_to_irq(MX6Q_SABRELITE_CAP_TCH_INT1),
-		.platform_data	= &ep0_platform_data,
 	},
 #if defined(CONFIG_TOUCHSCREEN_FT5X06) \
 	|| defined(CONFIG_TOUCHSCREEN_FT5X06_MODULE)
