@@ -346,6 +346,8 @@ static int mxcfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 		vtotal = var->yres + var->lower_margin + var->vsync_len +
 		    var->upper_margin;
 		var->pixclock = (vtotal * htotal * 6UL) / 100UL;
+		if (!var->pixclock)
+			var->pixclock = 1000;
 		var->pixclock = KHZ2PICOS(var->pixclock);
 		dev_dbg(info->device,
 			"pixclock set for 60Hz refresh = %u ps\n",
