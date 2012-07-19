@@ -11,7 +11,7 @@
  *  option) any later version.
  *
  */
-
+//#define DEBUG
 #include <linux/module.h>
 #include <linux/input.h>
 #include <linux/delay.h>
@@ -39,7 +39,7 @@
 static int calibration[7];
 module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
 
-static unsigned char drop_samples = 1;
+static unsigned char drop_samples = 0;
 module_param(drop_samples, byte, S_IRUGO | S_IWUSR);
 
 static unsigned char ts_mode = 255;
@@ -269,29 +269,20 @@ void insert_tsi_point(struct da9052_ts_priv *priv, unsigned x, unsigned y, unsig
 		priv->tsi_reg.sum_cnt = 0;
 		if (priv->drop_samples) {
 			priv->drop_samples--;
-			goto exit1;
-		}
-		da9052_calibrate(&x, &y);
-		input_report_abs(ip_dev, ABS_X, x);
-		input_report_abs(ip_dev, ABS_Y, y);
-		input_report_abs(ip_dev, ABS_PRESSURE, z);
-		input_report_key(ip_dev, BTN_TOUCH, 1);
-		input_sync(ip_dev);
-		if (priv->config_index) {
-			ts->release_pending = 1;
 		} else {
-			if (!ts->release_pending) {
-				ts->release_pending = 1;
-				ts->release_timer.expires = jiffies + msecs_to_jiffies(30);
-				add_timer(&ts->release_timer);
-			} else {
-				mod_timer(&ts->release_timer, jiffies + msecs_to_jiffies(30));
-			}
+			da9052_calibrate(&x, &y);
+			input_report_abs(ip_dev, ABS_X, x);
+			input_report_abs(ip_dev, ABS_Y, y);
+			input_report_abs(ip_dev, ABS_PRESSURE, z);
+			input_report_key(ip_dev, BTN_TOUCH, 1);
+			input_sync(ip_dev);
+			ts->release_pending = 1;
+			pr_debug("%s: x=%x, y=%x, z=%x, pressed\n",
+					__func__, x, y, z);
 		}
-		pr_debug("%s: x=%x, y=%x, z=%x, pressed\n",
-			__func__, x, y, z);
 	}
-exit1:
+	if (!priv->config_index)
+		mod_timer(&ts->release_timer, jiffies + msecs_to_jiffies(100));
 	mutex_unlock(&ts->point_lock);
 }
 
@@ -301,14 +292,12 @@ void insert_tsi_release(struct da9052_ts_priv *priv)
 	struct input_dev *ip_dev = (struct input_dev *)da9052_tsi_get_input_dev(
 			ts, (u8)TSI_INPUT_DEVICE_OFF);
 	mutex_lock(&ts->point_lock);
+	priv->tsi_reg.sum.x = 0;
+	priv->tsi_reg.sum.y = 0;
+	priv->tsi_reg.sum.z = 0;
+	priv->tsi_reg.sum_cnt = 0;
 	if (ts->release_pending) {
 		ts->release_pending = 0;
-		del_timer(&ts->release_timer);
-
-		priv->tsi_reg.sum.x = 0;
-		priv->tsi_reg.sum.y = 0;
-		priv->tsi_reg.sum.z = 0;
-		priv->tsi_reg.sum_cnt = 0;
 		input_report_abs(ip_dev, ABS_PRESSURE, 0);
 		input_report_key(ip_dev, BTN_TOUCH, 0);
 		input_sync(ip_dev);
@@ -322,7 +311,13 @@ static void release_work_rtn(struct work_struct *work)
 {
 	struct da9052_tsi_info *ts = container_of(work, struct da9052_tsi_info, release_work);
 	struct da9052_ts_priv *priv = container_of(ts, struct da9052_ts_priv, tsi_info);
-	insert_tsi_release(priv);
+	if (!timer_pending(&ts->release_timer)) {
+		/*
+		 * Only release if release has not been
+		 * delayed (more samples received)
+		 */
+		insert_tsi_release(priv);
+	}
 }
 
 static void release_timer_rtn(unsigned long data)
