@@ -521,7 +521,7 @@ static int elan_ktf2k_ts_probe(struct i2c_client *client,
 	input_set_abs_params(ts->input_dev, ABS_Y, 0, REPORTED_TOUCH_RANGE-1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_PRESSURE, 0, 255, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_TOOL_WIDTH, 0, 255, 0, 0);
-#ifdef TOUCHSCREEN_EKTF2K_SINGLE_TOUCH
+#ifndef TOUCHSCREEN_EKTF2K_SINGLE_TOUCH
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, REPORTED_TOUCH_RANGE-1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, REPORTED_TOUCH_RANGE-1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
