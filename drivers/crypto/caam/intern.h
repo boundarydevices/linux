@@ -2,7 +2,7 @@
  * CAAM/SEC 4.x driver backend
  * Private/internal definitions between modules
  *
- * Copyright 2008-2011 Freescale Semiconductor, Inc.
+ * Copyright (C) 2008-2012 Freescale Semiconductor, Inc.
  *
  */
 
@@ -25,6 +25,23 @@
 #define JOBR_INTC_TIME_THLD 0
 #define JOBR_INTC_COUNT_THLD 0
 #endif
+
+#ifndef CONFIG_OF
+#define JR_IRQRES_NAME_ROOT "irq_jr"
+#define JR_MEMRES_NAME_ROOT "offset_jr"
+#endif
+
+#ifdef CONFIG_ARM
+/*
+ * FIXME: ARM tree doesn't seem to provide this, ergo it seems to be
+ * in "platform limbo". Find a better place, perhaps.
+ */
+static inline void irq_dispose_mapping(unsigned int virq)
+{
+	return;
+}
+#endif
+
 
 /*
  * Storage for tracking each in-process entry moving across a ring
@@ -90,6 +107,12 @@ struct caam_drv_private {
 	struct device **algapi_jr;
 	/* list of registered crypto algorithms (mk generic context handle?) */
 	struct list_head alg_list;
+	/* list of registered hash algorithms (mk generic context handle?) */
+	struct list_head hash_list;
+
+#ifdef CONFIG_ARM
+	struct clk *caam_clk;
+#endif
 
 	/*
 	 * debugfs entries for developer view into driver/device
@@ -108,6 +131,28 @@ struct caam_drv_private {
 #endif
 };
 
-void caam_jr_algapi_init(struct device *dev);
-void caam_jr_algapi_remove(struct device *dev);
+/*
+ * These startup/shutdown functions exist to enable API startup/shutdown
+ * outside of the OF device detection framework. It's necessary for ARM
+ * kernels as presently delivered.
+ *
+ * Once ARM kernels are shipping with OF support, these functions can
+ * be re-integrated into the normal probe startup/exit functions,
+ * and these prototypes can then be removed.
+ */
+#ifndef CONFIG_OF
+void caam_algapi_shutdown(struct platform_device *pdev);
+int caam_algapi_startup(struct platform_device *pdev);
+
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_AHASH_API
+int caam_algapi_hash_startup(struct platform_device *pdev);
+void caam_algapi_hash_shutdown(struct platform_device *pdev);
+#endif
+
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_RNG_API
+int caam_rng_startup(struct platform_device *pdev);
+void caam_rng_shutdown(void);
+#endif
+#endif /* CONFIG_OF */
+
 #endif /* INTERN_H */
