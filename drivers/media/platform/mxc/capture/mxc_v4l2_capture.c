@@ -350,7 +350,7 @@ static int mxc_v4l2_prepare_bufs(cam_data *cam, struct v4l2_buffer *buf)
 	pr_debug("%s\n", __func__);
 
 	if (buf->index < 0 || buf->index >= FRAME_NUM || buf->length <
-			PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage)) {
+			cam->v2f.fmt.pix.sizeimage) {
 		pr_err("ERROR: v4l2 capture: mxc_v4l2_prepare_bufs buffers "
 			"not allocated,index=%d, length=%d\n", buf->index,
 			buf->length);
@@ -1822,12 +1822,12 @@ static int mxc_v4l_close(struct file *file)
 		err = stop_preview(cam);
 		cam->overlay_on = false;
 	}
-	if (cam->capture_pid == current->pid) {
-		err |= mxc_streamoff(cam);
-		wake_up_interruptible(&cam->enc_queue);
-	}
 
 	if (--cam->open_count == 0) {
+		if (cam->capture_pid == current->pid) {
+			err |= mxc_streamoff(cam);
+			wake_up_interruptible(&cam->enc_queue);
+		}
 		if (!IS_ERR(sensor->sensor_clk))
 			clk_disable_unprepare(sensor->sensor_clk);
 		wait_event_interruptible(cam->power_queue,
