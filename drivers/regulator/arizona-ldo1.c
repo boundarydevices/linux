@@ -88,7 +88,7 @@ static struct regulator_desc arizona_ldo1 = {
 	.type = REGULATOR_VOLTAGE,
 	.ops = &arizona_ldo1_ops,
 
-	.n_voltages = 7,
+	.n_voltages = 6,
 
 	.owner = THIS_MODULE,
 };
