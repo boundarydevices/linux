@@ -260,6 +260,7 @@ static void dapm_set_path_status(struct snd_soc_dapm_widget *w,
 	case snd_soc_dapm_output:
 	case snd_soc_dapm_adc:
 	case snd_soc_dapm_input:
+	case snd_soc_dapm_siggen:
 	case snd_soc_dapm_dac:
 	case snd_soc_dapm_micbias:
 	case snd_soc_dapm_vmid:
@@ -653,6 +654,11 @@ static int is_connected_input_ep(struct snd_soc_dapm_widget *widget)
 		if (widget->id == snd_soc_dapm_mic ||
 		    (widget->id == snd_soc_dapm_line && !list_empty(&widget->sinks)))
 			return snd_soc_dapm_suspend_check(widget);
+
+		/* signal generator */
+		if (widget->id == snd_soc_dapm_siggen) {
+			return snd_soc_dapm_suspend_check(widget);
+		}
 	}
 
 	list_for_each_entry(path, &widget->sources, list_sink) {
@@ -1716,6 +1722,7 @@ static int snd_soc_dapm_add_route(struct snd_soc_dapm_context *dapm,
 	case snd_soc_dapm_out_drv:
 	case snd_soc_dapm_input:
 	case snd_soc_dapm_output:
+	case snd_soc_dapm_siggen:
 	case snd_soc_dapm_micbias:
 	case snd_soc_dapm_vmid:
 	case snd_soc_dapm_pre:
