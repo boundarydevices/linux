@@ -34,6 +34,14 @@
 #define SOC_SINGLE_VALUE_EXT(xreg, xmax, xinvert) \
 	((unsigned long)&(struct soc_mixer_control) \
 	{.reg = xreg, .max = xmax, .platform_max = xmax, .invert = xinvert})
+#define SOC_DOUBLE_R_VALUE(xlreg, xrreg, xshift, xmax, xinvert) \
+	((unsigned long)&(struct soc_mixer_control) \
+	{.reg = xlreg, .rreg = xrreg, .shift = xshift, .rshift = xshift, \
+	.max = xmax, .platform_max = xmax, .invert = xinvert})
+#define SOC_DOUBLE_R_RANGE_VALUE(xlreg, xrreg, xshift, xmin, xmax, xinvert) \
+	((unsigned long)&(struct soc_mixer_control) \
+	{.reg = xlreg, .rreg = xrreg, .shift = xshift, .rshift = xshift, \
+	.min = xmin, .max = xmax, .platform_max = xmax, .invert = xinvert})
 #define SOC_SINGLE(xname, reg, shift, max, invert) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
 	.info = snd_soc_info_volsw, .get = snd_soc_get_volsw,\
@@ -76,7 +84,7 @@
 	.private_value = (unsigned long)&(struct soc_mixer_control) \
 		{.reg = xreg, .shift = xshift, .min = xmin,\
 		 .max = xmax, .platform_max = xmax, .invert = xinvert} }
-#define SOC_DOUBLE(xname, reg, shift_left, shift_right, max, invert) \
+#define SOC_DOUBLE(xname, xreg, shift_left, shift_right, xmax, xinvert) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname),\
 	.info = snd_soc_info_volsw, .get = snd_soc_get_volsw, \
 	.put = snd_soc_put_volsw, \
@@ -90,6 +98,13 @@
 	.private_value = (unsigned long)&(struct soc_mixer_control) \
 		{.reg = reg_left, .rreg = reg_right, .shift = xshift, \
 		.max = xmax, .platform_max = xmax, .invert = xinvert} }
+#define SOC_DOUBLE_R_RANGE(xname, reg_left, reg_right, xshift, xmin, \
+			   xmax, xinvert)		\
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname),\
+	.info = snd_soc_info_volsw_range, \
+	.get = snd_soc_get_volsw_range, .put = snd_soc_put_volsw_range, \
+	.private_value = SOC_DOUBLE_R_RANGE_VALUE(reg_left, reg_right, \
+					    xshift, xmin, xmax, xinvert) }
 #define SOC_DOUBLE_TLV(xname, xreg, shift_left, shift_right, xmax, xinvert, tlv_array) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname),\
 	.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ |\
@@ -110,6 +125,16 @@
 	.private_value = (unsigned long)&(struct soc_mixer_control) \
 		{.reg = reg_left, .rreg = reg_right, .shift = xshift, \
 		.max = xmax, .platform_max = xmax, .invert = xinvert} }
+#define SOC_DOUBLE_R_RANGE_TLV(xname, reg_left, reg_right, xshift, xmin, \
+			       xmax, xinvert, tlv_array)		\
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname),\
+	.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ |\
+		 SNDRV_CTL_ELEM_ACCESS_READWRITE,\
+	.tlv.p = (tlv_array), \
+	.info = snd_soc_info_volsw_range, \
+	.get = snd_soc_get_volsw_range, .put = snd_soc_put_volsw_range, \
+	.private_value = SOC_DOUBLE_R_RANGE_VALUE(reg_left, reg_right, \
+					    xshift, xmin, xmax, xinvert) }
 #define SOC_DOUBLE_S8_TLV(xname, xreg, xmin, xmax, tlv_array) \
 {	.iface  = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), \
 	.access = SNDRV_CTL_ELEM_ACCESS_TLV_READ | \
@@ -596,6 +621,7 @@ struct snd_soc_codec {
 	unsigned int ac97_created:1; /* Codec has been created by SoC */
 	unsigned int sysfs_registered:1; /* codec has been sysfs registered */
 	unsigned int cache_init:1; /* codec cache has been initialized */
+	unsigned int using_regmap:1; /* using regmap access */
 	u32 cache_only;  /* Suppress writes to hardware */
 	u32 cache_sync; /* Cache needs to be synced to hardware */
 
