@@ -10,7 +10,7 @@
  * published by the Free Software Foundation.
  */
 
-#include <linux/export.h>
+#include <linux/module.h>
 #include <linux/regmap.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
