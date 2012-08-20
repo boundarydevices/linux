@@ -1522,6 +1522,7 @@ static void mxc_hdmi_notify_fb(struct mxc_hdmi *hdmi)
 	hdmi->fbi->var.activate |= FB_ACTIVATE_FORCE;
 	console_lock();
 	hdmi->fbi->flags |= FBINFO_MISC_USEREVENT;
+	hdmi->fbi->var.yres_virtual = 0;	/* Use default */
 	fb_set_var(hdmi->fbi, &hdmi->fbi->var);
 	hdmi->fbi->flags &= ~FBINFO_MISC_USEREVENT;
 	console_unlock();
@@ -1682,7 +1683,7 @@ static void mxc_hdmi_cable_connected(struct mxc_hdmi *hdmi)
 	hdmi->cable_plugin = true;
 
 	/* HDMI Initialization Step B */
-	mxc_hdmi_set_mode_to_vga_dvi(hdmi);
+//	mxc_hdmi_set_mode_to_vga_dvi(hdmi);
 
 	/* HDMI Initialization Step C */
 	edid_status = mxc_hdmi_read_edid(hdmi);
