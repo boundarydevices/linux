@@ -303,6 +303,7 @@ static int __devinit wl1271_probe(struct sdio_func *func,
 	/* Tell PM core that we don't need the card to be powered now */
 	pm_runtime_put_noidle(&func->dev);
 
+	wl->set_power = wlan_data->set_power;
 	wl1271_notice("initialized");
 
 	return 0;
