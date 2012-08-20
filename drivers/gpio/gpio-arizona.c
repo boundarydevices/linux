@@ -84,6 +84,47 @@ static void arizona_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
 			   ARIZONA_GPN_LVL, value);
 }
 
+#ifdef CONFIG_DEBUG_FS
+static void arizona_gpio_dbg_show(struct seq_file *s, struct gpio_chip *chip)
+{
+	struct arizona_gpio *arizona_gpio = to_arizona_gpio(chip);
+	struct arizona *arizona = arizona_gpio->arizona;
+	int i;
+
+	for (i = 0; i < chip->ngpio; i++) {
+		int gpio = i + chip->base;
+		int reg, ret;
+		const char *label;
+
+		/* We report the GPIO even if it's not requested since
+		 * we're also reporting things like alternate
+		 * functions which apply even when the GPIO is not in
+		 * use as a GPIO.
+		 */
+		label = gpiochip_is_requested(chip, i);
+		if (!label)
+			label = "Unrequested";
+
+		seq_printf(s, " gpio-%-3d (%-20.20s) ", gpio, label);
+
+		ret = regmap_read(arizona->regmap, ARIZONA_GPIO1_CTRL + i, &reg);
+
+		if (ret < 0) {
+			dev_err(arizona->dev,
+				"GPIO control %d read failed: %d\n",
+				gpio, reg);
+			seq_printf(s, "\n");
+			continue;
+		}
+
+		/* No decode yet; note that GPIO2 is special */
+		seq_printf(s, "(%x)\n", reg);
+	}
+}
+#else
+#define arizona_gpio_dbg_show NULL
+#endif
+
 static struct gpio_chip template_chip = {
 	.label			= "arizona",
 	.owner			= THIS_MODULE,
@@ -91,6 +132,7 @@ static struct gpio_chip template_chip = {
 	.get			= arizona_gpio_get,
 	.direction_output	= arizona_gpio_direction_out,
 	.set			= arizona_gpio_set,
+	.dbg_show		= arizona_gpio_dbg_show,
 	.can_sleep		= 1,
 };
 
