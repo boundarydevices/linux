@@ -981,9 +981,19 @@ static iomux_v3_cfg_t n6x_sd2_pads[] = {
 };
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
+static void wl1271_set_power(bool enable)
+{
+	if (0 == enable) {
+		gpio_set_value(N6_WL1271_WL_EN, 0);		/* momentarily disable */
+		mdelay(2);
+		gpio_set_value(N6_WL1271_WL_EN, 1);
+	}
+}
+
 struct wl12xx_platform_data n6q_wlan_data __initdata = {
 	.irq = gpio_to_irq(N6_WL1271_WL_IRQ),
 	.board_ref_clock = WL12XX_REFCLOCK_38, /* 38.4 MHz */
+	.set_power = wl1271_set_power,
 };
 
 static struct regulator_consumer_supply n6q_vwl1271_consumers[] = {
