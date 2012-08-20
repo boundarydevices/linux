@@ -1767,6 +1767,8 @@ static void wl1271_op_remove_interface(struct ieee80211_hw *hw,
 
 	mutex_unlock(&wl->mutex);
 	cancel_work_sync(&wl->recovery_work);
+	if (wl->set_power)
+		wl->set_power(0);
 }
 
 void wl1271_configure_filters(struct wl1271 *wl, unsigned int filters)
