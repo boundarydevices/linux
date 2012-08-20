@@ -1748,6 +1748,9 @@ static void __wl1271_op_remove_interface(struct wl1271 *wl,
 	wl->tx_res_if = NULL;
 	kfree(wl->target_mem_map);
 	wl->target_mem_map = NULL;
+
+	if (wl->set_power)
+		wl->set_power(0);
 }
 
 static void wl1271_op_remove_interface(struct ieee80211_hw *hw,
