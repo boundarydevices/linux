@@ -2332,6 +2332,12 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	 .platform_data  = &camera_data,
 	},
 #endif
+#if defined(CONFIG_RTC_DRV_ISL1208) || defined(CONFIG_RTC_DRV_ISL1208_MODULE)
+	{
+	 .type = "isl1208",
+	 .addr = 0x6f,
+	},
+#endif
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
