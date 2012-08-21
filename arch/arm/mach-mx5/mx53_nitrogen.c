@@ -2254,15 +2254,18 @@ MACHINE_END
 #endif
 
 /*****************************************************************************/
-extern struct platform_device mxc_uart_device3;
+extern struct platform_device mxc_uart_device1;
 extern struct platform_device mxc_uart_device2;
+extern struct platform_device mxc_uart_device3;
 static struct imxuart_platform_data uart_pdata = {
 	.flags = IMXUART_HAVE_RTSCTS,
 };
 
 #ifdef CONFIG_MACH_NITROGEN_IMX53
 struct gpio nitrogen53_gpios_specific[] __initdata = {
+#ifndef CONFIG_N_9BIT
 	{.label = "Camera power down",	.gpio = MAKE_GP(1, 2),		.flags = GPIOF_INIT_HIGH},
+#endif
 	{.label = "pmic-int",		.gpio = MAKE_GP(2, 21),		.flags = GPIOF_DIR_IN},
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
 	{.label = "wl1271_btfunct5",	.gpio = MAKE_GP(1, 6),		.flags = GPIOF_DIR_IN},		/* GPIO_1_6 - (HOST_WU) */
@@ -2430,11 +2433,28 @@ static int sdhc_write_protect3(struct device *dev)
 	return gpio_get_value(N53_SD3_WP);
 }
 
+#ifdef CONFIG_N_9BIT
+static struct imxuart_platform_data uart1_pdata = {
+	.flags = IMXUART_USING_RS485,
+	.rs485_tx_gpio = MAKE_GP(1, 2),
+};
+static struct imxuart_platform_data uart3_pdata = {
+	.flags = IMXUART_USING_RS485,
+	.rs485_tx_gpio = MAKE_GP(1, 5),			/* was MAKE_GP(3, 30) */
+};
+#define UART1_DATA &uart1_pdata
+#define UART3_DATA &uart3_pdata
+#else
+#define UART1_DATA NULL
+#define UART3_DATA &uart_pdata	/* rts/cts */
+#endif
+
 static void __init mxc_board_init_nitrogen(void)
 {
 	unsigned da9052_irq = gpio_to_irq(MAKE_GP(2, 21));	/* pad EIM_A17 */
+	mxc_uart_device1.dev.platform_data = UART1_DATA;
+	mxc_uart_device3.dev.platform_data = UART3_DATA;
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
-	mxc_uart_device3.dev.platform_data = &uart_pdata;
 	/* PWM2 - GPIO_1 is slow clock */
 	mxc_pwm2_platform_data.clk_select = PWM_CLK_HIGHPERF;
 	mxc_backlight_data_pwm2.dft_brightness = 128;	/* slow clock 50% duty */

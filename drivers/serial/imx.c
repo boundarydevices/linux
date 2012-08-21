@@ -205,6 +205,7 @@ struct imx_port {
 	unsigned char		force_tx_par_err;
 	unsigned char		force_1_tx_parity_err;
 	unsigned char		transmitter_on;
+	unsigned char		default_ldisc;
 	int			transmitter_enable_gp;
 };
 
@@ -1324,6 +1325,8 @@ static int imx_ioctl(struct uart_port *port, unsigned int cmd,
 		do_rs485_setup(sport, &rs485data);
 		break;
 	}
+	case TIOC_DEFAULT_LDISC:
+		return sport->default_ldisc;
 	default:
 		return -ENOIOCTLCMD;
 	}
@@ -1546,6 +1549,8 @@ static int serial_imx_probe(struct platform_device *pdev)
 	void __iomem *base;
 	int ret = 0;
 	struct resource *res;
+	int rs485_tx_gpio = -1;
+	int using_rs485 = 0;
 
 	sport = kzalloc(sizeof(*sport), GFP_KERNEL);
 	if (!sport)
@@ -1605,23 +1610,25 @@ static int serial_imx_probe(struct platform_device *pdev)
 			if (ret)
 				goto clkput;
 		}
+		using_rs485 = pdata->flags & IMXUART_USING_RS485;
+		rs485_tx_gpio = pdata->rs485_tx_gpio;
 	}
 
 	ret = uart_add_one_port(&imx_reg, &sport->port);
 	if (ret)
 		goto deinit;
 	platform_set_drvdata(pdev, &sport->port);
+	sport->default_ldisc = N_TTY;
 
 #ifdef CONFIG_N_9BIT
-	pr_info("%s: id=%d\n", __func__, pdev->id);
-	if (pdev->id == 2) {
+	if (using_rs485) {
 		struct serial_rs485 rs;
 		memset(&rs, 0, sizeof(rs));
 		rs.flags = SER_RS485_ENABLED | SER_RS485_TX_CTL_GP |
 				SER_RS485_TX_CTL_HIGH_ACTIVE | SER_RS485_HALF_DUPLEX;
-#define MAKE_GP(port, bit) ((port - 1) * 32 + bit)
-		rs.transmitter_enable_gp = MAKE_GP(3, 30);
+		rs.transmitter_enable_gp = rs485_tx_gpio;
 		do_rs485_setup(sport, &rs);
+		sport->default_ldisc = N_9BIT;
 	}
 #endif
 	set_transmit_state(sport, RS485_OFF);
