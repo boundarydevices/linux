@@ -584,10 +584,6 @@ static const struct snd_soc_dapm_route wm5102_dapm_routes[] = {
 	{ "OUT5L", NULL, "SYSCLK" },
 	{ "OUT5R", NULL, "SYSCLK" },
 
-	{ "MICBIAS1", NULL, "MICVDD" },
-	{ "MICBIAS2", NULL, "MICVDD" },
-	{ "MICBIAS3", NULL, "MICVDD" },
-
 	{ "Noise Generator", NULL, "NOISE" },
 	{ "Tone Generator 1", NULL, "TONE" },
 	{ "Tone Generator 2", NULL, "TONE" },
