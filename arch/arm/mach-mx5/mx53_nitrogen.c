@@ -2676,7 +2676,7 @@ static const unsigned i2c2_gpiomux_gpios[] = {
 };
 
 static const unsigned i2c2_gpiomux_values[] = {
-	1, 0, 4, 8
+	1, 2, 4, 8
 };
 
 static struct gpio_i2cmux_platform_data i2c2_i2cmux_data = {
