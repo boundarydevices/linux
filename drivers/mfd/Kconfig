@@ -361,6 +361,7 @@ config MFD_S5M_CORE
 	 of the device
 
 config MFD_ARIZONA
+	select REGMAP_IRQ
 	tristate
 
 config MFD_ARIZONA_I2C
