@@ -315,7 +315,7 @@ int __devinit arizona_dev_init(struct arizona *arizona)
 		return ret;
 	}
 
-	ret = devm_regulator_bulk_get(dev, arizona->num_core_supplies,
+	ret = regulator_bulk_get(dev, arizona->num_core_supplies,
 				      arizona->core_supplies);
 	if (ret != 0) {
 		dev_err(dev, "Failed to request core supplies: %d\n",
