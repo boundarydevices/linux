@@ -31,6 +31,7 @@
 
 #include "arizona.h"
 #include "wm5102.h"
+#include "wm_adsp.h"
 
 struct wm5102_priv {
 	struct arizona_priv core;
@@ -41,6 +42,13 @@ static DECLARE_TLV_DB_SCALE(ana_tlv, 0, 100, 0);
 static DECLARE_TLV_DB_SCALE(eq_tlv, -1200, 100, 0);
 static DECLARE_TLV_DB_SCALE(digital_tlv, -6400, 50, 0);
 static DECLARE_TLV_DB_SCALE(noise_tlv, 0, 600, 0);
+
+static const struct wm_adsp_region wm5102_dsp1_regions[] = {
+	{ .type = WMFW_ADSP2_PM, .base = 0x100000 },
+	{ .type = WMFW_ADSP2_ZM, .base = 0x180000 },
+	{ .type = WMFW_ADSP2_XM, .base = 0x190000 },
+	{ .type = WMFW_ADSP2_YM, .base = 0x1a0000 },
+};
 
 static const struct reg_default wm5102_sysclk_reva_patch[] = {
 	{ 0x3000, 0x2225 },
@@ -698,6 +706,9 @@ ARIZONA_MIXER_CONTROLS("LHPF2", ARIZONA_HPLP2MIX_INPUT_1_SOURCE),
 ARIZONA_MIXER_CONTROLS("LHPF3", ARIZONA_HPLP3MIX_INPUT_1_SOURCE),
 ARIZONA_MIXER_CONTROLS("LHPF4", ARIZONA_HPLP4MIX_INPUT_1_SOURCE),
 
+ARIZONA_MIXER_CONTROLS("DSP1L", ARIZONA_DSP1LMIX_INPUT_1_SOURCE),
+ARIZONA_MIXER_CONTROLS("DSP1R", ARIZONA_DSP1RMIX_INPUT_1_SOURCE),
+
 SOC_ENUM("LHPF1 Mode", arizona_lhpf1_mode),
 SOC_ENUM("LHPF2 Mode", arizona_lhpf2_mode),
 SOC_ENUM("LHPF3 Mode", arizona_lhpf3_mode),
@@ -816,6 +827,10 @@ ARIZONA_MUX_ENUMS(ASRC1R, ARIZONA_ASRC1RMIX_INPUT_1_SOURCE);
 ARIZONA_MUX_ENUMS(ASRC2L, ARIZONA_ASRC2LMIX_INPUT_1_SOURCE);
 ARIZONA_MUX_ENUMS(ASRC2R, ARIZONA_ASRC2RMIX_INPUT_1_SOURCE);
 
+ARIZONA_MIXER_ENUMS(DSP1L, ARIZONA_DSP1LMIX_INPUT_1_SOURCE);
+ARIZONA_MIXER_ENUMS(DSP1R, ARIZONA_DSP1RMIX_INPUT_1_SOURCE);
+
+ARIZONA_DSP_AUX_ENUMS(DSP1, ARIZONA_DSP1AUX1MIX_INPUT_1_SOURCE);
 
 static const char *wm5102_aec_loopback_texts[] = {
 	"HPOUT1L", "HPOUT1R", "HPOUT2L", "HPOUT2R", "EPOUT",
@@ -1068,6 +1083,8 @@ ARIZONA_MUX_WIDGETS(ASRC1R, "ASRC1R"),
 ARIZONA_MUX_WIDGETS(ASRC2L, "ASRC2L"),
 ARIZONA_MUX_WIDGETS(ASRC2R, "ASRC2R"),
 
+WM_ADSP2("DSP1", 0),
+
 SND_SOC_DAPM_OUTPUT("HPOUT1L"),
 SND_SOC_DAPM_OUTPUT("HPOUT1R"),
 SND_SOC_DAPM_OUTPUT("HPOUT2L"),
@@ -1119,7 +1136,13 @@ SND_SOC_DAPM_OUTPUT("SPKDAT1R"),
 	{ name, "ASRC1L", "ASRC1L" }, \
 	{ name, "ASRC1R", "ASRC1R" }, \
 	{ name, "ASRC2L", "ASRC2L" }, \
-	{ name, "ASRC2R", "ASRC2R" }
+	{ name, "ASRC2R", "ASRC2R" }, \
+	{ name, "DSP1.1", "DSP1" }, \
+	{ name, "DSP1.2", "DSP1" }, \
+	{ name, "DSP1.3", "DSP1" }, \
+	{ name, "DSP1.4", "DSP1" }, \
+	{ name, "DSP1.5", "DSP1" }, \
+	{ name, "DSP1.6", "DSP1" }
 
 static const struct snd_soc_dapm_route wm5102_dapm_routes[] = {
 	{ "AIF2 Capture", NULL, "DBVDD2" },
@@ -1251,6 +1274,8 @@ static const struct snd_soc_dapm_route wm5102_dapm_routes[] = {
 	ARIZONA_MUX_ROUTES("ASRC1R"),
 	ARIZONA_MUX_ROUTES("ASRC2L"),
 	ARIZONA_MUX_ROUTES("ASRC2R"),
+
+	ARIZONA_DSP_ROUTES("DSP1"),
 
 	{ "AEC Loopback", "HPOUT1L", "OUT1L" },
 	{ "AEC Loopback", "HPOUT1R", "OUT1R" },
@@ -1426,6 +1451,15 @@ static int __devinit wm5102_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, wm5102);
 
 	wm5102->core.arizona = arizona;
+
+	wm5102->core.adsp[0].part = "wm5102";
+	wm5102->core.adsp[0].num = 1;
+	wm5102->core.adsp[0].type = WMFW_ADSP2;
+	wm5102->core.adsp[0].base = ARIZONA_DSP1_CONTROL_1;
+	wm5102->core.adsp[0].dev = arizona->dev;
+	wm5102->core.adsp[0].regmap = arizona->regmap;
+	wm5102->core.adsp[0].mem = wm5102_dsp1_regions;
+	wm5102->core.adsp[0].num_mems = ARRAY_SIZE(wm5102_dsp1_regions);
 
 	for (i = 0; i < ARRAY_SIZE(wm5102->fll); i++)
 		wm5102->fll[i].vco_mult = 1;
