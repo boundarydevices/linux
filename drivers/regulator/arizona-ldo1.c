@@ -26,11 +26,6 @@
 #include <linux/mfd/arizona/pdata.h>
 #include <linux/mfd/arizona/registers.h>
 
-
-#define  MIN_UV 	900000
-#define  UV_STEP 	50000
-
-
 struct arizona_ldo1 {
 	struct regulator_dev *regulator;
 	struct arizona *arizona;
@@ -39,48 +34,13 @@ struct arizona_ldo1 {
 	struct regulator_init_data init_data;
 };
 
-static int arizona_ldo_reg_list_voltage_linear(struct regulator_dev *rdev,
-					       unsigned int selector)
-{
-	if (selector >= rdev->desc->n_voltages)
-		return -EINVAL;
-
-	return MIN_UV + (UV_STEP * selector);
-}
-
-static int arizona_ldo_reg_get_voltage_sel(struct regulator_dev *rdev)
-{
-	unsigned int val;
-	int ret;
-	struct arizona_ldo1 *ldo1 = rdev_get_drvdata(rdev);
-
-	ret = regmap_read(ldo1->arizona->regmap,
-			  ARIZONA_LDO1_CONTROL_1,
-			  &val);
-	if (ret != 0)
-		return ret;
-
-	val &= ARIZONA_LDO1_VSEL_MASK;
-	val >>= ARIZONA_LDO1_VSEL_SHIFT;
-
-	return val;
-}
-
-static int arizona_ldo_reg_set_voltage_sel(struct regulator_dev *rdev,
-					   unsigned sel)
-{
-	struct arizona_ldo1 *ldo1 = rdev_get_drvdata(rdev);
-	sel <<= ARIZONA_LDO1_VSEL_SHIFT;
-
-	return regmap_update_bits(ldo1->arizona->regmap,
-				  ARIZONA_LDO1_CONTROL_1,
-				  ARIZONA_LDO1_VSEL_MASK, sel);
-}
-
 static struct regulator_ops arizona_ldo1_ops = {
-	.list_voltage = arizona_ldo_reg_list_voltage_linear,
-	.get_voltage_sel = arizona_ldo_reg_get_voltage_sel,
-	.set_voltage_sel = arizona_ldo_reg_set_voltage_sel,
+	.list_voltage = regulator_list_voltage_linear,
+	.map_voltage = regulator_map_voltage_linear,
+	.get_voltage_sel = regulator_get_voltage_sel_regmap,
+	.set_voltage_sel = regulator_set_voltage_sel_regmap,
+	.get_bypass = regulator_get_bypass_regmap,
+	.set_bypass = regulator_set_bypass_regmap,
 };
 
 static const struct regulator_desc arizona_ldo1 = {
@@ -88,6 +48,12 @@ static const struct regulator_desc arizona_ldo1 = {
 	.type = REGULATOR_VOLTAGE,
 	.ops = &arizona_ldo1_ops,
 
+	.vsel_reg = ARIZONA_LDO1_CONTROL_1,
+	.vsel_mask = ARIZONA_LDO1_VSEL_MASK,
+	.bypass_reg = ARIZONA_LDO1_CONTROL_1,
+	.bypass_mask = ARIZONA_LDO1_BYPASS,
+	.min_uV = 900000,
+	.uV_step = 50000,
 	.n_voltages = 7,
 
 	.owner = THIS_MODULE,
