@@ -72,33 +72,6 @@ static int arizona_micsupp_map_voltage(struct regulator_dev *rdev,
 	return selector;
 }
 
-static int arizona_micsupp_reg_get_voltage_sel(struct regulator_dev *rdev)
-{
-	unsigned int val;
-	int ret;
-	struct arizona_micsupp *micsupp = rdev_get_drvdata(rdev);
-
-	ret = regmap_read(micsupp->arizona->regmap, ARIZONA_LDO2_CONTROL_1, &val);
-	if (ret != 0)
-		return ret;
-
-	val &= ARIZONA_LDO2_VSEL_MASK;
-	val >>= ARIZONA_LDO2_VSEL_SHIFT;
-
-	return val;
-}
-
-static int arizona_micsupp_reg_set_voltage_sel(struct regulator_dev *rdev,
-					       unsigned sel)
-{
-	struct arizona_micsupp *micsupp = rdev_get_drvdata(rdev);
-	sel <<= ARIZONA_LDO2_VSEL_SHIFT;
-
-	return regmap_update_bits(micsupp->arizona->regmap,
-				  ARIZONA_LDO2_CONTROL_1,
-				  ARIZONA_LDO2_VSEL_MASK, sel);
-}
-
 static struct regulator_ops arizona_micsupp_ops = {
 	.enable = regulator_enable_regmap,
 	.disable = regulator_disable_regmap,
@@ -107,8 +80,11 @@ static struct regulator_ops arizona_micsupp_ops = {
 	.list_voltage = arizona_micsupp_list_voltage,
 	.map_voltage = arizona_micsupp_map_voltage,
 
-	.get_voltage_sel = arizona_micsupp_reg_get_voltage_sel,
-	.set_voltage_sel = arizona_micsupp_reg_set_voltage_sel,
+	.get_voltage_sel = regulator_get_voltage_sel_regmap,
+	.set_voltage_sel = regulator_set_voltage_sel_regmap,
+
+	.get_bypass = regulator_get_bypass_regmap,
+	.set_bypass = regulator_set_bypass_regmap,
 };
 
 static const struct regulator_desc arizona_micsupp = {
@@ -118,6 +94,12 @@ static const struct regulator_desc arizona_micsupp = {
 	.n_voltages = ARIZONA_MICSUPP_MAX_SELECTOR + 1,
 	.ops = &arizona_micsupp_ops,
 
+	.vsel_reg = ARIZONA_LDO2_CONTROL_1,
+	.vsel_mask = ARIZONA_LDO2_VSEL_MASK,
+	.enable_reg = ARIZONA_MIC_CHARGE_PUMP_1,
+	.enable_mask = ARIZONA_CPMIC_ENA,
+	.bypass_reg = ARIZONA_MIC_CHARGE_PUMP_1,
+	.bypass_mask = ARIZONA_CPMIC_BYPASS,
 	.owner = THIS_MODULE,
 };
 
