@@ -536,10 +536,15 @@ static struct mtd_partition imx6_sabrelite_spi_nor_partitions[] = {
 	{
 	 .name = "bootloader",
 	 .offset = 0,
-	 .size = 0x00040000,
+	 .size = 768*1024,
 	},
 	{
-	 .name = "kernel",
+	 .name = "ubparams",
+	 .offset = MTDPART_OFS_APPEND,
+	 .size = 8*1024,
+	},
+	{
+	 .name = "unused",
 	 .offset = MTDPART_OFS_APPEND,
 	 .size = MTDPART_SIZ_FULL,
 	},
