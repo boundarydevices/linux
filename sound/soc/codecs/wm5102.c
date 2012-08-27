@@ -823,8 +823,6 @@ static unsigned int wm5102_digital_vu[] = {
 static struct snd_soc_codec_driver soc_codec_dev_wm5102 = {
 	.probe = wm5102_codec_probe,
 
-	.idle_bias_off = true,
-
 	.set_sysclk = arizona_set_sysclk,
 	.set_pll = wm5102_set_fll,
 
