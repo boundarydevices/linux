@@ -1567,6 +1567,28 @@ uart_block_til_ready(struct file *filp, struct uart_state *state)
 	return 0;
 }
 
+int get_default_ldisc(struct tty_driver *driver, int line)
+{
+	struct uart_driver *drv = (struct uart_driver *)driver->driver_state;
+	int ret = -EINVAL;
+	if (drv) {
+		struct uart_state *state = drv->state + line;
+		struct tty_port *port = &state->port;
+		ret = -ERESTARTSYS;
+		if (!mutex_lock_interruptible(&port->mutex)) {
+			struct uart_port *uport = state->uart_port;
+			ret = -EINVAL;
+			if (uport && !(uport->flags & UPF_DEAD)) {
+				if (uport->ops->ioctl) {
+					ret = uport->ops->ioctl(uport, TIOC_DEFAULT_LDISC, 0);
+				}
+			}
+			mutex_unlock(&port->mutex);
+		}
+	}
+	return ret;
+}
+
 static struct uart_state *uart_get(struct uart_driver *drv, int line)
 {
 	struct uart_state *state;

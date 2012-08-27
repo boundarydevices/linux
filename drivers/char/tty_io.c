@@ -2737,6 +2737,8 @@ void do_SAK(struct tty_struct *tty)
 
 EXPORT_SYMBOL(do_SAK);
 
+int get_default_ldisc(struct tty_driver *driver, int line);
+
 /**
  *	initialize_tty_struct
  *	@tty: tty to initialize
@@ -2755,9 +2757,11 @@ void initialize_tty_struct(struct tty_struct *tty,
 	tty->magic = TTY_MAGIC;
 	tty->ldisc_default = N_TTY;
 #ifdef CONFIG_N_9BIT
-//	pr_err("major=%d idx=%d\n", driver->major, idx);
-	if ((driver->major == 207) && (idx == 2))
-		tty->ldisc_default = N_9BIT;
+	{
+		int ret = get_default_ldisc(driver, idx);
+		if (ret >= 0)
+			tty->ldisc_default = ret;
+	}
 #endif
 	tty_ldisc_init(tty);
 	tty->session = NULL;

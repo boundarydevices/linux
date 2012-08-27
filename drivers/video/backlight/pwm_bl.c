@@ -172,7 +172,7 @@ static int pwm_backlight_suspend(struct platform_device *pdev,
 	return 0;
 }
 
-static int pwm_backlight_shutdown(struct platform_device *pdev)
+static void pwm_backlight_shutdown(struct platform_device *pdev)
 {
 	struct backlight_device *bl = platform_get_drvdata(pdev);
 	struct pwm_bl_data *pb = dev_get_drvdata(&bl->dev);
@@ -182,7 +182,7 @@ static int pwm_backlight_shutdown(struct platform_device *pdev)
 	pwm_config(pb->pwm, 0, pb->period);
 	pwm_disable(pb->pwm);
 	pr_debug("shutdown mxc backlight\n");
-	return 0;
+	return;
 }
 
 static int pwm_backlight_resume(struct platform_device *pdev)

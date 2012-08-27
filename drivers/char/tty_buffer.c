@@ -474,6 +474,12 @@ void tty_flush_to_ldisc(struct tty_struct *tty)
 	flush_delayed_work(&tty->buf.work);
 }
 
+#ifdef CONFIG_N_9BIT
+#define TTY_FLIP_DELAY	0
+#else
+#define TTY_FLIP_DELAY	1
+#endif
+
 /**
  *	tty_flip_buffer_push	-	terminal
  *	@tty: tty to push
@@ -498,7 +504,7 @@ void tty_flip_buffer_push(struct tty_struct *tty)
 	if (tty->low_latency)
 		flush_to_ldisc(&tty->buf.work.work);
 	else
-		schedule_delayed_work(&tty->buf.work, 1);
+		schedule_delayed_work(&tty->buf.work, TTY_FLIP_DELAY);
 }
 EXPORT_SYMBOL(tty_flip_buffer_push);
 
