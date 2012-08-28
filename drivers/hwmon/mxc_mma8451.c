@@ -204,8 +204,8 @@ static void report_abs(void)
 	if (mma8451_read_data(&x, &y, &z) != 0)
 		goto out;
 
-	input_report_abs(mma8451_idev->input, ABS_X, x);
-	input_report_abs(mma8451_idev->input, ABS_Y, y);
+	input_report_abs(mma8451_idev->input, ABS_X, y);
+	input_report_abs(mma8451_idev->input, ABS_Y, x);
 	input_report_abs(mma8451_idev->input, ABS_Z, z);
 	input_sync(mma8451_idev->input);
 out:
