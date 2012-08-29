@@ -44,7 +44,7 @@ static const struct sdio_device_id sdio_ids[] = {
 	{ SDIO_DEVICE(0x024c, 0x8712)		},
 	{ SDIO_DEVICE(0x024c, 0x2300)		},
 //	{ SDIO_DEVICE_CLASS(SDIO_CLASS_WLAN)		},
-//	{ /* end: all zeroes */				},
+	{ /* end: all zeroes */				},
 };
 
 typedef struct _driver_priv{
