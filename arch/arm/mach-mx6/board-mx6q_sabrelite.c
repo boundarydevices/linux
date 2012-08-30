@@ -1149,6 +1149,13 @@ static struct mipi_csi2_platform_data mipi_csi2_pdata = {
 	.pixel_clk = "emi_clk",
 };
 
+static const struct imx_pcie_platform_data pcie_data  __initconst = {
+	.pcie_pwr_en	= -EINVAL,
+	.pcie_rst	= -EINVAL, //MX6Q_SABRELITE_CAP_TCH_INT1,
+	.pcie_wake_up	= -EINVAL,
+	.pcie_dis	= -EINVAL,
+};
+
 /*!
  * Board specific initialization.
  */
@@ -1271,6 +1278,7 @@ static void __init mx6_sabrelite_board_init(void)
 	clk_set_rate(clko2, rate);
 	clk_enable(clko2);
 	imx6q_add_busfreq();
+	imx6q_add_pcie(&pcie_data);
 }
 
 extern void __iomem *twd_base;
