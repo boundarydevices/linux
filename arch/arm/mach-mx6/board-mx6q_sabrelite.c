@@ -63,6 +63,7 @@
 #include <mach/mxc_hdmi.h>
 #include <mach/mxc_asrc.h>
 #include <linux/i2c/tsc2007.h>
+#include <linux/wl12xx.h>
 
 #include <asm/irq.h>
 #include <asm/setup.h>
@@ -328,6 +329,7 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	NEW_PAD_CTRL(MX6Q_PAD_NANDF_CS1__GPIO_6_14, MX6Q_SABRELITE_WL_IRQ_PADCFG),	/* wl1271 wl_irq */
 	NEW_PAD_CTRL(MX6Q_PAD_NANDF_CS2__GPIO_6_15, MX6Q_SABRELITE_WL_EN_PADCFG),	/* wl1271 wl_en */
 	NEW_PAD_CTRL(MX6Q_PAD_NANDF_CS3__GPIO_6_16, MX6Q_SABRELITE_WL_EN_PADCFG),	/* wl1271 bt_en */
+        MX6Q_PAD_SD1_CLK__OSC32K_32K_OUT, /* wl1271 clock */
 
 	/* UART3 for wl1271 */
 	MX6Q_PAD_EIM_D24__UART3_TXD,
@@ -1067,6 +1069,23 @@ static void __init sabrelite_add_device_buttons(void)
 static void __init sabrelite_add_device_buttons(void) {}
 #endif
 
+#ifdef CONFIG_WL12XX_PLATFORM_DATA
+static void wl1271_set_power(bool enable)
+{
+	if (0 == enable) {
+		gpio_set_value(N6_WL1271_WL_EN, 0);		/* momentarily disable */
+		mdelay(2);
+		gpio_set_value(N6_WL1271_WL_EN, 1);
+	}
+}
+
+struct wl12xx_platform_data n6q_wlan_data __initdata = {
+	.irq = gpio_to_irq(N6_WL1271_WL_IRQ),
+	.board_ref_clock = WL12XX_REFCLOCK_38, /* 38.4 MHz */
+	.set_power = wl1271_set_power,
+};
+#endif
+
 static struct regulator_consumer_supply sabrelite_vmmc_consumers[] = {
 	REGULATOR_SUPPLY("vmmc", "sdhci-esdhc-imx.2"),
 	REGULATOR_SUPPLY("vmmc", "sdhci-esdhc-imx.3"),
@@ -1388,6 +1407,25 @@ static void __init mx6_sabrelite_board_init(void)
 	clk_set_rate(clko2, rate);
 	clk_enable(clko2);
 	imx6q_add_busfreq();
+
+#ifdef CONFIG_WL12XX_PLATFORM_DATA
+	if (isn6) {
+		imx6q_add_sdhci_usdhc_imx(1, &mx6q_sabrelite_sd2_data);
+		/* WL12xx WLAN Init */
+		if (wl12xx_set_platform_data(&n6q_wlan_data))
+			pr_err("error setting wl12xx data\n");
+
+		gpio_set_value(N6_WL1271_WL_EN, 1);		/* momentarily enable */
+		gpio_set_value(N6_WL1271_BT_EN, 1);
+		mdelay(2);
+		gpio_set_value(N6_WL1271_WL_EN, 0);
+		gpio_set_value(N6_WL1271_BT_EN, 0);
+
+		gpio_free(N6_WL1271_WL_EN);
+		gpio_free(N6_WL1271_BT_EN);
+		mdelay(1);
+	}
+#endif
 
 	imx6q_add_pcie(&pcie_data);
 
