@@ -100,6 +100,10 @@
 #define N6_WL1271_WL_EN			IMX_GPIO_NR(6, 15)
 #define N6_WL1271_BT_EN			IMX_GPIO_NR(6, 16)
 
+#define MX6Q_SABRELITE_WL_IRQ_TEST_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+#define MX6Q_SABRELITE_WL_IRQ_PADCFG	(PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+#define MX6Q_SABRELITE_WL_EN_PADCFG	(PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm)
+
 #define MX6Q_SABRELITE_SD3_WP_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE |	\
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_MED |	\
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
@@ -320,6 +324,11 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	MX6Q_PAD_EIM_D26__UART2_TXD,
 	MX6Q_PAD_EIM_D27__UART2_RXD,
 
+	/* WL127X pads */
+	NEW_PAD_CTRL(MX6Q_PAD_NANDF_CS1__GPIO_6_14, MX6Q_SABRELITE_WL_IRQ_PADCFG),	/* wl1271 wl_irq */
+	NEW_PAD_CTRL(MX6Q_PAD_NANDF_CS2__GPIO_6_15, MX6Q_SABRELITE_WL_EN_PADCFG),	/* wl1271 wl_en */
+	NEW_PAD_CTRL(MX6Q_PAD_NANDF_CS3__GPIO_6_16, MX6Q_SABRELITE_WL_EN_PADCFG),	/* wl1271 bt_en */
+
 	/* UART3 for wl1271 */
 	MX6Q_PAD_EIM_D24__UART3_TXD,
 	MX6Q_PAD_EIM_D25__UART3_RXD,
@@ -332,6 +341,14 @@ static iomux_v3_cfg_t mx6q_sabrelite_pads[] = {
 	/* USB OC pin */
 	MX6Q_PAD_KEY_COL4__USBOH3_USBOTG_OC,
 	MX6Q_PAD_EIM_D30__USBOH3_USBH1_OC,
+
+	/* USDHC2 */
+	MX6Q_PAD_SD2_CLK__USDHC2_CLK_50MHZ,
+	MX6Q_PAD_SD2_CMD__USDHC2_CMD_50MHZ,
+	MX6Q_PAD_SD2_DAT0__USDHC2_DAT0_50MHZ,
+	MX6Q_PAD_SD2_DAT1__USDHC2_DAT1_50MHZ,
+	MX6Q_PAD_SD2_DAT2__USDHC2_DAT2_50MHZ,
+	MX6Q_PAD_SD2_DAT3__USDHC2_DAT3_50MHZ,
 
 	/* USDHC3 */
 	MX6Q_PAD_SD3_CLK__USDHC3_CLK_50MHZ,
@@ -399,6 +416,9 @@ mx6q_sd##id##_##speed##mhz[] = {		\
 	MX6Q_PAD_SD##id##_DAT3__USDHC##id##_DAT3_##speed##MHZ,	\
 }
 
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(2, 50);
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(2, 100);
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(2, 200);
 static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 50);
 static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 100);
 static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 200);
@@ -426,6 +446,15 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 	u32 sd_pads_50mhz_cnt;
 
 	switch (index) {
+	case 1:
+		sd_pads_200mhz = mx6q_sd2_200mhz;
+		sd_pads_100mhz = mx6q_sd2_100mhz;
+		sd_pads_50mhz = mx6q_sd2_50mhz;
+
+		sd_pads_200mhz_cnt = ARRAY_SIZE(mx6q_sd2_200mhz);
+		sd_pads_100mhz_cnt = ARRAY_SIZE(mx6q_sd2_100mhz);
+		sd_pads_50mhz_cnt = ARRAY_SIZE(mx6q_sd2_50mhz);
+		break;
 	case 2:
 		sd_pads_200mhz = mx6q_sd3_200mhz;
 		sd_pads_100mhz = mx6q_sd3_100mhz;
@@ -472,6 +501,15 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 							sd_pads_50mhz_cnt);
 	}
 }
+
+static struct esdhc_platform_data mx6q_sabrelite_sd2_data = {
+	.always_present = 1,
+	.cd_gpio = -1,
+	.wp_gpio = -1,
+	.keep_power_at_suspend = 0,
+	.caps = MMC_CAP_POWER_OFF_CARD,
+	.platform_pad_change = plt_sd_pad_change,
+};
 
 static struct esdhc_platform_data mx6q_sabrelite_sd3_data = {
 	.cd_gpio = MX6Q_SABRELITE_SD3_CD,
@@ -1257,7 +1295,6 @@ static void __init mx6_sabrelite_board_init(void)
 	if (isn6)
 		imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
 
-	mx6q_sabrelite_init_uart();
 	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
 
 	imx6q_add_ipuv3(0, &ipu_data[0]);
