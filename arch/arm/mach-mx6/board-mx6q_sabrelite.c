@@ -496,14 +496,6 @@ static const struct imxuart_platform_data mx6_arm2_uart2_data __initconst = {
 	.dma_req_tx = MX6Q_DMA_REQ_UART3_TX,
 };
 
-
-static inline void mx6q_sabrelite_init_uart(void)
-{
-	imx6q_add_imx_uart(0, NULL);
-	imx6q_add_imx_uart(1, NULL);
-	imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
-}
-
 static int mx6q_sabrelite_fec_phy_init(struct phy_device *phydev)
 {
 	/* prefer master mode */
@@ -1240,6 +1232,12 @@ static void __init mx6_sabrelite_board_init(void)
 	gp_reg_id = sabrelite_dvfscore_data.reg_id;
 	soc_reg_id = sabrelite_dvfscore_data.soc_id;
 	pu_reg_id = sabrelite_dvfscore_data.pu_id;
+
+	imx6q_add_imx_uart(0, NULL);
+	imx6q_add_imx_uart(1, NULL);
+	if (isn6)
+		imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
+
 	mx6q_sabrelite_init_uart();
 	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
 
