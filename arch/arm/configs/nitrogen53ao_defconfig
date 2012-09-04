@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.3
-# Sun Sep  2 16:01:48 2012
+# Tue Sep  4 14:06:27 2012
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -1615,7 +1615,7 @@ CONFIG_RTC_INTF_PROC=y
 CONFIG_RTC_INTF_DEV=y
 CONFIG_RTC_INTF_DEV_UIE_EMUL=y
 CONFIG_RTC_INTF_ALARM=y
-# CONFIG_RTC_INTF_ALARM_DEV is not set
+CONFIG_RTC_INTF_ALARM_DEV=y
 # CONFIG_RTC_DRV_TEST is not set
 
 #
