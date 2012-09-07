@@ -1691,6 +1691,14 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 				str += 7;
 				imx6q_gpu_pdata.reserved_mem_size = memparse(str, &str);
 			}
+			/* Primary framebuffer base address */
+			str = t->u.cmdline.cmdline;
+			str = strstr(str, "fb0base=");
+			if (str != NULL) {
+				str += 8;
+				pdata_fb[0].res_base[0] =
+						simple_strtol(str, &str, 16);
+			}
 			break;
 		}
 	}
@@ -2001,7 +2009,29 @@ static struct sys_timer mx6_sabresd_timer = {
 static void __init mx6q_sabresd_reserve(void)
 {
 	phys_addr_t phys;
-	int i;
+	int i, fb0_reserved = 0, fb_array_size;
+
+	/*
+	 * Reserve primary framebuffer memory if its base address
+	 * is set by kernel command line.
+	 */
+	fb_array_size = ARRAY_SIZE(sabresd_fb_data);
+	if (fb_array_size > 0 && sabresd_fb_data[0].res_base[0] &&
+	    sabresd_fb_data[0].res_size[0]) {
+		memblock_reserve(sabresd_fb_data[0].res_base[0],
+				 sabresd_fb_data[0].res_size[0]);
+		memblock_remove(sabresd_fb_data[0].res_base[0],
+				sabresd_fb_data[0].res_size[0]);
+		fb0_reserved = 1;
+	}
+	for (i = fb0_reserved; i < fb_array_size; i++)
+		if (sabresd_fb_data[i].res_size[0]) {
+			/* Reserve for other background buffer. */
+			phys = memblock_alloc(sabresd_fb_data[i].res_size[0],
+						SZ_4K);
+			memblock_remove(phys, sabresd_fb_data[i].res_size[0]);
+			sabresd_fb_data[i].res_base[0] = phys;
+		}
 
 #if defined(CONFIG_MXC_GPU_VIV) || defined(CONFIG_MXC_GPU_VIV_MODULE)
 	if (imx6q_gpu_pdata.reserved_mem_size) {
@@ -2019,15 +2049,6 @@ static void __init mx6q_sabresd_reserve(void)
 		imx_ion_data.heaps[0].base = phys;
 	}
 #endif
-
-	for (i = 0; i < ARRAY_SIZE(sabresd_fb_data); i++)
-		if (sabresd_fb_data[i].res_size[0]) {
-			/* reserve for background buffer */
-			phys = memblock_alloc(sabresd_fb_data[i].res_size[0],
-						SZ_4K);
-			memblock_remove(phys, sabresd_fb_data[i].res_size[0]);
-			sabresd_fb_data[i].res_base[0] = phys;
-		}
 }
 
 /*
