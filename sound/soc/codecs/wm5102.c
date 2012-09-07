@@ -927,7 +927,17 @@ static struct platform_driver wm5102_codec_driver = {
 	.remove = __devexit_p(wm5102_remove),
 };
 
-module_platform_driver(wm5102_codec_driver);
+static __init int wm5102_codec_init(void)
+{
+	return platform_driver_register(&wm5102_codec_driver);
+}
+module_init(wm5102_codec_init);
+
+static __exit void wm5102_codec_exit(void)
+{
+	return platform_driver_unregister(&wm5102_codec_driver);
+}
+module_exit(wm5102_codec_exit);
 
 MODULE_DESCRIPTION("ASoC WM5102 driver");
 MODULE_AUTHOR("Mark Brown <broonie@opensource.wolfsonmicro.com>");
