@@ -90,7 +90,17 @@ static struct i2c_driver arizona_i2c_driver = {
 	.id_table	= arizona_i2c_id,
 };
 
-module_i2c_driver(arizona_i2c_driver);
+static __init int arizona_i2c_init(void)
+{
+	return i2c_register_driver(THIS_MODULE, &arizona_i2c_driver);
+}
+module_init(arizona_i2c_init);
+
+static __exit void arizona_i2c_exit(void)
+{
+	return i2c_del_driver(&arizona_i2c_driver);
+}
+module_exit(arizona_i2c_exit);
 
 MODULE_DESCRIPTION("Arizona I2C bus interface");
 MODULE_AUTHOR("Mark Brown <broonie@opensource.wolfsonmicro.com>");
