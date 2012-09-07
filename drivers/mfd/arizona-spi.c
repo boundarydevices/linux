@@ -90,7 +90,17 @@ static struct spi_driver arizona_spi_driver = {
 	.id_table	= arizona_spi_ids,
 };
 
-module_spi_driver(arizona_spi_driver);
+static __init int arizona_spi_init(void)
+{
+	return spi_register_driver(&arizona_spi_driver);
+}
+module_init(arizona_spi_init);
+
+static __exit void arizona_spi_exit(void)
+{
+	return spi_unregister_driver(&arizona_spi_driver);
+}
+module_exit(arizona_spi_exit);
 
 MODULE_DESCRIPTION("Arizona SPI bus interface");
 MODULE_AUTHOR("Mark Brown <broonie@opensource.wolfsonmicro.com>");
