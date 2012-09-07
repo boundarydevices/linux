@@ -1362,10 +1362,6 @@ imx_set_termios(struct uart_port *port, struct ktermios *termios,
 
 		if (UART_ENABLE_MS(&sport->port, termios->c_cflag))
 			imx_enable_ms(&sport->port);
-
-		pr_info("old_ufcr=%x new_ufcr=%x, old_ucr2=%x new_ucr2=%x, old_ubir=%x num=%lx, old_ubmr=%x denom=%lx\n",
-				old_ufcr, new_ufcr, old_ucr2, new_ucr2, old_ubir, num, old_ubmr, denom);
-		pr_info("clk=%i div=%i num=%li denom=%li baud=%i\n", sport->port.uartclk, div, num+1, denom+1, baud);
 	}
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 }
