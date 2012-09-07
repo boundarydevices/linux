@@ -119,7 +119,7 @@ static struct regulator_ops arizona_micsupp_ops = {
 	.set_voltage_sel = arizona_micsupp_reg_set_voltage_sel,
 };
 
-static const struct regulator_desc arizona_micsupp = {
+static struct regulator_desc arizona_micsupp = {
 	.name = "MICVDD",
 	.type = REGULATOR_VOLTAGE,
 	.n_voltages = ARIZONA_MICSUPP_MAX_SELECTOR + 1,
