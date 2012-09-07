@@ -161,7 +161,17 @@ static struct platform_driver arizona_ldo1_driver = {
 	},
 };
 
-module_platform_driver(arizona_ldo1_driver);
+static __init int arizona_ldo1_init(void)
+{
+	return platform_driver_register(&arizona_ldo1_driver);
+}
+module_init(arizona_ldo1_init);
+
+static __exit void arizona_ldo1_exit(void)
+{
+	return platform_driver_unregister(&arizona_ldo1_driver);
+}
+module_exit(arizona_ldo1_exit);
 
 /* Module information */
 MODULE_AUTHOR("Mark Brown <broonie@opensource.wolfsonmicro.com>");
