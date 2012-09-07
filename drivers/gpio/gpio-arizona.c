@@ -196,7 +196,18 @@ static struct platform_driver arizona_gpio_driver = {
 	.remove		= __devexit_p(arizona_gpio_remove),
 };
 
-module_platform_driver(arizona_gpio_driver);
+static __init int arizona_gpio_init(void)
+{
+	return platform_driver_register(&arizona_gpio_driver);
+}
+module_init(arizona_gpio_init);
+
+static __exit void arizona_gpio_exit(void)
+{
+	platform_driver_unregister(&arizona_gpio_driver);
+}
+module_exit(arizona_gpio_exit);
+
 
 MODULE_AUTHOR("Mark Brown <broonie@opensource.wolfsonmicro.com>");
 MODULE_DESCRIPTION("GPIO interface for Arizona devices");
