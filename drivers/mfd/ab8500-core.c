@@ -795,7 +795,7 @@ int __devinit ab8500_init(struct ab8500 *ab8500)
 
 	ret = mfd_add_devices(ab8500->dev, 0, ab8500_devs,
 			      ARRAY_SIZE(ab8500_devs), NULL,
-			      ab8500->irq_base);
+			      ab8500->irq_base, ab8500->domain);
 	if (ret)
 		goto out_freeirq;
 

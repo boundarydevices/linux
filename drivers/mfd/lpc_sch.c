@@ -105,7 +105,8 @@ static int __devinit lpc_sch_probe(struct pci_dev *dev,
 		lpc_sch_cells[i].id = id->device;
 
 	return mfd_add_devices(&dev->dev, 0,
-			lpc_sch_cells, ARRAY_SIZE(lpc_sch_cells), NULL, 0);
+			       lpc_sch_cells, ARRAY_SIZE(lpc_sch_cells), NULL,
+			       0, NULL);
 }
 
 static void __devexit lpc_sch_remove(struct pci_dev *dev)

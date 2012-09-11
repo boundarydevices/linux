@@ -2039,8 +2039,7 @@ static int __init db8500_prcmu_probe(struct platform_device *pdev)
 		prcmu_config_esram0_deep_sleep(ESRAM0_DEEP_SLEEP_STATE_RET);
 
 	err = mfd_add_devices(&pdev->dev, 0, db8500_prcmu_devs,
-			      ARRAY_SIZE(db8500_prcmu_devs), NULL,
-			      0);
+			      ARRAY_SIZE(db8500_prcmu_devs), NULL, 0, NULL);
 
 	if (err)
 		pr_err("prcmu: Failed to add subdevices\n");

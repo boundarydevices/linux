@@ -411,7 +411,7 @@ static int pfuze_add_subdevice_pdata(struct mc_pfuze *mc_pfuze,
 	if (!cell.name)
 		return -ENOMEM;
 	return mfd_add_devices(&mc_pfuze->i2c_client->dev, -1, &cell, 1, NULL,
-			       0);
+			       0, NULL);
 }
 
 static ssize_t pfuze_show(struct device *dev,
