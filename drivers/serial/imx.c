@@ -1550,7 +1550,7 @@ static int serial_imx_probe(struct platform_device *pdev)
 	int ret = 0;
 	struct resource *res;
 	int rs485_tx_gpio = -1;
-	int using_rs485 = 0;
+	int flags = 0;
 
 	sport = kzalloc(sizeof(*sport), GFP_KERNEL);
 	if (!sport)
@@ -1610,7 +1610,7 @@ static int serial_imx_probe(struct platform_device *pdev)
 			if (ret)
 				goto clkput;
 		}
-		using_rs485 = pdata->flags & IMXUART_USING_RS485;
+		flags = pdata->flags;
 		rs485_tx_gpio = pdata->rs485_tx_gpio;
 	}
 
@@ -1620,17 +1620,20 @@ static int serial_imx_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, &sport->port);
 	sport->default_ldisc = N_TTY;
 
-#ifdef CONFIG_N_9BIT
-	if (using_rs485) {
+	if (flags & IMXUART_USING_RS485) {
 		struct serial_rs485 rs;
 		memset(&rs, 0, sizeof(rs));
 		rs.flags = SER_RS485_ENABLED | SER_RS485_TX_CTL_GP |
-				SER_RS485_TX_CTL_HIGH_ACTIVE | SER_RS485_HALF_DUPLEX;
+				SER_RS485_TX_CTL_HIGH_ACTIVE;
+		if (flags & IMXUART_HALF_DUPLEX)
+			rs.flags |= SER_RS485_HALF_DUPLEX;
 		rs.transmitter_enable_gp = rs485_tx_gpio;
 		do_rs485_setup(sport, &rs);
-		sport->default_ldisc = N_9BIT;
-	}
+#ifdef CONFIG_N_9BIT
+		if (flags & IMXUART_9BIT)
+			sport->default_ldisc = N_9BIT;
 #endif
+	}
 	set_transmit_state(sport, RS485_OFF);
 
 	return 0;

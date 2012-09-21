@@ -22,6 +22,8 @@
 #define IMXUART_HAVE_RTSCTS (1<<0)
 #define IMXUART_IRDA        (1<<1)
 #define IMXUART_USING_RS485 (1<<2)
+#define IMXUART_HALF_DUPLEX (1<<3)
+#define IMXUART_9BIT	    (1<<4)
 
 struct imxuart_platform_data {
 	int (*init)(struct platform_device *pdev);
