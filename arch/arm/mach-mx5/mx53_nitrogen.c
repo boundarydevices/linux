@@ -2441,11 +2441,11 @@ static int sdhc_write_protect3(struct device *dev)
 
 #ifdef CONFIG_N_9BIT
 static struct imxuart_platform_data uart1_pdata = {
-	.flags = IMXUART_USING_RS485,
+	.flags = IMXUART_USING_RS485 | IMXUART_HALF_DUPLEX | IMXUART_9BIT,
 	.rs485_tx_gpio = MAKE_GP(1, 2),
 };
 static struct imxuart_platform_data uart3_pdata = {
-	.flags = IMXUART_USING_RS485,
+	.flags = IMXUART_USING_RS485 | IMXUART_HALF_DUPLEX,
 	.rs485_tx_gpio = MAKE_GP(1, 5),			/* was MAKE_GP(3, 30) */
 };
 #define UART1_DATA &uart1_pdata
