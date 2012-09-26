@@ -119,10 +119,28 @@ const char *arizona_mixer_texts[ARIZONA_NUM_MIXER_INPUTS] = {
 	"DSP1.4",		/* 50 */
 	"DSP1.5",		/* 51 */
 	"DSP1.6",		/* 52 */
-	"ASRC1L",		/* 53 */
-	"ASRC1R",		/* 54 */
-	"ASRC2L",		/* 55 */
-	"ASRC2R",		/* 56 */
+	"DSP2.1",		/* 53 */
+	"DSP2.2",		/* 54 */
+	"DSP2.3",		/* 55 */
+	"DSP2.4",		/* 56 */
+	"DSP2.5",		/* 57 */
+	"DSP2.6",		/* 58 */
+	"DSP3.1",		/* 59 */
+	"DSP3.2",		/* 60 */
+	"DSP3.3",		/* 61 */
+	"DSP3.4",		/* 62 */
+	"DSP3.5",		/* 63 */
+	"DSP3.6",		/* 64 */
+	"DSP4.1",		/* 65 */
+	"DSP4.2",		/* 66 */
+	"DSP4.3",		/* 67 */
+	"DSP4.4",		/* 68 */
+	"DSP4.5",		/* 69 */
+	"DSP4.6",		/* 70 */
+	"ASRC1L",		/* 71 */
+	"ASRC1R",		/* 72 */
+	"ASRC2L",		/* 73 */
+	"ASRC2R",		/* 74 */
 };
 EXPORT_SYMBOL_GPL(arizona_mixer_texts);
 
@@ -180,6 +198,24 @@ int arizona_mixer_values[ARIZONA_NUM_MIXER_INPUTS] = {
 	0x6b,
 	0x6c,
 	0x6d,
+	0x70,  /* DSP2.1 */
+	0x71,
+	0x72,
+	0x73,
+	0x74,
+	0x75,
+	0x78,  /* DSP3.1 */
+	0x79,
+	0x7a,
+	0x7b,
+	0x7c,
+	0x7d,
+	0x80,  /* DSP4.1 */
+	0x81,
+	0x82,
+	0x83,
+	0x84,
+	0x85,
 	0x90,  /* ASRC1L */
 	0x91,
 	0x92,
