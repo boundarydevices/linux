@@ -20,6 +20,7 @@
 #include <linux/miscdevice.h>
 #include <linux/platform_device.h>
 #include <linux/fs.h>
+#include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/delay.h>

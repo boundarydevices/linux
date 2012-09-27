@@ -26,6 +26,7 @@
 #include <linux/mm.h>
 #include <linux/interrupt.h>
 #include <linux/clk.h>
+#include <linux/sched.h>
 #include <linux/semaphore.h>
 #include <linux/spinlock.h>
 #include <linux/device.h>
