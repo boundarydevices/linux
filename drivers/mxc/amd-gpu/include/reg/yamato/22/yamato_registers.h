@@ -7787,7 +7787,7 @@
         unsigned int                   L1_ARB_ENABLE : 1;
         unsigned int              L1_ARB_HOLD_ENABLE : 1;
         unsigned int                  L2_ARB_CONTROL : 1;
-        unsigned int                       PAGE_SIZE : 3;
+        unsigned int                       page_size : 3;
         unsigned int               TC_REORDER_ENABLE : 1;
         unsigned int              TC_ARB_HOLD_ENABLE : 1;
         unsigned int          IN_FLIGHT_LIMIT_ENABLE : 1;
@@ -7809,7 +7809,7 @@
         unsigned int          IN_FLIGHT_LIMIT_ENABLE : 1;
         unsigned int              TC_ARB_HOLD_ENABLE : 1;
         unsigned int               TC_REORDER_ENABLE : 1;
-        unsigned int                       PAGE_SIZE : 3;
+        unsigned int                       page_size : 3;
         unsigned int                  L2_ARB_CONTROL : 1;
         unsigned int              L1_ARB_HOLD_ENABLE : 1;
         unsigned int                   L1_ARB_ENABLE : 1;

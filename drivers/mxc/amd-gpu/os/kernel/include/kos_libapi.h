@@ -34,8 +34,8 @@ extern "C" {
 #endif // __cplusplus
 
 #include "os_types.h"
-
-
+#include <linux/mutex.h>
+#include <asm-generic/errno.h>
 //////////////////////////////////////////////////////////////////////////////
 //   entrypoint abstraction
 //////////////////////////////////////////////////////////////////////////////
@@ -377,7 +377,16 @@ KOS_API unsigned int    kos_strtoul(const char* nptr, char** endptr, int base);
  * \param   void* name      Name string for the new mutex.
  * \return  Returns a handle to the mutex.
  *//*-------------------------------------------------------------------*/
-KOS_API oshandle_t      kos_mutex_create(const char* name);
+#define kos_mutex_create(name)						\
+({									\
+	struct mutex *mutex = kmalloc(sizeof(struct mutex), GFP_KERNEL); \
+	if (mutex) {							\
+		static struct lock_class_key __key;			\
+		__mutex_init(mutex, name, &__key);			\
+	}								\
+	mutex;								\
+})
+
 /*-------------------------------------------------------------------*//*!
  * \external
  * \brief   Get a handle to an already existing mutex.
@@ -404,7 +413,16 @@ KOS_API int             kos_mutex_free(oshandle_t mutexhandle);
  * \param   oshandle_t mutexhandle  Handle to the mutex.
  * \return  Returns NULL if no error, otherwise an error code.
  *//*-------------------------------------------------------------------*/
-KOS_API int             kos_mutex_lock(oshandle_t mutexhandle);
+static inline KOS_API int kos_mutex_lock(oshandle_t mutexhandle)
+{
+	struct mutex *mutex = (struct mutex *)mutexhandle;
+	if (!mutex)
+		return OS_FAILURE;
+	if (mutex_lock_interruptible(mutex) == -EINTR)
+		return OS_FAILURE;
+	return OS_SUCCESS;
+}
+
 /*-------------------------------------------------------------------*//*!
  * \external
  * \brief   Try to lock the given mutex, if already locked returns immediately.

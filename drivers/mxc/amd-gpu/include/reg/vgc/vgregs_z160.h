@@ -1049,7 +1049,7 @@ typedef struct _REG_MH_ARBITER_CONFIG {
     unsigned L1_ARB_ENABLE       : 1;
     unsigned L1_ARB_HOLD_ENABLE  : 1;
     unsigned L2_ARB_CONTROL      : 1;
-    unsigned PAGE_SIZE           : 3;
+    unsigned page_size           : 3;
     unsigned TC_REORDER_ENABLE   : 1;
     unsigned TC_ARB_HOLD_ENABLE  : 1;
     unsigned IN_FLIGHT_LIMIT_ENABLE : 1;

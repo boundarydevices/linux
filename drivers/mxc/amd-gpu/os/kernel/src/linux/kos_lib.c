@@ -346,17 +346,6 @@ kos_strlen(const char* string)
 //////////////////////////////////////////////////////////////////////////////
 //  sync API
 //////////////////////////////////////////////////////////////////////////////
-
-KOS_API oshandle_t
-kos_mutex_create(const char *name)
-{
-	struct mutex *mutex = KOS_MALLOC(sizeof(struct mutex));
-	if (!mutex)
-		return 0;
-	mutex_init(mutex);
-	return mutex;
-}
-
 //----------------------------------------------------------------------------
 
 KOS_API oshandle_t
@@ -375,19 +364,6 @@ kos_mutex_free(oshandle_t mutexhandle)
 	if (!mutex)
 		return OS_FAILURE;
 	KOS_FREE(mutex);
-	return OS_SUCCESS;
-}
-
-//----------------------------------------------------------------------------
-
-KOS_API int
-kos_mutex_lock(oshandle_t mutexhandle)
-{
-	struct mutex *mutex = (struct mutex *)mutexhandle;
-	if (!mutex)
-		return OS_FAILURE;
-	if (mutex_lock_interruptible(mutex) == -EINTR)
-		return OS_FAILURE;
 	return OS_SUCCESS;
 }
 

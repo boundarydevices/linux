@@ -16,6 +16,7 @@
  *
  */
 
+#include <linux/slab.h>
 #include "gsl.h"
 #include "gsl_hal.h"
 
