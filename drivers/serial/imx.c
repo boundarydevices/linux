@@ -1312,8 +1312,6 @@ static int imx_ioctl(struct uart_port *port, unsigned int cmd,
 	struct imx_port *sport = (struct imx_port *)port;
 	switch (cmd) {
 	case TIOC_FORCE_TX_PARITY_ERROR:
-		while ( !(readl(sport->port.membase + USR2) & USR2_TXDC))
-			msleep(1);
 		sport->force_1_tx_parity_err = 1;
 		break;
 	case TIOCSRS485:
