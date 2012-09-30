@@ -336,6 +336,7 @@ kgsl_memarena_destroy(gsl_memarena_t *memarena)
             // external memory leak detected
             kgsl_log_write( KGSL_LOG_GROUP_MEMORY | KGSL_LOG_LEVEL_FATAL,
                             "ERROR: External memory leak detected.\n" );
+            GSL_MEMARENA_UNLOCK();
             return (GSL_FAILURE);
         }
     }
@@ -456,6 +457,7 @@ kgsl_memarena_checkfreeblock(gsl_memarena_t *memarena, int bytesneeded)
         if (p->blksize >= (unsigned int)bytesneeded)
         {
             kgsl_log_write( KGSL_LOG_GROUP_MEMORY | KGSL_LOG_LEVEL_TRACE, "<-- kgsl_memarena_checkfreeblock. Return value: %B\n", GSL_SUCCESS );
+            GSL_MEMARENA_UNLOCK();
             return (GSL_SUCCESS);
         }
 
