@@ -444,14 +444,31 @@ static void ts_shutdown(struct ft5x06_ts *ts)
 /*-----------------------------------------------------------------------*/
 
 /* Return 0 if detection is successful, -ENODEV otherwise */
+static int detect_ft5x06(struct i2c_client *client)
+{
+	struct i2c_adapter *adapter = client->adapter;
+	char buffer;
+	struct i2c_msg pkt = {
+		client->addr,
+		I2C_M_RD,
+		sizeof(buffer),
+		&buffer
+	};
+	if (!i2c_check_functionality(adapter, I2C_FUNC_I2C))
+		return -ENODEV;
+	if (i2c_transfer(adapter, &pkt, 1) != 1)
+		return -ENODEV;
+	return 0;
+}
+
+/* Return 0 if detection is successful, -ENODEV otherwise */
 static int ts_detect(struct i2c_client *client,
 			  struct i2c_board_info *info)
 {
-	struct i2c_adapter *adapter = client->adapter;
-	if (!i2c_check_functionality(adapter, I2C_FUNC_I2C))
-		return -ENODEV;
-	strlcpy(info->type, "ft5x06-ts", I2C_NAME_SIZE);
-	return 0;
+	int err = detect_ft5x06(client);
+	if (!err)
+		strlcpy(info->type, "ft5x06-ts", I2C_NAME_SIZE);
+	return err;
 }
 
 static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
@@ -463,6 +480,11 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		printk(KERN_ERR "%s: Error gts is already allocated\n",
 		       client_name);
 		return -ENOMEM;
+	}
+	if (detect_ft5x06(client) != 0) {
+		dev_err(dev, "%s: Could not detect touch screen.\n",
+			client_name);
+		return -ENODEV;
 	}
 	ts = kzalloc(sizeof(struct ft5x06_ts), GFP_KERNEL);
 	if (!ts) {
