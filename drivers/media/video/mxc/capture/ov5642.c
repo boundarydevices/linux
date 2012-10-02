@@ -3352,6 +3352,67 @@ static struct v4l2_int_device ov5642_int_device = {
 	},
 };
 
+#define MINREG 0x3000
+#define MAXREG 0x603C
+
+static int last_reg = -1 ;
+
+static ssize_t show_reg(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	if ((MINREG <= last_reg) && (MAXREG >= last_reg)) {
+		u8 val;
+		s32 rval = ov5642_read_reg(last_reg, &val);
+		if (0 <= rval)
+			return sprintf(buf, "0x%02x", val);
+		else
+			return rval;
+	} else
+		return 0;
+}
+
+static ssize_t store_reg
+	(struct device *dev, struct device_attribute *attr,
+	 const char *buf, size_t count)
+{
+	char const *end = buf+count;
+	while (buf < end) {
+		char regnum[16];
+		char const *nl = strchr(buf, '\n');
+		char const *sp = strchr(buf, ' ');
+		if (0 == nl)
+			nl = end;
+		if (0 == sp)
+			sp = nl;
+		if (sizeof(regnum) > (sp-buf)) {
+			strncpy(regnum, buf, sizeof(regnum));
+			regnum[sp-buf] = '\0';
+			last_reg = kstrtoul(regnum, 16, 0);
+			sp++ ;
+			if (sp < nl) {
+				char regval[16];
+				if (nl-sp < sizeof(regval)) {
+					int ival ;
+					strncpy(regval, sp, nl-sp);
+					regval[nl-sp] = 0;
+					ival = kstrtoul(regval, 16, 0);
+					if ((0 <= ival) && (0xff >= ival)) {
+						s32 rval;
+						rval = ov5642_write_reg
+							(last_reg, ival);
+						if (0 > rval)
+							return rval;
+					}
+				}
+			}
+		} else
+			dev_err(dev, "%s: Invalid register\n", __func__);
+		buf = nl+1;
+	}
+	return count;
+}
+static DEVICE_ATTR(ov5642_reg, S_IRWXUGO, show_reg, store_reg);
+
 /*!
  * ov5642 I2C probe function
  *
@@ -3444,6 +3505,11 @@ static int ov5642_probe(struct i2c_client *client,
 	ov5642_int_device.priv = &ov5642_data;
 	retval = v4l2_int_device_register(&ov5642_int_device);
 
+	if (device_create_file(&client->dev,
+			&dev_attr_ov5642_reg))
+		dev_err(&client->dev, "Error on creating sysfs file for ov5642_reg\n");
+	else
+		dev_err(&client->dev, "created sysfs entry for reading regs\n");
 	return retval;
 
 err3:
@@ -3490,6 +3556,8 @@ static int ov5642_remove(struct i2c_client *client)
 		regulator_put(io_regulator);
 	}
 
+	device_remove_file(&client->dev,
+		&dev_attr_ov5642_reg);
 	return 0;
 }
 
