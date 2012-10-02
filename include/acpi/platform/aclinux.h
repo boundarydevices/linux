@@ -108,7 +108,7 @@
 
 /* Linux uses GCC */
 
-#include "acgcc.h"
+#include <acpi/platform/acgcc.h>
 
 
 #ifdef __KERNEL__

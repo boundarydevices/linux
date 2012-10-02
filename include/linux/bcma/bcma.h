@@ -7,7 +7,7 @@
 #include <linux/bcma/bcma_driver_chipcommon.h>
 #include <linux/bcma/bcma_driver_pci.h>
 
-#include "bcma_regs.h"
+#include <linux/bcma/bcma_regs.h>
 
 struct bcma_device;
 struct bcma_bus;

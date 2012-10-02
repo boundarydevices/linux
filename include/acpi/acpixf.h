@@ -49,8 +49,8 @@
 
 #define ACPI_CA_VERSION                 0x20110413
 
-#include "actypes.h"
-#include "actbl.h"
+#include <acpi/actypes.h>
+#include <acpi/actbl.h>
 
 extern u8 acpi_gbl_permanent_mmap;
 

@@ -16,7 +16,7 @@
 
 #ifndef CONFIG_MMU
 
-#include "pgtable-nommu.h"
+#include <asm/pgtable-nommu.h>
 
 #else
 

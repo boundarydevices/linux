@@ -9,8 +9,8 @@
 #include <linux/version.h>
 #include <linux/workqueue.h>
 
-#include "types.h"
-#include "buffer.h"
+#include <linux/ceph/types.h>
+#include <linux/ceph/buffer.h>
 
 struct ceph_msg;
 struct ceph_connection;
