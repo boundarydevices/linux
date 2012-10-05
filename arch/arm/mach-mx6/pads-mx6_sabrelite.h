@@ -264,6 +264,14 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	0
 };
 
+#if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
+static iomux_v3_cfg_t MX6NAME(sabrelite_mipi_pads)[] = {
+	MX6PAD(NANDF_D5__GPIO_2_5),		/* Camera Reset, Nitrogen6x */
+	MX6PAD(NANDF_CS0__GPIO_6_11),		/* Camera Reset, SOM jumpered */
+	MX6PAD(GPIO_6__GPIO_1_6),		/* Camera GP */
+	0
+};
+#else
 static iomux_v3_cfg_t MX6NAME(sabrelite_csi0_sensor_pads)[] = {
 	/* IPU1 Camera */
 	MX6PAD(CSI0_DAT8__IPU1_CSI0_D_8),
@@ -284,11 +292,13 @@ static iomux_v3_cfg_t MX6NAME(sabrelite_csi0_sensor_pads)[] = {
 	MX6PAD(CSI0_VSYNC__IPU1_CSI0_VSYNC),
 	MX6PAD(GPIO_6__GPIO_1_6),		/* J5 - Camera GP */
 	MX6PAD(GPIO_8__GPIO_1_8),		/* J5 - Camera Reset */
+	MX6PAD(NANDF_CS0__GPIO_6_11),		/* J5 - Camera Reset */
 	MX6PAD(SD1_DAT0__GPIO_1_16),		/* J5 - Camera GP */
 	MX6PAD(NANDF_D5__GPIO_2_5),		/* J16 - MIPI GP */
 	MX6PAD(NANDF_WP_B__GPIO_6_9),		/* J16 - MIPI GP */
 	0
 };
+#endif
 
 static iomux_v3_cfg_t MX6NAME(sabrelite_hdmi_ddc_pads)[] = {
 	MX6PAD(KEY_COL3__HDMI_TX_DDC_SCL), /* HDMI DDC SCL */
