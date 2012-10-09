@@ -184,12 +184,13 @@ int arizona_irq_init(struct arizona *arizona)
         /* set virtual IRQs */
 	if (arizona->pdata.irq_base > 0) {
 	        arizona->virq[0] = arizona->pdata.irq_base;
-		arizona->virq[1] = arizona->pdata.irq_base + ARIZONA_NUM_IRQ;
+	        arizona->virq[1] = arizona->pdata.irq_base + 1;
 	} else {
 		dev_err(arizona->dev, "No irq_base specified\n");
 		return -EINVAL;
 	}
 
+	irq_base = arizona->pdata.irq_base + 2;
 	ret = regmap_add_irq_chip(arizona->regmap,
 				  arizona->virq[0],
 				  IRQF_ONESHOT, irq_base, aod,
@@ -199,6 +200,7 @@ int arizona_irq_init(struct arizona *arizona)
 		goto err_domain;
 	}
 
+	irq_base = arizona->pdata.irq_base + 2 + ARIZONA_NUM_IRQ;
 	ret = regmap_add_irq_chip(arizona->regmap,
 				  arizona->virq[1],
 				  IRQF_ONESHOT, irq_base, irq,
