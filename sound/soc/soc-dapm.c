@@ -1853,6 +1853,7 @@ int snd_soc_dapm_new_widgets(struct snd_soc_dapm_context *dapm)
 			w->power_check = dapm_generic_check_power;
 			dapm_new_pga(w);
 			break;
+		case snd_soc_dapm_siggen:
 		case snd_soc_dapm_input:
 		case snd_soc_dapm_output:
 		case snd_soc_dapm_micbias:
