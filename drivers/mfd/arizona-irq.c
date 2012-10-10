@@ -125,6 +125,20 @@ static irqreturn_t arizona_irq_thread(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+static void arizona_irq_enable(struct irq_data *data)
+{
+}
+
+static void arizona_irq_disable(struct irq_data *data)
+{
+}
+
+static struct irq_chip arizona_irq_chip = {
+	.name			= "arizona",
+	.irq_disable		= arizona_irq_disable,
+	.irq_enable		= arizona_irq_enable,
+};
+
 int arizona_irq_init(struct arizona *arizona)
 {
 	int flags = IRQF_ONESHOT;
@@ -188,6 +202,29 @@ int arizona_irq_init(struct arizona *arizona)
 	} else {
 		dev_err(arizona->dev, "No irq_base specified\n");
 		return -EINVAL;
+	}
+
+	ret = irq_alloc_descs(arizona->pdata.irq_base, 0,
+			      ARRAY_SIZE(arizona->virqs), 0);
+	if (ret < 0) {
+		dev_err(arizona->dev, "Failed to allocate IRQs: %d\n", ret);
+		return ret;
+        }
+
+	for (i = 0; i < ARRAY_SIZE(arizona->virq); i++) {
+		irq_set_chip_data(arizona->virq[i], arizona);
+		irq_set_chip_and_handler(arizona->virq[i], &arizona_irq_chip,
+					 handle_edge_irq);
+		irq_set_nested_thread(arizona->virq[i], 1);
+
+		/* ARM needs us to explicitly flag the IRQ as valid and
+		 * will set them noprobe when we do so.
+		 */
+#ifdef CONFIG_ARM
+		set_irq_flags(arizona->virq[0], IRQF_VALID);
+#else
+		irq_set_noprobe(arizona->virq[0]);
+#endif
 	}
 
 	irq_base = arizona->pdata.irq_base + 2;
