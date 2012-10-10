@@ -367,7 +367,7 @@ static int arizona_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	return 0;
 }
 
-static const int arizona_48k_bclk_rates[] = {
+static int arizona_48k_bclk_rates[] = {
 	-1,
 	48000,
 	64000,
@@ -389,7 +389,7 @@ static const int arizona_48k_bclk_rates[] = {
 	24576000,
 };
 
-static const unsigned int arizona_48k_rates[] = {
+static unsigned int arizona_48k_rates[] = {
 	12000,
 	24000,
 	48000,
@@ -407,12 +407,12 @@ static const unsigned int arizona_48k_rates[] = {
 	512000,
 };
 
-static const struct snd_pcm_hw_constraint_list arizona_48k_constraint = {
+static struct snd_pcm_hw_constraint_list arizona_48k_constraint = {
 	.count	= ARRAY_SIZE(arizona_48k_rates),
 	.list	= arizona_48k_rates,
 };
 
-static const int arizona_44k1_bclk_rates[] = {
+static int arizona_44k1_bclk_rates[] = {
 	-1,
 	44100,
 	58800,
@@ -434,7 +434,7 @@ static const int arizona_44k1_bclk_rates[] = {
 	22579200,
 };
 
-static const unsigned int arizona_44k1_rates[] = {
+static unsigned int arizona_44k1_rates[] = {
 	11025,
 	22050,
 	44100,
@@ -444,7 +444,7 @@ static const unsigned int arizona_44k1_rates[] = {
 	705600,
 };
 
-static const struct snd_pcm_hw_constraint_list arizona_44k1_constraint = {
+static struct snd_pcm_hw_constraint_list arizona_44k1_constraint = {
 	.count	= ARRAY_SIZE(arizona_44k1_rates),
 	.list	= arizona_44k1_rates,
 };
@@ -482,7 +482,7 @@ static int arizona_startup(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = dai->codec;
 	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);
 	struct arizona_dai_priv *dai_priv = &priv->dai[dai->id - 1];
-	const struct snd_pcm_hw_constraint_list *constraint;
+	struct snd_pcm_hw_constraint_list *constraint;
 	unsigned int base_rate;
 
 	switch (dai_priv->clk) {
