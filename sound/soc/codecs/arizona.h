@@ -17,6 +17,8 @@
 
 #include <sound/soc.h>
 
+#include "wm_adsp.h"
+
 #define ARIZONA_CLK_SYSCLK         1
 #define ARIZONA_CLK_ASYNCCLK       2
 #define ARIZONA_CLK_OPCLK          3
@@ -46,15 +48,18 @@
 #define ARIZONA_MIXER_VOL_SHIFT                 1
 #define ARIZONA_MIXER_VOL_WIDTH                 7
 
-#define ARIZONA_MAX_DAI 3
+#define ARIZONA_MAX_DAI  4
+#define ARIZONA_MAX_ADSP 4
 
 struct arizona;
+struct wm_adsp;
 
 struct arizona_dai_priv {
 	int clk;
 };
 
 struct arizona_priv {
+	struct wm_adsp adsp[ARIZONA_MAX_ADSP];
 	struct arizona *arizona;
 	int sysclk;
 	int asyncclk;
@@ -143,6 +148,22 @@ extern int arizona_mixer_values[ARIZONA_NUM_MIXER_INPUTS];
 	ARIZONA_MIXER_INPUT_ROUTES(name " Input 2"), \
 	ARIZONA_MIXER_INPUT_ROUTES(name " Input 3"), \
 	ARIZONA_MIXER_INPUT_ROUTES(name " Input 4")
+
+#define ARIZONA_DSP_ROUTES(name) \
+	{ name, NULL, name " Aux 1" }, \
+	{ name, NULL, name " Aux 2" }, \
+	{ name, NULL, name " Aux 3" }, \
+	{ name, NULL, name " Aux 4" }, \
+	{ name, NULL, name " Aux 5" }, \
+	{ name, NULL, name " Aux 6" }, \
+	ARIZONA_MIXER_INPUT_ROUTES(name " Aux 1"), \
+	ARIZONA_MIXER_INPUT_ROUTES(name " Aux 2"), \
+	ARIZONA_MIXER_INPUT_ROUTES(name " Aux 3"), \
+	ARIZONA_MIXER_INPUT_ROUTES(name " Aux 4"), \
+	ARIZONA_MIXER_INPUT_ROUTES(name " Aux 5"), \
+	ARIZONA_MIXER_INPUT_ROUTES(name " Aux 6"), \
+	ARIZONA_MIXER_ROUTES(name, name "L"), \
+	ARIZONA_MIXER_ROUTES(name, name "R")
 
 extern const struct soc_enum arizona_lhpf1_mode;
 extern const struct soc_enum arizona_lhpf2_mode;
