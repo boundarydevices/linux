@@ -972,6 +972,12 @@ gckKERNEL_Dispatch(
     case gcvHAL_FREE_NON_PAGED_MEMORY:
         physical = Interface->u.FreeNonPagedMemory.physical;
 
+        /* Unmap user logical out of physical memory first. */
+        gcmkONERROR(gckOS_UnmapUserLogical(Kernel->os,
+                                           physical,
+                                           Interface->u.FreeNonPagedMemory.bytes,
+                                           Interface->u.FreeNonPagedMemory.logical));
+
         /* Free non-paged memory. */
         gcmkONERROR(
             gckOS_FreeNonPagedMemory(Kernel->os,
@@ -1017,6 +1023,12 @@ gckKERNEL_Dispatch(
 
     case gcvHAL_FREE_CONTIGUOUS_MEMORY:
         physical = Interface->u.FreeContiguousMemory.physical;
+
+        /* Unmap user logical out of physical memory first. */
+        gcmkONERROR(gckOS_UnmapUserLogical(Kernel->os,
+                                           physical,
+                                           Interface->u.FreeContiguousMemory.bytes,
+                                           Interface->u.FreeContiguousMemory.logical));
 
         /* Free contiguous memory. */
         gcmkONERROR(
@@ -2068,6 +2080,7 @@ gckKERNEL_Dispatch(
         status = gcvSTATUS_NOT_SUPPORTED;
 #endif
         break;
+
     default:
         /* Invalid command. */
         gcmkONERROR(gcvSTATUS_INVALID_ARGUMENT);
@@ -2226,6 +2239,24 @@ gckKERNEL_AttachProcessEx(
 
             /* Save the last know process ID. */
             Kernel->db->lastProcessID = PID;
+        }
+
+#if gcdENABLE_VG
+        if (Kernel->vg == gcvNULL)
+#endif
+        {
+            status = gckEVENT_Submit(Kernel->eventObj, gcvTRUE, gcvFALSE);
+
+            if (status == gcvSTATUS_INTERRUPTED && Kernel->eventObj->submitTimer)
+            {
+                gcmkONERROR(gckOS_StartTimer(Kernel->os,
+                                             Kernel->eventObj->submitTimer,
+                                             1));
+            }
+            else
+            {
+                gcmkONERROR(status);
+            }
         }
 
         /* Decrement the number of clients attached. */
