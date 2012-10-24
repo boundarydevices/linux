@@ -530,8 +530,6 @@ struct _gckEVENT
     gcsEVENT_QUEUE_PTR          freeList;
     gcsEVENT_QUEUE              repoList[gcdREPO_LIST_COUNT];
     gctPOINTER                  eventListMutex;
-
-    gctPOINTER                  submitTimer;
 };
 
 /* Free all events belonging to a process. */

@@ -1830,11 +1830,7 @@ gckVIDMEM_Lock(
 #endif
 
 #if gcdENABLE_VG
-                if (Kernel->core == gcvCORE_VG)
-                {
-                    gcmkONERROR(gckVGMMU_Flush(Kernel->vg->mmu));
-                }
-                else
+                if (Kernel->core != gcvCORE_VG)
 #endif
                 {
                     gcmkONERROR(gckMMU_Flush(Kernel->mmu));

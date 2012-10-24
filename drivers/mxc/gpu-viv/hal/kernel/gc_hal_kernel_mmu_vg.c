@@ -344,6 +344,9 @@ gceSTATUS gckVGMMU_AllocatePages(
 
     if (!allocated)
     {
+        /* Flush the MMU. */
+        status = gckVGHARDWARE_FlushMMU(Mmu->hardware);
+
         if (status >= 0)
         {
             /* Walk all entries until we find enough slots. */
@@ -497,24 +500,6 @@ gckVGMMU_SetPage(
     gcmkVERIFY_ARGUMENT(!(PageAddress & 0xFFF));
 
     *PageEntry = PageAddress;
-
-    /* Success. */
-    gcmkFOOTER_NO();
-    return gcvSTATUS_OK;
-}
-
-gceSTATUS
-gckVGMMU_Flush(
-   IN gckVGMMU Mmu
-   )
-{
-    gckVGHARDWARE hardware;
-
-    gcmkHEADER_ARG("Mmu=0x%x", Mmu);
-
-    hardware = Mmu->hardware;
-    gcmkVERIFY_OK(
-        gckOS_AtomSet(hardware->os, hardware->pageTableDirty, 1));
 
     /* Success. */
     gcmkFOOTER_NO();

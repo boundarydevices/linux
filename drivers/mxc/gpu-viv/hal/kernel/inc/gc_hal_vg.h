@@ -895,12 +895,6 @@ gckVGMMU_SetPage(
    IN gctUINT32 *PageEntry
    );
 
-/* Flush MMU */
-gceSTATUS
-gckVGMMU_Flush(
-   IN gckVGMMU Mmu
-   );
-
 #endif /* gcdENABLE_VG */
 
 #ifdef __cplusplus

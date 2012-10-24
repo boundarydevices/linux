@@ -38,7 +38,6 @@
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,23)
 #include <linux/math64.h>
 #endif
-#include <linux/delay.h>
 
 #define _GC_OBJ_ZONE    gcvZONE_OS
 
@@ -1161,24 +1160,32 @@ _UnmapUserLogical(
     IN gctUINT32  Size
 )
 {
-    if (unlikely(current->mm == gcvNULL))
+    struct task_struct *task;
+    struct mm_struct *mm;
+
+    /* Get the task_struct of the task with stored pid. */
+    rcu_read_lock();
+
+    task = FIND_TASK_BY_PID(Pid);
+
+    if (task == gcvNULL)
     {
-        /* Do nothing if process is exiting. */
+        rcu_read_unlock();
         return;
     }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
-    if (vm_munmap((unsigned long)Logical, Size) < 0)
+    /* Get the mm_struct. */
+    mm = get_task_mm(task);
+
+    rcu_read_unlock();
+
+    if (mm == gcvNULL)
     {
-        gcmkTRACE_ZONE(
-                gcvLEVEL_WARNING, gcvZONE_OS,
-                "%s(%d): vm_munmap failed",
-                __FUNCTION__, __LINE__
-                );
+        return;
     }
-#else
-    down_write(&current->mm->mmap_sem);
-    if (do_munmap(current->mm, (unsigned long)Logical, Size) < 0)
+
+    down_write(&mm->mmap_sem);
+    if (do_munmap(mm, (unsigned long)Logical, Size) < 0)
     {
         gcmkTRACE_ZONE(
                 gcvLEVEL_WARNING, gcvZONE_OS,
@@ -1186,8 +1193,10 @@ _UnmapUserLogical(
                 __FUNCTION__, __LINE__
                 );
     }
-    up_write(&current->mm->mmap_sem);
-#endif
+    up_write(&mm->mmap_sem);
+
+    /* Dereference. */
+    mmput(mm);
 }
 
 /*******************************************************************************
@@ -1976,55 +1985,6 @@ gckOS_UnmapMemoryEx(
 
 /*******************************************************************************
 **
-**  gckOS_UnmapUserLogical
-**
-**  Unmap user logical memory out of physical memory.
-**
-**  INPUT:
-**
-**      gckOS Os
-**          Pointer to an gckOS object.
-**
-**      gctPHYS_ADDR Physical
-**          Start of physical address memory.
-**
-**      gctSIZE_T Bytes
-**          Number of bytes to unmap.
-**
-**      gctPOINTER Memory
-**          Pointer to a previously mapped memory region.
-**
-**  OUTPUT:
-**
-**      Nothing.
-*/
-gceSTATUS
-gckOS_UnmapUserLogical(
-    IN gckOS Os,
-    IN gctPHYS_ADDR Physical,
-    IN gctSIZE_T Bytes,
-    IN gctPOINTER Logical
-    )
-{
-    gcmkHEADER_ARG("Os=0x%X Physical=0x%X Bytes=%lu Logical=0x%X",
-                   Os, Physical, Bytes, Logical);
-
-    /* Verify the arguments. */
-    gcmkVERIFY_OBJECT(Os, gcvOBJ_OS);
-    gcmkVERIFY_ARGUMENT(Physical != 0);
-    gcmkVERIFY_ARGUMENT(Bytes > 0);
-    gcmkVERIFY_ARGUMENT(Logical != gcvNULL);
-
-    gckOS_UnmapMemory(Os, Physical, Bytes, Logical);
-
-    /* Success. */
-    gcmkFOOTER_NO();
-    return gcvSTATUS_OK;
-
-}
-
-/*******************************************************************************
-**
 **  gckOS_AllocateNonPagedMemory
 **
 **  Allocate a number of pages from non-paged memory.
@@ -2419,8 +2379,8 @@ gceSTATUS gckOS_FreeNonPagedMemory(
     {
         if (mdlMap->vmaAddr != gcvNULL)
         {
-            /* No mapped memory exists when free nonpaged memory */
-            gcmkASSERT(0);
+            _UnmapUserLogical(mdlMap->pid, mdlMap->vmaAddr, mdl->numPages * PAGE_SIZE);
+            mdlMap->vmaAddr = gcvNULL;
         }
 
         mdlMap = mdlMap->next;
@@ -3804,14 +3764,24 @@ gckOS_Delay(
 
     if (Delay > 0)
     {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 28)
-        ktime_t delay = ktime_set(0, Delay * NSEC_PER_MSEC);
-        __set_current_state(TASK_UNINTERRUPTIBLE);
-        schedule_hrtimeout(&delay, HRTIMER_MODE_REL);
+#if gcdHIGH_PRECISION_DELAY_ENABLE
+        ktime_t wait = ns_to_ktime(Delay * 1000 * 1000);
+        set_current_state(TASK_INTERRUPTIBLE);
+        schedule_hrtimeout(&wait, HRTIMER_MODE_REL);
 #else
-        msleep(Delay);
-#endif
+        struct timeval now;
+        unsigned long jiffies;
 
+        /* Convert milliseconds into seconds and microseconds. */
+        now.tv_sec  = Delay / 1000;
+        now.tv_usec = (Delay % 1000) * 1000;
+
+        /* Convert timeval to jiffies. */
+        jiffies = timeval_to_jiffies(&now);
+
+        /* Schedule timeout. */
+        schedule_timeout_interruptible(jiffies);
+#endif
     }
 
     /* Success. */
@@ -5674,11 +5644,7 @@ OnError:
         }
 
 #if gcdENABLE_VG
-        if (Core == gcvCORE_VG)
-        {
-            gcmkONERROR(gckVGMMU_Flush(Os->device->kernels[Core]->vg->mmu));
-        }
-        else
+        if (Core != gcvCORE_VG)
 #endif
         {
             gcmkONERROR(gckMMU_Flush(Os->device->kernels[Core]->mmu));

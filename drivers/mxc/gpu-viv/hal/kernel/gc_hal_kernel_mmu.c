@@ -79,23 +79,6 @@ static gcsSharedPageTable_PTR sharedPageTable = gcvNULL;
 #endif
 
 static gceSTATUS
-_FillPageTable(
-    IN gctUINT32_PTR PageTable,
-    IN gctUINT32     PageCount,
-    IN gctUINT32     EntryValue
-)
-{
-    gctUINT i;
-
-    for (i = 0; i < PageCount; i++)
-    {
-        PageTable[i] = EntryValue;
-    }
-
-    return gcvSTATUS_OK;
-}
-
-static gceSTATUS
 _Link(
     IN gckMMU Mmu,
     IN gctUINT32 Index,
@@ -1053,7 +1036,7 @@ gckMMU_AllocatePages(
     }
 
     /* Mark node as used. */
-    gcmkONERROR(_FillPageTable(&pageTable[index], PageCount, gcvMMU_USED));
+    pageTable[index] = gcvMMU_USED;
 
     /* Return pointer to page table. */
     *PageTable = &pageTable[index];
@@ -1129,8 +1112,6 @@ gckMMU_FreePages(
     )
 {
     gctUINT32_PTR pageTable;
-    gceSTATUS status;
-    gctBOOL acquired = gcvFALSE;
 
     gcmkHEADER_ARG("Mmu=0x%x PageTable=0x%x PageCount=%lu",
                    Mmu, PageTable, PageCount);
@@ -1143,11 +1124,7 @@ gckMMU_FreePages(
     /* Convert the pointer. */
     pageTable = (gctUINT32_PTR) PageTable;
 
-    gcmkONERROR(gckOS_AcquireMutex(Mmu->os, Mmu->pageTableMutex, gcvINFINITE));
-    acquired = gcvTRUE;
-
 #if gcdMMU_CLEAR_VALUE
-    if (Mmu->hardware->mmuVersion == 0)
     {
         gctUINT32 i;
 
@@ -1173,21 +1150,9 @@ gckMMU_FreePages(
     /* We have free nodes. */
     Mmu->freeNodes = gcvTRUE;
 
-    gcmkVERIFY_OK(gckOS_ReleaseMutex(Mmu->os, Mmu->pageTableMutex));
-    acquired = gcvFALSE;
-
     /* Success. */
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;
-
-OnError:
-    if (acquired)
-    {
-        gcmkVERIFY_OK(gckOS_ReleaseMutex(Mmu->os, Mmu->pageTableMutex));
-    }
-
-    gcmkFOOTER();
-    return status;
 }
 
 gceSTATUS

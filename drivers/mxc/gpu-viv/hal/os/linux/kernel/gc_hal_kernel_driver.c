@@ -495,7 +495,7 @@ long drv_ioctl(
         }
 
         iface.u.ChipInfo.count = count;
-        iface.status = status = gcvSTATUS_OK;
+        status = gcvSTATUS_OK;
     }
     else
     {
