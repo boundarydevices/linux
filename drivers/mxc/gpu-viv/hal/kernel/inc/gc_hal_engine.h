@@ -871,19 +871,6 @@ gco3D_SetAllEarlyDepthModes(
     IN gctBOOL Disable
     );
 
-/* Switch dynamic early mode */
-gceSTATUS
-gco3D_SwitchDynamicEarlyDepthMode(
-    IN gco3D Engine
-    );
-
-/* Set dynamic early mode */
-gceSTATUS
-gco3D_DisableDynamicEarlyDepthMode(
-    IN gco3D Engine,
-    IN gctBOOL Disable
-    );
-
 /* Enable or disable depth-only mode. */
 gceSTATUS
 gco3D_SetDepthOnly(
@@ -1793,16 +1780,6 @@ gcoVERTEXARRAY_Bind(
     IN OUT gctUINT * PrimitiveCount
     );
 
-gctUINT
-gcoVERTEXARRAY_GetMaxStream(
-    IN gcoVERTEXARRAY Vertex
-);
-
-gceSTATUS
-gcoVERTEXARRAY_SetMaxStream(
-    IN gcoVERTEXARRAY Vertex,
-    gctUINT maxStreams
-);
 /*******************************************************************************
 ***** Composition *************************************************************/
 

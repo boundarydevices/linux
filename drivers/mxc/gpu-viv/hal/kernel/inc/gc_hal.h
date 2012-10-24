@@ -30,8 +30,6 @@
 #include "gc_hal_base.h"
 #include "gc_hal_profiler.h"
 #include "gc_hal_driver.h"
-#include "gc_hal_statistics.h"
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -2363,19 +2361,7 @@ gckHARDWARE_QueryProfileRegisters(
     );
 #endif
 
-gceSTATUS
-gckOS_SignalQueryHardware(
-    IN gckOS Os,
-    IN gctSIGNAL Signal,
-    OUT gckHARDWARE * Hardware
-    );
 
-gceSTATUS
-gckOS_SignalSetHardware(
-    IN gckOS Os,
-    IN gctSIGNAL Signal,
-    gckHARDWARE Hardware
-    );
 
 #ifdef __cplusplus
 }

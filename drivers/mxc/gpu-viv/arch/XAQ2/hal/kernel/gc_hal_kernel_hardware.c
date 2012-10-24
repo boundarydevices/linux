@@ -603,8 +603,6 @@ gckHARDWARE_Construct(
 
     gcmkONERROR(gckOS_CreateMutex(Os, &hardware->powerMutex));
     gcmkONERROR(gckOS_CreateSemaphore(Os, &hardware->globalSemaphore));
-    hardware->startIsr = gcvNULL;
-    hardware->stopIsr = gcvNULL;
 
 #if gcdPOWEROFF_TIMEOUT
     hardware->powerOffTimeout = gcdPOWEROFF_TIMEOUT;
@@ -4019,11 +4017,12 @@ gckHARDWARE_SetPowerManagementState(
         /* Stop the command parser. */
         gcmkONERROR(gckCOMMAND_Stop(command, gcvFALSE));
 
+#ifndef __QNXNTO__
         /* Stop the Isr. */
-        if (Hardware->stopIsr)
-        {
-            gcmkONERROR(Hardware->stopIsr(Hardware->isrContext));
-        }
+        gcmkONERROR(Hardware->stopIsr(Hardware->isrContext));
+#else
+        /* QNX does not need to attach-dettach ISP that often */
+#endif
     }
 
     /* Get time until stopped. */
@@ -4109,11 +4108,13 @@ gckHARDWARE_SetPowerManagementState(
         /* Start the command processor. */
         gcmkONERROR(gckCOMMAND_Start(command));
 
-        if (Hardware->startIsr)
-        {
-            /* Start the Isr. */
-            gcmkONERROR(Hardware->startIsr(Hardware->isrContext));
-        }
+#ifndef __QNXNTO__
+        /* Start the Isr. */
+        gcmkONERROR(Hardware->startIsr(Hardware->isrContext));
+#else
+        /* XSUN: QNX does not need to attach-dettach ISP that often
+         * with the current release */
+#endif
 
         /* Set NEW MMU. */
         if (Hardware->mmuVersion != 0 && configMmu)
@@ -4894,8 +4895,6 @@ gckHARDWARE_Reset(
     gceSTATUS status;
     gckCOMMAND command;
     gctBOOL acquired = gcvFALSE;
-    gctBOOL mutexAcquired = gcvFALSE;
-    gctUINT32 process, thread;
 
     gcmkHEADER_ARG("Hardware=0x%x", Hardware);
 
@@ -4909,25 +4908,6 @@ gckHARDWARE_Reset(
     {
         /* Not supported - we need the isolation bit. */
         gcmkONERROR(gcvSTATUS_NOT_SUPPORTED);
-    }
-
-    status = gckOS_AcquireMutex(Hardware->os, Hardware->powerMutex, 0);
-    if (status == gcvSTATUS_TIMEOUT)
-    {
-        gcmkONERROR(gckOS_GetProcessID(&process));
-        gcmkONERROR(gckOS_GetThreadID(&thread));
-
-        if ((Hardware->powerProcess == process)
-        &&  (Hardware->powerThread  == thread))
-        {
-            /* No way to recovery from a error in power management. */
-            gcmkFOOTER_NO();
-            return gcvSTATUS_OK;
-        }
-    }
-    else
-    {
-        mutexAcquired = gcvTRUE;
     }
 
     if (Hardware->chipPowerState == gcvPOWER_ON)
@@ -4946,11 +4926,10 @@ gckHARDWARE_Reset(
         gcmkONERROR(gckCOMMAND_Stop(command, gcvTRUE));
     }
 
+#ifndef __QNXNTO__
     /* Stop isr, we will start it again when power on GPU. */
-    if (Hardware->stopIsr)
-    {
-        gcmkONERROR(Hardware->stopIsr(Hardware->isrContext));
-    }
+    gcmkONERROR(Hardware->stopIsr(Hardware->isrContext));
+#endif
 
     /* Hardware reset. */
     status = gckOS_ResetGPU(Hardware->os, Hardware->core);
@@ -4963,9 +4942,7 @@ gckHARDWARE_Reset(
 
     /* Force an OFF to ON power switch. */
     Hardware->chipPowerState = gcvPOWER_OFF;
-
-    gcmkONERROR(gckOS_ReleaseMutex(Hardware->os, Hardware->powerMutex));
-    mutexAcquired = gcvFALSE;
+    gcmkONERROR(gckHARDWARE_SetPowerManagementState(Hardware, gcvPOWER_ON));
 
     /* Success. */
     gcmkFOOTER_NO();
@@ -4977,11 +4954,6 @@ OnError:
         /* Release the power management semaphore. */
         gcmkVERIFY_OK(
             gckOS_ReleaseSemaphore(Hardware->os, command->powerSemaphore));
-    }
-
-    if (mutexAcquired)
-    {
-        gckOS_ReleaseMutex(Hardware->os, Hardware->powerMutex);
     }
 
     /* Return the error. */
