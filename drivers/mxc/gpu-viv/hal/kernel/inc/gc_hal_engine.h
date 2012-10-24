@@ -871,6 +871,19 @@ gco3D_SetAllEarlyDepthModes(
     IN gctBOOL Disable
     );
 
+/* Switch dynamic early mode */
+gceSTATUS
+gco3D_SwitchDynamicEarlyDepthMode(
+    IN gco3D Engine
+    );
+
+/* Set dynamic early mode */
+gceSTATUS
+gco3D_DisableDynamicEarlyDepthMode(
+    IN gco3D Engine,
+    IN gctBOOL Disable
+    );
+
 /* Enable or disable depth-only mode. */
 gceSTATUS
 gco3D_SetDepthOnly(
@@ -1450,6 +1463,21 @@ gcoTEXTURE_UploadCompressed(
     IN gctSIZE_T Bytes
     );
 
+/* Upload compressed sub data to an gcoTEXTURE object. */
+gceSTATUS
+gcoTEXTURE_UploadCompressedSub(
+    IN gcoTEXTURE Texture,
+    IN gctUINT MipMap,
+    IN gceTEXTURE_FACE Face,
+    IN gctUINT XOffset,
+    IN gctUINT YOffset,
+    IN gctUINT Width,
+    IN gctUINT Height,
+    IN gctUINT Slice,
+    IN gctCONST_POINTER Memory,
+    IN gctSIZE_T Size
+    );
+
 /* Get gcoSURF object for a mipmap level. */
 gceSTATUS
 gcoTEXTURE_GetMipMap(
@@ -1780,6 +1808,16 @@ gcoVERTEXARRAY_Bind(
     IN OUT gctUINT * PrimitiveCount
     );
 
+gctUINT
+gcoVERTEXARRAY_GetMaxStream(
+    IN gcoVERTEXARRAY Vertex
+);
+
+gceSTATUS
+gcoVERTEXARRAY_SetMaxStream(
+    IN gcoVERTEXARRAY Vertex,
+    gctUINT maxStreams
+);
 /*******************************************************************************
 ***** Composition *************************************************************/
 

@@ -172,6 +172,9 @@ static iomux_v3_cfg_t mx6q_sabreauto_pads[] = {
 	/* DISP0 RESET */
 	MX6Q_PAD_EIM_WAIT__GPIO_5_0,
 
+	/* eCompass int */
+	MX6Q_PAD_EIM_EB1__GPIO_2_29,
+
 	/*  SPDIF */
 	MX6Q_PAD_KEY_COL3__SPDIF_IN1,
 
@@ -206,10 +209,6 @@ static iomux_v3_cfg_t mx6q_sabreauto_pads[] = {
 
 	/* HDMI */
 	MX6Q_PAD_EIM_A25__HDMI_TX_CEC_LINE,
-
-	/* camera reset */
-	MX6Q_PAD_GPIO_19__GPIO_4_5,
-	MX6Q_PAD_EIM_D24__GPIO_3_24,
 
 	/* MLB150 */
 	MX6Q_PAD_ENET_TXD1__MLB_MLBCLK,

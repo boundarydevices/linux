@@ -30,11 +30,8 @@
 #include <linux/fsl_devices.h>
 #include <linux/smsc911x.h>
 #include <linux/spi/spi.h>
-#if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
 #include <linux/spi/flash.h>
-#else
 #include <linux/mtd/physmap.h>
-#endif
 #include <linux/i2c.h>
 #include <linux/i2c/pca953x.h>
 #include <linux/ata.h>
@@ -99,11 +96,11 @@
 #define SABREAUTO_ANDROID_MENU		IMX_GPIO_NR(2, 12)
 #define SABREAUTO_ANDROID_VOLUP		IMX_GPIO_NR(2, 15)
 #define SABREAUTO_CAP_TCH_INT		IMX_GPIO_NR(2, 28)
+#define SABREAUTO_eCOMPASS_INT		IMX_GPIO_NR(2, 29)
 #define SABREAUTO_ECSPI1_CS1		IMX_GPIO_NR(3, 19)
 #define SABREAUTO_DISP0_PWR		IMX_GPIO_NR(3, 24)
 #define SABREAUTO_DISP0_I2C_EN		IMX_GPIO_NR(3, 28)
 #define SABREAUTO_DISP0_DET_INT		IMX_GPIO_NR(3, 31)
-#define SABREAUTO_CSI0_RST		IMX_GPIO_NR(4, 5)
 #define SABREAUTO_DISP0_RESET		IMX_GPIO_NR(5, 0)
 #define SABREAUTO_I2C3_STEER		IMX_GPIO_NR(5, 4)
 #define SABREAUTO_WEIM_NOR_WDOG1        IMX_GPIO_NR(4, 29)
@@ -111,7 +108,6 @@
 #define SABREAUTO_PMIC_INT		IMX_GPIO_NR(5, 16)
 #define SABREAUTO_ALS_INT		IMX_GPIO_NR(5, 17)
 #define SABREAUTO_SD1_WP		IMX_GPIO_NR(5, 20)
-#define SABREAUTO_CSI0_PWN		IMX_GPIO_NR(5, 23)
 #define SABREAUTO_USB_HOST1_OC		IMX_GPIO_NR(5, 0)
 #define SABREAUTO_SD3_CD		IMX_GPIO_NR(6, 15)
 
@@ -142,6 +138,7 @@ extern char *soc_reg_id;
 extern char *pu_reg_id;
 
 static int mma8451_position = 3;
+static int mag3110_position = 2;
 static struct clk *sata_clk;
 static int mipi_sensor;
 static int can0_enable;
@@ -402,7 +399,6 @@ static const struct spi_imx_master mx6q_sabreauto_spi_data __initconst = {
 	.num_chipselect = ARRAY_SIZE(mx6q_sabreauto_spi_cs),
 };
 
-#if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
 static struct mtd_partition m25p32_partitions[] = {
 	{
 		.name	= "bootloader",
@@ -423,7 +419,6 @@ static struct flash_platform_data m25p32_spi_flash_data = {
 };
 
 static struct spi_board_info m25p32_spi0_board_info[] __initdata = {
-#if defined(CONFIG_MTD_M25P80)
 	{
 		/* The modalias must be the same as spi device driver name */
 		.modalias	= "m25p80",
@@ -432,14 +427,12 @@ static struct spi_board_info m25p32_spi0_board_info[] __initdata = {
 		.chip_select	= 0,
 		.platform_data	= &m25p32_spi_flash_data,
 	},
-#endif
 };
 static void spi_device_init(void)
 {
 	spi_register_board_info(m25p32_spi0_board_info,
 				ARRAY_SIZE(m25p32_spi0_board_info));
 }
-#else
 static struct mtd_partition mxc_nor_partitions[] = {
 	{
 		.name	= "Bootloader",
@@ -489,7 +482,6 @@ static void mx6q_setup_weimcs(void)
 	__raw_writel(0x1C022000, nor_reg + 0x00000008);
 	__raw_writel(0x0804a240, nor_reg + 0x00000010);
 }
-#endif
 
 static int max7310_1_setup(struct i2c_client *client,
 	unsigned gpio_base, unsigned ngpio,
@@ -603,18 +595,6 @@ static struct pca953x_platform_data max7310_u43_platdata = {
 	.setup		= max7310_u43_setup,
 };
 
-static struct fsl_mxc_camera_platform_data camera_data = {
-	.analog_regulator	= "DA9052_LDO7",
-	.core_regulator		= "DA9052_LDO9",
-	.mclk			= 24000000,
-	.csi			= 0,
-};
-
-static struct fsl_mxc_camera_platform_data ov5640_mipi_data = {
-	.mclk	= 24000000,
-	.csi	= 0,
-};
-
 static void adv7180_pwdn(int pwdn)
 {
 	int status = -1;
@@ -629,6 +609,14 @@ static void adv7180_pwdn(int pwdn)
 	gpio_free(SABREAUTO_VIDEOIN_PWR);
 }
 
+static void mx6q_csi0_io_init(void)
+{
+	if (cpu_is_mx6q())
+		mxc_iomux_set_gpr_register(1, 19, 1, 1);
+	else if (cpu_is_mx6dl())
+		mxc_iomux_set_gpr_register(13, 0, 3, 4);
+}
+
 static struct fsl_mxc_tvin_platform_data adv7180_data = {
 	.dvddio_reg	= NULL,
 	.dvdd_reg	= NULL,
@@ -636,6 +624,16 @@ static struct fsl_mxc_tvin_platform_data adv7180_data = {
 	.pvdd_reg	= NULL,
 	.pwdn		= adv7180_pwdn,
 	.reset		= NULL,
+	.cvbs		= true,
+	.io_init	= mx6q_csi0_io_init,
+};
+
+static struct fsl_mxc_tvin_platform_data adv7280_data = {
+	.dvddio_reg	= NULL,
+	.dvdd_reg	= NULL,
+	.avdd_reg	= NULL,
+	.pvdd_reg	= NULL,
+	.pwdn		= NULL,
 	.cvbs		= true,
 };
 
@@ -672,13 +670,14 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		I2C_BOARD_INFO("adv7180", 0x21),
 		.platform_data = (void *)&adv7180_data,
 	}, {
-		I2C_BOARD_INFO("ov3640", 0x3c),
-		.platform_data = (void *)&camera_data,
-	},
-	{
 		I2C_BOARD_INFO("isl29023", 0x44),
 		.irq  = gpio_to_irq(SABREAUTO_ALS_INT),
 		.platform_data = &ls_data,
+	},
+	{
+		I2C_BOARD_INFO("mag3110", 0x0e),
+		.irq = gpio_to_irq(SABREAUTO_eCOMPASS_INT),
+		.platform_data = (void *)&mag3110_position,
 	},
 	{
 		I2C_BOARD_INFO("mma8451", 0x1c),
@@ -693,17 +692,16 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	}, {
 		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
 	}, {
-		I2C_BOARD_INFO("ov5640_mipi", 0x3c),
-		.platform_data = (void *)&ov5640_mipi_data,
-	}, {
 		I2C_BOARD_INFO("cs42888", 0x48),
 		.platform_data = (void *)&cs42888_data,
-	},
-	{
+	}, {
 		I2C_BOARD_INFO("si4763_i2c", 0x63),
+	}, {
+		I2C_BOARD_INFO("adv7280", 0x21),
+		.platform_data = (void *)&adv7280_data,
 	},
-
 };
+
 struct platform_device mxc_si4763_audio_device = {
 	.name = "imx-tuner-si4763",
 	.id = 0,
@@ -1329,24 +1327,6 @@ static int __init early_enable_can0(char *p)
 }
 early_param("can0", early_enable_can0);
 
-static inline void __init mx6q_csi0_io_init(void)
-{
-	/* Camera reset */
-	gpio_request(SABREAUTO_CSI0_RST, "cam-reset");
-	gpio_direction_output(SABREAUTO_CSI0_RST, 1);
-
-	/* Camera power down */
-	gpio_request(SABREAUTO_CSI0_PWN, "cam-pwdn");
-	gpio_direction_output(SABREAUTO_CSI0_PWN, 1);
-	msleep(1);
-	gpio_set_value(SABREAUTO_CSI0_PWN, 0);
-
-	if (cpu_is_mx6q())
-		mxc_iomux_set_gpr_register(1, 19, 1, 1);
-	else if (cpu_is_mx6dl())
-		mxc_iomux_set_gpr_register(13, 0, 3, 4);
-}
-
 static struct mxc_spdif_platform_data mxc_spdif_data = {
 	.spdif_tx	= 0,	/* disable tx */
 	.spdif_rx	= 1,	/* enable rx */
@@ -1586,12 +1566,12 @@ static void __init mx6_board_init(void)
 	}
 	/* SPI */
 	imx6q_add_ecspi(0, &mx6q_sabreauto_spi_data);
-#if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
-		spi_device_init();
-#else
-		mx6q_setup_weimcs();
-		platform_device_register(&physmap_flash_device);
-#endif
+		if (spinor_en)
+			spi_device_init();
+		else if (weimnor_en) {
+			mx6q_setup_weimcs();
+			platform_device_register(&physmap_flash_device);
+		}
 	imx6q_add_mxc_hdmi(&hdmi_data);
 
 	imx6q_add_anatop_thermal_imx(1, &mx6q_sabreauto_anatop_thermal_data);
@@ -1616,9 +1596,6 @@ static void __init mx6_board_init(void)
 	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
 	imx6q_add_asrc(&imx_asrc_data);
 
-	if (!mipi_sensor)
-		mx6q_csi0_io_init();
-
 	/* DISP0 Detect */
 	gpio_request(SABREAUTO_DISP0_DET_INT, "disp0-detect");
 	gpio_direction_input(SABREAUTO_DISP0_DET_INT);
@@ -1642,7 +1619,7 @@ static void __init mx6_board_init(void)
 	imx6q_add_viim();
 	imx6q_add_imx2_wdt(0, NULL);
 	imx6q_add_dma();
-	if (!uart3_en)
+	if (!uart3_en && !weimnor_en)
 		imx6q_add_gpmi(&mx6q_gpmi_nand_platform_data);
 
 	imx6q_add_dvfs_core(&sabreauto_dvfscore_data);

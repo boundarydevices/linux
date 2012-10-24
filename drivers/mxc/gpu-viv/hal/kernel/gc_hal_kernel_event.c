@@ -328,6 +328,12 @@ __RemoveRecordFromProcessDB(
                 Record->info.u.UnmapUserMemory.info));
             break;
 
+        case gcvHAL_SIGNAL:
+            gcmkVERIFY_OK(gckOS_SignalSetHardware(Event->os,
+                Record->info.u.Signal.signal,
+                Event->kernel->hardware));
+            break;
+
         default:
             break;
         }
@@ -336,6 +342,15 @@ __RemoveRecordFromProcessDB(
     }
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;
+}
+
+void
+_SubmitTimerFunction(
+    gctPOINTER Data
+    )
+{
+    gckEVENT event = (gckEVENT)Data;
+    gcmkVERIFY_OK(gckEVENT_Submit(event, gcvTRUE, gcvFALSE));
 }
 
 /******************************************************************************\
@@ -430,6 +445,11 @@ gckEVENT_Construct(
     gcmkONERROR(gckOS_AtomConstruct(os, &eventObj->pending));
 #endif
 
+    gcmkVERIFY_OK(gckOS_CreateTimer(os,
+                                    _SubmitTimerFunction,
+                                    (gctPOINTER)eventObj,
+                                    &eventObj->submitTimer));
+
     /* Return pointer to the gckEVENT object. */
     *Event = eventObj;
 
@@ -510,6 +530,12 @@ gckEVENT_Destroy(
 
     /* Verify the arguments. */
     gcmkVERIFY_OBJECT(Event, gcvOBJ_EVENT);
+
+    if (Event->submitTimer != gcvNULL)
+    {
+        gcmkVERIFY_OK(gckOS_StopTimer(Event->os, Event->submitTimer));
+        gcmkVERIFY_OK(gckOS_DestoryTimer(Event->os, Event->submitTimer));
+    }
 
     /* Delete the queue mutex. */
     gcmkVERIFY_OK(gckOS_DeleteMutex(Event->os, Event->eventQueueMutex));
@@ -722,11 +748,6 @@ gckEVENT_GetEvent(
                 "%s(%d): no available events\n",
                 __FUNCTION__, __LINE__
                 );
-
-            /* Broadcast GPU stuck. */
-            gcmkONERROR(gckOS_Broadcast(Event->os,
-                                        Event->kernel->hardware,
-                                        gcvBROADCAST_GPU_STUCK));
 
             /* Bail out. */
             gcmkONERROR(gcvSTATUS_GPU_NOT_RESPONDING);
@@ -960,6 +981,31 @@ gckEVENT_AddList(
         queue->tail->next = record;
         queue->tail       = record;
     }
+
+    /* Unmap user space logical address.
+     * Linux kernel does not support unmap the memory of other process any more since 3.5.
+     * Let's unmap memory of self process before submit the event to gpu.
+     * */
+    switch(Interface->command)
+    {
+    case gcvHAL_FREE_NON_PAGED_MEMORY:
+        gcmkONERROR(gckOS_UnmapUserLogical(
+                        Event->os,
+                        Interface->u.FreeNonPagedMemory.physical,
+                        Interface->u.FreeNonPagedMemory.bytes,
+                        Interface->u.FreeNonPagedMemory.logical));
+        break;
+    case gcvHAL_FREE_CONTIGUOUS_MEMORY:
+        gcmkONERROR(gckOS_UnmapUserLogical(
+                        Event->os,
+                        Interface->u.FreeContiguousMemory.physical,
+                        Interface->u.FreeContiguousMemory.bytes,
+                        Interface->u.FreeContiguousMemory.logical));
+        break;
+    default:
+        break;
+    }
+
 
     /* Release the mutex. */
     gcmkONERROR(gckOS_ReleaseMutex(Event->os, Event->eventListMutex));
@@ -1492,6 +1538,14 @@ OnError:
     {
         /* Need to unroll the event allocation. */
         Event->queues[id].head = gcvNULL;
+    }
+
+    if (status == gcvSTATUS_GPU_NOT_RESPONDING)
+    {
+        /* Broadcast GPU stuck. */
+        status = gckOS_Broadcast(Event->os,
+                                 Event->kernel->hardware,
+                                 gcvBROADCAST_GPU_STUCK);
     }
 
     /* Return the status. */

@@ -101,9 +101,7 @@ DEFINE_SPINLOCK(mx6sl_clk_lock);
 	u32 gpt_ticks; \
 	u32 gpt_cnt; \
 	u32 reg; \
-	unsigned long flags; \
 	int result = 1; \
-	spin_lock_irqsave(&mx6sl_clk_lock, flags); \
 	gpt_rate = clk_get_rate(&gpt_clk[0]); \
 	gpt_ticks = timeout / (1000000000 / gpt_rate); \
 	reg = __raw_readl(timer_base + V2_TSTAT);\
@@ -133,7 +131,6 @@ DEFINE_SPINLOCK(mx6sl_clk_lock);
 			} \
 		} \
 	} \
-	spin_unlock_irqrestore(&mx6sl_clk_lock, flags); \
 	result; \
 })
 
@@ -1945,8 +1942,8 @@ static unsigned long _clk_ipu_round_rate(struct clk *clk,
 }
 
 static struct clk ipu1_clk = {
-	__INIT_CLK_DEBUG(ipu1_clk)
-	.parent = &pll2_pfd2_400M,
+	__INIT_CLK_DEBUG(csi_clk)
+	.parent = &osc_clk,
 	.enable_reg = MXC_CCM_CCGR3,
 	.enable_shift = MXC_CCM_CCGRx_CG0_OFFSET,
 	.enable = _clk_enable,
@@ -4065,9 +4062,9 @@ int __init mx6sl_clocks_init(unsigned long ckil, unsigned long osc,
 		     3 << MXC_CCM_CCGRx_CG11_OFFSET, MXC_CCM_CCGR1);
 	__raw_writel(1 << MXC_CCM_CCGRx_CG12_OFFSET |
 		     1 << MXC_CCM_CCGRx_CG11_OFFSET |
-		     1 << MXC_CCM_CCGRx_CG10_OFFSET |
-		     1 << MXC_CCM_CCGRx_CG9_OFFSET |
-		     1 << MXC_CCM_CCGRx_CG8_OFFSET, MXC_CCM_CCGR2);
+		     3 << MXC_CCM_CCGRx_CG10_OFFSET |
+		     3 << MXC_CCM_CCGRx_CG9_OFFSET |
+		     3 << MXC_CCM_CCGRx_CG8_OFFSET, MXC_CCM_CCGR2);
 	__raw_writel(1 << MXC_CCM_CCGRx_CG14_OFFSET |
 		     3 << MXC_CCM_CCGRx_CG13_OFFSET |
 		     3 << MXC_CCM_CCGRx_CG12_OFFSET |

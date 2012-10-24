@@ -89,6 +89,18 @@ gctCONST_STRING _DispatchText[] =
 };
 #endif
 
+#if gcdENABLE_RECOVERY
+void
+_ResetFinishFunction(
+    gctPOINTER Data
+    )
+{
+    gckKERNEL kernel = (gckKERNEL)Data;
+
+    gckOS_AtomSet(kernel->os, kernel->resetAtom, 0);
+}
+#endif
+
 /*******************************************************************************
 **
 **  gckKERNEL_Construct
@@ -246,6 +258,17 @@ gckKERNEL_Construct(
         /* Construct the gckMMU object. */
         gcmkONERROR(
             gckMMU_Construct(kernel, gcdMMU_SIZE, &kernel->mmu));
+
+#if gcdENABLE_RECOVERY
+        gcmkONERROR(
+            gckOS_AtomConstruct(Os, &kernel->resetAtom));
+
+        gcmkVERIFY_OK(
+            gckOS_CreateTimer(Os,
+                              (gctTIMERFUNCTION)_ResetFinishFunction,
+                              (gctPOINTER)kernel,
+                              &kernel->resetFlagClearTimer));
+#endif
     }
 
 #if VIVANTE_PROFILER
@@ -301,6 +324,19 @@ OnError:
         {
             gcmkVERIFY_OK(gckOS_AtomDestroy(Os, kernel->atomClients));
         }
+
+#if gcdENABLE_RECOVERY
+        if (kernel->resetAtom != gcvNULL)
+        {
+            gcmkVERIFY_OK(gckOS_AtomDestroy(Os, kernel->resetAtom));
+        }
+
+        if (kernel->resetFlagClearTimer)
+        {
+            gcmkVERIFY_OK(gckOS_StopTimer(Os, kernel->resetFlagClearTimer));
+            gcmkVERIFY_OK(gckOS_DestoryTimer(Os, kernel->resetFlagClearTimer));
+        }
+#endif
 
         if (kernel->dbCreated && kernel->db != gcvNULL)
         {
@@ -409,6 +445,16 @@ gckKERNEL_Destroy(
 
         /* Destroy the gckHARDWARE object. */
         gcmkVERIFY_OK(gckHARDWARE_Destroy(Kernel->hardware));
+
+#if gcdENABLE_RECOVERY
+        gcmkVERIFY_OK(gckOS_AtomDestroy(Kernel->os, Kernel->resetAtom));
+
+        if (Kernel->resetFlagClearTimer)
+        {
+            gcmkVERIFY_OK(gckOS_StopTimer(Kernel->os, Kernel->resetFlagClearTimer));
+            gcmkVERIFY_OK(gckOS_DestoryTimer(Kernel->os, Kernel->resetFlagClearTimer));
+        }
+#endif
     }
 
     /* Detsroy the client atom. */
@@ -787,6 +833,12 @@ gckKERNEL_Dispatch(
     case gcvHAL_FREE_NON_PAGED_MEMORY:
         physical = Interface->u.FreeNonPagedMemory.physical;
 
+        /* Unmap user logical out of physical memory first. */
+        gcmkONERROR(gckOS_UnmapUserLogical(Kernel->os,
+                                           physical,
+                                           Interface->u.FreeNonPagedMemory.bytes,
+                                           Interface->u.FreeNonPagedMemory.logical));
+
         /* Free non-paged memory. */
         gcmkONERROR(
             gckOS_FreeNonPagedMemory(Kernel->os,
@@ -832,6 +884,12 @@ gckKERNEL_Dispatch(
 
     case gcvHAL_FREE_CONTIGUOUS_MEMORY:
         physical = Interface->u.FreeContiguousMemory.physical;
+
+        /* Unmap user logical out of physical memory first. */
+        gcmkONERROR(gckOS_UnmapUserLogical(Kernel->os,
+                                           physical,
+                                           Interface->u.FreeContiguousMemory.bytes,
+                                           Interface->u.FreeContiguousMemory.logical));
 
         /* Free contiguous memory. */
         gcmkONERROR(
@@ -1124,10 +1182,70 @@ gckKERNEL_Dispatch(
             break;
 
         case gcvUSER_SIGNAL_WAIT:
-            /* Wait on the signal. */
-            status = gckOS_WaitUserSignal(Kernel->os,
-                                          Interface->u.UserSignal.id,
-                                          Interface->u.UserSignal.wait);
+#if gcdGPU_TIMEOUT
+            if (Interface->u.UserSignal.wait == gcvINFINITE)
+            {
+                gckHARDWARE hardware;
+                gctUINT32 timer = 0;
+
+                for(;;)
+                {
+                    /* Wait on the signal. */
+                    status = gckOS_WaitUserSignal(Kernel->os,
+                                                  Interface->u.UserSignal.id,
+                                                  gcdGPU_ADVANCETIMER);
+
+                    if (status == gcvSTATUS_TIMEOUT)
+                    {
+                        gcmkONERROR(
+                            gckOS_SignalQueryHardware(Kernel->os,
+                                                      (gctSIGNAL)Interface->u.UserSignal.id,
+                                                      &hardware));
+
+                        if (hardware)
+                        {
+                            /* This signal is bound to a hardware,
+                            ** so the timeout is limited by gcdGPU_TIMEOUT.
+                            */
+                            timer += gcdGPU_ADVANCETIMER;
+                        }
+
+                        if (timer >= gcdGPU_TIMEOUT)
+                        {
+                            gcmkONERROR(
+                                gckOS_Broadcast(Kernel->os,
+                                                hardware,
+                                                gcvBROADCAST_GPU_STUCK));
+
+                            timer = 0;
+
+                            /* If a few process try to reset GPU, only one
+                            ** of them can do the real reset, other processes
+                            ** still need to wait for this signal is triggered,
+                            ** which menas reset is finished.
+                            */
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        /* Bail out on other error. */
+                        gcmkONERROR(status);
+
+                        /* Wait for signal successfully. */
+                        break;
+                    }
+                }
+            }
+            else
+#endif
+            {
+                /* Wait on the signal. */
+                status = gckOS_WaitUserSignal(Kernel->os,
+                                              Interface->u.UserSignal.id,
+                                              Interface->u.UserSignal.wait);
+            }
+
             break;
 
         case gcvUSER_SIGNAL_MAP:
@@ -1823,6 +1941,7 @@ gckKERNEL_Dispatch(
         status = gcvSTATUS_NOT_SUPPORTED;
 #endif
         break;
+
     default:
         /* Invalid command. */
         gcmkONERROR(gcvSTATUS_INVALID_ARGUMENT);
@@ -1981,6 +2100,24 @@ gckKERNEL_AttachProcessEx(
 
             /* Save the last know process ID. */
             Kernel->db->lastProcessID = PID;
+        }
+
+#if gcdENABLE_VG
+        if (Kernel->vg == gcvNULL)
+#endif
+        {
+            status = gckEVENT_Submit(Kernel->eventObj, gcvTRUE, gcvFALSE);
+
+            if (status == gcvSTATUS_INTERRUPTED && Kernel->eventObj->submitTimer)
+            {
+                gcmkONERROR(gckOS_StartTimer(Kernel->os,
+                                             Kernel->eventObj->submitTimer,
+                                             1));
+            }
+            else
+            {
+                gcmkONERROR(status);
+            }
         }
 
         /* Decrement the number of clients attached. */
@@ -2530,7 +2667,7 @@ gckKERNEL_Recovery(
     )
 {
 #if gcdENABLE_RECOVERY
-#define gcvEVENT_MASK 0x3FFFFFFF
+#define gcdEVENT_MASK 0x3FFFFFFF
     gceSTATUS status;
     gckEVENT eventObj;
     gckHARDWARE hardware;
@@ -2538,7 +2675,7 @@ gckKERNEL_Recovery(
     gctUINT32 processID;
     gcskSECURE_CACHE_PTR cache;
 #endif
-
+    gctUINT32 oldValue;
     gcmkHEADER_ARG("Kernel=0x%x", Kernel);
 
     /* Validate the arguemnts. */
@@ -2552,28 +2689,29 @@ gckKERNEL_Recovery(
     hardware = Kernel->hardware;
     gcmkVERIFY_OBJECT(hardware, gcvOBJ_HARDWARE);
 
-    /* Handle all outstanding events now. */
-#if gcdSMP
-    gcmkONERROR(gckOS_AtomSet(Kernel->os, eventObj->pending, gcvEVENT_MASK));
-#else
-    eventObj->pending = gcvEVENT_MASK;
-#endif
-    gcmkONERROR(gckEVENT_Notify(eventObj, 1));
-
-    /* Again in case more events got submitted. */
-#if gcdSMP
-    gcmkONERROR(gckOS_AtomSet(Kernel->os, eventObj->pending, gcvEVENT_MASK));
-#else
-    eventObj->pending = gcvEVENT_MASK;
-#endif
-    gcmkONERROR(gckEVENT_Notify(eventObj, 2));
-
 #if gcdSECURE_USER
     /* Flush the secure mapping cache. */
     gcmkONERROR(gckOS_GetProcessID(&processID));
     gcmkONERROR(gckKERNEL_GetProcessDBCache(Kernel, processID, &cache));
     gcmkONERROR(gckKERNEL_FlushTranslationCache(Kernel, cache, gcvNULL, 0));
 #endif
+
+    gcmkONERROR(
+        gckOS_AtomicExchange(Kernel->os, Kernel->resetAtom, 1, &oldValue));
+
+    if (oldValue)
+    {
+        /* Some one else will recovery GPU. */
+        return gcvSTATUS_OK;
+    }
+
+    /* Start a timer to clear reset flag, before timer is expired,
+    ** other recovery request is ignored. */
+    gcmkVERIFY_OK(
+        gckOS_StartTimer(Kernel->os,
+                         Kernel->resetFlagClearTimer,
+                         gcdGPU_TIMEOUT - 500));
+
 
     /* Try issuing a soft reset for the GPU. */
     status = gckHARDWARE_Reset(hardware);
@@ -2590,6 +2728,22 @@ gckKERNEL_Recovery(
         /* Bail out on reset error. */
         gcmkONERROR(status);
     }
+
+    /* Handle all outstanding events now. */
+#if gcdSMP
+    gcmkONERROR(gckOS_AtomSet(Kernel->os, eventObj->pending, gcdEVENT_MASK));
+#else
+    eventObj->pending = gcdEVENT_MASK;
+#endif
+    gcmkONERROR(gckEVENT_Notify(eventObj, 1));
+
+    /* Again in case more events got submitted. */
+#if gcdSMP
+    gcmkONERROR(gckOS_AtomSet(Kernel->os, eventObj->pending, gcdEVENT_MASK));
+#else
+    eventObj->pending = gcdEVENT_MASK;
+#endif
+    gcmkONERROR(gckEVENT_Notify(eventObj, 2));
 
     /* Success. */
     gcmkFOOTER_NO();

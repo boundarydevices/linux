@@ -72,6 +72,7 @@ struct mxc_elcdif_fb_data {
 	bool wait4vsync;
 	bool wait4framedone;
 	bool panning;
+	bool running;
 	struct completion vsync_complete;
 	struct completion frame_done_complete;
 	struct semaphore flip_sem;
@@ -86,6 +87,12 @@ struct elcdif_signal_cfg {
 	unsigned Vsync_pol:1;	/* true = active high */
 };
 
+struct mxcfb_mode {
+	int dev_mode;
+	int num_modes;
+	struct fb_videomode *mode;
+};
+
 static int mxc_elcdif_fb_blank(int blank, struct fb_info *info);
 static int mxc_elcdif_fb_map_video_memory(struct fb_info *info);
 static int mxc_elcdif_fb_unmap_video_memory(struct fb_info *info);
@@ -97,6 +104,15 @@ static bool g_elcdif_axi_clk_enable;
 static bool g_elcdif_pix_clk_enable;
 static struct clk *g_elcdif_axi_clk;
 static struct clk *g_elcdif_pix_clk;
+static struct mxcfb_mode mxc_disp_mode;
+
+static void dump_fb_videomode(struct fb_videomode *m)
+{
+	pr_debug("fb_videomode = %d %d %d %d %d %d %d %d %d %d %d %d %d\n",
+		m->refresh, m->xres, m->yres, m->pixclock, m->left_margin,
+		m->right_margin, m->upper_margin, m->lower_margin,
+		m->hsync_len, m->vsync_len, m->sync, m->vmode, m->flag);
+}
 
 static inline void setup_dotclk_panel(u32 pixel_clk,
 				      u16 v_pulse_width,
@@ -113,15 +129,38 @@ static inline void setup_dotclk_panel(u32 pixel_clk,
 				      int enable_present)
 {
 	u32 val, rounded_pixel_clk;
+	u32 rounded_parent_clk;
+	struct clk *clk_parent;
 
 	if (!g_elcdif_axi_clk_enable) {
 		clk_enable(g_elcdif_axi_clk);
 		g_elcdif_axi_clk_enable = true;
 	}
 
+	/* Init clocking */
 	dev_dbg(g_elcdif_dev, "pixel clk = %d\n", pixel_clk);
-	rounded_pixel_clk = clk_round_rate(g_elcdif_pix_clk, pixel_clk);
+
+	clk_parent = clk_get_parent(g_elcdif_pix_clk);
+	if (clk_parent == NULL)
+		dev_err(g_elcdif_dev, "%s Failed get clk parent\n", __func__);
+
+	rounded_pixel_clk = pixel_clk * 2;
+
+	rounded_parent_clk = clk_round_rate(clk_parent,
+				rounded_pixel_clk);
+
+	while (rounded_pixel_clk < rounded_parent_clk) {
+		/* the max divider from parent to di is 8 */
+		if (rounded_parent_clk / pixel_clk < 8)
+			rounded_pixel_clk += pixel_clk * 2;
+	}
+
+	clk_set_rate(clk_parent, rounded_pixel_clk);
+	rounded_pixel_clk =
+		clk_round_rate(g_elcdif_pix_clk, pixel_clk);
 	clk_set_rate(g_elcdif_pix_clk, rounded_pixel_clk);
+
+	msleep(5);
 
 	__raw_writel(BM_ELCDIF_CTRL_DATA_SHIFT_DIR,
 		     elcdif_base + HW_ELCDIF_CTRL_CLR);
@@ -519,6 +558,35 @@ static inline void mxc_init_elcdif(void)
 	return;
 }
 
+void mxcfb_elcdif_register_mode(const struct fb_videomode *modedb,
+	int num_modes, int dev_mode)
+{
+	struct fb_videomode *mode;
+
+	mode = kzalloc(num_modes * sizeof(struct fb_videomode), GFP_KERNEL);
+
+	if (!mode) {
+		dev_err(g_elcdif_dev, "%s Failed to allocate mode data\n", __func__);
+		return;
+	}
+
+	if (mxc_disp_mode.num_modes)
+		memcpy(mode, mxc_disp_mode.mode,
+			mxc_disp_mode.num_modes * sizeof(struct fb_videomode));
+	if (modedb)
+		memcpy(mode + mxc_disp_mode.num_modes, modedb,
+			num_modes * sizeof(struct fb_videomode));
+
+	if (mxc_disp_mode.num_modes)
+		kfree(mxc_disp_mode.mode);
+
+	mxc_disp_mode.mode = mode;
+	mxc_disp_mode.num_modes += num_modes;
+	mxc_disp_mode.dev_mode = dev_mode;
+
+	return;
+}
+
 int mxc_elcdif_frame_addr_setup(dma_addr_t phys)
 {
 	int ret = 0;
@@ -548,7 +616,7 @@ static inline void mxc_elcdif_dma_release(void)
 	return;
 }
 
-static inline void mxc_elcdif_run(void)
+static inline void mxc_elcdif_run(struct mxc_elcdif_fb_data *data)
 {
 	if (!g_elcdif_axi_clk_enable) {
 		clk_enable(g_elcdif_axi_clk);
@@ -559,6 +627,9 @@ static inline void mxc_elcdif_run(void)
 		     elcdif_base + HW_ELCDIF_CTRL_SET);
 	__raw_writel(BM_ELCDIF_CTRL_RUN,
 		     elcdif_base + HW_ELCDIF_CTRL_SET);
+
+	data->running = true;
+
 	return;
 }
 
@@ -813,8 +884,8 @@ static int mxc_elcdif_fb_set_par(struct fb_info *fbi)
 	dev_dbg(fbi->device, "Reconfiguring framebuffer\n");
 
 	/* If parameter no change, don't reconfigure. */
-	if (mxc_elcdif_fb_par_equal(fbi, data))
-	    return 0;
+	if (mxc_elcdif_fb_par_equal(fbi, data) && (data->running == true))
+		return 0;
 
 	sema_init(&data->flip_sem, 1);
 
@@ -882,7 +953,7 @@ static int mxc_elcdif_fb_set_par(struct fb_info *fbi)
 			   sig_cfg,
 			   1);
 	mxc_elcdif_frame_addr_setup(fbi->fix.smem_start);
-	mxc_elcdif_run();
+	mxc_elcdif_run(data);
 	mxc_elcdif_blank_panel(FB_BLANK_UNBLANK);
 
 	fbi->mode = (struct fb_videomode *)fb_match_mode(&fbi->var,
@@ -1236,6 +1307,9 @@ static int mxc_elcdif_fb_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct fb_info *fbi;
 	struct mxc_fb_platform_data *pdata = pdev->dev.platform_data;
+	const struct fb_videomode *mode;
+	struct fb_videomode m;
+	int num;
 
 	fbi = framebuffer_alloc(sizeof(struct mxc_elcdif_fb_data), &pdev->dev);
 	if (fbi == NULL) {
@@ -1296,20 +1370,63 @@ static int mxc_elcdif_fb_probe(struct platform_device *pdev)
 	if (pdata && !data->output_pix_fmt)
 		data->output_pix_fmt = pdata->interface_pix_fmt;
 
+	INIT_LIST_HEAD(&fbi->modelist);
+
 	if (pdata && pdata->mode && pdata->num_modes)
 		fb_videomode_to_modelist(pdata->mode, pdata->num_modes,
 				&fbi->modelist);
+
+	if (mxc_disp_mode.num_modes) {
+		int i;
+		mode = mxc_disp_mode.mode;
+		num = mxc_disp_mode.num_modes;
+
+		for (i = 0; i < num; i++) {
+			/*
+			 * FIXME now we do not support interlaced
+			 * mode for ddc mode
+			 */
+			if ((mxc_disp_mode.dev_mode
+				& MXC_DISP_DDC_DEV) &&
+				(mode[i].vmode & FB_VMODE_INTERLACED))
+				continue;
+			else {
+				dev_dbg(&pdev->dev, "Added mode %d:", i);
+				dev_dbg(&pdev->dev,
+					"xres = %d, yres = %d, freq = %d, vmode = %d, flag = %d\n",
+					mode[i].xres, mode[i].yres,	mode[i].refresh, mode[i].vmode,
+					mode[i].flag);
+				fb_add_videomode(&mode[i], &fbi->modelist);
+			}
+		}
+	}
 
 	if (!fb_mode && pdata && pdata->mode_str)
 		fb_mode = pdata->mode_str;
 
 	if (fb_mode) {
+		dev_dbg(&pdev->dev, "default video mode %s\n", fb_mode);
 		ret = fb_find_mode(&fbi->var, fbi, fb_mode, NULL, 0, NULL,
 				   default_bpp);
-		if ((!ret || (ret > 2)) && pdata && pdata->mode &&
-		    pdata->num_modes)
-			fb_find_mode(&fbi->var, fbi, fb_mode, pdata->mode,
+		if ((ret == 1) || (ret == 2)) {
+			fb_var_to_videomode(&m, &fbi->var);
+			dump_fb_videomode(&m);
+			mode = fb_find_nearest_mode(&m,
+				&fbi->modelist);
+			fb_videomode_to_var(&fbi->var, mode);
+		} else if (pdata && pdata->mode && pdata->num_modes) {
+			ret = fb_find_mode(&fbi->var, fbi, fb_mode, pdata->mode,
 					pdata->num_modes, NULL, default_bpp);
+			if (!ret) {
+				dev_err(fbi->device,
+					"No valid video mode found");
+				goto err2;
+			}
+		} else {
+			dev_err(fbi->device,
+				"No valid video mode found");
+			goto err2;
+		}
 	}
 
 	mxc_elcdif_fb_check_var(&fbi->var, fbi);
@@ -1342,6 +1459,19 @@ static int mxc_elcdif_fb_probe(struct platform_device *pdev)
 	 * access ELCDIF registers.
 	 */
 	clk_set_rate(g_elcdif_pix_clk, 25000000);
+
+	fbi->var.activate |= FB_ACTIVATE_FORCE;
+	console_lock();
+	fbi->flags |= FBINFO_MISC_USEREVENT;
+	ret = fb_set_var(fbi, &fbi->var);
+	fbi->flags &= ~FBINFO_MISC_USEREVENT;
+	console_unlock();
+
+	if (data->cur_blank == FB_BLANK_UNBLANK) {
+		console_lock();
+		fb_blank(fbi, FB_BLANK_UNBLANK);
+		console_unlock();
+	}
 
 	ret = register_framebuffer(fbi);
 	if (ret)
@@ -1424,6 +1554,7 @@ static int mxc_elcdif_fb_suspend(struct platform_device *pdev,
 		clk_disable(g_elcdif_axi_clk);
 		g_elcdif_axi_clk_enable = false;
 	}
+	data->running = false;
 	console_unlock();
 	return 0;
 }

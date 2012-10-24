@@ -29,12 +29,6 @@
 	ldr	r7, [r1, #0x318] /* DRAM_DQM3 */
 	stmfd	r9!, {r4-r7}
 
-	ldr	r4, [r1, #0x344] /* DRAM_SDQS0 */
-	ldr	r5, [r1, #0x348] /* DRAM_SDQS1 */
-	ldr	r6, [r1, #0x34c] /* DRAM_SDQS2 */
-	ldr	r7, [r1, #0x350] /* DRAM_SDQS3 */
-	stmfd	r9!, {r4-r7}
-
 	ldr	r4, [r1, #0x5c4] /* GPR_B0DS */
 	ldr	r5, [r1, #0x5cc] /* GPR_B1DS */
 	ldr	r6, [r1, #0x5d4] /* GPR_B2DS */
@@ -56,24 +50,21 @@
 	ldr	r4, [r1, #0x330] /* DRAM_SDCKE0 */
 	ldr	r5, [r1, #0x334] /* DRAM_SDCKE1 */
 	ldr	r6, [r1, #0x320] /* DRAM_RESET */
-	ldr	r7, [r1, #0x5c8] /* GPR_CTLDS */
-	stmfd	r9!, {r4-r7}
+	stmfd	r9!, {r4-r6}
 
 	.endm
 
 	.macro	sl_ddr_io_restore
 
+	/* r9 points to IRAM stack.
+	  * r1 points to IOMUX base address.
+	  * r8 points to MMDC  base address.
+	  */
 	ldmea	r9!, {r4-r7}
 	str	r4, [r1, #0x30c] /* DRAM_DQM0 */
 	str	r5, [r1, #0x310] /* DRAM_DQM1 */
 	str	r6, [r1, #0x314] /* DRAM_DQM2 */
 	str	r7, [r1, #0x318] /* DRAM_DQM3 */
-
-	ldmea	r9!, {r4-r7}
-	str	r4, [r1, #0x344] /* DRAM_SDQS0 */
-	str	r5, [r1, #0x348] /* DRAM_SDQS1 */
-	str	r6, [r1, #0x34c] /* DRAM_SDQS2 */
-	str	r7, [r1, #0x350] /* DRAM_SDQS3 */
 
 	ldmea	r9!, {r4-r7}
 	str	r4, [r1, #0x5c4] /* GPR_B0DS */
@@ -93,11 +84,35 @@
 	str	r6, [r1, #0x33c] /* DRAM_SODT0*/
 	str	r7, [r1, #0x340] /* DRAM_SODT1*/
 
-	ldmea	r9!, {r4-r7}
+	ldmea	r9!, {r4-r6}
 	str	r4, [r1, #0x330] /* DRAM_SDCKE0 */
 	str	r5, [r1, #0x334] /* DRAM_SDCKE1 */
 	str	r6, [r1, #0x320] /* DRAM_RESET */
-	str	r7, [r1, #0x5c8] /* GPR_CTLDS */
+
+	/* Need to reset the FIFO to avoid MMDC lockup
+	  * caused because of floating/changing the
+	  * configuration of many DDR IO pads.
+	  */
+	/* reset read FIFO, RST_RD_FIFO */
+	ldr	r7, =0x83c
+	ldr	r6, [r8, r7]
+	orr	r6, r6, #0x80000000
+	str	r6, [r8, r7]
+fifo_reset1_wait:
+	ldr	r6, [r8, r7]
+	and	r6, r6, #0x80000000
+	cmp	r6, #0
+	bne	fifo_reset1_wait
+
+	/* reset FIFO a second time */
+	ldr	r6, [r8, r7]
+	orr	r6, r6, #0x80000000
+	str	r6, [r8, r7]
+fifo_reset2_wait:
+	ldr	r6, [r8, r7]
+	and	r6, r6, #0x80000000
+	cmp	r6, #0
+	bne	fifo_reset2_wait
 
 	.endm
 
@@ -108,18 +123,6 @@
 	str	r4, [r1, #0x310] /* DRAM_DQM1 */
 	str	r4, [r1, #0x314] /* DRAM_DQM2 */
 	str	r4, [r1, #0x318] /* DRAM_DQM3 */
-
-	/* Make sure the Pull Ups are enabled.
-	 * So only reduce the drive stength, but
-	 * leave the pull-ups in the original state.
-	 * This is required for LPDDR2.
-	 */
-	ldr	r4, [r1, #0x344]
-	orr	r4, r4, #0x3000
-	str	r4, [r1, #0x344] /* DRAM_SDQS0 */
-	str	r4, [r1, #0x348] /* DRAM_SDQS1 */
-	str	r4, [r1, #0x34c] /* DRAM_SDQS2 */
-	str	r4, [r1, #0x350] /* DRAM_SDQS3 */
 
 	str	r4, [r1, #0x5c4] /* GPR_B0DS */
 	str	r4, [r1, #0x5cc] /* GPR_B1DS */
@@ -235,15 +238,53 @@ mmdc_podf:
       /* Set the DDR IO in LPM state. */
      sl_ddr_io_set_lpm
 
-     /* Set AHB to 8MHz., AXI to 3MHz */
-     /* We want to ensure IPG_PERCLK to AHB
-      * clk ratio is 1:2.5
+     /* Check if none of the PLLs are
+      * locked, except PLL1 which will get
+      * bypassed below.
+      * We should not be here if PLL2 is not
+      * bypassed.
       */
-     /* Store the AXI/AHB podfs. */
+     ldr    r7, =1
+      /* USB1 PLL3 */
+      ldr    r6, [r3, #0x10]
+      and    r6, r6, #0x80000000
+      cmp  r6, #0x80000000
+      beq   no_analog_saving
+
+      /* USB2 PLL7 */
+      ldr    r6, [r3, #0x20]
+      and    r6, r6, #0x80000000
+      cmp  r6, #0x80000000
+      beq   no_analog_saving
+
+      /* Audio PLL4 */
+      ldr    r6, [r3, #0x70]
+      and    r6, r6, #0x80000000
+      cmp  r6, #0x80000000
+      beq   no_analog_saving
+
+      /* Video PLL5 */
+      ldr    r6, [r3, #0xA0]
+      and    r6, r6, #0x80000000
+      cmp  r6, #0x80000000
+      beq   no_analog_saving
+
+      /* ENET PLL8 */
+      ldr    r6, [r3, #0xE0]
+      and    r6, r6, #0x80000000
+      cmp  r6, #0x80000000
+      beq   no_analog_saving
+
+      b      cont
+
+no_analog_saving:
+     ldr    r7, =0
+
+cont:
+     /*Set the AHB to 3MHz. AXI to 3MHz. */
      ldr    r9, [r2, #0x14]
      mov   r6, r9
-     bic      r6, r6, #0x1c00
-     orr    r6, r6, #0x800
+     orr    r6, r6, #0x1c00
      orr    r6, r6, #0x70000
      str     r6, [r2, #0x14]
 
@@ -271,7 +312,7 @@ ahb_podf:
     str     r6, [r3, #0x04]
 
     /* Set the ARM PODF to divide by 8. */
-    /* IPG is at 4MHz here, we need ARM to
+    /* IPG is at 1.5MHz here, we need ARM to
      * run at the 12:5 ratio (WAIT mode issue).
      */
     ldr    r6, =0x7
@@ -283,9 +324,62 @@ podf_loop:
      cmp   r6, #0x0
      bne   podf_loop
 
-     /* Now do WFI. */
-     dsb
+      /* Check if we can save some
+       * in the Analog section.
+       */
+      cmp     r7, #0x1
+      bne     do_wfi
 
+     /* Disable 1p1 brown out. */
+     ldr     r6, [r3, #0x110]
+     bic     r6, r6, #0x2
+     str     r6, [r3, #0x110]
+
+     /* Enable the weak 2P5 */
+     ldr     r6, [r3, #0x130]
+     orr    r6, r6, #0x40000
+     str     r6, [r3, #0x130]
+
+     /*Disable main 2p5. */
+     ldr     r6, [r3, #0x130]
+     bic    r6, r6, #0x1
+     str     r6, [r3, #0x130]
+
+    /* Set the OSC bias current to -37.5%
+     * to drop the power on VDDHIGH.
+     */
+     ldr     r6, [r3, #0x150]
+     orr    r6, r6, #0xC000
+     str     r6, [r3, #0x150]
+
+     /* Enable low power bandgap */
+     ldr     r6, [r3, #0x260]
+     orr     r6, r6, #0x20
+     str     r6, [r3, #0x260]
+
+    /* turn off the bias current
+      * from the regular bandgap.
+      */
+     ldr     r6, [r3, #0x260]
+     orr     r6, r6, #0x80
+     str     r6, [r3, #0x260]
+
+     /* Clear the REFTOP_SELFBIASOFF,
+       * self-bias circuit of the band gap.
+       * Per RM, should be cleared when
+       * band gap is powered down.
+       */
+     ldr     r6, [r3, #0x150]
+     bic     r6, r6, #0x8
+     str     r6, [r3, #0x150]
+
+     /*Power down the regular bandgap. */
+     ldr     r6, [r3, #0x150]
+     orr     r6, r6, #0x1
+     str     r6, [r3, #0x150]
+
+do_wfi:
+     /* Now do WFI. */
      wfi
 
      /* Set original ARM PODF back. */
@@ -296,6 +390,60 @@ podf_loop1:
      ldr     r6, [r2, #0x48]
      cmp   r6, #0x0
      bne   podf_loop1
+
+      /* Check if powered down
+        * analog components.
+        */
+      cmp     r7, #0x1
+      bne     skip_analog_restore
+
+     /*Power up the regular bandgap. */
+     ldr     r6, [r3, #0x150]
+     bic      r6, r6, #0x1
+     str     r6, [r3, #0x150]
+
+    /* turn on the bias current
+      * from the regular bandgap.
+      */
+     ldr     r6, [r3, #0x260]
+     bic     r6, r6, #0x80
+     str     r6, [r3, #0x260]
+
+     /* Disable the low power bandgap */
+     ldr     r6, [r3, #0x260]
+     bic     r6, r6, #0x20
+     str     r6, [r3, #0x260]
+
+    /* Set the OSC bias current to max
+     * value for normal operation.
+     */
+     ldr     r6, [r3, #0x150]
+     bic    r6, r6, #0xC000
+     str     r6, [r3, #0x150]
+
+     /*Enable main 2p5. */
+     ldr     r6, [r3, #0x130]
+     orr    r6, r6, #0x1
+     str     r6, [r3, #0x130]
+
+    /* Ensure the 2P5 is up. */
+loop_2p5:
+     ldr     r6, [r3, #0x130]
+     and    r6, r6, #0x20000
+     cmp    r6, #0x20000
+     bne	loop_2p5
+
+     /* Disable the  weak 2P5 */
+     ldr     r6, [r3, #0x130]
+     bic    r6, r6, #0x40000
+     str     r6, [r3, #0x130]
+
+     /* Enable 1p1 brown out. */
+     ldr     r6, [r3, #0x110]
+     orr     r6, r6, #0x2
+     str     r6, [r3, #0x110]
+
+skip_analog_restore:
 
      /* Power up PLL1 and un-bypass it. */
     ldr     r6, =(1 << 12)

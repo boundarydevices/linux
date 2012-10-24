@@ -338,6 +338,11 @@ struct _gckKERNEL
     gckDB                       db;
     gctBOOL                     dbCreated;
 
+#if gcdENABLE_RECOVERY
+    gctPOINTER                  resetFlagClearTimer;
+    gctPOINTER                  resetAtom;
+#endif
+
     /* Pointer to gckEVENT object. */
     gcsTIMER                    timers[8];
     gctUINT32                   timeOut;
@@ -525,6 +530,8 @@ struct _gckEVENT
     gcsEVENT_QUEUE_PTR          freeList;
     gcsEVENT_QUEUE              repoList[gcdREPO_LIST_COUNT];
     gctPOINTER                  eventListMutex;
+
+    gctPOINTER                  submitTimer;
 };
 
 /* Free all events belonging to a process. */
