@@ -175,6 +175,7 @@ int __init mxc_early_serial_console_init(unsigned long base, struct clk *clk)
 	return 0;
 }
 
+#if 0
 int __init mxc_early_uart_console_disable(void)
 {
 	struct mxc_early_uart_device *device = &mxc_early_device;
@@ -189,3 +190,4 @@ int __init mxc_early_uart_console_disable(void)
 	return 0;
 }
 late_initcall_sync(mxc_early_uart_console_disable);
+#endif
