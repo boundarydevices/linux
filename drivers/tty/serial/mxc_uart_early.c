@@ -175,7 +175,6 @@ int __init mxc_early_serial_console_init(unsigned long base, struct clk *clk)
 	return 0;
 }
 
-#if 0
 int __init mxc_early_uart_console_disable(void)
 {
 	struct mxc_early_uart_device *device = &mxc_early_device;
@@ -184,10 +183,9 @@ int __init mxc_early_uart_console_disable(void)
 	if (mxc_early_uart_console.index >= 0) {
 		unregister_console(&mxc_early_uart_console);
 		iounmap(port->membase);
-		clk_disable(device->clk);
+//		clk_disable(device->clk);
 		clk_put(device->clk);
 	}
 	return 0;
 }
 late_initcall_sync(mxc_early_uart_console_disable);
-#endif
