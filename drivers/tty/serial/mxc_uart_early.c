@@ -183,7 +183,7 @@ int __init mxc_early_uart_console_disable(void)
 	if (mxc_early_uart_console.index >= 0) {
 		unregister_console(&mxc_early_uart_console);
 		iounmap(port->membase);
-		clk_disable(device->clk);
+//		clk_disable(device->clk);
 		clk_put(device->clk);
 	}
 	return 0;
