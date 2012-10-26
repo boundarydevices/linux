@@ -159,7 +159,9 @@ static int tstype_read_proc
 		struct i2c_msg readReg[] = {
 			{gts->client->addr, 0, 1, regAddr},
 			{gts->client->addr, I2C_M_RD, 1, buf},
-			{gts->client->addr, 0, 1, sumXReg}
+		};
+		struct i2c_msg select_sumX = {
+			gts->client->addr, 0, 1, sumXReg
 		};
 		int totalWritten = 0 ;
 		if  (0 < count) {
@@ -179,6 +181,7 @@ static int tstype_read_proc
 			if (totalWritten < 0) {
 				totalWritten = 0;
 			}
+			i2c_transfer(gts->client->adapter, &select_sumX, 1);
 		}
 		*eof = 1 ;
 		return totalWritten ;
