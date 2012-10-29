@@ -1942,8 +1942,6 @@ static void sdhci_pre_req(struct mmc_host *mmc, struct mmc_request *mrq,
 
 static const struct mmc_host_ops sdhci_ops = {
 	.request	= sdhci_request,
-	.post_req	= sdhci_post_req,
-	.pre_req	= sdhci_pre_req,
 	.set_ios	= sdhci_set_ios,
 	.get_ro		= sdhci_get_ro,
 	.enable_sdio_irq = sdhci_enable_sdio_irq,
