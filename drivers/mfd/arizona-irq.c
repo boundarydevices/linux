@@ -205,7 +205,7 @@ int arizona_irq_init(struct arizona *arizona)
 	}
 
 	ret = irq_alloc_descs(arizona->pdata.irq_base, 0,
-			      ARRAY_SIZE(arizona->virqs), 0);
+			      ARRAY_SIZE(arizona->virq), 0);
 	if (ret < 0) {
 		dev_err(arizona->dev, "Failed to allocate IRQs: %d\n", ret);
 		return ret;
