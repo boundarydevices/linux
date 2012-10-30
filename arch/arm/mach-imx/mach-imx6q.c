@@ -114,6 +114,17 @@ static void __init imx6q_sabrelite_init(void)
 	imx6q_sabrelite_cko1_setup();
 }
 
+static void __init imx6q_1588_init(void)
+{
+	struct regmap *gpr;
+
+	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
+	if (!IS_ERR(gpr))
+		regmap_update_bits(gpr, 0x4, 1 << 21, 1 << 21);
+	else
+		pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
+
+}
 static void __init imx6q_usb_init(void)
 {
 	struct regmap *anatop;
@@ -150,6 +161,7 @@ static void __init imx6q_init_machine(void)
 
 	imx6q_pm_init();
 	imx6q_usb_init();
+	imx6q_1588_init();
 }
 
 static void __init imx6q_map_io(void)
