@@ -2699,11 +2699,13 @@ struct gpio n53k_gpios_specific[] __initdata = {
 /* Middle i2C bus has a switch */
 static const unsigned i2c2_gpiomux_gpios[] = {
 	/* i2c3- i2c6*/
-	I2C2_HUB_EDID, I2C2_HUB_BQ24163, I2C2_HUB_AMBIENT, I2C2_HUB_CAMERA
+	I2C2_HUB_EDID, I2C2_HUB_BQ24163, I2C2_HUB_AMBIENT, I2C2_HUB_CAMERA,
+	MAKE_GP(3, 6),		/* 7 - EIM_DA6 - rtc isl1208 select */
+
 };
 
 static const unsigned i2c2_gpiomux_values[] = {
-	1, 2, 4, 8
+	1, 2, 4, 8, 16
 };
 
 static struct gpio_i2cmux_platform_data i2c2_i2cmux_data = {
@@ -2781,6 +2783,14 @@ static struct i2c_board_info n53k_i2c6_board_info[] __initdata = {
 	 .type = "ov5642",
 	 .addr = 0x3c,
 	 .platform_data  = &camera_data,
+	},
+#endif
+};
+static struct i2c_board_info n53k_i2c7_board_info[] __initdata = {
+#if defined(CONFIG_RTC_DRV_ISL1208) || defined(CONFIG_RTC_DRV_ISL1208_MODULE)
+	{
+	 .type = "isl1208",
+	 .addr = 0x6f,
 	},
 #endif
 };
@@ -2934,6 +2944,8 @@ static iomux_v3_cfg_t n53k_pads_specific[] __initdata = {
 	MX53_PAD_NANDF_RB0__GPIO6_10,		/* i2c2 hub-Camera */
 	MX53_PAD_NANDF_WE_B__GPIO6_12,		/* main power */
 	MX53_PAD_PATA_CS_1__GPIO7_10,		/* eMMC reset */
+	MX53_PAD_EIM_DA6__GPIO_3_6,		/* rtc isl1208 i2c_en */
+	NEW_PAD_CTRL(MX53_PAD_EIM_OE__GPIO2_25, PAD_CTL_PUS_100K_UP)		/* rtc isl1208 interrupt */
 };
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
@@ -3037,6 +3049,7 @@ static void __init n53k_board_init(void)
 	i2c_register_board_info(4, n53k_i2c4_board_info, ARRAY_SIZE(n53k_i2c4_board_info));
 	i2c_register_board_info(5, n53k_i2c5_board_info, ARRAY_SIZE(n53k_i2c5_board_info));
 	i2c_register_board_info(6, n53k_i2c6_board_info, ARRAY_SIZE(n53k_i2c6_board_info));
+	i2c_register_board_info(7, n53k_i2c7_board_info, ARRAY_SIZE(n53k_i2c7_board_info));
 #endif
 
 	/* eMMC is sdhc4 */
