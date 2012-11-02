@@ -286,7 +286,7 @@ extern struct snd_soc_codec_device soc_codec_dev_sgtl5000;
 /*
  * SGTL5000_CHIP_MIC_CTRL
  */
-#define SGTL5000_BIAS_R_MASK			0x0200
+#define SGTL5000_BIAS_R_MASK			0x0300
 #define SGTL5000_BIAS_R_SHIFT			8
 #define SGTL5000_BIAS_R_WIDTH			2
 #define SGTL5000_BIAS_R_off			0x0
