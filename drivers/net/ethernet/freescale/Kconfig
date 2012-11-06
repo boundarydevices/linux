@@ -87,7 +87,7 @@ config GIANFAR
 
 config FEC_PTP
 	bool "PTP Hardware Clock (PHC)"
-	depends on FEC
+	depends on FEC && ARCH_MXC
 	select PPS
 	select PTP_1588_CLOCK
 	--help---
