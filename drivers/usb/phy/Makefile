@@ -4,4 +4,5 @@
 
 ccflags-$(CONFIG_USB_DEBUG) := -DDEBUG
 
+obj-$(CONFIG_OF)			+= of.o
 obj-$(CONFIG_USB_ISP1301)		+= isp1301.o
