@@ -769,6 +769,16 @@ static struct mxc_pwm_platform_data mxc_pwm2_platform_data = {
 	.pwmo_invert = 0,	/* GPIO_1 */
 };
 
+#ifdef CONFIG_MACH_MX53_NITROGEN_K
+#define N53K_DISPLAY_BL_EN			MAKE_GP(2, 16)
+
+int n53k_bl_notify(struct device *dev, int brightness)
+{
+	gpio_set_value(N53K_DISPLAY_BL_EN, brightness ? 1 : 0);
+	return 0;
+}
+#endif
+
 /* GPIO_1 lcd backlight(pwm2) */
 static struct platform_pwm_backlight_data mxc_backlight_data_pwm2 = {
 	.pwm_id = 1,
@@ -777,6 +787,7 @@ static struct platform_pwm_backlight_data mxc_backlight_data_pwm2 = {
 	.pwm_period_ns = 1000000000/32768,	/* 30517 */
 #ifdef CONFIG_MACH_MX53_NITROGEN_K
 	.usable_range = {0,256},
+	.notify = n53k_bl_notify,
 #endif
 };
 #endif
@@ -2624,6 +2635,7 @@ struct gpio n53k_gpios_specific[] __initdata = {
 #ifdef CONFIG_K2
 #define	N53K_HEADPHONE_DET			MAKE_GP(1, 2)
 	{.label = "headphone detect",	.gpio = MAKE_GP(1, 2),		.flags = GPIOF_DIR_IN},
+#define N53K_DISPLAY_BL_EN			MAKE_GP(2, 16)
 	{.label = "Display power",	.gpio = MAKE_GP(2, 16),		.flags = GPIOF_INIT_HIGH},
 #define N53K_CAMERA_POWER_DOWN			MAKE_GP(2, 22)
 	{.label = "Camera power down",	.gpio = MAKE_GP(2, 22),		.flags = GPIOF_INIT_HIGH},
