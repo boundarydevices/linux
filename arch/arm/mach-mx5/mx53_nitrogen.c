@@ -775,7 +775,7 @@ static struct mxc_pwm_platform_data mxc_pwm2_platform_data = {
 int n53k_bl_notify(struct device *dev, int brightness)
 {
 	gpio_set_value(N53K_DISPLAY_BL_EN, brightness ? 1 : 0);
-	return 0;
+	return brightness;
 }
 #endif
 
