@@ -35,6 +35,7 @@
 #define  SDHCI_VENDOR_SPEC_SDIO_QUIRK	0x00000002
 #define SDHCI_WTMK_LVL			0x44
 #define SDHCI_MIX_CTRL			0x48
+#define SDHCI_MIX_CTRL_AC23EN	(1 << 7)
 
 /*
  * There is an INT DMA ERR mis-match between eSDHC and STD SDHC SPEC:
@@ -272,6 +273,12 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
 			writel(v, host->ioaddr + SDHCI_VENDOR_SPEC);
 		}
 		imx_data->scratchpad = val;
+
+		if (val & SDHCI_TRNS_AUTO_CMD23) {
+			imx_data->scratchpad &= ~SDHCI_TRNS_AUTO_CMD23;
+			imx_data->scratchpad |= SDHCI_MIX_CTRL_AC23EN;
+		}
+
 		return;
 	case SDHCI_COMMAND:
 		if ((host->cmd->opcode == MMC_STOP_TRANSMISSION ||
@@ -300,6 +307,8 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
 static void esdhc_writeb_le(struct sdhci_host *host, u8 val, int reg)
 {
 	u32 new_val;
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct pltfm_imx_data *imx_data = pltfm_host->priv;
 
 	switch (reg) {
 	case SDHCI_POWER_CONTROL:
@@ -331,8 +340,15 @@ static void esdhc_writeb_le(struct sdhci_host *host, u8 val, int reg)
 	 * circuit relies on.  To work around it, we turn the clocks on back
 	 * to keep card detection circuit functional.
 	 */
-	if ((reg == SDHCI_SOFTWARE_RESET) && (val & 1))
+	if ((reg == SDHCI_SOFTWARE_RESET) && (val & 1)) {
 		esdhc_clrset_le(host, 0x7, 0x7, ESDHC_SYSTEM_CONTROL);
+		/*
+		 * The RSTA, reset all, on usdhc will not clear MIX_CTRL
+		 * register, do it manually here.
+		 */
+		if (is_imx6q_usdhc(imx_data))
+			writel(0, host->ioaddr + SDHCI_MIX_CTRL);
+	}
 }
 
 static unsigned int esdhc_pltfm_get_max_clock(struct sdhci_host *host)
