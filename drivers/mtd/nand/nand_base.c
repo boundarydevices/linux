@@ -156,7 +156,7 @@ static uint8_t nand_read_byte(struct mtd_info *mtd)
 }
 
 /**
- * nand_read_byte16 - [DEFAULT] read one byte endianess aware from the chip
+ * nand_read_byte16 - [DEFAULT] read one byte endianness aware from the chip
  * nand_read_byte16 - [DEFAULT] read one byte endianness aware from the chip
  * @mtd: MTD device structure
  *
