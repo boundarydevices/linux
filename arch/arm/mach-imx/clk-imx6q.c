@@ -443,6 +443,13 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	 */
 	clk_set_parent(clk[IMX6QDL_CLK_ENFC_SEL], clk[IMX6QDL_CLK_PLL2_PFD2_396M]);
 
+	/* gpu clock initilazation */
+	clk_set_parent(clk[IMX6QDL_CLK_GPU3D_SHADER_SEL], clk[IMX6QDL_CLK_PLL2_PFD1_594M]);
+	clk_set_rate(clk[IMX6QDL_CLK_GPU3D_SHADER], 594000000);
+	clk_set_parent(clk[IMX6QDL_CLK_GPU3D_CORE_SEL], clk[IMX6QDL_CLK_MMDC_CH0_AXI]);
+	clk_set_rate(clk[IMX6QDL_CLK_GPU3D_CORE], 528000000);
+	clk_set_parent(clk[IMX6QDL_CLK_GPU2D_CORE_SEL], clk[IMX6QDL_CLK_PLL3_USB_OTG]);
+
 	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 		clk_prepare_enable(clk[clks_init_on[i]]);
 
