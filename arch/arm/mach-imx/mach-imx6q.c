@@ -22,6 +22,7 @@
 #include <linux/irqdomain.h>
 #include <linux/cpuidle.h>
 #include <linux/gpio.h>
+#include <linux/memblock.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_gpio.h>
@@ -65,6 +66,9 @@ enum {
 	PORT_PHY_CTL = 0x178, /* Port0 PHY Control */
 	PORT_PHY_CTL_PDDQ_LOC = 0x100000, /* PORT_PHY_CTL bits */
 };
+
+static phys_addr_t ggpu_phys;
+static u32 ggpu_size = SZ_128M;
 
 void imx6q_restart(char mode, const char *cmd)
 {
@@ -198,6 +202,65 @@ static void __init imx6q_1588_init(void)
 		pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
 
 }
+static void __init imx6q_gpu_init(void)
+{
+	struct device_node *np;
+	struct platform_device *pdev = NULL;
+	struct property *pbase;
+	struct property *poldbase;
+	u32 *psize;
+
+	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-gpu");
+	if (np)
+		pdev = of_find_device_by_node(np);
+
+	if (ggpu_phys) {
+		pbase = kzalloc(sizeof(*pbase)+sizeof(u32), GFP_KERNEL);
+		if (pbase == NULL)
+			return;
+		psize = (u32 *)(pbase + 1);
+		pbase->length = sizeof(u32);
+		pbase->name = kstrdup("contiguoussize", GFP_KERNEL);
+		if (!pbase->name) {
+			kfree(pbase);
+			return;
+		}
+
+		pbase->value = psize;
+		(*psize) = cpu_to_be32p(&ggpu_size);
+		poldbase = of_find_property(np, "contiguoussize", NULL);
+		if (poldbase)
+			prom_update_property(np, pbase, poldbase);
+		else
+			prom_add_property(np, pbase);
+
+		pbase = kzalloc(sizeof(*pbase)+sizeof(phys_addr_t), GFP_KERNEL);
+		if (pbase == NULL)
+			return;
+		pbase->value = pbase + 1;
+		pbase->length = sizeof(phys_addr_t);
+		pbase->name = kstrdup("contiguousbase", GFP_KERNEL);
+		if (!pbase->name) {
+			kfree(pbase);
+			return;
+		}
+		memcpy(pbase->value, &ggpu_phys, sizeof(phys_addr_t));
+		poldbase = of_find_property(np, "contiguousbase", NULL);
+		if (poldbase)
+			prom_update_property(np, pbase, poldbase);
+		else
+			prom_add_property(np, pbase);
+	}
+
+	return;
+}
+static void __init imx6q_gpu_reserve(void)
+{
+	/* DTS is not ready here, only global variables can be used. */
+	ggpu_phys = memblock_alloc_base(ggpu_size, SZ_4K, SZ_1G);
+	memblock_remove(ggpu_phys, ggpu_size);
+}
+
 static void __init imx6q_usb_init(void)
 {
 	struct regmap *anatop;
@@ -434,6 +497,8 @@ static void __init imx6q_init_machine(void)
 	imx6q_pm_init();
 	imx6q_usb_init();
 	imx6q_1588_init();
+	if (IS_ENABLED(CONFIG_MXC_GPU_VIV))
+		imx6q_gpu_init();
 }
 
 static void __init imx6q_init_late(void)
@@ -447,8 +512,14 @@ static void __init imx6q_init_late(void)
 		imx6q_cpuidle_init();
 }
 
+static void __init imx6q_reserve(void)
+{
+	imx6q_gpu_reserve();
+}
+
 static void __init imx6q_map_io(void)
 {
+	init_consistent_dma_size(SZ_8M);
 	imx_lluart_map_io();
 	imx_scu_map_io();
 	imx6q_clock_map_io();
@@ -560,6 +631,7 @@ static const char *imx6q_dt_compat[] __initdata = {
 
 DT_MACHINE_START(IMX6Q, "Freescale i.MX6 Quad (Device Tree)")
 	.map_io		= imx6q_map_io,
+	.reserve	= imx6q_reserve,
 	.init_irq	= imx6q_init_irq,
 	.handle_irq	= imx6q_handle_irq,
 	.timer		= &imx6q_timer,
