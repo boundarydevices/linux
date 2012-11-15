@@ -285,13 +285,18 @@ static int bq27x00_battery_get_property(struct power_supply *psy,
 	return ret;
 }
 
+static void bq27x00_power_changed(struct power_supply *psy)
+{
+	power_supply_changed(psy);
+}
+
 static void bq27x00_powersupply_init(struct bq27x00_device_info *di)
 {
 	di->bat.type = POWER_SUPPLY_TYPE_BATTERY;
 	di->bat.properties = bq27x00_battery_props;
 	di->bat.num_properties = ARRAY_SIZE(bq27x00_battery_props);
 	di->bat.get_property = bq27x00_battery_get_property;
-	di->bat.external_power_changed = NULL;
+	di->bat.external_power_changed = bq27x00_power_changed;
 }
 
 /*

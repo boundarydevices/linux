@@ -741,6 +741,12 @@ static s32 monitoring_thread(void *data)
 		if (ret < 0)
 			timeout = msecs_to_jiffies(1000);
 
+		if (bq->policy.battery_notify) {
+			struct power_supply *bsupply = power_supply_get_by_name(bq->policy.battery_notify);
+			if (bsupply && bsupply->external_power_changed)
+				bsupply->external_power_changed(bsupply);
+		}
+
 		ret = wait_event_freezable_timeout(bq->sample_waitq,
 				bq->bReady, timeout);
 		if (kthread_should_stop())
