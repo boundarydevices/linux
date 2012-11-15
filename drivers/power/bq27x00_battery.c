@@ -75,9 +75,6 @@ static enum power_supply_property bq27x00_battery_props[] = {
 	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_CAPACITY,
 	POWER_SUPPLY_PROP_TEMP,
-	POWER_SUPPLY_PROP_TIME_TO_EMPTY_NOW,
-	POWER_SUPPLY_PROP_TIME_TO_EMPTY_AVG,
-	POWER_SUPPLY_PROP_TIME_TO_FULL_NOW,
 };
 
 /*
@@ -217,29 +214,6 @@ static int bq27x00_battery_status(struct bq27x00_device_info *di,
 	return 0;
 }
 
-/*
- * Read a time register.
- * Return < 0 if something fails.
- */
-static int bq27x00_battery_time(struct bq27x00_device_info *di, int reg,
-				union power_supply_propval *val)
-{
-	int tval = 0;
-	int ret;
-
-	ret = bq27x00_read(reg, &tval, 0, di);
-	if (ret) {
-		dev_err(di->dev, "error reading register %02x\n", reg);
-		return ret;
-	}
-
-	if (tval == 65535)
-		return -ENODATA;
-
-	val->intval = tval * 60;
-	return 0;
-}
-
 #define to_bq27x00_device_info(x) container_of((x), \
 				struct bq27x00_device_info, bat);
 
@@ -265,18 +239,26 @@ static int bq27x00_battery_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		val->intval = bq27x00_battery_rsoc(di);
+		if (val->intval > 100) {
+			dev_err(di->dev, "%s: capacity%u > 100\n", __func__, val->intval);
+			val->intval = bq27x00_battery_rsoc(di);
+			if (val->intval > 100) {
+				dev_err(di->dev, "%s: capacity%u > 100\n", __func__, val->intval);
+				val->intval = 100 ;
+			}
+		}
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = bq27x00_battery_temperature(di);
-		break;
-	case POWER_SUPPLY_PROP_TIME_TO_EMPTY_NOW:
-		ret = bq27x00_battery_time(di, BQ27x00_REG_TTE, val);
-		break;
-	case POWER_SUPPLY_PROP_TIME_TO_EMPTY_AVG:
-		ret = bq27x00_battery_time(di, BQ27x00_REG_TTECP, val);
-		break;
-	case POWER_SUPPLY_PROP_TIME_TO_FULL_NOW:
-		ret = bq27x00_battery_time(di, BQ27x00_REG_TTF, val);
+		if (373 < val->intval) {
+			dev_err(di->dev, "--------- invalid temperature reading: %d\n", val->intval);
+			val->intval = bq27x00_battery_temperature(di);
+			dev_err(di->dev, "--------- temperature reading now: %d\n", val->intval);
+			if (373 < val->intval) {
+				dev_err(di->dev, "--------- temperature reading now: %d\n", val->intval);
+				val->intval = 315;
+			}
+		}
 		break;
 	default:
 		return -EINVAL;
