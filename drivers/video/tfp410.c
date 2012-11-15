@@ -219,7 +219,7 @@ static int lcd_fb_event(struct notifier_block *nb, unsigned long val, void *v)
 	case FB_EVENT_BLANK: {
 		int blankType = *((int *)event->data);
 		dev_info(dev, "%s: blank type 0x%x\n", __func__, blankType );
-		tfp->displayoff = (blankType == FB_BLANK_UNBLANK) ? 0 : 1;
+		tfp->displayoff = (blankType == FB_BLANK_NORMAL) ? 1 : 0;
 		break;
 	}
 	case FB_EVENT_SUSPEND : {
