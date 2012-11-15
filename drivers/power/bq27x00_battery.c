@@ -250,11 +250,11 @@ static int bq27x00_battery_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = bq27x00_battery_temperature(di);
-		if (373 < val->intval) {
+		if (1000 < val->intval) {
 			dev_err(di->dev, "--------- invalid temperature reading: %d\n", val->intval);
 			val->intval = bq27x00_battery_temperature(di);
 			dev_err(di->dev, "--------- temperature reading now: %d\n", val->intval);
-			if (373 < val->intval) {
+			if (1000 < val->intval) {
 				dev_err(di->dev, "--------- temperature reading now: %d\n", val->intval);
 				val->intval = 315;
 			}
