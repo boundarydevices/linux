@@ -128,7 +128,7 @@ static struct regulator_desc anatop_reg_desc[] = {
 	},
 };
 
-int anatop_regulator_probe(struct platform_device *pdev)
+static int anatop_regulator_probe(struct platform_device *pdev)
 {
 	struct regulator_desc *rdesc;
 	struct regulator_dev *rdev;

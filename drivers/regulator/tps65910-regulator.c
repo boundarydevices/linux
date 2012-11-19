@@ -870,7 +870,7 @@ static struct regulator_ops tps65911_ops = {
 	.list_voltage		= tps65911_list_voltage,
 };
 
-static __devinit int tps65910_probe(struct platform_device *pdev)
+static int tps65910_probe(struct platform_device *pdev)
 {
 	struct tps65910 *tps65910 = dev_get_drvdata(pdev->dev.parent);
 	struct regulator_config config = { };

@@ -414,7 +414,7 @@ static struct regulator_ops da9052_ldo_buck_ops = {
 	.set_voltage = da9052_ldo_buck_set_voltage,
 };
 
-static int __devinit da9052_regulator_probe(struct platform_device *pdev)
+static int da9052_regulator_probe(struct platform_device *pdev)
 {
 	struct regulator_config config = { };
 	struct da9052_regulator_priv *priv;

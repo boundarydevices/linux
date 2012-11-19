@@ -446,7 +446,7 @@ static struct regulator_ops wm831x_buckv_ops = {
  * Set up DVS control.  We just log errors since we can still run
  * (with reduced performance) if we fail.
  */
-static __devinit void wm831x_buckv_dvs_init(struct wm831x_dcdc *dcdc,
+static void wm831x_buckv_dvs_init(struct wm831x_dcdc *dcdc,
 					    struct wm831x_buckv_pdata *pdata)
 {
 	struct wm831x *wm831x = dcdc->wm831x;
@@ -500,7 +500,7 @@ static __devinit void wm831x_buckv_dvs_init(struct wm831x_dcdc *dcdc,
 	dcdc->dvs_gpio = pdata->dvs_gpio;
 }
 
-static __devinit int wm831x_buckv_probe(struct platform_device *pdev)
+static int wm831x_buckv_probe(struct platform_device *pdev)
 {
 	struct wm831x *wm831x = dev_get_drvdata(pdev->dev.parent);
 	struct wm831x_pdata *pdata = wm831x->dev->platform_data;
@@ -709,7 +709,7 @@ static struct regulator_ops wm831x_buckp_ops = {
 	.set_suspend_mode = wm831x_dcdc_set_suspend_mode,
 };
 
-static __devinit int wm831x_buckp_probe(struct platform_device *pdev)
+static int wm831x_buckp_probe(struct platform_device *pdev)
 {
 	struct wm831x *wm831x = dev_get_drvdata(pdev->dev.parent);
 	struct wm831x_pdata *pdata = wm831x->dev->platform_data;
@@ -841,7 +841,7 @@ static struct regulator_ops wm831x_boostp_ops = {
 	.disable = wm831x_dcdc_disable,
 };
 
-static __devinit int wm831x_boostp_probe(struct platform_device *pdev)
+static int wm831x_boostp_probe(struct platform_device *pdev)
 {
 	struct wm831x *wm831x = dev_get_drvdata(pdev->dev.parent);
 	struct wm831x_pdata *pdata = wm831x->dev->platform_data;
@@ -950,7 +950,7 @@ static struct regulator_ops wm831x_epe_ops = {
 	.get_status = wm831x_dcdc_get_status,
 };
 
-static __devinit int wm831x_epe_probe(struct platform_device *pdev)
+static int wm831x_epe_probe(struct platform_device *pdev)
 {
 	struct wm831x *wm831x = dev_get_drvdata(pdev->dev.parent);
 	struct wm831x_pdata *pdata = wm831x->dev->platform_data;

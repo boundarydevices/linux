@@ -275,7 +275,7 @@ static struct regulator_desc dcdc_desc = {
 	.owner		= THIS_MODULE,
 };
 
-static int __devinit max8649_regulator_probe(struct i2c_client *client,
+static int max8649_regulator_probe(struct i2c_client *client,
 					     const struct i2c_device_id *id)
 {
 	struct max8649_platform_data *pdata = client->dev.platform_data;

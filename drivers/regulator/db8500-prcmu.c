@@ -469,7 +469,7 @@ db8500_regulator_info[DB8500_NUM_REGULATORS] = {
 	},
 };
 
-static int __devinit db8500_regulator_probe(struct platform_device *pdev)
+static int db8500_regulator_probe(struct platform_device *pdev)
 {
 	struct regulator_init_data *db8500_init_data =
 					dev_get_platdata(&pdev->dev);

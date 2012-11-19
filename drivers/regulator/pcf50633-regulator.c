@@ -311,7 +311,7 @@ static struct regulator_desc regulators[] = {
 		PCF50633_REGULATOR("memldo", PCF50633_REGULATOR_MEMLDO, 0),
 };
 
-static int __devinit pcf50633_regulator_probe(struct platform_device *pdev)
+static int pcf50633_regulator_probe(struct platform_device *pdev)
 {
 	struct regulator_dev *rdev;
 	struct pcf50633 *pcf;

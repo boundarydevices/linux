@@ -1006,7 +1006,7 @@ static u8 twl_get_smps_mult(void)
 	return value;
 }
 
-static int __devinit twlreg_probe(struct platform_device *pdev)
+static int twlreg_probe(struct platform_device *pdev)
 {
 	int				i;
 	struct twlreg_info		*info;

@@ -957,7 +957,7 @@ static struct regulator_desc regulators[] = {
 	},
 };
 
-static __devinit int max8997_pmic_probe(struct platform_device *pdev)
+static int max8997_pmic_probe(struct platform_device *pdev)
 {
 	struct max8997_dev *iodev = dev_get_drvdata(pdev->dev.parent);
 	struct max8997_platform_data *pdata = dev_get_platdata(iodev->dev);
