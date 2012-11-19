@@ -221,9 +221,9 @@ int arizona_irq_init(struct arizona *arizona)
 		 * will set them noprobe when we do so.
 		 */
 #ifdef CONFIG_ARM
-		set_irq_flags(arizona->virq[0], IRQF_VALID);
+		set_irq_flags(arizona->virq[i], IRQF_VALID);
 #else
-		irq_set_noprobe(arizona->virq[0]);
+		irq_set_noprobe(arizona->virq[i]);
 #endif
 	}
 
