@@ -66,7 +66,7 @@ static struct pci_device_id lpc_sch_ids[] = {
 };
 MODULE_DEVICE_TABLE(pci, lpc_sch_ids);
 
-static int __devinit lpc_sch_probe(struct pci_dev *dev,
+static int lpc_sch_probe(struct pci_dev *dev,
 				const struct pci_device_id *id)
 {
 	unsigned int base_addr_cfg;

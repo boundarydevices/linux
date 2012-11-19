@@ -1022,7 +1022,7 @@ static struct gpio_chip gpio_chip_template = {
 	.get			= sm501_gpio_get,
 };
 
-static int __devinit sm501_gpio_register_chip(struct sm501_devdata *sm,
+static int sm501_gpio_register_chip(struct sm501_devdata *sm,
 					      struct sm501_gpio *gpio,
 					      struct sm501_gpio_chip *chip)
 {
@@ -1050,7 +1050,7 @@ static int __devinit sm501_gpio_register_chip(struct sm501_devdata *sm,
 	return gpiochip_add(gchip);
 }
 
-static int __devinit sm501_register_gpio(struct sm501_devdata *sm)
+static int sm501_register_gpio(struct sm501_devdata *sm)
 {
 	struct sm501_gpio *gpio = &sm->gpio;
 	resource_size_t iobase = sm->io_res->start + SM501_GPIO;
@@ -1321,7 +1321,7 @@ static unsigned int sm501_mem_local[] = {
  * Common init code for an SM501
 */
 
-static int __devinit sm501_init_dev(struct sm501_devdata *sm)
+static int sm501_init_dev(struct sm501_devdata *sm)
 {
 	struct sm501_initdata *idata;
 	struct sm501_platdata *pdata;
@@ -1397,7 +1397,7 @@ static int __devinit sm501_init_dev(struct sm501_devdata *sm)
 	return 0;
 }
 
-static int __devinit sm501_plat_probe(struct platform_device *dev)
+static int sm501_plat_probe(struct platform_device *dev)
 {
 	struct sm501_devdata *sm;
 	int ret;
@@ -1586,7 +1586,7 @@ static struct sm501_platdata sm501_pci_platdata = {
 	.gpio_base	= -1,
 };
 
-static int __devinit sm501_pci_probe(struct pci_dev *dev,
+static int sm501_pci_probe(struct pci_dev *dev,
 				     const struct pci_device_id *id)
 {
 	struct sm501_devdata *sm;
