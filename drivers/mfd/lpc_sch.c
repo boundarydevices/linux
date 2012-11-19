@@ -109,7 +109,7 @@ static int lpc_sch_probe(struct pci_dev *dev,
 			       0, NULL);
 }
 
-static void __devexit lpc_sch_remove(struct pci_dev *dev)
+static void lpc_sch_remove(struct pci_dev *dev)
 {
 	mfd_remove_devices(&dev->dev);
 }
