@@ -874,7 +874,7 @@ err_free_mem:
 	return ret;
 }
 
-static int __devexit max8998_pmic_remove(struct platform_device *pdev)
+static int max8998_pmic_remove(struct platform_device *pdev)
 {
 	struct max8998_data *max8998 = platform_get_drvdata(pdev);
 	struct regulator_dev **rdev = max8998->rdev;

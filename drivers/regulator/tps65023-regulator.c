@@ -540,7 +540,7 @@ static int tps_65023_probe(struct i2c_client *client,
  *
  * Unregister TPS driver as an i2c client device driver
  */
-static int __devexit tps_65023_remove(struct i2c_client *client)
+static int tps_65023_remove(struct i2c_client *client)
 {
 	struct tps_pmic *tps = i2c_get_clientdata(client);
 	int i;

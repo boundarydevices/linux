@@ -323,7 +323,7 @@ err_reg:
 	return ret;
 }
 
-static int __devexit max8952_pmic_remove(struct i2c_client *client)
+static int max8952_pmic_remove(struct i2c_client *client)
 {
 	struct max8952_data *max8952 = i2c_get_clientdata(client);
 	struct max8952_platform_data *pdata = max8952->pdata;

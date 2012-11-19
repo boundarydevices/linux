@@ -1171,7 +1171,7 @@ err_alloc:
 	return ret;
 }
 
-static int __devexit max8997_pmic_remove(struct platform_device *pdev)
+static int max8997_pmic_remove(struct platform_device *pdev)
 {
 	struct max8997_data *max8997 = platform_get_drvdata(pdev);
 	struct regulator_dev **rdev = max8997->rdev;

@@ -1102,7 +1102,7 @@ static int twlreg_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit twlreg_remove(struct platform_device *pdev)
+static int twlreg_remove(struct platform_device *pdev)
 {
 	regulator_unregister(platform_get_drvdata(pdev));
 	return 0;
