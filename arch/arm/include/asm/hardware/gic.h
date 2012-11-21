@@ -68,7 +68,6 @@ void gic_init_bases(unsigned int, int, void __iomem *, void __iomem *,
 		    u32 offset, struct device_node *);
 int gic_of_init(struct device_node *node, struct device_node *parent);
 void gic_secondary_init(unsigned int);
-void gic_handle_irq(struct pt_regs *regs);
 void gic_cascade_irq(unsigned int gic_nr, unsigned int irq);
 void gic_disable_ppi(unsigned int);
 void save_gic_cpu_state(unsigned int gic_nr, struct gic_cpu_state *gcs);

@@ -23,7 +23,6 @@
 #include <linux/io.h>
 
 #include <asm/mach/time.h>
-#include <asm/hardware/gic.h>
 
 #include <mach/msm_iomap.h>
 #include <mach/cpu.h>
