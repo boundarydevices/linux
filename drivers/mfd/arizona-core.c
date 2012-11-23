@@ -328,7 +328,7 @@ int __devinit arizona_dev_init(struct arizona *arizona)
 	if (ret != 0) {
 		dev_err(dev, "Failed to enable core supplies: %d\n",
 			ret);
-		goto err_early;
+		goto err_bulk_get;
 	}
 
 	if (arizona->pdata.reset) {
@@ -536,6 +536,9 @@ err_reset:
 err_enable:
 	regulator_bulk_disable(ARRAY_SIZE(arizona->core_supplies),
 			       arizona->core_supplies);
+err_bulk_get:
+	regulator_bulk_free(ARRAY_SIZE(arizona->core_supplies),
+			    arizona->core_supplies);
 err_early:
 	mfd_remove_devices(dev);
 	return ret;
