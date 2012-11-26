@@ -81,6 +81,10 @@ enum arizona_type {
 #define ARIZONA_IRQ_MICD_CLAMP_RISE	  51
 
 
+struct snd_soc_dapm_context;
+
+struct snd_soc_dapm_context;
+
 struct arizona {
 	struct regmap *regmap;
 	struct device *dev;
@@ -102,6 +106,8 @@ struct arizona {
 
 	struct mutex clk_lock;
 	int clk32k_ref;
+
+	struct snd_soc_dapm_context *dapm;
 };
 
 int arizona_clk32k_enable(struct arizona *arizona);
