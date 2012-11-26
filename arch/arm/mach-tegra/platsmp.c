@@ -123,8 +123,6 @@ void __init smp_init_cpus(void)
 
 	for (i = 0; i < ncores; i++)
 		cpu_set(i, cpu_possible_map);
-
-	set_smp_cross_call(gic_raise_softirq);
 }
 
 void __init platform_smp_prepare_cpus(unsigned int max_cpus)

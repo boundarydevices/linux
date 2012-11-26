@@ -617,6 +617,27 @@ static void __init gic_pm_init(struct gic_chip_data *gic)
 }
 #endif
 
+#ifdef CONFIG_SMP
+void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
+{
+	int cpu;
+	unsigned long map = 0;
+
+	/* Convert our logical CPU mask into a physical one. */
+	for_each_cpu(cpu, mask)
+		map |= 1 << cpu_logical_map(cpu);
+
+	/*
+	 * Ensure that stores to Normal memory are visible to the
+	 * other CPUs before issuing the IPI.
+	 */
+	dsb();
+
+	/* this always happens on GIC0 */
+	writel_relaxed(map << 16 | irq, gic_data_dist_base(&gic_data[0]) + GIC_DIST_SOFTINT);
+}
+#endif
+
 static int gic_irq_domain_map(struct irq_domain *d, unsigned int irq,
 				irq_hw_number_t hw)
 {
@@ -743,6 +764,9 @@ void gic_init_bases(unsigned int gic_nr, int irq_start,
 	if (WARN_ON(!gic->domain))
 		return;
 
+#ifdef CONFIG_SMP
+	set_smp_cross_call(gic_raise_softirq);
+#endif
 	gic_chip.flags |= gic_arch_extn.flags;
 	gic_dist_init(gic);
 	gic_cpu_init(gic);
@@ -886,27 +910,6 @@ void restore_gic_dist_state(unsigned int gic_nr, struct gic_dist_state *gds)
 	/* at last restore ctrl register */
 	__raw_writel(gds->icddcr, dist_base + GIC_DIST_CTRL);
 }
-
-#ifdef CONFIG_SMP
-void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
-{
-	int cpu;
-	unsigned long map = 0;
-
-	/* Convert our logical CPU mask into a physical one. */
-	for_each_cpu(cpu, mask)
-		map |= gic_cpu_map[cpu];
-
-	/*
-	 * Ensure that stores to Normal memory are visible to the
-	 * other CPUs before issuing the IPI.
-	 */
-	dsb();
-
-	/* this always happens on GIC0 */
-	writel_relaxed(map << 16 | irq, gic_data_dist_base(&gic_data[0]) + GIC_DIST_SOFTINT);
-}
-#endif
 
 #ifdef CONFIG_OF
 static int gic_cnt __initdata = 0;

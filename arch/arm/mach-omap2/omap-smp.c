@@ -64,7 +64,7 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	omap_modify_auxcoreboot0(0x200, 0xfffffdff);
 	flush_cache_all();
 	smp_wmb();
-	gic_raise_softirq(cpumask_of(cpu), 1);
+	arch_send_wakeup_ipi_mask(cpumask_of(cpu));
 
 	/*
 	 * Now the secondary core is starting up let it run its
@@ -119,8 +119,6 @@ void __init smp_init_cpus(void)
 
 	for (i = 0; i < ncores; i++)
 		set_cpu_possible(i, true);
-
-	set_smp_cross_call(gic_raise_softirq);
 }
 
 void __init platform_smp_prepare_cpus(unsigned int max_cpus)
