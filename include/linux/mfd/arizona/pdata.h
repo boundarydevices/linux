@@ -62,6 +62,9 @@
 
 #define ARIZONA_MAX_OUTPUT 6
 
+#define ARIZONA_HAP_ACT_ERM 0
+#define ARIZONA_HAP_ACT_LRA 2
+
 #define ARIZONA_MAX_PDM_SPK 2
 
 struct regulator_init_data;
@@ -120,6 +123,8 @@ struct arizona_pdata {
 	/** GPIO for primary IRQ (used for edge triggered emulation) */
 	int irq_gpio;
 
+	/** Haptic actuator type */
+	unsigned int hap_act;
 };
 
 #endif
