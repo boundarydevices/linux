@@ -34,6 +34,7 @@ struct arizona_switch_info {
 	struct device *dev;
 	struct arizona *arizona;
 	struct mutex lock;
+	struct regulator *micvdd;
 
 	int micd_mode;
 	const struct arizona_micd_config *micd_modes;
@@ -83,6 +84,7 @@ static void arizona_start_mic(struct arizona_switch_info *info)
 {
 	struct arizona *arizona = info->arizona;
 	bool change;
+	int ret;
 
 	info->detecting = true;
 	info->mic = false;
@@ -90,6 +92,12 @@ static void arizona_start_mic(struct arizona_switch_info *info)
 
 	/* Microphone detection can't use idle mode */
 	pm_runtime_get(info->dev);
+
+	ret = regulator_enable(info->micvdd);
+	if (ret != 0) {
+		dev_err(arizona->dev, "Failed to enable MICVDD: %d\n",
+			ret);
+	}
 
 	if (info->micd_reva) {
 		regmap_write(arizona->regmap, 0x80, 0x3);
@@ -101,6 +109,7 @@ static void arizona_start_mic(struct arizona_switch_info *info)
 				 ARIZONA_MICD_ENA, ARIZONA_MICD_ENA,
 				 &change);
 	if (!change) {
+		regulator_disable(info->micvdd);
 		pm_runtime_put_autosuspend(info->dev);
 	}
 }
@@ -121,6 +130,7 @@ static void arizona_stop_mic(struct arizona_switch_info *info)
 	}
 
 	if (change) {
+		regulator_disable(info->micvdd);
 		pm_runtime_put_autosuspend(info->dev);
 	}
 }
@@ -278,6 +288,13 @@ static int __devinit arizona_switch_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+	info->micvdd = regulator_get(arizona->dev, "MICVDD");
+	if (IS_ERR(info->micvdd)) {
+		ret = PTR_ERR(info->micvdd);
+		dev_err(arizona->dev, "Failed to get MICVDD: %d\n", ret);
+		goto err;
+	}
+
 	mutex_init(&info->lock);
 	info->arizona = arizona;
 	info->dev = &pdev->dev;
@@ -304,7 +321,7 @@ static int __devinit arizona_switch_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(arizona->dev, "switch_dev_register() failed: %d\n",
 			ret);
-		goto err;
+		goto err_micvdd;
 	}
 
 	if (pdata->num_micd_configs) {
@@ -401,6 +418,8 @@ err_rise:
 err_register:
 	pm_runtime_disable(&pdev->dev);
 	switch_dev_unregister(&info->sdev);
+err_micvdd:
+	regulator_put(info->micvdd);
 err:
 	return ret;
 }
@@ -423,6 +442,8 @@ static int __devexit arizona_switch_remove(struct platform_device *pdev)
 	arizona_clk32k_disable(arizona);
 
 	switch_dev_unregister(&info->sdev);
+
+	regulator_put(info->micvdd);
 
 	return 0;
 }
