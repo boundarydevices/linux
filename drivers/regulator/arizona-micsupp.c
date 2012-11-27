@@ -100,6 +100,9 @@ static const struct regulator_desc arizona_micsupp = {
 	.enable_mask = ARIZONA_CPMIC_ENA,
 	.bypass_reg = ARIZONA_MIC_CHARGE_PUMP_1,
 	.bypass_mask = ARIZONA_CPMIC_BYPASS,
+
+	.enable_time = 3000,
+
 	.owner = THIS_MODULE,
 };
 
