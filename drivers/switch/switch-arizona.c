@@ -47,7 +47,6 @@ struct arizona_switch_info {
 	int jack_flips;
 
 	struct switch_dev sdev;
-
 };
 
 /* These values are copied from Android WiredAccessoryObserver */
@@ -167,7 +166,6 @@ static irqreturn_t arizona_micdet(int irq, void *data)
 
 	/* If we got a high impedence we should have a headset, report it. */
 	if (info->detecting && (val & 0x400)) {
-
 		switch_set_state(&info->sdev, BIT_HEADSET);
 
 		info->mic = true;
@@ -189,7 +187,6 @@ static irqreturn_t arizona_micdet(int irq, void *data)
 			info->detecting = false;
 
 			switch_set_state(&info->sdev, BIT_HEADSET_NO_MIC);
-
 		} else {
 			info->micd_mode++;
 			if (info->micd_mode == info->micd_num_modes)
@@ -210,14 +207,12 @@ static irqreturn_t arizona_micdet(int irq, void *data)
 	if (val & 0x3fc) {
 		if (info->mic) {
 			dev_dbg(arizona->dev, "Mic button detected\n");
-
 		} else if (info->detecting) {
 			dev_dbg(arizona->dev, "Headphone detected\n");
 			info->detecting = false;
 			arizona_stop_mic(info);
 
 			switch_set_state(&info->sdev, BIT_HEADSET_NO_MIC);
-
 		} else {
 			dev_warn(arizona->dev, "Button with no mic: %x\n",
 				 val);
