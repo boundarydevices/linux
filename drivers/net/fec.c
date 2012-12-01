@@ -1671,6 +1671,9 @@ fec_restart(struct net_device *dev, int duplex)
 		writel(OPT_FRAME_SIZE | 0x06, fep->hwp + FEC_R_CNTRL);
 		writel(0x0, fep->hwp + FEC_X_CNTRL);
 	}
+#ifdef FEC_FTRL
+	writel(PKT_MAXBUF_SIZE, fep->hwp + FEC_FTRL);
+#endif
 	fep->full_duplex = duplex;
 
 	/* Set MII speed */
