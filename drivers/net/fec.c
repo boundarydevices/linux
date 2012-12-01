@@ -606,28 +606,33 @@ static int fec_rx_poll(struct napi_struct *napi, int budget)
 			goto rx_processing_done;
 
 		/* Check for errors. */
+		status ^= BD_ENET_RX_LAST;
 		if (status & (BD_ENET_RX_LG | BD_ENET_RX_SH | BD_ENET_RX_NO |
-			   BD_ENET_RX_CR | BD_ENET_RX_OV)) {
+			   BD_ENET_RX_CR | BD_ENET_RX_OV | BD_ENET_RX_LAST |
+			   BD_ENET_RX_CL)) {
 			ndev->stats.rx_errors++;
-			if (status & (BD_ENET_RX_LG | BD_ENET_RX_SH)) {
-				/* Frame too long or too short. */
-				ndev->stats.rx_length_errors++;
-			}
-			if (status & BD_ENET_RX_NO)	/* Frame alignment */
-				ndev->stats.rx_frame_errors++;
-			if (status & BD_ENET_RX_CR)	/* CRC Error */
-				ndev->stats.rx_crc_errors++;
-			if (status & BD_ENET_RX_OV)	/* FIFO overrun */
-				ndev->stats.rx_fifo_errors++;
-		}
 
-		/* Report late collisions as a frame error.
-		 * On this error, the BD is closed, but we don't know what we
-		 * have in the buffer.  So, just drop this frame on the floor.
-		 */
-		if (status & BD_ENET_RX_CL) {
-			ndev->stats.rx_errors++;
-			ndev->stats.rx_frame_errors++;
+			if (status & BD_ENET_RX_OV) {
+				/* FIFO overrun */
+				ndev->stats.rx_fifo_errors++;
+			} else {
+				if (status & (BD_ENET_RX_LG | BD_ENET_RX_SH
+						| BD_ENET_RX_LAST)) {
+					/* Frame too long or too short. */
+					ndev->stats.rx_length_errors++;
+					if (status & BD_ENET_RX_LAST)
+						dev_err(&ndev->dev,
+							"rcv is not +last, "
+							"0x%x\n", status);
+				}
+				if (status & BD_ENET_RX_CR)	/* CRC Error */
+					ndev->stats.rx_crc_errors++;
+				/*
+				 * Report late collisions as a frame error.
+				 */
+				if (status & (BD_ENET_RX_NO | BD_ENET_RX_CL))
+					ndev->stats.rx_frame_errors++;
+			}
 			goto rx_processing_done;
 		}
 
