@@ -1082,9 +1082,10 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 	}
 
 	/* mask with MAC supported features */
-	if (cpu_is_mx6q() || cpu_is_mx6dl())
-		phy_dev->supported &= PHY_GBIT_FEATURES;
-	else
+	if (cpu_is_mx6q() || cpu_is_mx6dl()) {
+		/* SUPPORTED_Asym_Pause prevents my switch from linking up */
+		phy_dev->supported &= PHY_GBIT_FEATURES | SUPPORTED_Pause;
+	} else
 		phy_dev->supported &= PHY_BASIC_FEATURES;
 
 	/* enable phy pause frame for any platform */
@@ -1698,12 +1699,9 @@ fec_restart(struct net_device *dev, int duplex)
 		 * ENET pause frame has two issues as ticket TKT116501
 		 * The issues have been fixed on Rigel TO1.1 and Arik TO1.2
 		 */
-		if ((cpu_is_mx6q() &&
-			(mx6q_revision() >= IMX_CHIP_REVISION_1_2)) ||
-			(cpu_is_mx6dl() &&
-			(mx6dl_revision() >= IMX_CHIP_REVISION_1_1)))
+		if (cpu_is_mx6q() || (cpu_is_mx6dl()
+				&& (mx6dl_revision() >= IMX_CHIP_REVISION_1_1)))
 			val |= FEC_ENET_FCE;
-
 		writel(val, fep->hwp + FEC_R_CNTRL);
 	}
 
@@ -1757,24 +1755,24 @@ fec_restart(struct net_device *dev, int duplex)
 		fep->phy_dev->speed == SPEED_1000)
 		val |= (0x1 << 5);
 
-	/* RX FIFO threshold setting for ENET pause frame feature
-	 * Only set the parameters after ticket TKT116501 fixed.
-	 * The issue has been fixed on Rigel TO1.1 and Arik TO1.2
-	 */
-	if ((cpu_is_mx6q() &&
-		(mx6q_revision() >= IMX_CHIP_REVISION_1_2)) ||
-		(cpu_is_mx6dl() &&
-		(mx6dl_revision() >= IMX_CHIP_REVISION_1_1))) {
-		writel(FEC_ENET_RSEM_V, fep->hwp + FEC_R_FIFO_RSEM);
+	if (cpu_is_mx6q() || cpu_is_mx6dl()) {
+		u32 rsem_val = 0;
+		/* RX FIFO threshold setting for ENET pause frame feature
+		 * Only set the parameters after ticket TKT116501 fixed.
+		 * The issue has been fixed on Rigel TO1.1 and Arik TO1.2
+		 */
+		if (cpu_is_mx6q() || (cpu_is_mx6dl()
+				&& (mx6dl_revision() >= IMX_CHIP_REVISION_1_1)))
+			rsem_val = FEC_ENET_RSEM_V;
+
+		writel(rsem_val, fep->hwp + FEC_R_FIFO_RSEM);
 		writel(FEC_ENET_RSFL_V, fep->hwp + FEC_R_FIFO_RSFL);
 		writel(FEC_ENET_RAEM_V, fep->hwp + FEC_R_FIFO_RAEM);
 		writel(FEC_ENET_RAFL_V, fep->hwp + FEC_R_FIFO_RAFL);
 
 		/* OPD */
 		writel(FEC_ENET_OPD_V, fep->hwp + FEC_OPD);
-	}
 
-	if (cpu_is_mx6q() || cpu_is_mx6dl()) {
 		/* enable endian swap */
 		val |= (0x1 << 8);
 		/* enable ENET store and forward mode */
