@@ -50,8 +50,9 @@
 #include <linux/of_net.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/regulator/consumer.h>
-
+#include <linux/pm_runtime.h>
 #include <asm/cacheflush.h>
+#include <mach/busfreq.h>
 
 #ifndef CONFIG_ARM
 #include <asm/coldfire.h>
@@ -1401,6 +1402,9 @@ fec_enet_open(struct net_device *ndev)
 		fec_enet_free_buffers(ndev);
 		return ret;
 	}
+
+	pm_runtime_get_sync(ndev->dev.parent);
+
 	phy_start(fep->phy_dev);
 	netif_start_queue(ndev);
 	fep->opened = 1;
@@ -1424,6 +1428,8 @@ fec_enet_close(struct net_device *ndev)
 	}
 
 	fec_enet_free_buffers(ndev);
+
+	pm_runtime_put_sync_suspend(ndev->dev.parent);
 
 	/* Clock gate close for saving power */
 	clk_disable_unprepare(fep->clk_ahb);
@@ -1758,6 +1764,8 @@ fec_probe(struct platform_device *pdev)
 		goto failed_clk;
 	}
 
+	pm_runtime_enable(&pdev->dev);
+
 #ifdef CONFIG_FEC_PTP
 	fep->clk_ptp = devm_clk_get(&pdev->dev, "ptp");
 	if (IS_ERR(fep->clk_ptp)) {
@@ -1875,6 +1883,18 @@ fec_drv_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+int fec_runtime_suspend(struct device *dev)
+{
+	release_bus_freq(BUS_FREQ_HIGH);
+	return 0;
+}
+
+int fec_runtime_resume(struct device *dev)
+{
+	request_bus_freq(BUS_FREQ_HIGH);
+	return 0;
+}
+
 static int
 fec_suspend(struct device *dev)
 {
@@ -1915,12 +1935,8 @@ fec_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops fec_pm_ops = {
-	.suspend	= fec_suspend,
-	.resume		= fec_resume,
-	.freeze		= fec_suspend,
-	.thaw		= fec_resume,
-	.poweroff	= fec_suspend,
-	.restore	= fec_resume,
+	SET_RUNTIME_PM_OPS(fec_runtime_suspend, fec_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(fec_suspend, fec_resume)
 };
 #endif
 
