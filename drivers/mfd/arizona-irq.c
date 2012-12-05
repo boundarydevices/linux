@@ -153,13 +153,7 @@ int arizona_irq_init(struct arizona *arizona)
 		aod = &wm5102_aod;
 		irq = &wm5102_irq;
 
-		switch (arizona->rev) {
-		case 0:
-			ctrlif_error = false;
-			break;
-		default:
-			break;
-		}
+		ctrlif_error = false;
 		break;
 #endif
 #ifdef CONFIG_MFD_WM5110
@@ -167,13 +161,7 @@ int arizona_irq_init(struct arizona *arizona)
 		aod = &wm5110_aod;
 		irq = &wm5110_irq;
 
-		switch (arizona->rev) {
-		case 0:
-			ctrlif_error = false;
-			break;
-		default:
-			break;
-		}
+		ctrlif_error = false;
 		break;
 #endif
 	default:
