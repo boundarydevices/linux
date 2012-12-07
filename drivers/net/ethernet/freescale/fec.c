@@ -18,7 +18,7 @@
  * Bug fixes and cleanup by Philippe De Muyter (phdm@macqel.be)
  * Copyright (c) 2004-2006 Macq Electronique SA.
  *
- * Copyright (C) 2010-2011 Freescale Semiconductor, Inc.
+ * Copyright (C) 2010-2013 Freescale Semiconductor, Inc.
  */
 
 #include <linux/module.h>
@@ -155,6 +155,8 @@ MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
 #define FEC_ENET_RXB	((uint)0x01000000)	/* A buffer was received */
 #define FEC_ENET_MII	((uint)0x00800000)	/* MII interrupt */
 #define FEC_ENET_EBERR	((uint)0x00400000)	/* SDMA bus error */
+#define FEC_ENET_TS_AVAIL       ((uint)0x00010000)
+#define FEC_ENET_TS_TIMER       ((uint)0x00008000)
 
 #define FEC_DEFAULT_IMASK (FEC_ENET_TXF | FEC_ENET_RXF | FEC_ENET_MII)
 
@@ -283,7 +285,8 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 #ifdef CONFIG_FEC_PTP
 	bdp->cbd_bdu = 0;
 	if (unlikely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP &&
-			fep->hwts_tx_en)) {
+			fep->hwts_tx_en) || unlikely(fep->hwts_tx_en_ioctl &&
+						fec_ptp_do_txstamp(skb))) {
 			bdp->cbd_esc = (BD_ENET_TX_TS | BD_ENET_TX_INT);
 			skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
 	} else {
@@ -458,9 +461,12 @@ fec_restart(struct net_device *ndev, int duplex)
 
 #ifdef CONFIG_FEC_PTP
 	fec_ptp_start_cyclecounter(ndev);
-#endif
 	/* Enable interrupts we wish to service */
+	writel(FEC_DEFAULT_IMASK | FEC_ENET_TS_AVAIL | FEC_ENET_TS_TIMER,
+		fep->hwp + FEC_IMASK);
+#else
 	writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
+#endif
 }
 
 static void
@@ -484,6 +490,12 @@ fec_stop(struct net_device *ndev)
 	udelay(10);
 	writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
 	writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
+
+#ifdef CONFIG_FEC_PTP
+	if (fep->hwts_tx_en_ioctl || fep->hwts_rx_en_ioctl ||
+		fep->hwts_tx_en || fep->hwts_rx_en)
+		fec_ptp_stop(ndev);
+#endif
 
 	/* We have to keep ENET enabled to have MII interrupt stay working */
 	if (id_entry->driver_data & FEC_QUIRK_ENET_MAC) {
@@ -545,7 +557,8 @@ fec_enet_tx(struct net_device *ndev)
 		}
 
 #ifdef CONFIG_FEC_PTP
-		if (unlikely(skb_shinfo(skb)->tx_flags & SKBTX_IN_PROGRESS)) {
+		if (unlikely((skb_shinfo(skb)->tx_flags & SKBTX_IN_PROGRESS) &&
+							fep->hwts_tx_en)) {
 			struct skb_shared_hwtstamps shhwtstamps;
 			unsigned long flags;
 
@@ -555,7 +568,8 @@ fec_enet_tx(struct net_device *ndev)
 				timecounter_cyc2time(&fep->tc, bdp->ts));
 			spin_unlock_irqrestore(&fep->tmreg_lock, flags);
 			skb_tstamp_tx(skb, &shhwtstamps);
-		}
+		} else if (unlikely(fep->hwts_tx_en_ioctl))
+			fec_ptp_store_txstamp(fep, skb, bdp);
 #endif
 		if (status & BD_ENET_TX_READY)
 			printk("HEY! Enet xmit interrupt and TX_READY.\n");
@@ -682,7 +696,6 @@ fec_enet_rx(struct net_device *ndev)
 			skb_reserve(skb, NET_IP_ALIGN);
 			skb_put(skb, pkt_len - 4);	/* Make room */
 			skb_copy_to_linear_data(skb, data, pkt_len - 4);
-			skb->protocol = eth_type_trans(skb, ndev);
 #ifdef CONFIG_FEC_PTP
 			/* Get receive timestamp from the skb */
 			if (fep->hwts_rx_en) {
@@ -696,8 +709,10 @@ fec_enet_rx(struct net_device *ndev)
 				shhwtstamps->hwtstamp = ns_to_ktime(
 				    timecounter_cyc2time(&fep->tc, bdp->ts));
 				spin_unlock_irqrestore(&fep->tmreg_lock, flags);
-			}
+			} else if (unlikely(fep->hwts_rx_en_ioctl))
+				fec_ptp_store_rxstamp(fep, skb, bdp);
 #endif
+			skb->protocol = eth_type_trans(skb, ndev);
 			if (!skb_defer_rx_timestamp(skb))
 				netif_rx(skb);
 		}
@@ -759,6 +774,14 @@ fec_enet_interrupt(int irq, void *dev_id)
 			ret = IRQ_HANDLED;
 			fec_enet_tx(ndev);
 		}
+
+#ifdef CONFIG_FEC_PTP
+		if (int_events & FEC_ENET_TS_TIMER) {
+			ret = IRQ_HANDLED;
+			if (fep->hwts_tx_en_ioctl || fep->hwts_rx_en_ioctl)
+				fep->prtc++;
+		}
+#endif
 
 		if (int_events & FEC_ENET_MII) {
 			ret = IRQ_HANDLED;
@@ -1158,9 +1181,13 @@ static int fec_enet_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 		return -ENODEV;
 
 #ifdef CONFIG_FEC_PTP
-	if (cmd == SIOCSHWTSTAMP)
+	if ((cmd == SIOCSHWTSTAMP) || ((cmd >= PTP_ENBL_TXTS_IOCTL) &&
+			(cmd <= PTP_FLUSH_TIMESTAMP)))
 		return fec_ptp_ioctl(ndev, rq, cmd);
+	else
+		return -ENODEV;
 #endif
+
 	return phy_mii_ioctl(phydev, rq, cmd);
 }
 
@@ -1717,6 +1744,7 @@ fec_drv_remove(struct platform_device *pdev)
 			free_irq(irq, ndev);
 	}
 #ifdef CONFIG_FEC_PTP
+	fec_ptp_cleanup(fep);
 	del_timer_sync(&fep->time_keep);
 	clk_disable_unprepare(fep->clk_ptp);
 	if (fep->ptp_clock)
