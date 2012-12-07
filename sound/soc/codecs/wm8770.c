@@ -685,7 +685,7 @@ static struct snd_soc_codec_driver soc_codec_dev_wm8770 = {
 };
 
 #if defined(CONFIG_SPI_MASTER)
-static int __devinit wm8770_spi_probe(struct spi_device *spi)
+static int wm8770_spi_probe(struct spi_device *spi)
 {
 	struct wm8770_priv *wm8770;
 	int ret;
@@ -704,7 +704,7 @@ static int __devinit wm8770_spi_probe(struct spi_device *spi)
 	return ret;
 }
 
-static int __devexit wm8770_spi_remove(struct spi_device *spi)
+static int wm8770_spi_remove(struct spi_device *spi)
 {
 	snd_soc_unregister_codec(&spi->dev);
 	kfree(spi_get_drvdata(spi));
@@ -717,7 +717,7 @@ static struct spi_driver wm8770_spi_driver = {
 		.owner = THIS_MODULE,
 	},
 	.probe = wm8770_spi_probe,
-	.remove = __devexit_p(wm8770_spi_remove)
+	.remove = wm8770_spi_remove
 };
 #endif
 

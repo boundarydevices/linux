@@ -664,8 +664,8 @@ static struct snd_soc_codec_driver soc_codec_dev_ak4671 = {
 	.num_dapm_routes = ARRAY_SIZE(ak4671_intercon),
 };
 
-static int __devinit ak4671_i2c_probe(struct i2c_client *client,
-		const struct i2c_device_id *id)
+static int ak4671_i2c_probe(struct i2c_client *client,
+			    const struct i2c_device_id *id)
 {
 	struct ak4671_priv *ak4671;
 	int ret;
@@ -685,7 +685,7 @@ static int __devinit ak4671_i2c_probe(struct i2c_client *client,
 	return ret;
 }
 
-static __devexit int ak4671_i2c_remove(struct i2c_client *client)
+static int ak4671_i2c_remove(struct i2c_client *client)
 {
 	snd_soc_unregister_codec(&client->dev);
 	kfree(i2c_get_clientdata(client));
@@ -704,7 +704,7 @@ static struct i2c_driver ak4671_i2c_driver = {
 		.owner = THIS_MODULE,
 	},
 	.probe = ak4671_i2c_probe,
-	.remove = __devexit_p(ak4671_i2c_remove),
+	.remove = ak4671_i2c_remove,
 	.id_table = ak4671_i2c_id,
 };
 

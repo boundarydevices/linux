@@ -2550,7 +2550,7 @@ static __devinit int wm8904_i2c_probe(struct i2c_client *i2c,
 	return ret;
 }
 
-static __devexit int wm8904_i2c_remove(struct i2c_client *client)
+static int wm8904_i2c_remove(struct i2c_client *client)
 {
 	snd_soc_unregister_codec(&client->dev);
 	kfree(i2c_get_clientdata(client));
@@ -2570,7 +2570,7 @@ static struct i2c_driver wm8904_i2c_driver = {
 		.owner = THIS_MODULE,
 	},
 	.probe =    wm8904_i2c_probe,
-	.remove =   __devexit_p(wm8904_i2c_remove),
+	.remove =   wm8904_i2c_remove,
 	.id_table = wm8904_i2c_id,
 };
 #endif

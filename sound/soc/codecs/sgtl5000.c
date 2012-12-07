@@ -1687,8 +1687,8 @@ static struct snd_soc_codec_driver sgtl5000_driver = {
 	.volatile_register = sgtl5000_volatile_register,
 };
 
-static __devinit int sgtl5000_i2c_probe(struct i2c_client *client,
-					const struct i2c_device_id *id)
+static int sgtl5000_i2c_probe(struct i2c_client *client,
+			      const struct i2c_device_id *id)
 {
 	struct sgtl5000_priv *sgtl5000;
 	int ret;
@@ -1710,7 +1710,7 @@ static __devinit int sgtl5000_i2c_probe(struct i2c_client *client,
 	return 0;
 }
 
-static __devexit int sgtl5000_i2c_remove(struct i2c_client *client)
+static int sgtl5000_i2c_remove(struct i2c_client *client)
 {
 	struct sgtl5000_priv *sgtl5000 = i2c_get_clientdata(client);
 
@@ -1733,7 +1733,7 @@ static struct i2c_driver sgtl5000_i2c_driver = {
 		   .owner = THIS_MODULE,
 		   },
 	.probe = sgtl5000_i2c_probe,
-	.remove = __devexit_p(sgtl5000_i2c_remove),
+	.remove = sgtl5000_i2c_remove,
 	.id_table = sgtl5000_id,
 };
 

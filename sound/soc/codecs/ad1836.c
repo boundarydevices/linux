@@ -276,7 +276,7 @@ static struct snd_soc_codec_driver soc_codec_dev_ad1836 = {
 	.reg_word_size = sizeof(u16),
 };
 
-static int __devinit ad1836_spi_probe(struct spi_device *spi)
+static int ad1836_spi_probe(struct spi_device *spi)
 {
 	struct ad1836_priv *ad1836;
 	int ret;
@@ -296,7 +296,7 @@ static int __devinit ad1836_spi_probe(struct spi_device *spi)
 	return ret;
 }
 
-static int __devexit ad1836_spi_remove(struct spi_device *spi)
+static int ad1836_spi_remove(struct spi_device *spi)
 {
 	snd_soc_unregister_codec(&spi->dev);
 	kfree(spi_get_drvdata(spi));
@@ -309,7 +309,7 @@ static struct spi_driver ad1836_spi_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe		= ad1836_spi_probe,
-	.remove		= __devexit_p(ad1836_spi_remove),
+	.remove		= ad1836_spi_remove,
 };
 
 static int __init ad1836_init(void)

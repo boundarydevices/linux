@@ -203,7 +203,7 @@ static struct platform_driver cq93vc_codec_driver = {
 	},
 
 	.probe = cq93vc_platform_probe,
-	.remove = __devexit_p(cq93vc_platform_remove),
+	.remove = cq93vc_platform_remove,
 };
 
 static int __init cq93vc_init(void)

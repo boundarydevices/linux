@@ -346,7 +346,7 @@ static struct snd_soc_codec_driver soc_codec_dev_jz4740_codec = {
 	.num_dapm_routes = ARRAY_SIZE(jz4740_codec_dapm_routes),
 };
 
-static int __devinit jz4740_codec_probe(struct platform_device *pdev)
+static int jz4740_codec_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct jz4740_codec *jz4740_codec;
@@ -399,7 +399,7 @@ err_free_codec:
 	return ret;
 }
 
-static int __devexit jz4740_codec_remove(struct platform_device *pdev)
+static int jz4740_codec_remove(struct platform_device *pdev)
 {
 	struct jz4740_codec *jz4740_codec = platform_get_drvdata(pdev);
 	struct resource *mem = jz4740_codec->mem;
@@ -417,7 +417,7 @@ static int __devexit jz4740_codec_remove(struct platform_device *pdev)
 
 static struct platform_driver jz4740_codec_driver = {
 	.probe = jz4740_codec_probe,
-	.remove = __devexit_p(jz4740_codec_remove),
+	.remove = jz4740_codec_remove,
 	.driver = {
 		.name = "jz4740-codec",
 		.owner = THIS_MODULE,

@@ -1751,13 +1751,13 @@ static struct snd_soc_codec_driver soc_codec_dev_twl6040 = {
 	.reg_cache_default = twl6040_reg,
 };
 
-static int __devinit twl6040_codec_probe(struct platform_device *pdev)
+static int twl6040_codec_probe(struct platform_device *pdev)
 {
 	return snd_soc_register_codec(&pdev->dev,
 			&soc_codec_dev_twl6040, &twl6040_dai, 1);
 }
 
-static int __devexit twl6040_codec_remove(struct platform_device *pdev)
+static int twl6040_codec_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
 	return 0;
@@ -1769,7 +1769,7 @@ static struct platform_driver twl6040_codec_driver = {
 		.owner = THIS_MODULE,
 	},
 	.probe = twl6040_codec_probe,
-	.remove = __devexit_p(twl6040_codec_remove),
+	.remove = twl6040_codec_remove,
 };
 
 static int __init twl6040_codec_init(void)

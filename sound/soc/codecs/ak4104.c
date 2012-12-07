@@ -276,7 +276,7 @@ static int ak4104_spi_probe(struct spi_device *spi)
 	return ret;
 }
 
-static int __devexit ak4104_spi_remove(struct spi_device *spi)
+static int ak4104_spi_remove(struct spi_device *spi)
 {
 	snd_soc_unregister_codec(&spi->dev);
 	kfree(spi_get_drvdata(spi));
@@ -289,7 +289,7 @@ static struct spi_driver ak4104_spi_driver = {
 		.owner  = THIS_MODULE,
 	},
 	.probe  = ak4104_spi_probe,
-	.remove = __devexit_p(ak4104_spi_remove),
+	.remove = ak4104_spi_remove,
 };
 
 static int __init ak4104_init(void)

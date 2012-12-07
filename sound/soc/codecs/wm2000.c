@@ -726,8 +726,8 @@ int wm2000_add_controls(struct snd_soc_codec *codec)
 }
 EXPORT_SYMBOL_GPL(wm2000_add_controls);
 
-static int __devinit wm2000_i2c_probe(struct i2c_client *i2c,
-				      const struct i2c_device_id *i2c_id)
+static int wm2000_i2c_probe(struct i2c_client *i2c,
+			    const struct i2c_device_id *i2c_id)
 {
 	struct wm2000_priv *wm2000;
 	struct wm2000_platform_data *pdata;
@@ -815,7 +815,7 @@ err:
 	return ret;
 }
 
-static __devexit int wm2000_i2c_remove(struct i2c_client *i2c)
+static int wm2000_i2c_remove(struct i2c_client *i2c)
 {
 	struct wm2000_priv *wm2000 = dev_get_drvdata(&i2c->dev);
 
@@ -868,7 +868,7 @@ static struct i2c_driver wm2000_i2c_driver = {
 		.pm = &wm2000_pm,
 	},
 	.probe = wm2000_i2c_probe,
-	.remove = __devexit_p(wm2000_i2c_remove),
+	.remove = wm2000_i2c_remove,
 	.shutdown = wm2000_i2c_shutdown,
 	.id_table = wm2000_i2c_id,
 };

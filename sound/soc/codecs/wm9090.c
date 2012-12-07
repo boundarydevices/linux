@@ -672,7 +672,7 @@ static int wm9090_i2c_probe(struct i2c_client *i2c,
 	return ret;
 }
 
-static int __devexit wm9090_i2c_remove(struct i2c_client *i2c)
+static int wm9090_i2c_remove(struct i2c_client *i2c)
 {
 	struct wm9090_priv *wm9090 = i2c_get_clientdata(i2c);
 
@@ -694,7 +694,7 @@ static struct i2c_driver wm9090_i2c_driver = {
 		.owner = THIS_MODULE,
 	},
 	.probe = wm9090_i2c_probe,
-	.remove = __devexit_p(wm9090_i2c_remove),
+	.remove = wm9090_i2c_remove,
 	.id_table = wm9090_id,
 };
 

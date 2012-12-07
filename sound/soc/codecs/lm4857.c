@@ -209,8 +209,8 @@ static struct snd_soc_codec_driver soc_codec_dev_lm4857 = {
 	.set_bias_level = lm4857_set_bias_level,
 };
 
-static int __devinit lm4857_i2c_probe(struct i2c_client *i2c,
-	const struct i2c_device_id *id)
+static int lm4857_i2c_probe(struct i2c_client *i2c,
+			    const struct i2c_device_id *id)
 {
 	struct lm4857 *lm4857;
 	int ret;
@@ -233,7 +233,7 @@ static int __devinit lm4857_i2c_probe(struct i2c_client *i2c,
 	return 0;
 }
 
-static int __devexit lm4857_i2c_remove(struct i2c_client *i2c)
+static int lm4857_i2c_remove(struct i2c_client *i2c)
 {
 	struct lm4857 *lm4857 = i2c_get_clientdata(i2c);
 
@@ -255,7 +255,7 @@ static struct i2c_driver lm4857_i2c_driver = {
 		.owner = THIS_MODULE,
 	},
 	.probe = lm4857_i2c_probe,
-	.remove = __devexit_p(lm4857_i2c_remove),
+	.remove = lm4857_i2c_remove,
 	.id_table = lm4857_i2c_id,
 };
 

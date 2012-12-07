@@ -55,14 +55,14 @@ static struct snd_soc_codec_driver soc_codec_dev_wm1250_ev1 = {
 	.num_dapm_routes = ARRAY_SIZE(wm1250_ev1_dapm_routes),
 };
 
-static int __devinit wm1250_ev1_probe(struct i2c_client *i2c,
-				      const struct i2c_device_id *id)
+static int wm1250_ev1_probe(struct i2c_client *i2c,
+			    const struct i2c_device_id *i2c_id)
 {
 	return snd_soc_register_codec(&i2c->dev, &soc_codec_dev_wm1250_ev1,
 				      &wm1250_ev1_dai, 1);
 }
 
-static int __devexit wm1250_ev1_remove(struct i2c_client *i2c)
+static int wm1250_ev1_remove(struct i2c_client *i2c)
 {
 	snd_soc_unregister_codec(&i2c->dev);
 
@@ -81,7 +81,7 @@ static struct i2c_driver wm1250_ev1_i2c_driver = {
 		.owner = THIS_MODULE,
 	},
 	.probe =    wm1250_ev1_probe,
-	.remove =   __devexit_p(wm1250_ev1_remove),
+	.remove =   wm1250_ev1_remove,
 	.id_table = wm1250_ev1_i2c_id,
 };
 
