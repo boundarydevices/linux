@@ -774,6 +774,22 @@
 							907 0x80000000	/* MX6Q_PAD_KEY_COL2__CAN1_TXCAN */
 						>;
 					};
+
+					pinctrl_flexcan1_2: flexcan1grp-2 {
+						fsl,pins = <
+							1018 0x80000000	/* MX6Q_PAD_GPIO_7__CAN1_TXCAN */
+							915  0x80000000	/* MX6Q_PAD_KEY_ROW2__CAN1_RXCAN */
+						>;
+					};
+				};
+
+				flexcan2 {
+					pinctrl_flexcan2_1: flexcan2grp-1 {
+						fsl,pins = <
+							937 0x80000000	/* MX6Q_PAD_KEY_COL4__CAN2_TXCAN */
+							945 0x80000000	/* MX6Q_PAD_KEY_ROW4__CAN2_RXCAN */
+						>;
+					};
 				};
 
 				uart1 {
