@@ -44,6 +44,14 @@
 				};
 			};
 
+			can@02090000 { /* CAN1 */
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_flexcan1_1>;
+				trx-en-gpio = <&gpio1 4 0>;
+				trx-stby-gpio = <&gpio1 2 0>;
+				status = "okay";
+			};
+
 			iomuxc@020e0000 {
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_gpio_hog>;
@@ -59,6 +67,8 @@
 							1262 0x80000000 /* MX6Q_PAD_SD3_DAT5__GPIO_7_0 */
 							1270 0x1f0b0	/* MX6Q_PAD_SD3_DAT4__GPIO_7_1 */
 							953  0x80000000	/* MX6Q_PAD_GPIO_0__CCM_CLKO */
+							1004 0x80000000 /* MX6Q_PAD_GPIO_4__GPIO_1_4 */
+							996  0x80000000 /* MX6Q_PAD_GPIO_2__GPIO_1_2 */
 						>;
 					};
 				};

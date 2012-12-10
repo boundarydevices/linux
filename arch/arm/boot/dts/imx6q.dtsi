@@ -767,6 +767,15 @@
 					};
 				};
 
+				flexcan1 {
+					pinctrl_flexcan1_1: flexcan1grp-1 {
+						fsl,pins = <
+							915 0x80000000	/* MX6Q_PAD_KEY_ROW2__CAN1_RXCAN */
+							907 0x80000000	/* MX6Q_PAD_KEY_COL2__CAN1_TXCAN */
+						>;
+					};
+				};
+
 				uart1 {
 					pinctrl_uart1_1: uart1grp-1 {
 						fsl,pins = <
