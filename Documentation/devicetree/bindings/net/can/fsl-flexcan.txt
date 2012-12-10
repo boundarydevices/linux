@@ -15,8 +15,10 @@ Required properties:
 Optional properties:
 
 - clock-frequency : The oscillator frequency driving the flexcan device
-
 - xceiver-supply: Regulator that powers the CAN transceiver
+- trx_en_gpio : enable gpio
+- trx_stby_gpio : standby gpio
+- trx_nerr_gpio : NERR gpio
 
 Example:
 
