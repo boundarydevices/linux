@@ -10,6 +10,7 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
+#include <linux/can/platform/flexcan.h>
 #include <linux/clk.h>
 #include <linux/clkdev.h>
 #include <linux/cpuidle.h>
@@ -19,8 +20,10 @@
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
+#include <linux/gpio.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
@@ -124,6 +127,44 @@ put_clk:
 		clk_put(ahb);
 	if (!IS_ERR(cko1))
 		clk_put(cko1);
+}
+
+static struct flexcan_platform_data flexcan_pdata[2];
+static int en_gpio[2];
+static int stby_gpio[2];
+#define imx6q_flexcan_switch(id)	\
+static void imx6q_flexcan ## id ##_switch(int enable)	\
+{							\
+	if (enable) {					\
+		gpio_set_value(en_gpio[id], 1);		\
+		gpio_set_value(stby_gpio[id], 1);	\
+	} else {					\
+		gpio_set_value(en_gpio[id], 0);		\
+		gpio_set_value(stby_gpio[id], 0);	\
+	}						\
+}
+imx6q_flexcan_switch(0)
+imx6q_flexcan_switch(1)
+
+static void __init imx6q_flexcan_fixup(void)
+{
+	struct device_node *np;
+	char *s1, *s2;
+	int i = 0;
+
+	for_each_compatible_node(np, NULL, "fsl,imx6q-flexcan") {
+		BUG_ON(i > 1);
+		en_gpio[i] = of_get_named_gpio(np, "trx-en-gpio", 0);
+		stby_gpio[i] = of_get_named_gpio(np, "trx-stby-gpio", 0);
+		s1 = kasprintf(GFP_KERNEL, "flexcan%d-trx-en", i);
+		s2 = kasprintf(GFP_KERNEL, "flexcan%d-trx-stby", i);
+		if (!gpio_request_one(en_gpio[i], GPIOF_DIR_OUT, s1) &&
+			!gpio_request_one(stby_gpio[i], GPIOF_DIR_OUT, s2)) {
+			flexcan_pdata[i].transceiver_switch =
+				i == 0 ? imx6q_flexcan0_switch : imx6q_flexcan1_switch ;
+		}
+		i++;
+	}
 }
 
 static void __init imx6q_sabrelite_init(void)
@@ -350,6 +391,9 @@ static struct ahci_platform_data imx_sata_pdata = {
 static const struct of_dev_auxdata imx6q_auxdata_lookup[] __initconst = {
 	OF_DEV_AUXDATA("snps,imx-ahci", MX6Q_SATA_BASE_ADDR, "imx-ahci",
 			&imx_sata_pdata),
+	OF_DEV_AUXDATA("fsl,imx6q-flexcan", 0x02090000, NULL, &flexcan_pdata[0]),
+	OF_DEV_AUXDATA("fsl,imx6q-flexcan", 0x02094000, NULL, &flexcan_pdata[1]),
+	{ /* sentinel */ }
 };
 
 static void __init imx6q_init_machine(void)
@@ -363,6 +407,7 @@ static void __init imx6q_init_machine(void)
 	imx6q_pm_init();
 	imx6q_usb_init();
 	imx6q_1588_init();
+	imx6q_flexcan_fixup();
 }
 
 static struct cpuidle_driver imx6q_cpuidle_driver = {
