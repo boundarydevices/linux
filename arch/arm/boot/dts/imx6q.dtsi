@@ -303,12 +303,12 @@
 				clock-names = "ipg", "per";
 			};
 
-			flexcan@02090000 { /* CAN1 */
+			can@02090000 { /* CAN1 */
 				reg = <0x02090000 0x4000>;
 				interrupts = <0 110 0x04>;
 			};
 
-			flexcan@02094000 { /* CAN2 */
+			can@02094000 { /* CAN2 */
 				reg = <0x02094000 0x4000>;
 				interrupts = <0 111 0x04>;
 			};
