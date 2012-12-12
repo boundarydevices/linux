@@ -927,6 +927,7 @@ static int __devinit sdhci_esdhc_imx_probe(struct platform_device *pdev)
 	if ((boarddata->support_vsel) && is_imx6q_usdhc(imx_data)) {
 		host->ocr_avail_sd |= MMC_VDD_165_195;
 		host->ocr_avail_mmc |= MMC_VDD_165_195;
+		host->ocr_avail_sdio |= MMC_VDD_165_195;
 
 		imx_data->pins_100mhz = pinctrl_lookup_state(imx_data->pinctrl,
 						ESDHC_PINCTRL_STATE_100MHZ);
