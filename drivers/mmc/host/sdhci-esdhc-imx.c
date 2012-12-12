@@ -104,14 +104,18 @@ static u32 esdhc_readl_le(struct sdhci_host *host, int reg)
 		val |= (fsl_prss & 0x00800000) << 1;
 	}
 
-	if (unlikely((reg == SDHCI_PRESENT_STATE)
-			&& gpio_is_valid(boarddata->cd_gpio))) {
-		if (gpio_get_value(boarddata->cd_gpio))
-			/* no card, if a valid gpio says so... */
-			val &= ~SDHCI_CARD_PRESENT;
-		else
-			/* ... in all other cases assume card is present */
+	if (unlikely((reg == SDHCI_PRESENT_STATE))) {
+		if (boarddata && (boarddata->cd_type == ESDHC_CD_PERMANENT)) {
 			val |= SDHCI_CARD_PRESENT;
+		} else if (boarddata && (boarddata->cd_type == ESDHC_CD_GPIO)
+				&& gpio_is_valid(boarddata->cd_gpio)) {
+			if (gpio_get_value(boarddata->cd_gpio))
+				/* no card, if a valid gpio says so... */
+				val &= ~SDHCI_CARD_PRESENT;
+			else
+				/* in all other cases assume card is present */
+				val |= SDHCI_CARD_PRESENT;
+		}
 	} else if ((reg == SDHCI_CAPABILITIES_1) && is_imx6q_usdhc(imx_data)) {
 		val = SDHCI_SUPPORT_DDR50 | SDHCI_SUPPORT_SDR104
 			| SDHCI_SUPPORT_SDR50;
