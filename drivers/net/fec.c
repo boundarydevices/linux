@@ -163,7 +163,9 @@ MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
 /* Pause frame feild and FIFO threshold */
 #define FEC_ENET_FCE		(1 << 5)
 #define FEC_ENET_RSEM_V		0x84
+#define FEC_ENET_RSEM_V_TO1	0x10
 #define FEC_ENET_RSFL_V		16
+#define FEC_ENET_RSFL_V_TO1     0x20
 #define FEC_ENET_RAEM_V		0x8
 #define FEC_ENET_RAFL_V		0x8
 #define FEC_ENET_OPD_V		0xFFF0
@@ -1762,11 +1764,18 @@ fec_restart(struct net_device *dev, int duplex)
 		 * The issue has been fixed on Rigel TO1.1 and Arik TO1.2
 		 */
 		if (cpu_is_mx6q() || (cpu_is_mx6dl()
-				&& (mx6dl_revision() >= IMX_CHIP_REVISION_1_1)))
-			rsem_val = FEC_ENET_RSEM_V;
+				&& (mx6dl_revision() >= IMX_CHIP_REVISION_1_1))) {
+			if (cpu_is_mx6q() && (mx6q_revision() < IMX_CHIP_REVISION_1_1)) {
+                                rsem_val = FEC_ENET_RSEM_V_TO1;
+			} else
+                                rsem_val = FEC_ENET_RSEM_V;
+		}
 
 		writel(rsem_val, fep->hwp + FEC_R_FIFO_RSEM);
-		writel(FEC_ENET_RSFL_V, fep->hwp + FEC_R_FIFO_RSFL);
+		if (cpu_is_mx6q() && (mx6q_revision() < IMX_CHIP_REVISION_1_1))
+			writel(FEC_ENET_RSFL_V_TO1, fep->hwp + FEC_R_FIFO_RSFL);
+		else
+			writel(FEC_ENET_RSFL_V, fep->hwp + FEC_R_FIFO_RSFL);
 		writel(FEC_ENET_RAEM_V, fep->hwp + FEC_R_FIFO_RAEM);
 		writel(FEC_ENET_RAFL_V, fep->hwp + FEC_R_FIFO_RAFL);
 
