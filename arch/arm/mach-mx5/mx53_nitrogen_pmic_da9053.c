@@ -171,7 +171,7 @@ static struct regulator_init_data da9052_regulators_init[] = {
 			/*
 			 * Audio AMP Power
 			 * 1.725 - 3.3V, 150 mA MAX
-			 * default 2.85V(0x6d), Freescale 2.775V(0x6a), 3.3V(0x7f) Needed
+			 * default 2.85V(0x6d), Freescale 2.775V(0x6a), 3.0V(0x73) Needed
 			 * R53(0x35), base 1.725V, step .025V
 			 */
 			.name		= "DA9052_LDO4",
@@ -183,7 +183,7 @@ static struct regulator_init_data da9052_regulators_init[] = {
 			.always_on = 1,
 			.boot_on = 1,
 			.state_mem = {
-				.uV = mV_to_uV(3300),
+				.uV = mV_to_uV(3000),
 				.mode = REGULATOR_MODE_NORMAL,
 				.enabled = 1,
 				.disabled = 0,
@@ -255,7 +255,7 @@ static struct regulator_init_data da9052_regulators_init[] = {
 			.always_on = 1,
 			.boot_on = 1,
 			.state_mem = {
-				.uV = mV_to_uV(2750),
+				.uV = mV_to_uV(2700),
 				.mode = REGULATOR_MODE_NORMAL,
 				.enabled = 1,
 				.disabled = 0,
@@ -347,7 +347,7 @@ static struct regulator_init_data da9052_regulators_init[] = {
 			 * default 1.8V(0x74), UBL 1.8V(0x74)
 			 * R46(0x2e), base 0.5V, step .025V
 			 *
-			 * Now, it is VDD_GP, graphic processor power 1.15V
+			 * Now, it is VDD_GP, graphic processor power 1.325V(0x61)
 			 */
 			.name		= "DA9052_BUCK_CORE",
 			.max_uV		= mV_to_uV(DA9052_BUCK_CORE_PRO_VOLT_UPPER),
@@ -358,7 +358,7 @@ static struct regulator_init_data da9052_regulators_init[] = {
 			.always_on = 1,
 			.boot_on = 1,
 			.state_mem = {
-				.uV = mV_to_uV(1150),	//1800 for rev 1 of board
+				.uV = mV_to_uV(1325),	//1800 for rev 1 of board
 				.mode = REGULATOR_MODE_NORMAL,
 				.enabled = 1,
 				.disabled = 0,
@@ -369,7 +369,7 @@ static struct regulator_init_data da9052_regulators_init[] = {
 		.constraints = {
 			/*
 			 * 0.725 - 2.075V, 1 amp MAX, need 1.3V for 1Ghz CPU
-			 * default 1.2V(0x5c), Freescale 1.3V(0x60)
+			 * default 1.2V(0x5c), Freescale 1.3V(0x60), uboot 1.35V(0x62)
 			 * R47(0x2f), base 0.5V, step .025V
 			 */
 			.name		= "DA9052_BUCK_PRO",
@@ -381,7 +381,7 @@ static struct regulator_init_data da9052_regulators_init[] = {
 			.always_on = 1,
 			.boot_on = 1,
 			.state_mem = {
-				.uV = mV_to_uV(1300),
+				.uV = mV_to_uV(1350),
 				.mode = REGULATOR_MODE_NORMAL,
 				.enabled = 1,
 				.disabled = 0,
@@ -392,7 +392,7 @@ static struct regulator_init_data da9052_regulators_init[] = {
 		.constraints = {
 			/*
 			 * 0.925 - 2.5V, 1 amp MAX
-			 * default 2.0V(0x6b), UBL 1.8V(0x63)
+			 * default 2.0V(0x6b), UBL 1.8V(0x63), uboot 1.775(0x62)
 			 * R48(0x30), base 0.925V, step .025V
 			 * */
 			.name		= "DA9052_BUCK_MEM",
@@ -404,7 +404,7 @@ static struct regulator_init_data da9052_regulators_init[] = {
 			.always_on = 1,
 			.boot_on = 1,
 			.state_mem = {
-				.uV = mV_to_uV(1800),
+				.uV = mV_to_uV(1775),
 				.mode = REGULATOR_MODE_NORMAL,
 				.enabled = 1,
 				.disabled = 0,
@@ -419,7 +419,7 @@ static struct regulator_init_data da9052_regulators_init[] = {
 			 * 0.925 - 2.475V, 1 amp MAX
 			 * 1.7V setting gives 1.675V
 			 * 2.5V setting gives 2.475V
-			 * default 1.6V(0x5b), Freescale 2.475V(0x7e)
+			 * default 1.6V(0x5b), Freescale 2.475V(0x7e), uboot 2.450V(0x7d)
 			 * R49(0x31), base 0.925V, step .025V
 			 */
 			.name		= "DA9052_BUCK_PERI",
@@ -431,7 +431,7 @@ static struct regulator_init_data da9052_regulators_init[] = {
 			.always_on = 1,
 			.boot_on = 1,
 			.state_mem = {
-				.uV = mV_to_uV(2475),
+				.uV = mV_to_uV(2450),
 				.mode = REGULATOR_MODE_NORMAL,
 				.enabled = 1,
 				.disabled = 0,
