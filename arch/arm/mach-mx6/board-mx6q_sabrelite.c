@@ -779,7 +779,6 @@ static const struct pm_platform_data mx6_sabrelite_pm_data __initconst = {
 	.suspend_exit = sabrelite_suspend_exit,
 };
 
-#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 #define GPIO_BUTTON(gpio_num, ev_code, act_low, descr, wake)	\
 {								\
 	.gpio		= gpio_num,				\
@@ -799,6 +798,7 @@ static struct gpio_keys_button sabrelite_buttons[] = {
 	GPIO_BUTTON(MX6_SABRELITE_VOL_DOWN_KEY, KEY_VOLUMEDOWN, 1, "volume-down", 0),
 };
 
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 static struct gpio_keys_platform_data sabrelite_button_data = {
 	.buttons	= sabrelite_buttons,
 	.nbuttons	= ARRAY_SIZE(sabrelite_buttons),
@@ -818,7 +818,15 @@ static void __init sabrelite_add_device_buttons(void)
 	platform_device_register(&sabrelite_button_device);
 }
 #else
-static void __init sabrelite_add_device_buttons(void) {}
+static void __init sabrelite_add_device_buttons(void)
+{
+	int i;
+	for (i=0; i < ARRAY_SIZE(sabrelite_buttons);i++) {
+		int gpio = sabrelite_buttons[i].gpio;
+		pr_debug("%s: exporting gpio %d\n", __func__, gpio);
+		gpio_export(gpio,1);
+	}
+}
 #endif
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
