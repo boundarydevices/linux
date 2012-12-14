@@ -14,6 +14,7 @@ struct bq2416x_charger_policy {
 	int	otg_lock : 1;			/* 0 - Charging from USB allowed */
 	int	prefer_usb_charging : 1;	/* 0 - Charging from IN preferred */
 	int	disable_charging : 1;
+	char   *battery_notify;
 };
 
 struct plat_i2c_bq2416x_data {

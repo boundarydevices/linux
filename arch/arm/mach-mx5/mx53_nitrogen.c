@@ -2768,6 +2768,7 @@ static struct plat_i2c_bq2416x_data i2c_bq2416x_data = {
 		.otg_lock = 0,
 		.prefer_usb_charging = 0,
 		.disable_charging = 0,
+		.battery_notify = "bq27200-0"
 	}
 };
 

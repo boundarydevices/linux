@@ -436,46 +436,6 @@ static ssize_t charger_state_show(struct device *dev,
 
 static DEVICE_ATTR(charger_state, 0444, charger_state_show, NULL);
 
-static int bq2416x_batt_status(struct bq2416x_priv *bq)
-{
-	int ctl = bq2416x_reg_read(bq, BQ24163_STATUS_CTL);
-
-	if (ctl >= 0) {
-		ctl >>= 4;
-		switch (ctl & 0x7) {
-		case 0:
-			return POWER_SUPPLY_STATUS_DISCHARGING;
-		case 1:
-		case 2:
-			return POWER_SUPPLY_STATUS_NOT_CHARGING;
-		case 3:
-		case 4:
-			return POWER_SUPPLY_STATUS_CHARGING;
-		case 5:
-			return POWER_SUPPLY_STATUS_FULL;
-		}
-	}
-	return POWER_SUPPLY_STATUS_UNKNOWN;
-}
-
-static int bq2416x_bat_check_health(struct bq2416x_priv *bq)
-{
-	int safety = bq2416x_reg_read(bq, BQ24163_SAFETY_TIMER);
-	if (safety >= 0) {
-		safety >>= 1;
-		safety &= 3;
-		switch (safety) {
-		case 0:
-			return POWER_SUPPLY_HEALTH_GOOD;
-		case 1:
-		case 2:
-		case 3:
-			return POWER_SUPPLY_HEALTH_OVERHEAT;
-		}
-	}
-	return POWER_SUPPLY_HEALTH_UNKNOWN;
-}
-
 static int bq2416x_bat_get_charge_type(struct bq2416x_priv *bq)
 {
 	int ctl = bq2416x_reg_read(bq, BQ24163_STATUS_CTL);
@@ -533,17 +493,8 @@ static int bq2416x_bat_get_property(struct power_supply *psy,
 	int ret = 0;
 
 	switch (psp) {
-	case POWER_SUPPLY_PROP_STATUS:
-		val->intval = bq2416x_batt_status(bq);
-		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = !!(bq2416x_read_battery_uvolts(bq));
-		break;
-	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-		val->intval = bq2416x_read_battery_uvolts(bq);
-		break;
-	case POWER_SUPPLY_PROP_HEALTH:
-		val->intval = bq2416x_bat_check_health(bq);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		val->intval = bq2416x_bat_get_charge_type(bq);
@@ -557,10 +508,7 @@ static int bq2416x_bat_get_property(struct power_supply *psy,
 }
 
 static enum power_supply_property bq2416x_bat_props[] = {
-	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_ONLINE,
-	POWER_SUPPLY_PROP_VOLTAGE_NOW,
-	POWER_SUPPLY_PROP_HEALTH,
 	POWER_SUPPLY_PROP_CHARGE_TYPE,
 };
 
@@ -740,6 +688,12 @@ static s32 monitoring_thread(void *data)
 		ret = bq2416x_reg_write(bq, BQ24163_STATUS_CTL, v);
 		if (ret < 0)
 			timeout = msecs_to_jiffies(1000);
+
+		if (bq->policy.battery_notify) {
+			struct power_supply *bsupply = power_supply_get_by_name(bq->policy.battery_notify);
+			if (bsupply && bsupply->external_power_changed)
+				bsupply->external_power_changed(bsupply);
+		}
 
 		ret = wait_event_freezable_timeout(bq->sample_waitq,
 				bq->bReady, timeout);
