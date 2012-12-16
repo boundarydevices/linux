@@ -385,9 +385,15 @@ static int num_cpu_wp = 3;
 
 static iomux_v3_cfg_t mx53common_pads[] = {
 	/* AUD3, J8 - PCM */
+#if 0
+	/*
+	 * Don't set yet, because Tiwi wants to be an output
+	 * on these pins. So configure CPU as input first
+	 */
 	MX53_PAD_CSI0_D4__AUD3_TXC,
-	MX53_PAD_CSI0_D5__AUD3_TXD,
 	MX53_PAD_CSI0_D6__AUD3_TXFS,
+#endif
+	MX53_PAD_CSI0_D5__AUD3_TXD,
 //	MX53_PAD_CSI0_D7__AUD3_RXD,
 
 	/* AUD4, sgtl5000 */
