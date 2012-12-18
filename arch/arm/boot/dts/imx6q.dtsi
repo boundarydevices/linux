@@ -766,7 +766,11 @@
 							66  0x1b0b0	/* MX6Q_PAD_RGMII_RD2__ENET_RGMII_RD2 */
 							70  0x1b0b0	/* MX6Q_PAD_RGMII_RD3__ENET_RGMII_RD3 */
 							48  0x1b0b0	/* MX6Q_PAD_RGMII_RX_CTL__RGMII_RX_CTL */
-							1033 0x4001b0a8	/* MX6Q_PAD_GPIO_16__ENET_ANATOP_ETHERNET_REF_OUT*/
+							/* For arm2 and Sabrelite board, GPIO_16 pin is shared by ENET RMII, */
+							/* 1588, I2C3, and SPIDF. In the same time, only one module can be configured */
+							/* to okay. 1588 module is unnecessary for engineer daily development,*/
+							/* so cancel the pin config for 1588 in default. */
+							/* 1033 0x4001b0a8 MX6Q_PAD_GPIO_16__ENET_ANATOP_ETHERNET_REF_OUT*/
 						>;
 					};
 
