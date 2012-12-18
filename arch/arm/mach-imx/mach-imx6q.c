@@ -70,6 +70,7 @@ enum {
 static phys_addr_t ggpu_phys;
 static u32 ggpu_size = SZ_128M;
 
+static int spdif_en;
 void imx6q_restart(char mode, const char *cmd)
 {
 	struct device_node *np;
@@ -191,9 +192,71 @@ static void __init imx6q_sabrelite_init(void)
 	imx6q_sabrelite_cko1_setup();
 }
 
+static int __init early_enable_spdif(char *p)
+{
+	/* Basically we don't need SPDIF on sabrelite and sabresd */
+	if ((of_machine_is_compatible("fsl,imx6q-sabrelite") ||
+		of_machine_is_compatible("fsl,imx6q-sabresd")))
+		return 0;
+
+	spdif_en = 1;
+	return 0;
+}
+early_param("spdif", early_enable_spdif);
+
+static void __init imx6q_i2c3_sda_pindel(void)
+{
+	struct device_node *np, *pinctrl_i2c3;
+	struct property *pbase;
+	struct property *poldbase;
+	u32 *psize;
+	int i = 0, j = 0;
+
+	/* Cancel GPIO_16 for I2C3 SDA config */
+	np = of_find_node_by_path("/soc/aips-bus@02100000/i2c@021a8000");
+	pinctrl_i2c3 = of_parse_phandle(np, "pinctrl-0", 0);
+	poldbase = of_find_property(pinctrl_i2c3, "fsl,pins", NULL);
+	if (poldbase) {
+		pbase = kzalloc(sizeof(*pbase) + poldbase->length - 8,
+					GFP_KERNEL);
+		if (pbase == NULL)
+			return;
+		psize = (u32 *)(pbase + 1);
+		/* Cancel  1037 0x4001b8b1 MX6Q_PAD_GPIO_16__I2C3_SDA */
+		pbase->length = poldbase->length - 8;
+		pbase->name = kstrdup(poldbase->name, GFP_KERNEL);
+		if (!pbase->name) {
+			kfree(pbase);
+			return;
+		}
+
+		pbase->value = psize;
+		for (i = 0, j = 0; i < pbase->length; i += 4, j += 4) {
+			if (cpu_to_be32(1037) ==
+				*(u32 *)(poldbase->value + j)) {
+				i -= 4;
+				j += 4;
+				continue;
+			}
+			*(u32 *)(pbase->value + i) =
+				*(u32 *)(poldbase->value + j);
+		}
+
+		prom_update_property(pinctrl_i2c3, pbase, poldbase);
+	}
+}
+
 static void __init imx6q_1588_init(void)
 {
 	struct regmap *gpr;
+	struct device_node *np, *pinctrl_enet;
+	struct property *pbase;
+	struct property *poldbase;
+	u32 *psize;
+	int i = 0;
+
+	if (!IS_BUILTIN(CONFIG_FEC_PTP))
+		return;
 
 	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
 	if (!IS_ERR(gpr))
@@ -201,7 +264,42 @@ static void __init imx6q_1588_init(void)
 	else
 		pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
 
+	/* config GPIO_16 for IEEE1588 */
+	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-fec");
+	pinctrl_enet = of_parse_phandle(np, "pinctrl-0", 0);
+	poldbase = of_find_property(pinctrl_enet, "fsl,pins", NULL);
+	if (poldbase) {
+		pbase = kzalloc(sizeof(*pbase) + poldbase->length + 8, GFP_KERNEL);
+		if (pbase == NULL)
+			return;
+		psize = (u32 *)(pbase + 1);
+		pbase->length = poldbase->length + 8;
+		pbase->name = kstrdup(poldbase->name, GFP_KERNEL);
+		if (!pbase->name) {
+			kfree(pbase);
+			return;
+		}
+
+		pbase->value = psize;
+		for (i = 0; i < poldbase->length; i += 4)
+			*(u32 *)(pbase->value + i) = *(u32 *)(poldbase->value + i);
+		/* 1033 0x4001b0a8 MX6Q_PAD_GPIO_16__ENET_ANATOP_ETHERNET_REF_OUT */
+		*(u32 *)(pbase->value + i) =  cpu_to_be32(1033);
+		*(u32 *)(pbase->value + i + 4) =  cpu_to_be32(0x4001b0a8);
+
+		prom_update_property(pinctrl_enet, pbase, poldbase);
+	}
+
+	/* arm2 and Sabrelite GPIO_16 is shared by 1588, i2c3 SDA, and spdif_en
+	 * if enable PTP, cancel the pinctrl for i2c sda and disable spdif_en
+	 */
+	if (of_machine_is_compatible("fsl,imx6q-sabrelite") ||
+		of_machine_is_compatible("fsl,imx6q-arm2")) {
+		imx6q_i2c3_sda_pindel();
+		spdif_en = 0;
+	}
 }
+
 static void __init imx6q_gpu_init(void)
 {
 	struct device_node *np;
