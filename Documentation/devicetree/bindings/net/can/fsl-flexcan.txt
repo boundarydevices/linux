@@ -11,7 +11,10 @@ Required properties:
 
 - reg : Offset and length of the register set for this device
 - interrupts : Interrupt tuple for this device
+
+Optional Properties:
 - clock-frequency : The oscillator frequency driving the flexcan device
+- gpr: phandle to general purpose register node, currently used for imx6q
 
 Below are gpios for tranceiver:
 - trx_en_gpio : enable gpio

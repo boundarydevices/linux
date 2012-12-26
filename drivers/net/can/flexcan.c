@@ -32,11 +32,14 @@
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
+#include <linux/mfd/syscon.h>
+#include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/regmap.h>
 
 #define DRV_NAME			"flexcan"
 
@@ -122,7 +125,8 @@
 	(FLEXCAN_ESR_ERR_BUS | FLEXCAN_ESR_ERR_STATE)
 #define FLEXCAN_ESR_ALL_INT \
 	(FLEXCAN_ESR_TWRN_INT | FLEXCAN_ESR_RWRN_INT | \
-	 FLEXCAN_ESR_BOFF_INT | FLEXCAN_ESR_ERR_INT)
+	 FLEXCAN_ESR_BOFF_INT | FLEXCAN_ESR_ERR_INT | \
+	 FLEXCAN_ESR_WAK_INT)
 
 /* FLEXCAN interrupt flag register (IFLAG) bits */
 #define FLEXCAN_TX_BUF_ID		8
@@ -161,6 +165,15 @@
 #define FLEXCAN_HAS_V10_FEATURES	BIT(1) /* For core version >= 10 */
 #define FLEXCAN_HAS_BROKEN_ERR_STATE	BIT(2) /* [TR]WRN_INT not connected */
 
+enum soc {
+	P1010,
+	IMX25_FLEXCAN,
+	IMX28_FLEXCAN,
+	IMX35_FLEXCAN,
+	IMX53_FLEXCAN,
+	IMX6Q_FLEXCAN,
+};
+
 /* Structure of the message buffer */
 struct flexcan_mb {
 	u32 can_ctrl;
@@ -195,6 +208,7 @@ struct flexcan_regs {
 };
 
 struct flexcan_devtype_data {
+	enum soc soc;
 	u32 features;	/* hardware controller features */
 };
 
@@ -211,6 +225,8 @@ struct flexcan_priv {
 	struct clk *clk_per;
 	struct flexcan_platform_data *pdata;
 	const struct flexcan_devtype_data *devtype_data;
+	struct regmap *gpr;
+	int id;
 };
 
 static struct flexcan_devtype_data fsl_p1010_devtype_data = {
@@ -218,6 +234,7 @@ static struct flexcan_devtype_data fsl_p1010_devtype_data = {
 };
 static struct flexcan_devtype_data fsl_imx28_devtype_data;
 static struct flexcan_devtype_data fsl_imx6q_devtype_data = {
+	.soc = IMX6Q_FLEXCAN,
 	.features = FLEXCAN_HAS_V10_FEATURES,
 };
 
@@ -257,6 +274,32 @@ static inline void flexcan_write(u32 val, void __iomem *addr)
 	writel(val, addr);
 }
 #endif
+
+static inline void flexcan_enter_stop_mode(struct flexcan_priv *priv)
+{
+	int val;
+
+	/* enable stop request */
+	if (priv->devtype_data->soc ==  IMX6Q_FLEXCAN) {
+		val = priv->id ? IMX6Q_GPR13_CAN2_STOP_REQ :
+				IMX6Q_GPR13_CAN1_STOP_REQ;
+		regmap_update_bits(priv->gpr, IOMUXC_GPR13,
+					val, val);
+	}
+}
+
+static inline void flexcan_exit_stop_mode(struct flexcan_priv *priv)
+{
+	int val;
+
+	/* remove stop request */
+	if (priv->devtype_data->soc ==  IMX6Q_FLEXCAN) {
+		val = priv->id ? IMX6Q_GPR13_CAN2_STOP_REQ :
+				IMX6Q_GPR13_CAN1_STOP_REQ;
+		regmap_update_bits(priv->gpr, IOMUXC_GPR13,
+			val, 0);
+	}
+}
 
 /*
  * Swtich transceiver on or off
@@ -620,6 +663,9 @@ static irqreturn_t flexcan_irq(int irq, void *dev_id)
 	if (reg_esr & FLEXCAN_ESR_ALL_INT)
 		flexcan_write(reg_esr & FLEXCAN_ESR_ALL_INT, &regs->esr);
 
+	if (reg_esr & FLEXCAN_ESR_WAK_INT)
+		flexcan_exit_stop_mode(priv);
+
 	/*
 	 * schedule NAPI in case of:
 	 * - rx IRQ
@@ -738,12 +784,15 @@ static int flexcan_chip_start(struct net_device *dev)
 	 * enable warning int
 	 * choose format C
 	 * disable local echo
+	 * enable self wakeup
 	 *
 	 */
 	reg_mcr = flexcan_read(&regs->mcr);
 	reg_mcr |= FLEXCAN_MCR_FRZ | FLEXCAN_MCR_FEN | FLEXCAN_MCR_HALT |
 		FLEXCAN_MCR_SUPV | FLEXCAN_MCR_WRN_EN |
-		FLEXCAN_MCR_IDAM_C | FLEXCAN_MCR_SRX_DIS;
+		FLEXCAN_MCR_IDAM_C | FLEXCAN_MCR_SRX_DIS |
+		FLEXCAN_MCR_WAK_MSK | FLEXCAN_MCR_SLF_WAK;
+
 	netdev_dbg(dev, "%s: writing mcr=0x%08x", __func__, reg_mcr);
 	flexcan_write(reg_mcr, &regs->mcr);
 
@@ -1091,6 +1140,25 @@ static int __devinit flexcan_probe(struct platform_device *pdev)
 		goto failed_register;
 	}
 
+	if (priv->devtype_data->soc == IMX6Q_FLEXCAN) {
+		priv->gpr = syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
+					"gpr");
+		if (IS_ERR(priv->gpr)) {
+			err = PTR_ERR(priv->gpr);
+			dev_err(&pdev->dev, "can not get grp\n");
+			goto failed_register;
+		}
+
+		priv->id = of_alias_get_id(pdev->dev.of_node, "flexcan");
+		if (priv->id < 0) {
+			err = priv->id;
+			dev_err(&pdev->dev, "can not get alias id\n");
+			goto failed_register;
+		}
+	}
+
+	device_set_wakeup_capable(&pdev->dev, 1);
+
 	dev_info(&pdev->dev, "device registered (reg_base=%p, irq=%d)\n",
 		 priv->base, dev->irq);
 
@@ -1132,12 +1200,22 @@ static int flexcan_suspend(struct platform_device *pdev, pm_message_t state)
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct flexcan_priv *priv = netdev_priv(dev);
 
-	flexcan_chip_disable(priv);
-
 	if (netif_running(dev)) {
 		netif_stop_queue(dev);
 		netif_device_detach(dev);
+
+		/*
+		 * if wakeup is enabled, enter stop mode
+		 * else enter disabled mode.
+		 */
+		if (device_may_wakeup(&pdev->dev)) {
+			enable_irq_wake(dev->irq);
+			flexcan_enter_stop_mode(priv);
+		} else {
+			flexcan_chip_disable(priv);
+		}
 	}
+
 	priv->can.state = CAN_STATE_SLEEPING;
 
 	return 0;
@@ -1152,8 +1230,14 @@ static int flexcan_resume(struct platform_device *pdev)
 	if (netif_running(dev)) {
 		netif_device_attach(dev);
 		netif_start_queue(dev);
+
+		if (device_may_wakeup(&pdev->dev)) {
+			disable_irq_wake(dev->irq);
+			flexcan_exit_stop_mode(priv);
+		} else {
+			flexcan_chip_enable(priv);
+		}
 	}
-	flexcan_chip_enable(priv);
 
 	return 0;
 }

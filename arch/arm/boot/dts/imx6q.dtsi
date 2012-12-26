@@ -26,6 +26,8 @@
 		gpio4 = &gpio5;
 		gpio5 = &gpio6;
 		gpio6 = &gpio7;
+		flexcan0 = &flexcan1;
+		flexcan1 = &flexcan2;
 	};
 
 	cpus {
@@ -303,21 +305,23 @@
 				clock-names = "ipg", "per";
 			};
 
-			can@02090000 { /* CAN1 */
+			flexcan1: can@02090000 { /* CAN1 */
 				compatible = "fsl,imx6q-flexcan";
 				reg = <0x02090000 0x4000>;
 				interrupts = <0 110 0x04>;
 				clocks = <&clks 108>, <&clks 109>;
 				clock-names = "ipg", "per";
+				gpr = <&gpr>;
 				status = "disabled";
 			};
 
-			can@02094000 { /* CAN2 */
+			flexcan2: can@02094000 { /* CAN2 */
 				compatible = "fsl,imx6q-flexcan";
 				reg = <0x02094000 0x4000>;
 				interrupts = <0 111 0x04>;
 				clocks = <&clks 110>, <&clks 111>;
 				clock-names = "ipg", "per";
+				gpr = <&gpr>;
 				status = "disabled";
 			};
 
