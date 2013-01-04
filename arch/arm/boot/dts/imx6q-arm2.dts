@@ -87,6 +87,20 @@
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_i2c3_3>;
 				status = "okay";
+
+				max7310_1: gpio@1f{
+					compatible = "maxim,max7310";
+					reg = <0x1f>;
+					gpio-controller;
+					#gpio-cells = <2>;
+				};
+
+				max7310_2: gpio@1b{
+					compatible = "maxim,max7310";
+					reg = <0x1b>;
+					gpio-controller;
+					#gpio-cells = <2>;
+				};
 			};
 
 			usdhc@02198000 { /* uSDHC3 */
