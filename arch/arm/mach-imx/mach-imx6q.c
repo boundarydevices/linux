@@ -135,13 +135,15 @@ static int stby_gpio[2];
 #define imx6q_flexcan_switch(id)	\
 static void imx6q_flexcan ## id ##_switch(int enable)	\
 {							\
-	if (enable) {					\
-		gpio_set_value(en_gpio[id], 1);		\
-		gpio_set_value(stby_gpio[id], 1);	\
-	} else {					\
-		gpio_set_value(en_gpio[id], 0);		\
-		gpio_set_value(stby_gpio[id], 0);	\
-	}						\
+	if (gpio_cansleep(en_gpio[id]))			\
+		gpio_set_value_cansleep(en_gpio[id], enable);	\
+	else						\
+		gpio_set_value(en_gpio[id], enable);	\
+							\
+	if (gpio_cansleep(stby_gpio[id]))		\
+		gpio_set_value_cansleep(stby_gpio[id], enable);	\
+	else						\
+		gpio_set_value(stby_gpio[id], enable);	\
 }
 imx6q_flexcan_switch(0)
 imx6q_flexcan_switch(1)
