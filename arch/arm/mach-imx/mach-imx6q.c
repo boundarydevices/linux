@@ -148,7 +148,7 @@ static void imx6q_flexcan ## id ##_switch(int enable)	\
 imx6q_flexcan_switch(0)
 imx6q_flexcan_switch(1)
 
-static void __init imx6q_flexcan_fixup(void)
+static int __init imx6q_flexcan_fixup(void)
 {
 	struct device_node *np;
 	char *s1, *s2;
@@ -167,6 +167,8 @@ static void __init imx6q_flexcan_fixup(void)
 		}
 		i++;
 	}
+
+	return 0;
 }
 
 static void __init imx6q_sabrelite_init(void)
@@ -409,7 +411,6 @@ static void __init imx6q_init_machine(void)
 	imx6q_pm_init();
 	imx6q_usb_init();
 	imx6q_1588_init();
-	imx6q_flexcan_fixup();
 }
 
 static struct cpuidle_driver imx6q_cpuidle_driver = {
@@ -423,6 +424,7 @@ static struct cpuidle_driver imx6q_cpuidle_driver = {
 static void __init imx6q_init_late(void)
 {
 	imx_cpuidle_init(&imx6q_cpuidle_driver);
+	imx6q_flexcan_fixup();
 }
 
 static void __init imx6q_map_io(void)
