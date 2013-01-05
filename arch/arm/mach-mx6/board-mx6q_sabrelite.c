@@ -1220,6 +1220,9 @@ static void __init mx6_sabrelite_board_init(void)
 	}
 #endif
 
+	gpio_export(N6_WL1271_WL_EN,1);
+	gpio_export(N6_WL1271_BT_EN,1);
+
 	imx6q_add_pcie(&pcie_data);
 }
 
