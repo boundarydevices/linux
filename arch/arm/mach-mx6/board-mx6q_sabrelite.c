@@ -831,19 +831,9 @@ static void __init sabrelite_add_device_buttons(void) {}
 #endif
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
-static void wl1271_set_power(bool enable)
-{
-	if (0 == enable) {
-		gpio_set_value(N6_WL1271_WL_EN, 0);		/* momentarily disable */
-		mdelay(2);
-		gpio_set_value(N6_WL1271_WL_EN, 1);
-	}
-}
-
 struct wl12xx_platform_data n6q_wlan_data __initdata = {
 	.irq = gpio_to_irq(N6_WL1271_WL_IRQ),
 	.board_ref_clock = WL12XX_REFCLOCK_38, /* 38.4 MHz */
-	.set_power = wl1271_set_power,
 };
 #endif
 
