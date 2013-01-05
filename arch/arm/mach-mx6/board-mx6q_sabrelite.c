@@ -1211,7 +1211,7 @@ static void __init mx6_sabrelite_board_init(void)
 		gpio_set_value(N6_WL1271_WL_EN, 1);		/* momentarily enable */
 		gpio_set_value(N6_WL1271_BT_EN, 1);
 		mdelay(2);
-		gpio_set_value(N6_WL1271_WL_EN, 0);
+		/* gpio_set_value(N6_WL1271_WL_EN, 0);		leave enabled for enumeration */
 		gpio_set_value(N6_WL1271_BT_EN, 0);
 
 		gpio_free(N6_WL1271_WL_EN);
