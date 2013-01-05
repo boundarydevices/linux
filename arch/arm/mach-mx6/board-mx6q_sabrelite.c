@@ -845,37 +845,6 @@ struct wl12xx_platform_data n6q_wlan_data __initdata = {
 	.board_ref_clock = WL12XX_REFCLOCK_38, /* 38.4 MHz */
 	.set_power = wl1271_set_power,
 };
-
-static struct regulator_consumer_supply n6q_vwl1271_consumers[] = {
-	REGULATOR_SUPPLY("vmmc", "sdhci-esdhc-imx.1"),
-};
-
-static struct regulator_init_data n6q_vwl1271_init = {
-	.constraints            = {
-		.name           = "VDD_1.8V",
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-	},
-	.num_consumer_supplies = ARRAY_SIZE(n6q_vwl1271_consumers),
-	.consumer_supplies = n6q_vwl1271_consumers,
-};
-
-static struct fixed_voltage_config n6q_vwl1271_reg_config = {
-	.supply_name		= "vwl1271",
-	.microvolts		= 1800000, /* 1.80V */
-	.gpio			= N6_WL1271_WL_EN,
-	.startup_delay		= 70000, /* 70ms */
-	.enable_high		= 1,
-	.enabled_at_boot	= 0,
-	.init_data		= &n6q_vwl1271_init,
-};
-
-static struct platform_device n6q_vwl1271_reg_devices = {
-	.name	= "reg-fixed-voltage",
-	.id	= 4,
-	.dev	= {
-		.platform_data = &n6q_vwl1271_reg_config,
-	},
-};
 #endif
 
 static struct regulator_consumer_supply sabrelite_vmmc_consumers[] = {
@@ -1248,7 +1217,6 @@ static void __init mx6_sabrelite_board_init(void)
 		/* WL12xx WLAN Init */
 		if (wl12xx_set_platform_data(&n6q_wlan_data))
 			pr_err("error setting wl12xx data\n");
-		platform_device_register(&n6q_vwl1271_reg_devices);
 
 		gpio_set_value(N6_WL1271_WL_EN, 1);		/* momentarily enable */
 		gpio_set_value(N6_WL1271_BT_EN, 1);
