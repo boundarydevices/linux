@@ -69,8 +69,8 @@ static inline struct clk *imx_clk_gate(const char *name, const char *parent,
 static inline struct clk *imx_clk_mux(const char *name, void __iomem *reg,
 		u8 shift, u8 width, const char **parents, int num_parents)
 {
-	return clk_register_mux(NULL, name, parents, num_parents, 0, reg, shift,
-			width, 0, &imx_ccm_lock);
+	return clk_register_mux(NULL, name, parents, num_parents,
+		CLK_SET_RATE_PARENT, reg, shift, width, 0, &imx_ccm_lock);
 }
 
 static inline struct clk *imx_clk_fixed_factor(const char *name,
