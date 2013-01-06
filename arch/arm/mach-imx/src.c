@@ -27,6 +27,8 @@
 #define BP_SRC_SCR_GPU2D_RST		4
 #define BP_SRC_SCR_CORE1_RST		14
 #define BP_SRC_SCR_CORE1_ENABLE		22
+#define SRC_IPU1_SWRST			0x0080
+#define SRC_IPU2_SWRST			0x1000
 
 static void __iomem *src_base;
 
@@ -138,6 +140,32 @@ int imx_src_reset_gpu(int gpucore_id)
 	return 0;
 }
 EXPORT_SYMBOL(imx_src_reset_gpu);
+
+int imx6q_src_init_ipu(int ipu_id)
+{
+	u32 val;
+	u32 rst_bit;
+	unsigned long time;
+	unsigned long flags;
+
+	spin_lock_irqsave(&scr_lock, flags);
+	val = readl_relaxed(src_base + SRC_SCR);
+	rst_bit = (ipu_id == 0) ? SRC_IPU1_SWRST : SRC_IPU2_SWRST;
+	val |= rst_bit;
+	writel_relaxed(val, src_base + SRC_SCR);
+	spin_unlock_irqrestore(&scr_lock, flags);
+
+	time = jiffies;
+	/* this is hardware self-clear bit, wait timeout is 50ms */
+	while ((readl_relaxed(src_base + SRC_SCR) & rst_bit) != 0) {
+		if (time_after(jiffies, time + HZ/20)) {
+			pr_err("ipu%d reset timeout.\n", ipu_id);
+			return -EBUSY;
+		}
+	}
+
+	return 0;
+}
 
 void __init imx_src_init(void)
 {
