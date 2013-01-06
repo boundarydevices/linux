@@ -4,6 +4,15 @@ if ARCH_MXC
 
 menu "MXC support drivers"
 
+config MXC_IPU
+	bool "Image Processing Unit Driver"
+	select MXC_IPU_V3 if SOC_IMX6Q
+	select MXC_IPU_V3H if SOC_IMX6Q
+	help
+	  If you plan to use the Image Processing unit, say
+	  Y here. IPU is needed by Framebuffer and V4L2 drivers.
+
+source "drivers/mxc/ipu3/Kconfig"
 source "drivers/mxc/thermal/Kconfig"
 source "drivers/mxc/gpu-viv/Kconfig"
 
