@@ -465,6 +465,9 @@ int __init mx6q_clocks_init(void)
 	clk_register_clkdev(clk[step], "step", NULL);
 	clk_register_clkdev(clk[arm], "arm", NULL);
 	clk_register_clkdev(clk[ocram], "ocram", NULL);
+	clk_register_clkdev(clk[pll5_video], "pll_video", NULL);
+	clk_register_clkdev(clk[ldb_di0], "ldb_di0", NULL);
+	clk_register_clkdev(clk[ldb_di1], "ldb_di1", NULL);
 
 	/*
 	 * The gpmi needs 100MHz frequency in the EDO/Sync mode,
@@ -499,6 +502,18 @@ int __init mx6q_clocks_init(void)
 		clk_set_rate(clk[gpu3d_core], 528000000);
 		clk_set_parent(clk[gpu2d_core_sel], clk[pll3_usb_otg]);
 	}
+
+	/* ipu clock initialization */
+	clk_set_parent(clk[ldb_di0_sel], clk[pll2_pfd0_352m]);
+	clk_set_parent(clk[ldb_di1_sel], clk[pll2_pfd0_352m]);
+	clk_set_parent(clk[ipu1_di0_pre_sel], clk[pll5_video]);
+	clk_set_parent(clk[ipu1_di1_pre_sel], clk[pll5_video]);
+	clk_set_parent(clk[ipu2_di0_pre_sel], clk[pll5_video]);
+	clk_set_parent(clk[ipu2_di1_pre_sel], clk[pll5_video]);
+	clk_set_parent(clk[ipu1_di0_sel], clk[ipu1_di0_pre]);
+	clk_set_parent(clk[ipu1_di1_sel], clk[ipu1_di1_pre]);
+	clk_set_parent(clk[ipu2_di0_sel], clk[ipu2_di0_pre]);
+	clk_set_parent(clk[ipu2_di1_sel], clk[ipu2_di1_pre]);
 
 	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 		clk_prepare_enable(clk[clks_init_on[i]]);
