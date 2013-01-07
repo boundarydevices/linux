@@ -1,7 +1,7 @@
 /*
  * IMX pinmux core definitions
  *
- * Copyright (C) 2012 Freescale Semiconductor, Inc.
+ * Copyright (C) 2012-2013 Freescale Semiconductor, Inc.
  * Copyright (C) 2012 Linaro Ltd.
  *
  * Author: Dong Aisheng <dong.aisheng@linaro.org>
@@ -97,7 +97,7 @@ struct imx_pinctrl_soc_info {
 #define IMX_PINCTRL_PIN(pin) PINCTRL_PIN(pin, #pin)
 
 #define PAD_CTL_MASK(len)	((1 << len) - 1)
-#define IMX_MUX_MASK	0x7
+#define IMX_MUX_MASK	0xf
 #define IOMUXC_CONFIG_SION	(0x1 << 4)
 
 int imx_pinctrl_probe(struct platform_device *pdev,
