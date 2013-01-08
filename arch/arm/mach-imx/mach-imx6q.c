@@ -791,13 +791,6 @@ static int __init imx6_soc_init(void)
 	int ret;
 	struct device_node *np;
 
-	/*
-	 * FIXME: This should be removed when pinctrl driver for imx6dl
-	 * is available.
-	 */
-	if (cpu_is_imx6dl())
-		pinctrl_provide_dummies();
-
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-wdt");
 	wdog_base1 = of_iomap(np, 0);
 	WARN_ON(!wdog_base1);
