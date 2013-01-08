@@ -42,6 +42,60 @@
 		};
 
 		aips1: aips-bus@02000000 {
+			iomuxc@020e0000 {
+				compatible = "fsl,imx6sdl-iomuxc";
+				reg = <0x020e0000 0x4000>;
+
+				/* shared pinctrl settings */
+				enet {
+					pinctrl_enet_1: enetgrp-1 {
+						fsl,pins = <
+							1152 0x1b0b0	/* MX6SDL_PAD_KEY_COL1__ENET_MDIO */
+							1164 0x1b0b0	/* MX6SDL_PAD_KEY_COL2__ENET_MDC */
+							1407 0x1b0b0	/* MX6SDL_PAD_RGMII_TXC__ENET_RGMII_TXC */
+							1383 0x1b0b0	/* MX6SDL_PAD_RGMII_TD0__ENET_RGMII_TD0 */
+							1387 0x1b0b0	/* MX6SDL_PAD_RGMII_TD1__ENET_RGMII_TD1 */
+							1392 0x1b0b0	/* MX6SDL_PAD_RGMII_TD2__ENET_RGMII_TD2 */
+							1397 0x1b0b0	/* MX6SDL_PAD_RGMII_TD3__ENET_RGMII_TD3 */
+							1402 0x1b0b0	/* MX6SDL_PAD_RGMII_TX_CTL__ENET_RGMII_TX_CTL */
+							979  0x1b0b0	/* MX6SDL_PAD_ENET_REF_CLK__ENET_TX_CLK */
+							1379 0x1b0b0	/* MX6SDL_PAD_RGMII_RXC__ENET_RGMII_RXC */
+							1357 0x1b0b0	/* MX6SDL_PAD_RGMII_RD0__ENET_RGMII_RD0 */
+							1361 0x1b0b0	/* MX6SDL_PAD_RGMII_RD1__ENET_RGMII_RD1 */
+							1366 0x1b0b0	/* MX6SDL_PAD_RGMII_RD2__ENET_RGMII_RD2 */
+							1370 0x1b0b0	/* MX6SDL_PAD_RGMII_RD3__ENET_RGMII_RD3 */
+							1374 0x1b0b0	/* MX6SDL_PAD_RGMII_RX_CTL__ENET_RGMII_RX_CTL */
+						>;
+					};
+				};
+
+				uart4 {
+					pinctrl_uart4_1: uart4grp-1 {
+						fsl,pins = <
+							1146 0x1b0b1	/* MX6SDL_PAD_KEY_COL0__UART4_TXD */
+							1190 0x1b0b1	/* MX6SDL_PAD_KEY_ROW0__UART4_RXD */
+						>;
+					};
+				};
+
+				usdhc3 {
+					pinctrl_usdhc3_1: usdhc3grp-1 {
+						fsl,pins = <
+							1488 0x10059	/* MX6SDL_PAD_SD3_CLK__USDHC3_CLK */
+							1497 0x17059	/* MX6SDL_PAD_SD3_CMD__USDHC3_CMD */
+							1506 0x17059	/* MX6SDL_PAD_SD3_DAT0__USDHC3_DAT0 */
+							1515 0x17059	/* MX6SDL_PAD_SD3_DAT1__USDHC3_DAT1 */
+							1524 0x17059	/* MX6SDL_PAD_SD3_DAT2__USDHC3_DAT2 */
+							1531 0x17059	/* MX6SDL_PAD_SD3_DAT3__USDHC3_DAT3 */
+							1540 0x17059	/* MX6SDL_PAD_SD3_DAT4__USDHC3_DAT4 */
+							1549 0x17059	/* MX6SDL_PAD_SD3_DAT5__USDHC3_DAT5 */
+							1558 0x17059	/* MX6SDL_PAD_SD3_DAT6__USDHC3_DAT6 */
+							1567 0x17059	/* MX6SDL_PAD_SD3_DAT7__USDHC3_DAT7 */
+						>;
+					};
+				};
+			};
+
 			pxp@020f0000 {
 				reg = <0x020f0000 0x4000>;
 				interrupts = <0 98 0x04>;
