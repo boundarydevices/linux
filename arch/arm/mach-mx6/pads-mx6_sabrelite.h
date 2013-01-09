@@ -123,46 +123,72 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(NANDF_D2__GPIO_2_2),	/* J14 - Back Button */
 	MX6PAD(NANDF_D3__GPIO_2_3),	/* J14 - Search Button */
 	MX6PAD(NANDF_D4__GPIO_2_4),	/* J14 - Home Button */
-	MX6PAD(EIM_A22__GPIO_2_16),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_A21__GPIO_2_17),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_A20__GPIO_2_18),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_A19__GPIO_2_19),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_A18__GPIO_2_20),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_A17__GPIO_2_21),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_A16__GPIO_2_22),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_RW__GPIO_2_26),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_LBA__GPIO_2_27),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_EB0__GPIO_2_28),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_EB1__GPIO_2_29),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_EB3__GPIO_2_31),	/* J12 - Boot Mode Select */
-
-	/* GPIO3 */
-	MX6PAD(EIM_DA0__GPIO_3_0),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA1__GPIO_3_1),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA2__GPIO_3_2),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA3__GPIO_3_3),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA4__GPIO_3_4),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA5__GPIO_3_5),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA6__GPIO_3_6),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA7__GPIO_3_7),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA8__GPIO_3_8),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA9__GPIO_3_9),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA10__GPIO_3_10),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA11__GPIO_3_11),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA12__GPIO_3_12),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA13__GPIO_3_13),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA14__GPIO_3_14),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_DA15__GPIO_3_15),	/* J12 - Boot Mode Select */
 
 	/* GPIO4 */
 	MX6PAD(GPIO_19__GPIO_4_5),	/* J14 - Volume Down */
 
-	/* GPIO5 */
-	MX6PAD(EIM_WAIT__GPIO_5_0),	/* J12 - Boot Mode Select */
-	MX6PAD(EIM_A24__GPIO_5_4),	/* J12 - Boot Mode Select */
 
-	/* GPIO6 */
-	MX6PAD(EIM_A23__GPIO_6_6),	/* J12 - Boot Mode Select */
+	/* CSI1/Bootmode pins - J12 */
+#ifdef FOR_DL_SOLO
+	/* Dualite/Solo doesn't have IPU2 */
+	MX6PAD(EIM_EB2__IPU1_CSI1_D_19),	/* GPIO2[30] */
+	MX6PAD(EIM_A23__IPU1_CSI1_D_18),	/* GPIO6[6] */
+	MX6PAD(EIM_A22__IPU1_CSI1_D_17),	/* GPIO2[16] */
+	MX6PAD(EIM_A21__IPU1_CSI1_D_16),	/* GPIO2[17] */
+	MX6PAD(EIM_A20__IPU1_CSI1_D_15),	/* GPIO2[18] */
+	MX6PAD(EIM_A19__IPU1_CSI1_D_14),	/* GPIO2[19] */
+	MX6PAD(EIM_A18__IPU1_CSI1_D_13),	/* GPIO2[20] */
+	MX6PAD(EIM_A17__IPU1_CSI1_D_12),	/* GPIO2[21] */
+	MX6PAD(EIM_EB0__IPU1_CSI1_D_11),	/* GPIO2[28] */
+	MX6PAD(EIM_EB1__IPU1_CSI1_D_10),	/* GPIO2[29] */
+	MX6PAD(EIM_DA0__IPU1_CSI1_D_9),		/* GPIO3[0] */
+	MX6PAD(EIM_DA1__IPU1_CSI1_D_8),		/* GPIO3[1] */
+	MX6PAD(EIM_DA2__IPU1_CSI1_D_7),		/* GPIO3[2] */
+	MX6PAD(EIM_DA3__IPU1_CSI1_D_6),		/* GPIO3[3] */
+	MX6PAD(EIM_DA4__IPU1_CSI1_D_5),		/* GPIO3[4] */
+	MX6PAD(EIM_DA5__IPU1_CSI1_D_4),		/* GPIO3[5] */
+	MX6PAD(EIM_DA6__IPU1_CSI1_D_3),		/* GPIO3[6] */
+	MX6PAD(EIM_DA7__IPU1_CSI1_D_2),		/* GPIO3[7] */
+	MX6PAD(EIM_DA8__IPU1_CSI1_D_1),		/* GPIO3[8] */
+	MX6PAD(EIM_DA9__IPU1_CSI1_D_0),		/* GPIO3[9] */
+	MX6PAD(EIM_DA10__IPU1_CSI1_DATA_EN),	/* GPIO3[10] */
+	MX6PAD(EIM_DA11__IPU1_CSI1_HSYNC),	/* GPIO3[11] */
+	MX6PAD(EIM_DA12__IPU1_CSI1_VSYNC),	/* GPIO3[12] */
+	MX6PAD(EIM_A16__IPU1_CSI1_PIXCLK),	/* GPIO2[22] */
+#else
+	MX6PAD(EIM_EB2__IPU2_CSI1_D_19),	/* GPIO2[30] */
+	MX6PAD(EIM_A23__IPU2_CSI1_D_18),	/* GPIO6[6] */
+	MX6PAD(EIM_A22__IPU2_CSI1_D_17),	/* GPIO2[16] */
+	MX6PAD(EIM_A21__IPU2_CSI1_D_16),	/* GPIO2[17] */
+	MX6PAD(EIM_A20__IPU2_CSI1_D_15),	/* GPIO2[18] */
+	MX6PAD(EIM_A19__IPU2_CSI1_D_14),	/* GPIO2[19] */
+	MX6PAD(EIM_A18__IPU2_CSI1_D_13),	/* GPIO2[20] */
+	MX6PAD(EIM_A17__IPU2_CSI1_D_12),	/* GPIO2[21] */
+	MX6PAD(EIM_EB0__IPU2_CSI1_D_11),	/* GPIO2[28] */
+	MX6PAD(EIM_EB1__IPU2_CSI1_D_10),	/* GPIO2[29] */
+	MX6PAD(EIM_DA0__IPU2_CSI1_D_9),		/* GPIO3[0] */
+	MX6PAD(EIM_DA1__IPU2_CSI1_D_8),		/* GPIO3[1] */
+	MX6PAD(EIM_DA2__IPU2_CSI1_D_7),		/* GPIO3[2] */
+	MX6PAD(EIM_DA3__IPU2_CSI1_D_6),		/* GPIO3[3] */
+	MX6PAD(EIM_DA4__IPU2_CSI1_D_5),		/* GPIO3[4] */
+	MX6PAD(EIM_DA5__IPU2_CSI1_D_4),		/* GPIO3[5] */
+	MX6PAD(EIM_DA6__IPU2_CSI1_D_3),		/* GPIO3[6] */
+	MX6PAD(EIM_DA7__IPU2_CSI1_D_2),		/* GPIO3[7] */
+	MX6PAD(EIM_DA8__IPU2_CSI1_D_1),		/* GPIO3[8] */
+	MX6PAD(EIM_DA9__IPU2_CSI1_D_0),		/* GPIO3[9] */
+	MX6PAD(EIM_DA10__IPU2_CSI1_DATA_EN),	/* GPIO3[10] */
+	MX6PAD(EIM_DA11__IPU2_CSI1_HSYNC),	/* GPIO3[11] */
+	MX6PAD(EIM_DA12__IPU2_CSI1_VSYNC),	/* GPIO3[12] */
+	MX6PAD(EIM_A16__IPU2_CSI1_PIXCLK),	/* GPIO2[22] */
+#endif
+	MX6PAD(EIM_DA13__GPIO_3_13),		/* GPIO3[13] - power down */
+	MX6PAD(EIM_DA14__GPIO_3_14),		/* GPIO3[14] - camera reset */
+	MX6PAD(EIM_RW__GPIO_2_26),		/* GPIO2[26] - unused */
+	MX6PAD(EIM_LBA__GPIO_2_27),		/* GPIO2[27] - unused */
+	MX6PAD(EIM_EB3__GPIO_2_31),		/* GPIO2[31] - unused */
+	MX6PAD(EIM_DA15__GPIO_3_15),		/* GPIO3[15] - unused */
+	MX6PAD(EIM_WAIT__GPIO_5_0),		/* GPIO5[0] - unused */
+	MX6PAD(EIM_A24__GPIO_5_4),		/* GPIO5[4] - unused */
 
 	/* NANDF_CS1/2/3 are unused for sabrelite */
 	NEW_PAD_CTRL(MX6PAD(NANDF_CS1__GPIO_6_14), N6_IRQ_TEST_PADCFG),	/* wl1271 wl_irq */
