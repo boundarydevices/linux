@@ -375,15 +375,16 @@ static int anatop_thermal_get_temp(struct thermal_zone_device *thermal,
 	tz->temperature = cvt_raw_to_celius(tmp);
 
 	if (debug_mask & DEBUG_VERBOSE)
-		pr_info("Cooling device Temperature is %lu C\n", tz->temperature);
+		pr_info("raw %d, celius %ld, %ld F\n", tmp, tz->temperature, ((tz->temperature * 9)/5) + 32);
+	if ((tz->temperature < -25) || (tz->temperature > 125)) {
+		pr_warn("Invalid temperature %ld C, force it to 25C\n",
+				tz->temperature);
+		tz->temperature = 25;
+	}
 
-	*temp = (cooling_device_disable
-		 &&
-		 (tz->temperature >= KELVIN_TO_CEL(_TEMP_CRITICAL,
-						   KELVIN_OFFSET)))
-		? KELVIN_TO_CEL(_TEMP_CRITICAL - 1, KELVIN_OFFSET)
-		: tz->temperature;
-
+	*temp = (cooling_device_disable &&
+		(tz->temperature >= KELVIN_TO_CEL(TEMP_CRITICAL, KELVIN_OFFSET))) ?
+		KELVIN_TO_CEL(TEMP_CRITICAL - 1, KELVIN_OFFSET) : tz->temperature;
 	return 0;
 }
 
@@ -947,8 +948,8 @@ static int anatop_thermal_counting_ratio(unsigned int fuse_data)
 	cvt_to_raw = raw25c - raw_hot;
 	cvt_to_raw <<= 32;
 	do_div(cvt_to_raw, hot_temp - 25);
-	pr_info("%s: raw25c=%d raw_hot=%d hot_temp=%d\n",
-		__func__, raw25c, raw_hot, hot_temp);
+	pr_info("%s: raw25c=%d raw_hot=%d hot_temp=%d cvt_to_raw=%llu\n",
+		__func__, raw25c, raw_hot, hot_temp, cvt_to_raw);
 
 	/* Init default critical temp to set alarm */
 	raw_critical = cvt_celius_to_raw
@@ -1028,12 +1029,14 @@ static int anatop_thermal_probe(struct platform_device *pdev)
 			fusedata, fuse_data);
 	else {
 		fuse_data = __raw_readl(calibration_addr);
-		if (0 == fuse_data) {
+		if (!fuse_data) {
+			unsigned raw25c = DEFAULT_RAW_25C;
+			unsigned raw_hot = DEFAULT_RAW_HOT;
+			unsigned hot_temp = DEFAULT_TEMP_HOT;
+
+			fuse_data = hot_temp | (raw_hot << 8) | (raw25c << 20);
 			dev_err(&pdev->dev,
 				"invalid fuse data, use defaults\n");
-			fuse_data = DEFAULT_TEMP_HOT
-				  | (DEFAULT_RAW_HOT<<8)
-				  | (DEFAULT_RAW_25C<<20);
 		}
 	}
 	dev_info(&pdev->dev, "fuse data: 0x%08lx\n", fuse_data);
