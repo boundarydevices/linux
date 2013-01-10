@@ -94,6 +94,12 @@ int wm5102_patch(struct arizona *arizona)
 }
 
 static const struct regmap_irq wm5102_aod_irqs[ARIZONA_NUM_IRQ] = {
+	[ARIZONA_IRQ_MICD_CLAMP_FALL] = {
+		.mask = ARIZONA_MICD_CLAMP_FALL_EINT1
+	},
+	[ARIZONA_IRQ_MICD_CLAMP_RISE] = {
+		.mask = ARIZONA_MICD_CLAMP_RISE_EINT1
+	},
 	[ARIZONA_IRQ_GP5_FALL] = { .mask = ARIZONA_GP5_FALL_EINT1 },
 	[ARIZONA_IRQ_GP5_RISE] = { .mask = ARIZONA_GP5_RISE_EINT1 },
 	[ARIZONA_IRQ_JD_FALL] = { .mask = ARIZONA_JD1_FALL_EINT1 },
@@ -332,7 +338,7 @@ static const struct reg_default wm5102_reg_default[] = {
 	{ 0x0000029B, 0x0020 },   /* R667   - Headphone Detect 1 */ 
 	{ 0x0000029C, 0x0000 },   /* R668   - Headphone Detect 2 */
 	{ 0x0000029F, 0x0000 },   /* R671   - Headphone Detect Test */
-	{ 0x000002A2, 0x0000 },   /* R674   - Micd Clamp control */
+	{ 0x000002A2, 0x0000 },   /* R674   - Micd clamp control */
 	{ 0x000002A3, 0x1102 },   /* R675   - Mic Detect 1 */ 
 	{ 0x000002A4, 0x009F },   /* R676   - Mic Detect 2 */ 
 	{ 0x000002A5, 0x0000 },   /* R677   - Mic Detect 3 */ 
