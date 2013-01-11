@@ -78,10 +78,10 @@ static DEFINE_PER_CPU(struct task_struct *, softlockup_watchdog);
 static DEFINE_PER_CPU(struct hrtimer, watchdog_hrtimer);
 static DEFINE_PER_CPU(bool, softlockup_touch_sync);
 static DEFINE_PER_CPU(bool, soft_watchdog_warn);
-static DEFINE_PER_CPU(unsigned long, hrtimer_interrupts);
+DEFINE_PER_CPU(unsigned long, hrtimer_interrupts);
 static DEFINE_PER_CPU(unsigned long, soft_lockup_hrtimer_cnt);
 static DEFINE_PER_CPU(struct task_struct *, softlockup_task_ptr_saved);
-static DEFINE_PER_CPU(unsigned long, hrtimer_interrupts_saved);
+DEFINE_PER_CPU(unsigned long, hrtimer_interrupts_saved);
 static unsigned long soft_lockup_nmi_warn;
 
 unsigned int __read_mostly softlockup_panic =
@@ -211,6 +211,7 @@ void touch_softlockup_watchdog_sync(void)
 }
 
 /* watchdog detector functions */
+#ifdef CONFIG_HARDLOCKUP_DETECTOR_NMI
 bool is_hardlockup(void)
 {
 	unsigned long hrint = __this_cpu_read(hrtimer_interrupts);
@@ -221,6 +222,7 @@ bool is_hardlockup(void)
 	__this_cpu_write(hrtimer_interrupts_saved, hrint);
 	return false;
 }
+#endif
 
 static int is_softlockup(unsigned long touch_ts)
 {
@@ -239,18 +241,6 @@ static void watchdog_interrupt_count(void)
 	__this_cpu_inc(hrtimer_interrupts);
 }
 
-/*
- * These two functions are mostly architecture specific
- * defining them as weak here.
- */
-int __weak watchdog_nmi_enable(unsigned int cpu)
-{
-	return 0;
-}
-void __weak watchdog_nmi_disable(unsigned int cpu)
-{
-}
-
 static int watchdog_enable_all_cpus(void);
 static void watchdog_disable_all_cpus(void);
 
@@ -267,6 +257,9 @@ static enum hrtimer_restart watchdog_timer_fn(struct hrtimer *hrtimer)
 
 	/* kick the hardlockup detector */
 	watchdog_interrupt_count();
+
+	/* test for hardlockups on the next cpu */
+	watchdog_check_hardlockup_other_cpu();
 
 	/* kick the softlockup detector */
 	wake_up_process(__this_cpu_read(softlockup_watchdog));
