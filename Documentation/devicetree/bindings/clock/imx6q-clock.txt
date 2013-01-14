@@ -198,6 +198,8 @@ clocks and IDs.
 	usbphy2			183
 	ldb_di0_div_3_5		184
 	ldb_di1_div_3_5		185
+	usbphy1_gate		186
+	usbphy2_gate		187
 
 Examples:
 
