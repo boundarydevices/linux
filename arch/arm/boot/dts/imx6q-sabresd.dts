@@ -22,6 +22,12 @@
 	};
 
 	soc {
+		pcie@01000000 {
+			pwr-gpios = <&gpio3 19 0>;
+			rst-gpios = <&gpio7 12 0>;
+			status = "okay";
+		};
+
 		aips-bus@02000000 { /* AIPS1 */
 			spba-bus@02000000 {
 				uart1: serial@02020000 {

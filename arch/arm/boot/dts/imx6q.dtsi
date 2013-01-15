@@ -251,6 +251,16 @@
 			cache-level = <2>;
 		};
 
+		pcie@01000000 {
+			compatible = "fsl,imx-pcie";
+			reg = <0x01ffc000 0x4000>;
+			reg-names = "pcie_reg";
+			interrupts = <0 123 0x04>;
+			clocks = <&clks 144>, <&clks 188>, <&clks 190>, <&clks 191>;
+			clock-names = "pcie_clk", "pcie_ref", "pcie_bus_in", "pcie_bus_out";
+			status = "disabled";
+		};
+
 		aips-bus@02000000 { /* AIPS1 */
 			compatible = "fsl,aips-bus", "simple-bus";
 			#address-cells = <1>;

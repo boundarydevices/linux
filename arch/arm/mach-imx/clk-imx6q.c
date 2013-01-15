@@ -121,7 +121,9 @@ static const char *vpu_axi_sels[]	= { "axi", "pll2_pfd2_396m", "pll2_pfd0_352m",
 static const char *cko1_sels[]	= { "pll3_usb_otg", "pll2_bus", "pll1_sys", "pll5_video",
 				    "dummy", "axi", "enfc", "ipu1_di0", "ipu1_di1", "ipu2_di0",
 				    "ipu2_di1", "ahb", "ipg", "ipg_per", "ckil", "pll4_audio", };
-
+/* Please add your own lvds src clk, if it is not contained yet. */
+static const char *lvds_sels[]	= { "arm", "pll1_sys", "dummy", "dummy", "dummy", "dummy", "pll4_audio", "pll5_video",
+				    "pll5_mlb", "dummy", "pcie_ref", "sata_ref", "usbphy1", "usbphy2", };
 enum mx6q_clks {
 	dummy, ckil, ckih, osc, pll2_pfd0_352m, pll2_pfd1_594m, pll2_pfd2_396m,
 	pll3_pfd0_720m, pll3_pfd1_540m, pll3_pfd2_508m, pll3_pfd3_454m,
@@ -153,7 +155,7 @@ enum mx6q_clks {
 	usdhc4, vdo_axi, vpu_axi, cko1, pll1_sys, pll2_bus, pll3_usb_otg,
 	pll4_audio, pll5_video, pll6_mlb, pll7_usb_host, pll8_enet, ssi1_ipg,
 	ssi2_ipg, ssi3_ipg, rom, usbphy1, usbphy2, ldb_di0_div_3_5, ldb_di1_div_3_5,
-	sata_ref, gpt_3m, clk_max
+	sata_ref, gpt_3m, pcie_ref, lvds1_sel, lvds1_in, lvds1_out, clk_max
 };
 
 static struct clk *clk[clk_max];
@@ -199,9 +201,16 @@ int __init mx6q_clocks_init(void)
 	clk[pll7_usb_host] = imx_clk_pllv3(IMX_PLLV3_USB,	"pll7_usb_host","osc", base + 0x20, 0x2000,   0x3);
 	clk[pll8_enet]     = imx_clk_pllv3(IMX_PLLV3_ENET,	"pll8_enet",	"osc", base + 0xe0, 0x182000, 0x3);
 
+	/*                              name            reg       shift width parent_names     num_parents */
+	clk[lvds1_sel]    = imx_clk_mux("lvds1_sel",    base + 0x160, 0,  5,  lvds_sels,       ARRAY_SIZE(lvds_sels));
+
 	clk[usbphy1] = imx_clk_gate("usbphy1", "pll3_usb_otg", base + 0x10, 6);
 	clk[usbphy2] = imx_clk_gate("usbphy2", "pll7_usb_host", base + 0x20, 6);
 	clk[sata_ref] = imx_clk_gate("sata_ref", "pll8_enet", base + 0xe0, 20);
+	clk[pcie_ref] = imx_clk_gate("pcie_ref", "pll8_enet", base + 0xe0, 19);
+	/* NOTICE: The gate of the lvds1 in/out is used to select the clk direction */
+	clk[lvds1_in] = imx_clk_gate("lvds1_in", NULL, base + 0x160, 12);
+	clk[lvds1_out] = imx_clk_gate("lvds1_out", "lvds1_sel", base + 0x160, 10);
 
 	/*                                name              parent_name        reg       idx */
 	clk[pll2_pfd0_352m] = imx_clk_pfd("pll2_pfd0_352m", "pll2_bus",     base + 0x100, 0);
@@ -421,6 +430,12 @@ int __init mx6q_clocks_init(void)
 	 * So choose pll2_pfd2_396m as enfc_sel's parent.
 	 */
 	clk_set_parent(clk[enfc_sel], clk[pll2_pfd2_396m]);
+
+	/* Set the parent clks of PCIe lvds1 and pcie_axi to be sata ref, axi */
+	if (clk_set_parent(clk[lvds1_sel], clk[sata_ref]))
+		pr_err("Failed to set PCIe bus parent clk.\n");
+	if (clk_set_parent(clk[pcie_axi_sel], clk[axi]))
+		pr_err("Failed to set PCIe parent clk.\n");
 
 	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 		clk_prepare_enable(clk[clks_init_on[i]]);

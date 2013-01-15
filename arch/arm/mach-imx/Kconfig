@@ -838,4 +838,9 @@ config SOC_IMX6Q
 	help
 	  This enables support for Freescale i.MX6 Quad processor.
 
+config IMX_PCIE
+	bool "PCI Express support"
+	depends on SOC_IMX6Q
+	select PCI
+
 endif
