@@ -187,6 +187,7 @@ void cpu_idle(void)
 
 	/* endless idle loop with no priority at all */
 	while (1) {
+		idle_notifier_call_chain(IDLE_START);
 		tick_nohz_idle_enter();
 		rcu_idle_enter();
 		leds_event(led_idle_start);
@@ -220,10 +221,12 @@ void cpu_idle(void)
 			} else
 				local_irq_enable();
 		}
+		idle_notifier_call_chain(IDLE_END);
 		leds_event(led_idle_end);
 		rcu_idle_exit();
 		tick_nohz_idle_exit();
 		schedule_preempt_disabled();
+
 	}
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2010 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2013 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -17,7 +17,7 @@
 #include <linux/module.h>
 #include <mach/hardware.h>
 #include <linux/io.h>
-
+struct cpu_op *(*get_cpu_op)(int *op);
 static int mx5_cpu_rev = -1;
 
 #define IIM_SREV 0x24

@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007, 2010 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2007, 2010-2013 Freescale Semiconductor, Inc. All Rights Reserved.
  * Copyright (C) 2008 Juergen Beisert (kernel@pengutronix.de)
  *
  * This program is free software; you can redistribute it and/or
@@ -163,10 +163,27 @@ extern unsigned int __mxc_cpu_type;
 #endif
 
 #ifndef __ASSEMBLY__
-
+#ifdef CONFIG_SOC_IMX6Q
+struct cpu_op {
+	u32 pll_reg;
+	u32 pll_rate;
+	u32 pll_lpm_rate;
+	u32 cpu_rate;
+	u32 pdr0_reg;
+	u32 pdf;
+	u32 mfi;
+	u32 mfd;
+	u32 mfn;
+	u32 pu_voltage;
+	u32 soc_voltage;
+	u32 cpu_voltage;
+	u32 cpu_podf;
+};
+#else
 struct cpu_op {
 	u32 cpu_rate;
 };
+#endif
 
 int tzic_enable_wake(void);
 

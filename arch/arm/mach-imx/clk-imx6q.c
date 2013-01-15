@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Freescale Semiconductor, Inc.
+ * Copyright 2011-2013 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -54,7 +54,7 @@
 #define BM_CLPCR_MASK_L2CC_IDLE		(0x1 << 27)
 
 static void __iomem *ccm_base;
-
+extern void mx6_cpu_op_init(void);
 void __init imx6q_clock_map_io(void) { }
 
 int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
@@ -405,6 +405,11 @@ int __init mx6q_clocks_init(void)
 	clk_register_clkdev(clk[cko1_sel], "cko1_sel", NULL);
 	clk_register_clkdev(clk[ahb], "ahb", NULL);
 	clk_register_clkdev(clk[cko1], "cko1", NULL);
+	clk_register_clkdev(clk[pll1_sys], "pll1_sys", NULL);
+	clk_register_clkdev(clk[pll1_sw], "pll1_sw", NULL);
+	clk_register_clkdev(clk[pll2_pfd2_396m], "pll2_pfd2_396m", NULL);
+	clk_register_clkdev(clk[step], "step", NULL);
+	clk_register_clkdev(clk[arm], "arm", NULL);
 
 	/*
 	 * The gpmi needs 100MHz frequency in the EDO/Sync mode,
@@ -421,6 +426,5 @@ int __init mx6q_clocks_init(void)
 	WARN_ON(!base);
 	irq = irq_of_parse_and_map(np, 0);
 	mxc_timer_init(base, irq);
-
 	return 0;
 }
