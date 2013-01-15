@@ -72,5 +72,9 @@
 				status = "okay";
 			};
 		};
+
+		ahci@02200000 { /* AHCI SATA */
+			status = "okay";
+		};
 	};
 };
