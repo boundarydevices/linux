@@ -406,6 +406,14 @@
 				interrupts = <0 82 0x04>;
 			};
 
+			busfreq { /* BUSFREQ */
+				compatible = "fsl,imx_busfreq";
+				clocks = <&clks 171>, <&clks 6>, <&clks 11>, <&clks 104>, <&clks 172>, <&clks 58>,
+					<&clks 18>, <&clks 60>, <&clks 20>, <&clks 3>;
+				clock-names = "pll2_bus_clk", "pll2_pfd2_396m_clk", "pll2_198m_clk", "arm_clk", "pll3_usb_otg_clk", "periph_clk",
+					"periph_pre_clk", "periph_clk2_clk", "periph_clk2_sel_clk", "osc_clk";
+			};
+
 			wdog@020bc000 { /* WDOG1 */
 				compatible = "fsl,imx6q-wdt", "fsl,imx21-wdt";
 				reg = <0x020bc000 0x4000>;
@@ -1109,6 +1117,11 @@
 
 			romcp@021ac000 {
 				reg = <0x021ac000 0x4000>;
+			};
+
+			mmdc0-1@021b0000 { /* MMDC0-1 */
+				compatible = "fsl,imx6q-mmdc-combine";
+				reg = <0x021b0000 0x8000>;
 			};
 
 			mmdc@021b0000 { /* MMDC0 */
