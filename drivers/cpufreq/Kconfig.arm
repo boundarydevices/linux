@@ -2,6 +2,12 @@
 # ARM CPU Frequency scaling drivers
 #
 
+config ARM_IMX_CPUFREQ
+	bool "IMX CPU Frequency scaling support"
+	depends on ARCH_IMX_V6_V7
+	default y
+	select CPU_FREQ_TABLE
+
 config ARM_OMAP2PLUS_CPUFREQ
 	bool "TI OMAP2+"
 	depends on ARCH_OMAP2PLUS
