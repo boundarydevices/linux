@@ -68,6 +68,27 @@
 				status = "okay";
 			};
 
+			i2c@021a0000 { /* I2C1 */
+				clock-frequency = <100000>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_i2c1_2>;
+				status = "okay";
+			};
+
+			i2c@021a4000 { /* I2C2 */
+				clock-frequency = <100000>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_i2c2_2>;
+				status = "okay";
+			};
+
+			i2c@021a8000 { /* I2C3 */
+				clock-frequency = <100000>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_i2c3_3>;
+				status = "okay";
+			};
+
 			usdhc@02198000 { /* uSDHC3 */
 				cd-gpios = <&gpio6 11 0>;
 				wp-gpios = <&gpio6 14 0>;
