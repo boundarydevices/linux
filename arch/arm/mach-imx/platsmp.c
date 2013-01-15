@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Freescale Semiconductor, Inc.
+ * Copyright 2011-2013 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -18,6 +18,8 @@
 #include <asm/mach/map.h>
 #include <mach/common.h>
 #include <mach/hardware.h>
+
+#define SCU_STANDBY_ENABLE      (1 << 5)
 
 static void __iomem *scu_base;
 
@@ -41,6 +43,18 @@ void __init imx_scu_map_io(void)
 	scu_base = IMX_IO_ADDRESS(base);
 }
 
+void imx_scu_standby_enable(bool enable)
+{
+	u32 val = readl_relaxed(scu_base);
+
+	if (enable)
+		val |= SCU_STANDBY_ENABLE;
+	else
+		val &= ~SCU_STANDBY_ENABLE;
+
+	writel_relaxed(val, scu_base);
+}
+
 void __cpuinit platform_secondary_init(unsigned int cpu)
 {
 	/*
@@ -55,6 +69,9 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	imx_set_cpu_jump(cpu, v7_secondary_startup);
 	imx_enable_cpu(cpu, true);
+	/* enable scu auto standby mode to save power and make
+	 * system be able to enter low power mode */
+	imx_scu_standby_enable(false);
 	return 0;
 }
 

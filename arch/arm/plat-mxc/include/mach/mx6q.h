@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2011-2013 Freescale Semiconductor, Inc. All Rights Reserved.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -33,6 +33,13 @@
 #define MX6Q_UART3_BASE_ADDR		0x021ec000
 #define MX6Q_UART4_BASE_ADDR		0x021f0000
 #define MX6Q_UART5_BASE_ADDR		0x021f4000
+
+#define MX6Q_MMDC_P0_BASE_ADDR		0x021b0000
+#define MX6Q_IOMUXC_BASE_ADDR		0x020e0000
+#define MX6Q_SRC_BASE_ADDR		0x020d8000
+#define MX6Q_IRAM_BASE_ADDR		0x900000
+/* The last 4K is for suspend/resume */
+#define MX6Q_IRAM_SIZE                  (SZ_256K - SZ_4K)
 
 /*
  * MX6Q_UART_BASE_ADDR is put in the middle to force the expansion

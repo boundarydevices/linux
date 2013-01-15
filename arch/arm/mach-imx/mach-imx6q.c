@@ -432,6 +432,7 @@ static void __init imx6q_map_io(void)
 	imx_lluart_map_io();
 	imx_scu_map_io();
 	imx6q_clock_map_io();
+	imx_pm_map_io();
 }
 
 static int __init imx6q_gpio_add_irq_domain(struct device_node *np,

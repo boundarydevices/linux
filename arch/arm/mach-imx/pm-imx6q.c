@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Freescale Semiconductor, Inc.
+ * Copyright 2011-2013 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -20,12 +20,25 @@
 #include <asm/hardware/cache-l2x0.h>
 #include <mach/common.h>
 #include <mach/hardware.h>
+#include <asm/mach/map.h>
+#include <linux/err.h>
+#include <linux/clk.h>
+#include <linux/delay.h>
 
 extern unsigned long phys_l2x0_saved_regs;
+static void *suspend_iram_base;
+static struct clk *ocram_clk;
+static void __iomem *iram_base;
+static int (*suspend_in_iram_fn)(unsigned int *iram_vbase,
+	unsigned int *iram_pbase, unsigned int cpu_type);
 
 static int imx6q_suspend_finish(unsigned long val)
 {
-	cpu_do_idle();
+	/* call low level suspend function in iram,
+	 * as we need to float DDR IO */
+	suspend_in_iram_fn((unsigned int *)iram_base,
+		(unsigned int *)(MX6Q_IRAM_BASE_ADDR +
+		MX6Q_IRAM_SIZE), 0);
 	return 0;
 }
 
@@ -48,6 +61,29 @@ static int imx6q_pm_enter(suspend_state_t state)
 	return 0;
 }
 
+static struct map_desc mx6_pm_io_desc[] __initdata = {
+	{
+	.virtual = IMX_IO_P2V(MX6Q_MMDC_P0_BASE_ADDR),
+	.pfn = __phys_to_pfn(MX6Q_MMDC_P0_BASE_ADDR),
+	.length = SZ_4K,
+	.type = MT_DEVICE},
+	{
+	.virtual = IMX_IO_P2V(MX6Q_SRC_BASE_ADDR),
+	.pfn = __phys_to_pfn(MX6Q_SRC_BASE_ADDR),
+	.length = SZ_4K,
+	.type = MT_DEVICE},
+	{
+	.virtual = IMX_IO_P2V(MX6Q_IOMUXC_BASE_ADDR),
+	.pfn = __phys_to_pfn(MX6Q_IOMUXC_BASE_ADDR),
+	.length = SZ_4K,
+	.type = MT_DEVICE},
+};
+
+void __init imx_pm_map_io(void)
+{
+	iotable_init(mx6_pm_io_desc, ARRAY_SIZE(mx6_pm_io_desc));
+}
+
 static const struct platform_suspend_ops imx6q_pm_ops = {
 	.enter = imx6q_pm_enter,
 	.valid = suspend_valid_only_mem,
@@ -55,6 +91,19 @@ static const struct platform_suspend_ops imx6q_pm_ops = {
 
 void __init imx6q_pm_init(void)
 {
+	ocram_clk = clk_get(NULL, "ocram");
+	if (IS_ERR(ocram_clk)) {
+		printk(KERN_ERR "%s: failed to get ocram clk\n", __func__);
+		return;
+	}
+	clk_prepare(ocram_clk);
+	clk_enable(ocram_clk);
+	iram_base = ioremap(MX6Q_IRAM_BASE_ADDR + MX6Q_IRAM_SIZE, SZ_4K);
+	/* last 4K of IRAM is reserved for suspend/resume */
+	suspend_iram_base = __arm_ioremap(MX6Q_IRAM_BASE_ADDR +
+		MX6Q_IRAM_SIZE, SZ_4K, MT_MEMORY_NONCACHED);
+	memcpy((void *)suspend_iram_base, imx_suspend, SZ_4K);
+	suspend_in_iram_fn = (void *)suspend_iram_base;
 	/*
 	 * The l2x0 core code provides an infrastucture to save and restore
 	 * l2x0 registers across suspend/resume cycle.  But because imx6q

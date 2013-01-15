@@ -411,6 +411,7 @@ int __init mx6q_clocks_init(void)
 	clk_register_clkdev(clk[pll2_pfd2_396m], "pll2_pfd2_396m", NULL);
 	clk_register_clkdev(clk[step], "step", NULL);
 	clk_register_clkdev(clk[arm], "arm", NULL);
+	clk_register_clkdev(clk[ocram], "ocram", NULL);
 
 	/*
 	 * The gpmi needs 100MHz frequency in the EDO/Sync mode,

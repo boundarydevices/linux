@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2007, 2013 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -125,9 +125,11 @@ extern u32 *pl310_get_save_ptr(void);
 extern void v7_secondary_startup(void);
 extern void imx_scu_map_io(void);
 extern void imx_smp_prepare(void);
+extern void imx_scu_standby_enable(bool enable);
 #else
 static inline void imx_scu_map_io(void) {}
 static inline void imx_smp_prepare(void) {}
+static inline void imx_scu_standby_enable(bool enable) {}
 #endif
 extern void imx_enable_cpu(int cpu, bool enable);
 extern void imx_set_cpu_jump(int cpu, void *jump_addr);
@@ -143,11 +145,13 @@ extern void imx53_qsb_common_init(void);
 extern void imx53_smd_common_init(void);
 extern int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode);
 extern void imx6q_clock_map_io(void);
+extern void imx_pm_map_io(void);
 
 #ifdef CONFIG_PM
 extern void imx6q_pm_init(void);
 extern void imx51_pm_init(void);
 extern void imx53_pm_init(void);
+extern void imx_suspend(void);
 #else
 static inline void imx6q_pm_init(void) {}
 static inline void imx51_pm_init(void) {}
