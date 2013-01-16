@@ -712,6 +712,7 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 			 struct esdhc_platform_data *boarddata)
 {
 	struct device_node *np = pdev->dev.of_node;
+	struct sdhci_host *host = platform_get_drvdata(pdev);
 
 	if (!np)
 		return -ENODEV;
@@ -742,6 +743,12 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 		boarddata->support_vsel = false;
 	else
 		boarddata->support_vsel = true;
+
+	if (of_find_property(np, "keep-power-in-suspend", NULL))
+		host->mmc->pm_caps |= MMC_PM_KEEP_POWER;
+
+	if (of_find_property(np, "enable-sdio-wakeup", NULL))
+		host->mmc->pm_caps |= MMC_PM_WAKE_SDIO_IRQ;
 
 	return 0;
 }
