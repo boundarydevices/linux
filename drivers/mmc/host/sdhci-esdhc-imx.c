@@ -29,29 +29,6 @@
 #include "sdhci-pltfm.h"
 #include "sdhci-esdhc.h"
 
-#define	SDHCI_CTRL_D3CD			0x08
-/* VENDOR SPEC register */
-#define SDHCI_VENDOR_SPEC		0xC0
-#define SDHCI_VENDOR_SPEC_SDIO_QUIRK	0x00000002
-#define SDHCI_WTMK_LVL			0x44
-#define SDHCI_MIX_CTRL			0x48
-#define SDHCI_MIX_CTRL_AC23EN	(1 << 7)
-
-#define SDHCI_PROT_CTRL_DMA_MASK	(3 << 8)
-#define SDHCI_PROT_CTRL_LCTL		(1 << 0)
-#define SDHCI_PROT_CTRL_DTW_MASK	(3 << 1)
-#define SDHCI_PROT_CTRL_1BIT		(0)
-#define SDHCI_PROT_CTRL_4BIT		(1 << 1)
-#define SDHCI_PROT_CTRL_8BIT		(1 << 2)
-
-/*
- * There is an INT DMA ERR mis-match between eSDHC and STD SDHC SPEC:
- * Bit25 is used in STD SPEC, and is reserved in fsl eSDHC design,
- * but bit28 is used as the INT DMA ERR in fsl eSDHC design.
- * Define this macro DMA error INT for fsl eSDHC
- */
-#define SDHCI_INT_VENDOR_SPEC_DMA_ERR	0x10000000
-
 /*
  * The CMDTYPE of the CMD register (offset 0xE) should be set to
  * "11" when the STOP CMD12 is issued on imx53 to abort one
@@ -64,25 +41,6 @@
  * exeception. Bit1 of Vendor Spec registor is used to fix it.
  */
 #define ESDHC_FLAG_MULTIBLK_NO_INT	(1 << 1)
-
-enum imx_esdhc_type {
-	IMX25_ESDHC,
-	IMX35_ESDHC,
-	IMX51_ESDHC,
-	IMX53_ESDHC,
-	IMX6Q_USDHC,
-};
-
-struct pltfm_imx_data {
-	int flags;
-	u32 scratchpad;
-	enum imx_esdhc_type devtype;
-	struct pinctrl *pinctrl;
-	struct esdhc_platform_data boarddata;
-	struct clk *clk_ipg;
-	struct clk *clk_ahb;
-	struct clk *clk_per;
-};
 
 static struct platform_device_id imx_esdhc_devtype[] = {
 	{
@@ -115,31 +73,6 @@ static const struct of_device_id imx_esdhc_dt_ids[] = {
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, imx_esdhc_dt_ids);
-
-static inline int is_imx25_esdhc(struct pltfm_imx_data *data)
-{
-	return data->devtype == IMX25_ESDHC;
-}
-
-static inline int is_imx35_esdhc(struct pltfm_imx_data *data)
-{
-	return data->devtype == IMX35_ESDHC;
-}
-
-static inline int is_imx51_esdhc(struct pltfm_imx_data *data)
-{
-	return data->devtype == IMX51_ESDHC;
-}
-
-static inline int is_imx53_esdhc(struct pltfm_imx_data *data)
-{
-	return data->devtype == IMX53_ESDHC;
-}
-
-static inline int is_imx6q_usdhc(struct pltfm_imx_data *data)
-{
-	return data->devtype == IMX6Q_USDHC;
-}
 
 static inline void esdhc_clrset_le(struct sdhci_host *host, u32 mask, u32 val, int reg)
 {
@@ -263,8 +196,43 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct pltfm_imx_data *imx_data = pltfm_host->priv;
+	struct esdhc_platform_data *boarddata = &imx_data->boarddata;
+	u32 v;
 
 	switch (reg) {
+	case SDHCI_CLOCK_CONTROL:
+		v = readl(host->ioaddr + SDHCI_VENDOR_SPEC);
+		if (val & SDHCI_CLOCK_CARD_EN)
+			v |= SDHCI_VENDOR_SPEC_FRC_SDCLK_ON;
+		else
+			v &= ~SDHCI_VENDOR_SPEC_FRC_SDCLK_ON;
+		writel(v, host->ioaddr + SDHCI_VENDOR_SPEC);
+
+		return;
+	case SDHCI_HOST_CONTROL2:
+		v = readl(host->ioaddr + SDHCI_VENDOR_SPEC);
+		if (val & SDHCI_CTRL_VDD_180)
+			v |= SDHCI_VENDOR_SPEC_VSELECT;
+		else
+			v &= ~SDHCI_VENDOR_SPEC_VSELECT;
+		writel(v, host->ioaddr + SDHCI_VENDOR_SPEC);
+
+		imx_data->is_ddr = val & SDHCI_CTRL_UHS_DDR50;
+
+		if (!boarddata->delay_line)
+			return;
+
+		if (val & SDHCI_CTRL_UHS_DDR50) {
+			v = boarddata->delay_line
+				<< SDHCI_DLL_OVERRIDE_OFFSET;
+			v |= (1 << SDHCI_DLL_OVERRIDE_EN_OFFSET);
+		} else {
+			v = 0;
+		}
+
+		writel(v, host->ioaddr + SDHCI_DLL_CTRL);
+
+		return;
 	case SDHCI_TRANSFER_MODE:
 		/*
 		 * Postpone this write, we must do it together with a
@@ -279,13 +247,22 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
 			v |= SDHCI_VENDOR_SPEC_SDIO_QUIRK;
 			writel(v, host->ioaddr + SDHCI_VENDOR_SPEC);
 		}
+
 		imx_data->scratchpad = val;
 
 		if (val & SDHCI_TRNS_AUTO_CMD23) {
+			/*
+			 * clear SDHCI_TRNS_AUTO_CMD23, which is conflict with
+			 * SDHCI_MIX_CTRL_DDREN.
+			 */
 			imx_data->scratchpad &= ~SDHCI_TRNS_AUTO_CMD23;
 			imx_data->scratchpad |= SDHCI_MIX_CTRL_AC23EN;
 		}
 
+		if (imx_data->is_ddr)
+			imx_data->scratchpad |= SDHCI_MIX_CTRL_DDREN;
+		else
+			imx_data->scratchpad &= ~SDHCI_MIX_CTRL_DDREN;
 		return;
 	case SDHCI_COMMAND:
 		if ((host->cmd->opcode == MMC_STOP_TRANSMISSION ||
@@ -519,6 +496,9 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 
 	of_property_read_u32(np, "bus-width", &boarddata->max_bus_width);
 
+	if (of_property_read_u32(np, "fsl,delay-line", &boarddata->delay_line))
+		boarddata->delay_line = 0;
+
 	return 0;
 }
 #else
@@ -674,6 +654,9 @@ static int __devinit sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		host->quirks |= SDHCI_QUIRK_FORCE_1_BIT_DATA;
 		break;
 	}
+
+	if (is_imx6q_usdhc(imx_data))
+		host->mmc->caps |= MMC_CAP_1_8V_DDR | MMC_CAP_UHS_DDR50;
 
 	err = sdhci_add_host(host);
 	if (err)
