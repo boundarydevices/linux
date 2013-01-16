@@ -277,6 +277,7 @@ struct sdhci_ops {
 	void	(*hw_reset)(struct sdhci_host *host);
 	void	(*platform_suspend)(struct sdhci_host *host);
 	void	(*platform_resume)(struct sdhci_host *host);
+	int (*platform_execute_tuning)(struct sdhci_host *host, u32 opcode);
 };
 
 #ifdef CONFIG_MMC_SDHCI_IO_ACCESSORS
@@ -386,5 +387,7 @@ extern void sdhci_enable_irq_wakeups(struct sdhci_host *host);
 extern int sdhci_runtime_suspend_host(struct sdhci_host *host);
 extern int sdhci_runtime_resume_host(struct sdhci_host *host);
 #endif
+
+void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq);
 
 #endif /* __SDHCI_HW_H */

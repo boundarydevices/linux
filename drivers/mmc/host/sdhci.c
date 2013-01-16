@@ -1241,7 +1241,7 @@ static int sdhci_set_power(struct sdhci_host *host, unsigned short power)
  *                                                                           *
 \*****************************************************************************/
 
-static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
+void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct sdhci_host *host;
 	bool present;
@@ -1735,6 +1735,12 @@ static int sdhci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		enable_irq(host->irq);
 		sdhci_runtime_pm_put(host);
 		return 0;
+	}
+
+	if (host->ops->platform_execute_tuning) {
+		spin_unlock(&host->lock);
+		enable_irq(host->irq);
+		return host->ops->platform_execute_tuning(host, opcode);
 	}
 
 	sdhci_writew(host, ctrl, SDHCI_HOST_CONTROL2);

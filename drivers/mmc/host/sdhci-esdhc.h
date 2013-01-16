@@ -55,6 +55,10 @@
 #define SDHCI_MIX_CTRL			0x48
 #define SDHCI_MIX_CTRL_AC23EN	(1 << 7)
 #define SDHCI_MIX_CTRL_DDREN	(1 << 3)
+#define SDHCI_MIX_CTRL_EXE_TUNE		(1 << 22)
+#define SDHCI_MIX_CTRL_SMPCLK_SEL	(1 << 23)
+#define SDHCI_MIX_CTRL_AUTO_TUNE	(1 << 24)
+#define SDHCI_MIX_CTRL_FBCLK_SEL	(1 << 25)
 
 /* protocol control register */
 #define SDHCI_PROT_CTRL_DMA_MASK	(3 << 8)
@@ -69,6 +73,16 @@
 #define SDHCI_DLL_OVERRIDE_OFFSET		9
 #define SDHCI_DLL_OVERRIDE_EN_OFFSET	8
 
+/* tune control register */
+#define SDHCI_TUNE_CTRL_STATUS			0x68
+#define SDHCI_TUNE_CTRL_STEP			1
+#define SDHCI_TUNE_CTRL_MIN				0
+#define SDHCI_TUNE_CTRL_MAX				((1 << 7) - 1)
+
+/* sys control register */
+#define SDHCI_SYS_CTRL					0x2C
+#define SDHCI_SYS_CTRL_RSTA				(1 << 24)
+
 /*
  * There is an INT DMA ERR mis-match between eSDHC and STD SDHC SPEC:
  * Bit25 is used in STD SPEC, and is reserved in fsl eSDHC design,
@@ -76,6 +90,10 @@
  * Define this macro DMA error INT for fsl eSDHC
  */
 #define SDHCI_INT_VENDOR_SPEC_DMA_ERR	0x10000000
+
+/* pinctrl state */
+#define ESDHC_PINCTRL_STATE_100MHZ		"state_100mhz"
+#define ESDHC_PINCTRL_STATE_200MHZ		"state_200mhz"
 
 enum imx_esdhc_type {
 	IMX25_ESDHC,
@@ -90,11 +108,17 @@ struct pltfm_imx_data {
 	u32 scratchpad;
 	enum imx_esdhc_type devtype;
 	struct pinctrl *pinctrl;
+	struct pinctrl_state *pins_current;
+	struct pinctrl_state *pins_default;
+	struct pinctrl_state *pins_100mhz;
+	struct pinctrl_state *pins_200mhz;
 	struct esdhc_platform_data boarddata;
 	struct clk *clk_ipg;
 	struct clk *clk_ahb;
 	struct clk *clk_per;
 	u32 is_ddr;
+	u32 is_tuned_clk;
+	u32 uhs_mode;
 };
 
 static inline int is_imx25_esdhc(struct pltfm_imx_data *data)
