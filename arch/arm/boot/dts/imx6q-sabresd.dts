@@ -109,6 +109,7 @@
 				pinctrl-0 = <&pinctrl_usdhc2_1>;
 				cd-gpios = <&gpio2 2 0>;
 				wp-gpios = <&gpio2 3 0>;
+				bus-width = <8>;
 				status = "okay";
 			};
 
@@ -117,6 +118,7 @@
 				pinctrl-0 = <&pinctrl_usdhc3_1>;
 				cd-gpios = <&gpio2 0 0>;
 				wp-gpios = <&gpio2 1 0>;
+				bus-width = <8>;
 				status = "okay";
 			};
 
@@ -124,6 +126,7 @@
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_usdhc4_1>;
 				non-removable;
+				bus-width = <8>;
 				status = "okay";
 			};
 
