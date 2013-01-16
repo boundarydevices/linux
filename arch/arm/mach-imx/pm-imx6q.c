@@ -37,8 +37,7 @@ static int imx6q_suspend_finish(unsigned long val)
 	/* call low level suspend function in iram,
 	 * as we need to float DDR IO */
 	suspend_in_iram_fn((unsigned int *)iram_base,
-		(unsigned int *)(MX6Q_IRAM_BASE_ADDR +
-		MX6Q_IRAM_SIZE), 0);
+		(unsigned int *)(MX6Q_IRAM_SUSPEND_ADDR), 0);
 	return 0;
 }
 
@@ -65,6 +64,11 @@ static struct map_desc mx6_pm_io_desc[] __initdata = {
 	{
 	.virtual = IMX_IO_P2V(MX6Q_MMDC_P0_BASE_ADDR),
 	.pfn = __phys_to_pfn(MX6Q_MMDC_P0_BASE_ADDR),
+	.length = SZ_4K,
+	.type = MT_DEVICE},
+	{
+	.virtual = IMX_IO_P2V(MX6Q_MMDC_P1_BASE_ADDR),
+	.pfn = __phys_to_pfn(MX6Q_MMDC_P1_BASE_ADDR),
 	.length = SZ_4K,
 	.type = MT_DEVICE},
 	{
@@ -108,10 +112,9 @@ void __init imx6q_pm_init(void)
 	}
 	clk_prepare(ocram_clk);
 	clk_enable(ocram_clk);
-	iram_base = ioremap(MX6Q_IRAM_BASE_ADDR + MX6Q_IRAM_SIZE, SZ_4K);
+	iram_base = ioremap(MX6Q_IRAM_SUSPEND_ADDR, SZ_4K);
 	/* last 4K of IRAM is reserved for suspend/resume */
-	suspend_iram_base = __arm_ioremap(MX6Q_IRAM_BASE_ADDR +
-		MX6Q_IRAM_SIZE, SZ_4K, MT_MEMORY_NONCACHED);
+	suspend_iram_base = __arm_ioremap(MX6Q_IRAM_SUSPEND_ADDR, SZ_4K, MT_MEMORY_NONCACHED);
 	memcpy((void *)suspend_iram_base, imx_suspend, SZ_4K);
 	suspend_in_iram_fn = (void *)suspend_iram_base;
 	/*

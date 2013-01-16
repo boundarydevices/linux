@@ -153,7 +153,7 @@ enum mx6q_clks {
 	usdhc4, vdo_axi, vpu_axi, cko1, pll1_sys, pll2_bus, pll3_usb_otg,
 	pll4_audio, pll5_video, pll6_mlb, pll7_usb_host, pll8_enet, ssi1_ipg,
 	ssi2_ipg, ssi3_ipg, rom, usbphy1, usbphy2, ldb_di0_div_3_5, ldb_di1_div_3_5,
-	sata_ref, clk_max
+	sata_ref, gpt_3m, clk_max
 };
 
 static struct clk *clk[clk_max];
@@ -218,6 +218,7 @@ int __init mx6q_clocks_init(void)
 	clk[pll3_80m]  = imx_clk_fixed_factor("pll3_80m",  "pll3_usb_otg",   1, 6);
 	clk[pll3_60m]  = imx_clk_fixed_factor("pll3_60m",  "pll3_usb_otg",   1, 8);
 	clk[twd]       = imx_clk_fixed_factor("twd",       "arm",            1, 2);
+	clk[gpt_3m]    = imx_clk_fixed_factor("gpt_3m",    "osc",            1, 8);
 
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-ccm");
 	base = of_iomap(np, 0);
@@ -402,6 +403,7 @@ int __init mx6q_clocks_init(void)
 
 	clk_register_clkdev(clk[gpt_ipg], "ipg", "imx-gpt.0");
 	clk_register_clkdev(clk[gpt_ipg_per], "per", "imx-gpt.0");
+	clk_register_clkdev(clk[gpt_3m], "gpt_3m", NULL);
 	clk_register_clkdev(clk[twd], NULL, "smp_twd");
 	clk_register_clkdev(clk[cko1_sel], "cko1_sel", NULL);
 	clk_register_clkdev(clk[ahb], "ahb", NULL);

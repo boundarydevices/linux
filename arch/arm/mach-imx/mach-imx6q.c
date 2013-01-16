@@ -43,6 +43,13 @@
 #include <mach/cpuidle.h>
 #include <mach/hardware.h>
 
+#define MXC_CPU_MX6Q	1
+#define MXC_CPU_MX6DL	2
+#define MXC_CPU_MX6SL	3
+#define IMX6Q_ANALOG_DIGPROG     0x260
+
+static int mx6_cpu_type;
+static int mx6_cpu_revision;
 
 enum {
 	HOST_CAP = 0x00,
@@ -461,8 +468,70 @@ static void __init imx6q_init_irq(void)
 	of_irq_init(imx6q_irq_match);
 }
 
+static void  check_imx6q_cpu(void)
+{
+	struct device_node *np;
+	void __iomem *base;
+	static u32 rev;
+
+	if (of_machine_is_compatible("fsl,imx6q")) {
+		mx6_cpu_type = MXC_CPU_MX6Q;
+		printk(KERN_INFO "Find i.MX6Q chip\n");
+	} else if (of_machine_is_compatible("fsl,imx6dl")) {
+		mx6_cpu_type = MXC_CPU_MX6DL;
+		printk(KERN_INFO "Find i.MX6DL chip\n");
+	} else if (of_machine_is_compatible("fsl,imx6sl")) {
+		mx6_cpu_type = MXC_CPU_MX6SL;
+		printk(KERN_INFO "Find i.MX6SL chip\n");
+	} else {
+		mx6_cpu_type = 0;
+		printk(KERN_ERR "Can't find any i.MX6 chip !\n");
+		return;
+	}
+
+	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-anatop");
+	base = of_iomap(np, 0);
+	WARN_ON(!base);
+	rev =  readl_relaxed(base + IMX6Q_ANALOG_DIGPROG);
+	iounmap(base);
+
+	switch (rev & 0xff) {
+	case 0:
+		mx6_cpu_revision = IMX_CHIP_REVISION_1_0;
+		printk(KERN_INFO "SOC revision TO1.0\n");
+		break;
+	case 1:
+		mx6_cpu_revision = IMX_CHIP_REVISION_1_1;
+		printk(KERN_INFO "SOC revision TO1.1\n");
+		break;
+	case 2:
+		mx6_cpu_revision = IMX_CHIP_REVISION_1_2;
+		printk(KERN_INFO "SOC revision TO1.2\n");
+		break;
+	default:
+		mx6_cpu_revision = IMX_CHIP_REVISION_UNKNOWN;
+		printk(KERN_ERR "SOC revision unrecognized!\n");
+		break;
+	}
+}
+
+int cpu_is_imx6dl(void)
+{
+	return (mx6_cpu_type == MXC_CPU_MX6DL) ? 1 : 0;
+}
+
+int cpu_is_imx6q(void)
+{
+	return (mx6_cpu_type == MXC_CPU_MX6Q) ? 1 : 0;
+}
+
+int imx6q_revision(void)
+{
+	return mx6_cpu_revision;
+}
 static void __init imx6q_timer_init(void)
 {
+	check_imx6q_cpu();
 	mx6q_clocks_init();
 	twd_local_timer_of_register();
 }
