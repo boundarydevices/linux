@@ -647,6 +647,17 @@
 				};
 			};
 
+			thermal {
+				compatible = "fsl,anatop-thermal";
+				reg = <0x021bc4e0 0x4000>;
+				reg-names = "calibration-addr";
+				interrupts = <0 81 0x04>;
+				interrupts-names = "anatop-thermal";
+				clocks = <&clks 172>;
+				clock-names = "pll3_usb_otg";
+				status = "okay";
+			};
+
 			usbphy1: usbphy@020c9000 {
 				compatible = "fsl,imx6q-usbphy", "fsl,imx23-usbphy";
 				reg = <0x020c9000 0x1000>;
