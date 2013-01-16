@@ -199,6 +199,13 @@ ENTRY(imx_suspend)
 	sub	r5, r5, r4
 	add	r9, r1, r5
 
+	/* make sure TLB contian the addr we want,
+	 * as we will access after DDR IO floated.
+	 */
+	ldr	r8, =MX6Q_ANATOP_BASE_ADDR
+	phy2virt
+	ldr	r7, [r8, #0x140]
+
 	/* must use r8 to store the IO address */
 	ldr	r8, =MX6Q_SRC_BASE_ADDR
 	phy2virt
@@ -244,6 +251,22 @@ poll_dvfs_set_1:
 	phy2virt
 	dq_ddr_io_set_lpm
 
+	/* if internal ldo(VDDARM) bypassed,analog bypass
+	 * it for DSM(0x1e) and restore it when resume(0x1f).
+	 */
+	ldr	r8, =MX6Q_ANATOP_BASE_ADDR
+	phy2virt
+	ldr	r7, [r8, #0x140]
+	and	r7, r7, #0x1f
+	cmp	r7, #0x1f
+	bne	ldo_check_done1
+ldo_analog_bypass:
+	ldr	r7, [r8, #0x140]
+	bic	r7, r7, #0x1f
+	orr	r7, r7, #0x1e
+	str	r7, [r8, #0x140]
+ldo_check_done1:
+
 	/* Zzz, enter stop mode */
 	wfi
 	nop
@@ -255,6 +278,19 @@ poll_dvfs_set_1:
 run to here means there is pending wakeup source, system
 should auto resume, we need to restore DDR IO first
 ********************************************************/
+	/* restore it with 0x1f if use ldo bypass mode.*/
+	ldr	r8, =MX6Q_ANATOP_BASE_ADDR
+	phy2virt
+	ldr	r7, [r8, #0x140]
+	and	r7, r7, #0x1f
+	cmp	r7, #0x1e
+	bne	ldo_check_done2
+ldo_bypass_restore:
+	ldr	r7, [r8, #0x140]
+	orr	r7, r7, #0x1f
+	str	r7, [r8, #0x140]
+ldo_check_done2:
+
 	add	r10, r0, #0x1000
 	/* skip the lr saved in iram */
 	sub	r10, r10, #0x4
@@ -283,6 +319,17 @@ poll_dvfs_clear_2:
 	mov	pc, lr
 
 resume:
+	/* restore it with 0x1f if use ldo bypass mode.*/
+	ldr	r8, =MX6Q_ANATOP_BASE_ADDR
+	ldr	r7, [r8, #0x140]
+	and	r7, r7, #0x1f
+	cmp	r7, #0x1e
+	bne	ldo_check_done3
+	ldr	r7, [r8, #0x140]
+	orr	r7, r7, #0x1f
+	str	r7, [r8, #0x140]
+ldo_check_done3:
+
 	ldr	r5, =MX6Q_SRC_BASE_ADDR
 	ldr	r10, [r5, #0x24]
 	ldmea	r10!, {lr}
