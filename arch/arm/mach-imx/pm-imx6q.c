@@ -29,6 +29,7 @@ extern unsigned long phys_l2x0_saved_regs;
 static void *suspend_iram_base;
 static struct clk *ocram_clk;
 static void __iomem *iram_base;
+static unsigned int iram_paddr, iram_size;
 static int (*suspend_in_iram_fn)(unsigned int *iram_vbase,
 	unsigned int *iram_pbase, unsigned int cpu_type);
 
@@ -37,7 +38,7 @@ static int imx6q_suspend_finish(unsigned long val)
 	/* call low level suspend function in iram,
 	 * as we need to float DDR IO */
 	suspend_in_iram_fn((unsigned int *)iram_base,
-		(unsigned int *)(MX6Q_IRAM_SUSPEND_ADDR), 0);
+		(unsigned int *)(iram_paddr), 0);
 	return 0;
 }
 
@@ -105,6 +106,15 @@ static const struct platform_suspend_ops imx6q_pm_ops = {
 
 void __init imx6q_pm_init(void)
 {
+	struct device_node *node;
+
+	node = of_find_compatible_node(NULL, NULL, "fsl,imx_suspend");
+	if (!node) {
+		printk(KERN_ERR "%s: failed to find device tree data!\n",
+			__func__);
+		return;
+	}
+
 	ocram_clk = clk_get(NULL, "ocram");
 	if (IS_ERR(ocram_clk)) {
 		printk(KERN_ERR "%s: failed to get ocram clk\n", __func__);
@@ -112,10 +122,13 @@ void __init imx6q_pm_init(void)
 	}
 	clk_prepare(ocram_clk);
 	clk_enable(ocram_clk);
-	iram_base = ioremap(MX6Q_IRAM_SUSPEND_ADDR, SZ_4K);
-	/* last 4K of IRAM is reserved for suspend/resume */
-	suspend_iram_base = __arm_ioremap(MX6Q_IRAM_SUSPEND_ADDR, SZ_4K, MT_MEMORY_NONCACHED);
-	memcpy((void *)suspend_iram_base, imx_suspend, SZ_4K);
+
+	of_property_read_u32(node, "iram_code_base", &iram_paddr);
+	of_property_read_u32(node, "iram_code_size", &iram_size);
+	iram_base = ioremap(iram_paddr, iram_size);
+	/* last size of IRAM is reserved for suspend/resume */
+	suspend_iram_base = __arm_ioremap(iram_paddr, iram_size, MT_MEMORY_NONCACHED);
+	memcpy((void *)suspend_iram_base, imx_suspend, iram_size);
 	suspend_in_iram_fn = (void *)suspend_iram_base;
 	/*
 	 * The l2x0 core code provides an infrastucture to save and restore

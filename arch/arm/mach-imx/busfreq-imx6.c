@@ -55,13 +55,13 @@ int med_bus_freq_mode;
 int audio_bus_freq_mode;
 int low_bus_freq_mode;
 
-int bus_freq_scaling_initialized;
+static int bus_freq_scaling_initialized;
 static struct device *busfreq_dev;
 static int busfreq_suspended;
 
-int bus_freq_scaling_is_active;
-int high_bus_count, med_bus_count, audio_bus_count;
-unsigned int ddr_low_rate;
+static int bus_freq_scaling_is_active;
+static int high_bus_count, med_bus_count, audio_bus_count;
+static unsigned int ddr_low_rate;
 unsigned int ddr_med_rate;
 unsigned int ddr_normal_rate;
 

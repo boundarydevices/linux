@@ -258,7 +258,8 @@ int update_ddr_freq(int ddr_rate)
 
 int init_mmdc_settings(void)
 {
-	unsigned long iram_paddr;
+	unsigned int iram_paddr;
+	unsigned int iram_size;
 	int i, err, cpu;
 	struct device_node *node;
 
@@ -311,11 +312,20 @@ int init_mmdc_settings(void)
 				+ normal_mmdc_settings[i][0]);
 	}
 
+	node = NULL;
+	node = of_find_compatible_node(NULL, NULL, "fsl,imx_busfreq");
+	if (!node) {
+		printk(KERN_ERR "%s: failed to find device tree data!\n",
+			__func__);
+		return -EINVAL;
+	}
+
 	/* Store the size of the array in iRAM also,
 	 * increase the size by 8 bytes.
 	 */
-	iram_paddr = MX6Q_IRAM_BUSFREQ_DATA1_ADDR;
-	iram_ddr_settings = ioremap(iram_paddr, SZ_2K);
+	of_property_read_u32(node, "iram_data1_base", &iram_paddr);
+	of_property_read_u32(node, "iram_data1_size", &iram_size);
+	iram_ddr_settings = ioremap(iram_paddr, iram_size);
 	if (iram_ddr_settings == NULL) {
 			printk(KERN_DEBUG
 			"%s: failed to allocate iRAM memory for ddr settings\n",
@@ -327,8 +337,9 @@ int init_mmdc_settings(void)
 	/* Store the size of the iomux settings in iRAM also,
 	 * increase the size by 8 bytes.
 	 */
-	iram_paddr = MX6Q_IRAM_BUSFREQ_DATA2_ADDR;
-	iram_iomux_settings = ioremap(iram_paddr, SZ_2K);
+	of_property_read_u32(node, "iram_data2_base", &iram_paddr);
+	of_property_read_u32(node, "iram_data2_size", &iram_size);
+	iram_iomux_settings = ioremap(iram_paddr, iram_size);
 	if (iram_iomux_settings == NULL) {
 			printk(KERN_DEBUG
 			"%s: failed to allocate iRAM memory for iomuxr settings\n",
@@ -337,22 +348,23 @@ int init_mmdc_settings(void)
 	}
 
 	/* Store the IOMUX settings at boot. */
-		for (i = 0; i < iomux_settings_size; i++) {
-			iomux_offsets_mx6q[i][1] =
-				__raw_readl(iomux_base
-				+ iomux_offsets_mx6q[i][0]);
-			iram_iomux_settings[i+1][0] = iomux_offsets_mx6q[i][0];
-			iram_iomux_settings[i+1][1] = iomux_offsets_mx6q[i][1];
-		}
-		irq_used = irqs_used_mx6q;
+	for (i = 0; i < iomux_settings_size; i++) {
+		iomux_offsets_mx6q[i][1] =
+			__raw_readl(iomux_base
+			+ iomux_offsets_mx6q[i][0]);
+		iram_iomux_settings[i+1][0] = iomux_offsets_mx6q[i][0];
+		iram_iomux_settings[i+1][1] = iomux_offsets_mx6q[i][1];
+	}
+	irq_used = irqs_used_mx6q;
 
 	/* Allocate IRAM for the DDR freq change code. */
-	iram_paddr = MX6Q_IRAM_BUSFREQ_CODE_ADDR;
+	of_property_read_u32(node, "iram_code_base", &iram_paddr);
+	of_property_read_u32(node, "iram_code_size", &iram_size);
 	/* Need to remap the area here since we want the memory region
 		 to be executable. */
 	ddr_freq_change_iram_base = __arm_ioremap(iram_paddr,
-						SZ_8K, MT_MEMORY_NONCACHED);
-	memcpy(ddr_freq_change_iram_base, mx6_ddr_freq_change, SZ_8K);
+						iram_size, MT_MEMORY_NONCACHED);
+	memcpy(ddr_freq_change_iram_base, mx6_ddr_freq_change, iram_size);
 	mx6_change_ddr_freq = (void *)ddr_freq_change_iram_base;
 
 	curr_ddr_rate = ddr_normal_rate;
