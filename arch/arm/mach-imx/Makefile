@@ -80,6 +80,10 @@ ifeq ($(CONFIG_PM),y)
 obj-$(CONFIG_SOC_IMX6Q) += pm-imx6q.o headsmp.o imx_suspend.o
 endif
 
+ifeq ($(CONFIG_CPU_IDLE),y)
+obj-$(CONFIG_SOC_IMX6Q) += cpuidle-imx6q.o
+endif
+
 # i.MX5 based machines
 obj-$(CONFIG_MACH_MX51_BABBAGE) += mach-mx51_babbage.o
 obj-$(CONFIG_MACH_MX51_3DS) += mach-mx51_3ds.o

@@ -13,13 +13,13 @@
 #include <linux/can/platform/flexcan.h>
 #include <linux/clk.h>
 #include <linux/clkdev.h>
-#include <linux/cpuidle.h>
 #include <linux/delay.h>
 #include <linux/export.h>
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
+#include <linux/cpuidle.h>
 #include <linux/gpio.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
@@ -420,18 +420,15 @@ static void __init imx6q_init_machine(void)
 	imx6q_1588_init();
 }
 
-static struct cpuidle_driver imx6q_cpuidle_driver = {
-	.name			= "imx6q_cpuidle",
-	.owner			= THIS_MODULE,
-	.en_core_tk_irqen	= 1,
-	.states[0]		= ARM_CPUIDLE_WFI_STATE,
-	.state_count		= 1,
-};
-
 static void __init imx6q_init_late(void)
 {
-	imx_cpuidle_init(&imx6q_cpuidle_driver);
 	imx6q_flexcan_fixup();
+	/*
+	 * WAIT mode is broken on TO 1.0 and 1.1, and there is no point to
+	 * have cpuidle running on them.
+	 */
+	if (imx6q_revision() > IMX_CHIP_REVISION_1_1)
+		imx6q_cpuidle_init();
 }
 
 static void __init imx6q_map_io(void)

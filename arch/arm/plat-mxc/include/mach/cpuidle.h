@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Freescale Semiconductor, Inc.
+ * Copyright 2012-2013 Freescale Semiconductor, Inc.
  * Copyright 2012 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -14,9 +14,15 @@
 
 #ifdef CONFIG_CPU_IDLE
 extern int imx_cpuidle_init(struct cpuidle_driver *drv);
+extern int imx6q_cpuidle_init(void);
 #else
 static inline int imx_cpuidle_init(struct cpuidle_driver *drv)
 {
 	return -ENODEV;
 }
+static inline int imx6q_cpuidle_init(void)
+{
+	return -ENODEV;
+}
 #endif
+
