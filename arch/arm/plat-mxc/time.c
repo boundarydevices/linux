@@ -59,6 +59,10 @@
 #define V2_TCTL_WAITEN		(1 << 3) /* Wait enable mode */
 #define V2_TCTL_CLK_IPG		(1 << 6)
 #define V2_TCTL_CLK_PER		(2 << 6)
+#define V2_TCTL_CLK_OSC_DIV8     (5 << 6)
+#define V2_TCTL_CLK_OSC         (7 << 6)
+#define V2_TCTL_24MEN		(1 << 10)
+#define V2_TPRER_PRE24M		12
 #define V2_TCTL_FRR		(1 << 9)
 #define V2_IR			0x0c
 #define V2_TSTAT		0x08
@@ -138,8 +142,7 @@ static int mx1_2_set_next_event(unsigned long evt,
 
 	__raw_writel(tcmp, timer_base + MX1_2_TCMP);
 
-	return (int)(tcmp - __raw_readl(timer_base + MX1_2_TCN)) < 0 ?
-				-ETIME : 0;
+	return 0;
 }
 
 static int v2_set_next_event(unsigned long evt,
@@ -151,8 +154,7 @@ static int v2_set_next_event(unsigned long evt,
 
 	__raw_writel(tcmp, timer_base + V2_TCMP);
 
-	return (int)(tcmp - __raw_readl(timer_base + V2_TCN)) < 0 ?
-				-ETIME : 0;
+	return 0;
 }
 
 #ifdef DEBUG
@@ -284,21 +286,30 @@ static int __init mxc_clockevent_init(struct clk *timer_clk)
 void __init mxc_timer_init(void __iomem *base, int irq)
 {
 	uint32_t tctl_val;
+	uint32_t tprer_val = 0;
 	struct clk *timer_clk;
 	struct clk *timer_ipg_clk;
 
-	timer_clk = clk_get_sys("imx-gpt.0", "per");
-	if (IS_ERR(timer_clk)) {
-		pr_err("i.MX timer: unable to get clk\n");
-		return;
+	/*GPT sourcing form IPG_PER on mx6q TO1.0,else from OSC*/
+	if (cpu_is_imx6q() && imx6q_revision() == IMX_CHIP_REVISION_1_0) {
+		timer_clk = clk_get_sys("imx-gpt.0", "per");
+		if (IS_ERR(timer_clk)) {
+			pr_err("i.MX timer: unable to get clk\n");
+			return;
+		}
+	} else {
+		timer_clk = clk_get(NULL, "gpt_3m");
+		if (IS_ERR(timer_clk)) {
+			pr_err("i.MX timer: unable to get clk\n");
+			return;
+		}
 	}
+
+	clk_prepare_enable(timer_clk);
 
 	timer_ipg_clk = clk_get_sys("imx-gpt.0", "ipg");
 	if (!IS_ERR(timer_ipg_clk))
 		clk_prepare_enable(timer_ipg_clk);
-
-	clk_prepare_enable(timer_clk);
-
 	timer_base = base;
 
 	/*
@@ -306,13 +317,22 @@ void __init mxc_timer_init(void __iomem *base, int irq)
 	 */
 
 	__raw_writel(0, timer_base + MXC_TCTL);
-	__raw_writel(0, timer_base + MXC_TPRER); /* see datasheet note */
 
-	if (timer_is_v2())
-		tctl_val = V2_TCTL_CLK_PER | V2_TCTL_FRR | V2_TCTL_WAITEN | MXC_TCTL_TEN;
-	else
+	if (timer_is_v2()) {
+		/*GPT sourcing form IPG_PER on mx6q TO1.0,else from OSC*/
+		if (cpu_is_imx6q() && imx6q_revision() == IMX_CHIP_REVISION_1_0)
+			tctl_val = V2_TCTL_CLK_PER | V2_TCTL_FRR | V2_TCTL_WAITEN | MXC_TCTL_TEN;
+		else
+			tctl_val = V2_TCTL_CLK_OSC_DIV8 | V2_TCTL_FRR | V2_TCTL_WAITEN | MXC_TCTL_TEN;
+		if (cpu_is_imx6dl()) {
+			tprer_val = 7 << V2_TPRER_PRE24M; /* 24 / 8 = 3 MHz */
+			tctl_val |= V2_TCTL_24MEN;
+		}
+	} else {
 		tctl_val = MX1_2_TCTL_FRR | MX1_2_TCTL_CLK_PCLK1 | MXC_TCTL_TEN;
+	}
 
+	__raw_writel(tprer_val, timer_base + MXC_TPRER);
 	__raw_writel(tctl_val, timer_base + MXC_TCTL);
 
 	/* init and register the timer to the framework */
