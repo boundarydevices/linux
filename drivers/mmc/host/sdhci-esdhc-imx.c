@@ -32,10 +32,17 @@
 #define	SDHCI_CTRL_D3CD			0x08
 /* VENDOR SPEC register */
 #define SDHCI_VENDOR_SPEC		0xC0
-#define  SDHCI_VENDOR_SPEC_SDIO_QUIRK	0x00000002
+#define SDHCI_VENDOR_SPEC_SDIO_QUIRK	0x00000002
 #define SDHCI_WTMK_LVL			0x44
 #define SDHCI_MIX_CTRL			0x48
 #define SDHCI_MIX_CTRL_AC23EN	(1 << 7)
+
+#define SDHCI_PROT_CTRL_DMA_MASK	(3 << 8)
+#define SDHCI_PROT_CTRL_LCTL		(1 << 0)
+#define SDHCI_PROT_CTRL_DTW_MASK	(3 << 1)
+#define SDHCI_PROT_CTRL_1BIT		(0)
+#define SDHCI_PROT_CTRL_4BIT		(1 << 1)
+#define SDHCI_PROT_CTRL_8BIT		(1 << 2)
 
 /*
  * There is an INT DMA ERR mis-match between eSDHC and STD SDHC SPEC:
@@ -304,6 +311,54 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
 	esdhc_clrset_le(host, 0xffff, val, reg);
 }
 
+static u8 esdhc_readb_le(struct sdhci_host *host, int reg)
+{
+	u8 ret = 0;
+	u32 val;
+
+	switch (reg) {
+	case SDHCI_HOST_CONTROL:
+		val = readl(host->ioaddr + SDHCI_HOST_CONTROL);
+		if (val & SDHCI_PROT_CTRL_LCTL)
+			ret |= SDHCI_CTRL_LED;
+		else
+			ret &= ~SDHCI_CTRL_LED;
+		ret |= (val & SDHCI_PROT_CTRL_DMA_MASK) >> 5;
+		if (SDHCI_PROT_CTRL_8BIT == (val & SDHCI_PROT_CTRL_DTW_MASK)) {
+			ret &= ~SDHCI_CTRL_4BITBUS;
+			ret |= SDHCI_CTRL_8BITBUS;
+		} else if (SDHCI_PROT_CTRL_4BIT
+				== (val & SDHCI_PROT_CTRL_DTW_MASK)) {
+			ret &= ~SDHCI_CTRL_8BITBUS;
+			ret |= SDHCI_CTRL_4BITBUS;
+		} else if (SDHCI_PROT_CTRL_1BIT
+				== (val & SDHCI_PROT_CTRL_DTW_MASK)) {
+			ret &= ~(SDHCI_CTRL_8BITBUS | SDHCI_CTRL_4BITBUS);
+		}
+		break;
+	case SDHCI_SOFTWARE_RESET:
+		val = readl(host->ioaddr + SDHCI_CLOCK_CONTROL);
+		ret = val >> 24;
+		break;
+	case SDHCI_RESPONSE + 3:
+		val = readl(host->ioaddr + SDHCI_RESPONSE);
+		ret = val >> 24;
+		break;
+	case SDHCI_RESPONSE + 7:
+		val = readl(host->ioaddr + SDHCI_RESPONSE + 4);
+		ret = val >> 24;
+		break;
+	case SDHCI_RESPONSE + 11:
+		val = readl(host->ioaddr + SDHCI_RESPONSE + 8);
+		ret = val >> 24;
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+}
+
 static void esdhc_writeb_le(struct sdhci_host *host, u8 val, int reg)
 {
 	u32 new_val;
@@ -319,9 +374,14 @@ static void esdhc_writeb_le(struct sdhci_host *host, u8 val, int reg)
 		return;
 	case SDHCI_HOST_CONTROL:
 		/* FSL messed up here, so we can just keep those three */
-		new_val = val & (SDHCI_CTRL_LED | \
-				SDHCI_CTRL_4BITBUS | \
-				SDHCI_CTRL_D3CD);
+		new_val = val & SDHCI_CTRL_LED;
+		if (val & SDHCI_CTRL_4BITBUS) {
+			new_val &= ~SDHCI_PROT_CTRL_8BIT;
+			new_val |= SDHCI_PROT_CTRL_4BIT;
+		} else if (val & SDHCI_CTRL_8BITBUS) {
+			new_val &= ~SDHCI_PROT_CTRL_4BIT;
+			new_val |= SDHCI_PROT_CTRL_8BIT;
+		}
 		/* ensure the endianess */
 		new_val |= ESDHC_HOST_CONTROL_LE;
 		/* DMA mode bits are shifted */
@@ -385,9 +445,24 @@ static unsigned int esdhc_pltfm_get_ro(struct sdhci_host *host)
 	return -ENOSYS;
 }
 
+static int esdhc_pltfm_set_buswidth(struct sdhci_host *host, int width)
+{
+	u32 reg = readl(host->ioaddr + SDHCI_HOST_CONTROL);
+	reg &= ~SDHCI_PROT_CTRL_DTW_MASK;
+
+	if (width == MMC_BUS_WIDTH_8)
+		reg |= SDHCI_PROT_CTRL_8BIT;
+	else if (width == MMC_BUS_WIDTH_4)
+		reg |= SDHCI_PROT_CTRL_4BIT;
+
+	writel(reg, host->ioaddr + SDHCI_HOST_CONTROL);
+	return 0;
+}
+
 static struct sdhci_ops sdhci_esdhc_ops = {
 	.read_l = esdhc_readl_le,
 	.read_w = esdhc_readw_le,
+	.read_b = esdhc_readb_le,
 	.write_l = esdhc_writel_le,
 	.write_w = esdhc_writew_le,
 	.write_b = esdhc_writeb_le,
@@ -395,6 +470,7 @@ static struct sdhci_ops sdhci_esdhc_ops = {
 	.get_max_clock = esdhc_pltfm_get_max_clock,
 	.get_min_clock = esdhc_pltfm_get_min_clock,
 	.get_ro = esdhc_pltfm_get_ro,
+	.platform_8bit_width = esdhc_pltfm_set_buswidth,
 };
 
 static struct sdhci_pltfm_data sdhci_esdhc_imx_pdata = {
@@ -440,6 +516,8 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	boarddata->wp_gpio = of_get_named_gpio(np, "wp-gpios", 0);
 	if (gpio_is_valid(boarddata->wp_gpio))
 		boarddata->wp_type = ESDHC_WP_GPIO;
+
+	of_property_read_u32(np, "bus-width", &boarddata->max_bus_width);
 
 	return 0;
 }
@@ -581,6 +659,19 @@ static int __devinit sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		break;
 
 	case ESDHC_CD_NONE:
+		break;
+	}
+
+	switch (boarddata->max_bus_width) {
+	case 8:
+		host->mmc->caps |= MMC_CAP_4_BIT_DATA | MMC_CAP_8_BIT_DATA;
+		break;
+	case 4:
+		host->mmc->caps |= MMC_CAP_4_BIT_DATA;
+		break;
+	case 1:
+	default:
+		host->quirks |= SDHCI_QUIRK_FORCE_1_BIT_DATA;
 		break;
 	}
 
