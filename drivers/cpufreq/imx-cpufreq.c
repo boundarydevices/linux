@@ -28,6 +28,7 @@
 #include <linux/regulator/consumer.h>
 #include <mach/hardware.h>
 #include <mach/clock.h>
+#include <mach/busfreq.h>
 #include <asm/cpu.h>
 
 #define CLK32_FREQ	32768
@@ -76,6 +77,11 @@ static int set_cpu_freq(int freq)
 	if (cpu_volt == 0)
 		return ret;
 	if (freq > org_cpu_rate) {
+		/* increase bus freq if cpufreq is increased */
+		if (!request_bus_high) {
+			request_bus_freq(BUS_FREQ_HIGH);
+			request_bus_high = true;
+		}
 		if (!IS_ERR(soc_regulator)) {
 			ret = regulator_set_voltage(soc_regulator,
 				soc_volt, soc_volt);
@@ -170,6 +176,11 @@ static int set_cpu_freq(int freq)
 			}
 		}
 		udelay(50);
+		/* release bus freq when cpufreq is lower to lowest setpoint */
+		if (freq == cpu_op_tbl[cpu_op_nr - 1].cpu_rate && request_bus_high) {
+			release_bus_freq(BUS_FREQ_HIGH);
+			request_bus_high = false;
+		}
 	}
 	return ret;
 }
