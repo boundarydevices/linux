@@ -69,6 +69,125 @@
 		      <0x00a00100 0x100>;
 	};
 
+	cpufreq-setpoint {
+		setpoint-number = <3>;
+
+		996000000 {
+			compatible = "fsl,996m", "setpoint-table";
+			pll_rate = <996000000>;
+			cpu_rate = <996000000>;
+			cpu_podf = <0>;
+			pu_voltage = <1250000>;
+			soc_voltage = <1250000>;
+			cpu_voltage = <1250000>;
+		};
+		792000000 {
+			compatible = "fsl,792m", "setpoint-table";
+			pll_rate = <792000000>;
+			cpu_rate = <792000000>;
+			cpu_podf = <0>;
+			pu_voltage = <1175000>;
+			soc_voltage = <1175000>;
+			cpu_voltage = <1150000>;
+		};
+		396000000 {
+			compatible = "fsl,396m", "setpoint-table";
+			pll_rate = <396000000>;
+			cpu_rate = <396000000>;
+			cpu_podf = <0>;
+			pu_voltage = <1175000>;
+			soc_voltage = <1175000>;
+			cpu_voltage = <950000>;
+		};
+	};
+
+	irq_tuner {
+		gpu3d {
+			compatible = "fsl,gpu3d", "irq-threshold";
+			irq_number = <41>;
+			up_threshold = <0>;
+			enabled;
+		};
+		gpu2d {
+			compatible = "fsl,gpu2d", "irq-threshold";
+			irq_number = <42>;
+			up_threshold = <40>;
+			enabled;
+		};
+		gpuvg {
+			compatible = "fsl,gpuvg", "irq-threshold";
+			irq_number = <43>;
+			up_threshold = <0>;
+			enabled;
+		};
+		usdhc1 {
+			compatible = "fsl,usdhc1", "irq-threshold";
+			irq_number = <54>;
+			up_threshold = <4>;
+			enabled;
+		};
+		usdhc2 {
+			compatible = "fsl,usdhc2", "irq-threshold";
+			irq_number = <55>;
+			up_threshold = <4>;
+			enabled;
+		};
+		usdhc3 {
+			compatible = "fsl,usdhc3", "irq-threshold";
+			irq_number = <56>;
+			up_threshold = <4>;
+			enabled;
+		};
+		usdhc4 {
+			compatible = "fsl,usdhc4", "irq-threshold";
+			irq_number = <57>;
+			up_threshold = <4>;
+			enabled;
+		};
+		sata {
+			compatible = "fsl,sata", "irq-threshold";
+			irq_number = <71>;
+			up_threshold = <4>;
+			enabled;
+		};
+		otg {
+			compatible = "fsl,otg", "irq-threshold";
+			irq_number = <75>;
+			up_threshold = <10>;
+			enabled;
+		};
+		enet {
+			compatible = "fsl,enet", "irq-threshold";
+			irq_number = <150>;
+			up_threshold = <4>;
+			enabled;
+		};
+	};
+
+	busfreq { /* BUSFREQ */
+		compatible = "fsl,imx_busfreq";
+		clocks = <&clks 171>, <&clks 6>, <&clks 11>, <&clks 104>, <&clks 172>, <&clks 58>,
+			<&clks 18>, <&clks 60>, <&clks 20>, <&clks 3>;
+			clock-names = "pll2_bus_clk", "pll2_pfd2_396m_clk", "pll2_198m_clk", "arm_clk", "pll3_usb_otg_clk", "periph_clk",
+			"periph_pre_clk", "periph_clk2_clk", "periph_clk2_sel_clk", "osc_clk";
+		iram_data1_base = <0x93c000>;
+		iram_data1_size = <0x800>;
+		iram_data2_base = <0x93c800>;
+		iram_data2_size = <0x800>;
+		iram_code_base = <0x93d000>;
+		iram_code_size = <0x2000>;
+		irq1 = <139>;
+		irq2 = <144>;
+		irq3 = <145>;
+		irq4 = <146>;
+	};
+
+	suspend { /* SUSPEND */
+		compatible = "fsl,imx_suspend";
+		iram_code_base = <0x93f000>;
+		iram_code_size = <0x1000>;
+	};
+
 	clocks {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -406,14 +525,6 @@
 				interrupts = <0 82 0x04>;
 			};
 
-			busfreq { /* BUSFREQ */
-				compatible = "fsl,imx_busfreq";
-				clocks = <&clks 171>, <&clks 6>, <&clks 11>, <&clks 104>, <&clks 172>, <&clks 58>,
-					<&clks 18>, <&clks 60>, <&clks 20>, <&clks 3>;
-				clock-names = "pll2_bus_clk", "pll2_pfd2_396m_clk", "pll2_198m_clk", "arm_clk", "pll3_usb_otg_clk", "periph_clk",
-					"periph_pre_clk", "periph_clk2_clk", "periph_clk2_sel_clk", "osc_clk";
-			};
-
 			wdog@020bc000 { /* WDOG1 */
 				compatible = "fsl,imx6q-wdt", "fsl,imx21-wdt";
 				reg = <0x020bc000 0x4000>;
@@ -523,101 +634,6 @@
 					anatop-min-bit-val = <1>;
 					anatop-min-voltage = <725000>;
 					anatop-max-voltage = <1450000>;
-				};
-			};
-
-			cpufreq-setpoint {
-				setpoint-number = <3>;
-
-				996000000 {
-					compatible = "fsl,996m", "setpoint-table";
-					pll_rate = <996000000>;
-					cpu_rate = <996000000>;
-					cpu_podf = <0>;
-					pu_voltage = <1250000>;
-					soc_voltage = <1250000>;
-					cpu_voltage = <1250000>;
-				};
-				792000000 {
-					compatible = "fsl,792m", "setpoint-table";
-					pll_rate = <792000000>;
-					cpu_rate = <792000000>;
-					cpu_podf = <0>;
-					pu_voltage = <1175000>;
-					soc_voltage = <1175000>;
-					cpu_voltage = <1150000>;
-				};
-				396000000 {
-					compatible = "fsl,396m", "setpoint-table";
-					pll_rate = <396000000>;
-					cpu_rate = <396000000>;
-					cpu_podf = <0>;
-					pu_voltage = <1175000>;
-					soc_voltage = <1175000>;
-					cpu_voltage = <950000>;
-				};
-			};
-
-			irq_tuner {
-				gpu3d {
-					compatible = "fsl,gpu3d", "irq-threshold";
-					irq_number = <41>;
-					up_threshold = <0>;
-					enabled;
-				};
-				gpu2d {
-					compatible = "fsl,gpu2d", "irq-threshold";
-					irq_number = <42>;
-					up_threshold = <40>;
-					enabled;
-				};
-				gpuvg {
-					compatible = "fsl,gpuvg", "irq-threshold";
-					irq_number = <43>;
-					up_threshold = <0>;
-					enabled;
-				};
-				usdhc1 {
-					compatible = "fsl,usdhc1", "irq-threshold";
-					irq_number = <54>;
-					up_threshold = <4>;
-					enabled;
-				};
-				usdhc2 {
-					compatible = "fsl,usdhc2", "irq-threshold";
-					irq_number = <55>;
-					up_threshold = <4>;
-					enabled;
-				};
-				usdhc3 {
-					compatible = "fsl,usdhc3", "irq-threshold";
-					irq_number = <56>;
-					up_threshold = <4>;
-					enabled;
-				};
-				usdhc4 {
-					compatible = "fsl,usdhc4", "irq-threshold";
-					irq_number = <57>;
-					up_threshold = <4>;
-					enabled;
-				};
-				sata {
-					compatible = "fsl,sata", "irq-threshold";
-					irq_number = <71>;
-					up_threshold = <4>;
-					enabled;
-				};
-				otg {
-					compatible = "fsl,otg", "irq-threshold";
-					irq_number = <75>;
-					up_threshold = <10>;
-					enabled;
-				};
-				enet {
-					compatible = "fsl,enet", "irq-threshold";
-					irq_number = <150>;
-					up_threshold = <4>;
-					enabled;
 				};
 			};
 
