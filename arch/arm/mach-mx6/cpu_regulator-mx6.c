@@ -21,6 +21,7 @@
 #include <linux/cpufreq.h>
 #endif
 #include <linux/io.h>
+#include <linux/delay.h>
 #include <asm/cpu.h>
 
 #include <mach/clock.h>
@@ -101,49 +102,16 @@ void mx6_cpu_regulator_init(void)
 			regulator_set_voltage(cpu_regulator,
 					      cpu_op_tbl[0].cpu_voltage,
 					      cpu_op_tbl[0].cpu_voltage);
-			if (enable_ldo_mode == LDO_MODE_BYPASSED) {
-				/*digital bypass VDDPU/VDDSOC/VDDARM*/
-				reg = __raw_readl(ANADIG_REG_CORE);
-				reg &= ~BM_ANADIG_REG_CORE_REG0_TRG;
-				reg |= BF_ANADIG_REG_CORE_REG0_TRG(0x1f);
-				reg &= ~BM_ANADIG_REG_CORE_REG1_TRG;
-				reg |= BF_ANADIG_REG_CORE_REG1_TRG(0x1f);
-				reg &= ~BM_ANADIG_REG_CORE_REG2_TRG;
-				reg |= BF_ANADIG_REG_CORE_REG2_TRG(0x1f);
-				__raw_writel(reg, ANADIG_REG_CORE);
-				/* Mask the ANATOP brown out interrupt in the GPC. */
-				reg = __raw_readl(gpc_base + 0x14);
-				reg |= 0x80000000;
-				__raw_writel(reg, gpc_base + 0x14);
-			}
-			clk_set_rate(cpu_clk, cpu_op_tbl[0].cpu_rate);
-
-			/*Fix loops-per-jiffy */
-#ifdef CONFIG_SMP
-			for_each_online_cpu(cpu)
-				per_cpu(cpu_data, cpu).loops_per_jiffy =
-				mx6_cpu_jiffies(
-					per_cpu(cpu_data, cpu).loops_per_jiffy,
-					curr_cpu / 1000,
-					clk_get_rate(cpu_clk) / 1000);
-#else
-			old_loops_per_jiffy = loops_per_jiffy;
-
-			loops_per_jiffy =
-				mx6_cpu_jiffies(old_loops_per_jiffy,
-						curr_cpu/1000,
-						clk_get_rate(cpu_clk) / 1000);
-#endif
-#if defined(CONFIG_CPU_FREQ)
-			/* Fix CPU frequency for CPUFREQ. */
-			for (cpu = 0; cpu < num_online_cpus(); cpu++)
-				cpufreq_get(cpu);
-#endif
 		}
 	}
 	soc_regulator = regulator_get(NULL, soc_reg_id);
 	if (IS_ERR(soc_regulator))
 		printk(KERN_ERR "%s: failed to get soc regulator\n", __func__);
+	else if (cpu_op_tbl)
+                regulator_set_voltage(soc_regulator,
+				      cpu_op_tbl[0].soc_voltage,
+				      cpu_op_tbl[0].soc_voltage);
+
 	pu_regulator = regulator_get(NULL, pu_reg_id);
 	if (IS_ERR(pu_regulator))
 		printk(KERN_ERR "%s: failed to get pu regulator\n", __func__);
@@ -161,7 +129,66 @@ void mx6_cpu_regulator_init(void)
 	*VDDPU can be turned off by internal anatop anatop power gate.
 	*
 	*/
-	else if (!IS_ERR(pu_regulator) && strcmp(pu_reg_id, "cpu_vddgpu"))
-		external_pureg = 1;
+	else {
+		printk (KERN_ERR "%s: have pu_regulator\n", __func__ );
+		if (strcmp(pu_reg_id, "cpu_vddgpu"))
+			external_pureg = 1;
+
+		if (cpu_op_tbl) {
+			printk (KERN_ERR "%s: setting pu_regulator to %uuV\n",
+				__func__,
+                                cpu_op_tbl[0].pu_voltage);
+
+			regulator_set_voltage(pu_regulator,
+					      cpu_op_tbl[0].pu_voltage,
+					      cpu_op_tbl[0].pu_voltage);
+		}
+	}
+
+	if (cpu_op_tbl
+	    && !IS_ERR(cpu_regulator)
+	    && !IS_ERR(soc_regulator)
+	    && !IS_ERR(pu_regulator)) {
+		udelay(500);
+
+		if (enable_ldo_mode == LDO_MODE_BYPASSED) {
+			/*digital bypass VDDPU/VDDSOC/VDDARM*/
+			reg = __raw_readl(ANADIG_REG_CORE);
+			reg &= ~BM_ANADIG_REG_CORE_REG0_TRG;
+			reg |= BF_ANADIG_REG_CORE_REG0_TRG(0x1f);
+			reg &= ~BM_ANADIG_REG_CORE_REG1_TRG;
+			reg |= BF_ANADIG_REG_CORE_REG1_TRG(0x1f);
+			reg &= ~BM_ANADIG_REG_CORE_REG2_TRG;
+			reg |= BF_ANADIG_REG_CORE_REG2_TRG(0x1f);
+			__raw_writel(reg, ANADIG_REG_CORE);
+			/* Mask the ANATOP brown out interrupt in the GPC. */
+			reg = __raw_readl(gpc_base + 0x14);
+			reg |= 0x80000000;
+			__raw_writel(reg, gpc_base + 0x14);
+		}
+		clk_set_rate(cpu_clk, cpu_op_tbl[0].cpu_rate);
+
+		/*Fix loops-per-jiffy */
+#ifdef CONFIG_SMP
+		for_each_online_cpu(cpu)
+			per_cpu(cpu_data, cpu).loops_per_jiffy =
+			mx6_cpu_jiffies(
+				per_cpu(cpu_data, cpu).loops_per_jiffy,
+				curr_cpu / 1000,
+				clk_get_rate(cpu_clk) / 1000);
+#else
+		old_loops_per_jiffy = loops_per_jiffy;
+
+		loops_per_jiffy =
+			mx6_cpu_jiffies(old_loops_per_jiffy,
+					curr_cpu/1000,
+					clk_get_rate(cpu_clk) / 1000);
+#endif
+#if defined(CONFIG_CPU_FREQ)
+		/* Fix CPU frequency for CPUFREQ. */
+		for (cpu = 0; cpu < num_online_cpus(); cpu++)
+			cpufreq_get(cpu);
+#endif
+	}
 }
 
