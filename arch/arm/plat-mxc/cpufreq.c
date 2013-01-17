@@ -112,7 +112,7 @@ int set_cpu_freq(int freq)
 			printk(KERN_ERR "COULD NOT SET GP VOLTAGE!!!!\n");
 			goto err3;
 		}
-		udelay(50);
+		udelay(260);
 	}
 	ret = clk_set_rate(cpu_clk, freq);
 	if (ret != 0) {
