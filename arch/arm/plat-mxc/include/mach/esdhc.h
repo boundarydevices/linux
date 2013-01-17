@@ -33,6 +33,7 @@ enum cd_types {
  * @wp_type:	type of write_protect method (see wp_types enum above)
  * @cd_type:	type of card_detect method (see cd_types enum above)
  * @max_bus_width: indicate max bus width supported
+ * @support_vsel:  indicate it supports 1.8v switching
  */
 
 struct esdhc_platform_data {
@@ -42,5 +43,6 @@ struct esdhc_platform_data {
 	enum cd_types cd_type;
 	unsigned int max_bus_width;
 	unsigned int delay_line;
+	bool support_vsel;
 };
 #endif /* __ASM_ARCH_IMX_ESDHC_H */
