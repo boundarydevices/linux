@@ -427,7 +427,13 @@ imx_pcie_scan_bus(int nr, struct pci_sys_data *sys)
 
 static int imx_pcie_map_irq(const struct pci_dev *dev, u8 slot, u8 pin)
 {
-	return legacy_irq;
+       switch (pin) {
+       case 1: return legacy_irq;
+       case 2: return legacy_irq - 1;
+       case 3: return legacy_irq - 2;
+       case 4: return legacy_irq - 3;
+       default: return -1;
+       }
 }
 
 static struct hw_pci imx_pci __initdata = {
