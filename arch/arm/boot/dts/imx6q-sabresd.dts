@@ -48,6 +48,7 @@
 							1410 0x80000000	/* MX6Q_PAD_NANDF_D1__GPIO_2_1 */
 							1418 0x80000000	/* MX6Q_PAD_NANDF_D2__GPIO_2_2 */
 							1426 0x80000000	/* MX6Q_PAD_NANDF_D3__GPIO_2_3 */
+							184 0x80000000 /* MX6Q_PAD_EIM_D26__GPIO_3_26 */
 						>;
 					};
 				};
@@ -83,6 +84,12 @@
                                 clock-frequency = <100000>;
                                 pinctrl-names = "default";
                                 pinctrl-0 = <&pinctrl_i2c2_2>;
+
+				max11801@48 {
+					compatible = "fsl,max11801";
+					reg = <0x48>;
+					int_input = <&gpio3 26 1>;
+                                };
 
 				pmic: pfuze100@08 {
 					compatible = "fsl,pfuze100";
