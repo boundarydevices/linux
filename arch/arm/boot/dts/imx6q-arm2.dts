@@ -142,6 +142,7 @@
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_usdhc3_1
 					     &pinctrl_usdhc3_arm2>;
+				no-1-8-v;
 				status = "okay";
 			};
 
@@ -150,6 +151,7 @@
 				vmmc-supply = <&reg_3p3v>;
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_usdhc4_1>;
+				no-1-8-v;
 				status = "okay";
 			};
 

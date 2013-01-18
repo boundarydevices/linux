@@ -100,6 +100,7 @@
 				cd-gpios = <&gpio7 0 0>;
 				wp-gpios = <&gpio7 1 0>;
 				vmmc-supply = <&reg_3p3v>;
+				no-1-8-v;
 				status = "okay";
 			};
 
@@ -109,6 +110,7 @@
 				cd-gpios = <&gpio2 6 0>;
 				wp-gpios = <&gpio2 7 0>;
 				vmmc-supply = <&reg_3p3v>;
+				no-1-8-v;
 				status = "okay";
 			};
 
