@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Freescale Semiconductor, Inc.
+ * Copyright 2011-2013 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -11,12 +11,14 @@
  */
 
 #include <linux/errno.h>
+#include <linux/io.h>
 #include <asm/cacheflush.h>
 #include <asm/cp15.h>
 #include <mach/common.h>
 
 int platform_cpu_kill(unsigned int cpu)
 {
+	imx_kill_cpu(cpu);
 	return 1;
 }
 
@@ -42,6 +44,22 @@ static inline void cpu_enter_lowpower(void)
 	  : "cc");
 }
 
+static inline void cpu_leave_lowpower(void)
+{
+	unsigned int v;
+
+	asm volatile(
+		"mrc	p15, 0, %0, c1, c0, 0\n"
+	"	orr	%0, %0, %1\n"
+	"	mcr	p15, 0, %0, c1, c0, 0\n"
+	"	mrc	p15, 0, %0, c1, c0, 1\n"
+	"	orr	%0, %0, %2\n"
+	"	mcr	p15, 0, %0, c1, c0, 1\n"
+	  : "=&r" (v)
+	  : "Ir" (CR_C), "Ir" (0x40)
+	  : "cc");
+}
+
 /*
  * platform-specific code to shutdown a CPU
  *
@@ -49,12 +67,27 @@ static inline void cpu_enter_lowpower(void)
  */
 void platform_cpu_die(unsigned int cpu)
 {
-	cpu_enter_lowpower();
-	imx_enable_cpu(cpu, false);
+	static int spurious;
 
-	/* spin here until hardware takes it down */
-	while (1)
-		;
+	cpu_enter_lowpower();
+
+	/*
+	 * tell cpu0 to kill this core, as this core's cache is
+	 * already disabled, and we want to set a flag to tell cpu0
+	 * to kill this core, so I write the flag to this core's SRC
+	 * parameter register, after cpu0 kill this core, it will
+	 * clear this register.
+	 */
+	imx_cpu_handshake(cpu, true);
+
+	for (;;) {
+		cpu_do_idle();
+		printk(KERN_ERR "cpu %d wake up from wfi !!!\n", cpu);
+	}
+	cpu_leave_lowpower();
+
+	pr_warn("CPU%u: %u spurious wakeup calls\n", cpu, ++spurious);
+	imx_cpu_handshake(cpu, false);
 }
 
 int platform_cpu_disable(unsigned int cpu)

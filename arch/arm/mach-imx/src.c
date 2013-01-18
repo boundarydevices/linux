@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Freescale Semiconductor, Inc.
+ * Copyright 2011-2013 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -16,6 +16,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/smp.h>
+#include <linux/sched.h>
 #include <asm/smp_plat.h>
 
 #define SRC_SCR				0x000
@@ -36,7 +37,40 @@ void imx_enable_cpu(int cpu, bool enable)
 	mask = 1 << (BP_SRC_SCR_CORE1_ENABLE + cpu - 1);
 	val = readl_relaxed(src_base + SRC_SCR);
 	val = enable ? val | mask : val & ~mask;
+	val |= 1 << (BP_SRC_SCR_CORE1_RST + cpu - 1);
 	writel_relaxed(val, src_base + SRC_SCR);
+
+	val = jiffies;
+	/* wait secondary cpu reset done, timeout is 10ms */
+	while ((readl_relaxed(src_base + SRC_SCR) &
+		(1 << (BP_SRC_SCR_CORE1_RST + cpu - 1))) != 0) {
+		if (time_after(jiffies, (unsigned long)(val +
+			msecs_to_jiffies(10)))) {
+			printk(KERN_WARNING "cpu %d: cpu reset fail\n", cpu);
+			break;
+		}
+	}
+}
+
+void imx_kill_cpu(unsigned int cpu)
+{
+	unsigned int val;
+
+	val = jiffies;
+	/* wait secondary cpu to die, timeout is 50ms */
+	while (readl_relaxed(src_base + SRC_GPR1 + (8 * cpu) + 4) == 0) {
+		if (time_after(jiffies, (unsigned long)(val +
+			msecs_to_jiffies(50)))) {
+			printk(KERN_WARNING "cpu %d: no handshake.\n", cpu);
+			break;
+		}
+	}
+	imx_enable_cpu(cpu, false);
+}
+
+void imx_cpu_handshake(unsigned int cpu, bool enable)
+{
+	writel_relaxed(!!enable, src_base + SRC_GPR1 + (8 * cpu) + 4);
 }
 
 void imx_set_cpu_jump(int cpu, void *jump_addr)
