@@ -95,7 +95,7 @@ static struct cpu_op mx6q_cpu_op_1G[] = {
 	 .soc_voltage = 1250000,
 #else
 	 .pu_voltage = 1175000,
-	 .soc_voltage = 1175000,
+	 .soc_voltage = 1250000,
 #endif
 	 .cpu_voltage = 1150000,},
 #ifdef CONFIG_MX6_VPU_352M
@@ -115,7 +115,7 @@ static struct cpu_op mx6q_cpu_op_1G[] = {
 	  .cpu_rate = 396000000,
 	  .cpu_podf = 0,
 	  .pu_voltage = 1175000,
-	  .soc_voltage = 1175000,
+	  .soc_voltage = 1250000,
 	  .cpu_voltage = 950000,},
 #endif
 };
