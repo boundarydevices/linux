@@ -835,6 +835,13 @@ static int __devinit imx_pcie_pltfm_probe(struct platform_device *pdev)
 	imx_pcie_regions_setup(dbi_base);
 	usleep_range(3000, 4000);
 
+	/*
+	 * Force to GEN1 because of PCIE2USB storage stress tests
+	 * would be failed when GEN2 is enabled
+	 */
+	writel(((readl(dbi_base + LNK_CAP) & 0xfffffff0) | 0x1),
+			dbi_base + LNK_CAP);
+
 	/* start link up */
 	imx_pcie_clrset(IOMUXC_GPR12_APP_LTSSM_ENABLE, 1 << 10, IOMUXC_GPR12);
 
