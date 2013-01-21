@@ -928,6 +928,14 @@
 					};
 				};
 
+				pwm0 {
+					pinctrl_pwm0_0: pwm0-1 {
+						fsl,pins = <
+							1543 0x1b0b1     /* MX6Q_PAD_SD1_DAT3__PWM1_PWMO */
+						>;
+					};
+				};
+
 				usdhc2 {
 					pinctrl_usdhc2_1: usdhc2grp-1 {
 						fsl,pins = <
