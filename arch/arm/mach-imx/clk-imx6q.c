@@ -462,5 +462,12 @@ int __init mx6q_clocks_init(void)
 	WARN_ON(!base);
 	irq = irq_of_parse_and_map(np, 0);
 	mxc_timer_init(base, irq);
+	/*
+	 * The reset value of LPM is WAIT mode,
+	 * need to set it to RUN mode before we unmask
+	 * all GPC interrupts.
+	 */
+	imx6q_set_lpm(WAIT_CLOCKED);
+
 	return 0;
 }

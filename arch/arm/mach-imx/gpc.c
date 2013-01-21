@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Freescale Semiconductor, Inc.
+ * Copyright 2011-2013 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -101,10 +101,15 @@ static void imx_gpc_irq_mask(struct irq_data *d)
 void __init imx_gpc_init(void)
 {
 	struct device_node *np;
+	int i;
 
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-gpc");
 	gpc_base = of_iomap(np, 0);
 	WARN_ON(!gpc_base);
+
+	/* Initially mask all interrupts */
+	for (i = 0; i < IMR_NUM; i++)
+		writel_relaxed(~0, gpc_base + GPC_IMR1 + i * 4);
 
 	/* Register GPC as the secondary interrupt controller behind GIC */
 	gic_arch_extn.irq_mask = imx_gpc_irq_mask;
