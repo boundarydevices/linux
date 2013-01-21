@@ -329,8 +329,7 @@ int anatop_thermal_cpufreq_down(void)
 			"cooling: already in the lowest setpoint!\n");
 		return 0;
 	}
-
-	cpufreq_new = cpu_op_tbl[cpu_op_nr - 1].cpu_rate;
+	cpufreq_new = cpu_op_tbl[0].cpu_rate;
 	cpufreq_new /= 1000;
 
 	strcpy(cpu_sys_file, CPUx);

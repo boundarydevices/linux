@@ -23,9 +23,13 @@
 #include <linux/err.h>
 #include <linux/slab.h>
 #include <linux/of_device.h>
+#include <linux/of_address.h>
 #include <linux/delay.h>
 #include <linux/suspend.h>
 #include <linux/regulator/consumer.h>
+#include <linux/mfd/syscon.h>
+#include <linux/regmap.h>
+#include <linux/io.h>
 #include <mach/hardware.h>
 #include <mach/clock.h>
 #include <mach/busfreq.h>
@@ -33,7 +37,22 @@
 
 #define CLK32_FREQ	32768
 #define NANOSECOND	(1000 * 1000 * 1000)
+#define OCOTP_SPEED_BIT_OFFSET (16)
+#define SPEED_FUSE	(0x440)
 
+enum IMX_LDO_MODE {
+	LDO_MODE_DEFAULT = -1,
+	LDO_MODE_ENABLED = 0,
+	LDO_MODE_BYPASSED = 1,
+};
+
+/*The below value aligned with SPEED_GRADING bits in 0x440 fuse offset */
+enum IMX_CPU_RATE {
+	CPU_AT_800MHz = 0,
+	CPU_AT_1GHz = 2,
+	CPU_AT_1_2GHz = 3,
+	CPU_AT_DEFAULT = 0xff
+};
 static int cpu_freq_khz_min;
 static int cpu_freq_khz_max;
 
@@ -48,6 +67,8 @@ static bool arm_use_pfd396;
 static struct mutex set_cpufreq_lock;
 static u32 pre_suspend_rate;
 
+static int ldo_bypass_mode = LDO_MODE_DEFAULT;
+static int arm_max_freq = CPU_AT_DEFAULT;
 static int set_cpu_freq(int freq)
 {
 	int i;
@@ -71,11 +92,12 @@ static int set_cpu_freq(int freq)
 		}
 	}
 
-	printk(KERN_DEBUG "new cpufreq %d, origin cpufreq %d, loops_per_jiffy %ld\n",
+	pr_debug("new cpufreq %d, origin cpufreq %d, loops_per_jiffy %ld\n",
 		freq, org_cpu_rate, loops_per_jiffy);
 
 	if (cpu_volt == 0)
 		return ret;
+
 	if (freq > org_cpu_rate) {
 		/* increase bus freq if cpufreq is increased */
 		if (!request_bus_high) {
@@ -86,7 +108,7 @@ static int set_cpu_freq(int freq)
 			ret = regulator_set_voltage(soc_regulator,
 				soc_volt, soc_volt);
 			if (ret < 0) {
-				printk(KERN_DEBUG "COULD NOT SET SOC VOLTAGE!!!!\n");
+				pr_err("COULD NOT SET SOC VOLTAGE!!!!\n");
 				return ret;
 			}
 		}
@@ -94,7 +116,7 @@ static int set_cpu_freq(int freq)
 			ret = regulator_set_voltage(pu_regulator,
 				pu_volt, pu_volt);
 			if (ret < 0) {
-				printk(KERN_DEBUG "COULD NOT SET PU VOLTAGE!!!!\n");
+				pr_err("COULD NOT SET PU VOLTAGE!!!!\n");
 				return ret;
 			}
 		}
@@ -102,7 +124,7 @@ static int set_cpu_freq(int freq)
 			ret = regulator_set_voltage(arm_regulator,
 				cpu_volt, cpu_volt);
 			if (ret < 0) {
-				printk(KERN_DEBUG "COULD NOT SET CPU VOLTAGE!!!!\n");
+				pr_err("COULD NOT SET CPU VOLTAGE!!!!\n");
 				return ret;
 			}
 		}
@@ -147,7 +169,7 @@ static int set_cpu_freq(int freq)
 	clk_set_rate(cpu_clk, freq);
 
 	if (ret != 0) {
-		printk(KERN_DEBUG "cannot set CPU clock rate\n");
+		pr_err("cannot set CPU clock rate\n");
 		return ret;
 	}
 	if (freq < org_cpu_rate) {
@@ -155,7 +177,7 @@ static int set_cpu_freq(int freq)
 			ret = regulator_set_voltage(arm_regulator,
 				cpu_volt, cpu_volt);
 			if (ret < 0) {
-				printk(KERN_DEBUG "COULD NOT SET CPU VOLTAGE!!!!\n");
+				pr_err("COULD NOT SET CPU VOLTAGE!!!!\n");
 				return ret;
 			}
 		}
@@ -163,7 +185,7 @@ static int set_cpu_freq(int freq)
 			ret = regulator_set_voltage(soc_regulator,
 				soc_volt, soc_volt);
 			if (ret < 0) {
-				printk(KERN_DEBUG "COULD NOT SET SOC VOLTAGE!!!!\n");
+				pr_err("COULD NOT SET SOC VOLTAGE!!!!\n");
 				return ret;
 			}
 		}
@@ -171,13 +193,13 @@ static int set_cpu_freq(int freq)
 			ret = regulator_set_voltage(pu_regulator,
 				pu_volt, pu_volt);
 			if (ret < 0) {
-				printk(KERN_DEBUG "COULD NOT SET PU VOLTAGE!!!!\n");
+				pr_err("COULD NOT SET PU VOLTAGE!!!!\n");
 				return ret;
 			}
 		}
 		udelay(50);
 		/* release bus freq when cpufreq is lower to lowest setpoint */
-		if (freq == cpu_op_tbl[cpu_op_nr - 1].cpu_rate && request_bus_high) {
+		if (freq == cpu_op_tbl[0].cpu_rate && request_bus_high) {
 			release_bus_freq(BUS_FREQ_HIGH);
 			request_bus_high = false;
 		}
@@ -236,7 +258,7 @@ static int mxc_set_target(struct cpufreq_policy *policy,
 	ret = set_cpu_freq(freq_Hz);
 
 	if (ret) {
-		/*restore cpufreq and tell cpufreq core if set fail*/
+		/* restore cpufreq and tell cpufreq core if set fail */
 		freqs.old = clk_get_rate(cpu_clk) / 1000;
 		freqs.new = freqs.old;
 		freqs.cpu = policy->cpu;
@@ -249,14 +271,16 @@ static int mxc_set_target(struct cpufreq_policy *policy,
 	}
 
 #ifdef CONFIG_SMP
-	/* Loops per jiffy is not updated by the CPUFREQ driver for SMP systems.
+	/*
+	 * Loops per jiffy is not updated by the CPUFREQ driver for SMP systems.
 	 * So update it for all CPUs.
 	 */
 	for_each_possible_cpu(i)
 		per_cpu(cpu_data, i).loops_per_jiffy =
 		cpufreq_scale(per_cpu(cpu_data, i).loops_per_jiffy,
 		freqs.old, freqs.new);
-	/* Update global loops_per_jiffy to cpu0's loops_per_jiffy,
+	/*
+	 * Update global loops_per_jiffy to cpu0's loops_per_jiffy,
 	 * as all CPUs are running at same freq
 	 */
 	loops_per_jiffy = per_cpu(cpu_data, 0).loops_per_jiffy;
@@ -277,28 +301,33 @@ static int mxc_cpufreq_init(struct cpufreq_policy *policy)
 	int ret;
 	int i;
 	struct device_node *np;
+	int offset = 0;
 
 	if (policy->cpu != 0)
 		return -EINVAL;
 
 	np = of_find_node_by_name(NULL, "cpufreq-setpoint");
 	if (!np) {
-		printk(KERN_ERR "%s: failed to find device tree data!\n",
+		pr_err("%s: failed to find device tree data!\n",
 			__func__);
 		return -EINVAL;
 	}
 
 	ret = of_property_read_u32(np, "setpoint-number", &cpu_op_nr);
 	if (ret) {
-		printk(KERN_ERR "%s: failed to get setpoint number!\n",
+		pr_err("%s: failed to get setpoint number!\n",
 			__func__);
 		return -EINVAL;
 	}
+	/* 4 setpoint-number for mx6q ,3 setpoint-number for mx6dl/sl */
+	if (cpu_op_nr == 4)
+		/* use to calculate the real setpoint */
+		offset = 1;
 
 	cpu_op_tbl = kzalloc(sizeof(*cpu_op_tbl) * cpu_op_nr, GFP_KERNEL);
 	if (!cpu_op_tbl) {
 		ret = -ENOMEM;
-		goto err6;
+		goto err1;
 	}
 
 	i = 0;
@@ -324,79 +353,30 @@ static int mxc_cpufreq_init(struct cpufreq_policy *policy)
 		i++;
 	}
 
-	printk(KERN_INFO "cpufreq support %d setpoint:\n", cpu_op_nr);
+	/*
+	 * mx6q:remove one setpoint if maxfreq is 1G, remove two if 800Mhz
+	 * mx6dl/sl:remove none if maxfreq is 1G, remove one if 800Mhz
+	 */
+	if (arm_max_freq == CPU_AT_1GHz)
+		cpu_op_nr -= offset;
+	else if (arm_max_freq == CPU_AT_800MHz)
+		cpu_op_nr -= (offset + 1);
+	pr_info("cpufreq support %d setpoint:\n", cpu_op_nr);
+
 	for (i = 0; i < cpu_op_nr; i++) {
-		printk(KERN_INFO "%d, %d, %d, %d, %d, %d\n",
+		pr_info("%d, %d, %d, %d, %d, %d\n",
 			cpu_op_tbl[i].pll_rate, cpu_op_tbl[i].cpu_rate,
 			cpu_op_tbl[i].cpu_podf, cpu_op_tbl[i].pu_voltage,
 			cpu_op_tbl[i].soc_voltage,
 			cpu_op_tbl[i].cpu_voltage);
 	}
 
-	pll1_sys = clk_get(NULL, "pll1_sys");
-	if (IS_ERR(pll1_sys)) {
-		printk(KERN_ERR "%s: failed to get pll1_sys\n", __func__);
-		ret = -EINVAL;
-		goto err5;
-	}
 	/* prepare and enable pll1 clock to make use count right */
 	clk_prepare(pll1_sys);
 	clk_enable(pll1_sys);
 
-	pll1_sw = clk_get(NULL, "pll1_sw");
-	if (IS_ERR(pll1_sw)) {
-		printk(KERN_ERR "%s: failed to get pll1_sw\n", __func__);
-		ret = -EINVAL;
-		goto err4;
-	}
-
-	step = clk_get(NULL, "step");
-	if (IS_ERR(pll1_sw)) {
-		printk(KERN_ERR "%s: failed to get step\n", __func__);
-		ret = -EINVAL;
-		goto err3;
-	}
-
-	pll2_pfd2_396m = clk_get(NULL, "pll2_pfd2_396m");
-	if (IS_ERR(pll1_sw)) {
-		printk(KERN_ERR "%s: failed to get pll2_pfd2_396m\n",
-			__func__);
-		ret = -EINVAL;
-		goto err2;
-	}
-
-	cpu_clk = clk_get(NULL, "arm");
-	if (IS_ERR(cpu_clk)) {
-		printk(KERN_ERR "%s: failed to get cpu clock\n",
-			__func__);
-		ret = -EINVAL;
-		goto err1;
-	}
-
-	arm_regulator = regulator_get(NULL, "cpu");
-	if (IS_ERR(arm_regulator)) {
-		printk(KERN_ERR "%s: failed to get arm regulator\n",
-			__func__);
-		ret = -EINVAL;
-		goto err1;
-	}
-	soc_regulator = regulator_get(NULL, "vddsoc");
-	if (IS_ERR(soc_regulator)) {
-		printk(KERN_ERR "%s: failed to get soc regulator\n",
-			__func__);
-		ret = -EINVAL;
-		goto err1;
-	}
-	pu_regulator = regulator_get(NULL, "vddpu");
-	if (IS_ERR(pu_regulator)) {
-		printk(KERN_ERR "%s: failed to get pu regulator\n",
-			__func__);
-		ret = -EINVAL;
-		goto err1;
-	}
-
-	cpu_freq_khz_min = cpu_op_tbl[0].cpu_rate / 1000;
-	cpu_freq_khz_max = cpu_op_tbl[0].cpu_rate / 1000;
+	cpu_freq_khz_min = cpu_op_tbl[cpu_op_nr-1].cpu_rate / 1000;
+	cpu_freq_khz_max = cpu_op_tbl[cpu_op_nr-1].cpu_rate / 1000;
 
 	imx_freq_table = kmalloc(
 		sizeof(struct cpufreq_frequency_table) * (cpu_op_nr + 1),
@@ -430,7 +410,7 @@ static int mxc_cpufreq_init(struct cpufreq_policy *policy)
 	ret = cpufreq_frequency_table_cpuinfo(policy, imx_freq_table);
 
 	if (ret < 0) {
-		printk(KERN_ERR "%s: failed to register i.MXC CPUfreq with\
+		pr_err("%s: failed to register i.MXC CPUfreq with\
 			error code %d\n", __func__, ret);
 		ret = -ENOMEM;
 		goto err0;
@@ -441,16 +421,6 @@ static int mxc_cpufreq_init(struct cpufreq_policy *policy)
 err0:
 	kfree(imx_freq_table);
 err1:
-	clk_put(cpu_clk);
-err2:
-	clk_put(pll2_pfd2_396m);
-err3:
-	clk_put(step);
-err4:
-	clk_put(pll1_sw);
-err5:
-	clk_put(pll1_sys);
-err6:
 	kfree(cpu_op_tbl);
 	return ret;
 }
@@ -487,17 +457,21 @@ static int cpufreq_pm_notify(struct notifier_block *nb, unsigned long event,
 	mutex_lock(&set_cpufreq_lock);
 	if (event == PM_SUSPEND_PREPARE) {
 		pre_suspend_rate = clk_get_rate(cpu_clk);
-		if (pre_suspend_rate != (imx_freq_table[0].frequency * 1000)) {
-			/*notify cpufreq core will raise up cpufreq to highest*/
+		if (pre_suspend_rate != (imx_freq_table[cpu_op_nr - 1].frequency
+			* 1000)) {
+			/*
+			 * notify cpufreq core will raise up cpufreq to highest
+			 */
 			freqs.old = pre_suspend_rate / 1000;
-			freqs.new = imx_freq_table[0].frequency;
+			freqs.new = imx_freq_table[cpu_op_nr - 1].frequency;
 			freqs.flags = 0;
 			for (i = 0; i < num_cpus; i++) {
 				freqs.cpu = i;
 				cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 			}
-			ret = set_cpu_freq(imx_freq_table[0].frequency * 1000);
-			/*restore cpufreq and tell cpufreq core if set fail*/
+			ret = set_cpu_freq(imx_freq_table[cpu_op_nr - 1].frequency
+				* 1000);
+			/* restore cpufreq and tell cpufreq core if set fail */
 			if (ret) {
 				freqs.old =  clk_get_rate(cpu_clk)/1000;
 				freqs.new = freqs.old;
@@ -506,17 +480,20 @@ static int cpufreq_pm_notify(struct notifier_block *nb, unsigned long event,
 					freqs.cpu = i;
 					cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 				}
-				goto Notify_finish;/*if update freq error,return*/
+				/* if update freq error,return */
+				goto Notify_finish;
 			}
 #ifdef CONFIG_SMP
 			for_each_possible_cpu(i)
 				per_cpu(cpu_data, i).loops_per_jiffy =
 					cpufreq_scale(per_cpu(cpu_data, i).loops_per_jiffy,
-					pre_suspend_rate / 1000, imx_freq_table[0].frequency);
+					pre_suspend_rate / 1000,
+					imx_freq_table[cpu_op_nr - 1].frequency);
 			loops_per_jiffy = per_cpu(cpu_data, 0).loops_per_jiffy;
 #else
 			loops_per_jiffy = cpufreq_scale(loops_per_jiffy,
-				pre_suspend_rate / 1000, imx_freq_table[0].frequency);
+				pre_suspend_rate / 1000,
+				imx_freq_table[cpu_op_nr - 1].frequency);
 #endif
 			for (i = 0; i < num_cpus; i++) {
 				freqs.cpu = i;
@@ -526,8 +503,10 @@ static int cpufreq_pm_notify(struct notifier_block *nb, unsigned long event,
 		cpufreq_suspend = true;
 	} else if (event == PM_POST_SUSPEND) {
 		if (clk_get_rate(cpu_clk) != pre_suspend_rate) {
-			/*notify cpufreq core will restore rate before suspend*/
-			freqs.old = imx_freq_table[0].frequency;
+			/*
+			 * notify cpufreq core will restore rate before suspend
+			 */
+			freqs.old = imx_freq_table[cpu_op_nr - 1].frequency;
 			freqs.new = pre_suspend_rate / 1000;
 			freqs.flags = 0;
 			for (i = 0; i < num_cpus; i++) {
@@ -535,7 +514,7 @@ static int cpufreq_pm_notify(struct notifier_block *nb, unsigned long event,
 				cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 			}
 			ret = set_cpu_freq(pre_suspend_rate);
-			/*restore cpufreq and tell cpufreq core if set fail*/
+			/* restore cpufreq and tell cpufreq core if set fail */
 			if (ret) {
 				freqs.old =  clk_get_rate(cpu_clk)/1000;
 				freqs.new = freqs.old;
@@ -544,17 +523,20 @@ static int cpufreq_pm_notify(struct notifier_block *nb, unsigned long event,
 					freqs.cpu = i;
 					cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 				}
-				goto Notify_finish;/*if update freq error,return*/
+				/*if update freq error,return*/
+				goto Notify_finish;
 			}
 #ifdef CONFIG_SMP
 			for_each_possible_cpu(i)
 				per_cpu(cpu_data, i).loops_per_jiffy =
 					cpufreq_scale(per_cpu(cpu_data, i).loops_per_jiffy,
-					imx_freq_table[0].frequency, pre_suspend_rate / 1000);
+					imx_freq_table[cpu_op_nr - 1].frequency,
+					pre_suspend_rate / 1000);
 			loops_per_jiffy = per_cpu(cpu_data, 0).loops_per_jiffy;
 #else
 			loops_per_jiffy = cpufreq_scale(loops_per_jiffy,
-				imx_freq_table[0].frequency, pre_suspend_rate / 1000);
+				imx_freq_table[cpu_op_nr - 1].frequency,
+				pre_suspend_rate / 1000);
 #endif
 			for (i = 0; i < num_cpus; i++) {
 				freqs.cpu = i;
@@ -574,22 +556,275 @@ Notify_finish:
 	mutex_unlock(&set_cpufreq_lock);
 	return NOTIFY_OK;
 }
+
 static struct notifier_block imx_cpufreq_pm_notifier = {
 	.notifier_call = cpufreq_pm_notify,
 };
-extern void mx6_cpu_regulator_init(void);
-static int __init mxc_cpufreq_driver_init(void)
+
+static int __devinit cpufreq_probe(struct platform_device *pdev)
 {
+	int ret = 0;
+	struct device_node *np;
+	void __iomem *base;
+
+	np = of_find_node_by_name(NULL, "ocotp");
+	base = of_iomap(np, 0);
+	WARN_ON(!base);
+
+	if (cpu_is_imx6q()) {
+		unsigned int reg;
+		/*
+		 * read fuse bit to know the max cpu freq : offset 0x440
+		 * bit[17:16]:SPEED_GRADING[1:0]
+		 */
+		reg = __raw_readl(base + SPEED_FUSE);
+		reg &= (0x3 << OCOTP_SPEED_BIT_OFFSET);
+		reg >>= OCOTP_SPEED_BIT_OFFSET;
+		/*
+		 * choose the little value to run lower max cpufreq if the flag
+		 * is overwrited by cmdline, else get speed from fuse bit
+		 */
+		if (arm_max_freq != CPU_AT_DEFAULT)
+			arm_max_freq = (reg > arm_max_freq) ? arm_max_freq
+					: reg;
+		else
+			arm_max_freq = reg;
+	} else if (arm_max_freq == CPU_AT_DEFAULT) {
+		/* mx6dl/sl max freq is 1Ghz default */
+		arm_max_freq = CPU_AT_1GHz;
+	} else if (arm_max_freq == CPU_AT_1_2GHz) {
+		pr_info("This chip didn't support 1.2GHz!please check \
+			your cmdline \n");
+	}
+	pr_info("Max freq is %s\n", (arm_max_freq == CPU_AT_1_2GHz) ?
+		"1.2GHz" : ((arm_max_freq == CPU_AT_1GHz) ? "1Ghz" : "800Mhz"));
+
+	/* force LDO enabled mode in 1.2Ghz board */
+	if (arm_max_freq == CPU_AT_1_2GHz)
+		ldo_bypass_mode = LDO_MODE_ENABLED;
+
+	if (ldo_bypass_mode == LDO_MODE_DEFAULT) {
+		ret = of_property_read_u32(pdev->dev.of_node, "bypass-mode",
+						&ldo_bypass_mode);
+		if (ret) {
+			pr_info("no bypass-mode,force to enable LDO\n");
+			ldo_bypass_mode = LDO_MODE_ENABLED;
+		} else {
+			pr_info("get bypass-mode from dts,not cmdline:\
+				%d", ldo_bypass_mode);
+		}
+	}
+
+	arm_regulator = devm_regulator_get(&pdev->dev, "vddarm");
+	if (IS_ERR(arm_regulator))
+		pr_warning("failed to get external arm regulator\n");
+
+	soc_regulator = devm_regulator_get(&pdev->dev, "vddsoc");
+	if (IS_ERR(soc_regulator))
+		pr_warning("failed to get external soc regulator\n");
+
+	pu_regulator = devm_regulator_get(&pdev->dev, "vddpu");
+	if (IS_ERR(pu_regulator))
+		pr_warning("failed to get external pu regulator\n");
+
+	/* force LDO enabled mode in 1.2Ghz board */
+	if (arm_max_freq == CPU_AT_1_2GHz) {
+		/*
+		 * For 1.2G chip only work on LDO enable mode and VDDARM_IN/
+		 * VDDSOC_IN need be increased form 1.375V to 1.425V for ldo
+		 * bypass mode
+		 */
+		pr_info("Force to LDO ENABLE mode on 1.2G chip.\n");
+		if (!IS_ERR(arm_regulator)) {
+			 ret = regulator_set_voltage(arm_regulator, 1425000,
+							1425000);
+			 if (ret < 0) {
+				pr_err("COULD NOT SET  VDDARM_IN\n");
+				return ret;
+			}
+		}
+		if (!IS_ERR(soc_regulator)) {
+			ret = regulator_set_voltage(soc_regulator, 1425000,
+							1425000);
+			if (ret < 0) {
+				pr_err("COULD NOT SET VDDSOC!!!!\n");
+				return ret;
+			}
+		}
+		ldo_bypass_mode = LDO_MODE_ENABLED;
+	}
+	if (ldo_bypass_mode == LDO_MODE_ENABLED) {
+		/* use internal anatop regulator */
+		pr_info("use internal regulator!\n");
+		arm_regulator = regulator_get(NULL, "cpu");
+		if (IS_ERR(arm_regulator)) {
+			pr_err("failed to get arm regulator\n");
+			return PTR_ERR(arm_regulator);
+		}
+		soc_regulator = regulator_get(NULL, "vddsoc");
+		if (IS_ERR(soc_regulator)) {
+			pr_err("failed to get soc regulator\n");
+			return PTR_ERR(soc_regulator);
+		}
+		pu_regulator = regulator_get(NULL, "vddpu");
+		if (IS_ERR(pu_regulator)) {
+			pr_err("failed to get pu regulator\n");
+			return PTR_ERR(pu_regulator);
+		}
+	} else {
+		struct regmap *anatop;
+
+		pr_info("bypass internal regulator!\n");
+		/*
+		 * For chip boot on 800Mhz, decrease VDDARM_IN/VDDSOC_IN
+		 * from 1.375V to 1.3V for ldo bypass mode
+		 */
+		if (!IS_ERR(arm_regulator)) {
+			 ret = regulator_set_voltage(arm_regulator, 1300000,
+							1300000);
+			 if (ret < 0) {
+				pr_err("COULD NOT SET  VDDARM_IN\n");
+				return ret;
+			}
+		}
+		if (!IS_ERR(soc_regulator)) {
+			ret = regulator_set_voltage(soc_regulator, 1300000,
+							1300000);
+			if (ret < 0) {
+				pr_err("COULD NOT SET VDDSOC!!!!\n");
+				return ret;
+			}
+		}
+
+		anatop = syscon_regmap_lookup_by_compatible("fsl,imx6q-anatop");
+		if (!IS_ERR(anatop)) {
+			/* digital bypass VDDPU/VDDSOC/VDDARM */
+			regmap_update_bits(anatop, 0x140, 0x7c3e1f, 0x7c3e1f);
+		} else {
+			ret = PTR_ERR(anatop);
+			pr_warn("failed to find fsl,imx6q-anatop regmap\n");
+			return ret;
+		}
+
+	}
+
+	pll1_sys = clk_get(NULL, "pll1_sys");
+	if (IS_ERR(pll1_sys)) {
+		pr_err("%s: failed to get pll1_sys\n", __func__);
+		ret = PTR_ERR(pll1_sys);
+		goto err5;
+	}
+
+	pll1_sw = clk_get(NULL, "pll1_sw");
+	if (IS_ERR(pll1_sw)) {
+		pr_err("%s: failed to get pll1_sw\n", __func__);
+		ret = PTR_ERR(pll1_sw);
+		goto err4;
+	}
+
+	step = clk_get(NULL, "step");
+	if (IS_ERR(step)) {
+		pr_err("%s: failed to get step\n", __func__);
+		ret = PTR_ERR(step);
+		goto err3;
+	}
+
+	pll2_pfd2_396m = clk_get(NULL, "pll2_pfd2_396m");
+	if (IS_ERR(pll2_pfd2_396m)) {
+		pr_err("%s: failed to get pll2_pfd2_396m\n", __func__);
+		ret = PTR_ERR(pll2_pfd2_396m);
+		goto err2;
+	}
+
+	cpu_clk = clk_get(NULL, "arm");
+	if (IS_ERR(cpu_clk)) {
+		pr_err("%s: failed to get cpu clock\n", __func__);
+		ret = PTR_ERR(cpu_clk);
+		goto err1;
+	}
+
 	mutex_init(&set_cpufreq_lock);
 	register_pm_notifier(&imx_cpufreq_pm_notifier);
-	return cpufreq_register_driver(&mxc_driver);
+
+	ret = cpufreq_register_driver(&mxc_driver);
+	if (ret) {
+		pr_err("failed to register imx cpufreq driver!\n");
+		unregister_pm_notifier(&imx_cpufreq_pm_notifier);
+		goto err1;
+	}
+
+	return  0;
+
+err1:
+	clk_put(cpu_clk);
+err2:
+	clk_put(pll2_pfd2_396m);
+err3:
+	clk_put(step);
+err4:
+	clk_put(pll1_sw);
+err5:
+	clk_put(pll1_sys);
+	return ret;
+}
+
+static const struct of_device_id imx6_cpufreq_ids[] = {
+	{ .compatible = "fsl,imx_cpufreq", },
+	{ /* sentinel */ }
+};
+
+static struct platform_driver imx6_cpufreq_driver = {
+	.driver = {
+		   .name = "imx_cpufreq",
+		   .of_match_table = imx6_cpufreq_ids,
+		},
+	.probe = cpufreq_probe,
+};
+
+static int __init mxc_cpufreq_driver_init(void)
+{
+	if (platform_driver_register(&imx6_cpufreq_driver) != 0) {
+		pr_err("cpufreq_driver register failed\n");
+		return -ENODEV;
+	}
+	pr_info("Cpu freq driver module loaded\n");
+	return 0;
 }
 
 static void mxc_cpufreq_driver_exit(void)
 {
-	cpufreq_unregister_driver(&mxc_driver);
+	platform_driver_unregister(&imx6_cpufreq_driver);
 }
 
+static int __init enable_ldo(char *p)
+{
+	if (memcmp(p, "on", 2) == 0) {
+		ldo_bypass_mode = LDO_MODE_ENABLED;
+		p += 2;
+	} else if (memcmp(p, "off", 3) == 0) {
+		ldo_bypass_mode = LDO_MODE_BYPASSED;
+		p += 3;
+	}
+	return 0;
+}
+early_param("ldo_active", enable_ldo);
+
+static int __init arm_core_max(char *p)
+{
+	if (memcmp(p, "1200", 4) == 0) {
+		arm_max_freq = CPU_AT_1_2GHz;
+		p += 4;
+	} else if (memcmp(p, "1000", 4) == 0) {
+		arm_max_freq = CPU_AT_1GHz;
+		p += 4;
+	} else if (memcmp(p, "800", 3) == 0) {
+		arm_max_freq = CPU_AT_800MHz;
+		p += 3;
+	}
+	return 0;
+}
+
+early_param("arm_freq", arm_core_max);
 module_init(mxc_cpufreq_driver_init);
 module_exit(mxc_cpufreq_driver_exit);
 
