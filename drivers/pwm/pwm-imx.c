@@ -17,6 +17,9 @@
 #include <linux/io.h>
 #include <linux/pwm.h>
 #include <linux/of_device.h>
+#include <linux/of.h>
+#include <linux/of_address.h>
+#include <linux/pinctrl/consumer.h>
 
 /* i.MX1 and i.MX21 share the same PWM function block: */
 
@@ -238,6 +241,7 @@ static int __devinit imx_pwm_probe(struct platform_device *pdev)
 	struct imx_pwm_data *data;
 	struct imx_chip *imx;
 	struct resource *r;
+	struct pinctrl *pinctrl;
 	int ret = 0;
 
 	if (!of_id)
@@ -248,6 +252,10 @@ static int __devinit imx_pwm_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to allocate memory\n");
 		return -ENOMEM;
 	}
+
+	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
+	if (IS_ERR(pinctrl))
+		return PTR_ERR(pinctrl);
 
 	imx->clk_per = devm_clk_get(&pdev->dev, "per");
 	if (IS_ERR(imx->clk_per)) {
