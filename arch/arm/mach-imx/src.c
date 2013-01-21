@@ -10,6 +10,7 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
+#include <linux/export.h>
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/of.h>
@@ -20,6 +21,8 @@
 #define SRC_SCR				0x000
 #define SRC_GPR1			0x020
 #define BP_SRC_SCR_WARM_RESET_ENABLE	0
+#define BP_SRC_SCR_GPU3D_RST		1
+#define BP_SRC_SCR_GPU2D_RST		4
 #define BP_SRC_SCR_CORE1_RST		14
 #define BP_SRC_SCR_CORE1_ENABLE		22
 
@@ -55,6 +58,35 @@ void imx_src_prepare_restart(void)
 	/* clear persistent entry register of primary core */
 	writel_relaxed(0, src_base + SRC_GPR1);
 }
+
+int imx_src_reset_gpu(int gpucore_id)
+{
+	u32 bit_offset, val;
+
+	/*
+	 * gcvCORE_MAJOR    0x0
+	 * gcvCORE_2D       0x1
+	 * cvCORE_VG       0x2
+	 */
+
+	if (gpucore_id == 0x0)
+		bit_offset = BP_SRC_SCR_GPU3D_RST;
+	else if ((gpucore_id == 0x1) || (gpucore_id == 0x2))
+		bit_offset = BP_SRC_SCR_GPU2D_RST;
+	else
+		return -1;
+
+	val = readl_relaxed(src_base + SRC_SCR);
+	val |= (1 << bit_offset);
+	writel_relaxed(val, src_base + SRC_SCR);
+
+	while ((readl_relaxed(src_base + SRC_SCR) &
+		(1 << bit_offset)) != 0) {
+		cpu_relax();
+	}
+	return 0;
+}
+EXPORT_SYMBOL(imx_src_reset_gpu);
 
 void __init imx_src_init(void)
 {

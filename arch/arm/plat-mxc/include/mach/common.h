@@ -112,6 +112,7 @@ void tzic_handle_irq(struct pt_regs *);
 #define imx53_handle_irq tzic_handle_irq
 #define imx6q_handle_irq gic_handle_irq
 
+extern int imx_src_reset_gpu(int gpucore_id);
 extern void imx_enable_cpu(int cpu, bool enable);
 extern void imx_set_cpu_jump(int cpu, void *jump_addr);
 #ifdef CONFIG_DEBUG_LL
