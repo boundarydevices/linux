@@ -70,7 +70,27 @@
 	};
 
 	cpufreq-setpoint {
-		setpoint-number = <3>;
+		setpoint-number = <4>;
+
+		396000000 {
+			compatible = "fsl,396m", "setpoint-table";
+			pll_rate = <396000000>;
+			cpu_rate = <396000000>;
+			cpu_podf = <0>;
+			pu_voltage = <1175000>;
+			soc_voltage = <1175000>;
+			cpu_voltage = <950000>;
+		};
+
+		792000000 {
+			compatible = "fsl,792m", "setpoint-table";
+			pll_rate = <792000000>;
+			cpu_rate = <792000000>;
+			cpu_podf = <0>;
+			pu_voltage = <1175000>;
+			soc_voltage = <1175000>;
+			cpu_voltage = <1150000>;
+		};
 
 		996000000 {
 			compatible = "fsl,996m", "setpoint-table";
@@ -81,24 +101,17 @@
 			soc_voltage = <1250000>;
 			cpu_voltage = <1250000>;
 		};
-		792000000 {
-			compatible = "fsl,792m", "setpoint-table";
-			pll_rate = <792000000>;
-			cpu_rate = <792000000>;
+
+		1200000000 {
+			compatible = "fsl,1200m", "setpoint-table";
+			pll_rate = <1200000000>;
+			cpu_rate = <1200000000>;
 			cpu_podf = <0>;
-			pu_voltage = <1175000>;
-			soc_voltage = <1175000>;
-			cpu_voltage = <1150000>;
+			pu_voltage = <1275000>;
+			soc_voltage = <1275000>;
+			cpu_voltage = <1275000>;
 		};
-		396000000 {
-			compatible = "fsl,396m", "setpoint-table";
-			pll_rate = <396000000>;
-			cpu_rate = <396000000>;
-			cpu_podf = <0>;
-			pu_voltage = <1175000>;
-			soc_voltage = <1175000>;
-			cpu_voltage = <950000>;
-		};
+
 	};
 
 	irq_tuner {

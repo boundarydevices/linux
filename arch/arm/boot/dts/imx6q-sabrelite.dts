@@ -196,6 +196,14 @@
 		};
 	};
 
+	regulator-bypass {
+			compatible = "fsl,imx_cpufreq";
+			/*1:bypass internal regulator,supplied by external reg
+			* 0:enable internal regulator
+			*/
+			bypass-mode = <0>;
+	};
+
 	sound {
 		compatible = "fsl,imx6q-sabrelite-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";
