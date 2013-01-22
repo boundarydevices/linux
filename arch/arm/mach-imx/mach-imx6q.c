@@ -34,6 +34,7 @@
 #include <linux/regmap.h>
 #include <linux/micrel_phy.h>
 #include <linux/mfd/syscon.h>
+#include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 #include <linux/ahci_platform.h>
 #include <asm/cpuidle.h>
 #include <asm/smp_twd.h>
@@ -788,6 +789,8 @@ static const struct of_dev_auxdata imx6q_auxdata_lookup[] __initconst = {
 
 static int __init imx6_soc_init(void)
 {
+	struct regmap *gpr;
+	unsigned int mask;
 	int ret;
 	struct device_node *np;
 
@@ -813,13 +816,52 @@ static int __init imx6_soc_init(void)
 		return ret;
 	}
 
+	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
+	if (IS_ERR(gpr)) {
+		pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
+		return PTR_ERR(gpr);
+	}
+
+	/*
+	 * enable AXI cache for VDOA/VPU/IPU
+	 * set IPU AXI-id0 Qos=0xf(bypass) AXI-id1 Qos=0x7
+	 * clear OCRAM_CTL bits to disable pipeline control
+	 */
+	ret = regmap_update_bits(gpr, IOMUXC_GPR3, IMX6Q_GPR3_OCRAM_CTL_MASK,
+					~IMX6Q_GPR3_OCRAM_CTL_MASK);
+	if (ret)
+		goto out;
+
+	mask = IMX6Q_GPR4_VDOA_WR_CACHE_SEL |
+		IMX6Q_GPR4_VDOA_RD_CACHE_SEL |
+		IMX6Q_GPR4_VDOA_WR_CACHE_VAL |
+		IMX6Q_GPR4_VDOA_RD_CACHE_VAL |
+		IMX6Q_GPR4_VPU_WR_CACHE_SEL |
+		IMX6Q_GPR4_VPU_RD_CACHE_SEL |
+		IMX6Q_GPR4_VPU_P_WR_CACHE_VAL |
+		IMX6Q_GPR4_VPU_P_RD_CACHE_VAL |
+		IMX6Q_GPR4_IPU_WR_CACHE_CTL |
+		IMX6Q_GPR4_IPU_RD_CACHE_CTL;
+	ret = regmap_update_bits(gpr, IOMUXC_GPR4, mask, mask);
+	if (ret)
+		goto out;
+
+	ret = regmap_write(gpr, IOMUXC_GPR6, IMX6Q_GPR6_IPU1_QOS_VAL);
+	if (ret)
+		goto out;
+
+	ret = regmap_write(gpr, IOMUXC_GPR7, IMX6Q_GPR7_IPU2_QOS_VAL);
+	if (ret)
+		goto out;
+
 	return 0;
+out:
+	pr_err("error: regmap update/write iomux gpr ret:%d\n", ret);
+	return ret;
 }
 
 static void __init imx6q_init_machine(void)
 {
-	imx6_soc_init();
-
 	if (of_machine_is_compatible("fsl,imx6q-sabrelite"))
 		imx6q_sabrelite_init();
 	else if (of_machine_is_compatible("fsl,imx6q-sabresd"))
@@ -830,6 +872,7 @@ static void __init imx6q_init_machine(void)
 	of_platform_populate(NULL, of_default_bus_match_table,
 			imx6q_auxdata_lookup, NULL);
 
+	imx6_soc_init();
 	imx6q_pm_init();
 	imx6q_usb_init();
 	imx6q_1588_init();
