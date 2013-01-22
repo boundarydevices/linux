@@ -17,6 +17,7 @@
 #include <linux/export.h>
 #include <linux/init.h>
 #include <linux/io.h>
+#include <linux/iram_alloc.h>
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
 #include <linux/cpuidle.h>
@@ -407,8 +408,23 @@ static const struct of_dev_auxdata imx6q_auxdata_lookup[] __initconst = {
 	{ /* sentinel */ }
 };
 
+static int __init imx6_soc_init(void)
+{
+	int ret;
+
+	ret = iram_init(MX6Q_IRAM_BASE_ADDR, MX6Q_IRAM_SIZE);
+	if (ret < 0) {
+		pr_err("iram init fail:%d!\n", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
 static void __init imx6q_init_machine(void)
 {
+	imx6_soc_init();
+
 	if (of_machine_is_compatible("fsl,imx6q-sabrelite"))
 		imx6q_sabrelite_init();
 

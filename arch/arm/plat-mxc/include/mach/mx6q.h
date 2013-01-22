@@ -39,6 +39,8 @@
 #define MX6Q_IOMUXC_BASE_ADDR		0x020e0000
 #define MX6Q_SRC_BASE_ADDR		0x020d8000
 #define MX6Q_IRAM_BASE_ADDR		0x900000
+/* Reserve top 16K for bus freq and suspend/resume, see DTS file */
+#define MX6Q_IRAM_SIZE			(SZ_256K - SZ_16K)
 
 /*
  * MX6Q_UART_BASE_ADDR is put in the middle to force the expansion
