@@ -210,11 +210,11 @@ choice
 		  on i.MX50 or i.MX53.
 
 	config DEBUG_IMX6Q_UART
-		bool "i.MX6Q Debug UART"
+		bool "i.MX6Q/DL Debug UART"
 		depends on SOC_IMX6Q
 		help
 		  Say Y here if you want kernel low-level debugging support
-		  on i.MX6Q.
+		  on i.MX6Q/DL.
 
 	config DEBUG_MSM_UART1
 		bool "Kernel low-level debugging messages via MSM UART1"
@@ -340,7 +340,7 @@ choice
 endchoice
 
 config DEBUG_IMX6Q_UART_PORT
-	int "i.MX6Q Debug UART Port (1-5)" if DEBUG_IMX6Q_UART
+	int "i.MX6Q/DL Debug UART Port (1-5)" if DEBUG_IMX6Q_UART
 	range 1 5
 	default 1
 	depends on SOC_IMX6Q

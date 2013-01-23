@@ -30,6 +30,7 @@
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
 #include <linux/phy.h>
+#include <linux/pinctrl/machine.h>
 #include <linux/regmap.h>
 #include <linux/micrel_phy.h>
 #include <linux/mfd/syscon.h>
@@ -607,6 +608,13 @@ static int __init imx6_soc_init(void)
 	int ret;
 	struct device_node *np;
 
+	/*
+	 * FIXME: This should be removed when pinctrl driver for imx6dl
+	 * is available.
+	 */
+	if (cpu_is_imx6dl())
+		pinctrl_provide_dummies();
+
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-wdt");
 	wdog_base1 = of_iomap(np, 0);
 	WARN_ON(!wdog_base1);
@@ -634,7 +642,6 @@ static int __init imx6_soc_init(void)
 
 static void __init imx6q_init_machine(void)
 {
-
 	imx6_soc_init();
 
 	if (of_machine_is_compatible("fsl,imx6q-sabrelite"))
@@ -774,11 +781,12 @@ static struct sys_timer imx6q_timer = {
 };
 
 static const char *imx6q_dt_compat[] __initdata = {
+	"fsl,imx6dl",
 	"fsl,imx6q",
 	NULL,
 };
 
-DT_MACHINE_START(IMX6Q, "Freescale i.MX6 Quad (Device Tree)")
+DT_MACHINE_START(IMX6Q, "Freescale i.MX6 Quad/DualLite (Device Tree)")
 	.map_io		= imx6q_map_io,
 	.reserve	= imx6q_reserve,
 	.init_irq	= imx6q_init_irq,
