@@ -52,10 +52,6 @@
 #define IMX6Q_ANALOG_DIGPROG     0x260
 #define WDOG_WMCR	0x8
 
-static int mx6_cpu_type;
-static int mx6_cpu_revision;
-static int sd30_en;
-
 enum {
 	HOST_CAP = 0x00,
 	HOST_CAP_SSS = (1 << 27), /* Staggered Spin-up */
@@ -70,18 +66,19 @@ enum {
 	PORT_PHY_CTL_PDDQ_LOC = 0x100000, /* PORT_PHY_CTL bits */
 };
 
-static phys_addr_t ggpu_phys;
-static u32 ggpu_size = SZ_128M;
-
-static int spdif_en;
 enum MX6_CPU_TYPE {
 	MXC_CPU_MX6Q = 1,
 	MXC_CPU_MX6DL =	2,
 	MXC_CPU_MX6SL =	3,
 };
 
+static phys_addr_t ggpu_phys;
+static u32 ggpu_size = SZ_128M;
 static int mx6_cpu_type;
 static int mx6_cpu_revision;
+static struct regmap *regmap_gpr;
+static int sd30_en;
+static int spdif_en;
 static void __iomem *wdog_base1;
 static void __iomem *wdog_base2;
 
@@ -467,7 +464,6 @@ static void __init imx6q_i2c3_sda_pindel(void)
 
 static void __init imx6q_1588_init(void)
 {
-	struct regmap *gpr;
 	struct device_node *np, *pinctrl_enet;
 	struct property *pbase;
 	struct property *poldbase;
@@ -477,11 +473,7 @@ static void __init imx6q_1588_init(void)
 	if (!IS_BUILTIN(CONFIG_FEC_PTP))
 		return;
 
-	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
-	if (!IS_ERR(gpr))
-		regmap_update_bits(gpr, 0x4, 1 << 21, 1 << 21);
-	else
-		pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
+	regmap_update_bits(regmap_gpr, 0x4, 1 << 21, 1 << 21);
 
 	/* config GPIO_16 for IEEE1588 */
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-fec");
@@ -615,7 +607,6 @@ static int imx_sata_init(struct device *dev, void __iomem *addr)
 	int ret = 0, iterations = 200;
 	struct clk *clk, *sata_clk, *sata_ref_clk;
 	struct device_node *np;
-	struct regmap *gpr;
 
 	/* Enable the pwr, clks and so on */
 	np = of_find_node_by_name(NULL, "imx-ahci");
@@ -668,13 +659,8 @@ static int imx_sata_init(struct device *dev, void __iomem *addr)
 	 *.mpll_clk_off(iomuxc_gpr13[1]),
 	 *.tx_edgerate_0(iomuxc_gpr13[0]),
 	 */
-	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
-	if (!IS_ERR(gpr)) {
-		regmap_update_bits(gpr, 0x34, 0x07FFFFFD, 0x0593A044);
-		regmap_update_bits(gpr, 0x34, 0x2, 0x2);
-	} else {
-		dev_err(dev, "failed to find fsl,imx6q-iomux-gpr regmap\n");
-	}
+	regmap_update_bits(regmap_gpr, 0x34, 0x07FFFFFD, 0x0593A044);
+	regmap_update_bits(regmap_gpr, 0x34, 0x2, 0x2);
 
 	/*
 	 * Make sure that SATA PHY is enabled
@@ -738,7 +724,7 @@ static int imx_sata_init(struct device *dev, void __iomem *addr)
 	return 0;
 
 error:
-	regmap_update_bits(gpr, 0x34, 0x2, 0x2);
+	regmap_update_bits(regmap_gpr, 0x34, 0x2, 0x2);
 	clk_disable_unprepare(sata_ref_clk);
 release_sata_clk:
 	clk_disable_unprepare(sata_clk);
@@ -749,13 +735,8 @@ release_sata_clk:
 static void imx_sata_exit(struct device *dev)
 {
 	struct clk *sata_clk, *sata_ref_clk;
-	struct regmap *gpr;
 
-	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
-	if (!IS_ERR(gpr))
-		regmap_update_bits(gpr, 0x34, 0x2, 0x2);
-	else
-		dev_err(dev, "failed to find fsl,imx6q-iomux-gpr regmap\n");
+	regmap_update_bits(regmap_gpr, 0x34, 0x2, 0x2);
 
 	sata_clk = devm_clk_get(dev, "sata");
 	if (IS_ERR(sata_clk))
@@ -790,7 +771,6 @@ static const struct of_dev_auxdata imx6q_auxdata_lookup[] __initconst = {
 
 static int __init imx6_soc_init(void)
 {
-	struct regmap *gpr;
 	unsigned int mask;
 	int ret;
 	struct device_node *np;
@@ -817,19 +797,13 @@ static int __init imx6_soc_init(void)
 		return ret;
 	}
 
-	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
-	if (IS_ERR(gpr)) {
-		pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
-		return PTR_ERR(gpr);
-	}
-
 	/*
 	 * enable AXI cache for VDOA/VPU/IPU
 	 * set IPU AXI-id0 Qos=0xf(bypass) AXI-id1 Qos=0x7
 	 * clear OCRAM_CTL bits to disable pipeline control
 	 */
-	ret = regmap_update_bits(gpr, IOMUXC_GPR3, IMX6Q_GPR3_OCRAM_CTL_MASK,
-					~IMX6Q_GPR3_OCRAM_CTL_MASK);
+	ret = regmap_update_bits(regmap_gpr, IOMUXC_GPR3,
+		IMX6Q_GPR3_OCRAM_CTL_MASK, ~IMX6Q_GPR3_OCRAM_CTL_MASK);
 	if (ret)
 		goto out;
 
@@ -843,15 +817,15 @@ static int __init imx6_soc_init(void)
 		IMX6Q_GPR4_VPU_P_RD_CACHE_VAL |
 		IMX6Q_GPR4_IPU_WR_CACHE_CTL |
 		IMX6Q_GPR4_IPU_RD_CACHE_CTL;
-	ret = regmap_update_bits(gpr, IOMUXC_GPR4, mask, mask);
+	ret = regmap_update_bits(regmap_gpr, IOMUXC_GPR4, mask, mask);
 	if (ret)
 		goto out;
 
-	ret = regmap_write(gpr, IOMUXC_GPR6, IMX6Q_GPR6_IPU1_QOS_VAL);
+	ret = regmap_write(regmap_gpr, IOMUXC_GPR6, IMX6Q_GPR6_IPU1_QOS_VAL);
 	if (ret)
 		goto out;
 
-	ret = regmap_write(gpr, IOMUXC_GPR7, IMX6Q_GPR7_IPU2_QOS_VAL);
+	ret = regmap_write(regmap_gpr, IOMUXC_GPR7, IMX6Q_GPR7_IPU2_QOS_VAL);
 	if (ret)
 		goto out;
 
@@ -872,6 +846,10 @@ static void __init imx6q_init_machine(void)
 
 	of_platform_populate(NULL, of_default_bus_match_table,
 			imx6q_auxdata_lookup, NULL);
+
+	regmap_gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
+	if (IS_ERR(regmap_gpr))
+		pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
 
 	imx6_soc_init();
 	imx6q_pm_init();
