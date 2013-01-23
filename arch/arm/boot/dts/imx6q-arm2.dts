@@ -146,6 +146,7 @@
 					     &pinctrl_usdhc3_arm2>;
 				pinctrl-2 = <&pinctrl_usdhc3_4
 					     &pinctrl_usdhc3_arm2>;
+				bus-width = <8>;
 				status = "okay";
 			};
 
@@ -155,6 +156,7 @@
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_usdhc4_1>;
 				no-1-8-v;
+				bus-width = <8>;
 				status = "okay";
 			};
 
