@@ -54,6 +54,8 @@
 							1410 0x80000000	/* MX6Q_PAD_NANDF_D1__GPIO_2_1 */
 							1418 0x80000000	/* MX6Q_PAD_NANDF_D2__GPIO_2_2 */
 							1426 0x80000000	/* MX6Q_PAD_NANDF_D3__GPIO_2_3 */
+							1341 0x80000000 /* MX6Q_PAD_NANDF_ALE__GPIO_6_8 */
+							1333 0x80000000 /* MX6Q_PAD_NANDF_CLE__GPIO_6_7 */
 							184 0x80000000 /* MX6Q_PAD_EIM_D26__GPIO_3_26 */
 							305 0x80000000 /* MX6Q_PAD_EIM_CS1__GPIO_2_24 */
 							733 0x80000000 /* MX6Q_PAD_ENET_RXD0__GPIO_1_27 */
@@ -89,6 +91,13 @@
 				status = "okay";
 			};
 
+			i2c@021a0000 { /* I2C1 */
+				status = "okay";
+				clock-frequency = <100000>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_i2c1_2>;
+			};
+
 			i2c@021a4000 { /* I2C2 */
                                 status = "okay";
                                 clock-frequency = <100000>;
@@ -100,6 +109,14 @@
 					reg = <0x48>;
 					int_input = <&gpio3 26 1>;
                                 };
+
+				egalax_ts@04 {
+					compatible = "eeti,egalax_ts";
+					reg = <0x04>;
+					interrupt-parent = <&gpio6>;
+					interrupts = <8 2>;
+					wakeup-gpios = <&gpio6 8 0>;
+				};
 
 				pmic: pfuze100@08 {
 					compatible = "fsl,pfuze100";
@@ -194,6 +211,21 @@
 							regulator-max-microvolt = <3300000>;
 						};
 					};
+				};
+			};
+
+			i2c@021a8000 { /* I2C3 */
+				status = "okay";
+				clock-frequency = <100000>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_i2c3_2>;
+
+				egalax_ts@04 {
+					compatible = "eeti,egalax_ts";
+					reg = <0x04>;
+					interrupt-parent = <&gpio6>;
+					interrupts = <7 2>;
+					wakeup-gpios = <&gpio6 7 0>;
 				};
 			};
 		};

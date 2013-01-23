@@ -69,6 +69,7 @@
 							953  0x80000000	/* MX6Q_PAD_GPIO_0__CCM_CLKO */
 							1004 0x80000000 /* MX6Q_PAD_GPIO_4__GPIO_1_4 */
 							996  0x80000000 /* MX6Q_PAD_GPIO_2__GPIO_1_2 */
+							972  0x80000000 /* MX6Q_PAD_GPIO_9__GPIO_1_9 */
 						>;
 					};
 				};
@@ -135,6 +136,28 @@
 					clocks = <&clks 169>;
 					VDDA-supply = <&reg_2p5v>;
 					VDDIO-supply = <&reg_3p3v>;
+				};
+			};
+
+			i2c@021a4000 { /* I2C2 */
+				status = "okay";
+				clock-frequency = <100000>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_i2c2_2>;
+			};
+
+			i2c@021a8000 { /* I2C3 */
+				status = "okay";
+				clock-frequency = <100000>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_i2c3_3>;
+
+				egalax_ts@04 {
+					compatible = "eeti,egalax_ts";
+					reg = <0x04>;
+					interrupt-parent = <&gpio1>;
+					interrupts = <9 2>;
+					wakeup-gpios = <&gpio1 9 0>;
 				};
 			};
 		};

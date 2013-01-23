@@ -53,6 +53,7 @@
 					pinctrl_hog: hoggrp {
 						fsl,pins = <
 							176  0x80000000	/* MX6Q_PAD_EIM_D25__GPIO_3_25 */
+							223  0x80000000 /* MX6Q_PAD_EIM_D31__GPIO_3_31 */
 							/*  CAN1 STBY */
 							1044 0x80000000	/* MX6Q_PAD_GPIO_17__GPIO_7_12 */
 							/*  CAN1 EN */
@@ -95,6 +96,14 @@
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_i2c2_2>;
 				status = "okay";
+
+				egalax_ts@04 {
+					compatible = "eeti,egalax_ts";
+					reg = <0x04>;
+					interrupt-parent = <&gpio3>;
+					interrupts = <31 2>;
+					wakeup-gpios = <&gpio3 31 0>;
+				};
 			};
 
 			i2c@021a8000 { /* I2C3 */
@@ -115,6 +124,14 @@
 					reg = <0x1b>;
 					gpio-controller;
 					#gpio-cells = <2>;
+				};
+
+				egalax_ts@04 {
+					compatible = "eeti,egalax_ts";
+					reg = <0x4>;
+					interrupt-parent = <&gpio3>;
+					interrupts = <31 2>;
+					wakeup-gpios = <&gpio3 31 0>;
 				};
 			};
 
