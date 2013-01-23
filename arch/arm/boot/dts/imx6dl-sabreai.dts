@@ -1,0 +1,39 @@
+/*
+ * Copyright 2013 Freescale Semiconductor, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ */
+
+/dts-v1/;
+/include/ "imx6dl.dtsi"
+
+/ {
+	model = "Freescale i.MX6 DualLite SABRE Automotive Infotainment Board";
+	compatible = "fsl,imx6dl-sabreai", "fsl,imx6dl";
+
+	memory {
+		reg = <0x10000000 0x40000000>;
+	};
+
+	soc {
+		aips2: aips-bus@02100000 {
+			ethernet@02188000 {
+				phy-mode = "rgmii";
+				status = "okay";
+			};
+
+			usdhc3: usdhc@02198000 {
+				cd-gpios = <&gpio6 15 0>;
+				wp-gpios = <&gpio1 13 0>;
+				status = "okay";
+			};
+
+			uart4: serial@021f0000 {
+				status = "okay";
+			};
+		};
+	};
+};
