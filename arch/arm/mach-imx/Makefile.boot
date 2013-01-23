@@ -43,6 +43,7 @@ dtb-$(CONFIG_MACH_IMX53_DT) += imx53-ard.dtb imx53-evk.dtb \
 			       imx53-qsb.dtb imx53-smd.dtb
 dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-sabreai.dtb \
+	imx6dl-sabresd.dtb \
 	imx6q-arm2.dtb \
 	imx6q-sabrelite.dtb \
 	imx6q-sabresd.dtb \
