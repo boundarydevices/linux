@@ -62,6 +62,7 @@
 							82  0x80000000 /* MX6Q_PAD_EIM_A25__GPIO_5_2 */
 							152 0x80000000 /* MX6Q_PAD_EIM_D23__GPIO_3_23 */
 							961 0x80000000	/* MX6Q_PAD_GPIO_1__WDOG2_WDOG_B */
+							1357 0x80000000 /* MX6Q_PAD_NANDF_RB0__GPIO_6_10 */
 						>;
 					};
 				};
@@ -234,6 +235,15 @@
 		ahci@02200000 { /* AHCI SATA */
 			status = "okay";
 		};
+
+	aux_5v: gpio-regulator {
+		compatible = "regulator-gpio";
+		regulator-name = "AUX5V-supply";
+		enable-gpio = <&gpio6 10 1>;
+		enable-active-high;
+		enable-at-boot;
+		regulator-type = "voltage";
+	};
 
 	regulator-bypass {
 			compatible = "fsl,imx_cpufreq";
