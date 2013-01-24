@@ -349,6 +349,16 @@
 			status = "okay";
 		};
 
+		ipu@02400000 { /* IPU1 */
+			bypass_reset = <0>;
+			status = "okay";
+		};
+
+		ipu@02800000 { /* IPU2 */
+			bypass_reset = <0>;
+			status = "okay";
+		};
+
 	regulator-bypass {
 			compatible = "fsl,imx_cpufreq";
 			/*
