@@ -35,6 +35,32 @@
 					pinctrl-0 = <&pinctrl_uart1_1>;
 					status = "okay";
 				};
+				ecspi@02008000 { /* eCSPI1 */
+					fsl,spi-num-chipselects = <1>;
+					cs-gpios = <&gpio4 9 0>;
+					pinctrl-names = "default";
+					pinctrl-0 = <&pinctrl_ecspi1_2>;
+					status = "okay";
+
+					flash: m25p32@0 {
+						#address-cells = <1>;
+						#size-cells = <1>;
+						compatible = "st,m25p32", "st,m25p";
+						spi-max-frequency = <20000000>;
+						reg = <0>;
+
+						partition@0 {
+							label = "U-Boot";
+							reg = <0x0 0x100000>;
+							read-only;
+						};
+
+						partition@40000 {
+							label = "Kernel";
+							reg = <0x40000 0x300000>;
+						};
+					};
+				};
 			};
 
 			pwm: pwm@02080000 {
@@ -63,6 +89,7 @@
 							152 0x80000000 /* MX6Q_PAD_EIM_D23__GPIO_3_23 */
 							961 0x80000000	/* MX6Q_PAD_GPIO_1__WDOG2_WDOG_B */
 							1357 0x80000000 /* MX6Q_PAD_NANDF_RB0__GPIO_6_10 */
+							902 0x80000000 /* MX6Q_PAD_KEY_ROW1__GPIO_4_9 */
 						>;
 					};
 				};

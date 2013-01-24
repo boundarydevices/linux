@@ -759,6 +759,13 @@
 							94  0x100b1	/* MX6Q_PAD_EIM_D16__ECSPI1_SCLK */
 						>;
 					};
+					pinctrl_ecspi1_2: ecspi1cr-1 {
+						fsl,pins = <
+							889 0x100b1	/* MX6Q_PAD_KEY_COL1__ECSPI1_MISO */
+							881 0x100b1	/* MX6Q_PAD_KEY_ROW0__ECSPI1_MOSI */
+							873  0x100b1	/* MX6Q_PAD_KEY_COL0__ECSPI1_SCLK */
+						>;
+					};
 				};
 
 				enet {
