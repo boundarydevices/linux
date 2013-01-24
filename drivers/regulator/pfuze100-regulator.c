@@ -853,9 +853,7 @@ static ssize_t pfuze_store(struct device *dev,
 	char *p;
 	struct i2c_client *client = to_i2c_client(dev);
 	struct mc_pfuze *mc_pfuze = i2c_get_clientdata(client);
-
-	reg = strict_strtoul(buf, NULL, 16);
-
+	reg = simple_strtoul(buf, NULL, 16);
 	p = NULL;
 	p = memchr(buf, ' ', count);
 
@@ -866,8 +864,7 @@ static ssize_t pfuze_store(struct device *dev,
 	}
 
 	p += 1;
-
-	value = strict_strtoul(p, NULL, 16);
+	value = simple_strtoul(p, NULL, 16);
 	ret = regmap_write(mc_pfuze->regmap, reg, value);
 	if (ret == 0)
 		pr_info("write reg%02x: %02x\n", reg, value);

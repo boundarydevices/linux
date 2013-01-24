@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2013 Freescale Semiconductor, Inc.
  * Copyright (C) 2008 Juergen Beisert
  *
  * This program is free software; you can redistribute it and/or
@@ -814,7 +814,8 @@ static int __devinit spi_imx_probe(struct platform_device *pdev)
 
 	init_completion(&spi_imx->xfer_done);
 
-	spi_imx->devtype_data = of_id ? of_id->data :
+	spi_imx->devtype_data = of_id ?
+		(struct spi_imx_devtype_data *) of_id->data :
 		(struct spi_imx_devtype_data *) pdev->id_entry->driver_data;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
