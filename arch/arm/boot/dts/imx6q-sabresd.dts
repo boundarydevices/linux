@@ -343,6 +343,10 @@
 					wakeup-gpios = <&gpio6 7 0>;
 				};
 			};
+
+			vdoa@021e4000 {
+				status = "okay";
+			};
 		};
 
 		ahci@02200000 { /* AHCI SATA */
