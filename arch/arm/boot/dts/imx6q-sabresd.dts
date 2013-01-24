@@ -82,6 +82,16 @@
 				status = "okay";
 			};
 
+			ldb@020e0000 {
+				ipu_id = <1>;
+				disp_id = <0>;
+				ext_ref = <1>;
+				mode = "sep0";
+				sec_ipu_id = <1>;
+				sec_disp_id = <1>;
+				status = "okay";
+			};
+
 			iomuxc@020e0000 {
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_hog>;
