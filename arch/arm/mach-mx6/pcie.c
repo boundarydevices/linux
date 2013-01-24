@@ -37,6 +37,7 @@
 #include <asm/sizes.h>
 
 #include "crm_regs.h"
+#include "msi.h"
 
 /* Register Definitions */
 #define PRT_LOG_R_BaseAddress 0x700
@@ -56,6 +57,16 @@
 #define DB_R1_RegisterResetValue 0x0
 #define DB_R1_RegisterResetMask 0xFFFFFFFF
 /* End of Register Definition for DB_R1 */
+
+#define PCIE_PL_MSICA		0x820
+#define PCIE_PL_MSICUA		0x824
+#define PCIE_PL_MSIC_INT	0x828
+
+#define MSIC_INT_EN	0x0
+#define MSIC_INT_MASK	0x4
+#define MSIC_INT_STATUS	0x8
+
+#define PCIE_PL_MSIC_GPIO	0x888
 
 #define ATU_R_BaseAddress 0x900
 #define ATU_VIEWPORT_R (ATU_R_BaseAddress + 0x0)
@@ -296,7 +307,9 @@ static int imx_pcie_link_up(void __iomem *dbi_base)
 static void imx_pcie_regions_setup(void __iomem *dbi_base)
 {
 	unsigned bus;
+	unsigned i;
 	unsigned untranslated_base = PCIE_ARB_END_ADDR +1 - SZ_1M;
+	void __iomem *p = dbi_base + PCIE_PL_MSIC_INT;
 	/*
 	 * i.MX6 defines 16MB in the AXI address map for PCIe.
 	 *
@@ -339,6 +352,62 @@ static void imx_pcie_regions_setup(void __iomem *dbi_base)
 				dbi_base + ATU_REGION_CTRL1_R);
 		writel((1<<31), dbi_base + ATU_REGION_CTRL2_R);
 	}
+
+	writel(MSI_MATCH_ADDR, dbi_base + PCIE_PL_MSICA);
+	writel(0, dbi_base + PCIE_PL_MSICUA);
+	for (i = 0; i < 8 ; i++) {
+		writel(0, p + MSIC_INT_EN);
+		writel(0xffffffff, p + MSIC_INT_MASK);
+		writel(0xffffffff, p + MSIC_INT_STATUS);
+		p += 12;
+	}
+}
+
+void imx_pcie_mask_irq(unsigned pos, int set)
+{
+	unsigned mask = 1 << (pos & 0x1f);
+	unsigned val, newval;
+	void __iomem *p = dbi_base + PCIE_PL_MSIC_INT + MSIC_INT_MASK + ((pos >> 5) * 12);
+	if (pos >= (8 * 32))
+		return;
+	val = readl(p);
+	if (set)
+		newval = val | mask;
+	else
+		newval = val & ~mask;
+	if (val != newval)
+		writel(newval, p);
+}
+
+void imx_pcie_enable_irq(unsigned pos, int set)
+{
+	unsigned mask = 1 << (pos & 0x1f);
+	unsigned val, newval;
+	void __iomem *p = dbi_base + PCIE_PL_MSIC_INT + MSIC_INT_EN + ((pos >> 5) * 12);
+	if (pos >= (8 * 32))
+		return;
+	val = readl(p);
+	if (set)
+		newval = val | mask;
+	else
+		newval = val & ~mask;
+	if (val != newval)
+		writel(newval, p);
+	if (set && (val != newval))
+		imx_pcie_mask_irq(pos, 0);	/* unmask when enabled */
+}
+
+unsigned imx_pcie_msi_pending(unsigned index)
+{
+	unsigned val, mask;
+	void __iomem *p = dbi_base + PCIE_PL_MSIC_INT + (index * 12);
+	if (index >= 8)
+		return 0;
+	val = readl(p + MSIC_INT_STATUS);
+	mask = readl(p + MSIC_INT_MASK);
+	val &= ~mask;
+	writel(val, p + MSIC_INT_STATUS);
+	return val;
 }
 
 static u32 get_cfg_addr(struct pci_bus *bus, u32 devfn, int where)

@@ -26,6 +26,7 @@
 #ifdef CONFIG_CPU_FREQ_GOV_INTERACTIVE
 #include <linux/cpufreq.h>
 #endif
+#include "msi.h"
 
 int mx6q_register_gpios(void);
 unsigned int gpc_wake_irq[4];
@@ -130,5 +131,8 @@ void mx6_init_irq(void)
 #ifdef CONFIG_CPU_FREQ_GOV_INTERACTIVE
 	for (i = 0; i < ARRAY_SIZE(mxc_irq_tuner); i++)
 		cpufreq_gov_irq_tuner_register(mxc_irq_tuner[i]);
+#endif
+#ifdef CONFIG_PCI_MSI
+	imx_msi_init();
 #endif
 }

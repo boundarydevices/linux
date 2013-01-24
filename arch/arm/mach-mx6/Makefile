@@ -19,3 +19,4 @@ obj-$(CONFIG_LOCAL_TIMERS) += localtimer.o
 obj-$(CONFIG_IMX_PCIE) += pcie.o
 obj-$(CONFIG_USB_FSL_ARC_OTG) += usb_dr.o
 obj-$(CONFIG_USB_EHCI_ARC_H1) += usb_h1.o
+obj-$(CONFIG_PCI_MSI) += msi.o
