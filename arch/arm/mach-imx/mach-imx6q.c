@@ -45,14 +45,9 @@
 #include <mach/cpuidle.h>
 #include <mach/hardware.h>
 
-#define MXC_CPU_MX6Q	1
-#define MXC_CPU_MX6DL	2
-#define MXC_CPU_MX6SL	3
+#define PMU_REG_CORE	0x140
 #define IMX6Q_ANALOG_DIGPROG     0x260
-
-static int mx6_cpu_type;
-static int mx6_cpu_revision;
-
+#define WDOG_WMCR	0x8
 enum {
 	HOST_CAP = 0x00,
 	HOST_CAP_SSS = (1 << 27), /* Staggered Spin-up */
@@ -71,22 +66,60 @@ static phys_addr_t ggpu_phys;
 static u32 ggpu_size = SZ_128M;
 
 static int spdif_en;
+enum MX6_CPU_TYPE {
+	MXC_CPU_MX6Q = 1,
+	MXC_CPU_MX6DL =	2,
+	MXC_CPU_MX6SL =	3,
+};
+
+static int mx6_cpu_type;
+static int mx6_cpu_revision;
+static void __iomem *wdog_base1;
+static void __iomem *wdog_base2;
+
 void imx6q_restart(char mode, const char *cmd)
 {
-	struct device_node *np;
-	void __iomem *wdog_base;
+	struct regmap *anatop;
+	unsigned int value;
+	int ret;
 
-	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-wdt");
-	wdog_base = of_iomap(np, 0);
-	if (!wdog_base)
+	if (!wdog_base1 || !wdog_base2)
 		goto soft;
 
 	imx_src_prepare_restart();
 
+
+	anatop = syscon_regmap_lookup_by_compatible("fsl,imx6q-anatop");
+	if (IS_ERR(anatop)) {
+		pr_err("failed to find imx6q-anatop regmap!\n");
+		return;
+	}
+
+	ret = regmap_read(anatop, PMU_REG_CORE, &value);
+	if (ret) {
+		pr_err("failed to read anatop 0x140 regmap!\n");
+		return;
+	}
+	/* VDDARM bypassed? */
+	if ((value & 0x1f) != 0x1f) {
+		pr_info("Not in bypass-mode!\n");
+		value = (1 << 2);
+	} else {
+		/*
+		 * Sabresd board use WDOG2 to reset extern pmic in bypass mode,
+		 * so do more WDOG2 reset here. Do not set SRS,since we will
+		 * trigger external POR later
+		 */
+		pr_info("In bypass-mode!\n");
+		value = 0x14;
+		writew_relaxed(value, wdog_base2);
+		writew_relaxed(value, wdog_base2);
+	}
+
 	/* enable wdog */
-	writew_relaxed(1 << 2, wdog_base);
+	writew_relaxed(value, wdog_base1);
 	/* write twice to ensure the request will not get ignored */
-	writew_relaxed(1 << 2, wdog_base);
+	writew_relaxed(value, wdog_base1);
 
 	/* wait for reset to assert ... */
 	mdelay(500);
@@ -572,6 +605,23 @@ static const struct of_dev_auxdata imx6q_auxdata_lookup[] __initconst = {
 static int __init imx6_soc_init(void)
 {
 	int ret;
+	struct device_node *np;
+
+	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-wdt");
+	wdog_base1 = of_iomap(np, 0);
+	WARN_ON(!wdog_base1);
+
+	np = of_find_compatible_node(np, NULL, "fsl,imx6q-wdt");
+	wdog_base2 = of_iomap(np, 0);
+	WARN_ON(!wdog_base2);
+
+	/*
+	 * clear PDE bit of WDOGx to avoid system reset in 16 seconds
+	 * if use WDOGx pin to reset external pmic. Do here repeated, whatever
+	 * it will be done in bootloader.
+	 */
+	writew_relaxed(0, wdog_base1 + WDOG_WMCR);
+	writew_relaxed(0, wdog_base2 + WDOG_WMCR);
 
 	ret = iram_init(MX6Q_IRAM_BASE_ADDR, MX6Q_IRAM_SIZE);
 	if (ret < 0) {
@@ -584,6 +634,7 @@ static int __init imx6_soc_init(void)
 
 static void __init imx6q_init_machine(void)
 {
+
 	imx6_soc_init();
 
 	if (of_machine_is_compatible("fsl,imx6q-sabrelite"))
@@ -658,16 +709,16 @@ static void  check_imx6q_cpu(void)
 
 	if (of_machine_is_compatible("fsl,imx6q")) {
 		mx6_cpu_type = MXC_CPU_MX6Q;
-		printk(KERN_INFO "Find i.MX6Q chip\n");
+		pr_info("Find i.MX6Q chip\n");
 	} else if (of_machine_is_compatible("fsl,imx6dl")) {
 		mx6_cpu_type = MXC_CPU_MX6DL;
-		printk(KERN_INFO "Find i.MX6DL chip\n");
+		pr_info("Find i.MX6DL chip\n");
 	} else if (of_machine_is_compatible("fsl,imx6sl")) {
 		mx6_cpu_type = MXC_CPU_MX6SL;
-		printk(KERN_INFO "Find i.MX6SL chip\n");
+		pr_info("Find i.MX6SL chip\n");
 	} else {
 		mx6_cpu_type = 0;
-		printk(KERN_ERR "Can't find any i.MX6 chip !\n");
+		pr_err("Can't find any i.MX6 chip !\n");
 		return;
 	}
 
@@ -680,19 +731,19 @@ static void  check_imx6q_cpu(void)
 	switch (rev & 0xff) {
 	case 0:
 		mx6_cpu_revision = IMX_CHIP_REVISION_1_0;
-		printk(KERN_INFO "SOC revision TO1.0\n");
+		pr_info("SOC revision TO1.0\n");
 		break;
 	case 1:
 		mx6_cpu_revision = IMX_CHIP_REVISION_1_1;
-		printk(KERN_INFO "SOC revision TO1.1\n");
+		pr_info("SOC revision TO1.1\n");
 		break;
 	case 2:
 		mx6_cpu_revision = IMX_CHIP_REVISION_1_2;
-		printk(KERN_INFO "SOC revision TO1.2\n");
+		pr_info("SOC revision TO1.2\n");
 		break;
 	default:
 		mx6_cpu_revision = IMX_CHIP_REVISION_UNKNOWN;
-		printk(KERN_ERR "SOC revision unrecognized!\n");
+		pr_err("SOC revision unrecognized!\n");
 		break;
 	}
 }
