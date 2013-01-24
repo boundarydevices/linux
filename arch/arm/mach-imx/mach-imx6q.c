@@ -49,6 +49,11 @@
 #define PMU_REG_CORE	0x140
 #define IMX6Q_ANALOG_DIGPROG     0x260
 #define WDOG_WMCR	0x8
+
+static int mx6_cpu_type;
+static int mx6_cpu_revision;
+static int sd30_en;
+
 enum {
 	HOST_CAP = 0x00,
 	HOST_CAP_SSS = (1 << 27), /* Staggered Spin-up */
@@ -77,6 +82,96 @@ static int mx6_cpu_type;
 static int mx6_cpu_revision;
 static void __iomem *wdog_base1;
 static void __iomem *wdog_base2;
+
+static int __init early_enable_sd30(char *p)
+{
+	sd30_en = 1;
+	return 0;
+}
+early_param("sd30", early_enable_sd30);
+
+static void remove_one_pin_from_node(const char *path,
+			   const char *phandle_name,
+			   const char *name,
+			   u32 pin)
+{
+	struct device_node *np, *pinctrl;
+	struct property *pbase;
+	struct property *poldbase;
+	u32 *psize;
+	int i = 0, j = 0;
+
+	np = of_find_node_by_path(path);
+	pinctrl = of_parse_phandle(np, phandle_name, 0);
+	poldbase = of_find_property(pinctrl, name, NULL);
+	if (poldbase) {
+		pbase = kzalloc(sizeof(*pbase)
+				+ poldbase->length - 8, GFP_KERNEL);
+		if (pbase == NULL)
+			return;
+		psize = (u32 *)(pbase + 1);
+		pbase->length = poldbase->length - 8;
+		pbase->name = kstrdup(poldbase->name, GFP_KERNEL);
+		if (!pbase->name) {
+			kfree(pbase);
+			return;
+		}
+
+		pbase->value = psize;
+		for (i = 0, j = 0; i < pbase->length; i += 4, j += 4) {
+			if (cpu_to_be32(pin)
+					== *(u32 *)(poldbase->value + j)) {
+				i -= 4;
+				j += 4;
+				continue;
+			}
+			*(u32 *)(pbase->value + i) =
+				*(u32 *)(poldbase->value + j);
+		}
+
+		prom_update_property(pinctrl, pbase, poldbase);
+	}
+}
+
+static void __init imx6q_rm_flexcan1_en_pin(void)
+{
+	remove_one_pin_from_node("/soc/aips-bus@02000000/iomuxc@020e0000",
+			"pinctrl-0", "fsl,pins", 1051);
+}
+
+static void __init imx6q_rm_usdhc3_vselect_pin(void)
+{
+	remove_one_pin_from_node("/soc/aips-bus@02100000/usdhc@02198000",
+			"pinctrl-0", "fsl,pins", 1048);
+	remove_one_pin_from_node("/soc/aips-bus@02100000/usdhc@02198000",
+			"pinctrl-1", "fsl,pins", 1048);
+	remove_one_pin_from_node("/soc/aips-bus@02100000/usdhc@02198000",
+			"pinctrl-2", "fsl,pins", 1048);
+}
+
+static void __init imx6q_add_no18v_to_sdhc3(void)
+{
+	struct device_node *np;
+	struct property *pbase;
+	struct property *poldbase;
+
+	np = of_find_node_by_path("/soc/aips-bus@02100000/usdhc@02198000");
+	if (np) {
+		poldbase = of_find_property(np, "no-1-8-v", NULL);
+		if (poldbase)
+			return;
+
+		pbase = kzalloc(sizeof(*pbase), GFP_KERNEL);
+		if (pbase == NULL)
+			return;
+		pbase->name = kstrdup("no-1-8-v", GFP_KERNEL);
+		if (!pbase->name) {
+			kfree(pbase);
+			return;
+		}
+		prom_add_property(np, pbase);
+	}
+}
 
 void imx6q_restart(char mode, const char *cmd)
 {
@@ -216,6 +311,16 @@ static int __init imx6q_flexcan_fixup(void)
 	}
 
 	return 0;
+}
+
+static void __init imx6q_arm2_init(void)
+{
+	if (!sd30_en) {
+		imx6q_rm_usdhc3_vselect_pin();
+		imx6q_add_no18v_to_sdhc3();
+	} else {
+		imx6q_rm_flexcan1_en_pin();
+	}
 }
 
 static void __init imx6q_sabrelite_init(void)
@@ -646,6 +751,8 @@ static void __init imx6q_init_machine(void)
 
 	if (of_machine_is_compatible("fsl,imx6q-sabrelite"))
 		imx6q_sabrelite_init();
+	if (of_machine_is_compatible("fsl,imx6q-arm2"))
+		imx6q_arm2_init();
 
 	of_platform_populate(NULL, of_default_bus_match_table,
 			imx6q_auxdata_lookup, NULL);
