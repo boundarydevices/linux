@@ -192,6 +192,7 @@ static int __devinit wl1271_probe(struct sdio_func *func,
 				  const struct sdio_device_id *id)
 {
 	struct wl12xx_platform_data *wlan_data;
+	struct wlcore_platdev_data *pdev_data;
 	struct wl12xx_sdio_glue *glue;
 	struct resource res[1];
 	mmc_pm_flag_t mmcflags;
@@ -201,10 +202,18 @@ static int __devinit wl1271_probe(struct sdio_func *func,
 	if (func->num != 0x02)
 		return -ENODEV;
 
+	pdev_data = kzalloc(sizeof(*pdev_data), GFP_KERNEL);
+	if (!pdev_data) {
+		dev_err(&func->dev, "can't allocate platdev_data\n");
+		goto out;
+	}
+
+	pdev_data->if_ops = &sdio_ops;
+
 	glue = kzalloc(sizeof(*glue), GFP_KERNEL);
 	if (!glue) {
 		dev_err(&func->dev, "can't allocate glue\n");
-		goto out;
+		goto out_free_pdev_data;
 	}
 
 	glue->dev = &func->dev;
@@ -228,8 +237,6 @@ static int __devinit wl1271_probe(struct sdio_func *func,
 
 	if (mmcflags & MMC_PM_KEEP_POWER)
 		wlan_data->pwr_in_suspend = true;
-
-	wlan_data->ops = &sdio_ops;
 
 	sdio_set_drvdata(func, glue);
 
@@ -257,8 +264,10 @@ static int __devinit wl1271_probe(struct sdio_func *func,
 		goto out_dev_put;
 	}
 
-	ret = platform_device_add_data(glue->core, wlan_data,
-				       sizeof(*wlan_data));
+	pdev_data->pdata = wlan_data;
+
+	ret = platform_device_add_data(glue->core, pdev_data,
+				       sizeof(*pdev_data));
 	if (ret) {
 		dev_err(glue->dev, "can't add platform data\n");
 		goto out_dev_put;
@@ -276,6 +285,9 @@ out_dev_put:
 
 out_free_glue:
 	kfree(glue);
+
+out_free_pdev_data:
+	kfree(pdev_data);
 
 out:
 	return ret;
