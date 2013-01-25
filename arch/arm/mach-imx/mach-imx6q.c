@@ -381,9 +381,32 @@ static void __init imx6q_sabrelite_init(void)
 	imx6q_sabrelite_cko1_setup();
 }
 
+static void __init imx6q_sabresd_cko_setup(void)
+{
+	struct clk *cko2, *cko1_cko2_sel;
+
+	cko1_cko2_sel = clk_get_sys(NULL, "cko1_cko2_sel");
+	cko2 = clk_get_sys(NULL, "cko2");
+	if (IS_ERR(cko1_cko2_sel) || IS_ERR(cko2)) {
+		pr_err("cko setup failed!\n");
+		goto put_clk_sd;
+	}
+
+	clk_set_parent(cko1_cko2_sel, cko2);
+	clk_prepare_enable(cko2);
+
+	return;
+put_clk_sd:
+	if (!IS_ERR(cko1_cko2_sel))
+		clk_put(cko1_cko2_sel);
+	if (!IS_ERR(cko2))
+		clk_put(cko2);
+}
+
 static void __init imx6q_sabresd_init(void)
 {
 	imx6q_ar803x_phy_fixup();
+	imx6q_sabresd_cko_setup();
 }
 
 static int __init early_enable_spdif(char *p)

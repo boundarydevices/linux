@@ -132,6 +132,14 @@ static const char *vpu_axi_sels[]	= { "axi", "pll2_pfd2_396m", "pll2_pfd0_352m",
 static const char *cko1_sels[]	= { "pll3_usb_otg", "pll2_bus", "pll1_sys", "pll5_video",
 				    "dummy", "axi", "enfc", "ipu1_di0", "ipu1_di1", "ipu2_di0",
 				    "ipu2_di1", "ahb", "ipg", "ipg_per", "ckil", "pll4_audio", };
+static const char *cko2_sels[]	= { "mmdc_ch0_axi", "mmdc_ch1_axi", "usdhc4", "usdhc1",
+				    "gpu2d_axi", "dummy", "ecspi_root", "gpu3d_axi", "usdhc3", "pcie_ref",
+				    "dummy", "dummy", "dummy", "vdo_axi", "osc", "gpu2d_core", "gpu3d_core",
+				    "usdhc2", "ssi1", "ssi2", "ssi3", "gpu3d_shader", "vpu_axi",
+				    "can_root", "dummy", "dummy", "esai", "dummy", "dummy",
+				    "dummy", "dummy", "dummy", };
+static const char *cko1_cko2_sels[]	= { "cko1", "cko2", };
+
 /* Please add your own lvds src clk, if it is not contained yet. */
 static const char *lvds_sels[]	= { "arm", "pll1_sys", "dummy", "dummy", "dummy", "dummy", "pll4_audio", "pll5_video",
 				    "pll5_mlb", "dummy", "pcie_ref", "sata_ref", "usbphy1", "usbphy2", };
@@ -167,7 +175,7 @@ enum mx6q_clks {
 	pll4_audio, pll5_video, pll6_mlb, pll7_usb_host, pll8_enet, ssi1_ipg,
 	ssi2_ipg, ssi3_ipg, rom, usbphy1, usbphy2, ldb_di0_div_3_5, ldb_di1_div_3_5,
 	sata_ref, gpt_3m, pcie_ref, lvds1_sel, lvds1_in, lvds1_out, usbphy1_gate,
-	usbphy2_gate, clk_max
+	usbphy2_gate, cko1_cko2_sel, cko2_sel, cko2_podf, cko2, clk_max
 };
 
 static struct clk *clk[clk_max];
@@ -302,7 +310,8 @@ int __init mx6q_clocks_init(void)
 	clk[vdo_axi_sel]      = imx_clk_mux("vdo_axi_sel",      base + 0x18, 11, 1, vdo_axi_sels,      ARRAY_SIZE(vdo_axi_sels));
 	clk[vpu_axi_sel]      = imx_clk_mux("vpu_axi_sel",      base + 0x18, 14, 2, vpu_axi_sels,      ARRAY_SIZE(vpu_axi_sels));
 	clk[cko1_sel]         = imx_clk_mux("cko1_sel",         base + 0x60, 0,  4, cko1_sels,         ARRAY_SIZE(cko1_sels));
-
+	clk[cko1_cko2_sel]    = imx_clk_mux("cko1_cko2_sel",    base + 0x60, 8,  1, cko1_cko2_sels,    ARRAY_SIZE(cko1_cko2_sels));
+	clk[cko2_sel]         = imx_clk_mux("cko2_sel",         base + 0x60, 16, 5, cko2_sels,	       ARRAY_SIZE(cko2_sels));
 	/*                              name         reg      shift width busy: reg, shift parent_names  num_parents */
 	clk[periph]  = imx_clk_busy_mux("periph",  base + 0x14, 25,  1,   base + 0x48, 5,  periph_sels,  ARRAY_SIZE(periph_sels));
 	clk[periph2] = imx_clk_busy_mux("periph2", base + 0x14, 26,  1,   base + 0x48, 3,  periph2_sels, ARRAY_SIZE(periph2_sels));
@@ -351,6 +360,7 @@ int __init mx6q_clocks_init(void)
 	clk[emi_slow_podf]    = imx_clk_divider("emi_slow_podf",    "emi_slow_sel",      base + 0x1c, 23, 3);
 	clk[vpu_axi_podf]     = imx_clk_divider("vpu_axi_podf",     "vpu_axi_sel",       base + 0x24, 25, 3);
 	clk[cko1_podf]        = imx_clk_divider("cko1_podf",        "cko1_sel",          base + 0x60, 4,  3);
+	clk[cko2_podf]        = imx_clk_divider("cko2_podf",        "cko2_sel",          base + 0x60, 21, 3);
 
 	/*                                            name                 parent_name    reg        shift width busy: reg, shift */
 	clk[axi]               = imx_clk_busy_divider("axi",               "axi_sel",     base + 0x14, 16,  3,   base + 0x48, 0);
@@ -428,6 +438,7 @@ int __init mx6q_clocks_init(void)
 	clk[vdo_axi]      = imx_clk_gate2("vdo_axi",       "vdo_axi_sel",       base + 0x80, 12);
 	clk[vpu_axi]      = imx_clk_gate2("vpu_axi",       "vpu_axi_podf",      base + 0x80, 14);
 	clk[cko1]         = imx_clk_gate("cko1",           "cko1_podf",         base + 0x60, 7);
+	clk[cko2]         = imx_clk_gate("cko2",           "cko2_podf",         base + 0x60, 24);
 
 	for (i = 0; i < ARRAY_SIZE(clk); i++)
 		if (IS_ERR(clk[i]))
@@ -443,8 +454,11 @@ int __init mx6q_clocks_init(void)
 	clk_register_clkdev(clk[gpt_3m], "gpt_3m", NULL);
 	clk_register_clkdev(clk[twd], NULL, "smp_twd");
 	clk_register_clkdev(clk[cko1_sel], "cko1_sel", NULL);
+	clk_register_clkdev(clk[cko1_cko2_sel], "cko1_cko2_sel", NULL);
+	clk_register_clkdev(clk[cko2_sel], "cko2_sel", NULL);
 	clk_register_clkdev(clk[ahb], "ahb", NULL);
 	clk_register_clkdev(clk[cko1], "cko1", NULL);
+	clk_register_clkdev(clk[cko2], "cko2", NULL);
 	clk_register_clkdev(clk[pll1_sys], "pll1_sys", NULL);
 	clk_register_clkdev(clk[pll1_sw], "pll1_sw", NULL);
 	clk_register_clkdev(clk[pll2_pfd2_396m], "pll2_pfd2_396m", NULL);
@@ -493,6 +507,9 @@ int __init mx6q_clocks_init(void)
 		clk_prepare_enable(clk[usbphy1_gate]);
 		clk_prepare_enable(clk[usbphy2_gate]);
 	}
+
+	if (clk_set_parent(clk[cko2_sel], clk[osc]))
+		pr_info("Failed to set cko2 parent clk.\n");
 
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-gpt");
 	base = of_iomap(np, 0);
