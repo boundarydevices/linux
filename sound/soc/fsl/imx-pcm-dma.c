@@ -1,7 +1,8 @@
 /*
- * imx-pcm-dma-mx2.c  --  ALSA Soc Audio Layer
+ * imx-pcm-dma.c  --  ALSA Soc Audio Layer
  *
  * Copyright 2009 Sascha Hauer <s.hauer@pengutronix.de>
+ * Copyright (C) 2013 Freescale Semiconductor, Inc.
  *
  * This code is based on code copyrighted by Freescale,
  * Liam Girdwood, Javier Martin and probably others.
@@ -48,10 +49,17 @@ static int snd_imx_pcm_hw_params(struct snd_pcm_substream *substream,
 				struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct dma_chan *chan = snd_dmaengine_pcm_get_chan(substream);
+	struct dma_chan *chan;
 	struct imx_pcm_dma_params *dma_params;
 	struct dma_slave_config slave_config;
 	int ret;
+
+	if (!substream->runtime->private_data) {
+		dev_err(rtd->dev, "DMA firmware might be missing.\n");
+		return -EINVAL;
+	}
+
+	chan = snd_dmaengine_pcm_get_chan(substream);
 
 	dma_params = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
 
@@ -107,8 +115,17 @@ static int snd_imx_open(struct snd_pcm_substream *substream)
 	snd_soc_set_runtime_hwparams(substream, &snd_imx_hardware);
 
 	dma_params = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+	if (!dma_params) {
+		dev_err(rtd->dev, "DMA params wasn't set properly.\n");
+		return -EINVAL;
+	}
 
 	dma_data = kzalloc(sizeof(*dma_data), GFP_KERNEL);
+	if (!dma_data) {
+		dev_err(rtd->dev, "dma_data memory allocation failed.\n");
+		return -ENOMEM;
+	}
+
 	dma_data->peripheral_type = dma_params->shared_peripheral ?
 					IMX_DMATYPE_SSI_SP : IMX_DMATYPE_SSI;
 	dma_data->priority = DMA_PRIO_HIGH;
@@ -127,7 +144,15 @@ static int snd_imx_open(struct snd_pcm_substream *substream)
 
 static int snd_imx_close(struct snd_pcm_substream *substream)
 {
-	struct imx_dma_data *dma_data = snd_dmaengine_pcm_get_data(substream);
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct imx_dma_data *dma_data;
+
+	if (!substream->runtime->private_data) {
+		dev_err(rtd->dev, "DMA firmware might be missing.\n");
+		return -EINVAL;
+	}
+
+	dma_data = snd_dmaengine_pcm_get_data(substream);
 
 	snd_dmaengine_pcm_close(substream);
 	kfree(dma_data);
