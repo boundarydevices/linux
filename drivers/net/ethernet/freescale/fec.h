@@ -195,10 +195,10 @@ struct bufdesc {
 #define BD_ENET_RX_INT          0x00800000
 #define BD_ENET_RX_PTP          ((ushort)0x0400)
 
-#ifdef CONFIG_FEC_PTP
 #define FALSE			0
 #define TRUE			1
 
+#ifdef CONFIG_FEC_PTP
 /* IEEE 1588 definition */
 #define FEC_T_PERIOD_ONE_SEC		0x3B9ACA00
 
@@ -346,6 +346,9 @@ struct fec_enet_private {
 	int	full_duplex;
 	struct	completion mdio_done;
 	int	irq[FEC_IRQ_NUM];
+
+	struct napi_struct napi;
+	int	napi_weight;
 
 #ifdef CONFIG_FEC_PTP
 	/* HW timestamping over ioctl enabled flag */

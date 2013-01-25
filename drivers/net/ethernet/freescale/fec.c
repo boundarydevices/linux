@@ -186,6 +186,8 @@ MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
 #define	OPT_FRAME_SIZE	0
 #endif
 
+#define FEC_NAPI_WEIGHT 64
+
 /* FEC MII MMFR bits definition */
 #define FEC_MMFR_ST		(1 << 30)
 #define FEC_MMFR_OP_READ	(2 << 28)
@@ -540,6 +542,20 @@ fec_timeout(struct net_device *ndev)
 }
 
 static void
+fec_enet_rx_int_enable(struct net_device *ndev, bool enabled)
+{
+	struct fec_enet_private *fep = netdev_priv(ndev);
+	uint    int_events;
+
+	int_events = readl(fep->hwp + FEC_IMASK);
+	if (enabled)
+		int_events |= FEC_ENET_RXF;
+	else
+		int_events &= ~FEC_ENET_RXF;
+	writel(int_events, fep->hwp + FEC_IMASK);
+}
+
+static void
 fec_enet_tx(struct net_device *ndev)
 {
 	struct	fec_enet_private *fep;
@@ -626,29 +642,26 @@ fec_enet_tx(struct net_device *ndev)
 	spin_unlock(&fep->hw_lock);
 }
 
-
-/* During a receive, the cur_rx points to the current incoming buffer.
- * When we update through the ring, if the next incoming buffer has
- * not been given to the system, we just set the empty indicator,
- * effectively tossing the packet.
- */
-static void
-fec_enet_rx(struct net_device *ndev)
+/*NAPI polling Receive packets */
+static int fec_enet_rx_poll(struct napi_struct *napi, int budget)
 {
-	struct fec_enet_private *fep = netdev_priv(ndev);
+	struct  fec_enet_private *fep =
+		container_of(napi, struct fec_enet_private, napi);
+	struct net_device *ndev = napi->dev;
 	const struct platform_device_id *id_entry =
 				platform_get_device_id(fep->pdev);
+	int pkt_received = 0;
 	struct bufdesc *bdp;
 	unsigned short status;
 	struct	sk_buff	*skb;
 	ushort	pkt_len;
 	__u8 *data;
 
+	WARN_ON(!budget);
+
 #ifdef CONFIG_M532x
 	flush_cache_all();
 #endif
-
-	spin_lock(&fep->hw_lock);
 
 	/* First, grab all of the stats for the incoming packet.
 	 * These get messed up if we get called due to a busy condition.
@@ -656,12 +669,15 @@ fec_enet_rx(struct net_device *ndev)
 	bdp = fep->cur_rx;
 
 	while (!((status = bdp->cbd_sc) & BD_ENET_RX_EMPTY)) {
+		if (pkt_received >= budget)
+			break;
+		pkt_received++;
 
 		/* Since we have allocated space to hold a complete frame,
 		 * the last indicator should be set.
 		 */
 		if ((status & BD_ENET_RX_LAST) == 0)
-			printk("FEC ENET: rcv is not +last\n");
+			dev_err(&ndev->dev, "FEC ENET: rcv is not +last\n");
 
 		if (!fep->opened)
 			goto rx_processing_done;
@@ -696,10 +712,10 @@ fec_enet_rx(struct net_device *ndev)
 		ndev->stats.rx_packets++;
 		pkt_len = bdp->cbd_datlen;
 		ndev->stats.rx_bytes += pkt_len;
-		data = (__u8*)__va(bdp->cbd_bufaddr);
+		data = (__u8 *)__va(bdp->cbd_bufaddr);
 
-		dma_unmap_single(&fep->pdev->dev, bdp->cbd_bufaddr,
-				FEC_ENET_TX_FRSIZE, DMA_FROM_DEVICE);
+		dma_unmap_single(&ndev->dev, bdp->cbd_bufaddr,
+				FEC_ENET_RX_FRSIZE, DMA_FROM_DEVICE);
 
 		if (id_entry->driver_data & FEC_QUIRK_SWAP_FRAME)
 			swap_buffer(data, pkt_len);
@@ -712,8 +728,8 @@ fec_enet_rx(struct net_device *ndev)
 		skb = netdev_alloc_skb(ndev, pkt_len - 4 + NET_IP_ALIGN);
 
 		if (unlikely(!skb)) {
-			printk("%s: Memory squeeze, dropping packet.\n",
-					ndev->name);
+			dev_err(&ndev->dev,
+			"%s: Memory squeeze, dropping packet.\n", ndev->name);
 			ndev->stats.rx_dropped++;
 		} else {
 			skb_reserve(skb, NET_IP_ALIGN);
@@ -737,11 +753,11 @@ fec_enet_rx(struct net_device *ndev)
 #endif
 			skb->protocol = eth_type_trans(skb, ndev);
 			if (!skb_defer_rx_timestamp(skb))
-				netif_rx(skb);
+				napi_gro_receive(napi, skb);
 		}
 
-		bdp->cbd_bufaddr = dma_map_single(&fep->pdev->dev, data,
-				FEC_ENET_TX_FRSIZE, DMA_FROM_DEVICE);
+		bdp->cbd_bufaddr = dma_map_single(&ndev->dev, data,
+				FEC_ENET_RX_FRSIZE, DMA_FROM_DEVICE);
 rx_processing_done:
 		/* Clear the status flags for this buffer */
 		status &= ~BD_ENET_RX_STATS;
@@ -769,7 +785,15 @@ rx_processing_done:
 	}
 	fep->cur_rx = bdp;
 
-	spin_unlock(&fep->hw_lock);
+	if (pkt_received < budget) {
+		napi_complete(napi);
+
+		spin_lock(&fep->hw_lock);
+		fec_enet_rx_int_enable(ndev, true);
+		spin_unlock(&fep->hw_lock);
+	}
+
+	return pkt_received;
 }
 
 static irqreturn_t
@@ -778,6 +802,7 @@ fec_enet_interrupt(int irq, void *dev_id)
 	struct net_device *ndev = dev_id;
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	uint int_events;
+	ulong flags;
 	irqreturn_t ret = IRQ_NONE;
 
 	do {
@@ -786,7 +811,15 @@ fec_enet_interrupt(int irq, void *dev_id)
 
 		if (int_events & FEC_ENET_RXF) {
 			ret = IRQ_HANDLED;
-			fec_enet_rx(ndev);
+
+			/* Disable the RX interrupt */
+			if (napi_schedule_prep(&fep->napi)) {
+				spin_lock_irqsave(&fep->hw_lock, flags);
+				fec_enet_rx_int_enable(ndev, false);
+				spin_unlock_irqrestore(&fep->hw_lock, flags);
+
+				__napi_schedule(&fep->napi);
+			}
 		}
 
 		/* Transmit OK, or non-fatal error. Update the buffer
@@ -814,8 +847,6 @@ fec_enet_interrupt(int irq, void *dev_id)
 
 	return ret;
 }
-
-
 
 /* ------------------------------------------------------------------------- */
 static void __inline__ fec_get_mac(struct net_device *ndev)
@@ -1294,6 +1325,8 @@ fec_enet_open(struct net_device *ndev)
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	int ret;
 
+	napi_enable(&fep->napi);
+
 	/* I should reset the ring buffers here, but I don't yet know
 	 * a simple way to do that.
 	 */
@@ -1322,6 +1355,8 @@ fec_enet_close(struct net_device *ndev)
 	/* Don't know what to do yet. */
 	fep->opened = 0;
 	netif_stop_queue(ndev);
+	napi_disable(&fep->napi);
+
 	fec_stop(ndev);
 
 	if (fep->phy_dev) {
@@ -1501,6 +1536,10 @@ static int fec_enet_init(struct net_device *ndev)
 	ndev->watchdog_timeo = TX_TIMEOUT;
 	ndev->netdev_ops = &fec_netdev_ops;
 	ndev->ethtool_ops = &fec_enet_ethtool_ops;
+
+	fep->napi_weight = FEC_NAPI_WEIGHT;
+	fec_enet_rx_int_enable(ndev, false);
+	netif_napi_add(ndev, &fep->napi, fec_enet_rx_poll, fep->napi_weight);
 
 	/* Initialize the receive buffer descriptors. */
 	bdp = fep->rx_bd_base;
