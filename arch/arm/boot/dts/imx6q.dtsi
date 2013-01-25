@@ -67,6 +67,23 @@
 							3    0x80000000	/* MX6Q_PAD_SD2_DAT1__AUDMUX_AUD4_TXFS */
 						>;
 					};
+
+					pinctrl_audmux_2: audmux-2 {
+						fsl,pins = <
+							1117 0x80000000	/* MX6Q_PAD_CSI0_DAT7__AUDMUX_AUD3_RXD */
+							1093 0x80000000	/* MX6Q_PAD_CSI0_DAT4__AUDMUX_AUD3_TXC */
+							1101 0x80000000	/* MX6Q_PAD_CSI0_DAT5__AUDMUX_AUD3_TXD */
+							1109 0x80000000	/* MX6Q_PAD_CSI0_DAT6__AUDMUX_AUD3_TXFS */
+						>;
+					};
+				};
+
+				clko {
+					pinctrl_clko_1: clkogrp-1 {
+						fsl,pins = <
+							953 0x130b0  /* MX6Q_PAD_GPIO_0__CCM_CLKO */
+						>;
+					};
 				};
 
 				ecspi1 {

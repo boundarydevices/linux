@@ -35,6 +35,12 @@
 					pinctrl-0 = <&pinctrl_uart1_1>;
 					status = "okay";
 				};
+
+				ssi2: ssi@0202c000 {
+					fsl,mode = "i2s-slave";
+					status = "okay";
+				};
+
 				ecspi@02008000 { /* eCSPI1 */
 					fsl,spi-num-chipselects = <1>;
 					cs-gpios = <&gpio4 9 0>;
@@ -90,6 +96,10 @@
 							961 0x80000000	/* MX6Q_PAD_GPIO_1__WDOG2_WDOG_B */
 							1357 0x80000000 /* MX6Q_PAD_NANDF_RB0__GPIO_6_10 */
 							902 0x80000000 /* MX6Q_PAD_KEY_ROW1__GPIO_4_9 */
+							910  0x80000000	/* MX6Q_PAD_KEY_COL2__GPIO_4_10 */
+							1325 0x80000000	/* MX6Q_PAD_SD3_RST__GPIO_7_8 */
+							972  0x80000000	/* MX6Q_PAD_GPIO_9__GPIO_1_9 */
+							953 0x130b0  /* MX6Q_PAD_GPIO_0__CCM_CLKO */
 						>;
 					};
 				};
@@ -139,11 +149,39 @@
 				status = "okay";
 			};
 
+			audmux@021d8000 {
+				status = "okay";
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_audmux_2>;
+			};
+
 			i2c@021a0000 { /* I2C1 */
 				status = "okay";
 				clock-frequency = <100000>;
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_i2c1_2>;
+
+				codec: wm8962@1a {
+					compatible = "fsl,wm8962";
+					reg = <0x1a>;
+					clocks = <&clks 169>;
+					DCVDD-supply = <&vgen4_reg>;	/* 1.8v */
+					DBVDD-supply = <&vgen4_reg>;	/* 1.8v */
+					AVDD-supply = <&vgen4_reg>;		/* 1.8v */
+					CPVDD-supply = <&vgen4_reg>;	/* 1.8v */
+					MICVDD-supply = <&vgen6_reg>;	/* 3.3v */
+					PLLVDD-supply = <&vgen4_reg>;	/* 1.8v */
+					SPKVDD1-supply = <&reg_4p2v>;
+					SPKVDD2-supply = <&reg_4p2v>;
+					gpio-cfg = <
+						0x0000 /* 0:Default */
+						0x0000 /* 1:Default */
+						0x0013 /* 2:FN_DMICCLK */
+						0x0000 /* 3:Default */
+						0x8014 /* 4:FN_DMICCDAT */
+						0x0000 /* 5:Default */
+					>;
+				};
 			};
 
 			i2c@021a4000 { /* I2C2 */
@@ -300,6 +338,43 @@
 			vddarm-supply = <&sw1a_reg>;
 			vddsoc-supply = <&sw1c_reg>;
 		};
+	};
+
+	regulators {
+		compatible = "simple-bus";
+
+		reg_4p2v: 4p2v {
+			compatible = "regulator-fixed";
+			regulator-name = "4P2V";
+			regulator-min-microvolt = <4200000>;
+			regulator-max-microvolt = <4200000>;
+			gpio = <&gpio4 10 0>;
+			regulator-always-on;
+			regulator-boot-on;
+			enable-active-high;
+		};
+	};
+
+	sound {
+		compatible = "fsl,imx6q-sabresd-wm8962",
+			     "fsl,imx-audio-wm8962";
+		model = "imx6q-sabresd-wm8962";
+		ssi-controller = <&ssi2>;
+		audio-codec = <&codec>;
+
+		audio-routing =
+			"Headphone Jack", "HPOUTL",
+			"Headphone Jack", "HPOUTR",
+			"Ext Spk", "SPKOUTL",
+			"Ext Spk", "SPKOUTR",
+			"MICBIAS", "AMIC",
+			"IN3R", "MICBIAS",
+			"DMIC", "MICBIAS",
+			"DMICDAT", "DMIC";
+		mux-int-port = <2>;
+		mux-ext-port = <3>;
+		hp-det-gpios = <&gpio7 8 1>;	/*active low*/
+		mic-det-gpios = <&gpio1 9 1>;	/*active low*/
 	};
 
 	battery {
