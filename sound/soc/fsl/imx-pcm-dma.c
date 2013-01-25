@@ -126,8 +126,7 @@ static int snd_imx_open(struct snd_pcm_substream *substream)
 		return -ENOMEM;
 	}
 
-	dma_data->peripheral_type = dma_params->shared_peripheral ?
-					IMX_DMATYPE_SSI_SP : IMX_DMATYPE_SSI;
+	dma_data->peripheral_type = dma_params->peripheral_type;
 	dma_data->priority = DMA_PRIO_HIGH;
 	dma_data->dma_request = dma_params->dma;
 

@@ -3,7 +3,7 @@
  *
  * Author: Timur Tabi <timur@freescale.com>
  *
- * Copyright 2007-2010 Freescale Semiconductor, Inc.
+ * Copyright 2007-2013 Freescale Semiconductor, Inc.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -758,11 +758,9 @@ static int __devinit fsl_ssi_probe(struct platform_device *pdev)
 		ssi_private->dma_params_tx.dma = dma_events[0];
 		ssi_private->dma_params_rx.dma = dma_events[1];
 
-		ssi_private->dma_params_tx.shared_peripheral =
-				of_device_is_compatible(of_get_parent(np),
-							"fsl,spba-bus");
-		ssi_private->dma_params_rx.shared_peripheral =
-				ssi_private->dma_params_tx.shared_peripheral;
+		ssi_private->dma_params_tx.peripheral_type = IMX_DMATYPE_SSI_SP;
+		ssi_private->dma_params_rx.peripheral_type =
+			ssi_private->dma_params_tx.peripheral_type;
 	}
 
 	/* Initialize the the device_attribute structure */

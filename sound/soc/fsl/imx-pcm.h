@@ -13,6 +13,8 @@
 #ifndef _IMX_PCM_H
 #define _IMX_PCM_H
 
+#include <mach/dma.h>
+
 /*
  * Do not change this as the FIQ handler depends on this size
  */
@@ -22,7 +24,7 @@ struct imx_pcm_dma_params {
 	int dma;
 	unsigned long dma_addr;
 	int burstsize;
-	bool shared_peripheral;	/* The peripheral is on SPBA bus */
+	enum sdma_peripheral_type peripheral_type;
 };
 
 int snd_imx_pcm_mmap(struct snd_pcm_substream *substream,
