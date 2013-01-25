@@ -1872,6 +1872,8 @@ static bool wm5102_volatile_register(struct device *dev, unsigned int reg)
 	}
 }
 
+#define WM5102_MAX_REGISTER 0x1a9800
+
 const struct regmap_config wm5102_spi_regmap = {
 	.reg_bits = 32,
 	.pad_bits = 16,
