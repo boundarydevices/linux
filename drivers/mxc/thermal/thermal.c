@@ -173,7 +173,6 @@ static const struct anatop_device_id thermal_device_ids[] = {
 
 int thermal_hot;
 EXPORT_SYMBOL(thermal_hot);
-
 atomic_t thermal_on = ATOMIC_INIT(1);
 
 extern struct cpu_op *(*get_cpu_op)(int *op);
@@ -409,6 +408,26 @@ int anatop_thermal_cpu_hotplug(bool cpu_on)
 	return ret;
 }
 
+static BLOCKING_NOTIFIER_HEAD(thermal_chain_head);
+
+int register_thermal_notifier(struct notifier_block *nb)
+{
+	return blocking_notifier_chain_register(&thermal_chain_head, nb);
+}
+EXPORT_SYMBOL_GPL(register_thermal_notifier);
+
+int unregister_thermal_notifier(struct notifier_block *nb)
+{
+	return blocking_notifier_chain_unregister(&thermal_chain_head, nb);
+}
+EXPORT_SYMBOL_GPL(unregister_thermal_notifier);
+
+int thermal_notifier_call_chain(unsigned long val)
+{
+	return (blocking_notifier_call_chain(&thermal_chain_head, val,
+		NULL) == NOTIFY_BAD) ? -EINVAL : 0;
+}
+
 static int
 imx_processor_set_cur_state(struct anatop_thermal *thermal,
 			unsigned long state)
@@ -421,7 +440,8 @@ imx_processor_set_cur_state(struct anatop_thermal *thermal,
 	if (cooling_cpuhotplug) {
 		if (!state) {
 			thermal_hot = 0;
-			atomic_set(&thermal_on, 0);
+			if (atomic_read(&thermal_on))
+				thermal_notifier_call_chain(0);
 			for (i = 1; i < 4; i++) {
 				if (cpu_mask && (0x1 << i)) {
 					anatop_thermal_cpu_hotplug(true);
@@ -433,7 +453,8 @@ imx_processor_set_cur_state(struct anatop_thermal *thermal,
 	} else {
 		if (!state) {
 			thermal_hot = 0;
-			atomic_set(&thermal_on, 0);
+			if (atomic_read(&thermal_on))
+				thermal_notifier_call_chain(0);
 			if (cpufreq_change_count < 0)
 				anatop_thermal_cpufreq_up();
 			else if (cpufreq_change_count > 0)
@@ -724,26 +745,6 @@ static int anatop_thermal_get_trip_temp(struct anatop_thermal *thermal,
 	return -EINVAL;
 }
 
-static BLOCKING_NOTIFIER_HEAD(thermal_chain_head);
-
-int register_thermal_notifier(struct notifier_block *nb)
-{
-	return blocking_notifier_chain_register(&thermal_chain_head, nb);
-}
-
-EXPORT_SYMBOL_GPL(register_thermal_notifier);
-
-int unregister_thermal_notifier(struct notifier_block *nb)
-{
-	return blocking_notifier_chain_unregister(&thermal_chain_head, nb);
-}
-EXPORT_SYMBOL_GPL(unregister_thermal_notifier);
-
-int thermal_notifier_call_chain(unsigned long val)
-{
-	return (blocking_notifier_call_chain(&thermal_chain_head, val,
-		NULL) == NOTIFY_BAD) ? -EINVAL : 0;
-}
 static int anatop_thermal_notify(struct anatop_thermal *thermal,
 	int trip, enum thermal_trip_type trip_type)
 {
@@ -761,7 +762,8 @@ static int anatop_thermal_notify(struct anatop_thermal *thermal,
 		printk(KERN_WARNING "thermal_notify: trip_critical reached!\n");
 		arm_pm_restart(mode, cmd);
 	} else if (trip_type == THERMAL_TRIP_HOT) {
-		atomic_set(&thermal_on, 1);
+		if (atomic_read(&thermal_on))
+			thermal_notifier_call_chain(1);
 		thermal_hot = 1;
 		printk(KERN_DEBUG "thermal_notify: trip_hot reached!\n");
 		type = ANATOP_THERMAL_NOTIFY_HOT;
@@ -778,7 +780,8 @@ static int anatop_thermal_notify(struct anatop_thermal *thermal,
 		full_run = false;
 	} else {
 		if (!full_run) {
-			atomic_set(&thermal_on, 0);
+			if (atomic_read(&thermal_on))
+				thermal_notifier_call_chain(0);
 			temperature_cooling = 0;
 			thermal_hot = 0;
 			if (cooling_cpuhotplug)
@@ -938,8 +941,6 @@ void thermal_device_update(struct anatop_thermal *tz)
 			break;
 		case THERMAL_TRIP_HOT:
 			if (temp >= trip_temp) {
-				if (atomic_read(&thermal_on))
-					thermal_notifier_call_chain(1);
 					anatop_thermal_notify(tz, count,
 						trip_type);
 				}
@@ -949,8 +950,6 @@ void thermal_device_update(struct anatop_thermal *tz)
 				imx_processor_set_cur_state(tz, 1);
 			} else {
 				imx_processor_set_cur_state(tz, 0);
-				if (atomic_read(&thermal_on))
-					thermal_notifier_call_chain(0);
 				}
 			break;
 		case THERMAL_TRIP_PASSIVE:
