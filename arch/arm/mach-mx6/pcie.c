@@ -440,9 +440,20 @@ imx_pcie_scan_bus(int nr, struct pci_sys_data *sys)
 	return bus;
 }
 
+signed short irq_map[] = {
+	-EINVAL,
+	MXC_INT_PCIE_3,		/* int a */
+	MXC_INT_PCIE_2,		/* int b */
+	MXC_INT_PCIE_1,		/* int c */
+	MXC_INT_PCIE_0,		/* int d/MSI */
+};
+
 static int __init imx_pcie_map_irq(struct pci_dev *dev, u8 slot, u8 pin)
 {
-	return MXC_INT_PCIE_3;
+	int val = -EINVAL;
+	if (pin <= 4)
+		val = irq_map[pin];
+	return val;
 }
 
 static struct hw_pci imx_pci __initdata = {
