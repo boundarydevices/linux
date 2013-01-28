@@ -110,9 +110,12 @@
 #define ADSP1_CLK_SEL_SHIFT                    0  /* CLK_SEL_ENA */
 #define ADSP1_CLK_SEL_WIDTH                    3  /* CLK_SEL_ENA */
 
-#define ADSP2_CONTROL  0
-#define ADSP2_CLOCKING 1
-#define ADSP2_STATUS1  4
+#define ADSP2_CONTROL        0x0
+#define ADSP2_CLOCKING       0x1
+#define ADSP2_STATUS1        0x4
+#define ADSP2_WDMA_CONFIG_1 0x30
+#define ADSP2_WDMA_CONFIG_2 0x31
+#define ADSP2_RDMA_CONFIG_1 0x34
 
 /*
  * ADSP2 Control
@@ -1026,6 +1029,11 @@ int wm_adsp2_event(struct snd_soc_dapm_widget *w,
 		regmap_update_bits(dsp->regmap, dsp->base + ADSP2_CONTROL,
 				   ADSP2_SYS_ENA | ADSP2_CORE_ENA |
 				   ADSP2_START, 0);
+
+		/* Make sure DMAs are quiesced */
+		regmap_write(dsp->regmap, dsp->base + ADSP2_WDMA_CONFIG_1, 0);
+		regmap_write(dsp->regmap, dsp->base + ADSP2_WDMA_CONFIG_2, 0);
+		regmap_write(dsp->regmap, dsp->base + ADSP2_RDMA_CONFIG_1, 0);
 
 		if (dsp->dvfs) {
 			ret = regulator_set_voltage(dsp->dvfs, 1200000,
