@@ -53,6 +53,7 @@ static const char *wm8962_supply_names[WM8962_NUM_SUPPLIES] = {
 struct wm8962_priv {
 	struct regmap *regmap;
 	struct snd_soc_codec *codec;
+	struct wm8962_pdata *pdata;
 
 	int sysclk;
 	int sysclk_rate;
@@ -2344,7 +2345,11 @@ static const struct snd_soc_dapm_route wm8962_spk_stereo_intercon[] = {
 static int wm8962_add_widgets(struct snd_soc_codec *codec)
 {
 	struct wm8962_pdata *pdata = dev_get_platdata(codec->dev);
+	struct wm8962_priv *wm8962 = snd_soc_codec_get_drvdata(codec);
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
+
+	if (!pdata)
+		pdata = wm8962->pdata;
 
 	snd_soc_add_codec_controls(codec, wm8962_snd_controls,
 			     ARRAY_SIZE(wm8962_snd_controls));
@@ -2583,6 +2588,17 @@ static int wm8962_hw_params(struct snd_pcm_substream *substream,
 
 	if (codec->dapm.bias_level == SND_SOC_BIAS_ON)
 		wm8962_configure_bclk(codec);
+
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		if (snd_soc_dapm_get_pin_status(&codec->dapm, "DMIC"))
+			snd_soc_update_bits(codec, WM8962_THREED1,
+					WM8962_ADC_MONOMIX_MASK,
+					0);
+		else
+			snd_soc_update_bits(codec, WM8962_THREED1,
+					WM8962_ADC_MONOMIX_MASK,
+					WM8962_ADC_MONOMIX);
+	}
 
 	return 0;
 }
@@ -3340,6 +3356,9 @@ static void wm8962_init_gpio(struct snd_soc_codec *codec)
 	wm8962->gpio_chip.ngpio = WM8962_MAX_GPIO;
 	wm8962->gpio_chip.dev = codec->dev;
 
+	if (!pdata)
+		pdata = wm8962->pdata;
+
 	if (pdata && pdata->gpio_base)
 		wm8962->gpio_chip.base = pdata->gpio_base;
 	else
@@ -3368,6 +3387,19 @@ static void wm8962_free_gpio(struct snd_soc_codec *codec)
 {
 }
 #endif
+
+static int wm8962_set_pdata_from_of(struct i2c_client *i2c,
+				    struct wm8962_pdata *pdata)
+{
+	const struct device_node *np = i2c->dev.of_node;
+
+	if (of_property_read_u32_array(np, "gpio-cfg", pdata->gpio_init,
+				       ARRAY_SIZE(pdata->gpio_init))) {
+		dev_warn(&i2c->dev, "Couldn't find DMIC GPIOs cfg in DTS\n");
+		return -ENOENT;
+	}
+	return 0;
+}
 
 static int wm8962_probe(struct snd_soc_codec *codec)
 {
@@ -3420,6 +3452,9 @@ static int wm8962_probe(struct snd_soc_codec *codec)
 	snd_soc_update_bits(codec, WM8962_PLL2,
 			    WM8962_OSC_ENA | WM8962_PLL2_ENA | WM8962_PLL3_ENA,
 			    0);
+
+	if (!pdata)
+		pdata = wm8962->pdata;
 
 	if (pdata) {
 		/* Apply static configuration for GPIOs */
@@ -3689,6 +3724,19 @@ static __devinit int wm8962_i2c_probe(struct i2c_client *i2c,
 	if (ret < 0) {
 		dev_err(&i2c->dev, "Failed to issue reset\n");
 		goto err_regmap;
+	}
+
+	if (!pdata && i2c->dev.of_node) {
+		wm8962->pdata = devm_kzalloc(&i2c->dev,
+					sizeof(struct wm8962_pdata),
+					GFP_KERNEL);
+		if (wm8962->pdata == NULL) {
+			dev_err(&i2c->dev, "Failed to allocate pdata\n");
+			return -ENOMEM;
+		}
+		memset(wm8962->pdata, 0, sizeof(struct wm8962_pdata));
+		wm8962_set_pdata_from_of(i2c, wm8962->pdata);
+		pdata = wm8962->pdata;
 	}
 
 	if (pdata && pdata->in4_dc_measure) {
