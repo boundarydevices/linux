@@ -3778,10 +3778,17 @@ static const struct i2c_device_id wm8962_i2c_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, wm8962_i2c_id);
 
+static const struct of_device_id wm8962_dt_ids[] = {
+	{ .compatible = "wlf,wm8962", },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, wm8962_dt_ids);
+
 static struct i2c_driver wm8962_i2c_driver = {
 	.driver = {
 		.name = "wm8962",
 		.owner = THIS_MODULE,
+		.of_match_table = wm8962_dt_ids,
 		.pm = &wm8962_pm,
 	},
 	.probe =    wm8962_i2c_probe,
