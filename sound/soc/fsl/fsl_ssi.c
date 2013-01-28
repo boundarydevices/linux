@@ -21,12 +21,15 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/pm_runtime.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/initval.h>
 #include <sound/soc.h>
+
+#include <mach/busfreq.h>
 
 #include "fsl_ssi.h"
 #include "imx-pcm.h"
@@ -323,6 +326,7 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 	struct snd_soc_dpcm_runtime *dpcm = container_of(&(substream->runtime),
 			struct snd_soc_dpcm_runtime, runtime);
 
+	pm_runtime_get_sync(dai->dev);
 	/*
 	 * If this is the first stream opened, then request the IRQ
 	 * and initialize the SSI registers.
@@ -745,6 +749,8 @@ static void fsl_ssi_shutdown(struct snd_pcm_substream *substream,
 
 		write_ssi_mask(&ssi->scr, CCSR_SSI_SCR_SSIEN, 0);
 	}
+
+	pm_runtime_put_sync(dai->dev);
 }
 
 static const struct snd_soc_dai_ops fsl_ssi_dai_ops = {
@@ -985,6 +991,8 @@ static int __devinit fsl_ssi_probe(struct platform_device *pdev)
 		goto error_irq;
 	}
 
+	pm_runtime_enable(&pdev->dev);
+
 	/* Register with ASoC */
 	dev_set_drvdata(&pdev->dev, ssi_private);
 
@@ -1091,6 +1099,25 @@ static int fsl_ssi_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_RUNTIME
+static int fsl_ssi_runtime_resume(struct device *dev)
+{
+	request_bus_freq(BUS_FREQ_AUDIO);
+	return 0;
+}
+
+static int fsl_ssi_runtime_suspend(struct device *dev)
+{
+	release_bus_freq(BUS_FREQ_AUDIO);
+	return 0;
+}
+#endif
+static const struct dev_pm_ops fsl_ssi_pm = {
+	SET_RUNTIME_PM_OPS(fsl_ssi_runtime_suspend,
+			fsl_ssi_runtime_resume,
+			NULL)
+};
+
 static const struct of_device_id fsl_ssi_ids[] = {
 	{ .compatible = "fsl,mpc8610-ssi", },
 	{ .compatible = "fsl,imx21-ssi", },
@@ -1103,6 +1130,7 @@ static struct platform_driver fsl_ssi_driver = {
 		.name = "fsl-ssi-dai",
 		.owner = THIS_MODULE,
 		.of_match_table = fsl_ssi_ids,
+		.pm = &fsl_ssi_pm,
 	},
 	.probe = fsl_ssi_probe,
 	.remove = fsl_ssi_remove,
