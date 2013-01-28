@@ -1383,6 +1383,12 @@ fec_enet_open(struct net_device *ndev)
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	int ret;
 
+	clk_prepare_enable(fep->clk_ahb);
+	clk_prepare_enable(fep->clk_ipg);
+#ifdef CONFIG_FEC_PTP
+	clk_prepare_enable(fep->clk_ptp);
+#endif
+
 	napi_enable(&fep->napi);
 
 	/* I should reset the ring buffers here, but I don't yet know
@@ -1422,6 +1428,13 @@ fec_enet_close(struct net_device *ndev)
 	}
 
 	fec_enet_free_buffers(ndev);
+
+	/* Clock gate close for saving power */
+	clk_disable_unprepare(fep->clk_ahb);
+	clk_disable_unprepare(fep->clk_ipg);
+#ifdef CONFIG_FEC_PTP
+	clk_disable_unprepare(fep->clk_ptp);
+#endif
 
 	return 0;
 }
@@ -1785,6 +1798,13 @@ fec_probe(struct platform_device *pdev)
 	/* Carrier starts down, phylib will bring it up */
 	netif_carrier_off(ndev);
 
+	/* disable all clock */
+	clk_disable_unprepare(fep->clk_ahb);
+	clk_disable_unprepare(fep->clk_ipg);
+#ifdef CONFIG_FEC_PTP
+	clk_disable_unprepare(fep->clk_ptp);
+#endif
+
 	ret = register_netdev(ndev);
 	if (ret)
 		goto failed_register;
@@ -1868,9 +1888,12 @@ fec_suspend(struct device *dev)
 	if (netif_running(ndev)) {
 		fec_stop(ndev);
 		netif_device_detach(ndev);
+		clk_disable_unprepare(fep->clk_ahb);
+		clk_disable_unprepare(fep->clk_ipg);
+#ifdef CONFIG_FEC_PTP
+		clk_disable_unprepare(fep->clk_ptp);
+#endif
 	}
-	clk_disable_unprepare(fep->clk_ahb);
-	clk_disable_unprepare(fep->clk_ipg);
 
 	return 0;
 }
@@ -1881,9 +1904,13 @@ fec_resume(struct device *dev)
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct fec_enet_private *fep = netdev_priv(ndev);
 
-	clk_prepare_enable(fep->clk_ahb);
-	clk_prepare_enable(fep->clk_ipg);
 	if (netif_running(ndev)) {
+		clk_prepare_enable(fep->clk_ahb);
+		clk_prepare_enable(fep->clk_ipg);
+#ifdef CONFIG_FEC_PTP
+		clk_prepare_enable(fep->clk_ptp);
+#endif
+
 		fec_restart(ndev, fep->full_duplex);
 		netif_device_attach(ndev);
 	}
