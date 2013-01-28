@@ -17,6 +17,7 @@
 #include <linux/of_address.h>
 #include <linux/smp.h>
 #include <linux/sched.h>
+#include <linux/spinlock.h>
 #include <asm/smp_plat.h>
 
 #define SRC_SCR				0x000
@@ -29,16 +30,21 @@
 
 static void __iomem *src_base;
 
+static DEFINE_SPINLOCK(scr_lock);
+
 void imx_enable_cpu(int cpu, bool enable)
 {
 	u32 mask, val;
+	unsigned long flags;
 
 	cpu = cpu_logical_map(cpu);
 	mask = 1 << (BP_SRC_SCR_CORE1_ENABLE + cpu - 1);
+	spin_lock_irqsave(&scr_lock, flags);
 	val = readl_relaxed(src_base + SRC_SCR);
 	val = enable ? val | mask : val & ~mask;
 	val |= 1 << (BP_SRC_SCR_CORE1_RST + cpu - 1);
 	writel_relaxed(val, src_base + SRC_SCR);
+	spin_unlock_irqrestore(&scr_lock, flags);
 
 	val = jiffies;
 	/* wait secondary cpu reset done, timeout is 10ms */
@@ -83,11 +89,14 @@ void imx_set_cpu_jump(int cpu, void *jump_addr)
 void imx_src_prepare_restart(void)
 {
 	u32 val;
+	unsigned long flags;
 
+	spin_lock_irqsave(&scr_lock, flags);
 	/* clear enable bits of secondary cores */
 	val = readl_relaxed(src_base + SRC_SCR);
 	val &= ~(0x7 << BP_SRC_SCR_CORE1_ENABLE);
 	writel_relaxed(val, src_base + SRC_SCR);
+	spin_unlock_irqrestore(&scr_lock, flags);
 
 	/* clear persistent entry register of primary core */
 	writel_relaxed(0, src_base + SRC_GPR1);
@@ -96,11 +105,12 @@ void imx_src_prepare_restart(void)
 int imx_src_reset_gpu(int gpucore_id)
 {
 	u32 bit_offset, val;
+	unsigned long flags;
 
 	/*
 	 * gcvCORE_MAJOR    0x0
 	 * gcvCORE_2D       0x1
-	 * cvCORE_VG       0x2
+	 * cvCORE_VG        0x2
 	 */
 
 	if (gpucore_id == 0x0)
@@ -110,13 +120,20 @@ int imx_src_reset_gpu(int gpucore_id)
 	else
 		return -1;
 
+	spin_lock_irqsave(&scr_lock, flags);
 	val = readl_relaxed(src_base + SRC_SCR);
 	val |= (1 << bit_offset);
 	writel_relaxed(val, src_base + SRC_SCR);
+	spin_unlock_irqrestore(&scr_lock, flags);
 
+	val = jiffies;
 	while ((readl_relaxed(src_base + SRC_SCR) &
 		(1 << bit_offset)) != 0) {
-		cpu_relax();
+		if (time_after(jiffies, (unsigned long)(val +
+			msecs_to_jiffies(10)))) {
+			printk(KERN_WARNING "gpu %d: gpu hw reset timeout\n", gpucore_id);
+			break;
+		}
 	}
 	return 0;
 }
@@ -126,6 +143,7 @@ void __init imx_src_init(void)
 {
 	struct device_node *np;
 	u32 val;
+	unsigned long flags;
 
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-src");
 	src_base = of_iomap(np, 0);
@@ -135,7 +153,9 @@ void __init imx_src_init(void)
 	 * force warm reset sources to generate cold reset
 	 * for a more reliable restart
 	 */
+	spin_lock_irqsave(&scr_lock, flags);
 	val = readl_relaxed(src_base + SRC_SCR);
 	val &= ~(1 << BP_SRC_SCR_WARM_RESET_ENABLE);
 	writel_relaxed(val, src_base + SRC_SCR);
+	spin_unlock_irqrestore(&scr_lock, flags);
 }
