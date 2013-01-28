@@ -226,12 +226,14 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	unsigned short	status;
 	unsigned long flags;
 
+	spin_lock_irqsave(&fep->hw_lock, flags);
 	if (!fep->link) {
+		netif_stop_queue(ndev);
+		spin_unlock_irqrestore(&fep->hw_lock, flags);
 		/* Link is down or autonegotiation is in progress. */
 		return NETDEV_TX_BUSY;
 	}
 
-	spin_lock_irqsave(&fep->hw_lock, flags);
 	/* Fill in a Tx ring entry */
 	bdp = fep->cur_tx;
 
@@ -242,6 +244,7 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		 * This should not happen, since ndev->tbusy should be set.
 		 */
 		printk("%s: tx queue full!.\n", ndev->name);
+		netif_stop_queue(ndev);
 		spin_unlock_irqrestore(&fep->hw_lock, flags);
 		return NETDEV_TX_BUSY;
 	}
@@ -261,8 +264,8 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	if (((unsigned long) bufaddr) & FEC_ALIGNMENT) {
 		unsigned int index;
 		index = bdp - fep->tx_bd_base;
-		memcpy(fep->tx_bounce[index], skb->data, skb->len);
-		bufaddr = fep->tx_bounce[index];
+		bufaddr = PTR_ALIGN(fep->tx_bounce[index], FEC_ALIGNMENT + 1);
+		memcpy(bufaddr, (void *)skb->data, skb->len);
 	}
 
 	/*
@@ -327,6 +330,41 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	return NETDEV_TX_OK;
 }
 
+/* Init RX & TX buffer descriptors
+ */
+static void fec_enet_bd_init(struct net_device *dev)
+{
+	struct fec_enet_private *fep = netdev_priv(dev);
+	struct bufdesc *bdp;
+	int i;
+
+	/* Initialize the receive buffer descriptors. */
+	bdp = fep->rx_bd_base;
+	for (i = 0; i < RX_RING_SIZE; i++) {
+
+		/* Initialize the BD for every fragment in the page. */
+		bdp->cbd_sc = BD_ENET_RX_EMPTY;
+		bdp++;
+	}
+
+	/* Set the last buffer to wrap */
+	bdp--;
+	bdp->cbd_sc |= BD_SC_WRAP;
+
+	/* ...and the same for transmit */
+	bdp = fep->tx_bd_base;
+	for (i = 0; i < TX_RING_SIZE; i++) {
+
+		/* Initialize the BD for every fragment in the page. */
+		bdp->cbd_sc = 0;
+		bdp++;
+	}
+
+	/* Set the last buffer to wrap */
+	bdp--;
+	bdp->cbd_sc |= BD_SC_WRAP;
+}
+
 /* This function is called to start or restart the FEC during a link
  * change.  This only happens when switching between half and full
  * duplex.
@@ -374,6 +412,8 @@ fec_restart(struct net_device *ndev, int duplex)
 	writel(fep->bd_dma, fep->hwp + FEC_R_DES_START);
 	writel((unsigned long)fep->bd_dma + sizeof(struct bufdesc) * RX_RING_SIZE,
 			fep->hwp + FEC_X_DES_START);
+	/* Reinit transmit descriptors */
+	fec_enet_bd_init(ndev);
 
 	fep->dirty_tx = fep->cur_tx = fep->tx_bd_base;
 	fep->cur_rx = fep->rx_bd_base;
@@ -538,7 +578,8 @@ fec_timeout(struct net_device *ndev)
 	ndev->stats.tx_errors++;
 
 	fec_restart(ndev, fep->full_duplex);
-	netif_wake_queue(ndev);
+	if (fep->link && !fep->tx_full)
+		netif_wake_queue(ndev);
 }
 
 static void
@@ -942,8 +983,11 @@ static void fec_enet_adjust_link(struct net_device *ndev)
 	/* Link on or off change */
 	if (phy_dev->link != fep->link) {
 		fep->link = phy_dev->link;
-		if (phy_dev->link)
+		if (phy_dev->link) {
 			fec_restart(ndev, phy_dev->duplex);
+			if (!fep->tx_full)
+				netif_wake_queue(ndev);
+		}
 		else
 			fec_stop(ndev);
 		status_change = 1;
@@ -1302,6 +1346,10 @@ static int fec_enet_alloc_buffers(struct net_device *ndev)
 	bdp = fep->tx_bd_base;
 	for (i = 0; i < TX_RING_SIZE; i++) {
 		fep->tx_bounce[i] = kmalloc(FEC_ENET_TX_FRSIZE, GFP_KERNEL);
+		if (!fep->tx_bounce[i]) {
+			fec_enet_free_buffers(ndev);
+			return -ENOMEM;
+		}
 
 		bdp->cbd_sc = 0;
 		bdp->cbd_bufaddr = 0;
@@ -1510,8 +1558,6 @@ static int fec_enet_init(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	struct bufdesc *cbd_base;
-	struct bufdesc *bdp;
-	int i;
 
 	/* Allocate memory for buffer descriptors. */
 	cbd_base = dma_alloc_coherent(NULL, PAGE_SIZE, &fep->bd_dma,
@@ -1541,32 +1587,8 @@ static int fec_enet_init(struct net_device *ndev)
 	fec_enet_rx_int_enable(ndev, false);
 	netif_napi_add(ndev, &fep->napi, fec_enet_rx_poll, fep->napi_weight);
 
-	/* Initialize the receive buffer descriptors. */
-	bdp = fep->rx_bd_base;
-	for (i = 0; i < RX_RING_SIZE; i++) {
-
-		/* Initialize the BD for every fragment in the page. */
-		bdp->cbd_sc = 0;
-		bdp++;
-	}
-
-	/* Set the last buffer to wrap */
-	bdp--;
-	bdp->cbd_sc |= BD_SC_WRAP;
-
-	/* ...and the same for transmit */
-	bdp = fep->tx_bd_base;
-	for (i = 0; i < TX_RING_SIZE; i++) {
-
-		/* Initialize the BD for every fragment in the page. */
-		bdp->cbd_sc = 0;
-		bdp->cbd_bufaddr = 0;
-		bdp++;
-	}
-
-	/* Set the last buffer to wrap */
-	bdp--;
-	bdp->cbd_sc |= BD_SC_WRAP;
+	/* Init enet descriptors */
+	fec_enet_bd_init(ndev);
 
 	fec_restart(ndev, 0);
 
