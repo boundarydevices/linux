@@ -1700,8 +1700,6 @@ SOC_ENUM("Capture LHPF Mode", cap_lhpf_mode),
 SOC_DOUBLE_R_TLV("Sidetone Volume", WM8962_DAC_DSP_MIXING_1,
 		 WM8962_DAC_DSP_MIXING_2, 4, 12, 0, st_tlv),
 
-SOC_DOUBLE_R_TLV("Digital Playback Volume", WM8962_LEFT_DAC_VOLUME,
-		 WM8962_RIGHT_DAC_VOLUME, 1, 127, 0, digital_tlv),
 SOC_SINGLE("DAC High Performance Switch", WM8962_ADC_DAC_CONTROL_2, 0, 1, 0),
 SOC_SINGLE("DAC L/R Swap Switch", WM8962_AUDIO_INTERFACE_0, 5, 1, 0),
 SOC_SINGLE("ADC L/R Swap Switch", WM8962_AUDIO_INTERFACE_0, 8, 1, 0),
@@ -3446,6 +3444,31 @@ static int wm8962_probe(struct snd_soc_codec *codec)
 					    WM8962_MICBIAS_LVL,
 					    pdata->mic_cfg);
 	}
+
+	/* set the default volume for playback and record*/
+	snd_soc_update_bits(codec, WM8962_HPOUTL_VOLUME,
+			    WM8962_HPOUTL_VOL_MASK, 0x5d);
+	snd_soc_update_bits(codec, WM8962_HPOUTR_VOLUME,
+			    WM8962_HPOUTR_VOL_MASK, 0x5d);
+	snd_soc_update_bits(codec, WM8962_SPKOUTL_VOLUME,
+			    WM8962_SPKOUTL_VOL_MASK, 0x72);
+	snd_soc_update_bits(codec, WM8962_SPKOUTR_VOLUME,
+			    WM8962_SPKOUTR_VOL_MASK, 0x72);
+	snd_soc_update_bits(codec, WM8962_LEFT_DAC_VOLUME,
+			    WM8962_DACL_VOL_MASK, 0xd8);
+	snd_soc_update_bits(codec, WM8962_RIGHT_DAC_VOLUME,
+			    WM8962_DACR_VOL_MASK, 0xd8);
+
+	snd_soc_update_bits(codec, WM8962_LEFT_INPUT_VOLUME,
+			    WM8962_INL_VOL_MASK, 0x3f);
+	snd_soc_update_bits(codec, WM8962_RIGHT_INPUT_VOLUME,
+			    WM8962_INR_VOL_MASK, 0x3f);
+	snd_soc_update_bits(codec, WM8962_LEFT_ADC_VOLUME,
+			    WM8962_ADCL_VOL_MASK, 0xd8);
+	snd_soc_update_bits(codec, WM8962_LEFT_ADC_VOLUME,
+			    WM8962_ADCR_VOL_MASK, 0xd8);
+	snd_soc_update_bits(codec, WM8962_RIGHT_INPUT_MIXER_VOLUME,
+			    WM8962_IN3R_MIXINR_VOL_MASK, 0x7);
 
 	/* Latch volume update bits */
 	snd_soc_update_bits(codec, WM8962_LEFT_INPUT_VOLUME,
