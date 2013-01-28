@@ -3,7 +3,7 @@
  *
  * Author: Timur Tabi <timur@freescale.com>
  *
- * Copyright 2007-2008 Freescale Semiconductor, Inc.  This file is licensed
+ * Copyright 2007-2013 Freescale Semiconductor, Inc.  This file is licensed
  * under the terms of the GNU General Public License version 2.  This
  * program is licensed "as is" without any warranty of any kind, whether
  * express or implied.
@@ -38,6 +38,17 @@ struct ccsr_ssi {
 	__be32 saccen;	/* 0x.0054 - SSI AC97 Channel Enable Register */
 	__be32 saccdis; /* 0x.0058 - SSI AC97 Channel Disable Register */
 };
+
+/* SSI clock sources */
+#define IMX_SSP_SYS_CLK		0
+
+/* SSI audio dividers */
+#define IMX_SSI_TX_DIV_2	0
+#define IMX_SSI_TX_DIV_PSR	1
+#define IMX_SSI_TX_DIV_PM	2
+#define IMX_SSI_RX_DIV_2	3
+#define IMX_SSI_RX_DIV_PSR	4
+#define IMX_SSI_RX_DIV_PM	5
 
 #define CCSR_SSI_SCR_RFR_CLK_DIS	0x00000800
 #define CCSR_SSI_SCR_TFR_CLK_DIS	0x00000400

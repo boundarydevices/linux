@@ -92,6 +92,8 @@ static inline void write_ssi_mask(u32 __iomem *addr, u32 clear, u32 set)
 		    CCSR_SSI_SIER_RDMAE | CCSR_SSI_SIER_RIE | \
 		    CCSR_SSI_SIER_ROE0_EN | CCSR_SSI_SIER_ROE1_EN)
 
+#define SIER_DEFAULT_FLAGS 0
+
 /**
  * fsl_ssi_private: per-SSI private data
  *
@@ -117,6 +119,13 @@ struct fsl_ssi_private {
 	struct snd_soc_dai_driver cpu_dai_drv;
 	struct device_attribute dev_attr;
 	struct platform_device *pdev;
+
+	unsigned int flags;
+#define IMX_SSI_DMA            (1 << 0)
+#define IMX_SSI_USE_AC97       (1 << 1)
+#define IMX_SSI_NET            (1 << 2)
+#define IMX_SSI_SYN            (1 << 3)
+#define IMX_SSI_USE_I2S_SLAVE  (1 << 4)
 
 	bool new_binding;
 	bool ssi_on_imx;
@@ -311,6 +320,8 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 	struct fsl_ssi_private *ssi_private =
 		snd_soc_dai_get_drvdata(rtd->cpu_dai);
 	int synchronous = ssi_private->cpu_dai_drv.symmetric_rates;
+	struct snd_soc_dpcm_runtime *dpcm = container_of(&(substream->runtime),
+			struct snd_soc_dpcm_runtime, runtime);
 
 	/*
 	 * If this is the first stream opened, then request the IRQ
@@ -318,8 +329,14 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 	 */
 	if (!ssi_private->first_stream) {
 		struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
+		int txbs, rxbs;
+		snd_pcm_format_t fmt_tmp;
 
 		ssi_private->first_stream = substream;
+
+		fmt_tmp = params_format(&(dpcm->hw_params));
+		substream->runtime->sample_bits =
+			snd_pcm_format_physical_width(fmt_tmp);
 
 		/*
 		 * Section 16.5 of the MPC8610 reference manual says that the
@@ -353,7 +370,7 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 		 */
 
 		/* Enable the interrupts and DMA requests */
-		write_ssi(SIER_FLAGS, &ssi->sier);
+		write_ssi(SIER_DEFAULT_FLAGS, &ssi->sier);
 
 		/*
 		 * Set the watermark for transmit FIFI 0 and receive FIFO 0. We
@@ -368,8 +385,12 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 		 * make this value larger (and maybe we should), but this way
 		 * data will be written to memory as soon as it's available.
 		 */
-		write_ssi(CCSR_SSI_SFCSR_TFWM0(ssi_private->fifo_depth - 2) |
-			CCSR_SSI_SFCSR_RFWM0(ssi_private->fifo_depth - 2),
+		rxbs = ssi_private->dma_params_rx.burstsize;
+		txbs = ssi_private->dma_params_tx.burstsize;
+		write_ssi(CCSR_SSI_SFCSR_TFWM0(txbs) |
+			CCSR_SSI_SFCSR_RFWM0(rxbs) |
+			CCSR_SSI_SFCSR_TFWM1(txbs) |
+			CCSR_SSI_SFCSR_RFWM1(rxbs),
 			&ssi->sfcsr);
 
 		/*
@@ -499,26 +520,203 @@ static int fsl_ssi_trigger(struct snd_pcm_substream *substream, int cmd,
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
+	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			write_ssi_mask(&ssi->scr, 0,
 				CCSR_SSI_SCR_SSIEN | CCSR_SSI_SCR_TE);
-		else
+			write_ssi_mask(&ssi->sier, 0, CCSR_SSI_SIER_TDMAE);
+		} else {
 			write_ssi_mask(&ssi->scr, 0,
 				CCSR_SSI_SCR_SSIEN | CCSR_SSI_SCR_RE);
+			write_ssi_mask(&ssi->sier, 0, CCSR_SSI_SIER_RDMAE);
+		}
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
+	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			write_ssi_mask(&ssi->scr, CCSR_SSI_SCR_TE, 0);
-		else
+			write_ssi_mask(&ssi->sier, CCSR_SSI_SIER_TDMAE, 0);
+		} else {
 			write_ssi_mask(&ssi->scr, CCSR_SSI_SCR_RE, 0);
+			write_ssi_mask(&ssi->sier, CCSR_SSI_SIER_RDMAE, 0);
+		}
 		break;
 
 	default:
 		return -EINVAL;
 	}
+
+	return 0;
+}
+
+/*
+ * SSI DAI format configuration.
+ * Should only be called when port is inactive (i.e. SSIEN = 0).
+ */
+static int fsl_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
+{
+	struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(cpu_dai);
+	struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
+	u32 strcr = 0, scr;
+
+	scr = read_ssi(&ssi->scr) & ~(CCSR_SSI_SCR_SYN | CCSR_SSI_SCR_NET);
+
+	/* DAI mode */
+	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
+	case SND_SOC_DAIFMT_I2S:
+		/* data on rising edge of bclk, frame low 1clk before data */
+		strcr |= CCSR_SSI_STCR_TFSI
+			| CCSR_SSI_STCR_TEFS
+			| CCSR_SSI_STCR_TXBIT0;
+		scr |= CCSR_SSI_SCR_NET;
+		if (ssi_private->flags & IMX_SSI_USE_I2S_SLAVE) {
+			scr &= ~CCSR_SSI_SCR_I2S_MODE_MASK;
+			scr |= CCSR_SSI_SCR_I2S_MODE_SLAVE;
+		}
+		break;
+	case SND_SOC_DAIFMT_LEFT_J:
+		/* data on rising edge of bclk, frame high with data */
+		strcr |= CCSR_SSI_STCR_TXBIT0;
+		break;
+	case SND_SOC_DAIFMT_DSP_B:
+		/* data on rising edge of bclk, frame high with data */
+		strcr |= CCSR_SSI_STCR_TFSL
+			| CCSR_SSI_STCR_TXBIT0;
+		break;
+	case SND_SOC_DAIFMT_DSP_A:
+		/* data on rising edge of bclk, frame high 1clk before data */
+		strcr |= CCSR_SSI_STCR_TFSL
+			| CCSR_SSI_STCR_TXBIT0
+			| CCSR_SSI_STCR_TEFS;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	/* DAI clock inversion */
+	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
+	case SND_SOC_DAIFMT_IB_IF:
+		strcr |= CCSR_SSI_STCR_TFSI;
+		strcr &= ~CCSR_SSI_STCR_TSCKP;
+		break;
+	case SND_SOC_DAIFMT_IB_NF:
+		strcr &= ~(CCSR_SSI_STCR_TSCKP | CCSR_SSI_STCR_TFSI);
+		break;
+	case SND_SOC_DAIFMT_NB_IF:
+		strcr |= CCSR_SSI_STCR_TFSI | CCSR_SSI_STCR_TSCKP;
+		break;
+	case SND_SOC_DAIFMT_NB_NF:
+		strcr &= ~CCSR_SSI_STCR_TFSI;
+		strcr |= CCSR_SSI_STCR_TSCKP;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	/* DAI clock master masks */
+	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
+	case SND_SOC_DAIFMT_CBM_CFM:
+		break;
+	default:
+		/* Master mode not implemented, needs handling of clocks. */
+		return -EINVAL;
+	}
+
+	strcr |= CCSR_SSI_STCR_TFEN0;
+
+	if (ssi_private->flags & IMX_SSI_NET)
+		scr |= CCSR_SSI_SCR_NET;
+	if (ssi_private->flags & IMX_SSI_SYN)
+		scr |= CCSR_SSI_SCR_SYN;
+
+	/* Dual-FIFO support */
+	strcr |= CCSR_SSI_STCR_TFEN1;
+	scr |= CCSR_SSI_SCR_TCH_EN;
+
+	write_ssi_mask(&ssi->stcr, 0, strcr);
+	write_ssi_mask(&ssi->srcr, 0, strcr);
+	write_ssi_mask(&ssi->scr, 0, scr);
+
+	return 0;
+}
+
+/*
+ * SSI Clock dividers
+ * Should only be called when port is inactive (i.e. SSIEN = 0).
+ */
+static int fsl_ssi_set_dai_clkdiv(struct snd_soc_dai *cpu_dai,
+				  int div_id, int div)
+{
+	struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(cpu_dai);
+	struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
+	u32 stccr, srccr;
+
+	stccr = read_ssi(&ssi->stccr);
+	srccr = read_ssi(&ssi->srccr);
+
+	switch (div_id) {
+	case IMX_SSI_TX_DIV_2:
+		stccr &= ~CCSR_SSI_SxCCR_DIV2;
+		stccr |= div;
+		break;
+	case IMX_SSI_TX_DIV_PSR:
+		stccr &= ~CCSR_SSI_SxCCR_PSR;
+		stccr |= div;
+		break;
+	case IMX_SSI_TX_DIV_PM:
+		stccr &= ~0xff;
+		stccr |= CCSR_SSI_SxCCR_PM(div);
+		break;
+	case IMX_SSI_RX_DIV_2:
+		stccr &= ~CCSR_SSI_SxCCR_DIV2;
+		stccr |= div;
+		break;
+	case IMX_SSI_RX_DIV_PSR:
+		stccr &= ~CCSR_SSI_SxCCR_PSR;
+		stccr |= div;
+		break;
+	case IMX_SSI_RX_DIV_PM:
+		stccr &= ~0xff;
+		stccr |= CCSR_SSI_SxCCR_PM(div);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	write_ssi_mask(&ssi->stccr, 0, stccr);
+	write_ssi_mask(&ssi->srccr, 0, srccr);
+
+	return 0;
+}
+
+/*
+ * SSI system clock configuration.
+ * Should only be called when port is inactive (i.e. SSIEN = 0).
+ */
+static int fsl_ssi_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
+				  int clk_id, unsigned int freq, int dir)
+{
+	struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(cpu_dai);
+	struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
+	u32 scr;
+
+	scr = read_ssi(&ssi->scr);
+
+	switch (clk_id) {
+	case IMX_SSP_SYS_CLK:
+		if (dir == SND_SOC_CLOCK_OUT)
+			scr |= CCSR_SSI_SCR_SYS_CLK_EN;
+		else
+			scr &= ~CCSR_SSI_SCR_SYS_CLK_EN;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	write_ssi_mask(&ssi->scr, 0, scr);
 
 	return 0;
 }
@@ -552,6 +750,9 @@ static void fsl_ssi_shutdown(struct snd_pcm_substream *substream,
 static const struct snd_soc_dai_ops fsl_ssi_dai_ops = {
 	.startup	= fsl_ssi_startup,
 	.hw_params	= fsl_ssi_hw_params,
+	.set_fmt	= fsl_ssi_set_dai_fmt,
+	.set_clkdiv	= fsl_ssi_set_dai_clkdiv,
+	.set_sysclk	= fsl_ssi_set_dai_sysclk,
 	.shutdown	= fsl_ssi_shutdown,
 	.trigger	= fsl_ssi_trigger,
 };
@@ -657,13 +858,6 @@ static int __devinit fsl_ssi_probe(struct platform_device *pdev)
 	if (!of_device_is_available(np))
 		return -ENODEV;
 
-	/* We only support the SSI in "I2S Slave" mode */
-	sprop = of_get_property(np, "fsl,mode", NULL);
-	if (!sprop || strcmp(sprop, "i2s-slave")) {
-		dev_notice(&pdev->dev, "mode %s is unsupported\n", sprop);
-		return -ENODEV;
-	}
-
 	/* The DAI name is the last part of the full name of the node. */
 	p = strrchr(np->full_name, '/') + 1;
 	ssi_private = kzalloc(sizeof(struct fsl_ssi_private) + strlen(p),
@@ -679,6 +873,20 @@ static int __devinit fsl_ssi_probe(struct platform_device *pdev)
 	memcpy(&ssi_private->cpu_dai_drv, &fsl_ssi_dai_template,
 	       sizeof(fsl_ssi_dai_template));
 	ssi_private->cpu_dai_drv.name = ssi_private->name;
+
+	ssi_private->flags = 0;
+
+	/* We only support the SSI in "I2S Slave" mode */
+	sprop = of_get_property(np, "fsl,mode", NULL);
+	if (!sprop || strcmp(sprop, "i2s-slave")) {
+		dev_notice(&pdev->dev, "mode %s is unsupported\n", sprop);
+		goto error_kmalloc;
+	}
+	if (!strcmp(sprop, "i2s-slave"))
+		ssi_private->flags |= IMX_SSI_USE_I2S_SLAVE;
+
+	/* Use sync mode for default */
+	ssi_private->flags |= IMX_SSI_SYN;
 
 	/* Get the addresses and IRQ */
 	ret = of_address_to_resource(np, 0, &res);
