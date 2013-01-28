@@ -140,10 +140,6 @@ MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
 #endif
 #endif /* CONFIG_M5272 */
 
-#if (((RX_RING_SIZE + TX_RING_SIZE) * 8) > PAGE_SIZE)
-#error "FEC: descriptor ring size constants too large"
-#endif
-
 /* Interrupt events/masks. */
 #define FEC_ENET_HBERR	((uint)0x80000000)	/* Heartbeat error */
 #define FEC_ENET_BABR	((uint)0x40000000)	/* Babbling receiver */
@@ -1582,7 +1578,7 @@ static int fec_enet_init(struct net_device *ndev)
 	struct bufdesc *cbd_base;
 
 	/* Allocate memory for buffer descriptors. */
-	cbd_base = dma_alloc_coherent(NULL, PAGE_SIZE, &fep->bd_dma,
+	cbd_base = dma_alloc_coherent(NULL, PAGE_ALIGN(BUFDES_SIZE), &fep->bd_dma,
 			GFP_KERNEL);
 	if (!cbd_base) {
 		printk("FEC: allocate descriptor memory failed?\n");
