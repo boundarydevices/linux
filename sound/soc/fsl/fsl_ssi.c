@@ -942,13 +942,13 @@ static int __devinit fsl_ssi_probe(struct platform_device *pdev)
 		clk_prepare_enable(ssi_private->clk);
 
 		/*
-		 * We have burstsize be "fifo_depth - 2" to match the SSI
-		 * watermark setting in fsl_ssi_startup().
+		 * Burstsize would directly determin watermark of DMA.
+		 * Odd number might be okay in single fifo mode of SSI.
+		 * But it would cause driver getting weird in dual fifo mode.
+		 * 6 is well tested for stability in recent cases.
 		 */
-		ssi_private->dma_params_tx.burstsize =
-			ssi_private->fifo_depth - 2;
-		ssi_private->dma_params_rx.burstsize =
-			ssi_private->fifo_depth - 2;
+		ssi_private->dma_params_tx.burstsize = 6;
+		ssi_private->dma_params_rx.burstsize = 6;
 		ssi_private->dma_params_tx.dma_addr =
 			ssi_private->ssi_phys + offsetof(struct ccsr_ssi, stx0);
 		ssi_private->dma_params_rx.dma_addr =
