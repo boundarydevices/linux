@@ -567,6 +567,11 @@ fec_stop(struct net_device *ndev)
 		writel(2, fep->hwp + FEC_ECNTRL);
 		writel(rmii_mode, fep->hwp + FEC_R_CNTRL);
 	}
+
+	if (netif_running(ndev))
+		netif_stop_queue(ndev);
+	netif_carrier_off(ndev);     /* prevent tx timeout */
+	fep->link = 0;
 }
 
 
@@ -577,7 +582,12 @@ fec_timeout(struct net_device *ndev)
 
 	ndev->stats.tx_errors++;
 
+	netif_device_detach(ndev);
+	fec_stop(ndev);
+
 	fec_restart(ndev, fep->full_duplex);
+	netif_device_attach(ndev);
+	ndev->trans_start = jiffies; /* prevent tx timeout */
 	if (fep->link && !fep->tx_full)
 		netif_wake_queue(ndev);
 }
@@ -1402,7 +1412,6 @@ fec_enet_close(struct net_device *ndev)
 
 	/* Don't know what to do yet. */
 	fep->opened = 0;
-	netif_stop_queue(ndev);
 	napi_disable(&fep->napi);
 
 	fec_stop(ndev);
