@@ -1,0 +1,46 @@
+WM8962 audio CODEC
+
+This device supports I2C only.
+
+Required properties:
+
+  - compatible : "wlf,wm8962"
+
+  - reg : the I2C address of the device.
+
+  - clocks : MCLK for wm8962.
+
+  - XXXX-supply : power source for exact pin of wm8962.
+
+Optional properties:
+
+  - interrupts : The interrupt line the codec is connected to.
+
+  - gpio-cfg : A list of GPIO configuration register values. The list must
+    be 5 entries long. If absent, no configuration of these registers is
+    performed. If any entry has the value 0xffffffff, that GPIO's
+    configuration will not be modified.
+
+Example:
+
+codec: wm8962@1a {
+	compatible = "fsl,wm8962";
+	reg = <0x1a>;
+	clocks = <&clks 169>;
+	DCVDD-supply = <&vgen4_reg>;	/* 1.8v */
+	DBVDD-supply = <&vgen4_reg>;	/* 1.8v */
+	AVDD-supply = <&vgen4_reg>;		/* 1.8v */
+	CPVDD-supply = <&vgen4_reg>;	/* 1.8v */
+	MICVDD-supply = <&vgen6_reg>;	/* 3.3v */
+	PLLVDD-supply = <&vgen4_reg>;	/* 1.8v */
+	SPKVDD1-supply = <&reg_4p2v>;
+	SPKVDD2-supply = <&reg_4p2v>;
+	gpio-cfg = <
+		0x0000 /* 0:Default */
+		0x0000 /* 1:Default */
+		0x0013 /* 2:FN_DMICCLK */
+		0x0000 /* 3:Default */
+		0x8014 /* 4:FN_DMICCDAT */
+		0x0000 /* 5:Default */
+	>;
+};
