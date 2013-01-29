@@ -10,6 +10,7 @@
 #define __LINUX_USB_OTG_H
 
 #include <linux/notifier.h>
+#include <linux/usb.h>
 
 /* OTG defines lots of enumeration states before device reset */
 enum usb_otg_state {
@@ -117,6 +118,11 @@ struct usb_phy {
 	int	(*set_suspend)(struct usb_phy *x,
 				int suspend);
 
+	/* notify phy connect status change */
+	int	(*notify_connect)(struct usb_phy *x,
+			enum usb_device_speed speed);
+	int	(*notify_disconnect)(struct usb_phy *x,
+			enum usb_device_speed speed);
 };
 
 
@@ -260,6 +266,23 @@ otg_start_srp(struct usb_otg *otg)
 	return -ENOTSUPP;
 }
 
+static inline int
+usb_phy_notify_connect(struct usb_phy *x, enum usb_device_speed speed)
+{
+	if (x->notify_connect)
+		return x->notify_connect(x, speed);
+	else
+		return 0;
+}
+
+static inline int
+usb_phy_notify_disconnect(struct usb_phy *x, enum usb_device_speed speed)
+{
+	if (x->notify_disconnect)
+		return x->notify_disconnect(x, speed);
+	else
+		return 0;
+}
 /* notifiers */
 static inline int
 usb_register_notifier(struct usb_phy *x, struct notifier_block *nb)
