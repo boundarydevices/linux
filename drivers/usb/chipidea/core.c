@@ -561,6 +561,7 @@ static int __devinit ci_hdrc_probe(struct platform_device *pdev)
 	void __iomem	*base;
 	int		ret;
 	u32		otgsc;
+	enum usb_dr_mode dr_mode;
 
 	if (!dev->platform_data) {
 		dev_err(dev, "platform data missing\n");
@@ -614,14 +615,22 @@ static int __devinit ci_hdrc_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	/* initialize role(s) before the interrupt is requested */
-	ret = ci_hdrc_host_init(ci);
-	if (ret)
-		dev_info(dev, "doesn't support host\n");
+	dr_mode = ci->platdata->dr_mode;
+	if (dr_mode == USB_DR_MODE_UNKNOWN)
+		dr_mode = USB_DR_MODE_OTG;
 
-	ret = ci_hdrc_gadget_init(ci);
-	if (ret)
-		dev_info(dev, "doesn't support gadget, ret=%d\n", ret);
+	/* initialize role(s) before the interrupt is requested */
+	if (dr_mode == USB_DR_MODE_OTG || dr_mode == USB_DR_MODE_HOST) {
+		ret = ci_hdrc_host_init(ci);
+		if (ret)
+			dev_info(dev, "doesn't support host\n");
+	}
+
+	if (dr_mode == USB_DR_MODE_OTG || dr_mode == USB_DR_MODE_PERIPHERAL) {
+		ret = ci_hdrc_gadget_init(ci);
+		if (ret)
+			dev_info(dev, "doesn't support gadget, ret=%d\n", ret);
+	}
 
 	if (!ci->roles[CI_ROLE_HOST] && !ci->roles[CI_ROLE_GADGET]) {
 		dev_err(dev, "no supported roles\n");
