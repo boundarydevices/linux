@@ -478,12 +478,18 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 		snd_pcm_format_width(params_format(hw_params));
 	u32 wl = CCSR_SSI_SxCCR_WL(sample_size);
 	int enabled = read_ssi(&ssi->scr) & CCSR_SSI_SCR_SSIEN;
+	int tere = read_ssi(&ssi->scr) & (CCSR_SSI_SCR_TE | CCSR_SSI_SCR_RE);
 
 	/*
 	 * If we're in synchronous mode, and the SSI is already enabled,
 	 * then STCCR is already set properly.
+	 * But if tere is 0, which means SSI hasn't been shut down
+	 * while there's no TX and RX in progress, in that case,
+	 * we'll allow driver to write SxCCR to change the WL.
+	 * It's quite essential to simply play a batch of audio files
+	 * in different wordlengths.
 	 */
-	if (enabled && ssi_private->cpu_dai_drv.symmetric_rates)
+	if (enabled && ssi_private->cpu_dai_drv.symmetric_rates && tere != 0)
 		return 0;
 
 	/*
