@@ -128,7 +128,6 @@ static int set_cpu_freq(int freq)
 				return ret;
 			}
 		}
-		udelay(50);
 	}
 	if (freq > clk_get_rate(pll2_pfd2_396m)) {
 		/* enable pfd396m */
