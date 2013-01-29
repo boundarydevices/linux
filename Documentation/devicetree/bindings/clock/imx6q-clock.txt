@@ -206,6 +206,10 @@ clocks and IDs.
 	lvds1_out		191
 	usbphy1_gate		192
 	usbphy2_gate		193
+	cko1_cko2_sel		194
+	cko2_sel		195
+	cko2_podf		196
+	cko2			197
 
 Examples:
 
