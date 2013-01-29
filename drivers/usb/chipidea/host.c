@@ -116,17 +116,23 @@ static int host_start(struct ci13xxx *ci)
 	hcd->regs = ci->hw_bank.abs;
 	hcd->has_tt = 1;
 
-	hcd->power_budget = ci->udc_driver->power_budget;
+	hcd->power_budget = ci->platdata->power_budget;
+	hcd->phy = ci->transceiver;
 
 	ehci = hcd_to_ehci(hcd);
 	ehci->caps = ci->hw_bank.cap;
 	ehci->has_hostpc = ci->hw_bank.lpm;
 
 	ret = usb_add_hcd(hcd, 0, 0);
-	if (ret)
+	if (ret) {
 		usb_put_hcd(hcd);
-	else
+	} else {
 		ci->hcd = hcd;
+		if (ci->platdata->flags & CI13XXX_DISABLE_STREAMING)
+			hw_write(ci, OP_USBMODE, USBMODE_CI_SDIS,
+				USBMODE_CI_SDIS);
+	}
+
 
 	return ret;
 }
@@ -150,8 +156,10 @@ int ci_hdrc_host_init(struct ci13xxx *ci)
 	if (!rdrv)
 		return -ENOMEM;
 
+	rdrv->init	= host_start;
 	rdrv->start	= host_start;
 	rdrv->stop	= host_stop;
+	rdrv->destroy	= host_stop;
 	rdrv->irq	= host_irq;
 	rdrv->name	= "host";
 	ci->roles[CI_ROLE_HOST] = rdrv;
