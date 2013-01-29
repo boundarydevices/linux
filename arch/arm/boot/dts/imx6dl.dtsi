@@ -33,7 +33,12 @@
 
 	soc {
 		gpu@00130000 {
-			status = "disabled";
+			reg = <0x00130000 0x4000>, <0x00134000 0x4000>, <0x0 0x0>;
+			reg-names = "iobase_3d", "iobase_2d", "phys_baseaddr";
+			interrupts = <0 9 0x04>, <0 10 0x04>;
+			interrupt-names = "irq_3d", "irq_2d";
+			clocks = <&clks 143>, <&clks 27>, <&clks 121>, <&clks 122>, <&clks 0>;
+			clock-names = "gpu2d_axi_clk", "gpu3d_axi_clk", "gpu2d_clk", "gpu3d_clk", "gpu3d_shader_clk";
 		};
 
 		aips1: aips-bus@02000000 {
