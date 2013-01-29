@@ -20,6 +20,7 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <mach/common.h>
+#include <mach/hardware.h>
 #include "clk.h"
 
 #define CCGR0				0x68
@@ -360,7 +361,10 @@ int __init mx6q_clocks_init(void)
 	clk[esai]         = imx_clk_gate2("esai",          "esai_podf",         base + 0x6c, 16);
 	clk[gpt_ipg]      = imx_clk_gate2("gpt_ipg",       "ipg",               base + 0x6c, 20);
 	clk[gpt_ipg_per]  = imx_clk_gate2("gpt_ipg_per",   "ipg_per",           base + 0x6c, 22);
-	clk[gpu2d_core]   = imx_clk_gate2("gpu2d_core",    "gpu2d_core_podf",   base + 0x6c, 24);
+	if (cpu_is_imx6dl())
+		clk[gpu2d_core]   = imx_clk_gate2("gpu2d_core", "gpu3d_shader",     base + 0x6c, 24);
+	else if (cpu_is_imx6q())
+		clk[gpu2d_core]   = imx_clk_gate2("gpu2d_core", "gpu2d_core_podf",  base + 0x6c, 24);
 	clk[gpu3d_core]   = imx_clk_gate2("gpu3d_core",    "gpu3d_core_podf",   base + 0x6c, 26);
 	clk[hdmi_iahb]    = imx_clk_gate2("hdmi_iahb",     "ahb",               base + 0x70, 0);
 	clk[hdmi_isfr]    = imx_clk_gate2("hdmi_isfr",     "pll3_pfd1_540m",    base + 0x70, 4);
@@ -448,11 +452,25 @@ int __init mx6q_clocks_init(void)
 		pr_err("Failed to set PCIe parent clk.\n");
 
 	/* gpu clock initilazation */
+	/*
+	 * On mx6dl, 2d core clock sources(sel, podf) is from 3d
+	 * shader core clock, but 3d shader clock multiplexer of
+	 * mx6dl is different. For instance the equivalent of
+	 * pll2_pfd_594M on mx6q is pll2_pfd_528M on mx6dl.
+	 * Make a note here.
+	 */
 	clk_set_parent(clk[gpu3d_shader_sel], clk[pll2_pfd1_594m]);
-	clk_set_rate(clk[gpu3d_shader], 594000000);
-	clk_set_parent(clk[gpu3d_core_sel], clk[mmdc_ch0_axi]);
-	clk_set_rate(clk[gpu3d_core], 528000000);
-	clk_set_parent(clk[gpu2d_core_sel], clk[pll3_usb_otg]);
+	if (cpu_is_imx6dl()) {
+		clk_set_rate(clk[gpu2d_core], 528000000);
+		/* for mx6dl, change gpu3d_core parent to 594_PFD*/
+		clk_set_parent(clk[gpu3d_core_sel], clk[pll2_pfd1_594m]);
+		clk_set_rate(clk[gpu3d_core], 528000000);
+	} else if (cpu_is_imx6q()) {
+		clk_set_rate(clk[gpu3d_shader], 594000000);
+		clk_set_parent(clk[gpu3d_core_sel], clk[mmdc_ch0_axi]);
+		clk_set_rate(clk[gpu3d_core], 528000000);
+		clk_set_parent(clk[gpu2d_core_sel], clk[pll3_usb_otg]);
+	}
 
 	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 		clk_prepare_enable(clk[clks_init_on[i]]);
