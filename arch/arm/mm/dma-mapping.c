@@ -630,9 +630,13 @@ static void __free_from_contiguous(struct device *dev, struct page *page,
 
 static inline pgprot_t __get_dma_pgprot(struct dma_attrs *attrs, pgprot_t prot)
 {
-	prot = dma_get_attr(DMA_ATTR_WRITE_COMBINE, attrs) ?
-			    pgprot_writecombine(prot) :
-			    pgprot_dmacoherent(prot);
+	if (dma_get_attr(DMA_ATTR_WRITE_COMBINE, attrs))
+		prot = pgprot_writecombine(prot);
+	else if (dma_get_attr(DMA_ATTR_NON_CACHEABLE, attrs))
+		prot = pgprot_noncached(prot);
+	else
+		prot = pgprot_dmacoherent(prot);
+
 	return prot;
 }
 
