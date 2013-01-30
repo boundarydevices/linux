@@ -1,0 +1,20 @@
+Freescale i.MX audio complex with S/PDIF
+
+Required properties:
+- compatible : "fsl,imx-audio-spdif"
+- model : The user-visible name of this sound complex
+- spdif-controller : The phandle of the i.MX SPDIF controller
+
+- spdif-tx : switch for spdif playback. 1:enable, 0:disable
+- spdif-rx : switch for spdif capture. 1:enable, 0:disable
+
+Example:
+
+	sound-spdif {
+		compatible = "fsl,imx-audio-spdif",
+			     "fsl,imx-arm2-spdif";
+		model = "imx-arm2-spdif";
+		spdif-controller = <&spdif_dai>;
+		spdif-tx = <1>;		/* 1:enable, 0:disable */
+		spdif-rx = <1>;		/* 1:enable, 0:disable */
+	};
