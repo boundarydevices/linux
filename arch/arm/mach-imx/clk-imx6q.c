@@ -223,7 +223,7 @@ enum mx6q_clks {
 	pll4_audio, pll5_video, pll6_mlb, pll7_usb_host, pll8_enet, ssi1_ipg,
 	ssi2_ipg, ssi3_ipg, rom, usbphy1, usbphy2, ldb_di0_div_3_5, ldb_di1_div_3_5,
 	sata_ref, gpt_3m, pcie_ref, lvds1_sel, lvds1_in, lvds1_out, usbphy1_gate,
-	usbphy2_gate, cko1_cko2_sel, cko2_sel, cko2_podf, cko2, clk_max
+	usbphy2_gate, cko1_cko2_sel, cko2_sel, cko2_podf, cko2, spdif, clk_max
 };
 
 static struct clk *clk[clk_max];
@@ -473,6 +473,7 @@ int __init mx6q_clocks_init(void)
 	clk[sata]         = imx_clk_gate2("sata",          "ipg",               base + 0x7c, 4);
 	clk[sdma]         = imx_clk_gate2("sdma",          "ahb",               base + 0x7c, 6);
 	clk[spba]         = imx_clk_gate2("spba",          "ipg",               base + 0x7c, 12);
+	clk[spdif]        = imx_clk_gate2("spdif",         "spdif_podf",    	base + 0x7c, 14);
 	clk[ssi1_ipg]     = imx_clk_gate2("ssi1_ipg",      "ipg",               base + 0x7c, 18);
 	clk[ssi2_ipg]     = imx_clk_gate2("ssi2_ipg",      "ipg",               base + 0x7c, 20);
 	clk[ssi3_ipg]     = imx_clk_gate2("ssi3_ipg",      "ipg",               base + 0x7c, 22);
@@ -523,6 +524,9 @@ int __init mx6q_clocks_init(void)
 	 * So choose pll2_pfd2_396m as enfc_sel's parent.
 	 */
 	clk_set_parent(clk[enfc_sel], clk[pll2_pfd2_396m]);
+
+	/*Set parent clock for spdif_sel*/
+	clk_set_parent(clk[spdif_sel], clk[pll3_pfd3_454m]);
 
 	/* Set the parent clks of PCIe lvds1 and pcie_axi to be sata ref, axi */
 	if (clk_set_parent(clk[lvds1_sel], clk[sata_ref]))
