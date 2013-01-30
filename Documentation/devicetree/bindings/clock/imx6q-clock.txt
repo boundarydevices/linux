@@ -210,6 +210,7 @@ clocks and IDs.
 	cko2_sel		195
 	cko2_podf		196
 	cko2			197
+	spdif			198
 
 Examples:
 
