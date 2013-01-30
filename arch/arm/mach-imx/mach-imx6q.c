@@ -247,6 +247,47 @@ static int ksz9021rn_phy_fixup(struct phy_device *phydev)
 	return 0;
 }
 
+/* For imx6q arm2 & sabresd & sabreauto board:
+ * set AR803x RGMII output 125MHz clock
+ */
+static int ar803x_phy_fixup(struct phy_device *phydev)
+{
+	unsigned short val;
+
+	if (IS_BUILTIN(CONFIG_PHYLIB)) {
+		/* disable phy AR8031 SmartEEE function. */
+		phy_write(phydev, 0xd, 0x3);
+		phy_write(phydev, 0xe, 0x805d);
+		phy_write(phydev, 0xd, 0x4003);
+		val = phy_read(phydev, 0xe);
+		val &= ~(0x1 << 8);
+		phy_write(phydev, 0xe, val);
+
+		/* To enable AR8031 ouput a 125MHz clk from CLK_25M */
+		phy_write(phydev, 0xd, 0x7);
+		phy_write(phydev, 0xe, 0x8016);
+		phy_write(phydev, 0xd, 0x4007);
+		val = phy_read(phydev, 0xe);
+
+		val &= 0xffe3;
+		val |= 0x18;
+		phy_write(phydev, 0xe, val);
+
+		/* introduce tx clock delay */
+		phy_write(phydev, 0x1d, 0x5);
+		val = phy_read(phydev, 0x1e);
+		val |= 0x0100;
+		phy_write(phydev, 0x1e, val);
+
+		/*check phy power*/
+		val = phy_read(phydev, 0x0);
+		if (val & BMCR_PDOWN)
+			phy_write(phydev, 0x0, (val & ~BMCR_PDOWN));
+	}
+
+	return 0;
+}
+
 static void __init imx6q_sabrelite_cko1_setup(void)
 {
 	struct clk *cko1_sel, *ahb, *cko1;
@@ -313,6 +354,13 @@ static int __init imx6q_flexcan_fixup(void)
 	return 0;
 }
 
+static void __init imx6q_ar803x_phy_fixup(void)
+{
+	/* The phy layer fixup for AR8031 and AR8033 */
+	if (IS_BUILTIN(CONFIG_PHYLIB))
+		phy_register_fixup_for_id(PHY_ANY_ID, ar803x_phy_fixup);
+}
+
 static void __init imx6q_arm2_init(void)
 {
 	if (!sd30_en) {
@@ -321,6 +369,8 @@ static void __init imx6q_arm2_init(void)
 	} else {
 		imx6q_rm_flexcan1_en_pin();
 	}
+
+	imx6q_ar803x_phy_fixup();
 }
 
 static void __init imx6q_sabrelite_init(void)
@@ -329,6 +379,11 @@ static void __init imx6q_sabrelite_init(void)
 		phy_register_fixup_for_uid(PHY_ID_KSZ9021, MICREL_PHY_ID_MASK,
 				ksz9021rn_phy_fixup);
 	imx6q_sabrelite_cko1_setup();
+}
+
+static void __init imx6q_sabresd_init(void)
+{
+	imx6q_ar803x_phy_fixup();
 }
 
 static int __init early_enable_spdif(char *p)
@@ -751,7 +806,9 @@ static void __init imx6q_init_machine(void)
 
 	if (of_machine_is_compatible("fsl,imx6q-sabrelite"))
 		imx6q_sabrelite_init();
-	if (of_machine_is_compatible("fsl,imx6q-arm2"))
+	else if (of_machine_is_compatible("fsl,imx6q-sabresd"))
+		imx6q_sabresd_init();
+	else if (of_machine_is_compatible("fsl,imx6q-arm2"))
 		imx6q_arm2_init();
 
 	of_platform_populate(NULL, of_default_bus_match_table,
