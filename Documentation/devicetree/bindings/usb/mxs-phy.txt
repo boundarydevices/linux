@@ -1,0 +1,21 @@
+* Freescale MXS USB Phy Device
+
+Required properties:
+- compatible: Should be "fsl,imx23-usbphy"
+- reg: Should contain registers location and length
+- interrupts: Should contain phy interrupt
+- usbphy_reg_at_anatop: if there is any registers at anatop domain
+- usbphy_need_disconnect_line_feature: at some platforms (like i.mx6),
+if both phys power is off, the status of dp/dm will be uncertain.
+At that time, there will be unknown wakeup. With this flag, we can
+avoid this unknown wakeup interrupt
+
+
+Example:
+usbphy1: usbphy@020c9000 {
+	compatible = "fsl,imx6q-usbphy", "fsl,imx23-usbphy";
+	reg = <0x020c9000 0x1000>;
+	interrupts = <0 44 0x04>;
+	usbphy_reg_at_anatop;
+	usbphy_need_disconnect_line_feature;
+};
