@@ -643,16 +643,19 @@
 
 			usbphy1: usbphy@020c9000 {
 				compatible = "fsl,imx6q-usbphy", "fsl,imx23-usbphy";
-				reg = <0x020c9000 0x1000>;
+				reg = <0x020c9000 0x1000>, <0x020C8000 0x200>;
 				interrupts = <0 44 0x04>;
 				clocks = <&clks 182>;
+				usbphy_reg_at_anatop;
+				usbphy_need_disconnect_line_feature;
 			};
 
 			usbphy2: usbphy@020ca000 {
 				compatible = "fsl,imx6q-usbphy", "fsl,imx23-usbphy";
-				reg = <0x020ca000 0x1000>;
+				reg = <0x020ca000 0x1000>, <0x020C8000 0x200>;
 				interrupts = <0 45 0x04>;
 				clocks = <&clks 183>;
+				usbphy_reg_at_anatop;
 			};
 
 			snvs@020cc000 {
@@ -731,38 +734,49 @@
 				reg = <0x0217c000 0x4000>;
 			};
 
-			usb@02184000 { /* USB OTG */
+			usbotg: usb@02184000 {
 				compatible = "fsl,imx6q-usb", "fsl,imx27-usb";
 				reg = <0x02184000 0x200>;
 				interrupts = <0 43 0x04>;
 				clocks = <&clks 162>;
 				fsl,usbphy = <&usbphy1>;
+				fsl,usbmisc = <&usbmisc 0>;
 				status = "disabled";
 			};
 
-			usb@02184200 { /* USB1 */
+			usbh1: usb@02184200 {
 				compatible = "fsl,imx6q-usb", "fsl,imx27-usb";
 				reg = <0x02184200 0x200>;
 				interrupts = <0 40 0x04>;
 				clocks = <&clks 162>;
 				fsl,usbphy = <&usbphy2>;
+				fsl,usbmisc = <&usbmisc 1>;
 				status = "disabled";
 			};
 
-			usb@02184400 { /* USB2 */
+			usbh2: usb@02184400 {
 				compatible = "fsl,imx6q-usb", "fsl,imx27-usb";
 				reg = <0x02184400 0x200>;
 				interrupts = <0 41 0x04>;
 				clocks = <&clks 162>;
+				fsl,usbmisc = <&usbmisc 2>;
 				status = "disabled";
 			};
 
-			usb@02184600 { /* USB3 */
+			usbh3: usb@02184600 {
 				compatible = "fsl,imx6q-usb", "fsl,imx27-usb";
 				reg = <0x02184600 0x200>;
 				interrupts = <0 42 0x04>;
 				clocks = <&clks 162>;
+				fsl,usbmisc = <&usbmisc 3>;
 				status = "disabled";
+			};
+
+			usbmisc: usbmisc: usbmisc@02184800 {
+				#index-cells = <1>;
+				compatible = "fsl,imx6q-usbmisc";
+				reg = <0x02184800 0x200>;
+				clocks = <&clks 162>;
 			};
 
 			ethernet@02188000 {

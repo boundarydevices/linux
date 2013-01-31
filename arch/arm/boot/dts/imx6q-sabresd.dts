@@ -107,6 +107,18 @@
 		};
 
 		aips-bus@02100000 { /* AIPS2 */
+			usb@02184000 { /* USB OTG */
+				vbus-supply = <&reg_usb_otg_vbus>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_usbotg_2>;
+				disable-over-current;
+				status = "okay";
+			};
+
+			usb@02184200 { /* USB1 */
+				status = "okay";
+			};
+
 			ethernet@02188000 {
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_enet_1>;
@@ -327,6 +339,18 @@
 		enable-active-high;
 		enable-at-boot;
 		regulator-type = "voltage";
+	};
+
+	regulators {
+		compatible = "simple-bus";
+		reg_usb_otg_vbus: usb_otg_vbus {
+			compatible = "regulator-fixed";
+			regulator-name = "usb_otg_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio3 22 0>;
+			enable-active-high;
+		};
 	};
 
 	regulator-bypass {

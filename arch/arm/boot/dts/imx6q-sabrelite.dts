@@ -79,6 +79,10 @@
 		aips-bus@02100000 { /* AIPS2 */
 			usb@02184000 { /* USB OTG */
 				vbus-supply = <&reg_usb_otg_vbus>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_usbotg_1>;
+				disable-over-current;
+				otg_id_pin_select_change;
 				status = "okay";
 			};
 
