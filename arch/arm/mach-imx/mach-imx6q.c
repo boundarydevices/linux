@@ -498,6 +498,70 @@ static void __init imx6q_1588_init(void)
 	}
 }
 
+static void __init imx6q_spdif_pinfix(void)
+{
+	struct device_node *pinctrl_iomuxc;
+	struct property *pbase;
+	struct property *poldbase;
+	u32 *psize;
+	int i = 0, j = 0;
+
+	/* Cancel GPIO_16 for I2C3 SDA config */
+	imx6q_i2c3_sda_pindel();
+
+	/* Cancel GPIO_17 for IOMUX GPIO_7_12 config */
+	pinctrl_iomuxc = of_find_node_by_name(NULL, "hoggrp");
+	poldbase = of_find_property(pinctrl_iomuxc, "fsl,pins", NULL);
+	if (poldbase) {
+		pbase = kzalloc(sizeof(*pbase) + poldbase->length, GFP_KERNEL);
+		if (pbase == NULL)
+			return;
+		psize = (u32 *)(pbase + 1);
+		pbase->length = poldbase->length - 8;
+		pbase->name = kstrdup(poldbase->name, GFP_KERNEL);
+		if (!pbase->name) {
+			kfree(pbase);
+			return;
+		}
+
+		pbase->value = psize;
+		for (i = 0, j = 0; i < pbase->length; i += 4, j += 4) {
+			/* Cancel 1044 0x80000000 MX6Q_PAD_GPIO_17__GPIO_7_12 */
+			if (cpu_to_be32(1044) == *(u32 *)(poldbase->value + j)) {
+				i -= 4;
+				j += 4;
+				continue;
+			}
+			*(u32 *)(pbase->value + i) = *(u32 *)(poldbase->value + j);
+		}
+
+		prom_update_property(pinctrl_iomuxc, pbase, poldbase);
+	}
+}
+
+static void __init imx6q_spdif_pindel(void)
+{
+	struct device_node *np;
+	struct property *poldbase;
+
+	/* Remove SPDIF pinctrl-0 */
+	np = of_find_node_by_name(NULL, "spdif-dai");
+	if (!np)
+		return;
+
+	poldbase = of_find_property(np, "pinctrl-0", 0);
+	if (poldbase)
+		prom_remove_property(np, poldbase);
+}
+
+static void __init imx6q_spdif_init(void)
+{
+	if (spdif_en)
+		imx6q_spdif_pinfix();
+	else
+		imx6q_spdif_pindel();
+}
+
 static void __init imx6q_gpu_init(void)
 {
 	struct device_node *np;
@@ -823,6 +887,8 @@ static void __init imx6q_init_machine(void)
 	imx6q_1588_init();
 	if (IS_ENABLED(CONFIG_MXC_GPU_VIV))
 		imx6q_gpu_init();
+	if (IS_ENABLED(CONFIG_SND_SOC_FSL_SPDIF))
+		imx6q_spdif_init();
 }
 
 static void __init imx6q_init_late(void)
