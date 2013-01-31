@@ -329,24 +329,11 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 /* Init RX & TX buffer descriptors
  */
-static void fec_enet_bd_init(struct net_device *dev)
+static void fec_enet_txbd_init(struct net_device *dev)
 {
 	struct fec_enet_private *fep = netdev_priv(dev);
 	struct bufdesc *bdp;
 	int i;
-
-	/* Initialize the receive buffer descriptors. */
-	bdp = fep->rx_bd_base;
-	for (i = 0; i < RX_RING_SIZE; i++) {
-
-		/* Initialize the BD for every fragment in the page. */
-		bdp->cbd_sc = BD_ENET_RX_EMPTY;
-		bdp++;
-	}
-
-	/* Set the last buffer to wrap */
-	bdp--;
-	bdp->cbd_sc |= BD_SC_WRAP;
 
 	/* ...and the same for transmit */
 	bdp = fep->tx_bd_base;
@@ -410,7 +397,7 @@ fec_restart(struct net_device *ndev, int duplex)
 	writel((unsigned long)fep->bd_dma + sizeof(struct bufdesc) * RX_RING_SIZE,
 			fep->hwp + FEC_X_DES_START);
 	/* Reinit transmit descriptors */
-	fec_enet_bd_init(ndev);
+	fec_enet_txbd_init(ndev);
 
 	fep->dirty_tx = fep->cur_tx = fep->tx_bd_base;
 	fep->cur_rx = fep->rx_bd_base;
@@ -1582,6 +1569,8 @@ static int fec_enet_init(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	struct bufdesc *cbd_base;
+	struct bufdesc *bdp;
+	int i;
 
 	/* Allocate memory for buffer descriptors. */
 	cbd_base = dma_alloc_noncacheable(NULL, PAGE_ALIGN(BUFDES_SIZE),
@@ -1611,8 +1600,20 @@ static int fec_enet_init(struct net_device *ndev)
 	fec_enet_rx_int_enable(ndev, false);
 	netif_napi_add(ndev, &fep->napi, fec_enet_rx_poll, fep->napi_weight);
 
-	/* Init enet descriptors */
-	fec_enet_bd_init(ndev);
+	/* Initialize the receive buffer descriptors. */
+	bdp = fep->rx_bd_base;
+	for (i = 0; i < RX_RING_SIZE; i++) {
+		/* Initialize the BD for every fragment in the page. */
+		bdp->cbd_sc = 0;
+		bdp++;
+	}
+
+	/* Set the last buffer to wrap */
+	bdp--;
+	bdp->cbd_sc |= BD_SC_WRAP;
+
+	/* Init transmit descriptors */
+	fec_enet_txbd_init(ndev);
 
 	fec_restart(ndev, 0);
 
