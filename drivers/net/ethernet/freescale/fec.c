@@ -156,6 +156,11 @@ MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
 #define FEC_ENET_TS_TIMER       ((uint)0x00008000)
 
 #define FEC_DEFAULT_IMASK (FEC_ENET_TXF | FEC_ENET_RXF | FEC_ENET_MII)
+#ifdef CONFIG_FEC_PTP
+#define FEC_DEFAULT_IMASK
+(FEC_ENET_TXF | FEC_ENET_RXF | FEC_ENET_MII | FEC_ENET_TS_AVAIL | FEC_ENET_TS_TIMER)
+#endif
+#define FEC_RX_DISABLED_IMASK (FEC_DEFAULT_IMASK & (~FEC_ENET_RXF))
 
 /* The FEC stores dest/src/type, data, and checksum for receive packets.
  */
@@ -510,12 +515,8 @@ fec_restart(struct net_device *ndev, int duplex)
 
 #ifdef CONFIG_FEC_PTP
 	fec_ptp_start_cyclecounter(ndev);
-	/* Enable interrupts we wish to service */
-	writel(FEC_DEFAULT_IMASK | FEC_ENET_TS_AVAIL | FEC_ENET_TS_TIMER,
-		fep->hwp + FEC_IMASK);
-#else
-	writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
 #endif
+	writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
 }
 
 static void
@@ -574,20 +575,6 @@ fec_timeout(struct net_device *ndev)
 	ndev->trans_start = jiffies; /* prevent tx timeout */
 	if (fep->link && !fep->tx_full)
 		netif_wake_queue(ndev);
-}
-
-static void
-fec_enet_rx_int_enable(struct net_device *ndev, bool enabled)
-{
-	struct fec_enet_private *fep = netdev_priv(ndev);
-	uint    int_events;
-
-	int_events = readl(fep->hwp + FEC_IMASK);
-	if (enabled)
-		int_events |= FEC_ENET_RXF;
-	else
-		int_events &= ~FEC_ENET_RXF;
-	writel(int_events, fep->hwp + FEC_IMASK);
 }
 
 static void
@@ -822,10 +809,7 @@ rx_processing_done:
 
 	if (pkt_received < budget) {
 		napi_complete(napi);
-
-		spin_lock(&fep->hw_lock);
-		fec_enet_rx_int_enable(ndev, true);
-		spin_unlock(&fep->hw_lock);
+		writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
 	}
 
 	return pkt_received;
@@ -849,10 +833,8 @@ fec_enet_interrupt(int irq, void *dev_id)
 
 			/* Disable the RX interrupt */
 			if (napi_schedule_prep(&fep->napi)) {
-				spin_lock_irqsave(&fep->hw_lock, flags);
-				fec_enet_rx_int_enable(ndev, false);
-				spin_unlock_irqrestore(&fep->hw_lock, flags);
-
+				writel(FEC_RX_DISABLED_IMASK,
+					fep->hwp + FEC_IMASK);
 				__napi_schedule(&fep->napi);
 			}
 		}
@@ -1597,7 +1579,7 @@ static int fec_enet_init(struct net_device *ndev)
 	ndev->ethtool_ops = &fec_enet_ethtool_ops;
 
 	fep->napi_weight = FEC_NAPI_WEIGHT;
-	fec_enet_rx_int_enable(ndev, false);
+	writel(FEC_RX_DISABLED_IMASK, fep->hwp + FEC_IMASK);
 	netif_napi_add(ndev, &fep->napi, fec_enet_rx_poll, fep->napi_weight);
 
 	/* Initialize the receive buffer descriptors. */
