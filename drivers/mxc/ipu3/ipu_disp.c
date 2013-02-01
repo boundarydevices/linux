@@ -47,6 +47,16 @@ struct dp_csc_param_t {
 #define DC_DISP_ID_SERIAL	2
 #define DC_DISP_ID_ASYNC	3
 
+/* DC microcode address */
+#define DC_MCODE_BT656_START			101
+#define DC_MCODE_BT656_VSYNC_FF		141
+#define DC_MCODE_BT656_EOFIELD		167
+#define DC_MCODE_BT656_DATA_W		173
+#define DC_MCODE_BT656_NL				179
+
+#define BT656_IF_DI_MSB			23  /* For 8 bits BT656: 23 for DISP_DAT23 ~ DISP_DAT16; 7 for DISP_DAT7 ~ DISP_DAT0 */
+								      /* For 16 bits BT1120: 23 for DISP_DAT23 ~ DISP_DAT8; 15 for DISP_DAT15 ~ DISP_DAT0 */
+
 static inline struct ipu_soc *pixelclk2ipu(struct clk *clk)
 {
 	struct ipu_soc *ipu;
@@ -516,33 +526,76 @@ static void _ipu_dc_map_clear(struct ipu_soc *ipu, int map)
 
 static void _ipu_dc_write_tmpl(struct ipu_soc *ipu,
 			int word, u32 opcode, u32 operand, int map,
-			int wave, int glue, int sync, int stop)
+			int wave, int glue, int sync, int stop, int lf, int af)
 {
-	u32 reg;
+	u32 reg, opcmd;
 
-	if (opcode == WRG) {
-		reg = sync;
-		reg |= (glue << 4);
-		reg |= (++wave << 11);
-		reg |= ((operand & 0x1FFFF) << 15);
-		ipu_dc_tmpl_write(ipu, reg, word * 2);
+	switch(opcode) {
+		case WROD:
+			reg = sync;
+			reg |= (glue << 4);
+			reg |= (++wave << 11);
+			reg |= (++map << 15);
+			reg |= (operand << 20) & 0xFFF00000;
+			ipu_dc_tmpl_write(ipu, reg, word * 2);
+			
+			opcmd = 0x18 | (lf << 1);
+			reg = (operand >> 12);
+			reg |= opcmd << 4;
+			reg |= (stop << 9);
+			ipu_dc_tmpl_write(ipu, reg, word * 2 + 1);
+			break;
 
-		reg = (operand >> 17);
-		reg |= opcode << 7;
-		reg |= (stop << 9);
-		ipu_dc_tmpl_write(ipu, reg, word * 2 + 1);
-	} else {
-		reg = sync;
-		reg |= (glue << 4);
-		reg |= (++wave << 11);
-		reg |= (++map << 15);
-		reg |= (operand << 20) & 0xFFF00000;
-		ipu_dc_tmpl_write(ipu, reg, word * 2);
+		case WRG:
+			reg = sync;
+			reg |= (glue << 4);
+			reg |= (++wave << 11);
+			reg |= ((operand & 0x1FFFF) << 15);
+			ipu_dc_tmpl_write(ipu, reg, word * 2);
+			
+			opcmd = 0x01;
+			reg = (operand >> 17);
+			reg |= opcmd << 7;
+			reg |= (stop << 9);
+			ipu_dc_tmpl_write(ipu, reg, word * 2 + 1);
+			break;
 
-		reg = (operand >> 12);
-		reg |= opcode << 4;
-		reg |= (stop << 9);
-		ipu_dc_tmpl_write(ipu, reg, word * 2 + 1);
+		case HMA:
+			reg = (operand << 5);
+			ipu_dc_tmpl_write(ipu, reg, word * 2);
+
+			opcmd = 0x02;
+			reg = (opcmd << 5);
+			reg |= (stop << 9);
+			ipu_dc_tmpl_write(ipu, reg, word * 2 + 1);
+			break;
+
+		case HMA1:
+			reg = (operand << 5);
+			ipu_dc_tmpl_write(ipu, reg, word * 2);
+
+			opcmd = 0x01;
+			reg = (opcmd << 5);
+			reg |= (stop << 9);
+			ipu_dc_tmpl_write(ipu, reg, word * 2 + 1);
+			break;
+
+		case BMA:
+			reg = sync;
+			reg |= (operand << 5);
+			ipu_dc_tmpl_write(ipu, reg, word * 2);
+
+			opcmd = 0x03;
+			reg = (af << 3);
+			reg |= (lf << 4);
+			reg |= (opcmd << 5);
+			reg |= (stop << 9);
+			ipu_dc_tmpl_write(ipu, reg, word * 2 + 1);
+			break;
+
+		default:
+			dev_err(ipu->dev, "WARNING: unsupported opcode.\n");
+			break;
 	}
 }
 
@@ -642,6 +695,7 @@ void __ipu_dp_csc_setup(struct ipu_soc *ipu,
 		reg = ipu_dp_read(ipu, DP_COM_CONF(dp));
 		reg &= ~DP_COM_CONF_CSC_DEF_MASK;
 		reg |= dp_csc_param.mode;
+//		reg |= (1 << 11);  /* Y range 16-235, U/V range 16-240. */
 		ipu_dp_write(ipu, reg, DP_COM_CONF(dp));
 	}
 
@@ -787,9 +841,17 @@ void _ipu_dc_init(struct ipu_soc *ipu, int dc_chan, int di, bool interlaced, uin
 
 	if ((dc_chan == 1) || (dc_chan == 5)) {
 		if (interlaced) {
-			_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NL, 0, 3);
-			_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOL, 0, 2);
-			_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, 0, 1);
+			if((pixel_fmt == IPU_PIX_FMT_BT656) || (pixel_fmt == IPU_PIX_FMT_BT1120)) {
+				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NL, DC_MCODE_BT656_NL, 2);
+				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NF, DC_MCODE_BT656_VSYNC_FF, 5);
+				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOF, DC_MCODE_BT656_START, 4);
+				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOFIELD, DC_MCODE_BT656_EOFIELD, 3);
+				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, DC_MCODE_BT656_DATA_W, 0);
+			} else {
+				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NL, 0, 3);
+				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOL, 0, 2);
+				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, 0, 1);
+			}
 		} else {
 			if (di) {
 				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NL, 2, 3);
@@ -815,12 +877,37 @@ void _ipu_dc_init(struct ipu_soc *ipu, int dc_chan, int di, bool interlaced, uin
 				}
 			}
 		}
-		_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NF, 0, 0);
-		_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NFIELD, 0, 0);
-		_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOF, 0, 0);
-		_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOFIELD, 0, 0);
-		_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_CHAN, 0, 0);
-		_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_ADDR, 0, 0);
+
+		if((pixel_fmt == IPU_PIX_FMT_BT656) || (pixel_fmt == IPU_PIX_FMT_BT1120)) {
+			_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOL, 0, 0);
+			_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NFIELD, 0, 0);
+			_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_CHAN, 0, 0);
+			_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_ADDR, 0, 0);
+
+			// config DC_UGDEx_0 for DC event 0: new line, disable autorepeat, enable odd mode, set event 0 priority to 1
+			reg = (0x1 << 25) | (0x1 << 3);
+			reg |= (DC_MCODE_BT656_DATA_W << 16);
+			if(pixel_fmt == IPU_PIX_FMT_BT656)
+				reg |= ((DC_MCODE_BT656_DATA_W + 3) << 8);
+			else if(pixel_fmt == IPU_PIX_FMT_BT1120)
+				reg |= ((DC_MCODE_BT656_DATA_W + 1) << 8);
+
+			if(dc_chan == 1)
+				reg |= (0x1 << 0);
+			else if(dc_chan == 5)
+				reg |= (0x3 << 0);
+
+			ipu_dc_write(ipu, reg, DC_UGDE_0(DC_DISP_ID_SYNC(di)));
+			ipu_dc_write(ipu, 0, DC_UGDE_1(DC_DISP_ID_SYNC(di)));
+			ipu_dc_write(ipu, 0, DC_UGDE_2(DC_DISP_ID_SYNC(di)));
+		} else {
+			_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NF, 0, 0);
+			_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NFIELD, 0, 0);
+			_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOF, 0, 0);
+			_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOFIELD, 0, 0);
+			_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_CHAN, 0, 0);
+			_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_ADDR, 0, 0);
+		}
 
 		reg = 0x2;
 		reg |= DC_DISP_ID_SYNC(di) << DC_WR_CH_CONF_PROG_DISP_ID_OFFSET;
@@ -1060,6 +1147,31 @@ void _ipu_init_dc_mappings(struct ipu_soc *ipu)
 	_ipu_dc_map_config(ipu, 4, 1, 13, 0xFC);
 	_ipu_dc_map_config(ipu, 4, 2, 21, 0xFC);
 
+#ifdef BT656_IF_DI_MSB
+	/* IPU_PIX_FMT_VYUY 16bit width */
+	_ipu_dc_map_clear(ipu, 5);
+	_ipu_dc_map_config(ipu, 5, 0, BT656_IF_DI_MSB - 8, 0xFF);
+	_ipu_dc_map_config(ipu, 5, 1, 0, 0x0);
+	_ipu_dc_map_config(ipu, 5, 2, BT656_IF_DI_MSB, 0xFF);
+	_ipu_dc_map_clear(ipu, 6);
+	_ipu_dc_map_config(ipu, 6, 0, 0, 0x0);
+	_ipu_dc_map_config(ipu, 6, 1, BT656_IF_DI_MSB - 8, 0xFF);
+	_ipu_dc_map_config(ipu, 6, 2, BT656_IF_DI_MSB, 0xFF);
+
+	// IPU_PIX_FMT_UYVY 16bit width for BT1120
+	_ipu_dc_map_clear(ipu, 7);  //UY
+	_ipu_dc_map_link(ipu, 7, 6, 0, 6, 1, 6, 2);
+	_ipu_dc_map_clear(ipu, 8);  //VY
+	_ipu_dc_map_link(ipu, 8, 5, 0, 5, 1, 5, 2);
+
+	// IPU_PIX_FMT_UYVY 8bit width for BT656
+	_ipu_dc_map_clear(ipu, 9);  //U
+	_ipu_dc_map_link(ipu, 9, 6, 0, 6, 2, 6, 0);
+	_ipu_dc_map_clear(ipu, 10);  //Y
+	_ipu_dc_map_link(ipu, 10, 6, 0, 6, 0, 6, 2);
+	_ipu_dc_map_clear(ipu, 11);  //V
+	_ipu_dc_map_link(ipu, 11, 6, 2, 6, 0, 6, 0);
+#else
 	/* IPU_PIX_FMT_VYUY 16bit width */
 	_ipu_dc_map_clear(ipu, 5);
 	_ipu_dc_map_config(ipu, 5, 0, 7, 0xFF);
@@ -1087,6 +1199,7 @@ void _ipu_init_dc_mappings(struct ipu_soc *ipu)
 	_ipu_dc_map_link(ipu, 11, 5, 1, 5, 2, 5, 0);
 	_ipu_dc_map_clear(ipu, 12);
 	_ipu_dc_map_link(ipu, 12, 5, 2, 5, 1, 5, 0);
+#endif
 
 	/* IPU_PIX_FMT_GBR24 */
 	/* IPU_PIX_FMT_VYU444 */
@@ -1114,12 +1227,20 @@ int _ipu_pixfmt_to_map(uint32_t fmt)
 		return 4;
 	case IPU_PIX_FMT_VYUY:
 		return 6;
+#ifdef BT656_IF_DI_MSB
+	case IPU_PIX_FMT_UYVY:
+	case IPU_PIX_FMT_BT1120:
+		return 8;
+	case IPU_PIX_FMT_BT656:
+		return 11;
+#else
 	case IPU_PIX_FMT_UYVY:
 		return 8;
 	case IPU_PIX_FMT_YUYV:
 		return 10;
 	case IPU_PIX_FMT_YVYU:
 		return 12;
+#endif
 	case IPU_PIX_FMT_GBR24:
 	case IPU_PIX_FMT_VYU444:
 		return 13;
@@ -1159,6 +1280,580 @@ void _ipu_dp_set_csc_coefficients(struct ipu_soc *ipu, ipu_channel_t channel, in
 	dp_csc_param.mode = -1;
 	dp_csc_param.coeff = param;
 	__ipu_dp_csc_setup(ipu, dp, dp_csc_param, true);
+}
+
+static void _ipu_dc_setup_bt656_interlaced(struct ipu_soc *ipu, 
+			    int u_map, int y_map, int v_map, 
+			    bool is_bt1120, int di_msb, 
+			    uint32_t bt656_h_start_width,
+			    uint32_t bt656_v_start_width_field0, 
+			    uint32_t bt656_v_end_width_field0, 
+			    uint32_t bt656_v_start_width_field1, 
+			    uint32_t bt656_v_end_width_field1)
+{
+	uint32_t microcode_addr_FirstPart, microcode_addr_SecondPart;
+	uint32_t microcode_addr_EOFIELD, microcode_addr_DataW, microcode_addr_NL, microcode_addr_FirstPartSF;
+	uint32_t microcode_addr_SAV0, microcode_addr_SAV1, microcode_addr_SAVff;
+	uint32_t microcode_addr_BlankDone, microcode_addr_VsyncSyncFF, microcode_addr_VsyncSyncCont;
+	uint32_t loop_N_times, loop_BL0_times, loop_BL1_times, loop_BL2_times, loop_BL3_times;
+	uint32_t microcode_start_addr, microcode_addr;
+	uint32_t second_offset = 0x50, second_field;
+	uint32_t vsync_sync_cont = 0x30;
+
+	second_field = (vsync_sync_cont - 1 + second_offset);
+	microcode_addr = microcode_start_addr = DC_MCODE_BT656_START;
+
+	microcode_addr_FirstPart = microcode_start_addr + 0x1;
+	microcode_addr_SAV0 = microcode_start_addr + 0xB;
+	microcode_addr_SecondPart = microcode_start_addr + 0x13;
+	microcode_addr_SAV1 = microcode_start_addr + 0x20;
+	microcode_addr_VsyncSyncFF = microcode_start_addr + 0x28;  //DC_MCODE_BT656_VSYNC_FF
+	microcode_addr_VsyncSyncCont = microcode_start_addr + vsync_sync_cont;
+	microcode_addr_SAVff = microcode_start_addr + 0x3A;
+	microcode_addr_EOFIELD = microcode_start_addr + 0x48 - 6;  //DATA_W - 6, DC_MCODE_BT656_EOFIELD
+	microcode_addr_DataW = microcode_start_addr + 0x48;  //DC_MCODE_BT656_DATA_W
+	microcode_addr_NL = microcode_start_addr + 0x48 + 6;  //DATA_W + 6, DC_MCODE_BT656_NL
+	microcode_addr_FirstPartSF = microcode_start_addr + second_offset;
+	microcode_addr_BlankDone = microcode_start_addr + second_field - 0x2;
+	
+	if(is_bt1120)
+		loop_N_times = (bt656_h_start_width - 8) - 1;  //horizontal blanking
+	else
+		loop_N_times = (bt656_h_start_width - 8) / 2 - 1;  //horizontal blanking
+
+	loop_BL0_times = bt656_v_end_width_field1 - 1;  //vertical blanking type 0
+	loop_BL1_times = bt656_v_start_width_field0 - 1;  //vertical blanking type 1
+	loop_BL2_times = bt656_v_end_width_field0 - 1;  //vertical blanking type 2
+	loop_BL3_times = bt656_v_start_width_field1 - 1;  //vertical blanking type 3
+
+	if(is_bt1120)
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WROD, 0, v_map, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	else
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WROD, 0, y_map, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//First part
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA1, microcode_addr_SAV0, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait he, send eav_0[0]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xFF << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_HSYNC, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait he, send eav_0[1]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_0[2]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_0[3]  //Blanking aferr FIELD1 F=1 V=1 H=1 P3=0 P2=0 P1=0 P0=1 =>11110001 => 0xF1
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xF1 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 0 HEAD_LOOP_0
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA, microcode_addr + 1, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//HEAD_LOOP_0:
+	if(is_bt1120) {
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x1080 << (di_msb - 15)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	} else {
+		//wait ipp_clk, send 0x80
+		//First 8 bit word in blanking
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x80 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+		microcode_addr ++;
+
+		//wait ipp_clk, send 0x10
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x10 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	}
+	microcode_addr ++;
+
+	//LOOP:
+	//Jump Store jump address 0 N_TIMES //else jump Store jump address 1
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, loop_N_times, 0, 0, 0, 0, 0, 1, 1);
+
+	microcode_addr = microcode_addr_SAV0;
+
+	//Sav0:
+	//wait ipp clk, send sav_0[0]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xFF << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_0[1]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 1: First part
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA1, microcode_addr_FirstPart, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_0[2]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_0[3]  //Blanking aferr FIELD1 F=1 V=1 H=0 P3=1 P2=1 P1=0 P0=0 =>11101100 => 0xEC
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xEC << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 0 sencond part
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA, microcode_addr_SecondPart, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//Jump Store jump address 1 BL0_TIMES //else jump Store jump address 0
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, loop_BL0_times, 0, 0, 0, 0, 0, 0, 0);
+
+	microcode_addr = microcode_addr_SecondPart;
+
+	//Second part
+	//wait he, send eav_1[0]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xFF << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_HSYNC, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_1[1]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//store jump address0 Sav_1
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA, microcode_addr_SAV1, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_1[2]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_1[3]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xB6 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 1 HEAD_LOOP_1
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA1, microcode_addr + 1, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//HEAD_LOOP_1:
+	if(is_bt1120) {
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x1080 << (di_msb - 15)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	} else {
+		//wait ipp_clk, send 0x80
+		//First 8 bit word in blanking
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x80 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+		microcode_addr ++;
+
+		//wait ipp_clk, send 0x10
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x10 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	}
+	microcode_addr ++;
+
+	//LOOP:
+	//Jump Store jump address 1 N_TIMES //else jump Store jump address 1
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, loop_N_times, 0, 0, 0, 0, 0, 0, 0);
+
+	microcode_addr = microcode_addr_SAV1;
+
+	//Sav1:
+	//wait ipp clk, send sav_1[0]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xFF << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_1[1]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 0: Second part
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA, microcode_addr_SecondPart, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_1[2]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_1[3]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xAB << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 1 blank done
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA1, microcode_addr_BlankDone, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//Jump Store jump address 0 BL1_TIMES //else jump Store jump address 1
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, loop_BL1_times, 0, 0, 0, 0, 0, 1, 1);
+
+	//New vsync
+	microcode_addr = microcode_addr_VsyncSyncFF;
+
+	//if nf
+	//Start here, no blank
+	
+	//Store jump address 0 VSYNC_SYNC_CONT
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA, microcode_addr_VsyncSyncCont, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait for synchronization
+	//wait ve, send eav_FF[0]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xFF << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_AFIELD, 0, 0, 0);
+	microcode_addr ++;
+
+	//Jump Store jump address 0
+	// go to vsync_sync_cont
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, 0, 0, 0, 0, 0, 0, 0, 0);
+
+	microcode_addr = microcode_addr_VsyncSyncCont - 1;
+
+	//First field
+	//wait he, send eav_FF[0]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xFF << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_HSYNC, 0, 0, 0);
+	microcode_addr ++;
+
+	//vync_sync_cont:
+	//wait ipp clk, send eav_FF[1]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 0: sav_ff
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA, microcode_addr_SAVff, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_FF[2]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_FF[3]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x9D << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 1: Header_loop_ff
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA1, microcode_addr + 1, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//HEAD_LOOP_FF:
+	if(is_bt1120) {
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x1080 << (di_msb - 15)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	} else {
+		//wait ipp_clk, send 0x80
+		//First 8 bit word in blanking
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x80 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+		microcode_addr ++;
+
+		//wait ipp_clk, send 0x10
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x10 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	}
+	microcode_addr ++;
+
+	//LOOP:
+	//Jump Store jump address 1 N_TIMES //else jump Store jump address 0
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, loop_N_times, 0, 0, 0, 0, 0, 0, 0);
+
+	microcode_addr = microcode_addr_SAVff;
+
+	//Savff:
+	//wait ipp clk, send sav_ff[0]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xFF << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_ff[1]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 1: data_w
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA1, microcode_addr_DataW, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_ff[2]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_ff[3]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x80 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 1 blank done
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA, microcode_addr_VsyncSyncCont - 1, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//Jump Store jump address 0 data_w
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, 0, 0, 0, 0, 0, 0, 1, 1);
+
+	//share routine
+	//EOField: last data of first field if not NF
+	microcode_addr = microcode_addr_EOFIELD;
+
+	if(is_bt1120)
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WROD, 0, v_map, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	else
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WROD, 0, y_map, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 1 FIRST_PART_SF
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA1, microcode_addr_FirstPartSF, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//Jump Store jump address 0 FIRST_PART_SF
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, 0, 0, 0, 0, 0, 0, 1, 1);
+
+	//regular data sending
+	microcode_addr = microcode_addr_DataW;
+
+	if(is_bt1120) {
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WROD, 0, u_map, 0, 0, DI_BT656_SYNC_BASECLK, 1, 0, 0);
+		microcode_addr ++;
+
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WROD, 0, v_map, 0, 0, DI_BT656_SYNC_BASECLK, 1, 0, 0);
+	} else {
+		//wait ipp clk, send data[0]
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WROD, 0, u_map, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+		microcode_addr ++;
+
+		//wait ipp clk, send data[1]
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WROD, 0, y_map, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+		microcode_addr ++;
+
+		//wait ipp clk, send data[2]
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WROD, 0, v_map, 0, 0, DI_BT656_SYNC_BASECLK, 1, 0, 0);
+		microcode_addr ++;
+
+		//wait ipp clk, send data[3]
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WROD, 0, y_map, 0, 0, DI_BT656_SYNC_BASECLK, 1, 0, 0);
+	}
+
+	microcode_addr = microcode_addr_NL;
+	//N_L: new line with data if not NF
+
+	//Jump Store jump address 0 //go to FIRST_FIELD/SECOND_FIELD
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, 0, 0, 0, 0, 0, 0, 0, 0);
+
+	///////////////////////////////////////
+	//				   Second field
+	///////////////////////////////////////
+	microcode_addr = microcode_start_addr + second_offset; // microcode_addr_FirstPartSF
+
+	//First part
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA1, microcode_addr_SAV0 + second_offset, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait he, send eav_0[0]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xFF << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_HSYNC, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_0[1]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_0[2]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_0[3]  //Blanking aferr FIELD0 F=0 V=1 H=1 P3=0 P2=1 P1=1 P0=0 =>10110110 => 0xB6
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xB6 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 0 HEAD_LOOP_0
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA, microcode_addr + 1, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//HEAD_LOOP_0:
+	if(is_bt1120) {
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x1080 << (di_msb - 15)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	} else {
+		//wait ipp_clk, send 0x80
+		//First 8 bit word in blanking
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x80 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+		microcode_addr ++;
+
+		//wait ipp_clk, send 0x10
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x10 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	}
+	microcode_addr ++;
+
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, loop_N_times, 0, 0, 0, 0, 0, 1, 1);
+
+	microcode_addr = microcode_addr_SAV0 + second_offset;
+
+	//Sav0:
+	//wait ipp clk, send sav_0[0]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xFF << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_0[1]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 1: First part
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA1, microcode_addr_FirstPartSF, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_0[2]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_0[3]  //Blanking aferr FIELD0 F=0 V=1 H=0 P3=1 P2=0 P1=1 P0=1 =>10101011 => 0xAB
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xAB << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 0 sencond part
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA, microcode_addr_SecondPart + second_offset, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//Jump Store jump address 1 BL0_TIMES //else jump Store jump address 0
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, loop_BL2_times, 0, 0, 0, 0, 0, 0, 0);
+
+	microcode_addr = microcode_addr_SecondPart + second_offset;
+
+	//Second part
+	//wait he, send eav_1[0]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xFF << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_HSYNC, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_1[1]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//store jump address0 Sav_1
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA, microcode_addr_SAV1 + second_offset, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_1[2]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_1[3]  //Blanking before field1 F=1 V=1 H=1 P3=0 P2=0 P1=0 P0=1 =>11110001=>0XF1
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xF1 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 1 HEAD_LOOP_1
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA1, microcode_addr + 1, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//HEAD_LOOP_1:
+	if(is_bt1120) {
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x1080 << (di_msb - 15)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	} else {
+		//wait ipp_clk, send 0x80
+		//First 8 bit word in blanking
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x80 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+		microcode_addr ++;
+
+		//wait ipp_clk, send 0x10
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x10 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	}
+	microcode_addr ++;
+
+	//LOOP:
+	//Jump Store jump address 1 N_TIMES //else jump Store jump address 1
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, loop_N_times, 0, 0, 0, 0, 0, 0, 0);
+
+	microcode_addr = microcode_addr_SAV1 + second_offset;
+
+	//Sav1:
+	//wait ipp clk, send sav_1[0]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xFF << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_1[1]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 0: Second part
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA, microcode_addr_SecondPart + second_offset, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_1[2]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_1[3]  //Blanking before field1 F=1 V=1 H=0 P3=1 P2=1 P1=0 P0=0 =>11101100=>0XEC
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xEC << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 1 blank done
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA1, microcode_addr_BlankDone, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//Jump Store jump address 0 BL1_TIMES //else jump Store jump address 1
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, loop_BL3_times, 0, 0, 0, 0, 0, 1, 1);
+
+	microcode_addr = microcode_addr_BlankDone;
+
+	//Store jump address 0 second field
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA, microcode_addr_BlankDone + 2, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	// Stop
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 1, 0, 0);
+	microcode_addr ++;
+
+	//SECOND FIELD microcode_addr_BlankDone+2
+	//wait he, send eav_FF[0]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xFF << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_HSYNC, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_FF[1]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 0: sav_ff
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA, microcode_addr_SAVff + second_offset, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_FF[2]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send eav_FF[3]	//H Blanking in field1 F=1, V=0, H=1, P3=1,P2=0, P1=0, P0=1=>11011010=>0xda
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xDA << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 1: Header_loop_ff
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA1, microcode_addr + 1, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//HEAD_LOOP_FF:
+	if(is_bt1120) {
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x1080 << (di_msb - 15)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	} else {
+		//wait ipp_clk, send 0x80
+		//First 8 bit word in blanking
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x80 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+		microcode_addr ++;
+
+		//wait ipp_clk, send 0x10
+		_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0x10 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	}
+	microcode_addr ++;
+
+	//LOOP:
+	//Jump Store jump address 1 N_TIMES //else jump Store jump address 0
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, loop_N_times, 0, 0, 0, 0, 0, 0, 0);
+
+	microcode_addr = microcode_addr_SAVff + second_offset;
+
+	//Savff:
+	//wait ipp clk, send sav_ff[0]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xFF << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_ff[1]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 1: data_w
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA1, microcode_addr_DataW, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_ff[2]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, 0x00, 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//wait ipp clk, send sav_ff[3]
+	_ipu_dc_write_tmpl(ipu, microcode_addr, WRG, (0xC7 << (di_msb - 7)), 0, 0, 0, DI_BT656_SYNC_BASECLK, 0, 0, 0);
+	microcode_addr ++;
+
+	//Store jump address 0 second field
+	_ipu_dc_write_tmpl(ipu, microcode_addr, HMA, microcode_addr_BlankDone + 2, 0, 0, 0, 0, 0, 0, 0);
+	microcode_addr ++;
+
+	//Jump Store jump address 1
+	_ipu_dc_write_tmpl(ipu, microcode_addr, BMA, 0, 0, 0, 0, 0, 0, 1, 1);
 }
 
 void ipu_set_csc_coefficients(struct ipu_soc *ipu, ipu_channel_t channel, int32_t param[][3])
@@ -1242,15 +1937,36 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 	uint32_t h_total, v_total;
 	int map;
 	struct clk *di_parent;
+	uint32_t bt656_h_start_width;
+	uint32_t bt656_v_start_width_field0 = 0, bt656_v_end_width_field0 = 0;
+	uint32_t bt656_v_start_width_field1 = 0, bt656_v_end_width_field1 = 0;
+	int u_map = 0, y_map = 0, v_map = 0;
 
 	dev_dbg(ipu->dev, "panel size = %d x %d\n", width, height);
 
 	if ((v_sync_width == 0) || (h_sync_width == 0))
 		return EINVAL;
 
-	adapt_panel_to_ipu_restricitions(ipu, &v_start_width, &v_sync_width, &v_end_width);
-	h_total = width + h_sync_width + h_start_width + h_end_width;
-	v_total = height + v_sync_width + v_start_width + v_end_width;
+	if((pixel_fmt == IPU_PIX_FMT_BT656) || (pixel_fmt == IPU_PIX_FMT_BT1120)) {
+		bt656_h_start_width = h_sync_width;
+		bt656_v_start_width_field0 = h_start_width;
+		bt656_v_end_width_field0 = h_end_width;
+		bt656_v_start_width_field1 =v_start_width ;
+		bt656_v_end_width_field1 = v_end_width;
+
+		v_total = height + bt656_v_start_width_field0 + bt656_v_end_width_field0 + bt656_v_start_width_field1 + bt656_v_end_width_field1;
+		if(pixel_fmt == IPU_PIX_FMT_BT656) {
+			/* BT656 */
+			h_total = bt656_h_start_width + width * 2;
+		} else {
+			/* BT1120 */
+			h_total = bt656_h_start_width + width;
+		}
+	} else {
+		adapt_panel_to_ipu_restricitions(ipu, &v_start_width, &v_sync_width, &v_end_width);
+		h_total = width + h_sync_width + h_start_width + h_end_width;
+		v_total = height + v_sync_width + v_start_width + v_end_width;
+	}
 
 	/* Init clocking */
 	dev_dbg(ipu->dev, "pixel clk = %d\n", pixel_clk);
@@ -1271,9 +1987,10 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 		 * we will only use 1/2 fraction for ipu clk,
 		 * so if the clk rate is not fit, try ext clk.
 		 */
-		if (!sig.int_clk &&
+		if ((!sig.int_clk &&
 			((rounded_pixel_clk >= pixel_clk + pixel_clk/200) ||
-			(rounded_pixel_clk <= pixel_clk - pixel_clk/200))) {
+			(rounded_pixel_clk <= pixel_clk - pixel_clk/200))) || 
+			(pixel_fmt == IPU_PIX_FMT_BT656) || (pixel_fmt == IPU_PIX_FMT_BT1120)) {
 			dev_dbg(ipu->dev, "try ipu ext di clk\n");
 			rounded_pixel_clk = pixel_clk * 2;
 			rounded_parent_clk = clk_round_rate(di_parent,
@@ -1313,6 +2030,17 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 		mutex_unlock(&ipu->mutex_lock);
 		return -EINVAL;
 	}
+	
+	if(pixel_fmt == IPU_PIX_FMT_BT656) {
+		u_map = map - 2;
+		y_map = map - 1;
+		v_map = map;
+		h_total = bt656_h_start_width + width * 2;
+	} else if(pixel_fmt == IPU_PIX_FMT_BT1120) {
+		u_map = map - 1;
+		v_map = map;
+		h_total = bt656_h_start_width + width;
+	}
 
 	/*clear DI*/
 	di_gen = ipu_di_read(ipu, disp, DI_GENERAL);
@@ -1321,172 +2049,289 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 
 	if (sig.interlaced) {
 		if (g_ipu_hw_rev >= 2) {
-			/* Setup internal HSYNC waveform */
-			_ipu_di_sync_config(ipu,
-					disp, 		/* display */
-					1, 		/* counter */
-					h_total/2 - 1, 	/* run count */
-					DI_SYNC_CLK,	/* run_resolution */
-					0, 		/* offset */
-					DI_SYNC_NONE, 	/* offset resolution */
-					0, 		/* repeat count */
-					DI_SYNC_NONE, 	/* CNT_CLR_SEL */
-					0, 		/* CNT_POLARITY_GEN_EN */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
-					0, 		/* COUNT UP */
-					0		/* COUNT DOWN */
-					);
+			if((pixel_fmt == IPU_PIX_FMT_BT656) || (pixel_fmt == IPU_PIX_FMT_BT1120)) {
+				/* COUNTER_1: basic clock */
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						DI_BT656_SYNC_BASECLK, 		/* counter */
+						0, 	/* run count */
+						DI_SYNC_CLK,	/* run_resolution */
+						0, 		/* offset */
+						DI_SYNC_NONE, 	/* offset resolution */
+						0, 		/* repeat count */
+						DI_SYNC_NONE, 	/* CNT_CLR_SEL */
+						0, 		/* CNT_POLARITY_GEN_EN */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
+						0, 		/* COUNT UP */
+						0		/* COUNT DOWN */
+						);
 
-			/* Field 1 VSYNC waveform */
-			_ipu_di_sync_config(ipu,
-					disp, 		/* display */
-					2, 		/* counter */
-					h_total - 1, 	/* run count */
-					DI_SYNC_CLK,	/* run_resolution */
-					0, 		/* offset */
-					DI_SYNC_NONE, 	/* offset resolution */
-					0, 		/* repeat count */
-					DI_SYNC_NONE, 	/* CNT_CLR_SEL */
-					0, 		/* CNT_POLARITY_GEN_EN */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
-					0, 		/* COUNT UP */
-					2*div		/* COUNT DOWN */
-					);
+				/* COUNTER_2: HSYNC for each line */
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						DI_BT656_SYNC_HSYNC, 		/* counter */
+						h_total - 1, 	/* run count */
+						DI_SYNC_CLK,	/* run_resolution */
+						0, 		/* offset */
+						DI_SYNC_NONE, 	/* offset resolution */
+						0, 		/* repeat count */
+						DI_SYNC_NONE, 	/* CNT_CLR_SEL */
+						0, 		/* CNT_POLARITY_GEN_EN */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
+						0, 		/* COUNT UP */
+						2*div		/* COUNT DOWN */
+						);
 
-			/* Setup internal HSYNC waveform */
-			_ipu_di_sync_config(ipu,
-					disp, 		/* display */
-					3, 		/* counter */
-					v_total*2 - 1, 	/* run count */
-					DI_SYNC_INT_HSYNC,	/* run_resolution */
-					1, 			/* offset */
-					DI_SYNC_INT_HSYNC, 	/* offset resolution */
-					0, 		/* repeat count */
-					DI_SYNC_NONE, 	/* CNT_CLR_SEL */
-					0, 		/* CNT_POLARITY_GEN_EN */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
-					0, 		/* COUNT UP */
-					2*div		/* COUNT DOWN */
-					);
+				/* COUNTER_3: internal VSYNC for each frame */
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						DI_BT656_SYNC_IVSYNC, 		/* counter */
+						v_total - 1, 	/* run count */
+						DI_BT656_SYNC_HSYNC,	/* run_resolution */
+						0, 			/* offset */
+						DI_SYNC_NONE, 	/* offset resolution */
+						0, 		/* repeat count */
+						DI_SYNC_NONE, 	/* CNT_CLR_SEL */
+						0, 		/* CNT_POLARITY_GEN_EN */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
+						0, 		/* COUNT UP */
+						0		/* COUNT DOWN */
+						);
 
-			/* Active Field ? */
-			_ipu_di_sync_config(ipu,
-					disp, 		/* display */
-					4, 		/* counter */
-					v_total/2 - 1, 	/* run count */
-					DI_SYNC_HSYNC,	/* run_resolution */
-					v_start_width, 	/*  offset */
-					DI_SYNC_HSYNC, 	/* offset resolution */
-					2, 		/* repeat count */
-					DI_SYNC_VSYNC, 	/* CNT_CLR_SEL */
-					0, 		/* CNT_POLARITY_GEN_EN */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
-					0, 		/* COUNT UP */
-					0		/* COUNT DOWN */
-					);
+				vsync_cnt = DI_BT656_SYNC_VSYNC;
 
-			/* Active Line */
-			_ipu_di_sync_config(ipu,
-					disp, 		/* display */
-					5, 		/* counter */
-					0, 		/* run count */
-					DI_SYNC_HSYNC,	/* run_resolution */
-					0, 		/*  offset */
-					DI_SYNC_NONE, 	/* offset resolution */
-					height/2, 	/* repeat count */
-					4, 		/* CNT_CLR_SEL */
-					0, 		/* CNT_POLARITY_GEN_EN */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
-					0, 		/* COUNT UP */
-					0		/* COUNT DOWN */
-					);
+				/* COUNTER_4: VSYNC for field1 only */
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						DI_BT656_SYNC_VSYNC, 		/* counter */
+						0, 	/* run count */
+						DI_BT656_SYNC_HSYNC,	/* run_resolution */
+						bt656_v_start_width_field0 + height / 2 + bt656_v_end_width_field0, 	/*  offset */
+						DI_BT656_SYNC_HSYNC, 	/* offset resolution */
+						1, 		/* repeat count */
+						DI_BT656_SYNC_IVSYNC, 	/* CNT_CLR_SEL */
+						0, 		/* CNT_POLARITY_GEN_EN */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
+						0, 		/* COUNT UP */
+						2*div		/* COUNT DOWN */
+						);
 
-			/* Field 0 VSYNC waveform */
-			_ipu_di_sync_config(ipu,
-					disp, 		/* display */
-					6, 		/* counter */
-					v_total - 1, 	/* run count */
-					DI_SYNC_HSYNC,	/* run_resolution */
-					0, 		/* offset */
-					DI_SYNC_NONE, 	/* offset resolution */
-					0, 		/* repeat count */
-					DI_SYNC_NONE, 	/* CNT_CLR_SEL  */
-					0, 		/* CNT_POLARITY_GEN_EN */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
-					0, 		/* COUNT UP */
-					0		/* COUNT DOWN */
-					);
+				/* COUNTER_5: first active line for field0 */
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						DI_BT656_SYNC_AFIELD, 		/* counter */
+						0, 		/* run count */
+						DI_BT656_SYNC_HSYNC,	/* run_resolution */
+						bt656_v_start_width_field0 + height / 2 + bt656_v_end_width_field0 + 2, 		/*  offset */
+						DI_BT656_SYNC_HSYNC, 	/* offset resolution */
+						1, 	/* repeat count */
+						DI_BT656_SYNC_IVSYNC, 		/* CNT_CLR_SEL */
+						0, 		/* CNT_POLARITY_GEN_EN */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
+						0, 		/* COUNT UP */
+						0		/* COUNT DOWN */
+						);
 
-			/* DC VSYNC waveform */
-			vsync_cnt = 7;
-			_ipu_di_sync_config(ipu,
-					disp, 		/* display */
-					7, 		/* counter */
-					v_total/2 - 1, 	/* run count */
-					DI_SYNC_HSYNC,	/* run_resolution  */
-					9, 		/* offset  */
-					DI_SYNC_HSYNC, 	/* offset resolution */
-					2, 		/* repeat count */
-					DI_SYNC_VSYNC, 	/* CNT_CLR_SEL */
-					0, 		/* CNT_POLARITY_GEN_EN */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
-					0, 		/* COUNT UP */
-					0		/* COUNT DOWN */
-					);
+				/* COUNTER_9: VSYNC for field0 only */
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						DI_BT656_SYNC_NVSYNC, 		/* counter */
+						0, 	/* run count */
+						DI_BT656_SYNC_HSYNC - 1,	/* run_resolution, the counter#9 setting is different with others , no necessary to +1! */
+						0, 		/* offset  */
+						DI_SYNC_NONE, 	/* offset resolution  */
+						1, 		/* repeat count */
+						DI_BT656_SYNC_IVSYNC - 1, 	/* CNT_CLR_SEL, the counter#9 setting is different with others , no necessary to +1! */
+						0, 		/* CNT_POLARITY_GEN_EN  */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL  */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
+						0, 		/* COUNT UP */
+						2*div		/* COUNT DOWN */
+						);
 
-			/* active pixel waveform */
-			_ipu_di_sync_config(ipu,
-					disp, 		/* display */
-					8, 		/* counter */
-					0, 		/* run count  */
-					DI_SYNC_CLK,	/* run_resolution */
-					h_start_width, 	/* offset  */
-					DI_SYNC_CLK, 	/* offset resolution */
-					width, 		/* repeat count  */
-					5, 		/* CNT_CLR_SEL  */
-					0, 		/* CNT_POLARITY_GEN_EN  */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL  */
-					0, 		/* COUNT UP  */
-					0		/* COUNT DOWN */
-					);
+				/* set gentime select and tag sel */
+				reg = ipu_di_read(ipu, disp, DI_SW_GEN1(9));
+				reg &= 0x1FFFFFFF;
+				reg |= (DI_BT656_SYNC_VSYNC - 1) << 29;
+				ipu_di_write(ipu, disp, reg, DI_SW_GEN1(9));
 
-			/* Second VSYNC */
-			_ipu_di_sync_config(ipu,
-					disp, 		/* display */
-					9, 		/* counter */
-					v_total - 1, 	/* run count */
-					DI_SYNC_INT_HSYNC,	/* run_resolution */
-					v_total/2, 		/* offset  */
-					DI_SYNC_INT_HSYNC, 	/* offset resolution  */
-					0, 		/* repeat count */
-					DI_SYNC_HSYNC, 	/* CNT_CLR_SEL */
-					0, 		/* CNT_POLARITY_GEN_EN  */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL  */
-					DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
-					0, 		/* COUNT UP */
-					2*div		/* COUNT DOWN */
-					);
+				ipu_di_write(ipu, disp, height / 2 + bt656_v_start_width_field0 + bt656_v_end_width_field0 - 1, DI_SCR_CONF);
 
-			/* set gentime select and tag sel */
-			reg = ipu_di_read(ipu, disp, DI_SW_GEN1(9));
-			reg &= 0x1FFFFFFF;
-			reg |= (3-1)<<29 | 0x00008000;
-			ipu_di_write(ipu, disp, reg, DI_SW_GEN1(9));
+				/* set y_sel = DI_BT656_SYNC_HSYNC - 1 */
+				di_gen |= ((DI_BT656_SYNC_HSYNC - 1) << 28);
+			} else {
+				/* Setup internal HSYNC waveform */
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						1, 		/* counter */
+						h_total/2 - 1, 	/* run count */
+						DI_SYNC_CLK,	/* run_resolution */
+						0, 		/* offset */
+						DI_SYNC_NONE, 	/* offset resolution */
+						0, 		/* repeat count */
+						DI_SYNC_NONE, 	/* CNT_CLR_SEL */
+						0, 		/* CNT_POLARITY_GEN_EN */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
+						0, 		/* COUNT UP */
+						0		/* COUNT DOWN */
+						);
 
-			ipu_di_write(ipu, disp, v_total / 2 - 1, DI_SCR_CONF);
+				/* Field 1 VSYNC waveform */
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						2, 		/* counter */
+						h_total - 1, 	/* run count */
+						DI_SYNC_CLK,	/* run_resolution */
+						0, 		/* offset */
+						DI_SYNC_NONE, 	/* offset resolution */
+						0, 		/* repeat count */
+						DI_SYNC_NONE, 	/* CNT_CLR_SEL */
+						0, 		/* CNT_POLARITY_GEN_EN */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
+						0, 		/* COUNT UP */
+						2*div		/* COUNT DOWN */
+						);
 
-			/* set y_sel = 1 */
-			di_gen |= 0x10000000;
-			di_gen |= DI_GEN_POLARITY_5;
-			di_gen |= DI_GEN_POLARITY_8;
+				/* Setup internal HSYNC waveform */
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						3, 		/* counter */
+						v_total*2 - 1, 	/* run count */
+						DI_SYNC_INT_HSYNC,	/* run_resolution */
+						1, 			/* offset */
+						DI_SYNC_INT_HSYNC, 	/* offset resolution */
+						0, 		/* repeat count */
+						DI_SYNC_NONE, 	/* CNT_CLR_SEL */
+						0, 		/* CNT_POLARITY_GEN_EN */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
+						0, 		/* COUNT UP */
+						2*div		/* COUNT DOWN */
+						);
+
+				/* Active Field ? */
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						4, 		/* counter */
+						v_total/2 - 1, 	/* run count */
+						DI_SYNC_HSYNC,	/* run_resolution */
+						v_start_width, 	/*  offset */
+						DI_SYNC_HSYNC, 	/* offset resolution */
+						2, 		/* repeat count */
+						DI_SYNC_VSYNC, 	/* CNT_CLR_SEL */
+						0, 		/* CNT_POLARITY_GEN_EN */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
+						0, 		/* COUNT UP */
+						0		/* COUNT DOWN */
+						);
+
+				/* Active Line */
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						5, 		/* counter */
+						0, 		/* run count */
+						DI_SYNC_HSYNC,	/* run_resolution */
+						0, 		/*  offset */
+						DI_SYNC_NONE, 	/* offset resolution */
+						height/2, 	/* repeat count */
+						4, 		/* CNT_CLR_SEL */
+						0, 		/* CNT_POLARITY_GEN_EN */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
+						0, 		/* COUNT UP */
+						0		/* COUNT DOWN */
+						);
+
+				/* Field 0 VSYNC waveform */
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						6, 		/* counter */
+						v_total - 1, 	/* run count */
+						DI_SYNC_HSYNC,	/* run_resolution */
+						0, 		/* offset */
+						DI_SYNC_NONE, 	/* offset resolution */
+						0, 		/* repeat count */
+						DI_SYNC_NONE, 	/* CNT_CLR_SEL  */
+						0, 		/* CNT_POLARITY_GEN_EN */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
+						0, 		/* COUNT UP */
+						0		/* COUNT DOWN */
+						);
+
+				/* DC VSYNC waveform */
+				vsync_cnt = 7;
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						7, 		/* counter */
+						v_total/2 - 1, 	/* run count */
+						DI_SYNC_HSYNC,	/* run_resolution  */
+						9, 		/* offset  */
+						DI_SYNC_HSYNC, 	/* offset resolution */
+						2, 		/* repeat count */
+						DI_SYNC_VSYNC, 	/* CNT_CLR_SEL */
+						0, 		/* CNT_POLARITY_GEN_EN */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
+						0, 		/* COUNT UP */
+						0		/* COUNT DOWN */
+						);
+
+				/* active pixel waveform */
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						8, 		/* counter */
+						0, 		/* run count  */
+						DI_SYNC_CLK,	/* run_resolution */
+						h_start_width, 	/* offset  */
+						DI_SYNC_CLK, 	/* offset resolution */
+						width, 		/* repeat count  */
+						5, 		/* CNT_CLR_SEL  */
+						0, 		/* CNT_POLARITY_GEN_EN  */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL  */
+						0, 		/* COUNT UP  */
+						0		/* COUNT DOWN */
+						);
+
+				/* Second VSYNC */
+				_ipu_di_sync_config(ipu,
+						disp, 		/* display */
+						9, 		/* counter */
+						v_total - 1, 	/* run count */
+						DI_SYNC_INT_HSYNC,	/* run_resolution */
+						v_total/2, 		/* offset  */
+						DI_SYNC_INT_HSYNC, 	/* offset resolution  */
+						0, 		/* repeat count */
+						DI_SYNC_HSYNC, 	/* CNT_CLR_SEL */
+						0, 		/* CNT_POLARITY_GEN_EN  */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_CLR_SEL  */
+						DI_SYNC_NONE, 	/* CNT_POLARITY_TRIGGER_SEL */
+						0, 		/* COUNT UP */
+						2*div		/* COUNT DOWN */
+						);
+
+				/* set gentime select and tag sel */
+				reg = ipu_di_read(ipu, disp, DI_SW_GEN1(9));
+				reg &= 0x1FFFFFFF;
+				reg |= (3-1)<<29 | 0x00008000;
+				ipu_di_write(ipu, disp, reg, DI_SW_GEN1(9));
+
+				ipu_di_write(ipu, disp, v_total / 2 - 1, DI_SCR_CONF);
+
+				/* set y_sel = 1 */
+				di_gen |= 0x10000000;
+				di_gen |= DI_GEN_POLARITY_5;
+				di_gen |= DI_GEN_POLARITY_8;
+			}
 		} else {
 			/* Setup internal HSYNC waveform */
 			_ipu_di_sync_config(ipu, disp, 1, h_total - 1, DI_SYNC_CLK,
@@ -1559,13 +2404,35 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 					v_end_width + height / 2 - 1, DI_SCR_CONF);
 		}
 
-		/* Init template microcode */
-		_ipu_dc_write_tmpl(ipu, 0, WROD(0), 0, map, SYNC_WAVE, 0, 8, 1);
+		if((pixel_fmt == IPU_PIX_FMT_BT656) || (pixel_fmt == IPU_PIX_FMT_BT1120)) {
+			/* Init template microcode */
+			if(pixel_fmt == IPU_PIX_FMT_BT656) {
+				_ipu_dc_setup_bt656_interlaced(ipu, u_map, y_map, v_map, 0, BT656_IF_DI_MSB, 
+						bt656_h_start_width, 
+						bt656_v_start_width_field0, bt656_v_end_width_field0, 
+						bt656_v_start_width_field1, bt656_v_end_width_field1);
+			} else {
+				_ipu_dc_setup_bt656_interlaced(ipu, u_map, y_map, v_map, 1, BT656_IF_DI_MSB, 
+						bt656_h_start_width, 
+						bt656_v_start_width_field0, bt656_v_end_width_field0, 
+						bt656_v_start_width_field1, bt656_v_end_width_field1);
+			}
 
-		if (sig.Hsync_pol)
-			di_gen |= DI_GEN_POLARITY_3;
-		if (sig.Vsync_pol)
-			di_gen |= DI_GEN_POLARITY_2;
+			ipu_dc_write(ipu, (width - 1), DC_UGDE_3(disp));
+
+			if (sig.Hsync_pol)
+				di_gen |= DI_GEN_POLARITY_2;
+			if (sig.Vsync_pol)
+				di_gen |= DI_GEN_POLARITY_4;
+		} else {
+			/* Init template microcode */
+			_ipu_dc_write_tmpl(ipu, 0, WROD, 0, map, SYNC_WAVE, 0, 8, 1, 0, 0);
+
+			if (sig.Hsync_pol)
+				di_gen |= DI_GEN_POLARITY_2;
+			if (sig.Vsync_pol)
+				di_gen |= DI_GEN_POLARITY_3;
+		}
 	} else {
 		/* Setup internal HSYNC waveform */
 		_ipu_di_sync_config(ipu, disp, 1, h_total - 1, DI_SYNC_CLK,
@@ -1639,30 +2506,30 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 				(pixel_fmt == IPU_PIX_FMT_UYVY) ||
 				(pixel_fmt == IPU_PIX_FMT_YVYU) ||
 				(pixel_fmt == IPU_PIX_FMT_VYUY)) {
-				_ipu_dc_write_tmpl(ipu, 8, WROD(0), 0, (map - 1), SYNC_WAVE, 0, 5, 1);
-				_ipu_dc_write_tmpl(ipu, 9, WROD(0), 0, map, SYNC_WAVE, 0, 5, 1);
+				_ipu_dc_write_tmpl(ipu, 8, WROD, 0, (map - 1), SYNC_WAVE, 0, 5, 1, 0, 0);
+				_ipu_dc_write_tmpl(ipu, 9, WROD, 0, map, SYNC_WAVE, 0, 5, 1, 0, 0);
 				/* configure user events according to DISP NUM */
 				ipu_dc_write(ipu, (width - 1), DC_UGDE_3(disp));
 			}
-			_ipu_dc_write_tmpl(ipu, 2, WROD(0), 0, map, SYNC_WAVE, 8, 5, 1);
-			_ipu_dc_write_tmpl(ipu, 3, WROD(0), 0, map, SYNC_WAVE, 4, 5, 0);
-			_ipu_dc_write_tmpl(ipu, 4, WRG, 0, map, NULL_WAVE, 0, 0, 1);
-			_ipu_dc_write_tmpl(ipu, 1, WROD(0), 0, map, SYNC_WAVE, 0, 5, 1);
+			_ipu_dc_write_tmpl(ipu, 2, WROD, 0, map, SYNC_WAVE, 8, 5, 1, 0, 0);
+			_ipu_dc_write_tmpl(ipu, 3, WROD, 0, map, SYNC_WAVE, 4, 5, 0, 0, 0);
+			_ipu_dc_write_tmpl(ipu, 4, WRG, 0, map, NULL_WAVE, 0, 0, 1, 0, 0);
+			_ipu_dc_write_tmpl(ipu, 1, WROD, 0, map, SYNC_WAVE, 0, 5, 1, 0, 0);
 
 		} else {
 			if ((pixel_fmt == IPU_PIX_FMT_YUYV) ||
 				(pixel_fmt == IPU_PIX_FMT_UYVY) ||
 				(pixel_fmt == IPU_PIX_FMT_YVYU) ||
 				(pixel_fmt == IPU_PIX_FMT_VYUY)) {
-				_ipu_dc_write_tmpl(ipu, 10, WROD(0), 0, (map - 1), SYNC_WAVE, 0, 5, 1);
-				_ipu_dc_write_tmpl(ipu, 11, WROD(0), 0, map, SYNC_WAVE, 0, 5, 1);
+				_ipu_dc_write_tmpl(ipu, 10, WROD, 0, (map - 1), SYNC_WAVE, 0, 5, 1, 0, 0);
+				_ipu_dc_write_tmpl(ipu, 11, WROD, 0, map, SYNC_WAVE, 0, 5, 1, 0, 0);
 				/* configure user events according to DISP NUM */
 				ipu_dc_write(ipu, width - 1, DC_UGDE_3(disp));
 			}
-		   _ipu_dc_write_tmpl(ipu, 5, WROD(0), 0, map, SYNC_WAVE, 8, 5, 1);
-		   _ipu_dc_write_tmpl(ipu, 6, WROD(0), 0, map, SYNC_WAVE, 4, 5, 0);
-		   _ipu_dc_write_tmpl(ipu, 7, WRG, 0, map, NULL_WAVE, 0, 0, 1);
-		   _ipu_dc_write_tmpl(ipu, 12, WROD(0), 0, map, SYNC_WAVE, 0, 5, 1);
+		   _ipu_dc_write_tmpl(ipu, 5, WROD, 0, map, SYNC_WAVE, 8, 5, 1, 0, 0);
+		   _ipu_dc_write_tmpl(ipu, 6, WROD, 0, map, SYNC_WAVE, 4, 5, 0, 0, 0);
+		   _ipu_dc_write_tmpl(ipu, 7, WRG, 0, map, NULL_WAVE, 0, 0, 1, 0, 0);
+		   _ipu_dc_write_tmpl(ipu, 12, WROD, 0, map, SYNC_WAVE, 0, 5, 1, 0, 0);
 		}
 
 		if (sig.Hsync_pol) {
@@ -1686,10 +2553,19 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 	if (!sig.clk_pol)
 		di_gen |= DI_GEN_POLARITY_DISP_CLK;
 
+	if((pixel_fmt == IPU_PIX_FMT_BT656) || (pixel_fmt == IPU_PIX_FMT_BT1120)) {
+		/* select external VSYNC for DI error recovery */
+		di_gen |= (1 << 10);
+	}
+
 	ipu_di_write(ipu, disp, di_gen, DI_GENERAL);
 
-	ipu_di_write(ipu, disp, (--vsync_cnt << DI_VSYNC_SEL_OFFSET) |
-			0x00000002, DI_SYNC_AS_GEN);
+	if((pixel_fmt == IPU_PIX_FMT_BT656) || (pixel_fmt == IPU_PIX_FMT_BT1120))
+		ipu_di_write(ipu, disp, (--vsync_cnt << DI_VSYNC_SEL_OFFSET), DI_SYNC_AS_GEN);
+	else
+		ipu_di_write(ipu, disp, (--vsync_cnt << DI_VSYNC_SEL_OFFSET) |
+				0x00000002, DI_SYNC_AS_GEN);
+
 	reg = ipu_di_read(ipu, disp, DI_POL);
 	reg &= ~(DI_POL_DRDY_DATA_POLARITY | DI_POL_DRDY_POLARITY_15);
 	if (sig.enable_pol)
@@ -1757,7 +2633,7 @@ int ipu_init_async_panel(struct ipu_soc *ipu, int disp, int type, uint32_t cycle
 		_ipu_di_data_pin_config(ipu, disp, ASYNC_SER_WAVE, DI_PIN_SER_RS,
 					2, 0, 0);
 
-		_ipu_dc_write_tmpl(ipu, 0x64, WROD(0), 0, map, ASYNC_SER_WAVE, 0, 0, 1);
+		_ipu_dc_write_tmpl(ipu, 0x64, WROD, 0, map, ASYNC_SER_WAVE, 0, 0, 1, 0, 0);
 
 		/* Configure DC for serial panel */
 		ipu_dc_write(ipu, 0x14, DC_DISP_CONF1(DC_DISP_ID_SERIAL));

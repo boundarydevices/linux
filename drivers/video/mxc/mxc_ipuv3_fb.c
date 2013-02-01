@@ -67,6 +67,7 @@ struct mxcfb_info {
 	ipu_channel_t ipu_ch;
 	int ipu_id;
 	int ipu_di;
+	u32 fb_pix_fmt;
 	u32 ipu_di_pix_fmt;
 	bool ipu_int_clk;
 	bool overlay;
@@ -134,6 +135,26 @@ enum {
 
 static bool g_dp_in_use[2];
 LIST_HEAD(fb_alloc_list);
+
+static bool is_rgb_pixfmt_fb(uint32_t pixfmt)
+{
+	bool ret = false;
+
+	switch (pixfmt) {
+	case IPU_PIX_FMT_RGB565:
+	case IPU_PIX_FMT_RGB24:
+	case IPU_PIX_FMT_BGR24:
+	case IPU_PIX_FMT_RGB32:
+	case IPU_PIX_FMT_BGR32:
+	case IPU_PIX_FMT_ABGR32:
+		ret = true;
+		break;
+
+	default:
+		break;
+	}
+	return ret;
+}
 
 /* Return default standard(RGB) pixel format */
 static uint32_t bpp_to_pixfmt(int bpp)
@@ -206,30 +227,6 @@ static int check_var_pixfmt(struct fb_var_screeninfo *var)
 	return ret;
 }
 
-static uint32_t fbi_to_pixfmt(struct fb_info *fbi)
-{
-	int i;
-	uint32_t pixfmt = 0;
-
-	if (fbi->var.nonstd)
-		return fbi->var.nonstd;
-
-	for (i = 0; i < ARRAY_SIZE(mxcfb_pfmts); i++) {
-		if (bitfield_is_equal(fbi->var.red, mxcfb_pfmts[i].red) &&
-		    bitfield_is_equal(fbi->var.green, mxcfb_pfmts[i].green) &&
-		    bitfield_is_equal(fbi->var.blue, mxcfb_pfmts[i].blue) &&
-		    bitfield_is_equal(fbi->var.transp, mxcfb_pfmts[i].transp)) {
-			pixfmt = mxcfb_pfmts[i].fb_pix_fmt;
-			break;
-		}
-	}
-
-	if (pixfmt == 0)
-		dev_err(fbi->device, "cannot get pixel format\n");
-
-	return pixfmt;
-}
-
 static struct fb_info *found_registered_fb(ipu_channel_t ipu_ch, int ipu_id)
 {
 	int i;
@@ -289,13 +286,13 @@ static int _setup_disp_channel1(struct fb_info *fbi)
 		if (fbi->var.vmode & FB_VMODE_INTERLACED)
 			params.mem_dc_sync.interlaced = true;
 		params.mem_dc_sync.out_pixel_fmt = mxc_fbi->ipu_di_pix_fmt;
-		params.mem_dc_sync.in_pixel_fmt = fbi_to_pixfmt(fbi);
+		params.mem_dc_sync.in_pixel_fmt = mxc_fbi->fb_pix_fmt;
 	} else {
 		params.mem_dp_bg_sync.di = mxc_fbi->ipu_di;
 		if (fbi->var.vmode & FB_VMODE_INTERLACED)
 			params.mem_dp_bg_sync.interlaced = true;
 		params.mem_dp_bg_sync.out_pixel_fmt = mxc_fbi->ipu_di_pix_fmt;
-		params.mem_dp_bg_sync.in_pixel_fmt = fbi_to_pixfmt(fbi);
+		params.mem_dp_bg_sync.in_pixel_fmt = mxc_fbi->fb_pix_fmt;
 		if (mxc_fbi->alpha_chan_en)
 			params.mem_dp_bg_sync.alpha_chan_en = true;
 	}
@@ -312,7 +309,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	unsigned long base;
 	unsigned int fr_xoff, fr_yoff, fr_w, fr_h;
 
-	switch (fbi_to_pixfmt(fbi)) {
+	switch (mxc_fbi->fb_pix_fmt) {
 	case IPU_PIX_FMT_YUV420P2:
 	case IPU_PIX_FMT_YVU420P:
 	case IPU_PIX_FMT_NV12:
@@ -360,7 +357,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 
 	retval = ipu_init_channel_buffer(mxc_fbi->ipu,
 					 mxc_fbi->ipu_ch, IPU_INPUT_BUFFER,
-					 fbi_to_pixfmt(fbi),
+					 mxc_fbi->fb_pix_fmt,
 					 fbi->var.xres, fbi->var.yres,
 					 fb_stride,
 					 fbi->var.rotate,
@@ -378,7 +375,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	/* update u/v offset */
 	ipu_update_channel_offset(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 			IPU_INPUT_BUFFER,
-			fbi_to_pixfmt(fbi),
+			mxc_fbi->fb_pix_fmt,
 			fr_w,
 			fr_h,
 			fr_w,
@@ -1335,6 +1332,24 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
 				return -EFAULT;
 			ipu_set_csc_coefficients(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 						csc.param);
+	case MXCFB_GET_FBFMT:
+		{
+			struct mxcfb_info *mxc_fbi =
+				(struct mxcfb_info *)fbi->par;
+
+			if (put_user(mxc_fbi->fb_pix_fmt, argp))
+				return -EFAULT;
+			break;
+		}
+	case MXCFB_SET_FBFMT:
+		{
+			struct mxcfb_info *mxc_fbi =
+				(struct mxcfb_info *)fbi->par;
+
+			if (get_user(mxc_fbi->fb_pix_fmt, argp))
+				return -EFAULT;
+
+			break;
 		}
 	default:
 		retval = -EINVAL;
@@ -1423,7 +1438,7 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	if (y_bottom > info->var.yres_virtual)
 		return -EINVAL;
 
-	switch (fbi_to_pixfmt(info)) {
+	switch (mxc_fbi->fb_pix_fmt) {
 	case IPU_PIX_FMT_YUV420P2:
 	case IPU_PIX_FMT_YVU420P:
 	case IPU_PIX_FMT_NV12:
@@ -1510,7 +1525,7 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 		/* update u/v offset */
 		ipu_update_channel_offset(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 				IPU_INPUT_BUFFER,
-				fbi_to_pixfmt(info),
+				mxc_fbi->fb_pix_fmt,
 				fr_w,
 				fr_h,
 				fr_w,
@@ -1909,6 +1924,10 @@ static int mxcfb_dispdrv_init(struct platform_device *pdev,
 		mxcfbi->ipu_di_pix_fmt = setting.if_fmt;
 		mxcfbi->default_bpp = setting.default_bpp;
 
+		/* if "fbpix" was not set from boot command, use default value */
+		if(mxcfbi->fb_pix_fmt == 0)
+			mxcfbi->fb_pix_fmt = bpp_to_pixfmt(setting.default_bpp);
+
 		/* setting */
 		mxcfbi->ipu_id = setting.dev_id;
 		mxcfbi->ipu_di = setting.disp_id;
@@ -1969,6 +1988,10 @@ static int mxcfb_option_setup(struct platform_device *pdev, struct fb_info *fbi)
 				pdata->interface_pix_fmt = IPU_PIX_FMT_YVYU;
 			else if (!strncmp(opt+3, "VYUY16", 6))
 				pdata->interface_pix_fmt = IPU_PIX_FMT_VYUY;
+			else if (!strncmp(opt+3, "BT656", 5))
+				pdata->interface_pix_fmt = IPU_PIX_FMT_BT656;
+			else if (!strncmp(opt+3, "BT1120", 6))
+				pdata->interface_pix_fmt = IPU_PIX_FMT_BT1120;
 		} else if (!strncmp(opt, "fbpix=", 6)) {
 			if (!strncmp(opt+6, "RGB24", 5))
 				fb_pix_fmt = IPU_PIX_FMT_RGB24;
@@ -1982,11 +2005,25 @@ static int mxcfb_option_setup(struct platform_device *pdev, struct fb_info *fbi)
 				fb_pix_fmt = IPU_PIX_FMT_ABGR32;
 			else if (!strncmp(opt+6, "RGB565", 6))
 				fb_pix_fmt = IPU_PIX_FMT_RGB565;
+			else if (!strncmp(opt+6, "YUYV16", 6))
+				fb_pix_fmt = IPU_PIX_FMT_YUYV;
+			else if (!strncmp(opt+6, "UYVY16", 6))
+				fb_pix_fmt = IPU_PIX_FMT_UYVY;
+			else if (!strncmp(opt+6, "YVYU16", 6))
+				fb_pix_fmt = IPU_PIX_FMT_YVYU;
+			else if (!strncmp(opt+6, "VYUY16", 6))
+				fb_pix_fmt = IPU_PIX_FMT_VYUY;
+			else if (!strncmp(opt+6, "YUV444", 6))
+				fb_pix_fmt = IPU_PIX_FMT_YUV444;
+			else if (!strncmp(opt+6, "VYU444", 6))
+				fb_pix_fmt = IPU_PIX_FMT_VYU444;
 
-			if (fb_pix_fmt) {
+			if (fb_pix_fmt && is_rgb_pixfmt_fb(fb_pix_fmt)) {
 				pixfmt_to_var(fb_pix_fmt, &fbi->var);
 				pdata->default_bpp =
 					fbi->var.bits_per_pixel;
+			} else {
+				pdata->default_bpp = fmt_to_bpp(fb_pix_fmt);
 			}
 		} else if (!strncmp(opt, "int_clk", 7)) {
 			pdata->int_clk = true;
@@ -2008,6 +2045,10 @@ static int mxcfb_option_setup(struct platform_device *pdev, struct fb_info *fbi)
 
 	if (fb_mode_str)
 		pdata->mode_str = fb_mode_str;
+
+	if(fb_pix_fmt == 0)
+		fb_pix_fmt = bpp_to_pixfmt(pdata->default_bpp);
+	pdata->fb_pix_fmt = fb_pix_fmt;
 
 	return 0;
 }
@@ -2174,12 +2215,15 @@ static int mxcfb_setup_overlay(struct platform_device *pdev,
 	mxcfbi_fg->ipu_ch = MEM_FG_SYNC;
 	mxcfbi_fg->ipu_di = -1;
 	mxcfbi_fg->ipu_di_pix_fmt = mxcfbi_bg->ipu_di_pix_fmt;
+	mxcfbi_fg->fb_pix_fmt = mxcfbi_bg->fb_pix_fmt;
+	mxcfbi_fg->default_bpp = mxcfbi_bg->default_bpp;
 	mxcfbi_fg->overlay = true;
 	mxcfbi_fg->cur_blank = mxcfbi_fg->next_blank = FB_BLANK_POWERDOWN;
 
 	/* Need dummy values until real panel is configured */
 	ovfbi->var.xres = 240;
 	ovfbi->var.yres = 320;
+	ovfbi->var.bits_per_pixel = mxcfbi_fg->default_bpp;
 
 	if (res && res->start && res->end) {
 		ovfbi->fix.smem_len = res->end - res->start + 1;
@@ -2262,6 +2306,7 @@ static int mxcfb_probe(struct platform_device *pdev)
 	mxcfbi = (struct mxcfb_info *)fbi->par;
 	mxcfbi->ipu_int_clk = plat_data->int_clk;
 	mxcfbi->late_init = plat_data->late_init;
+	mxcfbi->fb_pix_fmt = plat_data->fb_pix_fmt;
 	mxcfbi->first_set_par = true;
 	ret = mxcfb_dispdrv_init(pdev, fbi);
 	if (ret < 0)

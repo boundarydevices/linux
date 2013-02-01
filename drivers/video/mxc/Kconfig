@@ -39,6 +39,11 @@ config FB_MXC_LDB
 	depends on FB_MXC_SYNC_PANEL
 	depends on MXC_IPU_V3
 
+config FB_MXC_BT656
+	tristate "MXC BT656 and BT1120 output"
+	depends on FB_MXC_SYNC_PANEL
+	depends on MXC_IPU_V3
+
 config FB_MXC_MIPI_DSI
 	tristate "MXC MIPI_DSI"
 	depends on FB_MXC_SYNC_PANEL

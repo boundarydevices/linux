@@ -706,8 +706,22 @@ enum di_sync_wave {
 	DI_SYNC_DE = 5,
 };
 
+enum di_bt656_sync_wave {
+	DI_BT656_SYNC_BASECLK = 1,
+	DI_BT656_SYNC_HSYNC = 2,
+	DI_BT656_SYNC_IVSYNC = 3,
+	DI_BT656_SYNC_VSYNC = 4,
+	DI_BT656_SYNC_AFIELD = 5,
+	DI_BT656_SYNC_NVSYNC = 9,
+};
+
 /* DC template opcodes */
-#define WROD(lf)		(0x18 | (lf << 1))
-#define WRG	        	(0x01)
+enum dc_template_cmd {
+	WROD = 0,	/* real opcode is 0x18 */
+	WRG = 1,	/* real opcode is 0x01 */
+	HMA = 2,		/* real opcode is 0x02 */ 
+	HMA1 = 3,	/* real opcode is 0x01 */
+	BMA = 4,		/* real opcode is 0x03 */
+};
 
 #endif

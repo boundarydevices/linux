@@ -731,6 +731,7 @@ uint32_t bytes_per_pixel(uint32_t fmt);
 struct ipuv3_fb_platform_data {
 	char				disp_dev[32];
 	u32				interface_pix_fmt;
+	u32				fb_pix_fmt;
 	char				*mode_str;
 	int				default_bpp;
 	bool				int_clk;
