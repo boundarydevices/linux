@@ -77,6 +77,10 @@ config FB_MXC_TVOUT_CH7024
 	tristate "CH7024 TV Out Encoder"
 	depends on FB_MXC_SYNC_PANEL
 
+config FB_MXC_TVOUT_ADV739X
+	tristate "ADV7390/7391 TV Out Encoder"
+	depends on FB_MXC_SYNC_PANEL && I2C
+
 config FB_MXC_LOW_PWR_DISPLAY
 	bool "Low Power Display Refresh Mode"
 	depends on FB_MXC_SYNC_PANEL && MXC_FB_IRAM
