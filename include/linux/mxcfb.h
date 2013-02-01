@@ -153,6 +153,8 @@ struct mxcfb_csc_matrix {
 #define MXCFB_GET_FB_BLANK     _IOR('F', 0x2B, u_int32_t)
 #define MXCFB_SET_DIFMT		_IOW('F', 0x2C, u_int32_t)
 #define MXCFB_CSC_UPDATE	_IOW('F', 0x2D, struct mxcfb_csc_matrix)
+#define MXCFB_GET_FBFMT	       _IOR('F', 0x35, u_int32_t)
+#define MXCFB_SET_FBFMT	       _IOR('F', 0x36, u_int32_t)
 
 /* IOCTLs for E-ink panel updates */
 #define MXCFB_SET_WAVEFORM_MODES	_IOW('F', 0x2B, struct mxcfb_waveform_modes)

@@ -1380,6 +1380,12 @@ static struct fsl_mxc_ldb_platform_data ldb_data = {
 	.sec_disp_id = 0,
 };
 
+static struct fsl_mxc_lcd_platform_data bt656_data = {
+	.ipu_id = 0, 
+	.disp_id = 0, 
+	.default_ifmt = IPU_PIX_FMT_BT656,
+};
+
 static struct max8903_pdata charger1_data = {
 	.dok = SABRESD_CHARGE_DOK_B,
 	.uok = SABRESD_CHARGE_UOK_B,
@@ -1747,6 +1753,7 @@ static void __init mx6_sabresd_board_init(void)
 	imx6q_add_mipi_dsi(&mipi_dsi_pdata);
 	imx6q_add_lcdif(&lcdif_data);
 	imx6q_add_ldb(&ldb_data);
+	imx6q_add_bt656(&bt656_data);
 	imx6q_add_v4l2_output(0);
 	imx6q_add_v4l2_capture(0, &capture_data[0]);
 	imx6q_add_v4l2_capture(1, &capture_data[1]);
