@@ -123,6 +123,10 @@ extern const struct imx_ldb_data imx6q_ldb_data __initconst;
 #define imx6q_add_ldb(pdata) \
 	imx_add_ldb(&imx6q_ldb_data, pdata);
 
+#define imx6q_add_bt656(pdata)	\
+	platform_device_register_resndata(NULL, "mxc_bt656if",\
+			0, NULL, 0, pdata, sizeof(*pdata));
+
 #define imx6q_add_v4l2_output(id)	\
 	platform_device_register_resndata(NULL, "mxc_v4l2_output",\
 			id, NULL, 0, NULL, 0);
