@@ -128,7 +128,6 @@ static int set_cpu_freq(int freq)
 				return ret;
 			}
 		}
-		udelay(50);
 	}
 	if (freq > clk_get_rate(pll2_pfd2_396m)) {
 		/* enable pfd396m */
@@ -197,7 +196,6 @@ static int set_cpu_freq(int freq)
 				return ret;
 			}
 		}
-		udelay(50);
 		/* release bus freq when cpufreq is lower to lowest setpoint */
 		if (freq == cpu_op_tbl[0].cpu_rate && request_bus_high) {
 			release_bus_freq(BUS_FREQ_HIGH);
