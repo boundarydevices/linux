@@ -793,6 +793,12 @@ static struct fsl_mxc_lightsensor_platform_data ls_data = {
 	.rext = 499,	/* calibration: 499K->700K */
 };
 
+static struct fsl_mxc_lcd_platform_data adv7391_data = {
+	.ipu_id = 0, 
+	.disp_id = 0, 
+	.default_ifmt = IPU_PIX_FMT_BT656,
+};
+
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("wm89**", 0x1a),
@@ -823,6 +829,10 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 		I2C_BOARD_INFO("max11801", 0x48),
 		.platform_data = (void *)&max11801_mode,
 		.irq = gpio_to_irq(SABRESD_TS_INT),
+	},
+	{
+		I2C_BOARD_INFO("mxc_adv739x", 0x2a),
+		.platform_data = (void *)&adv7391_data,
 	},
 };
 
