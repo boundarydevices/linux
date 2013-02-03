@@ -130,7 +130,12 @@ static struct clk *sata_clk;
 extern char *gp_reg_id;
 extern char *soc_reg_id;
 extern char *pu_reg_id;
-static int caam_enabled;
+static int caam_enabled =
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM
+	1;
+#else
+	0;
+#endif
 
 extern struct regulator *(*get_cpu_regulator)(void);
 extern void (*put_cpu_regulator)(void);
