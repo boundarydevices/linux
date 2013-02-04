@@ -507,7 +507,7 @@ static irqreturn_t max8903_usbin(int irq, void *_data)
 	if (usb_in == data->usb_in)
 		return IRQ_HANDLED;
 	data->usb_in = usb_in;
-	pr_info("USB Charger %s.\n", usb_in ?
+	dev_dbg(data->dev, "USB Charger %s.\n", usb_in ?
 			"Connected" : "Disconnected");
 	max8903_charger_update_status(data);
 	power_supply_changed(&data->bat);
