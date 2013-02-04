@@ -934,25 +934,24 @@ static void __init imx6q_init_irq(void)
 
 #define HW_OCOTP_GPn(n)		(0x00000660 + (n - 1) * 0x10)
 #define HW_OCOTP_CFGn(n)	(0x00000410 + n * 0x10)
-static void  check_imx6q_cpu(void)
+static void check_imx6q_cpu(void)
 {
 	struct device_node *np;
 	void __iomem *base;
-	static u32 rev;
+	const char *cpu;
+	u32 rev;
 
 	if (of_machine_is_compatible("fsl,imx6q")) {
 		mx6_cpu_type = MXC_CPU_MX6Q;
-		pr_info("Find i.MX6Q chip\n");
+		cpu = "i.MX6Q";
 	} else if (of_machine_is_compatible("fsl,imx6dl")) {
 		mx6_cpu_type = MXC_CPU_MX6DL;
-		pr_info("Find i.MX6DL chip\n");
+		cpu = "i.MX6DL";
 	} else if (of_machine_is_compatible("fsl,imx6sl")) {
 		mx6_cpu_type = MXC_CPU_MX6SL;
-		pr_info("Find i.MX6SL chip\n");
+		cpu = "i.MX6SL";
 	} else {
-		mx6_cpu_type = 0;
-		pr_err("Can't find any i.MX6 chip !\n");
-		return;
+		BUG_ON(1);
 	}
 
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-anatop");
@@ -960,25 +959,24 @@ static void  check_imx6q_cpu(void)
 	WARN_ON(!base);
 	rev =  readl_relaxed(base + IMX6Q_ANALOG_DIGPROG);
 	iounmap(base);
+	of_node_put(np);
 
 	switch (rev & 0xff) {
 	case 0:
 		mx6_cpu_revision = IMX_CHIP_REVISION_1_0;
-		pr_info("SOC revision TO1.0\n");
 		break;
 	case 1:
 		mx6_cpu_revision = IMX_CHIP_REVISION_1_1;
-		pr_info("SOC revision TO1.1\n");
 		break;
 	case 2:
 		mx6_cpu_revision = IMX_CHIP_REVISION_1_2;
-		pr_info("SOC revision TO1.2\n");
 		break;
 	default:
 		mx6_cpu_revision = IMX_CHIP_REVISION_UNKNOWN;
-		pr_err("SOC revision unrecognized!\n");
 		break;
 	}
+
+	imx_print_silicon_rev(cpu, mx6_cpu_revision);
 
 	/*
 	 * system_rev setting
@@ -1060,6 +1058,7 @@ int imx6q_revision(void)
 {
 	return mx6_cpu_revision;
 }
+
 static void __init imx6q_timer_init(void)
 {
 	check_imx6q_cpu();
