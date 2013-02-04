@@ -1575,12 +1575,17 @@ static int ci13xxx_stop(struct usb_gadget *gadget,
 
 	spin_lock_irqsave(&ci->lock, flags);
 
+	/*
+	 * Put it at the beginning due to avoid calling gadget
+	 * disconnect at _gadget_stop_activity
+	 */
+	ci->driver = NULL;
+
 	if (ci->vbus_active) {
 		hw_device_state(ci, 0);
 		if (ci->platdata->notify_event)
 			ci->platdata->notify_event(ci,
 			CI13XXX_CONTROLLER_STOPPED_EVENT);
-		ci->driver = NULL;
 		spin_unlock_irqrestore(&ci->lock, flags);
 		_gadget_stop_activity(&ci->gadget);
 		spin_lock_irqsave(&ci->lock, flags);
