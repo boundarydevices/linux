@@ -43,6 +43,7 @@
 #include <asm/mach/arch.h>
 #include <asm/mach/time.h>
 #include <asm/system_misc.h>
+#include <asm/system_info.h>
 #include <mach/common.h>
 #include <mach/cpuidle.h>
 #include <mach/hardware.h>
@@ -931,6 +932,8 @@ static void __init imx6q_init_irq(void)
 	of_irq_init(imx6q_irq_match);
 }
 
+#define HW_OCOTP_GPn(n)		(0x00000660 + (n - 1) * 0x10)
+#define HW_OCOTP_CFGn(n)	(0x00000410 + n * 0x10)
 static void  check_imx6q_cpu(void)
 {
 	struct device_node *np;
@@ -976,6 +979,71 @@ static void  check_imx6q_cpu(void)
 		pr_err("SOC revision unrecognized!\n");
 		break;
 	}
+
+	/*
+	 * system_rev setting
+	 *
+	 * THe linux system_rev is using the following format:
+	 * | 31 - 20 | 19 - 12 | 11 - 8 | 7 - 4 | 3 - 0 |
+	 * | resverd | CHIP ID | BD Rev | Major Rev | Minor Rev |
+	 *
+	 * bit 12-19: Chip Silicon ID
+	 * 0x60: i.MX6 SoloLite
+	 * 0x61: i.MX6 Solo/DualLite
+	 * 0x63: i.MX6 Dual/Quad
+	 *
+	 * bit 8-11: Board Revision
+	 * 0x0: unknown or latest revision
+	 * 0x1: rev A
+	 * 0x2: rev B
+	 * 0x3: rev Bx
+	 * 0x4: rev C
+	 * 0x5: rev D
+	 *
+	 * bit 4-7: Chip Major Revision
+	 * 0x1: TO1._
+	 * 0x2: TO2._
+	 * 0x3: TO3._
+	 *
+	 * bit 0-3: Chip Minor Revision
+	 * 0x0: TO_.0
+	 * 0x1: TO_.1
+	 * 0x2: TO_.2
+	 * 0x3: TO_.3
+	 *
+	 * exp:
+	 * ARD rev B board - MX6Quad/Dual tapeout1.1		0x63211
+	 * SD rev A board - MX6DualLite/Solo tapeout1.1		0x61111
+	 * SL-EVK E-Ink rev A board - MX6SoloLite tapeout1.0	0x60110
+	 */
+
+	/* Chip Silicon ID */
+	system_rev = ((rev >> 16) & 0xFF) << 12;
+	/* Chip silicon major revision */
+	system_rev |= (((rev >> 8) & 0xF) + 0x1) << 4;
+	/* Chip silicon minor revision */
+	system_rev |= rev & 0xF;
+
+	np = of_find_node_by_name(NULL, "ocotp");
+	if (!np) {
+		pr_warn("can not find ocotp node\n");
+		return;
+	}
+	base = of_iomap(np, 0);
+	if (!base) {
+		of_node_put(np);
+		return;
+	}
+
+	rev =  readl_relaxed(base + HW_OCOTP_GPn(1));
+	system_rev |= ((rev >> 8) & 0xf) << 8;
+
+	/* system_serial setting */
+	system_serial_low = readl_relaxed(base + HW_OCOTP_CFGn(0));
+	system_serial_high = readl_relaxed(base + HW_OCOTP_CFGn(1));
+
+	iounmap(base);
+	of_node_put(np);
 }
 
 int cpu_is_imx6dl(void)
