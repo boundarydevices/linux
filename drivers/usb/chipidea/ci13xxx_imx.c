@@ -309,7 +309,7 @@ static int __devinit ci13xxx_imx_probe(struct platform_device *pdev)
 		ci->reg_vbus = data->reg_vbus;
 	}
 
-	device_init_wakeup(&pdev->dev, true);
+	device_set_wakeup_capable(&pdev->dev, true);
 
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
