@@ -268,7 +268,7 @@ void __cpuinit calibrate_delay(void)
 	if (per_cpu(cpu_data, this_cpu).loops_per_jiffy) {
 		lpj = per_cpu(cpu_data, this_cpu).loops_per_jiffy;
 		pr_info("Calibrating delay loop (skipped) "
-				"already calibrated this CPU");
+				"already calibrated this CPU\n");
 	} else if (preset_lpj) {
 #else
 	if (preset_lpj) {
