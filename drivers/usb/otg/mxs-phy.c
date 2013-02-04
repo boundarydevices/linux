@@ -173,6 +173,8 @@ void mxs_phy_disconnect_line(struct usb_phy *phy, bool enable)
 		writel_relaxed(BM_ANADIG_USB1_LOOPBACK_UTMI_DIG_TST1
 			| BM_ANADIG_USB1_LOOPBACK_TSTI_TX_EN,
 			anatop_base_addr + HW_ANADIG_USB1_LOOPBACK);
+		/* Delay some time, and let Linestate be SE0 for controller */
+		usleep_range(500, 1000);
 	} else {
 		dev_dbg(phy->dev, "Connect line between phy and controller\n");
 		writel_relaxed(0x0, anatop_base_addr + HW_ANADIG_USB1_LOOPBACK);
