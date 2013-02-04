@@ -821,7 +821,6 @@ fec_enet_interrupt(int irq, void *dev_id)
 	struct net_device *ndev = dev_id;
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	uint int_events;
-	ulong flags;
 	irqreturn_t ret = IRQ_NONE;
 
 	do {
