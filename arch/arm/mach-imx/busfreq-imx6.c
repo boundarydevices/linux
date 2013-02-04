@@ -426,12 +426,13 @@ static int __devinit busfreq_probe(struct platform_device *pdev)
 
 	busfreq_dev = &pdev->dev;
 
-	pll2_400 = clk_get(NULL, "pll2_pfd2_396m");
+	pll2_400 = devm_clk_get(&pdev->dev, "pll2_pfd2_396m_clk");
 	if (IS_ERR(pll2_400)) {
 		printk(KERN_WARNING "%s: failed to get pll2_pfd2_396m\n",
 		       __func__);
 		return PTR_ERR(pll2_400);
 	}
+
 	pll2_200 = devm_clk_get(&pdev->dev, "pll2_198m_clk");
 	if (IS_ERR(pll2_200)) {
 		printk(KERN_WARNING "%s: failed to get pll2_198m\n",
