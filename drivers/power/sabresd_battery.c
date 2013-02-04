@@ -920,6 +920,9 @@ static __devinit int max8903_probe(struct platform_device *pdev)
 			offset_charger = 1485;
 			offset_usb_charger = 1285;
 	}
+
+	device_set_wakeup_capable(&pdev->dev, true);
+
 	max8903_charger_update_status(data);
 	max8903_battery_update_status(data);
 	return 0;
@@ -998,14 +1001,14 @@ static int max8903_suspend(struct platform_device *pdev,
 	if (data) {
 		struct max8903_pdata *pdata = data->pdata;
 		if (pdata) {
-			if (pdata->dc_valid) {
+			if (pdata->dc_valid && device_may_wakeup(&pdev->dev)) {
 				irq = gpio_to_irq(pdata->dok);
 				enable_irq_wake(irq);
 			}
-			if (pdata->usb_valid) {
+			if (pdata->usb_valid && device_may_wakeup(&pdev->dev)) {
 				irq = gpio_to_irq(pdata->uok);
 				enable_irq_wake(irq);
-				}
+			}
 			cancel_delayed_work(&data->work);
 		}
 	}
@@ -1037,11 +1040,11 @@ static int max8903_resume(struct platform_device *pdev)
 				max8903_charger_update_status(data);
 				power_supply_changed(&data->usb);
 			}
-			if (pdata->dc_valid) {
+			if (pdata->dc_valid && device_may_wakeup(&pdev->dev)) {
 				irq = gpio_to_irq(pdata->dok);
 				disable_irq_wake(irq);
 			}
-			if (pdata->usb_valid) {
+			if (pdata->usb_valid && device_may_wakeup(&pdev->dev)) {
 				irq = gpio_to_irq(pdata->uok);
 				disable_irq_wake(irq);
 			}
