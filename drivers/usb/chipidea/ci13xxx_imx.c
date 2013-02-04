@@ -40,7 +40,6 @@ struct ci13xxx_imx_data {
 	struct platform_device *ci_pdev;
 	struct clk *clk;
 	struct regulator *reg_vbus;
-	unsigned int change_id_pin_selection_is_needed;
 };
 
 static const struct usbmisc_ops *usbmisc_ops;
@@ -246,6 +245,25 @@ static int __devinit ci13xxx_imx_probe(struct platform_device *pdev)
 		}
 	}
 
+	/* Any imx6 user who needs to change id select pin, do below */
+	if (of_find_property(pdev->dev.of_node,
+			"otg_id_pin_select_change", NULL)) {
+		iomuxc_gpr = syscon_regmap_lookup_by_compatible
+			("fsl,imx6q-iomuxc-gpr");
+		if (!IS_ERR(iomuxc_gpr)) {
+			/* Select USB ID pin at iomuxc grp1 */
+			regmap_read(iomuxc_gpr, IOMUXC_IOMUXC_GPR1, &gpr1);
+			regmap_write(iomuxc_gpr, IOMUXC_IOMUXC_GPR1,
+					gpr1 | USB_OTG_ID_SEL_BIT);
+		} else {
+			ret = PTR_ERR(iomuxc_gpr);
+			dev_warn(&pdev->dev,
+				"failed to find imx6q-iomuxc-gpr regmap:%d\n",
+				ret);
+			goto put_np;
+		}
+	}
+
 	plat_ci = ci13xxx_add_device(&pdev->dev,
 				pdev->resource, pdev->num_resources,
 				&ci13xxx_imx_platdata);
@@ -289,26 +307,6 @@ static int __devinit ci13xxx_imx_probe(struct platform_device *pdev)
 	} else if (ci->is_otg) {
 		ci->otg.set_vbus = ci13xxx_otg_set_vbus;
 		ci->reg_vbus = data->reg_vbus;
-	}
-
-	if (of_find_property(pdev->dev.of_node, "otg_id_pin_select_change", NULL))
-		data->change_id_pin_selection_is_needed = 1;
-
-	if (ci->is_otg && data->change_id_pin_selection_is_needed) {
-		iomuxc_gpr = syscon_regmap_lookup_by_compatible
-			("fsl,imx6q-iomuxc-gpr");
-		if (!IS_ERR(iomuxc_gpr)) {
-			/* Select USB ID pin at iomuxc grp1 */
-			regmap_read(iomuxc_gpr, IOMUXC_IOMUXC_GPR1, &gpr1);
-			regmap_write(iomuxc_gpr, IOMUXC_IOMUXC_GPR1,
-					gpr1 | USB_OTG_ID_SEL_BIT);
-		} else {
-			ret = PTR_ERR(iomuxc_gpr);
-			dev_warn(&pdev->dev,
-				"failed to find imx6q-iomuxc-gpr regmap:%d\n",
-				ret);
-			goto put_np;
-		}
 	}
 
 	device_init_wakeup(&pdev->dev, true);
