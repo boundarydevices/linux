@@ -35,8 +35,10 @@ static int (*suspend_in_iram_fn)(unsigned int *iram_vbase,
 
 static int imx6q_suspend_finish(unsigned long val)
 {
-	/* call low level suspend function in iram,
-	 * as we need to float DDR IO */
+	/*
+	 * call low level suspend function in iram,
+	 * as we need to float DDR IO.
+	 */
 	suspend_in_iram_fn((unsigned int *)iram_base,
 		(unsigned int *)(iram_paddr), 0);
 	return 0;
@@ -48,9 +50,20 @@ static int imx6q_pm_enter(suspend_state_t state)
 	case PM_SUSPEND_MEM:
 		imx6q_set_lpm(STOP_POWER_OFF);
 		imx_gpc_pre_suspend();
+		imx_anatop_pre_suspend();
 		imx_set_cpu_jump(0, v7_cpu_resume);
 		/* Zzz ... */
 		cpu_suspend(0, imx6q_suspend_finish);
+		imx_anatop_post_resume();
+		imx6q_disable_wb();
+		/*
+		 * mask all interrupts in gpc before
+		 * disabling/clearing rbc, the gpc
+		 * interrupts will be restored in gpc
+		 * post resume.
+		 */
+		imx_gpc_mask_all();
+		imx6q_disable_rbc();
 		imx_smp_prepare();
 		imx_gpc_post_resume();
 		imx6q_set_lpm(WAIT_CLOCKED);
@@ -93,6 +106,11 @@ static struct map_desc mx6_pm_io_desc[] __initdata = {
 	.pfn = __phys_to_pfn(MX6Q_ANATOP_BASE_ADDR),
 	.length = SZ_4K,
 	.type = MT_DEVICE},
+	{
+	.virtual = IMX_IO_P2V(MX6Q_GPC_BASE_ADDR),
+	.pfn = __phys_to_pfn(MX6Q_GPC_BASE_ADDR),
+	.length = SZ_16K,
+	.type = MT_DEVICE},
 };
 
 void __init imx_pm_map_io(void)
@@ -128,7 +146,8 @@ void __init imx6q_pm_init(void)
 	of_property_read_u32(node, "iram_code_size", &iram_size);
 	iram_base = ioremap(iram_paddr, iram_size);
 	/* last size of IRAM is reserved for suspend/resume */
-	suspend_iram_base = __arm_ioremap(iram_paddr, iram_size, MT_MEMORY_NONCACHED);
+	suspend_iram_base = __arm_ioremap(iram_paddr, iram_size,
+		MT_MEMORY_NONCACHED);
 	memcpy((void *)suspend_iram_base, imx_suspend, iram_size);
 	suspend_in_iram_fn = (void *)suspend_iram_base;
 	/*

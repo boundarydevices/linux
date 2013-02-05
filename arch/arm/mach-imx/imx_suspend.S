@@ -192,28 +192,39 @@
 	.endm
 ENTRY(imx_suspend)
 
-	/* counting the resume address in iram
-	 * to set it in SRC register */
+	/*
+	 * counting the resume address in iram
+	 * to set it in SRC register.
+	 */
 	ldr	r4, =imx_suspend
 	ldr	r5, =resume
 	sub	r5, r5, r4
 	add	r9, r1, r5
 
-	/* make sure TLB contian the addr we want,
+	/*
+	 * make sure TLB contain the addr we want,
 	 * as we will access after DDR IO floated.
 	 */
 	ldr	r8, =MX6Q_ANATOP_BASE_ADDR
 	phy2virt
 	ldr	r7, [r8, #0x140]
+	ldr	r8, =MX6Q_CCM_BASE_ADDR
+	phy2virt
+	ldr	r7, [r8, #0x0]
+	ldr	r8, =MX6Q_GPC_BASE_ADDR
+	phy2virt
+	ldr	r7, [r8, #0x0]
 
 	/* must use r8 to store the IO address */
 	ldr	r8, =MX6Q_SRC_BASE_ADDR
 	phy2virt
 
-	/* read previous resume address from SRC
+	/*
+	 * read previous resume address from SRC
 	 * register, which is v7_cpu_resume, this
 	 * is for the jump when we finish DDR IO
-	 * restore */
+	 * restore.
+	 */
 	ldr	r5, [r8, #0x20]
 	add	r10, r0, #0x1000
 	stmfd	r10!, {r5}
@@ -230,13 +241,15 @@ ENTRY(imx_suspend)
 	ldr	r8, =MX6Q_MMDC_P0_BASE_ADDR
 	phy2virt
 
-	/* Put DDR explicitly into self-refresh. */
-	/* Disable Automatic power savings. */
+	/*
+	 * put DDR explicitly into self-refresh and
+	 * disable Automatic power savings.
+	 */
 	ldr	r7, [r8, #0x404]
 	orr	r7, r7, #0x01
 	str	r7, [r8, #0x404]
 
-	/* Make the DDR explicitly enter self-refresh. */
+	/* make the DDR explicitly enter self-refresh. */
 	ldr	r7, [r8, #0x404]
 	orr	r7, r7, #0x200000
 	str	r7, [r8, #0x404]
@@ -251,7 +264,72 @@ poll_dvfs_set_1:
 	phy2virt
 	dq_ddr_io_set_lpm
 
-	/* if internal ldo(VDDARM) bypassed,analog bypass
+	/*
+	 * mask all GPC interrupts before
+	 * enabling the RBC counters to
+	 * avoid the counter starting too
+	 * early if an interupt is already
+	 * pending.
+	 */
+	ldr	r8, =MX6Q_CCM_BASE_ADDR
+	phy2virt
+	/* save CCM base in r9 */
+	mov	r9, r8
+	ldr	r8, =MX6Q_GPC_BASE_ADDR
+	phy2virt
+	ldr	r4, [r8, #0x08]
+	ldr	r5, [r8, #0x0c]
+	ldr	r6, [r8, #0x10]
+	ldr	r7, [r8, #0x14]
+
+	ldr	r3, =0xffffffff
+	str	r3, [r8, #0x08]
+	str	r3, [r8, #0x0c]
+	str	r3, [r8, #0x10]
+	str	r3, [r8, #0x14]
+
+	/*
+	 * enable the RBC bypass counter here
+	 * to hold off the interrupts. RBC counter
+	 * = 32 (1ms), Minimum RBC delay should be
+	 * 400us for the analog LDOs to power down.
+	 */
+	ldr	r3, [r9, #0x0]
+	ldr	r11, =0x7E00000
+	bic	r3, r3, r11
+	ldr	r11, =0x4000000
+	orr	r3, r3, r11
+	str	r3, [r9, #0x0]
+
+	/* enable the counter. */
+	ldr	r3, [r9, #0x0]
+	orr	r3, r3, #0x8000000
+	str	r3, [r9, #0x0]
+
+	/* unmask all the GPC interrupts. */
+	str	r4, [r8, #0x08]
+	str	r5, [r8, #0x0c]
+	str	r6, [r8, #0x10]
+	str	r7, [r8, #0x14]
+
+	/*
+	 * now delay for a short while (3usec)
+	 * ARM is at 1GHz at this point
+	 * so a short loop should be enough.
+	 * this delay is required to ensure that
+	 * the RBC counter can start counting in
+	 * case an interrupt is already pending
+	 * or in case an interrupt arrives just
+	 * as ARM is about to assert DSM_request.
+	 */
+	ldr     r4, =2000
+rbc_loop:
+	sub     r4, r4, #0x1
+	cmp     r4, #0x0
+	bne     rbc_loop
+
+	/*
+	 * if internal ldo(VDDARM) bypassed,analog bypass
 	 * it for DSM(0x1e) and restore it when resume(0x1f).
 	 */
 	ldr	r8, =MX6Q_ANATOP_BASE_ADDR
@@ -274,10 +352,12 @@ ldo_check_done1:
 	nop
 	nop
 
-/*******************************************************
-run to here means there is pending wakeup source, system
-should auto resume, we need to restore DDR IO first
-********************************************************/
+	/*
+	 * run to here means there is pending
+	 * wakeup source, system should auto
+	 * resume, we need to restore DDR IO first
+	 */
+
 	/* restore it with 0x1f if use ldo bypass mode.*/
 	ldr	r8, =MX6Q_ANATOP_BASE_ADDR
 	phy2virt

@@ -14,6 +14,7 @@
 #include <linux/types.h>
 #include <linux/clk.h>
 #include <linux/clkdev.h>
+#include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/of.h>
@@ -22,6 +23,11 @@
 #include <mach/common.h>
 #include <mach/hardware.h>
 #include "clk.h"
+
+#define CCR				0x0
+#define BM_CCR_WB_COUNT			(0x7 << 16)
+#define BM_CCR_RBC_BYPASS_COUNT		(0x3f << 21)
+#define BM_CCR_RBC_EN			(0x1 << 27)
 
 #define CCGR0				0x68
 #define CCGR1				0x6c
@@ -69,7 +75,40 @@ void imx6q_set_chicken_bit(void)
 	writel_relaxed(val, ccm_base + CGPR);
 }
 
+void imx6q_disable_rbc(void)
+{
+	/* disable RBC */
+	writel_relaxed(readl_relaxed(ccm_base + CCR) &
+		(~BM_CCR_RBC_EN), ccm_base + CCR);
+	/* clear RBC count */
+	writel_relaxed(readl_relaxed(ccm_base + CCR) &
+		(~BM_CCR_RBC_BYPASS_COUNT), ccm_base + CCR);
+	/* need delay at least 2 cycles of CKIL */
+	udelay(80);
+}
 
+void imx6q_disable_wb(void)
+{
+	/* disable WB */
+	writel_relaxed(readl_relaxed(ccm_base + CLPCR) &
+		(~BM_CLPCR_WB_PER_AT_LPM), ccm_base + CLPCR);
+	/* clear WB count */
+	writel_relaxed(readl_relaxed(ccm_base + CCR) &
+		(~BM_CCR_WB_COUNT), ccm_base + CCR);
+}
+
+void imx6q_set_wb_count(void)
+{
+	/* make sure we clear WB_COUNT and re-config it */
+	writel_relaxed(readl_relaxed(ccm_base + CCR) &
+		(~BM_CCR_WB_COUNT), ccm_base + CCR);
+	/*
+	 * reconfigure WB, need to set WB counter
+	 * to 0x7 to make sure it work normally.
+	 */
+	writel_relaxed(readl_relaxed(ccm_base + CCR) |
+		BM_CCR_WB_COUNT, ccm_base + CCR);
+}
 
 int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 {
@@ -92,6 +131,9 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 		val |= BM_CLPCR_VSTBY;
 		val |= BM_CLPCR_SBYOS;
 		val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
+		/* enable well bias for per */
+		val |= BM_CLPCR_WB_PER_AT_LPM;
+		imx6q_set_wb_count();
 		break;
 	default:
 		return -EINVAL;

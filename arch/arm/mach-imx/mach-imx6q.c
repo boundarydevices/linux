@@ -852,6 +852,7 @@ static void __init imx6q_init_machine(void)
 		pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
 
 	imx6_soc_init();
+	imx_anatop_init();
 	imx6q_pm_init();
 	imx6q_usb_init();
 	imx6q_1588_init();

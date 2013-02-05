@@ -7,6 +7,9 @@ config HAVE_IMX_MMDC
 config HAVE_IMX_SRC
 	bool
 
+config HAVE_IMX_ANATOP
+	bool
+
 config ARCH_MX1
 	bool
 
@@ -829,6 +832,7 @@ config SOC_IMX6Q
 	select HAVE_IMX_GPC
 	select HAVE_IMX_MMDC
 	select HAVE_IMX_SRC
+	select HAVE_IMX_ANATOP
 	select HAVE_SMP
 	select IRAM_ALLOC
 	select MFD_SYSCON
