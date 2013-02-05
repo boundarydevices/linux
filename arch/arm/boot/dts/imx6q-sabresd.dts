@@ -332,32 +332,12 @@
 			status = "okay";
 		};
 
-	aux_5v: gpio-regulator {
-		compatible = "regulator-gpio";
-		regulator-name = "AUX5V-supply";
-		enable-gpio = <&gpio6 10 1>;
-		enable-active-high;
-		enable-at-boot;
-		regulator-type = "voltage";
-	};
-
-	regulators {
-		compatible = "simple-bus";
-		reg_usb_otg_vbus: usb_otg_vbus {
-			compatible = "regulator-fixed";
-			regulator-name = "usb_otg_vbus";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-			gpio = <&gpio3 22 0>;
-			enable-active-high;
-		};
-	};
-
 	regulator-bypass {
 			compatible = "fsl,imx_cpufreq";
-			/*1:bypass internal regulator,supplied by external reg
-			* 0:enable internal regulator
-			*/
+			/*
+			 * 1:bypass internal regulator,supplied by external reg
+			 * 0:enable internal regulator
+			 */
 			bypass-mode = <1>;
 			vddarm-supply = <&sw1a_reg>;
 			vddsoc-supply = <&sw1c_reg>;
@@ -375,6 +355,25 @@
 			gpio = <&gpio4 10 0>;
 			regulator-always-on;
 			regulator-boot-on;
+			enable-active-high;
+		};
+
+		aux_5v: aux5v {
+			compatible = "regulator-fixed";
+			regulator-name = "AUX_5V";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio6 10 1>;
+			regulator-boot-on;
+			enable-active-high;
+		};
+
+		reg_usb_otg_vbus: usb_otg_vbus {
+			compatible = "regulator-fixed";
+			regulator-name = "usb_otg_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio3 22 0>;
 			enable-active-high;
 		};
 	};
