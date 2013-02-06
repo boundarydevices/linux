@@ -147,6 +147,8 @@ extern void imx_gpc_mask_all(void);
 extern void imx_anatop_init(void);
 extern void imx_anatop_pre_suspend(void);
 extern void imx_anatop_post_resume(void);
+extern unsigned int imx_anatop_get_core_reg_setting(void);
+extern void imx_anatop_usb_chrg_detect_disable(void);
 extern void imx51_babbage_common_init(void);
 extern void imx53_ard_common_init(void);
 extern void imx53_evk_common_init(void);

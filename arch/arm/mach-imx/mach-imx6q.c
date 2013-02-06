@@ -174,27 +174,14 @@ static void __init imx6q_add_no18v_to_sdhc3(void)
 
 void imx6q_restart(char mode, const char *cmd)
 {
-	struct regmap *anatop;
 	unsigned int value;
-	int ret;
 
 	if (!wdog_base1 || !wdog_base2)
 		goto soft;
 
 	imx_src_prepare_restart();
 
-
-	anatop = syscon_regmap_lookup_by_compatible("fsl,imx6q-anatop");
-	if (IS_ERR(anatop)) {
-		pr_err("failed to find imx6q-anatop regmap!\n");
-		return;
-	}
-
-	ret = regmap_read(anatop, PMU_REG_CORE, &value);
-	if (ret) {
-		pr_err("failed to read anatop 0x140 regmap!\n");
-		return;
-	}
+	value = imx_anatop_get_core_reg_setting();
 	/* VDDARM bypassed? */
 	if ((value & 0x1f) != 0x1f) {
 		pr_info("Not in bypass-mode!\n");
@@ -572,29 +559,7 @@ static void __init imx6q_gpu_reserve(void)
 
 static void __init imx6q_usb_init(void)
 {
-	struct regmap *anatop;
-
-#define HW_ANADIG_USB1_CHRG_DETECT		0x000001b0
-#define HW_ANADIG_USB2_CHRG_DETECT		0x00000210
-
-#define BM_ANADIG_USB_CHRG_DETECT_EN_B		0x00100000
-#define BM_ANADIG_USB_CHRG_DETECT_CHK_CHRG_B	0x00080000
-
-	anatop = syscon_regmap_lookup_by_compatible("fsl,imx6q-anatop");
-	if (!IS_ERR(anatop)) {
-		/*
-		 * The external charger detector needs to be disabled,
-		 * or the signal at DP will be poor
-		 */
-		regmap_write(anatop, HW_ANADIG_USB1_CHRG_DETECT,
-				BM_ANADIG_USB_CHRG_DETECT_EN_B
-				| BM_ANADIG_USB_CHRG_DETECT_CHK_CHRG_B);
-		regmap_write(anatop, HW_ANADIG_USB2_CHRG_DETECT,
-				BM_ANADIG_USB_CHRG_DETECT_EN_B |
-				BM_ANADIG_USB_CHRG_DETECT_CHK_CHRG_B);
-	} else {
-		pr_warn("failed to find fsl,imx6q-anatop regmap\n");
-	}
+	imx_anatop_usb_chrg_detect_disable();
 }
 
 #define MX6Q_SATA_BASE_ADDR	0x02200000
