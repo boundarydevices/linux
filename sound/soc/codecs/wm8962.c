@@ -3783,6 +3783,7 @@ static __devexit int wm8962_i2c_remove(struct i2c_client *client)
 static int wm8962_runtime_resume(struct device *dev)
 {
 	struct wm8962_priv *wm8962 = dev_get_drvdata(dev);
+	struct wm8962_pdata *pdata = wm8962->pdata;
 	int ret;
 
 	ret = regulator_bulk_enable(ARRAY_SIZE(wm8962->supplies),
@@ -3798,6 +3799,21 @@ static int wm8962_runtime_resume(struct device *dev)
 	wm8962_reset(wm8962);
 
 	regcache_sync(wm8962->regmap);
+
+	/*
+	 * gpio_init[4] is GPIO5 of wm8962; 0x0 means it's in its input mode.
+	 * In input mode, GPIO5 controls the MCLK's source by HW connection.
+	 * But if GPIO5 is used as an output, CLKREG_OVD bit must be set
+	 * according to the datasheet in the section about CLOCKING2 regsiter.
+	 *
+	 * CLKREG_OVD bit is 0 by default, so it'll be cleared after reg reset.
+	 * And the driver regards CLOCKING2 as a volatile reg, it won't resever
+	 * its value and would turn it into default. So we have to set the bit
+	 * when GPIO5's founded in its output mode.
+	 */
+	if (pdata && pdata->gpio_init[4] != 0x0)
+		regmap_update_bits(wm8962->regmap, WM8962_CLOCKING2,
+				WM8962_CLKREG_OVD, WM8962_CLKREG_OVD);
 
 	regmap_update_bits(wm8962->regmap, WM8962_ANTI_POP,
 			   WM8962_STARTUP_BIAS_ENA | WM8962_VMID_BUF_ENA,
