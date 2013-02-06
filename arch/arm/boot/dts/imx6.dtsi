@@ -659,6 +659,7 @@
 				clocks = <&clks 182>;
 				usbphy_reg_at_anatop;
 				usbphy_need_disconnect_line_feature;
+				usbphy_need_open_regulator_at_lpm;
 			};
 
 			usbphy2: usbphy@020ca000 {
@@ -667,6 +668,7 @@
 				interrupts = <0 45 0x04>;
 				clocks = <&clks 183>;
 				usbphy_reg_at_anatop;
+				usbphy_need_open_regulator_at_lpm;
 			};
 
 			snvs@020cc000 {
