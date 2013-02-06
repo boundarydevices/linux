@@ -1701,6 +1701,8 @@ SOC_ENUM("Capture LHPF Mode", cap_lhpf_mode),
 SOC_DOUBLE_R_TLV("Sidetone Volume", WM8962_DAC_DSP_MIXING_1,
 		 WM8962_DAC_DSP_MIXING_2, 4, 12, 0, st_tlv),
 
+SOC_DOUBLE_R_TLV("Digital Playback Volume", WM8962_LEFT_DAC_VOLUME,
+		 WM8962_RIGHT_DAC_VOLUME, 1, 127, 0, digital_tlv),
 SOC_SINGLE("DAC High Performance Switch", WM8962_ADC_DAC_CONTROL_2, 0, 1, 0),
 SOC_SINGLE("DAC L/R Swap Switch", WM8962_AUDIO_INTERFACE_0, 5, 1, 0),
 SOC_SINGLE("ADC L/R Swap Switch", WM8962_AUDIO_INTERFACE_0, 8, 1, 0),
