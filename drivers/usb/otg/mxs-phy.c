@@ -48,6 +48,7 @@ struct mxs_phy {
 	struct clk *clk;
 	void __iomem *anatop_base_addr;
 	bool need_disconnect_line_feature;
+	bool need_open_regulator_at_lpm;
 };
 
 #define to_mxs_phy(p) container_of((p), struct mxs_phy, phy)
@@ -184,6 +185,23 @@ void mxs_phy_disconnect_line(struct usb_phy *phy, bool enable)
 }
 EXPORT_SYMBOL_GPL(mxs_phy_disconnect_line);
 
+void mxs_phy_enable_regulator(struct usb_phy *phy, bool enable)
+{
+	struct mxs_phy *mxs_phy = to_mxs_phy(phy);
+	void __iomem *anatop_base_addr = mxs_phy->anatop_base_addr;
+
+	if (!mxs_phy->need_open_regulator_at_lpm)
+		return;
+
+	if (enable)
+		writel_relaxed(BM_ANADIG_ANA_MISC0_STOP_MODE_CONFIG,
+				anatop_base_addr + HW_ANADIG_ANA_MISC0_SET);
+	else
+		writel_relaxed(BM_ANADIG_ANA_MISC0_STOP_MODE_CONFIG,
+				anatop_base_addr + HW_ANADIG_ANA_MISC0_CLR);
+}
+EXPORT_SYMBOL_GPL(mxs_phy_enable_regulator);
+
 static int mxs_phy_probe(struct platform_device *pdev)
 {
 	struct resource *res;
@@ -240,6 +258,9 @@ static int mxs_phy_probe(struct platform_device *pdev)
 
 	if (of_find_property(np, "usbphy_need_disconnect_line_feature", NULL))
 		mxs_phy->need_disconnect_line_feature = true;
+
+	if (of_find_property(np, "usbphy_need_open_regulator_at_lpm", NULL))
+		mxs_phy->need_open_regulator_at_lpm = true;
 
 	dev_set_drvdata(dev, &mxs_phy->phy);
 

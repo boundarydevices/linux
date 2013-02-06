@@ -122,6 +122,16 @@ static void usbphy_post_resume(struct ci13xxx *ci, struct usb_phy *phy)
 	}
 }
 
+static void usbphy_regulator_enable(struct usb_phy *phy, bool enable)
+{
+	/* This setting is only used at low power mode */
+	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
+		extern void mxs_phy_enable_regulator
+			(struct usb_phy *phy, bool enable);
+		mxs_phy_enable_regulator(phy, enable);
+	}
+}
+
 static int ci13xxx_otg_set_vbus(struct usb_otg *otg, bool enabled)
 {
 	struct ci13xxx	*ci = container_of(otg, struct ci13xxx, otg);
@@ -368,8 +378,7 @@ static int ci13xxx_imx_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int imx_controller_suspend(struct device *dev)
 {
-	struct ci13xxx_imx_data *data =
-		platform_get_drvdata(to_platform_device(dev));
+	struct ci13xxx_imx_data *data = dev_get_drvdata(dev);
 	struct platform_device *plat_ci;
 	struct ci13xxx *ci;
 	int ret = 0;
@@ -404,9 +413,6 @@ static int imx_controller_suspend(struct device *dev)
 
 	clk_disable_unprepare(data->clk);
 
-	if (device_may_wakeup(dev))
-		enable_irq_wake(ci->irq);
-
 	atomic_set(&ci->in_lpm, 1);
 
 	enable_irq(ci->irq);
@@ -419,8 +425,7 @@ static int imx_controller_suspend(struct device *dev)
 static int imx_controller_resume(struct device *dev)
 {
 	int ret;
-	struct ci13xxx_imx_data *data =
-		platform_get_drvdata(to_platform_device(dev));
+	struct ci13xxx_imx_data *data = dev_get_drvdata(dev);
 	struct platform_device *plat_ci;
 	struct ci13xxx *ci;
 
@@ -469,9 +474,6 @@ static int imx_controller_resume(struct device *dev)
 
 	atomic_set(&ci->in_lpm, 0);
 
-	if (device_may_wakeup(dev))
-		disable_irq_wake(ci->irq);
-
 	if (ci->wakeup_int) {
 		ci->wakeup_int = false;
 		pm_runtime_put(ci->dev);
@@ -514,24 +516,45 @@ static int ci13xxx_imx_runtime_resume(struct device *dev)
 
 static int ci13xxx_imx_suspend(struct device *dev)
 {
-	int ret;
+	struct ci13xxx_imx_data *data = dev_get_drvdata(dev);
+	struct platform_device *plat_ci;
+	struct ci13xxx *ci;
+	int ret = 0;
 
 	dev_dbg(dev, "at %s\n", __func__);
 
+	plat_ci = data->ci_pdev;
+	ci = platform_get_drvdata(plat_ci);
+
 	ret = imx_controller_suspend(dev);
+	if (ret)
+		return ret;
+
+	if (device_may_wakeup(dev)) {
+		enable_irq_wake(ci->irq);
+		usbphy_regulator_enable(data->phy, true);
+	}
 
 	return ret;
 }
 
 static int ci13xxx_imx_resume(struct device *dev)
 {
-	int ret;
+	struct ci13xxx_imx_data *data = dev_get_drvdata(dev);
+	struct platform_device *plat_ci;
+	struct ci13xxx *ci;
 
 	dev_dbg(dev, "at %s\n", __func__);
 
-	ret = imx_controller_resume(dev);
+	plat_ci = data->ci_pdev;
+	ci = platform_get_drvdata(plat_ci);
 
-	return ret;
+	if (device_may_wakeup(dev)) {
+		disable_irq_wake(ci->irq);
+		usbphy_regulator_enable(data->phy, false);
+	}
+
+	return imx_controller_resume(dev);
 }
 
 static const struct dev_pm_ops ci13xxx_imx_pm_ops = {
