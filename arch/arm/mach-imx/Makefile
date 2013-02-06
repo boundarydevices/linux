@@ -78,7 +78,7 @@ obj-$(CONFIG_SOC_IMX6Q) += clk-imx6q.o mach-imx6q.o busfreq-imx6.o mx6_mmdc.o mx
 obj-$(CONFIG_IMX_PCIE)	+= pcie.o
 
 ifeq ($(CONFIG_PM),y)
-obj-$(CONFIG_SOC_IMX6Q) += pm-imx6q.o headsmp.o imx_suspend.o
+obj-$(CONFIG_SOC_IMX6Q) += pm-imx6.o headsmp.o imx6_suspend.o
 endif
 
 ifeq ($(CONFIG_CPU_IDLE),y)
