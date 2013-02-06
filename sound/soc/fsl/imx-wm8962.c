@@ -376,10 +376,41 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	int ret;
+
+	/*
+	 * wm8962 doesn't allow we to continuously setting FLL,
+	 * So we set MCLK as sysclk once, which'd remove the limitation.
+	 */
+	ret = snd_soc_dai_set_sysclk(codec_dai, WM8962_SYSCLK_MCLK,
+			0, SND_SOC_CLOCK_IN);
+	if (ret < 0) {
+		pr_err("Failed to set SYSCLK: %d\n", ret);
+		return ret;
+	}
+
+	/*
+	 * Continuously setting FLL would cause playback distortion.
+	 * We can fix it just by mute codec after playback.
+	 */
+	ret = snd_soc_dai_digital_mute(codec_dai, 1);
+	if (ret < 0) {
+		pr_err("Failed to set MUTE: %d\n", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
 static struct snd_soc_ops imx_hifi_ops = {
 	.startup = imx_hifi_startup,
 	.shutdown = imx_hifi_shutdown,
 	.hw_params = imx_hifi_hw_params,
+	.hw_free = imx_hifi_hw_free,
 	.trigger = imx_hifi_trigger,
 };
 
