@@ -9,6 +9,10 @@ Required properties:
 if both phys power is off, the status of dp/dm will be uncertain.
 At that time, there will be unknown wakeup. With this flag, we can
 avoid this unknown wakeup interrupt
+- usbphy_need_open_regulator_at_lpm: for some SoCs(like imx6), the
+phy's regulator is from the SoC power, when SoC enters lpm, this
+power will be off, but if we want to support usb as system wakeup
+source, these regulators need to be on.
 
 
 Example:
@@ -18,4 +22,5 @@ usbphy1: usbphy@020c9000 {
 	interrupts = <0 44 0x04>;
 	usbphy_reg_at_anatop;
 	usbphy_need_disconnect_line_feature;
+	usbphy_need_open_regulator_at_lpm;
 };
