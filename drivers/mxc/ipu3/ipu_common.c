@@ -242,21 +242,6 @@ static int __devinit ipu_probe(struct platform_device *pdev)
 		goto failed_get_res;
 	}
 
-	if (request_irq(ipu->irq_sync, ipu_irq_handler, 0, pdev->name, ipu) != 0) {
-		dev_err(ipu->dev, "request SYNC interrupt failed\n");
-		ret = -EBUSY;
-		goto failed_req_irq_sync;
-	}
-	/* Some platforms have 2 IPU interrupts */
-	if (ipu->irq_err >= 0) {
-		if (request_irq
-		    (ipu->irq_err, ipu_irq_handler, 0, pdev->name, ipu) != 0) {
-			dev_err(ipu->dev, "request ERR interrupt failed\n");
-			ret = -EBUSY;
-			goto failed_req_irq_err;
-		}
-	}
-
 	ipu_base = res->start;
 	/* base fixup */
 	if (g_ipu_hw_rev == 4)	/* IPUv3H */
@@ -344,12 +329,29 @@ static int __devinit ipu_probe(struct platform_device *pdev)
 	if (!plat_data->bypass_reset)
 		clk_disable(ipu->ipu_clk);
 
+	if (request_irq(ipu->irq_sync, ipu_irq_handler, 0, pdev->name, ipu) != 0) {
+		dev_err(ipu->dev, "request SYNC interrupt failed\n");
+		ret = -EBUSY;
+		goto failed_req_irq_sync;
+	}
+	/* Some platforms have 2 IPU interrupts */
+	if (ipu->irq_err >= 0) {
+		if (request_irq
+		    (ipu->irq_err, ipu_irq_handler, 0, pdev->name, ipu) != 0) {
+			dev_err(ipu->dev, "request ERR interrupt failed\n");
+			ret = -EBUSY;
+			goto failed_req_irq_err;
+		}
+	}
 	register_ipu_device(ipu, pdev->id);
 
 	ipu->online = true;
 
 	return ret;
 
+failed_req_irq_err:
+	free_irq(ipu->irq_sync, ipu);
+failed_req_irq_sync:
 failed_clk_setup:
 	iounmap(ipu->cm_reg);
 	iounmap(ipu->ic_reg);
@@ -370,9 +372,6 @@ failed_clk_setup:
 failed_ioremap:
 	if (ipu->irq_sync)
 		free_irq(ipu->irq_err, ipu);
-failed_req_irq_err:
-	free_irq(ipu->irq_sync, ipu);
-failed_req_irq_sync:
 failed_get_res:
 	return ret;
 }
@@ -2415,8 +2414,8 @@ static irqreturn_t ipu_irq_handler(int irq, void *desc)
 			bit = --line;
 			int_stat &= ~(1UL << line);
 			line += (int_reg[i] - 1) * 32;
-			result |=
-			    ipu->irq_list[line].handler(line,
+			if (ipu->irq_list[line].handler)
+				result |= ipu->irq_list[line].handler(line,
 						       ipu->irq_list[line].
 						       dev_id);
 			if (ipu->irq_list[line].flags & IPU_IRQF_ONESHOT) {
