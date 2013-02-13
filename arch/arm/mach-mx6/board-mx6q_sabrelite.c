@@ -41,6 +41,7 @@
 #include <linux/pmic_status.h>
 #include <linux/ipu.h>
 #include <linux/mxcfb.h>
+#include <linux/pwm.h>
 #include <linux/pwm_backlight.h>
 #include <linux/fec.h>
 #include <linux/memblock.h>
@@ -389,52 +390,91 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	},
 };
 
-static void mx6_csi0_cam_powerdown(int powerdown)
-{
-	if (powerdown)
-		gpio_set_value(MX6_SABRELITE_CSI0_PWN, 1);
-	else
-		gpio_set_value(MX6_SABRELITE_CSI0_PWN, 0);
-
-	msleep(2);
-}
-
 static void camera_reset(int power_gp, int reset_gp, int reset_gp2)
 {
+	pr_info("%s: power_gp=0x%x, reset_gp=0x%x reset_gp2=0x%x\n",
+			__func__, power_gp, reset_gp, reset_gp2);
 	/* Camera power down */
 	gpio_request(power_gp, "cam-pwdn");
 	gpio_request(reset_gp, "cam-reset");
-	gpio_request(reset_gp2, "cam-reset2");
+	if (reset_gp2 >= 0)
+		gpio_request(reset_gp2, "cam-reset2");
 	gpio_direction_output(power_gp, 1);
 	/* Camera reset */
 	gpio_direction_output(reset_gp, 0);
-	gpio_direction_output(reset_gp2, 0);
+	if (reset_gp2 >= 0)
+		gpio_direction_output(reset_gp2, 0);
 	msleep(1);
 	gpio_set_value(power_gp, 0);
 	msleep(1);
 	gpio_set_value(reset_gp, 1);
-	gpio_set_value(reset_gp2, 1);
+	if (reset_gp2 >= 0)
+		gpio_set_value(reset_gp2, 1);
 }
 
+
 #if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
-static void mx6_mipi_sensor_io_init(void)
+/*
+ * (ov5640 Mipi) - J16
+ * NANDF_WP_B	GPIO[6]:9	Nitrogen6x - power down, SOM - NC
+ * NANDF_D5 	GPIO[2]:5	Nitrogen6x/SOM - CSI0 reset
+ * NANDF_CS0	GPIO[6]:11	reset, old rev SOM jumpered
+ * SD1_DAT1	GPIO[1]:16	24 Mhz XCLK/XVCLK (pwm3)
+ */
+struct pwm_device	*mipi_pwm;
+
+static void mx6_mipi_camera_io_init(void)
 {
 	IOMUX_SETUP(sabrelite_mipi_pads);
 
-	camera_reset(MX6_SABRELITE_CSI0_PWN, IMX_GPIO_NR(2, 5),
-			IMX_GPIO_NR(6, 11));
-/*for mx6dl, mipi virtual channel 1 connect to csi 1*/
+	pr_info("%s\n", __func__);
+	mipi_pwm = pwm_request(2, "mipi_clock");
+	if (IS_ERR(mipi_pwm)) {
+		pr_err("unable to request PWM for mipi_clock\n");
+	} else {
+		unsigned period = 1000/22;
+		pr_info("got pwm for mipi_clock\n");
+		pwm_config(mipi_pwm, period >> 1, period);
+		pwm_enable(mipi_pwm);
+	}
+
+	camera_reset(IMX_GPIO_NR(6, 9), IMX_GPIO_NR(2, 5), IMX_GPIO_NR(6, 11));
+/* for mx6dl, mipi virtual channel 1 connect to csi 1*/
 	if (cpu_is_mx6dl())
 		mxc_iomux_set_gpr_register(13, 3, 3, 1);
 }
 
+static void mx6_mipi_camera_powerdown(int powerdown)
+{
+	if (!IS_ERR(mipi_pwm)) {
+		if (powerdown) {
+			pwm_disable(mipi_pwm);
+		} else {
+			unsigned period = 1000/24;
+			pwm_config(mipi_pwm, period >> 1, period);
+			pwm_enable(mipi_pwm);
+		}
+	}
+	pr_info("%s: powerdown=%d, power_gp=0x%x\n",
+			__func__, powerdown, IMX_GPIO_NR(6, 9));
+	gpio_set_value(IMX_GPIO_NR(6, 9), powerdown ? 1 : 0);
+	if (!powerdown)
+		msleep(2);
+}
+
 static struct fsl_mxc_camera_platform_data ov5640_mipi_data = {
-	.mclk = 24000000,
+	.mclk = 22000000,
 	.csi = 0,
-	.io_init = mx6_mipi_sensor_io_init,
-	.pwdn = mx6_csi0_cam_powerdown,
+	.io_init = mx6_mipi_camera_io_init,
+	.pwdn = mx6_mipi_camera_powerdown,
 };
 #else
+/*
+ * GPIO_6	GPIO[1]:6	(ov5642) - J5 - CSI0 power down
+ * GPIO_8	GPIO[1]:8	(ov5642) - J5 - CSI0 reset
+ * NANDF_CS0	GPIO[6]:11	(ov5642) - J5 - reset
+ * SD1_DAT0	GPIO[1]:16	(ov5642) - J5 - GP
+ */
 static void mx6_csi0_io_init(void)
 {
 	IOMUX_SETUP(sabrelite_csi0_sensor_pads);
@@ -459,12 +499,20 @@ static void mx6_csi0_io_init(void)
 		mxc_iomux_set_gpr_register(13, 0, 3, 4);
 }
 
+static void mx6_csi0_powerdown(int powerdown)
+{
+	pr_info("%s: powerdown=%d, power_gp=0x%x\n",
+			__func__, powerdown, MX6_SABRELITE_CSI0_PWN);
+	gpio_set_value(MX6_SABRELITE_CSI0_PWN, powerdown ? 1 : 0);
+	msleep(2);
+}
+
 static struct fsl_mxc_camera_platform_data camera_data = {
 	.mclk = 24000000,
 	.mclk_source = 0,
 	.csi = 0,
 	.io_init = mx6_csi0_io_init,
-	.pwdn = mx6_csi0_cam_powerdown,
+	.pwdn = mx6_csi0_powerdown,
 };
 
 #endif
@@ -994,18 +1042,22 @@ static int imx6_init_audio(void)
 	return 0;
 }
 
-/* PWM0_PWMO: backlight control on DRGB connector */
-static struct platform_pwm_backlight_data mx6_sabrelite_pwm0_backlight_data = {
-	.pwm_id = 0,
-	.max_brightness = 255,
-	.dft_brightness = 255,
+/* PWM1_PWMO: backlight control on DRGB connector */
+static struct platform_pwm_backlight_data mx6_sabrelite_pwm1_backlight_data = {
+	.pwm_id = 0,	/* pin SD1_DATA3 - PWM1 */
+	.max_brightness = 256,
+	.dft_brightness = 256,
 	.pwm_period_ns = 1000000000/32768,
 };
 
-/* PWM3_PWMO: backlight control on LDB connector */
-static struct platform_pwm_backlight_data mx6_sabrelite_pwm_backlight_data = {
-	.pwm_id = 3,
-	.max_brightness = 255,
+static struct mxc_pwm_platform_data mx6_sabrelite_pwm3_data = {
+	.clk_select = PWM_CLK_HIGHPERF,
+};
+
+/* PWM4_PWMO: backlight control on LDB connector */
+static struct platform_pwm_backlight_data mx6_sabrelite_pwm4_backlight_data = {
+	.pwm_id = 3,	/* pin SD1_CMD - PWM4 */
+	.max_brightness = 256,
 	.dft_brightness = 128,
 	.pwm_period_ns = 50000,
 };
@@ -1171,10 +1223,11 @@ static void __init mx6_sabrelite_board_init(void)
 
 	imx6q_add_mxc_pwm(0);
 	imx6q_add_mxc_pwm(1);
-	imx6q_add_mxc_pwm(2);
+	imx6q_add_mxc_pwm_pdata(2, &mx6_sabrelite_pwm3_data);
 	imx6q_add_mxc_pwm(3);
-	imx6q_add_mxc_pwm_backlight(0, &mx6_sabrelite_pwm0_backlight_data);
-	imx6q_add_mxc_pwm_backlight(3, &mx6_sabrelite_pwm_backlight_data);
+
+	imx6q_add_mxc_pwm_backlight(0, &mx6_sabrelite_pwm1_backlight_data);
+	imx6q_add_mxc_pwm_backlight(3, &mx6_sabrelite_pwm4_backlight_data);
 
 	imx6q_add_otp();
 	imx6q_add_viim();
