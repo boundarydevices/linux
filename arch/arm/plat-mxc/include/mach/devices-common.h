@@ -312,7 +312,8 @@ struct imx_mxc_pwm_data {
 	resource_size_t irq;
 };
 struct platform_device *__init imx_add_mxc_pwm(
-		const struct imx_mxc_pwm_data *data);
+		const struct imx_mxc_pwm_data *data,
+		const struct mxc_pwm_platform_data *pdata);
 
 /* mxc_rtc */
 struct imx_mxc_rtc_data {
