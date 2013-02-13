@@ -403,6 +403,11 @@ struct mxc_audio_codec_platform_data {
 
 struct mxc_pwm_platform_data {
 	int pwmo_invert;
+#define PWM_CLK_DEFAULT 0
+#define PWM_CLK_HIGHPERF 1
+#define PWM_CLK_HIGHFREQ 2
+#define PWM_CLK_32K       3
+	int clk_select;
 	void (*enable_pwm_pad) (void);
 	void (*disable_pwm_pad) (void);
 };
