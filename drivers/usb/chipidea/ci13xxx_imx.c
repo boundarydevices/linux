@@ -307,6 +307,13 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, data);
 
 	ci = platform_get_drvdata(plat_ci);
+
+	if (!ci) {
+		ret = -ENODEV;
+		dev_err(&pdev->dev,
+			"some wrong at ci core's initialization\n");
+		goto put_np;
+	}
 	/*
 	 * Internal vbus on/off policy
 	 * - Always on for host only function
