@@ -505,4 +505,9 @@
 		pinctrl-0 = <&pinctrl_ipu1_1>;
 		status = "okay";
 	};
+
+	v4l2_out {
+		compatible = "fsl,mxc_v4l2_output";
+		status = "okay";
+	};
 };
