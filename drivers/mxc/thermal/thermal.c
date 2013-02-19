@@ -111,25 +111,11 @@
 
 /* define */
 #define PREFIX					"ANATOP: "
-#define ANATOP_THERMAL_DRIVER_NAME		"Anatop Thermal"
-#define ANATOP_THERMAL_FILE_STATE		"state"
-#define ANATOP_THERMAL_FILE_TEMPERATURE		"temperature"
-#define ANATOP_THERMAL_FILE_TRIP_POINTS		"trip_points"
-#define ANATOP_THERMAL_FILE_COOLING_MODE	"cooling_mode"
-#define ANATOP_THERMAL_FILE_POLLING_FREQ	"polling_frequency"
-#define ANATOP_THERMAL_NOTIFY_TEMPERATURE	0x80
-#define ANATOP_THERMAL_NOTIFY_THRESHOLDS	0x81
-#define ANATOP_THERMAL_NOTIFY_DEVICES		0x82
 #define ANATOP_THERMAL_NOTIFY_CRITICAL		0xF0
 #define ANATOP_THERMAL_NOTIFY_HOT		0xF1
-#define ANATOP_THERMAL_MODE_ACTIVE		0x00
-#define ANATOP_THERMAL_MAX_ACTIVE		10
-#define ANATOP_THERMAL_MAX_LIMIT_STR_LEN	65
 #define ANATOP_TRIPS_CRITICAL			0x01
 #define ANATOP_TRIPS_HOT			0x02
-#define ANATOP_TRIPS_PASSIVE			0x04
 #define ANATOP_TRIPS_ACTIVE			0x08
-#define ANATOP_TRIPS_DEVICES			0x10
 
 #define ANATOP_TRIPS_POINT_CRITICAL		0x0
 #define ANATOP_TRIPS_POINT_HOT			0x1
@@ -138,9 +124,7 @@
 #define ANATOP_TRIPS_INIT      (ANATOP_TRIPS_CRITICAL | \
 		ANATOP_TRIPS_HOT | ANATOP_TRIPS_ACTIVE)
 
-#define _COMPONENT		ANATOP_THERMAL_COMPONENT
 #define KELVIN_OFFSET				273
-#define POLLING_FREQ				2000	/* 2s */
 #define TEMP_CRITICAL				373	/* 100 C*/
 #define TEMP_HOT				363	/* 90 C*/
 #define TEMP_ACTIVE				353	/* 80 C*/
@@ -153,7 +137,7 @@
 #define REG_VALUE_TO_CEL(ratio, raw)	((raw_n40c - raw) * 100 / ratio - 40)
 #define ANATOP_DEBUG				false
 #define THERMAL_FUSE_NAME			"/sys/fsl_otp/HW_OCOTP_ANA1"
-#define THERMAL_UPDATE_INTERVAL			5000
+#define THERMAL_UPDATE_INTERVAL			2000
 #define CPUx					"/sys/devices/system/cpu/cpu"
 #define MAX_GOVERNOR_NAME_LEN			12
 #define MAX_CPU_FREQ_LEN			7
@@ -165,7 +149,6 @@ static unsigned int hot_temp, raw_n40c, raw_125c, raw_critical, thermal_irq;
 static struct clk *pll3_clk;
 static bool full_run = true, suspend_flag, cooling_cpuhotplug;
 static bool cooling_device_disable;
-unsigned long temperature_cooling;
 static const struct anatop_device_id thermal_device_ids[] = {
 	{ANATOP_THERMAL_HID},
 	{""},
@@ -295,11 +278,8 @@ int anatop_thermal_cpufreq_up(void)
 	int ret = -EINVAL;
 #ifdef CONFIG_CPU_FREQ
 	int fd;
-	if (cpufreq_change_count > 0) {
-		printk(KERN_WARNING
-			"cooling: already in the highest setpoint!\n");
+	if (cpufreq_change_count > 0)
 		return 0;
-	}
 
 	strcpy(cpu_sys_file, CPUx);
 	strcat(cpu_sys_file, "0/cpufreq/scaling_max_freq");
@@ -323,11 +303,9 @@ int anatop_thermal_cpufreq_down(void)
 #ifdef CONFIG_CPU_FREQ
 	int fd;
 
-	if (cpufreq_change_count < 0) {
-		printk(KERN_WARNING
-			"cooling: already in the lowest setpoint!\n");
+	if (cpufreq_change_count < 0)
 		return 0;
-	}
+
 	cpufreq_new = cpu_op_tbl[0].cpu_rate;
 	cpufreq_new /= 1000;
 
@@ -369,13 +347,13 @@ int anatop_thermal_cpu_hotplug(bool cpu_on)
 			  O_RDWR, 0700);
 			if (fd >= 0) {
 				sys_read(fd, &online, MAX_CPU_ONLINE_LEN);
-				if (online == '0') {
+				if ((online == '0') && ((cpu_mask &
+					(0x1 << cpu)) != 0)) {
 					sys_write(fd, (char *)"1",
 						MAX_CPU_ONLINE_LEN);
 					cpu_mask &= ~(0x1 << cpu);
 					ret = 0;
 					sys_close(fd);
-					break;
 				}
 				sys_close(fd);
 			}
@@ -398,7 +376,6 @@ int anatop_thermal_cpu_hotplug(bool cpu_on)
 					cpu_mask |= 0x1 << cpu;
 					ret = 0;
 					sys_close(fd);
-					break;
 				}
 				sys_close(fd);
 			}
@@ -433,7 +410,6 @@ imx_processor_set_cur_state(struct anatop_thermal *thermal,
 			unsigned long state)
 {
 	int result = 0;
-	int i;
 
 	/* state =0 means we are at a low temp, we should try to attach the
 	secondary CPUs that detached by thermal driver */
@@ -442,13 +418,7 @@ imx_processor_set_cur_state(struct anatop_thermal *thermal,
 			thermal_hot = 0;
 			if (atomic_read(&thermal_on))
 				thermal_notifier_call_chain(0);
-			for (i = 1; i < 4; i++) {
-				if (cpu_mask && (0x1 << i)) {
-					anatop_thermal_cpu_hotplug(true);
-					temperature_cooling = 0;
-					break;
-				}
-			}
+			anatop_thermal_cpu_hotplug(true);
 		}
 	} else {
 		if (!state) {
@@ -459,7 +429,6 @@ imx_processor_set_cur_state(struct anatop_thermal *thermal,
 				anatop_thermal_cpufreq_up();
 			else if (cpufreq_change_count > 0)
 				anatop_thermal_cpufreq_down();
-			temperature_cooling = 0;
 		}
 	}
 
@@ -752,7 +721,6 @@ static int anatop_thermal_notify(struct anatop_thermal *thermal,
 	u8 type = 0;
 	char mode = 'r';
 	const char *cmd = "reboot";
-	struct anatop_thermal *tz = thermal;
 
 	if (cooling_device_disable)
 		return ret;
@@ -768,13 +736,10 @@ static int anatop_thermal_notify(struct anatop_thermal *thermal,
 		printk(KERN_DEBUG "thermal_notify: trip_hot reached!\n");
 		type = ANATOP_THERMAL_NOTIFY_HOT;
 		/* if temperature increase, continue to detach secondary CPUs */
-		if (tz->temperature > (temperature_cooling + 1)) {
-			if (cooling_cpuhotplug)
-				anatop_thermal_cpu_hotplug(false);
-			else
-				anatop_thermal_cpufreq_down();
-			temperature_cooling = tz->temperature;
-		}
+		if (cooling_cpuhotplug)
+			anatop_thermal_cpu_hotplug(false);
+		else
+			anatop_thermal_cpufreq_down();
 		if (ret)
 			printk(KERN_INFO "No secondary CPUs detached!\n");
 		full_run = false;
@@ -782,7 +747,6 @@ static int anatop_thermal_notify(struct anatop_thermal *thermal,
 		if (!full_run) {
 			if (atomic_read(&thermal_on))
 				thermal_notifier_call_chain(0);
-			temperature_cooling = 0;
 			thermal_hot = 0;
 			if (cooling_cpuhotplug)
 				anatop_thermal_cpu_hotplug(true);
