@@ -201,6 +201,10 @@ struct arizona_fll {
 	unsigned int fref;
 	unsigned int fout;
 	struct mutex fll_lock;
+
+	int ref_src;
+	unsigned int ref_freq;
+
 	char lock_name[ARIZONA_FLL_NAME_LEN];
 	char clock_ok_name[ARIZONA_FLL_NAME_LEN];
 };
