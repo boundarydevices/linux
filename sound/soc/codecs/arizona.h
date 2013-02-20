@@ -202,6 +202,8 @@ struct arizona_fll {
 	unsigned int fout;
 	struct mutex fll_lock;
 
+	int sync_src;
+	unsigned int sync_freq;
 	int ref_src;
 	unsigned int ref_freq;
 
