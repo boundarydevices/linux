@@ -159,7 +159,7 @@ static int imx_event_mic(struct snd_soc_dapm_widget *w,
 	char *buf;
 
 	if (priv->amic_gpio != -1) {
-		priv->amic_status = gpio_get_value(priv->amic_gpio);
+		priv->amic_status = gpio_get_value(priv->amic_gpio) ? 1 : 0;
 
 		buf = kmalloc(32, GFP_ATOMIC);
 		if (!buf) {
@@ -215,7 +215,7 @@ static ssize_t show_amic(struct device_driver *dev, char *buf)
 	struct imx_priv *priv = &card_priv;
 
 	/* determine whether amic is plugged in */
-	priv->amic_status = gpio_get_value(priv->hp_gpio) ? 1 : 0;
+	priv->amic_status = gpio_get_value(priv->amic_gpio) ? 1 : 0;
 
 	if (priv->amic_status != priv->amic_active_low)
 		strcpy(buf, "amic\n");
