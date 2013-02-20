@@ -198,10 +198,9 @@ struct arizona_fll {
 	unsigned int base;
 	unsigned int vco_mult;
 	struct completion ok;
-	unsigned int fref;
-	unsigned int fout;
 	struct mutex fll_lock;
 
+	unsigned int fout;
 	int sync_src;
 	unsigned int sync_freq;
 	int ref_src;

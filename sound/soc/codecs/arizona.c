@@ -1150,10 +1150,12 @@ int arizona_set_fll(struct arizona_fll *fll, int source,
 	int ret = 0;
 
 	mutex_lock(&fll->fll_lock);
-	if (fll->fref == Fref && fll->fout == Fout)
-		goto exit;
-
 	if (fll->ref_src < 0 || fll->ref_src == source) {
+		if (fll->sync_src == -1 &&
+		    fll->ref_src == source && fll->ref_freq == Fref &&
+		    fll->fout == Fout)
+			goto exit;
+
 		if (Fout) {
 			ret = arizona_calc_fll(fll, &ref, Fref, Fout);
 			if (ret != 0)
@@ -1164,6 +1166,10 @@ int arizona_set_fll(struct arizona_fll *fll, int source,
 		fll->ref_src = source;
 		fll->ref_freq = Fref;
 	} else {
+		if (fll->sync_src == source &&
+		    fll->sync_freq == Fref && fll->fout == Fout)
+			goto exit;
+
 		if (Fout) {
 			ret = arizona_calc_fll(fll, &ref, fll->ref_freq, Fout);
 			if (ret != 0)
@@ -1177,6 +1183,7 @@ int arizona_set_fll(struct arizona_fll *fll, int source,
 		fll->sync_src = source;
 		fll->sync_freq = Fref;
 	}
+	fll->fout = Fout;
 
 	if (Fout) {
 		arizona_enable_fll(fll, &ref, &sync);
@@ -1184,8 +1191,6 @@ int arizona_set_fll(struct arizona_fll *fll, int source,
 		arizona_disable_fll(fll);
 	}
 
-	fll->fref = Fref;
-	fll->fout = Fout;
 	ret = 0;
 exit:
 	mutex_unlock(&fll->fll_lock);
