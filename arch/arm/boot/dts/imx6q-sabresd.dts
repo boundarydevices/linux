@@ -194,14 +194,14 @@
 					compatible = "fsl,wm8962";
 					reg = <0x1a>;
 					clocks = <&clks 169>;
-					DCVDD-supply = <&vgen4_reg>;	/* 1.8v */
-					DBVDD-supply = <&vgen4_reg>;	/* 1.8v */
-					AVDD-supply = <&vgen4_reg>;		/* 1.8v */
-					CPVDD-supply = <&vgen4_reg>;	/* 1.8v */
-					MICVDD-supply = <&vgen6_reg>;	/* 3.3v */
-					PLLVDD-supply = <&vgen4_reg>;	/* 1.8v */
-					SPKVDD1-supply = <&reg_4p2v>;
-					SPKVDD2-supply = <&reg_4p2v>;
+					DCVDD-supply = <&reg_audio>;	/* 1.8v */
+					DBVDD-supply = <&reg_audio>;	/* 1.8v */
+					AVDD-supply = <&reg_audio>;	/* 1.8v */
+					CPVDD-supply = <&reg_audio>;	/* 1.8v */
+					MICVDD-supply = <&reg_audio>;	/* 3.3v */
+					PLLVDD-supply = <&reg_audio>;	/* 1.8v */
+					SPKVDD1-supply = <&reg_audio>;	/* 4.2v */
+					SPKVDD2-supply = <&reg_audio>;	/* 4.2v */
 					gpio-cfg = <
 						0x0000 /* 0:Default */
 						0x0000 /* 1:Default */
@@ -378,14 +378,10 @@
 	regulators {
 		compatible = "simple-bus";
 
-		reg_4p2v: 4p2v {
+		reg_audio: 8962_supply {
 			compatible = "regulator-fixed";
-			regulator-name = "4P2V";
-			regulator-min-microvolt = <4200000>;
-			regulator-max-microvolt = <4200000>;
+			regulator-name = "8962-SUPPLY";
 			gpio = <&gpio4 10 0>;
-			regulator-always-on;
-			regulator-boot-on;
 			enable-active-high;
 		};
 
