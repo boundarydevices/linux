@@ -838,7 +838,6 @@ config SOC_IMX6Q
 	select MFD_SYSCON
 	select PINCTRL
 	select PINCTRL_IMX6Q
-	select PINCTRL_IMX6SDL
 	select USE_OF
 
 	help

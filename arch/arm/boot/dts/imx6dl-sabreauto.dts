@@ -24,8 +24,8 @@
 				hog {
 					pinctrl_hog: hoggpr {
 						fsl,pins = <
-							/*RGMII Phy Interrupt */
-							1066 0x80000000 /* MX6SDL_PAD_GPIO_19__GPIO_4_5 */
+							/* RGMII Phy Interrupt */
+							MX6DL_PAD_GPIO_19__GPIO4_IO05 0x80000000
 						>;
 					};
 				};

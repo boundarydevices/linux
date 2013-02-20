@@ -1,14 +1,14 @@
-* Freescale IMX6Q IOMUX Controller
+* Freescale IMX6 DualLite/Solo IOMUX Controller
 
 Please refer to fsl,imx-pinctrl.txt in this directory for common binding part
 and usage.
 
 Required properties:
-- compatible: "fsl,imx6q-iomuxc"
+- compatible: "fsl,imx6dl-iomuxc"
 - fsl,pins: two integers array, represents a group of pins mux and config
   setting. The format is fsl,pins = <PIN_FUNC_ID CONFIG>, PIN_FUNC_ID is a
   pin working on a specific function, CONFIG is the pad setting value like
-  pull-up for this pin. Please refer to imx6q datasheet for the valid pad
+  pull-up for this pin. Please refer to imx6dl datasheet for the valid pad
   config settings.
 
 CONFIG bits definition:
@@ -34,5 +34,5 @@ PAD_CTL_DSE_34ohm               (7 << 3)
 PAD_CTL_SRE_FAST                (1 << 0)
 PAD_CTL_SRE_SLOW                (0 << 0)
 
-Refer to imx6q-pinfunc.h in device tree source folder for all available
-imx6q PIN_FUNC_ID.
+Refer to imx6dl-pinfunc.h in device tree source folder for all available
+imx6dl PIN_FUNC_ID.
