@@ -20,6 +20,11 @@ header-y += netfilter_ipv6/
 header-y += usb/
 header-y += wimax/
 
+## i.MX specific files
+header-y += ipu.h
+header-y += mxc_v4l2.h
+header-y += mxcfb.h
+
 objhdr-y += version.h
 
 ifneq ($(wildcard $(srctree)/arch/$(SRCARCH)/include/asm/a.out.h \
