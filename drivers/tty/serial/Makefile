@@ -97,3 +97,4 @@ obj-$(CONFIG_SERIAL_MXS_AUART) += mxs-auart.o
 obj-$(CONFIG_SERIAL_LANTIQ)	+= lantiq.o
 obj-$(CONFIG_SERIAL_XILINX_PS_UART) += xilinx_uartps.o
 obj-$(CONFIG_SERIAL_IMX_CONSOLE) += mxc_uart_early.o
+obj-$(CONFIG_SERIAL_XR17V35X) += xr17v35x.o

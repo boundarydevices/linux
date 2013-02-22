@@ -1635,4 +1635,9 @@ config SERIAL_XILINX_PS_UART_CONSOLE
 	help
 	  Enable a Xilinx PS UART port to be the system console.
 
+config SERIAL_XR17V35X
+	tristate "Exar PCIe Multiport Device Driver"
+	help
+	  Enable an Exar PCIe UART device.
+
 endmenu
