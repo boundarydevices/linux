@@ -58,3 +58,10 @@ config PCIEASPM_DEBUG
 config PCIE_PME
 	def_bool y
 	depends on PCIEPORTBUS && PM_RUNTIME && EXPERIMENTAL && ACPI
+
+
+config PCIE_TW6869
+	tristate "Techwell/Intersil TW6869"
+	select VIDEOBUF_DMA_CONTIG
+	select VIDEOBUF_DMA_SG
+	depends on PCIEPORTBUS && PM_RUNTIME
