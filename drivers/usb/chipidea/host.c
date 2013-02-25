@@ -47,6 +47,203 @@ static int ci_ehci_setup(struct usb_hcd *hcd)
 	return ret;
 }
 
+static enum usb_device_speed ci_get_device_speed(struct ehci_hcd *ehci,
+						u32 portsc)
+{
+	if (ehci_is_TDI(ehci)) {
+		switch ((portsc >> (ehci->has_hostpc ? 25 : 26)) & 3) {
+		case 0:
+			return USB_SPEED_FULL;
+		case 1:
+			return USB_SPEED_LOW;
+		case 2:
+			return USB_SPEED_HIGH;
+		default:
+			return USB_SPEED_UNKNOWN;
+		}
+	} else {
+		return USB_SPEED_HIGH;
+	}
+}
+
+static void ci_ehci_bus_post_suspend(struct usb_hcd *hcd)
+{
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	int port;
+	u32 tmp;
+
+	port = HCS_N_PORTS(ehci->hcs_params);
+	while (port--) {
+		u32 __iomem *reg = &ehci->regs->port_status[port];
+		u32 portsc = ehci_readl(ehci, reg);
+
+		if (portsc & PORT_CONNECT) {
+			/*
+			 * For chipidea, the resume signal will be ended
+			 * automatically, so for remote wakeup case, the
+			 * usbcmd.rs may not be set before the resume has
+			 * ended if other resume path consumes too much
+			 * time (~23ms-24ms), in that case, the SOF will not
+			 * send out within 3ms after resume ends, then the
+			 * device will enter suspend again.
+			 */
+			if (ehci_to_hcd(ehci)->self.root_hub->do_remote_wakeup) {
+				ehci_info(ehci,
+					"Remote wakeup is enabled, "
+					"and device is on the port\n");
+
+				tmp = ehci_readl(ehci, &ehci->regs->command);
+				tmp |= CMD_RUN;
+				ehci_writel(ehci, tmp, &ehci->regs->command);
+				/*
+				 * It needs a short delay between set RUNSTOP
+				 * and set PHCD.
+				 */
+				udelay(125);
+			}
+		}
+	}
+
+}
+
+static void ci_ehci_bus_suspend_notify_phy(struct usb_hcd *hcd)
+{
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	int port;
+
+	port = HCS_N_PORTS(ehci->hcs_params);
+	while (port--) {
+		u32 __iomem *reg = &ehci->regs->port_status[port];
+		u32 portsc = ehci_readl(ehci, reg);
+
+		if (portsc & PORT_CONNECT) {
+			enum usb_device_speed speed;
+			speed = ci_get_device_speed(ehci, portsc);
+			/* notify the USB PHY */
+			if (hcd->phy)
+				usb_phy_notify_suspend(hcd->phy, speed);
+		}
+	}
+
+}
+static int ci_ehci_bus_suspend(struct usb_hcd *hcd)
+{
+	int ret = ehci_bus_suspend(hcd);
+
+	if (ret)
+		return ret;
+	else if (!IS_ENABLED(CONFIG_USB_SUSPEND))
+		ci_ehci_bus_suspend_notify_phy(hcd);
+
+	ci_ehci_bus_post_suspend(hcd);
+
+	return ret;
+}
+
+static void ci_ehci_bus_post_resume(struct usb_hcd *hcd)
+{
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	int port;
+
+	port = HCS_N_PORTS(ehci->hcs_params);
+	while (port--) {
+		u32 __iomem *reg = &ehci->regs->port_status[port];
+		u32 portsc = ehci_readl(ehci, reg);
+
+		if (portsc & PORT_CONNECT) {
+			enum usb_device_speed speed;
+			speed = ci_get_device_speed(ehci, portsc);
+			/* notify the USB PHY */
+			if (hcd->phy)
+				usb_phy_notify_resume(hcd->phy, speed);
+		}
+	}
+}
+
+static int ci_ehci_bus_resume(struct usb_hcd *hcd)
+{
+	int ret = ehci_bus_resume(hcd);
+
+	if (ret)
+		return ret;
+	else if (!IS_ENABLED(CONFIG_USB_SUSPEND))
+		ci_ehci_bus_post_resume(hcd);
+
+	return ret;
+}
+
+/* The below code is based on tegra ehci driver */
+static int ci_ehci_hub_control(
+	struct usb_hcd	*hcd,
+	u16		typeReq,
+	u16		wValue,
+	u16		wIndex,
+	char		*buf,
+	u16		wLength
+)
+{
+	struct ehci_hcd	*ehci = hcd_to_ehci(hcd);
+	u32 __iomem	*status_reg;
+	u32		temp;
+	unsigned long	flags;
+	int		retval = 0;
+
+	status_reg = &ehci->regs->port_status[(wIndex & 0xff) - 1];
+
+	spin_lock_irqsave(&ehci->lock, flags);
+
+	if (typeReq == SetPortFeature && wValue == USB_PORT_FEAT_SUSPEND) {
+		temp = ehci_readl(ehci, status_reg);
+		if ((temp & PORT_PE) == 0 || (temp & PORT_RESET) != 0) {
+			retval = -EPIPE;
+			goto done;
+		}
+
+		temp &= ~(PORT_RWC_BITS | PORT_WKCONN_E);
+		temp |= PORT_WKDISC_E | PORT_WKOC_E;
+		ehci_writel(ehci, temp | PORT_SUSPEND, status_reg);
+
+		/*
+		 * If a transaction is in progress, there may be a delay in
+		 * suspending the port. Poll until the port is suspended.
+		 */
+		if (handshake(ehci, status_reg, PORT_SUSPEND,
+						PORT_SUSPEND, 5000))
+			ehci_err(ehci, "timeout waiting for SUSPEND\n");
+
+		spin_unlock_irqrestore(&ehci->lock, flags);
+		ci_ehci_bus_suspend_notify_phy(hcd);
+		spin_lock_irqsave(&ehci->lock, flags);
+
+		set_bit((wIndex & 0xff) - 1, &ehci->suspended_ports);
+		goto done;
+	}
+
+	/*
+	 * After resume has finished, it needs do some post resume
+	 * operation for some SoCs.
+	 */
+	else if (typeReq == ClearPortFeature &&
+					wValue == USB_PORT_FEAT_C_SUSPEND) {
+
+		/* Make sure the resume has finished, it should be finished */
+		if (handshake(ehci, status_reg, PORT_RESUME, 0, 25000))
+			ehci_err(ehci, "timeout waiting for resume\n");
+
+		temp = ehci_readl(ehci, status_reg);
+
+		ci_ehci_bus_post_resume(hcd);
+	}
+
+	spin_unlock_irqrestore(&ehci->lock, flags);
+
+	/* Handle the hub control events here */
+	return ehci_hub_control(hcd, typeReq, wValue, wIndex, buf, wLength);
+done:
+	spin_unlock_irqrestore(&ehci->lock, flags);
+	return retval;
+}
+
 static const struct hc_driver ci_ehci_hc_driver = {
 	.description	= "ehci_hcd",
 	.product_desc	= "ChipIdea HDRC EHCI",
@@ -83,9 +280,9 @@ static const struct hc_driver ci_ehci_hc_driver = {
 	 * root hub support
 	 */
 	.hub_status_data	= ehci_hub_status_data,
-	.hub_control		= ehci_hub_control,
-	.bus_suspend		= ehci_bus_suspend,
-	.bus_resume		= ehci_bus_resume,
+	.hub_control		= ci_ehci_hub_control,
+	.bus_suspend		= ci_ehci_bus_suspend,
+	.bus_resume		= ci_ehci_bus_resume,
 	.relinquish_port	= ehci_relinquish_port,
 	.port_handed_over	= ehci_port_handed_over,
 
@@ -132,7 +329,6 @@ static int host_start(struct ci13xxx *ci)
 			hw_write(ci, OP_USBMODE, USBMODE_CI_SDIS,
 				USBMODE_CI_SDIS);
 	}
-
 
 	return ret;
 }
