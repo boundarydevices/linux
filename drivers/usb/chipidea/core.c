@@ -610,6 +610,14 @@ static int __devinit ci_hdrc_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	/*
+	 * Set wakeup capable before the child device is created.
+	 * As at child device (roothub)'s init, it will set controller
+	 * device as wakeup enabled. If we does not put it before creating
+	 * roothub, the wakeup will not be enabled by default.
+	 */
+	device_set_wakeup_capable(&pdev->dev, true);
+
 	dr_mode = ci->platdata->dr_mode;
 	if (dr_mode == USB_DR_MODE_UNKNOWN)
 		dr_mode = USB_DR_MODE_OTG;
