@@ -43,50 +43,71 @@
 #define BM_USBPHY_CTRL_ENUTMILEVEL2		BIT(14)
 #define BM_USBPHY_CTRL_ENHOSTDISCONDETECT	BIT(1)
 
+enum imx_phy_type {
+	IMX6Q_USB_PHY,
+	IMX6DL_USB_PHY,
+	IMX6SL_USB_PHY,
+	IMX23_USB_PHY,
+};
+
 struct mxs_phy {
 	struct usb_phy phy;
 	struct clk *clk;
 	void __iomem *anatop_base_addr;
 	bool need_disconnect_line_feature;
 	bool need_open_regulator_at_lpm;
+	enum imx_phy_type devtype;
 };
 
+static inline int is_mx6q_phy(struct mxs_phy *data)
+{
+	return data->devtype == IMX6Q_USB_PHY;
+}
+
+static inline int is_mx6dl_phy(struct mxs_phy *data)
+{
+	return data->devtype == IMX6DL_USB_PHY;
+}
+
+static inline int is_mx6sl_phy(struct mxs_phy *data)
+{
+	return data->devtype == IMX6SL_USB_PHY;
+}
+
+static inline int is_mx23_phy(struct mxs_phy *data)
+{
+	return data->devtype == IMX23_USB_PHY;
+}
+
+static struct platform_device_id imx_phy_devtype[] = {
+	{
+		.name = "usb-phy-imx6q",
+		.driver_data = IMX6Q_USB_PHY,
+	}, {
+		.name = "usb-phy-imx6dl",
+		.driver_data = IMX6DL_USB_PHY,
+	}, {
+		.name = "usb-phy-imx6sl",
+		.driver_data = IMX6SL_USB_PHY,
+	}, {
+	}, {
+		.name = "usb-phy-imx23",
+		.driver_data = IMX23_USB_PHY,
+	}, {
+		/* sentinel */
+	}
+};
+MODULE_DEVICE_TABLE(platform, imx_phy_devtype);
+
+static const struct of_device_id mxs_phy_dt_ids[] = {
+	{ .compatible = "fsl,imx6q-usbphy", .data = &imx_phy_devtype[IMX6Q_USB_PHY], },
+	{ .compatible = "fsl,imx6dl-usbphy", .data = &imx_phy_devtype[IMX6DL_USB_PHY], },
+	{ .compatible = "fsl,imx6sl-usbphy", .data = &imx_phy_devtype[IMX6SL_USB_PHY], },
+	{ .compatible = "fsl,imx23-usbphy", .data = &imx_phy_devtype[IMX6SL_USB_PHY], },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, mxs_phy_dt_ids);
 #define to_mxs_phy(p) container_of((p), struct mxs_phy, phy)
-
-static void mxs_phy_hw_init(struct mxs_phy *mxs_phy)
-{
-	void __iomem *base = mxs_phy->phy.io_priv;
-
-	stmp_reset_block(base + HW_USBPHY_CTRL);
-
-	/* Power up the PHY */
-	writel_relaxed(0, base + HW_USBPHY_PWD);
-
-	/* enable FS/LS device */
-	writel_relaxed(BM_USBPHY_CTRL_ENUTMILEVEL2 |
-			BM_USBPHY_CTRL_ENUTMILEVEL3,
-			base + HW_USBPHY_CTRL_SET);
-
-	/* Enable wakeup logic */
-	writel_relaxed(BM_USBPHY_CTRL_ENDPDMCHG_WKUP
-			| BM_USBPHY_CTRL_ENVBUSCHG_WKUP
-			| BM_USBPHY_CTRL_ENIDCHG_WKUP
-			| BM_USBPHY_CTRL_ENAUTOSET_USBCLKS
-			| BM_USBPHY_CTRL_ENAUTOCLR_PHY_PWD
-			| BM_USBPHY_CTRL_ENAUTOCLR_CLKGATE
-			| BM_USBPHY_CTRL_ENAUTOCLR_USBCLKGATE
-			| BM_USBPHY_CTRL_ENAUTO_PWRON_PLL , base + HW_USBPHY_CTRL_SET);
-}
-
-static int mxs_phy_init(struct usb_phy *phy)
-{
-	struct mxs_phy *mxs_phy = to_mxs_phy(phy);
-
-	clk_prepare_enable(mxs_phy->clk);
-	mxs_phy_hw_init(mxs_phy);
-
-	return 0;
-}
 
 static void mxs_phy_shutdown(struct usb_phy *phy)
 {
@@ -157,6 +178,138 @@ static int mxs_phy_on_disconnect(struct usb_phy *phy,
 	return 0;
 }
 
+static int mxs_phy_on_suspend_workaround(struct usb_phy *phy,
+		enum usb_device_speed speed)
+{
+	dev_dbg(phy->dev, "%s speed device has suspended\n",
+		(speed == USB_SPEED_HIGH) ? "high" : "non-high");
+
+	/* delay 4ms to wait bus entering idle */
+	usleep_range(4000, 5000);
+
+	/*
+	 * Workaround for wakeup signal between portsc.suspendM
+	 * and PHY enters low power mode.
+	 */
+	writel_relaxed(0xffffffff, phy->io_priv + HW_USBPHY_PWD);
+	writel_relaxed(0, phy->io_priv + HW_USBPHY_PWD);
+
+	if (speed == USB_SPEED_HIGH)
+		writel_relaxed(BM_USBPHY_CTRL_ENHOSTDISCONDETECT,
+				phy->io_priv + HW_USBPHY_CTRL_CLR);
+
+	return 0;
+}
+
+static int mxs_phy_on_suspend(struct usb_phy *phy,
+		enum usb_device_speed speed)
+{
+	dev_dbg(phy->dev, "%s speed device has suspended\n",
+		(speed == USB_SPEED_HIGH) ? "high" : "non-high");
+
+	if (speed == USB_SPEED_HIGH)
+		writel_relaxed(BM_USBPHY_CTRL_ENHOSTDISCONDETECT,
+				phy->io_priv + HW_USBPHY_CTRL_CLR);
+
+	return 0;
+}
+
+/*
+ * The resume signal must be finished here.
+ */
+static int mxs_phy_on_resume(struct usb_phy *phy,
+		enum usb_device_speed speed)
+{
+	dev_dbg(phy->dev, "%s speed device has resumed\n",
+		(speed == USB_SPEED_HIGH) ? "high" : "non-high");
+
+	if (speed == USB_SPEED_HIGH) {
+		/* Make sure the device has switched to High-Speed mode */
+		udelay(500);
+		writel_relaxed(BM_USBPHY_CTRL_ENHOSTDISCONDETECT,
+				phy->io_priv + HW_USBPHY_CTRL_SET);
+	}
+
+	return 0;
+}
+
+static int mx6qdl_get_soc_rev(struct mxs_phy *mxs_phy)
+{
+	void __iomem *anatop_base_addr = mxs_phy->anatop_base_addr;
+	u32 rev = __raw_readl(anatop_base_addr + MX6_USB_ANALOG_DIGPROG);
+
+	rev &= 0xff;
+	if (rev == 0)
+		return IMX_CHIP_REVISION_1_0;
+	else if (rev == 1)
+		return IMX_CHIP_REVISION_1_1;
+	 /* We think the number of rev is less than 10 */
+	else if ((rev > 1) && (rev < 10))
+		return IMX_CHIP_REVISION_1_X;
+
+	dev_err(mxs_phy->phy.dev,
+			"%s: we can't get Soc revision number\n", __func__);
+
+	/* Default is revision 1.0 */
+	return IMX_CHIP_REVISION_1_0;
+}
+
+/* For mx23, mx28, mx6q (1.0, 1.1), mx6dl (1.0) */
+static bool full_workaround_is_needed(struct mxs_phy *mxs_phy)
+{
+	if (is_mx23_phy(mxs_phy)) {
+		return true;
+	} else if (is_mx6q_phy(mxs_phy)) {
+		if ((mx6qdl_get_soc_rev(mxs_phy) == IMX_CHIP_REVISION_1_0) ||
+			(mx6qdl_get_soc_rev(mxs_phy) == IMX_CHIP_REVISION_1_1))
+			return true;
+	} else if (is_mx6dl_phy(mxs_phy) &&
+		(mx6qdl_get_soc_rev(mxs_phy) == IMX_CHIP_REVISION_1_0)) {
+		return true;
+	}
+
+	return false;
+}
+
+static bool simple_workaround_is_needed(struct mxs_phy *mxs_phy)
+{
+	if (is_mx6dl_phy(mxs_phy)) {
+		if ((mx6qdl_get_soc_rev(mxs_phy) == IMX_CHIP_REVISION_1_1) ||
+			(mx6qdl_get_soc_rev(mxs_phy) == IMX_CHIP_REVISION_1_X))
+			return true;
+	} else if (is_mx6q_phy(mxs_phy) &&
+		(mx6qdl_get_soc_rev(mxs_phy) == IMX_CHIP_REVISION_1_X)) {
+		return true;
+	}
+
+	return false;
+}
+
+/*
+ * For mxs PHY, there are two PHY issues related to suspend/resume.
+ * For mx23, mx28, mx6q (1.0, 1.1), mx6dl (1.0),
+ * both of two issues are existed.
+ * For mx6q 1.2+, mx6dl 1.1+, only one issue is existed.
+ * For mx6 sololite, none issue is existed.
+ */
+static void mxs_phy_workaround(struct mxs_phy *mxs_phy)
+{
+	if (full_workaround_is_needed(mxs_phy)) {
+		mxs_phy->phy.notify_suspend = mxs_phy_on_suspend_workaround;
+		mxs_phy->phy.notify_resume = mxs_phy_on_resume;
+	} else if (simple_workaround_is_needed(mxs_phy)) {
+		mxs_phy->phy.notify_suspend = mxs_phy_on_suspend;
+		mxs_phy->phy.notify_resume = mxs_phy_on_resume;
+		/* enable IC fix */
+		writel_relaxed(HW_USBPHY_IC_FIX_ENABLED,
+				mxs_phy->phy.io_priv + HW_USBPHY_IP_SET);
+	} else if (is_mx6sl_phy(mxs_phy)) {
+		/* enable IC fixes */
+		writel_relaxed(HW_USBPHY_IC_FIX_ENABLED_6SL,
+				mxs_phy->phy.io_priv + HW_USBPHY_IP_SET);
+	}
+}
+
 void mxs_phy_disconnect_line(struct usb_phy *phy, bool enable)
 {
 	struct mxs_phy *mxs_phy = to_mxs_phy(phy);
@@ -202,6 +355,43 @@ void mxs_phy_enable_regulator(struct usb_phy *phy, bool enable)
 }
 EXPORT_SYMBOL_GPL(mxs_phy_enable_regulator);
 
+static void mxs_phy_hw_init(struct mxs_phy *mxs_phy)
+{
+	void __iomem *base = mxs_phy->phy.io_priv;
+
+	stmp_reset_block(base + HW_USBPHY_CTRL);
+
+	/* Power up the PHY */
+	writel_relaxed(0, base + HW_USBPHY_PWD);
+
+	/* enable FS/LS device */
+	writel_relaxed(BM_USBPHY_CTRL_ENUTMILEVEL2 |
+			BM_USBPHY_CTRL_ENUTMILEVEL3,
+			base + HW_USBPHY_CTRL_SET);
+
+	/* Enable wakeup logic */
+	writel_relaxed(BM_USBPHY_CTRL_ENDPDMCHG_WKUP
+			| BM_USBPHY_CTRL_ENVBUSCHG_WKUP
+			| BM_USBPHY_CTRL_ENIDCHG_WKUP
+			| BM_USBPHY_CTRL_ENAUTOSET_USBCLKS
+			| BM_USBPHY_CTRL_ENAUTOCLR_PHY_PWD
+			| BM_USBPHY_CTRL_ENAUTOCLR_CLKGATE
+			| BM_USBPHY_CTRL_ENAUTOCLR_USBCLKGATE
+			| BM_USBPHY_CTRL_ENAUTO_PWRON_PLL , base + HW_USBPHY_CTRL_SET);
+}
+
+static int mxs_phy_init(struct usb_phy *phy)
+{
+	struct mxs_phy *mxs_phy = to_mxs_phy(phy);
+
+	clk_prepare_enable(mxs_phy->clk);
+	mxs_phy_hw_init(mxs_phy);
+
+	mxs_phy_workaround(mxs_phy);
+
+	return 0;
+}
+
 static int mxs_phy_probe(struct platform_device *pdev)
 {
 	struct resource *res;
@@ -210,6 +400,8 @@ static int mxs_phy_probe(struct platform_device *pdev)
 	struct mxs_phy *mxs_phy;
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
+	const struct of_device_id *of_id =
+			of_match_device(mxs_phy_dt_ids, &pdev->dev);
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
@@ -243,6 +435,11 @@ static int mxs_phy_probe(struct platform_device *pdev)
 	mxs_phy->phy.notify_connect	= mxs_phy_on_connect;
 	mxs_phy->phy.notify_disconnect	= mxs_phy_on_disconnect;
 
+	if (of_id) {
+		pdev->id_entry = of_id->data;
+	}
+	mxs_phy->devtype = pdev->id_entry->driver_data;
+
 	ATOMIC_INIT_NOTIFIER_HEAD(&mxs_phy->phy.notifier);
 
 	mxs_phy->clk = clk;
@@ -274,15 +471,10 @@ static int mxs_phy_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id mxs_phy_dt_ids[] = {
-	{ .compatible = "fsl,imx23-usbphy", },
-	{ /* sentinel */ }
-};
-MODULE_DEVICE_TABLE(of, mxs_phy_dt_ids);
-
 static struct platform_driver mxs_phy_driver = {
 	.probe = mxs_phy_probe,
 	.remove = __devexit_p(mxs_phy_remove),
+	.id_table	= imx_phy_devtype,
 	.driver = {
 		.name = DRIVER_NAME,
 		.owner	= THIS_MODULE,
