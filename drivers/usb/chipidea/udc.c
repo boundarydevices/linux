@@ -1748,7 +1748,12 @@ static int udc_start(struct ci13xxx *ci)
 	if (!IS_ERR_OR_NULL(ci->transceiver)) {
 		retval = otg_set_peripheral(ci->transceiver->otg,
 						&ci->gadget);
-		if (retval)
+		/*
+		 * If we implement all USB functions using chipidea drivers,
+		 * it doesn't need to call above API, meanwhile, if we only
+		 * use gadget function, calling above API is useless.
+		 */
+		if (retval && retval != -ENOTSUPP)
 			goto remove_dbg;
 	}
 

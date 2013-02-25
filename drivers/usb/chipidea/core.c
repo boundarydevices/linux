@@ -639,7 +639,7 @@ static int __devinit ci_hdrc_probe(struct platform_device *pdev)
 	}
 
 	if (ci->roles[CI_ROLE_HOST] && ci->roles[CI_ROLE_GADGET]) {
-		dev_dbg(dev, "support otg\n");
+		dev_info(dev, "support otg\n");
 		ci->is_otg = true;
 		/* if otg is supported, create struct usb_otg */
 		ci_hdrc_otg_init(ci);
