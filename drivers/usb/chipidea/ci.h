@@ -338,6 +338,5 @@ int hw_port_test_set(struct ci13xxx *ci, u8 mode);
 u8 hw_port_test_get(struct ci13xxx *ci);
 
 void ci_handle_vbus_change(struct ci13xxx *ci);
-bool ci_is_device_mode(struct ci13xxx *ci);
 
 #endif	/* __DRIVERS_USB_CHIPIDEA_CI_H */

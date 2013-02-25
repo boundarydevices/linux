@@ -296,11 +296,6 @@ int hw_device_reset(struct ci13xxx *ci, u32 mode)
 	return 0;
 }
 
-bool ci_is_device_mode(struct ci13xxx *ci)
-{
-	return hw_read(ci, OP_USBMODE, USBMODE_CM) == USBMODE_CM_DC;
-}
-
 /**
  * ci_otg_role - pick role based on ID pin state
  * @ci: the controller

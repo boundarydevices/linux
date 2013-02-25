@@ -95,12 +95,17 @@ EXPORT_SYMBOL_GPL(usbmisc_get_init_data);
 
 /* End of common functions shared by usbmisc drivers*/
 
+bool ci_is_host_mode(struct ci13xxx *ci)
+{
+	return hw_read(ci, OP_USBMODE, USBMODE_CM) == USBMODE_CM;
+}
+
 static void usbphy_pre_suspend(struct ci13xxx *ci, struct usb_phy *phy)
 {
 	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
 		extern void mxs_phy_disconnect_line
 			(struct usb_phy *phy, bool enable);
-		if (ci_is_device_mode(ci))
+		if (!ci_is_host_mode(ci))
 			mxs_phy_disconnect_line(phy, true);
 	}
 }
@@ -110,7 +115,7 @@ static void usbphy_post_resume(struct ci13xxx *ci, struct usb_phy *phy)
 	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
 		extern void mxs_phy_disconnect_line
 			(struct usb_phy *phy, bool enable);
-		if (ci_is_device_mode(ci))
+		if (!ci_is_host_mode(ci))
 			mxs_phy_disconnect_line(phy, false);
 	}
 }
