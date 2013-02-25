@@ -95,6 +95,31 @@ EXPORT_SYMBOL_GPL(usbmisc_get_init_data);
 
 /* End of common functions shared by usbmisc drivers*/
 
+static int imx_set_wakeup(struct device *dev, bool enable)
+{
+	int ret = 0;
+	if (usbmisc_ops && usbmisc_ops->set_wakeup) {
+		enum ci_usb_wakeup_events wakeup_event =
+			CI_USB_WAKEUP_EVENT_NONE;
+		struct ci13xxx_imx_data *data = dev_get_drvdata(dev);
+		struct platform_device *plat_ci = data->ci_pdev;
+		struct ci13xxx *ci = platform_get_drvdata(plat_ci);
+
+		if (!enable)
+			wakeup_event = CI_USB_WAKEUP_EVENT_NONE;
+		else if (ci->is_otg)
+			wakeup_event = CI_USB_WAKEUP_EVENT_OTG;
+		else if (ci->roles[CI_ROLE_HOST])
+			wakeup_event = CI_USB_WAKEUP_EVENT_HOST;
+		else if (ci->roles[CI_ROLE_GADGET])
+			wakeup_event = CI_USB_WAKEUP_EVENT_GADGET;
+
+		ret = usbmisc_ops->set_wakeup(dev, wakeup_event);
+	}
+
+	return ret;
+}
+
 bool ci_is_host_mode(struct ci13xxx *ci)
 {
 	return hw_read(ci, OP_USBMODE, USBMODE_CM) == USBMODE_CM;
@@ -371,13 +396,11 @@ static int ci13xxx_imx_remove(struct platform_device *pdev)
 	if (data->reg_vbus)
 		regulator_disable(data->reg_vbus);
 
-	if (usbmisc_ops && usbmisc_ops->set_wakeup) {
-		ret = usbmisc_ops->set_wakeup(&pdev->dev, false);
-		if (ret) {
-			dev_err(&pdev->dev,
-				"usbmisc set_wakeup failed, ret=%d\n", ret);
-			return ret;
-		}
+	ret = imx_set_wakeup(&pdev->dev, false);
+	if (ret) {
+		dev_err(&pdev->dev,
+			"usbmisc set_wakeup failed, ret=%d\n", ret);
+		return ret;
 	}
 
 	hw_write(ci, OP_PORTSC, PORTSC_PHCD, PORTSC_PHCD);
@@ -418,13 +441,11 @@ static int imx_controller_suspend(struct device *dev)
 	if (data->phy)
 		usbphy_pre_suspend(ci, data->phy);
 
-	if (usbmisc_ops && usbmisc_ops->set_wakeup) {
-		ret = usbmisc_ops->set_wakeup(dev, true);
-		if (ret) {
-			dev_err(dev,
-				"usbmisc set_wakeup failed, ret=%d\n", ret);
-			return ret;
-		}
+	ret = imx_set_wakeup(dev, true);
+	if (ret) {
+		dev_err(dev,
+			"usbmisc set_wakeup failed, ret=%d\n", ret);
+		return ret;
 	}
 
 	hw_write(ci, OP_PORTSC, PORTSC_PHCD, PORTSC_PHCD);
@@ -473,13 +494,11 @@ static int imx_controller_resume(struct device *dev)
 		}
 	}
 
-	if (usbmisc_ops && usbmisc_ops->set_wakeup) {
-		ret = usbmisc_ops->set_wakeup(dev, false);
-		if (ret) {
-			dev_err(dev,
-				"usbmisc set_wakeup failed, ret=%d\n", ret);
-			return ret;
-		}
+	ret = imx_set_wakeup(dev, false);
+	if (ret) {
+		dev_err(dev,
+			"usbmisc set_wakeup failed, ret=%d\n", ret);
+		return ret;
 	}
 
 	if (hw_read(ci, OP_PORTSC, PORTSC_PHCD)) {

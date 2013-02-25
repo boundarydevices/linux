@@ -148,18 +148,27 @@ static int usbmisc_imx6q_init(struct device *dev)
 			usbmisc->base + usbdev->index * 4);
 	}
 
-	if (usbdev->index == 0) {
-		reg = readl(usbmisc->base);
-		writel((reg | MX6_BM_VBUS_WAKEUP | MX6_BM_ID_WAKEUP)
-			& (~MX6_BM_WAKEUP_ENABLE), usbmisc->base);
+	/* Disable wakeup at initialization */
+	reg = readl(usbmisc->base + usbdev->index * 4);
+	switch (usbdev->index) {
+	case 0:
+		reg &= ~(MX6_BM_ID_WAKEUP | MX6_BM_VBUS_WAKEUP
+				| MX6_BM_WAKEUP_ENABLE);
+		break;
+	case 1:
+	case 2:
+	case 3:
+		reg &= ~MX6_BM_WAKEUP_ENABLE;
 	}
+	writel(reg, usbmisc->base + usbdev->index * 4);
 
 	spin_unlock_irqrestore(&usbmisc->lock, flags);
 
 	return 0;
 }
 
-static int usbmisc_imx6q_wakeup(struct device *dev, bool enabled)
+static int usbmisc_imx6q_wakeup(struct device *dev,
+		enum ci_usb_wakeup_events wakeup_event)
 {
 	struct usbmisc_usb_device *usbdev;
 	unsigned long flags;
@@ -172,12 +181,34 @@ static int usbmisc_imx6q_wakeup(struct device *dev, bool enabled)
 	spin_lock_irqsave(&usbmisc->lock, flags);
 
 	reg = readl(usbmisc->base + usbdev->index * 4);
-	if (enabled)
-		writel(reg | MX6_BM_WAKEUP_ENABLE,
-			usbmisc->base + usbdev->index * 4);
-	else
-		writel(reg & (~MX6_BM_WAKEUP_ENABLE),
-			usbmisc->base + usbdev->index * 4);
+	switch (wakeup_event) {
+	case CI_USB_WAKEUP_EVENT_GADGET:
+		reg |= MX6_BM_VBUS_WAKEUP | MX6_BM_WAKEUP_ENABLE;
+		break;
+	case CI_USB_WAKEUP_EVENT_HOST:
+		reg |= MX6_BM_WAKEUP_ENABLE;
+		break;
+	case CI_USB_WAKEUP_EVENT_OTG:
+		reg |= MX6_BM_ID_WAKEUP | MX6_BM_VBUS_WAKEUP
+			| MX6_BM_WAKEUP_ENABLE;
+		break;
+	case CI_USB_WAKEUP_EVENT_NONE:
+		switch (usbdev->index) {
+		case 0:
+			reg &= ~(MX6_BM_ID_WAKEUP | MX6_BM_VBUS_WAKEUP
+					| MX6_BM_WAKEUP_ENABLE);
+			break;
+		case 1:
+		case 2:
+		case 3:
+			reg &= ~MX6_BM_WAKEUP_ENABLE;
+		}
+		break;
+	default:
+		dev_err(dev, "error wakeup event \n");
+	}
+
+	writel(reg, usbmisc->base + usbdev->index * 4);
 
 	spin_unlock_irqrestore(&usbmisc->lock, flags);
 
