@@ -21,12 +21,15 @@
 #include <asm/smp_plat.h>
 
 #define SRC_SCR				0x000
+#define SRC_SIMR			0x018
 #define SRC_GPR1			0x020
 #define BP_SRC_SCR_WARM_RESET_ENABLE	0
 #define BP_SRC_SCR_GPU3D_RST		1
+#define BP_SRC_SCR_VPU_RST		2
 #define BP_SRC_SCR_GPU2D_RST		4
 #define BP_SRC_SCR_CORE1_RST		14
 #define BP_SRC_SCR_CORE1_ENABLE		22
+#define BP_SRC_SIMR_MASK_VPU		1
 #define SRC_IPU1_SWRST			0x0080
 #define SRC_IPU2_SWRST			0x1000
 
@@ -140,6 +143,29 @@ int imx_src_reset_gpu(int gpucore_id)
 	return 0;
 }
 EXPORT_SYMBOL(imx_src_reset_gpu);
+
+int imx_src_reset_vpu(void)
+{
+	u32 val;
+	unsigned long flags;
+
+	/* mask interrupt due to vpu passed reset */
+	val = readl_relaxed(src_base + SRC_SIMR);
+	val |= (1 << BP_SRC_SIMR_MASK_VPU);
+	writel_relaxed(val, src_base + SRC_SIMR);
+
+	spin_lock_irqsave(&scr_lock, flags);
+	val = readl_relaxed(src_base + SRC_SCR);
+	val |= (1 << BP_SRC_SCR_VPU_RST);
+	writel_relaxed(val, src_base + SRC_SCR);
+	spin_unlock_irqrestore(&scr_lock, flags);
+
+	while (readl_relaxed(src_base + SRC_SCR) & (1 << BP_SRC_SCR_VPU_RST))
+		;
+
+	return 0;
+}
+EXPORT_SYMBOL(imx_src_reset_vpu);
 
 int imx6q_src_init_ipu(int ipu_id)
 {

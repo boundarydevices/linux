@@ -113,6 +113,7 @@ void tzic_handle_irq(struct pt_regs *);
 #define imx6q_handle_irq gic_handle_irq
 
 extern int imx_src_reset_gpu(int gpucore_id);
+extern int imx_src_reset_vpu(void);
 extern int imx6q_src_init_ipu(int ipu_id);
 static inline void imx6q_ipu_pg(int enable) {}
 extern void imx_enable_cpu(int cpu, bool enable);
