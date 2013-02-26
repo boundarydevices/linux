@@ -82,10 +82,50 @@ static inline void write_ssi_mask(u32 __iomem *addr, u32 clear, u32 set)
 #define FSLSSI_I2S_FORMATS (SNDRV_PCM_FMTBIT_S8 | SNDRV_PCM_FMTBIT_S16_BE | \
 	 SNDRV_PCM_FMTBIT_S18_3BE | SNDRV_PCM_FMTBIT_S20_3BE | \
 	 SNDRV_PCM_FMTBIT_S24_3BE | SNDRV_PCM_FMTBIT_S24_BE)
+
+static char *get_fslssi_format_string(snd_pcm_format_t fmt)
+{
+	switch ((__force int)fmt) {
+	case SNDRV_PCM_FORMAT_S8:
+		return "S8";
+	case SNDRV_PCM_FORMAT_S16_BE:
+		return "S16_BE";
+	case SNDRV_PCM_FORMAT_S18_3BE:
+		return "S18_3BE";
+	case SNDRV_PCM_FORMAT_S20_3BE:
+		return "S20_3BE";
+	case SNDRV_PCM_FORMAT_S24_3BE:
+		return "S24_3BE";
+	case SNDRV_PCM_FORMAT_S24_BE:
+		return "S24_BE";
+	default:
+		return "Unsupported format";
+	}
+};
 #else
 #define FSLSSI_I2S_FORMATS (SNDRV_PCM_FMTBIT_S8 | SNDRV_PCM_FMTBIT_S16_LE | \
 	 SNDRV_PCM_FMTBIT_S18_3LE | SNDRV_PCM_FMTBIT_S20_3LE | \
 	 SNDRV_PCM_FMTBIT_S24_3LE | SNDRV_PCM_FMTBIT_S24_LE)
+
+static char *get_fslssi_format_string(snd_pcm_format_t fmt)
+{
+	switch ((__force int)fmt) {
+	case SNDRV_PCM_FORMAT_S8:
+		return "S8";
+	case SNDRV_PCM_FORMAT_S16_LE:
+		return "S16_LE";
+	case SNDRV_PCM_FORMAT_S18_3LE:
+		return "S18_3LE";
+	case SNDRV_PCM_FORMAT_S20_3LE:
+		return "S20_3LE";
+	case SNDRV_PCM_FORMAT_S24_3LE:
+		return "S24_3LE";
+	case SNDRV_PCM_FORMAT_S24_LE:
+		return "S24_LE";
+	default:
+		return "Unsupported format";
+	}
+};
 #endif
 
 /* SIER bitflag of interrupts to enable */
@@ -323,8 +363,6 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 	struct fsl_ssi_private *ssi_private =
 		snd_soc_dai_get_drvdata(rtd->cpu_dai);
 	int synchronous = ssi_private->cpu_dai_drv.symmetric_rates;
-	struct snd_soc_dpcm_runtime *dpcm = container_of(&(substream->runtime),
-			struct snd_soc_dpcm_runtime, runtime);
 
 	pm_runtime_get_sync(dai->dev);
 	/*
@@ -334,13 +372,9 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 	if (!ssi_private->first_stream) {
 		struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
 		int txbs, rxbs;
-		snd_pcm_format_t fmt_tmp;
 
 		ssi_private->first_stream = substream;
-
-		fmt_tmp = params_format(&(dpcm->hw_params));
-		substream->runtime->sample_bits =
-			snd_pcm_format_physical_width(fmt_tmp);
+		substream->runtime->sample_bits = 0;
 
 		/*
 		 * Section 16.5 of the MPC8610 reference manual says that the
@@ -407,44 +441,8 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 		 * finished initializing the DMA controller.
 		 */
 	} else {
-		if (synchronous) {
-			struct snd_pcm_runtime *first_runtime =
-				ssi_private->first_stream->runtime;
-			/*
-			 * This is the second stream open, and we're in
-			 * synchronous mode, so we need to impose sample
-			 * sample size constraints. This is because STCCR is
-			 * used for playback and capture in synchronous mode,
-			 * so there's no way to specify different word
-			 * lengths.
-			 *
-			 * Note that this can cause a race condition if the
-			 * second stream is opened before the first stream is
-			 * fully initialized.  We provide some protection by
-			 * checking to make sure the first stream is
-			 * initialized, but it's not perfect.  ALSA sometimes
-			 * re-initializes the driver with a different sample
-			 * rate or size.  If the second stream is opened
-			 * before the first stream has received its final
-			 * parameters, then the second stream may be
-			 * constrained to the wrong sample rate or size.
-			 */
-			if (!first_runtime->sample_bits) {
-				dev_err(substream->pcm->card->dev,
-					"set sample size in %s stream first\n",
-					substream->stream ==
-					SNDRV_PCM_STREAM_PLAYBACK
-					? "capture" : "playback");
-				return -EAGAIN;
-			}
-
-			snd_pcm_hw_constraint_minmax(substream->runtime,
-				SNDRV_PCM_HW_PARAM_SAMPLE_BITS,
-				first_runtime->sample_bits,
-				first_runtime->sample_bits);
-		}
-
 		ssi_private->second_stream = substream;
+		substream->runtime->sample_bits = 0;
 	}
 
 	if (ssi_private->ssi_on_imx)
@@ -479,6 +477,49 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	u32 wl = CCSR_SSI_SxCCR_WL(sample_size);
 	int enabled = read_ssi(&ssi->scr) & CCSR_SSI_SCR_SSIEN;
 	int tere = read_ssi(&ssi->scr) & (CCSR_SSI_SCR_TE | CCSR_SSI_SCR_RE);
+	int synchronous = ssi_private->cpu_dai_drv.symmetric_rates;
+	struct snd_pcm_substream *other_stream;
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	snd_pcm_format_t current_fmt;
+
+	current_fmt = params_format(hw_params);
+	runtime->format = current_fmt;
+	runtime->sample_bits = snd_pcm_format_physical_width(current_fmt);
+
+	/*
+	 * Conceptually first_stream's hw_params() should be called first, but
+	 * if two substreams're created in the same time, that might cause a
+	 * race between the call timings of hw_params(). And due to the race,
+	 * we don't know which substream's hw_params() would be called first,
+	 * so literally we mark the alternative substream as the other_stream.
+	 */
+	if (ssi_private->first_stream == substream)
+		other_stream = ssi_private->second_stream;
+	else
+		other_stream = ssi_private->first_stream;
+
+	/* If other_stream exists, it means there're two substreams currently */
+	if (synchronous && other_stream != NULL) {
+		struct snd_pcm_runtime *other_runtime = other_stream->runtime;
+		snd_pcm_format_t other_fmt = other_runtime->format;
+
+		/*
+		 * Detect the race by other_stream's sample_bits value. If !0 it
+		 * means hw_params() of other_stream was called first. And we'd
+		 * warn user to keep current sample_bits same with other_stream.
+		 * If other_stream's sample_bits is still in its initial vaule,
+		 * it means this hw_params() is called firstly so we don't needs
+		 * to handle the sample_bits comparison right now.
+		 */
+		if (other_runtime->sample_bits != runtime->sample_bits &&
+				other_runtime->sample_bits != 0) {
+			dev_err(substream->pcm->card->dev,
+					"WRONG FORMAT: %s! KEEP SAME AS %s!\n",
+					get_fslssi_format_string(current_fmt),
+					get_fslssi_format_string(other_fmt));
+			return -EINVAL;
+		}
+	}
 
 	/*
 	 * If we're in synchronous mode, and the SSI is already enabled,
@@ -489,7 +530,7 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	 * It's quite essential to simply play a batch of audio files
 	 * in different wordlengths.
 	 */
-	if (enabled && ssi_private->cpu_dai_drv.symmetric_rates && tere != 0)
+	if (enabled && synchronous && tere != 0)
 		return 0;
 
 	/*
