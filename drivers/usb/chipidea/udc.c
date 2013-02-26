@@ -1368,6 +1368,16 @@ static int ci13xxx_vbus_session(struct usb_gadget *_gadget, int is_active)
 
 	if (gadget_ready) {
 		if (is_active) {
+			/*
+			 * If we set vbus as wakeup source, the vbus
+			 * interrupt may occur before the gadget runtime pm
+			 * is enabled. It will cause the runtime pm issue
+			 * later, as **_put will be called when runtime pm
+			 * is enabled. So we need to make sure the runtime pm
+			 * is enabled before calling **_get,  the runtime
+			 * pm will be enabled before system resume has finished.
+			 */
+			wait_for_completion(&_gadget->dev.power.completion);
 			pm_runtime_get_sync(&_gadget->dev);
 			hw_device_reset(ci, USBMODE_CM_DC);
 			hw_device_state(ci, ci->ep0out->qh.dma);
