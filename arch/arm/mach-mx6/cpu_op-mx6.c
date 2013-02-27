@@ -343,14 +343,19 @@ void mx6_cpu_op_init(void)
 	unsigned int reg;
 	void __iomem *base;
 	if (!cpu_is_mx6sl()) {
-		/*read fuse bit to know the max cpu freq : offset 0x440
-		* bit[17:16]:SPEED_GRADING[1:0],for mx6dq/dl*/
-		base = IO_ADDRESS(OCOTP_BASE_ADDR);
-		reg = __raw_readl(base + 0x440);
-		reg &= (0x3 << OCOTP_SPEED_BIT_OFFSET);
-		reg >>= OCOTP_SPEED_BIT_OFFSET;
-		/*choose the little value to run lower max cpufreq*/
-		arm_max_freq = (reg > arm_max_freq) ? arm_max_freq : reg;
+		if (cpu_is_mx6q() && (mx6q_revision() > IMX_CHIP_REVISION_1_0)) {
+			/*read fuse bit to know the max cpu freq : offset 0x440
+			 * bit[17:16]:SPEED_GRADING[1:0],for mx6dq/dl*/
+			base = IO_ADDRESS(OCOTP_BASE_ADDR);
+			reg = __raw_readl(base + 0x440);
+			reg &= (0x3 << OCOTP_SPEED_BIT_OFFSET);
+			reg >>= OCOTP_SPEED_BIT_OFFSET;
+			/*choose the little value to run lower max cpufreq*/
+			arm_max_freq = (reg > arm_max_freq) ? arm_max_freq : reg;
+		} else {
+			/* TO 1.0 didn't have cpu frequency fuses blown */
+			arm_max_freq = CPU_AT_1GHz;
+		}
 	} else {
 		/*
 		 * There is no SPEED_GRADING fuse bit on mx6sl,then do:
