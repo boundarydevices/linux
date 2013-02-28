@@ -2966,7 +2966,8 @@ static iomux_v3_cfg_t n53k_pads_specific[] __initdata = {
 	MX53_PAD_NANDF_WE_B__GPIO6_12,		/* main power */
 	MX53_PAD_PATA_CS_1__GPIO7_10,		/* eMMC reset */
 	MX53_PAD_EIM_DA6__GPIO_3_6,		/* rtc isl1208 i2c_en */
-	NEW_PAD_CTRL(MX53_PAD_EIM_OE__GPIO2_25, PAD_CTL_PUS_100K_UP)		/* rtc isl1208 interrupt */
+	NEW_PAD_CTRL(MX53_PAD_EIM_OE__GPIO2_25, PAD_CTL_PUS_100K_UP),		/* rtc isl1208 interrupt */
+	NEW_PAD_CTRL(MX53_PAD_EIM_LBA__GPIO2_27, BUTTON_100K) | MUX_SION_MASK,	/* barcode scanner interrupt */
 };
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
