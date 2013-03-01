@@ -282,7 +282,7 @@
 #define MX53_PAD_LVDS1_TX3_P__LVDS1_TX3		IOMUX_PAD(NON_PAD_I, 0x1EC, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_NANDF_CS0__GPIO6_11_KEY	IOMUX_PAD(0x5B0, 0x238, 1|IOMUX_CONFIG_SION, 0x0, 0, BUTTON_PAD_CTRL)
 #define MX53_PAD_NANDF_CS1__GPIO6_14_KEY	IOMUX_PAD(0x5B4, 0x23C, 1|IOMUX_CONFIG_SION, 0x0, 0, BUTTON_PAD_CTRL)
-#define MX53_PAD_NANDF_CS2__CSI0_MCLK		IOMUX_PAD(0x5B8, 0x240, 5|IOMUX_CONFIG_SION, 0x0, 0, NO_PAD_CTRL)
+#define MX53_PAD_NANDF_CS2__CSI0_MCLK		IOMUX_PAD(0x5B8, 0x240, 5|IOMUX_CONFIG_SION, 0x0, 0, PAD_CTL_DSE_HIGH)
 #define MX53_PAD_NANDF_CS3__GPIO_6_16		IOMUX_PAD(0x5BC, 0x244, 1, 0x0, 0, NO_PAD_CTRL)
 #define MX53_PAD_SD1_CLK__SD1_CLK		IOMUX_PAD(0x67C, 0x2F4, IOMUX_CONFIG_SION, 0x0, 0, MX53_SDHC_PAD_CTRL | PAD_CTL_HYS)
 #define MX53_PAD_SD1_CMD__SD1_CMD		IOMUX_PAD(0x674, 0x2EC, IOMUX_CONFIG_SION, 0x0, 0, MX53_SDHC_PAD_CTRL)
@@ -372,6 +372,7 @@ struct gpio nitrogen53_gpios[] __initdata = {
 	{.label = "USB HUB reset",	.gpio = MAKE_GP(5, 0),		.flags = 0},
 #define N53_CAMERA_STANDBY			MAKE_GP(5, 20)
 	{.label = "Camera standby",	.gpio = MAKE_GP(5, 20),		.flags = 0},
+	{.label = "Camera xclk",	.gpio = MAKE_GP(6, 15),		.flags = 0},
 #define N53_PHY_RESET				MAKE_GP(7, 13)
 	{.label = "ICS1893 reset",	.gpio = MAKE_GP(7, 13),		.flags = 0},	/* ICS1893 Ethernet PHY reset */
 #if defined(CONFIG_SERIAL_IMX_RS485)
@@ -527,7 +528,7 @@ static iomux_v3_cfg_t mx53common_pads[] = {
 	MX53_PAD_CSI0_VSYNC__CSI0_VSYNC,
 	MX53_PAD_CSI0_MCLK__CSI0_HSYNC,
 	MX53_PAD_CSI0_PIXCLK__CSI0_PIXCLK,
-	MX53_PAD_NANDF_CS2__CSI0_MCLK,
+	NEW_PAD_CTRL(MX53_PAD_NANDF_CS2__GPIO6_15, PAD_CTL_PUS_360K_DOWN),	/* pull is off */
 	MX53_PAD_GPIO_2__GPIO_1_2,	/* CAMERA_POWERDOWN (nitrogen53) */
 	MX53_PAD_GPIO_7__GPIO_1_7,	/* CAMERA_STROBE */
 	MX53_PAD_KEY_COL4__GPIO_4_14,	/* CAMERA_RESET */
@@ -1664,9 +1665,13 @@ static struct platform_device boundary_camera_interfaces[] = {
 static struct mxc_camera_platform_data camera_data;
 static void camera_pwdn(int pwdn)
 {
-//	pr_info("pwdn=%d camera_data.power_down=%x camera_data.reset=%x\n", pwdn, camera_data.power_down, camera_data.reset);
+	pr_debug("pwdn=%d camera_data.power_down=%x camera_data.reset=%x\n", pwdn, camera_data.power_down, camera_data.reset);
+	mxc_iomux_v3_setup_pad(pwdn ? NEW_PAD_CTRL(MX53_PAD_NANDF_CS2__GPIO6_15, PAD_CTL_PUS_360K_DOWN)
+			: MX53_PAD_NANDF_CS2__CSI0_MCLK);
 	gpio_set_value(camera_data.power_down, pwdn ? 1 : 0);
 	gpio_set_value(camera_data.reset, (0==pwdn));
+	if (!pwdn)
+		msleep(2);
 }
 
 static struct mxc_camera_platform_data camera_data = {
