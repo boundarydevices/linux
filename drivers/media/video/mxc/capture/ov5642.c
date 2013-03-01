@@ -43,6 +43,9 @@
 #define OV5642_XCLK_MIN 6000000
 #define OV5642_XCLK_MAX 24000000
 
+#define OV5642_CHIP_ID_HIGH_BYTE	0x300A
+#define OV5642_CHIP_ID_LOW_BYTE		0x300B
+
 enum ov5642_mode {
 	ov5642_mode_MIN = 0,
 	ov5642_mode_VGA_640_480 = 0,
@@ -1810,6 +1813,10 @@ static s32 ov5642_write_reg(u16 reg, u8 val)
 	au8Buf[0] = reg >> 8;
 	au8Buf[1] = reg & 0xff;
 	au8Buf[2] = val;
+	if (!ov5642_data.on) {
+		pr_err("!!!!!%s: sensor currently off\n", __func__);
+		WARN_ON(1);
+	}
 
 	ret = i2c_master_send(ov5642_data.i2c_client, au8Buf, 3);
 	if (ret < 0) {
@@ -1829,6 +1836,10 @@ static s32 ov5642_read_reg(u16 reg, u8 *val)
 	au8RegBuf[0] = reg >> 8;
 	au8RegBuf[1] = reg & 0xff;
 
+	if (!ov5642_data.on) {
+		pr_err("!!!!!%s: sensor currently off\n", __func__);
+		WARN_ON(1);
+	}
 	if (2 != i2c_master_send(ov5642_data.i2c_client, au8RegBuf, 2)) {
 		pr_err("%s:write reg error:reg=%x\n",
 				__func__, reg);
@@ -2020,6 +2031,7 @@ err:
 	return retval;
 }
 
+#if 0
 static int ov5642_write_snapshot_para(void)
 {
 	bool m_60Hz = false;
@@ -2127,7 +2139,7 @@ static int ov5642_write_snapshot_para(void)
 
 	return 0;
 }
-
+#endif
 
 /* --------------- IOCTL functions from v4l2_int_ioctl_desc --------------- */
 
@@ -2158,29 +2170,44 @@ static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
  * Turns the power on or off, depending on the value of on and returns the
  * appropriate error code.
  */
-static int ioctl_s_power(struct v4l2_int_device *s, int on)
+static int set_power(struct sensor *sensor, int on)
 {
-	struct sensor *sensor = s->priv;
+	int ret = 0;
 
-	if (on && !sensor->on) {
-		gpio_sensor_active(ov5642_data.csi);
-		if (io_regulator)
-			if (regulator_enable(io_regulator) != 0)
-				return -EIO;
-		if (core_regulator)
-			if (regulator_enable(core_regulator) != 0)
-				return -EIO;
-		if (gpo_regulator)
-			if (regulator_enable(gpo_regulator) != 0)
-				return -EIO;
-		if (analog_regulator)
-			if (regulator_enable(analog_regulator) != 0)
-				return -EIO;
-		/* Make sure power on */
-		if (camera_plat->pwdn)
-			camera_plat->pwdn(0);
-
-	} else if (!on && sensor->on) {
+	pr_info("%s on=%d\n", __func__, on);
+	if (on != sensor->on) {
+		if (on) {
+			gpio_sensor_active(sensor->csi);
+			if (io_regulator)
+				if (regulator_enable(io_regulator) != 0) {
+					pr_err("%s:io set voltage error\n", __func__);
+					goto off;
+				}
+			if (core_regulator)
+				if (regulator_enable(core_regulator) != 0) {
+					pr_err("%s:core set voltage error\n", __func__);
+					goto off;
+				}
+			if (gpo_regulator)
+				if (regulator_enable(gpo_regulator) != 0) {
+					pr_err("%s:gpo set voltage error\n", __func__);
+					goto off;
+				}
+			if (analog_regulator)
+				if (regulator_enable(analog_regulator) != 0) {
+					pr_err("%s:analog set voltage error\n", __func__);
+					goto off;
+				}
+			/* Turn on clock */
+			ipu_csi_enable_mclk_if(CSI_MCLK_I2C, sensor->csi, true, false);
+			if (camera_plat->pwdn)
+				camera_plat->pwdn(0);
+			sensor->on = 1;
+			return 0;
+off:
+			ret = -EIO;
+			on = 0;
+		}
 		if (analog_regulator)
 			regulator_disable(analog_regulator);
 		if (core_regulator)
@@ -2189,14 +2216,21 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 			regulator_disable(io_regulator);
 		if (gpo_regulator)
 			regulator_disable(gpo_regulator);
-		gpio_sensor_inactive(ov5642_data.csi);
+		gpio_sensor_inactive(sensor->csi);
+		if (sensor->on) {
+			ipu_csi_enable_mclk_if(CSI_MCLK_I2C, sensor->csi, false, false);
+			sensor->on = 0;
+		}
+		if (camera_plat->pwdn)
+			camera_plat->pwdn(1);
 	}
-
-	sensor->on = on;
-
-	return 0;
+	return ret;
 }
 
+static int ioctl_s_power(struct v4l2_int_device *s, int on)
+{
+	return set_power(s->priv, on);
+}
 /*!
  * ioctl_g_parm - V4L2 sensor interface handler for VIDIOC_G_PARM ioctl
  * @s: pointer to standard V4L2 device structure
@@ -2257,10 +2291,6 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	enum ov5642_frame_rate frame_rate;
 	int ret = 0;
 
-	/* Make sure power on */
-	if (camera_plat->pwdn)
-		camera_plat->pwdn(0);
-
 	switch (a->type) {
 	/* This is the only case currently handled. */
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
@@ -2295,6 +2325,8 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 			return -EINVAL;
 		}
 
+		/* Make sure power is on */
+		set_power(sensor, 1);
 		ret =  ov5642_change_mode(frame_rate, a->parm.capture.capturemode, sensor->streamcap.capturemode);
 		if (ret < 0)
 			return ret;
@@ -2433,6 +2465,11 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 		break;
 	case V4L2_CID_MXC_ROT:
 	case V4L2_CID_MXC_VF_ROT:
+		if (!sensor->on) {
+			pr_err("!!!!!%s: sensor currently off\n", __func__);
+			break;
+		}
+
 		switch (vc->value) {
 		case V4L2_MXC_CAM_ROTATE_NONE:
 			if (captureMode == ov5642_mode_QSXGA_2592_1944) {
@@ -2530,7 +2567,8 @@ static int ioctl_g_chip_ident(struct v4l2_int_device *s, int *id)
  */
 static int ioctl_init(struct v4l2_int_device *s)
 {
-
+	/* Turn power on */
+	set_power(s->priv, 1);
 	return 0;
 }
 
@@ -2573,29 +2611,23 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 	struct sensor *sensor = s->priv;
 	u32 tgt_xclk;	/* target xclk */
 	u32 tgt_fps;	/* target frames per secound */
-	enum ov5642_frame_rate frame_rate;
 
-	gpio_sensor_active(ov5642_data.csi);
-	ov5642_data.on = true;
+	set_power(sensor, 1);
 
 	/* mclk */
-	tgt_xclk = ov5642_data.mclk;
+	tgt_xclk = sensor->mclk;
 	tgt_xclk = min(tgt_xclk, (u32)OV5642_XCLK_MAX);
 	tgt_xclk = max(tgt_xclk, (u32)OV5642_XCLK_MIN);
-	ov5642_data.mclk = tgt_xclk;
+	sensor->mclk = tgt_xclk;
 
 	pr_debug("   Setting mclk to %d MHz\n", tgt_xclk / 1000000);
-	set_mclk_rate(&ov5642_data.mclk, ov5642_data.csi, ov5642_data.mclk_name);
+	set_mclk_rate(&sensor->mclk, sensor->csi, sensor->mclk_name);
 
 	/* Default camera frame rate is set in probe */
 	tgt_fps = sensor->streamcap.timeperframe.denominator /
 		  sensor->streamcap.timeperframe.numerator;
 
-	if (tgt_fps == 15)
-		frame_rate = ov5642_15_fps;
-	else if (tgt_fps == 30)
-		frame_rate = ov5642_30_fps;
-	else
+	if ((tgt_fps != 15) && (tgt_fps != 30))
 		return -EINVAL; /* Only support 15fps or 30fps now. */
 
 	pModeSetting = ov5642_initial_setting;
@@ -2635,8 +2667,7 @@ err:
  */
 static int ioctl_dev_exit(struct v4l2_int_device *s)
 {
-	gpio_sensor_inactive(ov5642_data.csi);
-
+	set_power(s->priv, 0);
 	return 0;
 }
 
@@ -2695,24 +2726,26 @@ static int ov5642_probe(struct i2c_client *client,
 {
 	int retval;
 	struct mxc_camera_platform_data *plat_data = client->dev.platform_data;
+	struct sensor *sensor = &ov5642_data;
+	u8 chip_id_high, chip_id_low;
 
 	/* Set initial values for the sensor struct. */
-	memset(&ov5642_data, 0, sizeof(ov5642_data));
+	memset(sensor, 0, sizeof(*sensor));
 
-	ov5642_data.mclk_name = plat_data->mclk_name ;
-	ov5642_data.mclk = 24000000; /* 6 - 54 MHz, typical 24MHz */
-	ov5642_data.mclk = plat_data->mclk;
-	ov5642_data.csi = plat_data->csi;
+	sensor->mclk_name = plat_data->mclk_name ;
+	sensor->mclk = 24000000; /* 6 - 54 MHz, typical 24MHz */
+	sensor->mclk = plat_data->mclk;
+	sensor->csi = plat_data->csi;
 
-	ov5642_data.i2c_client = client;
-	ov5642_data.pix.pixelformat = V4L2_PIX_FMT_YUYV;
-	ov5642_data.pix.width = 640;
-	ov5642_data.pix.height = 480;
-	ov5642_data.streamcap.capability = V4L2_MODE_HIGHQUALITY |
+	sensor->i2c_client = client;
+	sensor->pix.pixelformat = V4L2_PIX_FMT_YUYV;
+	sensor->pix.width = 640;
+	sensor->pix.height = 480;
+	sensor->streamcap.capability = V4L2_MODE_HIGHQUALITY |
 					   V4L2_CAP_TIMEPERFRAME;
-	ov5642_data.streamcap.capturemode = 0;
-	ov5642_data.streamcap.timeperframe.denominator = DEFAULT_FPS;
-	ov5642_data.streamcap.timeperframe.numerator = 1;
+	sensor->streamcap.capturemode = 0;
+	sensor->streamcap.timeperframe.denominator = DEFAULT_FPS;
+	sensor->streamcap.timeperframe.numerator = 1;
 
 	if (plat_data->io_regulator) {
 		io_regulator = regulator_get(&client->dev,
@@ -2721,13 +2754,6 @@ static int ov5642_probe(struct i2c_client *client,
 			regulator_set_voltage(io_regulator,
 					      OV5642_VOLTAGE_DIGITAL_IO,
 					      OV5642_VOLTAGE_DIGITAL_IO);
-			if (regulator_enable(io_regulator) != 0) {
-				pr_err("%s:io set voltage error\n", __func__);
-				goto err1;
-			} else {
-				dev_dbg(&client->dev,
-					"%s:io set voltage ok\n", __func__);
-			}
 		} else
 			io_regulator = NULL;
 	}
@@ -2739,13 +2765,6 @@ static int ov5642_probe(struct i2c_client *client,
 			regulator_set_voltage(core_regulator,
 					      OV5642_VOLTAGE_DIGITAL_CORE,
 					      OV5642_VOLTAGE_DIGITAL_CORE);
-			if (regulator_enable(core_regulator) != 0) {
-				pr_err("%s:core set voltage error\n", __func__);
-				goto err2;
-			} else {
-				dev_dbg(&client->dev,
-					"%s:core set voltage ok\n", __func__);
-			}
 		} else
 			core_regulator = NULL;
 	}
@@ -2757,40 +2776,49 @@ static int ov5642_probe(struct i2c_client *client,
 			regulator_set_voltage(analog_regulator,
 					      OV5642_VOLTAGE_ANALOG,
 					      OV5642_VOLTAGE_ANALOG);
-			if (regulator_enable(analog_regulator) != 0) {
-				pr_err("%s:analog set voltage error\n",
-					__func__);
-				goto err3;
-			} else {
-				dev_dbg(&client->dev,
-					"%s:analog set voltage ok\n", __func__);
-			}
 		} else
 			analog_regulator = NULL;
 	}
 
-	if (plat_data->pwdn)
-		plat_data->pwdn(0);
-
 	camera_plat = plat_data;
+	retval = set_power(sensor, 1);
+	if (retval)
+		goto err;
 
-	ov5642_int_device.priv = &ov5642_data;
+	retval = ov5642_read_reg(OV5642_CHIP_ID_HIGH_BYTE, &chip_id_high);
+	if (retval < 0 || chip_id_high != 0x56) {
+		pr_err("%s:cannot find camera\n", __func__);
+		retval = -ENODEV;
+		goto err;
+	}
+	retval = ov5642_read_reg(OV5642_CHIP_ID_LOW_BYTE, &chip_id_low);
+	if (retval < 0 || chip_id_low != 0x42) {
+		pr_err("%s:cannot find ov5642\n", __func__);
+		retval = -ENODEV;
+		goto err;
+	}
+
+	ov5642_int_device.priv = sensor;
 	retval = v4l2_int_device_register(&ov5642_int_device);
 
+	set_power(sensor, 0);
 	return retval;
 
-err3:
+err:
+	set_power(sensor, 0);
+	if (analog_regulator) {
+		regulator_put(analog_regulator);
+		analog_regulator = NULL;
+	}
 	if (core_regulator) {
-		regulator_disable(core_regulator);
 		regulator_put(core_regulator);
+		core_regulator = NULL;
 	}
-err2:
 	if (io_regulator) {
-		regulator_disable(io_regulator);
 		regulator_put(io_regulator);
+		io_regulator = NULL;
 	}
-err1:
-	return -1;
+	return retval;
 }
 
 /*!
