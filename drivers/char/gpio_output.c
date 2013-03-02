@@ -111,9 +111,9 @@ ssize_t gpio_output_write(struct file *file, const char __user *data, size_t len
 	unsigned char val ;
 	if (0 == copy_from_user(&val,data,sizeof(val))) {
 		val &= 1 ;
-		printk (KERN_ERR "%s: set gp[%u] to %d (now %d)\n", name, gpio, val, gpio_get_value(gpio));
+		pr_debug("%s: set gp[%u] to %d (now %d)\n", name, gpio, val, gpio_get_value(gpio));
 		gpio_set_value(gpio,val);
-		printk (KERN_ERR "%s: gp[%u] now %d\n", name, gpio, gpio_get_value(gpio));
+		pr_debug("%s: gp[%u] now %d\n", name, gpio, gpio_get_value(gpio));
 		return len ;
 	}
 	else
