@@ -26,6 +26,8 @@
 #include "../codecs/wm8962.h"
 #include "imx-audmux.h"
 
+#define IMX_WM8962_MCLK_RATE 24000000
+
 #define DAI_NAME_SIZE	32
 
 struct imx_wm8962_data {
@@ -33,7 +35,6 @@ struct imx_wm8962_data {
 	struct snd_soc_card card;
 	char codec_dai_name[DAI_NAME_SIZE];
 	char platform_name[DAI_NAME_SIZE];
-	struct clk *codec_clk;
 	unsigned int clk_frequency;
 };
 
@@ -293,30 +294,6 @@ static int imx_wm8962_dai_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
-static int imx_hifi_startup(struct snd_pcm_substream *substream)
-{
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct imx_priv *priv = &card_priv;
-	struct imx_wm8962_data *data = platform_get_drvdata(priv->pdev);
-
-	if (!codec_dai->active)
-		clk_enable(data->codec_clk);
-
-	return 0;
-}
-
-static void imx_hifi_shutdown(struct snd_pcm_substream *substream)
-{
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct imx_priv *priv = &card_priv;
-	struct imx_wm8962_data *data = platform_get_drvdata(priv->pdev);
-
-	if (codec_dai->active)
-		clk_disable(data->codec_clk);
-}
-
 static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 				     struct snd_pcm_hw_params *params)
 {
@@ -415,8 +392,6 @@ static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 }
 
 static struct snd_soc_ops imx_hifi_ops = {
-	.startup = imx_hifi_startup,
-	.shutdown = imx_hifi_shutdown,
 	.hw_params = imx_hifi_hw_params,
 	.hw_free = imx_hifi_hw_free,
 	.trigger = imx_hifi_trigger,
@@ -502,21 +477,7 @@ static int __devinit imx_wm8962_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	data->codec_clk = clk_get(&codec_dev->dev, NULL);
-	if (IS_ERR(data->codec_clk)) {
-		/* assuming clock enabled by default */
-		data->codec_clk = NULL;
-		ret = of_property_read_u32(codec_np, "clock-frequency",
-					&data->clk_frequency);
-		if (ret) {
-			dev_err(&codec_dev->dev,
-				"clock-frequency missing or invalid\n");
-			goto fail;
-		}
-	} else {
-		data->clk_frequency = 24000000;
-		clk_prepare(data->codec_clk);
-	}
+	data->clk_frequency = IMX_WM8962_MCLK_RATE;
 
 	data->dai.name = "HiFi";
 	data->dai.stream_name = "HiFi";
@@ -532,10 +493,10 @@ static int __devinit imx_wm8962_probe(struct platform_device *pdev)
 	data->card.dev = &pdev->dev;
 	ret = snd_soc_of_parse_card_name(&data->card, "model");
 	if (ret)
-		goto clk_fail;
+		goto fail;
 	ret = snd_soc_of_parse_audio_routing(&data->card, "audio-routing");
 	if (ret)
-		goto clk_fail;
+		goto fail;
 	data->card.num_links = 1;
 	data->card.dai_link = &data->dai;
 	data->card.dapm_widgets = imx_wm8962_dapm_widgets;
@@ -544,15 +505,13 @@ static int __devinit imx_wm8962_probe(struct platform_device *pdev)
 	ret = snd_soc_register_card(&data->card);
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n", ret);
-		goto clk_fail;
+		goto fail;
 	}
 
 	platform_set_drvdata(pdev, data);
 
 	return 0;
 
-clk_fail:
-	clk_put(data->codec_clk);
 fail:
 	if (ssi_np)
 		of_node_put(ssi_np);
@@ -566,10 +525,6 @@ static int __devexit imx_wm8962_remove(struct platform_device *pdev)
 {
 	struct imx_wm8962_data *data = platform_get_drvdata(pdev);
 
-	if (data->codec_clk) {
-		clk_unprepare(data->codec_clk);
-		clk_put(data->codec_clk);
-	}
 	snd_soc_unregister_card(&data->card);
 
 	return 0;

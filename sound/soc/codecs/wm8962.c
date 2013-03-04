@@ -16,6 +16,7 @@
 #include <linux/init.h>
 #include <linux/delay.h>
 #include <linux/pm.h>
+#include <linux/clk.h>
 #include <linux/gcd.h>
 #include <linux/gpio.h>
 #include <linux/i2c.h>
@@ -3400,6 +3401,18 @@ static int wm8962_set_pdata_from_of(struct i2c_client *i2c,
 		dev_warn(&i2c->dev, "Couldn't find DMIC GPIOs cfg in DTS\n");
 		return -ENOENT;
 	}
+
+	pdata->codec_mclk = clk_get(&i2c->dev, NULL);
+
+	/*
+	 * If clk_get() failed, we assume that clock's enabled by default.
+	 * Otherwise, we let driver prepare and control the clock source.
+	 */
+	if (IS_ERR(pdata->codec_mclk))
+		pdata->codec_mclk = NULL;
+	else
+		clk_prepare(pdata->codec_mclk);
+
 	return 0;
 }
 
@@ -3734,7 +3747,7 @@ static __devinit int wm8962_i2c_probe(struct i2c_client *i2c,
 					GFP_KERNEL);
 		if (wm8962->pdata == NULL) {
 			dev_err(&i2c->dev, "Failed to allocate pdata\n");
-			return -ENOMEM;
+			goto err_regmap;
 		}
 		memset(wm8962->pdata, 0, sizeof(struct wm8962_pdata));
 		wm8962_set_pdata_from_of(i2c, wm8962->pdata);
@@ -3757,7 +3770,7 @@ static __devinit int wm8962_i2c_probe(struct i2c_client *i2c,
 	ret = snd_soc_register_codec(&i2c->dev,
 				     &soc_codec_dev_wm8962, &wm8962_dai, 1);
 	if (ret < 0)
-		goto err_regmap;
+		goto err_clk;
 
 	/* The cache-only should be turned on before we power down the codec */
 	regcache_cache_only(wm8962->regmap, true);
@@ -3767,6 +3780,11 @@ static __devinit int wm8962_i2c_probe(struct i2c_client *i2c,
 
 	return 0;
 
+err_clk:
+	if (pdata->codec_mclk) {
+		clk_unprepare(pdata->codec_mclk);
+		clk_put(pdata->codec_mclk);
+	}
 err_regmap:
 	regmap_exit(wm8962->regmap);
 err_enable:
@@ -3780,6 +3798,12 @@ err:
 static __devexit int wm8962_i2c_remove(struct i2c_client *client)
 {
 	struct wm8962_priv *wm8962 = dev_get_drvdata(&client->dev);
+	struct wm8962_pdata *pdata = wm8962->pdata;
+
+	if (pdata->codec_mclk) {
+		clk_unprepare(pdata->codec_mclk);
+		clk_put(pdata->codec_mclk);
+	}
 
 	snd_soc_unregister_codec(&client->dev);
 	regmap_exit(wm8962->regmap);
@@ -3793,6 +3817,9 @@ static int wm8962_runtime_resume(struct device *dev)
 	struct wm8962_priv *wm8962 = dev_get_drvdata(dev);
 	struct wm8962_pdata *pdata = wm8962->pdata;
 	int ret;
+
+	if (pdata->codec_mclk)
+		clk_enable(pdata->codec_mclk);
 
 	ret = regulator_bulk_enable(ARRAY_SIZE(wm8962->supplies),
 				    wm8962->supplies);
@@ -3844,6 +3871,7 @@ static int wm8962_runtime_resume(struct device *dev)
 static int wm8962_runtime_suspend(struct device *dev)
 {
 	struct wm8962_priv *wm8962 = dev_get_drvdata(dev);
+	struct wm8962_pdata *pdata = wm8962->pdata;
 
 	regmap_update_bits(wm8962->regmap, WM8962_PWR_MGMT_1,
 			   WM8962_VMID_SEL_MASK | WM8962_BIAS_ENA, 0);
@@ -3856,6 +3884,9 @@ static int wm8962_runtime_suspend(struct device *dev)
 
 	regulator_bulk_disable(ARRAY_SIZE(wm8962->supplies),
 			       wm8962->supplies);
+
+	if (pdata->codec_mclk)
+		clk_disable(pdata->codec_mclk);
 
 	return 0;
 }
