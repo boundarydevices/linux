@@ -65,6 +65,8 @@ void imx_anatop_pre_suspend(void)
 void imx_anatop_post_resume(void)
 {
 	imx_anatop_enable_weak2p5(false);
+	if (imx6q_revision() > IMX_CHIP_REVISION_1_0)
+		imx_anatop_enable_fet_odrive(false);
 }
 
 unsigned int imx_anatop_get_core_reg_setting(void)
