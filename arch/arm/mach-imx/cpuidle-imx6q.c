@@ -82,8 +82,11 @@ int __init imx6q_cpuidle_init(void)
 	/* Set initial power mode */
 	imx6q_set_lpm(WAIT_CLOCKED);
 
-	/* Set chicken bit for a reliable WAIT mode support */
-	imx6q_set_chicken_bit();
+	/*
+	 * Set cache lpm in wait mode bit
+	 * for a reliable WAIT mode support
+	 */
+	imx6q_set_cache_lpm_in_wait(true);
 
 	/* Configure the broadcast timer on each cpu */
 	on_each_cpu(imx6q_setup_broadcast_timer, NULL, 1);
