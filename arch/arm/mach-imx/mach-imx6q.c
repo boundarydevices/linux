@@ -870,7 +870,28 @@ static const struct of_device_id imx6q_irq_match[] __initconst = {
 
 static void __init imx6q_init_irq(void)
 {
+#ifdef CONFIG_CACHE_L2X0
+	struct device_node *np;
+	void __iomem *l2x0_base;
+	u32 val;
+
+	np = of_find_compatible_node(NULL, NULL, "arm,pl310-cache");
+	l2x0_base = of_iomap(np, 0);
+	WARN_ON(!l2x0_base);
+
+	/* need to adjust L2X0's parameter */
+	writel_relaxed(0x132, l2x0_base + L2X0_TAG_LATENCY_CTRL);
+	writel_relaxed(0x132, l2x0_base + L2X0_DATA_LATENCY_CTRL);
+	val = readl_relaxed(l2x0_base + L2X0_PREFETCH_CTRL);
+	val |= 0x40800000;
+	writel_relaxed(val, l2x0_base + L2X0_PREFETCH_CTRL);
+	val = readl_relaxed(l2x0_base + L2X0_POWER_CTRL);
+	val |= L2X0_DYNAMIC_CLK_GATING_EN;
+	val |= L2X0_STNDBY_MODE_EN;
+	writel_relaxed(val, l2x0_base + L2X0_POWER_CTRL);
+
 	l2x0_of_init(0, ~0UL);
+#endif
 	imx_src_init();
 	imx_gpc_init();
 	of_irq_init(imx6q_irq_match);

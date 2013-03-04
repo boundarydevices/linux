@@ -113,6 +113,11 @@ static struct map_desc mx6_pm_io_desc[] __initdata = {
 	.pfn = __phys_to_pfn(MX6Q_GPC_BASE_ADDR),
 	.length = SZ_16K,
 	.type = MT_DEVICE},
+	{
+	.virtual = IMX_IO_P2V(MX6Q_L2_BASE_ADDR),
+	.pfn = __phys_to_pfn(MX6Q_L2_BASE_ADDR),
+	.length = SZ_4K,
+	.type = MT_DEVICE},
 };
 
 void __init imx_pm_map_io(void)

@@ -190,6 +190,27 @@
 	str	r10, [r8, #0x5a0] /* DRAM_SODT1*/
 
 	.endm
+
+	.macro  sync_l2_cache
+
+	/* sync L2 cache to drain L2's buffers to DRAM. */
+#ifdef CONFIG_CACHE_L2X0
+	ldr	r8, =MX6Q_L2_BASE_ADDR
+	phy2virt
+
+	mov	r5, #0x0
+	/* 0x730 is L2X0_CACHE_SYNC */
+	mov	r4, #0x700
+	orr	r4, #0x30
+	str	r5, [r8, r4]
+1:
+	ldr	r5, [r8, r4]
+	ands	r5, r5, #0x1
+	bne	1b
+#endif
+	.endm
+
+
 ENTRY(imx_suspend)
 
 	/*
@@ -237,6 +258,9 @@ ENTRY(imx_suspend)
 	phy2virt
 
 	dq_ddr_io_save
+
+	/* need to sync L2 cache before DSM. */
+	sync_l2_cache
 
 	ldr	r8, =MX6Q_MMDC_P0_BASE_ADDR
 	phy2virt
@@ -399,6 +423,16 @@ poll_dvfs_clear_2:
 	mov	pc, lr
 
 resume:
+	/* invalidate L1 I-cache first */
+	mov     r1,     #0x0
+	mcr     p15, 0, r1, c7, c5, 0
+	mcr     p15, 0, r1, c7, c5, 0
+	mcr     p15, 0, r1, c7, c5, 6
+	/* enable the Icache and branch prediction */
+	mov     r1, #0x1800
+	mcr     p15, 0, r1, c1, c0, 0
+	isb
+
 	/* restore it with 0x1f if use ldo bypass mode.*/
 	ldr	r8, =MX6Q_ANATOP_BASE_ADDR
 	ldr	r7, [r8, #0x140]
@@ -413,6 +447,12 @@ ldo_check_done3:
 	ldr	r5, =MX6Q_SRC_BASE_ADDR
 	ldr	r10, [r5, #0x24]
 	ldmea	r10!, {lr}
+
+	/* clear core0's entry and parameter */
+	ldr	r8, =MX6Q_SRC_BASE_ADDR
+	mov	r7, #0
+	str	r7, [r8, #0x20]
+	str	r7, [r8, #0x24]
 
 	ldr	r8, =MX6Q_IOMUXC_BASE_ADDR
 	dq_ddr_io_restore

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Freescale Semiconductor, Inc.
+ * Copyright 2011-2013 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -66,6 +66,15 @@ ENDPROC(v7_invalidate_l1)
 
 #ifdef CONFIG_SMP
 ENTRY(v7_secondary_startup)
+	mrc	p15, 0, r0, c0, c0, 5
+	and	r0, r0, #15
+	ldr	r1, = 0x020d8020
+	add	r1, r0, LSL#3
+
+	/* clear SRC_GPR register */
+	mov	r0, #0
+	str	r0, [r1]
+	str	r0, [r1, #0x4]
 	bl	v7_invalidate_l1
 	b	secondary_startup
 ENDPROC(v7_secondary_startup)
@@ -86,6 +95,15 @@ ENDPROC(v7_secondary_startup)
 	ldr	r0, [r2, #L2X0_R_PHY_BASE]	@ get physical base of l2x0
 	ldr	r1, [r2, #L2X0_R_AUX_CTRL]	@ get aux_ctrl value
 	str	r1, [r0, #L2X0_AUX_CTRL]	@ restore aux_ctrl
+	ldr	r1, [r2, #L2X0_R_TAG_LATENCY]
+	str	r1, [r0, #L2X0_TAG_LATENCY_CTRL]
+	ldr	r1, [r2, #L2X0_R_DATA_LATENCY]
+	str	r1, [r0, #L2X0_DATA_LATENCY_CTRL]
+	ldr	r1, [r2, #L2X0_R_PREFETCH_CTRL]
+	str	r1, [r0, #L2X0_PREFETCH_CTRL]
+	ldr	r1, [r2, #L2X0_R_PWR_CTRL]
+	str	r1, [r0, #L2X0_POWER_CTRL]
+
 	mov	r1, #0x1
 	str	r1, [r0, #L2X0_CTRL]		@ re-enable L2
 	.endm
