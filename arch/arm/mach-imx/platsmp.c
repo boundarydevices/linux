@@ -69,9 +69,7 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	imx_set_cpu_jump(cpu, v7_secondary_startup);
 	imx_enable_cpu(cpu, true);
-	/* enable scu auto standby mode to save power and make
-	 * system be able to enter low power mode */
-	imx_scu_standby_enable(false);
+
 	return 0;
 }
 
@@ -94,6 +92,11 @@ void __init smp_init_cpus(void)
 void imx_smp_prepare(void)
 {
 	scu_enable(scu_base);
+	/*
+	 * enable scu auto standby mode to save power and make
+	 * system be able to enter low power mode
+	 */
+	imx_scu_standby_enable(true);
 }
 
 void __init platform_smp_prepare_cpus(unsigned int max_cpus)
