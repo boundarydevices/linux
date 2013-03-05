@@ -84,7 +84,7 @@ static int adv739x_write(struct i2c_client *client, u8 reg, u8 data)
 {
 	int ret = 0;
 	ret = i2c_smbus_write_byte_data(client, reg, data);
-
+	pr_info("%s: reg=0x%x data=0x%x ret=%d\n", __func__, reg, data, ret);
 	return ret;
 }
 
@@ -92,7 +92,7 @@ static int adv739x_read(struct i2c_client *client, u8 reg)
 {
 	int data = 0;
 	data = i2c_smbus_read_byte_data(client, reg);
-
+	pr_info("%s: reg=0x%x data=0x%x %d\n", __func__, reg, data, data);
 	return data;
 }
 
@@ -311,16 +311,17 @@ static int __devinit adv739x_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	struct adv739x_data *adv739x;
-	int ret = 0;
 
 	if (!i2c_check_functionality(client->adapter,
-				I2C_FUNC_SMBUS_BYTE | I2C_FUNC_SMBUS_BYTE_DATA))
+				I2C_FUNC_SMBUS_BYTE | I2C_FUNC_SMBUS_BYTE_DATA)) {
+		pr_err("%s: need smbus\n", __func__);
 		return -ENODEV;
+	}
 
 	adv739x = kzalloc(sizeof(struct adv739x_data), GFP_KERNEL);
 	if (!adv739x) {
-		ret = -ENOMEM;
-		goto alloc_failed;
+		pr_err("%s: no mem\n", __func__);
+		return -ENOMEM;
 	}
 	
 	adv739x->client = client;
@@ -329,9 +330,7 @@ static int __devinit adv739x_probe(struct i2c_client *client,
 	mxc_dispdrv_setdata(adv739x->disp_adv739x, adv739x);
 
 	i2c_set_clientdata(client, adv739x);
-
-alloc_failed:
-	return ret;
+	return 0;
 
 }
 
