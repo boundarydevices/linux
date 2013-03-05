@@ -1629,9 +1629,9 @@ static int mxc_v4l_close(struct file *file)
 	}
 
 	if (--cam->open_count == 0) {
-		vidioc_int_s_power(cam->sensor, 0);
 		wait_event_interruptible(cam->power_queue,
 					 cam->low_power == false);
+		vidioc_int_s_power(cam->sensor, 0);
 		pr_info("mxc_v4l_close: release resource\n");
 
 		if (strcmp(mxc_capture_inputs[cam->current_input].name,
