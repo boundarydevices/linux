@@ -539,6 +539,13 @@ static struct tsc2007_platform_data tsc2007_info = {
 	.x_plate_ohms		= 500,
 };
 
+static struct fsl_mxc_lcd_platform_data adv7391_data = {
+	.ipu_id = 0,
+	.disp_id = 0,
+	.default_ifmt = IPU_PIX_FMT_BT656,
+};
+
+
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("egalax_ts", 0x4),
@@ -556,6 +563,10 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
 	},
 #endif
+	{
+		I2C_BOARD_INFO("mxc_adv739x", 0x2a),
+		.platform_data = (void *)&adv7391_data,
+	},
 };
 
 static void imx6_sabrelite_usbotg_vbus(bool on)
