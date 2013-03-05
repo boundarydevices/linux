@@ -1,13 +1,20 @@
 #undef MX6PAD
 #undef MX6NAME
+#undef MX6
 
 #ifdef FOR_DL_SOLO
+#define MX6(a) MX6DL_##a
 #define MX6PAD(a) MX6DL_PAD_##a
 #define MX6NAME(a) mx6dl_solo_##a
 #else
+#define MX6(a) MX6Q_##a
 #define MX6PAD(a) MX6Q_PAD_##a
 #define MX6NAME(a) mx6q_##a
 #endif
+
+#define MX6Q_USDHC_PAD_CTRL_22KPU_40OHM_50MHZ	(PAD_CTL_PKE | PAD_CTL_PUE |	\
+		PAD_CTL_PUS_22K_UP  | PAD_CTL_SPEED_LOW |		\
+		PAD_CTL_DSE_40ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
 
 #define MX6Q_USDHC_PAD_CTRL_50MHZ	MX6Q_USDHC_PAD_CTRL
 #define MX6Q_PAD_SD3_CLK__USDHC3_CLK	MX6Q_PAD_SD3_CLK__USDHC3_CLK_50MHZ
@@ -23,6 +30,8 @@
 #define MX6Q_PAD_SD4_DAT2__USDHC4_DAT2	MX6Q_PAD_SD4_DAT2__USDHC4_DAT2_50MHZ
 #define MX6Q_PAD_SD4_DAT3__USDHC4_DAT3	MX6Q_PAD_SD4_DAT3__USDHC4_DAT3_50MHZ
 
+#define MX6DL_USDHC_PAD_CTRL_22KPU_40OHM_50MHZ	MX6Q_USDHC_PAD_CTRL_22KPU_40OHM_50MHZ
+#define MX6DL_USDHC_PAD_CTRL_50MHZ	MX6DL_USDHC_PAD_CTRL
 #define MX6DL_PAD_SD3_CLK__USDHC3_CLK	MX6DL_PAD_SD3_CLK__USDHC3_CLK_50MHZ
 #define MX6DL_PAD_SD3_CMD__USDHC3_CMD	MX6DL_PAD_SD3_CMD__USDHC3_CMD_50MHZ
 #define MX6DL_PAD_SD3_DAT0__USDHC3_DAT0	MX6DL_PAD_SD3_DAT0__USDHC3_DAT0_50MHZ
@@ -36,17 +45,16 @@
 #define MX6DL_PAD_SD4_DAT2__USDHC4_DAT2	MX6DL_PAD_SD4_DAT2__USDHC4_DAT2_50MHZ
 #define MX6DL_PAD_SD4_DAT3__USDHC4_DAT3	MX6DL_PAD_SD4_DAT3__USDHC4_DAT3_50MHZ
 
-#define NP(id, speed, pin) \
-	NEW_PAD_CTRL(MX6PAD(SD##id##_##pin##__USDHC##id##_##pin), \
-		MX6Q_USDHC_PAD_CTRL_##speed##MHZ)
+#define NP(id, pin, pad_ctl) \
+	NEW_PAD_CTRL(MX6PAD(SD##id##_##pin##__USDHC##id##_##pin), MX6(pad_ctl))
 
-#define SD_PINS(id, speed) \
-	NP(id, speed, CLK),	\
-	NP(id, speed, CMD),	\
-	NP(id, speed, DAT0),	\
-	NP(id, speed, DAT1),	\
-	NP(id, speed, DAT2),	\
-	NP(id, speed, DAT3)
+#define SD_PINS(id, pad_ctl) \
+	NP(id, CLK, pad_ctl),	\
+	NP(id, CMD, pad_ctl),	\
+	NP(id, DAT0, pad_ctl),	\
+	NP(id, DAT1, pad_ctl),	\
+	NP(id, DAT2, pad_ctl),	\
+	NP(id, DAT3, pad_ctl)
 
 static iomux_v3_cfg_t MX6NAME(nitrogen6x_pads)[] = {
 	/* AUDMUX */
@@ -54,11 +62,9 @@ static iomux_v3_cfg_t MX6NAME(nitrogen6x_pads)[] = {
 	MX6PAD(CSI0_DAT4__AUDMUX_AUD3_TXC),
 	MX6PAD(CSI0_DAT5__AUDMUX_AUD3_TXD),
 	MX6PAD(CSI0_DAT6__AUDMUX_AUD3_TXFS),
-
 	NEW_PAD_CTRL(MX6PAD(NANDF_CS1__GPIO_6_14), N6_IRQ_PADCFG),	/* wl1271 wl_irq */
-
 	/* USDHC2 */
-	SD_PINS(2, 50),
+	SD_PINS(2, USDHC_PAD_CTRL_22KPU_40OHM_50MHZ),
         MX6PAD(SD1_CLK__OSC32K_32K_OUT), /* wl1271 clock */
 
 	/* UART3 for wl1271 */
@@ -253,12 +259,12 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(EIM_D30__USBOH3_USBH1_OC),
 
 	/* USDHC3 */
-	SD_PINS(3, 50),
+	SD_PINS(3, USDHC_PAD_CTRL_50MHZ),
 	MX6PAD(SD3_DAT5__GPIO_7_0),		/* J18 - SD3_CD */
 	NEW_PAD_CTRL(MX6PAD(SD3_DAT4__GPIO_7_1), MX6_SABRELITE_SD3_WP_PADCFG),
 
 	/* USDHC4 */
-	SD_PINS(4, 50),
+	SD_PINS(4, USDHC_PAD_CTRL_50MHZ),
 	MX6PAD(NANDF_D6__GPIO_2_6),		/* J20 - SD4_CD */
 	MX6PAD(NANDF_D7__GPIO_2_7),		/* SD4_WP */
 	0
@@ -317,18 +323,18 @@ static iomux_v3_cfg_t MX6NAME(sabrelite_mc33902_flexcan_pads)[] = {
 	0
 };
 
-#define MX6_USDHC_PAD_SETTING(id, speed)	\
-		MX6NAME(sd##id##_##speed##mhz)[] = { SD_PINS(id, speed), 0 }
+#define MX6_USDHC_PAD_SETTING(id, speed, pad_ctl)	\
+		MX6NAME(sd##id##_##speed##mhz)[] = { SD_PINS(id, pad_ctl), 0 }
 
-static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(2, 50);
-static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(2, 100);
-static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(2, 200);
-static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(3, 50);
-static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(3, 100);
-static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(3, 200);
-static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(4, 50);
-static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(4, 100);
-static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(4, 200);
+static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(2, 50, USDHC_PAD_CTRL_22KPU_40OHM_50MHZ);
+static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(2, 100, USDHC_PAD_CTRL_100MHZ);
+static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(2, 200, USDHC_PAD_CTRL_200MHZ);
+static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(3, 50, USDHC_PAD_CTRL_50MHZ);
+static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(3, 100, USDHC_PAD_CTRL_100MHZ);
+static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(3, 200, USDHC_PAD_CTRL_200MHZ);
+static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(4, 50, USDHC_PAD_CTRL_50MHZ);
+static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(4, 100, USDHC_PAD_CTRL_100MHZ);
+static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING(4, 200, USDHC_PAD_CTRL_200MHZ);
 
 #define _50MHZ 0
 #define _100MHZ 1
