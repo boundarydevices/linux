@@ -132,9 +132,9 @@
 #define KELVIN_TO_CEL(t, off) (((t) - (off)))
 #define CEL_TO_KELVIN(t, off) (((t) + (off)))
 
-#define DEFAULT_RAW_25C		1469
-#define DEFAULT_RAW_HOT		1375
-#define DEFAULT_TEMP_HOT	90
+#define DEFAULT_RAW_25C		1440
+#define DEFAULT_RAW_HOT		1240
+#define DEFAULT_TEMP_HOT	125
 
 #define ANATOP_DEBUG			false
 #define THERMAL_FUSE_NAME		"/sys/fsl_otp/HW_OCOTP_ANA1"
@@ -179,6 +179,10 @@ MODULE_PARM_DESC(temps, "Temperature trip points in degrees K (active,hot,critic
 #define _TEMP_CRITICAL temps[ANATOP_TRIPS_POINT_CRITICAL]
 #define _TEMP_HOT temps[ANATOP_TRIPS_POINT_HOT]
 #define _TEMP_ACTIVE temps[ANATOP_TRIPS_POINT_ACTIVE]
+
+static char fusedata[32] = {0};
+module_param_string(fusedata, fusedata, sizeof(fusedata),
+		    S_IRUGO | S_IWUSR | S_IWGRP);
 
 /* functions */
 static int anatop_thermal_add(struct anatop_device *device);
@@ -301,22 +305,10 @@ int cvt_celius_to_raw(int celius)
 	return raw_25c - change;
 }
 
-static int anatop_thermal_get_temp(struct thermal_zone_device *thermal,
-			    long *temp)
+static int anatop_read_raw(void)
 {
-	struct anatop_thermal *tz = thermal->devdata;
 	unsigned int tmp;
 	unsigned int reg;
-
-	if (!tz)
-		return -EINVAL;
-
-	if (!raw_25c || suspend_flag) {
-		*temp = KELVIN_TO_CEL(_TEMP_ACTIVE, KELVIN_OFFSET);
-		return 0;
-	}
-
-	tz->last_temperature = tz->temperature;
 
 	if ((__raw_readl(anatop_base + HW_ANADIG_TEMPSENSE0) &
 		BM_ANADIG_TEMPSENSE0_POWER_DOWN) != 0) {
@@ -354,6 +346,28 @@ static int anatop_thermal_get_temp(struct thermal_zone_device *thermal,
 
 	if (ANATOP_DEBUG)
 		anatop_dump_temperature_register();
+
+	return tmp;
+}
+
+static int anatop_thermal_get_temp(struct thermal_zone_device *thermal,
+			    long *temp)
+{
+	struct anatop_thermal *tz = thermal->devdata;
+	unsigned int tmp;
+
+	if (!tz)
+		return -EINVAL;
+
+	if (!raw_25c || suspend_flag) {
+		*temp = KELVIN_TO_CEL(_TEMP_ACTIVE, KELVIN_OFFSET);
+		return 0;
+	}
+
+	tz->last_temperature = tz->temperature;
+
+	tmp = anatop_read_raw();
+
 	/* only the temp between -40C and 125C is valid, this
 	is for save */
 	tz->temperature = cvt_raw_to_celius(tmp);
@@ -721,6 +735,14 @@ static struct thermal_zone_device_ops anatop_thermal_zone_ops = {
 	.notify = anatop_thermal_notify,
 };
 
+static ssize_t thermal_raw_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "0x%x", anatop_read_raw());
+}
+
+static DEVICE_ATTR(raw, 0644, thermal_raw_show, NULL);
+
 static int anatop_thermal_register_thermal_zone(struct anatop_thermal *tz)
 {
 	int trips = 0;
@@ -929,7 +951,7 @@ static int anatop_thermal_probe(struct platform_device *pdev)
 	struct resource *res_io, *res_irq, *res_calibration;
 	void __iomem *base, *calibration_addr;
 	struct anatop_device *device;
-	unsigned fuse_data;
+	unsigned long fuse_data;
 
 	device = kzalloc(sizeof(*device), GFP_KERNEL);
 	if (!device) {
@@ -973,11 +995,20 @@ static int anatop_thermal_probe(struct platform_device *pdev)
 	}
 
 	/* use calibration data to get ratio */
-	fuse_data = __raw_readl(calibration_addr);
-#if 1
-	if (!fuse_data)
-		fuse_data = (0x552 << 8) | 58 | (0x58e << 20);
-#endif
+	if (fusedata[0] && !kstrtoul(fusedata, 16, &fuse_data))
+		dev_err(&pdev->dev, "fuse data: %s(%lx) from cmdline\n",
+			fusedata, fuse_data);
+	else {
+		fuse_data = __raw_readl(calibration_addr);
+		if (0 == fuse_data) {
+			dev_err(&pdev->dev,
+				"invalid fuse data, use defaults\n");
+			fuse_data = DEFAULT_TEMP_HOT
+				  | (DEFAULT_RAW_HOT<<8)
+				  | (DEFAULT_RAW_25C<<20);
+		}
+	}
+	dev_info(&pdev->dev, "fuse data: 0x%08lx\n", fuse_data);
 	anatop_thermal_counting_ratio(fuse_data);
 
 	res_irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
@@ -994,6 +1025,8 @@ static int anatop_thermal_probe(struct platform_device *pdev)
 	anatop_thermal_cpufreq_init();
 	pr_info("%s: default cooling device is cpufreq!\n", __func__);
 
+	if (device_create_file(&pdev->dev, &dev_attr_raw))
+		printk(KERN_INFO "%s: error creating raw node\n", __func__);
 	goto success;
 anatop_failed:
 	kfree(device);
@@ -1011,6 +1044,8 @@ static int anatop_thermal_remove(struct platform_device *pdev)
 		return -EINVAL;
 
 	tz = platform_get_drvdata(pdev);
+
+	device_remove_file(&pdev->dev, &dev_attr_raw);
 
 	anatop_thermal_unregister_thermal_zone(tz);
 
