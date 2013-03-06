@@ -167,6 +167,19 @@ enum {
 static int debug_mask = DEBUG_USER_STATE;
 module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
+static int temps[3] = {
+	TEMP_CRITICAL,
+	TEMP_HOT,
+	TEMP_ACTIVE
+};
+
+module_param_array(temps, int, NULL, S_IRUGO | S_IWUSR | S_IWGRP);
+MODULE_PARM_DESC(temps, "Temperature trip points in degrees K (active,hot,critical)");
+
+#define _TEMP_CRITICAL temps[ANATOP_TRIPS_POINT_CRITICAL]
+#define _TEMP_HOT temps[ANATOP_TRIPS_POINT_HOT]
+#define _TEMP_ACTIVE temps[ANATOP_TRIPS_POINT_ACTIVE]
+
 /* functions */
 static int anatop_thermal_add(struct anatop_device *device);
 static int anatop_thermal_remove(struct platform_device *pdev);
@@ -299,7 +312,7 @@ static int anatop_thermal_get_temp(struct thermal_zone_device *thermal,
 		return -EINVAL;
 
 	if (!raw_25c || suspend_flag) {
-		*temp = KELVIN_TO_CEL(TEMP_ACTIVE, KELVIN_OFFSET);
+		*temp = KELVIN_TO_CEL(_TEMP_ACTIVE, KELVIN_OFFSET);
 		return 0;
 	}
 
@@ -344,17 +357,16 @@ static int anatop_thermal_get_temp(struct thermal_zone_device *thermal,
 	/* only the temp between -40C and 125C is valid, this
 	is for save */
 	tz->temperature = cvt_raw_to_celius(tmp);
-	if ((tz->temperature < -25) || (tz->temperature > 125)) {
-		pr_warn("Invalid temperature %ld C, force it to 25C\n",
-				tz->temperature);
-		tz->temperature = 25;
-	}
 
 	if (debug_mask & DEBUG_VERBOSE)
 		pr_info("Cooling device Temperature is %lu C\n", tz->temperature);
 
-	*temp = (cooling_device_disable && tz->temperature >= KELVIN_TO_CEL(TEMP_CRITICAL, KELVIN_OFFSET)) ?
-			KELVIN_TO_CEL(TEMP_CRITICAL - 1, KELVIN_OFFSET) : tz->temperature;
+	*temp = (cooling_device_disable
+		 &&
+		 (tz->temperature >= KELVIN_TO_CEL(_TEMP_CRITICAL,
+						   KELVIN_OFFSET)))
+		? KELVIN_TO_CEL(_TEMP_CRITICAL - 1, KELVIN_OFFSET)
+		: tz->temperature;
 
 	return 0;
 }
@@ -368,19 +380,19 @@ static int anatop_thermal_trips_update(struct anatop_thermal *tz, int flag)
 {
 	/* Critical Shutdown */
 	if (flag & ANATOP_TRIPS_CRITICAL) {
-		tz->trips.critical.temperature = TEMP_CRITICAL;
+		tz->trips.critical.temperature = _TEMP_CRITICAL;
 		tz->trips.critical.flags.valid = 1;
 	}
 
 	/* Hot */
 	if (flag & ANATOP_TRIPS_HOT) {
-			tz->trips.hot.temperature = TEMP_HOT;
+			tz->trips.hot.temperature = _TEMP_HOT;
 			tz->trips.hot.flags.valid = 1;
 	}
 
 	/* Active */
 	if (flag & ANATOP_TRIPS_ACTIVE) {
-			tz->trips.active.temperature = TEMP_ACTIVE;
+			tz->trips.active.temperature = _TEMP_ACTIVE;
 			tz->trips.active.flags.valid = 1;
 	}
 
@@ -885,10 +897,12 @@ static int anatop_thermal_counting_ratio(unsigned int fuse_data)
 	cvt_to_raw = raw25c - raw_hot;
 	cvt_to_raw <<= 32;
 	do_div(cvt_to_raw, hot_temp - 25);
-	pr_info("%s: raw25c=%d raw_hot=%d hot_temp=%d\n", __func__, raw25c, raw_hot, hot_temp);
+	pr_info("%s: raw25c=%d raw_hot=%d hot_temp=%d\n",
+		__func__, raw25c, raw_hot, hot_temp);
 
 	/* Init default critical temp to set alarm */
-	raw_critical = cvt_celius_to_raw(KELVIN_TO_CEL(TEMP_CRITICAL, KELVIN_OFFSET));
+	raw_critical = cvt_celius_to_raw
+			(KELVIN_TO_CEL(_TEMP_CRITICAL, KELVIN_OFFSET));
 	clk_enable(pll3_clk);
 	anatop_update_alarm(raw_critical);
 
