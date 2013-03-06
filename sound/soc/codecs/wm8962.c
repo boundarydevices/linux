@@ -3505,10 +3505,6 @@ static int wm8962_probe(struct snd_soc_codec *codec)
 			    WM8962_SPKOUTL_VOL_MASK, 0x72);
 	snd_soc_update_bits(codec, WM8962_SPKOUTR_VOLUME,
 			    WM8962_SPKOUTR_VOL_MASK, 0x72);
-	snd_soc_update_bits(codec, WM8962_LEFT_DAC_VOLUME,
-			    WM8962_DACL_VOL_MASK, 0xd8);
-	snd_soc_update_bits(codec, WM8962_RIGHT_DAC_VOLUME,
-			    WM8962_DACR_VOL_MASK, 0xd8);
 
 	snd_soc_update_bits(codec, WM8962_LEFT_INPUT_VOLUME,
 			    WM8962_INL_VOL_MASK, 0x3f);
