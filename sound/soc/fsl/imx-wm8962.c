@@ -403,6 +403,14 @@ static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 		return ret;
 	}
 
+	/* Disable FLL and let codec do pm_runtime_put() */
+	ret = snd_soc_dai_set_pll(codec_dai, WM8962_FLL,
+			WM8962_FLL_MCLK, 0, 0);
+	if (ret < 0) {
+		pr_err("Failed to set FLL: %d\n", ret);
+		return ret;
+	}
+
 	return 0;
 }
 
@@ -413,36 +421,6 @@ static struct snd_soc_ops imx_hifi_ops = {
 	.hw_free = imx_hifi_hw_free,
 	.trigger = imx_hifi_trigger,
 };
-
-static int imx_set_bias_level_post(struct snd_soc_card *card,
-		struct snd_soc_dapm_context *dapm,
-		enum snd_soc_bias_level level)
-{
-	struct snd_soc_dai *codec_dai = card->rtd[0].codec_dai;
-	int ret;
-
-	if (dapm->dev != codec_dai->dev)
-		return 0;
-
-	switch (level) {
-	case SND_SOC_BIAS_STANDBY:
-		/* Assure not disable fll from codec wakeup */
-		if (dapm->bias_level == SND_SOC_BIAS_OFF)
-			break;
-
-		ret = snd_soc_dai_set_pll(codec_dai, WM8962_FLL,
-				0, 0, 0);
-		if (ret < 0) {
-			pr_err("Failed to stop FLL: %d\n", ret);
-			return ret;
-		}
-		break;
-	default:
-		break;
-	}
-
-	return 0;
-}
 
 static int __devinit imx_wm8962_probe(struct platform_device *pdev)
 {
@@ -562,7 +540,6 @@ static int __devinit imx_wm8962_probe(struct platform_device *pdev)
 	data->card.dai_link = &data->dai;
 	data->card.dapm_widgets = imx_wm8962_dapm_widgets;
 	data->card.num_dapm_widgets = ARRAY_SIZE(imx_wm8962_dapm_widgets);
-	data->card.set_bias_level = imx_set_bias_level_post;
 
 	ret = snd_soc_register_card(&data->card);
 	if (ret) {
