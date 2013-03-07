@@ -468,8 +468,6 @@ static iomux_v3_cfg_t mx53common_pads[] = {
 	NEW_PAD_CTRL(MX53_PAD_EIM_A22__GPIO_2_16, PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP),	/* Keyboard */
 	NEW_PAD_CTRL(MX53_PAD_EIM_A21__GPIO_2_17, PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP),	/* Keyboard */
 	NEW_PAD_CTRL(MX53_PAD_EIM_A20__GPIO_2_18, PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP),	/* Keyboard */
-	NEW_PAD_CTRL(MX53_PAD_EIM_A19__GPIO_2_19, PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP),	/* Keyboard */
-	NEW_PAD_CTRL(MX53_PAD_EIM_A18__GPIO_2_20, PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP),	/* Keyboard */
 	NEW_PAD_CTRL(MX53_PAD_EIM_A17__GPIO_2_21, PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP),	/* Pmic IRQ */
 	NEW_PAD_CTRL(MX53_PAD_EIM_A16__GPIO_2_22, PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP),	/* Camera power down(nitrogenA) */
 	MX53_PAD_EIM_EB1__GPIO_2_29,									/* tpf410_i2cmode */
@@ -2200,6 +2198,10 @@ static iomux_v3_cfg_t nitrogen53_pads_specific_a[] __initdata = {
 
 	/* Pic16F616 touch int */
 	NEW_PAD_CTRL(MX53_PAD_EIM_DA8__GPIO_3_8, BUTTON_100K) | MUX_SION_MASK,
+
+	/* Keyboard */
+	NEW_PAD_CTRL(MX53_PAD_EIM_A18__GPIO_2_20, PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP),
+	NEW_PAD_CTRL(MX53_PAD_EIM_A19__GPIO_2_19, PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP),
 };
 
 static int sdhc_write_protect4(struct device *dev)
@@ -2426,6 +2428,10 @@ static iomux_v3_cfg_t nitrogen53_pads_specific[] __initdata = {
 #endif
 	/* PWM1 backlight */
 	MX53_PAD_GPIO_9__PWMO, /* pwm1 */
+
+	/* Keyboard */
+	NEW_PAD_CTRL(MX53_PAD_EIM_A19__GPIO_2_19, PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP),
+	NEW_PAD_CTRL(MX53_PAD_EIM_A18__GPIO_2_20, PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP),
 };
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
@@ -2642,8 +2648,8 @@ struct elan_ktf2k_i2c_platform_data ts_elan_ktf2k_data[] = {
 
 struct gpio n53k_gpios_specific[] __initdata = {
 	{.label = "pmic-int",		.gpio = MAKE_GP(2, 21),		.flags = GPIOF_DIR_IN},
-	{.label = "Dispay w3 sda",	.gpio = MAKE_GP(2, 19),		.flags = GPIOF_INIT_HIGH},
-	{.label = "Dispay w3 scl",	.gpio = MAKE_GP(2, 20),		.flags = GPIOF_INIT_HIGH},
+	{.label = "Dispay w3 sda",	.gpio = MAKE_GP(2, 19),		.flags = GPIOF_DIR_IN},
+	{.label = "Dispay w3 scl",	.gpio = MAKE_GP(2, 20),		.flags = GPIOF_DIR_IN},
 //	{.label = "i2c touchscreen int", .gpio = MAKE_GP(6, 6),		.flags = GPIOF_DIR_IN},
 #ifdef CONFIG_K2
 #define	N53K_HEADPHONE_DET			MAKE_GP(1, 2)
@@ -2656,7 +2662,7 @@ struct gpio n53k_gpios_specific[] __initdata = {
 	{.label = "accelerometer int2",	.gpio = MAKE_GP(2, 24),		.flags = GPIOF_DIR_IN},
 	{.label = "da9053 fault",	.gpio = MAKE_GP(2, 28),		.flags = GPIOF_DIR_IN},
 	{.label = "uart1 cts",		.gpio = MAKE_GP(2, 31),		.flags = GPIOF_INIT_LOW},
-	{.label = "Dispay w3 cs",	.gpio = MAKE_GP(3, 3),		.flags = GPIOF_INIT_HIGH},
+	{.label = "Dispay w3 cs",	.gpio = MAKE_GP(3, 3),		.flags = GPIOF_DIR_IN},
 	{.label = "da9053 shutdown",	.gpio = MAKE_GP(3, 4),		.flags = GPIOF_INIT_HIGH},
 	{.label = "ambient int",	.gpio = MAKE_GP(3, 7),		.flags = GPIOF_DIR_IN},
 #define I2C2_HUB_EDID				MAKE_GP(3, 8)
@@ -2936,7 +2942,6 @@ static iomux_v3_cfg_t n53k_pads_specific[] __initdata = {
 	MX53_PAD_EIM_DA9__GPIO_3_9,	/* i2c2 hub - BQ24163 enable */
 	MX53_PAD_GPIO_12__GPIO4_2,	/* BQ24163 int/status */
 	MX53_PAD_ATA_CS_0__GPIO_7_9,	/* accelerometer int1 on i2c3 */
-	MX53_PAD_EIM_DA3__GPIO3_3,	/* Dispay w3 cs */
 	/* UART3 */
 	MX53_PAD_EIM_D24__UART3_TXD,
 	MX53_PAD_EIM_D25__UART3_RXD,
@@ -2944,7 +2949,6 @@ static iomux_v3_cfg_t n53k_pads_specific[] __initdata = {
 	/* TiWi */
 	MX53_PAD_EIM_DA9__GPIO_3_9,	/* BT_FUNCT5 */
 	MX53_PAD_ATA_CS_0__GPIO_7_9,	/* WL1271_irq */
-	MX53_PAD_EIM_D24__GPIO3_24,	/* Dispay w3 cs */
 	/* UART3 */
 	MX53_PAD_ATA_CS_0__UART3_TXD,
 	MX53_PAD_ATA_CS_1__UART3_RXD,
@@ -2979,6 +2983,15 @@ static iomux_v3_cfg_t n53k_pads_specific[] __initdata = {
 	MX53_PAD_EIM_DA6__GPIO_3_6,		/* rtc isl1208 i2c_en */
 	NEW_PAD_CTRL(MX53_PAD_EIM_OE__GPIO2_25, PAD_CTL_PUS_100K_UP),		/* rtc isl1208 interrupt */
 	NEW_PAD_CTRL(MX53_PAD_EIM_LBA__GPIO2_27, BUTTON_100K) | MUX_SION_MASK,	/* barcode scanner interrupt */
+
+	/* W3 for Lvds display */
+	NEW_PAD_CTRL(MX53_PAD_EIM_A18__GPIO_2_20, PAD_CTL_PUS_100K_UP),	/* w3 scl, external pullup */
+	NEW_PAD_CTRL(MX53_PAD_EIM_A19__GPIO_2_19, PAD_CTL_PUS_100K_UP),	/* w3 sda, external pullup */
+#ifdef CONFIG_K2
+	NEW_PAD_CTRL(MX53_PAD_EIM_DA3__GPIO3_3, PAD_CTL_PUS_100K_UP),	/* w3 cs, external pullup */
+#else
+	MX53_PAD_EIM_D24__GPIO3_24,	/* Dispay w3 cs */
+#endif
 };
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
