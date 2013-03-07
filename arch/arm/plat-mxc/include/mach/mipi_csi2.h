@@ -88,34 +88,4 @@ void mipi_csi2_pixelclk_disable(struct mipi_csi2_info *info);
 
 int mipi_csi2_reset(struct mipi_csi2_info *info);
 
-/**
- * struct mipi_csi2_platform_data - MIPI CSI2 driver platform data.
- *
- * This structure communicates platform-specific information to the
- * MIPI CSI2 driver that can't be expressed as resources.
- *
- * @ipu_id:	the id of IPUs on which this MIPI CSI2 works
- *
- * @csi_id:	the id of IPU CSI interfaces
- *
- * @v_channel:	mipi virtual channel num
- *
- * @lanes:	mipi lanes
- *
- * @init:	A pointer to a function the driver will call to
- *              initialize the platform (e.g., set up the pin mux).
- * @exit:	A pointer to a function the driver will call to
- *                           exit the platform (e.g., free pins).
- */
-struct mipi_csi2_platform_data {
-	int	ipu_id;
-	unsigned int	csi_id;
-	unsigned int	v_channel;
-	unsigned int	lanes;
-	char	*dphy_clk;
-	char	*pixel_clk;
-	int	(*init)(struct platform_device *);
-	void	(*exit)(struct platform_device *);
-};
-
 #endif
