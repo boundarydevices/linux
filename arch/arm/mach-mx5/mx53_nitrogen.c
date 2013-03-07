@@ -2823,6 +2823,10 @@ static struct i2c_board_info n53k_i2c6_board_info[] __initdata = {
 	 .platform_data  = &camera_data,
 	},
 #endif
+	{
+	.type = "xrp6840",
+	.addr = 0x28,
+	},
 };
 static struct i2c_board_info n53k_i2c7_board_info[] __initdata = {
 #if defined(CONFIG_RTC_DRV_ISL1208) || defined(CONFIG_RTC_DRV_ISL1208_MODULE)
