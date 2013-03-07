@@ -2248,7 +2248,7 @@ static void __init mxc_board_init_nitrogen_a(void)
 	ldo9_consumers[0].dev_name = n53a_camera_i2c_dev_name;
 	mxci2c2_data.i2c_clock_toggle = n53a_i2c_clock_toggle2;
 	/* eMMC settings */
-	mmc3_data.caps = MMC_CAP_MMC_HIGHSPEED | MMC_CAP_4_BIT_DATA | MMC_CAP_8_BIT_DATA,	// MMC_CAP_DATA_DDR causes errors
+	mmc3_data.caps = MMC_CAP_MMC_HIGHSPEED | MMC_CAP_4_BIT_DATA | MMC_CAP_8_BIT_DATA;	// MMC_CAP_DATA_DDR causes errors
 
 #ifdef HAVE_CAMERA
 	camera_data.power_down = MAKE_GP(2, 22);
