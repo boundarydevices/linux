@@ -16,6 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/module.h>
 #include <linux/types.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
@@ -77,7 +78,7 @@ bool mipi_csi2_enable(struct mipi_csi2_info *info)
 
 	if (!info->mipi_en) {
 		info->mipi_en = true;
-		clk_enable(info->dphy_clk);
+		clk_prepare_enable(info->dphy_clk);
 	} else
 		mipi_dbg("mipi csi2 already enabled!\n");
 
@@ -103,7 +104,7 @@ bool mipi_csi2_disable(struct mipi_csi2_info *info)
 
 	if (info->mipi_en) {
 		info->mipi_en = false;
-		clk_disable(info->dphy_clk);
+		clk_disable_unprepare(info->dphy_clk);
 	} else
 		mipi_dbg("mipi csi2 already disabled!\n");
 
@@ -252,7 +253,7 @@ EXPORT_SYMBOL(mipi_csi2_get_error2);
  */
 int mipi_csi2_pixelclk_enable(struct mipi_csi2_info *info)
 {
-	return clk_enable(info->pixel_clk);
+	return clk_prepare_enable(info->pixel_clk);
 }
 EXPORT_SYMBOL(mipi_csi2_pixelclk_enable);
 
@@ -264,7 +265,7 @@ EXPORT_SYMBOL(mipi_csi2_pixelclk_enable);
  */
 void mipi_csi2_pixelclk_disable(struct mipi_csi2_info *info)
 {
-	clk_disable(info->pixel_clk);
+	clk_disable_unprepare(info->pixel_clk);
 }
 EXPORT_SYMBOL(mipi_csi2_pixelclk_disable);
 
@@ -375,22 +376,48 @@ EXPORT_SYMBOL(mipi_csi2_get_virtual_channel);
  */
 static int mipi_csi2_probe(struct platform_device *pdev)
 {
-	struct mipi_csi2_platform_data *plat_data = pdev->dev.platform_data;
+	struct device *dev = &pdev->dev;
+	struct device_node *np = pdev->dev.of_node;
 	struct resource *res;
 	u32 mipi_csi2_dphy_ver;
 	int ret;
-
-	if ((plat_data->ipu_id < 0) || (plat_data->ipu_id > 1) ||
-		(plat_data->csi_id > 1) || (plat_data->v_channel > 3) ||
-		(plat_data->lanes > 4)) {
-		dev_err(&pdev->dev, "invalid param for mimp csi2!\n");
-		return -EINVAL;
-	}
 
 	gmipi_csi2 = kmalloc(sizeof(struct mipi_csi2_info), GFP_KERNEL);
 	if (!gmipi_csi2) {
 		ret = -ENOMEM;
 		goto alloc_failed;
+	}
+
+	ret = of_property_read_u32(np, "ipu_id", &(gmipi_csi2->ipu_id));
+	if (ret) {
+		dev_err(&pdev->dev, "ipu_id missing or invalid\n");
+		goto err;
+	}
+
+	ret = of_property_read_u32(np, "csi_id", &(gmipi_csi2->csi_id));
+	if (ret) {
+		dev_err(&pdev->dev, "csi_id missing or invalid\n");
+		goto err;
+	}
+
+	ret = of_property_read_u32(np, "v_channel", &(gmipi_csi2->v_channel));
+	if (ret) {
+		dev_err(&pdev->dev, "v_channel missing or invalid\n");
+		goto err;
+	}
+
+	ret = of_property_read_u32(np, "lanes", &(gmipi_csi2->lanes));
+	if (ret) {
+		dev_err(&pdev->dev, "lanes missing or invalid\n");
+		goto err;
+	}
+
+	if ((gmipi_csi2->ipu_id < 0) || (gmipi_csi2->ipu_id > 1) ||
+		(gmipi_csi2->csi_id > 1) || (gmipi_csi2->v_channel > 3) ||
+		(gmipi_csi2->lanes > 4)) {
+		dev_err(&pdev->dev, "invalid param for mipi csi2!\n");
+		ret = -EINVAL;
+		goto err;
 	}
 
 	/* initialize mutex */
@@ -399,46 +426,42 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 	/* get mipi csi2 informaiton */
 	gmipi_csi2->pdev = pdev;
 	gmipi_csi2->mipi_en = false;
-	gmipi_csi2->ipu_id = plat_data->ipu_id;
-	gmipi_csi2->csi_id = plat_data->csi_id;
-	gmipi_csi2->v_channel = plat_data->v_channel;
-	gmipi_csi2->lanes = plat_data->lanes;
 
 	/* get mipi dphy clk */
-	gmipi_csi2->dphy_clk = clk_get(&pdev->dev, plat_data->dphy_clk);
+	gmipi_csi2->dphy_clk = devm_clk_get(dev, "dphy_clk");
 	if (IS_ERR(gmipi_csi2->dphy_clk)) {
 		dev_err(&pdev->dev, "failed to get dphy pll_ref_clk\n");
 		ret = PTR_ERR(gmipi_csi2->dphy_clk);
-		goto err_clk1;
+		goto err;
 	}
 
 	/* get mipi to ipu pixel clk */
-	gmipi_csi2->pixel_clk = clk_get(&pdev->dev, plat_data->pixel_clk);
+	gmipi_csi2->pixel_clk = devm_clk_get(dev, "pixel_clk");
 	if (IS_ERR(gmipi_csi2->pixel_clk)) {
 		dev_err(&pdev->dev, "failed to get mipi pixel clk\n");
 		ret = PTR_ERR(gmipi_csi2->pixel_clk);
-		goto err_clk2;
+		goto err;
 	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		ret = -ENODEV;
-		goto failed_get_res;
+		goto err;
 	}
 
 	/* mipi register mapping */
 	gmipi_csi2->mipi_csi2_base = ioremap(res->start, PAGE_SIZE);
 	if (!gmipi_csi2->mipi_csi2_base) {
 		ret = -ENOMEM;
-		goto failed_ioremap;
+		goto err;
 	}
 
 	/* mipi dphy clk enable for register access */
-	clk_enable(gmipi_csi2->dphy_clk);
+	clk_prepare_enable(gmipi_csi2->dphy_clk);
 	/* get mipi csi2 dphy version */
 	mipi_csi2_dphy_ver = mipi_csi2_read(gmipi_csi2, CSI2_VERSION);
 
-	clk_disable(gmipi_csi2->dphy_clk);
+	clk_disable_unprepare(gmipi_csi2->dphy_clk);
 
 	platform_set_drvdata(pdev, gmipi_csi2);
 
@@ -448,12 +471,7 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 
 	return 0;
 
-failed_ioremap:
-failed_get_res:
-	clk_put(gmipi_csi2->pixel_clk);
-err_clk2:
-	clk_put(gmipi_csi2->dphy_clk);
-err_clk1:
+err:
 	kfree(gmipi_csi2);
 alloc_failed:
 	return ret;
@@ -461,13 +479,10 @@ alloc_failed:
 
 static int __devexit mipi_csi2_remove(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
+
 	/* unmapping mipi register */
 	iounmap(gmipi_csi2->mipi_csi2_base);
-
-	/* disable mipi dphy clk */
-	clk_put(gmipi_csi2->dphy_clk);
-
-	clk_put(gmipi_csi2->pixel_clk);
 
 	kfree(gmipi_csi2);
 
@@ -476,9 +491,15 @@ static int __devexit mipi_csi2_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id imx_mipi_csi2_dt_ids[] = {
+	{ .compatible = "fsl,imx6q-mipi-csi2", },
+	{ /* sentinel */ }
+};
+
 static struct platform_driver mipi_csi2_driver = {
 	.driver = {
 		   .name = "mxc_mipi_csi2",
+		   .of_match_table = imx_mipi_csi2_dt_ids,
 	},
 	.probe = mipi_csi2_probe,
 	.remove = __devexit_p(mipi_csi2_remove),

@@ -6,7 +6,7 @@ menu "MXC MIPI Support"
 
 config MXC_MIPI_CSI2
 	tristate "MIPI CSI2 support"
-	depends on ARCH_MX6
+	depends on ARCH_IMX_V6_V7
 	---help---
          Say Y to get the MIPI CSI2 support.
 
