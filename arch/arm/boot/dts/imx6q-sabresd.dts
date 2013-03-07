@@ -344,6 +344,14 @@
 				};
 			};
 
+			mipi@021dc000 { /* MIPI-CSI */
+				status = "okay";
+				ipu_id = <0>;
+				csi_id = <1>;
+				v_channel = <0>;
+				lanes = <2>;
+			};
+
 			vdoa@021e4000 {
 				status = "okay";
 			};
