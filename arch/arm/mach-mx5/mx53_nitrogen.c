@@ -2658,7 +2658,7 @@ struct gpio n53k_gpios_specific[] __initdata = {
 	{.label = "uart1 cts",		.gpio = MAKE_GP(2, 31),		.flags = GPIOF_INIT_LOW},
 	{.label = "Dispay w3 cs",	.gpio = MAKE_GP(3, 3),		.flags = GPIOF_INIT_HIGH},
 	{.label = "da9053 shutdown",	.gpio = MAKE_GP(3, 4),		.flags = GPIOF_INIT_HIGH},
-	{.label = "ambient int",	.gpio = MAKE_GP(3, 7),		.flags = GPIOF_INIT_HIGH},
+	{.label = "ambient int",	.gpio = MAKE_GP(3, 7),		.flags = GPIOF_DIR_IN},
 #define I2C2_HUB_EDID				MAKE_GP(3, 8)
 //	{.label = "i2c2 hub-EDID",	.gpio = MAKE_GP(3, 8),		.flags = GPIOF_INIT_LOW},
 #define I2C2_HUB_BQ24163			MAKE_GP(3, 9)
