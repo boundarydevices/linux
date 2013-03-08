@@ -3138,7 +3138,6 @@ snd_soc_dapm_new_control(struct snd_soc_dapm_context *dapm,
 		break;
 	}
 
-	dapm->n_widgets++;
 	w->dapm = dapm;
 	w->codec = dapm->codec;
 	w->platform = dapm->platform;
