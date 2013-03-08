@@ -19,6 +19,7 @@
  * @ingroup IPU
  */
 
+#include <linux/module.h>
 #include <linux/semaphore.h>
 #include <linux/sched.h>
 #include <linux/ipu.h>

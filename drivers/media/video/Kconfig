@@ -1151,6 +1151,15 @@ config VIDEO_ATMEL_ISI
 	  This module makes the ATMEL Image Sensor Interface available
 	  as a v4l2 device.
 
+config VIDEO_MXC_CAMERA
+        tristate "MXC Video For Linux Camera"
+        depends on VIDEO_DEV && ARCH_MXC
+        default y
+        ---help---
+          This is the video4linux2 capture driver based on MXC IPUv3 module.
+
+source "drivers/media/video/mxc/capture/Kconfig"
+
 config VIDEO_MXC_OUTPUT
 	tristate "MXC Video For Linux Video Output"
 	depends on VIDEO_DEV && ARCH_MXC

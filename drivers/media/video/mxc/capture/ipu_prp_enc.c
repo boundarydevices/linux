@@ -19,10 +19,10 @@
  * @ingroup IPU
  */
 
+#include <linux/module.h>
 #include <linux/dma-mapping.h>
 #include <linux/platform_device.h>
 #include <linux/ipu.h>
-#include <mach/devices-common.h>
 #include <mach/mipi_csi2.h>
 #include "mxc_v4l2_capture.h"
 #include "ipu_prp_sw.h"

@@ -34,6 +34,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/delay.h>
 #include <linux/mxcfb.h>
+#include <linux/of_device.h>
 #include <media/v4l2-chip-ident.h>
 #include <media/v4l2-ioctl.h>
 #include <media/v4l2-int-device.h>
@@ -43,6 +44,29 @@
 
 #define init_MUTEX(sem)         sema_init(sem, 1)
 #define MXC_SENSOR_NUM 2
+
+static struct platform_device_id imx_v4l2_devtype[] = {
+	{
+		.name = "v4l2-capture-imx5",
+		.driver_data = IMX5_V4L2,
+	}, {
+		.name = "v4l2-capture-imx6",
+		.driver_data = IMX6_V4L2,
+	}, {
+		/* sentinel */
+	}
+};
+MODULE_DEVICE_TABLE(platform, imx_v4l2_devtype);
+
+static const struct of_device_id mxc_v4l2_dt_ids[] = {
+	{
+		.compatible = "fsl,imx6q-v4l2-capture",
+		.data = &imx_v4l2_devtype[IMX6_V4L2],
+	}, {
+		/* sentinel */
+	}
+};
+MODULE_DEVICE_TABLE(of, mxc_v4l2_dt_ids);
 
 static int video_nr = -1;
 
@@ -2577,26 +2601,60 @@ next:
  *
  * @return status  0 Success
  */
-static void init_camera_struct(cam_data *cam, struct platform_device *pdev)
+static int init_camera_struct(cam_data *cam, struct platform_device *pdev)
 {
-	struct fsl_mxc_capture_platform_data *pdata = pdev->dev.platform_data;
+	const struct of_device_id *of_id =
+			of_match_device(mxc_v4l2_dt_ids, &pdev->dev);
+	struct device_node *np = pdev->dev.of_node;
+	int ipu_id, csi_id, mclk_source;
+	int ret = 0;
 
 	pr_debug("In MVC: init_camera_struct\n");
+
+	ret = of_property_read_u32(np, "ipu_id", &ipu_id);
+	if (ret) {
+		dev_err(&pdev->dev, "ipu_id missing or invalid\n");
+		return ret;
+	}
+
+	ret = of_property_read_u32(np, "csi_id", &csi_id);
+	if (ret) {
+		dev_err(&pdev->dev, "csi_id missing or invalid\n");
+		return ret;
+	}
+
+	ret = of_property_read_u32(np, "mclk_source", &mclk_source);
+	if (ret) {
+		dev_err(&pdev->dev, "sensor mclk missing or invalid\n");
+		return ret;
+	}
+
 	/* Default everything to 0 */
 	memset(cam, 0, sizeof(cam_data));
 
-	cam->ipu = ipu_get_soc(pdata->ipu);
-	if (cam->ipu == NULL)
+	/* get devtype to distinguish if the cpu is imx5 or imx6
+	 * IMX5_V4L2 specify the cpu is imx5
+	 * IMX6_V4L2 specify the cpu is imx6q or imx6sdl
+	 */
+	if (of_id)
+		pdev->id_entry = of_id->data;
+	cam->devtype = pdev->id_entry->driver_data;
+
+	cam->ipu = ipu_get_soc(ipu_id);
+	if (cam->ipu == NULL) {
 		pr_err("ERROR: v4l2 capture: failed to get ipu\n");
-	else if (cam->ipu == ERR_PTR(-ENODEV))
+		return -EINVAL;
+	} else if (cam->ipu == ERR_PTR(-ENODEV)) {
 		pr_err("ERROR: v4l2 capture: get invalid ipu\n");
+		return -ENODEV;
+	}
 
 	init_MUTEX(&cam->param_lock);
 	init_MUTEX(&cam->busy_lock);
 
 	cam->video_dev = video_device_alloc();
 	if (cam->video_dev == NULL)
-		return;
+		return -ENODEV;
 
 	*(cam->video_dev) = mxc_v4l_template;
 
@@ -2642,9 +2700,9 @@ static void init_camera_struct(cam_data *cam, struct platform_device *pdev)
 	cam->win.w.left = 0;
 	cam->win.w.top = 0;
 
-	cam->ipu_id = pdata->ipu;
-	cam->csi = pdata->csi;
-	cam->mclk_source = pdata->mclk_source;
+	cam->ipu_id = ipu_id;
+	cam->csi = csi_id;
+	cam->mclk_source = mclk_source;
 	cam->mclk_on[cam->mclk_source] = false;
 
 	cam->enc_callback = camera_callback;
@@ -2657,6 +2715,8 @@ static void init_camera_struct(cam_data *cam, struct platform_device *pdev)
 	sprintf(cam->self->name, "mxc_v4l2_cap%d", cam->csi);
 	cam->self->type = v4l2_int_type_master;
 	cam->self->u.master = &mxc_v4l2_master;
+
+	return 0;
 }
 
 static ssize_t show_streaming(struct device *dev,
@@ -2880,7 +2940,10 @@ static int mxc_v4l2_resume(struct platform_device *pdev)
 static struct platform_driver mxc_v4l2_driver = {
 	.driver = {
 		   .name = "mxc_v4l2_capture",
+		   .owner = THIS_MODULE,
+		   .of_match_table = mxc_v4l2_dt_ids,
 		   },
+	.id_table = imx_v4l2_devtype,
 	.probe = mxc_v4l2_probe,
 	.remove = mxc_v4l2_remove,
 	.suspend = mxc_v4l2_suspend,

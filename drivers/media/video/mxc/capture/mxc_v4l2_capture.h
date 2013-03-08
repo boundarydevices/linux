@@ -29,11 +29,9 @@
 
 #include <linux/uaccess.h>
 #include <linux/list.h>
-#include <linux/ipu.h>
 #include <linux/mxc_v4l2.h>
 #include <linux/completion.h>
 #include <linux/dmaengine.h>
-#include <linux/pxp_dma.h>
 #include <mach/dma.h>
 #include <mach/ipu-v3.h>
 
@@ -42,6 +40,11 @@
 
 
 #define FRAME_NUM 10
+
+enum imx_v4l2_devtype {
+	IMX5_V4L2,
+	IMX6_V4L2,
+};
 
 /*!
  * v4l2 frame structure.
@@ -214,11 +217,9 @@ typedef struct _cam_data {
 	struct v4l2_int_device *self;
 	int sensor_index;
 	void *ipu;
+	enum imx_v4l2_devtype devtype;
 
 	/* v4l2 buf elements related to PxP DMA */
-	struct completion pxp_tx_cmpl;
-	struct pxp_channel *pxp_chan;
-	struct pxp_config_data pxp_conf;
 	struct dma_async_tx_descriptor *txd;
 	dma_cookie_t cookie;
 	struct scatterlist sg[2];
