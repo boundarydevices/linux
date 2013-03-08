@@ -46,8 +46,9 @@ struct imx_priv {
 	int amic_active_low;
 	int amic_status;
 	struct platform_device *pdev;
+	struct snd_pcm_substream *first_stream;
+	struct snd_pcm_substream *second_stream;
 };
-unsigned int sample_format = SNDRV_PCM_FMTBIT_S16_LE;
 static struct imx_priv card_priv;
 static struct snd_soc_codec *gcodec;
 
@@ -294,6 +295,43 @@ static int imx_wm8962_dai_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
+static int check_hw_params(struct snd_pcm_substream *substream,
+		snd_pcm_format_t sample_format,
+		unsigned int sample_rate)
+{
+	struct imx_priv *priv = &card_priv;
+
+	substream->runtime->sample_bits =
+		snd_pcm_format_physical_width(sample_format);
+	substream->runtime->rate = sample_rate;
+	substream->runtime->format = sample_format;
+
+	if (!priv->first_stream) {
+		priv->first_stream = substream;
+	} else {
+		priv->second_stream = substream;
+
+		if (priv->first_stream->runtime->rate !=
+				priv->second_stream->runtime->rate) {
+			dev_err(substream->pcm->card->dev,
+					"\n!KEEP THE SAME SAMPLE RATE: %d!\n",
+					priv->first_stream->runtime->rate);
+			return -EINVAL;
+		}
+		if (priv->first_stream->runtime->sample_bits !=
+				priv->second_stream->runtime->sample_bits) {
+			snd_pcm_format_t first_format =
+				priv->first_stream->runtime->format;
+
+			dev_err(substream->pcm->card->dev,
+					"\n!KEEP THE SAME FORMAT: %s!\n",
+					snd_pcm_format_name(first_format));
+			return -EINVAL;
+		}
+	}
+	return 0;
+}
+
 static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 				     struct snd_pcm_hw_params *params)
 {
@@ -302,10 +340,22 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct imx_priv *priv = &card_priv;
 	struct imx_wm8962_data *data = platform_get_drvdata(priv->pdev);
-	unsigned int sample_rate = 44100;
+	unsigned int sample_rate = params_rate(params);
+	snd_pcm_format_t sample_format = params_format(params);
 	int ret = 0;
 	u32 dai_format;
 	unsigned int pll_out;
+
+	/*
+	 * WM8962 doesn't support two substreams in different sample rates or
+	 * sample formats. So check the two parameters of two substreams' if
+	 * there are two substream for playback and capture in the same time.
+	 */
+	ret = check_hw_params(substream, sample_format, sample_rate);
+	if (ret < 0) {
+		pr_err("Failed to match hw params: %d\n", ret);
+		return ret;
+	}
 
 	dai_format = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 		SND_SOC_DAIFMT_CBM_CFM;
@@ -326,9 +376,6 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 		pr_err("Failed to set cpu dai fmt: %d\n", ret);
 		return ret;
 	}
-
-	sample_rate = params_rate(params);
-	sample_format = params_format(params);
 
 	if (sample_format == SNDRV_PCM_FORMAT_S24_LE)
 		pll_out = sample_rate * 192;
@@ -357,35 +404,46 @@ static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct imx_priv *priv = &card_priv;
 	int ret;
 
-	/*
-	 * wm8962 doesn't allow we to continuously setting FLL,
-	 * So we set MCLK as sysclk once, which'd remove the limitation.
-	 */
-	ret = snd_soc_dai_set_sysclk(codec_dai, WM8962_SYSCLK_MCLK,
-			0, SND_SOC_CLOCK_IN);
-	if (ret < 0) {
-		pr_err("Failed to set SYSCLK: %d\n", ret);
-		return ret;
-	}
+	/* We don't need to handle anything if there's no substream running */
+	if (!priv->first_stream)
+		return 0;
 
-	/*
-	 * Continuously setting FLL would cause playback distortion.
-	 * We can fix it just by mute codec after playback.
-	 */
-	ret = snd_soc_dai_digital_mute(codec_dai, 1);
-	if (ret < 0) {
-		pr_err("Failed to set MUTE: %d\n", ret);
-		return ret;
-	}
+	if (priv->first_stream == substream)
+		priv->first_stream = priv->second_stream;
+	priv->second_stream = NULL;
 
-	/* Disable FLL and let codec do pm_runtime_put() */
-	ret = snd_soc_dai_set_pll(codec_dai, WM8962_FLL,
-			WM8962_FLL_MCLK, 0, 0);
-	if (ret < 0) {
-		pr_err("Failed to set FLL: %d\n", ret);
-		return ret;
+	if (!priv->first_stream) {
+		/*
+		 * WM8962 doesn't allow us to continuously setting FLL,
+		 * So we set MCLK as sysclk once, which'd remove the limitation.
+		 */
+		ret = snd_soc_dai_set_sysclk(codec_dai, WM8962_SYSCLK_MCLK,
+				0, SND_SOC_CLOCK_IN);
+		if (ret < 0) {
+			pr_err("Failed to set SYSCLK: %d\n", ret);
+			return ret;
+		}
+
+		/*
+		 * Continuously setting FLL would cause playback distortion.
+		 * We can fix it just by mute codec after playback.
+		 */
+		ret = snd_soc_dai_digital_mute(codec_dai, 1);
+		if (ret < 0) {
+			pr_err("Failed to set MUTE: %d\n", ret);
+			return ret;
+		}
+
+		/* Disable FLL and let codec do pm_runtime_put() */
+		ret = snd_soc_dai_set_pll(codec_dai, WM8962_FLL,
+				WM8962_FLL_MCLK, 0, 0);
+		if (ret < 0) {
+			pr_err("Failed to set FLL: %d\n", ret);
+			return ret;
+		}
 	}
 
 	return 0;
@@ -470,6 +528,9 @@ static int __devinit imx_wm8962_probe(struct platform_device *pdev)
 				(enum of_gpio_flags *)&priv->hp_active_low);
 	priv->amic_gpio = of_get_named_gpio_flags(np, "mic-det-gpios", 0,
 				(enum of_gpio_flags *)&priv->amic_active_low);
+
+	priv->first_stream = NULL;
+	priv->second_stream = NULL;
 
 	data = devm_kzalloc(&pdev->dev, sizeof(*data), GFP_KERNEL);
 	if (!data) {
