@@ -8,7 +8,7 @@ Latest kernel releases:
 	Android - boundary-imx-android-r13.4-ga
 		http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-android-r13.4-ga
 
-	Non-Android - L3.0.35_MX6DQ_ER_1208-GA
+	Non-Android - imx_3.0.35_1.1.1
 		http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.0.35_1.1.1
 
 These branches are based on Freescale release of the same name (minus the 'boundary').
