@@ -5,3 +5,6 @@ ifeq ($(CONFIG_VIDEO_MXC_IPU_CAMERA),y)
 	obj-$(CONFIG_MXC_IPU_PRP_ENC) += ipu_prp_enc.o ipu_still.o
 	obj-$(CONFIG_MXC_IPU_CSI_ENC) += ipu_csi_enc.o ipu_still.o
 endif
+
+ov5642_camera-objs := ov5642.o
+obj-$(CONFIG_MXC_CAMERA_OV5642) += ov5642_camera.o
