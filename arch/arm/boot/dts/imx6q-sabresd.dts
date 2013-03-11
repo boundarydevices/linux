@@ -116,6 +116,8 @@
 							910  0x80000000	/* MX6Q_PAD_KEY_COL2__GPIO_4_10 */
 							1325 0x80000000	/* MX6Q_PAD_SD3_RST__GPIO_7_8 */
 							972  0x80000000	/* MX6Q_PAD_GPIO_9__GPIO_1_9 */
+							1537 0x80000000 /* MX6Q_PAD_SD1_DAT0__GPIO_1_16 */
+							1529 0x80000000 /* MX6Q_PAD_SD1_DAT1__GPIO_1_17 */
 							953 0x130b0  /* MX6Q_PAD_GPIO_0__CCM_CLKO */
 						>;
 					};
@@ -210,6 +212,23 @@
 						0x8014 /* 4:FN_DMICCDAT */
 						0x0000 /* 5:Default */
 					>;
+				};
+
+				ov5642: ov5642@3c {
+					compatible = "fsl,ov5642";
+					reg = <0x3c>;
+					pinctrl-names = "default";
+					pinctrl-0 = <&pinctrl_ipu1_csi0_1>;
+					clocks = <&clks 169>;
+					clock-names = "csi_mclk";
+					DOVDD-supply = <&vgen4_reg>; /* 1.8v */
+					AVDD-supply = <&vgen5_reg>;  /* 2.8v, on rev C board is VGEN3 */
+					DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
+					pwn-gpios = <&gpio1 16 1>;   /* active low: SD1_DAT0 */
+					rst-gpios = <&gpio1 17 0>;   /* active high: SD1_DAT1 */
+					csi_id = <0>;
+					mclk = <24000000>;
+					mclk_source = <0>;
 				};
 			};
 
