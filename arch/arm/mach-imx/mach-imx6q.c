@@ -389,6 +389,15 @@ put_clk_sd:
 		clk_put(cko2);
 }
 
+static void __init imx6q_csi_mux_init(void)
+{
+	/* sabre sd board: ipu1 csi0 are connect to parallel interface.
+	 * set GPR1 bit 19 to enable the parallel interface.
+	 */
+	if (of_machine_is_compatible("fsl,imx6q-sabresd"))
+		regmap_update_bits(regmap_gpr, IOMUXC_GPR1, 1 << 19, 1 << 19);
+}
+
 static void __init imx6q_sabresd_init(void)
 {
 	imx6q_ar803x_phy_fixup();
@@ -889,6 +898,7 @@ static void __init imx6q_init_machine(void)
 		imx6q_gpu_init();
 	if (IS_ENABLED(CONFIG_SND_SOC_FSL_SPDIF))
 		imx6q_spdif_init();
+	imx6q_csi_mux_init();
 }
 
 static void __init imx6q_init_late(void)
