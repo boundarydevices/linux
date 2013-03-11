@@ -175,7 +175,7 @@ static void __exit gpiomux_exit(void)
 	platform_driver_unregister(&gpiomux_driver);
 }
 
-module_init(gpiomux_init);
+subsys_initcall(gpiomux_init);
 module_exit(gpiomux_exit);
 
 MODULE_DESCRIPTION("GPIO-based I2C multiplexer driver");
