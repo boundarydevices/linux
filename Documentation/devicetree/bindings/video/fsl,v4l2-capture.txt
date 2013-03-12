@@ -1,0 +1,19 @@
+* Freescale V4L2 Capture for i.MX6DQ/i.MX6SDL
+
+Required properties for v4l2_capture
+- compatible: should be "fsl,imx6q-v4l2-capture"
+- ipu_id: ipu id for v4l2 capture device
+  should be 0 or 1 for i.MX6DQ; should be 0 for i.MX6SDL
+- csi_id: csi id for v4l2 capture device
+  should be 0 or 1 for i.MX6DQ/i.MX6SDL
+- mclk_source: should be 0 or 1. two mclk sources at most now
+- status: should be set to "okay" to enable this device
+
+Examples for v4l2_capture:
+	v4l2_cap {
+		compatible = "fsl,imx6q-v4l2-capture";
+		ipu_id = <0>;
+		csi_id = <0>;
+		mclk_source = <0>;
+		status = "okay";
+	};
