@@ -17,6 +17,30 @@ Required properties for v4l2_capture
 - mclk_source: should be 0 or 1. two mclk sources at most now
 - status: should be set to "okay" to enable this device
 
+Required properties for sensor
+- compatible:  "fsl,<sensor>"
+  please check the supported sensor in the Supported Sensor fields.
+- reg: sensor I2C slave address
+- pinctrl-names: should be "default" for parallel sensor
+- pinctrl-0: should depend on the connection between sensor and i.MX
+  connection between sensor and i.MX could be MIPI-CSI2 or legacy parallel
+- clocks: should be the clock source provided to sensor.
+- clock-names: should be "csi_mclk"
+- DOVDD-supply: set according to the board.
+- AVDD-supply: set according to the board.
+- DVDD-supply: set according to the board.
+- pwn-gpios: set according to the board.
+- rst-gpios: set according to the board.
+- csi_id: csi id for v4l2 capture device
+  should be 0 or 1 for i.MX6DQ/i.MX6SDL.
+- mclk: should the value of mclk clock send out the sensor. unit is Hz.
+- mclk_source: should be 0 or 1 and should be the same as the setting in
+  v4l2_capture.
+
+Supported Sensor
+- ov5642
+
+
 Example for IPUv3 including capture settings on imx6q-sabresd.dts:
 	ipu1: ipu@02400000 { /* IPU1 */
 		compatible = "fsl,imx6q-ipuv3";
@@ -34,4 +58,22 @@ Examples for v4l2_capture:
 		csi_id = <0>;
 		mclk_source = <0>;
 		status = "okay";
+	};
+
+Examples for sensor:
+	ov5642: ov5642@3c {
+		compatible = "fsl,ov5642";
+		reg = <0x3c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu1_csi0_1>;
+		clocks = <&clks 169>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&vgen4_reg>; /* 1.8v */
+		AVDD-supply = <&vgen5_reg>;  /* 2.8v, on rev C board is VGEN3 */
+		DVDD-supply = <&vgen2_reg>;  /* 1.5v*/
+		pwn-gpios = <&gpio1 16 1>;   /* active low: SD1_DAT0 */
+		rst-gpios = <&gpio1 17 0>;   /* active high: SD1_DAT1 */
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
 	};
