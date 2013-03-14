@@ -245,6 +245,8 @@ static struct esdhc_platform_data mx6_oc_sd3_data = {
 /* EMMC */
 static const struct esdhc_platform_data mx6_oc_sd4_data __initconst = {
 	.always_present = 1,
+	.support_18v = 1,
+	.support_8bit = 1,
 	.cd_gpio = -1,
 	.wp_gpio = -1,
 	.keep_power_at_suspend = 1,
