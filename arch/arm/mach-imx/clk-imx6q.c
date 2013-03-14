@@ -231,7 +231,9 @@ enum mx6q_clks {
 	pll4_audio, pll5_video, pll6_mlb, pll7_usb_host, pll8_enet, ssi1_ipg,
 	ssi2_ipg, ssi3_ipg, rom, usbphy1, usbphy2, ldb_di0_div_3_5, ldb_di1_div_3_5,
 	sata_ref, gpt_3m, pcie_ref, lvds1_sel, lvds1_in, lvds1_out, usbphy1_gate,
-	usbphy2_gate, cko1_cko2_sel, cko2_sel, cko2_podf, cko2, spdif, clk_max
+	usbphy2_gate, spdif,
+	cko1_cko2_sel, cko2_sel, cko2_podf, cko2, caam_ipg, caam_mem, caam_aclk,
+	clk_max,
 };
 
 static struct clk *clk[clk_max];
@@ -428,6 +430,9 @@ int __init mx6q_clocks_init(void)
 	/*                                name             parent_name          reg         shift */
 	clk[apbh_dma]     = imx_clk_gate2("apbh_dma",      "usdhc3",            base + 0x68, 4);
 	clk[asrc]         = imx_clk_gate2("asrc",          "asrc_podf",         base + 0x68, 6);
+	clk[caam_mem]     = imx_clk_gate2("caam_mem",      "ahb",               base + 0x68, 8);
+	clk[caam_aclk]    = imx_clk_gate2("caam_aclk",     "ahb",               base + 0x68, 10);
+	clk[caam_ipg]     = imx_clk_gate2("caam_ipg",      "ipg",               base + 0x68, 12);
 	clk[can1_ipg]     = imx_clk_gate2("can1_ipg",      "ipg",               base + 0x68, 14);
 	clk[can1_serial]  = imx_clk_gate2("can1_serial",   "can_root",          base + 0x68, 16);
 	clk[can2_ipg]     = imx_clk_gate2("can2_ipg",      "ipg",               base + 0x68, 18);
