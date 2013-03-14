@@ -620,10 +620,7 @@
 			reg = <0x02100000 0x100000>;
 			ranges;
 
-			caam@02100000 {
-				reg = <0x02100000 0x40000>;
-				interrupts = <0 105 0x04 0 106 0x04>;
-			};
+/include/ "imx6-caam.dtsi"
 
 			aipstz@0217c000 { /* AIPSTZ2 */
 				reg = <0x0217c000 0x4000>;
