@@ -14,6 +14,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/init.h>
+#include <linux/ipu.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
 #include <linux/mxcfb.h>
@@ -25,7 +26,6 @@
 #define ADV739X_MODE_NTSC		0
 #define ADV739X_MODE_PAL		1
 
-
 struct adv739x_data {
 	struct platform_device *pdev;
 	struct i2c_client *client;
@@ -34,12 +34,64 @@ struct adv739x_data {
 
 	int ipu_id;
 	int disp_id;
-	int default_ifmt;
+	int ifmt;
 
 	int cur_mode;
 	int enabled;
 	struct notifier_block nb;
+	unsigned reg;
 };
+
+static int adv739x_write(struct i2c_client *client, u8 reg, u8 data)
+{
+	int ret = 0;
+	ret = i2c_smbus_write_byte_data(client, reg, data);
+	pr_info("%s: reg=0x%x data=0x%x ret=%d\n", __func__, reg, data, ret);
+	return ret;
+}
+
+static int adv739x_read(struct i2c_client *client, u8 reg)
+{
+	int data = 0;
+	data = i2c_smbus_read_byte_data(client, reg);
+	pr_info("%s: reg=0x%x data=0x%x %d\n", __func__, reg, data, data);
+	return data;
+}
+
+static ssize_t adv739x_reg_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	int val;
+	struct adv739x_data *adv739x = dev_get_drvdata(dev);
+
+	val = adv739x_read(adv739x->client, adv739x->reg);
+	return sprintf(buf, "%02x: %02x\n", adv739x->reg, val);
+}
+
+static ssize_t adv739x_reg_store(struct device *dev, struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	unsigned val;
+	struct adv739x_data *adv739x = dev_get_drvdata(dev);
+	char *endp;
+	unsigned reg = simple_strtol(buf, &endp, 16);
+	if (reg >= 0xf2)
+		return count;
+	adv739x->reg = reg;
+	if (!endp)
+		return count;
+	if (*endp == 0x20)
+		endp++;
+	if (*endp == 0)
+		return count;
+	val = simple_strtol(endp, &endp, 16);
+	if (val >= 0x100)
+		return count;
+	adv739x_write(adv739x->client, reg, val);
+	return count;
+}
+
+static DEVICE_ATTR(adv739x_reg, 0644, adv739x_reg_show, adv739x_reg_store);
 
 /*
  * left_margin: used for field0 vStart width in lines
@@ -62,39 +114,23 @@ static struct fb_videomode adv739x_modedb[] = {
 	{
 	 /* NTSC Interlaced output */
 	 "BT656-NTSC", 60, 720, 480, 37037,
-	 19, 3,
-	 20, 3,
-	 276, 1,
-	 FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
-	 FB_VMODE_INTERLACED,
-	 FB_MODE_IS_DETAILED,},
+	 .left_margin = 19, .right_margin = 3,		/* interpreted as field 0 vertical top/bottom */
+	 .upper_margin = 20, .lower_margin = 3,		/* interpreted as field 1 vertical top/bottom */
+	 .hsync_len = 276, .vsync_len = 1,		/* htotal clocks = hsync_len + xres*2 */
+	 .sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	 .vmode = FB_VMODE_INTERLACED,
+	 .flag = FB_MODE_IS_DETAILED,},
 	{
 	 /* PAL Interlaced output */
 	 "BT656-PAL", 50, 720, 576, 37037,
-	 22, 2,
-	 23, 2,
-	 288, 1,
-	 FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
-	 FB_VMODE_INTERLACED,
-	 FB_MODE_IS_DETAILED,},
+	 .left_margin = 22, .right_margin = 2,		/* interpreted as field 0 vertical top/bottom */
+	 .upper_margin = 23, .lower_margin = 2,		/* interpreted as field 1 vertical top/bottom */
+	 .hsync_len = 288, .vsync_len = 1,		/* htotal clocks = hsync_len + xres*2 */
+	 .sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	 .vmode = FB_VMODE_INTERLACED,
+	 .flag = FB_MODE_IS_DETAILED,},
 };
 static int adv739x_modedb_sz = ARRAY_SIZE(adv739x_modedb);
-
-static int adv739x_write(struct i2c_client *client, u8 reg, u8 data)
-{
-	int ret = 0;
-	ret = i2c_smbus_write_byte_data(client, reg, data);
-	pr_info("%s: reg=0x%x data=0x%x ret=%d\n", __func__, reg, data, ret);
-	return ret;
-}
-
-static int adv739x_read(struct i2c_client *client, u8 reg)
-{
-	int data = 0;
-	data = i2c_smbus_read_byte_data(client, reg);
-	pr_info("%s: reg=0x%x data=0x%x %d\n", __func__, reg, data, data);
-	return data;
-}
 
 static void adv739x_setmode(struct adv739x_data *adv739x, int mode)
 {
@@ -123,6 +159,7 @@ static void adv739x_setmode(struct adv739x_data *adv739x, int mode)
 			
 			// Reg 0x82: SD, CVBS
 			adv739x_write(client, 0x82, 0xCB);
+			adv739x_write(client, 0x8a, (adv739x->ifmt != IPU_PIX_FMT_BT656) ? 0x0e : 0x08);
 			break;
 
 		case ADV739X_MODE_PAL:
@@ -146,6 +183,7 @@ static void adv739x_setmode(struct adv739x_data *adv739x, int mode)
 			adv739x_write(client, 0x8D, 0x8A);
 			adv739x_write(client, 0x8E, 0x09);
 			adv739x_write(client, 0x8F, 0x2A);
+			adv739x_write(client, 0x8a, (adv739x->ifmt != IPU_PIX_FMT_BT656) ? 0x0e : 0x08);
 			break;
 
 		default:
@@ -196,17 +234,20 @@ int adv739x_fb_event(struct notifier_block *nb, unsigned long val, void *v)
 	struct fb_event *event = v;
 	struct fb_info *fbi = event->info;
 	struct adv739x_data *adv739x = container_of(nb, struct adv739x_data, nb);
+	int i;
 
 	if (strcmp(event->info->fix.id, adv739x->fbi->fix.id))
 		return 0;
 
 	switch (val) {
 	case FB_EVENT_MODE_CHANGE:
-		if(strcmp(fbi->mode->name, "BT656-NTSC") == 0)
-			adv739x->cur_mode = ADV739X_MODE_NTSC;
-		else if(strcmp(fbi->mode->name, "BT656-PAL") == 0)
-			adv739x->cur_mode = ADV739X_MODE_PAL;
-		adv739x_setmode(adv739x, adv739x->cur_mode);
+		for (i = 0; i < ARRAY_SIZE(adv739x_modedb); i++) {
+			if (strcmp(fbi->mode->name, adv739x_modedb[i].name) == 0) {
+				adv739x->cur_mode = i;
+				adv739x_setmode(adv739x, adv739x->cur_mode);
+				break;
+			}
+		}
 		break;
 	case FB_EVENT_BLANK:
 		if (*((int *)event->data) == FB_BLANK_UNBLANK)
@@ -241,6 +282,7 @@ static int adv739x_disp_init(struct mxc_dispdrv_handle *disp,
 	if (!ret) {
 		fb_videomode_to_var(&setting->fbi->var, &modedb[0]);
 		setting->if_fmt = plat->default_ifmt;
+		adv739x->ifmt = plat->default_ifmt;
 	}
 
 	INIT_LIST_HEAD(&setting->fbi->modelist);
@@ -310,7 +352,9 @@ static struct mxc_dispdrv_driver adv739x_drv = {
 static int __devinit adv739x_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
+	struct fsl_mxc_lcd_platform_data *plat = client->dev.platform_data;
 	struct adv739x_data *adv739x;
+	int ret;
 
 	if (!i2c_check_functionality(client->adapter,
 				I2C_FUNC_SMBUS_BYTE | I2C_FUNC_SMBUS_BYTE_DATA)) {
@@ -325,13 +369,16 @@ static int __devinit adv739x_probe(struct i2c_client *client,
 	}
 	
 	adv739x->client = client;
+	adv739x->ifmt = plat->default_ifmt;
 
 	adv739x->disp_adv739x = mxc_dispdrv_register(&adv739x_drv);
 	mxc_dispdrv_setdata(adv739x->disp_adv739x, adv739x);
 
 	i2c_set_clientdata(client, adv739x);
+	ret = device_create_file(&client->dev, &dev_attr_adv739x_reg);
+	if (ret < 0)
+		pr_warn("failed to add adv739x sysfs files\n");
 	return 0;
-
 }
 
 static int __devexit adv739x_remove(struct i2c_client *client)
@@ -340,6 +387,7 @@ static int __devexit adv739x_remove(struct i2c_client *client)
 
 	mxc_dispdrv_puthandle(adv739x->disp_adv739x);
 	mxc_dispdrv_unregister(adv739x->disp_adv739x);
+	device_remove_file(&client->dev, &dev_attr_adv739x_reg);
 	kfree(adv739x);
 	return 0;
 }
