@@ -82,50 +82,10 @@ static inline void write_ssi_mask(u32 __iomem *addr, u32 clear, u32 set)
 #define FSLSSI_I2S_FORMATS (SNDRV_PCM_FMTBIT_S8 | SNDRV_PCM_FMTBIT_S16_BE | \
 	 SNDRV_PCM_FMTBIT_S18_3BE | SNDRV_PCM_FMTBIT_S20_3BE | \
 	 SNDRV_PCM_FMTBIT_S24_3BE | SNDRV_PCM_FMTBIT_S24_BE)
-
-static char *get_fslssi_format_string(snd_pcm_format_t fmt)
-{
-	switch ((__force int)fmt) {
-	case SNDRV_PCM_FORMAT_S8:
-		return "S8";
-	case SNDRV_PCM_FORMAT_S16_BE:
-		return "S16_BE";
-	case SNDRV_PCM_FORMAT_S18_3BE:
-		return "S18_3BE";
-	case SNDRV_PCM_FORMAT_S20_3BE:
-		return "S20_3BE";
-	case SNDRV_PCM_FORMAT_S24_3BE:
-		return "S24_3BE";
-	case SNDRV_PCM_FORMAT_S24_BE:
-		return "S24_BE";
-	default:
-		return "Unsupported format";
-	}
-};
 #else
 #define FSLSSI_I2S_FORMATS (SNDRV_PCM_FMTBIT_S8 | SNDRV_PCM_FMTBIT_S16_LE | \
 	 SNDRV_PCM_FMTBIT_S18_3LE | SNDRV_PCM_FMTBIT_S20_3LE | \
 	 SNDRV_PCM_FMTBIT_S24_3LE | SNDRV_PCM_FMTBIT_S24_LE)
-
-static char *get_fslssi_format_string(snd_pcm_format_t fmt)
-{
-	switch ((__force int)fmt) {
-	case SNDRV_PCM_FORMAT_S8:
-		return "S8";
-	case SNDRV_PCM_FORMAT_S16_LE:
-		return "S16_LE";
-	case SNDRV_PCM_FORMAT_S18_3LE:
-		return "S18_3LE";
-	case SNDRV_PCM_FORMAT_S20_3LE:
-		return "S20_3LE";
-	case SNDRV_PCM_FORMAT_S24_3LE:
-		return "S24_3LE";
-	case SNDRV_PCM_FORMAT_S24_LE:
-		return "S24_LE";
-	default:
-		return "Unsupported format";
-	}
-};
 #endif
 
 /* SIER bitflag of interrupts to enable */
@@ -515,8 +475,8 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 				other_runtime->sample_bits != 0) {
 			dev_err(substream->pcm->card->dev,
 					"WRONG FORMAT: %s! KEEP SAME AS %s!\n",
-					get_fslssi_format_string(current_fmt),
-					get_fslssi_format_string(other_fmt));
+					snd_pcm_format_name(current_fmt),
+					snd_pcm_format_name(other_fmt));
 			return -EINVAL;
 		}
 	}
