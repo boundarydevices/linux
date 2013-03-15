@@ -992,8 +992,8 @@
 			compatible = "fsl,imx6q-ipuv3";
 			reg = <0x02400000 0x400000>;
 			interrupts = <0 5 0x04>, < 0 6 0x04>;
-			clocks = <&clks 130>, <&clks 131>, <&clks 132>, <&clks 39>, <&clks 40>;
-			clock-names = "ipu1", "ipu1_di0", "ipu1_di1", "ipu1_di0_sel", "ipu1_di1_sel";
+			clocks = <&clks 130>, <&clks 131>, <&clks 132>, <&clks 39>, <&clks 40>, <&clks 169>;
+			clock-names = "ipu1", "ipu1_di0", "ipu1_di1", "ipu1_di0_sel", "ipu1_di1_sel", "ipu1_csi0";
 			status = "disabled";
 		};
 
@@ -1001,8 +1001,8 @@
 			compatible = "fsl,imx6q-ipuv3";
 			reg = <0x02800000 0x400000>;
 			interrupts = <0 7 0x04>, <0 8 0x04>;
-			clocks = <&clks 133>, <&clks 134>, <&clks 137>, <&clks 41>, <&clks 42>;
-			clock-names = "ipu2", "ipu2_di0", "ipu2_di1", "ipu2_di0_sel", "ipu2_di1_sel";
+			clocks = <&clks 133>, <&clks 134>, <&clks 137>, <&clks 41>, <&clks 42>, <&clks 169>;
+			clock-names = "ipu2", "ipu2_di0", "ipu2_di1", "ipu2_di0_sel", "ipu2_di1_sel", "ipu2_csi0";
 			status = "disabled";
 		};
 	};
