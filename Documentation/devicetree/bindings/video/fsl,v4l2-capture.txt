@@ -39,6 +39,7 @@ Required properties for sensor
 
 Supported Sensor
 - ov5642
+- ov5640_mipi
 
 
 Example for IPUv3 including capture settings on imx6q-sabresd.dts:
