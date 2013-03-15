@@ -136,6 +136,8 @@ static int ipu_clk_setup_enable(struct ipu_soc *ipu,
 	char pixel_clk_0_div[] = "ipu1_pclk0_div";
 	char pixel_clk_1_div[] = "ipu1_pclk1_div";
 	char *ipu_pixel_clk_sel[] = { "ipu1", "ipu1_di0", "ipu1_di1", };
+	char csi0_clk[] = "ipu1_csi0";
+	char csi1_clk[] = "ipu1_csi1";
 	char *pclk_sel;
 	struct clk *clk;
 	int ret;
@@ -151,6 +153,8 @@ static int ipu_clk_setup_enable(struct ipu_soc *ipu,
 	pixel_clk_1_sel[3] += pdata->id;
 	pixel_clk_0_div[3] += pdata->id;
 	pixel_clk_1_div[3] += pdata->id;
+	csi0_clk[3] += pdata->id;
+	csi1_clk[3] += pdata->id;
 	for (i = 0; i < ARRAY_SIZE(ipu_pixel_clk_sel); i++) {
 		pclk_sel = ipu_pixel_clk_sel[i];
 		pclk_sel[3] += pdata->id;
@@ -237,6 +241,15 @@ static int ipu_clk_setup_enable(struct ipu_soc *ipu,
 		dev_err(ipu->dev, "clk_get di1_sel failed");
 		return PTR_ERR(ipu->di_clk_sel[1]);
 	}
+
+	/* To keep the interface the same as ipuv1:
+	 * csi_clk here means the clock provide to external sensor.
+	 * Usually it is the ccm clock (if there is).
+	 * If csi don't need to provide clock to external sensor,
+	 * csi_clk is null, so don't check the error information here.
+	 */
+	ipu->csi_clk[0] = devm_clk_get(ipu->dev, csi0_clk);
+	ipu->csi_clk[1] = devm_clk_get(ipu->dev, csi1_clk);
 
 	return 0;
 }
