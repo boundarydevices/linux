@@ -13,14 +13,14 @@ config BCMDHD
 config BCMDHD_FW_PATH
 	depends on BCMDHD
 	string "Firmware path"
-	default "/system/etc/firmware/fw_bcmdhd.bin"
+	default "/lib/firmware/fw_bcmdhd.bin"
 	---help---
 	  Path to the firmware file.
 
 config BCMDHD_NVRAM_PATH
 	depends on BCMDHD
 	string "NVRAM path"
-	default "/system/etc/firmware/bcmdhd.cal"
+	default "/lib/firmware/bcmdhd.cal"
 	---help---
 	  Path to the calibration file.
 
