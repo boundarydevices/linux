@@ -48,6 +48,9 @@
 #endif
 #endif /* CONFIG_WIFI_CONTROL_FUNC */
 
+#define dtoh32(i) i
+#define dtoh16(i) i
+
 /* message levels */
 #define ANDROID_ERROR_LEVEL	0x0001
 #define ANDROID_TRACE_LEVEL	0x0002
