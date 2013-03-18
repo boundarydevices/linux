@@ -74,7 +74,7 @@ obj-$(CONFIG_HAVE_IMX_ANATOP) += anatop.o
 AFLAGS_headsmp.o :=-Wa,-march=armv7-a
 obj-$(CONFIG_SMP) += headsmp.o platsmp.o
 obj-$(CONFIG_HOTPLUG_CPU) += hotplug.o
-obj-$(CONFIG_SOC_IMX6Q) += clk-imx6q.o mach-imx6q.o busfreq-imx6.o mx6_mmdc.o mx6_ddr_freq.o
+obj-$(CONFIG_SOC_IMX6Q) += clk-imx6q.o mach-imx6q.o busfreq-imx6.o imx6_mmdc.o imx6_ddr_freq.o
 obj-$(CONFIG_IMX_PCIE)	+= pcie.o
 
 AFLAGS_imx6_suspend.o :=-Wa,-march=armv7-a
