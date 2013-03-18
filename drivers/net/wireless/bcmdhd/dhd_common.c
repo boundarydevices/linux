@@ -331,8 +331,12 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid, const ch
 		bcm_strncpy_s((char*)arg, len, dhd_version, len);
 		break;
 
-	case IOV_GVAL(IOV_WLMSGLEVEL):
+		case IOV_GVAL(IOV_WLMSGLEVEL):
+#ifdef CONFIG_WIRELESS_EXT
 		int_val = (int32)iw_msg_level;
+#else
+		int_val = -1;
+#endif
 		bcopy(&int_val, arg, val_size);
 		break;
 
