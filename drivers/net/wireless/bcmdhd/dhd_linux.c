@@ -302,7 +302,9 @@ module_param(dhd_sysioc, uint, 0);
 
 /* Error bits */
 module_param(dhd_msg_level, int, 0);
+#if defined(CONFIG_WIRELESS_EXT) || defined(WL_WIRELESS_EXT)
 module_param(iw_msg_level, int, 0);
+#endif
 module_param(android_msg_level, int, 0);
 
 /* load firmware and/or nvram values from the filesystem */
