@@ -1,5 +1,13 @@
 * Freescale V4L2 Capture for i.MX6DQ/i.MX6SDL
 
+Required board properties for IPUv3 capture:
+- clocks: should include the clock provided by i.MX6 to sensor
+- clock-names: sensor clock's name should be "ipux_csiy"
+  x should be 1 or 2 for i.MX6DQ; should be 1 for i.MX6SDL
+  y is 0 or 1 for i.MX6DQ/i.MX6SDL
+Note: other detailed information for IPUv3, please refer to
+Documentation/devicetree/bindings/fb/fsl_ipuv3_fb.txt
+
 Required properties for v4l2_capture
 - compatible: should be "fsl,imx6q-v4l2-capture"
 - ipu_id: ipu id for v4l2 capture device
@@ -8,6 +16,16 @@ Required properties for v4l2_capture
   should be 0 or 1 for i.MX6DQ/i.MX6SDL
 - mclk_source: should be 0 or 1. two mclk sources at most now
 - status: should be set to "okay" to enable this device
+
+Example for IPUv3 including capture settings on imx6q-sabresd.dts:
+	ipu1: ipu@02400000 { /* IPU1 */
+		compatible = "fsl,imx6q-ipuv3";
+		reg = <0x02400000 0x400000>;
+		interrupts = <0 5 0x04>, < 0 6 0x04>;
+		clocks = <&clks 130>, <&clks 131>, <&clks 132>, <&clks 39>, <&clks 40>, <&clks 169>;
+		clock-names = "ipu1", "ipu1_di0", "ipu1_di1", "ipu1_di0_sel", "ipu1_di1_sel", "ipu1_csi0";
+		status = "disabled";
+	};
 
 Examples for v4l2_capture:
 	v4l2_cap {
