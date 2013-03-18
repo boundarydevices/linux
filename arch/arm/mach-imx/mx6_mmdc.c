@@ -18,28 +18,28 @@
  *
  * @ingroup PM
  */
+#include <asm/cacheflush.h>
+#include <asm/fncpy.h>
+#include <asm/hardware/gic.h>
 #include <asm/io.h>
-#include <linux/sched.h>
-#include <linux/proc_fs.h>
-#include <linux/clk.h>
-#include <linux/interrupt.h>
-#include <linux/platform_device.h>
-#include <linux/mutex.h>
-#include <linux/delay.h>
-#include <linux/cpumask.h>
-#include <linux/kernel.h>
-#include <linux/smp.h>
-#include <mach/hardware.h>
-#include <mach/clock.h>
 #include <asm/mach/map.h>
 #include <asm/mach-types.h>
-#include <asm/cacheflush.h>
 #include <asm/tlb.h>
-#include <asm/hardware/gic.h>
-#include <linux/of_device.h>
+#include <linux/clk.h>
+#include <linux/cpumask.h>
+#include <linux/delay.h>
+#include <linux/interrupt.h>
+#include <linux/kernel.h>
+#include <linux/mutex.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
-
+#include <linux/of_device.h>
+#include <linux/platform_device.h>
+#include <linux/proc_fs.h>
+#include <linux/sched.h>
+#include <linux/smp.h>
+#include <mach/clock.h>
+#include <mach/hardware.h>
 
 /* DDR settings */
 unsigned long (*iram_ddr_settings)[2];
@@ -364,8 +364,8 @@ int init_mmdc_settings(void)
 		 to be executable. */
 	ddr_freq_change_iram_base = __arm_ioremap(iram_paddr,
 						iram_size, MT_MEMORY_NONCACHED);
-	memcpy(ddr_freq_change_iram_base, mx6_ddr_freq_change, iram_size);
-	mx6_change_ddr_freq = (void *)ddr_freq_change_iram_base;
+	mx6_change_ddr_freq = (void *)fncpy(ddr_freq_change_iram_base,
+		&mx6_ddr_freq_change, iram_size);
 
 	curr_ddr_rate = ddr_normal_rate;
 

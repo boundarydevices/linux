@@ -15,20 +15,20 @@
 #include <linux/of.h>
 #include <linux/suspend.h>
 #include <asm/cacheflush.h>
+#include <asm/fncpy.h>
+#include <asm/hardware/cache-l2x0.h>
+#include <asm/mach/map.h>
 #include <asm/proc-fns.h>
 #include <asm/suspend.h>
-#include <asm/hardware/cache-l2x0.h>
-#include <mach/common.h>
-#include <mach/hardware.h>
-#include <asm/mach/map.h>
-#include <linux/err.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/err.h>
+#include <mach/common.h>
+#include <mach/hardware.h>
 
 extern unsigned long phys_l2x0_saved_regs;
 static void *suspend_iram_base;
 static struct clk *ocram_clk;
-static void __iomem *iram_base;
 static unsigned int iram_paddr, iram_size;
 static int (*suspend_in_iram_fn)(unsigned int *iram_vbase,
 	unsigned int *iram_pbase, unsigned int cpu_type);
@@ -39,7 +39,7 @@ static int imx6q_suspend_finish(unsigned long val)
 	 * call low level suspend function in iram,
 	 * as we need to float DDR IO.
 	 */
-	suspend_in_iram_fn((unsigned int *)iram_base,
+	suspend_in_iram_fn((unsigned int *)suspend_iram_base,
 		(unsigned int *)(iram_paddr), 0);
 	return 0;
 }
@@ -151,12 +151,12 @@ void __init imx6q_pm_init(void)
 
 	of_property_read_u32(node, "iram_code_base", &iram_paddr);
 	of_property_read_u32(node, "iram_code_size", &iram_size);
-	iram_base = ioremap(iram_paddr, iram_size);
 	/* last size of IRAM is reserved for suspend/resume */
 	suspend_iram_base = __arm_ioremap(iram_paddr, iram_size,
 		MT_MEMORY_NONCACHED);
-	memcpy((void *)suspend_iram_base, imx_suspend, iram_size);
-	suspend_in_iram_fn = (void *)suspend_iram_base;
+
+	suspend_in_iram_fn = (void *)fncpy(suspend_iram_base,
+		&imx_suspend, iram_size);
 	/*
 	 * The l2x0 core code provides an infrastucture to save and restore
 	 * l2x0 registers across suspend/resume cycle.  But because imx6q

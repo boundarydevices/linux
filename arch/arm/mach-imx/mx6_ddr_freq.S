@@ -19,6 +19,8 @@
 #include <linux/linkage.h>
 #include <mach/hardware.h>
 
+	.align 3
+
 	.macro	phy2virt
 
 	/* phy io map to vitr according to IMX_IO_P2V define */
