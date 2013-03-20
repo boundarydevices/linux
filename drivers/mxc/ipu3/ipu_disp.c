@@ -508,6 +508,8 @@ int _ipu_dp_init(struct ipu_soc *ipu,
 	int dp;
 	int partial = false;
 	uint32_t reg;
+	enum csc_type_t csc_type;
+	struct dp_csc_param_t param;
 
 	if (channel == MEM_FG_SYNC) {
 		dp = DP_SYNC;
@@ -525,31 +527,13 @@ int _ipu_dp_init(struct ipu_soc *ipu,
 	in_fmt = format_to_colorspace(in_pixel_fmt);
 	out_fmt = format_to_colorspace(out_pixel_fmt);
 
-	if (partial) {
-		if (in_fmt == RGB) {
-			if (out_fmt == RGB)
-				ipu->fg_csc_type = RGB2RGB;
-			else
-				ipu->fg_csc_type = RGB2YUV;
-		} else {
-			if (out_fmt == RGB)
-				ipu->fg_csc_type = YUV2RGB;
-			else
-				ipu->fg_csc_type = YUV2YUV;
-		}
-	} else {
-		if (in_fmt == RGB) {
-			if (out_fmt == RGB)
-				ipu->bg_csc_type = RGB2RGB;
-			else
-				ipu->bg_csc_type = RGB2YUV;
-		} else {
-			if (out_fmt == RGB)
-				ipu->bg_csc_type = YUV2RGB;
-			else
-				ipu->bg_csc_type = YUV2YUV;
-		}
-	}
+	csc_type = (in_fmt == RGB) ? ((out_fmt == RGB) ? RGB2RGB : RGB2YUV) :
+				     ((out_fmt == RGB) ? YUV2RGB : YUV2YUV);
+	if (partial)
+		ipu->fg_csc_type = csc_type;
+	else
+		ipu->bg_csc_type = csc_type;
+
 
 	/* Transform color key from rgb to yuv if CSC is enabled */
 	reg = ipu_dp_read(ipu, DP_COM_CONF(dp));
@@ -580,9 +564,11 @@ int _ipu_dp_init(struct ipu_soc *ipu,
 		dev_dbg(ipu->dev, "_ipu_dp_init color key change to yuv fmt 0x%x!\n", color_key);
 	}
 
-	__ipu_dp_csc_setup(ipu, dp,
-			   dp_csc_array[ipu->bg_csc_type][ipu->fg_csc_type],
-			   false);
+	param = dp_csc_array[ipu->bg_csc_type][ipu->fg_csc_type];
+	if ((ipu->fg_csc_type == RGB2YUV) || (ipu->bg_csc_type == RGB2YUV))
+		param.mode |= (1 << 11);  /* Y range 16-235, U/V range 16-240. */
+
+	__ipu_dp_csc_setup(ipu, dp, param, true);
 
 	return 0;
 }
