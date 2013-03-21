@@ -479,8 +479,6 @@ alloc_failed:
 
 static int __devexit mipi_csi2_remove(struct platform_device *pdev)
 {
-	struct device *dev = &pdev->dev;
-
 	/* unmapping mipi register */
 	iounmap(gmipi_csi2->mipi_csi2_base);
 
