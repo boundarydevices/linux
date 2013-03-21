@@ -789,6 +789,9 @@ static void dma_rx_work(struct work_struct *w)
 	struct tty_struct *tty = sport->port.state->port.tty;
 
 	if (sport->rx_bytes) {
+		spin_lock(&sport->port.lock);
+		sport->port.icount.rx += sport->rx_bytes;
+		spin_unlock(&sport->port.lock);
 		tty_insert_flip_string(tty, sport->rx_buf, sport->rx_bytes);
 		tty_flip_buffer_push(tty);
 		sport->rx_bytes = 0;
