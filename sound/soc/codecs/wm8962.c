@@ -3829,22 +3829,27 @@ static int wm8962_runtime_resume(struct device *dev)
 
 	wm8962_reset(wm8962);
 
-	regcache_sync(wm8962->regmap);
-
 	/*
-	 * gpio_init[4] is GPIO5 of wm8962; 0x0 means it's in its input mode.
-	 * In input mode, GPIO5 controls the MCLK's source by HW connection.
-	 * But if GPIO5 is used as an output, CLKREG_OVD bit must be set
-	 * according to the datasheet in the section about CLOCKING2 regsiter.
+	 * WM8962_CLOCKING2 is a volatile register so its value would be set to
+	 * default after reset.
 	 *
-	 * CLKREG_OVD bit is 0 by default, so it'll be cleared after reg reset.
-	 * And the driver regards CLOCKING2 as a volatile reg, it won't resever
-	 * its value and would turn it into default. So we have to set the bit
-	 * when GPIO5's founded in its output mode.
+	 * gpio_init[4] is GPIO5 of wm8962, it controls the SYSCLK's source by
+	 * hardware connection, and 0x0's its default vaule (R516:GP5_FN).
+	 * Meanwhile, if we need to use GPIO5 as another function, we must set
+	 * CLKREG_OVD bit of WM8962_CLOCKING2 before we sync the other register.
+	 * These info above are all described in wm8962 datasheet for REG 516.
+	 *
+	 * We here also clear SYSCLK_SRC bit. Because if GPIO5 was a logic 1
+	 * input during wm8962 power-up period, the SYSCLK's source would be set
+	 * to FLL. And after CLKREG_OVD's set, wm8962 might be confused with its
+	 * real source of SYSCLK. So it's better to clear SYSCLK_SRC bit once.
 	 */
 	if (pdata && pdata->gpio_init[4] != 0x0)
 		regmap_update_bits(wm8962->regmap, WM8962_CLOCKING2,
-				WM8962_CLKREG_OVD, WM8962_CLKREG_OVD);
+				WM8962_CLKREG_OVD_MASK | WM8962_SYSCLK_SRC_MASK,
+				WM8962_CLKREG_OVD);
+
+	regcache_sync(wm8962->regmap);
 
 	regmap_update_bits(wm8962->regmap, WM8962_ANTI_POP,
 			   WM8962_STARTUP_BIAS_ENA | WM8962_VMID_BUF_ENA,
