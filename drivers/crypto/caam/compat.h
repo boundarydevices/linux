@@ -24,6 +24,10 @@
 #include <linux/types.h>
 #include <linux/debugfs.h>
 #include <linux/circ_buf.h>
+
+#ifdef CONFIG_ARM /* needs the clock control subsystem */
+#include <linux/clk.h>
+#endif
 #include <net/xfrm.h>
 
 #include <crypto/algapi.h>

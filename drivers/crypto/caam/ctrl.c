@@ -37,6 +37,13 @@ static int caam_remove(struct platform_device *pdev)
 	/* Unmap controller region */
 	iounmap(&topregs->ctrl);
 
+#ifdef CONFIG_ARM
+	/* shut clocks off before finalizing shutdown */
+	clk_disable(ctrlpriv->caam_ipg);
+	clk_disable(ctrlpriv->caam_mem);
+	clk_disable(ctrlpriv->caam_aclk);
+#endif
+
 	kfree(ctrlpriv->jrdev);
 	kfree(ctrlpriv);
 
@@ -47,6 +54,7 @@ static int caam_remove(struct platform_device *pdev)
 static int caam_probe(struct platform_device *pdev)
 {
 	int ring, rspec;
+	int ret = 0;
 	struct device *dev;
 	struct device_node *nprop, *np;
 	struct caam_ctrl __iomem *ctrl;
@@ -79,6 +87,73 @@ static int caam_probe(struct platform_device *pdev)
 
 	/* Get the IRQ of the controller (for security violations only) */
 	ctrlpriv->secvio_irq = of_irq_to_resource(nprop, 0, NULL);
+
+/*
+ * ARM targets tend to have clock control subsystems that can
+ * enable/disable clocking to our device. Turn clocking on to proceed
+ */
+#ifdef CONFIG_ARM
+	ctrlpriv->caam_ipg = devm_clk_get(&ctrlpriv->pdev->dev, "caam_ipg");
+	if (IS_ERR(ctrlpriv->caam_ipg)) {
+		ret = PTR_ERR(ctrlpriv->caam_ipg);
+		dev_err(&ctrlpriv->pdev->dev,
+			"can't identify CAAM ipg clk: %d\n", ret);
+		return -ENODEV;
+	}
+	ctrlpriv->caam_mem = devm_clk_get(&ctrlpriv->pdev->dev, "caam_mem");
+	if (IS_ERR(ctrlpriv->caam_mem)) {
+		ret = PTR_ERR(ctrlpriv->caam_mem);
+		dev_err(&ctrlpriv->pdev->dev,
+			"can't identify CAAM secure mem clk: %d\n", ret);
+		return -ENODEV;
+	}
+	ctrlpriv->caam_aclk = devm_clk_get(&ctrlpriv->pdev->dev, "caam_aclk");
+	if (IS_ERR(ctrlpriv->caam_aclk)) {
+		ret = PTR_ERR(ctrlpriv->caam_aclk);
+		dev_err(&ctrlpriv->pdev->dev,
+			"can't identify CAAM aclk clk: %d\n", ret);
+		return -ENODEV;
+	}
+
+	ret = clk_prepare(ctrlpriv->caam_ipg);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "can't prepare CAAM ipg clock: %d\n", ret);
+		return -ENODEV;
+	}
+	ret = clk_prepare(ctrlpriv->caam_mem);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "can't prepare CAAM secure mem clock: %d\n", ret);
+		return -ENODEV;
+	}
+	ret = clk_prepare(ctrlpriv->caam_aclk);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "can't prepare CAAM aclk clock: %d\n", ret);
+		return -ENODEV;
+	}
+
+	ret = clk_enable(ctrlpriv->caam_ipg);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "can't enable CAAM ipg clock: %d\n", ret);
+		return -ENODEV;
+	}
+	ret = clk_enable(ctrlpriv->caam_mem);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "can't enable CAAM secure mem clock: %d\n", ret);
+		return -ENODEV;
+	}
+	ret = clk_enable(ctrlpriv->caam_aclk);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "can't enable CAAM aclk clock: %d\n", ret);
+		return -ENODEV;
+	}
+
+	pr_debug("%s caam_ipg clock:%d\n", __func__,
+		(int)clk_get_rate(ctrlpriv->caam_ipg));
+	pr_debug("%s caam_mem clock:%d\n", __func__,
+		(int)clk_get_rate(ctrlpriv->caam_mem));
+	pr_debug("%s caam_aclk clock:%d\n", __func__,
+		(int)clk_get_rate(ctrlpriv->caam_aclk));
+#endif
 
 	/*
 	 * Enable DECO watchdogs and, if this is a PHYS_ADDR_T_64BIT kernel,
