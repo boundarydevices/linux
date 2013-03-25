@@ -83,6 +83,12 @@
 #endif
 #endif
 
+#ifdef CONFIG_ARM
+/* These are common macros for Power, put here for ARMs */
+#define setbits32(_addr, _v) writel((readl(_addr) | (_v)), (_addr))
+#define clrbits32(_addr, _v) writel((readl(_addr) & ~(_v)), (_addr))
+#endif
+
 #ifndef CONFIG_64BIT
 static inline void wr_reg64(u64 __iomem *reg, u64 data)
 {
