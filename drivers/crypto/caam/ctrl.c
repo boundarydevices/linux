@@ -2,7 +2,7 @@
  * CAAM control-plane driver backend
  * Controller-level driver, kernel property detection, initialization
  *
- * Copyright 2008-2011 Freescale Semiconductor, Inc.
+ * Copyright (C) 2008-2013 Freescale Semiconductor, Inc.
  */
 
 #include "compat.h"
@@ -256,7 +256,18 @@ static struct platform_driver caam_driver = {
 	.remove      = __devexit_p(caam_remove),
 };
 
-module_platform_driver(caam_driver);
+static int __init caam_base_init(void)
+{
+	return platform_driver_register(&caam_driver);
+}
+
+static void __exit caam_base_exit(void)
+{
+	return platform_driver_unregister(&caam_driver);
+}
+
+module_init(caam_base_init);
+module_exit(caam_base_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("FSL CAAM request backend");
