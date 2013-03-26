@@ -1,7 +1,7 @@
 /*
  * caam - Freescale FSL CAAM support for crypto API
  *
- * Copyright 2008-2011 Freescale Semiconductor, Inc.
+ * Copyright (C) 2008-2013 Freescale Semiconductor, Inc.
  *
  * Based on talitos crypto API driver.
  *
@@ -287,6 +287,8 @@ static int aead_set_sh_desc(struct crypto_aead *aead)
 		       desc_bytes(desc), 1);
 #endif
 
+	dma_sync_single_for_cpu(jrdev, ctx->sh_desc_enc_dma, desc_bytes(desc),
+				DMA_TO_DEVICE);
 	/*
 	 * Job Descriptor and Shared Descriptors
 	 * must all fit into the 64-word Descriptor h/w Buffer
@@ -354,6 +356,8 @@ static int aead_set_sh_desc(struct crypto_aead *aead)
 		       DUMP_PREFIX_ADDRESS, 16, 4, desc,
 		       desc_bytes(desc), 1);
 #endif
+	dma_sync_single_for_cpu(jrdev, ctx->sh_desc_dec_dma, desc_bytes(desc),
+				DMA_TO_DEVICE);
 
 	/*
 	 * Job Descriptor and Shared Descriptors
@@ -437,6 +441,8 @@ static int aead_set_sh_desc(struct crypto_aead *aead)
 		       DUMP_PREFIX_ADDRESS, 16, 4, desc,
 		       desc_bytes(desc), 1);
 #endif
+	dma_sync_single_for_cpu(jrdev, ctx->sh_desc_givenc_dma,
+				desc_bytes(desc), DMA_TO_DEVICE);
 
 	return 0;
 }
@@ -629,6 +635,9 @@ static int aead_setkey(struct crypto_aead *aead,
 		       DUMP_PREFIX_ADDRESS, 16, 4, ctx->key,
 		       ctx->split_key_pad_len + enckeylen, 1);
 #endif
+	dma_sync_single_for_device(jrdev, ctx->key_dma,
+				   ctx->split_key_pad_len + enckeylen,
+				   DMA_TO_DEVICE);
 
 	ctx->enckeylen = enckeylen;
 
@@ -667,6 +676,7 @@ static int ablkcipher_setkey(struct crypto_ablkcipher *ablkcipher,
 		return -ENOMEM;
 	}
 	ctx->enckeylen = keylen;
+	dma_sync_single_for_device(jrdev, ctx->key_dma, keylen, DMA_TO_DEVICE);
 
 	/* ablkcipher_encrypt shared descriptor */
 	desc = ctx->sh_desc_enc;
@@ -708,6 +718,9 @@ static int ablkcipher_setkey(struct crypto_ablkcipher *ablkcipher,
 		       DUMP_PREFIX_ADDRESS, 16, 4, desc,
 		       desc_bytes(desc), 1);
 #endif
+	dma_sync_single_for_device(jrdev, ctx->sh_desc_enc_dma,
+				   desc_bytes(desc), DMA_TO_DEVICE);
+
 	/* ablkcipher_decrypt shared descriptor */
 	desc = ctx->sh_desc_dec;
 
@@ -753,6 +766,8 @@ static int ablkcipher_setkey(struct crypto_ablkcipher *ablkcipher,
 		       DUMP_PREFIX_ADDRESS, 16, 4, desc,
 		       desc_bytes(desc), 1);
 #endif
+	dma_sync_single_for_device(jrdev, ctx->sh_desc_dec_dma,
+				   desc_bytes(desc), DMA_TO_DEVICE);
 
 	return ret;
 }
@@ -1342,6 +1357,7 @@ static struct aead_edesc *aead_edesc_alloc(struct aead_request *req,
 	link_tbl_len += dst_nents;
 
 	link_tbl_bytes = link_tbl_len * sizeof(struct link_tbl_entry);
+	dma_sync_single_for_device(jrdev, iv_dma, ivsize, DMA_TO_DEVICE);
 
 	/* allocate space for base edesc and hw desc commands, link tables */
 	edesc = kmalloc(sizeof(struct aead_edesc) + desc_bytes +
@@ -1382,6 +1398,8 @@ static struct aead_edesc *aead_edesc_alloc(struct aead_request *req,
 		sg_to_link_tbl_last(req->dst, dst_nents,
 				    edesc->link_tbl + link_tbl_index, 0);
 	}
+	dma_sync_single_for_device(jrdev, edesc->link_tbl_dma, link_tbl_bytes,
+				   DMA_TO_DEVICE);
 
 	return edesc;
 }
@@ -1529,6 +1547,8 @@ static struct aead_edesc *aead_giv_edesc_alloc(struct aead_givcrypt_request
 
 	link_tbl_bytes = link_tbl_len * sizeof(struct link_tbl_entry);
 
+	dma_sync_single_for_device(jrdev, iv_dma, ivsize, DMA_TO_DEVICE);
+
 	/* allocate space for base edesc and hw desc commands, link tables */
 	edesc = kmalloc(sizeof(struct aead_edesc) + desc_bytes +
 			link_tbl_bytes, GFP_DMA | flags);
@@ -1569,6 +1589,8 @@ static struct aead_edesc *aead_giv_edesc_alloc(struct aead_givcrypt_request
 		sg_to_link_tbl_last(req->dst, dst_nents,
 				    edesc->link_tbl + link_tbl_index, 0);
 	}
+	dma_sync_single_for_device(jrdev, edesc->link_tbl_dma, link_tbl_bytes,
+				   DMA_TO_DEVICE);
 
 	return edesc;
 }
@@ -1661,6 +1683,7 @@ static struct ablkcipher_edesc *ablkcipher_edesc_alloc(struct ablkcipher_request
 	 * If so, include it. If not, create scatterlist.
 	 */
 	iv_dma = dma_map_single(jrdev, req->info, ivsize, DMA_TO_DEVICE);
+	dma_sync_single_for_device(jrdev, iv_dma, ivsize, DMA_TO_DEVICE);
 	if (!src_nents && iv_dma + ivsize == sg_dma_address(req->src))
 		iv_contig = true;
 	else
@@ -1698,6 +1721,9 @@ static struct ablkcipher_edesc *ablkcipher_edesc_alloc(struct ablkcipher_request
 	edesc->link_tbl_dma = dma_map_single(jrdev, edesc->link_tbl,
 					     link_tbl_bytes, DMA_TO_DEVICE);
 	edesc->iv_dma = iv_dma;
+
+	dma_sync_single_for_device(jrdev, edesc->link_tbl_dma, link_tbl_bytes,
+				   DMA_TO_DEVICE);
 
 #ifdef DEBUG
 	print_hex_dump(KERN_ERR, "ablkcipher link_tbl@"xstr(__LINE__)": ",
