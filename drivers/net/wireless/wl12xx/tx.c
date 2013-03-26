@@ -872,7 +872,6 @@ u32 wl1271_tx_min_rate_get(struct wl1271 *wl)
 	u32 rate = 0;
 
 	if (!wl->basic_rate_set) {
-		WARN_ON(1);
 		wl->basic_rate_set = wl->conf.tx.basic_rate;
 	}
 
