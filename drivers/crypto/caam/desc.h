@@ -2,7 +2,7 @@
  * CAAM descriptor composition header
  * Definitions to support CAAM descriptor instruction generation
  *
- * Copyright 2008-2011 Freescale Semiconductor, Inc.
+ * Copyright (C) 2008-2013 Freescale Semiconductor, Inc.
  */
 
 #ifndef DESC_H
@@ -1162,6 +1162,11 @@
 #define OP_ALG_AAI_GSM		(0x10 << OP_ALG_AAI_SHIFT)
 #define OP_ALG_AAI_EDGE		(0x20 << OP_ALG_AAI_SHIFT)
 
+/* RNG4 set */
+#define OP_ALG_RNG4_SHIFT	4
+#define OP_ALG_RNG4_MASK	(0x1f3 << OP_ALG_RNG4_SHIFT)
+
+#define OP_ALG_RNG4_SK		(0x100 << OP_ALG_RNG4_SHIFT)
 
 #define OP_ALG_AS_SHIFT		2
 #define OP_ALG_AS_MASK		(0x3 << OP_ALG_AS_SHIFT)

@@ -113,6 +113,18 @@ struct jr_outentry {
 } __packed;
 
 /*
+ * Random Generator
+ * RNG4 = FIPS-verification-compliant, requires init kickstart for use
+ */
+#define CHA_ID_RNG_SHIFT	16
+#define CHA_ID_RNG_MASK		(0xfull << CHA_ID_RNG_SHIFT)
+#define CHA_ID_RNG_A		(0x1ull << CHA_ID_RNG_SHIFT)
+#define CHA_ID_RNG_B		(0x2ull << CHA_ID_RNG_SHIFT)
+#define CHA_ID_RNG_C		(0x3ull << CHA_ID_RNG_SHIFT)
+#define CHA_ID_RNG_4		(0x4ull << CHA_ID_RNG_SHIFT)
+
+
+/*
  * caam_perfmon - Performance Monitor/Secure Memory Status/
  *                CAAM Global Status/Component Version IDs
  *
@@ -206,6 +218,35 @@ struct rngtst {
 	u32 rsvd14[15];
 };
 
+/* RNG4 TRNG test registers */
+#define RTMCTL_PRGM 0x00010000	/* 1 -> program mode, 0 -> run mode */
+#define RTMCTL_OSC_DIV_MASK 0xc	/* select oscillator divider value */
+#define RTSDCTL_ENT_DLY_SHIFT 16
+#define RTSDCTL_ENT_DLY_MASK (0xffff << RTSDCTL_ENT_DLY_SHIFT)
+#define RDSTA_IF 0x00000003     /* state handle instantiated flags 0 and 1 */
+struct rng4tst {
+	u32 rtmctl;		/* misc. control register */
+	u32 rtscmisc;		/* statistical check misc. register */
+	u32 rtpkrrng;		/* poker range register */
+	union {
+		u32 rtpkrmax;	/* PRGM=1: poker max. limit register */
+		u32 rtpkrsq;	/* PRGM=0: poker square calc. result register */
+	};
+	u32 rtsdctl;		/* seed control register */
+	union {
+		u32 rtsblim;	/* PRGM=1: sparse bit limit register */
+		u32 rttotsam;	/* PRGM=0: total samples register */
+	};
+	u32 rtfrqmin;		/* frequency count min. limit register */
+	union {
+		u32 rtfrqmax;	/* PRGM=1: freq. count max. limit register */
+		u32 rtfrqcnt;	/* PRGM=0: freq. count register */
+	};
+	u32 rsvd1[40];
+	u32 rdsta;              /* DRNG status register */
+	u32 rsvd2[15];
+};
+
 /*
  * caam_ctrl - basic core configuration
  * starts base + 0x0000 padded out to 0x1000
@@ -255,7 +296,10 @@ struct caam_ctrl {
 
 	/* RNG Test/Verification/Debug Access                   600-7ff */
 	/* (Useful in Test/Debug modes only...)                         */
-	struct rngtst rtst[2];
+	union {
+		struct rngtst rtst[2];
+		struct rng4tst r4tst[2];
+	};
 
 	u32 rsvd9[448];
 
