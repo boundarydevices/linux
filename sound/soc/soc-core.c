@@ -4247,6 +4247,7 @@ error_component_name:
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(snd_soc_register_component);
 
 /**
  * snd_soc_unregister_component - Unregister a component from the ASoC core
@@ -4272,6 +4273,7 @@ found:
 	dev_dbg(dev, "ASoC: Unregistered component '%s'\n", cmpnt->name);
 	kfree(cmpnt->name);
 }
+EXPORT_SYMBOL_GPL(snd_soc_unregister_component);
 
 /* Retrieve a card's name from device tree */
 int snd_soc_of_parse_card_name(struct snd_soc_card *card,
