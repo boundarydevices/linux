@@ -239,6 +239,12 @@ int adv739x_fb_event(struct notifier_block *nb, unsigned long val, void *v)
 	if (strcmp(event->info->fix.id, adv739x->fbi->fix.id))
 		return 0;
 
+	if (!fbi->mode) {
+		adv739x_poweroff(adv739x);
+		pr_info("%s No mode set\n", __func__);
+		return 0;
+	}
+
 	switch (val) {
 	case FB_EVENT_MODE_CHANGE:
 		for (i = 0; i < ARRAY_SIZE(adv739x_modedb); i++) {
