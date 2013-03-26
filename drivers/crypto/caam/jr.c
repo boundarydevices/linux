@@ -485,7 +485,8 @@ int caam_jr_probe(struct platform_device *pdev, struct device_node *np,
 	struct platform_device *jr_pdev;
 	struct caam_drv_private *ctrlpriv;
 	struct caam_drv_private_jr *jrpriv;
-	u32 *jroffset;
+	const __be32 *jroffset_addr;
+	u32 jroffset;
 	int error;
 
 	ctrldev = &pdev->dev;
@@ -507,9 +508,21 @@ int caam_jr_probe(struct platform_device *pdev, struct device_node *np,
 	 * need to add in the offset to this JobR. Don't know if I
 	 * like this long-term, but it'll run
 	 */
-	jroffset = (u32 *)of_get_property(np, "reg", NULL);
+	jroffset_addr = of_get_property(np, "reg", NULL);
+
+	if (jroffset_addr == NULL) {
+		kfree(jrpriv);
+		return -EINVAL;
+	}
+
+	/*
+	 * Fix the endianness of this value read from the device
+	 * tree if running on ARM.
+	 */
+	jroffset = be32_to_cpup(jroffset_addr);
+
 	jrpriv->rregs = (struct caam_job_ring __iomem *)((void *)ctrlpriv->ctrl
-							 + *jroffset);
+							 + jroffset);
 
 	/* Build a local dev for each detected queue */
 	jr_pdev = of_platform_device_create(np, NULL, ctrldev);
