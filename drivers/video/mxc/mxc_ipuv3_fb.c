@@ -1952,6 +1952,10 @@ static int mxcfb_option_setup(struct platform_device *pdev, struct fb_info *fbi)
 
 	name[5] += pdev->id;
 	if (fb_get_options(name, &options)) {
+		if (options && !strncmp(options, "off", 3)) {
+			dev_info(&pdev->dev, "%s is turned off!\n", name);
+			return -ENODEV;
+		}
 		dev_err(&pdev->dev, "Can't get fb option for %s!\n", name);
 		return -ENODEV;
 	}
@@ -2111,6 +2115,10 @@ static int mxcfb_register(struct fb_info *fbi)
 
 	if (!mxcfbi->late_init) {
 		fbi->var.activate |= FB_ACTIVATE_FORCE;
+/*
+ *  Often, we need to comment out the following console_lock/console_unlock
+ *  in order to see crash output!!!!
+ */
 		console_lock();
 		fbi->flags |= FBINFO_MISC_USEREVENT;
 		ret = fb_set_var(fbi, &fbi->var);
@@ -2343,7 +2351,7 @@ static int mxcfb_probe(struct platform_device *pdev)
 		mxcfbi->ipu_alp_ch_irq = IPU_IRQ_BG_ALPHA_SYNC_EOF;
 		mxcfbi->ipu_ch = MEM_BG_SYNC;
 		/* Unblank the primary fb only by default */
-		if (pdev->id == 0)
+		if (1) //(pdev->id == 0)
 			mxcfbi->cur_blank = mxcfbi->next_blank = FB_BLANK_UNBLANK;
 		else
 			mxcfbi->cur_blank = mxcfbi->next_blank = FB_BLANK_POWERDOWN;
