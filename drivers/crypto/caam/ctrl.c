@@ -293,8 +293,14 @@ static int caam_probe(struct platform_device *pdev)
 		 ((1 << MCFGR_AXIPIPE_SHIFT) & MCFGR_AXIPIPE_MASK));
 #endif
 
+	/* Set DMA masks according to platform ranging */
 	if (sizeof(dma_addr_t) == sizeof(u64))
-		dma_set_mask(dev, DMA_BIT_MASK(36));
+		if (of_device_is_compatible(nprop, "fsl,sec-v5.0"))
+			dma_set_mask(dev, DMA_BIT_MASK(40));
+		else
+			dma_set_mask(dev, DMA_BIT_MASK(36));
+	else
+		dma_set_mask(dev, DMA_BIT_MASK(32));
 
 	/*
 	 * Detect and enable JobRs
