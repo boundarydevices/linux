@@ -607,6 +607,10 @@ static struct ahci_platform_data mx6_sabrelite_sata_data = {
 	.exit = mx6_sabrelite_sata_exit,
 };
 
+static struct viv_gpu_platform_data imx6q_gpu_pdata __initdata = {
+	.reserved_mem_size = SZ_128M + SZ_64M,
+};
+
 static struct gpio mx6_sabrelite_flexcan_gpios[] = {
 	{ MX6_SABRELITE_CAN1_ERR, GPIOF_DIR_IN, "flexcan1-err" },
 	{ MX6_SABRELITE_CAN1_EN, GPIOF_OUT_INIT_LOW, "flexcan1-en" },
