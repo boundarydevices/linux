@@ -58,19 +58,17 @@ static void caam_jr_dequeue(unsigned long devarg)
 	void (*usercall)(struct device *dev, u32 *desc, u32 status, void *arg);
 	u32 *userdesc, userstatus;
 	void *userarg;
-	unsigned long flags;
 	dma_addr_t outbusaddr;
 
 	outbusaddr = rd_reg64(&jrp->rregs->outring_base);
 
-	spin_lock_irqsave(&jrp->outlock, flags);
+	while (rd_reg32(&jrp->rregs->outring_used)) {
 
-	head = ACCESS_ONCE(jrp->head);
-	sw_idx = tail = jrp->tail;
+		head = ACCESS_ONCE(jrp->head);
 
-	while (CIRC_CNT(head, tail, JOBR_DEPTH) >= 1 &&
-	       rd_reg32(&jrp->rregs->outring_used)) {
+		spin_lock(&jrp->outlock);
 
+		sw_idx = tail = jrp->tail;
 		hw_idx = jrp->out_ring_read_index;
 		dma_sync_single_for_cpu(dev, outbusaddr,
 					sizeof(struct jr_outentry) * JOBR_DEPTH,
@@ -104,6 +102,9 @@ static void caam_jr_dequeue(unsigned long devarg)
 
 		smp_mb();
 
+		/* set done */
+		wr_reg32(&jrp->rregs->outring_rmvd, 1);
+
 		jrp->out_ring_read_index = (jrp->out_ring_read_index + 1) &
 					   (JOBR_DEPTH - 1);
 
@@ -122,21 +123,11 @@ static void caam_jr_dequeue(unsigned long devarg)
 			jrp->tail = tail;
 		}
 
-		/* set done */
-		wr_reg32(&jrp->rregs->outring_rmvd, 1);
-
-		spin_unlock_irqrestore(&jrp->outlock, flags);
+		spin_unlock(&jrp->outlock);
 
 		/* Finally, execute user's callback */
 		usercall(dev, userdesc, userstatus, userarg);
-
-		spin_lock_irqsave(&jrp->outlock, flags);
-
-		head = ACCESS_ONCE(jrp->head);
-		sw_idx = tail = jrp->tail;
 	}
-
-	spin_unlock_irqrestore(&jrp->outlock, flags);
 
 	/* reenable / unmask IRQs */
 	clrbits32(&jrp->rregs->rconfig_lo, JRCFG_IMSK);
@@ -155,23 +146,22 @@ int caam_jr_register(struct device *ctrldev, struct device **rdev)
 {
 	struct caam_drv_private *ctrlpriv = dev_get_drvdata(ctrldev);
 	struct caam_drv_private_jr *jrpriv = NULL;
-	unsigned long flags;
 	int ring;
 
 	/* Lock, if free ring - assign, unlock */
-	spin_lock_irqsave(&ctrlpriv->jr_alloc_lock, flags);
+	spin_lock(&ctrlpriv->jr_alloc_lock);
 	for (ring = 0; ring < ctrlpriv->total_jobrs; ring++) {
 		jrpriv = dev_get_drvdata(ctrlpriv->jrdev[ring]);
 		if (jrpriv->assign == JOBR_UNASSIGNED) {
 			jrpriv->assign = JOBR_ASSIGNED;
 			*rdev = ctrlpriv->jrdev[ring];
-			spin_unlock_irqrestore(&ctrlpriv->jr_alloc_lock, flags);
+			spin_unlock(&ctrlpriv->jr_alloc_lock);
 			return ring;
 		}
 	}
 
 	/* If assigned, write dev where caller needs it */
-	spin_unlock_irqrestore(&ctrlpriv->jr_alloc_lock, flags);
+	spin_unlock(&ctrlpriv->jr_alloc_lock);
 	*rdev = NULL;
 
 	return -ENODEV;
@@ -189,7 +179,6 @@ int caam_jr_deregister(struct device *rdev)
 {
 	struct caam_drv_private_jr *jrpriv = dev_get_drvdata(rdev);
 	struct caam_drv_private *ctrlpriv;
-	unsigned long flags;
 
 	/* Get the owning controller's private space */
 	ctrlpriv = dev_get_drvdata(jrpriv->parentdev);
@@ -202,9 +191,9 @@ int caam_jr_deregister(struct device *rdev)
 		return -EBUSY;
 
 	/* Release ring */
-	spin_lock_irqsave(&ctrlpriv->jr_alloc_lock, flags);
+	spin_lock(&ctrlpriv->jr_alloc_lock);
 	jrpriv->assign = JOBR_UNASSIGNED;
-	spin_unlock_irqrestore(&ctrlpriv->jr_alloc_lock, flags);
+	spin_unlock(&ctrlpriv->jr_alloc_lock);
 
 	return 0;
 }
@@ -245,7 +234,6 @@ int caam_jr_enqueue(struct device *dev, u32 *desc,
 {
 	struct caam_drv_private_jr *jrp = dev_get_drvdata(dev);
 	struct caam_jrentry_info *head_entry;
-	unsigned long flags;
 	int head, tail, desc_size;
 	dma_addr_t desc_dma, inpbusaddr;
 
@@ -263,14 +251,14 @@ int caam_jr_enqueue(struct device *dev, u32 *desc,
 					sizeof(dma_addr_t) * JOBR_DEPTH,
 					DMA_TO_DEVICE);
 
-	spin_lock_irqsave(&jrp->inplock, flags);
+	spin_lock_bh(&jrp->inplock);
 
 	head = jrp->head;
 	tail = ACCESS_ONCE(jrp->tail);
 
 	if (!rd_reg32(&jrp->rregs->inpring_avail) ||
 	    CIRC_SPACE(head, tail, JOBR_DEPTH) <= 0) {
-		spin_unlock_irqrestore(&jrp->inplock, flags);
+		spin_unlock_bh(&jrp->inplock);
 		dma_unmap_single(dev, desc_dma, desc_size, DMA_TO_DEVICE);
 		return -EBUSY;
 	}
@@ -298,7 +286,7 @@ int caam_jr_enqueue(struct device *dev, u32 *desc,
 
 	wr_reg32(&jrp->rregs->inpring_jobadd, 1);
 
-	spin_unlock_irqrestore(&jrp->inplock, flags);
+	spin_unlock_bh(&jrp->inplock);
 
 	return 0;
 }
