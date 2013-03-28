@@ -94,6 +94,8 @@ struct caam_drv_private {
 	struct device **algapi_jr;
 	/* list of registered crypto algorithms (mk generic context handle?) */
 	struct list_head alg_list;
+	/* list of registered hash algorithms (mk generic context handle?) */
+	struct list_head hash_list;
 
 #ifdef CONFIG_ARM
 	struct clk *caam_ipg;

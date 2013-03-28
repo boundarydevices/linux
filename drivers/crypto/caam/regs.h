@@ -123,6 +123,18 @@ struct jr_outentry {
 #define CHA_ID_RNG_C		(0x3ull << CHA_ID_RNG_SHIFT)
 #define CHA_ID_RNG_4		(0x4ull << CHA_ID_RNG_SHIFT)
 
+/*
+ * Message Digest
+ * LP256 = Low Power (MD5/SHA1/SHA224/SHA256 + HMAC)
+ * LP512 = Low Power (LP256 + SHA384/SHA512)
+ * HP    = High Power (LP512 + SMAC)
+ */
+#define CHA_ID_MD_SHIFT		12
+#define CHA_ID_MD_MASK		(0xfull << CHA_ID_MD_SHIFT)
+#define CHA_ID_MD_LP256		(0x0ull << CHA_ID_MD_SHIFT)
+#define CHA_ID_MD_LP512		(0x1ull << CHA_ID_MD_SHIFT)
+#define CHA_ID_MD_HP		(0x2ull << CHA_ID_MD_SHIFT)
+
 
 /*
  * caam_perfmon - Performance Monitor/Secure Memory Status/

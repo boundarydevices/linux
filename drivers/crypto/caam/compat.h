@@ -39,5 +39,6 @@
 #include <crypto/authenc.h>
 #include <crypto/scatterwalk.h>
 #include <crypto/internal/skcipher.h>
+#include <crypto/internal/hash.h>
 
 #endif /* !defined(CAAM_COMPAT_H) */
