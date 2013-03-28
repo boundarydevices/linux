@@ -1,7 +1,7 @@
 /*
  * caam descriptor construction helper functions
  *
- * Copyright 2008-2011 Freescale Semiconductor, Inc.
+ * Copyright (C) 2008-2013 Freescale Semiconductor, Inc.
  */
 
 #include "desc.h"
@@ -172,6 +172,17 @@ APPEND_CMD_PTR(load, LOAD)
 APPEND_CMD_PTR(store, STORE)
 APPEND_CMD_PTR(fifo_load, FIFO_LOAD)
 APPEND_CMD_PTR(fifo_store, FIFO_STORE)
+
+#define APPEND_SEQ_PTR_INTLEN(cmd, op) \
+static inline void append_seq_##cmd##_ptr_intlen(u32 *desc, dma_addr_t ptr, \
+						 unsigned int len, \
+						 u32 options) \
+{ \
+	PRINT_POS; \
+	append_cmd_ptr(desc, ptr, len, CMD_SEQ_##op##_PTR | options); \
+}
+APPEND_SEQ_PTR_INTLEN(in, IN)
+APPEND_SEQ_PTR_INTLEN(out, OUT)
 
 #define APPEND_CMD_PTR_TO_IMM(cmd, op) \
 static inline void append_##cmd##_as_imm(u32 *desc, void *data, \
