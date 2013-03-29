@@ -211,9 +211,15 @@ struct jr_outentry {
  * Spans f00-fff wherever instantiated
  */
 
-/* Number of DECOs */
-#define CHA_NUM_DECONUM_SHIFT	56
-#define CHA_NUM_DECONUM_MASK	(0xfull << CHA_NUM_DECONUM_SHIFT)
+struct sec_vid {
+	u16 ip_id;
+	u8 maj_rev;
+	u8 min_rev;
+};
+
+#define SEC_VID_IPID_SHIFT      16
+#define SEC_VID_MAJ_SHIFT       8
+#define SEC_VID_MAJ_MASK        0xFF00
 
 struct caam_perfmon {
 	/* Performance Monitor Registers			f00-f9f */

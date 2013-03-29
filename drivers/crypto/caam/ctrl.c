@@ -11,6 +11,7 @@
 #include "jr.h"
 #include "desc_constr.h"
 #include "error.h"
+#include "ctrl.h"
 
 static int caam_remove(struct platform_device *pdev)
 {
@@ -166,11 +167,61 @@ static void kick_trng(struct platform_device *pdev)
 	clrbits32(&r4tst->rtmctl, RTMCTL_PRGM);
 }
 
+/**
+ * caam_get_era() - Return the ERA of the SEC on SoC, based
+ * on the SEC_VID register.
+ * Returns the ERA number (1..4) or -ENOTSUPP if the ERA is unknown.
+ * @caam_id - the value of the SEC_VID register
+ **/
+int caam_get_era(u32 caam_id)
+{
+	struct sec_vid sec_vid;
+	static const struct {
+		u16 ip_id;
+		u8 maj_rev;
+		u8 era;
+	} caam_eras[] = {
+		{0x0A10, 1, 1},
+		{0x0A10, 2, 2},
+		{0x0A12, 1, 3},
+		{0x0A14, 1, 3},
+		{0x0A14, 2, 4},
+		{0x0A16, 1, 4},
+		{0x0A11, 1, 4},
+		{0x0A10, 3, 4},
+		{0x0A18, 1, 4},
+		{0x0A11, 2, 5},
+		{0x0A12, 2, 5},
+		{0x0A13, 1, 5},
+		{0x0A1C, 1, 5},
+		{0x0A12, 4, 6},
+		{0x0A13, 2, 6},
+		{0x0A16, 2, 6},
+		{0x0A18, 2, 6},
+		{0x0A1A, 1, 6},
+		{0x0A1C, 2, 6},
+		{0x0A17, 1, 6}
+	};
+	int i;
+
+	sec_vid.ip_id = caam_id >> SEC_VID_IPID_SHIFT;
+	sec_vid.maj_rev = (caam_id & SEC_VID_MAJ_MASK) >> SEC_VID_MAJ_SHIFT;
+
+	for (i = 0; i < ARRAY_SIZE(caam_eras); i++)
+		if (caam_eras[i].ip_id == sec_vid.ip_id &&
+			caam_eras[i].maj_rev == sec_vid.maj_rev)
+			return caam_eras[i].era;
+
+	return -ENOTSUPP;
+}
+EXPORT_SYMBOL(caam_get_era);
+
 /* Probe routine for CAAM top (controller) level */
 static int caam_probe(struct platform_device *pdev)
 {
 	int ring, rspec;
 	int ret = 0;
+	u32 caam_id;
 	struct device *dev;
 	struct device_node *nprop, *np;
 	struct caam_ctrl __iomem *ctrl;
@@ -413,9 +464,11 @@ static int caam_probe(struct platform_device *pdev)
 	/* Initialize queue allocator lock */
 	spin_lock_init(&ctrlpriv->jr_alloc_lock);
 
+	caam_id = rd_reg32((u32 *)&topregs->ctrl.perfmon.caam_id);
+
 	/* Report "alive" for developer to see */
-	dev_info(dev, "device ID = 0x%016llx\n",
-		 rd_reg64(&topregs->ctrl.perfmon.caam_id));
+	dev_info(dev, "device ID = 0x%08x (Era %d)\n", caam_id,
+		 caam_get_era(caam_id));
 	dev_info(dev, "job rings = %d, qi = %d\n",
 		 ctrlpriv->total_jobrs, ctrlpriv->qi_present);
 
