@@ -224,6 +224,12 @@ clocks and IDs.
 	mx6fast1		209
 	per2_main		210
 	emi_slow		211
+	sata_ref_100m	212
+	pcie_ref_125m	213
+	enet_ref		214
+	pll4_post_div	215
+	pll5_post_div	216
+	pll5_video_div	216
 
 Examples:
 
