@@ -122,6 +122,15 @@ static struct fb_videomode lcdif_modedb[] = {
 	  FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 	  FB_VMODE_INTERLACED,
 	  FB_MODE_IS_DETAILED,},
+	{
+	 /* Okaya 480x272 */
+	 "okaya_480x272", 60, 480, 272, 97786,
+	 .left_margin = 2, .right_margin = 1,
+	 .upper_margin = 3, .lower_margin = 2,
+	 .hsync_len = 41, .vsync_len = 10,
+	 .sync = FB_SYNC_CLK_LAT_FALL,
+	 .vmode = FB_VMODE_NONINTERLACED,
+	 .flag = 0,},
 };
 static int lcdif_modedb_sz = ARRAY_SIZE(lcdif_modedb);
 
