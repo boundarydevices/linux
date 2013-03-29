@@ -433,6 +433,7 @@ static int caam_jr_init(struct device *dev)
 int caam_jr_shutdown(struct device *dev)
 {
 	struct caam_drv_private_jr *jrp = dev_get_drvdata(dev);
+	struct platform_device *pdev;
 	dma_addr_t inpbusaddr, outbusaddr;
 	int ret;
 
@@ -454,6 +455,13 @@ int caam_jr_shutdown(struct device *dev)
 	kfree(jrp->outring);
 	kfree(jrp->inpring);
 	kfree(jrp->entinfo);
+
+	/* Unregister the job ring platform device */
+	pdev = of_find_device_by_node(dev->of_node);
+	if (pdev == NULL)
+		return -EINVAL;
+
+	platform_device_unregister(pdev);
 
 	return ret;
 }
