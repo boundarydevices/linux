@@ -1961,7 +1961,8 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 	di_parent = clk_get_parent(ipu->di_clk[disp]);
 	if (clk_get(NULL, "tve_clk") == di_parent ||
 		clk_get(NULL, "ldb_di0_clk") == di_parent ||
-		clk_get(NULL, "ldb_di1_clk") == di_parent) {
+		clk_get(NULL, "ldb_di1_clk") == di_parent ||
+		clk_get(NULL, "pll3_pfd_540M") == di_parent) {
 		/* if di clk parent is tve/ldb, then keep it;*/
 		dev_dbg(ipu->dev, "use special clk parent\n");
 		clk_set_parent(&ipu->pixel_clk[disp], ipu->di_clk[disp]);
@@ -1974,10 +1975,9 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 		 * we will only use 1/2 fraction for ipu clk,
 		 * so if the clk rate is not fit, try ext clk.
 		 */
-		if ((!sig.int_clk &&
+		if (!sig.int_clk &&
 			((rounded_pixel_clk >= pixel_clk + pixel_clk/200) ||
-			(rounded_pixel_clk <= pixel_clk - pixel_clk/200))) || 
-			(pixel_fmt == IPU_PIX_FMT_BT656) || (pixel_fmt == IPU_PIX_FMT_BT1120)) {
+			(rounded_pixel_clk <= pixel_clk - pixel_clk/200))) {
 			dev_dbg(ipu->dev, "try ipu ext di clk\n");
 			rounded_pixel_clk = pixel_clk * 2;
 			rounded_parent_clk = clk_round_rate(di_parent,
@@ -1998,6 +1998,7 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 	}
 	rounded_pixel_clk = clk_round_rate(&ipu->pixel_clk[disp], pixel_clk);
 	clk_set_rate(&ipu->pixel_clk[disp], rounded_pixel_clk);
+	pr_info("%s: disp=%d, pixel_clk=%d %ld\n", __func__, disp, pixel_clk, clk_get_rate(&ipu->pixel_clk[disp]));
 	msleep(5);
 	/* Get integer portion of divider */
 	div = clk_get_rate(clk_get_parent(&ipu->pixel_clk[disp])) / rounded_pixel_clk;

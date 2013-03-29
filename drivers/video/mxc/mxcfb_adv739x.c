@@ -13,6 +13,7 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/clk.h>
 #include <linux/init.h>
 #include <linux/ipu.h>
 #include <linux/delay.h>
@@ -283,6 +284,25 @@ static int adv739x_disp_init(struct mxc_dispdrv_handle *disp,
 	setting->dev_id = plat->ipu_id;
 	setting->disp_id = plat->disp_id;
 
+	{
+		struct clk *di_parent;
+		struct clk *di;
+		char di_clk[] = "ipu1_di0_clk";
+
+		di_clk[3] += setting->dev_id;
+		di_clk[7] += setting->disp_id;
+		di = clk_get(NULL, di_clk);
+		if (IS_ERR(di)) {
+			pr_err("%s: clock %s not found\n", __func__, di_clk);
+		}
+		di_parent = clk_get(NULL, "pll3_pfd_540M");
+		if (IS_ERR(di_parent)) {
+			pr_err("%s: clock pll3_pfd_540M not found\n", __func__);
+		}
+		clk_set_parent(di, di_parent);
+		clk_set_rate(di, 540000000/5);
+		clk_enable(di_parent);
+	}
 	ret = fb_find_mode(&setting->fbi->var, setting->fbi, setting->dft_mode_str,
 				modedb, modedb_sz, NULL, setting->default_bpp);
 	if (!ret) {
