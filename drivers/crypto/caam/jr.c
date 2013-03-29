@@ -550,6 +550,10 @@ int caam_jr_probe(struct platform_device *pdev, struct device_node *np,
 
 	/* Identify the interrupt */
 	jrpriv->irq = of_irq_to_resource(np, 0, NULL);
+	if (jrpriv->irq <= 0) {
+		kfree(jrpriv);
+		return -EINVAL;
+	}
 
 	/* Now do the platform independent part */
 	error = caam_jr_init(jrdev); /* now turn on hardware */
