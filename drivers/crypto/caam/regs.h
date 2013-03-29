@@ -113,6 +113,52 @@ struct jr_outentry {
 } __packed;
 
 /*
+ * CHA version ID / instantiation bitfields
+ * Defined for use within cha_id in perfmon
+ * Note that the same shift/mask selectors can be used to pull out number
+ * of instantiated blocks within cha_num in perfmon, the locations are
+ * the same.
+ */
+
+/* Job Ring */
+#define CHA_ID_JR_SHIFT	60
+#define CHA_ID_JR_MASK		(0xfull << CHA_ID_JR_SHIFT)
+
+/* DEscriptor COntroller */
+#define CHA_ID_DECO_SHIFT	56
+#define CHA_ID_DECO_MASK	(0xfull << CHA_ID_DECO_SHIFT)
+#define CHA_NUM_DECONUM_SHIFT	56 /* legacy definition */
+#define CHA_NUM_DECONUM_MASK	(0xfull << CHA_NUM_DECONUM_SHIFT)
+
+/* ZUC-Authentication */
+#define CHA_ID_ZA_SHIFT	44
+#define CHA_ID_ZA_MASK		(0xfull << CHA_ID_ZA_SHIFT)
+
+/* ZUC-Encryption */
+#define CHA_ID_ZE_SHIFT	40
+#define CHA_ID_ZE_MASK		(0xfull << CHA_ID_ZE_SHIFT)
+
+/* SNOW f9 */
+#define CHA_ID_SNW9_SHIFT	36
+#define CHA_ID_SNW9_MASK	(0xfull << CHA_ID_SNW9_SHIFT)
+
+/* CRC */
+#define CHA_ID_CRC_SHIFT	32
+#define CHA_ID_CRC_MASK		(0xfull << CHA_ID_CRC_SHIFT)
+
+/* Public Key */
+#define CHA_ID_PK_SHIFT	28
+#define CHA_ID_PK_MASK		(0xfull << CHA_ID_PK_SHIFT)
+
+/* Kasumi */
+#define CHA_ID_KAS_SHIFT	24
+#define CHA_ID_KAS_MASK		(0xfull << CHA_ID_KAS_SHIFT)
+
+/* SNOW f8 */
+#define CHA_ID_SNW8_SHIFT	20
+#define CHA_ID_SNW8_MASK	(0xfull << CHA_ID_SNW8_SHIFT)
+
+/*
  * Random Generator
  * RNG4 = FIPS-verification-compliant, requires init kickstart for use
  */
@@ -134,6 +180,28 @@ struct jr_outentry {
 #define CHA_ID_MD_LP256		(0x0ull << CHA_ID_MD_SHIFT)
 #define CHA_ID_MD_LP512		(0x1ull << CHA_ID_MD_SHIFT)
 #define CHA_ID_MD_HP		(0x2ull << CHA_ID_MD_SHIFT)
+
+/* ARC4 Streamcipher */
+#define CHA_ID_ARC4_SHIFT	8
+#define CHA_ID_ARC4_MASK	(0xfull << CHA_ID_ARC4_SHIFT)
+#define CHA_ID_ARC4_LP		(0x0ull << CHA_ID_ARC4_SHIFT)
+#define CHA_ID_ARC4_HP		(0x1ull << CHA_ID_ARC4_SHIFT)
+
+/* DES Blockcipher Accelerator */
+#define CHA_ID_DES_SHIFT	4
+#define CHA_ID_DES_MASK		(0xfull << CHA_ID_DES_SHIFT)
+
+/*
+ * AES Blockcipher + Combo Mode Accelerator
+ * LP = Low Power (includes ECB/CBC/CFB128/OFB/CTR/CCM/CMAC/XCBC-MAC)
+ * HP = High Power (LP + CBCXCBC/CTRXCBC/XTS/GCM)
+ * DIFFPWR = ORed in if differential-power-analysis resistance implemented
+ */
+#define CHA_ID_AES_SHIFT	0
+#define CHA_ID_AES_MASK		(0xfull << CHA_ID_AES_SHIFT)
+#define CHA_ID_AES_LP		(0x3ull << CHA_ID_AES_SHIFT)
+#define CHA_ID_AES_HP		(0x4ull << CHA_ID_AES_SHIFT)
+#define CHA_ID_AES_DIFFPWR	(0x1ull << CHA_ID_AES_SHIFT)
 
 
 /*

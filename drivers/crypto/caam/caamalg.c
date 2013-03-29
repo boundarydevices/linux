@@ -1677,7 +1677,11 @@ struct caam_alg_template {
 };
 
 static struct caam_alg_template driver_algs[] = {
-	/* single-pass ipsec_esp descriptor */
+	/*
+	 * single-pass ipsec_esp descriptor
+	 * authencesn(*,*) is also registered, although not present
+	 * explicitly here.
+	 */
 	{
 		.name = "authenc(hmac(md5),cbc(aes))",
 		.driver_name = "authenc-hmac-md5-cbc-aes-caam",
@@ -2225,7 +2229,9 @@ static int __init caam_algapi_init(void)
 	struct platform_device *pdev;
 	struct device *ctrldev, **jrdev;
 	struct caam_drv_private *priv;
-	int i = 0, err = 0;
+	int i = 0, err = 0, md_limit = 0;
+	int des_inst, aes_inst, md_inst;
+	u64 cha_inst;
 
 	dev_node = of_find_compatible_node(NULL, NULL, "fsl,sec-v4.0");
 	if (!dev_node) {
@@ -2268,10 +2274,48 @@ static int __init caam_algapi_init(void)
 	priv->algapi_jr = jrdev;
 	atomic_set(&priv->tfm_count, -1);
 
-	/* register crypto algorithms the device supports */
+	/*
+	 * register crypto algorithms the device supports
+	 * first, detect presence of DES, AES, and MD blocks. If MD present,
+	 * determine limit of supported digest size
+	 */
+	cha_inst = rd_reg64(&priv->ctrl->perfmon.cha_num);
+	des_inst = (cha_inst & CHA_ID_DES_MASK) >> CHA_ID_DES_SHIFT;
+	aes_inst = (cha_inst & CHA_ID_AES_MASK) >> CHA_ID_AES_SHIFT;
+	md_inst = (cha_inst & CHA_ID_MD_MASK) >> CHA_ID_MD_SHIFT;
+	if (md_inst) {
+		md_limit = SHA512_DIGEST_SIZE;
+		if ((rd_reg64(&priv->ctrl->perfmon.cha_id) & CHA_ID_MD_MASK)
+		     == CHA_ID_MD_LP256) /* LP256 limits digest size */
+			md_limit = SHA256_DIGEST_SIZE;
+	}
+
 	for (i = 0; i < ARRAY_SIZE(driver_algs); i++) {
-		/* TODO: check if h/w supports alg */
 		struct caam_crypto_alg *t_alg;
+		bool done = false;
+
+authencesn:
+		/*
+		 * All registrable algs in this module require a blockcipher
+		 * All aead algs require message digests, so check them for
+		 * instantiation and size.
+		 */
+		if (driver_algs[i].type == CRYPTO_ALG_TYPE_AEAD) {
+			/* If no MD instantiated, or MD too small, skip */
+			if ((!md_inst) ||
+			    (driver_algs[i].template_aead.maxauthsize >
+			     md_limit))
+				continue;
+		}
+		/* If DES alg, and CHA not instantiated, skip */
+		if ((driver_algs[i].class1_alg_type & OP_ALG_ALGSEL_3DES) ||
+		    (driver_algs[i].class1_alg_type & OP_ALG_ALGSEL_DES))
+			if (!des_inst)
+				continue;
+		/* If AES alg, and CHA not instantiated, skip */
+		if (driver_algs[i].class1_alg_type & OP_ALG_ALGSEL_AES)
+			if (!aes_inst)
+				continue;
 
 		t_alg = caam_alg_alloc(ctrldev, &driver_algs[i]);
 		if (IS_ERR(t_alg)) {
@@ -2286,9 +2330,30 @@ static int __init caam_algapi_init(void)
 			dev_warn(ctrldev, "%s alg registration failed\n",
 				t_alg->crypto_alg.cra_driver_name);
 			kfree(t_alg);
-		} else
+		} else {
 			list_add_tail(&t_alg->entry, &priv->alg_list);
+			dev_info(ctrldev, "%s\n",
+				 t_alg->crypto_alg.cra_driver_name);
+
+			if (driver_algs[i].type == CRYPTO_ALG_TYPE_AEAD &&
+			    !memcmp(driver_algs[i].name, "authenc", 7) &&
+			    !done) {
+				char *name;
+
+				name = driver_algs[i].name;
+				memmove(name + 10, name + 7, strlen(name) - 7);
+				memcpy(name + 7, "esn", 3);
+
+				name = driver_algs[i].driver_name;
+				memmove(name + 10, name + 7, strlen(name) - 7);
+				memcpy(name + 7, "esn", 3);
+
+				done = true;
+				goto authencesn;
+			}
+		}
 	}
+
 	if (!list_empty(&priv->alg_list))
 		dev_info(ctrldev, "%s algorithms registered in /proc/crypto\n",
 			 (char *)of_get_property(dev_node, "compatible", NULL));
