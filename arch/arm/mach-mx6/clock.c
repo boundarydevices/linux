@@ -5638,6 +5638,7 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 		clk_set_rate(&ipu2_clk, 200000000);
 		clk_set_parent(&axi_clk, &pll3_pfd_540M);
 	} else if (cpu_is_mx6q()) {
+		clk_set_rate(&pll3_pfd_540M, 540000000);
 		clk_set_parent(&gpu3d_core_clk[0], &mmdc_ch0_axi_clk[0]);
 		clk_set_rate(&gpu3d_core_clk[0], 528000000);
 		clk_set_parent(&ipu2_clk, &mmdc_ch0_axi_clk[0]);
