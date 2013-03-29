@@ -325,13 +325,36 @@ static int caam_probe(struct platform_device *pdev)
 	ring = 0;
 	ctrlpriv->total_jobrs = 0;
 	for_each_compatible_node(np, NULL, "fsl,sec-v4.0-job-ring") {
-		caam_jr_probe(pdev, np, ring);
+		ret = caam_jr_probe(pdev, np, ring);
+		if (ret < 0) {
+			/*
+			 * Job ring not found, error out.  At some
+			 * point, we should enhance job ring handling
+			 * to allow for non-consecutive job rings to
+			 * be found.
+			 */
+			pr_err("fsl,sec-v4.0-job-ring not found ");
+			pr_err("(ring %d)\n", ring);
+			return ret;
+		}
 		ctrlpriv->total_jobrs++;
 		ring++;
 	}
+
 	if (!ring) {
 		for_each_compatible_node(np, NULL, "fsl,sec4.0-job-ring") {
-			caam_jr_probe(pdev, np, ring);
+			ret = caam_jr_probe(pdev, np, ring);
+			if (ret < 0) {
+				/*
+				 * Job ring not found, error out.  At some
+				 * point, we should enhance job ring handling
+				 * to allow for non-consecutive job rings to
+				 * be found.
+				 */
+				pr_err("fsl,sec4.0-job-ring not found ");
+				pr_err("(ring %d)\n", ring);
+				return ret;
+			}
 			ctrlpriv->total_jobrs++;
 			ring++;
 		}
