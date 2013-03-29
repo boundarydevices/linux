@@ -2147,11 +2147,13 @@ static void __exit caam_algapi_exit(void)
 	}
 
 	pdev = of_find_device_by_node(dev_node);
+
+	of_node_put(dev_node);
+
 	if (!pdev)
 		return;
 
 	ctrldev = &pdev->dev;
-	of_node_put(dev_node);
 	priv = dev_get_drvdata(ctrldev);
 
 	if (!priv->alg_list.next)
@@ -2233,18 +2235,21 @@ static int __init caam_algapi_init(void)
 	}
 
 	pdev = of_find_device_by_node(dev_node);
-	if (!pdev)
+	if (!pdev) {
+		of_node_put(dev_node);
 		return -ENODEV;
+	}
 
 	ctrldev = &pdev->dev;
 	priv = dev_get_drvdata(ctrldev);
-	of_node_put(dev_node);
 
 	INIT_LIST_HEAD(&priv->alg_list);
 
 	jrdev = kmalloc(sizeof(*jrdev) * priv->total_jobrs, GFP_KERNEL);
-	if (!jrdev)
+	if (!jrdev) {
+		of_node_put(dev_node);
 		return -ENOMEM;
+	}
 
 	for (i = 0; i < priv->total_jobrs; i++) {
 		err = caam_jr_register(ctrldev, &jrdev[i]);
@@ -2254,6 +2259,7 @@ static int __init caam_algapi_init(void)
 	if (err < 0 && i == 0) {
 		dev_err(ctrldev, "algapi error in job ring registration: %d\n",
 			err);
+		of_node_put(dev_node);
 		kfree(jrdev);
 		return err;
 	}
@@ -2287,6 +2293,7 @@ static int __init caam_algapi_init(void)
 		dev_info(ctrldev, "%s algorithms registered in /proc/crypto\n",
 			 (char *)of_get_property(dev_node, "compatible", NULL));
 
+	of_node_put(dev_node);
 	return err;
 }
 
