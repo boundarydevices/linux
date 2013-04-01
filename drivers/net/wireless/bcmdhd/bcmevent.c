@@ -29,7 +29,7 @@
 #include <proto/bcmeth.h>
 #include <proto/bcmevent.h>
 
-#if WLC_E_LAST != 87
+#if WLC_E_LAST != 90
 #error "You need to add an entry to bcmevent_names[] for the new event"
 #endif
 
@@ -96,6 +96,10 @@ const bcmevent_name_t bcmevent_names[] = {
 	{ WLC_E_ACTION_FRAME_RX, "ACTION_FRAME_RX" },
 	{ WLC_E_ACTION_FRAME_COMPLETE, "ACTION_FRAME_COMPLETE" },
 #endif
+#ifdef BCMWAPI_WAI
+	{ WLC_E_WAI_STA_EVENT, "WAI_STA_EVENT" },
+	{ WLC_E_WAI_MSG, "WAI_MSG" },
+#endif /* BCMWAPI_WAI */
 	{ WLC_E_ESCAN_RESULT, "WLC_E_ESCAN_RESULT" },
 	{ WLC_E_ACTION_FRAME_OFF_CHAN_COMPLETE, "WLC_E_AF_OFF_CHAN_COMPLETE" },
 #ifdef WLP2P

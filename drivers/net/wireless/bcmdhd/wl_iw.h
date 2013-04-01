@@ -47,8 +47,7 @@
 #define BAND_SET_CMD				"SETBAND"
 #define DTIM_SKIP_GET_CMD			"DTIMSKIPGET"
 #define DTIM_SKIP_SET_CMD			"DTIMSKIPSET"
-#define SETSUSPENDOPT_CMD			"SETSUSPENDOPT"
-#define SETSUSPENDMODE_CMD			"SETSUSPENDMODE"
+#define SETSUSPEND_CMD				"SETSUSPENDOPT"
 #define PNOSSIDCLR_SET_CMD			"PNOSSIDCLR"
 
 #define PNOSETUP_SET_CMD			"PNOSETUP " 
@@ -104,8 +103,6 @@ struct cntry_locales_custom {
 
 #define			G_SCAN_RESULTS 8*1024
 #define 		WE_ADD_EVENT_FIX	0x80
-#define          G_WLAN_SET_ON	0
-#define          G_WLAN_SET_OFF	1
 
 #define CHECK_EXTRA_FOR_NULL(extra) \
 if (!extra) { \
@@ -202,13 +199,20 @@ extern int wl_iw_get_wireless_stats(struct net_device *dev, struct iw_statistics
 int wl_iw_attach(struct net_device *dev, void * dhdp);
 void wl_iw_detach(void);
 
+#ifndef DHD_PACKET_TIMEOUT_MS
+#define DHD_PACKET_TIMEOUT_MS	1000
+#endif
+#ifndef DHD_EVENT_TIMEOUT_MS
+#define DHD_EVENT_TIMEOUT_MS	2000
+#endif
 extern int net_os_wake_lock(struct net_device *dev);
 extern int net_os_wake_unlock(struct net_device *dev);
 extern int net_os_wake_lock_timeout(struct net_device *dev);
-extern int  net_os_wake_lock_ctrl_timeout_enable(struct net_device *dev, int val);
+extern int net_os_wake_lock_timeout_enable(struct net_device *dev, int val);
 extern int net_os_set_suspend_disable(struct net_device *dev, int val);
-extern int net_os_set_suspend(struct net_device *dev, int val, int force);
+extern int net_os_set_suspend(struct net_device *dev, int val);
 extern int net_os_set_dtim_skip(struct net_device *dev, int val);
+extern int net_os_send_hang_message(struct net_device *dev);
 extern void get_customized_country_code(char *country_iso_code, wl_country_t *cspec);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)
@@ -314,6 +318,6 @@ extern int wl_iw_parse_channel_list(char** list_str, uint16* channel_list, int c
 #define WPS_ADD_PROBE_REQ_IE_CMD "ADD_WPS_PROBE_REQ_IE "
 #define WPS_DEL_PROBE_REQ_IE_CMD "DEL_WPS_PROBE_REQ_IE "
 #define WPS_PROBE_REQ_IE_CMD_LENGTH 21
-#endif
+#endif 
 
 #endif 

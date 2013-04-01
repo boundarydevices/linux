@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_common.c 319098 2012-03-07 01:05:20Z $
+ * $Id: dhd_common.c 307573 2012-01-12 00:04:39Z $
  */
 #include <typedefs.h>
 #include <osl.h>
@@ -104,6 +104,7 @@ void dhd_set_timer(void *bus, uint wdtick);
 /* IOVar table */
 enum {
 	IOV_VERSION = 1,
+	IOV_WLMSGLEVEL,
 	IOV_MSGLEVEL,
 	IOV_BCMERRORSTR,
 	IOV_BCMERROR,
@@ -135,6 +136,7 @@ enum {
 
 const bcm_iovar_t dhd_iovars[] = {
 	{"version",	IOV_VERSION,	0,	IOVT_BUFFER,	sizeof(dhd_version) },
+	{"wlmsglevel",	IOV_WLMSGLEVEL,	0,	IOVT_UINT32,	0 },
 #ifdef DHD_DEBUG
 	{"msglevel",	IOV_MSGLEVEL,	0,	IOVT_UINT32,	0 },
 #endif /* DHD_DEBUG */
@@ -300,7 +302,7 @@ dhd_wl_ioctl(dhd_pub_t *dhd_pub, int ifindex, wl_ioctl_t *ioc, void *buf, int le
 	dhd_os_proto_block(dhd_pub);
 
 	ret = dhd_prot_ioctl(dhd_pub, ifindex, ioc, buf, len);
-	if (ret)
+	if (ret) // terence 20120516: fix for HANG issue
 		dhd_os_check_hang(dhd_pub, ifindex, ret);
 
 	dhd_os_proto_unblock(dhd_pub);
@@ -329,6 +331,25 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid, const ch
 		bcm_strncpy_s((char*)arg, len, dhd_version, len);
 		break;
 
+	case IOV_GVAL(IOV_WLMSGLEVEL):
+		int_val = (int32)iw_msg_level;
+		bcopy(&int_val, arg, val_size);
+		break;
+
+	case IOV_SVAL(IOV_WLMSGLEVEL):
+#if defined(CONFIG_WIRELESS_EXT) || defined(WL_WIRELESS_EXT)
+		if (int_val & DHD_IW_VAL)
+			iw_msg_level = int_val;
+		else
+#endif
+#ifdef WL_CFG80211
+		if (int_val & DHD_CFG_VAL)
+			wl_cfg80211_enable_trace(int_val);
+		else
+#endif
+		android_msg_level = int_val;
+		break;
+
 	case IOV_GVAL(IOV_MSGLEVEL):
 		int_val = (int32)dhd_msg_level;
 		bcopy(&int_val, arg, val_size);
@@ -336,12 +357,8 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid, const ch
 
 	case IOV_SVAL(IOV_MSGLEVEL):
 		dhd_msg_level = int_val;
-#ifdef WL_CFG80211
-		/* Enable DHD and WL logs in oneshot */
-		if (dhd_msg_level & DHD_WL_VAL)
-			wl_cfg80211_enable_trace(dhd_msg_level);
-#endif
 		break;
+
 	case IOV_GVAL(IOV_BCMERRORSTR):
 		bcm_strncpy_s((char *)arg, len, bcmerrorstr(dhd_pub->bcmerror), BCME_STRLEN);
 		((char *)arg)[BCME_STRLEN - 1] = 0x00;
@@ -1724,19 +1741,16 @@ fail:
 /*
  * returns = TRUE if associated, FALSE if not associated
  */
-bool dhd_is_associated(dhd_pub_t *dhd, void *bss_buf, int *retval)
+bool dhd_is_associated(dhd_pub_t *dhd, void *bss_buf)
 {
 	char bssid[6], zbuf[6];
-	int ret;
+	int ret = -1;
 
 	bzero(bssid, 6);
 	bzero(zbuf, 6);
 
 	ret  = dhd_wl_ioctl_cmd(dhd, WLC_GET_BSSID, (char *)&bssid, ETHER_ADDR_LEN, FALSE, 0);
 	DHD_TRACE((" %s WLC_GET_BSSID ioctl res = %d\n", __FUNCTION__, ret));
-
-	if (retval)
-		*retval = ret;
 
 	if (ret == BCME_NOTASSOCIATED) {
 		DHD_TRACE(("%s: not associated! res:%d\n", __FUNCTION__, ret));
@@ -1774,7 +1788,7 @@ dhd_get_dtim_skip(dhd_pub_t *dhd)
 		bcn_li_dtim = dhd->dtim_skip;
 
 	/* Check if associated */
-	if (dhd_is_associated(dhd, NULL, NULL) == FALSE) {
+	if (dhd_is_associated(dhd, NULL) == FALSE) {
 		DHD_TRACE(("%s NOT assoc ret %d\n", __FUNCTION__, ret));
 		goto exit;
 	}
@@ -1817,24 +1831,10 @@ exit:
 bool dhd_check_ap_wfd_mode_set(dhd_pub_t *dhd)
 {
 #ifdef  WL_CFG80211
-#ifndef WL_ENABLE_P2P_IF
-	/* To be back compatble with ICS MR1 release where p2p interface
-	 * disable but wlan0 used for p2p
-	 */
 	if (((dhd->op_mode & HOSTAPD_MASK) == HOSTAPD_MASK) ||
-		((dhd->op_mode & WFD_MASK) == WFD_MASK)) {
+		((dhd->op_mode & WFD_MASK) == WFD_MASK))
 		return TRUE;
-	}
 	else
-#else
-	/* concurent mode with p2p interface for wfd and wlan0 for sta */
-	if (((dhd->op_mode & P2P_GO_ENABLED) == P2P_GO_ENABLED) ||
-		((dhd->op_mode & P2P_GC_ENABLED) == P2P_GC_ENABLED)) {
-		DHD_ERROR(("%s P2P enabled for  mode=%d\n", __FUNCTION__, dhd->op_mode));
-		return TRUE;
-	}
-	else
-#endif /* WL_ENABLE_P2P_IF */
 #endif /* WL_CFG80211 */
 		return FALSE;
 }
@@ -1886,12 +1886,10 @@ dhd_pno_enable(dhd_pub_t *dhd, int pfn_enabled)
 
 	memset(iovbuf, 0, sizeof(iovbuf));
 
-#ifndef WL_SCHED_SCAN
-	if ((pfn_enabled) && (dhd_is_associated(dhd, NULL, NULL) == TRUE)) {
+	if ((pfn_enabled) && (dhd_is_associated(dhd, NULL) == TRUE)) {
 		DHD_ERROR(("%s pno is NOT enable : called in assoc mode , ignore\n", __FUNCTION__));
 		return ret;
 	}
-#endif
 
 	/* Enable/disable PNO */
 	if ((ret = bcm_mkiovar("pfn", (char *)&pfn_enabled, 4, iovbuf, sizeof(iovbuf))) > 0) {
@@ -2067,7 +2065,7 @@ int dhd_keep_alive_onoff(dhd_pub_t *dhd)
 	mkeep_alive_pkt.keep_alive_id = 0;
 	mkeep_alive_pkt.len_bytes = 0;
 	buf_len += WL_MKEEP_ALIVE_FIXED_LEN;
-	/* Keep-alive attributes are set in local variable (mkeep_alive_pkt), and
+	/* Keep-alive attributes are set in local	variable (mkeep_alive_pkt), and
 	 * then memcpy'ed into buffer (mkeep_alive_pktp) since there is no
 	 * guarantee that the buffer is properly aligned.
 	 */
@@ -2078,7 +2076,6 @@ int dhd_keep_alive_onoff(dhd_pub_t *dhd)
 	return res;
 }
 #endif /* defined(KEEP_ALIVE) */
-
 /* Android ComboSCAN support */
 
 /*

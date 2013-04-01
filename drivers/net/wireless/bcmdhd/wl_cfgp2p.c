@@ -105,6 +105,7 @@ bool wl_cfgp2p_is_p2p_action(void *frame, u32 frame_len)
 
 	return false;
 }
+
 bool wl_cfgp2p_is_gas_action(void *frame, u32 frame_len)
 {
 
@@ -128,6 +129,7 @@ bool wl_cfgp2p_is_gas_action(void *frame, u32 frame_len)
 		return false;
 
 }
+
 void wl_cfgp2p_print_actframe(bool tx, void *frame, u32 frame_len)
 {
 	wifi_p2p_pub_act_frame_t *pact_frm;
@@ -228,7 +230,10 @@ void wl_cfgp2p_print_actframe(bool tx, void *frame, u32 frame_len)
 				CFGP2P_DBG(("%s Unknown P2P GAS Frame\n",
 					(tx)? "TX" : "RX"));
 		}
+
+
 	}
+
 }
 
 /*
@@ -1614,6 +1619,7 @@ wl_cfgp2p_set_p2p_noa(struct wl_priv *wl, struct net_device *ndev, char* buf, in
 s32
 wl_cfgp2p_get_p2p_noa(struct wl_priv *wl, struct net_device *ndev, char* buf, int buf_len)
 {
+
 	wifi_p2p_noa_desc_t *noa_desc;
 	int len = 0, i;
 	char _buf[200];
@@ -1886,7 +1892,6 @@ wl_cfgp2p_unregister_ndev(struct wl_priv *wl)
 
 	return 0;
 }
-
 static int wl_cfgp2p_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
 	CFGP2P_DBG(("(%s) is not used for data operations. Droping the packet. \n", ndev->name));
