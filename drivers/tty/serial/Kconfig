@@ -89,6 +89,12 @@ config SERIAL_8250_PCI
 	  disable this feature if you only need legacy serial support.
 	  Saves about 9K.
 
+config SERIAL_XR17V35X
+	tristate "XR17V35X PCI device support"
+	depends on PCI
+	help
+	  This builds standard PCI serial support for XR17V35X.
+
 config SERIAL_8250_PNP
 	tristate "8250/16550 PNP device support" if EXPERT
 	depends on SERIAL_8250 && PNP
