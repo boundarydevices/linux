@@ -8,8 +8,8 @@
  */
 
 /dts-v1/;
-/include/ "imx6q.dtsi"
-/include/ "imx6qdl-sabreauto.dtsi"
+#include "imx6q.dtsi"
+#include "imx6qdl-sabreauto.dtsi"
 
 / {
 	model = "Freescale i.MX6Q SABRE Automotive Infotainment Board";

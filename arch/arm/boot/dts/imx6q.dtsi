@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  */
 
-/include/ "imx6.dtsi"
+#include "imx6.dtsi"
 
 / {
 	aliases {

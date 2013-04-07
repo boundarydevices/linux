@@ -8,8 +8,8 @@
  */
 
 /dts-v1/;
-/include/ "imx6dl.dtsi"
-/include/ "imx6qdl-sabresd.dtsi"
+#include "imx6dl.dtsi"
+#include "imx6qdl-sabresd.dtsi"
 
 / {
 	model = "Freescale i.MX6 DualLite SABRE Smart Device Board";

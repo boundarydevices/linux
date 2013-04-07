@@ -11,8 +11,8 @@
  */
 
 /dts-v1/;
-/include/ "imx6q.dtsi"
-/include/ "imx6qdl-sabresd.dtsi"
+#include "imx6q.dtsi"
+#include "imx6qdl-sabresd.dtsi"
 
 / {
 	model = "Freescale i.MX6Q SABRE Smart Device Board";
