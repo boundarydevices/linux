@@ -586,6 +586,7 @@ static void __init imx6_oc_init_usb(void)
 	mxc_iomux_set_gpr_register(1, 13, 1, 1);
 
 	mx6_set_otghost_vbus_func(imx6_oc_usbotg_vbus);
+	mx6_usb_dr_init();
 }
 
 /* HW Initialization, if return 0, initialization is successful. */
