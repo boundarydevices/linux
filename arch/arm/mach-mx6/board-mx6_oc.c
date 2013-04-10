@@ -583,7 +583,7 @@ static void __init imx6_oc_init_usb(void)
 	/* disable external charger detect,
 	 * or it will affect signal quality at dp .
 	 */
-	mxc_iomux_set_gpr_register(1, 13, 1, 1);
+	mxc_iomux_set_gpr_register(1, 13, 1, 0);
 
 	mx6_set_otghost_vbus_func(imx6_oc_usbotg_vbus);
 	mx6_usb_dr_init();
