@@ -218,10 +218,11 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	/* 12v supply enable  */
 	NEW_PAD_CTRL(MX6PAD(GPIO_19__GPIO_4_5), WEAK),	/* high active */
 
+	/* use ENET_RX_ER for fake USB OTG, default device */
+        MX6PAD(ENET_RX_ER__ANATOP_USBOTG_ID),
+
 	/* Reserved - jumper pins */
 	NEW_PAD_CTRL(MX6PAD(EIM_D30__GPIO_3_30), WEAK),
-//	NEW_PAD_CTRL(MX6PAD(GPIO_1__GPIO_1_1), WEAK),	/* can be USBOTG_ID */
-	MX6PAD(GPIO_1__USBOTG_ID),
 	NEW_PAD_CTRL(MX6PAD(SD3_DAT4__GPIO_7_1), WEAK),
 
 	/* eMMC pads that aren't configured by U-Boot*/
