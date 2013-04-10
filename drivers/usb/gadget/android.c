@@ -905,24 +905,28 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 
 	sscanf(buff, "%d", &enabled);
 	if (enabled && !dev->enabled) {
-		/* update values in composite driver's copy of device descriptor */
-		cdev->desc.idVendor = device_desc.idVendor;
-		cdev->desc.idProduct = device_desc.idProduct;
-		cdev->desc.bcdDevice = device_desc.bcdDevice;
-		cdev->desc.bDeviceClass = device_desc.bDeviceClass;
-		cdev->desc.bDeviceSubClass = device_desc.bDeviceSubClass;
-		cdev->desc.bDeviceProtocol = device_desc.bDeviceProtocol;
-		usb_add_config(cdev, &android_config_driver,
-					android_bind_config);
-		spin_lock_irqsave(&cdev->lock, flags);
-		if (dev->connected) {
-			usb_gadget_disconnect(cdev->gadget);
-			mdelay(10);
-			usb_gadget_connect(cdev->gadget);
-			usb_gadget_vbus_connect(cdev->gadget);
+		if (cdev) {
+			/* update values in composite driver's copy of device descriptor */
+			cdev->desc.idVendor = device_desc.idVendor;
+			cdev->desc.idProduct = device_desc.idProduct;
+			cdev->desc.bcdDevice = device_desc.bcdDevice;
+			cdev->desc.bDeviceClass = device_desc.bDeviceClass;
+			cdev->desc.bDeviceSubClass = device_desc.bDeviceSubClass;
+			cdev->desc.bDeviceProtocol = device_desc.bDeviceProtocol;
+			usb_add_config(cdev, &android_config_driver,
+						android_bind_config);
+			spin_lock_irqsave(&cdev->lock, flags);
+			if (dev->connected) {
+				usb_gadget_disconnect(cdev->gadget);
+				mdelay(10);
+				usb_gadget_connect(cdev->gadget);
+				usb_gadget_vbus_connect(cdev->gadget);
+			}
+			spin_unlock_irqrestore(&cdev->lock, flags);
+			dev->enabled = true;
+		} else {
+			pr_err("%s:%s: no cdev\n", __FILE__, __func__ );
 		}
-		spin_unlock_irqrestore(&cdev->lock, flags);
-		dev->enabled = true;
 	} else if (!enabled && dev->enabled) {
 		spin_lock_irqsave(&cdev->lock, flags);
 		if (dev->connected) {
