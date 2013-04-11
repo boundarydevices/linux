@@ -37,8 +37,6 @@ MODULE_DESCRIPTION("alsa driver module for tw6869 based DVR cards");
 MODULE_AUTHOR("liran <jli11@intersil.com>");
 MODULE_LICENSE("GPL");
 
-static long tw686x_audio_nr = 0;
-
 /*
  * PCM structure
  */
@@ -151,7 +149,6 @@ static int snd_card_tw686x_capture_trigger(struct snd_pcm_substream * substream,
 		/* start dma */
 		dev->pb_flag = 0;
 
-		//将音频格式设置挪到这里
         tw686x_dev_set_audio(dev->chip, runtime->rate, runtime->sample_bits, runtime->channels, dev->blksize);
 
 		tw686x_dev_run_audio(dev, true);
@@ -593,11 +590,8 @@ int tw686x_alsa_create(struct tw686x_adev *dev)
 
 	daprintk(DPRT_LEVEL0, dev, "%s()\n", __func__);
 
-	if(tw686x_audio_nr > (SNDRV_CARDS-2))
-		return -ENODEV;
-
 #if(LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30))
-    err = snd_card_create(tw686x_audio_nr+1, NULL, THIS_MODULE,
+	err = snd_card_create(-1, NULL, THIS_MODULE,
 			      sizeof(snd_card_tw686x_t), &card);
 	if (err < 0)
 		return err;
@@ -635,10 +629,9 @@ int tw686x_alsa_create(struct tw686x_adev *dev)
 
 	daprintk(1, dev, "alsa: %s registered as card %d\n",card->longname,dev->channel_id);
 
-	if ((err = snd_card_register(card)) == 0) {
-	    tw686x_audio_nr++;
+	err = snd_card_register(card);
+	if (!err)
 		return 0;
-	}
 
 __nodev:
 	snd_card_free(card);
@@ -651,8 +644,6 @@ int tw686x_alsa_free(struct tw686x_adev *dev)
         snd_card_free(dev->card->card);
         dev->card = NULL;
     }
-
-    tw686x_audio_nr--;
 
 	return 1;
 }
