@@ -2822,6 +2822,16 @@ static void __devinit fixup_ti816x_class(struct pci_dev* dev)
 }
 DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_TI, 0xb800, fixup_ti816x_class);
 
+/* TW6869 Frame grabber has same problem as ti816x */
+static void __devinit fixup_tw6869_class(struct pci_dev* dev)
+{
+	if (dev->class == PCI_CLASS_NOT_DEFINED) {
+		dev_info(&dev->dev, "Setting PCI class for tw6869 PCIe device\n");
+		dev->class = PCI_CLASS_MULTIMEDIA_VIDEO;
+	}
+}
+DECLARE_PCI_FIXUP_EARLY(0x1797, 0x6869, fixup_tw6869_class);
+
 /*
  * Some BIOS implementations leave the Intel GPU interrupts enabled,
  * even though no one is handling them (f.e. i915 driver is never loaded).
