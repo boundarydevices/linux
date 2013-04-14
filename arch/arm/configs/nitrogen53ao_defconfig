@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.3
-# Tue Sep  4 14:06:27 2012
+# Sun Apr 14 08:54:47 2013
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -537,18 +537,31 @@ CONFIG_NET_ACTIVITY_STATS=y
 # CONFIG_BT is not set
 # CONFIG_AF_RXRPC is not set
 CONFIG_WIRELESS=y
-# CONFIG_WIRELESS_EXT is not set
-# CONFIG_WEXT_PRIV is not set
-# CONFIG_CFG80211 is not set
+CONFIG_WIRELESS_EXT=y
+CONFIG_WEXT_CORE=y
+CONFIG_WEXT_PROC=y
+CONFIG_WEXT_PRIV=y
+CONFIG_CFG80211=y
+# CONFIG_NL80211_TESTMODE is not set
+# CONFIG_CFG80211_DEVELOPER_WARNINGS is not set
+# CONFIG_CFG80211_REG_DEBUG is not set
+CONFIG_CFG80211_DEFAULT_PS=y
+# CONFIG_CFG80211_DEBUGFS is not set
+# CONFIG_CFG80211_INTERNAL_REGDB is not set
+CONFIG_CFG80211_WEXT=y
+CONFIG_WIRELESS_EXT_SYSFS=y
 # CONFIG_LIB80211 is not set
-
-#
-# CFG80211 needs to be enabled for MAC80211
-#
-
-#
-# Some wireless drivers require a rate control algorithm
-#
+CONFIG_MAC80211=y
+CONFIG_MAC80211_HAS_RC=y
+# CONFIG_MAC80211_RC_PID is not set
+CONFIG_MAC80211_RC_MINSTREL=y
+# CONFIG_MAC80211_RC_DEFAULT_PID is not set
+CONFIG_MAC80211_RC_DEFAULT_MINSTREL=y
+CONFIG_MAC80211_RC_DEFAULT="minstrel"
+# CONFIG_MAC80211_MESH is not set
+# CONFIG_MAC80211_LEDS is not set
+# CONFIG_MAC80211_DEBUGFS is not set
+# CONFIG_MAC80211_DEBUG_MENU is not set
 # CONFIG_WIMAX is not set
 CONFIG_RFKILL=y
 CONFIG_RFKILL_INPUT=y
@@ -609,7 +622,7 @@ CONFIG_UID_STAT=y
 # CONFIG_EEPROM_AT25 is not set
 # CONFIG_EEPROM_LEGACY is not set
 # CONFIG_EEPROM_MAX6875 is not set
-# CONFIG_EEPROM_93CX6 is not set
+CONFIG_EEPROM_93CX6=m
 # CONFIG_IWMC3200TOP is not set
 CONFIG_HAVE_IDE=y
 # CONFIG_IDE is not set
@@ -712,7 +725,25 @@ CONFIG_FEC=y
 # CONFIG_FEC2 is not set
 # CONFIG_NETDEV_1000 is not set
 # CONFIG_NETDEV_10000 is not set
-# CONFIG_WLAN is not set
+CONFIG_WLAN=y
+# CONFIG_LIBERTAS_THINFIRM is not set
+# CONFIG_AT76C50X_USB is not set
+# CONFIG_USB_ZD1201 is not set
+# CONFIG_USB_NET_RNDIS_WLAN is not set
+# CONFIG_RTL8187 is not set
+CONFIG_RTL8712U=m
+# CONFIG_RTL8712S is not set
+# CONFIG_MAC80211_HWSIM is not set
+# CONFIG_ATH_COMMON is not set
+# CONFIG_B43 is not set
+# CONFIG_B43LEGACY is not set
+# CONFIG_HOSTAP is not set
+# CONFIG_IWM is not set
+# CONFIG_LIBERTAS is not set
+# CONFIG_P54_COMMON is not set
+# CONFIG_RT2X00 is not set
+# CONFIG_WL12XX is not set
+# CONFIG_ZD1211RW is not set
 
 #
 # Enable WiMAX (Networking options) to see the WiMAX drivers
@@ -1696,12 +1727,17 @@ CONFIG_STAGING=y
 # CONFIG_STAGING_EXCLUDE_BUILD is not set
 # CONFIG_VIDEO_TM6000 is not set
 # CONFIG_USB_IP_COMMON is not set
+# CONFIG_W35UND is not set
+# CONFIG_PRISM2_USB is not set
 # CONFIG_ECHO is not set
+# CONFIG_OTUS is not set
+# CONFIG_RT2870 is not set
 # CONFIG_COMEDI is not set
 # CONFIG_ASUS_OLED is not set
 # CONFIG_TRANZPORT is not set
 # CONFIG_POHMELFS is not set
 # CONFIG_LINE6_USB is not set
+# CONFIG_VT6656 is not set
 # CONFIG_FB_UDL is not set
 
 #
@@ -1717,6 +1753,7 @@ CONFIG_STAGING=y
 #
 # CONFIG_TI_ST is not set
 # CONFIG_ADIS16255 is not set
+# CONFIG_ATH6K_LEGACY is not set
 
 #
 # Android
