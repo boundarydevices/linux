@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _HCI_OPS_C_
 
 #include <drv_conf.h>
@@ -75,7 +75,7 @@ u8 usb_read8(struct intf_hdl *pintfhdl, u32 addr)
 		
 }
 u16 usb_read16(struct intf_hdl *pintfhdl, u32 addr)
-{      
+{       
 	u8 request;
 	u8 requesttype;
 	u16 wvalue;
@@ -278,7 +278,7 @@ void usb_set_intf_ops(struct _io_ops	*pops)
 	pops->_write16 = &usb_write16;
 	pops->_write32 = &usb_write32;
 	pops->_write_mem = &usb_write_mem;
-	pops->_write_port = &usb_write_port;	  
+	pops->_write_port = &usb_write_port;	   
 
 	_func_exit_;
 

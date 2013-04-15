@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _HCI_OPS_OS_C_
 
 #include <drv_conf.h>
@@ -44,11 +44,13 @@ struct zero_bulkout_context
 };
 
 
-#define usb_write_cmd usb_write_mem
+#define usb_write_cmd usb_write_mem 
 //#define usb_read_cmd usb_read_mem
 #define usb_write_cmd_complete usb_write_mem_complete
 //#define usb_read_cmd_complete usb_read_mem_complete
 
+#define RTW_USB_CONTROL_MSG_TIMEOUT		500
+#define RTW_USB_CONTROL_RETRY_CNT		10
 
 uint usb_init_intf_priv(struct intf_priv *pintfpriv)
 {
@@ -113,7 +115,7 @@ int ffaddr2pipehdl(struct dvobj_priv *pdvobj, u32 addr)
 	if(pdvobj->nr_endpoint == 11)
 	{		
 		switch(addr)
-		{	   
+		{	    
 			case RTL8712_DMA_BKQ:
 			 	pipe=usb_sndbulkpipe(pusbd, 0x07);
 				break;
@@ -151,7 +153,7 @@ int ffaddr2pipehdl(struct dvobj_priv *pdvobj, u32 addr)
 	else if(pdvobj->nr_endpoint == 6)
 	{
 		switch(addr)
-		{	   
+		{	    
 	     		case RTL8712_DMA_BKQ:
 			 	pipe=usb_sndbulkpipe(pusbd, 0x07);
 				break;
@@ -181,7 +183,7 @@ int ffaddr2pipehdl(struct dvobj_priv *pdvobj, u32 addr)
 	else if(pdvobj->nr_endpoint == 4)
 	{
 		switch(addr)
-		{		       
+		{		        
 	     		case RTL8712_DMA_BEQ:
 		 	//case RTL8712_DMA_BKQ:
 			 	//pipe=usb_sndbulkpipe(pusbd, 0x05);
@@ -279,7 +281,7 @@ u32 usb_bulkout_zero(struct intf_hdl *pintfhdl, u32 addr)
 	//translate DMA FIFO addr to pipehandle
 	pipe = ffaddr2pipehdl(pdvobj, addr);	
 
-	usb_fill_bulk_urb(purb, pusbd, pipe,
+	usb_fill_bulk_urb(purb, pusbd, pipe, 
        				pbuf,
               			len,
               			usb_bulkout_zero_complete,
@@ -411,7 +413,7 @@ _func_enter_;
 		goto exit;
 	}
 	
-	usb_fill_bulk_urb(piorw_urb, pusbd, pipe,
+	usb_fill_bulk_urb(piorw_urb, pusbd, pipe, 
        			    wmem,
               		    cnt,
               		    usb_write_mem_complete,
@@ -419,7 +421,7 @@ _func_enter_;
 	
 
         //piorw_urb->transfer_flags |= URB_ZERO_PACKET;
-     
+      
 	status = usb_submit_urb(piorw_urb, GFP_ATOMIC);
 
 	if (!status)
@@ -477,13 +479,13 @@ static void usb_read_port_complete(struct urb *purb, struct pt_regs *regs)
 
 	if(purb->status==0)//SUCCESS
 	{
-		if((purb->actual_length>(MAX_RECVBUF_SZ)) || (purb->actual_length < RXDESC_SIZE))
+		if((purb->actual_length>(MAX_RECVBUF_SZ)) || (purb->actual_length < RXDESC_SIZE)) 
 		{
 			RT_TRACE(_module_hci_ops_os_c_,_drv_err_,("usb_read_port_complete: (purb->actual_length > MAX_RECVBUF_SZ) || (purb->actual_length < RXDESC_SIZE)\n"));
 			precvbuf->reuse = _TRUE;
 			read_port(padapter, precvpriv->ff_hwaddr, 0, (unsigned char *)precvbuf);
 		}
-		else
+		else 
 		{	
 			precvbuf->transfer_len = purb->actual_length;
 
@@ -656,7 +658,7 @@ _func_enter_;
 		//translate DMA FIFO addr to pipehandle
 		pipe = ffaddr2pipehdl(pdvobj, addr);	
 
-		usb_fill_bulk_urb(purb, pusbd, pipe,
+		usb_fill_bulk_urb(purb, pusbd, pipe, 
 						precvbuf->pbuf,
                 				MAX_RECVBUF_SZ,
                 				usb_read_port_complete,
@@ -745,7 +747,7 @@ static void usb_write_port_complete(struct urb *purb, struct pt_regs *regs)
 	struct pkt_attrib *pattrib = &pxmitframe->attrib;
 
 	struct dvobj_priv * pdvobjpriv = (struct dvobj_priv *)&padapter->dvobjpriv;
-	struct usb_device *pusbd=pdvobjpriv->pusbdev;	  
+	struct usb_device *pusbd=pdvobjpriv->pusbdev;	   
 
 _func_enter_;
 
@@ -753,7 +755,7 @@ _func_enter_;
 
 	//_enter_critical(&pxmitpriv->lock, &irqL);
 	
-	switch(pattrib->priority)
+	switch(pattrib->priority) 
 	{
 		case 1:				
 		case 2:
@@ -785,8 +787,8 @@ _func_enter_;
 	{
             if(purb == pxmitframe->pxmit_urb[i])
             {
-		    pxmitframe->bpending[i] = _FALSE;//		 
-		    break;		 
+		    pxmitframe->bpending[i] = _FALSE;//		  
+		    break;		  
             }
 	}
 	
@@ -863,7 +865,7 @@ _func_enter_;
 	if(pxmitframe->fragcnt == 0)// if((pxmitframe->fragcnt == 0) && (pxmitframe->irpcnt == 8)){
 	{
 		//RT_TRACE(_module_hci_ops_os_c_,_drv_err_,("\n usb_write_port_complete:pxmitframe->fragcnt == 0\n"));
-		free_xmitframe(pxmitpriv,pxmitframe);	         
+		free_xmitframe(pxmitpriv,pxmitframe);	          
       	}
 #else	
 
@@ -889,7 +891,7 @@ _func_exit_;
 
 
 u32 usb_write_port(struct intf_hdl *pintfhdl, u32 addr, u32 cnt, u8 *wmem)
-{   
+{    
 	_irqL irqL;
 	int i, pipe, status;
 	u32 ret, bwritezero;
@@ -920,7 +922,7 @@ _func_enter_;
 			pxmitpriv->txirp_cnt++;
 			pxmitframe->bpending[i]  = _TRUE;
 
-			switch(pattrib->priority)
+			switch(pattrib->priority) 
 			{
 				case 1:				
 				case 2:				
@@ -946,7 +948,7 @@ _func_enter_;
 			pxmitframe->sz[i] = (u16)cnt;
 			purb	= pxmitframe->pxmit_urb[i];		
 			
-			break;	
+			break;	 
 		}
 		
        }	
@@ -987,8 +989,8 @@ _func_enter_;
 	{
 		cnt += 8;
 	}
-	  
-	usb_fill_bulk_urb(purb, pusbd, pipe,
+	   
+	usb_fill_bulk_urb(purb, pusbd, pipe, 
        				pxmitframe->mem_addr,
               			cnt,
               			usb_write_port_complete,
@@ -1041,62 +1043,65 @@ void usb_write_port_cancel(_adapter *padapter)
 	}
 }
 
-#define ALIGNMENT_UNIT    16
-#define MAX_VENDOR_REQ_CMD_SIZE 4  //for 8712u
-#define MAX_USB_IO_CTL_SIZE  (MAX_VENDOR_REQ_CMD_SIZE +ALIGNMENT_UNIT)
-
 int usbctrl_vendorreq(struct intf_priv *pintfpriv, u8 request, u16 value, u16 index, void *pdata, u16 len, u8 requesttype)
 {
 	unsigned int pipe;
-	int status = 0;
+	int status, intretry;
 	u8 reqtype;
-	u8 tmp_buf[MAX_USB_IO_CTL_SIZE];
-	
-	struct dvobj_priv  *pdvobjpriv = (struct dvobj_priv  *)pintfpriv->intf_dev;
-        struct usb_device *udev=pdvobjpriv->pusbdev;
-
+	struct dvobj_priv *pdvobjpriv = ( struct dvobj_priv *) pintfpriv->intf_dev;
+	struct usb_device *udev=pdvobjpriv->pusbdev;
+		
 	// Added by Albert 2010/02/09
 	// For mstar platform, mstar suggests the address for USB IO should be 16 bytes alignment.
 	// Trying to fix it here.
 
 	u8 *palloc_buf, *pIo_buf;
 
-	if(len>MAX_VENDOR_REQ_CMD_SIZE)
+	palloc_buf = _malloc( (u32) len + 16);
+	
+	if ( palloc_buf== NULL)
 	{
- 		printk( "[%s] Buffer len error ,vendor request failed\n", __FUNCTION__ );
+		printk( "[%s] Can't alloc memory for vendor request\n", __FUNCTION__ );
 		return(-1);
 	}
-
- 	_memset(tmp_buf, 0, MAX_USB_IO_CTL_SIZE);
-
-	pIo_buf = tmp_buf + ALIGNMENT_UNIT -((uint)(tmp_buf) & 0x0f );
-
-  	if (requesttype == 0x01)
+	
+	pIo_buf = palloc_buf + 16 -((uint)(palloc_buf) & 0x0f );
+	
+	if (requesttype == 0x01)
 	{
 		pipe = usb_rcvctrlpipe(udev, 0);//read_in
-		reqtype =  RTL871X_VENQT_READ; 
-	}
-	else
+		reqtype =  RTL871X_VENQT_READ;		
+	} 
+	else 
 	{
 		pipe = usb_sndctrlpipe(udev, 0);//write_out
-		reqtype =  RTL871X_VENQT_WRITE; 
+		reqtype =  RTL871X_VENQT_WRITE;		
 		_memcpy( pIo_buf, pdata, len);
-	} 
-
-	status = usb_control_msg(udev, pipe, request, reqtype, value, index, pIo_buf, len, HZ/2);
-
-	if (status < 0)
-	{
-		printk("reg 0x%x, usb %s  error status:%d value=0x%x\n", value,(requesttype == 0x01)?"read":"write" , status, *(u32*)pdata); 
-		RT_TRACE(_module_hci_ops_os_c_,_drv_err_,("reg 0x%x, usb_read8 TimeOut! status:0x%x value=0x%x\n", value, status, *(u32*)pdata));
 	}
+
+	intretry = 0;
+retry:
+	status = usb_control_msg(udev, pipe, request, reqtype, value, index, pIo_buf, len, RTW_USB_CONTROL_MSG_TIMEOUT );
+	
+	if (status < 0)
+       {
+		printk("retry = %d, reg 0x%x, usb read/write TimeOut! status:%d value=0x%x\n", intretry, value, status, *(u32*)pdata);
+		RT_TRACE(_module_hci_ops_os_c_,_drv_err_,("reg 0x%x, usb_read8 TimeOut! status:0x%x value=0x%x\n", value, status, *(u32*)pdata));
+		intretry++;
+		if ( intretry < RTW_USB_CONTROL_RETRY_CNT )
+		{
+			goto retry;
+		}
+       }
 	else if ( status > 0 )   // Success this control transfer.
 	{
-		if ( requesttype == 0x01 )
-		{   // For Control read transfer, we have to copy the read data from pIo_buf to pdata.
-			_memcpy( pdata, pIo_buf,  status );
-		}
+               if ( requesttype == 0x01 )
+               {   // For Control read transfer, we have to copy the read data from pIo_buf to pdata.
+                       _memcpy( pdata, pIo_buf,  status );
+               }
 	}
+
+	_mfree( palloc_buf, (u32) len + 16 );
 
 	return status;
 

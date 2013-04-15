@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __DRV_CONF_H__
 #define __DRV_CONF_H__
 #include "autoconf.h"
@@ -25,6 +25,20 @@
 
 #error "Shall be Linux or Windows, but not both!\n"
 
+#endif
+
+//Older Android kernel doesn't has CONFIG_ANDROID defined,
+//add this to force CONFIG_ANDROID defined
+#ifdef CONFIG_PLATFORM_ANDROID
+#define CONFIG_ANDROID
+#endif
+
+#ifdef CONFIG_ANDROID
+//Some Android build will restart the UI while non-printable ascii is passed
+//between java and c/c++ layer (JNI). We force CONFIG_VALIDATE_SSID
+//for Android here. If you are sure there is no risk on your system about this,
+//mask this macro define to support non-printable ascii ssid.
+#define CONFIG_VALIDATE_SSID
 #endif
 
 //#include <rtl871x_byteorder.h>

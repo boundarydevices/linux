@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __OSDEP_SERVICE_H_
 #define __OSDEP_SERVICE_H_
 
@@ -101,7 +101,7 @@ static __inline _list	*get_list_head(_queue	*queue)
 #define LIST_CONTAINOR(ptr, type, member) \
         ((type *)((char *)(ptr)-(SIZE_T)(&((type *)0)->member)))	
 
-       
+        
 static void __inline _enter_critical(_lock *plock, _irqL *pirqL)
 {
 	spin_lock_irqsave(plock, *pirqL);
@@ -238,7 +238,7 @@ static __inline _list	*get_list_head(_queue	*queue)
 	
 
 #define LIST_CONTAINOR(ptr, type, member) CONTAINING_RECORD(ptr, type, member)
-    
+     
 
 static __inline _enter_critical(_lock *plock, _irqL *pirqL)
 {
@@ -315,6 +315,12 @@ static __inline void _set_workitem(_workitem *pwork)
 
 #include <rtl871x_byteorder.h>
 
+#ifdef CONFIG_IOCTL_CFG80211	
+//	#include <linux/ieee80211.h>        
+        #include <net/ieee80211_radiotap.h>
+	#include <net/cfg80211.h>	
+#endif //CONFIG_IOCTL_CFG80211
+
 #ifndef BIT
 	#define BIT(x)	( 1 << (x))
 #endif
@@ -351,8 +357,18 @@ extern void	msleep_os(int ms);
 extern void	usleep_os(int us);
 extern void	mdelay_os(int ms);
 extern void	udelay_os(int us);
+extern u8*	_zmalloc(u32 sz);
+extern u8	*	_vmalloc(u32 sz);
+extern u8	*	_zvmalloc(u32 sz);
+extern void	_vmfree(u8 * pbuf, u32 sz);
 
-
+struct rtw_netdev_priv_indicator {
+	void *priv;
+	u32 sizeof_priv;
+};
+extern struct net_device * rtw_alloc_etherdev(int sizeof_priv);
+#define rtw_netdev_priv(netdev) ( ((struct rtw_netdev_priv_indicator *)netdev_priv(netdev))->priv )
+extern void rtw_free_netdev(struct net_device * netdev);
 
 static __inline unsigned char _cancel_timer_ex(_timer *ptimer)
 {	
@@ -379,10 +395,10 @@ static __inline void thread_enter(void *context)
 #endif
 }
 
-static __inline void flush_signals_thread(void)
+static __inline void flush_signals_thread(void) 
 {
 #ifdef PLATFORM_LINUX
-	if (signal_pending (current))
+	if (signal_pending (current)) 
 	{
 		flush_signals(current);
 	}

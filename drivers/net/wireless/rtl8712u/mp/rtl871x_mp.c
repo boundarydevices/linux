@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _RTL871X_MP_C_
 
 #include <drv_conf.h>
@@ -142,7 +142,7 @@ int init_mp_priv(struct mp_priv *pmp_priv)
 	_init_queue(&pmp_priv->free_mp_xmitqueue);
 
 	pmp_priv->pallocated_mp_xmitframe_buf = NULL;
-	pmp_priv->pallocated_mp_xmitframe_buf = _malloc(NR_MP_XMITFRAME * sizeof(struct mp_xmit_frame) + 4);
+	pmp_priv->pallocated_mp_xmitframe_buf = _vmalloc(NR_MP_XMITFRAME * sizeof(struct mp_xmit_frame) + 4);
 	if (pmp_priv->pallocated_mp_xmitframe_buf == NULL) {
 		//ERR_8712("_init_mp_priv, alloc mp_xmitframe_buf fail\n");
 		res = _FAIL;
@@ -181,7 +181,7 @@ int free_mp_priv(struct mp_priv *pmp_priv)
 	//MSG_8712("+_free_mp_priv\n");
 
 	if (pmp_priv->pallocated_mp_xmitframe_buf)
-		_mfree(pmp_priv->pallocated_mp_xmitframe_buf, NR_MP_XMITFRAME * sizeof(struct mp_xmit_frame) + 4);
+		_vmfree(pmp_priv->pallocated_mp_xmitframe_buf, NR_MP_XMITFRAME * sizeof(struct mp_xmit_frame) + 4);
 
 	return res;
 }

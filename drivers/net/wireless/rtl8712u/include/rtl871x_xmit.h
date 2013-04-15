@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef _RTL871X_XMIT_H_
 #define _RTL871X_XMIT_H_
 
@@ -30,19 +30,19 @@
 #define NR_XMITBUFF	(16)
 #else //USB
 
-#ifdef CONFIG_USB_TX_AGGR
+#ifdef CONFIG_USB_TX_AGGREGATION
 #define MAX_XMITBUF_SZ	(16384)
 #else
 #define MAX_XMITBUF_SZ	(2048)
-#endif
+#endif //CONFIG_USB_TX_AGGREGATION
 
 #define NR_XMITBUFF	(4)
 #endif
 
-#ifdef CONFIG_USB_TX_AGGR
+#ifdef CONFIG_USB_TX_AGGREGATION
 #define AGGR_NR_HIGH_BOUND	(4) //(8)
 #define AGGR_NR_LOW_BOUND	(2)
-#endif
+#endif //CONFIG_USB_TX_AGGREGATION
 
 #ifdef PLATFORM_OS_CE
 #define XMITBUF_ALIGN_SZ 4
@@ -186,7 +186,7 @@ struct xmit_buf
 	//uint irpcnt;//can be removed
 	//uint fragcnt;//can be removed
 #endif	
-	  
+	   
 #ifdef CONFIG_SDIO_HCI
 	u32  len;	
 	u8 *phead;
@@ -196,7 +196,7 @@ struct xmit_buf
 	u32 ff_hwaddr;
 #ifdef PLATFORM_OS_XP
 	PMDL pxmitbuf_mdl;
-	PIRP  pxmitbuf_irp;
+	PIRP  pxmitbuf_irp; 
 	PSDBUS_REQUEST_PACKET pxmitbuf_sdrp;
 #endif	
 #endif
@@ -226,8 +226,8 @@ struct xmit_frame
 
 #ifdef CONFIG_USB_HCI
 
-	//insert urb, irp, and irpcnt info below...     
-	//max frag_cnt = 8
+	//insert urb, irp, and irpcnt info below...      
+	//max frag_cnt = 8 
 
 	u8 *mem_addr;
 	u16 sz[8];
@@ -266,7 +266,7 @@ struct sta_xmit_priv
 
 
 	//struct tx_servq blk_q[MAX_NUMBLKS];
-	struct tx_servq	be_q;			//priority == 0,3
+	struct tx_servq	be_q;			//priority == 0,3 
 	struct tx_servq	bk_q;			//priority == 1,2
 	struct tx_servq	vi_q;			//priority == 4,5
 	struct tx_servq	vo_q;			//priority == 6,7
@@ -388,7 +388,7 @@ struct	xmit_priv {
 #ifdef PLATFORM_OS_XP
 	PMDL prd_freesz_mdl[2];
 	u8 brd_freesz_pending[2];
-	PIRP  prd_freesz_irp[2];
+	PIRP  prd_freesz_irp[2]; 
 	PSDBUS_REQUEST_PACKET prd_freesz_sdrp[2];
 	u8 rd_freesz_irp_idx;
 #endif

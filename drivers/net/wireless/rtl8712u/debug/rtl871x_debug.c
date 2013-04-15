@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 
 #define _RTL871X_DEBUG_C_
 
@@ -39,7 +39,7 @@
 			_module_rtl871x_sta_mgt_c_ |
 			_module_rtl871x_cmd_c_ 	|
 			_module_cmd_osdep_c_ 	|
-			_module_rtl871x_io_c_   |
+			_module_rtl871x_io_c_   | 
 			_module_io_osdep_c_ 	|
 			_module_os_intfs_c_|
 			_module_rtl871x_security_c_|

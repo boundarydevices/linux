@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __RTL871X_PWRCTRL_H_
 #define __RTL871X_PWRCTRL_H_
 
@@ -100,7 +100,7 @@ struct reportpwrstate_parm {
 	unsigned char mode;
 	unsigned char state; //the CPWM value
 	unsigned short rsvd;
-};
+}; 
 
 
 typedef _sema _pwrlock;
@@ -135,7 +135,7 @@ struct	pwrctrl_priv {
 	volatile u8 cpwm; // fw current power state. updated when 1. read from HCPWM 2. driver lowers power level
 	volatile u8 tog; // toggling
 	volatile u8 cpwm_tog; // toggling
-	volatile u8 tgt_rpwm; // wanted power state
+	volatile u8 tgt_rpwm; // wanted power state 
 	uint pwr_mode;
 	uint smart_ps;
 	uint alives;

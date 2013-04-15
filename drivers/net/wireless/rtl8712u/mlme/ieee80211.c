@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _IEEE80211_C
 
 #include <drv_types.h>
@@ -27,16 +27,16 @@
 
 
 //-----------------------------------------------------------
-// for adhoc-master to generate ie and provide supported-rate to fw
+// for adhoc-master to generate ie and provide supported-rate to fw 
 //-----------------------------------------------------------
 
-u8 	WIFI_CCKRATES[] =
+u8 	WIFI_CCKRATES[] = 
 {(IEEE80211_CCK_RATE_1MB | IEEE80211_BASIC_RATE_MASK),
  (IEEE80211_CCK_RATE_2MB | IEEE80211_BASIC_RATE_MASK),
  (IEEE80211_CCK_RATE_5MB | IEEE80211_BASIC_RATE_MASK),
  (IEEE80211_CCK_RATE_11MB | IEEE80211_BASIC_RATE_MASK)};
 
-u8 	WIFI_OFDMRATES[] =
+u8 	WIFI_OFDMRATES[] = 
 {(IEEE80211_OFDM_RATE_6MB),
  (IEEE80211_OFDM_RATE_9MB),
  (IEEE80211_OFDM_RATE_12MB),
@@ -126,10 +126,10 @@ u8 *set_fixed_ie(unsigned char *pbuf, unsigned int len, unsigned char *source,
 // set_ie will update frame length
 u8 *set_ie
 (
-	u8 *pbuf,
-	sint index,
+	u8 *pbuf, 
+	sint index, 
 	uint len,
-	u8 *source,
+	u8 *source, 
 	uint *frlen //frame length
 )
 {
@@ -185,7 +185,7 @@ _func_exit_;
 	return NULL;
 }
 
-void set_supported_rate(u8* SupportedRates, uint mode)
+void set_supported_rate(u8* SupportedRates, uint mode) 
 {
 _func_enter_;
 
@@ -243,7 +243,7 @@ _func_enter_;
 	
 	//beacon interval : 2bytes
 	*(u16*)ie = cpu_to_le16((u16)pdev_network->Configuration.BeaconPeriod);//BCN_INTERVAL;
-	sz += 2;
+	sz += 2; 
 	ie += 2;
 	
 	//capability info
@@ -302,7 +302,7 @@ unsigned char *get_wpa_ie(unsigned char *pie, int *wpa_ie_len, int limit)
 	unsigned char wpa_oui_type[] = {0x00, 0x50, 0xf2, 0x01};		
 	u8 *pbuf = pie;
 
-	while(1)
+	while(1) 
 	{
 		pbuf = get_ie(pbuf, _WPA_IE_ID_, &len, limit);
 
@@ -421,7 +421,7 @@ int parse_wpa_ie(u8* wpa_ie, int wpa_ie_len, int *group_cipher, int *pairwise_ci
 		pos += WPA_SELECTOR_LEN;
 		left -= WPA_SELECTOR_LEN;
 		
-	}
+	} 
 	else if (left > 0)
 	{
 		RT_TRACE(_module_rtl871x_mlme_c_,_drv_err_,("%s: ie length mismatch, %u too much", __FUNCTION__, left));
@@ -451,7 +451,7 @@ int parse_wpa_ie(u8* wpa_ie, int wpa_ie_len, int *group_cipher, int *pairwise_ci
 			left -= WPA_SELECTOR_LEN;
 		}
 		
-	}
+	} 
 	else if (left == 1)
 	{
 		RT_TRACE(_module_rtl871x_mlme_c_,_drv_err_,("%s: ie too short (for key mgmt)",   __FUNCTION__));
@@ -518,7 +518,7 @@ int parse_wpa2_ie(u8* rsn_ie, int rsn_ie_len, int *group_cipher, int *pairwise_c
 			left -= RSN_SELECTOR_LEN;
 		}
 
-	}
+	} 
 	else if (left == 1)
 	{
 		RT_TRACE(_module_rtl871x_mlme_c_,_drv_err_,("%s: ie too short (for key mgmt)",  __FUNCTION__));
@@ -591,38 +591,53 @@ _func_exit_;
 	
 }
 
-int get_wps_ie(u8 *in_ie, uint in_len, u8 *wps_ie, uint *wps_ielen)
+/**
+ * rtw_get_wps_ie - Search WPS IE from a series of IEs
+ * @in_ie: Address of IEs to search
+ * @in_len: Length limit from in_ie
+ * @wps_ie: If not NULL and WPS IE is found, WPS IE will be copied to the buf starting from wps_ie
+ * @wps_ielen: If not NULL and WPS IE is found, will set to the length of the entire WPS IE
+ *
+ * Returns: The address of the WPS IE found, or NULL
+ */
+u8 *get_wps_ie(u8 *in_ie, uint in_len, u8 *wps_ie, uint *wps_ielen)
 {
-	int match;
-	uint cnt;	
+	uint cnt;
+	u8 *wpsie_ptr=NULL;
 	u8 eid, wps_oui[4]={0x0,0x50,0xf2,0x04};
 
+	if(wps_ielen)
+		*wps_ielen = 0;
 
-	cnt=12;	
-	match=_FALSE;
+	if(!in_ie || in_len<=0)
+		return wpsie_ptr;
+
+	cnt = 0;
+
 	while(cnt<in_len)
 	{
 		eid = in_ie[cnt];
-		
+
 		if((eid==_WPA_IE_ID_)&&(_memcmp(&in_ie[cnt+2], wps_oui, 4)==_TRUE))
 		{
-			_memcpy(wps_ie, &in_ie[cnt], in_ie[cnt+1]+2);
+			wpsie_ptr = &in_ie[cnt];
+
+			if(wps_ie)
+				_memcpy(wps_ie, &in_ie[cnt], in_ie[cnt+1]+2);
 			
-			*wps_ielen = in_ie[cnt+1]+2;
+			if(wps_ielen)
+				*wps_ielen = in_ie[cnt+1]+2;
 			
 			cnt+=in_ie[cnt+1]+2;
 
-			match = _TRUE;
 			break;
 		}
 		else
 		{
 			cnt+=in_ie[cnt+1]+2; //goto next	
 		}		
-		
+
 	}	
 
-	return match;
-
+	return wpsie_ptr;
 }
-

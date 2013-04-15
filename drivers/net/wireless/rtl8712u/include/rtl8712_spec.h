@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __RTL8712_SPEC_H__
 #define __RTL8712_SPEC_H__
 
@@ -35,7 +35,7 @@
 #define RTL8712_IOBASE_FW2HW			0x102A0000	//IOBASE_FW2HW
 #define RTL8712_IOBASE_ACCESS_PHYREG	0x102B0000	//IOBASE_ACCESS_PHYREG
 
-#define RTL8712_IOBASE_FF	0x10300000	//IOBASE_FIFO 0x1031000~0x103AFFFF
+#define RTL8712_IOBASE_FF	0x10300000	//IOBASE_FIFO 0x1031000~0x103AFFFF 
 
 
 //IOREG Offset for 8712

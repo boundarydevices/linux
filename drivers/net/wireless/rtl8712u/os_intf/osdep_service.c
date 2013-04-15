@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 
 
 #define _OSDEP_SERVICE_C_
@@ -25,6 +25,7 @@
 #include <osdep_service.h>
 #include <drv_types.h>
 #include <recv_osdep.h>
+#include <linux/vmalloc.h>
 
 #ifdef RTK_DMP_PLATFORM
 #include <linux/auth.h>
@@ -80,6 +81,110 @@ void	_mfree(u8 *pbuf, u32 sz)
 	
 	
 }
+
+struct net_device *rtw_alloc_etherdev(int sizeof_priv)
+{
+	struct net_device *pnetdev;
+	struct rtw_netdev_priv_indicator *pnpi;
+	
+	pnetdev = alloc_etherdev(sizeof(struct rtw_netdev_priv_indicator));
+	if (!pnetdev)
+		goto RETURN;
+	
+	pnpi = netdev_priv(pnetdev);
+	
+	pnpi->priv = _zvmalloc(sizeof_priv);
+	if (!pnpi->priv) {
+		free_netdev(pnetdev);
+		pnetdev = NULL;
+		goto RETURN;
+	}
+	
+	pnpi->sizeof_priv=sizeof_priv;
+RETURN:
+	return pnetdev;
+}
+
+void rtw_free_netdev(struct net_device * netdev)
+{
+	struct rtw_netdev_priv_indicator *pnpi;
+	
+	if(!netdev)
+		goto RETURN;
+	
+	pnpi = netdev_priv(netdev);
+
+	if(!pnpi->priv)
+		goto RETURN;
+
+	_vmfree(pnpi->priv, pnpi->sizeof_priv);
+	free_netdev(netdev);
+
+RETURN:
+	return;
+}
+
+u8* _zmalloc(u32 sz)
+{
+	u8 	*pbuf = _malloc(sz);
+
+	if (pbuf != NULL) {
+
+#ifdef PLATFORM_LINUX
+		memset(pbuf, 0, sz);
+#endif	
+	
+#ifdef PLATFORM_WINDOWS
+		NdisFillMemory(pbuf, sz, 0);
+#endif
+
+	}
+	return pbuf;	
+}
+
+inline u8* _vmalloc(u32 sz)
+{
+	u8 	*pbuf;
+#ifdef PLATFORM_LINUX	
+	pbuf = vmalloc(sz);
+#endif	
+	
+#ifdef PLATFORM_WINDOWS
+	NdisAllocateMemoryWithTag(&pbuf,sz, RT_TAG);	
+#endif
+
+	return pbuf;	
+}
+
+inline u8* _zvmalloc(u32 sz)
+{
+	u8 	*pbuf;
+#ifdef PLATFORM_LINUX
+	pbuf = _vmalloc(sz);
+	if (pbuf != NULL)
+		memset(pbuf, 0, sz);
+#endif	
+	
+#ifdef PLATFORM_WINDOWS
+	NdisAllocateMemoryWithTag(&pbuf,sz, RT_TAG);
+	if (pbuf != NULL)
+		NdisFillMemory(pbuf, sz, 0);
+#endif
+
+	return pbuf;	
+}
+
+inline void _vmfree(u8 *pbuf, u32 sz)
+{
+#ifdef	PLATFORM_LINUX
+	vfree(pbuf);
+#endif	
+	
+#ifdef PLATFORM_WINDOWS
+	NdisFreeMemory(pbuf,sz, 0);
+#endif
+}
+
 void _memcpy(void* dst, void* src, u32 sz)
 {
 
@@ -163,7 +268,7 @@ void _init_listhead(_list *list)
 
 
 /*
-For the following list_xxx operations,
+For the following list_xxx operations, 
 caller must guarantee the atomic context.
 Otherwise, there will be racing condition.
 */
@@ -291,7 +396,7 @@ u32 _down_sema(_sema *sema)
 
 #ifdef PLATFORM_OS_CE
 	if(WAIT_OBJECT_0 == WaitForSingleObject(*sema, INFINITE ))
-		return _SUCCESS;
+		return _SUCCESS; 
 	else
 		return _FAIL;
 #endif
@@ -302,9 +407,11 @@ u32 _down_sema(_sema *sema)
 void	_rtl_rwlock_init(_rwlock *prwlock)
 {
 #ifdef PLATFORM_LINUX
-
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37))
 	init_MUTEX(prwlock);
-
+#else
+	sema_init(prwlock, 1);
+#endif
 #endif
 #ifdef PLATFORM_OS_XP
 
@@ -456,7 +563,7 @@ u32	get_current_time(void)
 
 	LARGE_INTEGER	SystemTime;
 	NdisGetCurrentSystemTime(&SystemTime);
-	return (u32)(SystemTime.LowPart);// count of 100-nanosecond intervals
+	return (u32)(SystemTime.LowPart);// count of 100-nanosecond intervals 
 
 #endif
 	
@@ -469,7 +576,7 @@ void sleep_schedulable(int ms)
 #ifdef PLATFORM_LINUX
 
     u32 delta;
-   
+    
     delta = (ms * HZ)/1000;//(ms)
     if (delta == 0) {
         delta = 1;// 1 ms
@@ -532,7 +639,7 @@ void mdelay_os(int ms)
 
 #ifdef PLATFORM_LINUX
 
-   	mdelay((unsigned long)ms);
+   	mdelay((unsigned long)ms); 
 
 #endif	
 	
@@ -549,7 +656,7 @@ void udelay_os(int us)
 
 #ifdef PLATFORM_LINUX
 
-      udelay((unsigned long)us);
+      udelay((unsigned long)us); 
 
 #endif	
 	

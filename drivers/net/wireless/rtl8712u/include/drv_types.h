@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 /*-------------------------------------------------------------------------------
 	
 	For type defines and data structure defines
@@ -96,6 +96,10 @@ typedef struct _ADAPTER _adapter, ADAPTER,*PADAPTER;
 #include <rtl871x_wlan_sme.h>
 #endif
 
+#ifdef CONFIG_IOCTL_CFG80211
+	#include "ioctl_cfg80211.h"	
+#endif //CONFIG_IOCTL_CFG80211
+
 #define SPEC_DEV_ID_NONE BIT(0)
 #define SPEC_DEV_ID_DISABLE_HT BIT(1)
 #define SPEC_DEV_ID_ENABLE_PS BIT(2)
@@ -112,14 +116,14 @@ struct specific_device_id{
 };
 
 struct registry_priv
-{   
+{    
 	u8	chip_version;
 	u8	rfintfs;
 	u8	lbkmode;
 	u8	hci;
-	u8	network_mode;	//infra, ad-hoc, auto	 
+	u8	network_mode;	//infra, ad-hoc, auto	  
 	NDIS_802_11_SSID	ssid;
-	u8	channel;//ad-hoc support requirement
+	u8	channel;//ad-hoc support requirement 
 	u8	wireless_mode;//A, B, G, auto
 	u8	vrtl_carrier_sense;//Enable, Disable, Auto
 	u8	vcs_type;//RTS/CTS, CTS-to-self
@@ -129,7 +133,7 @@ struct registry_priv
 	u8  scan_mode;//active, passive
 	u8  adhoc_tx_pwr;
 	u8      	     soft_ap;
-	u8      	     smart_ps; 
+	u8      	     smart_ps;  
 	 u8                  power_mgnt;
 	 u8                  radio_enable;
 	 u8                  long_retry_lmt;
@@ -138,16 +142,16 @@ struct registry_priv
     	 u8                  ack_policy;
 	 u8		     mp_mode;	
 	 u8 		     software_encrypt;
-	 u8 		     software_decrypt;	 
+	 u8 		     software_decrypt;	  
 
 	  //UAPSD
 	  u8		     wmm_enable;
-	  u8		     uapsd_enable;	 
+	  u8		     uapsd_enable;	  
 	  u8		     uapsd_max_sp;
 	  u8		     uapsd_acbk_en;
 	  u8		     uapsd_acbe_en;
 	  u8		     uapsd_acvi_en;
-	  u8		     uapsd_acvo_en;	 
+	  u8		     uapsd_acvo_en;	  
 
 	  WLAN_BSSID_EX    dev_network;
 
@@ -162,8 +166,8 @@ struct registry_priv
 	u8		rf_config ;
 	u8		low_power ;
 	u8		wifi_test;
-	 
-	 
+	  
+	  
 };
 
 
@@ -191,7 +195,7 @@ struct dvobj_priv {
 #endif//PLATFORM_OS_XP
 
 #ifdef PLATFORM_OS_CE
-	SD_DEVICE_HANDLE hDevice;    
+	SD_DEVICE_HANDLE hDevice;     
 	SD_CARD_RCA                 sd_rca;
 	SD_CARD_INTERFACE           card_intf;
 	BOOLEAN                     enableIsarWithStatus;
@@ -209,7 +213,7 @@ struct dvobj_priv {
 	u16	driver_version;
 	u16	rxblknum;
 	u16	rxblknum_rd;
-	u16	c2hblknum;
+	u16	c2hblknum; 
 	u8  tx_block_mode;
 	u8  rx_block_mode;
 	u8 cmdfifo_cnt;
@@ -219,7 +223,7 @@ struct dvobj_priv {
 #endif//	CONFIG_SDIO_HCI
 
 /*-------- below is for USB INTERFACE --------*/
-
+ 
 #ifdef CONFIG_USB_HCI
 
 	u32 nr_endpoint;
@@ -236,7 +240,7 @@ struct dvobj_priv {
 	PDEVICE_OBJECT	pfuncdevobj;//pFuncDevObj;
 	PDEVICE_OBJECT	pnextdevobj;//pNextDevObj;
 
-	u8	nextdevstacksz;//unsigned char NextDeviceStackSize;	//= (CHAR)CEdevice->pUsbDevObj->StackSize + 1;
+	u8	nextdevstacksz;//unsigned char NextDeviceStackSize;	//= (CHAR)CEdevice->pUsbDevObj->StackSize + 1; 
 
 	//urb for control diescriptor request
 
@@ -295,7 +299,7 @@ struct _ADAPTER{
 	struct	hostapd_priv	*phostapdpriv;		
 #endif
 	
-	s32	bDriverStopped;
+	s32	bDriverStopped; 
 	s32	bSurpriseRemoved;
 
 	u32	IsrContent;
@@ -331,6 +335,11 @@ struct _ADAPTER{
 	int bup;
 	struct net_device_stats stats;
 	struct iw_statistics iwstats;
+
+#ifdef CONFIG_IOCTL_CFG80211
+	struct wireless_dev *rtw_wdev;
+#endif //CONFIG_IOCTL_CFG80211
+	
 #endif //end of PLATFORM_LINUX
 
 	int pid;//process id from UI
@@ -340,13 +349,8 @@ struct _ADAPTER{
 	_lock	lockRxFF0Filter;
 #endif
 
-#ifdef CONFIG_PLATFORM_ANDROID
-	u8 bdisassoc_by_assoc;
-#endif
-
-
 };	
- 
+  
 static __inline u8 *myid(struct eeprom_priv *peepriv)
 {
 	return (peepriv->mac_addr);

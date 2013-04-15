@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _RTL8712_RF_C_
 
 #include <drv_conf.h>
@@ -209,8 +209,8 @@ u32 QueryBBReg(PADAPTER padapter, u32 addr, u32 bitmask)
   	u32	ReturnValue = 0, OriginalValue, BitShift;
 
 	//
-	// <Roger_Notes> Due to 8051 operation cycle (limitation cycle: 6us) and 1-Byte access issue, we should use
-	// 4181 to access Base Band instead of 8051 on USB interface to make sure that access could be done in
+	// <Roger_Notes> Due to 8051 operation cycle (limitation cycle: 6us) and 1-Byte access issue, we should use 
+	// 4181 to access Base Band instead of 8051 on USB interface to make sure that access could be done in 
 	// infinite cycle.
 	// 2008.09.06.
 	//
@@ -246,8 +246,8 @@ void SetRFReg(PADAPTER padapter, int rfpath, u32 addr, u32 bitmask, u32 data)
 #endif
 
 	//
-	// <Roger_Notes> Due to 8051 operation cycle (limitation cycle: 6us) and 1-Byte access issue, we should use
-	// 4181 to access Base Band instead of 8051 on USB interface to make sure that access could be done in
+	// <Roger_Notes> Due to 8051 operation cycle (limitation cycle: 6us) and 1-Byte access issue, we should use 
+	// 4181 to access Base Band instead of 8051 on USB interface to make sure that access could be done in 
 	// infinite cycle.
 	// 2008.09.06.
 	//
@@ -359,31 +359,31 @@ static u8 fw_iocmd_write(PADAPTER pAdapter , u32 iocmd, u32 value)
 int set_ratid_cmd(PADAPTER pAdapter, unsigned short param, unsigned int bitmap)
 {	
 	u8 ret;
-	u32 iocmd =  0xfd0000a2 | ((param<<8)	&0x00ffff00) ;
+	u32 iocmd =  0xfd0000a2 | ((param<<8)	&0x00ffff00) ; 
 	
 	ret = fw_iocmd_write(pAdapter, iocmd, bitmap);
 
 	return ((ret) ? _TRUE:_FALSE);
 }
 
-static u32 bb_read_cmd(PADAPTER pAdapter, u16 offset)// offset : 0X800~0XFFF
+static u32 bb_read_cmd(PADAPTER pAdapter, u16 offset)// offset : 0X800~0XFFF 
 {	
 	u16 bb_addr = offset & 0x0FFF;
 	u32 bb_val, iocmd;
 	
-	iocmd = IOCMD_CLS_F0_IDX_00 | (bb_addr<<8) ;
+	iocmd = IOCMD_CLS_F0_IDX_00 | (bb_addr<<8) ; 
 		
 	bb_val = fw_iocmd_read(pAdapter, iocmd);
 	
 	return bb_val;	
 }
 
-static u8 bb_write_cmd(PADAPTER pAdapter, u16 offset, u32 value)// offset : 0X800~0XFFF
+static u8 bb_write_cmd(PADAPTER pAdapter, u16 offset, u32 value)// offset : 0X800~0XFFF 
 {
 	u32 iocmd;
 	u16 bb_addr = offset & 0x0FFF  ;
 
-	iocmd = IOCMD_CLS_F0_IDX_01 | (bb_addr<<8) ;
+	iocmd = IOCMD_CLS_F0_IDX_01 | (bb_addr<<8) ; 
 	
 	return fw_iocmd_write(pAdapter, iocmd , value);
 }
@@ -394,7 +394,7 @@ static u32 rf_read_cmd(PADAPTER pAdapter, u8 path, u8 offset) // offset : 0x00 ~
 	u32 rf_data, iocmd;
 	
 	rf_addr = (path << 8 ) | offset;
-	iocmd = IOCMD_CLS_F0_IDX_02 | (rf_addr<<8) ;
+	iocmd = IOCMD_CLS_F0_IDX_02 | (rf_addr<<8) ; 
 
 	rf_data =  fw_iocmd_read(pAdapter, iocmd);
 	
@@ -455,7 +455,7 @@ u32 get_rfreg(PADAPTER pAdapter ,u8 path,u8 offset,u32 bitmask)
 	new_value =( org_value & bitmask) >> bit_shift;
 		
 	return new_value;
-}
+} 
 
 u8 set_rfreg(PADAPTER pAdapter, u8 path, u8 offset, u32 bitmask, u32 value)
 {
@@ -485,7 +485,7 @@ u32 get_efuse_content(_adapter *padapter, u16 offset)
 	u32 iocmd;	
 	u16 addr = offset & 0xFFFF;	
 	
-	iocmd = IOCMD_CLS_F0_IDX_04 | (addr<<8) ;
+	iocmd = IOCMD_CLS_F0_IDX_04 | (addr<<8) ; 
 		
 	return fw_iocmd_read(padapter, iocmd);
 

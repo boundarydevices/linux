@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __RTL871X_SECURITY_H_
 #define __RTL871X_SECURITY_H_
 
@@ -60,7 +60,7 @@ struct {
   u8 TSC6;
   u8 TSC7;
 } _byte_;
-
+ 
 #elif defined(CONFIG_BIG_ENDIAN)
 
 struct {
@@ -73,7 +73,7 @@ struct {
   u8 TSC1;
   u8 TSC0;
 } _byte_;
-
+ 
 #endif
 
 };
@@ -97,12 +97,12 @@ typedef struct _RT_PMKID_LIST
 
 struct	security_priv	{
 	
-	u32	  dot11AuthAlgrthm;		// 802.11 auth, could be open, shared, 8021x and authswitch
+	u32	  dot11AuthAlgrthm;		// 802.11 auth, could be open, shared, 8021x and authswitch 
 	u32	  dot11PrivacyAlgrthm;	// This specify the privacy for shared auth. algorithm.
 	u32	  dot11PrivacyKeyIndex;	// this is only valid for legendary wep, 0~3 for key id.
 	union Keytype dot11DefKey[4];			// this is only valid for def. key	
 	u32 	dot11DefKeylen[4];
-	u32 dot118021XGrpPrivacy;	// This specify the privacy algthm. used for Grp key
+	u32 dot118021XGrpPrivacy;	// This specify the privacy algthm. used for Grp key 
 	u32	dot118021XGrpKeyid;		// key id used for Grp Key
 	union Keytype	dot118021XGrpKey[2];	// 802.1x Group Key, for inx0 and inx1	
 	union Keytype	dot118021XGrptxmickey[2];
@@ -111,7 +111,7 @@ struct	security_priv	{
 	union pn48		dot11Grprxpn;			// PN48 used for Grp Key recv.
 
 #ifdef CONFIG_HOSTAPD_MODE
-	//extend security capabilities for AP_MODE
+	//extend security capabilities for AP_MODE 
 	unsigned int dot8021xalg;//0:disable, 1:psk, 2:802.1x
 	unsigned int wpa_psk;//0:disable, bit(0): WPA, bit(1):WPA2
 	unsigned int wpa_group_cipher;

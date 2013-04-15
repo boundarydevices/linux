@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define  _RTL871X_SECURITY_C_
 
 #include <drv_conf.h>
@@ -35,7 +35,9 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/kref.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
 #include <linux/smp_lock.h>
+#endif
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
 #include <linux/circ_buf.h>
@@ -50,7 +52,7 @@
 #endif
 
 
-//=====WEP related=====
+//=====WEP related===== 
 
 #define CRC32_POLY 0x04c11db7
 
@@ -108,11 +110,11 @@ _func_enter_;
 _func_exit_;	
 	return state[(sx + sy) & 0xff];
 }
-             
-          
-void arcfour_encrypt(	struct arc4context	*parc4ctx,
+              
+           
+void arcfour_encrypt(	struct arc4context	*parc4ctx, 
 	u8 * dest,
-	u8 * src,
+	u8 * src, 
 	u32 len)
 {
 	u32	i;
@@ -134,7 +136,7 @@ u8 crc32_reverseBit( u8 data)
 void crc32_init(void)
 {
 _func_enter_;	
-	if (bcrc32initialized == 1)
+	if (bcrc32initialized == 1) 
 		goto exit;
 	else{
 		sint i, j;
@@ -144,7 +146,7 @@ _func_enter_;
 
 		c = 0x12340000;
 
-		for (i = 0; i < 256; ++i)
+		for (i = 0; i < 256; ++i) 
 		{
 			k = crc32_reverseBit((u8)i);
 			for (c = ((u32)k) << 24, j = 8; j > 0; --j){
@@ -172,7 +174,7 @@ _func_enter_;
 
 	crc = 0xffffffff;       /* preload shift register, per CRC-32 spec */
 
-	for (p = buf; len > 0; ++p, --len)
+	for (p = buf; len > 0; ++p, --len) 
 	{
 		crc = crc32_table[ (crc ^ *p) & 0xff] ^ (crc >> 8);
 	}
@@ -506,7 +508,7 @@ const unsigned short Sbox1[2][256]=       /* Sbox for hash (can be in ROM)     *
    0x038F,0x59F8,0x0980,0x1A17,0x65DA,0xD731,0x84C6,0xD0B8,
    0x82C3,0x29B0,0x5A77,0x1E11,0x7BCB,0xA8FC,0x6DD6,0x2C3A,
   },
-
+ 
 
   {  /* second half of table is unsigned char-reversed version of first! */
    0xA5C6,0x84F8,0x99EE,0x8DF6,0x0DFF,0xBDD6,0xB1DE,0x5491,
@@ -543,7 +545,7 @@ const unsigned short Sbox1[2][256]=       /* Sbox for hash (can be in ROM)     *
    0xC382,0xB029,0x775A,0x111E,0xCB7B,0xFCA8,0xD66D,0x3A2C,
   }
 };
-
+ 
  /*
 **********************************************************************
 * Routine: Phase 1 -- generate P1K, given TA, TK, IV32
@@ -585,7 +587,7 @@ _func_enter_;
         }
 _func_exit_;
 }
-
+ 
 
 /*
 **********************************************************************
@@ -644,7 +646,7 @@ _func_enter_;
 	rc4key[1] =(Hi8(iv16) | 0x20) & 0x7F; /* Help avoid weak (FMS) keys  */
 	rc4key[2] = Lo8(iv16);
 	rc4key[3] = Lo8((PPK[5] ^ TK16(0)) >> 1);
-	
+	 
 
 	/* Copy 96 bits of PPK[0..5] to RC4KEY[4..15]  (little-endian)       */
 	for (i=0;i<6;i++)
@@ -1266,9 +1268,9 @@ _func_enter_;
     i = 0;
 
     ctr_preload[0] = 0x01;                                  /* flag */
-    if (qc_exists && a4_exists)
+    if (qc_exists && a4_exists) 
 		ctr_preload[1] = mpdu[30] & 0x0f;   /* QoC_Control */
-    if (qc_exists && !a4_exists)
+    if (qc_exists && !a4_exists) 
 		ctr_preload[1] = mpdu[24] & 0x0f;
 
     for (i = 2; i < 8; i++)
@@ -1348,7 +1350,7 @@ _func_enter_;
 		{
 			qc_exists = 1;
 					if(hdrlen !=  WLAN_HDR_A3_QOS_LEN){
-				
+				 
 					hdrlen += 2;
 			}
 		}
@@ -1359,7 +1361,7 @@ _func_enter_;
 		(frsubtype == 0x0b))
 		{
 			if(hdrlen !=  WLAN_HDR_A3_QOS_LEN){
-				
+				 
 					hdrlen += 2;
 			}
 			qc_exists = 1;
@@ -1500,7 +1502,7 @@ u32	aes_encrypt(_adapter *padapter, u8 *pxmitframe)
 {	// exclude ICV
 
 
-	/*static*/
+	/*static*/ 
 //	unsigned char	message[MAX_MSG_SIZE];
 
     	/* Intermediate Buffers */
@@ -1631,7 +1633,7 @@ _func_enter_;
 		{
 			qc_exists = 1;
 					if(hdrlen !=  WLAN_HDR_A3_QOS_LEN){
-				
+				 
 					hdrlen += 2;
 			}
 		}
@@ -1642,7 +1644,7 @@ _func_enter_;
 		(frsubtype == 0x0b))
 		{
 			if(hdrlen !=  WLAN_HDR_A3_QOS_LEN){
-				
+				 
 					hdrlen += 2;
 			}
 			qc_exists = 1;
@@ -1837,7 +1839,7 @@ u32	aes_decrypt(_adapter *padapter, u8 *precvframe)
 {	// exclude ICV
 
 
-	/*static*/
+	/*static*/ 
 //	unsigned char	message[MAX_MSG_SIZE];
 
 
@@ -1852,7 +1854,7 @@ u32	aes_decrypt(_adapter *padapter, u8 *precvframe)
 	struct 	security_priv	*psecuritypriv=&padapter->securitypriv;
 //	struct	recv_priv		*precvpriv=&padapter->recvpriv;
 	u32	res=_SUCCESS;
-_func_enter_;	
+_func_enter_;	 
 	pframe=(unsigned char *)((union recv_frame*)precvframe)->u.hdr.rx_data;
 	//4 start to encrypt each fragment
 	if((prxattrib->encrypt==_AES_)){

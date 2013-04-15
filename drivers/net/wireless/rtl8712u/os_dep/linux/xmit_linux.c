@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _XMIT_OSDEP_C_
 
 
@@ -34,7 +34,7 @@
 #include <osdep_intf.h>
 #include <circ_buf.h>
  #ifdef CONFIG_SDIO_HCI
-#include <linux/mmc/sdio_func.h>
+#include <linux/mmc/sdio_func.h> 
 #endif
 uint remainder_len(struct pkt_file *pfile)
 {
@@ -73,7 +73,7 @@ _func_enter_;
 
 _func_exit_;
 
-	return len;
+	return len; 
 }
 
 sint endofpktfile (struct pkt_file *pfile)
@@ -94,7 +94,7 @@ void set_qos(struct pkt_file *ppktfile, struct pkt_attrib *pattrib)
 {
 	int i;
 	struct ethhdr etherhdr;
-	struct iphdr ip_hdr;
+	struct iphdr ip_hdr; 
 	u16 UserPriority = 0;
 
 	_open_pktfile(ppktfile->pkt, ppktfile);	
@@ -111,7 +111,7 @@ void set_qos(struct pkt_file *ppktfile, struct pkt_attrib *pattrib)
 	}
 	else
 	{
-		// "When priority processing of data frames is supported,
+		// "When priority processing of data frames is supported, 
 		//a STA's SME should send EAPOL-Key frames at the highest priority."
 
 		if (pattrib->ether_type == 0x888e)
@@ -126,7 +126,7 @@ void set_qos(struct pkt_file *ppktfile, struct pkt_attrib *pattrib)
 #ifdef CONFIG_SDIO_HCI
 int os_xmit_resource_alloc(_adapter *padapter, struct xmit_buf *pxmitbuf)
 {
-	int	res=_SUCCESS;  
+	int	res=_SUCCESS;   
 
 	return res;
 
@@ -144,7 +144,7 @@ void urb_reset4_workitem_callback(struct work_struct *work)
 	struct xmit_priv *pxmitpriv = container_of(work, struct xmit_priv, xmit_pipe4_reset_wi);
 	_adapter *padapter = container_of(pxmitpriv, _adapter, xmitpriv);
 	struct dvobj_priv * pdvobjpriv = (struct dvobj_priv *)&padapter->dvobjpriv;
-	struct usb_device *pusbdev=pdvobjpriv->pusbdev;	 
+	struct usb_device *pusbdev=pdvobjpriv->pusbdev;	  
 
 	usb_clear_halt(pusbdev,usb_sndbulkpipe(pusbdev, 0x04));
 
@@ -155,7 +155,7 @@ void urb_reset6_workitem_callback(struct work_struct *work)
 	struct xmit_priv *pxmitpriv = container_of(work, struct xmit_priv, xmit_pipe6_reset_wi);
 	_adapter *padapter = container_of(pxmitpriv, _adapter, xmitpriv);
 	struct dvobj_priv * pdvobjpriv = (struct dvobj_priv *)&padapter->dvobjpriv;
-	struct usb_device *pusbdev=pdvobjpriv->pusbdev;	 
+	struct usb_device *pusbdev=pdvobjpriv->pusbdev;	  
 
 	usb_clear_halt(pusbdev,usb_sndbulkpipe(pusbdev, 0x06));
 
@@ -166,7 +166,7 @@ void urb_resetd_workitem_callback(struct work_struct *work)
 	struct xmit_priv *pxmitpriv = container_of(work, struct xmit_priv, xmit_piped_reset_wi);
 	_adapter *padapter = container_of(pxmitpriv, _adapter, xmitpriv);
 	struct dvobj_priv * pdvobjpriv = (struct dvobj_priv *)&padapter->dvobjpriv;
-	struct usb_device *pusbdev=pdvobjpriv->pusbdev;	 
+	struct usb_device *pusbdev=pdvobjpriv->pusbdev;	  
 
 	usb_clear_halt(pusbdev,usb_sndbulkpipe(pusbdev, 0x0d));
 }
@@ -208,14 +208,14 @@ int os_xmit_resource_alloc(_adapter *padapter, struct xmit_buf *pxmitbuf)
        for(i=0; i<8; i++)
       	{
       		pxmitbuf->pxmit_urb[i] = usb_alloc_urb(0, GFP_KERNEL);
-             	if(pxmitbuf->pxmit_urb[i] == NULL)
+             	if(pxmitbuf->pxmit_urb[i] == NULL) 
              	{
              		printk("pxmitbuf->pxmit_urb[i]==NULL");
-	        	return _FAIL;	
+	        	return _FAIL;	 
              	}      		  	
 	
       	}
-                    
+                     
 	return _SUCCESS;
 	
 }
@@ -249,7 +249,7 @@ void os_xmit_complete(_adapter *padapter, struct xmit_frame *pxframe)
 int xmit_entry(_pkt *pkt, _nic_hdl pnetdev)
 {
 	struct xmit_frame *pxmitframe = NULL;
-	_adapter *padapter = (_adapter *)netdev_priv(pnetdev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(pnetdev);
 	struct xmit_priv *pxmitpriv = &(padapter->xmitpriv);
 	int ret = 0;
 

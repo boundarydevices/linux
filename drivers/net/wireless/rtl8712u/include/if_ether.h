@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 /*
  * INET		An implementation of the TCP/IP protocol suite for the LINUX
  *		operating system.  INET is implemented using the  BSD Socket
@@ -36,13 +36,13 @@
  *		as published by the Free Software Foundation; either version
  *		2 of the License, or (at your option) any later version.
  */
-
+ 
 #ifndef _LINUX_IF_ETHER_H
 #define _LINUX_IF_ETHER_H
 
 /*
  *	IEEE 802.3 Ethernet magic constants.  The frame sizes omit the preamble
- *	and FCS/CRC (frame check sequence).
+ *	and FCS/CRC (frame check sequence). 
  */
 
 #define ETH_ALEN	6		/* Octets in one ethernet addr	 */
@@ -88,7 +88,7 @@
 /*
  *	Non DIX types. Won't clash for 1500 types.
  */
-
+ 
 #define ETH_P_802_3	0x0001		/* Dummy type for 802.3 frames  */
 #define ETH_P_AX25	0x0002		/* Dummy protocol id for AX.25  */
 #define ETH_P_ALL	0x0003		/* Every packet (be careful!!!) */
@@ -108,8 +108,8 @@
 /*
  *	This is an Ethernet frame header.
  */
-
-struct ethhdr
+ 
+struct ethhdr 
 {
 	unsigned char	h_dest[ETH_ALEN];	/* destination eth addr	*/
 	unsigned char	h_source[ETH_ALEN];	/* source ether addr	*/

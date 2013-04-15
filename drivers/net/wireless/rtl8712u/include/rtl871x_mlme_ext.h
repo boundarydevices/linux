@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __RTL871X_MLME_EXT_H_
 #define __RTL871X_MLME_EXT_H_
 
@@ -344,11 +344,11 @@ struct mgnt_frame{
 	
 #ifdef CONFIG_USB_HCI
 
-	//insert urb, irp, and irpcnt info below...     
-	//max frag_cnt = 8
+	//insert urb, irp, and irpcnt info below...      
+	//max frag_cnt = 8 
 	
-       u8 *mem_addr;     
-       u16 sz[8];	  
+       u8 *mem_addr;      
+       u16 sz[8];	   
 	PURB	pxmit_urb[8];
 #ifdef PLATFORM_WINDOWS
 	PIRP		pxmit_irp[8];
@@ -356,7 +356,7 @@ struct mgnt_frame{
 	u8 bpending[8];
 	//sint ac_tag[8];
 	u8 last[8];
-       //uint irpcnt;        
+       //uint irpcnt;         
        //uint fragcnt;
 #endif
 	
@@ -364,7 +364,6 @@ struct mgnt_frame{
 	uint	mem[1];
 	
 };
-
 
 int	init_mlme_ext_priv (_adapter* padapter);
 void free_mlme_ext_priv (struct mlme_ext_priv *pmlmeext);

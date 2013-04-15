@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __RTL8712_HAL_H__
 #define __RTL8712_HAL_H__
 
@@ -56,10 +56,10 @@ enum RTL8712_RF_CONFIG{
 
 enum _RTL8712_HCI_TYPE_{
  RTL8712_HCI_TYPE_PCIE=0x01,
- RTL8712_HCI_TYPE_AP_PCIE=0x81, 
+ RTL8712_HCI_TYPE_AP_PCIE=0x81,  
  RTL8712_HCI_TYPE_USB=0x02,
  RTL8712_HCI_TYPE_92USB=0x02,
- RTL8712_HCI_TYPE_AP_USB=0x82,  
+ RTL8712_HCI_TYPE_AP_USB=0x82,   
  RTL8712_HCI_TYPE_72USB=0x12,
  RTL8712_HCI_TYPE_SDIO=0x04,
  RTL8712_HCI_TYPE_72SDIO=0x14
@@ -72,7 +72,7 @@ struct fw_priv {   //8-bytes alignment required
  unsigned char  signature_0;  //0x12: CE product, 0x92: IT product
  unsigned char  signature_1;  //0x87: CE product, 0x81: IT product
  unsigned char  hci_sel;   //0x81: PCI-AP, 01:PCIe, 02: 92S-U, 0x82: USB-AP, 0x12: 72S-U, 03:SDIO
- unsigned char  chip_version; //the same value as reigster value
+ unsigned char  chip_version; //the same value as reigster value 
  unsigned char  customer_ID_0; //customer  ID low byte
  unsigned char  customer_ID_1; //customer  ID high byte
  unsigned char  rf_config;  //0x11:  1T1R, 0x12: 1T2R, 0x92: 1T2R turbo, 0x22: 2T2R
@@ -82,7 +82,7 @@ struct fw_priv {   //8-bytes alignment required
  unsigned char  regulatory_class_0; //regulatory class bit map 0
  unsigned char  regulatory_class_1; //regulatory class bit map 1
  unsigned char  regulatory_class_2; //regulatory class bit map 2
- unsigned char  regulatory_class_3; //regulatory class bit map 3
+ unsigned char  regulatory_class_3; //regulatory class bit map 3 
  unsigned char  rfintfs;    // 0:SWSI, 1:HWSI, 2:HWPI
  unsigned char  def_nettype;  //
  unsigned char  turboMode;
@@ -142,7 +142,7 @@ struct fw_hdr{//8-byte alinment required
 	
 	unsigned int		img_SRAM_size;    //define the size of FW in SRAM
 
-	unsigned int		fw_priv_sz;       //define the size of DMEM variable
+	unsigned int		fw_priv_sz;       //define the size of DMEM variable 
 	
 	unsigned short	efuse_addr;
 	unsigned short 	h2ccnd_resp_addr;

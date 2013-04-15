@@ -1,4 +1,4 @@
-EXTRA_CFLAGS += -DCONFIG_PLATFORM_ANDROID -O1 -Wno-unused-variable -Wno-unused-value -Wno-unused-label -Wno-unused-parameter -Wno-uninitialized
+EXTRA_CFLAGS += -O1 -Wno-unused-variable -Wno-unused-value -Wno-unused-label -Wno-unused-parameter -Wno-uninitialized
 EXTRA_CFLAGS += -I$(src)/include  -Wno-unused -Wno-unused-function
 
 CONFIG_RTL8711                  =       n
@@ -11,11 +11,10 @@ CONFIG_SDIO_HCI                 =       n
 
 CONFIG_MP_INCLUDED              =       y
 
-CONFIG_PLATFORM_I386_PC         =       n
+CONFIG_PLATFORM_I386_PC         =       y
 CONFIG_PLATFORM_ANDROID_X86     =       n
 CONFIG_PLATFORM_ARM_S3C         =       n
 CONFIG_PLATFORM_ARM_PXA         =       n
-CONFIG_PLATFORM_ARM_IMX		=	y
 CONFIG_PLATFORM_MIPS_RMI        =       n
 CONFIG_PLATFORM_RTK_DMP         =       n
 CONFIG_PLATFORM_MIPS_PLM        =       n
@@ -47,7 +46,7 @@ endif
 
 ifeq ($(CONFIG_SDIO_HCI), y)
 
-
+ 
 _OS_INTFS_FILES := os_intf/osdep_service.o \
                     os_intf/linux/os_intfs.o \
                     os_intf/osdep_sdio_intf.o \
@@ -62,12 +61,13 @@ endif
 
 
 ifeq ($(CONFIG_USB_HCI), y)
-
+ 
 
 _OS_INTFS_FILES := os_intf/osdep_service.o \
-				   os_intf/linux/os_intfs.o \
-				   os_intf/linux/usb_intf.o \
-
+					os_intf/linux/os_intfs.o \
+					os_intf/linux/usb_intf.o \
+					os_dep/linux/ioctl_cfg80211.o \
+					os_dep/linux/rtw_android.o \
 
 _HAL_INTFS_FILES := hal/$(RTL871X)/hal_init.o \
 					hal/$(RTL871X)/usb_ops.o \
@@ -95,6 +95,7 @@ SUBARCH := $(shell uname -m | sed -e s/i.86/i386/)
 ARCH := $(SUBARCH)
 CROSS_COMPILE := i686-unknown-linux-gnu-
 KSRC := /usr/src/froyo-x86/out/target/product/eeepc/obj/kernel
+MODULE_NAME = wlan
 endif
 
 ifeq ($(CONFIG_PLATFORM_ARM_S3C), y)
@@ -125,7 +126,7 @@ ifeq ($(CONFIG_PLATFORM_MIPS_RMI), y)
 EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
 ARCH:=mips
 CROSS_COMPILE:=mipsisa32r2-uclibc-
-KVER:=
+KVER:= 
 KSRC:= /root/work/kernel_realtek
 endif
 
@@ -133,7 +134,7 @@ ifeq ($(CONFIG_PLATFORM_RTK_DMP), y)
 EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN -DRTK_DMP_PLATFORM
 ARCH:=mips
 CROSS_COMPILE:=mipsel-linux-
-KVER:=
+KVER:= 
 KSRC ?= /root/Desktop/SVN/linux-2.6.12
 endif
 
@@ -141,7 +142,7 @@ ifeq ($(CONFIG_PLATFORM_MIPS_PLM), y)
 EXTRA_CFLAGS += -DCONFIG_BIG_ENDIAN
 ARCH:=mips
 CROSS_COMPILE:=mipsisa32r2-uclibc-
-KVER:=
+KVER:= 
 KSRC:= /root/work/kernel_realtek
 endif
 
@@ -154,30 +155,11 @@ KSRC:= /home/mstar/mstar_linux/2.6.28.9/
 endif
 
 ifeq ($(CONFIG_PLATFORM_ARM_TCC8900), y)
-EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN -DCONFIG_PLATFORM_ANDROID #-DCONFIG_DEBUG_RTW_WX_SET_PRIV
-ARCH := arm
-CROSS_COMPILE = /usr/src/telechip/SDK_0127_20101006/prebuilt/linux-x86/toolchain/arm-eabi-4.3.1/bin/arm-eabi-
-KSRC := /usr/src/telechip/SDK_0127_20101006/kernel
-endif
-
-ifeq ($(CONFIG_PLATFORM_ARM_PXA), y)
-EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
+EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN #-DCONFIG_MINIMAL_MEMORY_USAGE
 ARCH ?= arm
-CROSS_COMPILE ?= arm-v5t-linux-gnueabi-
-KVER  := 2.6.30-wl-00108-gaf3e8a3
-KSRC := $(HOME)/linux-hydrogen
-MODDESTDIR := /lib/modules/$(KVER)
-INSTALL_PREFIX :=
-endif
-
-ifeq ($(CONFIG_PLATFORM_ARM_IMX), y)
-EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
-ARCH ?= arm
-CROSS_COMPILE ?= arm-none-linux-gnueabi-
-KVER  ?= 2.6.35.3-00851-ga7991a5
-KSRC ?= $(HOME)/linux-bd
-MODDESTDIR := /lib/modules/$(KVER)
-INSTALL_PREFIX :=
+CROSS_COMPILE ?= /media/DATA-1/telechips/SDK_2302_20110425/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
+KSRC ?=/media/DATA-1/telechips/SDK_2302_20110425/kernel
+MODULE_NAME := wlan
 endif
 
 ifneq ($(KERNELRELEASE),)
@@ -185,8 +167,8 @@ ifneq ($(KERNELRELEASE),)
 
 $(MODULE_NAME)-y += cmd/rtl871x_cmd.o cmd/$(RTL871X)_cmd.o
 
-$(MODULE_NAME)-y += crypto/rtl871x_security.o
-$(MODULE_NAME)-y += debug/rtl871x_debug.o
+$(MODULE_NAME)-y += crypto/rtl871x_security.o 
+$(MODULE_NAME)-y += debug/rtl871x_debug.o 
 
 $(MODULE_NAME)-y += eeprom/rtl871x_eeprom.o efuse/rtl8712_efuse.o
 
@@ -255,25 +237,25 @@ config_r:
 clean:
 	rm -fr *.mod.c *.mod *.o .*.cmd *.ko *~
 	rm .tmp_versions -fr ; rm Module.symvers -fr
-	cd cmd ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd crypto ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd debug ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd eeprom ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd hal/$(RTL871X) ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd io ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd ioctl ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd led ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd mlme ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd mp ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd os_dep/linux ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd os_intf ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd os_intf/linux ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd pwrctrl ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd recv ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd rf ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd sta_mgt ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd xmit; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
-	cd efuse; rm -fr *.mod.c *.mod *.o .*.cmd *.ko
+	cd cmd ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd crypto ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd debug ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd eeprom ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd hal/$(RTL871X) ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd io ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd ioctl ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd led ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd mlme ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd mp ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd os_dep/linux ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd os_intf ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd os_intf/linux ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd pwrctrl ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd recv ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd rf ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd sta_mgt ; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd xmit; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
+	cd efuse; rm -fr *.mod.c *.mod *.o .*.cmd *.ko 
 
 endif
 

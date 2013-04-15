@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef _WIFI_H_
 #define _WIFI_H_
 
@@ -511,13 +511,13 @@ static __inline unsigned char * get_hdr_bssid(unsigned char *pframe)
 
 
 /*-----------------------------------------------------------------------------
-				Below is the definition for 802.11n
+				Below is the definition for 802.11n 
 ------------------------------------------------------------------------------*/
 
 /* block-ack parameters */
 #define IEEE80211_ADDBA_PARAM_POLICY_MASK 0x0002
 #define IEEE80211_ADDBA_PARAM_TID_MASK 0x003C
-#define IEEE80211_ADDBA_PARAM_BUF_SIZE_MASK 0xFFA0
+#define RTW_IEEE80211_ADDBA_PARAM_BUF_SIZE_MASK 0xFFA0
 #define IEEE80211_DELBA_PARAM_TID_MASK 0xF000
 #define IEEE80211_DELBA_PARAM_INITIATOR_MASK 0x0800
 
@@ -532,13 +532,13 @@ static __inline unsigned char * get_hdr_bssid(unsigned char *pframe)
 
 
 /**
- * struct ieee80211_bar - HT Block Ack Request
+ * struct rtw_ieee80211_bar - HT Block Ack Request
  *
  * This structure refers to "HT BlockAckReq" as
  * described in 802.11n draft section 7.2.1.7.1
  */
  #if defined(PLATFORM_LINUX) || defined(CONFIG_RTL8712FW)
-struct ieee80211_bar {
+struct rtw_ieee80211_bar {
 	unsigned short frame_control;
 	unsigned short duration;
 	unsigned char ra[6];
@@ -556,13 +556,13 @@ struct ieee80211_bar {
  #if defined(PLATFORM_LINUX) || defined(CONFIG_RTL8712FW)
 
  /**
- * struct ieee80211_ht_cap - HT capabilities
+ * struct rtw_ieee80211_ht_cap - HT capabilities
  *
  * This structure refers to "HT capabilities element" as
  * described in 802.11n draft section 7.3.2.52
  */
-
-struct ieee80211_ht_cap {
+ 
+struct rtw_ieee80211_ht_cap {
 	unsigned short 	cap_info;
 	unsigned char 	ampdu_params_info;
 	unsigned char 	supp_mcs_set[16];
@@ -572,7 +572,7 @@ struct ieee80211_ht_cap {
 } __attribute__ ((packed));
 
 /**
- * struct ieee80211_ht_cap - HT additional information
+ * struct rtw_ieee80211_ht_cap - HT additional information
  *
  * This structure refers to "HT information element" as
  * described in 802.11n draft section 7.3.2.53
@@ -651,7 +651,7 @@ struct ieee80211_ht_addt_info {
 /* block-ack parameters */
 #define IEEE80211_ADDBA_PARAM_POLICY_MASK 0x0002
 #define IEEE80211_ADDBA_PARAM_TID_MASK 0x003C
-#define IEEE80211_ADDBA_PARAM_BUF_SIZE_MASK 0xFFA0
+#define RTW_IEEE80211_ADDBA_PARAM_BUF_SIZE_MASK 0xFFA0
 #define IEEE80211_DELBA_PARAM_TID_MASK 0xF000
 #define IEEE80211_DELBA_PARAM_INITIATOR_MASK 0x0800
 

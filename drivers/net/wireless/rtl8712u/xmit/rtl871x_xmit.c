@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _RTL871X_XMIT_C_
 #include <drv_conf.h>
 #include <osdep_service.h>
@@ -94,7 +94,7 @@ sint	_init_xmit_priv(struct xmit_priv *pxmitpriv, _adapter *padapter)
 	sint i;
 	struct xmit_buf* pxmitbuf;
 	struct xmit_frame*	pxframe;
-	sint	res=_SUCCESS;  
+	sint	res=_SUCCESS;   
 
 _func_enter_;   	
 
@@ -104,7 +104,7 @@ _func_enter_;
 	_init_sema(&pxmitpriv->xmit_sema, 0);
 	_init_sema(&pxmitpriv->terminate_xmitthread_sema, 0);
 
-	/*
+	/* 
 	Please insert all the queue initializaiton using _init_queue below
 	*/
 
@@ -126,12 +126,12 @@ _func_enter_;
 
 
 	/*	
-	Please allocate memory with the sz = (struct xmit_frame) * NR_XMITFRAME,
+	Please allocate memory with the sz = (struct xmit_frame) * NR_XMITFRAME, 
 	and initialize free_xmit_frame below.
 	Please also apply  free_txobj to link_up all the xmit_frames...
 	*/
 
-	pxmitpriv->pallocated_frame_buf = _malloc(NR_XMITFRAME * sizeof(struct xmit_frame) + 4);
+	pxmitpriv->pallocated_frame_buf = _vmalloc(NR_XMITFRAME * sizeof(struct xmit_frame) + 4);
 	
 	if (pxmitpriv->pallocated_frame_buf  == NULL){
 		pxmitpriv->pxmit_frame_buf =NULL;
@@ -156,7 +156,7 @@ _func_enter_;
 
                 pxframe->buf_addr = NULL;
 		pxframe->pxmitbuf = NULL;
-
+ 
 		list_insert_tail(&(pxframe->list), &(pxmitpriv->free_xmit_queue.queue));
 
 		pxframe++;
@@ -283,10 +283,10 @@ void _free_xmit_priv (struct xmit_priv *pxmitpriv)
 	struct xmit_frame*	pxmitframe = (struct xmit_frame*) pxmitpriv->pxmit_frame_buf;
 	struct xmit_buf*	pxmitbuf = (struct xmit_buf *)pxmitpriv->pxmitbuf;
 
- _func_enter_;  
-
+ _func_enter_;   
+ 
 	mfree_xmit_priv_lock (pxmitpriv);
-
+ 
  	if(pxmitpriv->pxmit_frame_buf==NULL)
 		goto out;
 	
@@ -309,7 +309,7 @@ void _free_xmit_priv (struct xmit_priv *pxmitpriv)
 	}
 	
 	if(pxmitpriv->pallocated_frame_buf)
-		_mfree(pxmitpriv->pallocated_frame_buf, NR_XMITFRAME * sizeof(struct xmit_frame) + 4);
+		_vmfree(pxmitpriv->pallocated_frame_buf, NR_XMITFRAME * sizeof(struct xmit_frame) + 4);
 
 	if(pxmitpriv->pallocated_xmitbuf)
 		_mfree(pxmitpriv->pallocated_xmitbuf, NR_XMITBUFF * sizeof(struct xmit_buf) + 4);
@@ -398,7 +398,7 @@ sint update_attrib(_adapter *padapter, _pkt *pkt, struct pkt_attrib *pattrib)
 		i = _pktfile_read(&pktfile, (u8*)&txdesc, TXDESC_SIZE);//get MP_TXDESC_SIZE bytes txcmd per packet
 
 		_memcpy(pattrib->ra, pattrib->dst, ETH_ALEN);
-		_memcpy(pattrib->ta, pattrib->src, ETH_ALEN);		
+		_memcpy(pattrib->ta, pattrib->src, ETH_ALEN);		 
 
 		pattrib->pctrl = 1;
 	}
@@ -408,7 +408,7 @@ sint update_attrib(_adapter *padapter, _pkt *pkt, struct pkt_attrib *pattrib)
 
 	if (ETH_P_IP == pattrib->ether_type)
 	{
-		// The following is for DHCP and ARP packet, we use cck1M to tx these packets and let LPS awake some time
+		// The following is for DHCP and ARP packet, we use cck1M to tx these packets and let LPS awake some time 
 		// to prevent DHCP protocol fail
 		u8 tmp[24];
 		_pktfile_read(&pktfile, &tmp[0], 24);
@@ -421,14 +421,14 @@ sint update_attrib(_adapter *padapter, _pkt *pkt, struct pkt_attrib *pattrib)
 					// 67 : UDP BOOTP server
 					RT_TRACE(_module_rtl871x_xmit_c_,_drv_err_,("======================update_attrib: get DHCP Packet \n"));
 					// Use low rate to send DHCP packet.
-					//if(pMgntInfo->IOTAction & HT_IOT_ACT_WA_IOT_Broadcom)
+					//if(pMgntInfo->IOTAction & HT_IOT_ACT_WA_IOT_Broadcom) 
 					//{
 					//	tcb_desc->DataRate = MgntQuery_TxRateExcludeCCKRates(ieee);//0xc;//ofdm 6m
 					//	tcb_desc->bTxDisableRateFallBack = false;
 					//}
 					//else
-					//	pTcb->DataRate = Adapter->MgntInfo.LowestBasicRate;
-					//RTPRINT(FDM, WA_IOT, ("DHCP TranslateHeader(), pTcb->DataRate = 0x%x\n", pTcb->DataRate));
+					//	pTcb->DataRate = Adapter->MgntInfo.LowestBasicRate; 
+					//RTPRINT(FDM, WA_IOT, ("DHCP TranslateHeader(), pTcb->DataRate = 0x%x\n", pTcb->DataRate)); 
 					pattrib->dhcp_pkt = 1;
 				}
 			}
@@ -489,7 +489,7 @@ sint update_attrib(_adapter *padapter, _pkt *pkt, struct pkt_attrib *pattrib)
 	pattrib->pkt_hdrlen = ETH_HLEN;//(pattrib->ether_type == 0x8100) ? (14 + 4 ): 14; //vlan tag
 
 	if (pqospriv->qos_option) {
-		if (check_fwstate(pmlmepriv, WIFI_AP_STATE) && psta->qos_option)
+		if (check_fwstate(pmlmepriv, WIFI_AP_STATE) && psta->qos_option) 
 			set_qos(&pktfile, pattrib);
 		else
 			set_qos(&pktfile, pattrib);
@@ -623,7 +623,7 @@ sint xmitframe_addmic(_adapter *padapter, struct xmit_frame *pxmitframe){
 
 _func_enter_;
 
-	if(pattrib->encrypt ==_TKIP_)//if(psecuritypriv->dot11PrivacyAlgrthm==_TKIP_PRIVACY_)
+	if(pattrib->encrypt ==_TKIP_)//if(psecuritypriv->dot11PrivacyAlgrthm==_TKIP_PRIVACY_) 
 	{
 		//encode mic code
 		if(stainfo!= NULL){
@@ -765,7 +765,7 @@ sint make_wlanhdr (_adapter *padapter , u8 *hdr, struct pkt_attrib *pattrib)
 {
 	u16 *qc;
 
-	struct ieee80211_hdr *pwlanhdr = (struct ieee80211_hdr *)hdr;
+	struct rtw_ieee80211_hdr *pwlanhdr = (struct rtw_ieee80211_hdr *)hdr;
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	struct qos_priv *pqospriv = &pmlmepriv->qospriv;
 
@@ -927,7 +927,7 @@ void xmitframe_tcp_checksum_offload(_pkt *pkt, struct pkt_attrib *pattrib)
 		{
 			const struct iphdr *ip = ip_hdr(skb);
 
-			if (ip->protocol == IPPROTO_TCP)
+			if (ip->protocol == IPPROTO_TCP) 
 			{
 				// TCP checksum offload by HW
 				printk("CHECKSUM_PARTIAL TCP\n");
@@ -935,7 +935,7 @@ void xmitframe_tcp_checksum_offload(_pkt *pkt, struct pkt_attrib *pattrib)
 				//skb_checksum_help(skb);
 			} else if (ip->protocol == IPPROTO_UDP) {
 				//printk("CHECKSUM_PARTIAL UDP\n");
-#if 1                      
+#if 1                       
 				skb_checksum_help(skb);
 #else
 				// Set UDP checksum = 0 to skip checksum check
@@ -964,7 +964,7 @@ This sub-routine will perform all the following:
 3. append sta's iv/ext-iv
 4. append LLC
 5. move frag chunk from pframe to pxmitframe->mem
-6. apply sw-encrypt, if necessary.
+6. apply sw-encrypt, if necessary. 
 
 */
 sint xmitframe_coalesce(_adapter *padapter, _pkt *pkt, struct xmit_frame *pxmitframe)
@@ -1020,7 +1020,7 @@ _func_enter_;
 	//mem_start = (u8*)(pxmitframe->mem) + WLANHDR_OFFSET + TXDESC_OFFSET;
 
 #ifdef CONFIG_MP_INCLUDED
-	if ((check_fwstate(pmlmepriv, WIFI_MP_STATE) == _TRUE)/* &&
+	if ((check_fwstate(pmlmepriv, WIFI_MP_STATE) == _TRUE)/* && 
 	    (check_fwstate(pmlmepriv, WIFI_MP_LPBK_STATE) == _TRUE)*/)
 	{	
 		//truncate TXDESC_SIZE bytes txcmd if at mp mode for 871x
@@ -1109,7 +1109,7 @@ _func_enter_;
 		pframe += mem_sz;
 
 		if ((pattrib->icv_len >0 )&& (pattrib->bswenc)) {
-			_memcpy(pframe, pattrib->icv, pattrib->icv_len);
+			_memcpy(pframe, pattrib->icv, pattrib->icv_len); 
 			pframe += pattrib->icv_len;
 		}
 
@@ -1119,7 +1119,7 @@ _func_enter_;
 		{
 			pattrib->nr_frags = frg_inx;
 
-			pattrib->last_txcmdsz = pattrib->hdrlen + pattrib->iv_len + ((pattrib->nr_frags==1)? llc_sz:0) +
+			pattrib->last_txcmdsz = pattrib->hdrlen + pattrib->iv_len + ((pattrib->nr_frags==1)? llc_sz:0) + 
 					((pattrib->bswenc) ? pattrib->icv_len : 0) + mem_sz;
 			ClearMFrag(mem_start);
 #ifdef CONFIG_SDIO_HCI
@@ -1310,11 +1310,11 @@ _func_enter_;
 		
 	_exit_critical(&pfree_xmitbuf_queue->lock, &irqL);	
 
-_func_exit_;	
+_func_exit_;	 
 
 	return _SUCCESS;
 	
-}
+} 
 
 
 /*
@@ -1333,7 +1333,7 @@ struct xmit_frame *alloc_xmitframe(struct xmit_priv *pxmitpriv)//(_queue *pfree_
 {
 	/*
 		Please remember to use all the osdep_service api,
-		and lock/unlock or _enter/_exit critical to protect
+		and lock/unlock or _enter/_exit critical to protect 
 		pfree_xmit_queue
 	*/
 
@@ -1408,7 +1408,7 @@ _func_enter_;
 		pfree_xmit_queue = &pxmitpriv->free_txagg_xmit_queue;
 		pfree_cnt = &pxmitpriv->free_txagg_xmitframe_cnt;
 	}	
-	else
+	else 
 	{
 		return NULL;
 	}
@@ -1516,7 +1516,7 @@ _func_enter_;
 	if(pxmitframe->frame_tag == DATA_FRAMETAG)
 	{
 		RT_TRACE(_module_rtl871x_xmit_c_, _drv_debug_, ("free_xmitframe_ex(), free_xmitframe\n"));
-		free_xmitframe(pxmitpriv, pxmitframe);	 
+		free_xmitframe(pxmitpriv, pxmitframe);	  
 	}
 #ifdef CONFIG_DRVEXT_MODULE
 	else if(pxmitframe->frame_tag == L2_FRAMETAG)
@@ -1546,11 +1546,11 @@ _func_enter_;
 
 exit:
 	
-_func_exit_;	
+_func_exit_;	 
 
 	return _SUCCESS;
 	
-}
+} 
 
 void free_xmitframe_queue(struct xmit_priv *pxmitpriv, _queue *pframequeue)
 {
@@ -1570,7 +1570,7 @@ _func_enter_;
 			
 		pxmitframe = LIST_CONTAINOR(plist, struct xmit_frame, list);
 
-		plist = get_next(plist);
+		plist = get_next(plist); 
 		
 		free_xmitframe(pxmitpriv,pxmitframe);
 			
@@ -1594,12 +1594,12 @@ _func_enter_;
 	if(IS_MCAST(psta->hwaddr))
 	{
 		ptxservq = &(psta->sta_xmitpriv.be_q); // we will use be_q to queue bc/mc frames in BCMC_stainfo
-		*ppstapending = &padapter->xmitpriv.bm_pending;
+		*ppstapending = &padapter->xmitpriv.bm_pending; 
 	}
 	else
 #endif		
 	{
-		switch (up)
+		switch (up) 
 		{
 			case 1:
 			case 2:
@@ -1930,7 +1930,7 @@ int pre_xmit(_adapter *padapter, struct xmit_frame *pxmitframe)
 
 		xmitframe_xmitbuf_attach(pxmitframe,pxmitbuf);
 
-		xmit_direct(padapter, pxmitframe);
+		xmit_direct(padapter, pxmitframe); 
 	}
 
 	return ret;

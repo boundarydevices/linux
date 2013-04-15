@@ -16,12 +16,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 /*
 
 The purpose of rtl871x_io.c
 
-a. provides the API
+a. provides the API 
 
 b. provides the protocol engine
 
@@ -66,7 +66,9 @@ jackson@realtek.com.tw
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/kref.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
 #include <linux/smp_lock.h>
+#endif
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
 #include <linux/usb.h>
@@ -162,7 +164,7 @@ _func_enter_;
 
 #ifdef CONFIG_USB_HCI	
       unload_intf_priv = &usb_unload_intf_priv;
-#endif
+#endif 
 	
 	unload_intf_priv(pintfpriv);
 
@@ -447,7 +449,7 @@ _func_enter_;
 uint alloc_io_queue(_adapter *adapter)
 {
 	u32 i;
-	struct io_queue *pio_queue;
+	struct io_queue *pio_queue; 
 	struct io_req *pio_req;
 
 _func_enter_;
@@ -474,7 +476,7 @@ _func_enter_;
 
 	_memset(pio_queue->pallocated_free_ioreqs_buf, 0, (NUM_IOREQ *(sizeof (struct io_req)) + 4));
 
-	pio_queue->free_ioreqs_buf = pio_queue->pallocated_free_ioreqs_buf + 4
+	pio_queue->free_ioreqs_buf = pio_queue->pallocated_free_ioreqs_buf + 4 
 			- ((u32 )(pio_queue->pallocated_free_ioreqs_buf)  & 3);
 
 	pio_req = (struct io_req *)(pio_queue->free_ioreqs_buf);

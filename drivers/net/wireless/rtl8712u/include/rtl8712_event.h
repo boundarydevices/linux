@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef _RTL8712_EVENT_H_
 #define _RTL8712_EVENT_H_
 
@@ -35,8 +35,8 @@ enum rtl8712_c2h_event
  	GEN_EVT_CODE(_Read_EEPROM),
  	GEN_EVT_CODE(_Read_EFUSE),
 	GEN_EVT_CODE(_Read_CAM),			/*5*/
- 	GEN_EVT_CODE(_Get_BasicRate), 
- 	GEN_EVT_CODE(_Get_DataRate),  
+ 	GEN_EVT_CODE(_Get_BasicRate),  
+ 	GEN_EVT_CODE(_Get_DataRate),   
  	GEN_EVT_CODE(_Survey),	 /*8*/
  	GEN_EVT_CODE(_SurveyDone),	 /*9*/
  	
@@ -44,11 +44,11 @@ enum rtl8712_c2h_event
  	GEN_EVT_CODE(_AddSTA),
  	GEN_EVT_CODE(_DelSTA),
  	GEN_EVT_CODE(_AtimDone) ,
- 	GEN_EVT_CODE(_TX_Report), 
+ 	GEN_EVT_CODE(_TX_Report),  
 	GEN_EVT_CODE(_CCX_Report),			/*15*/
  	GEN_EVT_CODE(_DTM_Report),
  	GEN_EVT_CODE(_TX_Rate_Statistics),
- 	GEN_EVT_CODE(_C2HLBK),
+ 	GEN_EVT_CODE(_C2HLBK), 
  	GEN_EVT_CODE(_FWDBG),
 	GEN_EVT_CODE(_C2HFEEDBACK),               /*20*/
 	GEN_EVT_CODE(_ADDBA),
@@ -56,13 +56,15 @@ enum rtl8712_c2h_event
 	GEN_EVT_CODE(_ReportPwrState),		//filen: only for PCIE, USB	
 	GEN_EVT_CODE(_WPS_PBC),			/*24*/
 	GEN_EVT_CODE(_ADDBAReq_Report),	/*25*/
+	GEN_EVT_CODE(_Survey_timer),	/*26*///for softap mode, need been modified
+	GEN_EVT_CODE(_OBSS_scan_timer),	/*27*/
  	MAX_C2HEVT
 };
 
 
 #ifdef _RTL8712_CMD_C_		
 
-struct fwevent wlanevents[] =
+struct fwevent wlanevents[] = 
 {
 	{0, dummy_event_callback}, 	/*0*/
 	{0, NULL},
@@ -91,6 +93,8 @@ struct fwevent wlanevents[] =
 	{0, &cpwm_event_callback},
 	{0, &wpspbc_event_callback},
 	{0, &got_addbareq_event_callback},
+	{0, fwdbg_event_callback},//for softap mode, need been modified
+	{sizeof(struct survey_timer_event), &survey_timer_event_callback},
 };
 
 #endif//_RTL8712_CMD_C_

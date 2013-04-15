@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _RTL8712_XMIT_C_
 #include <drv_conf.h>
 #include <osdep_service.h>
@@ -88,8 +88,8 @@ sint txframes_pending(_adapter *padapter)
 {
 	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
 
-	return ((_queue_empty(&pxmitpriv->be_pending) == _FALSE) ||
-			 (_queue_empty(&pxmitpriv->bk_pending) == _FALSE) ||
+	return ((_queue_empty(&pxmitpriv->be_pending) == _FALSE) || 
+			 (_queue_empty(&pxmitpriv->bk_pending) == _FALSE) || 
 			 (_queue_empty(&pxmitpriv->vi_pending) == _FALSE) ||
 			 (_queue_empty(&pxmitpriv->vo_pending) == _FALSE));
 }
@@ -103,7 +103,7 @@ int txframes_sta_ac_pending(_adapter *padapter, struct pkt_attrib *pattrib)
 
 	psta = pattrib->psta;
 
-	switch(priority)
+	switch(priority) 
 	{
 			case 1:
 			case 2:
@@ -463,13 +463,15 @@ void do_queue_select(_adapter	*padapter, struct pkt_attrib *pattrib)
 	unsigned int qsel;
 	struct xmit_priv *pxmitpriv = &(padapter->xmitpriv);	
 	struct dvobj_priv	*pdvobj = (struct dvobj_priv *)&padapter->dvobjpriv;
+	struct registry_priv *pregistrypriv = &padapter->registrypriv;
 
 	if(pdvobj->nr_endpoint == 6)
 	{
 		qsel = (uint)pattrib->priority;
 	}
 	else if(pdvobj->nr_endpoint == 4)
-#ifndef CONFIG_WIFI_WMM_TEST
+	{
+		if (pregistrypriv->wifi_test == 0)
 	{
 		qsel = (uint)pattrib->priority;
 
@@ -484,7 +486,7 @@ void do_queue_select(_adapter	*padapter, struct pkt_attrib *pattrib)
 		else
 			qsel = 3;
 	}
-#else
+		else //wifi_test 
 	{
 		switch(pattrib->priority)
 		{
@@ -539,8 +541,10 @@ void do_queue_select(_adapter	*padapter, struct pkt_attrib *pattrib)
 				qsel = (uint)(0x3);
 				break;
 		}
+			
+		}
+		
 	}
-#endif
 
 	pattrib->qsel = qsel;
 
@@ -556,9 +560,9 @@ int check_xmit_resource(_adapter *padapter, struct xmit_frame *pxmitframe)
 	int bq=0;
 	struct xmit_priv *pxmitpriv = &(padapter->xmitpriv);
 	
-	//todo: accordding to the AC(TID) of  txframes to check the each txframes_pending queue.
+	//todo: accordding to the AC(TID) of  txframes to check the each txframes_pending queue. 
 	
-	//Notes: in winxp os, the usb_wirte_port_complete is at dispatch level, so it needs not to protect
+	//Notes: in winxp os, the usb_wirte_port_complete is at dispatch level, so it needs not to protect 
 	// 		when checking txframes_pending
 
 #ifdef CONFIG_USB_HCI
@@ -850,7 +854,7 @@ void update_txdesc_ex(struct xmit_frame *pxmitframe, struct tx_desc *ptxdesc)
 }
 #endif
 
-#ifdef CONFIG_USB_TX_AGGR
+#ifdef CONFIG_USB_TX_AGGREGATION
 u8 construct_txaggr_cmd_desc(struct xmit_buf *pxmitbuf)
 {
 	struct xmit_frame	*pxmitframe	= (struct xmit_frame *)pxmitbuf->priv_data;
@@ -953,7 +957,7 @@ u8 append_mpdu_unit(struct xmit_buf *pxmitbuf, struct xmit_frame *pxmitframe)
 	// Add the new mpdu's length
 	//printk("Aggred sz = %d, going to add %d\n", (ptx_desc->txdw0&0x0000ffff),last_txcmdsz+padding_sz );
 	ptx_desc->txdw0 = cpu_to_le32((ptx_desc->txdw0&0xffff0000)|
-		( (ptx_desc->txdw0&0x0000ffff)+((TXDESC_SIZE+last_txcmdsz+padding_sz)&0x0000ffff)) );   
+		( (ptx_desc->txdw0&0x0000ffff)+((TXDESC_SIZE+last_txcmdsz+padding_sz)&0x0000ffff)) );    
 
 	return _SUCCESS;
 
@@ -1057,7 +1061,7 @@ u8 dump_aggr_xframe(struct xmit_buf* pxmitbuf, struct xmit_frame * pxmitframe)
 }
 
 
-#endif
+#endif //CONFIG_USB_TX_AGGREGATION
 
 void update_txdesc(struct xmit_frame *pxmitframe, uint *pmem, int sz)
 {
@@ -1070,9 +1074,9 @@ void update_txdesc(struct xmit_frame *pxmitframe, uint *pmem, int sz)
 	struct tx_desc		*ptxdesc = (struct tx_desc *)pmem;
 	struct dvobj_priv	*pdvobj = (struct dvobj_priv   *)&padapter->dvobjpriv;	
 
-#ifdef CONFIG_USB_TX_AGGR
+#ifdef CONFIG_USB_TX_AGGREGATION
 	struct cmd_priv		*pcmdpriv = ( struct cmd_priv  *)&padapter->cmdpriv;
-#endif
+#endif //CONFIG_USB_TX_AGGREGATION
 
 	u8 blnSetTxDescOffset;
 
@@ -1137,7 +1141,7 @@ void update_txdesc(struct xmit_frame *pxmitframe, uint *pmem, int sz)
 		//ptxdesc->txdw1 |= (0x05)&0x1f;//CAM_ID(MAC_ID), default=5;
 		ptxdesc->txdw1 |= cpu_to_le32((pattrib->mac_id)&0x1f);//CAM_ID(MAC_ID)
 
-#ifdef CONFIG_USB_TX_AGGR
+#ifdef CONFIG_USB_TX_AGGREGATION
 		// dirty workaround, need to check if it is aggr cmd.
 		if((u8*)pmem != (u8*)pxmitframe->pxmitbuf->pbuf)
 		{
@@ -1164,7 +1168,7 @@ void update_txdesc(struct xmit_frame *pxmitframe, uint *pmem, int sz)
 
 			ptxdesc->txdw2 = cpu_to_le32((qsel << RTS_RC_SHT)&0x0001f000);
 
-			ptxdesc->txdw7 |= cpu_to_le32( pcmdpriv->cmd_seq << 24 );
+			ptxdesc->txdw7 |= cpu_to_le32( pcmdpriv->cmd_seq << 24 ); 
 			pcmdpriv->cmd_seq++;
 		}
 
@@ -1173,7 +1177,7 @@ void update_txdesc(struct xmit_frame *pxmitframe, uint *pmem, int sz)
 		qsel = (uint)(pattrib->qsel & 0x0000001f);
 		ptxdesc->txdw1 |= cpu_to_le32((qsel << QSEL_SHT) & 0x00001f00);
 
-#endif
+#endif //CONFIG_USB_TX_AGGREGATION
 
 		if (!pqospriv->qos_option)
 			ptxdesc->txdw1 |= cpu_to_le32(BIT(16));//Non-QoS
@@ -1391,9 +1395,9 @@ int xmitframe_complete(_adapter *padapter, struct xmit_priv *pxmitpriv, struct x
 	sint hwentry;
 	struct xmit_frame *pxmitframe=NULL;	
 
-#ifdef CONFIG_USB_TX_AGGR
+#ifdef CONFIG_USB_TX_AGGREGATION
 	struct xmit_frame *p2ndxmitframe = NULL;
-#endif
+#endif //CONFIG_USB_TX_AGGREGATION
 
 	int res=_SUCCESS, xcnt = 0;
 
@@ -1410,9 +1414,9 @@ int xmitframe_complete(_adapter *padapter, struct xmit_priv *pxmitpriv, struct x
 			return _FALSE;
 		}
 
-#ifdef CONFIG_USB_TX_AGGR
+#ifdef CONFIG_USB_TX_AGGREGATION
 		pxmitbuf->aggr_nr = 0;
-#endif
+#endif //CONFIG_USB_TX_AGGREGATION
 
 	}
 
@@ -1423,7 +1427,7 @@ int xmitframe_complete(_adapter *padapter, struct xmit_priv *pxmitpriv, struct x
 	if(pxmitframe!=NULL)
 	{
 
-#ifdef CONFIG_USB_TX_AGGR
+#ifdef CONFIG_USB_TX_AGGREGATION
 		/*	1. dequeue 2nd frame
 		 *  2. aggr if 2nd xframe is dequeued, else dump directly
 		 */
@@ -1504,7 +1508,7 @@ int xmitframe_complete(_adapter *padapter, struct xmit_priv *pxmitpriv, struct x
 
 		xcnt++;
 
-#endif
+#endif //CONFIG_USB_TX_AGGREGATION
 	}
 	else // pxmitframe == NULL && p2ndxmitframe == NULL
 	{
@@ -1590,16 +1594,16 @@ void dump_xframe(_adapter *padapter, struct xmit_frame *pxmitframe)
 		write_port(padapter, ff_hwaddr, w_sz, (unsigned char*)mem_addr);
 #else
 
-#ifdef CONFIG_USB_TX_AGGR
+#ifdef CONFIG_USB_TX_AGGREGATION
 		write_port(padapter, RTL8712_DMA_H2CCMD, w_sz, (unsigned char*)pxmitframe);
 #else
 		write_port(padapter, ff_hwaddr, w_sz, (unsigned char*)pxmitframe);
-#endif
+#endif //CONFIG_USB_TX_AGGREGATION
 
 #endif
 
 		RT_TRACE(_module_rtl871x_xmit_c_, _drv_info_, ("write_port, w_sz=%d\n", w_sz));
-		//printk("write_port, w_sz=%d, sz=%d, txdesc_sz=%d, tid=%d\n", w_sz, sz, w_sz-sz, pattrib->priority);     
+		//printk("write_port, w_sz=%d, sz=%d, txdesc_sz=%d, tid=%d\n", w_sz, sz, w_sz-sz, pattrib->priority);      
 
 		mem_addr += w_sz;
 

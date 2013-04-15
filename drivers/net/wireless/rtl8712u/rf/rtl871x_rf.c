@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _RTL871X_RF_C_
 
 #include <drv_conf.h>
@@ -42,7 +42,7 @@ u32 ch2freq(u32 ch)
 	else if (ch >= 180)
 		starting_freq = 4000;
 	
-	else
+	else 
 		starting_freq = 5000;
 		
 	return channel2freq(starting_freq, ch);
@@ -144,15 +144,15 @@ void set_channelset_bg(_adapter  *padapter, struct regulatory_class *reg_class, 
 		   psetphyinfopara->class_sets[class_index].starting_freq
 		- Channel sets:
 		   For each channel set, please call ->
-		   a.) 802.11b/g
+		   a.) 802.11b/g 
 			 set_channelset_bg(adapter, &psetphyinfopara->class_sets[class_index], channel_set_index, channel_set);
 		   b.) 802.11a
-			 set_channelset_a(adapter, &psetphyinfopara->class_sets[class_index], channel_set_index, channel_set);			
-  		- Channel spacing (MHz): 
+			 set_channelset_a(adapter, &psetphyinfopara->class_sets[class_index], channel_set_index, channel_set);			 
+  		- Channel spacing (MHz):  
          	   psetphyinfopara->class_sets[class_index].channel_spacing
-         	- Transmit power limit (dBm):  
+         	- Transmit power limit (dBm):   
   		   psetphyinfopara->class_sets[class_index].txpower_limit
-*/     	   	 
+*/     	   	  
 void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 {
 
@@ -184,7 +184,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			if(peeprompriv->sys_config & _A_BAND) //if A band exists in EEPROM setting
 			{
 			//Regulatory class 1-> class_sets[1]
-			psetphyinfopara->class_sets[1].starting_freq = 5000;
+			psetphyinfopara->class_sets[1].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[1], 0, 36);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[1], 1, 40);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[1], 2, 44);			
@@ -193,7 +193,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[1].txpower_limit = 16;
 
 			//Regulatory class 2 -> class_sets[2]
-			psetphyinfopara->class_sets[2].starting_freq = 5000;
+			psetphyinfopara->class_sets[2].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[2], 0, 52);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[2], 1, 56);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[2], 2, 60);			
@@ -202,7 +202,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[2].txpower_limit = 23;
 
 			//Regulatory class 3 -> class_sets[3]
-			psetphyinfopara->class_sets[3].starting_freq = 5000;
+			psetphyinfopara->class_sets[3].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[3], 0, 149);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[3], 1, 153);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[3], 2, 157);			
@@ -238,7 +238,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			if(peeprompriv->sys_config & _A_BAND) //if A band exists in EEPROM setting
 			{
 			//Regulatory class 1-> class_sets[1]
-			psetphyinfopara->class_sets[1].starting_freq = 5000;
+			psetphyinfopara->class_sets[1].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[1], 0, 36);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[1], 1, 40);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[1], 2, 44);			
@@ -247,7 +247,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[1].txpower_limit = 23;
 
 			//Regulatory class 2 -> class_sets[2]
-			psetphyinfopara->class_sets[2].starting_freq = 5000;
+			psetphyinfopara->class_sets[2].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[2], 0, 52);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[2], 1, 56);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[2], 2, 60);			
@@ -256,7 +256,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[2].txpower_limit = 23;
 
 			//Regulatory class 3 -> class_sets[3]
-			psetphyinfopara->class_sets[3].starting_freq = 5000;
+			psetphyinfopara->class_sets[3].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[3], 0, 100);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[3], 1, 104);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[3], 2, 108);			
@@ -298,7 +298,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			if(peeprompriv->sys_config & _A_BAND) //if A band exists in EEPROM setting
 			{		
 			//Regulatory class 1-> class_sets[1]
-			psetphyinfopara->class_sets[1].starting_freq = 5000;
+			psetphyinfopara->class_sets[1].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[1], 0, 34);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[1], 1, 38);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[1], 2, 42);			
@@ -307,7 +307,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[1].txpower_limit = 22;
 
 			//Regulatory class 2 -> class_sets[2]
-			psetphyinfopara->class_sets[2].starting_freq = 5000;
+			psetphyinfopara->class_sets[2].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[2], 0, 8);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[2], 1, 12);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[2], 2, 16);			
@@ -315,7 +315,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[2].txpower_limit = 24;
 
 			//Regulatory class 3 -> class_sets[3]
-			psetphyinfopara->class_sets[3].starting_freq = 5000;
+			psetphyinfopara->class_sets[3].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[3], 0, 8);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[3], 1, 12);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[3], 2, 16);			
@@ -323,7 +323,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[3].txpower_limit = 24;			
 
 			//Regulatory class 4 -> class_sets[4]
-			psetphyinfopara->class_sets[4].starting_freq = 5000;
+			psetphyinfopara->class_sets[4].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[4], 0, 8);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[4], 1, 12);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[4], 2, 16);			
@@ -331,7 +331,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[4].txpower_limit = 24;				
 
 			//Regulatory class 5 -> class_sets[5]
-			psetphyinfopara->class_sets[5].starting_freq = 5000;
+			psetphyinfopara->class_sets[5].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[5], 0, 8);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[5], 1, 12);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[5], 2, 16);			
@@ -339,7 +339,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[5].txpower_limit = 24;
 
 			//Regulatory class 6 -> class_sets[6]
-			psetphyinfopara->class_sets[6].starting_freq = 5000;
+			psetphyinfopara->class_sets[6].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[6], 0, 8);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[6], 1, 12);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[6], 2, 16);			
@@ -347,7 +347,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[6].txpower_limit = 22;
 
 			//Regulatory class 7 -> class_sets[7]
-			psetphyinfopara->class_sets[7].starting_freq = 4000;
+			psetphyinfopara->class_sets[7].starting_freq = 4000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[7], 0, 184);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[7], 1, 188);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[7], 2, 192);			
@@ -356,7 +356,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[7].txpower_limit = 24;
 
 			//Regulatory class 8 -> class_sets[8]
-			psetphyinfopara->class_sets[8].starting_freq = 4000;
+			psetphyinfopara->class_sets[8].starting_freq = 4000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[8], 0, 184);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[8], 1, 188);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[8], 2, 192);			
@@ -365,7 +365,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[8].txpower_limit = 24;
 
 			//Regulatory class 9 -> class_sets[9]
-			psetphyinfopara->class_sets[9].starting_freq = 4000;
+			psetphyinfopara->class_sets[9].starting_freq = 4000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[9], 0, 184);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[9], 1, 188);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[9], 2, 192);			
@@ -374,7 +374,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[9].txpower_limit = 24;
 
 			//Regulatory class 10 -> class_sets[9]
-			psetphyinfopara->class_sets[10].starting_freq = 4000;
+			psetphyinfopara->class_sets[10].starting_freq = 4000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[10], 0, 184);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[10], 1, 188);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[10], 2, 192);			
@@ -383,7 +383,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[10].txpower_limit = 24;
 
 			//Regulatory class 11 -> class_sets[11]
-			psetphyinfopara->class_sets[11].starting_freq = 4000;
+			psetphyinfopara->class_sets[11].starting_freq = 4000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[11], 0, 184);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[11], 1, 188);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[11], 2, 192);			
@@ -392,7 +392,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[11].txpower_limit = 22;
 
 			//Regulatory class 12 -> class_sets[12]
-			psetphyinfopara->class_sets[12].starting_freq = 5000;
+			psetphyinfopara->class_sets[12].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[12], 0, 7);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[12], 1, 8);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[12], 2, 9);			
@@ -401,7 +401,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[12].txpower_limit = 24;
 
 			//Regulatory class 13 -> class_sets[13]
-			psetphyinfopara->class_sets[13].starting_freq = 5000;
+			psetphyinfopara->class_sets[13].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[13], 0, 7);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[13], 1, 8);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[13], 2, 9);			
@@ -410,7 +410,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[13].txpower_limit = 24;
 
 			//Regulatory class 14 -> class_sets[14]
-			psetphyinfopara->class_sets[14].starting_freq = 5000;
+			psetphyinfopara->class_sets[14].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[14], 0, 7);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[14], 1, 8);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[14], 2, 9);			
@@ -419,7 +419,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[14].txpower_limit = 24;		
 	
 			//Regulatory class 15 -> class_sets[15]
-			psetphyinfopara->class_sets[15].starting_freq = 5000;
+			psetphyinfopara->class_sets[15].starting_freq = 5000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[15], 0, 7);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[15], 1, 8);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[15], 2, 9);			
@@ -428,7 +428,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[15].txpower_limit = 24;		
 
 			//Regulatory class 16 -> class_sets[16]
-			psetphyinfopara->class_sets[16].starting_freq = 4000;
+			psetphyinfopara->class_sets[16].starting_freq = 4000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[16], 0, 183);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[16], 1, 184);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[16], 2, 185);			
@@ -439,7 +439,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[16].txpower_limit = 24;		
 
 			//Regulatory class 17 -> class_sets[17]
-			psetphyinfopara->class_sets[17].starting_freq = 4000;
+			psetphyinfopara->class_sets[17].starting_freq = 4000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[17], 0, 183);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[17], 1, 184);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[17], 2, 185);			
@@ -450,7 +450,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[17].txpower_limit = 24;		
 
 			//Regulatory class 18 -> class_sets[18]
-			psetphyinfopara->class_sets[18].starting_freq = 4000;
+			psetphyinfopara->class_sets[18].starting_freq = 4000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[18], 0, 183);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[18], 1, 184);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[18], 2, 185);			
@@ -461,7 +461,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[18].txpower_limit = 24;		
 
 			//Regulatory class 19 -> class_sets[19]
-			psetphyinfopara->class_sets[19].starting_freq = 4000;
+			psetphyinfopara->class_sets[19].starting_freq = 4000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[19], 0, 183);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[19], 1, 184);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[19], 2, 185);			
@@ -472,7 +472,7 @@ void init_phyinfo(_adapter  *adapter, struct setphyinfo_parm* psetphyinfopara)
 			psetphyinfopara->class_sets[19].txpower_limit = 24;		
 
 			//Regulatory class 20 -> class_sets[20]
-			psetphyinfopara->class_sets[20].starting_freq = 4000;
+			psetphyinfopara->class_sets[20].starting_freq = 4000; 
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[20], 0, 183);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[20], 1, 184);
 			set_channelset_a(adapter, &psetphyinfopara->class_sets[20], 2, 185);			
@@ -501,7 +501,7 @@ u8 writephyinfo_fw(_adapter *padapter, u32 addr)
 	u32 *tmpWrite;
 	struct setphyinfo_parm*	psetphyinfopara;
 
-	psetphyinfopara = (struct setphyinfo_parm*)_malloc(sizeof(struct setphyinfo_parm));
+	psetphyinfopara = (struct setphyinfo_parm*)_malloc(sizeof(struct setphyinfo_parm)); 
 
 	if(psetphyinfopara==NULL){
 		return _FAIL;
@@ -513,7 +513,7 @@ u8 writephyinfo_fw(_adapter *padapter, u32 addr)
 
 	tmpWrite = (u32 *)psetphyinfopara;
 
-	for(i = 0; i < sizeof(struct setphyinfo_parm); i = i + sizeof(u32))
+	for(i = 0; i < sizeof(struct setphyinfo_parm); i = i + sizeof(u32)) 
 	{
 		write32(padapter, addr+i, *tmpWrite);
 		tmpWrite++;

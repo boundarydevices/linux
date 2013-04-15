@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 
 #define _HAL_INIT_C_
 #include <drv_conf.h>
@@ -45,7 +45,7 @@
 #if defined(PLATFORM_OS_CE) && defined(CONFIG_USB_HCI)
 #define MAX_DUMP_FWSZ	2000
 #else
-#define MAX_DUMP_FWSZ	49152 /*default = 49152 (48k)*/
+#define MAX_DUMP_FWSZ	3072  /*default = 49152 (48k)*/
 #endif
 
 void fill_fwpriv(_adapter * padapter, struct fw_priv *pfwpriv)
@@ -94,6 +94,7 @@ void fill_fwpriv(_adapter * padapter, struct fw_priv *pfwpriv)
 	pfwpriv->turboMode = ( ( pregpriv->wifi_test == 1 ) ? 0 : 1 ) ;	//default enable it
 
 	pfwpriv->lowPowerMode = pregpriv->low_power;
+	pfwpriv->rsvd024 = 1;	//	F/W will issue two probe request. One is with ssid ( if exists ), another is with the wildcard ssid.
 	RT_TRACE(_module_hal_init_c_,_drv_err_,("== fill_fwpriv: pfwpriv->lowPowerMode=%d [0:normal / 1:low power]\n",pfwpriv->lowPowerMode ));
 }
 
@@ -108,7 +109,7 @@ void update_fwhdr(struct fw_hdr	* pfwhdr, u8* pmappedfw)
 	
 	pfwhdr->img_SRAM_size = le32_to_cpu(*(uint *)(pmappedfw+12));    //define the size of FW in SRAM
 	
-	pfwhdr->fw_priv_sz = le32_to_cpu(*(uint *)(pmappedfw+16));      //define the size of DMEM variable
+	pfwhdr->fw_priv_sz = le32_to_cpu(*(uint *)(pmappedfw+16));      //define the size of DMEM variable 
 	
 	
 	//_memcpy(&pfwhdr->fwpriv, pmappedfw+16 + sizeof(uint)*4, sizeof(struct fw_priv));
@@ -205,7 +206,8 @@ _func_enter_;
 
 		maxlen = (fwhdr.img_IMEM_size > fwhdr.img_SRAM_size)? fwhdr.img_IMEM_size : fwhdr.img_SRAM_size;
 		maxlen += txdscp_sz;
-		ptmpchar = _malloc(maxlen + FWBUFF_ALIGN_SZ);
+		//ptmpchar = _malloc(maxlen + FWBUFF_ALIGN_SZ);
+		ptmpchar = _malloc(4*1024);
 
 		if (ptmpchar==NULL) {
 			RT_TRACE(_module_hal_init_c_,_drv_err_,("can't alloc resources when dl_fw\n"));
@@ -236,8 +238,8 @@ _func_enter_;
 		do {
 			_memset(ptx_desc, 0, TXDESC_SIZE);
 
-			if(imem_sz >  MAX_DUMP_FWSZ/*49152*/) {
-				dump_imem_sz = MAX_DUMP_FWSZ;//49152
+			if(imem_sz >  MAX_DUMP_FWSZ) {
+				dump_imem_sz = MAX_DUMP_FWSZ;
 			} else {
 				dump_imem_sz = imem_sz;
 				ptx_desc->txdw0 |= cpu_to_le32(BIT(28));	
@@ -318,7 +320,7 @@ _func_enter_;
 				
 			}			
 
-			ptx_desc->txdw0 |= cpu_to_le32(dump_emem_sz&0x0000ffff);
+			ptx_desc->txdw0 |= cpu_to_le32(dump_emem_sz&0x0000ffff); 
 			
 			_memcpy(ppayload, ptr, dump_emem_sz);
 			write_mem(padapter, RTL8712_DMA_VOQ, dump_emem_sz+TXDESC_SIZE, (u8*)ptx_desc);
@@ -377,8 +379,8 @@ _func_enter_;
 
 		tmp8 = read8(padapter, SYS_FUNC_EN + 1);
 		RT_TRACE(_module_hal_init_c_, _drv_notice_,("WT SYS_FUNC_EN+1 to 0x%x[ori=0x%x]\n",(u32)(tmp8|BIT(2)),tmp8));
-		write8(padapter, SYS_FUNC_EN+1, tmp8|BIT(2));
-		tmp8_a = read8(padapter, SYS_FUNC_EN + 1);
+		write8(padapter, SYS_FUNC_EN+1, tmp8|BIT(2)); 
+		tmp8_a = read8(padapter, SYS_FUNC_EN + 1); 
 		if (tmp8_a != (tmp8|BIT(2))) {
 			RT_TRACE(_module_hal_init_c_,_drv_err_,("Error=> WT SYS_FUNC_EN fail; SYS_FUNC_EN=%x; target_val=%x\n", tmp8_a, tmp8));
 			ret8=_FAIL;
@@ -401,7 +403,7 @@ _func_enter_;
 #endif
 		i = 100;
 		tmp16 = read16(padapter, TCR);
-		while (((tmp16 & _IMEM_RDY) == 0) && (i > 0))
+		while (((tmp16 & _IMEM_RDY) == 0) && (i > 0)) 
 		{
 			udelay_os(1000);
 			tmp16 = read16(padapter,TCR);
@@ -541,7 +543,7 @@ uint rtl8712_hal_init(_adapter *padapter)
 	u32	val32;
 	u8	val8;
 	struct registry_priv *pregistrypriv = &padapter->registrypriv;
-	struct eeprom_priv *peeprompriv = &padapter->eeprompriv;	
+	struct eeprom_priv *peeprompriv = &padapter->eeprompriv;	 
 	uint status = _SUCCESS;
 
 _func_enter_;
@@ -606,7 +608,11 @@ _func_enter_;
 	RT_TRACE(_module_hal_init_c_,_drv_debug_,("0x1025FE5B=0x%x\n", read8(padapter, 0x1025FE5B)));
 	
 	write8(padapter, 0x102500B5, read8(padapter, 0x102500B5)|BIT(0));//page = 128bytes
+#ifdef CONFIG_USB_RX_AGGREGATION
 	write8(padapter, 0x102500BD, read8(padapter, 0x102500BD)|BIT(7));//enable usb rx aggregation
+#else
+	write8(padapter, 0x102500BD, read8(padapter, 0x102500BD) & (~ BIT(7) ) );//disable usb rx aggregation
+#endif //CONFIG_USB_RX_AGGREGATION
 	//write8(padapter, 0x102500D9, 48);//TH = 48 pages, 6k
 	write8(padapter, 0x102500D9, 1);// TH=1 => means that invalidate  usb rx aggregation
 	//write8(padapter, 0x1025FE5B, 0x02);// 1.7ms/2
@@ -636,13 +642,13 @@ _func_enter_;
 			padapter->eeprompriv.mac_addr[i] = val8;			
 		}
 #if 0
-		printk("MAC Address = %x-%x-%x-%x-%x-%x\n",
+		printk("MAC Address = %x-%x-%x-%x-%x-%x\n", 
 				 peeprompriv->mac_addr[0],	peeprompriv->mac_addr[1],
 				 peeprompriv->mac_addr[2],	peeprompriv->mac_addr[3],
 			peeprompriv->mac_addr[4],	peeprompriv->mac_addr[5]);
 #endif
 	}
-				
+				 
 	RT_TRACE(_module_hal_init_c_, _drv_debug_,
 		 ("MAC Address=%02x:%02x:%02x:%02x:%02x:%02x\n",
 		  peeprompriv->mac_addr[0], peeprompriv->mac_addr[1], peeprompriv->mac_addr[2],
@@ -672,7 +678,7 @@ uint rtl8712_hal_deinit(_adapter *padapter)
 	
 #if 0
 	// Turn off RF
-	PHY_SetRFReg(Adapter, (RF90_RADIO_PATH_E)RF90_PATH_A,
+	PHY_SetRFReg(Adapter, (RF90_RADIO_PATH_E)RF90_PATH_A, 
 					0x00, bMask20Bits, 0x00000);
 #else
 	write8(padapter, RF_CTRL, 0x00);
@@ -688,7 +694,7 @@ uint rtl8712_hal_deinit(_adapter *padapter)
 	write8(padapter, SYS_FUNC_EN+1, 0x70); // Reset MACTOP, IOREG, 4181
 	write8(padapter, PMC_FSM, 0x06);  // Enable Loader Data Keep
 	write8(padapter, SYS_ISO_CTRL, 0xF9); // Isolation signals from CORE, PLL
-	write8(padapter, SYS_ISO_CTRL+1, 0xe8); // Enable EFUSE 1.2V(LDO)
+	write8(padapter, SYS_ISO_CTRL+1, 0xe8); // Enable EFUSE 1.2V(LDO) 
 	//write8(padapter, SYS_ISO_CTRL+1, 0x69); // Isolation signals from Loader
 	write8(padapter, AFE_PLL_CTRL, 0x00); // Disable AFE PLL.
 	write8(padapter, LDOA15_CTRL, 0x54);  // Disable A15V
@@ -705,7 +711,7 @@ uint rtl8712_hal_deinit(_adapter *padapter)
 
 	// Option for Disable 1.6V LDO.	
 	write8(padapter, SPS0_CTRL, 0x56); // Disable 1.6V LDO
-	write8(padapter, SPS0_CTRL+1, 0x43);  // Set SW PFM
+	write8(padapter, SPS0_CTRL+1, 0x43);  // Set SW PFM 
 
 	// Option for Disable 1.8V Switch.	
 	//write8(padapter, SPS0_CTRL, 0x55); // Disable SW 1.8V
@@ -792,7 +798,7 @@ BISR Test flow:
 #define IRAM_BISR_OUT_DIFF			BIT(28)
 #define IRAM_BISR_UNREPAIRABLE	BIT(29)
 
-static uint iram_test(_adapter *padapter)
+static uint iram_test(_adapter *padapter) 
 {
 	u32 val32;
 	u32 report = 0;
@@ -826,10 +832,10 @@ static uint iram_test(_adapter *padapter)
 		
 	report =(val32 & 0xFFFF0000);
 	
-	if((report& IRAM_BISR_DONE ) && (!(report&IRAM_BISR_FAIL))){
+	if((report& IRAM_BISR_DONE ) && (!(report&IRAM_BISR_FAIL))){ 
 		RT_TRACE(_module_hal_init_c_,_drv_alert_,("@@@@@  Internal SRAM- bisr test pass !!!!! (0x%08x)\n",val32));
 	}
-	if(report&IRAM_BISR_FAIL){
+	if(report&IRAM_BISR_FAIL){ 
 		RT_TRACE(_module_hal_init_c_,_drv_alert_,("@@@@@  Internal SRAM- bisr test fail !!!!!! (0x%08x)\n",val32));		
 	}
 	if(report&IRAM_BISR_REPAIRED){
@@ -843,7 +849,7 @@ static uint iram_test(_adapter *padapter)
 	}
 	RT_TRACE(_module_hal_init_c_,_drv_alert_,("@@@@@ iram_test !!!!! #step 4 - check report (0x%08x) \n",report));		
 
-	//step 5.leave mbisr mode: write 0x310[3:0] = 0000
+	//step 5.leave mbisr mode: write 0x310[3:0] = 0000 
 	val32 = read32(padapter, BIST_REG);	
 	val32  &= 0xFFFFFFF0;
 	RT_TRACE(_module_hal_init_c_,_drv_alert_,("@@@@@ iram_test !!!!! #step 5 - leave mbisr mode  (0x%08x)\n",val32));	
@@ -855,7 +861,7 @@ static uint iram_test(_adapter *padapter)
 
 uint rtl871x_hal_init(_adapter *padapter)
 {
-	u8 val8;	
+	u8 val8;	 
 	uint status = _SUCCESS;
 	
 	 padapter->hw_init_completed=_FALSE;

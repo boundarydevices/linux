@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef _RTL8712_XMIT_H_
 #define _RTL8712_XMIT_H_
 
@@ -224,9 +224,9 @@ struct amsdu_xmit_frame {
 	 _adapter *	padapter;
 	
 #ifdef CONFIG_USB_HCI
-	//insert urb, irp, and irpcnt info below...     
-       u8 *mem_addr;     
-       u32 sz[8];	  
+	//insert urb, irp, and irpcnt info below...      
+       u8 *mem_addr;      
+       u32 sz[8];	   
 
 #if defined(PLATFORM_OS_XP)||defined(PLATFORM_LINUX)
 	PURB	pxmit_urb[8];
@@ -239,9 +239,9 @@ struct amsdu_xmit_frame {
 	u8 bpending[8];
 	sint ac_tag[8];
 	sint last[8];
-       uint irpcnt;        
+       uint irpcnt;         
        uint fragcnt;
-		  
+		   
 #endif
 
 	uint	mem[(MAX_AMSDU_XMITBUF_SZ>>2)];	
@@ -258,9 +258,9 @@ struct agg_xmit_frame {
 	_adapter *padapter;
 	
 #ifdef CONFIG_USB_HCI
-	//insert urb, irp, and irpcnt info below...      
-       u8 *mem_addr;     
-       u32 sz[8];	  
+	//insert urb, irp, and irpcnt info below...       
+       u8 *mem_addr;      
+       u32 sz[8];	   
 
 #if defined(PLATFORM_OS_XP)||defined(PLATFORM_LINUX)
 	PURB	pxmit_urb[8];
@@ -272,9 +272,9 @@ struct agg_xmit_frame {
 	u8 bpending[8];
 	sint ac_tag[8];
 	sint last[8];
-       uint irpcnt;        
+       uint irpcnt;         
        uint fragcnt;
-	  
+	   
 #endif
 
 	uint	mem[(MAX_TXAGG_XMITBUF_SZ>>2)];
@@ -302,10 +302,10 @@ struct xmit_frame *dequeue_xframe(struct xmit_priv *pxmitpriv, struct hw_xmit *p
 void do_queue_select(_adapter *padapter, struct pkt_attrib *pattrib);
 u32 get_ff_hwaddr(struct xmit_frame	*pxmitframe);
 
-#ifdef CONFIG_USB_TX_AGGR
+#ifdef CONFIG_USB_TX_AGGREGATION
 u8 xmitframe_aggr_1st(struct xmit_buf * pxmitbuf, struct xmit_frame * pxmitframe);
 u8 dump_aggr_xframe(struct xmit_buf * pxmitbuf, struct xmit_frame * pxmitframe);
-#endif
+#endif //CONFIG_USB_TX_AGGREGATION
 
 
 #endif

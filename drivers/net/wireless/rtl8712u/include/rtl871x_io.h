@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef _IO_H_
 #define _IO_H_
 
@@ -32,7 +32,9 @@
 #include <linux/semaphore.h>
 #endif
 #include <linux/list.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
 #include <linux/smp_lock.h>
+#endif
 #include <linux/spinlock.h>
 #include <asm/atomic.h>
 
@@ -73,7 +75,7 @@
 #define _IO_CMDMASK_	(0x1F80)
 
 
-/*
+/* 
 	For prompt mode accessing, caller shall free io_req
 	Otherwise, io_handler will free io_req
 */
@@ -208,7 +210,7 @@ struct io_req {
 
 #ifdef PLATFORM_OS_XP	
 	PMDL pmdl;
-	PIRP  pirp;
+	PIRP  pirp; 
 
 #ifdef CONFIG_SDIO_HCI
 	PSDBUS_REQUEST_PACKET sdrp;
@@ -400,7 +402,7 @@ extern void write32(_adapter *adapter, u32 addr, u32 val);
 extern void write_mem(_adapter *adapter, u32 addr, u32 cnt, u8 *pmem);
 extern void write_port(_adapter *adapter, u32 addr, u32 cnt, u8 *pmem);
 extern void write_scsi(_adapter *adapter, u32 cnt, u8 *pmem);
-//ioreq
+//ioreq 
 extern void ioreq_read8(_adapter *adapter, u32 addr, u8 *pval);
 extern void ioreq_read16(_adapter *adapter, u32 addr, u16 *pval);	
 extern void ioreq_read32(_adapter *adapter, u32 addr, u32 *pval);
@@ -410,11 +412,11 @@ extern void ioreq_write32(_adapter *adapter, u32 addr, u32 val);
 
 
 extern uint async_read8(_adapter *adapter, u32 addr, u8 *pbuff,
-	void (*_async_io_callback)(_adapter *padater, struct io_req *pio_req, u8 *cnxt), u8 *cnxt);
+	void (*_async_io_callback)(_adapter *padater, struct io_req *pio_req, u8 *cnxt), u8 *cnxt); 
 extern uint async_read16(_adapter *adapter, u32 addr,  u8 *pbuff,
-	void (*_async_io_callback)(_adapter *padater, struct io_req *pio_req, u8 *cnxt), u8 *cnxt);
+	void (*_async_io_callback)(_adapter *padater, struct io_req *pio_req, u8 *cnxt), u8 *cnxt); 
 extern uint async_read32(_adapter *adapter, u32 addr,  u8 *pbuff,
-	void (*_async_io_callback)(_adapter *padater, struct io_req *pio_req, u8 *cnxt), u8 *cnxt);
+	void (*_async_io_callback)(_adapter *padater, struct io_req *pio_req, u8 *cnxt), u8 *cnxt); 
 
 extern void async_read_mem(_adapter *adapter, u32 addr, u32 cnt, u8 *pmem);
 extern void async_read_port(_adapter *adapter, u32 addr, u32 cnt, u8 *pmem);

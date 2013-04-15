@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __IOCTL_H
 #define __IOCTL_H
 
@@ -79,10 +79,10 @@ enum oid_type
 struct oid_funs_node {
 	unsigned int oid_start; //the starting number for OID
 	unsigned int oid_end; //the ending number for OID
-	struct oid_obj_priv *node_array;
+	struct oid_obj_priv *node_array; 
 	unsigned int array_sz; //the size of node_array
-	int query_counter; //count the number of query hits for this segment 
-	int set_counter; //count the number of set hits for this segment 
+	int query_counter; //count the number of query hits for this segment  
+	int set_counter; //count the number of set hits for this segment  
 };
 
 struct oid_par_priv
@@ -98,7 +98,7 @@ struct oid_par_priv
 };
 
 struct oid_obj_priv {
-	unsigned char	dbg; // 0: without OID debug message  1: with OID debug message
+	unsigned char	dbg; // 0: without OID debug message  1: with OID debug message 
 	NDIS_STATUS (*oidfuns)(struct oid_par_priv *poid_par_priv);	
 };
 
@@ -228,7 +228,7 @@ NDIS_STATUS oid_802_11_bssid_list_hdl(struct oid_par_priv* poid_par_priv);
 NDIS_STATUS oid_802_11_statistics_hdl(struct oid_par_priv* poid_par_priv);
 
 
-//OID Handler for Segment ED
+//OID Handler for Segment ED 
 NDIS_STATUS oid_rt_mh_vender_id_hdl(struct oid_par_priv* poid_par_priv);
 
 void Set_802_3_MULTICAST_LIST(ADAPTER *pAdapter, UCHAR *MCListbuf, ULONG MCListlen, BOOLEAN bAcceptAllMulticast);

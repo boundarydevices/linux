@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _IO_OSDEP_C_
 
 #include <drv_conf.h>
@@ -38,7 +38,9 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/kref.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
 #include <linux/smp_lock.h>
+#endif
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
 #include <linux/usb.h>
@@ -75,8 +77,8 @@ u32 rtl871x_open_fw(_adapter * padapter, void **pphfwfile_hdl, u8 **ppmappedfw)
 #ifdef  CONFIG_EMBEDDED_FWIMG	
 
 	*ppmappedfw = f_array;
-	len = sizeof(f_array);		  
- 
+	len = sizeof(f_array);		   
+  
 #else
 
 	int rc;		
@@ -113,10 +115,10 @@ u32 rtl871x_open_fw(_adapter * padapter, void **pphfwfile_hdl, u8 **ppmappedfw)
 void rtl871x_close_fw(_adapter *padapter, void *phfwfile_hdl)
 {
 
-#ifndef  CONFIG_EMBEDDED_FWIMG		  
+#ifndef  CONFIG_EMBEDDED_FWIMG		   
 
 	struct firmware *praw = (struct firmware *)phfwfile_hdl;
-	if(praw)	  
+	if(praw)	   
 		release_firmware(praw);
 #endif
 

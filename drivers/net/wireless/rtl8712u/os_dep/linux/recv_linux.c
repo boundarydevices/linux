@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _RECV_OSDEP_C_
 
 #include <drv_conf.h>
@@ -125,12 +125,30 @@ int os_recvbuf_resource_free(_adapter *padapter, struct recv_buf *precvbuf)
 
 void handle_tkip_mic_err(_adapter *padapter,u8 bgroup)
 {
+#ifdef CONFIG_IOCTL_CFG80211
+	enum nl80211_key_type key_type;
+#endif //CONFIG_IOCTL_CFG80211
     union iwreq_data wrqu;
     struct iw_michaelmicfailure    ev;
     struct mlme_priv*              pmlmepriv  = &padapter->mlmepriv;
 
-   
+    
     _memset( &ev, 0x00, sizeof( ev ) );
+
+#ifdef CONFIG_IOCTL_CFG80211
+	if ( bgroup )
+	{
+		key_type |= NL80211_KEYTYPE_GROUP;
+	}
+	else
+	{
+		key_type |= NL80211_KEYTYPE_PAIRWISE;
+	}
+
+	cfg80211_michael_mic_failure(padapter->pnetdev, (u8 *)&pmlmepriv->assoc_bssid[ 0 ], key_type, -1,
+		NULL, GFP_ATOMIC);
+#endif
+	
     if ( bgroup )
     {
         ev.flags |= IW_MICFAILURE_GROUP;
@@ -139,7 +157,7 @@ void handle_tkip_mic_err(_adapter *padapter,u8 bgroup)
     {
         ev.flags |= IW_MICFAILURE_PAIRWISE;
     }
-  
+   
     ev.src_addr.sa_family = ARPHRD_ETHER;
     _memcpy( ev.src_addr.sa_data, &pmlmepriv->assoc_bssid[ 0 ], ETH_ALEN );
 
@@ -152,7 +170,7 @@ void handle_tkip_mic_err(_adapter *padapter,u8 bgroup)
 void recv_indicatepkt(_adapter *padapter, union recv_frame *precv_frame)
 {	
        struct recv_priv *precvpriv;
-       _queue	*pfree_recv_queue;	    
+       _queue	*pfree_recv_queue;	     
 	_pkt *skb;	
 #ifdef CONFIG_RTL8712_TCP_CSUM_OFFLOAD_RX
 	struct rx_pkt_attrib *pattrib = &precv_frame->u.hdr.attrib;
@@ -162,15 +180,15 @@ _func_enter_;
 
 	precvpriv = &(padapter->recvpriv);	
 	pfree_recv_queue = &(precvpriv->free_recv_queue);	
-    
-	skb = precv_frame->u.hdr.pkt;	      
+     
+	skb = precv_frame->u.hdr.pkt;	       
        if(skb == NULL)
-       {       
-            RT_TRACE(_module_recv_osdep_c_,_drv_err_,("recv_indicatepkt():skb==NULL something wrong!!!!\n"));		  
+       {        
+            RT_TRACE(_module_recv_osdep_c_,_drv_err_,("recv_indicatepkt():skb==NULL something wrong!!!!\n"));		   
 	     goto _recv_indicatepkt_drop;
 	}
 
-	  
+	   
 	RT_TRACE(_module_recv_osdep_c_,_drv_info_,("recv_indicatepkt():skb != NULL !!!\n"));		
 	RT_TRACE(_module_recv_osdep_c_,_drv_info_,("\n recv_indicatepkt():precv_frame->u.hdr.rx_head=%p  precv_frame->hdr.rx_data=%p ", precv_frame->u.hdr.rx_head, precv_frame->u.hdr.rx_data));
 	RT_TRACE(_module_recv_osdep_c_,_drv_info_,("precv_frame->hdr.rx_tail=%p precv_frame->u.hdr.rx_end=%p precv_frame->hdr.len=%d \n", precv_frame->u.hdr.rx_tail, precv_frame->u.hdr.rx_end, precv_frame->u.hdr.len));
@@ -218,7 +236,7 @@ _recv_indicatepkt_drop:
 	 if(precv_frame)
 		 free_recvframe(precv_frame, pfree_recv_queue);
 
-	
+	 
  	 precvpriv->rx_drop++;	
 
 _func_exit_;

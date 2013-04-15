@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _RTL871X_STA_MGT_C_
 
 #include <drv_conf.h>
@@ -71,14 +71,14 @@ u32	_init_sta_priv(struct	sta_priv *pstapriv)
 	
 _func_enter_;	
 
-	pstapriv->pallocated_stainfo_buf = _malloc (sizeof(struct sta_info) * NUM_STA+ 4);
+	pstapriv->pallocated_stainfo_buf = _vmalloc (sizeof(struct sta_info) * NUM_STA+ 4);
 
 	if(pstapriv->pallocated_stainfo_buf == NULL){
 		RT_TRACE(_module_rtl871x_sta_mgt_c_,_drv_err_,("_init_sta_priv : alloc stainfo_buf  FAIL !\n"));
 		return _FAIL;
 	}
 
-	pstapriv->pstainfo_buf = pstapriv->pallocated_stainfo_buf + 4 -
+	pstapriv->pstainfo_buf = pstapriv->pallocated_stainfo_buf + 4 - 
 		((unsigned int)(pstapriv->pallocated_stainfo_buf ) & 3);
 
 	_init_queue(&pstapriv->free_sta_queue);
@@ -204,7 +204,7 @@ _func_enter_;
 	if(pstapriv){
 		mfree_sta_priv_lock(pstapriv);
 		if(pstapriv->pallocated_stainfo_buf)
-			_mfree(pstapriv->pallocated_stainfo_buf, (sizeof(struct sta_info) * NUM_STA+ 4));
+			_vmfree(pstapriv->pallocated_stainfo_buf, (sizeof(struct sta_info) * NUM_STA+ 4));
 	}
 _func_exit_;
 	return _SUCCESS;
@@ -212,7 +212,7 @@ _func_exit_;
 
 
 //struct	sta_info *alloc_stainfo(_queue *pfree_sta_queue, unsigned char *hwaddr)
-struct	sta_info *alloc_stainfo(struct	sta_priv *pstapriv, u8 *hwaddr)
+struct	sta_info *alloc_stainfo(struct	sta_priv *pstapriv, u8 *hwaddr) 
 {
 	uint tmp_aid;
 	s32	index;
@@ -274,7 +274,7 @@ _func_enter_;
                      _memcpy( &psta->sta_recvpriv.rxcache.tid_rxseq[ i ], &wRxSeqInitialValue, 2 );
 		}
 
-		RT_TRACE(_module_rtl871x_sta_mgt_c_,_drv_info_,("alloc number_%d stainfo  with hwaddr = %x %x %x %x %x %x  \n",
+		RT_TRACE(_module_rtl871x_sta_mgt_c_,_drv_info_,("alloc number_%d stainfo  with hwaddr = %x %x %x %x %x %x  \n", 
 		pstapriv->asoc_sta_count , hwaddr[0], hwaddr[1], hwaddr[2],hwaddr[3],hwaddr[4],hwaddr[5]));
 
 		
@@ -287,9 +287,10 @@ _func_enter_;
 			preorder_ctrl->padapter = pstapriv->padapter;
 		
 			preorder_ctrl->indicate_seq = 0xffff;
-			preorder_ctrl->wend_b= 0xffff;      
+			preorder_ctrl->wend_b= 0xffff;       
 			//preorder_ctrl->wsize_b = (NR_RECVBUFF-2);
 			preorder_ctrl->wsize_b = 64;
+			preorder_ctrl->enable = _FALSE;
 
 			_init_queue(&preorder_ctrl->pending_recvframe_queue);
 
@@ -476,7 +477,7 @@ _func_enter_;
 	
 		psta = LIST_CONTAINOR(plist, struct sta_info, hash_list);
 		
-		if ((_memcmp(psta->hwaddr,hwaddr, ETH_ALEN))== _TRUE)
+		if ((_memcmp(psta->hwaddr,hwaddr, ETH_ALEN))== _TRUE) 
 		{ // if found the matched address
 			break;
 		}
@@ -499,7 +500,7 @@ u32 init_bcmc_stainfo(_adapter* padapter)
 	NDIS_802_11_MAC_ADDRESS	bcast_addr= {0xff,0xff,0xff,0xff,0xff,0xff};
 	
 	struct	sta_priv *pstapriv = &padapter->stapriv;
-	_queue	*pstapending = &padapter->xmitpriv.bm_pending;
+	_queue	*pstapending = &padapter->xmitpriv.bm_pending; 
 	
 _func_enter_;
 
@@ -536,7 +537,7 @@ struct sta_info* get_bcmc_stainfo(_adapter* padapter)
 	u8 bc_addr[ETH_ALEN] = {0xff,0xff,0xff,0xff,0xff,0xff};
 _func_enter_;
 	 psta = get_stainfo(pstapriv, bc_addr);
-_func_exit_;		
+_func_exit_;		 
 	return psta;
 
 }

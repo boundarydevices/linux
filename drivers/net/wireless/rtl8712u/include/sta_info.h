@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __STA_INFO_H_
 #define __STA_INFO_H_
 
@@ -69,7 +69,7 @@ struct sta_info {
 	uint qos_option;
 	u8	hwaddr[ETH_ALEN];
 
-	uint	ieee8021x_blocked;	//0: allowed, 1:blocked
+	uint	ieee8021x_blocked;	//0: allowed, 1:blocked 
 	uint	dot118021XPrivacy; //aes, tkip...
 	union Keytype	dot11tkiptxmickey;
 	union Keytype	dot11tkiprxmickey;
@@ -85,7 +85,7 @@ struct sta_info {
 
 	struct stainfo_stats sta_stats;
 
-	//for A-MPDU Rx reordering buffer control
+	//for A-MPDU Rx reordering buffer control 
 	struct recv_reorder_ctrl recvreorder_ctrl[16];
 
 	
@@ -107,7 +107,7 @@ struct sta_info {
 
 	_list asoc_list;
 	_list auth_list;
-	
+	 
 	unsigned int expire_to;
 	unsigned int auth_seq;
 	unsigned int authalg;

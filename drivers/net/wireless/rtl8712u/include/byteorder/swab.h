@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef _LINUX_BYTEORDER_SWAB_H
 #define _LINUX_BYTEORDER_SWAB_H
 
@@ -39,9 +39,9 @@ typedef unsigned long long	__u64;
 
 static __inline __u16  ___swab16(__u16 x)
 {
-	__u16 __x = x;
-	return
-	((__u16)(
+	__u16 __x = x; 
+	return 
+	((__u16)( 
 		(((__u16)(__x) & (__u16)0x00ffU) << 8) |
 		(((__u16)(__x) & (__u16)0xff00U) >> 8) ));
 
@@ -61,7 +61,7 @@ static __inline __u64  ___swab64(__u64 x)
 {
 	__u64 __x = (x);
 	
-	return
+	return 
 	((__u64)( \
 		(__u64)(((__u64)(__x) & (__u64)0x00000000000000ffULL) << 56) | \
 		(__u64)(((__u64)(__x) & (__u64)0x000000000000ff00ULL) << 40) | \
@@ -84,7 +84,7 @@ static __inline __u16 __arch__swab16(__u16 x)
 #ifndef __arch__swab32
 static __inline __u32 __arch__swab32(__u32 x)
 {
-	__u32 __tmp = (x) ;
+	__u32 __tmp = (x) ; 
 	return ___swab32(__tmp);
 }
 #endif
@@ -93,7 +93,7 @@ static __inline __u32 __arch__swab32(__u32 x)
 
 static __inline __u64 __arch__swab64(__u64 x)
 {
-	__u64 __tmp = (x) ;
+	__u64 __tmp = (x) ; 
 	return ___swab64(__tmp);
 }
 

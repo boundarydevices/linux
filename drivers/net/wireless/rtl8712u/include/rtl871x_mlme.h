@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __RTL871X_MLME_H_
 #define __RTL871X_MLME_H_
 
@@ -87,7 +87,21 @@
 #endif
 #define _FW_UNDER_SURVEY	WIFI_SITE_MONITOR
 
+enum dot11AuthAlgrthmNum {
+	dot11AuthAlgrthm_Open = 0,
+	dot11AuthAlgrthm_Shared,
+	dot11AuthAlgrthm_8021X,
+	dot11AuthAlgrthm_Auto,
+	dot11AuthAlgrthm_MaxNum
+};
 
+// Scan type including active and passive scan.
+typedef enum _RT_SCAN_TYPE
+{
+	SCAN_PASSIVE,
+	SCAN_ACTIVE,
+	SCAN_MIX,
+}RT_SCAN_TYPE, *PRT_SCAN_TYPE;
 
 /*
 
@@ -148,6 +162,9 @@ struct mlme_priv {
 	_timer scan_to_timer; // driver itself handles scan_timeout status.
 	_timer dhcp_timer; // set dhcp timeout if driver is in ps mode.
 
+	_timer survey_timer; // regular site survey timer for WiFi Certification
+	u32 survey_interval; // survey timer interval, millisecond(ms)
+
 	struct qos_priv qospriv;
 
 #ifdef CONFIG_80211N_HT
@@ -187,6 +204,7 @@ extern void stadel_event_callback(_adapter *adapter, u8 *pbuf);
 extern void atimdone_event_callback(_adapter *adapter, u8 *pbuf);
 extern void cpwm_event_callback(_adapter *adapter, u8 *pbuf);
 extern void wpspbc_event_callback(_adapter *adapter, u8 *pbuf);
+extern void survey_timer_event_callback(PADAPTER adapter, u8 *pbuf);
 
 #ifdef PLATFORM_WINDOWS
 extern thread_return event_thread(void *context);
@@ -334,6 +352,7 @@ extern struct wlan_network* get_oldest_wlan_network(_queue *scanned_queue);
 extern void free_assoc_resources(_adapter* adapter);
 extern void indicate_disconnect(_adapter* adapter);
 extern void indicate_connect(_adapter* adapter);
+void rtw_indicate_scan_done( _adapter *padapter, bool aborted);
 
 extern int restruct_sec_ie(_adapter *adapter,u8 *in_ie,u8 *out_ie,uint in_len);
 extern int restruct_wmm_ie(_adapter *adapter, u8 *in_ie, u8 *out_ie, uint in_len, uint initial_out_len);
@@ -347,6 +366,7 @@ extern void _sitesurvey_ctrl_handler(_adapter *adapter);
 extern void _join_timeout_handler(_adapter *adapter);
 extern void scan_timeout_handler(_adapter *adapter);
 extern void _dhcp_timeout_handler(_adapter *adapter);
+extern void _regular_site_survey_handler(PADAPTER padapter);
 extern void _wdg_timeout_handler(_adapter *adapter);
 //extern void _hw_pbc_timeout_handler(_adapter *adapter);
 

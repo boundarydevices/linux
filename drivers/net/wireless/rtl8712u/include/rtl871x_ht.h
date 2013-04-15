@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef _RTL871X_HT_H_
 #define _RTL871X_HT_H_
 
@@ -32,7 +32,7 @@ struct ht_priv
 	unsigned int	tx_amsdu_enable;//for enable Tx A-MSDU
 	unsigned int	tx_amdsu_maxlen; // 1: 8k, 0:4k ; default:8k, for tx
 	unsigned int	rx_ampdu_maxlen; //for rx reordering ctrl win_sz, updated when join_callback.
-	struct ieee80211_ht_cap ht_cap;
+	struct rtw_ieee80211_ht_cap ht_cap;
 };
 
 #endif	//_RTL871X_HT_H_

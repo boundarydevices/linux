@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _RTL871X_PWRCTRL_C_
 
 #include <drv_conf.h>
@@ -481,7 +481,7 @@ Caller: xmit_thread
 
 Check if the fw_pwrstate is okay for xmit.
 If not (cpwm is less than P1 state), then the sub-routine
-will raise the cpwm to be greater than or equal to P1.
+will raise the cpwm to be greater than or equal to P1. 
 
 Calling Context: Passive
 
@@ -525,7 +525,7 @@ Caller: cmd_thread
 
 Check if the fw_pwrstate is okay for issuing cmd.
 If not (cpwm should be is less than P2 state), then the sub-routine
-will raise the cpwm to be greater than or equal to P2.
+will raise the cpwm to be greater than or equal to P2. 
 
 Calling Context: Passive
 

@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 
 #define _RTL8712_IO_C_
 #include <drv_conf.h>
@@ -37,7 +37,9 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/kref.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
 #include <linux/smp_lock.h>
+#endif
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
 #include <linux/usb.h>
@@ -175,7 +177,7 @@ void read_mem(_adapter *adapter, u32 addr, u32 cnt, u8 *pmem)
 _func_enter_;
 
 	if( (adapter->bDriverStopped ==_TRUE) || (adapter->bSurpriseRemoved == _TRUE)) {
-		RT_TRACE(_module_rtl871x_io_c_, _drv_info_, ("read_mem:bDriverStopped(%d) OR bSurpriseRemoved(%d)", adapter->bDriverStopped, adapter->bSurpriseRemoved));	   
+		RT_TRACE(_module_rtl871x_io_c_, _drv_info_, ("read_mem:bDriverStopped(%d) OR bSurpriseRemoved(%d)", adapter->bDriverStopped, adapter->bSurpriseRemoved));	    
 		return;
 	}
 
@@ -210,7 +212,7 @@ void read_port(_adapter *adapter, u32 addr, u32 cnt, u8 *pmem)
 _func_enter_;
 
 	if ((adapter->bDriverStopped ==_TRUE) || (adapter->bSurpriseRemoved == _TRUE)) {
-		RT_TRACE(_module_rtl871x_io_c_, _drv_info_, ("read_port:bDriverStopped(%d) OR bSurpriseRemoved(%d)", adapter->bDriverStopped, adapter->bSurpriseRemoved));	   
+		RT_TRACE(_module_rtl871x_io_c_, _drv_info_, ("read_port:bDriverStopped(%d) OR bSurpriseRemoved(%d)", adapter->bDriverStopped, adapter->bSurpriseRemoved));	    
 		return;
 	}
 

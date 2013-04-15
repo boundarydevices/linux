@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _RTL8712_RECV_C_
 #include <drv_conf.h>
 #include <osdep_service.h>
@@ -40,6 +40,7 @@
 #include <wifi.h>
 #include <circ_buf.h>
 
+extern u8* g_pallocated_recv_buf;
 
 int	init_recv_priv(struct recv_priv *precvpriv, _adapter *padapter)
 {
@@ -53,10 +54,10 @@ int	init_recv_priv(struct recv_priv *precvpriv, _adapter *padapter)
 	_init_sema(&precvpriv->terminate_recvthread_sema, 0);//will be removed
 	
       //init recv_buf
-      _init_queue(&precvpriv->free_recv_buf_queue);	 
+      _init_queue(&precvpriv->free_recv_buf_queue);	  
 
 
-      precvpriv->pallocated_recv_buf = _malloc(NR_RECVBUFF *sizeof(struct recv_buf) + 4);	 
+      precvpriv->pallocated_recv_buf = g_pallocated_recv_buf;
       if(precvpriv->pallocated_recv_buf==NULL){
 		res= _FAIL;
 		RT_TRACE(_module_rtl871x_recv_c_,_drv_err_,("alloc recv_buf fail!\n"));
@@ -68,26 +69,26 @@ int	init_recv_priv(struct recv_priv *precvpriv, _adapter *padapter)
 							((uint) (precvpriv->pallocated_recv_buf) &(4-1));
 
 
-      precvbuf = (struct recv_buf*)precvpriv->precv_buf;    
+      precvbuf = (struct recv_buf*)precvpriv->precv_buf;
 
       for(i=0; i < NR_RECVBUFF ; i++)
      {
 	    _init_listhead(&precvbuf->list);
 
-	     _spinlock_init(&precvbuf->recvbuf_lock);	    
-	    
-	     res = os_recvbuf_resource_alloc(padapter, precvbuf);		
+	     _spinlock_init(&precvbuf->recvbuf_lock);	     
+	     
+	     res = os_recvbuf_resource_alloc(padapter, precvbuf);		 
 	     if(res==_FAIL)
 		 	break;
-		
+		 
 	     precvbuf->ref_cnt = 0;
 	     precvbuf->adapter =padapter;
- 
+  
 
-	     list_insert_tail(&precvbuf->list, &(precvpriv->free_recv_buf_queue.queue));	
- 
+	     list_insert_tail(&precvbuf->list, &(precvpriv->free_recv_buf_queue.queue));	 
+  
 	     precvbuf++;
-		
+		 
 	}
 #ifdef CONFIG_SDIO_HCI
 	
@@ -122,7 +123,7 @@ int	init_recv_priv(struct recv_priv *precvpriv, _adapter *padapter)
 		preorder_ctrl->padapter = padapter;
 		
 		preorder_ctrl->indicate_seq = 0xffff;
-		preorder_ctrl->wend_b= 0xffff;      
+		preorder_ctrl->wend_b= 0xffff;       
 		//preorder_ctrl->wsize_b = (NR_RECVBUFF-2);
 		preorder_ctrl->wsize_b = 16;//64;
 
@@ -200,13 +201,13 @@ void free_recv_priv (struct recv_priv *precvpriv)
 	precvbuf = (struct recv_buf *)precvpriv->precv_buf;
 
 	for(i=0; i < NR_RECVBUFF ; i++)
-	{
+	{ 
 		os_recvbuf_resource_free(padapter, precvbuf);
 		precvbuf++;	
 	}	
 		
 	if(precvpriv->pallocated_recv_buf)
-		_mfree(precvpriv->pallocated_recv_buf, NR_RECVBUFF *sizeof(struct recv_buf) + 4);
+		precvpriv->pallocated_recv_buf = NULL;
 
 
 #ifdef PLATFORM_LINUX
@@ -271,7 +272,7 @@ void init_recvframe(union recv_frame *precvframe, struct recv_priv *precvpriv)
 		}	
 	}
 	
-#endif	    
+#endif	     
 
 }
 
@@ -437,7 +438,7 @@ _func_enter_;
 		//the first fragment number must be 0
 		//free the whole queue
 		free_recvframe(prframe, pfree_recv_queue);
-		free_recvframe_queue(defrag_q, pfree_recv_queue);
+		free_recvframe_queue(defrag_q, pfree_recv_queue); 
 		
 		return NULL;
 	}
@@ -460,10 +461,10 @@ _func_enter_;
 		
 		if(curfragnum!=pnfhdr->attrib.frag_num)
 		{
-			//the fragment number must be increasing  (after decache)
+			//the fragment number must be increasing  (after decache) 
 			//release the defrag_q & prframe
-			free_recvframe(prframe, pfree_recv_queue); 
-			free_recvframe_queue(defrag_q, pfree_recv_queue); 
+			free_recvframe(prframe, pfree_recv_queue);  
+			free_recvframe_queue(defrag_q, pfree_recv_queue);  
 			return NULL;
 		}
 		
@@ -490,7 +491,7 @@ _func_enter_;
 	};
 
 	//free the defrag_q queue and return the prframe
-	free_recvframe_queue(defrag_q, pfree_recv_queue); 
+	free_recvframe_queue(defrag_q, pfree_recv_queue);  
 	
 	RT_TRACE(_module_rtl871x_recv_c_,_drv_info_,("Performance defrag!!!!!\n"));
 	
@@ -498,7 +499,7 @@ _func_exit_;
 
 	return prframe;
 
-} 
+}  
 
 //check if need to defrag, if needed queue the frame to defrag_q
 union recv_frame * recvframe_chk_defrag(_adapter *padapter,union recv_frame* precv_frame)
@@ -568,13 +569,13 @@ _func_enter_;
 		}
 		else
 		{
-			//can't find this ta's defrag_queue, so free this recv_frame
+			//can't find this ta's defrag_queue, so free this recv_frame 
 			free_recvframe(precv_frame, pfree_recv_queue);
 			prtnframe=NULL;
 			RT_TRACE(_module_rtl871x_recv_c_,_drv_err_,("Free because pdefrag_q ==NULL: ismfrag = %d, fragnum= %d\n", ismfrag, fragnum));
 		}
 		
-	}
+	} 
 	
 	if((ismfrag==0)&&(fragnum!=0))
 	{
@@ -595,7 +596,7 @@ _func_enter_;
 		}
 		else
 		{
-			//can't find this ta's defrag_queue, so free this recv_frame
+			//can't find this ta's defrag_queue, so free this recv_frame 
 			free_recvframe(precv_frame, pfree_recv_queue);
 			prtnframe=NULL;
 			RT_TRACE(_module_rtl871x_recv_c_,_drv_err_,("Free because pdefrag_q ==NULL: ismfrag = %d, fragnum= %d\n", ismfrag,fragnum));
@@ -606,7 +607,7 @@ _func_enter_;
 	
 	if((prtnframe!=NULL)&&(prtnframe->u.hdr.attrib.privacy))
 	{
-		//after defrag we must check tkip mic code
+		//after defrag we must check tkip mic code 
 		if(recvframe_chkmic(padapter,  prtnframe)==_FAIL)
 		{
 			RT_TRACE(_module_rtl871x_recv_c_,_drv_err_,("\nrecvframe_chkmic(padapter,  prtnframe)==_FAIL \n"));
@@ -638,7 +639,7 @@ int recvbuf2recvframe(_adapter *padapter, struct recv_buf *precvbuf)
 #ifdef CONFIG_SKB_COPY  //compile flag for linux only
 	_pkt  *pkt_copy=NULL;
 #endif
-	union recv_frame *precvframe=NULL;
+	union recv_frame *precvframe=NULL; 
 	struct recv_priv *precvpriv = &padapter->recvpriv;
 	struct intf_hdl * pintfhdl=&padapter->pio_queue->intf;
 
@@ -670,11 +671,11 @@ int recvbuf2recvframe(_adapter *padapter, struct recv_buf *precvbuf)
 	precvbuf->ref_cnt++;
 	do{		
 
-		prxstat = (struct recv_stat *)pbuf;		     
+		prxstat = (struct recv_stat *)pbuf;		      
 	       //pkt_len = le32_to_cpu(prxstat->rxdw0&0x00003fff); //pkt_len = prxstat->frame_length;	
 	       pkt_len =  le32_to_cpu(prxstat->rxdw0)&0x00003fff;
 
-		RT_TRACE(_module_rtl871x_recv_c_,_drv_info_,("rxdesc : offsset0:0x%08x, offsset4:0x%08x, offsset8:0x%08x, offssetc:0x%08x\n",
+		RT_TRACE(_module_rtl871x_recv_c_,_drv_info_,("rxdesc : offsset0:0x%08x, offsset4:0x%08x, offsset8:0x%08x, offssetc:0x%08x\n", 
 			prxstat->rxdw0, prxstat->rxdw1, prxstat->rxdw2, prxstat->rxdw4));
 	
 		//drvinfo_sz = le16_to_cpu((prxstat->rxdw0&0x000f0000)>>16);//uint 2^3 = 8 bytes
@@ -693,7 +694,7 @@ int recvbuf2recvframe(_adapter *padapter, struct recv_buf *precvbuf)
 			goto  _exit_recvbuf2recvframe;
 		}		
 
-		  
+		   
 
 		precvframe = alloc_recvframe(pfree_recv_queue);
 		if(precvframe==NULL)
@@ -722,7 +723,7 @@ int recvbuf2recvframe(_adapter *padapter, struct recv_buf *precvbuf)
 		if(pkt_copy==NULL)
 		{
 			//printk("recvbuf2recvframe:can not allocate memory for skb copy\n");
-			init_recvframe(precvframe, precvpriv);
+			init_recvframe(precvframe, precvpriv); 
 			precvframe->u.hdr.rx_head = precvframe->u.hdr.rx_data = precvframe->u.hdr.rx_tail = pbuf;
 			precvframe->u.hdr.rx_end = precvbuf->pend;
 			goto _cont;	
@@ -738,7 +739,7 @@ int recvbuf2recvframe(_adapter *padapter, struct recv_buf *precvbuf)
 
 		precvframe->u.hdr.rx_end = pkt_copy->data + (pkt_offset>1600?pkt_offset:1600);
 #else
-		init_recvframe(precvframe, precvpriv);
+		init_recvframe(precvframe, precvpriv); 
 		precvframe->u.hdr.rx_head = precvframe->u.hdr.rx_data = precvframe->u.hdr.rx_tail = pbuf;
 		precvframe->u.hdr.rx_end = precvbuf->pend;
 
@@ -873,9 +874,9 @@ int amsdu_to_msdu(_adapter *padapter, union recv_frame *prframe)
 		/* convert hdr + possible LLC headers into Ethernet header */
 		eth_type = (sub_skb->data[6] << 8) | sub_skb->data[7];
 		if (sub_skb->len >= 8 &&
-			((_memcmp(sub_skb->data, rfc1042_header, SNAP_SIZE) &&
+			((_memcmp(sub_skb->data, rtw_rfc1042_header, SNAP_SIZE) &&
 			  eth_type != ETH_P_AARP && eth_type != ETH_P_IPX) ||
-			 _memcmp(sub_skb->data, bridge_tunnel_header, SNAP_SIZE) )) {
+			 _memcmp(sub_skb->data, rtw_bridge_tunnel_header, SNAP_SIZE) )) {
 			/* remove RFC1042 or Bridge-Tunnel encapsulation and replace EtherType */
 			skb_pull(sub_skb, SNAP_SIZE);
 			_memcpy(skb_push(sub_skb, ETH_ALEN), pattrib->src, ETH_ALEN);
@@ -966,7 +967,7 @@ int amsdu_to_msdu(_adapter *padapter, union recv_frame *prframe)
 		ptr+=ETH_ALEN;
 		
 		_memcpy(&type_len, ptr, 2);
-		type_len= ntohs((unsigned short )type_len);
+		type_len= ntohs((unsigned short )type_len); 
 		ptr +=2;
 		mv_len += ETH_HLEN;
 	
@@ -1031,7 +1032,7 @@ int amsdu_to_msdu(_adapter *padapter, union recv_frame *prframe)
 			mv_len+=4;
 		}
 
-		if(eth_type==0x0800)//ip
+		if(eth_type==0x0800)//ip 
 		{
 			struct iphdr*  piphdr = (struct iphdr*)ptr;
 	
@@ -1048,7 +1049,7 @@ int amsdu_to_msdu(_adapter *padapter, union recv_frame *prframe)
 			UINT32 VlanID = (pvlan!=NULL ? get_vlan_id(pvlan) : 0 );
 
 			VlanPriInfo.Value =          // Get current value.
-      				NDIS_PER_PACKET_INFO_FROM_PACKET(pnrframe->u.hdr.pkt, Ieee8021QInfo);
+      				NDIS_PER_PACKET_INFO_FROM_PACKET(pnrframe->u.hdr.pkt, Ieee8021QInfo); 
 
 			VlanPriInfo.TagHeader.UserPriority = UserPriority;
 			VlanPriInfo.TagHeader.VlanId =  VlanID ;
@@ -1076,7 +1077,7 @@ int amsdu_to_msdu(_adapter *padapter, union recv_frame *prframe)
 
 //#ifdef CONFIG_SKB_COPY	
 #if 0
-		if(a_len > ETH_HLEN)
+		if(a_len > ETH_HLEN) 
 		{
 			pnrframe_new = alloc_recvframe(pfree_recv_queue);
 			if(pnrframe_new)
@@ -1156,7 +1157,7 @@ int amsdu_to_msdu(_adapter *padapter, union recv_frame *prframe)
 			
 #else
 
-		if(a_len > ETH_HLEN)
+		if(a_len > ETH_HLEN) 
 		{			
 			pnrframe_new = alloc_recvframe(pfree_recv_queue);
 
@@ -1165,7 +1166,7 @@ int amsdu_to_msdu(_adapter *padapter, union recv_frame *prframe)
 				//pnrframe_new->u.hdr.precvbuf = precvbuf;//precvbuf is assigned before call init_recvframe()
 				//init_recvframe(pnrframe_new, precvpriv); 	
 				{					
-						_pkt *pskb = pnrframe->u.hdr.pkt;	 
+						_pkt *pskb = pnrframe->u.hdr.pkt;	  
 						_init_listhead(&pnrframe_new->u.hdr.list);
 
 						pnrframe_new->u.hdr.len=0;
@@ -1624,6 +1625,16 @@ int recv_indicatepkt_reorder(_adapter *padapter, union recv_frame *prframe)
 				return _FAIL;			
 			}
 		}
+		else if(preorder_ctrl->enable == _FALSE)
+		{
+			preorder_ctrl->indicate_seq = pattrib->seq_num;
+
+			recv_indicatepkt(padapter, prframe);				
+
+			preorder_ctrl->indicate_seq = (preorder_ctrl->indicate_seq + 1)%4096;
+
+			return _SUCCESS;	
+		}			
 #ifndef CONFIG_RECV_REORDERING_CTRL
 		else
 		{
@@ -1637,7 +1648,18 @@ int recv_indicatepkt_reorder(_adapter *padapter, union recv_frame *prframe)
 	else if(pattrib->amsdu==1) //temp filter -> means didn't support A-MSDUs in a A-MPDU
 	{
 		//printk("recv_indicatepkt_reorder():pattrib->amsdu==1\n");
+		if(preorder_ctrl->enable == _FALSE)
+		{
+			preorder_ctrl->indicate_seq = pattrib->seq_num;
+
+			retval = amsdu_to_msdu(padapter, prframe);
 		
+			preorder_ctrl->indicate_seq = (preorder_ctrl->indicate_seq + 1)%4096;
+
+			return retval;	
+		}
+		else
+		{
 #ifndef CONFIG_RECV_REORDERING_CTRL
 
 		preorder_ctrl->indicate_seq = pattrib->seq_num;
@@ -1648,6 +1670,7 @@ int recv_indicatepkt_reorder(_adapter *padapter, union recv_frame *prframe)
 
 		return retval;		
 #endif
+		}
 		
 	}
 	else
@@ -1707,7 +1730,7 @@ int recv_indicatepkt_reorder(_adapter *padapter, union recv_frame *prframe)
 	return _SUCCESS;
 
 _err_exit:
-
+ 
         _exit_critical_ex(&ppending_recvframe_queue->lock, &irql);
 		
         return _FAIL;
@@ -1837,7 +1860,7 @@ static u8 evm_db2percentage(s8 value)
 	// -33dB~0dB to 0%~99%
 	//
 	s8 ret_val;
-   
+    
 	ret_val = value;
 	//ret_val /= 2;
 
@@ -1866,7 +1889,7 @@ s32 signal_scale_mapping(s32 cur_sig )
 	// Step 1. Scale mapping.
 	if(cur_sig >= 81 && cur_sig <= 100)
 	{
-		ret_sig = 100;
+		ret_sig = 100; 
 	}
 	if(cur_sig >= 61 && cur_sig <= 80)
 	{
@@ -1975,8 +1998,8 @@ s32  translate2dbm(_adapter *padapter,u8 signal_strength_idx	)
 
 
 	// Translate to dBm (x=0.5y-95).
-	signal_power = (s32)((signal_strength_idx + 1) >> 1);
-	signal_power -= 95;
+	signal_power = (s32)((signal_strength_idx + 1) >> 1); 
+	signal_power -= 95; 
 
 	return signal_power;
 }
@@ -2007,7 +2030,7 @@ void query_rx_phy_status(_adapter *padapter,union recv_frame *prframe)
 		pcck_buf = (struct phy_cck_rx_status *)pphy_stat;	
 //		Adapter->RxStats.NumQryPhyStatusCCK++;
 	
-		//
+		// 
 		// (1)Hardware does not provide RSSI for CCK
 		// (2)PWDB, Average PWDB cacluated by hardware (for rate adaptive)
 		//
@@ -2062,7 +2085,7 @@ void query_rx_phy_status(_adapter *padapter,union recv_frame *prframe)
 		pwdb_all= query_rx_pwr_percentage(rx_pwr_all);
 		//if(pMgntInfo->CustomerID == RT_CID_819x_Lenovo)		
 		{
-			// CCK gain is smaller than OFDM/MCS gain,
+			// CCK gain is smaller than OFDM/MCS gain, 
 			// so we add gain diff by experiences, the val is 6
 			pwdb_all+=6;
 			if(pwdb_all > 100)
@@ -2113,7 +2136,7 @@ void query_rx_phy_status(_adapter *padapter,union recv_frame *prframe)
 	else
 	{
 
-		//
+		// 
 		// (1)Get RSSI for HT rate
 		//
 		for(i=0; i<((padapter->registrypriv.rf_config) &0x0f ); i++)
@@ -2155,11 +2178,11 @@ void query_rx_phy_status(_adapter *padapter,union recv_frame *prframe)
 			for(i=0; i<max_spatial_stream; i++)
 			{
 				// Do not use shift operation like "rx_evmX >>= 1" because the compilor of free build environment
-				// fill most significant bit to "zero" when doing shifting operation which may change a negative
+				// fill most significant bit to "zero" when doing shifting operation which may change a negative 
 				// value to positive one, then the dbm value (which is supposed to be negative)  is not correct anymore.
 				evm =evm_db2percentage( (pphy_head[PHY_STAT_RXEVM_SHT+i] /*/ 2*/));	//dbm
 
-				RT_TRACE(_module_rtl871x_recv_c_, _drv_err_, ("RXRATE=%x RXEVM=%x EVM=%s%d\n",
+				RT_TRACE(_module_rtl871x_recv_c_, _drv_err_, ("RXRATE=%x RXEVM=%x EVM=%s%d\n", 
 				prframe->u.hdr.attrib.mcs_rate, pphy_head[PHY_STAT_RXEVM_SHT+i], "%",evm));
 				
 			//	if(bPacketMatchBSSID)
@@ -2173,7 +2196,7 @@ void query_rx_phy_status(_adapter *padapter,union recv_frame *prframe)
 			}
 		}
 		//
-		// 4. Record rx statistics for debug
+		// 4. Record rx statistics for debug 
 		//		
 
 	}
@@ -2295,13 +2318,13 @@ int recv_func(_adapter *padapter, void *pcontext)
 			padapter->mppriv.rx_crcerrpktcount++;
 		else
 			padapter->mppriv.rx_pktcount++;	         	
-					  
+					   
 		if(check_fwstate(pmlmepriv, WIFI_MP_LPBK_STATE) ==_FALSE){
 			RT_TRACE(_module_rtl871x_recv_c_,_drv_alert_,("MP - Not in loopback mode , drop pkt \n"));
 			free_recvframe(orig_prframe, pfree_recv_queue);//free this recv_frame
 			goto _exit_recv_func;	
 		}
-       }	  
+       }	   
 #endif	
 
 
@@ -2420,7 +2443,7 @@ static int recvbuf2recvframe_u(_adapter *padapter, struct sk_buff *pskb)
 	s16	pkt_cnt;
 	_queue *pfree_recv_queue;
 	_pkt  *pkt_copy=NULL;
-	union recv_frame *precvframe=NULL;
+	union recv_frame *precvframe=NULL; 
 	struct recv_priv *precvpriv = &padapter->recvpriv;
 
 	RT_TRACE(_module_rtl871x_recv_c_,_drv_info_,("+recvbuf2recvframe_u()\n"));
@@ -2451,13 +2474,13 @@ static int recvbuf2recvframe_u(_adapter *padapter, struct sk_buff *pskb)
 	
 	do{		
 
-		prxstat = (struct recv_stat *)pbuf;	  
+		prxstat = (struct recv_stat *)pbuf;	   
 		pkt_len =  le32_to_cpu(prxstat->rxdw0)&0x00003fff;
 
 		mf = (le32_to_cpu(prxstat->rxdw1) >> 27) & 0x1;//more fragment bit
 		frag = (le32_to_cpu(prxstat->rxdw2) >> 12) & 0xf;//fragmentation number
 
-		RT_TRACE(_module_rtl871x_recv_c_,_drv_info_,("rxdesc : offsset0:0x%08x, offsset4:0x%08x, offsset8:0x%08x, offssetc:0x%08x\n",
+		RT_TRACE(_module_rtl871x_recv_c_,_drv_info_,("rxdesc : offsset0:0x%08x, offsset4:0x%08x, offsset8:0x%08x, offssetc:0x%08x\n", 
 			prxstat->rxdw0, prxstat->rxdw1, prxstat->rxdw2, prxstat->rxdw4));
 			
 		drvinfo_sz = (le32_to_cpu(prxstat->rxdw0)&0x000f0000)>>16;//uint 2^3 = 8 bytes
@@ -2484,7 +2507,7 @@ static int recvbuf2recvframe_u(_adapter *padapter, struct sk_buff *pskb)
 		}
 
 		_init_listhead(&precvframe->u.hdr.list);	
-		precvframe->u.hdr.precvbuf = NULL;	//can't access the precvbuf
+		precvframe->u.hdr.precvbuf = NULL;	//can't access the precvbuf 
 		precvframe->u.hdr.len=0;
 	
 		tmp_len = pkt_len + drvinfo_sz + RXDESC_SIZE;

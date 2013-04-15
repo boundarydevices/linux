@@ -1,7 +1,7 @@
 /******************************************************************************
  *
  * Copyright(c) 2007 - 2010 Realtek Corporation. All rights reserved.
- *                                       
+ *                                        
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
  * published by the Free Software Foundation.
@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _RTL8712_CMD_C_
 
 #include <drv_conf.h>
@@ -41,7 +41,9 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/kref.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
 #include <linux/smp_lock.h>
+#endif
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
 #include <linux/usb.h>
@@ -125,9 +127,9 @@ void start_hw_event_posting(_adapter *padapter)
 
 	//assign event code, size...
 	
-	RT_TRACE(_module_rtl871x_cmd_c_,_drv_info_,("tail:%d, evt_code:%d, evt_sz:%d\n", *tail, node->evt_code, node->evt_sz));
+	RT_TRACE(_module_rtl871x_cmd_c_,_drv_info_,("tail:%d, evt_code:%d, evt_sz:%d\n", *tail, node->evt_code, node->evt_sz)); 
 	
-	pmlmeext->c2h_res = ((node->evt_code << 24) |
+	pmlmeext->c2h_res = ((node->evt_code << 24) | 
 	 					((node->evt_sz) << 8) | pmlmeext->c2hevent.seq++);
 
 	RT_TRACE(_module_rtl871x_cmd_c_,_drv_info_,("evt_sz = %d, val=%x\n", node->evt_sz, pmlmeext->c2h_res));
@@ -244,7 +246,7 @@ _func_enter_;
 		{
 			RT_TRACE(_module_rtl871x_cmd_c_,_drv_err_,("Evetn Seq Error! %d vs %d\n", (val & 0xff), pevt_priv->event_seq));
 
-			//pevt_priv->event_seq = ((val+1)&0x7f);
+			//pevt_priv->event_seq = ((val+1)&0x7f); 
 			evt_seq = ((val+1)&0x7f); 	
 			
 			goto _abort_event_;
@@ -261,11 +263,11 @@ _func_enter_;
 		}
 
 		// checking if event size match the event parm size	
-		if ((wlanevents[ec].parmsize != 0) &&
+		if ((wlanevents[ec].parmsize != 0) && 
 			(wlanevents[ec].parmsize != r_sz))
 		{
 			
-			RT_TRACE(_module_rtl871x_cmd_c_,_drv_err_,("Event(%d) Parm Size mismatch (%d vs %d)!\n",
+			RT_TRACE(_module_rtl871x_cmd_c_,_drv_err_,("Event(%d) Parm Size mismatch (%d vs %d)!\n", 
 							ec, wlanevents[ec].parmsize, r_sz));
 			
 			evt_seq = ((val+1)&0x7f); 	
@@ -328,8 +330,8 @@ _func_exit_;
 static void check_hw_pbc(_adapter *padapter)
 {
 	u8	tmp1byte;
-
-	write8(padapter, MAC_PINMUX_CTRL, (GPIOMUX_EN | GPIOSEL_GPIO));
+ 
+	write8(padapter, MAC_PINMUX_CTRL, (GPIOMUX_EN | GPIOSEL_GPIO)); 
 
 	tmp1byte = read8(padapter, GPIO_IO_SEL);
 
@@ -337,14 +339,14 @@ static void check_hw_pbc(_adapter *padapter)
 
 	write8(padapter, GPIO_IO_SEL, tmp1byte);
 
-	tmp1byte = read8(padapter, GPIO_CTRL);
+	tmp1byte = read8(padapter, GPIO_CTRL); 
 
 	//printk("CheckPbcGPIO - Ox%x\n", tmp1byte);
-
+ 
 	// Add by hpfan 2008.07.07 to fix read GPIO error from S3
 	if (tmp1byte == 0xff)
 		return ;
-
+ 
 	if (tmp1byte&HAL_8192S_HW_GPIO_WPS_BIT)
 	{
 		// Here we only set bPbcPressed to true
@@ -1084,7 +1086,7 @@ void event_handle(_adapter *padapter, uint *peventbuf)
 	// checking if event size match the event parm size	
 	if ((wlanevents[evt_code].parmsize != 0) && (wlanevents[evt_code].parmsize != evt_sz))
 	{			
-		RT_TRACE(_module_rtl871x_cmd_c_,_drv_err_,("Event(%d) Parm Size mismatch (%d vs %d)!\n",
+		RT_TRACE(_module_rtl871x_cmd_c_,_drv_err_,("Event(%d) Parm Size mismatch (%d vs %d)!\n", 
 					evt_code, wlanevents[evt_code].parmsize, evt_sz));
 		pevt_priv->event_seq = ((evt_seq+1)&0x7f);
 		goto _abort_event_;	
@@ -1129,10 +1131,12 @@ void fwdbg_event_callback(_adapter *adapter , u8 *pbuf)
 {
 	if(pbuf)
 	{	
-                pbuf[60]='\0';
-				
+		pbuf[60]='\0';
+		if ( strlen( pbuf ) < 3 )
+			return;
+		
 #ifdef PLATFORM_LINUX
-                printk("fwdbg:%s\n", pbuf);     
+                printk("fwdbg:%s\n", pbuf);      
 #endif
 
                 RT_TRACE(_module_rtl871x_cmd_c_,_drv_err_,("fwdbg:%s\n", pbuf));
@@ -1179,7 +1183,7 @@ _func_enter_;
 		goto exit;
 	}
 	
-	pcmd_parm = (struct reg_rw_parm*)_malloc(sizeof(struct reg_rw_parm));
+	pcmd_parm = (struct reg_rw_parm*)_malloc(sizeof(struct reg_rw_parm)); 
 	if(pcmd_parm ==NULL)
 	{
 		_mfree((unsigned char *)ph2c, sizeof(struct cmd_obj));
@@ -1274,11 +1278,11 @@ _next_event:
 		}
 
 		// checking if event size match the event parm size	
-		if ((wlanevents[evt_code].parmsize != 0) &&
+		if ((wlanevents[evt_code].parmsize != 0) && 
 			(wlanevents[evt_code].parmsize != evt_sz))
 		{
 			
-			RT_TRACE(_module_rtl871x_cmd_c_,_drv_err_,("\nEvent(%d) Parm Size mismatch (%d vs %d)!\n",
+			RT_TRACE(_module_rtl871x_cmd_c_,_drv_err_,("\nEvent(%d) Parm Size mismatch (%d vs %d)!\n", 
 			evt_code, wlanevents[evt_code].parmsize, evt_sz));
 			goto _abort_event_;	
 			
@@ -1306,7 +1310,7 @@ _abort_event_:
 		if (signal_pending (current)) {
 			flush_signals(current);
         	}
-#endif      
+#endif       
 
 
 		if(peventbuf)

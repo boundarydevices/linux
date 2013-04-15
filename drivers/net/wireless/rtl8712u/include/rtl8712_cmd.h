@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __RTL8712_CMD_H_
 #define __RTL8712_CMD_H_
 
@@ -34,24 +34,24 @@ struct cmd_hdr {
 enum rtl8712_h2c_cmd
 {
 	GEN_CMD_CODE(_Read_MACREG) ,	/*0*/
- 	GEN_CMD_CODE(_Write_MACREG) ,   
- 	GEN_CMD_CODE(_Read_BBREG) , 
- 	GEN_CMD_CODE(_Write_BBREG) , 
- 	GEN_CMD_CODE(_Read_RFREG) , 
+ 	GEN_CMD_CODE(_Write_MACREG) ,    
+ 	GEN_CMD_CODE(_Read_BBREG) ,  
+ 	GEN_CMD_CODE(_Write_BBREG) ,  
+ 	GEN_CMD_CODE(_Read_RFREG) ,  
  	GEN_CMD_CODE(_Write_RFREG) , /*5*/
- 	GEN_CMD_CODE(_Read_EEPROM) , 
- 	GEN_CMD_CODE(_Write_EEPROM) , 
- 	GEN_CMD_CODE(_Read_EFUSE) , 
- 	GEN_CMD_CODE(_Write_EFUSE) ,
+ 	GEN_CMD_CODE(_Read_EEPROM) ,  
+ 	GEN_CMD_CODE(_Write_EEPROM) ,  
+ 	GEN_CMD_CODE(_Read_EFUSE) ,  
+ 	GEN_CMD_CODE(_Write_EFUSE) , 
  	
  	GEN_CMD_CODE(_Read_CAM) ,	/*10*/
- 	GEN_CMD_CODE(_Write_CAM) ,  
+ 	GEN_CMD_CODE(_Write_CAM) ,   
  	GEN_CMD_CODE(_setBCNITV),
  	GEN_CMD_CODE(_setMBIDCFG),
  	GEN_CMD_CODE(_JoinBss),   /*14*/
  	GEN_CMD_CODE(_DisConnect) , /*15*/
  	GEN_CMD_CODE(_CreateBss) ,
-	GEN_CMD_CODE(_SetOpMode) ,
+	GEN_CMD_CODE(_SetOpMode) , 
 	GEN_CMD_CODE(_SiteSurvey),  /*18*/
  	GEN_CMD_CODE(_SetAuth) ,
  	
@@ -59,7 +59,7 @@ enum rtl8712_h2c_cmd
  	GEN_CMD_CODE(_SetStaKey) ,
  	GEN_CMD_CODE(_SetAssocSta) ,
  	GEN_CMD_CODE(_DelAssocSta) ,
- 	GEN_CMD_CODE(_SetStaPwrState) ,
+ 	GEN_CMD_CODE(_SetStaPwrState) , 
  	GEN_CMD_CODE(_SetBasicRate) , /*25*/
  	GEN_CMD_CODE(_GetBasicRate) ,
  	GEN_CMD_CODE(_SetDataRate) ,
@@ -72,7 +72,7 @@ enum rtl8712_h2c_cmd
  	GEN_CMD_CODE(_readRssi) ,
  	GEN_CMD_CODE(_readGain) ,
  	GEN_CMD_CODE(_SetAtim) , /*35*/
- 	GEN_CMD_CODE(_SetPwrMode) ,
+ 	GEN_CMD_CODE(_SetPwrMode) , 
  	GEN_CMD_CODE(_JoinbssRpt),
  	GEN_CMD_CODE(_SetRaTable) ,
  	GEN_CMD_CODE(_GetRaTable) ,  	
@@ -87,7 +87,7 @@ enum rtl8712_h2c_cmd
 	GEN_CMD_CODE(_SetChannel), /*46*/
 
 // MP_OFFLOAD Start (47~54)
-	GEN_CMD_CODE(_SetTxPower),
+	GEN_CMD_CODE(_SetTxPower), 
 	GEN_CMD_CODE(_SwitchAntenna),
 	GEN_CMD_CODE(_SetCrystalCap),
 	GEN_CMD_CODE(_SetSingleCarrierTx), /*50*/
@@ -99,12 +99,15 @@ enum rtl8712_h2c_cmd
 
 	GEN_CMD_CODE(_TX_Beacon),        /*55*/
 	GEN_CMD_CODE(_SetPowerTracking),
-	GEN_CMD_CODE(_AMSDU_TO_AMPDU), /*57*/
+	GEN_CMD_CODE(_AMSDU_TO_AMPDU), /*57*/ 
 	GEN_CMD_CODE(_SetMacAddress), /*58*/
 
 	GEN_CMD_CODE(_DisconnectCtrl), /*59*/
 	GEN_CMD_CODE(_SetChannelPlan), /*60*/
 	GEN_CMD_CODE(_DisconnectCtrlEx), /*61*/
+	GEN_CMD_CODE(_WWlanCtrl), /*62*/
+	GEN_CMD_CODE(_SetPwrParam),	/*63*/
+	
 	
 #if 1//To do, modify these h2c cmd, add or delete
 	GEN_CMD_CODE(_GetH2cLbk) ,
@@ -116,7 +119,7 @@ enum rtl8712_h2c_cmd
 	GEN_CMD_CODE(_SetAssocRspExtraIE) ,
 	
 	// the following is driver will do
-	GEN_CMD_CODE(_GetCurDataRate) ,
+	GEN_CMD_CODE(_GetCurDataRate) , 
 
 	GEN_CMD_CODE(_GetTxRetrycnt),  // to record times that Tx retry to transmmit packet after association
 	GEN_CMD_CODE(_GetRxRetrycnt), // to record total number of the received frame with ReTry bit set in the WLAN header
@@ -142,10 +145,10 @@ enum rtl8712_h2c_cmd
 #define _SetRFIntFs_CMD_	(MAX_H2CCMD+2)
 
 #ifdef _RTL8712_CMD_C_
-struct _cmd_callback 	cmd_callback[] =
+struct _cmd_callback 	cmd_callback[] = 
 {
 	{GEN_CMD_CODE(_Read_MACREG), NULL}, /*0*/
-	{GEN_CMD_CODE(_Write_MACREG), NULL},
+	{GEN_CMD_CODE(_Write_MACREG), NULL}, 
 	{GEN_CMD_CODE(_Read_BBREG), &getbbrfreg_cmdrsp_callback},
 	{GEN_CMD_CODE(_Write_BBREG), NULL},
 	{GEN_CMD_CODE(_Read_RFREG), &getbbrfreg_cmdrsp_callback},
@@ -190,8 +193,8 @@ struct _cmd_callback 	cmd_callback[] =
  	
 	{GEN_CMD_CODE(_GetCCXReport), NULL}, /*40*/
  	{GEN_CMD_CODE(_GetDTMReport),	NULL},
- 	{GEN_CMD_CODE(_GetTXRateStatistics), NULL},
- 	{GEN_CMD_CODE(_SetUsbSuspend), NULL},
+ 	{GEN_CMD_CODE(_GetTXRateStatistics), NULL}, 
+ 	{GEN_CMD_CODE(_SetUsbSuspend), NULL}, 
  	{GEN_CMD_CODE(_SetH2cLbk), NULL},
  	{GEN_CMD_CODE(_AddBAReq), NULL}, /*45*/
 
@@ -210,12 +213,14 @@ struct _cmd_callback 	cmd_callback[] =
 
 	{GEN_CMD_CODE(_TX_Beacon), NULL},        /*55*/
 	{GEN_CMD_CODE(_SetPowerTracking), NULL},
-	{GEN_CMD_CODE(_AMSDU_TO_AMPDU), NULL}, /*57*/
+	{GEN_CMD_CODE(_AMSDU_TO_AMPDU), NULL}, /*57*/ 
 	{GEN_CMD_CODE(_SetMacAddress), NULL}, /*58*/	
 
-	{GEN_CMD_CODE(_DisconnectCtrl),NULL}, /*59*/
+	{GEN_CMD_CODE(_DisconnectCtrl),NULL}, /*59*/ 
 	{GEN_CMD_CODE(_SetChannelPlan),NULL}, /*60*/
 	{GEN_CMD_CODE(_DisconnectCtrlEx),NULL}, /*61*/
+	{GEN_CMD_CODE(_WWlanCtrl), NULL}, /*62*/
+	{GEN_CMD_CODE(_SetPwrParam), NULL}, /*63*/
 	
 #if 1//To do, modify these h2c cmd, add or delete
 	{GEN_CMD_CODE(_GetH2cLbk), NULL},
@@ -271,7 +276,7 @@ extern u8 r871x_del_assocsta_hdl(_adapter *padapter, u8 *pbuf);
 #define GEN_MLME_CMD_HANDLER(size, cmd)	{size, &r871x_ ## cmd ## _hdl},
 
 #ifdef _RTL8712_CMD_C_
-struct cmd_hdl	wlancmds[] =
+struct cmd_hdl	wlancmds[] = 
 {
 	GEN_DRV_CMD_HANDLER(0, read_macreg) /*0*/
 	GEN_DRV_CMD_HANDLER(0, write_macreg)

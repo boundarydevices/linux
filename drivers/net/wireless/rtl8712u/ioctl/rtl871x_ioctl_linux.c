@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _RTL871X_IOCTL_LINUX_C_
 
 #include <drv_conf.h>
@@ -58,6 +58,17 @@
 #define SCAN_ITEM_SIZE 768
 #define MAX_CUSTOM_LEN 64
 #define RATE_COUNT 4
+
+// combo scan
+#define WEXT_CSCAN_HEADER		"CSCAN S\x01\x00\x00S\x00"
+#define WEXT_CSCAN_HEADER_SIZE		12
+#define WEXT_CSCAN_SSID_SECTION		'S'
+#define WEXT_CSCAN_CHANNEL_SECTION	'C'
+#define WEXT_CSCAN_NPROBE_SECTION	'N'
+#define WEXT_CSCAN_ACTV_DWELL_SECTION	'A'
+#define WEXT_CSCAN_PASV_DWELL_SECTION	'P'
+#define WEXT_CSCAN_HOME_DWELL_SECTION	'H'
+#define WEXT_CSCAN_TYPE_SECTION		'T'
 
 
 u32 rtl8180_rates[] = {1000000,2000000,5500000,11000000,
@@ -125,6 +136,34 @@ static int hwaddr_aton_i(const char *txt, u8 *addr)
 	return 0;
 }
 
+static void indicate_wx_custom_event(_adapter *padapter, char *msg)
+{
+	u8 *buff, *p;
+	union iwreq_data wrqu;
+
+	if (strlen(msg) > IW_CUSTOM_MAX) {
+		printk("%s strlen(msg):%u > IW_CUSTOM_MAX:%u\n", __FUNCTION__ ,strlen(msg), IW_CUSTOM_MAX);
+		return;
+	}
+
+	buff = _malloc(IW_CUSTOM_MAX+1);
+	if(!buff)
+		return;
+
+	_memset(buff, 0, IW_CUSTOM_MAX+1);	
+	
+	_memcpy(buff, msg, strlen(msg));
+		
+	_memset(&wrqu,0,sizeof(wrqu));
+	wrqu.data.length = strlen(msg);
+
+	printk("%s %s\n", __FUNCTION__, buff);	
+	wireless_send_event(padapter->pnetdev, IWEVCUSTOM, &wrqu, buff);
+
+	_mfree(buff, IW_CUSTOM_MAX+1);
+
+}
+
 void request_wps_pbc_event(_adapter *padapter)
 {
 	u8 *buff, *p;
@@ -158,6 +197,15 @@ void request_wps_pbc_event(_adapter *padapter)
 
 }
 
+void indicate_wx_scan_complete_event(_adapter *padapter)
+{	
+	union iwreq_data wrqu;
+	struct	mlme_priv *pmlmepriv = &padapter->mlmepriv;	
+
+	_memset(&wrqu, 0, sizeof(union iwreq_data));
+
+	wireless_send_event(padapter->pnetdev, SIOCGIWSCAN, &wrqu, NULL);
+}
 
 void indicate_wx_assoc_event(_adapter *padapter)
 {
@@ -227,7 +275,7 @@ static inline char *translate_scan(_adapter *padapter, struct iw_request_info* i
 	u32 i = 0;
 	char *current_val;
 	long rssi;
-	struct ieee80211_ht_cap *pht_capie;
+	struct rtw_ieee80211_ht_cap *pht_capie;
 	u8 bw_40MHz=0, short_GI=0;
 	u16 mcs_rate=0;
 	struct registry_priv *pregpriv = &padapter->registrypriv;
@@ -246,21 +294,12 @@ static inline char *translate_scan(_adapter *padapter, struct iw_request_info* i
 		}
 	}
 
-	#ifdef CONFIG_PLATFORM_ANDROID	
-	if(validate_ssid(&(pnetwork->network.Ssid))==_FALSE)
-	{		
-		RT_TRACE(_module_rtl871x_ioctl_os_c, _drv_err_, ("translate_scan : validate_ssid==FALSE \n"));
-	}	
-	else
-	#endif
-	{
 	/* AP MAC address */
 	iwe.cmd = SIOCGIWAP;
 	iwe.u.ap_addr.sa_family = ARPHRD_ETHER;
 
 	_memcpy(iwe.u.ap_addr.sa_data, pnetwork->network.MacAddress, ETH_ALEN);
 	start = iwe_stream_add_event(info, start, stop, &iwe, IW_EV_ADDR_LEN);
-	}
 
 	/* Add the ESSID */
 	iwe.cmd = SIOCGIWESSID;
@@ -273,7 +312,7 @@ static inline char *translate_scan(_adapter *padapter, struct iw_request_info* i
 	if(p && ht_ielen>0)
 	{
 		ht_cap = _TRUE;
-		pht_capie = (struct ieee80211_ht_cap *)(p+2);
+		pht_capie = (struct rtw_ieee80211_ht_cap *)(p+2);
 		_memcpy(&mcs_rate , pht_capie->supp_mcs_set, 2);
 		bw_40MHz = (pht_capie->cap_info&IEEE80211_HT_CAP_SUP_WIDTH) ? 1:0;
 		short_GI = (pht_capie->cap_info&(IEEE80211_HT_CAP_SGI_20|IEEE80211_HT_CAP_SGI_40)) ? 1:0;
@@ -451,7 +490,7 @@ static inline char *translate_scan(_adapter *padapter, struct iw_request_info* i
 		u8 wps_ie[512];
 		uint wps_ielen;
 
-		if(get_wps_ie(pnetwork->network.IEs, pnetwork->network.IELength, wps_ie, &wps_ielen)==_TRUE)
+		if(get_wps_ie(pnetwork->network.IEs, pnetwork->network.IELength, wps_ie, &wps_ielen))
 		{
 			if(wps_ielen>2)
 			{
@@ -474,13 +513,18 @@ static inline char *translate_scan(_adapter *padapter, struct iw_request_info* i
 	iwe.u.qual.updated = IW_QUAL_QUAL_INVALID | IW_QUAL_LEVEL_UPDATED | IW_QUAL_NOISE_INVALID;
 
 	//H(signal strength) = H(signal quality) + H(noise level);
-	#ifdef CONFIG_PLATFORM_ANDROID
+
+#ifdef CONFIG_PLATFORM_MT53XX
+	iwe.u.qual.level = (u8)rssi;  //force showing % in MT53XX
+#else
+	#ifdef CONFIG_ANDROID
 	iwe.u.qual.level = (u8) (pnetwork->network.Rssi>>1)-95;
 	#else
 	iwe.u.qual.level = (u8)rssi;  //signal strength
 	#endif
 	iwe.u.qual.qual = 0; // signal quality
 	iwe.u.qual.noise = 0; // noise level
+#endif
 
 	//printk("iqual=%d, ilevel=%d, inoise=%d, iupdated=%d\n", iwe.u.qual.qual, iwe.u.qual.level , iwe.u.qual.noise, iwe.u.qual.updated);
 
@@ -496,7 +540,7 @@ static inline char *translate_scan(_adapter *padapter, struct iw_request_info* i
 
 static int wpa_set_auth_algs(struct net_device *dev, u32 value)
 {
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 	int ret = 0;
 
 	if ((value & AUTH_ALG_SHARED_KEY) && (value & AUTH_ALG_OPEN_SYSTEM))
@@ -557,7 +601,7 @@ static int wpa_set_encryption(struct net_device *dev, struct ieee_param *param, 
 	int ret = 0;
 	u32 wep_key_idx, wep_key_len=0;
 	NDIS_802_11_WEP	 *pwep = NULL;
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	struct security_priv *psecuritypriv = &padapter->securitypriv;
 
@@ -917,7 +961,7 @@ static int r8711_wx_get_name(struct net_device *dev,
 			     struct iw_request_info *info,
 			     union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	u16 cap;
 	u32 ht_ielen = 0;
 	char *p;
@@ -986,7 +1030,7 @@ static int r8711_wx_set_freq(struct net_device *dev,
 			     struct iw_request_info *info,
 			     union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct iw_freq *fwrq = & wrqu->freq;
 	int rc = 0;
 
@@ -1016,7 +1060,7 @@ _func_enter_;
 		} else {
 			// Yes ! We can set it !!!
              RT_TRACE(_module_rtl871x_ioctl_os_c, _drv_notice_, (" Set to channel = %d\n", channel));
-			padapter->registrypriv.channel=channel; 
+			padapter->registrypriv.channel=channel;  
 		}
 	}
 
@@ -1029,7 +1073,7 @@ static int r8711_wx_get_freq(struct net_device *dev,
 			     struct iw_request_info *info,
 			     union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	NDIS_WLAN_BSSID_EX *pcur_bss = &pmlmepriv->cur_network.network;
 
@@ -1050,7 +1094,7 @@ static int r8711_wx_set_mode(struct net_device *dev,
 				struct iw_request_info *a,
 				union iwreq_data *wrqu, char *b)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	NDIS_802_11_NETWORK_INFRASTRUCTURE networkType;
 	int ret = 0;
 
@@ -1106,7 +1150,7 @@ _func_exit_;
 static int r8711_wx_get_mode(struct net_device *dev, struct iw_request_info *a,
 			     union iwreq_data *wrqu, char *b)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 
 _func_enter_;
@@ -1136,7 +1180,7 @@ static int r871x_wx_set_pmkid(struct net_device *dev,
 			     struct iw_request_info *a,
 			     union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	struct security_priv *psecuritypriv = &padapter->securitypriv;
 
@@ -1237,7 +1281,7 @@ static int r8711_wx_get_sens(struct net_device *dev,
 			     struct iw_request_info *info,
 			     union iwreq_data *wrqu, char *extra)
 {
-	//_adapter *padapter = netdev_priv(dev);
+	//_adapter *padapter = rtw_netdev_priv(dev);
 
 	RT_TRACE(_module_rtl871x_mlme_c_, _drv_notice_, ("+r8711_wx_get_sens\n"));
 
@@ -1253,7 +1297,7 @@ static int r8711_wx_get_range(struct net_device *dev,
 				union iwreq_data *wrqu, char *extra)
 {
 	struct iw_range *range = (struct iw_range *)extra;
-//	_adapter *padapter = (_adapter *)netdev_priv(dev);
+//	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 
 	u16 val;
 	int i;
@@ -1386,163 +1430,6 @@ _func_exit_;
 	return 0;
 }
 
-static int r8711_wx_get_rate(struct net_device *dev,
-			     struct iw_request_info *info,
-			     union iwreq_data *wrqu, char *extra);
-
-static int r871x_wx_set_priv(struct net_device *dev,
-				struct iw_request_info *info,
-				union iwreq_data *awrq,
-				char *extra)
-{
-	int ret = 0, len = 0;
-	char *ext;
-
-	_adapter *padapter = netdev_priv(dev);
-	struct iw_point *dwrq = (struct iw_point*)awrq;
-
-	#ifdef DEBUG_RTW_WX_SET_PRIV
-	char *ext_dbg;
-	#endif
-
-	RT_TRACE(_module_rtl871x_ioctl_os_c, _drv_notice_, ("+r871x_wx_set_priv\n"));
-
-	len = dwrq->length;
-	if (!(ext = _malloc(len)))
-		return -ENOMEM;
-
-	if (copy_from_user(ext, dwrq->pointer, len)) {
-		_mfree(ext, len);
-		return -EFAULT;
-	}
-
-	#ifdef DEBUG_RTW_WX_SET_PRIV
-	if (!(ext_dbg = _malloc(len)))
-		return -ENOMEM;
-	
-	_memcpy(ext_dbg, ext, len);
-	#endif
-
-	#if 0
-	if(0 == strcasecmp(ext,"START")){
-		//Turn on Wi-Fi hardware
-		//OK if successful
-		ret=-1;
-		goto FREE_EXT;
-		
-	}else if(0 == strcasecmp(ext,"STOP")){
-		//Turn off Wi-Fi hardwoare
-		//OK if successful
-		ret=-1;
-		goto FREE_EXT;
-		
-	}else
-	#endif
-	if(0 == strcasecmp(ext,"RSSI")){
-		//Return received signal strength indicator in -db for current AP
-		//<ssid> Rssi xx
-		struct	mlme_priv	*pmlmepriv = &(padapter->mlmepriv);	
-		struct	wlan_network	*pcur_network = &pmlmepriv->cur_network;
-		//static u8 xxxx;
-		if(check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE) {
-			sprintf(ext, "%s rssi %d",
-				pcur_network->network.Ssid.Ssid,
-				//(xxxx=xxxx+10)
-				((padapter->recvpriv.fw_rssi)>>1)-95
-				//pcur_network->network.Rssi
-				);
-		} else {
-			sprintf(ext, "OK");
-		}
-		
-	}else if(0 == strcasecmp(ext,"LINKSPEED")){
-		//Return link speed in MBPS
-		//LinkSpeed xx
-		union iwreq_data wrqd;
-		int ret_inner;
-		int mbps;
-		
-		if( 0!=(ret_inner=r8711_wx_get_rate(dev, info, &wrqd, extra)) ){
-			mbps=0;
-		} else {
-			mbps=wrqd.bitrate.value / 1000000;
-		}
-		
-		sprintf(ext, "LINKSPEED %d", mbps);
-		
-		
-	}else if(0 == strcasecmp(ext,"MACADDR")){
-		//Return mac address of the station
-		//Macaddr = xx.xx.xx.xx.xx.xx
-		sprintf(ext,
-			"MACADDR = %02x.%02x.%02x.%02x.%02x.%02x",
-			*(dev->dev_addr),*(dev->dev_addr+1),*(dev->dev_addr+2),
-			*(dev->dev_addr+3),*(dev->dev_addr+4),*(dev->dev_addr+5));
-
-	}else if(0 == strcasecmp(ext,"SCAN-ACTIVE")){
-		//Set scan type to active
-		//OK if successful
-		struct	mlme_priv	*pmlmepriv = &(padapter->mlmepriv);
-		pmlmepriv->passive_mode=1;
-		sprintf(ext, "OK");
-		
-	}else if(0 == strcasecmp(ext,"SCAN-PASSIVE")){
-		//Set scan type to passive
-		//OK if successfu
-		struct	mlme_priv	*pmlmepriv = &(padapter->mlmepriv);
-		pmlmepriv->passive_mode=0;
-		sprintf(ext, "OK");
-		
-	}else if(0 == strncmp(ext,"DCE-E",5)){
-		//Set scan type to passive
-		//OK if successfu
-		
-		disconnectCtrlEx_cmd(padapter
-			, 1 //u32 enableDrvCtrl
-			, 5 //u32 tryPktCnt
-			, 100 //u32 tryPktInterval
-			, 5000 //u32 firstStageTO
-		);
-		sprintf(ext, "OK");
-
-	}else if(0 == strncmp(ext,"DCE-D",5)){
-		//Set scan type to passive
-		//OK if successfu
-		
-		disconnectCtrlEx_cmd(padapter
-			, 0 //u32 enableDrvCtrl
-			, 5 //u32 tryPktCnt
-			, 100 //u32 tryPktInterval
-			, 5000 //u32 firstStageTO
-		);
-		sprintf(ext, "OK");
-		
-	}else{
-		#ifdef DEBUG_RTW_WX_SET_PRIV
-		printk("%s: %s unknowned req=%s\n",
-		__FUNCTION__,dev->name, ext_dbg);
-		#endif
-		goto FREE_EXT;
-
-	}
-
-	if (copy_to_user(dwrq->pointer, ext, min(dwrq->length,(__u16)(strlen(ext)+1)) ) )
-		ret = -EFAULT;
-
-	#ifdef DEBUG_RTW_WX_SET_PRIV
-	printk("%s: %s req=%s rep=%s\n",
-	__FUNCTION__,dev->name, ext_dbg ,ext);
-	#endif
-
-FREE_EXT:
-	_mfree(ext, len);
-	#ifdef DEBUG_RTW_WX_SET_PRIV
-	_mfree(ext_dbg, len);
-	#endif
-
-	return ret;
-}
-
 //set bssid flow
 //s1. set_802_11_infrastructure_mode()
 //s2. set_802_11_authentication_mode()
@@ -1555,7 +1442,7 @@ static int r8711_wx_set_wap(struct net_device *dev,
 {
 	int ret = 0;
 
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	_queue *queue = &pmlmepriv->scanned_queue;
 
@@ -1634,7 +1521,7 @@ static int r8711_wx_get_wap(struct net_device *dev,
 				struct iw_request_info *info,
 				union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	NDIS_WLAN_BSSID_EX *pcur_bss = &pmlmepriv->cur_network.network;
 
@@ -1674,7 +1561,7 @@ struct	iw_mlme
 
 	int ret = 0;
 	u16 reason;
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct iw_mlme *mlme = (struct iw_mlme *) extra;
 
 
@@ -1713,9 +1600,11 @@ int r8711_wx_set_scan(struct net_device *dev,
 			struct iw_request_info *a,
 			union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 
+	NDIS_802_11_SSID ssid;
+	_irqL irqL;
 	u8 status = _TRUE;
 	int ret = 0;
 
@@ -1739,11 +1628,16 @@ _func_enter_;
 		goto exit;
 	}
 
+	// When Busy Traffic, driver do not site survey. So driver return success.
+	// wpa_supplicant will not issue SIOCSIWSCAN cmd again after scan timeout.
+	// modify by thomas 2011-02-22.
+	// merged by Kurt @20111018
 	if ((check_fwstate(pmlmepriv, _FW_UNDER_SURVEY|_FW_UNDER_LINKING) == _TRUE) ||
 	    (pmlmepriv->sitesurveyctrl.traffic_busy == _TRUE))
 	{
+		indicate_wx_scan_complete_event(padapter);
 		goto exit;
-	}
+	} 
 
 #if WIRELESS_EXT >= 17
 	if (wrqu->data.length == sizeof(struct iw_scan_req))
@@ -1752,8 +1646,6 @@ _func_enter_;
 
 		if (wrqu->data.flags & IW_SCAN_THIS_ESSID)
 		{
-			NDIS_802_11_SSID ssid;
-			_irqL irqL;
 			int len = min((int)req->essid_len, IW_ESSID_MAX_SIZE);
 
 			_memset((unsigned char*)&ssid, 0, sizeof(NDIS_802_11_SSID));
@@ -1781,6 +1673,78 @@ _func_enter_;
 	}
 	else
 #endif
+
+	if(	wrqu->data.length >= WEXT_CSCAN_HEADER_SIZE
+		&& _memcmp(extra, WEXT_CSCAN_HEADER, WEXT_CSCAN_HEADER_SIZE) == _TRUE
+	)
+	{
+		int len = wrqu->data.length -WEXT_CSCAN_HEADER_SIZE;
+		char *pos = extra+WEXT_CSCAN_HEADER_SIZE;
+		char section;
+		char sec_len;
+
+		//printk("%s COMBO_SCAN header is recognized\n", __FUNCTION__);
+
+		_memset((unsigned char*)&ssid, 0, sizeof(NDIS_802_11_SSID));
+
+		while(len >= 1) {
+			sscanf(pos, "%c", &section);
+			pos+=1; len-=1;
+
+			switch(section) {
+				case WEXT_CSCAN_SSID_SECTION:
+					printk("WEXT_CSCAN_SSID_SECTION\n");
+					if(len < 1) len = 0;
+					sscanf(pos, "%c", &sec_len);
+					pos+=1; len-=1;
+
+					#if 0 //the 8712fw will only report AP with the specific ssid, this will cause some problem..., don't spcifiy ssid
+					if(len >= sec_len) {
+						ssid.SsidLength = sec_len;
+						_memcpy(ssid.Ssid, pos, ssid.SsidLength);
+						printk("%s COMBO_SCAN with specific ssid:%s\n", __FUNCTION__, ssid.Ssid);
+					}
+					#endif
+					
+					pos+=sec_len; len-=sec_len;
+					break;
+					
+				#if 0
+				case WEXT_CSCAN_CHANNEL_SECTION:
+					DBG_871X("WEXT_CSCAN_CHANNEL_SECTION\n");
+					
+					pos+=1; len-=1;
+					break;
+				case WEXT_CSCAN_NPROBE_SECTION:
+					DBG_871X("WEXT_CSCAN_NPROBE_SECTION\n");
+					break;
+				case WEXT_CSCAN_ACTV_DWELL_SECTION:
+					DBG_871X("WEXT_CSCAN_ACTV_DWELL_SECTION\n");
+					break;
+				case WEXT_CSCAN_PASV_DWELL_SECTION:
+					DBG_871X("WEXT_CSCAN_PASV_DWELL_SECTION\n");
+					break;
+				case WEXT_CSCAN_HOME_DWELL_SECTION:
+					DBG_871X("WEXT_CSCAN_HOME_DWELL_SECTION\n");
+					break;
+				case WEXT_CSCAN_TYPE_SECTION:
+					DBG_871X("WEXT_CSCAN_TYPE_SECTION\n");
+					break;
+				#endif
+				
+				default:
+					//DBG_871X("Unknown CSCAN section %c\n", section);
+					len = 0; // stop parsing
+			}
+			
+		}
+		
+		//jeff: it has still some scan paramater to parse, we only do this now...			
+		_enter_critical(&pmlmepriv->lock, &irqL);				
+		status = sitesurvey_cmd(padapter, &ssid);	
+		_exit_critical(&pmlmepriv->lock, &irqL);
+		
+	} else
 	{
 		status = set_802_11_bssid_list_scan(padapter);
 	}
@@ -1799,7 +1763,7 @@ static int r8711_wx_get_scan(struct net_device *dev,
 				struct iw_request_info *a,
 				union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	_queue *queue = &pmlmepriv->scanned_queue;
 	struct wlan_network *pnetwork = NULL;
@@ -1844,8 +1808,13 @@ _func_enter_;
 		}
 
 		pnetwork = LIST_CONTAINOR(plist, struct wlan_network, list);
-
-		ev = translate_scan(padapter, a, pnetwork, ev, stop);
+		
+		#ifdef CONFIG_VALIDATE_SSID
+		if(validate_ssid(&(pnetwork->network.Ssid))==_TRUE)
+		#endif
+		{
+			ev = translate_scan(padapter, a, pnetwork, ev, stop);
+		}
 
 		plist = get_next(plist);
 	}
@@ -1873,7 +1842,7 @@ static int r8711_wx_set_essid(struct net_device *dev,
 				struct iw_request_info *a,
 				union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	_queue *queue = &pmlmepriv->scanned_queue;
 
@@ -2012,7 +1981,7 @@ static int r8711_wx_get_essid(struct net_device *dev,
 				struct iw_request_info *a,
 				union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	NDIS_WLAN_BSSID_EX *pcur_bss = &pmlmepriv->cur_network.network;
 
@@ -2043,7 +2012,7 @@ static int r8711_wx_set_rate(struct net_device *dev,
 				struct iw_request_info *a,
 				union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 
 	u32 target_rate = wrqu->bitrate.value;
 	u32 fixed = wrqu->bitrate.fixed;
@@ -2136,12 +2105,12 @@ static int r8711_wx_get_rate(struct net_device *dev,
 			     struct iw_request_info *info,
 			     union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct registry_priv *pregpriv = &padapter->registrypriv;
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	NDIS_WLAN_BSSID_EX *pcur_bss = &pmlmepriv->cur_network.network;
 
-	struct ieee80211_ht_cap *pht_capie;
+	struct rtw_ieee80211_ht_cap *pht_capie;
 	unsigned char rf_type=padapter->registrypriv.rf_config;
 	
 
@@ -2163,7 +2132,7 @@ static int r8711_wx_get_rate(struct net_device *dev,
 		{
 			ht_cap = _TRUE;
 
-			pht_capie = (struct ieee80211_ht_cap *)(p+2);
+			pht_capie = (struct rtw_ieee80211_ht_cap *)(p+2);
 
 			_memcpy(&mcs_rate , pht_capie->supp_mcs_set, 2);
 
@@ -2243,7 +2212,7 @@ static int r8711_wx_get_rts(struct net_device *dev,
 				struct iw_request_info *info,
 				union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 
 _func_enter_;
 
@@ -2262,7 +2231,7 @@ static int r8711_wx_set_frag(struct net_device *dev,
 				struct iw_request_info *info,
 				union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 
 _func_enter_;
 
@@ -2285,7 +2254,7 @@ static int r8711_wx_get_frag(struct net_device *dev,
 				struct iw_request_info *info,
 				union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 
 _func_enter_;
 
@@ -2302,7 +2271,7 @@ static int r8711_wx_get_retry(struct net_device *dev,
 				struct iw_request_info *info,
 				union iwreq_data *wrqu, char *extra)
 {
-	//_adapter *padapter = netdev_priv(dev);
+	//_adapter *padapter = rtw_netdev_priv(dev);
 
 	wrqu->retry.value = 7;
 	wrqu->retry.fixed = 0;	/* no auto select */
@@ -2344,7 +2313,7 @@ static int r8711_wx_set_enc(struct net_device *dev,
 	NDIS_802_11_AUTHENTICATION_MODE authmode;
 
 	struct iw_point *erq = &(wrqu->encoding);
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 
 	key = erq->flags & IW_ENCODE_INDEX;
 
@@ -2372,7 +2341,7 @@ _func_enter_;
 			return -EINVAL;
 		key--;
 		keyindex_provided = 1;
-	}
+	} 
 	else
 	{
 		keyindex_provided = 0;
@@ -2478,7 +2447,7 @@ static int r8711_wx_get_enc(struct net_device *dev,
 				union iwreq_data *wrqu, char *keybuf)
 {
 	uint key, ret =0;
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 	struct iw_point *erq = &(wrqu->encoding);
 	struct	mlme_priv	*pmlmepriv = &(padapter->mlmepriv);
 
@@ -2561,7 +2530,7 @@ static int r8711_wx_get_power(struct net_device *dev,
 				struct iw_request_info *info,
 				union iwreq_data *wrqu, char *extra)
 {
-	//_adapter *padapter = netdev_priv(dev);
+	//_adapter *padapter = rtw_netdev_priv(dev);
 
 	wrqu->power.value = 0;
 	wrqu->power.fixed = 0;	/* no auto select */
@@ -2574,7 +2543,7 @@ static int r871x_wx_set_gen_ie(struct net_device *dev,
 				struct iw_request_info *info,
 				union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 
 	return r871x_set_wpa_ie(padapter, extra, wrqu->data.length);
 }
@@ -2584,7 +2553,7 @@ static int r871x_wx_set_mtk_wps_ie(struct net_device *dev,
 				struct iw_request_info *info,
 				union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 
 	return r871x_set_wpa_ie(padapter, wrqu->data.pointer, wrqu->data.length);
 }
@@ -2594,7 +2563,7 @@ static int r871x_wx_set_auth(struct net_device *dev,
 				struct iw_request_info *info,
 				union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 	struct iw_param *param = (struct iw_param*)&(wrqu->param);
 	int paramid;
 	int paramval;
@@ -2666,14 +2635,13 @@ static int r871x_wx_set_auth(struct net_device *dev,
 
 		case IW_AUTH_80211_AUTH_ALG: // 6
 
-			#ifdef CONFIG_PLATFORM_ANDROID
+			#ifdef CONFIG_ANDROID
 			/*
 			 *  It's the starting point of a link layer connection using wpa_supplicant
 			*/
 			if(check_fwstate(&padapter->mlmepriv, _FW_LINKED)) {
 				disassoc_cmd(padapter);
 				indicate_disconnect(padapter);
-				padapter->bdisassoc_by_assoc=1;
 			}
 			#endif
 			
@@ -2730,7 +2698,7 @@ static int r871x_wx_set_enc_ext(struct net_device *dev,
 
 	switch (pext->alg) {
 		case IW_ENCODE_ALG_NONE:
-		//todo: remove key
+		//todo: remove key 
 		//remove = 1;	
 			alg_name = "none";
 			break;
@@ -2773,7 +2741,7 @@ static int r871x_wx_set_enc_ext(struct net_device *dev,
 
 	if (pencoding->flags & IW_ENCODE_DISABLED)
 	{		
-		//todo: remove key
+		//todo: remove key 
 		//remove = 1;		
 	}	
 	
@@ -2804,7 +2772,7 @@ static int r8711_wx_read32(struct net_device *dev,
 				union iwreq_data *wrqu, char *keybuf)
 {
 	//uint key, ret = 0;
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 	//struct iw_point *erq = &wrqu->encoding;
 
 	u32 addr;
@@ -2834,7 +2802,7 @@ static int r8711_wx_write32(struct net_device *dev,
 				 union iwreq_data *wrqu, char *keybuf)
 {
 	//uint key, ret = 0;
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 	//struct iw_point *erq = &wrqu->encoding;
 
 	u32 addr;
@@ -2854,7 +2822,7 @@ static int dummy(struct net_device *dev,
 		struct iw_request_info *a,
 		union iwreq_data *wrqu, char *b)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 
 	RT_TRACE(_module_rtl871x_ioctl_os_c, _drv_notice_,
@@ -2869,7 +2837,7 @@ static int r871x_wx_set_mtk_wps_probe_ie(struct net_device *dev,
 		struct iw_request_info *a,
 		union iwreq_data *wrqu, char *b)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(dev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 
 	RT_TRACE(_module_rtl871x_ioctl_os_c, _drv_notice_,
@@ -2884,7 +2852,7 @@ static int r871x_wx_get_sensitivity(struct net_device *dev,
 				union iwreq_data *wrqu, char *buf)
 {
 
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 
     //wrqu->qual.level = (u8)padapter->mlmepriv.cur_network.network.Rssi;
 
@@ -2925,7 +2893,7 @@ struct	iw_point
 	int ret;
 	u16 len;
 	u8 *pparmbuf, bset;
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 	struct iw_point *p = &wrqu->data;
 
 	if ((!p->length) || (!p->pointer)) {
@@ -3006,7 +2974,7 @@ static int r871x_mp_ioctl_hdl(struct net_device *dev,
 				struct iw_request_info *info,
 				union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 
 	struct iw_point *p = &wrqu->data;
 
@@ -3096,7 +3064,7 @@ static int r871x_mp_ioctl_hdl(struct net_device *dev,
 		//todo:check status, BytesNeeded, etc.
 	}
 	else {
-		printk("r871x_mp_ioctl_hdl(): err!, subcode=%d, oid=%d, handler=%p\n",
+		printk("r871x_mp_ioctl_hdl(): err!, subcode=%d, oid=%d, handler=%p\n", 
 			poidparam->subcode, phandler->oid, phandler->handler);
 		ret = -EFAULT;
 		goto _r871x_mp_ioctl_hdl_exit;
@@ -3127,7 +3095,7 @@ static int r871x_get_ap_info(struct net_device *dev,
 				struct iw_request_info *info,
 				union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	_queue *queue = &pmlmepriv->scanned_queue;
 	struct iw_point *pdata = &wrqu->data;
@@ -3184,8 +3152,8 @@ static int r871x_get_ap_info(struct net_device *dev,
 
 		pnetwork = LIST_CONTAINOR(plist, struct wlan_network, list);
 
-		//if(hwaddr_aton_i(pdata->pointer, bssid))
-		if(hwaddr_aton_i(data, bssid))
+		//if(hwaddr_aton_i(pdata->pointer, bssid)) 
+		if(hwaddr_aton_i(data, bssid)) 
 		{			
 			printk("Invalid BSSID '%s'.\n", (u8*)data);
 			return -EINVAL;
@@ -3231,7 +3199,7 @@ static int r871x_set_pid(struct net_device *dev,
 				union iwreq_data *wrqu, char *extra)
 {
 	int ret = 0;
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 	struct iw_point *pdata = &wrqu->data;
 
 	printk("+r871x_set_pid\n");
@@ -3259,13 +3227,45 @@ exit:
 	return ret;
 }
 
+static int r871x_set_chplan(struct net_device *dev,
+				struct iw_request_info *info,
+				union iwreq_data *wrqu, char *extra)
+{
+	int ret = 0;
+	_adapter *padapter = rtw_netdev_priv(dev);
+	struct iw_point *pdata = &wrqu->data;
+	int ch_plan = -1;
+
+	printk("+r871x_set_chplan\n");
+
+	if((padapter->bDriverStopped) || (pdata==NULL))
+	{
+		ret= -EINVAL;
+		goto exit;
+	}
+
+	//pdata->length = 0;
+	//pdata->flags = 0;
+
+	//_memcpy(&padapter->pid, pdata->pointer, sizeof(int));
+	//if(copy_from_user(&ch_plan, pdata->pointer, sizeof(int)))
+
+	ch_plan=(int)*extra;
+	set_chplan_cmd(padapter, ch_plan);
+
+
+exit:
+
+	return ret;
+}
+
 static int r871x_wps_start(struct net_device *dev,
                                struct iw_request_info *info,
                                union iwreq_data *wrqu, char *extra)
 {
 	
 	int ret = 0;	
-	_adapter *padapter = netdev_priv(dev);	
+	_adapter *padapter = rtw_netdev_priv(dev);	
 	struct iw_point *pdata = &wrqu->data;
 	u32   u32wps_start = 0;
         unsigned int uintRet = 0;
@@ -3273,7 +3273,7 @@ static int r871x_wps_start(struct net_device *dev,
         uintRet = copy_from_user( ( void* ) &u32wps_start, pdata->pointer, 4 );
 
 	if((padapter->bDriverStopped) || (pdata==NULL))
-	{               
+	{                
 		ret= -EINVAL;
 		goto exit;
 	}		
@@ -3317,7 +3317,7 @@ static int r871x_wx_get_ap_status(struct net_device *dev,
                                struct iw_request_info *info,
                                union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 	int name_len;
 
 	//count the length of input ssid
@@ -3332,7 +3332,7 @@ static int r871x_wx_set_countrycode(struct net_device *dev,
                                struct iw_request_info *info,
                                union iwreq_data *wrqu, char *extra)
 {
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 	int	countrycode=0;
 
 	countrycode = (int)wrqu->data.pointer;
@@ -3346,7 +3346,7 @@ static int wpa_set_param(struct net_device *dev, u8 name, u32 value)
 {
 	uint ret = 0;
 	u32 flags;
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 
 	switch (name)
 	{
@@ -3445,7 +3445,7 @@ static int wpa_set_param(struct net_device *dev, u8 name, u32 value)
 static int wpa_mlme(struct net_device *dev, u32 command, u32 reason)
 {
 	int ret = 0;
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 
 	switch (command)
 	{
@@ -3476,7 +3476,7 @@ static int wpa_set_wpa_ie(struct net_device *dev,
 	u32 left;
  	u8 *pos;
 	int group_cipher, pairwise_cipher;
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 
 
 	if((param->u.wpa_ie.len > MAX_WPA_IE_LEN) || (param->u.wpa_ie.data == NULL))
@@ -3629,7 +3629,7 @@ int wpa_supplicant_ioctl(struct net_device *dev, struct iw_point *p)
 
 		case IEEE_CMD_SET_WPA_IE:
 			//ret = wpa_set_wpa_ie(dev, param, p->length);
-			ret =  r871x_set_wpa_ie((_adapter *)netdev_priv(dev), (char*)param->u.wpa_ie.data, (u16)param->u.wpa_ie.len);
+			ret =  r871x_set_wpa_ie((_adapter *)rtw_netdev_priv(dev), (char*)param->u.wpa_ie.data, (u16)param->u.wpa_ie.len);
 			break;
 
 		case IEEE_CMD_SET_ENCRYPTION:
@@ -3658,10 +3658,187 @@ out:
 	return ret;
 }
 
+#include <rtw_android.h>
+static int r871x_wx_set_priv(struct net_device *dev,
+				struct iw_request_info *info,
+				union iwreq_data *awrq,
+				char *extra)
+{
+	int ret = 0, len = 0;
+	char *ext;
+	int i;
+
+	_adapter *padapter = rtw_netdev_priv(dev);
+	struct iw_point *dwrq = (struct iw_point*)awrq;
+
+	#ifdef DEBUG_RTW_WX_SET_PRIV
+	char *ext_dbg;
+	#endif
+
+	RT_TRACE(_module_rtl871x_ioctl_os_c, _drv_notice_, ("+r871x_wx_set_priv\n"));
+
+	len = dwrq->length;
+	if ( len == 0 )
+		return ret;
+	
+	if (!(ext = _malloc(len)))
+		return -ENOMEM;
+
+	if (copy_from_user(ext, dwrq->pointer, len)) {
+		_mfree(ext, len);
+		return -EFAULT;
+	}
+
+	#ifdef DEBUG_RTW_WX_SET_PRIV
+	if (!(ext_dbg = _malloc(len)))
+		return -ENOMEM;
+	
+	_memcpy(ext_dbg, ext, len);
+	#endif
+
+	if(	len >= WEXT_CSCAN_HEADER_SIZE
+		&& _memcmp(ext, WEXT_CSCAN_HEADER, WEXT_CSCAN_HEADER_SIZE) == _TRUE
+	){
+		ret = r8711_wx_set_scan(dev, info, awrq, ext);
+		goto FREE_EXT;
+	}
+	
+#ifdef CONFIG_ANDROID
+	//DBG_871X("rtw_wx_set_priv: %s req=%s\n", dev->name, ext);
+#if 0
+	for(i=0; i<len; i++) {
+		if(*(ext+i)>='a' && *(ext+i)<='z' ) {
+			*(ext+i)+= 'A'-'a';
+		}
+	}
+
+	for(i=0 ; i<ANDROID_WIFI_CMD_MAX; i++)
+		if(0 == strncmp(ext , android_wifi_cmd_str[i], strlen(android_wifi_cmd_str[i])) )
+			break;
+#endif
+	i = rtw_android_cmdstr_to_num(ext);
+
+	switch(i) {
+		case ANDROID_WIFI_CMD_START :
+			indicate_wx_custom_event(padapter, "START");
+			break;
+		case ANDROID_WIFI_CMD_STOP :
+			indicate_wx_custom_event(padapter, "STOP");
+			break;
+		case ANDROID_WIFI_CMD_RSSI :
+			{
+				struct	mlme_priv	*pmlmepriv = &(padapter->mlmepriv);	
+				struct	wlan_network	*pcur_network = &pmlmepriv->cur_network;
+				//static u8 xxxx;
+				if(check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE) {
+					sprintf(ext, "%s rssi %d",
+						pcur_network->network.Ssid.Ssid,
+						//(xxxx=xxxx+10)
+						((padapter->recvpriv.fw_rssi)>>1)-95
+						//pcur_network->network.Rssi
+						);
+				} else {
+					sprintf(ext, "OK");
+				}
+			}
+			break;
+		case ANDROID_WIFI_CMD_LINKSPEED :
+			{
+				union iwreq_data wrqd;
+				int ret_inner;
+				int mbps;
+				
+				if( 0!=(ret_inner=r8711_wx_get_rate(dev, info, &wrqd, extra)) ){
+					mbps=0;
+				} else {
+					mbps=wrqd.bitrate.value / 1000000;
+				}
+				
+				sprintf(ext, "LINKSPEED %d", mbps);
+			}
+			break;
+		case ANDROID_WIFI_CMD_MACADDR :
+			sprintf(ext, "MACADDR = " MAC_FMT, MAC_ARG(dev->dev_addr));
+			break;
+		case ANDROID_WIFI_CMD_SCAN_ACTIVE :
+			{
+				struct	mlme_priv	*pmlmepriv = &(padapter->mlmepriv);
+				pmlmepriv->passive_mode=1;
+				sprintf(ext, "OK");
+			}
+			break;
+		case ANDROID_WIFI_CMD_SCAN_PASSIVE :
+			{
+				struct	mlme_priv	*pmlmepriv = &(padapter->mlmepriv);
+				pmlmepriv->passive_mode=0;
+				sprintf(ext, "OK");
+			}
+			break;
+
+		#if 0
+		case ANDROID_WIFI_CMD_COUNTRY :
+			{
+				char country_code[10];
+				int channel_plan;
+				union iwreq_data wrqd;
+				int ret_inner;
+					
+				sscanf(ext,"%*s %s",country_code);
+		
+				if(0 == strcmp(country_code, "US"))
+					channel_plan = RT_CHANNEL_DOMAIN_FCC;
+				else if(0 == strcmp(country_code, "EU"))
+					channel_plan = RT_CHANNEL_DOMAIN_ETSI;
+				else if(0 == strcmp(country_code, "JP"))
+					channel_plan = RT_CHANNEL_DOMAIN_MKK;
+				else
+					DBG_871X("%s unknown country_code:%s\n", __FUNCTION__, country_code);
+				
+				_rtw_memcpy(&wrqd, &channel_plan, sizeof(int));
+				
+				if( 0!=(ret_inner=rtw_wx_set_channel_plan(dev, info, &wrqd, extra)) ){
+					printk("%s rtw_wx_set_channel_plan error\n", __FUNCTION__);
+				}
+				
+				sprintf(ext, "OK");
+			}
+			break;
+		#endif
+			
+		default :
+			#ifdef  DEBUG_RTW_WX_SET_PRIV
+			printk("%s: %s unknowned req=%s\n", __FUNCTION__,
+				dev->name, ext_dbg);
+			#endif
+
+			sprintf(ext, "OK");
+		
+	}
+
+	if (copy_to_user(dwrq->pointer, ext, min(dwrq->length, (u16)(strlen(ext)+1)) ) )
+		ret = -EFAULT;
+
+	#ifdef DEBUG_RTW_WX_SET_PRIV
+	printk("%s: %s req=%s rep=%s dwrq->length=%d, strlen(ext)+1=%d\n", __FUNCTION__,
+		dev->name, ext_dbg ,ext, dwrq->length, (u16)(strlen(ext)+1));
+	#endif
+#endif //end of CONFIG_ANDROID
+
+
+FREE_EXT:
+	_mfree(ext, len);
+	#ifdef DEBUG_RTW_WX_SET_PRIV
+	_mfree(ext_dbg, len);
+	#endif
+
+	return ret;
+}
+
+
 //based on "driver_ipw" and for hostapd
 int r871x_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 {
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 	struct iwreq *wrq = (struct iwreq *)rq;
 	int ret = 0;
 
@@ -3773,7 +3950,7 @@ static const struct iw_priv_args r8711_private_args[] =
 	{
 		SIOCIWFIRSTPRIV + 0x5,
 		IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "setpid"
-	},
+	}, 
 	{
 		SIOCIWFIRSTPRIV + 0x6,
 		IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "wps_start"
@@ -3803,9 +3980,13 @@ static const struct iw_priv_args r8711_private_args[] =
 	{
 		SIOCIWFIRSTPRIV + 0x9,
 		IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "wps_assoc_req_ie"
-	},
+	}
 #endif
-
+	,
+	{
+		SIOCIWFIRSTPRIV + 0x7,
+		IW_PRIV_TYPE_INT | IW_PRIV_SIZE_FIXED | 1, 0, "chplan"
+	}
 };
 
 static iw_handler r8711_private_handler[] =
@@ -3829,13 +4010,13 @@ static iw_handler r8711_private_handler[] =
 	r871x_wx_set_mtk_wps_probe_ie,
 	r871x_wx_set_mtk_wps_ie,
 #endif
-
+	r871x_set_chplan,
 };
 
 #if WIRELESS_EXT >= 17
 static struct iw_statistics *r871x_get_wireless_stats(struct net_device *dev)
 {
-	_adapter *padapter = netdev_priv(dev);
+	_adapter *padapter = rtw_netdev_priv(dev);
 	struct iw_statistics *piwstats = &padapter->iwstats;
 	int tmp_level = 0;
 	int tmp_qual = 0;
@@ -3863,14 +4044,14 @@ static struct iw_statistics *r871x_get_wireless_stats(struct net_device *dev)
 		piwstats->qual.qual = tmp_level;
 		piwstats->qual.noise = tmp_noise;
 
-		#ifdef CONFIG_PLATFORM_ANDROID
+		#ifdef CONFIG_ANDROID
 		piwstats->qual.level=(padapter->recvpriv.fw_rssi>>1)-95;
 		#endif
 	}
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,14))
 	//	Use the percentage for signal, noise display.
 	piwstats->qual.updated = IW_QUAL_ALL_UPDATED
-		#ifdef CONFIG_PLATFORM_ANDROID
+		#ifdef CONFIG_ANDROID
 		| IW_QUAL_DBM
 		#endif
 		;

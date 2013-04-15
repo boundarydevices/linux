@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __RTL8712_LED_H
 #define __RTL8712_LED_H
 
@@ -95,7 +95,7 @@ typedef struct _LED_871x{
 
 	_timer			BlinkTimer; // Timer object for led blinking.
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,5,0)
-	_workitem		BlinkWorkItem; // Workitem used by BlinkTimer to manipulate H/W to blink LED.
+	_workitem		BlinkWorkItem; // Workitem used by BlinkTimer to manipulate H/W to blink LED. 
 #endif
 } LED_871x, *PLED_871x;
 

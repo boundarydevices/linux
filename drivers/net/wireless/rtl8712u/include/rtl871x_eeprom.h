@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __RTL871X_EEPROM_H__
 #define __RTL871X_EEPROM_H__
 
@@ -66,7 +66,7 @@ typedef enum _RT_CUSTOMER_ID
 	RT_CID_8187_HW_LED = 3,
 	RT_CID_8187_NETGEAR = 4,
 	RT_CID_WHQL = 5,
-	RT_CID_819x_CAMEO  = 6,
+	RT_CID_819x_CAMEO  = 6, 
 	RT_CID_819x_RUNTOP = 7,
 	RT_CID_819x_Senao = 8,
 	RT_CID_TOSHIBA = 9,	// Merge by Jacken, 2008/01/31.
@@ -77,7 +77,7 @@ typedef enum _RT_CUSTOMER_ID
 	RT_CID_COREGA = 14,
 	RT_CID_819x_ALPHA = 15,
 	RT_CID_819x_Sitecom = 16,
-	RT_CID_CCX = 17, // It's set under CCX logo test and isn't demanded for CCX functions, but for test behavior like retry limit and tx report. By Bruce, 2009-02-17.     
+	RT_CID_CCX = 17, // It's set under CCX logo test and isn't demanded for CCX functions, but for test behavior like retry limit and tx report. By Bruce, 2009-02-17.      
 	RT_CID_819x_Lenovo = 18,
 	RT_CID_819x_QMI = 19,
 	RT_CID_819x_Edimax_Belkin = 20,		
@@ -91,8 +91,8 @@ typedef enum _RT_CUSTOMER_ID
 	RT_CID_819x_CLEVO = 28,
 }RT_CUSTOMER_ID, *PRT_CUSTOMER_ID;
 
-struct eeprom_priv
-{   
+struct eeprom_priv 
+{    
 	u8		bautoload_fail_flag;
 	u8		bempty;
 	u8		sys_config;
@@ -121,7 +121,7 @@ struct eeprom_priv
 extern void eeprom_write16(_adapter *padapter, u16 reg, u16 data);
 extern u16 eeprom_read16(_adapter *padapter, u16 reg);
 extern void read_eeprom_content(_adapter *padapter);
-extern void eeprom_read_sz(_adapter * padapter, u16 reg,u8* data, u32 sz);
+extern void eeprom_read_sz(_adapter * padapter, u16 reg,u8* data, u32 sz); 
 
 extern void read_eeprom_content_by_attrib(_adapter *	padapter	);
 

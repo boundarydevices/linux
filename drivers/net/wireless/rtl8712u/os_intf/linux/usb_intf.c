@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _HCI_INTF_C_
 
 #include <drv_conf.h>
@@ -60,6 +60,7 @@ extern u8 init_drv_sw(_adapter *padapter);
 extern u8 free_drv_sw(_adapter *padapter);
 extern struct net_device *init_netdev(void);
 extern char* initmac;
+extern u8* g_pallocated_recv_buf;
 
 void r871x_dev_unload(_adapter *padapter);
 
@@ -202,7 +203,7 @@ static struct specific_device_id specific_device_id_tbl[] = {
 };
 
 typedef struct _driver_priv{
-     
+      
 	struct usb_driver r871xu_drv;
 	int drv_registered;	
 
@@ -418,7 +419,7 @@ void r871x_dev_unload(_adapter *padapter)
 	}
 					
        padapter->bDriverStopped = _TRUE;
-	padapter->bSurpriseRemoved = _TRUE;  
+	padapter->bSurpriseRemoved = _TRUE;   
 
 	rtl871x_intf_stop(padapter);
 
@@ -449,7 +450,7 @@ void r871x_dev_unload(_adapter *padapter)
 	{
 		printk("+r871x_dev_unload\n");
 		//s1.
-/*		if(pnetdev)  
+/*		if(pnetdev)   
      		{
         		netif_carrier_off(pnetdev);
      	  		netif_stop_queue(pnetdev);
@@ -460,7 +461,7 @@ void r871x_dev_unload(_adapter *padapter)
 		disassoc_cmd(padapter);	
 		//s2-2.  indicate disconnect to os
 		indicate_disconnect(padapter);				
-		//s2-3.
+		//s2-3. 
 	       free_assoc_resources(padapter);	
 		//s2-4.
 		free_network_queue(padapter);*/
@@ -525,8 +526,8 @@ static void disable_ht_for_spec_devid(const struct usb_device_id *pdid)
 
 		if((pdid->idVendor==vid) && (pdid->idProduct==pid) && (flags&SPEC_DEV_ID_DISABLE_HT))
 		{
-			 ht_enable = 0;           
-			 cbw40_enable = 0;           
+			 ht_enable = 0;            
+			 cbw40_enable = 0;            
 			 ampdu_enable = 0;			
 		}
 	}
@@ -559,7 +560,7 @@ u8 key_2char2num(u8 hch, u8 lch)
 */
 static int r871xu_drv_init(struct usb_interface *pusb_intf,const struct usb_device_id *pdid)
 {  	
-  	uint status;	
+  	uint status;	 
 	_adapter *padapter = NULL;
   	struct dvobj_priv *pdvobjpriv;
 	struct net_device *pnetdev;
@@ -587,11 +588,16 @@ static int r871xu_drv_init(struct usb_interface *pusb_intf,const struct usb_devi
 	if (!pnetdev)
 		goto error;	
 	
-	padapter = netdev_priv(pnetdev);
+	padapter = rtw_netdev_priv(pnetdev);
 	pdvobjpriv = &padapter->dvobjpriv;	
 	pdvobjpriv->padapter = padapter;
 
 	padapter->dvobjpriv.pusbdev = udev;
+
+#ifdef CONFIG_IOCTL_CFG80211
+	rtw_wdev_alloc(padapter, &pusb_intf->dev);
+#endif //CONFIG_IOCTL_CFG80211
+
 	usb_set_intfdata(pusb_intf, pnetdev);	
 	SET_NETDEV_DEV(pnetdev, &pusb_intf->dev);
 
@@ -614,7 +620,7 @@ static int r871xu_drv_init(struct usb_interface *pusb_intf,const struct usb_devi
 		if (status != _SUCCESS) {
 			RT_TRACE(_module_hci_intfs_c_,_drv_err_,("\n initialize device object priv Failed!\n"));			
 			goto error;
-		}
+		} 
 	}
 
 	//step 4.
@@ -639,7 +645,7 @@ static int r871xu_drv_init(struct usb_interface *pusb_intf,const struct usb_devi
 		{
 			printk("Boot from EEPROM\n");
 		}
-		else
+		else 
 		{
 			printk("Boot from EFUSE\n");
 		}	
@@ -650,14 +656,10 @@ static int r871xu_drv_init(struct usb_interface *pusb_intf,const struct usb_devi
 			printk("Autoload OK!!\n");
 			AutoloadFail = _TRUE;
 
-			//
-			// <Roger_Note> The following operation are prevent Efuse leakage by turn on 2.5V.
-			// 2008.11.25.
-			//
-			tmpU1b = read8(padapter, EFUSE_TEST+3);
-			write8(padapter, EFUSE_TEST+3, tmpU1b|0x80);
-			mdelay_os(1);
-			write8(padapter, EFUSE_TEST+3, (tmpU1b&(~ BIT(7))));
+			//tmpU1b = read8(padapter, EFUSE_TEST+3);
+			//write8(padapter, EFUSE_TEST+3, tmpU1b|0x80);
+			//mdelay_os(1);
+			//write8(padapter, EFUSE_TEST+3, (tmpU1b&(~ BIT(7))));
 
 			// Retrieve Chip version.
 			// 20090915 Joseph: Recognize IC version by Reg0x4 BIT15.
@@ -703,7 +705,7 @@ static int r871xu_drv_init(struct usb_interface *pusb_intf,const struct usb_devi
 			}
 			else
 			{	//	Use the mac address stored in the Efuse
-			 	_memcpy(mac, &pdata[0x12], ETH_ALEN);//offset = 0x12 for usb in efuse
+			 	_memcpy(mac, &pdata[0x12], ETH_ALEN);//offset = 0x12 for usb in efuse 
 			}
 
 
@@ -766,7 +768,7 @@ static int r871xu_drv_init(struct usb_interface *pusb_intf,const struct usb_devi
 
 			//
 			// Led mode
-			//
+			// 
 			switch(padapter->eeprompriv.CustomerID)
 			{
 				case RT_CID_DEFAULT:
@@ -815,7 +817,7 @@ static int r871xu_drv_init(struct usb_interface *pusb_intf,const struct usb_devi
 		}
 
 		if(	((mac[0]==0xff) &&(mac[1]==0xff) && (mac[2]==0xff)  && (mac[3]==0xff) &&
-			(mac[4]==0xff) &&(mac[5]==0xff) ) ||
+			(mac[4]==0xff) &&(mac[5]==0xff) ) || 
 			((mac[0]==0x0) &&(mac[1]==0x0) && (mac[2]==0x0)  && (mac[3]==0x0) &&
 			(mac[4]==0x0) &&(mac[5]==0x0)) || (AutoloadFail == _FALSE))
 		{
@@ -829,7 +831,7 @@ static int r871xu_drv_init(struct usb_interface *pusb_intf,const struct usb_devi
 	
 		_memcpy(pnetdev->dev_addr, mac/*padapter->eeprompriv.mac_addr*/, ETH_ALEN);
 
-		 printk("MAC Address from efuse= %x-%x-%x-%x-%x-%x\n",
+		 printk("MAC Address from efuse= %x-%x-%x-%x-%x-%x\n", 
 			mac[0],mac[1],mac[2],mac[3], mac[4], mac[5]);		
 	}	
 #endif
@@ -858,7 +860,7 @@ static int r871xu_drv_init(struct usb_interface *pusb_intf,const struct usb_devi
 
   	return 0;
 
-error:	     
+error:	      
 
 	usb_put_dev(udev);//decrease the reference count of the usb device structure if driver fail on initialzation
 
@@ -868,7 +870,7 @@ error:
 		RT_TRACE(_module_hci_intfs_c_,_drv_err_,("\n Initialize dvobjpriv.dvobj_deinit error!!!\n"));
 	}else{
 		padapter->dvobj_deinit(padapter);
-	} 	 
+	} 	  
 
 	if(pnetdev)
 	{
@@ -891,7 +893,7 @@ static void r871xu_dev_remove(struct usb_interface *pusb_intf)
 {	
 	_irqL irqL;
 	struct net_device *pnetdev=usb_get_intfdata(pusb_intf);	
-     _adapter *padapter = (_adapter*)netdev_priv(pnetdev);
+     _adapter *padapter = (_adapter*)rtw_netdev_priv(pnetdev);
 	 struct	mlme_priv *pmlmepriv = &padapter->mlmepriv;
 
 _func_exit_;
@@ -902,9 +904,9 @@ _func_exit_;
 		
 		pnetdev= (struct net_device*)padapter->pnetdev;	
       		
-		padapter->bSurpriseRemoved = _TRUE;	
-    
-    		if(pnetdev)  
+		padapter->bSurpriseRemoved = _TRUE;	 
+     
+    		if(pnetdev)   
      		{
         		netif_carrier_off(pnetdev);
      	  		netif_stop_queue(pnetdev);
@@ -916,7 +918,7 @@ _func_exit_;
 		// indicate-disconnect if necssary (free all assoc-resources)
 		// dis-assoc from assoc_sta (optional)			
 		_enter_critical(&pmlmepriv->lock, &irqL);
-		if(check_fwstate(pmlmepriv, _FW_LINKED)== _TRUE)
+		if(check_fwstate(pmlmepriv, _FW_LINKED)== _TRUE) 
 		{
 			indicate_disconnect(padapter); //will clr Linked_state; before this function, we must have chked whether  issue dis-assoc_cmd or not		
 		}
@@ -942,14 +944,19 @@ static void r871xu_dev_remove(struct usb_interface *pusb_intf)
 {		
 	struct net_device *pnetdev=usb_get_intfdata(pusb_intf);	
 	struct usb_device	*udev = interface_to_usbdev(pusb_intf);
-       _adapter *padapter = (_adapter*)netdev_priv(pnetdev);
-  
+       _adapter *padapter = (_adapter*)rtw_netdev_priv(pnetdev);
+   
 _func_exit_;
 
 	usb_set_intfdata(pusb_intf, NULL);
 
 	if(padapter)	
 	{
+
+#ifdef CONFIG_IOCTL_CFG80211
+		struct wireless_dev *wdev = padapter->rtw_wdev;
+#endif //CONFIG_IOCTL_CFG80211
+
 		printk("+r871xu_dev_remove\n");
        	RT_TRACE(_module_hci_intfs_c_,_drv_err_,("+dev_remove()\n"));		
       		
@@ -960,7 +967,7 @@ _func_exit_;
 		if(drvpriv.drv_registered == _TRUE)
 		{
 			//printk("r871xu_dev_remove():padapter->bSurpriseRemoved == _TRUE\n");
-		        padapter->bSurpriseRemoved = _TRUE;	
+		        padapter->bSurpriseRemoved = _TRUE;	 
 		}
 		/*else
 		{
@@ -984,17 +991,21 @@ _func_exit_;
 		r871x_dev_unload(padapter);
 
 		free_drv_sw(padapter);
+
+#ifdef CONFIG_IOCTL_CFG80211
+		rtw_wdev_free(wdev);
+#endif //CONFIG_IOCTL_CFG80211		
 	}
 
 	usb_put_dev(udev);//decrease the reference count of the usb device structure when disconnect
 		
-	//If we didn't unplug usb dongle and remove/insert modlue, driver fails on sitesurvey for the first time when device is up .
+	//If we didn't unplug usb dongle and remove/insert modlue, driver fails on sitesurvey for the first time when device is up . 
 	//Reset usb port for sitesurvey fail issue. 2009.8.13, by Thomas
 	if(udev->state != USB_STATE_NOTATTACHED)
 		usb_reset_device(udev);
 	
 	RT_TRACE(_module_hci_intfs_c_,_drv_err_,("-dev_remove()\n"));
-	printk("-r871xu_dev_remove, hw_init_completed=%d\n", padapter->hw_init_completed);
+	//printk("-r871xu_dev_remove, hw_init_completed=%d\n", padapter->hw_init_completed);
 
 #ifdef CONFIG_PLATFORM_RTD2880B
 	printk("wlan link down\n");
@@ -1012,6 +1023,7 @@ _func_exit_;
 static int __init r8712u_drv_entry(void)
 {
 	RT_TRACE(_module_hci_intfs_c_,_drv_err_,("+r8712u_drv_entry\n"));
+	g_pallocated_recv_buf = _malloc(NR_RECVBUFF *sizeof(struct recv_buf) + 4);
 	drvpriv.drv_registered = _TRUE;
 	return usb_register(&drvpriv.r871xu_drv);	
 }
@@ -1021,7 +1033,12 @@ static void __exit r8712u_drv_halt(void)
 	RT_TRACE(_module_hci_intfs_c_,_drv_err_,("+r8712u_drv_halt\n"));
 	printk("+r8712u_drv_halt\n");
 	drvpriv.drv_registered = _FALSE;
+	
 	usb_deregister(&drvpriv.r871xu_drv);
+
+	if( g_pallocated_recv_buf )
+		_mfree(g_pallocated_recv_buf, NR_RECVBUFF *sizeof(struct recv_buf) + 4);
+	
 	printk("-r8712u_drv_halt\n");
 }
 

@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _OS_INTFS_C_
 
 #include <drv_conf.h>
@@ -26,7 +26,7 @@
 #error "Shall be Linux or Windows, but not both!\n"
 
 #endif
-
+ 
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -40,7 +40,7 @@
 
 #ifdef CONFIG_SDIO_HCI
 #include <sdio_osintf.h>
-#include <linux/mmc/sdio_func.h>
+#include <linux/mmc/sdio_func.h> 
 #include <linux/mmc/sdio_ids.h>
 #endif
 
@@ -68,9 +68,9 @@ int hci = RTL8712_USB;
 // It may be specify when inserting module with video_mode=1 parameter.
 int video_mode = 1;   // enable video mode
 
-int network_mode = Ndis802_11IBSS;//Ndis802_11Infrastructure;//infra, ad-hoc, auto	 
+int network_mode = Ndis802_11IBSS;//Ndis802_11Infrastructure;//infra, ad-hoc, auto	  
 //NDIS_802_11_SSID	ssid;
-int channel = 1;//ad-hoc support requirement
+int channel = 1;//ad-hoc support requirement 
 int wireless_mode = WIRELESS_11BG;
 int vrtl_carrier_sense = AUTO_VCS;
 int vcs_type = RTS_CTS;//*
@@ -80,7 +80,7 @@ int preamble = PREAMBLE_LONG;//long, short, auto
 int scan_mode = 1;//active, passive
 int adhoc_tx_pwr = 1;
 int soft_ap = 0;
-int smart_ps = 1; 
+int smart_ps = 1;  
 int power_mgnt = PS_MODE_ACTIVE;
 int radio_enable = 1;
 int long_retry_lmt = 7;
@@ -90,10 +90,10 @@ int busy_thresh = 40;
 int ack_policy = NORMAL_ACK;
 int mp_mode = 0;	
 int software_encrypt = 0;
-int software_decrypt = 0;	 
-
-int wmm_enable = 0;// default is set to disable the wmm.
-int uapsd_enable = 0;	 
+int software_decrypt = 0;	  
+ 
+int wmm_enable = 1;// default is set to enable the wmm.
+int uapsd_enable = 0;	  
 int uapsd_max_sp = NO_LIMIT;
 int uapsd_acbk_en = 0;
 int uapsd_acbe_en = 0;
@@ -109,6 +109,7 @@ int rf_config = RTL8712_RF_1T2R;  // 1T2R
 int low_power = 0;
 char* initmac = 0;  // temp mac address if users want to use instead of the mac address in Efuse
 int wifi_test = 0;    // if wifi_test = 1, driver had to disable the turbo mode and pass it to firmware private.
+u8* g_pallocated_recv_buf = NULL;
 
 module_param(initmac, charp, 0644);
 module_param(wifi_test, int, 0644);
@@ -152,7 +153,7 @@ static int netdev_close (struct net_device *pnetdev);
 
 uint loadparam( _adapter *padapter,  _nic_hdl	pnetdev)
 {
-      
+       
 	uint status = _SUCCESS;
 	struct registry_priv  *registry_par = &padapter->registrypriv;
 
@@ -176,7 +177,7 @@ _func_enter_;
 	registry_par->scan_mode = (u8)scan_mode;
 	registry_par->adhoc_tx_pwr = (u8)adhoc_tx_pwr;
 	registry_par->soft_ap=  (u8)soft_ap;
-	registry_par->smart_ps =  (u8)smart_ps; 
+	registry_par->smart_ps =  (u8)smart_ps;  
 	registry_par->power_mgnt = (u8)power_mgnt;
 	registry_par->radio_enable = (u8)radio_enable;
 	registry_par->long_retry_lmt = (u8)long_retry_lmt;
@@ -186,11 +187,11 @@ _func_enter_;
     	registry_par->ack_policy = (u8)ack_policy;
 	registry_par->mp_mode = (u8)mp_mode;	
 	registry_par->software_encrypt = (u8)software_encrypt;
-	registry_par->software_decrypt = (u8)software_decrypt;	 
+	registry_par->software_decrypt = (u8)software_decrypt;	  
 
 	 //UAPSD
 	registry_par->wmm_enable = (u8)wmm_enable;
-	registry_par->uapsd_enable = (u8)uapsd_enable;	 
+	registry_par->uapsd_enable = (u8)uapsd_enable;	  
 	registry_par->uapsd_max_sp = (u8)uapsd_max_sp;
 	registry_par->uapsd_acbk_en = (u8)uapsd_acbk_en;
 	registry_par->uapsd_acbe_en = (u8)uapsd_acbe_en;
@@ -214,7 +215,7 @@ _func_exit_;
 
 static int r871x_net_set_mac_address(struct net_device *pnetdev, void *p)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(pnetdev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(pnetdev);
 	struct sockaddr *addr = p;
 	
 	if(padapter->bup == _FALSE)
@@ -231,7 +232,7 @@ static int r871x_net_set_mac_address(struct net_device *pnetdev, void *p)
 
 static struct net_device_stats *r871x_net_get_stats(struct net_device *pnetdev)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(pnetdev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(pnetdev);
 	struct xmit_priv *pxmitpriv = &(padapter->xmitpriv);
 	struct recv_priv *precvpriv = &(padapter->recvpriv);
 
@@ -252,7 +253,11 @@ static const struct net_device_ops rtl8712_netdev_ops = {
         .ndo_start_xmit = xmit_entry,
         .ndo_set_mac_address = r871x_net_set_mac_address,
         .ndo_get_stats = r871x_net_get_stats,
+#ifdef CONFIG_IOCTL_CFG80211
+	.ndo_do_ioctl = rtw_cfg80211_do_ioctl,
+#else //CONFIG_IOCTL_CFG80211
         .ndo_do_ioctl = r871x_ioctl,
+#endif //CONFIG_IOCTL_CFG80211
 };
 #endif
 
@@ -264,7 +269,7 @@ struct net_device *init_netdev(void)
 	RT_TRACE(_module_os_intfs_c_,_drv_info_,("+init_net_dev\n"));
 
 	//pnetdev = alloc_netdev(sizeof(_adapter), "wlan%d", ether_setup);
-	pnetdev = alloc_etherdev(sizeof(_adapter));	
+	pnetdev = rtw_alloc_etherdev(sizeof(_adapter));	
 	if (!pnetdev)
 	   return NULL;
 
@@ -274,7 +279,7 @@ struct net_device *init_netdev(void)
 
 	//ether_setup(pnetdev); already called in alloc_etherdev() -> alloc_netdev().
 	
-	padapter = netdev_priv(pnetdev);
+	padapter = rtw_netdev_priv(pnetdev);
 	padapter->pnetdev = pnetdev;	
 	
 	//pnetdev->init = NULL;
@@ -292,7 +297,11 @@ struct net_device *init_netdev(void)
 	pnetdev->set_mac_address = r871x_net_set_mac_address;
 	pnetdev->get_stats = r871x_net_get_stats;
 
+#ifdef CONFIG_IOCTL_CFG80211
+	pnetdev->do_ioctl = rtw_cfg80211_do_ioctl;
+#else  //CONFIG_IOCTL_CFG80211
 	pnetdev->do_ioctl = r871x_ioctl;
+#endif //CONFIG_IOCTL_CFG80211
 
 #endif
 
@@ -303,20 +312,24 @@ struct net_device *init_netdev(void)
 	//pnetdev->tx_timeout = NULL;
 	pnetdev->watchdog_timeo = HZ; /* 1 second timeout */	
 	
-	pnetdev->wireless_handlers = (struct iw_handler_def *)&r871x_handlers_def; 
+	pnetdev->wireless_handlers = (struct iw_handler_def *)&r871x_handlers_def;  
 	
 #ifdef WIRELESS_SPY
 	//priv->wireless_data.spy_data = &priv->spy_data;
 	//pnetdev->wireless_data = &priv->wireless_data;
 #endif
-	
+
+#ifdef CONFIG_PLATFORM_MT53XX
+	if(dev_alloc_name(pnetdev,"rea%d") < 0)
+#else
 	if(dev_alloc_name(pnetdev,"wlan%d") < 0)
+#endif
 	{
 		RT_TRACE(_module_os_intfs_c_,_drv_err_,("dev_alloc_name, fail! \n"));
 	}
 
 	//step 2.
-   	loadparam(padapter, pnetdev);	  
+   	loadparam(padapter, pnetdev);	   
 
 	netif_carrier_off(pnetdev);
 	//netif_stop_queue(pnetdev);
@@ -354,7 +367,7 @@ u32 start_drv_threads(_adapter *padapter)
     if(padapter->evtThread < 0)
 		_status = _FAIL;		
 #endif
- 
+  
     return _status;
 }
 
@@ -383,7 +396,7 @@ void stop_drv_threads (_adapter *padapter)
 	_down_sema(&padapter->xmitpriv.terminate_xmitthread_sema);
 	RT_TRACE(_module_os_intfs_c_,_drv_info_,("\n drv_halt: xmit_thread can be terminated ! \n"));
 #endif
-	
+	 
 #ifdef CONFIG_RECV_THREAD_MODE	
 	// Below is to termindate rx_thread...
 	_up_sema(&padapter->recvpriv.recv_sema);
@@ -421,6 +434,9 @@ void stop_drv_timers (_adapter *padapter)
 	_cancel_timer_ex(&padapter->mlmepriv.dhcp_timer);
 	RT_TRACE(_module_os_intfs_c_,_drv_err_,("stop_drv_timers:cancel dhcp_timer! \n"));
 #endif
+
+	_cancel_timer_ex(&padapter->mlmepriv.survey_timer);
+	RT_TRACE(_module_os_intfs_c_,_drv_info_,("stop_drv_timers: cancel survey_timer!\n"));
 	
 	_cancel_timer_ex(&padapter->mlmepriv.wdg_timer);
 	RT_TRACE(_module_os_intfs_c_,_drv_info_,("stop_drv_timers:cancel wdg_timer! \n"));
@@ -519,7 +535,7 @@ _func_enter_;
 	}
 	
 #ifdef CONFIG_RECV_BH
-	tasklet_init(&padapter->evtpriv.event_tasklet,
+	tasklet_init(&padapter->evtpriv.event_tasklet, 
 				(void(*)(unsigned long))recv_event_bh,
 	     			(unsigned long)padapter);
 #endif
@@ -550,7 +566,7 @@ _func_enter_;
 	_init_sema(&(padapter->pwrctrlpriv.pnp_pwr_mgnt_sema), 0);
 		
 #ifdef CONFIG_MP_INCLUDED
-        mp871xinit(padapter);
+        mp871xinit(padapter); 
 #endif
 
 /*
@@ -621,7 +637,7 @@ u8 free_drv_sw(_adapter *padapter)
 
 	if(pnetdev)
 	{
-		free_netdev(pnetdev);
+		rtw_free_netdev(pnetdev);
 	}
 
 	RT_TRACE(_module_os_intfs_c_,_drv_info_,("-free_drv_sw\n"));
@@ -654,15 +670,15 @@ void enable_video_mode( _adapter* padapter, int cbw40_value)
 static int netdev_open(struct net_device *pnetdev)
 {
 	uint status;	
-	_adapter *padapter = (_adapter *)netdev_priv(pnetdev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(pnetdev);
 
 	RT_TRACE(_module_os_intfs_c_,_drv_info_,("+871x_drv - dev_open\n"));
 	//printk("+871x_drv - drv_open, bup=%d\n", padapter->bup);
 
        if(padapter->bup == _FALSE)
-    	{   
+    	{    
 		padapter->bDriverStopped = _FALSE;
-	 	padapter->bSurpriseRemoved = _FALSE;	
+	 	padapter->bSurpriseRemoved = _FALSE;	 
         	padapter->bup = _TRUE;
 	
 		status = rtl871x_hal_init(padapter);		
@@ -687,7 +703,7 @@ static int netdev_open(struct net_device *pnetdev)
 			_memcpy( padapter->eeprompriv.mac_addr, pnetdev->dev_addr, ETH_ALEN );
 		}
 
-		printk("MAC Address= %x-%x-%x-%x-%x-%x\n",
+		printk("MAC Address= %x-%x-%x-%x-%x-%x\n", 
 				 pnetdev->dev_addr[0],	pnetdev->dev_addr[1],  pnetdev->dev_addr[2],	pnetdev->dev_addr[3], pnetdev->dev_addr[4], pnetdev->dev_addr[5]);		
 
 		
@@ -702,7 +718,7 @@ static int netdev_open(struct net_device *pnetdev)
 		
 #ifdef CONFIG_DRVEXT_MODULE
 		init_drvext(padapter);
-#endif	  
+#endif	   
 		
 		status=start_drv_threads(padapter);
 		if(status ==_FAIL)
@@ -724,6 +740,9 @@ static int netdev_open(struct net_device *pnetdev)
 		}			
 #endif
 
+#ifdef CONFIG_IOCTL_CFG80211
+		rtw_cfg80211_init_wiphy(padapter);
+#endif
 	
 #ifdef CONFIG_PWRCTRL
 		RT_TRACE(_module_os_intfs_c_,_drv_info_,("Initialize Power Mode. \n"));
@@ -736,11 +755,11 @@ static int netdev_open(struct net_device *pnetdev)
 #endif
 
        	//padapter->bDriverStopped = _FALSE;
-	 	//padapter->bSurpriseRemoved = _FALSE;	
+	 	//padapter->bSurpriseRemoved = _FALSE;	 
         	//padapter->bup = _TRUE;
 	}		
 		
-	//netif_carrier_on(pnetdev);//call this func when joinbss_event_callback return success      
+	//netif_carrier_on(pnetdev);//call this func when joinbss_event_callback return success       
  	if(!netif_queue_stopped(pnetdev))
       		netif_start_queue(pnetdev);
 	else
@@ -750,7 +769,7 @@ static int netdev_open(struct net_device *pnetdev)
 	 {
               enable_video_mode( padapter, cbw40_enable );
 	 }
-	
+	 
 	//start driver mlme relation timer
 	start_drv_timers(padapter);
 	padapter->ledpriv.LedControlHandler(padapter, LED_CTL_NO_LINK);	
@@ -775,7 +794,7 @@ netdev_open_error:
 
 static int netdev_close(struct net_device *pnetdev)
 {
-	_adapter *padapter = (_adapter *)netdev_priv(pnetdev);
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(pnetdev);
 		
 	RT_TRACE(_module_os_intfs_c_,_drv_info_,("+871x_drv - drv_close\n"));	
 
@@ -787,7 +806,7 @@ static int netdev_close(struct net_device *pnetdev)
 	{
 		printk("(1)871x_drv - drv_close, bup=%d, hw_init_completed=%d\n", padapter->bup, padapter->hw_init_completed);
 
-	padapter->bDriverStopped = _TRUE;  
+	padapter->bDriverStopped = _TRUE;   
 
 	r871x_dev_unload(padapter);	
 	}
@@ -796,42 +815,39 @@ static int netdev_close(struct net_device *pnetdev)
 		printk("(2)871x_drv - drv_close, bup=%d, hw_init_completed=%d\n", padapter->bup, padapter->hw_init_completed);
 
 		//s1.
-		if(pnetdev)  
+		if(pnetdev)   
      		{
 			if (!netif_queue_stopped(pnetdev))
 				netif_stop_queue(pnetdev);
      		}
 		
-		#ifndef CONFIG_PLATFORM_ANDROID
-		//if(!padapter->bdisassoc_by_assoc) {
-		//#endif
+		#ifndef CONFIG_ANDROID
 			
 		//s2.	
 		//s2-1.  issue disassoc_cmd to fw
 		disassoc_cmd(padapter);
 		//s2-2.  indicate disconnect to os
 		indicate_disconnect(padapter);
-		//s2-3.
+		//s2-3. 
 		free_assoc_resources(padapter);	
 		//s2-4.
 		free_network_queue(padapter);
 
-
-		//#ifdef CONFIG_PLATFORM_ANDROID
-		//}
-		//padapter->bdisassoc_by_assoc=0;//FON
 		#endif
 			
 
 	}
 
-	
+#ifdef CONFIG_IOCTL_CFG80211
+	printk("call rtw_indicate_scan_done when drv_close\n");
+	rtw_indicate_scan_done(padapter, _TRUE);
+#endif //CONFIG_IOCTL_CFG80211	
 
 	//r871x_dev_unload(padapter);
 
 	RT_TRACE(_module_os_intfs_c_,_drv_info_,("-871x_drv - drv_close\n"));
 	printk("-871x_drv - drv_close, bup=%d\n", padapter->bup);
-	  
+	   
 	return 0;
 }
 
@@ -862,7 +878,7 @@ int start_pseudo_adhoc(_adapter *padapter)
 	ibssid[5] = 0x55;
 
 	//87-4c-e0-0-1-55
-	adhoc_sta_addr[0] = 0x00;
+	adhoc_sta_addr[0] = 0x00; 
 	adhoc_sta_addr[1] = 0xE0;
 	adhoc_sta_addr[2] = 0x4C;
 	adhoc_sta_addr[3] = 0x87;
@@ -884,7 +900,7 @@ int start_pseudo_adhoc(_adapter *padapter)
 	   	free_stainfo(padapter,  psta_old);
 
 	//create new  a wlan_network for mp driver and replace the cur_network;
-	pnetwork= (struct wlan_network *)_malloc(sizeof(struct wlan_network));      
+	pnetwork= (struct wlan_network *)_malloc(sizeof(struct wlan_network));       
 	if(pnetwork == NULL){
 		RT_TRACE(_module_os_intfs_c_,_drv_err_,("Can't alloc wlan_network for pseudo_adhoc\n"));
 		return _FAIL;
@@ -892,12 +908,12 @@ int start_pseudo_adhoc(_adapter *padapter)
 	_memset((unsigned char *)pnetwork, 0, sizeof (struct wlan_network));
 	pnetwork->join_res = 1;//
 	_memcpy(&(pnetwork->network.MacAddress), ibssid, ETH_ALEN);
-		  
+		   
 	pnetwork->network.InfrastructureMode = Ndis802_11IBSS;
 	pnetwork->network.NetworkTypeInUse = Ndis802_11OFDM24;
 
 	pnetwork->network.IELength = 0;
-	  
+	   
 	pnetwork->network.Ssid.SsidLength = 21;
 	_memcpy(pnetwork->network.Ssid.Ssid , (unsigned char*)"rtl_pseudo_adhoc_8712", pnetwork->network.Ssid.SsidLength);
 
@@ -915,7 +931,7 @@ int start_pseudo_adhoc(_adapter *padapter)
 /*
 {
 	//87-4c-e0-0-1-55
-	adhoc_sta_addr[0] = 0x00;
+	adhoc_sta_addr[0] = 0x00; 
 	adhoc_sta_addr[1] = 0xE0;
 	adhoc_sta_addr[2] = 0x4C;
 	adhoc_sta_addr[3] = 0x87;
@@ -960,12 +976,12 @@ int start_pseudo_adhoc(_adapter *padapter)
 			goto end_of_mp_start_test;
 		}
 
-		 
+		  
               //Set to LINKED STATE for pseudo_adhoc
 		pmlmepriv->fw_state |= _FW_LINKED;	
 
 		os_indicate_connect(padapter);
-			 
+			  
 /*
               //NDIS_802_11_NETWORK_INFRASTRUCTURE networktype;
               if(padapter->eeprompriv.bautoload_fail_flag==_FALSE)
@@ -1003,7 +1019,7 @@ int stop_pseudo_adhoc(_adapter *padapter)
 	struct wlan_network *tgt_network = &(pmlmepriv->cur_network);	
 
 	//87-4c-e0-0-1-55
-	adhoc_sta_addr[0] = 0x00;
+	adhoc_sta_addr[0] = 0x00; 
 	adhoc_sta_addr[1] = 0xE0;
 	adhoc_sta_addr[2] = 0x4C;
 	adhoc_sta_addr[3] = 0x87;
@@ -1023,7 +1039,7 @@ int stop_pseudo_adhoc(_adapter *padapter)
 /*
 {
 	//87-4c-e0-0-1-55
-	adhoc_sta_addr[0] = 0x00;
+	adhoc_sta_addr[0] = 0x00; 
 	adhoc_sta_addr[1] = 0xE0;
 	adhoc_sta_addr[2] = 0x4C;
 	adhoc_sta_addr[3] = 0x87;
@@ -1034,10 +1050,10 @@ int stop_pseudo_adhoc(_adapter *padapter)
        if(psta)	   	
 	   	free_stainfo(padapter, psta);
 
-	  
+	   
 }
 */
-	//flush the cur_network  
+	//flush the cur_network   
 	_memset((unsigned char *)tgt_network, 0, sizeof (struct wlan_network));	
 
 	

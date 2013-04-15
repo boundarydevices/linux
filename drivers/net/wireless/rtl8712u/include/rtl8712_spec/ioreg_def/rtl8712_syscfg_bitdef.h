@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __RTL8712_SYSCFG_BITDEF_H__
 #define __RTL8712_SYSCFG_BITDEF_H__
 
@@ -86,7 +86,7 @@
 #define SWHW_SEL_SHT		14		
 #define SWHW_SEL		BIT(SWHW_SEL_SHT) // Load done, control path seitch.
 #define FWHW_SEL_SHT		15
-#define FWHW_SEL		BIT(FWHW_SEL_SHT) // Sleep exit, control path swith.
+#define FWHW_SEL		BIT(FWHW_SEL_SHT) // Sleep exit, control path swith. 
 
 //9346CR
 #define	_VPDIDX_MSK			0xFF00
@@ -114,9 +114,9 @@
 #define	AFE_MISC_I32_EN			BIT(AFE_MISC_I32_EN_SHT)
 #define	AFE_MISC_E32_EN_SHT		2
 #define	AFE_MISC_E32_EN			BIT(AFE_MISC_E32_EN_SHT)
-#define	AFE_MISC_MBEN_SHT		1
+#define	AFE_MISC_MBEN_SHT		1 
 #define	AFE_MISC_MBEN			BIT(AFE_MISC_MBEN_SHT)// Enable AFE Macro Block's Mbias.
-#define	AFE_MISC_BGEN_SHT		0
+#define	AFE_MISC_BGEN_SHT		0 
 #define	AFE_MISC_BGEN			BIT(AFE_MISC_BGEN_SHT)// Enable AFE Macro Block's Bandgap.
 
 
@@ -124,7 +124,7 @@
 //       SPS1_CTRL bits					(Offset 0x18-1E, 56bits)
 //----------------------------------------------------------------------------
 #define	SPS1_SWEN			BIT(1)	// Enable vsps18 SW Macro Block.
-#define	SPS1_LDEN			BIT(0)	// Enable VSPS12 LDO Macro block.
+#define	SPS1_LDEN			BIT(0)	// Enable VSPS12 LDO Macro block. 
 
 
 //----------------------------------------------------------------------------

@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _RTL871X_RECV_C_
 #include <drv_conf.h>
 #include <osdep_service.h>
@@ -91,7 +91,7 @@ _func_enter_;
 
 	os_recv_resource_init(precvpriv, padapter);
 
-	precvpriv->pallocated_frame_buf = _malloc(NR_RECVFRAME * sizeof(union recv_frame) + RXFRAME_ALIGN_SZ);
+	precvpriv->pallocated_frame_buf = _vmalloc(NR_RECVFRAME * sizeof(union recv_frame) + RXFRAME_ALIGN_SZ);
 	if(precvpriv->pallocated_frame_buf==NULL){
 		res= _FAIL;
 		goto exit;
@@ -156,7 +156,7 @@ _func_enter_;
 	os_recv_resource_free(precvpriv);
 
 	if(precvpriv->pallocated_frame_buf)
-		_mfree(precvpriv->pallocated_frame_buf, NR_RECVFRAME * sizeof(union recv_frame) + RXFRAME_ALIGN_SZ);
+		_vmfree(precvpriv->pallocated_frame_buf, NR_RECVFRAME * sizeof(union recv_frame) + RXFRAME_ALIGN_SZ);
 
 	free_recv_priv(precvpriv);
 	
@@ -195,7 +195,7 @@ _func_enter_;
 				precvpriv->free_recvframe_cnt--;
 		}
 	}
-	       
+	        
 	_exit_critical(&pfree_recv_queue->lock, &irqL);
 	
 _func_exit_;
@@ -507,11 +507,11 @@ _func_enter_;
 		ptr=ptr+pfhdr->attrib.hdrlen+pfhdr->attrib.iv_len+LLC_HEADER_SIZE;
 		 _memcpy(&ether_type,ptr, 2);
 		 ether_type= ntohs((unsigned short )ether_type);
-		
+		 
 		if(ether_type == 0x888e){
 			prtnframe=precv_frame;
 		}
-		else{
+		else{ 
 
 			//free this frame
 			free_recvframe(precv_frame, &adapter->recvpriv.free_recv_queue);
@@ -519,7 +519,7 @@ _func_enter_;
 		}			
 	  }
 	  else
-	  {
+	  { 
 	  	//allowed
 	  	//check decryption status, and decrypt the frame if needed	
 	  	RT_TRACE(_module_rtl871x_recv_c_,_drv_info_,("########portctrl:psta->ieee8021x_blocked==0\n"));
@@ -534,7 +534,7 @@ _func_enter_;
 		if(ether_type == 0x888e){
 
 			RT_TRACE(_module_rtl871x_recv_c_,_drv_err_,("########portctrl:ether_type == 0x888e\n"));
-			//check Rekey
+			//check Rekey 
 
 			prtnframe=precv_frame;
 			
@@ -543,7 +543,7 @@ _func_enter_;
 			RT_TRACE(_module_rtl871x_recv_c_,_drv_err_,("########portctrl:ether_type = 0x%.4x\n",ether_type));
 		}
 	  }
-	 
+	  
 	}
 	else
 	{
@@ -560,7 +560,7 @@ sint recv_decache(union recv_frame *precv_frame, u8 bretry, struct stainfo_rxcac
 {
 	sint tid = precv_frame->u.hdr.attrib.priority;
 
-	u16 seq_ctrl = ( (precv_frame->u.hdr.attrib.seq_num&0xffff) << 4) |
+	u16 seq_ctrl = ( (precv_frame->u.hdr.attrib.seq_num&0xffff) << 4) | 
 		(precv_frame->u.hdr.attrib.frag_num & 0xf);
 
 _func_enter_;			
@@ -592,8 +592,8 @@ _func_exit_;
 
 
 sint sta2sta_data_frame(
-	_adapter *adapter,
-	union recv_frame *precv_frame,
+	_adapter *adapter, 
+	union recv_frame *precv_frame, 
  	struct sta_info**psta
  )
 {
@@ -612,7 +612,7 @@ sint sta2sta_data_frame(
 _func_enter_;		
 
  	if ((check_fwstate(pmlmepriv, WIFI_ADHOC_STATE) == _TRUE) ||
-		(check_fwstate(pmlmepriv, WIFI_ADHOC_MASTER_STATE) == _TRUE))
+		(check_fwstate(pmlmepriv, WIFI_ADHOC_MASTER_STATE) == _TRUE)) 
 	{
 
            // filter packets that SA is myself or multicast or broadcast
@@ -621,11 +621,11 @@ _func_enter_;
 		  ret= _FAIL;
 		  goto exit;
 	    }		
-       
+        
 	    if( (!_memcmp(myhwaddr, pattrib->dst, ETH_ALEN))	&& (!bmcast) ){
 		  ret= _FAIL;
 		  goto exit;
-	    	} 
+	    	}  
 		
 	    if( _memcmp(pattrib->bssid, "\x0\x0\x0\x0\x0\x0", ETH_ALEN) ||
 		   _memcmp(mybssid, "\x0\x0\x0\x0\x0\x0", ETH_ALEN) ||
@@ -681,7 +681,7 @@ _func_enter_;
   	       _memcpy(pattrib->ra, pattrib->dst, ETH_ALEN);
 		_memcpy(pattrib->ta, pattrib->src, ETH_ALEN);
 
-              sta_addr = mybssid;	
+              sta_addr = mybssid;	 
 	  }
 	 else
 	 {
@@ -689,7 +689,7 @@ _func_enter_;
 	 }
 
 
-	
+	 
 	if(bmcast)
 		*psta = get_bcmc_stainfo(adapter);
 	else
@@ -697,14 +697,14 @@ _func_enter_;
 
 	if (*psta == NULL) {
 	       RT_TRACE(_module_rtl871x_recv_c_,_drv_err_,("can't get psta under sta2sta_data_frame ; drop pkt\n"));
-#ifdef CONFIG_MP_INCLUDED		  
+#ifdef CONFIG_MP_INCLUDED		   
                if(check_fwstate(pmlmepriv, WIFI_MP_STATE) == _TRUE)
-                    adapter->mppriv.rx_pktloss++;  
-#endif			  
+                    adapter->mppriv.rx_pktloss++;   
+#endif			   
 	       ret= _FAIL;
 		   goto exit;
 	}			
-	
+	 
 exit:
 _func_exit_;		
 	return ret;
@@ -713,8 +713,8 @@ _func_exit_;
 
 
 sint ap2sta_data_frame(
-	_adapter *adapter,
-	union recv_frame *precv_frame,
+	_adapter *adapter, 
+	union recv_frame *precv_frame, 
  	struct sta_info**psta )
 {
 	u8 *ptr = precv_frame->u.hdr.rx_data;
@@ -731,9 +731,9 @@ sint ap2sta_data_frame(
 
 _func_enter_;	
 
-	if ((check_fwstate(pmlmepriv, WIFI_STATION_STATE) == _TRUE)
+	if ((check_fwstate(pmlmepriv, WIFI_STATION_STATE) == _TRUE) 
 #ifndef CONFIG_DRVEXT_MODULE			
-		&& (check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE)
+		&& (check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE) 
 #endif			
 		)	
 	{
@@ -744,9 +744,9 @@ _func_enter_;
 		   	RT_TRACE(_module_rtl871x_recv_c_,_drv_info_,(" NULL frame \n"));	
 			ret= _FAIL;
 			goto exit;
-	          
+	           
 	       }
-		  
+		   
 		//drop QoS-SubType Data, including QoS NULL, excluding QoS-Data
 		if( (GetFrameSubType(ptr) & WIFI_QOS_DATA_TYPE )== WIFI_QOS_DATA_TYPE)
 		{
@@ -757,7 +757,7 @@ _func_enter_;
 			}
 					
 		}
-		 
+		  
               // filter packets that SA is myself or multicast or broadcast
 	       if (_memcmp(myhwaddr, pattrib->src, ETH_ALEN)){
 		     RT_TRACE(_module_rtl871x_recv_c_,_drv_err_,(" SA==myself \n"));
@@ -765,7 +765,7 @@ _func_enter_;
 			goto exit;
 		}	
 
-		// da should be for me 
+		// da should be for me  
               if((!_memcmp(myhwaddr, pattrib->dst, ETH_ALEN))&& (!bmcast))
               {
                   RT_TRACE(_module_rtl871x_recv_c_,_drv_info_,(" ap2sta_data_frame:  compare DA fail; DA= %x:%x:%x:%x:%x:%x \n",
@@ -775,11 +775,11 @@ _func_enter_;
 					pattrib->dst[3],
 					pattrib->dst[4],
 					pattrib->dst[5]));
-				  
+				   
 				ret= _FAIL;
 				goto exit;
               }
-			 
+			  
 		
 		// check BSSID
 		if( _memcmp(pattrib->bssid, "\x0\x0\x0\x0\x0\x0", ETH_ALEN) ||
@@ -794,14 +794,14 @@ _func_enter_;
 				pattrib->bssid[4],
 				pattrib->bssid[5]));
 				
-			RT_TRACE(_module_rtl871x_recv_c_,_drv_info_,("mybssid= %x:%x:%x:%x:%x:%x\n",
+			RT_TRACE(_module_rtl871x_recv_c_,_drv_info_,("mybssid= %x:%x:%x:%x:%x:%x\n", 
 				mybssid[0],
 				mybssid[1],
 				mybssid[2],
 				mybssid[3],
 				mybssid[4],
 				mybssid[5]));
-                  
+                   
 			ret= _FAIL;
 			goto exit;
 			}	
@@ -818,9 +818,9 @@ _func_enter_;
 		}
 
 	}
-       else if ((check_fwstate(pmlmepriv, WIFI_MP_STATE) == _TRUE) &&
+       else if ((check_fwstate(pmlmepriv, WIFI_MP_STATE) == _TRUE) && 
 		     (check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE) )
-	{     
+	{      
 	       _memcpy(pattrib->dst, GetAddr1Ptr(ptr), ETH_ALEN);
 	       _memcpy(pattrib->src, GetAddr2Ptr(ptr), ETH_ALEN);
 	       _memcpy(pattrib->bssid, GetAddr3Ptr(ptr), ETH_ALEN);
@@ -829,8 +829,8 @@ _func_enter_;
 
 		//
 		_memcpy(pattrib->bssid,  mybssid, ETH_ALEN);
-		 
-		 
+		  
+		  
 		   *psta = get_stainfo(pstapriv, pattrib->bssid); // get sta_info
 		if (*psta == NULL) {
 		       RT_TRACE(_module_rtl871x_recv_c_,_drv_err_,("can't get psta under MP_MODE ; drop pkt\n"));
@@ -857,8 +857,8 @@ _func_exit_;
 
 
 sint sta2ap_data_frame(
-	_adapter *adapter,
-	union recv_frame *precv_frame,
+	_adapter *adapter, 
+	union recv_frame *precv_frame, 
  	struct sta_info**psta )
 {
 	u8 *ptr = precv_frame->u.hdr.rx_data;
@@ -875,7 +875,7 @@ sint sta2ap_data_frame(
 _func_enter_;
 
 	if (check_fwstate(pmlmepriv, WIFI_AP_STATE) == _TRUE)
-	{
+	{ 
 
 #if 0
 		if (bmcast)
@@ -897,7 +897,7 @@ _func_enter_;
 		{
 		
 			//??? For AP mode, if DA is non-MCAST, then it must be BSSID, and bssid == BSSID
-			//???if( (!_memcmp(mybssid, pattrib->dst, ETH_ALEN)) ||
+			//???if( (!_memcmp(mybssid, pattrib->dst, ETH_ALEN)) || 
 			//For AP mode, RA=BSSID, TX=STA(SRC_ADDR), A3=DST_ADDR
 			if(!_memcmp(pattrib->bssid, mybssid, ETH_ALEN))
 			{
@@ -1157,7 +1157,7 @@ MSG_8712("\n");
 	subtype = GetFrameSubType(ptr); //bit(7)~bit(2)
 
 	pattrib->to_fr_ds = get_tofr_ds(ptr);
-	
+	 
 	pattrib->frag_num = GetFragNum(ptr);
 	pattrib->seq_num = GetSequence(ptr);
 
@@ -1185,7 +1185,7 @@ MSG_8712("\n");
 			  RT_TRACE(_module_rtl871x_recv_c_,_drv_err_,("\n  validate_recv_ctrl_frame fail\n"));
                           }
 			  break;
-		case WIFI_DATA_TYPE: //data
+		case WIFI_DATA_TYPE: //data 
 			pattrib->qos = (subtype & BIT(7))? 1:0;
 			retval=validate_recv_data_frame(adapter, precv_frame);
 			if (retval==_FAIL)
@@ -1235,11 +1235,11 @@ _func_enter_;
 	psnap_type=ptr+pattrib->hdrlen + pattrib->iv_len+SNAP_SIZE;
 	/* convert hdr + possible LLC headers into Ethernet header */
 	//eth_type = (psnap_type[0] << 8) | psnap_type[1];
-	if((_memcmp(psnap, rfc1042_header, SNAP_SIZE) &&
-		(_memcmp(psnap_type, SNAP_ETH_TYPE_IPX, 2) == _FALSE) &&
+	if((_memcmp(psnap, rtw_rfc1042_header, SNAP_SIZE) &&
+		(_memcmp(psnap_type, SNAP_ETH_TYPE_IPX, 2) == _FALSE) && 
 		(_memcmp(psnap_type, SNAP_ETH_TYPE_APPLETALK_AARP, 2)==_FALSE) )||
 		//eth_type != ETH_P_AARP && eth_type != ETH_P_IPX) ||
-		 _memcmp(psnap, bridge_tunnel_header, SNAP_SIZE)){
+		 _memcmp(psnap, rtw_bridge_tunnel_header, SNAP_SIZE)){
 		/* remove RFC1042 or Bridge-Tunnel encapsulation and replace EtherType */
 		bsnaphdr = _TRUE;
 	}
@@ -1331,10 +1331,10 @@ _func_enter_;
 	   ptr += rmv_len ;	
           *ptr = 0x87;
 	   *(ptr+1) = 0x12;
-	  
-	    //back to original pointer	
-	    ptr -= rmv_len;         
-        }
+	   
+	    //back to original pointer	 
+	    ptr -= rmv_len;          
+        } 
 	
 	ptr += rmv_len ;
 
@@ -1357,7 +1357,7 @@ _func_enter_;
 		ptr+=4;
 	}
 
-	if(eth_type==0x0800)//ip
+	if(eth_type==0x0800)//ip 
 	{
 		struct iphdr*  piphdr = (struct iphdr*) ptr;
 		//__u8 tos = (unsigned char)(pattrib->priority & 0xff);
@@ -1372,7 +1372,7 @@ _func_enter_;
 	else if(eth_type==0x8712)// append rx status for mp test packets
 	{
 	       //ptr -= 16;
-	       //_memcpy(ptr, get_rxmem(precvframe), 16);		
+	       //_memcpy(ptr, get_rxmem(precvframe), 16);		 
 	}
 	else
 	{
@@ -1382,7 +1382,7 @@ _func_enter_;
 		UINT32 VlanID = (pvlan!=NULL ? get_vlan_id(pvlan) : 0 );
 
 		VlanPriInfo.Value =          // Get current value.
-      			NDIS_PER_PACKET_INFO_FROM_PACKET(precvframe->u.hdr.pkt, Ieee8021QInfo);
+      			NDIS_PER_PACKET_INFO_FROM_PACKET(precvframe->u.hdr.pkt, Ieee8021QInfo); 
 
 		VlanPriInfo.TagHeader.UserPriority = UserPriority;
 		VlanPriInfo.TagHeader.VlanId =  VlanID ;
@@ -1395,9 +1395,9 @@ _func_enter_;
 
        if(eth_type==0x8712)// append rx status for mp test packets
       	{
-              ptr = recvframe_pull(precvframe, (rmv_len-sizeof(struct ethhdr)+2)-24);      
+              ptr = recvframe_pull(precvframe, (rmv_len-sizeof(struct ethhdr)+2)-24);       
 	       _memcpy(ptr, get_rxmem(precvframe), 24);		
-             ptr+=24;			 
+             ptr+=24;			  
       	}
        else
 	ptr = recvframe_pull(precvframe, (rmv_len-sizeof(struct ethhdr)+2));
@@ -1420,8 +1420,8 @@ s32 recv_entry(union recv_frame *precvframe)
 	struct recv_priv *precvpriv;
 	struct	mlme_priv	*pmlmepriv ;
 	 struct dvobj_priv *pdev;		
-	struct recv_stat *prxstat;
-	 u8 *phead, *pdata, *ptail,*pend;   
+	struct recv_stat *prxstat; 
+	 u8 *phead, *pdata, *ptail,*pend;    
 
 	_queue *pfree_recv_queue, *ppending_recv_queue;
 	u8 blk_mode = _FALSE;
@@ -1444,7 +1444,7 @@ _func_enter_;
 	phead=precvframe->u.hdr.rx_head;
 	pdata=precvframe->u.hdr.rx_data;
 	ptail=precvframe->u.hdr.rx_tail;
-	pend=precvframe->u.hdr.rx_end; 
+	pend=precvframe->u.hdr.rx_end;  
 	prxstat=(struct recv_stat *)phead;	
 
 	padapter->ledpriv.LedControlHandler(padapter, LED_CTL_RX);

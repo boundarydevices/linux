@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 /*
  * Automatically generated C config: don't edit
  */
@@ -33,12 +33,17 @@
 #undef  CONFIG_RTL8716
 
 
+#define CONFIG_IOCTL_CFG80211	1
+
+#ifdef CONFIG_IOCTL_CFG80211
+#define CONFIG_CFG80211_FORCE_COMPATIBLE_2_6_37_UNDER
+#endif //CONFIG_IOCTL_CFG80211
 
 //#define CONFIG_LITTLE_ENDIAN 1
 //#undef CONFIG_BIG_ENDIAN
 
 #undef PLATFORM_WINDOWS
-#undef PLATFORM_OS_XP
+#undef PLATFORM_OS_XP 
 #undef PLATFORM_OS_CE
 
 
@@ -95,18 +100,21 @@
 
 		#ifdef CONFIG_MLME_EXT
 			#define CONFIG_EVENT_THREAD_MODE 1
-		#endif 
+		#endif  
 
 		//#define CONFIG_R8712_TEST_ASTA 1
 
-		#define CONFIG_R8712_TEST_BSTA 1			 
+		#define CONFIG_R8712_TEST_BSTA 1			  
 
 	#endif
 
 	#define CONFIG_RTL8712_TCP_CSUM_OFFLOAD_RX
 	#define CONFIG_REDUCE_USB_TX_INT
 
-	//#define CONFIG_USB_TX_AGGR
+#ifndef CONFIG_MINIMAL_MEMORY_USAGE
+	//#define CONFIG_USB_TX_AGGREGATION	1
+	#define CONFIG_USB_RX_AGGREGATION	1
+#endif
 
 #endif
 

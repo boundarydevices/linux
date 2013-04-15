@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __SDIO_OSINTF_H
 #define __SDIO_OSINTF_H
 
@@ -38,7 +38,7 @@ void sd_c2h_hdl( PADAPTER	padapter);
 
 #ifdef PLATFORM_OS_CE
 extern NDIS_STATUS ce_sd_get_dev_hdl(_adapter *padapter );
-SD_API_STATUS 
+SD_API_STATUS  
 ce_sd_int_callback(SD_DEVICE_HANDLE hDevice, _adapter* padapter);
 extern void sd_setup_irs(_adapter *padapter);
 #endif

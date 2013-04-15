@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _RTL871X_EEPROM_C_
 
 #include <drv_conf.h>
@@ -139,7 +139,7 @@ u16 wait_eeprom_cmd_done(_adapter* padapter)
 	u16	i,res=_FALSE;
 _func_enter_;	
 	standby(padapter );
-	for (i=0; i<200; i++)
+	for (i=0; i<200; i++) 
 	{
 		x = read8(padapter, EE_9346CR);
 		if (x & _EEDO){
@@ -223,7 +223,7 @@ _func_enter_;
 //	shift_out_bits(Adapter, EEPROM_ERASE_OPCODE, 3);
 //	shift_out_bits(Adapter, reg, Adapter->EepromAddressSize);
 //
-//	if (wait_eeprom_cmd_done(Adapter ) == FALSE)
+//	if (wait_eeprom_cmd_done(Adapter ) == FALSE) 
 //	{
 //		return;
 //	}
@@ -242,7 +242,7 @@ _func_enter_;
 	// write the data to the selected EEPROM word.
 	shift_out_bits(padapter, data, 16);
 
-	if (wait_eeprom_cmd_done(padapter ) == _FALSE)
+	if (wait_eeprom_cmd_done(padapter ) == _FALSE) 
 	{
 
 		goto exit;
@@ -331,7 +331,7 @@ _func_exit_;
 
 
 //From even offset
-void eeprom_read_sz(_adapter * padapter, u16 reg, u8* data, u32 sz)
+void eeprom_read_sz(_adapter * padapter, u16 reg, u8* data, u32 sz) 
 {
 
 	u16 x, data16;
@@ -404,7 +404,7 @@ _func_enter_;
 	reg = reg+i;
 	if(remainder){ //end of read at lower part of short : 0,2,4,6,...
 		stmp = eeprom_read16(padapter, reg);
-		rbuf[idx] = (u8)(stmp & 0xff);
+		rbuf[idx] = (u8)(stmp & 0xff); 
 	}
 _func_exit_;		
 	return _TRUE;

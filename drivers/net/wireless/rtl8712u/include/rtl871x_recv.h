@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef _RTL871X_RECV_H_
 #define _RTL871X_RECV_H_
 
@@ -52,10 +52,10 @@ static u8 oui_rfc1042[]= {0x00,0x00,0x00};
 
 /* See IEEE 802.1H for LLC/SNAP encapsulation/decapsulation */
 /* Ethernet-II snap header (RFC1042 for most EtherTypes) */
-static u8 rfc1042_header[] =
+static u8 rtw_rfc1042_header[] =
 { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
 /* Bridge-Tunnel header (for EtherTypes ETH_P_AARP and ETH_P_IPX) */
-static u8 bridge_tunnel_header[] =
+static u8 rtw_bridge_tunnel_header[] =
 { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0xf8 };
 /* No encapsulation header if EtherType < 0x600 (=length) */
 
@@ -66,6 +66,7 @@ struct recv_reorder_ctrl
 	u16 indicate_seq;//=wstart_b, init_value=0xffff
 	u16 wend_b;
        u8 wsize_b;	
+	u8 enable;
 	_queue pending_recvframe_queue;
 	_timer reordering_ctrl_timer;
 };
@@ -166,7 +167,7 @@ struct recv_priv {
 	
 
 	u8 *pallocated_frame_buf;
-	u8 *precv_frame_buf;
+	u8 *precv_frame_buf; 
 	
 	uint free_recvframe_cnt;
 	
@@ -179,7 +180,7 @@ struct recv_priv {
 #ifdef PLATFORM_OS_XP
 	PMDL	pbytecnt_mdl;
 #endif
-	uint	counter; //record the number that up-layer will return to drv; only when counter==0 can we  release recv_priv
+	uint	counter; //record the number that up-layer will return to drv; only when counter==0 can we  release recv_priv 
 	NDIS_EVENT 	recv_resource_evt ;
 #endif	
 
@@ -208,7 +209,7 @@ struct recv_priv {
 
 
 
-#ifdef CONFIG_RTL8712      
+#ifdef CONFIG_RTL8712       
 	u8 *pallocated_recv_buf;
 	u8 *precv_buf;    // 4 alignment	
 	_queue	free_recv_buf_queue;
@@ -237,14 +238,14 @@ struct recv_priv {
 
 
 struct sta_recv_priv {
-   
+    
     _lock	lock;
 	sint	option;	
 	
 	//_queue	blk_strms[MAX_RX_NUMBLKS];
 	_queue defrag_q;	 //keeping the fragment frame until defrag
 	
-	struct	stainfo_rxcache rxcache; 
+	struct	stainfo_rxcache rxcache;  
 	
 	uint	sta_rx_bytes;
 	uint	sta_rx_pkts;
@@ -263,11 +264,11 @@ struct sta_recv_priv {
 
 //rtl871x_recv.c
 extern union recv_frame *alloc_recvframe (_queue *pfree_recv_queue);  //get a free recv_frame from pfree_recv_queue
-extern int	 free_recvframe(union recv_frame *precvframe, _queue *pfree_recv_queue); 
+extern int	 free_recvframe(union recv_frame *precvframe, _queue *pfree_recv_queue);  
 extern union recv_frame *dequeue_recvframe (_queue *queue);
 extern int	enqueue_recvframe(union recv_frame *precvframe, _queue *queue);
 
-extern void free_recvframe_queue(_queue *pframequeue,  _queue *pfree_recv_queue); 
+extern void free_recvframe_queue(_queue *pframequeue,  _queue *pfree_recv_queue);  
 extern void init_recvframe(union recv_frame *precvframe ,struct recv_priv *precvpriv);
 
 
@@ -305,14 +306,14 @@ static __inline u8 *get_recvframe_data(union recv_frame *precvframe)
 
 static __inline u8 *recvframe_push(union recv_frame *precvframe, sint sz)
 {	
-	// append data before rx_data
+	// append data before rx_data 
 
 	/* add data to the start of recv_frame
  *
  *      This function extends the used data area of the recv_frame at the buffer
  *      start. rx_data must be still larger than rx_head, after pushing.
  */
-
+ 
 	if(precvframe==NULL)
 		return NULL;
 
@@ -361,7 +362,7 @@ static __inline u8 *recvframe_put(union recv_frame *precvframe, sint sz)
 	// rx_tai += sz; move rx_tail sz bytes  hereafter
 
 	//used for append sz bytes from ptr to rx_tail, update rx_tail and return the updated rx_tail to the caller
-	//after putting, rx_tail must be still larger than rx_end.
+	//after putting, rx_tail must be still larger than rx_end. 
  	unsigned char * prev_rx_tail;
 
 	if(precvframe==NULL)
@@ -427,7 +428,7 @@ static __inline _buffer * get_rxbuf_desc(union recv_frame *precvframe)
 
 static __inline union recv_frame *rxmem_to_recvframe(u8 *rxmem)
 {
-	//due to the design of 2048 bytes alignment of recv_frame, we can reference the union recv_frame
+	//due to the design of 2048 bytes alignment of recv_frame, we can reference the union recv_frame 
 	//from any given member of recv_frame.
 	// rxmem indicates the any member/address in recv_frame
 	

@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 
 #define _MLME_OSDEP_C_
 
@@ -32,7 +32,9 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/kref.h>
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
 #include <linux/smp_lock.h>
+#endif
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
 #include <linux/circ_buf.h>
@@ -142,6 +144,12 @@ void dhcp_timeout_handler (void *FunctionContext)
 	_dhcp_timeout_handler(adapter);
 }
 
+void regular_site_survey_handler(void *FunctionContext)
+{
+	PADAPTER padapter = (PADAPTER)FunctionContext;
+	_regular_site_survey_handler(padapter);
+}
+
 void wdg_timeout_handler (void *FunctionContext)
 {
 	_adapter *adapter = (_adapter *)FunctionContext;
@@ -169,6 +177,8 @@ void init_mlme_timer(_adapter *padapter)
 	_init_timer(&(pmlmepriv->dhcp_timer), padapter->pnetdev, dhcp_timeout_handler, (u8 *)(pmlmepriv->nic_hdl));
 #endif
 
+	_init_timer(&pmlmepriv->survey_timer, padapter->pnetdev, regular_site_survey_handler, pmlmepriv->nic_hdl);
+
 	_init_timer(&(pmlmepriv->wdg_timer), padapter->pnetdev, wdg_timeout_handler, (u8 *)(pmlmepriv->nic_hdl));
 
 	//2010-04-16 by Thomas
@@ -190,6 +200,10 @@ void os_indicate_connect(_adapter *adapter)
 
 _func_enter_;	
 
+#ifdef CONFIG_IOCTL_CFG80211
+	rtw_cfg80211_indicate_connect(adapter);
+#endif //CONFIG_IOCTL_CFG80211
+
         indicate_wx_assoc_event(adapter);
 	netif_carrier_on(adapter->pnetdev);
 
@@ -201,14 +215,27 @@ _func_exit_;
 
 }
 
+extern void indicate_wx_scan_complete_event(_adapter *padapter);
+void rtw_os_indicate_scan_done( _adapter *padapter, bool aborted)
+{
+#ifdef CONFIG_IOCTL_CFG80211
+	rtw_cfg80211_indicate_scan_done(wdev_to_priv(padapter->rtw_wdev), aborted);
+#endif //CONFIG_IOCTL_CFG80211
+	indicate_wx_scan_complete_event(padapter);
+}
+
 static RT_PMKID_LIST   backupPMKIDList[ NUM_PMKID_CACHE ];
 void os_indicate_disconnect( _adapter *adapter )
 {
 	//RT_PMKID_LIST   backupPMKIDList[ NUM_PMKID_CACHE ];
 	u8	backupPMKIDIndex = 0;
 	u8	backupTKIPCountermeasure = 0x00;
-     
+      
 _func_enter_;
+
+#ifdef CONFIG_IOCTL_CFG80211
+	rtw_cfg80211_indicate_disconnect(adapter); 	
+#endif //CONFIG_IOCTL_CFG80211
 
 	indicate_wx_disassoc_event(adapter);	
 	netif_carrier_off(adapter->pnetdev);
@@ -224,7 +251,7 @@ _func_enter_;
 		//
 		// Backup the btkip_countermeasure information.
 		// When the countermeasure is trigger, the driver have to disconnect with AP for 60 seconds.
-       
+        
 		_memset( &backupPMKIDList[ 0 ], 0x00, sizeof( RT_PMKID_LIST ) * NUM_PMKID_CACHE );
 
 		_memcpy( &backupPMKIDList[ 0 ], &adapter->securitypriv.PMKIDList[ 0 ], sizeof( RT_PMKID_LIST ) * NUM_PMKID_CACHE );
@@ -240,7 +267,7 @@ _func_enter_;
 		adapter->securitypriv.PMKIDIndex = backupPMKIDIndex;
 		adapter->securitypriv.btkip_countermeasure = backupTKIPCountermeasure;
 	}
-	else //reset values in securitypriv
+	else //reset values in securitypriv 
 	{
 		//if(adapter->mlmepriv.fw_state & WIFI_STATION_STATE)
 		//{

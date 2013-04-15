@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #ifndef __RTL871X_MP_H_
 #define __RTL871X_MP_H_
 
@@ -149,8 +149,8 @@ struct mp_xmit_frame
 	u8 bpending[8];
 	//sint ac_tag[8];
 	u8 last[8];
-	//uint irpcnt;        
-	//uint fragcnt;	  
+	//uint irpcnt;         
+	//uint fragcnt;	   
 #endif /* CONFIG_USB_HCI */
 
 	uint mem[(MAX_MP_XMITBUF_SZ >> 2)];

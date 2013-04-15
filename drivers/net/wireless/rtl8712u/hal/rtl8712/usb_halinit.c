@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
+ ******************************************************************************/ 
 #define _HCI_HAL_INIT_C_
 
 #include <drv_conf.h>
@@ -133,7 +133,7 @@ u8 usb_hal_bus_init(_adapter * padapter)
 #endif
 
 		//consideration of power consumption - init
-		write8(padapter, 0x10250008, read8(padapter, 0x10250008)&0xfffffffb);      
+		write8(padapter, 0x10250008, read8(padapter, 0x10250008)&0xfffffffb);       
 
 	
 
@@ -244,7 +244,7 @@ u8 usb_hal_bus_init(_adapter * padapter)
 		
 
 		//
-		//<Roger_Notes> Set control path switch to HW control and reset Digital Core,  CPU Core and
+		//<Roger_Notes> Set control path switch to HW control and reset Digital Core,  CPU Core and 
 		// MAC I/O to solve FW download fail when system from resume sate.
 		// 2008.11.04.
 		//
@@ -255,7 +255,7 @@ u8 usb_hal_bus_init(_adapter * padapter)
        			val8 &= 0x3f;
               		write8(padapter, SYS_CLKR+1, val8);
 		}
-	  
+	   
       		val8 = read8(padapter, SYS_FUNC_EN+1);
 		val8 &= 0x73;
 		write8(padapter, SYS_FUNC_EN+1, val8);
@@ -356,7 +356,7 @@ u8 usb_hal_bus_init(_adapter * padapter)
 		val8 = read8(padapter, SYS_CLKR);	
 		write8(padapter, SYS_CLKR, val8&(~CPU_CLKSEL));
 
-		// Revised for 8051 ROM code wrong operation. Added by Roger. 2008.10.16.
+		// Revised for 8051 ROM code wrong operation. Added by Roger. 2008.10.16. 
 		write8(padapter, 0x1025fe1c, 0x80);
 
 		//

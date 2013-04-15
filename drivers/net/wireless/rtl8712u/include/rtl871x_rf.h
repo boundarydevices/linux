@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
  *
  *
- ******************************************************************************/
-#ifndef	__RTL871X_RF_H_
+ ******************************************************************************/ 
+#ifndef	__RTL871X_RF_H_ 
 #define __RTL871X_RF_H_
 
 #include <drv_conf.h>
@@ -38,7 +38,8 @@
 #define RTL8711_RF_DEF_SENS 4
 
 
-#define NUM_CHANNELS	15
+//#define NUM_CHANNELS	15
+#define NUM_CHANNELS	32
 //#define NUM_REGULATORYS	21
 #define NUM_REGULATORYS	1
 
@@ -48,7 +49,7 @@
 #define JAPAN						0x2 //temp, should be provided later	
 
 struct	regulatory_class {
-	u32	starting_freq;					//MHz,
+	u32	starting_freq;					//MHz, 
 	u8	channel_set[NUM_CHANNELS];
 	u8	channel_cck_power[NUM_CHANNELS];//dbm
 	u8	channel_ofdm_power[NUM_CHANNELS];//dbm
