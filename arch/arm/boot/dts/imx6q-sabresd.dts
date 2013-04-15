@@ -409,8 +409,9 @@
 			status = "okay";
 		};
 
-	regulator-bypass {
-			compatible = "fsl,imx_cpufreq";
+	};
+
+	cpufreq-setpoint {
 			/*
 			 * 1:bypass internal regulator,supplied by external reg
 			 * 0:enable internal regulator
@@ -419,7 +420,6 @@
 			vddarm-supply = <&sw1a_reg>;
 			vddsoc-supply = <&sw1c_reg>;
 		};
-	};
 
 	regulators {
 		compatible = "simple-bus";

@@ -43,8 +43,10 @@
 	};
 
 	cpufreq-setpoint {
+		compatible = "fsl,imx_cpufreq";
 		setpoint-number = <4>;
-
+		clocks = <&clks 170>, <&clks 17>, <&clks 16>, <&clks 6>, <&clks 104>;
+		clock-names = "pll1_sys", "pll1_sw", "step", "pll2_pfd2_396m", "arm";
 		396000000 {
 			compatible = "fsl,396m", "setpoint-table";
 			pll_rate = <396000000>;
