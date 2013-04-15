@@ -569,7 +569,7 @@ static int __devinit cpufreq_probe(struct platform_device *pdev)
 	base = of_iomap(np, 0);
 	WARN_ON(!base);
 
-	if (cpu_is_imx6q()) {
+	if (cpu_is_imx6q() || cpu_is_imx6dl()) {
 		unsigned int reg;
 		/*
 		 * read fuse bit to know the max cpu freq : offset 0x440
@@ -588,7 +588,7 @@ static int __devinit cpufreq_probe(struct platform_device *pdev)
 		else
 			arm_max_freq = reg;
 	} else if (arm_max_freq == CPU_AT_DEFAULT) {
-		/* mx6dl/sl max freq is 1Ghz default */
+		/* mx6sl max freq is 1Ghz default */
 		arm_max_freq = CPU_AT_1GHz;
 	} else if (arm_max_freq == CPU_AT_1_2GHz) {
 		pr_info("This chip didn't support 1.2GHz!please check \
@@ -596,10 +596,6 @@ static int __devinit cpufreq_probe(struct platform_device *pdev)
 	}
 	pr_info("Max freq is %s\n", (arm_max_freq == CPU_AT_1_2GHz) ?
 		"1.2GHz" : ((arm_max_freq == CPU_AT_1GHz) ? "1Ghz" : "800Mhz"));
-
-	/* force LDO enabled mode in 1.2Ghz board */
-	if (arm_max_freq == CPU_AT_1_2GHz)
-		ldo_bypass_mode = LDO_MODE_ENABLED;
 
 	if (ldo_bypass_mode == LDO_MODE_DEFAULT) {
 		ret = of_property_read_u32(pdev->dev.of_node, "bypass-mode",
@@ -613,17 +609,29 @@ static int __devinit cpufreq_probe(struct platform_device *pdev)
 		}
 	}
 
-	arm_regulator = devm_regulator_get(&pdev->dev, "vddarm");
-	if (IS_ERR(arm_regulator))
-		pr_warning("failed to get external arm regulator\n");
+	/*
+	 * Generally ldo_bypass use external regulator from dts, but one
+	 * exception for 1.2G on Sabresd: In this case, we will raise VDDARM_IN
+	 * /VDDSOC_IN from 1.375V to 1.425V by programing these external
+	 * regulator firstly, although it works as ldo_enable mode.
+	 */
+	if (ldo_bypass_mode == LDO_MODE_BYPASSED ||
+		arm_max_freq == CPU_AT_1_2GHz) {
+		arm_regulator = devm_regulator_get(&pdev->dev, "vddarm");
+		if (IS_ERR(arm_regulator)) {
+			pr_warning("failed to get external arm regulator\n");
+			return -ENODEV;
+		}
 
-	soc_regulator = devm_regulator_get(&pdev->dev, "vddsoc");
-	if (IS_ERR(soc_regulator))
-		pr_warning("failed to get external soc regulator\n");
-
-	pu_regulator = devm_regulator_get(&pdev->dev, "vddpu");
-	if (IS_ERR(pu_regulator))
-		pr_warning("failed to get external pu regulator\n");
+		soc_regulator = devm_regulator_get(&pdev->dev, "vddsoc");
+		if (IS_ERR(soc_regulator)) {
+			pr_warning("failed to get external soc regulator\n");
+			return -ENODEV;
+		}
+		pu_regulator = devm_regulator_get(&pdev->dev, "vddpu");
+		if (IS_ERR(pu_regulator))
+			pr_warning("failed to get external pu regulator\n");
+	}
 
 	/* force LDO enabled mode in 1.2Ghz board */
 	if (arm_max_freq == CPU_AT_1_2GHz) {
@@ -706,35 +714,35 @@ static int __devinit cpufreq_probe(struct platform_device *pdev)
 
 	}
 
-	pll1_sys = clk_get(NULL, "pll1_sys");
+	pll1_sys = devm_clk_get(&pdev->dev, "pll1_sys");
 	if (IS_ERR(pll1_sys)) {
 		pr_err("%s: failed to get pll1_sys\n", __func__);
 		ret = PTR_ERR(pll1_sys);
 		goto err5;
 	}
 
-	pll1_sw = clk_get(NULL, "pll1_sw");
+	pll1_sw = devm_clk_get(&pdev->dev, "pll1_sw");
 	if (IS_ERR(pll1_sw)) {
 		pr_err("%s: failed to get pll1_sw\n", __func__);
 		ret = PTR_ERR(pll1_sw);
 		goto err4;
 	}
 
-	step = clk_get(NULL, "step");
+	step = devm_clk_get(&pdev->dev, "step");
 	if (IS_ERR(step)) {
 		pr_err("%s: failed to get step\n", __func__);
 		ret = PTR_ERR(step);
 		goto err3;
 	}
 
-	pll2_pfd2_396m = clk_get(NULL, "pll2_pfd2_396m");
+	pll2_pfd2_396m = devm_clk_get(&pdev->dev, "pll2_pfd2_396m");
 	if (IS_ERR(pll2_pfd2_396m)) {
 		pr_err("%s: failed to get pll2_pfd2_396m\n", __func__);
 		ret = PTR_ERR(pll2_pfd2_396m);
 		goto err2;
 	}
 
-	cpu_clk = clk_get(NULL, "arm");
+	cpu_clk = devm_clk_get(&pdev->dev, "arm");
 	if (IS_ERR(cpu_clk)) {
 		pr_err("%s: failed to get cpu clock\n", __func__);
 		ret = PTR_ERR(cpu_clk);
@@ -754,15 +762,15 @@ static int __devinit cpufreq_probe(struct platform_device *pdev)
 	return  0;
 
 err1:
-	clk_put(cpu_clk);
+	devm_clk_put(&pdev->dev, cpu_clk);
 err2:
-	clk_put(pll2_pfd2_396m);
+	devm_clk_put(&pdev->dev, pll2_pfd2_396m);
 err3:
-	clk_put(step);
+	devm_clk_put(&pdev->dev, step);
 err4:
-	clk_put(pll1_sw);
+	devm_clk_put(&pdev->dev, pll1_sw);
 err5:
-	clk_put(pll1_sys);
+	devm_clk_put(&pdev->dev, pll1_sys);
 	return ret;
 }
 
