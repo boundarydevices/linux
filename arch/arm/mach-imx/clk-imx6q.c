@@ -508,11 +508,6 @@ int __init mx6q_clocks_init(void)
 	clk_register_clkdev(clk[ahb], "ahb", NULL);
 	clk_register_clkdev(clk[cko1], "cko1", NULL);
 	clk_register_clkdev(clk[cko2], "cko2", NULL);
-	clk_register_clkdev(clk[pll1_sys], "pll1_sys", NULL);
-	clk_register_clkdev(clk[pll1_sw], "pll1_sw", NULL);
-	clk_register_clkdev(clk[pll2_pfd2_396m], "pll2_pfd2_396m", NULL);
-	clk_register_clkdev(clk[step], "step", NULL);
-	clk_register_clkdev(clk[arm], "arm", NULL);
 	clk_register_clkdev(clk[ocram], "ocram", NULL);
 	clk_register_clkdev(clk[pll5_video], "pll_video", NULL);
 	clk_register_clkdev(clk[ldb_di0], "ldb_di0", NULL);
