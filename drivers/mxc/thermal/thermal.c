@@ -3,7 +3,7 @@
  *
  *  Copyright (C) 2001, 2002 Andy Grover <andrew.grover@intel.com>
  *  Copyright (C) 2001, 2002 Paul Diefenbaugh <paul.s.diefenbaugh@intel.com>
- *  Copyright (C) 2011-2012 Freescale Semiconductor, Inc.
+ *  Copyright (C) 2011-2013 Freescale Semiconductor, Inc.
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -43,6 +43,7 @@
 #include <linux/cpufreq.h>
 #include <linux/clk.h>
 #include "anatop_driver.h"
+#include <mach/hardware.h>
 
 /* register define of anatop */
 #define HW_ANADIG_ANA_MISC0	(0x00000150)
@@ -152,6 +153,7 @@ static bool suspend_flag;
 static unsigned int thermal_irq;
 bool cooling_cpuhotplug;
 bool cooling_device_disable;
+static bool calibration_valid;
 unsigned long temperature_cooling;
 static const struct anatop_device_id thermal_device_ids[] = {
 	{ANATOP_THERMAL_HID},
@@ -879,6 +881,15 @@ static int __init anatop_thermal_cooling_device_disable(char *str)
 }
 __setup("no_cooling_device", anatop_thermal_cooling_device_disable);
 
+static int __init anatop_thermal_use_calibration(char *str)
+{
+	calibration_valid = true;
+	pr_info("%s: use calibration data for thermal sensor!\n", __func__);
+
+	return 1;
+}
+__setup("use_calibration", anatop_thermal_use_calibration);
+
 static int anatop_thermal_counting_ratio(unsigned int fuse_data)
 {
 	unsigned raw25c, raw_hot, hot_temp;
@@ -894,6 +905,23 @@ static int anatop_thermal_counting_ratio(unsigned int fuse_data)
 	raw25c = fuse_data >> 20;
 	raw_hot = (fuse_data & 0xfff00) >> 8;
 	hot_temp = fuse_data & 0xff;
+
+	if (!calibration_valid && cpu_is_mx6q()) {
+		/*
+		 * Only use raw25c value from fuse
+		 * cvt_to_raw = (0.0015976 * raw25c) - 0.4297157
+		 * cvt_to_raw = (0.0015976 * 1440) - 0.4297157 = 1.8708
+		 * cvt_to_raw = (1440 - 268.975776) * 0.0015976  = 1.8708
+		 * cvt_to_raw = (1440 - 268.975776) / 625.938908  = 1.8708
+		 * cvt_to_raw = (1440 - 268.975776) / (650.938908 - 25) = 1.8708
+		 *
+		 * cvt_to_raw = (1440 - 269) / (651 - 25) = 1171/626 = 1.8706
+		 */
+		raw_hot = 269;
+		hot_temp = 651;
+		if (raw25c == 0xfff)
+			raw25c = 0;
+	}
 
 	if ((raw25c <= raw_hot) || (hot_temp <= 25)) {
 		pr_info("%s: invalid calibration data, disable cooling!!! raw25c=%x raw_hot=%x hot_temp=%x\n",
