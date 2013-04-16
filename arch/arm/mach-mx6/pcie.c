@@ -958,6 +958,7 @@ static int __devinit imx_pcie_pltfm_probe(struct platform_device *pdev)
 	struct resource *mem;
 	struct device *dev = &pdev->dev;
 	struct imx_pcie_platform_data *pdata = dev->platform_data;
+	u32 cap;
 
 	pr_info("iMX6 PCIe %s mode %s entering.\n",
 			pdata->type_ep ? "PCIe EP" : "PCIe RC", __func__);
@@ -1025,12 +1026,14 @@ static int __devinit imx_pcie_pltfm_probe(struct platform_device *pdev)
 		imx_pcie_regions_setup(dev, dbi_base);
 	}
 
-	/*
-	 * Force to GEN1 because of PCIE2USB storage stress tests
-	 * would be failed when GEN2 is enabled
-	 */
-	writel(((readl(dbi_base + LNK_CAP) & 0xfffffff0) | 0x1),
-			dbi_base + LNK_CAP);
+	cap = readl(dbi_base + LNK_CAP);
+#ifdef CONFIG_PCIE_FORCE_GEN1
+#define USE_GEN 1
+#else
+#define USE_GEN 2
+#endif
+	if ((cap & 0xf) != USE_GEN)
+		writel(((cap & ~0xf) | USE_GEN), dbi_base + LNK_CAP);
 
 	pr_info("PCIE: %s start link up.\n", __func__);
 	/* start link up */
