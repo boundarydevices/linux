@@ -288,6 +288,10 @@ config IMX_PCIE
 	bool "PCI Express support"
 	select PCI
 
+config PCIE_FORCE_GEN1
+	bool "PCI Express force gen1 speed"
+	depends on IMX_PCIE
+
 config USB_EHCI_ARC_H1
 	tristate "USB Host 1 support"
 	depends on USB_EHCI_ARC
