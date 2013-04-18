@@ -252,6 +252,20 @@ static const struct imxuart_platform_data mx6_arm2_uart2_data __initconst = {
 	.dma_req_tx = MX6Q_DMA_REQ_UART3_TX,
 };
 
+#if !(defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE))
+static const struct imxuart_platform_data mx6_arm2_uart3_data __initconst = {
+	.flags      = IMXUART_HAVE_RTSCTS | IMXUART_SDMA,
+	.dma_req_rx = MX6Q_DMA_REQ_UART4_RX,
+	.dma_req_tx = MX6Q_DMA_REQ_UART4_TX,
+};
+
+static const struct imxuart_platform_data mx6_arm2_uart4_data __initconst = {
+	.flags      = IMXUART_HAVE_RTSCTS | IMXUART_SDMA,
+	.dma_req_rx = MX6Q_DMA_REQ_UART5_RX,
+	.dma_req_tx = MX6Q_DMA_REQ_UART5_TX,
+};
+#endif
+
 static int mx6_sabrelite_fec_phy_init(struct phy_device *phydev)
 {
 	/* prefer master mode */
@@ -1174,6 +1188,11 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_imx_uart(1, NULL);
 	if (isn6)
 		imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
+
+#if !(defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE))
+	imx6q_add_imx_uart(3, &mx6_arm2_uart3_data);
+	imx6q_add_imx_uart(4, &mx6_arm2_uart4_data);
+#endif
 
 	if (!cpu_is_mx6q()) {
 		ldb_data.ipu_id = 0;
