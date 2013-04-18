@@ -143,11 +143,15 @@
 #define MAX_CPU_FREQ_LEN			7
 #define MAX_CPU_ONLINE_LEN			1
 
+#define        FACTOR1         15976
+#define        FACTOR2         4297157
+
 /* variables */
 static unsigned int anatop_base, ratio, raw_25c, raw_hot;
 static unsigned int hot_temp, raw_n40c, raw_125c, raw_critical, thermal_irq;
 static struct clk *pll3_clk;
 static bool full_run = true, suspend_flag, cooling_cpuhotplug;
+static bool calibration_valid;
 static bool cooling_device_disable;
 static const struct anatop_device_id thermal_device_ids[] = {
 	{ANATOP_THERMAL_HID},
@@ -805,13 +809,22 @@ static int __init anatop_thermal_cooling_device_disable(char *str)
 }
 __setup("no_cooling_device", anatop_thermal_cooling_device_disable);
 
+static int __init anatop_thermal_use_calibration(char *str)
+{
+	calibration_valid = true;
+	pr_info("%s: use calibration data for thermal sensor!\n", __func__);
+
+	return 1;
+}
+__setup("use_calibration", anatop_thermal_use_calibration);
+
 static int anatop_thermal_counting_ratio(unsigned int fuse_data)
 {
 	int ret = -EINVAL;
 
 	pr_info("Thermal calibration data is 0x%x\n", fuse_data);
 	if (fuse_data == 0 || fuse_data == 0xffffffff ||
-		(fuse_data & 0xff) == 0) {
+		(fuse_data & 0xfff00000) == 0) {
 		pr_info(KERN_INFO
 			"%s: invalid calibration data, disable cooling!!!\n",
 			__func__);
@@ -831,7 +844,20 @@ static int anatop_thermal_counting_ratio(unsigned int fuse_data)
 	raw_hot = (fuse_data & 0xfff00) >> 8;
 	hot_temp = fuse_data & 0xff;
 
-	ratio = ((raw_25c - raw_hot) * 100) / (hot_temp - 25);
+	if (!calibration_valid)
+		/*
+		 * The universal equation for thermal sensor
+		 * is slope = 0.4297157 - (0.0015976 * 25C fuse),
+		 * here we convert them to integer to make them
+		 * easy for counting, FACTOR1 is 15976,
+		 * FACTOR2 is 4297157. Our ratio = -100 * slope.
+		 */
+		ratio = ((FACTOR1 * raw_25c - FACTOR2) + 50000) / 100000;
+	else
+		ratio = ((raw_25c - raw_hot) * 100) / (hot_temp - 25);
+
+	pr_info("Thermal sensor with ratio = %d\n", ratio);
+
 	raw_n40c = raw_25c + (13 * ratio) / 20;
 	raw_125c = raw_25c - ratio;
 	/* Init default critical temp to set alarm */
