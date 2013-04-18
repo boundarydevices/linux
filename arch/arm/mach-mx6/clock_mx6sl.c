@@ -3980,6 +3980,7 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK("imx-uart.1", NULL, uart_clk[0]),
 	_REGISTER_CLOCK("imx-uart.2", NULL, uart_clk[0]),
 	_REGISTER_CLOCK("imx-uart.3", NULL, uart_clk[0]),
+	_REGISTER_CLOCK("imx-uart.4", NULL, uart_clk[0]),
 	_REGISTER_CLOCK(NULL, "gpt", gpt_clk[0]),
 	_REGISTER_CLOCK("mxc_pwm.0", NULL, pwm_clk[0]),
 	_REGISTER_CLOCK("mxc_pwm.1", NULL, pwm_clk[1]),
