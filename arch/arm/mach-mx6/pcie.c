@@ -174,6 +174,17 @@
 
 #define PCIE_DBI_BASE_ADDR	(PCIE_ARB_END_ADDR - SZ_16K + 1)
 
+#ifdef CONFIG_PCIE_FORCE_GEN1
+#define USE_GEN 1
+#else
+#define USE_GEN 2
+#endif
+
+static unsigned force_gen = USE_GEN;
+module_param(force_gen, uint, S_IRUGO);
+MODULE_PARM_DESC(force_gen, "Force pcie speed to gen N, (N=1,2)");
+
+
 static void __iomem *base;
 static void __iomem *dbi_base;
 
@@ -830,12 +841,11 @@ static int __devinit imx_pcie_pltfm_probe(struct platform_device *pdev)
 	imx_pcie_regions_setup(dbi_base);
 	usleep_range(3000, 4000);
 
-	/*
-	 * Force to GEN1 because of PCIE2USB storage stress tests
-	 * would be failed when GEN2 is enabled
-	 */
-	writel(((readl(dbi_base + LNK_CAP) & 0xfffffff0) | 0x1),
-			dbi_base + LNK_CAP);
+	if (force_gen && (force_gen <= 2)) {
+		u32 cap = readl(dbi_base + LNK_CAP);
+		if ((cap & 0xf) != force_gen)
+			writel(((cap & ~0xf) | force_gen), dbi_base + LNK_CAP);
+	}
 
 	/* start link up */
 	imx_pcie_clrset(iomuxc_gpr12_app_ltssm_enable, 1 << 10, IOMUXC_GPR12);
