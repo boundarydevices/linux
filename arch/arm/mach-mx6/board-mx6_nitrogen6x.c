@@ -388,6 +388,9 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("sgtl5000", 0x0a),
 	},
+	{
+		I2C_BOARD_INFO("isl1208", 0x6f),	/* Real time clock */
+	},
 };
 
 static void mx6_csi0_cam_powerdown(int powerdown)
@@ -1128,8 +1131,12 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_imx_i2c(0, &mx6_sabrelite_i2c_data);
 	imx6q_add_imx_i2c(1, &mx6_sabrelite_i2c_data);
 	imx6q_add_imx_i2c(2, &mx6_sabrelite_i2c_data);
+	/*
+	 * SABRE Lite does not have an ISL1208 RTC
+	 */
 	i2c_register_board_info(0, mxc_i2c0_board_info,
-			ARRAY_SIZE(mxc_i2c0_board_info));
+			isn6    ? ARRAY_SIZE(mxc_i2c0_board_info)
+				: ARRAY_SIZE(mxc_i2c0_board_info)-1);
 	i2c_register_board_info(1, mxc_i2c1_board_info,
 			ARRAY_SIZE(mxc_i2c1_board_info));
 	i2c_register_board_info(2, mxc_i2c2_board_info,
