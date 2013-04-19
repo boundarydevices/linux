@@ -17,6 +17,7 @@ source "drivers/mxc/thermal/Kconfig"
 source "drivers/mxc/gpu-viv/Kconfig"
 source "drivers/mxc/vpu/Kconfig"
 source "drivers/mxc/mipi/Kconfig"
+source "drivers/mxc/asrc/Kconfig"
 
 endmenu
 
