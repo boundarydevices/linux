@@ -406,7 +406,7 @@ int rtc_read_alarm(struct rtc_device *rtc, struct rtc_wkalrm *alarm)
 }
 EXPORT_SYMBOL_GPL(rtc_read_alarm);
 
-static int __rtc_set_alarm(struct rtc_device *rtc, struct rtc_wkalrm *alarm)
+static int check_alarm_past(struct rtc_device *rtc, struct rtc_wkalrm *alarm)
 {
 	struct rtc_time tm;
 	time64_t now, scheduled;
@@ -424,8 +424,16 @@ static int __rtc_set_alarm(struct rtc_device *rtc, struct rtc_wkalrm *alarm)
 		return err;
 	now = rtc_tm_to_time64(&tm);
 
-	if (scheduled <= now)
+	if (scheduled <= now) {
+		pr_info("%s: alarm in the past\n", __func__);
 		return -ETIME;
+	}
+	return 0;
+}
+
+static int __rtc_set_alarm(struct rtc_device *rtc, struct rtc_wkalrm *alarm)
+{
+	int err = check_alarm_past(rtc, alarm);
 	/*
 	 * XXX - We just checked to make sure the alarm time is not
 	 * in the past, but there is still a race window where if
@@ -433,14 +441,17 @@ static int __rtc_set_alarm(struct rtc_device *rtc, struct rtc_wkalrm *alarm)
 	 * over right here, before we set the alarm.
 	 */
 
+	if (err)
+		return err;
 	rtc_subtract_offset(rtc, &alarm->time);
 
 	if (!rtc->ops)
 		err = -ENODEV;
 	else if (!test_bit(RTC_FEATURE_ALARM, rtc->features))
 		err = -EINVAL;
-	else
+	else {
 		err = rtc->ops->set_alarm(rtc->dev.parent, alarm);
+	}
 
 	trace_rtc_set_alarm(rtc_tm_to_time64(&alarm->time), err);
 	return err;
@@ -492,11 +503,10 @@ EXPORT_SYMBOL_GPL(rtc_set_alarm);
 /* Called once per device from rtc_device_register */
 int rtc_initialize_alarm(struct rtc_device *rtc, struct rtc_wkalrm *alarm)
 {
-	int err;
 	struct rtc_time now;
+	int err = check_alarm_past(rtc, alarm);
 
-	err = rtc_valid_tm(&alarm->time);
-	if (err != 0)
+	if (err)
 		return err;
 
 	err = rtc_read_time(rtc, &now);
