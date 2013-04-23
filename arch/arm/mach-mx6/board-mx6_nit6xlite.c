@@ -439,6 +439,12 @@ static struct ipuv3_fb_platform_data oc_fb_data[] = {
 	}, {
 	.disp_dev = "lcd",
 	.interface_pix_fmt = IPU_PIX_FMT_RGB565,
+	.mode_str = "wqvga-lcd",
+	.default_bpp = 16,
+	.int_clk = false,
+	}, {
+	.disp_dev = "lcd",
+	.interface_pix_fmt = IPU_PIX_FMT_RGB565,
 	.mode_str = "CLAA-WVGA",
 	.default_bpp = 16,
 	.int_clk = false,
@@ -495,8 +501,14 @@ static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
 	.disp_id = 1,
 };
 
+static struct fsl_mxc_lcd_platform_data lcdif_data = {
+	.ipu_id = 0,
+	.disp_id = 0,
+	.default_ifmt = IPU_PIX_FMT_RGB565,
+};
+
 static struct fsl_mxc_ldb_platform_data ldb_data = {
-	.ipu_id = 1,
+	.ipu_id = 0,
 	.disp_id = 0,
 	.ext_ref = 1,
 	.mode = LDB_SEP0,
@@ -768,6 +780,7 @@ static void __init mx6_oc_board_init(void)
 		imx6q_add_ipuv3fb(i, &oc_fb_data[i]);
 
 	imx6q_add_vdoa();
+	imx6q_add_lcdif(&lcdif_data);
 	imx6q_add_ldb(&ldb_data);
 	imx6q_add_v4l2_output(0);
 	imx6q_add_imx_snvs_rtc();
