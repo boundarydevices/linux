@@ -95,7 +95,7 @@
 #define MX6_OC_ST_ECSPI1_CS1		IMX_GPIO_NR(3, 19)	/* EIM_D19 - active low */
 
 #define MX6_OC_TOUCH_RESET		IMX_GPIO_NR(1, 4)	/* GPIO_4 - active low */
-#define MX6_OC_TOUCH_IRQ		IMX_GPIO_NR(5, 0)	/* EIM_WAIT - active low */
+#define MX6_OC_TOUCH_IRQ		IMX_GPIO_NR(2, 27)	/* EIM_LBA - active low */
 
 #define MX6_OC_USB_HUB_RESET		IMX_GPIO_NR(7, 12)	/* GPIO_17 - active low */
 
@@ -153,8 +153,8 @@ struct gpio mx6_oc_init_gpios[] __initdata = {
 //	{.label = "rtc_i2c_en",		.gpio = MX6_OC_RTC_I2C_EN,	.flags = 0},		/* GPIO2[23]: EIM_CS0 - active high */
 	{.label = "rtc_irq",		.gpio = MX6_OC_RTC_IRQ,		.flags = GPIOF_DIR_IN},	/* GPIO2[24]:* EIM_CS1 - active low */
 
-	{.label = "touch_reset",	.gpio = MX6_OC_TOUCH_RESET,	.flags = GPIOF_HIGH},		/* GPIO1[4]: GPIO_4 - active low */
-	{.label = "touch_irq",		.gpio = MX6_OC_TOUCH_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO5[0]: EIM_WAIT - active low */
+	{.label = "touch_reset",	.gpio = MX6_OC_TOUCH_RESET,	.flags = GPIOF_HIGH},	/* GPIO1[4]: GPIO_4 - active low */
+	{.label = "touch_irq",		.gpio = MX6_OC_TOUCH_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO2[27]: EIM_LBA - active low */
 
 	{.label = "usb_hub_reset",	.gpio = MX6_OC_USB_HUB_RESET,	.flags = 0},		/* GPIO7[12]: GPIO_17 - active low */
 
