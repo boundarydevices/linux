@@ -78,34 +78,34 @@
 #include "crm_regs.h"
 #include "cpu_op-mx6.h"
 
-#define MX6_OC_AUDIO_MUTE		IMX_GPIO_NR(5, 2)	/* EIM_A25 - active low */
+#define AUDIO_MUTE		IMX_GPIO_NR(5, 2)	/* EIM_A25 - active low */
 
-#define MX6_OC_DISP_I2C_EN		IMX_GPIO_NR(2, 17)	/* EIM_A21 - active high */
-#define MX6_OC_DISP_BACKLIGHT_EN	IMX_GPIO_NR(1, 17)	/* SD1_DAT1 - active high */
-#define MX6_OC_DISP_BACKLIGHT_12V_EN	IMX_GPIO_NR(4, 5)	/* GPIO_19 - active high */
+#define DISP_I2C_EN		IMX_GPIO_NR(2, 17)	/* EIM_A21 - active high */
+#define DISP_BACKLIGHT_EN	IMX_GPIO_NR(1, 17)	/* SD1_DAT1 - active high */
+#define DISP_BACKLIGHT_12V_EN	IMX_GPIO_NR(4, 5)	/* GPIO_19 - active high */
 
-#define MX6_OC_ENET_PHY_RESET		IMX_GPIO_NR(1, 27)	/* ENET_RXD0 - active low */
-#define MX6_OC_ENET_PHY_IRQ		IMX_GPIO_NR(1, 28)	/* ENET_TX_EN - active low */
+#define ENET_PHY_RESET		IMX_GPIO_NR(1, 27)	/* ENET_RXD0 - active low */
+#define ENET_PHY_IRQ		IMX_GPIO_NR(1, 28)	/* ENET_TX_EN - active low */
 
-#define MX6_OC_RTC_I2C_EN		IMX_GPIO_NR(2, 23)	/* EIM_CS0 - active high */
-#define MX6_OC_RTC_IRQ			IMX_GPIO_NR(2, 26)	/* EIM_RW - active low */
+#define RTC_I2C_EN		IMX_GPIO_NR(2, 23)	/* EIM_CS0 - active high */
+#define RTC_IRQ			IMX_GPIO_NR(2, 26)	/* EIM_RW - active low */
 
-#define MX6_OC_ST_EMMC_RESET		IMX_GPIO_NR(2, 5)	/* NANDF_D5 - active low */
-#define MX6_OC_ST_SD3_CD		IMX_GPIO_NR(7, 0)	/* SD3_DAT5 - active low */
-#define MX6_OC_ST_ECSPI1_CS1		IMX_GPIO_NR(3, 19)	/* EIM_D19 - active low */
+#define ST_EMMC_RESET		IMX_GPIO_NR(2, 5)	/* NANDF_D5 - active low */
+#define ST_SD3_CD		IMX_GPIO_NR(7, 0)	/* SD3_DAT5 - active low */
+#define ST_ECSPI1_CS1		IMX_GPIO_NR(3, 19)	/* EIM_D19 - active low */
 
-#define MX6_OC_TOUCH_RESET		IMX_GPIO_NR(1, 4)	/* GPIO_4 - active low */
-#define MX6_OC_TOUCH_IRQ		IMX_GPIO_NR(2, 27)	/* EIM_LBA - active low */
+#define TOUCH_RESET		IMX_GPIO_NR(1, 4)	/* GPIO_4 - active low */
+#define TOUCH_IRQ		IMX_GPIO_NR(2, 27)	/* EIM_LBA - active low */
 
-#define MX6_OC_USB_HUB_RESET		IMX_GPIO_NR(7, 12)	/* GPIO_17 - active low */
+#define USB_HUB_RESET		IMX_GPIO_NR(7, 12)	/* GPIO_17 - active low */
 
-#define MX6_OC_WL_BT_RESET		IMX_GPIO_NR(6, 8)	/* NANDF_ALE - active low */
-#define MX6_OC_WL_BT_REG_EN		IMX_GPIO_NR(6, 15)	/* NANDF_CS2 - active high */
-#define MX6_OC_WL_BT_WAKE_IRQ		IMX_GPIO_NR(6, 16)	/* NANDF_CS3 - active low */
+#define WL_BT_RESET		IMX_GPIO_NR(6, 8)	/* NANDF_ALE - active low */
+#define WL_BT_REG_EN		IMX_GPIO_NR(6, 15)	/* NANDF_CS2 - active high */
+#define WL_BT_WAKE_IRQ		IMX_GPIO_NR(6, 16)	/* NANDF_CS3 - active low */
 
-#define MX6_OC_WL_EN			IMX_GPIO_NR(6, 7)	/* NANDF_CLE - active high */
-#define MX6_OC_WL_CLK_REQ_IRQ		IMX_GPIO_NR(6, 9)	/* NANDF_WP_B - active low */
-#define MX6_OC_WL_WAKE_IRQ		IMX_GPIO_NR(6, 14)	/* NANDF_CS1 - active low */
+#define WL_EN			IMX_GPIO_NR(6, 7)	/* NANDF_CLE - active high */
+#define WL_CLK_REQ_IRQ		IMX_GPIO_NR(6, 9)	/* NANDF_WP_B - active low */
+#define WL_WAKE_IRQ		IMX_GPIO_NR(6, 14)	/* NANDF_CS1 - active low */
 
 #define MX6_N6L_GLED			IMX_GPIO_NR(1, 2)	/* J14 pin1: GPIO2 */
 #define MX6_N6L_RLED			IMX_GPIO_NR(1, 3)	/* J14 pin3: GPIO3 */
@@ -145,30 +145,30 @@ int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
 
 #define GPIOF_HIGH	GPIOF_OUT_INIT_HIGH
 struct gpio mx6_oc_init_gpios[] __initdata = {
-	{.label = "audio_mute",		.gpio = MX6_OC_AUDIO_MUTE,	.flags = 0},		/* GPIO5[2]: EIM_A25 - active low */
+	{.label = "audio_mute",		.gpio = AUDIO_MUTE,	.flags = 0},		/* GPIO5[2]: EIM_A25 - active low */
 
-//	{.label = "edid_i2c_en",	.gpio = MX6_OC_DISP_I2C_EN,	.flags = 0},		/* GPIO2[17]: EIM_A21 - active high */
-	{.label = "backlight_en",	.gpio = MX6_OC_DISP_BACKLIGHT_EN, .flags = 0},		/* GPIO1[17]: SD1_DAT1 - active high */
-	{.label = "backlight_12V_en",	.gpio = MX6_OC_DISP_BACKLIGHT_12V_EN, .flags = 0},	/* GPIO4[5]: GPIO_19 - active high */
+//	{.label = "edid_i2c_en",	.gpio = DISP_I2C_EN,	.flags = 0},		/* GPIO2[17]: EIM_A21 - active high */
+	{.label = "backlight_en",	.gpio = DISP_BACKLIGHT_EN, .flags = 0},		/* GPIO1[17]: SD1_DAT1 - active high */
+	{.label = "backlight_12V_en",	.gpio = DISP_BACKLIGHT_12V_EN, .flags = 0},	/* GPIO4[5]: GPIO_19 - active high */
 
-	{.label = "phy_reset",		.gpio = MX6_OC_ENET_PHY_RESET,	.flags = GPIOF_HIGH},	/* GPIO1[27]: ENET_RXD0 - active low */
-//	{.label = "phy_irq",		.gpio = MX6_OC_ENET_PHY_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO1[28]: ENET_TX_EN - active low */
+	{.label = "phy_reset",		.gpio = ENET_PHY_RESET,	.flags = GPIOF_HIGH},	/* GPIO1[27]: ENET_RXD0 - active low */
+//	{.label = "phy_irq",		.gpio = ENET_PHY_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO1[28]: ENET_TX_EN - active low */
 
-//	{.label = "rtc_i2c_en",		.gpio = MX6_OC_RTC_I2C_EN,	.flags = 0},		/* GPIO2[23]: EIM_CS0 - active high */
-	{.label = "rtc_irq",		.gpio = MX6_OC_RTC_IRQ,		.flags = GPIOF_DIR_IN},	/* GPIO2[24]:* EIM_CS1 - active low */
+//	{.label = "rtc_i2c_en",		.gpio = RTC_I2C_EN,	.flags = 0},		/* GPIO2[23]: EIM_CS0 - active high */
+	{.label = "rtc_irq",		.gpio = RTC_IRQ,		.flags = GPIOF_DIR_IN},	/* GPIO2[24]:* EIM_CS1 - active low */
 
-	{.label = "touch_reset",	.gpio = MX6_OC_TOUCH_RESET,	.flags = GPIOF_HIGH},	/* GPIO1[4]: GPIO_4 - active low */
-	{.label = "touch_irq",		.gpio = MX6_OC_TOUCH_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO2[27]: EIM_LBA - active low */
+	{.label = "touch_reset",	.gpio = TOUCH_RESET,	.flags = GPIOF_HIGH},	/* GPIO1[4]: GPIO_4 - active low */
+	{.label = "touch_irq",		.gpio = TOUCH_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO2[27]: EIM_LBA - active low */
 
-	{.label = "usb_hub_reset",	.gpio = MX6_OC_USB_HUB_RESET,	.flags = 0},		/* GPIO7[12]: GPIO_17 - active low */
+	{.label = "usb_hub_reset",	.gpio = USB_HUB_RESET,	.flags = 0},		/* GPIO7[12]: GPIO_17 - active low */
 
-	{.label = "bt_reset",		.gpio = MX6_OC_WL_BT_RESET,	.flags = 0},		/* GPIO6[8]: NANDF_ALE - active low */
-	{.label = "bt_reg_en",		.gpio = MX6_OC_WL_BT_REG_EN,	.flags = 0},		/* GPIO6[15]: NANDF_CS2 - active high */
-	{.label = "bt_wake_irq",	.gpio = MX6_OC_WL_BT_WAKE_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[16]: NANDF_CS3 - active low */
+	{.label = "bt_reset",		.gpio = WL_BT_RESET,	.flags = 0},		/* GPIO6[8]: NANDF_ALE - active low */
+	{.label = "bt_reg_en",		.gpio = WL_BT_REG_EN,	.flags = 0},		/* GPIO6[15]: NANDF_CS2 - active high */
+	{.label = "bt_wake_irq",	.gpio = WL_BT_WAKE_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[16]: NANDF_CS3 - active low */
 
-	{.label = "wl_en",		.gpio = MX6_OC_WL_EN,		.flags = 0},		/* GPIO6[7]: NANDF_CLE - active high */
-	{.label = "wl_clk_req_irq",	.gpio = MX6_OC_WL_CLK_REQ_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[9]: NANDF_WP_B - active low */
-	{.label = "wl_wake_irq",	.gpio = MX6_OC_WL_WAKE_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[14]: NANDF_CS1 - active low */
+	{.label = "wl_en",		.gpio = WL_EN,		.flags = 0},		/* GPIO6[7]: NANDF_CLE - active high */
+	{.label = "wl_clk_req_irq",	.gpio = WL_CLK_REQ_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[9]: NANDF_WP_B - active low */
+	{.label = "wl_wake_irq",	.gpio = WL_WAKE_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[14]: NANDF_CS1 - active low */
 
 	{.label = "gled",		.gpio = MX6_N6L_GLED,		.flags = GPIOF_HIGH},	/* J14 pin1: GPIO2 */
 	{.label = "rled",		.gpio = MX6_N6L_RLED,		.flags = GPIOF_HIGH},	/* J14 pin3: GPIO3 */
@@ -224,7 +224,7 @@ static struct esdhc_platform_data mx6_oc_sd2_data = {
 
 /* SD card */
 static struct esdhc_platform_data mx6_oc_sd3_data = {
-	.cd_gpio = MX6_OC_ST_SD3_CD,
+	.cd_gpio = ST_SD3_CD,
 	.wp_gpio = -1,
 	.keep_power_at_suspend = 1,
 	.platform_pad_change = plt_sd_pad_change,
@@ -264,11 +264,11 @@ static int mx6_oc_fec_phy_init(struct phy_device *phydev)
 static struct fec_platform_data fec_data __initdata = {
 	.init = mx6_oc_fec_phy_init,
 	.phy = PHY_INTERFACE_MODE_RGMII,
-	.phy_irq = gpio_to_irq(MX6_OC_ENET_PHY_IRQ)
+	.phy_irq = gpio_to_irq(ENET_PHY_IRQ)
 };
 
 static int mx6_oc_spi_cs[] = {
-	MX6_OC_ST_ECSPI1_CS1,
+	ST_ECSPI1_CS1,
 };
 
 static const struct spi_imx_master mx6_oc_spi_data __initconst = {
@@ -354,7 +354,7 @@ static int mx6_oc_sgtl5000_init(void)
 
 int mx6_oc_amp_enable(int enable)
 {
-	gpio_set_value(MX6_OC_AUDIO_MUTE, enable ? 1 : 0);
+	gpio_set_value(AUDIO_MUTE, enable ? 1 : 0);
 	return 0;
 }
 
@@ -401,7 +401,7 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("tsc2004", 0x48),
 		.platform_data	= &tsc2007_info,
-		.irq = gpio_to_irq(MX6_OC_TOUCH_IRQ),
+		.irq = gpio_to_irq(TOUCH_IRQ),
 	},
 	{
 		I2C_BOARD_INFO("isl1208", 0x6f),	/* Real time clock */
@@ -565,7 +565,7 @@ static struct regulator_init_data mx6_oc_vwifi_init = {
 static struct fixed_voltage_config mx6_oc_vwifi_reg_config = {
 	.supply_name		= "vwifi",
 	.microvolts		= 1800000, /* 1.80V */
-	.gpio			= MX6_OC_WL_EN,
+	.gpio			= WL_EN,
 	.startup_delay		= 70000, /* 70ms */
 	.enable_high		= 1,
 	.enabled_at_boot	= 0,
@@ -700,8 +700,8 @@ static int imx6_init_audio(void)
 int mx6_oc_bl_notify(struct device *dev, int brightness)
 {
 	pr_info("%s: brightness=%d\n", __func__, brightness);
-	gpio_set_value(MX6_OC_DISP_BACKLIGHT_12V_EN, brightness ? 1 : 0);
-	gpio_set_value(MX6_OC_DISP_BACKLIGHT_EN, brightness ? 1 : 0);
+	gpio_set_value(DISP_BACKLIGHT_12V_EN, brightness ? 1 : 0);
+	gpio_set_value(DISP_BACKLIGHT_EN, brightness ? 1 : 0);
 	return brightness;
 }
 
@@ -860,7 +860,7 @@ static void __init mx6_oc_board_init(void)
 	imx6q_add_asrc(&imx_asrc_data);
 
 	/* release USB Hub reset */
-	gpio_set_value(MX6_OC_USB_HUB_RESET, 1);
+	gpio_set_value(USB_HUB_RESET, 1);
 
 	imx6q_add_mxc_pwm(3);
 
@@ -897,14 +897,14 @@ static void __init mx6_oc_board_init(void)
 	imx6q_add_sdhci_usdhc_imx(1, &mx6_oc_sd2_data);
 	platform_device_register(&mx6_oc_vwifi_reg_devices);
 
-	gpio_set_value(MX6_OC_WL_EN, 1);		/* momentarily enable */
-	gpio_set_value(MX6_OC_WL_BT_REG_EN, 1);
+	gpio_set_value(WL_EN, 1);		/* momentarily enable */
+	gpio_set_value(WL_BT_REG_EN, 1);
 	mdelay(2);
-	gpio_set_value(MX6_OC_WL_EN, 0);
-	gpio_set_value(MX6_OC_WL_BT_REG_EN, 0);
+	gpio_set_value(WL_EN, 0);
+	gpio_set_value(WL_BT_REG_EN, 0);
 
-	gpio_free(MX6_OC_WL_EN);
-	gpio_free(MX6_OC_WL_BT_REG_EN);
+	gpio_free(WL_EN);
+	gpio_free(WL_BT_REG_EN);
 	mdelay(1);
 
 	imx6q_add_perfmon(0);
