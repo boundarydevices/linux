@@ -659,7 +659,7 @@ isl1208_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (client->irq > 0) {
 		rc = request_threaded_irq(client->irq, NULL,
 					  isl1208_rtc_interrupt,
-					  IRQF_SHARED,
+					  IRQF_SHARED | IRQF_TRIGGER_FALLING,
 					  isl1208_driver.driver.name, client);
 		if (!rc) {
 			device_init_wakeup(&client->dev, 1);
