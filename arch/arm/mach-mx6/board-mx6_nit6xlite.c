@@ -107,6 +107,10 @@
 #define MX6_OC_WL_CLK_REQ_IRQ		IMX_GPIO_NR(6, 9)	/* NANDF_WP_B - active low */
 #define MX6_OC_WL_WAKE_IRQ		IMX_GPIO_NR(6, 14)	/* NANDF_CS1 - active low */
 
+#define MX6_N6L_GLED			IMX_GPIO_NR(1, 2)	/* J14 pin1: GPIO2 */
+#define MX6_N6L_RLED			IMX_GPIO_NR(1, 3)	/* J14 pin3: GPIO3 */
+#define MX6_N6L_VOLUP			IMX_GPIO_NR(7, 13)	/* J14 pin5: GPIO_18 */
+#define MX6_N6L_VOLDOWN			IMX_GPIO_NR(4, 5)	/* J14 pin7: GPIO_19 */
 
 #include "pads-mx6_nit6xlite.h"
 #define FOR_DL_SOLO
@@ -165,8 +169,12 @@ struct gpio mx6_oc_init_gpios[] __initdata = {
 	{.label = "wl_en",		.gpio = MX6_OC_WL_EN,		.flags = 0},		/* GPIO6[7]: NANDF_CLE - active high */
 	{.label = "wl_clk_req_irq",	.gpio = MX6_OC_WL_CLK_REQ_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[9]: NANDF_WP_B - active low */
 	{.label = "wl_wake_irq",	.gpio = MX6_OC_WL_WAKE_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[14]: NANDF_CS1 - active low */
-};
 
+	{.label = "gled",		.gpio = MX6_N6L_GLED,		.flags = GPIOF_HIGH},	/* J14 pin1: GPIO2 */
+	{.label = "rled",		.gpio = MX6_N6L_RLED,		.flags = GPIOF_HIGH},	/* J14 pin3: GPIO3 */
+	{.label = "volup",		.gpio = MX6_N6L_VOLUP,		.flags = GPIOF_DIR_IN},	/* J14 pin5: GPIO_18 */
+	{.label = "voldown",		.gpio = MX6_N6L_VOLDOWN,	.flags = GPIOF_DIR_IN},	/* J14 pin7: GPIO_19 */
+};
 
 enum sd_pad_mode {
 	SD_PAD_MODE_LOW_SPEED,
@@ -731,6 +739,43 @@ static struct mxc_dvfs_platform_data oc_dvfscore_data = {
 	.delay_time = 80,
 };
 
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#define GPIO_BUTTON(gpio_num, ev_code, act_low, descr, wake)	\
+{								\
+	.gpio		= gpio_num,				\
+	.type		= EV_KEY,				\
+	.code		= ev_code,				\
+	.active_low	= act_low,				\
+	.desc		= "btn " descr,				\
+	.wakeup		= wake,					\
+	.debounce_interval = 1	\
+}
+
+static struct gpio_keys_button buttons[] = {
+	GPIO_BUTTON(MX6_N6L_VOLUP, KEY_VOLUMEUP, 1, "volume-up", 0),
+	GPIO_BUTTON(MX6_N6L_VOLDOWN, KEY_VOLUMEDOWN, 1, "volume-down", 0),
+};
+
+static struct gpio_keys_platform_data button_data = {
+	.buttons	= buttons,
+	.nbuttons	= ARRAY_SIZE(buttons),
+};
+
+static struct platform_device button_device = {
+	.name		= "gpio-keys",
+	.id		= -1,
+	.num_resources  = 0,
+	.dev		= {
+		.platform_data = &button_data,
+	}
+};
+
+static void __init add_device_buttons(void)
+{
+	platform_device_register(&button_device);
+}
+#endif
+
 static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 				   char **cmdline, struct meminfo *mi)
 {
@@ -828,6 +873,8 @@ static void __init mx6_oc_board_init(void)
 
 	imx6q_add_dvfs_core(&oc_dvfscore_data);
 	mx6_cpu_regulator_init();
+
+	add_device_buttons();
 
 	imx6q_add_hdmi_soc();
 	imx6q_add_hdmi_soc_dai();
