@@ -752,8 +752,8 @@ static struct mxc_dvfs_platform_data oc_dvfscore_data = {
 }
 
 static struct gpio_keys_button buttons[] = {
-	GPIO_BUTTON(MX6_N6L_VOLUP, KEY_VOLUMEUP, 1, "volume-up", 0),
-	GPIO_BUTTON(MX6_N6L_VOLDOWN, KEY_VOLUMEDOWN, 1, "volume-down", 0),
+	GPIO_BUTTON(MX6_N6L_VOLUP, KEY_HOME, 1, "volume-up", 0),
+	GPIO_BUTTON(MX6_N6L_VOLDOWN, KEY_BACK, 1, "volume-down", 0),
 };
 
 static struct gpio_keys_platform_data button_data = {
