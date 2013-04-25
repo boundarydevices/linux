@@ -33,10 +33,11 @@ imx_pcm_dma_params_init_data(struct imx_dma_data *dma_data,
 }
 
 #ifdef CONFIG_SND_SOC_IMX_PCM_DMA
-int imx_pcm_dma_init(struct platform_device *pdev);
+int imx_pcm_dma_init(struct platform_device *pdev, unsigned int flags);
 void imx_pcm_dma_exit(struct platform_device *pdev);
 #else
-static inline int imx_pcm_dma_init(struct platform_device *pdev)
+static inline int imx_pcm_dma_init(struct platform_device *pdev,
+				   unsigned int flags)
 {
 	return -ENODEV;
 }
