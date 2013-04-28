@@ -22,6 +22,8 @@
 		aips-bus@02000000 { /* AIPS1 */
 			spba-bus@02000000 {
 				uart1: serial@02020000 {
+					pinctrl-names = "default";
+					pinctrl-0 = <&pinctrl_uart1_1>;
 					status = "okay";
 				};
 			};
@@ -30,18 +32,31 @@
 		aips-bus@02100000 { /* AIPS2 */
 			ethernet@02188000 {
 				phy-mode = "rgmii";
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_enet_3 &pinctrl_enet_2>;
 				status = "okay";
 			};
 
 			usdhc@02194000 { /* uSDHC2 */
 				cd-gpios = <&gpio2 2 0>;
 				wp-gpios = <&gpio2 3 0>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_usdhc2_1>;
 				status = "okay";
 			};
 
 			usdhc@02198000 { /* uSDHC3 */
 				cd-gpios = <&gpio2 0 0>;
 				wp-gpios = <&gpio2 1 0>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_usdhc3_1>;
+				status = "okay";
+			};
+
+			usdhc@0219c000 { /* uSDHC4 */
+				non-removable;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_usdhc4_1>;
 				status = "okay";
 			};
 		};
