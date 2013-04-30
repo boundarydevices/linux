@@ -17,6 +17,8 @@ DHDOFILES = aiutils.o bcmsdh_sdmmc_linux.o dhd_linux.o siutils.o bcmutils.o \
 obj-$(CONFIG_BCMDHD) += bcmdhd.o
 bcmdhd-objs += $(DHDOFILES)
 
+DHDCFLAGS += -DSDIO_ISR_THREAD
+
 ifeq ($(CONFIG_MACH_ODROID_4210),y)
 	DHDOFILES += hardkernel.o
 	DHDCFLAGS += -DCUSTOMER_HW
