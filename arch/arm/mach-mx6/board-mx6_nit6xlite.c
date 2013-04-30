@@ -948,7 +948,7 @@ static void __init mx6_oc_reserve(void)
 /*
  * initialize __mach_desc_MX6Q_OC data structure.
  */
-MACHINE_START(MX6_NIT6XLITE, "Freescale i.MX 6 OC Board")
+MACHINE_START(MX6_NIT6XLITE, "Boundary Devices Nit6xLite Board")
 	.boot_params = MX6_PHYS_OFFSET + 0x100,
 	.fixup = fixup_mxc_board,
 	.map_io = mx6_map_io,
