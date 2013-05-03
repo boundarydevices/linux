@@ -736,16 +736,20 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 		fb_videomode_to_var(&setting->fbi->var, &ldb_modedb[0]);
 
 	INIT_LIST_HEAD(&setting->fbi->modelist);
-	for (i = 0; i < ldb_modedb_sz; i++) {
+	{
 		struct fb_videomode m;
 		fb_var_to_videomode(&m, &setting->fbi->var);
-		if (fb_mode_is_equal(&m, &ldb_modedb[i])) {
-			fb_add_videomode(&ldb_modedb[i],
-					&setting->fbi->modelist);
-			break;
+		pr_info("%s: ret=%d, %dx%d\n", __func__, ret, m.xres, m.yres);
+		fb_add_videomode(&m, &setting->fbi->modelist);
+		for (i = 0; i < ldb_modedb_sz; i++) {
+			if (!fb_mode_is_equal(&m, &ldb_modedb[i])) {
+				pr_info("%s: %dx%d\n", __func__, ldb_modedb[i].xres, ldb_modedb[i].yres);
+				fb_add_videomode(&ldb_modedb[i],
+						&setting->fbi->modelist);
+				break;
+			}
 		}
 	}
-
 	/* save current ldb setting for fb notifier */
 	ldb->setting[setting_idx].active = true;
 	ldb->setting[setting_idx].ipu = setting->dev_id;
