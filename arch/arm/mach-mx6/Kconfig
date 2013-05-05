@@ -261,7 +261,7 @@ config MACH_MX6_OC
 	  Include support for i.MX 6Quad OC platform. This includes specific
 	  configurations for the board and its peripherals.
 
-config MACH_MX6_N6XLITE
+config MACH_MX6_NIT6XLITE
 	bool "Support i.MX 6S Nit6XLite platform"
 	select ARCH_MX6Q
 	select SOC_IMX6Q
