@@ -22,6 +22,7 @@ struct fec_platform_data {
 	phy_interface_t phy;
 	unsigned char mac[ETH_ALEN];
 	int gpio_irq;
+	int phy_irq;
 };
 
 #endif
