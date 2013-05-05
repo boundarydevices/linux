@@ -146,7 +146,7 @@ int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
 }
 
 #define GPIOF_HIGH	GPIOF_OUT_INIT_HIGH
-struct gpio mx6_oc_init_gpios[] __initdata = {
+struct gpio mx6_init_gpios[] __initdata = {
 	{.label = "audio_mute",		.gpio = AUDIO_MUTE,	.flags = 0},		/* GPIO5[2]: EIM_A25 - active low */
 
 //	{.label = "edid_i2c_en",	.gpio = DISP_I2C_EN,	.flags = 0},		/* GPIO2[17]: EIM_A21 - active high */
@@ -215,7 +215,7 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 }
 
 /* Broadcom wifi */
-static struct esdhc_platform_data mx6_oc_sd2_data = {
+static struct esdhc_platform_data mx6_sd2_data = {
 	.always_present = 1,
 	.cd_gpio = -1,
 	.wp_gpio = -1,
@@ -225,7 +225,7 @@ static struct esdhc_platform_data mx6_oc_sd2_data = {
 };
 
 /* SD card */
-static struct esdhc_platform_data mx6_oc_sd3_data = {
+static struct esdhc_platform_data mx6_sd3_data = {
 	.cd_gpio = ST_SD3_CD,
 	.wp_gpio = -1,
 	.keep_power_at_suspend = 1,
@@ -233,7 +233,7 @@ static struct esdhc_platform_data mx6_oc_sd3_data = {
 };
 
 static const struct anatop_thermal_platform_data
-	mx6_oc_anatop_thermal_data __initconst = {
+	mx6_anatop_thermal_data __initconst = {
 		.name = "anatop_thermal",
 };
 
@@ -243,7 +243,7 @@ static const struct imxuart_platform_data mx6_arm2_uart2_data __initconst = {
 	.dma_req_tx = MX6Q_DMA_REQ_UART3_TX,
 };
 
-static int mx6_oc_fec_phy_init(struct phy_device *phydev)
+static int mx6_fec_phy_init(struct phy_device *phydev)
 {
 	/* prefer master mode */
 	phy_write(phydev, 0x9, 0x1f00);
@@ -264,22 +264,22 @@ static int mx6_oc_fec_phy_init(struct phy_device *phydev)
 }
 
 static struct fec_platform_data fec_data __initdata = {
-	.init = mx6_oc_fec_phy_init,
+	.init = mx6_fec_phy_init,
 	.phy = PHY_INTERFACE_MODE_RGMII,
 	.phy_irq = gpio_to_irq(ENET_PHY_IRQ)
 };
 
-static int mx6_oc_spi_cs[] = {
+static int mx6_spi_cs[] = {
 	ST_ECSPI1_CS1,
 };
 
-static const struct spi_imx_master mx6_oc_spi_data __initconst = {
-	.chipselect     = mx6_oc_spi_cs,
-	.num_chipselect = ARRAY_SIZE(mx6_oc_spi_cs),
+static const struct spi_imx_master mx6_spi_data __initconst = {
+	.chipselect     = mx6_spi_cs,
+	.num_chipselect = ARRAY_SIZE(mx6_spi_cs),
 };
 
 #if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
-static struct mtd_partition imx6_oc_spi_nor_partitions[] = {
+static struct mtd_partition imx6_spi_nor_partitions[] = {
 	{
 	 .name = "bootloader",
 	 .offset = 0,
@@ -297,35 +297,35 @@ static struct mtd_partition imx6_oc_spi_nor_partitions[] = {
 	},
 };
 
-static struct flash_platform_data imx6_oc__spi_flash_data = {
+static struct flash_platform_data imx6__spi_flash_data = {
 	.name = "m25p80",
-	.parts = imx6_oc_spi_nor_partitions,
-	.nr_parts = ARRAY_SIZE(imx6_oc_spi_nor_partitions),
+	.parts = imx6_spi_nor_partitions,
+	.nr_parts = ARRAY_SIZE(imx6_spi_nor_partitions),
 	.type = "sst25vf016b",
 };
 #endif
 
-static struct spi_board_info imx6_oc_spi_nor_device[] __initdata = {
+static struct spi_board_info imx6_spi_nor_device[] __initdata = {
 #if defined(CONFIG_MTD_M25P80)
 	{
 		.modalias = "m25p80",
 		.max_speed_hz = 20000000, /* max spi clock (SCK) speed in HZ */
 		.bus_num = 0,
 		.chip_select = 0,
-		.platform_data = &imx6_oc__spi_flash_data,
+		.platform_data = &imx6__spi_flash_data,
 	},
 #endif
 };
 
 static void spi_device_init(void)
 {
-	spi_register_board_info(imx6_oc_spi_nor_device,
-				ARRAY_SIZE(imx6_oc_spi_nor_device));
+	spi_register_board_info(imx6_spi_nor_device,
+				ARRAY_SIZE(imx6_spi_nor_device));
 }
 
-static struct mxc_audio_platform_data mx6_oc_audio_data;
+static struct mxc_audio_platform_data mx6_audio_data;
 
-static int mx6_oc_sgtl5000_init(void)
+static int mx6_sgtl5000_init(void)
 {
 	struct clk *clko;
 	struct clk *new_parent;
@@ -348,37 +348,37 @@ static int mx6_oc_sgtl5000_init(void)
 		return -1;
 	}
 	pr_info("%s: rate=%d\n", __func__, rate);
-	mx6_oc_audio_data.sysclk = rate;
+	mx6_audio_data.sysclk = rate;
 	clk_set_rate(clko, rate);
 	clk_enable(clko);
 	return 0;
 }
 
-int mx6_oc_amp_enable(int enable)
+int mx6_amp_enable(int enable)
 {
 	gpio_set_value(AUDIO_MUTE, enable ? 1 : 0);
 	return 0;
 }
 
-static struct imx_ssi_platform_data mx6_oc_ssi_pdata = {
+static struct imx_ssi_platform_data mx6_ssi_pdata = {
 	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
 };
 
-static struct mxc_audio_platform_data mx6_oc_audio_data = {
+static struct mxc_audio_platform_data mx6_audio_data = {
 	.ssi_num = 1,
 	.src_port = 2,
 	.ext_port = 3,
-	.init = mx6_oc_sgtl5000_init,
+	.init = mx6_sgtl5000_init,
 	.hp_gpio = -1,
 	.mic_gpio = -1,
-	.amp_enable = mx6_oc_amp_enable,
+	.amp_enable = mx6_amp_enable,
 };
 
-static struct platform_device mx6_oc_audio_device = {
+static struct platform_device mx6_audio_device = {
 	.name = "imx-sgtl5000",
 };
 
-static struct imxi2c_platform_data mx6_oc_i2c_data = {
+static struct imxi2c_platform_data mx6_i2c_data = {
 	.bitrate = 100000,
 };
 
@@ -431,11 +431,11 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
  **********************************************************************
  */
 
-static void imx6_oc_usbotg_vbus(bool on)
+static void imx6_usbotg_vbus(bool on)
 {
 }
 
-static void __init imx6_oc_init_usb(void)
+static void __init imx6_init_usb(void)
 {
 	imx_otg_base = MX6_IO_ADDRESS(MX6Q_USB_OTG_BASE_ADDR);
 	/* disable external charger detect,
@@ -443,7 +443,7 @@ static void __init imx6_oc_init_usb(void)
 	 */
 	mxc_iomux_set_gpr_register(1, 13, 1, 0);
 
-	mx6_set_otghost_vbus_func(imx6_oc_usbotg_vbus);
+	mx6_set_otghost_vbus_func(imx6_usbotg_vbus);
 	mx6_usb_dr_init();
 }
 
@@ -562,40 +562,40 @@ static void oc_suspend_exit(void)
 {
 	/* resume restore */
 }
-static const struct pm_platform_data mx6_oc_pm_data __initconst = {
+static const struct pm_platform_data mx6_pm_data __initconst = {
 	.name = "imx_pm",
 	.suspend_enter = oc_suspend_enter,
 	.suspend_exit = oc_suspend_exit,
 };
 
-static struct regulator_consumer_supply mx6_oc_vwifi_consumers[] = {
+static struct regulator_consumer_supply mx6_vwifi_consumers[] = {
 	REGULATOR_SUPPLY("vmmc", "sdhci-esdhc-imx.1"),
 };
 
-static struct regulator_init_data mx6_oc_vwifi_init = {
+static struct regulator_init_data mx6_vwifi_init = {
 	.constraints            = {
 		.name           = "VDD_1.8V",
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 	},
-	.num_consumer_supplies = ARRAY_SIZE(mx6_oc_vwifi_consumers),
-	.consumer_supplies = mx6_oc_vwifi_consumers,
+	.num_consumer_supplies = ARRAY_SIZE(mx6_vwifi_consumers),
+	.consumer_supplies = mx6_vwifi_consumers,
 };
 
-static struct fixed_voltage_config mx6_oc_vwifi_reg_config = {
+static struct fixed_voltage_config mx6_vwifi_reg_config = {
 	.supply_name		= "vwifi",
 	.microvolts		= 1800000, /* 1.80V */
 	.gpio			= WL_EN,
 	.startup_delay		= 70000, /* 70ms */
 	.enable_high		= 1,
 	.enabled_at_boot	= 0,
-	.init_data		= &mx6_oc_vwifi_init,
+	.init_data		= &mx6_vwifi_init,
 };
 
-static struct platform_device mx6_oc_vwifi_reg_devices = {
+static struct platform_device mx6_vwifi_reg_devices = {
 	.name	= "reg-fixed-voltage",
 	.id	= 4,
 	.dev	= {
-		.platform_data = &mx6_oc_vwifi_reg_config,
+		.platform_data = &mx6_vwifi_reg_config,
 	},
 };
 
@@ -705,9 +705,9 @@ static struct platform_device sgtl5000_oc_vddd_reg_devices = {
 
 static int imx6_init_audio(void)
 {
-	mxc_register_device(&mx6_oc_audio_device,
-			    &mx6_oc_audio_data);
-	imx6q_add_imx_ssi(1, &mx6_oc_ssi_pdata);
+	mxc_register_device(&mx6_audio_device,
+			    &mx6_audio_data);
+	imx6q_add_imx_ssi(1, &mx6_ssi_pdata);
 #ifdef CONFIG_SND_SOC_SGTL5000
 	platform_device_register(&sgtl5000_oc_vdda_reg_devices);
 	platform_device_register(&sgtl5000_oc_vddio_reg_devices);
@@ -716,7 +716,7 @@ static int imx6_init_audio(void)
 	return 0;
 }
 
-int mx6_oc_bl_notify(struct device *dev, int brightness)
+int mx6_bl_notify(struct device *dev, int brightness)
 {
 	pr_info("%s: brightness=%d\n", __func__, brightness);
 	gpio_set_value(DISP_BACKLIGHT_12V_EN, brightness ? 1 : 0);
@@ -725,12 +725,12 @@ int mx6_oc_bl_notify(struct device *dev, int brightness)
 }
 
 /* PWM4_PWMO: backlight control on LDB connector */
-static struct platform_pwm_backlight_data mx6_oc_pwm4_backlight_data = {
+static struct platform_pwm_backlight_data mx6_pwm4_backlight_data = {
 	.pwm_id = 3,	/* pin SD1_CMD - PWM4 */
 	.max_brightness = 256,
 	.dft_brightness = 128,
 	.pwm_period_ns = 50000,
-	.notify = mx6_oc_bl_notify,
+	.notify = mx6_bl_notify,
 };
 
 static struct mxc_dvfs_platform_data oc_dvfscore_data = {
@@ -803,18 +803,18 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 /*!
  * Board specific initialization.
  */
-static void __init mx6_oc_board_init(void)
+static void __init mx6_board_init(void)
 {
 	int i, j;
 	struct clk *clko2;
 	struct clk *new_parent;
 	int rate;
-	int ret = gpio_request_array(mx6_oc_init_gpios,
-			ARRAY_SIZE(mx6_oc_init_gpios));
+	int ret = gpio_request_array(mx6_init_gpios,
+			ARRAY_SIZE(mx6_init_gpios));
 
 	if (ret) {
 		printk(KERN_ERR "%s gpio_request_array failed("
-				"%d) for mx6_oc_init_gpios\n", __func__, ret);
+				"%d) for mx6_init_gpios\n", __func__, ret);
 	}
 	IOMUX_SETUP(common_pads);
 
@@ -849,9 +849,9 @@ static void __init mx6_oc_board_init(void)
 	imx6q_add_v4l2_output(0);
 	imx6q_add_imx_snvs_rtc();
 
-	imx6q_add_imx_i2c(0, &mx6_oc_i2c_data);
-	imx6q_add_imx_i2c(1, &mx6_oc_i2c_data);
-	imx6q_add_imx_i2c(2, &mx6_oc_i2c_data);
+	imx6q_add_imx_i2c(0, &mx6_i2c_data);
+	imx6q_add_imx_i2c(1, &mx6_i2c_data);
+	imx6q_add_imx_i2c(2, &mx6_i2c_data);
 	i2c_register_board_info(0, mxc_i2c0_board_info,
 			ARRAY_SIZE(mxc_i2c0_board_info));
 	i2c_register_board_info(1, mxc_i2c1_board_info,
@@ -860,17 +860,17 @@ static void __init mx6_oc_board_init(void)
 			ARRAY_SIZE(mxc_i2c2_board_info));
 
 	/* SPI */
-	imx6q_add_ecspi(0, &mx6_oc_spi_data);
+	imx6q_add_ecspi(0, &mx6_spi_data);
 	spi_device_init();
 
 	imx6q_add_mxc_hdmi(&hdmi_data);
 
-	imx6q_add_anatop_thermal_imx(1, &mx6_oc_anatop_thermal_data);
+	imx6q_add_anatop_thermal_imx(1, &mx6_anatop_thermal_data);
 	imx6_init_fec(fec_data);
-	imx6q_add_pm_imx(0, &mx6_oc_pm_data);
-	imx6q_add_sdhci_usdhc_imx(2, &mx6_oc_sd3_data);
+	imx6q_add_pm_imx(0, &mx6_pm_data);
+	imx6q_add_sdhci_usdhc_imx(2, &mx6_sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
-	imx6_oc_init_usb();
+	imx6_init_usb();
 	imx6q_add_vpu();
 	imx6_init_audio();
 	platform_device_register(&oc_vmmc_reg_devices);
@@ -883,7 +883,7 @@ static void __init mx6_oc_board_init(void)
 
 	imx6q_add_mxc_pwm(3);
 
-	imx6q_add_mxc_pwm_backlight(3, &mx6_oc_pwm4_backlight_data);
+	imx6q_add_mxc_pwm_backlight(3, &mx6_pwm4_backlight_data);
 
 	imx6q_add_otp();
 	imx6q_add_viim();
@@ -913,8 +913,8 @@ static void __init mx6_oc_board_init(void)
 	}
 	imx6q_add_busfreq();
 
-	imx6q_add_sdhci_usdhc_imx(1, &mx6_oc_sd2_data);
-	platform_device_register(&mx6_oc_vwifi_reg_devices);
+	imx6q_add_sdhci_usdhc_imx(1, &mx6_sd2_data);
+	platform_device_register(&mx6_vwifi_reg_devices);
 
 	gpio_set_value(WL_EN, 1);		/* momentarily enable */
 	gpio_set_value(WL_BT_REG_EN, 1);
@@ -933,7 +933,7 @@ static void __init mx6_oc_board_init(void)
 }
 
 extern void __iomem *twd_base;
-static void __init mx6_oc_timer_init(void)
+static void __init mx6_timer_init(void)
 {
 	struct clk *uart_clk;
 #ifdef CONFIG_LOCAL_TIMERS
@@ -946,11 +946,11 @@ static void __init mx6_oc_timer_init(void)
 	early_console_setup(UART2_BASE_ADDR, uart_clk);
 }
 
-static struct sys_timer mx6_oc_timer = {
-	.init   = mx6_oc_timer_init,
+static struct sys_timer mx6_timer = {
+	.init   = mx6_timer_init,
 };
 
-static void __init mx6_oc_reserve(void)
+static void __init mx6_reserve(void)
 {
 #if defined(CONFIG_MXC_GPU_VIV) || defined(CONFIG_MXC_GPU_VIV_MODULE)
 	phys_addr_t phys;
@@ -972,7 +972,7 @@ MACHINE_START(MX6_NIT6XLITE, "Boundary Devices Nit6xLite Board")
 	.fixup = fixup_mxc_board,
 	.map_io = mx6_map_io,
 	.init_irq = mx6_init_irq,
-	.init_machine = mx6_oc_board_init,
-	.timer = &mx6_oc_timer,
-	.reserve = mx6_oc_reserve,
+	.init_machine = mx6_board_init,
+	.timer = &mx6_timer,
+	.reserve = mx6_reserve,
 MACHINE_END
