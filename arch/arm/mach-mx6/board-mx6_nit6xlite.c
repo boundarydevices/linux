@@ -444,7 +444,6 @@ static void __init imx6_init_usb(void)
 	mxc_iomux_set_gpr_register(1, 13, 1, 0);
 
 	mx6_set_otghost_vbus_func(imx6_usbotg_vbus);
-	mx6_usb_dr_init();
 }
 
 static struct viv_gpu_platform_data imx6_gpu_pdata __initdata = {
