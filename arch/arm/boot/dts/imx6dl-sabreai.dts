@@ -40,7 +40,7 @@
 			ethernet@02188000 {
 				phy-mode = "rgmii";
 				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_enet_1 &pinctrl_enet_2>;
+				pinctrl-0 = <&pinctrl_enet_2>;
 				status = "okay";
 			};
 

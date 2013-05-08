@@ -9,56 +9,62 @@
 
 /dts-v1/;
 /include/ "imx6dl.dtsi"
+/include/ "imx6qdl-sabresd.dtsi"
 
 / {
 	model = "Freescale i.MX6 DualLite SABRE Smart Device Board";
 	compatible = "fsl,imx6dl-sabresd", "fsl,imx6dl";
 
-	memory {
-		reg = <0x10000000 0x40000000>;
-	};
-
 	soc {
 		aips-bus@02000000 { /* AIPS1 */
-			spba-bus@02000000 {
-				uart1: serial@02020000 {
-					pinctrl-names = "default";
-					pinctrl-0 = <&pinctrl_uart1_1>;
-					status = "okay";
+			iomuxc@020e0000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_hog>;
+
+				hog {
+					pinctrl_hog: hoggrp {
+						fsl,pins = <
+							1286	0x80000000 /* MX6SDL_PAD_NANDF_D0__GPIO_2_0 */
+							1293	0x80000000 /* MX6SDL_PAD_NANDF_D1__GPIO_2_1 */
+							1300	0x80000000 /* MX6SDL_PAD_NANDF_D2__GPIO_2_2 */
+							1307	0x80000000 /* MX6SDL_PAD_NANDF_D3__GPIO_2_3 */
+							1243	0x80000000 /* MX6SDL_PAD_NANDF_ALE__GPIO_6_8 */
+							1250	0x80000000 /* MX6SDL_PAD_NANDF_CLE__GPIO_6_7 */
+							705	0x80000000 /* MX6SDL_PAD_EIM_D26__GPIO_3_26 */
+							603	0x80000000 /* MX6SDL_PAD_EIM_CS1__GPIO_2_24 */
+							997	0x80000000 /* MX6SDL_PAD_ENET_RXD0__GPIO_1_27 */
+							582	0x80000000 /* MX6SDL_PAD_EIM_A25__GPIO_5_2 */
+							675	0x80000000 /* MX6SDL_PAD_EIM_D23__GPIO_3_23 */
+							1031	0x80000000 /* MX6SDL_PAD_GPIO_1__WDOG2_WDOG_B */
+							1341	0x80000000 /* MX6SDL_PAD_NANDF_RB0__GPIO_6_10 */
+							1200	0x80000000 /* MX6SDL_PAD_KEY_ROW1__GPIO_4_9 */
+							1165	0x80000000 /* MX6SDL_PAD_KEY_COL2__GPIO_4_10 */
+							1582	0x80000000 /* MX6SDL_PAD_SD3_RST__GPIO_7_8 */
+							1133	0x80000000 /* MX6SDL_PAD_GPIO_9__GPIO_1_9 */
+							1426	0x80000000 /* MX6SDL_PAD_SD1_DAT0__GPIO_1_16 */
+							1433	0x80000000 /* MX6SDL_PAD_SD1_DAT1__GPIO_1_17 */
+							1440	0x80000000 /* MX6SDL_PAD_SD1_DAT2__GPIO_1_19 */
+							1415	0x80000000 /* MX6SDL_PAD_SD1_CLK__GPIO_1_20 */
+							1023	0x130b0	   /* MX6SDL_PAD_GPIO_0__CCM_CLKO */
+							1090	0x80000000 /* MX6SDL_PAD_GPIO_4__GPIO_1_4 */
+							1098	0x80000000 /* MX6SDL_PAD_GPIO_5__GPIO_1_5 */
+							734	0x80000000 /* MX6SDL_PAD_EIM_D29__GPIO_3_29 */
+						>;
+					};
 				};
 			};
 		};
 
-		aips-bus@02100000 { /* AIPS2 */
-			ethernet@02188000 {
-				phy-mode = "rgmii";
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_enet_3 &pinctrl_enet_2>;
-				status = "okay";
-			};
+		ahci@02200000 { /* AHCI SATA */
+			status = "disabled";
+		};
 
-			usdhc@02194000 { /* uSDHC2 */
-				cd-gpios = <&gpio2 2 0>;
-				wp-gpios = <&gpio2 3 0>;
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_usdhc2_1>;
-				status = "okay";
-			};
+		ipu@02400000 { /* IPU1 */
+			status = "disabled";
+		};
 
-			usdhc@02198000 { /* uSDHC3 */
-				cd-gpios = <&gpio2 0 0>;
-				wp-gpios = <&gpio2 1 0>;
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_usdhc3_1>;
-				status = "okay";
-			};
-
-			usdhc@0219c000 { /* uSDHC4 */
-				non-removable;
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_usdhc4_1>;
-				status = "okay";
-			};
+		ipu@02800000 { /* IPU2 */
+			status = "disabled";
 		};
 	};
 };

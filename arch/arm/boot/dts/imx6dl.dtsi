@@ -167,16 +167,53 @@
 				reg = <0x020e0000 0x4000>;
 
 				/* shared pinctrl settings */
+				audmux {
+					pinctrl_audmux_2: audmux-2 {
+						fsl,pins = <
+							118	0x80000000	/* MX6SDL_PAD_CSI0_DAT7__AUDMUX_AUD3_RXD */
+							94	0x80000000	/* MX6SDL_PAD_CSI0_DAT4__AUDMUX_AUD3_TXC */
+							102	0x80000000	/* MX6SDL_PAD_CSI0_DAT5__AUDMUX_AUD3_TXD */
+							110	0x80000000	/* MX6SDL_PAD_CSI0_DAT6__AUDMUX_AUD3_TXFS */
+						>;
+					};
+				};
+
+				ecspi1 {
+					pinctrl_ecspi1_2: ecspi1cr-1 {
+						fsl,pins = <
+							1151	0x100b1	/* MX6SDL_PAD_KEY_COL1__ECSPI1_MISO */
+							1185	0x100b1	/* MX6SDL_PAD_KEY_ROW0__ECSPI1_MOSI */
+							1142	0x100b1	/* MX6SDL_PAD_KEY_COL0__ECSPI1_SCLK */
+						>;
+					};
+				};
+
 				enet {
 					pinctrl_enet_1: enetgrp-1 {
 						fsl,pins = <
-							1152 0x1b0b0	/* MX6SDL_PAD_KEY_COL1__ENET_MDIO */
-							1164 0x1b0b0	/* MX6SDL_PAD_KEY_COL2__ENET_MDC */
+							973  0x1b0b0	/* MX6SDL_PAD_ENET_MDIO__ENET_MDIO */
+							968  0x1b0b0	/* MX6SDL_PAD_ENET_MDC__ENET_MDC */
+							1407 0x1b0b0	/* MX6SDL_PAD_RGMII_TXC__ENET_RGMII_TXC */
+							1383 0x1b0b0	/* MX6SDL_PAD_RGMII_TD0__ENET_RGMII_TD0 */
+							1387 0x1b0b0	/* MX6SDL_PAD_RGMII_TD1__ENET_RGMII_TD1 */
+							1392 0x1b0b0	/* MX6SDL_PAD_RGMII_TD2__ENET_RGMII_TD2 */
+							1397 0x1b0b0	/* MX6SDL_PAD_RGMII_TD3__ENET_RGMII_TD3 */
+							1402 0x1b0b0	/* MX6SDL_PAD_RGMII_TX_CTL__ENET_RGMII_TX_CTL */
+							979  0x1b0b0	/* MX6SDL_PAD_ENET_REF_CLK__ENET_TX_CLK */
+							1379 0x1b0b0	/* MX6SDL_PAD_RGMII_RXC__ENET_RGMII_RXC */
+							1357 0x1b0b0	/* MX6SDL_PAD_RGMII_RD0__ENET_RGMII_RD0 */
+							1361 0x1b0b0	/* MX6SDL_PAD_RGMII_RD1__ENET_RGMII_RD1 */
+							1366 0x1b0b0	/* MX6SDL_PAD_RGMII_RD2__ENET_RGMII_RD2 */
+							1370 0x1b0b0	/* MX6SDL_PAD_RGMII_RD3__ENET_RGMII_RD3 */
+							1374 0x1b0b0	/* MX6SDL_PAD_RGMII_RX_CTL__ENET_RGMII_RX_CTL */
+
 						>;
 					};
 
 					pinctrl_enet_2: enetgrp-2 {
 						fsl,pins = <
+							1152 0x1b0b0	/* MX6SDL_PAD_KEY_COL1__ENET_MDIO */
+							1164 0x1b0b0	/* MX6SDL_PAD_KEY_COL2__ENET_MDC */
 							1407 0x1b0b0	/* MX6SDL_PAD_RGMII_TXC__ENET_RGMII_TXC */
 							1383 0x1b0b0	/* MX6SDL_PAD_RGMII_TD0__ENET_RGMII_TD0 */
 							1387 0x1b0b0	/* MX6SDL_PAD_RGMII_TD1__ENET_RGMII_TD1 */
@@ -192,11 +229,93 @@
 							1374 0x1b0b0	/* MX6SDL_PAD_RGMII_RX_CTL__ENET_RGMII_RX_CTL */
 						>;
 					};
+				};
 
-					pinctrl_enet_3: enetgrp-3 {
+				i2c1 {
+					pinctrl_i2c1_2: i2c1grp-2 {
 						fsl,pins = <
-							973  0x1b0b0	/* MX6SDL_PAD_ENET_MDIO__ENET_MDIO */
-							968  0x1b0b0	/* MX6SDL_PAD_ENET_MDC__ENET_MDC */
+							126  0x4001b8b1	/* MX6SDL_PAD_CSI0_DAT8__I2C1_SDA */
+							134  0x4001b8b1 /* MX6SDL_PAD_CSI0_DAT9__I2C1_SCL */
+						>;
+					};
+				};
+
+				i2c2 {
+					pinctrl_i2c2_2: i2c2grp-2 {
+						fsl,pins = <
+							1215	0x4001b8b1 /* MX6SDL_PAD_KEY_ROW3__I2C2_SDA */
+							1172	0x4001b8b1 /* MX6SDL_PAD_KEY_COL3__I2C2_SCL */
+						>;
+					};
+				};
+
+				i2c3 {
+					pinctrl_i2c3_2: i2c3grp-2 {
+						fsl,pins = <
+							1079	0x4001b8b1  /* MX6SDL_PAD_GPIO_3__I2C3_SCL */
+							1103	0x4001b8b1  /* MX6SDL_PAD_GPIO_6__I2C3_SDA */
+						>;
+					};
+				};
+
+				ipu1 {
+					pinctrl_ipu1_1: ipu1grp-1 {
+						fsl,pins = <
+							165	0x10	/* MX6SDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK,		*/
+							173	0x10	/* MX6SDL_PAD_DI0_PIN15__IPU1_DI0_PIN15,	 DE 		*/
+							182	0x10	/* MX6SDL_PAD_DI0_PIN2__IPU1_DI0_PIN2,	 HSync 		*/
+							191	0x10	/* MX6SDL_PAD_DI0_PIN3__IPU1_DI0_PIN3,	 VSync 		*/
+							200	0x80000000	/* MX6SDL_PAD_DI0_PIN4__IPU1_DI0_PIN4,	 Contrast 	*/
+							209	0x10	/* MX6SDL_PAD_DISP0_DAT0__IPU1_DISP0_DAT_0,		*/
+							217	0x10	/* MX6SDL_PAD_DISP0_DAT1__IPU1_DISP0_DAT_1,		*/
+							299	0x10	/* MX6SDL_PAD_DISP0_DAT2__IPU1_DISP0_DAT_2,		*/
+							339	0x10	/* MX6SDL_PAD_DISP0_DAT3__IPU1_DISP0_DAT_3,		*/
+							347	0x10	/* MX6SDL_PAD_DISP0_DAT4__IPU1_DISP0_DAT_4,		*/
+							355	0x10	/* MX6SDL_PAD_DISP0_DAT5__IPU1_DISP0_DAT_5,		*/
+							363	0x10	/* MX6SDL_PAD_DISP0_DAT6__IPU1_DISP0_DAT_6,		*/
+							371	0x10	/* MX6SDL_PAD_DISP0_DAT7__IPU1_DISP0_DAT_7,		*/
+							379	0x10	/* MX6SDL_PAD_DISP0_DAT8__IPU1_DISP0_DAT_8,		*/
+							387	0x10	/* MX6SDL_PAD_DISP0_DAT9__IPU1_DISP0_DAT_9,		*/
+							225	0x10	/* MX6SDL_PAD_DISP0_DAT10__IPU1_DISP0_DAT_10,		*/
+							232	0x10	/* MX6SDL_PAD_DISP0_DAT11__IPU1_DISP0_DAT_11,		*/
+							239	0x10	/* MX6SDL_PAD_DISP0_DAT12__IPU1_DISP0_DAT_12,		*/
+							245	0x10	/* MX6SDL_PAD_DISP0_DAT13__IPU1_DISP0_DAT_13,		*/
+							252	0x10	/* MX6SDL_PAD_DISP0_DAT14__IPU1_DISP0_DAT_14,		*/
+							259	0x10	/* MX6SDL_PAD_DISP0_DAT15__IPU1_DISP0_DAT_15,		*/
+							267	0x10	/* MX6SDL_PAD_DISP0_DAT16__IPU1_DISP0_DAT_16,		*/
+							275	0x10	/* MX6SDL_PAD_DISP0_DAT17__IPU1_DISP0_DAT_17,		*/
+							283	0x10	/* MX6SDL_PAD_DISP0_DAT18__IPU1_DISP0_DAT_18,		*/
+							291	0x10	/* MX6SDL_PAD_DISP0_DAT19__IPU1_DISP0_DAT_19,		*/
+							307	0x10	/* MX6SDL_PAD_DISP0_DAT20__IPU1_DISP0_DAT_20,		*/
+							315	0x10	/* MX6SDL_PAD_DISP0_DAT21__IPU1_DISP0_DAT_21,		*/
+							323	0x10	/* MX6SDL_PAD_DISP0_DAT22__IPU1_DISP0_DAT_22,		*/
+							331	0x10	/* MX6SDL_PAD_DISP0_DAT23__IPU1_DISP0_DAT_23,		*/
+						>;
+					};
+
+					pinctrl_ipu1_csi0_1: ipu1csi0grp-1 { /* parallel port */
+						fsl,pins = <
+							18	0x80000000	/* MX6SDL_PAD_CSI0_DAT12__IPU1_CSI0_D_12 */
+							27	0x80000000	/* MX6SDL_PAD_CSI0_DAT13__IPU1_CSI0_D_13 */
+							36	0x80000000	/* MX6SDL_PAD_CSI0_DAT14__IPU1_CSI0_D_14 */
+							45	0x80000000	/* MX6SDL_PAD_CSI0_DAT15__IPU1_CSI0_D_15 */
+							54	0x80000000	/* MX6SDL_PAD_CSI0_DAT16__IPU1_CSI0_D_16 */
+							63	0x80000000	/* MX6SDL_PAD_CSI0_DAT17__IPU1_CSI0_D_17 */
+							72	0x80000000	/* MX6SDL_PAD_CSI0_DAT18__IPU1_CSI0_D_18 */
+							81	0x80000000	/* MX6SDL_PAD_CSI0_DAT19__IPU1_CSI0_D_19 */
+							138	0x80000000	/* MX6SDL_PAD_CSI0_DATA_EN__IPU1_CSI0_DATA_EN */
+							152	0x80000000	/* MX6SDL_PAD_CSI0_PIXCLK__IPU1_CSI0_PIXCLK */
+							145	0x80000000	/* MX6SDL_PAD_CSI0_MCLK__IPU1_CSI0_HSYNC */
+							158	0x80000000	/* MX6SDL_PAD_CSI0_VSYNC__IPU1_CSI0_VSYNC */
+						>;
+					};
+				};
+
+
+				pwm0 {
+					pinctrl_pwm0_0: pwm0-1 {
+						fsl,pins = <
+							1445 0x1b0b1     /* MX6SDL_PAD_SD1_DAT3__PWM1_PWMO */
 						>;
 					};
 				};
@@ -213,6 +332,14 @@
 						fsl,pins = <
 							1146 0x1b0b1	/* MX6SDL_PAD_KEY_COL0__UART4_TXD */
 							1190 0x1b0b1	/* MX6SDL_PAD_KEY_ROW0__UART4_RXD */
+						>;
+					};
+				};
+
+				usbotg {
+					pinctrl_usbotg_2: usbotggrp-2 {
+						fsl,pins = <
+							985  0x17059	/* MX6SDL_PAD_ENET_RX_ER__ANATOP_USBOTG_ID */
 						>;
 					};
 				};
