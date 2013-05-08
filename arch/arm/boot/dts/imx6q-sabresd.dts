@@ -17,4 +17,45 @@
 / {
 	model = "Freescale i.MX6Q SABRE Smart Device Board";
 	compatible = "fsl,imx6q-sabresd", "fsl,imx6q";
+
+	soc {
+		aips-bus@02000000 { /* AIPS1 */
+			iomuxc@020e0000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_hog>;
+
+				hog {
+					pinctrl_hog: hoggrp {
+						fsl,pins = <
+							1402 0x80000000	/* MX6Q_PAD_NANDF_D0__GPIO_2_0 */
+							1410 0x80000000	/* MX6Q_PAD_NANDF_D1__GPIO_2_1 */
+							1418 0x80000000	/* MX6Q_PAD_NANDF_D2__GPIO_2_2 */
+							1426 0x80000000	/* MX6Q_PAD_NANDF_D3__GPIO_2_3 */
+							1341 0x80000000 /* MX6Q_PAD_NANDF_ALE__GPIO_6_8 */
+							1333 0x80000000 /* MX6Q_PAD_NANDF_CLE__GPIO_6_7 */
+							184 0x80000000 /* MX6Q_PAD_EIM_D26__GPIO_3_26 */
+							305 0x80000000 /* MX6Q_PAD_EIM_CS1__GPIO_2_24 */
+							733 0x80000000 /* MX6Q_PAD_ENET_RXD0__GPIO_1_27 */
+							82  0x80000000 /* MX6Q_PAD_EIM_A25__GPIO_5_2 */
+							152 0x80000000 /* MX6Q_PAD_EIM_D23__GPIO_3_23 */
+							961 0x80000000	/* MX6Q_PAD_GPIO_1__WDOG2_WDOG_B */
+							1357 0x80000000 /* MX6Q_PAD_NANDF_RB0__GPIO_6_10 */
+							902 0x80000000 /* MX6Q_PAD_KEY_ROW1__GPIO_4_9 */
+							910  0x80000000	/* MX6Q_PAD_KEY_COL2__GPIO_4_10 */
+							1325 0x80000000	/* MX6Q_PAD_SD3_RST__GPIO_7_8 */
+							972  0x80000000	/* MX6Q_PAD_GPIO_9__GPIO_1_9 */
+							1537 0x80000000 /* MX6Q_PAD_SD1_DAT0__GPIO_1_16 */
+							1529 0x80000000 /* MX6Q_PAD_SD1_DAT1__GPIO_1_17 */
+							1559 0x80000000	/* MX6Q_PAD_SD1_DAT2__GPIO_1_19 */
+							1566 0x80000000	/* MX6Q_PAD_SD1_CLK__GPIO_1_20 */
+							953 0x130b0  /* MX6Q_PAD_GPIO_0__CCM_CLKO */
+							1004 0x80000000 /* MX6Q_PAD_GPIO_4__GPIO_1_4 */
+							1012 0x80000000 /* MX6Q_PAD_GPIO_5__GPIO_1_5 */
+							207 0x80000000 /* MX6Q_PAD_EIM_D29__GPIO_3_29 */
+						>;
+					};
+				};
+			};
+		};
+	};
 };
