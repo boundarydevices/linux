@@ -132,6 +132,7 @@ static __inline__ void __arch_decomp_setup(unsigned long arch_id)
 	case MACH_TYPE_MX6_NITROGEN6X:
 #endif
 	case MACH_TYPE_MX6_OC:
+	case MACH_TYPE_MX6_H:
 		uart_base = MX6Q_UART2_BASE_ADDR;
 		break;
 	case MACH_TYPE_MX6Q_SABRESD:

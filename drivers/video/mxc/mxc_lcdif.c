@@ -48,6 +48,15 @@ static struct fb_videomode lcdif_modedb[] = {
 	 .sync = FB_SYNC_CLK_LAT_FALL,
 	 .vmode = FB_VMODE_NONINTERLACED,
 	 .flag = 0,},
+	{
+	/* 800x480 @ 57 Hz , pixel clk @ 27MHz */
+	"INNOLUX-WVGA", 57, 800, 480, 25000,
+	.left_margin = 45, .right_margin = 1056 - 1 - 45 - 800,
+	.upper_margin = 22, .lower_margin = 635 - 1 - 22 - 480,
+	.hsync_len = 1, .vsync_len = 1,
+	.sync = FB_SYNC_CLK_LAT_FALL,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,},
 };
 static int lcdif_modedb_sz = ARRAY_SIZE(lcdif_modedb);
 

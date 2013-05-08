@@ -568,6 +568,7 @@ int fsl_usb_host_init(struct platform_device *pdev)
 				USB_H1_CTRL &= ~UCTRL_OVER_CUR_POL;
 			else if (machine_is_mx6q_sabrelite()
 				|| machine_is_mx6_oc()
+				|| machine_is_mx6_h()
 				|| machine_is_mx6_nitrogen6x()
 				|| machine_is_mx6_nit6xlite())
 				USB_H1_CTRL |= UCTRL_OVER_CUR_POL;
@@ -882,6 +883,7 @@ int usbotg_init(struct platform_device *pdev)
 				USB_OTG_CTRL &= ~UCTRL_OVER_CUR_POL;
 			else if (machine_is_mx6q_sabrelite()
 				|| machine_is_mx6_oc()
+				|| machine_is_mx6_h()
 				|| machine_is_mx6_nitrogen6x()
 				|| machine_is_mx6_nit6xlite())
 				USB_OTG_CTRL |= UCTRL_OVER_CUR_POL;
