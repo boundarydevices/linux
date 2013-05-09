@@ -45,5 +45,6 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-sabreai.dtb \
 	imx6dl-sabresd.dtb \
 	imx6q-arm2.dtb \
+	imx6q-sabreai.dtb \
 	imx6q-sabrelite.dtb \
 	imx6q-sabresd.dtb \

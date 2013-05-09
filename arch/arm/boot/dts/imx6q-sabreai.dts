@@ -1,0 +1,35 @@
+/*
+ * Copyright 2013 Freescale Semiconductor, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ */
+
+/dts-v1/;
+/include/ "imx6q.dtsi"
+/include/ "imx6qdl-sabreai.dtsi"
+
+/ {
+	model = "Freescale i.MX6Q SABRE Automotive Infotainment Board";
+	compatible = "fsl,imx6q-sabreai", "fsl,imx6q";
+
+	soc {
+		aips-bus@02000000 { /* AIPS1 */
+			iomuxc@020e0000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_gpio_hog>;
+
+				gpios {
+					pinctrl_gpio_hog: gpiohog {
+						fsl,pins = <
+							/*RGMII Phy Interrupt */
+							1059 0x80000000 /* MX6Q_PAD_GPIO_19__GPIO_4_5 */
+						>;
+					};
+				};
+			};
+		};
+	};
+};
