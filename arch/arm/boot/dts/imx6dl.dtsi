@@ -151,10 +151,6 @@
 		iram_code_size = <0x1000>;
 	};
 
-	busfreq {
-		status = "disabled";
-	};
-
 	soc {
 		gpu@00130000 {
 			reg = <0x00130000 0x4000>, <0x00134000 0x4000>, <0x0 0x0>;
