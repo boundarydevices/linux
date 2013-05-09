@@ -320,14 +320,16 @@
 					};
 				};
 
-				uart4 {
+				uart1 {
 					pinctrl_uart1_1: uart1grp-1 {
 						fsl,pins = <
 							3    0x1b0b1	/* MX6SDL_PAD_CSI0_DAT10__UART1_TXD */
 							13   0x1b0b1	/* MX6SDL_PAD_CSI0_DAT11__UART1_RXD */
 						>;
 					};
+				};
 
+				uart4 {
 					pinctrl_uart4_1: uart4grp-1 {
 						fsl,pins = <
 							1146 0x1b0b1	/* MX6SDL_PAD_KEY_COL0__UART4_TXD */
