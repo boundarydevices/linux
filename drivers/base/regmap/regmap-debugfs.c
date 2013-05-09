@@ -266,6 +266,7 @@ static ssize_t regmap_map_write_file(struct file *file,
 	char *start = buf;
 	unsigned long reg, value;
 	struct regmap *map = file->private_data;
+	int ret;
 
 	buf_size = min(count, (sizeof(buf)-1));
 	if (copy_from_user(buf, user_buf, buf_size))
@@ -283,7 +284,9 @@ static ssize_t regmap_map_write_file(struct file *file,
 	/* Userspace has been fiddling around behind the kernel's back */
 	add_taint(TAINT_USER);
 
-	regmap_write(map, reg, value);
+	ret = regmap_write(map, reg, value);
+	if (ret < 0)
+		return ret;
 	return buf_size;
 }
 #else
