@@ -67,6 +67,7 @@ static void __iomem *ccm_base;
 extern void mx6_cpu_op_init(void);
 void __init imx6q_clock_map_io(void) { }
 
+
 void imx6q_set_cache_lpm_in_wait(bool enable)
 {
 	if (imx6q_revision() > IMX_CHIP_REVISION_1_1) {
@@ -512,6 +513,12 @@ int __init mx6q_clocks_init(void)
 	clk_register_clkdev(clk[pll5_video], "pll_video", NULL);
 	clk_register_clkdev(clk[ldb_di0], "ldb_di0", NULL);
 	clk_register_clkdev(clk[ldb_di1], "ldb_di1", NULL);
+	clk_register_clkdev(clk[gpu3d_core], "gpu3d_core", NULL);
+	clk_register_clkdev(clk[gpu3d_shader], "gpu3d_shader", NULL);
+	clk_register_clkdev(clk[gpu2d_core], "gpu2d_core", NULL);
+	clk_register_clkdev(clk[gpu2d_axi], "gpu2d_axi", NULL);
+	clk_register_clkdev(clk[openvg_axi], "openvg_axi", NULL);
+	clk_register_clkdev(clk[vpu_axi], "vpu_axi", NULL);
 
 	/*
 	 * The gpmi needs 100MHz frequency in the EDO/Sync mode,

@@ -161,6 +161,10 @@ extern void imx_pm_map_io(void);
 extern void imx6q_set_cache_lpm_in_wait(bool enable);
 extern void imx6q_disable_rbc(void);
 extern void imx6q_disable_wb(void);
+extern void imx_gpc_power_up_pu(bool flag);
+extern void imx_anatop_pu_vol(bool enable);
+extern int imx_anatop_pu_is_enabled(void);
+extern void imx_anatop_bypass_ldo(void);
 #ifdef CONFIG_PM
 extern void imx6q_pm_init(void);
 extern void imx51_pm_init(void);
