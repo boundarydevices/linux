@@ -28,17 +28,18 @@
 #include <linux/suspend.h>
 #include <linux/regulator/consumer.h>
 #include <linux/mfd/syscon.h>
-#include <linux/regmap.h>
 #include <linux/io.h>
 #include <mach/hardware.h>
 #include <mach/clock.h>
 #include <mach/busfreq.h>
+#include <mach/common.h>
 #include <asm/cpu.h>
 
 #define CLK32_FREQ	32768
 #define NANOSECOND	(1000 * 1000 * 1000)
 #define OCOTP_SPEED_BIT_OFFSET (16)
 #define SPEED_FUSE	(0x440)
+#define ANA_REG_CORE	0x140
 
 enum IMX_LDO_MODE {
 	LDO_MODE_DEFAULT = -1,
@@ -69,6 +70,7 @@ static u32 pre_suspend_rate;
 
 static int ldo_bypass_mode = LDO_MODE_DEFAULT;
 static int arm_max_freq = CPU_AT_DEFAULT;
+
 static int set_cpu_freq(int freq)
 {
 	int i;
@@ -112,7 +114,9 @@ static int set_cpu_freq(int freq)
 				return ret;
 			}
 		}
-		if (!IS_ERR(pu_regulator)) {
+
+		if (!IS_ERR(pu_regulator) && imx_anatop_pu_is_enabled()) {
+			/* set pu voltage if pu enabled */
 			ret = regulator_set_voltage(pu_regulator,
 				pu_volt, pu_volt);
 			if (ret < 0) {
@@ -120,6 +124,7 @@ static int set_cpu_freq(int freq)
 				return ret;
 			}
 		}
+
 		if (!IS_ERR(arm_regulator)) {
 			ret = regulator_set_voltage(arm_regulator,
 				cpu_volt, cpu_volt);
@@ -188,7 +193,9 @@ static int set_cpu_freq(int freq)
 				return ret;
 			}
 		}
-		if (!IS_ERR(pu_regulator)) {
+
+		if (!IS_ERR(pu_regulator) && imx_anatop_pu_is_enabled()) {
+			/* set pu voltage if pu enabled */
 			ret = regulator_set_voltage(pu_regulator,
 				pu_volt, pu_volt);
 			if (ret < 0) {
@@ -196,6 +203,7 @@ static int set_cpu_freq(int freq)
 				return ret;
 			}
 		}
+
 		/* release bus freq when cpufreq is lower to lowest setpoint */
 		if (freq == cpu_op_tbl[0].cpu_rate && request_bus_high) {
 			release_bus_freq(BUS_FREQ_HIGH);
@@ -617,18 +625,18 @@ static int __devinit cpufreq_probe(struct platform_device *pdev)
 	 */
 	if (ldo_bypass_mode == LDO_MODE_BYPASSED ||
 		arm_max_freq == CPU_AT_1_2GHz) {
-		arm_regulator = devm_regulator_get(&pdev->dev, "vddarm");
+		arm_regulator = devm_regulator_get(&pdev->dev, "VDDARM");
 		if (IS_ERR(arm_regulator)) {
 			pr_warning("failed to get external arm regulator\n");
 			return -ENODEV;
 		}
 
-		soc_regulator = devm_regulator_get(&pdev->dev, "vddsoc");
+		soc_regulator = devm_regulator_get(&pdev->dev, "VDDSOC");
 		if (IS_ERR(soc_regulator)) {
 			pr_warning("failed to get external soc regulator\n");
 			return -ENODEV;
 		}
-		pu_regulator = devm_regulator_get(&pdev->dev, "vddpu");
+		pu_regulator = devm_regulator_get(&pdev->dev, "VDDPU");
 		if (IS_ERR(pu_regulator))
 			pr_warning("failed to get external pu regulator\n");
 	}
@@ -678,8 +686,6 @@ static int __devinit cpufreq_probe(struct platform_device *pdev)
 			return PTR_ERR(pu_regulator);
 		}
 	} else {
-		struct regmap *anatop;
-
 		pr_info("bypass internal regulator!\n");
 		/*
 		 * For chip boot on 800Mhz, decrease VDDARM_IN/VDDSOC_IN
@@ -702,16 +708,8 @@ static int __devinit cpufreq_probe(struct platform_device *pdev)
 			}
 		}
 
-		anatop = syscon_regmap_lookup_by_compatible("fsl,imx6q-anatop");
-		if (!IS_ERR(anatop)) {
-			/* digital bypass VDDPU/VDDSOC/VDDARM */
-			regmap_update_bits(anatop, 0x140, 0x7c3e1f, 0x7c3e1f);
-		} else {
-			ret = PTR_ERR(anatop);
-			pr_warn("failed to find fsl,imx6q-anatop regmap\n");
-			return ret;
-		}
-
+		/* digital bypass VDDPU/VDDSOC/VDDARM */
+		imx_anatop_bypass_ldo();
 	}
 
 	pll1_sys = devm_clk_get(&pdev->dev, "pll1_sys");
