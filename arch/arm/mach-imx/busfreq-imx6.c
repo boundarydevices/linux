@@ -125,7 +125,7 @@ int reduce_bus_freq(void)
 		low_bus_freq_mode = 1;
 		audio_bus_freq_mode = 0;
 	}
-	if (med_bus_freq_mode)
+	if (high_bus_freq_mode && cpu_is_imx6dl())
 		clk_disable(pll2_400);
 
 	clk_disable(pll3);
@@ -187,7 +187,12 @@ int set_high_bus_freq(int high_bus_freq)
 
 	if (busfreq_suspended)
 		return 0;
-	high_bus_freq = 1;
+
+	/* for high setpoint, i.MX6Q is 528MHz, i.MX6DL is 400MHz */
+	if (cpu_is_imx6q())
+		high_bus_freq = 1;
+	else
+		high_bus_freq = 0;
 
 	if (!bus_freq_scaling_initialized || !bus_freq_scaling_is_active)
 		return 0;
@@ -217,8 +222,6 @@ int set_high_bus_freq(int high_bus_freq)
 				__func__, __LINE__);
 		if (med_bus_freq_mode)
 			clk_disable(pll2_400);
-		high_bus_freq_mode = 1;
-		med_bus_freq_mode = 0;
 	} else {
 		clk_enable(pll2_400);
 		update_ddr_freq(ddr_med_rate);
@@ -235,12 +238,12 @@ int set_high_bus_freq(int high_bus_freq)
 		if (ret)
 			printk(KERN_WARNING "%s: %d: clk set parent fail!\n",
 				__func__, __LINE__);
-		high_bus_freq_mode = 0;
-		med_bus_freq_mode = 1;
 	}
 	if (audio_bus_freq_mode)
 		clk_disable(pll2_400);
 
+	high_bus_freq_mode = 1;
+	med_bus_freq_mode = 0;
 	low_bus_freq_mode = 0;
 	audio_bus_freq_mode = 0;
 
@@ -260,6 +263,7 @@ int set_high_bus_freq(int high_bus_freq)
 void request_bus_freq(enum bus_freq_mode mode)
 {
 	mutex_lock(&bus_freq_mutex);
+
 	if (mode == BUS_FREQ_HIGH)
 		high_bus_count++;
 	else if (mode == BUS_FREQ_MED)
@@ -299,6 +303,7 @@ EXPORT_SYMBOL(request_bus_freq);
 void release_bus_freq(enum bus_freq_mode mode)
 {
 	mutex_lock(&bus_freq_mutex);
+
 	if (mode == BUS_FREQ_HIGH) {
 		if (high_bus_count == 0) {
 			printk(KERN_ERR "high bus count mismatch!\n");
@@ -348,7 +353,6 @@ EXPORT_SYMBOL(release_bus_freq);
 static void bus_freq_daemon_handler(struct work_struct *work)
 {
 	mutex_lock(&bus_freq_mutex);
-	high_bus_count--;
 	if ((!low_bus_freq_mode) && (high_bus_count == 0) &&
 		(med_bus_count == 0) && (audio_bus_count == 0))
 		set_low_bus_freq(0);
@@ -396,6 +400,7 @@ static int bus_freq_pm_notify(struct notifier_block *nb, unsigned long event,
 		busfreq_suspended = 1;
 	} else if (event == PM_POST_SUSPEND) {
 		busfreq_suspended = 0;
+		high_bus_count--;
 		schedule_delayed_work(&bus_freq_daemon,
 			usecs_to_jiffies(5000000));
 	}
@@ -506,13 +511,18 @@ static int __devinit busfreq_probe(struct platform_device *pdev)
 	high_bus_freq_mode = 1;
 	med_bus_freq_mode = 0;
 	low_bus_freq_mode = 0;
+	audio_bus_freq_mode = 0;
 
 	bus_freq_scaling_is_active = 1;
 	bus_freq_scaling_initialized = 1;
 
 	ddr_low_rate = LPAPM_CLK;
 	ddr_med_rate = DDR_MED_CLK;
-	ddr_normal_rate = DDR3_NORMAL_CLK;
+
+	if (cpu_is_imx6q())
+		ddr_normal_rate = DDR3_NORMAL_CLK;
+	if (cpu_is_imx6dl())
+		ddr_normal_rate = DDR_MED_CLK;
 
 	INIT_DELAYED_WORK(&low_bus_freq_handler, reduce_bus_freq_handler);
 	INIT_DELAYED_WORK(&bus_freq_daemon, bus_freq_daemon_handler);

@@ -156,7 +156,6 @@ int can_change_ddr_freq(void)
 	return 1;
 }
 
-
 /*
  * each active core apart from the one changing
  * the DDR frequency will execute this function.
@@ -200,7 +199,7 @@ int update_ddr_freq(int ddr_rate)
 
 	iram_ddr_settings[0][0] = ddr_settings_size;
 	iram_iomux_settings[0][0] = iomux_settings_size;
-	if (ddr_rate == ddr_med_rate) {
+	if (ddr_rate == ddr_med_rate && cpu_is_imx6q()) {
 		for (i = 0; i < ARRAY_SIZE(ddr3_dll_mx6q); i++) {
 			iram_ddr_settings[i + 1][0] =
 					normal_mmdc_settings[i][0];
@@ -280,7 +279,11 @@ int init_mmdc_settings(void)
 	WARN(!mmdc_base, "unable to map mmdc registers\n");
 
 	node = NULL;
-	node = of_find_compatible_node(NULL, NULL, "fsl,imx6q-iomuxc");
+	if (cpu_is_imx6q())
+		node = of_find_compatible_node(NULL, NULL, "fsl,imx6q-iomuxc");
+	if (cpu_is_imx6dl())
+		node = of_find_compatible_node(NULL, NULL,
+			"fsl,imx6sdl-iomuxc");
 	if (!node) {
 		printk(KERN_ERR "%s: failed to find device tree data!\n",
 			__func__);
@@ -301,14 +304,26 @@ int init_mmdc_settings(void)
 	gic_cpu_base = of_iomap(node, 1);
 	WARN(!gic_cpu_base, "unable to map gic cpu registers\n");
 
-	ddr_settings_size = ARRAY_SIZE(ddr3_dll_mx6q) +
-		ARRAY_SIZE(ddr3_calibration);
+	if (cpu_is_imx6q())
+		ddr_settings_size = ARRAY_SIZE(ddr3_dll_mx6q) +
+			ARRAY_SIZE(ddr3_calibration);
+	if (cpu_is_imx6dl())
+		ddr_settings_size = ARRAY_SIZE(ddr3_dll_mx6dl) +
+			ARRAY_SIZE(ddr3_calibration);
 
 	normal_mmdc_settings = kmalloc((ddr_settings_size * 8), GFP_KERNEL);
-	memcpy(normal_mmdc_settings, ddr3_dll_mx6q, sizeof(ddr3_dll_mx6q));
-	memcpy(((char *)normal_mmdc_settings + sizeof(ddr3_dll_mx6q)),
-		ddr3_calibration, sizeof(ddr3_calibration));
-
+	if (cpu_is_imx6q()) {
+		memcpy(normal_mmdc_settings, ddr3_dll_mx6q,
+			sizeof(ddr3_dll_mx6q));
+		memcpy(((char *)normal_mmdc_settings + sizeof(ddr3_dll_mx6q)),
+			ddr3_calibration, sizeof(ddr3_calibration));
+	}
+	if (cpu_is_imx6dl()) {
+		memcpy(normal_mmdc_settings, ddr3_dll_mx6dl,
+			sizeof(ddr3_dll_mx6dl));
+		memcpy(((char *)normal_mmdc_settings + sizeof(ddr3_dll_mx6dl)),
+			ddr3_calibration, sizeof(ddr3_calibration));
+	}
 	/* store the original DDR settings at boot. */
 	for (i = 0; i < ddr_settings_size; i++) {
 		/*
@@ -318,7 +333,7 @@ int init_mmdc_settings(void)
 		 */
 		if (normal_mmdc_settings[i][0] != 0x1C)
 			normal_mmdc_settings[i][1] =
-				__raw_readl(mmdc_base
+				readl_relaxed(mmdc_base
 				+ normal_mmdc_settings[i][0]);
 	}
 
@@ -358,16 +373,28 @@ int init_mmdc_settings(void)
 			return ENOMEM;
 	}
 
-	/* store the IOMUX settings at boot. */
-	for (i = 0; i < iomux_settings_size; i++) {
-		iomux_offsets_mx6q[i][1] =
-			__raw_readl(iomux_base
-			+ iomux_offsets_mx6q[i][0]);
-		iram_iomux_settings[i+1][0] = iomux_offsets_mx6q[i][0];
-		iram_iomux_settings[i+1][1] = iomux_offsets_mx6q[i][1];
+	if (cpu_is_imx6q()) {
+		/* store the IOMUX settings at boot. */
+		for (i = 0; i < iomux_settings_size; i++) {
+			iomux_offsets_mx6q[i][1] =
+				readl_relaxed(iomux_base +
+					iomux_offsets_mx6q[i][0]);
+			iram_iomux_settings[i+1][0] = iomux_offsets_mx6q[i][0];
+			iram_iomux_settings[i+1][1] = iomux_offsets_mx6q[i][1];
+		}
+		irq_used = irqs_used_mx6q;
 	}
-	irq_used = irqs_used_mx6q;
 
+	if (cpu_is_imx6dl()) {
+		for (i = 0; i < iomux_settings_size; i++) {
+			iomux_offsets_mx6dl[i][1] =
+				readl_relaxed(iomux_base +
+					iomux_offsets_mx6dl[i][0]);
+			iram_iomux_settings[i+1][0] = iomux_offsets_mx6dl[i][0];
+			iram_iomux_settings[i+1][1] = iomux_offsets_mx6dl[i][1];
+		}
+		irq_used = irqs_used_mx6dl;
+	}
 	/* allocate IRAM for the DDR freq change code. */
 	of_property_read_u32(node, "iram_code_base", &iram_paddr);
 	of_property_read_u32(node, "iram_code_size", &iram_size);
