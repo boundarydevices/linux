@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007, 2010-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2007, 2010-2013 Freescale Semiconductor, Inc.
  * Copyright (C) 2008 Juergen Beisert (kernel@pengutronix.de)
  *
  * This program is free software; you can redistribute it and/or
@@ -35,6 +35,9 @@
 #define MXC_CPU_MX50		50
 #define MXC_CPU_MX51		51
 #define MXC_CPU_MX53		53
+#define MXC_CPU_MX6Q		63
+#define MXC_CPU_MX6DL		61
+#define MXC_CPU_MX6SL		60
 
 #define IMX_CHIP_REVISION_1_0		0x10
 #define IMX_CHIP_REVISION_1_1		0x11

@@ -66,12 +66,6 @@ enum {
 	PORT_PHY_CTL_PDDQ_LOC = 0x100000, /* PORT_PHY_CTL bits */
 };
 
-enum MX6_CPU_TYPE {
-	MXC_CPU_MX6Q = 1,
-	MXC_CPU_MX6DL =	2,
-	MXC_CPU_MX6SL =	3,
-};
-
 static phys_addr_t ggpu_phys;
 static u32 ggpu_size = SZ_128M;
 static int mx6_cpu_type;
@@ -905,10 +899,11 @@ static void __init imx6q_init_late(void)
 {
 	imx6q_flexcan_fixup();
 	/*
-	 * WAIT mode is broken on TO 1.0 and 1.1, and there is no point to
+	 * WAIT mode is broken on some TOs, and there is no point to
 	 * have cpuidle running on them.
 	 */
-	if (imx6q_revision() > IMX_CHIP_REVISION_1_1)
+	if (imx6q_revision() > IMX_CHIP_REVISION_1_1 ||
+		imx6dl_revision() > IMX_CHIP_REVISION_1_0)
 		imx6q_cpuidle_init();
 }
 
@@ -1097,6 +1092,17 @@ int cpu_is_imx6q(void)
 
 int imx6q_revision(void)
 {
+	if (!cpu_is_imx6q())
+		return -EINVAL;
+
+	return mx6_cpu_revision;
+}
+
+int imx6dl_revision(void)
+{
+	if (!cpu_is_imx6dl())
+		return -EINVAL;
+
 	return mx6_cpu_revision;
 }
 

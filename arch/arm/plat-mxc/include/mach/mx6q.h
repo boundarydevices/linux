@@ -61,6 +61,7 @@
 
 #ifndef __ASSEMBLY__
 extern int cpu_is_imx6dl(void);
+extern int imx6dl_revision(void);
 extern int cpu_is_imx6q(void);
 extern int imx6q_revision(void);
 #endif
