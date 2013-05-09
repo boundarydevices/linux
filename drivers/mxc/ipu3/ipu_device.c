@@ -682,6 +682,11 @@ static void dump_check_warn(struct device *dev, int warn)
 
 static int set_crop(struct ipu_crop *crop, int width, int height, int fmt)
 {
+	if ((width == 0) || (height == 0)) {
+		pr_err("Invalid param: width=%d, height=%d\n", width, height);
+		return -EINVAL;
+	}
+
 	if ((IPU_PIX_FMT_TILED_NV12 == fmt) ||
 		(IPU_PIX_FMT_TILED_NV12F == fmt)) {
 		if (crop->w || crop->h) {
@@ -719,6 +724,12 @@ static int set_crop(struct ipu_crop *crop, int width, int height, int fmt)
 		}
 		crop->w -= crop->w%8;
 		crop->h -= crop->h%8;
+	}
+
+	if ((crop->w == 0) || (crop->h == 0)) {
+		pr_err("Invalid crop param: crop.w=%d, crop.h=%d\n",
+			crop->w, crop->h);
+		return -EINVAL;
 	}
 
 	return 0;
