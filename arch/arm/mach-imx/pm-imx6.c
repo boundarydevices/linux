@@ -32,6 +32,8 @@ static struct clk *ocram_clk;
 static unsigned int iram_paddr, iram_size;
 static int (*suspend_in_iram_fn)(unsigned int *iram_vbase,
 	unsigned int *iram_pbase, unsigned int cpu_type);
+/* cpu_type: 63 -> DQ, 61 -> DL, 60 -> SL */
+static unsigned int cpu_type;
 
 static int imx6q_suspend_finish(unsigned long val)
 {
@@ -40,7 +42,7 @@ static int imx6q_suspend_finish(unsigned long val)
 	 * as we need to float DDR IO.
 	 */
 	suspend_in_iram_fn((unsigned int *)suspend_iram_base,
-		(unsigned int *)(iram_paddr), 0);
+		(unsigned int *)(iram_paddr), cpu_type);
 	return 0;
 }
 
@@ -171,4 +173,11 @@ void __init imx6q_pm_init(void)
 #endif
 
 	suspend_set_ops(&imx6q_pm_ops);
+	/* Set cpu_type for DSM */
+	if (cpu_is_imx6q())
+		cpu_type = MXC_CPU_MX6Q;
+	else if (cpu_is_imx6dl())
+		cpu_type = MXC_CPU_MX6DL;
+	else
+		cpu_type = MXC_CPU_MX6SL;
 }

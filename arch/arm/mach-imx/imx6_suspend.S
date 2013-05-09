@@ -36,6 +36,163 @@
 
 	.endm
 
+	.macro	dl_ddr_io_save
+
+	ldr	r4, [r8, #0x470] /* DRAM_DQM0 */
+	ldr	r5, [r8, #0x474] /* DRAM_DQM1 */
+	ldr	r6, [r8, #0x478] /* DRAM_DQM2 */
+	ldr	r7, [r8, #0x47c] /* DRAM_DQM3 */
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x480] /* DRAM_DQM4 */
+	ldr	r5, [r8, #0x484] /* DRAM_DQM5 */
+	ldr	r6, [r8, #0x488] /* DRAM_DQM6 */
+	ldr	r7, [r8, #0x48c] /* DRAM_DQM7 */
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x464] /* DRAM_CAS */
+	ldr	r5, [r8, #0x490] /* DRAM_RAS */
+	ldr	r6, [r8, #0x4ac] /* DRAM_SDCLK_0 */
+	ldr	r7, [r8, #0x4b0] /* DRAM_SDCLK_1 */
+	stmfd	r10!, {r4-r7}
+
+	ldr	r5, [r8, #0x750] /* DDRMODE_CTL */
+	ldr	r6, [r8, #0x760] /* DDRMODE */
+	stmfd	r10!, {r5-r6}
+
+	ldr	r4, [r8, #0x4bc] /* DRAM_SDQS0 */
+	ldr	r5, [r8, #0x4c0] /* DRAM_SDQS1 */
+	ldr	r6, [r8, #0x4c4] /* DRAM_SDQS2 */
+	ldr	r7, [r8, #0x4c8] /* DRAM_SDQS3 */
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x4cc] /* DRAM_SDQS4 */
+	ldr	r5, [r8, #0x4d0] /* DRAM_SDQS5 */
+	ldr	r6, [r8, #0x4d4] /* DRAM_SDQS6 */
+	ldr	r7, [r8, #0x4d8] /* DRAM_SDQS7 */
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x764] /* GPR_B0DS */
+	ldr	r5, [r8, #0x770] /* GPR_B1DS */
+	ldr	r6, [r8, #0x778] /* GPR_B2DS */
+	ldr	r7, [r8, #0x77c] /* GPR_B3DS */
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x780] /* GPR_B4DS */
+	ldr	r5, [r8, #0x784] /* GPR_B5DS */
+	ldr	r6, [r8, #0x78c] /* GPR_B6DS */
+	ldr	r7, [r8, #0x748] /* GPR_B7DS */
+	stmfd	r10!, {r4-r7}
+
+	ldr	r5, [r8, #0x74c] /* GPR_ADDS*/
+	ldr	r6, [r8, #0x4b4] /* DRAM_SODT0*/
+	ldr	r7, [r8, #0x4b8] /* DRAM_SODT1*/
+	stmfd	r10!, {r5-r7}
+
+	.endm
+
+	.macro	dl_ddr_io_restore
+
+	ldmea	r10!, {r4-r7}
+	str	r4, [r8, #0x470] /* DRAM_DQM0 */
+	str	r5, [r8, #0x474] /* DRAM_DQM1 */
+	str	r6, [r8, #0x478] /* DRAM_DQM2 */
+	str	r7, [r8, #0x47c] /* DRAM_DQM3 */
+
+	ldmea	r10!, {r4-r7}
+	str	r4, [r8, #0x480] /* DRAM_DQM4 */
+	str	r5, [r8, #0x484] /* DRAM_DQM5 */
+	str	r6, [r8, #0x488] /* DRAM_DQM6 */
+	str	r7, [r8, #0x48c] /* DRAM_DQM7 */
+
+	ldmea	r10!, {r4-r7}
+	str	r4, [r8, #0x464] /* DRAM_CAS */
+	str	r5, [r8, #0x490] /* DRAM_RAS */
+	str	r6, [r8, #0x4ac] /* DRAM_SDCLK_0 */
+	str	r7, [r8, #0x4b0] /* DRAM_SDCLK_1 */
+
+	ldmea	r10!, {r5-r6}
+	str	r5, [r8, #0x750] /* DDRMODE_CTL */
+	str	r6, [r8, #0x760] /* DDRMODE */
+
+	ldmea	r10!, {r4-r7}
+	str	r4, [r8, #0x4bc] /* DRAM_SDQS0 */
+	str	r5, [r8, #0x4c0] /* DRAM_SDQS1 */
+	str	r6, [r8, #0x4c4] /* DRAM_SDQS2 */
+	str	r7, [r8, #0x4c8] /* DRAM_SDQS3 */
+
+	ldmea	r10!, {r4-r7}
+	str	r4, [r8, #0x4cc] /* DRAM_SDQS4 */
+	str	r5, [r8, #0x4d0] /* DRAM_SDQS5 */
+	str	r6, [r8, #0x4d4] /* DRAM_SDQS6 */
+	str	r7, [r8, #0x4d8] /* DRAM_SDQS7 */
+
+	ldmea	r10!, {r4-r7}
+	str	r4, [r8, #0x764] /* GPR_B0DS */
+	str	r5, [r8, #0x770] /* GPR_B1DS */
+	str	r6, [r8, #0x778] /* GPR_B2DS */
+	str	r7, [r8, #0x77c] /* GPR_B3DS */
+
+	ldmea	r10!, {r4-r7}
+	str	r4, [r8, #0x780] /* GPR_B4DS */
+	str	r5, [r8, #0x784] /* GPR_B5DS */
+	str	r6, [r8, #0x78c] /* GPR_B6DS */
+	str	r7, [r8, #0x748] /* GPR_B7DS */
+
+	ldmea	r10!, {r5-r7}
+	str	r5, [r8, #0x74c] /* GPR_ADDS*/
+	str	r6, [r8, #0x4b4] /* DRAM_SODT0*/
+	str	r7, [r8, #0x4b8] /* DRAM_SODT1*/
+
+	.endm
+
+	.macro	dl_ddr_io_set_lpm
+
+	mov	r10, #0
+	str	r10, [r8, #0x470] /* DRAM_DQM0 */
+	str	r10, [r8, #0x474] /* DRAM_DQM1 */
+	str	r10, [r8, #0x478] /* DRAM_DQM2 */
+	str	r10, [r8, #0x47c] /* DRAM_DQM3 */
+
+	str	r10, [r8, #0x480] /* DRAM_DQM4 */
+	str	r10, [r8, #0x484] /* DRAM_DQM5 */
+	str	r10, [r8, #0x488] /* DRAM_DQM6 */
+	str	r10, [r8, #0x48c] /* DRAM_DQM7 */
+
+	str	r10, [r8, #0x464] /* DRAM_CAS */
+	str	r10, [r8, #0x490] /* DRAM_RAS */
+	str	r10, [r8, #0x4ac] /* DRAM_SDCLK_0 */
+	str	r10, [r8, #0x4b0] /* DRAM_SDCLK_1 */
+
+	str	r10, [r8, #0x750] /* DDRMODE_CTL */
+	str	r10, [r8, #0x760] /* DDRMODE */
+
+	str	r10, [r8, #0x4bc] /* DRAM_SDQS0 */
+	str	r10, [r8, #0x4c0] /* DRAM_SDQS1 */
+	str	r10, [r8, #0x4c4] /* DRAM_SDQS2 */
+	str	r10, [r8, #0x4c8] /* DRAM_SDQS3 */
+
+	str	r10, [r8, #0x4cc] /* DRAM_SDQS4 */
+	str	r10, [r8, #0x4d0] /* DRAM_SDQS5 */
+	str	r10, [r8, #0x4d4] /* DRAM_SDQS6 */
+	str	r10, [r8, #0x4d8] /* DRAM_SDQS7 */
+
+	str	r10, [r8, #0x764] /* GPR_B0DS */
+	str	r10, [r8, #0x770] /* GPR_B1DS */
+	str	r10, [r8, #0x778] /* GPR_B2DS */
+	str	r10, [r8, #0x77c] /* GPR_B3DS */
+
+	str	r10, [r8, #0x780] /* GPR_B4DS */
+	str	r10, [r8, #0x784] /* GPR_B5DS */
+	str	r10, [r8, #0x78c] /* GPR_B6DS */
+	str	r10, [r8, #0x748] /* GPR_B7DS */
+
+	str	r10, [r8, #0x74c] /* GPR_ADDS*/
+	str	r10, [r8, #0x4b4] /* DRAM_SODT0*/
+	str	r10, [r8, #0x4b8] /* DRAM_SODT1*/
+
+	.endm
+
 	.macro	dq_ddr_io_save
 
 	ldr	r4, [r8, #0x5ac] /* DRAM_DQM0 */
@@ -252,6 +409,9 @@ ENTRY(imx_suspend)
 	add	r10, r0, #0x1000
 	stmfd	r10!, {r5}
 
+	/* save cpu type */
+	stmfd	r10!, {r2}
+
 	str	r9, [r8, #0x20]
 	add	r3, r1, #0x1000
 	str	r3, [r8, #0x24]
@@ -259,7 +419,13 @@ ENTRY(imx_suspend)
 	ldr	r8, =MX6Q_IOMUXC_BASE_ADDR
 	phy2virt
 
+	cmp	r2, #MXC_CPU_MX6Q
+	bne	dl_io_dsm_save
 	dq_ddr_io_save
+	b	ddr_io_save_dsm_done
+dl_io_dsm_save:
+	dl_ddr_io_save
+ddr_io_save_dsm_done:
 
 	/* need to sync L2 cache before DSM. */
 	sync_l2_cache
@@ -288,7 +454,14 @@ poll_dvfs_set_1:
 
 	ldr	r8, =MX6Q_IOMUXC_BASE_ADDR
 	phy2virt
+
+	cmp	r2, #MXC_CPU_MX6Q
+	bne	dl_io_dsm_set_lpm
 	dq_ddr_io_set_lpm
+	b	ddr_io_set_lpm_dsm_done
+dl_io_dsm_set_lpm:
+	dl_ddr_io_set_lpm
+ddr_io_set_lpm_dsm_done:
 
 	/*
 	 * mask all GPC interrupts before
@@ -400,10 +573,19 @@ ldo_check_done2:
 	add	r10, r0, #0x1000
 	/* skip the lr saved in iram */
 	sub	r10, r10, #0x4
+	/* skip the cpu type saved in iram */
+	sub	r10, r10, #0x4
 
 	ldr	r8, =MX6Q_IOMUXC_BASE_ADDR
 	phy2virt
+
+	cmp	r2, #MXC_CPU_MX6Q
+	bne	dl_io_restore
 	dq_ddr_io_restore
+	b	ddr_io_restore_done
+dl_io_restore:
+	dl_ddr_io_restore
+ddr_io_restore_done:
 
 	ldr	r8, =MX6Q_MMDC_P0_BASE_ADDR
 	phy2virt
@@ -450,6 +632,9 @@ ldo_check_done3:
 	ldr	r10, [r5, #0x24]
 	ldmea	r10!, {lr}
 
+	/* get cpu tpye */
+	ldmea	r10!, {r2}
+
 	/* clear core0's entry and parameter */
 	ldr	r8, =MX6Q_SRC_BASE_ADDR
 	mov	r7, #0
@@ -457,7 +642,14 @@ ldo_check_done3:
 	str	r7, [r8, #0x24]
 
 	ldr	r8, =MX6Q_IOMUXC_BASE_ADDR
+
+	cmp	r2, #MXC_CPU_MX6Q
+	bne	dl_io_dsm_restore
 	dq_ddr_io_restore
+	b	ddr_io_restore_dsm_done
+dl_io_dsm_restore:
+	dl_ddr_io_restore
+ddr_io_restore_dsm_done:
 
 	ldr	r8, =MX6Q_MMDC_P0_BASE_ADDR
 	/* let DDR out of self-refresh */
