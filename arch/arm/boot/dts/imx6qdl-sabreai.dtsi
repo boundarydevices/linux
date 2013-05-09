@@ -1,0 +1,56 @@
+/*
+ * Copyright 2013 Freescale Semiconductor, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ */
+
+/ {
+	memory {
+		reg = <0x10000000 0x40000000>;
+	};
+
+	soc {
+		aips-bus@02000000 { /* AIPS1 */
+			iomuxc@020e0000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_gpio_hog>;
+
+				gpios {
+					pinctrl_gpio_hog: gpiohog {
+						fsl,pins = <
+							/*RGMII Phy Interrupt */
+							1066 0x80000000 /* MX6SDL_PAD_GPIO_19__GPIO_4_5 */
+						>;
+					};
+				};
+			};
+		};
+
+
+		aips2: aips-bus@02100000 {
+			ethernet@02188000 {
+				phy-mode = "rgmii";
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_enet_2>;
+				status = "okay";
+			};
+
+			usdhc3: usdhc@02198000 {
+				cd-gpios = <&gpio6 15 0>;
+				wp-gpios = <&gpio1 13 0>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_usdhc3_1>;
+				status = "okay";
+			};
+
+			uart4: serial@021f0000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_uart4_1>;
+				status = "okay";
+			};
+		};
+	};
+};
