@@ -420,8 +420,8 @@
 			 * 0:enable internal regulator
 			 */
 			bypass-mode = <1>;
-			vddarm-supply = <&sw1a_reg>;
-			vddsoc-supply = <&sw1c_reg>;
+			VDDARM-supply = <&sw1a_reg>;
+			VDDSOC-supply = <&sw1c_reg>;
 	};
 
 	gpio-keys {
