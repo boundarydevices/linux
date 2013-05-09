@@ -123,7 +123,9 @@ static int vpu_jpu_irq;
 #endif
 
 static unsigned int regBk[64];
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
 static struct regulator *vpu_regulator;
+#endif
 static unsigned int pc_before_suspend;
 static atomic_t clk_cnt_from_ioc = ATOMIC_INIT(0);
 
@@ -283,8 +285,12 @@ static int vpu_open(struct inode *inode, struct file *filp)
 	mutex_lock(&vpu_data.lock);
 
 	if (open_count++ == 0) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
 		if (!IS_ERR(vpu_regulator))
 			regulator_enable(vpu_regulator);
+#else
+		imx_gpc_power_up_pu(true);
+#endif
 
 #ifdef CONFIG_SOC_IMX6Q
 		clk_prepare(vpu_clk);
@@ -673,8 +679,12 @@ static int vpu_release(struct inode *inode, struct file *filp)
 			atomic_dec(&clk_cnt_from_ioc);
 		}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
 		if (!IS_ERR(vpu_regulator))
 			regulator_disable(vpu_regulator);
+#else
+		imx_gpc_power_up_pu(false);
+#endif
 
 	}
 	mutex_unlock(&vpu_data.lock);
@@ -859,15 +869,13 @@ static int vpu_dev_probe(struct platform_device *pdev)
 			  (void *)(&vpu_data));
 	if (err)
 		goto err_out_class;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
 	vpu_regulator = regulator_get(NULL, "cpu_vddvpu");
 	if (IS_ERR(vpu_regulator)) {
 		if (!(cpu_is_mx51() || cpu_is_mx53())) {
 			printk(KERN_ERR
 				"%s: failed to get vpu regulator\n", __func__);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
-			/* don't abort in kernel 3.5 until regulator API is ready*/
 			goto err_out_class;
-#endif
 		} else {
 			/* regulator_get will return error on MX5x,
 			 * just igore it everywhere*/
@@ -875,6 +883,7 @@ static int vpu_dev_probe(struct platform_device *pdev)
 				"%s: failed to get vpu regulator\n", __func__);
 		}
 	}
+#endif
 
 #ifdef MXC_VPU_HAS_JPU
 	vpu_jpu_irq = platform_get_irq_byname(pdev, "vpu_jpu_irq");
@@ -927,8 +936,11 @@ static int vpu_dev_remove(struct platform_device *pdev)
 	if (vpu_plat && vpu_plat->iram_enable && vpu_plat->iram_size)
 		iram_free(iram.start,  vpu_plat->iram_size);
 #endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
 	if (!IS_ERR(vpu_regulator))
 		regulator_put(vpu_regulator);
+#endif
 	return 0;
 }
 
@@ -998,8 +1010,12 @@ static int vpu_suspend(struct platform_device *pdev, pm_message_t state)
 
 		/* If VPU is working before suspend, disable
 		 * regulator to make usecount right. */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
 		if (!IS_ERR(vpu_regulator))
 			regulator_disable(vpu_regulator);
+#else
+		imx_gpc_power_up_pu(false);
+#endif
 	}
 
 	mutex_unlock(&vpu_data.lock);
@@ -1026,14 +1042,16 @@ static int vpu_resume(struct platform_device *pdev)
 		if (cpu_is_mx53())
 			goto recover_clk;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
 		/* If VPU is working before suspend, enable
 		 * regulator to make usecount right. */
 		if (!IS_ERR(vpu_regulator))
 			regulator_enable(vpu_regulator);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
 		if (vpu_plat->pg)
 			vpu_plat->pg(0);
+#else
+		imx_gpc_power_up_pu(true);
 #endif
 
 		if (bitwork_mem.cpu_addr != 0) {
