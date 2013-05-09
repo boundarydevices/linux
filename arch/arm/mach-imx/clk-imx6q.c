@@ -70,7 +70,8 @@ void __init imx6q_clock_map_io(void) { }
 
 void imx6q_set_cache_lpm_in_wait(bool enable)
 {
-	if (imx6q_revision() > IMX_CHIP_REVISION_1_1) {
+	if (imx6q_revision() > IMX_CHIP_REVISION_1_1 ||
+		imx6dl_revision() > IMX_CHIP_REVISION_1_0) {
 		u32 val;
 
 		val = readl_relaxed(ccm_base + CGPR);
