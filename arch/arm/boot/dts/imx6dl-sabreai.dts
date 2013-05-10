@@ -19,10 +19,10 @@
 		aips-bus@02000000 { /* AIPS1 */
 			iomuxc@020e0000 {
 				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_gpio_hog>;
+				pinctrl-0 = <&pinctrl_hog>;
 
-				gpios {
-					pinctrl_gpio_hog: gpiohog {
+				hog {
+					pinctrl_hog: hoggpr {
 						fsl,pins = <
 							/*RGMII Phy Interrupt */
 							1066 0x80000000 /* MX6SDL_PAD_GPIO_19__GPIO_4_5 */
