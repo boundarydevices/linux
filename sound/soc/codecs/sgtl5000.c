@@ -1468,6 +1468,31 @@ static s32 sgtl5000_write16(struct i2c_client *client, u16 reg, u16 val)
 	return (ret < 0) ? ret : -EIO;
 }
 
+/*
+ * Write all the default values from sgtl5000_reg_defaults[] array into the
+ * sgtl5000 registers, to make sure we always start with the sane registers
+ * values as stated in the datasheet.
+ *
+ * Since sgtl5000 does not have a reset line, nor a reset command in software,
+ * we follow this approach to guarantee we always start from the default values
+ * and avoid problems like, not being able to probe after an audio playback
+ * followed by a system reset or a 'reboot' command in Linux
+ */
+static int sgtl5000_fill_defaults(struct sgtl5000_priv *sgtl5000)
+{
+	int i, ret, val, index;
+
+	for (i = 0; i < ARRAY_SIZE(sgtl5000_reg_defaults); i++) {
+		val = sgtl5000_reg_defaults[i].def;
+		index = sgtl5000_reg_defaults[i].reg;
+		ret = regmap_write(sgtl5000->regmap, index, val);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
 static int sgtl5000_i2c_probe(struct i2c_client *client,
 			      const struct i2c_device_id *id)
 {
@@ -1518,6 +1543,11 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 		sgtl5000_write16(client, init_regs[i], init_regs[i+1]);
 
 	i2c_set_clientdata(client, sgtl5000);
+
+	/* Ensure sgtl5000 will start with sane register values */
+	ret = sgtl5000_fill_defaults(sgtl5000);
+	if (ret)
+		return ret;
 
 	ret = snd_soc_register_codec(&client->dev,
 			&sgtl5000_driver, &sgtl5000_dai, 1);
