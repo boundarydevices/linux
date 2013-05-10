@@ -871,7 +871,8 @@ static void __init imx6q_init_machine(void)
 {
 	if (of_machine_is_compatible("fsl,imx6q-sabrelite"))
 		imx6q_sabrelite_init();
-	else if (of_machine_is_compatible("fsl,imx6q-sabresd"))
+	else if (of_machine_is_compatible("fsl,imx6q-sabresd") ||
+			of_machine_is_compatible("fsl,imx6dl-sabresd"))
 		imx6q_sabresd_init();
 	else if (of_machine_is_compatible("fsl,imx6q-arm2"))
 		imx6q_arm2_init();
