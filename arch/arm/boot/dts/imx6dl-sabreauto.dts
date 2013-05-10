@@ -9,7 +9,7 @@
 
 /dts-v1/;
 /include/ "imx6dl.dtsi"
-/include/ "imx6qdl-sabreai.dtsi"
+/include/ "imx6qdl-sabreauto.dtsi"
 
 / {
 	model = "Freescale i.MX6 DualLite SABRE Automotive Infotainment Board";
