@@ -142,7 +142,7 @@ extern void imx_set_cpu_jump(int cpu, void *jump_addr);
 extern void imx_src_init(void);
 extern void imx_src_prepare_restart(void);
 extern void imx_gpc_init(void);
-extern void imx_gpc_pre_suspend(void);
+extern void imx_gpc_pre_suspend(bool arm_power_off);
 extern void imx_gpc_post_resume(void);
 extern void imx_gpc_mask_all(void);
 extern void imx_anatop_init(void);

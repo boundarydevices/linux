@@ -147,26 +147,29 @@ void imx_gpc_power_up_pu(bool flag)
 	mutex_unlock(&pu_lock);
 	return;
 }
-void imx_gpc_pre_suspend(void)
+
+void imx_gpc_pre_suspend(bool arm_power_off)
 {
 	void __iomem *reg_imr1 = gpc_base + GPC_IMR1;
 	int i;
 
-	/* Tell GPC to power off ARM core when suspend */
-	writel_relaxed(0x1, gpc_base + GPC_PGC_CPU_PDN);
+	if (arm_power_off) {
+		/* Tell GPC to power off ARM core when suspend */
+		writel_relaxed(0x1, gpc_base + GPC_PGC_CPU_PDN);
 
-	/*
-	 * The PUPSCR is a counter that counts in CKIL(32K) cycles.
-	 * Should include the time it takes for the ARM LDO to ramp up.
-	 */
-	writel_relaxed(0xf0f, gpc_base + GPC_PGC_CPU_PUPSCR);
+		/*
+		 * The PUPSCR is a counter that counts in CKIL(32K) cycles.
+		 * Should include the time it takes for the ARM LDO to ramp up.
+		 */
+		writel_relaxed(0xf0f, gpc_base + GPC_PGC_CPU_PUPSCR);
 
-	/*
-	 * The PDNSCR is a counter that counts in IPG_CLK cycles.
-	 * This counter can be set to minimum values to power
-	 * down faster.
-	 */
-	writel_relaxed(0x101, gpc_base + GPC_PGC_CPU_PDNSCR);
+		/*
+		 * The PDNSCR is a counter that counts in IPG_CLK cycles.
+		 * This counter can be set to minimum values to power
+		 * down faster.
+		 */
+		writel_relaxed(0x101, gpc_base + GPC_PGC_CPU_PDNSCR);
+	}
 
 	for (i = 0; i < IMR_NUM; i++) {
 		gpc_saved_imrs[i] = readl_relaxed(reg_imr1 + i * 4);
