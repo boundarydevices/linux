@@ -1051,17 +1051,6 @@ static int mxc_v4l2_g_ctrl(cam_data *cam, struct v4l2_control *c)
 	return status;
 }
 
-static int mxc_v4l2_send_command(cam_data *cam,
-		struct v4l2_send_command_control *c) {
-	int ret =0;
-	ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, true, true);
-	if (vidioc_int_send_command(cam->sensor, c)) {
-		ret = -EINVAL;
-	}
-	ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, false, false);
-	return ret;
-}
-
 /*!
  * V4L2 - set_control function
  *          V4L2_CID_PRIVATE_BASE is the extention for IPU preprocessing.
@@ -1142,34 +1131,6 @@ static int mxc_v4l2_s_ctrl(cam_data *cam, struct v4l2_control *c)
 			break;
 		case V4L2_MXC_ROTATE_90_LEFT:
 			tmp_rotation = IPU_ROTATE_90_LEFT;
-			break;
-		case V4L2_MXC_CAM_ROTATE_NONE:
-			ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, true, true);
-			if (vidioc_int_s_ctrl(cam->sensor, c)) {
-				ret = -EINVAL;
-			}
-			ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, false, false);
-			break;
-		case V4L2_MXC_CAM_ROTATE_VERT_FLIP:
-			ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, true, true);
-			if (vidioc_int_s_ctrl(cam->sensor, c)) {
-				ret = -EINVAL;
-			}
-			ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, false, false);
-			break;
-		case V4L2_MXC_CAM_ROTATE_HORIZ_FLIP:
-			ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, true, true);
-			if (vidioc_int_s_ctrl(cam->sensor, c)) {
-				ret = -EINVAL;
-			}
-			ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, false, false);
-			break;
-		case V4L2_MXC_CAM_ROTATE_180:
-			ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, true, true);
-			if (vidioc_int_s_ctrl(cam->sensor, c)) {
-				ret = -EINVAL;
-			}
-			ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, false, false);
 			break;
 		default:
 			ret = -EINVAL;
@@ -1252,77 +1213,6 @@ static int mxc_v4l2_s_ctrl(cam_data *cam, struct v4l2_control *c)
 		ipu_csi_flash_strobe(true);
 #endif
 		break;
-
-	case V4L2_CID_AUTO_FOCUS_START: {
-		pr_info(
-				">>>>>>>>>>>>> mxc_v4l2_s_ctrl:V4L2_CID_AUTO_FOCUS_START <<<<<<<<<<<<<<<<<  ");
-
-		ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, true, true);
-
-		ret = vidioc_int_s_ctrl(cam->sensor, c);
-
-		ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, false, false);
-		break;
-	}
-
-	case V4L2_CID_AUTO_FOCUS_STOP: {
-		pr_info(
-				">>>>>>>>>>>>> mxc_v4l2_s_ctrl:V4L2_CID_AUTO_FOCUS_STOP <<<<<<<<<<<<<<<<<  ");
-
-		ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, true, true);
-
-		if (vidioc_int_s_ctrl(cam->sensor, c)) {
-			ret = -EINVAL;
-		}
-
-		ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, false, false);
-
-		break;
-	}
-
-case V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE: {
-		pr_info(
-				">>>>>>>>>>>>> mxc_v4l2_s_ctrl:V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE <<<<<<<<<<<<<<<<<  ");
-
-		ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, true, true);
-
-		if (vidioc_int_s_ctrl(cam->sensor, c)) {
-			ret = -EINVAL;
-		}
-
-		ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, false, false);
-
-		break;
-	}
-
-	case V4L2_CID_FLASH_STROBE_START: {
-		pr_info(
-				">>>>>>>>>>>>> mxc_v4l2_s_ctrl:V4L2_CID_FLASH_STROBE_START <<<<<<<<<<<<<<<<<  ");
-		ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, true, true);
-
-		if (vidioc_int_s_ctrl(cam->sensor, c)) {
-			ret = -EINVAL;
-		}
-
-		ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, false, false);
-		break;
-	}
-
-	case V4L2_CID_FLASH_STROBE_STOP: {
-		pr_info(
-				">>>>>>>>>>>>> mxc_v4l2_s_ctrl:V4L2_CID_FLASH_STROBE_STOP <<<<<<<<<<<<<<<<<  ");
-		ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, true, true);
-
-		if (vidioc_int_s_ctrl(cam->sensor, c)) {
-			ret = -EINVAL;
-		}
-
-		ipu_csi_enable_mclk_if(cam->ipu,CSI_MCLK_I2C, cam->csi, false, false);
-		break;
-	}
-
-
-
 	case V4L2_CID_MXC_SWITCH_CAM:
 		if (cam->sensor != cam->all_sensors[c->value]) {
 			/* power down other cameraes before enable new one */
@@ -2476,13 +2366,6 @@ static long mxc_v4l_do_ioctl(struct file *file,
 		}
 		break;
 	}
-
-	case VIDIOC_SEND_COMMAND: {
-		pr_info("   case VIDIOC_SEND_COMMAND\n");
-		retval = mxc_v4l2_send_command(cam, arg);
-		break;
-	}
-
 	case VIDIOC_TRY_FMT:
 	case VIDIOC_QUERYCTRL:
 	case VIDIOC_G_TUNER:
