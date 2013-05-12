@@ -12,6 +12,7 @@
 #include <linux/irqchip.h>
 #include <linux/clk-provider.h>
 #include <asm/mach/arch.h>
+#include <asm/mach/map.h>
 #include <asm/hardware/cache-l2x0.h>
 
 #include "common.h"
@@ -40,6 +41,7 @@ static const char *vf610_dt_compat[] __initdata = {
 };
 
 DT_MACHINE_START(VYBRID_VF610, "Freescale Vybrid VF610 (Device Tree)")
+	.map_io		= debug_ll_io_init,
 	.init_irq	= vf610_init_irq,
 	.init_time	= vf610_init_time,
 	.init_machine   = vf610_init_machine,
