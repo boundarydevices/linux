@@ -1080,7 +1080,6 @@ static void __init mx6_oc_board_init(void)
 	imx6q_add_dma();
 
 	imx6q_add_dvfs_core(&oc_dvfscore_data);
-	mx6_cpu_regulator_init();
 
 	imx6q_add_hdmi_soc();
 	imx6q_add_hdmi_soc_dai();
