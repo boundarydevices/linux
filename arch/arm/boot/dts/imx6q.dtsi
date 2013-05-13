@@ -740,6 +740,15 @@
 			};
 		};
 
+		ahci@02200000 { /* AHCI SATA */
+			compatible = "snps,imx-ahci";
+			reg = <0x02200000 0x4000>;
+			interrupts = <0 39 0x04>;
+			clocks = <&clks 154>, <&clks 186>;
+			clock-names = "sata", "sata_ref";
+			status = "disabled";
+		};
+
 		ipu2: ipu@02800000 { /* IPU2 */
 			compatible = "fsl,imx6q-ipuv3";
 			reg = <0x02800000 0x400000>;

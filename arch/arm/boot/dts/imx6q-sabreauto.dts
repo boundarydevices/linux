@@ -40,6 +40,10 @@
 			};
 		};
 
+		ahci@02200000 { /* AHCI SATA */
+			status = "okay";
+		};
+
 		ipu1: ipu@02400000 { /* IPU1 */
 			status = "okay";
 		};
