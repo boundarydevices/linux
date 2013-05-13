@@ -78,11 +78,11 @@
 
 			ldb@020e0000 {
 				ipu_id = <1>;
-				disp_id = <0>;
+				disp_id = <1>;
 				ext_ref = <1>;
-				mode = "sep0";
+				mode = "sep1";
 				sec_ipu_id = <1>;
-				sec_disp_id = <1>;
+				sec_disp_id = <0>;
 				status = "okay";
 			};
 		};
