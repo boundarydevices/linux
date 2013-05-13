@@ -53,18 +53,27 @@
 					};
 				};
 			};
+
+			ldb@020e0000 {
+				ipu_id = <0>;
+				sec_ipu_id = <0>;
+			};
 		};
 
 		ahci@02200000 { /* AHCI SATA */
 			status = "disabled";
 		};
 
-		ipu@02400000 { /* IPU1 */
-			status = "disabled";
+		ipu1: ipu@02400000 { /* IPU1 */
+			status = "okay";
 		};
+	};
 
-		ipu@02800000 { /* IPU2 */
-			status = "disabled";
-		};
+	mxcfb1: fb@0 {
+		status = "okay";
+	};
+
+	mxcfb2: fb@1 {
+		status = "okay";
 	};
 };

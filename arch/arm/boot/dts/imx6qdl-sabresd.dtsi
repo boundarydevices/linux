@@ -359,14 +359,8 @@
 			status = "okay";
 		};
 
-		ipu@02400000 { /* IPU1 */
+		ipu1: ipu@02400000 { /* IPU1 */
 			bypass_reset = <0>;
-			status = "okay";
-		};
-
-		ipu@02800000 { /* IPU2 */
-			bypass_reset = <0>;
-			status = "okay";
 		};
 
 	};
@@ -485,7 +479,7 @@
 		default_bpp = <16>;
 		int_clk = <0>;
 		late_init = <0>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	mxcfb2: fb@1 {
@@ -496,7 +490,7 @@
 		default_bpp = <16>;
 		int_clk = <0>;
 		late_init = <0>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	mxcfb3: fb@2 {
@@ -507,7 +501,7 @@
 		default_bpp = <16>;
 		int_clk = <0>;
 		late_init = <0>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	mxcfb4: fb@3 {
@@ -518,7 +512,7 @@
 		default_bpp = <16>;
 		int_clk = <0>;
 		late_init = <0>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	lcd@0 {

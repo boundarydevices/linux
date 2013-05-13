@@ -9,6 +9,10 @@
 /include/ "imx6.dtsi"
 
 / {
+	aliases {
+		ipu1 = &ipu2;
+	};
+
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -196,14 +200,6 @@
 				clocks = <&clks 168>, <&clks 140>, <&clks 142>;
 				clock-names = "vpu_clk", "mmdc_ch0_axi", "ocram";
 				iramsize = <0x21000>;
-			};
-
-			ldb@020e0000 {
-				compatible = "fsl,imx6q-ldb";
-				reg = <0x020e0000 0x4000>;
-				clocks = <&clks 135>, <&clks 136>, <&clks 39>, <&clks 40>, <&clks 41>, <&clks 42>;
-				clock-names = "ldb_di0", "ldb_di1", "ipu1_di0_sel", "ipu1_di1_sel", "ipu2_di0_sel", "ipu2_di1_sel";
-				status = "disabled";
 			};
 
 			iomuxc@020e0000 {
@@ -743,6 +739,15 @@
 					};
 				};
 			};
+		};
+
+		ipu2: ipu@02800000 { /* IPU2 */
+			compatible = "fsl,imx6q-ipuv3";
+			reg = <0x02800000 0x400000>;
+			interrupts = <0 7 0x04>, <0 8 0x04>;
+			clocks = <&clks 133>, <&clks 134>, <&clks 137>, <&clks 41>, <&clks 42>, <&clks 169>;
+			clock-names = "ipu2", "ipu2_di0", "ipu2_di1", "ipu2_di0_sel", "ipu2_di1_sel", "ipu2_csi0";
+			status = "disabled";
 		};
 	};
 };
