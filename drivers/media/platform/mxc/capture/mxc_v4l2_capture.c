@@ -1064,6 +1064,16 @@ static int mxc_v4l2_g_ctrl(cam_data *cam, struct v4l2_control *c)
 	return status;
 }
 
+static int mxc_v4l2_send_command(cam_data *cam,
+		struct v4l2_send_command_control *c) {
+	int ret =0;
+
+	if (vidioc_int_send_command(cam->sensor, c)) {
+		ret = -EINVAL;
+	}
+	return ret;
+}
+
 /*!
  * V4L2 - set_control function
  *          V4L2_CID_PRIVATE_BASE is the extention for IPU preprocessing.
@@ -1226,6 +1236,19 @@ static int mxc_v4l2_s_ctrl(cam_data *cam, struct v4l2_control *c)
 		ipu_csi_flash_strobe(true);
 #endif
 		break;
+
+	case V4L2_CID_AUTO_FOCUS_START: {
+		ret = vidioc_int_s_ctrl(cam->sensor, c);
+		break;
+	}
+
+	case V4L2_CID_AUTO_FOCUS_STOP: {
+		if (vidioc_int_s_ctrl(cam->sensor, c)) {
+			ret = -EINVAL;
+		}
+		break;
+	}
+
 	case V4L2_CID_MXC_SWITCH_CAM:
 		if (cam->sensor == cam->all_sensors[c->value])
 			break;
@@ -1561,6 +1584,7 @@ static void power_down_callback(struct work_struct *work)
 
 	down(&cam->busy_lock);
 	if (!cam->open_count) {
+		pr_err("%s\n", __func__);
 		vidioc_int_s_power(cam->sensor, 0);
 		cam->power_on = 0;
 	}
@@ -2432,6 +2456,12 @@ static long mxc_v4l_do_ioctl(struct file *file,
 		}
 		break;
 	}
+
+	case VIDIOC_SEND_COMMAND: {
+		retval = mxc_v4l2_send_command(cam, arg);
+		break;
+	}
+
 	case VIDIOC_TRY_FMT:
 	case VIDIOC_QUERYCTRL:
 	case VIDIOC_G_TUNER:
@@ -3066,6 +3096,7 @@ static int mxc_v4l2_master_attach(struct v4l2_int_device *slave)
 	}
 
 	for (i = 0; i < cam->sensor_index; i++) {
+		pr_err("%s: %x\n", __func__, i);
 		vidioc_int_dev_exit(cam->all_sensors[i]);
 		vidioc_int_s_power(cam->all_sensors[i], 0);
 	}
