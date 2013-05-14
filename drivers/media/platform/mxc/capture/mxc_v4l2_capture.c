@@ -1057,6 +1057,16 @@ static int mxc_v4l2_g_ctrl(cam_data *cam, struct v4l2_control *c)
 	return status;
 }
 
+static int mxc_v4l2_send_command(cam_data *cam,
+		struct v4l2_send_command_control *c) {
+	int ret =0;
+
+	if (vidioc_int_send_command(cam->sensor, c)) {
+		ret = -EINVAL;
+	}
+	return ret;
+}
+
 /*!
  * V4L2 - set_control function
  *          V4L2_CID_PRIVATE_BASE is the extention for IPU preprocessing.
@@ -1219,6 +1229,19 @@ static int mxc_v4l2_s_ctrl(cam_data *cam, struct v4l2_control *c)
 		ipu_csi_flash_strobe(true);
 #endif
 		break;
+
+	case V4L2_CID_AUTO_FOCUS_START: {
+		ret = vidioc_int_s_ctrl(cam->sensor, c);
+		break;
+	}
+
+	case V4L2_CID_AUTO_FOCUS_STOP: {
+		if (vidioc_int_s_ctrl(cam->sensor, c)) {
+			ret = -EINVAL;
+		}
+		break;
+	}
+
 	case V4L2_CID_MXC_SWITCH_CAM:
 		if (cam->sensor == cam->all_sensors[c->value])
 			break;
@@ -2413,6 +2436,10 @@ static long mxc_v4l_do_ioctl(struct file *file,
 			pr_err("ERROR: v4l2 capture: slave not found!\n");
 			retval = -ENODEV;
 		}
+		break;
+	}
+	case VIDIOC_SEND_COMMAND: {
+		retval = mxc_v4l2_send_command(cam, arg);
 		break;
 	}
 	case VIDIOC_TRY_FMT:
