@@ -1227,6 +1227,13 @@ struct v4l2_ext_controls {
 	struct v4l2_ext_control *controls;
 };
 
+struct v4l2_send_command_control {
+	__u32		     id;
+	__u32		     value0;
+	__u32		     value1;
+	char	     	 debug[256];
+};
+
 #define V4L2_CTRL_ID_MASK      	  (0x0fffffff)
 #define V4L2_CTRL_ID2CLASS(id)    ((id) & 0x0fff0000UL)
 #define V4L2_CTRL_DRIVER_PRIV(id) (((id) & 0xffff) >= 0x1000)
@@ -1956,6 +1963,8 @@ struct v4l2_create_buffers {
 /* Experimental, meant for debugging, testing and internal use.
    Never use these in applications! */
 #define VIDIOC_DBG_G_CHIP_INFO  _IOWR('V', 102, struct v4l2_dbg_chip_info)
+
+#define VIDIOC_SEND_COMMAND	_IOWR('V', 103, struct v4l2_send_command_control)
 
 /* Reminder: when adding new ioctls please add support for them to
    drivers/media/video/v4l2-compat-ioctl32.c as well! */
