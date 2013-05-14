@@ -34,6 +34,7 @@
 #include <mach/busfreq.h>
 #include <mach/common.h>
 #include <asm/cpu.h>
+#include <asm/smp_plat.h>
 
 #define CLK32_FREQ	32768
 #define NANOSECOND	(1000 * 1000 * 1000)
@@ -215,8 +216,7 @@ static int set_cpu_freq(int freq)
 
 static int mxc_verify_speed(struct cpufreq_policy *policy)
 {
-	return 0;
-	if (policy->cpu != 0)
+	if (policy->cpu >= num_possible_cpus())
 		return -EINVAL;
 
 	return cpufreq_frequency_table_verify(policy, imx_freq_table);
@@ -224,7 +224,7 @@ static int mxc_verify_speed(struct cpufreq_policy *policy)
 
 static unsigned int mxc_get_speed(unsigned int cpu)
 {
-	if (cpu)
+	if (cpu >= num_possible_cpus())
 		return 0;
 	return clk_get_rate(cpu_clk) / 1000;
 }
@@ -238,7 +238,7 @@ static int mxc_set_target(struct cpufreq_policy *policy,
 	unsigned int index;
 
 	num_cpus = num_possible_cpus();
-	if (policy->cpu > num_cpus)
+	if (policy->cpu >= num_cpus)
 		return 0;
 
 	mutex_lock(&set_cpufreq_lock);
@@ -306,109 +306,53 @@ static int mxc_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int ret;
 	int i;
-	struct device_node *np;
-	int offset = 0;
 
-	if (policy->cpu != 0)
+	if (policy->cpu >= num_possible_cpus())
 		return -EINVAL;
 
-	np = of_find_node_by_name(NULL, "cpufreq-setpoint");
-	if (!np) {
-		pr_err("%s: failed to find device tree data!\n",
-			__func__);
-		return -EINVAL;
-	}
+	if (imx_freq_table == NULL) {
+		imx_freq_table = kmalloc(
+			sizeof(struct cpufreq_frequency_table) *
+			(cpu_op_nr + 1), GFP_KERNEL);
+		if (!imx_freq_table) {
+			ret = -ENOMEM;
+			goto err0;
+		}
 
-	ret = of_property_read_u32(np, "setpoint-number", &cpu_op_nr);
-	if (ret) {
-		pr_err("%s: failed to get setpoint number!\n",
-			__func__);
-		return -EINVAL;
-	}
-	/* 4 setpoint-number for mx6q ,3 setpoint-number for mx6dl/sl */
-	if (cpu_op_nr == 4)
-		/* use to calculate the real setpoint */
-		offset = 1;
+		cpu_freq_khz_min = cpu_op_tbl[cpu_op_nr - 1].cpu_rate / 1000;
+		cpu_freq_khz_max = cpu_op_tbl[cpu_op_nr - 1].cpu_rate / 1000;
 
-	cpu_op_tbl = kzalloc(sizeof(*cpu_op_tbl) * cpu_op_nr, GFP_KERNEL);
-	if (!cpu_op_tbl) {
-		ret = -ENOMEM;
-		goto err1;
-	}
+		for (i = 0; i < cpu_op_nr; i++) {
+			imx_freq_table[i].index = i;
+			imx_freq_table[i].frequency = cpu_op_tbl[i].cpu_rate /
+				1000;
 
-	i = 0;
-	for_each_compatible_node(np, NULL, "setpoint-table") {
-		if (of_property_read_u32(np, "pll_rate",
-			&(cpu_op_tbl[i].pll_rate)))
-			continue;
-		if (of_property_read_u32(np, "cpu_rate",
-			&(cpu_op_tbl[i].cpu_rate)))
-			continue;
-		if (of_property_read_u32(np, "cpu_podf",
-			&(cpu_op_tbl[i].cpu_podf)))
-			continue;
-		if (of_property_read_u32(np, "pu_voltage",
-			&(cpu_op_tbl[i].pu_voltage)))
-			continue;
-		if (of_property_read_u32(np, "soc_voltage",
-			&(cpu_op_tbl[i].soc_voltage)))
-			continue;
-		if (of_property_read_u32(np, "cpu_voltage",
-			&(cpu_op_tbl[i].cpu_voltage)))
-			continue;
-		i++;
-	}
+			if ((cpu_op_tbl[i].cpu_rate / 1000) < cpu_freq_khz_min)
+				cpu_freq_khz_min = cpu_op_tbl[i].cpu_rate /
+					1000;
 
-	/*
-	 * mx6q:remove one setpoint if maxfreq is 1G, remove two if 800Mhz
-	 * mx6dl/sl:remove none if maxfreq is 1G, remove one if 800Mhz
-	 */
-	if (arm_max_freq == CPU_AT_1GHz)
-		cpu_op_nr -= offset;
-	else if (arm_max_freq == CPU_AT_800MHz)
-		cpu_op_nr -= (offset + 1);
-	pr_info("cpufreq support %d setpoint:\n", cpu_op_nr);
+			if ((cpu_op_tbl[i].cpu_rate / 1000) > cpu_freq_khz_max)
+				cpu_freq_khz_max = cpu_op_tbl[i].cpu_rate /
+					1000;
+		}
 
-	for (i = 0; i < cpu_op_nr; i++) {
-		pr_info("%d, %d, %d, %d, %d, %d\n",
-			cpu_op_tbl[i].pll_rate, cpu_op_tbl[i].cpu_rate,
-			cpu_op_tbl[i].cpu_podf, cpu_op_tbl[i].pu_voltage,
-			cpu_op_tbl[i].soc_voltage,
-			cpu_op_tbl[i].cpu_voltage);
-	}
-
-	/* prepare and enable pll1 clock to make use count right */
-	clk_prepare(pll1_sys);
-	clk_enable(pll1_sys);
-
-	cpu_freq_khz_min = cpu_op_tbl[cpu_op_nr-1].cpu_rate / 1000;
-	cpu_freq_khz_max = cpu_op_tbl[cpu_op_nr-1].cpu_rate / 1000;
-
-	imx_freq_table = kmalloc(
-		sizeof(struct cpufreq_frequency_table) * (cpu_op_nr + 1),
-			GFP_KERNEL);
-	if (!imx_freq_table) {
-		ret = -ENOMEM;
-		goto err0;
-	}
-
-	for (i = 0; i < cpu_op_nr; i++) {
 		imx_freq_table[i].index = i;
-		imx_freq_table[i].frequency = cpu_op_tbl[i].cpu_rate / 1000;
-
-		if ((cpu_op_tbl[i].cpu_rate / 1000) < cpu_freq_khz_min)
-			cpu_freq_khz_min = cpu_op_tbl[i].cpu_rate / 1000;
-
-		if ((cpu_op_tbl[i].cpu_rate / 1000) > cpu_freq_khz_max)
-			cpu_freq_khz_max = cpu_op_tbl[i].cpu_rate / 1000;
+		imx_freq_table[i].frequency = CPUFREQ_TABLE_END;
 	}
 
-	imx_freq_table[i].index = i;
-	imx_freq_table[i].frequency = CPUFREQ_TABLE_END;
 
 	policy->cur = clk_get_rate(cpu_clk) / 1000;
 	policy->min = policy->cpuinfo.min_freq = cpu_freq_khz_min;
 	policy->max = policy->cpuinfo.max_freq = cpu_freq_khz_max;
+
+	/*
+	 * All processors share the same frequency and voltage.
+	 * So all frequencies need to be scaled together.
+	 */
+	if (is_smp()) {
+		policy->shared_type = CPUFREQ_SHARED_TYPE_ANY;
+		cpumask_setall(policy->cpus);
+	}
 
 	/* Manual states, that PLL stabilizes in two CLK32 periods */
 	policy->cpuinfo.transition_latency = 2 * NANOSECOND / CLK32_FREQ;
@@ -426,18 +370,17 @@ static int mxc_cpufreq_init(struct cpufreq_policy *policy)
 	return 0;
 err0:
 	kfree(imx_freq_table);
-err1:
-	kfree(cpu_op_tbl);
 	return ret;
 }
 
 static int mxc_cpufreq_exit(struct cpufreq_policy *policy)
 {
 	cpufreq_frequency_table_put_attr(policy->cpu);
-
-	set_cpu_freq(cpu_freq_khz_max * 1000);
-	clk_put(cpu_clk);
-	kfree(imx_freq_table);
+	if (policy->cpu == 0) {
+		set_cpu_freq(cpu_freq_khz_max * 1000);
+		clk_put(cpu_clk);
+		kfree(imx_freq_table);
+	}
 	return 0;
 }
 
@@ -572,6 +515,8 @@ static int __devinit cpufreq_probe(struct platform_device *pdev)
 	int ret = 0;
 	struct device_node *np;
 	void __iomem *base;
+	int offset = 0;
+	int i;
 
 	np = of_find_node_by_name(NULL, "ocotp");
 	base = of_iomap(np, 0);
@@ -750,6 +695,75 @@ static int __devinit cpufreq_probe(struct platform_device *pdev)
 	mutex_init(&set_cpufreq_lock);
 	register_pm_notifier(&imx_cpufreq_pm_notifier);
 
+	np = of_find_node_by_name(NULL, "cpufreq-setpoint");
+	if (!np) {
+		pr_err("%s: failed to find device tree data!\n",
+			__func__);
+		return -EINVAL;
+	}
+
+	ret = of_property_read_u32(np, "setpoint-number", &cpu_op_nr);
+	if (ret) {
+		pr_err("%s: failed to get setpoint number!\n",
+			__func__);
+		return -EINVAL;
+	}
+	/* 4 setpoint-number for mx6q ,3 setpoint-number for mx6dl/sl */
+	if (cpu_op_nr == 4)
+		/* use to calculate the real setpoint */
+		offset = 1;
+
+	cpu_op_tbl = kzalloc(sizeof(*cpu_op_tbl) * cpu_op_nr, GFP_KERNEL);
+	if (!cpu_op_tbl) {
+		ret = -ENOMEM;
+		goto err6;
+	}
+
+	i = 0;
+	for_each_compatible_node(np, NULL, "setpoint-table") {
+		if (of_property_read_u32(np, "pll_rate",
+			&(cpu_op_tbl[i].pll_rate)))
+			continue;
+		if (of_property_read_u32(np, "cpu_rate",
+			&(cpu_op_tbl[i].cpu_rate)))
+			continue;
+		if (of_property_read_u32(np, "cpu_podf",
+			&(cpu_op_tbl[i].cpu_podf)))
+			continue;
+		if (of_property_read_u32(np, "pu_voltage",
+			&(cpu_op_tbl[i].pu_voltage)))
+			continue;
+		if (of_property_read_u32(np, "soc_voltage",
+			&(cpu_op_tbl[i].soc_voltage)))
+			continue;
+		if (of_property_read_u32(np, "cpu_voltage",
+			&(cpu_op_tbl[i].cpu_voltage)))
+			continue;
+		i++;
+	}
+
+	/*
+	 * mx6q:remove one setpoint if maxfreq is 1G, remove two if 800Mhz
+	 * mx6dl/sl:remove none if maxfreq is 1G, remove one if 800Mhz
+	 */
+	if (arm_max_freq == CPU_AT_1GHz)
+		cpu_op_nr -= offset;
+	else if (arm_max_freq == CPU_AT_800MHz)
+		cpu_op_nr -= (offset + 1);
+	pr_info("cpufreq support %d setpoint:\n", cpu_op_nr);
+
+	for (i = 0; i < cpu_op_nr; i++) {
+		pr_info("%d, %d, %d, %d, %d, %d\n",
+			cpu_op_tbl[i].pll_rate, cpu_op_tbl[i].cpu_rate,
+			cpu_op_tbl[i].cpu_podf, cpu_op_tbl[i].pu_voltage,
+			cpu_op_tbl[i].soc_voltage,
+			cpu_op_tbl[i].cpu_voltage);
+	}
+
+	/* prepare and enable pll1 clock to make use count right */
+	clk_prepare(pll1_sys);
+	clk_enable(pll1_sys);
+
 	ret = cpufreq_register_driver(&mxc_driver);
 	if (ret) {
 		pr_err("failed to register imx cpufreq driver!\n");
@@ -769,6 +783,8 @@ err4:
 	devm_clk_put(&pdev->dev, pll1_sw);
 err5:
 	devm_clk_put(&pdev->dev, pll1_sys);
+err6:
+	kfree(cpu_op_tbl);
 	return ret;
 }
 
