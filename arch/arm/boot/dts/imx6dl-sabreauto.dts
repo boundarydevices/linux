@@ -13,7 +13,7 @@
 
 / {
 	model = "Freescale i.MX6 DualLite SABRE Automotive Infotainment Board";
-	compatible = "fsl,imx6dl-sabreai", "fsl,imx6dl";
+	compatible = "fsl,imx6dl-sabreauto", "fsl,imx6dl";
 
 	soc {
 		aips-bus@02000000 { /* AIPS1 */

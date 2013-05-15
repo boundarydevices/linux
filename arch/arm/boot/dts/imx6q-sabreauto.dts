@@ -13,7 +13,7 @@
 
 / {
 	model = "Freescale i.MX6Q SABRE Automotive Infotainment Board";
-	compatible = "fsl,imx6q-sabreai", "fsl,imx6q";
+	compatible = "fsl,imx6q-sabreauto", "fsl,imx6q";
 
 	soc {
 		aips-bus@02000000 { /* AIPS1 */
