@@ -575,6 +575,13 @@ int __init mx6q_clocks_init(void)
 	clk_set_parent(clk[ipu1_di1_sel], clk[ipu1_di1_pre]);
 	clk_set_parent(clk[ipu2_di0_sel], clk[ipu2_di0_pre]);
 	clk_set_parent(clk[ipu2_di1_sel], clk[ipu2_di1_pre]);
+	if (cpu_is_imx6dl()) {
+		clk_set_rate(clk[pll3_pfd1_540m], 540000000);
+		clk_set_parent(clk[ipu1_sel], clk[pll3_pfd1_540m]);
+	} else if (cpu_is_imx6q()) {
+		clk_set_parent(clk[ipu1_sel], clk[mmdc_ch0_axi]);
+		clk_set_parent(clk[ipu2_sel], clk[mmdc_ch0_axi]);
+	}
 
 	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 		clk_prepare_enable(clk[clks_init_on[i]]);
