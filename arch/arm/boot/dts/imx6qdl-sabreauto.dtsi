@@ -13,6 +13,23 @@
 	};
 
 	soc {
+
+		aips-bus@02000000 { /* AIPS1 */
+			spba-bus@02000000 {
+				spdif: spdif@02004000 {
+					compatible = "fsl,fsl-spdif";
+					reg = <0x02004000 0x4000>;
+					pinctrl-names = "default";
+					pinctrl-0 = <&pinctrl_spdif_1>;
+					fsl,spdif-dma-events = <15 14>;
+					clocks = <&clks 198>;
+					clock-names = "spdif";
+					interrupts = <0 52 0x04>;
+					status = "okay";
+			       };
+			};
+		};
+
 		aips2: aips-bus@02100000 {
 			ethernet@02188000 {
 				phy-mode = "rgmii";
@@ -139,5 +156,14 @@
 				};
 			};
 		};
+	};
+
+	sound-spdif {
+		compatible = "fsl,imx-audio-spdif",
+			     "fsl,imx-sabreauto-spdif";
+		model = "imx-spdif";
+		spdif-controller = <&spdif>;
+		spdif-tx = <0>;		/* 1:enable, 0:disable */
+		spdif-rx = <1>;		/* 1:enable, 0:disable */
 	};
 };
