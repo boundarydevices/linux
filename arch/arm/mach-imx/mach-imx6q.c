@@ -83,6 +83,18 @@ static int __init early_enable_sd30(char *p)
 }
 early_param("sd30", early_enable_sd30);
 
+static int __init early_enable_spdif(char *p)
+{
+	/* Basically we don't need SPDIF on sabrelite and sabresd */
+	if ((of_machine_is_compatible("fsl,imx6q-sabrelite") ||
+		of_machine_is_compatible("fsl,imx6q-sabresd")))
+		return 0;
+
+	spdif_en = 1;
+	return 0;
+}
+early_param("spdif", early_enable_spdif);
+
 static void remove_one_pin_from_node(const char *path,
 			   const char *phandle_name,
 			   const char *name,
@@ -397,18 +409,6 @@ static void __init imx6q_sabresd_init(void)
 	imx6q_ar803x_phy_fixup();
 	imx6q_sabresd_cko_setup();
 }
-
-static int __init early_enable_spdif(char *p)
-{
-	/* Basically we don't need SPDIF on sabrelite and sabresd */
-	if ((of_machine_is_compatible("fsl,imx6q-sabrelite") ||
-		of_machine_is_compatible("fsl,imx6q-sabresd")))
-		return 0;
-
-	spdif_en = 1;
-	return 0;
-}
-early_param("spdif", early_enable_spdif);
 
 static void __init imx6q_i2c3_sda_pindel(void)
 {
