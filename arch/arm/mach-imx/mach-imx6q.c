@@ -85,11 +85,6 @@ early_param("sd30", early_enable_sd30);
 
 static int __init early_enable_spdif(char *p)
 {
-	/* Basically we don't need SPDIF on sabrelite and sabresd */
-	if ((of_machine_is_compatible("fsl,imx6q-sabrelite") ||
-		of_machine_is_compatible("fsl,imx6q-sabresd")))
-		return 0;
-
 	spdif_en = 1;
 	return 0;
 }
@@ -559,10 +554,13 @@ static void __init imx6q_spdif_pindel(void)
 
 static void __init imx6q_spdif_init(void)
 {
-	if (spdif_en)
-		imx6q_spdif_pinfix();
-	else
-		imx6q_spdif_pindel();
+	if (of_machine_is_compatible("fsl,imx6q-arm2") ||
+			of_machine_is_compatible("fsl,imx6dl-arm2")) {
+		if (spdif_en && IS_ENABLED(CONFIG_SND_SOC_FSL_SPDIF))
+			imx6q_spdif_pinfix();
+		else
+			imx6q_spdif_pindel();
+	}
 }
 
 static void __init imx6q_gpu_init(void)
@@ -891,8 +889,7 @@ static void __init imx6q_init_machine(void)
 	imx6q_1588_init();
 	if (IS_ENABLED(CONFIG_MXC_GPU_VIV))
 		imx6q_gpu_init();
-	if (IS_ENABLED(CONFIG_SND_SOC_FSL_SPDIF))
-		imx6q_spdif_init();
+	imx6q_spdif_init();
 	imx6q_csi_mux_init();
 }
 
