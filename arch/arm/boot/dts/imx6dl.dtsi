@@ -188,6 +188,20 @@
 					};
 				};
 
+				spdif {
+					pinctrl_spdif_1: spdifgrp-1 {
+						fsl,pins = <
+							1174	0x1b0b0	/* MX6SDL_PAD_KEY_COL3__SPDIF_IN1 */
+						>;
+					};
+					pinctrl_spdif_2: spdifgrp-2 {
+						fsl,pins = <
+							1042	0x1b0b0	/* MX6SDL_PAD_GPIO_16__SPDIF_IN1 */
+							1050	0x1b0b0	/* MX6SDL_PAD_GPIO_17__SPDIF_OUT1 */
+						>;
+					};
+				};
+
 				enet {
 					pinctrl_enet_1: enetgrp-1 {
 						fsl,pins = <
