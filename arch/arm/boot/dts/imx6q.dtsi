@@ -253,12 +253,12 @@
 				};
 
 				spdif {
-					pinctrl_spdif_1: spdif-1 {
+					pinctrl_spdif_1: spdifgrp-1 {
 						fsl,pins = <
 							927 0x1b0b0	/* MX6Q_PAD_KEY_COL3__SPDIF_IN1 */
 						>;
 					};
-					pinctrl_spdif_2: spdif-2 {
+					pinctrl_spdif_2: spdifgrp-2 {
 						fsl,pins = <
 							1035 0x1b0b0	/* MX6Q_PAD_GPIO_16__SPDIF_IN1 */
 							1043 0x1b0b0	/* MX6Q_PAD_GPIO_17__SPDIF_OUT1 */
