@@ -105,6 +105,16 @@ config TOUCHSCREEN_AD7879_SPI
 	  To compile this driver as a module, choose M here: the
 	  module will be called ad7879-spi.
 
+config TOUCHSCREEN_AR1020_I2C
+	tristate "Microchip AR1020 I2C touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have a Microchip AR1020 I2C Controller and
+	  want to enable support for the built-in touchscreen.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called ar1020-i2c.
+
 config TOUCHSCREEN_AR1021_I2C
 	tristate "Microchip AR1020/1021 i2c touchscreen"
 	depends on I2C && OF
