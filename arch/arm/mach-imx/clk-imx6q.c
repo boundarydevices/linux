@@ -231,16 +231,16 @@ enum mx6q_clks {
 	pll4_audio, pll5_video, pll6_mlb, pll7_usb_host, pll8_enet, ssi1_ipg,
 	ssi2_ipg, ssi3_ipg, rom, usbphy1, usbphy2, ldb_di0_div_3_5, ldb_di1_div_3_5,
 	sata_ref, gpt_3m, pcie_ref, lvds1_sel, lvds1_in, lvds1_out, usbphy1_gate,
-	usbphy2_gate, spdif,
-	cko1_cko2_sel, cko2_sel, cko2_podf, cko2, caam_ipg, caam_mem, caam_aclk,
-	clk_max,
+	usbphy2_gate, cko1_cko2_sel, cko2_sel, cko2_podf, cko2, spdif, aips_tz1,
+	aips_tz2, caam_mem, caam_aclk, caam_ipg, tzasc1, tzasc2, vdoa, mmdc_ch0_ipg,
+	mmdc_ch1_ipg, mx6fast1, per2_main, emi_slow, clk_max
 };
 
 static struct clk *clk[clk_max];
 static struct clk_onecell_data clk_data;
 
 static enum mx6q_clks const clks_init_on[] __initconst = {
-	mmdc_ch0_axi, rom,
+	mmdc_ch0_axi, mmdc_ch0_ipg, mmdc_ch1_ipg, rom, ocram, aips_tz1, aips_tz2, per2_main, mx6fast1,
 };
 
 int __init mx6q_clocks_init(void)
@@ -428,6 +428,8 @@ int __init mx6q_clocks_init(void)
 	clk[ahb]               = imx_clk_busy_divider("ahb",               "periph",      base + 0x14, 10,  3,   base + 0x48, 1);
 
 	/*                                name             parent_name          reg         shift */
+	clk[aips_tz1]     = imx_clk_gate2("aips_tz1",      "ahb",               base + 0x68, 0);
+	clk[aips_tz2]     = imx_clk_gate2("aips_tz2",      "ahb",               base + 0x68, 2);
 	clk[apbh_dma]     = imx_clk_gate2("apbh_dma",      "usdhc3",            base + 0x68, 4);
 	clk[asrc]         = imx_clk_gate2("asrc",          "asrc_podf",         base + 0x68, 6);
 	clk[caam_mem]     = imx_clk_gate2("caam_mem",      "ahb",               base + 0x68, 8);
@@ -458,22 +460,29 @@ int __init mx6q_clocks_init(void)
 	clk[i2c3]         = imx_clk_gate2("i2c3",          "ipg_per",           base + 0x70, 10);
 	clk[iim]          = imx_clk_gate2("iim",           "ipg",               base + 0x70, 12);
 	clk[enfc]         = imx_clk_gate2("enfc",          "enfc_podf",         base + 0x70, 14);
+	clk[tzasc1]       = imx_clk_gate2("tzasc1",        "mmdc_ch0_axi_podf", base + 0x70, 22);
+	clk[tzasc2]       = imx_clk_gate2("tzasc2",        "mmdc_ch0_axi_podf", base + 0x70, 24);
+	clk[vdoa]         = imx_clk_gate2("vdoa",          "vdo_axi",           base + 0x70, 26);
 	clk[ipu1]         = imx_clk_gate2("ipu1",          "ipu1_podf",         base + 0x74, 0);
 	clk[ipu1_di0]     = imx_clk_gate2("ipu1_di0",      "ipu1_di0_sel",      base + 0x74, 2);
 	clk[ipu1_di1]     = imx_clk_gate2("ipu1_di1",      "ipu1_di1_sel",      base + 0x74, 4);
 	clk[ipu2]         = imx_clk_gate2("ipu2",          "ipu2_podf",         base + 0x74, 6);
 	clk[ipu2_di0]     = imx_clk_gate2("ipu2_di0",      "ipu2_di0_sel",      base + 0x74, 8);
+	clk[ipu2_di1]     = imx_clk_gate2("ipu2_di1",      "ipu2_di1_sel",      base + 0x74, 10);
 	clk[ldb_di0]      = imx_clk_gate2("ldb_di0",       "ldb_di0_podf",      base + 0x74, 12);
 	clk[ldb_di1]      = imx_clk_gate2("ldb_di1",       "ldb_di1_podf",      base + 0x74, 14);
-	clk[ipu2_di1]     = imx_clk_gate2("ipu2_di1",      "ipu2_di1_sel",      base + 0x74, 10);
 	clk[hsi_tx]       = imx_clk_gate2("hsi_tx",        "hsi_tx_podf",       base + 0x74, 16);
 	clk[mlb]          = imx_clk_gate2("mlb",           "pll6_mlb",          base + 0x74, 18);
 	clk[mmdc_ch0_axi] = imx_clk_gate2("mmdc_ch0_axi",  "mmdc_ch0_axi_podf", base + 0x74, 20);
 	clk[mmdc_ch1_axi] = imx_clk_gate2("mmdc_ch1_axi",  "mmdc_ch1_axi_podf", base + 0x74, 22);
+	clk[mmdc_ch0_ipg] = imx_clk_gate2("mmdc_ch0_ipg",  "ipg",               base + 0x74, 24);
+	clk[mmdc_ch1_ipg] = imx_clk_gate2("mmdc_ch1_ipg",  "ipg",               base + 0x74, 26);
 	clk[ocram]        = imx_clk_gate2("ocram",         "ahb",               base + 0x74, 28);
 	clk[openvg_axi]   = imx_clk_gate2("openvg_axi",    "axi",               base + 0x74, 30);
 	clk[pcie_axi]     = imx_clk_gate2("pcie_axi",      "pcie_axi_sel",      base + 0x78, 0);
-	clk[per1_bch]     = imx_clk_gate2("per1_bch",      "usdhc3",            base + 0x78, 12);
+	clk[mx6fast1]     = imx_clk_gate2("mx6fast1",      "ahb",               base + 0x78, 8);
+	clk[per1_bch]     = imx_clk_gate2("per1_bch",      "ahb",               base + 0x78, 12);
+	clk[per2_main]    = imx_clk_gate2("per2_main",     "ahb",               base + 0x78, 14);
 	clk[pwm1]         = imx_clk_gate2("pwm1",          "ipg_per",           base + 0x78, 16);
 	clk[pwm2]         = imx_clk_gate2("pwm2",          "ipg_per",           base + 0x78, 18);
 	clk[pwm3]         = imx_clk_gate2("pwm3",          "ipg_per",           base + 0x78, 20);
@@ -497,6 +506,7 @@ int __init mx6q_clocks_init(void)
 	clk[usdhc2]       = imx_clk_gate2("usdhc2",        "usdhc2_podf",       base + 0x80, 4);
 	clk[usdhc3]       = imx_clk_gate2("usdhc3",        "usdhc3_podf",       base + 0x80, 6);
 	clk[usdhc4]       = imx_clk_gate2("usdhc4",        "usdhc4_podf",       base + 0x80, 8);
+	clk[emi_slow]     = imx_clk_gate2("emi_slow",      "emi_slow_podf",     base + 0x80, 10);
 	clk[vdo_axi]      = imx_clk_gate2("vdo_axi",       "vdo_axi_sel",       base + 0x80, 12);
 	clk[vpu_axi]      = imx_clk_gate2("vpu_axi",       "vpu_axi_podf",      base + 0x80, 14);
 	clk[cko1]         = imx_clk_gate("cko1",           "cko1_podf",         base + 0x60, 7);
