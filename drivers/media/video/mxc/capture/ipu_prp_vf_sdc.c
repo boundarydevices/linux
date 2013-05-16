@@ -20,13 +20,12 @@
 #include <linux/dma-mapping.h>
 #include <linux/console.h>
 #include <linux/ipu.h>
+#include <linux/module.h>
 #include <linux/mxcfb.h>
 #include <mach/hardware.h>
 #include <mach/mipi_csi2.h>
 #include "mxc_v4l2_capture.h"
 #include "ipu_prp_sw.h"
-
-#define OVERLAY_FB_SUPPORT_NONSTD	(cpu_is_mx5())
 
 static int buffer_num;
 static struct ipu_soc *disp_ipu;
@@ -116,7 +115,7 @@ static int prpvf_start(void *private)
 	/* Store the overlay frame buffer's original std */
 	cam->fb_origin_std = fbvar.nonstd;
 
-	if (OVERLAY_FB_SUPPORT_NONSTD) {
+	if (cam->devtype == IMX5_V4L2 || cam->devtype == IMX6_V4L2) {
 		/* Use DP to do CSC so that we can get better performance */
 		vf_out_format = IPU_PIX_FMT_UYVY;
 		fbvar.nonstd = vf_out_format;
