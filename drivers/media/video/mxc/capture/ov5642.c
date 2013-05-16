@@ -92,7 +92,7 @@ struct ov5642_mode_info {
  * Maintains the information on the current state of the sesor.
  */
 static struct sensor_data ov5642_data;
-u32 pwn_gpio, rst_gpio;
+static int pwn_gpio, rst_gpio;
 
 static struct reg_value ov5642_rot_none_VGA[] = {
 	{0x3818, 0xc1, 0x00, 0x00}, {0x3621, 0x87, 0x00, 0x00},

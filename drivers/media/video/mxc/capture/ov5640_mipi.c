@@ -98,7 +98,7 @@ struct ov5640_mode_info {
  * Maintains the information on the current state of the sesor.
  */
 static struct sensor_data ov5640_data;
-u32 pwn_gpio, rst_gpio;
+static int pwn_gpio, rst_gpio;
 
 static struct reg_value ov5640_init_setting_30fps_VGA[] = {
 
