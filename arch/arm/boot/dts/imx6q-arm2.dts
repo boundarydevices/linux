@@ -29,16 +29,18 @@
 		};
 
 		aips-bus@02000000 { /* AIPS1 */
-			spdif_dai: spdif-dai@02004000 {
-				compatible = "fsl,fsl-spdif";
-				reg = <0x02004000 0x4000>;
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_spdif_2>;
-				fsl,spdif-dma-events = <15 14>;
-				clocks = <&clks 198>;
-				clock-names = "spdif";
-				interrupts = <0 52 0x04>;
-				status = "okay";
+			spba-bus@02000000 {
+				spdif: spdif@02004000 {
+					compatible = "fsl,fsl-spdif";
+					reg = <0x02004000 0x4000>;
+					pinctrl-names = "default";
+					pinctrl-0 = <&pinctrl_spdif_2>;
+					fsl,spdif-dma-events = <15 14>;
+					clocks = <&clks 198>;
+					clock-names = "spdif";
+					interrupts = <0 52 0x04>;
+					status = "okay";
+				};
 			};
 
 			can@02090000 { /* CAN1 */
@@ -210,7 +212,7 @@
 		compatible = "fsl,imx-audio-spdif",
 			     "fsl,imx-arm2-spdif";
 		model = "imx-arm2-spdif";
-		spdif-controller = <&spdif_dai>;
+		spdif-controller = <&spdif>;
 		spdif-tx = <1>;		/* 1:enable, 0:disable */
 		spdif-rx = <1>;		/* 1:enable, 0:disable */
 	};
