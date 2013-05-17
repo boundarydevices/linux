@@ -44,6 +44,7 @@ static int __devinit imx_spdif_audio_probe(struct platform_device *pdev)
 	struct imx_spdif_data *data;
 	struct mxc_spdif_data codec_pdata;
 	struct property *poldbase;
+	char platform_name[32];
 	int ret = 0;
 	u32 val;
 
@@ -102,7 +103,9 @@ static int __devinit imx_spdif_audio_probe(struct platform_device *pdev)
 	data->dai.codec_dai_name = "mxc-spdif";
 	data->dai.codec_name = dev_name(&codec_dev->dev);
 	data->dai.cpu_dai_name = dev_name(&spdif_pdev->dev);
-	data->dai.platform_name = "imx-pcm-audio";
+
+	sprintf(platform_name, "imx-pcm-audio.%d", of_alias_get_id(spdif_np, "audio"));
+	data->dai.platform_name = platform_name;
 	data->card.dev = &pdev->dev;
 	ret = snd_soc_of_parse_card_name(&data->card, "model");
 	if (ret)
@@ -110,12 +113,6 @@ static int __devinit imx_spdif_audio_probe(struct platform_device *pdev)
 
 	data->card.num_links = 1;
 	data->card.dai_link = &data->dai;
-
-	if (!platform_device_register_simple("imx-pcm-audio", -1, NULL, 0)) {
-		pr_err("%s failed platform_device_alloc\n", __func__);
-		ret = -ENOMEM;
-		goto err1;
-	}
 
 	ret = snd_soc_register_card(&data->card);
 	if (ret) {
@@ -138,12 +135,7 @@ fail:
 
 static int __devexit imx_spdif_audio_remove(struct platform_device *pdev)
 {
-	struct imx_ssi *ssi = platform_get_drvdata(pdev);
-
-	platform_device_unregister(ssi->soc_platform_pdev);
 	snd_soc_unregister_dai(&pdev->dev);
-	kfree(ssi);
-
 	return 0;
 }
 
