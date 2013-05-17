@@ -1009,10 +1009,16 @@ static int __devinit fsl_ssi_probe(struct platform_device *pdev)
 		goto error_dev;
 	}
 
+	pdev->id = of_alias_get_id(np, "audio");
+	if (pdev->id < 0) {
+		dev_err(&pdev->dev, "Missing alias for ssi in devicetree");
+		goto error_dev;
+	}
+
 	if (ssi_private->ssi_on_imx) {
 		ssi_private->imx_pcm_pdev =
 			platform_device_register_simple("imx-pcm-audio",
-							-1, NULL, 0);
+							pdev->id, NULL, 0);
 		if (IS_ERR(ssi_private->imx_pcm_pdev)) {
 			ret = PTR_ERR(ssi_private->imx_pcm_pdev);
 			goto error_dev;
