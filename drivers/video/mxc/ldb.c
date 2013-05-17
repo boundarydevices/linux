@@ -140,6 +140,15 @@ static struct fb_videomode ldb_modedb[] = {
 	 .sync = 0,
 	 .vmode = FB_VMODE_NONINTERLACED,
 	 .flag = FB_MODE_IS_DETAILED,},
+	{
+	/* 800x480 @ 57 Hz , pixel clk @ 27MHz */
+	"INNOLUX-WVGA", 57, 800, 480, 25000,
+	 .left_margin = 45, .right_margin = 1056 - 1 - 45 - 800,
+	 .upper_margin = 22, .lower_margin = 635 - 1 - 22 - 480,
+	 .hsync_len = 1, .vsync_len = 1,
+	 .sync = 0,
+	 .vmode = FB_VMODE_NONINTERLACED,
+	 .flag = FB_MODE_IS_DETAILED,},
 };
 static int ldb_modedb_sz = ARRAY_SIZE(ldb_modedb);
 
@@ -740,6 +749,11 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 		struct fb_videomode m;
 		fb_var_to_videomode(&m, &setting->fbi->var);
 		pr_info("%s: ret=%d, %dx%d\n", __func__, ret, m.xres, m.yres);
+		pr_info("%s:r=%d, x=%d, y=%d, p=%d, l=%d, r=%d, upper=%d, lower=%d, h=%d, v=%d\n",
+			__func__, m.refresh, m.xres, m.yres, m.pixclock,
+			m.left_margin, m.right_margin,
+			m.upper_margin, m.lower_margin,
+			m.hsync_len, m.vsync_len);
 		fb_add_videomode(&m, &setting->fbi->modelist);
 		for (i = 0; i < ldb_modedb_sz; i++) {
 			if (!fb_mode_is_equal(&m, &ldb_modedb[i])) {
