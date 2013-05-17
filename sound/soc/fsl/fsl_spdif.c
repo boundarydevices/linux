@@ -105,6 +105,7 @@ struct spdif_mixer_control {
 
 struct mxc_spdif_priv {
 	struct mxc_spdif_platform_data *plat_data;
+	struct platform_device *imx_pcm_pdev;
 	unsigned long __iomem *reg_base;
 	unsigned long reg_phys_base;
 	struct snd_card *card;	/* ALSA SPDIF sound card handle */
@@ -1208,6 +1209,20 @@ static int fsl_spdif_dai_probe(struct platform_device *pdev)
 		plat_data->spdif_div_48000 = mxc_spdif_default_data[3];
 		plat_data->spdif_div_32000 = mxc_spdif_default_data[4];
 		plat_data->spdif_rx_clk = mxc_spdif_default_data[5];
+
+		pdev->id = of_alias_get_id(np, "audio");
+		if (pdev->id < 0) {
+			dev_err(&pdev->dev, "Missing alias in devicetree");
+			goto error_kzalloc;
+		}
+
+		spdif_priv->imx_pcm_pdev =
+			platform_device_register_simple("imx-pcm-audio",
+					pdev->id, NULL, 0);
+		if (IS_ERR(spdif_priv->imx_pcm_pdev)) {
+			ret = PTR_ERR(spdif_priv->imx_pcm_pdev);
+			goto error_kzalloc;
+		}
 	}
 
 
@@ -1298,6 +1313,8 @@ card_err:
 	clk_put(plat_data->spdif_clk);
 failed_clk:
 	platform_set_drvdata(pdev, NULL);
+	if (!IS_ERR(spdif_priv->imx_pcm_pdev))
+		platform_device_unregister(spdif_priv->imx_pcm_pdev);
 error_kzalloc:
 	kfree(spdif_priv);
 	return ret;
@@ -1308,6 +1325,8 @@ static int __devexit fsl_spdif_dai_remove(struct platform_device *pdev)
 	struct mxc_spdif_priv *spdif_priv = platform_get_drvdata(pdev);
 
 	snd_soc_unregister_dai(&pdev->dev);
+	if (!IS_ERR(spdif_priv->imx_pcm_pdev))
+		platform_device_unregister(spdif_priv->imx_pcm_pdev);
 
 	platform_set_drvdata(pdev, NULL);
 	kfree(spdif_priv);
