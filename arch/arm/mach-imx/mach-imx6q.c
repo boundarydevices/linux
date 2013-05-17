@@ -392,11 +392,21 @@ put_clk_sd:
 
 static void __init imx6q_csi_mux_init(void)
 {
-	/* sabre sd board: ipu1 csi0 are connect to parallel interface.
-	 * set GPR1 bit 19 to enable the parallel interface.
+	/*
+	 * MX6Q SabreSD board:
+	 * IPU1 CSI0 connects to parallel interface.
+	 * Set GPR1 bit 19 to 0x1.
+	 *
+	 * MX6DL SabreSD board:
+	 * IPU1 CSI0 connects to parallel interface.
+	 * Set GPR13 bit 0-2 to 0x4.
+	 * IPU1 CSI1 connects to MIPI CSI2 virtual channel 1.
+	 * Set GPR13 bit 3-5 to 0x1.
 	 */
 	if (of_machine_is_compatible("fsl,imx6q-sabresd"))
 		regmap_update_bits(regmap_gpr, IOMUXC_GPR1, 1 << 19, 1 << 19);
+	else if (of_machine_is_compatible("fsl,imx6dl-sabresd"))
+		regmap_update_bits(regmap_gpr, IOMUXC_GPR13, 0x3F, 0x0C);
 }
 
 static void __init imx6q_sabresd_init(void)
