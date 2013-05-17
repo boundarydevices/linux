@@ -615,6 +615,11 @@ int32_t ipu_init_channel(struct ipu_soc *ipu, ipu_channel_t channel, ipu_channel
 		dump_stack();
 		return ret;
 	}
+	/*
+	 * Here, ret could be 1 if the device's runtime PM status was
+	 * already 'active', so clear it to be 0.
+	 */
+	ret = 0;
 
 	_ipu_get(ipu);
 
