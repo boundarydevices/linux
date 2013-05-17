@@ -464,6 +464,7 @@ static int __devinit imx_wm8962_probe(struct platform_device *pdev)
 	struct i2c_client *codec_dev;
 	struct imx_wm8962_data *data;
 	int int_port, ext_port;
+	char platform_name[32];
 	int ret;
 
 	priv->pdev = pdev;
@@ -545,7 +546,9 @@ static int __devinit imx_wm8962_probe(struct platform_device *pdev)
 	data->dai.codec_dai_name = "wm8962";
 	data->dai.codec_of_node = codec_np;
 	data->dai.cpu_dai_name = dev_name(&ssi_pdev->dev);
-	data->dai.platform_name = "imx-pcm-audio";
+
+	sprintf(platform_name, "imx-pcm-audio.%d", of_alias_get_id(ssi_np, "audio"));
+	data->dai.platform_name = platform_name;
 	data->dai.init = &imx_wm8962_dai_init;
 	data->dai.ops = &imx_hifi_ops;
 	data->dai.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
