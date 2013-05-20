@@ -216,6 +216,15 @@ config SND_SOC_IMX_SPDIF
 	  Say Y if you want to add support for SoC audio on an i.MX board with
 	  a S/DPDIF.
 
+config SND_SOC_IMX_SI4763
+	tristate "SoC Audio support for IMX SI4763"
+	select SND_MXC_SOC_SSI
+	select SND_SOC_SI4763
+	help
+	  SoC Audio support for i.MX boards with SI4763
+	  Say Y if you want to add support for Soc audio for the AMFM Tuner chip
+	  SI4763 module.
+
 config SND_SOC_IMX_MC13783
 	tristate "SoC Audio support for I.MX boards with mc13783"
 	depends on MFD_MC13783
