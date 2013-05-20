@@ -26,6 +26,11 @@
 
 		aips-bus@02000000 { /* AIPS1 */
 			spba-bus@02000000 {
+				ssi2: ssi@0202c000 {
+					fsl,mode = "i2s-master";
+					status = "okay";
+				};
+
 				spdif: spdif@02004000 {
 					compatible = "fsl,fsl-spdif";
 					reg = <0x02004000 0x4000>;
@@ -97,6 +102,12 @@
 			uart4: serial@021f0000 {
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_uart4_1>;
+				status = "okay";
+			};
+
+			audmux: audmux@021d8000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_audmux_3>;
 				status = "okay";
 			};
 
@@ -234,6 +245,16 @@
 		spdif-controller = <&spdif>;
 		spdif-tx = <0>;		/* 1:enable, 0:disable */
 		spdif-rx = <1>;		/* 1:enable, 0:disable */
+	};
+
+	sound-fm {
+		compatible = "fsl,imx-audio-si4763",
+			"fsl,imx-tuner-si4763";
+		model = "imx6q-sabreauto-si4763";
+
+		ssi-controller = <&ssi2>;
+		mux-int-port = <2>;
+		mux-ext-port = <5>;
 	};
 
 	mxcfb1: fb@0 {
