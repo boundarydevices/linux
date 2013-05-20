@@ -590,7 +590,7 @@ static int fsl_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(cpu_dai);
 	struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
 	u32 strcr = 0, scr;
-	bool is_i2s;
+	bool is_i2s, i2s_master;
 
 	scr = read_ssi(&ssi->scr) & ~(CCSR_SSI_SCR_SYN | CCSR_SSI_SCR_NET);
 
@@ -652,6 +652,7 @@ static int fsl_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	case SND_SOC_DAIFMT_CBS_CFS:
 		strcr |= CCSR_SSI_STCR_TFDIR | CCSR_SSI_STCR_TXDIR;
 		if (is_i2s) {
+			i2s_master = true;
 			scr &= ~CCSR_SSI_SCR_I2S_MODE_MASK;
 			scr |= CCSR_SSI_SCR_I2S_MODE_MASTER;
 		}
@@ -681,6 +682,8 @@ static int fsl_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	scr |= CCSR_SSI_SCR_TCH_EN;
 
 	write_ssi(strcr, &ssi->stcr);
+	if (i2s_master)
+		strcr &= ~(CCSR_SSI_STCR_TFDIR | CCSR_SSI_STCR_TXDIR);
 	write_ssi(strcr, &ssi->srcr);
 	write_ssi(scr, &ssi->scr);
 
