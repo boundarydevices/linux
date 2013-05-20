@@ -666,9 +666,9 @@ static int fsl_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	strcr |= CCSR_SSI_STCR_TFEN1;
 	scr |= CCSR_SSI_SCR_TCH_EN;
 
-	write_ssi_mask(&ssi->stcr, 0, strcr);
-	write_ssi_mask(&ssi->srcr, 0, strcr);
-	write_ssi_mask(&ssi->scr, 0, scr);
+	write_ssi(strcr, &ssi->stcr);
+	write_ssi(strcr, &ssi->srcr);
+	write_ssi(scr, &ssi->scr);
 
 	return 0;
 }
@@ -716,8 +716,8 @@ static int fsl_ssi_set_dai_clkdiv(struct snd_soc_dai *cpu_dai,
 		return -EINVAL;
 	}
 
-	write_ssi_mask(&ssi->stccr, 0, stccr);
-	write_ssi_mask(&ssi->srccr, 0, srccr);
+	write_ssi(stccr, &ssi->stccr);
+	write_ssi(srccr, &ssi->srccr);
 
 	return 0;
 }
