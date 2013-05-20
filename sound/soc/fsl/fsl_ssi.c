@@ -146,7 +146,6 @@ struct fsl_ssi_private {
 #define IMX_SSI_USE_AC97       (1 << 1)
 #define IMX_SSI_NET            (1 << 2)
 #define IMX_SSI_SYN            (1 << 3)
-#define IMX_SSI_USE_I2S_SLAVE  (1 << 4)
 
 	bool new_binding;
 	bool ssi_on_imx;
@@ -591,21 +590,19 @@ static int fsl_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(cpu_dai);
 	struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
 	u32 strcr = 0, scr;
+	bool is_i2s;
 
 	scr = read_ssi(&ssi->scr) & ~(CCSR_SSI_SCR_SYN | CCSR_SSI_SCR_NET);
 
 	/* DAI mode */
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_I2S:
+		is_i2s = true;
 		/* data on rising edge of bclk, frame low 1clk before data */
 		strcr |= CCSR_SSI_STCR_TFSI
 			| CCSR_SSI_STCR_TEFS
 			| CCSR_SSI_STCR_TXBIT0;
 		scr |= CCSR_SSI_SCR_NET;
-		if (ssi_private->flags & IMX_SSI_USE_I2S_SLAVE) {
-			scr &= ~CCSR_SSI_SCR_I2S_MODE_MASK;
-			scr |= CCSR_SSI_SCR_I2S_MODE_SLAVE;
-		}
 		break;
 	case SND_SOC_DAIFMT_LEFT_J:
 		/* data on rising edge of bclk, frame high with data */
@@ -623,6 +620,8 @@ static int fsl_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 			| CCSR_SSI_STCR_TEFS;
 		break;
 	default:
+		dev_err(cpu_dai->dev, "Unsupported SND_SOC_DAIFMT: %d",
+				fmt & SND_SOC_DAIFMT_FORMAT_MASK);
 		return -EINVAL;
 	}
 
@@ -643,15 +642,30 @@ static int fsl_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 		strcr |= CCSR_SSI_STCR_TSCKP;
 		break;
 	default:
+		dev_err(cpu_dai->dev, "Unsupported SND_SOC_DAIFMT_INV: %d",
+				fmt & SND_SOC_DAIFMT_INV_MASK);
 		return -EINVAL;
 	}
 
 	/* DAI clock master masks */
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
+	case SND_SOC_DAIFMT_CBS_CFS:
+		strcr |= CCSR_SSI_STCR_TFDIR | CCSR_SSI_STCR_TXDIR;
+		if (is_i2s) {
+			scr &= ~CCSR_SSI_SCR_I2S_MODE_MASK;
+			scr |= CCSR_SSI_SCR_I2S_MODE_MASTER;
+		}
+		break;
 	case SND_SOC_DAIFMT_CBM_CFM:
+		strcr &= ~(CCSR_SSI_STCR_TFDIR | CCSR_SSI_STCR_TXDIR);
+		if (is_i2s) {
+			scr &= ~CCSR_SSI_SCR_I2S_MODE_MASK;
+			scr |= CCSR_SSI_SCR_I2S_MODE_SLAVE;
+		}
 		break;
 	default:
-		/* Master mode not implemented, needs handling of clocks. */
+		dev_err(cpu_dai->dev, "Unsupported SND_SOC_DAIFMT_MASTER: %d",
+				fmt & SND_SOC_DAIFMT_MASTER_MASK);
 		return -EINVAL;
 	}
 
@@ -907,15 +921,6 @@ static int __devinit fsl_ssi_probe(struct platform_device *pdev)
 	ssi_private->cpu_dai_drv.name = ssi_private->name;
 
 	ssi_private->flags = 0;
-
-	/* We only support the SSI in "I2S Slave" mode */
-	sprop = of_get_property(np, "fsl,mode", NULL);
-	if (!sprop || strcmp(sprop, "i2s-slave")) {
-		dev_notice(&pdev->dev, "mode %s is unsupported\n", sprop);
-		goto error_kmalloc;
-	}
-	if (!strcmp(sprop, "i2s-slave"))
-		ssi_private->flags |= IMX_SSI_USE_I2S_SLAVE;
 
 	/* Use sync mode for default */
 	ssi_private->flags |= IMX_SSI_SYN;
