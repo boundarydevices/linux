@@ -703,28 +703,72 @@ static int fsl_ssi_set_dai_clkdiv(struct snd_soc_dai *cpu_dai,
 
 	switch (div_id) {
 	case IMX_SSI_TX_DIV_2:
-		stccr &= ~CCSR_SSI_SxCCR_DIV2;
-		stccr |= div;
+		switch (div) {
+		case 1:
+			stccr |= CCSR_SSI_SxCCR_DIV2;
+			break;
+		case 0:
+			stccr &= ~CCSR_SSI_SxCCR_DIV2;
+			break;
+		default:
+			dev_err(cpu_dai->dev, "DIV_2 only supports value 0 or 1");
+			return -EINVAL;
+		}
 		break;
 	case IMX_SSI_TX_DIV_PSR:
-		stccr &= ~CCSR_SSI_SxCCR_PSR;
-		stccr |= div;
+		switch (div) {
+		case 1:
+			stccr |= CCSR_SSI_SxCCR_PSR;
+			break;
+		case 0:
+			stccr &= ~CCSR_SSI_SxCCR_PSR;
+			break;
+		default:
+			dev_err(cpu_dai->dev, "PSR only supports value 0 or 1");
+			return -EINVAL;
+		}
 		break;
 	case IMX_SSI_TX_DIV_PM:
-		stccr &= ~0xff;
+		if (div & (~CCSR_SSI_SxCCR_PM_MASK)) {
+			dev_err(cpu_dai->dev, "Too large value for PM.");
+			return -EINVAL;
+		}
+		stccr &= ~CCSR_SSI_SxCCR_PM_MASK;
 		stccr |= CCSR_SSI_SxCCR_PM(div);
 		break;
 	case IMX_SSI_RX_DIV_2:
-		stccr &= ~CCSR_SSI_SxCCR_DIV2;
-		stccr |= div;
+		switch (div) {
+		case 1:
+			srccr |= CCSR_SSI_SxCCR_DIV2;
+			break;
+		case 0:
+			srccr &= ~CCSR_SSI_SxCCR_DIV2;
+			break;
+		default:
+			dev_err(cpu_dai->dev, "DIV_2 only supports value 0 or 1");
+			return -EINVAL;
+		}
 		break;
 	case IMX_SSI_RX_DIV_PSR:
-		stccr &= ~CCSR_SSI_SxCCR_PSR;
-		stccr |= div;
+		switch (div) {
+		case 1:
+			srccr |= CCSR_SSI_SxCCR_PSR;
+			break;
+		case 0:
+			srccr &= ~CCSR_SSI_SxCCR_PSR;
+			break;
+		default:
+			dev_err(cpu_dai->dev, "PSR only supports value 0 or 1");
+			return -EINVAL;
+		}
 		break;
 	case IMX_SSI_RX_DIV_PM:
-		stccr &= ~0xff;
-		stccr |= CCSR_SSI_SxCCR_PM(div);
+		if (div & (~CCSR_SSI_SxCCR_PM_MASK)) {
+			dev_err(cpu_dai->dev, "Too large value for PM.");
+			return -EINVAL;
+		}
+		srccr &= ~CCSR_SSI_SxCCR_PM_MASK;
+		srccr |= CCSR_SSI_SxCCR_PM(div);
 		break;
 	default:
 		return -EINVAL;
