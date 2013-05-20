@@ -101,8 +101,10 @@
 				cd-gpios = <&gpio6 15 0>;
 				wp-gpios = <&gpio1 13 0>;
 				bus-width = <8>;
-				pinctrl-names = "default";
+				pinctrl-names = "default", "state_100mhz", "state_200mhz";
 				pinctrl-0 = <&pinctrl_usdhc3_1>;
+				pinctrl-1 = <&pinctrl_usdhc3_3>;
+				pinctrl-2 = <&pinctrl_usdhc3_4>;
 				status = "okay";
 			};
 
