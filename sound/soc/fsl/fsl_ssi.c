@@ -809,6 +809,33 @@ static int fsl_ssi_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
 	return 0;
 }
 
+/*
+ * SSI Network Mode or TDM slots configuration.
+ * Should only be called when port is inactive (i.e. SSIEN = 0).
+ */
+static int fsl_ssi_set_dai_tdm_slot(struct snd_soc_dai *cpu_dai,
+	unsigned int tx_mask, unsigned int rx_mask, int slots, int slot_width)
+{
+	struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(cpu_dai);
+	struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
+	u32 sccr;
+
+	sccr = read_ssi(&ssi->stccr);
+	sccr &= ~CCSR_SSI_SxCCR_DC_MASK;
+	sccr |= CCSR_SSI_SxCCR_DC(slots);
+	write_ssi(sccr, &ssi->stccr);
+
+	sccr = read_ssi(&ssi->srccr);
+	sccr &= ~CCSR_SSI_SxCCR_DC_MASK;
+	sccr |= CCSR_SSI_SxCCR_DC(slots);
+	write_ssi(sccr, &ssi->srccr);
+
+	write_ssi(tx_mask, &ssi->stmsk);
+	write_ssi(rx_mask, &ssi->srmsk);
+
+	return 0;
+}
+
 /**
  * fsl_ssi_shutdown: shutdown the SSI
  *
@@ -843,6 +870,7 @@ static const struct snd_soc_dai_ops fsl_ssi_dai_ops = {
 	.set_fmt	= fsl_ssi_set_dai_fmt,
 	.set_clkdiv	= fsl_ssi_set_dai_clkdiv,
 	.set_sysclk	= fsl_ssi_set_dai_sysclk,
+	.set_tdm_slot	= fsl_ssi_set_dai_tdm_slot,
 	.shutdown	= fsl_ssi_shutdown,
 	.trigger	= fsl_ssi_trigger,
 };
