@@ -9,15 +9,6 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <linux/module.h>
-#include <linux/of_platform.h>
-#include <linux/clk.h>
-#include <linux/err.h>
-#include <linux/io.h>
-#include <linux/delay.h>
-
-#include "ci13xxx_imx.h"
-
 #define USB_DEV_MAX 4
 
 #define MX25_USB_PHY_CTRL_OFFSET	0x08
@@ -36,121 +27,88 @@
 #define MX6_BM_WAKEUP_ENABLE		BIT(10)
 #define MX6_BM_WAKEUP_INTR		BIT(31)
 
-struct imx_usbmisc {
-	void __iomem *base;
-	spinlock_t lock;
-	struct clk *clk;
-	struct usbmisc_usb_device usbdev[USB_DEV_MAX];
-	const struct usbmisc_ops *ops;
-};
-
-static struct imx_usbmisc *usbmisc;
-
-static struct usbmisc_usb_device *get_usbdev(struct device *dev)
+static int usbmisc_imx25_post(struct ci13xxx_imx_data *data)
 {
-	int i, ret;
-
-	for (i = 0; i < USB_DEV_MAX; i++) {
-		if (usbmisc->usbdev[i].dev == dev)
-			return &usbmisc->usbdev[i];
-		else if (!usbmisc->usbdev[i].dev)
-			break;
-	}
-
-	if (i >= USB_DEV_MAX)
-		return ERR_PTR(-EBUSY);
-
-	ret = usbmisc_get_init_data(dev, &usbmisc->usbdev[i]);
-	if (ret)
-		return ERR_PTR(ret);
-
-	return &usbmisc->usbdev[i];
-}
-
-static int usbmisc_imx25_post(struct device *dev)
-{
-	struct usbmisc_usb_device *usbdev;
 	void __iomem *reg;
 	unsigned long flags;
 	u32 val;
 
-	usbdev = get_usbdev(dev);
-	if (IS_ERR(usbdev))
-		return PTR_ERR(usbdev);
+	if (!data->non_core_base_addr)
+		return -EINVAL;
 
-	reg = usbmisc->base + MX25_USB_PHY_CTRL_OFFSET;
+	reg = data->non_core_base_addr + MX25_USB_PHY_CTRL_OFFSET;
 
-	if (usbdev->evdo) {
-		spin_lock_irqsave(&usbmisc->lock, flags);
+	if (data->evdo) {
+		spin_lock_irqsave(&data->lock, flags);
 		val = readl(reg);
 		writel(val | MX25_BM_EXTERNAL_VBUS_DIVIDER, reg);
-		spin_unlock_irqrestore(&usbmisc->lock, flags);
+		spin_unlock_irqrestore(&data->lock, flags);
 		usleep_range(5000, 10000); /* needed to stabilize voltage */
 	}
 
 	return 0;
 }
 
-static int usbmisc_imx53_init(struct device *dev)
+static int usbmisc_imx53_init(struct ci13xxx_imx_data *data)
 {
-	struct usbmisc_usb_device *usbdev;
 	void __iomem *reg = NULL;
 	unsigned long flags;
 	u32 val = 0;
 
-	usbdev = get_usbdev(dev);
-	if (IS_ERR(usbdev))
-		return PTR_ERR(usbdev);
+	if (!data->non_core_base_addr || data->index < 0)
+		return -EINVAL;
 
-	if (usbdev->disable_oc) {
-		spin_lock_irqsave(&usbmisc->lock, flags);
-		switch (usbdev->index) {
+	if (data->disable_oc) {
+		spin_lock_irqsave(&data->lock, flags);
+		switch (data->index) {
 		case 0:
-			reg = usbmisc->base + MX53_USB_OTG_PHY_CTRL_0_OFFSET;
+			reg = data->non_core_base_addr +
+				MX53_USB_OTG_PHY_CTRL_0_OFFSET;
 			val = readl(reg) | MX53_BM_OVER_CUR_DIS_OTG;
 			break;
 		case 1:
-			reg = usbmisc->base + MX53_USB_OTG_PHY_CTRL_0_OFFSET;
+			reg = data->non_core_base_addr +
+				MX53_USB_OTG_PHY_CTRL_0_OFFSET;
 			val = readl(reg) | MX53_BM_OVER_CUR_DIS_H1;
 			break;
 		case 2:
-			reg = usbmisc->base + MX53_USB_UH2_CTRL_OFFSET;
+			reg = data->non_core_base_addr +
+				MX53_USB_UH2_CTRL_OFFSET;
 			val = readl(reg) | MX53_BM_OVER_CUR_DIS_UHx;
 			break;
 		case 3:
-			reg = usbmisc->base + MX53_USB_UH3_CTRL_OFFSET;
+			reg = data->non_core_base_addr +
+				MX53_USB_UH3_CTRL_OFFSET;
 			val = readl(reg) | MX53_BM_OVER_CUR_DIS_UHx;
 			break;
 		}
 		if (reg && val)
 			writel(val, reg);
-		spin_unlock_irqrestore(&usbmisc->lock, flags);
+		spin_unlock_irqrestore(&data->lock, flags);
 	}
 
 	return 0;
 }
 
-static int usbmisc_imx6q_init(struct device *dev)
+static int usbmisc_imx6q_init(struct ci13xxx_imx_data *data)
 {
-	struct usbmisc_usb_device *usbdev;
 	unsigned long flags;
 	u32 reg;
 
-	usbdev = get_usbdev(dev);
-	if (IS_ERR(usbdev))
-		return PTR_ERR(usbdev);
+	if (!data->non_core_base_addr || data->index < 0)
+		return -EINVAL;
 
-	spin_lock_irqsave(&usbmisc->lock, flags);
+	spin_lock_irqsave(&data->lock, flags);
 
-	if (usbdev->disable_oc) {
-		reg = readl(usbmisc->base + usbdev->index * 4);
+	if (data->disable_oc) {
+		reg = readl(data->non_core_base_addr + data->index * 4);
 		writel(reg | MX6_BM_OVER_CUR_DIS,
-			usbmisc->base + usbdev->index * 4);
+			data->non_core_base_addr + data->index * 4);
 	}
 
 	/* Disable wakeup at initialization */
-	reg = readl(usbmisc->base + usbdev->index * 4);
-	switch (usbdev->index) {
+	reg = readl(data->non_core_base_addr + data->index * 4);
+	switch (data->index) {
 	case 0:
 		reg &= ~(MX6_BM_ID_WAKEUP | MX6_BM_VBUS_WAKEUP
 				| MX6_BM_WAKEUP_ENABLE);
@@ -160,27 +118,25 @@ static int usbmisc_imx6q_init(struct device *dev)
 	case 3:
 		reg &= ~MX6_BM_WAKEUP_ENABLE;
 	}
-	writel(reg, usbmisc->base + usbdev->index * 4);
+	writel(reg, data->non_core_base_addr + data->index * 4);
 
-	spin_unlock_irqrestore(&usbmisc->lock, flags);
+	spin_unlock_irqrestore(&data->lock, flags);
 
 	return 0;
 }
 
-static int usbmisc_imx6q_wakeup(struct device *dev,
+static int usbmisc_imx6q_wakeup(struct ci13xxx_imx_data *data,
 		enum ci_usb_wakeup_events wakeup_event)
 {
-	struct usbmisc_usb_device *usbdev;
 	unsigned long flags;
 	u32 reg;
 
-	usbdev = get_usbdev(dev);
-	if (IS_ERR(usbdev))
-		return PTR_ERR(usbdev);
+	if (!data->non_core_base_addr || data->index < 0)
+		return -EINVAL;
 
-	spin_lock_irqsave(&usbmisc->lock, flags);
+	spin_lock_irqsave(&data->lock, flags);
 
-	reg = readl(usbmisc->base + usbdev->index * 4);
+	reg = readl(data->non_core_base_addr + data->index * 4);
 	switch (wakeup_event) {
 	case CI_USB_WAKEUP_EVENT_GADGET:
 		reg |= MX6_BM_VBUS_WAKEUP | MX6_BM_WAKEUP_ENABLE;
@@ -193,7 +149,7 @@ static int usbmisc_imx6q_wakeup(struct device *dev,
 			| MX6_BM_WAKEUP_ENABLE;
 		break;
 	case CI_USB_WAKEUP_EVENT_NONE:
-		switch (usbdev->index) {
+		switch (data->index) {
 		case 0:
 			reg &= ~(MX6_BM_ID_WAKEUP | MX6_BM_VBUS_WAKEUP
 					| MX6_BM_WAKEUP_ENABLE);
@@ -205,26 +161,25 @@ static int usbmisc_imx6q_wakeup(struct device *dev,
 		}
 		break;
 	default:
-		dev_err(dev, "error wakeup event \n");
+		printk(KERN_ERR "error wakeup event\n");
+		return -EINVAL;
 	}
 
-	writel(reg, usbmisc->base + usbdev->index * 4);
+	writel(reg, data->non_core_base_addr + data->index * 4);
 
-	spin_unlock_irqrestore(&usbmisc->lock, flags);
+	spin_unlock_irqrestore(&data->lock, flags);
 
 	return 0;
 }
 
-static int usbmisc_imx6q_is_wakeup_interrupt(struct device *dev)
+static int usbmisc_imx6q_is_wakeup_interrupt(struct ci13xxx_imx_data *data)
 {
-	struct usbmisc_usb_device *usbdev;
 	u32 reg;
 
-	usbdev = get_usbdev(dev);
-	if (IS_ERR(usbdev))
-		return PTR_ERR(usbdev);
+	if (!data->non_core_base_addr || data->index < 0)
+		return -EINVAL;
 
-	reg = readl(usbmisc->base + usbdev->index * 4);
+	reg = readl(data->non_core_base_addr + data->index * 4);
 	if (reg & MX6_BM_WAKEUP_INTR)
 		return IMX_WAKEUP_INTR_PENDING;
 
@@ -245,96 +200,3 @@ static const struct usbmisc_ops imx6q_usbmisc_ops = {
 	.set_wakeup = usbmisc_imx6q_wakeup,
 	.is_wakeup_intr = usbmisc_imx6q_is_wakeup_interrupt,
 };
-
-static const struct of_device_id usbmisc_imx_dt_ids[] = {
-	{ .compatible = "fsl,imx25-usbmisc", .data = (void *)&imx25_usbmisc_ops },
-	{ .compatible = "fsl,imx53-usbmisc", .data = (void *)&imx53_usbmisc_ops },
-	{ .compatible = "fsl,imx6q-usbmisc", .data = (void *)&imx6q_usbmisc_ops },
-	{ /* sentinel */ }
-};
-
-static int usbmisc_imx_probe(struct platform_device *pdev)
-{
-	struct resource	*res;
-	struct imx_usbmisc *data;
-	int ret;
-	struct of_device_id *tmp_dev;
-
-	if (usbmisc)
-		return -EBUSY;
-
-	data = devm_kzalloc(&pdev->dev, sizeof(*data), GFP_KERNEL);
-	if (!data)
-		return -ENOMEM;
-
-	spin_lock_init(&data->lock);
-
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	data->base = devm_request_and_ioremap(&pdev->dev, res);
-	if (!data->base)
-		return -EADDRNOTAVAIL;
-
-	data->clk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(data->clk)) {
-		dev_err(&pdev->dev,
-			"failed to get clock, err=%ld\n", PTR_ERR(data->clk));
-		return PTR_ERR(data->clk);
-	}
-
-	ret = clk_prepare_enable(data->clk);
-	if (ret) {
-		dev_err(&pdev->dev,
-			"clk_prepare_enable failed, err=%d\n", ret);
-		return ret;
-	}
-
-	tmp_dev = (struct of_device_id *)
-		of_match_device(usbmisc_imx_dt_ids, &pdev->dev);
-	data->ops = (const struct usbmisc_ops *)tmp_dev->data;
-	usbmisc = data;
-	ret = usbmisc_set_ops(data->ops);
-	if (ret) {
-		usbmisc = NULL;
-		clk_disable_unprepare(data->clk);
-		return ret;
-	}
-
-	/* ci13xxx_imx.c should keep clk is on when the misc APIs are called */
-	clk_disable_unprepare(usbmisc->clk);
-
-	return 0;
-}
-
-static int usbmisc_imx_remove(struct platform_device *pdev)
-{
-	usbmisc_unset_ops(usbmisc->ops);
-	usbmisc = NULL;
-	return 0;
-}
-
-static struct platform_driver usbmisc_imx_driver = {
-	.probe = usbmisc_imx_probe,
-	.remove = usbmisc_imx_remove,
-	.driver = {
-		.name = "usbmisc_imx",
-		.owner = THIS_MODULE,
-		.of_match_table = usbmisc_imx_dt_ids,
-	 },
-};
-
-int __init usbmisc_imx_drv_init(void)
-{
-	return platform_driver_register(&usbmisc_imx_driver);
-}
-subsys_initcall(usbmisc_imx_drv_init);
-
-void __exit usbmisc_imx_drv_exit(void)
-{
-	platform_driver_unregister(&usbmisc_imx_driver);
-}
-module_exit(usbmisc_imx_drv_exit);
-
-MODULE_ALIAS("platform:usbmisc-imx");
-MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("driver for imx usb non-core registers");
-MODULE_AUTHOR("Richard Zhao <richard.zhao@freescale.com>");

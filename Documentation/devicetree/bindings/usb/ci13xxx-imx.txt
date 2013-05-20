@@ -13,8 +13,6 @@ Recommended properies:
 
 Optional properties:
 - fsl,usbphy: phandler of usb phy that connects to the only one port
-- fsl,usbmisc: phandler of non-core register device, with one argument
-  that indicate usb controller index
 - vbus-supply: regulator for vbus
 - disable-over-current: disable over current detect
 - external-vbus-divider: enables off-chip resistor divider for Vbus
@@ -30,7 +28,6 @@ usb@02184000 { /* USB OTG */
 	reg = <0x02184000 0x200>;
 	interrupts = <0 43 0x04>;
 	fsl,usbphy = <&usbphy1>;
-	fsl,usbmisc = <&usbmisc 0>;
 	disable-over-current;
 	external-vbus-divider;
 };

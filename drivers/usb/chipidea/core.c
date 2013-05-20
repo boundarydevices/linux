@@ -729,6 +729,9 @@ static int ci_hdrc_remove(struct platform_device *pdev)
 	free_irq(ci->irq, ci);
 	ci_role_destroy(ci);
 
+	/* Put the PHY into low power mode */
+	hw_write(ci, OP_PORTSC, PORTSC_PHCD, PORTSC_PHCD);
+
 	return 0;
 }
 

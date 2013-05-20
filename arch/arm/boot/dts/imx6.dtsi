@@ -34,6 +34,10 @@
 		audio2 = &ssi3;
 		audio3 = &esai;
 		audio4 = &spdif;
+		usb0 = &usbotg;
+		usb1 = &usbh1;
+		usb2 = &usbh2;
+		usb3 = &usbh3;
 	};
 
 	intc: interrupt-controller@00a01000 {
@@ -666,47 +670,36 @@
 
 			usbotg: usb@02184000 {
 				compatible = "fsl,imx6q-usb", "fsl,imx27-usb";
-				reg = <0x02184000 0x200>;
+				reg = <0x02184000 0x200>, <0x02184800 0x200>;
 				interrupts = <0 43 0x04>;
 				clocks = <&clks 162>;
 				fsl,usbphy = <&usbphy1>;
-				fsl,usbmisc = <&usbmisc 0>;
 				status = "disabled";
 			};
 
 			usbh1: usb@02184200 {
 				compatible = "fsl,imx6q-usb", "fsl,imx27-usb";
-				reg = <0x02184200 0x200>;
+				reg = <0x02184200 0x200>, <0x02184800 0x200>;
 				interrupts = <0 40 0x04>;
 				clocks = <&clks 162>;
 				fsl,usbphy = <&usbphy2>;
-				fsl,usbmisc = <&usbmisc 1>;
 				status = "disabled";
 			};
 
 			usbh2: usb@02184400 {
 				compatible = "fsl,imx6q-usb", "fsl,imx27-usb";
-				reg = <0x02184400 0x200>;
+				reg = <0x02184400 0x200>, <0x02184800 0x200>;
 				interrupts = <0 41 0x04>;
 				clocks = <&clks 162>;
-				fsl,usbmisc = <&usbmisc 2>;
 				status = "disabled";
 			};
 
 			usbh3: usb@02184600 {
 				compatible = "fsl,imx6q-usb", "fsl,imx27-usb";
-				reg = <0x02184600 0x200>;
+				reg = <0x02184600 0x200>, <0x02184800 0x200>;
 				interrupts = <0 42 0x04>;
 				clocks = <&clks 162>;
-				fsl,usbmisc = <&usbmisc 3>;
 				status = "disabled";
-			};
-
-			usbmisc: usbmisc: usbmisc@02184800 {
-				#index-cells = <1>;
-				compatible = "fsl,imx6q-usbmisc";
-				reg = <0x02184800 0x200>;
-				clocks = <&clks 162>;
 			};
 
 			ethernet@02188000 {

@@ -25,83 +25,64 @@
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
 #include <linux/usb/of.h>
+#include <linux/io.h>
 
 #include "ci.h"
 #include "bits.h"
 #include "ci13xxx_imx.h"
+#include "usbmisc_imx.c"
 
 #define pdev_to_phy(pdev) \
 	((struct usb_phy *)platform_get_drvdata(pdev))
 #define IOMUXC_IOMUXC_GPR1			0x00000004
 #define USB_OTG_ID_SEL_BIT			(1<<13)
 
-struct ci13xxx_imx_data {
-	struct device_node *phy_np;
-	struct usb_phy *phy;
-	struct platform_device *ci_pdev;
-	struct clk *clk;
-	struct regulator *reg_vbus;
+static const struct of_device_id ci13xxx_imx_dt_ids[] = {
+	{ .compatible = "fsl,imx25-usb", .data = (void *)&imx25_usbmisc_ops },
+	{ .compatible = "fsl,imx53-usb", .data = (void *)&imx53_usbmisc_ops },
+	{ .compatible = "fsl,imx6q-usb", .data = (void *)&imx6q_usbmisc_ops },
+	{ .compatible = "fsl,imx27-usb", .data = NULL },
+	{ /* sentinel */ }
 };
+MODULE_DEVICE_TABLE(of, ci13xxx_imx_dt_ids);
 
-static const struct usbmisc_ops *usbmisc_ops;
-
-/* Common functions shared by usbmisc drivers */
-
-int usbmisc_set_ops(const struct usbmisc_ops *ops)
-{
-	if (usbmisc_ops)
-		return -EBUSY;
-
-	usbmisc_ops = ops;
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(usbmisc_set_ops);
-
-void usbmisc_unset_ops(const struct usbmisc_ops *ops)
-{
-	usbmisc_ops = NULL;
-}
-EXPORT_SYMBOL_GPL(usbmisc_unset_ops);
-
-int usbmisc_get_init_data(struct device *dev, struct usbmisc_usb_device *usbdev)
+static int usbmisc_init(struct device *dev)
 {
 	struct device_node *np = dev->of_node;
-	struct of_phandle_args args;
+	struct ci13xxx_imx_data *data = dev_get_drvdata(dev);
 	int ret;
+	const struct of_device_id *of_id =
+			of_match_device(ci13xxx_imx_dt_ids, dev);
 
-	usbdev->dev = dev;
+	if (of_id->data)
+		data->usbmisc_ops = (struct usbmisc_ops *)of_id->data;
+	else
+		dev_dbg(dev, "no usbmisc_ops\n");
 
-	ret = of_parse_phandle_with_args(np, "fsl,usbmisc", "#index-cells",
-					0, &args);
-	if (ret) {
-		dev_err(dev, "Failed to parse property fsl,usbmisc, errno %d\n",
-			ret);
-		memset(usbdev, 0, sizeof(*usbdev));
-		return ret;
+	ret = of_alias_get_id(np, "usb");
+	if (ret < 0) {
+		dev_dbg(dev, "failed to get alias id, errno %d\n", ret);
+		data->index = -1;
+	} else {
+		data->index = ret;
 	}
-	usbdev->index = args.args[0];
-	of_node_put(args.np);
 
 	if (of_find_property(np, "disable-over-current", NULL))
-		usbdev->disable_oc = 1;
+		data->disable_oc = 1;
 
 	if (of_find_property(np, "external-vbus-divider", NULL))
-		usbdev->evdo = 1;
+		data->evdo = 1;
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(usbmisc_get_init_data);
 
-/* End of common functions shared by usbmisc drivers*/
-
-static int imx_set_wakeup(struct device *dev, bool enable)
+static int imx_set_wakeup(struct ci13xxx_imx_data *data , bool enable)
 {
 	int ret = 0;
+	struct usbmisc_ops *usbmisc_ops = data->usbmisc_ops;
 	if (usbmisc_ops && usbmisc_ops->set_wakeup) {
 		enum ci_usb_wakeup_events wakeup_event =
 			CI_USB_WAKEUP_EVENT_NONE;
-		struct ci13xxx_imx_data *data = dev_get_drvdata(dev);
 		struct platform_device *plat_ci = data->ci_pdev;
 		struct ci13xxx *ci = platform_get_drvdata(plat_ci);
 
@@ -114,7 +95,7 @@ static int imx_set_wakeup(struct device *dev, bool enable)
 		else if (ci->roles[CI_ROLE_GADGET])
 			wakeup_event = CI_USB_WAKEUP_EVENT_GADGET;
 
-		ret = usbmisc_ops->set_wakeup(dev, wakeup_event);
+		ret = usbmisc_ops->set_wakeup(data, wakeup_event);
 	}
 
 	return ret;
@@ -192,7 +173,7 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 	struct ci13xxx_platform_data *pdata;
 	struct platform_device *plat_ci, *phy_pdev;
 	struct ci13xxx	*ci;
-	struct device_node *phy_np;
+	struct device_node *ci_np, *phy_np;
 	struct resource *res;
 	struct regulator *reg_vbus;
 	struct pinctrl *pinctrl;
@@ -200,10 +181,7 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 	u32 gpr1 = 0;
 	int ret;
 
-	if (of_find_property(pdev->dev.of_node, "fsl,usbmisc", NULL)
-		&& !usbmisc_ops)
-		return -EPROBE_DEFER;
-
+	ci_np = pdev->dev.of_node;
 	pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
 	if (!pdata) {
 		dev_err(&pdev->dev, "Failed to allocate CI13xxx-IMX pdata!\n");
@@ -225,10 +203,26 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	platform_set_drvdata(pdev, data);
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
-		dev_err(&pdev->dev, "Can't get device resources!\n");
+		dev_err(&pdev->dev, "Can't get device resources 0!\n");
 		return -ENOENT;
+	}
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (!res) {
+		dev_dbg(&pdev->dev,
+			"Can't get resource, mx23/mx28 doesn't need it\n");
+	} else {
+		data->non_core_base_addr = devm_ioremap
+			(&pdev->dev, res->start, resource_size(res));
+		if (!data->non_core_base_addr) {
+			dev_err(&pdev->dev,
+				"remap non core register failed!\n");
+			return -EBUSY;
+		}
 	}
 
 	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
@@ -285,11 +279,20 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 		dma_set_coherent_mask(&pdev->dev, *pdev->dev.dma_mask);
 	}
 
-	if (usbmisc_ops && usbmisc_ops->init) {
-		ret = usbmisc_ops->init(&pdev->dev);
+	spin_lock_init(&data->lock);
+
+	/* Some platform specific initializations */
+	ret = usbmisc_init(&pdev->dev);
+	if (ret) {
+		dev_err(&pdev->dev, "usbmisc_init failed, ret=%d\n", ret);
+		goto put_np;
+	}
+
+	if (data->usbmisc_ops && data->usbmisc_ops->init) {
+		ret = data->usbmisc_ops->init(data);
 		if (ret) {
 			dev_err(&pdev->dev,
-				"usbmisc init failed, ret=%d\n", ret);
+				"usbmisc_ops->init failed, ret=%d\n", ret);
 			goto put_np;
 		}
 	}
@@ -324,8 +327,8 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 		goto put_np;
 	}
 
-	if (usbmisc_ops && usbmisc_ops->post) {
-		ret = usbmisc_ops->post(&pdev->dev);
+	if (data->usbmisc_ops && data->usbmisc_ops->post) {
+		ret = data->usbmisc_ops->post(data);
 		if (ret) {
 			dev_err(&pdev->dev,
 				"usbmisc post failed, ret=%d\n", ret);
@@ -334,7 +337,6 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 	}
 
 	data->ci_pdev = plat_ci;
-	platform_set_drvdata(pdev, data);
 
 	ci = platform_get_drvdata(plat_ci);
 
@@ -384,26 +386,23 @@ static int ci13xxx_imx_remove(struct platform_device *pdev)
 {
 	struct ci13xxx_imx_data *data = platform_get_drvdata(pdev);
 	struct platform_device *plat_ci;
-	struct ci13xxx *ci;
 	int ret = 0;
 
 	plat_ci = data->ci_pdev;
-	ci = platform_get_drvdata(plat_ci);
 
 	pm_runtime_disable(&pdev->dev);
-	ci13xxx_remove_device(plat_ci);
 
 	if (data->reg_vbus)
 		regulator_disable(data->reg_vbus);
 
-	ret = imx_set_wakeup(&pdev->dev, false);
+	ret = imx_set_wakeup(data, false);
 	if (ret) {
 		dev_err(&pdev->dev,
 			"usbmisc set_wakeup failed, ret=%d\n", ret);
 		return ret;
 	}
 
-	hw_write(ci, OP_PORTSC, PORTSC_PHCD, PORTSC_PHCD);
+	ci13xxx_remove_device(plat_ci);
 
 	if (data->phy) {
 		usb_phy_shutdown(data->phy);
@@ -441,7 +440,7 @@ static int imx_controller_suspend(struct device *dev)
 	if (data->phy)
 		usbphy_pre_suspend(ci, data->phy);
 
-	ret = imx_set_wakeup(dev, true);
+	ret = imx_set_wakeup(data, true);
 	if (ret) {
 		dev_err(dev,
 			"usbmisc set_wakeup failed, ret=%d\n", ret);
@@ -470,6 +469,7 @@ static int imx_controller_resume(struct device *dev)
 	struct ci13xxx_imx_data *data = dev_get_drvdata(dev);
 	struct platform_device *plat_ci;
 	struct ci13xxx *ci;
+	struct usbmisc_ops *usbmisc_ops = data->usbmisc_ops;
 
 	dev_dbg(dev, "at the beginning of %s\n", __func__);
 
@@ -487,14 +487,14 @@ static int imx_controller_resume(struct device *dev)
 	}
 
 	if (usbmisc_ops && usbmisc_ops->is_wakeup_intr) {
-		if (usbmisc_ops->is_wakeup_intr(dev) == 1) {
+		if (usbmisc_ops->is_wakeup_intr(data) == 1) {
 			dev_dbg(dev, "Wakeup interrupt occurs %s\n", __func__);
 			/* Wait controller reflects PHY's status */
 			mdelay(2);
 		}
 	}
 
-	ret = imx_set_wakeup(dev, false);
+	ret = imx_set_wakeup(data, false);
 	if (ret) {
 		dev_err(dev,
 			"usbmisc set_wakeup failed, ret=%d\n", ret);
@@ -605,12 +605,6 @@ static const struct dev_pm_ops ci13xxx_imx_pm_ops = {
 	.runtime_idle		= ci13xxx_imx_runtime_idle,
 };
 #endif
-
-static const struct of_device_id ci13xxx_imx_dt_ids[] = {
-	{ .compatible = "fsl,imx27-usb", },
-	{ /* sentinel */ }
-};
-MODULE_DEVICE_TABLE(of, ci13xxx_imx_dt_ids);
 
 static struct platform_driver ci13xxx_imx_driver = {
 	.probe = ci13xxx_imx_probe,
