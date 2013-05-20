@@ -182,6 +182,14 @@
 							MX6DL_PAD_CSI0_DAT6__AUD3_TXFS  0x80000000
 						>;
 					};
+
+					pinctrl_audmux_3: audmux-3 {
+						fsl,pins = <
+							MX6DL_PAD_DISP0_DAT16__AUD5_TXC  0x80000000
+							MX6DL_PAD_DISP0_DAT18__AUD5_TXFS 0x80000000
+							MX6DL_PAD_DISP0_DAT19__AUD5_RXD  0x80000000
+						>;
+					};
 				};
 
 				ecspi1 {
