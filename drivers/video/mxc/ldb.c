@@ -128,6 +128,18 @@ static struct fb_videomode ldb_modedb[] = {
 	 0,
 	 FB_VMODE_NONINTERLACED,
 	 FB_MODE_IS_DETAILED,},
+	{
+	 /* 640x480 @ 60 Hz */
+	 "OC-VGA", 60, 640, 480, 15385,
+	 .left_margin = 40,
+	 .right_margin = 24,
+	 .hsync_len = 160,
+	 .upper_margin = 32,
+	 .lower_margin = 11,
+	 .vsync_len = 160,
+	 .sync = 0,
+	 .vmode = FB_VMODE_NONINTERLACED,
+	 .flag = FB_MODE_IS_DETAILED,},
 };
 static int ldb_modedb_sz = ARRAY_SIZE(ldb_modedb);
 
