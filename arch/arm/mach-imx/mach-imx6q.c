@@ -73,6 +73,7 @@ static int mx6_cpu_revision;
 static struct regmap *regmap_gpr;
 static int sd30_en;
 static int spdif_en;
+static int tuner_en;
 static void __iomem *wdog_base1;
 static void __iomem *wdog_base2;
 
@@ -89,6 +90,13 @@ static int __init early_enable_spdif(char *p)
 	return 0;
 }
 early_param("spdif", early_enable_spdif);
+
+static int __init early_enable_tuner(char *p)
+{
+	tuner_en = 1;
+	return 0;
+}
+early_param("tuner", early_enable_tuner);
 
 static void remove_one_pin_from_node(const char *path,
 			   const char *phandle_name,
@@ -464,6 +472,21 @@ static void __init imx6q_sabresd_init(void)
 	imx6q_sabresd_cko_setup();
 }
 
+static void __init imx6q_tuner_pindel(void)
+{
+	struct device_node *np;
+	struct property *poldbase;
+
+	/* Remove tuner pinctrl-0 */
+	np = of_find_node_by_path("/soc/aips-bus@02100000/audmux@021d8000");
+	if (!np)
+		return;
+
+	poldbase = of_find_property(np, "pinctrl-0", 0);
+	if (poldbase)
+		prom_remove_property(np, poldbase);
+}
+
 static void __init imx6q_i2c3_sda_pindel(void)
 {
 	struct device_node *np, *pinctrl_i2c3;
@@ -509,6 +532,8 @@ static void __init imx6q_i2c3_sda_pindel(void)
 static void __init imx6q_sabreauto_init(void)
 {
 	imx6q_sabreauto_esai_setup();
+	if (!tuner_en)
+		imx6q_tuner_pindel();
 }
 static void __init imx6q_1588_init(void)
 {
@@ -935,6 +960,9 @@ static void __init imx6q_init_machine(void)
 	else if (of_machine_is_compatible("fsl,imx6q-sabresd") ||
 			of_machine_is_compatible("fsl,imx6dl-sabresd"))
 		imx6q_sabresd_init();
+	else if (of_machine_is_compatible("fsl,imx6q-sabreauto") ||
+			of_machine_is_compatible("fsl,imx6dl-sabreauto"))
+		imx6q_sabreauto_init();
 	else if (of_machine_is_compatible("fsl,imx6q-arm2"))
 		imx6q_arm2_init();
 	else if (of_machine_is_compatible("fsl,imx6q-sabreauto") ||
