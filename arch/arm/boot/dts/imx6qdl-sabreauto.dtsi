@@ -32,6 +32,22 @@
 					interrupts = <0 52 0x04>;
 					status = "okay";
 			       };
+
+				ecspi@02008000 { /* eCSPI1 */
+					fsl,spi-num-chipselects = <1>;
+					cs-gpios = <&gpio3 19 0>;
+					pinctrl-names = "default";
+					pinctrl-0 = <&pinctrl_ecspi1_1 &pinctrl_ecspi1_sabreauto>;
+					status = "okay"; /* pin conflict with WEIM NOR */
+
+					flash: m25p80@0 {
+						#address-cells = <1>;
+						#size-cells = <1>;
+						compatible = "st,m25p32";
+						spi-max-frequency = <20000000>;
+						reg = <0>;
+					};
+				};
 			};
 		};
 
