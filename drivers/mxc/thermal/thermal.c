@@ -868,7 +868,7 @@ static int anatop_thermal_counting_ratio(unsigned int fuse_data)
 	/* Init default critical temp to set alarm */
 	raw_critical = raw_25c - ratio *
 		(KELVIN_TO_CEL(TEMP_CRITICAL, KELVIN_OFFSET) - 25) / 100;
-	clk_enable(pll3_clk);
+	clk_prepare_enable(pll3_clk);
 
 	return ret;
 }
