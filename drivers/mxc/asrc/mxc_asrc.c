@@ -1319,8 +1319,10 @@ static long asrc_ioctl_config_pair(struct asrc_pair_params *params,
 	params->last_period_sample = ASRC_OUTPUT_LAST_SAMPLE_DEFAULT;
 
 	/* Expand last period buffer if output_sample_rate is much bigger */
-	if (params->output_sample_rate / params->input_sample_rate > 1)
-		params->last_period_sample *= 4;
+	if (params->output_sample_rate / params->input_sample_rate > 2)
+		params->last_period_sample *= 5;
+	else if (params->output_sample_rate / params->input_sample_rate > 1)
+		params->last_period_sample *= 3;
 
 	ret = mxc_allocate_dma_buf(params);
 	if (ret) {
