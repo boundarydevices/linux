@@ -13,6 +13,11 @@
 	};
 
 	soc {
+		gpmi-nand@00112000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_gpmi_nand_1>;
+			status = "okay";
+		};
 
 		aips-bus@02000000 { /* AIPS1 */
 			spba-bus@02000000 {
