@@ -35,7 +35,6 @@ struct ci13xxx_imx_data {
 	struct usb_phy *phy;
 	struct platform_device *ci_pdev;
 	struct clk *clk;
-	struct regulator *reg_vbus;
 	struct usbmisc_ops *usbmisc_ops;
 	/* non core register base address, 0x0 means no non core register */
 	void __iomem *non_core_base_addr;

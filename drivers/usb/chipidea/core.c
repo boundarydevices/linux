@@ -356,17 +356,10 @@ static void ci_handle_id_switch(struct ci13xxx *ci)
 		hw_device_reset(ci, USBMODE_CM_IDLE);
 
 		/* 2. Turn on/off vbus according to coming role */
-		if (role == CI_ROLE_GADGET) {
-			otg_set_vbus(&ci->otg, false);
+		if (role == CI_ROLE_GADGET)
 			/* wait vbus lower than OTGSC_BSV */
 			hw_wait_reg(ci, OP_OTGSC, OTGSC_BSV, 0,
 					CI_VBUS_STABLE_TIMEOUT);
-		} else if (role == CI_ROLE_HOST) {
-			otg_set_vbus(&ci->otg, true);
-			/* wait vbus higher than OTGSC_AVV */
-			hw_wait_reg(ci, OP_OTGSC, OTGSC_AVV, OTGSC_AVV,
-					CI_VBUS_STABLE_TIMEOUT);
-		}
 
 		/* 3. Begin the new role */
 		ci_role_start(ci, role);
@@ -583,6 +576,7 @@ static int __devinit ci_hdrc_probe(struct platform_device *pdev)
 
 	ci->dev = dev;
 	ci->platdata = dev->platform_data;
+	ci->reg_vbus = ci->platdata->reg_vbus;
 	if (ci->platdata->phy)
 		ci->transceiver = ci->platdata->phy;
 	else

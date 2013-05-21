@@ -136,37 +136,6 @@ static void usbphy_regulator_enable(struct usb_phy *phy, bool enable)
 	}
 }
 
-static int ci13xxx_otg_set_vbus(struct usb_otg *otg, bool enabled)
-{
-	struct ci13xxx	*ci = container_of(otg, struct ci13xxx, otg);
-	struct regulator *reg_vbus = ci->reg_vbus;
-	int ret;
-
-	WARN_ON(!reg_vbus);
-
-	if (reg_vbus) {
-		if (enabled) {
-			ret = regulator_enable(reg_vbus);
-			if (ret) {
-				dev_err(ci->dev,
-				"Failed to enable vbus regulator, ret=%d\n",
-				ret);
-				return ret;
-			}
-		} else {
-			ret = regulator_disable(reg_vbus);
-			if (ret) {
-				dev_err(ci->dev,
-				"Failed to disable vbus regulator, ret=%d\n",
-				ret);
-				return ret;
-			}
-		}
-	}
-
-	return 0;
-}
-
 static int ci13xxx_imx_probe(struct platform_device *pdev)
 {
 	struct ci13xxx_imx_data *data;
@@ -261,9 +230,7 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 
 	reg_vbus = devm_regulator_get(&pdev->dev, "vbus");
 	if (!IS_ERR(reg_vbus))
-		data->reg_vbus = reg_vbus;
-	else
-		reg_vbus = NULL;
+		pdata->reg_vbus = reg_vbus;
 
 	pdata->phy = data->phy;
 
@@ -346,26 +313,6 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 			"some wrong at ci core's initialization\n");
 		goto put_np;
 	}
-	/*
-	 * Internal vbus on/off policy
-	 * - Always on for host only function
-	 * - Always off for gadget only function
-	 * - call otg.set_vbus to control on/off according usb role
-	 */
-
-	if (ci->roles[CI_ROLE_HOST] && !ci->roles[CI_ROLE_GADGET]
-			&& reg_vbus) {
-		ret = regulator_enable(reg_vbus);
-		if (ret) {
-			dev_err(&pdev->dev,
-				"Failed to enable vbus regulator, ret=%d\n",
-				ret);
-			goto put_np;
-		}
-	} else if (ci->is_otg) {
-		ci->otg.set_vbus = ci13xxx_otg_set_vbus;
-		ci->reg_vbus = data->reg_vbus;
-	}
 
 	device_set_wakeup_capable(&pdev->dev, true);
 
@@ -391,9 +338,6 @@ static int ci13xxx_imx_remove(struct platform_device *pdev)
 	plat_ci = data->ci_pdev;
 
 	pm_runtime_disable(&pdev->dev);
-
-	if (data->reg_vbus)
-		regulator_disable(data->reg_vbus);
 
 	ret = imx_set_wakeup(data, false);
 	if (ret) {
