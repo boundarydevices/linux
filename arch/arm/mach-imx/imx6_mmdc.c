@@ -283,7 +283,7 @@ int init_mmdc_settings(void)
 		node = of_find_compatible_node(NULL, NULL, "fsl,imx6q-iomuxc");
 	if (cpu_is_imx6dl())
 		node = of_find_compatible_node(NULL, NULL,
-			"fsl,imx6sdl-iomuxc");
+			"fsl,imx6dl-iomuxc");
 	if (!node) {
 		printk(KERN_ERR "%s: failed to find device tree data!\n",
 			__func__);
