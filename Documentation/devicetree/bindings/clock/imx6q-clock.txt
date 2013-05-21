@@ -211,6 +211,19 @@ clocks and IDs.
 	cko2_podf		196
 	cko2			197
 	spdif			198
+	aips_tz1		199
+	aips_tz2		200
+	caam_mem		201
+	caam_aclk		202
+	caam_ipg		203
+	tzasc1			204
+	tzasc2			205
+	vdoa			206
+	mmdc_ch0_ipg		207
+	mmdc_ch1_ipg		208
+	mx6fast1		209
+	per2_main		210
+	emi_slow		211
 
 Examples:
 
