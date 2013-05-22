@@ -222,7 +222,6 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 			phy = pdev_to_phy(phy_pdev);
 			if (phy &&
 			    try_module_get(phy_pdev->dev.driver->owner)) {
-				usb_phy_init(phy);
 				data->phy = phy;
 			}
 		}
@@ -333,18 +332,13 @@ static int ci13xxx_imx_remove(struct platform_device *pdev)
 {
 	struct ci13xxx_imx_data *data = platform_get_drvdata(pdev);
 	struct platform_device *plat_ci;
-	int ret = 0;
 
 	plat_ci = data->ci_pdev;
 
+	device_set_wakeup_capable(&pdev->dev, false);
+	pm_runtime_get_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
-
-	ret = imx_set_wakeup(data, false);
-	if (ret) {
-		dev_err(&pdev->dev,
-			"usbmisc set_wakeup failed, ret=%d\n", ret);
-		return ret;
-	}
+	pm_runtime_put_noidle(&pdev->dev);
 
 	ci13xxx_remove_device(plat_ci);
 

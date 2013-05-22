@@ -195,6 +195,14 @@ static int hw_device_init(struct ci13xxx *ci, void __iomem *base)
 	ci->hw_bank.size += OP_LAST;
 	ci->hw_bank.size /= sizeof(u32);
 
+	/* PHY Initialization */
+	if (hw_read(ci, OP_PORTSC, PORTSC_PHCD)) {
+		hw_write(ci, OP_PORTSC, PORTSC_PHCD, 0);
+		/* Some clks sync between Controller and USB PHY */
+		usleep_range(800, 1000);
+	}
+	usb_phy_init(ci->transceiver);
+
 	reg = hw_read(ci, CAP_DCCPARAMS, DCCPARAMS_DEN) >>
 		ffs_nr(DCCPARAMS_DEN);
 	ci->hw_ep_max = reg * 2;   /* cache hw ENDPT_MAX */
@@ -719,6 +727,12 @@ static int ci_hdrc_remove(struct platform_device *pdev)
 
 	flush_workqueue(ci->wq);
 	destroy_workqueue(ci->wq);
+
+	device_set_wakeup_capable(&pdev->dev, false);
+	pm_runtime_get_sync(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+	pm_runtime_put_noidle(&pdev->dev);
+
 	device_remove_file(ci->dev, &dev_attr_role);
 	free_irq(ci->irq, ci);
 	ci_role_destroy(ci);

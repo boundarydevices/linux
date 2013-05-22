@@ -221,6 +221,10 @@ static inline void ci_role_destroy(struct ci13xxx *ci)
 	if (role == CI_ROLE_END)
 		return;
 
+	/* destroy gadget unconditionly at otg condition */
+	if (ci->is_otg && ci->role == CI_ROLE_HOST)
+		ci->roles[CI_ROLE_GADGET]->destroy(ci);
+
 	ci->role = CI_ROLE_END;
 
 	ci->roles[role]->destroy(ci);
