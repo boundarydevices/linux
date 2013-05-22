@@ -49,6 +49,8 @@ static int snd_imx_pcm_hw_params(struct snd_pcm_substream *substream,
 				struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct imx_dma_data *dma_data =
+				snd_dmaengine_pcm_get_data(substream);
 	struct dma_chan *chan;
 	struct imx_pcm_dma_params *dma_params;
 	struct dma_slave_config slave_config;
@@ -62,6 +64,11 @@ static int snd_imx_pcm_hw_params(struct snd_pcm_substream *substream,
 	chan = snd_dmaengine_pcm_get_chan(substream);
 
 	dma_params = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+
+	/* reconfig memory to FIFO dma request. Because some driver does not
+	 * know the dma in opening, it will get the dma when hw_params().
+	 */
+	dma_data->dma_request = dma_params->dma;
 
 	ret = snd_hwparams_to_dma_slave_config(substream, params, &slave_config);
 	if (ret)
@@ -93,7 +100,9 @@ static struct snd_pcm_hardware snd_imx_hardware = {
 		SNDRV_PCM_INFO_MMAP_VALID |
 		SNDRV_PCM_INFO_PAUSE |
 		SNDRV_PCM_INFO_RESUME,
-	.formats = SNDRV_PCM_FMTBIT_S16_LE,
+	.formats =      SNDRV_PCM_FMTBIT_S16_LE |
+			SNDRV_PCM_FMTBIT_S24_LE |
+			SNDRV_PCM_FMTBIT_S20_3LE,
 	.rate_min = 8000,
 	.channels_min = 2,
 	.channels_max = 2,
