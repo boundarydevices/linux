@@ -202,8 +202,14 @@
 				};
 
 				esai: esai@02024000 {
+					compatible = "fsl,imx6q-esai";
 					reg = <0x02024000 0x4000>;
 					interrupts = <0 51 0x04>;
+					clocks = <&clks 118>;
+					fsl,fifo-depth = <128>;
+					fsl,esai-dma-events = <24 23>;
+					flags = <1>;
+					status = "disabled";
 				};
 
 				ssi1: ssi@02028000 {

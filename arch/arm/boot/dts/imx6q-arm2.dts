@@ -41,6 +41,15 @@
 					interrupts = <0 52 0x04>;
 					status = "okay";
 				};
+				esai: esai@02024000 {
+					pinctrl-names = "default";
+					pinctrl-0 = <&pinctrl_esai_1>;
+					status = "okay";
+				};
+				asrc_p2p: asrc-p2p {
+					compatible = "fsl,imx6q-asrc-p2p";
+					output-rate = <44100>;
+				};
 			};
 
 			can@02090000 { /* CAN1 */
@@ -103,6 +112,17 @@
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_i2c1_2>;
 				status = "okay";
+				codec: cs42888@048 {
+					compatible = "fsl,cs42888";
+					reg = <0x048>;
+					mclk-source = <2>;
+					sysclk = <16934400>;
+					rates = <0xa40>;
+					VA-supply = <&reg_3p3v>;
+					VD-supply = <&reg_3p3v>;
+					VLS-supply = <&reg_3p3v>;
+					VLC-supply = <&reg_3p3v>;
+				};
 			};
 
 			i2c@021a4000 { /* I2C2 */
@@ -196,6 +216,15 @@
 			regulator-max-microvolt = <3300000>;
 			regulator-always-on;
 		};
+	};
+
+	sound-cs42888 {
+		compatible = "fsl,imx6q-arm2-cs42888",
+				"fsl,imx-audio-cs42888";
+		model = "imx6q-arm2-cs42888";
+		esai-controller = <&esai>;
+		asrc-controller = <&asrc_p2p>;
+		audio-codec = <&codec>;
 	};
 
 	leds {

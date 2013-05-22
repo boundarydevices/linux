@@ -53,6 +53,18 @@
 						reg = <0>;
 					};
 				};
+
+				esai: esai@02024000 {
+					pinctrl-names = "default";
+					pinctrl-0 = <&pinctrl_esai_2>;
+					status = "okay";
+				};
+
+				asrc_p2p: asrc-p2p {
+					compatible = "fsl,imx6q-asrc-p2p";
+					output-rate  = <48000>;
+					output-width = <16>;
+				};
 			};
 
 			ldb@020e0000 {
@@ -190,6 +202,18 @@
 						};
 					};
 				};
+
+				codec: cs42888@048 {
+					compatible = "fsl,cs42888";
+					reg = <0x048>;
+					sysclk = <24576000>;
+					mclk-source = <1>;
+					rates = <0x1480>;
+					VA-supply = <&reg_3p3v>;
+					VD-supply = <&reg_3p3v>;
+					VLS-supply = <&reg_3p3v>;
+					VLC-supply = <&reg_3p3v>;
+				};
 			};
 		};
 
@@ -232,5 +256,25 @@
 	v4l2_out {
 		compatible = "fsl,mxc_v4l2_output";
 		status = "okay";
+	};
+
+	regulators {
+		compatible = "simple-bus";
+		reg_3p3v: 3p3v {
+			compatible = "regulator-fixed";
+			regulator-name = "3P3V";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
+	};
+
+	sound-cs42888 {
+		compatible = "fsl,imx6-sabreauto-cs42888",
+				"fsl,imx-audio-cs42888";
+		model = "imx-cs42888";
+		esai-controller = <&esai>;
+		asrc-controller = <&asrc_p2p>;
+		audio-codec = <&codec>;
 	};
 };
