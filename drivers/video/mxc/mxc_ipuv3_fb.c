@@ -1332,6 +1332,7 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
 				return -EFAULT;
 			ipu_set_csc_coefficients(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 						csc.param);
+		}
 	case MXCFB_GET_FBFMT:
 		{
 			struct mxcfb_info *mxc_fbi =
