@@ -39,5 +39,22 @@
 				};
 			};
 		};
+
+		ipu1: ipu@02400000 { /* IPU1 */
+			status = "okay";
+		};
+
+		ipu2: ipu@02800000 { /* IPU2 */
+			bypass_reset = <0>;
+			status = "okay";
+		};
+	};
+
+	mxcfb1: fb@0 {
+		status = "okay";
+	};
+
+	mxcfb2: fb@1 {
+		status = "okay";
 	};
 };

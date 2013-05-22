@@ -8,6 +8,11 @@
  */
 
 / {
+	aliases {
+		mxcfb0 = &mxcfb1;
+		mxcfb1 = &mxcfb2;
+	};
+
 	memory {
 		reg = <0x10000000 0x40000000>;
 	};
@@ -48,6 +53,16 @@
 						reg = <0>;
 					};
 				};
+			};
+
+			ldb@020e0000 {
+				ipu_id = <1>;
+				disp_id = <0>;
+				ext_ref = <1>;
+				mode = "sep0";
+				sec_ipu_id = <1>;
+				sec_disp_id = <1>;
+				status = "okay";
 			};
 		};
 
@@ -177,6 +192,10 @@
 				};
 			};
 		};
+
+		ipu1: ipu@02400000 { /* IPU1 */
+			bypass_reset = <0>;
+		};
 	};
 
 	sound-spdif {
@@ -186,5 +205,32 @@
 		spdif-controller = <&spdif>;
 		spdif-tx = <0>;		/* 1:enable, 0:disable */
 		spdif-rx = <1>;		/* 1:enable, 0:disable */
+	};
+
+	mxcfb1: fb@0 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "ldb";
+		interface_pix_fmt = "RGB666";
+		mode_str ="LDB-XGA";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	mxcfb2: fb@1 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "ldb";
+		interface_pix_fmt = "RGB666";
+		mode_str ="LDB-XGA";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	v4l2_out {
+		compatible = "fsl,mxc_v4l2_output";
+		status = "okay";
 	};
 };

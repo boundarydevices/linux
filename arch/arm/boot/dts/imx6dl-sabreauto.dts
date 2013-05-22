@@ -38,6 +38,23 @@
 					};
 				};
 			};
+
+			ldb@020e0000 {
+				ipu_id = <0>;
+				sec_ipu_id = <0>;
+			};
 		};
+
+		ipu1: ipu@02400000 { /* IPU1 */
+			status = "okay";
+		};
+	};
+
+	mxcfb1: fb@0 {
+		status = "okay";
+	};
+
+	mxcfb2: fb@1 {
+		status = "okay";
 	};
 };
