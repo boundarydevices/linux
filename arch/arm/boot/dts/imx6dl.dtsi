@@ -163,6 +163,11 @@
 		};
 
 		aips1: aips-bus@02000000 {
+			vpu@02040000 {
+				iramsize = <0>;
+				status = "okay";
+			};
+
 			iomuxc@020e0000 {
 				compatible = "fsl,imx6dl-iomuxc";
 				reg = <0x020e0000 0x4000>;
