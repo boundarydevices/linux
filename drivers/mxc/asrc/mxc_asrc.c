@@ -915,21 +915,25 @@ static bool filter(struct dma_chan *chan, void *param)
 }
 
 static struct dma_chan *imx_asrc_dma_request_channel(
-		enum asrc_pair_index index, bool in)
+		struct asrc_pair_params *params, bool in)
 {
-	int dma_req = asrc_get_dma_request(index, in);
-	struct imx_dma_data dma_data = {0};
+	int dma_req = asrc_get_dma_request(params->index, in);
 	dma_cap_mask_t mask;
+	struct imx_dma_data *dma_data;
 
-	dma_data.peripheral_type = IMX_DMATYPE_ASRC;
-	dma_data.priority = DMA_PRIO_MEDIUM;
-	dma_data.dma_request = dma_req;
+	if (in)
+		dma_data = &params->input_dma_data;
+	else
+		dma_data = &params->output_dma_data;
+	dma_data->peripheral_type = IMX_DMATYPE_ASRC;
+	dma_data->priority = DMA_PRIO_MEDIUM;
+	dma_data->dma_request = dma_req;
 
 	/* Try to grab a DMA channel */
 	dma_cap_zero(mask);
 	dma_cap_set(DMA_SLAVE, mask);
 
-	return dma_request_channel(mask, filter, &dma_data);
+	return dma_request_channel(mask, filter, dma_data);
 }
 
 static int imx_asrc_dma_config(struct asrc_pair_params *params,
@@ -1325,14 +1329,16 @@ static long asrc_ioctl_config_pair(struct asrc_pair_params *params,
 	}
 
 	/* Request DMA channel for both input and output */
-	params->input_dma_channel = imx_asrc_dma_request_channel(index, true);
+	params->input_dma_channel =
+			imx_asrc_dma_request_channel(params, true);
 	if (params->input_dma_channel == NULL) {
 		ASRC_ERR("Failed to request rx channel for Pair %c\n",
 				'A' + index);
 		return  -EBUSY;
 	}
 
-	params->output_dma_channel = imx_asrc_dma_request_channel(index, false);
+	params->output_dma_channel =
+			imx_asrc_dma_request_channel(params, false);
 	if (params->output_dma_channel == NULL) {
 		ASRC_ERR("Failed to request tx channel for Pair %c\n",
 				'A' + index);
@@ -1505,14 +1511,15 @@ static long asrc_ioctl_flush(struct asrc_pair_params *params,
 	dma_release_channel(params->input_dma_channel);
 	dma_release_channel(params->output_dma_channel);
 
-	params->input_dma_channel = imx_asrc_dma_request_channel(index, true);
+	params->input_dma_channel = imx_asrc_dma_request_channel(params, true);
 	if (params->input_dma_channel == NULL) {
 		ASRC_ERR("Failed to request rx channel for Pair %c\n",
 				'A' + index);
 		return -EBUSY;
 	}
 
-	params->output_dma_channel = imx_asrc_dma_request_channel(index, false);
+	params->output_dma_channel =
+			imx_asrc_dma_request_channel(params, false);
 	if (params->output_dma_channel == NULL) {
 		ASRC_ERR("Failed to request tx channel for Pair %c\n",
 				'A' + index);

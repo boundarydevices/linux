@@ -18,6 +18,8 @@
 #ifndef __MXC_ASRC_H__
 #define __MXC_ASRC_H__
 
+#include <mach/dma.h>
+
 #define ASRC_IOC_MAGIC		'C'
 
 #define ASRC_REQ_PAIR		_IOWR(ASRC_IOC_MAGIC, 0, struct asrc_req)
@@ -456,6 +458,8 @@ struct asrc_pair_params {
 	u32 output_wm;
 	struct completion output_completion;
 	unsigned int last_period_sample;
+	struct imx_dma_data input_dma_data;
+	struct imx_dma_data output_dma_data;
 };
 
 struct asrc_data {
