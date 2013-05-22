@@ -528,9 +528,11 @@ int __init mx6q_clocks_init(void)
 	clk_register_clkdev(clk[cko1_sel], "cko1_sel", NULL);
 	clk_register_clkdev(clk[cko1_cko2_sel], "cko1_cko2_sel", NULL);
 	clk_register_clkdev(clk[cko2_sel], "cko2_sel", NULL);
+	clk_register_clkdev(clk[esai_sel], "esai_sel", NULL);
 	clk_register_clkdev(clk[ahb], "ahb", NULL);
 	clk_register_clkdev(clk[cko1], "cko1", NULL);
 	clk_register_clkdev(clk[cko2], "cko2", NULL);
+	clk_register_clkdev(clk[pll3_pfd2_508m], "pll3_pfd2_508m", NULL);
 	clk_register_clkdev(clk[ocram], "ocram", NULL);
 	clk_register_clkdev(clk[pll5_video], "pll_video", NULL);
 	clk_register_clkdev(clk[ldb_di0], "ldb_di0", NULL);
@@ -541,6 +543,8 @@ int __init mx6q_clocks_init(void)
 	clk_register_clkdev(clk[gpu2d_axi], "gpu2d_axi", NULL);
 	clk_register_clkdev(clk[openvg_axi], "openvg_axi", NULL);
 	clk_register_clkdev(clk[vpu_axi], "vpu_axi", NULL);
+	clk_register_clkdev(clk[esai], "esai", NULL);
+	clk_register_clkdev(clk[pll4_audio], "pll4_audio", NULL);
 
 	/*
 	 * The gpmi needs 100MHz frequency in the EDO/Sync mode,

@@ -299,6 +299,54 @@ put_clk:
 		clk_put(cko1);
 }
 
+static void __init imx6q_arm2_esai_setup(void)
+{
+	struct clk *esai_sel, *pll3_pfd2_508m, *esai;
+	unsigned long rate;
+
+	esai           = clk_get_sys(NULL, "esai");
+	esai_sel       = clk_get_sys(NULL, "esai_sel");
+	pll3_pfd2_508m = clk_get_sys(NULL, "pll3_pfd2_508m");
+	if (IS_ERR(esai_sel) || IS_ERR(pll3_pfd2_508m) || IS_ERR(esai)) {
+		pr_err("esai clock setup failed!\n");
+		goto put_clk1;
+	}
+	clk_set_parent(esai_sel, pll3_pfd2_508m);
+	rate = 101647058;
+	clk_set_rate(esai, rate);
+put_clk1:
+	if (!IS_ERR(esai_sel))
+		clk_put(esai_sel);
+	if (!IS_ERR(pll3_pfd2_508m))
+		clk_put(pll3_pfd2_508m);
+	if (!IS_ERR(esai))
+		clk_put(esai);
+}
+
+static void __init imx6q_sabreauto_esai_setup(void)
+{
+	struct clk *pll4_clk, *esai_clk, *esai_sel;
+
+	esai_clk = clk_get_sys(NULL, "esai");
+	esai_sel = clk_get_sys(NULL, "esai_sel");
+	pll4_clk = clk_get_sys(NULL, "pll4_audio");
+	if (IS_ERR(esai_clk) || IS_ERR(pll4_clk) || IS_ERR(esai_sel)) {
+		pr_err("esai clock setup failed!\n");
+		goto put_clk2;
+	}
+
+	clk_set_parent(esai_sel, pll4_clk);
+	clk_set_rate(pll4_clk, 768000000);
+	clk_set_rate(esai_clk, 24000000);
+put_clk2:
+	if (!IS_ERR(esai_clk))
+		clk_put(esai_clk);
+	if (!IS_ERR(pll4_clk))
+		clk_put(pll4_clk);
+	if (!IS_ERR(esai_sel))
+		clk_put(esai_sel);
+}
+
 static struct flexcan_platform_data flexcan_pdata[2];
 static int en_gpio[2];
 static int stby_gpio[2];
@@ -358,6 +406,7 @@ static void __init imx6q_arm2_init(void)
 	}
 
 	imx6q_ar803x_phy_fixup();
+	imx6q_arm2_esai_setup();
 }
 
 static void __init imx6q_sabrelite_init(void)
@@ -457,6 +506,10 @@ static void __init imx6q_i2c3_sda_pindel(void)
 	}
 }
 
+static void __init imx6q_sabreauto_init(void)
+{
+	imx6q_sabreauto_esai_setup();
+}
 static void __init imx6q_1588_init(void)
 {
 	struct device_node *np, *pinctrl_enet;
@@ -884,6 +937,9 @@ static void __init imx6q_init_machine(void)
 		imx6q_sabresd_init();
 	else if (of_machine_is_compatible("fsl,imx6q-arm2"))
 		imx6q_arm2_init();
+	else if (of_machine_is_compatible("fsl,imx6q-sabreauto") ||
+			of_machine_is_compatible("fsl,imx6dl-sabreauto"))
+		imx6q_sabreauto_init();
 
 	of_platform_populate(NULL, of_default_bus_match_table,
 			imx6q_auxdata_lookup, NULL);
