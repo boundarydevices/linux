@@ -39,7 +39,7 @@ crypto: crypto@2100000 {
         reg = <0x2100000 0x40000>;
         ranges = <0 0x2100000 0x40000>;
         interrupt-parent = <&intc>; /* interrupts = <0 92 0x4>; */
-        clocks = <&clks 197>, <&clks 198>, <&clks 199>;
+        clocks = <&clks 203>, <&clks 201>, <&clks 202>;
         clock-names = "caam_ipg", "caam_mem", "caam_aclk";
 
         sec_jr0: jr1@1000 {
