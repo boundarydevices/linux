@@ -29,19 +29,17 @@
 
 static int usbmisc_imx25_post(struct ci13xxx_imx_data *data)
 {
-	void __iomem *reg;
 	unsigned long flags;
 	u32 val;
 
-	if (!data->non_core_base_addr)
+	if (IS_ERR(data->non_core_base_addr))
 		return -EINVAL;
-
-	reg = data->non_core_base_addr + MX25_USB_PHY_CTRL_OFFSET;
 
 	if (data->evdo) {
 		spin_lock_irqsave(&data->lock, flags);
-		val = readl(reg);
-		writel(val | MX25_BM_EXTERNAL_VBUS_DIVIDER, reg);
+		regmap_read(data->non_core_base_addr, MX25_USB_PHY_CTRL_OFFSET, &val);
+		regmap_write(data->non_core_base_addr, MX25_USB_PHY_CTRL_OFFSET,
+				val | MX25_BM_EXTERNAL_VBUS_DIVIDER);
 		spin_unlock_irqrestore(&data->lock, flags);
 		usleep_range(5000, 10000); /* needed to stabilize voltage */
 	}
@@ -51,39 +49,42 @@ static int usbmisc_imx25_post(struct ci13xxx_imx_data *data)
 
 static int usbmisc_imx53_init(struct ci13xxx_imx_data *data)
 {
-	void __iomem *reg = NULL;
 	unsigned long flags;
-	u32 val = 0;
+	u32 reg = 0, val = 0;
 
-	if (!data->non_core_base_addr || data->index < 0)
+	if (IS_ERR(data->non_core_base_addr) || data->index < 0)
 		return -EINVAL;
 
 	if (data->disable_oc) {
 		spin_lock_irqsave(&data->lock, flags);
 		switch (data->index) {
 		case 0:
-			reg = data->non_core_base_addr +
-				MX53_USB_OTG_PHY_CTRL_0_OFFSET;
-			val = readl(reg) | MX53_BM_OVER_CUR_DIS_OTG;
+			reg = MX53_USB_OTG_PHY_CTRL_0_OFFSET;
+			regmap_read(data->non_core_base_addr,
+				reg, &val);
+			val |= MX53_BM_OVER_CUR_DIS_OTG;
 			break;
 		case 1:
-			reg = data->non_core_base_addr +
-				MX53_USB_OTG_PHY_CTRL_0_OFFSET;
-			val = readl(reg) | MX53_BM_OVER_CUR_DIS_H1;
+			reg = MX53_USB_OTG_PHY_CTRL_0_OFFSET;
+			regmap_read(data->non_core_base_addr,
+				reg, &val);
+			val |= MX53_BM_OVER_CUR_DIS_H1;
 			break;
 		case 2:
-			reg = data->non_core_base_addr +
-				MX53_USB_UH2_CTRL_OFFSET;
-			val = readl(reg) | MX53_BM_OVER_CUR_DIS_UHx;
+			reg = MX53_USB_UH2_CTRL_OFFSET;
+			regmap_read(data->non_core_base_addr,
+				reg, &val);
+			val |= MX53_BM_OVER_CUR_DIS_UHx;
 			break;
 		case 3:
-			reg = data->non_core_base_addr +
-				MX53_USB_UH3_CTRL_OFFSET;
-			val = readl(reg) | MX53_BM_OVER_CUR_DIS_UHx;
+			reg = MX53_USB_UH3_CTRL_OFFSET;
+			regmap_read(data->non_core_base_addr,
+				reg, &val);
+			val |= MX53_BM_OVER_CUR_DIS_UHx;
 			break;
 		}
 		if (reg && val)
-			writel(val, reg);
+			regmap_write(data->non_core_base_addr, reg, val);
 		spin_unlock_irqrestore(&data->lock, flags);
 	}
 
@@ -93,32 +94,32 @@ static int usbmisc_imx53_init(struct ci13xxx_imx_data *data)
 static int usbmisc_imx6q_init(struct ci13xxx_imx_data *data)
 {
 	unsigned long flags;
-	u32 reg;
+	u32 val;
 
-	if (!data->non_core_base_addr || data->index < 0)
+	if (IS_ERR(data->non_core_base_addr) || data->index < 0)
 		return -EINVAL;
 
 	spin_lock_irqsave(&data->lock, flags);
 
 	if (data->disable_oc) {
-		reg = readl(data->non_core_base_addr + data->index * 4);
-		writel(reg | MX6_BM_OVER_CUR_DIS,
-			data->non_core_base_addr + data->index * 4);
+		regmap_read(data->non_core_base_addr, data->index * 4, &val);
+		regmap_write(data->non_core_base_addr, data->index * 4,
+			val | MX6_BM_OVER_CUR_DIS);
 	}
 
 	/* Disable wakeup at initialization */
-	reg = readl(data->non_core_base_addr + data->index * 4);
+	regmap_read(data->non_core_base_addr, data->index * 4, &val);
 	switch (data->index) {
 	case 0:
-		reg &= ~(MX6_BM_ID_WAKEUP | MX6_BM_VBUS_WAKEUP
+		val &= ~(MX6_BM_ID_WAKEUP | MX6_BM_VBUS_WAKEUP
 				| MX6_BM_WAKEUP_ENABLE);
 		break;
 	case 1:
 	case 2:
 	case 3:
-		reg &= ~MX6_BM_WAKEUP_ENABLE;
+		val &= ~MX6_BM_WAKEUP_ENABLE;
 	}
-	writel(reg, data->non_core_base_addr + data->index * 4);
+	regmap_write(data->non_core_base_addr, data->index * 4, val);
 
 	spin_unlock_irqrestore(&data->lock, flags);
 
@@ -129,35 +130,35 @@ static int usbmisc_imx6q_wakeup(struct ci13xxx_imx_data *data,
 		enum ci_usb_wakeup_events wakeup_event)
 {
 	unsigned long flags;
-	u32 reg;
+	u32 val;
 
-	if (!data->non_core_base_addr || data->index < 0)
+	if (IS_ERR(data->non_core_base_addr) || data->index < 0)
 		return -EINVAL;
 
 	spin_lock_irqsave(&data->lock, flags);
 
-	reg = readl(data->non_core_base_addr + data->index * 4);
+	regmap_read(data->non_core_base_addr, data->index * 4, &val);
 	switch (wakeup_event) {
 	case CI_USB_WAKEUP_EVENT_GADGET:
-		reg |= MX6_BM_VBUS_WAKEUP | MX6_BM_WAKEUP_ENABLE;
+		val |= MX6_BM_VBUS_WAKEUP | MX6_BM_WAKEUP_ENABLE;
 		break;
 	case CI_USB_WAKEUP_EVENT_HOST:
-		reg |= MX6_BM_WAKEUP_ENABLE;
+		val |= MX6_BM_WAKEUP_ENABLE;
 		break;
 	case CI_USB_WAKEUP_EVENT_OTG:
-		reg |= MX6_BM_ID_WAKEUP | MX6_BM_VBUS_WAKEUP
+		val |= MX6_BM_ID_WAKEUP | MX6_BM_VBUS_WAKEUP
 			| MX6_BM_WAKEUP_ENABLE;
 		break;
 	case CI_USB_WAKEUP_EVENT_NONE:
 		switch (data->index) {
 		case 0:
-			reg &= ~(MX6_BM_ID_WAKEUP | MX6_BM_VBUS_WAKEUP
+			val &= ~(MX6_BM_ID_WAKEUP | MX6_BM_VBUS_WAKEUP
 					| MX6_BM_WAKEUP_ENABLE);
 			break;
 		case 1:
 		case 2:
 		case 3:
-			reg &= ~MX6_BM_WAKEUP_ENABLE;
+			val &= ~MX6_BM_WAKEUP_ENABLE;
 		}
 		break;
 	default:
@@ -165,7 +166,7 @@ static int usbmisc_imx6q_wakeup(struct ci13xxx_imx_data *data,
 		return -EINVAL;
 	}
 
-	writel(reg, data->non_core_base_addr + data->index * 4);
+	regmap_write(data->non_core_base_addr, data->index * 4, val);
 
 	spin_unlock_irqrestore(&data->lock, flags);
 
@@ -174,13 +175,13 @@ static int usbmisc_imx6q_wakeup(struct ci13xxx_imx_data *data,
 
 static int usbmisc_imx6q_is_wakeup_interrupt(struct ci13xxx_imx_data *data)
 {
-	u32 reg;
+	u32 val;
 
-	if (!data->non_core_base_addr || data->index < 0)
+	if (IS_ERR(data->non_core_base_addr) || data->index < 0)
 		return -EINVAL;
 
-	reg = readl(data->non_core_base_addr + data->index * 4);
-	if (reg & MX6_BM_WAKEUP_INTR)
+	regmap_read(data->non_core_base_addr, data->index * 4, &val);
+	if (val & MX6_BM_WAKEUP_INTR)
 		return IMX_WAKEUP_INTR_PENDING;
 
 	return 0;

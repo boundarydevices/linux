@@ -36,8 +36,8 @@ struct ci13xxx_imx_data {
 	struct platform_device *ci_pdev;
 	struct clk *clk;
 	struct usbmisc_ops *usbmisc_ops;
-	/* non core register base address, 0x0 means no non core register */
-	void __iomem *non_core_base_addr;
+	/* non core register base address, mx23/mx28 has no non core register */
+	struct regmap *non_core_base_addr;
 	int index; /* controller's index */
 	spinlock_t lock;
 	int disable_oc:1; /* over current detect disabled */

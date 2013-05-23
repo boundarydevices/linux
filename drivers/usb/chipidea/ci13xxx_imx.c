@@ -180,20 +180,6 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 		return -ENOENT;
 	}
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (!res) {
-		dev_dbg(&pdev->dev,
-			"Can't get resource, mx23/mx28 doesn't need it\n");
-	} else {
-		data->non_core_base_addr = devm_ioremap
-			(&pdev->dev, res->start, resource_size(res));
-		if (!data->non_core_base_addr) {
-			dev_err(&pdev->dev,
-				"remap non core register failed!\n");
-			return -EBUSY;
-		}
-	}
-
 	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
 	if (IS_ERR(pinctrl))
 		dev_warn(&pdev->dev, "pinctrl get/select failed, err=%ld\n",
@@ -246,6 +232,14 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 	}
 
 	spin_lock_init(&data->lock);
+
+	data->non_core_base_addr = syscon_regmap_lookup_by_phandle
+		(pdev->dev.of_node, "ci,noncore");
+	if (IS_ERR(data->non_core_base_addr)) {
+		dev_dbg(&pdev->dev,
+			"can't find non-core regmap (mx23/mx28 is not):%ld\n",
+			PTR_ERR(data->non_core_base_addr));
+	}
 
 	/* Some platform specific initializations */
 	ret = usbmisc_init(&pdev->dev);
