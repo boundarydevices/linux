@@ -375,14 +375,14 @@ int __init mx6q_clocks_init(void)
 	clk[ipu2_sel]         = imx_clk_mux("ipu2_sel",         base + 0x3c, 14, 2, ipu_sels,          ARRAY_SIZE(ipu_sels));
 	clk[ldb_di0_sel]      = imx_clk_mux2("ldb_di0_sel",     base + 0x2c, 9,  3, ldb_di_sels,       ARRAY_SIZE(ldb_di_sels));
 	clk[ldb_di1_sel]      = imx_clk_mux2("ldb_di1_sel",     base + 0x2c, 12, 3, ldb_di_sels,       ARRAY_SIZE(ldb_di_sels));
-	clk[ipu1_di0_pre_sel] = imx_clk_mux("ipu1_di0_pre_sel", base + 0x34, 6,  3, ipu_di_pre_sels,   ARRAY_SIZE(ipu_di_pre_sels));
-	clk[ipu1_di1_pre_sel] = imx_clk_mux("ipu1_di1_pre_sel", base + 0x34, 15, 3, ipu_di_pre_sels,   ARRAY_SIZE(ipu_di_pre_sels));
-	clk[ipu2_di0_pre_sel] = imx_clk_mux("ipu2_di0_pre_sel", base + 0x38, 6,  3, ipu_di_pre_sels,   ARRAY_SIZE(ipu_di_pre_sels));
-	clk[ipu2_di1_pre_sel] = imx_clk_mux("ipu2_di1_pre_sel", base + 0x38, 15, 3, ipu_di_pre_sels,   ARRAY_SIZE(ipu_di_pre_sels));
-	clk[ipu1_di0_sel]     = imx_clk_mux("ipu1_di0_sel",     base + 0x34, 0,  3, ipu1_di0_sels,     ARRAY_SIZE(ipu1_di0_sels));
-	clk[ipu1_di1_sel]     = imx_clk_mux("ipu1_di1_sel",     base + 0x34, 9,  3, ipu1_di1_sels,     ARRAY_SIZE(ipu1_di1_sels));
-	clk[ipu2_di0_sel]     = imx_clk_mux("ipu2_di0_sel",     base + 0x38, 0,  3, ipu2_di0_sels,     ARRAY_SIZE(ipu2_di0_sels));
-	clk[ipu2_di1_sel]     = imx_clk_mux("ipu2_di1_sel",     base + 0x38, 9,  3, ipu2_di1_sels,     ARRAY_SIZE(ipu2_di1_sels));
+	clk[ipu1_di0_pre_sel] = imx_clk_mux2("ipu1_di0_pre_sel", base + 0x34, 6,  3, ipu_di_pre_sels,   ARRAY_SIZE(ipu_di_pre_sels));
+	clk[ipu1_di1_pre_sel] = imx_clk_mux2("ipu1_di1_pre_sel", base + 0x34, 15, 3, ipu_di_pre_sels,   ARRAY_SIZE(ipu_di_pre_sels));
+	clk[ipu2_di0_pre_sel] = imx_clk_mux2("ipu2_di0_pre_sel", base + 0x38, 6,  3, ipu_di_pre_sels,   ARRAY_SIZE(ipu_di_pre_sels));
+	clk[ipu2_di1_pre_sel] = imx_clk_mux2("ipu2_di1_pre_sel", base + 0x38, 15, 3, ipu_di_pre_sels,   ARRAY_SIZE(ipu_di_pre_sels));
+	clk[ipu1_di0_sel]     = imx_clk_mux2("ipu1_di0_sel",     base + 0x34, 0,  3, ipu1_di0_sels,     ARRAY_SIZE(ipu1_di0_sels));
+	clk[ipu1_di1_sel]     = imx_clk_mux2("ipu1_di1_sel",     base + 0x34, 9,  3, ipu1_di1_sels,     ARRAY_SIZE(ipu1_di1_sels));
+	clk[ipu2_di0_sel]     = imx_clk_mux2("ipu2_di0_sel",     base + 0x38, 0,  3, ipu2_di0_sels,     ARRAY_SIZE(ipu2_di0_sels));
+	clk[ipu2_di1_sel]     = imx_clk_mux2("ipu2_di1_sel",     base + 0x38, 9,  3, ipu2_di1_sels,     ARRAY_SIZE(ipu2_di1_sels));
 	clk[hsi_tx_sel]       = imx_clk_mux("hsi_tx_sel",       base + 0x30, 28, 1, hsi_tx_sels,       ARRAY_SIZE(hsi_tx_sels));
 	clk[pcie_axi_sel]     = imx_clk_mux("pcie_axi_sel",     base + 0x18, 10, 1, pcie_axi_sels,     ARRAY_SIZE(pcie_axi_sels));
 	clk[ssi1_sel]         = imx_clk_mux("ssi1_sel",         base + 0x1c, 10, 2, ssi_sels,          ARRAY_SIZE(ssi_sels));
@@ -564,7 +564,6 @@ int __init mx6q_clocks_init(void)
 	clk_register_clkdev(clk[cko2], "cko2", NULL);
 	clk_register_clkdev(clk[pll3_pfd2_508m], "pll3_pfd2_508m", NULL);
 	clk_register_clkdev(clk[ocram], "ocram", NULL);
-	clk_register_clkdev(clk[pll5_video], "pll_video", NULL);
 	clk_register_clkdev(clk[ldb_di0], "ldb_di0", NULL);
 	clk_register_clkdev(clk[ldb_di1], "ldb_di1", NULL);
 	clk_register_clkdev(clk[gpu3d_core], "gpu3d_core", NULL);
@@ -616,10 +615,10 @@ int __init mx6q_clocks_init(void)
 	/* ipu clock initialization */
 	clk_set_parent(clk[ldb_di0_sel], clk[pll2_pfd0_352m]);
 	clk_set_parent(clk[ldb_di1_sel], clk[pll2_pfd0_352m]);
-	clk_set_parent(clk[ipu1_di0_pre_sel], clk[pll5_video]);
-	clk_set_parent(clk[ipu1_di1_pre_sel], clk[pll5_video]);
-	clk_set_parent(clk[ipu2_di0_pre_sel], clk[pll5_video]);
-	clk_set_parent(clk[ipu2_di1_pre_sel], clk[pll5_video]);
+	clk_set_parent(clk[ipu1_di0_pre_sel], clk[pll5_video_div]);
+	clk_set_parent(clk[ipu1_di1_pre_sel], clk[pll5_video_div]);
+	clk_set_parent(clk[ipu2_di0_pre_sel], clk[pll5_video_div]);
+	clk_set_parent(clk[ipu2_di1_pre_sel], clk[pll5_video_div]);
 	clk_set_parent(clk[ipu1_di0_sel], clk[ipu1_di0_pre]);
 	clk_set_parent(clk[ipu1_di1_sel], clk[ipu1_di1_pre]);
 	clk_set_parent(clk[ipu2_di0_sel], clk[ipu2_di0_pre]);
