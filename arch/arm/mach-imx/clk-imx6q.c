@@ -240,7 +240,8 @@ static struct clk *clk[clk_max];
 static struct clk_onecell_data clk_data;
 
 static enum mx6q_clks const clks_init_on[] __initconst = {
-	mmdc_ch0_axi, mmdc_ch0_ipg, mmdc_ch1_ipg, rom, ocram, aips_tz1, aips_tz2, per2_main, mx6fast1,
+	mmdc_ch0_axi, mmdc_ch0_ipg, mmdc_ch1_ipg, rom, ocram,
+	aips_tz1, aips_tz2, per2_main, mx6fast1, axi, ckil, ipg_per,
 };
 
 int __init mx6q_clocks_init(void)
@@ -597,6 +598,7 @@ int __init mx6q_clocks_init(void)
 	if (cpu_is_imx6dl()) {
 		clk_set_rate(clk[pll3_pfd1_540m], 540000000);
 		clk_set_parent(clk[ipu1_sel], clk[pll3_pfd1_540m]);
+		clk_set_parent(clk[axi_sel], clk[pll3_pfd1_540m]);
 	} else if (cpu_is_imx6q()) {
 		clk_set_parent(clk[ipu1_sel], clk[mmdc_ch0_axi]);
 		clk_set_parent(clk[ipu2_sel], clk[mmdc_ch0_axi]);
