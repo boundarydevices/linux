@@ -965,9 +965,6 @@ static void __init imx6q_init_machine(void)
 		imx6q_sabreauto_init();
 	else if (of_machine_is_compatible("fsl,imx6q-arm2"))
 		imx6q_arm2_init();
-	else if (of_machine_is_compatible("fsl,imx6q-sabreauto") ||
-			of_machine_is_compatible("fsl,imx6dl-sabreauto"))
-		imx6q_sabreauto_init();
 
 	of_platform_populate(NULL, of_default_bus_match_table,
 			imx6q_auxdata_lookup, NULL);
