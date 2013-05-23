@@ -1048,13 +1048,12 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 	uint32_t field1_offset;
 	uint32_t reg;
 	uint32_t di_gen, vsync_cnt;
-	uint32_t div, rounded_pixel_clk, rounded_parent_clk;
+	uint32_t div, rounded_pixel_clk;
 	uint32_t h_total, v_total;
 	int map;
 	int ret;
 	struct clk *ldb_di0_clk, *ldb_di1_clk;
 	struct clk *di_parent;
-	struct clk *pll_video;
 
 	dev_dbg(ipu->dev, "panel size = %d x %d\n", width, height);
 
@@ -1112,31 +1111,7 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 			((rounded_pixel_clk >= pixel_clk + pixel_clk/200) ||
 			(rounded_pixel_clk <= pixel_clk - pixel_clk/200))) {
 			dev_dbg(ipu->dev, "try ipu ext di clk\n");
-			pll_video = clk_get(NULL, "pll_video");
-			if (IS_ERR(pll_video)) {
-				dev_err(ipu->dev, "clk_get pll_video failed");
-				return PTR_ERR(pll_video);
-			}
-			rounded_pixel_clk = pixel_clk * 2;
-			rounded_parent_clk = clk_round_rate(pll_video,
-						rounded_pixel_clk);
-			dev_dbg(ipu->dev, "rounded pix clk:%d, parent clk:%d\n",
-				rounded_pixel_clk, rounded_parent_clk);
-			while (rounded_pixel_clk < rounded_parent_clk) {
-				/* the max divider from parent to di is 8 */
-				if (rounded_parent_clk / pixel_clk < 8)
-					rounded_pixel_clk += pixel_clk * 2;
-				else
-					rounded_pixel_clk *= 2;
-			}
 
-			ret = clk_set_rate(pll_video, rounded_pixel_clk);
-			if (ret) {
-				dev_err(ipu->dev, "clk_set_rate err:%d\n", ret);
-				return ret;
-			}
-			dev_dbg(ipu->dev, "pll di ext rounded pix clk:%d\n",
-					rounded_pixel_clk);
 			rounded_pixel_clk =
 				clk_round_rate(ipu->di_clk[disp], pixel_clk);
 			ret = clk_set_rate(ipu->di_clk[disp],
