@@ -1,0 +1,35 @@
+CS42888 audio CODEC
+
+This device supports I2C only.
+
+Required properties:
+
+  - compatible : "fsl,cs42888"
+
+  - reg : the I2C address of the device.
+
+  - sysclk : MCLK's value.
+
+  - mclk-source : mclk source for cs42888.
+	<1> : mclk is from the external osc.
+	<2> : mclk is from the esai HCKT.
+
+  - rates : supported samplerate.
+
+  - XXXX-supply : power source for exact pin of cs42888.
+
+Optional properties:
+
+Example:
+
+codec: cs42888@1a {
+	compatible = "fsl,cs42888";
+	reg = <0x048>;
+	sysclk = <24576000>;
+	mclk-source = <1>;
+	rates = <0x1480>;
+	VA-supply = <&reg_3p3v>;
+	VD-supply = <&reg_3p3v>;
+	VLS-supply = <&reg_3p3v>;
+	VLC-supply = <&reg_3p3v>;
+};
