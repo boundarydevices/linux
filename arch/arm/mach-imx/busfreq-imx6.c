@@ -374,11 +374,12 @@ static ssize_t bus_freq_scaling_enable_store(struct device *dev,
 	if (strncmp(buf, "1", 1) == 0) {
 		bus_freq_scaling_is_active = 1;
 		set_high_bus_freq(1);
-		high_bus_count++;
-		/* We set bus freq to highest at the beginning,
+		/*
+		 * We set bus freq to highest at the beginning,
 		 * so we use this daemon thread to make sure system
 		 * can enter low bus mode if
-		 * there is no high bus request pending */
+		 * there is no high bus request pending
+		 */
 		schedule_delayed_work(&bus_freq_daemon,
 			usecs_to_jiffies(5000000));
 	} else if (strncmp(buf, "0", 1) == 0) {
