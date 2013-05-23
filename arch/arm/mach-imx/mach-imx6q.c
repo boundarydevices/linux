@@ -665,7 +665,7 @@ static void __init imx6q_spdif_pindel(void)
 	struct property *poldbase;
 
 	/* Remove SPDIF pinctrl-0 */
-	np = of_find_node_by_name(NULL, "spdif-dai");
+	np = of_find_node_by_path("/soc/aips-bus@02000000/spba-bus@02000000/spdif@02004000");
 	if (!np)
 		return;
 
