@@ -527,46 +527,6 @@ static void __init imx6q_sabreauto_init(void)
 		imx6q_tuner_pindel();
 }
 
-static void __init imx6q_i2c3_sda_pindel(void)
-{
-	struct device_node *np, *pinctrl_i2c3;
-	struct property *pbase;
-	struct property *poldbase;
-	u32 *psize;
-	int i = 0, j = 0, k;
-
-	/* Cancel GPIO_16 for I2C3 SDA config */
-	np = of_find_node_by_path("/soc/aips-bus@02100000/i2c@021a8000");
-	pinctrl_i2c3 = of_parse_phandle(np, "pinctrl-0", 0);
-	poldbase = of_find_property(pinctrl_i2c3, "fsl,pins", NULL);
-	if (poldbase) {
-		pbase = kzalloc(sizeof(*pbase) + poldbase->length - 8,
-					GFP_KERNEL);
-		if (pbase == NULL)
-			return;
-		psize = (u32 *)(pbase + 1);
-		/* Cancel  1037 0x4001b8b1 MX6Q_PAD_GPIO_16__I2C3_SDA */
-		pbase->length = poldbase->length - LEN_OF_PINCTRL;
-		pbase->name = kstrdup(poldbase->name, GFP_KERNEL);
-		if (!pbase->name) {
-			kfree(pbase);
-			return;
-		}
-		pbase->value = psize;
-		for ( ; i < pbase->length; i += LEN_OF_PINCTRL, j += LEN_OF_PINCTRL) {
-			/* Cancel MX6Q_PAD_GPIO_16__I2C3_SDA 0x248 */
-			if (cpu_to_be32(0x248) == *(u32 *)(poldbase->value + j)) {
-				i -= LEN_OF_PINCTRL;
-				continue;
-			}
-			for (k = 0; k < LEN_OF_PINCTRL; k += sizeof(u32))
-				*(u32 *)(pbase->value + i + k) =
-					*(u32 *)(poldbase->value + j + k);
-		}
-		prom_update_property(pinctrl_i2c3, pbase, poldbase);
-	}
-}
-
 static void __init imx6q_1588_init(void)
 {
 	struct device_node *np, *pinctrl_enet;
@@ -611,7 +571,9 @@ static void __init imx6q_1588_init(void)
 	 */
 	if (of_machine_is_compatible("fsl,imx6q-sabrelite") ||
 		of_machine_is_compatible("fsl,imx6q-arm2")) {
-		imx6q_i2c3_sda_pindel();
+		/* Cancel GPIO_16(0x248) for I2C3 SDA config */
+		remove_one_pin_from_node("/soc/aips-bus@02100000/i2c@021a8000",
+				"pinctrl-0", "fsl,pins", 0x248);
 		spdif_en = 0;
 	}
 }
@@ -625,7 +587,8 @@ static void __init imx6q_spdif_pinfix(void)
 	int i = 0, j = 0, k;
 
 	/* Cancel GPIO_16 for I2C3 SDA config */
-	imx6q_i2c3_sda_pindel();
+	remove_one_pin_from_node("/soc/aips-bus@02100000/i2c@021a8000",
+			"pinctrl-0", "fsl,pins", 0x248);
 
 	/* Cancel GPIO_17 for IOMUX GPIO_7_12 config */
 	pinctrl_iomuxc = of_find_node_by_name(NULL, "hoggrp");
