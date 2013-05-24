@@ -457,6 +457,23 @@ static void __init imx6q_ar803x_phy_fixup(void)
 		phy_register_fixup_for_id(PHY_ANY_ID, ar803x_phy_fixup);
 }
 
+static void __init imx6q_arm2_spdif_init(void)
+{
+	if (spdif_en && IS_ENABLED(CONFIG_SND_SOC_FSL_SPDIF)
+			&& !IS_BUILTIN(CONFIG_FEC_PTP)) {
+		/* Cancel GPIO_16(0x248) for I2C3 SDA config */
+		remove_one_pin_from_node("/soc/aips-bus@02100000/i2c@021a8000",
+				"pinctrl-0", "fsl,pins", 0x248);
+
+		/* Cancel GPIO_17(0x24c) for IOMUX GPIO_7_12 config */
+		remove_one_pin_from_node("/soc/aips-bus@02000000/iomuxc@020e0000",
+				"pinctrl-0", "fsl,pins", 0x24c);
+	} else {
+		/* Remove SPDIF pinctrl-0 */
+		remove_pinctrl0("/soc/aips-bus@02000000/spba-bus@02000000/spdif@02004000");
+	}
+}
+
 static void __init imx6q_arm2_init(void)
 {
 	if (!sd30_en) {
@@ -468,6 +485,7 @@ static void __init imx6q_arm2_init(void)
 
 	imx6q_ar803x_phy_fixup();
 	imx6q_arm2_esai_setup();
+	imx6q_arm2_spdif_init();
 }
 
 static void __init imx6q_sabrelite_init(void)
@@ -580,33 +598,6 @@ static void __init imx6q_1588_init(void)
 		remove_one_pin_from_node("/soc/aips-bus@02100000/i2c@021a8000",
 				"pinctrl-0", "fsl,pins", 0x248);
 		spdif_en = 0;
-	}
-}
-
-static void __init imx6q_spdif_pinfix(void)
-{
-	/* Cancel GPIO_16 for I2C3 SDA config */
-	remove_one_pin_from_node("/soc/aips-bus@02100000/i2c@021a8000",
-			"pinctrl-0", "fsl,pins", 0x248);
-
-	/* Cancel GPIO_17 for IOMUX GPIO_7_12 config */
-	remove_one_pin_from_node("/soc/aips-bus@02000000/iomuxc@020e0000",
-			"pinctrl-0", "fsl,pins", 0x24c);
-}
-
-static void __init imx6q_spdif_pindel(void)
-{
-	remove_pinctrl0("/soc/aips-bus@02000000/spba-bus@02000000/spdif@02004000");
-}
-
-static void __init imx6q_spdif_init(void)
-{
-	if (of_machine_is_compatible("fsl,imx6q-arm2") ||
-			of_machine_is_compatible("fsl,imx6dl-arm2")) {
-		if (spdif_en && IS_ENABLED(CONFIG_SND_SOC_FSL_SPDIF))
-			imx6q_spdif_pinfix();
-		else
-			imx6q_spdif_pindel();
 	}
 }
 
@@ -939,7 +930,6 @@ static void __init imx6q_init_machine(void)
 	imx6q_1588_init();
 	if (IS_ENABLED(CONFIG_MXC_GPU_VIV))
 		imx6q_gpu_init();
-	imx6q_spdif_init();
 	imx6q_csi_mux_init();
 }
 
