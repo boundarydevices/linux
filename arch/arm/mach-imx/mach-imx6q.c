@@ -580,46 +580,13 @@ static void __init imx6q_1588_init(void)
 
 static void __init imx6q_spdif_pinfix(void)
 {
-	struct device_node *pinctrl_iomuxc;
-	struct property *pbase;
-	struct property *poldbase;
-	u32 *psize;
-	int i = 0, j = 0, k;
-
 	/* Cancel GPIO_16 for I2C3 SDA config */
 	remove_one_pin_from_node("/soc/aips-bus@02100000/i2c@021a8000",
 			"pinctrl-0", "fsl,pins", 0x248);
 
 	/* Cancel GPIO_17 for IOMUX GPIO_7_12 config */
-	pinctrl_iomuxc = of_find_node_by_name(NULL, "hoggrp");
-	if (!pinctrl_iomuxc)
-		return;
-	poldbase = of_find_property(pinctrl_iomuxc, "fsl,pins", NULL);
-	if (poldbase) {
-		pbase = kzalloc(sizeof(*pbase) + poldbase->length, GFP_KERNEL);
-		if (pbase == NULL)
-			return;
-		psize = (u32 *)(pbase + 1);
-		pbase->length = poldbase->length - LEN_OF_PINCTRL;
-		pbase->name = kstrdup(poldbase->name, GFP_KERNEL);
-		if (!pbase->name) {
-			kfree(pbase);
-			return;
-		}
-		pbase->value = psize;
-		for ( ; i < pbase->length; i += LEN_OF_PINCTRL, j += LEN_OF_PINCTRL) {
-			/* Cancel MX6Q_PAD_GPIO_17__GPIO_7_12 0x24c */
-			if (cpu_to_be32(0x24c) == *(u32 *)(poldbase->value + j)) {
-				i -= LEN_OF_PINCTRL;
-				continue;
-			}
-			for (k = 0; k < LEN_OF_PINCTRL; k += sizeof(u32))
-				*(u32 *)(pbase->value + i + k) =
-					*(u32 *)(poldbase->value + j + k);
-		}
-
-		prom_update_property(pinctrl_iomuxc, pbase, poldbase);
-	}
+	remove_one_pin_from_node("/soc/aips-bus@02000000/iomuxc@020e0000",
+			"pinctrl-0", "fsl,pins", 0x24c);
 }
 
 static void __init imx6q_spdif_pindel(void)
