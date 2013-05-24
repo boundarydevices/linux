@@ -155,7 +155,7 @@
 				pinctrl-0 = <&pinctrl_i2c1_2>;
 
 				codec: wm8962@1a {
-					compatible = "fsl,wm8962";
+					compatible = "wlf,wm8962";
 					reg = <0x1a>;
 					clocks = <&clks 169>;
 					DCVDD-supply = <&reg_audio>;	/* 1.8v */
