@@ -98,6 +98,14 @@ static int __init early_enable_tuner(char *p)
 }
 early_param("tuner", early_enable_tuner);
 
+/*
+ * The length's determined by PINFUNC definition's length.
+ * To check the length, see: arch/arm/boot/dts/imx6q-pinfunc.h
+ * And the real pinctrl length should be (PINFUNC length + 1),
+ * because there's a functional value behind each PINCTRL
+ */
+#define LEN_OF_PINCTRL	(sizeof(u32) * 6)
+
 static void remove_one_pin_from_node(const char *path,
 			   const char *phandle_name,
 			   const char *name,
@@ -107,10 +115,14 @@ static void remove_one_pin_from_node(const char *path,
 	struct property *pbase;
 	struct property *poldbase;
 	u32 *psize;
-	int i = 0, j = 0;
+	int i = 0, j = 0, k;
 
 	np = of_find_node_by_path(path);
+	if (!np)
+		return;
 	pinctrl = of_parse_phandle(np, phandle_name, 0);
+	if (!phandle_name)
+		return;
 	poldbase = of_find_property(pinctrl, name, NULL);
 	if (poldbase) {
 		pbase = kzalloc(sizeof(*pbase)
@@ -118,23 +130,21 @@ static void remove_one_pin_from_node(const char *path,
 		if (pbase == NULL)
 			return;
 		psize = (u32 *)(pbase + 1);
-		pbase->length = poldbase->length - 8;
+		pbase->length = poldbase->length - LEN_OF_PINCTRL;
 		pbase->name = kstrdup(poldbase->name, GFP_KERNEL);
 		if (!pbase->name) {
 			kfree(pbase);
 			return;
 		}
-
 		pbase->value = psize;
-		for (i = 0, j = 0; i < pbase->length; i += 4, j += 4) {
-			if (cpu_to_be32(pin)
-					== *(u32 *)(poldbase->value + j)) {
-				i -= 4;
-				j += 4;
+		for ( ; i < pbase->length; i += LEN_OF_PINCTRL, j += LEN_OF_PINCTRL) {
+			if (cpu_to_be32(pin) == *(u32 *)(poldbase->value + j)) {
+				i -= LEN_OF_PINCTRL;
 				continue;
 			}
-			*(u32 *)(pbase->value + i) =
-				*(u32 *)(poldbase->value + j);
+			for (k = 0; k < LEN_OF_PINCTRL; k += sizeof(u32))
+				*(u32 *)(pbase->value + i + k) =
+					*(u32 *)(poldbase->value + j + k);
 		}
 
 		prom_update_property(pinctrl, pbase, poldbase);
@@ -500,7 +510,7 @@ static void __init imx6q_i2c3_sda_pindel(void)
 	struct property *pbase;
 	struct property *poldbase;
 	u32 *psize;
-	int i = 0, j = 0;
+	int i = 0, j = 0, k;
 
 	/* Cancel GPIO_16 for I2C3 SDA config */
 	np = of_find_node_by_path("/soc/aips-bus@02100000/i2c@021a8000");
@@ -513,25 +523,23 @@ static void __init imx6q_i2c3_sda_pindel(void)
 			return;
 		psize = (u32 *)(pbase + 1);
 		/* Cancel  1037 0x4001b8b1 MX6Q_PAD_GPIO_16__I2C3_SDA */
-		pbase->length = poldbase->length - 8;
+		pbase->length = poldbase->length - LEN_OF_PINCTRL;
 		pbase->name = kstrdup(poldbase->name, GFP_KERNEL);
 		if (!pbase->name) {
 			kfree(pbase);
 			return;
 		}
-
 		pbase->value = psize;
-		for (i = 0, j = 0; i < pbase->length; i += 4, j += 4) {
-			if (cpu_to_be32(1037) ==
-				*(u32 *)(poldbase->value + j)) {
-				i -= 4;
-				j += 4;
+		for ( ; i < pbase->length; i += LEN_OF_PINCTRL, j += LEN_OF_PINCTRL) {
+			/* Cancel MX6Q_PAD_GPIO_16__I2C3_SDA 0x248 */
+			if (cpu_to_be32(0x248) == *(u32 *)(poldbase->value + j)) {
+				i -= LEN_OF_PINCTRL;
 				continue;
 			}
-			*(u32 *)(pbase->value + i) =
-				*(u32 *)(poldbase->value + j);
+			for (k = 0; k < LEN_OF_PINCTRL; k += sizeof(u32))
+				*(u32 *)(pbase->value + i + k) =
+					*(u32 *)(poldbase->value + j + k);
 		}
-
 		prom_update_property(pinctrl_i2c3, pbase, poldbase);
 	}
 }
@@ -591,35 +599,37 @@ static void __init imx6q_spdif_pinfix(void)
 	struct property *pbase;
 	struct property *poldbase;
 	u32 *psize;
-	int i = 0, j = 0;
+	int i = 0, j = 0, k;
 
 	/* Cancel GPIO_16 for I2C3 SDA config */
 	imx6q_i2c3_sda_pindel();
 
 	/* Cancel GPIO_17 for IOMUX GPIO_7_12 config */
 	pinctrl_iomuxc = of_find_node_by_name(NULL, "hoggrp");
+	if (!pinctrl_iomuxc)
+		return;
 	poldbase = of_find_property(pinctrl_iomuxc, "fsl,pins", NULL);
 	if (poldbase) {
 		pbase = kzalloc(sizeof(*pbase) + poldbase->length, GFP_KERNEL);
 		if (pbase == NULL)
 			return;
 		psize = (u32 *)(pbase + 1);
-		pbase->length = poldbase->length - 8;
+		pbase->length = poldbase->length - LEN_OF_PINCTRL;
 		pbase->name = kstrdup(poldbase->name, GFP_KERNEL);
 		if (!pbase->name) {
 			kfree(pbase);
 			return;
 		}
-
 		pbase->value = psize;
-		for (i = 0, j = 0; i < pbase->length; i += 4, j += 4) {
-			/* Cancel 1044 0x80000000 MX6Q_PAD_GPIO_17__GPIO_7_12 */
-			if (cpu_to_be32(1044) == *(u32 *)(poldbase->value + j)) {
-				i -= 4;
-				j += 4;
+		for ( ; i < pbase->length; i += LEN_OF_PINCTRL, j += LEN_OF_PINCTRL) {
+			/* Cancel MX6Q_PAD_GPIO_17__GPIO_7_12 0x24c */
+			if (cpu_to_be32(0x24c) == *(u32 *)(poldbase->value + j)) {
+				i -= LEN_OF_PINCTRL;
 				continue;
 			}
-			*(u32 *)(pbase->value + i) = *(u32 *)(poldbase->value + j);
+			for (k = 0; k < LEN_OF_PINCTRL; k += sizeof(u32))
+				*(u32 *)(pbase->value + i + k) =
+					*(u32 *)(poldbase->value + j + k);
 		}
 
 		prom_update_property(pinctrl_iomuxc, pbase, poldbase);
