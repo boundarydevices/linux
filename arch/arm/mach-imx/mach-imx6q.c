@@ -106,6 +106,9 @@ early_param("tuner", early_enable_tuner);
  */
 #define LEN_OF_PINCTRL	(sizeof(u32) * 6)
 
+#define IMX6Q_C_ERR(fmt, ...) \
+	pr_err("mach-imx6q.c ERROR: %s: " fmt, __func__, ##__VA_ARGS__)
+
 static void remove_one_pin_from_node(const char *path,
 			   const char *phandle_name,
 			   const char *name,
@@ -118,36 +121,56 @@ static void remove_one_pin_from_node(const char *path,
 	int i = 0, j = 0, k;
 
 	np = of_find_node_by_path(path);
-	if (!np)
+	if (!np) {
+		IMX6Q_C_ERR("No such path: %s\n", path);
 		return;
-	pinctrl = of_parse_phandle(np, phandle_name, 0);
-	if (!phandle_name)
-		return;
-	poldbase = of_find_property(pinctrl, name, NULL);
-	if (poldbase) {
-		pbase = kzalloc(sizeof(*pbase)
-				+ poldbase->length - 8, GFP_KERNEL);
-		if (pbase == NULL)
-			return;
-		psize = (u32 *)(pbase + 1);
-		pbase->length = poldbase->length - LEN_OF_PINCTRL;
-		pbase->name = kstrdup(poldbase->name, GFP_KERNEL);
-		if (!pbase->name) {
-			kfree(pbase);
-			return;
-		}
-		pbase->value = psize;
-		for ( ; i < pbase->length; i += LEN_OF_PINCTRL, j += LEN_OF_PINCTRL) {
-			if (cpu_to_be32(pin) == *(u32 *)(poldbase->value + j)) {
-				i -= LEN_OF_PINCTRL;
-				continue;
-			}
-			for (k = 0; k < LEN_OF_PINCTRL; k += sizeof(u32))
-				*(u32 *)(pbase->value + i + k) =
-					*(u32 *)(poldbase->value + j + k);
-		}
+	}
 
+	pinctrl = of_parse_phandle(np, phandle_name, 0);
+	if (!phandle_name) {
+		IMX6Q_C_ERR("No such phandle name: %s\n", phandle_name);
+		return;
+	}
+
+	poldbase = of_find_property(pinctrl, name, NULL);
+	if (!poldbase) {
+		IMX6Q_C_ERR("No such property name: %s\n", name);
+		return;
+	}
+
+	pbase = kzalloc(sizeof(*pbase)
+			+ poldbase->length - 8, GFP_KERNEL);
+	if (!pbase) {
+		IMX6Q_C_ERR("No MEMORY to allocate new pbase\n");
+		return;
+	}
+
+	psize = (u32 *)(pbase + 1);
+	pbase->length = poldbase->length - LEN_OF_PINCTRL;
+	pbase->name = kstrdup(poldbase->name, GFP_KERNEL);
+	if (!pbase->name) {
+		IMX6Q_C_ERR("Invalid pbase->name\n");
+		kfree(pbase);
+		return;
+	}
+
+	pbase->value = psize;
+	for ( ; j < poldbase->length; i += LEN_OF_PINCTRL, j += LEN_OF_PINCTRL) {
+		if (cpu_to_be32(pin) == *(u32 *)(poldbase->value + j)) {
+			i -= LEN_OF_PINCTRL;
+			continue;
+		}
+		for (k = 0; k < LEN_OF_PINCTRL; k += sizeof(u32))
+			*(u32 *)(pbase->value + i + k) =
+				*(u32 *)(poldbase->value + j + k);
+	}
+
+	if (i < j) {
+		/* Only update the property if found the pin */
 		prom_update_property(pinctrl, pbase, poldbase);
+	} else {
+		IMX6Q_C_ERR("No such pin 0x%x in %s\n", pin, path);
+		kfree(pbase);
 	}
 }
 
