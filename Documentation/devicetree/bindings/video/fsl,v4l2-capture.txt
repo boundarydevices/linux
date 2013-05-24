@@ -38,6 +38,7 @@ Required properties for sensor
   v4l2_capture.
 
 Supported Sensor
+- ov5640
 - ov5642
 - ov5640_mipi
 
