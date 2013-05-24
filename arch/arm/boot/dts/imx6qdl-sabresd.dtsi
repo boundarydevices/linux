@@ -431,7 +431,7 @@
 	sound {
 		compatible = "fsl,imx6q-sabresd-wm8962",
 			     "fsl,imx-audio-wm8962";
-		model = "imx6q-sabresd-wm8962";
+		model = "wm8962-audio";
 		ssi-controller = <&ssi2>;
 		audio-codec = <&codec>;
 
