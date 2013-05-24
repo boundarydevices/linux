@@ -109,6 +109,26 @@ early_param("tuner", early_enable_tuner);
 #define IMX6Q_C_ERR(fmt, ...) \
 	pr_err("mach-imx6q.c ERROR: %s: " fmt, __func__, ##__VA_ARGS__)
 
+static void remove_pinctrl0(const char *path)
+{
+	struct device_node *np;
+	struct property *poldbase;
+
+	np = of_find_node_by_path(path);
+	if (!np) {
+		IMX6Q_C_ERR("No such path: %s\n", path);
+		return;
+	}
+
+	poldbase = of_find_property(np, "pinctrl-0", 0);
+	if (!poldbase) {
+		IMX6Q_C_ERR("No such property: pinctrl-0\n");
+		return;
+	}
+
+	prom_remove_property(np, poldbase);
+}
+
 static void remove_one_pin_from_node(const char *path,
 			   const char *phandle_name,
 			   const char *name,
@@ -505,26 +525,11 @@ static void __init imx6q_sabresd_init(void)
 	imx6q_sabresd_cko_setup();
 }
 
-static void __init imx6q_tuner_pindel(void)
-{
-	struct device_node *np;
-	struct property *poldbase;
-
-	/* Remove tuner pinctrl-0 */
-	np = of_find_node_by_path("/soc/aips-bus@02100000/audmux@021d8000");
-	if (!np)
-		return;
-
-	poldbase = of_find_property(np, "pinctrl-0", 0);
-	if (poldbase)
-		prom_remove_property(np, poldbase);
-}
-
 static void __init imx6q_sabreauto_init(void)
 {
 	imx6q_sabreauto_esai_setup();
 	if (!tuner_en)
-		imx6q_tuner_pindel();
+		remove_pinctrl0("/soc/aips-bus@02100000/audmux@021d8000");
 }
 
 static void __init imx6q_1588_init(void)
@@ -591,17 +596,7 @@ static void __init imx6q_spdif_pinfix(void)
 
 static void __init imx6q_spdif_pindel(void)
 {
-	struct device_node *np;
-	struct property *poldbase;
-
-	/* Remove SPDIF pinctrl-0 */
-	np = of_find_node_by_path("/soc/aips-bus@02000000/spba-bus@02000000/spdif@02004000");
-	if (!np)
-		return;
-
-	poldbase = of_find_property(np, "pinctrl-0", 0);
-	if (poldbase)
-		prom_remove_property(np, poldbase);
+	remove_pinctrl0("/soc/aips-bus@02000000/spba-bus@02000000/spdif@02004000");
 }
 
 static void __init imx6q_spdif_init(void)
