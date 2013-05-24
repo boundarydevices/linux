@@ -176,8 +176,8 @@
 					>;
 				};
 
-				ov5642: ov5642@3c {
-					compatible = "fsl,ov5642";
+				ov564x: ov564x@3c {
+					compatible = "fsl,ov564x";
 					reg = <0x3c>;
 					pinctrl-names = "default";
 					pinctrl-0 = <&pinctrl_ipu1_csi0_1>;
