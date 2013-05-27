@@ -47,6 +47,8 @@
 #define PORTSC_FPR            BIT(6)
 #define PORTSC_SUSP           BIT(7)
 #define PORTSC_HSP            BIT(9)
+#define PORTSC_WKCN	      BIT(20)
+#define PORTSC_WKDS	      BIT(21)
 #define PORTSC_PHCD           BIT(23) /* phy suspend mode */
 #define PORTSC_PTC            (0x0FUL << 16)
 /* PTS and PTW for non lpm version only */

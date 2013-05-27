@@ -78,6 +78,34 @@ static int usbmisc_init(struct device *dev)
 	return 0;
 }
 
+static void ci13xxx_imx_notify_event(struct ci13xxx *ci, unsigned event)
+{
+	int ret = 0;
+	struct device *imx_dev = ci->dev->parent;
+	struct ci13xxx_imx_data *data = dev_get_drvdata(imx_dev);
+	struct usbmisc_ops *usbmisc_ops = data->usbmisc_ops;
+
+	switch (event) {
+	case CI13XXX_CONTROLLER_HSIC_ACTIVE_EVENT:
+		if (!IS_ERR(data->pinctrl) &&
+			!IS_ERR(data->pinctrl_hsic_active)) {
+			ret = pinctrl_select_state(data->pinctrl
+				, data->pinctrl_hsic_active);
+			if (ret)
+				dev_err(imx_dev,
+					 "hsic_active select failed, err=%d\n",
+					 ret);
+	}
+		break;
+	case CI13XXX_CONTROLLER_HSIC_SUSPEND_EVENT:
+		if (usbmisc_ops && usbmisc_ops->hsic_set_connect)
+			usbmisc_ops->hsic_set_connect(data);
+		break;
+	default:
+		dev_dbg(ci->dev, "unknown event\n");
+	}
+}
+
 static int imx_set_wakeup(struct ci13xxx_imx_data *data , bool enable)
 {
 	int ret = 0;
@@ -106,6 +134,22 @@ static int imx_set_wakeup(struct ci13xxx_imx_data *data , bool enable)
 bool ci_is_host_mode(struct ci13xxx *ci)
 {
 	return hw_read(ci, OP_USBMODE, USBMODE_CM) == USBMODE_CM;
+}
+
+static void imx_hsic_wakeup_handler(struct ci13xxx_imx_data *data)
+{
+	struct platform_device *plat_ci;
+	struct ci13xxx *ci;
+
+	plat_ci = data->ci_pdev;
+	ci = platform_get_drvdata(plat_ci);
+	/*
+	 * For freescale HSIC controller , it needs to disable
+	 * WKDS (wake on disconnect) &  WKCN (wake on connect)
+	 */
+	if ((data->usbmisc_ops == &imx6q_usbmisc_ops) && (data->index > 1))
+		hw_write(ci, OP_PORTSC, PORTSC_WKCN | PORTSC_WKDS, 0);
+
 }
 
 static void usbphy_pre_suspend(struct ci13xxx *ci, struct usb_phy *phy)
@@ -142,7 +186,7 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 	struct device_node *ci_np, *phy_np;
 	struct resource *res;
 	struct regulator *reg_vbus;
-	struct pinctrl *pinctrl;
+	struct pinctrl_state *pinctrl_id, *pinctrl_hsic_idle;
 	struct regmap *iomuxc_gpr;
 	u32 gpr1 = 0;
 	int ret;
@@ -162,6 +206,7 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 
 	pdata->phy_mode = of_usb_get_phy_mode(pdev->dev.of_node);
 	pdata->dr_mode = of_usb_get_dr_mode(pdev->dev.of_node);
+	pdata->notify_event = ci13xxx_imx_notify_event;
 
 	data = devm_kzalloc(&pdev->dev, sizeof(*data), GFP_KERNEL);
 	if (!data) {
@@ -177,10 +222,49 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 		return -ENOENT;
 	}
 
-	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
-	if (IS_ERR(pinctrl))
-		dev_warn(&pdev->dev, "pinctrl get/select failed, err=%ld\n",
-			PTR_ERR(pinctrl));
+	data->pinctrl = devm_pinctrl_get(&pdev->dev);
+	if (IS_ERR(data->pinctrl)) {
+		dev_dbg(&pdev->dev, "pinctrl get failed, err=%ld\n",
+			PTR_ERR(data->pinctrl));
+	} else {
+		pinctrl_id = pinctrl_lookup_state(data->pinctrl, "pinctrl_id");
+		if (IS_ERR(pinctrl_id)) {
+			dev_dbg(&pdev->dev,
+				 "pinctrl_id lookup failed, err=%ld\n",
+				 PTR_ERR(pinctrl_id));
+		} else {
+			ret = pinctrl_select_state(data->pinctrl, pinctrl_id);
+			if (ret) {
+				dev_err(&pdev->dev,
+					 "pinctrl_id select failed, err=%d\n",
+					 ret);
+				return ret;
+			}
+		}
+
+		pinctrl_hsic_idle = pinctrl_lookup_state(data->pinctrl, "idle");
+		if (IS_ERR(pinctrl_hsic_idle)) {
+			dev_dbg(&pdev->dev,
+				 "pinctrl_hsic_idle lookup failed, err=%ld\n",
+				 PTR_ERR(pinctrl_hsic_idle));
+		} else {
+			ret = pinctrl_select_state(data->pinctrl,
+					pinctrl_hsic_idle);
+			if (ret) {
+				dev_err(&pdev->dev,
+					 "hsic_idle select failed, err=%d\n",
+					 ret);
+				return ret;
+			}
+		}
+
+		data->pinctrl_hsic_active = pinctrl_lookup_state
+			(data->pinctrl, "active");
+		if (IS_ERR(data->pinctrl_hsic_active))
+			dev_dbg(&pdev->dev,
+				 "pinctrl_hsic_active lookup failed, err=%ld\n",
+				 PTR_ERR(data->pinctrl_hsic_active));
+	}
 
 	data->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(data->clk)) {
@@ -333,6 +417,9 @@ static int ci13xxx_imx_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 	pm_runtime_put_noidle(&pdev->dev);
 
+	/* FIXME: Need to add below logic at host/hcd layer in future */
+	imx_hsic_wakeup_handler(data);
+
 	ci13xxx_remove_device(plat_ci);
 
 	if (data->phy) {
@@ -355,6 +442,7 @@ static int ci13xxx_imx_remove(struct platform_device *pdev)
 static int imx_controller_suspend(struct device *dev)
 {
 	struct ci13xxx_imx_data *data = dev_get_drvdata(dev);
+	struct usbmisc_ops *usbmisc_ops = data->usbmisc_ops;
 	struct platform_device *plat_ci;
 	struct ci13xxx *ci;
 	int ret = 0;
@@ -373,6 +461,9 @@ static int imx_controller_suspend(struct device *dev)
 	if (data->phy)
 		usbphy_pre_suspend(ci, data->phy);
 
+	/* FIXME: Need to add below logic at host/hcd layer in future */
+	imx_hsic_wakeup_handler(data);
+
 	ret = imx_set_wakeup(data, true);
 	if (ret) {
 		dev_err(dev,
@@ -384,6 +475,9 @@ static int imx_controller_suspend(struct device *dev)
 
 	if (data->phy)
 		usb_phy_set_suspend(data->phy, 1);
+
+	if (usbmisc_ops && usbmisc_ops->hsic_set_clk)
+		usbmisc_ops->hsic_set_clk(data, false);
 
 	clk_disable_unprepare(data->clk);
 
@@ -421,6 +515,9 @@ static int imx_controller_resume(struct device *dev)
 			"Failed to prepare or enable clock, err=%d\n", ret);
 		return ret;
 	}
+
+	if (usbmisc_ops && usbmisc_ops->hsic_set_clk)
+		usbmisc_ops->hsic_set_clk(data, true);
 
 	if (usbmisc_ops && usbmisc_ops->is_wakeup_intr) {
 		if (usbmisc_ops->is_wakeup_intr(data) == 1) {

@@ -22,10 +22,24 @@
 #define MX53_BM_OVER_CUR_DIS_UHx	BIT(30)
 
 #define MX6_BM_OVER_CUR_DIS		BIT(7)
+#define MX6_BM_UTMI_ON_CLOCK		BIT(13)
 #define MX6_BM_ID_WAKEUP		BIT(16)
 #define MX6_BM_VBUS_WAKEUP		BIT(17)
 #define MX6_BM_WAKEUP_ENABLE		BIT(10)
 #define MX6_BM_WAKEUP_INTR		BIT(31)
+
+/*************** HSIC Register Mapping ***********/
+#define MX6_USB_UH2_HSIC_CTRL		0x10
+#define MX6_USB_UH3_HSIC_CTRL		0x14
+/* Indicating whether HSIC clock is valid */
+#define MX6_HSIC_CLK_VLD		BIT(31)
+/* set before set portsc.suspendM */
+#define MX6_HSIC_DEV_CONN		BIT(21)
+/* HSIC enable */
+#define MX6_HSIC_EN			BIT(12)
+/* Force HSIC module 480M clock on, even when in Host is in suspend mode */
+#define MX6_HSIC_CLK_ON			BIT(11)
+/*************** End of HSIC Register Mapping *********/
 
 static int usbmisc_imx25_post(struct ci13xxx_imx_data *data)
 {
@@ -94,7 +108,7 @@ static int usbmisc_imx53_init(struct ci13xxx_imx_data *data)
 static int usbmisc_imx6q_init(struct ci13xxx_imx_data *data)
 {
 	unsigned long flags;
-	u32 val;
+	u32 val, val_hsic;
 
 	if (IS_ERR(data->non_core_base_addr) || data->index < 0)
 		return -EINVAL;
@@ -115,9 +129,21 @@ static int usbmisc_imx6q_init(struct ci13xxx_imx_data *data)
 				| MX6_BM_WAKEUP_ENABLE);
 		break;
 	case 1:
+		val &= ~MX6_BM_WAKEUP_ENABLE;
+		break;
 	case 2:
 	case 3:
 		val &= ~MX6_BM_WAKEUP_ENABLE;
+		val |= MX6_BM_UTMI_ON_CLOCK;
+
+		/* Need to add delay to wait 24M OSC to be stable */
+		imx_anatop_set_clk_get_delay(3);
+
+		regmap_read(data->non_core_base_addr,
+			0x10 + (data->index - 2) * 4, &val_hsic);
+		val_hsic |= MX6_HSIC_EN | MX6_HSIC_CLK_ON;
+		regmap_write(data->non_core_base_addr,
+			0x10 + (data->index - 2) * 4, val_hsic);
 	}
 	regmap_write(data->non_core_base_addr, data->index * 4, val);
 
@@ -175,17 +201,81 @@ static int usbmisc_imx6q_wakeup(struct ci13xxx_imx_data *data,
 
 static int usbmisc_imx6q_is_wakeup_interrupt(struct ci13xxx_imx_data *data)
 {
+	unsigned long flags;
 	u32 val;
 
 	if (IS_ERR(data->non_core_base_addr) || data->index < 0)
 		return -EINVAL;
 
+	spin_lock_irqsave(&data->lock, flags);
 	regmap_read(data->non_core_base_addr, data->index * 4, &val);
-	if (val & MX6_BM_WAKEUP_INTR)
+	if (val & MX6_BM_WAKEUP_INTR) {
+		spin_unlock_irqrestore(&data->lock, flags);
 		return IMX_WAKEUP_INTR_PENDING;
+	}
+
+	spin_unlock_irqrestore(&data->lock, flags);
 
 	return 0;
 
+}
+
+static void usbmisc_imx6q_hsic_set_connect(struct ci13xxx_imx_data *data)
+{
+	unsigned long flags;
+	u32 val;
+
+	if (IS_ERR(data->non_core_base_addr) || data->index < 0) {
+		printk(KERN_ERR "%s: error parameters\n", __func__);
+		BUG_ON(1);
+	}
+
+	spin_lock_irqsave(&data->lock, flags);
+	switch (data->index) {
+	case 0:
+	case 1:
+		break;
+	case 2:
+	case 3:
+		regmap_read(data->non_core_base_addr,
+				0x10 + (data->index - 2) * 4, &val);
+		if (!(val & MX6_HSIC_DEV_CONN))
+			regmap_write(data->non_core_base_addr,
+				0x10 + (data->index - 2) * 4,
+					val | MX6_HSIC_DEV_CONN);
+	}
+	spin_unlock_irqrestore(&data->lock, flags);
+}
+
+static int usbmisc_imx6q_hsic_set_clk
+	(struct ci13xxx_imx_data *data, bool on)
+{
+	unsigned long flags;
+	u32 val;
+
+	if (IS_ERR(data->non_core_base_addr) || data->index < 0)
+		return -EINVAL;
+
+	spin_lock_irqsave(&data->lock, flags);
+	switch (data->index) {
+	case 0:
+	case 1:
+		break;
+	case 2:
+	case 3:
+		regmap_read(data->non_core_base_addr,
+			0x10 + (data->index - 2) * 4, &val);
+		if (on)
+			val |= MX6_HSIC_CLK_ON;
+		else
+			val &= ~MX6_HSIC_CLK_ON;
+
+		regmap_write(data->non_core_base_addr,
+			0x10 + (data->index - 2) * 4, val);
+	}
+	spin_unlock_irqrestore(&data->lock, flags);
+
+	return 0;
 }
 
 static const struct usbmisc_ops imx25_usbmisc_ops = {
@@ -200,4 +290,6 @@ static const struct usbmisc_ops imx6q_usbmisc_ops = {
 	.init = usbmisc_imx6q_init,
 	.set_wakeup = usbmisc_imx6q_wakeup,
 	.is_wakeup_intr = usbmisc_imx6q_is_wakeup_interrupt,
+	.hsic_set_connect = usbmisc_imx6q_hsic_set_connect,
+	.hsic_set_clk	= usbmisc_imx6q_hsic_set_clk,
 };

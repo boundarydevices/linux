@@ -703,6 +703,7 @@
 				interrupts = <0 41 0x04>;
 				clocks = <&clks 162>;
 				ci,noncore = <&noncore>;
+				phy_type = "hsic";
 				status = "disabled";
 			};
 
@@ -712,6 +713,7 @@
 				interrupts = <0 42 0x04>;
 				clocks = <&clks 162>;
 				ci,noncore = <&noncore>;
+				phy_type = "hsic";
 				status = "disabled";
 			};
 

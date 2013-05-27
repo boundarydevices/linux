@@ -28,6 +28,9 @@ struct usbmisc_ops {
 		enum ci_usb_wakeup_events wakeup_event);
 	/* To know if current interrupt is wakeup interrupt */
 	int (*is_wakeup_intr)(struct ci13xxx_imx_data *data);
+	/* Call it before setting portsc.suspendM=1 */
+	void (*hsic_set_connect)(struct ci13xxx_imx_data *data);
+	int (*hsic_set_clk)(struct ci13xxx_imx_data *data, bool on);
 };
 
 struct ci13xxx_imx_data {
@@ -44,6 +47,8 @@ struct ci13xxx_imx_data {
 	int evdo:1; /* set external vbus divider option */
 	/* wakeup event for which operation mode, gadget/host/otg */
 	enum ci_usb_wakeup_events wakeup_event;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pinctrl_hsic_active;
 };
 
 #define IMX_WAKEUP_INTR_PENDING		1

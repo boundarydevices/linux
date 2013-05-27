@@ -22,8 +22,12 @@ struct ci13xxx_platform_data {
 	enum usb_dr_mode	dr_mode;
 #define CI13XXX_CONTROLLER_RESET_EVENT		0
 #define CI13XXX_CONTROLLER_STOPPED_EVENT	1
+#define CI13XXX_CONTROLLER_HSIC_ACTIVE_EVENT	2
+#define CI13XXX_CONTROLLER_HSIC_SUSPEND_EVENT	3
 	void	(*notify_event) (struct ci13xxx *ci, unsigned event);
 	struct regulator *reg_vbus;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pinctrl_hsic_active;
 };
 
 /* Default offset of capability registers */

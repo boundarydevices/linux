@@ -194,11 +194,17 @@ static int ci_ehci_hub_control(
 	spin_lock_irqsave(&ehci->lock, flags);
 
 	if (typeReq == SetPortFeature && wValue == USB_PORT_FEAT_SUSPEND) {
+		struct device *dev = hcd->self.controller;
+		struct ci13xxx *ci = dev_get_drvdata(dev);
 		temp = ehci_readl(ehci, status_reg);
 		if ((temp & PORT_PE) == 0 || (temp & PORT_RESET) != 0) {
 			retval = -EPIPE;
 			goto done;
 		}
+
+		if (ci->platdata->notify_event)
+			ci->platdata->notify_event
+				(ci, CI13XXX_CONTROLLER_HSIC_SUSPEND_EVENT);
 
 		temp &= ~(PORT_RWC_BITS | PORT_WKCONN_E);
 		temp |= PORT_WKDISC_E | PORT_WKOC_E;
@@ -336,6 +342,10 @@ static int host_start(struct ci13xxx *ci)
 		goto disable_reg;
 	else
 		ci->hcd = hcd;
+
+	if (ci->platdata->notify_event)
+		ci->platdata->notify_event
+			(ci, CI13XXX_CONTROLLER_HSIC_ACTIVE_EVENT);
 
 	if (ci->platdata->flags & CI13XXX_DISABLE_STREAMING)
 		hw_write(ci, OP_USBMODE, USBMODE_CI_SDIS, USBMODE_CI_SDIS);
