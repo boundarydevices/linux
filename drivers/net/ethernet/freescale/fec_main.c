@@ -2050,8 +2050,6 @@ fec_drv_remove(struct platform_device *pdev)
 	clk_disable_unprepare(fep->clk_ipg);
 	free_netdev(ndev);
 
-	platform_set_drvdata(pdev, NULL);
-
 	return 0;
 }
 
