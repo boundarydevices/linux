@@ -16,6 +16,7 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/clk.h>
+#include <linux/export.h>
 #include <mach/common.h>
 #include <asm/hardware/gic.h>
 
@@ -147,6 +148,7 @@ void imx_gpc_power_up_pu(bool flag)
 	mutex_unlock(&pu_lock);
 	return;
 }
+EXPORT_SYMBOL(imx_gpc_power_up_pu);
 
 void imx_gpc_pre_suspend(bool arm_power_off)
 {
