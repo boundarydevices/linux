@@ -84,9 +84,13 @@ void imx_anatop_pu_vol(bool enable)
 		 * especially, you disconnect VDDPU_IN and VDDSOC_IN.
 		 * if you want to power on/off external PU regulator to minimal
 		 * power leakage, you can add your specific code here.
+		 * But in our case, VDDPU_IN and VDDSOC_IN share the same input
+		 * from pfuze, and VDDSOC_IN can't be turned off, then the
+		 * delay time is decided by VDDPU switch from 0 to bypass, seem
+		 * fixed on 50us, enlarge to 70us for safe.
 		 */
 		if (new_vol == 0x1f)
-			delay_u = 16;
+			delay_u = 70;
 		else
 			delay_u = new_vol  * ((LDO_RAMP_UP_UNIT_IN_CYCLES <<
 					val) / LDO_RAMP_UP_FREQ_IN_MHZ + 1);
