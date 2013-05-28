@@ -140,6 +140,16 @@ config MX3_IPU_IRQS
 	  To avoid bloating the irq_desc[] array we allocate a sufficient
 	  number of IRQ slots and map them dynamically to specific sources.
 
+config MXC_PXP_V2
+    bool "MXC PxP V2 support"
+    depends on ARCH_IMX_V6_V7
+    select DMA_ENGINE
+
+config MXC_PXP_CLIENT_DEVICE
+    bool "MXC PxP Client Device"
+    default y
+    depends on MXC_PXP_V2
+
 config TXX9_DMAC
 	tristate "Toshiba TXx9 SoC DMA support"
 	depends on MACH_TX49XX || MACH_TX39XX
