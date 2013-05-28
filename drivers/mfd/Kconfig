@@ -864,6 +864,14 @@ config MFD_PM8XXX_IRQ
 config TPS65911_COMPARATOR
 	tristate
 
+config MFD_MXC_HDMI
+	tristate "MXC HDMI Core"
+	select MFD_CORE
+	default y
+	help
+	  This is the core driver for the i.MX on-chip HDMI.  This MFD
+	  driver connects with the video and audio drivers for HDMI.
+
 config MFD_TPS65090
 	bool "TPS65090 Power Management chips"
 	depends on I2C=y && GENERIC_HARDIRQS
