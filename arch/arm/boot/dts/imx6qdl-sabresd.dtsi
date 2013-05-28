@@ -29,6 +29,13 @@
 			status = "okay";
 		};
 
+		hdmi_video@00120000 {
+			compatible = "fsl,imx6-hdmi-video";
+			phy_reg_vlev = <0x0294>;
+			phy_reg_cksymtx = <0x800d>;
+			status = "okay";
+		};
+
 		aips-bus@02000000 { /* AIPS1 */
 			spba-bus@02000000 {
 				uart1: serial@02020000 {
@@ -205,6 +212,11 @@
 					reg = <0x48>;
 					int_input = <&gpio3 26 1>;
                                 };
+
+				hdmi_edid@50 {
+					compatible = "fsl,imx6-hdmi-i2c";
+					reg = <0x50>;
+				};
 
 				ov5640_mipi: ov5640_mipi@3c { /* i2c2 driver */
 					compatible = "fsl,ov5640_mipi";
