@@ -17,6 +17,7 @@
 #include <linux/cpu.h>
 #include <linux/delay.h>
 #include <linux/export.h>
+#include <linux/gpio.h>
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/irq.h>
@@ -24,6 +25,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
+#include <linux/of_gpio.h>
 #include <linux/of_platform.h>
 #include <linux/opp.h>
 #include <linux/phy.h>
@@ -195,6 +197,42 @@ static void __init imx6q_usb_init(void)
 	imx_anatop_usb_chrg_detect_disable();
 }
 
+/*
+ * Disable Hannstar LVDS panel CABC function.
+ * This function turns the panel's backlight density automatically
+ * according to the content shown on the panel which may cause
+ * annoying unstable backlight issue.
+ */
+static void __init imx6q_lvds_cabc_init(void)
+{
+	struct device_node *np = NULL;
+	int ret, lvds0_gpio, lvds1_gpio;
+
+	np = of_find_node_by_name(NULL, "lvds_cabc_ctrl");
+	if (!np)
+		return;
+
+	lvds0_gpio = of_get_named_gpio(np, "lvds0-gpios", 0);
+	if (gpio_is_valid(lvds0_gpio)) {
+		ret = gpio_request_one(lvds0_gpio, GPIOF_OUT_INIT_LOW,
+				"LVDS0 CABC enable");
+		if (!ret) {
+			gpio_set_value(lvds0_gpio, 0);
+			gpio_free(lvds0_gpio);
+		}
+	}
+
+	lvds1_gpio = of_get_named_gpio(np, "lvds1-gpios", 0);
+	if (gpio_is_valid(lvds1_gpio)) {
+		ret = gpio_request_one(lvds1_gpio, GPIOF_OUT_INIT_LOW,
+				"LVDS1 CABC enable");
+		if (!ret) {
+			gpio_set_value(lvds1_gpio, 0);
+			gpio_free(lvds1_gpio);
+		}
+	}
+}
+
 static void __init imx6q_init_machine(void)
 {
 	imx6q_enet_phy_init();
@@ -205,6 +243,7 @@ static void __init imx6q_init_machine(void)
 	imx6q_pm_init();
 	imx6q_usb_init();
 	imx6q_1588_init();
+	imx6q_lvds_cabc_init();
 }
 
 #define OCOTP_CFG3			0x440
