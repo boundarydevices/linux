@@ -1,0 +1,6 @@
+#
+# IIO imu drivers configuration
+#
+menu "Inertial measurement units"
+source "drivers/staging/iio/imu/inv_mpu/Kconfig"
+endmenu
