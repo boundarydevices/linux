@@ -74,6 +74,7 @@ static struct regmap *regmap_gpr;
 static int sd30_en;
 static int spdif_en;
 static int tuner_en;
+static int weim_nor;
 static void __iomem *wdog_base1;
 static void __iomem *wdog_base2;
 
@@ -98,6 +99,12 @@ static int __init early_enable_tuner(char *p)
 }
 early_param("tuner", early_enable_tuner);
 
+static int __init early_enable_weim(char *p)
+{
+	weim_nor = 1;
+	return 0;
+}
+early_param("weim-nor", early_enable_weim);
 /*
  * The length's determined by PINFUNC definition's length.
  * To check the length, see: arch/arm/boot/dts/imx6q-pinfunc.h
@@ -548,6 +555,12 @@ static void __init imx6q_sabreauto_init(void)
 	imx6q_sabreauto_esai_setup();
 	if (!tuner_en)
 		remove_pinctrl0("/soc/aips-bus@02100000/audmux@021d8000");
+
+	/* WEIM NOR has pin conflict with SPI NOR. */
+	if (weim_nor)
+		remove_pinctrl0("/soc/aips-bus@02000000/spba-bus@02000000/ecspi@02008000");
+	else
+		remove_pinctrl0("/soc/aips-bus@02100000/weim@021b8000");
 }
 
 static void __init imx6q_1588_init(void)
