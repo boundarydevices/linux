@@ -544,6 +544,42 @@ static void __init imx6q_csi_mux_init(void)
 		regmap_update_bits(regmap_gpr, IOMUXC_GPR13, 0x3F, 0x0C);
 }
 
+/*
+ * Disable Hannstar LVDS panel CABC function.
+ * This function turns the panel's backlight density automatically
+ * according to the content shown on the panel which may cause
+ * annoying unstable backlight issue.
+ */
+static void __init imx6q_lvds_cabc_init(void)
+{
+	struct device_node *np = NULL;
+	int ret, lvds0_gpio, lvds1_gpio;
+
+	np = of_find_node_by_name(NULL, "lvds_cabc_ctrl");
+	if (!np)
+		return;
+
+	lvds0_gpio = of_get_named_gpio(np, "lvds0-gpios", 0);
+	if (gpio_is_valid(lvds0_gpio)) {
+		ret = gpio_request_one(lvds0_gpio, GPIOF_OUT_INIT_LOW,
+				"LVDS0 CABC enable");
+		if (!ret) {
+			gpio_set_value(lvds0_gpio, 0);
+			gpio_free(lvds0_gpio);
+		}
+	}
+
+	lvds1_gpio = of_get_named_gpio(np, "lvds1-gpios", 0);
+	if (gpio_is_valid(lvds1_gpio)) {
+		ret = gpio_request_one(lvds1_gpio, GPIOF_OUT_INIT_LOW,
+				"LVDS1 CABC enable");
+		if (!ret) {
+			gpio_set_value(lvds1_gpio, 0);
+			gpio_free(lvds1_gpio);
+		}
+	}
+}
+
 static void __init imx6q_sabresd_init(void)
 {
 	imx6q_ar803x_phy_fixup();
@@ -944,6 +980,7 @@ static void __init imx6q_init_machine(void)
 	if (IS_ENABLED(CONFIG_MXC_GPU_VIV))
 		imx6q_gpu_init();
 	imx6q_csi_mux_init();
+	imx6q_lvds_cabc_init();
 }
 
 static void __init imx6q_init_late(void)
