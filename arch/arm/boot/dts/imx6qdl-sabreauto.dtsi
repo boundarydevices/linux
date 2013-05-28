@@ -105,6 +105,46 @@
 				status = "okay";
 			};
 
+			weim: weim@021b8000{
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_weim_nor_1 &pinctrl_weim_cs0_1>;
+				#address-cells = <2>;
+				#size-cells = <1>;
+				ranges = <0 0 0x08000000 0x08000000>;
+				status = "okay"; /* pin conflict with SPI NOR */
+
+				nor@0,0 {
+					compatible = "cfi-flash";
+					reg = <0 0 0x02000000>;
+					#address-cells = <1>;
+					#size-cells = <1>;
+					bank-width = <2>;
+					fsl,weim-cs-timing = <0x00620081 0x00000001 0x1c022000
+							0x0000c000 0x1404a38e 0x00000000>;
+
+					partition@0 {
+						label = "U-Boot";
+						reg = <0x0 0x80000>;
+					};
+
+					partition@80000 {
+						label = "U-Boot-ENV";
+						reg = <0x80000 0x20000>;
+						read-only;
+					};
+
+					partition@a0000 {
+						label = "Kernel DTB";
+						reg = <0xa0000 0x20000>;
+					};
+
+					partition@c0000 {
+						label = "Kernel";
+						reg = <0xc0000 0x1f40000>;
+					};
+				};
+			};
+
 			uart4: serial@021f0000 {
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_uart4_1>;
