@@ -100,6 +100,7 @@
 			usdhc3: usdhc@02198000 {
 				cd-gpios = <&gpio6 15 0>;
 				wp-gpios = <&gpio1 13 0>;
+				bus-width = <8>;
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_usdhc3_1>;
 				status = "okay";
