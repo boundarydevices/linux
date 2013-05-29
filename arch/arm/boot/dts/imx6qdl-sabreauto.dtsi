@@ -80,7 +80,7 @@
 
 			ldb@020e0000 {
 				ipu_id = <1>;
-				disp_id = <0>;
+				disp_id = <1>;
 				ext_ref = <1>;
 				mode = "sep0";
 				sec_ipu_id = <1>;
@@ -169,6 +169,11 @@
 				si4763: si4763@63 {
 					compatible = "fsl,si4763_i2c";
 					reg = <0x63>;
+				};
+
+				hdmi_edid@50 {
+					compatible = "fsl,imx6-hdmi-i2c";
+					reg = <0x50>;
 				};
 
 				pmic: pfuze100@08 {
