@@ -2424,29 +2424,30 @@ static void hdmi_init_route(struct mxc_hdmi *hdmi)
 	}
 }
 
-static int hdmi_get_of_property(struct mxc_hdmi *hdmi)
+static void hdmi_get_of_property(struct mxc_hdmi *hdmi)
 {
 	struct platform_device *pdev = hdmi->pdev;
 	struct device_node *np = pdev->dev.of_node;
-	int err;
-	u32 phy_reg_vlev, phy_reg_cksymtx;
+	int ret;
+	u32 phy_reg_vlev = 0, phy_reg_cksymtx = 0;
 
-	err = of_property_read_u32(np, "phy_reg_vlev", &phy_reg_vlev);
-	if (err) {
-		dev_dbg(&pdev->dev, "get of property phy_reg_vlev fail\n");
-		return err;
-	}
-	err = of_property_read_u32(np, "phy_reg_cksymtx", &phy_reg_cksymtx);
-	if (err) {
-		dev_dbg(&pdev->dev, "get of property phy_reg_cksymtx fail\n");
-		return err;
-	}
+	/* HDMI PHY register vlev and cksymtx preperty is optional.
+	 * It is for specific board to pass HCT electrical part.
+	 * Default value will been setting in HDMI PHY config function
+	 * if it is not define in device tree.
+	 */
+	ret = of_property_read_u32(np, "phy_reg_vlev", &phy_reg_vlev);
+	if (ret)
+		dev_dbg(&pdev->dev, "No board specific HDMI PHY vlev\n");
+
+	ret = of_property_read_u32(np, "phy_reg_cksymtx", &phy_reg_cksymtx);
+	if (ret)
+		dev_dbg(&pdev->dev, "No board specific HDMI PHY cksymtx\n");
 
 	/* Specific phy config */
 	hdmi->phy_config.reg_cksymtx = phy_reg_cksymtx;
 	hdmi->phy_config.reg_vlev = phy_reg_vlev;
 
-	return err;
 }
 
 /* HDMI Initialization Step A */
@@ -2469,11 +2470,7 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 		return -1;
 	}
 
-	ret = hdmi_get_of_property(hdmi);
-	if (ret < 0) {
-		dev_err(&hdmi->pdev->dev, "get hdmi of property fail\n");
-		return -ENOENT;
-	}
+	hdmi_get_of_property(hdmi);
 
 	if (irq < 0)
 		return -ENODEV;
