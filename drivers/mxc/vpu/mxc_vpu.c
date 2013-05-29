@@ -1183,6 +1183,28 @@ static void __exit vpu_exit(void)
 	vpu_free_dma_buffer(&pic_para_mem);
 	vpu_free_dma_buffer(&user_data_mem);
 
+	/* reset VPU state */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
+	if (!IS_ERR(vpu_regulator))
+		regulator_enable(vpu_regulator);
+	clk_prepare(vpu_clk);
+	clk_enable(vpu_clk);
+	if (vpu_plat->reset)
+		vpu_plat->reset();
+	clk_disable(vpu_clk);
+	clk_unprepare(vpu_clk);
+	if (!IS_ERR(vpu_regulator))
+		regulator_disable(vpu_regulator);
+#else
+	imx_gpc_power_up_pu(true);
+	clk_prepare(vpu_clk);
+	clk_enable(vpu_clk);
+	imx_src_reset_vpu();
+	clk_disable(vpu_clk);
+	clk_unprepare(vpu_clk);
+	imx_gpc_power_up_pu(false);
+#endif
+
 	clk_put(vpu_clk);
 
 	platform_driver_unregister(&mxcvpu_driver);
