@@ -93,8 +93,6 @@
 
 #define PCI_NUM_BAR_RESOURCES	6
 
-static unsigned char int_offset[8] = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80 };
-
 struct serial_private {
 	struct pci_dev		*dev;
 	unsigned int		nr;
@@ -1624,47 +1622,28 @@ static void __devexit remove_one_xrpciserialcard(struct pci_dev *dev)
 }
 
 
-static struct pci_device_id xrserial_pci_tbl[] = {
-	{	0x13a8, 0x358,
-		PCI_ANY_ID, PCI_ANY_ID,
-		0, 0, xr_8port },
-	{	0x13a8, 0x354,
-		PCI_ANY_ID, PCI_ANY_ID,
-		0, 0, xr_4port },
-	{	0x13a8, 0x352,
-		PCI_ANY_ID, PCI_ANY_ID,
-		0, 0, xr_2port },
-	{	0x13a8, 0x4354,
-		PCI_ANY_ID, PCI_ANY_ID,
-		0, 0, xr_4354port },
-	{	0x13a8, 0x8354,
-		PCI_ANY_ID, PCI_ANY_ID,
-		0, 0, xr_8354port },
-	{	0x13a8, 0x4358,
-		PCI_ANY_ID, PCI_ANY_ID,
-		0, 0, xr_4358port },
-	{	0x13a8, 0x8358,
-		PCI_ANY_ID, PCI_ANY_ID,
-		0, 0, xr_8358port },
-	{	0x13a8, 0x258,
-		PCI_ANY_ID, PCI_ANY_ID,
-		0, 0, xr_258port },
-	{	0x13a8, 0x254,
-		PCI_ANY_ID, PCI_ANY_ID,
-		0, 0, xr_254port },
-	{	0x13a8, 0x252,
-		PCI_ANY_ID, PCI_ANY_ID,
-		0, 0, xr_252port },
+static DEFINE_PCI_DEVICE_TABLE(xrserial_pci_tbl) = {
+	{ PCI_DEVICE(0x13a8, 0x358), .driver_data = xr_8port },
+	{ PCI_DEVICE(0x13a8, 0x354), .driver_data = xr_4port },
+	{ PCI_DEVICE(0x13a8, 0x352), .driver_data = xr_2port },
+	{ PCI_DEVICE(0x13a8, 0x4354), .driver_data = xr_4354port },
+	{ PCI_DEVICE(0x13a8, 0x8354), .driver_data = xr_8354port },
+	{ PCI_DEVICE(0x13a8, 0x4358), .driver_data = xr_4358port },
+	{ PCI_DEVICE(0x13a8, 0x8358), .driver_data = xr_8358port },
+	{ PCI_DEVICE(0x13a8, 0x258), .driver_data = xr_258port },
+	{ PCI_DEVICE(0x13a8, 0x254), .driver_data = xr_254port },
+	{ PCI_DEVICE(0x13a8, 0x252), .driver_data = xr_252port },
 	{ 0, }
 };
 
 static struct pci_driver xrserial_pci_driver = {
-	.name		= "xrserial",
+	.name		= "xr17v35x",
 	.probe		= init_one_xrpciserialcard,
 	.remove		= __devexit_p(remove_one_xrpciserialcard),
 	.id_table	= xrserial_pci_tbl,
 };
 
+MODULE_DEVICE_TABLE(pci, xrserial_pci_tbl);
 
 static int __init serialxr_init(void)
 {
