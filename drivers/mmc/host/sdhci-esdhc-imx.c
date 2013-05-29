@@ -938,18 +938,14 @@ static int __devinit sdhci_esdhc_imx_probe(struct platform_device *pdev)
 
 		imx_data->pins_100mhz = pinctrl_lookup_state(imx_data->pinctrl,
 						ESDHC_PINCTRL_STATE_100MHZ);
-		if (IS_ERR(imx_data->pins_100mhz)) {
-			ret = PTR_ERR(imx_data->pins_100mhz);
-			dev_err(mmc_dev(host->mmc),
-				"could not get 100mhz state: %d\n", ret);
-		}
-
 		imx_data->pins_200mhz = pinctrl_lookup_state(imx_data->pinctrl,
 						ESDHC_PINCTRL_STATE_200MHZ);
-		if (IS_ERR(imx_data->pins_200mhz)) {
-			ret = PTR_ERR(imx_data->pins_200mhz);
+		if (IS_ERR(imx_data->pins_100mhz) || IS_ERR(imx_data->pins_200mhz)) {
+			ret = -ENODEV;
 			dev_err(mmc_dev(host->mmc),
-				"could not get 200mhz state: %d\n", ret);
+				"could not get ultra high speed state: %d\n", ret);
+			/* fall back to not support sd30 */
+			host->quirks2 |= SDHCI_QUIRK2_NO_1_8_V;
 		}
 	} else {
 		host->quirks2 |= SDHCI_QUIRK2_NO_1_8_V;
