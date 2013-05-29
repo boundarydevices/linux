@@ -122,12 +122,13 @@ static unsigned long _ipu_pixel_clk_div_recalc_rate(struct clk_hw *hw,
 	struct clk_di_div *di_div = to_clk_di_div(hw);
 	struct ipu_soc *ipu = ipu_get_soc(di_div->ipu_id);
 	u32 div;
-	u64 final_rate = parent_rate * 16;
+	u64 final_rate = (unsigned long long)parent_rate * 16;
 
 	_ipu_get(ipu);
 	div = ipu_di_read(ipu, di_div->di_id, DI_BS_CLKGEN0);
 	_ipu_put(ipu);
-	pr_debug("ipu_di%d read BS_CLKGEN0 div:%d\n", di_div->di_id, div);
+	pr_debug("ipu_di%d read BS_CLKGEN0 div:%d, final_rate:%lld, prate:%ld\n",
+			di_div->di_id, div, final_rate, parent_rate);
 
 	if (div == 0)
 		return 0;

@@ -1142,6 +1142,11 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 	/* Get integer portion of divider */
 	div = clk_get_rate(clk_get_parent(ipu->pixel_clk[disp])) / rounded_pixel_clk;
 	dev_dbg(ipu->dev, "div:%d\n", div);
+	if (!div) {
+		dev_err(ipu->dev, "invalid pixel clk div = 0\n");
+		return -EINVAL;
+	}
+
 
 	mutex_lock(&ipu->mutex_lock);
 
