@@ -258,6 +258,9 @@ config SND_SOC_CS42888
 config SND_SOC_MXC_SPDIF
 	tristate
 
+config SND_SOC_MXC_HDMI
+	tristate
+
 config SND_SOC_SIGMADSP
 	tristate
 	select CRC32
