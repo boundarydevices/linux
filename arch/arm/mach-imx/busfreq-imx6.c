@@ -89,10 +89,10 @@ int low_bus_freq;
 int reduce_bus_freq(void)
 {
 	int ret = 0;
-	clk_enable(pll3);
+	clk_prepare_enable(pll3);
 	if (low_bus_freq) {
 		/* Need to ensure that PLL2_PFD_400M is kept ON. */
-		clk_enable(pll2_400);
+		clk_prepare_enable(pll2_400);
 		update_ddr_freq(DDR_AUDIO_CLK);
 		/* Make sure periph clk's parent also got updated */
 		ret = clk_set_parent(periph_clk2_sel, pll3);
@@ -121,14 +121,14 @@ int reduce_bus_freq(void)
 			printk(KERN_WARNING "%s: %d: clk set parent fail!\n",
 				__func__, __LINE__);
 		if (audio_bus_freq_mode)
-			clk_disable(pll2_400);
+			clk_disable_unprepare(pll2_400);
 		low_bus_freq_mode = 1;
 		audio_bus_freq_mode = 0;
 	}
 	if (high_bus_freq_mode && cpu_is_imx6dl())
-		clk_disable(pll2_400);
+		clk_disable_unprepare(pll2_400);
 
-	clk_disable(pll3);
+	clk_disable_unprepare(pll3);
 	med_bus_freq_mode = 0;
 	high_bus_freq_mode = 0;
 
@@ -204,7 +204,7 @@ int set_high_bus_freq(int high_bus_freq)
 	if (med_bus_freq_mode && !high_bus_freq)
 		return 0;
 
-	clk_enable(pll3);
+	clk_prepare_enable(pll3);
 	if (high_bus_freq) {
 		update_ddr_freq(ddr_normal_rate);
 		/* Make sure periph clk's parent also got updated */
@@ -221,9 +221,9 @@ int set_high_bus_freq(int high_bus_freq)
 			printk(KERN_WARNING "%s: %d: clk set parent fail!\n",
 				__func__, __LINE__);
 		if (med_bus_freq_mode)
-			clk_disable(pll2_400);
+			clk_disable_unprepare(pll2_400);
 	} else {
-		clk_enable(pll2_400);
+		clk_prepare_enable(pll2_400);
 		update_ddr_freq(ddr_med_rate);
 		/* Make sure periph clk's parent also got updated */
 		ret = clk_set_parent(periph_clk2_sel, pll3);
@@ -240,14 +240,14 @@ int set_high_bus_freq(int high_bus_freq)
 				__func__, __LINE__);
 	}
 	if (audio_bus_freq_mode)
-		clk_disable(pll2_400);
+		clk_disable_unprepare(pll2_400);
 
 	high_bus_freq_mode = 1;
 	med_bus_freq_mode = 0;
 	low_bus_freq_mode = 0;
 	audio_bus_freq_mode = 0;
 
-	clk_disable(pll3);
+	clk_disable_unprepare(pll3);
 
 	if (high_bus_freq_mode)
 		printk(KERN_DEBUG "Bus freq set to high mode. Count:\
