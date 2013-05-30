@@ -799,7 +799,7 @@ static void pxp_clk_enable(struct pxps *pxp)
 		return;
 	}
 
-	clk_enable(pxp->clk);
+	clk_prepare_enable(pxp->clk);
 	pxp->clk_stat = CLK_STAT_ON;
 
 	mutex_unlock(&pxp->clk_mutex);
@@ -819,7 +819,7 @@ static void pxp_clk_disable(struct pxps *pxp)
 	spin_lock_irqsave(&pxp->lock, flags);
 	if ((pxp->pxp_ongoing == 0) && list_empty(&head)) {
 		spin_unlock_irqrestore(&pxp->lock, flags);
-		clk_disable(pxp->clk);
+		clk_disable_unprepare(pxp->clk);
 		pxp->clk_stat = CLK_STAT_OFF;
 	} else
 		spin_unlock_irqrestore(&pxp->lock, flags);
@@ -1524,6 +1524,12 @@ static ssize_t clk_off_timeout_store(struct device *dev,
 static DEVICE_ATTR(clk_off_timeout, 0644, clk_off_timeout_show,
 		   clk_off_timeout_store);
 
+static const struct of_device_id imx_pxpdma_dt_ids[] = {
+	{ .compatible = "fsl,imx6dl-pxp-dma", },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, imx_pxpdma_dt_ids);
+
 static int pxp_probe(struct platform_device *pdev)
 {
 	struct pxps *pxp;
@@ -1556,36 +1562,38 @@ static int pxp_probe(struct platform_device *pdev)
 	spin_lock_init(&pxp->lock);
 	mutex_init(&pxp->clk_mutex);
 
-	if (!request_mem_region(res->start, resource_size(res), "pxp-mem")) {
-		err = -EBUSY;
-		goto freepxp;
+	pxp->base = devm_request_and_ioremap(&pdev->dev, res);
+	if (pxp->base == NULL) {
+		dev_err(&pdev->dev, "Couldn't ioremap regs\n");
+		err = -ENODEV;
+		goto release;
 	}
 
-	pxp->base = ioremap(res->start, SZ_4K);
 	pxp->pdev = pdev;
 
-	pxp->clk = clk_get(NULL, "pxp_axi");
-	clk_enable(pxp->clk);
+	pxp->clk = devm_clk_get(&pdev->dev, "pxp-axi");
+	clk_prepare_enable(pxp->clk);
 
 	err = pxp_hw_init(pxp);
+	clk_disable_unprepare(pxp->clk);
 	if (err) {
 		dev_err(&pdev->dev, "failed to initialize hardware\n");
 		goto release;
 	}
-	clk_disable(pxp->clk);
 
-	err = request_irq(pxp->irq, pxp_irq, 0, "pxp-irq", pxp);
+	err = devm_request_irq(&pdev->dev, pxp->irq, pxp_irq, 0,
+				"pxp-dmaengine", pxp);
 	if (err)
 		goto release;
 	/* Initialize DMA engine */
 	err = pxp_dma_init(pxp);
 	if (err < 0)
-		goto err_dma_init;
+		goto release;
 
 	if (device_create_file(&pdev->dev, &dev_attr_clk_off_timeout)) {
 		dev_err(&pdev->dev,
 			"Unable to create file from clk_off_timeout\n");
-		goto err_dma_init;
+		goto release;
 	}
 	dump_pxp_reg(pxp);
 
@@ -1596,11 +1604,7 @@ static int pxp_probe(struct platform_device *pdev)
 	pxp->clk_timer.data = (unsigned long)pxp;
 exit:
 	return err;
-err_dma_init:
-	free_irq(pxp->irq, pxp);
 release:
-	release_mem_region(res->start, resource_size(res));
-freepxp:
 	kfree(pxp);
 	dev_err(&pdev->dev, "Exiting (unsuccessfully) pxp_probe function\n");
 	return err;
@@ -1612,10 +1616,7 @@ static int __devexit pxp_remove(struct platform_device *pdev)
 
 	cancel_work_sync(&pxp->work);
 	del_timer_sync(&pxp->clk_timer);
-	free_irq(pxp->irq, pxp);
-	clk_disable(pxp->clk);
-	clk_put(pxp->clk);
-	iounmap(pxp->base);
+	clk_disable_unprepare(pxp->clk);
 	device_remove_file(&pdev->dev, &dev_attr_clk_off_timeout);
 
 	kfree(pxp);
@@ -1656,7 +1657,8 @@ static int pxp_resume(struct platform_device *pdev)
 
 static struct platform_driver pxp_driver = {
 	.driver = {
-		   .name = "imx-pxp",
+			.name = "imx-pxp",
+			.of_match_table = of_match_ptr(imx_pxpdma_dt_ids),
 		   },
 	.probe = pxp_probe,
 	.remove = __exit_p(pxp_remove),
