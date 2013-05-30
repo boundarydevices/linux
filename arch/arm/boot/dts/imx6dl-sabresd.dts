@@ -60,6 +60,10 @@
 				ipu_id = <0>;
 				sec_ipu_id = <0>;
 			};
+
+			pxp@020f0000 {
+				status = "okay";
+			};
 		};
 
 		ahci@02200000 { /* AHCI SATA */
