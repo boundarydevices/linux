@@ -38,6 +38,7 @@
 #include <asm/signal.h>
 
 #include <mach/io.h>
+#include <mach/busfreq.h>
 
 /* Register Definitions */
 /* Register LNK_CAP */
@@ -659,6 +660,8 @@ static int __devinit imx_pcie_pltfm_probe(struct platform_device *pdev)
 	}
 	regmap_update_bits(gpr, 0x04, iomuxc_gpr1_test_powerdown, 0 << 18);
 
+	/* call busfreq API to request/release bus freq setpoint. */
+	request_bus_freq(BUS_FREQ_HIGH);
 	/* enable the clks */
 	pcie_clk = devm_clk_get(dev, "pcie_clk");
 	if (IS_ERR(pcie_clk)) {
@@ -782,6 +785,8 @@ err_release_clk:
 	devm_clk_put(dev, pcie_clk);
 
 err_release_pwr_gpio:
+	/* call busfreq API to request/release bus freq setpoint. */
+	release_bus_freq(BUS_FREQ_HIGH);
 	if (gpio_is_valid(pwr_gpio))
 		gpio_free(pwr_gpio);
 
