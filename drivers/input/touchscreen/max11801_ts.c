@@ -455,7 +455,8 @@ static int __devinit max11801_ts_probe(struct i2c_client *client,
 		goto err_free_mem;
 	}
 
-	error = request_irq(gpio_to_irq(gpio), max11801_ts_interrupt,
+	error = request_threaded_irq(gpio_to_irq(gpio), NULL,
+			max11801_ts_interrupt,
 			 IRQF_TRIGGER_LOW | IRQF_ONESHOT,
 			 "max11801_ts", data);
 	if (error) {
