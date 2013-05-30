@@ -824,6 +824,7 @@ comment "i.MX6 family:"
 
 config SOC_IMX6Q
 	bool "i.MX6 Quad/DualLite support"
+	select ARCH_SUPPORTS_MSI
 	select ARM_CPU_SUSPEND if PM
 	select ARM_GIC
 	select ARCH_HAS_CPUFREQ

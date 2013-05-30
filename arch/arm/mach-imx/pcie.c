@@ -39,6 +39,9 @@
 
 #include <mach/io.h>
 #include <mach/busfreq.h>
+#ifdef CONFIG_PCI_MSI
+#include "msi.h"
+#endif
 
 /* Register Definitions */
 /* Register LNK_CAP */
@@ -119,6 +122,19 @@
 #define iomuxc_gpr8_tx_swing_full		(0x7F << 18)
 /* GPR8: iomuxc_gpr8_tx_swing_low(iomuxc_gpr8[31:25]) */
 #define iomuxc_gpr8_tx_swing_low		(0x7F << 25)
+
+#ifdef CONFIG_PCI_MSI
+#define PCIE_RC_MSI_CAP   0x50
+
+#define PCIE_PL_MSICA    0x820
+#define PCIE_PL_MSICUA    0x824
+#define PCIE_PL_MSIC_INT  0x828
+
+#define MSIC_INT_EN  0x0
+#define MSIC_INT_MASK  0x4
+#define MSIC_INT_STATUS  0x8
+#endif
+
 /* End of Register Definitions */
 
 #define PCIE_ARB_BASE_ADDR		UL(0x01000000)
@@ -268,6 +284,11 @@ static int imx_pcie_link_up(void __iomem *dbi_base)
 
 static void imx_pcie_regions_setup(void __iomem *dbi_base)
 {
+#ifdef CONFIG_PCI_MSI
+	unsigned int i;
+	void __iomem *p = dbi_base + PCIE_PL_MSIC_INT;
+#endif
+
 	/*
 	 * i.MX6 defines 16MB in the AXI address map for PCIe.
 	 *
@@ -277,7 +298,7 @@ static void imx_pcie_regions_setup(void __iomem *dbi_base)
 	 *
 	 * 0x0100_0000 --- 0x010F_FFFF 1MB IORESOURCE_IO
 	 * 0x0110_0000 --- 0x01EF_FFFF 14MB IORESOURCE_MEM
-	 * 0x01F0_0000 --- 0x01FF_FFFF 1MB Cfg + Registers
+	 * 0x01F0_0000 --- 0x01FF_FFFF 1MB Cfg + MSI + Registers
 	 */
 
 	if (dbi_base == NULL) {
@@ -310,7 +331,81 @@ static void imx_pcie_regions_setup(void __iomem *dbi_base)
 	writel(0, dbi_base + ATU_REGION_UP_TRGT_ADDR_R);
 	writel(CfgRdWr0, dbi_base + ATU_REGION_CTRL1_R);
 	writel((1<<31), dbi_base + ATU_REGION_CTRL2_R);
+
+#ifdef CONFIG_PCI_MSI
+	writel(MSI_MATCH_ADDR, dbi_base + PCIE_PL_MSICA);
+	writel(0, dbi_base + PCIE_PL_MSICUA);
+	for (i = 0; i < 8 ; i++) {
+		writel(0, p + MSIC_INT_EN);
+		writel(0xFFFFFFFF, p + MSIC_INT_MASK);
+		writel(0xFFFFFFFF, p + MSIC_INT_STATUS);
+		p += 12;
+	}
+#endif
 }
+
+#ifdef CONFIG_PCI_MSI
+void imx_pcie_mask_irq(unsigned int pos, int set)
+{
+	unsigned int mask = 1 << (pos & 0x1F);
+	unsigned int val, newval;
+	void __iomem *p;
+
+	p = dbi_base + PCIE_PL_MSIC_INT + MSIC_INT_MASK + ((pos >> 5) * 12);
+
+	if (pos >= (8 * 32))
+		return;
+	val = readl(p);
+	if (set)
+		newval = val | mask;
+	else
+		newval = val & ~mask;
+	if (val != newval)
+		writel(newval, p);
+}
+
+void imx_pcie_enable_irq(unsigned int pos, int set)
+{
+	unsigned int mask = 1 << (pos & 0x1F);
+	unsigned int val, newval;
+	void __iomem *p;
+
+	p = dbi_base + PCIE_PL_MSIC_INT + MSIC_INT_EN + ((pos >> 5) * 12);
+
+	/* RC: MSI CAP enable */
+	if (set) {
+		val = readl(dbi_base + PCIE_RC_MSI_CAP);
+		val |= (PCI_MSI_FLAGS_ENABLE << 16);
+		writel(val, dbi_base + PCIE_RC_MSI_CAP);
+	}
+
+	if (pos >= (8 * 32))
+		return;
+	val = readl(p);
+	if (set)
+		newval = val | mask;
+	else
+		newval = val & ~mask;
+	if (val != newval)
+		writel(newval, p);
+	if (set && (val != newval))
+		imx_pcie_mask_irq(pos, 0);  /* unmask when enabled */
+}
+
+unsigned int imx_pcie_msi_pending(unsigned int index)
+{
+	unsigned int val, mask;
+	void __iomem *p = dbi_base + PCIE_PL_MSIC_INT + (index * 12);
+
+	if (index >= 8)
+		return 0;
+	val = readl(p + MSIC_INT_STATUS);
+	mask = readl(p + MSIC_INT_MASK);
+	val &= ~mask;
+	writel(val, p + MSIC_INT_STATUS);
+	return val;
+}
+#endif
 
 static int imx_pcie_rd_conf(struct pci_bus *bus, u32 devfn, int where,
 			int size, u32 *val)
@@ -329,7 +424,7 @@ static int imx_pcie_rd_conf(struct pci_bus *bus, u32 devfn, int where,
 
 	if (pp) {
 		if (devfn != 0) {
-			*val = 0xffffffff;
+			*val = 0xFFFFFFFF;
 			return PCIBIOS_DEVICE_NOT_FOUND;
 		}
 
@@ -656,8 +751,10 @@ static int __devinit imx_pcie_pltfm_probe(struct platform_device *pdev)
 		ret = gpio_request_one(pwr_gpio, GPIOF_OUT_INIT_HIGH,
 				"PCIE_PWR_EN");
 		if (ret)
-			dev_warn(dev, "no pwr_en pin available!\n");
-	}
+			dev_info(dev, "pwr_en pin request failed!\n");
+	} else
+		dev_warn(dev, "no pwr_en pin available!\n");
+
 	regmap_update_bits(gpr, 0x04, iomuxc_gpr1_test_powerdown, 0 << 18);
 
 	/* call busfreq API to request/release bus freq setpoint. */
@@ -718,19 +815,23 @@ static int __devinit imx_pcie_pltfm_probe(struct platform_device *pdev)
 	}
 
 	regmap_update_bits(gpr, 0x04, iomuxc_gpr1_pcie_ref_clk_en, 1 << 16);
+	usleep_range(100, 200);
 
 	/* PCIE RESET, togle the external card's reset */
 	rst_gpio = of_get_named_gpio(np, "rst-gpios", 0);
 	if (gpio_is_valid(rst_gpio)) {
 		ret = gpio_request_one(rst_gpio, GPIOF_DIR_OUT, "PCIE RESET");
-		if (ret)
-			dev_warn(dev, "no pcie rst pin available!\n");
-		/* activate PERST_B */
-		gpio_set_value(rst_gpio, 0);
-		msleep(100);
-		/* deactive PERST_B */
-		gpio_set_value(rst_gpio, 1);
-	}
+		if (ret) {
+			dev_info(dev, "pcie rst pin request failed!\n");
+		} else {
+			/* activate PERST_B */
+			gpio_set_value(rst_gpio, 0);
+			msleep(100);
+			/* deactive PERST_B */
+			gpio_set_value(rst_gpio, 1);
+		}
+	} else
+		dev_warn(dev, "no pcie rst pin available!\n");
 
 	imx_pcie_regions_setup(dbi_base);
 

@@ -48,6 +48,9 @@
 #include <mach/cpuidle.h>
 #include <mach/hardware.h>
 #include <mach/busfreq.h>
+#ifdef CONFIG_PCI_MSI
+#include "msi.h"
+#endif
 
 #define PMU_REG_CORE	0x140
 #define IMX6Q_ANALOG_DIGPROG     0x260
@@ -1035,6 +1038,9 @@ static void __init imx6q_init_irq(void)
 	imx_src_init();
 	imx_gpc_init();
 	of_irq_init(imx6q_irq_match);
+#ifdef CONFIG_PCI_MSI
+	imx_msi_init();
+#endif
 }
 
 #define HW_OCOTP_GPn(n)		(0x00000660 + (n - 1) * 0x10)

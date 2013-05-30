@@ -76,6 +76,7 @@ obj-$(CONFIG_SMP) += headsmp.o platsmp.o
 obj-$(CONFIG_HOTPLUG_CPU) += hotplug.o
 obj-$(CONFIG_SOC_IMX6Q) += clk-imx6q.o mach-imx6q.o busfreq-imx6.o imx6_mmdc.o imx6_ddr_freq.o
 obj-$(CONFIG_IMX_PCIE)	+= pcie.o
+obj-$(CONFIG_PCI_MSI) += msi.o
 
 AFLAGS_imx6_suspend.o :=-Wa,-march=armv7-a
 ifeq ($(CONFIG_PM),y)

@@ -58,6 +58,10 @@
 #define MX6Q_INT_PERFMON1          144
 #define MX6Q_INT_PERFMON2          145
 #define MX6Q_INT_PERFMON3          146
+#define MXC_INT_PCIE_0			152
+#define MXC_INT_PCIE_1			153
+#define MXC_INT_PCIE_2			154
+#define MXC_INT_PCIE_3			155
 
 #ifndef __ASSEMBLY__
 extern int cpu_is_imx6dl(void);
