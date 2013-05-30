@@ -602,53 +602,26 @@ static void __init imx6q_sabreauto_init(void)
 
 static void __init imx6q_1588_init(void)
 {
-	struct device_node *np, *pinctrl_enet;
-	struct property *pbase;
-	struct property *poldbase;
-	u32 *psize;
-	int i = 0;
-
-	if (!IS_BUILTIN(CONFIG_FEC_PTP))
+	if (!IS_BUILTIN(CONFIG_FEC_PTP)) {
+		if (of_machine_is_compatible("fsl,imx6q"))
+			remove_one_pin_from_node("/soc/aips-bus@02100000/ethernet@02188000",
+				"pinctrl-0", "fsl,pins", 0x248);
+		else if (of_machine_is_compatible("fsl,imx6dl"))
+			remove_one_pin_from_node("/soc/aips-bus@02100000/ethernet@02188000",
+				"pinctrl-0", "fsl,pins", 0x214);
 		return;
+	}
 
 	regmap_update_bits(regmap_gpr, 0x4, 1 << 21, 1 << 21);
-
-	/* config GPIO_16 for IEEE1588 */
-	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-fec");
-	pinctrl_enet = of_parse_phandle(np, "pinctrl-0", 0);
-	poldbase = of_find_property(pinctrl_enet, "fsl,pins", NULL);
-	if (poldbase) {
-		pbase = kzalloc(sizeof(*pbase) + poldbase->length + 8, GFP_KERNEL);
-		if (pbase == NULL)
-			return;
-		psize = (u32 *)(pbase + 1);
-		pbase->length = poldbase->length + 8;
-		pbase->name = kstrdup(poldbase->name, GFP_KERNEL);
-		if (!pbase->name) {
-			kfree(pbase);
-			return;
-		}
-
-		pbase->value = psize;
-		for (i = 0; i < poldbase->length; i += 4)
-			*(u32 *)(pbase->value + i) = *(u32 *)(poldbase->value + i);
-		/* 1033 0x4001b0a8 MX6Q_PAD_GPIO_16__ENET_ANATOP_ETHERNET_REF_OUT */
-		*(u32 *)(pbase->value + i) =  cpu_to_be32(1033);
-		*(u32 *)(pbase->value + i + 4) =  cpu_to_be32(0x4001b0a8);
-
-		prom_update_property(pinctrl_enet, pbase, poldbase);
-	}
 
 	/* arm2 and Sabrelite GPIO_16 is shared by 1588, i2c3 SDA, and spdif_en
 	 * if enable PTP, cancel the pinctrl for i2c sda and disable spdif_en
 	 */
 	if (of_machine_is_compatible("fsl,imx6q-sabrelite") ||
-		of_machine_is_compatible("fsl,imx6q-arm2")) {
+		of_machine_is_compatible("fsl,imx6q-arm2"))
 		/* Cancel GPIO_16(0x248) for I2C3 SDA config */
 		remove_one_pin_from_node("/soc/aips-bus@02100000/i2c@021a8000",
 				"pinctrl-0", "fsl,pins", 0x248);
-		spdif_en = 0;
-	}
 }
 
 static void __init imx6q_gpu_init(void)
