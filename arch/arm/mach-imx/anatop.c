@@ -16,6 +16,7 @@
 #include <linux/regmap.h>
 #include <linux/delay.h>
 #include <linux/mfd/syscon.h>
+#include <linux/export.h>
 #include <mach/hardware.h>
 
 #define REG_SET		0x4
@@ -41,6 +42,8 @@
 
 #define LDO_RAMP_UP_UNIT_IN_CYCLES      64 /* 64 cycles per step */
 #define LDO_RAMP_UP_FREQ_IN_MHZ         24 /* time base on 24M OSC */
+
+#define ANA_MISC0_CLK_DELAY		26 /* bit26 - bit28 clkgate delay */
 static struct regmap *anatop;
 
 void imx_anatop_pu_vol(bool enable)
@@ -122,6 +125,7 @@ void imx_anatop_set_stop_mode_config(bool enable)
 	regmap_write(anatop, ANA_MISC0 + (enable ?
 		REG_SET : REG_CLR), 0x1 << 12);
 }
+EXPORT_SYMBOL(imx_anatop_set_stop_mode_config);
 
 void imx_anatop_enable_weak2p5(bool enable)
 {
@@ -172,6 +176,17 @@ void imx_anatop_usb_chrg_detect_disable(void)
 		BM_ANADIG_USB_CHRG_DETECT_EN_B |
 		BM_ANADIG_USB_CHRG_DETECT_CHK_CHRG_B);
 }
+
+void imx_anatop_set_clk_get_delay(int value)
+{
+	WARN_ON(value > 7);
+	WARN_ON(value < 0);
+
+	value = value & 0x7;
+	regmap_write(anatop, ANA_MISC0 + REG_SET,
+		value << ANA_MISC0_CLK_DELAY);
+}
+EXPORT_SYMBOL(imx_anatop_set_clk_get_delay);
 
 void __init imx_anatop_init(void)
 {
