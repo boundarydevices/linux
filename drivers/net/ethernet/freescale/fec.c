@@ -737,7 +737,7 @@ static int fec_enet_rx_poll(struct napi_struct *napi, int budget)
 		ndev->stats.rx_bytes += pkt_len;
 		data = (__u8 *)__va(bdp->cbd_bufaddr);
 
-		dma_unmap_single(&ndev->dev, bdp->cbd_bufaddr,
+		dma_unmap_single(&fep->pdev->dev, bdp->cbd_bufaddr,
 				FEC_ENET_RX_FRSIZE, DMA_FROM_DEVICE);
 
 		if (id_entry->driver_data & FEC_QUIRK_SWAP_FRAME)
@@ -779,7 +779,7 @@ static int fec_enet_rx_poll(struct napi_struct *napi, int budget)
 				napi_gro_receive(napi, skb);
 		}
 
-		bdp->cbd_bufaddr = dma_map_single(&ndev->dev, data,
+		bdp->cbd_bufaddr = dma_map_single(&fep->pdev->dev, data,
 				FEC_ENET_RX_FRSIZE, DMA_FROM_DEVICE);
 rx_processing_done:
 		/* Clear the status flags for this buffer */
