@@ -1337,13 +1337,13 @@ static int __devexit fsl_spdif_dai_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_RUNTIME
 static int fsl_spdif_runtime_resume(struct device *dev)
 {
-	request_bus_freq(BUS_FREQ_AUDIO);
+	request_bus_freq(BUS_FREQ_HIGH);
 	return 0;
 }
 
 static int fsl_spdif_runtime_suspend(struct device *dev)
 {
-	release_bus_freq(BUS_FREQ_AUDIO);
+	release_bus_freq(BUS_FREQ_HIGH);
 	return 0;
 }
 #endif
