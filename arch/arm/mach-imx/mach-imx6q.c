@@ -47,6 +47,7 @@
 #include <mach/common.h>
 #include <mach/cpuidle.h>
 #include <mach/hardware.h>
+#include <mach/busfreq.h>
 
 #define PMU_REG_CORE	0x140
 #define IMX6Q_ANALOG_DIGPROG     0x260
@@ -737,6 +738,8 @@ static int imx_sata_init(struct device *dev, void __iomem *addr)
 		dev_info(dev, "no PWR EN pin!\n");
 	}
 
+	/* call busfreq API to request/release bus freq setpoint. */
+	request_bus_freq(BUS_FREQ_HIGH);
 	sata_clk = devm_clk_get(dev, "sata");
 	if (IS_ERR(sata_clk)) {
 		dev_err(dev, "can't get sata clock.\n");
@@ -845,6 +848,8 @@ error:
 	clk_disable_unprepare(sata_ref_clk);
 release_sata_clk:
 	clk_disable_unprepare(sata_clk);
+	/* call busfreq API to request/release bus freq setpoint. */
+	release_bus_freq(BUS_FREQ_HIGH);
 
 	return ret;
 }
@@ -865,6 +870,8 @@ static void imx_sata_exit(struct device *dev)
 		dev_err(dev, "can't get sata_ref clock.\n");
 	else
 		clk_disable_unprepare(sata_ref_clk);
+	/* call busfreq API to request/release bus freq setpoint. */
+	release_bus_freq(BUS_FREQ_HIGH);
 
 	/* Disable SATA power,in-activate pwr_gpio */
 	if (gpio_is_valid(pwr_gpio)) {
