@@ -18,8 +18,6 @@
 #ifndef __MXC_ASRC_H__
 #define __MXC_ASRC_H__
 
-#include <mach/dma.h>
-
 #define ASRC_IOC_MAGIC		'C'
 
 #define ASRC_REQ_PAIR		_IOWR(ASRC_IOC_MAGIC, 0, struct asrc_req)
@@ -144,6 +142,7 @@ enum asrc_error_status {
 
 #ifdef __KERNEL__
 #include <linux/scatterlist.h>
+#include <mach/dma.h>
 
 #define ASRC_DMA_BUFFER_NUM		2
 #define ASRC_INPUTFIFO_THRESHOLD	32
