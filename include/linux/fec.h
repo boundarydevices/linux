@@ -21,7 +21,10 @@ struct fec_platform_data {
 	int (*power_hibernate) (struct phy_device *);
 	phy_interface_t phy;
 	unsigned char mac[ETH_ALEN];
-	int gpio_irq;
+#ifdef CONFIG_MX6_ENET_IRQ_TO_GPIO
+	unsigned int gpio_irq;
+#endif
+	int phy_irq;
 };
 
 #endif
