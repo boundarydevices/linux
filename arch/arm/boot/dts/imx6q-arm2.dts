@@ -198,6 +198,15 @@
 				status = "okay";
 			};
 
+			uart2: serial@021e8000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_uart2_dte>;
+				fsl,dte-mode;
+				fsl,uart-has-rtscts;
+				fsl,uart-dma-events = <27 28>;
+				status = "okay";
+			};
+
 			uart4: serial@021f0000 {
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_uart4_1>;
