@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2013 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -708,7 +708,7 @@
 #define MX6Q_PAD_GPIO_8__USB_OTG_PWR_CTL_WAKE     0x244 0x614 0x000 0x7 0x0
 #define MX6Q_PAD_GPIO_16__ESAI_TX3_RX2            0x248 0x618 0x880 0x0 0x1
 #define MX6Q_PAD_GPIO_16__ENET_1588_EVENT2_IN     0x248 0x618 0x000 0x1 0x0
-#define MX6Q_PAD_GPIO_16__ENET_REF_CLK            0x248 0x618 0x83c 0x2 0x1
+#define MX6Q_PAD_GPIO_16__ENET_REF_CLK            0x248 0x618 0x83c 0x12 0x1
 #define MX6Q_PAD_GPIO_16__SD1_LCTL                0x248 0x618 0x000 0x3 0x0
 #define MX6Q_PAD_GPIO_16__SPDIF_IN                0x248 0x618 0x914 0x4 0x3
 #define MX6Q_PAD_GPIO_16__GPIO7_IO11              0x248 0x618 0x000 0x5 0x0

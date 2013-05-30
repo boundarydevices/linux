@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2013 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -702,7 +702,7 @@
 #define MX6DL_PAD_GPIO_1__SD1_CD_B                 0x210 0x5e0 0x000 0x6 0x0
 #define MX6DL_PAD_GPIO_16__ESAI_TX3_RX2            0x214 0x5e4 0x850 0x0 0x1
 #define MX6DL_PAD_GPIO_16__ENET_1588_EVENT2_IN     0x214 0x5e4 0x000 0x1 0x0
-#define MX6DL_PAD_GPIO_16__ENET_REF_CLK            0x214 0x5e4 0x80c 0x2 0x0
+#define MX6DL_PAD_GPIO_16__ENET_REF_CLK            0x214 0x5e4 0x80c 0x12 0x0
 #define MX6DL_PAD_GPIO_16__SD1_LCTL                0x214 0x5e4 0x000 0x3 0x0
 #define MX6DL_PAD_GPIO_16__SPDIF_IN                0x214 0x5e4 0x8f0 0x4 0x2
 #define MX6DL_PAD_GPIO_16__GPIO7_IO11              0x214 0x5e4 0x000 0x5 0x0
