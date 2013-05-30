@@ -103,6 +103,9 @@ config SND_SOC_IMX_SSI
 config SND_SOC_FSL_SPDIF
 	tristate
 
+config SND_SOC_FSL_HDMI
+	tristate
+
 config SND_SOC_IMX_PCM
 	tristate
 
