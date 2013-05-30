@@ -440,6 +440,12 @@
 		};
 	};
 
+	sound-hdmi {
+		compatible = "fsl,imx6q-sabresd-hdmi-audio",
+			     "fsl,imx-audio-hdmi";
+		model = "imx-audio-hdmi";
+	};
+
 	sound {
 		compatible = "fsl,imx6q-sabresd-wm8962",
 			     "fsl,imx-audio-wm8962";

@@ -309,6 +309,12 @@
 		spdif-rx = <1>;		/* 1:enable, 0:disable */
 	};
 
+	sound-hdmi {
+		compatible = "fsl,imx6q-sabreauto-hdmi-audio",
+			     "fsl,imx-audio-hdmi";
+		model = "imx-audio-hdmi";
+	};
+
 	sound-fm {
 		compatible = "fsl,imx-audio-si4763",
 			"fsl,imx-tuner-si4763";

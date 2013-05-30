@@ -119,6 +119,15 @@
 			clock-names = "hdmi_isfr", "hdmi_iahb";
 		};
 
+		hdmi_audio@00120000 {
+			compatible = "fsl,fsl-hdmi-audio";
+			interrupts = <0 115 0x04>;
+			clocks = <&clks 124>, <&clks 123>;
+			clock-names = "hdmi_isfr", "hdmi_iahb";
+			fsl,hdmi-dma-events = <2>;
+			status = "okay";
+		};
+
 		timer@00a00600 {
 			compatible = "arm,cortex-a9-twd-timer";
 			reg = <0x00a00600 0x20>;
