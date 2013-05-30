@@ -342,6 +342,8 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 	int synchronous = ssi_private->cpu_dai_drv.symmetric_rates;
 
 	pm_runtime_get_sync(dai->dev);
+
+	clk_enable(ssi_private->clk);
 	/*
 	 * If this is the first stream opened, then request the IRQ
 	 * and initialize the SSI registers.
@@ -864,6 +866,8 @@ static void fsl_ssi_shutdown(struct snd_pcm_substream *substream,
 		write_ssi_mask(&ssi->scr, CCSR_SSI_SCR_SSIEN, 0);
 	}
 
+	clk_disable(ssi_private->clk);
+
 	pm_runtime_put_sync(dai->dev);
 }
 
@@ -1051,7 +1055,7 @@ static int __devinit fsl_ssi_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "could not get clock: %d\n", ret);
 			goto error_irq;
 		}
-		clk_prepare_enable(ssi_private->clk);
+		clk_prepare(ssi_private->clk);
 
 		/*
 		 * Burstsize would directly determin watermark of DMA.
@@ -1169,7 +1173,7 @@ error_dev:
 
 error_clk:
 	if (ssi_private->ssi_on_imx) {
-		clk_disable_unprepare(ssi_private->clk);
+		clk_unprepare(ssi_private->clk);
 		clk_put(ssi_private->clk);
 	}
 
@@ -1196,7 +1200,7 @@ static int fsl_ssi_remove(struct platform_device *pdev)
 		platform_device_unregister(ssi_private->pdev);
 	if (ssi_private->ssi_on_imx) {
 		platform_device_unregister(ssi_private->imx_pcm_pdev);
-		clk_disable_unprepare(ssi_private->clk);
+		clk_unprepare(ssi_private->clk);
 		clk_put(ssi_private->clk);
 	}
 	snd_soc_unregister_dai(&pdev->dev);
