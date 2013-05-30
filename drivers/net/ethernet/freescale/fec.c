@@ -77,6 +77,8 @@
 #define FEC_QUIRK_USE_GASKET		(1 << 2)
 /* Controller has GBIT support */
 #define FEC_QUIRK_HAS_GBIT		(1 << 3)
+/* ENET IP errata ticket TKT168103 */
+#define FEC_QUIRK_BUG_TKT168103		(1 << 2)
 
 static struct platform_device_id fec_devtype[] = {
 	{
@@ -91,10 +93,12 @@ static struct platform_device_id fec_devtype[] = {
 		.driver_data = 0,
 	}, {
 		.name = "imx28-fec",
-		.driver_data = FEC_QUIRK_ENET_MAC | FEC_QUIRK_SWAP_FRAME,
+		.driver_data = FEC_QUIRK_ENET_MAC | FEC_QUIRK_SWAP_FRAME |
+				FEC_QUIRK_BUG_TKT168103,
 	}, {
 		.name = "imx6q-fec",
-		.driver_data = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT,
+		.driver_data = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT |
+				FEC_QUIRK_BUG_TKT168103,
 	}, {
 		/* sentinel */
 	}
@@ -218,13 +222,43 @@ static void *swap_buffer(void *bufaddr, int len)
 	return bufaddr;
 }
 
+static inline
+void *fec_enet_get_pre_txbd(struct net_device *ndev)
+{
+	struct fec_enet_private *fep = netdev_priv(ndev);
+	struct bufdesc *bdp = fep->cur_tx;
+
+	if (bdp == fep->tx_bd_base)
+		return bdp + TX_RING_SIZE;
+	else
+		return bdp - 1;
+}
+
+/* MTIP enet IP have one IC issue recorded at PDM ticket:TKT168103
+ * The TDAR bit after being set by software is not acted upon by the
+ * ENET module due to the timing of when the ENET state machine
+ * clearing the TDAR bit occurring coincident or momentarily after
+ * the software sets the bit.
+ * This forces ENET module to check the Transmit buffer descriptor
+ * and take action if the “ready” flag is set. Otherwise the ENET
+ * returns to idle mode.
+ */
+static void fixup_trigger_tx_func(struct work_struct *work)
+{
+	struct fec_enet_private *fep =
+			container_of(work, struct fec_enet_private,
+					fixup_trigger_tx.work);
+
+	writel(0, fep->hwp + FEC_X_DES_ACTIVE);
+}
+
 static netdev_tx_t
 fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	const struct platform_device_id *id_entry =
 				platform_get_device_id(fep->pdev);
-	struct bufdesc *bdp;
+	struct bufdesc *bdp, *bdp_pre;
 	void *bufaddr;
 	unsigned short	status;
 	unsigned long flags;
@@ -312,6 +346,12 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 #endif
 	/* Trigger transmission start */
 	writel(0, fep->hwp + FEC_X_DES_ACTIVE);
+
+	bdp_pre = fec_enet_get_pre_txbd(ndev);
+	if ((id_entry->driver_data & FEC_QUIRK_BUG_TKT168103) &&
+		!(bdp_pre->cbd_sc & BD_ENET_TX_READY))
+		schedule_delayed_work(&fep->fixup_trigger_tx,
+					msecs_to_jiffies(1));
 
 	/* If this was the last BD in the ring, start at the beginning again. */
 	if (status & BD_ENET_TX_WRAP)
@@ -1792,6 +1832,9 @@ fec_probe(struct platform_device *pdev)
 	clk_disable_unprepare(fep->clk_ptp);
 #endif
 
+	/* workaround for enet IP errata */
+	INIT_DELAYED_WORK(&fep->fixup_trigger_tx, fixup_trigger_tx_func);
+
 	ret = register_netdev(ndev);
 	if (ret)
 		goto failed_register;
@@ -1837,6 +1880,7 @@ fec_drv_remove(struct platform_device *pdev)
 	struct resource *r;
 	int i;
 
+	cancel_delayed_work_sync(&fep->fixup_trigger_tx);
 	unregister_netdev(ndev);
 	fec_enet_mii_remove(fep);
 	for (i = 0; i < FEC_IRQ_NUM; i++) {

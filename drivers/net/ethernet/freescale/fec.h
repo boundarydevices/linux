@@ -348,6 +348,7 @@ struct fec_enet_private {
 	int	full_duplex;
 	struct	completion mdio_done;
 	int	irq[FEC_IRQ_NUM];
+	struct delayed_work fixup_trigger_tx;
 
 	struct napi_struct napi;
 	int	napi_weight;
