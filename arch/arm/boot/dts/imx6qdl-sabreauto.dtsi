@@ -24,6 +24,10 @@
 			status = "okay";
 		};
 
+		pcie@01000000 {
+			status = "okay";
+		};
+
 		aips-bus@02000000 { /* AIPS1 */
 			spba-bus@02000000 {
 				ssi2: ssi@0202c000 {
