@@ -10,6 +10,9 @@ Optional properties:
 - fsl,irda-mode : Indicate the uart supports irda mode
 - fsl,dte-mode : Indicate the uart works in DTE mode. The uart works
                   is DCE mode by default.
+- fsl,uart-dma-events : contains the DMA events for RX and TX,
+	          The first is the RX event, while the other is TX.
+		  If you set this item, you will enable the DMA support.
 
 Example:
 
@@ -19,4 +22,5 @@ serial@73fbc000 {
 	interrupts = <31>;
 	fsl,uart-has-rtscts;
 	fsl,dte-mode;
+	fsl,uart-dma-events = <xx xx>;
 };
