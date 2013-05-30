@@ -475,7 +475,7 @@ static struct miscdevice pxp_device_miscdev = {
 	.fops = &pxp_device_fops,
 };
 
-static int __devinit pxp_device_probe(struct platform_device *pdev)
+int register_pxp_device(void)
 {
 	int ret;
 
@@ -483,39 +483,11 @@ static int __devinit pxp_device_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	pr_debug("PxP_Device Probe Successfully\n");
+	pr_debug("PxP_Device registered Successfully\n");
 	return 0;
 }
 
-static int __devexit pxp_device_remove(struct platform_device *pdev)
+void unregister_pxp_device(void)
 {
 	misc_deregister(&pxp_device_miscdev);
-
-	return 0;
 }
-
-static struct platform_driver pxp_client_driver = {
-	.probe = pxp_device_probe,
-	.remove = __exit_p(pxp_device_remove),
-	.driver = {
-		   .name = "imx-pxp-client",
-		   .owner = THIS_MODULE,
-		   },
-};
-
-static int __init pxp_device_init(void)
-{
-	return platform_driver_register(&pxp_client_driver);
-}
-
-static void __exit pxp_device_exit(void)
-{
-	platform_driver_unregister(&pxp_client_driver);
-}
-
-module_init(pxp_device_init);
-module_exit(pxp_device_exit);
-
-MODULE_DESCRIPTION("i.MX PxP client driver");
-MODULE_AUTHOR("Freescale Semiconductor, Inc.");
-MODULE_LICENSE("GPL");

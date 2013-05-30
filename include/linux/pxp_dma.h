@@ -223,6 +223,15 @@ struct pxp_irq_info {
 
 void pxp_txd_ack(struct dma_async_tx_descriptor *txd,
 		 struct pxp_channel *pxp_chan);
+
+#ifdef CONFIG_MXC_PXP_CLIENT_DEVICE
+int register_pxp_device(void);
+void unregister_pxp_device(void);
+#else
+int register_pxp_device(void) { return 0; }
+void unregister_pxp_device(void) {}
+#endif
+
 #endif
 
 #endif

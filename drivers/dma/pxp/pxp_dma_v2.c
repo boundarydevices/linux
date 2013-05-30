@@ -1602,6 +1602,8 @@ static int pxp_probe(struct platform_device *pdev)
 	init_timer(&pxp->clk_timer);
 	pxp->clk_timer.function = pxp_clkoff_timer;
 	pxp->clk_timer.data = (unsigned long)pxp;
+
+	register_pxp_device();
 exit:
 	return err;
 release:
@@ -1610,10 +1612,11 @@ release:
 	return err;
 }
 
-static int __devexit pxp_remove(struct platform_device *pdev)
+static int pxp_remove(struct platform_device *pdev)
 {
 	struct pxps *pxp = platform_get_drvdata(pdev);
 
+	unregister_pxp_device();
 	cancel_work_sync(&pxp->work);
 	del_timer_sync(&pxp->clk_timer);
 	clk_disable_unprepare(pxp->clk);
@@ -1661,24 +1664,13 @@ static struct platform_driver pxp_driver = {
 			.of_match_table = of_match_ptr(imx_pxpdma_dt_ids),
 		   },
 	.probe = pxp_probe,
-	.remove = __exit_p(pxp_remove),
+	.remove = pxp_remove,
 	.suspend = pxp_suspend,
 	.resume = pxp_resume,
 };
 
-static int __init pxp_init(void)
-{
-	return platform_driver_register(&pxp_driver);
-}
+module_platform_driver(pxp_driver);
 
-subsys_initcall(pxp_init);
-
-static void __exit pxp_exit(void)
-{
-	platform_driver_unregister(&pxp_driver);
-}
-
-module_exit(pxp_exit);
 
 MODULE_DESCRIPTION("i.MX PxP driver");
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
