@@ -26,6 +26,7 @@
 #include <linux/mfd/syscon.h>
 #include <linux/usb/of.h>
 #include <linux/io.h>
+#include <mach/common.h>
 
 #include "ci.h"
 #include "bits.h"
@@ -126,14 +127,9 @@ static void usbphy_post_resume(struct ci13xxx *ci, struct usb_phy *phy)
 	}
 }
 
-static void usbphy_regulator_enable(struct usb_phy *phy, bool enable)
+static void lpm_usb_regulator_enable(bool enable)
 {
-	/* This setting is only used at low power mode */
-	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
-		extern void mxs_phy_enable_regulator
-			(struct usb_phy *phy, bool enable);
-		mxs_phy_enable_regulator(phy, enable);
-	}
+	imx_anatop_set_stop_mode_config(enable);
 }
 
 static int ci13xxx_imx_probe(struct platform_device *pdev)
@@ -504,7 +500,7 @@ static int ci13xxx_imx_suspend(struct device *dev)
 
 	if (device_may_wakeup(dev)) {
 		enable_irq_wake(ci->irq);
-		usbphy_regulator_enable(data->phy, true);
+		lpm_usb_regulator_enable(true);
 	}
 
 	return ret;
@@ -523,7 +519,7 @@ static int ci13xxx_imx_resume(struct device *dev)
 
 	if (device_may_wakeup(dev)) {
 		disable_irq_wake(ci->irq);
-		usbphy_regulator_enable(data->phy, false);
+		lpm_usb_regulator_enable(false);
 	}
 
 	return imx_controller_resume(dev);

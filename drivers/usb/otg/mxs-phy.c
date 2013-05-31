@@ -338,23 +338,6 @@ void mxs_phy_disconnect_line(struct usb_phy *phy, bool enable)
 }
 EXPORT_SYMBOL_GPL(mxs_phy_disconnect_line);
 
-void mxs_phy_enable_regulator(struct usb_phy *phy, bool enable)
-{
-	struct mxs_phy *mxs_phy = to_mxs_phy(phy);
-	void __iomem *anatop_base_addr = mxs_phy->anatop_base_addr;
-
-	if (!mxs_phy->need_open_regulator_at_lpm)
-		return;
-
-	if (enable)
-		writel_relaxed(BM_ANADIG_ANA_MISC0_STOP_MODE_CONFIG,
-				anatop_base_addr + HW_ANADIG_ANA_MISC0_SET);
-	else
-		writel_relaxed(BM_ANADIG_ANA_MISC0_STOP_MODE_CONFIG,
-				anatop_base_addr + HW_ANADIG_ANA_MISC0_CLR);
-}
-EXPORT_SYMBOL_GPL(mxs_phy_enable_regulator);
-
 static void mxs_phy_hw_init(struct mxs_phy *mxs_phy)
 {
 	void __iomem *base = mxs_phy->phy.io_priv;
