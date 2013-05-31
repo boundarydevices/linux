@@ -27,6 +27,7 @@
 #include <linux/usb/of.h>
 #include <linux/io.h>
 #include <mach/common.h>
+#include <mach/busfreq.h>
 
 #include "ci.h"
 #include "bits.h"
@@ -188,6 +189,8 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 		return PTR_ERR(data->clk);
 	}
 
+	request_bus_freq(BUS_FREQ_HIGH);
+
 	ret = clk_prepare_enable(data->clk);
 	if (ret) {
 		dev_err(&pdev->dev,
@@ -341,6 +344,8 @@ static int ci13xxx_imx_remove(struct platform_device *pdev)
 
 	clk_disable_unprepare(data->clk);
 
+	release_bus_freq(BUS_FREQ_HIGH);
+
 	platform_set_drvdata(pdev, NULL);
 
 	return 0;
@@ -382,6 +387,8 @@ static int imx_controller_suspend(struct device *dev)
 
 	clk_disable_unprepare(data->clk);
 
+	release_bus_freq(BUS_FREQ_HIGH);
+
 	atomic_set(&ci->in_lpm, 1);
 
 	enable_irq(ci->irq);
@@ -407,6 +414,7 @@ static int imx_controller_resume(struct device *dev)
 	if (!atomic_read(&ci->in_lpm))
 		return 0;
 
+	request_bus_freq(BUS_FREQ_HIGH);
 	ret = clk_prepare_enable(data->clk);
 	if (ret) {
 		dev_err(dev,
