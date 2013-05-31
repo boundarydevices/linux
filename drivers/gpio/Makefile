@@ -49,3 +49,4 @@ obj-$(CONFIG_GPIO_ML_IOH)	+= ml_ioh_gpio.o
 obj-$(CONFIG_DA9052_GPIO_ENABLE)+= da9052-gpio.o
 obj-$(CONFIG_AB8500_GPIO)       += ab8500-gpio.o
 obj-$(CONFIG_GPIO_TPS65910)	+= tps65910-gpio.o
+obj-$(CONFIG_GPIO_XR17V35X)	+= xr17v35x-gpio.o

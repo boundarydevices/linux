@@ -373,6 +373,18 @@ config GPIO_ML_IOH
 	  Hub) which is for IVI(In-Vehicle Infotainment) use.
 	  This driver can access the IOH's GPIO device.
 
+config GPIO_XR17V35X
+	tristate "Exar xr17v35x GPIO support"
+	depends on SERIAL_XR17V35X
+	help
+	  This adds GPIO support to the xr17v35x multi serial port
+	  PCI card.
+
+config GPIO_XR17V35X_IRQ
+	bool "gpio irq Support for xr17v35x"
+	depends on GPIO_XR17V35X
+
+
 config GPIO_TIMBERDALE
 	bool "Support for timberdale GPIO IP"
 	depends on MFD_TIMBERDALE && HAS_IOMEM
