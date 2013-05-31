@@ -197,7 +197,7 @@ int set_high_bus_freq(int high_bus_freq)
 	if (!bus_freq_scaling_initialized || !bus_freq_scaling_is_active)
 		return 0;
 
-	if (high_bus_freq_mode && high_bus_freq)
+	if (high_bus_freq_mode)
 		return 0;
 
 	/* medium bus freq is only supported for MX6DQ */
