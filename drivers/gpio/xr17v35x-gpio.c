@@ -381,6 +381,7 @@ static void __exit xr17v35x_gpio_exit(void)
 module_init(xr17v35x_gpio_init);
 module_exit(xr17v35x_gpio_exit);
 
+MODULE_ALIAS("platform:xr17v35x-gpio");
 MODULE_AUTHOR("Troy Kisky <troy.kisky@boundarydevices.com>");
 MODULE_DESCRIPTION("xr17v35x GPIO Device Driver");
 MODULE_LICENSE("GPL");
