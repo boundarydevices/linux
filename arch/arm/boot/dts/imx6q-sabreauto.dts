@@ -26,6 +26,7 @@
 						fsl,pins = <
 							/*RGMII Phy Interrupt */
 							MX6Q_PAD_GPIO_19__GPIO4_IO05 0x80000000
+							MX6Q_PAD_EIM_EB0__GPIO2_IO28 0x80000000
 						>;
 					};
 				};

@@ -176,6 +176,14 @@
 					reg = <0x50>;
 				};
 
+				egalax_ts@04 {
+					compatible = "eeti,egalax_ts";
+					reg = <0x04>;
+					interrupt-parent = <&gpio2>;
+					interrupts = <28 2>;
+					wakeup-gpios = <&gpio2 28 0>;
+				};
+
 				pmic: pfuze100@08 {
 					compatible = "fsl,pfuze100";
 					reg = <0x08>;
