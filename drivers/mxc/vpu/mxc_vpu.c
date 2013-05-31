@@ -48,6 +48,8 @@
 #include <linux/version.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
 #include <linux/module.h>
+#include <linux/pm_runtime.h>
+#include <mach/busfreq.h>
 #include <mach/hardware.h>
 #include <mach/common.h>
 #endif
@@ -104,6 +106,10 @@ static u32 phy_vpu_base_addr;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
 static phys_addr_t top_address_DRAM;
 static struct mxc_vpu_platform_data *vpu_plat;
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
+static struct platform_device *vpu_pdev;
 #endif
 
 /* IRAM setting */
@@ -289,6 +295,7 @@ static int vpu_open(struct inode *inode, struct file *filp)
 		if (!IS_ERR(vpu_regulator))
 			regulator_enable(vpu_regulator);
 #else
+		pm_runtime_get_sync(&vpu_pdev->dev);
 		imx_gpc_power_up_pu(true);
 #endif
 
@@ -698,6 +705,7 @@ static int vpu_release(struct inode *inode, struct file *filp)
 			regulator_disable(vpu_regulator);
 #else
 		imx_gpc_power_up_pu(false);
+		pm_runtime_put_sync_suspend(&vpu_pdev->dev);
 #endif
 
 	}
@@ -825,6 +833,8 @@ static int vpu_dev_probe(struct platform_device *pdev)
 		iram.start = addr;
 		iram.end = addr + iramsize - 1;
 	}
+
+	vpu_pdev = pdev;
 #else
 
 	vpu_plat = pdev->dev.platform_data;
@@ -915,6 +925,10 @@ static int vpu_dev_probe(struct platform_device *pdev)
 	}
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
+	pm_runtime_enable(&pdev->dev);
+#endif
+
 	vpu_data.workqueue = create_workqueue("vpu_wq");
 	INIT_WORK(&vpu_data.work, vpu_worker_callback);
 	mutex_init(&vpu_data.lock);
@@ -959,7 +973,11 @@ static int vpu_dev_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
+static int vpu_suspend(struct device *dev)
+#else
 static int vpu_suspend(struct platform_device *pdev, pm_message_t state)
+#endif
 {
 	int i;
 	unsigned long timeout;
@@ -1036,7 +1054,11 @@ static int vpu_suspend(struct platform_device *pdev, pm_message_t state)
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
+static int vpu_resume(struct device *dev)
+#else
 static int vpu_resume(struct platform_device *pdev)
+#endif
 {
 	int i;
 
@@ -1140,6 +1162,26 @@ recover_clk:
 	mutex_unlock(&vpu_data.lock);
 	return 0;
 }
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
+static int vpu_runtime_suspend(struct device *dev)
+{
+	release_bus_freq(BUS_FREQ_HIGH);
+	return 0;
+}
+
+static int vpu_runtime_resume(struct device *dev)
+{
+	request_bus_freq(BUS_FREQ_HIGH);
+	return 0;
+}
+
+static const struct dev_pm_ops vpu_pm_ops = {
+	SET_RUNTIME_PM_OPS(vpu_runtime_suspend, vpu_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(vpu_suspend, vpu_resume)
+};
+#endif
+
 #else
 #define	vpu_suspend	NULL
 #define	vpu_resume	NULL
@@ -1161,12 +1203,17 @@ static struct platform_driver mxcvpu_driver = {
 		   .name = "mxc_vpu",
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
 		   .of_match_table = vpu_of_match,
+#ifdef CONFIG_PM
+		   .pm = &vpu_pm_ops,
+#endif
 #endif
 		   },
 	.probe = vpu_dev_probe,
 	.remove = vpu_dev_remove,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
 	.suspend = vpu_suspend,
 	.resume = vpu_resume,
+#endif
 };
 
 static int __init vpu_init(void)
