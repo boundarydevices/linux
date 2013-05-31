@@ -164,7 +164,7 @@ static const char *periph_pre_sels[]	= { "pll2_bus", "pll2_pfd2_396m", "pll2_pfd
 static const char *periph_clk2_sels[]	= { "pll3_usb_otg", "osc", };
 static const char *periph_sels[]	= { "periph_pre", "periph_clk2", };
 static const char *periph2_sels[]	= { "periph2_pre", "periph2_clk2", };
-static const char *axi_sels[]		= { "periph", "pll2_pfd2_396m", "pll3_pfd1_540m", };
+static const char *axi_sels[]		= { "periph", "pll2_pfd2_396m", "periph", "pll3_pfd1_540m", };
 static const char *audio_sels[]	= { "pll4_post_div", "pll3_pfd2_508m", "pll3_pfd3_454m", "pll3_usb_otg", };
 static const char *gpu_axi_sels[]	= { "axi", "ahb", };
 static const char *gpu2d_core_sels[]	= { "axi", "pll3_usb_otg", "pll2_pfd0_352m", "pll2_pfd2_396m", };
@@ -611,6 +611,8 @@ int __init mx6q_clocks_init(void)
 		clk_set_rate(clk[gpu3d_core], 528000000);
 		clk_set_parent(clk[gpu2d_core_sel], clk[pll3_usb_otg]);
 	}
+
+	clk_set_rate(clk[ipg_per], 22000000);
 
 	/* ipu clock initialization */
 	clk_set_parent(clk[ldb_di0_sel], clk[pll2_pfd0_352m]);
