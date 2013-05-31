@@ -589,6 +589,7 @@ static void __init imx6q_sabresd_init(void)
 
 static void __init imx6q_sabreauto_init(void)
 {
+	imx6q_ar803x_phy_fixup();
 	imx6q_sabreauto_esai_setup();
 	if (!tuner_en)
 		remove_pinctrl0("/soc/aips-bus@02100000/audmux@021d8000");
