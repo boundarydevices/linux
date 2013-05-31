@@ -38,6 +38,9 @@
 #include <linux/sysrq.h>
 #include <linux/delay.h>
 #include <linux/device.h>
+#include <linux/gpio.h>
+#include <linux/mfd/core.h>
+#include <linux/mfd/xr17v35x-reg.h>
 #include <linux/pci.h>
 #include <linux/sched.h>
 #include <linux/string.h>
@@ -93,11 +96,21 @@
 
 #define PCI_NUM_BAR_RESOURCES	6
 
+struct port_list {
+	spinlock_t		lock;	/* Protects list not the hash */
+	struct list_head	*head;
+};
+
 struct serial_private {
 	struct pci_dev		*dev;
 	unsigned int		nr;
 	void __iomem		*remapped_bar[PCI_NUM_BAR_RESOURCES];
 	struct pci_serial_quirk	*quirk;
+	void (*gpio_callback)(struct xr17v35x_gpio *xr);
+	struct xr17v35x_gpio	*gpio_xr;
+	unsigned char __iomem	*membase;
+	int			irq;
+	struct port_list	port_chain;
 	int			line[0];
 };
 
@@ -291,6 +304,7 @@ struct uart_xr_port {
 	unsigned char		msr_saved_flags;
 	
 	unsigned short 		deviceid;
+	struct serial_private	*priv;
 
 	/*
 	 * We provide a per-port pm hook.
@@ -298,17 +312,6 @@ struct uart_xr_port {
 	void			(*pm)(struct uart_port *port,
 					  unsigned int state, unsigned int old);
 };
-
-struct irq_info {
-	struct			hlist_node node;
-	int			irq;
-	spinlock_t		lock;	/* Protects list not the hash */
-	struct list_head	*head;
-};
-
-#define NR_IRQ_HASH		32	/* Can be adjusted later */
-static struct hlist_head irq_lists[NR_IRQ_HASH];
-static DEFINE_MUTEX(hash_mutex);	/* Used to walk the hash */
 
 /*
  * Here we define the default xmit fifo size used for each type of UART.
@@ -701,7 +704,8 @@ static void serialxr_handle_port(struct uart_xr_port *up)
  */
 static irqreturn_t serialxr_interrupt(int irq, void *dev_id)
 {
-	struct irq_info *i = dev_id;
+	struct serial_private *priv = dev_id;
+	struct port_list *i = &priv->port_chain;
 	struct list_head *l, *end = NULL;
 	int pass_counter = 0, handled = 0;
 
@@ -709,6 +713,11 @@ static irqreturn_t serialxr_interrupt(int irq, void *dev_id)
 
 	spin_lock(&i->lock);
 
+	if (priv && priv->gpio_callback) {
+		unsigned val = readb(priv->membase + XR_INT1);
+		if ((val & 0x7) == 6)
+			priv->gpio_callback(priv->gpio_xr);
+	}
 	l = i->head;
 	do {
 		struct uart_xr_port *up;
@@ -750,7 +759,7 @@ static irqreturn_t serialxr_interrupt(int irq, void *dev_id)
  * line being stuck active, and, since ISA irqs are edge triggered,
  * no more IRQs will be seen.
  */
-static void serial_do_unlink(struct irq_info *i, struct uart_xr_port *up)
+static void serial_do_unlink(struct port_list *i, struct uart_xr_port *up)
 {
 	spin_lock_irq(&i->lock);
 
@@ -764,88 +773,29 @@ static void serial_do_unlink(struct irq_info *i, struct uart_xr_port *up)
 	}
 
 	spin_unlock_irq(&i->lock);
-
-	/* List empty so throw away the hash node */
-	if (i->head == NULL) {
-		hlist_del(&i->node);
-		kfree(i);
-	}
 }
 
 static int serial_link_irq_chain(struct uart_xr_port *up)
 {
-	struct hlist_head *h;
-	struct hlist_node *n;
-	struct irq_info *i;
-	int ret, irq_flags = up->port.flags & UPF_SHARE_IRQ ? IRQF_SHARED : 0;
-
-	mutex_lock(&hash_mutex);
-
-	h = &irq_lists[up->port.irq % NR_IRQ_HASH];
-
-	hlist_for_each(n, h) {
-		i = hlist_entry(n, struct irq_info, node);
-		if (i->irq == up->port.irq)
-			break;
-	}
-
-	if (n == NULL) {
-		i = kzalloc(sizeof(struct irq_info), GFP_KERNEL);
-		if (i == NULL) {
-			mutex_unlock(&hash_mutex);
-			return -ENOMEM;
-		}
-		spin_lock_init(&i->lock);
-		i->irq = up->port.irq;
-		hlist_add_head(&i->node, h);
-	}
-	mutex_unlock(&hash_mutex);
+	struct port_list *i = &up->priv->port_chain;
 
 	spin_lock_irq(&i->lock);
 
 	if (i->head) {
 		list_add(&up->list, i->head);
-		spin_unlock_irq(&i->lock);
-
-		ret = 0;
 	} else {
 		INIT_LIST_HEAD(&up->list);
 		i->head = &up->list;
-		spin_unlock_irq(&i->lock);
-		irq_flags |= up->port.irqflags;
-		ret = request_irq(up->port.irq, serialxr_interrupt,
-				  irq_flags, "xrserial", i);
-		if (ret < 0)
-			serial_do_unlink(i, up);
 	}
-
-	return ret;
+	spin_unlock_irq(&i->lock);
+	return 0;
 }
 
 static void serial_unlink_irq_chain(struct uart_xr_port *up)
 {
-	struct irq_info *i;
-	struct hlist_node *n;
-	struct hlist_head *h;
-
-	mutex_lock(&hash_mutex);
-
-	h = &irq_lists[up->port.irq % NR_IRQ_HASH];
-
-	hlist_for_each(n, h) {
-		i = hlist_entry(n, struct irq_info, node);
-		if (i->irq == up->port.irq)
-			break;
-	}
-
-	BUG_ON(n == NULL);
-	BUG_ON(i->head == NULL);
-
-	if (list_empty(i->head))
-		free_irq(up->port.irq, i);
+	struct port_list *i = &up->priv->port_chain;
 
 	serial_do_unlink(i, up);
-	mutex_unlock(&hash_mutex);
 }
 
 static inline int poll_timeout(int timeout)
@@ -1399,7 +1349,8 @@ static struct uart_xr_port *serialxr_find_match_or_unused(struct uart_port *port
  *
  *	On success the port is ready to use and the line number is returned.
  */
-int serialxr_register_port(struct uart_port *port, unsigned short deviceid)
+int serialxr_register_port(struct uart_port *port, unsigned short deviceid,
+		struct serial_private *priv)
 {
 	struct uart_xr_port *uart;
 	int ret = -ENOSPC;
@@ -1435,7 +1386,8 @@ int serialxr_register_port(struct uart_port *port, unsigned short deviceid)
 		uart->mcr_mask = ~(0x0); //~ALPHA_KLUDGE_MCR;
 		uart->mcr_force = 0; // ALPHA_KLUDGE_MCR;
 
-		uart->port.ops = &serialxr_pops;		
+		uart->port.ops = &serialxr_pops;
+		uart->priv = priv;
 		
 		ret = uart_add_one_port(&xr_uart_driver, &uart->port);
 #if 0
@@ -1453,6 +1405,68 @@ int serialxr_register_port(struct uart_port *port, unsigned short deviceid)
 
 	return ret;
 }
+
+int access_read(struct serial_private *priv, int reg)
+{
+	return readb(priv->membase + reg);
+}
+
+int access_write(struct serial_private *priv, int reg, unsigned value)
+{
+	writeb(value, priv->membase + reg);
+	return 0;
+}
+
+int access_modify(struct serial_private *priv, int reg,
+		unsigned clear_mask, unsigned set_mask)
+{
+	unsigned val, new_val;
+
+	val = readb(priv->membase + reg);
+	new_val = (val & ~clear_mask) | set_mask;
+	if (val != new_val) {
+		writeb(new_val, priv->membase + reg);
+//		pr_info("xr *%p=%x\n", priv->membase + reg, new_val);
+		return 1;
+	}
+	return 0;
+}
+
+int access_register_gpio_interrupt(struct serial_private *priv,
+		void (*call_back)(struct xr17v35x_gpio *xr),
+		struct xr17v35x_gpio *xr)
+{
+	priv->gpio_callback = call_back;
+	priv->gpio_xr = xr;
+	return 0;
+}
+
+static const struct xr17v35x_access xr_access = {
+	.read = access_read,
+	.write = access_write,
+	.modify = access_modify,
+	.register_gpio_interrupt = access_register_gpio_interrupt,
+
+};
+
+static struct xr17v35x_gpio_platform_data xr_gpio_pdata = {
+	.irq_base = 0,
+	.gpio_base = ARCH_NR_GPIOS - 16,
+	.access = &xr_access,
+};
+
+static struct mfd_cell cell = {
+	.name = "xr17v35x-gpio",
+	.platform_data = &xr_gpio_pdata,
+	.pdata_size = sizeof(xr_gpio_pdata),
+};
+
+static int xr17v35x_add_gpio_device(struct device *parent, struct serial_private *priv)
+{
+	xr_gpio_pdata.priv = priv;
+	return mfd_add_devices(parent, -1, &cell, 1, NULL, 0);
+}
+
 
 /*
  * Probe one serial board.  Unfortunately, there is no rhyme nor reason
@@ -1514,6 +1528,7 @@ init_one_xrpciserialcard(struct pci_dev *dev, const struct pci_device_id *ent)
 
 	priv->dev = dev;
 	priv->quirk = quirk;
+	spin_lock_init(&priv->port_chain.lock);
 
 	memset(&serial_port, 0, sizeof(struct uart_port));
 	serial_port.flags = UPF_SKIP_TEST | UPF_BOOT_AUTOCONF | UPF_SHARE_IRQ;
@@ -1523,6 +1538,9 @@ init_one_xrpciserialcard(struct pci_dev *dev, const struct pci_device_id *ent)
 	for (i = 0; i < nr_ports; i++) {
 		if (quirk->setup(priv, board, &serial_port, i))
 			break;
+
+		if (i == 0)
+			priv->membase = serial_port.membase;
 
 		// setup the uartclock for the devices on expansion slot
 		switch(priv->dev->device)
@@ -1543,19 +1561,25 @@ init_one_xrpciserialcard(struct pci_dev *dev, const struct pci_device_id *ent)
 		    break;
 		}
 
-		priv->line[i] = serialxr_register_port(&serial_port, dev->device);
+		priv->line[i] = serialxr_register_port(&serial_port, dev->device, priv);
 		if (priv->line[i] < 0) {
 			printk(KERN_WARNING "Couldn't register serial port %s: %d\n", pci_name(dev), priv->line[i]);
 			break;
 		}
 	}
+	rc = request_irq(serial_port.irq, serialxr_interrupt,
+			serial_port.flags & UPF_SHARE_IRQ ? IRQF_SHARED : 0,
+			"xr17v35x", priv);
+	if (rc < 0)
+		pr_err("%s: request_irq failed irq=%d, rc=%d\n", __func__, serial_port.irq, rc);
+	else
+		priv->irq = serial_port.irq;
 
 	priv->nr = i;
 
-	if (!IS_ERR(priv)) {
-		pci_set_drvdata(dev, priv);
-		return 0;
-	}
+	pci_set_drvdata(dev, priv);
+	xr17v35x_add_gpio_device(&dev->dev, priv);
+	return 0;
 
  deinit:
 	if (quirk->exit)
@@ -1607,6 +1631,7 @@ void pciserial_remove_ports(struct serial_private *priv)
 	if (quirk->exit)
 		quirk->exit(priv->dev);
 
+	free_irq(priv->irq, priv);
 	kfree(priv);
 }
 
