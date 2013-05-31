@@ -30,6 +30,7 @@
 
 #define IMX_NUM_MSI_IRQS 128
 static DECLARE_BITMAP(msi_irq_in_use, IMX_NUM_MSI_IRQS);
+static int intd_active;
 
 static void imx_msi_handler(unsigned int irq, struct irq_desc *desc)
 {
@@ -47,6 +48,10 @@ static void imx_msi_handler(unsigned int irq, struct irq_desc *desc)
 			status &= ~(1 << j);
 		}
 		base_irq += 32;
+	}
+	if (intd_active) {
+		pr_info("%s intd\n", __func__);
+		generic_handle_irq(MXC_INT_PCIE_0B);
 	}
 	chained_irq_exit(chip, desc);
 }
@@ -145,7 +150,32 @@ int arch_setup_msi_irq(struct pci_dev *pdev, struct msi_desc *desc)
 	return 0;
 }
 
+static void intd_irq_mask(struct irq_data *d)
+{
+	pr_info("%s\n", __func__);
+	intd_active = 0;
+}
+
+static void intd_irq_unmask(struct irq_data *d)
+{
+	pr_info("%s\n", __func__);
+	intd_active = 1;
+}
+
+static struct irq_chip intd_irq_chip = {
+	.name			= "PCIe intD",
+	.irq_mask		= intd_irq_mask,
+	.irq_unmask		= intd_irq_unmask,
+};
+
+
 void imx_msi_init(void)
 {
-	irq_set_chained_handler(MXC_INT_PCIE_0, imx_msi_handler);
+	if (pci_msi_enabled()) {
+		int irq = MXC_INT_PCIE_0B;
+		irq_set_chained_handler(MXC_INT_PCIE_0, imx_msi_handler);
+
+		irq_set_chip_and_handler(irq, &intd_irq_chip, handle_simple_irq);
+		set_irq_flags(irq, IRQF_VALID);
+	}
 }

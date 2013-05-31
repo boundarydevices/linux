@@ -619,8 +619,8 @@ static int imx_pcie_map_irq(struct pci_dev *dev, u8 slot, u8 pin)
        case 1: return MXC_INT_PCIE_3;
        case 2: return MXC_INT_PCIE_2;
        case 3: return MXC_INT_PCIE_1;
-       case 4: return MXC_INT_PCIE_0;
-       default: return -1;
+       case 4: return pci_msi_enabled() ?  MXC_INT_PCIE_0B : MXC_INT_PCIE_0;
+       default: return -EINVAL;
        }
 }
 
