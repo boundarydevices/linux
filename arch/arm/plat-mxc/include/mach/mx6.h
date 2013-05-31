@@ -484,6 +484,9 @@
 #define MXC_INT_ANATOP_ANA2		159
 #define MXC_INT_END			159
 
+/* If MSI support is active, this is INT D for a card that doesn't use MSI */
+#define MXC_INT_PCIE_0B			160
+
 #define MX6Q_INT_UART1			MXC_INT_UART1_ANDED
 #define MX6Q_INT_UART2			MXC_INT_UART2_ANDED
 #define MX6Q_INT_UART3			MXC_INT_UART3_ANDED
