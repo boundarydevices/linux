@@ -111,6 +111,18 @@
 		};
 
 		aips2: aips-bus@02100000 {
+			usb@02184000 { /* USB OTG */
+				vbus-supply = <&reg_usb_otg_vbus>;
+				pinctrl-names = "pinctrl_id";
+				pinctrl-0 = <&pinctrl_usbotg_2>;
+				disable-over-current;
+				status = "okay";
+			};
+
+			usb@02184200 { /* USB1 */
+				vbus-supply = <&reg_usb_h1_vbus>;
+				status = "okay";
+			};
 			ethernet@02188000 {
 				phy-mode = "rgmii";
 				pinctrl-names = "default";
@@ -411,6 +423,24 @@
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 			regulator-always-on;
+		};
+
+		reg_usb_otg_vbus: usb_otg_vbus {
+			compatible = "regulator-fixed";
+			regulator-name = "usb_otg_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&max7310_3 1 0>;
+			enable-active-high;
+		};
+
+		reg_usb_h1_vbus: usb_h1_vbus {
+			compatible = "regulator-fixed";
+			regulator-name = "usb_h1_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&max7310_2 7 0>;
+			enable-active-high;
 		};
 	};
 
