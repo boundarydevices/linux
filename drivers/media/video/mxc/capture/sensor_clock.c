@@ -50,6 +50,10 @@ void set_mclk_rate(uint32_t *p_mclk_freq, uint32_t csi)
 		if (csi == 0) {
 			if (machine_is_mx6q_sabrelite()
 			    ||
+			    machine_is_mx6_nitrogen6x()
+			    ||
+			    machine_is_mx6_nit6xlite()
+			    ||
 			    machine_is_mx6_oc())
 				mclk = "clko2_clk";
 			else
