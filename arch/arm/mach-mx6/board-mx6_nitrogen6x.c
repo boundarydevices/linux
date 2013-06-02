@@ -1359,7 +1359,7 @@ static void __init timer_init(void)
 	early_console_setup(UART2_BASE_ADDR, uart_clk);
 }
 
-static struct sys_timer timer = {
+static struct sys_timer timer __initdata = {
 	.init   = timer_init,
 };
 
