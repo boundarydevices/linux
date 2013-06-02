@@ -59,7 +59,6 @@ static int kszphy_set_interrupt(struct phy_device *phydev)
 	if (PHY_INTERRUPT_ENABLED == phydev->interrupts) {
 		new_bmcr = bmcr & ~BMCR_PDOWN;
 		if (bmcr != new_bmcr) {
-			unsigned intcs, temp;
 			phy_write(phydev, MII_BMCR, new_bmcr);
 			udelay(100);	/* power up needs delay after */
 			/* force master mode */
