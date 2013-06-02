@@ -227,7 +227,7 @@ static struct imx_pcie_port *bus_to_port(int bus)
 	return i >= 0 ? imx_pcie_port + i : NULL;
 }
 
-static int __init imx_pcie_setup(int nr, struct pci_sys_data *sys)
+static int imx_pcie_setup(int nr, struct pci_sys_data *sys)
 {
 	struct imx_pcie_port *pp;
 
@@ -598,7 +598,7 @@ static struct pci_ops imx_pcie_ops = {
 	.write = imx_pcie_wr_conf,
 };
 
-static struct pci_bus __init *
+static struct pci_bus *
 imx_pcie_scan_bus(int nr, struct pci_sys_data *sys)
 {
 	struct pci_bus *bus;
@@ -613,7 +613,7 @@ imx_pcie_scan_bus(int nr, struct pci_sys_data *sys)
 	return bus;
 }
 
-static int __init imx_pcie_map_irq(struct pci_dev *dev, u8 slot, u8 pin)
+static int imx_pcie_map_irq(struct pci_dev *dev, u8 slot, u8 pin)
 {
        switch (pin) {
        case 1: return MXC_INT_PCIE_3;
@@ -624,7 +624,7 @@ static int __init imx_pcie_map_irq(struct pci_dev *dev, u8 slot, u8 pin)
        }
 }
 
-static struct hw_pci imx_pci __initdata = {
+static struct hw_pci imx_pci = {
 	.nr_controllers	= 1,
 	.swizzle	= pci_std_swizzle,
 	.setup		= imx_pcie_setup,
