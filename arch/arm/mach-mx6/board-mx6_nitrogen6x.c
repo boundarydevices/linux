@@ -160,7 +160,7 @@ struct gpio n6w_wl1271_gpios[] __initdata = {
 	{.label = "wl1271_wl_en",	.gpio = N6_WL1271_WL_EN,	.flags = 0},
 };
 
-int is_nitrogen6w(void)
+__init static int is_nitrogen6w(void)
 {
 	int ret = gpio_request_array(n6w_wl1271_gpios,
 			ARRAY_SIZE(n6w_wl1271_gpios));
