@@ -201,7 +201,8 @@ static int hw_device_init(struct ci13xxx *ci, void __iomem *base)
 		/* Some clks sync between Controller and USB PHY */
 		usleep_range(800, 1000);
 	}
-	usb_phy_init(ci->transceiver);
+	if (ci->transceiver)
+		usb_phy_init(ci->transceiver);
 
 	reg = hw_read(ci, CAP_DCCPARAMS, DCCPARAMS_DEN) >>
 		ffs_nr(DCCPARAMS_DEN);
@@ -674,8 +675,6 @@ static int __devinit ci_hdrc_probe(struct platform_device *pdev)
 			goto rm_wq;
 		}
 	}
-
-	hw_phymode_configure(ci);
 
 	if (ci->role == CI_ROLE_HOST) {
 		ret = ci->roles[CI_ROLE_HOST]->init(ci);

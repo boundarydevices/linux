@@ -131,7 +131,7 @@ static int imx_set_wakeup(struct ci13xxx_imx_data *data , bool enable)
 	return ret;
 }
 
-bool ci_is_host_mode(struct ci13xxx *ci)
+static bool ci_is_host_mode(struct ci13xxx *ci)
 {
 	return hw_read(ci, OP_USBMODE, USBMODE_CM) == USBMODE_CM;
 }
@@ -427,7 +427,8 @@ static int ci13xxx_imx_remove(struct platform_device *pdev)
 		module_put(data->phy->dev->driver->owner);
 	}
 
-	of_node_put(data->phy_np);
+	if (data->phy_np)
+		of_node_put(data->phy_np);
 
 	clk_disable_unprepare(data->clk);
 

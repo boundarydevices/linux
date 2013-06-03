@@ -89,7 +89,7 @@ static void ci_ehci_bus_post_suspend(struct usb_hcd *hcd)
 			 * device will enter suspend again.
 			 */
 			if (ehci_to_hcd(ehci)->self.root_hub->do_remote_wakeup) {
-				ehci_info(ehci,
+				ehci_dbg(ehci,
 					"Remote wakeup is enabled, "
 					"and device is on the port\n");
 
