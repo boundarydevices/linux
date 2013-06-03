@@ -104,6 +104,7 @@
 			};
 
 			usb@02184200 { /* USB1 */
+				vbus-supply = <&reg_usb_h1_vbus>;
 				status = "okay";
 			};
 
@@ -432,6 +433,15 @@
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 			gpio = <&gpio3 22 0>;
+			enable-active-high;
+		};
+
+		reg_usb_h1_vbus: usb_h1_vbus {
+			compatible = "regulator-fixed";
+			regulator-name = "usb_h1_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio1 29 0>;
 			enable-active-high;
 		};
 	};
