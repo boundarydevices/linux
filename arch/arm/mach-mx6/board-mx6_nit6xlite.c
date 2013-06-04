@@ -354,7 +354,7 @@ static int mx6_sgtl5000_init(void)
 	return 0;
 }
 
-int mx6_amp_enable(int enable)
+static int mx6_amp_enable(int enable)
 {
 	gpio_set_value(AUDIO_MUTE, enable ? 1 : 0);
 	return 0;
