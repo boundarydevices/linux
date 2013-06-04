@@ -148,7 +148,7 @@
 			reg-names = "pcie_reg";
 			interrupts = <0 123 0x04>;
 			clocks = <&clks 144>, <&clks 188>, <&clks 190>, <&clks 191>;
-			clock-names = "pcie_clk", "pcie_ref", "pcie_bus_in", "pcie_bus_out";
+			clock-names = "pcie_axi", "pcie_ref", "pcie_bus_in", "pcie_bus_out";
 			status = "disabled";
 		};
 
