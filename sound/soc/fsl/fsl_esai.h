@@ -330,8 +330,7 @@ struct imx_esai {
 	void (*ac97_reset) (struct snd_ac97 *ac97);
 	void (*ac97_warm_reset)(struct snd_ac97 *ac97);
 
-	struct imx_pcm_dma_params dma_params_rx;
-	struct imx_pcm_dma_params dma_params_tx;
+	struct imx_pcm_params   pcm_params;
 
 	int enabled;
 	int imx_esai_txrx_state;

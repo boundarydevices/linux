@@ -151,8 +151,7 @@ struct fsl_ssi_private {
 	bool ssi_on_imx;
 	struct clk *clk;
 	struct platform_device *imx_pcm_pdev;
-	struct imx_pcm_dma_params dma_params_tx;
-	struct imx_pcm_dma_params dma_params_rx;
+	struct imx_pcm_params pcm_params;
 
 	struct {
 		unsigned int rfrc;
@@ -402,8 +401,8 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 		 * make this value larger (and maybe we should), but this way
 		 * data will be written to memory as soon as it's available.
 		 */
-		rxbs = ssi_private->dma_params_rx.burstsize;
-		txbs = ssi_private->dma_params_tx.burstsize;
+		rxbs = ssi_private->pcm_params.dma_params_rx.burstsize;
+		txbs = ssi_private->pcm_params.dma_params_tx.burstsize;
 		write_ssi(CCSR_SSI_SFCSR_TFWM0(txbs) |
 			CCSR_SSI_SFCSR_RFWM0(rxbs) |
 			CCSR_SSI_SFCSR_TFWM1(txbs) |
@@ -427,8 +426,8 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 	if (ssi_private->ssi_on_imx)
 		snd_soc_dai_set_dma_data(dai, substream,
 			(substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ?
-				&ssi_private->dma_params_tx :
-				&ssi_private->dma_params_rx);
+				&ssi_private->pcm_params.dma_params_tx :
+				&ssi_private->pcm_params.dma_params_rx);
 
 	return 0;
 }
@@ -1063,11 +1062,11 @@ static int __devinit fsl_ssi_probe(struct platform_device *pdev)
 		 * But it would cause driver getting weird in dual fifo mode.
 		 * 6 is well tested for stability in recent cases.
 		 */
-		ssi_private->dma_params_tx.burstsize = 6;
-		ssi_private->dma_params_rx.burstsize = 6;
-		ssi_private->dma_params_tx.dma_addr =
+		ssi_private->pcm_params.dma_params_tx.burstsize = 6;
+		ssi_private->pcm_params.dma_params_rx.burstsize = 6;
+		ssi_private->pcm_params.dma_params_tx.dma_addr =
 			ssi_private->ssi_phys + offsetof(struct ccsr_ssi, stx0);
-		ssi_private->dma_params_rx.dma_addr =
+		ssi_private->pcm_params.dma_params_rx.dma_addr =
 			ssi_private->ssi_phys + offsetof(struct ccsr_ssi, srx0);
 		/*
 		 * TODO: This is a temporary solution and should be changed
@@ -1079,12 +1078,15 @@ static int __devinit fsl_ssi_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "could not get dma events\n");
 			goto error_clk;
 		}
-		ssi_private->dma_params_tx.dma = dma_events[0];
-		ssi_private->dma_params_rx.dma = dma_events[1];
+		ssi_private->pcm_params.dma_params_tx.dma = dma_events[0];
+		ssi_private->pcm_params.dma_params_rx.dma = dma_events[1];
 
-		ssi_private->dma_params_tx.peripheral_type = IMX_DMATYPE_SSI_SP;
-		ssi_private->dma_params_rx.peripheral_type =
-			ssi_private->dma_params_tx.peripheral_type;
+		ssi_private->pcm_params.dma_params_tx.peripheral_type = IMX_DMATYPE_SSI_SP;
+		ssi_private->pcm_params.dma_params_rx.peripheral_type =
+			ssi_private->pcm_params.dma_params_tx.peripheral_type;
+
+		ssi_private->pcm_params.dma_params_tx.dma_buf_size = IMX_SSI_DMABUF_SIZE;
+		ssi_private->pcm_params.dma_params_rx.dma_buf_size = IMX_SSI_DMABUF_SIZE;
 	}
 
 	/* Initialize the the device_attribute structure */
@@ -1126,6 +1128,7 @@ static int __devinit fsl_ssi_probe(struct platform_device *pdev)
 			ret = PTR_ERR(ssi_private->imx_pcm_pdev);
 			goto error_dev;
 		}
+		platform_set_drvdata(ssi_private->imx_pcm_pdev, &ssi_private->pcm_params);
 	}
 
 	/*

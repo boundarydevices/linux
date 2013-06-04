@@ -106,7 +106,7 @@ static struct snd_pcm_hardware snd_imx_hardware = {
 	.rate_min = 8000,
 	.channels_min = 2,
 	.channels_max = 2,
-	.buffer_bytes_max = IMX_SSI_DMABUF_SIZE,
+	.buffer_bytes_max = IMX_DEFAULT_DMABUF_SIZE,
 	.period_bytes_min = 128,
 	.period_bytes_max = 65535, /* Limited by SDMA engine */
 	.periods_min = 2,
@@ -121,13 +121,15 @@ static int snd_imx_open(struct snd_pcm_substream *substream)
 	struct imx_dma_data *dma_data;
 	int ret;
 
-	snd_soc_set_runtime_hwparams(substream, &snd_imx_hardware);
-
 	dma_params = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
 	if (!dma_params) {
 		dev_err(rtd->dev, "DMA params wasn't set properly.\n");
 		return -EINVAL;
 	}
+
+	if (dma_params->dma_buf_size > 0)
+		snd_imx_hardware.buffer_bytes_max = dma_params->dma_buf_size;
+	snd_soc_set_runtime_hwparams(substream, &snd_imx_hardware);
 
 	dma_data = kzalloc(sizeof(*dma_data), GFP_KERNEL);
 	if (!dma_data) {

@@ -113,10 +113,8 @@ struct mxc_spdif_priv {
 	atomic_t dpll_locked;	/* DPLL locked status */
 	bool tx_active;
 	bool rx_active;
+	struct imx_pcm_params pcm_params;
 };
-
-struct imx_pcm_dma_params dma_params_tx;
-struct imx_pcm_dma_params dma_params_rx;
 
 struct spdif_mixer_control mxc_spdif_control;
 
@@ -971,7 +969,8 @@ int mxc_spdif_startup(struct snd_pcm_substream *substream,
 
 	/* Tx/Rx config */
 	snd_soc_dai_set_dma_data(cpu_dai, substream,
-			is_playack ? &dma_params_tx : &dma_params_rx);
+			is_playack ? &spdif_priv->pcm_params.dma_params_tx
+				   : &spdif_priv->pcm_params.dma_params_rx);
 
 	/* enable spdif_xtal_clk */
 	ret = clk_enable(plat_data->spdif_clk);
@@ -1223,6 +1222,7 @@ static int fsl_spdif_dai_probe(struct platform_device *pdev)
 			ret = PTR_ERR(spdif_priv->imx_pcm_pdev);
 			goto error_kzalloc;
 		}
+		platform_set_drvdata(spdif_priv->imx_pcm_pdev, &spdif_priv->pcm_params);
 	}
 
 
@@ -1272,15 +1272,17 @@ static int fsl_spdif_dai_probe(struct platform_device *pdev)
 		goto card_err;
 	}
 
-	dma_params_tx.dma_addr = res.start + SPDIF_REG_STL;
-	dma_params_rx.dma_addr = res.start + SPDIF_REG_SRL;
+	spdif_priv->pcm_params.dma_params_tx.dma_addr = res.start + SPDIF_REG_STL;
+	spdif_priv->pcm_params.dma_params_rx.dma_addr = res.start + SPDIF_REG_SRL;
 
-	dma_params_tx.burstsize = MXC_SPDIF_TXFIFO_WML;
-	dma_params_rx.burstsize = MXC_SPDIF_RXFIFO_WML;
+	spdif_priv->pcm_params.dma_params_tx.burstsize = MXC_SPDIF_TXFIFO_WML;
+	spdif_priv->pcm_params.dma_params_rx.burstsize = MXC_SPDIF_RXFIFO_WML;
 
-	dma_params_tx.peripheral_type = IMX_DMATYPE_SPDIF;
-	dma_params_rx.peripheral_type = IMX_DMATYPE_SPDIF;
+	spdif_priv->pcm_params.dma_params_tx.peripheral_type = IMX_DMATYPE_SPDIF;
+	spdif_priv->pcm_params.dma_params_rx.peripheral_type = IMX_DMATYPE_SPDIF;
 
+	spdif_priv->pcm_params.dma_params_tx.dma_buf_size = IMX_SPDIF_DMABUF_SIZE;
+	spdif_priv->pcm_params.dma_params_rx.dma_buf_size = IMX_SPDIF_DMABUF_SIZE;
 	/*
 	 * TODO: This is a temporary solution and should be changed
 	 * to use generic DMA binding later when the helplers get in.
@@ -1291,8 +1293,8 @@ static int fsl_spdif_dai_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to get dma events\n");
 		goto error_clk;
 	}
-	dma_params_tx.dma = dma_events[0];
-	dma_params_rx.dma = dma_events[1];
+	spdif_priv->pcm_params.dma_params_tx.dma = dma_events[0];
+	spdif_priv->pcm_params.dma_params_rx.dma = dma_events[1];
 
 	pm_runtime_enable(&pdev->dev);
 

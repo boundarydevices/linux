@@ -18,13 +18,22 @@
 /*
  * Do not change this as the FIQ handler depends on this size
  */
+#define IMX_DEFAULT_DMABUF_SIZE	(64 * 1024)
 #define IMX_SSI_DMABUF_SIZE	(64 * 1024)
+#define IMX_ESAI_DMABUF_SIZE	(256 * 1024)
+#define IMX_SPDIF_DMABUF_SIZE	(64 * 1024)
 
 struct imx_pcm_dma_params {
 	int dma;
 	unsigned long dma_addr;
 	int burstsize;
 	enum sdma_peripheral_type peripheral_type;
+	int dma_buf_size;
+};
+
+struct imx_pcm_params {
+	struct imx_pcm_dma_params dma_params_tx;
+	struct imx_pcm_dma_params dma_params_rx;
 };
 
 int snd_imx_pcm_mmap(struct snd_pcm_substream *substream,

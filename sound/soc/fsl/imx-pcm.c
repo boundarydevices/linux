@@ -36,8 +36,18 @@ EXPORT_SYMBOL_GPL(snd_imx_pcm_mmap);
 static int imx_pcm_preallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 {
 	struct snd_pcm_substream *substream = pcm->streams[stream].substream;
+	struct snd_soc_pcm_runtime *rtd = pcm->private_data;
 	struct snd_dma_buffer *buf = &substream->dma_buffer;
-	size_t size = IMX_SSI_DMABUF_SIZE;
+	size_t size = IMX_DEFAULT_DMABUF_SIZE;
+	struct imx_pcm_params *pcm_params = dev_get_drvdata(rtd->platform->dev);
+
+	if (pcm_params && (stream ==  SNDRV_PCM_STREAM_PLAYBACK)
+		&& (pcm_params->dma_params_tx.dma_buf_size > 0))
+		size = pcm_params->dma_params_tx.dma_buf_size;
+
+	if (pcm_params && (stream ==  SNDRV_PCM_STREAM_CAPTURE)
+		&& (pcm_params->dma_params_rx.dma_buf_size > 0))
+		size = pcm_params->dma_params_rx.dma_buf_size;
 
 	buf->dev.type = SNDRV_DMA_TYPE_DEV;
 	buf->dev.dev = pcm->card->dev;

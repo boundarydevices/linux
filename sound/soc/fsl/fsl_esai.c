@@ -317,10 +317,10 @@ static int imx_esai_startup(struct snd_pcm_substream *substream,
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		local_esai->imx_esai_txrx_state |= IMX_DAI_ESAI_TX;
-		dma_data = &esai->dma_params_tx;
+		dma_data = &esai->pcm_params.dma_params_tx;
 	} else {
 		local_esai->imx_esai_txrx_state |= IMX_DAI_ESAI_RX;
-		dma_data = &esai->dma_params_rx;
+		dma_data = &esai->pcm_params.dma_params_rx;
 	}
 
 	snd_soc_dai_set_dma_data(cpu_dai, substream, dma_data);
@@ -674,14 +674,17 @@ static int imx_esai_probe(struct platform_device *pdev)
 	else
 		fifo_depth = 32;
 
-	esai->dma_params_tx.burstsize = fifo_depth;
-	esai->dma_params_rx.burstsize = fifo_depth;
+	esai->pcm_params.dma_params_tx.burstsize = fifo_depth;
+	esai->pcm_params.dma_params_rx.burstsize = fifo_depth;
 
-	esai->dma_params_tx.dma_addr = res->start + ESAI_ETDR;
-	esai->dma_params_rx.dma_addr = res->start + ESAI_ERDR;
+	esai->pcm_params.dma_params_tx.dma_addr = res->start + ESAI_ETDR;
+	esai->pcm_params.dma_params_rx.dma_addr = res->start + ESAI_ERDR;
 
-	esai->dma_params_tx.peripheral_type = IMX_DMATYPE_ESAI;
-	esai->dma_params_rx.peripheral_type = IMX_DMATYPE_ESAI;
+	esai->pcm_params.dma_params_tx.peripheral_type = IMX_DMATYPE_ESAI;
+	esai->pcm_params.dma_params_rx.peripheral_type = IMX_DMATYPE_ESAI;
+
+	esai->pcm_params.dma_params_tx.dma_buf_size = IMX_ESAI_DMABUF_SIZE;
+	esai->pcm_params.dma_params_rx.dma_buf_size = IMX_ESAI_DMABUF_SIZE;
 
 	ret = of_property_read_u32_array(pdev->dev.of_node,
 				"fsl,esai-dma-events", dma_events, 2);
@@ -689,8 +692,8 @@ static int imx_esai_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "could not get dma events\n");
 		goto failed_ioremap;
 	}
-	esai->dma_params_tx.dma = dma_events[0];
-	esai->dma_params_rx.dma = dma_events[1];
+	esai->pcm_params.dma_params_tx.dma = dma_events[0];
+	esai->pcm_params.dma_params_rx.dma = dma_events[1];
 
 	platform_set_drvdata(pdev, esai);
 
@@ -717,7 +720,7 @@ static int imx_esai_probe(struct platform_device *pdev)
 		goto failed_pdev_fiq_alloc;
 	}
 
-	platform_set_drvdata(esai->soc_platform_pdev_fiq, esai);
+	platform_set_drvdata(esai->soc_platform_pdev_fiq, &esai->pcm_params);
 	ret = platform_device_add(esai->soc_platform_pdev_fiq);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to add platform device\n");
@@ -731,7 +734,7 @@ static int imx_esai_probe(struct platform_device *pdev)
 		goto failed_pdev_alloc;
 	}
 
-	platform_set_drvdata(esai->soc_platform_pdev, esai);
+	platform_set_drvdata(esai->soc_platform_pdev, &esai->pcm_params);
 	ret = platform_device_add(esai->soc_platform_pdev);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to add platform device\n");
