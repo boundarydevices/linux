@@ -169,6 +169,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	NEW_PAD_CTRL(MX6PAD(SD3_DAT4__GPIO_7_1), WEAK),
 
 	/* GPIO connector (J14) */
+        MX6PAD(GPIO_6__GPIO_1_6),			/* J14 pins 8/9 (dry contact) */
 	NEW_PAD_CTRL(MX6PAD(GPIO_2__GPIO_1_2), WEAK),	/* J14 pin1 - GLED */
 	NEW_PAD_CTRL(MX6PAD(GPIO_3__GPIO_1_3), WEAK),	/* J14 pin3 - RLED */
 	NEW_PAD_CTRL(MX6PAD(GPIO_18__GPIO_7_13), WEAK),	/* J14 pin5 - VOL+ */

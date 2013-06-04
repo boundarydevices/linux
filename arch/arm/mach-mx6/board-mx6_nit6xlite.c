@@ -109,6 +109,7 @@
 #define WL_CLK_REQ_IRQ		IMX_GPIO_NR(6, 9)	/* NANDF_WP_B - active low */
 #define WL_WAKE_IRQ		IMX_GPIO_NR(6, 14)	/* NANDF_CS1 - active low */
 
+#define MX6_N6L_DRYCONTACT		IMX_GPIO_NR(1, 6)	/* J14 pins 8 and 9 - dry contact */
 #define MX6_N6L_GLED			IMX_GPIO_NR(1, 2)	/* J14 pin1: GPIO2 */
 #define MX6_N6L_RLED			IMX_GPIO_NR(1, 3)	/* J14 pin3: GPIO3 */
 #define MX6_N6L_VOLUP			IMX_GPIO_NR(7, 13)	/* J14 pin5: GPIO_18 */
@@ -172,6 +173,7 @@ struct gpio mx6_init_gpios[] __initdata = {
 	{.label = "wl_clk_req_irq",	.gpio = WL_CLK_REQ_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[9]: NANDF_WP_B - active low */
 	{.label = "wl_wake_irq",	.gpio = WL_WAKE_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[14]: NANDF_CS1 - active low */
 
+	{.label = "drycontact",		.gpio = MX6_N6L_DRYCONTACT,	.flags = GPIOF_HIGH},	/* J14 pins 8/9: GPIO6 */
 	{.label = "gled",		.gpio = MX6_N6L_GLED,		.flags = GPIOF_HIGH},	/* J14 pin1: GPIO2 */
 	{.label = "rled",		.gpio = MX6_N6L_RLED,		.flags = GPIOF_HIGH},	/* J14 pin3: GPIO3 */
 	{.label = "volup",		.gpio = MX6_N6L_VOLUP,		.flags = GPIOF_DIR_IN},	/* J14 pin5: GPIO_18 */
