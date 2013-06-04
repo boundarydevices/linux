@@ -84,7 +84,7 @@
 
 			ldb@020e0000 {
 				ipu_id = <1>;
-				disp_id = <1>;
+				disp_id = <0>;
 				ext_ref = <1>;
 				mode = "sep0";
 				sec_ipu_id = <1>;

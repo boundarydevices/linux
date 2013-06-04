@@ -16,6 +16,12 @@
 	compatible = "fsl,imx6dl-sabreauto", "fsl,imx6dl";
 
 	soc {
+		hdmi_core@00120000 {
+			compatible = "fsl,imx6-hdmi-core";
+			disp_id = <1>;
+			status = "okay";
+		};
+
 		aips-bus@02000000 { /* AIPS1 */
 			iomuxc@020e0000 {
 				pinctrl-names = "default";
