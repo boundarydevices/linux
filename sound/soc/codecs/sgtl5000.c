@@ -112,6 +112,7 @@ struct sgtl5000_priv {
 	int fmt;	/* i2s data format */
 	struct regulator_bulk_data supplies[SGTL5000_SUPPLY_NUM];
 	struct ldo_regulator *ldo;
+	int mic_bias_impedance;
 };
 
 /*
@@ -126,24 +127,24 @@ struct sgtl5000_priv {
 static int mic_bias_event(struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *kcontrol, int event)
 {
+	struct sgtl5000_priv *sgtl5000;
+	int impedance = SGTL5000_BIAS_R_off;
+
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
-		/* change mic bias resistor to 4Kohm */
-		snd_soc_update_bits(w->codec, SGTL5000_CHIP_MIC_CTRL,
-			SGTL5000_BIAS_R_MASK,
-			SGTL5000_BIAS_R_4k << SGTL5000_BIAS_R_SHIFT);
+		sgtl5000 = snd_soc_codec_get_drvdata(w->codec);
+		if (sgtl5000)
+			impedance = sgtl5000->mic_bias_impedance;
 		break;
 
 	case SND_SOC_DAPM_PRE_PMD:
-		/*
-		 * SGTL5000_BIAS_R_8k as mask to clean the two bits
-		 * of mic bias and output impedance
-		 */
-		snd_soc_update_bits(w->codec, SGTL5000_CHIP_MIC_CTRL,
-			SGTL5000_BIAS_R_MASK,
-			SGTL5000_BIAS_R_off << SGTL5000_BIAS_R_SHIFT);
 		break;
+	default:
+		return 0;
 	}
+	snd_soc_update_bits(w->codec, SGTL5000_CHIP_MIC_CTRL,
+		SGTL5000_BIAS_R_MASK, impedance << SGTL5000_BIAS_R_SHIFT);
+	pr_info("%s: %d %04x\n", __func__, impedance, snd_soc_read(w->codec, SGTL5000_CHIP_MIC_CTRL));
 	return 0;
 }
 
@@ -575,6 +576,29 @@ static const DECLARE_TLV_DB_SCALE(avc_max_gain, 0, 600, 0);
 static const DECLARE_TLV_DB_SCALE(avc_threshold, 0, 1, 0);
 static const DECLARE_TLV_DB_SCALE(mixer_volume, 0, 1, 0);
 
+
+static int sgtl500_mic_bias_impedance_get(struct snd_kcontrol *kcontrol,
+				    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = sgtl5000->mic_bias_impedance;
+	return 0;
+}
+
+static int sgtl500_mic_bias_impedance_put(struct snd_kcontrol *kcontrol,
+				    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
+	int v = ucontrol->value.integer.value[0];
+
+	sgtl5000->mic_bias_impedance = v;
+	return 1;
+}
+
+
 static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 	/* SOC_DOUBLE_S8_TLV with invert */
 	{
@@ -603,6 +627,11 @@ static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 
 	SOC_SINGLE_TLV("Mic Volume", SGTL5000_CHIP_MIC_CTRL,
 			0, 3, 0, mic_gain_tlv),
+
+	/* mic bias voltage, 1.25V - 3.00V by .250V */
+	SOC_SINGLE("Mic Bias Volt", SGTL5000_CHIP_MIC_CTRL, 4, 7, 0),
+	SOC_SINGLE_EXT("Mic Bias Impedance", SGTL5000_CHIP_MIC_CTRL, 8, 3, 0,
+			sgtl500_mic_bias_impedance_get, sgtl500_mic_bias_impedance_put),
 
 	/* Bass Enhance enable */
 	SOC_SINGLE("Bass Enable", SGTL5000_DAP_BASS_ENHANCE,
@@ -1614,7 +1643,7 @@ static int sgtl5000_probe(struct snd_soc_codec *codec)
 			SGTL5000_HP_ZCD_EN |
 			SGTL5000_ADC_ZCD_EN);
 
-	snd_soc_write(codec, SGTL5000_CHIP_MIC_CTRL, 2);
+	snd_soc_write(codec, SGTL5000_CHIP_MIC_CTRL, 2 | (((2250 - 1250) / 250) << 4));
 
 	snd_soc_write(codec, SGTL5000_CHIP_DAC_VOL, 0x6060);
 	snd_soc_write(codec, SGTL5000_CHIP_ANA_ADC_CTRL,
@@ -1693,6 +1722,7 @@ static __devinit int sgtl5000_i2c_probe(struct i2c_client *client,
 	if (!sgtl5000)
 		return -ENOMEM;
 
+	sgtl5000->mic_bias_impedance = SGTL5000_BIAS_R_4k;
 	i2c_set_clientdata(client, sgtl5000);
 
 	ret = snd_soc_register_codec(&client->dev,
