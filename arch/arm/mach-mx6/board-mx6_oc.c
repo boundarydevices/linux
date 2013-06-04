@@ -1150,6 +1150,7 @@ static void __init mx6_oc_board_init(void)
 
 	gpio_free(MX6_OC_WL_EN);
 	gpio_free(MX6_OC_WL_BT_REG_EN);
+	gpio_free(MX6_OC_WL_BT_RESET);
 	mdelay(1);
 
 	imx6q_add_pcie(&pcie_data);
