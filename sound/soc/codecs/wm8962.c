@@ -3830,6 +3830,17 @@ static int wm8962_runtime_resume(struct device *dev)
 	wm8962_reset(wm8962);
 
 	/*
+	 * Disable SYSCLK so that registers can be more safely updated.
+	 * We put this line here is to pervent an infinitesimal chance that
+	 * SYSCLK_SRC can't be updated in time, then the driver would prompt
+	 * timeout error and never work again.
+	 * And don't worry about the SYSCLK_ENA bit because the driver already
+	 * registered a DAPM supply for it, DAPM would enable the bit when it
+	 * needs to.
+	 */
+	regmap_update_bits(wm8962->regmap, WM8962_CLOCKING2, WM8962_SYSCLK_ENA, 0);
+
+	/*
 	 * WM8962_CLOCKING2 is a volatile register so its value would be set to
 	 * default after reset.
 	 *
