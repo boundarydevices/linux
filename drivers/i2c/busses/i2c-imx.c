@@ -546,6 +546,10 @@ static int __init i2c_imx_probe(struct platform_device *pdev)
 	writeb(0, i2c_imx->base + IMX_I2C_I2CR);
 	writeb(0, i2c_imx->base + IMX_I2C_I2SR);
 
+	/* initialise board specific setting */
+	if (pdata && pdata->board_init)
+		pdata->board_init();
+
 	/* Add I2C adapter */
 	ret = i2c_add_numbered_adapter(&i2c_imx->adapter);
 	if (ret < 0) {
