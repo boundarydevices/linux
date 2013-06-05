@@ -187,14 +187,15 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(EIM_DA12__IPU2_CSI1_VSYNC),	/* GPIO3[12] */
 	MX6PAD(EIM_A16__IPU2_CSI1_PIXCLK),	/* GPIO2[22] */
 #endif
-	MX6PAD(EIM_DA13__GPIO_3_13),		/* GPIO3[13] - power down */
-	MX6PAD(EIM_DA14__GPIO_3_14),		/* GPIO3[14] - camera reset */
+	MX6PAD(EIM_DA13__GPIO_3_13),		/* Power */
+	MX6PAD(EIM_DA14__GPIO_3_14),		/* Reset */
+	MX6PAD(EIM_WAIT__GPIO_5_0),		/* Irq */
+	MX6PAD(EIM_A24__GPIO_5_4),		/* Field */
+
 	MX6PAD(EIM_RW__GPIO_2_26),		/* GPIO2[26] - unused */
 	MX6PAD(EIM_LBA__GPIO_2_27),		/* GPIO2[27] - unused */
 	MX6PAD(EIM_EB3__GPIO_2_31),		/* GPIO2[31] - unused */
 	MX6PAD(EIM_DA15__GPIO_3_15),		/* GPIO3[15] - unused */
-	MX6PAD(EIM_WAIT__GPIO_5_0),		/* GPIO5[0] - unused */
-	MX6PAD(EIM_A24__GPIO_5_4),		/* GPIO5[4] - unused */
 
 	/* NANDF_CS1/2/3 are unused for sabrelite */
 	NEW_PAD_CTRL(MX6PAD(NANDF_CS1__GPIO_6_14), N6_IRQ_TEST_PADCFG),	/* wl1271 wl_irq */
@@ -321,7 +322,9 @@ static iomux_v3_cfg_t MX6NAME(mipi_pads)[] = {
 	MX6PAD(GPIO_6__GPIO_1_6),		/* Camera GP */
 	0
 };
-#else
+#endif
+
+#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE)
 static iomux_v3_cfg_t MX6NAME(csi0_sensor_pads)[] = {
 	/* IPU1 Camera */
 	MX6PAD(CSI0_DAT8__IPU1_CSI0_D_8),
