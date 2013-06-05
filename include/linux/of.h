@@ -262,6 +262,10 @@ extern int prom_remove_property(struct device_node *np, struct property *prop);
 extern int prom_update_property(struct device_node *np,
 				struct property *newprop,
 				struct property *oldprop);
+extern int of_node_status_disable(struct device_node *np);
+extern int of_node_status_enable(struct device_node *np);
+extern int of_node_status_disable_by_path(const char *path);
+extern int of_node_status_enable_by_path(const char *path);
 
 #if defined(CONFIG_OF_DYNAMIC)
 /* For updating the device tree at runtime */

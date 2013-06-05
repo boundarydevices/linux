@@ -1094,6 +1094,80 @@ int prom_update_property(struct device_node *np,
 	return 0;
 }
 
+/* update the node status property to be "enabled" or "disabled" */
+int of_node_status_update(struct device_node *np, u32 enable)
+{
+	struct property *oldprop;
+	struct property *newprop;
+
+	if (of_device_is_available(np) == !!enable)
+		return 0;
+
+	oldprop = of_find_property(np, "status", NULL);
+
+	if (enable) {
+		/* if enable, there must be a status property with "disabled" state */
+		prom_remove_property(np, oldprop);
+	} else {
+		newprop = kzalloc(sizeof(*newprop), GFP_KERNEL);
+		if (!newprop)
+			return -ENOMEM;
+
+		newprop->name = kstrdup("status", GFP_KERNEL);
+		newprop->value = kstrdup("disabled", GFP_KERNEL);
+		newprop->length = 9;
+		if (!newprop->name || !newprop->value) {
+			kfree(newprop->name);
+			kfree(newprop->value);
+			kfree(newprop);
+			return -ENOMEM;
+		}
+
+		if (!oldprop)
+			prom_add_property(np, newprop);
+		else
+			prom_update_property(np, newprop, oldprop);
+	}
+
+	return 0;
+}
+
+int of_node_status_disable(struct device_node *np)
+{
+	return of_node_status_update(np, 0);
+}
+EXPORT_SYMBOL_GPL(of_node_status_disable);
+
+int of_node_status_enable(struct device_node *np)
+{
+	return of_node_status_update(np, 1);
+}
+EXPORT_SYMBOL_GPL(of_node_status_enable);
+
+int of_node_status_disable_by_path(const char *path)
+{
+	struct device_node *np;
+
+	np = of_find_node_by_path(path);
+	if (!np)
+		return -ENODEV;
+
+	return of_node_status_update(np, 0);
+}
+EXPORT_SYMBOL_GPL(of_node_status_disable_by_path);
+
+int of_node_status_enable_by_path(const char *path)
+{
+	struct device_node *np;
+
+	np = of_find_node_by_path(path);
+	if (!np)
+		return -ENODEV;
+
+	return of_node_status_update(np, 1);
+}
+EXPORT_SYMBOL_GPL(of_node_status_enable_by_path);
+
 #if defined(CONFIG_OF_DYNAMIC)
 /*
  * Support for dynamic device trees.
