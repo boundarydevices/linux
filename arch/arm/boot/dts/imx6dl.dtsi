@@ -623,6 +623,7 @@
 				compatible = "fsl,imx1-i2c";
 				reg = <0x021f8000 0x4000>;
 				interrupts = <0 35 0x04>;
+				clocks = <&clks 218>;
 				status = "disabled";
 			};
 		};
