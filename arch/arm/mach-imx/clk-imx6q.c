@@ -235,7 +235,8 @@ enum mx6q_clks {
 	usbphy2_gate, cko1_cko2_sel, cko2_sel, cko2_podf, cko2, spdif, aips_tz1,
 	aips_tz2, caam_mem, caam_aclk, caam_ipg, tzasc1, tzasc2, vdoa, mmdc_ch0_ipg,
 	mmdc_ch1_ipg, mx6fast1, per2_main, emi_slow,
-	sata_ref_100m, pcie_ref_125m, enet_ref, pll4_post_div, pll5_post_div, pll5_video_div, clk_max
+	sata_ref_100m, pcie_ref_125m, enet_ref, pll4_post_div, pll5_post_div, pll5_video_div,
+	i2c4, clk_max
 };
 
 static struct clk *clk[clk_max];
@@ -473,7 +474,10 @@ int __init mx6q_clocks_init(void)
 	clk[ecspi2]       = imx_clk_gate2("ecspi2",        "ecspi_root",        base + 0x6c, 2);
 	clk[ecspi3]       = imx_clk_gate2("ecspi3",        "ecspi_root",        base + 0x6c, 4);
 	clk[ecspi4]       = imx_clk_gate2("ecspi4",        "ecspi_root",        base + 0x6c, 6);
-	clk[ecspi5]       = imx_clk_gate2("ecspi5",        "ecspi_root",        base + 0x6c, 8);
+	if (cpu_is_imx6q())
+		clk[ecspi5]       = imx_clk_gate2("ecspi5", "ecspi_root",       base + 0x6c, 8);
+	else if (cpu_is_imx6dl())
+		clk[i2c4]         = imx_clk_gate2("i2c4",  "ecspi_root",        base + 0x6c, 8);
 	clk[enet]         = imx_clk_gate2("enet",          "ipg",               base + 0x6c, 10);
 	clk[esai]         = imx_clk_gate2("esai",          "esai_podf",         base + 0x6c, 16);
 	clk[gpt_ipg]      = imx_clk_gate2("gpt_ipg",       "ipg",               base + 0x6c, 20);
