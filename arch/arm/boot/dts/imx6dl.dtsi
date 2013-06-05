@@ -299,6 +299,13 @@
 							MX6DL_PAD_GPIO_6__I2C3_SDA  0x4001b8b1
 						>;
 					};
+
+					pinctrl_i2c3_4: i2c3grp-4 {
+						fsl,pins = <
+							MX6DL_PAD_GPIO_3__I2C3_SCL  0x4001b8b1
+							MX6DL_PAD_EIM_D18__I2C3_SDA  0x4001b8b1
+						>;
+					};
 				};
 
 				ipu1 {
