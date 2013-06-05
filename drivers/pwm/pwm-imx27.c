@@ -232,41 +232,86 @@ static void pwm_imx27_wait_fifo_slot(struct pwm_chip *chip,
 static int pwm_imx27_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 			   const struct pwm_state *state)
 {
-	unsigned long period_cycles, duty_cycles, prescale, counter_check, flags;
+	unsigned long duty_cycles, counter_check, flags;
 	struct pwm_imx27_chip *imx = to_pwm_imx27_chip(chip);
 	void __iomem *reg_sar = imx->mmio_base + MX3_PWMSAR;
 	__force u32 sar_last, sar_current;
 	struct pwm_state cstate;
+	int duty_ns = state->duty_cycle;
+	int period_ns = state->period;
+	unsigned src, best_src = 0;
+	unsigned long best_rate = ~0;
+	unsigned long best_error = ~0;
+	unsigned long best_cycles = 0, best_prescale = 0;
 	unsigned long long c;
-	unsigned long long clkrate;
 	int ret;
 	u32 cr, timeout = 1000;
 
 	pwm_get_state(pwm, &cstate);
 
-	clkrate = clk_get_rate(imx->clk_per);
-	c = clkrate * state->period;
+	if (!state->enabled) {
+		if (cstate.enabled) {
+			writel(0, imx->mmio_base + MX3_PWMCR);
+			pwm_imx27_clk_disable_unprepare(imx);
+		}
+		return 0;
+	}
 
-	do_div(c, NSEC_PER_SEC);
-	period_cycles = c;
+	for (src = MX3_PWMCR_CLKSRC_IPG; src <= MX3_PWMCR_CLKSRC_IPG_32K; src++) {
+		unsigned long rate;
+		unsigned long ns, error;
+		unsigned long prescale, cycles;
 
-	prescale = period_cycles / 0x10000 + 1;
+		switch (src) {
+		case MX3_PWMCR_CLKSRC_IPG:
+			rate = clk_get_rate(imx->clk_ipg);
+			break;
+		case MX3_PWMCR_CLKSRC_IPG_HIGH:
+			rate = clk_get_rate(imx->clk_per);
+			break;
+		case MX3_PWMCR_CLKSRC_IPG_32K:
+			rate = 32768;
+		}
+		c = rate;
+		c = c * (unsigned)period_ns + 500000000;
+		do_div(c, 1000000000);
+		cycles = c;
 
-	period_cycles /= prescale;
-	c = clkrate * state->duty_cycle;
-	do_div(c, NSEC_PER_SEC);
+		prescale = cycles / 0x10000 + 1;
+		if (prescale > 4096)
+			prescale = 4096;
+
+		cycles /= prescale;
+		if (cycles < 2)
+			cycles = 2;
+		else if (cycles > 0x10001)
+			cycles = 0x10001;
+
+		c = prescale * cycles;
+		c = c * 1000000000 + (rate >> 1);
+		do_div(c, rate);
+		ns = c;
+		error = (ns >= (unsigned)period_ns) ? (ns  - period_ns) :
+				period_ns - ns;
+		pr_debug("error=%ld, ns=%ld, period_ns=%d cycles=%ld\n",
+				error, ns, period_ns, cycles);
+		if (best_error >= error) {
+			if ((best_error > error) || (best_rate > rate)) {
+				best_error = error;
+				best_cycles = cycles;
+				best_prescale = prescale;
+				best_src = src;
+				best_rate = rate;
+			}
+		}
+	}
+	c = (unsigned long long)best_cycles * (unsigned)duty_ns;
+	do_div(c, period_ns);
 	duty_cycles = c;
-	duty_cycles /= prescale;
+	if ((duty_cycles == 0) && duty_ns)
+		duty_cycles = 1;
 
-	/*
-	 * according to imx pwm RM, the real period value should be PERIOD
-	 * value in PWMPR plus 2.
-	 */
-	if (period_cycles > 2)
-		period_cycles -= 2;
-	else
-		period_cycles = 0;
-
+	pr_debug("best_src=%d best_cycles=0x%lx\n", best_src, best_cycles);
 	/*
 	 * Wait for a free FIFO slot if the PWM is already enabled, and flush
 	 * the FIFO if the PWM was disabled and is about to be enabled.
@@ -309,7 +354,7 @@ static int pwm_imx27_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 	 * can solve this problem.
 	 */
 	if (duty_cycles < imx->duty_cycle) {
-		c = clkrate * 1500;
+		c = best_rate * 1500;
 		do_div(c, NSEC_PER_SEC);
 		counter_check = c;
 		sar_last = cpu_to_le32(imx->duty_cycle);
@@ -317,7 +362,7 @@ static int pwm_imx27_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 
 		spin_lock_irqsave(&imx->lock, flags);
 		if (state->period >= 2000) {
-			while ((period_cycles -
+			while ((best_cycles - 2 -
 				readl_relaxed(imx->mmio_base + MX3_PWMCNR))
 				< counter_check) {
 				if (!--timeout)
@@ -332,7 +377,11 @@ static int pwm_imx27_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 	} else
 		writel(duty_cycles, imx->mmio_base + MX3_PWMSAR);
 
-	writel(period_cycles, imx->mmio_base + MX3_PWMPR);
+	/*
+	 * according to imx pwm RM, the real period value should be
+	 * PERIOD value in PWMPR plus 2.
+	 */
+	writel(best_cycles - 2, imx->mmio_base + MX3_PWMPR);
 
 	/*
 	 * Store the duty cycle for future reference in cases where the
@@ -340,9 +389,9 @@ static int pwm_imx27_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 	 */
 	imx->duty_cycle = duty_cycles;
 
-	cr = MX3_PWMCR_PRESCALER_SET(prescale) |
+	cr = MX3_PWMCR_PRESCALER_SET(best_prescale) |
 	     MX3_PWMCR_STOPEN | MX3_PWMCR_DOZEN | MX3_PWMCR_WAITEN |
-	     FIELD_PREP(MX3_PWMCR_CLKSRC, MX3_PWMCR_CLKSRC_IPG_HIGH) |
+	     FIELD_PREP(MX3_PWMCR_CLKSRC, best_src) |
 	     MX3_PWMCR_DBGEN;
 
 	if (state->polarity == PWM_POLARITY_INVERSED)
