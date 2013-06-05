@@ -301,8 +301,31 @@
 			i2c@021a8000 { /* I2C3 */
 				clock-frequency = <100000>;
 				pinctrl-names = "default";
+				steer-gpios = <&gpio5 4 0>;
+				reset-gpios = <&gpio1 15 0>;
 				pinctrl-0 = <&pinctrl_i2c3_4>;
 				status = "okay";
+
+				max7310_1: gpio@30{
+					compatible = "maxim,max7310";
+					reg = <0x30>;
+					gpio-controller;
+					#gpio-cells = <2>;
+				};
+
+				max7310_2: gpio@32{
+					compatible = "maxim,max7310";
+					reg = <0x32>;
+					gpio-controller;
+					#gpio-cells = <2>;
+				};
+
+				max7310_3: gpio@34{
+					compatible = "maxim,max7310";
+					reg = <0x34>;
+					gpio-controller;
+					#gpio-cells = <2>;
+				};
 			};
 		};
 

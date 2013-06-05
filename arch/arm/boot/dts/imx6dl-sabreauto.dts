@@ -33,6 +33,13 @@
 							/* RGMII Phy Interrupt */
 							MX6DL_PAD_GPIO_19__GPIO4_IO05 0x80000000
 							MX6DL_PAD_EIM_EB0__GPIO2_IO28 0x80000000
+							/*
+							 * SABREAUTO_I2C3_STEER
+							 * enable either EIM_D18 or i2c3_sda route path
+							 */
+							MX6DL_PAD_EIM_A24__GPIO5_IO04 0x80000000
+							/* max7310 reset pin */
+							MX6DL_PAD_SD2_DAT0__GPIO1_IO15 0x80000000
 						>;
 					};
 				};

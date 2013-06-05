@@ -47,6 +47,7 @@
 #include <mach/common.h>
 #include <mach/cpuidle.h>
 #include <mach/hardware.h>
+#include <mach/i2c.h>
 #include <mach/busfreq.h>
 #ifdef CONFIG_PCI_MSI
 #include "msi.h"
@@ -877,12 +878,56 @@ static struct ahci_platform_data imx_sata_pdata = {
 	.exit = imx_sata_exit,
 };
 
+static int i2c3_board_init(void)
+{
+	struct device_node *np;
+	int i2c3_steer_gpio;
+	int max7310_reset_gpio;
+
+	np = of_find_node_by_path("/soc/aips-bus@02100000/i2c@021a8000");
+	if (!np)
+		return -ENODEV;
+
+	i2c3_steer_gpio = of_get_named_gpio(np, "steer-gpios", 0);
+	max7310_reset_gpio = of_get_named_gpio(np, "reset-gpios", 0);
+	if (!gpio_is_valid(i2c3_steer_gpio) || !gpio_is_valid(max7310_reset_gpio)) {
+		pr_warn("unable to get i2c board setup gpios\n");
+		return -ENODEV;
+	}
+
+	if (gpio_request_one(i2c3_steer_gpio, GPIOF_DIR_OUT,
+			"i2c3 steer gpio"))
+		return -EINVAL;
+
+	if (gpio_request_one(max7310_reset_gpio, GPIOF_DIR_OUT,
+			"max7310 reset gpio"))
+		return -EINVAL;
+
+	/* enable either EIM_D18 or i2c3_sda route path */
+	if (spinor_en || weim_nor) {
+		gpio_set_value(i2c3_steer_gpio , 0);
+		gpio_set_value(i2c3_steer_gpio , 0);
+	} else {
+		gpio_set_value(i2c3_steer_gpio , 1);
+		gpio_set_value(max7310_reset_gpio, 1);
+	}
+
+	of_node_put(np);
+
+	return 0;
+}
+
+static struct imxi2c_platform_data i2c3_pdata = {
+	.board_init = i2c3_board_init,
+};
+
 /* Add auxdata to pass platform data */
 static const struct of_dev_auxdata imx6q_auxdata_lookup[] __initconst = {
 	OF_DEV_AUXDATA("snps,imx-ahci", MX6Q_SATA_BASE_ADDR, "imx-ahci",
 			&imx_sata_pdata),
 	OF_DEV_AUXDATA("fsl,imx6q-flexcan", 0x02090000, NULL, &flexcan_pdata[0]),
 	OF_DEV_AUXDATA("fsl,imx6q-flexcan", 0x02094000, NULL, &flexcan_pdata[1]),
+	OF_DEV_AUXDATA("fsl,imx6q-i2c", 0x021a8000, NULL, &i2c3_pdata),
 	{ /* sentinel */ }
 };
 
