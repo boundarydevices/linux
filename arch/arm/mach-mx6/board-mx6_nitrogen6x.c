@@ -321,7 +321,7 @@ static struct mtd_partition spi_nor_partitions[] = {
 	},
 };
 
-static struct flash_platform_data _spi_flash_data = {
+static struct flash_platform_data spi_flash_data = {
 	.name = "m25p80",
 	.parts = spi_nor_partitions,
 	.nr_parts = ARRAY_SIZE(spi_nor_partitions),
@@ -336,7 +336,7 @@ static struct spi_board_info spi_nor_device[] __initdata = {
 		.max_speed_hz = 20000000, /* max spi clock (SCK) speed in HZ */
 		.bus_num = 0,
 		.chip_select = 0,
-		.platform_data = &_spi_flash_data,
+		.platform_data = &spi_flash_data,
 	},
 #endif
 };
