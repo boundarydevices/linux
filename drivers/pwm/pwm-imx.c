@@ -37,6 +37,7 @@
 #define MX3_PWMSAR			0x0C    /* PWM Sample Register */
 #define MX3_PWMPR			0x10    /* PWM Period Register */
 #define MX3_PWMCR_PRESCALER(x)		((((x) - 1) & 0xFFF) << 4)
+#define MX3_PWMCR_STOPEN		(1 << 25)
 #define MX3_PWMCR_DOZEEN		(1 << 24)
 #define MX3_PWMCR_WAITEN		(1 << 23)
 #define MX3_PWMCR_DBGEN			(1 << 22)
@@ -49,6 +50,11 @@
 #define MX3_PWMSR_FIFOAV_MASK		0x7
 
 #define MX3_PWM_SWR_LOOP		5
+
+#define MX3_PWMCR_CLKSRC(src)	(src << 16)
+#define CLKSRC_IPG	1
+#define CLKSRC_PER	2
+#define CLKSRC_32k	3
 
 struct imx_chip {
 	struct clk	*clk_per;
@@ -202,70 +208,113 @@ static void imx_pwm_wait_fifo_slot(struct pwm_chip *chip,
 static int imx_pwm_apply_v2(struct pwm_chip *chip, struct pwm_device *pwm,
 			    struct pwm_state *state)
 {
-	unsigned long period_cycles, duty_cycles, prescale;
+	unsigned long duty_cycles;
 	struct imx_chip *imx = to_imx_chip(chip);
 	struct pwm_state cstate;
+	int duty_ns = state->duty_cycle;
+	int period_ns = state->period;
+	unsigned src, best_src = 0;
+	unsigned long best_rate = ~0;
+	unsigned long best_error = ~0;
+	unsigned long best_cycles = 0, best_prescale = 0;
 	unsigned long long c;
 	int ret;
 	u32 cr;
 
 	pwm_get_state(pwm, &cstate);
 
-	if (state->enabled) {
-		c = clk_get_rate(imx->clk_per);
-		c *= state->period;
-
-		do_div(c, 1000000000);
-		period_cycles = c;
-
-		prescale = period_cycles / 0x10000 + 1;
-
-		period_cycles /= prescale;
-		c = (unsigned long long)period_cycles * state->duty_cycle;
-		do_div(c, state->period);
-		duty_cycles = c;
-
-		/*
-		 * according to imx pwm RM, the real period value should be
-		 * PERIOD value in PWMPR plus 2.
-		 */
-		if (period_cycles > 2)
-			period_cycles -= 2;
-		else
-			period_cycles = 0;
-
-		/*
-		 * Wait for a free FIFO slot if the PWM is already enabled, and
-		 * flush the FIFO if the PWM was disabled and is about to be
-		 * enabled.
-		 */
+	if (!state->enabled) {
 		if (cstate.enabled) {
-			imx_pwm_wait_fifo_slot(chip, pwm);
-		} else {
-			ret = imx_pwm_clk_prepare_enable(chip);
-			if (ret)
-				return ret;
-
-			imx_pwm_sw_reset(chip);
+			writel(0, imx->mmio_base + MX3_PWMCR);
+			imx_pwm_clk_disable_unprepare(chip);
 		}
-
-		writel(duty_cycles, imx->mmio_base + MX3_PWMSAR);
-		writel(period_cycles, imx->mmio_base + MX3_PWMPR);
-
-		cr = MX3_PWMCR_PRESCALER(prescale) |
-		     MX3_PWMCR_DOZEEN | MX3_PWMCR_WAITEN |
-		     MX3_PWMCR_DBGEN | MX3_PWMCR_CLKSRC_IPG_HIGH |
-		     MX3_PWMCR_EN;
-
-		if (state->polarity == PWM_POLARITY_INVERSED)
-			cr |= MX3_PWMCR_POUTC;
-
-		writel(cr, imx->mmio_base + MX3_PWMCR);
-	} else if (cstate.enabled) {
-		writel(0, imx->mmio_base + MX3_PWMCR);
-
-		imx_pwm_clk_disable_unprepare(chip);
+		return 0;
 	}
+
+	for (src = CLKSRC_IPG; src <= CLKSRC_32k; src++) {
+		unsigned long rate;
+		unsigned long ns, error;
+		unsigned long prescale, cycles;
+
+		switch (src) {
+		case CLKSRC_IPG:
+			rate = clk_get_rate(imx->clk_ipg);
+			break;
+		case CLKSRC_PER:
+			rate = clk_get_rate(imx->clk_per);
+			break;
+		case CLKSRC_32k:
+			rate = 32768;
+		}
+		c = rate;
+		c = c * (unsigned)period_ns + 500000000;
+		do_div(c, 1000000000);
+		cycles = c;
+
+		prescale = cycles / 0x10000 + 1;
+		if (prescale > 4096)
+			prescale = 4096;
+
+		cycles /= prescale;
+		if (cycles < 2)
+			cycles = 2;
+		else if (cycles > 0x10001)
+			cycles = 0x10001;
+
+		c = prescale * cycles;
+		c = c * 1000000000 + (rate >> 1);
+		do_div(c, rate);
+		ns = c;
+		error = (ns >= (unsigned)period_ns) ? (ns  - period_ns) :
+				period_ns - ns;
+		pr_debug("error=%ld, ns=%ld, period_ns=%d cycles=%ld\n",
+				error, ns, period_ns, cycles);
+		if (best_error >= error) {
+			if ((best_error > error) || (best_rate > rate)) {
+				best_error = error;
+				best_cycles = cycles;
+				best_prescale = prescale;
+				best_src = src;
+				best_rate = rate;
+			}
+		}
+	}
+	c = (unsigned long long)best_cycles * (unsigned)duty_ns;
+	do_div(c, period_ns);
+	duty_cycles = c;
+	if ((duty_cycles == 0) && duty_ns)
+		duty_cycles = 1;
+
+	pr_debug("best_src=%d best_cycles=0x%lx\n", best_src, best_cycles);
+	/*
+	 * Wait for a free FIFO slot if the PWM is already enabled, and
+	 * flush the FIFO if the PWM was disabled and is about to be
+	 * enabled.
+	 */
+	if (cstate.enabled) {
+		imx_pwm_wait_fifo_slot(chip, pwm);
+	} else {
+		ret = imx_pwm_clk_prepare_enable(chip);
+		if (ret)
+			return ret;
+
+		imx_pwm_sw_reset(chip);
+	}
+	writel(duty_cycles, imx->mmio_base + MX3_PWMSAR);
+	/*
+	 * according to imx pwm RM, the real period value should be
+	 * PERIOD value in PWMPR plus 2.
+	 */
+	writel(best_cycles - 2, imx->mmio_base + MX3_PWMPR);
+
+	cr = MX3_PWMCR_PRESCALER(best_prescale) |
+		MX3_PWMCR_STOPEN | MX3_PWMCR_DOZEEN | MX3_PWMCR_WAITEN |
+		MX3_PWMCR_DBGEN | MX3_PWMCR_CLKSRC(best_src) |
+		MX3_PWMCR_EN;
+
+	if (state->polarity == PWM_POLARITY_INVERSED)
+		cr |= MX3_PWMCR_POUTC;
+	writel(cr, imx->mmio_base + MX3_PWMCR);
 
 	return 0;
 }
