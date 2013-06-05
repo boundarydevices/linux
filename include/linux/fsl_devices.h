@@ -309,6 +309,7 @@ struct fsl_mxc_camera_platform_data {
 	char *gpo_regulator;
 	u32 mclk;
 	u8 mclk_source;
+	int ipu;
 	u32 csi;
 	void (*pwdn)(int pwdn);
 	void (*io_init)(void);
@@ -323,6 +324,8 @@ struct fsl_mxc_tvin_platform_data {
 	void (*reset)(void);
 	void (*io_init)(void);
 	bool cvbs;
+	int ipu;
+	u32 csi;
 	/* adv7280 mipi-csi i2c slave addr */
 	u8 csi_tx_addr;
 };
