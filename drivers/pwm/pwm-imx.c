@@ -47,6 +47,11 @@
 
 #define MX3_PWM_SWR_LOOP		5
 
+#define MX3_PWMCR_CLKSRC(src)	(src << 16)
+#define CLKSRC_IPG	1
+#define CLKSRC_PER	2
+#define CLKSRC_32k	3
+
 struct imx_chip {
 	struct clk	*clk_per;
 	struct clk	*clk_ipg;
@@ -111,8 +116,12 @@ static int imx_pwm_config_v2(struct pwm_chip *chip,
 {
 	struct imx_chip *imx = to_imx_chip(chip);
 	struct device *dev = chip->dev;
+	unsigned src, best_src = 0;
+	unsigned long best_rate = ~0;
+	unsigned long best_error = ~0;
+	unsigned long best_cycles = 0, best_prescale = 0;
+	unsigned long duty_cycles;
 	unsigned long long c;
-	unsigned long period_cycles, duty_cycles, prescale;
 	unsigned int period_ms;
 	bool enable = pwm_is_enabled(pwm);
 	int wait_count = 0, fifoav;
@@ -149,33 +158,71 @@ static int imx_pwm_config_v2(struct pwm_chip *chip,
 			dev_warn(dev, "software reset timeout\n");
 	}
 
-	c = clk_get_rate(imx->clk_per);
-	c = c * period_ns;
-	do_div(c, 1000000000);
-	period_cycles = c;
+	for (src = CLKSRC_IPG; src <= CLKSRC_32k; src++) {
+		unsigned long rate;
+		unsigned long ns, error;
+		unsigned long prescale, cycles;
 
-	prescale = period_cycles / 0x10000 + 1;
+		switch (src) {
+		case CLKSRC_IPG:
+			rate = clk_get_rate(imx->clk_ipg);
+			break;
+		case CLKSRC_PER:
+			rate = clk_get_rate(imx->clk_per);
+			break;
+		case CLKSRC_32k:
+			rate = 32768;
+		}
+		c = rate;
+		c = c * (unsigned)period_ns + 500000000;
+		do_div(c, 1000000000);
+		cycles = c;
 
-	period_cycles /= prescale;
-	c = (unsigned long long)period_cycles * duty_ns;
+		prescale = cycles / 0x10000 + 1;
+		if (prescale > 4096)
+			prescale = 4096;
+
+		cycles /= prescale;
+		if (cycles < 2)
+			cycles = 2;
+		else if (cycles > 0x10001)
+			cycles = 0x10001;
+
+		c = prescale * cycles;
+		c = c * 1000000000 + (rate >> 1);
+		do_div(c, rate);
+		ns = c;
+		error = (ns >= (unsigned)period_ns) ? (ns  - period_ns) :
+				period_ns - ns;
+		pr_debug("error=%ld, ns=%ld, period_ns=%d cycles=%ld\n",
+				error, ns, period_ns, cycles);
+		if (best_error >= error) {
+			if ((best_error > error) || (best_rate > rate)) {
+				best_error = error;
+				best_cycles = cycles;
+				best_prescale = prescale;
+				best_src = src;
+				best_rate = rate;
+			}
+		}
+	}
+	c = (unsigned long long)best_cycles * (unsigned)duty_ns;
 	do_div(c, period_ns);
 	duty_cycles = c;
+	if ((duty_cycles == 0) && duty_ns)
+		duty_cycles = 1;
 
+	pr_debug("best_src=%d best_cycles=0x%lx\n", best_src, best_cycles);
+	writel(duty_cycles, imx->mmio_base + MX3_PWMSAR);
 	/*
 	 * according to imx pwm RM, the real period value should be
 	 * PERIOD value in PWMPR plus 2.
 	 */
-	if (period_cycles > 2)
-		period_cycles -= 2;
-	else
-		period_cycles = 0;
+	writel(best_cycles - 2, imx->mmio_base + MX3_PWMPR);
 
-	writel(duty_cycles, imx->mmio_base + MX3_PWMSAR);
-	writel(period_cycles, imx->mmio_base + MX3_PWMPR);
-
-	cr = MX3_PWMCR_PRESCALER(prescale) |
+	cr = MX3_PWMCR_PRESCALER(best_prescale) |
 		MX3_PWMCR_DOZEEN | MX3_PWMCR_WAITEN |
-		MX3_PWMCR_DBGEN | MX3_PWMCR_CLKSRC_IPG_HIGH;
+		MX3_PWMCR_DBGEN | MX3_PWMCR_CLKSRC(best_src);
 
 	if (enable)
 		cr |= MX3_PWMCR_EN;
