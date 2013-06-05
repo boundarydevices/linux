@@ -79,6 +79,7 @@ static int sd30_en;
 static int spdif_en;
 static int tuner_en;
 static int weim_nor;
+static int spinor_en;
 static void __iomem *wdog_base1;
 static void __iomem *wdog_base2;
 
@@ -109,6 +110,14 @@ static int __init early_enable_weim(char *p)
 	return 0;
 }
 early_param("weim-nor", early_enable_weim);
+
+static int __init spinor_enable(char *p)
+{
+	spinor_en = 1;
+	return 0;
+}
+early_param("spi-nor", spinor_enable);
+
 /*
  * The length's determined by PINFUNC definition's length.
  * To check the length, see: arch/arm/boot/dts/imx6q-pinfunc.h
@@ -597,11 +606,18 @@ static void __init imx6q_sabreauto_init(void)
 	if (!tuner_en)
 		remove_pinctrl0("/soc/aips-bus@02100000/audmux@021d8000");
 
-	/* WEIM NOR has pin conflict with SPI NOR. */
-	if (weim_nor)
-		remove_pinctrl0("/soc/aips-bus@02000000/spba-bus@02000000/ecspi@02008000");
-	else
-		remove_pinctrl0("/soc/aips-bus@02100000/weim@021b8000");
+	/* WEIM NOR has pin conflict with SPI NOR and I2C3. */
+	if (spinor_en) {
+		of_node_status_disable_by_path("/soc/aips-bus@02100000/weim@021b8000");
+		of_node_status_disable_by_path("/soc/aips-bus@02100000/i2c@021a8000");
+	} else if (weim_nor) {
+		of_node_status_disable_by_path("/soc/aips-bus@02000000/spba-bus@02000000/ecspi@02008000");
+		of_node_status_disable_by_path("/soc/aips-bus@02100000/i2c@021a8000");
+	} else {
+		/* if neither spi-nor nor weim-nor is enabled, enable i2c3 */
+		of_node_status_disable_by_path("/soc/aips-bus@02100000/weim@021b8000");
+		of_node_status_disable_by_path("/soc/aips-bus@02000000/spba-bus@02000000/ecspi@02008000");
+	}
 }
 
 static void __init imx6q_1588_init(void)
