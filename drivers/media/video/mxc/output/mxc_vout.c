@@ -2058,10 +2058,12 @@ static int mxc_vout_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	dev->dev = &pdev->dev;
-	dev->dev->dma_mask = kmalloc(sizeof(*dev->dev->dma_mask), GFP_KERNEL);
-	*dev->dev->dma_mask = DMA_BIT_MASK(32);
-	dev->dev->coherent_dma_mask = DMA_BIT_MASK(32);
-
+	if (!dev->dev->dma_mask) {
+		dev->dev->dma_mask = kmalloc(sizeof(*dev->dev->dma_mask), GFP_KERNEL);
+		if (dev->dev->dma_mask)
+			*dev->dev->dma_mask = DMA_BIT_MASK(32);
+		dev->dev->coherent_dma_mask = DMA_BIT_MASK(32);
+	}
 	ret = v4l2_device_register(dev->dev, &dev->v4l2_dev);
 	if (ret) {
 		dev_err(dev->dev, "v4l2_device_register failed\n");
