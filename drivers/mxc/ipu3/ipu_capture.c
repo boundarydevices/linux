@@ -128,9 +128,12 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 
 	mutex_lock(&ipu->mutex_lock);
 
+	dev_dbg(ipu->dev, "%s:CSI_SENS_CONF: ipu=%p,csi=%x,data=%x\n", __func__, ipu, csi, data);
 	ipu_csi_write(ipu, csi, data, CSI_SENS_CONF);
 
+	dev_dbg(ipu->dev, "%s: cfg_param.mclk=%d\n", __func__, cfg_param.mclk);
 	/* Setup sensor frame size */
+	dev_dbg(ipu->dev, "%s: %dx%d\n", __func__, width, height);
 	ipu_csi_write(ipu, csi, (width - 1) | (height - 1) << 16, CSI_SENS_FRM_SIZE);
 
 	/* Set CCIR registers */
@@ -290,6 +293,8 @@ void ipu_csi_set_window_size(struct ipu_soc *ipu, uint32_t width, uint32_t heigh
 	ipu_csi_write(ipu, csi, (width - 1) | (height - 1) << 16, CSI_ACT_FRM_SIZE);
 
 	mutex_unlock(&ipu->mutex_lock);
+	dev_dbg(ipu->dev, "CSI_ACT_FRM_SIZE = 0x%08X\n",
+		ipu_csi_read(ipu, csi, CSI_ACT_FRM_SIZE));
 
 	_ipu_put(ipu);
 }
@@ -747,6 +752,9 @@ int _ipu_csi_init(struct ipu_soc *ipu, ipu_channel_t channel, uint32_t csi)
 
 	csi_sens_conf = ipu_csi_read(ipu, csi, CSI_SENS_CONF);
 	csi_sens_conf &= ~CSI_SENS_CONF_DATA_DEST_MASK;
+	dev_dbg(ipu->dev, "%s:CSI_SENS_CONF: ipu=%p,csi=%x,data=%x\n", __func__,
+			ipu, csi, csi_sens_conf |
+			(csi_dest << CSI_SENS_CONF_DATA_DEST_SHIFT));
 	ipu_csi_write(ipu, csi, csi_sens_conf | (csi_dest <<
 		CSI_SENS_CONF_DATA_DEST_SHIFT), CSI_SENS_CONF);
 err:
