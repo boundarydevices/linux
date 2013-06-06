@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Freescale Semiconductor, Inc.
+ * Copyright (C) 2012-2013 Freescale Semiconductor, Inc.
  * Copyright 2012 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -16,6 +16,7 @@
 #include <linux/slab.h>
 #include <linux/jiffies.h>
 #include <linux/err.h>
+#include <linux/delay.h>
 #include "clk.h"
 
 #define PLL_NUM_OFFSET		0x10
@@ -50,7 +51,7 @@ struct clk_pllv3 {
 static int clk_pllv3_prepare(struct clk_hw *hw)
 {
 	struct clk_pllv3 *pll = to_clk_pllv3(hw);
-	unsigned long timeout = jiffies + msecs_to_jiffies(10);
+	int count = 100;
 	u32 val;
 
 	val = readl_relaxed(pll->base);
@@ -62,9 +63,14 @@ static int clk_pllv3_prepare(struct clk_hw *hw)
 	writel_relaxed(val, pll->base);
 
 	/* Wait for PLL to lock */
-	while (!(readl_relaxed(pll->base) & BM_PLL_LOCK))
-		if (time_after(jiffies, timeout))
-			return -ETIMEDOUT;
+	do {
+		if (readl_relaxed(pll->base) & BM_PLL_LOCK)
+			break;
+		udelay(100);
+	} while (count--);
+
+	if (count == 0 && !(readl_relaxed(pll->base) & BM_PLL_LOCK))
+		return -ETIMEDOUT;
 
 	return 0;
 }
