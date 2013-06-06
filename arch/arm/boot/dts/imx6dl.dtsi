@@ -268,6 +268,31 @@
                                         };
 				};
 
+				flexcan1 {
+					pinctrl_flexcan1_1: flexcan1grp-1 {
+						fsl,pins = <
+							MX6DL_PAD_KEY_ROW2__FLEXCAN1_RX  0x80000000
+							MX6DL_PAD_KEY_COL2__FLEXCAN1_TX  0x80000000
+						>;
+					};
+
+					pinctrl_flexcan1_2: flexcan1grp-2 {
+						fsl,pins = <
+							MX6DL_PAD_GPIO_7__FLEXCAN1_TX	0x80000000
+							MX6DL_PAD_KEY_ROW2__FLEXCAN1_RX	0x80000000
+						>;
+					};
+				};
+
+				flexcan2 {
+					pinctrl_flexcan2_1: flexcan2grp-1 {
+						fsl,pins = <
+							MX6DL_PAD_KEY_COL4__FLEXCAN2_TX  0x80000000
+							MX6DL_PAD_KEY_ROW4__FLEXCAN2_RX  0x80000000
+						>;
+					};
+				};
+
 				i2c1 {
 					pinctrl_i2c1_2: i2c1grp-2 {
 						fsl,pins = <

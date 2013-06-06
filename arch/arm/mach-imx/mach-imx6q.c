@@ -81,6 +81,7 @@ static int spdif_en;
 static int tuner_en;
 static int weim_nor;
 static int spinor_en;
+static int can0_enable;
 static void __iomem *wdog_base1;
 static void __iomem *wdog_base2;
 
@@ -118,6 +119,14 @@ static int __init spinor_enable(char *p)
 	return 0;
 }
 early_param("spi-nor", spinor_enable);
+
+static int __init early_enable_can0(char *p)
+{
+	can0_enable = 1;
+	return 0;
+}
+early_param("can0", early_enable_can0);
+
 
 /*
  * The length's determined by PINFUNC definition's length.
@@ -471,6 +480,77 @@ static int __init imx6q_flexcan_fixup(void)
 	return 0;
 }
 
+static int flexcan0_en;
+static int flexcan1_en;
+static int can1_steer;
+static void mx6q_flexcan_switch(void)
+{
+	if (flexcan0_en || flexcan1_en) {
+		gpio_set_value_cansleep(en_gpio[0], 1);
+		gpio_set_value_cansleep(stby_gpio[0], 1);
+
+		/*
+		 * Enable STEER pin if CAN1 interface is required.
+		 * STEER pin is used to switch between ENET_MDC
+		 * and CAN1_TX functionality. By default ENET_MDC
+		 * is active after reset.
+		 */
+		if (flexcan0_en)
+			gpio_set_value_cansleep(can1_steer, 1);
+	} else {
+		/*
+		 * avoid to disable CAN xcvr if any of the CAN interfaces
+		 * are down. XCRV will be disabled only if both CAN2
+		 * interfaces are DOWN.
+		 */
+		gpio_set_value_cansleep(en_gpio[0], 0);
+		gpio_set_value_cansleep(stby_gpio[0], 0);
+
+		/* turn down STEER pin only if CAN1 is DOWN */
+		if (!flexcan0_en)
+			gpio_set_value_cansleep(can1_steer, 0);
+	}
+}
+
+static void imx6q_flexcan0_switch_auto(int enable)
+{
+	flexcan0_en = enable;
+	mx6q_flexcan_switch();
+}
+
+static void imx6q_flexcan1_switch_auto(int enable)
+{
+	flexcan1_en = enable;
+	mx6q_flexcan_switch();
+}
+
+static int __init imx6q_flexcan_fixup_auto(void)
+{
+	struct device_node *np;
+
+	np = of_find_node_by_path("/soc/aips-bus@02000000/can@02090000");
+	if (!np)
+		return -ENODEV;
+
+	can1_steer = of_get_named_gpio(np, "tx-steer-gpio", 0);
+	if (gpio_is_valid(can1_steer)) {
+		if (gpio_request_one(can1_steer, GPIOF_OUT_INIT_LOW,
+				"flexcan1 tx steer"))
+			/* only warn to give a chance to flexcan2 to work */
+			pr_warn("unable to get flexcan1 tx-steer-gpio\n");
+	}
+
+	en_gpio[0] = of_get_named_gpio(np, "trx-en-gpio", 0);
+	stby_gpio[0] = of_get_named_gpio(np, "trx-stby-gpio", 0);
+	if (!gpio_request_one(en_gpio[0], GPIOF_DIR_OUT, "flexcan-trx-en") &&
+		!gpio_request_one(stby_gpio[0], GPIOF_DIR_OUT, "flexcan-trx-stby")) {
+		flexcan_pdata[0].transceiver_switch = imx6q_flexcan0_switch_auto;
+		flexcan_pdata[1].transceiver_switch = imx6q_flexcan1_switch_auto;
+	}
+
+	return 0;
+}
+
 static void __init imx6q_ar803x_phy_fixup(void)
 {
 	/* The phy layer fixup for AR8031 and AR8033 */
@@ -619,6 +699,11 @@ static void __init imx6q_sabreauto_init(void)
 		of_node_status_disable_by_path("/soc/aips-bus@02100000/weim@021b8000");
 		of_node_status_disable_by_path("/soc/aips-bus@02000000/spba-bus@02000000/ecspi@02008000");
 	}
+
+	if (can0_enable)
+		of_node_status_disable_by_path("/soc/aips-bus@02100000/ethernet@02188000");
+	else
+		of_node_status_disable_by_path("/soc/aips-bus@02000000/can@02090000");
 }
 
 static void __init imx6q_1588_init(void)
@@ -1030,7 +1115,14 @@ static void __init imx6q_init_machine(void)
 
 static void __init imx6q_init_late(void)
 {
-	imx6q_flexcan_fixup();
+
+	if (of_machine_is_compatible("fsl,imx6q-sabrelite") ||
+		of_machine_is_compatible("fsl,imx6q-arm2"))
+		imx6q_flexcan_fixup();
+	else if (of_machine_is_compatible("fsl,imx6q-sabreauto") ||
+		of_machine_is_compatible("fsl,imx6dl-sabreauto"))
+		imx6q_flexcan_fixup_auto();
+
 	/*
 	 * WAIT mode is broken on some TOs, and there is no point to
 	 * have cpuidle running on them.

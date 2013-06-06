@@ -82,6 +82,23 @@
 				status = "okay";
 			};
 
+			can@02090000 { /* CAN1 */
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_flexcan1_1>;
+				trx-en-gpio = <&max7310_2 6 0>;
+				trx-stby-gpio = <&max7310_2 5 0>;
+				tx-steer-gpio = <&max7310_2 3 0>;
+				status = "okay";
+			};
+
+			can@02094000 { /* CAN2 */
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_flexcan2_1>;
+				trx-en-gpio = <&max7310_2 6 0>;
+				trx-stby-gpio = <&max7310_2 5 0>;
+				status = "okay";
+			};
+
 			ldb@020e0000 {
 				ipu_id = <1>;
 				disp_id = <0>;
