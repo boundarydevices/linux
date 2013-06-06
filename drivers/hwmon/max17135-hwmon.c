@@ -54,17 +54,23 @@ static int temp_from_reg(int val)
 static int max17135_sensor_probe(struct platform_device *pdev);
 static int max17135_sensor_remove(struct platform_device *pdev);
 
+static const struct platform_device_id max17135_sns_id[] = {
+	{ "max17135-sns", 0},
+	{ /* sentinel */ },
+};
+MODULE_DEVICE_TABLE(platform, max17135_sns_id);
+
 /*
  * Driver data (common to all clients)
  */
 static struct platform_driver max17135_sensor_driver = {
 	.probe = max17135_sensor_probe,
 	.remove = max17135_sensor_remove,
+	.id_table = max17135_sns_id,
 	.driver = {
 		.name = "max17135_sensor",
 	},
 };
-
 
 /*
  * Client data (each client gets its own)

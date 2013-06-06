@@ -37,14 +37,23 @@
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/uaccess.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_gpio.h>
 
 #include <linux/platform_device.h>
 #include <linux/regulator/machine.h>
 #include <linux/pmic_status.h>
+#include <linux/mfd/core.h>
 #include <linux/mfd/max17135.h>
 #include <asm/mach-types.h>
 
 struct i2c_client *max17135_client;
+
+static struct mfd_cell max17135_devs[] = {
+	{ .name = "max17135-pmic", },
+	{ .name = "max17135-sns", },
+};
 
 static const unsigned short normal_i2c[] = {0x48, I2C_CLIENT_END};
 
@@ -95,14 +104,37 @@ int max17135_reg_write(int reg_num, const unsigned int reg_val)
 	return PMIC_SUCCESS;
 }
 
+#ifdef CONFIG_OF
+static struct max17135_platform_data *max17135_i2c_parse_dt_pdata(
+					struct device *dev)
+{
+	struct max17135_platform_data *pdata;
+
+	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
+	if (!pdata) {
+		dev_err(dev, "could not allocate memory for pdata\n");
+		return ERR_PTR(-ENOMEM);
+	}
+
+	return pdata;
+}
+#else
+static struct max17135_platform_data *max17135_i2c_parse_dt_pdata(
+					struct device *dev)
+{
+	return NULL;
+}
+#endif	/* !CONFIG_OF */
+
 static int max17135_probe(struct i2c_client *client,
 			    const struct i2c_device_id *id)
 {
 	struct max17135 *max17135;
 	struct max17135_platform_data *pdata = client->dev.platform_data;
+	struct device_node *np = client->dev.of_node;
 	int ret = 0;
 
-	if (!pdata || !pdata->init)
+	if (!np)
 		return -ENODEV;
 
 	/* Create the PMIC data structure */
@@ -119,16 +151,25 @@ static int max17135_probe(struct i2c_client *client,
 
 	max17135_client = client;
 
-	if (pdata && pdata->init) {
-		ret = pdata->init(max17135);
-		if (ret != 0)
+	mfd_add_devices(max17135->dev, -1, max17135_devs,
+			ARRAY_SIZE(max17135_devs),
+			NULL, 0);
+
+	if (max17135->dev->of_node) {
+		pdata = max17135_i2c_parse_dt_pdata(max17135->dev);
+		if (IS_ERR(pdata)) {
+			ret = PTR_ERR(pdata);
 			goto err;
+		}
+
 	}
+	max17135->pdata = pdata;
 
 	dev_info(&client->dev, "PMIC MAX17135 for eInk display\n");
 
 	return ret;
 err:
+	mfd_remove_devices(max17135->dev);
 	kfree(max17135);
 
 	return ret;
@@ -138,13 +179,8 @@ err:
 static int max17135_remove(struct i2c_client *i2c)
 {
 	struct max17135 *max17135 = i2c_get_clientdata(i2c);
-	int i;
 
-	for (i = 0; i < ARRAY_SIZE(max17135->pdev); i++)
-		platform_device_unregister(max17135->pdev[i]);
-
-	kfree(max17135);
-
+	mfd_remove_devices(max17135->dev);
 	return 0;
 }
 
@@ -200,11 +236,22 @@ static const struct i2c_device_id max17135_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, max17135_id);
 
+static const struct of_device_id max17135_dt_ids[] = {
+	{
+		.compatible = "maxim,max17135",
+		.data = (void *) &max17135_id[0],
+	}, {
+		/* sentinel */
+	}
+};
+MODULE_DEVICE_TABLE(of, max17135_dt_ids);
+
 
 static struct i2c_driver max17135_driver = {
 	.driver = {
 		   .name = "max17135",
 		   .owner = THIS_MODULE,
+		   .of_match_table = max17135_dt_ids,
 	},
 	.probe = max17135_probe,
 	.remove = max17135_remove,
@@ -228,5 +275,5 @@ static void __exit max17135_exit(void)
 /*
  * Module entry points
  */
-subsys_initcall_sync(max17135_init);
+subsys_initcall(max17135_init);
 module_exit(max17135_exit);

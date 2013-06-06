@@ -133,12 +133,10 @@ struct max17135 {
 	int rev;
 
 	struct device *dev;
+	struct max17135_platform_data *pdata;
 
 	/* Platform connection */
 	struct i2c_client *i2c_client;
-
-	/* Client devices */
-	struct platform_device *pdev[MAX17135_REG_NUM];
 
 	/* Timings */
 	unsigned int gvee_pwrup;
@@ -163,7 +161,6 @@ struct max17135 {
 
 	/* One-time VCOM setup marker */
 	bool vcom_setup;
-	bool init_done;
 
 	/* powerup/powerdown wait time */
 	int max_wait;
@@ -187,6 +184,7 @@ enum {
  * Declarations
  */
 struct regulator_init_data;
+struct max17135_regulator_data;
 
 struct max17135_platform_data {
 	unsigned int gvee_pwrup;
@@ -204,12 +202,17 @@ struct max17135_platform_data {
 	int gpio_pmic_intr;
 	int pass_num;
 	int vcom_uV;
-	struct regulator_init_data *regulator_init;
-	int (*init)(struct max17135 *);
+
+	/* PMIC */
+	struct max17135_regulator_data *regulators;
+	int num_regulators;
 };
 
-int max17135_register_regulator(struct max17135 *max17135, int reg,
-				     struct regulator_init_data *initdata);
+struct max17135_regulator_data {
+	int id;
+	struct regulator_init_data *initdata;
+	struct device_node *reg_node;
+};
 
 int max17135_reg_read(int reg_num, unsigned int *reg_val);
 int max17135_reg_write(int reg_num, const unsigned int reg_val);

@@ -26,8 +26,10 @@
 #include <linux/platform_device.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/driver.h>
+#include <linux/regulator/of_regulator.h>
 #include <linux/mfd/max17135.h>
 #include <linux/gpio.h>
+#include <linux/of_gpio.h>
 
 /*
  * Regulator definitions
@@ -80,6 +82,12 @@ struct max17135_vcom_programming_data {
 	int vcom_min_uV;
 	int vcom_max_uV;
 	int vcom_step_uV;
+};
+
+struct max17135_data {
+	int num_regulators;
+	struct max17135 *max17135;
+	struct regulator_dev **rdev;
 };
 
 static long unsigned int max17135_pass_num = { 1 };
@@ -538,113 +546,258 @@ static void max17135_setup_timings(struct max17135 *max17135)
 	}
 }
 
+#define CHECK_PROPERTY_ERROR_KFREE(prop) \
+do { \
+	int ret = of_property_read_u32(max17135->dev->of_node, \
+					#prop, &max17135->prop); \
+	if (ret < 0) { \
+		return ret;	\
+	}	\
+} while (0);
+
+#ifdef CONFIG_OF
+static int max17135_pmic_dt_parse_pdata(struct platform_device *pdev,
+					struct max17135_platform_data *pdata)
+{
+	struct max17135 *max17135 = dev_get_drvdata(pdev->dev.parent);
+	struct device_node *pmic_np, *regulators_np, *reg_np;
+	struct max17135_regulator_data *rdata;
+	int i, ret;
+
+	pmic_np = of_node_get(max17135->dev->of_node);
+	if (!pmic_np) {
+		dev_err(&pdev->dev, "could not find pmic sub-node\n");
+		return -ENODEV;
+	}
+
+	regulators_np = of_find_node_by_name(pmic_np, "regulators");
+	if (!regulators_np) {
+		dev_err(&pdev->dev, "could not find regulators sub-node\n");
+		return -EINVAL;
+	}
+
+	pdata->num_regulators = of_get_child_count(regulators_np);
+	pr_info("==> num_regulators %d\n", pdata->num_regulators);
+
+	rdata = devm_kzalloc(&pdev->dev, sizeof(*rdata) *
+				pdata->num_regulators, GFP_KERNEL);
+	if (!rdata) {
+		of_node_put(regulators_np);
+		dev_err(&pdev->dev, "could not allocate memory for"
+			"regulator data\n");
+		return -ENOMEM;
+	}
+
+	pdata->regulators = rdata;
+	for_each_child_of_node(regulators_np, reg_np) {
+		for (i = 0; i < ARRAY_SIZE(max17135_reg); i++)
+			if (!of_node_cmp(reg_np->name, max17135_reg[i].name))
+				break;
+
+		if (i == ARRAY_SIZE(max17135_reg)) {
+			dev_warn(&pdev->dev, "don't know how to configure"
+				"regulator %s\n", reg_np->name);
+			continue;
+		}
+
+		rdata->id = i;
+		rdata->initdata = of_get_regulator_init_data(&pdev->dev,
+							     reg_np);
+		rdata->reg_node = reg_np;
+		rdata++;
+	}
+	of_node_put(regulators_np);
+
+	CHECK_PROPERTY_ERROR_KFREE(vneg_pwrup);
+	CHECK_PROPERTY_ERROR_KFREE(gvee_pwrup);
+	CHECK_PROPERTY_ERROR_KFREE(vpos_pwrup);
+	CHECK_PROPERTY_ERROR_KFREE(gvdd_pwrup);
+	CHECK_PROPERTY_ERROR_KFREE(gvdd_pwrdn);
+	CHECK_PROPERTY_ERROR_KFREE(vpos_pwrdn);
+	CHECK_PROPERTY_ERROR_KFREE(gvee_pwrdn);
+	CHECK_PROPERTY_ERROR_KFREE(vneg_pwrdn);
+
+	dev_info(&pdev->dev, "vneg_pwrup %d, vneg_pwrdn %d, vpos_pwrup %d,"
+		"vpos_pwrdn %d, gvdd_pwrup %d, gvdd_pwrdn %d, gvee_pwrup %d,"
+		"gvee_pwrdn %d\n", max17135->vneg_pwrup, max17135->vneg_pwrdn,
+		max17135->vpos_pwrup, max17135->vpos_pwrdn,
+		max17135->gvdd_pwrup, max17135->gvdd_pwrdn,
+		max17135->gvee_pwrup, max17135->gvee_pwrdn);
+
+	max17135->max_wait = max17135->vpos_pwrup + max17135->vneg_pwrup +
+		max17135->gvdd_pwrup + max17135->gvee_pwrup;
+
+	max17135->gpio_pmic_wakeup = of_get_named_gpio(pmic_np,
+					"gpio_pmic_wakeup", 0);
+	if (!gpio_is_valid(max17135->gpio_pmic_wakeup)) {
+		dev_err(&pdev->dev, "no epdc pmic wakeup pin available\n");
+		goto err;
+	}
+	ret = devm_gpio_request_one(&pdev->dev, max17135->gpio_pmic_wakeup,
+				GPIOF_OUT_INIT_LOW, "epdc-pmic-wake");
+	if (ret < 0)
+		goto err;
+
+	max17135->gpio_pmic_vcom_ctrl = of_get_named_gpio(pmic_np,
+					"gpio_pmic_vcom_ctrl", 0);
+	if (!gpio_is_valid(max17135->gpio_pmic_vcom_ctrl)) {
+		dev_err(&pdev->dev, "no epdc pmic vcom_ctrl pin available\n");
+		goto err;
+	}
+	ret = devm_gpio_request_one(&pdev->dev, max17135->gpio_pmic_vcom_ctrl,
+				GPIOF_OUT_INIT_LOW, "epdc-vcom");
+	if (ret < 0)
+		goto err;
+
+	max17135->gpio_pmic_v3p3 = of_get_named_gpio(pmic_np,
+					"gpio_pmic_v3p3", 0);
+	if (!gpio_is_valid(max17135->gpio_pmic_v3p3)) {
+		dev_err(&pdev->dev, "no epdc pmic v3p3 pin available\n");
+		goto err;
+	}
+	ret = devm_gpio_request_one(&pdev->dev, max17135->gpio_pmic_v3p3,
+				GPIOF_OUT_INIT_LOW, "epdc-v3p3");
+	if (ret < 0)
+		goto err;
+
+	max17135->gpio_pmic_intr = of_get_named_gpio(pmic_np,
+					"gpio_pmic_intr", 0);
+	if (!gpio_is_valid(max17135->gpio_pmic_intr)) {
+		dev_err(&pdev->dev, "no epdc pmic intr pin available\n");
+		goto err;
+	}
+	ret = devm_gpio_request_one(&pdev->dev, max17135->gpio_pmic_intr,
+				GPIOF_IN, "epdc-pmic-int");
+	if (ret < 0)
+		goto err;
+
+	max17135->gpio_pmic_pwrgood = of_get_named_gpio(pmic_np,
+					"gpio_pmic_pwrgood", 0);
+	if (!gpio_is_valid(max17135->gpio_pmic_pwrgood)) {
+		dev_err(&pdev->dev, "no epdc pmic pwrgood pin available\n");
+		goto err;
+	}
+	ret = devm_gpio_request_one(&pdev->dev, max17135->gpio_pmic_pwrgood,
+				GPIOF_IN, "epdc-pwrstat");
+	if (ret < 0)
+		goto err;
+
+err:
+	return 0;
+
+}
+#else
+static int max17135_pmic_dt_parse_pdata(struct platform_device *pdev,
+					struct max17135 *max17135)
+{
+	return 0;
+}
+#endif	/* !CONFIG_OF */
 
 /*
  * Regulator init/probing/exit functions
  */
 static int max17135_regulator_probe(struct platform_device *pdev)
 {
-	struct regulator_dev *rdev;
+	struct max17135 *max17135 = dev_get_drvdata(pdev->dev.parent);
+	struct max17135_platform_data *pdata = max17135->pdata;
+	struct max17135_data *priv;
+	struct regulator_dev **rdev;
 	struct regulator_config config = { };
+	int size, i, ret = 0;
 
-	config.dev = &pdev->dev;
-	config.init_data = pdev->dev.platform_data;
-	config.driver_data = dev_get_drvdata(&pdev->dev);
-	rdev = regulator_register(&max17135_reg[pdev->id], &config);
+	if (max17135->dev->of_node) {
+		ret = max17135_pmic_dt_parse_pdata(pdev, pdata);
+		if (ret)
+			return ret;
+	}
+	priv = devm_kzalloc(&pdev->dev, sizeof(struct max17135_data),
+			       GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
 
-	if (IS_ERR(rdev)) {
-		dev_err(&pdev->dev, "failed to register %s\n",
-			max17135_reg[pdev->id].name);
-		return PTR_ERR(rdev);
+	size = sizeof(struct regulator_dev *) * pdata->num_regulators;
+	priv->rdev = devm_kzalloc(&pdev->dev, size, GFP_KERNEL);
+	if (!priv->rdev)
+		return -ENOMEM;
+
+	rdev = priv->rdev;
+	priv->num_regulators = pdata->num_regulators;
+	platform_set_drvdata(pdev, priv);
+
+	max17135->vcom_setup = false;
+	max17135->pass_num = max17135_pass_num;
+	max17135->vcom_uV = max17135_vcom;
+
+	for (i = 0; i < pdata->num_regulators; i++) {
+		int id = pdata->regulators[i].id;
+
+		config.dev = max17135->dev;
+		config.init_data = pdata->regulators[i].initdata;
+		config.driver_data = max17135;
+		config.of_node = pdata->regulators[i].reg_node;
+
+		rdev[i] = regulator_register(&max17135_reg[id], &config);
+		if (IS_ERR(rdev[i])) {
+			ret = PTR_ERR(rdev[i]);
+			dev_err(&pdev->dev, "regulator init failed for %d\n",
+					id);
+			rdev[i] = NULL;
+			goto err;
+		}
 	}
 
+	/*
+	 * Set up PMIC timing values.
+	 * Should only be done one time!  Timing values may only be
+	 * changed a limited number of times according to spec.
+	 */
+	max17135_setup_timings(max17135);
+
 	return 0;
+err:
+	while (--i >= 0)
+		regulator_unregister(rdev[i]);
+	return ret;
 }
 
 static int max17135_regulator_remove(struct platform_device *pdev)
 {
-	struct regulator_dev *rdev = platform_get_drvdata(pdev);
-	regulator_unregister(rdev);
+	struct max17135_data *priv = platform_get_drvdata(pdev);
+	struct regulator_dev **rdev = priv->rdev;
+	int i;
+
+	for (i = 0; i < priv->num_regulators; i++)
+		regulator_unregister(rdev[i]);
 	return 0;
 }
+
+static const struct platform_device_id max17135_pmic_id[] = {
+	{ "max17135-pmic", 0},
+	{ /* sentinel */ },
+};
+MODULE_DEVICE_TABLE(platform, max17135_pmic_id);
 
 static struct platform_driver max17135_regulator_driver = {
 	.probe = max17135_regulator_probe,
 	.remove = max17135_regulator_remove,
+	.id_table = max17135_pmic_id,
 	.driver = {
-		.name = "max17135-reg",
+		.name = "max17135-pmic",
 	},
 };
-
-int max17135_register_regulator(struct max17135 *max17135, int reg,
-				     struct regulator_init_data *initdata)
-{
-	struct platform_device *pdev;
-	int ret;
-
-	struct i2c_client *client = max17135->i2c_client;
-	/* If we can't find PMIC via I2C, we should not register regulators */
-	if (i2c_smbus_read_byte_data(client,
-		REG_MAX17135_PRODUCT_REV) != 0) {
-		dev_err(max17135->dev,
-			"Max17135 PMIC not found!\n");
-		return -ENXIO;
-	}
-
-	if (max17135->pdev[reg])
-		return -EBUSY;
-
-	pdev = platform_device_alloc("max17135-reg", reg);
-	if (!pdev)
-		return -ENOMEM;
-
-	max17135->pdev[reg] = pdev;
-
-	initdata->driver_data = max17135;
-
-	pdev->dev.platform_data = initdata;
-	pdev->dev.parent = max17135->dev;
-	platform_set_drvdata(pdev, max17135);
-
-	ret = platform_device_add(pdev);
-
-	if (ret != 0) {
-		dev_err(max17135->dev,
-		       "Failed to register regulator %d: %d\n",
-			reg, ret);
-		platform_device_del(pdev);
-		max17135->pdev[reg] = NULL;
-	}
-
-	if (!max17135->init_done) {
-		max17135->pass_num = max17135_pass_num;
-		max17135->vcom_uV = max17135_vcom;
-
-		/*
-		 * Set up PMIC timing values.
-		 * Should only be done one time!  Timing values may only be
-		 * changed a limited number of times according to spec.
-		 */
-		max17135_setup_timings(max17135);
-
-		max17135->init_done = true;
-	}
-
-	return ret;
-}
 
 static int __init max17135_regulator_init(void)
 {
 	return platform_driver_register(&max17135_regulator_driver);
 }
-subsys_initcall(max17135_regulator_init);
+subsys_initcall_sync(max17135_regulator_init);
 
 static void __exit max17135_regulator_exit(void)
 {
 	platform_driver_unregister(&max17135_regulator_driver);
 }
 module_exit(max17135_regulator_exit);
-
 
 /*
  * Parse user specified options (`max17135:')
