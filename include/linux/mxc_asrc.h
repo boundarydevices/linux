@@ -30,6 +30,7 @@
 #define ASRC_FLUSH		_IOW(ASRC_IOC_MAGIC, 7, enum asrc_pair_index)
 
 enum asrc_pair_index {
+	ASRC_UNVALID_PAIR = -1,
 	ASRC_PAIR_A = 0,
 	ASRC_PAIR_B = 1,
 	ASRC_PAIR_C = 2,
