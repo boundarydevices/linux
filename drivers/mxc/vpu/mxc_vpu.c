@@ -977,7 +977,7 @@ static int vpu_resume(struct platform_device *pdev)
 
 			pc = READ_REG(BIT_CUR_PC);
 			if (pc) {
-				printk(KERN_WARNING "Not power off after suspend (PC=0x%x)\n", pc);
+				pr_debug("Not power off after suspend (PC=0x%x)\n", pc);
 				clk_disable(vpu_clk);
 				goto recover_clk;
 			}
