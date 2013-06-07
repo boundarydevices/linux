@@ -873,6 +873,18 @@
 					};
 
 				};
+				hdmi_cec {
+					pinctrl_hdmi_cec_1: hdmicecgrp-1 {
+						fsl,pins = <
+							MX6Q_PAD_EIM_A25__HDMI_TX_CEC_LINE  0x1f8b0
+						>;
+					};
+					pinctrl_hdmi_cec_2: hdmicecgrp-2 {
+						fsl,pins = <
+							MX6Q_PAD_KEY_ROW2__HDMI_TX_CEC_LINE  0x1f8b0
+						>;
+					};
+				};
 			};
 		};
 

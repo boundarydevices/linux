@@ -44,6 +44,7 @@
 #include <mach/mxc_edid.h>
 #include <mach/mxc_hdmi.h>
 
+#include <linux/pinctrl/consumer.h>
 #include "mxc_hdmi-cec.h"
 
 
@@ -471,6 +472,7 @@ static int hdmi_cec_dev_probe(struct platform_device *pdev)
 	int err = 0;
 	struct device *temp_class;
 	struct resource *res;
+	struct pinctrl *pinctrl;
 
 	hdmi_cec_major = register_chrdev(hdmi_cec_major, "mxc_hdmi_cec", &hdmi_cec_fops);
 	if (hdmi_cec_major < 0) {
@@ -503,6 +505,12 @@ static int hdmi_cec_dev_probe(struct platform_device *pdev)
 				   NULL, "mxc_hdmi_cec");
 	if (IS_ERR(temp_class)) {
 		err = PTR_ERR(temp_class);
+		goto err_out_class;
+	}
+
+	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
+	if (IS_ERR(pinctrl)) {
+		dev_err(&pdev->dev, "can't get/select CEC pinctrl\n");
 		goto err_out_class;
 	}
 
@@ -552,7 +560,7 @@ static void __exit hdmi_cec_exit(void)
 	if (hdmi_cec_major > 0) {
 		device_destroy(hdmi_cec_class, MKDEV(hdmi_cec_major, 0));
 		class_destroy(hdmi_cec_class);
-		unregister_chrdev(hdmi_cec_major, "mxc_vpu");
+		unregister_chrdev(hdmi_cec_major, "mxc_hdmi_cec");
 		hdmi_cec_major = 0;
 	}
 

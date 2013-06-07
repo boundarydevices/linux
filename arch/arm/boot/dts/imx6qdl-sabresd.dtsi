@@ -36,6 +36,13 @@
 			status = "okay";
 		};
 
+		hdmi_cec@00120000 {
+			compatible = "fsl,imx6-hdmi-cec";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_hdmi_cec_2>;
+			status = "okay";
+		};
+
 		aips-bus@02000000 { /* AIPS1 */
 			spba-bus@02000000 {
 				uart1: serial@02020000 {

@@ -128,6 +128,11 @@
 			status = "okay";
 		};
 
+		hdmi_cec@00120000 {
+			compatible = "fsl,imx6-hdmi-cec";
+			interrupts = <0 116 0x04>;
+		};
+
 		timer@00a00600 {
 			compatible = "arm,cortex-a9-twd-timer";
 			reg = <0x00a00600 0x20>;
