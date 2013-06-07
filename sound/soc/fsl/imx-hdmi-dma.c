@@ -101,7 +101,7 @@ static unsigned char g_packet_head_table[48*8];
 static bool use_sdma;
 
 
-struct hdmi_audio_header_t iec_header;
+union hdmi_audio_header_t iec_header;
 EXPORT_SYMBOL(iec_header);
 
 /*
@@ -289,7 +289,7 @@ int odd_ones(unsigned a)
 static u32 hdmi_dma_add_frame_info(struct imx_hdmi_dma_runtime_data *rtd,
 				   u32 pcm_data, int subframe_idx)
 {
-	struct hdmi_audio_dma_data_t subframe;
+	union hdmi_audio_dma_data_t subframe;
 
 	subframe.U = 0;
 	iec_header.B.channel = subframe_idx;

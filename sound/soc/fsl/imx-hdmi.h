@@ -49,7 +49,7 @@ struct imx_hdmi {
 #define MXC_HDMI_FORMATS_PLAYBACK \
 	(SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE)
 
-struct hdmi_audio_header_t {
+union hdmi_audio_header_t {
 	uint64_t  U;
 	struct {
 		unsigned consumer:1;
@@ -80,7 +80,7 @@ struct hdmi_audio_header_t {
 	unsigned char status[8];
 };
 
-struct hdmi_audio_dma_data_t {
+union hdmi_audio_dma_data_t {
 	uint32_t  U;
 	struct {
 		unsigned data:24;
@@ -93,6 +93,6 @@ struct hdmi_audio_dma_data_t {
 	} B;
 };
 
-extern struct hdmi_audio_header_t iec_header;
+extern union hdmi_audio_header_t iec_header;
 
 #endif /* __IMX_HDMI_H */
