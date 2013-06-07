@@ -137,16 +137,25 @@ static int set_cpu_freq(int freq)
 	}
 	if (freq > clk_get_rate(pll2_pfd2_396m)) {
 		/* enable pfd396m */
-		clk_prepare(pll2_pfd2_396m);
-		clk_enable(pll2_pfd2_396m);
+		ret = clk_prepare_enable(pll2_pfd2_396m);
+		if (ret) {
+			pr_err("Failed to prepare or enable clock, err=%d\n",
+				ret);
+			return ret;
+		}
 		/* move pll1_sw clk to step */
 		clk_set_parent(pll1_sw, step);
 		/* setp pll1_sys rate */
 		clk_set_rate(pll1_sys, pll_rate);
 		if (org_cpu_rate <= clk_get_rate(pll2_pfd2_396m)) {
 			/* enable pll1_sys */
-			clk_prepare(pll1_sys);
-			clk_enable(pll1_sys);
+			ret = clk_prepare_enable(pll1_sys);
+			if (ret) {
+				pr_err("Failed to prepare or enable clock"
+				       " , err=%d\n",
+					ret);
+				return ret;
+			}
 		}
 		/* move pll1_sw clk to pll1_sys */
 		clk_set_parent(pll1_sw, pll1_sys);
@@ -161,8 +170,12 @@ static int set_cpu_freq(int freq)
 		arm_use_pfd396 = false;
 	} else {
 		/* enable pfd396m */
-		clk_prepare(pll2_pfd2_396m);
-		clk_enable(pll2_pfd2_396m);
+		ret = clk_prepare_enable(pll2_pfd2_396m);
+		if (ret) {
+			pr_err("Failed to prepare or enable clock, err=%d\n",
+				ret);
+			return ret;
+		}
 		/* move pll1_sw clk to step */
 		clk_set_parent(pll1_sw, step);
 		/* disable pll1_sys */
@@ -171,7 +184,7 @@ static int set_cpu_freq(int freq)
 		arm_use_pfd396 = true;
 	}
 	/* set arm divider */
-	clk_set_rate(cpu_clk, freq);
+	ret = clk_set_rate(cpu_clk, freq);
 
 	if (ret != 0) {
 		pr_err("cannot set CPU clock rate\n");
