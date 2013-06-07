@@ -116,7 +116,7 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 		 * PERIOD value in PWMPR plus 2.
 		 */
 		writel(period_cycles - 2, pwm->mmio_base + MX3_PWMPR);
-		pr_info("%s: pwm freq = %ld, clk_select=%x clock_rate=%ld\n",
+		pr_debug("%s: pwm freq = %ld, clk_select=%x clock_rate=%ld\n",
 				__func__,
 				clock_rate / (prescale * period_cycles),
 				pwm->clk_select, clock_rate);
