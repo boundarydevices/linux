@@ -180,6 +180,11 @@ static int __devinit reg_fixed_voltage_probe(struct platform_device *pdev)
 	if (!config)
 		return -ENOMEM;
 
+	if (pdev->dev.of_node &&
+		of_find_property(pdev->dev.of_node, "gpio", NULL) &&
+			!gpio_is_valid(config->gpio))
+		return -EPROBE_DEFER;
+
 	drvdata = devm_kzalloc(&pdev->dev, sizeof(struct fixed_voltage_data),
 			       GFP_KERNEL);
 	if (drvdata == NULL) {
