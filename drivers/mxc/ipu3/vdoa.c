@@ -434,7 +434,7 @@ static int vdoa_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct resource *res_irq;
 	struct device	*dev = &pdev->dev;
-	char   clk_vdoa[] = "vdo_axi";
+	char   clk_vdoa[] = "vdoa";
 	char   clk_ocram[] = "ocram";
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
