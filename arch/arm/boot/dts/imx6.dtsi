@@ -872,8 +872,8 @@
 				compatible = "fsl,imx6q-vdoa";
 				reg = <0x021e4000 0x4000>;
 				interrupts = <0 18 0x04>;
-				clocks = <&clks 167>, <&clks 142>;
-				clock-names = "vdo_axi", "ocram";
+				clocks = <&clks 206>, <&clks 142>;
+				clock-names = "vdoa", "ocram";
 				status = "disabled";
 			};
 
