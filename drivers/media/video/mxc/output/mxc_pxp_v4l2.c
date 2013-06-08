@@ -1151,6 +1151,12 @@ static const struct video_device pxp_template = {
 	.ioctl_ops			= &pxp_ioctl_ops,
 };
 
+static const struct of_device_id imx_pxpv4l2_dt_ids[] = {
+	{ .compatible = "fsl,imx6dl-pxp-v4l2", },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, imx_pxpv4l2_dt_ids);
+
 static int pxp_probe(struct platform_device *pdev)
 {
 	struct pxps *pxp;
@@ -1222,6 +1228,7 @@ static int __devexit pxp_remove(struct platform_device *pdev)
 static struct platform_driver pxp_driver = {
 	.driver 	= {
 		.name	= PXP_DRIVER_NAME,
+		.of_match_table = of_match_ptr(imx_pxpv4l2_dt_ids),
 	},
 	.probe		= pxp_probe,
 	.remove		= __exit_p(pxp_remove),
