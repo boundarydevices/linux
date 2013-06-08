@@ -660,4 +660,8 @@
 		compatible = "fsl,imx6dl-pxp-v4l2";
 		status = "disabled";
 	};
+	pxp_v4l2_out {
+		compatible = "fsl,imx6dl-pxp-v4l2";
+		status = "disabled";
+	};
 };
