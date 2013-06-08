@@ -31,6 +31,7 @@ struct imx_hdmi_sdma_params {
 struct imx_hdmi {
 	struct platform_device *pdev;
 	struct platform_device *soc_platform_pdev;
+	struct platform_device *soc_codec_pdev;
 	int irq;
 	struct clk *isfr_clk;
 	struct clk *iahb_clk;

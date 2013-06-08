@@ -104,7 +104,7 @@ config SND_SOC_FSL_SPDIF
 	tristate
 
 config SND_SOC_FSL_HDMI
-	tristate
+	bool
 
 config SND_SOC_IMX_PCM
 	tristate
@@ -120,7 +120,7 @@ config SND_SOC_IMX_PCM_DMA
 	select SND_SOC_IMX_PCM
 
 config SND_SOC_IMX_HDMI_DMA
-	tristate
+	bool
 	select SND_SOC_DMAENGINE_PCM
 	select SND_SOC_IMX_PCM
 

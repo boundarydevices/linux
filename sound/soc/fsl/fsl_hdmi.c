@@ -596,8 +596,15 @@ static int fsl_hdmi_dai_probe(struct platform_device *pdev)
 	hdmi_data->soc_platform_pdev =
 		platform_device_register_simple("imx-hdmi-soc-audio", -1, NULL, 0);
 	if (!hdmi_data->soc_platform_pdev) {
-		dev_err(&pdev->dev, "failed platform_device_alloc\n");
+		dev_err(&pdev->dev, "failed to register ALSA platform driver\n");
 		goto e_alloc_dai;
+	}
+
+	hdmi_data->soc_codec_pdev =
+		platform_device_register_simple("mxc_hdmi_soc", -1, NULL, 0);
+	if (!hdmi_data->soc_codec_pdev) {
+		dev_err(&pdev->dev, "failed to register HDMI audio codec\n");
+		return -ENOMEM;
 	}
 
 	platform_set_drvdata(hdmi_data->soc_platform_pdev, hdmi_data);
@@ -624,6 +631,8 @@ static int __devexit fsl_hdmi_dai_remove(struct platform_device *pdev)
 
 	if (!IS_ERR(hdmi_data->soc_platform_pdev))
 		platform_device_unregister(hdmi_data->soc_platform_pdev);
+	if (!IS_ERR(hdmi_data->soc_codec_pdev))
+		platform_device_unregister(hdmi_data->soc_codec_pdev);
 	snd_soc_unregister_dai(&pdev->dev);
 
 	return 0;

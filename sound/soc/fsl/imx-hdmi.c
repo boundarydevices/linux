@@ -52,8 +52,6 @@ static struct snd_soc_card snd_soc_card_imx_hdmi = {
 	.num_links = 1,
 };
 
-static struct platform_device *imx_hdmi_codec_device;
-
 static int __devinit imx_hdmi_audio_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &snd_soc_card_imx_hdmi;
@@ -62,13 +60,6 @@ static int __devinit imx_hdmi_audio_probe(struct platform_device *pdev)
 	if (!hdmi_get_registered()) {
 		dev_err(&pdev->dev, "Initialize HDMI-audio failed. Load HDMI-video first!\n");
 		return -ENODEV;
-	}
-
-	imx_hdmi_codec_device =
-		platform_device_register_simple("mxc_hdmi_soc", -1, NULL, 0);
-	if (!imx_hdmi_codec_device) {
-		dev_err(&pdev->dev, "Failed to register HDMI audio codec\n");
-		return -ENOMEM;
 	}
 
 	card->dev = &pdev->dev;
@@ -83,7 +74,6 @@ static int __devexit imx_hdmi_audio_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &snd_soc_card_imx_hdmi;
 
-	platform_device_unregister(imx_hdmi_codec_device);
 	snd_soc_unregister_card(card);
 
 	return 0;
