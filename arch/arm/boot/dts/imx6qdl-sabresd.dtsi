@@ -641,4 +641,23 @@
 		lvds0-gpios = <&gpio6 15 0>;
 		lvds1-gpios = <&gpio6 16 0>;
 	};
+
+	mxc_epdcfb@0x020f8000 {
+		compatible = "fsl,imx6-epdc";
+		reg = <0x020f8000 4000>;
+		panel-enable-gpios = <&gpio3 30 0>;
+		interrupts = <0 97 0x04>;
+		clocks = <&clks 133>, <&clks 137>;  /* ipu2, ipu2_di1 */
+		clock-names = "epdc-axi", "epdc-pix";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_epdc_0>;
+		V3P3_supply = <&V3P3_reg>;
+		VCOM_supply = <&VCOM_reg>;
+		DISPLAY_supply = <&DISPLAY_reg>;
+		status = "disabled";
+	};
+	pxp_v4l2_out {
+		compatible = "fsl,imx6dl-pxp-v4l2";
+		status = "disabled";
+	};
 };

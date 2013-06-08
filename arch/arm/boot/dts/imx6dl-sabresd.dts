@@ -89,4 +89,8 @@
 	mxcfb2: fb@1 {
 		status = "okay";
 	};
+
+	mxc_epdcfb {
+		status = "okay";
+	};
 };
