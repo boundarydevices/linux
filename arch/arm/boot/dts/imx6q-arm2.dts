@@ -40,6 +40,9 @@
 					clock-names = "spdif";
 					interrupts = <0 52 0x04>;
 					status = "okay";
+
+					spdif-tx = <1>;		/* 1:enable, 0:disable */
+					spdif-rx = <1>;		/* 1:enable, 0:disable */
 				};
 				esai: esai@02024000 {
 					pinctrl-names = "default";
@@ -284,7 +287,5 @@
 			     "fsl,imx-arm2-spdif";
 		model = "imx-spdif";
 		spdif-controller = <&spdif>;
-		spdif-tx = <1>;		/* 1:enable, 0:disable */
-		spdif-rx = <1>;		/* 1:enable, 0:disable */
 	};
 };

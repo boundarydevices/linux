@@ -106,6 +106,7 @@ struct spdif_mixer_control {
 struct mxc_spdif_priv {
 	struct mxc_spdif_platform_data *plat_data;
 	struct platform_device *imx_pcm_pdev;
+	struct platform_device *codec_dev;
 	unsigned long __iomem *reg_base;
 	unsigned long reg_phys_base;
 	struct snd_card *card;	/* ALSA SPDIF sound card handle */
@@ -1161,10 +1162,12 @@ static int fsl_spdif_dai_probe(struct platform_device *pdev)
 	struct mxc_spdif_platform_data *plat_data =
 		dev_get_platdata(&pdev->dev);
 	struct mxc_spdif_priv *spdif_priv;
+	struct mxc_spdif_data codec_pdata;
 	struct device_node *np = pdev->dev.of_node;
 	struct resource res;
 	struct pinctrl *pinctrl;
 	u32 dma_events[2];
+	u32 val;
 	int err, irq;
 	int ret = 0;
 
@@ -1223,8 +1226,26 @@ static int fsl_spdif_dai_probe(struct platform_device *pdev)
 			goto error_kzalloc;
 		}
 		platform_set_drvdata(spdif_priv->imx_pcm_pdev, &spdif_priv->pcm_params);
+
+		if (of_property_read_u32(np, "spdif-tx", &val) >= 0)
+			codec_pdata.spdif_tx = val;
+		else
+			codec_pdata.spdif_tx = 0;
+
+		if (of_property_read_u32(np, "spdif-rx", &val) >= 0)
+			codec_pdata.spdif_rx = val;
+		else
+			codec_pdata.spdif_rx = 0;
 	}
 
+	spdif_priv->codec_dev =
+		platform_device_register_resndata(NULL, "mxc_spdif", -1,
+			NULL, 0, &codec_pdata, sizeof(codec_pdata));
+	if (IS_ERR(spdif_priv->codec_dev)) {
+		ret = PTR_ERR(spdif_priv->imx_pcm_pdev);
+		dev_err(&pdev->dev, "failed register codec driver: %d\n", ret);
+		goto error_pcm_reigster;
+	}
 
 	if (plat_data->spdif_clk_44100 >= 0)
 		fsl_spdif_dai.playback.rates |= SNDRV_PCM_RATE_44100;
@@ -1314,6 +1335,9 @@ error_clk:
 card_err:
 	clk_put(plat_data->spdif_clk);
 failed_clk:
+	if (!IS_ERR(spdif_priv->codec_dev))
+		platform_device_unregister(spdif_priv->codec_dev);
+error_pcm_reigster:
 	platform_set_drvdata(pdev, NULL);
 	if (!IS_ERR(spdif_priv->imx_pcm_pdev))
 		platform_device_unregister(spdif_priv->imx_pcm_pdev);

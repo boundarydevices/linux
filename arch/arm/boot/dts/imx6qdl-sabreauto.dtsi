@@ -59,6 +59,9 @@
 					clock-names = "spdif";
 					interrupts = <0 52 0x04>;
 					status = "okay";
+
+					spdif-tx = <0>;		/* 1:enable, 0:disable */
+					spdif-rx = <1>;		/* 1:enable, 0:disable */
 			       };
 
 				ecspi@02008000 { /* eCSPI1 */
@@ -382,8 +385,6 @@
 			     "fsl,imx-sabreauto-spdif";
 		model = "imx-spdif";
 		spdif-controller = <&spdif>;
-		spdif-tx = <0>;		/* 1:enable, 0:disable */
-		spdif-rx = <1>;		/* 1:enable, 0:disable */
 	};
 
 	sound-hdmi {

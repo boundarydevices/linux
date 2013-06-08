@@ -40,13 +40,10 @@ static int __devinit imx_spdif_audio_probe(struct platform_device *pdev)
 	struct device_node *spdif_np;
 	struct device_node *np = pdev->dev.of_node;
 	struct platform_device *spdif_pdev;
-	struct platform_device *codec_dev;
 	struct imx_spdif_data *data;
-	struct mxc_spdif_data codec_pdata;
 	struct property *poldbase;
 	char platform_name[32];
 	int ret = 0;
-	u32 val;
 
 	spdif_np = of_parse_phandle(np, "spdif-controller", 0);
 	if (!spdif_np) {
@@ -74,34 +71,17 @@ static int __devinit imx_spdif_audio_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto fail;
 	}
-	if (of_property_read_u32(np, "spdif-tx", &val) >= 0)
-		codec_pdata.spdif_tx = val;
-	else
-		codec_pdata.spdif_tx = 0;
-
-	if (of_property_read_u32(np, "spdif-rx", &val) >= 0)
-		codec_pdata.spdif_rx = val;
-	else
-		codec_pdata.spdif_rx = 0;
-
-	codec_dev = platform_device_register_resndata(NULL, "mxc_spdif", -1,
-			NULL, 0, &codec_pdata, sizeof(codec_pdata));
-	if (!codec_dev) {
-		pr_err("%s failed platform_device_alloc\n", __func__);
-		ret = -ENOMEM;
-		goto fail;
-	}
 
 	data = devm_kzalloc(&pdev->dev, sizeof(*data), GFP_KERNEL);
 	if (!data) {
 		ret = -ENOMEM;
-		goto err1;
+		goto fail;
 	}
 
 	data->dai.name = "SPDIF";
 	data->dai.stream_name = "SPDIF";
 	data->dai.codec_dai_name = "mxc-spdif";
-	data->dai.codec_name = dev_name(&codec_dev->dev);
+	data->dai.codec_name = "mxc_spdif";
 	data->dai.cpu_dai_name = dev_name(&spdif_pdev->dev);
 
 	sprintf(platform_name, "imx-pcm-audio.%d", of_alias_get_id(spdif_np, "audio"));
@@ -109,7 +89,7 @@ static int __devinit imx_spdif_audio_probe(struct platform_device *pdev)
 	data->card.dev = &pdev->dev;
 	ret = snd_soc_of_parse_card_name(&data->card, "model");
 	if (ret)
-		goto err1;
+		goto fail;
 
 	data->card.num_links = 1;
 	data->card.dai_link = &data->dai;
@@ -117,15 +97,13 @@ static int __devinit imx_spdif_audio_probe(struct platform_device *pdev)
 	ret = snd_soc_register_card(&data->card);
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n", ret);
-		goto err1;
+		goto fail;
 	}
 
 	platform_set_drvdata(pdev, data);
 
 	return 0;
 
-err1:
-	platform_device_unregister(codec_dev);
 fail:
 	if (spdif_np)
 		of_node_put(spdif_np);
