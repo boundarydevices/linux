@@ -48,6 +48,7 @@
 #include <linux/regulator/driver.h>
 #include <linux/fsl_devices.h>
 #include <linux/bitops.h>
+#include <linux/pinctrl/consumer.h>
 #include <mach/epdc.h>
 #include <mach/dma.h>
 #include <asm/cacheflush.h>
@@ -1081,10 +1082,6 @@ static void epdc_powerup(struct mxc_epdc_fb_data *fb_data)
 
 	msleep(1);
 
-	/* Enable pins used by EPDC */
-	if (fb_data->pdata->enable_pins)
-		fb_data->pdata->enable_pins();
-
 	/* Enable clocks to EPDC */
 	clk_enable(fb_data->epdc_clk_axi);
 	clk_enable(fb_data->epdc_clk_pix);
@@ -1135,10 +1132,6 @@ static void epdc_powerdown(struct mxc_epdc_fb_data *fb_data)
 	__raw_writel(EPDC_CTRL_CLKGATE, EPDC_CTRL_SET);
 	clk_disable(fb_data->epdc_clk_pix);
 	clk_disable(fb_data->epdc_clk_axi);
-
-	/* Disable pins used by EPDC (to prevent leakage current) */
-	if (fb_data->pdata->disable_pins)
-		fb_data->pdata->disable_pins();
 
 	/* turn off the V3p3 */
 	regulator_disable(fb_data->v3p3_regulator);
@@ -4309,9 +4302,16 @@ static struct device_attribute fb_attrs[] = {
 	__ATTR(update, S_IRUGO|S_IWUSR, NULL, store_update),
 };
 
+static const struct of_device_id imx_epdc_dt_ids[] = {
+	{ .compatible = "fsl,imx6-epdc", },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, imx_epdc_dt_ids);
+
 int __devinit mxc_epdc_fb_probe(struct platform_device *pdev)
 {
 	int ret = 0;
+	struct pinctrl *pinctrl;
 	struct mxc_epdc_fb_data *fb_data;
 	struct resource *res;
 	struct fb_info *info;
@@ -4665,8 +4665,12 @@ int __devinit mxc_epdc_fb_probe(struct platform_device *pdev)
 	}
 
 	/* Initialize EPDC pins */
-	if (fb_data->pdata->get_pins)
-		fb_data->pdata->get_pins();
+	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
+	if (IS_ERR(pinctrl)) {
+		dev_err(&pdev->dev, "can't get/select pinctrl\n");
+		ret = PTR_ERR(pinctrl);
+		goto out_copybuffer;
+	}
 
 	fb_data->in_init = false;
 
@@ -4900,8 +4904,6 @@ out_irq:
 out_dma_work_buf:
 	dma_free_writecombine(&pdev->dev, fb_data->working_buffer_size,
 		fb_data->working_buffer_virt, fb_data->working_buffer_phys);
-	if (fb_data->pdata->put_pins)
-		fb_data->pdata->put_pins();
 out_copybuffer:
 	dma_free_writecombine(&pdev->dev, fb_data->max_pix_size*2,
 			      fb_data->virt_addr_copybuf,
@@ -4983,9 +4985,6 @@ static int mxc_epdc_fb_remove(struct platform_device *pdev)
 	dma_free_writecombine(&pdev->dev, fb_data->map_size, fb_data->info.screen_base,
 			      fb_data->phys_start);
 
-	if (fb_data->pdata->put_pins)
-		fb_data->pdata->put_pins();
-
 	/* Release PxP-related resources */
 	if (fb_data->pxp_chan != NULL)
 		dma_release_channel(&fb_data->pxp_chan->dma_chan);
@@ -5043,10 +5042,6 @@ static void mxc_epdc_fb_shutdown(struct platform_device *pdev)
 	clk_disable(fb_data->epdc_clk_pix);
 	clk_disable(fb_data->epdc_clk_axi);
 
-	/* Disable pins used by EPDC (to prevent leakage current) */
-	if (fb_data->pdata->disable_pins)
-		fb_data->pdata->disable_pins();
-
 	/* turn off the V3p3 */
 	if (regulator_is_enabled(fb_data->v3p3_regulator))
 		regulator_disable(fb_data->v3p3_regulator);
@@ -5066,6 +5061,7 @@ static struct platform_driver mxc_epdc_fb_driver = {
 	.driver = {
 		   .name = "imx_epdc_fb",
 		   .owner = THIS_MODULE,
+		   .of_match_table = of_match_ptr(imx_epdc_dt_ids),
 		   },
 };
 

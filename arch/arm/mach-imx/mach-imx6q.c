@@ -15,6 +15,7 @@
 #include <linux/clkdev.h>
 #include <linux/delay.h>
 #include <linux/export.h>
+#include <linux/fb.h>
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/iram_alloc.h>
@@ -49,6 +50,7 @@
 #include <mach/hardware.h>
 #include <mach/i2c.h>
 #include <mach/busfreq.h>
+#include <mach/epdc.h>
 #ifdef CONFIG_PCI_MSI
 #include "msi.h"
 #endif
@@ -147,6 +149,133 @@ early_param("can0", early_enable_can0);
 #define IMX6Q_C_ERR(fmt, ...) \
 	pr_err("mach-imx6q.c ERROR: %s: " fmt, __func__, ##__VA_ARGS__)
 
+static struct fb_videomode e60_v110_mode = {
+	.name = "E60_V110",
+	.refresh = 50,
+	.xres = 800,
+	.yres = 600,
+	.pixclock = 18604700,
+	.left_margin = 8,
+	.right_margin = 178,
+	.upper_margin = 4,
+	.lower_margin = 10,
+	.hsync_len = 20,
+	.vsync_len = 4,
+	.sync = 0,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,
+};
+static struct fb_videomode e60_v220_mode = {
+	.name = "E60_V220",
+	.refresh = 85,
+	.xres = 800,
+	.yres = 600,
+	.pixclock = 30000000,
+	.left_margin = 8,
+	.right_margin = 164,
+	.upper_margin = 4,
+	.lower_margin = 8,
+	.hsync_len = 4,
+	.vsync_len = 1,
+	.sync = 0,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,
+	.refresh = 85,
+	.xres = 800,
+	.yres = 600,
+};
+static struct fb_videomode e060scm_mode = {
+	.name = "E060SCM",
+	.refresh = 85,
+	.xres = 800,
+	.yres = 600,
+	.pixclock = 26666667,
+	.left_margin = 8,
+	.right_margin = 100,
+	.upper_margin = 4,
+	.lower_margin = 8,
+	.hsync_len = 4,
+	.vsync_len = 1,
+	.sync = 0,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,
+};
+static struct fb_videomode e97_v110_mode = {
+	.name = "E97_V110",
+	.refresh = 50,
+	.xres = 1200,
+	.yres = 825,
+	.pixclock = 32000000,
+	.left_margin = 12,
+	.right_margin = 128,
+	.upper_margin = 4,
+	.lower_margin = 10,
+	.hsync_len = 20,
+	.vsync_len = 4,
+	.sync = 0,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,
+};
+
+static struct imx_epdc_fb_mode panel_modes[] = {
+	{
+		&e60_v110_mode,
+		4,      /* vscan_holdoff */
+		10,     /* sdoed_width */
+		20,     /* sdoed_delay */
+		10,     /* sdoez_width */
+		20,     /* sdoez_delay */
+		428,    /* gdclk_hp_offs */
+		20,     /* gdsp_offs */
+		0,      /* gdoe_offs */
+		1,      /* gdclk_offs */
+		1,      /* num_ce */
+	},
+	{
+		&e60_v220_mode,
+		4,      /* vscan_holdoff */
+		10,     /* sdoed_width */
+		20,     /* sdoed_delay */
+		10,     /* sdoez_width */
+		20,     /* sdoez_delay */
+		465,    /* gdclk_hp_offs */
+		20,     /* gdsp_offs */
+		0,      /* gdoe_offs */
+		9,      /* gdclk_offs */
+		1,      /* num_ce */
+	},
+	{
+		&e060scm_mode,
+		4,      /* vscan_holdoff */
+		10,     /* sdoed_width */
+		20,     /* sdoed_delay */
+		10,     /* sdoez_width */
+		20,     /* sdoez_delay */
+		419,    /* gdclk_hp_offs */
+		20,     /* gdsp_offs */
+		0,      /* gdoe_offs */
+		5,      /* gdclk_offs */
+		1,      /* num_ce */
+	},
+	{
+		&e97_v110_mode,
+		8,      /* vscan_holdoff */
+		10,     /* sdoed_width */
+		20,     /* sdoed_delay */
+		10,     /* sdoez_width */
+		20,     /* sdoez_delay */
+		632,    /* gdclk_hp_offs */
+		20,     /* gdsp_offs */
+		0,      /* gdoe_offs */
+		1,      /* gdclk_offs */
+		3,      /* num_ce */
+	}
+};
+
+static struct imx_epdc_fb_platform_data epdc_data = {
+	.epdc_mode = panel_modes,
+	.num_modes = ARRAY_SIZE(panel_modes),
+};
 
 static void remove_pinctrl0(const char *path)
 {
@@ -1033,6 +1162,7 @@ static const struct of_dev_auxdata imx6q_auxdata_lookup[] __initconst = {
 	OF_DEV_AUXDATA("fsl,imx6q-flexcan", 0x02090000, NULL, &flexcan_pdata[0]),
 	OF_DEV_AUXDATA("fsl,imx6q-flexcan", 0x02094000, NULL, &flexcan_pdata[1]),
 	OF_DEV_AUXDATA("fsl,imx6q-i2c", 0x021a8000, NULL, &i2c3_pdata),
+	OF_DEV_AUXDATA("fsl,imx6-epdc", 0x020f8000, NULL, &epdc_data),
 	{ /* sentinel */ }
 };
 
