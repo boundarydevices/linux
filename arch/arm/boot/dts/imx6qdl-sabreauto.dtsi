@@ -50,13 +50,8 @@
 				};
 
 				spdif: spdif@02004000 {
-					compatible = "fsl,fsl-spdif";
-					reg = <0x02004000 0x4000>;
 					pinctrl-names = "default";
 					pinctrl-0 = <&pinctrl_spdif_1>;
-					fsl,spdif-dma-events = <15 14>;
-					clocks = <&clks 198>;
-					clock-names = "spdif";
 					interrupts = <0 52 0x04>;
 					status = "okay";
 

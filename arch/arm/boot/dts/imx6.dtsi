@@ -182,8 +182,13 @@
 				ranges;
 
 				spdif: spdif@02004000 {
+					compatible = "fsl,fsl-spdif";
 					reg = <0x02004000 0x4000>;
 					interrupts = <0 52 0x04>;
+					fsl,spdif-dma-events = <15 14>;
+					clocks = <&clks 198>;
+					clock-names = "spdif";
+					status = "disabled";
 				};
 
 				ecspi@02008000 { /* eCSPI1 */
