@@ -6,7 +6,7 @@
  *
  * Maintainer: Kumar Gala <galak@kernel.crashing.org>
  *
- * Copyright 2004,2012 Freescale Semiconductor, Inc
+ * Copyright (C) 2004, 2012-2013 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -125,6 +125,27 @@ struct fsl_spi_platform_data {
 	u16	max_chipselect;
 	void	(*cs_control)(struct spi_device *spi, bool on);
 	u32	sysclk;
+};
+
+struct mxc_fb_platform_data {
+	struct fb_videomode *mode;
+	int num_modes;
+	char *mode_str;
+	u32 interface_pix_fmt;
+};
+
+struct fsl_mxc_lcd_platform_data {
+	char *io_reg;
+	char *core_reg;
+	char *analog_reg;
+	void (*reset) (void);
+	int (*get_pins) (void);
+	void (*put_pins) (void);
+	void (*enable_pins) (void);
+	void (*disable_pins) (void);
+	int default_ifmt;
+	int ipu_id;
+	int disp_id;
 };
 
 struct mpc8xx_pcmcia_ops {
