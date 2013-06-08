@@ -273,6 +273,14 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 		return PTR_ERR(data->clk);
 	}
 
+	reg_vbus = devm_regulator_get(&pdev->dev, "vbus");
+	if (!IS_ERR(reg_vbus)) {
+		pdata->reg_vbus = reg_vbus;
+	} else {
+		if (of_find_property(pdev->dev.of_node, "vbus-supply", NULL))
+			return -EPROBE_DEFER;
+	}
+
 	request_bus_freq(BUS_FREQ_HIGH);
 
 	ret = clk_prepare_enable(data->clk);
@@ -295,10 +303,6 @@ static int ci13xxx_imx_probe(struct platform_device *pdev)
 			}
 		}
 	}
-
-	reg_vbus = devm_regulator_get(&pdev->dev, "vbus");
-	if (!IS_ERR(reg_vbus))
-		pdata->reg_vbus = reg_vbus;
 
 	pdata->phy = data->phy;
 
