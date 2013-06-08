@@ -50,6 +50,7 @@
 #include <linux/fsl_devices.h>
 #include <linux/ipu.h>
 #include <linux/regmap.h>
+#include <linux/pinctrl/consumer.h>
 
 #include <linux/console.h>
 #include <linux/types.h>
@@ -194,6 +195,10 @@ struct mxc_hdmi {
 	int *gpr_hdmi_base;
 	int *gpr_sdma_base;
 	struct hdmi_phy_reg_config phy_config;
+
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pins_hdcp;
+	struct pinctrl_state *pins_cec;
 };
 
 static int hdmi_major;
@@ -227,6 +232,14 @@ static void dump_fb_videomode(struct fb_videomode *m)
 static void dump_fb_videomode(struct fb_videomode *m)
 {}
 #endif
+
+static int hdcp_init;
+static int __init early_init_hdcp(char *p)
+{
+	hdcp_init = 1;
+	return 0;
+}
+early_param("hdcp", early_init_hdcp);
 
 static ssize_t mxc_hdmi_show_name(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -1612,7 +1625,8 @@ static int mxc_hdmi_read_edid(struct mxc_hdmi *hdmi)
 	/* save old edid */
 	memcpy(edid_old, hdmi->edid, HDMI_EDID_LEN);
 
-	if (!hdmi->hdmi_data.hdcp_enable)
+	/* Read EDID via HDMI DDC when HDCP Enable */
+	if (!hdcp_init)
 		ret = mxc_edid_read(hdmi_i2c->adapter, hdmi_i2c->addr,
 				hdmi->edid, &hdmi->edid_cfg, hdmi->fbi);
 	else {
@@ -2525,6 +2539,15 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 
 	dev_dbg(&hdmi->pdev->dev, "Enabled HDMI clocks\n");
 
+	/* Init DDC pins for HDCP  */
+	if (hdcp_init) {
+		hdmi->pinctrl = devm_pinctrl_get_select_default(&hdmi->pdev->dev);
+		if (IS_ERR(hdmi->pinctrl)) {
+			dev_err(&hdmi->pdev->dev, "can't get/select DDC pinctrl\n");
+			goto erate2;
+		}
+	}
+
 	/* Product and revision IDs */
 	dev_info(&hdmi->pdev->dev,
 		"Detected HDMI controller 0x%x:0x%x:0x%x:0x%x\n",
@@ -2725,7 +2748,8 @@ static int __devinit mxc_hdmi_probe(struct platform_device *pdev)
 	int ret = 0;
 
 	/* Check that I2C driver is loaded and available */
-	if (!hdmi_i2c)
+	/* Skip I2C driver available check when HDCP enable */
+	if (!hdmi_i2c && !hdcp_init)
 		return -ENODEV;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
