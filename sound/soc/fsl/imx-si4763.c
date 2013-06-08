@@ -38,7 +38,6 @@ static struct imx_si4763_priv {
 	int hw;
 	int active;
 	struct platform_device *pdev;
-	struct platform_device *codec_dev;
 } card_priv;
 
 static struct platform_device *imx_3stack_snd_device;
@@ -197,15 +196,8 @@ static int __devinit imx_3stack_si4763_probe(struct platform_device *pdev)
 
 	priv->sysclk = SI4763_SYSCLK;
 
-	priv->codec_dev = platform_device_register_simple("si4763", -1, NULL, 0);
-	if (!priv->codec_dev) {
-		dev_err(&pdev->dev, "Failed to register si4763 codec\n");
-		goto err1;
-	}
-
 	card->dev = &pdev->dev;
 	card->dai_link->cpu_dai_name = dev_name(&ssi_pdev->dev);
-	card->dai_link->codec_name = dev_name(&priv->codec_dev->dev);
 
 	sprintf(platform_name, "imx-pcm-audio.%d", of_alias_get_id(ssi_np, "audio"));
 	card->dai_link->platform_name = platform_name;
@@ -213,12 +205,11 @@ static int __devinit imx_3stack_si4763_probe(struct platform_device *pdev)
 	ret = snd_soc_register_card(card);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to register card: %d\n", ret);
-		goto err2;
+		goto err1;
 	}
 
 	return 0;
-err2:
-	platform_device_unregister(priv->codec_dev);
+
 err1:
 	if (ssi_np)
 		of_node_put(ssi_np);
@@ -228,11 +219,7 @@ err1:
 
 static int __devexit imx_3stack_si4763_remove(struct platform_device *pdev)
 {
-	struct imx_si4763_priv *priv = &card_priv;
-
-	platform_device_unregister(priv->codec_dev);
 	platform_device_unregister(imx_3stack_snd_device);
-
 	return 0;
 }
 

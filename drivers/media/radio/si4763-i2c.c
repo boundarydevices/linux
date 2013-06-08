@@ -25,6 +25,7 @@
 #include <linux/gpio.h>
 #include <linux/regulator/consumer.h>
 #include <linux/module.h>
+#include <linux/platform_device.h>
 #include <linux/moduleparam.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
@@ -778,6 +779,12 @@ static int si4713_probe(struct i2c_client *client, const struct i2c_device_id *i
 		goto free_video;
 	}
 	i2c_set_clientdata(client, sdev);
+
+	/* Register a codec driver of ALSA, does not care if failed */
+	sdev->codec_dev = platform_device_register_simple("si4763", -1, NULL, 0);
+	if (IS_ERR(sdev->codec_dev))
+		dev_err(&client->dev, "Failed to register si4763 codec\n");
+
 	return 0;
 
 free_video:
@@ -792,6 +799,9 @@ static int si4713_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct si4763_device *sdev = to_si4763_device(sd);
+
+	if (!IS_ERR(sdev->codec_dev))
+		platform_device_unregister(sdev->codec_dev);
 
 	if (sdev->power_state)
 		si4713_set_power_state(sdev, POWER_DOWN);

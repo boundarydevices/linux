@@ -237,5 +237,6 @@ struct si4763_device {
 	u8 users;
 	struct i2c_client *client;
 	struct video_device *videodev;
+	struct platform_device *codec_dev;
 };
 #endif /* ifndef SI4763_I2C_H */
