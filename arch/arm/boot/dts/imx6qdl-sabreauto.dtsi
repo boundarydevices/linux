@@ -28,6 +28,13 @@
 			status = "okay";
 		};
 
+		hdmi_video@00120000 {
+			compatible = "fsl,imx6-hdmi-video";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_hdmi_hdcp_3>;
+			status = "okay";
+		};
+
 		hdmi_cec@00120000 {
 			compatible = "fsl,imx6-hdmi-cec";
 			pinctrl-names = "default";

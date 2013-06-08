@@ -79,6 +79,7 @@ static struct regmap *regmap_gpr;
 static int sd30_en;
 static int spdif_en;
 static int tuner_en;
+static int hdcp_init;
 static int weim_nor;
 static int spinor_en;
 static int can0_enable;
@@ -105,6 +106,13 @@ static int __init early_enable_tuner(char *p)
 	return 0;
 }
 early_param("tuner", early_enable_tuner);
+
+static int __init early_enable_hdcp(char *p)
+{
+	hdcp_init = 1;
+	return 0;
+}
+early_param("hdcp", early_enable_hdcp);
 
 static int __init early_enable_weim(char *p)
 {
@@ -138,6 +146,7 @@ early_param("can0", early_enable_can0);
 
 #define IMX6Q_C_ERR(fmt, ...) \
 	pr_err("mach-imx6q.c ERROR: %s: " fmt, __func__, ##__VA_ARGS__)
+
 
 static void remove_pinctrl0(const char *path)
 {
@@ -706,6 +715,17 @@ static void __init imx6q_sabreauto_init(void)
 		of_node_status_disable_by_path("/soc/aips-bus@02000000/can@02090000");
 }
 
+static void __init imx6q_hdcp_init(void)
+{
+	if (hdcp_init && IS_ENABLED(CONFIG_FB_MXC_HDMI)) {
+		/* Remove I2C2 pins config */
+		remove_pinctrl0("/soc/aips-bus@02100000/i2c@021a4000");
+	} else {
+		/* Remove HDCP pinctrl-0 */
+		remove_pinctrl0("/soc/hdmi_video@00120000");
+	}
+}
+
 static void __init imx6q_1588_init(void)
 {
 	if (!IS_BUILTIN(CONFIG_FEC_PTP)) {
@@ -1107,6 +1127,7 @@ static void __init imx6q_init_machine(void)
 	imx6q_pm_init();
 	imx6q_usb_init();
 	imx6q_1588_init();
+	imx6q_hdcp_init();
 	if (IS_ENABLED(CONFIG_MXC_GPU_VIV))
 		imx6q_gpu_init();
 	imx6q_csi_mux_init();

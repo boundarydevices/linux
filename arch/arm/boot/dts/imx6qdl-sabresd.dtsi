@@ -31,6 +31,8 @@
 
 		hdmi_video@00120000 {
 			compatible = "fsl,imx6-hdmi-video";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_hdmi_hdcp_1>;
 			phy_reg_vlev = <0x0294>;
 			phy_reg_cksymtx = <0x800d>;
 			status = "okay";
@@ -219,7 +221,7 @@
 					compatible = "fsl,max11801";
 					reg = <0x48>;
 					int_input = <&gpio3 26 1>;
-                                };
+                };
 
 				hdmi_edid@50 {
 					compatible = "fsl,imx6-hdmi-i2c";
