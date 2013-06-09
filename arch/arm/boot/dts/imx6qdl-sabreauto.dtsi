@@ -142,6 +142,12 @@
 				status = "okay";
 			};
 
+			mlb@0218c000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_mlb_2>;
+				status = "okay";
+			};
+
 			usdhc3: usdhc@02198000 {
 				cd-gpios = <&gpio6 15 0>;
 				wp-gpios = <&gpio1 13 0>;

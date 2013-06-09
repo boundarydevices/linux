@@ -128,6 +128,12 @@
 				status = "okay";
 			};
 
+			mlb@0218c000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_mlb_1>;
+				status = "okay";
+			};
+
 			i2c@021a0000 { /* I2C1 */
 				clock-frequency = <100000>;
 				pinctrl-names = "default";

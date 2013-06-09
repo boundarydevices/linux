@@ -413,6 +413,24 @@
 					};
 				};
 
+				mlb {
+					pinctrl_mlb_1: mlbgrp-1 {
+						fsl,pins = <
+							MX6DL_PAD_GPIO_3__MLB_CLK 0x71
+							MX6DL_PAD_GPIO_6__MLB_SIG 0x71
+							MX6DL_PAD_GPIO_2__MLB_DATA 0x71
+						>;
+					};
+
+					pinctrl_mlb_2: mlbgrp-2 {
+						fsl,pins = <
+							MX6DL_PAD_ENET_TXD1__MLB_CLK 0x71
+							MX6DL_PAD_GPIO_6__MLB_SIG 0x71
+							MX6DL_PAD_GPIO_2__MLB_DATA 0x71
+						>;
+					};
+				};
+
 				pwm0 {
 					pinctrl_pwm0_0: pwm0-1 {
 						fsl,pins = <

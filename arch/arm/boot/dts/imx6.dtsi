@@ -742,8 +742,12 @@
 			};
 
 			mlb@0218c000 {
+				compatible = "fsl,imx6q-mlb";
 				reg = <0x0218c000 0x4000>;
 				interrupts = <0 53 0x04 0 117 0x04 0 126 0x04>;
+				clocks = <&clks 139>, <&clks 175>;
+				clock-names = "mlb3p", "mlb6p";
+				status = "disabled";
 			};
 
 			usdhc@02190000 { /* uSDHC1 */
