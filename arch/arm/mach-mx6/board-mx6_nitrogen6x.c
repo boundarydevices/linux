@@ -1264,14 +1264,6 @@ static void __init board_init(void)
 	imx6q_add_lcdif(&lcdif_data);
 	imx6q_add_ldb(&ldb_data);
 	imx6q_add_bt656(&bt656_data);
-	voutdev = imx6q_add_v4l2_output(0);
-	if (vout_mem.res_msize && voutdev) {
-		dma_declare_coherent_memory(&voutdev->dev,
-				vout_mem.res_mbase,
-				vout_mem.res_mbase,
-				vout_mem.res_msize,
-				DMA_MEMORY_MAP | DMA_MEMORY_EXCLUSIVE);
-	}
 
 	for (i = 0; i < ARRAY_SIZE(capture_data); i++) {
 		if (!cpu_is_mx6q())
