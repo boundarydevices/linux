@@ -65,6 +65,7 @@
 #include <mach/ahci_sata.h>
 #include <mach/ipu-v3.h>
 #include <mach/mxc_asrc.h>
+#include <mach/system.h>
 #include <linux/i2c/tsc2007.h>
 #include <linux/wl12xx.h>
 
@@ -1057,6 +1058,32 @@ static struct platform_device platdev_leds_pwd = {
 };
 
 
+static void poweroff(void)
+{
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	int waspressed = 0;
+	int i;
+	for (i=0; i < num_registered_fb; i++) {
+		if (registered_fb[i])
+                        fb_blank(registered_fb[i],FB_BLANK_POWERDOWN);
+	}
+
+	while (1) {
+		int pressed=(0 == gpio_get_value(GP_KEY_ONOFF));
+		if (!pressed && waspressed) {
+			break;
+		}
+		if (waspressed != pressed) {
+			waspressed=pressed;
+		} else {
+			dsb();
+			isb();
+		}
+	}
+	arch_reset('h',"");
+#endif
+}
+
 /*!
  * Board specific initialization.
  */
@@ -1183,6 +1210,7 @@ static void __init board_init(void)
 	rate = clk_round_rate(clko2, 24000000);
 	clk_set_rate(clko2, rate);
 	clk_enable(clko2);
+	pm_power_off = poweroff;
 	imx6q_add_busfreq();
 
 	gpio_set_value(GP_WL_EN, 1);		/* momentarily enable */
