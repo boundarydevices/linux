@@ -824,6 +824,12 @@ config MFD_TPS65910
 	  if you say yes here you get support for the TPS65910 series of
 	  Power Management chips.
 
+config MFD_WM8997
+	bool "Support Wolfson Microelectronics WM8997"
+	depends on MFD_ARIZONA
+	help
+	  Support for Wolfson Microelectronics WM8997 low power audio SoC
+
 config TPS65911_COMPARATOR
 	tristate
 
