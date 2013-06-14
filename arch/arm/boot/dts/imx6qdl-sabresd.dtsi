@@ -373,6 +373,7 @@
 					vpos_pwrdn = <2>;
 					gvee_pwrdn = <1>;
 					vneg_pwrdn = <1>;
+					SENSOR-supply = <&reg_sensor>;
 					gpio_pmic_pwrgood = <&gpio2 21 0>;
 					gpio_pmic_vcom_ctrl = <&gpio3 17 0>;
 					gpio_pmic_wakeup = <&gpio3 20 0>;
@@ -509,6 +510,13 @@
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 			gpio = <&gpio1 29 0>;
+			enable-active-high;
+		};
+
+		reg_sensor: sensor_supply {
+			compatible = "regulator-fixed";
+			regulator-name = "sensor-SUPPLY";
+			gpio = <&gpio2 31 0>;
 			enable-active-high;
 		};
 	};

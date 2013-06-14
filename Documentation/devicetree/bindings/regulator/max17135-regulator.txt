@@ -16,6 +16,7 @@ Required properties :
 - vpos_pwrdn: the timing for VPOS power down
 - gvee_pwrdn: the timing for GVEE power down
 - vneg_pwrdn: the timing for VNEG power down
+- SENSOR-supply: the gpio regulator to control the supply for this chip
 - gpio_pmic_pwrgood: gpio setting for EPDC_PWRSTAT
 - gpio_pmic_vcom_ctrl: gpio setting for EPDC_VCOM
 - gpio_pmic_wakeup: gpio setting for EPDC_PWRWAKEUP
@@ -44,6 +45,7 @@ Example:
 		vpos_pwrdn = <2>;
 		gvee_pwrdn = <1>;
 		vneg_pwrdn = <1>;
+		SENSOR-supply = <&reg_sensor>;
 		gpio_pmic_pwrgood = <&gpio2 21 0>;
 		gpio_pmic_vcom_ctrl = <&gpio3 17 0>;
 		gpio_pmic_wakeup = <&gpio3 20 0>;

@@ -49,6 +49,7 @@
 #include <asm/mach-types.h>
 
 struct i2c_client *max17135_client;
+static struct regulator *gpio_regulator;
 
 static struct mfd_cell max17135_devs[] = {
 	{ .name = "max17135-pmic", },
@@ -136,6 +137,15 @@ static int max17135_probe(struct i2c_client *client,
 
 	if (!np)
 		return -ENODEV;
+
+	gpio_regulator = devm_regulator_get(&client->dev, "SENSOR");
+	if (gpio_regulator) {
+		ret = regulator_enable(gpio_regulator);
+		if (ret) {
+			dev_err(&client->dev, "gpio set voltage error\n");
+			return ret;
+		}
+	}
 
 	/* Create the PMIC data structure */
 	max17135 = kzalloc(sizeof(struct max17135), GFP_KERNEL);
