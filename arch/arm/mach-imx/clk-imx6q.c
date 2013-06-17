@@ -638,6 +638,12 @@ int __init mx6q_clocks_init(void)
 		clk_set_parent(clk[ipu2_sel], clk[mmdc_ch0_axi]);
 	}
 
+	if (cpu_is_imx6dl()) {
+		/* pxp & epdc */
+		clk_set_parent(clk[ipu2_sel], clk[pll2_pfd2_396m]);
+		clk_set_rate(clk[ipu2], 200000000);
+	}
+
 	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 		clk_prepare_enable(clk[clks_init_on[i]]);
 
