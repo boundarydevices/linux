@@ -40,7 +40,6 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
-
 #include <linux/platform_device.h>
 #include <linux/regulator/machine.h>
 #include <linux/pmic_status.h>
@@ -48,6 +47,8 @@
 #include <linux/mfd/max17135.h>
 #include <asm/mach-types.h>
 
+static int max17135_detect(struct i2c_client *client,
+			  struct i2c_board_info *info);
 struct i2c_client *max17135_client;
 static struct regulator *gpio_regulator;
 
@@ -160,6 +161,9 @@ static int max17135_probe(struct i2c_client *client,
 	max17135->i2c_client = client;
 
 	max17135_client = client;
+	ret = max17135_detect(client, NULL);
+	if (ret)
+		goto err1;
 
 	mfd_add_devices(max17135->dev, -1, max17135_devs,
 			ARRAY_SIZE(max17135_devs),
@@ -169,7 +173,7 @@ static int max17135_probe(struct i2c_client *client,
 		pdata = max17135_i2c_parse_dt_pdata(max17135->dev);
 		if (IS_ERR(pdata)) {
 			ret = PTR_ERR(pdata);
-			goto err;
+			goto err2;
 		}
 
 	}
@@ -178,8 +182,9 @@ static int max17135_probe(struct i2c_client *client,
 	dev_info(&client->dev, "PMIC MAX17135 for eInk display\n");
 
 	return ret;
-err:
+err2:
 	mfd_remove_devices(max17135->dev);
+err1:
 	kfree(max17135);
 
 	return ret;
@@ -235,7 +240,8 @@ static int max17135_detect(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	strlcpy(info->type, "max17135_sensor", I2C_NAME_SIZE);
+	if (info)
+		strlcpy(info->type, "max17135_sensor", I2C_NAME_SIZE);
 
 	return 0;
 }
