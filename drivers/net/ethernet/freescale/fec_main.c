@@ -1445,6 +1445,17 @@ static int fec_enet_set_pauseparam(struct net_device *ndev,
 
 #endif /* !defined(CONFIG_M5272) */
 
+static int fec_enet_nway_reset(struct net_device *dev)
+{
+	struct fec_enet_private *fep = netdev_priv(dev);
+	struct phy_device *phydev = fep->phy_dev;
+
+	if (!phydev)
+		return -ENODEV;
+
+	return genphy_restart_aneg(phydev);
+}
+
 static const struct ethtool_ops fec_enet_ethtool_ops = {
 #if !defined(CONFIG_M5272)
 	.get_pauseparam		= fec_enet_get_pauseparam,
@@ -1455,6 +1466,7 @@ static const struct ethtool_ops fec_enet_ethtool_ops = {
 	.get_drvinfo		= fec_enet_get_drvinfo,
 	.get_link		= ethtool_op_get_link,
 	.get_ts_info		= fec_enet_get_ts_info,
+	.nway_reset		= fec_enet_nway_reset,
 };
 
 static int fec_enet_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
