@@ -713,8 +713,11 @@
 			};
 
 			epdc@020f4000 {
+				compatible = "fsl,imx6-epdc";
 				reg = <0x020f4000 0x4000>;
 				interrupts = <0 97 0x04>;
+				clocks = <&clks 133>, <&clks 137>;
+				clock-names = "epdc_axi", "epdc_pix";
 			};
 
 			lcdif@020f8000 {

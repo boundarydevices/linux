@@ -85,6 +85,7 @@ static int hdcp_init;
 static int weim_nor;
 static int spinor_en;
 static int can0_enable;
+static int epdc_enable;
 static void __iomem *wdog_base1;
 static void __iomem *wdog_base2;
 
@@ -137,6 +138,12 @@ static int __init early_enable_can0(char *p)
 }
 early_param("can0", early_enable_can0);
 
+static int __init early_enable_epdc(char *p)
+{
+	epdc_enable = 1;
+	return 0;
+}
+early_param("epdc", early_enable_epdc);
 
 /*
  * The length's determined by PINFUNC definition's length.
@@ -816,6 +823,9 @@ static void __init imx6q_sabresd_init(void)
 {
 	imx6q_ar803x_phy_fixup();
 	imx6q_sabresd_cko_setup();
+
+	if (!epdc_enable)
+		of_node_status_disable_by_path("/soc/aips-bus@02000000/epdc@020f4000");
 }
 
 static void __init imx6q_sabreauto_init(void)
@@ -1162,7 +1172,7 @@ static const struct of_dev_auxdata imx6q_auxdata_lookup[] __initconst = {
 	OF_DEV_AUXDATA("fsl,imx6q-flexcan", 0x02090000, NULL, &flexcan_pdata[0]),
 	OF_DEV_AUXDATA("fsl,imx6q-flexcan", 0x02094000, NULL, &flexcan_pdata[1]),
 	OF_DEV_AUXDATA("fsl,imx6q-i2c", 0x021a8000, NULL, &i2c3_pdata),
-	OF_DEV_AUXDATA("fsl,imx6-epdc", 0x020f8000, NULL, &epdc_data),
+	OF_DEV_AUXDATA("fsl,imx6-epdc", 0x020f4000, NULL, &epdc_data),
 	{ /* sentinel */ }
 };
 
