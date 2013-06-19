@@ -19,27 +19,32 @@
  * @ingroup Camera
  */
 
-#include <linux/module.h>
-#include <linux/init.h>
-#include <linux/types.h>
+#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/i2c.h>
-#include <linux/videodev2.h>
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/of_device.h>
+#include <linux/of_gpio.h>
+#include <mach/iomux-v3.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/regulator/consumer.h>
-#include <linux/fsl_devices.h>
 #include <media/v4l2-chip-ident.h>
 #include <media/v4l2-int-device.h>
+#include <linux/types.h>
 #include "mxc_v4l2_capture.h"
+
+#define ADV7180_VOLTAGE_ANALOG               3300000
+#define ADV7180_VOLTAGE_DIGITAL_CORE         1800000
+#define ADV7180_VOLTAGE_DIGITAL_IO           1800000
+#define ADV7180_VOLTAGE_PLL                  1800000
 
 static struct regulator *dvddio_regulator;
 static struct regulator *dvdd_regulator;
 static struct regulator *avdd_regulator;
 static struct regulator *pvdd_regulator;
-static struct fsl_mxc_tvin_platform_data *tvin_plat;
-
-extern void gpio_sensor_active(void);
-extern void gpio_sensor_inactive(void);
+static int pwn_gpio;
 
 static int adv7180_probe(struct i2c_client *adapter,
 			 const struct i2c_device_id *id);
@@ -91,6 +96,8 @@ typedef struct {
 	u16 raw_height;		/*!< Raw height. */
 	u16 active_width;	/*!< Active width. */
 	u16 active_height;	/*!< Active height. */
+	u16 active_top;		/*!< Active top. */
+	u16 active_left;	/*!< Active left. */
 } video_fmt_t;
 
 /*! Description of video formats supported.
@@ -106,6 +113,8 @@ static video_fmt_t video_fmts[] = {
 	 .raw_height = 525,	/* SENS_FRM_HEIGHT */
 	 .active_width = 720,	/* ACT_FRM_WIDTH plus 1 */
 	 .active_height = 480,	/* ACT_FRM_WIDTH plus 1 */
+	 .active_top = 13,
+	 .active_left = 0,
 	 },
 	{			/*! (B, G, H, I, N) PAL */
 	 .v4l2_id = V4L2_STD_PAL,
@@ -114,6 +123,8 @@ static video_fmt_t video_fmts[] = {
 	 .raw_height = 625,
 	 .active_width = 720,
 	 .active_height = 576,
+	 .active_top = 0,
+	 .active_left = 0,
 	 },
 	{			/*! Unlocked standard */
 	 .v4l2_id = V4L2_STD_ALL,
@@ -122,6 +133,8 @@ static video_fmt_t video_fmts[] = {
 	 .raw_height = 625,
 	 .active_width = 720,
 	 .active_height = 576,
+	 .active_top = 0,
+	 .active_left = 0,
 	 },
 };
 
@@ -172,6 +185,96 @@ static struct v4l2_queryctrl adv7180_qctrl[] = {
 	}
 };
 
+static inline void adv7180_power_down(int enable)
+{
+	int val = !enable;
+
+	gpio_set_value_cansleep(pwn_gpio, val);
+	msleep(2);
+}
+
+#if 0
+static void adv7180_io_init(void)
+{
+	if (cpu_is_mx6q())
+		mxc_iomux_set_gpr_register(1, 19, 1, 1);
+	else if (cpu_is_mx6dl())
+		mxc_iomux_set_gpr_register(13, 0, 3, 4);
+}
+#endif
+
+static int adv7180_regulator_enable(struct device *dev)
+{
+	int ret = 0;
+	dvddio_regulator = devm_regulator_get(dev, "DOVDD");
+
+	if (!IS_ERR(dvddio_regulator)) {
+		regulator_set_voltage(dvddio_regulator,
+				      ADV7180_VOLTAGE_DIGITAL_IO,
+				      ADV7180_VOLTAGE_DIGITAL_IO);
+		ret = regulator_enable(dvddio_regulator);
+		if (ret) {
+			dev_err(dev, "set io voltage failed\n");
+			return ret;
+		} else {
+			dev_dbg(dev, "set io voltage ok\n");
+		}
+	} else {
+		dev_warn(dev, "cannot get io voltage\n");
+	}
+
+	dvdd_regulator = devm_regulator_get(dev, "DVDD");
+	if (!IS_ERR(dvdd_regulator)) {
+		regulator_set_voltage(dvdd_regulator,
+				      ADV7180_VOLTAGE_DIGITAL_CORE,
+				      ADV7180_VOLTAGE_DIGITAL_CORE);
+		ret = regulator_enable(dvdd_regulator);
+		if (ret) {
+			dev_err(dev, "set core voltage failed\n");
+			return ret;
+		} else {
+			dev_dbg(dev, "set core voltage ok\n");
+		}
+	} else {
+		dev_warn(dev, "cannot get core voltage\n");
+	}
+
+	avdd_regulator = devm_regulator_get(dev, "AVDD");
+	if (!IS_ERR(avdd_regulator)) {
+		regulator_set_voltage(avdd_regulator,
+				      ADV7180_VOLTAGE_ANALOG,
+				      ADV7180_VOLTAGE_ANALOG);
+		ret = regulator_enable(avdd_regulator);
+		if (ret) {
+			dev_err(dev, "set analog voltage failed\n");
+			return ret;
+		} else {
+			dev_dbg(dev, "set analog voltage ok\n");
+		}
+	} else {
+		dev_warn(dev, "cannot get analog voltage\n");
+	}
+
+	pvdd_regulator = devm_regulator_get(dev, "PVDD");
+	if (!IS_ERR(pvdd_regulator)) {
+		regulator_set_voltage(pvdd_regulator,
+				      ADV7180_VOLTAGE_ANALOG,
+				      ADV7180_VOLTAGE_ANALOG);
+		ret = regulator_enable(pvdd_regulator);
+		if (ret) {
+			dev_err(dev, "set pll voltage failed\n");
+			return ret;
+		} else {
+			dev_dbg(dev, "set pll voltage ok\n");
+		}
+	} else {
+		dev_warn(dev, "cannot get pll voltage\n");
+	}
+
+	return ret;
+}
+
+
 /***********************************************************************
  * I2C transfert.
  ***********************************************************************/
@@ -185,6 +288,7 @@ static struct v4l2_queryctrl adv7180_qctrl[] = {
 static inline int adv7180_read(u8 reg)
 {
 	int val;
+
 	val = i2c_smbus_read_byte_data(adv7180_data.sen.i2c_client, reg);
 	if (val < 0) {
 		dev_dbg(&adv7180_data.sen.i2c_client->dev,
@@ -322,7 +426,6 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 	dev_dbg(&adv7180_data.sen.i2c_client->dev, "adv7180:ioctl_s_power\n");
 
 	if (on && !sensor->sen.on) {
-		gpio_sensor_active();
 		if (adv7180_write_reg(ADV7180_PWR_MNG, 0x04) != 0)
 			return -EIO;
 
@@ -334,7 +437,6 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 	} else if (!on && sensor->sen.on) {
 		if (adv7180_write_reg(ADV7180_PWR_MNG, 0x24) != 0)
 			return -EIO;
-		gpio_sensor_inactive();
 	}
 
 	sensor->sen.on = on;
@@ -674,6 +776,7 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 				 struct v4l2_frmsizeenum *fsize)
 {
+
 	if (fsize->index >= 1)
 		return -EINVAL;
 
@@ -1079,61 +1182,35 @@ static int adv7180_probe(struct i2c_client *client,
 {
 	int rev_id;
 	int ret = 0;
-	tvin_plat = client->dev.platform_data;
+	u32 cvbs = true;
+	struct pinctrl *pinctrl;
+	struct device *dev = &client->dev;
 
 	printk(KERN_ERR"DBG sensor data is at %p\n", &adv7180_data);
 
-	pr_debug("In adv7180_probe\n");
-
-	if (tvin_plat->dvddio_reg) {
-		dvddio_regulator =
-		    regulator_get(&client->dev, tvin_plat->dvddio_reg);
-		if (!IS_ERR_VALUE((unsigned long)dvddio_regulator)) {
-			regulator_set_voltage(dvddio_regulator,
-					      3300000, 3300000);
-			if (regulator_enable(dvddio_regulator) != 0)
-				return -ENODEV;
-		}
+	/* ov5640 pinctrl */
+	pinctrl = devm_pinctrl_get_select_default(dev);
+	if (IS_ERR(pinctrl)) {
+		dev_err(dev, "setup pinctrl failed\n");
+		return PTR_ERR(pinctrl);
 	}
 
-	if (tvin_plat->dvdd_reg) {
-		dvdd_regulator =
-		    regulator_get(&client->dev, tvin_plat->dvdd_reg);
-		if (!IS_ERR_VALUE((unsigned long)dvdd_regulator)) {
-			regulator_set_voltage(dvdd_regulator, 1800000, 1800000);
-			if (regulator_enable(dvdd_regulator) != 0)
-				return -ENODEV;
-		}
+	/* request power down pin */
+	pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
+	if (!gpio_is_valid(pwn_gpio)) {
+		dev_err(dev, "no sensor pwdn pin available\n");
+		return -ENODEV;
+	}
+	ret = devm_gpio_request_one(dev, pwn_gpio, GPIOF_OUT_INIT_HIGH,
+					"adv7180_pwdn");
+	if (ret < 0) {
+		dev_err(dev, "no power pin available!\n");
+		return ret;
 	}
 
-	if (tvin_plat->avdd_reg) {
-		avdd_regulator =
-		    regulator_get(&client->dev, tvin_plat->avdd_reg);
-		if (!IS_ERR_VALUE((unsigned long)avdd_regulator)) {
-			regulator_set_voltage(avdd_regulator, 1800000, 1800000);
-			if (regulator_enable(avdd_regulator) != 0)
-				return -ENODEV;
-		}
-	}
+	adv7180_regulator_enable(dev);
 
-	if (tvin_plat->pvdd_reg) {
-		pvdd_regulator =
-		    regulator_get(&client->dev, tvin_plat->pvdd_reg);
-		if (!IS_ERR_VALUE((unsigned long)pvdd_regulator)) {
-			regulator_set_voltage(pvdd_regulator, 1800000, 1800000);
-			if (regulator_enable(pvdd_regulator) != 0)
-				return -ENODEV;
-		}
-	}
-
-	if (tvin_plat->io_init)
-		tvin_plat->io_init();
-
-	if (tvin_plat->reset)
-		tvin_plat->reset();
-
-	if (tvin_plat->pwdn)
-		tvin_plat->pwdn(0);
+	adv7180_power_down(0);
 
 	msleep(1);
 
@@ -1150,7 +1227,36 @@ static int adv7180_probe(struct i2c_client *client,
 	adv7180_data.sen.pix.priv = 1;  /* 1 is used to indicate TV in */
 	adv7180_data.sen.on = true;
 
-	gpio_sensor_active();
+
+	adv7180_data.sen.sensor_clk = devm_clk_get(dev, "csi_mclk");
+	if (IS_ERR(adv7180_data.sen.sensor_clk)) {
+		dev_err(dev, "get mclk failed\n");
+		return PTR_ERR(adv7180_data.sen.sensor_clk);
+	}
+
+	ret = of_property_read_u32(dev->of_node, "mclk",
+					&adv7180_data.sen.mclk);
+	if (ret) {
+		dev_err(dev, "mclk frequency is invalid\n");
+		return ret;
+	}
+
+	ret = of_property_read_u32(
+		dev->of_node, "mclk_source",
+		(u32 *) &(adv7180_data.sen.mclk_source));
+	if (ret) {
+		dev_err(dev, "mclk_source invalid\n");
+		return ret;
+	}
+
+	ret = of_property_read_u32(dev->of_node, "csi_id",
+					&(adv7180_data.sen.csi));
+	if (ret) {
+		dev_err(dev, "csi_id invalid\n");
+		return ret;
+	}
+
+	clk_prepare_enable(adv7180_data.sen.sensor_clk);
 
 	dev_dbg(&adv7180_data.sen.i2c_client->dev,
 		"%s:adv7180 probe i2c address is 0x%02X\n",
@@ -1158,12 +1264,18 @@ static int adv7180_probe(struct i2c_client *client,
 
 	/*! Read the revision ID of the tvin chip */
 	rev_id = adv7180_read(ADV7180_IDENT);
-	dev_dbg(&adv7180_data.sen.i2c_client->dev,
+	dev_dbg(dev,
 		"%s:Analog Device adv7%2X0 detected!\n", __func__,
 		rev_id);
 
+	ret = of_property_read_u32(dev->of_node, "cvbs", &(cvbs));
+	if (ret) {
+		dev_err(dev, "cvbs setting is not found\n");
+		cvbs = true;
+	}
+
 	/*! ADV7180 initialization. */
-	adv7180_hard_reset(tvin_plat->cvbs);
+	adv7180_hard_reset(cvbs);
 
 	pr_debug("   type is %d (expect %d)\n",
 		 adv7180_int_device.type, v4l2_int_type_slave);
@@ -1171,7 +1283,7 @@ static int adv7180_probe(struct i2c_client *client,
 		 adv7180_int_device.u.slave->num_ioctls);
 
 	/* This function attaches this structure to the /dev/video0 device.
-	 * The pointer in priv points to the mt9v111_data structure here.*/
+	 * The pointer in priv points to the adv7180_data structure here.*/
 	adv7180_int_device.priv = &adv7180_data;
 	ret = v4l2_int_device_register(&adv7180_int_device);
 
@@ -1195,25 +1307,17 @@ static int adv7180_detach(struct i2c_client *client)
 	/* Power down via i2c */
 	adv7180_write_reg(ADV7180_PWR_MNG, 0x24);
 
-	if (dvddio_regulator) {
+	if (dvddio_regulator)
 		regulator_disable(dvddio_regulator);
-		regulator_put(dvddio_regulator);
-	}
 
-	if (dvdd_regulator) {
+	if (dvdd_regulator)
 		regulator_disable(dvdd_regulator);
-		regulator_put(dvdd_regulator);
-	}
 
-	if (avdd_regulator) {
+	if (avdd_regulator)
 		regulator_disable(avdd_regulator);
-		regulator_put(avdd_regulator);
-	}
 
-	if (pvdd_regulator) {
+	if (pvdd_regulator)
 		regulator_disable(pvdd_regulator);
-		regulator_put(pvdd_regulator);
-	}
 
 	v4l2_int_device_unregister(&adv7180_int_device);
 
@@ -1251,7 +1355,6 @@ static void __exit adv7180_clean(void)
 {
 	dev_dbg(&adv7180_data.sen.i2c_client->dev, "In adv7180_clean\n");
 	i2c_del_driver(&adv7180_i2c_driver);
-	gpio_sensor_inactive();
 }
 
 module_init(adv7180_init);
