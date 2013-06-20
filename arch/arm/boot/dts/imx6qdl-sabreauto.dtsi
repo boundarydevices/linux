@@ -392,6 +392,18 @@
 					cvbs = <1>;
 				};
 			};
+
+			mipi@021dc000 { /* MIPI-CSI */
+				status = "okay";
+				ipu_id = <0>;
+				csi_id = <1>;
+				v_channel = <1>;
+				lanes = <1>;
+			};
+
+			vdoa@021e4000 {
+				status = "okay";
+			};
 		};
 
 		ipu1: ipu@02400000 { /* IPU1 */
