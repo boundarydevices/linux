@@ -777,9 +777,11 @@ static void __init imx6q_csi_mux_init(void)
 	 * IPU1 CSI1 connects to MIPI CSI2 virtual channel 1.
 	 * Set GPR13 bit 3-5 to 0x1.
 	 */
-	if (of_machine_is_compatible("fsl,imx6q-sabresd"))
+	if (of_machine_is_compatible("fsl,imx6q-sabresd") ||
+	    of_machine_is_compatible("fsl,imx6q-sabreauto"))
 		regmap_update_bits(regmap_gpr, IOMUXC_GPR1, 1 << 19, 1 << 19);
-	else if (of_machine_is_compatible("fsl,imx6dl-sabresd"))
+	else if (of_machine_is_compatible("fsl,imx6dl-sabresd") ||
+		 of_machine_is_compatible("fsl,imx6dl-sabreauto"))
 		regmap_update_bits(regmap_gpr, IOMUXC_GPR13, 0x3F, 0x0C);
 }
 
