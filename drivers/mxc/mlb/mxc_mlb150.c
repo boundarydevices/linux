@@ -2640,9 +2640,9 @@ static int mxc_mlb150_resume(struct platform_device *pdev)
 {
 	struct mlb_data *drvdata = platform_get_drvdata(pdev);
 
-	mlb150_dev_init();
-
 	clk_prepare_enable(drvdata->clk_mlb3p);
+
+	mlb150_dev_init();
 
 	return 0;
 }
