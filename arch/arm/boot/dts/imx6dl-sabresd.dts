@@ -58,6 +58,10 @@
 							MX6DL_PAD_EIM_D20__GPIO3_IO20 0x80000000
 							MX6DL_PAD_EIM_A18__GPIO2_IO20 0x80000000
 							MX6DL_PAD_EIM_OE__GPIO2_IO25 0x80000000
+							/* elan touch */
+							MX6DL_PAD_EIM_A20__GPIO2_IO18 0x80000000
+							MX6DL_PAD_EIM_DA8__GPIO3_IO08 0x80000000
+							MX6DL_PAD_EIM_D28__GPIO3_IO28 0x80000000
 						>;
 					};
 				};
@@ -81,6 +85,21 @@
 			};
 		};
 
+		aips-bus@02100000 { /* AIPS2 */
+			i2c@021a8000 { /* I2C3 */
+				elan@10 {
+					compatible = "elan,elan-touch";
+					reg = <0x10>;
+					interrupt-parent = <&gpio3>;
+					interrupts = <28 3>;
+					gpio_elan_cs = <&gpio2 18 0>;
+					gpio_elan_rst = <&gpio3 8 0>;
+					gpio_intr = <&gpio3 28 0>;
+					status = "okay";
+				};
+			};
+		};
+
 		ahci@02200000 { /* AHCI SATA */
 			status = "disabled";
 		};
@@ -97,5 +116,4 @@
 	mxcfb2: fb@1 {
 		status = "okay";
 	};
-
 };
