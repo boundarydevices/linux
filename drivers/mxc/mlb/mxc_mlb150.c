@@ -2506,21 +2506,21 @@ static int __devinit mxc_mlb150_probe(struct platform_device *pdev)
 	ret = devm_request_irq(&pdev->dev, drvdata->irq_ahb0, mlb_ahb_isr, 0, pdev->name, drvdata);
 	if (ret) {
 		dev_err(&pdev->dev, "can't claim irq %d\n", drvdata->irq_ahb0);
-		goto err_irq;
+		goto err_dev;
 	}
 
 	drvdata->irq_ahb1 = platform_get_irq(pdev, 2);
 	ret = devm_request_irq(&pdev->dev, drvdata->irq_ahb1, mlb_ahb_isr, 0, pdev->name, drvdata);
 	if (ret) {
 		dev_err(&pdev->dev, "can't claim irq %d\n", drvdata->irq_ahb1);
-		goto err_irq;
+		goto err_dev;
 	}
 
 	drvdata->irq_mlb  = platform_get_irq(pdev, 0);
 	ret = devm_request_irq(&pdev->dev, drvdata->irq_mlb, mlb_isr, 0, pdev->name, drvdata);
 	if (ret) {
 		dev_err(&pdev->dev, "can't claim irq %d\n", drvdata->irq_mlb);
-		goto err_irq;
+		goto err_dev;
 	}
 
 	/* pinctrl */
@@ -2543,7 +2543,7 @@ static int __devinit mxc_mlb150_probe(struct platform_device *pdev)
 	if (!mlb_base) {
 		dev_err(&pdev->dev,
 			"failed to get ioremap base\n");
-		goto err_irq;
+		goto err_dev;
 	}
 	drvdata->membase = mlb_base;
 
@@ -2565,7 +2565,7 @@ static int __devinit mxc_mlb150_probe(struct platform_device *pdev)
 	if (IS_ERR(drvdata->clk_mlb3p)) {
 		dev_err(&pdev->dev, "unable to get mlb clock\n");
 		ret = PTR_ERR(drvdata->clk_mlb3p);
-		goto err_clk;
+		goto err_dev;
 	}
 	clk_prepare_enable(drvdata->clk_mlb3p);
 
@@ -2582,14 +2582,6 @@ static int __devinit mxc_mlb150_probe(struct platform_device *pdev)
 
 err_clk:
 	clk_disable_unprepare(drvdata->clk_mlb3p);
-	clk_disable_unprepare(drvdata->clk_mlb6p);
-err_irq:
-	if (drvdata->irq_ahb0)
-		free_irq(drvdata->irq_ahb0, NULL);
-	if (drvdata->irq_ahb1)
-		free_irq(drvdata->irq_ahb1, NULL);
-	if (drvdata->irq_mlb)
-		free_irq(drvdata->irq_mlb, NULL);
 err_dev:
 	for (--i; i >= 0; i--)
 		device_destroy(drvdata->class, MKDEV(mlb_major, i));
@@ -2598,10 +2590,6 @@ err_dev:
 err_reg:
 	unregister_chrdev_region(drvdata->firstdev, MLB_MINOR_DEVICES);
 err_unmap:
-	iounmap((void __iomem *)drvdata->membase);
-
-	kfree(drvdata);
-
 	return ret;
 }
 
@@ -2623,15 +2611,6 @@ static int __devexit mxc_mlb150_remove(struct platform_device *pdev)
 	}
 #endif
 
-	/* iounmap */
-	iounmap((void __iomem *)drvdata->membase);
-
-	if (drvdata->irq_ahb0)
-		free_irq(drvdata->irq_ahb0, NULL);
-	if (drvdata->irq_ahb1)
-		free_irq(drvdata->irq_ahb1, NULL);
-	if (drvdata->irq_mlb)
-		free_irq(drvdata->irq_mlb,  NULL);
 
 	/* destroy mlb device class */
 	for (i = MLB_MINOR_DEVICES - 1; i >= 0; i--)
@@ -2641,8 +2620,6 @@ static int __devexit mxc_mlb150_remove(struct platform_device *pdev)
 
 	/* Unregister the two MLB devices */
 	unregister_chrdev_region(drvdata->firstdev, MLB_MINOR_DEVICES);
-
-	kfree(drvdata);
 
 	return 0;
 }
