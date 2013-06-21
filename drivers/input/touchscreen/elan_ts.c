@@ -28,6 +28,8 @@
 #include <linux/i2c.h>
 #include <linux/delay.h>
 #include <linux/hrtimer.h>
+#include <linux/of_gpio.h>
+#include <linux/regulator/consumer.h>
 #include <linux/gpio.h>
 
 static const char ELAN_TS_NAME[] = "elan-touch";
@@ -62,7 +64,7 @@ static struct elan_data {
 /*--------------------------------------------------------------*/
 static int elan_touch_detect_int_level(void)
 {
-	unsigned v;
+	int v;
 	v = gpio_get_value(elan_touch_data.intr_gpio);
 
 	return v;
@@ -270,7 +272,55 @@ static int elan_touch_register_interrupt(struct i2c_client *client)
 static int elan_touch_probe(struct i2c_client *client,
 			    const struct i2c_device_id *id)
 {
-	int err = 0;
+	struct device_node *np = client->dev.of_node;
+	int gpio_elan_cs, gpio_elan_rst, err = 0;
+
+	if (!np)
+		return -ENODEV;
+
+	elan_touch_data.intr_gpio = of_get_named_gpio(np, "gpio_intr", 0);
+	if (!gpio_is_valid(elan_touch_data.intr_gpio))
+		return -ENODEV;
+
+	err = devm_gpio_request_one(&client->dev, elan_touch_data.intr_gpio,
+				GPIOF_IN, "gpio_elan_intr");
+	if (err < 0) {
+		dev_err(&client->dev,
+			"request gpio failed: %d\n", err);
+		return err;
+	}
+
+	/* elan touch init */
+	gpio_elan_cs = of_get_named_gpio(np, "gpio_elan_cs", 0);
+	if (!gpio_is_valid(gpio_elan_cs))
+		return -ENODEV;
+
+	err = devm_gpio_request_one(&client->dev, gpio_elan_cs,
+				GPIOF_OUT_INIT_HIGH, "gpio_elan_cs");
+	if (err < 0) {
+		dev_err(&client->dev,
+			"request gpio failed: %d\n", err);
+		return err;
+	}
+	gpio_set_value(gpio_elan_cs, 0);
+
+	gpio_elan_rst = of_get_named_gpio(np, "gpio_elan_rst", 0);
+	if (!gpio_is_valid(gpio_elan_rst))
+		return -ENODEV;
+
+	err = devm_gpio_request_one(&client->dev, gpio_elan_rst,
+				GPIOF_OUT_INIT_HIGH, "gpio_elan_rst");
+	if (err < 0) {
+		dev_err(&client->dev,
+			"request gpio failed: %d\n", err);
+		return err;
+	}
+	gpio_set_value(gpio_elan_rst, 0);
+	msleep(10);
+	gpio_set_value(gpio_elan_rst, 1);
+
+	gpio_set_value(gpio_elan_cs, 1);
+	msleep(100);
 
 	elan_wq = create_singlethread_workqueue("elan_wq");
 	if (!elan_wq) {
@@ -282,10 +332,6 @@ static int elan_touch_probe(struct i2c_client *client,
 	strlcpy(client->name, ELAN_TS_NAME, I2C_NAME_SIZE);
 
 	INIT_WORK(&elan_touch_data.work, elan_touch_work_func);
-
-	elan_touch_data.intr_gpio = irq_to_gpio(client->irq);
-	pr_info("irq_to_gpio irq %d, gpio %d\n", client->irq,
-		 elan_touch_data.intr_gpio);
 
 	elan_touch_data.input = input_allocate_device();
 	if (elan_touch_data.input == NULL) {
@@ -358,6 +404,15 @@ static const struct i2c_device_id elan_touch_id[] = {
 	{}
 };
 
+static const struct of_device_id elan_dt_ids[] = {
+	{
+		.compatible = "elan,elan-touch",
+	}, {
+		/* sentinel */
+	}
+};
+MODULE_DEVICE_TABLE(of, elan_dt_ids);
+
 static int elan_suspend(struct device *dev)
 {
 	return 0;
@@ -392,6 +447,7 @@ static struct i2c_driver elan_touch_driver = {
 	.driver = {
 		   .name = "elan-touch",
 		   .owner = THIS_MODULE,
+		   .of_match_table = elan_dt_ids,
 #ifdef CONFIG_PM
 		   .pm = &elan_dev_pm_ops,
 #endif
