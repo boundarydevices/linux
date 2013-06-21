@@ -2665,7 +2665,7 @@ static int mxc_mlb150_resume(struct platform_device *pdev)
 
 	mlb150_dev_init();
 
-	clk_prepare_enable(drvdata->clk_mlb6p);
+	clk_prepare_enable(drvdata->clk_mlb3p);
 
 	return 0;
 }
