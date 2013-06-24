@@ -378,7 +378,7 @@
 					compatible = "fsl,adv7180";
 					reg = <0x21>;
 					pinctrl-names = "default";
-					pinctrl-0 = <&pinctrl_ipu1_csi0_1>;
+					pinctrl-0 = <&pinctrl_ipu1_csi0_2>;
 					clocks = <&clks 169>;
 					clock-names = "csi_mclk";
 					DOVDD-supply = <&reg_3p3v>; /* 3.3v, enabled via 2.8 VGEN6 */
