@@ -36,11 +36,13 @@ Required properties for sensor
 - mclk: should the value of mclk clock send out the sensor. unit is Hz.
 - mclk_source: should be 0 or 1 and should be the same as the setting in
   v4l2_capture.
+- cbvs: 1 for CVBS input, 0 YPbPr input
 
 Supported Sensor
 - ov5640
 - ov5642
 - ov5640_mipi
+- adv7180
 
 
 Example for IPUv3 including capture settings on imx6q-sabresd.dts:
@@ -62,7 +64,7 @@ Examples for v4l2_capture:
 		status = "okay";
 	};
 
-Examples for sensor:
+Examples for sensors:
 	ov5642: ov5642@3c {
 		compatible = "fsl,ov5642";
 		reg = <0x3c>;
@@ -78,4 +80,22 @@ Examples for sensor:
 		csi_id = <0>;
 		mclk = <24000000>;
 		mclk_source = <0>;
+	};
+
+	adv7180: adv7180@21 {
+		compatible = "fsl,adv7180";
+		reg = <0x21>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu1_csi0_2>;
+		clocks = <&clks 169>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&reg_3p3v>; /* 3.3v, enabled via 2.8 VGEN6 */
+		AVDD-supply = <&reg_3p3v>;  /* 1.8v */
+		DVDD-supply = <&reg_3p3v>;  /* 1.8v */
+		PVDD-supply = <&reg_3p3v>;  /* 1.8v */
+		pwn-gpios = <&max7310_2 2 0>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+		cvbs = <1>;
 	};
