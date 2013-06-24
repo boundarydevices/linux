@@ -27,17 +27,15 @@
 #include <linux/module.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
-#include <mach/iomux-v3.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/regulator/consumer.h>
 #include <media/v4l2-chip-ident.h>
 #include <media/v4l2-int-device.h>
-#include <linux/types.h>
 #include "mxc_v4l2_capture.h"
 
-#define ADV7180_VOLTAGE_ANALOG               3300000
+#define ADV7180_VOLTAGE_ANALOG               1800000
 #define ADV7180_VOLTAGE_DIGITAL_CORE         1800000
-#define ADV7180_VOLTAGE_DIGITAL_IO           1800000
+#define ADV7180_VOLTAGE_DIGITAL_IO           3300000
 #define ADV7180_VOLTAGE_PLL                  1800000
 
 static struct regulator *dvddio_regulator;
@@ -96,8 +94,6 @@ typedef struct {
 	u16 raw_height;		/*!< Raw height. */
 	u16 active_width;	/*!< Active width. */
 	u16 active_height;	/*!< Active height. */
-	u16 active_top;		/*!< Active top. */
-	u16 active_left;	/*!< Active left. */
 } video_fmt_t;
 
 /*! Description of video formats supported.
@@ -113,8 +109,6 @@ static video_fmt_t video_fmts[] = {
 	 .raw_height = 525,	/* SENS_FRM_HEIGHT */
 	 .active_width = 720,	/* ACT_FRM_WIDTH plus 1 */
 	 .active_height = 480,	/* ACT_FRM_WIDTH plus 1 */
-	 .active_top = 13,
-	 .active_left = 0,
 	 },
 	{			/*! (B, G, H, I, N) PAL */
 	 .v4l2_id = V4L2_STD_PAL,
@@ -123,8 +117,6 @@ static video_fmt_t video_fmts[] = {
 	 .raw_height = 625,
 	 .active_width = 720,
 	 .active_height = 576,
-	 .active_top = 0,
-	 .active_left = 0,
 	 },
 	{			/*! Unlocked standard */
 	 .v4l2_id = V4L2_STD_ALL,
@@ -133,8 +125,6 @@ static video_fmt_t video_fmts[] = {
 	 .raw_height = 625,
 	 .active_width = 720,
 	 .active_height = 576,
-	 .active_top = 0,
-	 .active_left = 0,
 	 },
 };
 
@@ -187,25 +177,14 @@ static struct v4l2_queryctrl adv7180_qctrl[] = {
 
 static inline void adv7180_power_down(int enable)
 {
-	int val = !enable;
-
-	gpio_set_value_cansleep(pwn_gpio, val);
+	gpio_set_value_cansleep(pwn_gpio, !enable);
 	msleep(2);
 }
-
-#if 0
-static void adv7180_io_init(void)
-{
-	if (cpu_is_mx6q())
-		mxc_iomux_set_gpr_register(1, 19, 1, 1);
-	else if (cpu_is_mx6dl())
-		mxc_iomux_set_gpr_register(13, 0, 3, 4);
-}
-#endif
 
 static int adv7180_regulator_enable(struct device *dev)
 {
 	int ret = 0;
+
 	dvddio_regulator = devm_regulator_get(dev, "DOVDD");
 
 	if (!IS_ERR(dvddio_regulator)) {
@@ -258,8 +237,8 @@ static int adv7180_regulator_enable(struct device *dev)
 	pvdd_regulator = devm_regulator_get(dev, "PVDD");
 	if (!IS_ERR(pvdd_regulator)) {
 		regulator_set_voltage(pvdd_regulator,
-				      ADV7180_VOLTAGE_ANALOG,
-				      ADV7180_VOLTAGE_ANALOG);
+				      ADV7180_VOLTAGE_PLL,
+				      ADV7180_VOLTAGE_PLL);
 		ret = regulator_enable(pvdd_regulator);
 		if (ret) {
 			dev_err(dev, "set pll voltage failed\n");
@@ -776,7 +755,6 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 				 struct v4l2_frmsizeenum *fsize)
 {
-
 	if (fsize->index >= 1)
 		return -EINVAL;
 
@@ -1226,7 +1204,6 @@ static int adv7180_probe(struct i2c_client *client,
 	adv7180_data.sen.pix.pixelformat = V4L2_PIX_FMT_UYVY;  /* YUV422 */
 	adv7180_data.sen.pix.priv = 1;  /* 1 is used to indicate TV in */
 	adv7180_data.sen.on = true;
-
 
 	adv7180_data.sen.sensor_clk = devm_clk_get(dev, "csi_mclk");
 	if (IS_ERR(adv7180_data.sen.sensor_clk)) {
