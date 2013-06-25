@@ -716,7 +716,6 @@ port_err:
 	clk_disable_unprepare(sirfport->clk);
 	clk_put(sirfport->clk);
 clk_err:
-	platform_set_drvdata(pdev, NULL);
 	if (sirfport->hw_flow_ctrl)
 		pinctrl_put(sirfport->p);
 err:
@@ -727,7 +726,7 @@ static int sirfsoc_uart_remove(struct platform_device *pdev)
 {
 	struct sirfsoc_uart_port *sirfport = platform_get_drvdata(pdev);
 	struct uart_port *port = &sirfport->port;
-	platform_set_drvdata(pdev, NULL);
+
 	if (sirfport->hw_flow_ctrl)
 		pinctrl_put(sirfport->p);
 	clk_disable_unprepare(sirfport->clk);
