@@ -1786,7 +1786,6 @@ static int mxc_v4l_close(struct file *file)
 	}
 
 	if (--cam->open_count == 0) {
-		vidioc_int_s_power(cam->sensor, 0);
 		if (cam->mclk_on[cam->mclk_source]) {
 			ipu_csi_enable_mclk_if(cam->ipu, CSI_MCLK_I2C,
 					       cam->mclk_source,
