@@ -719,7 +719,6 @@ static int mxc_hdmi_core_probe(struct platform_device *pdev)
 	initialize_hdmi_ih_mutes();
 
 	/* Disable HDMI clocks until video/audio sub-drivers are initialized */
-	clk_disable_unprepare(isfr_clk);
 	clk_disable_unprepare(iahb_clk);
 
 	/* Replace platform data coming in with a local struct */
