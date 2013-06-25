@@ -760,6 +760,18 @@ static void plt_clk_ctrl(struct sdhci_host *host, bool enable)
 	}
 }
 
+static void sdhci_platform_set_power(struct sdhci_host *host,
+				     int on)
+{
+	struct esdhc_platform_data *boarddata
+				= host->mmc->parent->platform_data;
+	pr_debug("%s----------------- %d: %p:%p\n", __func__, on,
+                 boarddata,
+                 boarddata ? boarddata->set_power : 0);
+	if (boarddata && boarddata->set_power)
+		boarddata->set_power(on);
+}
+
 static struct sdhci_ops sdhci_esdhc_ops = {
 	.read_l = esdhc_readl_le,
 	.read_w = esdhc_readw_le,
@@ -771,6 +783,7 @@ static struct sdhci_ops sdhci_esdhc_ops = {
 	.get_max_clock = esdhc_pltfm_get_max_clock,
 	.get_min_clock = esdhc_pltfm_get_min_clock,
 	.platform_8bit_width = plt_8bit_width,
+	.platform_set_power = sdhci_platform_set_power,
 	.platform_clk_ctrl = plt_clk_ctrl,
 };
 
@@ -883,6 +896,8 @@ static int esdhc_pltfm_init(struct sdhci_host *host, struct sdhci_pltfm_data *pd
 	reg &= ~SDHCI_MIX_CTRL_DDREN;
 	writel(reg, host->ioaddr + SDHCI_MIX_CTRL);
 
+	pr_debug("-----------%s: boarddata %p, set_power %p\n",
+		 __func__, boarddata, boarddata->set_power);
 	if (boarddata) {
 		/* Device is always present, e.x, populated emmc device */
 		if (boarddata->always_present) {
