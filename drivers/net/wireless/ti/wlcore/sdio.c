@@ -29,7 +29,7 @@
 #include <linux/mmc/sdio_ids.h>
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
-#include <linux/gpio.h>
+#include <linux/of_irq.h>
 #include <linux/wl12xx.h>
 #include <linux/pm_runtime.h>
 
@@ -188,10 +188,46 @@ static struct wl1271_if_operations sdio_ops = {
 	.set_block_size = wl1271_sdio_set_block_size,
 };
 
+static struct wl12xx_platform_data *wlcore_get_pdata_from_of(struct device *dev)
+{
+	struct wl12xx_platform_data *pdata;
+	struct device_node *np = dev->of_node;
+
+	if (!np) {
+		np = of_find_matching_node(NULL, dev->driver->of_match_table);
+		if (!np) {
+			dev_notice(dev, "device tree node not available\n");
+			pdata = ERR_PTR(-ENODEV);
+			goto out;
+		}
+	}
+
+	pdata = kzalloc(sizeof(*pdata), GFP_KERNEL);
+	if (!pdata) {
+		dev_err(dev, "can't allocate platform data\n");
+		pdata = ERR_PTR(-ENODEV);
+		goto out;
+	}
+
+	pdata->irq = irq_of_parse_and_map(np, 0);
+	if (pdata->irq < 0) {
+		dev_err(dev, "can't get interrupt gpio from the device tree\n");
+		goto out_free;
+	}
+	pdata->board_ref_clock = WL12XX_REFCLOCK_38; /* 38.4 MHz */
+	goto out;
+
+out_free:
+	kfree(pdata);
+	pdata = ERR_PTR(-ENODEV);
+
+out:
+	return pdata;
+}
+
 static int __devinit wl1271_probe(struct sdio_func *func,
 				  const struct sdio_device_id *id)
 {
-	struct wl12xx_platform_data *wlan_data;
 	struct wlcore_platdev_data *pdev_data;
 	struct wl12xx_sdio_glue *glue;
 	struct resource res[1];
@@ -224,11 +260,22 @@ static int __devinit wl1271_probe(struct sdio_func *func,
 	/* Use block mode for transferring over one block size of data */
 	func->card->quirks |= MMC_QUIRK_BLKSZ_FOR_BYTE_MODE;
 
-	wlan_data = wl12xx_get_platform_data();
-	if (IS_ERR(wlan_data)) {
-		ret = PTR_ERR(wlan_data);
-		dev_err(glue->dev, "missing wlan platform data: %d\n", ret);
-		goto out_free_glue;
+	/* The pdata allocated here is freed when the device is freed,
+	 * so we don't need an additional out label to free it in case
+	 * of error further on.
+	 */
+
+	/* Try to get legacy platform data from the board file */
+	pdev_data->pdata = wl12xx_get_platform_data();
+	if (IS_ERR(pdev_data->pdata)) {
+		dev_info(&func->dev,
+			 "legacy platform data not found, trying device tree\n");
+
+		pdev_data->pdata = wlcore_get_pdata_from_of(&func->dev);
+		if (IS_ERR(pdev_data->pdata)) {
+			dev_err(&func->dev, "can't get platform data\n");
+			goto out_free_glue;
+		}
 	}
 
 	/* if sdio can keep power while host is suspended, enable wow */
@@ -236,7 +283,7 @@ static int __devinit wl1271_probe(struct sdio_func *func,
 	dev_dbg(glue->dev, "sdio PM caps = 0x%x\n", mmcflags);
 
 	if (mmcflags & MMC_PM_KEEP_POWER)
-		wlan_data->pwr_in_suspend = true;
+		pdev_data->pdata->pwr_in_suspend = true;
 
 	sdio_set_drvdata(func, glue);
 
@@ -254,7 +301,7 @@ static int __devinit wl1271_probe(struct sdio_func *func,
 
 	memset(res, 0x00, sizeof(res));
 
-	res[0].start = wlan_data->irq;
+	res[0].start = pdev_data->pdata->irq;
 	res[0].flags = IORESOURCE_IRQ;
 	res[0].name = "irq";
 
@@ -263,8 +310,6 @@ static int __devinit wl1271_probe(struct sdio_func *func,
 		dev_err(glue->dev, "can't add resources\n");
 		goto out_dev_put;
 	}
-
-	pdev_data->pdata = wlan_data;
 
 	ret = platform_device_add_data(glue->core, pdev_data,
 				       sizeof(*pdev_data));
@@ -354,16 +399,25 @@ static const struct dev_pm_ops wl1271_sdio_pm_ops = {
 };
 #endif
 
+static const struct of_device_id wlcore_sdio_of_match_table[] = {
+	{ .compatible = "ti,wilink6" },
+	{ .compatible = "ti,wilink7" },
+	{ .compatible = "ti,wilink8" },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, wlcore_sdio_of_match_table);
+
 static struct sdio_driver wl1271_sdio_driver = {
 	.name		= "wl1271_sdio",
 	.id_table	= wl1271_devices,
 	.probe		= wl1271_probe,
 	.remove		= __devexit_p(wl1271_remove),
-#ifdef CONFIG_PM
 	.drv = {
+#ifdef CONFIG_PM
 		.pm = &wl1271_sdio_pm_ops,
-	},
 #endif
+		.of_match_table = of_match_ptr(wlcore_sdio_of_match_table),
+	},
 };
 
 static int __init wl1271_init(void)
