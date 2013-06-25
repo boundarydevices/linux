@@ -1853,7 +1853,6 @@ static int atmel_serial_remove(struct platform_device *pdev)
 	int ret = 0;
 
 	device_init_wakeup(&pdev->dev, 0);
-	platform_set_drvdata(pdev, NULL);
 
 	ret = uart_remove_one_port(&atmel_uart, port);
 
