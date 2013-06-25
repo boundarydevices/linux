@@ -64,6 +64,7 @@ struct platform_driver mxc_hdmi_driver = {
 };
 module_platform_driver(mxc_hdmi_driver);
 
+MODULE_ALIAS("platform:mxc_hdmi_soc");
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_DESCRIPTION("MXC HDMI Audio");
 MODULE_LICENSE("GPL");
