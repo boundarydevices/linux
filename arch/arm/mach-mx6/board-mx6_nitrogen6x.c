@@ -41,6 +41,7 @@
 #include <linux/pmic_status.h>
 #include <linux/ipu.h>
 #include <linux/mxcfb.h>
+#include <linux/pwm.h>
 #include <linux/pwm_backlight.h>
 #include <linux/fec.h>
 #include <linux/memblock.h>
@@ -96,8 +97,8 @@
 #define MX6_SABRELITE_HOME_KEY		IMX_GPIO_NR(2, 4)
 #define MX6_SABRELITE_VOL_UP_KEY	IMX_GPIO_NR(7, 13)
 #define MX6_SABRELITE_VOL_DOWN_KEY	IMX_GPIO_NR(4, 5)
-#define MX6_SABRELITE_CSI0_RST		IMX_GPIO_NR(1, 8)
-#define MX6_SABRELITE_CSI0_PWN		IMX_GPIO_NR(1, 6)
+#define GP_CSI0_RST		IMX_GPIO_NR(1, 8)
+#define GP_CSI0_PWN		IMX_GPIO_NR(1, 6)
 #define MX6_SABRELITE_ENET_PHY_INT	IMX_GPIO_NR(1, 28)
 
 #define N6_WL1271_WL_IRQ		IMX_GPIO_NR(6, 14)
@@ -403,34 +404,52 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 
 static void mx6_csi0_cam_powerdown(int powerdown)
 {
-	gpio_set_value(MX6_SABRELITE_CSI0_PWN, powerdown ? 1 : 0);
+	gpio_set_value(GP_CSI0_PWN, powerdown ? 1 : 0);
 	msleep(2);
 }
 
-static void camera_reset(int power_gp, int reset_gp, int reset_gp2)
+static void camera_reset(int power_gp, int poweroff_level, int reset_gp, int reset_gp2)
 {
+	pr_info("%s: power_gp=0x%x, reset_gp=0x%x reset_gp2=0x%x\n",
+			__func__, power_gp, reset_gp, reset_gp2);
 	/* Camera power down */
 	gpio_request(power_gp, "cam-pwdn");
 	gpio_request(reset_gp, "cam-reset");
-	gpio_request(reset_gp2, "cam-reset2");
-	gpio_direction_output(power_gp, 1);
+	if (reset_gp2 >= 0)
+		gpio_request(reset_gp2, "cam-reset2");
+	gpio_direction_output(power_gp, poweroff_level);
 	/* Camera reset */
 	gpio_direction_output(reset_gp, 0);
-	gpio_direction_output(reset_gp2, 0);
+	if (reset_gp2 >= 0)
+		gpio_direction_output(reset_gp2, 0);
 	msleep(1);
-	gpio_set_value(power_gp, 0);
+	gpio_set_value(power_gp, poweroff_level ^ 1);
 	msleep(1);
 	gpio_set_value(reset_gp, 1);
-	gpio_set_value(reset_gp2, 1);
+	if (reset_gp2 >= 0)
+		gpio_set_value(reset_gp2, 1);
 }
 
+
 #if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
+
+static struct pwm_device *mipi_pwm = 0;
+
 static void mx6_mipi_sensor_io_init(void)
 {
 	IOMUX_SETUP(sabrelite_mipi_pads);
 
-	camera_reset(MX6_SABRELITE_CSI0_PWN, IMX_GPIO_NR(2, 5),
-			IMX_GPIO_NR(6, 11));
+	mipi_pwm = pwm_request(2, "mipi_clock");
+	if (IS_ERR(mipi_pwm)) {
+		pr_err("unable to request PWM for mipi_clock\n");
+	} else {
+		unsigned period = 1000/22;
+		pr_info("got pwm for mipi_clock\n");
+		pwm_config(mipi_pwm, period >> 1, period);
+		pwm_enable(mipi_pwm);
+	}
+
+	camera_reset(IMX_GPIO_NR(6, 9), 1, IMX_GPIO_NR(2, 5), IMX_GPIO_NR(6, 11));
 /*for mx6dl, mipi virtual channel 1 connect to csi 1*/
 	if (cpu_is_mx6dl())
 		mxc_iomux_set_gpr_register(13, 3, 3, 1);
@@ -447,8 +466,7 @@ static void mx6_csi0_io_init(void)
 {
 	IOMUX_SETUP(sabrelite_csi0_sensor_pads);
 
-	camera_reset(MX6_SABRELITE_CSI0_PWN, MX6_SABRELITE_CSI0_RST,
-			IMX_GPIO_NR(6, 11));
+	camera_reset(GP_CSI0_PWN, 1, GP_CSI0_RST, IMX_GPIO_NR(6, 11));
 	/* For MX6Q GPR1 bit19 and bit20 meaning:
 	 * Bit19:       0 - Enable mipi to IPU1 CSI0
 	 *                      virtual channel is fixed to 0
