@@ -1263,6 +1263,7 @@ static void __init board_init(void)
 	imx6q_add_vdoa();
 	imx6q_add_lcdif(&lcdif_data);
 	imx6q_add_ldb(&ldb_data);
+	imx6q_add_v4l2_output(0);
 	imx6q_add_bt656(&bt656_data);
 
 	for (i = 0; i < ARRAY_SIZE(capture_data); i++) {
