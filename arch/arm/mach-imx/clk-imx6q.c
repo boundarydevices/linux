@@ -552,7 +552,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	clk_register_clkdev(clk[cko1], "cko1", NULL);
 	clk_register_clkdev(clk[arm], NULL, "cpu0");
 
-	if (imx6q_revision() != IMX_CHIP_REVISION_1_0) {
+	if ((imx6q_revision() != IMX_CHIP_REVISION_1_0) || cpu_is_imx6dl()) {
 		clk_set_parent(clk[ldb_di0_sel], clk[pll5_video_div]);
 		clk_set_parent(clk[ldb_di1_sel], clk[pll5_video_div]);
 	}
