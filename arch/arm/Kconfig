@@ -1725,9 +1725,10 @@ config HW_PERF_EVENTS
 source "mm/Kconfig"
 
 config FORCE_MAX_ZONEORDER
-	int "Maximum zone order" if ARCH_SHMOBILE
+	int "Maximum zone order" if ARCH_SHMOBILE || ARCH_MXC
 	range 11 64 if ARCH_SHMOBILE
 	default "9" if SA1111
+	default "14" if ARCH_MXC
 	default "11"
 	help
 	  The kernel memory allocator divides physically contiguous memory
@@ -1739,6 +1740,14 @@ config FORCE_MAX_ZONEORDER
 
 	  This config option is actually maximum order plus one. For example,
 	  a value of 11 means that the largest free memory block is 2^10 pages.
+
+config CONSISTENT_DMA_SIZE_IN_MB
+	int "consistent dma size in MBytes"
+	default "184" if ARCH_MXC
+	default "2"
+	help
+	  The option provides the arch related consistent dma size in MBytes,
+	  if the number is 2 which means the consitend dma size will be 2MB.
 
 config LEDS
 	bool "Timer and CPU usage LEDs"
