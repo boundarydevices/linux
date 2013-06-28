@@ -424,7 +424,7 @@ static int sdma_run_channel0(struct sdma_engine *sdma)
 	while (!(ret = readl_relaxed(sdma->regs + SDMA_H_INTR) & 1)) {
 		if (timeout-- <= 0)
 			break;
-		udelay(1);
+		mdelay(2);
 	}
 
 	if (ret) {
