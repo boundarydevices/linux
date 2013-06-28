@@ -36,7 +36,8 @@ Required properties for sensor
 - mclk: should the value of mclk clock send out the sensor. unit is Hz.
 - mclk_source: should be 0 or 1 and should be the same as the setting in
   v4l2_capture.
-- cbvs: 1 for CVBS input, 0 YPbPr input
+- cvbs: 1 for CVBS input, 0 YPbPr input. This property is only needed for
+  adv7180 tv decoder.
 
 Supported Sensor
 - ov5640
