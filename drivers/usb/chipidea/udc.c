@@ -407,7 +407,7 @@ static int _hardware_enqueue(struct ci13xxx_ep *mEp, struct ci13xxx_req *mReq)
 	mReq->req.status = -EALREADY;
 
 	if (mReq->req.zero && length && (length % mEp->ep.maxpacket == 0)) {
-		mReq->zptr = dma_pool_alloc(mEp->td_pool, GFP_ATOMIC,
+		mReq->zptr = dma_pool_alloc_nonbufferable(mEp->td_pool, GFP_ATOMIC,
 					   &mReq->zdma);
 		if (mReq->zptr == NULL)
 			return -ENOMEM;
@@ -1102,7 +1102,7 @@ static struct usb_request *ep_alloc_request(struct usb_ep *ep, gfp_t gfp_flags)
 	if (mReq != NULL) {
 		INIT_LIST_HEAD(&mReq->queue);
 
-		mReq->ptr = dma_pool_alloc(mEp->td_pool, gfp_flags,
+		mReq->ptr = dma_pool_alloc_nonbufferable(mEp->td_pool, gfp_flags,
 					   &mReq->dma);
 		if (mReq->ptr == NULL) {
 			kfree(mReq);
@@ -1488,7 +1488,7 @@ static int init_eps(struct ci13xxx *ci)
 			mEp->ep.maxpacket = (unsigned short)~0;
 
 			INIT_LIST_HEAD(&mEp->qh.queue);
-			mEp->qh.ptr = dma_pool_alloc(ci->qh_pool, GFP_KERNEL,
+			mEp->qh.ptr = dma_pool_alloc_nonbufferable(ci->qh_pool, GFP_KERNEL,
 						     &mEp->qh.dma);
 			if (mEp->qh.ptr == NULL)
 				retval = -ENOMEM;
