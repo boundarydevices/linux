@@ -21,13 +21,13 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: siutils_priv.h,v 1.17.4.3 2010-10-25 16:56:56 Exp $
+ * $Id: siutils_priv.h,v 1.17.4.3 2010-10-25 16:56:56 $
  */
 
 #ifndef	_siutils_priv_h_
 #define	_siutils_priv_h_
 
-#define	SI_ERROR(args)
+#define	SI_ERROR(args) printf args
 
 #define	SI_MSG(args)
 

@@ -44,6 +44,7 @@
 #include <bcmsdpcm.h>
 #include <hndpmu.h>
 
+
 #include "siutils_priv.h"
 
 /* local prototypes */
@@ -297,6 +298,7 @@ si_buscore_setup(si_info_t *sii, chipcregs_t *cc, uint bustype, uint32 savewin,
 
 
 
+
 static si_info_t *
 si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
                        uint bustype, void *sdh, char **vars, uint *varsz)
@@ -376,7 +378,7 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 		bcmsdh_cfg_write(sdh, SDIO_FUNC_1, 0x10006, 0x0, NULL);
 		bcmsdh_cfg_write(sdh, SDIO_FUNC_1, 0x10007, 0x2, NULL);
 	}
-#endif
+#endif 
 
 	if ((CHIPID(sih->chip) == BCM4329_CHIP_ID) && (sih->chiprev == 0) &&
 		(sih->chippkg != BCM4329_289PIN_PKG_ID)) {
@@ -443,6 +445,7 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 			W_REG(osh, &cc->gpiopulldown, 0);
 			si_setcoreidx(sih, origidx);
 		}
+
 
 
 
@@ -1226,6 +1229,7 @@ si_clkctl_init(si_t *sih)
 	if (!fast)
 		si_setcoreidx(sih, origidx);
 }
+
 
 /* change logical "focus" to the gpio core for optimized access */
 void *

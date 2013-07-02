@@ -37,7 +37,7 @@
 
 #include "siutils_priv.h"
 
-
+#define BCM47162_DMP() (0)
 
 
 

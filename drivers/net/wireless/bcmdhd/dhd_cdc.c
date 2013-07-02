@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_cdc.c 324280 2012-03-28 19:01:17Z $
+ * $Id: dhd_cdc.c 303389 2011-12-16 09:30:48Z $
  *
  * BDC is like CDC, except it includes a header for data packets to convey
  * packet priority over the bus, and flags (e.g. to indicate checksum status
@@ -166,8 +166,10 @@ dhdcdc_query_ioctl(dhd_pub_t *dhd, int ifidx, uint cmd, void *buf, uint len, uin
 		memcpy(prot->buf, buf, len);
 
 	if ((ret = dhdcdc_msg(dhd)) < 0) {
-		if (!dhd->hang_was_sent)
+		if (!dhd->hang_was_sent) {
+			dhd->busstate = DHD_BUS_DOWN; // terence 20120516: fix for HANG issue
 			DHD_ERROR(("dhdcdc_query_ioctl: dhdcdc_msg failed w/status %d\n", ret));
+		}
 		goto done;
 	}
 

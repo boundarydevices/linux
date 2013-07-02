@@ -53,13 +53,15 @@ s32 wldev_ioctl(
 	s32 ret = 0;
 	struct wl_ioctl ioc;
 
+
 	memset(&ioc, 0, sizeof(ioc));
 	ioc.cmd = cmd;
 	ioc.buf = arg;
 	ioc.len = len;
 	ioc.set = set;
-
 	ret = dhd_ioctl_entry_local(dev, &ioc, cmd);
+
+
 	return ret;
 }
 
@@ -190,7 +192,6 @@ s32 wldev_mkiovar_bsscfg(
 	return iolen;
 
 }
-
 s32 wldev_iovar_getbuf_bsscfg(
 	struct net_device *dev, s8 *iovar_name,
 	void *param, s32 paramlen, void *buf, s32 buflen, s32 bsscfg_idx, struct mutex* buf_sync)
@@ -320,8 +321,6 @@ int wldev_set_band(
 
 	if ((band == WLC_BAND_AUTO) || (band == WLC_BAND_5G) || (band == WLC_BAND_2G)) {
 		error = wldev_ioctl(dev, WLC_SET_BAND, &band, sizeof(band), 1);
-		if (!error)
-			dhd_bus_band_set(dev, band);
 	}
 	return error;
 }
@@ -334,11 +333,8 @@ int wldev_set_country(
 	scb_val_t scbval;
 	char smbuf[WLC_IOCTL_SMLEN];
 
-	if (!country_code) {
-		WLDEV_ERROR(("%s: set country failed for %s\n",
-			__FUNCTION__, country_code));
+	if (!country_code)
 		return error;
-	}
 
 	error = wldev_iovar_getbuf(dev, "country", &cspec, sizeof(cspec),
 		smbuf, sizeof(smbuf), NULL);
@@ -354,71 +350,20 @@ int wldev_set_country(
 				__FUNCTION__, error));
 			return error;
 		}
-
-		cspec.rev = -1;
-		memcpy(cspec.country_abbrev, country_code, WLC_CNTRY_BUF_SZ);
-		memcpy(cspec.ccode, country_code, WLC_CNTRY_BUF_SZ);
-		get_customized_country_code((char *)&cspec.country_abbrev, &cspec);
-		error = wldev_iovar_setbuf(dev, "country", &cspec, sizeof(cspec),
-			smbuf, sizeof(smbuf), NULL);
-		if (error < 0) {
-			WLDEV_ERROR(("%s: set country for %s as %s rev %d failed\n",
-				__FUNCTION__, country_code, cspec.ccode, cspec.rev));
-			return error;
-		}
-		dhd_bus_country_set(dev, &cspec);
-		WLDEV_ERROR(("%s: set country for %s as %s rev %d\n",
+	}
+	cspec.rev = -1;
+	memcpy(cspec.country_abbrev, country_code, WLC_CNTRY_BUF_SZ);
+	memcpy(cspec.ccode, country_code, WLC_CNTRY_BUF_SZ);
+	get_customized_country_code((char *)&cspec.country_abbrev, &cspec);
+	error = wldev_iovar_setbuf(dev, "country", &cspec, sizeof(cspec),
+		smbuf, sizeof(smbuf), NULL);
+	if (error < 0) {
+		WLDEV_ERROR(("%s: set country for %s as %s rev %d failed\n",
 			__FUNCTION__, country_code, cspec.ccode, cspec.rev));
+		return error;
 	}
+	dhd_bus_country_set(dev, &cspec);
+	WLDEV_ERROR(("%s: set country for %s as %s rev %d\n",
+		__FUNCTION__, country_code, cspec.ccode, cspec.rev));
 	return 0;
-}
-
-/*
- *  softap channel autoselect
- */
-int wldev_get_auto_channel(struct net_device *dev, int *chan)
-{
-	int chosen = 0;
-	wl_uint32_list_t request;
-	int retry = 0;
-	int updown = 0;
-	int ret = 0;
-	wlc_ssid_t null_ssid;
-
-	memset(&null_ssid, 0, sizeof(wlc_ssid_t));
-	ret |= wldev_ioctl(dev, WLC_UP, &updown, sizeof(updown), true);
-
-	ret |= wldev_ioctl(dev, WLC_SET_SSID, &null_ssid, sizeof(null_ssid), true);
-
-	request.count = htod32(0);
-	ret = wldev_ioctl(dev, WLC_START_CHANNEL_SEL, &request, sizeof(request), true);
-	if (ret < 0) {
-		WLDEV_ERROR(("can't start auto channel scan:%d\n", ret));
-		goto fail;
-	}
-
-	while  (retry++ < 15) {
-
-		bcm_mdelay(350);
-
-		ret = wldev_ioctl(dev, WLC_GET_CHANNEL_SEL, &chosen, sizeof(chosen), false);
-
-		if ((ret == 0) && (dtoh32(chosen) != 0)) {
-			*chan = (uint16)chosen & 0x00FF;  /* covert chanspec --> chan number  */
-			printf("%s: Got channel = %d, attempt:%d\n",
-				__FUNCTION__, *chan, retry);
-			break;
-		}
-	}
-
-	if ((ret = wldev_ioctl(dev, WLC_DOWN, &updown, sizeof(updown), true)) < 0) {
-		WLDEV_ERROR(("%s fail to WLC_DOWN ioctl err =%d\n", __FUNCTION__, ret));
-		goto fail;
-	}
-
-fail :
-	if (ret < 0) {
-		WLDEV_ERROR(("%s: return value %d\n", __FUNCTION__, ret));
-	}
-	return ret;
 }
