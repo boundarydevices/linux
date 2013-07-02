@@ -20,7 +20,7 @@
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
 *
-* $Id: dhd_custom_gpio.c 339054 2012-06-15 04:56:55Z $
+* $Id: dhd_custom_gpio.c 280266 2011-08-28 04:18:20Z $
 */
 
 #include <typedefs.h>
@@ -68,6 +68,13 @@ extern int sdioh_mmc_irq(int irq);
 /* Customer specific Host GPIO defintion  */
 static int dhd_oob_gpio_num = -1;
 
+#ifdef HARDKERNEL_OOB
+#include <linux/gpio.h>
+#include <mach/gpio.h>
+#include <mach/regs-gpio.h>
+#include <plat/gpio-cfg.h>
+#endif
+
 module_param(dhd_oob_gpio_num, int, 0644);
 MODULE_PARM_DESC(dhd_oob_gpio_num, "DHD oob gpio number");
 
@@ -89,6 +96,12 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 #ifdef CUSTOMER_HW2
 	host_oob_irq = wifi_get_irq_number(irq_flags_ptr);
 
+#elif defined(HARDKERNEL_OOB)
+	printk("GPIO(WL_HOST_WAKE) = EXYNOS4_GPX0(7) = %d\n", EXYNOS4_GPX0(7));
+	host_oob_irq = gpio_to_irq(EXYNOS4_GPX0(7));
+	gpio_direction_input(EXYNOS4_GPX0(7));
+	printk("host_oob_irq: %d \r\n", host_oob_irq);
+
 #else
 #if defined(CUSTOM_OOB_GPIO_NUM)
 	if (dhd_oob_gpio_num < 0) {
@@ -97,13 +110,13 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 #endif /* CUSTOMER_HW2 */
 
 	if (dhd_oob_gpio_num < 0) {
-		WL_ERROR(("%s: ERROR customer specific Host GPIO is NOT defined\n",
+		WL_ERROR(("%s: ERROR customer specific Host GPIO is NOT defined \n",
 			__FUNCTION__));
 		return (dhd_oob_gpio_num);
 	}
 
 	WL_ERROR(("%s: customer specific Host GPIO number is (%d)\n",
-		__FUNCTION__, dhd_oob_gpio_num));
+	         __FUNCTION__, dhd_oob_gpio_num));
 
 #if defined CUSTOMER_HW
 	host_oob_irq = MSM_GPIO_TO_INT(dhd_oob_gpio_num);
@@ -153,6 +166,7 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #ifdef CUSTOMER_HW
 			bcm_wlan_power_off(1);
 #endif /* CUSTOMER_HW */
+			WL_ERROR(("=========== WLAN placed in POWER OFF ========\n"));
 		break;
 
 		case WLAN_POWER_ON:
@@ -163,6 +177,7 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 			/* Lets customer power to get stable */
 			OSL_DELAY(200);
 #endif /* CUSTOMER_HW */
+			WL_ERROR(("=========== WLAN placed in POWER ON ========\n"));
 		break;
 	}
 }
@@ -289,5 +304,5 @@ void get_customized_country_code(char *country_iso_code, wl_country_t *cspec)
 	cspec->rev = translate_custom_table[0].custom_locale_rev;
 #endif /* EXMAPLE_TABLE */
 	return;
-#endif /* defined(CUSTOMER_HW2) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39)) */
+#endif /* defined(CUSTOMER_HW2) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)) */
 }

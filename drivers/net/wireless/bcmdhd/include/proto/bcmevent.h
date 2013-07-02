@@ -184,7 +184,10 @@ typedef BWL_PRE_PACKED_STRUCT struct bcm_event {
 #define WLC_E_GTK_PLUMBED 84
 #define WLC_E_ASSOC_REQ_IE 85
 #define WLC_E_ASSOC_RESP_IE 86
-#define WLC_E_LAST	87	
+#define WLC_E_ASSOCREQ_IE	87	/* Send up assoc req/probe resp ie */
+#define WLC_E_LOAD_IND		88	/* loading incicate */
+#define WLC_E_TX_STAT_ERROR     89      /* tx error indicate */
+#define WLC_E_LAST	90	/* highest val + 1 for range checking */
 
 
 

@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_proto.h,v 1.8.10.6 2010-12-22 23:47:24 Exp $
+ * $Id: dhd_proto.h 277732 2011-08-16 17:36:42Z $
  */
 
 #ifndef _dhd_proto_h_
@@ -34,7 +34,7 @@
 #include <wlioctl.h>
 
 #ifndef IOCTL_RESP_TIMEOUT
-#define IOCTL_RESP_TIMEOUT  2000 /* In milli second */
+#define IOCTL_RESP_TIMEOUT  20000 /* In milli second */
 #endif
 
 /*
