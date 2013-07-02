@@ -45,6 +45,7 @@
 #include <linux/pwm_backlight.h>
 #include <linux/fec.h>
 #include <linux/memblock.h>
+#include <linux/micrel_phy.h>
 #include <linux/gpio.h>
 #include <linux/etherdevice.h>
 #include <linux/regulator/anatop-regulator.h>
@@ -266,8 +267,42 @@ static const struct imxuart_platform_data mx6_arm2_uart4_data __initconst = {
 };
 #endif
 
+static unsigned short ksz9031_por_cmds[] = {
+	0x0204, 0x0,		/* RX_CTL/TX_CTL output pad skew */
+	0x0205, 0x0,		/* RXDn pad skew */
+	0x0206, 0x0,		/* TXDn pad skew */
+	0x0208, 0x03ff,		/* TXC/RXC pad skew */
+	0x0, 0x0
+};
+
+static int ksz9031_send_phy_cmds(struct phy_device *phydev, unsigned short* p)
+{
+	for (;;) {
+		unsigned reg = *p++;
+		unsigned val = *p++;
+		if (reg == 0 && val == 0)
+			break;
+		if (reg < 32) {
+			phy_write(phydev, reg, val);
+		} else {
+			unsigned dev_addr = (reg >> 8) & 0x7f;
+			phy_write(phydev, 0x0d, dev_addr);
+			phy_write(phydev, 0x0e, reg & 0xff);
+			phy_write(phydev, 0x0d, dev_addr | 0x8000);
+			phy_write(phydev, 0x0e, val);
+		}
+	}
+	return 0;
+}
+
+
 static int fec_phy_init(struct phy_device *phydev)
 {
+	if ((phydev->phy_id & 0x00fffff0) == PHY_ID_KSZ9031) {
+		ksz9031_send_phy_cmds(phydev, ksz9031_por_cmds);
+		return 0;
+	}
+	/* KSZ9021 */
 	/* prefer master mode */
 	phy_write(phydev, 0x9, 0x1f00);
 
