@@ -20,7 +20,7 @@ config BCMDHD_FW_PATH
 config BCMDHD_NVRAM_PATH
 	depends on BCMDHD
 	string "NVRAM path"
-	default "/system/etc/wifi/bcmdhd.cal"
+	default "/system/etc/firmware/bcmdhd.cal"
 	---help---
 	  Path to the calibration file.
 
@@ -38,17 +38,3 @@ config DHD_USE_STATIC_BUF
 	default n
 	---help---
 	  Use memory preallocated in platform
-
-config DHD_USE_SCHED_SCAN
-	bool "Use CFG80211 sched scan"
-	depends on BCMDHD && CFG80211
-	default n
-	---help---
-	  Use CFG80211 sched scan
-
-config DHD_ENABLE_P2P
-	bool "Enable Wifi Direct"
-	depends on BCMDHD && CFG80211
-	default n
-	---help---
-	  Use Enable Wifi Direct
