@@ -21,18 +21,28 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh_sdmmc.h 314048 2012-02-09 20:31:56Z $
+ * $Id: bcmsdh_sdmmc.h 277737 2011-08-16 17:54:59Z $
  */
 
 #ifndef __BCMSDH_SDMMC_H__
 #define __BCMSDH_SDMMC_H__
 
-#define sd_err(x)
-#define sd_trace(x)
-#define sd_info(x)
-#define sd_debug(x)
-#define sd_data(x)
-#define sd_ctrl(x)
+/* message levels */
+#define SD_ERROR_LEVEL	0x0001
+#define SD_TRACE_LEVEL	0x0002
+#define SD_INFO_LEVEL	0x0004
+#define SD_DEBUG_LEVEL	0x0008
+#define SD_DATA_LEVEL	0x0010
+#define SD_CTRL_LEVEL	0x0020
+
+extern uint sd_msglevel;
+
+#define sd_err(x)		do {if (sd_msglevel & SD_ERROR_LEVEL) printf x;} while (0)
+#define sd_trace(x)		do {if (sd_msglevel & SD_TRACE_LEVEL) printf x;} while (0)
+#define sd_info(x)		do {if (sd_msglevel & SD_INFO_LEVEL) printf x;} while (0)
+#define sd_debug(x)		do {if (sd_msglevel & SD_DEBUG_LEVEL) printf x;} while (0)
+#define sd_data(x)		do {if (sd_msglevel & SD_DATA_LEVEL) printf x;} while (0)
+#define sd_ctrl(x)		do {if (sd_msglevel & SD_CTRL_LEVEL) printf x;} while (0)
 
 #define sd_sync_dma(sd, read, nbytes)
 #define sd_init_dma(sd)
@@ -82,18 +92,14 @@ struct sdioh_info {
 	uint8 		num_funcs;		/* Supported funcs on client */
 	uint32 		com_cis_ptr;
 	uint32 		func_cis_ptr[SDIOD_MAX_IOFUNCS];
-
-#define SDIOH_SDMMC_MAX_SG_ENTRIES	32
-	struct scatterlist sg_list[SDIOH_SDMMC_MAX_SG_ENTRIES];
-	bool		use_rxchain;
+	uint		max_dma_len;
+	uint		max_dma_descriptors;	/* DMA Descriptors supported by this controller. */
+//	SDDMA_DESCRIPTOR	SGList[32];	/* Scatter/Gather DMA List */
 };
 
 /************************************************************
  * Internal interfaces: per-port references into bcmsdh_sdmmc.c
  */
-
-/* Global message bits */
-extern uint sd_msglevel;
 
 /* OS-independent interrupt handler */
 extern bool check_client_intr(sdioh_info_t *sd);

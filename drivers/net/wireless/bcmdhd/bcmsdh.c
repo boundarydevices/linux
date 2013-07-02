@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh.c 344235 2012-07-11 23:47:18Z $
+ * $Id: bcmsdh.c 300445 2011-12-03 05:37:20Z $
  */
 
 /**
@@ -362,10 +362,9 @@ bcmsdh_cis_read(void *sdh, uint func, uint8 *cis, uint length)
 		}
 		bcopy(cis, tmp_buf, length);
 		for (tmp_ptr = tmp_buf, ptr = cis; ptr < (cis + length - 4); tmp_ptr++) {
-			ptr += snprintf((char*)ptr, (cis + length - ptr - 4),
-				"%.2x ", *tmp_ptr & 0xff);
+			ptr += sprintf((char*)ptr, "%.2x ", *tmp_ptr & 0xff);
 			if ((((tmp_ptr - tmp_buf) + 1) & 0xf) == 0)
-				ptr += snprintf((char *)ptr, (cis + length - ptr -4), "\n");
+				ptr += sprintf((char *)ptr, "\n");
 		}
 		MFREE(bcmsdh->osh, tmp_buf, length);
 	}
@@ -688,4 +687,40 @@ bcmsdh_sleep(void *sdh, bool enab)
 #else
 	return BCME_UNSUPPORTED;
 #endif
+}
+
+int
+bcmsdh_gpio_init(void *sdh)
+{
+	bcmsdh_info_t *p = (bcmsdh_info_t *)sdh;
+	sdioh_info_t *sd = (sdioh_info_t *)(p->sdioh);
+
+	return sdioh_gpio_init(sd);
+}
+
+bool
+bcmsdh_gpioin(void *sdh, uint32 gpio)
+{
+	bcmsdh_info_t *p = (bcmsdh_info_t *)sdh;
+	sdioh_info_t *sd = (sdioh_info_t *)(p->sdioh);
+
+	return sdioh_gpioin(sd, gpio);
+}
+
+int
+bcmsdh_gpioouten(void *sdh, uint32 gpio)
+{
+	bcmsdh_info_t *p = (bcmsdh_info_t *)sdh;
+	sdioh_info_t *sd = (sdioh_info_t *)(p->sdioh);
+
+	return sdioh_gpioouten(sd, gpio);
+}
+
+int
+bcmsdh_gpioout(void *sdh, uint32 gpio, bool enab)
+{
+	bcmsdh_info_t *p = (bcmsdh_info_t *)sdh;
+	sdioh_info_t *sd = (sdioh_info_t *)(p->sdioh);
+
+	return sdioh_gpioout(sd, gpio, enab);
 }
