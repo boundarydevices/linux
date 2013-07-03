@@ -120,6 +120,7 @@ config SND_SOC_IMX_SPDIF
 config SND_SOC_IMX_HDMI
 	tristate "SoC Audio support for IMX - HDMI"
 	default n
+	select SND_MXC_SOC_MX2
 	select SND_SOC_MXC_HDMI
 	select MFD_MXC_HDMI
 	help
