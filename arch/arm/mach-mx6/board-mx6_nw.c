@@ -71,6 +71,8 @@
 #define ST_SD3_CD		IMX_GPIO_NR(7, 0)	/* SD3_DAT5 - active low */
 #define ST_ECSPI1_CS1		IMX_GPIO_NR(3, 19)	/* EIM_D19 - active low */
 
+#define USB_OTG_POWER		IMX_GPIO_NR(3, 22)	/* EIM_D22 - power enable for devices: active high */
+
 #define WL_BT_RESET		IMX_GPIO_NR(6, 8)	/* NANDF_ALE - active low */
 #define WL_BT_REG_EN		IMX_GPIO_NR(6, 15)	/* NANDF_CS2 - active high */
 #define WL_BT_WAKE_IRQ		IMX_GPIO_NR(6, 16)	/* NANDF_CS3 - active low */
@@ -78,6 +80,9 @@
 #define WL_EN			IMX_GPIO_NR(6, 7)	/* NANDF_CLE - active high */
 #define WL_CLK_REQ_IRQ		IMX_GPIO_NR(6, 9)	/* NANDF_WP_B - active low */
 #define WL_WAKE_IRQ		IMX_GPIO_NR(6, 14)	/* NANDF_CS1 - active low */
+
+#define WEAK_PULLUP	(PAD_CTL_HYS | PAD_CTL_PKE \
+			 | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP)
 
 #include "pads-mx6_nw.h"
 #define FOR_DL_SOLO
@@ -112,6 +117,7 @@ int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
 
 #define GPIOF_HIGH	GPIOF_OUT_INIT_HIGH
 struct gpio mx6_init_gpios[] __initdata = {
+	{.label = "usbotg_pwr_en",	.gpio = USB_OTG_POWER,	.flags = 0},		/* GPIO3[22]: EIM_D22 - active high */
 	{.label = "wl_en",		.gpio = WL_EN,		.flags = 0},		/* GPIO6[7]: NANDF_CLE - active high */
 	{.label = "wl_clk_req_irq",	.gpio = WL_CLK_REQ_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[9]: NANDF_WP_B - active low */
 	{.label = "wl_wake_irq",	.gpio = WL_WAKE_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[14]: NANDF_CS1 - active low */
@@ -260,15 +266,16 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 
 static void imx6_usbotg_vbus(bool on)
 {
+	gpio_set_value(USB_OTG_POWER, (0 != on));
 }
 
 static void __init imx6_init_usb(void)
 {
 	imx_otg_base = MX6_IO_ADDRESS(MX6Q_USB_OTG_BASE_ADDR);
-	/* disable external charger detect,
-	 * or it will affect signal quality at dp .
+	/*
+	 * Select GPIO_1 as the OTG_ID pad
 	 */
-	mxc_iomux_set_gpr_register(1, 13, 1, 0);
+	mxc_iomux_set_gpr_register(1, 13, 1, 1);
 
 	mx6_set_otghost_vbus_func(imx6_usbotg_vbus);
 }
