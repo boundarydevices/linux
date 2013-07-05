@@ -742,12 +742,36 @@ static int ci_hdrc_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int ci_core_suspend(struct device *dev)
+{
+	return 0;
+}
+
+static int ci_core_resume(struct device *dev)
+{
+	int ret;
+
+	pm_runtime_disable(dev);
+	pm_runtime_set_active(dev);
+	pm_runtime_enable(dev);
+
+	return 0;
+}
+
+
+static const struct dev_pm_ops ci_core_pm_ops = {
+	.suspend		= ci_core_suspend,
+	.resume			= ci_core_resume,
+};
 static struct platform_driver ci_hdrc_driver = {
 	.probe	= ci_hdrc_probe,
 	.remove	= __devexit_p(ci_hdrc_remove),
 	.driver	= {
 		.name	= "ci_hdrc",
+		.pm	= &ci_core_pm_ops,
 	},
+#ifdef CONFIG_PM
+#endif
 };
 
 module_platform_driver(ci_hdrc_driver);

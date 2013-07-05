@@ -621,6 +621,7 @@ static int ci13xxx_imx_resume(struct device *dev)
 	struct ci13xxx_imx_data *data = dev_get_drvdata(dev);
 	struct platform_device *plat_ci;
 	struct ci13xxx *ci;
+	int ret;
 
 	dev_dbg(dev, "at %s\n", __func__);
 
@@ -632,7 +633,14 @@ static int ci13xxx_imx_resume(struct device *dev)
 		lpm_usb_regulator_enable(false);
 	}
 
-	return imx_controller_resume(dev);
+	ret = imx_controller_resume(dev);
+	if (ret == 0) {
+		pm_runtime_disable(dev);
+		pm_runtime_set_active(dev);
+		pm_runtime_enable(dev);
+	}
+
+	return 0;
 }
 
 static const struct dev_pm_ops ci13xxx_imx_pm_ops = {
