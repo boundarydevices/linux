@@ -1024,9 +1024,7 @@ static int _clk_audio_video_set_rate(struct clk *clk, unsigned long rate)
 	__raw_writel(mfn, pllbase + PLL_NUM_DIV_OFFSET);
 	__raw_writel(mfd, pllbase + PLL_DENOM_DIV_OFFSET);
 
-	if ((rev >= IMX_CHIP_REVISION_1_1)
-	    &&
-	    (pllbase == PLL5_VIDEO_BASE_ADDR)) {
+	if (rev >= IMX_CHIP_REVISION_1_1) {
 		reg = __raw_readl(ANA_MISC2_BASE_ADDR)
 			& ~ANADIG_ANA_MISC2_CONTROL3_MASK;
 		reg |= control3 << ANADIG_ANA_MISC2_CONTROL3_OFFSET;
