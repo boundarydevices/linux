@@ -48,15 +48,7 @@ void set_mclk_rate(uint32_t *p_mclk_freq, uint32_t csi)
 		}
 	} else if (cpu_is_mx6q() || cpu_is_mx6dl()) {
 		if (csi == 0) {
-			if (machine_is_mx6q_sabrelite()
-			    || machine_is_mx6_nitrogen6x()
-			    || machine_is_mx6_nit6xlite()
-			    || machine_is_mx6_oc()
-			    || machine_is_mx6_h()
-			)
-				mclk = "clko2_clk";
-			else
-				mclk = "clko_clk";
+			mclk = "clko2_clk";
 		} else {
 			pr_err("invalid csi num %d\n", csi);
 			return;
