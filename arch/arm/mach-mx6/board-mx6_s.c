@@ -83,6 +83,7 @@
 #define GP_SD4_CD		IMX_GPIO_NR(2, 6)
 #define GP_SD4_WP		IMX_GPIO_NR(2, 7)
 #define GP_ECSPI1_CS1	IMX_GPIO_NR(3, 19)
+#define GP_ECSPI2_CS1	IMX_GPIO_NR(2, 27)
 #define GP_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
 #define GP_CAP_TCH_INT1	IMX_GPIO_NR(1, 9)
 #define GP_DRGB_IRQGPIO	IMX_GPIO_NR(4, 20)
@@ -316,13 +317,13 @@ static struct fec_platform_data fec_data __initdata = {
 	.phy_irq = gpio_to_irq(GP_ENET_PHY_INT)
 };
 
-static int spi_cs[] = {
+static int spi1_cs[] = {
 	GP_ECSPI1_CS1,
 };
 
-static const struct spi_imx_master spi_data __initconst = {
-	.chipselect     = spi_cs,
-	.num_chipselect = ARRAY_SIZE(spi_cs),
+static const struct spi_imx_master spi1_data __initconst = {
+	.chipselect     = spi1_cs,
+	.num_chipselect = ARRAY_SIZE(spi1_cs),
 };
 
 #if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
@@ -364,11 +365,20 @@ static struct spi_board_info spi_nor_device[] __initdata = {
 #endif
 };
 
-static void spi_device_init(void)
+static void spi_nor_device_init(void)
 {
 	spi_register_board_info(spi_nor_device,
 				ARRAY_SIZE(spi_nor_device));
 }
+
+static int spi2_cs[] = {
+	GP_ECSPI2_CS1,
+};
+
+static const struct spi_imx_master spi2_data __initconst = {
+	.chipselect     = spi2_cs,
+	.num_chipselect = ARRAY_SIZE(spi2_cs),
+};
 
 static struct mxc_audio_platform_data audio_data;
 
@@ -1138,8 +1148,9 @@ static void __init board_init(void)
 			ARRAY_SIZE(mxc_i2c2_board_info));
 
 	/* SPI */
-	imx6q_add_ecspi(0, &spi_data);
-	spi_device_init();
+	imx6q_add_ecspi(0, &spi1_data);
+	spi_nor_device_init();
+	imx6q_add_ecspi(1, &spi2_data);
 
 	imx6q_add_mxc_hdmi(&hdmi_data);
 
