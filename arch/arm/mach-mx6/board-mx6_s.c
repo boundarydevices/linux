@@ -86,12 +86,6 @@
 #define GP_CAP_TCH_INT1	IMX_GPIO_NR(1, 9)
 #define GP_DRGB_IRQGPIO	IMX_GPIO_NR(4, 20)
 #define GP_USB_HUB_RESET	IMX_GPIO_NR(7, 12)
-#define GP_MENU_KEY		IMX_GPIO_NR(2, 1)
-#define GP_BACK_KEY		IMX_GPIO_NR(2, 2)
-#define GP_ONOFF_KEY		IMX_GPIO_NR(2, 3)
-#define GP_HOME_KEY		IMX_GPIO_NR(2, 4)
-#define GP_VOL_UP_KEY	IMX_GPIO_NR(7, 13)
-#define GP_VOL_DOWN_KEY	IMX_GPIO_NR(4, 5)
 #define GP_CSI0_RST		IMX_GPIO_NR(1, 8)
 #define GP_CSI0_PWN		IMX_GPIO_NR(1, 6)
 #define GP_ENET_PHY_INT	IMX_GPIO_NR(1, 28)
@@ -775,56 +769,6 @@ static const struct pm_platform_data pm_data __initconst = {
 	.suspend_exit = suspend_exit,
 };
 
-#define GPIO_BUTTON(gpio_num, ev_code, act_low, descr, wake)	\
-{								\
-	.gpio		= gpio_num,				\
-	.type		= EV_KEY,				\
-	.code		= ev_code,				\
-	.active_low	= act_low,				\
-	.desc		= "btn " descr,				\
-	.wakeup		= wake,					\
-}
-
-static struct gpio_keys_button buttons[] = {
-	GPIO_BUTTON(GP_ONOFF_KEY, KEY_POWER, 1, "key-power", 1),
-	GPIO_BUTTON(GP_MENU_KEY, KEY_MENU, 1, "key-memu", 0),
-	GPIO_BUTTON(GP_HOME_KEY, KEY_HOME, 1, "key-home", 0),
-	GPIO_BUTTON(GP_BACK_KEY, KEY_BACK, 1, "key-back", 0),
-	GPIO_BUTTON(GP_VOL_UP_KEY, KEY_VOLUMEUP, 1, "volume-up", 0),
-	GPIO_BUTTON(GP_VOL_DOWN_KEY, KEY_VOLUMEDOWN, 1, "volume-down", 0),
-};
-
-#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
-static struct gpio_keys_platform_data button_data = {
-	.buttons	= buttons,
-	.nbuttons	= ARRAY_SIZE(buttons),
-};
-
-static struct platform_device button_device = {
-	.name		= "gpio-keys",
-	.id		= -1,
-	.num_resources  = 0,
-	.dev		= {
-		.platform_data = &button_data,
-	}
-};
-
-static void __init add_device_buttons(void)
-{
-	platform_device_register(&button_device);
-}
-#else
-static void __init add_device_buttons(void)
-{
-	int i;
-	for (i=0; i < ARRAY_SIZE(buttons);i++) {
-		int gpio = buttons[i].gpio;
-		pr_debug("%s: exporting gpio %d\n", __func__, gpio);
-		gpio_export(gpio,1);
-	}
-}
-#endif
-
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
 static void wl1271_set_power(bool enable)
 {
@@ -1196,8 +1140,6 @@ static void __init board_init(void)
 
 	imx6q_add_dvfs_core(&dvfscore_data);
 
-	add_device_buttons();
-
 	imx6q_add_hdmi_soc();
 	imx6q_add_hdmi_soc_dai();
 
@@ -1238,6 +1180,11 @@ static void __init board_init(void)
 	imx6q_add_pcie(&pcie_data);
 
 	gpio_request_array(gpios,ARRAY_SIZE(gpios));
+	for (i=0; i < ARRAY_SIZE(gpios);i++) {
+		int gpio = gpios[i].gpio;
+		pr_debug("%s: exporting gpio %d\n", __func__, gpio);
+		gpio_export(gpio,1);
+	}
 	imx6q_add_perfmon(0);
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
