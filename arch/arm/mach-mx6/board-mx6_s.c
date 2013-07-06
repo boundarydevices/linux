@@ -31,8 +31,6 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/flash.h>
 #include <linux/i2c.h>
-#include <linux/i2c/pca953x.h>
-#include <linux/ata.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/map.h>
 #include <linux/mtd/partitions.h>
@@ -1060,7 +1058,6 @@ static const struct imx_pcie_platform_data pcie_data  __initconst = {
 static void __init board_init(void)
 {
 	int i, j;
-	int ret;
 	struct clk *clko2;
 	struct clk *new_parent;
 	int rate;
