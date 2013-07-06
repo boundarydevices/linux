@@ -150,6 +150,17 @@ struct gpio n6w_wl1271_gpios[] __initdata = {
 	{.label = "wl1271_wl_en",	.gpio = N6_WL1271_WL_EN,	.flags = 0},
 };
 
+struct gpio gpios[] __initdata = {
+	{.label = "SPARE_GPIO",		.gpio = IMX_GPIO_NR(2,22),	.flags = GPIOF_DIR_IN},
+	{.label = "TEMP_ALARM",		.gpio = IMX_GPIO_NR(2,21),	.flags = GPIOF_DIR_IN},
+	{.label = "FAN_FAIL",		.gpio = IMX_GPIO_NR(2,19),	.flags = GPIOF_DIR_IN},
+	{.label = "AC_FAIL",		.gpio = IMX_GPIO_NR(2,18),	.flags = GPIOF_DIR_IN},
+	{.label = "GPO_2",		.gpio = IMX_GPIO_NR(2,17),	.flags = 0},
+	{.label = "GPO_1",		.gpio = IMX_GPIO_NR(2,16),	.flags = 0},
+	{.label = "BGPI_2",		.gpio = IMX_GPIO_NR(6,6),	.flags = GPIOF_DIR_IN},
+	{.label = "BGPI_1",		.gpio = IMX_GPIO_NR(5,4),	.flags = GPIOF_DIR_IN},
+};
+
 __init static int is_nitrogen6w(void)
 {
 	int ret = gpio_request_array(n6w_wl1271_gpios,
@@ -1226,6 +1237,7 @@ static void __init board_init(void)
 
 	imx6q_add_pcie(&pcie_data);
 
+	gpio_request_array(gpios,ARRAY_SIZE(gpios));
 	imx6q_add_perfmon(0);
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
