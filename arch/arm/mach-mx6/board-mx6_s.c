@@ -455,63 +455,6 @@ static void camera_reset(int power_gp, int poweroff_level, int reset_gp, int res
 }
 
 
-#if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
-/*
- * (ov5640 Mipi) - J16
- * NANDF_WP_B	GPIO[6]:9	Nitrogen6x - power down, SOM - NC
- * NANDF_D5 	GPIO[2]:5	Nitrogen6x/SOM - CSI0 reset
- * NANDF_CS0	GPIO[6]:11	reset, old rev SOM jumpered
- * SD1_DAT1	GPIO[1]:16	24 Mhz XCLK/XVCLK (pwm3)
- */
-struct pwm_device	*mipi_pwm;
-
-static void ov5640_mipi_camera_io_init(void)
-{
-	IOMUX_SETUP(mipi_pads);
-
-	pr_info("%s\n", __func__);
-	mipi_pwm = pwm_request(2, "mipi_clock");
-	if (IS_ERR(mipi_pwm)) {
-		pr_err("unable to request PWM for mipi_clock\n");
-	} else {
-		unsigned period = 1000/22;
-		pr_info("got pwm for mipi_clock\n");
-		pwm_config(mipi_pwm, period >> 1, period);
-		pwm_enable(mipi_pwm);
-	}
-
-	camera_reset(IMX_GPIO_NR(6, 9), 1, IMX_GPIO_NR(2, 5), IMX_GPIO_NR(6, 11));
-/* for mx6dl, mipi virtual channel 1 connect to csi 1*/
-	if (cpu_is_mx6dl())
-		mxc_iomux_set_gpr_register(13, 3, 3, 1);
-}
-
-static void ov5640_mipi_camera_powerdown(int powerdown)
-{
-	if (!IS_ERR(mipi_pwm)) {
-		if (powerdown) {
-			pwm_disable(mipi_pwm);
-		} else {
-			unsigned period = 1000/24;
-			pwm_config(mipi_pwm, period >> 1, period);
-			pwm_enable(mipi_pwm);
-		}
-	}
-	pr_info("%s: powerdown=%d, power_gp=0x%x\n",
-			__func__, powerdown, IMX_GPIO_NR(6, 9));
-	gpio_set_value(IMX_GPIO_NR(6, 9), powerdown ? 1 : 0);
-	if (!powerdown)
-		msleep(2);
-}
-
-static struct fsl_mxc_camera_platform_data ov5640_mipi_data = {
-	.mclk = 22000000,
-	.csi = 0,
-	.io_init = ov5640_mipi_camera_io_init,
-	.pwdn = ov5640_mipi_camera_powerdown,
-};
-#endif
-
 #if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE)
 /*
  * GPIO_6	GPIO[1]:6	(ov5642) - J5 - CSI0 power down
@@ -560,47 +503,7 @@ static struct fsl_mxc_camera_platform_data ov5642_data = {
 
 #endif
 
-static void adv7180_pwdn(int powerdown)
-{
-	pr_info("%s: powerdown=%d, power_gp=0x%x\n",
-			__func__, powerdown, IMX_GPIO_NR(3, 13));
-	gpio_set_value(IMX_GPIO_NR(3, 13), powerdown ? 0 : 1);
-}
-
-static void adv7180_io_init(void)
-{
-	camera_reset(IMX_GPIO_NR(3, 13), 0, IMX_GPIO_NR(3, 14), -1);
-
-	if (cpu_is_mx6q())
-		mxc_iomux_set_gpr_register(1, 20, 1, 1);
-	else
-		mxc_iomux_set_gpr_register(13, 3, 3, 4);
-}
-
-static struct fsl_mxc_tvin_platform_data adv7180_data = {
-	.pwdn = adv7180_pwdn,
-	.io_init = adv7180_io_init,
-	.cvbs = true,
-	.ipu = 1,
-	.csi = 1,
-};
-
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
-	},
-#if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
-	{
-		I2C_BOARD_INFO("ov5640_mipi", 0x3c),
-		.platform_data = (void *)&ov5640_mipi_data,
-	},
-#endif
-#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE)
-	{
-		I2C_BOARD_INFO("ov5642", 0x3c),
-		.platform_data = (void *)&ov5642_data,
-	},
-#endif
 };
 
 static struct tsc2007_platform_data tsc2007_info = {
@@ -608,39 +511,16 @@ static struct tsc2007_platform_data tsc2007_info = {
 	.x_plate_ohms		= 500,
 };
 
-static struct fsl_mxc_lcd_platform_data adv7391_data = {
-	.ipu_id = 0,
-	.disp_id = 0,
-	.default_ifmt = IPU_PIX_FMT_BT656,
-};
-
-
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
-		I2C_BOARD_INFO("egalax_ts", 0x4),
-		.irq = gpio_to_irq(GP_CAP_TCH_INT1),
+		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
 	},
+#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE)
 	{
-		I2C_BOARD_INFO("tsc2004", 0x48),
-		.platform_data	= &tsc2007_info,
-		.irq = gpio_to_irq(GP_DRGB_IRQGPIO),
-	},
-#if defined(CONFIG_TOUCHSCREEN_FT5X06) \
-	|| defined(CONFIG_TOUCHSCREEN_FT5X06_MODULE)
-	{
-		I2C_BOARD_INFO("ft5x06-ts", 0x38),
-		.irq = gpio_to_irq(GP_CAP_TCH_INT1),
+		I2C_BOARD_INFO("ov5642", 0x3c),
+		.platform_data = (void *)&ov5642_data,
 	},
 #endif
-	{
-		I2C_BOARD_INFO("mxc_adv739x", 0x2a),
-		.platform_data = (void *)&adv7391_data,
-	},
-	{
-		I2C_BOARD_INFO("adv7180", 0x20),
-		.platform_data = (void *)&adv7180_data,
-		.irq = gpio_to_irq(IMX_GPIO_NR(5, 0)),  /* EIM_WAIT */
-	},
 };
 
 static void usbotg_vbus(bool on)
@@ -860,22 +740,6 @@ static struct fsl_mxc_capture_platform_data capture_data[] = {
 	{
 		.ipu = 0,
 		.csi = 0,
-		.mclk_source = 0,
-		.is_mipi = 0,
-	},
-#endif
-#if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
-	{
-		.ipu = 0,
-		.csi = 0,
-		.mclk_source = 0,
-		.is_mipi = 1,
-	},
-#endif
-#if defined(CONFIG_MXC_TVIN_ADV7180) || defined(CONFIG_MXC_TVIN_ADV7180_MODULE)
-	{
-		.ipu = 1,
-		.csi = 1,
 		.mclk_source = 0,
 		.is_mipi = 0,
 	},
@@ -1244,7 +1108,6 @@ static void __init board_init(void)
 		j = ARRAY_SIZE(fb_data);
 	} else {
 		j = (ARRAY_SIZE(fb_data) + 1) / 2;
-		adv7180_data.ipu = 0;
 	}
 	for (i = 0; i < j; i++)
 		imx6q_add_ipuv3fb(i, &fb_data[i]);
