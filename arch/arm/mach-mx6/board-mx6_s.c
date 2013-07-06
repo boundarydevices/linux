@@ -65,7 +65,6 @@
 #include <mach/ipu-v3.h>
 #include <mach/mxc_hdmi.h>
 #include <mach/mxc_asrc.h>
-#include <linux/i2c/tsc2007.h>
 #include <linux/wl12xx.h>
 
 #include <asm/irq.h>
@@ -504,11 +503,6 @@ static struct fsl_mxc_camera_platform_data ov5642_data = {
 #endif
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
-};
-
-static struct tsc2007_platform_data tsc2007_info = {
-	.model			= 2004,
-	.x_plate_ohms		= 500,
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
