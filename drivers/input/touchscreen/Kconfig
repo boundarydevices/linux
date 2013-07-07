@@ -1628,6 +1628,15 @@ config TOUCHSCREEN_IQS5XX
 	  To compile this driver as a module, choose M here: the
 	  module will be called iqs5xx.
 
+config TOUCHSCREEN_AR1010_UART
+	tristate "Microchip AR1010 UART touchscreen"
+	help
+	  Say Y here if you have a Microchip AR1010 serial touch controller
+	  and want to enable support for it
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called mchpar1xxx.
+
 config TOUCHSCREEN_ZINITIX
 	tristate "Zinitix touchscreen support"
 	depends on I2C
