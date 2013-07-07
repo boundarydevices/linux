@@ -211,6 +211,13 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 	return IOMUX_SETUP(sd_pads[i]);
 }
 
+static void sdio_set_power(int on)
+{
+	pr_debug("%s:%s: set power(%d)\n",
+		 __FILE__, __func__, on);
+        gpio_set_value(N6_WL1271_WL_EN,on);
+}
+
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
 static struct esdhc_platform_data sd2_data = {
 	.always_present = 1,
@@ -219,6 +226,7 @@ static struct esdhc_platform_data sd2_data = {
 	.keep_power_at_suspend = 0,
 	.caps = MMC_CAP_POWER_OFF_CARD,
 	.platform_pad_change = plt_sd_pad_change,
+	.set_power = sdio_set_power,
 };
 #endif
 
