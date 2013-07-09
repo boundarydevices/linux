@@ -216,6 +216,13 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 	return IOMUX_SETUP(sd_pads[i]);
 }
 
+static void sdio_set_power(int on)
+{
+	pr_err("%s:%s: set power(%d)\n",
+		 __FILE__, __func__, on);
+        gpio_set_value(WL_EN,on);
+}
+
 /* Broadcom wifi */
 static struct esdhc_platform_data mx6_sd2_data = {
 	.always_present = 1,
@@ -224,6 +231,7 @@ static struct esdhc_platform_data mx6_sd2_data = {
 	.keep_power_at_suspend = 0,
 	.caps = MMC_CAP_POWER_OFF_CARD,
 	.platform_pad_change = plt_sd_pad_change,
+	.set_power = sdio_set_power,
 };
 
 /* SD card */
