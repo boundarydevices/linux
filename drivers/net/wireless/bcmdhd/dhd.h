@@ -594,7 +594,7 @@ extern uint dhd_pktgen_len;
 extern char fw_path[MOD_PARAM_PATHLEN];
 extern char nv_path[MOD_PARAM_PATHLEN];
 
-#define FW_PATH_AUTO_SELECT 1
+// #define FW_PATH_AUTO_SELECT 1
 // terence
 extern char firmware_path[MOD_PARAM_PATHLEN];
 #ifdef FW_PATH_AUTO_SELECT
