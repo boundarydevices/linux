@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2013 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -158,6 +158,8 @@
 #define VF610_CLK_GPU_SEL		145
 #define VF610_CLK_GPU_EN		146
 #define VF610_CLK_GPU2D			147
-#define VF610_CLK_END			148
+#define VF610_CLK_ENET0			148
+#define VF610_CLK_ENET1			149
+#define VF610_CLK_END			150
 
 #endif /* __DT_BINDINGS_CLOCK_VF610_H */
