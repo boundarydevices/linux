@@ -64,6 +64,7 @@
 #include <mach/ipu-v3.h>
 #include <mach/mxc_hdmi.h>
 #include <mach/mxc_asrc.h>
+#include <mach/imx_rfkill.h>
 #include <linux/i2c/tsc2007.h>
 #include <linux/wl12xx.h>
 
@@ -246,9 +247,26 @@ static const struct anatop_thermal_platform_data
 };
 
 static const struct imxuart_platform_data mx6_arm2_uart2_data __initconst = {
-	.flags      = IMXUART_HAVE_RTSCTS | IMXUART_SDMA,
+	.flags      = IMXUART_HAVE_RTSCTS,
 	.dma_req_rx = MX6Q_DMA_REQ_UART3_RX,
 	.dma_req_tx = MX6Q_DMA_REQ_UART3_TX,
+};
+
+static int bt_enable(int enable)
+{
+	int do_enable= (0 != enable);
+	gpio_set_value(WL_BT_REG_EN,do_enable);
+	msleep(10*(10*do_enable)); 	/* 10ms for disable, 100 for enable */
+	pr_debug("%s: %d\n",__func__,enable);
+	return 0;
+}
+
+static struct platform_device bt_rfkill = {
+	.name = "mxc_bt_rfkill",
+};
+
+static struct imx_bt_rfkill_platform_data rfkill_data = {
+	.power_change = bt_enable,
 };
 
 static int mx6_fec_phy_init(struct phy_device *phydev)
@@ -936,6 +954,7 @@ static void __init mx6_board_init(void)
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
 //	regulator_has_full_constraints();
+	mxc_register_device(&bt_rfkill, &rfkill_data);
 }
 
 extern void __iomem *twd_base;
