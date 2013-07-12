@@ -725,6 +725,15 @@ int mx6_bl_notify(struct device *dev, int brightness)
 }
 
 /* PWM4_PWMO: backlight control on LDB connector */
+static struct platform_pwm_backlight_data mx6_pwm3_backlight_data = {
+	.pwm_id = 2,	/* pin SD1_DAT1 - PWM3 */
+	.max_brightness = 256,
+	.dft_brightness = 256,
+	.pwm_period_ns = 50000,
+	.notify = mx6_bl_notify,
+};
+
+/* PWM4_PWMO: backlight control on LDB connector */
 static struct platform_pwm_backlight_data mx6_pwm4_backlight_data = {
 	.pwm_id = 3,	/* pin SD1_CMD - PWM4 */
 	.max_brightness = 256,
@@ -881,8 +890,10 @@ static void __init mx6_board_init(void)
 	/* release USB Hub reset */
 	gpio_set_value(USB_HUB_RESET, 1);
 
+	imx6q_add_mxc_pwm(2);
 	imx6q_add_mxc_pwm(3);
 
+	imx6q_add_mxc_pwm_backlight(2, &mx6_pwm3_backlight_data);
 	imx6q_add_mxc_pwm_backlight(3, &mx6_pwm4_backlight_data);
 
 	imx6q_add_otp();
