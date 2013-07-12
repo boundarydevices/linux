@@ -82,7 +82,6 @@
 #define AUDIO_MUTE		IMX_GPIO_NR(5, 2)	/* EIM_A25 - active low */
 
 #define DISP_I2C_EN		IMX_GPIO_NR(2, 17)	/* EIM_A21 - active high */
-#define DISP_BACKLIGHT_EN	IMX_GPIO_NR(1, 17)	/* SD1_DAT1 - active high */
 #define DISP_BACKLIGHT_12V_EN	IMX_GPIO_NR(4, 5)	/* GPIO_19 - active high */
 
 #define ENET_PHY_RESET		IMX_GPIO_NR(1, 27)	/* ENET_RXD0 - active low */
@@ -151,7 +150,6 @@ struct gpio mx6_init_gpios[] __initdata = {
 	{.label = "audio_mute",		.gpio = AUDIO_MUTE,	.flags = 0},		/* GPIO5[2]: EIM_A25 - active low */
 
 //	{.label = "edid_i2c_en",	.gpio = DISP_I2C_EN,	.flags = 0},		/* GPIO2[17]: EIM_A21 - active high */
-	{.label = "backlight_en",	.gpio = DISP_BACKLIGHT_EN, .flags = 0},		/* GPIO1[17]: SD1_DAT1 - active high */
 	{.label = "backlight_12V_en",	.gpio = DISP_BACKLIGHT_12V_EN, .flags = 0},	/* GPIO4[5]: GPIO_19 - active high */
 
 	{.label = "phy_reset",		.gpio = ENET_PHY_RESET,	.flags = GPIOF_HIGH},	/* GPIO1[27]: ENET_RXD0 - active low */
@@ -745,7 +743,6 @@ int mx6_bl_notify(struct device *dev, int brightness)
 {
 	pr_info("%s: brightness=%d\n", __func__, brightness);
 	gpio_set_value(DISP_BACKLIGHT_12V_EN, brightness ? 1 : 0);
-	gpio_set_value(DISP_BACKLIGHT_EN, brightness ? 1 : 0);
 	return brightness;
 }
 
