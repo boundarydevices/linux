@@ -250,21 +250,15 @@ static const struct anatop_thermal_platform_data
 };
 
 static const struct imxuart_platform_data mx6_arm2_uart2_data __initconst = {
-	.flags      = IMXUART_HAVE_RTSCTS | IMXUART_SDMA,
-	.dma_req_rx = MX6Q_DMA_REQ_UART3_RX,
-	.dma_req_tx = MX6Q_DMA_REQ_UART3_TX,
+	.flags      = IMXUART_HAVE_RTSCTS,
 };
 
 static const struct imxuart_platform_data mx6_arm2_uart3_data __initconst = {
-	.flags      = IMXUART_HAVE_RTSCTS | IMXUART_SDMA,
-	.dma_req_rx = MX6Q_DMA_REQ_UART4_RX,
-	.dma_req_tx = MX6Q_DMA_REQ_UART4_TX,
+	.flags      = IMXUART_HAVE_RTSCTS,
 };
 
 static const struct imxuart_platform_data mx6_arm2_uart4_data __initconst = {
-	.flags      = IMXUART_HAVE_RTSCTS | IMXUART_SDMA,
-	.dma_req_rx = MX6Q_DMA_REQ_UART5_RX,
-	.dma_req_tx = MX6Q_DMA_REQ_UART5_TX,
+	.flags      = IMXUART_HAVE_RTSCTS,
 };
 
 static unsigned short ksz9031_por_cmds[] = {

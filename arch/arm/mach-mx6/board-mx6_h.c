@@ -244,9 +244,7 @@ static const struct anatop_thermal_platform_data
 };
 
 static const struct imxuart_platform_data plat_uart2 __initconst = {
-	.flags      = IMXUART_HAVE_RTSCTS | IMXUART_SDMA,
-	.dma_req_rx = MX6Q_DMA_REQ_UART3_RX,
-	.dma_req_tx = MX6Q_DMA_REQ_UART3_TX,
+	.flags      = IMXUART_HAVE_RTSCTS,
 };
 
 static int fec_phy_init(struct phy_device *phydev)
