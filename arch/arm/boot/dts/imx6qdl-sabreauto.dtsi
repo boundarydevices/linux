@@ -22,6 +22,13 @@
 		spdif-controller = <&spdif>;
 		spdif-in;
 	};
+
+	max7310_reset: max7310-reset {
+		compatible = "gpio-reset";
+		reset-gpios = <&gpio1 15 GPIO_ACTIVE_LOW>;
+		reset-delay-us = <1>;
+		#reset-cells = <0>;
+	};
 };
 
 &ecspi1 {
@@ -53,6 +60,35 @@
 	status = "okay";
 };
 
+&i2c3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c3>;
+	pinctrl-assert-gpios = <&gpio5 4 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+
+	max7310_a: gpio@30 {
+		compatible = "maxim,max7310";
+		reg = <0x30>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		resets = <&max7310_reset>;
+	};
+
+	max7310_b: gpio@32 {
+		compatible = "maxim,max7310";
+		reg = <0x32>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+	max7310_c: gpio@34 {
+		compatible = "maxim,max7310";
+		reg = <0x34>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+};
+
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
@@ -63,6 +99,8 @@
 				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15 0x80000000
 				MX6QDL_PAD_SD2_DAT2__GPIO1_IO13  0x80000000
 				MX6QDL_PAD_GPIO_18__SD3_VSELECT 0x17059
+				MX6QDL_PAD_EIM_A24__GPIO5_IO04   0x80000000
+				MX6QDL_PAD_SD2_DAT0__GPIO1_IO15  0x80000000
 			>;
 		};
 
@@ -119,6 +157,13 @@
 				MX6QDL_PAD_NANDF_D6__NAND_DATA06	0xb0b1
 				MX6QDL_PAD_NANDF_D7__NAND_DATA07	0xb0b1
 				MX6QDL_PAD_SD4_DAT0__NAND_DQS		0x00b1
+			>;
+		};
+
+		pinctrl_i2c3: i2c3grp {
+			fsl,pins = <
+				MX6QDL_PAD_GPIO_3__I2C3_SCL  0x4001b8b1
+				MX6QDL_PAD_EIM_D18__I2C3_SDA 0x4001b8b1
 			>;
 		};
 
