@@ -19,6 +19,7 @@
 #include <linux/irqdomain.h>
 #include <linux/i2c.h>
 #include <linux/i2c/pca953x.h>
+#include <linux/reset.h>
 #include <linux/slab.h>
 #ifdef CONFIG_OF_GPIO
 #include <linux/of_platform.h>
@@ -751,6 +752,10 @@ static int pca953x_probe(struct i2c_client *client,
 	chip->chip_type = id->driver_data & (PCA953X_TYPE | PCA957X_TYPE);
 
 	mutex_init(&chip->i2c_lock);
+
+	ret = device_reset(&client->dev);
+	if (ret == -ENODEV)
+		return -EPROBE_DEFER;
 
 	/* initialize cached registers from their original values.
 	 * we can't share this chip with another i2c master.
