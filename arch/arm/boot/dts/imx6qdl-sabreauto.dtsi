@@ -14,6 +14,13 @@
 	memory {
 		reg = <0x10000000 0x80000000>;
 	};
+
+	max7310_reset: max7310-reset {
+		compatible = "gpio-reset";
+		reset-gpios = <&gpio1 15 GPIO_ACTIVE_LOW>;
+		reset-delay-us = <1>;
+		#reset-cells = <0>;
+	};
 };
 
 &fec {
@@ -21,6 +28,35 @@
 	pinctrl-0 = <&pinctrl_enet_2>;
 	phy-mode = "rgmii";
 	status = "okay";
+};
+
+&i2c3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c3_4>;
+	pinctrl-assert-gpios = <&gpio5 4 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+
+	max7310_a: gpio@30 {
+		compatible = "maxim,max7310";
+		reg = <0x30>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		resets = <&max7310_reset>;
+	};
+
+	max7310_b: gpio@32 {
+		compatible = "maxim,max7310";
+		reg = <0x32>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+	max7310_c: gpio@34 {
+		compatible = "maxim,max7310";
+		reg = <0x34>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
 };
 
 &iomuxc {
@@ -32,6 +68,8 @@
 			fsl,pins = <
 				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15 0x80000000
 				MX6QDL_PAD_SD2_DAT2__GPIO1_IO13  0x80000000
+				MX6QDL_PAD_EIM_A24__GPIO5_IO04   0x80000000
+				MX6QDL_PAD_SD2_DAT0__GPIO1_IO15  0x80000000
 			>;
 		};
 	};
