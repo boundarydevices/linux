@@ -12,6 +12,13 @@ struct reset_control *reset_control_get(struct device *dev, const char *id);
 void reset_control_put(struct reset_control *rstc);
 struct reset_control *devm_reset_control_get(struct device *dev, const char *id);
 
+#ifdef CONFIG_RESET_CONTROLLER
 int device_reset(struct device *dev);
+#else
+static inline int device_reset(struct device *dev)
+{
+	return 0;
+}
+#endif /* CONFIG_RESET_CONTROLLER */
 
 #endif
