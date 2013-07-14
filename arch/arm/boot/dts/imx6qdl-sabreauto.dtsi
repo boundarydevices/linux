@@ -75,6 +75,15 @@
 	};
 };
 
+&uart3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart3_1>;
+	pinctrl-assert-gpios = <&max7310_b 4 GPIO_ACTIVE_HIGH>, /* CTS */
+			       <&max7310_c 3 GPIO_ACTIVE_HIGH>; /* RXD and TXD */
+	fsl,uart-has-rtscts;
+	status = "okay";
+};
+
 &uart4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4_1>;
