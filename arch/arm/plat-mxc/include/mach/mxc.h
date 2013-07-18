@@ -165,6 +165,10 @@ extern unsigned int __mxc_cpu_type;
 # define cpu_is_mx53()		(0)
 #endif
 
+#ifndef mxc_cpu_type
+#  define mxc_cpu_type __mxc_cpu_type
+#endif
+
 #ifndef __ASSEMBLY__
 #ifdef CONFIG_SOC_IMX6Q
 struct cpu_op {
