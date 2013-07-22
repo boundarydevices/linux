@@ -11,6 +11,7 @@ config MXC_IPU
 	  If you plan to use the Image Processing unit, say
 	  Y here. IPU is needed by Framebuffer and V4L2 drivers.
 
+source "drivers/mxc/gpu-viv/Kconfig"
 source "drivers/mxc/ipu3/Kconfig"
 
 endmenu
