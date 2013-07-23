@@ -12,6 +12,7 @@ config ARCH_MXC
 	select MIGHT_HAVE_CACHE_L2X0 if ARCH_MULTI_V6_V7
 	select MULTI_IRQ_HANDLER
 	select SPARSE_IRQ
+	select SRAM
 	select USE_OF
 	help
 	  Support for Freescale MXC/iMX-based family of processors
