@@ -2476,6 +2476,10 @@ source "drivers/video/exynos/Kconfig"
 source "drivers/video/mmp/Kconfig"
 source "drivers/video/backlight/Kconfig"
 
+if ARCH_MXC
+source "drivers/video/mxc/Kconfig"
+endif
+
 if VT
 	source "drivers/video/console/Kconfig"
 endif
