@@ -71,7 +71,6 @@ static const struct file_operations viv_driver_fops = {
 
 static struct drm_driver driver = {
 	.driver_features = DRIVER_USE_MTRR,
-	.reclaim_buffers = drm_core_reclaim_buffers,
 	.fops = &viv_driver_fops,
 	.name = DRIVER_NAME,
 	.desc = DRIVER_DESC,
