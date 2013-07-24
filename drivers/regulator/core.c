@@ -339,13 +339,14 @@ static ssize_t regulator_uA_show(struct device *dev,
 }
 static DEVICE_ATTR(microamps, 0444, regulator_uA_show, NULL);
 
-static ssize_t regulator_name_show(struct device *dev,
-			     struct device_attribute *attr, char *buf)
+static ssize_t name_show(struct device *dev, struct device_attribute *attr,
+			 char *buf)
 {
 	struct regulator_dev *rdev = dev_get_drvdata(dev);
 
 	return sprintf(buf, "%s\n", rdev_get_name(rdev));
 }
+static DEVICE_ATTR_RO(name);
 
 static ssize_t regulator_print_opmode(char *buf, int mode)
 {
@@ -505,15 +506,16 @@ static ssize_t regulator_total_uA_show(struct device *dev,
 }
 static DEVICE_ATTR(requested_microamps, 0444, regulator_total_uA_show, NULL);
 
-static ssize_t regulator_num_users_show(struct device *dev,
-				      struct device_attribute *attr, char *buf)
+static ssize_t num_users_show(struct device *dev, struct device_attribute *attr,
+			      char *buf)
 {
 	struct regulator_dev *rdev = dev_get_drvdata(dev);
 	return sprintf(buf, "%d\n", rdev->use_count);
 }
+static DEVICE_ATTR_RO(num_users);
 
-static ssize_t regulator_type_show(struct device *dev,
-				  struct device_attribute *attr, char *buf)
+static ssize_t type_show(struct device *dev, struct device_attribute *attr,
+			 char *buf)
 {
 	struct regulator_dev *rdev = dev_get_drvdata(dev);
 
@@ -525,6 +527,7 @@ static ssize_t regulator_type_show(struct device *dev,
 	}
 	return sprintf(buf, "unknown\n");
 }
+static DEVICE_ATTR_RO(type);
 
 static ssize_t regulator_suspend_mem_uV_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
@@ -648,12 +651,13 @@ static DEVICE_ATTR(bypass, 0444,
  * These are the only attributes are present for all regulators.
  * Other attributes are a function of regulator functionality.
  */
-static struct device_attribute regulator_dev_attrs[] = {
-	__ATTR(name, 0444, regulator_name_show, NULL),
-	__ATTR(num_users, 0444, regulator_num_users_show, NULL),
-	__ATTR(type, 0444, regulator_type_show, NULL),
-	__ATTR_NULL,
+static struct attribute *regulator_dev_attrs[] = {
+	&dev_attr_name.attr,
+	&dev_attr_num_users.attr,
+	&dev_attr_type.attr,
+	NULL,
 };
+ATTRIBUTE_GROUPS(regulator_dev);
 
 static void regulator_dev_release(struct device *dev)
 {
@@ -664,7 +668,7 @@ static void regulator_dev_release(struct device *dev)
 static struct class regulator_class = {
 	.name = "regulator",
 	.dev_release = regulator_dev_release,
-	.dev_attrs = regulator_dev_attrs,
+	.dev_groups = regulator_dev_groups,
 };
 
 /* Calculate the new optimum regulator operating mode based on the new total
