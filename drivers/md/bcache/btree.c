@@ -884,6 +884,7 @@ out:
 
 	lock_set_subclass(&b->lock.dep_map, level + 1, _THIS_IP_);
 	b->level	= level;
+	b->parent	= (void *) ~0UL;
 
 	mca_reinit(b);
 
@@ -1895,7 +1896,7 @@ out:
 
 static int btree_split(struct btree *b, struct btree_op *op)
 {
-	bool split, root = b == b->c->root;
+	bool split;
 	struct btree *n1, *n2 = NULL, *n3 = NULL;
 	uint64_t start_time = local_clock();
 
@@ -1917,7 +1918,7 @@ static int btree_split(struct btree *b, struct btree_op *op)
 		if (IS_ERR(n2))
 			goto err_free1;
 
-		if (root) {
+		if (!b->parent) {
 			n3 = bch_btree_node_alloc(b->c, b->level + 1, &op->cl);
 			if (IS_ERR(n3))
 				goto err_free2;
@@ -1925,7 +1926,8 @@ static int btree_split(struct btree *b, struct btree_op *op)
 
 		bch_btree_insert_keys(n1, op);
 
-		/* Has to be a linear search because we don't have an auxiliary
+		/*
+		 * Has to be a linear search because we don't have an auxiliary
 		 * search tree yet
 		 */
 
@@ -1957,6 +1959,8 @@ static int btree_split(struct btree *b, struct btree_op *op)
 	bch_btree_node_write(n1, &op->cl);
 
 	if (n3) {
+		/* Depth increases, make a new root */
+
 		bkey_copy_key(&n3->key, &MAX_KEY);
 		bch_btree_insert_keys(n3, op);
 		bch_btree_node_write(n3, &op->cl);
@@ -1964,7 +1968,9 @@ static int btree_split(struct btree *b, struct btree_op *op)
 		closure_sync(&op->cl);
 		bch_btree_set_root(n3);
 		rw_unlock(true, n3);
-	} else if (root) {
+	} else if (!b->parent) {
+		/* Root filled up but didn't need to be split */
+
 		op->keys.top = op->keys.bottom;
 		closure_sync(&op->cl);
 		bch_btree_set_root(n1);
