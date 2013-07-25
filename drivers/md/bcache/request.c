@@ -743,18 +743,6 @@ static struct search *search_alloc(struct bio *bio, struct bcache_device *d)
 	return s;
 }
 
-static void btree_read_async(struct closure *cl)
-{
-	struct btree_op *op = container_of(cl, struct btree_op, cl);
-
-	int ret = btree_root(search_recurse, op->c, op);
-
-	if (ret == -EAGAIN)
-		continue_at(cl, btree_read_async, bcache_wq);
-
-	closure_return(cl);
-}
-
 /* Cached devices */
 
 static void cached_dev_bio_complete(struct closure *cl)
@@ -1066,7 +1054,7 @@ static void cached_dev_read(struct cached_dev *dc, struct search *s)
 {
 	struct closure *cl = &s->cl;
 
-	closure_call(&s->op.cl, btree_read_async, NULL, cl);
+	closure_call(&s->op.cl, bch_btree_search_async, NULL, cl);
 	continue_at(cl, cached_dev_read_done_bh, NULL);
 }
 
@@ -1330,7 +1318,7 @@ static void flash_dev_make_request(struct request_queue *q, struct bio *bio)
 
 		closure_call(&s->op.cl, bch_data_insert, NULL, cl);
 	} else {
-		closure_call(&s->op.cl, btree_read_async, NULL, cl);
+		closure_call(&s->op.cl, bch_btree_search_async, NULL, cl);
 	}
 
 	continue_at(cl, search_free, NULL);
