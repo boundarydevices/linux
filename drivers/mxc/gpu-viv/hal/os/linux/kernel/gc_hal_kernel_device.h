@@ -26,6 +26,15 @@
 ******************************* gckGALDEVICE Structure *******************************
 \******************************************************************************/
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+struct contiguous_mem_pool {
+	struct dma_attrs attrs;
+	dma_addr_t phys;
+	void *virt;
+	size_t size;
+};
+#endif
+
 typedef struct _gckGALDEVICE
 {
     /* Objects. */
@@ -97,6 +106,9 @@ typedef struct _gckGALDEVICE
 #endif
 	/*Run time pm*/
 	struct device		*pmdev;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	struct contiguous_mem_pool *pool;
+#endif
 }
 * gckGALDEVICE;
 

@@ -2801,16 +2801,25 @@ gckOS_MapPhysical(
 
     if (mdl == gcvNULL)
     {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	struct contiguous_mem_pool *pool = Os->device->pool;
+
+	if (Physical >= pool->phys && Physical < pool->phys + pool->size)
+		logical = (gctPOINTER)(Physical - pool->phys + pool->virt);
+	else
+		logical = gcvNULL;
+#else
         /* Map memory as cached memory. */
         request_mem_region(physical, Bytes, "MapRegion");
         logical = (gctPOINTER) ioremap_nocache(physical, Bytes);
+#endif
 
         if (logical == gcvNULL)
         {
             gcmkTRACE_ZONE(
                 gcvLEVEL_INFO, gcvZONE_OS,
-                "%s(%d): Failed to ioremap",
-                __FUNCTION__, __LINE__
+                "%s(%d): Failed to map physical address 0x%08x",
+                __FUNCTION__, __LINE__, Physical
                 );
 
             MEMORY_UNLOCK(Os);
