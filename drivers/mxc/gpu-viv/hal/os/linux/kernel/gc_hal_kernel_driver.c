@@ -118,7 +118,11 @@ module_param(registerMemBaseVG, ulong, 0644);
 static ulong registerMemSizeVG = 2 << 10;
 module_param(registerMemSizeVG, ulong, 0644);
 
+#if gcdENABLE_FSCALE_VAL_ADJUST
+static ulong contiguousSize = 128 << 20;
+#else
 static ulong contiguousSize = 4 << 20;
+#endif
 module_param(contiguousSize, ulong, 0644);
 
 static ulong contiguousBase = 0;
@@ -846,6 +850,10 @@ static int drv_init(struct device *pdev)
         &device
         ));
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	device->pool = dev_get_drvdata(pdev);
+#endif
+
     /* Start the GAL device. */
     gcmkONERROR(gckGALDEVICE_Start(device));
 
@@ -1038,7 +1046,9 @@ static int __devinit gpu_probe(struct platform_device *pdev)
 {
     int ret = -ENODEV;
     struct resource* res;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	struct contiguous_mem_pool *pool;
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
 	struct device_node *dn =pdev->dev.of_node;
 	const u32 *prop;
 #else
@@ -1083,7 +1093,22 @@ static int __devinit gpu_probe(struct platform_device *pdev)
         registerMemSizeVG = res->end - res->start + 1;
     }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	pool = devm_kzalloc(&pdev->dev, sizeof(*pool), GFP_KERNEL);
+	if (!pool)
+		return -ENOMEM;
+	pool->size = contiguousSize;
+	init_dma_attrs(&pool->attrs);
+	dma_set_attr(DMA_ATTR_WRITE_COMBINE, &pool->attrs);
+	pool->virt = dma_alloc_attrs(&pdev->dev, pool->size, &pool->phys,
+				     GFP_KERNEL, &pool->attrs);
+	if (!pool->virt) {
+		dev_err(&pdev->dev, "Failed to allocate contiguous memory\n");
+		return -ENOMEM;
+	}
+	contiguousBase = pool->phys;
+	dev_set_drvdata(&pdev->dev, pool);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
 	prop = of_get_property(dn, "contiguousbase", NULL);
 	if(prop)
 		contiguousBase = *prop;
@@ -1113,6 +1138,10 @@ static int __devinit gpu_probe(struct platform_device *pdev)
 #if gcdENABLE_FSCALE_VAL_ADJUST
     unregister_thermal_notifier(&thermal_hot_pm_notifier);
 #endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	dma_free_attrs(&pdev->dev, pool->size, pool->virt, pool->phys,
+		       &pool->attrs);
+#endif
     gcmkFOOTER_ARG(KERN_INFO "Failed to register gpu driver: %d\n", ret);
     return ret;
 }
@@ -1123,12 +1152,20 @@ static int gpu_remove(struct platform_device *pdev)
 static int __devexit gpu_remove(struct platform_device *pdev)
 #endif
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	gckGALDEVICE device = platform_get_drvdata(pdev);
+	struct contiguous_mem_pool *pool = device->pool;
+#endif
     gcmkHEADER();
 #if gcdENABLE_FSCALE_VAL_ADJUST
     if(galDevice->kernels[gcvCORE_MAJOR])
         unregister_thermal_notifier(&thermal_hot_pm_notifier);
 #endif
     drv_exit();
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	dma_free_attrs(&pdev->dev, pool->size, pool->virt, pool->phys,
+		       &pool->attrs);
+#endif
     gcmkFOOTER_NO();
     return 0;
 }
