@@ -1030,7 +1030,11 @@ static struct notifier_block thermal_hot_pm_notifier = {
 
 
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+static int gpu_probe(struct platform_device *pdev)
+#else
 static int __devinit gpu_probe(struct platform_device *pdev)
+#endif
 {
     int ret = -ENODEV;
     struct resource* res;
@@ -1113,7 +1117,11 @@ static int __devinit gpu_probe(struct platform_device *pdev)
     return ret;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+static int gpu_remove(struct platform_device *pdev)
+#else
 static int __devexit gpu_remove(struct platform_device *pdev)
+#endif
 {
     gcmkHEADER();
 #if gcdENABLE_FSCALE_VAL_ADJUST
@@ -1290,7 +1298,11 @@ static const struct dev_pm_ops gpu_pm_ops = {
 
 static struct platform_driver gpu_driver = {
     .probe      = gpu_probe,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+    .remove     = gpu_remove,
+#else
     .remove     = __devexit_p(gpu_remove),
+#endif
 
     .suspend    = gpu_suspend,
     .resume     = gpu_resume,
