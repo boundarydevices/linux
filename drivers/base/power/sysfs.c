@@ -203,7 +203,7 @@ static ssize_t autosuspend_delay_ms_store(struct device *dev,
 	if (!dev->power.use_autosuspend)
 		return -EIO;
 
-	if (strict_strtol(buf, 10, &delay) != 0 || delay != (int) delay)
+	if (kstrtol(buf, 10, &delay) != 0 || delay != (int) delay)
 		return -EINVAL;
 
 	pm_runtime_set_autosuspend_delay(dev, delay);
