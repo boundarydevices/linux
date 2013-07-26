@@ -69,7 +69,9 @@ task_notify_func(struct notifier_block *self, unsigned long val, void *data)
 #include <mach/viv_gpu.h>
 #else
 #include <linux/pm_runtime.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 #include <mach/busfreq.h>
+#endif
 #endif
 /* Zone used for header/footer. */
 #define _GC_OBJ_ZONE    gcvZONE_DRIVER
@@ -1254,13 +1256,17 @@ MODULE_DEVICE_TABLE(of, mxs_gpu_dt_ids);
 #ifdef CONFIG_PM
 static int gpu_runtime_suspend(struct device *dev)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 	release_bus_freq(BUS_FREQ_HIGH);
+#endif
 	return 0;
 }
 
 static int gpu_runtime_resume(struct device *dev)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 	request_bus_freq(BUS_FREQ_HIGH);
+#endif
 	return 0;
 }
 
