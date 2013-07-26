@@ -851,6 +851,7 @@ gckGALDEVICE_Construct(
             }
             else
             {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
                 mem_region = request_mem_region(
                     ContiguousBase, ContiguousSize, "galcore managed memory"
                     );
@@ -866,6 +867,7 @@ gckGALDEVICE_Construct(
 
                     gcmkONERROR(gcvSTATUS_OUT_OF_RESOURCES);
                 }
+#endif
 
                 device->requestedContiguousBase  = ContiguousBase;
                 device->requestedContiguousSize  = ContiguousSize;
