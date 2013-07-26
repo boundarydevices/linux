@@ -25,7 +25,9 @@
 #include <linux/mm.h>
 #include <linux/mman.h>
 #include <linux/slab.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 #include <mach/hardware.h>
+#endif
 #include <linux/pm_runtime.h>
 
 #define _GC_OBJ_ZONE    gcvZONE_DEVICE

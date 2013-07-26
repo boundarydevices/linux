@@ -30,7 +30,9 @@
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
 #include <linux/idr.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 #include <mach/hardware.h>
+#endif
 #include <linux/workqueue.h>
 #include <linux/idr.h>
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,23)
