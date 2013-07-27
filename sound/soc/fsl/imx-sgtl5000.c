@@ -64,6 +64,7 @@ static int __devinit imx_sgtl5000_probe(struct platform_device *pdev)
 	struct i2c_client *codec_dev;
 	struct imx_sgtl5000_data *data;
 	int int_port, ext_port;
+	char platform_name[32];
 	int ret;
 
 	ret = of_property_read_u32(np, "mux-int-port", &int_port);
@@ -150,7 +151,9 @@ static int __devinit imx_sgtl5000_probe(struct platform_device *pdev)
 	data->dai.codec_dai_name = "sgtl5000";
 	data->dai.codec_of_node = codec_np;
 	data->dai.cpu_dai_name = dev_name(&ssi_pdev->dev);
-	data->dai.platform_name = "imx-pcm-audio";
+
+	sprintf(platform_name, "imx-pcm-audio.%d", of_alias_get_id(ssi_np, "audio"));
+	data->dai.platform_name = platform_name;
 	data->dai.init = &imx_sgtl5000_dai_init;
 	data->dai.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 			    SND_SOC_DAIFMT_CBM_CFM;
