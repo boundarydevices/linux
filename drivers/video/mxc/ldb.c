@@ -78,6 +78,9 @@
 
 #define LDB_SPLIT_MODE_EN		0x00000010
 
+#define LDB_CH0_MASKS	LDB_CH0_MODE_MASK | LDB_DATA_WIDTH_CH0_MASK | LDB_BIT_MAP_CH0_MASK
+#define LDB_CH1_MASKS	LDB_CH1_MODE_MASK | LDB_DATA_WIDTH_CH1_MASK | LDB_BIT_MAP_CH1_MASK
+
 enum {
 	IMX6_LDB,
 };
@@ -469,14 +472,14 @@ int ldb_fb_event(struct notifier_block *nb, unsigned long val, void *v)
 #define LVDS0_MUX_CTL_MASK	(LVDS_MUX_CTL_MASK << 6)
 #define LVDS1_MUX_CTL_MASK	(LVDS_MUX_CTL_MASK << 8)
 #define ROUTE_IPU_DI(ipu, di)	(((ipu << 1) | di) & LVDS_MUX_CTL_MASK)
-static int ldb_ipu_ldb_route(int ipu, int di, struct ldb_data *ldb)
+static int ldb_ipu_ldb_route(int ipu, int di, struct ldb_data *ldb, int channel)
 {
 	uint32_t reg;
-	int channel;
 	int shift;
 	int mode = ldb->mode;
 
 	reg = readl(ldb->gpr3_reg);
+
 	if (mode < LDB_SIN0) {
 		reg &= ~(LVDS0_MUX_CTL_MASK | LVDS1_MUX_CTL_MASK);
 		reg |= (ROUTE_IPU_DI(ipu, di) << LVDS0_MUX_CTL_OFFS) |
@@ -484,63 +487,57 @@ static int ldb_ipu_ldb_route(int ipu, int di, struct ldb_data *ldb)
 		dev_dbg(&ldb->pdev->dev,
 			"Dual/Split mode both channels route to IPU%d-DI%d\n",
 			ipu, di);
-	} else if ((mode == LDB_SIN0) || (mode == LDB_SIN1)) {
-		reg &= ~(LVDS0_MUX_CTL_MASK | LVDS1_MUX_CTL_MASK);
-		channel = mode - LDB_SIN0;
-		shift = LVDS0_MUX_CTL_OFFS + channel * LVDS_MUX_CTL_WIDTH;
-		reg |= ROUTE_IPU_DI(ipu, di) << shift;
-		dev_dbg(&ldb->pdev->dev,
-			"Single mode channel %d route to IPU%d-DI%d\n",
-				channel, ipu, di);
 	} else {
-		static bool first = true;
-
-		if (first) {
-			if (mode == LDB_SEP0) {
-				reg &= ~LVDS0_MUX_CTL_MASK;
-				channel = 0;
-			} else {
-				reg &= ~LVDS1_MUX_CTL_MASK;
-				channel = 1;
-			}
-			first = false;
-		} else {
-			if (mode == LDB_SEP0) {
-				reg &= ~LVDS1_MUX_CTL_MASK;
-				channel = 1;
-			} else {
-				reg &= ~LVDS0_MUX_CTL_MASK;
-				channel = 0;
-			}
-		}
-
 		shift = LVDS0_MUX_CTL_OFFS + channel * LVDS_MUX_CTL_WIDTH;
+		reg &= ~(LVDS_MUX_CTL_MASK << shift);
 		reg |= ROUTE_IPU_DI(ipu, di) << shift;
-
 		dev_dbg(&ldb->pdev->dev,
-			"Separate mode channel %d route to IPU%d-DI%d\n",
+			"channel %d route to IPU%d-DI%d\n",
 			channel, ipu, di);
 	}
 	writel(reg, ldb->gpr3_reg);
-
 	return 0;
 }
+
+const static unsigned char lvds_enables[] = {
+	[LDB_SPL_DI0] = LDB_SPLIT_MODE_EN | LDB_CH0_MODE_EN_TO_DI0
+		| LDB_CH1_MODE_EN_TO_DI0,
+	[LDB_SPL_DI1] = LDB_SPLIT_MODE_EN | LDB_CH0_MODE_EN_TO_DI1
+		| LDB_CH1_MODE_EN_TO_DI1,
+	[LDB_DUL_DI0] = LDB_CH0_MODE_EN_TO_DI0 | LDB_CH1_MODE_EN_TO_DI0,
+	[LDB_DUL_DI1] = LDB_CH0_MODE_EN_TO_DI1 | LDB_CH1_MODE_EN_TO_DI1,
+	[LDB_SIN0] = LDB_CH0_MODE_EN_TO_DI0,
+	[LDB_SIN0 + 1] = LDB_CH0_MODE_EN_TO_DI1,
+	[LDB_SIN0 + 2] = LDB_CH1_MODE_EN_TO_DI0,
+	[LDB_SIN0 + 3] = LDB_CH1_MODE_EN_TO_DI1
+};
 
 static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 	struct mxc_dispdrv_setting *setting)
 {
-	int ret = 0, i, lvds_channel = 0;
+	int ret = 0, i;
 	struct ldb_data *ldb = mxc_dispdrv_getdata(disp);
 	struct fsl_mxc_ldb_platform_data *plat_data = ldb->pdev->dev.platform_data;
 	struct resource *res;
-	uint32_t reg, setting_idx;
-	uint32_t ch_mask = 0, ch_val = 0;
-	uint32_t ipu_id, disp_id;
+	uint32_t reg;
+	uint32_t setting_idx = ldb->inited ? 1 : 0;
+	uint32_t ch_mask = 0;
+	uint32_t reg_set = 0, reg_clear = 0;
+	int lvds_channel = ldb->inited ? 1 : 0;
+	int mode;
 	char di_clk[] = "ipu1_di0_sel";
 	char ldb_clk[] = "ldb_di0";
 	char div_3_5_clk[] = "di0_div_3_5";
 	char div_7_clk[] = "di0_div_7";
 	char div_sel_clk[] = "di0_div_sel";
+
+	mode = (g_ldb_mode >= LDB_SPL_DI0) ? g_ldb_mode : plat_data->mode;
+	ldb->mode = mode;
+
+	if ((mode == LDB_SIN1) || (mode == LDB_SEP1) || (mode == LDB_SPL_DI1))
+		lvds_channel ^= 1;
+	setting->dev_id = plat_data->ipu_id;
+	setting->disp_id = lvds_channel;
 
 	/* if input format not valid, make RGB666 as default*/
 	if (!valid_mode(setting->if_fmt)) {
@@ -550,7 +547,6 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 	}
 
 	if (!ldb->inited) {
-		setting_idx = 0;
 		res = platform_get_resource(ldb->pdev, IORESOURCE_MEM, 0);
 		if (!res) {
 			dev_err(&ldb->pdev->dev, "get iomem fail.\n");
@@ -562,157 +558,29 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 		ldb->control_reg = ldb->reg + 2;
 		ldb->gpr3_reg = ldb->reg + 3;
 
-		/* ipu selected by platform data setting */
-		setting->dev_id = plat_data->ipu_id;
+		/* reference resistor select */
+		reg_clear |= LDB_BGREF_RMODE_MASK;
+		if (!plat_data->ext_ref)
+			reg_set |= LDB_BGREF_RMODE_EXT;
 
-		reg = readl(ldb->control_reg);
-
-		/* refrence resistor select */
-		reg &= ~LDB_BGREF_RMODE_MASK;
-		if (plat_data->ext_ref)
-			reg |= LDB_BGREF_RMODE_EXT;
-		else
-			reg |= LDB_BGREF_RMODE_INT;
-
-		/* TODO: now only use SPWG data mapping for both channel */
-		reg &= ~(LDB_BIT_MAP_CH0_MASK | LDB_BIT_MAP_CH1_MASK);
-		reg |= LDB_BIT_MAP_CH0_SPWG | LDB_BIT_MAP_CH1_SPWG;
-
-		/* channel mode setting */
-		reg &= ~(LDB_CH0_MODE_MASK | LDB_CH1_MODE_MASK);
-		reg &= ~(LDB_DATA_WIDTH_CH0_MASK | LDB_DATA_WIDTH_CH1_MASK);
-
-		if (bits_per_pixel(setting->if_fmt) == 24)
-			reg |= LDB_DATA_WIDTH_CH0_24 | LDB_DATA_WIDTH_CH1_24;
-		else
-			reg |= LDB_DATA_WIDTH_CH0_18 | LDB_DATA_WIDTH_CH1_18;
-
-		if (g_ldb_mode >= LDB_SPL_DI0)
-			ldb->mode = g_ldb_mode;
-		else
-			ldb->mode = plat_data->mode;
-
-		if ((ldb->mode == LDB_SIN0) || (ldb->mode == LDB_SIN1)) {
-			ret = ldb->mode - LDB_SIN0;
-			if (plat_data->disp_id != ret) {
-				dev_warn(&ldb->pdev->dev,
-					"change IPU DI%d to IPU DI%d for LDB "
-					"channel%d.\n",
-					plat_data->disp_id, ret, ret);
-				plat_data->disp_id = ret;
-			}
-		} else if (((ldb->mode == LDB_SEP0) || (ldb->mode == LDB_SEP1))
-				&& is_imx6_ldb(plat_data)) {
-			if (plat_data->disp_id == plat_data->sec_disp_id) {
-				dev_err(&ldb->pdev->dev,
-					"For LVDS separate mode,"
-					"two DIs should be different!\n");
-				return -EINVAL;
-			}
-
-			if (((!plat_data->disp_id) && (ldb->mode == LDB_SEP1))
-				|| ((plat_data->disp_id) &&
-					(ldb->mode == LDB_SEP0))) {
-				dev_dbg(&ldb->pdev->dev,
-					"LVDS separate mode:"
-					"swap DI configuration!\n");
-				ipu_id = plat_data->ipu_id;
-				disp_id = plat_data->disp_id;
-				plat_data->ipu_id = plat_data->sec_ipu_id;
-				plat_data->disp_id = plat_data->sec_disp_id;
-				plat_data->sec_ipu_id = ipu_id;
-				plat_data->sec_disp_id = disp_id;
-			}
-		}
-
-		if (ldb->mode == LDB_SPL_DI0) {
-			reg |= LDB_SPLIT_MODE_EN | LDB_CH0_MODE_EN_TO_DI0
-				| LDB_CH1_MODE_EN_TO_DI0;
-			setting->disp_id = 0;
-		} else if (ldb->mode == LDB_SPL_DI1) {
-			reg |= LDB_SPLIT_MODE_EN | LDB_CH0_MODE_EN_TO_DI1
-				| LDB_CH1_MODE_EN_TO_DI1;
-			setting->disp_id = 1;
-		} else if (ldb->mode == LDB_DUL_DI0) {
-			reg &= ~LDB_SPLIT_MODE_EN;
-			reg |= LDB_CH0_MODE_EN_TO_DI0 | LDB_CH1_MODE_EN_TO_DI0;
-			setting->disp_id = 0;
-		} else if (ldb->mode == LDB_DUL_DI1) {
-			reg &= ~LDB_SPLIT_MODE_EN;
-			reg |= LDB_CH0_MODE_EN_TO_DI1 | LDB_CH1_MODE_EN_TO_DI1;
-			setting->disp_id = 1;
-		} else if (ldb->mode == LDB_SIN0) {
-			reg &= ~LDB_SPLIT_MODE_EN;
-			setting->disp_id = plat_data->disp_id;
-			if (setting->disp_id == 0)
-				reg |= LDB_CH0_MODE_EN_TO_DI0;
-			else
-				reg |= LDB_CH0_MODE_EN_TO_DI1;
-			ch_mask = LDB_CH0_MODE_MASK;
-			ch_val = reg & LDB_CH0_MODE_MASK;
-		} else if (ldb->mode == LDB_SIN1) {
-			reg &= ~LDB_SPLIT_MODE_EN;
-			setting->disp_id = plat_data->disp_id;
-			if (setting->disp_id == 0)
-				reg |= LDB_CH1_MODE_EN_TO_DI0;
-			else
-				reg |= LDB_CH1_MODE_EN_TO_DI1;
-			ch_mask = LDB_CH1_MODE_MASK;
-			ch_val = reg & LDB_CH1_MODE_MASK;
-		} else { /* separate mode*/
-			setting->disp_id = plat_data->disp_id;
-
-			/* first output is LVDS0 or LVDS1 */
-			if (ldb->mode == LDB_SEP0)
-				lvds_channel = 0;
-			else
-				lvds_channel = 1;
-
-			reg &= ~LDB_SPLIT_MODE_EN;
-
-			if ((lvds_channel == 0) && (setting->disp_id == 0))
-				reg |= LDB_CH0_MODE_EN_TO_DI0;
-			else if ((lvds_channel == 0) && (setting->disp_id == 1))
-				reg |= LDB_CH0_MODE_EN_TO_DI1;
-			else if ((lvds_channel == 1) && (setting->disp_id == 0))
-				reg |= LDB_CH1_MODE_EN_TO_DI0;
-			else
-				reg |= LDB_CH1_MODE_EN_TO_DI1;
-			ch_mask = lvds_channel ? LDB_CH1_MODE_MASK :
-					LDB_CH0_MODE_MASK;
-			ch_val = reg & ch_mask;
-
-			if (bits_per_pixel(setting->if_fmt) == 24) {
-				if (lvds_channel == 0)
-					reg &= ~LDB_DATA_WIDTH_CH1_24;
-				else
-					reg &= ~LDB_DATA_WIDTH_CH0_24;
-			} else {
-				if (lvds_channel == 0)
-					reg &= ~LDB_DATA_WIDTH_CH1_18;
-				else
-					reg &= ~LDB_DATA_WIDTH_CH0_18;
-			}
-		}
-
-		writel(reg, ldb->control_reg);
-		if (ldb->mode <  LDB_SIN0) {
+		if (ldb->mode < LDB_SIN0) {
+			reg_clear |= LDB_CH0_MASKS | LDB_CH1_MASKS
+					| LDB_SPLIT_MODE_EN;
+			if (bits_per_pixel(setting->if_fmt) == 24)
+				reg_set |= LDB_DATA_WIDTH_CH0_24 | LDB_DATA_WIDTH_CH1_24;
+			reg_set |= lvds_enables[ldb->mode];
 			ch_mask = LDB_CH0_MODE_MASK | LDB_CH1_MODE_MASK;
-			ch_val = reg & (LDB_CH0_MODE_MASK | LDB_CH1_MODE_MASK);
+		} else {
+			setting->disp_id = plat_data->disp_id;
 		}
-	} else { /* second time for separate mode */
-		if ((ldb->mode == LDB_SPL_DI0) ||
-			(ldb->mode == LDB_SPL_DI1) ||
-			(ldb->mode == LDB_DUL_DI0) ||
-			(ldb->mode == LDB_DUL_DI1) ||
-			(ldb->mode == LDB_SIN0) ||
-			(ldb->mode == LDB_SIN1)) {
+	} else {
+		 /* second time for separate mode */
+		if ((ldb->mode != LDB_SEP0) && (ldb->mode != LDB_SEP1)) {
 			dev_err(&ldb->pdev->dev, "for second ldb disp"
 					"ldb mode should in separate mode\n");
 			return -EINVAL;
 		}
 
-		setting_idx = 1;
 		if (is_imx6_ldb(plat_data)) {
 			setting->dev_id = plat_data->sec_ipu_id;
 			setting->disp_id = plat_data->sec_disp_id;
@@ -720,75 +588,71 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 			setting->dev_id = plat_data->ipu_id;
 			setting->disp_id = !plat_data->disp_id;
 		}
-		if (setting->disp_id == ldb->setting[0].di) {
+		if ((setting->disp_id == ldb->setting[0].di) && (setting->dev_id == ldb->setting[0].ipu)) {
 			dev_err(&ldb->pdev->dev, "Err: for second ldb disp in"
-				"separate mode, DI should be different!\n");
+				"separate mode, IPU/DI should be different!\n");
 			return -EINVAL;
 		}
+	}
+	if (ldb->mode >= LDB_SIN0) {
+		int lvds_ch_disp = (is_imx6_ldb(plat_data)) ? lvds_channel
+				: setting->disp_id;
 
-		/* second output is LVDS0 or LVDS1 */
-		if (ldb->mode == LDB_SEP0)
-			lvds_channel = 1;
-		else
-			lvds_channel = 0;
-
-		reg = readl(ldb->control_reg);
-		if ((lvds_channel == 0) && (setting->disp_id == 0))
-			reg |= LDB_CH0_MODE_EN_TO_DI0;
-		else if ((lvds_channel == 0) && (setting->disp_id == 1))
-			reg |= LDB_CH0_MODE_EN_TO_DI1;
-		else if ((lvds_channel == 1) && (setting->disp_id == 0))
-			reg |= LDB_CH1_MODE_EN_TO_DI0;
-		else
-			reg |= LDB_CH1_MODE_EN_TO_DI1;
-		ch_mask = lvds_channel ?  LDB_CH1_MODE_MASK :
+		reg_clear |= ((lvds_channel ? LDB_CH1_MASKS : LDB_CH0_MASKS)
+			| LDB_SPLIT_MODE_EN);
+		reg_set |= lvds_enables[LDB_SIN0 + ((lvds_channel << 1)
+				| lvds_ch_disp)];
+		if (bits_per_pixel(setting->if_fmt) == 24)
+			reg_set |= (lvds_channel ? LDB_DATA_WIDTH_CH1_24
+					: LDB_DATA_WIDTH_CH0_24);
+		ch_mask = lvds_channel ? LDB_CH1_MODE_MASK :
 				LDB_CH0_MODE_MASK;
-		ch_val = reg & ch_mask;
-
-		if (bits_per_pixel(setting->if_fmt) == 24) {
-			if (lvds_channel == 0)
-				reg |= LDB_DATA_WIDTH_CH0_24;
-			else
-				reg |= LDB_DATA_WIDTH_CH1_24;
-		} else {
-			if (lvds_channel == 0)
-				reg |= LDB_DATA_WIDTH_CH0_18;
-			else
-				reg |= LDB_DATA_WIDTH_CH1_18;
-		}
-		writel(reg, ldb->control_reg);
 	}
+	reg = readl(ldb->control_reg);
+	reg &= ~reg_clear;
+	reg |= reg_set;
+	writel(reg, ldb->control_reg);
 
-	/* get clocks */
-	if (is_imx6_ldb(plat_data) &&
-		((ldb->mode == LDB_SEP0) || (ldb->mode == LDB_SEP1))) {
-		ldb_clk[6] += lvds_channel;
-		div_3_5_clk[2] += lvds_channel;
-		div_7_clk[2] += lvds_channel;
-		div_sel_clk[2] += lvds_channel;
-	} else {
-		ldb_clk[6] += setting->disp_id;
-		div_3_5_clk[2] += setting->disp_id;
-		div_7_clk[2] += setting->disp_id;
-		div_sel_clk[2] += setting->disp_id;
-	}
+	/* clock setting */
+	ldb_clk[6] = '0' + lvds_channel;
+	div_3_5_clk[2] = '0' + lvds_channel;
+	div_7_clk[2] = '0' + lvds_channel;
+	div_sel_clk[2] = '0' + lvds_channel;
 	ldb->setting[setting_idx].ldb_di_clk = clk_get(&ldb->pdev->dev,
-							ldb_clk);
+			ldb_clk);
 	if (IS_ERR(ldb->setting[setting_idx].ldb_di_clk)) {
 		dev_err(&ldb->pdev->dev, "get ldb clk failed\n");
+		if (!ldb->inited)
+			iounmap(ldb->reg);
 		return PTR_ERR(ldb->setting[setting_idx].ldb_di_clk);
 	}
+
+	di_clk[3] = '1' + setting->dev_id;
+	di_clk[7] = '0' + setting->disp_id;
+	ldb->setting[setting_idx].di_clk = clk_get(&ldb->pdev->dev, di_clk);
+	if (IS_ERR(ldb->setting[setting_idx].di_clk)) {
+		dev_err(&ldb->pdev->dev, "get di clk0 failed\n");
+		if (!ldb->inited)
+			iounmap(ldb->reg);
+		return PTR_ERR(ldb->setting[setting_idx].di_clk);
+	}
+
+	dev_dbg(&ldb->pdev->dev, "ldb_clk to di clk: %s -> %s\n", ldb_clk, di_clk);
 
 	ldb->setting[setting_idx].div_3_5_clk = clk_get(&ldb->pdev->dev,
 							div_3_5_clk);
 	if (IS_ERR(ldb->setting[setting_idx].div_3_5_clk)) {
 		dev_err(&ldb->pdev->dev, "get div 3.5 clk failed\n");
+		if (!ldb->inited)
+			iounmap(ldb->reg);
 		return PTR_ERR(ldb->setting[setting_idx].div_3_5_clk);
 	}
 	ldb->setting[setting_idx].div_7_clk = clk_get(&ldb->pdev->dev,
 							div_7_clk);
 	if (IS_ERR(ldb->setting[setting_idx].div_7_clk)) {
-		dev_err(&ldb->pdev->dev, "get div 7 clk failed\n");
+		dev_err(&ldb->pdev->dev, "get %s failed\n", div_7_clk);
+		if (!ldb->inited)
+			iounmap(ldb->reg);
 		return PTR_ERR(ldb->setting[setting_idx].div_7_clk);
 	}
 
@@ -796,23 +660,16 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 							div_sel_clk);
 	if (IS_ERR(ldb->setting[setting_idx].div_sel_clk)) {
 		dev_err(&ldb->pdev->dev, "get div sel clk failed\n");
+		if (!ldb->inited)
+			iounmap(ldb->reg);
 		return PTR_ERR(ldb->setting[setting_idx].div_sel_clk);
 	}
 
-	di_clk[3] += setting->dev_id;
-	di_clk[7] += setting->disp_id;
-	ldb->setting[setting_idx].di_clk = clk_get(&ldb->pdev->dev,
-							di_clk);
-	if (IS_ERR(ldb->setting[setting_idx].di_clk)) {
-		dev_err(&ldb->pdev->dev, "get di clk failed\n");
-		return PTR_ERR(ldb->setting[setting_idx].di_clk);
-	}
-
 	ldb->setting[setting_idx].ch_mask = ch_mask;
-	ldb->setting[setting_idx].ch_val = ch_val;
+	ldb->setting[setting_idx].ch_val = reg & ch_mask;
 
 	if (is_imx6_ldb(plat_data))
-		ldb_ipu_ldb_route(setting->dev_id, setting->disp_id, ldb);
+		ldb_ipu_ldb_route(setting->dev_id, setting->disp_id, ldb, lvds_channel);
 
 	/* must use spec video mode defined by driver */
 	ret = fb_find_mode(&setting->fbi->var, setting->fbi, setting->dft_mode_str,
@@ -821,13 +678,23 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 		fb_videomode_to_var(&setting->fbi->var, &ldb_modedb[0]);
 
 	INIT_LIST_HEAD(&setting->fbi->modelist);
-	for (i = 0; i < ldb_modedb_sz; i++) {
+	{
 		struct fb_videomode m;
+
 		fb_var_to_videomode(&m, &setting->fbi->var);
-		if (fb_mode_is_equal(&m, &ldb_modedb[i])) {
-			fb_add_videomode(&ldb_modedb[i],
-					&setting->fbi->modelist);
-			break;
+		if (0) pr_info("%s: ret=%d, %dx%d\n", __func__, ret, m.xres, m.yres);
+		if (0) pr_info("%s:r=%d, x=%d, y=%d, p=%d, l=%d, r=%d, upper=%d, lower=%d, h=%d, v=%d\n",
+				__func__, m.refresh, m.xres, m.yres, m.pixclock,
+				m.left_margin, m.right_margin,
+				m.upper_margin, m.lower_margin,
+				m.hsync_len, m.vsync_len);
+
+		for (i = 0; i < ldb_modedb_sz; i++) {
+			if (!fb_mode_is_equal(&m, &ldb_modedb[i])) {
+				if (0) pr_info("%s: %dx%d\n", __func__, ldb_modedb[i].xres, ldb_modedb[i].yres);
+				fb_add_videomode(&ldb_modedb[i],
+						&setting->fbi->modelist);
+			}
 		}
 	}
 
