@@ -16,14 +16,64 @@
 / {
 	model = "Freescale i.MX6 Quad SABRE Lite Board";
 	compatible = "fsl,imx6q-sabrelite", "fsl,imx6q";
+	aliases {
+		mxcfb0 = &mxcfb1;
+		mxcfb1 = &mxcfb2;
+		mxcfb2 = &mxcfb3;
+	};
 
 	memory {
 		reg = <0x10000000 0x40000000>;
 	};
 
 	soc {
+		pcie@01000000 {
+			pwr-gpios = <&gpio3 19 0>;
+			rst-gpios = <&gpio7 12 0>;
+			status = "okay";
+		};
+
+		hdmi_core@00120000 {
+			compatible = "fsl,imx6-hdmi-core";
+			ipu_id = <1>;
+			disp_id = <0>;
+			status = "okay";
+		};
+
+		hdmi_video@00120000 {
+			compatible = "fsl,imx6-hdmi-video";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_hdmi_hdcp_1>;
+			phy_reg_vlev = <0x0294>;
+			phy_reg_cksymtx = <0x800d>;
+			status = "okay";
+		};
+
+		hdmi_cec@00120000 {
+			compatible = "fsl,imx6-hdmi-cec";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_hdmi_cec_2>;
+			status = "okay";
+		};
+
+		ipu1: ipu@02400000 { /* IPU1 */
+			bypass_reset = <0>;
+			status = "okay";
+		};
+
+		ipu2: ipu@02800000 { /* IPU2 */
+			bypass_reset = <0>;
+			status = "okay";
+		};
+
 		aips-bus@02000000 { /* AIPS1 */
 			spba-bus@02000000 {
+				uart1: serial@02020000 {
+					pinctrl-names = "default";
+					pinctrl-0 = <&pinctrl_uart1_1>;
+					status = "okay";
+				};
+
 				ecspi@02008000 { /* eCSPI1 */
 					fsl,spi-num-chipselects = <1>;
 					cs-gpios = <&gpio3 19 0>;
@@ -74,6 +124,28 @@
 					};
 				};
 			};
+
+			pwm1: pwm@02080000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_pwm0_0>;
+				status = "okay";
+			};
+
+			pwm4: pwm@0208c000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_pwm3_0>;
+				status = "okay";
+			};
+
+			ldb@020e0000 {
+				ipu_id = <0>;
+				disp_id = <1>;
+				ext_ref = <1>;
+				mode = "sin0";
+				sec_ipu_id = <1>;
+				sec_disp_id = <1>;
+				status = "okay";
+			};
 		};
 
 		aips-bus@02100000 { /* AIPS2 */
@@ -118,18 +190,6 @@
 				status = "okay";
 			};
 
-			audmux@021d8000 {
-				status = "okay";
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_audmux_1>;
-			};
-
-			uart2: serial@021e8000 {
-				status = "okay";
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_uart2_1>;
-			};
-
 			i2c@021a0000 { /* I2C1 */
 				status = "okay";
 				clock-frequency = <100000>;
@@ -150,6 +210,11 @@
 				clock-frequency = <100000>;
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_i2c2_2>;
+
+				hdmi_edid@50 {
+					compatible = "fsl,imx6-hdmi-i2c";
+					reg = <0x50>;
+				};
 			};
 
 			i2c@021a8000 { /* I2C3 */
@@ -166,6 +231,19 @@
 					wakeup-gpios = <&gpio1 9 0>;
 				};
 			};
+
+			audmux@021d8000 {
+				status = "okay";
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_audmux_1>;
+			};
+
+			uart2: serial@021e8000 {
+				status = "okay";
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_uart2_1>;
+			};
+
 		};
 
 		ahci@02200000 { /* AHCI SATA */
@@ -202,6 +280,12 @@
 		};
 	};
 
+	sound-hdmi {
+		compatible = "fsl,imx6q-sabrelite-hdmi-audio",
+			     "fsl,imx-audio-hdmi";
+		model = "imx-audio-hdmi";
+	};
+
 	sound {
 		compatible = "fsl,imx6q-sabrelite-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";
@@ -214,5 +298,96 @@
 			"Headphone Jack", "HP_OUT";
 		mux-int-port = <1>;
 		mux-ext-port = <4>;
+	};
+
+	backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm4 0 5000000>;
+		brightness-levels = <0 4 8 16 32 64 128 255>;
+		default-brightness-level = <7>;
+	};
+
+	mxcfb1: fb@0 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "hdmi";
+		interface_pix_fmt = "RGB24";
+		mode_str ="1280x720MR@60";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "okay";
+	};
+
+	mxcfb2: fb@1 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "ldb";
+		interface_pix_fmt = "RGB666";
+		mode_str ="LDB-XGA";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "okay";
+	};
+
+	mxcfb3: fb@2 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "lcd";
+		interface_pix_fmt = "RGB666";
+		mode_str ="CLAA-WVGA";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "okay";
+	};
+
+	mxcfb4: fb@3 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "ldb";
+		status = "disabled";
+	};
+
+	lcd@0 {
+		compatible = "fsl,lcd";
+		ipu_id = <0>;
+		disp_id = <0>;
+		default_ifmt = "RGB666";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu1_1>;
+		status = "okay";
+	};
+
+	v4l2_cap_0 {
+		compatible = "fsl,imx6q-v4l2-capture";
+		ipu_id = <0>;
+		csi_id = <0>;
+		mclk_source = <0>;
+		status = "okay";
+	};
+
+	v4l2_cap_1 {
+		compatible = "fsl,imx6q-v4l2-capture";
+		ipu_id = <0>;
+		csi_id = <1>;
+		mclk_source = <0>;
+		status = "okay";
+	};
+
+	v4l2_out {
+		compatible = "fsl,mxc_v4l2_output";
+		status = "okay";
+	};
+
+	lvds_cabc_ctrl {
+		lvds0-gpios = <&gpio6 15 0>;
+		lvds1-gpios = <&gpio6 16 0>;
+	};
+
+	pxp_v4l2_out {
+		compatible = "fsl,imx6dl-pxp-v4l2";
+		status = "disabled";
+	};
+	pxp_v4l2_out {
+		compatible = "fsl,imx6dl-pxp-v4l2";
+		status = "disabled";
 	};
 };
