@@ -607,6 +607,15 @@ static int mxcfb_set_par(struct fb_info *fbi)
 
 		dev_dbg(fbi->device, "pixclock = %ul Hz\n",
 			(u32) (PICOS2KHZ(fbi->var.pixclock) * 1000UL));
+		dev_info(fbi->device,"%dx%d h_sync,r,l: %d,%d,%d  v_sync,l,u: %d,%d,%d pixclock=%u Hz\n",
+			fbi->var.xres, fbi->var.yres,
+			fbi->var.hsync_len,
+			fbi->var.right_margin,
+			fbi->var.left_margin,
+			fbi->var.vsync_len,
+			fbi->var.lower_margin,
+			fbi->var.upper_margin,
+			(u32)(PICOS2KHZ(fbi->var.pixclock) * 1000UL));
 
 		if (ipu_init_sync_panel(mxc_fbi->ipu, mxc_fbi->ipu_di,
 					(PICOS2KHZ(fbi->var.pixclock)) * 1000UL,
@@ -1952,6 +1961,10 @@ static int mxcfb_option_setup(struct platform_device *pdev, struct fb_info *fbi)
 
 	name[5] += pdev->id;
 	if (fb_get_options(name, &options)) {
+		if (options && !strncmp(options, "off", 3)) {
+			dev_info(&pdev->dev, "%s is turned off!\n", name);
+			return -ENODEV;
+		}
 		dev_err(&pdev->dev, "Can't get fb option for %s!\n", name);
 		return -ENODEV;
 	}
@@ -2238,8 +2251,10 @@ static void mxcfb_unsetup_overlay(struct fb_info *fbi_bg)
 }
 
 static bool ipu_usage[2][2];
-static int ipu_test_set_usage(int ipu, int di)
+static int ipu_test_set_usage(unsigned ipu, unsigned di)
 {
+	if ((ipu >= 2) || (di >= 2))
+		return -EINVAL;
 	if (ipu_usage[ipu][di])
 		return -EBUSY;
 	else
@@ -2249,6 +2264,8 @@ static int ipu_test_set_usage(int ipu, int di)
 
 static void ipu_clear_usage(int ipu, int di)
 {
+	if ((ipu >= 2) || (di >= 2))
+		return;
 	ipu_usage[ipu][di] = false;
 }
 
@@ -2426,7 +2443,7 @@ static int mxcfb_probe(struct platform_device *pdev)
 		mxcfbi->ipu_alp_ch_irq = IPU_IRQ_BG_ALPHA_SYNC_EOF;
 		mxcfbi->ipu_ch = MEM_BG_SYNC;
 		/* Unblank the primary fb only by default */
-		if (pdev->id == 0)
+		if (1) //if (pdev->id == 0)
 			mxcfbi->cur_blank = mxcfbi->next_blank = FB_BLANK_UNBLANK;
 		else
 			mxcfbi->cur_blank = mxcfbi->next_blank = FB_BLANK_POWERDOWN;
@@ -2467,7 +2484,7 @@ static int mxcfb_probe(struct platform_device *pdev)
 		mxcfbi->ipu_ch_nf_irq = IPU_IRQ_DC_SYNC_NFACK;
 		mxcfbi->ipu_alp_ch_irq = -1;
 		mxcfbi->ipu_ch = MEM_DC_SYNC;
-		mxcfbi->cur_blank = mxcfbi->next_blank = FB_BLANK_POWERDOWN;
+		mxcfbi->cur_blank = mxcfbi->next_blank = FB_BLANK_UNBLANK;
 
 		ret = mxcfb_register(fbi);
 		if (ret < 0)
