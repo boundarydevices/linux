@@ -39,6 +39,7 @@
 #include <linux/math64.h>
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#include <linux/reset.h>
 static inline void imx_gpc_power_up_pu(bool flag) {}
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
 #include <mach/common.h>
@@ -7059,6 +7060,10 @@ gckOS_ResetGPU(
     }
 
     gcmkFOOTER_NO();
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	struct reset_control *rstc = Os->device->rstc[Core];
+	if (rstc)
+		reset_control_reset(rstc);
 #else
     imx_src_reset_gpu((int)Core);
 #endif
