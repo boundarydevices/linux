@@ -540,6 +540,14 @@
 					};
 				};
 
+				pwm3 {
+					pinctrl_pwm3_0: pwm4 {
+						fsl,pins = <
+							MX6Q_PAD_SD1_CMD__PWM4_OUT 0x1b0b1
+						>;
+					};
+				};
+
 				usdhc2 {
 					pinctrl_usdhc2_1: usdhc2grp-1 {
 						fsl,pins = <
