@@ -38,7 +38,9 @@
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,23)
 #include <linux/math64.h>
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+static inline void imx_gpc_power_up_pu(bool flag) {}
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
 #include <mach/common.h>
 #endif
 #include <linux/delay.h>
