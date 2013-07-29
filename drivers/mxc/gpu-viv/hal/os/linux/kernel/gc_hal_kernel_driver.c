@@ -79,8 +79,19 @@ task_notify_func(struct notifier_block *self, unsigned long val, void *data)
 #define _GC_OBJ_ZONE    gcvZONE_DRIVER
 
 #if gcdENABLE_FSCALE_VAL_ADJUST
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+static inline int register_thermal_notifier(struct notifier_block *nb)
+{
+	return 0;
+}
+static inline int unregister_thermal_notifier(struct notifier_block *nb)
+{
+	return 0;
+}
+#else
 extern int register_thermal_notifier(struct notifier_block *nb);
 extern int unregister_thermal_notifier(struct notifier_block *nb);
+#endif
 #endif
 
 MODULE_DESCRIPTION("Vivante Graphics Driver");
