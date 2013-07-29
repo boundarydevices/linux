@@ -108,6 +108,7 @@ typedef struct _gckGALDEVICE
 	struct device		*pmdev;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 	struct contiguous_mem_pool *pool;
+	struct reset_control *rstc[gcdMAX_GPU_COUNT];
 #endif
 }
 * gckGALDEVICE;

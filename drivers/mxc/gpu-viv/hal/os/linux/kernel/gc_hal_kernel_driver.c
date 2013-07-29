@@ -71,6 +71,8 @@ task_notify_func(struct notifier_block *self, unsigned long val, void *data)
 #include <linux/pm_runtime.h>
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 #include <mach/busfreq.h>
+#else
+#include <linux/reset.h>
 #endif
 #endif
 /* Zone used for header/footer. */
@@ -1048,6 +1050,7 @@ static int __devinit gpu_probe(struct platform_device *pdev)
     struct resource* res;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 	struct contiguous_mem_pool *pool;
+	struct reset_control *rstc;
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
 	struct device_node *dn =pdev->dev.of_node;
 	const u32 *prop;
@@ -1126,6 +1129,16 @@ static int __devinit gpu_probe(struct platform_device *pdev)
 
     if (!ret)
     {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	rstc = devm_reset_control_get(&pdev->dev, "gpu3d");
+	galDevice->rstc[gcvCORE_MAJOR] = IS_ERR(rstc) ? NULL : rstc;
+
+	rstc = devm_reset_control_get(&pdev->dev, "gpu2d");
+	galDevice->rstc[gcvCORE_2D] = IS_ERR(rstc) ? NULL : rstc;
+
+	rstc = devm_reset_control_get(&pdev->dev, "gpuvg");
+	galDevice->rstc[gcvCORE_VG] = IS_ERR(rstc) ? NULL : rstc;
+#endif
         platform_set_drvdata(pdev, galDevice);
 
 #if gcdENABLE_FSCALE_VAL_ADJUST
