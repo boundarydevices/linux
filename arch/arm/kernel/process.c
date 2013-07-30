@@ -170,8 +170,10 @@ void arch_cpu_idle_dead(void)
  */
 void arch_cpu_idle(void)
 {
+	idle_notifier_call_chain(IDLE_START);
 	if (cpuidle_idle_call())
 		default_idle();
+	idle_notifier_call_chain(IDLE_END);
 }
 
 static char reboot_mode = 'h';
