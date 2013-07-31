@@ -813,6 +813,7 @@ config SOC_IMX6Q
 	select PCI_DOMAINS if PCI
 	select PINCTRL_IMX6Q
 	select SOC_IMX6
+	select ZONE_DMA
 
 	help
 	  This enables support for Freescale i.MX6 Quad processor.
