@@ -305,6 +305,12 @@ static const char *imx6q_dt_compat[] __initdata = {
 };
 
 DT_MACHINE_START(IMX6Q, "Freescale i.MX6 Quad/DualLite (Device Tree)")
+	/*
+	 * i.MX6Q/DL maps system memory at 0x10000000 (offset 256MiB), and
+	 * GPU has a limit on physical address that it accesses, which must
+	 * be below 2GiB.
+	 */
+	.dma_zone_size	= (SZ_2G - SZ_256M),
 	.smp		= smp_ops(imx_smp_ops),
 	.map_io		= imx6q_map_io,
 	.init_irq	= imx6q_init_irq,
