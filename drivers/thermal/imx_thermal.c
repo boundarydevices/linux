@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2013 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -64,12 +64,16 @@ enum imx_thermal_trip {
 #define IMX_POLLING_DELAY		2000 /* millisecond */
 #define IMX_PASSIVE_DELAY		1000
 
+#define FACTOR0				10000000
+#define FACTOR1				15976
+#define FACTOR2				4297157
+
 struct imx_thermal_data {
 	struct thermal_zone_device *tz;
 	struct thermal_cooling_device *cdev;
 	enum thermal_device_mode mode;
 	struct regmap *tempmon;
-	int c1, c2; /* See formula in imx_get_sensor_data() */
+	u32 c1, c2; /* See formula in imx_get_sensor_data() */
 };
 
 static int imx_get_temp(struct thermal_zone_device *tz, unsigned long *temp)
@@ -106,7 +110,7 @@ static int imx_get_temp(struct thermal_zone_device *tz, unsigned long *temp)
 	n_meas = (val & TEMPSENSE0_TEMP_CNT_MASK) >> TEMPSENSE0_TEMP_CNT_SHIFT;
 
 	/* See imx_get_sensor_data() for formula derivation */
-	*temp = data->c2 + data->c1 * n_meas;
+	*temp = data->c2 - n_meas * data->c1;
 
 	if (*temp != last_temp) {
 		dev_dbg(&tz->device, "millicelsius: %ld\n", *temp);
@@ -217,9 +221,10 @@ static int imx_get_sensor_data(struct platform_device *pdev)
 {
 	struct imx_thermal_data *data = platform_get_drvdata(pdev);
 	struct regmap *map;
-	int t1, t2, n1, n2;
+	int t1, n1;
 	int ret;
 	u32 val;
+	u64 temp64;
 
 	map = syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
 					      "fsl,tempmon-data");
@@ -243,29 +248,33 @@ static int imx_get_sensor_data(struct platform_device *pdev)
 	/*
 	 * Sensor data layout:
 	 *   [31:20] - sensor value @ 25C
-	 *    [19:8] - sensor value of hot
-	 *     [7:0] - hot temperature value
+	 * We use universal formula now and only need sensor value @ 25C
+	 * slope = 0.4297157 - (0.0015976 * 25C fuse)
 	 */
 	n1 = val >> 20;
-	n2 = (val & 0xfff00) >> 8;
-	t2 = val & 0xff;
 	t1 = 25; /* t1 always 25C */
 
 	/*
-	 * Derived from linear interpolation,
-	 * Tmeas = T2 + (Nmeas - N2) * (T1 - T2) / (N1 - N2)
+	 * Derived from linear interpolation:
+	 * slope = 0.4297157 - (0.0015976 * 25C fuse)
+	 * slope = (FACTOR2 - FACTOR1 * n1) / FACTOR0
+	 * (Nmeas - n1) / (Tmeas - t1) = slope
 	 * We want to reduce this down to the minimum computation necessary
 	 * for each temperature read.  Also, we want Tmeas in millicelsius
 	 * and we don't want to lose precision from integer division. So...
-	 * milli_Tmeas = 1000 * T2 + 1000 * (Nmeas - N2) * (T1 - T2) / (N1 - N2)
-	 * Let constant c1 = 1000 * (T1 - T2) / (N1 - N2)
-	 * milli_Tmeas = (1000 * T2) + c1 * (Nmeas - N2)
-	 * milli_Tmeas = (1000 * T2) + (c1 * Nmeas) - (c1 * N2)
-	 * Let constant c2 = (1000 * T2) - (c1 * N2)
-	 * milli_Tmeas = c2 + (c1 * Nmeas)
+	 * Tmeas = (Nmeas - n1) / slope + t1
+	 * milli_Tmeas = 1000 * (Nmeas - n1) / slope + 1000 * t1
+	 * milli_Tmeas = -1000 * (n1 - Nmeas) / slope + 1000 * t1
+	 * Let constant c1 = (-1000 / slope)
+	 * milli_Tmeas = (n1 - Nmeas) * c1 + 1000 * t1
+	 * Let constant c2 = n1 *c1 + 1000 * t1
+	 * milli_Tmeas = c2 - Nmeas * c1
 	 */
-	data->c1 = 1000 * (t1 - t2) / (n1 - n2);
-	data->c2 = 1000 * t2 - data->c1 * n2;
+	temp64 = FACTOR0;
+	temp64 *= 1000;
+	do_div(temp64, FACTOR1 * n1 - FACTOR2);
+	data->c1 = temp64;
+	data->c2 = n1 * data->c1 + 1000 * t1;
 
 	return 0;
 }
