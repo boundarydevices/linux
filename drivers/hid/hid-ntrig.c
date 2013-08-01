@@ -907,6 +907,7 @@ static int ntrig_probe(struct hid_device *hdev, const struct hid_device_id *id)
 			continue;
 
 		input = hidinput->input;
+		__set_bit(INPUT_PROP_DIRECT, input->propbit);
 		switch (hidinput->report->field[0]->application) {
 		case HID_DG_PEN:
 			input->name = "N-Trig Pen";
