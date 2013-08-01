@@ -78,6 +78,8 @@
 #include "crm_regs.h"
 #include "cpu_op-mx6.h"
 
+#define GP_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
+
 #define AUDIO_MUTE		IMX_GPIO_NR(5, 2)	/* EIM_A25 - active low */
 
 #define DISP_I2C_EN		IMX_GPIO_NR(2, 17)	/* EIM_A21 - active high */
@@ -439,15 +441,25 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 
 static void imx6_usbotg_vbus(bool on)
 {
+	gpio_set_value(GP_USB_OTG_PWR, on ? 1 : 0);
 }
 
 static void __init imx6_init_usb(void)
 {
+	int ret = 0;
+
 	imx_otg_base = MX6_IO_ADDRESS(MX6Q_USB_OTG_BASE_ADDR);
 	/* disable external charger detect,
 	 * or it will affect signal quality at dp .
 	 */
-	mxc_iomux_set_gpr_register(1, 13, 1, 0);
+	ret = gpio_request(GP_USB_OTG_PWR, "usb-pwr");
+	if (ret) {
+		pr_err("failed to get GPIO USB_OTG_PWR: %d\n",
+			ret);
+		return;
+	}
+	gpio_direction_output(GP_USB_OTG_PWR, 0);
+	mxc_iomux_set_gpr_register(1, 13, 1, 1);
 
 	mx6_set_otghost_vbus_func(imx6_usbotg_vbus);
 }
