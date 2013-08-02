@@ -625,6 +625,9 @@ static void sdma_get_pc(struct sdma_channel *sdmac,
 		emi_2_per = sdma->script_addrs->mcu_2_app_addr;
 		break;
 	case IMX_DMATYPE_SSI_SP:
+		per_2_emi = sdma->script_addrs->ssish_2_mcu_addr;
+		emi_2_per = sdma->script_addrs->mcu_2_ssish_addr;
+		break;
 	case IMX_DMATYPE_MMC:
 	case IMX_DMATYPE_SDHC:
 	case IMX_DMATYPE_CSPI_SP:
@@ -1143,7 +1146,7 @@ static void sdma_issue_pending(struct dma_chan *chan)
 		sdma_enable_channel(sdma, sdmac->channel);
 }
 
-#define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V1	35
+#define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V1	37
 
 static void sdma_add_scripts(struct sdma_engine *sdma,
 		const struct sdma_script_start_addrs *addr)
