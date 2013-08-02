@@ -83,8 +83,25 @@
 
 					flash: m25p80@0 {
 						compatible = "sst,sst25vf016b";
+						#address-cells = <1>;
+						#size-cells = <1>;
 						spi-max-frequency = <20000000>;
 						reg = <0>;
+						partition@0 {
+							label = "U-Boot";
+							reg = <0x0 0xC0000>;
+							read-only;
+						};
+						partition@C0000 {
+							label = "env";
+							reg = <0xC0000 0x2000>;
+							read-only;
+						};
+
+						partition@C2000 {
+							label = "Kernel";
+							reg = <0xC2000 0x13e000>;
+						};
 					};
 				};
 
