@@ -679,6 +679,19 @@
 							MX6Q_PAD_GPIO_18__SD3_VSELECT 0x17059
 						>;
 					};
+
+					pinctrl_usdhc3_5: usdhc3grp-5 {
+						fsl,pins = <
+							MX6Q_PAD_SD3_CMD__SD3_CMD    0x17059
+							MX6Q_PAD_SD3_CLK__SD3_CLK    0x10059
+							MX6Q_PAD_SD3_DAT0__SD3_DATA0 0x17059
+							MX6Q_PAD_SD3_DAT1__SD3_DATA1 0x17059
+							MX6Q_PAD_SD3_DAT2__SD3_DATA2 0x17059
+							MX6Q_PAD_SD3_DAT3__SD3_DATA3 0x17059
+
+						>;
+					};
+
 				};
 
 				usdhc4 {
