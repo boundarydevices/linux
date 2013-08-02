@@ -172,7 +172,7 @@
 
 			usdhc@02198000 { /* uSDHC3 */
 				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_usdhc3_2>;
+				pinctrl-0 = <&pinctrl_usdhc3_5>;
 				cd-gpios = <&gpio7 0 0>;
 				wp-gpios = <&gpio7 1 0>;
 				vmmc-supply = <&reg_3p3v>;
@@ -248,6 +248,46 @@
 
 		ahci@02200000 { /* AHCI SATA */
 			status = "okay";
+		};
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		power {
+			label = "Power Button";
+			gpios = <&gpio2 3 0>;
+			linux,code = <116>; /* KEY_POWER, or search */
+			gpio-key,wakeup;
+		};
+
+		menu {
+			label = "Menu";
+			gpios = <&gpio2 1 0>;
+			linux,code = <139>; /* KEY_MENU */
+		};
+
+		home {
+			label = "Home";
+			gpios = <&gpio2 4 0>;
+			linux,code = <102>; /* KEY_HOME */
+		};
+
+		back {
+			label = "Back";
+			gpios = <&gpio2 2 0>;
+			linux,code = <158>; /* KEY_BACK */
+		};
+
+		volume-up {
+			label = "Volume Up";
+			gpios = <&gpio7 13 0>;
+			linux,code = <115>; /* KEY_VOLUMEUP */
+		};
+
+		volume-down {
+			label = "Volume Down";
+			gpios = <&gpio4 5 0>;
+			linux,code = <114>; /* KEY_VOLUMEDOWN */
 		};
 	};
 
