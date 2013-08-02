@@ -10,6 +10,7 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
+#include <linux/clk.h>
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/of.h>
@@ -20,12 +21,17 @@
 
 #define GPC_IMR1		0x008
 #define GPC_PGC_CPU_PDN		0x2a0
+#define GPC_PGC_GPU_PDN		0x260
+#define GPC_CNTR		0x0
+#define GPC_CNTR_xPU_UP_REQ_SHIFT	0x1
 
 #define IMR_NUM			4
 
 static void __iomem *gpc_base;
 static u32 gpc_wake_irqs[IMR_NUM];
 static u32 gpc_saved_imrs[IMR_NUM];
+static struct clk *gpu3d_clk, *gpu3d_shader_clk, *gpu2d_clk, *gpu2d_axi_clk;
+static struct clk *openvg_axi_clk, *vpu_clk;
 
 void imx_gpc_pre_suspend(void)
 {
@@ -118,6 +124,60 @@ static void imx_gpc_irq_mask(struct irq_data *d)
 	val = readl_relaxed(reg);
 	val |= 1 << (d->irq % 32);
 	writel_relaxed(val, reg);
+}
+
+static void imx_gpc_pu_clk_init(void)
+{
+	if (gpu3d_clk != NULL &&  gpu3d_shader_clk != NULL
+		&& gpu2d_clk != NULL && gpu2d_axi_clk != NULL
+		&& openvg_axi_clk != NULL && vpu_clk != NULL)
+		return;
+
+	/* Get gpu&vpu clk for power up PU by GPC */
+	gpu3d_clk = clk_get(NULL, "gpu3d_core");
+	gpu3d_shader_clk = clk_get(NULL, "gpu3d_shader");
+	gpu2d_clk = clk_get(NULL, "gpu2d_core");
+	gpu2d_axi_clk = clk_get(NULL, "gpu2d_axi");
+	openvg_axi_clk = clk_get(NULL, "openvg_axi");
+	vpu_clk = clk_get(NULL, "vpu_axi");
+	if (IS_ERR(gpu3d_clk) || IS_ERR(gpu3d_shader_clk)
+		|| IS_ERR(gpu2d_clk) || IS_ERR(gpu2d_axi_clk)
+		|| IS_ERR(openvg_axi_clk) || IS_ERR(vpu_clk))
+		printk(KERN_ERR "%s: failed to get clk!\n", __func__);
+}
+
+static void imx_pu_clk(bool enable)
+{
+	if (enable) {
+		clk_prepare_enable(gpu3d_clk);
+		clk_prepare_enable(gpu3d_shader_clk);
+		clk_prepare_enable(vpu_clk);
+		clk_prepare_enable(gpu2d_clk);
+		clk_prepare_enable(gpu2d_axi_clk);
+		clk_prepare_enable(openvg_axi_clk);
+	} else {
+		clk_disable_unprepare(gpu3d_clk);
+		clk_disable_unprepare(gpu3d_shader_clk);
+		clk_disable_unprepare(vpu_clk);
+		clk_disable_unprepare(gpu2d_clk);
+		clk_disable_unprepare(gpu2d_axi_clk);
+		clk_disable_unprepare(openvg_axi_clk);
+	}
+}
+
+void imx_gpc_xpu_enable(void)
+{
+	/*
+	 * PU is turned off in uboot, so we need to turn it on here
+	 * to avoid kernel hang during GPU init, will remove
+	 * this code after PU power management done.
+	 */
+	imx_gpc_pu_clk_init();
+	imx_pu_clk(true);
+	writel_relaxed(1, gpc_base + GPC_PGC_GPU_PDN);
+	writel_relaxed(1 << GPC_CNTR_xPU_UP_REQ_SHIFT, gpc_base + GPC_CNTR);
+	while (readl_relaxed(gpc_base + GPC_CNTR) & 0x2)
+		;
 }
 
 void __init imx_gpc_init(void)
