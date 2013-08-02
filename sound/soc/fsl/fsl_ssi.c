@@ -51,6 +51,24 @@ static inline void write_ssi_mask(u32 __iomem *addr, u32 clear, u32 set)
 }
 #endif
 
+#ifdef DEBUG
+#define NUM_OF_SSI_REG (sizeof(struct ccsr_ssi) / sizeof(__be32))
+
+void dump_reg(struct ccsr_ssi __iomem *ssi)
+{
+	u32 val, i;
+
+	for (i = 0; i < NUM_OF_SSI_REG; i++) {
+		if (&ssi->stx0 + i == NULL)
+			continue;
+		val = read_ssi(&ssi->stx0 + i);
+		pr_debug("REG %x = %x\n", (u32)(&ssi->stx0 + i) & 0xff, val);
+	}
+}
+#else
+void dump_reg(struct ccsr_ssi __iomem *ssi) {}
+#endif
+
 /**
  * FSLSSI_I2S_RATES: sample rates supported by the I2S
  *
@@ -500,6 +518,7 @@ static int fsl_ssi_trigger(struct snd_pcm_substream *substream, int cmd,
 		else
 			write_ssi_mask(&ssi->scr, 0,
 				CCSR_SSI_SCR_SSIEN | CCSR_SSI_SCR_RE);
+		dump_reg(ssi);
 		break;
 
 	case SNDRV_PCM_TRIGGER_STOP:
