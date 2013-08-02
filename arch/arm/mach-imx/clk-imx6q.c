@@ -572,6 +572,12 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	clk_register_clkdev(clk[arm], NULL, "cpu0");
 	clk_register_clkdev(clk[pll4_post_div], "pll4_post_div", NULL);
 	clk_register_clkdev(clk[pll4_audio], "pll4_audio", NULL);
+	clk_register_clkdev(clk[gpu3d_core], "gpu3d_core", NULL);
+	clk_register_clkdev(clk[gpu3d_shader], "gpu3d_shader", NULL);
+	clk_register_clkdev(clk[gpu2d_core], "gpu2d_core", NULL);
+	clk_register_clkdev(clk[gpu2d_axi], "gpu2d_axi", NULL);
+	clk_register_clkdev(clk[openvg_axi], "openvg_axi", NULL);
+	clk_register_clkdev(clk[vpu_axi], "vpu_axi", NULL);
 
 	if ((imx6q_revision() != IMX_CHIP_REVISION_1_0) || cpu_is_imx6dl()) {
 		clk_set_parent(clk[ldb_di0_sel], clk[pll5_video_div]);
