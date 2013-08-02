@@ -73,6 +73,7 @@ struct imx_thermal_data {
 	struct thermal_cooling_device *cdev;
 	enum thermal_device_mode mode;
 	struct regmap *tempmon;
+	unsigned long trip_temp[IMX_TRIP_NUM];
 	u32 c1, c2; /* See formula in imx_get_sensor_data() */
 };
 
@@ -160,15 +161,30 @@ static int imx_get_trip_type(struct thermal_zone_device *tz, int trip,
 static int imx_get_crit_temp(struct thermal_zone_device *tz,
 			     unsigned long *temp)
 {
-	*temp = IMX_TEMP_CRITICAL;
+	struct imx_thermal_data *data = tz->devdata;
+
+	*temp = data->trip_temp[IMX_TRIP_CRITICAL];
+
 	return 0;
 }
 
 static int imx_get_trip_temp(struct thermal_zone_device *tz, int trip,
 			     unsigned long *temp)
 {
-	*temp = (trip == IMX_TRIP_PASSIVE) ? IMX_TEMP_PASSIVE :
-					     IMX_TEMP_CRITICAL;
+	struct imx_thermal_data *data = tz->devdata;
+
+	*temp = data->trip_temp[trip];
+
+	return 0;
+}
+
+static int imx_set_trip_temp(struct thermal_zone_device *tz, int trip,
+			     unsigned long temp)
+{
+	struct imx_thermal_data *data = tz->devdata;
+
+	data->trip_temp[trip] = temp;
+
 	return 0;
 }
 
@@ -215,6 +231,7 @@ static const struct thermal_zone_device_ops imx_tz_ops = {
 	.get_trip_type = imx_get_trip_type,
 	.get_trip_temp = imx_get_trip_temp,
 	.get_crit_temp = imx_get_crit_temp,
+	.set_trip_temp = imx_set_trip_temp,
 };
 
 static int imx_get_sensor_data(struct platform_device *pdev)
@@ -322,8 +339,12 @@ static int imx_thermal_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	data->trip_temp[IMX_TRIP_PASSIVE] = IMX_TEMP_PASSIVE;
+	data->trip_temp[IMX_TRIP_CRITICAL] = IMX_TEMP_CRITICAL;
 	data->tz = thermal_zone_device_register("imx_thermal_zone",
-						IMX_TRIP_NUM, 0, data,
+						IMX_TRIP_NUM,
+						(1 << IMX_TRIP_NUM) - 1,
+						data,
 						&imx_tz_ops, NULL,
 						IMX_PASSIVE_DELAY,
 						IMX_POLLING_DELAY);
