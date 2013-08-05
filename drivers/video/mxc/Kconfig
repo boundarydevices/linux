@@ -22,3 +22,17 @@ config FB_MXC_LDB
 	tristate "MXC LDB"
 	depends on FB_MXC_SYNC_PANEL
 	depends on MXC_IPU_V3
+
+config FB_MXC_HDMI
+	depends on FB_MXC_SYNC_PANEL
+	depends on MXC_IPU_V3
+	depends on I2C
+	tristate "MXC HDMI driver support"
+	select MFD_MXC_HDMI
+	help
+	  Driver for the on-chip MXC HDMI controller.
+
+config FB_MXC_EDID
+     depends on FB_MXC && I2C
+     tristate "MXC EDID support"
+     default y
