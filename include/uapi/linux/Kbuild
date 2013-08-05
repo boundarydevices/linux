@@ -225,6 +225,7 @@ ifneq ($(wildcard $(srctree)/arch/$(SRCARCH)/include/uapi/asm/kvm_para.h \
 header-y += kvm_para.h
 endif
 
+header-y += ipu.h
 header-y += l2tp.h
 header-y += limits.h
 header-y += llc.h
