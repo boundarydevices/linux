@@ -14,6 +14,7 @@
 struct platform_device;
 struct pt_regs;
 struct clk;
+struct irq_data;
 enum mxc_cpu_pwr_mode;
 
 extern void mx1_map_io(void);
@@ -131,6 +132,8 @@ extern void imx_gpc_init(void);
 extern void imx_gpc_pre_suspend(void);
 extern void imx_gpc_post_resume(void);
 extern void imx_gpc_mask_all(void);
+extern void imx_gpc_irq_mask(struct irq_data *d);
+extern void imx_gpc_irq_unmask(struct irq_data *d);
 extern void imx_gpc_restore_all(void);
 extern void imx_gpc_xpu_enable(void);
 extern void imx_anatop_init(void);
