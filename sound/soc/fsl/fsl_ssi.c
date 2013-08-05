@@ -138,6 +138,7 @@ struct fsl_ssi_private {
 
 	bool new_binding;
 	bool ssi_on_imx;
+	bool use_dual_fifo;
 	struct clk *clk;
 	struct snd_dmaengine_dai_dma_data dma_params_tx;
 	struct snd_dmaengine_dai_dma_data dma_params_rx;
@@ -386,8 +387,21 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 		 * data will be written to memory as soon as it's available.
 		 */
 		write_ssi(CCSR_SSI_SFCSR_TFWM0(ssi_private->fifo_depth - 2) |
-			CCSR_SSI_SFCSR_RFWM0(ssi_private->fifo_depth - 2),
+			CCSR_SSI_SFCSR_RFWM0(ssi_private->fifo_depth - 2) |
+			CCSR_SSI_SFCSR_TFWM1(ssi_private->fifo_depth - 2) |
+			CCSR_SSI_SFCSR_RFWM1(ssi_private->fifo_depth - 2),
 			&ssi->sfcsr);
+
+		/* Select Single/Dual fifo mode */
+		if (ssi_private->use_dual_fifo) {
+			write_ssi_mask(&ssi->srcr, 0, CCSR_SSI_SRCR_RFEN1);
+			write_ssi_mask(&ssi->stcr, 0, CCSR_SSI_STCR_TFEN1);
+			write_ssi_mask(&ssi->scr, 0, CCSR_SSI_SCR_TCH_EN);
+		} else {
+			write_ssi_mask(&ssi->srcr, CCSR_SSI_SRCR_RFEN1, 0);
+			write_ssi_mask(&ssi->stcr, CCSR_SSI_STCR_TFEN1, 0);
+			write_ssi_mask(&ssi->scr, CCSR_SSI_SCR_TCH_EN, 0);
+		}
 
 		/*
 		 * We keep the SSI disabled because if we enable it, then the
@@ -810,6 +824,9 @@ static int fsl_ssi_probe(struct platform_device *pdev)
 		if (ret)
 			goto error_dev;
 	}
+
+	/* Enable dual fifo feature as default */
+	ssi_private->use_dual_fifo = true;
 
 	/*
 	 * If codec-handle property is missing from SSI node, we assume
