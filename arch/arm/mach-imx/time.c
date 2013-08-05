@@ -60,7 +60,11 @@
 #define V2_TCTL_WAITEN		(1 << 3) /* Wait enable mode */
 #define V2_TCTL_CLK_IPG		(1 << 6)
 #define V2_TCTL_CLK_PER		(2 << 6)
+#define V2_TCTL_CLK_OSC_DIV8     (5 << 6)
+#define V2_TCTL_CLK_OSC         (7 << 6)
+#define V2_TCTL_24MEN          (1 << 10)
 #define V2_TCTL_FRR		(1 << 9)
+#define V2_TPRER_PRE24M                12
 #define V2_IR			0x0c
 #define V2_TSTAT		0x08
 #define V2_TSTAT_OF1		(1 << 0)
@@ -277,11 +281,20 @@ static int __init mxc_clockevent_init(struct clk *timer_clk)
 
 void __init mxc_timer_init(void __iomem *base, int irq)
 {
-	uint32_t tctl_val;
+	uint32_t tctl_val, tprer_val;
 	struct clk *timer_clk;
 	struct clk *timer_ipg_clk;
 
-	timer_clk = clk_get_sys("imx-gpt.0", "per");
+	/*
+	 * gpt clk source from 24M OSC on imx6 series SOCs except
+	 * imx6q TO1.0, others from per clk.
+	 */
+	if ((cpu_is_imx6q() && imx6q_revision() == IMX_CHIP_REVISION_1_0)
+		|| !cpu_is_imx6())
+		timer_clk = clk_get_sys("imx-gpt.0", "per");
+	else
+		timer_clk = clk_get_sys("imx-gpt.0", "gpt_3m");
+
 	if (IS_ERR(timer_clk)) {
 		pr_err("i.MX timer: unable to get clk\n");
 		return;
@@ -302,10 +315,24 @@ void __init mxc_timer_init(void __iomem *base, int irq)
 	__raw_writel(0, timer_base + MXC_TCTL);
 	__raw_writel(0, timer_base + MXC_TPRER); /* see datasheet note */
 
-	if (timer_is_v2())
-		tctl_val = V2_TCTL_CLK_PER | V2_TCTL_FRR | V2_TCTL_WAITEN | MXC_TCTL_TEN;
-	else
+	if (timer_is_v2()) {
+		if ((cpu_is_imx6q() && imx6q_revision() ==
+			IMX_CHIP_REVISION_1_0) || !cpu_is_imx6()) {
+			tctl_val = V2_TCTL_CLK_PER | V2_TCTL_FRR |
+				V2_TCTL_WAITEN | MXC_TCTL_TEN;
+		} else {
+			tctl_val = V2_TCTL_CLK_OSC_DIV8 | V2_TCTL_FRR |
+				V2_TCTL_WAITEN | MXC_TCTL_TEN;
+			if (cpu_is_imx6dl() || cpu_is_imx6sl()) {
+				/* 24 / 8 = 3 MHz */
+				tprer_val = 7 << V2_TPRER_PRE24M;
+				__raw_writel(tprer_val, timer_base + MXC_TPRER);
+				tctl_val |= V2_TCTL_24MEN;
+			}
+		}
+	} else {
 		tctl_val = MX1_2_TCTL_FRR | MX1_2_TCTL_CLK_PCLK1 | MXC_TCTL_TEN;
+	}
 
 	__raw_writel(tctl_val, timer_base + MXC_TCTL);
 
