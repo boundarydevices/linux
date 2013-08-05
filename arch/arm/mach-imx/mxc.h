@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2007, 2010 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2007, 2010, 2013 Freescale Semiconductor, Inc. All Rights Reserved.
  * Copyright (C) 2008 Juergen Beisert (kernel@pengutronix.de)
  *
  * This program is free software; you can redistribute it and/or
@@ -34,6 +34,7 @@
 #define MXC_CPU_MX35		35
 #define MXC_CPU_MX51		51
 #define MXC_CPU_MX53		53
+#define MXC_CPU_IMX6SL		0x60
 #define MXC_CPU_IMX6DL		0x61
 #define MXC_CPU_IMX6Q		0x63
 
@@ -152,6 +153,11 @@ extern unsigned int __mxc_cpu_type;
 #endif
 
 #ifndef __ASSEMBLY__
+static inline bool cpu_is_imx6sl(void)
+{
+	return __mxc_cpu_type == MXC_CPU_IMX6SL;
+}
+
 static inline bool cpu_is_imx6dl(void)
 {
 	return __mxc_cpu_type == MXC_CPU_IMX6DL;
@@ -171,6 +177,7 @@ int tzic_enable_wake(void);
 extern struct cpu_op *(*get_cpu_op)(int *op);
 #endif
 
+#define cpu_is_imx6()    (cpu_is_imx6q() || cpu_is_imx6dl() || cpu_is_imx6sl())
 #define cpu_is_mx3()	(cpu_is_mx31() || cpu_is_mx35())
 #define cpu_is_mx2()	(cpu_is_mx21() || cpu_is_mx27())
 
