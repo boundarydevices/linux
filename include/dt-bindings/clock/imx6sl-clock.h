@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2013 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -143,6 +143,7 @@
 #define IMX6SL_CLK_USDHC2		130
 #define IMX6SL_CLK_USDHC3		131
 #define IMX6SL_CLK_USDHC4		132
-#define IMX6SL_CLK_CLK_END		133
+#define IMX6SL_CLK_GPT_3M		133
+#define IMX6SL_CLK_CLK_END		134
 
 #endif /* __DT_BINDINGS_CLOCK_IMX6SL_H */
