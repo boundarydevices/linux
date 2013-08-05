@@ -55,6 +55,9 @@ struct wm8962_pdata {
 	 * in a DC measurement configuration.
 	 */
 	bool in4_dc_measure;
+
+	/* MCLK for wm8962 */
+	struct clk *codec_mclk;
 };
 
 #endif
