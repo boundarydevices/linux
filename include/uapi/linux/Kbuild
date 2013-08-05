@@ -250,6 +250,7 @@ header-y += mroute6.h
 header-y += msdos_fs.h
 header-y += msg.h
 header-y += mtio.h
+header-y += mxcfb.h
 header-y += n_r3964.h
 header-y += nbd.h
 header-y += ncp.h
