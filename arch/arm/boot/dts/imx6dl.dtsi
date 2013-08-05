@@ -56,6 +56,31 @@
 			clocks = <&clks 142>;
 		};
 
+		hdmi_core: hdmi_core@00120000 {
+			compatible = "fsl,imx6dl-hdmi-core";
+			ipu_id = <0>;
+			disp_id = <0>;
+			reg = <0x00120000 0x9000>;
+			reg-names = "hdmi_regs";
+			clocks = <&clks 124>, <&clks 123>;
+			clock-names = "hdmi_isfr", "hdmi_iahb";
+			status = "okay";
+		};
+
+		hdmi_video: hdmi_video@00120000 {
+			compatible = "fsl,imx6dl-hdmi-video";
+			reg = <0x020E0000 0x1000>;
+			reg-names = "hdmi_gpr";
+			interrupts = <0 115 0x04>;
+			clocks = <&clks 124>, <&clks 123>;
+			clock-names = "hdmi_isfr", "hdmi_iahb";
+		};
+
+		hdmi_cec: hdmi_cec@00120000 {
+			compatible = "fsl,imx6dl-hdmi-cec";
+			interrupts = <0 116 0x04>;
+		};
+
 		aips1: aips-bus@02000000 {
 			iomuxc: iomuxc@020e0000 {
 				compatible = "fsl,imx6dl-iomuxc";
