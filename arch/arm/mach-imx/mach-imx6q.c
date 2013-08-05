@@ -46,6 +46,11 @@ int imx6q_revision(void)
 	return chip_revision;
 }
 
+int imx6dl_revision(void)
+{
+	return chip_revision;
+}
+
 static void __init imx6q_init_revision(void)
 {
 	u32 rev = imx_anatop_get_digprog();
@@ -266,7 +271,9 @@ static void __init imx6q_init_late(void)
 	 * WAIT mode is broken on TO 1.0 and 1.1, so there is no point
 	 * to run cpuidle on them.
 	 */
-	if (imx6q_revision() > IMX_CHIP_REVISION_1_1)
+	if ((cpu_is_imx6q() && imx6q_revision() > IMX_CHIP_REVISION_1_1)
+		|| (cpu_is_imx6dl() && imx6dl_revision() >
+		IMX_CHIP_REVISION_1_0))
 		imx6q_cpuidle_init();
 
 	if (IS_ENABLED(CONFIG_ARM_IMX6Q_CPUFREQ)) {
