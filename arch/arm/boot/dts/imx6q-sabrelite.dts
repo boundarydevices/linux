@@ -28,8 +28,6 @@
 
 	soc {
 		pcie@01000000 {
-			pwr-gpios = <&gpio3 19 0>;
-			rst-gpios = <&gpio7 12 0>;
 			status = "okay";
 		};
 
