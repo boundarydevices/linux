@@ -16,6 +16,7 @@
 #include <linux/init.h>
 #include <linux/delay.h>
 #include <linux/pm.h>
+#include <linux/clk.h>
 #include <linux/gcd.h>
 #include <linux/gpio.h>
 #include <linux/i2c.h>
@@ -3608,6 +3609,15 @@ static int wm8962_set_pdata_from_of(struct i2c_client *i2c,
 				pdata->gpio_init[i] = 0x0;
 		}
 
+	pdata->codec_mclk = devm_clk_get(&i2c->dev, NULL);
+
+	/*
+	 * If clk_get() failed, we assume that clock's enabled by default.
+	 * Otherwise, we let driver prepare and control the clock source.
+	 */
+	if (IS_ERR(pdata->codec_mclk))
+		pdata->codec_mclk = NULL;
+
 	return 0;
 }
 
@@ -3638,6 +3648,9 @@ static int wm8962_i2c_probe(struct i2c_client *i2c,
 		if (ret != 0)
 			return ret;
 	}
+
+	if (wm8962->pdata.codec_mclk)
+		clk_prepare(wm8962->pdata.codec_mclk);
 
 	for (i = 0; i < ARRAY_SIZE(wm8962->supplies); i++)
 		wm8962->supplies[i].supply = wm8962_supply_names[i];
@@ -3730,11 +3743,19 @@ static int wm8962_i2c_probe(struct i2c_client *i2c,
 err_enable:
 	regulator_bulk_disable(ARRAY_SIZE(wm8962->supplies), wm8962->supplies);
 err:
+	if (wm8962->pdata.codec_mclk)
+		clk_unprepare(wm8962->pdata.codec_mclk);
+
 	return ret;
 }
 
 static int wm8962_i2c_remove(struct i2c_client *client)
 {
+	struct wm8962_priv *wm8962 = dev_get_drvdata(&client->dev);
+
+	if (wm8962->pdata.codec_mclk)
+		clk_unprepare(wm8962->pdata.codec_mclk);
+
 	snd_soc_unregister_codec(&client->dev);
 	return 0;
 }
@@ -3744,6 +3765,9 @@ static int wm8962_runtime_resume(struct device *dev)
 {
 	struct wm8962_priv *wm8962 = dev_get_drvdata(dev);
 	int ret;
+
+	if (wm8962->pdata.codec_mclk)
+		clk_enable(wm8962->pdata.codec_mclk);
 
 	ret = regulator_bulk_enable(ARRAY_SIZE(wm8962->supplies),
 				    wm8962->supplies);
@@ -3803,6 +3827,10 @@ static int wm8962_runtime_suspend(struct device *dev)
 
 	regulator_bulk_disable(ARRAY_SIZE(wm8962->supplies),
 			       wm8962->supplies);
+
+	if (wm8962->pdata.codec_mclk)
+		clk_disable(wm8962->pdata.codec_mclk);
+
 
 	return 0;
 }
