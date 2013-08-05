@@ -558,6 +558,13 @@ static void fsl_ssi_shutdown(struct snd_pcm_substream *substream,
 		ssi_private->first_stream = ssi_private->second_stream;
 
 	ssi_private->second_stream = NULL;
+
+	/* If this is the last active substream, disable the interrupts. */
+	if (!ssi_private->first_stream) {
+		struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
+
+		write_ssi_mask(&ssi->sier, SIER_FLAGS, 0);
+	}
 }
 
 static int fsl_ssi_dai_probe(struct snd_soc_dai *dai)
