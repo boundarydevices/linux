@@ -13,8 +13,8 @@
  * for more details.
  */
 
-#ifndef __MACH_IPU_V3_H_
-#define __MACH_IPU_V3_H_
+#ifndef __LINUX_IPU_V3_H_
+#define __LINUX_IPU_V3_H_
 
 #include <linux/ipu.h>
 
@@ -747,4 +747,4 @@ struct ipuv3_fb_platform_data {
 	bool                            late_init;
 };
 
-#endif /* __MACH_IPU_V3_H_ */
+#endif /* __LINUX_IPU_V3_H_ */
