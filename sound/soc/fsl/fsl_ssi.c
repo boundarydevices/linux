@@ -330,6 +330,8 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 		snd_soc_dai_get_drvdata(rtd->cpu_dai);
 	int synchronous = ssi_private->cpu_dai_drv.symmetric_rates;
 
+	clk_enable(ssi_private->clk);
+
 	/*
 	 * If this is the first stream opened, then request the IRQ
 	 * and initialize the SSI registers.
@@ -573,6 +575,8 @@ static void fsl_ssi_shutdown(struct snd_pcm_substream *substream,
 
 	ssi_private->second_stream = NULL;
 
+	clk_disable(ssi_private->clk);
+
 	/* If this is the last active substream, disable the interrupts. */
 	if (!ssi_private->first_stream) {
 		struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
@@ -779,7 +783,7 @@ static int fsl_ssi_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "could not get clock: %d\n", ret);
 			goto error_irq;
 		}
-		clk_prepare_enable(ssi_private->clk);
+		clk_prepare(ssi_private->clk);
 
 		/*
 		 * We have burstsize be "fifo_depth - 2" to match the SSI
@@ -872,7 +876,7 @@ error_dev:
 	device_remove_file(&pdev->dev, dev_attr);
 
 	if (ssi_private->ssi_on_imx) {
-		clk_disable_unprepare(ssi_private->clk);
+		clk_unprepare(ssi_private->clk);
 		clk_put(ssi_private->clk);
 	}
 
@@ -899,7 +903,7 @@ static int fsl_ssi_remove(struct platform_device *pdev)
 		platform_device_unregister(ssi_private->pdev);
 	if (ssi_private->ssi_on_imx) {
 		imx_pcm_dma_exit(pdev);
-		clk_disable_unprepare(ssi_private->clk);
+		clk_unprepare(ssi_private->clk);
 		clk_put(ssi_private->clk);
 	}
 	snd_soc_unregister_component(&pdev->dev);
