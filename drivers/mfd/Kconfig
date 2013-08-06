@@ -139,6 +139,13 @@ config MFD_DA9055
 	  This driver can be built as a module. If built as a module it will be
 	  called "da9055"
 
+config MFD_MXC_HDMI
+	tristate "Freescale HDMI Core"
+	select MFD_CORE
+	help
+	  This is the core driver for the Freescale i.MX6 on-chip HDMI.
+	  This MFD driver connects with the video and audio drivers for HDMI.
+
 config MFD_MC13783
 	tristate
 
@@ -1149,10 +1156,3 @@ config VEXPRESS_CONFIG
 	  Platform configuration infrastructure for the ARM Ltd.
 	  Versatile Express.
 
-config MFD_MXC_HDMI
-	tristate "MXC HDMI Core"
-	select MFD_CORE
-	default y
-	help
-	  This is the core driver for the i.MX on-chip HDMI.  This MFD
-	  driver connects with the video and audio drivers for HDMI.
