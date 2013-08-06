@@ -260,6 +260,13 @@
 					interrupts = <9 2>;
 					wakeup-gpios = <&gpio1 9 0>;
 				};
+				ft5x06_ts@38 {
+					compatible = "ft5x06-ts,ft5x06-ts";
+					reg = <0x38>;
+					interrupt-parent = <&gpio1>;
+					interrupts = <9 2>;
+					wakeup-gpios = <&gpio1 9 0>;
+				};
 			};
 
 			audmux@021d8000 {
