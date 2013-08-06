@@ -844,7 +844,7 @@ config SOC_IMX6Q
 	select PINCTRL
 	select PINCTRL_IMX6Q
 	select USE_OF
-
+	select IMX_HAVE_PLATFORM_FLEXCAN if CAN
 	help
 	  This enables support for Freescale i.MX6 Quad processor.
 
