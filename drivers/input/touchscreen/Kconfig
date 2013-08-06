@@ -339,6 +339,23 @@ config TOUCHSCREEN_ELAN_TS
 	  To compile this driver as a module, choose M here: the
 	  module will be called elan-touch.
 
+config TOUCHSCREEN_FT5X06
+	tristate "Focaltech FT5X06 5 point touchscreen"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  If you say yes here you get touchscreen support through
+	  FocalTech's FT5X06 controller.
+
+config TOUCHSCREEN_FT5X06_SINGLE_TOUCH
+	bool "FT5X06 touchscreen as single-touch"
+	default N
+	depends on TOUCHSCREEN_FT5X06
+	help
+	  If you say yes here you get single-touch touchscreen support
+	  on the FT5X06 I2C controller.
+	  If you say "no", you'll get the normal 5-finger goodness.
+
 config TOUCHSCREEN_FUJITSU
 	tristate "Fujitsu serial touchscreen"
 	select SERIO
