@@ -122,7 +122,6 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SL_CLK_PLL3_120M] = imx_clk_fixed_factor("pll3_120m", "pll3_usb_otg",   1, 4);
 	clks[IMX6SL_CLK_PLL3_80M]  = imx_clk_fixed_factor("pll3_80m",  "pll3_usb_otg",   1, 6);
 	clks[IMX6SL_CLK_PLL3_60M]  = imx_clk_fixed_factor("pll3_60m",  "pll3_usb_otg",   1, 8);
-	clks[IMX6SL_CLK_GPT_3M]    = imx_clk_fixed_factor("gpt_3m",    "osc",            1, 8);
 
 	np = ccm_node;
 	base = of_iomap(np, 0);
@@ -253,13 +252,14 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 
 	clk_register_clkdev(clks[IMX6SL_CLK_GPT], "ipg", "imx-gpt.0");
 	clk_register_clkdev(clks[IMX6SL_CLK_GPT_SERIAL], "per", "imx-gpt.0");
-	clk_register_clkdev(clks[IMX6SL_CLK_GPT_3M], "gpt_3m", "imx-gpt.0");
 
 	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
 		clk_prepare_enable(clks[IMX6SL_CLK_USBPHY1_GATE]);
 		clk_prepare_enable(clks[IMX6SL_CLK_USBPHY2_GATE]);
 	}
 
+	/* set perclk to source from OSC 24MHz */
+	clk_set_parent(clks[IMX6SL_CLK_PERCLK_SEL], clks[IMX6SL_CLK_OSC]);
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6sl-gpt");
 	base = of_iomap(np, 0);
 	WARN_ON(!base);
