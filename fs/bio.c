@@ -1758,6 +1758,79 @@ void bio_endio_nodec(struct bio *bio, int error)
 }
 EXPORT_SYMBOL(bio_endio_nodec);
 
+/**
+ * bio_split - split a bio
+ * @bio:	bio to split
+ * @sectors:	number of sectors to split from the front of @bio
+ * @gfp:	gfp mask
+ * @bs:		bio set to allocate from
+ *
+ * Allocates and returns a new bio which represents @sectors from the start of
+ * @bio, and updates @bio to represent the remaining sectors.
+ *
+ * If bio_sectors(@bio) was less than or equal to @sectors, returns @bio
+ * unchanged.
+ */
+struct bio *bio_split(struct bio *bio, int sectors,
+		      gfp_t gfp, struct bio_set *bs)
+{
+	unsigned vcnt = 0, nbytes = sectors << 9;
+	struct bio_vec bv;
+	struct bvec_iter iter;
+	struct bio *split = NULL;
+
+	BUG_ON(sectors <= 0);
+	BUG_ON(sectors >= bio_sectors(bio));
+
+	if (bio->bi_rw & REQ_DISCARD) {
+		split = bio_alloc_bioset(gfp, 1, bs);
+		if (!split)
+			return NULL;
+		goto out;
+	}
+
+	bio_for_each_segment(bv, bio, iter) {
+		vcnt++;
+
+		if (nbytes <= bv.bv_len)
+			break;
+
+		nbytes -= bv.bv_len;
+	}
+
+	split = bio_alloc_bioset(gfp, vcnt, bs);
+	if (!split)
+		return NULL;
+
+	bio_for_each_segment(bv, bio, iter) {
+		split->bi_io_vec[split->bi_vcnt++] = bv;
+
+		if (split->bi_vcnt == vcnt)
+			break;
+	}
+
+	split->bi_io_vec[split->bi_vcnt - 1].bv_len = nbytes;
+out:
+	split->bi_bdev		= bio->bi_bdev;
+	split->bi_iter.bi_sector = bio->bi_iter.bi_sector;
+	split->bi_iter.bi_size	= sectors << 9;
+	split->bi_rw		= bio->bi_rw;
+
+	if (bio_integrity(bio)) {
+		if (bio_integrity_clone(split, bio, gfp)) {
+			bio_put(split);
+			return NULL;
+		}
+
+		bio_integrity_trim(split, 0, bio_sectors(split));
+	}
+
+	bio_advance(bio, split->bi_iter.bi_size);
+
+	return split;
+}
+EXPORT_SYMBOL(bio_split);
+
 void bio_pair_release(struct bio_pair *bp)
 {
 	if (atomic_dec_and_test(&bp->cnt)) {

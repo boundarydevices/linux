@@ -514,7 +514,7 @@ static void bch_insert_data_loop(struct closure *cl)
 		if (!bch_alloc_sectors(k, bio_sectors(bio), s))
 			goto err;
 
-		n = bch_bio_split(bio, KEY_SIZE(k), GFP_NOIO, split);
+		n = bio_next_split(bio, KEY_SIZE(k), GFP_NOIO, split);
 
 		n->bi_end_io	= bch_insert_data_endio;
 		n->bi_private	= cl;
@@ -854,7 +854,7 @@ static int cached_dev_cache_miss(struct btree *b, struct search *s,
 	struct cached_dev *dc = container_of(s->d, struct cached_dev, disk);
 	struct bio *miss;
 
-	miss = bch_bio_split(bio, sectors, GFP_NOIO, s->d->bio_split);
+	miss = bio_next_split(bio, sectors, GFP_NOIO, s->d->bio_split);
 	if (miss == bio)
 		s->op.lookup_done = true;
 
