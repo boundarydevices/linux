@@ -146,6 +146,16 @@
 #define  PCIE_CONF_FUNC(f)		(((f) & 0x7) << 8)
 #define  PCIE_CONF_REG(r)		((r) & ~0x3)
 
+#ifdef CONFIG_PCIE_FORCE_GEN1
+#define USE_GEN 1
+#else
+#define USE_GEN 2
+#endif
+
+static unsigned force_gen = USE_GEN;
+module_param(force_gen, uint, S_IRUGO);
+MODULE_PARM_DESC(force_gen, "Force pcie speed to gen N, (N=1,2)");
+
 /*
  * The default values of the RC's reserved ddr memory
  * used to verify EP mode.
@@ -1001,6 +1011,12 @@ static int __devinit imx_pcie_pltfm_probe(struct platform_device *pdev)
 			dev_warn(dev, "no pcie rst pin available!\n");
 
 		imx_pcie_regions_setup(dbi_base);
+	}
+
+	if (force_gen && (force_gen <= 2)) {
+		u32 cap = readl(dbi_base + LNK_CAP);
+		if ((cap & 0xf) != force_gen)
+			writel(((cap & ~0xf) | force_gen), dbi_base + LNK_CAP);
 	}
 
 	/* start link up */

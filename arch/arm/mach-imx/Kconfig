@@ -853,6 +853,10 @@ config IMX_PCIE
 	depends on SOC_IMX6Q
 	select PCI
 
+config PCIE_FORCE_GEN1
+	bool "PCI Express force gen1 speed"
+	depends on IMX_PCIE
+
 config EP_OF_EP_RC_SYS
 	bool "PCI Express EP mode in the IMX6 RC/EP interconnection system"
 	depends on IMX_PCIE
