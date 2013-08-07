@@ -1085,6 +1085,11 @@ enum {
 
 };
 
+enum imx_hdmi_type {
+	IMX6DL_HDMI,
+	IMX6Q_HDMI,
+};
+
 /* IOCTL commands */
 #define HDMI_IOC_MAGIC  'H'
 
