@@ -202,11 +202,6 @@ struct mxc_hdmi {
 	struct pinctrl_state *pins_cec;
 };
 
-enum imx_hdmim_type {
-	IMX6DL_HDMI,
-	IMX6Q_HDMI,
-};
-
 static int hdmi_major;
 static struct class *hdmi_class;
 
@@ -2484,11 +2479,11 @@ static void hdmi_get_of_property(struct mxc_hdmi *hdmi)
 	 * Default value will been setting in HDMI PHY config function
 	 * if it is not define in device tree.
 	 */
-	ret = of_property_read_u32(np, "phy_reg_vlev", &phy_reg_vlev);
+	ret = of_property_read_u32(np, "fsl,phy_reg_vlev", &phy_reg_vlev);
 	if (ret)
 		dev_dbg(&pdev->dev, "No board specific HDMI PHY vlev\n");
 
-	ret = of_property_read_u32(np, "phy_reg_cksymtx", &phy_reg_cksymtx);
+	ret = of_property_read_u32(np, "fsl,phy_reg_cksymtx", &phy_reg_cksymtx);
 	if (ret)
 		dev_dbg(&pdev->dev, "No board specific HDMI PHY cksymtx\n");
 
