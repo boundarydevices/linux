@@ -418,6 +418,12 @@
 	status = "okay";
 };
 
+&hdmi_core {
+	ipu_id = <0>;
+	disp_id = <0>;
+	status = "okay";
+};
+
 &hdmi_video {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hdmi_hdcp_1>;
