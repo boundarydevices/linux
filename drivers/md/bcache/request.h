@@ -16,7 +16,6 @@ struct search {
 	unsigned		cache_bio_sectors;
 
 	unsigned		recoverable:1;
-	unsigned		unaligned_bvec:1;
 
 	unsigned		write:1;
 	unsigned		writeback:1;
@@ -27,6 +26,7 @@ struct search {
 
 	/* Anything past op->keys won't get zeroed in do_bio_hook */
 	struct btree_op		op;
+	struct bio_vec		bv[BIO_MAX_PAGES];
 };
 
 void bch_cache_read_endio(struct bio *, int);

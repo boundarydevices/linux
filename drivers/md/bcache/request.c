@@ -679,10 +679,14 @@ static void bio_complete(struct search *s)
 static void do_bio_hook(struct search *s)
 {
 	struct bio *bio = &s->bio.bio;
-	memcpy(bio, s->orig_bio, sizeof(struct bio));
 
+	bio_init(bio);
+	bio->bi_io_vec		= s->bv;
+	bio->bi_max_vecs	= BIO_MAX_PAGES;
+	__bio_clone(bio, s->orig_bio);
 	bio->bi_end_io		= request_endio;
 	bio->bi_private		= &s->cl;
+
 	atomic_set(&bio->bi_cnt, 3);
 }
 
@@ -694,16 +698,12 @@ static void search_free(struct closure *cl)
 	if (s->op.cache_bio)
 		bio_put(s->op.cache_bio);
 
-	if (s->unaligned_bvec)
-		mempool_free(s->bio.bio.bi_io_vec, s->d->unaligned_bvec);
-
 	closure_debug_destroy(cl);
 	mempool_free(s, s->d->c->search);
 }
 
 static struct search *search_alloc(struct bio *bio, struct bcache_device *d)
 {
-	struct bio_vec *bv;
 	struct search *s = mempool_alloc(d->c->search, GFP_NOIO);
 	memset(s, 0, offsetof(struct search, op.keys));
 
@@ -721,15 +721,6 @@ static struct search *search_alloc(struct bio *bio, struct bcache_device *d)
 	s->recoverable		= 1;
 	s->start_time		= jiffies;
 	do_bio_hook(s);
-
-	if (bio->bi_size != bio_segments(bio) * PAGE_SIZE) {
-		bv = mempool_alloc(d->unaligned_bvec, GFP_NOIO);
-		memcpy(bv, bio_iovec(bio),
-		       sizeof(struct bio_vec) * bio_segments(bio));
-
-		s->bio.bio.bi_io_vec	= bv;
-		s->unaligned_bvec	= 1;
-	}
 
 	return s;
 }
@@ -780,26 +771,13 @@ static void cached_dev_read_complete(struct closure *cl)
 static void request_read_error(struct closure *cl)
 {
 	struct search *s = container_of(cl, struct search, cl);
-	struct bio_vec *bv;
-	int i;
 
 	if (s->recoverable) {
 		/* Retry from the backing device: */
 		trace_bcache_read_retry(s->orig_bio);
 
 		s->error = 0;
-		bv = s->bio.bio.bi_io_vec;
 		do_bio_hook(s);
-		s->bio.bio.bi_io_vec = bv;
-
-		if (!s->unaligned_bvec)
-			bio_for_each_segment(bv, s->orig_bio, i)
-				bv->bv_offset = 0, bv->bv_len = PAGE_SIZE;
-		else
-			memcpy(s->bio.bio.bi_io_vec,
-			       bio_iovec(s->orig_bio),
-			       sizeof(struct bio_vec) *
-			       bio_segments(s->orig_bio));
 
 		/* XXX: invalidate cache */
 

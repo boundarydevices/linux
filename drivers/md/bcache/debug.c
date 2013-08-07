@@ -191,10 +191,6 @@ void bch_data_verify(struct search *s)
 	struct bio_vec *bv;
 	int i;
 
-	if (!s->unaligned_bvec)
-		bio_for_each_segment(bv, s->orig_bio, i)
-			bv->bv_offset = 0, bv->bv_len = PAGE_SIZE;
-
 	check = bio_clone(s->orig_bio, GFP_NOIO);
 	if (!check)
 		return;
