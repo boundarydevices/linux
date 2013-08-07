@@ -13,6 +13,7 @@ config MXC_IPU
 
 source "drivers/mxc/gpu-viv/Kconfig"
 source "drivers/mxc/ipu3/Kconfig"
+source "drivers/mxc/asrc/Kconfig"
 
 endmenu
 
