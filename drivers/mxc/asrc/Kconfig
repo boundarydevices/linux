@@ -1,0 +1,14 @@
+#
+# ASRC configuration
+#
+
+menu "MXC Asynchronous Sample Rate Converter support"
+
+config MXC_ASRC
+	tristate "ASRC support"
+	depends on SOC_IMX35 || SOC_IMX53 || SOC_IMX6Q
+	select SND_SOC_FSL_ASRC
+	---help---
+         Say Y to get the ASRC service.
+
+endmenu
