@@ -843,13 +843,20 @@ static struct attribute_group imx_pcie_attrgroup = {
 	.attrs	= imx_pcie_attrs,
 };
 
+static const char* const clock_list[] = {
+	"pcie_axi",
+	"pcie_ref",
+	"pcie_bus_in",
+	"pcie_bus_out",
+};
+#define I_PCIE_BUS_IN 2
+
 static int __devinit imx_pcie_pltfm_probe(struct platform_device *pdev)
 {
-	int i;
+	int i, max;
 	int ret = 0;
 	struct resource *mem;
-	struct clk *pcie_axi, *pcie_ref_clk;
-	struct clk *pcie_bus_out = NULL, *pcie_bus_in = NULL;
+	struct clk *clks[ARRAY_SIZE(clock_list)];
 	struct device *dev = &pdev->dev;
 	struct device_node *np = pdev->dev.of_node;
 
@@ -931,62 +938,30 @@ static int __devinit imx_pcie_pltfm_probe(struct platform_device *pdev)
 
 	/* call busfreq API to request/release bus freq setpoint. */
 	request_bus_freq(BUS_FREQ_HIGH);
-	/* enable the clks */
-	pcie_axi = devm_clk_get(dev, "pcie_axi");
-	if (IS_ERR(pcie_axi)) {
-		dev_err(dev, "no pcie clock.\n");
-		ret = PTR_ERR(pcie_axi);
-		goto err_release_pwr_gpio;
-	}
-	ret = clk_prepare_enable(pcie_axi);
-	if (ret < 0) {
-		dev_err(dev, "can't prepare-enable pcie clock\n");
-		devm_clk_put(dev, pcie_axi);
-		goto err_release_pwr_gpio;
-	}
 
-	pcie_ref_clk = devm_clk_get(dev, "pcie_ref");
-	if (IS_ERR(pcie_ref_clk)) {
-		dev_err(dev, "no pcie ref clock.\n");
-		ret = PTR_ERR(pcie_ref_clk);
-		goto err_release_clk;
-	}
-	ret = clk_prepare_enable(pcie_ref_clk);
-	if (ret < 0) {
-		dev_err(dev, "can't prepare-enable pcie ref clock\n");
-		devm_clk_put(dev, pcie_ref_clk);
-		goto err_release_clk;
-	}
 
-	if (!(IS_BUILTIN(CONFIG_EP_OF_EP_RC_SYS)
-				|| IS_BUILTIN(CONFIG_RC_OF_EP_RC_SYS))) {
-		/*
-		 * Route pcie bus clock out to EP
-		 * set the pcie bus out clk parent.
-		 * disable pcie bus in.
-		 * enable pcie bus out.
-		 */
-		pcie_bus_in = devm_clk_get(dev, "pcie_bus_in");
-		if (IS_ERR(pcie_bus_in)) {
-			dev_err(dev, "no pcie bus in clock.\n");
-			ret = PTR_ERR(pcie_bus_in);
-			goto err_release_ref_clk;
+	max = ARRAY_SIZE(clock_list);
+	if (config_enabled(CONFIG_EP_OF_EP_RC_SYS))
+		max--;	/* Don't grab pcie_bus_out clock */
+
+	for (i = 0; i < max; i++) {
+		const char* clk = clock_list[i];
+
+		clks[i] = devm_clk_get(dev, clk);
+		if (IS_ERR(clks[i])) {
+			dev_err(dev, "no %s clock.\n", clk);
+			ret = PTR_ERR(clks[i]);
+			goto err_release_clk;
 		}
-		clk_prepare_enable(pcie_bus_in);
-		clk_disable_unprepare(pcie_bus_in);
-
-		pcie_bus_out = devm_clk_get(dev, "pcie_bus_out");
-		if (IS_ERR(pcie_bus_out)) {
-			dev_err(dev, "no pcie bus out clock.\n");
-			ret = PTR_ERR(pcie_bus_out);
-			goto err_release_bus_clk;
-		}
-		ret = clk_prepare_enable(pcie_bus_out);
+		/* enable the clks */
+		ret = clk_prepare_enable(clks[i]);
 		if (ret < 0) {
-			dev_err(dev, "can't pre-en pcie bus clock out.\n");
-			devm_clk_put(dev, pcie_bus_out);
-			goto err_release_bus_clk;
+			dev_err(dev, "can't prepare-enable %s clock\n", clk);
+			devm_clk_put(dev, clks[i]);
+			goto err_release_clk;
 		}
+		if (i == I_PCIE_BUS_IN)
+			clk_disable_unprepare(clks[i]);
 	}
 
 	regmap_update_bits(gpr, 0x04, iomuxc_gpr1_pcie_ref_clk_en, 1 << 16);
@@ -1024,6 +999,8 @@ static int __devinit imx_pcie_pltfm_probe(struct platform_device *pdev)
 
 	if (IS_BUILTIN(CONFIG_EP_OF_EP_RC_SYS)) {
 		if (IS_BUILTIN(CONFIG_EP_SELF_IO_TEST)) {
+			int i;
+
 			/* Prepare the test regions and data */
 			test_reg1 = kzalloc(test_region_size, GFP_KERNEL);
 			if (!test_reg1) {
@@ -1156,26 +1133,15 @@ static int __devinit imx_pcie_pltfm_probe(struct platform_device *pdev)
 err_link_down:
 	if (gpio_is_valid(rst_gpio))
 		gpio_free(rst_gpio);
-	if (pcie_bus_out) {
-		clk_disable_unprepare(pcie_bus_out);
-		devm_clk_put(dev, pcie_bus_out);
-	}
-
-err_release_bus_clk:
-	if (pcie_bus_in)
-		devm_clk_put(dev, pcie_bus_in);
-
-err_release_ref_clk:
-	if (pcie_ref_clk) {
-		clk_disable_unprepare(pcie_ref_clk);
-		devm_clk_put(dev, pcie_ref_clk);
-	}
 
 err_release_clk:
-	clk_disable_unprepare(pcie_axi);
-	devm_clk_put(dev, pcie_axi);
+	while (i > 0) {
+		i--;
+		if (i != I_PCIE_BUS_IN)
+			clk_disable_unprepare(clks[i]);
+		devm_clk_put(dev, clks[i]);
+	}
 
-err_release_pwr_gpio:
 	/* call busfreq API to request/release bus freq setpoint. */
 	release_bus_freq(BUS_FREQ_HIGH);
 	if (gpio_is_valid(pwr_gpio))
