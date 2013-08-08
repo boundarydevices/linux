@@ -100,7 +100,7 @@ typedef struct _gckGALDEVICE
     struct clk         *clk_2d_axi;
     struct clk         *clk_vg_axi;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0) || LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
     /*Power management.*/
     struct regulator      *gpu_regulator;
 #endif
