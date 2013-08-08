@@ -11,6 +11,7 @@
 #include <linux/cpufreq.h>
 #include <linux/delay.h>
 #include <linux/device.h>
+#include <linux/device_cooling.h>
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
@@ -54,6 +55,7 @@ enum imx_thermal_trip {
  * that will trigger cooling action when crossed.
  */
 #define IMX_TEMP_PASSIVE		85000
+#define IMX_TEMP_PASSIVE_COOL_DELTA	10000
 
 /*
  * The maximum die temperature on imx parts is 105C, let's give some cushion
@@ -70,7 +72,7 @@ enum imx_thermal_trip {
 
 struct imx_thermal_data {
 	struct thermal_zone_device *tz;
-	struct thermal_cooling_device *cdev;
+	struct thermal_cooling_device *cdev[2];
 	enum thermal_device_mode mode;
 	struct regmap *tempmon;
 	unsigned long trip_temp[IMX_TRIP_NUM];
@@ -222,6 +224,24 @@ static int imx_unbind(struct thermal_zone_device *tz,
 	return 0;
 }
 
+static int imx_get_trend(struct thermal_zone_device *tz,
+		int trip, enum thermal_trend *trend)
+{
+	int ret;
+	unsigned long trip_temp;
+
+	ret = imx_get_trip_temp(tz, trip, &trip_temp);
+	if (ret < 0)
+		return ret;
+
+	if (tz->temperature >= (trip_temp - IMX_TEMP_PASSIVE_COOL_DELTA))
+		*trend = THERMAL_TREND_RAISE_FULL;
+	else
+		*trend = THERMAL_TREND_DROP_FULL;
+
+	return 0;
+}
+
 static const struct thermal_zone_device_ops imx_tz_ops = {
 	.bind = imx_bind,
 	.unbind = imx_unbind,
@@ -231,6 +251,7 @@ static const struct thermal_zone_device_ops imx_tz_ops = {
 	.get_trip_type = imx_get_trip_type,
 	.get_trip_temp = imx_get_trip_temp,
 	.get_crit_temp = imx_get_crit_temp,
+	.get_trend = imx_get_trend,
 	.set_trip_temp = imx_set_trip_temp,
 };
 
@@ -331,11 +352,19 @@ static int imx_thermal_probe(struct platform_device *pdev)
 	regmap_write(map, TEMPSENSE0 + REG_SET, TEMPSENSE0_POWER_DOWN);
 
 	cpumask_set_cpu(0, &clip_cpus);
-	data->cdev = cpufreq_cooling_register(&clip_cpus);
-	if (IS_ERR(data->cdev)) {
-		ret = PTR_ERR(data->cdev);
+	data->cdev[0] = cpufreq_cooling_register(&clip_cpus);
+	if (IS_ERR(data->cdev[0])) {
+		ret = PTR_ERR(data->cdev[0]);
 		dev_err(&pdev->dev,
 			"failed to register cpufreq cooling device: %d\n", ret);
+		return ret;
+	}
+
+	data->cdev[1] = devfreq_cooling_register();
+	if (IS_ERR(data->cdev[1])) {
+		ret = PTR_ERR(data->cdev[1]);
+		dev_err(&pdev->dev,
+			"failed to register devfreq cooling device: %d\n", ret);
 		return ret;
 	}
 
@@ -352,7 +381,8 @@ static int imx_thermal_probe(struct platform_device *pdev)
 		ret = PTR_ERR(data->tz);
 		dev_err(&pdev->dev,
 			"failed to register thermal zone device %d\n", ret);
-		cpufreq_cooling_unregister(data->cdev);
+		cpufreq_cooling_unregister(data->cdev[0]);
+		devfreq_cooling_unregister(data->cdev[1]);
 		return ret;
 	}
 
@@ -366,7 +396,8 @@ static int imx_thermal_remove(struct platform_device *pdev)
 	struct imx_thermal_data *data = platform_get_drvdata(pdev);
 
 	thermal_zone_device_unregister(data->tz);
-	cpufreq_cooling_unregister(data->cdev);
+	cpufreq_cooling_unregister(data->cdev[0]);
+	devfreq_cooling_unregister(data->cdev[1]);
 
 	return 0;
 }
