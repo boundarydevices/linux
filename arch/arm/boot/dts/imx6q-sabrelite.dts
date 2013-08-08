@@ -135,6 +135,7 @@
 							MX6Q_PAD_GPIO_4__GPIO1_IO04 0x80000000
 							MX6Q_PAD_GPIO_2__GPIO1_IO02 0x80000000
 							MX6Q_PAD_GPIO_9__GPIO1_IO09 0x80000000
+							MX6Q_PAD_DI0_PIN4__GPIO4_IO20 0x1b0b0
 						>;
 					};
 				};
@@ -251,6 +252,13 @@
 					interrupt-parent = <&gpio1>;
 					interrupts = <9 2>;
 					wakeup-gpios = <&gpio1 9 0>;
+				};
+				tsc2004@48 {
+					compatible = "tsc2004,tsc2004";
+					reg = <0x48>;
+					interrupt-parent = <&gpio4>;
+					interrupts = <20 2>;
+					wakeup-gpios = <&gpio4 20 0>;
 				};
 			};
 
