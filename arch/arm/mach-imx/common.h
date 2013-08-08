@@ -140,7 +140,6 @@ extern void imx_gpc_mask_all(void);
 extern void imx_gpc_irq_mask(struct irq_data *d);
 extern void imx_gpc_irq_unmask(struct irq_data *d);
 extern void imx_gpc_restore_all(void);
-extern void imx_gpc_xpu_enable(void);
 extern void imx_anatop_init(void);
 extern void imx_anatop_pre_suspend(void);
 extern void imx_anatop_post_resume(void);
