@@ -11,6 +11,7 @@
  */
 
 /dts-v1/;
+#include <dt-bindings/interrupt-controller/irq.h>
 #include "imx6q.dtsi"
 
 / {
@@ -138,6 +139,7 @@
 							MX6Q_PAD_NANDF_CS1__GPIO6_IO14 0x100b0
 							MX6Q_PAD_NANDF_CS2__GPIO6_IO15 0x000b0
 							MX6Q_PAD_NANDF_CS3__GPIO6_IO16 0x000b0
+							MX6Q_PAD_SD1_CLK__OSC32K_32K_OUT 0x000b0
 						>;
 					};
 				};
@@ -193,8 +195,9 @@
 				pinctrl-0 = <&pinctrl_usdhc2_d4_1>;
 				bus-width = <4>;
 				non-removable;
-				vmmc-supply = <&reg_tiwi_wlan>;
-				no-1-8-v;
+				vmmc-supply = <&wilink_wl_en>;
+				ocr-limit = <0x80>;	/* 1.65v - 1.95v */
+				power-off-card;
 				keep-power-in-suspend;
 				enable-sdio-wakeup;
 				status = "okay";
@@ -368,19 +371,20 @@
 			gpio = <&gpio3 22 0>;
 			enable-active-high;
 		};
-		reg_tiwi_wlan: tiwi_wlan {
+		wilink_wl_en: tiwi_wlan {
 			compatible = "regulator-fixed";
-			regulator-name = "tiwi_wlan";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
+			regulator-name = "wilink_wl_en";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
 			gpio = <&gpio6 15 0>;
+			startup-delay-us = <70000>;
 			enable-active-high;
 		};
-		reg_tiwi_bt: tiwi_bt {
+		wilink_bt_en: tiwi_bt {
 			compatible = "regulator-fixed";
-			regulator-name = "tiwi_wlan";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
+			regulator-name = "wilink_bt_en";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
 			gpio = <&gpio6 16 0>;
 			enable-active-high;
 		};
@@ -490,17 +494,26 @@
 		status = "okay";
 	};
 
-	lvds_cabc_ctrl {
-		lvds0-gpios = <&gpio6 15 0>;
-		lvds1-gpios = <&gpio6 16 0>;
+	pxp_v4l2_out {
+		compatible = "fsl,imx6dl-pxp-v4l2";
+		status = "disabled";
+	};
+	pxp_v4l2_out {
+		compatible = "fsl,imx6dl-pxp-v4l2";
+		status = "disabled";
 	};
 
-	pxp_v4l2_out {
-		compatible = "fsl,imx6dl-pxp-v4l2";
-		status = "disabled";
-	};
-	pxp_v4l2_out {
-		compatible = "fsl,imx6dl-pxp-v4l2";
-		status = "disabled";
-	};
+	wlan {
+		compatible = "ti,wilink6";
+		interrupt-parent = <&gpio6>;
+		interrupts = <14 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&refclock>;
+		clock-names = "refclock";
+
+		refclock: refclock {
+			compatible = "ti,wilink-clock";
+			#clock-cells = <0>;
+			clock-frequency = <38400000>;
+		};
+	 };
 };
