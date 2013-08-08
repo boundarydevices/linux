@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2013 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -56,6 +56,11 @@ struct imx_dma_data {
 static inline int imx_dma_is_ipu(struct dma_chan *chan)
 {
 	return !strcmp(dev_name(chan->device->dev), "ipu-core");
+}
+
+static inline int imx_dma_is_pxp(struct dma_chan *chan)
+{
+	return strstr(dev_name(chan->device->dev), "pxp") != NULL;
 }
 
 static inline int imx_dma_is_general_purpose(struct dma_chan *chan)
