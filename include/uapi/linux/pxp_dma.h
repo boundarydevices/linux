@@ -21,8 +21,10 @@
 
 #include <linux/posix_types.h>
 
+#ifndef __KERNEL__
 typedef unsigned long dma_addr_t;
 typedef unsigned char bool;
+#endif
 
 /*  PXP Pixel format definitions */
 /*  Four-character-code (FOURCC) */
