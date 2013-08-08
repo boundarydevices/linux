@@ -2,6 +2,7 @@
  * consumer.h -- SoC Regulator consumer support.
  *
  * Copyright (C) 2007, 2008 Wolfson Microelectronics PLC.
+ * Copyright (C) 2013 Freescale Semiconductor, Inc.
  *
  * Author: Liam Girdwood <lrg@slimlogic.co.uk>
  *
@@ -105,6 +106,8 @@ struct notifier_block;
 #define REGULATOR_EVENT_FORCE_DISABLE		0x20
 #define REGULATOR_EVENT_VOLTAGE_CHANGE		0x40
 #define REGULATOR_EVENT_DISABLE 		0x80
+#define REGULATOR_EVENT_PRE_DISABLE		0x100
+#define REGULATOR_EVENT_ENABLE			0x200
 
 struct regulator;
 
