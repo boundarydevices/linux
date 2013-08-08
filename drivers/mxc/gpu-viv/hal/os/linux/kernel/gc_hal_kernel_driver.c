@@ -1,7 +1,7 @@
 /****************************************************************************
 *
 *    Copyright (C) 2005 - 2013 by Vivante Corp.
-*    Copyright (C) 2011-2012 Freescale Semiconductor, Inc.
+*    Copyright (C) 2011-2013 Freescale Semiconductor, Inc.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -80,17 +80,14 @@ task_notify_func(struct notifier_block *self, unsigned long val, void *data)
 
 #if gcdENABLE_FSCALE_VAL_ADJUST
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
-static inline int register_thermal_notifier(struct notifier_block *nb)
-{
-	return 0;
-}
-static inline int unregister_thermal_notifier(struct notifier_block *nb)
-{
-	return 0;
-}
+#include <linux/device_cooling.h>
+#define REG_THERMAL_NOTIFIER(a) register_devfreq_cooling_notifier(a);
+#define UNREG_THERMAL_NOTIFIER(a) unregister_devfreq_cooling_notifier(a);
 #else
 extern int register_thermal_notifier(struct notifier_block *nb);
 extern int unregister_thermal_notifier(struct notifier_block *nb);
+#define REG_THERMAL_NOTIFIER(a) register_thermal_notifier(a);
+#define UNREG_THERMAL_NOTIFIER(a) unregister_thermal_notifier(a);
 #endif
 #endif
 
@@ -1153,14 +1150,14 @@ static int __devinit gpu_probe(struct platform_device *pdev)
         platform_set_drvdata(pdev, galDevice);
 
 #if gcdENABLE_FSCALE_VAL_ADJUST
-        if(galDevice->kernels[gcvCORE_MAJOR])
-            register_thermal_notifier(&thermal_hot_pm_notifier);
+        if (galDevice->kernels[gcvCORE_MAJOR])
+            REG_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
 #endif
         gcmkFOOTER_NO();
         return ret;
     }
 #if gcdENABLE_FSCALE_VAL_ADJUST
-    unregister_thermal_notifier(&thermal_hot_pm_notifier);
+    UNREG_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 	dma_free_attrs(&pdev->dev, pool->size, pool->virt, pool->phys,
@@ -1183,7 +1180,7 @@ static int __devexit gpu_remove(struct platform_device *pdev)
     gcmkHEADER();
 #if gcdENABLE_FSCALE_VAL_ADJUST
     if(galDevice->kernels[gcvCORE_MAJOR])
-        unregister_thermal_notifier(&thermal_hot_pm_notifier);
+        UNREG_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
 #endif
     drv_exit();
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
