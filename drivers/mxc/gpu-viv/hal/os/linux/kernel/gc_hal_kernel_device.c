@@ -371,6 +371,10 @@ gckGALDEVICE_Construct(
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
     /*get gpu regulator*/
     device->gpu_regulator = regulator_get(pdev, "cpu_vddgpu");
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+    device->gpu_regulator = regulator_get(pdev, "vddpu");
+#endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0) || LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
     if (IS_ERR(device->gpu_regulator)) {
 	gcmkTRACE_ZONE(gcvLEVEL_ERROR, gcvZONE_DRIVER,
 		"%s(%d): Failed to get gpu regulator  %s/%s \n",
@@ -1111,7 +1115,7 @@ gckGALDEVICE_Destroy(
             pm_runtime_disable(Device->pmdev);
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0) || LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
         if (Device->gpu_regulator) {
            regulator_put(Device->gpu_regulator);
            Device->gpu_regulator = NULL;
