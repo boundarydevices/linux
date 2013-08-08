@@ -9,7 +9,6 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/of.h>
@@ -25,7 +24,6 @@
 #define ANADIG_REG_2P5		0x130
 #define ANADIG_REG_CORE		0x140
 #define ANADIG_ANA_MISC0	0x150
-#define ANADIG_ANA_MISC2	0x170
 #define ANADIG_USB1_CHRG_DETECT	0x1b0
 #define ANADIG_USB2_CHRG_DETECT	0x210
 #define ANADIG_DIGPROG		0x260
@@ -37,54 +35,7 @@
 #define BM_ANADIG_USB_CHRG_DETECT_CHK_CHRG_B	0x80000
 #define BM_ANADIG_USB_CHRG_DETECT_EN_B		0x100000
 
-#define ANADIG_ANA_MISC2_REG1_STEP_OFFSET	26
-#define ANADIG_ANA_MISC2_REG_STEP_MASK		0x3
-#define ANADIG_REG_CORE_REG_MASK		0x1f
-#define ANADIG_REG_CORE_REG2_OFFSET		18	/* VDDSOC */
-#define ANADIG_REG_CORE_REG1_OFFSET		9	/* VDDPU */
-
-#define LDO_RAMP_UP_UNIT_IN_CYCLES		64	/* 64 cycles per step */
-#define LDO_RAMP_UP_FREQ_IN_MHZ			24	/* base on 24M OSC */
-
 static struct regmap *anatop;
-
-static void imx_anatop_pu_enable(bool enable)
-{
-	u32 val, vddsoc;
-
-	regmap_read(anatop, ANADIG_REG_CORE, &val);
-	if (enable) {
-		/* VDDPU track with VDDSOC if enable */
-		val &= ~(ANADIG_REG_CORE_REG_MASK <<
-			ANADIG_REG_CORE_REG1_OFFSET);
-		vddsoc = val & (ANADIG_REG_CORE_REG_MASK <<
-			ANADIG_REG_CORE_REG2_OFFSET);
-		val |= vddsoc >> (ANADIG_REG_CORE_REG2_OFFSET -
-			ANADIG_REG_CORE_REG1_OFFSET);
-	} else
-		/* power off pu */
-		val &= ~(ANADIG_REG_CORE_REG_MASK <<
-			ANADIG_REG_CORE_REG1_OFFSET);
-	regmap_write(anatop, ANADIG_REG_CORE, val);
-
-	if (enable) {
-		/*
-		 * the delay time for LDO ramp up time is
-		 * based on the register setting, we need
-		 * to calculate how many steps LDO need to
-		 * ramp up, and how much delay needed. (us)
-		 */
-		static u32 new_vol, delay_u;
-		regmap_read(anatop, ANADIG_ANA_MISC2, &val);
-		val = (val >> ANADIG_ANA_MISC2_REG1_STEP_OFFSET) &
-			ANADIG_ANA_MISC2_REG_STEP_MASK;
-		new_vol = (vddsoc >> ANADIG_REG_CORE_REG2_OFFSET) &
-			ANADIG_REG_CORE_REG_MASK;
-		delay_u = new_vol * ((LDO_RAMP_UP_UNIT_IN_CYCLES <<
-			val) / LDO_RAMP_UP_FREQ_IN_MHZ + 1);
-		udelay(delay_u);
-	}
-}
 
 static void imx_anatop_enable_weak2p5(bool enable)
 {
@@ -168,12 +119,4 @@ void __init imx_anatop_init(void)
 		pr_err("%s: failed to find imx6q-anatop regmap!\n", __func__);
 		return;
 	}
-
-	/*
-	 * PU is turned off in uboot, so we need to turn it on here
-	 * to avoid kernel hang during GPU init, will remove
-	 * this code after PU power management done.
-	 */
-	imx_anatop_pu_enable(true);
-	imx_gpc_xpu_enable();
 }
