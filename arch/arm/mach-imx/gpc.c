@@ -11,19 +11,30 @@
  */
 
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/irq.h>
+#include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
+#include <linux/platform_device.h>
 #include <linux/irqchip/arm-gic.h>
+#include <linux/regulator/consumer.h>
 #include "common.h"
 
 #define GPC_IMR1		0x008
 #define GPC_PGC_CPU_PDN		0x2a0
 #define GPC_PGC_GPU_PDN		0x260
+#define GPC_PGC_GPU_PUPSCR	0x264
+#define GPC_PGC_GPU_PDNSCR	0x268
+#define GPC_PGC_GPU_SW_SHIFT		0
+#define GPC_PGC_GPU_SW_MASK		0x3f
+#define GPC_PGC_GPU_SW2ISO_SHIFT	8
+#define GPC_PGC_GPU_SW2ISO_MASK		0x3f
 #define GPC_CNTR		0x0
-#define GPC_CNTR_xPU_UP_REQ_SHIFT	0x1
+#define GPC_CNTR_PU_UP_REQ_SHIFT	0x1
+#define GPC_CNTR_PU_DOWN_REQ_SHIFT	0x0
 
 #define IMR_NUM			4
 
@@ -31,7 +42,10 @@ static void __iomem *gpc_base;
 static u32 gpc_wake_irqs[IMR_NUM];
 static u32 gpc_saved_imrs[IMR_NUM];
 static struct clk *gpu3d_clk, *gpu3d_shader_clk, *gpu2d_clk, *gpu2d_axi_clk;
-static struct clk *openvg_axi_clk, *vpu_clk;
+static struct clk *openvg_axi_clk, *vpu_clk, *ipg_clk;
+static struct device *gpc_dev;
+struct regulator *pu_reg;
+struct notifier_block nb;
 
 void imx_gpc_pre_suspend(void)
 {
@@ -126,26 +140,6 @@ void imx_gpc_irq_mask(struct irq_data *d)
 	writel_relaxed(val, reg);
 }
 
-static void imx_gpc_pu_clk_init(void)
-{
-	if (gpu3d_clk != NULL &&  gpu3d_shader_clk != NULL
-		&& gpu2d_clk != NULL && gpu2d_axi_clk != NULL
-		&& openvg_axi_clk != NULL && vpu_clk != NULL)
-		return;
-
-	/* Get gpu&vpu clk for power up PU by GPC */
-	gpu3d_clk = clk_get(NULL, "gpu3d_core");
-	gpu3d_shader_clk = clk_get(NULL, "gpu3d_shader");
-	gpu2d_clk = clk_get(NULL, "gpu2d_core");
-	gpu2d_axi_clk = clk_get(NULL, "gpu2d_axi");
-	openvg_axi_clk = clk_get(NULL, "openvg_axi");
-	vpu_clk = clk_get(NULL, "vpu_axi");
-	if (IS_ERR(gpu3d_clk) || IS_ERR(gpu3d_shader_clk)
-		|| IS_ERR(gpu2d_clk) || IS_ERR(gpu2d_axi_clk)
-		|| IS_ERR(openvg_axi_clk) || IS_ERR(vpu_clk))
-		printk(KERN_ERR "%s: failed to get clk!\n", __func__);
-}
-
 static void imx_pu_clk(bool enable)
 {
 	if (enable) {
@@ -165,19 +159,79 @@ static void imx_pu_clk(bool enable)
 	}
 }
 
-void imx_gpc_xpu_enable(void)
+static void imx_gpc_pu_enable(bool enable)
 {
-	/*
-	 * PU is turned off in uboot, so we need to turn it on here
-	 * to avoid kernel hang during GPU init, will remove
-	 * this code after PU power management done.
-	 */
-	imx_gpc_pu_clk_init();
-	imx_pu_clk(true);
-	writel_relaxed(1, gpc_base + GPC_PGC_GPU_PDN);
-	writel_relaxed(1 << GPC_CNTR_xPU_UP_REQ_SHIFT, gpc_base + GPC_CNTR);
-	while (readl_relaxed(gpc_base + GPC_CNTR) & 0x2)
-		;
+	u32 rate, delay_us;
+	u32 gpu_pupscr_sw2iso, gpu_pdnscr_sw2iso;
+	u32 gpu_pupscr_sw, gpu_pdnscr_sw;
+
+	/* get ipg clk rate for PGC delay */
+	rate = clk_get_rate(ipg_clk);
+
+	if (enable) {
+		/*
+		 * need to add necessary delay between powering up PU LDO and
+		 * disabling PU isolation in PGC, the counter of PU isolation
+		 * is based on ipg clk.
+		 */
+		gpu_pupscr_sw2iso = (readl_relaxed(gpc_base +
+			GPC_PGC_GPU_PUPSCR) >> GPC_PGC_GPU_SW2ISO_SHIFT)
+			& GPC_PGC_GPU_SW2ISO_MASK;
+		gpu_pupscr_sw = (readl_relaxed(gpc_base +
+			GPC_PGC_GPU_PUPSCR) >> GPC_PGC_GPU_SW_SHIFT)
+			& GPC_PGC_GPU_SW_MASK;
+		delay_us = (gpu_pupscr_sw2iso + gpu_pupscr_sw) * 1000000
+			/ rate + 1;
+		udelay(delay_us);
+
+		imx_pu_clk(true);
+		writel_relaxed(1, gpc_base + GPC_PGC_GPU_PDN);
+		writel_relaxed(1 << GPC_CNTR_PU_UP_REQ_SHIFT,
+			gpc_base + GPC_CNTR);
+		while (readl_relaxed(gpc_base + GPC_CNTR) &
+			(1 << GPC_CNTR_PU_UP_REQ_SHIFT))
+			;
+		imx_pu_clk(false);
+	} else {
+		writel_relaxed(1, gpc_base + GPC_PGC_GPU_PDN);
+		writel_relaxed(1 << GPC_CNTR_PU_DOWN_REQ_SHIFT,
+			gpc_base + GPC_CNTR);
+		while (readl_relaxed(gpc_base + GPC_CNTR) &
+			(1 << GPC_CNTR_PU_DOWN_REQ_SHIFT))
+			;
+		/*
+		 * need to add necessary delay between enabling PU isolation
+		 * in PGC and powering down PU LDO , the counter of PU isolation
+		 * is based on ipg clk.
+		 */
+		gpu_pdnscr_sw2iso = (readl_relaxed(gpc_base +
+			GPC_PGC_GPU_PDNSCR) >> GPC_PGC_GPU_SW2ISO_SHIFT)
+			& GPC_PGC_GPU_SW2ISO_MASK;
+		gpu_pdnscr_sw = (readl_relaxed(gpc_base +
+			GPC_PGC_GPU_PDNSCR) >> GPC_PGC_GPU_SW_SHIFT)
+			& GPC_PGC_GPU_SW_MASK;
+		delay_us = (gpu_pdnscr_sw2iso + gpu_pdnscr_sw) * 1000000
+			/ rate + 1;
+		udelay(delay_us);
+	}
+}
+
+static int imx_gpc_regulator_notify(struct notifier_block *nb,
+					unsigned long event,
+					void *ignored)
+{
+	switch (event) {
+	case REGULATOR_EVENT_PRE_DISABLE:
+		imx_gpc_pu_enable(false);
+		break;
+	case REGULATOR_EVENT_ENABLE:
+		imx_gpc_pu_enable(true);
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
 }
 
 void __init imx_gpc_init(void)
@@ -198,3 +252,57 @@ void __init imx_gpc_init(void)
 	gic_arch_extn.irq_unmask = imx_gpc_irq_unmask;
 	gic_arch_extn.irq_set_wake = imx_gpc_irq_set_wake;
 }
+
+static int imx_gpc_probe(struct platform_device *pdev)
+{
+	int ret;
+
+	gpc_dev = &pdev->dev;
+
+	pu_reg = devm_regulator_get(gpc_dev, "pu");
+	nb.notifier_call = &imx_gpc_regulator_notify;
+
+	/* Get gpu&vpu clk for power up PU by GPC */
+	gpu3d_clk = devm_clk_get(gpc_dev, "gpu3d_core");
+	gpu3d_shader_clk = devm_clk_get(gpc_dev, "gpu3d_shader");
+	gpu2d_clk = devm_clk_get(gpc_dev, "gpu2d_core");
+	gpu2d_axi_clk = devm_clk_get(gpc_dev, "gpu2d_axi");
+	openvg_axi_clk = devm_clk_get(gpc_dev, "openvg_axi");
+	vpu_clk = devm_clk_get(gpc_dev, "vpu_axi");
+	ipg_clk = devm_clk_get(gpc_dev, "ipg");
+	if (IS_ERR(gpu3d_clk) || IS_ERR(gpu3d_shader_clk)
+		|| IS_ERR(gpu2d_clk) || IS_ERR(gpu2d_axi_clk)
+		|| IS_ERR(openvg_axi_clk) || IS_ERR(vpu_clk)
+		|| IS_ERR(ipg_clk)) {
+		dev_err(gpc_dev, "failed to get clk!\n");
+		return -ENOENT;
+	}
+
+	ret = regulator_register_notifier(pu_reg, &nb);
+	if (ret) {
+		dev_err(gpc_dev,
+			"regulator notifier request failed\n");
+		return ret;
+	}
+
+	return 0;
+}
+
+static const struct of_device_id imx_gpc_ids[] = {
+	{ .compatible = "fsl,imx6q-gpc" },
+};
+MODULE_DEVICE_TABLE(of, imx_gpc_ids);
+
+static struct platform_driver imx_gpc_platdrv = {
+	.driver = {
+		.name	= "imx-gpc",
+		.owner	= THIS_MODULE,
+		.of_match_table = imx_gpc_ids,
+	},
+	.probe		= imx_gpc_probe,
+};
+module_platform_driver(imx_gpc_platdrv);
+
+MODULE_AUTHOR("Anson Huang <b20788@freescale.com>");
+MODULE_DESCRIPTION("Freescale i.MX GPC driver");
+MODULE_LICENSE("GPL");
