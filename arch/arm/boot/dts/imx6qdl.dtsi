@@ -570,6 +570,11 @@
 				compatible = "fsl,imx6q-gpc";
 				reg = <0x020dc000 0x4000>;
 				interrupts = <0 89 0x04 0 90 0x04>;
+				clocks = <&clks 122>, <&clks 74>, <&clks 121>,
+					<&clks 26>, <&clks 143>, <&clks 168>, <&clks 62>;
+				clock-names = "gpu3d_core", "gpu3d_shader", "gpu2d_core",
+					"gpu2d_axi", "openvg_axi", "vpu_axi", "ipg";
+				pu-supply = <&reg_pu>;
 			};
 
 			gpr: iomuxc-gpr@020e0000 {
