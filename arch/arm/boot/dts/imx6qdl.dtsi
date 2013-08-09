@@ -191,8 +191,13 @@
 				};
 
 				esai: esai@02024000 {
+					compatible = "fsl,imx6q-esai";
 					reg = <0x02024000 0x4000>;
 					interrupts = <0 51 0x04>;
+					clocks = <&clks 118>;
+					fsl,esai-dma-events = <24 23>;
+					fsl,flags = <1>;
+					status = "disabled";
 				};
 
 				ssi1: ssi@02028000 {
@@ -240,6 +245,15 @@
 						"txa", "txb", "txc";
 					fsl,clk-map-version = <2>;
 					fsl,clk-channel-bits = <4>;
+					status = "okay";
+				};
+
+				asrc_p2p: asrc_p2p {
+					compatible = "fsl,imx6q-asrc-p2p";
+					fsl,output-rate  = <48000>;
+					fsl,output-width = <16>;
+					fsl,asrc-dma-rx-events = <17 18 19>;
+					fsl,asrc-dma-tx-events = <20 21 22>;
 					status = "okay";
 				};
 
