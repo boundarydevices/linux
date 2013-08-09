@@ -549,17 +549,7 @@ EXPORT_SYMBOL(bio_phys_segments);
  */
 void __bio_clone(struct bio *bio, struct bio *bio_src)
 {
-	if (bio_is_rw(bio_src)) {
-		struct bio_vec bv;
-		struct bvec_iter iter;
-
-		bio_for_each_segment(bv, bio_src, iter)
-			bio->bi_io_vec[bio->bi_vcnt++] = bv;
-	} else if (bio_has_data(bio_src)) {
-		memcpy(bio->bi_io_vec, bio_src->bi_io_vec,
-		       bio_src->bi_max_vecs * sizeof(struct bio_vec));
-		bio->bi_vcnt = bio_src->bi_vcnt;
-	}
+	BUG_ON(bio->bi_pool && BIO_POOL_IDX(bio) != BIO_POOL_NONE);
 
 	/*
 	 * most users will be overriding ->bi_bdev with a new target,
@@ -569,6 +559,7 @@ void __bio_clone(struct bio *bio, struct bio *bio_src)
 	bio->bi_flags |= 1 << BIO_CLONED;
 	bio->bi_rw = bio_src->bi_rw;
 	bio->bi_iter = bio_src->bi_iter;
+	bio->bi_io_vec = bio_src->bi_io_vec;
 }
 EXPORT_SYMBOL(__bio_clone);
 
@@ -585,7 +576,7 @@ struct bio *bio_clone_bioset(struct bio *bio, gfp_t gfp_mask,
 {
 	struct bio *b;
 
-	b = bio_alloc_bioset(gfp_mask, bio->bi_max_vecs, bs);
+	b = bio_alloc_bioset(gfp_mask, 0, bs);
 	if (!b)
 		return NULL;
 
@@ -605,6 +596,50 @@ struct bio *bio_clone_bioset(struct bio *bio, gfp_t gfp_mask,
 	return b;
 }
 EXPORT_SYMBOL(bio_clone_bioset);
+
+/**
+ * bio_clone_biovec: Given a cloned bio, give the clone its own copy of the
+ * biovec
+ * @bio: cloned bio
+ *
+ * @bio must have been allocated from a bioset - i.e. returned from
+ * bio_clone_bioset()
+ */
+int bio_clone_biovec(struct bio *bio, gfp_t gfp_mask)
+{
+	unsigned long idx = BIO_POOL_NONE;
+	unsigned nr_iovecs = 0;
+	struct bio_vec bv, *bvl = NULL;
+	struct bvec_iter iter;
+
+	BUG_ON(!bio->bi_pool);
+	BUG_ON(BIO_POOL_IDX(bio) != BIO_POOL_NONE);
+
+	bio_for_each_segment(bv, bio, iter)
+		nr_iovecs++;
+
+	if (nr_iovecs > BIO_INLINE_VECS) {
+		bvl = bvec_alloc(gfp_mask, nr_iovecs, &idx,
+				 bio->bi_pool->bvec_pool);
+		if (!bvl)
+			return -ENOMEM;
+	} else if (nr_iovecs) {
+		bvl = bio->bi_inline_vecs;
+	}
+
+	bio_for_each_segment(bv, bio, iter)
+		bvl[bio->bi_vcnt++] = bv;
+
+	bio->bi_io_vec = bvl;
+	bio->bi_iter.bi_idx = 0;
+	bio->bi_iter.bi_bvec_done = 0;
+
+	bio->bi_flags &= BIO_POOL_MASK - 1;
+	bio->bi_flags |= idx << BIO_POOL_OFFSET;
+
+	return 0;
+}
+EXPORT_SYMBOL(bio_clone_biovec);
 
 /**
  *	bio_get_nr_vecs		- return approx number of vecs
@@ -931,60 +966,33 @@ void bio_copy_data(struct bio *dst, struct bio *src)
 EXPORT_SYMBOL(bio_copy_data);
 
 struct bio_map_data {
-	struct bio_vec *iovecs;
-	struct sg_iovec *sgvecs;
 	int nr_sgvecs;
 	int is_our_pages;
+	struct sg_iovec sgvecs[];
 };
 
 static void bio_set_map_data(struct bio_map_data *bmd, struct bio *bio,
 			     struct sg_iovec *iov, int iov_count,
 			     int is_our_pages)
 {
-	memcpy(bmd->iovecs, bio->bi_io_vec, sizeof(struct bio_vec) * bio->bi_vcnt);
 	memcpy(bmd->sgvecs, iov, sizeof(struct sg_iovec) * iov_count);
 	bmd->nr_sgvecs = iov_count;
 	bmd->is_our_pages = is_our_pages;
 	bio->bi_private = bmd;
 }
 
-static void bio_free_map_data(struct bio_map_data *bmd)
-{
-	kfree(bmd->iovecs);
-	kfree(bmd->sgvecs);
-	kfree(bmd);
-}
-
 static struct bio_map_data *bio_alloc_map_data(int nr_segs,
 					       unsigned int iov_count,
 					       gfp_t gfp_mask)
 {
-	struct bio_map_data *bmd;
-
 	if (iov_count > UIO_MAXIOV)
 		return NULL;
 
-	bmd = kmalloc(sizeof(*bmd), gfp_mask);
-	if (!bmd)
-		return NULL;
-
-	bmd->iovecs = kmalloc(sizeof(struct bio_vec) * nr_segs, gfp_mask);
-	if (!bmd->iovecs) {
-		kfree(bmd);
-		return NULL;
-	}
-
-	bmd->sgvecs = kmalloc(sizeof(struct sg_iovec) * iov_count, gfp_mask);
-	if (bmd->sgvecs)
-		return bmd;
-
-	kfree(bmd->iovecs);
-	kfree(bmd);
-	return NULL;
+	return kmalloc(sizeof(struct bio_map_data) +
+		       sizeof(struct sg_iovec) * iov_count, gfp_mask);
 }
 
-static int __bio_copy_iov(struct bio *bio, struct bio_vec *iovecs,
-			  struct sg_iovec *iov, int iov_count,
+static int __bio_copy_iov(struct bio *bio, struct sg_iovec *iov, int iov_count,
 			  int to_user, int from_user, int do_free_page)
 {
 	int ret = 0, i;
@@ -994,7 +1002,7 @@ static int __bio_copy_iov(struct bio *bio, struct bio_vec *iovecs,
 
 	bio_for_each_segment_all(bvec, bio, i) {
 		char *bv_addr = page_address(bvec->bv_page);
-		unsigned int bv_len = iovecs[i].bv_len;
+		unsigned int bv_len = bvec->bv_len;
 
 		while (bv_len && iov_idx < iov_count) {
 			unsigned int bytes;
@@ -1054,14 +1062,14 @@ int bio_uncopy_user(struct bio *bio)
 		 * don't copy into a random user address space, just free.
 		 */
 		if (current->mm)
-			ret = __bio_copy_iov(bio, bmd->iovecs, bmd->sgvecs,
-					     bmd->nr_sgvecs, bio_data_dir(bio) == READ,
+			ret = __bio_copy_iov(bio, bmd->sgvecs, bmd->nr_sgvecs,
+					     bio_data_dir(bio) == READ,
 					     0, bmd->is_our_pages);
 		else if (bmd->is_our_pages)
 			bio_for_each_segment_all(bvec, bio, i)
 				__free_page(bvec->bv_page);
 	}
-	bio_free_map_data(bmd);
+	kfree(bmd);
 	bio_put(bio);
 	return ret;
 }
@@ -1175,7 +1183,7 @@ struct bio *bio_copy_user_iov(struct request_queue *q,
 	 */
 	if ((!write_to_vm && (!map_data || !map_data->null_mapped)) ||
 	    (map_data && map_data->from_user)) {
-		ret = __bio_copy_iov(bio, bio->bi_io_vec, iov, iov_count, 0, 1, 0);
+		ret = __bio_copy_iov(bio, iov, iov_count, 0, 1, 0);
 		if (ret)
 			goto cleanup;
 	}
@@ -1189,7 +1197,7 @@ cleanup:
 
 	bio_put(bio);
 out_bmd:
-	bio_free_map_data(bmd);
+	kfree(bmd);
 	return ERR_PTR(ret);
 }
 
@@ -1506,16 +1514,15 @@ static void bio_copy_kern_endio(struct bio *bio, int err)
 
 	bio_for_each_segment_all(bvec, bio, i) {
 		char *addr = page_address(bvec->bv_page);
-		int len = bmd->iovecs[i].bv_len;
 
 		if (read)
-			memcpy(p, addr, len);
+			memcpy(p, addr, bvec->bv_len);
 
 		__free_page(bvec->bv_page);
-		p += len;
+		p += bvec->bv_len;
 	}
 
-	bio_free_map_data(bmd);
+	kfree(bmd);
 	bio_put(bio);
 }
 
@@ -1766,62 +1773,25 @@ EXPORT_SYMBOL(bio_endio_nodec);
  * Allocates and returns a new bio which represents @sectors from the start of
  * @bio, and updates @bio to represent the remaining sectors.
  *
- * If bio_sectors(@bio) was less than or equal to @sectors, returns @bio
- * unchanged.
+ * The newly allocated bio will point to @bio's bi_io_vec; it is the caller's
+ * responsibility to ensure that @bio is not freed before the split.
  */
 struct bio *bio_split(struct bio *bio, int sectors,
 		      gfp_t gfp, struct bio_set *bs)
 {
-	unsigned vcnt = 0, nbytes = sectors << 9;
-	struct bio_vec bv;
-	struct bvec_iter iter;
 	struct bio *split = NULL;
 
 	BUG_ON(sectors <= 0);
 	BUG_ON(sectors >= bio_sectors(bio));
 
-	if (bio->bi_rw & REQ_DISCARD) {
-		split = bio_alloc_bioset(gfp, 1, bs);
-		if (!split)
-			return NULL;
-		goto out;
-	}
-
-	bio_for_each_segment(bv, bio, iter) {
-		vcnt++;
-
-		if (nbytes <= bv.bv_len)
-			break;
-
-		nbytes -= bv.bv_len;
-	}
-
-	split = bio_alloc_bioset(gfp, vcnt, bs);
+	split = bio_clone_bioset(bio, gfp, bs);
 	if (!split)
 		return NULL;
 
-	bio_for_each_segment(bv, bio, iter) {
-		split->bi_io_vec[split->bi_vcnt++] = bv;
+	split->bi_iter.bi_size = sectors << 9;
 
-		if (split->bi_vcnt == vcnt)
-			break;
-	}
-
-	split->bi_io_vec[split->bi_vcnt - 1].bv_len = nbytes;
-out:
-	split->bi_bdev		= bio->bi_bdev;
-	split->bi_iter.bi_sector = bio->bi_iter.bi_sector;
-	split->bi_iter.bi_size	= sectors << 9;
-	split->bi_rw		= bio->bi_rw;
-
-	if (bio_integrity(bio)) {
-		if (bio_integrity_clone(split, bio, gfp)) {
-			bio_put(split);
-			return NULL;
-		}
-
-		bio_integrity_trim(split, 0, bio_sectors(split));
-	}
+	if (bio_integrity(split))
+		bio_integrity_trim(split, 0, sectors);
 
 	bio_advance(bio, split->bi_iter.bi_size);
 

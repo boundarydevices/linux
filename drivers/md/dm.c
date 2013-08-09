@@ -1220,7 +1220,7 @@ static void __clone_and_map_data_bio(struct clone_info *ci, struct dm_target *ti
 		num_target_bios = ti->num_write_bios(ti, bio);
 
 	for (target_bio_nr = 0; target_bio_nr < num_target_bios; target_bio_nr++) {
-		tio = alloc_tio(ci, ti, bio_segments(bio), target_bio_nr);
+		tio = alloc_tio(ci, ti, 0, target_bio_nr);
 		clone_bio(tio, bio, sector, len);
 		__map_bio(tio);
 	}

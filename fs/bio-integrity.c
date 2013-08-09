@@ -594,17 +594,11 @@ int bio_integrity_clone(struct bio *bio, struct bio *bio_src,
 	struct bio_integrity_payload *bip_src = bio_src->bi_integrity;
 	struct bio_integrity_payload *bip;
 
-	BUG_ON(bip_src == NULL);
-
-	bip = bio_integrity_alloc(bio, gfp_mask, bip_src->bip_vcnt);
-
+	bip = bio_integrity_alloc(bio, gfp_mask, 0);
 	if (bip == NULL)
-		return -EIO;
+		return -ENOMEM;
 
-	memcpy(bip->bip_vec, bip_src->bip_vec,
-	       bip_src->bip_vcnt * sizeof(struct bio_vec));
-
-	bip->bip_vcnt = bip_src->bip_vcnt;
+	bip->bip_vec = bip_src->bip_vec;
 	bip->bip_iter = bip_src->bip_iter;
 
 	return 0;

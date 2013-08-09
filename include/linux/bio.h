@@ -329,6 +329,7 @@ extern void bio_put(struct bio *);
 
 extern void __bio_clone(struct bio *, struct bio *);
 extern struct bio *bio_clone_bioset(struct bio *, gfp_t, struct bio_set *bs);
+extern int bio_clone_biovec(struct bio *bio, gfp_t gfp_mask);
 
 extern struct bio_set *fs_bio_set;
 

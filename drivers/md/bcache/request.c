@@ -681,8 +681,6 @@ static void do_bio_hook(struct search *s)
 	struct bio *bio = &s->bio.bio;
 
 	bio_init(bio);
-	bio->bi_io_vec		= s->bv;
-	bio->bi_max_vecs	= BIO_MAX_PAGES;
 	__bio_clone(bio, s->orig_bio);
 	bio->bi_end_io		= request_endio;
 	bio->bi_private		= &s->cl;

@@ -26,7 +26,6 @@ struct search {
 
 	/* Anything past op->keys won't get zeroed in do_bio_hook */
 	struct btree_op		op;
-	struct bio_vec		bv[BIO_MAX_PAGES];
 };
 
 void bch_cache_read_endio(struct bio *, int);
