@@ -14,6 +14,7 @@
 #include <linux/platform_device.h>
 #include <linux/dmaengine.h>
 #include <linux/types.h>
+#include <linux/platform_data/dma-imx.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -53,9 +54,62 @@ static const struct snd_pcm_hardware imx_pcm_hardware = {
 	.fifo_size = 0,
 };
 
+static void imx_pcm_dma_set_config_from_dai_data(
+	const struct snd_pcm_substream *substream,
+	const struct snd_dmaengine_dai_dma_data *dma_data,
+	struct dma_slave_config *slave_config)
+{
+	struct imx_dma_data *filter_data = dma_data->filter_data;
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		slave_config->dst_addr = dma_data->addr;
+		slave_config->dst_maxburst = dma_data->maxburst;
+		if (dma_data->addr_width != DMA_SLAVE_BUSWIDTH_UNDEFINED)
+			slave_config->dst_addr_width = dma_data->addr_width;
+	} else {
+		slave_config->src_addr = dma_data->addr;
+		slave_config->src_maxburst = dma_data->maxburst;
+		if (dma_data->addr_width != DMA_SLAVE_BUSWIDTH_UNDEFINED)
+			slave_config->src_addr_width = dma_data->addr_width;
+	}
+
+	slave_config->slave_id = dma_data->slave_id;
+
+	/*
+	 * In dma binding mode, there is no filter_data, so dma_request need to be
+	 * set to zero.
+	*/
+	if (filter_data) {
+		slave_config->dma_request0 = filter_data->dma_request0;
+		slave_config->dma_request1 = filter_data->dma_request1;
+	} else {
+		slave_config->dma_request0 = 0;
+		slave_config->dma_request1 = 0;
+	}
+}
+
+static int imx_pcm_dma_prepare_slave_config(struct snd_pcm_substream *substream,
+	struct snd_pcm_hw_params *params, struct dma_slave_config *slave_config)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_dmaengine_dai_dma_data *dma_data;
+	int ret;
+
+	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+
+	ret = snd_hwparams_to_dma_slave_config(substream, params, slave_config);
+	if (ret)
+		return ret;
+
+	imx_pcm_dma_set_config_from_dai_data(substream, dma_data,
+		slave_config);
+
+	return 0;
+}
+
 static const struct snd_dmaengine_pcm_config imx_dmaengine_pcm_config = {
 	.pcm_hardware = &imx_pcm_hardware,
-	.prepare_slave_config = snd_dmaengine_pcm_prepare_slave_config,
+	.prepare_slave_config = imx_pcm_dma_prepare_slave_config,
 	.compat_filter_fn = filter,
 	.prealloc_buffer_size = IMX_SSI_DMABUF_SIZE,
 };
