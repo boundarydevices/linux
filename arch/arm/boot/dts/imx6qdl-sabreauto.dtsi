@@ -90,6 +90,33 @@
 		default-brightness-level = <7>;
 	};
 
+	regulators {
+		compatible = "simple-bus";
+		reg_audio: cs42888_supply {
+			compatible = "regulator-fixed";
+			regulator-name = "cs42888_supply";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
+	};
+
+	sound-cs42888 {
+		compatible = "fsl,imx6-sabreauto-cs42888",
+				"fsl,imx-audio-cs42888";
+		model = "imx-cs42888";
+		esai-controller = <&esai>;
+		asrc-controller = <&asrc_p2p>;
+		audio-codec = <&codec>;
+	};
+
+	clocks {
+		codec_osc: codec_osc {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <24576000>;
+		};
+	};
 };
 
 &ecspi1 {
@@ -127,6 +154,17 @@
 		interrupt-parent = <&gpio2>;
 		interrupts = <28 2>;
 		wakeup-gpios = <&gpio2 28 0>;
+	};
+
+	codec: cs42888@048 {
+		compatible = "cirrus,cs42888";
+		reg = <0x048>;
+		clocks = <&codec_osc 0>;
+		clock-names = "codec_osc";
+		VA-supply = <&reg_audio>;
+		VD-supply = <&reg_audio>;
+		VLS-supply = <&reg_audio>;
+		VLC-supply = <&reg_audio>;
 	};
 };
 
@@ -231,5 +269,11 @@
 &pwm3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm3_1>;
+	status = "okay";
+};
+
+&esai {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_esai_2>;
 	status = "okay";
 };
