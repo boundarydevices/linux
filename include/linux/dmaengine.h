@@ -341,6 +341,8 @@ enum dma_slave_buswidth {
  * @slave_id: Slave requester id. Only valid for slave channels. The dma
  * slave peripheral will have unique id as dma requester which need to be
  * pass as slave config.
+ * @dma_request0: this is the first dma request of this dma channel.
+ * @dma_request1: this is the second dma request of this dma channel.
  *
  * This struct is passed in as configuration data to a DMA engine
  * in order to set up a certain channel for DMA transport at runtime.
@@ -369,6 +371,8 @@ struct dma_slave_config {
 	u32 dst_maxburst;
 	bool device_fc;
 	unsigned int slave_id;
+	int dma_request0;
+	int dma_request1;
 };
 
 static inline const char *dma_chan_name(struct dma_chan *chan)
