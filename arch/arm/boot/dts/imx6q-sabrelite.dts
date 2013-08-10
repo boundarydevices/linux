@@ -454,11 +454,6 @@
 		status = "okay";
 	};
 
-	lvds_cabc_ctrl {
-		lvds0-gpios = <&gpio6 15 0>;
-		lvds1-gpios = <&gpio6 16 0>;
-	};
-
 	pxp_v4l2_out {
 		compatible = "fsl,imx6dl-pxp-v4l2";
 		status = "disabled";
