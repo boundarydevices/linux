@@ -455,6 +455,13 @@
 							MX6Q_PAD_CSI0_DAT11__UART1_RX_DATA 0x1b0b1
 						>;
 					};
+
+					pinctrl_uart1_2: uart1grp-2 {
+						fsl,pins = <
+							MX6Q_PAD_SD3_DAT7__UART1_TX_DATA 0x1b0b1
+							MX6Q_PAD_SD3_DAT6__UART1_RX_DATA 0x1b0b1
+						>;
+					};
 				};
 
 				uart2 {
