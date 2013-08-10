@@ -69,7 +69,7 @@
 			spba-bus@02000000 {
 				uart1: serial@02020000 {
 					pinctrl-names = "default";
-					pinctrl-0 = <&pinctrl_uart1_1>;
+					pinctrl-0 = <&pinctrl_uart1_2>;
 					status = "okay";
 				};
 
