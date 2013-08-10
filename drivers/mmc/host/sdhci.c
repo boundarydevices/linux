@@ -2923,8 +2923,10 @@ int sdhci_add_host(struct sdhci_host *host)
 	else /* normal SD controllers don't support 1.8V */
 		mmc->ocr_avail_sd &= ~MMC_VDD_165_195;
 	mmc->ocr_avail_mmc = ocr_avail;
-	if (host->ocr_avail_mmc)
+	if (host->ocr_avail_mmc) {
 		mmc->ocr_avail_mmc &= host->ocr_avail_mmc;
+		mmc->ocr_avail &= host->ocr_avail_mmc;
+	}
 
 	if (mmc->ocr_avail == 0) {
 		pr_err("%s: Hardware doesn't report any "

@@ -744,6 +744,11 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	else
 		boarddata->support_vsel = true;
 
+	of_property_read_u32(np, "ocr-limit", &boarddata->ocr_limit);
+
+	if (of_find_property(np, "power-off-card", NULL))
+		host->mmc->caps |= MMC_CAP_POWER_OFF_CARD;
+
 	if (of_find_property(np, "keep-power-in-suspend", NULL))
 		host->mmc->pm_caps |= MMC_PM_KEEP_POWER;
 
@@ -898,7 +903,7 @@ static int __devinit sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		break;
 
 	case ESDHC_CD_PERMANENT:
-		host->mmc->caps = MMC_CAP_NONREMOVABLE;
+		host->mmc->caps |= MMC_CAP_NONREMOVABLE;
 		break;
 
 	case ESDHC_CD_NONE:
@@ -949,6 +954,11 @@ static int __devinit sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		}
 	} else {
 		host->quirks2 |= SDHCI_QUIRK2_NO_1_8_V;
+	}
+	if (boarddata->ocr_limit) {
+		host->ocr_avail_sd &= boarddata->ocr_limit;
+		host->ocr_avail_mmc &= boarddata->ocr_limit;
+		host->ocr_avail_sdio &= boarddata->ocr_limit;
 	}
 
 	err = sdhci_add_host(host);

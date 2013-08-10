@@ -44,5 +44,6 @@ struct esdhc_platform_data {
 	unsigned int max_bus_width;
 	unsigned int delay_line;
 	bool support_vsel;
+	unsigned int ocr_limit;
 };
 #endif /* __ASM_ARCH_IMX_ESDHC_H */
