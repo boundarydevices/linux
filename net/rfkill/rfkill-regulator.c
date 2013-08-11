@@ -14,6 +14,7 @@
 
 #include <linux/module.h>
 #include <linux/err.h>
+#include <linux/of_irq.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
@@ -57,22 +58,50 @@ static struct rfkill_ops rfkill_regulator_ops = {
 	.set_block = rfkill_regulator_set_block,
 };
 
+static struct rfkill_regulator_platform_data *rfkill_regulator_get_pdata_from_of(struct device *dev)
+{
+	struct rfkill_regulator_platform_data *pdata;
+	struct device_node *np = dev->of_node;
+
+	if (!np) {
+		np = of_find_matching_node(NULL, dev->driver->of_match_table);
+		if (!np) {
+			dev_notice(dev, "device tree node not available\n");
+			return ERR_PTR(-ENODEV);
+		}
+	}
+
+	pdata = kzalloc(sizeof(*pdata), GFP_KERNEL);
+	if (!pdata) {
+		dev_err(dev, "can't allocate platform data\n");
+		return ERR_PTR(-ENODEV);
+	}
+	of_property_read_u32(np, "type", &pdata->type);
+	of_property_read_string(np, "name", &pdata->name);
+	return pdata;
+}
+
 static int rfkill_regulator_probe(struct platform_device *pdev)
 {
 	struct rfkill_regulator_platform_data *pdata = pdev->dev.platform_data;
+	struct rfkill_regulator_platform_data *p = NULL;
 	struct rfkill_regulator_data *rfkill_data;
 	struct regulator *vcc;
 	struct rfkill *rf_kill;
 	int ret = 0;
 
 	if (pdata == NULL) {
-		dev_err(&pdev->dev, "no platform data\n");
-		return -ENODEV;
+		p = pdata = rfkill_regulator_get_pdata_from_of(&pdev->dev);
+		if (IS_ERR(p)) {
+			dev_err(&pdev->dev, "no platform data\n");
+			return PTR_ERR(p);
+		}
 	}
 
 	if (pdata->name == NULL || pdata->type == 0) {
 		dev_err(&pdev->dev, "invalid name or type in platform data\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	vcc = regulator_get_exclusive(&pdev->dev, "vrfkill");
@@ -111,7 +140,7 @@ static int rfkill_regulator_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, rfkill_data);
 	dev_info(&pdev->dev, "%s initialized\n", pdata->name);
-
+	kfree(p);
 	return 0;
 
 err_rfkill_register:
@@ -121,6 +150,7 @@ err_rfkill_alloc:
 err_data_alloc:
 	regulator_put(vcc);
 out:
+	kfree(p);
 	return ret;
 }
 
@@ -137,11 +167,18 @@ static int rfkill_regulator_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id rfkill_regulator_of_match_table[] = {
+	{ .compatible = "net,rfkill-reg" },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, rfkill_regulator_of_match_table);
+
 static struct platform_driver rfkill_regulator_driver = {
 	.probe = rfkill_regulator_probe,
 	.remove = rfkill_regulator_remove,
 	.driver = {
 		.name = "rfkill-regulator",
+		.of_match_table = of_match_ptr(rfkill_regulator_of_match_table),
 	},
 };
 
