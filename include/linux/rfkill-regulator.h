@@ -41,7 +41,7 @@
 #include <linux/rfkill.h>
 
 struct rfkill_regulator_platform_data {
-	char *name;             /* the name for the rfkill switch */
+	const char *name;             /* the name for the rfkill switch */
 	enum rfkill_type type;  /* the type as specified in rfkill.h */
 };
 
