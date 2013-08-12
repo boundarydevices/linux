@@ -128,6 +128,10 @@
 				};
 			};
 
+			vpu@02040000 {
+				status = "okay";
+			};
+
 			iomuxc: iomuxc@020e0000 {
 				compatible = "fsl,imx6q-iomuxc";
 
