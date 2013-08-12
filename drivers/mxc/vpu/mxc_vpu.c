@@ -27,7 +27,6 @@
 #include <linux/platform_device.h>
 #include <linux/kdev_t.h>
 #include <linux/dma-mapping.h>
-#include <linux/iram_alloc.h>
 #include <linux/wait.h>
 #include <linux/list.h>
 #include <linux/clk.h>
@@ -46,23 +45,33 @@
 #include <linux/memblock.h>
 #include <linux/memory.h>
 #include <linux/version.h>
+#include <asm/page.h>
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
-#include <mach/busfreq.h>
-#include <mach/hardware.h>
-#include <mach/common.h>
-#endif
-#include <asm/page.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
 #include <linux/sizes.h>
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
+#include <linux/iram_alloc.h>
+#include <mach/clock.h>
+#include <mach/hardware.h>
+#include <mach/mxc_vpu.h>
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+#include <linux/genalloc.h>
+#include <linux/of.h>
+#include <linux/reset.h>
+#include <linux/clk.h>
+#include <linux/mxc_vpu.h>
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
+#include <mach/busfreq.h>
+#include <mach/common.h>
 #else
 #include <asm/sizes.h>
 #endif
-#include <mach/clock.h>
-#include <mach/hardware.h>
-
-#include <mach/mxc_vpu.h>
 
 /* Define one new pgprot which combined uncached and XN(never executable) */
 #define pgprot_noncachedxn(prot) \
@@ -85,6 +94,11 @@ struct iram_setting {
 	u32 start;
 	u32 end;
 };
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+static struct gen_pool *iram_pool;
+static u32 iram_base;
+#endif
 
 static LIST_HEAD(head);
 
@@ -153,6 +167,39 @@ static int cpu_is_mx6q(void)
 	ret = of_machine_is_compatible("fsl,imx6q");
 	return ret;
 }
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+static void imx_src_reset_vpu(void)
+{
+	device_reset(&vpu_pdev->dev);
+}
+
+static void imx_gpc_power_up_pu(int on)
+{
+}
+
+static void request_bus_freq(int freq)
+{
+}
+
+static void release_bus_freq(int freq)
+{
+}
+
+static int cpu_is_mx53(void)
+{
+	return 0;
+}
+
+static int cpu_is_mx51(void)
+{
+	return 0;
+}
+
+#define VM_RESERVED 0
+#define BUS_FREQ_HIGH 0
+
 #endif
 
 /*!
@@ -826,7 +873,25 @@ static int vpu_dev_probe(struct platform_device *pdev)
 
 	err = of_property_read_u32(np, "iramsize", (u32 *)&iramsize);
 	if (!err && iramsize)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+	{
+		iram_pool = of_get_named_gen_pool(np, "iram", 0);
+		if (!iram_pool) {
+			printk(KERN_ERR "iram pool not available\n");
+			return -ENOMEM;
+		}
+
+		iram_base = gen_pool_alloc(iram_pool, iramsize);
+		if (!iram_base) {
+			printk(KERN_ERR "unable to alloc iram\n");
+			return -ENOMEM;
+		}
+
+		addr = gen_pool_virt_to_phys(iram_pool, iram_base);
+	}
+#else
 		iram_alloc(iramsize, &addr);
+#endif
 	if (addr == 0)
 		iram.start = iram.end = 0;
 	else {
@@ -959,7 +1024,11 @@ static int vpu_dev_remove(struct platform_device *pdev)
 	iounmap(vpu_base);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
 	if (iram.start)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+		gen_pool_free(iram_pool, iram_base, iram.end-iram.start+1);
+#else
 		iram_free(iram.start, iram.end-iram.start+1);
+#endif
 #else
 	if (vpu_plat && vpu_plat->iram_enable && vpu_plat->iram_size)
 		iram_free(iram.start,  vpu_plat->iram_size);
