@@ -21,6 +21,10 @@
 	sec_ipu_id = <0>;
 };
 
+&pxp {
+	status = "okay";
+};
+
 &mxcfb1 {
 	status = "okay";
 };

@@ -1,0 +1,30 @@
+* Freescale PxP Controller for i.MX6DL, i.MX6SL
+
+Required properties for PxP controller:
+- compatible: should be "fsl,<soc>-pxp-dma"
+- reg: <base addr, range> contains pxp register base address and range
+- interrupts: <type num flag> where type is an interrupt type, num is the
+  interrupt number and flag is a field that level/trigger information for
+  the interrupt.
+- clocks: the clock sources that pxp depends on.
+- clock-names: the name is related to the clock source
+
+Required properties for pxp on specified board:
+- status: should be set to "okay" if want to use PxP
+
+Examples:
+for SOC imx6dl.dtsi:
+	pxp@020f0000 {
+		compatible = "fsl,imx6dl-pxp-dma";
+		reg = <0x020f0000 0x4000>;
+		interrupts = <0 98 0x04>;
+		clocks = <&clks 133>;
+		clock-names = "pxp-axi";
+		status = "disabled";
+	};
+
+
+for board imx6dl-sabresd.dts:
+	&pxp {
+		status = "okay";
+	};
