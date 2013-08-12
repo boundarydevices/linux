@@ -216,20 +216,16 @@ static void __init imx6q_lvds_cabc_init(void)
 	if (gpio_is_valid(lvds0_gpio)) {
 		ret = gpio_request_one(lvds0_gpio, GPIOF_OUT_INIT_LOW,
 				"LVDS0 CABC enable");
-		if (!ret) {
-			gpio_set_value(lvds0_gpio, 0);
-			gpio_free(lvds0_gpio);
-		}
+		if (ret)
+			pr_warn("failed to request LVDS0 CABC gpio\n");
 	}
 
 	lvds1_gpio = of_get_named_gpio(np, "lvds1-gpios", 0);
 	if (gpio_is_valid(lvds1_gpio)) {
 		ret = gpio_request_one(lvds1_gpio, GPIOF_OUT_INIT_LOW,
 				"LVDS1 CABC enable");
-		if (!ret) {
-			gpio_set_value(lvds1_gpio, 0);
-			gpio_free(lvds1_gpio);
-		}
+		if (ret)
+			pr_warn("failed to request LVDS1 CABC gpio\n");
 	}
 }
 
