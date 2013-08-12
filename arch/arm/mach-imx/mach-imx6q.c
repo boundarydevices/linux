@@ -302,6 +302,18 @@ static struct platform_device imx6q_cpufreq_pdev = {
 
 static void __init imx6q_init_late(void)
 {
+	struct regmap *gpr;
+
+	/*
+	 * Need to force IOMUXC irq pending to meet CCM low power mode
+	 * restriction, this is recommended by hardware team.
+	 */
+	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
+	if (!IS_ERR(gpr))
+		regmap_update_bits(gpr, IOMUXC_GPR1,
+			IMX6Q_GPR1_GINT_MASK,
+			IMX6Q_GPR1_GINT_ASSERT);
+
 	/*
 	 * WAIT mode is broken on TO 1.0 and 1.1, so there is no point
 	 * to run cpuidle on them.
