@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Freescale Semiconductor, Inc.
+ * Copyright (C) 2012-2013 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -122,7 +122,9 @@
 #define IMX6Q_GPR1_USB_OTG_ID_SEL_MASK		BIT(13)
 #define IMX6Q_GPR1_USB_OTG_ID_SEL_ENET_RX_ER	0x0
 #define IMX6Q_GPR1_USB_OTG_ID_SEL_GPIO_1	BIT(13)
-#define IMX6Q_GPR1_GINT				BIT(12)
+#define IMX6Q_GPR1_GINT_MASK			BIT(12)
+#define IMX6Q_GPR1_GINT_CLEAR			0x0
+#define IMX6Q_GPR1_GINT_ASSERT			BIT(12)
 #define IMX6Q_GPR1_ADDRS3_MASK			(0x3 << 10)
 #define IMX6Q_GPR1_ADDRS3_32MB			(0x0 << 10)
 #define IMX6Q_GPR1_ADDRS3_64MB			(0x1 << 10)
