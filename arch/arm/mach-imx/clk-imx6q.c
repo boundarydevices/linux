@@ -64,7 +64,7 @@
 #define CGPR				0x64
 #define BM_CGPR_CHICKEN_BIT		(0x1 << 17)
 
-#define MX6Q_INT_PARITY_CHECK_ERROR	125
+#define MX6Q_INT_IOMUXC			32
 
 static void __iomem *ccm_base;
 
@@ -140,7 +140,7 @@ static void imx6q_enable_wb(bool enable)
 int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 {
 	u32 val = readl_relaxed(ccm_base + CLPCR);
-	struct irq_desc *desc = irq_to_desc(MX6Q_INT_PARITY_CHECK_ERROR);
+	struct irq_desc *desc = irq_to_desc(MX6Q_INT_IOMUXC);
 
 	/*
 	 * CCM state machine has restriction, before enabling
@@ -148,7 +148,7 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 	 * by dsm_wakeup_signal, which means the wakeup source
 	 * must be seen by GPC, then CCM will clean its state machine
 	 * and re-sample necessary signal to decide whether it can
-	 * enter LPM mode. Here we use the forever pending irq #125,
+	 * enter LPM mode. We force irq #32 to be always pending,
 	 * unmask it before we enable LPM mode and mask it after LPM
 	 * is enabled, this flow will make sure CCM state machine in
 	 * reliable status before entering LPM mode. Otherwise, CCM
