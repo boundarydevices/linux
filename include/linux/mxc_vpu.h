@@ -16,15 +16,15 @@
  */
 
 /*!
- * @file plat-mxc/include/mach/mxc_vpu.h
+ * @file linux/mxc_vpu.h
  *
  * @brief VPU system initialization and file operation definition
  *
  * @ingroup VPU
  */
 
-#ifndef __ASM_ARCH_MXC_VPU_H__
-#define __ASM_ARCH_MXC_VPU_H__
+#ifndef __LINUX_MXC_VPU_H__
+#define __LINUX_MXC_VPU_H__
 
 #include <linux/fs.h>
 
@@ -79,7 +79,7 @@ struct vpu_mem_desc {
 #define BIT_FRAME_MEM_CTRL		BIT_WORK_CTRL_BUF_REG(4)
 #define BIT_BIT_STREAM_PARAM		BIT_WORK_CTRL_BUF_REG(5)
 
-#ifndef CONFIG_ARCH_MX6
+#ifndef CONFIG_SOC_IMX6Q
 #define BIT_RESET_CTRL			0x11C
 #else
 #define BIT_RESET_CTRL			0x128
