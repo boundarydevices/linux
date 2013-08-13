@@ -218,6 +218,14 @@
 		reg = <0x50>;
 	};
 
+	max11801@48 {
+		compatible = "maxim,max11801";
+		reg = <0x48>;
+		interrupt-parent = <&gpio3>;
+		interrupts = <26 2>;
+		work-mode = <1>;/*DCM mode*/
+	};
+
 	pmic: pfuze100@08 {
 		compatible = "fsl,pfuze100";
 		reg = <0x08>;
@@ -358,6 +366,7 @@
 				MX6QDL_PAD_GPIO_0__CCM_CLKO1    0x130b0
 				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15 0x80000000
 				MX6QDL_PAD_NANDF_CS3__GPIO6_IO16 0x80000000
+				MX6QDL_PAD_EIM_D26__GPIO3_IO26 0x80000000
 			>;
 		};
 	};
