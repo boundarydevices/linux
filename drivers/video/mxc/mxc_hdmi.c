@@ -205,11 +205,11 @@ struct mxc_hdmi {
 static int hdmi_major;
 static struct class *hdmi_class;
 
-
 struct i2c_client *hdmi_i2c;
 struct mxc_hdmi *g_hdmi;
 
 static bool hdmi_inited;
+static bool hdcp_init;
 
 extern const struct fb_videomode mxc_cea_mode[64];
 extern void mxc_hdmi_cec_handle(u16 cec_stat);
@@ -252,14 +252,6 @@ static void dump_fb_videomode(struct fb_videomode *m)
 static void dump_fb_videomode(struct fb_videomode *m)
 {}
 #endif
-
-static int hdcp_init;
-static int __init early_init_hdcp(char *p)
-{
-	hdcp_init = 1;
-	return 0;
-}
-early_param("hdcp", early_init_hdcp);
 
 static ssize_t mxc_hdmi_show_name(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -1306,19 +1298,6 @@ static void mxc_hdmi_phy_init(struct mxc_hdmi *hdmi)
 	hdmi->phy_enabled = true;
 }
 
-static void hdmi_tx_hdcp_config(struct mxc_hdmi *hdmi)
-{
-#if 0
-	if (hdmi->hdmi_data.hdcp_enable) {
-		/* Enable HDMI DDC pin */
-		mxc_hdmi_enable_pins(hdmi);
-	} else {
-		/* Disable HDMI DDC pin */
-		mxc_hdmi_disable_pins(hdmi);
-	}
-#endif
-}
-
 static void hdmi_config_AVI(struct mxc_hdmi *hdmi)
 {
 	u8 val;
@@ -1687,22 +1666,6 @@ static int mxc_hdmi_read_edid(struct mxc_hdmi *hdmi)
 
 	return HDMI_EDID_SUCCESS;
 }
-
-#if 0
-static void mxc_hdmi_enable_pins(struct mxc_hdmi *hdmi)
-{
-
-	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
-
-}
-
-static void mxc_hdmi_disable_pins(struct mxc_hdmi *hdmi)
-{
-
-	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
-
-}
-#endif
 
 static void mxc_hdmi_phy_disable(struct mxc_hdmi *hdmi)
 {
@@ -2295,7 +2258,6 @@ static void mxc_hdmi_setup(struct mxc_hdmi *hdmi, unsigned long event)
 	hdmi_video_packetize(hdmi);
 	hdmi_video_csc(hdmi);
 	hdmi_video_sample(hdmi);
-	hdmi_tx_hdcp_config(hdmi);
 
 	mxc_hdmi_clear_overflow(hdmi);
 
@@ -2458,6 +2420,18 @@ static void hdmi_init_route(struct mxc_hdmi *hdmi)
 		writel(reg, hdmi->gpr_sdma_base);
 	}
 */
+}
+
+static void hdmi_hdcp_get_property(struct platform_device *pdev)
+{
+	struct device_node *np = pdev->dev.of_node;
+
+	/* Check hdcp enable by dts.*/
+	hdcp_init = of_property_read_bool(np, "fsl,hdcp");
+	if (hdcp_init)
+		dev_dbg(&pdev->dev, "hdcp enable\n");
+	else
+		dev_dbg(&pdev->dev, "hdcp disable\n");
 }
 
 static void hdmi_get_of_property(struct mxc_hdmi *hdmi)
@@ -2776,8 +2750,9 @@ static int mxc_hdmi_probe(struct platform_device *pdev)
 	struct resource *res;
 	int ret = 0;
 
-	/* Check that I2C driver is loaded and available */
-	/* Skip I2C driver available check when HDCP enable */
+	/* Check I2C driver is loaded and available
+	 * check hdcp function is enable by dts */
+	hdmi_hdcp_get_property(pdev);
 	if (!hdmi_i2c && !hdcp_init)
 		return -ENODEV;
 
