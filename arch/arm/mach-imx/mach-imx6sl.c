@@ -19,9 +19,15 @@
 
 static void __init imx6sl_init_machine(void)
 {
+	struct device *parent;
+
 	mxc_arch_reset_init_dt();
 
-	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
+	parent = imx_soc_device_init();
+	if (parent == NULL)
+		pr_warn("failed to initialize soc device\n");
+
+	of_platform_populate(NULL, of_default_bus_match_table, NULL, parent);
 }
 
 static void __init imx6sl_init_irq(void)
