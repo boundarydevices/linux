@@ -26,7 +26,7 @@ static void __init imx6sl_init_machine(void)
 
 static void __init imx6sl_init_irq(void)
 {
-	mxc_set_cpu_type(MXC_CPU_IMX6SL);
+	imx_init_revision_from_anatop();
 	imx_init_l2cache();
 	imx_src_init();
 	imx_gpc_init();
