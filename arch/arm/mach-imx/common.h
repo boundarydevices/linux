@@ -81,6 +81,7 @@ extern void imx_set_aips(void __iomem *);
 extern int mxc_device_init(void);
 extern void imx_set_soc_revision(unsigned int rev);
 extern unsigned int imx_get_soc_revision(void);
+extern void imx_init_revision_from_anatop(void);
 
 enum mxc_cpu_pwr_mode {
 	WAIT_CLOCKED,		/* wfi only */
@@ -143,7 +144,6 @@ extern void imx_anatop_init(void);
 extern void imx_anatop_pre_suspend(void);
 extern void imx_anatop_post_resume(void);
 extern void imx_anatop_usb_chrg_detect_disable(void);
-extern u32 imx_anatop_get_digprog(void);
 extern int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode);
 extern void imx6q_set_chicken_bit(void);
 
