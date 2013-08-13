@@ -71,6 +71,7 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 	struct device_node *np;
 	void __iomem *base;
 	int irq;
+	int ret;
 	int i;
 
 	clks[IMX6SL_CLK_DUMMY] = imx_clk_fixed("dummy", 0);
@@ -252,6 +253,15 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 
 	clk_register_clkdev(clks[IMX6SL_CLK_GPT], "ipg", "imx-gpt.0");
 	clk_register_clkdev(clks[IMX6SL_CLK_GPT_SERIAL], "per", "imx-gpt.0");
+
+	/*
+	 * To prevent the bus clock from being disabled accidently when
+	 * clk_disable() gets called on child clock, let's increment the use
+	 * count of IPG clock by initially calling clk_prepare_enable() on it.
+	 */
+	ret = clk_prepare_enable(clks[IMX6SL_CLK_IPG]);
+	if (ret)
+		pr_warn("%s: failed to enable IPG clock %d\n", __func__, ret);
 
 	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
 		clk_prepare_enable(clks[IMX6SL_CLK_USBPHY1_GATE]);
