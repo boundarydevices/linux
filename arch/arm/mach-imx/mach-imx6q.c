@@ -41,21 +41,10 @@
 #include "cpuidle.h"
 #include "hardware.h"
 
-static u32 chip_revision;
-
-int imx6q_revision(void)
-{
-	return chip_revision;
-}
-
-int imx6dl_revision(void)
-{
-	return chip_revision;
-}
-
 static void __init imx6q_init_revision(void)
 {
 	u32 rev = imx_anatop_get_digprog();
+	u32 chip_revision;
 
 	switch (rev & 0xff) {
 	case 0:
@@ -72,6 +61,7 @@ static void __init imx6q_init_revision(void)
 	}
 
 	mxc_set_cpu_type(rev >> 16 & 0xff);
+	imx_set_soc_revision(chip_revision);
 }
 
 static void imx6q_restart(char mode, const char *cmd)
@@ -318,8 +308,8 @@ static void __init imx6q_init_late(void)
 	 * WAIT mode is broken on TO 1.0 and 1.1, so there is no point
 	 * to run cpuidle on them.
 	 */
-	if ((cpu_is_imx6q() && imx6q_revision() > IMX_CHIP_REVISION_1_1)
-		|| (cpu_is_imx6dl() && imx6dl_revision() >
+	if ((cpu_is_imx6q() && imx_get_soc_revision() > IMX_CHIP_REVISION_1_1)
+		|| (cpu_is_imx6dl() && imx_get_soc_revision() >
 		IMX_CHIP_REVISION_1_0))
 		imx6q_cpuidle_init();
 
@@ -350,7 +340,7 @@ static void __init imx6q_timer_init(void)
 	of_clk_init(NULL);
 	clocksource_of_init();
 	imx_print_silicon_rev(cpu_is_imx6dl() ? "i.MX6DL" : "i.MX6Q",
-			      imx6q_revision());
+			      imx_get_soc_revision());
 }
 
 static const char *imx6q_dt_compat[] __initdata = {

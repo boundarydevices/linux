@@ -289,7 +289,7 @@ void __init mxc_timer_init(void __iomem *base, int irq)
 	 * gpt clk source from 24M OSC on imx6q > TO1.0 and
 	 * imx6dl, others from per clk.
 	 */
-	if ((cpu_is_imx6q() && imx6q_revision() > IMX_CHIP_REVISION_1_0)
+	if ((cpu_is_imx6q() && imx_get_soc_revision() > IMX_CHIP_REVISION_1_0)
 		|| cpu_is_imx6dl())
 		timer_clk = clk_get_sys("imx-gpt.0", "gpt_3m");
 	else
@@ -316,7 +316,7 @@ void __init mxc_timer_init(void __iomem *base, int irq)
 	__raw_writel(0, timer_base + MXC_TPRER); /* see datasheet note */
 
 	if (timer_is_v2()) {
-		if ((cpu_is_imx6q() && imx6q_revision() >
+		if ((cpu_is_imx6q() && imx_get_soc_revision() >
 			IMX_CHIP_REVISION_1_0) || cpu_is_imx6dl()) {
 			tctl_val = V2_TCTL_CLK_OSC_DIV8 | V2_TCTL_FRR |
 				V2_TCTL_WAITEN | MXC_TCTL_TEN;
