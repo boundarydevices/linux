@@ -2,6 +2,8 @@ Device-Tree bindings for hdmi video driver
 
 Required properties:
 - compatible: value should be "fsl,imx6q-hdmi-video".
+- fsl,hdcp: define the property in dts, hdmi driver will initalize for hdcp,
+  otherwise hdcp function will not supported.
 - fsl,phy_reg_vlev: hdmi phy register,Voltage Level Control Register offset 0x0e,
   adjust hdmi phy signal voltage level.
 - fsl,phy_reg_cksymtx: hdmi phy register, clock symbol and transmitter control
@@ -11,6 +13,7 @@ Example:
 
 	hdmi_video {
 		compatible = "fsl,imx6q-hdmi-video";
+		fsl,hdcp;
 		fsl,phy_reg_vlev = <0x0294>;
 		fsl,phy_reg_cksymtx = <0x800d>;
 	};
