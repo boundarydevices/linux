@@ -42,10 +42,10 @@
 
 	mxcfb2: fb@1 {
 		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "ldb";
-		interface_pix_fmt = "RGB666";
-		mode_str ="LDB-XGA";
-		default_bpp = <16>;
+		disp_dev = "hdmi";
+		interface_pix_fmt = "RGB24";
+		mode_str ="1920x1080M@60";
+		default_bpp = <24>;
 		int_clk = <0>;
 		late_init = <0>;
 		status = "disabled";
@@ -71,16 +71,6 @@
 		int_clk = <0>;
 		late_init = <0>;
 		status = "disabled";
-	};
-
-	lcd@0 {
-		compatible = "fsl,lcd";
-		ipu_id = <0>;
-		disp_id = <0>;
-		default_ifmt = "RGB565";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ipu1_1>;
-		status = "okay";
 	};
 
 	backlight {
@@ -165,6 +155,11 @@
 		VD-supply = <&reg_audio>;
 		VLS-supply = <&reg_audio>;
 		VLC-supply = <&reg_audio>;
+	};
+
+	hdmi: edid@50 {
+		compatible = "fsl,imx6-hdmi-i2c";
+		reg = <0x50>;
 	};
 };
 
@@ -258,11 +253,11 @@
 
 &ldb {
 	ipu_id = <1>;
-	disp_id = <1>;
+	disp_id = <0>;
 	ext_ref = <1>;
 	mode = "sep0";
 	sec_ipu_id = <1>;
-	sec_disp_id = <0>;
+	sec_disp_id = <1>;
 	status = "okay";
 };
 
@@ -275,5 +270,23 @@
 &esai {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_esai_2>;
+	status = "okay";
+};
+
+&hdmi_core {
+	ipu_id = <0>;
+	disp_id = <1>;
+	status = "okay";
+};
+
+&hdmi_video {
+	fsl,phy_reg_vlev = <0x0294>;
+	fsl,phy_reg_cksymtx = <0x800d>;
+	status = "okay";
+};
+
+&hdmi_cec {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hdmi_cec_2>;
 	status = "okay";
 };
