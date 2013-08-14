@@ -318,6 +318,8 @@ struct fec_enet_private {
 	struct	napi_struct napi;
 	int	csum_flags;
 
+	int	phy_reset_gpio;
+
 	struct ptp_clock *ptp_clock;
 	struct ptp_clock_info ptp_caps;
 	unsigned long last_overflow_check;
