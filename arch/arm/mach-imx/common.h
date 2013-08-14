@@ -143,7 +143,6 @@ extern void imx_gpc_restore_all(void);
 extern void imx_anatop_init(void);
 extern void imx_anatop_pre_suspend(void);
 extern void imx_anatop_post_resume(void);
-extern void imx_anatop_usb_chrg_detect_disable(void);
 extern int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode);
 extern void imx6q_set_cache_lpm_in_wait(bool enable);
 
