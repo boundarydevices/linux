@@ -46,3 +46,14 @@ config FB_MXC_EDID
      depends on FB_MXC && I2C
      tristate "MXC EDID support"
      default y
+
+config FB_MXC_EINK_PANEL
+	depends on FB_MXC
+	depends on DMA_ENGINE
+	select FB_DEFERRED_IO
+	tristate "E-Ink Panel Framebuffer"
+
+config FB_MXC_EINK_AUTO_UPDATE_MODE
+    bool "E-Ink Auto-update Mode Support"
+    default n
+    depends on FB_MXC_EINK_PANEL
