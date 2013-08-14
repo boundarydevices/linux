@@ -191,7 +191,6 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 		val |= BM_CLPCR_VSTBY;
 		val |= BM_CLPCR_SBYOS;
 		imx6q_enable_wb(true);
-		imx6q_enable_rbc(true);
 		break;
 	default:
 		imx_gpc_irq_mask(&desc->irq_data);
