@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Freescale Semiconductor, Inc.
+ * Copyright (C) 2012-2013 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -68,8 +68,8 @@ int __init imx6q_cpuidle_init(void)
 	/* Need to enable SCU standby for entering WAIT modes */
 	imx_scu_standby_enable();
 
-	/* Set chicken bit to get a reliable WAIT mode support */
-	imx6q_set_chicken_bit();
+	/* Set cache lpm bit for reliable WAIT mode support */
+	imx6q_set_cache_lpm_in_wait(true);
 
 	return cpuidle_register(&imx6q_cpuidle_driver, NULL);
 }
