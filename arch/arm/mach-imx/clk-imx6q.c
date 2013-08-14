@@ -492,6 +492,9 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 		clk_set_rate(clk[pll3_pfd1_540m], 540000000);
 		clk_set_parent(clk[ipu1_sel], clk[pll3_pfd1_540m]);
 		clk_set_parent(clk[axi_sel], clk[pll3_pfd1_540m]);
+		/* set epdc/pxp axi clock to 200Mhz */
+		clk_set_parent(clk[ipu2_sel], clk[pll2_pfd2_396m]);
+		clk_set_rate(clk[ipu2], 200000000);
 	} else if (cpu_is_imx6q()) {
 		clk_set_parent(clk[ipu1_sel], clk[mmdc_ch0_axi]);
 		clk_set_parent(clk[ipu2_sel], clk[mmdc_ch0_axi]);
