@@ -62,18 +62,27 @@
 #define BM_CLPCR_MASK_L2CC_IDLE		(0x1 << 27)
 
 #define CGPR				0x64
-#define BM_CGPR_CHICKEN_BIT		(0x1 << 17)
+#define BM_CGPR_INT_MEM_CLK_LPM		(0x1 << 17)
 
 #define MX6Q_INT_IOMUXC			32
 
 static void __iomem *ccm_base;
 
-void imx6q_set_chicken_bit(void)
+void imx6q_set_cache_lpm_in_wait(bool enable)
 {
-	u32 val = readl_relaxed(ccm_base + CGPR);
+	if ((cpu_is_imx6q() && imx_get_soc_revision() >
+		IMX_CHIP_REVISION_1_1) ||
+		(cpu_is_imx6dl() && imx_get_soc_revision() >
+		IMX_CHIP_REVISION_1_0)) {
+		u32 val;
 
-	val |= BM_CGPR_CHICKEN_BIT;
-	writel_relaxed(val, ccm_base + CGPR);
+		val = readl_relaxed(ccm_base + CGPR);
+		if (enable)
+			val |= BM_CGPR_INT_MEM_CLK_LPM;
+		else
+			val &= ~BM_CGPR_INT_MEM_CLK_LPM;
+		writel_relaxed(val, ccm_base + CGPR);
+	}
 }
 
 static void imx6q_enable_rbc(bool enable)

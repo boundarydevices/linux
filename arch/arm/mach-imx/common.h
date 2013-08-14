@@ -145,7 +145,7 @@ extern void imx_anatop_pre_suspend(void);
 extern void imx_anatop_post_resume(void);
 extern void imx_anatop_usb_chrg_detect_disable(void);
 extern int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode);
-extern void imx6q_set_chicken_bit(void);
+extern void imx6q_set_cache_lpm_in_wait(bool enable);
 
 extern void imx_cpu_die(unsigned int cpu);
 extern int imx_cpu_kill(unsigned int cpu);
