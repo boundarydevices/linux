@@ -53,13 +53,14 @@ static struct device *gpc_dev;
 struct regulator *pu_reg;
 struct notifier_block nb;
 
-void imx_gpc_pre_suspend(void)
+void imx_gpc_pre_suspend(bool arm_power_off)
 {
 	void __iomem *reg_imr1 = gpc_base + GPC_IMR1;
 	int i;
 
-	/* Tell GPC to power off ARM core when suspend */
-	writel_relaxed(0x1, gpc_base + GPC_PGC_CPU_PDN);
+	if (arm_power_off)
+		/* Tell GPC to power off ARM core when suspend */
+		writel_relaxed(0x1, gpc_base + GPC_PGC_CPU_PDN);
 
 	for (i = 0; i < IMR_NUM; i++) {
 		gpc_saved_imrs[i] = readl_relaxed(reg_imr1 + i * 4);
