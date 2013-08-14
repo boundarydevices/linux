@@ -198,8 +198,6 @@ struct mxc_hdmi {
 	struct hdmi_phy_reg_config phy_config;
 
 	struct pinctrl *pinctrl;
-	struct pinctrl_state *pins_hdcp;
-	struct pinctrl_state *pins_cec;
 };
 
 static int hdmi_major;
