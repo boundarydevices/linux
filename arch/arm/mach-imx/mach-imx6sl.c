@@ -11,11 +11,30 @@
 #include <linux/irqchip.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
+#include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
+#include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
 
 #include "common.h"
 #include "hardware.h"
+
+static void __init imx6sl_fec_init(void)
+{
+	struct regmap *gpr;
+
+	/* set FEC clock from internal PLL clock source */
+	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6sl-iomuxc-gpr");
+	if (!IS_ERR(gpr)) {
+		regmap_update_bits(gpr, IOMUXC_GPR1,
+			IMX6SL_GPR1_FEC_CLOCK_MUX2_SEL_MASK, 0);
+		regmap_update_bits(gpr, IOMUXC_GPR1,
+			IMX6SL_GPR1_FEC_CLOCK_MUX1_SEL_MASK, 0);
+	} else
+		pr_err("failed to find fsl,imx6sl-iomux-gpr regmap\n");
+
+}
 
 static void __init imx6sl_init_machine(void)
 {
@@ -28,6 +47,8 @@ static void __init imx6sl_init_machine(void)
 		pr_warn("failed to initialize soc device\n");
 
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, parent);
+
+	imx6sl_fec_init();
 }
 
 static void __init imx6sl_init_irq(void)
