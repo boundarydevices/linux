@@ -1,0 +1,30 @@
+* Freescale MXC Electrophoretic Display Controller (EPDC)
+
+Required properties:
+- compatible: Should be "fsl,<chip>-epdc".  Supported chips include
+  imx6dl and imx6sl
+- reg: Address and length of the register set for EPDC
+- interrupts: Should contain EPDC interrupts
+- clocks: the clocks for EPDC
+- pinctrl-names: should be "default"
+- pinctrl-0: should be pinctrl_ipu1_1 or pinctrl_ipu2_1, which depends on the
+  IPU connected.
+- V3P3_supply: power supply for EPDC_PWRCTRL0 from pmic
+- VCOM_supply: power supply for EPDC_VCOM0 from pmic
+- DISPLAY_supply: power supply enable for pmic
+
+Examples:
+
+imx6_epdc@0x020f8000 {
+	compatible = "fsl,imx6dl-epdc";
+	reg = <0x020f8000 4000>;
+	interrupts = <0 97 0x04>;
+	clocks = <&clks 133>, <&clks 137>;  /* ipu2, ipu2_di1 */
+	clock-names = "epdc-axi", "epdc-pix";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_epdc_0>;
+	V3P3_supply = <&V3P3_reg>;
+	VCOM_supply = <&VCOM_reg>;
+	DISPLAY_supply = <&DISPLAY_reg>;
+	status = "disabled";
+};
