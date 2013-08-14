@@ -1,0 +1,20 @@
+Freescale imx GPC bindings
+
+Optional properties:
+- fsl,cpu_pupscr_sw2iso: for powering up CPU, number of 32K clock cycle PGC will wait before negating isolation signal.
+- fsl,cpu_pupscr_sw: for powering up CPU, number of 32K clock cycle PGC will wait before asserting isolation signal.
+- fsl,cpu_pdnscr_iso2sw: for powering down CPU, number of ipg clock cycle PGC will wait before negating isolation signal.
+- fsl,cpu_pdnscr_iso: for powering down CPU, number of ipg clock cycle PGC will wait before asserting isolation signal.
+
+These properties are for adjusting the GPC PGC CPU power up/down setting, if there is no such property in dts, then default
+value in GPC PGC registers will be used.
+
+
+Example:
+
+	&gpc {
+		fsl,cpu_pupscr_sw2iso = <0xf>;
+		fsl,cpu_pupscr_sw = <0xf>;
+		fsl,cpu_pdnscr_iso2sw = <0x1>;
+		fsl,cpu_pdnscr_iso = <0x1>;
+	};
