@@ -47,6 +47,7 @@ static int imx6q_pm_enter(suspend_state_t state)
 {
 	switch (state) {
 	case PM_SUSPEND_MEM:
+		imx6q_set_cache_lpm_in_wait(false);
 		imx6q_set_lpm(STOP_POWER_OFF);
 		imx_gpc_pre_suspend();
 		imx_anatop_pre_suspend();
@@ -56,6 +57,7 @@ static int imx6q_pm_enter(suspend_state_t state)
 		imx_smp_prepare();
 		imx_anatop_post_resume();
 		imx_gpc_post_resume();
+		imx6q_set_cache_lpm_in_wait(true);
 		imx6q_set_lpm(WAIT_CLOCKED);
 		break;
 	default:
