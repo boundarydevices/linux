@@ -1,0 +1,112 @@
+Maxim MAX17135 Voltage Regulator
+
+The MAX17135 is a complete power-management IC for E-paper displays that
+provides source- and gate-driver power supplies, a high-speed VCOM amplifier,
+and a temperature sensor. It is interfaced to the host controller using an
+i2c interface.
+
+Required properties :
+- compatible : "maxim,max17135"
+- reg: Specifies the i2c slave address of the pmic block.
+- vneg_pwrup: the timing for VNEG power up
+- gvee_pwrup: the timing for GVEE power up
+- vpos_pwrup: the timing for VPOS power up
+- gvdd_pwrup: the timing for GVDD power up
+- gvdd_pwrdn: the timing for GVDD power down
+- vpos_pwrdn: the timing for VPOS power down
+- gvee_pwrdn: the timing for GVEE power down
+- vneg_pwrdn: the timing for VNEG power down
+- gpio_pmic_pwrgood: gpio setting for EPDC_PWRSTAT
+- gpio_pmic_vcom_ctrl: gpio setting for EPDC_VCOM
+- gpio_pmic_wakeup: gpio setting for EPDC_PWRWAKEUP
+- gpio_pmic_v3p3: gpio setting for EPDC_PWRCTRL0
+- gpio_pmic_intr: gpio setting for EPDC_PWRINT
+
+Optional properties :
+- SENSOR-supply: the gpio regulator to control the supply for this chip
+
+
+Regulators: The regulators of max17135 that have to be instantiated should be
+included in a sub-node named 'regulators'. Regulator nodes included in this
+sub-node should be of the format as listed below.
+
+        regulator_name {
+                standard regulator bindings here
+        };
+
+Example:
+	max17135@48 {
+		compatible = "maxim,max17135";
+		reg = <0x48>;
+		vneg_pwrup = <1>;
+		gvee_pwrup = <1>;
+		vpos_pwrup = <2>;
+		gvdd_pwrup = <1>;
+		gvdd_pwrdn = <1>;
+		vpos_pwrdn = <2>;
+		gvee_pwrdn = <1>;
+		vneg_pwrdn = <1>;
+		SENSOR-supply = <&reg_sensor>;
+		gpio_pmic_pwrgood = <&gpio2 21 0>;
+		gpio_pmic_vcom_ctrl = <&gpio3 17 0>;
+		gpio_pmic_wakeup = <&gpio3 20 0>;
+		gpio_pmic_v3p3 = <&gpio2 20 0>;
+		gpio_pmic_intr = <&gpio2 25 0>;
+
+		regulators {
+			DISPLAY_reg: DISPLAY {
+				regulator-name = "DISPLAY";
+			};
+
+			GVDD_reg: GVDD {
+				regulator-name = "GVDD";
+				regulator-min-microvolt = <20000000>;
+				regulator-max-microvolt = <20000000>;
+			};
+
+			GVEE_reg: GVEE {
+				regulator-name = "GVEE";
+				/* 2's-compliment, -22000000 */
+				regulator-min-microvolt = <0xfeb04e80>;
+				regulator-max-microvolt = <0xfeb04e80>;
+			};
+
+			HVINN_reg: HVINN {
+				regulator-name = "HVINN";
+				/* 2's-compliment, -22000000 */
+				regulator-min-microvolt = <0xfeb04e80>;
+				regulator-max-microvolt = <0xfeb04e80>;
+			};
+
+			HVINP_reg: HVINP {
+				regulator-name = "HVINP";
+				regulator-min-microvolt = <20000000>;
+				regulator-max-microvolt = <20000000>;
+			};
+
+			VCOM_reg: VCOM {
+				regulator-name = "VCOM";
+				/* 2's-compliment, -4325000 */
+				regulator-min-microvolt = <0xffbe0178>;
+				/* 2's-compliment, -500000 */
+				regulator-max-microvolt = <0xfff85ee0>;
+			};
+
+			VNEG_reg: VNEG {
+				regulator-name = "VNEG";
+				/* 2's-compliment, -15000000 */
+				regulator-min-microvolt = <0xff1b1e40>;
+				regulator-max-microvolt = <0xff1b1e40>;
+			};
+
+			VPOS_reg: VPOS {
+				regulator-name = "VPOS";
+				regulator-min-microvolt = <15000000>;
+				regulator-max-microvolt = <15000000>;
+			};
+
+			V3P3_reg: V3P3 {
+				regulator-name = "V3P3";
+			};
+		};
+	};
