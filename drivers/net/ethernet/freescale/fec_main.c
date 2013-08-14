@@ -95,6 +95,8 @@ static void fec_free_reset_gpio(struct platform_device *pdev);
 #define FEC_QUIRK_HAS_CSUM		(1 << 5)
 /* Controller has hardware vlan support */
 #define FEC_QUIRK_HAS_VLAN		(1 << 6)
+/* Controller is FEC-MAC */
+#define FEC_QUIRK_FEC_MAC              (1 << 7)
 /* ENET IP errata ERR006358
  *
  * If the ready bit in the transmit buffer descriptor (TxBD[R]) is previously
@@ -117,7 +119,7 @@ static struct platform_device_id fec_devtype[] = {
 		.driver_data = 0,
 	}, {
 		.name = "imx25-fec",
-		.driver_data = FEC_QUIRK_USE_GASKET,
+		.driver_data = FEC_QUIRK_USE_GASKET | FEC_QUIRK_FEC_MAC,
 	}, {
 		.name = "imx27-fec",
 		.driver_data = 0,
@@ -487,7 +489,8 @@ fec_restart(struct net_device *ndev, int duplex)
 	 * enet-mac reset will reset mac address registers too,
 	 * so need to reconfigure it.
 	 */
-	if (id_entry->driver_data & FEC_QUIRK_ENET_MAC) {
+	if (id_entry->driver_data & FEC_QUIRK_ENET_MAC ||
+		id_entry->driver_data & FEC_QUIRK_FEC_MAC) {
 		memcpy(&temp_mac, ndev->dev_addr, ETH_ALEN);
 		writel(cpu_to_be32(temp_mac[0]), fep->hwp + FEC_ADDR_LOW);
 		writel(cpu_to_be32(temp_mac[1]), fep->hwp + FEC_ADDR_HIGH);
