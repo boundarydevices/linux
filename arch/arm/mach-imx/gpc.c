@@ -32,6 +32,12 @@
 #define GPC_PGC_GPU_SW_MASK		0x3f
 #define GPC_PGC_GPU_SW2ISO_SHIFT	8
 #define GPC_PGC_GPU_SW2ISO_MASK		0x3f
+#define GPC_PGC_CPU_PUPSCR	0x2a4
+#define GPC_PGC_CPU_PDNSCR	0x2a8
+#define GPC_PGC_CPU_SW_SHIFT		0
+#define GPC_PGC_CPU_SW_MASK		0x3f
+#define GPC_PGC_CPU_SW2ISO_SHIFT	8
+#define GPC_PGC_CPU_SW2ISO_MASK		0x3f
 #define GPC_CNTR		0x0
 #define GPC_CNTR_PU_UP_REQ_SHIFT	0x1
 #define GPC_CNTR_PU_DOWN_REQ_SHIFT	0x0
@@ -162,8 +168,8 @@ static void imx_pu_clk(bool enable)
 static void imx_gpc_pu_enable(bool enable)
 {
 	u32 rate, delay_us;
-	u32 gpu_pupscr_sw2iso, gpu_pdnscr_sw2iso;
-	u32 gpu_pupscr_sw, gpu_pdnscr_sw;
+	u32 gpu_pupscr_sw2iso, gpu_pdnscr_iso2sw;
+	u32 gpu_pupscr_sw, gpu_pdnscr_iso;
 
 	/* get ipg clk rate for PGC delay */
 	rate = clk_get_rate(ipg_clk);
@@ -204,13 +210,13 @@ static void imx_gpc_pu_enable(bool enable)
 		 * in PGC and powering down PU LDO , the counter of PU isolation
 		 * is based on ipg clk.
 		 */
-		gpu_pdnscr_sw2iso = (readl_relaxed(gpc_base +
+		gpu_pdnscr_iso2sw = (readl_relaxed(gpc_base +
 			GPC_PGC_GPU_PDNSCR) >> GPC_PGC_GPU_SW2ISO_SHIFT)
 			& GPC_PGC_GPU_SW2ISO_MASK;
-		gpu_pdnscr_sw = (readl_relaxed(gpc_base +
+		gpu_pdnscr_iso = (readl_relaxed(gpc_base +
 			GPC_PGC_GPU_PDNSCR) >> GPC_PGC_GPU_SW_SHIFT)
 			& GPC_PGC_GPU_SW_MASK;
-		delay_us = (gpu_pdnscr_sw2iso + gpu_pdnscr_sw) * 1000000
+		delay_us = (gpu_pdnscr_iso2sw + gpu_pdnscr_iso) * 1000000
 			/ rate + 1;
 		udelay(delay_us);
 	}
@@ -238,6 +244,9 @@ void __init imx_gpc_init(void)
 {
 	struct device_node *np;
 	int i;
+	u32 val;
+	u32 cpu_pupscr_sw2iso, cpu_pupscr_sw;
+	u32 cpu_pdnscr_iso2sw, cpu_pdnscr_iso;
 
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-gpc");
 	gpc_base = of_iomap(np, 0);
@@ -251,6 +260,40 @@ void __init imx_gpc_init(void)
 	gic_arch_extn.irq_mask = imx_gpc_irq_mask;
 	gic_arch_extn.irq_unmask = imx_gpc_irq_unmask;
 	gic_arch_extn.irq_set_wake = imx_gpc_irq_set_wake;
+
+	/*
+	 * If there are CPU isolation timing settings in dts,
+	 * update them according to dts, otherwise, keep them
+	 * with default value in registers.
+	 */
+	cpu_pupscr_sw2iso = cpu_pupscr_sw =
+		cpu_pdnscr_iso2sw = cpu_pdnscr_iso = 0;
+
+	/* Read CPU isolation setting for GPC */
+	of_property_read_u32(np, "fsl,cpu_pupscr_sw2iso", &cpu_pupscr_sw2iso);
+	of_property_read_u32(np, "fsl,cpu_pupscr_sw", &cpu_pupscr_sw);
+	of_property_read_u32(np, "fsl,cpu_pdnscr_iso2sw", &cpu_pdnscr_iso2sw);
+	of_property_read_u32(np, "fsl,cpu_pdnscr_iso", &cpu_pdnscr_iso);
+
+	/* Update CPU PUPSCR timing if it is defined in dts */
+	val = readl_relaxed(gpc_base + GPC_PGC_CPU_PUPSCR);
+	if (cpu_pupscr_sw2iso)
+		val &= ~(GPC_PGC_CPU_SW2ISO_MASK << GPC_PGC_CPU_SW2ISO_SHIFT);
+	if (cpu_pupscr_sw)
+		val &= ~(GPC_PGC_CPU_SW_MASK << GPC_PGC_CPU_SW_SHIFT);
+	val |= cpu_pupscr_sw2iso << GPC_PGC_CPU_SW2ISO_SHIFT;
+	val |= cpu_pupscr_sw << GPC_PGC_CPU_SW_SHIFT;
+	writel_relaxed(val, gpc_base + GPC_PGC_CPU_PUPSCR);
+
+	/* Update CPU PDNSCR timing if it is defined in dts */
+	val = readl_relaxed(gpc_base + GPC_PGC_CPU_PDNSCR);
+	if (cpu_pdnscr_iso2sw)
+		val &= ~(GPC_PGC_CPU_SW2ISO_MASK << GPC_PGC_CPU_SW2ISO_SHIFT);
+	if (cpu_pdnscr_iso)
+		val &= ~(GPC_PGC_CPU_SW_MASK << GPC_PGC_CPU_SW_SHIFT);
+	val |= cpu_pdnscr_iso2sw << GPC_PGC_CPU_SW2ISO_SHIFT;
+	val |= cpu_pdnscr_iso << GPC_PGC_CPU_SW_SHIFT;
+	writel_relaxed(val, gpc_base + GPC_PGC_CPU_PDNSCR);
 }
 
 static int imx_gpc_probe(struct platform_device *pdev)
