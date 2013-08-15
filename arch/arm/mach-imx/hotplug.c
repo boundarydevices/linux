@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Freescale Semiconductor, Inc.
+ * Copyright 2011, 2013 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -52,7 +52,8 @@ void imx_cpu_die(unsigned int cpu)
 	 * the register being cleared to kill the cpu.
 	 */
 	imx_set_cpu_arg(cpu, ~0);
-	cpu_do_idle();
+	for (;;)
+		cpu_do_idle();
 }
 
 int imx_cpu_kill(unsigned int cpu)
