@@ -41,6 +41,17 @@
 #include "cpuidle.h"
 #include "hardware.h"
 
+/*
+ * The length's determined by PINFUNC definition's length.
+ * To check the length, see: arch/arm/boot/dts/imx6q-pinfunc.h
+ * And the real pinctrl length should be (PINFUNC length + 1),
+ * because there's a functional value behind each PINCTRL
+ */
+#define LEN_OF_PINCTRL	(sizeof(u32) * 6)
+
+#define IMX6Q_C_ERR(fmt, ...) \
+	pr_err("mach-imx6q.c ERROR: %s: " fmt, __func__, ##__VA_ARGS__)
+
 static void imx6q_restart(char mode, const char *cmd)
 {
 	struct device_node *np;
@@ -154,9 +165,96 @@ static void __init imx6q_enet_phy_init(void)
 	}
 }
 
+static void remove_one_pin_from_node(const char *path,
+			   const char *phandle_name,
+			   const char *name,
+			   u32 pin)
+{
+	struct device_node *np, *pinctrl;
+	struct property *pbase;
+	struct property *poldbase;
+	u32 *psize;
+	int i = 0, j = 0, k;
+
+	np = of_find_node_by_path(path);
+	if (!np) {
+		IMX6Q_C_ERR("No such path: %s\n", path);
+		return;
+	}
+
+	pinctrl = of_parse_phandle(np, phandle_name, 0);
+	if (!phandle_name) {
+		IMX6Q_C_ERR("No such phandle name: %s\n", phandle_name);
+		return;
+	}
+
+	poldbase = of_find_property(pinctrl, name, NULL);
+	if (!poldbase) {
+		IMX6Q_C_ERR("No such property name: %s\n", name);
+		return;
+	}
+
+	pbase = kzalloc(sizeof(*pbase)
+			+ poldbase->length - 8, GFP_KERNEL);
+	if (!pbase) {
+		IMX6Q_C_ERR("No MEMORY to allocate new pbase\n");
+		return;
+	}
+
+	psize = (u32 *)(pbase + 1);
+	pbase->length = poldbase->length - LEN_OF_PINCTRL;
+	pbase->name = kstrdup(poldbase->name, GFP_KERNEL);
+	if (!pbase->name) {
+		IMX6Q_C_ERR("Invalid pbase->name\n");
+		kfree(pbase);
+		return;
+	}
+
+	pbase->value = psize;
+	for ( ; j < poldbase->length; i += LEN_OF_PINCTRL,
+			j += LEN_OF_PINCTRL) {
+		if (cpu_to_be32(pin) == *(u32 *)(poldbase->value + j)) {
+			i -= LEN_OF_PINCTRL;
+			continue;
+		}
+		for (k = 0; k < LEN_OF_PINCTRL; k += sizeof(u32))
+			*(u32 *)(pbase->value + i + k) =
+				*(u32 *)(poldbase->value + j + k);
+	}
+
+	if (i < j) {
+		/* Only update the property if found the pin */
+		of_update_property(pinctrl, pbase);
+	} else {
+		IMX6Q_C_ERR("No such pin 0x%x in %s\n", pin, path);
+		kfree(pbase);
+	}
+}
+
 static void __init imx6q_1588_init(void)
 {
 	struct regmap *gpr;
+	struct device_node *np;
+	int ret;
+	u32 val;
+
+	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-fec");
+	if (!np) {
+		pr_warn("failed to find fec node\n");
+		return;
+	}
+
+	ret = of_property_read_u32(np, "ptp-enable", &val);
+
+	if (!val || ret) {
+		if (of_machine_is_compatible("fsl,imx6q"))
+			remove_one_pin_from_node("/soc/aips-bus@02100000/ethernet@02188000",
+				"pinctrl-0", "fsl,pins", 0x248);
+		else if (of_machine_is_compatible("fsl,imx6dl"))
+			remove_one_pin_from_node("/soc/aips-bus@02100000/ethernet@02188000",
+				"pinctrl-0", "fsl,pins", 0x214);
+		return;
+	}
 
 	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
 	if (!IS_ERR(gpr))
@@ -166,7 +264,16 @@ static void __init imx6q_1588_init(void)
 	else
 		pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
 
+	/* arm2 and Sabrelite GPIO_16 is shared by 1588, i2c3 SDA, and spdif_en
+	 * if enable PTP, cancel the pinctrl for i2c sda and disable spdif_en
+	 */
+	if (of_machine_is_compatible("fsl,imx6q-sabrelite") ||
+		of_machine_is_compatible("fsl,imx6q-arm2"))
+		/* Cancel GPIO_16(0x248) for I2C3 SDA config */
+		remove_one_pin_from_node("/soc/aips-bus@02100000/i2c@021a8000",
+		"pinctrl-0", "fsl,pins", 0x248);
 }
+
 static void __init imx6q_usb_init(void)
 {
 	imx_anatop_usb_chrg_detect_disable();
