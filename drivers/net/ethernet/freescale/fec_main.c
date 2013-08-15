@@ -197,6 +197,8 @@ MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
 #define FEC_ENET_RXB	((uint)0x01000000)	/* A buffer was received */
 #define FEC_ENET_MII	((uint)0x00800000)	/* MII interrupt */
 #define FEC_ENET_EBERR	((uint)0x00400000)	/* SDMA bus error */
+#define FEC_ENET_TS_AVAIL       ((uint)0x00010000)
+#define FEC_ENET_TS_TIMER       ((uint)0x00008000)
 
 #define FEC_DEFAULT_IMASK (FEC_ENET_TXF | FEC_ENET_RXF | FEC_ENET_MII)
 #define FEC_RX_DISABLED_IMASK (FEC_DEFAULT_IMASK & (~FEC_ENET_RXF))
@@ -369,7 +371,8 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		struct bufdesc_ex *ebdp = (struct bufdesc_ex *)bdp;
 		ebdp->cbd_bdu = 0;
 		if (unlikely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP &&
-			fep->hwts_tx_en)) {
+			fep->hwts_tx_en) || unlikely(fep->hwts_tx_en_ioctl &&
+						fec_ptp_do_txstamp(skb))) {
 			ebdp->cbd_esc = (BD_ENET_TX_TS | BD_ENET_TX_INT);
 			skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
 		} else {
@@ -645,8 +648,13 @@ fec_restart(struct net_device *ndev, int duplex)
 	writel(ecntl, fep->hwp + FEC_ECNTRL);
 	writel(0, fep->hwp + FEC_R_DES_ACTIVE);
 
-	if (fep->bufdesc_ex)
+	if (fep->bufdesc_ex) {
 		fec_ptp_start_cyclecounter(ndev);
+		/* Enable interrupts we wish to service */
+		writel(FEC_DEFAULT_IMASK | FEC_ENET_TS_AVAIL |
+			FEC_ENET_TS_TIMER, fep->hwp + FEC_IMASK);
+	} else
+		writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
 
 	/* Enable interrupts we wish to service */
 	writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
@@ -680,6 +688,11 @@ fec_stop(struct net_device *ndev)
 	udelay(10);
 	writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
 	writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
+
+	if (fep->bufdesc_ex && (fep->hwts_tx_en_ioctl ||
+		fep->hwts_rx_en_ioctl || fep->hwts_tx_en ||
+		fep->hwts_rx_en))
+		fec_ptp_stop(ndev);
 
 	/* We have to keep ENET enabled to have MII interrupt stay working */
 	if (id_entry->driver_data & FEC_QUIRK_ENET_MAC) {
@@ -775,8 +788,8 @@ fec_enet_tx(struct net_device *ndev)
 			ndev->stats.tx_bytes += bdp->cbd_datlen;
 		}
 
-		if (unlikely(skb_shinfo(skb)->tx_flags & SKBTX_IN_PROGRESS) &&
-			fep->bufdesc_ex) {
+		if (unlikely((skb_shinfo(skb)->tx_flags & SKBTX_IN_PROGRESS) &&
+				fep->hwts_tx_en) && fep->bufdesc_ex) {
 			struct skb_shared_hwtstamps shhwtstamps;
 			unsigned long flags;
 			struct bufdesc_ex *ebdp = (struct bufdesc_ex *)bdp;
@@ -787,7 +800,8 @@ fec_enet_tx(struct net_device *ndev)
 				timecounter_cyc2time(&fep->tc, ebdp->ts));
 			spin_unlock_irqrestore(&fep->tmreg_lock, flags);
 			skb_tstamp_tx(skb, &shhwtstamps);
-		}
+		} else if (unlikely(fep->hwts_tx_en_ioctl) && fep->bufdesc_ex)
+			fec_ptp_store_txstamp(fep, skb, bdp);
 
 		if (status & BD_ENET_TX_READY)
 			netdev_err(ndev, "HEY! Enet xmit interrupt and TX_READY\n");
@@ -944,8 +958,6 @@ fec_enet_rx(struct net_device *ndev, int budget)
 						       data + payload_offset,
 						       pkt_len - 4 - (2 * ETH_ALEN));
 
-			skb->protocol = eth_type_trans(skb, ndev);
-
 			/* Get receive timestamp from the skb */
 			if (fep->hwts_rx_en && fep->bufdesc_ex) {
 				struct skb_shared_hwtstamps *shhwtstamps =
@@ -958,8 +970,11 @@ fec_enet_rx(struct net_device *ndev, int budget)
 				shhwtstamps->hwtstamp = ns_to_ktime(
 				    timecounter_cyc2time(&fep->tc, ebdp->ts));
 				spin_unlock_irqrestore(&fep->tmreg_lock, flags);
-			}
+			} else if (unlikely(fep->hwts_rx_en_ioctl) &&
+					fep->bufdesc_ex)
+				fec_ptp_store_rxstamp(fep, skb, bdp);
 
+			skb->protocol = eth_type_trans(skb, ndev);
 			if (fep->bufdesc_ex &&
 			    (fep->csum_flags & FLAG_RX_CSUM_ENABLED)) {
 				if (!(ebdp->cbd_esc & FLAG_RX_CSUM_ERROR)) {
@@ -1035,6 +1050,12 @@ fec_enet_interrupt(int irq, void *dev_id)
 					fep->hwp + FEC_IMASK);
 				__napi_schedule(&fep->napi);
 			}
+		}
+
+		if ((int_events & FEC_ENET_TS_TIMER) && fep->bufdesc_ex) {
+			ret = IRQ_HANDLED;
+			if (fep->hwts_tx_en_ioctl || fep->hwts_rx_en_ioctl)
+				fep->prtc++;
 		}
 
 		if (int_events & FEC_ENET_MII) {
@@ -1656,8 +1677,11 @@ static int fec_enet_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 	if (!phydev)
 		return -ENODEV;
 
-	if (cmd == SIOCSHWTSTAMP && fep->bufdesc_ex)
+	if (((cmd == SIOCSHWTSTAMP) || ((cmd >= PTP_ENBL_TXTS_IOCTL) &&
+		(cmd <= PTP_FLUSH_TIMESTAMP))) && fep->bufdesc_ex)
 		return fec_ptp_ioctl(ndev, rq, cmd);
+	else if (fep->bufdesc_ex)
+		return -ENODEV;
 
 	return phy_mii_ioctl(phydev, rq, cmd);
 }
@@ -2255,7 +2279,10 @@ fec_drv_remove(struct platform_device *pdev)
 	cancel_delayed_work_sync(&(fep->delay_work.delay_work));
 	unregister_netdev(ndev);
 	fec_enet_mii_remove(fep);
-	del_timer_sync(&fep->time_keep);
+	if (fep->bufdesc_ex) {
+		fec_ptp_cleanup(fep);
+		del_timer_sync(&fep->time_keep);
+	}
 	for (i = 0; i < FEC_IRQ_NUM; i++) {
 		int irq = platform_get_irq(pdev, i);
 		if (irq > 0)
@@ -2263,9 +2290,11 @@ fec_drv_remove(struct platform_device *pdev)
 	}
 	if (fep->reg_phy)
 		regulator_disable(fep->reg_phy);
-	clk_disable_unprepare(fep->clk_ptp);
-	if (fep->ptp_clock)
-		ptp_clock_unregister(fep->ptp_clock);
+	if (fep->bufdesc_ex) {
+		clk_disable_unprepare(fep->clk_ptp);
+		if (fep->ptp_clock)
+			ptp_clock_unregister(fep->ptp_clock);
+	}
 	clk_disable_unprepare(fep->clk_enet_out);
 	clk_disable_unprepare(fep->clk_ahb);
 	clk_disable_unprepare(fep->clk_ipg);
