@@ -722,16 +722,6 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 		}
 
 		dev_dbg(&ldb->pdev->dev, "ldb_clk to di clk: %s -> %s\n", ldb_clk, di_clk);
-
-		/* fb notifier for clk setting */
-		ldb->nb.notifier_call = ldb_fb_event,
-		ret = fb_register_client(&ldb->nb);
-		if (ret < 0) {
-			iounmap(ldb->reg);
-			return ret;
-		}
-
-		ldb->inited = true;
 	} else { /* second time for separate mode */
 		char di_clk[] = "ipu1_di0_sel";
 		char ldb_clk[] = "ldb_di0";
@@ -823,18 +813,6 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 	if (is_imx6_ldb(plat_data))
 		ldb_ipu_ldb_route(setting->dev_id, setting->disp_id, ldb);
 
-	/*
-	 * ldb_di0_clk -> ipux_di0_clk
-	 * ldb_di1_clk -> ipux_di1_clk
-	 */
-	ret = clk_set_parent(ldb->setting[setting_idx].di_clk,
-			ldb->setting[setting_idx].ldb_di_clk);
-	if (ret < 0) {
-		dev_err(&ldb->pdev->dev, "fail: set ldb_di clk as"
-			"the parent of ipu_di clk ret:%d!\n", ret);
-		return ret;
-	}
-
 	/* must use spec video mode defined by driver */
 	ret = fb_find_mode(&setting->fbi->var, setting->fbi, setting->dft_mode_str,
 				ldb_modedb, ldb_modedb_sz, NULL, setting->default_bpp);
@@ -852,11 +830,36 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 		}
 	}
 
-	/* save current ldb setting for fb notifier */
-	ldb->setting[setting_idx].active = true;
 	ldb->setting[setting_idx].ipu = setting->dev_id;
 	ldb->setting[setting_idx].di = setting->disp_id;
 
+	return ret;
+}
+
+static int ldb_post_disp_init(struct mxc_dispdrv_handle *disp,
+				int ipu_id, int disp_id)
+{
+	struct ldb_data *ldb = mxc_dispdrv_getdata(disp);
+	int setting_idx = ldb->inited ? 1 : 0;
+	int ret = 0;
+
+	if (!ldb->inited) {
+		ldb->nb.notifier_call = ldb_fb_event;
+		fb_register_client(&ldb->nb);
+	}
+
+	ret = clk_set_parent(ldb->setting[setting_idx].di_clk,
+			ldb->setting[setting_idx].ldb_di_clk);
+	if (ret) {
+		dev_err(&ldb->pdev->dev, "fail to set ldb_di clk as"
+			"the parent of ipu_di clk\n");
+		return ret;
+	}
+
+	/* save active ldb setting for fb notifier */
+	ldb->setting[setting_idx].active = true;
+
+	ldb->inited = true;
 	return ret;
 }
 
@@ -880,6 +883,7 @@ static void ldb_disp_deinit(struct mxc_dispdrv_handle *disp)
 static struct mxc_dispdrv_driver ldb_drv = {
 	.name 	= DISPDRV_LDB,
 	.init 	= ldb_disp_init,
+	.post_init = ldb_post_disp_init,
 	.deinit	= ldb_disp_deinit,
 	.setup = ldb_disp_setup,
 };
