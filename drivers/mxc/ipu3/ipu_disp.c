@@ -2773,6 +2773,7 @@ int32_t ipu_disp_set_color_key(struct ipu_soc *ipu, ipu_channel_t channel,
 		ipu_dp_write(ipu, reg | color_key, DP_GRAPH_WIND_CTRL(flow));
 
 		reg = ipu_dp_read(ipu, DP_COM_CONF(flow));
+		reg &= ~DP_COM_CONF_GWAM;
 		ipu_dp_write(ipu, reg | DP_COM_CONF_GWCKE, DP_COM_CONF(flow));
 	} else {
 		reg = ipu_dp_read(ipu, DP_COM_CONF(flow));
