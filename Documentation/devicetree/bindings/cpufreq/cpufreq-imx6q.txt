@@ -1,0 +1,59 @@
+iMX6q/iMX6dl/iMX6sl specific CPUFREQ settings
+
+iMX6q/iMX6dl/iMX6sl has limitation that a couple of voltage rails (VDDSOC_CAP and VDDPU_CAP)
+must track VDDARM_CAP within 50mV:
+VDDARM_CAP - VDDSOC_CAP/VDDPU_CAP <= 50mV
+
+The VDDSOC_CAP and VDDPU_CAP operating points for various VDDARM_CAP settings are listed below.
+
+Required properties:
+- fsl,soc-operating-points: Refer to Documentation/devicetree/bindings/power/opp.txt
+  for details. It is a voltage frequency tuple.
+
+- For other entries in the example below please refer to Documentation/devicetree/bindings/cpufreq/cpufreq-cpu0.txt
+
+Examples:
+
+cpus {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	cpu@0 {
+		compatible = "arm,cortex-a9";
+		reg = <0>;
+		next-level-cache = <&L2>;
+		operating-points = <
+			/* kHz    uV */
+			1200000 1275000
+			996000  1250000
+			792000  1175000
+			396000  1075000
+		>;
+		fsl,soc-operating-points = <
+			/* ARM kHz  SOC-PU uV */
+			1200000       1275000
+			996000        1250000
+			792000        1175000
+			396000        1175000
+		>;
+		clock-latency = <61036>; /* two CLK32 periods */
+	};
+
+	cpu@1 {
+		compatible = "arm,cortex-a9";
+		reg = <1>;
+		next-level-cache = <&L2>;
+	};
+
+	cpu@2 {
+		compatible = "arm,cortex-a9";
+		reg = <2>;
+		next-level-cache = <&L2>;
+	};
+
+	cpu@3 {
+		compatible = "arm,cortex-a9";
+		reg = <3>;
+		next-level-cache = <&L2>;
+	};
+};
