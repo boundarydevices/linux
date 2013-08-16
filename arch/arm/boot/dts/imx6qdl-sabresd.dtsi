@@ -175,7 +175,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet_1>;
 	phy-mode = "rgmii";
-	ptp-enable = <1>;
 	status = "okay";
 };
 
