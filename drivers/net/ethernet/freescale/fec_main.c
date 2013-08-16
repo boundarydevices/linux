@@ -62,7 +62,6 @@
 
 static void set_multicast_list(struct net_device *ndev);
 static void fec_reset_phy(struct platform_device *pdev);
-static void fec_free_reset_gpio(struct platform_device *pdev);
 
 #if defined(CONFIG_ARM)
 #define FEC_ALIGNMENT	0xf
@@ -1813,7 +1812,6 @@ fec_enet_close(struct net_device *ndev)
 	}
 
 	fec_enet_free_buffers(ndev);
-	fec_free_reset_gpio(fep->pdev);
 
 	return 0;
 }
@@ -2039,22 +2037,27 @@ static int fec_enet_init(struct net_device *ndev)
 	return 0;
 }
 
-#ifdef CONFIG_OF
-static void fec_reset_phy(struct platform_device *pdev)
+static void fec_of_init(struct platform_device *pdev)
 {
-	int err;
-	int msec = 1;
 	struct device_node *np = pdev->dev.of_node;
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct fec_enet_private *fep = netdev_priv(ndev);
+	int err;
+
+	/*
+	 * init phy-reset-gpio to one invalid GPIO for no phy
+	 * gpio reset platform
+	 */
+	fep->phy_reset_gpio = -1;
 
 	if (!np)
 		return;
 
-	of_property_read_u32(np, "phy-reset-duration", &msec);
+	of_property_read_u32(np, "phy-reset-duration",
+				 &fep->reset_duration);
 	/* A sane reset duration should not be longer than 1s */
-	if (msec > 1000)
-		msec = 1;
+	if ((fep->reset_duration > 1000) || (fep->reset_duration == 0))
+		fep->reset_duration = 1;
 
 	fep->phy_reset_gpio = of_get_named_gpio(np, "phy-reset-gpios", 0);
 	if (!gpio_is_valid(fep->phy_reset_gpio))
@@ -2064,42 +2067,22 @@ static void fec_reset_phy(struct platform_device *pdev)
 				    GPIOF_OUT_INIT_LOW, "phy-reset");
 	if (err) {
 		dev_err(&pdev->dev, "failed to get phy-reset-gpios: %d\n", err);
-		return;
+		fep->phy_reset_gpio = -1;
 	}
-	msleep(msec);
-	gpio_set_value(fep->phy_reset_gpio, 1);
 }
 
-static void fec_free_reset_gpio(struct platform_device *pdev)
+static void fec_reset_phy(struct platform_device *pdev)
 {
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct fec_enet_private *fep = netdev_priv(ndev);
-	struct device_node *np = pdev->dev.of_node;
-	if (!np)
-		return;
 
-	fep->phy_reset_gpio = of_get_named_gpio(np, "phy-reset-gpios", 0);
-	if (!gpio_is_valid(fep->phy_reset_gpio))
-		return;
-
-	devm_gpio_free(&pdev->dev, fep->phy_reset_gpio);
+	/* check GPIO valid to avoid kernel print warning when no gpio reset */
+	if (gpio_is_valid(fep->phy_reset_gpio)) {
+		gpio_set_value(fep->phy_reset_gpio, 0);
+		msleep(fep->reset_duration);
+		gpio_set_value(fep->phy_reset_gpio, 1);
+	}
 }
-#else /* CONFIG_OF */
-static void fec_reset_phy(struct platform_device *pdev)
-{
-	/*
-	 * In case of platform probe, the reset has been done
-	 * by machine code.
-	 */
-}
-
-static void fec_free_reset_gpio(struct platform_device *pdev)
-{
-	/*
-	 * make pair as api "fec_reset_phy()"
-	 */
-}
-#endif /* CONFIG_OF */
 
 static int
 fec_probe(struct platform_device *pdev)
@@ -2150,6 +2133,7 @@ fec_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, ndev);
 
+	fec_of_init(pdev);
 	ret = of_get_phy_mode(pdev->dev.of_node);
 	if (ret < 0) {
 		pdata = pdev->dev.platform_data;
