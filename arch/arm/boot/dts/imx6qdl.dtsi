@@ -1494,10 +1494,6 @@
 				reg = <0x021dc000 0x4000>;
 			};
 
-			mipi@021e0000 { /* MIPI-DSI */
-				reg = <0x021e0000 0x4000>;
-			};
-
 			vdoa@021e4000 {
 				compatible = "fsl,imx6q-vdoa";
 				reg = <0x021e4000 0x4000>;
