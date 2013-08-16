@@ -59,6 +59,10 @@ Required properties for fb:
 
 Required properties for display:
 - compatible : should be "fsl,lcd" for lcd panel, "fsl,imx6q-ldb" for ldb
+- reg : the register address range if necessary to have.
+- interrupts : the error and sync interrupts if necessary to have.
+- clocks : the clock sources that it depends on if necessary to have.
+- clock-names: the related clock names if necessary to have.
 - ipu_id : ipu id for the first display device: 0 or 1
 - disp_id : display interface id for the first display interface: 0 or 1
 - default_ifmt : save as above display interface pixel format for lcd
@@ -78,6 +82,14 @@ Required properties for display:
 	sin1		LDB_SIN1
 	sep0		LDB_SEP0
 	sep1		LDB_SEP1
+- gpr : the mux controller for the display engine's display interfaces and the display encoder
+	(only valid for mipi dsi now).
+- disp-power-on-supply : the regulator to control display panel's power.
+			(only valid for mipi dsi now).
+- resets : the gpio pin to reset the display device(only valid for mipi display panel now).
+- lcd_panel : the video mode name for the display device(only valid for mipi display panel now).
+- dev_id : the display engine's identity within the system, which intends to replace ipu_id
+	   (only valid for mipi dsi now).
 
 Example for IPU:
 		ipu1: ipu@02400000 {
@@ -114,5 +126,21 @@ Example for ldb display:
 			mode = "sep0";
 			sec_ipu_id = <1>;
 			sec_disp_id = <1>;
+			status = "okay";
+		};
+
+Example for mipi dsi display:
+		mipi_dsi: mipi@021e0000 {
+			compatible = "fsl,imx6q-mipi-dsi";
+			reg = <0x021e0000 0x4000>;
+			interrupts = <0 102 0x04>;
+			gpr = <&gpr>;
+			clocks = <&clks 138>, <&clks 204>;
+			clock-names = "mipi_pllref_clk", "mipi_cfg_clk";
+			dev_id = <0>;
+			disp_id = <0>;
+			lcd_panel = "TRULY-WVGA";
+			disp-power-on-supply = <&reg_mipi_dsi_pwr_on>
+			resets = <&mipi_dsi_reset>;
 			status = "okay";
 		};
