@@ -32,3 +32,10 @@
 &mxcfb2 {
 	status = "okay";
 };
+
+&battery {
+	offset-charger = <1485>;
+	offset-discharger = <1464>;
+	offset-usb-charger = <1285>;
+};
+
