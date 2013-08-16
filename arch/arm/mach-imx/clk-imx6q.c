@@ -284,7 +284,7 @@ enum mx6q_clks {
 	ssi2_ipg, ssi3_ipg, rom, usbphy1, usbphy2, ldb_di0_div_3_5, ldb_di1_div_3_5,
 	sata_ref, sata_ref_100m, pcie_ref, pcie_ref_125m, enet_ref, usbphy1_gate,
 	usbphy2_gate, pll4_post_div, pll5_post_div, pll5_video_div, eim_slow,
-	spdif, cko2_sel, cko2_podf, cko2, cko, vdoa, gpt_3m, clk_max
+	spdif, cko2_sel, cko2_podf, cko2, cko, vdoa, gpt_3m, video_27m, clk_max
 };
 
 static struct clk *clk[clk_max];
@@ -391,6 +391,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	clk[pll3_60m]  = imx_clk_fixed_factor("pll3_60m",  "pll3_usb_otg",   1, 8);
 	clk[twd]       = imx_clk_fixed_factor("twd",       "arm",            1, 2);
 	clk[gpt_3m]    = imx_clk_fixed_factor("gpt_3m",    "osc",            1, 8);
+	clk[video_27m] = imx_clk_fixed_factor("video_27m", "pll3_pfd1_540m", 1, 20);
 
 	clk[pll4_post_div] = clk_register_divider_table(NULL, "pll4_post_div", "pll4_audio", CLK_SET_RATE_PARENT, base + 0x70, 19, 2, 0, post_div_table, &imx_ccm_lock);
 	clk[pll5_post_div] = clk_register_divider_table(NULL, "pll5_post_div", "pll5_video", CLK_SET_RATE_PARENT, base + 0xa0, 19, 2, 0, post_div_table, &imx_ccm_lock);
