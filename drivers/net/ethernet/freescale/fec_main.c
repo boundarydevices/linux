@@ -2064,7 +2064,7 @@ static void fec_of_init(struct platform_device *pdev)
 		return;
 
 	err = devm_gpio_request_one(&pdev->dev, fep->phy_reset_gpio,
-				    GPIOF_OUT_INIT_LOW, "phy-reset");
+				    GPIOF_OUT_INIT_HIGH, "phy-reset");
 	if (err) {
 		dev_err(&pdev->dev, "failed to get phy-reset-gpios: %d\n", err);
 		fep->phy_reset_gpio = -1;
