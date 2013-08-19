@@ -534,6 +534,7 @@
 				interrupts = <0 49 0x04>;
 				fsl,tempmon = <&anatop>;
 				fsl,tempmon-data = <&ocotp>;
+				clocks = <&clks 172>;
 			};
 
 			usbphy1: usbphy@020c9000 {
