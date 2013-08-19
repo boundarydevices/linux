@@ -7,6 +7,7 @@
  *
  */
 
+#include <linux/clk.h>
 #include <linux/cpu_cooling.h>
 #include <linux/cpufreq.h>
 #include <linux/delay.h>
@@ -77,6 +78,7 @@ struct imx_thermal_data {
 	struct regmap *tempmon;
 	unsigned long trip_temp[IMX_TRIP_NUM];
 	u32 c1, c2; /* See formula in imx_get_sensor_data() */
+	struct clk *thermal_clk;
 };
 
 static int imx_get_temp(struct thermal_zone_device *tz, unsigned long *temp)
@@ -87,6 +89,7 @@ static int imx_get_temp(struct thermal_zone_device *tz, unsigned long *temp)
 	unsigned int n_meas;
 	u32 val;
 
+	clk_prepare_enable(data->thermal_clk);
 	/*
 	 * Every time we measure the temperature, we will power on the
 	 * temperature sensor, enable measurements, take a reading,
@@ -119,6 +122,8 @@ static int imx_get_temp(struct thermal_zone_device *tz, unsigned long *temp)
 		dev_dbg(&tz->device, "millicelsius: %ld\n", *temp);
 		last_temp = *temp;
 	}
+
+	clk_disable_unprepare(data->thermal_clk);
 
 	return 0;
 }
@@ -341,6 +346,13 @@ static int imx_thermal_probe(struct platform_device *pdev)
 	ret = imx_get_sensor_data(pdev);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to get sensor data\n");
+		return ret;
+	}
+
+	data->thermal_clk = devm_clk_get(&pdev->dev, NULL);
+	ret = IS_ERR(data->thermal_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to get thermal clk!\n");
 		return ret;
 	}
 
