@@ -33,6 +33,11 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c1_1>;
 	status = "okay";
+
+	mma8450@1c {
+		compatible = "fsl,mma8450";
+		reg = <0x1c>;
+	};
 };
 
 &i2c2 {
