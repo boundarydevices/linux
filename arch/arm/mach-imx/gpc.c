@@ -22,6 +22,7 @@
 #include <linux/irqchip/arm-gic.h>
 #include <linux/regulator/consumer.h>
 #include "common.h"
+#include "hardware.h"
 
 #define GPC_IMR1		0x008
 #define GPC_PGC_CPU_PDN		0x2a0
@@ -150,19 +151,29 @@ void imx_gpc_irq_mask(struct irq_data *d)
 static void imx_pu_clk(bool enable)
 {
 	if (enable) {
-		clk_prepare_enable(gpu3d_clk);
-		clk_prepare_enable(gpu3d_shader_clk);
-		clk_prepare_enable(vpu_clk);
-		clk_prepare_enable(gpu2d_clk);
-		clk_prepare_enable(gpu2d_axi_clk);
-		clk_prepare_enable(openvg_axi_clk);
+		if (cpu_is_imx6sl()) {
+			clk_prepare_enable(gpu2d_clk);
+			clk_prepare_enable(openvg_axi_clk);
+		} else {
+			clk_prepare_enable(gpu3d_clk);
+			clk_prepare_enable(gpu3d_shader_clk);
+			clk_prepare_enable(vpu_clk);
+			clk_prepare_enable(gpu2d_clk);
+			clk_prepare_enable(gpu2d_axi_clk);
+			clk_prepare_enable(openvg_axi_clk);
+		}
 	} else {
-		clk_disable_unprepare(gpu3d_clk);
-		clk_disable_unprepare(gpu3d_shader_clk);
-		clk_disable_unprepare(vpu_clk);
-		clk_disable_unprepare(gpu2d_clk);
-		clk_disable_unprepare(gpu2d_axi_clk);
-		clk_disable_unprepare(openvg_axi_clk);
+		if (cpu_is_imx6sl()) {
+			clk_disable_unprepare(gpu2d_clk);
+			clk_disable_unprepare(openvg_axi_clk);
+		} else {
+			clk_disable_unprepare(gpu3d_clk);
+			clk_disable_unprepare(gpu3d_shader_clk);
+			clk_disable_unprepare(vpu_clk);
+			clk_disable_unprepare(gpu2d_clk);
+			clk_disable_unprepare(gpu2d_axi_clk);
+			clk_disable_unprepare(openvg_axi_clk);
+		}
 	}
 }
 
@@ -307,19 +318,30 @@ static int imx_gpc_probe(struct platform_device *pdev)
 	nb.notifier_call = &imx_gpc_regulator_notify;
 
 	/* Get gpu&vpu clk for power up PU by GPC */
-	gpu3d_clk = devm_clk_get(gpc_dev, "gpu3d_core");
-	gpu3d_shader_clk = devm_clk_get(gpc_dev, "gpu3d_shader");
-	gpu2d_clk = devm_clk_get(gpc_dev, "gpu2d_core");
-	gpu2d_axi_clk = devm_clk_get(gpc_dev, "gpu2d_axi");
-	openvg_axi_clk = devm_clk_get(gpc_dev, "openvg_axi");
-	vpu_clk = devm_clk_get(gpc_dev, "vpu_axi");
-	ipg_clk = devm_clk_get(gpc_dev, "ipg");
-	if (IS_ERR(gpu3d_clk) || IS_ERR(gpu3d_shader_clk)
-		|| IS_ERR(gpu2d_clk) || IS_ERR(gpu2d_axi_clk)
-		|| IS_ERR(openvg_axi_clk) || IS_ERR(vpu_clk)
-		|| IS_ERR(ipg_clk)) {
-		dev_err(gpc_dev, "failed to get clk!\n");
-		return -ENOENT;
+	if (cpu_is_imx6sl()) {
+		gpu2d_clk = devm_clk_get(gpc_dev, "gpu2d_podf");
+		openvg_axi_clk = devm_clk_get(gpc_dev, "gpu2d_ovg");
+		ipg_clk = devm_clk_get(gpc_dev, "ipg");
+		if (IS_ERR(gpu2d_clk) || IS_ERR(openvg_axi_clk)
+			|| IS_ERR(ipg_clk)) {
+			dev_err(gpc_dev, "failed to get clk!\n");
+			return -ENOENT;
+		}
+	} else {
+		gpu3d_clk = devm_clk_get(gpc_dev, "gpu3d_core");
+		gpu3d_shader_clk = devm_clk_get(gpc_dev, "gpu3d_shader");
+		gpu2d_clk = devm_clk_get(gpc_dev, "gpu2d_core");
+		gpu2d_axi_clk = devm_clk_get(gpc_dev, "gpu2d_axi");
+		openvg_axi_clk = devm_clk_get(gpc_dev, "openvg_axi");
+		vpu_clk = devm_clk_get(gpc_dev, "vpu_axi");
+		ipg_clk = devm_clk_get(gpc_dev, "ipg");
+		if (IS_ERR(gpu3d_clk) || IS_ERR(gpu3d_shader_clk)
+			|| IS_ERR(gpu2d_clk) || IS_ERR(gpu2d_axi_clk)
+			|| IS_ERR(openvg_axi_clk) || IS_ERR(vpu_clk)
+			|| IS_ERR(ipg_clk)) {
+			dev_err(gpc_dev, "failed to get clk!\n");
+			return -ENOENT;
+		}
 	}
 
 	ret = regulator_register_notifier(pu_reg, &nb);
