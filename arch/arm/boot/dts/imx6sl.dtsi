@@ -621,6 +621,33 @@
 						>;
 					};
 				};
+
+				i2c1 {
+					pinctrl_i2c1_1: i2c1grp-1 {
+						fsl,pins = <
+							MX6SL_PAD_I2C1_SCL__I2C1_SCL 0x4001b8b1
+							MX6SL_PAD_I2C1_SDA__I2C1_SDA 0x4001b8b1
+						>;
+					};
+				};
+
+				i2c2 {
+					pinctrl_i2c2_1: i2c2grp-1 {
+						fsl,pins = <
+							MX6SL_PAD_I2C2_SCL__I2C2_SCL 0x4001b8b1
+							MX6SL_PAD_I2C2_SDA__I2C2_SDA 0x4001b8b1
+						>;
+					};
+				};
+
+				i2c3 {
+					pinctrl_i2c3_1: i2c3grp-1 {
+						fsl,pins = <
+							MX6SL_PAD_EPDC_SDCE2__I2C3_SCL 0x4001b8b1
+							MX6SL_PAD_EPDC_SDCE3__I2C3_SDA 0x4001b8b1
+						>;
+					};
+				};
 			};
 
 			csi: csi@020e4000 {
