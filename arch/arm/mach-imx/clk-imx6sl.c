@@ -268,6 +268,10 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 		clk_prepare_enable(clks[IMX6SL_CLK_USBPHY2_GATE]);
 	}
 
+	clk_set_parent(clks[IMX6SL_CLK_GPU2D_OVG_SEL],
+		clks[IMX6SL_CLK_PLL2_BUS]);
+	clk_set_parent(clks[IMX6SL_CLK_GPU2D_SEL], clks[IMX6SL_CLK_PLL2_BUS]);
+
 	/* set perclk to source from OSC 24MHz */
 	clk_set_parent(clks[IMX6SL_CLK_PERCLK_SEL], clks[IMX6SL_CLK_OSC]);
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6sl-gpt");
