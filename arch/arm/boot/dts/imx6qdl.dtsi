@@ -273,6 +273,7 @@
 				iramsize = <0x21000>;
 				iram = <&ocram>;
 				resets = <&src 1>;
+				pu-supply = <&reg_pu>;
 				status = "disabled";
 			};
 
