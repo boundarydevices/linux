@@ -19,7 +19,6 @@
 *
 *****************************************************************************/
 
-
 #include <linux/device.h>
 #include <linux/slab.h>
 #include <linux/notifier.h>
@@ -69,9 +68,10 @@ task_notify_func(struct notifier_block *self, unsigned long val, void *data)
 #include <mach/viv_gpu.h>
 #else
 #include <linux/pm_runtime.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
 #include <mach/busfreq.h>
 #else
+#include <linux/busfreq-imx6.h>
 #include <linux/reset.h>
 #endif
 #endif
@@ -1322,7 +1322,7 @@ MODULE_DEVICE_TABLE(of, mxs_gpu_dt_ids);
 #ifdef CONFIG_PM
 static int gpu_runtime_suspend(struct device *dev)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 7)
 	release_bus_freq(BUS_FREQ_HIGH);
 #endif
 	return 0;
@@ -1330,7 +1330,7 @@ static int gpu_runtime_suspend(struct device *dev)
 
 static int gpu_runtime_resume(struct device *dev)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 7)
 	request_bus_freq(BUS_FREQ_HIGH);
 #endif
 	return 0;
