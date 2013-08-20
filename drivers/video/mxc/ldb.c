@@ -530,7 +530,6 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 	struct ldb_data *ldb = mxc_dispdrv_getdata(disp);
 	struct fsl_mxc_ldb_platform_data *plat_data = ldb->pdev->dev.platform_data;
 	struct resource *res;
-	uint32_t base_addr;
 	uint32_t reg, setting_idx;
 	uint32_t ch_mask = 0, ch_val = 0;
 	uint32_t ipu_id, disp_id;
@@ -554,8 +553,8 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 			return -ENOMEM;
 		}
 
-		base_addr = res->start;
-		ldb->reg = ioremap(base_addr, res->end - res->start + 1);
+		ldb->reg = devm_ioremap(&ldb->pdev->dev, res->start,
+					resource_size(res));
 		ldb->control_reg = ldb->reg + 2;
 		ldb->gpr3_reg = ldb->reg + 3;
 
@@ -708,7 +707,6 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 								ldb_clk);
 		if (IS_ERR(ldb->setting[setting_idx].ldb_di_clk)) {
 			dev_err(&ldb->pdev->dev, "get ldb clk0 failed\n");
-			iounmap(ldb->reg);
 			return PTR_ERR(ldb->setting[setting_idx].ldb_di_clk);
 		}
 		di_clk[3] += setting->dev_id;
@@ -717,7 +715,6 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 								di_clk);
 		if (IS_ERR(ldb->setting[setting_idx].di_clk)) {
 			dev_err(&ldb->pdev->dev, "get di clk0 failed\n");
-			iounmap(ldb->reg);
 			return PTR_ERR(ldb->setting[setting_idx].di_clk);
 		}
 
@@ -876,8 +873,6 @@ static void ldb_disp_deinit(struct mxc_dispdrv_handle *disp)
 	}
 
 	fb_unregister_client(&ldb->nb);
-
-	iounmap(ldb->reg);
 }
 
 static struct mxc_dispdrv_driver ldb_drv = {
