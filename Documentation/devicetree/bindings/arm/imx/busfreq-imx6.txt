@@ -1,0 +1,64 @@
+Freescale Busfreq driver
+
+It is a generic driver that manages the frequency of the DDR, AHB and AXI buses in the iMX6x architecture.
+It works for both SMP and UP systems and for both DDR3 and LPDDR2 memory types.
+
+Required properties are listed below:
+- compatible: should be "fsl,imx6_busfreq"
+- clocks: Lists the various clocks used by the busfreq driver
+- interrupts - Lists the interrupts used by the busfreq driver. This is needed only for SMP architecutre.
+- fsl,max_ddr_freq - The max ddr freq for this chip
+
+Examples:
+For SOC imx6q.dtsi:
+	busfreq { /* BUSFREQ */
+		compatible = "fsl,imx6_busfreq";
+		clocks = <&clks 171>, <&clks 6>, <&clks 11>, <&clks 104>, <&clks 172>, <&clks 58>,
+			<&clks 18>, <&clks 60>, <&clks 20>, <&clks 3>;
+		clock-names = "pll2_bus", "pll2_pfd2_396m", "pll2_198m", "arm", "pll3_usb_otg", "periph",
+			"periph_pre", "periph_clk2", "periph_clk2_sel", "osc";
+		interrupts = <0 107 0x04>, <0 112 0x4>, <0 113 0x4>, <0 114 0x4>;
+		interrupt-names = "irq_busfreq_0", "irq_busfreq_1", "irq_busfreq_2", "irq_busfreq_3";
+		fsl,max_ddr_freq = <528000000>;
+	};
+
+The Freescale Busfreq driver supports the following setpoints for the DDR freq:
+enum bus_freq_mode {
+	BUS_FREQ_HIGH, -> The max freq the SOC supports
+	BUS_FREQ_MED,  -> Medium setpoint (ex 400MHz for DDR3 when the max is 528MHz)
+	BUS_FREQ_AUDIO, -> Audio playback freq (50MHz)
+	BUS_FREQ_LOW,  -> Low power IDLE freq (24MHz)
+};
+
+Currently the Freescale Busfreq driver implementation requires drivers to call the following APIs:
+1. request_bus_freq(enum bus_freq_mode):
+	The driver is requesting the system and ddr freq to be set to the requested value. The driver should call this
+	API before it even enables its clocks.
+
+2. release_bus_freq(enum bus_freq_mode):
+	The driver no longer needs the system and ddr freq at the required value. The driver should call this API after
+	its work is done and it has disabled its clocks.
+
+Examples:
+In the IPU driver, the requesting and releasing of the required bus frequency is tied into the runtime PM implementation:
+
+int ipu_runtime_suspend(struct device *dev)
+{
+	release_bus_freq(BUS_FREQ_HIGH);
+	dev_dbg(dev, "ipu busfreq high release.\n");
+
+	return 0;
+}
+
+int ipu_runtime_resume(struct device *dev)
+{
+	request_bus_freq(BUS_FREQ_HIGH);
+	dev_dbg(dev, "ipu busfreq high requst.\n");
+
+	return 0;
+}
+
+static const struct dev_pm_ops ipu_pm_ops = {
+	SET_RUNTIME_PM_OPS(ipu_runtime_suspend, ipu_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(ipu_suspend, ipu_resume)
+};
