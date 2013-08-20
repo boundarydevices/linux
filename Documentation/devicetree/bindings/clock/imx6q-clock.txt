@@ -89,8 +89,6 @@ clocks and IDs.
 	gpu3d_shader		74
 	ipu1_podf		75
 	ipu2_podf		76
-	ldb_di0_podf		77
-	ldb_di1_podf		78
 	ipu1_di0_pre		79
 	ipu1_di1_pre		80
 	ipu2_di0_pre		81
@@ -217,6 +215,10 @@ clocks and IDs.
 	vdoa      		202
 	gpt_3m      		203
 	video_27m      		204
+	ldb_di0_div_7		205
+	ldb_di1_div_7		206
+	ldb_di0_div_sel		207
+	ldb_di1_div_sel		208
 
 Examples:
 
