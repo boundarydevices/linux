@@ -181,7 +181,12 @@ int imx6_set_lpm(enum mxc_cpu_pwr_mode mode)
 		val |= 0x2 << BP_CLPCR_LPM;
 		val &= ~BM_CLPCR_VSTBY;
 		val &= ~BM_CLPCR_SBYOS;
-		val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
+		if (cpu_is_imx6sl()) {
+			val |= BM_CLPCR_BYPASS_PMIC_READY;
+			val |= BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
+		} else {
+			val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
+		}
 		break;
 	case WAIT_UNCLOCKED_POWER_OFF:
 		val |= 0x1 << BP_CLPCR_LPM;
@@ -193,7 +198,12 @@ int imx6_set_lpm(enum mxc_cpu_pwr_mode mode)
 		val |= 0x3 << BP_CLPCR_STBY_COUNT;
 		val |= BM_CLPCR_VSTBY;
 		val |= BM_CLPCR_SBYOS;
-		val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
+		if (cpu_is_imx6sl()) {
+			val |= BM_CLPCR_BYPASS_PMIC_READY;
+			val |= BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
+		} else {
+			val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
+		}
 		imx6_enable_wb(true);
 		break;
 	default:
@@ -237,7 +247,8 @@ static int imx6_pm_enter(suspend_state_t state)
 		imx_set_cpu_jump(0, v7_cpu_resume);
 		/* Zzz ... */
 		cpu_suspend(0, imx6_suspend_finish);
-		imx_smp_prepare();
+		if (!cpu_is_imx6sl())
+			imx_smp_prepare();
 		imx_anatop_post_resume();
 		imx_gpc_post_resume();
 		imx6_set_cache_lpm_in_wait(true);
@@ -330,4 +341,6 @@ void __init imx6_pm_init(void)
 		cpu_type = MXC_CPU_IMX6Q;
 	else if (cpu_is_imx6dl())
 		cpu_type = MXC_CPU_IMX6DL;
+	else
+		cpu_type = MXC_CPU_IMX6SL;
 }

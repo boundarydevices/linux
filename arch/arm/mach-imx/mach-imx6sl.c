@@ -49,6 +49,31 @@ static void __init imx6sl_init_machine(void)
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, parent);
 
 	imx6sl_fec_init();
+	imx_anatop_init();
+	imx6_pm_init();
+}
+
+static void __init imx6sl_init_late(void)
+{
+	struct regmap *gpr;
+
+	/*
+	 * Need to force IOMUXC irq pending to meet CCM low power mode
+	 * restriction, this is recommended by hardware team.
+	 */
+	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6sl-iomuxc-gpr");
+	if (!IS_ERR(gpr))
+		regmap_update_bits(gpr, IOMUXC_GPR1,
+			IMX6Q_GPR1_GINT_MASK,
+			IMX6Q_GPR1_GINT_ASSERT);
+	else
+		pr_err("failed to find fsl,imx6sl-iomux-gpr regmap\n");
+}
+
+static void __init imx6sl_map_io(void)
+{
+	debug_ll_io_init();
+	imx6_pm_map_io();
 }
 
 static void __init imx6sl_init_irq(void)
@@ -71,10 +96,11 @@ static const char *imx6sl_dt_compat[] __initdata = {
 };
 
 DT_MACHINE_START(IMX6SL, "Freescale i.MX6 SoloLite (Device Tree)")
-	.map_io		= debug_ll_io_init,
+	.map_io		= imx6sl_map_io,
 	.init_irq	= imx6sl_init_irq,
 	.init_time	= imx6sl_timer_init,
 	.init_machine	= imx6sl_init_machine,
+	.init_late      = imx6sl_init_late,
 	.dt_compat	= imx6sl_dt_compat,
 	.restart	= mxc_restart,
 MACHINE_END
