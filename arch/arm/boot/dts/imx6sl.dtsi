@@ -546,6 +546,12 @@
 				#reset-cells = <1>;
 			};
 
+			ocram: sram@00900000 {
+				compatible = "mmio-sram";
+				reg = <0x00900000 0x20000>;
+				clocks = <&clks IMX6SL_CLK_OCRAM>;
+			};
+
 			gpc: gpc@020dc000 {
 				compatible = "fsl,imx6sl-gpc", "fsl,imx6q-gpc";
 				reg = <0x020dc000 0x4000>;
