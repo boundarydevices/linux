@@ -18,6 +18,7 @@
  *
  * @ingroup IPU
  */
+#include <linux/busfreq-imx6.h>
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/delay.h>
@@ -3043,19 +3044,17 @@ static int ipu_resume(struct device *dev)
 
 int ipu_runtime_suspend(struct device *dev)
 {
-#if 0
 	release_bus_freq(BUS_FREQ_HIGH);
 	dev_dbg(dev, "ipu busfreq high release.\n");
-#endif
+
 	return 0;
 }
 
 int ipu_runtime_resume(struct device *dev)
 {
-#if 0
 	request_bus_freq(BUS_FREQ_HIGH);
 	dev_dbg(dev, "ipu busfreq high requst.\n");
-#endif
+
 	return 0;
 }
 

@@ -10,6 +10,7 @@
  * kind, whether express or implied.
  */
 
+#include <linux/busfreq-imx6.h>
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/module.h>
@@ -21,6 +22,7 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/pm_runtime.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -330,6 +332,8 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 		snd_soc_dai_get_drvdata(rtd->cpu_dai);
 	int synchronous = ssi_private->cpu_dai_drv.symmetric_rates;
 
+	pm_runtime_get_sync(dai->dev);
+
 	clk_enable(ssi_private->clk);
 
 	/*
@@ -577,6 +581,8 @@ static void fsl_ssi_shutdown(struct snd_pcm_substream *substream,
 
 	clk_disable(ssi_private->clk);
 
+	pm_runtime_put_sync(dai->dev);
+
 	/* If this is the last active substream, disable the interrupts. */
 	if (!ssi_private->first_stream) {
 		struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
@@ -813,6 +819,8 @@ static int fsl_ssi_probe(struct platform_device *pdev)
 		goto error_irq;
 	}
 
+	pm_runtime_enable(&pdev->dev);
+
 	/* Register with ASoC */
 	dev_set_drvdata(&pdev->dev, ssi_private);
 
@@ -917,6 +925,26 @@ static int fsl_ssi_remove(struct platform_device *pdev)
 
 	return 0;
 }
+
+#ifdef CONFIG_PM_RUNTIME
+static int fsl_ssi_runtime_resume(struct device *dev)
+{
+	request_bus_freq(BUS_FREQ_AUDIO);
+	return 0;
+}
+
+static int fsl_ssi_runtime_suspend(struct device *dev)
+{
+	release_bus_freq(BUS_FREQ_AUDIO);
+	return 0;
+}
+
+static const struct dev_pm_ops fsl_ssi_pm = {
+	SET_RUNTIME_PM_OPS(fsl_ssi_runtime_suspend,
+			fsl_ssi_runtime_resume,
+			NULL)
+};
+#endif
 
 static const struct of_device_id fsl_ssi_ids[] = {
 	{ .compatible = "fsl,mpc8610-ssi", },

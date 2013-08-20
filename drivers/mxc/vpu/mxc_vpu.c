@@ -61,11 +61,12 @@
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+#include <linux/busfreq-imx6.h>
+#include <linux/clk.h>
 #include <linux/genalloc.h>
+#include <linux/mxc_vpu.h>
 #include <linux/of.h>
 #include <linux/reset.h>
-#include <linux/clk.h>
-#include <linux/mxc_vpu.h>
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
 #include <mach/busfreq.h>
 #include <mach/common.h>
@@ -224,14 +225,6 @@ static void vpu_power_up(bool on)
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
-static void request_bus_freq(int freq)
-{
-}
-
-static void release_bus_freq(int freq)
-{
-}
-
 static int cpu_is_mx53(void)
 {
 	return 0;
@@ -243,8 +236,6 @@ static int cpu_is_mx51(void)
 }
 
 #define VM_RESERVED 0
-#define BUS_FREQ_HIGH 0
-
 #endif
 
 /*!
