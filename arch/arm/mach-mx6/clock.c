@@ -3189,7 +3189,7 @@ static struct clk ipu1_di_clk[] = {
 	{
 	 __INIT_CLK_DEBUG(ipu1_di_clk_0)
 	.id = 0,
-	.parent = &pll5_video_main_clk,
+	.parent = &pll3_pfd_540M,
 	.enable_reg = MXC_CCM_CCGR3,
 	.enable_shift = MXC_CCM_CCGRx_CG1_OFFSET,
 	.enable = _clk_enable,
@@ -5489,7 +5489,7 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 	clk_set_rate(&pll4_audio_main_clk, 176000000);
 	clk_set_rate(&pll5_video_main_clk, 650000000);
 
-	clk_set_parent(&ipu1_di_clk[0], &pll5_video_main_clk);
+	clk_set_parent(&ipu1_di_clk[0], &pll3_pfd_540M);
 	clk_set_parent(&ipu1_di_clk[1], &pll5_video_main_clk);
 	clk_set_parent(&ipu2_di_clk[0], &pll5_video_main_clk);
 	clk_set_parent(&ipu2_di_clk[1], &pll5_video_main_clk);
