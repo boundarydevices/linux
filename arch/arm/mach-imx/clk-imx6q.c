@@ -14,7 +14,6 @@
 #include <linux/types.h>
 #include <linux/clk.h>
 #include <linux/clkdev.h>
-#include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/of.h>
@@ -24,188 +23,6 @@
 #include "clk.h"
 #include "common.h"
 #include "hardware.h"
-
-#define CCR				0x0
-#define BM_CCR_WB_COUNT			(0x7 << 16)
-#define BM_CCR_RBC_BYPASS_COUNT		(0x3f << 21)
-#define BM_CCR_RBC_EN			(0x1 << 27)
-
-#define CCGR0				0x68
-#define CCGR1				0x6c
-#define CCGR2				0x70
-#define CCGR3				0x74
-#define CCGR4				0x78
-#define CCGR5				0x7c
-#define CCGR6				0x80
-#define CCGR7				0x84
-
-#define CLPCR				0x54
-#define BP_CLPCR_LPM			0
-#define BM_CLPCR_LPM			(0x3 << 0)
-#define BM_CLPCR_BYPASS_PMIC_READY	(0x1 << 2)
-#define BM_CLPCR_ARM_CLK_DIS_ON_LPM	(0x1 << 5)
-#define BM_CLPCR_SBYOS			(0x1 << 6)
-#define BM_CLPCR_DIS_REF_OSC		(0x1 << 7)
-#define BM_CLPCR_VSTBY			(0x1 << 8)
-#define BP_CLPCR_STBY_COUNT		9
-#define BM_CLPCR_STBY_COUNT		(0x3 << 9)
-#define BM_CLPCR_COSC_PWRDOWN		(0x1 << 11)
-#define BM_CLPCR_WB_PER_AT_LPM		(0x1 << 16)
-#define BM_CLPCR_WB_CORE_AT_LPM		(0x1 << 17)
-#define BM_CLPCR_BYP_MMDC_CH0_LPM_HS	(0x1 << 19)
-#define BM_CLPCR_BYP_MMDC_CH1_LPM_HS	(0x1 << 21)
-#define BM_CLPCR_MASK_CORE0_WFI		(0x1 << 22)
-#define BM_CLPCR_MASK_CORE1_WFI		(0x1 << 23)
-#define BM_CLPCR_MASK_CORE2_WFI		(0x1 << 24)
-#define BM_CLPCR_MASK_CORE3_WFI		(0x1 << 25)
-#define BM_CLPCR_MASK_SCU_IDLE		(0x1 << 26)
-#define BM_CLPCR_MASK_L2CC_IDLE		(0x1 << 27)
-
-#define CGPR				0x64
-#define BM_CGPR_INT_MEM_CLK_LPM		(0x1 << 17)
-
-#define MX6Q_INT_IOMUXC			32
-
-static void __iomem *ccm_base;
-
-void imx6q_set_cache_lpm_in_wait(bool enable)
-{
-	if ((cpu_is_imx6q() && imx_get_soc_revision() >
-		IMX_CHIP_REVISION_1_1) ||
-		(cpu_is_imx6dl() && imx_get_soc_revision() >
-		IMX_CHIP_REVISION_1_0)) {
-		u32 val;
-
-		val = readl_relaxed(ccm_base + CGPR);
-		if (enable)
-			val |= BM_CGPR_INT_MEM_CLK_LPM;
-		else
-			val &= ~BM_CGPR_INT_MEM_CLK_LPM;
-		writel_relaxed(val, ccm_base + CGPR);
-	}
-}
-
-static void imx6q_enable_rbc(bool enable)
-{
-	u32 val;
-	static bool last_rbc_mode;
-
-	if (last_rbc_mode == enable)
-		return;
-	/*
-	 * need to mask all interrupts in GPC before
-	 * operating RBC configurations
-	 */
-	imx_gpc_mask_all();
-
-	/* configure RBC enable bit */
-	val = readl_relaxed(ccm_base + CCR);
-	val &= ~BM_CCR_RBC_EN;
-	val |= enable ? BM_CCR_RBC_EN : 0;
-	writel_relaxed(val, ccm_base + CCR);
-
-	/* configure RBC count */
-	val = readl_relaxed(ccm_base + CCR);
-	val &= ~BM_CCR_RBC_BYPASS_COUNT;
-	val |= enable ? BM_CCR_RBC_BYPASS_COUNT : 0;
-	writel(val, ccm_base + CCR);
-
-	/*
-	 * need to delay at least 2 cycles of CKIL(32K)
-	 * due to hardware design requirement, which is
-	 * ~61us, here we use 65us for safe
-	 */
-	udelay(65);
-
-	/* restore GPC interrupt mask settings */
-	imx_gpc_restore_all();
-
-	last_rbc_mode = enable;
-}
-
-static void imx6q_enable_wb(bool enable)
-{
-	u32 val;
-	static bool last_wb_mode;
-
-	if (last_wb_mode == enable)
-		return;
-
-	/* configure well bias enable bit */
-	val = readl_relaxed(ccm_base + CLPCR);
-	val &= ~BM_CLPCR_WB_PER_AT_LPM;
-	val |= enable ? BM_CLPCR_WB_PER_AT_LPM : 0;
-	writel_relaxed(val, ccm_base + CLPCR);
-
-	/* configure well bias count */
-	val = readl_relaxed(ccm_base + CCR);
-	val &= ~BM_CCR_WB_COUNT;
-	val |= enable ? BM_CCR_WB_COUNT : 0;
-	writel_relaxed(val, ccm_base + CCR);
-
-	last_wb_mode = enable;
-}
-
-int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
-{
-	u32 val = readl_relaxed(ccm_base + CLPCR);
-	struct irq_desc *desc = irq_to_desc(MX6Q_INT_IOMUXC);
-
-	/*
-	 * CCM state machine has restriction, before enabling
-	 * LPM mode, need to make sure last LPM mode is waked up
-	 * by dsm_wakeup_signal, which means the wakeup source
-	 * must be seen by GPC, then CCM will clean its state machine
-	 * and re-sample necessary signal to decide whether it can
-	 * enter LPM mode. We force irq #32 to be always pending,
-	 * unmask it before we enable LPM mode and mask it after LPM
-	 * is enabled, this flow will make sure CCM state machine in
-	 * reliable status before entering LPM mode. Otherwise, CCM
-	 * may enter LPM mode by mistake which will cause system bus
-	 * locked by CPU access not finished, as when CCM enter
-	 * LPM mode, CPU will stop running.
-	 */
-	imx_gpc_irq_unmask(&desc->irq_data);
-
-	val &= ~BM_CLPCR_LPM;
-	switch (mode) {
-	case WAIT_CLOCKED:
-		imx6q_enable_wb(false);
-		imx6q_enable_rbc(false);
-		break;
-	case WAIT_UNCLOCKED:
-		val |= 0x1 << BP_CLPCR_LPM;
-		val |= BM_CLPCR_ARM_CLK_DIS_ON_LPM;
-		break;
-	case STOP_POWER_ON:
-		val |= 0x2 << BP_CLPCR_LPM;
-		val &= ~BM_CLPCR_VSTBY;
-		val &= ~BM_CLPCR_SBYOS;
-		val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
-		break;
-	case WAIT_UNCLOCKED_POWER_OFF:
-		val |= 0x1 << BP_CLPCR_LPM;
-		val &= ~BM_CLPCR_VSTBY;
-		val &= ~BM_CLPCR_SBYOS;
-		break;
-	case STOP_POWER_OFF:
-		val |= 0x2 << BP_CLPCR_LPM;
-		val |= 0x3 << BP_CLPCR_STBY_COUNT;
-		val |= BM_CLPCR_VSTBY;
-		val |= BM_CLPCR_SBYOS;
-		val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
-		imx6q_enable_wb(true);
-		break;
-	default:
-		imx_gpc_irq_mask(&desc->irq_data);
-		return -EINVAL;
-	}
-
-	writel_relaxed(val, ccm_base + CLPCR);
-	imx_gpc_irq_mask(&desc->irq_data);
-
-	return 0;
-}
 
 static const char *step_sels[]	= { "osc", "pll2_pfd2_396m", };
 static const char *pll1_sw_sels[]	= { "pll1_sys", "step", };
@@ -400,7 +217,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	np = ccm_node;
 	base = of_iomap(np, 0);
 	WARN_ON(!base);
-	ccm_base = base;
+	imx6_pm_set_ccm_base(base);
 
 	/*                                  name                reg       shift width parent_names     num_parents */
 	clk[step]             = imx_clk_mux("step",	        base + 0xc,  8,  1, step_sels,	       ARRAY_SIZE(step_sels));
@@ -667,7 +484,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 		pr_warn("failed to set up CLKO: %d\n", ret);
 
 	/* Set initial power mode */
-	imx6q_set_lpm(WAIT_CLOCKED);
+	imx6_set_lpm(WAIT_CLOCKED);
 
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-gpt");
 	base = of_iomap(np, 0);

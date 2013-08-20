@@ -143,18 +143,20 @@ extern void imx_gpc_restore_all(void);
 extern void imx_anatop_init(void);
 extern void imx_anatop_pre_suspend(void);
 extern void imx_anatop_post_resume(void);
-extern int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode);
-extern void imx6q_set_cache_lpm_in_wait(bool enable);
+extern int imx6_set_lpm(enum mxc_cpu_pwr_mode mode);
+extern void imx6_set_cache_lpm_in_wait(bool enable);
 
 extern void imx_cpu_die(unsigned int cpu);
 extern int imx_cpu_kill(unsigned int cpu);
 
 #ifdef CONFIG_PM
-extern void imx6q_pm_init(void);
+extern void imx6_pm_init(void);
+extern void imx6_pm_set_ccm_base(void __iomem *base);
 extern void imx51_pm_init(void);
 extern void imx53_pm_init(void);
 #else
-static inline void imx6q_pm_init(void) {}
+static inline void imx6_pm_init(void) {}
+static inline void imx6_pm_set_ccm_base(void __iomem *base) {}
 static inline void imx51_pm_init(void) {}
 static inline void imx53_pm_init(void) {}
 #endif
