@@ -55,10 +55,18 @@
 #include <linux/of_net.h>
 #include <linux/regulator/consumer.h>
 #include <linux/if_vlan.h>
+#include <linux/pm_runtime.h>
+#include <linux/version.h>
 
 #include <asm/cacheflush.h>
 
 #include "fec.h"
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+#include <linux/busfreq-imx6.h>
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
+#include <mach/busfreq.h>
+#endif
 
 static void set_multicast_list(struct net_device *ndev);
 static void fec_reset_phy(struct platform_device *pdev);
@@ -1769,6 +1777,8 @@ fec_enet_open(struct net_device *ndev)
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	int ret;
 
+	pm_runtime_get_sync(ndev->dev.parent);
+
 	napi_enable(&fep->napi);
 
 	/* I should reset the ring buffers here, but I don't yet know
@@ -1785,6 +1795,7 @@ fec_enet_open(struct net_device *ndev)
 		fec_enet_free_buffers(ndev);
 		return ret;
 	}
+
 	phy_start(fep->phy_dev);
 	netif_start_queue(ndev);
 	fep->opened = 1;
@@ -1810,6 +1821,8 @@ fec_enet_close(struct net_device *ndev)
 		phy_stop(fep->phy_dev);
 		phy_disconnect(fep->phy_dev);
 	}
+
+	pm_runtime_put_sync_suspend(ndev->dev.parent);
 
 	fec_enet_free_buffers(ndev);
 
@@ -2170,6 +2183,8 @@ fec_probe(struct platform_device *pdev)
 		fep->bufdesc_ex = 0;
 	}
 
+	pm_runtime_enable(&pdev->dev);
+
 	clk_prepare_enable(fep->clk_ahb);
 	clk_prepare_enable(fep->clk_ipg);
 	clk_prepare_enable(fep->clk_enet_out);
@@ -2287,7 +2302,7 @@ fec_drv_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_PM_SLEEP
+#ifdef CONFIG_PM
 static int
 fec_suspend(struct device *dev)
 {
@@ -2331,9 +2346,30 @@ fec_resume(struct device *dev)
 
 	return 0;
 }
+
+static int fec_runtime_suspend(struct device *dev)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
+	release_bus_freq(BUS_FREQ_HIGH);
+#endif
+	return 0;
+}
+
+static int fec_runtime_resume(struct device *dev)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
+	request_bus_freq(BUS_FREQ_HIGH);
+#endif
+	return 0;
+}
+
+static const struct dev_pm_ops fec_pm_ops = {
+	SET_RUNTIME_PM_OPS(fec_runtime_suspend, fec_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(fec_suspend, fec_resume)
+};
+
 #endif /* CONFIG_PM_SLEEP */
 
-static SIMPLE_DEV_PM_OPS(fec_pm_ops, fec_suspend, fec_resume);
 
 static struct platform_driver fec_driver = {
 	.driver	= {

@@ -6,6 +6,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/busfreq-imx6.h>
 #include <linux/clk.h>
 #include <linux/cpufreq.h>
 #include <linux/delay.h>
@@ -30,6 +31,7 @@ static struct clk *pll2_pfd2_396m_clk;
 static struct device *cpu_dev;
 static struct cpufreq_frequency_table *freq_table;
 static unsigned int transition_latency;
+
 struct soc_opp {
 	u32 arm_freq;
 	u32 soc_volt;
@@ -101,6 +103,13 @@ static int imx6q_set_target(struct cpufreq_policy *policy,
 	dev_dbg(cpu_dev, "%u MHz, %ld mV --> %u MHz, %ld mV\n",
 		freqs.old / 1000, volt_old / 1000,
 		freqs.new / 1000, volt / 1000);
+
+	/*
+	  * CPU freq is increasing, so need to ensure
+	  * that bus frequency is increased too.
+	  */
+	if (freqs.old == freq_table[0].frequency)
+		request_bus_freq(BUS_FREQ_HIGH);
 
 	/* scaling up?  scale voltage before frequency */
 	if (freqs.new > freqs.old) {
@@ -196,8 +205,14 @@ static int imx6q_set_target(struct cpufreq_policy *policy,
 				goto err1;
 			}
 		}
-
 	}
+	/*
+	  * If CPU is dropped to the lowest level, release the need
+	  * for a high bus frequency.
+	  */
+	if (freqs.new == freq_table[0].frequency)
+		release_bus_freq(BUS_FREQ_HIGH);
+
 	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
 
 	return 0;
@@ -219,6 +234,9 @@ static int imx6q_cpufreq_init(struct cpufreq_policy *policy)
 	policy->cur = clk_get_rate(arm_clk) / 1000;
 	cpumask_setall(policy->cpus);
 	cpufreq_frequency_table_get_attr(freq_table, policy->cpu);
+
+	if (policy->cur > freq_table[0].frequency)
+		request_bus_freq(BUS_FREQ_HIGH);
 
 	return 0;
 }
