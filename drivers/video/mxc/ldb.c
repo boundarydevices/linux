@@ -119,6 +119,9 @@ struct ldb_data {
 	struct ldb_setting {
 		struct clk *di_clk;
 		struct clk *ldb_di_clk;
+		struct clk *div_3_5_clk;
+		struct clk *div_7_clk;
+		struct clk *div_sel_clk;
 		bool active;
 		bool clk_en;
 		int ipu;
@@ -526,13 +529,18 @@ static int ldb_ipu_ldb_route(int ipu, int di, struct ldb_data *ldb)
 static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 	struct mxc_dispdrv_setting *setting)
 {
-	int ret = 0, i;
+	int ret = 0, i, lvds_channel = 0;
 	struct ldb_data *ldb = mxc_dispdrv_getdata(disp);
 	struct fsl_mxc_ldb_platform_data *plat_data = ldb->pdev->dev.platform_data;
 	struct resource *res;
 	uint32_t reg, setting_idx;
 	uint32_t ch_mask = 0, ch_val = 0;
 	uint32_t ipu_id, disp_id;
+	char di_clk[] = "ipu1_di0_sel";
+	char ldb_clk[] = "ldb_di0";
+	char div_3_5_clk[] = "di0_div_3_5";
+	char div_7_clk[] = "di0_div_7";
+	char div_sel_clk[] = "di0_div_sel";
 
 	/* if input format not valid, make RGB666 as default*/
 	if (!valid_mode(setting->if_fmt)) {
@@ -542,10 +550,6 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 	}
 
 	if (!ldb->inited) {
-		char di_clk[] = "ipu1_di0_sel";
-		char ldb_clk[] = "ldb_di0";
-		int lvds_channel = 0;
-
 		setting_idx = 0;
 		res = platform_get_resource(ldb->pdev, IORESOURCE_MEM, 0);
 		if (!res) {
@@ -696,34 +700,7 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 			ch_mask = LDB_CH0_MODE_MASK | LDB_CH1_MODE_MASK;
 			ch_val = reg & (LDB_CH0_MODE_MASK | LDB_CH1_MODE_MASK);
 		}
-
-		/* clock setting */
-		if (is_imx6_ldb(plat_data) &&
-			((ldb->mode == LDB_SEP0) || (ldb->mode == LDB_SEP1)))
-			ldb_clk[6] += lvds_channel;
-		else
-			ldb_clk[6] += setting->disp_id;
-		ldb->setting[setting_idx].ldb_di_clk = clk_get(&ldb->pdev->dev,
-								ldb_clk);
-		if (IS_ERR(ldb->setting[setting_idx].ldb_di_clk)) {
-			dev_err(&ldb->pdev->dev, "get ldb clk0 failed\n");
-			return PTR_ERR(ldb->setting[setting_idx].ldb_di_clk);
-		}
-		di_clk[3] += setting->dev_id;
-		di_clk[7] += setting->disp_id;
-		ldb->setting[setting_idx].di_clk = clk_get(&ldb->pdev->dev,
-								di_clk);
-		if (IS_ERR(ldb->setting[setting_idx].di_clk)) {
-			dev_err(&ldb->pdev->dev, "get di clk0 failed\n");
-			return PTR_ERR(ldb->setting[setting_idx].di_clk);
-		}
-
-		dev_dbg(&ldb->pdev->dev, "ldb_clk to di clk: %s -> %s\n", ldb_clk, di_clk);
 	} else { /* second time for separate mode */
-		char di_clk[] = "ipu1_di0_sel";
-		char ldb_clk[] = "ldb_di0";
-		int lvds_channel;
-
 		if ((ldb->mode == LDB_SPL_DI0) ||
 			(ldb->mode == LDB_SPL_DI1) ||
 			(ldb->mode == LDB_DUL_DI0) ||
@@ -780,28 +757,55 @@ static int ldb_disp_init(struct mxc_dispdrv_handle *disp,
 				reg |= LDB_DATA_WIDTH_CH1_18;
 		}
 		writel(reg, ldb->control_reg);
+	}
 
-		/* clock setting */
-		if (is_imx6_ldb(plat_data))
-			ldb_clk[6] += lvds_channel;
-		else
-			ldb_clk[6] += setting->disp_id;
-		ldb->setting[setting_idx].ldb_di_clk = clk_get(&ldb->pdev->dev,
-								ldb_clk);
-		if (IS_ERR(ldb->setting[setting_idx].ldb_di_clk)) {
-			dev_err(&ldb->pdev->dev, "get ldb clk1 failed\n");
-			return PTR_ERR(ldb->setting[setting_idx].ldb_di_clk);
-		}
-		di_clk[3] += setting->dev_id;
-		di_clk[7] += setting->disp_id;
-		ldb->setting[setting_idx].di_clk = clk_get(&ldb->pdev->dev,
-								di_clk);
-		if (IS_ERR(ldb->setting[setting_idx].di_clk)) {
-			dev_err(&ldb->pdev->dev, "get di clk1 failed\n");
-			return PTR_ERR(ldb->setting[setting_idx].di_clk);
-		}
+	/* get clocks */
+	if (is_imx6_ldb(plat_data) &&
+		((ldb->mode == LDB_SEP0) || (ldb->mode == LDB_SEP1))) {
+		ldb_clk[6] += lvds_channel;
+		div_3_5_clk[2] += lvds_channel;
+		div_7_clk[2] += lvds_channel;
+		div_sel_clk[2] += lvds_channel;
+	} else {
+		ldb_clk[6] += setting->disp_id;
+		div_3_5_clk[2] += setting->disp_id;
+		div_7_clk[2] += setting->disp_id;
+		div_sel_clk[2] += setting->disp_id;
+	}
+	ldb->setting[setting_idx].ldb_di_clk = clk_get(&ldb->pdev->dev,
+							ldb_clk);
+	if (IS_ERR(ldb->setting[setting_idx].ldb_di_clk)) {
+		dev_err(&ldb->pdev->dev, "get ldb clk failed\n");
+		return PTR_ERR(ldb->setting[setting_idx].ldb_di_clk);
+	}
 
-		dev_dbg(&ldb->pdev->dev, "ldb_clk to di clk: %s -> %s\n", ldb_clk, di_clk);
+	ldb->setting[setting_idx].div_3_5_clk = clk_get(&ldb->pdev->dev,
+							div_3_5_clk);
+	if (IS_ERR(ldb->setting[setting_idx].div_3_5_clk)) {
+		dev_err(&ldb->pdev->dev, "get div 3.5 clk failed\n");
+		return PTR_ERR(ldb->setting[setting_idx].div_3_5_clk);
+	}
+	ldb->setting[setting_idx].div_7_clk = clk_get(&ldb->pdev->dev,
+							div_7_clk);
+	if (IS_ERR(ldb->setting[setting_idx].div_7_clk)) {
+		dev_err(&ldb->pdev->dev, "get div 7 clk failed\n");
+		return PTR_ERR(ldb->setting[setting_idx].div_7_clk);
+	}
+
+	ldb->setting[setting_idx].div_sel_clk = clk_get(&ldb->pdev->dev,
+							div_sel_clk);
+	if (IS_ERR(ldb->setting[setting_idx].div_sel_clk)) {
+		dev_err(&ldb->pdev->dev, "get div sel clk failed\n");
+		return PTR_ERR(ldb->setting[setting_idx].div_sel_clk);
+	}
+
+	di_clk[3] += setting->dev_id;
+	di_clk[7] += setting->disp_id;
+	ldb->setting[setting_idx].di_clk = clk_get(&ldb->pdev->dev,
+							di_clk);
+	if (IS_ERR(ldb->setting[setting_idx].di_clk)) {
+		dev_err(&ldb->pdev->dev, "get di clk failed\n");
+		return PTR_ERR(ldb->setting[setting_idx].di_clk);
 	}
 
 	ldb->setting[setting_idx].ch_mask = ch_mask;
@@ -853,6 +857,24 @@ static int ldb_post_disp_init(struct mxc_dispdrv_handle *disp,
 		return ret;
 	}
 
+	if ((ldb->mode == LDB_SPL_DI0) || (ldb->mode == LDB_SPL_DI1)) {
+		ret = clk_set_parent(ldb->setting[setting_idx].div_sel_clk,
+				ldb->setting[setting_idx].div_3_5_clk);
+		if (ret) {
+			dev_err(&ldb->pdev->dev, "fail to set div 3.5 clk as"
+				"the parent of div sel clk\n");
+			return ret;
+		}
+	} else {
+		ret = clk_set_parent(ldb->setting[setting_idx].div_sel_clk,
+				ldb->setting[setting_idx].div_7_clk);
+		if (ret) {
+			dev_err(&ldb->pdev->dev, "fail to set div 7 clk as"
+				"the parent of div sel clk\n");
+			return ret;
+		}
+	}
+
 	/* save active ldb setting for fb notifier */
 	ldb->setting[setting_idx].active = true;
 
@@ -870,6 +892,9 @@ static void ldb_disp_deinit(struct mxc_dispdrv_handle *disp)
 	for (i = 0; i < 2; i++) {
 		clk_disable(ldb->setting[i].ldb_di_clk);
 		clk_put(ldb->setting[i].ldb_di_clk);
+		clk_put(ldb->setting[i].div_3_5_clk);
+		clk_put(ldb->setting[i].div_7_clk);
+		clk_put(ldb->setting[i].div_sel_clk);
 	}
 
 	fb_unregister_client(&ldb->nb);
