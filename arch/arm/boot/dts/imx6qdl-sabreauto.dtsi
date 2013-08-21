@@ -190,6 +190,12 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 	};
+
+	mma8451@1c {
+		compatible = "fsl,mma8451";
+		reg = <0x1c>;
+		position = <3>;
+	};
 };
 
 &iomuxc {
