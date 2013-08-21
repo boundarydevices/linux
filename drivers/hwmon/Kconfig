@@ -1556,4 +1556,9 @@ config SENSORS_ATK0110
 
 endif # ACPI
 
+config MXC_MMA8451
+	tristate "MMA8451 device driver"
+	depends on I2C
+	default y
+
 endif # HWMON
