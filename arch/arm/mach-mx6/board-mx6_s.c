@@ -1055,6 +1055,13 @@ static void __init add_device_buttons(void)
 }
 #endif
 
+static void poweroff(void)
+{
+	while (1) {
+                gpio_direction_output(GP_KEY_ONOFF, 0);
+	}
+}
+
 /*!
  * Board specific initialization.
  */
@@ -1205,6 +1212,7 @@ static void __init board_init(void)
 	rate = clk_round_rate(clko2, 24000000);
 	clk_set_rate(clko2, rate);
 	clk_enable(clko2);
+	pm_power_off = poweroff;
 	imx6q_add_busfreq();
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
