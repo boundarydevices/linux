@@ -269,7 +269,9 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	/* USDHC4 */
 	SD_PINS(4, USDHC_PAD_CTRL_50MHZ),
 	MX6PAD(NANDF_D6__GPIO_2_6),		/* J20 - SD4_CD */
-	MX6PAD(NANDF_D7__GPIO_2_7),		/* SD4_WP */
+	NEW_PAD_CTRL(MX6PAD(NANDF_D7__GPIO_2_7),
+                     WEAK_PULLUP
+		     |PAD_CTL_DSE_40ohm),	/* parallel with ONOFF */
 	0
 };
 
