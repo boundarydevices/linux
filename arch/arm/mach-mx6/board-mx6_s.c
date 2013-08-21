@@ -45,6 +45,7 @@
 #include <linux/memblock.h>
 #include <linux/micrel_phy.h>
 #include <linux/gpio.h>
+#include <linux/gpio_keys.h>
 #include <linux/etherdevice.h>
 #include <linux/regulator/anatop-regulator.h>
 #include <linux/regulator/consumer.h>
@@ -79,7 +80,6 @@
 #define GP_SD3_CD		IMX_GPIO_NR(7, 0)
 #define GP_SD3_WP		IMX_GPIO_NR(7, 1)
 #define GP_SD4_CD		IMX_GPIO_NR(2, 6)
-#define GP_SD4_WP		IMX_GPIO_NR(2, 7)
 #define GP_ECSPI1_CS1	IMX_GPIO_NR(3, 19)
 #define GP_ECSPI2_CS1	IMX_GPIO_NR(2, 27)
 #define GP_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
@@ -89,6 +89,7 @@
 #define GP_CSI0_RST		IMX_GPIO_NR(1, 8)
 #define GP_CSI0_PWN		IMX_GPIO_NR(1, 6)
 #define GP_ENET_PHY_INT	IMX_GPIO_NR(1, 28)
+#define GP_KEY_ONOFF		IMX_GPIO_NR(2, 7)
 
 #define N6_WL1271_WL_IRQ		IMX_GPIO_NR(6, 14)
 #define N6_WL1271_WL_EN			IMX_GPIO_NR(6, 15)
@@ -1009,6 +1010,51 @@ static const struct imx_pcie_platform_data pcie_data  __initconst = {
 	.pcie_dis	= -EINVAL,
 };
 
+#define GPIO_BUTTON(gpio_num, ev_code, act_low, descr, wake)	\
+{								\
+	.gpio		= gpio_num,				\
+	.type		= EV_KEY,				\
+	.code		= ev_code,				\
+	.active_low	= act_low,				\
+	.desc		= "btn " descr,				\
+	.wakeup		= wake,					\
+}
+
+static struct gpio_keys_button gpio_buttons[] = {
+	GPIO_BUTTON(GP_KEY_ONOFF, KEY_POWER, 1, "key-power", 1),
+};
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+static struct gpio_keys_platform_data plat_button = {
+	.buttons	= gpio_buttons,
+	.nbuttons	= ARRAY_SIZE(gpio_buttons),
+};
+
+static struct platform_device platdev_button_device = {
+	.name		= "gpio-keys",
+	.id		= -1,
+	.num_resources  = 0,
+	.dev		= {
+		.platform_data = &plat_button,
+	}
+};
+
+static void __init add_device_buttons(void)
+{
+	platform_device_register(&platdev_button_device);
+}
+#else
+static void __init add_device_buttons(void)
+{
+	int i;
+	for (i=0; i < ARRAY_SIZE(gpio_buttons);i++) {
+		int gpio = gpio_buttons[i].gpio;
+		pr_debug("%s: exporting gpio %d\n", __func__, gpio);
+		gpio_export(gpio,1);
+	}
+}
+#endif
+
 /*!
  * Board specific initialization.
  */
@@ -1141,6 +1187,8 @@ static void __init board_init(void)
 	imx6q_add_dma();
 
 	imx6q_add_dvfs_core(&dvfscore_data);
+
+	add_device_buttons();
 
 	imx6q_add_hdmi_soc();
 	imx6q_add_hdmi_soc_dai();
