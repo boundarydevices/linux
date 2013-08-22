@@ -666,6 +666,55 @@
 						>;
 					};
 				};
+
+				lcdif {
+					pinctrl_lcdif_dat_0: lcdifdatgrp-0 {
+						fsl,pins = <
+							MX6SL_PAD_LCD_DAT0__LCD_DATA00 0x1b0b0
+							MX6SL_PAD_LCD_DAT1__LCD_DATA01 0x1b0b0
+							MX6SL_PAD_LCD_DAT2__LCD_DATA02 0x1b0b0
+							MX6SL_PAD_LCD_DAT3__LCD_DATA03 0x1b0b0
+							MX6SL_PAD_LCD_DAT4__LCD_DATA04 0x1b0b0
+							MX6SL_PAD_LCD_DAT5__LCD_DATA05 0x1b0b0
+							MX6SL_PAD_LCD_DAT6__LCD_DATA06 0x1b0b0
+							MX6SL_PAD_LCD_DAT7__LCD_DATA07 0x1b0b0
+							MX6SL_PAD_LCD_DAT8__LCD_DATA08 0x1b0b0
+							MX6SL_PAD_LCD_DAT9__LCD_DATA09 0x1b0b0
+							MX6SL_PAD_LCD_DAT10__LCD_DATA10 0x1b0b0
+							MX6SL_PAD_LCD_DAT11__LCD_DATA11 0x1b0b0
+							MX6SL_PAD_LCD_DAT12__LCD_DATA12 0x1b0b0
+							MX6SL_PAD_LCD_DAT13__LCD_DATA13 0x1b0b0
+							MX6SL_PAD_LCD_DAT14__LCD_DATA14 0x1b0b0
+							MX6SL_PAD_LCD_DAT15__LCD_DATA15 0x1b0b0
+							MX6SL_PAD_LCD_DAT16__LCD_DATA16 0x1b0b0
+							MX6SL_PAD_LCD_DAT17__LCD_DATA17 0x1b0b0
+							MX6SL_PAD_LCD_DAT18__LCD_DATA18 0x1b0b0
+							MX6SL_PAD_LCD_DAT19__LCD_DATA19 0x1b0b0
+							MX6SL_PAD_LCD_DAT20__LCD_DATA20 0x1b0b0
+							MX6SL_PAD_LCD_DAT21__LCD_DATA21 0x1b0b0
+							MX6SL_PAD_LCD_DAT22__LCD_DATA22 0x1b0b0
+							MX6SL_PAD_LCD_DAT23__LCD_DATA23 0x1b0b0
+						>;
+					};
+
+					pinctrl_lcdif_ctrl_0: lcdifctrlgrp-0 {
+						fsl,pins = <
+							MX6SL_PAD_LCD_CLK__LCD_CLK 0x1b0b0
+							MX6SL_PAD_LCD_ENABLE__LCD_ENABLE 0x1b0b0
+							MX6SL_PAD_LCD_HSYNC__LCD_HSYNC 0x1b0b0
+							MX6SL_PAD_LCD_VSYNC__LCD_VSYNC 0x1b0b0
+							MX6SL_PAD_LCD_RESET__LCD_RESET 0x1b0b0
+						>;
+					};
+				};
+
+				pwm1 {
+					pinctrl_pwm1_0: pwm1grp-0 {
+						fsl,pins = <
+							MX6SL_PAD_PWM1__PWM1_OUT 0x110b0
+						>;
+					};
+				};
 			};
 
 			csi: csi@020e4000 {
@@ -705,8 +754,13 @@
 			};
 
 			lcdif: lcdif@020f8000 {
+				compatible = "fsl,imx6sl-lcdif", "fsl,imx28-lcdif";
 				reg = <0x020f8000 0x4000>;
 				interrupts = <0 39 0x04>;
+				clocks = <&clks IMX6SL_CLK_LCDIF_PIX>,
+					 <&clks IMX6SL_CLK_LCDIF_AXI>;
+				clock-names = "pix", "axi";
+				status = "disabled";
 			};
 
 			dcp: dcp@020fc000 {
