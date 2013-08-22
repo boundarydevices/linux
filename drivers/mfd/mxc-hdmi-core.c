@@ -532,17 +532,7 @@ static int hdmi_core_get_of_property(struct platform_device *pdev)
 
 	return err;
 }
-/*
-unsigned int hdmi_SDMA_check(void)
-{
 
-	return (imx6q_revision() > IMX_CHIP_REVISION_1_1) ||
-			(imx6dl_revision() > IMX_CHIP_REVISION_1_0);
-
-	return 0;
-}
-EXPORT_SYMBOL(hdmi_SDMA_check);
-*/
 /* Need to run this before phy is enabled the first time to prevent
  * overflow condition in HDMI_IH_FC_STAT2 */
 void hdmi_init_clk_regenerator(void)
