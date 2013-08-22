@@ -219,6 +219,7 @@ clocks and IDs.
 	ldb_di1_div_7		206
 	ldb_di0_div_sel		207
 	ldb_di1_div_sel		208
+	pll4_audio_div		209
 
 Examples:
 
