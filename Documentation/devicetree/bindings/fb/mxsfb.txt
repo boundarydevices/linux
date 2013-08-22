@@ -3,6 +3,9 @@
 Required properties:
 - compatible: Should be "fsl,<chip>-lcdif".  Supported chips include
   imx23 and imx28.
+- pinctrl-names: Should be "default"
+- pinctrl-0: pinctrl setting for lcd
+- lcd-supply: lcd power supply, usually via GPIO
 - reg: Address and length of the register set for lcdif
 - interrupts: Should contain lcdif interrupts
 - display : phandle to display node (see below for details)
@@ -22,6 +25,10 @@ lcdif@80030000 {
 	compatible = "fsl,imx28-lcdif";
 	reg = <0x80030000 2000>;
 	interrupts = <38 86>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&lcdif_24bit_pins_a
+		     &lcdif_pins_evk>;
+	lcd-supply = <&reg_lcd_3v3>;
 
 	display: display {
 		bits-per-pixel = <32>;
