@@ -861,7 +861,7 @@ fec_enet_rx(struct net_device *ndev, int budget)
 	int	pkt_received = 0;
 	struct	bufdesc_ex *ebdp = NULL;
 	bool	vlan_packet_rcvd = false;
-	u16	vlan_tag;
+	u16	vlan_tag = 0;
 
 #ifdef CONFIG_M532x
 	flush_cache_all();
