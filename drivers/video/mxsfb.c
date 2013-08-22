@@ -4,7 +4,7 @@
  * This code is based on:
  * Author: Vitaly Wool <vital@embeddedalley.com>
  *
- * Copyright 2008-2009 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2013 Freescale Semiconductor, Inc. All Rights Reserved.
  * Copyright 2008 Embedded Alley Solutions, Inc All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -171,7 +171,9 @@ struct mxsfb_devdata {
 struct mxsfb_info {
 	struct fb_info fb_info;
 	struct platform_device *pdev;
-	struct clk *clk;
+	struct clk *clk_pix;
+	struct clk *clk_axi;
+	bool clk_axi_enabled;
 	void __iomem *base;	/* registers */
 	unsigned allocated_size;
 	int enabled;
@@ -207,6 +209,26 @@ static const struct mxsfb_devdata mxsfb_devdata[] = {
 };
 
 #define to_imxfb_host(x) (container_of(x, struct mxsfb_info, fb_info))
+
+/* enable lcdif axi clock */
+static inline void clk_enable_axi(struct mxsfb_info *host)
+{
+	if (!host->clk_axi_enabled && host &&
+		host->clk_axi && !IS_ERR(host->clk_axi)) {
+		clk_prepare_enable(host->clk_axi);
+		host->clk_axi_enabled = true;
+	}
+}
+
+/* disable lcdif axi clock */
+static inline void clk_disable_axi(struct mxsfb_info *host)
+{
+	if (host->clk_axi_enabled && host &&
+		host->clk_axi && !IS_ERR(host->clk_axi)) {
+		clk_disable_unprepare(host->clk_axi);
+		host->clk_axi_enabled = false;
+	}
+}
 
 /* mask and shift depends on architecture */
 static inline u32 set_hsync_pulse_width(struct mxsfb_info *host, unsigned val)
@@ -352,8 +374,10 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 		}
 	}
 
-	clk_prepare_enable(host->clk);
-	clk_set_rate(host->clk, PICOS2KHZ(fb_info->var.pixclock) * 1000U);
+	clk_enable_axi(host);
+
+	clk_prepare_enable(host->clk_pix);
+	clk_set_rate(host->clk_pix, PICOS2KHZ(fb_info->var.pixclock) * 1000U);
 
 	/* if it was disabled, re-enable the mode again */
 	writel(CTRL_DOTCLK_MODE, host->base + LCDC_CTRL + REG_SET);
@@ -377,6 +401,7 @@ static void mxsfb_disable_controller(struct fb_info *fb_info)
 
 	dev_dbg(&host->pdev->dev, "%s\n", __func__);
 
+	clk_enable_axi(host);
 	/*
 	 * Even if we disable the controller here, it will still continue
 	 * until its FIFOs are running out of data
@@ -394,7 +419,7 @@ static void mxsfb_disable_controller(struct fb_info *fb_info)
 	reg = readl(host->base + LCDC_VDCTRL4);
 	writel(reg & ~VDCTRL4_SYNC_SIGNALS_ON, host->base + LCDC_VDCTRL4);
 
-	clk_disable_unprepare(host->clk);
+	clk_disable_unprepare(host->clk_pix);
 
 	host->enabled = 0;
 
@@ -412,6 +437,8 @@ static int mxsfb_set_par(struct fb_info *fb_info)
 	u32 ctrl, vdctrl0, vdctrl4;
 	int line_size, fb_size;
 	int reenable = 0;
+
+	clk_enable_axi(host);
 
 	line_size =  fb_info->var.xres * (fb_info->var.bits_per_pixel >> 3);
 	fb_size = fb_info->var.yres_virtual * line_size;
@@ -576,6 +603,8 @@ static int mxsfb_blank(int blank, struct fb_info *fb_info)
 	case FB_BLANK_NORMAL:
 		if (host->enabled)
 			mxsfb_disable_controller(fb_info);
+
+		clk_disable_axi(host);
 		break;
 
 	case FB_BLANK_UNBLANK:
@@ -594,6 +623,8 @@ static int mxsfb_pan_display(struct fb_var_screeninfo *var,
 
 	if (var->xoffset != 0)
 		return -EINVAL;
+
+	clk_enable_axi(host);
 
 	offset = fb_info->fix.line_length * var->yoffset;
 
@@ -626,6 +657,8 @@ static int mxsfb_restore_mode(struct mxsfb_info *host)
 	u32 transfer_count, vdctrl0, vdctrl2, vdctrl3, vdctrl4, ctrl;
 	struct fb_videomode vmode;
 
+	clk_enable_axi(host);
+
 	/* Only restore the mode when the controller is running */
 	ctrl = readl(host->base + LCDC_CTRL);
 	if (!(ctrl & CTRL_RUN))
@@ -654,7 +687,7 @@ static int mxsfb_restore_mode(struct mxsfb_info *host)
 
 	fb_info->var.bits_per_pixel = bits_per_pixel;
 
-	vmode.pixclock = KHZ2PICOS(clk_get_rate(host->clk) / 1000U);
+	vmode.pixclock = KHZ2PICOS(clk_get_rate(host->clk_pix) / 1000U);
 	vmode.hsync_len = get_hsync_pulse_width(host, vdctrl2);
 	vmode.left_margin = GET_HOR_WAIT_CNT(vdctrl3) - vmode.hsync_len;
 	vmode.right_margin = VDCTRL2_GET_HSYNC_PERIOD(vdctrl2) - vmode.hsync_len -
@@ -701,7 +734,7 @@ static int mxsfb_restore_mode(struct mxsfb_info *host)
 	line_count = fb_info->fix.smem_len / fb_info->fix.line_length;
 	fb_info->fix.ypanstep = 1;
 
-	clk_prepare_enable(host->clk);
+	clk_prepare_enable(host->clk_pix);
 	host->enabled = 1;
 
 	return 0;
@@ -915,9 +948,15 @@ static int mxsfb_probe(struct platform_device *pdev)
 		goto fb_release;
 	}
 
-	host->clk = devm_clk_get(&host->pdev->dev, NULL);
-	if (IS_ERR(host->clk)) {
-		ret = PTR_ERR(host->clk);
+	host->clk_pix = devm_clk_get(&host->pdev->dev, "pix");
+	if (IS_ERR(host->clk_pix)) {
+		ret = PTR_ERR(host->clk_pix);
+		goto fb_release;
+	}
+
+	host->clk_axi = devm_clk_get(&host->pdev->dev, "axi");
+	if (IS_ERR(host->clk_axi)) {
+		ret = PTR_ERR(host->clk_axi);
 		goto fb_release;
 	}
 
@@ -965,7 +1004,7 @@ static int mxsfb_probe(struct platform_device *pdev)
 
 fb_destroy:
 	if (host->enabled)
-		clk_disable_unprepare(host->clk);
+		clk_disable_unprepare(host->clk_pix);
 	fb_destroy_modelist(&fb_info->modelist);
 fb_release:
 	framebuffer_release(fb_info);
@@ -996,11 +1035,13 @@ static void mxsfb_shutdown(struct platform_device *pdev)
 	struct fb_info *fb_info = platform_get_drvdata(pdev);
 	struct mxsfb_info *host = to_imxfb_host(fb_info);
 
+	clk_enable_axi(host);
 	/*
 	 * Force stop the LCD controller as keeping it running during reboot
 	 * might interfere with the BootROM's boot mode pads sampling.
 	 */
 	writel(CTRL_RUN, host->base + LCDC_CTRL + REG_CLR);
+	clk_disable_axi(host);
 }
 
 static struct platform_driver mxsfb_driver = {
