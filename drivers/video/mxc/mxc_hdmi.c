@@ -2412,14 +2412,10 @@ static void hdmi_init_route(struct mxc_hdmi *hdmi)
 
 	writel(reg, hdmi->gpr_hdmi_base);
 
-	/* Set HDMI event as SDMA event2 while Chip version later than TO1.2 */
-/*
-	if (hdmi_SDMA_check()) {
-		reg = readl(hdmi->gpr_sdma_base);
-		reg |= 0x1;
-		writel(reg, hdmi->gpr_sdma_base);
-	}
-*/
+	/* Set HDMI event as SDMA event2 for HDMI audio */
+	reg = readl(hdmi->gpr_sdma_base);
+	reg |= 0x1;
+	writel(reg, hdmi->gpr_sdma_base);
 }
 
 static void hdmi_hdcp_get_property(struct platform_device *pdev)
