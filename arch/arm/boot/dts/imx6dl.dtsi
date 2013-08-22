@@ -109,7 +109,7 @@
 
 		hdmi_cec: hdmi_cec@00120000 {
 			compatible = "fsl,imx6dl-hdmi-cec";
-			interrupts = <0 116 0x04>;
+			interrupts = <0 115 0x04>;
 			status = "disabled";
 		};
 
