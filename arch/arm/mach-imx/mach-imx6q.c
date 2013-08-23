@@ -273,7 +273,7 @@ put_node:
 }
 
 static struct platform_device imx6q_cpufreq_pdev = {
-	.name = "imx6q-cpufreq",
+	.name = "imx6-cpufreq",
 };
 
 static void __init imx6q_init_late(void)
@@ -299,7 +299,7 @@ static void __init imx6q_init_late(void)
 		IMX_CHIP_REVISION_1_0))
 		imx6q_cpuidle_init();
 
-	if (IS_ENABLED(CONFIG_ARM_IMX6Q_CPUFREQ)) {
+	if (IS_ENABLED(CONFIG_ARM_IMX6_CPUFREQ)) {
 		imx6q_opp_init(&imx6q_cpufreq_pdev.dev);
 		platform_device_register(&imx6q_cpufreq_pdev);
 	}
