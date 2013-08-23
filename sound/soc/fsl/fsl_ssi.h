@@ -3,7 +3,7 @@
  *
  * Author: Timur Tabi <timur@freescale.com>
  *
- * Copyright 2007-2008 Freescale Semiconductor, Inc.  This file is licensed
+ * Copyright 2007-2013 Freescale Semiconductor, Inc.  This file is licensed
  * under the terms of the GNU General Public License version 2.  This
  * program is licensed "as is" without any warranty of any kind, whether
  * express or implied.
@@ -125,7 +125,11 @@ struct ccsr_ssi {
 #define CCSR_SSI_SRCR_REFS		0x00000001
 
 /* STCCR and SRCCR */
+#define CCSR_SSI_SxCCR_DIV2_SHIFT	18
+#define CCSR_SSI_SxCCR_DIV2_MASK	0x00040000
 #define CCSR_SSI_SxCCR_DIV2		0x00040000
+#define CCSR_SSI_SxCCR_PSR_SHIFT	17
+#define CCSR_SSI_SxCCR_PSR_MASK		0x00020000
 #define CCSR_SSI_SxCCR_PSR		0x00020000
 #define CCSR_SSI_SxCCR_WL_SHIFT		13
 #define CCSR_SSI_SxCCR_WL_MASK		0x0001E000

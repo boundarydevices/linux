@@ -138,6 +138,7 @@ struct fsl_ssi_private {
 	struct device_attribute dev_attr;
 	struct platform_device *pdev;
 
+	unsigned long sysrate;
 	bool new_binding;
 	bool ssi_on_imx;
 	bool use_dual_fifo;
@@ -488,6 +489,8 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 		snd_pcm_format_width(params_format(hw_params));
 	u32 wl = CCSR_SSI_SxCCR_WL(sample_size);
 	int enabled = read_ssi(&ssi->scr) & CCSR_SSI_SCR_SSIEN;
+	u32 dc = CCSR_SSI_SxCCR_DC(params_channels(hw_params));
+	int ret;
 
 	/*
 	 * If we're in synchronous mode, and the SSI is already enabled,
@@ -495,6 +498,14 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	 */
 	if (enabled && ssi_private->cpu_dai_drv.symmetric_rates)
 		return 0;
+
+	if (ssi_private->sysrate) {
+		ret = clk_set_rate(ssi_private->clk, ssi_private->sysrate);
+		if (ret) {
+			dev_err(cpu_dai->dev, "failed to set clock rate\n");
+			return ret;
+		}
+	}
 
 	/*
 	 * FIXME: The documentation says that SxCCR[WL] should not be
@@ -508,10 +519,13 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 
 	/* In synchronous mode, the SSI uses STCCR for capture */
 	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) ||
-	    ssi_private->cpu_dai_drv.symmetric_rates)
+	    ssi_private->cpu_dai_drv.symmetric_rates) {
 		write_ssi_mask(&ssi->stccr, CCSR_SSI_SxCCR_WL_MASK, wl);
-	else
+		write_ssi_mask(&ssi->stccr, CCSR_SSI_SxCCR_DC_MASK, dc);
+	} else {
 		write_ssi_mask(&ssi->srccr, CCSR_SSI_SxCCR_WL_MASK, wl);
+		write_ssi_mask(&ssi->srccr, CCSR_SSI_SxCCR_WL_MASK, dc);
+	}
 
 	return 0;
 }
@@ -567,6 +581,194 @@ static int fsl_ssi_trigger(struct snd_pcm_substream *substream, int cmd,
 	return 0;
 }
 
+static int fsl_ssi_set_dai_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
+{
+	struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(cpu_dai);
+	struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
+	u32 strcr = 0, stcr, srcr, scr, mask;
+
+	scr = read_ssi(&ssi->scr) & ~(CCSR_SSI_SCR_SYN | CCSR_SSI_SCR_NET);
+
+	mask = CCSR_SSI_STCR_TXBIT0 | CCSR_SSI_STCR_TFDIR | CCSR_SSI_STCR_TXDIR
+		| CCSR_SSI_STCR_TSCKP | CCSR_SSI_STCR_TFSI | CCSR_SSI_STCR_TFSL
+		| CCSR_SSI_STCR_TEFS;
+	stcr = read_ssi(&ssi->stcr) & ~mask;
+	srcr = read_ssi(&ssi->srcr) & ~mask;
+
+	/* DAI format */
+	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
+	case SND_SOC_DAIFMT_I2S:
+		scr |= CCSR_SSI_SCR_NET;
+
+		/* Pre-set SSI I2S mode */
+		switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
+		case SND_SOC_DAIFMT_CBS_CFS:
+			scr &= ~CCSR_SSI_SCR_I2S_MODE_MASK;
+			scr |= CCSR_SSI_SCR_I2S_MODE_MASTER;
+			break;
+		case SND_SOC_DAIFMT_CBM_CFM:
+			scr &= ~CCSR_SSI_SCR_I2S_MODE_MASK;
+			scr |= CCSR_SSI_SCR_I2S_MODE_SLAVE;
+			break;
+		default:
+			dev_err(cpu_dai->dev, "unsupported SND_SOC_DAIFMT_MASTER: %d",
+					fmt & SND_SOC_DAIFMT_MASTER_MASK);
+			return -EINVAL;
+		}
+
+		/* Data on rising edge of bclk, frame low, 1clk before data */
+		strcr |= CCSR_SSI_STCR_TFSI | CCSR_SSI_STCR_TSCKP
+			| CCSR_SSI_STCR_TXBIT0 | CCSR_SSI_STCR_TEFS;
+		break;
+	case SND_SOC_DAIFMT_LEFT_J:
+		/* Data on rising edge of bclk, frame high */
+		strcr |= CCSR_SSI_STCR_TXBIT0 | CCSR_SSI_STCR_TSCKP;
+		break;
+	case SND_SOC_DAIFMT_DSP_A:
+		/* Data on rising edge of bclk, frame high, 1clk before data */
+		strcr |= CCSR_SSI_STCR_TFSL | CCSR_SSI_STCR_TSCKP
+			| CCSR_SSI_STCR_TXBIT0 | CCSR_SSI_STCR_TEFS;
+		break;
+	case SND_SOC_DAIFMT_DSP_B:
+		/* Data on rising edge of bclk, frame high */
+		strcr |= CCSR_SSI_STCR_TFSL | CCSR_SSI_STCR_TSCKP
+			| CCSR_SSI_STCR_TXBIT0;
+		break;
+	default:
+		dev_err(cpu_dai->dev, "unsupported SND_SOC_DAIFMT: %d",
+				fmt & SND_SOC_DAIFMT_FORMAT_MASK);
+		return -EINVAL;
+	}
+
+	/* DAI clock inversion */
+	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
+	case SND_SOC_DAIFMT_NB_NF:
+		/* Nothing to do for both normal cases */
+		break;
+	case SND_SOC_DAIFMT_IB_NF:
+		/* Invert bit clock */
+		strcr ^= CCSR_SSI_STCR_TSCKP;
+		break;
+	case SND_SOC_DAIFMT_NB_IF:
+		/* Invert frame clock */
+		strcr ^= CCSR_SSI_STCR_TFSI;
+		break;
+	case SND_SOC_DAIFMT_IB_IF:
+		/* Invert both clocks */
+		strcr ^= CCSR_SSI_STCR_TSCKP;
+		strcr ^= CCSR_SSI_STCR_TFSI;
+		break;
+	default:
+		dev_err(cpu_dai->dev, "unsupported SND_SOC_DAIFMT_INV: %d",
+				fmt & SND_SOC_DAIFMT_INV_MASK);
+		return -EINVAL;
+	}
+
+	/* DAI clock master masks */
+	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
+	case SND_SOC_DAIFMT_CBS_CFS:
+		scr |= CCSR_SSI_SCR_SYS_CLK_EN;
+		strcr |= CCSR_SSI_STCR_TFDIR | CCSR_SSI_STCR_TXDIR;
+		break;
+	case SND_SOC_DAIFMT_CBM_CFM:
+		scr &= ~CCSR_SSI_SCR_SYS_CLK_EN;
+		break;
+	default:
+		dev_err(cpu_dai->dev, "unsupported SND_SOC_DAIFMT_MASTER: %d",
+				fmt & SND_SOC_DAIFMT_MASTER_MASK);
+		return -EINVAL;
+	}
+
+	stcr |= strcr;
+	srcr |= strcr;
+
+	if (ssi_private->cpu_dai_drv.symmetric_rates) {
+		scr |= CCSR_SSI_SCR_SYN;
+
+		/* Need to clear RXDIR when using SYNC mode */
+		srcr &= ~CCSR_SSI_SRCR_RXDIR;
+	}
+
+	write_ssi(stcr, &ssi->stcr);
+	write_ssi(srcr, &ssi->srcr);
+	write_ssi(scr, &ssi->scr);
+
+	return 0;
+}
+
+static int fsl_ssi_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
+				  int clk_id, unsigned int freq, int dir)
+{
+	struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(cpu_dai);
+	struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
+	int synchronous = ssi_private->cpu_dai_drv.symmetric_rates;
+	u32 pm = 999, div2, psr, stccr, mask, afreq, factor, i;
+	unsigned long clkrate, sysrate = 0;
+	u64 sub, savesub = 100000;
+
+	/*
+	 * It should be already enough to divide clock by setting pm.
+	 * So we here keep psr and div2 to 0.
+	 */
+	psr = 0;
+	div2 = 0;
+
+	factor = (div2 + 1) * (7 * psr + 1) * 2;
+
+	for (i = 0; i < 255; i++) {
+		/* The bclk rate must be smaller than 1/5 sysclk rate */
+		if (factor * (i + 1) < 5)
+			continue;
+
+		sysrate = freq * factor * (i + 2);
+		clkrate = clk_round_rate(ssi_private->clk, sysrate);
+
+		do_div(clkrate, factor);
+		afreq = (u32)clkrate / (i + 1);
+
+		if (freq == afreq)
+			sub = 0;
+		else if (freq / afreq == 1)
+			sub = freq - afreq;
+		else if (afreq / freq == 1)
+			sub = afreq - freq;
+		else
+			continue;
+
+		/* Calculate the fraction */
+		sub *= 100000;
+		do_div(sub, freq);
+
+		if (sub < savesub) {
+			ssi_private->sysrate = sysrate;
+			savesub = sub;
+			pm = i;
+		}
+
+		/* We are lucky */
+		if (savesub == 0)
+			break;
+	}
+
+	/* No proper pm found if it is still remaining the initial value */
+	if (pm == 999) {
+		dev_err(cpu_dai->dev, "failed to handle the required sysclk\n");
+		return -EINVAL;
+	}
+
+	stccr = CCSR_SSI_SxCCR_PM(pm + 1) | (div2 ? CCSR_SSI_SxCCR_DIV2 : 0)
+		| (psr ? CCSR_SSI_SxCCR_PSR : 0);
+	mask = CCSR_SSI_SxCCR_PM_MASK | CCSR_SSI_SxCCR_DIV2_MASK
+		| CCSR_SSI_SxCCR_PSR_MASK;
+
+	if (dir == SND_SOC_CLOCK_OUT || synchronous)
+		write_ssi_mask(&ssi->stccr, mask, stccr);
+	else
+		write_ssi_mask(&ssi->srccr, mask, stccr);
+
+	return 0;
+}
+
 /**
  * fsl_ssi_shutdown: shutdown the SSI
  *
@@ -588,6 +790,8 @@ static void fsl_ssi_shutdown(struct snd_pcm_substream *substream,
 		struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
 
 		write_ssi_mask(&ssi->sier, SIER_FLAGS, 0);
+
+		ssi_private->sysrate = 0;
 	}
 
 	if (ssi_private->ssi_on_imx) {
@@ -613,6 +817,8 @@ static int fsl_ssi_dai_probe(struct snd_soc_dai *dai)
 static const struct snd_soc_dai_ops fsl_ssi_dai_ops = {
 	.startup	= fsl_ssi_startup,
 	.hw_params	= fsl_ssi_hw_params,
+	.set_fmt	= fsl_ssi_set_dai_fmt,
+	.set_sysclk	= fsl_ssi_set_dai_sysclk,
 	.shutdown	= fsl_ssi_shutdown,
 	.trigger	= fsl_ssi_trigger,
 };
@@ -723,13 +929,6 @@ static int fsl_ssi_probe(struct platform_device *pdev)
 	if (!of_device_is_available(np))
 		return -ENODEV;
 
-	/* We only support the SSI in "I2S Slave" mode */
-	sprop = of_get_property(np, "fsl,mode", NULL);
-	if (!sprop || strcmp(sprop, "i2s-slave")) {
-		dev_notice(&pdev->dev, "mode %s is unsupported\n", sprop);
-		return -ENODEV;
-	}
-
 	/* The DAI name is the last part of the full name of the node. */
 	p = strrchr(np->full_name, '/') + 1;
 	ssi_private = kzalloc(sizeof(struct fsl_ssi_private) + strlen(p),
@@ -816,6 +1015,8 @@ static int fsl_ssi_probe(struct platform_device *pdev)
 		ssi_private->dma_params_rx.addr =
 			ssi_private->ssi_phys + offsetof(struct ccsr_ssi, srx0);
 	}
+
+	ssi_private->sysrate = 0;
 
 	/* Initialize the the device_attribute structure */
 	dev_attr = &ssi_private->dev_attr;
