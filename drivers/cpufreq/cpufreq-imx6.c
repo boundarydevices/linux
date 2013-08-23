@@ -37,20 +37,20 @@ struct soc_opp {
 	u32 soc_volt;
 };
 
-static struct soc_opp *imx6q_soc_opp;
+static struct soc_opp *imx6_soc_opp;
 static u32 soc_opp_count;
 
-static int imx6q_verify_speed(struct cpufreq_policy *policy)
+static int imx6_verify_speed(struct cpufreq_policy *policy)
 {
 	return cpufreq_frequency_table_verify(policy, freq_table);
 }
 
-static unsigned int imx6q_get_speed(unsigned int cpu)
+static unsigned int imx6_get_speed(unsigned int cpu)
 {
 	return clk_get_rate(arm_clk) / 1000;
 }
 
-static int imx6q_set_target(struct cpufreq_policy *policy,
+static int imx6_set_target(struct cpufreq_policy *policy,
 			    unsigned int target_freq, unsigned int relation)
 {
 	struct cpufreq_freqs freqs;
@@ -90,13 +90,13 @@ static int imx6q_set_target(struct cpufreq_policy *policy,
 
 	/* Find the matching VDDSOC/VDDPU operating voltage */
 	while (soc_opp_index < soc_opp_count) {
-		if (freqs.new == imx6q_soc_opp[soc_opp_index].arm_freq)
+		if (freqs.new == imx6_soc_opp[soc_opp_index].arm_freq)
 			break;
 		soc_opp_index++;
 	}
 	if (soc_opp_index >= soc_opp_count) {
 		dev_err(cpu_dev,
-			"Cannot find matching imx6q_soc_opp voltage\n");
+			"Cannot find matching imx6_soc_opp voltage\n");
 			return -EINVAL;
 	}
 
@@ -115,7 +115,7 @@ static int imx6q_set_target(struct cpufreq_policy *policy,
 	if (freqs.new > freqs.old) {
 		if (regulator_is_enabled(pu_reg)) {
 			ret = regulator_set_voltage_tol(pu_reg,
-					imx6q_soc_opp[soc_opp_index].soc_volt,
+					imx6_soc_opp[soc_opp_index].soc_volt,
 					0);
 			if (ret) {
 				dev_err(cpu_dev,
@@ -124,7 +124,7 @@ static int imx6q_set_target(struct cpufreq_policy *policy,
 			}
 		}
 		ret = regulator_set_voltage_tol(soc_reg,
-				imx6q_soc_opp[soc_opp_index].soc_volt, 0);
+				imx6_soc_opp[soc_opp_index].soc_volt, 0);
 		if (ret) {
 			dev_err(cpu_dev,
 				"failed to scale vddsoc up: %d\n", ret);
@@ -188,7 +188,7 @@ static int imx6q_set_target(struct cpufreq_policy *policy,
 		}
 
 		ret = regulator_set_voltage_tol(soc_reg,
-				imx6q_soc_opp[soc_opp_index].soc_volt, 0);
+				imx6_soc_opp[soc_opp_index].soc_volt, 0);
 		if (ret) {
 			dev_err(cpu_dev,
 				"failed to scale vddsoc down: %d\n", ret);
@@ -197,7 +197,7 @@ static int imx6q_set_target(struct cpufreq_policy *policy,
 
 		if (regulator_is_enabled(pu_reg)) {
 			ret = regulator_set_voltage_tol(pu_reg,
-					imx6q_soc_opp[soc_opp_index].soc_volt,
+					imx6_soc_opp[soc_opp_index].soc_volt,
 					0);
 			if (ret) {
 				dev_err(cpu_dev,
@@ -220,7 +220,7 @@ err1:
 	return -1;
 }
 
-static int imx6q_cpufreq_init(struct cpufreq_policy *policy)
+static int imx6_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int ret;
 
@@ -241,28 +241,28 @@ static int imx6q_cpufreq_init(struct cpufreq_policy *policy)
 	return 0;
 }
 
-static int imx6q_cpufreq_exit(struct cpufreq_policy *policy)
+static int imx6_cpufreq_exit(struct cpufreq_policy *policy)
 {
 	cpufreq_frequency_table_put_attr(policy->cpu);
 	return 0;
 }
 
-static struct freq_attr *imx6q_cpufreq_attr[] = {
+static struct freq_attr *imx6_cpufreq_attr[] = {
 	&cpufreq_freq_attr_scaling_available_freqs,
 	NULL,
 };
 
-static struct cpufreq_driver imx6q_cpufreq_driver = {
-	.verify = imx6q_verify_speed,
-	.target = imx6q_set_target,
-	.get = imx6q_get_speed,
-	.init = imx6q_cpufreq_init,
-	.exit = imx6q_cpufreq_exit,
-	.name = "imx6q-cpufreq",
-	.attr = imx6q_cpufreq_attr,
+static struct cpufreq_driver imx6_cpufreq_driver = {
+	.verify = imx6_verify_speed,
+	.target = imx6_set_target,
+	.get = imx6_get_speed,
+	.init = imx6_cpufreq_init,
+	.exit = imx6_cpufreq_exit,
+	.name = "imx6-cpufreq",
+	.attr = imx6_cpufreq_attr,
 };
 
-static int imx6q_cpufreq_probe(struct platform_device *pdev)
+static int imx6_cpufreq_probe(struct platform_device *pdev)
 {
 	struct device_node *np;
 	struct opp *opp;
@@ -340,11 +340,11 @@ static int imx6q_cpufreq_probe(struct platform_device *pdev)
 	}
 
 	/* Get the VDDSOC/VDDPU voltages that need to track the CPU voltages. */
-	imx6q_soc_opp = devm_kzalloc(cpu_dev,
+	imx6_soc_opp = devm_kzalloc(cpu_dev,
 					sizeof(struct soc_opp) * (nr / 2),
 					GFP_KERNEL);
 
-	if (imx6q_soc_opp == NULL) {
+	if (imx6_soc_opp == NULL) {
 		dev_err(cpu_dev, "No Memory for VDDSOC/PU table\n");
 		goto free_freq_table;
 	}
@@ -375,8 +375,8 @@ static int imx6q_cpufreq_probe(struct platform_device *pdev)
 				goto free_freq_table;
 			}
 		}
-		imx6q_soc_opp[i].arm_freq = freq;
-		imx6q_soc_opp[i].soc_volt = volt;
+		imx6_soc_opp[i].arm_freq = freq;
+		imx6_soc_opp[i].soc_volt = volt;
 		soc_opp_count++;
 	}
 	rcu_read_unlock();
@@ -413,7 +413,7 @@ static int imx6q_cpufreq_probe(struct platform_device *pdev)
 	if (ret > 0)
 		transition_latency += ret * 1000;
 
-	ret = cpufreq_register_driver(&imx6q_cpufreq_driver);
+	ret = cpufreq_register_driver(&imx6_cpufreq_driver);
 	if (ret) {
 		dev_err(cpu_dev, "failed register driver: %d\n", ret);
 		goto free_freq_table;
@@ -429,24 +429,24 @@ put_node:
 	return ret;
 }
 
-static int imx6q_cpufreq_remove(struct platform_device *pdev)
+static int imx6_cpufreq_remove(struct platform_device *pdev)
 {
-	cpufreq_unregister_driver(&imx6q_cpufreq_driver);
+	cpufreq_unregister_driver(&imx6_cpufreq_driver);
 	opp_free_cpufreq_table(cpu_dev, &freq_table);
 
 	return 0;
 }
 
-static struct platform_driver imx6q_cpufreq_platdrv = {
+static struct platform_driver imx6_cpufreq_platdrv = {
 	.driver = {
-		.name	= "imx6q-cpufreq",
+		.name	= "imx6-cpufreq",
 		.owner	= THIS_MODULE,
 	},
-	.probe		= imx6q_cpufreq_probe,
-	.remove		= imx6q_cpufreq_remove,
+	.probe		= imx6_cpufreq_probe,
+	.remove		= imx6_cpufreq_remove,
 };
-module_platform_driver(imx6q_cpufreq_platdrv);
+module_platform_driver(imx6_cpufreq_platdrv);
 
 MODULE_AUTHOR("Shawn Guo <shawn.guo@linaro.org>");
-MODULE_DESCRIPTION("Freescale i.MX6Q cpufreq driver");
+MODULE_DESCRIPTION("Freescale i.MX6 cpufreq driver");
 MODULE_LICENSE("GPL");
