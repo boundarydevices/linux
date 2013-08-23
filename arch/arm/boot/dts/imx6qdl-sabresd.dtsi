@@ -400,6 +400,16 @@
                 interrupts = <7 2>;
                 wakeup-gpios = <&gpio6 7 0>;
         };
+
+	mag3110@0e {
+		compatible = "fsl,mag3110";
+		reg = <0x0e>;
+		position = <2>;
+		vdd-supply = <&reg_sensor>;
+		vddio-supply = <&reg_sensor>;
+		interrupt-parent = <&gpio3>;
+		interrupts = <16 2>;
+	};
 };
 
 &iomuxc {
@@ -430,6 +440,7 @@
 				MX6QDL_PAD_NANDF_CS0__GPIO6_IO11 0x80000000
 				MX6QDL_PAD_NANDF_CS1__GPIO6_IO14 0x80000000
 				MX6QDL_PAD_EIM_EB3__GPIO2_IO31 0x80000000
+				MX6QDL_PAD_EIM_D16__GPIO3_IO16 0x80000000
 			>;
 		};
 	};
