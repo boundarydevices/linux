@@ -11,6 +11,7 @@
 #include <linux/irqchip.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
+#include <linux/opp.h>
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
 #include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
@@ -19,6 +20,10 @@
 
 #include "common.h"
 #include "hardware.h"
+
+static struct platform_device imx6sl_cpufreq_pdev = {
+	.name = "imx6-cpufreq",
+};
 
 static void __init imx6sl_fec_init(void)
 {
@@ -53,6 +58,26 @@ static void __init imx6sl_init_machine(void)
 	imx6_pm_init();
 }
 
+static void __init imx6sl_opp_init(struct device *cpu_dev)
+{
+	struct device_node *np;
+
+	np = of_find_node_by_path("/cpus/cpu@0");
+	if (!np) {
+		pr_warn("failed to find cpu0 node\n");
+		return;
+	}
+
+	cpu_dev->of_node = np;
+	if (of_init_opp_table(cpu_dev)) {
+		pr_warn("failed to init OPP table\n");
+		goto put_node;
+	}
+
+put_node:
+	of_node_put(np);
+}
+
 static void __init imx6sl_init_late(void)
 {
 	struct regmap *gpr;
@@ -68,6 +93,12 @@ static void __init imx6sl_init_late(void)
 			IMX6Q_GPR1_GINT_ASSERT);
 	else
 		pr_err("failed to find fsl,imx6sl-iomux-gpr regmap\n");
+
+	if (IS_ENABLED(CONFIG_ARM_IMX6_CPUFREQ)) {
+		imx6sl_opp_init(&imx6sl_cpufreq_pdev.dev);
+		platform_device_register(&imx6sl_cpufreq_pdev);
+	}
+
 }
 
 static void __init imx6sl_map_io(void)
