@@ -141,6 +141,7 @@ struct fsl_ssi_private {
 	bool new_binding;
 	bool ssi_on_imx;
 	bool use_dual_fifo;
+	struct clk *coreclk;
 	struct clk *clk;
 	struct snd_dmaengine_dai_dma_data dma_params_tx;
 	struct snd_dmaengine_dai_dma_data dma_params_rx;
@@ -332,9 +333,12 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 		snd_soc_dai_get_drvdata(rtd->cpu_dai);
 	int synchronous = ssi_private->cpu_dai_drv.symmetric_rates;
 
-	pm_runtime_get_sync(dai->dev);
+	if (ssi_private->ssi_on_imx) {
+		pm_runtime_get_sync(dai->dev);
 
-	clk_enable(ssi_private->clk);
+		clk_prepare_enable(ssi_private->coreclk);
+		clk_prepare_enable(ssi_private->clk);
+	}
 
 	/*
 	 * If this is the first stream opened, then request the IRQ
@@ -579,15 +583,18 @@ static void fsl_ssi_shutdown(struct snd_pcm_substream *substream,
 
 	ssi_private->second_stream = NULL;
 
-	clk_disable(ssi_private->clk);
-
-	pm_runtime_put_sync(dai->dev);
-
 	/* If this is the last active substream, disable the interrupts. */
 	if (!ssi_private->first_stream) {
 		struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
 
 		write_ssi_mask(&ssi->sier, SIER_FLAGS, 0);
+	}
+
+	if (ssi_private->ssi_on_imx) {
+		clk_disable_unprepare(ssi_private->clk);
+		clk_disable_unprepare(ssi_private->coreclk);
+
+		pm_runtime_put_sync(dai->dev);
 	}
 }
 
@@ -783,13 +790,18 @@ static int fsl_ssi_probe(struct platform_device *pdev)
 	if (of_device_is_compatible(pdev->dev.of_node, "fsl,imx21-ssi")) {
 		ssi_private->ssi_on_imx = true;
 
-		ssi_private->clk = clk_get(&pdev->dev, NULL);
-		if (IS_ERR(ssi_private->clk)) {
-			ret = PTR_ERR(ssi_private->clk);
-			dev_err(&pdev->dev, "could not get clock: %d\n", ret);
+		ssi_private->coreclk = devm_clk_get(&pdev->dev, "ipg");
+		if (IS_ERR(ssi_private->coreclk)) {
+			ret = PTR_ERR(ssi_private->coreclk);
+			dev_err(&pdev->dev, "could not get ipg clock: %d\n", ret);
 			goto error_irq;
 		}
-		clk_prepare(ssi_private->clk);
+		ssi_private->clk = devm_clk_get(&pdev->dev, "baud");
+		if (IS_ERR(ssi_private->clk)) {
+			ret = PTR_ERR(ssi_private->clk);
+			dev_err(&pdev->dev, "could not get baud clock: %d\n", ret);
+			goto error_irq;
+		}
 
 		/*
 		 * We have burstsize be "fifo_depth - 2" to match the SSI
@@ -883,11 +895,6 @@ error_dev:
 	dev_set_drvdata(&pdev->dev, NULL);
 	device_remove_file(&pdev->dev, dev_attr);
 
-	if (ssi_private->ssi_on_imx) {
-		clk_unprepare(ssi_private->clk);
-		clk_put(ssi_private->clk);
-	}
-
 error_irq:
 	free_irq(ssi_private->irq, ssi_private);
 
@@ -909,11 +916,9 @@ static int fsl_ssi_remove(struct platform_device *pdev)
 
 	if (!ssi_private->new_binding)
 		platform_device_unregister(ssi_private->pdev);
-	if (ssi_private->ssi_on_imx) {
+	if (ssi_private->ssi_on_imx)
 		imx_pcm_dma_exit(pdev);
-		clk_unprepare(ssi_private->clk);
-		clk_put(ssi_private->clk);
-	}
+
 	snd_soc_unregister_component(&pdev->dev);
 	device_remove_file(&pdev->dev, &ssi_private->dev_attr);
 
