@@ -209,6 +209,14 @@
 		interrupt-parent = <&gpio2>;
 		interrupts = <29 2>;
 	};
+
+	isl29023@44 {
+		compatible = "fsl,isl29023";
+		reg = <0x44>;
+		rext = <499>;
+		interrupt-parent = <&gpio5>;
+		interrupts = <17 2>;
+	};
 };
 
 &iomuxc {
@@ -224,6 +232,7 @@
 				MX6QDL_PAD_SD2_DAT0__GPIO1_IO15  0x80000000
 				MX6QDL_PAD_EIM_EB0__GPIO2_IO28   0x80000000
 				MX6QDL_PAD_EIM_EB1__GPIO2_IO29	0x80000000
+				MX6QDL_PAD_DISP0_DAT23__GPIO5_IO17 0x80000000
 			>;
 		};
 	};
