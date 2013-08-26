@@ -107,6 +107,11 @@
 			clock-frequency = <24576000>;
 		};
 	};
+
+	v4l2_out {
+		compatible = "fsl,mxc_v4l2_output";
+		status = "okay";
+	};
 };
 
 &ecspi1 {
