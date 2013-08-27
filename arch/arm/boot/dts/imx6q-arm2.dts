@@ -44,6 +44,13 @@
 	};
 };
 
+&fec {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_enet_2>;
+	phy-mode = "rgmii";
+	status = "okay";
+};
+
 &gpmi {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_gpmi_nand_1>;
@@ -72,10 +79,9 @@
 	};
 };
 
-&fec {
+&uart4 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_enet_2>;
-	phy-mode = "rgmii";
+	pinctrl-0 = <&pinctrl_uart4_1>;
 	status = "okay";
 };
 
@@ -94,11 +100,5 @@
 	vmmc-supply = <&reg_3p3v>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc4_1>;
-	status = "okay";
-};
-
-&uart4 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart4_1>;
 	status = "okay";
 };

@@ -20,6 +20,12 @@
 	compatible = "fsl,imx6q-sabresd", "fsl,imx6q";
 };
 
+&battery {
+	offset-charger = <1900>;
+	offset-discharger = <1694>;
+	offset-usb-charger = <1685>;
+};
+
 &mxcfb1 {
 	status = "okay";
 };
@@ -38,10 +44,4 @@
 
 &sata {
 	status = "okay";
-};
-
-&battery {
-	offset-charger = <1900>;
-	offset-discharger = <1694>;
-	offset-usb-charger = <1685>;
 };

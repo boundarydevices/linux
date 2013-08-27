@@ -46,6 +46,13 @@
 	status = "okay";
 };
 
+&gpc {
+	fsl,cpu_pupscr_sw2iso = <0xf>;
+	fsl,cpu_pupscr_sw = <0xf>;
+	fsl,cpu_pdnscr_iso2sw = <0x1>;
+	fsl,cpu_pdnscr_iso = <0x1>;
+};
+
 &i2c1 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
@@ -130,6 +137,10 @@
 	status = "okay";
 };
 
+&pxp {
+	status = "okay";
+};
+
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1_1>;
@@ -158,15 +169,4 @@
 	pinctrl-0 = <&pinctrl_usdhc3_1>;
 	cd-gpios = <&gpio3 22 0>;
 	status = "okay";
-};
-
-&pxp {
-	status = "okay";
-};
-
-&gpc {
-	fsl,cpu_pupscr_sw2iso = <0xf>;
-	fsl,cpu_pupscr_sw = <0xf>;
-	fsl,cpu_pdnscr_iso2sw = <0x1>;
-	fsl,cpu_pdnscr_iso = <0x1>;
 };
