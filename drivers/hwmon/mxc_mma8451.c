@@ -274,8 +274,11 @@ static ssize_t mma8451_enable_store(struct device *dev,
 	u8 val = 0;
 
 	ret = strict_strtoul(buf, 10, &enable);
-	if (ret)
-		dev_warn(dev, "Warning when tranfser string\n");
+	if (ret) {
+		dev_err(dev, "string transform error\n");
+		return ret;
+	}
+
 	mutex_lock(&mma8451_lock);
 	client = mma8451_i2c_client;
 	enable = (enable > 0) ? 1 : 0;
@@ -317,8 +320,11 @@ static ssize_t mma8451_position_store(struct device *dev,
 	unsigned long  position;
 	int ret;
 	ret = strict_strtoul(buf, 10, &position);
-	if (ret)
-		dev_warn(dev, "Warning when tranfser string\n");
+	if (ret) {
+		dev_err(dev, "string transform error\n");
+		return ret;
+	}
+
 	mutex_lock(&mma8451_lock);
 	mma_status.position = (int)position;
 	mutex_unlock(&mma8451_lock);
