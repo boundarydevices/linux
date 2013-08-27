@@ -224,6 +224,33 @@
 	status = "okay";
 };
 
+&gpc {
+	fsl,cpu_pupscr_sw2iso = <0xf>;
+	fsl,cpu_pupscr_sw = <0xf>;
+	fsl,cpu_pdnscr_iso2sw = <0x1>;
+	fsl,cpu_pdnscr_iso = <0x1>;
+};
+
+&hdmi_cec {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hdmi_cec_2>;
+	status = "okay";
+};
+
+&hdmi_core {
+	ipu_id = <0>;
+	disp_id = <0>;
+	status = "okay";
+};
+
+&hdmi_video {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hdmi_hdcp_1>;
+	fsl,phy_reg_vlev = <0x0294>;
+	fsl,phy_reg_cksymtx = <0x800d>;
+	status = "okay";
+};
+
 &i2c1 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
@@ -466,6 +493,15 @@
 	status = "okay";
 };
 
+&mipi_dsi {
+	dev_id = <0>;
+	disp_id = <0>;
+	lcd_panel = "TRULY-WVGA";
+	disp-power-on-supply = <&reg_mipi_dsi_pwr_on>;
+	resets = <&mipi_dsi_reset>;
+	status = "okay";
+};
+
 &pwm1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm1_1>;
@@ -480,15 +516,6 @@
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1_1>;
-	status = "okay";
-};
-
-&mipi_dsi {
-	dev_id = <0>;
-	disp_id = <0>;
-	lcd_panel = "TRULY-WVGA";
-	disp-power-on-supply = <&reg_mipi_dsi_pwr_on>;
-	resets = <&mipi_dsi_reset>;
 	status = "okay";
 };
 
@@ -519,31 +546,4 @@
 	cd-gpios = <&gpio2 0 0>;
 	wp-gpios = <&gpio2 1 0>;
 	status = "okay";
-};
-
-&hdmi_core {
-	ipu_id = <0>;
-	disp_id = <0>;
-	status = "okay";
-};
-
-&hdmi_video {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hdmi_hdcp_1>;
-	fsl,phy_reg_vlev = <0x0294>;
-	fsl,phy_reg_cksymtx = <0x800d>;
-	status = "okay";
-};
-
-&hdmi_cec {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hdmi_cec_2>;
-	status = "okay";
-};
-
-&gpc {
-	fsl,cpu_pupscr_sw2iso = <0xf>;
-	fsl,cpu_pupscr_sw = <0xf>;
-	fsl,cpu_pdnscr_iso2sw = <0x1>;
-	fsl,cpu_pdnscr_iso = <0x1>;
 };

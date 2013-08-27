@@ -22,6 +22,21 @@
 		reg = <0x10000000 0x80000000>;
 	};
 
+	backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm3 0 5000000>;
+		brightness-levels = <0 4 8 16 32 64 128 255>;
+		default-brightness-level = <7>;
+	};
+
+	clocks {
+		codec_osc: codec_osc {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <24576000>;
+		};
+	};
+
 	max7310_reset: max7310-reset {
 		compatible = "gpio-reset";
 		reset-gpios = <&gpio1 15 GPIO_ACTIVE_LOW>;
@@ -73,13 +88,6 @@
 		status = "disabled";
 	};
 
-	backlight {
-		compatible = "pwm-backlight";
-		pwms = <&pwm3 0 5000000>;
-		brightness-levels = <0 4 8 16 32 64 128 255>;
-		default-brightness-level = <7>;
-	};
-
 	regulators {
 		compatible = "simple-bus";
 		reg_audio: cs42888_supply {
@@ -98,14 +106,6 @@
 		esai-controller = <&esai>;
 		asrc-controller = <&asrc_p2p>;
 		audio-codec = <&codec>;
-	};
-
-	clocks {
-		codec_osc: codec_osc {
-			compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <24576000>;
-		};
 	};
 
 	v4l2_out {
@@ -130,10 +130,41 @@
 	};
 };
 
+&esai {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_esai_2>;
+	status = "okay";
+};
+
 &fec {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet_2>;
 	phy-mode = "rgmii";
+	status = "okay";
+};
+
+&gpc {
+	fsl,cpu_pupscr_sw2iso = <0xf>;
+	fsl,cpu_pupscr_sw = <0xf>;
+	fsl,cpu_pdnscr_iso2sw = <0x1>;
+	fsl,cpu_pdnscr_iso = <0x1>;
+};
+
+&hdmi_cec {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hdmi_cec_1>;
+	status = "okay";
+};
+
+&hdmi_core {
+	ipu_id = <0>;
+	disp_id = <1>;
+	status = "okay";
+};
+
+&hdmi_video {
+	fsl,phy_reg_vlev = <0x0294>;
+	fsl,phy_reg_cksymtx = <0x800d>;
 	status = "okay";
 };
 
@@ -238,6 +269,22 @@
 	};
 };
 
+&ldb {
+	ipu_id = <1>;
+	disp_id = <0>;
+	ext_ref = <1>;
+	mode = "sep0";
+	sec_ipu_id = <1>;
+	sec_disp_id = <1>;
+	status = "okay";
+};
+
+&pwm3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm3_1>;
+	status = "okay";
+};
+
 &uart3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3_1>;
@@ -278,51 +325,4 @@
 		fsl,weim-cs-timing = <0x00620081 0x00000001 0x1c022000
 				0x0000c000 0x1404a38e 0x00000000>;
 	};
-};
-
-&ldb {
-	ipu_id = <1>;
-	disp_id = <0>;
-	ext_ref = <1>;
-	mode = "sep0";
-	sec_ipu_id = <1>;
-	sec_disp_id = <1>;
-	status = "okay";
-};
-
-&pwm3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm3_1>;
-	status = "okay";
-};
-
-&esai {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_esai_2>;
-	status = "okay";
-};
-
-&hdmi_core {
-	ipu_id = <0>;
-	disp_id = <1>;
-	status = "okay";
-};
-
-&hdmi_video {
-	fsl,phy_reg_vlev = <0x0294>;
-	fsl,phy_reg_cksymtx = <0x800d>;
-	status = "okay";
-};
-
-&hdmi_cec {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hdmi_cec_1>;
-	status = "okay";
-};
-
-&gpc {
-	fsl,cpu_pupscr_sw2iso = <0xf>;
-	fsl,cpu_pupscr_sw = <0xf>;
-	fsl,cpu_pdnscr_iso2sw = <0x1>;
-	fsl,cpu_pdnscr_iso = <0x1>;
 };
