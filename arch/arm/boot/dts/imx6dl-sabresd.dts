@@ -16,13 +16,15 @@
 	compatible = "fsl,imx6dl-sabresd", "fsl,imx6dl";
 };
 
+&battery {
+	offset-charger = <1485>;
+	offset-discharger = <1464>;
+	offset-usb-charger = <1285>;
+};
+
 &ldb {
 	ipu_id = <0>;
 	sec_ipu_id = <0>;
-};
-
-&pxp {
-	status = "okay";
 };
 
 &mxcfb1 {
@@ -33,9 +35,6 @@
 	status = "okay";
 };
 
-&battery {
-	offset-charger = <1485>;
-	offset-discharger = <1464>;
-	offset-usb-charger = <1285>;
+&pxp {
+	status = "okay";
 };
-
