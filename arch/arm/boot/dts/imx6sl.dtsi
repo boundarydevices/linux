@@ -571,150 +571,6 @@
 			iomuxc: iomuxc@020e0000 {
 				compatible = "fsl,imx6sl-iomuxc";
 				reg = <0x020e0000 0x4000>;
-
-				fec {
-					pinctrl_fec_1: fecgrp-1 {
-						fsl,pins = <
-							MX6SL_PAD_FEC_MDC__FEC_MDC         0x1b0b0
-							MX6SL_PAD_FEC_MDIO__FEC_MDIO       0x1b0b0
-							MX6SL_PAD_FEC_CRS_DV__FEC_RX_DV    0x1b0b0
-							MX6SL_PAD_FEC_RXD0__FEC_RX_DATA0   0x1b0b0
-							MX6SL_PAD_FEC_RXD1__FEC_RX_DATA1   0x1b0b0
-							MX6SL_PAD_FEC_TX_EN__FEC_TX_EN     0x1b0b0
-							MX6SL_PAD_FEC_TXD0__FEC_TX_DATA0   0x1b0b0
-							MX6SL_PAD_FEC_TXD1__FEC_TX_DATA1   0x1b0b0
-							MX6SL_PAD_FEC_REF_CLK__FEC_REF_OUT 0x4001b0a8
-						>;
-					};
-				};
-
-				uart1 {
-					pinctrl_uart1_1: uart1grp-1 {
-						fsl,pins = <
-							MX6SL_PAD_UART1_RXD__UART1_RX_DATA 0x1b0b1
-							MX6SL_PAD_UART1_TXD__UART1_TX_DATA 0x1b0b1
-						>;
-					};
-				};
-
-				usdhc1 {
-					pinctrl_usdhc1_1: usdhc1grp-1 {
-						fsl,pins = <
-							MX6SL_PAD_SD1_CMD__SD1_CMD    0x17059
-							MX6SL_PAD_SD1_CLK__SD1_CLK    0x10059
-							MX6SL_PAD_SD1_DAT0__SD1_DATA0 0x17059
-							MX6SL_PAD_SD1_DAT1__SD1_DATA1 0x17059
-							MX6SL_PAD_SD1_DAT2__SD1_DATA2 0x17059
-							MX6SL_PAD_SD1_DAT3__SD1_DATA3 0x17059
-							MX6SL_PAD_SD1_DAT4__SD1_DATA4 0x17059
-							MX6SL_PAD_SD1_DAT5__SD1_DATA5 0x17059
-							MX6SL_PAD_SD1_DAT6__SD1_DATA6 0x17059
-							MX6SL_PAD_SD1_DAT7__SD1_DATA7 0x17059
-						>;
-					};
-				};
-
-				usdhc2 {
-					pinctrl_usdhc2_1: usdhc2grp-1 {
-						fsl,pins = <
-							MX6SL_PAD_SD2_CMD__SD2_CMD    0x17059
-							MX6SL_PAD_SD2_CLK__SD2_CLK    0x10059
-							MX6SL_PAD_SD2_DAT0__SD2_DATA0 0x17059
-							MX6SL_PAD_SD2_DAT1__SD2_DATA1 0x17059
-							MX6SL_PAD_SD2_DAT2__SD2_DATA2 0x17059
-							MX6SL_PAD_SD2_DAT3__SD2_DATA3 0x17059
-						>;
-					};
-				};
-
-				usdhc3 {
-					pinctrl_usdhc3_1: usdhc3grp-1 {
-						fsl,pins = <
-							MX6SL_PAD_SD3_CMD__SD3_CMD    0x17059
-							MX6SL_PAD_SD3_CLK__SD3_CLK    0x10059
-							MX6SL_PAD_SD3_DAT0__SD3_DATA0 0x17059
-							MX6SL_PAD_SD3_DAT1__SD3_DATA1 0x17059
-							MX6SL_PAD_SD3_DAT2__SD3_DATA2 0x17059
-							MX6SL_PAD_SD3_DAT3__SD3_DATA3 0x17059
-						>;
-					};
-				};
-
-				i2c1 {
-					pinctrl_i2c1_1: i2c1grp-1 {
-						fsl,pins = <
-							MX6SL_PAD_I2C1_SCL__I2C1_SCL 0x4001b8b1
-							MX6SL_PAD_I2C1_SDA__I2C1_SDA 0x4001b8b1
-						>;
-					};
-				};
-
-				i2c2 {
-					pinctrl_i2c2_1: i2c2grp-1 {
-						fsl,pins = <
-							MX6SL_PAD_I2C2_SCL__I2C2_SCL 0x4001b8b1
-							MX6SL_PAD_I2C2_SDA__I2C2_SDA 0x4001b8b1
-						>;
-					};
-				};
-
-				i2c3 {
-					pinctrl_i2c3_1: i2c3grp-1 {
-						fsl,pins = <
-							MX6SL_PAD_EPDC_SDCE2__I2C3_SCL 0x4001b8b1
-							MX6SL_PAD_EPDC_SDCE3__I2C3_SDA 0x4001b8b1
-						>;
-					};
-				};
-
-				lcdif {
-					pinctrl_lcdif_dat_0: lcdifdatgrp-0 {
-						fsl,pins = <
-							MX6SL_PAD_LCD_DAT0__LCD_DATA00 0x1b0b0
-							MX6SL_PAD_LCD_DAT1__LCD_DATA01 0x1b0b0
-							MX6SL_PAD_LCD_DAT2__LCD_DATA02 0x1b0b0
-							MX6SL_PAD_LCD_DAT3__LCD_DATA03 0x1b0b0
-							MX6SL_PAD_LCD_DAT4__LCD_DATA04 0x1b0b0
-							MX6SL_PAD_LCD_DAT5__LCD_DATA05 0x1b0b0
-							MX6SL_PAD_LCD_DAT6__LCD_DATA06 0x1b0b0
-							MX6SL_PAD_LCD_DAT7__LCD_DATA07 0x1b0b0
-							MX6SL_PAD_LCD_DAT8__LCD_DATA08 0x1b0b0
-							MX6SL_PAD_LCD_DAT9__LCD_DATA09 0x1b0b0
-							MX6SL_PAD_LCD_DAT10__LCD_DATA10 0x1b0b0
-							MX6SL_PAD_LCD_DAT11__LCD_DATA11 0x1b0b0
-							MX6SL_PAD_LCD_DAT12__LCD_DATA12 0x1b0b0
-							MX6SL_PAD_LCD_DAT13__LCD_DATA13 0x1b0b0
-							MX6SL_PAD_LCD_DAT14__LCD_DATA14 0x1b0b0
-							MX6SL_PAD_LCD_DAT15__LCD_DATA15 0x1b0b0
-							MX6SL_PAD_LCD_DAT16__LCD_DATA16 0x1b0b0
-							MX6SL_PAD_LCD_DAT17__LCD_DATA17 0x1b0b0
-							MX6SL_PAD_LCD_DAT18__LCD_DATA18 0x1b0b0
-							MX6SL_PAD_LCD_DAT19__LCD_DATA19 0x1b0b0
-							MX6SL_PAD_LCD_DAT20__LCD_DATA20 0x1b0b0
-							MX6SL_PAD_LCD_DAT21__LCD_DATA21 0x1b0b0
-							MX6SL_PAD_LCD_DAT22__LCD_DATA22 0x1b0b0
-							MX6SL_PAD_LCD_DAT23__LCD_DATA23 0x1b0b0
-						>;
-					};
-
-					pinctrl_lcdif_ctrl_0: lcdifctrlgrp-0 {
-						fsl,pins = <
-							MX6SL_PAD_LCD_CLK__LCD_CLK 0x1b0b0
-							MX6SL_PAD_LCD_ENABLE__LCD_ENABLE 0x1b0b0
-							MX6SL_PAD_LCD_HSYNC__LCD_HSYNC 0x1b0b0
-							MX6SL_PAD_LCD_VSYNC__LCD_VSYNC 0x1b0b0
-							MX6SL_PAD_LCD_RESET__LCD_RESET 0x1b0b0
-						>;
-					};
-				};
-
-				pwm1 {
-					pinctrl_pwm1_0: pwm1grp-0 {
-						fsl,pins = <
-							MX6SL_PAD_PWM1__PWM1_OUT 0x110b0
-						>;
-					};
-				};
 			};
 
 			csi: csi@020e4000 {
@@ -943,6 +799,152 @@
 				reset-names = "gpu2d", "gpuvg";
 			};
 
+		};
+	};
+};
+
+&iomuxc {
+	fec {
+		pinctrl_fec_1: fecgrp-1 {
+			fsl,pins = <
+				MX6SL_PAD_FEC_MDC__FEC_MDC         0x1b0b0
+				MX6SL_PAD_FEC_MDIO__FEC_MDIO       0x1b0b0
+				MX6SL_PAD_FEC_CRS_DV__FEC_RX_DV    0x1b0b0
+				MX6SL_PAD_FEC_RXD0__FEC_RX_DATA0   0x1b0b0
+				MX6SL_PAD_FEC_RXD1__FEC_RX_DATA1   0x1b0b0
+				MX6SL_PAD_FEC_TX_EN__FEC_TX_EN     0x1b0b0
+				MX6SL_PAD_FEC_TXD0__FEC_TX_DATA0   0x1b0b0
+				MX6SL_PAD_FEC_TXD1__FEC_TX_DATA1   0x1b0b0
+				MX6SL_PAD_FEC_REF_CLK__FEC_REF_OUT 0x4001b0a8
+			>;
+		};
+	};
+
+	i2c1 {
+		pinctrl_i2c1_1: i2c1grp-1 {
+			fsl,pins = <
+				MX6SL_PAD_I2C1_SCL__I2C1_SCL 0x4001b8b1
+				MX6SL_PAD_I2C1_SDA__I2C1_SDA 0x4001b8b1
+			>;
+		};
+	};
+
+	i2c2 {
+		pinctrl_i2c2_1: i2c2grp-1 {
+			fsl,pins = <
+				MX6SL_PAD_I2C2_SCL__I2C2_SCL 0x4001b8b1
+				MX6SL_PAD_I2C2_SDA__I2C2_SDA 0x4001b8b1
+			>;
+		};
+	};
+
+	i2c3 {
+		pinctrl_i2c3_1: i2c3grp-1 {
+			fsl,pins = <
+				MX6SL_PAD_EPDC_SDCE2__I2C3_SCL 0x4001b8b1
+				MX6SL_PAD_EPDC_SDCE3__I2C3_SDA 0x4001b8b1
+			>;
+		};
+	};
+
+	lcdif {
+		pinctrl_lcdif_dat_0: lcdifdatgrp-0 {
+			fsl,pins = <
+				MX6SL_PAD_LCD_DAT0__LCD_DATA00 0x1b0b0
+				MX6SL_PAD_LCD_DAT1__LCD_DATA01 0x1b0b0
+				MX6SL_PAD_LCD_DAT2__LCD_DATA02 0x1b0b0
+				MX6SL_PAD_LCD_DAT3__LCD_DATA03 0x1b0b0
+				MX6SL_PAD_LCD_DAT4__LCD_DATA04 0x1b0b0
+				MX6SL_PAD_LCD_DAT5__LCD_DATA05 0x1b0b0
+				MX6SL_PAD_LCD_DAT6__LCD_DATA06 0x1b0b0
+				MX6SL_PAD_LCD_DAT7__LCD_DATA07 0x1b0b0
+				MX6SL_PAD_LCD_DAT8__LCD_DATA08 0x1b0b0
+				MX6SL_PAD_LCD_DAT9__LCD_DATA09 0x1b0b0
+				MX6SL_PAD_LCD_DAT10__LCD_DATA10 0x1b0b0
+				MX6SL_PAD_LCD_DAT11__LCD_DATA11 0x1b0b0
+				MX6SL_PAD_LCD_DAT12__LCD_DATA12 0x1b0b0
+				MX6SL_PAD_LCD_DAT13__LCD_DATA13 0x1b0b0
+				MX6SL_PAD_LCD_DAT14__LCD_DATA14 0x1b0b0
+				MX6SL_PAD_LCD_DAT15__LCD_DATA15 0x1b0b0
+				MX6SL_PAD_LCD_DAT16__LCD_DATA16 0x1b0b0
+				MX6SL_PAD_LCD_DAT17__LCD_DATA17 0x1b0b0
+				MX6SL_PAD_LCD_DAT18__LCD_DATA18 0x1b0b0
+				MX6SL_PAD_LCD_DAT19__LCD_DATA19 0x1b0b0
+				MX6SL_PAD_LCD_DAT20__LCD_DATA20 0x1b0b0
+				MX6SL_PAD_LCD_DAT21__LCD_DATA21 0x1b0b0
+				MX6SL_PAD_LCD_DAT22__LCD_DATA22 0x1b0b0
+				MX6SL_PAD_LCD_DAT23__LCD_DATA23 0x1b0b0
+			>;
+		};
+
+		pinctrl_lcdif_ctrl_0: lcdifctrlgrp-0 {
+			fsl,pins = <
+				MX6SL_PAD_LCD_CLK__LCD_CLK 0x1b0b0
+				MX6SL_PAD_LCD_ENABLE__LCD_ENABLE 0x1b0b0
+				MX6SL_PAD_LCD_HSYNC__LCD_HSYNC 0x1b0b0
+				MX6SL_PAD_LCD_VSYNC__LCD_VSYNC 0x1b0b0
+				MX6SL_PAD_LCD_RESET__LCD_RESET 0x1b0b0
+			>;
+		};
+	};
+
+	pwm1 {
+		pinctrl_pwm1_0: pwm1grp-0 {
+			fsl,pins = <
+				MX6SL_PAD_PWM1__PWM1_OUT 0x110b0
+			>;
+		};
+	};
+
+	uart1 {
+		pinctrl_uart1_1: uart1grp-1 {
+			fsl,pins = <
+				MX6SL_PAD_UART1_RXD__UART1_RX_DATA 0x1b0b1
+				MX6SL_PAD_UART1_TXD__UART1_TX_DATA 0x1b0b1
+			>;
+		};
+	};
+
+	usdhc1 {
+		pinctrl_usdhc1_1: usdhc1grp-1 {
+			fsl,pins = <
+				MX6SL_PAD_SD1_CMD__SD1_CMD    0x17059
+				MX6SL_PAD_SD1_CLK__SD1_CLK    0x10059
+				MX6SL_PAD_SD1_DAT0__SD1_DATA0 0x17059
+				MX6SL_PAD_SD1_DAT1__SD1_DATA1 0x17059
+				MX6SL_PAD_SD1_DAT2__SD1_DATA2 0x17059
+				MX6SL_PAD_SD1_DAT3__SD1_DATA3 0x17059
+				MX6SL_PAD_SD1_DAT4__SD1_DATA4 0x17059
+				MX6SL_PAD_SD1_DAT5__SD1_DATA5 0x17059
+				MX6SL_PAD_SD1_DAT6__SD1_DATA6 0x17059
+				MX6SL_PAD_SD1_DAT7__SD1_DATA7 0x17059
+			>;
+		};
+	};
+
+	usdhc2 {
+		pinctrl_usdhc2_1: usdhc2grp-1 {
+			fsl,pins = <
+				MX6SL_PAD_SD2_CMD__SD2_CMD    0x17059
+				MX6SL_PAD_SD2_CLK__SD2_CLK    0x10059
+				MX6SL_PAD_SD2_DAT0__SD2_DATA0 0x17059
+				MX6SL_PAD_SD2_DAT1__SD2_DATA1 0x17059
+				MX6SL_PAD_SD2_DAT2__SD2_DATA2 0x17059
+				MX6SL_PAD_SD2_DAT3__SD2_DATA3 0x17059
+			>;
+		};
+	};
+
+	usdhc3 {
+		pinctrl_usdhc3_1: usdhc3grp-1 {
+			fsl,pins = <
+				MX6SL_PAD_SD3_CMD__SD3_CMD    0x17059
+				MX6SL_PAD_SD3_CLK__SD3_CLK    0x10059
+				MX6SL_PAD_SD3_DAT0__SD3_DATA0 0x17059
+				MX6SL_PAD_SD3_DAT1__SD3_DATA1 0x17059
+				MX6SL_PAD_SD3_DAT2__SD3_DATA2 0x17059
+				MX6SL_PAD_SD3_DAT3__SD3_DATA3 0x17059
+			>;
 		};
 	};
 };
