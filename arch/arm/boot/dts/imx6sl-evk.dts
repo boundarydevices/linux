@@ -59,6 +59,72 @@
 	pinctrl-0 = <&pinctrl_i2c1_1>;
 	status = "okay";
 
+	max17135@48 {
+		compatible = "maxim,max17135";
+		reg = <0x48>;
+		vneg_pwrup = <1>;
+		gvee_pwrup = <2>;
+		vpos_pwrup = <10>;
+		gvdd_pwrup = <12>;
+		gvdd_pwrdn = <1>;
+		vpos_pwrdn = <2>;
+		gvee_pwrdn = <8>;
+		vneg_pwrdn = <10>;
+		gpio_pmic_pwrgood = <&gpio2 13 0>;
+		gpio_pmic_vcom_ctrl = <&gpio2 3 0>;
+		gpio_pmic_wakeup = <&gpio2 14 0>;
+		gpio_pmic_v3p3 = <&gpio2 7 0>;
+		gpio_pmic_intr = <&gpio2 12 0>;
+
+		regulators {
+			DISPLAY_reg: DISPLAY {
+				regulator-name = "DISPLAY";
+			};
+
+			GVDD_reg: GVDD {
+				/* 20v */
+				regulator-name = "GVDD";
+			};
+
+			GVEE_reg: GVEE {
+				/* -22v */
+				regulator-name = "GVEE";
+			};
+
+			HVINN_reg: HVINN {
+				/* -22v */
+				regulator-name = "HVINN";
+			};
+
+			HVINP_reg: HVINP {
+				/* 20v */
+				regulator-name = "HVINP";
+			};
+
+			VCOM_reg: VCOM {
+				regulator-name = "VCOM";
+				/* 2's-compliment, -4325000 */
+				regulator-min-microvolt = <0xffbe0178>;
+				/* 2's-compliment, -500000 */
+				regulator-max-microvolt = <0xfff85ee0>;
+			};
+
+			VNEG_reg: VNEG {
+				/* -15v */
+				regulator-name = "VNEG";
+			};
+
+			VPOS_reg: VPOS {
+				/* 15v */
+				regulator-name = "VPOS";
+			};
+
+			V3P3_reg: V3P3 {
+				regulator-name = "V3P3";
+			};
+		};
+	};
+
 	mma8450@1c {
 		compatible = "fsl,mma8450";
 		reg = <0x1c>;
@@ -93,6 +159,11 @@
 				MX6SL_PAD_REF_CLK_32K__GPIO3_IO22 0x17059
 				MX6SL_PAD_FEC_TX_CLK__GPIO4_IO21  0x80000000
 				MX6SL_PAD_KEY_ROW5__GPIO4_IO03	  0x80000000
+				MX6SL_PAD_EPDC_VCOM0__GPIO2_IO03  0x80000000
+				MX6SL_PAD_EPDC_PWRSTAT__GPIO2_IO13 0x80000000
+				MX6SL_PAD_EPDC_PWRCTRL0__GPIO2_IO07 0x80000000
+				MX6SL_PAD_EPDC_PWRWAKEUP__GPIO2_IO14 0x80000000
+				MX6SL_PAD_EPDC_PWRINT__GPIO2_IO12 0x80000000
 			>;
 		};
 	};
