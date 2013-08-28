@@ -1507,7 +1507,7 @@ gcoOS_QueryProfileTickRate(
 #   define gcmPROFILE_QUERY(start, ticks)   do { } while (gcvFALSE)
 #   define gcmPROFILE_ONLY(x)               do { } while (gcvFALSE)
 #   define gcmPROFILE_ELSE(x)               x
-#   define gcmPROFILE_DECLARE_ONLY(x)       typedef x
+#   define gcmPROFILE_DECLARE_ONLY(x)       do { } while (gcvFALSE) 
 #   define gcmPROFILE_DECLARE_ELSE(x)       x
 #endif
 
