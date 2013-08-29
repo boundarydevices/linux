@@ -281,6 +281,10 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 
 	/* set perclk to source from OSC 24MHz */
 	clk_set_parent(clks[IMX6SL_CLK_PERCLK_SEL], clks[IMX6SL_CLK_OSC]);
+
+	/* Set initial power mode */
+	imx6_set_lpm(WAIT_CLOCKED);
+
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6sl-gpt");
 	base = of_iomap(np, 0);
 	WARN_ON(!base);
