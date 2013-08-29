@@ -217,15 +217,36 @@ static int si476x_core_regmap_read(void *context, unsigned int reg,
 	return 0;
 }
 
+static bool si476x_core_regmap_volatile_register(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case SI476X_PROP_DIGITAL_IO_OUTPUT_SAMPLE_RATE:
+	case SI476X_PROP_DIGITAL_IO_OUTPUT_FORMAT:
+		return false;
+	default:
+		return true;
+	}
+
+	return true;
+}
+
+/* These two register is used by the codec, so add reg_default here */
+static struct reg_default si476x_core_reg[] = {
+	{ 0x202, 0xBB80 },
+	{ 0x203, 0x1700 },
+};
 
 static const struct regmap_config si476x_regmap_config = {
 	.reg_bits = 16,
 	.val_bits = 16,
 
 	.max_register = 0x4003,
+	.reg_defaults = si476x_core_reg,
+	.num_reg_defaults = ARRAY_SIZE(si476x_core_reg),
 
 	.writeable_reg = si476x_core_regmap_writable_register,
 	.readable_reg = si476x_core_regmap_readable_register,
+	.volatile_reg = si476x_core_regmap_volatile_register,
 
 	.reg_read = si476x_core_regmap_read,
 	.reg_write = si476x_core_regmap_write,
