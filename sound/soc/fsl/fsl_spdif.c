@@ -1187,9 +1187,7 @@ static int fsl_spdif_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = imx_pcm_dma_init(pdev,  SND_DMAENGINE_PCM_FLAG_NO_RESIDUE |
-				     SND_DMAENGINE_PCM_FLAG_NO_DT |
-				     SND_DMAENGINE_PCM_FLAG_COMPAT);
+	ret = imx_pcm_dma_init(pdev, SND_DMAENGINE_PCM_FLAG_NO_RESIDUE);
 	if (ret) {
 		dev_err(&pdev->dev, "imx_pcm_dma_init failed: %d\n", ret);
 		goto error_component;
