@@ -809,8 +809,14 @@
 				interrupts = <0 14 IRQ_TYPE_LEVEL_HIGH>;
 			};
 
-			ocotp: ocotp@021bc000 {
-				compatible = "fsl,imx6sl-ocotp", "syscon";
+			ocotp: ocotp-ctrl@021bc000 {
+				compatible = "syscon";
+				reg = <0x021bc000 0x4000>;
+				clocks = <&clks IMX6SL_CLK_OCOTP>;
+			};
+
+			ocotp-fuse@021bc000 {
+				compatible = "fsl,imx6sl-ocotp", "fsl,imx6q-ocotp";
 				reg = <0x021bc000 0x4000>;
 				clocks = <&clks IMX6SL_CLK_OCOTP>;
 			};
