@@ -136,6 +136,8 @@
 			"DMICDAT", "DMIC";
 		mux-int-port = <2>;
 		mux-ext-port = <3>;
+		hp-det-gpios = <&gpio7 8 1>;
+		mic-det-gpios = <&gpio1 9 1>;
 	};
 
 	sound-hdmi {
@@ -264,6 +266,7 @@
 		PLLVDD-supply = <&reg_audio>;
 		SPKVDD1-supply = <&reg_audio>;
 		SPKVDD2-supply = <&reg_audio>;
+		amic-mono;
 		gpio-cfg = <
 			0x0000 /* 0:Default */
 			0x0000 /* 1:Default */
@@ -454,6 +457,8 @@
 				MX6QDL_PAD_EIM_EB3__GPIO2_IO31 0x80000000
 				MX6QDL_PAD_SD1_CMD__GPIO1_IO18 0x80000000
 				MX6QDL_PAD_EIM_D16__GPIO3_IO16 0x80000000
+				MX6QDL_PAD_SD3_RST__GPIO7_IO08	0x80000000
+				MX6QDL_PAD_GPIO_9__GPIO1_IO09 	0x80000000
 			>;
 		};
 
