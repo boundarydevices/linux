@@ -1886,6 +1886,7 @@ fec_probe(struct platform_device *pdev)
 			phy_irq = pdata->phy_irq;
 	}
 
+#ifdef CONFIG_MX6_ENET_IRQ_TO_GPIO
 	if (pdata->gpio_irq > 0) {
 		gpio_request(pdata->gpio_irq, "gpio_enet_irq");
 		gpio_direction_input(pdata->gpio_irq);
@@ -1897,6 +1898,7 @@ fec_probe(struct platform_device *pdev)
 		if (ret)
 			goto failed_irq;
 	} else {
+#endif
 		/* This device has up to three irqs on some platforms */
 		for (i = 0; i < 3; i++) {
 			irq = platform_get_irq(pdev, i);
@@ -1912,7 +1914,9 @@ fec_probe(struct platform_device *pdev)
 				goto failed_irq;
 			}
 		}
+#ifdef CONFIG_MX6_ENET_IRQ_TO_GPIO
 	}
+#endif
 
 	fep->clk = clk_get(&pdev->dev, "fec_clk");
 	if (IS_ERR(fep->clk)) {
@@ -1969,15 +1973,19 @@ failed_init:
 	clk_put(fep->clk);
 	clk_put(fep->mdc_clk);
 failed_clk:
+#ifdef CONFIG_MX6_ENET_IRQ_TO_GPIO
 	if (pdata->gpio_irq < 0)
 		free_irq(irq, ndev);
 	else {
+#endif
 		for (i = 0; i < 3; i++) {
 			irq = platform_get_irq(pdev, i);
 			if (irq > 0)
 				free_irq(irq, ndev);
 		}
+#ifdef CONFIG_MX6_ENET_IRQ_TO_GPIO
 	}
+#endif
 failed_irq:
 	iounmap(fep->hwp);
 failed_ioremap:
