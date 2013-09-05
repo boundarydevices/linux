@@ -46,6 +46,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-sabresd.dtb \
 	imx6q-arm2.dtb \
 	imx6q-nitrogen6x.dtb \
+	imx6q-utc.dtb \
 	imx6q-sabreauto.dtb \
 	imx6q-sabrelite.dtb \
 	imx6q-sabresd.dtb \

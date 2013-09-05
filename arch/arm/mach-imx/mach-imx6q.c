@@ -742,6 +742,14 @@ static void __init imx6q_sabrelite_init(void)
 	imx6q_sabrelite_cko1_setup();
 }
 
+static void __init imx6q_utc_init(void)
+{
+	if (IS_BUILTIN(CONFIG_PHYLIB))
+		phy_register_fixup_for_uid(0x4dd074, 0xfffff0,
+				ar803x_phy_fixup);
+	imx6q_sabrelite_cko1_setup();
+}
+
 static void __init imx6q_sabresd_cko_setup(void)
 {
 	struct clk *cko2, *cko1_cko2_sel;
@@ -1246,7 +1254,9 @@ out:
 
 static void __init imx6q_init_machine(void)
 {
-	if (of_machine_is_compatible("fsl,imx6q-sabrelite"))
+	if (of_machine_is_compatible("fsl,imx6q-utc"))
+		imx6q_utc_init();
+	else if (of_machine_is_compatible("fsl,imx6q-sabrelite"))
 		imx6q_sabrelite_init();
 	else if (of_machine_is_compatible("fsl,imx6q-sabresd") ||
 			of_machine_is_compatible("fsl,imx6dl-sabresd"))
