@@ -191,8 +191,10 @@
 			};
 
 			usdhc@02194000 { /* uSDHC2 */
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_usdhc2_d4_1>;
+				pinctrl-names = "default", "state_100mhz", "state_200mhz";
+				pinctrl-0 = <&pinctrl_usdhc2_d4_50>;
+				pinctrl-1 = <&pinctrl_usdhc2_d4_100>;
+				pinctrl-2 = <&pinctrl_usdhc2_d4_200>;
 				bus-width = <4>;
 				non-removable;
 				vmmc-supply = <&wilink_wl_en>;
@@ -204,8 +206,10 @@
 			};
 
 			usdhc@02198000 { /* uSDHC3 */
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_usdhc3_5>;
+				pinctrl-names = "default", "state_100mhz", "state_200mhz";
+				pinctrl-0 = <&pinctrl_usdhc3_d4_50>;
+				pinctrl-1 = <&pinctrl_usdhc3_d4_100>;
+				pinctrl-2 = <&pinctrl_usdhc3_d4_200>;
 				cd-gpios = <&gpio7 0 0>;
 				wp-gpios = <&gpio7 1 0>;
 				vmmc-supply = <&reg_3p3v>;
@@ -214,8 +218,10 @@
 			};
 
 			usdhc@0219c000 { /* uSDHC4 */
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_usdhc4_2>;
+				pinctrl-names = "default", "state_100mhz", "state_200mhz";
+				pinctrl-0 = <&pinctrl_usdhc4_d4_50>;
+				pinctrl-1 = <&pinctrl_usdhc4_d4_100>;
+				pinctrl-2 = <&pinctrl_usdhc4_d4_200>;
 				cd-gpios = <&gpio2 6 0>;
 				wp-gpios = <&gpio2 7 0>;
 				vmmc-supply = <&reg_3p3v>;
