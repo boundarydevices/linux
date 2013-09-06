@@ -649,7 +649,7 @@ isl1208_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (client->irq > 0) {
 		rc = request_threaded_irq(client->irq, NULL,
 					  isl1208_rtc_interrupt,
-					  IRQF_SHARED,
+					  IRQF_SHARED | IRQF_ONESHOT,
 					  isl1208_driver.driver.name, client);
 		if (!rc) {
 			device_init_wakeup(&client->dev, 1);
@@ -717,9 +717,15 @@ static const struct i2c_device_id isl1208_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, isl1208_id);
 
+static struct of_device_id isl1208_dt_ids[] = {
+	{ .compatible = "isl,isl1208" },
+	{ /* sentinel */ }
+};
+
 static struct i2c_driver isl1208_driver = {
 	.driver = {
 		   .name = "rtc-isl1208",
+		   .of_match_table = of_match_ptr(isl1208_dt_ids),
 		   },
 	.probe = isl1208_probe,
 	.remove = isl1208_remove,
