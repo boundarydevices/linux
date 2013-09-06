@@ -100,6 +100,7 @@ static const struct i2c_device_id isl1208_id[] = {
 MODULE_DEVICE_TABLE(i2c, isl1208_id);
 
 static const __maybe_unused struct of_device_id isl1208_of_match[] = {
+	{ .compatible = "isl,isl1208",  .data = &isl1208_configs[TYPE_ISL1208] },
 	{ .compatible = "isil,isl1208", .data = &isl1208_configs[TYPE_ISL1208] },
 	{ .compatible = "isil,isl1209", .data = &isl1208_configs[TYPE_ISL1209] },
 	{ .compatible = "isil,isl1218", .data = &isl1208_configs[TYPE_ISL1218] },
@@ -265,14 +266,16 @@ static int
 isl1208_rtc_proc(struct device *dev, struct seq_file *seq)
 {
 	struct i2c_client *const client = to_i2c_client(dev);
-	int sr, dtr, atr, usr;
+	int sr, dtr, atr, usr, icr;
 
 	sr = isl1208_i2c_get_sr(client);
 	if (sr < 0) {
 		dev_err(&client->dev, "%s: reading SR failed\n", __func__);
 		return sr;
 	}
+	icr = i2c_smbus_read_byte_data(client, ISL1208_REG_INT);
 
+	seq_printf(seq, "int reg\t: %x\n", icr);
 	seq_printf(seq, "status_reg\t:%s%s%s%s%s%s (0x%.2x)\n",
 		   (sr & ISL1208_REG_SR_RTCF) ? " RTCF" : "",
 		   (sr & ISL1208_REG_SR_BAT) ? " BAT" : "",
@@ -346,9 +349,12 @@ isl1208_i2c_read_time(struct i2c_client *client, struct rtc_time *tm)
 static int
 isl1208_i2c_read_alarm(struct i2c_client *client, struct rtc_wkalrm *alarm)
 {
+	unsigned long long rtc_secs, alarm_secs;
+	struct rtc_time rtc_tm;
+	int err;
 	struct rtc_time *const tm = &alarm->time;
 	u8 regs[ISL1208_ALARM_SECTION_LEN] = { 0, };
-	int icr, yr, sr = isl1208_i2c_get_sr(client);
+	int icr, sr = isl1208_i2c_get_sr(client);
 
 	if (sr < 0) {
 		dev_err(&client->dev, "%s: reading SR failed\n", __func__);
@@ -370,15 +376,7 @@ isl1208_i2c_read_alarm(struct i2c_client *client, struct rtc_wkalrm *alarm)
 	tm->tm_mday = bcd2bin(regs[ISL1208_REG_DTA - ISL1208_REG_SCA] & 0x3f);
 	tm->tm_mon =
 		bcd2bin(regs[ISL1208_REG_MOA - ISL1208_REG_SCA] & 0x1f) - 1;
-	tm->tm_wday = bcd2bin(regs[ISL1208_REG_DWA - ISL1208_REG_SCA] & 0x03);
-
-	/* The alarm doesn't store the year so get it from the rtc section */
-	yr = i2c_smbus_read_byte_data(client, ISL1208_REG_YR);
-	if (yr < 0) {
-		dev_err(&client->dev, "%s: reading RTC YR failed\n", __func__);
-		return yr;
-	}
-	tm->tm_year = bcd2bin(yr) + 100;
+	tm->tm_wday = bcd2bin(regs[ISL1208_REG_DWA - ISL1208_REG_SCA] & 0x07);
 
 	icr = i2c_smbus_read_byte_data(client, ISL1208_REG_INT);
 	if (icr < 0) {
@@ -387,6 +385,28 @@ isl1208_i2c_read_alarm(struct i2c_client *client, struct rtc_wkalrm *alarm)
 	}
 	alarm->enabled = !!(icr & ISL1208_REG_INT_ALME);
 
+	rtc_secs = 0;
+	alarm_secs = 0;
+	rtc_tm.tm_year = 100;
+	err = isl1208_i2c_read_time(client, &rtc_tm);
+	/* The alarm doesn't store the year so get it from the rtc section */
+	tm->tm_year = rtc_tm.tm_year;
+
+	if (!err)
+		rtc_secs = rtc_tm_to_time64(&rtc_tm);
+
+	alarm_secs = rtc_tm_to_time64(tm);
+	if (alarm->enabled) {
+		if (alarm_secs < rtc_secs) {
+			/* enabled alarm needs to move to future date */
+			tm->tm_year++;
+		}
+	} else {
+		if (alarm_secs > rtc_secs) {
+			/* disabled alarm needs to move to past date */
+			tm->tm_year--;
+		}
+	}
 	return 0;
 }
 
@@ -404,10 +424,12 @@ isl1208_i2c_set_alarm(struct i2c_client *client, struct rtc_wkalrm *alarm)
 		return err;
 
 	/* If the alarm time is before the current time disable the alarm */
-	if (!alarm->enabled || rtc_tm_sub(alarm_tm, &rtc_tm) <= 0)
+	if (!alarm->enabled || rtc_tm_sub(alarm_tm, &rtc_tm) <= 0) {
 		enable = 0x00;
-	else
+		dev_info(&client->dev, "%s: alarm in the past\n", __func__);
+	} else {
 		enable = 0x80;
+	}
 
 	/* Program the alarm and enable it for each setting */
 	regs[ISL1208_REG_SCA - offs] = bin2bcd(alarm_tm->tm_sec) | enable;
@@ -444,7 +466,7 @@ isl1208_rtc_read_time(struct device *dev, struct rtc_time *tm)
 static int
 isl1208_i2c_set_time(struct i2c_client *client, struct rtc_time const *tm)
 {
-	int sr;
+	int sr, ret;
 	u8 regs[ISL1208_RTC_SECTION_LEN] = { 0, };
 
 	/* The clock has an 8 bit wide bcd-coded register (they never learn)
@@ -470,6 +492,12 @@ isl1208_i2c_set_time(struct i2c_client *client, struct rtc_time const *tm)
 		return sr;
 	}
 
+	/*
+	 * manual says writes of 1 have no effect, it lies
+	 * So, we cannot do
+	 * sr |= ISL1208_REG_SR_ALM;
+	 *
+	 */
 	/* set WRTC */
 	sr = i2c_smbus_write_byte_data(client, ISL1208_REG_SR,
 				       sr | ISL1208_REG_SR_WRTC);
@@ -479,11 +507,11 @@ isl1208_i2c_set_time(struct i2c_client *client, struct rtc_time const *tm)
 	}
 
 	/* write RTC registers */
-	sr = isl1208_i2c_set_regs(client, 0, regs, ISL1208_RTC_SECTION_LEN);
-	if (sr < 0) {
+	ret = isl1208_i2c_set_regs(client, 0, regs, ISL1208_RTC_SECTION_LEN);
+	if (ret < 0) {
 		dev_err(&client->dev, "%s: writing RTC section failed\n",
 			__func__);
-		return sr;
+		return ret;
 	}
 
 	/* clear WRTC again */
@@ -802,6 +830,7 @@ isl1208_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	int rc = 0;
 	struct isl1208_state *isl1208;
 	int evdet_irq = -1;
+	u8 regs[6] = {0};
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
 		return -ENODEV;
@@ -843,9 +872,14 @@ isl1208_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		return rc;
 	}
 
-	if (rc & ISL1208_REG_SR_RTCF)
+	if (rc & ISL1208_REG_SR_RTCF) {
 		dev_warn(&client->dev, "rtc power failure detected, "
 			 "please set clock.\n");
+		regs[0] = 0x90;
+		isl1208_i2c_set_regs(client, ISL1208_REG_SR, regs, 1);
+		regs[0] = 0;
+		isl1208_i2c_set_regs(client, 0, regs, sizeof(regs));
+	}
 
 	if (isl1208->config->has_tamper) {
 		struct device_node *np = client->dev.of_node;
