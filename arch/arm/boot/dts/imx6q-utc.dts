@@ -29,6 +29,7 @@
 
 	soc {
 		pcie@01000000 {
+			rst-gpios = <&gpio3 13 0>;
 			status = "okay";
 		};
 
@@ -137,6 +138,7 @@
 							MX6Q_PAD_SD1_CLK__OSC32K_32K_OUT 0x000b0	/* TiWi slow clock */
 							MX6Q_PAD_GPIO_4__GPIO1_IO04 0x80000000		/* UGPIO5 */
 							MX6Q_PAD_EIM_LBA__GPIO2_IO27 0x1b0b0		/* ISL1208 interrupt */
+							MX6Q_PAD_EIM_DA13__GPIO3_IO13 0x000b0		/* PCIe reset */
 						>;
 					};
 				};
