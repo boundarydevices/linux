@@ -535,6 +535,30 @@ put_clk:
 		clk_put(cko1);
 }
 
+static void __init imx6q_sabrelite_cko2_setup(void)
+{
+	struct clk *cko2, *new_parent;
+	unsigned long rate;
+
+	cko2 = clk_get_sys(NULL, "cko2");
+	if (IS_ERR(cko2)) {
+		pr_err("cko2 setup failed!\n");
+		return;
+	}
+	new_parent = clk_get_sys(NULL, "osc");
+	if (IS_ERR(new_parent)) {
+		pr_err("cko2 parent failed!\n");
+		goto exit1;
+	}
+	clk_set_parent(cko2, new_parent);
+	clk_put(new_parent);
+
+	rate = clk_round_rate(cko2, 24000000);
+	clk_set_rate(cko2, rate);
+exit1:
+	clk_put(cko2);
+}
+
 static void __init imx6q_arm2_esai_setup(void)
 {
 	struct clk *esai_sel, *pll3_pfd2_508m, *esai;
@@ -740,6 +764,7 @@ static void __init imx6q_sabrelite_init(void)
 		phy_register_fixup_for_uid(PHY_ID_KSZ9021, MICREL_PHY_ID_MASK,
 				ksz9021rn_phy_fixup);
 	imx6q_sabrelite_cko1_setup();
+	imx6q_sabrelite_cko2_setup();
 }
 
 static void __init imx6q_utc_init(void)
@@ -748,6 +773,7 @@ static void __init imx6q_utc_init(void)
 		phy_register_fixup_for_uid(0x4dd074, 0xfffff0,
 				ar803x_phy_fixup);
 	imx6q_sabrelite_cko1_setup();
+	imx6q_sabrelite_cko2_setup();
 }
 
 static void __init imx6q_sabresd_cko_setup(void)
