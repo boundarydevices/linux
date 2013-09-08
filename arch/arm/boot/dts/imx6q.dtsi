@@ -545,21 +545,62 @@
 					};
 				};
 
-				pwm0 {
-					pinctrl_pwm0_0: pwm0-1 {
+				pwm1 {
+					pinctrl_pwm1_1: pwm1-1 {
+						fsl,pins = <
+							MX6Q_PAD_DISP0_DAT8__PWM1_OUT 0x1b0b1
+						>;
+					};
+					pinctrl_pwm1_2: pwm1-2 {
+						fsl,pins = <
+							 MX6Q_PAD_GPIO_9__PWM1_OUT 0x1b0b1
+						>;
+					};
+					pinctrl_pwm1_3: pwm1-3 {
 						fsl,pins = <
 							MX6Q_PAD_SD1_DAT3__PWM1_OUT 0x1b0b1
 						>;
 					};
-					pinctrl_pwm0_1: pwm0-3 {
+				};
+
+				pwm2 {
+					pinctrl_pwm2_1: pwm2-1 {
 						fsl,pins = <
-							MX6Q_PAD_SD4_DAT1__PWM3_OUT 0x1b0b1
+							MX6Q_PAD_DISP0_DAT9__PWM2_OUT 0x1b0b1
+						>;
+					};
+					pinctrl_pwm2_2: pwm2-2 {
+						fsl,pins = <
+							MX6Q_PAD_GPIO_1__PWM2_OUT 0x1b0b1
+						>;
+					};
+					pinctrl_pwm2_3: pwm2-3 {
+						fsl,pins = <
+							MX6Q_PAD_SD1_DAT2__PWM2_OUT 0x1b0b1
 						>;
 					};
 				};
 
 				pwm3 {
-					pinctrl_pwm3_0: pwm4 {
+					pinctrl_pwm3_1: pwm3-1 {
+						fsl,pins = <
+							MX6Q_PAD_SD4_DAT1__PWM3_OUT 0x1b0b1
+						>;
+					};
+					pinctrl_pwm3_2: pwm3-2 {
+						fsl,pins = <
+							MX6Q_PAD_SD1_DAT1__PWM3_OUT 0x1b0b1
+						>;
+					};
+				};
+
+				pwm4 {
+					pinctrl_pwm4_1: pwm4-1 {
+						fsl,pins = <
+							MX6Q_PAD_SD4_DAT2__PWM4_OUT 0x1b0b1
+						>;
+					};
+					pinctrl_pwm4_2: pwm4-2 {
 						fsl,pins = <
 							MX6Q_PAD_SD1_CMD__PWM4_OUT 0x1b0b1
 						>;
