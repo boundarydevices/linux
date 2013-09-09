@@ -1,4 +1,5 @@
 /*
+ * Copyright 2013 Boundary Devices
  * Copyright 2011 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
@@ -132,7 +133,7 @@
 							MX6Q_PAD_SD3_DAT4__GPIO7_IO01 0x1f0b0		/* USDHC3 WP */
 							MX6Q_PAD_NANDF_D6__GPIO2_IO06 0x80000000	/* uSDHC4 CD */
 							MX6Q_PAD_NANDF_D7__GPIO2_IO07 0x80000000	/* uSDHC4 WP */
-							MX6Q_PAD_GPIO_0__CCM_CLKO1    0x80000000	/* SGTL5000 sys_mclk */
+							MX6Q_PAD_GPIO_0__CCM_CLKO1	0x000b0		/* SGTL5000 sys_mclk */
 							MX6Q_PAD_GPIO_2__GPIO1_IO02 0x80000000		/* CAN standby */
 							MX6Q_PAD_GPIO_9__GPIO1_IO09 0x80000000		/* UGPIO9/I2C3 exapnsion interrupt */
 							MX6Q_PAD_NANDF_CS1__GPIO6_IO14 0x100b0		/* wl12xx_wl_irq */
@@ -141,6 +142,9 @@
 							MX6Q_PAD_SD1_CLK__OSC32K_32K_OUT 0x000b0	/* TiWi slow clock */
 							MX6Q_PAD_GPIO_4__GPIO1_IO04 0x80000000		/* UGPIO5 */
 							MX6Q_PAD_NANDF_CLE__GPIO6_IO07 0x1b0b0		/* ISL1208 interrupt */
+							MX6Q_PAD_NANDF_WP_B__GPIO6_IO09 0x0b0b0		/* ov5640 mipi powerdown */
+							MX6Q_PAD_NANDF_D5__GPIO2_IO05 0x000b0		/* ov5640 mipi reset */
+							MX6Q_PAD_GPIO_3__CCM_CLKO2	0x000b0		/* ov5642 mclk */
 						>;
 					};
 				};
@@ -148,13 +152,19 @@
 
 			pwm1: pwm@02080000 {
 				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_pwm0_0>;
+				pinctrl-0 = <&pinctrl_pwm1_3>;
+				status = "okay";
+			};
+
+			pwm3: pwm@02088000 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_pwm3_2>;
 				status = "okay";
 			};
 
 			pwm4: pwm@0208c000 {
 				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_pwm3_0>;
+				pinctrl-0 = <&pinctrl_pwm4_2>;
 				status = "okay";
 			};
 
@@ -191,7 +201,7 @@
 				status = "okay";
 			};
 
-			usdhc@02194000 { /* uSDHC2 */
+			usdhc@02194000 { /* uSDHC2, TiWi wl1271 */
 				pinctrl-names = "default", "state_100mhz", "state_200mhz";
 				pinctrl-0 = <&pinctrl_usdhc2_d4_50>;
 				pinctrl-1 = <&pinctrl_usdhc2_d4_100>;
@@ -261,6 +271,22 @@
 					compatible = "fsl,imx6-hdmi-i2c";
 					reg = <0x50>;
 				};
+
+				ov5640_mipi: ov5640_mipi@3c {
+					compatible = "fsl,ov5640_mipi";
+					reg = <0x3c>;
+					clocks = <&clks 147>;
+					clock-names = "csi_mclk";
+					DOVDD-supply = <&reg_1p8v>;
+					AVDD-supply = <&reg_2p5v>;
+					DVDD-supply = <&reg_1p8v>;
+					pwn-gpios = <&gpio6 9 1>;
+					rst-gpios = <&gpio2 5 0>;
+					csi_id = <0>;
+					mclk = <22000000>;
+					mclk_source = <0>;
+					pwms = <&pwm3 0 45>;
+				};
 			};
 
 			i2c@021a8000 { /* I2C3 */
@@ -296,6 +322,14 @@
 				status = "okay";
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_audmux_2>;
+			};
+
+			mipi@021dc000 { /* MIPI-CSI */
+				ipu_id = <0>;
+				csi_id = <0>;
+				v_channel = <0>;
+				lanes = <2>;
+				status = "okay";
 			};
 
 			uart2: serial@021e8000 {
@@ -360,6 +394,14 @@
 
 	regulators {
 		compatible = "simple-bus";
+
+		reg_1p8v: 1p8v {
+			compatible = "regulator-fixed";
+			regulator-name = "1P8V";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+		};
 
 		reg_2p5v: 2p5v {
 			compatible = "regulator-fixed";
@@ -497,7 +539,7 @@
 
 	v4l2_cap_1 {
 		compatible = "fsl,imx6q-v4l2-capture";
-		ipu_id = <0>;
+		ipu_id = <1>;
 		csi_id = <1>;
 		mclk_source = <0>;
 		status = "okay";
