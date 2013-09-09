@@ -131,6 +131,9 @@ static __inline__ void __arch_decomp_setup(unsigned long arch_id)
 #if defined(CONFIG_MACH_MX6_NITROGEN6X)
 	case MACH_TYPE_MX6_NITROGEN6X:
 #endif
+#if defined(CONFIG_MACH_MX6_UTC)
+	case MACH_TYPE_MX6_UTC:
+#endif
 	case MACH_TYPE_MX6_OC:
 	case MACH_TYPE_MX6_H:
 		uart_base = MX6Q_UART2_BASE_ADDR;
