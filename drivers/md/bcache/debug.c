@@ -200,13 +200,14 @@ void bch_data_verify(struct cached_dev *dc, struct bio *bio)
 		void *p2 = page_address(bv2.bv_page);
 		unsigned bytes = min(bv1.bv_len, bv2.bv_len);
 
-		if (memcmp(p1 + bv1.bv_offset,
-			   p2 + bv2.bv_offset,
-			   bytes))
-			printk(KERN_ERR
-			       "bcache (%s): verify failed at sector %llu\n",
-			       bdevname(dc->bdev, name),
-			       (uint64_t) bio->bi_iter.bi_sector);
+		cache_set_err_on(memcmp(p1 + bv1.bv_offset,
+					p2 + bv2.bv_offset,
+					bytes),
+				 dc->disk.c,
+				 "verify failed at dev %s sector %llu",
+				 bdevname(dc->bdev, name),
+				 (uint64_t) iter1.bi_sector);
+
 		kunmap_atomic(p1);
 
 		bio_advance_iter(bio, &iter1, bytes);
