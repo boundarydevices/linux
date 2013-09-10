@@ -127,6 +127,9 @@ static __inline__ void __arch_decomp_setup(unsigned long arch_id)
 		break;
 	case MACH_TYPE_MX6Q_SABRELITE:
 	case MACH_TYPE_MX6_OC:
+#if defined(CONFIG_MACH_MX6_UTC)
+	case MACH_TYPE_MX6_UTC:
+#endif
 		uart_base = MX6Q_UART2_BASE_ADDR;
 		break;
 	case MACH_TYPE_MX6Q_SABRESD:

@@ -566,7 +566,9 @@ int fsl_usb_host_init(struct platform_device *pdev)
 		if (!strcmp("Host 1", pdata->name)) {
 			if (machine_is_mx6q_arm2())
 				USB_H1_CTRL &= ~UCTRL_OVER_CUR_POL;
-			else if (machine_is_mx6q_sabrelite() || machine_is_mx6_oc())
+			else if (machine_is_mx6q_sabrelite()
+				 || machine_is_mx6_oc()
+				 || machine_is_mx6_utc())
 				USB_H1_CTRL |= UCTRL_OVER_CUR_POL;
 			USB_H1_CTRL |= UCTRL_OVER_CUR_DIS;
 		}
