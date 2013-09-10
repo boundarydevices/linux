@@ -441,6 +441,14 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	},
 };
 
+#if defined(CONFIG_TOUCHSCREEN_TSC2004) \
+	|| defined(CONFIG_TOUCHSCREEN_TSC2004_MODULE)
+static struct tsc2007_platform_data tsc2007_info = {
+	.model			= 2004,
+	.x_plate_ohms		= 500,
+};
+#endif
+
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("egalax_ts", 0x4),
@@ -451,6 +459,14 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("ft5x06-ts", 0x38),
 		.irq = gpio_to_irq(GP_CAP_TCH_INT1),
+	},
+#endif
+#if defined(CONFIG_TOUCHSCREEN_TSC2004) \
+	|| defined(CONFIG_TOUCHSCREEN_TSC2004_MODULE)
+	{
+		I2C_BOARD_INFO("tsc2004", 0x48),
+		.platform_data	= &tsc2007_info,
+		.irq = gpio_to_irq(IMX_GPIO_NR(4,8)),
 	},
 #endif
 };
