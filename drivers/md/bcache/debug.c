@@ -8,7 +8,6 @@
 #include "bcache.h"
 #include "btree.h"
 #include "debug.h"
-#include "request.h"
 
 #include <linux/console.h>
 #include <linux/debugfs.h>
@@ -176,11 +175,10 @@ void bch_btree_verify(struct btree *b, struct bset *new)
 	mutex_unlock(&b->c->verify_lock);
 }
 
-void bch_data_verify(struct search *s)
+void bch_data_verify(struct cached_dev *dc, struct bio *bio)
 {
 	char name[BDEVNAME_SIZE];
-	struct cached_dev *dc = container_of(s->d, struct cached_dev, disk);
-	struct bio *bio = s->orig_bio, *check;
+	struct bio *check;
 	struct bio_vec *bv;
 	struct bvec_iter iter1, iter2;
 	int i;
@@ -214,7 +212,7 @@ void bch_data_verify(struct search *s)
 			printk(KERN_ERR
 			       "bcache (%s): verify failed at sector %llu\n",
 			       bdevname(dc->bdev, name),
-			       (uint64_t) s->orig_bio->bi_iter.bi_sector);
+			       (uint64_t) bio->bi_iter.bi_sector);
 		kunmap_atomic(p1);
 
 		bio_advance_iter(bio, &iter1, bytes);
