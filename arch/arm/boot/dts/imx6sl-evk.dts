@@ -173,6 +173,8 @@
 &gpc {
 	/* use ldo-bypass, u-boot will check it and configure */
 	fsl,ldo-bypass = <1>;
+	/* watchdog select of reset source */
+	fsl,wdog-reset = <1>;
 };
 
 &i2c1 {
