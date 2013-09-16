@@ -157,8 +157,10 @@ struct usb_phy {
 	 */
 	enum usb_charger_type (*charger_detect)(struct usb_phy *x);
 
-	ANDROID_KABI_RESERVE(1);
-	ANDROID_KABI_RESERVE(2);
+	int	(*notify_suspend)(struct usb_phy *x,
+			enum usb_device_speed speed);
+	int	(*notify_resume)(struct usb_phy *x,
+			enum usb_device_speed speed);
 	ANDROID_KABI_RESERVE(3);
 	ANDROID_KABI_RESERVE(4);
 };
@@ -336,6 +338,24 @@ usb_phy_notify_disconnect(struct usb_phy *x, enum usb_device_speed speed)
 {
 	if (x && x->notify_disconnect)
 		return x->notify_disconnect(x, speed);
+	else
+		return 0;
+}
+
+static inline int usb_phy_notify_suspend
+	(struct usb_phy *x, enum usb_device_speed speed)
+{
+	if (x && x->notify_suspend)
+		return x->notify_suspend(x, speed);
+	else
+		return 0;
+}
+
+static inline int usb_phy_notify_resume
+	(struct usb_phy *x, enum usb_device_speed speed)
+{
+	if (x && x->notify_resume)
+		return x->notify_resume(x, speed);
 	else
 		return 0;
 }
