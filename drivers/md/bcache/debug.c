@@ -188,7 +188,8 @@ void bch_data_verify(struct search *s)
 	struct cached_dev *dc = container_of(s->d, struct cached_dev, disk);
 	struct closure *cl = &s->cl;
 	struct bio *check;
-	struct bio_vec *bv;
+	struct bio_vec bv, *bv2;
+	struct bvec_iter iter;
 	int i;
 
 	check = bio_clone(s->orig_bio, GFP_NOIO);
@@ -205,24 +206,24 @@ void bch_data_verify(struct search *s)
 	closure_bio_submit(check, cl, &dc->disk);
 	closure_sync(cl);
 
-	bio_for_each_segment(bv, s->orig_bio, i) {
-		void *p1 = kmap(bv->bv_page);
-		void *p2 = kmap(check->bi_io_vec[i].bv_page);
+	bio_for_each_segment(bv, s->orig_bio, iter) {
+		void *p1 = kmap(bv.bv_page);
+		void *p2 = kmap(check->bi_io_vec[iter.bi_idx].bv_page);
 
-		if (memcmp(p1 + bv->bv_offset,
-			   p2 + bv->bv_offset,
-			   bv->bv_len))
+		if (memcmp(p1 + bv.bv_offset,
+			   p2 + bv.bv_offset,
+			   bv.bv_len))
 			printk(KERN_ERR
 			       "bcache (%s): verify failed at sector %llu\n",
 			       bdevname(dc->bdev, name),
 			       (uint64_t) s->orig_bio->bi_iter.bi_sector);
 
-		kunmap(bv->bv_page);
-		kunmap(check->bi_io_vec[i].bv_page);
+		kunmap(bv.bv_page);
+		kunmap(check->bi_io_vec[iter.bi_idx].bv_page);
 	}
 
-	__bio_for_each_segment(bv, check, i, 0)
-		__free_page(bv->bv_page);
+	bio_for_each_segment_all(bv2, check, i)
+		__free_page(bv2->bv_page);
 out_put:
 	bio_put(check);
 }
