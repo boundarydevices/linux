@@ -153,9 +153,9 @@
 				wp-gpios = <&gpio1 13 0>;
 				bus-width = <8>;
 				pinctrl-names = "default", "state_100mhz", "state_200mhz";
-				pinctrl-0 = <&pinctrl_usdhc3_1>;
-				pinctrl-1 = <&pinctrl_usdhc3_3>;
-				pinctrl-2 = <&pinctrl_usdhc3_4>;
+				pinctrl-0 = <&pinctrl_usdhc3_d8_50>;
+				pinctrl-1 = <&pinctrl_usdhc3_d8_100>;
+				pinctrl-2 = <&pinctrl_usdhc3_d8_200>;
 				status = "okay";
 			};
 

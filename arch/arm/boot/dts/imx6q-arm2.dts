@@ -201,11 +201,11 @@
 				wp-gpios = <&gpio6 14 0>;
 				vmmc-supply = <&reg_3p3v>;
 				pinctrl-names = "default", "state_100mhz", "state_200mhz";
-				pinctrl-0 = <&pinctrl_usdhc3_1
+				pinctrl-0 = <&pinctrl_usdhc3_d8_50
 					     &pinctrl_usdhc3_arm2>;
-				pinctrl-1 = <&pinctrl_usdhc3_3
+				pinctrl-1 = <&pinctrl_usdhc3_d8_100
 					     &pinctrl_usdhc3_arm2>;
-				pinctrl-2 = <&pinctrl_usdhc3_4
+				pinctrl-2 = <&pinctrl_usdhc3_d8_200
 					     &pinctrl_usdhc3_arm2>;
 				bus-width = <8>;
 				keep-power-in-suspend;
@@ -217,7 +217,7 @@
 				non-removable;
 				vmmc-supply = <&reg_3p3v>;
 				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_usdhc4_1>;
+				pinctrl-0 = <&pinctrl_usdhc4_d8_50>;
 				no-1-8-v;
 				bus-width = <8>;
 				keep-power-in-suspend;

@@ -125,8 +125,10 @@
 			};
 
 			usdhc@02194000 { /* uSDHC2 */
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_usdhc2_1>;
+				pinctrl-names = "default", "state_100mhz", "state_200mhz";
+				pinctrl-0 = <&pinctrl_usdhc2_d8_50>;
+				pinctrl-1 = <&pinctrl_usdhc2_d8_100>;
+				pinctrl-2 = <&pinctrl_usdhc2_d8_200>;
 				cd-gpios = <&gpio2 2 0>;
 				wp-gpios = <&gpio2 3 0>;
 				bus-width = <8>;
@@ -137,8 +139,10 @@
 			};
 
 			usdhc@02198000 { /* uSDHC3 */
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_usdhc3_1>;
+				pinctrl-names = "default", "state_100mhz", "state_200mhz";
+				pinctrl-0 = <&pinctrl_usdhc3_d8_50>;
+				pinctrl-1 = <&pinctrl_usdhc3_d8_100>;
+				pinctrl-2 = <&pinctrl_usdhc3_d8_200>;
 				cd-gpios = <&gpio2 0 0>;
 				wp-gpios = <&gpio2 1 0>;
 				bus-width = <8>;
@@ -149,8 +153,10 @@
 			};
 
 			usdhc@0219c000 { /* uSDHC4 */
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_usdhc4_1>;
+				pinctrl-names = "default", "state_100mhz", "state_200mhz";
+				pinctrl-0 = <&pinctrl_usdhc4_d8_50>;
+				pinctrl-1 = <&pinctrl_usdhc4_d8_100>;
+				pinctrl-2 = <&pinctrl_usdhc4_d8_200>;
 				non-removable;
 				bus-width = <8>;
 				no-1-8-v;
