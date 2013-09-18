@@ -143,13 +143,13 @@
 
 			pwm1: pwm@02080000 {
 				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_pwm0_0>;
+				pinctrl-0 = <&pinctrl_pwm1_3>;
 				status = "okay";
 			};
 
 			pwm4: pwm@0208c000 {
 				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_pwm3_0>;
+				pinctrl-0 = <&pinctrl_pwm4_2>;
 				status = "okay";
 			};
 

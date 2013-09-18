@@ -90,7 +90,7 @@
 
 			pwm3: pwm@02088000 {
 				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_pwm0_1>;
+				pinctrl-0 = <&pinctrl_pwm3_1>;
 				status = "okay";
 			};
 
