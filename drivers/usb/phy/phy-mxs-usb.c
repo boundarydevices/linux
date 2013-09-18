@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright 2012-2014 Freescale Semiconductor, Inc.
+ * Copyright 2012-2015 Freescale Semiconductor, Inc.
  * Copyright (C) 2012 Marek Vasut <marex@denx.de>
  * on behalf of DENX Software Engineering GmbH
  */
@@ -542,6 +542,29 @@ static int mxs_charger_data_contact_detect(struct mxs_phy *x)
 	return 0;
 }
 
+static int mxs_phy_on_suspend(struct usb_phy *phy,
+		enum usb_device_speed speed)
+{
+	struct mxs_phy *mxs_phy = to_mxs_phy(phy);
+
+	dev_dbg(phy->dev, "%s device has suspended\n",
+		(speed == USB_SPEED_HIGH) ? "HS" : "FS/LS");
+
+	/* delay 4ms to wait bus entering idle */
+	usleep_range(4000, 5000);
+
+	if (mxs_phy->data->flags & MXS_PHY_ABNORMAL_IN_SUSPEND) {
+		writel_relaxed(0xffffffff, phy->io_priv + HW_USBPHY_PWD);
+		writel_relaxed(0, phy->io_priv + HW_USBPHY_PWD);
+	}
+
+	if (speed == USB_SPEED_HIGH)
+		writel_relaxed(BM_USBPHY_CTRL_ENHOSTDISCONDETECT,
+				phy->io_priv + HW_USBPHY_CTRL_CLR);
+
+	return 0;
+}
+
 static enum usb_charger_type mxs_charger_primary_detection(struct mxs_phy *x)
 {
 	struct regmap *regmap = x->regmap_anatop;
@@ -629,6 +652,25 @@ static enum usb_charger_type mxs_phy_charger_detect(struct usb_phy *phy)
 	return chgr_type;
 }
 
+/*
+ * The resume signal must be finished here.
+ */
+static int mxs_phy_on_resume(struct usb_phy *phy,
+		enum usb_device_speed speed)
+{
+	dev_dbg(phy->dev, "%s device has resumed\n",
+		(speed == USB_SPEED_HIGH) ? "HS" : "FS/LS");
+
+	if (speed == USB_SPEED_HIGH) {
+		/* Make sure the device has switched to High-Speed mode */
+		udelay(500);
+		writel_relaxed(BM_USBPHY_CTRL_ENHOSTDISCONDETECT,
+				phy->io_priv + HW_USBPHY_CTRL_SET);
+	}
+
+	return 0;
+}
+
 static int mxs_phy_probe(struct platform_device *pdev)
 {
 	struct resource *res;
@@ -706,6 +748,8 @@ static int mxs_phy_probe(struct platform_device *pdev)
 	if (ret < 0)
 		dev_dbg(&pdev->dev, "failed to get alias id, errno %d\n", ret);
 	mxs_phy->port_id = ret;
+	mxs_phy->clk = clk;
+	mxs_phy->data = of_id->data;
 
 	mxs_phy->phy.io_priv		= base;
 	mxs_phy->phy.dev		= &pdev->dev;
@@ -719,8 +763,10 @@ static int mxs_phy_probe(struct platform_device *pdev)
 	mxs_phy->phy.set_wakeup		= mxs_phy_set_wakeup;
 	mxs_phy->phy.charger_detect	= mxs_phy_charger_detect;
 
-	mxs_phy->clk = clk;
-	mxs_phy->data = of_id->data;
+	if (mxs_phy->data->flags & MXS_PHY_SENDING_SOF_TOO_FAST) {
+		mxs_phy->phy.notify_suspend = mxs_phy_on_suspend;
+		mxs_phy->phy.notify_resume = mxs_phy_on_resume;
+	}
 
 	platform_set_drvdata(pdev, mxs_phy);
 
