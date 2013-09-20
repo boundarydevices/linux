@@ -453,6 +453,10 @@ static void camera_reset(int power_gp, int poweroff_level, int reset_gp, int res
 
 #if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
 
+static struct mxc_pwm_platform_data pwm3_data = {
+	.clk_select = PWM_CLK_HIGHPERF,
+};
+
 static struct pwm_device *mipi_pwm = 0;
 
 static void mx6_mipi_sensor_io_init(void)
@@ -1211,7 +1215,7 @@ static void __init mx6_sabrelite_board_init(void)
 
 	imx6q_add_mxc_pwm(0);
 	imx6q_add_mxc_pwm(1);
-	imx6q_add_mxc_pwm(2);
+	imx6q_add_mxc_pwm_pdata(2, &pwm3_data);
 	imx6q_add_mxc_pwm(3);
 	imx6q_add_mxc_pwm_backlight(0, &mx6_sabrelite_pwm0_backlight_data);
 	imx6q_add_mxc_pwm_backlight(3, &mx6_sabrelite_pwm_backlight_data);
