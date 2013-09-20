@@ -298,7 +298,8 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 
 #if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
 static iomux_v3_cfg_t MX6NAME(sabrelite_mipi_pads)[] = {
-	MX6PAD(NANDF_D5__GPIO_2_5),		/* Camera Reset, Nitrogen6x */
+	MX6PAD(NANDF_WP_B__GPIO_6_9),		/* J16 - MIPI Powerdown - Nitrogen6x, SOM is NC */
+	MX6PAD(NANDF_D5__GPIO_2_5),		/* J16 - MIPI camera reset - Nitrogen6x/SOM */
 	MX6PAD(NANDF_CS0__GPIO_6_11),		/* Camera Reset, SOM jumpered */
 	MX6PAD(GPIO_6__GPIO_1_6),		/* Camera GP */
 	0
@@ -326,8 +327,6 @@ static iomux_v3_cfg_t MX6NAME(sabrelite_csi0_sensor_pads)[] = {
 	MX6PAD(GPIO_8__GPIO_1_8),		/* J5 - Camera Reset */
 	MX6PAD(NANDF_CS0__GPIO_6_11),		/* J5 - Camera Reset */
 	MX6PAD(SD1_DAT0__GPIO_1_16),		/* J5 - Camera GP */
-	MX6PAD(NANDF_D5__GPIO_2_5),		/* J16 - MIPI GP */
-	MX6PAD(NANDF_WP_B__GPIO_6_9),		/* J16 - MIPI GP */
 	0
 };
 #endif
