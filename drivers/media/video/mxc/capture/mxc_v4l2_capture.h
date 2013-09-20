@@ -109,6 +109,8 @@ typedef struct _cam_data {
 	struct semaphore busy_lock;
 
 	int open_count;
+	struct delayed_work power_down_work;
+	int power_on;
 
 	/* params lock for this camera */
 	struct semaphore param_lock;
