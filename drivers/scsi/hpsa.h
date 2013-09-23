@@ -155,7 +155,20 @@ struct ctlr_info {
 #define HPSATMF_LOG_QRY_TASK    (1 << 23)
 #define HPSATMF_LOG_QRY_TSET    (1 << 24)
 #define HPSATMF_LOG_QRY_ASYNC   (1 << 25)
+	spinlock_t offline_device_lock;
+	struct list_head offline_device_list;
+	struct task_struct *offline_device_monitor;
+	unsigned char offline_device_thread_state;
+#define OFFLINE_DEVICE_THREAD_STOPPED 0
+#define OFFLINE_DEVICE_THREAD_STOPPING 1
+#define OFFLINE_DEVICE_THREAD_RUNNING 2
 };
+
+struct offline_device_entry {
+	unsigned char scsi3addr[8];
+	struct list_head offline_list;
+};
+
 #define HPSA_ABORT_MSG 0
 #define HPSA_DEVICE_RESET_MSG 1
 #define HPSA_RESET_TYPE_CONTROLLER 0x00
