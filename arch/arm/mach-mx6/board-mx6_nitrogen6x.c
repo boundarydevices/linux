@@ -451,12 +451,11 @@ static void camera_reset(int power_gp, int poweroff_level, int reset_gp, int res
 }
 
 
-#if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
-
 static struct mxc_pwm_platform_data pwm3_data = {
 	.clk_select = PWM_CLK_HIGHPERF,
 };
 
+#if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
 static struct pwm_device *mipi_pwm = 0;
 
 static void mx6_mipi_sensor_io_init(void)
