@@ -880,10 +880,24 @@ static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
 	.disp_id = 1,
 };
 
+static void lcd_enable_pins(void)
+{
+	pr_info("%s\n", __func__);
+	IOMUX_SETUP(lcd_pads_enable);
+}
+
+static void lcd_disable_pins(void)
+{
+	pr_info("%s\n", __func__);
+	IOMUX_SETUP(lcd_pads_disable);
+}
+
 static struct fsl_mxc_lcd_platform_data lcdif_data = {
 	.ipu_id = 0,
 	.disp_id = 0,
 	.default_ifmt = IPU_PIX_FMT_RGB565,
+	.enable_pins = lcd_enable_pins,
+	.disable_pins = lcd_disable_pins,
 };
 
 static struct fsl_mxc_ldb_platform_data ldb_data = {
@@ -1266,6 +1280,7 @@ static void __init board_init(void)
 	struct platform_device *voutdev;
 
 	IOMUX_SETUP(common_pads);
+	lcd_disable_pins();
 
 	isn6 = is_nitrogen6w();
 	if (isn6) {
