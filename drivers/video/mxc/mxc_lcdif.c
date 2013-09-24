@@ -117,13 +117,19 @@ static int lcdif_init(struct mxc_dispdrv_handle *disp,
 			break;
 		}
 	}
-
+	if (plat_data->enable_pins)
+		plat_data->enable_pins();
 	return ret;
 }
 
 void lcdif_deinit(struct mxc_dispdrv_handle *disp)
 {
-	/*TODO*/
+	struct mxc_lcdif_data *lcdif = mxc_dispdrv_getdata(disp);
+	struct fsl_mxc_lcd_platform_data *plat_data
+			= lcdif->pdev->dev.platform_data;
+
+	if (plat_data->disable_pins)
+		plat_data->disable_pins();
 }
 
 static struct mxc_dispdrv_driver lcdif_drv = {
