@@ -168,7 +168,7 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	struct device_node *cpu_np, *codec_np;
 	struct platform_device *cpu_pdev;
 	struct i2c_client *codec_dev;
-	struct imx_sgtl5000_data *data;
+	struct imx_sgtl5000_data *data = NULL;
 	int ret;
 
 	cpu_np = of_parse_phandle(pdev->dev.of_node, "cpu-dai", 0);
@@ -251,7 +251,7 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	return 0;
 
 fail:
-	if (!IS_ERR(data->codec_clk))
+	if (data && !IS_ERR(data->codec_clk))
 		clk_put(data->codec_clk);
 	if (cpu_np)
 		of_node_put(cpu_np);
