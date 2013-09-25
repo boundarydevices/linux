@@ -203,7 +203,7 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	data->codec_clk = devm_clk_get(&codec_dev->dev, NULL);
+	data->codec_clk = clk_get(&codec_dev->dev, NULL);
 	if (IS_ERR(data->codec_clk)) {
 		ret = PTR_ERR(data->codec_clk);
 		goto fail;
@@ -251,6 +251,8 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	return 0;
 
 fail:
+	if (!IS_ERR(data->codec_clk))
+		clk_put(data->codec_clk);
 	if (cpu_np)
 		of_node_put(cpu_np);
 	if (codec_np)
