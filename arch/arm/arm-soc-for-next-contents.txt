@@ -1,0 +1,13 @@
+
+
+next/cleanup
+	shark/removal
+		  git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson.git tags/del-shark-for-v3.13
+
+next/soc
+	samsung/s3c64xx-clk
+		http://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-clk-s3c64xx
+
+next/dt
+	samsung/s3c64xx-dt
+		  http://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-dt-s3c64xx
