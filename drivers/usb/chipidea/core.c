@@ -639,6 +639,10 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	ci_get_otg_capable(ci);
 
 	dr_mode = ci->platdata->dr_mode;
+
+	ci->supports_runtime_pm = !!(ci->platdata->flags &
+		CI_HDRC_SUPPORTS_RUNTIME_PM);
+
 	/* initialize role(s) before the interrupt is requested */
 	if (dr_mode == USB_DR_MODE_OTG || dr_mode == USB_DR_MODE_HOST) {
 		ret = ci_hdrc_host_init(ci);
@@ -707,6 +711,13 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	if (ret)
 		goto stop;
 
+	device_set_wakeup_capable(&pdev->dev, true);
+
+	if (ci->supports_runtime_pm) {
+		pm_runtime_set_active(&pdev->dev);
+		pm_runtime_enable(&pdev->dev);
+	}
+
 	if (ci_otg_is_fsm_mode(ci))
 		ci_hdrc_otg_fsm_start(ci);
 
@@ -727,6 +738,11 @@ static int ci_hdrc_remove(struct platform_device *pdev)
 {
 	struct ci_hdrc *ci = platform_get_drvdata(pdev);
 
+	if (ci->supports_runtime_pm) {
+		pm_runtime_get_sync(&pdev->dev);
+		pm_runtime_disable(&pdev->dev);
+		pm_runtime_put_noidle(&pdev->dev);
+	}
 	dbg_remove_files(ci);
 	free_irq(ci->irq, ci);
 	ci_role_destroy(ci);
@@ -737,12 +753,114 @@ static int ci_hdrc_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int ci_controller_suspend(struct device *dev)
+{
+	struct ci_hdrc *ci = dev_get_drvdata(dev);
+
+	dev_dbg(dev, "at %s\n", __func__);
+
+	if (ci->in_lpm)
+		return 0;
+
+	disable_irq(ci->irq);
+
+	if (ci->transceiver)
+		usb_phy_set_wakeup(ci->transceiver, true);
+
+	ci_hdrc_enter_lpm(ci, true);
+
+	if (ci->transceiver)
+		usb_phy_set_suspend(ci->transceiver, 1);
+
+	ci->in_lpm = true;
+
+	enable_irq(ci->irq);
+
+	return 0;
+}
+
+static int ci_controller_resume(struct device *dev)
+{
+	struct ci_hdrc *ci = dev_get_drvdata(dev);
+
+	dev_dbg(dev, "at %s\n", __func__);
+
+	if (!ci->in_lpm)
+		return 0;
+
+	ci_hdrc_enter_lpm(ci, false);
+
+	if (ci->transceiver) {
+		usb_phy_set_suspend(ci->transceiver, 0);
+		usb_phy_set_wakeup(ci->transceiver, false);
+	}
+
+	ci->in_lpm = false;
+
+	return 0;
+}
+
+#ifdef CONFIG_PM_SLEEP
+static int ci_suspend(struct device *dev)
+{
+	struct ci_hdrc *ci = dev_get_drvdata(dev);
+	int ret;
+
+	ret = ci_controller_suspend(dev);
+	if (ret)
+		return ret;
+
+	if (device_may_wakeup(dev))
+		enable_irq_wake(ci->irq);
+
+	return ret;
+}
+
+static int ci_resume(struct device *dev)
+{
+	struct ci_hdrc *ci = dev_get_drvdata(dev);
+	int ret;
+
+	if (device_may_wakeup(dev))
+		disable_irq_wake(ci->irq);
+
+	ret = ci_controller_resume(dev);
+	if (!ret && ci->supports_runtime_pm) {
+		pm_runtime_disable(dev);
+		pm_runtime_set_active(dev);
+		pm_runtime_enable(dev);
+	}
+
+	return ret;
+}
+#endif /* CONFIG_PM_SLEEP */
+
+#ifdef CONFIG_PM_RUNTIME
+static int ci_runtime_suspend(struct device *dev)
+{
+	return ci_controller_suspend(dev);
+}
+
+static int ci_runtime_resume(struct device *dev)
+{
+	return ci_controller_resume(dev);
+}
+#endif /* CONFIG_PM_RUNTIME */
+
+#endif /* CONFIG_PM */
+static const struct dev_pm_ops ci_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(ci_suspend, ci_resume)
+	SET_RUNTIME_PM_OPS(ci_runtime_suspend, ci_runtime_resume, NULL)
+};
+
 static struct platform_driver ci_hdrc_driver = {
 	.probe	= ci_hdrc_probe,
 	.remove	= ci_hdrc_remove,
 	.driver	= {
 		.name	= "ci_hdrc",
 		.owner	= THIS_MODULE,
+		.pm	= &ci_pm_ops,
 	},
 };
 
