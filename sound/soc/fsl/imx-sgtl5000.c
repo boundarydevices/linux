@@ -261,6 +261,15 @@ fail:
 	return ret;
 }
 
+static int imx_sgtl5000_remove(struct platform_device *pdev)
+{
+	struct imx_sgtl5000_data *data = platform_get_drvdata(pdev);
+
+	clk_put(data->codec_clk);
+
+	return 0;
+}
+
 static const struct of_device_id imx_sgtl5000_dt_ids[] = {
 	{ .compatible = "fsl,imx-audio-sgtl5000", },
 	{ /* sentinel */ }
@@ -274,6 +283,7 @@ static struct platform_driver imx_sgtl5000_driver = {
 		.of_match_table = imx_sgtl5000_dt_ids,
 	},
 	.probe = imx_sgtl5000_probe,
+	.remove = imx_sgtl5000_remove,
 };
 module_platform_driver(imx_sgtl5000_driver);
 
