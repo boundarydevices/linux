@@ -187,6 +187,8 @@ static inline int ts_register(struct ft5x06_ts *ts)
 #ifdef USE_ABS_MT
 	input_set_abs_params(idev, ABS_MT_POSITION_X, 0, 1023, 0, 0);
 	input_set_abs_params(idev, ABS_MT_POSITION_Y, 0, 0x255, 0, 0);
+	input_set_abs_params(idev, ABS_X, 0, 1023, 0, 0);
+	input_set_abs_params(idev, ABS_Y, 0, 0x255, 0, 0);
 	input_set_abs_params(idev, ABS_MT_TOUCH_MAJOR, 0, 1, 0, 0);
 #else
 	__set_bit(EV_SYN, idev->evbit);
