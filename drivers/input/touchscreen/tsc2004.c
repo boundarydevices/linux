@@ -29,8 +29,11 @@
 #include <linux/i2c.h>
 #include <linux/i2c/tsc2007.h>
 
-static int calibration[7];
+static int calibration[9];
 module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
+
+#define CALIBRATION_XRES 7
+#define CALIBRATION_YRES 8
 
 static void translate(u16 *px, u16 *py)
 {
@@ -473,8 +476,17 @@ static int __devinit tsc2004_probe(struct i2c_client *client,
 	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
 	input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
 
-	input_set_abs_params(input_dev, ABS_X, 0, MAX_12BIT, 0, 0);
-	input_set_abs_params(input_dev, ABS_Y, 0, MAX_12BIT, 0, 0);
+	if ((0 == calibration[CALIBRATION_XRES])
+	    ||
+	    (0 == calibration[CALIBRATION_YRES])) {
+		input_set_abs_params(input_dev, ABS_X, 0, MAX_12BIT, 0, 0);
+		input_set_abs_params(input_dev, ABS_Y, 0, MAX_12BIT, 0, 0);
+	} else {
+		input_set_abs_params(input_dev, ABS_X, 0,
+				     calibration[CALIBRATION_XRES], 0, 0);
+		input_set_abs_params(input_dev, ABS_Y, 0,
+				     calibration[CALIBRATION_YRES], 0, 0);
+	}
 	input_set_abs_params(input_dev, ABS_PRESSURE, 0, MAX_12BIT, 0, 0);
 
 	if (pdata->init_platform_hw)
