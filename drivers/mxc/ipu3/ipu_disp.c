@@ -2031,7 +2031,7 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 
 	/*clear DI*/
 	di_gen = ipu_di_read(ipu, disp, DI_GENERAL);
-	di_gen &= (0x3 << 20);
+	di_gen &= (0x32 << 16);
 	ipu_di_write(ipu, disp, di_gen, DI_GENERAL);
 
 	if (sig.interlaced) {
