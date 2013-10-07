@@ -7,6 +7,8 @@ next/cleanup
 		https://github.com/shesselba/linux-dove.git clk-of-init-v2_for-3.13
 	patch
 		ARM: drop explicit selection of HAVE_CLK and CLKDEV_LOOKUP
+	reneasas/initdata-cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-fixes5-for-v3.12
 
 next/soc
 	samsung/s3c64xx-clk
