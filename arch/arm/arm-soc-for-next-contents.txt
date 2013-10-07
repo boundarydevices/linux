@@ -3,6 +3,8 @@
 next/cleanup
 	shark/removal
 		  git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson.git tags/del-shark-for-v3.13
+	cleanup/dt-clock
+		https://github.com/shesselba/linux-dove.git clk-of-init-v2_for-3.13
 
 next/soc
 	samsung/s3c64xx-clk
