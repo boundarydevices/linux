@@ -26,6 +26,10 @@ next/drivers
 	davinci/gpio
 		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci.git tags/davinci-for-v3.13/gpio
 
+next/boards
+	renesas/boards
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git renesas-boards-for-v3.13
+
 next/dt
 	samsung/s3c64xx-dt
 		  http://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-dt-s3c64xx
