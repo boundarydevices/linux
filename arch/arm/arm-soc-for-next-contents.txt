@@ -11,6 +11,8 @@ next/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-fixes5-for-v3.12
 	renesas/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-cleanup-for-v3.13
+	patch
+		clk: nomadik: fix missing __init on nomadik_src_init
 
 next/soc
 	samsung/s3c64xx-clk
