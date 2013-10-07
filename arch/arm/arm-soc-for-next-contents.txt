@@ -9,6 +9,8 @@ next/cleanup
 		ARM: drop explicit selection of HAVE_CLK and CLKDEV_LOOKUP
 	reneasas/initdata-cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-fixes5-for-v3.12
+	renesas/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-cleanup-for-v3.13
 
 next/soc
 	samsung/s3c64xx-clk
