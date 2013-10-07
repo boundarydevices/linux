@@ -17,6 +17,8 @@ next/soc
 		http://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-clk-s3c64xx
 	patch
 		ARM: davinci: remove deprecated IRQF_DISABLED
+	renesas/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-soc-for-v3.13
 
 next/drivers
 	davinci/gpio
