@@ -19,6 +19,8 @@ next/soc
 		ARM: davinci: remove deprecated IRQF_DISABLED
 	renesas/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-soc-for-v3.13
+	renesas/smp
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-smp-for-v3.13
 
 next/drivers
 	davinci/gpio
