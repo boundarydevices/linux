@@ -7,6 +7,8 @@ next/cleanup
 next/soc
 	samsung/s3c64xx-clk
 		http://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-clk-s3c64xx
+	patch
+		ARM: davinci: remove deprecated IRQF_DISABLED
 
 next/drivers
 	davinci/gpio
