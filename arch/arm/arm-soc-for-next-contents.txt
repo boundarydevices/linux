@@ -46,4 +46,7 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson.git tags/ux500-devicetree-2
 	renesas/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-dt-for-v3.13
+	mvebu/dt
+		git://git.infradead.org/linux-mvebu.git tags/dt-3.13
+		git://git.infradead.org/linux-mvebu.git tags/dt-3.13-2
 
