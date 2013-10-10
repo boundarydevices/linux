@@ -358,6 +358,31 @@ u64 fuse_lock_owner_id(struct fuse_conn *fc, fl_owner_t id)
 	return (u64) v0 + ((u64) v1 << 32);
 }
 
+static bool fuse_range_is_writeback(struct inode *inode, pgoff_t idx_from,
+				    pgoff_t idx_to)
+{
+	struct fuse_conn *fc = get_fuse_conn(inode);
+	struct fuse_inode *fi = get_fuse_inode(inode);
+	struct fuse_req *req;
+	bool found = false;
+
+	spin_lock(&fc->lock);
+	list_for_each_entry(req, &fi->writepages, writepages_entry) {
+		pgoff_t curr_index;
+
+		BUG_ON(req->inode != inode);
+		curr_index = req->misc.write.in.offset >> PAGE_CACHE_SHIFT;
+		if (!(idx_from >= curr_index + req->num_pages ||
+		      idx_to < curr_index)) {
+			found = true;
+			break;
+		}
+	}
+	spin_unlock(&fc->lock);
+
+	return found;
+}
+
 /*
  * Check if page is under writeback
  *
@@ -400,6 +425,19 @@ static int fuse_wait_on_page_writeback(struct inode *inode, pgoff_t index)
 
 	wait_event(fi->page_waitq, !fuse_page_is_writeback(inode, index));
 	return 0;
+}
+
+static void fuse_wait_on_writeback(struct inode *inode, pgoff_t start,
+				   size_t bytes)
+{
+	struct fuse_inode *fi = get_fuse_inode(inode);
+	pgoff_t idx_from, idx_to;
+
+	idx_from = start >> PAGE_CACHE_SHIFT;
+	idx_to = (start + bytes - 1) >> PAGE_CACHE_SHIFT;
+
+	wait_event(fi->page_waitq,
+		   !fuse_range_is_writeback(inode, idx_from, idx_to));
 }
 
 static int fuse_flush(struct file *file, fl_owner_t id)
@@ -1380,8 +1418,10 @@ static inline int fuse_iter_npages(const struct iov_iter *ii_p)
 
 ssize_t fuse_direct_io(struct fuse_io_priv *io, const struct iovec *iov,
 		       unsigned long nr_segs, size_t count, loff_t *ppos,
-		       int write)
+		       int flags)
 {
+	int write = flags & FUSE_DIO_WRITE;
+	int cuse = flags & FUSE_DIO_CUSE;
 	struct file *file = io->file;
 	struct fuse_file *ff = file->private_data;
 	struct fuse_conn *fc = ff->fc;
@@ -1409,6 +1449,10 @@ ssize_t fuse_direct_io(struct fuse_io_priv *io, const struct iovec *iov,
 			res = err;
 			break;
 		}
+
+		if (!cuse)
+			fuse_wait_on_writeback(file->f_mapping->host, pos,
+					       nbytes);
 
 		if (write)
 			nres = fuse_send_write(req, io, pos, nbytes, owner);
@@ -1488,7 +1532,8 @@ static ssize_t __fuse_direct_write(struct fuse_io_priv *io,
 
 	res = generic_write_checks(file, ppos, &count, 0);
 	if (!res)
-		res = fuse_direct_io(io, iov, nr_segs, count, ppos, 1);
+		res = fuse_direct_io(io, iov, nr_segs, count, ppos,
+				     FUSE_DIO_WRITE);
 
 	fuse_invalidate_attr(inode);
 
