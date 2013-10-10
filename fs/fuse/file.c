@@ -1967,6 +1967,104 @@ out:
 	return err;
 }
 
+/*
+ * Determine the number of bytes of data the page contains
+ */
+static inline unsigned fuse_page_length(struct page *page)
+{
+	loff_t i_size = i_size_read(page_file_mapping(page)->host);
+
+	if (i_size > 0) {
+		pgoff_t page_index = page_file_index(page);
+		pgoff_t end_index = (i_size - 1) >> PAGE_CACHE_SHIFT;
+		if (page_index < end_index)
+			return PAGE_CACHE_SIZE;
+		if (page_index == end_index)
+			return ((i_size - 1) & ~PAGE_CACHE_MASK) + 1;
+	}
+	return 0;
+}
+
+static int fuse_prepare_write(struct fuse_conn *fc, struct file *file,
+		struct page *page, loff_t pos, unsigned len)
+{
+	struct fuse_req *req = NULL;
+	unsigned num_read;
+	unsigned page_len;
+	int err;
+
+	if (PageUptodate(page) || (len == PAGE_CACHE_SIZE)) {
+		fuse_wait_on_page_writeback(page->mapping->host, page->index);
+		return 0;
+	}
+
+	page_len = fuse_page_length(page);
+	if (!page_len) {
+		fuse_wait_on_page_writeback(page->mapping->host, page->index);
+		zero_user(page, 0, PAGE_CACHE_SIZE);
+		return 0;
+	}
+
+	num_read = __fuse_readpage(file, page, page_len, &err, &req, NULL);
+	if (req)
+		fuse_put_request(fc, req);
+	if (err) {
+		unlock_page(page);
+		page_cache_release(page);
+	} else if (num_read != PAGE_CACHE_SIZE) {
+		zero_user_segment(page, num_read, PAGE_CACHE_SIZE);
+	}
+	return err;
+}
+
+/*
+ * It's worthy to make sure that space is reserved on disk for the write,
+ * but how to implement it without killing performance need more thinking.
+ */
+static int fuse_write_begin(struct file *file, struct address_space *mapping,
+		loff_t pos, unsigned len, unsigned flags,
+		struct page **pagep, void **fsdata)
+{
+	pgoff_t index = pos >> PAGE_CACHE_SHIFT;
+	struct fuse_conn *fc = get_fuse_conn(file->f_dentry->d_inode);
+
+	BUG_ON(!fc->writeback_cache);
+
+	*pagep = grab_cache_page_write_begin(mapping, index, flags);
+	if (!*pagep)
+		return -ENOMEM;
+
+	return fuse_prepare_write(fc, file, *pagep, pos, len);
+}
+
+static int fuse_commit_write(struct file *file, struct page *page,
+		unsigned from, unsigned to)
+{
+	struct inode *inode = page->mapping->host;
+	loff_t pos = ((loff_t)page->index << PAGE_CACHE_SHIFT) + to;
+
+	if (!PageUptodate(page))
+		SetPageUptodate(page);
+
+	fuse_write_update_size(inode, pos);
+	set_page_dirty(page);
+	return 0;
+}
+
+static int fuse_write_end(struct file *file, struct address_space *mapping,
+		loff_t pos, unsigned len, unsigned copied,
+		struct page *page, void *fsdata)
+{
+	unsigned from = pos & (PAGE_CACHE_SIZE - 1);
+
+	fuse_commit_write(file, page, from, from+copied);
+
+	unlock_page(page);
+	page_cache_release(page);
+
+	return copied;
+}
+
 static int fuse_launder_page(struct page *page)
 {
 	int err = 0;
@@ -2991,6 +3089,8 @@ static const struct address_space_operations fuse_file_aops  = {
 	.set_page_dirty	= __set_page_dirty_nobuffers,
 	.bmap		= fuse_bmap,
 	.direct_IO	= fuse_direct_IO,
+	.write_begin	= fuse_write_begin,
+	.write_end	= fuse_write_end,
 };
 
 void fuse_init_file_inode(struct inode *inode)
