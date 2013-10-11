@@ -4471,6 +4471,13 @@ L:	linux-serial@vger.kernel.org
 S:	Maintained
 F:	drivers/tty/serial/ioc3_serial.c
 
+IOMMU DRIVERS
+M:	Joerg Roedel <joro@8bytes.org>
+L:	iommu@lists.linux-foundation.org
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/joro/iommu.git
+S:	Maintained
+F:	drivers/iommu/
+
 IP MASQUERADING
 M:	Juanjo Ciarlante <jjciarla@raiz.uncu.edu.ar>
 S:	Maintained
@@ -7272,9 +7279,9 @@ F:	include/linux/sched.h
 F:	include/uapi/linux/sched.h
 
 SCORE ARCHITECTURE
-M:	Chen Liqin <liqin.chen@sunplusct.com>
+M:	Chen Liqin <liqin.linux@gmail.com>
 M:	Lennox Wu <lennox.wu@gmail.com>
-W:	http://www.sunplusct.com
+W:	http://www.sunplus.com
 S:	Supported
 F:	arch/score/
 
@@ -9379,6 +9386,7 @@ F:	arch/arm64/include/asm/xen/
 
 XEN NETWORK BACKEND DRIVER
 M:	Ian Campbell <ian.campbell@citrix.com>
+M:	Wei Liu <wei.liu2@citrix.com>
 L:	xen-devel@lists.xenproject.org (moderated for non-subscribers)
 L:	netdev@vger.kernel.org
 S:	Supported
