@@ -35,6 +35,7 @@ struct imx6_pcie {
 	int			power_on_gpio;
 	int			wake_up_gpio;
 	int			disable_gpio;
+	struct clk		*lvds_sel;
 	struct clk		*lvds_gate;
 	struct clk		*sata_ref_100m;
 	struct clk		*pcie_ref_125m;
@@ -249,6 +250,12 @@ static int imx6_pcie_deassert_core_reset(struct pcie_port *pp)
 		goto err_pcie_ref;
 	}
 
+	ret = clk_prepare_enable(imx6_pcie->lvds_sel);
+	if (ret) {
+		dev_err(pp->dev, "unable to enable lvds_sel\n");
+		goto err_lvds_sel;
+	}
+
 	ret = clk_prepare_enable(imx6_pcie->lvds_gate);
 	if (ret) {
 		dev_err(pp->dev, "unable to enable lvds_gate\n");
@@ -267,8 +274,10 @@ static int imx6_pcie_deassert_core_reset(struct pcie_port *pp)
 	return 0;
 
 err_pcie_axi:
-	clk_disable_unprepare(imx6_pcie->lvds_gate);
+	clk_disable_unprepare(imx6_pcie->lvds_sel);
 err_lvds_gate:
+	clk_disable_unprepare(imx6_pcie->lvds_gate);
+err_lvds_sel:
 	clk_disable_unprepare(imx6_pcie->pcie_ref_125m);
 err_pcie_ref:
 	clk_disable_unprepare(imx6_pcie->sata_ref_100m);
@@ -490,6 +499,14 @@ static int __init imx6_pcie_probe(struct platform_device *pdev)
 	}
 
 	/* Fetch clocks */
+	imx6_pcie->lvds_sel = devm_clk_get(&pdev->dev, "lvds_sel");
+	if (IS_ERR(imx6_pcie->lvds_sel)) {
+		dev_err(&pdev->dev,
+			"lvds_sel clock select missing or invalid\n");
+		ret = PTR_ERR(imx6_pcie->lvds_sel);
+		goto err;
+	}
+
 	imx6_pcie->lvds_gate = devm_clk_get(&pdev->dev, "lvds_gate");
 	if (IS_ERR(imx6_pcie->lvds_gate)) {
 		dev_err(&pdev->dev,
