@@ -230,7 +230,7 @@ void bch_btree_node_read(struct btree *b)
 
 	bio = bch_bbio_alloc(b->c);
 	bio->bi_rw	= REQ_META|READ_SYNC;
-	bio->bi_size	= KEY_SIZE(&b->key) << 9;
+	bio->bi_iter.bi_size = KEY_SIZE(&b->key) << 9;
 	bio->bi_end_io	= btree_node_read_endio;
 	bio->bi_private	= &cl;
 
@@ -329,7 +329,7 @@ static void do_btree_node_write(struct btree *b)
 	b->bio->bi_end_io	= btree_node_write_endio;
 	b->bio->bi_private	= &b->io.cl;
 	b->bio->bi_rw		= REQ_META|WRITE_SYNC|REQ_FUA;
-	b->bio->bi_size		= set_blocks(i, b->c) * block_bytes(b->c);
+	b->bio->bi_iter.bi_size	= set_blocks(i, b->c) * block_bytes(b->c);
 	bch_bio_map(b->bio, i);
 
 	/*
@@ -2161,11 +2161,11 @@ static int submit_partial_cache_miss(struct btree *b, struct btree_op *op,
 		unsigned sectors = INT_MAX;
 
 		if (KEY_INODE(k) == op->inode) {
-			if (KEY_START(k) <= bio->bi_sector)
+			if (KEY_START(k) <= bio->bi_iter.bi_sector)
 				break;
 
 			sectors = min_t(uint64_t, sectors,
-					KEY_START(k) - bio->bi_sector);
+					KEY_START(k) - bio->bi_iter.bi_sector);
 		}
 
 		ret = s->d->cache_miss(b, s, bio, sectors);
@@ -2197,12 +2197,12 @@ static int submit_partial_cache_hit(struct btree *b, struct btree_op *op,
 
 	while (!op->lookup_done &&
 	       KEY_INODE(k) == op->inode &&
-	       bio->bi_sector < KEY_OFFSET(k)) {
+	       bio->bi_iter.bi_sector < KEY_OFFSET(k)) {
 		struct bkey *bio_key;
 		sector_t sector = PTR_OFFSET(k, ptr) +
-			(bio->bi_sector - KEY_START(k));
+			(bio->bi_iter.bi_sector - KEY_START(k));
 		unsigned sectors = min_t(uint64_t, INT_MAX,
-					 KEY_OFFSET(k) - bio->bi_sector);
+				KEY_OFFSET(k) - bio->bi_iter.bi_sector);
 
 		n = bch_bio_split(bio, sectors, GFP_NOIO, s->d->bio_split);
 		if (n == bio)
@@ -2241,7 +2241,8 @@ int bch_btree_search_recurse(struct btree *b, struct btree_op *op)
 	int ret = 0;
 	struct bkey *k;
 	struct btree_iter iter;
-	bch_btree_iter_init(b, &iter, &KEY(op->inode, bio->bi_sector, 0));
+	bch_btree_iter_init(b, &iter, &KEY(op->inode,
+					   bio->bi_iter.bi_sector, 0));
 
 	do {
 		k = bch_btree_iter_next_filter(&iter, b, bch_ptr_bad);

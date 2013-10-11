@@ -215,7 +215,7 @@ void bch_data_verify(struct search *s)
 			printk(KERN_ERR
 			       "bcache (%s): verify failed at sector %llu\n",
 			       bdevname(dc->bdev, name),
-			       (uint64_t) s->orig_bio->bi_sector);
+			       (uint64_t) s->orig_bio->bi_iter.bi_sector);
 
 		kunmap(bv->bv_page);
 		kunmap(check->bi_io_vec[i].bv_page);

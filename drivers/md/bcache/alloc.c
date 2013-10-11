@@ -178,12 +178,12 @@ static void do_discard(struct cache *ca, long bucket)
 
 	bio_init(&d->bio);
 
-	d->bio.bi_sector	= bucket_to_sector(ca->set, d->bucket);
+	d->bio.bi_iter.bi_sector = bucket_to_sector(ca->set, d->bucket);
 	d->bio.bi_bdev		= ca->bdev;
 	d->bio.bi_rw		= REQ_WRITE|REQ_DISCARD;
 	d->bio.bi_max_vecs	= 1;
 	d->bio.bi_io_vec	= d->bio.bi_inline_vecs;
-	d->bio.bi_size		= bucket_bytes(ca);
+	d->bio.bi_iter.bi_size	= bucket_bytes(ca);
 	d->bio.bi_end_io	= discard_endio;
 	bio_set_prio(&d->bio, IOPRIO_PRIO_VALUE(IOPRIO_CLASS_IDLE, 0));
 
