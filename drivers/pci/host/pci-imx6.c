@@ -315,6 +315,7 @@ static void imx6_pcie_host_init(struct pcie_port *pp)
 {
 	int count = 0;
 	struct imx6_pcie *imx6_pcie = to_imx6_pcie(pp);
+	uint32_t tmp;
 
 	imx6_pcie_assert_core_reset(pp);
 
@@ -323,6 +324,16 @@ static void imx6_pcie_host_init(struct pcie_port *pp)
 	imx6_pcie_deassert_core_reset(pp);
 
 	dw_pcie_setup_rc(pp);
+
+	/*
+	 * FIXME:
+	 * Force Gen1 operation. In case the IP block is in Gen2 operation
+	 * mode, it does not detect the PCIe switch at all.
+	 */
+	tmp = readl(pp->dbi_base + 0x7c);
+	tmp &= ~0xf;
+	tmp |= 0x1;
+	writel(tmp, pp->dbi_base + 0x7c);
 
 	regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
 			IMX6Q_GPR12_PCIE_CTL_2, 1 << 10);
