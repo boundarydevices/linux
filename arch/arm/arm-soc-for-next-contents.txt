@@ -71,4 +71,5 @@ next/dt
 		git://git.rocketboards.org/linux-socfpga-next.git tags/socfpga-dts-updates-for-v3.13
 	omap/pdata-quirks		
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/quirk-signed
-
+	omap/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/dt-signed
