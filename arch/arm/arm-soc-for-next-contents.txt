@@ -48,6 +48,8 @@ next/boards
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git renesas-boards-for-v3.13
 	renesas/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-defconfig-for-v3.13
+	renesas/boards2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-boards2-for-v3.13
 
 next/dt
 	samsung/s3c64xx-dt
