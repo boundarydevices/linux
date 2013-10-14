@@ -1352,7 +1352,7 @@ static void start_quiescing(struct cache *cache)
 	unsigned long flags;
 
 	spin_lock_irqsave(&cache->lock, flags);
-	cache->quiescing = 1;
+	cache->quiescing = true;
 	spin_unlock_irqrestore(&cache->lock, flags);
 }
 
@@ -1361,7 +1361,7 @@ static void stop_quiescing(struct cache *cache)
 	unsigned long flags;
 
 	spin_lock_irqsave(&cache->lock, flags);
-	cache->quiescing = 0;
+	cache->quiescing = false;
 	spin_unlock_irqrestore(&cache->lock, flags);
 }
 
