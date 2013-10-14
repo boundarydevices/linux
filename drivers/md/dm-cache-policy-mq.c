@@ -997,16 +997,18 @@ static int mq_lookup(struct dm_cache_policy *p, dm_oblock_t oblock, dm_cblock_t 
  * Ideally a policy should not block in functions called
  * from the map() function.  Explore using RCU.
  */
-static void __mq_set_clear_dirty(struct dm_cache_policy *p, dm_oblock_t oblock, bool set)
+static int __mq_set_clear_dirty(struct dm_cache_policy *p, dm_oblock_t oblock, bool set)
 {
+	int r = 0;
 	struct mq_policy *mq = to_mq_policy(p);
 	struct entry *e;
 
 	mutex_lock(&mq->lock);
 	e = hash_lookup(mq, oblock);
-	if (!e)
+	if (!e) {
+		r = -ENOENT;
 		DMWARN("__mq_set_clear_dirty called for a block that isn't in the cache");
-	else {
+	} else {
 		BUG_ON(!e->in_cache);
 
 		del(mq, e);
@@ -1014,16 +1016,18 @@ static void __mq_set_clear_dirty(struct dm_cache_policy *p, dm_oblock_t oblock, 
 		push(mq, e);
 	}
 	mutex_unlock(&mq->lock);
+
+	return r;
 }
 
-static void mq_set_dirty(struct dm_cache_policy *p, dm_oblock_t oblock)
+static int mq_set_dirty(struct dm_cache_policy *p, dm_oblock_t oblock)
 {
-	__mq_set_clear_dirty(p, oblock, true);
+	return __mq_set_clear_dirty(p, oblock, true);
 }
 
-static void mq_clear_dirty(struct dm_cache_policy *p, dm_oblock_t oblock)
+static int mq_clear_dirty(struct dm_cache_policy *p, dm_oblock_t oblock)
 {
-	__mq_set_clear_dirty(p, oblock, false);
+	return __mq_set_clear_dirty(p, oblock, false);
 }
 
 static int mq_load_mapping(struct dm_cache_policy *p,
@@ -1085,23 +1089,40 @@ static int mq_walk_mappings(struct dm_cache_policy *p, policy_walk_fn fn,
 	return r;
 }
 
-static void mq_remove_mapping(struct dm_cache_policy *p, dm_oblock_t oblock)
+static int __remove_mapping(struct mq_policy *mq,
+			    dm_oblock_t oblock, dm_cblock_t *cblock)
 {
-	struct mq_policy *mq = to_mq_policy(p);
 	struct entry *e;
-
-	mutex_lock(&mq->lock);
 
 	e = hash_lookup(mq, oblock);
 
-	BUG_ON(!e || !e->in_cache);
+	if (e && e->in_cache) {
+		del(mq, e);
+		e->in_cache = false;
+		e->dirty = false;
 
-	del(mq, e);
-	e->in_cache = false;
-	e->dirty = false;
-	push(mq, e);
+		if (cblock) {
+			*cblock = e->cblock;
+			list_add(&e->list, &mq->free);
+		} else
+			push(mq, e);
 
+		return 0;
+	}
+
+	return -ENOENT;
+}
+
+static void mq_remove_mapping(struct dm_cache_policy *p, dm_oblock_t oblock)
+{
+	int r;
+	struct mq_policy *mq = to_mq_policy(p);
+
+	mutex_lock(&mq->lock);
+	r = __remove_mapping(mq, oblock, NULL);
 	mutex_unlock(&mq->lock);
+
+	BUG_ON(r);
 }
 
 static int __mq_writeback_work(struct mq_policy *mq, dm_oblock_t *oblock,
@@ -1133,17 +1154,17 @@ static int mq_writeback_work(struct dm_cache_policy *p, dm_oblock_t *oblock,
 	return r;
 }
 
-static void force_mapping(struct mq_policy *mq,
-			  dm_oblock_t current_oblock, dm_oblock_t new_oblock)
+static void __force_mapping(struct mq_policy *mq,
+			    dm_oblock_t current_oblock, dm_oblock_t new_oblock)
 {
 	struct entry *e = hash_lookup(mq, current_oblock);
 
-	BUG_ON(!e || !e->in_cache);
-
-	del(mq, e);
-	e->oblock = new_oblock;
-	e->dirty = true;
-	push(mq, e);
+	if (e && e->in_cache) {
+		del(mq, e);
+		e->oblock = new_oblock;
+		e->dirty = true;
+		push(mq, e);
+	}
 }
 
 static void mq_force_mapping(struct dm_cache_policy *p,
@@ -1152,8 +1173,21 @@ static void mq_force_mapping(struct dm_cache_policy *p,
 	struct mq_policy *mq = to_mq_policy(p);
 
 	mutex_lock(&mq->lock);
-	force_mapping(mq, current_oblock, new_oblock);
+	__force_mapping(mq, current_oblock, new_oblock);
 	mutex_unlock(&mq->lock);
+}
+
+static int mq_invalidate_mapping(struct dm_cache_policy *p,
+				 dm_oblock_t *oblock, dm_cblock_t *cblock)
+{
+	int r;
+	struct mq_policy *mq = to_mq_policy(p);
+
+	mutex_lock(&mq->lock);
+	r = __remove_mapping(mq, *oblock, cblock);
+	mutex_unlock(&mq->lock);
+
+	return r;
 }
 
 static dm_cblock_t mq_residency(struct dm_cache_policy *p)
@@ -1227,6 +1261,7 @@ static void init_policy_functions(struct mq_policy *mq)
 	mq->policy.remove_mapping = mq_remove_mapping;
 	mq->policy.writeback_work = mq_writeback_work;
 	mq->policy.force_mapping = mq_force_mapping;
+	mq->policy.invalidate_mapping = mq_invalidate_mapping;
 	mq->policy.residency = mq_residency;
 	mq->policy.tick = mq_tick;
 	mq->policy.emit_config_values = mq_emit_config_values;

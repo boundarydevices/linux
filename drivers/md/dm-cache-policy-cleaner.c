@@ -243,7 +243,7 @@ static void __set_clear_dirty(struct dm_cache_policy *pe, dm_oblock_t oblock, bo
 	}
 }
 
-static void wb_set_dirty(struct dm_cache_policy *pe, dm_oblock_t oblock)
+static int wb_set_dirty(struct dm_cache_policy *pe, dm_oblock_t oblock)
 {
 	struct policy *p = to_policy(pe);
 	unsigned long flags;
@@ -251,9 +251,11 @@ static void wb_set_dirty(struct dm_cache_policy *pe, dm_oblock_t oblock)
 	spin_lock_irqsave(&p->lock, flags);
 	__set_clear_dirty(pe, oblock, true);
 	spin_unlock_irqrestore(&p->lock, flags);
+
+	return 0;
 }
 
-static void wb_clear_dirty(struct dm_cache_policy *pe, dm_oblock_t oblock)
+static int wb_clear_dirty(struct dm_cache_policy *pe, dm_oblock_t oblock)
 {
 	struct policy *p = to_policy(pe);
 	unsigned long flags;
@@ -261,6 +263,8 @@ static void wb_clear_dirty(struct dm_cache_policy *pe, dm_oblock_t oblock)
 	spin_lock_irqsave(&p->lock, flags);
 	__set_clear_dirty(pe, oblock, false);
 	spin_unlock_irqrestore(&p->lock, flags);
+
+	return 0;
 }
 
 static void add_cache_entry(struct policy *p, struct wb_cache_entry *e)

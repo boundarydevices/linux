@@ -76,14 +76,14 @@ static int shim_lookup(struct dm_cache_policy *p, dm_oblock_t oblock,
 	return policy_lookup(p->child, oblock, cblock);
 }
 
-static void shim_set_dirty(struct dm_cache_policy *p, dm_oblock_t oblock)
+static int shim_set_dirty(struct dm_cache_policy *p, dm_oblock_t oblock)
 {
-	policy_set_dirty(p->child, oblock);
+	return policy_set_dirty(p->child, oblock);
 }
 
-static void shim_clear_dirty(struct dm_cache_policy *p, dm_oblock_t oblock)
+static int shim_clear_dirty(struct dm_cache_policy *p, dm_oblock_t oblock)
 {
-	policy_clear_dirty(p->child, oblock);
+	return policy_clear_dirty(p->child, oblock);
 }
 
 static int shim_load_mapping(struct dm_cache_policy *p,
@@ -130,6 +130,12 @@ static void shim_force_mapping(struct dm_cache_policy *p,
 	policy_force_mapping(p->child, current_oblock, new_oblock);
 }
 
+static int shim_invalidate_mapping(struct dm_cache_policy *p,
+				   dm_oblock_t *oblock, dm_cblock_t *cblock)
+{
+	return policy_invalidate_mapping(p->child, oblock, cblock);
+}
+
 static dm_cblock_t shim_residency(struct dm_cache_policy *p)
 {
 	return policy_residency(p->child);
@@ -164,6 +170,7 @@ void dm_cache_shim_utils_init_shim_policy(struct dm_cache_policy *p)
 	p->remove_mapping = shim_remove_mapping;
 	p->writeback_work = shim_writeback_work;
 	p->force_mapping = shim_force_mapping;
+	p->invalidate_mapping = shim_invalidate_mapping;
 	p->residency = shim_residency;
 	p->tick = shim_tick;
 	p->emit_config_values = shim_emit_config_values;
