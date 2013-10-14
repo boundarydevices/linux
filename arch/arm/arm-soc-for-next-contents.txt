@@ -32,6 +32,8 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-soc2-for-v3.13
 	keystone/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone.git tags/keystone-soc-for-arm-soc
+	patch
+		ARM: keystone: fix PM domain initcall to be keystone only
 
 next/drivers
 	davinci/gpio
