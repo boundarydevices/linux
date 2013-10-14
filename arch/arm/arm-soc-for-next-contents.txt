@@ -34,6 +34,8 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone.git tags/keystone-soc-for-arm-soc
 	patch
 		ARM: keystone: fix PM domain initcall to be keystone only
+	omap/hwmod
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/hwmod-signed
 
 next/drivers
 	davinci/gpio
