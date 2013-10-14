@@ -69,4 +69,6 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-dt2-for-v3.13
 	socfpga/dt
 		git://git.rocketboards.org/linux-socfpga-next.git tags/socfpga-dts-updates-for-v3.13
-		
+	omap/pdata-quirks		
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/quirk-signed
+
