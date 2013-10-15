@@ -165,6 +165,8 @@ enum {
 };
 static int debug_mask = DEBUG_USER_STATE;
 module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
+static int fuse_override = 0;
+module_param_named(fuse_override, fuse_override, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 /* functions */
 static int anatop_thermal_add(struct anatop_device *device);
@@ -1009,7 +1011,9 @@ static int anatop_thermal_probe(struct platform_device *pdev)
 
 	raw_n40c = DEFAULT_N40C;
 	/* use calibration data to get ratio */
-	anatop_thermal_counting_ratio(__raw_readl(calibration_addr));
+	if (0 == fuse_override)
+                fuse_override = __raw_readl(calibration_addr);
+	anatop_thermal_counting_ratio(fuse_override);
 
 	res_irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (res_irq == NULL) {
