@@ -788,8 +788,6 @@ static struct platform_device vmmc_reg_devices = {
 static struct regulator_consumer_supply wm5102_consumer_5v[] = {
 	REGULATOR_SUPPLY("SPKVDDL", "spi2.1"),
 	REGULATOR_SUPPLY("SPKVDDR", "spi2.1"),
-	REGULATOR_SUPPLY("SPKVDDL", "wm5102-codec"),
-	REGULATOR_SUPPLY("SPKVDDR", "wm5102-codec"),
 };
 
 static struct regulator_consumer_supply wm5102_consumer_1p8v[] = {
@@ -799,10 +797,6 @@ static struct regulator_consumer_supply wm5102_consumer_1p8v[] = {
 	REGULATOR_SUPPLY("AVDD", "spi2.1"),
 	REGULATOR_SUPPLY("LDOVDD", "spi2.1"),
 	REGULATOR_SUPPLY("CPVDD", "spi2.1"),
-
-	REGULATOR_SUPPLY("DBVDD2", "wm5102-codec"),
-	REGULATOR_SUPPLY("DBVDD3", "wm5102-codec"),
-	REGULATOR_SUPPLY("CPVDD", "wm5102-codec"),
 };
 
 static struct regulator_init_data wm5102_5v_reg_initdata = {
