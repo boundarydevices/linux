@@ -5,10 +5,10 @@ Boundary Devices Kernel tree for i.MX6
 
 Latest kernel releases:
 
-	Android - boundary-imx-android-r13.4-ga
-		http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-android-r13.4-ga
+	Android - boundary-jb4.2.2
+		http://github.com/boundarydevices/linux-imx6/tree/boundary-jb4.2.2
 
 	Non-Android - imx_3.0.35_1.1.1
-		http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.0.35_1.1.1
+		http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.0.35_4.1.0
 
 These branches are based on Freescale release of the same name (minus the 'boundary').
