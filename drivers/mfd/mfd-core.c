@@ -20,6 +20,7 @@
 #include <linux/module.h>
 #include <linux/irqdomain.h>
 #include <linux/of.h>
+#include <linux/regulator/consumer.h>
 
 static struct device_type mfd_dev_type = {
 	.name	= "mfd_device",
@@ -97,6 +98,13 @@ static int mfd_add_device(struct device *parent, int id,
 	pdev->dev.parent = parent;
 	pdev->dev.type = &mfd_dev_type;
 
+	ret = devm_regulator_bulk_register_supply_alias(
+			&pdev->dev, cell->parent_supplies,
+			parent, cell->parent_supplies,
+			cell->num_parent_supplies);
+	if (ret < 0)
+		goto fail_res;
+
 	if (parent->of_node && cell->of_compatible) {
 		for_each_child_of_node(parent->of_node, np) {
 			if (of_device_is_compatible(np, cell->of_compatible)) {
@@ -110,12 +118,12 @@ static int mfd_add_device(struct device *parent, int id,
 		ret = platform_device_add_data(pdev,
 					cell->platform_data, cell->pdata_size);
 		if (ret)
-			goto fail_res;
+			goto fail_alias;
 	}
 
 	ret = mfd_platform_add_cell(pdev, cell);
 	if (ret)
-		goto fail_res;
+		goto fail_alias;
 
 	for (r = 0; r < cell->num_resources; r++) {
 		res[r].name = cell->resources[r].name;
@@ -150,17 +158,17 @@ static int mfd_add_device(struct device *parent, int id,
 		if (!cell->ignore_resource_conflicts) {
 			ret = acpi_check_resource_conflict(&res[r]);
 			if (ret)
-				goto fail_res;
+				goto fail_alias;
 		}
 	}
 
 	ret = platform_device_add_resources(pdev, res, cell->num_resources);
 	if (ret)
-		goto fail_res;
+		goto fail_alias;
 
 	ret = platform_device_add(pdev);
 	if (ret)
-		goto fail_res;
+		goto fail_alias;
 
 	if (cell->pm_runtime_no_callbacks)
 		pm_runtime_no_callbacks(&pdev->dev);
@@ -169,6 +177,10 @@ static int mfd_add_device(struct device *parent, int id,
 
 	return 0;
 
+fail_alias:
+	devm_regulator_bulk_unregister_supply_alias(&pdev->dev,
+						    cell->parent_supplies,
+						    cell->num_parent_supplies);
 fail_res:
 	kfree(res);
 fail_device:
