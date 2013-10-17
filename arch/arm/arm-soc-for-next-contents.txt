@@ -20,6 +20,8 @@ next/cleanup
 		ARM: Remove temporary sched_clock.h header
 	qcom/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/davidb/linux-msm.git tags/msm-cleanup-for-3.13
+	tegra/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.13-cleanup
 
 next/soc
 	samsung/s3c64xx-clk
