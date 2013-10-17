@@ -95,3 +95,5 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/dt-signed
 	mvebu/dt3
 		git fetch git://git.infradead.org/linux-mvebu.git tags/dt-3.13-3
+	tegra/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.13-dt
