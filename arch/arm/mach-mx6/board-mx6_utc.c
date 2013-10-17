@@ -1241,6 +1241,12 @@ static void __init reserve(void)
 			memblock_remove(phys, fb_data[i].res_size[0]);
 			fb_data[i].res_base[0] = phys;
 		}
+	if (vout_mem.res_msize) {
+		phys = memblock_alloc_base(vout_mem.res_msize,
+					   SZ_4K, SZ_1G);
+		memblock_remove(phys, vout_mem.res_msize);
+		vout_mem.res_mbase = phys;
+	}
 }
 
 /*
