@@ -970,6 +970,21 @@ static struct mxc_dvfs_platform_data oc_dvfscore_data = {
 static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 				   char **cmdline, struct meminfo *mi)
 {
+	char *str;
+	struct tag *t;
+
+	for_each_tag(t, tags) {
+		if (t->hdr.tag == ATAG_CMDLINE) {
+			/* GPU reserved memory */
+			str = t->u.cmdline.cmdline;
+			str = strstr(str, "gpumem=");
+			if (str != NULL) {
+				str += 7;
+				imx6_gpu_pdata.reserved_mem_size = memparse(str, &str);
+			}
+			break;
+		}
+	}
 }
 
 static const struct imx_pcie_platform_data pcie_data  __initconst = {
