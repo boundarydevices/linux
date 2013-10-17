@@ -44,6 +44,8 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci.git tags/davinci-for-v3.13/soc-2 # rebased from -v3.12-rc5 to -rc3
 	integrator/soc
 		git fetch git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator.git tags/integrator-for-v3.13-2
+	mvebu/soc
+		git fetch git://git.infradead.org/linux-mvebu.git tags/soc-3.13-2
 
 next/drivers
 	davinci/gpio
