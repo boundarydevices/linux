@@ -46,6 +46,8 @@ next/soc
 		git fetch git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator.git tags/integrator-for-v3.13-2
 	mvebu/soc
 		git fetch git://git.infradead.org/linux-mvebu.git tags/soc-3.13-2
+	highbank/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/robh/linux.git tags/highbank-for-3.13
 
 next/drivers
 	davinci/gpio
