@@ -721,6 +721,15 @@ static struct fsl_mxc_capture_platform_data capture_data[] = {
 };
 
 
+struct imx_vout_mem {
+       resource_size_t res_mbase;
+       resource_size_t res_msize;
+};
+
+static struct imx_vout_mem vout_mem __initdata = {
+       .res_msize = 0,
+};
+
 static void suspend_enter(void)
 {
 	/* suspend preparation */
@@ -974,6 +983,13 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 				str += 7;
 				imx6_gpu_pdata.reserved_mem_size = memparse(str, &str);
 			}
+			/* VPU reserved memory */
+			str = t->u.cmdline.cmdline;
+			str = strstr(str, "vpumem=");
+			if (str != NULL) {
+				str += 7;
+				vout_mem.res_msize = memparse(str, &str);
+			}
 			break;
 		}
 	}
@@ -1012,6 +1028,7 @@ static void __init board_init(void)
 	struct clk *clko2;
 	struct clk *new_parent;
 	int rate;
+	struct platform_device *voutdev;
 
 	ret = gpio_request_array(n6w_wl1271_gpios,
 				ARRAY_SIZE(n6w_wl1271_gpios));
@@ -1051,7 +1068,15 @@ static void __init board_init(void)
 	imx6q_add_vdoa();
 	imx6q_add_lcdif(&lcdif_data);
 	imx6q_add_ldb(&ldb_data);
-	imx6q_add_v4l2_output(0);
+	voutdev = imx6q_add_v4l2_output(0);
+	if (vout_mem.res_msize && voutdev) {
+		dma_declare_coherent_memory(&voutdev->dev,
+                                            vout_mem.res_mbase,
+                                            vout_mem.res_mbase,
+                                            vout_mem.res_msize,
+                                            (DMA_MEMORY_MAP |
+                                             DMA_MEMORY_EXCLUSIVE));
+	}
 
 	for (i = 0; i < ARRAY_SIZE(capture_data); i++) {
 		if (!cpu_is_mx6q())
