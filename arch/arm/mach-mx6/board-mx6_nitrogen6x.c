@@ -1293,6 +1293,7 @@ static void __init mx6_sabrelite_board_init(void)
 
 	imx6q_add_pcie(&pcie_data);
 	mxc_register_device(&bt_rfkill, &rfkill_data);
+	imx6_add_armpmu();
 }
 
 extern void __iomem *twd_base;
