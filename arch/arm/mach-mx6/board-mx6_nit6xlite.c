@@ -988,14 +988,20 @@ static void __init mx6_board_init(void)
 	imx6q_add_sdhci_usdhc_imx(1, &mx6_sd2_data);
 	platform_device_register(&mx6_vwifi_reg_devices);
 
-	gpio_set_value(WL_EN, 1);		/* momentarily enable */
-	gpio_set_value(WL_BT_REG_EN, 1);
+	gpio_request(WL_EN, "wl-en");
+	gpio_request(WL_BT_REG_EN, "bt-reg-en");
+	gpio_request(WL_BT_RESET, "bt-reset");
+
+	gpio_direction_output(WL_EN, 1);		/* momentarily enable */
+	gpio_direction_output(WL_BT_REG_EN, 1);
+        gpio_direction_output(WL_BT_RESET, 1);
+
 	mdelay(2);
 	gpio_set_value(WL_EN, 0);
-	gpio_set_value(WL_BT_REG_EN, 0);
 
 	gpio_free(WL_EN);
 	gpio_free(WL_BT_REG_EN);
+	gpio_free(WL_BT_RESET);
 	mdelay(1);
 
 	imx6q_add_perfmon(0);
