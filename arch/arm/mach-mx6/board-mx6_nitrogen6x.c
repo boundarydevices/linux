@@ -1428,6 +1428,7 @@ static void __init board_init(void)
 
 	imx6q_add_pcie(&pcie_data);
 
+	imx6_add_armpmu();
 	imx6q_add_perfmon(0);
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
