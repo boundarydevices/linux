@@ -50,6 +50,8 @@ next/soc
 		git fetch git://git.infradead.org/linux-mvebu.git tags/soc-3.13-2
 	highbank/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/robh/linux.git tags/highbank-for-3.13
+	omap/hwmod2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/am43xx-hwmod-signed
 
 next/drivers
 	davinci/gpio
