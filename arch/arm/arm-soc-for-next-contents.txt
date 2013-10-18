@@ -106,3 +106,5 @@ next/dt
 		git fetch git://git.infradead.org/linux-mvebu.git tags/dt-3.13-3
 	tegra/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.13-dt
+	at91/dt
+		git://github.com/at91linux/linux-at91.git tags/at91-dt
