@@ -72,6 +72,9 @@ next/boards
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/board-signed
 	tegra/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.13-defconfig
+	rockchip/boards
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip.git tags/v3.13-rockchip-boards
+		# but moved MAINTAINERS patch to fixes
 
 next/dt
 	samsung/s3c64xx-dt
