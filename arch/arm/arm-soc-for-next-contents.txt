@@ -110,3 +110,5 @@ next/dt
 		git://github.com/at91linux/linux-at91.git tags/at91-dt
 	omap/dt2
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/board-removal-signed-take2
+	omap/pinctrl-fix
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/pinctrl-fix
