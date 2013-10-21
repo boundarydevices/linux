@@ -260,6 +260,12 @@ config NEED_MACH_MEMORY_H
 	  definitions for this platform.  The need for mach/memory.h should
 	  be avoided when possible.
 
+config NEED_MACH_TIMEX_H
+	bool
+	help
+	  Select this when mach/timex.h is required to provide special
+	  definitions for this platform. This should be avoided when possible.
+
 config PHYS_OFFSET
 	hex "Physical address of main memory" if MMU
 	depends on !ARM_PATCH_PHYS_VIRT && !NEED_MACH_MEMORY_H
@@ -362,6 +368,7 @@ config ARCH_AT91
 	select IRQ_DOMAIN
 	select NEED_MACH_GPIO_H
 	select NEED_MACH_IO_H if PCCARD
+	select NEED_MACH_TIMEX_H
 	select PINCTRL
 	select PINCTRL_AT91 if USE_OF
 	help
@@ -488,6 +495,7 @@ config ARCH_IXP4XX
 	select GENERIC_CLOCKEVENTS
 	select MIGHT_HAVE_PCI
 	select NEED_MACH_IO_H
+	select NEED_MACH_TIMEX_H
 	select USB_EHCI_BIG_ENDIAN_DESC
 	select USB_EHCI_BIG_ENDIAN_MMIO
 	help
@@ -573,6 +581,7 @@ config ARCH_KS8695
 	select CPU_ARM922T
 	select GENERIC_CLOCKEVENTS
 	select NEED_MACH_MEMORY_H
+	select NEED_MACH_TIMEX_H
 	help
 	  Support for Micrel/Kendin KS8695 "Centaur" (ARM922T) based
 	  System-on-Chip devices.
