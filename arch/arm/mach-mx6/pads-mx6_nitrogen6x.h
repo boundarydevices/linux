@@ -333,7 +333,8 @@ static iomux_v3_cfg_t MX6NAME(mipi_pads)[] = {
 };
 #endif
 
-#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE)
+#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE) || \
+    defined(CONFIG_MXC_CAMERA_OV5640) || defined(CONFIG_MXC_CAMERA_OV5640_MODULE)
 static iomux_v3_cfg_t MX6NAME(csi0_sensor_pads)[] = {
 	/* IPU1 Camera */
 	MX6PAD(CSI0_DAT8__IPU1_CSI0_D_8),

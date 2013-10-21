@@ -525,7 +525,8 @@ static struct fsl_mxc_camera_platform_data ov5640_mipi_data = {
 };
 #endif
 
-#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE)
+#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE) || \
+    defined(CONFIG_MXC_CAMERA_OV5640) || defined(CONFIG_MXC_CAMERA_OV5640_MODULE)
 /*
  * GPIO_6	GPIO[1]:6	(ov5642) - J5 - CSI0 power down
  * GPIO_8	GPIO[1]:8	(ov5642) - J5 - CSI0 reset
@@ -606,6 +607,12 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("ov5640_mipi", 0x3c),
 		.platform_data = (void *)&ov5640_mipi_data,
+	},
+#endif
+#if defined(CONFIG_MXC_CAMERA_OV5640) || defined(CONFIG_MXC_CAMERA_OV5640_MODULE)
+	{
+		I2C_BOARD_INFO("ov5640", 0x3c),
+		.platform_data = (void *)&ov5642_data,
 	},
 #endif
 #if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE)
