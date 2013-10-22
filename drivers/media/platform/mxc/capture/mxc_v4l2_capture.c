@@ -1571,6 +1571,37 @@ static int mxc_v4l_dqueue(cam_data *cam, struct v4l2_buffer *buf)
 	return retval;
 }
 
+static void power_down_callback(struct work_struct *work)
+{
+	cam_data *cam = container_of(work, struct _cam_data, power_down_work.work);
+
+	down(&cam->busy_lock);
+	if (!cam->open_count) {
+		vidioc_int_s_power(cam->sensor, 0);
+		cam->power_on = 0;
+	}
+	up(&cam->busy_lock);
+}
+
+/* cam->busy_lock is held */
+void power_up_camera(cam_data *cam)
+{
+	if (cam->power_on) {
+		cancel_delayed_work(&cam->power_down_work);
+		return;
+	}
+	vidioc_int_s_power(cam->sensor, 1);
+	vidioc_int_init(cam->sensor);
+	vidioc_int_dev_init(cam->sensor);
+	cam->power_on = 1;
+}
+
+
+void power_off_camera(cam_data *cam)
+{
+	schedule_delayed_work(&cam->power_down_work, (HZ * 2));
+}
+
 /*!
  * V4L interface - open function
  *
@@ -1713,9 +1744,7 @@ static int mxc_v4l_open(struct file *file)
 					cam_fmt.fmt.pix.pixelformat,
 					csi_param);
 		clk_prepare_enable(sensor->sensor_clk);
-		vidioc_int_s_power(cam->sensor, 1);
-		vidioc_int_init(cam->sensor);
-		vidioc_int_dev_init(cam->sensor);
+		power_up_camera(cam);
 	}
 
 	file->private_data = dev;
@@ -1770,7 +1799,6 @@ static int mxc_v4l_close(struct file *file)
 	}
 
 	if (--cam->open_count == 0) {
-		vidioc_int_s_power(cam->sensor, 0);
 		clk_disable_unprepare(sensor->sensor_clk);
 		wait_event_interruptible(cam->power_queue,
 					 cam->low_power == false);
@@ -1795,6 +1823,7 @@ static int mxc_v4l_close(struct file *file)
 		wake_up_interruptible(&cam->enc_queue);
 		mxc_free_frames(cam);
 		cam->enc_counter++;
+		power_off_camera(cam);
 	}
 
 	up(&cam->busy_lock);
@@ -2665,6 +2694,7 @@ static int init_camera_struct(cam_data *cam, struct platform_device *pdev)
 
 	init_MUTEX(&cam->param_lock);
 	init_MUTEX(&cam->busy_lock);
+	INIT_DELAYED_WORK(&cam->power_down_work, power_down_callback);
 
 	cam->video_dev = video_device_alloc();
 	if (cam->video_dev == NULL)
@@ -2928,7 +2958,8 @@ static int mxc_v4l2_resume(struct platform_device *pdev)
 	wake_up_interruptible(&cam->power_queue);
 
 	if (cam->sensor && cam->open_count) {
-		vidioc_int_s_power(cam->sensor, 1);
+		if ((cam->overlay_on == true) || (cam->capture_on == true))
+			vidioc_int_s_power(cam->sensor, 1);
 
 		if (!cam->mclk_on[cam->mclk_source]) {
 			ipu_csi_enable_mclk_if(cam->ipu, CSI_MCLK_I2C,
