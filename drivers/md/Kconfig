@@ -371,26 +371,11 @@ config DM_MULTIPATH_ST
 
 	  If unsure, say N.
 
-config DM_DELAY
-	tristate "I/O delaying target"
-	depends on BLK_DEV_DM
-	---help---
-	A target that delays reads and/or writes and can send
-	them to different devices.  Useful for testing.
-
-	If unsure, say N.
-
 config DM_UEVENT
 	bool "DM uevents"
 	depends on BLK_DEV_DM
 	---help---
 	Generate udev events for DM events.
-
-config DM_FLAKEY
-       tristate "Flakey target"
-       depends on BLK_DEV_DM
-       ---help---
-         A target that intermittently fails I/O for debugging purposes.
 
 config DM_VERITY
 	tristate "Verity target support"
@@ -423,6 +408,29 @@ config DM_SWITCH
 
 	  To compile this code as a module, choose M here: the module will
 	  be called dm-switch.
+
+	  If unsure, say N.
+
+config DM_TEST_TARGETS
+	tristate "DM test targets"
+	depends on BLK_DEV_DM
+	---help---
+	  Targets that are primarily useful for testing.
+
+config DM_FLAKEY
+	tristate "Flakey target"
+	depends on DM_TEST_TARGETS
+	---help---
+	  A target that intermittently fails I/O for debugging purposes.
+
+	  If unsure, say N.
+
+config DM_DELAY
+	tristate "I/O delaying target"
+	depends on DM_TEST_TARGETS
+	---help---
+	  A target that delays reads and/or writes and can send
+	  them to different devices.  Primarily useful for testing.
 
 	  If unsure, say N.
 
