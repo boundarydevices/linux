@@ -29,6 +29,7 @@
 #include <linux/i2c.h>
 #include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/pwm.h>
 #include <linux/regulator/consumer.h>
 #include <linux/fsl_devices.h>
 #include <linux/mipi_csi2.h>
@@ -1940,6 +1941,7 @@ static struct v4l2_int_device ov5640_int_device = {
 static int ov5640_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
+	struct pwm_device *pwm;
 	struct device *dev = &client->dev;
 	int retval;
 	u8 chip_id_high, chip_id_low;
@@ -2009,6 +2011,13 @@ static int ov5640_probe(struct i2c_client *client,
 	ov5640_data.streamcap.capturemode = 0;
 	ov5640_data.streamcap.timeperframe.denominator = DEFAULT_FPS;
 	ov5640_data.streamcap.timeperframe.numerator = 1;
+
+	pwm = pwm_get(dev, NULL);
+	if (!IS_ERR(pwm)) {
+		dev_info(dev, "found pwm%d, period=%d\n", pwm->pwm, pwm->period);
+		pwm_config(pwm, pwm->period >> 1, pwm->period);
+		pwm_enable(pwm);
+	}
 
 	ov5640_power_on(dev);
 
