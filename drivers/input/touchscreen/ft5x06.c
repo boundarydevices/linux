@@ -92,29 +92,6 @@ static char const procentryname[] = {
 static int ts_startup(struct ft5x06_ts *ts);
 static void ts_shutdown(struct ft5x06_ts *ts);
 
-static int ft5x06_proc_read
-	(char *page,
-	 char **start,
-	 off_t off,
-	 int count,
-	 int *eof,
-	 void *data)
-{
-	printk(KERN_ERR "%s\n", __func__);
-	return 0 ;
-}
-
-static int
-ft5x06_proc_write
-	(struct file *file,
-	 const char __user *buffer,
-	 unsigned long count,
-	 void *data)
-{
-	printk(KERN_ERR "%s\n", __func__);
-	return count ;
-}
-
 /*-----------------------------------------------------------------------*/
 static inline void ts_evt_add(struct ft5x06_ts *ts,
 			      unsigned buttons, struct point *p)
@@ -253,6 +230,44 @@ static void set_mode(struct ft5x06_ts *ts, int mode)
 
 #define WORK_MODE 0
 #define FACTORY_MODE 4
+
+static int proc_regnum = 0;
+static int ft5x06_proc_read
+	(char *page,
+	 char **start,
+	 off_t off,
+	 int count,
+	 int *eof,
+	 void *data)
+{
+	int ret;
+	unsigned char startch[1] = { (u8)proc_regnum };
+	unsigned char buf[1];
+	struct i2c_msg readpkt[2] = {
+		{gts->client->addr, 0, 1, startch},
+		{gts->client->addr, I2C_M_RD, sizeof(buf), buf}
+	};
+	ret = i2c_transfer(gts->client->adapter, readpkt,
+			   ARRAY_SIZE(readpkt));
+	if (ret != ARRAY_SIZE(readpkt)) {
+		printk(KERN_WARNING "%s: i2c_transfer failed\n",
+		       client_name);
+	} else {
+		printk (KERN_ERR "ft5x06[0x%02x] == 0x%02x\n", (u8)proc_regnum, buf[0]);
+	}
+	return 0 ;
+}
+
+static int
+ft5x06_proc_write
+	(struct file *file,
+	 const char __user *buffer,
+	 unsigned long count,
+	 void *data)
+{
+	proc_regnum = simple_strtoul(buffer,0,0);
+	return count ;
+}
 
 /*-----------------------------------------------------------------------*/
 
