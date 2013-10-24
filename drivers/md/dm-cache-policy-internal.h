@@ -124,6 +124,12 @@ const unsigned *dm_cache_policy_get_version(struct dm_cache_policy *p);
 int    dm_cache_policy_set_hint_size(struct dm_cache_policy *p, unsigned hint_size);
 size_t dm_cache_policy_get_hint_size(struct dm_cache_policy *p);
 
+/*
+ * Return bool that reflects whether or not policy is only a shim
+ * layer in a policy stack.
+ */
+bool dm_cache_policy_is_shim(struct dm_cache_policy *p);
+
 /*----------------------------------------------------------------*/
 
 #endif /* DM_CACHE_POLICY_INTERNAL_H */

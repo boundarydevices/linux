@@ -5,6 +5,7 @@
  */
 
 #include "dm-cache-policy-internal.h"
+#include "dm-cache-stack-utils.h"
 #include "dm.h"
 
 #include <linux/module.h>
@@ -54,6 +55,9 @@ static struct dm_cache_policy_type *get_policy_once(const char *name)
 static struct dm_cache_policy_type *get_policy(const char *name)
 {
 	struct dm_cache_policy_type *t;
+	char name_wo_delim[CACHE_POLICY_NAME_SIZE];
+	char *p_delim;
+	int n;
 
 	t = get_policy_once(name);
 	if (IS_ERR(t))
@@ -63,6 +67,28 @@ static struct dm_cache_policy_type *get_policy(const char *name)
 		return t;
 
 	request_module("dm-cache-%s", name);
+
+	t = get_policy_once(name);
+	if (IS_ERR(t))
+		return NULL;
+
+	if (t)
+		return t;
+
+	/*
+	 * We also need to check for dm-cache-<@name> with no trailing
+	 * DM_CACHE_POLICY_STACK_DELIM if @name has one, in order to
+	 * support loadable policy shims.
+	 */
+	n = strlcpy(name_wo_delim, name, sizeof(name_wo_delim));
+	if (n >= sizeof(name_wo_delim))
+		return NULL;
+	p_delim = strchr(name_wo_delim, DM_CACHE_POLICY_STACK_DELIM);
+	if (!p_delim || (p_delim[1] != '\0'))
+		return NULL;
+	p_delim[0] = '\0';
+
+	request_module("dm-cache-%s", name_wo_delim);
 
 	t = get_policy_once(name);
 	if (IS_ERR(t))
@@ -117,6 +143,11 @@ struct dm_cache_policy *dm_cache_policy_create(const char *name,
 	struct dm_cache_policy *p = NULL;
 	struct dm_cache_policy_type *type;
 
+	if (dm_cache_stack_utils_string_is_policy_stack(name))
+		return dm_cache_stack_utils_policy_stack_create(name, cache_size,
+								origin_size,
+								cache_block_size);
+
 	type = get_policy(name);
 	if (!type) {
 		DMWARN("unknown policy type");
@@ -138,8 +169,12 @@ void dm_cache_policy_destroy(struct dm_cache_policy *p)
 {
 	struct dm_cache_policy_type *t = p->private;
 
-	p->destroy(p);
-	put_policy(t);
+	if (dm_cache_stack_utils_string_is_policy_stack(t->name))
+		dm_cache_stack_utils_policy_stack_destroy(p);
+	else {
+		p->destroy(p);
+		put_policy(t);
+	}
 }
 EXPORT_SYMBOL_GPL(dm_cache_policy_destroy);
 
@@ -178,5 +213,13 @@ int dm_cache_policy_set_hint_size(struct dm_cache_policy *p, unsigned hint_size)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(dm_cache_policy_set_hint_size);
+
+bool dm_cache_policy_is_shim(struct dm_cache_policy *p)
+{
+	struct dm_cache_policy_type *t = p->private;
+
+	return (t->features & DM_CACHE_POLICY_SHIM) ? true : false;
+}
+EXPORT_SYMBOL_GPL(dm_cache_policy_is_shim);
 
 /*----------------------------------------------------------------*/
