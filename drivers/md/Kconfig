@@ -282,6 +282,23 @@ config DM_CACHE_MQ
          This is meant to be a general purpose policy.  It prioritises
          reads over writes.
 
+config DM_CACHE_ERA
+       tristate "ERA Cache Policy shim (EXPERIMENTAL)"
+       depends on DM_CACHE
+       ---help---
+	 A cache policy shim that adds an "era" property to the
+	 per-cache-block metadata, to facilitate the implementation of
+	 cache coherency validation and recovery tools.	 This mechanism
+	 works as follows.  There is a monotonically increasing 32-bit
+	 era counter associated with each cache instance.  Each cache
+	 block is tagged with the era during which it was last written.
+	 A device mapper message interface is provided to obtain the
+	 current era, advance to the next era, and invalidate blocks
+	 from before or after a given era.  Note that you can use this
+	 policy shim to add the era functionality to any cache policy
+	 via name concatenation -- specify era+mq instead of just mq to
+	 add the era mechanism to the mq policy, for example.
+
 config DM_CACHE_CLEANER
        tristate "Cleaner Cache Policy (EXPERIMENTAL)"
        depends on DM_CACHE
