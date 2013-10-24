@@ -41,7 +41,7 @@ static inline void policy_clear_dirty(struct dm_cache_policy *p, dm_oblock_t obl
 
 static inline int policy_load_mapping(struct dm_cache_policy *p,
 				      dm_oblock_t oblock, dm_cblock_t cblock,
-				      uint32_t hint, bool hint_valid)
+				      void *hint, bool hint_valid)
 {
 	return p->load_mapping(p, oblock, cblock, hint, hint_valid);
 }
@@ -119,6 +119,9 @@ const char *dm_cache_policy_get_name(struct dm_cache_policy *p);
 
 const unsigned *dm_cache_policy_get_version(struct dm_cache_policy *p);
 
+#define DM_CACHE_POLICY_DEF_HINT_SIZE 4U
+#define DM_CACHE_POLICY_MAX_HINT_SIZE 128U
+int    dm_cache_policy_set_hint_size(struct dm_cache_policy *p, unsigned hint_size);
 size_t dm_cache_policy_get_hint_size(struct dm_cache_policy *p);
 
 /*----------------------------------------------------------------*/

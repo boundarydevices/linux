@@ -2398,9 +2398,11 @@ static int write_discard_bitset(struct cache *cache)
 }
 
 static int save_hint(void *context, dm_cblock_t cblock, dm_oblock_t oblock,
-		     uint32_t hint)
+		     void *hint)
 {
 	struct cache *cache = context;
+
+	__dm_bless_for_disk(hint);
 	return dm_cache_save_hint(cache->cmd, cblock, hint);
 }
 
@@ -2468,7 +2470,7 @@ static void cache_postsuspend(struct dm_target *ti)
 }
 
 static int load_mapping(void *context, dm_oblock_t oblock, dm_cblock_t cblock,
-			bool dirty, uint32_t hint, bool hint_valid)
+			bool dirty, void *hint, bool hint_valid)
 {
 	int r;
 	struct cache *cache = context;
@@ -2724,7 +2726,7 @@ static void cache_io_hints(struct dm_target *ti, struct queue_limits *limits)
 
 static struct target_type cache_target = {
 	.name = "cache",
-	.version = {1, 1, 1},
+	.version = {1, 2, 0},
 	.module = THIS_MODULE,
 	.ctr = cache_ctr,
 	.dtr = cache_dtr,

@@ -49,7 +49,12 @@
  */
 #define DM_CACHE_FEATURE_COMPAT_SUPP	  0UL
 #define DM_CACHE_FEATURE_COMPAT_RO_SUPP	  0UL
-#define DM_CACHE_FEATURE_INCOMPAT_SUPP	  0UL
+
+enum dm_cache_incompat_bits {
+	DM_CACHE_VARIABLE_HINT_SIZE = 0
+};
+
+#define DM_CACHE_FEATURE_INCOMPAT_SUPP	  (1 << DM_CACHE_VARIABLE_HINT_SIZE)
 
 /*
  * Reopens or creates a new, empty metadata volume.
@@ -87,7 +92,7 @@ int dm_cache_changed_this_transaction(struct dm_cache_metadata *cmd);
 
 typedef int (*load_mapping_fn)(void *context, dm_oblock_t oblock,
 			       dm_cblock_t cblock, bool dirty,
-			       uint32_t hint, bool hint_valid);
+			       void *hint, bool hint_valid);
 int dm_cache_load_mappings(struct dm_cache_metadata *cmd,
 			   struct dm_cache_policy *policy,
 			   load_mapping_fn fn,
@@ -118,9 +123,10 @@ int dm_cache_get_metadata_dev_size(struct dm_cache_metadata *cmd,
 void dm_cache_dump(struct dm_cache_metadata *cmd);
 
 /*
- * The policy is invited to save a 32bit hint value for every cblock (eg,
- * for a hit count).  These are stored against the policy name.  If
- * policies are changed, then hints will be lost.  If the machine crashes,
+ * The policy is invited to save a hint (void* sequence of bytes) for every
+ * cblock (eg, for a hit count) and is reponsible to do endianess conversions.
+ * These are stored against the policy name.
+ * If policies are changed, then hints will be lost.  If the machine crashes,
  * hints will be lost.
  *
  * The hints are indexed by the cblock, but many policies will not
@@ -132,10 +138,13 @@ void dm_cache_dump(struct dm_cache_metadata *cmd);
 int dm_cache_begin_hints(struct dm_cache_metadata *cmd, struct dm_cache_policy *p);
 
 /*
- * requests hints for every cblock and stores in the metadata device.
+ * Saves the hint for a given cblock in the metadata device.  Policy
+ * modules must perform any endian conversions needed and bless the hints
+ * for disk.
  */
 int dm_cache_save_hint(struct dm_cache_metadata *cmd,
-		       dm_cblock_t cblock, uint32_t hint);
+		       dm_cblock_t cblock, void *hint)
+	__dm_written_to_disk(hint);
 
 /*----------------------------------------------------------------*/
 

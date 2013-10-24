@@ -6,6 +6,7 @@
 
 #include "dm-cache-policy.h"
 #include "dm.h"
+#include "persistent-data/dm-btree.h"
 
 #include <linux/hash.h>
 #include <linux/module.h>
@@ -1027,7 +1028,7 @@ static void mq_clear_dirty(struct dm_cache_policy *p, dm_oblock_t oblock)
 
 static int mq_load_mapping(struct dm_cache_policy *p,
 			   dm_oblock_t oblock, dm_cblock_t cblock,
-			   uint32_t hint, bool hint_valid)
+			   void *hint, bool hint_valid)
 {
 	struct mq_policy *mq = to_mq_policy(p);
 	struct entry *e;
@@ -1040,9 +1041,29 @@ static int mq_load_mapping(struct dm_cache_policy *p,
 	e->oblock = oblock;
 	e->in_cache = true;
 	e->dirty = false;	/* this gets corrected in a minute */
-	e->hit_count = hint_valid ? hint : 1;
+	e->hit_count = hint_valid ? le32_to_cpu(*((__le32 *) hint)) : 1;
 	e->generation = mq->generation;
 	push(mq, e);
+
+	return 0;
+}
+
+static int mq_save_hints(struct mq_policy *mq, struct queue *q,
+			 policy_walk_fn fn, void *context)
+{
+	int r;
+	unsigned level;
+	struct entry *e;
+
+	for (level = 0; level < NR_QUEUE_LEVELS; level++)
+		list_for_each_entry(e, q->qs + level, list) {
+			__le32 value = cpu_to_le32(e->hit_count);
+			__dm_bless_for_disk(&value);
+
+			r = fn(context, e->cblock, e->oblock, &value);
+			if (r)
+				return r;
+		}
 
 	return 0;
 }
@@ -1052,26 +1073,13 @@ static int mq_walk_mappings(struct dm_cache_policy *p, policy_walk_fn fn,
 {
 	struct mq_policy *mq = to_mq_policy(p);
 	int r = 0;
-	struct entry *e;
-	unsigned level;
 
 	mutex_lock(&mq->lock);
 
-	for (level = 0; level < NR_QUEUE_LEVELS; level++)
-		list_for_each_entry(e, &mq->cache_clean.qs[level], list) {
-			r = fn(context, e->cblock, e->oblock, e->hit_count);
-			if (r)
-				goto out;
-		}
+	r = mq_save_hints(mq, &mq->cache_clean, fn, context);
+	if (!r)
+		r = mq_save_hints(mq, &mq->cache_dirty, fn, context);
 
-	for (level = 0; level < NR_QUEUE_LEVELS; level++)
-		list_for_each_entry(e, &mq->cache_dirty.qs[level], list) {
-			r = fn(context, e->cblock, e->oblock, e->hit_count);
-			if (r)
-				goto out;
-		}
-
-out:
 	mutex_unlock(&mq->lock);
 
 	return r;

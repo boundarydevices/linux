@@ -8,6 +8,7 @@
 #define DM_CACHE_POLICY_H
 
 #include "dm-cache-block-types.h"
+#include "persistent-data/dm-btree.h"
 
 #include <linux/device-mapper.h>
 
@@ -79,7 +80,8 @@ struct policy_result {
 };
 
 typedef int (*policy_walk_fn)(void *context, dm_cblock_t cblock,
-			      dm_oblock_t oblock, uint32_t hint);
+			      dm_oblock_t oblock, void *hint)
+	__dm_written_to_disk(hint);
 
 /*
  * The cache policy object.  Just a bunch of methods.  It is envisaged that
@@ -146,7 +148,7 @@ struct dm_cache_policy {
 	 * mapping from the metadata device into the policy.
 	 */
 	int (*load_mapping)(struct dm_cache_policy *p, dm_oblock_t oblock,
-			    dm_cblock_t cblock, uint32_t hint, bool hint_valid);
+			    dm_cblock_t cblock, void *hint, bool hint_valid);
 
 	int (*walk_mappings)(struct dm_cache_policy *p, policy_walk_fn fn,
 			     void *context);
@@ -210,9 +212,9 @@ struct dm_cache_policy_type {
 	unsigned version[CACHE_POLICY_VERSION_SIZE];
 
 	/*
-	 * Policies may store a hint for each each cache block.
-	 * Currently the size of this hint must be 0 or 4 bytes but we
-	 * expect to relax this in future.
+	 * Policies may store a hint for each cache block.
+	 * Currently the size of this hint must be <=
+	 * DM_CACHE_POLICY_MAX_HINT_SIZE bytes.
 	 */
 	size_t hint_size;
 
@@ -227,4 +229,4 @@ void dm_cache_policy_unregister(struct dm_cache_policy_type *type);
 
 /*----------------------------------------------------------------*/
 
-#endif	/* DM_CACHE_POLICY_H */
+#endif /* DM_CACHE_POLICY_H */

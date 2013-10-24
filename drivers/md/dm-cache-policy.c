@@ -80,9 +80,10 @@ int dm_cache_policy_register(struct dm_cache_policy_type *type)
 {
 	int r;
 
-	/* One size fits all for now */
-	if (type->hint_size != 0 && type->hint_size != 4) {
-		DMWARN("hint size must be 0 or 4 but %llu supplied.", (unsigned long long) type->hint_size);
+	if (type->hint_size > DM_CACHE_POLICY_MAX_HINT_SIZE) {
+		DMWARN("hint size must be <= %llu but %llu was supplied.",
+		       (unsigned long long) DM_CACHE_POLICY_MAX_HINT_SIZE,
+		       (unsigned long long) type->hint_size);
 		return -EINVAL;
 	}
 
@@ -165,5 +166,17 @@ size_t dm_cache_policy_get_hint_size(struct dm_cache_policy *p)
 	return t->hint_size;
 }
 EXPORT_SYMBOL_GPL(dm_cache_policy_get_hint_size);
+
+int dm_cache_policy_set_hint_size(struct dm_cache_policy *p, unsigned hint_size)
+{
+	struct dm_cache_policy_type *t = p->private;
+
+	if (hint_size > DM_CACHE_POLICY_MAX_HINT_SIZE)
+		return -EPERM;
+
+	t->hint_size = hint_size;
+	return 0;
+}
+EXPORT_SYMBOL_GPL(dm_cache_policy_set_hint_size);
 
 /*----------------------------------------------------------------*/
