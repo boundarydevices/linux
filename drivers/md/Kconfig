@@ -451,4 +451,11 @@ config DM_DELAY
 
 	  If unsure, say N.
 
+config DM_CACHE_HINTS
+       tristate "Hint Size Test Cache Policy (EXPERIMENTAL)"
+       depends on DM_CACHE
+       depends on DM_TEST_TARGETS
+       ---help---
+         A dumb cache policy just to test variable hint size
+
 endif # MD
