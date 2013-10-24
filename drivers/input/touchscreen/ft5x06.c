@@ -36,8 +36,15 @@
 #define USE_ABS_MT
 #endif
 
-static int calibration[7];
+static int calibration[7] = {
+	65536,0,0,
+	0,65536,0,
+	65536
+};
 module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
+
+static int screenres[2] = {1024, 600};
+module_param_array(screenres, int, NULL, S_IRUGO | S_IWUSR);
 
 static void translate(int *px, int *py)
 {
@@ -162,15 +169,15 @@ static inline int ts_register(struct ft5x06_ts *ts)
 	__set_bit(BTN_TOUCH, idev->keybit);
 
 #ifdef USE_ABS_MT
-	input_set_abs_params(idev, ABS_MT_POSITION_X, 0, 1023, 0, 0);
-	input_set_abs_params(idev, ABS_MT_POSITION_Y, 0, 0x255, 0, 0);
-	input_set_abs_params(idev, ABS_X, 0, 1023, 0, 0);
-	input_set_abs_params(idev, ABS_Y, 0, 0x255, 0, 0);
+	input_set_abs_params(idev, ABS_MT_POSITION_X, 0, screenres[0]-1, 0, 0);
+	input_set_abs_params(idev, ABS_MT_POSITION_Y, 0, screenres[1]-1, 0, 0);
+	input_set_abs_params(idev, ABS_X, 0, screenres[0]-1, 0, 0);
+	input_set_abs_params(idev, ABS_Y, 0, screenres[1]-1, 0, 0);
 	input_set_abs_params(idev, ABS_MT_TOUCH_MAJOR, 0, 1, 0, 0);
 #else
 	__set_bit(EV_SYN, idev->evbit);
-	input_set_abs_params(idev, ABS_X, 0, 1023, 0, 0);
-	input_set_abs_params(idev, ABS_Y, 0, 0x255, 0, 0);
+	input_set_abs_params(idev, ABS_X, 0, screenres[0]-1, 0, 0);
+	input_set_abs_params(idev, ABS_Y, 0, screenres[1]-1, 0, 0);
 	input_set_abs_params(idev, ABS_PRESSURE, 0, 1, 0, 0);
 #endif
 
