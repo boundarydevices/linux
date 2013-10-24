@@ -27,8 +27,11 @@
 #include <linux/clk.h>
 #include <linux/of_device.h>
 #include <linux/i2c.h>
+#include <linux/mfd/syscon.h>
+#include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 #include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
 #include <linux/fsl_devices.h>
 #include <linux/mipi_csi2.h>
@@ -1096,6 +1099,7 @@ static void ov5640_set_virtual_channel(int channel)
 	ov5640_read_reg(0x4814, &channel_id);
 	channel_id &= ~(3 << 6);
 	ov5640_write_reg(0x4814, channel_id | (channel << 6));
+	pr_info("%s: virtual channel=%d\n", __func__, channel);
 }
 
 /* download ov5640 settings to sensor through i2c */
@@ -1387,7 +1391,7 @@ static int ov5640_init_mode(enum ov5640_frame_rate frame_rate,
 	OV5640_set_AE_target(AE_Target);
 	OV5640_get_light_freq();
 	OV5640_set_bandingfilter();
-	ov5640_set_virtual_channel(ov5640_data.csi);
+	ov5640_set_virtual_channel(ov5640_data.csi | (ov5640_data.ipu_id << 1));
 
 	/* add delay to wait for sensor stable */
 	if (mode == ov5640_mode_QSXGA_2592_1944) {
@@ -1981,6 +1985,8 @@ static int ov5640_probe(struct i2c_client *client,
 	struct device *dev = &client->dev;
 	int retval;
 	u8 chip_id_high, chip_id_low;
+	struct regmap *gpr;
+	struct sensor_data *sensor = &ov5640_data;
 
 	/* request power down pin */
 	pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
@@ -2028,6 +2034,13 @@ static int ov5640_probe(struct i2c_client *client,
 		return retval;
 	}
 
+	retval = of_property_read_u32(dev->of_node, "ipu_id",
+					&sensor->ipu_id);
+	if (retval) {
+		dev_err(dev, "ipu_id missing or invalid\n");
+		return retval;
+	}
+
 	retval = of_property_read_u32(dev->of_node, "csi_id",
 					&(ov5640_data.csi));
 	if (retval) {
@@ -2067,12 +2080,31 @@ static int ov5640_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
+	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
+	if (!IS_ERR(gpr)) {
+		if (sensor->csi == sensor->ipu_id) {
+			if (of_machine_is_compatible("fsl,imx6q")) {
+				int mask = sensor->csi ? (1 << 20) : (1 << 19);
+
+				regmap_update_bits(gpr, IOMUXC_GPR1, mask, 0);
+			} else if (of_machine_is_compatible("fsl,imx6dl")) {
+				int mask = sensor->csi ? (7 << 3) : (7 << 0);
+				int val =  sensor->csi ? (3 << 3) : (0 << 0);
+
+				regmap_update_bits(gpr, IOMUXC_GPR13, mask, val);
+			}
+		}
+	} else {
+		pr_err("%s: failed to find fsl,imx6q-iomux-gpr regmap\n",
+		       __func__);
+	}
+
 	ov5640_standby(1);
 
 	ov5640_int_device.priv = &ov5640_data;
 	retval = v4l2_int_device_register(&ov5640_int_device);
 
-	clk_disable_unprepare(ov5640_data.sensor_clk);
+//	clk_disable_unprepare(ov5640_data.sensor_clk);
 
 	pr_info("camera ov5640_mipi is found\n");
 	return retval;
