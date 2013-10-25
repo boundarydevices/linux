@@ -176,54 +176,53 @@ void bch_btree_verify(struct btree *b, struct bset *new)
 	mutex_unlock(&b->c->verify_lock);
 }
 
-static void data_verify_endio(struct bio *bio, int error)
-{
-	struct closure *cl = bio->bi_private;
-	closure_put(cl);
-}
-
 void bch_data_verify(struct search *s)
 {
 	char name[BDEVNAME_SIZE];
 	struct cached_dev *dc = container_of(s->d, struct cached_dev, disk);
-	struct closure *cl = &s->cl;
-	struct bio *check;
-	struct bio_vec bv, *bv2;
-	struct bvec_iter iter;
+	struct bio *bio = s->orig_bio, *check;
+	struct bio_vec *bv;
+	struct bvec_iter iter1, iter2;
 	int i;
 
-	check = bio_clone(s->orig_bio, GFP_NOIO);
-	if (!check)
-		return;
+	check = bio_alloc(GFP_NOIO,
+			  DIV_ROUND_UP(bio->bi_iter.bi_size, PAGE_SIZE));
+
+	check->bi_bdev		= bio->bi_bdev;
+	check->bi_iter.bi_sector = bio->bi_iter.bi_sector;
+	check->bi_iter.bi_size	= bio->bi_iter.bi_size;
+	bch_bio_map(check, NULL);
 
 	if (bio_alloc_pages(check, GFP_NOIO))
 		goto out_put;
 
-	check->bi_rw		= READ_SYNC;
-	check->bi_private	= cl;
-	check->bi_end_io	= data_verify_endio;
+	iter1 = bio->bi_iter;
+	iter2 = check->bi_iter;
 
-	closure_bio_submit(check, cl, &dc->disk);
-	closure_sync(cl);
+	submit_bio_wait(READ_SYNC, check);
 
-	bio_for_each_segment(bv, s->orig_bio, iter) {
-		void *p1 = kmap(bv.bv_page);
-		void *p2 = kmap(check->bi_io_vec[iter.bi_idx].bv_page);
+	while (iter1.bi_size) {
+		struct bio_vec bv1 = bio_iter_iovec(bio, iter1);
+		struct bio_vec bv2 = bio_iter_iovec(check, iter2);
+		void *p1 = kmap_atomic(bv1.bv_page);
+		void *p2 = page_address(bv2.bv_page);
+		unsigned bytes = min(bv1.bv_len, bv2.bv_len);
 
-		if (memcmp(p1 + bv.bv_offset,
-			   p2 + bv.bv_offset,
-			   bv.bv_len))
+		if (memcmp(p1 + bv1.bv_offset,
+			   p2 + bv2.bv_offset,
+			   bytes))
 			printk(KERN_ERR
 			       "bcache (%s): verify failed at sector %llu\n",
 			       bdevname(dc->bdev, name),
 			       (uint64_t) s->orig_bio->bi_iter.bi_sector);
+		kunmap_atomic(p1);
 
-		kunmap(bv.bv_page);
-		kunmap(check->bi_io_vec[iter.bi_idx].bv_page);
+		bio_advance_iter(bio, &iter1, bytes);
+		bio_advance_iter(check, &iter2, bytes);
 	}
 
-	bio_for_each_segment_all(bv2, check, i)
-		__free_page(bv2->bv_page);
+	bio_for_each_segment_all(bv, check, i)
+		__free_page(bv->bv_page);
 out_put:
 	bio_put(check);
 }
