@@ -2161,9 +2161,6 @@ int bch_btree_insert(struct btree_op *op, struct cache_set *c,
 		}
 	}
 
-	if (op->journal)
-		atomic_dec_bug(op->journal);
-	op->journal = NULL;
 	return ret;
 }
 
