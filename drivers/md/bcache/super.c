@@ -1338,6 +1338,9 @@ static void cache_set_flush(struct closure *cl)
 	kobject_put(&c->internal);
 	kobject_del(&c->kobj);
 
+	if (c->gc_thread)
+		kthread_stop(c->gc_thread);
+
 	if (!IS_ERR_OR_NULL(c->root))
 		list_add(&c->root->list, &c->btree_cache);
 
@@ -1575,8 +1578,6 @@ static void run_cache_set(struct cache_set *c)
 		bch_journal_replay(c, &journal, &op);
 	} else {
 		pr_notice("invalidating existing data");
-		/* Don't want invalidate_buckets() to queue a gc yet */
-		closure_lock(&c->gc, NULL);
 
 		for_each_cache(ca, c, i) {
 			unsigned j;
@@ -1602,12 +1603,12 @@ static void run_cache_set(struct cache_set *c)
 
 		err = "cannot allocate new UUID bucket";
 		if (__uuid_write(c))
-			goto err_unlock_gc;
+			goto err;
 
 		err = "cannot allocate new btree root";
 		c->root = bch_btree_node_alloc(c, 0);
 		if (IS_ERR_OR_NULL(c->root))
-			goto err_unlock_gc;
+			goto err;
 
 		bkey_copy_key(&c->root->key, &MAX_KEY);
 		bch_btree_node_write(c->root, &op.cl);
@@ -1624,11 +1625,11 @@ static void run_cache_set(struct cache_set *c)
 
 		bch_journal_next(&c->journal);
 		bch_journal_meta(c, &op.cl);
-
-		/* Unlock */
-		closure_set_stopped(&c->gc.cl);
-		closure_put(&c->gc.cl);
 	}
+
+	err = "error starting gc thread";
+	if (bch_gc_thread_start(c))
+		goto err;
 
 	closure_sync(&op.cl);
 	c->sb.last_mount = get_seconds();
@@ -1640,9 +1641,6 @@ static void run_cache_set(struct cache_set *c)
 	flash_devs_run(c);
 
 	return;
-err_unlock_gc:
-	closure_set_stopped(&c->gc.cl);
-	closure_put(&c->gc.cl);
 err:
 	closure_sync(&op.cl);
 	/* XXX: test this, it's broken */
