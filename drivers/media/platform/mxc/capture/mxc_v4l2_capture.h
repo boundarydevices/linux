@@ -255,6 +255,7 @@ struct sensor_data {
 	u32 mclk;
 	u8 mclk_source;
 	struct clk *sensor_clk;
+	int ipu_id;
 	int csi;
 
 	void (*io_init)(void);
