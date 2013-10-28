@@ -140,3 +140,6 @@ next/dt
 		NOTE: Pulled the branch but dropped the topmost patch.
 	imx/dt
 		git://git.linaro.org/people/shawnguo/linux-2.6.git tags/imx-dt-3.13
+	mvevu/dt4
+		git://git.infradead.org/linux-mvebu.git tags/dt-3.13-4
+
