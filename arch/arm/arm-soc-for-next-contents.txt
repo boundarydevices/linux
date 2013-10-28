@@ -150,3 +150,5 @@ next/dt
 		git://git.infradead.org/linux-mvebu.git tags/dt-3.13-4
 	omap/cpufreq
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/cpufreq-late
+	omap/dt3
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/dt-late
