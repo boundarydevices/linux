@@ -74,6 +74,8 @@ next/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/will/linux.git tags/arm-perf-3.13
 	mvebu/drivers2
 		git://git.infradead.org/linux-mvebu.git tags/drivers-3.13-2
+	samsung/s3c24xx0dma
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/s3c24xx-dma
 
 next/boards
 	renesas/boards
