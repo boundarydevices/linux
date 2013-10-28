@@ -124,3 +124,12 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/board-removal-signed-take2
 	omap/pinctrl-fix
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/pinctrl-fix
+	sunxi/dt
+		https://github.com/mripard/linux.git tags/sunxi-dt-for-3.13
+	sunxi/fixes
+		https://github.com/mripard/linux.git tags/sunxi-fixes-for-3.13
+	ux500/dt3
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson.git tags/ux500-dt-for-v3.13-3
+	samsung/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/exynos-dt (all but last patch)
+		NOTE: Pulled the branch but dropped the topmost patch.
