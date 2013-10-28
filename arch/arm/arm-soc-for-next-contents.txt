@@ -58,6 +58,12 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/am43xx-hwmod-signed
 	tegra/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/swarren/linux-tegra.git tegra-for-3.13-soc-v2
+	cleanup/dt-clock
+		(brought in as a dependency, part of next/cleanup)
+	sunxi/core
+		https://github.com/mripard/linux.git tags/sunxi-core-for-3.13
+	sunxi/defconfig
+		https://github.com/mripard/linux.git tags/sunxi-defconfig-for-3.13
 
 next/drivers
 	davinci/gpio
