@@ -148,4 +148,5 @@ next/dt
 		git://git.linaro.org/people/shawnguo/linux-2.6.git tags/imx-dt-3.13
 	mvevu/dt4
 		git://git.infradead.org/linux-mvebu.git tags/dt-3.13-4
-
+	omap/cpufreq
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/cpufreq-late
