@@ -135,3 +135,5 @@ next/dt
 	samsung/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/exynos-dt (all but last patch)
 		NOTE: Pulled the branch but dropped the topmost patch.
+	imx/dt
+		git://git.linaro.org/people/shawnguo/linux-2.6.git tags/imx-dt-3.13
