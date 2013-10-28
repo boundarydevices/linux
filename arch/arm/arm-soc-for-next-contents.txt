@@ -1,4 +1,8 @@
 
+fixes-non-critical
+	omap/fixes-non-critical2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/fixes-not-urgent-part2
+
 
 next/cleanup
 	shark/removal
