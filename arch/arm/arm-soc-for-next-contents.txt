@@ -66,6 +66,9 @@ next/soc
 		https://github.com/mripard/linux.git tags/sunxi-defconfig-for-3.13
 	imx/soc
 		git://git.linaro.org/people/shawnguo/linux-2.6.git tags/imx-soc-3.13
+	patches
+		ARM: vexpress: Enable platform-specific options in defconfig
+		ARM: vexpress: Make defconfig work again
 
 next/drivers
 	davinci/gpio
