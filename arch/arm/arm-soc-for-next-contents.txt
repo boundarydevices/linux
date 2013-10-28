@@ -24,6 +24,8 @@ next/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.13-cleanup
 	at91/cleanup
 		git://github.com/at91linux/linux-at91.git tags/at91-cleanup
+	samsung/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-cleanup
 
 next/soc
 	samsung/s3c64xx-clk
