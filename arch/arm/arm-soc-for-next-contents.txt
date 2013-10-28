@@ -30,6 +30,8 @@ next/cleanup
 		git://github.com/at91linux/linux-at91.git tags/at91-cleanup
 	samsung/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-cleanup
+	omap/cleanup-cm
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/cm-scm-cleanup-signed
 
 next/soc
 	samsung/s3c64xx-clk
