@@ -157,3 +157,5 @@ next/dt
 	sirf/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/baohua/linux.git tags/sirf-dts-for-3.13
 		(Above branch cherry-picked back to 3.12-rc4 base)
+	patch
+		ARM: dts: use 'status' property for PCIe nodes
