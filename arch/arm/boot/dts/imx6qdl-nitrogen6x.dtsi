@@ -1,4 +1,5 @@
 /*
+ * Copyright 2013 Boundary Devices
  * Copyright 2012 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
@@ -57,6 +58,25 @@
 			gpio = <&gpio3 22 0>;
 			enable-active-high;
 		};
+
+		wilink_wl_en: tiwi_wlan {
+			compatible = "regulator-fixed";
+			regulator-name = "wilink_wl_en";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			gpio = <&gpio6 15 0>;
+			startup-delay-us = <70000>;
+			enable-active-high;
+		};
+
+		wilink_bt_en: tiwi_bt {
+			compatible = "regulator-fixed";
+			regulator-name = "wilink_bt_en";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			gpio = <&gpio6 16 0>;
+			enable-active-high;
+		};
 	};
 
 	gpio-keys {
@@ -100,9 +120,9 @@
 	};
 
 	sound {
-		compatible = "fsl,imx6q-sabrelite-sgtl5000",
+		compatible = "fsl,imx6q-nitrogen6x-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";
-		model = "imx6q-sabrelite-sgtl5000";
+		model = "imx6q-nitrogen6x-sgtl5000";
 		ssi-controller = <&ssi1>;
 		audio-codec = <&codec>;
 		audio-routing =
@@ -110,7 +130,7 @@
 			"Mic Jack", "Mic Bias",
 			"Headphone Jack", "HP_OUT";
 		mux-int-port = <1>;
-		mux-ext-port = <4>;
+		mux-ext-port = <3>;
 	};
 	sound-hdmi {
 		compatible = "fsl,imx6q-audio-hdmi",
@@ -220,6 +240,27 @@
 		status = "okay";
 	};
 
+	wlan {
+		compatible = "ti,wilink6";
+		interrupt-parent = <&gpio6>;
+		interrupts = <14 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&refclock>;
+		clock-names = "refclock";
+
+		refclock: refclock {
+			compatible = "ti,wilink-clock";
+			#clock-cells = <0>;
+			clock-frequency = <38400000>;
+		};
+	};
+
+	wlan_bt_rfkill {
+		compatible = "net,rfkill-reg";
+		name = "wlan_bt_rfkill";
+		type = <2>;     /* bluetooth */
+		vrfkill-supply = <&wilink_bt_en>;
+	};
+
 	mipi_dsi_reset: mipi-dsi-reset {
 		compatible = "gpio-reset";
 		reset-gpios = <&gpio2 5 GPIO_ACTIVE_LOW>;
@@ -230,7 +271,7 @@
 
 &audmux {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_audmux_1>;
+	pinctrl-0 = <&pinctrl_audmux_2>;
 	status = "okay";
 };
 
@@ -269,7 +310,7 @@
 	pinctrl-0 = <&pinctrl_enet_4>;
 	phy-mode = "rgmii";
 #if 0
-	phy-reset-gpios = <&gpio3 23 0>;
+	phy-reset-gpios = <&gpio1 27 0>;
 #endif
 	status = "okay";
 };
@@ -308,6 +349,12 @@
 		clocks = <&clks 201>;
 		VDDA-supply = <&reg_2p5v>;
 		VDDIO-supply = <&reg_3p3v>;
+	};
+	isl1208@6f {
+		compatible = "isl,isl1208";
+		reg = <0x6f>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <7 IRQ_TYPE_EDGE_FALLING>;
 	};
 };
 
@@ -397,14 +444,14 @@
 			fsl,pins = <
 				MX6QDL_PAD_EIM_D19__GPIO3_IO19		0x80000000	/* spi-nor CS */
 				MX6QDL_PAD_EIM_D22__GPIO3_IO22		0x80000000	/* otg power en */
-				MX6QDL_PAD_EIM_D23__GPIO3_IO23		0x80000000	/* ethernet phy reset */
+				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27	0x000b0		/* ethernet phy reset */
 				MX6QDL_PAD_SD3_DAT5__GPIO7_IO00		0x80000000	/* USDHC3 CD */
-				MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1f0b0		/* USDHC3 WP */
+				MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1f0b0		/* Spare */
 				MX6QDL_PAD_NANDF_D6__GPIO2_IO06		0x80000000	/* uSDHC4 CD */
 				MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x80000000	/* Spare */
 				MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0		/* SGTL5000 sys_mclk */
 				MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x80000000	/* CAN standby */
-				MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x80000000	/* CAN enable */
+				MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x80000000	/* Spare */
 				MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x80000000	/* I2C3 touch screen interrupt */
 				MX6QDL_PAD_DI0_PIN4__GPIO4_IO20		0x1b0b0		/* tsc2004 interrupt */
 				MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x0b0b0		/* ov5640 mipi powerdown */
@@ -412,6 +459,11 @@
 				MX6QDL_PAD_GPIO_3__CCM_CLKO2		0x000b0		/* ov5642 mclk */
 				MX6QDL_PAD_GPIO_6__GPIO1_IO06		0x000b0		/* ov5642 Power Down */
 				MX6QDL_PAD_GPIO_8__GPIO1_IO08		0x000b0		/* ov5642 Reset */
+				MX6QDL_PAD_NANDF_CS1__GPIO6_IO14	0x100b0		/* wl12xx_wl_irq */
+				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x000b0		/* wl12xx_wl_en */
+				MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x000b0		/* wl12xx_bt_en */
+				MX6QDL_PAD_SD1_CLK__OSC32K_32K_OUT	0x000b0		/* TiWi slow clock */
+				MX6QDL_PAD_NANDF_CLE__GPIO6_IO07	0x1b0b0		/* ISL1208 interrupt */
 			>;
 		};
 	};
@@ -483,6 +535,13 @@
 	status = "okay";
 };
 
+&uart3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart3_2>;
+	fsl,uart-has-rtscts;
+	status = "okay";
+};
+
 &usbh1 {
 	status = "okay";
 };
@@ -499,11 +558,22 @@
 	status = "okay";
 };
 
+&usdhc2 {	/* uSDHC2, TiWi wl1271 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usdhc2_2>;
+	bus-width = <4>;
+	non-removable;
+	vmmc-supply = <&wilink_wl_en>;
+	ocr-limit = <0x80>;     /* 1.65v - 1.95v */
+	power-off-card;
+	keep-power-in-suspend;
+	status = "okay";
+};
+
 &usdhc3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc3_2>;
 	cd-gpios = <&gpio7 0 0>;
-	wp-gpios = <&gpio7 1 0>;
 	vmmc-supply = <&reg_3p3v>;
 	status = "okay";
 };
