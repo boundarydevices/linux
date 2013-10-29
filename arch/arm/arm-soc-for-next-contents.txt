@@ -159,3 +159,5 @@ next/dt
 		(Above branch cherry-picked back to 3.12-rc4 base)
 	patch
 		ARM: dts: use 'status' property for PCIe nodes
+	omap/dt-fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/dt-fixes-for-merge-window
