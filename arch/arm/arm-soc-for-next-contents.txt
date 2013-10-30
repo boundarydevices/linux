@@ -77,6 +77,8 @@ next/soc
 	patches
 		ARM: vexpress: Enable platform-specific options in defconfig
 		ARM: vexpress: Make defconfig work again
+	bcm/soc
+		git://github.com/broadcom/bcm11351.git tags/bcm-for-3.13-soc2
 
 next/drivers
 	davinci/gpio
