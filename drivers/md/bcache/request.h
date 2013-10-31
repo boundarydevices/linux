@@ -16,7 +16,6 @@ struct search {
 	unsigned		cache_bio_sectors;
 
 	unsigned		recoverable:1;
-	unsigned		unaligned_bvec:1;
 
 	unsigned		write:1;
 	unsigned		writeback:1;

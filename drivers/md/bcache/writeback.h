@@ -43,7 +43,7 @@ static inline bool should_writeback(struct cached_dev *dc, struct bio *bio,
 		return false;
 
 	if (dc->partial_stripes_expensive &&
-	    bcache_dev_stripe_dirty(&dc->disk, bio->bi_sector,
+	    bcache_dev_stripe_dirty(&dc->disk, bio->bi_iter.bi_sector,
 				    bio_sectors(bio)))
 		return true;
 
