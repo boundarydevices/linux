@@ -79,6 +79,8 @@ next/soc
 		ARM: vexpress: Make defconfig work again
 	bcm/soc
 		git://github.com/broadcom/bcm11351.git tags/bcm-for-3.13-soc2
+	patch
+		  ARM: bcm281xx: Add ARCH_BCM_MOBILE to bcm config                              
 
 next/drivers
 	davinci/gpio
