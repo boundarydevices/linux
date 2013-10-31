@@ -1343,7 +1343,7 @@ static void imx_hdmi_clear_overflow(struct imx_hdmi *hdmi)
 		return;
 	}
 
-	for (count = 0; count < 5; count++)
+	for (count = 0; count < 4; count++)
 		hdmi_writeb(hdmi, val, HDMI_FC_INVIDCONF);
 }
 
