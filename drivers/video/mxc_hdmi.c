@@ -85,6 +85,9 @@ static int only_cea;
 module_param(only_cea, bool, 0644);
 MODULE_PARM_DESC(only_cea, "Allow only CEA modes");
 
+static int keepalive=1;
+module_param(keepalive, bool, 0644);
+MODULE_PARM_DESC(keepalive, "Allow only CEA modes");
 
 /*
  * We follow a flowchart which is in the "Synopsys DesignWare Courses
@@ -2013,6 +2016,7 @@ static void hotplug_worker(struct work_struct *work)
 	u32 hdmi_phy_stat0, hdmi_phy_pol0, hdmi_phy_mask0;
 	unsigned long flags;
 	char event_string[32];
+	int isalive = 0;
 	char *envp[] = { event_string, NULL };
 
 
@@ -2039,7 +2043,10 @@ static void hotplug_worker(struct work_struct *work)
 #endif
 		hdmi_set_cable_state(1);
 
-	} else {
+		if (keepalive)
+                        hdmi_writeb(HDMI_DVI_STAT, HDMI_PHY_POL0);
+		isalive=1;
+	} else if (!keepalive) {
 		/* Plugout event */
 		dev_dbg(&hdmi->pdev->dev, "EVENT=plugout\n");
 		hdmi_set_cable_state(0);
@@ -2058,16 +2065,18 @@ static void hotplug_worker(struct work_struct *work)
 	 * completed before next interrupt processed */
 	spin_lock_irqsave(&hdmi->irq_lock, flags);
 
-	/* Re-enable HPD interrupts */
-	hdmi_phy_mask0 = hdmi_readb(HDMI_PHY_MASK0);
-	hdmi_phy_mask0 &= ~HDMI_DVI_STAT;
-	hdmi_writeb(hdmi_phy_mask0, HDMI_PHY_MASK0);
+	if (!(keepalive || isalive)) {
+		/* Re-enable HPD interrupts */
+		hdmi_phy_mask0 = hdmi_readb(HDMI_PHY_MASK0);
+		hdmi_phy_mask0 &= ~HDMI_DVI_STAT;
+		hdmi_writeb(hdmi_phy_mask0, HDMI_PHY_MASK0);
 
-	/* Unmute interrupts */
-	hdmi_writeb(~HDMI_DVI_IH_STAT, HDMI_IH_MUTE_PHY_STAT0);
+		/* Unmute interrupts */
+		hdmi_writeb(~HDMI_DVI_IH_STAT, HDMI_IH_MUTE_PHY_STAT0);
 
-	if (hdmi_readb(HDMI_IH_FC_STAT2) & HDMI_IH_FC_STAT2_OVERFLOW_MASK)
-		mxc_hdmi_clear_overflow();
+		if (hdmi_readb(HDMI_IH_FC_STAT2) & HDMI_IH_FC_STAT2_OVERFLOW_MASK)
+			mxc_hdmi_clear_overflow();
+	}
 
 	spin_unlock_irqrestore(&hdmi->irq_lock, flags);
 }
