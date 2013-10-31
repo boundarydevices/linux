@@ -62,6 +62,19 @@
 	status = "okay";
 };
 
+
+&hdmi {
+	ddc = <&i2c1>;
+	status = "okay";
+};
+
+&i2c1 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c1>;
+	status = "okay";
+};
+
 &i2c2 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
@@ -102,6 +115,10 @@
 
 		pinctrl_enet: enetgrp {
 			fsl,pins = <MX6QDL_ENET_PINGRP1>;
+		};
+
+		pinctrl_i2c1: i2c1grp {
+			fsl,pins = <MX6QDL_I2C1_PINGRP1>;
 		};
 
 		pinctrl_i2c2: i2c2grp {
