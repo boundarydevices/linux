@@ -82,6 +82,16 @@
 
 		aips-bus@02000000 { /* AIPS1 */
 			spba-bus@02000000 {
+				hdmi: hdmi@0120000 {
+					compatible = "fsl,imx6q-hdmi";
+					reg = <0x00120000 0x9000>;
+					interrupts = <0 115 0x04>;
+					gpr = <&gpr>;
+					clocks = <&clks 123>, <&clks 124>;
+					clock-names = "iahb", "isfr";
+					status = "disabled";
+				};
+
 				ecspi5: ecspi@02018000 {
 					#address-cells = <1>;
 					#size-cells = <0>;
@@ -172,4 +182,8 @@
 	lvds-channel@1 {
 		crtcs = <&ipu1 0>, <&ipu1 1>, <&ipu2 0>, <&ipu2 1>;
 	};
+};
+
+&hdmi {
+	crtcs = <&ipu1 0>, <&ipu1 1>, <&ipu2 0>, <&ipu2 1>;
 };

@@ -61,6 +61,16 @@
 		};
 
 		aips1: aips-bus@02000000 {
+			hdmi: hdmi@0120000 {
+				compatible = "fsl,imx6dl-hdmi";
+				reg = <0x00120000 0x9000>;
+				interrupts = <0 115 0x04>;
+				gpr = <&gpr>;
+				clocks = <&clks 123>, <&clks 124>;
+				clock-names = "iahb", "isfr";
+				status = "disabled";
+			};
+
 			iomuxc: iomuxc@020e0000 {
 				compatible = "fsl,imx6dl-iomuxc";
 			};
@@ -109,4 +119,8 @@
 	lvds-channel@1 {
 		crtcs = <&ipu1 0>, <&ipu1 1>;
 	};
+};
+
+&hdmi {
+	crtcs = <&ipu1 0>, <&ipu1 1>;
 };
