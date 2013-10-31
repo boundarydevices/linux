@@ -167,3 +167,7 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.13/dt-fixes-for-merge-window
 	patch
 		ARM: tegra: fix Tegra114 IOMMU register address
+	bcm/dt
+		git://github.com/broadcom/bcm11351.git tags/bcm-for-3.13-dt (rebased locally for renaming / adding s-o-b)
+	mvebu/dt5
+		git://git.infradead.org/linux-mvebu.git tags/dt-3.13-5
