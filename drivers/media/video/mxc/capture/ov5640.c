@@ -32,6 +32,7 @@
 #include <media/v4l2-int-device.h>
 #include "mxc_v4l2_capture.h"
 #include "fsl_csi.h"
+#include <linux/proc_fs.h>
 
 #define OV5640_VOLTAGE_ANALOG               2800000
 #define OV5640_VOLTAGE_DIGITAL_CORE         1500000
@@ -1733,6 +1734,48 @@ static struct v4l2_int_device ov5640_int_device = {
 	},
 };
 
+static int write_proc(struct file *file, const char __user *buffer, unsigned long count, void *data)
+{
+	char localbuf[256];
+	if( count < sizeof(localbuf) ){
+		if(copy_from_user(localbuf,buffer,count)){
+			printk(KERN_ERR "Error reading user buf\n" );
+		} else {
+			int addr0 ;
+			int value ;
+			int numScanned ;
+			if(2 == (numScanned = sscanf(localbuf,"%04x %02x", &addr0, &value)) ){
+				if( (0xFFFF >= addr0) && (0xff >= value) ){
+					s32 rval ;
+
+					rval = ov5640_write_reg(addr0,value);
+                                        if (rval < 0)
+						pr_err("%s, write reg 0x%x failed: %d\n", __func__, addr0, rval);
+					else
+                                                pr_err("ov5640[%04x] = %02x\n", addr0,value);
+				}
+				else
+					printk(KERN_ERR "Invalid data: %s\n", localbuf);
+			} else if(1 == numScanned){
+				if(0xFFFF > addr0){
+					s32 rval;
+					u8 value;
+					rval = ov5640_read_reg(addr0,&value);
+					if (0 <= rval) {
+						pr_err("ov5640[%04x] == 0x%02x\n", addr0,value);
+					} else {
+						pr_err("%s, read reg 0x%x failed: %d\n", __func__, addr0, rval);
+					}
+				}
+			}
+			else
+				printk(KERN_ERR "Invalid data: %s\n", localbuf);
+		}
+	}
+
+	return count ;
+}
+
 /*!
  * ov5640 I2C probe function
  *
@@ -1745,6 +1788,7 @@ static int ov5640_probe(struct i2c_client *client,
 	int retval;
 	struct fsl_mxc_camera_platform_data *plat_data = client->dev.platform_data;
 	u8 chip_id_high, chip_id_low;
+	struct proc_dir_entry *pde ;
 
 	/* Set initial values for the sensor struct. */
 	memset(&ov5640_data, 0, sizeof(ov5640_data));
@@ -1854,6 +1898,13 @@ static int ov5640_probe(struct i2c_client *client,
 	retval = v4l2_int_device_register(&ov5640_int_device);
 
 	pr_info("camera ov5640 is found\n");
+	pde = create_proc_entry("driver/ov5640", 0, 0);
+	if( pde ) {
+		pde->write_proc = write_proc ;
+		pde->data = &ov5640_int_device ;
+	}
+	else
+		printk( KERN_ERR "Error creating ov5640 proc entry\n" );
 	return retval;
 
 err4:
@@ -1883,6 +1934,8 @@ err1:
  */
 static int ov5640_remove(struct i2c_client *client)
 {
+	remove_proc_entry("driver/ov5640", NULL);
+
 	v4l2_int_device_unregister(&ov5640_int_device);
 
 	if (gpo_regulator) {
@@ -1917,7 +1970,6 @@ static int ov5640_remove(struct i2c_client *client)
 static __init int ov5640_init(void)
 {
 	u8 err;
-
 	err = i2c_add_driver(&ov5640_i2c_driver);
 	if (err != 0)
 		pr_err("%s:driver registration failed, error=%d \n",
