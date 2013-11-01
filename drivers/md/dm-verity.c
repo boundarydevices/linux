@@ -384,6 +384,7 @@ static void verity_finish_io(struct dm_verity_io *io, int error)
 
 	bio->bi_end_io = io->orig_bi_end_io;
 	bio->bi_private = io->orig_bi_private;
+	atomic_inc(&bio->bi_remaining);
 
 	bio_endio(bio, error);
 }
