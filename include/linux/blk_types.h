@@ -35,7 +35,8 @@ struct bvec_iter {
 
 	unsigned int		bi_idx;		/* current index into bvl_vec */
 
-	unsigned int            bi_bvec_done;
+	unsigned int            bi_bvec_done;	/* number of bytes completed in
+						   current bvec */
 };
 
 /*
