@@ -259,7 +259,8 @@ static const struct imxuart_platform_data mx6_arm2_uart2_data __initconst = {
 	.flags      = IMXUART_HAVE_RTSCTS,
 };
 
-#if !(defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE))
+#if !(defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE) \
+    ||defined(CONFIG_MXC_CAMERA_OV5640) || defined(CONFIG_MXC_CAMERA_OV5640_MODULE))
 static const struct imxuart_platform_data mx6_arm2_uart3_data __initconst = {
 	.flags      = IMXUART_HAVE_RTSCTS,
 };
@@ -909,7 +910,8 @@ static struct imx_ipuv3_platform_data ipu_data[] = {
 };
 
 static struct fsl_mxc_capture_platform_data capture_data[] = {
-#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE)
+#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE) \
+ || defined(CONFIG_MXC_CAMERA_OV5640) || defined(CONFIG_MXC_CAMERA_OV5640_MODULE)
 	{
 		.ipu = 0,
 		.csi = 0,
@@ -1282,7 +1284,8 @@ static void __init board_init(void)
 	if (isn6)
 		imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
 
-#if !(defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE))
+#if !(defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE) \
+    ||defined(CONFIG_MXC_CAMERA_OV5640) || defined(CONFIG_MXC_CAMERA_OV5640_MODULE))
 	imx6q_add_imx_uart(3, &mx6_arm2_uart3_data);
 	imx6q_add_imx_uart(4, &mx6_arm2_uart4_data);
 #endif
