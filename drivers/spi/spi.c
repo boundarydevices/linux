@@ -340,6 +340,21 @@ struct spi_device *spi_alloc_device(struct spi_master *master)
 }
 EXPORT_SYMBOL_GPL(spi_alloc_device);
 
+void spi_dev_set_name(struct spi_device *spi)
+{
+	if (ACPI_HANDLE(&spi->dev)) {
+		struct acpi_device *adev;
+		if (!acpi_bus_get_device(ACPI_HANDLE(&spi->dev), &adev)) {
+			dev_set_name(&spi->dev, "spi-%s",
+				     dev_name(&adev->dev));
+			return;
+		}
+	}
+
+	dev_set_name(&spi->dev, "%s.%u", dev_name(&spi->master->dev),
+		     spi->chip_select);
+}
+
 /**
  * spi_add_device - Add spi_device allocated with spi_alloc_device
  * @spi: spi_device to register
@@ -366,9 +381,7 @@ int spi_add_device(struct spi_device *spi)
 	}
 
 	/* Set the bus ID string */
-	dev_set_name(&spi->dev, "%s.%u", dev_name(&spi->master->dev),
-			spi->chip_select);
-
+	spi_dev_set_name(spi);
 
 	/* We need to make sure there's no other device with this
 	 * chipselect **BEFORE** we call setup(), else we'll trash
