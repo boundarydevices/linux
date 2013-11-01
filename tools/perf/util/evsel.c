@@ -680,6 +680,9 @@ void perf_evsel__config(struct perf_evsel *evsel,
 	attr->mmap  = track;
 	attr->comm  = track;
 
+	if (opts->sample_transaction)
+		attr->sample_type	|= PERF_SAMPLE_TRANSACTION;
+
 	/*
 	 * XXX see the function comment above
 	 *
@@ -982,6 +985,7 @@ static size_t perf_event_attr__fprintf(struct perf_event_attr *attr, FILE *fp)
 	ret += PRINT_ATTR2(exclude_host, exclude_guest);
 	ret += PRINT_ATTR2N("excl.callchain_kern", exclude_callchain_kernel,
 			    "excl.callchain_user", exclude_callchain_user);
+	ret += PRINT_ATTR_U32(mmap2);
 
 	ret += PRINT_ATTR_U32(wakeup_events);
 	ret += PRINT_ATTR_U32(wakeup_watermark);
@@ -1213,6 +1217,7 @@ static int perf_evsel__parse_id_sample(const struct perf_evsel *evsel,
 
 		sample->pid = u.val32[0];
 		sample->tid = u.val32[1];
+		array--;
 	}
 
 	return 0;
@@ -1452,6 +1457,9 @@ int perf_evsel__parse_sample(struct perf_evsel *evsel, union perf_event *event,
 			array = (void *)array + sz;
 			OVERFLOW_CHECK_u64(array);
 			data->user_stack.size = *array++;
+			if (WARN_ONCE(data->user_stack.size > sz,
+				      "user stack dump failure\n"))
+				return -EFAULT;
 		}
 	}
 
@@ -1466,6 +1474,12 @@ int perf_evsel__parse_sample(struct perf_evsel *evsel, union perf_event *event,
 	if (type & PERF_SAMPLE_DATA_SRC) {
 		OVERFLOW_CHECK_u64(array);
 		data->data_src = *array;
+		array++;
+	}
+
+	data->transaction = 0;
+	if (type & PERF_SAMPLE_TRANSACTION) {
+		data->transaction = *array;
 		array++;
 	}
 

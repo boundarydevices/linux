@@ -33,8 +33,10 @@
 #include "util/thread.h"
 #include "util/sort.h"
 #include "util/hist.h"
+#include "util/data.h"
 #include "arch/common.h"
 
+#include <dlfcn.h>
 #include <linux/bitmap.h>
 
 struct perf_report {
@@ -47,6 +49,7 @@ struct perf_report {
 	bool			show_threads;
 	bool			inverted_callchain;
 	bool			mem_mode;
+	int			max_stack;
 	struct perf_read_values	show_threads_values;
 	const char		*pretty_printing_style;
 	const char		*cpu_list;
@@ -88,7 +91,8 @@ static int perf_report__add_mem_hist_entry(struct perf_tool *tool,
 	if ((sort__has_parent || symbol_conf.use_callchain) &&
 	    sample->callchain) {
 		err = machine__resolve_callchain(machine, evsel, al->thread,
-						 sample, &parent, al);
+						 sample, &parent, al,
+						 rep->max_stack);
 		if (err)
 			return err;
 	}
@@ -179,7 +183,8 @@ static int perf_report__add_branch_hist_entry(struct perf_tool *tool,
 	if ((sort__has_parent || symbol_conf.use_callchain)
 	    && sample->callchain) {
 		err = machine__resolve_callchain(machine, evsel, al->thread,
-						 sample, &parent, al);
+						 sample, &parent, al,
+						 rep->max_stack);
 		if (err)
 			return err;
 	}
@@ -242,24 +247,27 @@ out:
 	return err;
 }
 
-static int perf_evsel__add_hist_entry(struct perf_evsel *evsel,
+static int perf_evsel__add_hist_entry(struct perf_tool *tool,
+				      struct perf_evsel *evsel,
 				      struct addr_location *al,
 				      struct perf_sample *sample,
 				      struct machine *machine)
 {
+	struct perf_report *rep = container_of(tool, struct perf_report, tool);
 	struct symbol *parent = NULL;
 	int err = 0;
 	struct hist_entry *he;
 
 	if ((sort__has_parent || symbol_conf.use_callchain) && sample->callchain) {
 		err = machine__resolve_callchain(machine, evsel, al->thread,
-						 sample, &parent, al);
+						 sample, &parent, al,
+						 rep->max_stack);
 		if (err)
 			return err;
 	}
 
 	he = __hists__add_entry(&evsel->hists, al, parent, sample->period,
-					sample->weight);
+				sample->weight, sample->transaction);
 	if (he == NULL)
 		return -ENOMEM;
 
@@ -330,7 +338,8 @@ static int process_sample_event(struct perf_tool *tool,
 		if (al.map != NULL)
 			al.map->dso->hit = 1;
 
-		ret = perf_evsel__add_hist_entry(evsel, &al, sample, machine);
+		ret = perf_evsel__add_hist_entry(tool, evsel, &al, sample,
+						 machine);
 		if (ret < 0)
 			pr_debug("problem incrementing symbol period, skipping event\n");
 	}
@@ -364,10 +373,11 @@ static int process_read_event(struct perf_tool *tool,
 /* For pipe mode, sample_type is not currently set */
 static int perf_report__setup_sample_type(struct perf_report *rep)
 {
-	struct perf_session *self = rep->session;
-	u64 sample_type = perf_evlist__combined_sample_type(self->evlist);
+	struct perf_session *session = rep->session;
+	u64 sample_type = perf_evlist__combined_sample_type(session->evlist);
+	bool is_pipe = perf_data_file__is_pipe(session->file);
 
-	if (!self->fd_pipe && !(sample_type & PERF_SAMPLE_CALLCHAIN)) {
+	if (!is_pipe && !(sample_type & PERF_SAMPLE_CALLCHAIN)) {
 		if (sort__has_parent) {
 			ui__error("Selected --sort parent, but no "
 				    "callchain data. Did you call "
@@ -390,7 +400,7 @@ static int perf_report__setup_sample_type(struct perf_report *rep)
 	}
 
 	if (sort__mode == SORT_MODE__BRANCH) {
-		if (!self->fd_pipe &&
+		if (!is_pipe &&
 		    !(sample_type & PERF_SAMPLE_BRANCH_STACK)) {
 			ui__error("Selected -b but no branch data. "
 				  "Did you call perf record without -b?\n");
@@ -407,14 +417,14 @@ static void sig_handler(int sig __maybe_unused)
 }
 
 static size_t hists__fprintf_nr_sample_events(struct perf_report *rep,
-					      struct hists *self,
+					      struct hists *hists,
 					      const char *evname, FILE *fp)
 {
 	size_t ret;
 	char unit;
-	unsigned long nr_samples = self->stats.nr_events[PERF_RECORD_SAMPLE];
-	u64 nr_events = self->stats.total_period;
-	struct perf_evsel *evsel = hists_to_evsel(self);
+	unsigned long nr_samples = hists->stats.nr_events[PERF_RECORD_SAMPLE];
+	u64 nr_events = hists->stats.total_period;
+	struct perf_evsel *evsel = hists_to_evsel(hists);
 	char buf[512];
 	size_t size = sizeof(buf);
 
@@ -486,6 +496,8 @@ static int __cmd_report(struct perf_report *rep)
 	struct map *kernel_map;
 	struct kmap *kernel_kmap;
 	const char *help = "For a higher level overview, try: perf report --sort comm,dso";
+	struct ui_progress prog;
+	struct perf_data_file *file = session->file;
 
 	signal(SIGINT, sig_handler);
 
@@ -547,13 +559,19 @@ static int __cmd_report(struct perf_report *rep)
 	}
 
 	nr_samples = 0;
+	list_for_each_entry(pos, &session->evlist->entries, node)
+		nr_samples += pos->hists.nr_entries;
+
+	ui_progress__init(&prog, nr_samples, "Merging related events...");
+
+	nr_samples = 0;
 	list_for_each_entry(pos, &session->evlist->entries, node) {
 		struct hists *hists = &pos->hists;
 
 		if (pos->idx == 0)
 			hists->symbol_filter_str = rep->symbol_filter_str;
 
-		hists__collapse_resort(hists);
+		hists__collapse_resort(hists, &prog);
 		nr_samples += hists->stats.nr_events[PERF_RECORD_SAMPLE];
 
 		/* Non-group events are considered as leader */
@@ -565,12 +583,13 @@ static int __cmd_report(struct perf_report *rep)
 			hists__link(leader_hists, hists);
 		}
 	}
+	ui_progress__finish();
 
 	if (session_done())
 		return 0;
 
 	if (nr_samples == 0) {
-		ui__error("The %s file has no samples!\n", session->filename);
+		ui__error("The %s file has no samples!\n", file->path);
 		return 0;
 	}
 
@@ -591,8 +610,19 @@ static int __cmd_report(struct perf_report *rep)
 				ret = 0;
 
 		} else if (use_browser == 2) {
-			perf_evlist__gtk_browse_hists(session->evlist, help,
-						      NULL, rep->min_percent);
+			int (*hist_browser)(struct perf_evlist *,
+					    const char *,
+					    struct hist_browser_timer *,
+					    float min_pcnt);
+
+			hist_browser = dlsym(perf_gtk_handle,
+					     "perf_evlist__gtk_browse_hists");
+			if (hist_browser == NULL) {
+				ui__error("GTK browser not found!\n");
+				return ret;
+			}
+			hist_browser(session->evlist, help, NULL,
+				     rep->min_percent);
 		}
 	} else
 		perf_evlist__tty_browse_hists(session->evlist, rep, help);
@@ -757,6 +787,7 @@ int cmd_report(int argc, const char **argv, const char *prefix __maybe_unused)
 			.ordered_samples = true,
 			.ordering_requires_timestamps = true,
 		},
+		.max_stack		 = PERF_MAX_STACK_DEPTH,
 		.pretty_printing_style	 = "normal",
 	};
 	const struct option options[] = {
@@ -787,7 +818,7 @@ int cmd_report(int argc, const char **argv, const char *prefix __maybe_unused)
 		   "sort by key(s): pid, comm, dso, symbol, parent, cpu, srcline,"
 		   " dso_to, dso_from, symbol_to, symbol_from, mispredict,"
 		   " weight, local_weight, mem, symbol_daddr, dso_daddr, tlb, "
-		   "snoop, locked"),
+		   "snoop, locked, abort, in_tx, transaction"),
 	OPT_BOOLEAN(0, "showcpuutilization", &symbol_conf.show_cpu_utilization,
 		    "Show sample percentage for different cpu modes"),
 	OPT_STRING('p', "parent", &parent_pattern, "regex",
@@ -797,6 +828,10 @@ int cmd_report(int argc, const char **argv, const char *prefix __maybe_unused)
 	OPT_CALLBACK_DEFAULT('g', "call-graph", &report, "output_type,min_percent[,print_limit],call_order",
 		     "Display callchains using output_type (graph, flat, fractal, or none) , min percent threshold, optional print limit, callchain order, key (function or address). "
 		     "Default: fractal,0.5,callee,function", &parse_callchain_opt, callchain_default_opt),
+	OPT_INTEGER(0, "max-stack", &report.max_stack,
+		    "Set the maximum stack depth when parsing the callchain, "
+		    "anything beyond the specified depth will be ignored. "
+		    "Default: " __stringify(PERF_MAX_STACK_DEPTH)),
 	OPT_BOOLEAN('G', "inverted", &report.inverted_callchain,
 		    "alias for inverted call graph"),
 	OPT_CALLBACK(0, "ignore-callees", NULL, "regex",
@@ -845,6 +880,9 @@ int cmd_report(int argc, const char **argv, const char *prefix __maybe_unused)
 		     "Don't show entries under that percent", parse_percent_limit),
 	OPT_END()
 	};
+	struct perf_data_file file = {
+		.mode  = PERF_DATA_MODE_READ,
+	};
 
 	perf_config(perf_report_config, &report);
 
@@ -874,9 +912,11 @@ int cmd_report(int argc, const char **argv, const char *prefix __maybe_unused)
 		perf_hpp__init();
 	}
 
+	file.path  = input_name;
+	file.force = report.force;
+
 repeat:
-	session = perf_session__new(input_name, O_RDONLY,
-				    report.force, false, &report.tool);
+	session = perf_session__new(&file, false, &report.tool);
 	if (session == NULL)
 		return -ENOMEM;
 

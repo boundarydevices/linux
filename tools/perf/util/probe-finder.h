@@ -7,6 +7,7 @@
 
 #define MAX_PROBE_BUFFER	1024
 #define MAX_PROBES		 128
+#define MAX_PROBE_ARGS		 128
 
 static inline int is_c_varname(const char *name)
 {
@@ -14,7 +15,7 @@ static inline int is_c_varname(const char *name)
 	return isalpha(name[0]) || name[0] == '_';
 }
 
-#ifdef DWARF_SUPPORT
+#ifdef HAVE_DWARF_SUPPORT
 
 #include "dwarf-aux.h"
 
@@ -105,6 +106,6 @@ struct line_finder {
 	int			found;
 };
 
-#endif /* DWARF_SUPPORT */
+#endif /* HAVE_DWARF_SUPPORT */
 
 #endif /*_PROBE_FINDER_H */
