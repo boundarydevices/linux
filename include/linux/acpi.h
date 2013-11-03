@@ -472,7 +472,17 @@ static inline bool acpi_driver_match_device(struct device *dev,
 }
 
 #define ACPI_PTR(_ptr)	(NULL)
+typedef void * acpi_handle;
 
+struct acpi_device {
+	struct device dev;
+};
+
+static inline int acpi_bus_get_device(acpi_handle handle,
+				      struct acpi_device **device)
+{
+	return -ENODEV;
+}
 #endif	/* !CONFIG_ACPI */
 
 #ifdef CONFIG_ACPI
