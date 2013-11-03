@@ -829,6 +829,13 @@ void add_input_randomness(unsigned int type, unsigned int code,
 }
 EXPORT_SYMBOL_GPL(add_input_randomness);
 
+void add_device_attach_randomness(struct device *dev)
+{
+	static struct timer_rand_state attach_state = { 0, };
+
+	add_timer_randomness(&attach_state, dev->devt);
+}
+
 static DEFINE_PER_CPU(struct fast_pool, irq_randomness);
 
 void add_interrupt_randomness(int irq, int irq_flags)
