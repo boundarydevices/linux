@@ -116,7 +116,7 @@ void acpi_numa_arch_fixup(void);
 
 #ifdef CONFIG_ACPI_HOTPLUG_CPU
 /* Arch dependent functions for cpu hotplug support */
-int acpi_map_lsapic(acpi_handle handle, int *pcpu);
+int acpi_map_lsapic(acpi_handle handle, int physid, int *pcpu);
 int acpi_unmap_lsapic(int cpu);
 #endif /* CONFIG_ACPI_HOTPLUG_CPU */
 
@@ -465,7 +465,17 @@ static inline bool acpi_driver_match_device(struct device *dev,
 }
 
 #define ACPI_PTR(_ptr)	(NULL)
+typedef void * acpi_handle;
 
+struct acpi_device {
+	struct device dev;
+};
+
+static inline int acpi_bus_get_device(acpi_handle handle,
+				      struct acpi_device **device)
+{
+	return -ENODEV;
+}
 #endif	/* !CONFIG_ACPI */
 
 #ifdef CONFIG_ACPI

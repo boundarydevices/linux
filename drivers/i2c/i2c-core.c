@@ -254,10 +254,12 @@ static int i2c_device_probe(struct device *dev)
 					client->flags & I2C_CLIENT_WAKE);
 	dev_dbg(dev, "probe\n");
 
+	acpi_dev_pm_attach(&client->dev, true);
 	status = driver->probe(client, i2c_match_id(driver->id_table, client));
-	if (status)
+	if (status) {
 		i2c_set_clientdata(client, NULL);
-
+		acpi_dev_pm_detach(&client->dev, true);
+	}
 	return status;
 }
 
@@ -280,7 +282,7 @@ static int i2c_device_remove(struct device *dev)
 	}
 	if (status == 0)
 		i2c_set_clientdata(client, NULL);
-
+	acpi_dev_pm_detach(&client->dev, true);
 	return status;
 }
 
@@ -613,6 +615,24 @@ void i2c_unlock_adapter(struct i2c_adapter *adapter)
 }
 EXPORT_SYMBOL_GPL(i2c_unlock_adapter);
 
+static void i2c_dev_set_name(struct i2c_adapter *adap,
+			     struct i2c_client *client)
+{
+	if (ACPI_HANDLE(&client->dev)) {
+		struct acpi_device *adev;
+		if (!acpi_bus_get_device(ACPI_HANDLE(&client->dev), &adev)) {
+			dev_set_name(&client->dev, "i2c-%s",
+				     dev_name(&adev->dev));
+			return;
+		}
+	}
+
+	/* For 10-bit clients, add an arbitrary offset to avoid collisions */
+	dev_set_name(&client->dev, "%d-%04x", i2c_adapter_id(adap),
+		     client->addr | ((client->flags & I2C_CLIENT_TEN)
+				     ? 0xa000 : 0));
+}
+
 /**
  * i2c_new_device - instantiate an i2c device
  * @adap: the adapter managing the device
@@ -671,10 +691,7 @@ i2c_new_device(struct i2c_adapter *adap, struct i2c_board_info const *info)
 	client->dev.of_node = info->of_node;
 	ACPI_HANDLE_SET(&client->dev, info->acpi_node.handle);
 
-	/* For 10-bit clients, add an arbitrary offset to avoid collisions */
-	dev_set_name(&client->dev, "%d-%04x", i2c_adapter_id(adap),
-		     client->addr | ((client->flags & I2C_CLIENT_TEN)
-				     ? 0xa000 : 0));
+	i2c_dev_set_name(adap, client);
 	status = device_register(&client->dev);
 	if (status)
 		goto out_err;
@@ -1109,8 +1126,10 @@ static acpi_status acpi_i2c_add_device(acpi_handle handle, u32 level,
 	if (ret < 0 || !info.addr)
 		return AE_OK;
 
+	adev->power.flags.ignore_parent = true;
 	strlcpy(info.type, dev_name(&adev->dev), sizeof(info.type));
 	if (!i2c_new_device(adapter, &info)) {
+		adev->power.flags.ignore_parent = false;
 		dev_err(&adapter->dev,
 			"failed to add I2C device %s from ACPI\n",
 			dev_name(&adev->dev));
