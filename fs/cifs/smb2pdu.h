@@ -534,9 +534,16 @@ struct create_durable {
 	} Data;
 } __packed;
 
+#define COPY_CHUNK_RES_KEY_SIZE	24
+struct resume_key_req {
+	char ResumeKey[COPY_CHUNK_RES_KEY_SIZE];
+	__le32	ContextLength;	/* MBZ */
+	char	Context[0];	/* ignored, Windows sets to 4 bytes of zero */
+} __packed;
+
 /* this goes in the ioctl buffer when doing a copychunk request */
 struct copychunk_ioctl {
-	char SourceKey[24];
+	char SourceKey[COPY_CHUNK_RES_KEY_SIZE];
 	__le32 ChunkCount; /* we are only sending 1 */
 	__le32 Reserved;
 	/* array will only be one chunk long for us */
@@ -544,6 +551,12 @@ struct copychunk_ioctl {
 	__le64 TargetOffset;
 	__le32 Length; /* how many bytes to copy */
 	__u32 Reserved2;
+} __packed;
+
+struct copychunk_ioctl_rsp {
+	__le32 ChunksWritten;
+	__le32 ChunkBytesWritten;
+	__le32 TotalBytesWritten;
 } __packed;
 
 /* Response and Request are the same format */
@@ -569,6 +582,10 @@ struct network_interface_info_ioctl_rsp {
 
 #define NO_FILE_ID 0xFFFFFFFFFFFFFFFFULL /* general ioctls to srv not to file */
 
+struct compress_ioctl {
+	__le16 CompressionState; /* See cifspdu.h for possible flag values */
+} __packed;
+
 struct smb2_ioctl_req {
 	struct smb2_hdr hdr;
 	__le16 StructureSize;	/* Must be 57 */
@@ -584,7 +601,7 @@ struct smb2_ioctl_req {
 	__le32 MaxOutputResponse;
 	__le32 Flags;
 	__u32  Reserved2;
-	char   Buffer[0];
+	__u8   Buffer[0];
 } __packed;
 
 struct smb2_ioctl_rsp {
@@ -870,14 +887,16 @@ struct smb2_lease_ack {
 
 /* File System Information Classes */
 #define FS_VOLUME_INFORMATION		1 /* Query */
-#define FS_LABEL_INFORMATION		2 /* Set */
+#define FS_LABEL_INFORMATION		2 /* Local only */
 #define FS_SIZE_INFORMATION		3 /* Query */
 #define FS_DEVICE_INFORMATION		4 /* Query */
 #define FS_ATTRIBUTE_INFORMATION	5 /* Query */
 #define FS_CONTROL_INFORMATION		6 /* Query, Set */
 #define FS_FULL_SIZE_INFORMATION	7 /* Query */
 #define FS_OBJECT_ID_INFORMATION	8 /* Query, Set */
-#define FS_DRIVER_PATH_INFORMATION	9 /* Query */
+#define FS_DRIVER_PATH_INFORMATION	9 /* Local only */
+#define FS_VOLUME_FLAGS_INFORMATION	10 /* Local only */
+#define FS_SECTOR_SIZE_INFORMATION	11 /* SMB3 or later. Query */
 
 struct smb2_fs_full_size_info {
 	__le64 TotalAllocationUnits;
@@ -885,6 +904,22 @@ struct smb2_fs_full_size_info {
 	__le64 ActualAvailableAllocationUnits;
 	__le32 SectorsPerAllocationUnit;
 	__le32 BytesPerSector;
+} __packed;
+
+#define SSINFO_FLAGS_ALIGNED_DEVICE		0x00000001
+#define SSINFO_FLAGS_PARTITION_ALIGNED_ON_DEVICE 0x00000002
+#define SSINFO_FLAGS_NO_SEEK_PENALTY		0x00000004
+#define SSINFO_FLAGS_TRIM_ENABLED		0x00000008
+
+/* sector size info struct */
+struct smb3_fs_ss_info {
+	__le32 LogicalBytesPerSector;
+	__le32 PhysicalBytesPerSectorForAtomicity;
+	__le32 PhysicalBytesPerSectorForPerf;
+	__le32 FileSystemEffectivePhysicalBytesPerSectorForAtomicity;
+	__le32 Flags;
+	__le32 ByteOffsetForSectorAlignment;
+	__le32 ByteOffsetForPartitionAlignment;
 } __packed;
 
 /* partial list of QUERY INFO levels */
