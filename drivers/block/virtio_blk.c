@@ -184,7 +184,7 @@ static void virtblk_bio_send_data(struct virtblk_req *vbr)
 
 	vbr->flags &= ~VBLK_IS_FLUSH;
 	vbr->out_hdr.type = 0;
-	vbr->out_hdr.sector = bio->bi_sector;
+	vbr->out_hdr.sector = bio->bi_iter.bi_sector;
 	vbr->out_hdr.ioprio = bio_prio(bio);
 
 	if (blk_bio_map_sg(vblk->disk->queue, bio, vbr->sg)) {
@@ -400,7 +400,7 @@ static void virtblk_make_request(struct request_queue *q, struct bio *bio)
 		vbr->flags |= VBLK_REQ_FLUSH;
 	if (bio->bi_rw & REQ_FUA)
 		vbr->flags |= VBLK_REQ_FUA;
-	if (bio->bi_size)
+	if (bio->bi_iter.bi_size)
 		vbr->flags |= VBLK_REQ_DATA;
 
 	if (unlikely(vbr->flags & VBLK_REQ_FLUSH))
