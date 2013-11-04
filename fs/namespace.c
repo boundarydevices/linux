@@ -39,7 +39,7 @@ static int mnt_group_start = 1;
 static struct list_head *mount_hashtable __read_mostly;
 static struct list_head *mountpoint_hashtable __read_mostly;
 static struct kmem_cache *mnt_cache __read_mostly;
-static struct rw_semaphore namespace_sem;
+static DECLARE_RWSEM(namespace_sem);
 
 /* /sys/fs */
 struct kobject *fs_kobj;
@@ -1849,14 +1849,10 @@ static int do_remount(struct path *path, int flags, int mnt_flags,
 		br_write_lock(&vfsmount_lock);
 		mnt_flags |= mnt->mnt.mnt_flags & MNT_PROPAGATION_MASK;
 		mnt->mnt.mnt_flags = mnt_flags;
-		br_write_unlock(&vfsmount_lock);
-	}
-	up_write(&sb->s_umount);
-	if (!err) {
-		br_write_lock(&vfsmount_lock);
 		touch_mnt_namespace(mnt->mnt_ns);
 		br_write_unlock(&vfsmount_lock);
 	}
+	up_write(&sb->s_umount);
 	return err;
 }
 
@@ -2444,9 +2440,7 @@ static struct mnt_namespace *dup_mnt_ns(struct mnt_namespace *mnt_ns,
 		return ERR_CAST(new);
 	}
 	new_ns->root = new;
-	br_write_lock(&vfsmount_lock);
 	list_add_tail(&new_ns->list, &new->mnt_list);
-	br_write_unlock(&vfsmount_lock);
 
 	/*
 	 * Second pass: switch the tsk->fs->* elements and mark new vfsmounts
@@ -2767,8 +2761,6 @@ void __init mnt_init(void)
 	unsigned u;
 	int err;
 
-	init_rwsem(&namespace_sem);
-
 	mnt_cache = kmem_cache_create("mnt_cache", sizeof(struct mount),
 			0, SLAB_HWCACHE_ALIGN | SLAB_PANIC, NULL);
 
@@ -2802,11 +2794,7 @@ void put_mnt_ns(struct mnt_namespace *ns)
 {
 	if (!atomic_dec_and_test(&ns->count))
 		return;
-	namespace_lock();
-	br_write_lock(&vfsmount_lock);
-	umount_tree(ns->root, 0);
-	br_write_unlock(&vfsmount_lock);
-	namespace_unlock();
+	drop_collected_mounts(&ns->root->mnt);
 	free_mnt_ns(ns);
 }
 
@@ -2875,7 +2863,7 @@ bool fs_fully_visible(struct file_system_type *type)
 	if (unlikely(!ns))
 		return false;
 
-	namespace_lock();
+	down_read(&namespace_sem);
 	list_for_each_entry(mnt, &ns->list, mnt_list) {
 		struct mount *child;
 		if (mnt->mnt.mnt_sb->s_type != type)
@@ -2896,7 +2884,7 @@ bool fs_fully_visible(struct file_system_type *type)
 	next:	;
 	}
 found:
-	namespace_unlock();
+	up_read(&namespace_sem);
 	return visible;
 }
 

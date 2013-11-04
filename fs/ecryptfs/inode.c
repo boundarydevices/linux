@@ -361,8 +361,8 @@ static int ecryptfs_lookup_interpose(struct dentry *dentry,
 	BUG_ON(!d_count(lower_dentry));
 
 	ecryptfs_set_dentry_private(dentry, dentry_info);
-	ecryptfs_set_dentry_lower(dentry, lower_dentry);
-	ecryptfs_set_dentry_lower_mnt(dentry, lower_mnt);
+	dentry_info->lower_path.mnt = lower_mnt;
+	dentry_info->lower_path.dentry = lower_dentry;
 
 	if (!lower_dentry->d_inode) {
 		/* We want to add because we couldn't find in lower */
@@ -701,16 +701,6 @@ static void *ecryptfs_follow_link(struct dentry *dentry, struct nameidata *nd)
 out:
 	nd_set_link(nd, buf);
 	return NULL;
-}
-
-static void
-ecryptfs_put_link(struct dentry *dentry, struct nameidata *nd, void *ptr)
-{
-	char *buf = nd_get_link(nd);
-	if (!IS_ERR(buf)) {
-		/* Free the char* */
-		kfree(buf);
-	}
 }
 
 /**
@@ -1121,7 +1111,7 @@ out:
 const struct inode_operations ecryptfs_symlink_iops = {
 	.readlink = generic_readlink,
 	.follow_link = ecryptfs_follow_link,
-	.put_link = ecryptfs_put_link,
+	.put_link = kfree_put_link,
 	.permission = ecryptfs_permission,
 	.setattr = ecryptfs_setattr,
 	.getattr = ecryptfs_getattr_link,
