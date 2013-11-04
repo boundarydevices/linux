@@ -31,5 +31,6 @@ obj-$(CONFIG_64BIT)	+= binfmt_elf32.o sys_parisc32.o signal32.o
 obj-$(CONFIG_STACKTRACE)+= stacktrace.o
 # only supported for PCX-W/U in 64-bit mode at the moment
 obj-$(CONFIG_64BIT)	+= perf.o perf_asm.o
+obj-$(CONFIG_AUDIT_ARCH) += audit.o compat_audit.o
 obj-$(CONFIG_FUNCTION_TRACER)		+= ftrace.o
 obj-$(CONFIG_FUNCTION_GRAPH_TRACER)	+= ftrace.o
