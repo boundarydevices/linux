@@ -816,12 +816,6 @@ static int esdhc_change_pinstate(struct sdhci_host *host,
 
 	dev_dbg(mmc_dev(host->mmc), "change pinctrl state for uhs %d\n", uhs);
 
-	if (IS_ERR(imx_data->pinctrl) ||
-		IS_ERR(imx_data->pins_default) ||
-		IS_ERR(imx_data->pins_100mhz) ||
-		IS_ERR(imx_data->pins_200mhz))
-		return -EINVAL;
-
 	switch (uhs) {
 	case MMC_TIMING_UHS_SDR50:
 		pinctrl = imx_data->pins_100mhz;
@@ -835,6 +829,8 @@ static int esdhc_change_pinstate(struct sdhci_host *host,
 		pinctrl = imx_data->pins_default;
 	}
 
+	if (IS_ERR(pinctrl))
+		return -EINVAL;
 	return pinctrl_select_state(imx_data->pinctrl, pinctrl);
 }
 
