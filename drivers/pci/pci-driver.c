@@ -135,6 +135,7 @@ store_new_id(struct device_driver *driver, const char *buf, size_t count)
 		return retval;
 	return count;
 }
+static DRIVER_ATTR(new_id, S_IWUSR, NULL, store_new_id);
 
 /**
  * store_remove_id - remove a PCI device ID from this driver
@@ -180,12 +181,14 @@ store_remove_id(struct device_driver *driver, const char *buf, size_t count)
 		return retval;
 	return count;
 }
+static DRIVER_ATTR(remove_id, S_IWUSR, NULL, store_remove_id);
 
-static struct driver_attribute pci_drv_attrs[] = {
-	__ATTR(new_id, S_IWUSR, NULL, store_new_id),
-	__ATTR(remove_id, S_IWUSR, NULL, store_remove_id),
-	__ATTR_NULL,
+static struct attribute *pci_drv_attrs[] = {
+	&driver_attr_new_id.attr,
+	&driver_attr_remove_id.attr,
+	NULL,
 };
+ATTRIBUTE_GROUPS(pci_drv);
 
 /**
  * pci_match_id - See if a pci device matches a given pci_id table
@@ -599,18 +602,10 @@ static int pci_pm_prepare(struct device *dev)
 	return error;
 }
 
-static void pci_pm_complete(struct device *dev)
-{
-	struct device_driver *drv = dev->driver;
-
-	if (drv && drv->pm && drv->pm->complete)
-		drv->pm->complete(dev);
-}
 
 #else /* !CONFIG_PM_SLEEP */
 
 #define pci_pm_prepare	NULL
-#define pci_pm_complete	NULL
 
 #endif /* !CONFIG_PM_SLEEP */
 
@@ -1121,9 +1116,8 @@ static int pci_pm_runtime_idle(struct device *dev)
 
 #ifdef CONFIG_PM
 
-const struct dev_pm_ops pci_dev_pm_ops = {
+static const struct dev_pm_ops pci_dev_pm_ops = {
 	.prepare = pci_pm_prepare,
-	.complete = pci_pm_complete,
 	.suspend = pci_pm_suspend,
 	.resume = pci_pm_resume,
 	.freeze = pci_pm_freeze,
@@ -1316,9 +1310,9 @@ struct bus_type pci_bus_type = {
 	.probe		= pci_device_probe,
 	.remove		= pci_device_remove,
 	.shutdown	= pci_device_shutdown,
-	.dev_attrs	= pci_dev_attrs,
-	.bus_attrs	= pci_bus_attrs,
-	.drv_attrs	= pci_drv_attrs,
+	.dev_groups	= pci_dev_groups,
+	.bus_groups	= pci_bus_groups,
+	.drv_groups	= pci_drv_groups,
 	.pm		= PCI_PM_OPS_PTR,
 };
 
