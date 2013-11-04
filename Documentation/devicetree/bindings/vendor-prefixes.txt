@@ -25,6 +25,7 @@ denx	Denx Software Engineering
 emmicro	EM Microelectronic
 epson	Seiko Epson Corp.
 est	ESTeem Wireless Modems
+eukrea  Eukréa Electromatique
 fsl	Freescale Semiconductor
 GEFanuc	GE Fanuc Intelligent Platforms Embedded Systems, Inc.
 gef	GE Fanuc Intelligent Platforms Embedded Systems, Inc.
@@ -69,6 +70,7 @@ ti	Texas Instruments
 toshiba	Toshiba Corporation
 v3	V3 Semiconductor
 via	VIA Technologies, Inc.
+voipac	Voipac Technologies s.r.o.
 wlf	Wolfson Microelectronics
 wm	Wondermedia Technologies, Inc.
 winbond Winbond Electronics corp.
