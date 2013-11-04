@@ -58,6 +58,7 @@
 #define DRM_MODE_FLAG_PIXMUX			(1<<11)
 #define DRM_MODE_FLAG_DBLCLK			(1<<12)
 #define DRM_MODE_FLAG_CLKDIV2			(1<<13)
+
  /*
   * When adding a new stereo mode don't forget to adjust DRM_MODE_FLAGS_3D_MAX
   * (define not exposed to user space).
@@ -73,6 +74,7 @@
 #define  DRM_MODE_FLAG_3D_TOP_AND_BOTTOM	(7<<14)
 #define  DRM_MODE_FLAG_3D_SIDE_BY_SIDE_HALF	(8<<14)
 
+#define DRM_MODE_FLAG_PIXDATA_NEGEDGE		(1<<20)
 
 /* DPMS flags */
 /* bit compatible with the xorg definitions. */
