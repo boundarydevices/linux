@@ -320,6 +320,7 @@ static int iguanair_set_tx_carrier(struct rc_dev *dev, uint32_t carrier)
 			sevens = 2;
 			break;
 		case 3:
+		default:
 			sevens = 1;
 			break;
 		}
