@@ -53,6 +53,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
+#include <linux/of_irq.h>
 #include <linux/of_net.h>
 #include <linux/regulator/consumer.h>
 #include <linux/if_vlan.h>
@@ -1937,7 +1938,7 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 	return 0;
 }
 
-static int fec_enet_mii_init(struct platform_device *pdev)
+static int fec_enet_mii_init(struct platform_device *pdev, int phy_irq)
 {
 	static struct mii_bus *fec0_mii_bus;
 	static int *fec_mii_bus_share;
@@ -2012,7 +2013,7 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	}
 
 	for (i = 0; i < PHY_MAX_ADDR; i++)
-		fep->mii_bus->irq[i] = PHY_POLL;
+		fep->mii_bus->irq[i] = phy_irq;
 
 	if (mdiobus_register(fep->mii_bus))
 		goto err_out_free_mdio_irq;
@@ -3106,6 +3107,8 @@ fec_probe(struct platform_device *pdev)
 	static int dev_id;
 	int num_tx_qs = 1;
 	int num_rx_qs = 1;
+	int phy_irq = PHY_POLL;
+	struct device_node *np;
 
 	of_id = of_match_device(fec_dt_ids, &pdev->dev);
 	if (of_id)
@@ -3171,6 +3174,16 @@ fec_probe(struct platform_device *pdev)
 			fep->phy_interface = PHY_INTERFACE_MODE_MII;
 	} else {
 		fep->phy_interface = ret;
+	}
+	np = of_get_child_by_name(pdev->dev.of_node, "phy_int");
+	if (!np) {
+		pr_warn("%s: could not find phy node\n",
+				of_node_full_name(pdev->dev.of_node));
+	} else {
+		phy_irq = irq_of_parse_and_map(np, 0);
+		pr_info("phyirq=%d\n", phy_irq);
+		if (phy_irq <= 0)
+			phy_irq = PHY_POLL;
 	}
 
 	fep->clk_ipg = devm_clk_get(&pdev->dev, "ipg");
@@ -3248,7 +3261,7 @@ fec_probe(struct platform_device *pdev)
 	}
 
 	init_completion(&fep->mdio_done);
-	ret = fec_enet_mii_init(pdev);
+	ret = fec_enet_mii_init(pdev, phy_irq);
 	if (ret)
 		goto failed_mii_init;
 
