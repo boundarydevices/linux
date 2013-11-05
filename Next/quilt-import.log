@@ -1,0 +1,21 @@
+Importing jdelvare-hwmon based on 3.12
+$ git clone -s -l -n -q . ../quilt-tmp
+$ cd ../quilt-tmp
+$ git reset --hard 5e01dc7b26d9f24f39abace5da98ccbd6a5ceb52
+HEAD is now at 5e01dc7b26d9 Linux 3.12
+$ git am ../quilt/jdelvare-hwmon/hwmon-lm90-01-fix-max6696-alarm-handling.patch
+Applying: hwmon: (lm90) Fix max6696 alarm handling
+$ git am ../quilt/jdelvare-hwmon/hwmon-lm90-02-split-set-show-temp-as-common-codes.patch
+Applying: hwmon: (lm90) Split set&show temp as common codes
+$ git am ../quilt/jdelvare-hwmon/hwmon-lm90-03-define-status-bits.patch
+Applying: hwmon: (lm90) Define status bits
+$ git am ../quilt/jdelvare-hwmon/hwmon-lm90-04-add-support-to-handle-irq.patch
+Applying: hwmon: (lm90) Add support to handle IRQ
+$ git am ../quilt/jdelvare-hwmon/hwmon-lm90-05-use-enums-for-the-indexes-of-temp8-and-temp11.patch
+Applying: hwmon: (lm90) Use enums for the indexes of temp8 and temp11
+$ git am ../quilt/jdelvare-hwmon/hwmon-lm90-06-add-support-for-ti-tmp451.patch
+Applying: hwmon: (lm90) Add support for TI TMP451
+$ cd /home/sfr/kernels/next/next
+$ git fetch -f ../quilt-tmp master:jdelvare-hwmon/master
+From ../quilt-tmp
+   0e7a3ed04f0c..0f07c1dd7545  master     -> jdelvare-hwmon/master
