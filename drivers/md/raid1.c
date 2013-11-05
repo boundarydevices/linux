@@ -84,10 +84,12 @@ static void r1bio_pool_free(void *r1_bio, void *data)
 }
 
 #define RESYNC_BLOCK_SIZE (64*1024)
-//#define RESYNC_BLOCK_SIZE PAGE_SIZE
+#define RESYNC_DEPTH 32
 #define RESYNC_SECTORS (RESYNC_BLOCK_SIZE >> 9)
 #define RESYNC_PAGES ((RESYNC_BLOCK_SIZE + PAGE_SIZE-1) / PAGE_SIZE)
-#define RESYNC_WINDOW (2048*1024)
+#define RESYNC_WINDOW (RESYNC_BLOCK_SIZE * RESYNC_DEPTH)
+#define RESYNC_WINDOW_SECTORS (RESYNC_WINDOW >> 9)
+#define NEXT_NORMALIO_DISTANCE (3 * RESYNC_WINDOW_SECTORS)
 
 static void * r1buf_pool_alloc(gfp_t gfp_flags, void *data)
 {
@@ -812,8 +814,6 @@ static void flush_pending_writes(struct r1conf *conf)
  *    there is no normal IO happeing.  It must arrange to call
  *    lower_barrier when the particular background IO completes.
  */
-#define RESYNC_DEPTH 32
-
 static void raise_barrier(struct r1conf *conf)
 {
 	spin_lock_irq(&conf->resync_lock);
@@ -827,6 +827,7 @@ static void raise_barrier(struct r1conf *conf)
 
 	/* Now wait for all pending IO to complete */
 	wait_event_lock_irq(conf->wait_barrier,
+			    !conf->array_frozen &&
 			    !conf->nr_pending && conf->barrier < RESYNC_DEPTH,
 			    conf->resync_lock);
 
@@ -858,10 +859,11 @@ static void wait_barrier(struct r1conf *conf)
 		 * count down.
 		 */
 		wait_event_lock_irq(conf->wait_barrier,
-				    !conf->barrier ||
+				    !conf->array_frozen &&
+				    (!conf->barrier ||
 				    (conf->nr_pending &&
 				     current->bio_list &&
-				     !bio_list_empty(current->bio_list)),
+				     !bio_list_empty(current->bio_list))),
 				    conf->resync_lock);
 		conf->nr_waiting--;
 	}
@@ -882,8 +884,7 @@ static void freeze_array(struct r1conf *conf, int extra)
 {
 	/* stop syncio and normal IO and wait for everything to
 	 * go quite.
-	 * We increment barrier and nr_waiting, and then
-	 * wait until nr_pending match nr_queued+extra
+	 * We wait until nr_pending match nr_queued+extra
 	 * This is called in the context of one normal IO request
 	 * that has failed. Thus any sync request that might be pending
 	 * will be blocked by nr_pending, and we need to wait for
@@ -893,8 +894,7 @@ static void freeze_array(struct r1conf *conf, int extra)
 	 * we continue.
 	 */
 	spin_lock_irq(&conf->resync_lock);
-	conf->barrier++;
-	conf->nr_waiting++;
+	conf->array_frozen = 1;
 	wait_event_lock_irq_cmd(conf->wait_barrier,
 				conf->nr_pending == conf->nr_queued+extra,
 				conf->resync_lock,
@@ -905,8 +905,7 @@ static void unfreeze_array(struct r1conf *conf)
 {
 	/* reverse the effect of the freeze */
 	spin_lock_irq(&conf->resync_lock);
-	conf->barrier--;
-	conf->nr_waiting--;
+	conf->array_frozen = 0;
 	wake_up(&conf->wait_barrier);
 	spin_unlock_irq(&conf->resync_lock);
 }
@@ -2874,8 +2873,8 @@ static int stop(struct mddev *mddev)
 			   atomic_read(&bitmap->behind_writes) == 0);
 	}
 
-	raise_barrier(conf);
-	lower_barrier(conf);
+	freeze_array(conf, 0);
+	unfreeze_array(conf);
 
 	md_unregister_thread(&mddev->thread);
 	if (conf->r1bio_pool)
@@ -3034,10 +3033,10 @@ static void raid1_quiesce(struct mddev *mddev, int state)
 		wake_up(&conf->wait_barrier);
 		break;
 	case 1:
-		raise_barrier(conf);
+		freeze_array(conf, 0);
 		break;
 	case 0:
-		lower_barrier(conf);
+		unfreeze_array(conf);
 		break;
 	}
 }
