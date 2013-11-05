@@ -98,14 +98,25 @@ enum intel_display_power_domain {
 	POWER_DOMAIN_TRANSCODER_A,
 	POWER_DOMAIN_TRANSCODER_B,
 	POWER_DOMAIN_TRANSCODER_C,
-	POWER_DOMAIN_TRANSCODER_EDP = POWER_DOMAIN_TRANSCODER_A + 0xF,
+	POWER_DOMAIN_TRANSCODER_EDP,
 	POWER_DOMAIN_VGA,
+	POWER_DOMAIN_INIT,
+
+	POWER_DOMAIN_NUM,
 };
+
+#define POWER_DOMAIN_MASK (BIT(POWER_DOMAIN_NUM) - 1)
 
 #define POWER_DOMAIN_PIPE(pipe) ((pipe) + POWER_DOMAIN_PIPE_A)
 #define POWER_DOMAIN_PIPE_PANEL_FITTER(pipe) \
 		((pipe) + POWER_DOMAIN_PIPE_A_PANEL_FITTER)
-#define POWER_DOMAIN_TRANSCODER(tran) ((tran) + POWER_DOMAIN_TRANSCODER_A)
+#define POWER_DOMAIN_TRANSCODER(tran) \
+	((tran) == TRANSCODER_EDP ? POWER_DOMAIN_TRANSCODER_EDP : \
+	 (tran) + POWER_DOMAIN_TRANSCODER_A)
+
+#define HSW_ALWAYS_ON_POWER_DOMAINS (		\
+	BIT(POWER_DOMAIN_PIPE_A) |		\
+	BIT(POWER_DOMAIN_TRANSCODER_EDP))
 
 enum hpd_pin {
 	HPD_NONE = 0,
@@ -288,6 +299,7 @@ struct drm_i915_error_state {
 	u32 cpu_ring_tail[I915_NUM_RINGS];
 	u32 error; /* gen6+ */
 	u32 err_int; /* gen7 */
+	u32 bbstate[I915_NUM_RINGS];
 	u32 instpm[I915_NUM_RINGS];
 	u32 instps[I915_NUM_RINGS];
 	u32 extra_instdone[I915_NUM_INSTDONE_REG];
@@ -900,11 +912,21 @@ struct intel_ilk_power_mgmt {
 
 /* Power well structure for haswell */
 struct i915_power_well {
-	struct drm_device *device;
-	spinlock_t lock;
 	/* power well enable/disable usage count */
 	int count;
-	int i915_request;
+};
+
+#define I915_MAX_POWER_WELLS 1
+
+struct i915_power_domains {
+	/*
+	 * Power wells needed for initialization at driver init and suspend
+	 * time are on. They are kept on until after the first modeset.
+	 */
+	bool init_power_on;
+
+	struct mutex lock;
+	struct i915_power_well power_wells[I915_MAX_POWER_WELLS];
 };
 
 struct i915_dri1_state {
@@ -1226,6 +1248,12 @@ enum intel_pipe_crc_source {
 	INTEL_PIPE_CRC_SOURCE_PLANE2,
 	INTEL_PIPE_CRC_SOURCE_PF,
 	INTEL_PIPE_CRC_SOURCE_PIPE,
+	/* TV/DP on pre-gen5/vlv can't use the pipe source. */
+	INTEL_PIPE_CRC_SOURCE_TV,
+	INTEL_PIPE_CRC_SOURCE_DP_B,
+	INTEL_PIPE_CRC_SOURCE_DP_C,
+	INTEL_PIPE_CRC_SOURCE_DP_D,
+	INTEL_PIPE_CRC_SOURCE_AUTO,
 	INTEL_PIPE_CRC_SOURCE_MAX,
 };
 
@@ -1236,10 +1264,11 @@ struct intel_pipe_crc_entry {
 
 #define INTEL_PIPE_CRC_ENTRIES_NR	128
 struct intel_pipe_crc {
-	atomic_t available;		/* exclusive access to the device */
+	spinlock_t lock;
+	bool opened;		/* exclusive access to the result file */
 	struct intel_pipe_crc_entry *entries;
 	enum intel_pipe_crc_source source;
-	atomic_t head, tail;
+	int head, tail;
 	wait_queue_head_t wq;
 };
 
@@ -1367,6 +1396,10 @@ typedef struct drm_i915_private {
 	struct drm_crtc *pipe_to_crtc_mapping[3];
 	wait_queue_head_t pending_flip_queue;
 
+#ifdef CONFIG_DEBUG_FS
+	struct intel_pipe_crc pipe_crc[I915_MAX_PIPES];
+#endif
+
 	int num_shared_dpll;
 	struct intel_shared_dpll shared_dplls[I915_NUM_PLLS];
 	struct intel_ddi_plls ddi_plls;
@@ -1392,8 +1425,7 @@ typedef struct drm_i915_private {
 	 * mchdev_lock in intel_pm.c */
 	struct intel_ilk_power_mgmt ips;
 
-	/* Haswell power well */
-	struct i915_power_well power_well;
+	struct i915_power_domains power_domains;
 
 	struct i915_psr psr;
 
@@ -1447,10 +1479,6 @@ typedef struct drm_i915_private {
 	struct i915_dri1_state dri1;
 	/* Old ums support infrastructure, same warning applies. */
 	struct i915_ums_state ums;
-
-#ifdef CONFIG_DEBUG_FS
-	struct intel_pipe_crc pipe_crc[I915_MAX_PIPES];
-#endif
 } drm_i915_private_t;
 
 static inline struct drm_i915_private *to_i915(const struct drm_device *dev)
@@ -1786,27 +1814,6 @@ struct drm_i915_file_private {
 
 #include "i915_trace.h"
 
-/**
- * RC6 is a special power stage which allows the GPU to enter an very
- * low-voltage mode when idle, using down to 0V while at this stage.  This
- * stage is entered automatically when the GPU is idle when RC6 support is
- * enabled, and as soon as new workload arises GPU wakes up automatically as well.
- *
- * There are different RC6 modes available in Intel GPU, which differentiate
- * among each other with the latency required to enter and leave RC6 and
- * voltage consumed by the GPU in different states.
- *
- * The combination of the following flags define which states GPU is allowed
- * to enter, while RC6 is the normal RC6 state, RC6p is the deep RC6, and
- * RC6pp is deepest RC6. Their support by hardware varies according to the
- * GPU, BIOS, chipset and platform. RC6 is usually the safest one and the one
- * which brings the most power savings; deeper states save more power, but
- * require higher latency to switch to and wake up.
- */
-#define INTEL_RC6_ENABLE			(1<<0)
-#define INTEL_RC6p_ENABLE			(1<<1)
-#define INTEL_RC6pp_ENABLE			(1<<2)
-
 extern const struct drm_ioctl_desc i915_ioctls[];
 extern int i915_max_ioctl;
 extern unsigned int i915_fbpercrtc __always_unused;
@@ -1880,10 +1887,10 @@ extern void intel_uncore_check_errors(struct drm_device *dev);
 extern void intel_uncore_fini(struct drm_device *dev);
 
 void
-i915_enable_pipestat(drm_i915_private_t *dev_priv, int pipe, u32 mask);
+i915_enable_pipestat(drm_i915_private_t *dev_priv, enum pipe pipe, u32 mask);
 
 void
-i915_disable_pipestat(drm_i915_private_t *dev_priv, int pipe, u32 mask);
+i915_disable_pipestat(drm_i915_private_t *dev_priv, enum pipe pipe, u32 mask);
 
 /* i915_gem.c */
 int i915_gem_init_ioctl(struct drm_device *dev, void *data,
