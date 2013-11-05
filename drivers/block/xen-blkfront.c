@@ -400,10 +400,13 @@ static int blkif_queue_request(struct request *req)
 	if (unlikely(info->connected != BLKIF_STATE_CONNECTED))
 		return 1;
 
-	max_grefs = info->max_indirect_segments ?
-		    info->max_indirect_segments +
-		    INDIRECT_GREFS(info->max_indirect_segments) :
-		    BLKIF_MAX_SEGMENTS_PER_REQUEST;
+	max_grefs = req->nr_phys_segments;
+	if (max_grefs > BLKIF_MAX_SEGMENTS_PER_REQUEST)
+		/*
+		 * If we are using indirect segments we need to account
+		 * for the indirect grefs used in the request.
+		 */
+		max_grefs += INDIRECT_GREFS(req->nr_phys_segments);
 
 	/* Check if we have enough grants to allocate a requests */
 	if (info->persistent_gnts_c < max_grefs) {
@@ -1013,13 +1016,38 @@ static void blkif_completion(struct blk_shadow *s, struct blkfront_info *info,
 	}
 	/* Add the persistent grant into the list of free grants */
 	for (i = 0; i < nseg; i++) {
-		list_add(&s->grants_used[i]->node, &info->persistent_gnts);
-		info->persistent_gnts_c++;
+		if (gnttab_query_foreign_access(s->grants_used[i]->gref)) {
+			/*
+			 * If the grant is still mapped by the backend (the
+			 * backend has chosen to make this grant persistent)
+			 * we add it at the head of the list, so it will be
+			 * reused first.
+			 */
+			list_add(&s->grants_used[i]->node, &info->persistent_gnts);
+			info->persistent_gnts_c++;
+		} else {
+			/*
+			 * If the grant is not mapped by the backend we end the
+			 * foreign access and add it to the tail of the list,
+			 * so it will not be picked again unless we run out of
+			 * persistent grants.
+			 */
+			gnttab_end_foreign_access(s->grants_used[i]->gref, 0, 0UL);
+			s->grants_used[i]->gref = GRANT_INVALID_REF;
+			list_add_tail(&s->grants_used[i]->node, &info->persistent_gnts);
+		}
 	}
 	if (s->req.operation == BLKIF_OP_INDIRECT) {
 		for (i = 0; i < INDIRECT_GREFS(nseg); i++) {
-			list_add(&s->indirect_grants[i]->node, &info->persistent_gnts);
-			info->persistent_gnts_c++;
+			if (gnttab_query_foreign_access(s->indirect_grants[i]->gref)) {
+				list_add(&s->indirect_grants[i]->node, &info->persistent_gnts);
+				info->persistent_gnts_c++;
+			} else {
+				gnttab_end_foreign_access(s->indirect_grants[i]->gref, 0, 0UL);
+				s->indirect_grants[i]->gref = GRANT_INVALID_REF;
+				list_add_tail(&s->indirect_grants[i]->node,
+				              &info->persistent_gnts);
+			}
 		}
 	}
 }
@@ -1336,57 +1364,6 @@ static int blkfront_probe(struct xenbus_device *dev,
 	return 0;
 }
 
-/*
- * This is a clone of md_trim_bio, used to split a bio into smaller ones
- */
-static void trim_bio(struct bio *bio, int offset, int size)
-{
-	/* 'bio' is a cloned bio which we need to trim to match
-	 * the given offset and size.
-	 * This requires adjusting bi_sector, bi_size, and bi_io_vec
-	 */
-	int i;
-	struct bio_vec *bvec;
-	int sofar = 0;
-
-	size <<= 9;
-	if (offset == 0 && size == bio->bi_size)
-		return;
-
-	bio->bi_sector += offset;
-	bio->bi_size = size;
-	offset <<= 9;
-	clear_bit(BIO_SEG_VALID, &bio->bi_flags);
-
-	while (bio->bi_idx < bio->bi_vcnt &&
-	       bio->bi_io_vec[bio->bi_idx].bv_len <= offset) {
-		/* remove this whole bio_vec */
-		offset -= bio->bi_io_vec[bio->bi_idx].bv_len;
-		bio->bi_idx++;
-	}
-	if (bio->bi_idx < bio->bi_vcnt) {
-		bio->bi_io_vec[bio->bi_idx].bv_offset += offset;
-		bio->bi_io_vec[bio->bi_idx].bv_len -= offset;
-	}
-	/* avoid any complications with bi_idx being non-zero*/
-	if (bio->bi_idx) {
-		memmove(bio->bi_io_vec, bio->bi_io_vec+bio->bi_idx,
-			(bio->bi_vcnt - bio->bi_idx) * sizeof(struct bio_vec));
-		bio->bi_vcnt -= bio->bi_idx;
-		bio->bi_idx = 0;
-	}
-	/* Make sure vcnt and last bv are not too big */
-	bio_for_each_segment(bvec, bio, i) {
-		if (sofar + bvec->bv_len > size)
-			bvec->bv_len = size - sofar;
-		if (bvec->bv_len == 0) {
-			bio->bi_vcnt = i;
-			break;
-		}
-		sofar += bvec->bv_len;
-	}
-}
-
 static void split_bio_end(struct bio *bio, int error)
 {
 	struct split_bio *split_bio = bio->bi_private;
@@ -1519,10 +1496,10 @@ static int blkif_recover(struct blkfront_info *info)
 			for (i = 0; i < pending; i++) {
 				offset = (i * segs * PAGE_SIZE) >> 9;
 				size = min((unsigned int)(segs * PAGE_SIZE) >> 9,
-					   (unsigned int)(bio->bi_size >> 9) - offset);
+					   (unsigned int)bio_sectors(bio) - offset);
 				cloned_bio = bio_clone(bio, GFP_NOIO);
 				BUG_ON(cloned_bio == NULL);
-				trim_bio(cloned_bio, offset, size);
+				bio_trim(cloned_bio, offset, size);
 				cloned_bio->bi_private = split_bio;
 				cloned_bio->bi_end_io = split_bio_end;
 				submit_bio(cloned_bio->bi_rw, cloned_bio);
