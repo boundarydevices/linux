@@ -529,7 +529,7 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	},
 #else
 	{
-		I2C_BOARD_INFO("ov5642", 0x3c),
+		I2C_BOARD_INFO("ov564x", 0x3c),
 		.platform_data = (void *)&camera_data,
 	},
 #endif
