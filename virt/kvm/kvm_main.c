@@ -70,7 +70,8 @@ MODULE_LICENSE("GPL");
  * 		kvm->lock --> kvm->slots_lock --> kvm->irq_lock
  */
 
-DEFINE_RAW_SPINLOCK(kvm_lock);
+DEFINE_SPINLOCK(kvm_lock);
+static DEFINE_RAW_SPINLOCK(kvm_count_lock);
 LIST_HEAD(vm_list);
 
 static cpumask_var_t cpus_hardware_enabled;
@@ -490,9 +491,9 @@ static struct kvm *kvm_create_vm(unsigned long type)
 	if (r)
 		goto out_err;
 
-	raw_spin_lock(&kvm_lock);
+	spin_lock(&kvm_lock);
 	list_add(&kvm->vm_list, &vm_list);
-	raw_spin_unlock(&kvm_lock);
+	spin_unlock(&kvm_lock);
 
 	return kvm;
 
@@ -581,9 +582,9 @@ static void kvm_destroy_vm(struct kvm *kvm)
 	struct mm_struct *mm = kvm->mm;
 
 	kvm_arch_sync_events(kvm);
-	raw_spin_lock(&kvm_lock);
+	spin_lock(&kvm_lock);
 	list_del(&kvm->vm_list);
-	raw_spin_unlock(&kvm_lock);
+	spin_unlock(&kvm_lock);
 	kvm_free_irq_routing(kvm);
 	for (i = 0; i < KVM_NR_BUSES; i++)
 		kvm_io_bus_destroy(kvm->buses[i]);
@@ -872,21 +873,6 @@ int __kvm_set_memory_region(struct kvm *kvm,
 			goto out_free;
 	}
 
-	/*
-	 * IOMMU mapping:  New slots need to be mapped.  Old slots need to be
-	 * un-mapped and re-mapped if their base changes.  Since base change
-	 * unmapping is handled above with slot deletion, mapping alone is
-	 * needed here.  Anything else the iommu might care about for existing
-	 * slots (size changes, userspace addr changes and read-only flag
-	 * changes) is disallowed above, so any other attribute changes getting
-	 * here can be skipped.
-	 */
-	if ((change == KVM_MR_CREATE) || (change == KVM_MR_MOVE)) {
-		r = kvm_iommu_map_pages(kvm, &new);
-		if (r)
-			goto out_slots;
-	}
-
 	/* actual memory is freed via old in kvm_free_physmem_slot below */
 	if (change == KVM_MR_DELETE) {
 		new.dirty_bitmap = NULL;
@@ -899,6 +885,20 @@ int __kvm_set_memory_region(struct kvm *kvm,
 
 	kvm_free_physmem_slot(&old, &new);
 	kfree(old_memslots);
+
+	/*
+	 * IOMMU mapping:  New slots need to be mapped.  Old slots need to be
+	 * un-mapped and re-mapped if their base changes.  Since base change
+	 * unmapping is handled above with slot deletion, mapping alone is
+	 * needed here.  Anything else the iommu might care about for existing
+	 * slots (size changes, userspace addr changes and read-only flag
+	 * changes) is disallowed above, so any other attribute changes getting
+	 * here can be skipped.
+	 */
+	if ((change == KVM_MR_CREATE) || (change == KVM_MR_MOVE)) {
+		r = kvm_iommu_map_pages(kvm, &new);
+		return r;
+	}
 
 	return 0;
 
@@ -2271,6 +2271,11 @@ static int kvm_ioctl_create_device(struct kvm *kvm,
 		ops = &kvm_xics_ops;
 		break;
 #endif
+#ifdef CONFIG_KVM_VFIO
+	case KVM_DEV_TYPE_VFIO:
+		ops = &kvm_vfio_ops;
+		break;
+#endif
 	default:
 		return -ENODEV;
 	}
@@ -2683,11 +2688,12 @@ static void hardware_enable_nolock(void *junk)
 	}
 }
 
-static void hardware_enable(void *junk)
+static void hardware_enable(void)
 {
-	raw_spin_lock(&kvm_lock);
-	hardware_enable_nolock(junk);
-	raw_spin_unlock(&kvm_lock);
+	raw_spin_lock(&kvm_count_lock);
+	if (kvm_usage_count)
+		hardware_enable_nolock(NULL);
+	raw_spin_unlock(&kvm_count_lock);
 }
 
 static void hardware_disable_nolock(void *junk)
@@ -2700,11 +2706,12 @@ static void hardware_disable_nolock(void *junk)
 	kvm_arch_hardware_disable(NULL);
 }
 
-static void hardware_disable(void *junk)
+static void hardware_disable(void)
 {
-	raw_spin_lock(&kvm_lock);
-	hardware_disable_nolock(junk);
-	raw_spin_unlock(&kvm_lock);
+	raw_spin_lock(&kvm_count_lock);
+	if (kvm_usage_count)
+		hardware_disable_nolock(NULL);
+	raw_spin_unlock(&kvm_count_lock);
 }
 
 static void hardware_disable_all_nolock(void)
@@ -2718,16 +2725,16 @@ static void hardware_disable_all_nolock(void)
 
 static void hardware_disable_all(void)
 {
-	raw_spin_lock(&kvm_lock);
+	raw_spin_lock(&kvm_count_lock);
 	hardware_disable_all_nolock();
-	raw_spin_unlock(&kvm_lock);
+	raw_spin_unlock(&kvm_count_lock);
 }
 
 static int hardware_enable_all(void)
 {
 	int r = 0;
 
-	raw_spin_lock(&kvm_lock);
+	raw_spin_lock(&kvm_count_lock);
 
 	kvm_usage_count++;
 	if (kvm_usage_count == 1) {
@@ -2740,7 +2747,7 @@ static int hardware_enable_all(void)
 		}
 	}
 
-	raw_spin_unlock(&kvm_lock);
+	raw_spin_unlock(&kvm_count_lock);
 
 	return r;
 }
@@ -2750,20 +2757,17 @@ static int kvm_cpu_hotplug(struct notifier_block *notifier, unsigned long val,
 {
 	int cpu = (long)v;
 
-	if (!kvm_usage_count)
-		return NOTIFY_OK;
-
 	val &= ~CPU_TASKS_FROZEN;
 	switch (val) {
 	case CPU_DYING:
 		printk(KERN_INFO "kvm: disabling virtualization on CPU%d\n",
 		       cpu);
-		hardware_disable(NULL);
+		hardware_disable();
 		break;
 	case CPU_STARTING:
 		printk(KERN_INFO "kvm: enabling virtualization on CPU%d\n",
 		       cpu);
-		hardware_enable(NULL);
+		hardware_enable();
 		break;
 	}
 	return NOTIFY_OK;
@@ -3056,10 +3060,10 @@ static int vm_stat_get(void *_offset, u64 *val)
 	struct kvm *kvm;
 
 	*val = 0;
-	raw_spin_lock(&kvm_lock);
+	spin_lock(&kvm_lock);
 	list_for_each_entry(kvm, &vm_list, vm_list)
 		*val += *(u32 *)((void *)kvm + offset);
-	raw_spin_unlock(&kvm_lock);
+	spin_unlock(&kvm_lock);
 	return 0;
 }
 
@@ -3073,12 +3077,12 @@ static int vcpu_stat_get(void *_offset, u64 *val)
 	int i;
 
 	*val = 0;
-	raw_spin_lock(&kvm_lock);
+	spin_lock(&kvm_lock);
 	list_for_each_entry(kvm, &vm_list, vm_list)
 		kvm_for_each_vcpu(i, vcpu, kvm)
 			*val += *(u32 *)((void *)vcpu + offset);
 
-	raw_spin_unlock(&kvm_lock);
+	spin_unlock(&kvm_lock);
 	return 0;
 }
 
@@ -3133,7 +3137,7 @@ static int kvm_suspend(void)
 static void kvm_resume(void)
 {
 	if (kvm_usage_count) {
-		WARN_ON(raw_spin_is_locked(&kvm_lock));
+		WARN_ON(raw_spin_is_locked(&kvm_count_lock));
 		hardware_enable_nolock(NULL);
 	}
 }
