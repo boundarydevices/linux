@@ -16,6 +16,7 @@ avago	Avago Technologies
 bosch	Bosch Sensortec GmbH
 brcm	Broadcom Corporation
 cavium	Cavium, Inc.
+cdns	Cadence Design Systems Inc.
 chrp	Common Hardware Reference Platform
 cirrus	Cirrus Logic, Inc.
 cortina	Cortina Systems, Inc.
@@ -46,6 +47,7 @@ nintendo	Nintendo
 nvidia	NVIDIA
 nxp	NXP Semiconductors
 onnn	ON Semiconductor Corp.
+phytec	PHYTEC Messtechnik GmbH
 picochip	Picochip Ltd
 powervr	PowerVR (deprecated, use img)
 qca	Qualcomm Atheros, Inc.
@@ -65,13 +67,13 @@ snps 	Synopsys, Inc.
 st	STMicroelectronics
 ste	ST-Ericsson
 stericsson	ST-Ericsson
-toumaz	Toumaz
 ti	Texas Instruments
 toshiba	Toshiba Corporation
+toumaz	Toumaz
 v3	V3 Semiconductor
 via	VIA Technologies, Inc.
 voipac	Voipac Technologies s.r.o.
+winbond Winbond Electronics corp.
 wlf	Wolfson Microelectronics
 wm	Wondermedia Technologies, Inc.
-winbond Winbond Electronics corp.
 xlnx	Xilinx

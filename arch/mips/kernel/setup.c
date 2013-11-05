@@ -611,6 +611,8 @@ static void __init arch_mem_init(char **cmdline_p)
 {
 	extern void plat_mem_setup(void);
 
+	device_tree_init();
+
 	/* call board setup routine */
 	plat_mem_setup();
 
@@ -671,7 +673,6 @@ static void __init arch_mem_init(char **cmdline_p)
 				crashk_res.end - crashk_res.start + 1,
 				BOOTMEM_DEFAULT);
 #endif
-	device_tree_init();
 	sparse_init();
 	plat_swiotlb_setup();
 	paging_init();
