@@ -46,6 +46,7 @@
 #include "util/util.h"
 #include "util/parse-options.h"
 #include "util/parse-events.h"
+#include "util/pmu.h"
 #include "util/event.h"
 #include "util/evlist.h"
 #include "util/evsel.h"
@@ -70,6 +71,41 @@ static void print_counter_aggr(struct perf_evsel *counter, char *prefix);
 static void print_counter(struct perf_evsel *counter, char *prefix);
 static void print_aggr(char *prefix);
 
+/* Default events used for perf stat -T */
+static const char * const transaction_attrs[] = {
+	"task-clock",
+	"{"
+	"instructions,"
+	"cycles,"
+	"cpu/cycles-t/,"
+	"cpu/tx-start/,"
+	"cpu/el-start/,"
+	"cpu/cycles-ct/"
+	"}"
+};
+
+/* More limited version when the CPU does not have all events. */
+static const char * const transaction_limited_attrs[] = {
+	"task-clock",
+	"{"
+	"instructions,"
+	"cycles,"
+	"cpu/cycles-t/,"
+	"cpu/tx-start/"
+	"}"
+};
+
+/* must match transaction_attrs and the beginning limited_attrs */
+enum {
+	T_TASK_CLOCK,
+	T_INSTRUCTIONS,
+	T_CYCLES,
+	T_CYCLES_IN_TX,
+	T_TRANSACTION_START,
+	T_ELISION_START,
+	T_CYCLES_IN_TX_CP,
+};
+
 static struct perf_evlist	*evsel_list;
 
 static struct perf_target	target = {
@@ -90,6 +126,7 @@ static enum aggr_mode		aggr_mode			= AGGR_GLOBAL;
 static volatile pid_t		child_pid			= -1;
 static bool			null_run			=  false;
 static int			detailed_run			=  0;
+static bool			transaction_run;
 static bool			big_num				=  true;
 static int			big_num_opt			=  -1;
 static const char		*csv_sep			= NULL;
@@ -214,7 +251,10 @@ static struct stats runtime_l1_icache_stats[MAX_NR_CPUS];
 static struct stats runtime_ll_cache_stats[MAX_NR_CPUS];
 static struct stats runtime_itlb_cache_stats[MAX_NR_CPUS];
 static struct stats runtime_dtlb_cache_stats[MAX_NR_CPUS];
+static struct stats runtime_cycles_in_tx_stats[MAX_NR_CPUS];
 static struct stats walltime_nsecs_stats;
+static struct stats runtime_transaction_stats[MAX_NR_CPUS];
+static struct stats runtime_elision_stats[MAX_NR_CPUS];
 
 static void perf_stat__reset_stats(struct perf_evlist *evlist)
 {
@@ -236,6 +276,11 @@ static void perf_stat__reset_stats(struct perf_evlist *evlist)
 	memset(runtime_ll_cache_stats, 0, sizeof(runtime_ll_cache_stats));
 	memset(runtime_itlb_cache_stats, 0, sizeof(runtime_itlb_cache_stats));
 	memset(runtime_dtlb_cache_stats, 0, sizeof(runtime_dtlb_cache_stats));
+	memset(runtime_cycles_in_tx_stats, 0,
+			sizeof(runtime_cycles_in_tx_stats));
+	memset(runtime_transaction_stats, 0,
+		sizeof(runtime_transaction_stats));
+	memset(runtime_elision_stats, 0, sizeof(runtime_elision_stats));
 	memset(&walltime_nsecs_stats, 0, sizeof(walltime_nsecs_stats));
 }
 
@@ -274,6 +319,29 @@ static inline int nsec_counter(struct perf_evsel *evsel)
 	return 0;
 }
 
+static struct perf_evsel *nth_evsel(int n)
+{
+	static struct perf_evsel **array;
+	static int array_len;
+	struct perf_evsel *ev;
+	int j;
+
+	/* Assumes this only called when evsel_list does not change anymore. */
+	if (!array) {
+		list_for_each_entry(ev, &evsel_list->entries, node)
+			array_len++;
+		array = malloc(array_len * sizeof(void *));
+		if (!array)
+			exit(ENOMEM);
+		j = 0;
+		list_for_each_entry(ev, &evsel_list->entries, node)
+			array[j++] = ev;
+	}
+	if (n < array_len)
+		return array[n];
+	return NULL;
+}
+
 /*
  * Update various tracking values we maintain to print
  * more semantic information such as miss/hit ratios,
@@ -285,6 +353,15 @@ static void update_shadow_stats(struct perf_evsel *counter, u64 *count)
 		update_stats(&runtime_nsecs_stats[0], count[0]);
 	else if (perf_evsel__match(counter, HARDWARE, HW_CPU_CYCLES))
 		update_stats(&runtime_cycles_stats[0], count[0]);
+	else if (transaction_run &&
+		 perf_evsel__cmp(counter, nth_evsel(T_CYCLES_IN_TX)))
+		update_stats(&runtime_cycles_in_tx_stats[0], count[0]);
+	else if (transaction_run &&
+		 perf_evsel__cmp(counter, nth_evsel(T_TRANSACTION_START)))
+		update_stats(&runtime_transaction_stats[0], count[0]);
+	else if (transaction_run &&
+		 perf_evsel__cmp(counter, nth_evsel(T_ELISION_START)))
+		update_stats(&runtime_elision_stats[0], count[0]);
 	else if (perf_evsel__match(counter, HARDWARE, HW_STALLED_CYCLES_FRONTEND))
 		update_stats(&runtime_stalled_cycles_front_stats[0], count[0]);
 	else if (perf_evsel__match(counter, HARDWARE, HW_STALLED_CYCLES_BACKEND))
@@ -629,10 +706,13 @@ static void nsec_printout(int cpu, int nr, struct perf_evsel *evsel, double avg)
 {
 	double msecs = avg / 1e6;
 	const char *fmt = csv_output ? "%.6f%s%s" : "%18.6f%s%-25s";
+	char name[25];
 
 	aggr_printout(evsel, cpu, nr);
 
-	fprintf(output, fmt, msecs, csv_sep, perf_evsel__name(evsel));
+	scnprintf(name, sizeof(name), "%s%s",
+		  perf_evsel__name(evsel), csv_output ? "" : " (msec)");
+	fprintf(output, fmt, msecs, csv_sep, name);
 
 	if (evsel->cgrp)
 		fprintf(output, "%s%s", csv_sep, evsel->cgrp->name);
@@ -828,7 +908,7 @@ static void print_ll_cache_misses(int cpu,
 
 static void abs_printout(int cpu, int nr, struct perf_evsel *evsel, double avg)
 {
-	double total, ratio = 0.0;
+	double total, ratio = 0.0, total2;
 	const char *fmt;
 
 	if (csv_output)
@@ -853,11 +933,10 @@ static void abs_printout(int cpu, int nr, struct perf_evsel *evsel, double avg)
 
 	if (perf_evsel__match(evsel, HARDWARE, HW_INSTRUCTIONS)) {
 		total = avg_stats(&runtime_cycles_stats[cpu]);
-		if (total)
+		if (total) {
 			ratio = avg / total;
-
-		fprintf(output, " #   %5.2f  insns per cycle        ", ratio);
-
+			fprintf(output, " #   %5.2f  insns per cycle        ", ratio);
+		}
 		total = avg_stats(&runtime_stalled_cycles_front_stats[cpu]);
 		total = max(total, avg_stats(&runtime_stalled_cycles_back_stats[cpu]));
 
@@ -920,10 +999,47 @@ static void abs_printout(int cpu, int nr, struct perf_evsel *evsel, double avg)
 	} else if (perf_evsel__match(evsel, HARDWARE, HW_CPU_CYCLES)) {
 		total = avg_stats(&runtime_nsecs_stats[cpu]);
 
+		if (total) {
+			ratio = avg / total;
+			fprintf(output, " # %8.3f GHz                    ", ratio);
+		}
+	} else if (transaction_run &&
+		   perf_evsel__cmp(evsel, nth_evsel(T_CYCLES_IN_TX))) {
+		total = avg_stats(&runtime_cycles_stats[cpu]);
 		if (total)
-			ratio = 1.0 * avg / total;
+			fprintf(output,
+				" #   %5.2f%% transactional cycles   ",
+				100.0 * (avg / total));
+	} else if (transaction_run &&
+		   perf_evsel__cmp(evsel, nth_evsel(T_CYCLES_IN_TX_CP))) {
+		total = avg_stats(&runtime_cycles_stats[cpu]);
+		total2 = avg_stats(&runtime_cycles_in_tx_stats[cpu]);
+		if (total2 < avg)
+			total2 = avg;
+		if (total)
+			fprintf(output,
+				" #   %5.2f%% aborted cycles         ",
+				100.0 * ((total2-avg) / total));
+	} else if (transaction_run &&
+		   perf_evsel__cmp(evsel, nth_evsel(T_TRANSACTION_START)) &&
+		   avg > 0 &&
+		   runtime_cycles_in_tx_stats[cpu].n != 0) {
+		total = avg_stats(&runtime_cycles_in_tx_stats[cpu]);
 
-		fprintf(output, " # %8.3f GHz                    ", ratio);
+		if (total)
+			ratio = total / avg;
+
+		fprintf(output, " # %8.0f cycles / transaction   ", ratio);
+	} else if (transaction_run &&
+		   perf_evsel__cmp(evsel, nth_evsel(T_ELISION_START)) &&
+		   avg > 0 &&
+		   runtime_cycles_in_tx_stats[cpu].n != 0) {
+		total = avg_stats(&runtime_cycles_in_tx_stats[cpu]);
+
+		if (total)
+			ratio = total / avg;
+
+		fprintf(output, " # %8.0f cycles / elision       ", ratio);
 	} else if (runtime_nsecs_stats[cpu].n != 0) {
 		char unit = 'M';
 
@@ -1116,7 +1232,11 @@ static void print_stat(int argc, const char **argv)
 	if (!csv_output) {
 		fprintf(output, "\n");
 		fprintf(output, " Performance counter stats for ");
-		if (!perf_target__has_task(&target)) {
+		if (target.system_wide)
+			fprintf(output, "\'system wide");
+		else if (target.cpu_list)
+			fprintf(output, "\'CPU(s) %s", target.cpu_list);
+		else if (!perf_target__has_task(&target)) {
 			fprintf(output, "\'%s", argv[0]);
 			for (i = 1; i < argc; i++)
 				fprintf(output, " %s", argv[i]);
@@ -1237,6 +1357,16 @@ static int perf_stat_init_aggr_mode(void)
 	return 0;
 }
 
+static int setup_events(const char * const *attrs, unsigned len)
+{
+	unsigned i;
+
+	for (i = 0; i < len; i++) {
+		if (parse_events(evsel_list, attrs[i]))
+			return -1;
+	}
+	return 0;
+}
 
 /*
  * Add default attributes, if there were no attributes specified or
@@ -1355,6 +1485,22 @@ static int add_default_attributes(void)
 	if (null_run)
 		return 0;
 
+	if (transaction_run) {
+		int err;
+		if (pmu_have_event("cpu", "cycles-ct") &&
+		    pmu_have_event("cpu", "el-start"))
+			err = setup_events(transaction_attrs,
+					ARRAY_SIZE(transaction_attrs));
+		else
+			err = setup_events(transaction_limited_attrs,
+				 ARRAY_SIZE(transaction_limited_attrs));
+		if (err < 0) {
+			fprintf(stderr, "Cannot set up transaction events\n");
+			return -1;
+		}
+		return 0;
+	}
+
 	if (!evsel_list->nr_entries) {
 		if (perf_evlist__add_default_attrs(evsel_list, default_attrs) < 0)
 			return -1;
@@ -1389,6 +1535,8 @@ int cmd_stat(int argc, const char **argv, const char *prefix __maybe_unused)
 	int output_fd = 0;
 	const char *output_name	= NULL;
 	const struct option options[] = {
+	OPT_BOOLEAN('T', "transaction", &transaction_run,
+		    "hardware transaction statistics"),
 	OPT_CALLBACK('e', "event", &evsel_list, "event",
 		     "event selector. use 'perf list' to list available events",
 		     parse_events_option),
@@ -1514,8 +1662,9 @@ int cmd_stat(int argc, const char **argv, const char *prefix __maybe_unused)
 	} else if (big_num_opt == 0) /* User passed --no-big-num */
 		big_num = false;
 
-	if (!argc && !perf_target__has_task(&target))
+	if (!argc && perf_target__none(&target))
 		usage_with_options(stat_usage, options);
+
 	if (run_count < 0) {
 		usage_with_options(stat_usage, options);
 	} else if (run_count == 0) {

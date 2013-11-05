@@ -15,6 +15,7 @@
 #include "util/evlist.h"
 #include "util/evsel.h"
 #include "util/sort.h"
+#include "util/data.h"
 #include <linux/bitmap.h>
 
 static char const		*script_name;
@@ -409,7 +410,9 @@ static void print_sample_bts(union perf_event *event,
 	printf(" => ");
 
 	/* print branch_to information */
-	if (PRINT_FIELD(ADDR))
+	if (PRINT_FIELD(ADDR) ||
+	    ((evsel->attr.sample_type & PERF_SAMPLE_ADDR) &&
+	     !output[attr->type].user_set))
 		print_sample_addr(event, sample, machine, thread, attr);
 
 	printf("\n");
@@ -539,18 +542,9 @@ static int process_sample_event(struct perf_tool *tool __maybe_unused,
 	return 0;
 }
 
-static struct perf_tool perf_script = {
-	.sample		 = process_sample_event,
-	.mmap		 = perf_event__process_mmap,
-	.mmap2		 = perf_event__process_mmap2,
-	.comm		 = perf_event__process_comm,
-	.exit		 = perf_event__process_exit,
-	.fork		 = perf_event__process_fork,
-	.attr		 = perf_event__process_attr,
-	.tracing_data	 = perf_event__process_tracing_data,
-	.build_id	 = perf_event__process_build_id,
-	.ordered_samples = true,
-	.ordering_requires_timestamps = true,
+struct perf_script {
+	struct perf_tool	tool;
+	struct perf_session	*session;
 };
 
 static void sig_handler(int sig __maybe_unused)
@@ -558,13 +552,13 @@ static void sig_handler(int sig __maybe_unused)
 	session_done = 1;
 }
 
-static int __cmd_script(struct perf_session *session)
+static int __cmd_script(struct perf_script *script)
 {
 	int ret;
 
 	signal(SIGINT, sig_handler);
 
-	ret = perf_session__process_events(session, &perf_script);
+	ret = perf_session__process_events(script->session, &script->tool);
 
 	if (debug_mode)
 		pr_err("Misordered timestamps: %" PRIu64 "\n", nr_unordered);
@@ -1113,10 +1107,14 @@ int find_scripts(char **scripts_array, char **scripts_path_array)
 	char scripts_path[MAXPATHLEN], lang_path[MAXPATHLEN];
 	DIR *scripts_dir, *lang_dir;
 	struct perf_session *session;
+	struct perf_data_file file = {
+		.path = input_name,
+		.mode = PERF_DATA_MODE_READ,
+	};
 	char *temp;
 	int i = 0;
 
-	session = perf_session__new(input_name, O_RDONLY, 0, false, NULL);
+	session = perf_session__new(&file, false, NULL);
 	if (!session)
 		return -1;
 
@@ -1266,6 +1264,21 @@ int cmd_script(int argc, const char **argv, const char *prefix __maybe_unused)
 	char *script_path = NULL;
 	const char **__argv;
 	int i, j, err;
+	struct perf_script script = {
+		.tool = {
+			.sample		 = process_sample_event,
+			.mmap		 = perf_event__process_mmap,
+			.mmap2		 = perf_event__process_mmap2,
+			.comm		 = perf_event__process_comm,
+			.exit		 = perf_event__process_exit,
+			.fork		 = perf_event__process_fork,
+			.attr		 = perf_event__process_attr,
+			.tracing_data	 = perf_event__process_tracing_data,
+			.build_id	 = perf_event__process_build_id,
+			.ordered_samples = true,
+			.ordering_requires_timestamps = true,
+		},
+	};
 	const struct option options[] = {
 	OPT_BOOLEAN('D', "dump-raw-trace", &dump_trace,
 		    "dump raw trace in ASCII"),
@@ -1317,11 +1330,16 @@ int cmd_script(int argc, const char **argv, const char *prefix __maybe_unused)
 		"perf script [<options>] <top-script> [script-args]",
 		NULL
 	};
+	struct perf_data_file file = {
+		.mode = PERF_DATA_MODE_READ,
+	};
 
 	setup_scripting();
 
 	argc = parse_options(argc, argv, options, script_usage,
 			     PARSE_OPT_STOP_AT_NON_OPTION);
+
+	file.path = input_name;
 
 	if (argc > 1 && !strncmp(argv[0], "rec", strlen("rec"))) {
 		rec_script_path = get_script_path(argv[1], RECORD_SUFFIX);
@@ -1486,10 +1504,11 @@ int cmd_script(int argc, const char **argv, const char *prefix __maybe_unused)
 	if (!script_name)
 		setup_pager();
 
-	session = perf_session__new(input_name, O_RDONLY, 0, false,
-				    &perf_script);
+	session = perf_session__new(&file, false, &script.tool);
 	if (session == NULL)
 		return -ENOMEM;
+
+	script.session = session;
 
 	if (cpu_list) {
 		if (perf_session__cpu_bitmap(session, cpu_list, cpu_bitmap))
@@ -1514,7 +1533,7 @@ int cmd_script(int argc, const char **argv, const char *prefix __maybe_unused)
 			return -1;
 		}
 
-		input = open(session->filename, O_RDONLY);	/* input_name */
+		input = open(file.path, O_RDONLY);	/* input_name */
 		if (input < 0) {
 			perror("failed to open file");
 			return -1;
@@ -1554,7 +1573,7 @@ int cmd_script(int argc, const char **argv, const char *prefix __maybe_unused)
 	if (err < 0)
 		goto out;
 
-	err = __cmd_script(session);
+	err = __cmd_script(&script);
 
 	perf_session__delete(session);
 	cleanup_scripting();

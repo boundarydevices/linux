@@ -300,6 +300,7 @@ struct acpi_osc_context {
 	struct acpi_buffer ret;		/* free by caller if success */
 };
 
+acpi_status acpi_str_to_uuid(char *str, u8 *uuid);
 acpi_status acpi_run_osc(acpi_handle handle, struct acpi_osc_context *context);
 
 /* Indexes into _OSC Capabilities Buffer (DWORDs 2 & 3 are device-specific) */

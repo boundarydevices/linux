@@ -16,73 +16,34 @@
 #include "perf_regs.h"
 #include "vdso.h"
 
-static int perf_session__open(struct perf_session *self, bool force)
+static int perf_session__open(struct perf_session *self)
 {
-	struct stat input_stat;
-
-	if (!strcmp(self->filename, "-")) {
-		self->fd_pipe = true;
-		self->fd = STDIN_FILENO;
-
-		if (perf_session__read_header(self) < 0)
-			pr_err("incompatible file format (rerun with -v to learn more)");
-
-		return 0;
-	}
-
-	self->fd = open(self->filename, O_RDONLY);
-	if (self->fd < 0) {
-		int err = errno;
-
-		pr_err("failed to open %s: %s", self->filename, strerror(err));
-		if (err == ENOENT && !strcmp(self->filename, "perf.data"))
-			pr_err("  (try 'perf record' first)");
-		pr_err("\n");
-		return -errno;
-	}
-
-	if (fstat(self->fd, &input_stat) < 0)
-		goto out_close;
-
-	if (!force && input_stat.st_uid && (input_stat.st_uid != geteuid())) {
-		pr_err("file %s not owned by current user or root\n",
-		       self->filename);
-		goto out_close;
-	}
-
-	if (!input_stat.st_size) {
-		pr_info("zero-sized file (%s), nothing to do!\n",
-			self->filename);
-		goto out_close;
-	}
+	struct perf_data_file *file = self->file;
 
 	if (perf_session__read_header(self) < 0) {
 		pr_err("incompatible file format (rerun with -v to learn more)");
-		goto out_close;
+		return -1;
 	}
+
+	if (perf_data_file__is_pipe(file))
+		return 0;
 
 	if (!perf_evlist__valid_sample_type(self->evlist)) {
 		pr_err("non matching sample_type");
-		goto out_close;
+		return -1;
 	}
 
 	if (!perf_evlist__valid_sample_id_all(self->evlist)) {
 		pr_err("non matching sample_id_all");
-		goto out_close;
+		return -1;
 	}
 
 	if (!perf_evlist__valid_read_format(self->evlist)) {
 		pr_err("non matching read_format");
-		goto out_close;
+		return -1;
 	}
 
-	self->size = input_stat.st_size;
 	return 0;
-
-out_close:
-	close(self->fd);
-	self->fd = -1;
-	return -1;
 }
 
 void perf_session__set_id_hdr_size(struct perf_session *session)
@@ -106,39 +67,36 @@ static void perf_session__destroy_kernel_maps(struct perf_session *self)
 	machines__destroy_kernel_maps(&self->machines);
 }
 
-struct perf_session *perf_session__new(const char *filename, int mode,
-				       bool force, bool repipe,
-				       struct perf_tool *tool)
+struct perf_session *perf_session__new(struct perf_data_file *file,
+				       bool repipe, struct perf_tool *tool)
 {
 	struct perf_session *self;
-	struct stat st;
-	size_t len;
 
-	if (!filename || !strlen(filename)) {
-		if (!fstat(STDIN_FILENO, &st) && S_ISFIFO(st.st_mode))
-			filename = "-";
-		else
-			filename = "perf.data";
-	}
-
-	len = strlen(filename);
-	self = zalloc(sizeof(*self) + len);
-
-	if (self == NULL)
+	self = zalloc(sizeof(*self));
+	if (!self)
 		goto out;
 
-	memcpy(self->filename, filename, len);
 	self->repipe = repipe;
 	INIT_LIST_HEAD(&self->ordered_samples.samples);
 	INIT_LIST_HEAD(&self->ordered_samples.sample_cache);
 	INIT_LIST_HEAD(&self->ordered_samples.to_free);
 	machines__init(&self->machines);
 
-	if (mode == O_RDONLY) {
-		if (perf_session__open(self, force) < 0)
+	if (file) {
+		if (perf_data_file__open(file))
 			goto out_delete;
-		perf_session__set_id_hdr_size(self);
-	} else if (mode == O_WRONLY) {
+
+		self->file = file;
+
+		if (perf_data_file__is_read(file)) {
+			if (perf_session__open(self) < 0)
+				goto out_close;
+
+			perf_session__set_id_hdr_size(self);
+		}
+	}
+
+	if (!file || perf_data_file__is_write(file)) {
 		/*
 		 * In O_RDONLY mode this will be performed when reading the
 		 * kernel MMAP event, in perf_event__process_mmap().
@@ -153,10 +111,13 @@ struct perf_session *perf_session__new(const char *filename, int mode,
 		tool->ordered_samples = false;
 	}
 
-out:
 	return self;
-out_delete:
+
+ out_close:
+	perf_data_file__close(file);
+ out_delete:
 	perf_session__delete(self);
+ out:
 	return NULL;
 }
 
@@ -193,7 +154,8 @@ void perf_session__delete(struct perf_session *self)
 	perf_session__delete_threads(self);
 	perf_session_env__delete(&self->header.env);
 	machines__exit(&self->machines);
-	close(self->fd);
+	if (self->file)
+		perf_data_file__close(self->file);
 	free(self);
 	vdso__exit();
 }
@@ -397,6 +359,17 @@ static void perf_event__read_swap(union perf_event *event, bool sample_id_all)
 		swap_sample_id_all(event, &event->read + 1);
 }
 
+static void perf_event__throttle_swap(union perf_event *event,
+				      bool sample_id_all)
+{
+	event->throttle.time	  = bswap_64(event->throttle.time);
+	event->throttle.id	  = bswap_64(event->throttle.id);
+	event->throttle.stream_id = bswap_64(event->throttle.stream_id);
+
+	if (sample_id_all)
+		swap_sample_id_all(event, &event->throttle + 1);
+}
+
 static u8 revbyte(u8 b)
 {
 	int rev = (b >> 4) | ((b & 0xf) << 4);
@@ -442,6 +415,9 @@ void perf_event__attr_swap(struct perf_event_attr *attr)
 	attr->bp_type		= bswap_32(attr->bp_type);
 	attr->bp_addr		= bswap_64(attr->bp_addr);
 	attr->bp_len		= bswap_64(attr->bp_len);
+	attr->branch_sample_type = bswap_64(attr->branch_sample_type);
+	attr->sample_regs_user	 = bswap_64(attr->sample_regs_user);
+	attr->sample_stack_user  = bswap_32(attr->sample_stack_user);
 
 	swap_bitfield((u8 *) (&attr->read_format + 1), sizeof(u64));
 }
@@ -482,6 +458,8 @@ static perf_event__swap_op perf_event__swap_ops[] = {
 	[PERF_RECORD_EXIT]		  = perf_event__task_swap,
 	[PERF_RECORD_LOST]		  = perf_event__all64_swap,
 	[PERF_RECORD_READ]		  = perf_event__read_swap,
+	[PERF_RECORD_THROTTLE]		  = perf_event__throttle_swap,
+	[PERF_RECORD_UNTHROTTLE]	  = perf_event__throttle_swap,
 	[PERF_RECORD_SAMPLE]		  = perf_event__all64_swap,
 	[PERF_RECORD_HEADER_ATTR]	  = perf_event__hdr_attr_swap,
 	[PERF_RECORD_HEADER_EVENT_TYPE]	  = perf_event__event_type_swap,
@@ -525,12 +503,15 @@ static int flush_sample_queue(struct perf_session *s,
 	struct perf_sample sample;
 	u64 limit = os->next_flush;
 	u64 last_ts = os->last_sample ? os->last_sample->timestamp : 0ULL;
-	unsigned idx = 0, progress_next = os->nr_samples / 16;
 	bool show_progress = limit == ULLONG_MAX;
+	struct ui_progress prog;
 	int ret;
 
 	if (!tool->ordered_samples || !limit)
 		return 0;
+
+	if (show_progress)
+		ui_progress__init(&prog, os->nr_samples, "Processing time ordered events...");
 
 	list_for_each_entry_safe(iter, tmp, head, list) {
 		if (session_done())
@@ -552,11 +533,9 @@ static int flush_sample_queue(struct perf_session *s,
 		os->last_flush = iter->timestamp;
 		list_del(&iter->list);
 		list_add(&iter->list, &os->sample_cache);
-		if (show_progress && (++idx >= progress_next)) {
-			progress_next += os->nr_samples / 16;
-			ui_progress__update(idx, os->nr_samples,
-					    "Processing time ordered events...");
-		}
+
+		if (show_progress)
+			ui_progress__update(&prog, 1);
 	}
 
 	if (list_empty(head)) {
@@ -860,6 +839,9 @@ static void dump_sample(struct perf_evsel *evsel, union perf_event *event,
 	if (sample_type & PERF_SAMPLE_DATA_SRC)
 		printf(" . data_src: 0x%"PRIx64"\n", sample->data_src);
 
+	if (sample_type & PERF_SAMPLE_TRANSACTION)
+		printf("... transaction: %" PRIx64 "\n", sample->transaction);
+
 	if (sample_type & PERF_SAMPLE_READ)
 		sample_read__printf(sample, evsel->attr.read_format);
 }
@@ -1031,6 +1013,7 @@ static int perf_session_deliver_event(struct perf_session *session,
 static int perf_session__process_user_event(struct perf_session *session, union perf_event *event,
 					    struct perf_tool *tool, u64 file_offset)
 {
+	int fd = perf_data_file__fd(session->file);
 	int err;
 
 	dump_event(session, event, file_offset, NULL);
@@ -1044,7 +1027,7 @@ static int perf_session__process_user_event(struct perf_session *session, union 
 		return err;
 	case PERF_RECORD_HEADER_TRACING_DATA:
 		/* setup for reading amidst mmap */
-		lseek(session->fd, file_offset, SEEK_SET);
+		lseek(fd, file_offset, SEEK_SET);
 		return tool->tracing_data(tool, event, session);
 	case PERF_RECORD_HEADER_BUILD_ID:
 		return tool->build_id(tool, event, session);
@@ -1170,6 +1153,7 @@ volatile int session_done;
 static int __perf_session__process_pipe_events(struct perf_session *self,
 					       struct perf_tool *tool)
 {
+	int fd = perf_data_file__fd(self->file);
 	union perf_event *event;
 	uint32_t size, cur_size = 0;
 	void *buf = NULL;
@@ -1188,7 +1172,7 @@ static int __perf_session__process_pipe_events(struct perf_session *self,
 		return -errno;
 more:
 	event = buf;
-	err = readn(self->fd, event, sizeof(struct perf_event_header));
+	err = readn(fd, event, sizeof(struct perf_event_header));
 	if (err <= 0) {
 		if (err == 0)
 			goto done;
@@ -1220,7 +1204,7 @@ more:
 	p += sizeof(struct perf_event_header);
 
 	if (size - sizeof(struct perf_event_header)) {
-		err = readn(self->fd, p, size - sizeof(struct perf_event_header));
+		err = readn(fd, p, size - sizeof(struct perf_event_header));
 		if (err <= 0) {
 			if (err == 0) {
 				pr_err("unexpected end of event stream\n");
@@ -1247,7 +1231,9 @@ more:
 	if (!session_done())
 		goto more;
 done:
-	err = 0;
+	/* do the final flush for ordered samples */
+	self->ordered_samples.next_flush = ULLONG_MAX;
+	err = flush_sample_queue(self, tool);
 out_err:
 	free(buf);
 	perf_session__warn_about_errors(self, tool);
@@ -1299,12 +1285,14 @@ int __perf_session__process_events(struct perf_session *session,
 				   u64 data_offset, u64 data_size,
 				   u64 file_size, struct perf_tool *tool)
 {
-	u64 head, page_offset, file_offset, file_pos, progress_next;
+	int fd = perf_data_file__fd(session->file);
+	u64 head, page_offset, file_offset, file_pos;
 	int err, mmap_prot, mmap_flags, map_idx = 0;
 	size_t	mmap_size;
 	char *buf, *mmaps[NUM_MMAPS];
 	union perf_event *event;
 	uint32_t size;
+	struct ui_progress prog;
 
 	perf_tool__fill_defaults(tool);
 
@@ -1315,7 +1303,7 @@ int __perf_session__process_events(struct perf_session *session,
 	if (data_size && (data_offset + data_size < file_size))
 		file_size = data_offset + data_size;
 
-	progress_next = file_size / 16;
+	ui_progress__init(&prog, file_size, "Processing events...");
 
 	mmap_size = MMAP_SIZE;
 	if (mmap_size > file_size)
@@ -1331,7 +1319,7 @@ int __perf_session__process_events(struct perf_session *session,
 		mmap_flags = MAP_PRIVATE;
 	}
 remap:
-	buf = mmap(NULL, mmap_size, mmap_prot, mmap_flags, session->fd,
+	buf = mmap(NULL, mmap_size, mmap_prot, mmap_flags, fd,
 		   file_offset);
 	if (buf == MAP_FAILED) {
 		pr_err("failed to mmap file\n");
@@ -1370,19 +1358,15 @@ more:
 	head += size;
 	file_pos += size;
 
-	if (file_pos >= progress_next) {
-		progress_next += file_size / 16;
-		ui_progress__update(file_pos, file_size,
-				    "Processing events...");
-	}
+	ui_progress__update(&prog, size);
 
-	err = 0;
 	if (session_done())
-		goto out_err;
+		goto out;
 
 	if (file_pos < file_size)
 		goto more;
 
+out:
 	/* do the final flush for ordered samples */
 	session->ordered_samples.next_flush = ULLONG_MAX;
 	err = flush_sample_queue(session, tool);
@@ -1396,16 +1380,17 @@ out_err:
 int perf_session__process_events(struct perf_session *self,
 				 struct perf_tool *tool)
 {
+	u64 size = perf_data_file__size(self->file);
 	int err;
 
 	if (perf_session__register_idle_thread(self) == NULL)
 		return -ENOMEM;
 
-	if (!self->fd_pipe)
+	if (!perf_data_file__is_pipe(self->file))
 		err = __perf_session__process_events(self,
 						     self->header.data_offset,
 						     self->header.data_size,
-						     self->size, tool);
+						     size, tool);
 	else
 		err = __perf_session__process_pipe_events(self, tool);
 
@@ -1525,7 +1510,8 @@ void perf_evsel__print_ip(struct perf_evsel *evsel, union perf_event *event,
 	if (symbol_conf.use_callchain && sample->callchain) {
 
 		if (machine__resolve_callchain(machine, evsel, al.thread,
-					       sample, NULL, NULL) != 0) {
+					       sample, NULL, NULL,
+					       PERF_MAX_STACK_DEPTH) != 0) {
 			if (verbose)
 				error("Failed to resolve callchain. Skipping\n");
 			return;
@@ -1629,13 +1615,14 @@ int perf_session__cpu_bitmap(struct perf_session *session,
 void perf_session__fprintf_info(struct perf_session *session, FILE *fp,
 				bool full)
 {
+	int fd = perf_data_file__fd(session->file);
 	struct stat st;
 	int ret;
 
 	if (session == NULL || fp == NULL)
 		return;
 
-	ret = fstat(session->fd, &st);
+	ret = fstat(fd, &st);
 	if (ret == -1)
 		return;
 
