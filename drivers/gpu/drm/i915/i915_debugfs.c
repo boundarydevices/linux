@@ -27,6 +27,8 @@
  */
 
 #include <linux/seq_file.h>
+#include <linux/circ_buf.h>
+#include <linux/ctype.h>
 #include <linux/debugfs.h>
 #include <linux/slab.h>
 #include <linux/export.h>
@@ -37,9 +39,6 @@
 #include "intel_ringbuffer.h"
 #include <drm/i915_drm.h>
 #include "i915_drv.h"
-
-#define DRM_I915_RING_DEBUG 1
-
 
 #if defined(CONFIG_DEBUG_FS)
 
@@ -52,6 +51,32 @@ enum {
 static const char *yesno(int v)
 {
 	return v ? "yes" : "no";
+}
+
+/* As the drm_debugfs_init() routines are called before dev->dev_private is
+ * allocated we need to hook into the minor for release. */
+static int
+drm_add_fake_info_node(struct drm_minor *minor,
+		       struct dentry *ent,
+		       const void *key)
+{
+	struct drm_info_node *node;
+
+	node = kmalloc(sizeof(*node), GFP_KERNEL);
+	if (node == NULL) {
+		debugfs_remove(ent);
+		return -ENOMEM;
+	}
+
+	node->minor = minor;
+	node->dent = ent;
+	node->info_ent = (void *) key;
+
+	mutex_lock(&minor->debugfs_lock);
+	list_add(&node->list, &minor->debugfs_list);
+	mutex_unlock(&minor->debugfs_lock);
+
+	return 0;
 }
 
 static int i915_capabilities(struct seq_file *m, void *data)
@@ -143,6 +168,13 @@ describe_obj(struct seq_file *m, struct drm_i915_gem_object *obj)
 	}
 	if (obj->ring != NULL)
 		seq_printf(m, " (%s)", obj->ring->name);
+}
+
+static void describe_ctx(struct seq_file *m, struct i915_hw_context *ctx)
+{
+	seq_putc(m, ctx->is_initialized ? 'I' : 'i');
+	seq_putc(m, ctx->remap_slice ? 'R' : 'r');
+	seq_putc(m, ' ');
 }
 
 static int i915_gem_object_list_info(struct seq_file *m, void *data)
@@ -843,6 +875,8 @@ static int i915_cur_delayinfo(struct seq_file *m, void *unused)
 	drm_i915_private_t *dev_priv = dev->dev_private;
 	int ret;
 
+	flush_delayed_work(&dev_priv->rps.delayed_resume_work);
+
 	if (IS_GEN5(dev)) {
 		u16 rgvswctl = I915_READ16(MEMSWCTL);
 		u16 rgvstat = I915_READ16(MEMSTAT_ILK);
@@ -1321,6 +1355,8 @@ static int i915_ring_freq_table(struct seq_file *m, void *unused)
 		return 0;
 	}
 
+	flush_delayed_work(&dev_priv->rps.delayed_resume_work);
+
 	ret = mutex_lock_interruptible(&dev_priv->rps.hw_lock);
 	if (ret)
 		return ret;
@@ -1395,12 +1431,12 @@ static int i915_gem_framebuffer_info(struct seq_file *m, void *data)
 {
 	struct drm_info_node *node = (struct drm_info_node *) m->private;
 	struct drm_device *dev = node->minor->dev;
-	drm_i915_private_t *dev_priv = dev->dev_private;
-	struct intel_fbdev *ifbdev;
+	struct intel_fbdev *ifbdev = NULL;
 	struct intel_framebuffer *fb;
-	int ret;
 
-	ret = mutex_lock_interruptible(&dev->mode_config.mutex);
+#ifdef CONFIG_DRM_I915_FBDEV
+	struct drm_i915_private *dev_priv = dev->dev_private;
+	int ret = mutex_lock_interruptible(&dev->mode_config.mutex);
 	if (ret)
 		return ret;
 
@@ -1416,10 +1452,11 @@ static int i915_gem_framebuffer_info(struct seq_file *m, void *data)
 	describe_obj(m, fb->obj);
 	seq_putc(m, '\n');
 	mutex_unlock(&dev->mode_config.mutex);
+#endif
 
 	mutex_lock(&dev->mode_config.fb_lock);
 	list_for_each_entry(fb, &dev->mode_config.fb_list, base.head) {
-		if (&fb->base == ifbdev->helper.fb)
+		if (ifbdev && &fb->base == ifbdev->helper.fb)
 			continue;
 
 		seq_printf(m, "user size: %d x %d, depth %d, %d bpp, refcount %d, obj ",
@@ -1442,6 +1479,7 @@ static int i915_context_status(struct seq_file *m, void *unused)
 	struct drm_device *dev = node->minor->dev;
 	drm_i915_private_t *dev_priv = dev->dev_private;
 	struct intel_ring_buffer *ring;
+	struct i915_hw_context *ctx;
 	int ret, i;
 
 	ret = mutex_lock_interruptible(&dev->mode_config.mutex);
@@ -1460,12 +1498,15 @@ static int i915_context_status(struct seq_file *m, void *unused)
 		seq_putc(m, '\n');
 	}
 
-	for_each_ring(ring, dev_priv, i) {
-		if (ring->default_context) {
-			seq_printf(m, "HW default context %s ring ", ring->name);
-			describe_obj(m, ring->default_context->obj);
-			seq_putc(m, '\n');
-		}
+	list_for_each_entry(ctx, &dev_priv->context_list, link) {
+		seq_puts(m, "HW context ");
+		describe_ctx(m, ctx);
+		for_each_ring(ring, dev_priv, i)
+			if (ring->default_context == ctx)
+				seq_printf(m, "(default context %s) ", ring->name);
+
+		describe_obj(m, ctx->obj);
+		seq_putc(m, '\n');
 	}
 
 	mutex_unlock(&dev->mode_config.mutex);
@@ -1610,27 +1651,27 @@ static int i915_dpio_info(struct seq_file *m, void *data)
 	seq_printf(m, "DPIO_CTL: 0x%08x\n", I915_READ(DPIO_CTL));
 
 	seq_printf(m, "DPIO_DIV_A: 0x%08x\n",
-		   vlv_dpio_read(dev_priv, _DPIO_DIV_A));
+		   vlv_dpio_read(dev_priv, PIPE_A, _DPIO_DIV_A));
 	seq_printf(m, "DPIO_DIV_B: 0x%08x\n",
-		   vlv_dpio_read(dev_priv, _DPIO_DIV_B));
+		   vlv_dpio_read(dev_priv, PIPE_A, _DPIO_DIV_B));
 
 	seq_printf(m, "DPIO_REFSFR_A: 0x%08x\n",
-		   vlv_dpio_read(dev_priv, _DPIO_REFSFR_A));
+		   vlv_dpio_read(dev_priv, PIPE_A, _DPIO_REFSFR_A));
 	seq_printf(m, "DPIO_REFSFR_B: 0x%08x\n",
-		   vlv_dpio_read(dev_priv, _DPIO_REFSFR_B));
+		   vlv_dpio_read(dev_priv, PIPE_A, _DPIO_REFSFR_B));
 
 	seq_printf(m, "DPIO_CORE_CLK_A: 0x%08x\n",
-		   vlv_dpio_read(dev_priv, _DPIO_CORE_CLK_A));
+		   vlv_dpio_read(dev_priv, PIPE_A, _DPIO_CORE_CLK_A));
 	seq_printf(m, "DPIO_CORE_CLK_B: 0x%08x\n",
-		   vlv_dpio_read(dev_priv, _DPIO_CORE_CLK_B));
+		   vlv_dpio_read(dev_priv, PIPE_A, _DPIO_CORE_CLK_B));
 
 	seq_printf(m, "DPIO_LPF_COEFF_A: 0x%08x\n",
-		   vlv_dpio_read(dev_priv, _DPIO_LPF_COEFF_A));
+		   vlv_dpio_read(dev_priv, PIPE_A, _DPIO_LPF_COEFF_A));
 	seq_printf(m, "DPIO_LPF_COEFF_B: 0x%08x\n",
-		   vlv_dpio_read(dev_priv, _DPIO_LPF_COEFF_B));
+		   vlv_dpio_read(dev_priv, PIPE_A, _DPIO_LPF_COEFF_B));
 
 	seq_printf(m, "DPIO_FASTCLK_DISABLE: 0x%08x\n",
-		   vlv_dpio_read(dev_priv, DPIO_FASTCLK_DISABLE));
+		   vlv_dpio_read(dev_priv, PIPE_A, DPIO_FASTCLK_DISABLE));
 
 	mutex_unlock(&dev_priv->dpio_lock);
 
@@ -1655,126 +1696,20 @@ static int i915_edp_psr_status(struct seq_file *m, void *data)
 	struct drm_info_node *node = m->private;
 	struct drm_device *dev = node->minor->dev;
 	struct drm_i915_private *dev_priv = dev->dev_private;
-	u32 psrstat, psrperf;
+	u32 psrperf = 0;
+	bool enabled = false;
 
-	if (!IS_HASWELL(dev)) {
-		seq_puts(m, "PSR not supported on this platform\n");
-	} else if (IS_HASWELL(dev) && I915_READ(EDP_PSR_CTL) & EDP_PSR_ENABLE) {
-		seq_puts(m, "PSR enabled\n");
-	} else {
-		seq_puts(m, "PSR disabled: ");
-		switch (dev_priv->no_psr_reason) {
-		case PSR_NO_SOURCE:
-			seq_puts(m, "not supported on this platform");
-			break;
-		case PSR_NO_SINK:
-			seq_puts(m, "not supported by panel");
-			break;
-		case PSR_MODULE_PARAM:
-			seq_puts(m, "disabled by flag");
-			break;
-		case PSR_CRTC_NOT_ACTIVE:
-			seq_puts(m, "crtc not active");
-			break;
-		case PSR_PWR_WELL_ENABLED:
-			seq_puts(m, "power well enabled");
-			break;
-		case PSR_NOT_TILED:
-			seq_puts(m, "not tiled");
-			break;
-		case PSR_SPRITE_ENABLED:
-			seq_puts(m, "sprite enabled");
-			break;
-		case PSR_S3D_ENABLED:
-			seq_puts(m, "stereo 3d enabled");
-			break;
-		case PSR_INTERLACED_ENABLED:
-			seq_puts(m, "interlaced enabled");
-			break;
-		case PSR_HSW_NOT_DDIA:
-			seq_puts(m, "HSW ties PSR to DDI A (eDP)");
-			break;
-		default:
-			seq_puts(m, "unknown reason");
-		}
-		seq_puts(m, "\n");
-		return 0;
-	}
+	seq_printf(m, "Sink_Support: %s\n", yesno(dev_priv->psr.sink_support));
+	seq_printf(m, "Source_OK: %s\n", yesno(dev_priv->psr.source_ok));
 
-	psrstat = I915_READ(EDP_PSR_STATUS_CTL);
+	enabled = HAS_PSR(dev) &&
+		I915_READ(EDP_PSR_CTL(dev)) & EDP_PSR_ENABLE;
+	seq_printf(m, "Enabled: %s\n", yesno(enabled));
 
-	seq_puts(m, "PSR Current State: ");
-	switch (psrstat & EDP_PSR_STATUS_STATE_MASK) {
-	case EDP_PSR_STATUS_STATE_IDLE:
-		seq_puts(m, "Reset state\n");
-		break;
-	case EDP_PSR_STATUS_STATE_SRDONACK:
-		seq_puts(m, "Wait for TG/Stream to send on frame of data after SRD conditions are met\n");
-		break;
-	case EDP_PSR_STATUS_STATE_SRDENT:
-		seq_puts(m, "SRD entry\n");
-		break;
-	case EDP_PSR_STATUS_STATE_BUFOFF:
-		seq_puts(m, "Wait for buffer turn off\n");
-		break;
-	case EDP_PSR_STATUS_STATE_BUFON:
-		seq_puts(m, "Wait for buffer turn on\n");
-		break;
-	case EDP_PSR_STATUS_STATE_AUXACK:
-		seq_puts(m, "Wait for AUX to acknowledge on SRD exit\n");
-		break;
-	case EDP_PSR_STATUS_STATE_SRDOFFACK:
-		seq_puts(m, "Wait for TG/Stream to acknowledge the SRD VDM exit\n");
-		break;
-	default:
-		seq_puts(m, "Unknown\n");
-		break;
-	}
-
-	seq_puts(m, "Link Status: ");
-	switch (psrstat & EDP_PSR_STATUS_LINK_MASK) {
-	case EDP_PSR_STATUS_LINK_FULL_OFF:
-		seq_puts(m, "Link is fully off\n");
-		break;
-	case EDP_PSR_STATUS_LINK_FULL_ON:
-		seq_puts(m, "Link is fully on\n");
-		break;
-	case EDP_PSR_STATUS_LINK_STANDBY:
-		seq_puts(m, "Link is in standby\n");
-		break;
-	default:
-		seq_puts(m, "Unknown\n");
-		break;
-	}
-
-	seq_printf(m, "PSR Entry Count: %u\n",
-		   psrstat >> EDP_PSR_STATUS_COUNT_SHIFT &
-		   EDP_PSR_STATUS_COUNT_MASK);
-
-	seq_printf(m, "Max Sleep Timer Counter: %u\n",
-		   psrstat >> EDP_PSR_STATUS_MAX_SLEEP_TIMER_SHIFT &
-		   EDP_PSR_STATUS_MAX_SLEEP_TIMER_MASK);
-
-	seq_printf(m, "Had AUX error: %s\n",
-		   yesno(psrstat & EDP_PSR_STATUS_AUX_ERROR));
-
-	seq_printf(m, "Sending AUX: %s\n",
-		   yesno(psrstat & EDP_PSR_STATUS_AUX_SENDING));
-
-	seq_printf(m, "Sending Idle: %s\n",
-		   yesno(psrstat & EDP_PSR_STATUS_SENDING_IDLE));
-
-	seq_printf(m, "Sending TP2 TP3: %s\n",
-		   yesno(psrstat & EDP_PSR_STATUS_SENDING_TP2_TP3));
-
-	seq_printf(m, "Sending TP1: %s\n",
-		   yesno(psrstat & EDP_PSR_STATUS_SENDING_TP1));
-
-	seq_printf(m, "Idle Count: %u\n",
-		   psrstat & EDP_PSR_STATUS_IDLE_MASK);
-
-	psrperf = (I915_READ(EDP_PSR_PERF_CNT)) & EDP_PSR_PERF_CNT_MASK;
-	seq_printf(m, "Performance Counter: %u\n", psrperf);
+	if (HAS_PSR(dev))
+		psrperf = I915_READ(EDP_PSR_PERF_CNT(dev)) &
+			EDP_PSR_PERF_CNT_MASK;
+	seq_printf(m, "Performance_Counter: %u\n", psrperf);
 
 	return 0;
 }
@@ -1824,6 +1759,467 @@ static int i915_pc8_status(struct seq_file *m, void *unused)
 
 	return 0;
 }
+
+struct pipe_crc_info {
+	const char *name;
+	struct drm_device *dev;
+	enum pipe pipe;
+};
+
+static int i915_pipe_crc_open(struct inode *inode, struct file *filep)
+{
+	struct pipe_crc_info *info = inode->i_private;
+	struct drm_i915_private *dev_priv = info->dev->dev_private;
+	struct intel_pipe_crc *pipe_crc = &dev_priv->pipe_crc[info->pipe];
+
+	if (!atomic_dec_and_test(&pipe_crc->available)) {
+		atomic_inc(&pipe_crc->available);
+		return -EBUSY; /* already open */
+	}
+
+	filep->private_data = inode->i_private;
+
+	return 0;
+}
+
+static int i915_pipe_crc_release(struct inode *inode, struct file *filep)
+{
+	struct pipe_crc_info *info = inode->i_private;
+	struct drm_i915_private *dev_priv = info->dev->dev_private;
+	struct intel_pipe_crc *pipe_crc = &dev_priv->pipe_crc[info->pipe];
+
+	atomic_inc(&pipe_crc->available); /* release the device */
+
+	return 0;
+}
+
+/* (6 fields, 8 chars each, space separated (5) + '\n') */
+#define PIPE_CRC_LINE_LEN	(6 * 8 + 5 + 1)
+/* account for \'0' */
+#define PIPE_CRC_BUFFER_LEN	(PIPE_CRC_LINE_LEN + 1)
+
+static int pipe_crc_data_count(struct intel_pipe_crc *pipe_crc)
+{
+	int head, tail;
+
+	head = atomic_read(&pipe_crc->head);
+	tail = atomic_read(&pipe_crc->tail);
+
+	return CIRC_CNT(head, tail, INTEL_PIPE_CRC_ENTRIES_NR);
+}
+
+static ssize_t
+i915_pipe_crc_read(struct file *filep, char __user *user_buf, size_t count,
+		   loff_t *pos)
+{
+	struct pipe_crc_info *info = filep->private_data;
+	struct drm_device *dev = info->dev;
+	struct drm_i915_private *dev_priv = dev->dev_private;
+	struct intel_pipe_crc *pipe_crc = &dev_priv->pipe_crc[info->pipe];
+	char buf[PIPE_CRC_BUFFER_LEN];
+	int head, tail, n_entries, n;
+	ssize_t bytes_read;
+
+	/*
+	 * Don't allow user space to provide buffers not big enough to hold
+	 * a line of data.
+	 */
+	if (count < PIPE_CRC_LINE_LEN)
+		return -EINVAL;
+
+	if (pipe_crc->source == INTEL_PIPE_CRC_SOURCE_NONE)
+		return 0;
+
+	/* nothing to read */
+	while (pipe_crc_data_count(pipe_crc) == 0) {
+		if (filep->f_flags & O_NONBLOCK)
+			return -EAGAIN;
+
+		if (wait_event_interruptible(pipe_crc->wq,
+					     pipe_crc_data_count(pipe_crc)))
+			 return -ERESTARTSYS;
+	}
+
+	/* We now have one or more entries to read */
+	head = atomic_read(&pipe_crc->head);
+	tail = atomic_read(&pipe_crc->tail);
+	n_entries = min((size_t)CIRC_CNT(head, tail, INTEL_PIPE_CRC_ENTRIES_NR),
+			count / PIPE_CRC_LINE_LEN);
+	bytes_read = 0;
+	n = 0;
+	do {
+		struct intel_pipe_crc_entry *entry = &pipe_crc->entries[tail];
+		int ret;
+
+		bytes_read += snprintf(buf, PIPE_CRC_BUFFER_LEN,
+				       "%8u %8x %8x %8x %8x %8x\n",
+				       entry->frame, entry->crc[0],
+				       entry->crc[1], entry->crc[2],
+				       entry->crc[3], entry->crc[4]);
+
+		ret = copy_to_user(user_buf + n * PIPE_CRC_LINE_LEN,
+				   buf, PIPE_CRC_LINE_LEN);
+		if (ret == PIPE_CRC_LINE_LEN)
+			return -EFAULT;
+
+		BUILD_BUG_ON_NOT_POWER_OF_2(INTEL_PIPE_CRC_ENTRIES_NR);
+		tail = (tail + 1) & (INTEL_PIPE_CRC_ENTRIES_NR - 1);
+		atomic_set(&pipe_crc->tail, tail);
+		n++;
+	} while (--n_entries);
+
+	return bytes_read;
+}
+
+static const struct file_operations i915_pipe_crc_fops = {
+	.owner = THIS_MODULE,
+	.open = i915_pipe_crc_open,
+	.read = i915_pipe_crc_read,
+	.release = i915_pipe_crc_release,
+};
+
+static struct pipe_crc_info i915_pipe_crc_data[I915_MAX_PIPES] = {
+	{
+		.name = "i915_pipe_A_crc",
+		.pipe = PIPE_A,
+	},
+	{
+		.name = "i915_pipe_B_crc",
+		.pipe = PIPE_B,
+	},
+	{
+		.name = "i915_pipe_C_crc",
+		.pipe = PIPE_C,
+	},
+};
+
+static int i915_pipe_crc_create(struct dentry *root, struct drm_minor *minor,
+				enum pipe pipe)
+{
+	struct drm_device *dev = minor->dev;
+	struct dentry *ent;
+	struct pipe_crc_info *info = &i915_pipe_crc_data[pipe];
+
+	info->dev = dev;
+	ent = debugfs_create_file(info->name, S_IRUGO, root, info,
+				  &i915_pipe_crc_fops);
+	if (IS_ERR(ent))
+		return PTR_ERR(ent);
+
+	return drm_add_fake_info_node(minor, ent, info);
+}
+
+static const char * const pipe_crc_sources[] = {
+	"none",
+	"plane1",
+	"plane2",
+	"pf",
+	"pipe",
+};
+
+static const char *pipe_crc_source_name(enum intel_pipe_crc_source source)
+{
+	BUILD_BUG_ON(ARRAY_SIZE(pipe_crc_sources) != INTEL_PIPE_CRC_SOURCE_MAX);
+	return pipe_crc_sources[source];
+}
+
+static int display_crc_ctl_show(struct seq_file *m, void *data)
+{
+	struct drm_device *dev = m->private;
+	struct drm_i915_private *dev_priv = dev->dev_private;
+	int i;
+
+	for (i = 0; i < I915_MAX_PIPES; i++)
+		seq_printf(m, "%c %s\n", pipe_name(i),
+			   pipe_crc_source_name(dev_priv->pipe_crc[i].source));
+
+	return 0;
+}
+
+static int display_crc_ctl_open(struct inode *inode, struct file *file)
+{
+	struct drm_device *dev = inode->i_private;
+
+	return single_open(file, display_crc_ctl_show, dev);
+}
+
+static int ilk_pipe_crc_ctl_reg(enum intel_pipe_crc_source source,
+				uint32_t *val)
+{
+	switch (source) {
+	case INTEL_PIPE_CRC_SOURCE_PLANE1:
+		*val = PIPE_CRC_ENABLE | PIPE_CRC_SOURCE_PRIMARY_ILK;
+		break;
+	case INTEL_PIPE_CRC_SOURCE_PLANE2:
+		*val = PIPE_CRC_ENABLE | PIPE_CRC_SOURCE_SPRITE_ILK;
+		break;
+	case INTEL_PIPE_CRC_SOURCE_PF:
+		return -EINVAL;
+	case INTEL_PIPE_CRC_SOURCE_PIPE:
+		*val = PIPE_CRC_ENABLE | PIPE_CRC_SOURCE_PIPE_ILK;
+		break;
+	default:
+		*val = 0;
+		break;
+	}
+
+	return 0;
+}
+
+static int ivb_pipe_crc_ctl_reg(enum intel_pipe_crc_source source,
+				uint32_t *val)
+{
+	switch (source) {
+	case INTEL_PIPE_CRC_SOURCE_PLANE1:
+		*val = PIPE_CRC_ENABLE | PIPE_CRC_SOURCE_PRIMARY_IVB;
+		break;
+	case INTEL_PIPE_CRC_SOURCE_PLANE2:
+		*val = PIPE_CRC_ENABLE | PIPE_CRC_SOURCE_SPRITE_IVB;
+		break;
+	case INTEL_PIPE_CRC_SOURCE_PF:
+		*val = PIPE_CRC_ENABLE | PIPE_CRC_SOURCE_PF_IVB;
+		break;
+	case INTEL_PIPE_CRC_SOURCE_PIPE:
+		return -EINVAL;
+	default:
+		*val = 0;
+		break;
+	}
+
+	return 0;
+}
+
+static int pipe_crc_set_source(struct drm_device *dev, enum pipe pipe,
+			       enum intel_pipe_crc_source source)
+{
+	struct drm_i915_private *dev_priv = dev->dev_private;
+	struct intel_pipe_crc *pipe_crc = &dev_priv->pipe_crc[pipe];
+	u32 val;
+	int ret;
+
+	if (!(INTEL_INFO(dev)->gen >= 5 && !IS_VALLEYVIEW(dev)))
+		return -ENODEV;
+
+	if (pipe_crc->source == source)
+		return 0;
+
+	/* forbid changing the source without going back to 'none' */
+	if (pipe_crc->source && source)
+		return -EINVAL;
+
+	if (IS_GEN5(dev) || IS_GEN6(dev))
+		ret = ilk_pipe_crc_ctl_reg(source, &val);
+	else
+		ret = ivb_pipe_crc_ctl_reg(source, &val);
+
+	if (ret != 0)
+		return ret;
+
+	/* none -> real source transition */
+	if (source) {
+		DRM_DEBUG_DRIVER("collecting CRCs for pipe %c, %s\n",
+				 pipe_name(pipe), pipe_crc_source_name(source));
+
+		pipe_crc->entries = kzalloc(sizeof(*pipe_crc->entries) *
+					    INTEL_PIPE_CRC_ENTRIES_NR,
+					    GFP_KERNEL);
+		if (!pipe_crc->entries)
+			return -ENOMEM;
+
+		atomic_set(&pipe_crc->head, 0);
+		atomic_set(&pipe_crc->tail, 0);
+	}
+
+	pipe_crc->source = source;
+
+	I915_WRITE(PIPE_CRC_CTL(pipe), val);
+	POSTING_READ(PIPE_CRC_CTL(pipe));
+
+	/* real source -> none transition */
+	if (source == INTEL_PIPE_CRC_SOURCE_NONE) {
+		DRM_DEBUG_DRIVER("stopping CRCs for pipe %c\n",
+				 pipe_name(pipe));
+
+		intel_wait_for_vblank(dev, pipe);
+
+		kfree(pipe_crc->entries);
+		pipe_crc->entries = NULL;
+	}
+
+	return 0;
+}
+
+/*
+ * Parse pipe CRC command strings:
+ *   command: wsp* object wsp+ name wsp+ source wsp*
+ *   object: 'pipe'
+ *   name: (A | B | C)
+ *   source: (none | plane1 | plane2 | pf)
+ *   wsp: (#0x20 | #0x9 | #0xA)+
+ *
+ * eg.:
+ *  "pipe A plane1"  ->  Start CRC computations on plane1 of pipe A
+ *  "pipe A none"    ->  Stop CRC
+ */
+static int display_crc_ctl_tokenize(char *buf, char *words[], int max_words)
+{
+	int n_words = 0;
+
+	while (*buf) {
+		char *end;
+
+		/* skip leading white space */
+		buf = skip_spaces(buf);
+		if (!*buf)
+			break;	/* end of buffer */
+
+		/* find end of word */
+		for (end = buf; *end && !isspace(*end); end++)
+			;
+
+		if (n_words == max_words) {
+			DRM_DEBUG_DRIVER("too many words, allowed <= %d\n",
+					 max_words);
+			return -EINVAL;	/* ran out of words[] before bytes */
+		}
+
+		if (*end)
+			*end++ = '\0';
+		words[n_words++] = buf;
+		buf = end;
+	}
+
+	return n_words;
+}
+
+enum intel_pipe_crc_object {
+	PIPE_CRC_OBJECT_PIPE,
+};
+
+static const char * const pipe_crc_objects[] = {
+	"pipe",
+};
+
+static int
+display_crc_ctl_parse_object(const char *buf, enum intel_pipe_crc_object *o)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(pipe_crc_objects); i++)
+		if (!strcmp(buf, pipe_crc_objects[i])) {
+			*o = i;
+			return 0;
+		    }
+
+	return -EINVAL;
+}
+
+static int display_crc_ctl_parse_pipe(const char *buf, enum pipe *pipe)
+{
+	const char name = buf[0];
+
+	if (name < 'A' || name >= pipe_name(I915_MAX_PIPES))
+		return -EINVAL;
+
+	*pipe = name - 'A';
+
+	return 0;
+}
+
+static int
+display_crc_ctl_parse_source(const char *buf, enum intel_pipe_crc_source *s)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(pipe_crc_sources); i++)
+		if (!strcmp(buf, pipe_crc_sources[i])) {
+			*s = i;
+			return 0;
+		    }
+
+	return -EINVAL;
+}
+
+static int display_crc_ctl_parse(struct drm_device *dev, char *buf, size_t len)
+{
+#define N_WORDS 3
+	int n_words;
+	char *words[N_WORDS];
+	enum pipe pipe;
+	enum intel_pipe_crc_object object;
+	enum intel_pipe_crc_source source;
+
+	n_words = display_crc_ctl_tokenize(buf, words, N_WORDS);
+	if (n_words != N_WORDS) {
+		DRM_DEBUG_DRIVER("tokenize failed, a command is %d words\n",
+				 N_WORDS);
+		return -EINVAL;
+	}
+
+	if (display_crc_ctl_parse_object(words[0], &object) < 0) {
+		DRM_DEBUG_DRIVER("unknown object %s\n", words[0]);
+		return -EINVAL;
+	}
+
+	if (display_crc_ctl_parse_pipe(words[1], &pipe) < 0) {
+		DRM_DEBUG_DRIVER("unknown pipe %s\n", words[1]);
+		return -EINVAL;
+	}
+
+	if (display_crc_ctl_parse_source(words[2], &source) < 0) {
+		DRM_DEBUG_DRIVER("unknown source %s\n", words[2]);
+		return -EINVAL;
+	}
+
+	return pipe_crc_set_source(dev, pipe, source);
+}
+
+static ssize_t display_crc_ctl_write(struct file *file, const char __user *ubuf,
+				     size_t len, loff_t *offp)
+{
+	struct seq_file *m = file->private_data;
+	struct drm_device *dev = m->private;
+	char *tmpbuf;
+	int ret;
+
+	if (len == 0)
+		return 0;
+
+	if (len > PAGE_SIZE - 1) {
+		DRM_DEBUG_DRIVER("expected <%lu bytes into pipe crc control\n",
+				 PAGE_SIZE);
+		return -E2BIG;
+	}
+
+	tmpbuf = kmalloc(len + 1, GFP_KERNEL);
+	if (!tmpbuf)
+		return -ENOMEM;
+
+	if (copy_from_user(tmpbuf, ubuf, len)) {
+		ret = -EFAULT;
+		goto out;
+	}
+	tmpbuf[len] = '\0';
+
+	ret = display_crc_ctl_parse(dev, tmpbuf, len);
+
+out:
+	kfree(tmpbuf);
+	if (ret < 0)
+		return ret;
+
+	*offp += len;
+	return len;
+}
+
+static const struct file_operations i915_display_crc_ctl_fops = {
+	.owner = THIS_MODULE,
+	.open = display_crc_ctl_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+	.write = display_crc_ctl_write
+};
 
 static int
 i915_wedged_get(void *data, u64 *val)
@@ -1883,6 +2279,72 @@ i915_ring_stop_set(void *data, u64 val)
 
 DEFINE_SIMPLE_ATTRIBUTE(i915_ring_stop_fops,
 			i915_ring_stop_get, i915_ring_stop_set,
+			"0x%08llx\n");
+
+static int
+i915_ring_missed_irq_get(void *data, u64 *val)
+{
+	struct drm_device *dev = data;
+	struct drm_i915_private *dev_priv = dev->dev_private;
+
+	*val = dev_priv->gpu_error.missed_irq_rings;
+	return 0;
+}
+
+static int
+i915_ring_missed_irq_set(void *data, u64 val)
+{
+	struct drm_device *dev = data;
+	struct drm_i915_private *dev_priv = dev->dev_private;
+	int ret;
+
+	/* Lock against concurrent debugfs callers */
+	ret = mutex_lock_interruptible(&dev->struct_mutex);
+	if (ret)
+		return ret;
+	dev_priv->gpu_error.missed_irq_rings = val;
+	mutex_unlock(&dev->struct_mutex);
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(i915_ring_missed_irq_fops,
+			i915_ring_missed_irq_get, i915_ring_missed_irq_set,
+			"0x%08llx\n");
+
+static int
+i915_ring_test_irq_get(void *data, u64 *val)
+{
+	struct drm_device *dev = data;
+	struct drm_i915_private *dev_priv = dev->dev_private;
+
+	*val = dev_priv->gpu_error.test_irq_rings;
+
+	return 0;
+}
+
+static int
+i915_ring_test_irq_set(void *data, u64 val)
+{
+	struct drm_device *dev = data;
+	struct drm_i915_private *dev_priv = dev->dev_private;
+	int ret;
+
+	DRM_DEBUG_DRIVER("Masking interrupts on rings 0x%08llx\n", val);
+
+	/* Lock against concurrent debugfs callers */
+	ret = mutex_lock_interruptible(&dev->struct_mutex);
+	if (ret)
+		return ret;
+
+	dev_priv->gpu_error.test_irq_rings = val;
+	mutex_unlock(&dev->struct_mutex);
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(i915_ring_test_irq_fops,
+			i915_ring_test_irq_get, i915_ring_test_irq_set,
 			"0x%08llx\n");
 
 #define DROP_UNBOUND 0x1
@@ -1972,6 +2434,8 @@ i915_max_freq_get(void *data, u64 *val)
 	if (!(IS_GEN6(dev) || IS_GEN7(dev)))
 		return -ENODEV;
 
+	flush_delayed_work(&dev_priv->rps.delayed_resume_work);
+
 	ret = mutex_lock_interruptible(&dev_priv->rps.hw_lock);
 	if (ret)
 		return ret;
@@ -1995,6 +2459,8 @@ i915_max_freq_set(void *data, u64 val)
 
 	if (!(IS_GEN6(dev) || IS_GEN7(dev)))
 		return -ENODEV;
+
+	flush_delayed_work(&dev_priv->rps.delayed_resume_work);
 
 	DRM_DEBUG_DRIVER("Manually setting max freq to %llu\n", val);
 
@@ -2034,6 +2500,8 @@ i915_min_freq_get(void *data, u64 *val)
 	if (!(IS_GEN6(dev) || IS_GEN7(dev)))
 		return -ENODEV;
 
+	flush_delayed_work(&dev_priv->rps.delayed_resume_work);
+
 	ret = mutex_lock_interruptible(&dev_priv->rps.hw_lock);
 	if (ret)
 		return ret;
@@ -2057,6 +2525,8 @@ i915_min_freq_set(void *data, u64 val)
 
 	if (!(IS_GEN6(dev) || IS_GEN7(dev)))
 		return -ENODEV;
+
+	flush_delayed_work(&dev_priv->rps.delayed_resume_work);
 
 	DRM_DEBUG_DRIVER("Manually setting min freq to %llu\n", val);
 
@@ -2135,32 +2605,6 @@ i915_cache_sharing_set(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(i915_cache_sharing_fops,
 			i915_cache_sharing_get, i915_cache_sharing_set,
 			"%llu\n");
-
-/* As the drm_debugfs_init() routines are called before dev->dev_private is
- * allocated we need to hook into the minor for release. */
-static int
-drm_add_fake_info_node(struct drm_minor *minor,
-		       struct dentry *ent,
-		       const void *key)
-{
-	struct drm_info_node *node;
-
-	node = kmalloc(sizeof(struct drm_info_node), GFP_KERNEL);
-	if (node == NULL) {
-		debugfs_remove(ent);
-		return -ENOMEM;
-	}
-
-	node->minor = minor;
-	node->dent = ent;
-	node->info_ent = (void *) key;
-
-	mutex_lock(&minor->debugfs_lock);
-	list_add(&node->list, &minor->debugfs_list);
-	mutex_unlock(&minor->debugfs_lock);
-
-	return 0;
-}
 
 static int i915_forcewake_open(struct inode *inode, struct file *file)
 {
@@ -2278,10 +2722,26 @@ static struct i915_debugfs_files {
 	{"i915_min_freq", &i915_min_freq_fops},
 	{"i915_cache_sharing", &i915_cache_sharing_fops},
 	{"i915_ring_stop", &i915_ring_stop_fops},
+	{"i915_ring_missed_irq", &i915_ring_missed_irq_fops},
+	{"i915_ring_test_irq", &i915_ring_test_irq_fops},
 	{"i915_gem_drop_caches", &i915_drop_caches_fops},
 	{"i915_error_state", &i915_error_state_fops},
 	{"i915_next_seqno", &i915_next_seqno_fops},
+	{"i915_display_crc_ctl", &i915_display_crc_ctl_fops},
 };
+
+void intel_display_crc_init(struct drm_device *dev)
+{
+	struct drm_i915_private *dev_priv = dev->dev_private;
+	int i;
+
+	for (i = 0; i < INTEL_INFO(dev)->num_pipes; i++) {
+		struct intel_pipe_crc *pipe_crc = &dev_priv->pipe_crc[i];
+
+		atomic_set(&pipe_crc->available, 1);
+		init_waitqueue_head(&pipe_crc->wq);
+	}
+}
 
 int i915_debugfs_init(struct drm_minor *minor)
 {
@@ -2290,6 +2750,12 @@ int i915_debugfs_init(struct drm_minor *minor)
 	ret = i915_forcewake_create(minor->debugfs_root, minor);
 	if (ret)
 		return ret;
+
+	for (i = 0; i < ARRAY_SIZE(i915_pipe_crc_data); i++) {
+		ret = i915_pipe_crc_create(minor->debugfs_root, minor, i);
+		if (ret)
+			return ret;
+	}
 
 	for (i = 0; i < ARRAY_SIZE(i915_debugfs_files); i++) {
 		ret = i915_debugfs_create(minor->debugfs_root, minor,
@@ -2310,8 +2776,17 @@ void i915_debugfs_cleanup(struct drm_minor *minor)
 
 	drm_debugfs_remove_files(i915_debugfs_list,
 				 I915_DEBUGFS_ENTRIES, minor);
+
 	drm_debugfs_remove_files((struct drm_info_list *) &i915_forcewake_fops,
 				 1, minor);
+
+	for (i = 0; i < ARRAY_SIZE(i915_pipe_crc_data); i++) {
+		struct drm_info_list *info_list =
+			(struct drm_info_list *)&i915_pipe_crc_data[i];
+
+		drm_debugfs_remove_files(info_list, 1, minor);
+	}
+
 	for (i = 0; i < ARRAY_SIZE(i915_debugfs_files); i++) {
 		struct drm_info_list *info_list =
 			(struct drm_info_list *) i915_debugfs_files[i].fops;

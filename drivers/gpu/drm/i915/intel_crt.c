@@ -107,7 +107,17 @@ static unsigned int intel_crt_get_flags(struct intel_encoder *encoder)
 static void intel_crt_get_config(struct intel_encoder *encoder,
 				 struct intel_crtc_config *pipe_config)
 {
+	struct drm_device *dev = encoder->base.dev;
+	int dotclock;
+
 	pipe_config->adjusted_mode.flags |= intel_crt_get_flags(encoder);
+
+	dotclock = pipe_config->port_clock;
+
+	if (HAS_PCH_SPLIT(dev))
+		ironlake_check_encoder_dotclock(pipe_config, dotclock);
+
+	pipe_config->adjusted_mode.crtc_clock = dotclock;
 }
 
 static void hsw_crt_get_config(struct intel_encoder *encoder,
@@ -264,7 +274,7 @@ static void intel_crt_mode_set(struct intel_encoder *encoder)
 	struct drm_display_mode *adjusted_mode = &crtc->config.adjusted_mode;
 	u32 adpa;
 
-	if (HAS_PCH_SPLIT(dev))
+	if (INTEL_INFO(dev)->gen >= 5)
 		adpa = ADPA_HOTPLUG_BITS;
 	else
 		adpa = 0;
@@ -365,9 +375,6 @@ static bool valleyview_crt_detect_hotplug(struct drm_connector *connector)
 		ret = false;
 
 	DRM_DEBUG_KMS("valleyview hotplug adpa=0x%x, result %d\n", adpa, ret);
-
-	/* FIXME: debug force function and remove */
-	ret = true;
 
 	return ret;
 }
@@ -670,7 +677,6 @@ intel_crt_detect(struct drm_connector *connector, bool force)
 
 static void intel_crt_destroy(struct drm_connector *connector)
 {
-	drm_sysfs_connector_remove(connector);
 	drm_connector_cleanup(connector);
 	kfree(connector);
 }
@@ -776,7 +782,7 @@ void intel_crt_init(struct drm_device *dev)
 	if (!crt)
 		return;
 
-	intel_connector = kzalloc(sizeof(struct intel_connector), GFP_KERNEL);
+	intel_connector = kzalloc(sizeof(*intel_connector), GFP_KERNEL);
 	if (!intel_connector) {
 		kfree(crt);
 		return;

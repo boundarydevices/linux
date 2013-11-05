@@ -107,10 +107,17 @@ void qxl_display_read_client_monitors_config(struct qxl_device *qdev)
 		qxl_io_log(qdev, "failed crc check for client_monitors_config,"
 				 " retrying\n");
 	}
-	drm_helper_hpd_irq_event(qdev->ddev);
+
+	if (!drm_helper_hpd_irq_event(qdev->ddev)) {
+		/* notify that the monitor configuration changed, to
+		   adjust at the arbitrary resolution */
+		drm_kms_helper_hotplug_event(qdev->ddev);
+	}
 }
 
-static int qxl_add_monitors_config_modes(struct drm_connector *connector)
+static int qxl_add_monitors_config_modes(struct drm_connector *connector,
+                                         unsigned *pwidth,
+                                         unsigned *pheight)
 {
 	struct drm_device *dev = connector->dev;
 	struct qxl_device *qdev = dev->dev_private;
@@ -126,11 +133,15 @@ static int qxl_add_monitors_config_modes(struct drm_connector *connector)
 	mode = drm_cvt_mode(dev, head->width, head->height, 60, false, false,
 			    false);
 	mode->type |= DRM_MODE_TYPE_PREFERRED;
+	*pwidth = head->width;
+	*pheight = head->height;
 	drm_mode_probed_add(connector, mode);
 	return 1;
 }
 
-static int qxl_add_common_modes(struct drm_connector *connector)
+static int qxl_add_common_modes(struct drm_connector *connector,
+                                unsigned pwidth,
+                                unsigned pheight)
 {
 	struct drm_device *dev = connector->dev;
 	struct drm_display_mode *mode = NULL;
@@ -159,12 +170,9 @@ static int qxl_add_common_modes(struct drm_connector *connector)
 	};
 
 	for (i = 0; i < ARRAY_SIZE(common_modes); i++) {
-		if (common_modes[i].w < 320 || common_modes[i].h < 200)
-			continue;
-
 		mode = drm_cvt_mode(dev, common_modes[i].w, common_modes[i].h,
 				    60, false, false, false);
-		if (common_modes[i].w == 1024 && common_modes[i].h == 768)
+		if (common_modes[i].w == pwidth && common_modes[i].h == pheight)
 			mode->type |= DRM_MODE_TYPE_PREFERRED;
 		drm_mode_probed_add(connector, mode);
 	}
@@ -720,16 +728,18 @@ static int qxl_conn_get_modes(struct drm_connector *connector)
 {
 	int ret = 0;
 	struct qxl_device *qdev = connector->dev->dev_private;
+	unsigned pwidth = 1024;
+	unsigned pheight = 768;
 
 	DRM_DEBUG_KMS("monitors_config=%p\n", qdev->monitors_config);
 	/* TODO: what should we do here? only show the configured modes for the
 	 * device, or allow the full list, or both? */
 	if (qdev->monitors_config && qdev->monitors_config->count) {
-		ret = qxl_add_monitors_config_modes(connector);
+		ret = qxl_add_monitors_config_modes(connector, &pwidth, &pheight);
 		if (ret < 0)
 			return ret;
 	}
-	ret += qxl_add_common_modes(connector);
+	ret += qxl_add_common_modes(connector, pwidth, pheight);
 	return ret;
 }
 
@@ -793,7 +803,10 @@ static enum drm_connector_status qxl_conn_detect(
 		     qdev->client_monitors_config->count > output->index &&
 		     qxl_head_enabled(&qdev->client_monitors_config->heads[output->index]));
 
-	DRM_DEBUG("\n");
+	DRM_DEBUG("#%d connected: %d\n", output->index, connected);
+	if (!connected)
+		qxl_monitors_config_set(qdev, output->index, 0, 0, 0, 0, 0);
+
 	return connected ? connector_status_connected
 			 : connector_status_disconnected;
 }

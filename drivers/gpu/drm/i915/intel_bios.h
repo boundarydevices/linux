@@ -104,6 +104,7 @@ struct vbios_data {
 #define BDB_LVDS_LFP_DATA	 42
 #define BDB_LVDS_BACKLIGHT	 43
 #define BDB_LVDS_POWER		 44
+#define BDB_MIPI		 50
 #define BDB_SKIP		254 /* VBIOS private block, ignore */
 
 struct bdb_general_features {
@@ -201,7 +202,10 @@ struct bdb_general_features {
 #define DEVICE_PORT_DVOB	0x01
 #define DEVICE_PORT_DVOC	0x02
 
-struct child_device_config {
+/* We used to keep this struct but without any version control. We should avoid
+ * using it in the future, but it should be safe to keep using it in the old
+ * code. */
+struct old_child_dev_config {
 	u16 handle;
 	u16 device_type;
 	u8  device_id[10]; /* ascii string */
@@ -222,6 +226,32 @@ struct child_device_config {
 	u16 extended_type;
 	u8  dvo_function;
 } __attribute__((packed));
+
+/* This one contains field offsets that are known to be common for all BDB
+ * versions. Notice that the meaning of the contents contents may still change,
+ * but at least the offsets are consistent. */
+struct common_child_dev_config {
+	u16 handle;
+	u16 device_type;
+	u8 not_common1[12];
+	u8 dvo_port;
+	u8 not_common2[2];
+	u8 ddc_pin;
+	u16 edid_ptr;
+} __attribute__((packed));
+
+/* This field changes depending on the BDB version, so the most reliable way to
+ * read it is by checking the BDB version and reading the raw pointer. */
+union child_device_config {
+	/* This one is safe to be used anywhere, but the code should still check
+	 * the BDB version. */
+	u8 raw[33];
+	/* This one should only be kept for legacy code. */
+	struct old_child_dev_config old;
+	/* This one should also be safe to use anywhere, even without version
+	 * checks. */
+	struct common_child_dev_config common;
+};
 
 struct bdb_general_definitions {
 	/* DDC GPIO */
@@ -248,7 +278,7 @@ struct bdb_general_definitions {
 	 * number = (block_size - sizeof(bdb_general_definitions))/
 	 *	     sizeof(child_device_config);
 	 */
-	struct child_device_config devices[0];
+	union child_device_config devices[0];
 } __attribute__((packed));
 
 struct bdb_lvds_options {
@@ -617,5 +647,58 @@ int intel_parse_bios(struct drm_device *dev);
 #define		PORT_IDPB	7
 #define		PORT_IDPC	8
 #define		PORT_IDPD	9
+
+/* Possible values for the "DVO Port" field for versions >= 155: */
+#define DVO_PORT_HDMIA	0
+#define DVO_PORT_HDMIB	1
+#define DVO_PORT_HDMIC	2
+#define DVO_PORT_HDMID	3
+#define DVO_PORT_LVDS	4
+#define DVO_PORT_TV	5
+#define DVO_PORT_CRT	6
+#define DVO_PORT_DPB	7
+#define DVO_PORT_DPC	8
+#define DVO_PORT_DPD	9
+#define DVO_PORT_DPA	10
+
+/* MIPI DSI panel info */
+struct bdb_mipi {
+	u16 panel_id;
+	u16 bridge_revision;
+
+	/* General params */
+	u32 dithering:1;
+	u32 bpp_pixel_format:1;
+	u32 rsvd1:1;
+	u32 dphy_valid:1;
+	u32 resvd2:28;
+
+	u16 port_info;
+	u16 rsvd3:2;
+	u16 num_lanes:2;
+	u16 rsvd4:12;
+
+	/* DSI config */
+	u16 virt_ch_num:2;
+	u16 vtm:2;
+	u16 rsvd5:12;
+
+	u32 dsi_clock;
+	u32 bridge_ref_clk;
+	u16 rsvd_pwr;
+
+	/* Dphy Params */
+	u32 prepare_cnt:5;
+	u32 rsvd6:3;
+	u32 clk_zero_cnt:8;
+	u32 trail_cnt:5;
+	u32 rsvd7:3;
+	u32 exit_zero_cnt:6;
+	u32 rsvd8:2;
+
+	u32 hl_switch_cnt;
+	u32 lp_byte_clk;
+	u32 clk_lane_switch_cnt;
+} __attribute__((packed));
 
 #endif /* _I830_BIOS_H_ */

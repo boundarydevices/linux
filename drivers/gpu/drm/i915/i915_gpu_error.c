@@ -215,6 +215,24 @@ static void print_error_buffers(struct drm_i915_error_state_buf *m,
 	}
 }
 
+static const char *hangcheck_action_to_str(enum intel_ring_hangcheck_action a)
+{
+	switch (a) {
+	case HANGCHECK_IDLE:
+		return "idle";
+	case HANGCHECK_WAIT:
+		return "wait";
+	case HANGCHECK_ACTIVE:
+		return "active";
+	case HANGCHECK_KICK:
+		return "kick";
+	case HANGCHECK_HUNG:
+		return "hung";
+	}
+
+	return "unknown";
+}
+
 static void i915_ring_error_state(struct drm_i915_error_state_buf *m,
 				  struct drm_device *dev,
 				  struct drm_i915_error_state *error,
@@ -255,6 +273,9 @@ static void i915_ring_error_state(struct drm_i915_error_state_buf *m,
 	err_printf(m, "  waiting: %s\n", yesno(error->waiting[ring]));
 	err_printf(m, "  ring->head: 0x%08x\n", error->cpu_ring_head[ring]);
 	err_printf(m, "  ring->tail: 0x%08x\n", error->cpu_ring_tail[ring]);
+	err_printf(m, "  hangcheck: %s [%d]\n",
+		   hangcheck_action_to_str(error->hangcheck_action[ring]),
+		   error->hangcheck_score[ring]);
 }
 
 void i915_error_printf(struct drm_i915_error_state_buf *e, const char *f, ...)
@@ -283,13 +304,14 @@ int i915_error_state_to_str(struct drm_i915_error_state_buf *m,
 	err_printf(m, "Time: %ld s %ld us\n", error->time.tv_sec,
 		   error->time.tv_usec);
 	err_printf(m, "Kernel: " UTS_RELEASE "\n");
-	err_printf(m, "PCI ID: 0x%04x\n", dev->pci_device);
+	err_printf(m, "PCI ID: 0x%04x\n", dev->pdev->device);
 	err_printf(m, "EIR: 0x%08x\n", error->eir);
 	err_printf(m, "IER: 0x%08x\n", error->ier);
 	err_printf(m, "PGTBL_ER: 0x%08x\n", error->pgtbl_er);
 	err_printf(m, "FORCEWAKE: 0x%08x\n", error->forcewake);
 	err_printf(m, "DERRMR: 0x%08x\n", error->derrmr);
 	err_printf(m, "CCID: 0x%08x\n", error->ccid);
+	err_printf(m, "Missed interrupts: 0x%08lx\n", dev_priv->gpu_error.missed_irq_rings);
 
 	for (i = 0; i < dev_priv->num_fence_regs; i++)
 		err_printf(m, "  fence[%d] = %08llx\n", i, error->fence[i]);
@@ -720,6 +742,9 @@ static void i915_record_ring_state(struct drm_device *dev,
 
 	error->cpu_ring_head[ring->id] = ring->head;
 	error->cpu_ring_tail[ring->id] = ring->tail;
+
+	error->hangcheck_score[ring->id] = ring->hangcheck.score;
+	error->hangcheck_action[ring->id] = ring->hangcheck.action;
 }
 
 
@@ -769,7 +794,7 @@ static void i915_gem_record_rings(struct drm_device *dev,
 
 		error->ring[i].num_requests = count;
 		error->ring[i].requests =
-			kmalloc(count*sizeof(struct drm_i915_error_request),
+			kcalloc(count, sizeof(*error->ring[i].requests),
 				GFP_ATOMIC);
 		if (error->ring[i].requests == NULL) {
 			error->ring[i].num_requests = 0;
@@ -811,7 +836,7 @@ static void i915_gem_capture_vm(struct drm_i915_private *dev_priv,
 	error->pinned_bo_count[ndx] = i - error->active_bo_count[ndx];
 
 	if (i) {
-		active_bo = kmalloc(sizeof(*active_bo)*i, GFP_ATOMIC);
+		active_bo = kcalloc(i, sizeof(*active_bo), GFP_ATOMIC);
 		if (active_bo)
 			pinned_bo = active_bo + error->active_bo_count[ndx];
 	}
@@ -885,8 +910,12 @@ void i915_capture_error_state(struct drm_device *dev)
 		return;
 	}
 
-	DRM_INFO("capturing error event; look for more information in "
-		 "/sys/class/drm/card%d/error\n", dev->primary->index);
+	DRM_INFO("GPU crash dump saved to /sys/class/drm/card%d/error\n",
+		 dev->primary->index);
+	DRM_INFO("GPU hangs can indicate a bug anywhere in the entire gfx stack, including userspace.\n");
+	DRM_INFO("Please file a _new_ bug report on bugs.freedesktop.org against DRI -> DRM/Intel\n");
+	DRM_INFO("drm/i915 developers can then reassign to the right component if it's not a kernel issue.\n");
+	DRM_INFO("The gpu crash dump is required to analyze gpu hangs, so please always attach it.\n");
 
 	kref_init(&error->ref);
 	error->eir = I915_READ(EIR);
@@ -988,6 +1017,7 @@ const char *i915_cache_level_str(int type)
 	case I915_CACHE_NONE: return " uncached";
 	case I915_CACHE_LLC: return " snooped or LLC";
 	case I915_CACHE_L3_LLC: return " L3+LLC";
+	case I915_CACHE_WT: return " WT";
 	default: return "";
 	}
 }
