@@ -21,6 +21,7 @@ struct mnt_pcp {
 struct mountpoint {
 	struct list_head m_hash;
 	struct dentry *m_dentry;
+	struct list_head m_list;
 	int m_count;
 };
 
@@ -47,6 +48,7 @@ struct mount {
 	struct mount *mnt_master;	/* slave is on master->mnt_slave_list */
 	struct mnt_namespace *mnt_ns;	/* containing namespace */
 	struct mountpoint *mnt_mp;	/* where is it mounted */
+	struct list_head mnt_mp_list;	/* list mounts with the same mountpoint */
 #ifdef CONFIG_FSNOTIFY
 	struct hlist_head mnt_fsnotify_marks;
 	__u32 mnt_fsnotify_mask;
@@ -77,6 +79,7 @@ static inline int is_mounted(struct vfsmount *mnt)
 }
 
 extern struct mount *__lookup_mnt(struct vfsmount *, struct dentry *, int);
+extern void detach_mounts(struct dentry *dentry);
 
 static inline void get_mnt_ns(struct mnt_namespace *ns)
 {
