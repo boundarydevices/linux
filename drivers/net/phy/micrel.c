@@ -258,10 +258,18 @@ static int ksz9021_load_values_from_of(struct phy_device *phydev,
 	return kszphy_extended_write(phydev, reg, newval);
 }
 
+#define CTRL1000_PREFER_MASTER		(1 << 10)
+#define CTRL1000_CONFIG_MASTER		(1 << 11)
+#define CTRL1000_MANUAL_CONFIG		(1 << 12)
+
 static int ksz9021_config_init(struct phy_device *phydev)
 {
 	struct device *dev = &phydev->dev;
 	struct device_node *of_node = dev->of_node;
+	unsigned ctrl1000 = 0;
+	const unsigned master = CTRL1000_PREFER_MASTER |
+			CTRL1000_CONFIG_MASTER | CTRL1000_MANUAL_CONFIG;
+	unsigned features = phydev->drv->features;
 
 	if (!of_node && dev->parent->of_node)
 		of_node = dev->parent->of_node;
@@ -280,6 +288,14 @@ static int ksz9021_config_init(struct phy_device *phydev)
 				    "txd0-skew-ps", "txd1-skew-ps",
 				    "txd2-skew-ps", "txd3-skew-ps");
 	}
+	/* force master mode for 1000BaseT due to chip errata */
+	if (features & SUPPORTED_1000baseT_Half)
+		ctrl1000 |= ADVERTISE_1000HALF | master;
+	if (features & SUPPORTED_1000baseT_Full)
+		ctrl1000 |= ADVERTISE_1000FULL | master;
+	phydev->advertising = phydev->supported = features;
+	phy_write(phydev, MII_CTRL1000, ctrl1000);
+	pr_info("%s:reg %d=0x%x\n", __func__, MII_CTRL1000, ctrl1000);
 	return 0;
 }
 
