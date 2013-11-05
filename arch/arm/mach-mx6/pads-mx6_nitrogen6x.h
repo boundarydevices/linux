@@ -281,7 +281,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(EIM_D26__UART2_TXD),
 	MX6PAD(EIM_D27__UART2_RXD),
 
-#if !(defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE))
+#if !(defined(CSI0_CAMERA))
 	/* UART4 */
 	MX6PAD(CSI0_DAT12__UART4_TXD),
 	MX6PAD(CSI0_DAT13__UART4_RXD),
@@ -333,8 +333,7 @@ static iomux_v3_cfg_t MX6NAME(mipi_pads)[] = {
 };
 #endif
 
-#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE) || \
-    defined(CONFIG_MXC_CAMERA_OV5640) || defined(CONFIG_MXC_CAMERA_OV5640_MODULE)
+#if defined(CSI0_CAMERA)
 static iomux_v3_cfg_t MX6NAME(csi0_sensor_pads)[] = {
 	/* IPU1 Camera */
 	MX6PAD(CSI0_DAT8__IPU1_CSI0_D_8),

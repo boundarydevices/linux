@@ -122,6 +122,11 @@
 #define N6_IRQ_TEST_PADCFG	(PAD_CTL_PKE | N6_IRQ_PADCFG)
 #define N6_EN_PADCFG		(PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm)
 
+#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE) \
+ || defined(CONFIG_MXC_CAMERA_OV5640) || defined(CONFIG_MXC_CAMERA_OV5640_MODULE)
+#define CSI0_CAMERA
+#endif
+
 #include "pads-mx6_nitrogen6x.h"
 #define FOR_DL_SOLO
 #include "pads-mx6_nitrogen6x.h"
@@ -259,7 +264,7 @@ static const struct imxuart_platform_data mx6_arm2_uart2_data __initconst = {
 	.flags      = IMXUART_HAVE_RTSCTS,
 };
 
-#if !(defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE))
+#if !(defined(CSI0_CAMERA))
 static const struct imxuart_platform_data mx6_arm2_uart3_data __initconst = {
 	.flags      = IMXUART_HAVE_RTSCTS,
 };
@@ -525,15 +530,14 @@ static struct fsl_mxc_camera_platform_data ov5640_mipi_data = {
 };
 #endif
 
-#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE) || \
-    defined(CONFIG_MXC_CAMERA_OV5640) || defined(CONFIG_MXC_CAMERA_OV5640_MODULE)
+#if defined(CSI0_CAMERA)
 /*
- * GPIO_6	GPIO[1]:6	(ov5642) - J5 - CSI0 power down
- * GPIO_8	GPIO[1]:8	(ov5642) - J5 - CSI0 reset
- * NANDF_CS0	GPIO[6]:11	(ov5642) - J5 - reset
- * SD1_DAT0	GPIO[1]:16	(ov5642) - J5 - GP
+ * GPIO_6	GPIO[1]:6	(ov564x) - J5 - CSI0 power down
+ * GPIO_8	GPIO[1]:8	(ov564x) - J5 - CSI0 reset
+ * NANDF_CS0	GPIO[6]:11	(ov564x) - J5 - reset
+ * SD1_DAT0	GPIO[1]:16	(ov564x) - J5 - GP
  */
-static void ov5642_io_init(void)
+static void ov564x_io_init(void)
 {
 	IOMUX_SETUP(csi0_sensor_pads);
 
@@ -556,7 +560,7 @@ static void ov5642_io_init(void)
 		mxc_iomux_set_gpr_register(13, 0, 3, 4);
 }
 
-static void ov5642_powerdown(int powerdown)
+static void ov564x_powerdown(int powerdown)
 {
 	pr_info("%s: powerdown=%d, power_gp=0x%x\n",
 			__func__, powerdown, GP_CSI0_PWN);
@@ -564,12 +568,12 @@ static void ov5642_powerdown(int powerdown)
 	msleep(2);
 }
 
-static struct fsl_mxc_camera_platform_data ov5642_data = {
+static struct fsl_mxc_camera_platform_data ov564x_data = {
 	.mclk = 24000000,
 	.mclk_source = 0,
 	.csi = 0,
-	.io_init = ov5642_io_init,
-	.pwdn = ov5642_powerdown,
+	.io_init = ov564x_io_init,
+	.pwdn = ov564x_powerdown,
 };
 
 #endif
@@ -609,16 +613,10 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 		.platform_data = (void *)&ov5640_mipi_data,
 	},
 #endif
-#if defined(CONFIG_MXC_CAMERA_OV5640) || defined(CONFIG_MXC_CAMERA_OV5640_MODULE)
+#if defined(CSI0_CAMERA)
 	{
-		I2C_BOARD_INFO("ov5640", 0x3c),
-		.platform_data = (void *)&ov5642_data,
-	},
-#endif
-#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE)
-	{
-		I2C_BOARD_INFO("ov5642", 0x3c),
-		.platform_data = (void *)&ov5642_data,
+		I2C_BOARD_INFO("ov564x", 0x3c),
+		.platform_data = (void *)&ov564x_data,
 	},
 #endif
 };
@@ -909,7 +907,7 @@ static struct imx_ipuv3_platform_data ipu_data[] = {
 };
 
 static struct fsl_mxc_capture_platform_data capture_data[] = {
-#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE)
+#if defined(CSI0_CAMERA)
 	{
 		.ipu = 0,
 		.csi = 0,
@@ -1282,7 +1280,7 @@ static void __init board_init(void)
 	if (isn6)
 		imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
 
-#if !(defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE))
+#if !defined(CSI0_CAMERA)
 	imx6q_add_imx_uart(3, &mx6_arm2_uart3_data);
 	imx6q_add_imx_uart(4, &mx6_arm2_uart4_data);
 #endif
