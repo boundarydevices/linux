@@ -28,7 +28,7 @@ static void print_chunk(struct extent_buffer *eb, struct btrfs_chunk *chunk)
 	       "num_stripes %d\n",
 	       btrfs_chunk_length(eb, chunk), btrfs_chunk_owner(eb, chunk),
 	       btrfs_chunk_type(eb, chunk), num_stripes);
-	for (i = 0 ; i < num_stripes ; i++) {
+	for (i = 0; i < num_stripes; i++) {
 		printk(KERN_INFO "\t\t\tstripe %d devid %llu offset %llu\n", i,
 		      btrfs_stripe_devid_nr(eb, chunk, i),
 		      btrfs_stripe_offset_nr(eb, chunk, i));
