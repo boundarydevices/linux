@@ -6,6 +6,7 @@
 
 #include "dm-cache-policy.h"
 #include "dm.h"
+#include "persistent-data/dm-btree.h"
 
 #include <linux/hash.h>
 #include <linux/module.h>
@@ -151,6 +152,21 @@ static void queue_init(struct queue *q)
 }
 
 /*
+ * Checks to see if the queue is empty.
+ * FIXME: reduce cpu usage.
+ */
+static bool queue_empty(struct queue *q)
+{
+	unsigned i;
+
+	for (i = 0; i < NR_QUEUE_LEVELS; i++)
+		if (!list_empty(q->qs + i))
+			return false;
+
+	return true;
+}
+
+/*
  * Insert an entry to the back of the given level.
  */
 static void queue_push(struct queue *q, unsigned level, struct list_head *elt)
@@ -224,6 +240,7 @@ struct entry {
 	 * FIXME: pack these better
 	 */
 	bool in_cache:1;
+	bool dirty:1;
 	unsigned hit_count;
 	unsigned generation;
 	unsigned tick;
@@ -238,13 +255,15 @@ struct mq_policy {
 	struct io_tracker tracker;
 
 	/*
-	 * We maintain two queues of entries.  The cache proper contains
-	 * the currently active mappings.  Whereas the pre_cache tracks
-	 * blocks that are being hit frequently and potential candidates
-	 * for promotion to the cache.
+	 * We maintain three queues of entries.  The cache proper,
+	 * consisting of a clean and dirty queue, contains the currently
+	 * active mappings.  Whereas the pre_cache tracks blocks that
+	 * are being hit frequently and potential candidates for promotion
+	 * to the cache.
 	 */
 	struct queue pre_cache;
-	struct queue cache;
+	struct queue cache_clean;
+	struct queue cache_dirty;
 
 	/*
 	 * Keeps track of time, incremented by the core.  We use this to
@@ -311,7 +330,7 @@ struct mq_policy {
 
 /*----------------------------------------------------------------*/
 /* Free/alloc mq cache entry structures. */
-static void takeout_queue(struct list_head *lh, struct queue *q)
+static void concat_queue(struct list_head *lh, struct queue *q)
 {
 	unsigned level;
 
@@ -323,8 +342,9 @@ static void free_entries(struct mq_policy *mq)
 {
 	struct entry *e, *tmp;
 
-	takeout_queue(&mq->free, &mq->pre_cache);
-	takeout_queue(&mq->free, &mq->cache);
+	concat_queue(&mq->free, &mq->pre_cache);
+	concat_queue(&mq->free, &mq->cache_clean);
+	concat_queue(&mq->free, &mq->cache_dirty);
 
 	list_for_each_entry_safe(e, tmp, &mq->free, list)
 		kmem_cache_free(mq_entry_cache, e);
@@ -438,6 +458,11 @@ static bool any_free_cblocks(struct mq_policy *mq)
 	return mq->nr_cblocks_allocated < from_cblock(mq->cache_size);
 }
 
+static bool any_clean_cblocks(struct mq_policy *mq)
+{
+	return !queue_empty(&mq->cache_clean);
+}
+
 /*
  * Fills result out with a cache block that isn't in use, or return
  * -ENOSPC.  This does _not_ mark the cblock as allocated, the caller is
@@ -508,7 +533,8 @@ static void push(struct mq_policy *mq, struct entry *e)
 
 	if (e->in_cache) {
 		alloc_cblock(mq, e->cblock);
-		queue_push(&mq->cache, queue_level(e), &e->list);
+		queue_push(e->dirty ? &mq->cache_dirty : &mq->cache_clean,
+			   queue_level(e), &e->list);
 	} else
 		queue_push(&mq->pre_cache, queue_level(e), &e->list);
 }
@@ -531,14 +557,16 @@ static void del(struct mq_policy *mq, struct entry *e)
  */
 static struct entry *pop(struct mq_policy *mq, struct queue *q)
 {
-	struct entry *e = container_of(queue_pop(q), struct entry, list);
+	struct entry *e;
+	struct list_head *h = queue_pop(q);
 
-	if (e) {
-		hash_remove(e);
+	if (!h)
+		return NULL;
 
-		if (e->in_cache)
-			free_cblock(mq, e->cblock);
-	}
+	e = container_of(h, struct entry, list);
+	hash_remove(e);
+	if (e->in_cache)
+		free_cblock(mq, e->cblock);
 
 	return e;
 }
@@ -556,7 +584,8 @@ static bool updated_this_tick(struct mq_policy *mq, struct entry *e)
  * of the entries.
  *
  * At the moment the threshold is taken by averaging the hit counts of some
- * of the entries in the cache (the first 20 entries of the first level).
+ * of the entries in the cache (the first 20 entries across all levels in
+ * ascending order, giving preference to the clean entries at each level).
  *
  * We can be much cleverer than this though.  For example, each promotion
  * could bump up the threshold helping to prevent churn.  Much more to do
@@ -578,7 +607,16 @@ static void check_generation(struct mq_policy *mq)
 		mq->generation++;
 
 		for (level = 0; level < NR_QUEUE_LEVELS && count < MAX_TO_AVERAGE; level++) {
-			head = mq->cache.qs + level;
+			head = mq->cache_clean.qs + level;
+			list_for_each_entry(e, head, list) {
+				nr++;
+				total += e->hit_count;
+
+				if (++count >= MAX_TO_AVERAGE)
+					break;
+			}
+
+			head = mq->cache_dirty.qs + level;
 			list_for_each_entry(e, head, list) {
 				nr++;
 				total += e->hit_count;
@@ -631,19 +669,28 @@ static void requeue_and_update_tick(struct mq_policy *mq, struct entry *e)
  * - set the hit count to a hard coded value other than 1, eg, is it better
  *   if it goes in at level 2?
  */
-static dm_cblock_t demote_cblock(struct mq_policy *mq, dm_oblock_t *oblock)
+static int demote_cblock(struct mq_policy *mq, dm_oblock_t *oblock, dm_cblock_t *cblock)
 {
-	dm_cblock_t result;
-	struct entry *demoted = pop(mq, &mq->cache);
+	struct entry *demoted = pop(mq, &mq->cache_clean);
 
-	BUG_ON(!demoted);
-	result = demoted->cblock;
+	if (!demoted)
+		/*
+		 * We could get a block from mq->cache_dirty, but that
+		 * would add extra latency to the triggering bio as it
+		 * waits for the writeback.  Better to not promote this
+		 * time and hope there's a clean block next time this block
+		 * is hit.
+		 */
+		return -ENOSPC;
+
+	*cblock = demoted->cblock;
 	*oblock = demoted->oblock;
 	demoted->in_cache = false;
+	demoted->dirty = false;
 	demoted->hit_count = 1;
 	push(mq, demoted);
 
-	return result;
+	return 0;
 }
 
 /*
@@ -662,17 +709,18 @@ static dm_cblock_t demote_cblock(struct mq_policy *mq, dm_oblock_t *oblock)
 static unsigned adjusted_promote_threshold(struct mq_policy *mq,
 					   bool discarded_oblock, int data_dir)
 {
-	if (discarded_oblock && any_free_cblocks(mq) && data_dir == WRITE)
+	if (data_dir == READ)
+		return mq->promote_threshold + READ_PROMOTE_THRESHOLD;
+
+	if (discarded_oblock && (any_free_cblocks(mq) || any_clean_cblocks(mq))) {
 		/*
 		 * We don't need to do any copying at all, so give this a
-		 * very low threshold.  In practice this only triggers
-		 * during initial population after a format.
+		 * very low threshold.
 		 */
 		return DISCARDED_PROMOTE_THRESHOLD;
+	}
 
-	return data_dir == READ ?
-		(mq->promote_threshold + READ_PROMOTE_THRESHOLD) :
-		(mq->promote_threshold + WRITE_PROMOTE_THRESHOLD);
+	return mq->promote_threshold + WRITE_PROMOTE_THRESHOLD;
 }
 
 static bool should_promote(struct mq_policy *mq, struct entry *e,
@@ -697,17 +745,22 @@ static int cache_entry_found(struct mq_policy *mq,
 }
 
 /*
- * Moves and entry from the pre_cache to the cache.  The main work is
+ * Moves an entry from the pre_cache to the cache.  The main work is
  * finding which cache block to use.
  */
 static int pre_cache_to_cache(struct mq_policy *mq, struct entry *e,
 			      struct policy_result *result)
 {
+	int r;
 	dm_cblock_t cblock;
 
 	if (find_free_cblock(mq, &cblock) == -ENOSPC) {
 		result->op = POLICY_REPLACE;
-		cblock = demote_cblock(mq, &result->old_oblock);
+		r = demote_cblock(mq, &result->old_oblock, &cblock);
+		if (r) {
+			result->op = POLICY_MISS;
+			return 0;
+		}
 	} else
 		result->op = POLICY_NEW;
 
@@ -715,6 +768,7 @@ static int pre_cache_to_cache(struct mq_policy *mq, struct entry *e,
 
 	del(mq, e);
 	e->in_cache = true;
+	e->dirty = false;
 	push(mq, e);
 
 	return 0;
@@ -740,6 +794,17 @@ static int pre_cache_entry_found(struct mq_policy *mq, struct entry *e,
 	return r;
 }
 
+static void insert_entry_in_pre_cache(struct mq_policy *mq,
+				      struct entry *e, dm_oblock_t oblock)
+{
+	e->in_cache = false;
+	e->dirty = false;
+	e->oblock = oblock;
+	e->hit_count = 1;
+	e->generation = mq->generation;
+	push(mq, e);
+}
+
 static void insert_in_pre_cache(struct mq_policy *mq,
 				dm_oblock_t oblock)
 {
@@ -757,39 +822,51 @@ static void insert_in_pre_cache(struct mq_policy *mq,
 		return;
 	}
 
-	e->in_cache = false;
-	e->oblock = oblock;
-	e->hit_count = 1;
-	e->generation = mq->generation;
-	push(mq, e);
+	insert_entry_in_pre_cache(mq, e, oblock);
 }
 
 static void insert_in_cache(struct mq_policy *mq, dm_oblock_t oblock,
 			    struct policy_result *result)
 {
+	int r;
 	struct entry *e;
 	dm_cblock_t cblock;
 
 	if (find_free_cblock(mq, &cblock) == -ENOSPC) {
-		result->op = POLICY_MISS;
-		insert_in_pre_cache(mq, oblock);
-		return;
-	}
+		r = demote_cblock(mq, &result->old_oblock, &cblock);
+		if (unlikely(r)) {
+			result->op = POLICY_MISS;
+			insert_in_pre_cache(mq, oblock);
+			return;
+		}
 
-	e = alloc_entry(mq);
-	if (unlikely(!e)) {
-		result->op = POLICY_MISS;
-		return;
+		/*
+		 * This will always succeed, since we've just demoted.
+		 */
+		e = pop(mq, &mq->pre_cache);
+		result->op = POLICY_REPLACE;
+
+	} else {
+		e = alloc_entry(mq);
+		if (unlikely(!e))
+			e = pop(mq, &mq->pre_cache);
+
+		if (unlikely(!e)) {
+			result->op = POLICY_MISS;
+			return;
+		}
+
+		result->op = POLICY_NEW;
 	}
 
 	e->oblock = oblock;
 	e->cblock = cblock;
 	e->in_cache = true;
+	e->dirty = false;
 	e->hit_count = 1;
 	e->generation = mq->generation;
 	push(mq, e);
 
-	result->op = POLICY_NEW;
 	result->cblock = e->cblock;
 }
 
@@ -915,9 +992,47 @@ static int mq_lookup(struct dm_cache_policy *p, dm_oblock_t oblock, dm_cblock_t 
 	return r;
 }
 
+/*
+ * FIXME: __mq_set_clear_dirty can block due to mutex.
+ * Ideally a policy should not block in functions called
+ * from the map() function.  Explore using RCU.
+ */
+static int __mq_set_clear_dirty(struct dm_cache_policy *p, dm_oblock_t oblock, bool set)
+{
+	int r = 0;
+	struct mq_policy *mq = to_mq_policy(p);
+	struct entry *e;
+
+	mutex_lock(&mq->lock);
+	e = hash_lookup(mq, oblock);
+	if (!e) {
+		r = -ENOENT;
+		DMWARN("__mq_set_clear_dirty called for a block that isn't in the cache");
+	} else {
+		BUG_ON(!e->in_cache);
+
+		del(mq, e);
+		e->dirty = set;
+		push(mq, e);
+	}
+	mutex_unlock(&mq->lock);
+
+	return r;
+}
+
+static int mq_set_dirty(struct dm_cache_policy *p, dm_oblock_t oblock)
+{
+	return __mq_set_clear_dirty(p, oblock, true);
+}
+
+static int mq_clear_dirty(struct dm_cache_policy *p, dm_oblock_t oblock)
+{
+	return __mq_set_clear_dirty(p, oblock, false);
+}
+
 static int mq_load_mapping(struct dm_cache_policy *p,
 			   dm_oblock_t oblock, dm_cblock_t cblock,
-			   uint32_t hint, bool hint_valid)
+			   void *hint, bool hint_valid)
 {
 	struct mq_policy *mq = to_mq_policy(p);
 	struct entry *e;
@@ -929,9 +1044,30 @@ static int mq_load_mapping(struct dm_cache_policy *p,
 	e->cblock = cblock;
 	e->oblock = oblock;
 	e->in_cache = true;
-	e->hit_count = hint_valid ? hint : 1;
+	e->dirty = false;	/* this gets corrected in a minute */
+	e->hit_count = hint_valid ? le32_to_cpu(*((__le32 *) hint)) : 1;
 	e->generation = mq->generation;
 	push(mq, e);
+
+	return 0;
+}
+
+static int mq_save_hints(struct mq_policy *mq, struct queue *q,
+			 policy_walk_fn fn, void *context)
+{
+	int r;
+	unsigned level;
+	struct entry *e;
+
+	for (level = 0; level < NR_QUEUE_LEVELS; level++)
+		list_for_each_entry(e, q->qs + level, list) {
+			__le32 value = cpu_to_le32(e->hit_count);
+			__dm_bless_for_disk(&value);
+
+			r = fn(context, e->cblock, e->oblock, &value);
+			if (r)
+				return r;
+		}
 
 	return 0;
 }
@@ -941,52 +1077,94 @@ static int mq_walk_mappings(struct dm_cache_policy *p, policy_walk_fn fn,
 {
 	struct mq_policy *mq = to_mq_policy(p);
 	int r = 0;
-	struct entry *e;
-	unsigned level;
 
 	mutex_lock(&mq->lock);
 
-	for (level = 0; level < NR_QUEUE_LEVELS; level++)
-		list_for_each_entry(e, &mq->cache.qs[level], list) {
-			r = fn(context, e->cblock, e->oblock, e->hit_count);
-			if (r)
-				goto out;
-		}
+	r = mq_save_hints(mq, &mq->cache_clean, fn, context);
+	if (!r)
+		r = mq_save_hints(mq, &mq->cache_dirty, fn, context);
 
-out:
 	mutex_unlock(&mq->lock);
 
 	return r;
 }
 
-static void mq_remove_mapping(struct dm_cache_policy *p, dm_oblock_t oblock)
+static int __remove_mapping(struct mq_policy *mq,
+			    dm_oblock_t oblock, dm_cblock_t *cblock)
 {
-	struct mq_policy *mq = to_mq_policy(p);
 	struct entry *e;
-
-	mutex_lock(&mq->lock);
 
 	e = hash_lookup(mq, oblock);
 
-	BUG_ON(!e || !e->in_cache);
+	if (e && e->in_cache) {
+		del(mq, e);
+		e->in_cache = false;
+		e->dirty = false;
 
-	del(mq, e);
-	e->in_cache = false;
-	push(mq, e);
+		if (cblock) {
+			*cblock = e->cblock;
+			list_add(&e->list, &mq->free);
+		} else
+			push(mq, e);
 
-	mutex_unlock(&mq->lock);
+		return 0;
+	}
+
+	return -ENOENT;
 }
 
-static void force_mapping(struct mq_policy *mq,
-			  dm_oblock_t current_oblock, dm_oblock_t new_oblock)
+static void mq_remove_mapping(struct dm_cache_policy *p, dm_oblock_t oblock)
+{
+	int r;
+	struct mq_policy *mq = to_mq_policy(p);
+
+	mutex_lock(&mq->lock);
+	r = __remove_mapping(mq, oblock, NULL);
+	mutex_unlock(&mq->lock);
+
+	BUG_ON(r);
+}
+
+static int __mq_writeback_work(struct mq_policy *mq, dm_oblock_t *oblock,
+			      dm_cblock_t *cblock)
+{
+	struct entry *e = pop(mq, &mq->cache_dirty);
+
+	if (!e)
+		return -ENODATA;
+
+	*oblock = e->oblock;
+	*cblock = e->cblock;
+	e->dirty = false;
+	push(mq, e);
+
+	return 0;
+}
+
+static int mq_writeback_work(struct dm_cache_policy *p, dm_oblock_t *oblock,
+			     dm_cblock_t *cblock)
+{
+	int r;
+	struct mq_policy *mq = to_mq_policy(p);
+
+	mutex_lock(&mq->lock);
+	r = __mq_writeback_work(mq, oblock, cblock);
+	mutex_unlock(&mq->lock);
+
+	return r;
+}
+
+static void __force_mapping(struct mq_policy *mq,
+			    dm_oblock_t current_oblock, dm_oblock_t new_oblock)
 {
 	struct entry *e = hash_lookup(mq, current_oblock);
 
-	BUG_ON(!e || !e->in_cache);
-
-	del(mq, e);
-	e->oblock = new_oblock;
-	push(mq, e);
+	if (e && e->in_cache) {
+		del(mq, e);
+		e->oblock = new_oblock;
+		e->dirty = true;
+		push(mq, e);
+	}
 }
 
 static void mq_force_mapping(struct dm_cache_policy *p,
@@ -995,16 +1173,35 @@ static void mq_force_mapping(struct dm_cache_policy *p,
 	struct mq_policy *mq = to_mq_policy(p);
 
 	mutex_lock(&mq->lock);
-	force_mapping(mq, current_oblock, new_oblock);
+	__force_mapping(mq, current_oblock, new_oblock);
 	mutex_unlock(&mq->lock);
+}
+
+static int mq_invalidate_mapping(struct dm_cache_policy *p,
+				 dm_oblock_t *oblock, dm_cblock_t *cblock)
+{
+	int r;
+	struct mq_policy *mq = to_mq_policy(p);
+
+	mutex_lock(&mq->lock);
+	r = __remove_mapping(mq, *oblock, cblock);
+	mutex_unlock(&mq->lock);
+
+	return r;
 }
 
 static dm_cblock_t mq_residency(struct dm_cache_policy *p)
 {
+	dm_cblock_t r;
 	struct mq_policy *mq = to_mq_policy(p);
 
-	/* FIXME: lock mutex, not sure we can block here */
-	return to_cblock(mq->nr_cblocks_allocated);
+	might_sleep();
+
+	mutex_lock(&mq->lock);
+	r = to_cblock(mq->nr_cblocks_allocated);
+	mutex_unlock(&mq->lock);
+
+	return r;
 }
 
 static void mq_tick(struct dm_cache_policy *p)
@@ -1057,11 +1254,14 @@ static void init_policy_functions(struct mq_policy *mq)
 	mq->policy.destroy = mq_destroy;
 	mq->policy.map = mq_map;
 	mq->policy.lookup = mq_lookup;
+	mq->policy.set_dirty = mq_set_dirty;
+	mq->policy.clear_dirty = mq_clear_dirty;
 	mq->policy.load_mapping = mq_load_mapping;
 	mq->policy.walk_mappings = mq_walk_mappings;
 	mq->policy.remove_mapping = mq_remove_mapping;
-	mq->policy.writeback_work = NULL;
+	mq->policy.writeback_work = mq_writeback_work;
 	mq->policy.force_mapping = mq_force_mapping;
+	mq->policy.invalidate_mapping = mq_invalidate_mapping;
 	mq->policy.residency = mq_residency;
 	mq->policy.tick = mq_tick;
 	mq->policy.emit_config_values = mq_emit_config_values;
@@ -1093,7 +1293,9 @@ static struct dm_cache_policy *mq_create(dm_cblock_t cache_size,
 	mq->find_free_last_word = 0;
 
 	queue_init(&mq->pre_cache);
-	queue_init(&mq->cache);
+	queue_init(&mq->cache_clean);
+	queue_init(&mq->cache_dirty);
+
 	mq->generation_period = max((unsigned) from_cblock(cache_size), 1024U);
 
 	mq->nr_entries = 2 * from_cblock(cache_size);

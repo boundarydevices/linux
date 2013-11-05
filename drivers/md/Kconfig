@@ -282,6 +282,23 @@ config DM_CACHE_MQ
          This is meant to be a general purpose policy.  It prioritises
          reads over writes.
 
+config DM_CACHE_ERA
+       tristate "ERA Cache Policy shim (EXPERIMENTAL)"
+       depends on DM_CACHE
+       ---help---
+	 A cache policy shim that adds an "era" property to the
+	 per-cache-block metadata, to facilitate the implementation of
+	 cache coherency validation and recovery tools.	 This mechanism
+	 works as follows.  There is a monotonically increasing 32-bit
+	 era counter associated with each cache instance.  Each cache
+	 block is tagged with the era during which it was last written.
+	 A device mapper message interface is provided to obtain the
+	 current era, advance to the next era, and invalidate blocks
+	 from before or after a given era.  Note that you can use this
+	 policy shim to add the era functionality to any cache policy
+	 via name concatenation -- specify era+mq instead of just mq to
+	 add the era mechanism to the mq policy, for example.
+
 config DM_CACHE_CLEANER
        tristate "Cleaner Cache Policy (EXPERIMENTAL)"
        depends on DM_CACHE
@@ -371,26 +388,11 @@ config DM_MULTIPATH_ST
 
 	  If unsure, say N.
 
-config DM_DELAY
-	tristate "I/O delaying target"
-	depends on BLK_DEV_DM
-	---help---
-	A target that delays reads and/or writes and can send
-	them to different devices.  Useful for testing.
-
-	If unsure, say N.
-
 config DM_UEVENT
 	bool "DM uevents"
 	depends on BLK_DEV_DM
 	---help---
 	Generate udev events for DM events.
-
-config DM_FLAKEY
-       tristate "Flakey target"
-       depends on BLK_DEV_DM
-       ---help---
-         A target that intermittently fails I/O for debugging purposes.
 
 config DM_VERITY
 	tristate "Verity target support"
@@ -425,5 +427,35 @@ config DM_SWITCH
 	  be called dm-switch.
 
 	  If unsure, say N.
+
+config DM_TEST_TARGETS
+	tristate "DM test targets"
+	depends on BLK_DEV_DM
+	---help---
+	  Targets that are primarily useful for testing.
+
+config DM_FLAKEY
+	tristate "Flakey target"
+	depends on DM_TEST_TARGETS
+	---help---
+	  A target that intermittently fails I/O for debugging purposes.
+
+	  If unsure, say N.
+
+config DM_DELAY
+	tristate "I/O delaying target"
+	depends on DM_TEST_TARGETS
+	---help---
+	  A target that delays reads and/or writes and can send
+	  them to different devices.  Primarily useful for testing.
+
+	  If unsure, say N.
+
+config DM_CACHE_HINTS
+       tristate "Hint Size Test Cache Policy (EXPERIMENTAL)"
+       depends on DM_CACHE
+       depends on DM_TEST_TARGETS
+       ---help---
+         A dumb cache policy just to test variable hint size
 
 endif # MD
