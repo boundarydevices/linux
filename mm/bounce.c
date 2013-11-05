@@ -202,8 +202,6 @@ static void __blk_queue_bounce(struct request_queue *q, struct bio **bio_orig,
 	struct bvec_iter iter;
 	unsigned i;
 
-	if (force)
-		goto bounce;
 	bio_for_each_segment(from, *bio_orig, iter)
 		if (page_to_pfn(from.bv_page) > queue_bounce_pfn(q))
 			goto bounce;
