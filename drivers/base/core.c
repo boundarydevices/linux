@@ -27,6 +27,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/netdevice.h>
 #include <linux/sysfs.h>
+#include <linux/random.h>
 
 #include "base.h"
 #include "power/power.h"
@@ -1086,6 +1087,8 @@ int device_add(struct device *dev)
 				class_intf->add_dev(dev, class_intf);
 		mutex_unlock(&dev->class->p->mutex);
 	}
+	add_device_attach_randomness(dev);
+
 done:
 	put_device(dev);
 	return error;
