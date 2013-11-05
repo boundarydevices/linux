@@ -1111,7 +1111,7 @@ static int pmecc_choose_ecc(struct atmel_nand_host *host,
 	return 0;
 }
 
-static int __init atmel_pmecc_nand_init_params(struct platform_device *pdev,
+static int atmel_pmecc_nand_init_params(struct platform_device *pdev,
 					 struct atmel_nand_host *host)
 {
 	struct mtd_info *mtd = &host->mtd;
@@ -1512,7 +1512,7 @@ static int atmel_of_init_port(struct atmel_nand_host *host,
 	return 0;
 }
 
-static int __init atmel_hw_nand_init_params(struct platform_device *pdev,
+static int atmel_hw_nand_init_params(struct platform_device *pdev,
 					 struct atmel_nand_host *host)
 {
 	struct mtd_info *mtd = &host->mtd;
@@ -1951,7 +1951,7 @@ static struct platform_driver atmel_nand_nfc_driver;
 /*
  * Probe for the NAND device.
  */
-static int __init atmel_nand_probe(struct platform_device *pdev)
+static int atmel_nand_probe(struct platform_device *pdev)
 {
 	struct atmel_nand_host *host;
 	struct mtd_info *mtd;
@@ -2149,7 +2149,7 @@ err_nand_ioremap:
 /*
  * Remove a NAND device.
  */
-static int __exit atmel_nand_remove(struct platform_device *pdev)
+static int atmel_nand_remove(struct platform_device *pdev)
 {
 	struct atmel_nand_host *host = platform_get_drvdata(pdev);
 	struct mtd_info *mtd = &host->mtd;
@@ -2232,7 +2232,8 @@ static struct platform_driver atmel_nand_nfc_driver = {
 };
 
 static struct platform_driver atmel_nand_driver = {
-	.remove		= __exit_p(atmel_nand_remove),
+	.probe		= atmel_nand_probe,
+	.remove		= atmel_nand_remove,
 	.driver		= {
 		.name	= "atmel_nand",
 		.owner	= THIS_MODULE,
@@ -2240,7 +2241,7 @@ static struct platform_driver atmel_nand_driver = {
 	},
 };
 
-module_platform_driver_probe(atmel_nand_driver, atmel_nand_probe);
+module_platform_driver(atmel_nand_driver);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Rick Bronson");
