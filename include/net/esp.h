@@ -3,17 +3,7 @@
 
 #include <linux/skbuff.h>
 
-struct crypto_aead;
-
-struct esp_data {
-	/* 0..255 */
-	int padlen;
-
-	/* Confidentiality & Integrity */
-	struct crypto_aead *aead;
-};
-
-extern void *pskb_put(struct sk_buff *skb, struct sk_buff *tail, int len);
+void *pskb_put(struct sk_buff *skb, struct sk_buff *tail, int len);
 
 struct ip_esp_hdr;
 

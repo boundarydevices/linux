@@ -1704,16 +1704,9 @@ int ath_cabq_update(struct ath_softc *sc)
 	int qnum = sc->beacon.cabq->axq_qnum;
 
 	ath9k_hw_get_txq_props(sc->sc_ah, qnum, &qi);
-	/*
-	 * Ensure the readytime % is within the bounds.
-	 */
-	if (sc->config.cabqReadytime < ATH9K_READY_TIME_LO_BOUND)
-		sc->config.cabqReadytime = ATH9K_READY_TIME_LO_BOUND;
-	else if (sc->config.cabqReadytime > ATH9K_READY_TIME_HI_BOUND)
-		sc->config.cabqReadytime = ATH9K_READY_TIME_HI_BOUND;
 
 	qi.tqi_readyTime = (cur_conf->beacon_interval *
-			    sc->config.cabqReadytime) / 100;
+			    ATH_CABQ_READY_TIME) / 100;
 	ath_txq_update(sc, qnum, &qi);
 
 	return 0;
@@ -2037,8 +2030,7 @@ u8 ath_txchainmask_reduction(struct ath_softc *sc, u8 chainmask, u32 rate)
 	struct ath_hw *ah = sc->sc_ah;
 	struct ath9k_channel *curchan = ah->curchan;
 
-	if ((ah->caps.hw_caps & ATH9K_HW_CAP_APM) &&
-	    (curchan->channelFlags & CHANNEL_5GHZ) &&
+	if ((ah->caps.hw_caps & ATH9K_HW_CAP_APM) && IS_CHAN_5GHZ(curchan) &&
 	    (chainmask == 0x7) && (rate < 0x90))
 		return 0x3;
 	else if (AR_SREV_9462(ah) && ath9k_hw_btcoex_is_enabled(ah) &&
@@ -2329,7 +2321,7 @@ static void ath_tx_complete(struct ath_softc *sc, struct sk_buff *skb,
 	ath_dbg(common, XMIT, "TX complete: skb: %p\n", skb);
 
 	if (sc->sc_ah->caldata)
-		sc->sc_ah->caldata->paprd_packet_sent = true;
+		set_bit(PAPRD_PACKET_SENT, &sc->sc_ah->caldata->cal_flags);
 
 	if (!(tx_flags & ATH_TX_ERROR))
 		/* Frame was ACKed */
