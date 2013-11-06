@@ -179,6 +179,20 @@
 			>;
 		};
 
+		pinctrl_flexcan1: flexcan1grp {
+			fsl,pins = <
+				MX6QDL_PAD_KEY_ROW2__FLEXCAN1_RX	0x80000000
+				MX6QDL_PAD_KEY_COL2__FLEXCAN1_TX	0x80000000
+			>;
+		};
+
+		pinctrl_flexcan2: flexcan2grp {
+			fsl,pins = <
+				MX6QDL_PAD_KEY_COL4__FLEXCAN2_TX	0x80000000
+				MX6QDL_PAD_KEY_ROW4__FLEXCAN2_RX	0x80000000
+			>;
+		};
+
 		pinctrl_gpmi_nand: gpminandgrp {
 			fsl,pins = <
 				MX6QDL_PAD_NANDF_CLE__NAND_CLE		0xb0b1
@@ -423,6 +437,23 @@
 &dcic2 {
 	dcic_id = <1>;
 	dcic_mux = "dcic-lvds0";
+	status = "okay";
+};
+
+&flexcan1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan1>;
+	pinctrl-assert-gpios = <&max7310_b 3 GPIO_ACTIVE_HIGH>; /* TX */
+	trx-en-gpio = <&max7310_b 6 GPIO_ACTIVE_HIGH>;
+	trx-stby-gpio = <&max7310_b 5 GPIO_ACTIVE_HIGH>;
+	status = "disabled"; /* pin conflict with fec */
+};
+
+&flexcan2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan2>;
+	trx-en-gpio = <&max7310_c 6 GPIO_ACTIVE_HIGH>;
+	trx-stby-gpio = <&max7310_c 5 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 
