@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2013 Freescale Semiconductor, Inc.
+ * Copyright 2011-2014 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -10,17 +10,20 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
+#include <linux/can/platform/flexcan.h>
 #include <linux/clk.h>
 #include <linux/clkdev.h>
 #include <linux/cpu.h>
 #include <linux/delay.h>
 #include <linux/export.h>
+#include <linux/gpio.h>
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/irqchip.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/pm_opp.h>
@@ -38,6 +41,68 @@
 #include "common.h"
 #include "cpuidle.h"
 #include "hardware.h"
+
+static struct flexcan_platform_data flexcan_pdata[2];
+static int flexcan_en_gpio;
+static int flexcan_stby_gpio;
+static int flexcan0_en;
+static int flexcan1_en;
+static void mx6q_flexcan_switch(void)
+{
+	if (flexcan0_en || flexcan1_en) {
+		/*
+		 * The transceiver TJA1041A on sabreauto RevE baseboard will
+		 * fail to transit to Normal state if EN/STBY is high by default
+		 * after board power up. So we set the EN/STBY initial state to low
+		 * first then to high to guarantee the state transition successfully.
+		 */
+		gpio_set_value_cansleep(flexcan_en_gpio, 0);
+		gpio_set_value_cansleep(flexcan_stby_gpio, 0);
+
+		gpio_set_value_cansleep(flexcan_en_gpio, 1);
+		gpio_set_value_cansleep(flexcan_stby_gpio, 1);
+	} else {
+		/*
+		 * avoid to disable CAN xcvr if any of the CAN interfaces
+		 * are down. XCRV will be disabled only if both CAN2
+		 * interfaces are DOWN.
+		*/
+		gpio_set_value_cansleep(flexcan_en_gpio, 0);
+		gpio_set_value_cansleep(flexcan_stby_gpio, 0);
+	}
+}
+
+static void imx6q_flexcan0_switch_auto(int enable)
+{
+	flexcan0_en = enable;
+	mx6q_flexcan_switch();
+}
+
+static void imx6q_flexcan1_switch_auto(int enable)
+{
+	flexcan1_en = enable;
+	mx6q_flexcan_switch();
+}
+
+static int __init imx6q_flexcan_fixup_auto(void)
+{
+	struct device_node *np;
+
+	np = of_find_node_by_path("/soc/aips-bus@02000000/can@02090000");
+	if (!np)
+		return -ENODEV;
+
+	flexcan_en_gpio = of_get_named_gpio(np, "trx-en-gpio", 0);
+	flexcan_stby_gpio = of_get_named_gpio(np, "trx-stby-gpio", 0);
+	if (!gpio_request_one(flexcan_en_gpio, GPIOF_DIR_OUT, "flexcan-trx-en") &&
+		!gpio_request_one(flexcan_stby_gpio, GPIOF_DIR_OUT, "flexcan-trx-stby")) {
+		/* flexcan 0 & 1 are using the same GPIOs for transceiver */
+		flexcan_pdata[0].transceiver_switch = imx6q_flexcan0_switch_auto;
+		flexcan_pdata[1].transceiver_switch = imx6q_flexcan1_switch_auto;
+	}
+
+	return 0;
+}
 
 /* For imx6q sabrelite board: set KSZ9021RN RGMII pad skew */
 static int ksz9021rn_phy_fixup(struct phy_device *phydev)
@@ -228,6 +293,13 @@ put_node:
 	of_node_put(np);
 }
 
+/* Add auxdata to pass platform data */
+static const struct of_dev_auxdata imx6q_auxdata_lookup[] __initconst = {
+	OF_DEV_AUXDATA("fsl,imx6q-flexcan", 0x02090000, NULL, &flexcan_pdata[0]),
+	OF_DEV_AUXDATA("fsl,imx6q-flexcan", 0x02094000, NULL, &flexcan_pdata[1]),
+	{ /* sentinel */ }
+};
+
 static void __init imx6q_init_machine(void)
 {
 	struct device *parent;
@@ -243,7 +315,8 @@ static void __init imx6q_init_machine(void)
 
 	imx6q_enet_phy_init();
 
-	of_platform_populate(NULL, of_default_bus_match_table, NULL, parent);
+	of_platform_populate(NULL, of_default_bus_match_table,
+					imx6q_auxdata_lookup, parent);
 
 	imx_anatop_init();
 	cpu_is_imx6q() ?  imx6q_pm_init() : imx6dl_pm_init();
@@ -345,6 +418,10 @@ static void __init imx6q_init_late(void)
 		imx6q_opp_init();
 		platform_device_register(&imx6q_cpufreq_pdev);
 	}
+
+	if (of_machine_is_compatible("fsl,imx6q-sabreauto")
+		|| of_machine_is_compatible("fsl,imx6dl-sabreauto"))
+		imx6q_flexcan_fixup_auto();
 }
 
 static void __init imx6q_map_io(void)
@@ -362,7 +439,7 @@ static void __init imx6q_init_irq(void)
 	irqchip_init();
 }
 
-static const char *imx6q_dt_compat[] __initconst = {
+static const char *imx6q_dt_compat[] __initdata = {
 	"fsl,imx6dl",
 	"fsl,imx6q",
 	NULL,
