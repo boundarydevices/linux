@@ -268,6 +268,7 @@
 			fsl,pins = <
 				MX6QDL_PAD_EIM_D19__GPIO3_IO19		0x80000000	/* spi-nor CS */
 				MX6QDL_PAD_EIM_D22__GPIO3_IO22		0x80000000	/* otg power en */
+				MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x1b0b0		/* USB hub reset */
 				MX6QDL_PAD_EIM_D23__GPIO3_IO23		0x000b0		/* ethernet phy reset */
 				MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28	0x000b0		/* ethernet phy interrupt */
 				MX6QDL_PAD_SD3_DAT5__GPIO7_IO00		0x80000000	/* USDHC3 CD */
@@ -296,7 +297,6 @@
 		status = "okay";
 		fsl,data-mapping = "spwg";
 		fsl,data-width = <18>;
-
 		display-timings {
 			native-mode = <&timing1>;
 /* HANNSTAR */
@@ -364,12 +364,15 @@
 
 &usbh1 {
 	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbh1_1>;
+	disable-over-current;
 };
 
 &usbotg {
 	vbus-supply = <&reg_usb_otg_vbus>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usbotg_1>;
+	pinctrl-0 = <&pinctrl_usbotg_3>;
 	disable-over-current;
 	status = "okay";
 };
