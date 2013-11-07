@@ -516,16 +516,22 @@ struct fec_enet_delayed_work {
 	int trig_tx;
 };
 
-struct fec_enet_priv_tx_q {
+struct bufdesc_prop {
 	int index;
+	/* Address of Rx and Tx buffers */
+	struct bufdesc	*base;
+	struct bufdesc	*last;
+	struct bufdesc	*cur;
+	dma_addr_t	dma;
+	unsigned short ring_size;
+	unsigned short desc_size;
+};
+
+struct fec_enet_priv_tx_q {
+	struct bufdesc_prop bd;
 	unsigned char *tx_bounce[TX_RING_SIZE];
 	struct  sk_buff *tx_skbuff[TX_RING_SIZE];
 
-	dma_addr_t	bd_dma;
-	struct bufdesc	*tx_bd_base;
-	uint tx_ring_size;
-
-	struct bufdesc	*cur_tx;
 	struct bufdesc	*dirty_tx;
 
 	/* Software TSO */
@@ -536,14 +542,8 @@ struct fec_enet_priv_tx_q {
 };
 
 struct fec_enet_priv_rx_q {
-	int index;
+	struct bufdesc_prop bd;
 	struct  sk_buff *rx_skbuff[RX_RING_SIZE];
-
-	dma_addr_t	bd_dma;
-	struct bufdesc	*rx_bd_base;
-	uint rx_ring_size;
-
-	struct bufdesc	*cur_rx;
 };
 
 /* The FEC buffer descriptors track the ring buffers.  The rx_bd_base and
@@ -573,7 +573,6 @@ struct fec_enet_private {
 	struct fec_enet_priv_tx_q *tx_queue[FEC_ENET_MAX_TX_QS];
 	struct fec_enet_priv_rx_q *rx_queue[FEC_ENET_MAX_RX_QS];
 
-	unsigned short bufdesc_size;
 	unsigned int total_tx_ring_size;
 	unsigned int total_rx_ring_size;
 
