@@ -377,6 +377,15 @@ struct fec_enet_delayed_work {
 	bool trig_tx;
 };
 
+struct bufdesc_prop {
+	/* Address of Rx and Tx buffers */
+	struct bufdesc	*base;
+	struct bufdesc	*last;
+	struct bufdesc	*cur;
+	dma_addr_t	dma;
+	unsigned short ring_size;
+	unsigned short desc_size;
+};
 /* The FEC buffer descriptors track the ring buffers.  The rx_bd_base and
  * tx_bd_base always point to the base of the buffer descriptors.  The
  * cur_rx and cur_tx point to the currently available buffer.
@@ -402,12 +411,9 @@ struct fec_enet_private {
 	struct	sk_buff *rx_skbuff[RX_RING_SIZE];
 
 	/* CPM dual port RAM relative addresses */
-	dma_addr_t	bd_dma;
-	/* Address of Rx and Tx buffers */
-	struct bufdesc	*rx_bd_base;
-	struct bufdesc	*tx_bd_base;
-	/* The next free ring entry */
-	struct bufdesc	*cur_rx, *cur_tx;
+	struct bufdesc_prop bd_tx;
+	struct bufdesc_prop bd_rx;
+
 	/* The ring entries to be free()ed */
 	struct bufdesc	*dirty_tx;
 
