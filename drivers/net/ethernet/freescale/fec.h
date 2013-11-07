@@ -440,33 +440,33 @@ struct fec_enet_stop_mode {
 	u8 req_bit;
 };
 
-struct fec_enet_priv_tx_q {
+struct bufdesc_prop {
 	int index;
+	/* Address of Rx and Tx buffers */
+	struct bufdesc	*base;
+	struct bufdesc	*last;
+	struct bufdesc	*cur;
+	dma_addr_t	dma;
+	unsigned short ring_size;
+	unsigned short desc_size;
+};
+
+struct fec_enet_priv_tx_q {
+	struct bufdesc_prop bd;
 	unsigned char *tx_bounce[TX_RING_SIZE];
 	struct  sk_buff *tx_skbuff[TX_RING_SIZE];
-
-	dma_addr_t	bd_dma;
-	struct bufdesc	*tx_bd_base;
-	uint tx_ring_size;
 
 	unsigned short tx_stop_threshold;
 	unsigned short tx_wake_threshold;
 
-	struct bufdesc	*cur_tx;
 	struct bufdesc	*dirty_tx;
 	char *tso_hdrs;
 	dma_addr_t tso_hdrs_dma;
 };
 
 struct fec_enet_priv_rx_q {
-	int index;
+	struct bufdesc_prop bd;
 	struct  sk_buff *rx_skbuff[RX_RING_SIZE];
-
-	dma_addr_t	bd_dma;
-	struct bufdesc	*rx_bd_base;
-	uint rx_ring_size;
-
-	struct bufdesc	*cur_rx;
 };
 
 /* The FEC buffer descriptors track the ring buffers.  The rx_bd_base and
