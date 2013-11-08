@@ -2058,8 +2058,10 @@ static unsigned long _clk_gpt_get_rate(struct clk *clk)
 {
 	unsigned long rate;
 
+#ifdef wantbadclock
 	if (mx6q_revision() == IMX_CHIP_REVISION_1_0)
 		return clk_get_rate(clk->parent);
+#endif
 
 	rate = mx6_timer_rate();
 	if (!rate)
@@ -5565,14 +5567,9 @@ int __init mx6_clocks_init(unsigned long ckil, unsigned long osc,
 	  * the WAIT routines use GPT counter as
 	  * a delay.
 	  */
-	if (mx6q_revision() == IMX_CHIP_REVISION_1_0) {
-		gpt_clk[0].parent = &ipg_perclk;
-		gpt_clk[0].get_rate = NULL;
-	} else {
-		/* Here we use OSC 24M as GPT's clock source, no need to
-		enable gpt serial clock*/
-		gpt_clk[0].secondary = NULL;
-	}
+	/* Here we use OSC 24M as GPT's clock source, no need to
+	enable gpt serial clock*/
+	gpt_clk[0].secondary = NULL;
 
 	mxc_timer_init(&gpt_clk[0], timer_base, MXC_INT_GPT);
 
