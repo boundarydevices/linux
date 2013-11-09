@@ -84,7 +84,7 @@ set_a_bus_req(struct device *dev, struct device_attribute *attr,
 		ci->fsm.a_bus_req = 1;
 	}
 
-	ci_otg_queue_work(ci);
+	ci_otg_wake(ci);
 	mutex_unlock(&ci->fsm.lock);
 
 	return count;
@@ -124,7 +124,7 @@ set_a_bus_drop(struct device *dev, struct device_attribute *attr,
 		ci->fsm.a_bus_req = 0;
 	}
 
-	ci_otg_queue_work(ci);
+	ci_otg_wake(ci);
 	mutex_unlock(&ci->fsm.lock);
 
 	return count;
@@ -163,7 +163,7 @@ set_b_bus_req(struct device *dev, struct device_attribute *attr,
 	else if (buf[0] == '1')
 		ci->fsm.b_bus_req = 1;
 
-	ci_otg_queue_work(ci);
+	ci_otg_wake(ci);
 	mutex_unlock(&ci->fsm.lock);
 
 	return count;
@@ -183,7 +183,7 @@ set_a_clr_err(struct device *dev, struct device_attribute *attr,
 	if (buf[0] == '1')
 		ci->fsm.a_clr_err = 1;
 
-	ci_otg_queue_work(ci);
+	ci_otg_wake(ci);
 	mutex_unlock(&ci->fsm.lock);
 
 	return count;
@@ -293,7 +293,7 @@ static void set_tmout_and_fsm(void *ptr, unsigned long indicator)
 
 	set_tmout(ci, indicator);
 
-	ci_otg_queue_work(ci);
+	ci_otg_wake(ci);
 }
 
 static void a_wait_vfall_tmout_func(void *ptr, unsigned long indicator)
@@ -307,7 +307,7 @@ static void a_wait_vfall_tmout_func(void *ptr, unsigned long indicator)
 	hw_write_otgsc(ci, OTGSC_DPIS, OTGSC_DPIS);
 	/* Enable data pulse irq */
 	hw_write_otgsc(ci, OTGSC_DPIE, OTGSC_DPIE);
-	ci_otg_queue_work(ci);
+	ci_otg_wake(ci);
 }
 
 static void b_ase0_brst_tmout_func(void *ptr, unsigned long indicator)
@@ -318,7 +318,7 @@ static void b_ase0_brst_tmout_func(void *ptr, unsigned long indicator)
 	if (!hw_read_otgsc(ci, OTGSC_BSV))
 		ci->fsm.b_sess_vld = 0;
 
-	ci_otg_queue_work(ci);
+	ci_otg_wake(ci);
 }
 
 static void b_ssend_srp_tmout_func(void *ptr, unsigned long indicator)
@@ -329,7 +329,7 @@ static void b_ssend_srp_tmout_func(void *ptr, unsigned long indicator)
 
 	/* only vbus fall below B_sess_vld in b_idle state */
 	if (ci->transceiver->state == OTG_STATE_B_IDLE)
-		ci_otg_queue_work(ci);
+		ci_otg_wake(ci);
 }
 
 static void b_sess_vld_tmout_func(void *ptr, unsigned long indicator)
@@ -340,7 +340,7 @@ static void b_sess_vld_tmout_func(void *ptr, unsigned long indicator)
 	if (!(hw_read_otgsc(ci, OTGSC_BSV))) {
 		ci->fsm.b_sess_vld = 0;
 		ci_otg_add_timer(ci, B_SSEND_SRP);
-		ci_otg_queue_work(ci);
+		ci_otg_wake(ci);
 	}
 }
 
@@ -355,7 +355,7 @@ static void b_data_pulse_end(void *ptr, unsigned long indicator)
 
 	hw_write_otgsc(ci, OTGSC_HABA, 0);
 
-	ci_otg_queue_work(ci);
+	ci_otg_wake(ci);
 }
 
 /* Initialize timers */
@@ -597,7 +597,7 @@ int ci_otg_fsm_work(struct ci_hdrc *ci)
 			 */
 			if ((ci->fsm.id) || (ci->id_event) ||
 						(ci->fsm.power_up))
-				ci_otg_queue_work(ci);
+				ci_otg_wake(ci);
 			if (ci->id_event)
 				ci->id_event = false;
 		} else if (ci->transceiver->state == OTG_STATE_B_IDLE) {
@@ -607,7 +607,7 @@ int ci_otg_fsm_work(struct ci_hdrc *ci)
 				 * Further transite to b_periphearl state
 				 * when register gadget driver with vbus on
 				 */
-				ci_otg_queue_work(ci);
+				ci_otg_wake(ci);
 			}
 		}
 	}
@@ -632,19 +632,19 @@ static void ci_otg_fsm_event(struct ci_hdrc *ci)
 		if (port_conn) {
 			fsm->b_conn = 1;
 			fsm->a_bus_req = 1;
-			ci_otg_queue_work(ci);
+			ci_otg_wake(ci);
 		}
 		break;
 	case OTG_STATE_B_IDLE:
 		if (otg_bsess_vld && (intr_sts & USBi_PCI) && port_conn) {
 			fsm->b_sess_vld = 1;
-			ci_otg_queue_work(ci);
+			ci_otg_wake(ci);
 		}
 		break;
 	case OTG_STATE_B_PERIPHERAL:
 		if ((intr_sts & USBi_SLI) && port_conn && otg_bsess_vld) {
 			fsm->a_bus_suspend = 1;
-			ci_otg_queue_work(ci);
+			ci_otg_wake(ci);
 		} else if (intr_sts & USBi_PCI) {
 			if (fsm->a_bus_suspend == 1)
 				fsm->a_bus_suspend = 0;
@@ -654,7 +654,7 @@ static void ci_otg_fsm_event(struct ci_hdrc *ci)
 		if ((intr_sts & USBi_PCI) && !port_conn) {
 			fsm->a_conn = 0;
 			fsm->b_bus_req = 0;
-			ci_otg_queue_work(ci);
+			ci_otg_wake(ci);
 			ci_otg_add_timer(ci, B_SESS_VLD);
 		}
 		break;
@@ -688,19 +688,19 @@ static void ci_otg_fsm_event(struct ci_hdrc *ci)
 				/* A device to be peripheral mode */
 				ci->gadget.is_a_peripheral = 1;
 			}
-			ci_otg_queue_work(ci);
+			ci_otg_wake(ci);
 		}
 		break;
 	case OTG_STATE_A_HOST:
 		if ((intr_sts & USBi_PCI) && !port_conn) {
 			fsm->b_conn = 0;
-			ci_otg_queue_work(ci);
+			ci_otg_wake(ci);
 		}
 		break;
 	case OTG_STATE_B_WAIT_ACON:
 		if ((intr_sts & USBi_PCI) && port_conn) {
 			fsm->a_conn = 1;
-			ci_otg_queue_work(ci);
+			ci_otg_wake(ci);
 		}
 		break;
 	default:
@@ -761,7 +761,7 @@ irqreturn_t ci_otg_fsm_irq(struct ci_hdrc *ci)
 				fsm->b_conn = 0;
 			}
 		}
-		ci_otg_queue_work(ci);
+		ci_otg_wake(ci);
 		return IRQ_HANDLED;
 	}
 
@@ -772,7 +772,7 @@ irqreturn_t ci_otg_fsm_irq(struct ci_hdrc *ci)
 
 void ci_hdrc_otg_fsm_start(struct ci_hdrc *ci)
 {
-	ci_otg_queue_work(ci);
+	ci_otg_wake(ci);
 }
 
 int ci_hdrc_otg_fsm_init(struct ci_hdrc *ci)

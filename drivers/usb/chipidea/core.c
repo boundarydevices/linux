@@ -439,7 +439,7 @@ static irqreturn_t ci_irq(int irq, void *data)
 		ci->id_event = true;
 		/* Clear ID change irq status */
 		hw_write_otgsc(ci, OTGSC_IDIS, OTGSC_IDIS);
-		ci_otg_queue_work(ci);
+		ci_otg_wake(ci);
 		return IRQ_HANDLED;
 	}
 
@@ -451,7 +451,7 @@ static irqreturn_t ci_irq(int irq, void *data)
 		ci->b_sess_valid_event = true;
 		/* Clear BSV irq */
 		hw_write_otgsc(ci, OTGSC_BSVIS, OTGSC_BSVIS);
-		ci_otg_queue_work(ci);
+		ci_otg_wake(ci);
 		return IRQ_HANDLED;
 	}
 
