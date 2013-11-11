@@ -8,6 +8,7 @@
  *   Author: Wolfram Sang <kernel@pengutronix.de>
  */
 
+#include <linux/busfreq-imx.h>
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <linux/err.h>
@@ -1310,6 +1311,9 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 
 	pltfm_host->clk = imx_data->clk_per;
 	pltfm_host->clock = clk_get_rate(pltfm_host->clk);
+
+	request_bus_freq(BUS_FREQ_HIGH);
+
 	err = clk_prepare_enable(imx_data->clk_per);
 	if (err)
 		goto free_sdhci;
@@ -1380,6 +1384,9 @@ disable_ipg_clk:
 	clk_disable_unprepare(imx_data->clk_ipg);
 disable_per_clk:
 	clk_disable_unprepare(imx_data->clk_per);
+
+	release_bus_freq(BUS_FREQ_HIGH);
+
 free_sdhci:
 	sdhci_pltfm_free(pdev);
 	return err;
@@ -1452,6 +1459,8 @@ static int sdhci_esdhc_runtime_suspend(struct device *dev)
 	}
 	clk_disable_unprepare(imx_data->clk_ahb);
 
+	release_bus_freq(BUS_FREQ_HIGH);
+
 	return ret;
 }
 
@@ -1465,6 +1474,8 @@ static int sdhci_esdhc_runtime_resume(struct device *dev)
 	err = clk_prepare_enable(imx_data->clk_ahb);
 	if (err)
 		return err;
+
+	request_bus_freq(BUS_FREQ_HIGH);
 
 	if (!sdhci_sdio_irq_enabled(host)) {
 		err = clk_prepare_enable(imx_data->clk_per);
