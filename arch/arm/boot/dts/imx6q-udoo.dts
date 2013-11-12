@@ -21,8 +21,19 @@
 	};
 };
 
+&fec {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_enet>;
+	phy-mode = "rgmii";
+	status = "okay";
+};
+
 &iomuxc {
 	imx6q-udoo {
+		pinctrl_enet: enetgrp {
+			fsl,pins = <MX6QDL_ENET_PINGRP1>;
+		};
+
 		pinctrl_uart2: uart2grp {
 			fsl,pins = <MX6QDL_UART2_PINGRP1>;
 		};
