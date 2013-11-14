@@ -722,7 +722,7 @@ static int init_sata(struct device *dev, void __iomem *addr)
 	 *.tx_edgerate_0(iomuxc_gpr13[0]),
 	 */
 	tmpdata = readl(IOMUXC_GPR13);
-	writel(((tmpdata & ~0x07FFFFFD) | 0x0593A044), IOMUXC_GPR13);
+	writel(((tmpdata & ~0x07FFFFFF) | 0x0593A044), IOMUXC_GPR13);
 
 	/* enable SATA_PHY PLL */
 	tmpdata = readl(IOMUXC_GPR13);
