@@ -519,7 +519,7 @@ static int init_sata(struct device *dev, void __iomem *addr)
 	}
 
 	/* Set PHY Paremeters, two steps to configure the GPR13,
-	 * one write for rest of parameters, mask of first write is 0x07FFFFFD,
+	 * one write for rest of parameters, mask of first write is 0x07FFFFFF,
 	 * and the other one write for setting the mpll_clk_off_b
 	 *.rx_eq_val_0(iomuxc_gpr13[26:24]),
 	 *.los_lvl(iomuxc_gpr13[23:19]),
@@ -533,11 +533,11 @@ static int init_sata(struct device *dev, void __iomem *addr)
 	 *.tx_edgerate_0(iomuxc_gpr13[0]),
 	 */
 	tmpdata = readl(IOMUXC_GPR13);
-	writel(((tmpdata & ~0x07FFFFFD) | 0x0593A044), IOMUXC_GPR13);
+	writel(((tmpdata & ~0x07FFFFFF) | 0x0593A044), IOMUXC_GPR13);
 
 	/* enable SATA_PHY PLL */
 	tmpdata = readl(IOMUXC_GPR13);
-	writel(((tmpdata & ~0x2) | 0x2), IOMUXC_GPR13);
+	writel((tmpdata | 0x2), IOMUXC_GPR13);
 
 	/* Get the AHB clock rate, and configure the TIMER1MS reg later */
 	clk = clk_get(NULL, "ahb");
