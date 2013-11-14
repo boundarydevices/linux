@@ -22,5 +22,6 @@ static inline void ci_otg_wake(struct ci_hdrc *ci)
 	disable_irq_nosync(ci->irq);
 	wake_up(&ci->otg_wait);
 }
+void ci_handle_vbus_connected(struct ci_hdrc *ci);
 
 #endif /* __DRIVERS_USB_CHIPIDEA_OTG_H */
