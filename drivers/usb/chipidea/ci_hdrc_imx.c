@@ -19,6 +19,10 @@
 #include <linux/dma-mapping.h>
 #include <linux/usb/chipidea.h>
 #include <linux/clk.h>
+#include <linux/of_device.h>
+#include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
+#include <linux/power/imx6_usb_charger.h>
 
 #include "ci.h"
 #include "ci_hdrc_imx.h"
@@ -69,6 +73,8 @@ struct ci_hdrc_imx_data {
 	struct imx_usbmisc_data *usbmisc_data;
 	bool supports_runtime_pm;
 	bool in_lpm;
+	bool imx6_usb_charger_detection;
+	struct usb_charger charger;
 };
 
 /* Common functions shared by usbmisc drivers */
@@ -113,6 +119,37 @@ static struct imx_usbmisc_data *usbmisc_get_init_data(struct device *dev)
 
 /* End of common functions shared by usbmisc drivers*/
 
+static int ci_hdrc_imx_notify_event(struct ci_hdrc *ci, unsigned event)
+{
+	struct device *dev = ci->dev->parent;
+	struct ci_hdrc_imx_data *data = dev_get_drvdata(dev);
+	int ret = 0;
+
+	switch (event) {
+	case CI_HDRC_CONTROLLER_CHARGER_EVENT:
+		if (!data->imx6_usb_charger_detection)
+			return ret;
+		if (ci->vbus_active) {
+			ret = imx6_usb_vbus_connect(&data->charger);
+			if (!ret && data->charger.psy.type
+				!= POWER_SUPPLY_TYPE_USB)
+				ret = CI_HDRC_NOTIFY_RET_DEFER_EVENT;
+		} else {
+			ret = imx6_usb_vbus_disconnect(&data->charger);
+		}
+		break;
+	case CI_HDRC_CONTROLLER_CHARGER_POST_EVENT:
+		if (!data->imx6_usb_charger_detection)
+			return ret;
+		imx6_usb_charger_detect_post(&data->charger);
+		break;
+	default:
+		dev_dbg(dev, "unknown event\n");
+	}
+
+	return ret;
+}
+
 static int ci_hdrc_imx_probe(struct platform_device *pdev)
 {
 	struct ci_hdrc_imx_data *data;
@@ -121,17 +158,21 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 		.capoffset	= DEF_CAPOFFSET,
 		.flags		= CI_HDRC_REQUIRE_TRANSCEIVER |
 				  CI_HDRC_DISABLE_STREAMING,
+		.notify_event = ci_hdrc_imx_notify_event,
 	};
 	int ret;
 	const struct of_device_id *of_id =
 			of_match_device(ci_hdrc_imx_dt_ids, &pdev->dev);
 	const struct ci_hdrc_imx_platform_flag *imx_platform_flag = of_id->data;
+	struct device_node *np = pdev->dev.of_node;
 
 	data = devm_kzalloc(&pdev->dev, sizeof(*data), GFP_KERNEL);
 	if (!data) {
 		dev_err(&pdev->dev, "Failed to allocate ci_hdrc-imx data!\n");
 		return -ENOMEM;
 	}
+
+	platform_set_drvdata(pdev, data);
 
 	data->usbmisc_data = usbmisc_get_init_data(&pdev->dev);
 	if (IS_ERR(data->usbmisc_data))
@@ -185,6 +226,26 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 		}
 	}
 
+	if (of_find_property(np, "imx6-usb-charger-detection", NULL))
+		data->imx6_usb_charger_detection = true;
+
+	if (data->imx6_usb_charger_detection) {
+		data->charger.anatop = syscon_regmap_lookup_by_phandle
+			(np, "fsl,anatop");
+		if (IS_ERR(data->charger.anatop)) {
+			dev_dbg(&pdev->dev,
+				"failed to find regmap for anatop\n");
+			ret = PTR_ERR(data->charger.anatop);
+			goto err_clk;
+		}
+		data->charger.dev = &pdev->dev;
+		ret = imx6_usb_create_charger(&data->charger,
+			"imx6_usb_charger");
+		if (ret)
+			goto err_clk;
+		dev_dbg(&pdev->dev, "USB Charger is created\n");
+	}
+
 	data->ci_pdev = ci_hdrc_add_device(&pdev->dev,
 				pdev->resource, pdev->num_resources,
 				&pdata);
@@ -193,7 +254,7 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Can't register ci_hdrc platform device, err=%d\n",
 			ret);
-		goto err_clk;
+		goto remove_charger;
 	}
 
 	if (data->usbmisc_data) {
@@ -214,8 +275,6 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 		}
 	}
 
-	platform_set_drvdata(pdev, data);
-
 	device_set_wakeup_capable(&pdev->dev, true);
 
 	if (data->supports_runtime_pm) {
@@ -227,6 +286,9 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 
 disable_device:
 	ci_hdrc_remove_device(data->ci_pdev);
+remove_charger:
+	if (data->imx6_usb_charger_detection)
+		imx6_usb_remove_charger(&data->charger);
 err_clk:
 	clk_disable_unprepare(data->clk);
 	return ret;
@@ -243,6 +305,8 @@ static int ci_hdrc_imx_remove(struct platform_device *pdev)
 		pm_runtime_put_noidle(&pdev->dev);
 	}
 	clk_disable_unprepare(data->clk);
+	if (data->imx6_usb_charger_detection)
+		imx6_usb_remove_charger(&data->charger);
 
 	return 0;
 }
