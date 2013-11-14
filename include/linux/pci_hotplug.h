@@ -52,8 +52,8 @@ enum pcie_link_width {
  * @hardware_test: Called to run a specified hardware test on the specified
  * slot.
  * @get_power_status: Called to get the current power status of a slot.
- * 	If this field is NULL, the value passed in the struct hotplug_slot_info
- * 	will be used when this value is requested by a user.
+ *	If this field is NULL, the value passed in the struct hotplug_slot_info
+ *	will be used when this value is requested by a user.
  * @get_attention_status: Called to get the current attention status of a slot.
  *	If this field is NULL, the value passed in the struct hotplug_slot_info
  *	will be used when this value is requested by a user.
@@ -200,4 +200,3 @@ static inline int pci_get_hp_params(struct pci_dev *dev,
 
 void pci_configure_slot(struct pci_dev *dev);
 #endif
-
