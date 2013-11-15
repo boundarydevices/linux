@@ -319,7 +319,13 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
 
 		switch (field->application) {
 		case HID_GD_MOUSE:
-		case HID_GD_POINTER:  code += BTN_MOUSE; break;
+		case HID_GD_POINTER:
+				if (0xEEF == device->vendor) {
+					code += BTN_TOUCH;
+				}
+				else
+					code += BTN_MOUSE;
+				break;
 		case HID_GD_JOYSTICK:
 				if (code <= 0xf)
 					code += BTN_JOYSTICK;
@@ -750,6 +756,7 @@ void hidinput_hid_event(struct hid_device *hid, struct hid_field *field, struct 
 {
 	struct input_dev *input;
 	unsigned *quirks = &hid->quirks;
+	struct hid_device *device;
 
 	if (!field->hidinput)
 		return;
@@ -821,6 +828,23 @@ void hidinput_hid_event(struct hid_device *hid, struct hid_field *field, struct 
 	/* report the usage code as scancode if the key status has changed */
 	if (usage->type == EV_KEY && !!test_bit(usage->code, input->key) != value)
 		input_event(input, EV_MSC, MSC_SCAN, usage->hid);
+
+
+        device = input_get_drvdata(input);
+	if ((0xEEF == device->vendor)
+	    &&
+            (usage->type == EV_ABS))
+	{
+		__s32 before=value;
+		if (usage->hid == HID_GD_X) {
+			usage->code = 1;        // vs 0 (X becomes Y)
+			value = 4096 - value;
+		} else if (usage->hid == HID_GD_Y) {
+			usage->code = 0;        // vs 1 (Y becomes X)
+		}
+		value = (((value-2048)*306)/256)+2048;
+                /* dev_err(&input->dev,"%s: type %d, code %d, value %d->%d\n", __func__, usage->type, usage->code, before, value); */
+	}
 
 	input_event(input, usage->type, usage->code, value);
 
