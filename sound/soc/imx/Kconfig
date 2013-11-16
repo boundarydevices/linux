@@ -120,6 +120,7 @@ config SND_SOC_IMX_HDMI
 	default n
 	select SND_SOC_MXC_HDMI
 	select MFD_MXC_HDMI
+	select SND_MXC_SOC_MX2
 	help
 	  Say Y if you want to add support for SoC audio through IMX HDMI.
 
