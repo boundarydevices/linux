@@ -15,6 +15,7 @@
 #include "imx51-pingrp.h"
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/clock/imx5-clock.h>
+#include <dt-bindings/gpio/gpio.h>
 
 / {
 	aliases {
