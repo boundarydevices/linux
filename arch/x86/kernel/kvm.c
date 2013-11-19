@@ -464,7 +464,7 @@ static struct notifier_block kvm_cpu_notifier = {
 
 static void __init kvm_apf_trap_init(void)
 {
-	set_intr_gate(14, &async_page_fault);
+	set_intr_gate(14, async_page_fault);
 }
 
 void __init kvm_guest_init(void)
@@ -609,7 +609,7 @@ static struct dentry *d_kvm_debug;
 
 struct dentry *kvm_init_debugfs(void)
 {
-	d_kvm_debug = debugfs_create_dir("kvm", NULL);
+	d_kvm_debug = debugfs_create_dir("kvm-guest", NULL);
 	if (!d_kvm_debug)
 		printk(KERN_WARNING "Could not create 'kvm' debugfs directory\n");
 
