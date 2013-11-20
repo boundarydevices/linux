@@ -267,81 +267,85 @@ int arizona_init_gpio(struct snd_soc_codec *codec)
 EXPORT_SYMBOL_GPL(arizona_init_gpio);
 
 const char *arizona_mixer_texts[ARIZONA_NUM_MIXER_INPUTS] = {
-	"None",			/* 0 */
-	"Tone Generator 1",	/* 1 */
-	"Tone Generator 2",	/* 2 */
-	"Haptics",		/* 3 */
-	"AEC",			/* 4 */
-	"Mic Mute Mixer",	/* 5 */
-	"Noise Generator",	/* 6 */
-	"IN1L",			/* 7 */
-	"IN1R",			/* 8 */
-	"IN2L",			/* 9 */
-	"IN2R",			/* 10 */
-	"IN3L",			/* 11 */
-	"IN3R",			/* 12 */
-	"IN4L",			/* 13 */
-	"IN4R",			/* 14 */
-	"AIF1RX1",		/* 15 */
-	"AIF1RX2",		/* 16 */
-	"AIF1RX3",		/* 17 */
-	"AIF1RX4",		/* 18 */
-	"AIF1RX5",		/* 19 */
-	"AIF1RX6",		/* 20 */
-	"AIF1RX7",		/* 21 */
-	"AIF1RX8",		/* 22 */
-	"AIF2RX1",		/* 23 */
-	"AIF2RX2",		/* 24 */
-	"AIF3RX1",		/* 25 */
-	"AIF3RX2",		/* 26 */
-	"SLIMRX1",		/* 27 */
-	"SLIMRX2",		/* 28 */
-	"SLIMRX3",		/* 29 */
-	"SLIMRX4",		/* 30 */
-	"SLIMRX5",		/* 31 */
-	"SLIMRX6",		/* 32 */
-	"SLIMRX7",		/* 33 */
-	"SLIMRX8",		/* 34 */
-	"EQ1",			/* 35 */
-	"EQ2",			/* 36 */
-	"EQ3",			/* 37 */
-	"EQ4",			/* 38 */
-	"DRC1L",		/* 39 */
-	"DRC1R",		/* 40 */
-	"DRC2L",		/* 41 */
-	"DRC2R",		/* 42 */
-	"LHPF1",		/* 43 */
-	"LHPF2",		/* 44 */
-	"LHPF3",		/* 45 */
-	"LHPF4",		/* 46 */
-	"DSP1.1",		/* 47 */
-	"DSP1.2",		/* 48 */
-	"DSP1.3",		/* 49 */
-	"DSP1.4",		/* 50 */
-	"DSP1.5",		/* 51 */
-	"DSP1.6",		/* 52 */
-	"DSP2.1",		/* 53 */
-	"DSP2.2",		/* 54 */
-	"DSP2.3",		/* 55 */
-	"DSP2.4",		/* 56 */
-	"DSP2.5",		/* 57 */
-	"DSP2.6",		/* 58 */
-	"DSP3.1",		/* 59 */
-	"DSP3.2",		/* 60 */
-	"DSP3.3",		/* 61 */
-	"DSP3.4",		/* 62 */
-	"DSP3.5",		/* 63 */
-	"DSP3.6",		/* 64 */
-	"DSP4.1",		/* 65 */
-	"DSP4.2",		/* 66 */
-	"DSP4.3",		/* 67 */
-	"DSP4.4",		/* 68 */
-	"DSP4.5",		/* 69 */
-	"DSP4.6",		/* 70 */
-	"ASRC1L",		/* 71 */
-	"ASRC1R",		/* 72 */
-	"ASRC2L",		/* 73 */
-	"ASRC2R",		/* 74 */
+	"None",
+	"Tone Generator 1",
+	"Tone Generator 2",
+	"Haptics",
+	"AEC",
+	"Mic Mute Mixer",
+	"Noise Generator",
+	"IN1L",
+	"IN1R",
+	"IN2L",
+	"IN2R",
+	"IN3L",
+	"IN3R",
+	"IN4L",
+	"IN4R",
+	"AIF1RX1",
+	"AIF1RX2",
+	"AIF1RX3",
+	"AIF1RX4",
+	"AIF1RX5",
+	"AIF1RX6",
+	"AIF1RX7",
+	"AIF1RX8",
+	"AIF2RX1",
+	"AIF2RX2",
+	"AIF2RX3",
+	"AIF2RX4",
+	"AIF2RX5",
+	"AIF2RX6",
+	"AIF3RX1",
+	"AIF3RX2",
+	"SLIMRX1",
+	"SLIMRX2",
+	"SLIMRX3",
+	"SLIMRX4",
+	"SLIMRX5",
+	"SLIMRX6",
+	"SLIMRX7",
+	"SLIMRX8",
+	"EQ1",
+	"EQ2",
+	"EQ3",
+	"EQ4",
+	"DRC1L",
+	"DRC1R",
+	"DRC2L",
+	"DRC2R",
+	"LHPF1",
+	"LHPF2",
+	"LHPF3",
+	"LHPF4",
+	"DSP1.1",
+	"DSP1.2",
+	"DSP1.3",
+	"DSP1.4",
+	"DSP1.5",
+	"DSP1.6",
+	"DSP2.1",
+	"DSP2.2",
+	"DSP2.3",
+	"DSP2.4",
+	"DSP2.5",
+	"DSP2.6",
+	"DSP3.1",
+	"DSP3.2",
+	"DSP3.3",
+	"DSP3.4",
+	"DSP3.5",
+	"DSP3.6",
+	"DSP4.1",
+	"DSP4.2",
+	"DSP4.3",
+	"DSP4.4",
+	"DSP4.5",
+	"DSP4.6",
+	"ASRC1L",
+	"ASRC1R",
+	"ASRC2L",
+	"ASRC2R",
 	"ISRC1INT1",
 	"ISRC1INT2",
 	"ISRC1INT3",
@@ -395,6 +399,10 @@ int arizona_mixer_values[ARIZONA_NUM_MIXER_INPUTS] = {
 	0x27,
 	0x28,  /* AIF2RX1 */
 	0x29,
+	0x2a,
+	0x2b,
+	0x2c,
+	0x2d,
 	0x30,  /* AIF3RX1 */
 	0x31,
 	0x38,  /* SLIMRX1 */
