@@ -156,11 +156,11 @@
 		};
 
 		pinctrl_usdhc3: usdhc3grp {
-			fsl,pins = <MX6QDL_USDHC3_PINGRP2>;
+			fsl,pins = <MX6QDL_USDHC3_PINGRP_D4>;
 		};
 
 		pinctrl_usdhc4: usdhc4grp {
-			fsl,pins = <MX6QDL_USDHC4_PINGRP2>;
+			fsl,pins = <MX6QDL_USDHC4_PINGRP_D4>;
 		};
 	};
 };

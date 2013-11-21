@@ -81,15 +81,15 @@
 		};
 
 		pinctrl_usdhc3: usdhc3grp {
-			fsl,pins = <MX6QDL_USDHC3_PINGRP1>;
+			fsl,pins = <MX6QDL_USDHC3_PINGRP_D8>;
 		};
 
 		pinctrl_usdhc3_100mhz: usdhc3grp100mhz {
-			fsl,pins = <MX6QDL_USDHC3_PINGRP1_100MHZ>;
+			fsl,pins = <MX6QDL_USDHC3_PINGRP_D8_100MHZ>;
 		};
 
 		pinctrl_usdhc3_200mhz: usdhc3grp200mhz {
-			fsl,pins = <MX6QDL_USDHC3_PINGRP1_200MHZ>;
+			fsl,pins = <MX6QDL_USDHC3_PINGRP_D8_200MHZ>;
 		};
 
 		pinctrl_weim_cs0: weimcs0grp {
