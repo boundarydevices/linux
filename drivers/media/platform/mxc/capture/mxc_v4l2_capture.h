@@ -43,6 +43,7 @@
 
 
 #define FRAME_NUM 10
+#define MXC_SENSOR_NUM 2
 
 /*!
  * v4l2 frame structure.
@@ -213,8 +214,8 @@ typedef struct _cam_data {
 	int local_buf_num;
 
 	/* camera sensor interface */
-	struct camera_sensor *cam_sensor; 	/* old version */
-	struct v4l2_int_device *all_sensors[2];
+	struct camera_sensor *cam_sensor;	/* old version */
+	struct v4l2_int_device *all_sensors[MXC_SENSOR_NUM];
 	struct v4l2_int_device *sensor;
 	struct v4l2_int_device *self;
 	int sensor_index;
