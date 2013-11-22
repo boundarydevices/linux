@@ -510,7 +510,7 @@ static void ov5640_mipi_camera_powerdown(int powerdown)
 		if (powerdown) {
 			pwm_disable(mipi_pwm);
 		} else {
-			unsigned period = 1000/24;
+			unsigned period = 1000/22;
 			pwm_config(mipi_pwm, period >> 1, period);
 			pwm_enable(mipi_pwm);
 		}
