@@ -47,6 +47,7 @@
 #include <linux/slab.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/io.h>
 #include <linux/dma-mapping.h>
 
@@ -210,9 +211,11 @@ struct imx_port {
 	unsigned int		use_irda:1;
 	unsigned int		irda_inv_rx:1;
 	unsigned int		irda_inv_tx:1;
+	unsigned int		half_duplex:1;
 	unsigned short		trcv_delay; /* transceiver delay */
 	struct clk		*clk_ipg;
 	struct clk		*clk_per;
+	int			rs485_txen;
 	const struct imx_uart_data *devdata;
 
 	/* DMA fields */
@@ -220,6 +223,7 @@ struct imx_port {
 	unsigned int		dma_is_enabled:1;
 	unsigned int		dma_is_rxing:1;
 	unsigned int		dma_is_txing:1;
+	unsigned int		rs485_transmitting:1;
 	struct dma_chan		*dma_chan_rx, *dma_chan_tx;
 	struct scatterlist	rx_sgl, tx_sgl[2];
 	void			*rx_buf;
@@ -374,7 +378,7 @@ static void imx_stop_tx(struct uart_port *port)
 	struct imx_port *sport = (struct imx_port *)port;
 	unsigned long temp;
 
-	if (USE_IRDA(sport)) {
+	if (sport->half_duplex) {
 		/* half duplex - wait for end of transmission */
 		int n = 256;
 		while ((--n > 0) &&
@@ -412,6 +416,11 @@ static void imx_stop_tx(struct uart_port *port)
 			temp = readl(sport->port.membase + UCR4);
 			temp |= UCR4_DREN;
 			writel(temp, sport->port.membase + UCR4);
+
+			if (sport->rs485_transmitting) {
+				sport->rs485_transmitting = 0;
+				gpio_set_value(sport->rs485_txen, 0);
+			}
 		}
 		return;
 	}
@@ -422,7 +431,6 @@ static void imx_stop_tx(struct uart_port *port)
 	 */
 	if (sport->dma_is_enabled && sport->dma_is_txing)
 		return;
-
 	temp = readl(sport->port.membase + UCR1);
 	writel(temp & ~UCR1_TXMPTYEN, sport->port.membase + UCR1);
 }
@@ -570,7 +578,7 @@ static void imx_start_tx(struct uart_port *port)
 	if (uart_circ_empty(&port->state->xmit))
 		return;
 
-	if (USE_IRDA(sport)) {
+	if (sport->half_duplex) {
 		/* half duplex in IrDA mode; have to disable receive mode */
 		temp = readl(sport->port.membase + UCR4);
 		temp &= ~(UCR4_DREN);
@@ -593,7 +601,11 @@ static void imx_start_tx(struct uart_port *port)
 		writel(temp | UCR1_TXMPTYEN, sport->port.membase + UCR1);
 	}
 
-	if (USE_IRDA(sport)) {
+	if (gpio_is_valid(sport->rs485_txen) && (!sport->rs485_transmitting)) {
+		gpio_set_value(sport->rs485_txen, 1);
+		sport->rs485_transmitting = 1;
+	}
+	if (sport->half_duplex) {
 		temp = readl(sport->port.membase + UCR1);
 		temp |= UCR1_TRDYEN;
 		writel(temp, sport->port.membase + UCR1);
@@ -671,6 +683,8 @@ static irqreturn_t imx_rxint(int irq, void *dev_id)
 		sport->port.icount.rx++;
 
 		rx = readl(sport->port.membase + URXD0);
+		if (sport->rs485_transmitting && sport->half_duplex)
+			continue;
 
 		temp = readl(sport->port.membase + USR2);
 		if (temp & USR2_BRCD) {
@@ -1331,7 +1345,7 @@ imx_set_termios(struct uart_port *port, struct ktermios *termios,
 			ucr2 |= UCR2_CTSC;
 
 			/* Can we enable the DMA support? */
-			if (is_imx6q_uart(sport) && !uart_console(port)
+			if (is_imx6q_uart(sport) && !uart_console(port) && !sport->half_duplex
 				&& !sport->dma_is_inited)
 				imx_uart_dma_init(sport);
 		} else {
@@ -1858,12 +1872,28 @@ static int serial_imx_probe_dt(struct imx_port *sport,
 	if (of_get_property(np, "fsl,uart-has-rtscts", NULL))
 		sport->have_rtscts = 1;
 
-	if (of_get_property(np, "fsl,irda-mode", NULL))
+	if (of_get_property(np, "fsl,irda-mode", NULL)) {
 		sport->use_irda = 1;
-
+		sport->half_duplex = 1;
+	}
 	if (of_get_property(np, "fsl,dte-mode", NULL))
 		sport->dte_mode = 1;
 
+	if (of_get_property(np, "half-duplex", NULL))
+		sport->half_duplex = 1;
+	sport->rs485_txen = of_get_named_gpio(np, "rs485-txen-gpios", 0);
+	if (gpio_is_valid(sport->rs485_txen)) {
+		ret = devm_gpio_request_one(&pdev->dev, sport->rs485_txen, GPIOF_OUT_INIT_LOW, "rs485-txen");
+		if (ret < 0) {
+			dev_err(&pdev->dev, "could not obtain gpio %d\n", sport->rs485_txen);
+			sport->rs485_txen = -1;
+		} else {
+			dev_err(&pdev->dev, "obtained gpio %d\n", sport->rs485_txen);
+		}
+	}
+
+	if (of_get_property(np, "fsl,dte-mode", NULL))
+		sport->dte_mode = 1;
 	sport->devdata = of_id->data;
 
 	return 0;
