@@ -110,3 +110,4 @@ config COMMON_CLK_KEYSTONE
 endmenu
 
 source "drivers/clk/mvebu/Kconfig"
+source "drivers/clk/bcm/Kconfig"

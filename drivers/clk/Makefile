@@ -37,6 +37,7 @@ obj-$(CONFIG_COMMON_CLK_XGENE)  += clk-xgene.o
 obj-$(CONFIG_COMMON_CLK_KEYSTONE)	+= keystone/
 
 obj-$(CONFIG_X86)		+= x86/
+obj-$(CONFIG_ARCH_BCM)		+= bcm/
 
 # Chip specific
 obj-$(CONFIG_COMMON_CLK_AXI_CLKGEN) += clk-axi-clkgen.o
