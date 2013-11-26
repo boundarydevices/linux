@@ -72,6 +72,10 @@
 		pinctrl_uart1: uart1grp {
 			fsl,pins = <MX53_UART1_PINGRP2>;
 		};
+
+		pinctrl_nand: nandgrp {
+			fsl,pins = <MX53_NAND_PINGRP1>;
+		};
 	};
 };
 
@@ -203,6 +207,14 @@
 			};
 		};
 	};
+};
+
+&nfc {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_nand>;
+	nand-bus-width = <8>;
+	nand-ecc-mode = "hw";
+	status = "okay";
 };
 
 &uart1 {
