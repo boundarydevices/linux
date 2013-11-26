@@ -38,6 +38,16 @@
 			regulator-max-microvolt = <3300000>;
 			regulator-always-on;
 		};
+
+		reg_usb_vbus: regulator@1 {
+			compatible = "regulator-fixed";
+			reg = <1>;
+			regulator-name = "usb_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio3 31 0>; /* PEN */
+			enable-active-high;
+		};
 	};
 };
 
@@ -220,5 +230,11 @@
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
+	status = "okay";
+};
+
+&usbh1 {
+	vbus-supply = <&reg_usb_vbus>;
+	phy_type = "utmi";
 	status = "okay";
 };
