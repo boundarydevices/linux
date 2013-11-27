@@ -48,6 +48,14 @@
 			linux,default-trigger = "heartbeat";
 		};
 	};
+
+	sound {
+		compatible = "eukrea,asoc-tlv320";
+		eukrea,model = "imx51-eukrea-tlv320aic23";
+		ssi-controller = <&ssi2>;
+		fsl,mux-int-port = <2>;
+		fsl,mux-ext-port = <3>;
+	};
 };
 
 &audmux {
@@ -125,6 +133,7 @@
 };
 
 &ssi2 {
+	codec-handle = <&tlv320aic23>;
 	fsl,mode = "i2s-slave";
 	status = "okay";
 };
