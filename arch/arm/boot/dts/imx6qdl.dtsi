@@ -164,6 +164,12 @@
 			clocks = <&clks IMX6QDL_CLK_APBH_DMA>;
 		};
 
+		irq_sec_vio: caam_secvio {
+			compatible = "fsl,imx6q-caam-secvio";
+			interrupts = <0 20 0x04>;
+			secvio_src = <0x8000001d>;
+		};
+
 		gpmi: gpmi-nand@112000 {
 			compatible = "fsl,imx6q-gpmi-nand";
 			#address-cells = <1>;
