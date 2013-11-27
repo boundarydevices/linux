@@ -838,9 +838,9 @@ void hidinput_hid_event(struct hid_device *hid, struct hid_field *field, struct 
 		__s32 before=value;
 		if (usage->hid == HID_GD_X) {
 			usage->code = 1;        // vs 0 (X becomes Y)
-			value = 4096 - value;
 		} else if (usage->hid == HID_GD_Y) {
 			usage->code = 0;        // vs 1 (Y becomes X)
+			value = 4096 - value;
 		}
 		value = (((value-2048)*306)/256)+2048;
                 /* dev_err(&input->dev,"%s: type %d, code %d, value %d->%d\n", __func__, usage->type, usage->code, before, value); */
