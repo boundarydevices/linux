@@ -228,7 +228,8 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (of_find_property(np, "imx6-usb-charger-detection", NULL))
+	if (of_find_property(np, "imx6-usb-charger-detection", NULL) &&
+			IS_ENABLED(CONFIG_IMX6_USB_CHARGER))
 		data->imx6_usb_charger_detection = true;
 
 	if (data->imx6_usb_charger_detection) {
