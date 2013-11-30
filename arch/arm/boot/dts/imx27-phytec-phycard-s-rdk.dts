@@ -113,7 +113,7 @@
 };
 
 &sdhci2 {
-	cd-gpios = <&gpio3 29 0>;
+	cd-gpios = <&gpio3 29 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 
