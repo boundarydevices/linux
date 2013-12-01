@@ -1945,7 +1945,7 @@ static s32 ov5640_write_reg(u16 reg, u8 val)
 			__func__, reg, val);
 		return -1;
 	}
-
+	pr_debug("reg=%x,val=%x\n", reg, val);
 	return 0;
 }
 
@@ -1987,44 +1987,62 @@ void OV5640_stream_off(void)
 	ov5640_write_reg(0x4202, 0x0f);
 }
 
+static const int sclk_rdiv_map[] = {1, 2, 4, 8};
 
 int OV5640_get_sysclk(void)
 {
 	 /* calculate sysclk */
-	int xvclk = ov5640_data.mclk / 10000;
-	int temp1, temp2;
-	int Multiplier, PreDiv, VCO, SysDiv, Pll_rdiv, Bit_div2x = 1, sclk_rdiv, sysclk;
+	int tmp;
+	unsigned Multiplier, PreDiv, SysDiv, Pll_rdiv, Bit_div2x = 1;
+	unsigned div, sclk_rdiv, sysclk;
 	u8 temp;
 
-	int sclk_rdiv_map[] = {1, 2, 4, 8};
+	tmp = ov5640_read_reg(0x3034, &temp);
+	if (tmp < 0)
+		return tmp;
+	tmp &= 0x0f;
+	if (tmp == 8 || tmp == 10)
+		Bit_div2x = tmp / 2;
 
-	temp1 = ov5640_read_reg(0x3034, &temp);
-	temp2 = temp1 & 0x0f;
-	if (temp2 == 8 || temp2 == 10) {
-		Bit_div2x = temp2 / 2;
-	}
-
-	temp1 = ov5640_read_reg(0x3035, &temp);
-	SysDiv = temp1>>4;
-	if (SysDiv == 0) {
+	tmp = ov5640_read_reg(0x3035, &temp);
+	if (tmp < 0)
+		return tmp;
+	SysDiv = tmp >> 4;
+	if (SysDiv == 0)
 	       SysDiv = 16;
+
+	tmp = ov5640_read_reg(0x3036, &temp);
+	if (tmp < 0)
+		return tmp;
+	Multiplier = tmp;
+
+	tmp = ov5640_read_reg(0x3037, &temp);
+	if (tmp < 0)
+		return tmp;
+	PreDiv = tmp & 0x0f;
+	Pll_rdiv = ((tmp >> 4) & 0x01) + 1;
+
+	tmp = ov5640_read_reg(0x3108, &temp);
+	if (tmp < 0)
+		return tmp;
+	sclk_rdiv = sclk_rdiv_map[tmp & 0x03];
+
+	sysclk = ov5640_data.mclk / 10000 * Multiplier;
+	div = PreDiv * SysDiv * Pll_rdiv * Bit_div2x * sclk_rdiv;
+	if (!div) {
+		pr_err("%s:Error divide by 0, (%d * %d * %d * %d * %d)\n",
+			__func__, PreDiv, SysDiv, Pll_rdiv, Bit_div2x, sclk_rdiv);
+		return -EINVAL;
 	}
-
-	temp1 = ov5640_read_reg(0x3036, &temp);
-	Multiplier = temp1;
-
-	temp1 = ov5640_read_reg(0x3037, &temp);
-	PreDiv = temp1 & 0x0f;
-	Pll_rdiv = ((temp1 >> 4) & 0x01) + 1;
-
-	temp1 = ov5640_read_reg(0x3108, &temp);
-	temp2 = temp1 & 0x03;
-	sclk_rdiv = sclk_rdiv_map[temp2];
-
-	VCO = xvclk * Multiplier / PreDiv;
-
-	sysclk = VCO / SysDiv / Pll_rdiv * 2 / Bit_div2x / sclk_rdiv;
-
+	if (!sysclk) {
+		pr_err("%s:Error 0 clk, ov5640_data.mclk=%d, Multiplier=%d\n",
+			__func__, ov5640_data.mclk, Multiplier);
+		return -EINVAL;
+	}
+	sysclk /= div;
+	pr_debug("%s: sysclk(%d) = %d / 10000 * %d / (%d * %d * %d * %d * %d)\n",
+		__func__, sysclk, ov5640_data.mclk, Multiplier,
+		PreDiv, SysDiv, Pll_rdiv, Bit_div2x, sclk_rdiv);
 	return sysclk;
 }
 
@@ -2182,6 +2200,7 @@ void OV5640_set_bandingfilter(void)
 
 	/* read preview VTS */
 	prev_VTS = OV5640_get_VTS();
+	pr_debug("prev_sysclk=%x, prev_HTS=%x, prev_VTS=%x\n", prev_sysclk, prev_HTS, prev_VTS);
 
 	/* calculate banding filter */
 	/* 60Hz */
@@ -2362,6 +2381,7 @@ static int ov5640_change_mode_exposure_calc(enum ov5640_frame_rate frame_rate,
 	cap_VTS = OV5640_get_VTS();
 	cap_HTS = OV5640_get_HTS();
 	cap_sysclk = OV5640_get_sysclk();
+	pr_debug("cap_sysclk=%x, cap_HTS=%x, cap_VTS=%x\n", cap_sysclk, cap_HTS, cap_VTS);
 
 	/* calculate capture banding filter */
 	light_freq = OV5640_get_light_freq();
@@ -3086,7 +3106,7 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 	ov5640_data.mclk = tgt_xclk;
 
 	pr_debug("   Setting mclk to %d MHz\n", tgt_xclk / 1000000);
-	set_mclk_rate(&ov5640_data.mclk, ov5640_data.mclk_source);
+//	set_mclk_rate(&ov5640_data.mclk, ov5640_data.mclk_source);
 
 	/* Default camera frame rate is set in probe */
 	tgt_fps = sensor->streamcap.timeperframe.denominator /
