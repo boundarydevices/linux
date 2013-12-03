@@ -123,6 +123,10 @@
 			fsl,pins = <MX27_I2C2_PINGRP1>;
 		};
 
+		pinctrl_pwm: pwmgrp {
+			fsl,pins = <MX27_PWM_PINGRP1>;
+		};
+
 		pinctrl_sdhc2: sdhc2grp {
 			fsl,pins = <MX27_SDHC2_PINGRP1>;
 		};
@@ -135,4 +139,9 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sdhc2>;
 	status = "okay";
+};
+
+&pwm {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm>;
 };
