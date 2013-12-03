@@ -55,7 +55,7 @@
 
 #include "drm_pciids.h"
 
-static char platformdevicename[] = "Vivante GCCore";
+static char platformdevicename[] = "Vivante GCCore:00";
 static struct platform_device *pplatformdev;
 
 static const struct file_operations viv_driver_fops = {
