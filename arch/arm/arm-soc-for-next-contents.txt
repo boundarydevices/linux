@@ -1,0 +1,8 @@
+Contents of arm-soc branches contained in for-next
+
+
+
+next/soc
+	patches
+		ARM: ep93xx: remove deprecated IRQF_DISABLED
+		ARM: ep93xx: use soc bus
