@@ -42,7 +42,16 @@
 		stdout-path = &uart1;
 	};
 
-	memory@10000000 {
+	leds {
+		compatible = "gpio-leds";
+
+		charger-led {
+			gpios = <&gpio1 2 0>;
+			linux,default-trigger = "max8903-charger-charging";
+		};
+	};
+
+	memory: memory@10000000 {
 		reg = <0x10000000 0x40000000>;
 	};
 
