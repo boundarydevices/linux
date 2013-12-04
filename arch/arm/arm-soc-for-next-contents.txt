@@ -21,6 +21,8 @@ next/dt
 next/boards
 	renesas/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-defconfig-for-v3.14
+	mvebu/defconfig
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-defconfig-3.14
 
 next/drivers
 	mvebu/drivers
