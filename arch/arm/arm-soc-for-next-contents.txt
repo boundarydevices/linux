@@ -1,6 +1,10 @@
 Contents of arm-soc branches contained in for-next
 
 
+next/cleanup
+	renesas/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-cleanup-for-v3.14
+
 next/soc
 	patches
 		ARM: ep93xx: remove deprecated IRQF_DISABLED
