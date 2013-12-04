@@ -1,8 +1,12 @@
 Contents of arm-soc branches contained in for-next
 
 
-
 next/soc
 	patches
 		ARM: ep93xx: remove deprecated IRQF_DISABLED
 		ARM: ep93xx: use soc bus
+
+next/dt
+	ux500/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-devicetree-v3.14-1
+
