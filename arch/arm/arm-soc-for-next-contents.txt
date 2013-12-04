@@ -6,6 +6,8 @@ next/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-cleanup-for-v3.14
 	mvebu/soc
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-soc-3.14
+	at91/sama5-ccf
+		git://github.com/at91linux/linux-at91.git tags/at91-cleanup
 
 next/soc
 	patches
