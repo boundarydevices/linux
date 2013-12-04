@@ -27,3 +27,5 @@ next/boards
 next/drivers
 	mvebu/drivers
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-drivers-3.14
+	samsung/s3c64xx-dmaengine
+		git://git.kernel.org/pub/scm/linux/kernel/git/broonie/misc.git tags/s3c64xx-dmaengine
