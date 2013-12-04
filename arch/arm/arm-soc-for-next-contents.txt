@@ -19,12 +19,16 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-devicetree-v3.14-1
 	mvebu/dt
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.14
+	sti/dt
+		http://git.stlinux.com/devel/kernel/linux-sti.git tags/DT-for-v3.14-part-1
 
 next/boards
 	renesas/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-defconfig-for-v3.14
 	mvebu/defconfig
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-defconfig-3.14
+	patch
+		ARM: multi_v7_defconfig: Fix STi support
 
 next/drivers
 	mvebu/drivers
