@@ -21,6 +21,7 @@
 #include <linux/xattr.h>
 #include <linux/fs.h>
 #include <linux/percpu-refcount.h>
+#include <linux/seq_file.h>
 
 #ifdef CONFIG_CGROUPS
 
@@ -387,16 +388,6 @@ struct css_set {
 };
 
 /*
- * cgroup_map_cb is an abstract callback API for reporting map-valued
- * control files
- */
-
-struct cgroup_map_cb {
-	int (*fill)(struct cgroup_map_cb *cb, const char *key, u64 value);
-	void *state;
-};
-
-/*
  * struct cftype: handler definitions for cgroup control files
  *
  * When reading/writing to a file:
@@ -443,10 +434,6 @@ struct cftype {
 	 */
 	struct cgroup_subsys *ss;
 
-	int (*open)(struct inode *inode, struct file *file);
-	ssize_t (*read)(struct cgroup_subsys_state *css, struct cftype *cft,
-			struct file *file,
-			char __user *buf, size_t nbytes, loff_t *ppos);
 	/*
 	 * read_u64() is a shortcut for the common case of returning a
 	 * single integer. Use it in place of read()
@@ -456,24 +443,14 @@ struct cftype {
 	 * read_s64() is a signed version of read_u64()
 	 */
 	s64 (*read_s64)(struct cgroup_subsys_state *css, struct cftype *cft);
-	/*
-	 * read_map() is used for defining a map of key/value
-	 * pairs. It should call cb->fill(cb, key, value) for each
-	 * entry. The key/value pairs (and their ordering) should not
-	 * change between reboots.
-	 */
-	int (*read_map)(struct cgroup_subsys_state *css, struct cftype *cft,
-			struct cgroup_map_cb *cb);
-	/*
-	 * read_seq_string() is used for outputting a simple sequence
-	 * using seqfile.
-	 */
-	int (*read_seq_string)(struct cgroup_subsys_state *css,
-			       struct cftype *cft, struct seq_file *m);
 
-	ssize_t (*write)(struct cgroup_subsys_state *css, struct cftype *cft,
-			 struct file *file,
-			 const char __user *buf, size_t nbytes, loff_t *ppos);
+	/* generic seq_file read interface */
+	int (*seq_show)(struct seq_file *sf, void *v);
+
+	/* optional ops, implement all or none */
+	void *(*seq_start)(struct seq_file *sf, loff_t *ppos);
+	void *(*seq_next)(struct seq_file *sf, void *v, loff_t *ppos);
+	void (*seq_stop)(struct seq_file *sf, void *v);
 
 	/*
 	 * write_u64() is a shortcut for the common case of accepting
@@ -515,6 +492,26 @@ struct cftype_set {
 };
 
 /*
+ * cgroupfs file entry, pointed to from leaf dentry->d_fsdata.  Don't
+ * access directly.
+ */
+struct cfent {
+	struct list_head		node;
+	struct dentry			*dentry;
+	struct cftype			*type;
+	struct cgroup_subsys_state	*css;
+
+	/* file xattrs */
+	struct simple_xattrs		xattrs;
+};
+
+/* seq_file->private points to the following, only ->priv is public */
+struct cgroup_open_file {
+	struct cfent			*cfe;
+	void				*priv;
+};
+
+/*
  * See the comment above CGRP_ROOT_SANE_BEHAVIOR for details.  This
  * function can be called as long as @cgrp is accessible.
  */
@@ -527,6 +524,18 @@ static inline bool cgroup_sane_behavior(const struct cgroup *cgrp)
 static inline const char *cgroup_name(const struct cgroup *cgrp)
 {
 	return rcu_dereference(cgrp->name)->name;
+}
+
+static inline struct cgroup_subsys_state *seq_css(struct seq_file *seq)
+{
+	struct cgroup_open_file *of = seq->private;
+	return of->cfe->css;
+}
+
+static inline struct cftype *seq_cft(struct seq_file *seq)
+{
+	struct cgroup_open_file *of = seq->private;
+	return of->cfe->type;
 }
 
 int cgroup_add_cftypes(struct cgroup_subsys *ss, struct cftype *cfts);

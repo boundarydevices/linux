@@ -41,7 +41,6 @@
 #include <linux/rcupdate.h>
 #include <linux/sched.h>
 #include <linux/backing-dev.h>
-#include <linux/seq_file.h>
 #include <linux/slab.h>
 #include <linux/magic.h>
 #include <linux/spinlock.h>
@@ -129,19 +128,6 @@ static struct cgroupfs_root cgroup_dummy_root;
 
 /* dummy_top is a shorthand for the dummy hierarchy's top cgroup */
 static struct cgroup * const cgroup_dummy_top = &cgroup_dummy_root.top_cgroup;
-
-/*
- * cgroupfs file entry, pointed to from leaf dentry->d_fsdata.
- */
-struct cfent {
-	struct list_head		node;
-	struct dentry			*dentry;
-	struct cftype			*type;
-	struct cgroup_subsys_state	*css;
-
-	/* file xattrs */
-	struct simple_xattrs		xattrs;
-};
 
 /* The list of hierarchy roots */
 
@@ -2226,10 +2212,9 @@ static int cgroup_release_agent_write(struct cgroup_subsys_state *css,
 	return 0;
 }
 
-static int cgroup_release_agent_show(struct cgroup_subsys_state *css,
-				     struct cftype *cft, struct seq_file *seq)
+static int cgroup_release_agent_show(struct seq_file *seq, void *v)
 {
-	struct cgroup *cgrp = css->cgroup;
+	struct cgroup *cgrp = seq_css(seq)->cgroup;
 
 	if (!cgroup_lock_live_group(cgrp))
 		return -ENODEV;
@@ -2239,140 +2224,61 @@ static int cgroup_release_agent_show(struct cgroup_subsys_state *css,
 	return 0;
 }
 
-static int cgroup_sane_behavior_show(struct cgroup_subsys_state *css,
-				     struct cftype *cft, struct seq_file *seq)
+static int cgroup_sane_behavior_show(struct seq_file *seq, void *v)
 {
-	seq_printf(seq, "%d\n", cgroup_sane_behavior(css->cgroup));
+	struct cgroup *cgrp = seq_css(seq)->cgroup;
+
+	seq_printf(seq, "%d\n", cgroup_sane_behavior(cgrp));
 	return 0;
 }
 
 /* A buffer size big enough for numbers or short strings */
 #define CGROUP_LOCAL_BUFFER_SIZE 64
 
-static ssize_t cgroup_write_X64(struct cgroup_subsys_state *css,
-				struct cftype *cft, struct file *file,
-				const char __user *userbuf, size_t nbytes,
-				loff_t *unused_ppos)
-{
-	char buffer[CGROUP_LOCAL_BUFFER_SIZE];
-	int retval = 0;
-	char *end;
-
-	if (!nbytes)
-		return -EINVAL;
-	if (nbytes >= sizeof(buffer))
-		return -E2BIG;
-	if (copy_from_user(buffer, userbuf, nbytes))
-		return -EFAULT;
-
-	buffer[nbytes] = 0;     /* nul-terminate */
-	if (cft->write_u64) {
-		u64 val = simple_strtoull(strstrip(buffer), &end, 0);
-		if (*end)
-			return -EINVAL;
-		retval = cft->write_u64(css, cft, val);
-	} else {
-		s64 val = simple_strtoll(strstrip(buffer), &end, 0);
-		if (*end)
-			return -EINVAL;
-		retval = cft->write_s64(css, cft, val);
-	}
-	if (!retval)
-		retval = nbytes;
-	return retval;
-}
-
-static ssize_t cgroup_write_string(struct cgroup_subsys_state *css,
-				   struct cftype *cft, struct file *file,
-				   const char __user *userbuf, size_t nbytes,
-				   loff_t *unused_ppos)
-{
-	char local_buffer[CGROUP_LOCAL_BUFFER_SIZE];
-	int retval = 0;
-	size_t max_bytes = cft->max_write_len;
-	char *buffer = local_buffer;
-
-	if (!max_bytes)
-		max_bytes = sizeof(local_buffer) - 1;
-	if (nbytes >= max_bytes)
-		return -E2BIG;
-	/* Allocate a dynamic buffer if we need one */
-	if (nbytes >= sizeof(local_buffer)) {
-		buffer = kmalloc(nbytes + 1, GFP_KERNEL);
-		if (buffer == NULL)
-			return -ENOMEM;
-	}
-	if (nbytes && copy_from_user(buffer, userbuf, nbytes)) {
-		retval = -EFAULT;
-		goto out;
-	}
-
-	buffer[nbytes] = 0;     /* nul-terminate */
-	retval = cft->write_string(css, cft, strstrip(buffer));
-	if (!retval)
-		retval = nbytes;
-out:
-	if (buffer != local_buffer)
-		kfree(buffer);
-	return retval;
-}
-
-static ssize_t cgroup_file_write(struct file *file, const char __user *buf,
+static ssize_t cgroup_file_write(struct file *file, const char __user *userbuf,
 				 size_t nbytes, loff_t *ppos)
 {
 	struct cfent *cfe = __d_cfe(file->f_dentry);
 	struct cftype *cft = __d_cft(file->f_dentry);
 	struct cgroup_subsys_state *css = cfe->css;
+	size_t max_bytes = cft->max_write_len ?: CGROUP_LOCAL_BUFFER_SIZE - 1;
+	char *buf;
+	int ret;
 
-	if (cft->write)
-		return cft->write(css, cft, file, buf, nbytes, ppos);
-	if (cft->write_u64 || cft->write_s64)
-		return cgroup_write_X64(css, cft, file, buf, nbytes, ppos);
-	if (cft->write_string)
-		return cgroup_write_string(css, cft, file, buf, nbytes, ppos);
-	if (cft->trigger) {
-		int ret = cft->trigger(css, (unsigned int)cft->private);
-		return ret ? ret : nbytes;
+	if (nbytes >= max_bytes)
+		return -E2BIG;
+
+	buf = kmalloc(nbytes + 1, GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
+	if (copy_from_user(buf, userbuf, nbytes)) {
+		ret = -EFAULT;
+		goto out_free;
 	}
-	return -EINVAL;
-}
 
-static ssize_t cgroup_read_u64(struct cgroup_subsys_state *css,
-			       struct cftype *cft, struct file *file,
-			       char __user *buf, size_t nbytes, loff_t *ppos)
-{
-	char tmp[CGROUP_LOCAL_BUFFER_SIZE];
-	u64 val = cft->read_u64(css, cft);
-	int len = sprintf(tmp, "%llu\n", (unsigned long long) val);
+	buf[nbytes] = '\0';
 
-	return simple_read_from_buffer(buf, nbytes, ppos, tmp, len);
-}
-
-static ssize_t cgroup_read_s64(struct cgroup_subsys_state *css,
-			       struct cftype *cft, struct file *file,
-			       char __user *buf, size_t nbytes, loff_t *ppos)
-{
-	char tmp[CGROUP_LOCAL_BUFFER_SIZE];
-	s64 val = cft->read_s64(css, cft);
-	int len = sprintf(tmp, "%lld\n", (long long) val);
-
-	return simple_read_from_buffer(buf, nbytes, ppos, tmp, len);
-}
-
-static ssize_t cgroup_file_read(struct file *file, char __user *buf,
-				size_t nbytes, loff_t *ppos)
-{
-	struct cfent *cfe = __d_cfe(file->f_dentry);
-	struct cftype *cft = __d_cft(file->f_dentry);
-	struct cgroup_subsys_state *css = cfe->css;
-
-	if (cft->read)
-		return cft->read(css, cft, file, buf, nbytes, ppos);
-	if (cft->read_u64)
-		return cgroup_read_u64(css, cft, file, buf, nbytes, ppos);
-	if (cft->read_s64)
-		return cgroup_read_s64(css, cft, file, buf, nbytes, ppos);
-	return -EINVAL;
+	if (cft->write_string) {
+		ret = cft->write_string(css, cft, strstrip(buf));
+	} else if (cft->write_u64) {
+		unsigned long long v;
+		ret = kstrtoull(buf, 0, &v);
+		if (!ret)
+			ret = cft->write_u64(css, cft, v);
+	} else if (cft->write_s64) {
+		long long v;
+		ret = kstrtoll(buf, 0, &v);
+		if (!ret)
+			ret = cft->write_s64(css, cft, v);
+	} else if (cft->trigger) {
+		ret = cft->trigger(css, (unsigned int)cft->private);
+	} else {
+		ret = -EINVAL;
+	}
+out_free:
+	kfree(buf);
+	return ret ?: nbytes;
 }
 
 /*
@@ -2380,33 +2286,67 @@ static ssize_t cgroup_file_read(struct file *file, char __user *buf,
  * supports string->u64 maps, but can be extended in future.
  */
 
-static int cgroup_map_add(struct cgroup_map_cb *cb, const char *key, u64 value)
+static void *cgroup_seqfile_start(struct seq_file *seq, loff_t *ppos)
 {
-	struct seq_file *sf = cb->state;
-	return seq_printf(sf, "%s %llu\n", key, (unsigned long long)value);
+	struct cftype *cft = seq_cft(seq);
+
+	if (cft->seq_start) {
+		return cft->seq_start(seq, ppos);
+	} else {
+		/*
+		 * The same behavior and code as single_open().  Returns
+		 * !NULL if pos is at the beginning; otherwise, NULL.
+		 */
+		return NULL + !*ppos;
+	}
+}
+
+static void *cgroup_seqfile_next(struct seq_file *seq, void *v, loff_t *ppos)
+{
+	struct cftype *cft = seq_cft(seq);
+
+	if (cft->seq_next) {
+		return cft->seq_next(seq, v, ppos);
+	} else {
+		/*
+		 * The same behavior and code as single_open(), always
+		 * terminate after the initial read.
+		 */
+		++*ppos;
+		return NULL;
+	}
+}
+
+static void cgroup_seqfile_stop(struct seq_file *seq, void *v)
+{
+	struct cftype *cft = seq_cft(seq);
+
+	if (cft->seq_stop)
+		cft->seq_stop(seq, v);
 }
 
 static int cgroup_seqfile_show(struct seq_file *m, void *arg)
 {
-	struct cfent *cfe = m->private;
-	struct cftype *cft = cfe->type;
-	struct cgroup_subsys_state *css = cfe->css;
+	struct cftype *cft = seq_cft(m);
+	struct cgroup_subsys_state *css = seq_css(m);
 
-	if (cft->read_map) {
-		struct cgroup_map_cb cb = {
-			.fill = cgroup_map_add,
-			.state = m,
-		};
-		return cft->read_map(css, cft, &cb);
-	}
-	return cft->read_seq_string(css, cft, m);
+	if (cft->seq_show)
+		return cft->seq_show(m, arg);
+
+	if (cft->read_u64)
+		seq_printf(m, "%llu\n", cft->read_u64(css, cft));
+	else if (cft->read_s64)
+		seq_printf(m, "%lld\n", cft->read_s64(css, cft));
+	else
+		return -EINVAL;
+	return 0;
 }
 
-static const struct file_operations cgroup_seqfile_operations = {
-	.read = seq_read,
-	.write = cgroup_file_write,
-	.llseek = seq_lseek,
-	.release = cgroup_file_release,
+static struct seq_operations cgroup_seq_operations = {
+	.start		= cgroup_seqfile_start,
+	.next		= cgroup_seqfile_next,
+	.stop		= cgroup_seqfile_stop,
+	.show		= cgroup_seqfile_show,
 };
 
 static int cgroup_file_open(struct inode *inode, struct file *file)
@@ -2415,6 +2355,7 @@ static int cgroup_file_open(struct inode *inode, struct file *file)
 	struct cftype *cft = __d_cft(file->f_dentry);
 	struct cgroup *cgrp = __d_cgrp(cfe->dentry->d_parent);
 	struct cgroup_subsys_state *css;
+	struct cgroup_open_file *of;
 	int err;
 
 	err = generic_file_open(inode, file);
@@ -2444,16 +2385,16 @@ static int cgroup_file_open(struct inode *inode, struct file *file)
 	WARN_ON_ONCE(cfe->css && cfe->css != css);
 	cfe->css = css;
 
-	if (cft->read_map || cft->read_seq_string) {
-		file->f_op = &cgroup_seqfile_operations;
-		err = single_open(file, cgroup_seqfile_show, cfe);
-	} else if (cft->open) {
-		err = cft->open(inode, file);
+	of = __seq_open_private(file, &cgroup_seq_operations,
+				sizeof(struct cgroup_open_file));
+	if (of) {
+		of->cfe = cfe;
+		return 0;
 	}
 
-	if (css->ss && err)
+	if (css->ss)
 		css_put(css);
-	return err;
+	return -ENOMEM;
 }
 
 static int cgroup_file_release(struct inode *inode, struct file *file)
@@ -2463,9 +2404,7 @@ static int cgroup_file_release(struct inode *inode, struct file *file)
 
 	if (css->ss)
 		css_put(css);
-	if (file->f_op == &cgroup_seqfile_operations)
-		single_release(inode, file);
-	return 0;
+	return seq_release_private(inode, file);
 }
 
 /*
@@ -2576,7 +2515,7 @@ static ssize_t cgroup_listxattr(struct dentry *dentry, char *buf, size_t size)
 }
 
 static const struct file_operations cgroup_file_operations = {
-	.read = cgroup_file_read,
+	.read = seq_read,
 	.write = cgroup_file_write,
 	.llseek = generic_file_llseek,
 	.open = cgroup_file_open,
@@ -2658,12 +2597,11 @@ static umode_t cgroup_file_mode(const struct cftype *cft)
 	if (cft->mode)
 		return cft->mode;
 
-	if (cft->read || cft->read_u64 || cft->read_s64 ||
-	    cft->read_map || cft->read_seq_string)
+	if (cft->read_u64 || cft->read_s64 || cft->seq_show)
 		mode |= S_IRUGO;
 
-	if (cft->write || cft->write_u64 || cft->write_s64 ||
-	    cft->write_string || cft->trigger)
+	if (cft->write_u64 || cft->write_s64 || cft->write_string ||
+	    cft->trigger)
 		mode |= S_IWUSR;
 
 	return mode;
@@ -3464,13 +3402,6 @@ struct cgroup_pidlist {
 	struct delayed_work destroy_dwork;
 };
 
-/* seq_file->private points to the following */
-struct cgroup_pidlist_open_file {
-	enum cgroup_filetype		type;
-	struct cgroup			*cgrp;
-	struct cgroup_pidlist		*pidlist;
-};
-
 /*
  * The following two functions "fix" the issue where there are more pids
  * than kmalloc will give memory for; in such cases, we use vmalloc/vfree.
@@ -3785,33 +3716,35 @@ static void *cgroup_pidlist_start(struct seq_file *s, loff_t *pos)
 	 * after a seek to the start). Use a binary-search to find the
 	 * next pid to display, if any
 	 */
-	struct cgroup_pidlist_open_file *of = s->private;
-	struct cgroup *cgrp = of->cgrp;
+	struct cgroup_open_file *of = s->private;
+	struct cgroup *cgrp = seq_css(s)->cgroup;
 	struct cgroup_pidlist *l;
+	enum cgroup_filetype type = seq_cft(s)->private;
 	int index = 0, pid = *pos;
 	int *iter, ret;
 
 	mutex_lock(&cgrp->pidlist_mutex);
 
 	/*
-	 * !NULL @of->pidlist indicates that this isn't the first start()
+	 * !NULL @of->priv indicates that this isn't the first start()
 	 * after open.  If the matching pidlist is around, we can use that.
-	 * Look for it.  Note that @of->pidlist can't be used directly.  It
+	 * Look for it.  Note that @of->priv can't be used directly.  It
 	 * could already have been destroyed.
 	 */
-	if (of->pidlist)
-		of->pidlist = cgroup_pidlist_find(cgrp, of->type);
+	if (of->priv)
+		of->priv = cgroup_pidlist_find(cgrp, type);
 
 	/*
 	 * Either this is the first start() after open or the matching
 	 * pidlist has been destroyed inbetween.  Create a new one.
 	 */
-	if (!of->pidlist) {
-		ret = pidlist_array_load(of->cgrp, of->type, &of->pidlist);
+	if (!of->priv) {
+		ret = pidlist_array_load(cgrp, type,
+					 (struct cgroup_pidlist **)&of->priv);
 		if (ret)
 			return ERR_PTR(ret);
 	}
-	l = of->pidlist;
+	l = of->priv;
 
 	if (pid) {
 		int end = l->length;
@@ -3838,19 +3771,19 @@ static void *cgroup_pidlist_start(struct seq_file *s, loff_t *pos)
 
 static void cgroup_pidlist_stop(struct seq_file *s, void *v)
 {
-	struct cgroup_pidlist_open_file *of = s->private;
+	struct cgroup_open_file *of = s->private;
+	struct cgroup_pidlist *l = of->priv;
 
-	if (of->pidlist)
-		mod_delayed_work(cgroup_pidlist_destroy_wq,
-				 &of->pidlist->destroy_dwork,
+	if (l)
+		mod_delayed_work(cgroup_pidlist_destroy_wq, &l->destroy_dwork,
 				 CGROUP_PIDLIST_DESTROY_DELAY);
-	mutex_unlock(&of->cgrp->pidlist_mutex);
+	mutex_unlock(&seq_css(s)->cgroup->pidlist_mutex);
 }
 
 static void *cgroup_pidlist_next(struct seq_file *s, void *v, loff_t *pos)
 {
-	struct cgroup_pidlist_open_file *of = s->private;
-	struct cgroup_pidlist *l = of->pidlist;
+	struct cgroup_open_file *of = s->private;
+	struct cgroup_pidlist *l = of->priv;
 	pid_t *p = v;
 	pid_t *end = l->list + l->length;
 	/*
@@ -3861,7 +3794,7 @@ static void *cgroup_pidlist_next(struct seq_file *s, void *v, loff_t *pos)
 	if (p >= end) {
 		return NULL;
 	} else {
-		*pos = cgroup_pid_fry(of->cgrp, *p);
+		*pos = cgroup_pid_fry(seq_css(s)->cgroup, *p);
 		return p;
 	}
 }
@@ -3881,45 +3814,6 @@ static const struct seq_operations cgroup_pidlist_seq_operations = {
 	.next = cgroup_pidlist_next,
 	.show = cgroup_pidlist_show,
 };
-
-static const struct file_operations cgroup_pidlist_operations = {
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.write = cgroup_file_write,
-	.release = seq_release_private,
-};
-
-/*
- * The following functions handle opens on a file that displays a pidlist
- * (tasks or procs). Prepare an array of the process/thread IDs of whoever's
- * in the cgroup.
- */
-/* helper function for the two below it */
-static int cgroup_pidlist_open(struct file *file, enum cgroup_filetype type)
-{
-	struct cgroup *cgrp = __d_cgrp(file->f_dentry->d_parent);
-	struct cgroup_pidlist_open_file *of;
-
-	/* configure file information */
-	file->f_op = &cgroup_pidlist_operations;
-
-	of = __seq_open_private(file, &cgroup_pidlist_seq_operations,
-				sizeof(*of));
-	if (!of)
-		return -ENOMEM;
-
-	of->type = type;
-	of->cgrp = cgrp;
-	return 0;
-}
-static int cgroup_tasks_open(struct inode *unused, struct file *file)
-{
-	return cgroup_pidlist_open(file, CGROUP_FILE_TASKS);
-}
-static int cgroup_procs_open(struct inode *unused, struct file *file)
-{
-	return cgroup_pidlist_open(file, CGROUP_FILE_PROCS);
-}
 
 static u64 cgroup_read_notify_on_release(struct cgroup_subsys_state *css,
 					 struct cftype *cft)
@@ -3974,7 +3868,11 @@ static int cgroup_clone_children_write(struct cgroup_subsys_state *css,
 static struct cftype cgroup_base_files[] = {
 	{
 		.name = "cgroup.procs",
-		.open = cgroup_procs_open,
+		.seq_start = cgroup_pidlist_start,
+		.seq_next = cgroup_pidlist_next,
+		.seq_stop = cgroup_pidlist_stop,
+		.seq_show = cgroup_pidlist_show,
+		.private = CGROUP_FILE_PROCS,
 		.write_u64 = cgroup_procs_write,
 		.mode = S_IRUGO | S_IWUSR,
 	},
@@ -3987,7 +3885,7 @@ static struct cftype cgroup_base_files[] = {
 	{
 		.name = "cgroup.sane_behavior",
 		.flags = CFTYPE_ONLY_ON_ROOT,
-		.read_seq_string = cgroup_sane_behavior_show,
+		.seq_show = cgroup_sane_behavior_show,
 	},
 
 	/*
@@ -3998,7 +3896,11 @@ static struct cftype cgroup_base_files[] = {
 	{
 		.name = "tasks",
 		.flags = CFTYPE_INSANE,		/* use "procs" instead */
-		.open = cgroup_tasks_open,
+		.seq_start = cgroup_pidlist_start,
+		.seq_next = cgroup_pidlist_next,
+		.seq_stop = cgroup_pidlist_stop,
+		.seq_show = cgroup_pidlist_show,
+		.private = CGROUP_FILE_TASKS,
 		.write_u64 = cgroup_tasks_write,
 		.mode = S_IRUGO | S_IWUSR,
 	},
@@ -4011,7 +3913,7 @@ static struct cftype cgroup_base_files[] = {
 	{
 		.name = "release_agent",
 		.flags = CFTYPE_INSANE | CFTYPE_ONLY_ON_ROOT,
-		.read_seq_string = cgroup_release_agent_show,
+		.seq_show = cgroup_release_agent_show,
 		.write_string = cgroup_release_agent_write,
 		.max_write_len = PATH_MAX,
 	},
@@ -5386,9 +5288,7 @@ static u64 current_css_set_refcount_read(struct cgroup_subsys_state *css,
 	return count;
 }
 
-static int current_css_set_cg_links_read(struct cgroup_subsys_state *css,
-					 struct cftype *cft,
-					 struct seq_file *seq)
+static int current_css_set_cg_links_read(struct seq_file *seq, void *v)
 {
 	struct cgrp_cset_link *link;
 	struct css_set *cset;
@@ -5413,9 +5313,9 @@ static int current_css_set_cg_links_read(struct cgroup_subsys_state *css,
 }
 
 #define MAX_TASKS_SHOWN_PER_CSS 25
-static int cgroup_css_links_read(struct cgroup_subsys_state *css,
-				 struct cftype *cft, struct seq_file *seq)
+static int cgroup_css_links_read(struct seq_file *seq, void *v)
 {
+	struct cgroup_subsys_state *css = seq_css(seq);
 	struct cgrp_cset_link *link;
 
 	read_lock(&css_set_lock);
@@ -5461,12 +5361,12 @@ static struct cftype debug_files[] =  {
 
 	{
 		.name = "current_css_set_cg_links",
-		.read_seq_string = current_css_set_cg_links_read,
+		.seq_show = current_css_set_cg_links_read,
 	},
 
 	{
 		.name = "cgroup_css_links",
-		.read_seq_string = cgroup_css_links_read,
+		.seq_show = cgroup_css_links_read,
 	},
 
 	{
