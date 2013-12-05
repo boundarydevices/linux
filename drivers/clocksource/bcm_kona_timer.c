@@ -17,6 +17,7 @@
 #include <linux/jiffies.h>
 #include <linux/clockchips.h>
 #include <linux/types.h>
+#include <linux/clk.h>
 
 #include <linux/io.h>
 #include <asm/mach/time.h>
@@ -107,11 +108,18 @@ static const struct of_device_id bcm_timer_ids[] __initconst = {
 static void __init kona_timers_init(struct device_node *node)
 {
 	u32 freq;
+	struct clk *external_clk;
 
-	if (!of_property_read_u32(node, "clock-frequency", &freq))
+	external_clk = of_clk_get_by_name(node, NULL);
+
+	if (!IS_ERR(external_clk)) {
+		arch_timer_rate = clk_get_rate(external_clk);
+		clk_prepare_enable(external_clk);
+	} else if (!of_property_read_u32(node, "clock-frequency", &freq)) {
 		arch_timer_rate = freq;
-	else
-		panic("clock-frequency not set in the .dts file");
+	} else {
+		panic("unable to determine clock-frequency");
+	}
 
 	/* Setup IRQ numbers */
 	timers.tmr_irq = irq_of_parse_and_map(node, 0);
