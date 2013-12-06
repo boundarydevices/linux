@@ -13,6 +13,8 @@ next/soc
 	patches
 		ARM: ep93xx: remove deprecated IRQF_DISABLED
 		ARM: ep93xx: use soc bus
+	soc/sched_clock
+		local branch: rebased onto tip/timers-core-for-linus for dependencies
 
 next/dt
 	ux500/dt
