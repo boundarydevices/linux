@@ -37,7 +37,11 @@
 &iomuxc {
 	imx27_phycore_rdk {
 		pinctrl_i2c1: i2c1grp {
-			fsl,pins = <MX27_I2C1_PINGRP1>;
+			/* Add pullup to DATA line */
+			fsl,pins = <
+				MX27_PAD_I2C_DATA__I2C_DATA	0x1
+				MX27_PAD_I2C_CLK__I2C_CLK	0x0
+			>;
 		};
 
 		pinctrl_uart1: uart1grp {
