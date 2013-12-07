@@ -11,7 +11,6 @@
  */
 
 #include "skeleton.dtsi"
-#include "imx51-pinfunc.h"
 #include "imx51-pingrp.h"
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/clock/imx5-clock.h>

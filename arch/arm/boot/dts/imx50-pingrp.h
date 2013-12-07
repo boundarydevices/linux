@@ -10,6 +10,8 @@
 #ifndef __DTS_IMX50_PINGRP_H
 #define __DTS_IMX50_PINGRP_H
 
+#include "imx50-pinfunc.h"
+
 #define MX50_CSPI_PINGRP1 \
 	MX50_PAD_CSPI_SCLK__CSPI_SCLK			0x00 \
 	MX50_PAD_CSPI_MISO__CSPI_MISO			0x00 \

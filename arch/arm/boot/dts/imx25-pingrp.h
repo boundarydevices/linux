@@ -10,6 +10,8 @@
 #ifndef __DTS_IMX25_PINGRP_H
 #define __DTS_IMX25_PINGRP_H
 
+#include "imx25-pinfunc.h"
+
 #define MX25_AUDMUX_PINGRP1 \
 	MX25_PAD_KPP_COL3__AUD5_TXFS			0xe0 \
 	MX25_PAD_KPP_COL2__AUD5_TXC			0xe0 \

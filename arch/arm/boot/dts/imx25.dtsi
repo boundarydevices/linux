@@ -10,7 +10,6 @@
  */
 
 #include "skeleton.dtsi"
-#include "imx25-pinfunc.h"
 #include "imx25-pingrp.h"
 
 / {

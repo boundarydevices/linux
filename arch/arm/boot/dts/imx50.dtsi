@@ -12,7 +12,6 @@
  */
 
 #include "skeleton.dtsi"
-#include "imx50-pinfunc.h"
 #include "imx50-pingrp.h"
 #include <dt-bindings/clock/imx5-clock.h>
 
