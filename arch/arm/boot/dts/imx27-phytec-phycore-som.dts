@@ -180,7 +180,7 @@
 };
 
 &iomuxc {
-	imx27_phycard_s_som {
+	imx27_phycore_som {
 		pinctrl_fec1: fec1grp {
 			fsl,pins = <MX27_FEC1_PINGRP1>;
 		};
