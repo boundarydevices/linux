@@ -1283,7 +1283,7 @@ static void __init reserve(void)
 /*
  * initialize __mach_desc_MX6Q_SABRELITE data structure.
  */
-MACHINE_START(MX6_S, "Boundary Devices S Lite Board")
+MACHINE_START(MX6_S, "Boundary Devices S Board")
 	/* Maintainer: Boundary Devices */
 	.boot_params = MX6_PHYS_OFFSET + 0x100,
 	.fixup = fixup_mxc_board,
