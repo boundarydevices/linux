@@ -39,7 +39,7 @@
 &dspi0 {
 	bus-num = <0>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_dspi0_1>;
+	pinctrl-0 = <&pinctrl_dspi0>;
 	status = "okay";
 
 	sflash: at26df081a@0 {
@@ -56,26 +56,50 @@
 &fec0 {
 	phy-mode = "rmii";
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_fec0_1>;
+	pinctrl-0 = <&pinctrl_fec0>;
 	status = "okay";
 };
 
 &fec1 {
 	phy-mode = "rmii";
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_fec1_1>;
+	pinctrl-0 = <&pinctrl_fec1>;
 	status = "okay";
 };
 
 &i2c0 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_i2c0_1>;
+	pinctrl-0 = <&pinctrl_i2c0>;
 	status = "okay";
+};
+
+&iomuxc {
+	vf610-twr {
+		pinctrl_dspi0: dspi0grp {
+			fsl,pins = <VF610_DSPI0_PINGRP1>;
+		};
+
+		pinctrl_fec0: fec0grp {
+			fsl,pins = <VF610_FEC0_PINGRP1>;
+		};
+
+		pinctrl_fec1: fec1grp {
+			fsl,pins = <VF610_FEC1_PINGRP1>;
+		};
+
+		pinctrl_i2c0: i2c0grp {
+			fsl,pins = <VF610_I2C0_PINGRP1>;
+		};
+
+		pinctrl_uart1: uart1grp {
+			fsl,pins = <VF610_UART1_PINGRP1>;
+		};
+	};
 };
 
 &uart1 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart1_1>;
+	pinctrl-0 = <&pinctrl_uart1>;
 	status = "okay";
 };
