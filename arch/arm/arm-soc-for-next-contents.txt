@@ -15,6 +15,8 @@ next/soc
 		ARM: ep93xx: use soc bus
 	soc/sched_clock
 		local branch: rebased onto tip/timers-core-for-linus for dependencies
+	patch
+		ARM: at91: sama5d3: add support for sama5d36 chip
 
 next/dt
 	ux500/dt
