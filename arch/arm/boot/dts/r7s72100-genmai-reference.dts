@@ -1,5 +1,5 @@
 /*
- * Device Tree Source for the Lager board
+ * Device Tree Source for the Genmai board
  *
  * Copyright (C) 2013 Renesas Solutions Corp.
  *
@@ -9,24 +9,19 @@
  */
 
 /dts-v1/;
-#include "r8a7790.dtsi"
+/include/ "r7s72100.dtsi"
 
 / {
-	model = "Lager";
-	compatible = "renesas,lager", "renesas,r8a7790";
+	model = "Genmai";
+	compatible = "renesas,genmai-reference", "renesas,r7s72100";
 
 	chosen {
-		bootargs = "console=ttySC6,115200 ignore_loglevel rw root=/dev/nfs ip=dhcp";
+		bootargs = "console=ttySC2,115200 ignore_loglevel rw root=/dev/nfs ip=dhcp";
 	};
 
-	memory@40000000 {
+	memory {
 		device_type = "memory";
-		reg = <0 0x40000000 0 0x80000000>;
-	};
-
-	memory@180000000 {
-		device_type = "memory";
-		reg = <1 0x80000000 0 0x80000000>;
+		reg = <0x08000000 0x08000000>;
 	};
 
 	lbsc {
