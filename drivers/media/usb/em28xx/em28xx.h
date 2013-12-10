@@ -132,6 +132,7 @@
 #define EM2884_BOARD_C3TECH_DIGITAL_DUO		  88
 #define EM2874_BOARD_DELOCK_61959		  89
 #define EM2874_BOARD_KWORLD_UB435Q_V2		  90
+#define EM2765_BOARD_SPEEDLINK_VAD_LAPLACE	  91
 
 /* Limits minimum and default number of buffers */
 #define EM28XX_MIN_BUF 4
@@ -180,6 +181,9 @@
 
 /* time in msecs to wait for i2c writes to finish */
 #define EM2800_I2C_XFER_TIMEOUT		20
+
+/* max. number of button state polling addresses */
+#define EM28XX_NUM_BUTTON_ADDRESSES_MAX		5
 
 enum em28xx_mode {
 	EM28XX_SUSPEND,
@@ -374,6 +378,33 @@ enum em28xx_adecoder {
 	EM28XX_TVAUDIO,
 };
 
+enum em28xx_led_role {
+	EM28XX_LED_ANALOG_CAPTURING = 0,
+	EM28XX_LED_ILLUMINATION,
+	EM28XX_NUM_LED_ROLES, /* must be the last */
+};
+
+struct em28xx_led {
+	enum em28xx_led_role role;
+	u8 gpio_reg;
+	u8 gpio_mask;
+	bool inverted;
+};
+
+enum em28xx_button_role {
+	EM28XX_BUTTON_SNAPSHOT = 0,
+	EM28XX_BUTTON_ILLUMINATION,
+	EM28XX_NUM_BUTTON_ROLES, /* must be the last */
+};
+
+struct em28xx_button {
+	enum em28xx_button_role role;
+	u8 reg_r;
+	u8 reg_clearing;
+	u8 mask;
+	bool inverted;
+};
+
 struct em28xx_board {
 	char *name;
 	int vchannels;
@@ -395,7 +426,6 @@ struct em28xx_board {
 	unsigned int mts_firmware:1;
 	unsigned int max_range_640_480:1;
 	unsigned int has_dvb:1;
-	unsigned int has_snapshot_button:1;
 	unsigned int is_webcam:1;
 	unsigned int valid:1;
 	unsigned int has_ir_i2c:1;
@@ -410,6 +440,12 @@ struct em28xx_board {
 	struct em28xx_input       input[MAX_EM28XX_INPUT];
 	struct em28xx_input	  radio;
 	char			  *ir_codes;
+
+	/* LEDs that need to be controlled explicitly */
+	struct em28xx_led	  *leds;
+
+	/* Buttons */
+	struct em28xx_button	  *buttons;
 };
 
 struct em28xx_eeprom {
@@ -639,10 +675,14 @@ struct em28xx {
 
 	enum em28xx_mode mode;
 
-	/* Snapshot button */
+	/* Button state polling */
+	struct delayed_work buttons_query_work;
+	u8 button_polling_addresses[EM28XX_NUM_BUTTON_ADDRESSES_MAX];
+	u8 button_polling_last_values[EM28XX_NUM_BUTTON_ADDRESSES_MAX];
+	u8 num_button_polling_addresses;
+	/* Snapshot button input device */
 	char snapshot_button_path[30];	/* path of the input dev */
 	struct input_dev *sbutton_input_dev;
-	struct delayed_work sbutton_query_work;
 
 	struct em28xx_dvb *dvb;
 };
@@ -672,6 +712,7 @@ int em28xx_write_regs(struct em28xx *dev, u16 reg, char *buf, int len);
 int em28xx_write_reg(struct em28xx *dev, u16 reg, u8 val);
 int em28xx_write_reg_bits(struct em28xx *dev, u16 reg, u8 val,
 				 u8 bitmask);
+int em28xx_toggle_reg_bits(struct em28xx *dev, u16 reg, u8 bitmask);
 
 int em28xx_read_ac97(struct em28xx *dev, u8 reg);
 int em28xx_write_ac97(struct em28xx *dev, u8 reg, u16 val);
@@ -680,6 +721,8 @@ int em28xx_audio_analog_set(struct em28xx *dev);
 int em28xx_audio_setup(struct em28xx *dev);
 
 int em28xx_colorlevels_set_default(struct em28xx *dev);
+const struct em28xx_led *em28xx_find_led(struct em28xx *dev,
+					 enum em28xx_led_role role);
 int em28xx_capture_start(struct em28xx *dev, int start);
 int em28xx_vbi_supported(struct em28xx *dev);
 int em28xx_set_outfmt(struct em28xx *dev);
