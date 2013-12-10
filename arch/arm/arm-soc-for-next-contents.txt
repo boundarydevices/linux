@@ -23,6 +23,8 @@ next/dt
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.14
 	sti/dt
 		http://git.stlinux.com/devel/kernel/linux-sti.git tags/DT-for-v3.14-part-1
+	mvebu/dt-2
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.14-2		
 
 next/boards
 	renesas/defconfig
