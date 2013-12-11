@@ -114,8 +114,8 @@ struct pcie_host_ops {
 	u32 (*get_msi_addr)(struct pcie_port *pp);
 };
 
-int cfg_read(void __iomem *addr, int where, int size, u32 *val);
-int cfg_write(void __iomem *addr, int where, int size, u32 val);
+int dw_pcie_cfg_read(void __iomem *addr, int where, int size, u32 *val);
+int dw_pcie_cfg_write(void __iomem *addr, int where, int size, u32 val);
 irqreturn_t dw_handle_msi_irq(struct pcie_port *pp);
 void dw_pcie_msi_init(struct pcie_port *pp);
 void dw_pcie_msi_cfg_save(struct pcie_port *pp);
