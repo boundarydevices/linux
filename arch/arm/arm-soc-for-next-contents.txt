@@ -31,6 +31,8 @@ next/dt
 		ARM: at91: sama5d3/dt: add sama5d36ek dts files (based on next/cleanup for dependencies)
 	at91/dt
 		git://github.com/at91linux/linux-at91.git tags/at91-dt
+	integrator/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator.git tags/integrator-v3.14-1
 
 next/boards
 	renesas/defconfig
