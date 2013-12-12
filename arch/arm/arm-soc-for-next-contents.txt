@@ -14,6 +14,8 @@ next/cleanup
 		ARM: pxa: Remove unused variables
 		ARM: pxa: remove IRQF_DISABLED
 		ARM: mmp: build sram driver alone
+	patch
+		ARM: at91: remove AT91_PROGRAMMABLE_CLOCKS configuration option
 
 next/soc
 	patches
