@@ -11,6 +11,9 @@ next/cleanup
 	patches
 		ARM: at91: remove redundant dependency
 		ARM: clean up cache handling in platform code
+		ARM: pxa: Remove unused variables
+		ARM: pxa: remove IRQF_DISABLED
+		ARM: mmp: build sram driver alone
 
 next/soc
 	patches
@@ -36,6 +39,8 @@ next/dt
 		git://github.com/at91linux/linux-at91.git tags/at91-dt
 	integrator/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator.git tags/integrator-v3.14-1
+	patches
+		ARM: pxa: add PWM nodes to pxa27x.dtsi
 
 next/boards
 	renesas/defconfig
