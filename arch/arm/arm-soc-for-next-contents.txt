@@ -8,6 +8,8 @@ next/cleanup
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-soc-3.14
 	at91/sama5-ccf
 		git://github.com/at91linux/linux-at91.git tags/at91-cleanup
+	patch
+		ARM: at91: remove redundant dependency
 
 next/soc
 	patches
