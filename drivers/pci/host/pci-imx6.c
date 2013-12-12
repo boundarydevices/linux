@@ -321,9 +321,27 @@ static irqreturn_t imx_pcie_msi_irq_handler(int irq, void *arg)
 	return IRQ_HANDLED;
 }
 
+static int imx6_pcie_wait_for_link(struct pcie_port *pp)
+{
+	int count = 200;
+
+	while (!dw_pcie_link_up(pp)) {
+		usleep_range(100, 1000);
+		if (--count)
+			continue;
+
+		dev_err(pp->dev, "phy link never came up\n");
+		dev_dbg(pp->dev, "DEBUG_R0: 0x%08x, DEBUG_R1: 0x%08x\n",
+			readl(pp->dbi_base + PCIE_PHY_DEBUG_R0),
+			readl(pp->dbi_base + PCIE_PHY_DEBUG_R1));
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static void imx6_pcie_host_init(struct pcie_port *pp)
 {
-	int count = 0;
 	struct imx6_pcie *imx6_pcie = to_imx6_pcie(pp);
 
 	imx6_pcie_init_phy(pp);
@@ -335,26 +353,13 @@ static void imx6_pcie_host_init(struct pcie_port *pp)
 	regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
 			IMX6Q_GPR12_PCIE_CTL_2, 1 << 10);
 
-	while (!dw_pcie_link_up(pp)) {
-		usleep_range(100, 1000);
-		count++;
-		if (count >= 200) {
-			dev_err(pp->dev, "phy link never came up\n");
-			dev_dbg(pp->dev,
-				"DEBUG_R0: 0x%08x, DEBUG_R1: 0x%08x\n",
-				readl(pp->dbi_base + PCIE_PHY_DEBUG_R0),
-				readl(pp->dbi_base + PCIE_PHY_DEBUG_R1));
-			return;
-		}
-	}
+	imx6_pcie_wait_for_link(pp);
 
 	if (IS_ENABLED(CONFIG_PCI_MSI)) {
 		pp->quirks |= DW_PCIE_QUIRK_NO_MSI_VEC;
 		pp->quirks |= DW_PCIE_QUIRK_MSI_SELF_EN;
 		dw_pcie_msi_init(pp);
 	}
-
-	return;
 }
 
 static void imx6_pcie_reset_phy(struct pcie_port *pp)
