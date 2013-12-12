@@ -344,6 +344,17 @@ static const struct spi_imx_master spi_data __initconst = {
 	.num_chipselect = ARRAY_SIZE(spi_cs),
 };
 
+#ifdef ONE_WIRE
+static int ecspi2_cs[] = {
+	IMX_GPIO_NR(5, 12),
+};
+
+static const struct spi_imx_master ecspi2_data __initconst = {
+	.chipselect     = ecspi2_cs,
+	.num_chipselect = ARRAY_SIZE(ecspi2_cs),
+};
+#endif
+
 #if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
 static struct mtd_partition spi_nor_partitions[] = {
 	{
@@ -979,7 +990,9 @@ static struct gpio_keys_button buttons[] = {
 	GPIO_BUTTON(GP_HOME_KEY, KEY_HOME, 1, "key-home", 0),
 	GPIO_BUTTON(GP_BACK_KEY, KEY_BACK, 1, "key-back", 0),
 	GPIO_BUTTON(GP_VOL_UP_KEY, KEY_VOLUMEUP, 1, "volume-up", 0),
+#ifndef ONE_WIRE
 	GPIO_BUTTON(GP_VOL_DOWN_KEY, KEY_VOLUMEDOWN, 1, "volume-down", 0),
+#endif
 };
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
@@ -1262,7 +1275,9 @@ static void __init board_init(void)
 	struct clk *new_parent;
 	int rate;
 	int isn6 ;
-
+#ifdef ONE_WIRE
+	int one_wire_gp;
+#endif
 	IOMUX_SETUP(common_pads);
 	lcd_disable_pins();
 
@@ -1291,6 +1306,14 @@ static void __init board_init(void)
 	pu_reg_id = dvfscore_data.pu_id;
 
 	imx6q_add_imx_uart(0, NULL);
+
+#ifdef ONE_WIRE
+	one_wire_gp = IMX_GPIO_NR(4, 5);
+	gpio_request(one_wire_gp, "one-wire-12v");
+	gpio_direction_output(one_wire_gp, 1);
+	gpio_export(one_wire_gp, 1);
+#endif
+
 	imx6q_add_imx_uart(1, NULL);
 	if (isn6)
 		imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
@@ -1351,6 +1374,9 @@ static void __init board_init(void)
 
 	/* SPI */
 	imx6q_add_ecspi(0, &spi_data);
+#ifdef ONE_WIRE
+	imx6q_add_ecspi(1, &ecspi2_data);
+#endif
 	spi_device_init();
 
 	imx6q_add_mxc_hdmi(&hdmi_data);
