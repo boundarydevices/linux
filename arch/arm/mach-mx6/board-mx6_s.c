@@ -156,26 +156,6 @@ struct gpio gpios[] __initdata = {
 	{.label = "BGPI_1",		.gpio = IMX_GPIO_NR(5,4),	.flags = GPIOF_DIR_IN},
 };
 
-__init static int is_nitrogen6w(void)
-{
-	int ret = gpio_request_array(n6w_wl1271_gpios,
-			ARRAY_SIZE(n6w_wl1271_gpios));
-	if (ret) {
-		printk(KERN_ERR "%s gpio_request_array failed("
-				"%d) for n6w_wl1271_gpios\n", __func__, ret);
-		return ret;
-	}
-	ret = gpio_get_value(N6_WL1271_WL_IRQ);
-	if (ret <= 0) {
-		/* Sabrelite, not nitrogen6w */
-		gpio_free(N6_WL1271_WL_IRQ);
-		gpio_free(N6_WL1271_WL_EN);
-		gpio_free(N6_WL1271_BT_EN);
-		ret = 0;
-	}
-	return ret;
-}
-
 enum sd_pad_mode {
 	SD_PAD_MODE_LOW_SPEED,
 	SD_PAD_MODE_MED_SPEED,
@@ -1071,20 +1051,14 @@ static void __init board_init(void)
 	struct clk *clko2;
 	struct clk *new_parent;
 	int rate;
-	int isn6 ;
 
 	IOMUX_SETUP(common_pads);
 
-	isn6 = is_nitrogen6w();
-	if (isn6) {
-		audio_data.ext_port = 3;
-		sd3_data.wp_gpio = -1 ;
-		IOMUX_SETUP(nitrogen6x_pads);
-	} else {
-		IOMUX_SETUP(sabrelite_pads);
-	}
-	printk(KERN_ERR "------------ Board type %s\n",
-               isn6 ? "Nitrogen6X/W" : "Sabre Lite");
+	gpio_request_array(n6w_wl1271_gpios,ARRAY_SIZE(n6w_wl1271_gpios));
+	audio_data.ext_port = 3;
+	sd3_data.wp_gpio = -1 ;
+	IOMUX_SETUP(nitrogen6x_pads);
+	printk(KERN_ERR "Board type Nitrogen6S\n");
 
 #ifdef CONFIG_FEC_1588
 	/* Set GPIO_16 input for IEEE-1588 ts_clk and RMII reference clock
@@ -1101,9 +1075,7 @@ static void __init board_init(void)
 
 	imx6q_add_imx_uart(0, NULL);
 	imx6q_add_imx_uart(1, NULL);
-	if (isn6)
-		imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
-
+	imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
 	imx6q_add_imx_uart(3, &mx6_arm2_uart3_data);
 	imx6q_add_imx_uart(4, &mx6_arm2_uart4_data);
 
@@ -1143,12 +1115,7 @@ static void __init board_init(void)
 	imx6q_add_imx_i2c(0, &i2c_data);
 	imx6q_add_imx_i2c(1, &i2c_data);
 	imx6q_add_imx_i2c(2, &i2c_data);
-	/*
-	 * SABRE Lite does not have an ISL1208 RTC
-	 */
-	i2c_register_board_info(0, mxc_i2c0_board_info,
-			isn6    ? ARRAY_SIZE(mxc_i2c0_board_info)
-				: ARRAY_SIZE(mxc_i2c0_board_info)-1);
+	i2c_register_board_info(0, mxc_i2c0_board_info,ARRAY_SIZE(mxc_i2c0_board_info));
 	i2c_register_board_info(1, mxc_i2c1_board_info,
 			ARRAY_SIZE(mxc_i2c1_board_info));
 	i2c_register_board_info(2, mxc_i2c2_board_info,
@@ -1215,25 +1182,21 @@ static void __init board_init(void)
 	pm_power_off = poweroff;
 	imx6q_add_busfreq();
 
-#ifdef CONFIG_WL12XX_PLATFORM_DATA
-	if (isn6) {
-		imx6q_add_sdhci_usdhc_imx(1, &sd2_data);
-		/* WL12xx WLAN Init */
-		if (wl12xx_set_platform_data(&n6q_wlan_data))
-			pr_err("error setting wl12xx data\n");
-		platform_device_register(&n6q_vwl1271_reg_devices);
+	imx6q_add_sdhci_usdhc_imx(1, &sd2_data);
+	/* WL12xx WLAN Init */
+	if (wl12xx_set_platform_data(&n6q_wlan_data))
+		pr_err("error setting wl12xx data\n");
+	platform_device_register(&n6q_vwl1271_reg_devices);
 
-		gpio_set_value(N6_WL1271_WL_EN, 1);		/* momentarily enable */
-		gpio_set_value(N6_WL1271_BT_EN, 1);
-		mdelay(2);
-		gpio_set_value(N6_WL1271_WL_EN, 0);
-		gpio_set_value(N6_WL1271_BT_EN, 0);
+	gpio_set_value(N6_WL1271_WL_EN, 1);		/* momentarily enable */
+	gpio_set_value(N6_WL1271_BT_EN, 1);
+	mdelay(2);
+	gpio_set_value(N6_WL1271_WL_EN, 0);
+	gpio_set_value(N6_WL1271_BT_EN, 0);
 
-		gpio_free(N6_WL1271_WL_EN);
-		gpio_free(N6_WL1271_BT_EN);
-		mdelay(1);
-	}
-#endif
+	gpio_free(N6_WL1271_WL_EN);
+	gpio_free(N6_WL1271_BT_EN);
+	mdelay(1);
 
 	imx6q_add_pcie(&pcie_data);
 

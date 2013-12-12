@@ -75,15 +75,6 @@ static iomux_v3_cfg_t MX6NAME(nitrogen6x_pads)[] = {
 	0
 };
 
-static iomux_v3_cfg_t MX6NAME(sabrelite_pads)[] = {
-	/* AUDMUX */
-	MX6PAD(SD2_DAT0__AUDMUX_AUD4_RXD),
-	MX6PAD(SD2_DAT3__AUDMUX_AUD4_TXC),
-	MX6PAD(SD2_DAT2__AUDMUX_AUD4_TXD),
-	MX6PAD(SD2_DAT1__AUDMUX_AUD4_TXFS),
-	0
-};
-
 static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	/* CCM  */
 	MX6PAD(GPIO_0__CCM_CLKO),		/* SGTL500 sys_mclk */
