@@ -1203,7 +1203,9 @@ static void __init board_init(void)
 	gpio_request_array(gpios,ARRAY_SIZE(gpios));
 	for (i=0; i < ARRAY_SIZE(gpios);i++) {
 		int gpio = gpios[i].gpio;
-		pr_debug("%s: exporting gpio %d\n", __func__, gpio);
+		pr_info("%s: exporting gpio %d: %s: %s\n", __func__, 
+			gpio, gpios[i].label, 
+			(gpios[i].flags & GPIOF_DIR_IN) ? "input" : "output");
 		gpio_export(gpio,1);
 	}
 	imx6q_add_perfmon(0);
