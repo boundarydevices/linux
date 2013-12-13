@@ -121,7 +121,7 @@ static struct fb_videomode ldb_modedb[] = {
 	 FB_VMODE_NONINTERLACED,
 	 FB_MODE_IS_DETAILED,},
 	{
-	 "LG-9.7", 60, 1024, 768, 15385,
+	 "LG-9.7", 60, 1024, 768, 10000,
 	 480, 260,
 	 16, 6,
 	 250, 10,
