@@ -60,6 +60,33 @@ static const u16 sgtl5000_regs[SGTL5000_MAX_REG_OFFSET] =  {
 	[SGTL5000_DAP_AVC_DECAY] = 0x0050,
 };
 
+u16 init_regs[] = {
+	SGTL5000_CHIP_CLK_CTRL, 0x0008,
+	SGTL5000_CHIP_I2S_CTRL, 0x0010,
+	SGTL5000_CHIP_SSS_CTRL, 0x0010,
+	SGTL5000_CHIP_DAC_VOL, 0x3c3c,
+	SGTL5000_CHIP_PAD_STRENGTH, 0x015f,
+	SGTL5000_CHIP_ANA_HP_CTRL, 0x1818,
+	SGTL5000_CHIP_ANA_CTRL, 0x0111,
+	SGTL5000_CHIP_LINE_OUT_VOL, 0x0404,
+	SGTL5000_CHIP_ANA_POWER, 0x7060,
+	SGTL5000_CHIP_PLL_CTRL, 0x5000,
+	SGTL5000_DAP_BASS_ENHANCE, 0x0040,
+	SGTL5000_DAP_BASS_ENHANCE_CTRL, 0x051f,
+	SGTL5000_DAP_SURROUND, 0x0040,
+	SGTL5000_DAP_EQ_BASS_BAND0, 0x002f,
+	SGTL5000_DAP_EQ_BASS_BAND1, 0x002f,
+	SGTL5000_DAP_EQ_BASS_BAND2, 0x002f,
+	SGTL5000_DAP_EQ_BASS_BAND3, 0x002f,
+	SGTL5000_DAP_EQ_BASS_BAND4, 0x002f,
+	SGTL5000_DAP_MAIN_CHAN, 0x8000,
+	SGTL5000_DAP_AVC_CTRL, 0x0510,
+	SGTL5000_DAP_AVC_THRESHOLD, 0x1473,
+	SGTL5000_DAP_AVC_ATTACK, 0x0028,
+	SGTL5000_DAP_AVC_DECAY, 0x0050,
+};
+
+
 /* regulator supplies for sgtl5000, VDDD is an optional external supply */
 enum sgtl5000_regulator_supplies {
 	VDDA,
@@ -112,6 +139,8 @@ struct sgtl5000_priv {
 	int fmt;	/* i2s data format */
 	struct regulator_bulk_data supplies[SGTL5000_SUPPLY_NUM];
 	struct ldo_regulator *ldo;
+	struct clk *mclk;
+	int revision;
 };
 
 /*
@@ -1210,9 +1239,7 @@ static int sgtl5000_replace_vddd_with_ldo(struct snd_soc_codec *codec)
 
 static int sgtl5000_enable_regulators(struct snd_soc_codec *codec)
 {
-	u16 reg;
 	int ret;
-	int rev;
 	int i;
 	int external_vddd = 0;
 	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
@@ -1238,24 +1265,11 @@ static int sgtl5000_enable_regulators(struct snd_soc_codec *codec)
 	/* wait for all power rails bring up */
 	udelay(10);
 
-	/* read chip information */
-	reg = snd_soc_read(codec, SGTL5000_CHIP_ID);
-	if (((reg & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
-	    SGTL5000_PARTID_PART_ID) {
-		dev_err(codec->dev,
-			"Device with ID register %x is not a sgtl5000\n", reg);
-		ret = -ENODEV;
-		goto err_regulator_disable;
-	}
-
-	rev = (reg & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT;
-	dev_info(codec->dev, "sgtl5000 revision 0x%x\n", rev);
-
 	/*
 	 * workaround for revision 0x11 and later,
 	 * roll back to use internal LDO
 	 */
-	if (external_vddd && rev >= 0x11) {
+	if (external_vddd && sgtl5000->revision >= 0x11) {
 		/* disable all regulator first */
 		regulator_bulk_disable(ARRAY_SIZE(sgtl5000->supplies),
 					sgtl5000->supplies);
@@ -1278,9 +1292,6 @@ static int sgtl5000_enable_regulators(struct snd_soc_codec *codec)
 
 	return 0;
 
-err_regulator_disable:
-	regulator_bulk_disable(ARRAY_SIZE(sgtl5000->supplies),
-				sgtl5000->supplies);
 err_regulator_free:
 	regulator_bulk_free(ARRAY_SIZE(sgtl5000->supplies),
 				sgtl5000->supplies);
@@ -1400,28 +1411,128 @@ static struct snd_soc_codec_driver sgtl5000_driver = {
 	.num_dapm_routes = ARRAY_SIZE(sgtl5000_dapm_routes),
 };
 
+static s32 sgtl5000_read16(struct i2c_client *client, u16 reg, u16 *val)
+{
+	int retry = 0;
+	int ret;
+	u8 buf[4];
+	struct i2c_msg msgs[2];
+
+	while (retry++ < 3) {
+		buf[0] = reg >> 8;
+		buf[1] = reg & 0xff;
+		msgs[0].addr = client->addr;
+		msgs[0].flags = 0;
+		msgs[0].len = 2;
+		msgs[0].buf = buf;
+		msgs[1].addr = client->addr;
+		msgs[1].flags = I2C_M_RD;
+		msgs[1].len = 2;
+		msgs[1].buf = buf;
+
+		ret = i2c_transfer(client->adapter, msgs, 2);
+		if (ret == 2) {
+			*val = (buf[0] << 8) | buf[1];
+			return 0;
+		}
+		pr_err("%s: ret=%d reg=%x addr=%x\n", __func__, ret, reg, client->addr);
+	}
+	return (ret < 0) ? ret : -EIO;
+}
+
+static s32 sgtl5000_write16(struct i2c_client *client, u16 reg, u16 val)
+{
+	int retry = 0;
+	int ret;
+	u8 buf[4];
+	struct i2c_msg msgs[1];
+
+	while (retry++ < 3) {
+		buf[0] = reg >> 8;
+		buf[1] = reg & 0xff;
+		buf[2] = val >> 8;
+		buf[3] = val & 0xff;
+		msgs[0].addr = client->addr;
+		msgs[0].flags = 0;
+		msgs[0].len = 4;
+		msgs[0].buf = buf;
+
+		ret = i2c_transfer(client->adapter, msgs, 1);
+		if (ret == 1)
+			return 0;
+		pr_err("%s: ret=%d reg=%x addr=%x\n", __func__, ret, reg, client->addr);
+	}
+	return (ret < 0) ? ret : -EIO;
+}
+
 static int sgtl5000_i2c_probe(struct i2c_client *client,
 			      const struct i2c_device_id *id)
 {
 	struct sgtl5000_priv *sgtl5000;
-	int ret;
+	int ret, rev, i;
+	u16 reg;
 
 	sgtl5000 = devm_kzalloc(&client->dev, sizeof(struct sgtl5000_priv),
 								GFP_KERNEL);
 	if (!sgtl5000)
 		return -ENOMEM;
 
+	sgtl5000->mclk = devm_clk_get(&client->dev, NULL);
+	if (IS_ERR(sgtl5000->mclk)) {
+		ret = PTR_ERR(sgtl5000->mclk);
+		dev_err(&client->dev, "Failed to get mclock: %d\n", ret);
+		/* Defer the probe to see if the clk will be provided later */
+		if (ret == -ENOENT)
+			return -EPROBE_DEFER;
+		return ret;
+	}
+
+	ret = clk_prepare_enable(sgtl5000->mclk);
+	if (ret)
+		return ret;
+
+	/* read chip information */
+	ret = sgtl5000_read16(client, SGTL5000_CHIP_ID, &reg);
+	if (ret < 0) {
+		ret = -ENODEV;
+		goto disable_clk;
+	}
+
+	if (((reg & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
+	    SGTL5000_PARTID_PART_ID) {
+		dev_err(&client->dev,
+			"Device with ID register %x is not a sgtl5000\n", reg);
+		ret = -ENODEV;
+		goto disable_clk;
+	}
+
+	rev = (reg & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT;
+	dev_info(&client->dev, "sgtl5000 revision 0x%x\n", rev);
+	sgtl5000->revision = rev;
+
+	/* Restore regs back to power up conditions */
+	for (i = 0; i < ARRAY_SIZE(init_regs); i += 2)
+		sgtl5000_write16(client, init_regs[i], init_regs[i+1]);
+
 	i2c_set_clientdata(client, sgtl5000);
 
 	ret = snd_soc_register_codec(&client->dev,
 			&sgtl5000_driver, &sgtl5000_dai, 1);
+	if (ret)
+		goto disable_clk;
+	return ret;
+
+disable_clk:
+	clk_disable_unprepare(sgtl5000->mclk);
 	return ret;
 }
 
 static int sgtl5000_i2c_remove(struct i2c_client *client)
 {
-	snd_soc_unregister_codec(&client->dev);
+	struct sgtl5000_priv *sgtl5000 = i2c_get_clientdata(client);
 
+	snd_soc_unregister_codec(&client->dev);
+	clk_disable_unprepare(sgtl5000->mclk);
 	return 0;
 }
 
