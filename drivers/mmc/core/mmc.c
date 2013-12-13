@@ -439,6 +439,8 @@ static int mmc_compare_ext_csds(struct mmc_card *card, unsigned bus_width)
 	err = mmc_get_ext_csd(card, &bw_ext_csd);
 
 	if (err || bw_ext_csd == NULL) {
+		pr_err("%s: %p err=%d could not get csd when bus_width=%d\n",
+				__func__, bw_ext_csd, err, bus_width);
 		if (bus_width != MMC_BUS_WIDTH_1)
 			err = -EINVAL;
 		goto out;
@@ -461,7 +463,7 @@ static int mmc_compare_ext_csds(struct mmc_card *card, unsigned bus_width)
 		(card->ext_csd.raw_s_a_timeout ==
 			bw_ext_csd[EXT_CSD_S_A_TIMEOUT]) &&
 		(card->ext_csd.raw_hc_erase_gap_size ==
-			bw_ext_csd[EXT_CSD_HC_WP_GRP_SIZE]) &&
+			bw_ext_csd[EXT_CSD_PARTITION_ATTRIBUTE]) &&
 		(card->ext_csd.raw_erase_timeout_mult ==
 			bw_ext_csd[EXT_CSD_ERASE_TIMEOUT_MULT]) &&
 		(card->ext_csd.raw_hc_erase_grp_size ==
@@ -1173,6 +1175,7 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 				if (!err)
 					break;
 			}
+			pr_err("%s: err=%d bus_width=%d\n", __func__, err, bus_width);
 		}
 
 		if (!err && ddr) {
