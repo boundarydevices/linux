@@ -141,6 +141,10 @@
 			fsl,pins = <MX6QDL_I2C1_PINGRP1>;
 		};
 
+		pinctrl_uart1: uart1grp {
+			fsl,pins = <MX6QDL_UART1_PINGRP2>;
+		};
+
 		pinctrl_uart2: uart2grp {
 			fsl,pins = <MX6QDL_UART2_PINGRP1>;
 		};
@@ -186,6 +190,12 @@
 
 &ssi1 {
 	fsl,mode = "i2s-slave";
+	status = "okay";
+};
+
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart1>;
 	status = "okay";
 };
 
