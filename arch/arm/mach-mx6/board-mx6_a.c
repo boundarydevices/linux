@@ -450,6 +450,25 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 {
 }
 
+/* Order gpios with 1st to be set/cleared when enabling transmit */
+const unsigned short uart2_gpios[] = {
+	IMX_GPIO_NR(2, 16),		/* rx enable, active high */
+	IMX_GPIO_NR(2, 17),		/* tx enable, active high */
+	IMX_GPIO_NR(2, 18),		/* rs485 enable, active high */
+	IMX_GPIO_NR(7, 13),		/* all on, active high */
+	-1
+};
+
+static const struct imxuart_platform_data uart2_data __initconst = {
+	.gpios = uart2_gpios,
+	.flags = IMXUART_RS485_HALF_DUPLEX,
+	.rs485_txen_mask = 0x3,
+	.rs485_txen_levels = 0x2,
+	.rs485_levels = 0xd,
+	.rs232_levels = 0x1,
+	.off_levels = 0,
+};
+
 /*!
  * Board specific initialization.
  */
@@ -471,7 +490,7 @@ static void __init mx6_board_init(void)
 
 	imx6q_add_imx_uart(0, NULL);
 	imx6q_add_imx_uart(1, NULL);
-	imx6q_add_imx_uart(2, NULL);
+	imx6q_add_imx_uart(2, &uart2_data);
 	imx6q_add_imx_uart(3, NULL);
 
 	imx6q_add_imx_snvs_rtc();
