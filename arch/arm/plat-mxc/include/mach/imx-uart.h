@@ -23,6 +23,7 @@
 #define IMXUART_IRDA        (1<<1)
 #define IMXUART_USE_DCEDTE  (1<<2)
 #define IMXUART_SDMA        (1<<3)
+#define IMXUART_HALF_DUPLEX (1<<4)
 
 struct imxuart_platform_data {
 	int (*init)(struct platform_device *pdev);
@@ -34,6 +35,7 @@ struct imxuart_platform_data {
 	unsigned short transceiver_delay;
 	unsigned int dma_req_rx;
 	unsigned int dma_req_tx;
+	unsigned int rs485_txen;
 };
 
 #endif

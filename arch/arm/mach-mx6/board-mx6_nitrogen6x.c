@@ -259,6 +259,16 @@ static const struct anatop_thermal_platform_data
 	anatop_thermal_data __initconst = {
 		.name = "anatop_thermal",
 };
+#define ENABLE_RS485_TTYMXC0
+#ifdef ENABLE_RS485_TTYMXC0
+static const struct imxuart_platform_data mx6_arm2_uart0_data __initconst = {
+	.flags      = IMXUART_HALF_DUPLEX,
+	.rs485_txen = IMX_GPIO_NR(7, 13),
+};
+#define TTYMXC0_PLATFORM_DATA	&mx6_arm2_uart0_data
+#else
+#define TTYMXC0_PLATFORM_DATA	NULL
+#endif
 
 static const struct imxuart_platform_data mx6_arm2_uart2_data __initconst = {
 	.flags      = IMXUART_HAVE_RTSCTS,
@@ -989,7 +999,9 @@ static struct gpio_keys_button buttons[] = {
 	GPIO_BUTTON(GP_MENU_KEY, KEY_MENU, 1, "key-memu", 0),
 	GPIO_BUTTON(GP_HOME_KEY, KEY_HOME, 1, "key-home", 0),
 	GPIO_BUTTON(GP_BACK_KEY, KEY_BACK, 1, "key-back", 0),
+#ifndef ENABLE_RS485_TTYMXC0
 	GPIO_BUTTON(GP_VOL_UP_KEY, KEY_VOLUMEUP, 1, "volume-up", 0),
+#endif
 #ifndef ONE_WIRE
 	GPIO_BUTTON(GP_VOL_DOWN_KEY, KEY_VOLUMEDOWN, 1, "volume-down", 0),
 #endif
@@ -1305,7 +1317,7 @@ static void __init board_init(void)
 	soc_reg_id = dvfscore_data.soc_id;
 	pu_reg_id = dvfscore_data.pu_id;
 
-	imx6q_add_imx_uart(0, NULL);
+	imx6q_add_imx_uart(0, TTYMXC0_PLATFORM_DATA);
 
 #ifdef ONE_WIRE
 	one_wire_gp = IMX_GPIO_NR(4, 5);
