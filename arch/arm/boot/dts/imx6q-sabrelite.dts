@@ -19,10 +19,6 @@
 	compatible = "fsl,imx6q-sabrelite", "fsl,imx6q";
 };
 
-&pcie {
-	status = "okay";
-};
-
 &sata {
 	status = "okay";
 };
