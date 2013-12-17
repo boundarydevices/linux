@@ -51,6 +51,8 @@ next/boards
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-defconfig-3.14
 	patch
 		ARM: multi_v7_defconfig: Fix STi support
+	omap/board-removal
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.14/board-removal-safe
 
 next/drivers
 	mvebu/drivers
