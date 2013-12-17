@@ -143,6 +143,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6dl-gw52xx.dtb \
 	imx6dl-gw53xx.dtb \
 	imx6dl-gw54xx.dtb \
+	imx6dl-hummingboard.dtb \
 	imx6dl-nitrogen6x.dtb \
 	imx6dl-sabreauto.dtb \
 	imx6dl-sabrelite.dtb \
