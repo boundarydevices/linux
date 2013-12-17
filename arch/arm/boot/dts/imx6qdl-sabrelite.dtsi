@@ -114,7 +114,6 @@
 	imx6q-sabrelite {
 		pinctrl_hog: hoggrp {
 			fsl,pins = <
-				MX6QDL_PAD_EIM_D23__GPIO3_IO23  0x80000000
 				MX6QDL_PAD_GPIO_0__CCM_CLKO1    0x80000000
 			>;
 		};
@@ -131,7 +130,11 @@
 		};
 
 		pinctrl_enet: enetgrp {
-			fsl,pins = <MX6QDL_ENET_PINGRP1>;
+			fsl,pins = <
+				MX6QDL_ENET_PINGRP1
+				/* Phy reset */
+				MX6QDL_PAD_EIM_D23__GPIO3_IO23		0x000b0
+			>;
 		};
 
 		pinctrl_i2c1: i2c1grp {
