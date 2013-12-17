@@ -114,7 +114,6 @@
 	imx6q-sabrelite {
 		pinctrl_hog: hoggrp {
 			fsl,pins = <
-				MX6QDL_PAD_NANDF_D6__GPIO2_IO06 0x80000000
 				MX6QDL_PAD_EIM_D19__GPIO3_IO19  0x80000000
 				MX6QDL_PAD_EIM_D22__GPIO3_IO22  0x80000000
 				MX6QDL_PAD_EIM_D23__GPIO3_IO23  0x80000000
@@ -157,7 +156,10 @@
 		};
 
 		pinctrl_usdhc4: usdhc4grp {
-			fsl,pins = <MX6QDL_USDHC4_PINGRP_D4>;
+			fsl,pins = <
+				MX6QDL_USDHC4_PINGRP_D4
+				MX6QDL_PAD_NANDF_D6__GPIO2_IO06 0x1b0b0	/* CD */
+			>;
 		};
 	};
 };
