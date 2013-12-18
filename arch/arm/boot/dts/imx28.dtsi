@@ -1181,4 +1181,9 @@
 			status = "disabled";
 		};
 	};
+
+	iio_hwmon {
+		compatible = "iio-hwmon";
+		io-channels = <&lradc 8>;
+	};
 };
