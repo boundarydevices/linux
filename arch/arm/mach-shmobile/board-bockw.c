@@ -25,6 +25,7 @@
 #include <linux/mmc/sh_mmcif.h>
 #include <linux/mtd/partitions.h>
 #include <linux/pinctrl/machine.h>
+#include <linux/platform_data/camera-rcar.h>
 #include <linux/platform_data/usb-rcar-phy.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/fixed.h>
@@ -684,7 +685,7 @@ static void __init bockw_init(void)
 			.id             = i,
 			.data           = &rsnd_card_info[i],
 			.size_data      = sizeof(struct asoc_simple_card_info),
-			.dma_mask       = ~0,
+			.dma_mask	= DMA_BIT_MASK(32),
 		};
 
 		platform_device_register_full(&cardinfo);
