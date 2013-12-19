@@ -1225,7 +1225,6 @@ static int adv7180_probe(struct i2c_client *client,
 	adv->cvbs = tvin_plat->cvbs;
 	adv->reset = tvin_plat->reset;
 	adv->pwdn = tvin_plat->pwdn;
-	adv->sen.ipu = tvin_plat->ipu;
 	adv->sen.csi = tvin_plat->csi;
 
 	if (adv->reset)
