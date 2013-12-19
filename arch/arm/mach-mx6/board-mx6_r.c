@@ -588,12 +588,13 @@ static const struct pm_platform_data pm_data __initconst = {
 }
 
 static struct gpio_keys_button buttons[] = {
-	GPIO_BUTTON(IMX_GPIO_NR(6, 11), KEY_POWER, 1, "key-power", 1),
-	GPIO_BUTTON(IMX_GPIO_NR(3, 0), KEY_MENU, 1, "key-memu", 0),
+	GPIO_BUTTON(IMX_GPIO_NR(3, 0), KEY_BACK, 1, "key-back", 0),
 	GPIO_BUTTON(IMX_GPIO_NR(3, 1), KEY_HOME, 1, "key-home", 0),
-	GPIO_BUTTON(IMX_GPIO_NR(3, 2), KEY_BACK, 1, "key-back", 0),
-	GPIO_BUTTON(IMX_GPIO_NR(3, 3), KEY_VOLUMEUP, 1, "volume-up", 0),
-	GPIO_BUTTON(IMX_GPIO_NR(4, 5), KEY_VOLUMEDOWN, 1, "volume-down", 0),
+	GPIO_BUTTON(IMX_GPIO_NR(3, 2), KEY_MENU, 1, "key-menu", 0),
+	GPIO_BUTTON(IMX_GPIO_NR(3, 3), KEY_VOLUMEDOWN, 1, "volume-down", 0),
+	GPIO_BUTTON(IMX_GPIO_NR(7, 13), KEY_VOLUMEUP, 1, "volume-up", 0),
+	GPIO_BUTTON(IMX_GPIO_NR(4, 5), KEY_FORWARD, 1, "key-forward", 0),
+	GPIO_BUTTON(IMX_GPIO_NR(7, 1), KEY_POWER, 0, "key-power", 1),
 };
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
