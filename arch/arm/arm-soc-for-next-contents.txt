@@ -43,6 +43,14 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator.git tags/integrator-v3.14-1
 	patches
 		ARM: pxa: add PWM nodes to pxa27x.dtsi
+	nomadik/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-nomadik.git tags/nomadik-dt-v3.14
+	mvebu/dt-3
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.14-3
+	mvebu/dt-4
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.14-4
+	keystone/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone.git tags/keystone-dts
 
 next/boards
 	renesas/defconfig
