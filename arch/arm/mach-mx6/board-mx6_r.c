@@ -748,13 +748,6 @@ static struct mipi_csi2_platform_data mipi_csi2_pdata = {
 	.pixel_clk = "emi_clk",
 };
 
-static const struct imx_pcie_platform_data pcie_data  __initconst = {
-	.pcie_pwr_en	= -EINVAL,
-	.pcie_rst	= -EINVAL,
-	.pcie_wake_up	= -EINVAL,
-	.pcie_dis	= -EINVAL,
-};
-
 #define GPIOF_HIGH GPIOF_OUT_INIT_HIGH
 
 struct gpio r_gpios[] __initdata = {
