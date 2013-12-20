@@ -75,7 +75,7 @@
 		};
 
 		pinctrl_enet: enetgrp {
-			fsl,pins = <MX6QDL_ENET_PINGRP2>;
+			fsl,pins = <MX6QDL_ENET_PINGRP2_GPIO6>;
 		};
 
 		pinctrl_gpmi_nand: gpminandgrp {
@@ -115,6 +115,8 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet>;
 	phy-mode = "rgmii";
+	interrupts-extended = <&gpio1 6 IRQ_TYPE_LEVEL_HIGH>,
+			      <&intc 0 119 IRQ_TYPE_LEVEL_HIGH>;
 	status = "okay";
 };
 
