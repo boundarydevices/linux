@@ -25,6 +25,12 @@ next/soc
 		local branch: rebased onto tip/timers-core-for-linus for dependencies
 	patch
 		ARM: at91: sama5d3: add support for sama5d36 chip
+	berlin/soc
+		https://github.com/shesselba/linux-berlin.git tags/berlin-3.14
+	efm32/soc
+		git://git.pengutronix.de/git/ukl/linux.git tags/efm32
+	keystone/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone.git for_3.14/soc
 
 next/dt
 	ux500/dt
