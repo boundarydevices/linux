@@ -31,6 +31,8 @@ next/soc
 		git://git.pengutronix.de/git/ukl/linux.git tags/efm32
 	keystone/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone.git for_3.14/soc
+	renesas/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-soc-for-v3.14
 
 next/dt
 	ux500/dt
