@@ -59,6 +59,8 @@ next/dt
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.14-4
 	keystone/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone.git tags/keystone-dts
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-dt-for-v3.14
 
 next/boards
 	renesas/defconfig
