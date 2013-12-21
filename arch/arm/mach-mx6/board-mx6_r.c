@@ -800,6 +800,11 @@ static struct platform_device platdev_leds_pwd = {
 	},
 };
 
+static void poweroff(void)
+{
+	gpio_direction_output(IMX_GPIO_NR(1, 16), 0);
+	while (1);
+}
 
 /*!
  * Board specific initialization.
@@ -912,6 +917,7 @@ static void __init board_init(void)
 	imx6q_add_hdmi_soc();
 	imx6q_add_hdmi_soc_dai();
 
+	pm_power_off = poweroff;
 	imx6q_add_busfreq();
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
