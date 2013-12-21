@@ -24,6 +24,7 @@
 #include <linux/irq.h>
 #include <linux/init.h>
 #include <linux/input.h>
+#include <linux/leds_pwm.h>
 #include <linux/nodemask.h>
 #include <linux/clk.h>
 #include <linux/platform_device.h>
@@ -777,6 +778,29 @@ static struct imx_bt_rfkill_platform_data mxc_bt_rfkill_data = {
 	.power_change = bt_power_change,
 };
 
+static struct led_pwm pwms[] = {
+	[0] = {
+		.name           = "buzzer",
+		.default_trigger = "what_default_trigger",
+		.pwm_id         = 3,
+		.active_low     = 0,
+		.max_brightness = 0x100,
+		.pwm_period_ns  = 3822192,	/* middle "C" is 261.63 hz or */
+	},
+};
+
+static struct led_pwm_platform_data plat_led = {
+	.num_leds = 1,
+	.leds = pwms,
+};
+static struct platform_device platdev_leds_pwd = {
+	.name   = "leds_pwm",
+	.dev    = {
+			.platform_data  = &plat_led,
+	},
+};
+
+
 /*!
  * Board specific initialization.
  */
@@ -870,7 +894,7 @@ static void __init board_init(void)
 	imx6q_add_asrc(&imx_asrc_data);
 
 	imx6q_add_mxc_pwm(0);
-	imx6q_add_mxc_pwm(1);
+	imx6q_add_mxc_pwm(3);
 
 	imx6q_add_mxc_pwm_backlight(0, &pwm1_backlight_data);
 
@@ -880,6 +904,8 @@ static void __init board_init(void)
 	imx6q_add_dma();
 
 	imx6q_add_dvfs_core(&dvfscore_data);
+
+	platform_device_register(&platdev_leds_pwd);
 
 	add_device_buttons();
 

@@ -135,6 +135,9 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	NEW_PAD_CTRL(MX6PAD(NANDF_CS0__GPIO_6_11), WEAK_PULLUP), /* pin 10 - NC */
 	NEW_PAD_CTRL(MX6PAD(SD1_DAT1__GPIO_1_17), WEAK_PULLUP),	/* pin 11 - NC */
 
+	/* PWM4: Audio buzzer*/
+	MX6PAD(SD1_CMD__PWM4_PWMO),		/* GPIO1[18] */
+
 	/* GPIO1 */
 	MX6PAD(SD1_DAT0__GPIO_1_16),	/* Main power enable */
 
