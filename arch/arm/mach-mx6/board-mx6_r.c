@@ -366,6 +366,9 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		I2C_BOARD_INFO("isl1208", 0x6f),	/* Real time clock */
 		.irq = gpio_to_irq(IMX_GPIO_NR(6, 7)),	/* NANDF_CLE */
 	},
+        {
+                I2C_BOARD_INFO("mma8451", 0x1c)	/* Accelerometer */
+        },
 };
 
 static void usbotg_vbus(bool on)
