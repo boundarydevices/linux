@@ -91,6 +91,8 @@ next/boards
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.14/board-removal-safe
 	samsung/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-defconfig
+	mvebu/defconfig-2
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-defconfig-3.14-2
 
 next/drivers
 	mvebu/drivers
