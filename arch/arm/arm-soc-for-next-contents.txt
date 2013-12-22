@@ -100,3 +100,5 @@ next/drivers
 	at91/drivers
 		git://github.com/at91linux/linux-at91.git tags/at91-drivers
 		Contains at91/dt
+	samsung/irq
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-irq
