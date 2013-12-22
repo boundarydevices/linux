@@ -37,6 +37,7 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-soc-for-v3.14
 	patch
 		ARM: moxart: add MOXA ART SoC platform files
+		MAINTAINERS: take maintainership for Energy Micro efm32 SoCs
 
 next/dt
 	ux500/dt
