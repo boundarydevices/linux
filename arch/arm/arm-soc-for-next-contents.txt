@@ -77,6 +77,8 @@ next/dt
 		git://git.xilinx.com/linux-xlnx.git tags/zynq-dt-for-3.14
 	patch
 		ARM: moxart: add MOXA ART SoC device tree files
+	samsung/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-dt
 
 next/boards
 	renesas/defconfig
