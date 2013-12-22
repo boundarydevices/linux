@@ -43,6 +43,8 @@ next/soc
 	patch
 		ARM: moxart: add MOXA ART SoC platform files
 		MAINTAINERS: take maintainership for Energy Micro efm32 SoCs
+	samsung/dev
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-dev
 
 next/dt
 	ux500/dt
