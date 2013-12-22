@@ -16,6 +16,8 @@ next/cleanup
 		ARM: mmp: build sram driver alone
 	patch
 		ARM: at91: remove AT91_PROGRAMMABLE_CLOCKS configuration option
+	zynq/cleanup
+		git://git.xilinx.com/linux-xlnx.git tags/zynq-cleanup-for-3.14
 
 next/soc
 	patches
