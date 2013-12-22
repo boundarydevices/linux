@@ -85,6 +85,8 @@ next/boards
 		ARM: multi_v7_defconfig: Fix STi support
 	omap/board-removal
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.14/board-removal-safe
+	samsung/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-defconfig
 
 next/drivers
 	mvebu/drivers
