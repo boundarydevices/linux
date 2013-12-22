@@ -83,3 +83,6 @@ next/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/broonie/misc.git tags/s3c64xx-dmaengine
 	renesas/drivers-usb
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-usb-r8a66597-hcd-for-v3.14
+	at91/drivers
+		git://github.com/at91linux/linux-at91.git tags/at91-drivers
+		Contains at91/dt
