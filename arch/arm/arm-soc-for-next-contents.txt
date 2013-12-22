@@ -35,6 +35,8 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone.git for_3.14/soc
 	renesas/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-soc-for-v3.14
+	patch
+		ARM: moxart: add MOXA ART SoC platform files
 
 next/dt
 	ux500/dt
@@ -65,6 +67,8 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-dt-for-v3.14
 	zynq/dt
 		git://git.xilinx.com/linux-xlnx.git tags/zynq-dt-for-3.14
+	patch
+		ARM: moxart: add MOXA ART SoC device tree files
 
 next/boards
 	renesas/defconfig
