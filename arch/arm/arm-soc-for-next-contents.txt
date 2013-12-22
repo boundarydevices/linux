@@ -21,6 +21,8 @@ next/cleanup
 		ARM: at91: remove AT91_PROGRAMMABLE_CLOCKS configuration option
 	zynq/cleanup
 		git://git.xilinx.com/linux-xlnx.git tags/zynq-cleanup-for-3.14
+	samsung/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-cleanup
 
 next/soc
 	patches
