@@ -29,9 +29,8 @@ static void csi2_if_enable(struct iss_csi2_device *csi2, u8 enable)
 {
 	struct iss_csi2_ctrl_cfg *currctrl = &csi2->ctrl;
 
-	writel((readl(csi2->regs1 + CSI2_CTRL) & ~CSI2_CTRL_IF_EN) |
-		(enable ? CSI2_CTRL_IF_EN : 0),
-		csi2->regs1 + CSI2_CTRL);
+	iss_reg_update(csi2->iss, csi2->regs1, CSI2_CTRL, CSI2_CTRL_IF_EN,
+		       enable ? CSI2_CTRL_IF_EN : 0);
 
 	currctrl->if_enable = enable;
 }
@@ -90,7 +89,7 @@ static void csi2_recv_config(struct iss_csi2_device *csi2,
 	 */
 	reg |= CSI2_CTRL_ENDIANNESS;
 
-	writel(reg, csi2->regs1 + CSI2_CTRL);
+	iss_reg_write(csi2->iss, csi2->regs1, CSI2_CTRL, reg);
 }
 
 static const unsigned int csi2_input_fmts[] = {
@@ -260,10 +259,10 @@ static void csi2_set_outaddr(struct iss_csi2_device *csi2, u32 addr)
 
 	ctx->ping_addr = addr;
 	ctx->pong_addr = addr;
-	writel(ctx->ping_addr,
-	       csi2->regs1 + CSI2_CTX_PING_ADDR(ctx->ctxnum));
-	writel(ctx->pong_addr,
-	       csi2->regs1 + CSI2_CTX_PONG_ADDR(ctx->ctxnum));
+	iss_reg_write(csi2->iss, csi2->regs1, CSI2_CTX_PING_ADDR(ctx->ctxnum),
+		      ctx->ping_addr);
+	iss_reg_write(csi2->iss, csi2->regs1, CSI2_CTX_PONG_ADDR(ctx->ctxnum),
+		      ctx->pong_addr);
 }
 
 /*
@@ -274,7 +273,7 @@ static void csi2_set_outaddr(struct iss_csi2_device *csi2, u32 addr)
  */
 static inline int is_usr_def_mapping(u32 format_id)
 {
-	return ((format_id & 0xF0) == 0x40) ? 1 : 0;
+	return (format_id & 0xf0) == 0x40 ? 1 : 0;
 }
 
 /*
@@ -288,7 +287,7 @@ static void csi2_ctx_enable(struct iss_csi2_device *csi2, u8 ctxnum, u8 enable)
 	struct iss_csi2_ctx_cfg *ctx = &csi2->contexts[ctxnum];
 	u32 reg;
 
-	reg = readl(csi2->regs1 + CSI2_CTX_CTRL1(ctxnum));
+	reg = iss_reg_read(csi2->iss, csi2->regs1, CSI2_CTX_CTRL1(ctxnum));
 
 	if (enable) {
 		unsigned int skip = 0;
@@ -306,7 +305,7 @@ static void csi2_ctx_enable(struct iss_csi2_device *csi2, u8 ctxnum, u8 enable)
 		reg &= ~CSI2_CTX_CTRL1_CTX_EN;
 	}
 
-	writel(reg, csi2->regs1 + CSI2_CTX_CTRL1(ctxnum));
+	iss_reg_write(csi2->iss, csi2->regs1, CSI2_CTX_CTRL1(ctxnum), reg);
 	ctx->enabled = enable;
 }
 
@@ -330,7 +329,7 @@ static void csi2_ctx_config(struct iss_csi2_device *csi2,
 	if (ctx->checksum_enabled)
 		reg |= CSI2_CTX_CTRL1_CS_EN;
 
-	writel(reg, csi2->regs1 + CSI2_CTX_CTRL1(ctx->ctxnum));
+	iss_reg_write(csi2->iss, csi2->regs1, CSI2_CTX_CTRL1(ctx->ctxnum), reg);
 
 	/* Set up CSI2_CTx_CTRL2 */
 	reg = ctx->virtual_id << CSI2_CTX_CTRL2_VIRTUAL_ID_SHIFT;
@@ -342,23 +341,20 @@ static void csi2_ctx_config(struct iss_csi2_device *csi2,
 	if (is_usr_def_mapping(ctx->format_id))
 		reg |= 2 << CSI2_CTX_CTRL2_USER_DEF_MAP_SHIFT;
 
-	writel(reg, csi2->regs1 + CSI2_CTX_CTRL2(ctx->ctxnum));
+	iss_reg_write(csi2->iss, csi2->regs1, CSI2_CTX_CTRL2(ctx->ctxnum), reg);
 
 	/* Set up CSI2_CTx_CTRL3 */
-	writel(ctx->alpha << CSI2_CTX_CTRL3_ALPHA_SHIFT,
-		csi2->regs1 + CSI2_CTX_CTRL3(ctx->ctxnum));
+	iss_reg_write(csi2->iss, csi2->regs1, CSI2_CTX_CTRL3(ctx->ctxnum),
+		      ctx->alpha << CSI2_CTX_CTRL3_ALPHA_SHIFT);
 
 	/* Set up CSI2_CTx_DAT_OFST */
-	reg = readl(csi2->regs1 + CSI2_CTX_DAT_OFST(ctx->ctxnum));
-	reg &= ~CSI2_CTX_DAT_OFST_MASK;
-	reg |= ctx->data_offset;
-	writel(reg, csi2->regs1 + CSI2_CTX_DAT_OFST(ctx->ctxnum));
+	iss_reg_update(csi2->iss, csi2->regs1, CSI2_CTX_DAT_OFST(ctx->ctxnum),
+		       CSI2_CTX_DAT_OFST_MASK, ctx->data_offset);
 
-	writel(ctx->ping_addr,
-		       csi2->regs1 + CSI2_CTX_PING_ADDR(ctx->ctxnum));
-
-	writel(ctx->pong_addr,
-		       csi2->regs1 + CSI2_CTX_PONG_ADDR(ctx->ctxnum));
+	iss_reg_write(csi2->iss, csi2->regs1, CSI2_CTX_PING_ADDR(ctx->ctxnum),
+		      ctx->ping_addr);
+	iss_reg_write(csi2->iss, csi2->regs1, CSI2_CTX_PONG_ADDR(ctx->ctxnum),
+		      ctx->pong_addr);
 }
 
 /*
@@ -370,7 +366,7 @@ static void csi2_timing_config(struct iss_csi2_device *csi2,
 {
 	u32 reg;
 
-	reg = readl(csi2->regs1 + CSI2_TIMING);
+	reg = iss_reg_read(csi2->iss, csi2->regs1, CSI2_TIMING);
 
 	if (timing->force_rx_mode)
 		reg |= CSI2_TIMING_FORCE_RX_MODE_IO1;
@@ -391,7 +387,7 @@ static void csi2_timing_config(struct iss_csi2_device *csi2,
 	reg |= timing->stop_state_counter <<
 	       CSI2_TIMING_STOP_STATE_COUNTER_IO1_SHIFT;
 
-	writel(reg, csi2->regs1 + CSI2_TIMING);
+	iss_reg_write(csi2->iss, csi2->regs1, CSI2_TIMING, reg);
 }
 
 /*
@@ -407,14 +403,14 @@ static void csi2_irq_ctx_set(struct iss_csi2_device *csi2, int enable)
 		reg |= CSI2_CTX_IRQ_FS;
 
 	for (i = 0; i < 8; i++) {
-		writel(reg, csi2->regs1 + CSI2_CTX_IRQSTATUS(i));
+		iss_reg_write(csi2->iss, csi2->regs1, CSI2_CTX_IRQSTATUS(i),
+			      reg);
 		if (enable)
-			writel(readl(csi2->regs1 + CSI2_CTX_IRQENABLE(i)) | reg,
-				csi2->regs1 + CSI2_CTX_IRQENABLE(i));
+			iss_reg_set(csi2->iss, csi2->regs1,
+				    CSI2_CTX_IRQENABLE(i), reg);
 		else
-			writel(readl(csi2->regs1 + CSI2_CTX_IRQENABLE(i)) &
-				~reg,
-				csi2->regs1 + CSI2_CTX_IRQENABLE(i));
+			iss_reg_clr(csi2->iss, csi2->regs1,
+				    CSI2_CTX_IRQENABLE(i), reg);
 	}
 }
 
@@ -452,12 +448,13 @@ static void csi2_irq_complexio1_set(struct iss_csi2_device *csi2, int enable)
 		CSI2_COMPLEXIO_IRQ_ERRESC1 |
 		CSI2_COMPLEXIO_IRQ_ERRSOTSYNCHS1 |
 		CSI2_COMPLEXIO_IRQ_ERRSOTHS1;
-	writel(reg, csi2->regs1 + CSI2_COMPLEXIO_IRQSTATUS);
+	iss_reg_write(csi2->iss, csi2->regs1, CSI2_COMPLEXIO_IRQSTATUS, reg);
 	if (enable)
-		reg |= readl(csi2->regs1 + CSI2_COMPLEXIO_IRQENABLE);
+		iss_reg_set(csi2->iss, csi2->regs1, CSI2_COMPLEXIO_IRQENABLE,
+			    reg);
 	else
-		reg = 0;
-	writel(reg, csi2->regs1 + CSI2_COMPLEXIO_IRQENABLE);
+		iss_reg_write(csi2->iss, csi2->regs1, CSI2_COMPLEXIO_IRQENABLE,
+			      0);
 }
 
 /*
@@ -474,13 +471,11 @@ static void csi2_irq_status_set(struct iss_csi2_device *csi2, int enable)
 		CSI2_IRQ_COMPLEXIO_ERR |
 		CSI2_IRQ_FIFO_OVF |
 		CSI2_IRQ_CONTEXT0;
-	writel(reg, csi2->regs1 + CSI2_IRQSTATUS);
+	iss_reg_write(csi2->iss, csi2->regs1, CSI2_IRQSTATUS, reg);
 	if (enable)
-		reg |= readl(csi2->regs1 + CSI2_IRQENABLE);
+		iss_reg_set(csi2->iss, csi2->regs1, CSI2_IRQENABLE, reg);
 	else
-		reg = 0;
-
-	writel(reg, csi2->regs1 + CSI2_IRQENABLE);
+		iss_reg_write(csi2->iss, csi2->regs1, CSI2_IRQENABLE, 0);
 }
 
 /*
@@ -502,13 +497,12 @@ int omap4iss_csi2_reset(struct iss_csi2_device *csi2)
 	if (csi2->phy->phy_in_use)
 		return -EBUSY;
 
-	writel(readl(csi2->regs1 + CSI2_SYSCONFIG) |
-		CSI2_SYSCONFIG_SOFT_RESET,
-		csi2->regs1 + CSI2_SYSCONFIG);
+	iss_reg_set(csi2->iss, csi2->regs1, CSI2_SYSCONFIG,
+		    CSI2_SYSCONFIG_SOFT_RESET);
 
 	do {
-		reg = readl(csi2->regs1 + CSI2_SYSSTATUS) &
-				    CSI2_SYSSTATUS_RESET_DONE;
+		reg = iss_reg_read(csi2->iss, csi2->regs1, CSI2_SYSSTATUS)
+		    & CSI2_SYSSTATUS_RESET_DONE;
 		if (reg == CSI2_SYSSTATUS_RESET_DONE)
 			break;
 		soft_reset_retries++;
@@ -517,17 +511,17 @@ int omap4iss_csi2_reset(struct iss_csi2_device *csi2)
 	} while (soft_reset_retries < 5);
 
 	if (soft_reset_retries == 5) {
-		printk(KERN_ERR "CSI2: Soft reset try count exceeded!\n");
+		dev_err(csi2->iss->dev,
+			"CSI2: Soft reset try count exceeded!\n");
 		return -EBUSY;
 	}
 
-	writel(readl(csi2->regs1 + CSI2_COMPLEXIO_CFG) |
-		CSI2_COMPLEXIO_CFG_RESET_CTRL,
-		csi2->regs1 + CSI2_COMPLEXIO_CFG);
+	iss_reg_set(csi2->iss, csi2->regs1, CSI2_COMPLEXIO_CFG,
+		    CSI2_COMPLEXIO_CFG_RESET_CTRL);
 
 	i = 100;
 	do {
-		reg = readl(csi2->phy->phy_regs + REGISTER1)
+		reg = iss_reg_read(csi2->iss, csi2->phy->phy_regs, REGISTER1)
 		    & REGISTER1_RESET_DONE_CTRLCLK;
 		if (reg == REGISTER1_RESET_DONE_CTRLCLK)
 			break;
@@ -535,16 +529,15 @@ int omap4iss_csi2_reset(struct iss_csi2_device *csi2)
 	} while (--i > 0);
 
 	if (i == 0) {
-		printk(KERN_ERR
-		       "CSI2: Reset for CSI2_96M_FCLK domain Failed!\n");
+		dev_err(csi2->iss->dev,
+			"CSI2: Reset for CSI2_96M_FCLK domain Failed!\n");
 		return -EBUSY;
 	}
 
-	writel((readl(csi2->regs1 + CSI2_SYSCONFIG) &
-		~(CSI2_SYSCONFIG_MSTANDBY_MODE_MASK |
-		  CSI2_SYSCONFIG_AUTO_IDLE)) |
-		CSI2_SYSCONFIG_MSTANDBY_MODE_NO,
-		csi2->regs1 + CSI2_SYSCONFIG);
+	iss_reg_update(csi2->iss, csi2->regs1, CSI2_SYSCONFIG,
+		       CSI2_SYSCONFIG_MSTANDBY_MODE_MASK |
+		       CSI2_SYSCONFIG_AUTO_IDLE,
+		       CSI2_SYSCONFIG_MSTANDBY_MODE_NO);
 
 	return 0;
 }
@@ -579,7 +572,7 @@ static int csi2_configure(struct iss_csi2_device *csi2)
 	timing->force_rx_mode = 1;
 	timing->stop_state_16x = 1;
 	timing->stop_state_4x = 1;
-	timing->stop_state_counter = 0x1FF;
+	timing->stop_state_counter = 0x1ff;
 
 	/*
 	 * The CSI2 receiver can't do any format conversion except DPCM
@@ -626,7 +619,7 @@ static int csi2_configure(struct iss_csi2_device *csi2)
  */
 #define CSI2_PRINT_REGISTER(iss, regs, name)\
 	dev_dbg(iss->dev, "###CSI2 " #name "=0x%08x\n", \
-		readl(regs + CSI2_##name))
+		iss_reg_read(iss, regs, CSI2_##name))
 
 static void csi2_print_status(struct iss_csi2_device *csi2)
 {
@@ -694,8 +687,8 @@ static void csi2_isr_ctx(struct iss_csi2_device *csi2,
 	unsigned int n = ctx->ctxnum;
 	u32 status;
 
-	status = readl(csi2->regs1 + CSI2_CTX_IRQSTATUS(n));
-	writel(status, csi2->regs1 + CSI2_CTX_IRQSTATUS(n));
+	status = iss_reg_read(csi2->iss, csi2->regs1, CSI2_CTX_IRQSTATUS(n));
+	iss_reg_write(csi2->iss, csi2->regs1, CSI2_CTX_IRQSTATUS(n), status);
 
 	/* Propagate frame number */
 	if (status & CSI2_CTX_IRQ_FS) {
@@ -744,17 +737,17 @@ void omap4iss_csi2_isr(struct iss_csi2_device *csi2)
 	if (!csi2->available)
 		return;
 
-	csi2_irqstatus = readl(csi2->regs1 + CSI2_IRQSTATUS);
-	writel(csi2_irqstatus, csi2->regs1 + CSI2_IRQSTATUS);
+	csi2_irqstatus = iss_reg_read(csi2->iss, csi2->regs1, CSI2_IRQSTATUS);
+	iss_reg_write(csi2->iss, csi2->regs1, CSI2_IRQSTATUS, csi2_irqstatus);
 
 	/* Failure Cases */
 	if (csi2_irqstatus & CSI2_IRQ_COMPLEXIO_ERR) {
-		cpxio1_irqstatus = readl(csi2->regs1 +
-					 CSI2_COMPLEXIO_IRQSTATUS);
-		writel(cpxio1_irqstatus,
-			csi2->regs1 + CSI2_COMPLEXIO_IRQSTATUS);
-		dev_dbg(iss->dev, "CSI2: ComplexIO Error IRQ "
-			"%x\n", cpxio1_irqstatus);
+		cpxio1_irqstatus = iss_reg_read(csi2->iss, csi2->regs1,
+						CSI2_COMPLEXIO_IRQSTATUS);
+		iss_reg_write(csi2->iss, csi2->regs1, CSI2_COMPLEXIO_IRQSTATUS,
+			      cpxio1_irqstatus);
+		dev_dbg(iss->dev, "CSI2: ComplexIO Error IRQ %x\n",
+			cpxio1_irqstatus);
 		pipe->error = true;
 	}
 
@@ -763,23 +756,13 @@ void omap4iss_csi2_isr(struct iss_csi2_device *csi2)
 			      CSI2_IRQ_ECC_NO_CORRECTION |
 			      CSI2_IRQ_COMPLEXIO_ERR |
 			      CSI2_IRQ_FIFO_OVF)) {
-		dev_dbg(iss->dev, "CSI2 Err:"
-			" OCP:%d,"
-			" Short_pack:%d,"
-			" ECC:%d,"
-			" CPXIO:%d,"
-			" FIFO_OVF:%d,"
-			"\n",
-			(csi2_irqstatus &
-			 CSI2_IRQ_OCP_ERR) ? 1 : 0,
-			(csi2_irqstatus &
-			 CSI2_IRQ_SHORT_PACKET) ? 1 : 0,
-			(csi2_irqstatus &
-			 CSI2_IRQ_ECC_NO_CORRECTION) ? 1 : 0,
-			(csi2_irqstatus &
-			 CSI2_IRQ_COMPLEXIO_ERR) ? 1 : 0,
-			(csi2_irqstatus &
-			 CSI2_IRQ_FIFO_OVF) ? 1 : 0);
+		dev_dbg(iss->dev,
+			"CSI2 Err: OCP:%d SHORT:%d ECC:%d CPXIO:%d OVF:%d\n",
+			csi2_irqstatus & CSI2_IRQ_OCP_ERR ? 1 : 0,
+			csi2_irqstatus & CSI2_IRQ_SHORT_PACKET ? 1 : 0,
+			csi2_irqstatus & CSI2_IRQ_ECC_NO_CORRECTION ? 1 : 0,
+			csi2_irqstatus & CSI2_IRQ_COMPLEXIO_ERR ? 1 : 0,
+			csi2_irqstatus & CSI2_IRQ_FIFO_OVF ? 1 : 0);
 		pipe->error = true;
 	}
 
@@ -1073,21 +1056,17 @@ static int csi2_set_stream(struct v4l2_subdev *sd, int enable)
 	struct iss_device *iss = csi2->iss;
 	struct iss_pipeline *pipe = to_iss_pipeline(&csi2->subdev.entity);
 	struct iss_video *video_out = &csi2->video_out;
+	int ret = 0;
 
 	if (csi2->state == ISS_PIPELINE_STREAM_STOPPED) {
 		if (enable == ISS_PIPELINE_STREAM_STOPPED)
 			return 0;
 
-		if (csi2 == &iss->csi2a)
-			omap4iss_subclk_enable(iss, OMAP4_ISS_SUBCLK_CSI2_A);
-		else if (csi2 == &iss->csi2b)
-			omap4iss_subclk_enable(iss, OMAP4_ISS_SUBCLK_CSI2_B);
+		omap4iss_subclk_enable(iss, csi2->subclk);
 	}
 
 	switch (enable) {
 	case ISS_PIPELINE_STREAM_CONTINUOUS: {
-		int ret;
-
 		ret = omap4iss_csiphy_config(iss, sd);
 		if (ret < 0)
 			return ret;
@@ -1119,22 +1098,18 @@ static int csi2_set_stream(struct v4l2_subdev *sd, int enable)
 			return 0;
 		if (omap4iss_module_sync_idle(&sd->entity, &csi2->wait,
 					      &csi2->stopping))
-			dev_dbg(iss->dev, "%s: module stop timeout.\n",
-				sd->name);
+			ret = -ETIMEDOUT;
 		csi2_ctx_enable(csi2, 0, 0);
 		csi2_if_enable(csi2, 0);
 		csi2_irq_ctx_set(csi2, 0);
 		omap4iss_csiphy_release(csi2->phy);
-		if (csi2 == &iss->csi2a)
-			omap4iss_subclk_disable(iss, OMAP4_ISS_SUBCLK_CSI2_A);
-		else if (csi2 == &iss->csi2b)
-			omap4iss_subclk_disable(iss, OMAP4_ISS_SUBCLK_CSI2_B);
+		omap4iss_subclk_disable(iss, csi2->subclk);
 		iss_video_dmaqueue_flags_clr(video_out);
 		break;
 	}
 
 	csi2->state = enable;
-	return 0;
+	return ret;
 }
 
 /* subdev video operations */
@@ -1213,8 +1188,7 @@ static int csi2_link_setup(struct media_entity *entity,
 		return -EINVAL;
 	}
 
-	ctrl->vp_only_enable =
-		(csi2->output & CSI2_OUTPUT_MEMORY) ? false : true;
+	ctrl->vp_only_enable = csi2->output & CSI2_OUTPUT_MEMORY ? false : true;
 	ctrl->vp_clk_enable = !!(csi2->output & CSI2_OUTPUT_IPIPEIF);
 
 	return 0;
@@ -1329,8 +1303,9 @@ int omap4iss_csi2_init(struct iss_device *iss)
 
 	csi2a->iss = iss;
 	csi2a->available = 1;
-	csi2a->regs1 = iss->regs[OMAP4_ISS_MEM_CSI2_A_REGS1];
+	csi2a->regs1 = OMAP4_ISS_MEM_CSI2_A_REGS1;
 	csi2a->phy = &iss->csiphy1;
+	csi2a->subclk = OMAP4_ISS_SUBCLK_CSI2_A;
 	csi2a->state = ISS_PIPELINE_STREAM_STOPPED;
 	init_waitqueue_head(&csi2a->wait);
 
@@ -1340,8 +1315,9 @@ int omap4iss_csi2_init(struct iss_device *iss)
 
 	csi2b->iss = iss;
 	csi2b->available = 1;
-	csi2b->regs1 = iss->regs[OMAP4_ISS_MEM_CSI2_B_REGS1];
+	csi2b->regs1 = OMAP4_ISS_MEM_CSI2_B_REGS1;
 	csi2b->phy = &iss->csiphy2;
+	csi2b->subclk = OMAP4_ISS_SUBCLK_CSI2_B;
 	csi2b->state = ISS_PIPELINE_STREAM_STOPPED;
 	init_waitqueue_head(&csi2b->wait);
 

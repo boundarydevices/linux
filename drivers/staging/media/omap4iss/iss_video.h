@@ -40,6 +40,7 @@ struct v4l2_pix_format;
  *	shifted to be 8 bits per pixel. =0 if format is not shiftable.
  * @pixelformat: V4L2 pixel format FCC identifier
  * @bpp: Bits per pixel
+ * @description: Human-readable format description
  */
 struct iss_format_info {
 	enum v4l2_mbus_pixelcode code;
@@ -48,6 +49,7 @@ struct iss_format_info {
 	enum v4l2_mbus_pixelcode flavor;
 	u32 pixelformat;
 	unsigned int bpp;
+	const char *description;
 };
 
 enum iss_pipeline_stream_state {
@@ -75,6 +77,7 @@ enum iss_pipeline_state {
 
 /*
  * struct iss_pipeline - An OMAP4 ISS hardware pipeline
+ * @entities: Bitmask of entities in the pipeline (indexed by entity ID)
  * @error: A hardware error occurred during capture
  */
 struct iss_pipeline {
@@ -84,6 +87,7 @@ struct iss_pipeline {
 	enum iss_pipeline_stream_state stream_state;
 	struct iss_video *input;
 	struct iss_video *output;
+	unsigned int entities;
 	atomic_t frame_number;
 	bool do_propagation; /* of frame number */
 	bool error;
@@ -159,10 +163,11 @@ struct iss_video {
 	/* Pipeline state */
 	struct iss_pipeline pipe;
 	struct mutex stream_lock;	/* pipeline and stream states */
+	bool error;
 
 	/* Video buffers queue */
 	struct vb2_queue *queue;
-	spinlock_t qlock;	/* Spinlock for dmaqueue */
+	spinlock_t qlock;		/* protects dmaqueue and error */
 	struct list_head dmaqueue;
 	enum iss_video_dmaqueue_flags dmaqueue_flags;
 	struct vb2_alloc_ctx *alloc_ctx;
@@ -190,6 +195,7 @@ int omap4iss_video_register(struct iss_video *video,
 			    struct v4l2_device *vdev);
 void omap4iss_video_unregister(struct iss_video *video);
 struct iss_buffer *omap4iss_video_buffer_next(struct iss_video *video);
+void omap4iss_video_cancel_stream(struct iss_video *video);
 struct media_pad *omap4iss_video_remote_pad(struct iss_video *video);
 
 const struct iss_format_info *

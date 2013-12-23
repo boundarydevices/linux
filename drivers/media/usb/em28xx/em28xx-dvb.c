@@ -51,6 +51,8 @@
 #include "a8293.h"
 #include "qt1010.h"
 #include "mb86a20s.h"
+#include "m88ds3103.h"
+#include "m88ts2022.h"
 
 MODULE_DESCRIPTION("driver for em28xx based DVB cards");
 MODULE_AUTHOR("Mauro Carvalho Chehab <mchehab@infradead.org>");
@@ -87,6 +89,7 @@ struct em28xx_dvb {
 	struct semaphore      pll_mutex;
 	bool			dont_attach_fe1;
 	int			lna_gpio;
+	struct i2c_client	*i2c_client_tuner;
 };
 
 
@@ -808,6 +811,14 @@ static struct tda18271_config c3tech_duo_tda18271_config = {
 	.small_i2c = TDA18271_03_BYTE_CHUNK_INIT,
 };
 
+static const struct m88ds3103_config pctv_461e_m88ds3103_config = {
+	.i2c_addr = 0x68,
+	.clock = 27000000,
+	.i2c_wr_max = 33,
+	.clock_out = 0,
+	.ts_mode = M88DS3103_TS_PARALLEL_16,
+	.agc = 0x99,
+};
 
 /* ------------------------------------------------------------------ */
 
@@ -1330,6 +1341,48 @@ static int em28xx_dvb_init(struct em28xx *dev)
 			goto out_free;
 		}
 		break;
+	case EM28178_BOARD_PCTV_461E:
+		{
+			/* demod I2C adapter */
+			struct i2c_adapter *i2c_adapter;
+			struct i2c_board_info info;
+			struct m88ts2022_config m88ts2022_config = {
+				.clock = 27000000,
+			};
+			memset(&info, 0, sizeof(struct i2c_board_info));
+
+			/* attach demod */
+			dvb->fe[0] = dvb_attach(m88ds3103_attach,
+					&pctv_461e_m88ds3103_config,
+					&dev->i2c_adap[dev->def_i2c_bus],
+					&i2c_adapter);
+			if (dvb->fe[0] == NULL) {
+				result = -ENODEV;
+				goto out_free;
+			}
+
+			/* attach tuner */
+			m88ts2022_config.fe = dvb->fe[0];
+			strlcpy(info.type, "m88ts2022", I2C_NAME_SIZE);
+			info.addr = 0x60;
+			info.platform_data = &m88ts2022_config;
+			request_module("m88ts2022");
+			dvb->i2c_client_tuner = i2c_new_device(i2c_adapter, &info);
+
+			/* delegate signal strength measurement to tuner */
+			dvb->fe[0]->ops.read_signal_strength =
+					dvb->fe[0]->ops.tuner_ops.get_rf_strength;
+
+			/* attach SEC */
+			if (!dvb_attach(a8293_attach, dvb->fe[0],
+					&dev->i2c_adap[dev->def_i2c_bus],
+					&em28xx_a8293_config)) {
+				dvb_frontend_detach(dvb->fe[0]);
+				result = -ENODEV;
+				goto out_free;
+			}
+		}
+		break;
 	default:
 		em28xx_errdev("/2: The frontend of your DVB/ATSC card"
 				" isn't supported yet\n");
@@ -1392,6 +1445,7 @@ static int em28xx_dvb_fini(struct em28xx *dev)
 				prevent_sleep(&dvb->fe[1]->ops);
 		}
 
+		i2c_release_client(dvb->i2c_client_tuner);
 		em28xx_unregister_dvb(dvb);
 		kfree(dvb);
 		dev->dvb = NULL;

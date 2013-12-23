@@ -23,10 +23,6 @@
 #include "iss_regs.h"
 #include "iss_resizer.h"
 
-static struct v4l2_mbus_framefmt *
-__resizer_get_format(struct iss_resizer_device *resizer, struct v4l2_subdev_fh *fh,
-		  unsigned int pad, enum v4l2_subdev_format_whence which);
-
 static const unsigned int resizer_fmts[] = {
 	V4L2_MBUS_FMT_UYVY8_1X16,
 	V4L2_MBUS_FMT_YUYV8_1X16,
@@ -40,11 +36,11 @@ static const unsigned int resizer_fmts[] = {
  */
 #define RSZ_PRINT_REGISTER(iss, name)\
 	dev_dbg(iss->dev, "###RSZ " #name "=0x%08x\n", \
-		readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_##name))
+		iss_reg_read(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_##name))
 
 #define RZA_PRINT_REGISTER(iss, name)\
 	dev_dbg(iss->dev, "###RZA " #name "=0x%08x\n", \
-		readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_##name))
+		iss_reg_read(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_##name))
 
 static void resizer_print_status(struct iss_resizer_device *resizer)
 {
@@ -120,16 +116,12 @@ static void resizer_enable(struct iss_resizer_device *resizer, u8 enable)
 {
 	struct iss_device *iss = to_iss_device(resizer);
 
-	writel((readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SRC_EN) &
-		~RSZ_SRC_EN_SRC_EN) |
-		enable ? RSZ_SRC_EN_SRC_EN : 0,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SRC_EN);
+	iss_reg_update(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_SRC_EN,
+		       RSZ_SRC_EN_SRC_EN, enable ? RSZ_SRC_EN_SRC_EN : 0);
 
 	/* TODO: Enable RSZB */
-	writel((readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_EN) &
-		~RSZ_EN_EN) |
-		enable ? RSZ_EN_EN : 0,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_EN);
+	iss_reg_update(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_EN, RSZ_EN_EN,
+		       enable ? RSZ_EN_EN : 0);
 }
 
 /* -----------------------------------------------------------------------------
@@ -152,16 +144,16 @@ static void resizer_set_outaddr(struct iss_resizer_device *resizer, u32 addr)
 	outformat = &resizer->formats[RESIZER_PAD_SOURCE_MEM];
 
 	/* Save address splitted in Base Address H & L */
-	writel((addr >> 16) & 0xffff,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_SDR_Y_BAD_H);
-	writel(addr & 0xffff,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_SDR_Y_BAD_L);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_SDR_Y_BAD_H,
+		      (addr >> 16) & 0xffff);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_SDR_Y_BAD_L,
+		      addr & 0xffff);
 
 	/* SAD = BAD */
-	writel((addr >> 16) & 0xffff,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_SDR_Y_SAD_H);
-	writel(addr & 0xffff,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_SDR_Y_SAD_L);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_SDR_Y_SAD_H,
+		      (addr >> 16) & 0xffff);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_SDR_Y_SAD_L,
+		      addr & 0xffff);
 
 	/* Program UV buffer address... Hardcoded to be contiguous! */
 	if ((informat->code == V4L2_MBUS_FMT_UYVY8_1X16) &&
@@ -177,16 +169,16 @@ static void resizer_set_outaddr(struct iss_resizer_device *resizer, u32 addr)
 		}
 
 		/* Save address splitted in Base Address H & L */
-		writel((c_addr >> 16) & 0xffff,
-			iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_SDR_C_BAD_H);
-		writel(c_addr & 0xffff,
-			iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_SDR_C_BAD_L);
+		iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_SDR_C_BAD_H,
+			      (c_addr >> 16) & 0xffff);
+		iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_SDR_C_BAD_L,
+			      c_addr & 0xffff);
 
 		/* SAD = BAD */
-		writel((c_addr >> 16) & 0xffff,
-			iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_SDR_C_SAD_H);
-		writel(c_addr & 0xffff,
-			iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_SDR_C_SAD_L);
+		iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_SDR_C_SAD_H,
+			      (c_addr >> 16) & 0xffff);
+		iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_SDR_C_SAD_L,
+			      c_addr & 0xffff);
 	}
 }
 
@@ -198,74 +190,74 @@ static void resizer_configure(struct iss_resizer_device *resizer)
 	informat = &resizer->formats[RESIZER_PAD_SINK];
 	outformat = &resizer->formats[RESIZER_PAD_SOURCE_MEM];
 
-	/* Make sure we don't bypass the resizer */
-	writel(readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SRC_FMT0) &
-		~RSZ_SRC_FMT0_BYPASS,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SRC_FMT0);
+	/* Disable pass-through more. Despite its name, the BYPASS bit controls
+	 * pass-through mode, not bypass mode.
+	 */
+	iss_reg_clr(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_SRC_FMT0,
+		    RSZ_SRC_FMT0_BYPASS);
 
 	/* Select RSZ input */
-	writel((readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SRC_FMT0) &
-		~RSZ_SRC_FMT0_SEL) |
-		(resizer->input == RESIZER_INPUT_IPIPEIF) ? RSZ_SRC_FMT0_SEL : 0,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SRC_FMT0);
+	iss_reg_update(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_SRC_FMT0,
+		       RSZ_SRC_FMT0_SEL,
+		       resizer->input == RESIZER_INPUT_IPIPEIF ?
+		       RSZ_SRC_FMT0_SEL : 0);
 
 	/* RSZ ignores WEN signal from IPIPE/IPIPEIF */
-	writel(readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SRC_MODE) &
-		~RSZ_SRC_MODE_WRT,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SRC_MODE);
+	iss_reg_clr(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_SRC_MODE,
+		    RSZ_SRC_MODE_WRT);
 
 	/* Set Resizer in free-running mode */
-	writel(readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SRC_MODE) &
-		~RSZ_SRC_MODE_OST,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SRC_MODE);
+	iss_reg_clr(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_SRC_MODE,
+		    RSZ_SRC_MODE_OST);
 
 	/* Init Resizer A */
-	writel(readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_MODE) &
-		~RZA_MODE_ONE_SHOT,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_MODE);
+	iss_reg_clr(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_MODE,
+		    RZA_MODE_ONE_SHOT);
 
 	/* Set size related things now */
-	writel(0, iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SRC_VPS);
-	writel(0, iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SRC_HPS);
-	writel(informat->height - 2, iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SRC_VSZ);
-	writel(informat->width - 1, iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SRC_HSZ);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_SRC_VPS, 0);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_SRC_HPS, 0);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_SRC_VSZ,
+		      informat->height - 2);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_SRC_HSZ,
+		      informat->width - 1);
 
-	writel(0, iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_I_VPS);
-	writel(0, iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_I_HPS);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_I_VPS, 0);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_I_HPS, 0);
 
-	writel(outformat->height - 2, iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_O_VSZ);
-	writel(outformat->width - 1, iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_O_HSZ);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_O_VSZ,
+		      outformat->height - 2);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_O_HSZ,
+		      outformat->width - 1);
 
-	writel(0x100, iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_V_DIF);
-	writel(0x100, iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_H_DIF);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_V_DIF, 0x100);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_H_DIF, 0x100);
 
 	/* Buffer output settings */
-	writel(0, iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_SDR_Y_PTR_S);
-	writel(outformat->height - 1,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_SDR_Y_PTR_E);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_SDR_Y_PTR_S, 0);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_SDR_Y_PTR_E,
+		      outformat->height - 1);
 
-	writel(resizer->video_out.bpl_value,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_SDR_Y_OFT);
+	iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_SDR_Y_OFT,
+		      resizer->video_out.bpl_value);
 
 	/* UYVY -> NV12 conversion */
 	if ((informat->code == V4L2_MBUS_FMT_UYVY8_1X16) &&
 	    (outformat->code == V4L2_MBUS_FMT_YUYV8_1_5X8)) {
-		writel(RSZ_420_CEN | RSZ_420_YEN,
-			iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_420);
+		iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_420,
+			      RSZ_420_CEN | RSZ_420_YEN);
 
 		/* UV Buffer output settings */
-		writel(0, iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_SDR_C_PTR_S);
-		writel(outformat->height - 1,
-			iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_SDR_C_PTR_E);
+		iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_SDR_C_PTR_S,
+			      0);
+		iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_SDR_C_PTR_E,
+			      outformat->height - 1);
 
-		writel(resizer->video_out.bpl_value,
-			iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_SDR_C_OFT);
+		iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_SDR_C_OFT,
+			      resizer->video_out.bpl_value);
 	} else {
-		writel(0,
-			iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_420);
+		iss_reg_write(iss, OMAP4_ISS_MEM_ISP_RESIZER, RZA_420, 0);
 	}
-
-	omap4iss_isp_enable_interrupts(iss);
 }
 
 /* -----------------------------------------------------------------------------
@@ -274,12 +266,12 @@ static void resizer_configure(struct iss_resizer_device *resizer)
 
 static void resizer_isr_buffer(struct iss_resizer_device *resizer)
 {
-	struct iss_device *iss = to_iss_device(resizer);
 	struct iss_buffer *buffer;
 
-	writel(readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_EN) &
-		~RSZ_EN_EN,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_EN);
+	/* The whole resizer needs to be stopped. Disabling RZA only produces
+	 * input FIFO overflows, most probably when the next frame is received.
+	 */
+	resizer_enable(resizer, 0);
 
 	buffer = omap4iss_video_buffer_next(&resizer->video_out);
 	if (buffer == NULL)
@@ -287,9 +279,7 @@ static void resizer_isr_buffer(struct iss_resizer_device *resizer)
 
 	resizer_set_outaddr(resizer, buffer->iss_addr);
 
-	writel(readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_EN) |
-		RSZ_EN_EN,
-		iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RZA_EN);
+	resizer_enable(resizer, 1);
 }
 
 /*
@@ -319,20 +309,16 @@ void omap4iss_resizer_isr(struct iss_resizer_device *resizer, u32 events)
 	struct iss_pipeline *pipe =
 			     to_iss_pipeline(&resizer->subdev.entity);
 
-	if (events & (ISP5_IRQ_RSZ_FIFO_IN_BLK |
+	if (events & (ISP5_IRQ_RSZ_FIFO_IN_BLK_ERR |
 		      ISP5_IRQ_RSZ_FIFO_OVF)) {
-		dev_dbg(iss->dev, "RSZ Err:"
-			" FIFO_IN_BLK:%d,"
-			" FIFO_OVF:%d,"
-			"\n",
-			(events &
-			 ISP5_IRQ_RSZ_FIFO_IN_BLK) ? 1 : 0,
-			(events &
-			 ISP5_IRQ_RSZ_FIFO_OVF) ? 1 : 0);
-		pipe->error = true;
+		dev_dbg(iss->dev, "RSZ Err: FIFO_IN_BLK:%d, FIFO_OVF:%d\n",
+			events & ISP5_IRQ_RSZ_FIFO_IN_BLK_ERR ? 1 : 0,
+			events & ISP5_IRQ_RSZ_FIFO_OVF ? 1 : 0);
+		omap4iss_pipeline_cancel_stream(pipe);
 	}
 
-	if (omap4iss_module_sync_is_stopping(&resizer->wait, &resizer->stopping))
+	if (omap4iss_module_sync_is_stopping(&resizer->wait,
+					     &resizer->stopping))
 		return;
 
 	if (events & ISP5_IRQ_RSZ_INT_DMA)
@@ -343,7 +329,8 @@ void omap4iss_resizer_isr(struct iss_resizer_device *resizer, u32 events)
  * ISS video operations
  */
 
-static int resizer_video_queue(struct iss_video *video, struct iss_buffer *buffer)
+static int resizer_video_queue(struct iss_video *video,
+			       struct iss_buffer *buffer)
 {
 	struct iss_resizer_device *resizer = container_of(video,
 				struct iss_resizer_device, video_out);
@@ -393,17 +380,14 @@ static int resizer_set_stream(struct v4l2_subdev *sd, int enable)
 
 		omap4iss_isp_subclk_enable(iss, OMAP4_ISS_ISP_SUBCLK_RSZ);
 
-		writel(readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_GCK_MMR) |
-			RSZ_GCK_MMR_MMR,
-			iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_GCK_MMR);
-		writel(readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_GCK_SDR) |
-			RSZ_GCK_SDR_CORE,
-			iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_GCK_SDR);
+		iss_reg_set(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_GCK_MMR,
+			    RSZ_GCK_MMR_MMR);
+		iss_reg_set(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_GCK_SDR,
+			    RSZ_GCK_SDR_CORE);
 
 		/* FIXME: Enable RSZB also */
-		writel(readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SYSCONFIG) |
-			RSZ_SYSCONFIG_RSZA_CLK_EN,
-			iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SYSCONFIG);
+		iss_reg_set(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_SYSCONFIG,
+			    RSZ_SYSCONFIG_RSZA_CLK_EN);
 	}
 
 	switch (enable) {
@@ -432,20 +416,15 @@ static int resizer_set_stream(struct v4l2_subdev *sd, int enable)
 			return 0;
 		if (omap4iss_module_sync_idle(&sd->entity, &resizer->wait,
 					      &resizer->stopping))
-			dev_dbg(iss->dev, "%s: module stop timeout.\n",
-				sd->name);
+			ret = -ETIMEDOUT;
 
 		resizer_enable(resizer, 0);
-		omap4iss_isp_disable_interrupts(iss);
-		writel(readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SYSCONFIG) &
-			~RSZ_SYSCONFIG_RSZA_CLK_EN,
-			iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_SYSCONFIG);
-		writel(readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_GCK_SDR) &
-			~RSZ_GCK_SDR_CORE,
-			iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_GCK_SDR);
-		writel(readl(iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_GCK_MMR) &
-			~RSZ_GCK_MMR_MMR,
-			iss->regs[OMAP4_ISS_MEM_ISP_RESIZER] + RSZ_GCK_MMR);
+		iss_reg_clr(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_SYSCONFIG,
+			    RSZ_SYSCONFIG_RSZA_CLK_EN);
+		iss_reg_clr(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_GCK_SDR,
+			    RSZ_GCK_SDR_CORE);
+		iss_reg_clr(iss, OMAP4_ISS_MEM_ISP_RESIZER, RSZ_GCK_MMR,
+			    RSZ_GCK_MMR_MMR);
 		omap4iss_isp_subclk_disable(iss, OMAP4_ISS_ISP_SUBCLK_RSZ);
 		iss_video_dmaqueue_flags_clr(video_out);
 		break;
@@ -456,8 +435,9 @@ static int resizer_set_stream(struct v4l2_subdev *sd, int enable)
 }
 
 static struct v4l2_mbus_framefmt *
-__resizer_get_format(struct iss_resizer_device *resizer, struct v4l2_subdev_fh *fh,
-		  unsigned int pad, enum v4l2_subdev_format_whence which)
+__resizer_get_format(struct iss_resizer_device *resizer,
+		     struct v4l2_subdev_fh *fh, unsigned int pad,
+		     enum v4l2_subdev_format_whence which)
 {
 	if (which == V4L2_SUBDEV_FORMAT_TRY)
 		return v4l2_subdev_get_try_format(fh, pad);
@@ -473,9 +453,10 @@ __resizer_get_format(struct iss_resizer_device *resizer, struct v4l2_subdev_fh *
  * @fmt: Format
  */
 static void
-resizer_try_format(struct iss_resizer_device *resizer, struct v4l2_subdev_fh *fh,
-		unsigned int pad, struct v4l2_mbus_framefmt *fmt,
-		enum v4l2_subdev_format_whence which)
+resizer_try_format(struct iss_resizer_device *resizer,
+		   struct v4l2_subdev_fh *fh, unsigned int pad,
+		   struct v4l2_mbus_framefmt *fmt,
+		   enum v4l2_subdev_format_whence which)
 {
 	enum v4l2_mbus_pixelcode pixelcode;
 	struct v4l2_mbus_framefmt *format;
@@ -501,7 +482,8 @@ resizer_try_format(struct iss_resizer_device *resizer, struct v4l2_subdev_fh *fh
 
 	case RESIZER_PAD_SOURCE_MEM:
 		pixelcode = fmt->code;
-		format = __resizer_get_format(resizer, fh, RESIZER_PAD_SINK, which);
+		format = __resizer_get_format(resizer, fh, RESIZER_PAD_SINK,
+					      which);
 		memcpy(fmt, format, sizeof(*fmt));
 
 		if ((pixelcode == V4L2_MBUS_FMT_YUYV8_1_5X8) &&
@@ -589,7 +571,8 @@ static int resizer_enum_frame_size(struct v4l2_subdev *sd,
 	format.code = fse->code;
 	format.width = 1;
 	format.height = 1;
-	resizer_try_format(resizer, fh, fse->pad, &format, V4L2_SUBDEV_FORMAT_TRY);
+	resizer_try_format(resizer, fh, fse->pad, &format,
+			   V4L2_SUBDEV_FORMAT_TRY);
 	fse->min_width = format.width;
 	fse->min_height = format.height;
 
@@ -599,7 +582,8 @@ static int resizer_enum_frame_size(struct v4l2_subdev *sd,
 	format.code = fse->code;
 	format.width = -1;
 	format.height = -1;
-	resizer_try_format(resizer, fh, fse->pad, &format, V4L2_SUBDEV_FORMAT_TRY);
+	resizer_try_format(resizer, fh, fse->pad, &format,
+			   V4L2_SUBDEV_FORMAT_TRY);
 	fse->max_width = format.width;
 	fse->max_height = format.height;
 
@@ -653,8 +637,9 @@ static int resizer_set_format(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 
 	/* Propagate the format from sink to source */
 	if (fmt->pad == RESIZER_PAD_SINK) {
-		format = __resizer_get_format(resizer, fh, RESIZER_PAD_SOURCE_MEM,
-					   fmt->which);
+		format = __resizer_get_format(resizer, fh,
+					      RESIZER_PAD_SOURCE_MEM,
+					      fmt->which);
 		*format = fmt->format;
 		resizer_try_format(resizer, fh, RESIZER_PAD_SOURCE_MEM, format,
 				fmt->which);
@@ -663,7 +648,8 @@ static int resizer_set_format(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 	return 0;
 }
 
-static int resizer_link_validate(struct v4l2_subdev *sd, struct media_link *link,
+static int resizer_link_validate(struct v4l2_subdev *sd,
+				 struct media_link *link,
 				 struct v4l2_subdev_format *source_fmt,
 				 struct v4l2_subdev_format *sink_fmt)
 {
@@ -687,7 +673,8 @@ static int resizer_link_validate(struct v4l2_subdev *sd, struct media_link *link
  * formats are initialized on the file handle. Otherwise active formats are
  * initialized on the device.
  */
-static int resizer_init_formats(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+static int resizer_init_formats(struct v4l2_subdev *sd,
+				struct v4l2_subdev_fh *fh)
 {
 	struct v4l2_subdev_format format;
 
@@ -836,8 +823,9 @@ static int resizer_init_entities(struct iss_resizer_device *resizer)
 		return ret;
 
 	/* Connect the RESIZER subdev to the video node. */
-	ret = media_entity_create_link(&resizer->subdev.entity, RESIZER_PAD_SOURCE_MEM,
-			&resizer->video_out.video.entity, 0, 0);
+	ret = media_entity_create_link(&resizer->subdev.entity,
+				       RESIZER_PAD_SOURCE_MEM,
+				       &resizer->video_out.video.entity, 0, 0);
 	if (ret < 0)
 		return ret;
 

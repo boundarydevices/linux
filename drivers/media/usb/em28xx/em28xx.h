@@ -133,6 +133,7 @@
 #define EM2874_BOARD_DELOCK_61959		  89
 #define EM2874_BOARD_KWORLD_UB435Q_V2		  90
 #define EM2765_BOARD_SPEEDLINK_VAD_LAPLACE	  91
+#define EM28178_BOARD_PCTV_461E                   92
 
 /* Limits minimum and default number of buffers */
 #define EM28XX_MIN_BUF 4
@@ -680,6 +681,7 @@ struct em28xx {
 	u8 button_polling_addresses[EM28XX_NUM_BUTTON_ADDRESSES_MAX];
 	u8 button_polling_last_values[EM28XX_NUM_BUTTON_ADDRESSES_MAX];
 	u8 num_button_polling_addresses;
+	u16 button_polling_interval; /* [ms] */
 	/* Snapshot button input device */
 	char snapshot_button_path[30];	/* path of the input dev */
 	struct input_dev *sbutton_input_dev;

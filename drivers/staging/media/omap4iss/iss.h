@@ -77,6 +77,10 @@ struct iss_reg {
 	u32 val;
 };
 
+/*
+ * struct iss_device - ISS device structure.
+ * @crashed: Bitmask of crashed entities (indexed by entity ID)
+ */
 struct iss_device {
 	struct v4l2_device v4l2_dev;
 	struct media_device media_dev;
@@ -93,6 +97,7 @@ struct iss_device {
 	u64 raw_dmamask;
 
 	struct mutex iss_mutex;	/* For handling ref_count field */
+	bool crashed;
 	int has_context;
 	int ref_count;
 
@@ -126,6 +131,7 @@ int omap4iss_module_sync_is_stopping(wait_queue_head_t *wait,
 
 int omap4iss_pipeline_set_stream(struct iss_pipeline *pipe,
 				 enum iss_pipeline_stream_state state);
+void omap4iss_pipeline_cancel_stream(struct iss_pipeline *pipe);
 
 void omap4iss_configure_bridge(struct iss_device *iss,
 			       enum ipipeif_input_entity input);
@@ -141,13 +147,90 @@ void omap4iss_isp_subclk_enable(struct iss_device *iss,
 void omap4iss_isp_subclk_disable(struct iss_device *iss,
 				 enum iss_isp_subclk_resource res);
 
-void omap4iss_isp_enable_interrupts(struct iss_device *iss);
-void omap4iss_isp_disable_interrupts(struct iss_device *iss);
-
 int omap4iss_pipeline_pm_use(struct media_entity *entity, int use);
 
 int omap4iss_register_entities(struct platform_device *pdev,
 			       struct v4l2_device *v4l2_dev);
 void omap4iss_unregister_entities(struct platform_device *pdev);
+
+/*
+ * iss_reg_read - Read the value of an OMAP4 ISS register
+ * @iss: the ISS device
+ * @res: memory resource in which the register is located
+ * @offset: register offset in the memory resource
+ *
+ * Return the register value.
+ */
+static inline
+u32 iss_reg_read(struct iss_device *iss, enum iss_mem_resources res,
+		 u32 offset)
+{
+	return readl(iss->regs[res] + offset);
+}
+
+/*
+ * iss_reg_write - Write a value to an OMAP4 ISS register
+ * @iss: the ISS device
+ * @res: memory resource in which the register is located
+ * @offset: register offset in the memory resource
+ * @value: value to be written
+ */
+static inline
+void iss_reg_write(struct iss_device *iss, enum iss_mem_resources res,
+		   u32 offset, u32 value)
+{
+	writel(value, iss->regs[res] + offset);
+}
+
+/*
+ * iss_reg_clr - Clear bits in an OMAP4 ISS register
+ * @iss: the ISS device
+ * @res: memory resource in which the register is located
+ * @offset: register offset in the memory resource
+ * @clr: bit mask to be cleared
+ */
+static inline
+void iss_reg_clr(struct iss_device *iss, enum iss_mem_resources res,
+		 u32 offset, u32 clr)
+{
+	u32 v = iss_reg_read(iss, res, offset);
+
+	iss_reg_write(iss, res, offset, v & ~clr);
+}
+
+/*
+ * iss_reg_set - Set bits in an OMAP4 ISS register
+ * @iss: the ISS device
+ * @res: memory resource in which the register is located
+ * @offset: register offset in the memory resource
+ * @set: bit mask to be set
+ */
+static inline
+void iss_reg_set(struct iss_device *iss, enum iss_mem_resources res,
+		 u32 offset, u32 set)
+{
+	u32 v = iss_reg_read(iss, res, offset);
+
+	iss_reg_write(iss, res, offset, v | set);
+}
+
+/*
+ * iss_reg_update - Clear and set bits in an OMAP4 ISS register
+ * @iss: the ISS device
+ * @res: memory resource in which the register is located
+ * @offset: register offset in the memory resource
+ * @clr: bit mask to be cleared
+ * @set: bit mask to be set
+ *
+ * Clear the clr mask first and then set the set mask.
+ */
+static inline
+void iss_reg_update(struct iss_device *iss, enum iss_mem_resources res,
+		    u32 offset, u32 clr, u32 set)
+{
+	u32 v = iss_reg_read(iss, res, offset);
+
+	iss_reg_write(iss, res, offset, (v & ~clr) | set);
+}
 
 #endif /* _OMAP4_ISS_H_ */
