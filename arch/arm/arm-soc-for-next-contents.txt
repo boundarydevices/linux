@@ -3,6 +3,8 @@ Contents of arm-soc branches contained in for-next
 next/fixes-non-critical
 	samsung/fixes
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-fixes
+	samsung/fixes2
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-fixes-2
 
 next/cleanup
 	renesas/cleanup
