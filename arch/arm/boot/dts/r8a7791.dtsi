@@ -394,6 +394,14 @@
 		};
 
 		/* Gate clocks */
+		mstp0_clks: mstp0_clks@e6150130 {
+			compatible = "renesas,r8a7791-mstp-clocks", "renesas,cpg-mstp-clocks";
+			reg = <0 0xe6150130 0 4>, <0 0xe6150030 0 4>;
+			clocks = <&mp_clk>;
+			#clock-cells = <1>;
+			renesas,clock-indices = <R8A7791_CLK_MSIOF0>;
+			clock-output-names = "msiof0";
+		};
 		mstp1_clks: mstp1_clks@e6150134 {
 			compatible = "renesas,r8a7791-mstp-clocks", "renesas,cpg-mstp-clocks";
 			reg = <0 0xe6150134 0 4>, <0 0xe6150038 0 4>;
@@ -413,15 +421,16 @@
 			compatible = "renesas,r8a7791-mstp-clocks", "renesas,cpg-mstp-clocks";
 			reg = <0 0xe6150138 0 4>, <0 0xe6150040 0 4>;
 			clocks = <&mp_clk>, <&mp_clk>, <&mp_clk>, <&mp_clk>, <&mp_clk>,
-				 <&mp_clk>;
+				 <&mp_clk>, <&mp_clk>, <&mp_clk>;
 			#clock-cells = <1>;
 			renesas,clock-indices = <
 				R8A7791_CLK_SCIFA2 R8A7791_CLK_SCIFA1 R8A7791_CLK_SCIFA0
-				R8A7791_CLK_SCIFB0 R8A7791_CLK_SCIFB1 R8A7791_CLK_SCIFB2
+				R8A7791_CLK_MSIOF2 R8A7791_CLK_SCIFB0 R8A7791_CLK_SCIFB1
+				R8A7791_CLK_MSIOF1 R8A7791_CLK_SCIFB2
 			>;
 			clock-output-names =
-				"scifa2", "scifa1", "scifa0", "scifb0", "scifb1",
-				"scifb2";
+				"scifa2", "scifa1", "scifa0", "misof2", "scifb0",
+				"scifb1", "msiof1", "scifb2";
 		};
 		mstp3_clks: mstp3_clks@e615013c {
 			compatible = "renesas,r8a7791-mstp-clocks", "renesas,cpg-mstp-clocks";
@@ -473,17 +482,38 @@
 		mstp9_clks: mstp9_clks@e6150994 {
 			compatible = "renesas,r8a7791-mstp-clocks", "renesas,cpg-mstp-clocks";
 			reg = <0 0xe6150994 0 4>, <0 0xe61509a4 0 4>;
-			clocks = <&p_clk>, <&p_clk>, <&p_clk>, <&p_clk>, <&p_clk>,
-				 <&p_clk>, <&p_clk>, <&p_clk>;
+			clocks = <&p_clk>, <&p_clk>, <&cpg_clocks R8A7791_CLK_QSPI>,
+				 <&p_clk>, <&p_clk>, <&p_clk>, <&p_clk>, <&p_clk>,
+				 <&p_clk>;
 			#clock-cells = <1>;
 			renesas,clock-indices = <
-				R8A7791_CLK_RCAN1 R8A7791_CLK_RCAN0 R8A7791_CLK_I2C4
-				R8A7791_CLK_I2C4 R8A7791_CLK_I2C3 R8A7791_CLK_I2C2
-				R8A7791_CLK_I2C1 R8A7791_CLK_I2C0
+				R8A7791_CLK_RCAN1 R8A7791_CLK_RCAN0 R8A7791_CLK_QSPI_MOD
+				R8A7791_CLK_I2C4 R8A7791_CLK_I2C4 R8A7791_CLK_I2C3
+				R8A7791_CLK_I2C2 R8A7791_CLK_I2C1 R8A7791_CLK_I2C0
 			>;
 			clock-output-names =
-				"rcan1", "rcan0", "i2c5", "i2c4", "i2c3", "i2c2", "i2c1",
-				"i2c0";
+				"rcan1", "rcan0", "qspi_mod", "i2c5", "i2c4", "i2c3",
+				"i2c2", "i2c1", "i2c0";
+		};
+		mstp10_clks: mstp10_clks@e6150998 {
+			compatible = "renesas,r8a7791-mstp-clocks", "renesas,cpg-mstp-clocks";
+			reg = <0 0xe6150998 0 4>, <0 0xe61509a8 0 4>;
+			clocks = <&p_clk>, <&mstp10_clks R8A7791_CLK_SSI>,
+				 <&mstp10_clks R8A7791_CLK_SSI>, <&mstp10_clks R8A7791_CLK_SSI>,
+				 <&mstp10_clks R8A7791_CLK_SSI>, <&mstp10_clks R8A7791_CLK_SSI>,
+				 <&mstp10_clks R8A7791_CLK_SSI>, <&mstp10_clks R8A7791_CLK_SSI>,
+				 <&mstp10_clks R8A7791_CLK_SSI>, <&mstp10_clks R8A7791_CLK_SSI>,
+				 <&mstp10_clks R8A7791_CLK_SSI>;
+			#clock-cells = <1>;
+			renesas,clock-indices = <
+				R8A7791_CLK_SSI R8A7791_CLK_SSI9 R8A7791_CLK_SSI8
+				R8A7791_CLK_SSI7 R8A7791_CLK_SSI6 R8A7791_CLK_SSI5
+				R8A7791_CLK_SSI4 R8A7791_CLK_SSI3 R8A7791_CLK_SSI2
+				R8A7791_CLK_SSI1 R8A7791_CLK_SSI0
+			>;
+			clock-output-names =
+				"ssi", "ssi9", "ssi8", "ssi7", "ssi6", "ssi5",
+				"ssi4", "ssi3", "ssi2", "ssi1", "ssi0";
 		};
 		mstp11_clks: mstp11_clks@e615099c {
 			compatible = "renesas,r8a7791-mstp-clocks", "renesas,cpg-mstp-clocks";
