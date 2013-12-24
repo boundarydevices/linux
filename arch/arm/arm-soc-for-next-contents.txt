@@ -83,6 +83,8 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-dt
 	at91/dt-2
 		git://github.com/at91linux/linux-at91.git tags/at91-dt2
+	samsung/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-dt-2
 
 next/boards
 	renesas/defconfig
