@@ -132,7 +132,8 @@ next/drivers
 		Contains at91/dt
 	samsung/irq
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-irq
-
+	tegra/trusted-foundations
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-trusted-foundations
 
 Patches only in for-next, not in any topic branch due to conflicts:
 
