@@ -67,6 +67,8 @@ next/soc
 	tegra/powergate
 		based on tegra/dma-reset-rework
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-powergate
+	tegra/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-soc
 
 next/dt
 	ux500/dt
