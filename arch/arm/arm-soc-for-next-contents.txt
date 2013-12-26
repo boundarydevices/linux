@@ -1,5 +1,16 @@
 Contents of arm-soc branches contained in for-next
 
+dependencies:
+
+depends/asoc-dma
+	git://git.kernel.org/pub/scm/linux/kernel/git/broonie/sound.git asoc-dma-v3.14
+depends/dma-defer-probe
+	git://git.infradead.org/users/vkoul/slave-dma.git topic/defer_probe
+depends/dma-of
+	git://git.infradead.org/users/vkoul/slave-dma.git topic/of
+depends/tegra-clk
+	git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git clk-tegra-for-3.14
+
 next/fixes-non-critical
 	samsung/fixes
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-fixes
@@ -25,6 +36,12 @@ next/cleanup
 		git://git.xilinx.com/linux-xlnx.git tags/zynq-cleanup-for-3.14
 	samsung/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-cleanup
+	tegra/dma-reset-rework
+		depends on depends/asoc-dma
+		depends on depends/dma-defer-probe
+		depends on depends/dma-of
+		depends on depends/tegra-clk
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git clk-tegra-for-3.14
 
 next/soc
 	patches
