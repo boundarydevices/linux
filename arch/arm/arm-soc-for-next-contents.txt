@@ -37,10 +37,10 @@ next/cleanup
 	samsung/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-cleanup
 	tegra/dma-reset-rework
-		depends on depends/asoc-dma
-		depends on depends/dma-defer-probe
-		depends on depends/dma-of
-		depends on depends/tegra-clk
+		based on depends/asoc-dma
+		based on depends/dma-defer-probe
+		based on depends/dma-of
+		based on depends/tegra-clk
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git clk-tegra-for-3.14
 
 next/soc
@@ -64,6 +64,9 @@ next/soc
 		MAINTAINERS: take maintainership for Energy Micro efm32 SoCs
 	samsung/dev
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-dev
+	tegra/powergate
+		based on tegra/dma-reset-rework
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-powergate
 
 next/dt
 	ux500/dt
