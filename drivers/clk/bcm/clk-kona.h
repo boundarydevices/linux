@@ -25,9 +25,11 @@
 
 #define	BILLION		1000000000
 
+#ifndef U32_MAX
 #define U8_MAX	((u8)~0U)
 #define U32_MAX	((u32)~0U)
 #define U64_MAX	((u64)~0U)
+#endif /* !U32_MAX */
 
 /* The common clock framework uses u8 to represent a parent index */
 #define PARENT_COUNT_MAX	((u32)U8_MAX)
