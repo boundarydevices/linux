@@ -213,7 +213,7 @@ static void dw_pcie_msi_clear_irq(struct pcie_port *pp, int irq)
 }
 
 static void clear_irq_range(struct pcie_port *pp, unsigned int irq_base,
-                            unsigned int nvec, unsigned int pos)
+			    unsigned int nvec, unsigned int pos)
 {
 	unsigned int i;
  
