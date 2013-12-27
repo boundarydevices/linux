@@ -109,6 +109,8 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-dt-2
 	tegra/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-dt
+	tegra/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-dt-2
 
 next/boards
 	renesas/defconfig
