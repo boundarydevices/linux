@@ -575,6 +575,7 @@ struct fec_enet_private {
 
 	unsigned int total_tx_ring_size;
 	unsigned int total_rx_ring_size;
+	uint	events;
 
 	struct	platform_device *pdev;
 
