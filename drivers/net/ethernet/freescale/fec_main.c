@@ -984,12 +984,14 @@ fec_stop(struct net_device *ndev)
 	}
 }
 
+static uint last_ievents;
 
 static void
 fec_timeout(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 
+	pr_err("%s: last=%x %x, mask %x\n", __func__, last_ievents, readl(fep->hwp + FEC_IEVENT), readl(fep->hwp + FEC_IMASK));
 	fec_dump(ndev);
 
 	ndev->stats.tx_errors++;
@@ -1306,23 +1308,29 @@ fec_enet_interrupt(int irq, void *dev_id)
 	struct net_device *ndev = dev_id;
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	const unsigned napi_mask = FEC_ENET_RXF | FEC_ENET_TXF;
-	uint int_events;
+	uint int_events, eir;
 	irqreturn_t ret = IRQ_NONE;
 
-	int_events = readl(fep->hwp + FEC_IEVENT);
-	writel(int_events & ~napi_mask, fep->hwp + FEC_IEVENT);
+	while (1) {
+		eir = readl(fep->hwp + FEC_IEVENT);
+		int_events = eir & readl(fep->hwp + FEC_IMASK);
+		if (!int_events)
+			break;
+		last_ievents = eir;
 
-	if (int_events & napi_mask) {
-		ret = IRQ_HANDLED;
+		if (int_events & napi_mask) {
+			ret = IRQ_HANDLED;
 
-		/* Disable the NAPI interrupts */
-		writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
-		napi_schedule(&fep->napi);
-	}
+			/* Disable the NAPI interrupts */
+			writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
+			napi_schedule(&fep->napi);
+		}
 
-	if (int_events & FEC_ENET_MII) {
-		ret = IRQ_HANDLED;
-		complete(&fep->mdio_done);
+		if (int_events & FEC_ENET_MII) {
+			writel(FEC_ENET_MII, fep->hwp + FEC_IEVENT);
+			ret = IRQ_HANDLED;
+			complete(&fep->mdio_done);
+		}
 	}
 
 	return ret;
@@ -1341,12 +1349,15 @@ static int fec_enet_rx_napi(struct napi_struct *napi, int budget)
 	writel(FEC_ENET_RXF | FEC_ENET_TXF, fep->hwp + FEC_IEVENT);
 
 	pkts = fec_enet_rx(ndev, budget);
-
 	fec_enet_tx(ndev);
 
 	if (pkts < budget) {
-		napi_complete(napi);
-		writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
+		uint int_events = readl(fep->hwp + FEC_IEVENT);
+
+		if (!(int_events & (FEC_ENET_RXF | FEC_ENET_TXF))) {
+			napi_complete(napi);
+			writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
+		}
 	}
 	return pkts;
 }
