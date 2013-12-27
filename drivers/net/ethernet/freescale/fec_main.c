@@ -1477,16 +1477,6 @@ skb_done:
 		writel(0, txq->bd.reg_desc_active);
 }
 
-static void fec_enet_tx(struct net_device *ndev)
-{
-	struct fec_enet_private *fep = netdev_priv(ndev);
-	int i;
-
-	/* Make sure that AVB queues are processed first. */
-	for (i = fep->num_tx_queues - 1; i >= 0; i--)
-		fec_txq(ndev, fep->tx_queue[i]);
-}
-
 static void fec_enet_update_cbd(struct fec_enet_priv_rx_q *rxq,
 				struct bufdesc *bdp, int index)
 {
@@ -1773,49 +1763,32 @@ rx_processing_done:
 	return pkt_received;
 }
 
-static int fec_enet_rx(struct net_device *ndev, int budget)
-{
-	struct fec_enet_private *fep = netdev_priv(ndev);
-	int i, done = 0;
-
-	/* Make sure that AVB queues are processed first. */
-	for (i = fep->num_rx_queues - 1; i >= 0; i--)
-		done += fec_rxq(ndev, fep->rx_queue[i], budget - done);
-
-	return done;
-}
-
-static bool fec_enet_collect_events(struct fec_enet_private *fep)
-{
-	uint int_events;
-
-	int_events = readl(fep->hwp + FEC_IEVENT);
-
-	/* Don't clear MDIO events, we poll for those */
-	int_events &= ~FEC_ENET_MII;
-
-	writel(int_events, fep->hwp + FEC_IEVENT);
-
-	return int_events != 0;
-}
-
 static irqreturn_t
 fec_enet_interrupt(int irq, void *dev_id)
 {
 	struct net_device *ndev = dev_id;
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	irqreturn_t ret = IRQ_NONE;
+	uint eir = readl(fep->hwp + FEC_IEVENT);
+	uint int_events = eir & readl(fep->hwp + FEC_IMASK);
 
-	if (fec_enet_collect_events(fep) && fep->link) {
-		ret = IRQ_HANDLED;
-
+	if (int_events & (FEC_ENET_RXF | FEC_ENET_TXF)) {
 		if (napi_schedule_prep(&fep->napi)) {
 			/* Disable interrupts */
 			writel(0, fep->hwp + FEC_IMASK);
 			__napi_schedule(&fep->napi);
+			int_events &= ~(FEC_ENET_RXF | FEC_ENET_TXF);
+			ret = IRQ_HANDLED;
+		} else {
+			fep->events |= int_events;
+			netdev_info(ndev, "couldn't schedule NAPI\n");
 		}
 	}
 
+	if (int_events) {
+		ret = IRQ_HANDLED;
+		writel(int_events, fep->hwp + FEC_IEVENT);
+	}
 	return ret;
 }
 
@@ -1824,17 +1797,38 @@ static int fec_enet_rx_napi(struct napi_struct *napi, int budget)
 	struct net_device *ndev = napi->dev;
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	int done = 0;
+	uint events;
 
 	do {
-		done += fec_enet_rx(ndev, budget - done);
-		fec_enet_tx(ndev);
-	} while ((done < budget) && fec_enet_collect_events(fep));
+		events = readl(fep->hwp + FEC_IEVENT);
+		if (fep->events) {
+			events |= fep->events;
+			fep->events = 0;
+		}
+		events &= FEC_ENET_RXF | FEC_ENET_TXF;
+		if (!events) {
+			if (budget) {
+				napi_complete_done(napi, done);
+				writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
+			}
+			return done;
+		}
 
-	if (done < budget) {
-		napi_complete_done(napi, done);
-		writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
-	}
-
+		writel(events, fep->hwp + FEC_IEVENT);
+		if (events & FEC_ENET_RXF_1)
+			done += fec_rxq(ndev, fep->rx_queue[1], budget - done);
+		if (events & FEC_ENET_RXF_2)
+			done += fec_rxq(ndev, fep->rx_queue[2], budget - done);
+		if (events & FEC_ENET_RXF_0)
+			done += fec_rxq(ndev, fep->rx_queue[0], budget - done);
+		if (events & FEC_ENET_TXF_1)
+			fec_txq(ndev, fep->tx_queue[1]);
+		if (events & FEC_ENET_TXF_2)
+			fec_txq(ndev, fep->tx_queue[2]);
+		if (events & FEC_ENET_TXF_0)
+			fec_txq(ndev, fep->tx_queue[0]);
+	} while (done < budget);
+	fep->events |= events & FEC_ENET_RXF;	/* save for next callback */
 	return done;
 }
 
