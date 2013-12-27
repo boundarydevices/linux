@@ -127,6 +127,8 @@ next/boards
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-defconfig-3.14-2
 	tegra/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-defconfig
+	tegra/defconfig2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-defconfig-2
 
 next/drivers
 	mvebu/drivers
