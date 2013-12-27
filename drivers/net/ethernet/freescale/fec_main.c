@@ -686,12 +686,14 @@ fec_stop(struct net_device *ndev)
 	}
 }
 
+static uint last_ievents;
 
 static void
 fec_timeout(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 
+	pr_err("%s: last=%x %x, mask %x\n", __func__, last_ievents, readl(fep->hwp + FEC_IEVENT), readl(fep->hwp + FEC_IMASK));
 	ndev->stats.tx_errors++;
 
 	fep->delay_work.timeout = true;
@@ -1016,38 +1018,37 @@ fec_enet_interrupt(int irq, void *dev_id)
 {
 	struct net_device *ndev = dev_id;
 	struct fec_enet_private *fep = netdev_priv(ndev);
-	uint int_events;
+	uint int_events, eir;
 	irqreturn_t ret = IRQ_NONE;
 
-	do {
-		int_events = readl(fep->hwp + FEC_IEVENT);
-		writel(int_events & (~FEC_ENET_TS_TIMER),
-			fep->hwp + FEC_IEVENT);
+	while (1) {
+		eir = readl(fep->hwp + FEC_IEVENT);
+		int_events = eir & readl(fep->hwp + FEC_IMASK);
+		if (!int_events)
+			break;
+		last_ievents = eir;
 
 		if ((int_events & FEC_ENET_TS_TIMER) && fep->bufdesc_ex) {
 			ret = IRQ_HANDLED;
 			if (fep->hwts_tx_en_ioctl || fep->hwts_rx_en_ioctl)
 				fep->prtc++;
-
 			writel(FEC_ENET_TS_TIMER, fep->hwp + FEC_IEVENT);
 		}
-
 		if (int_events & (FEC_ENET_RXF | FEC_ENET_TXF)) {
 			ret = IRQ_HANDLED;
-
-			/* Disable the RX interrupt */
 			if (napi_schedule_prep(&fep->napi)) {
-				writel(FEC_RX_DISABLED_IMASK,
-					fep->hwp + FEC_IMASK);
+				/* Disable the RX/TX interrupt */
+				writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
 				__napi_schedule(&fep->napi);
 			}
 		}
 
 		if (int_events & FEC_ENET_MII) {
+			writel(FEC_ENET_MII, fep->hwp + FEC_IEVENT);
 			ret = IRQ_HANDLED;
 			complete(&fep->mdio_done);
 		}
-	} while (int_events);
+	}
 
 	return ret;
 }
@@ -1055,14 +1056,20 @@ fec_enet_interrupt(int irq, void *dev_id)
 static int fec_enet_rx_napi(struct napi_struct *napi, int budget)
 {
 	struct net_device *ndev = napi->dev;
-	int pkts = fec_enet_rx(ndev, budget);
 	struct fec_enet_private *fep = netdev_priv(ndev);
+	int pkts;
 
+	writel(FEC_ENET_RXF | FEC_ENET_TXF, fep->hwp + FEC_IEVENT);
+	pkts = fec_enet_rx(ndev, budget);
 	fec_enet_tx(ndev);
 
 	if (pkts < budget) {
-		napi_complete(napi);
-		writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
+		uint int_events = readl(fep->hwp + FEC_IEVENT);
+
+		if (!(int_events & (FEC_ENET_RXF | FEC_ENET_TXF))) {
+			napi_complete(napi);
+			writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
+		}
 	}
 	return pkts;
 }
