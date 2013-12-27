@@ -73,7 +73,6 @@ static void fec_enet_itr_coal_init(struct net_device *ndev);
 
 #define DRIVER_NAME	"fec"
 
-#define FEC_ENET_GET_QUQUE(_x) ((_x == 0) ? 1 : ((_x == 1) ? 2 : 0))
 static const u16 fec_enet_vlan_pri_to_queue[8] = {1, 1, 1, 1, 2, 2, 2, 2};
 
 /* Pause frame feild and FIFO threshold */
@@ -1126,12 +1125,14 @@ fec_stop(struct net_device *ndev)
 	}
 }
 
+static uint last_ievents;
 
 static void
 fec_timeout(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 
+	pr_err("%s: last=%x %x, mask %x\n", __func__, last_ievents, readl(fep->hwp + FEC_IEVENT), readl(fep->hwp + FEC_IMASK));
 	fec_dump(ndev);
 
 	ndev->stats.tx_errors++;
@@ -1172,26 +1173,19 @@ fec_enet_hwtstamp(struct fec_enet_private *fep, unsigned ts,
 	hwtstamps->hwtstamp = ns_to_ktime(ns);
 }
 
-static void
-fec_enet_tx_queue(struct net_device *ndev, u16 queue_id)
+static void fec_enet_tx_queue(struct net_device *ndev,
+		struct fec_enet_private *fep, struct fec_enet_priv_tx_q *txq)
 {
-	struct	fec_enet_private *fep;
 	struct bufdesc *bdp, *bdp_t;
 	unsigned short status;
 	struct	sk_buff	*skb;
-	struct fec_enet_priv_tx_q *txq;
 	struct netdev_queue *nq;
 	int	index = 0;
 	int	i, bdnum;
 	int	entries_free;
 
-	fep = netdev_priv(ndev);
-
-	queue_id = FEC_ENET_GET_QUQUE(queue_id);
-
-	txq = fep->tx_queue[queue_id];
 	/* get next bdp of dirty_tx */
-	nq = netdev_get_tx_queue(ndev, queue_id);
+	nq = netdev_get_tx_queue(ndev, txq->bd.index);
 	bdp = txq->dirty_tx;
 
 	/* get next bdp of dirty_tx */
@@ -1280,21 +1274,8 @@ fec_enet_tx_queue(struct net_device *ndev, u16 queue_id)
 
 	/* ERR006538: Keep the transmitter going */
 	if (bdp != txq->bd.cur &&
-	    readl(fep->hwp + FEC_X_DES_ACTIVE(queue_id)) == 0)
-		writel(0, fep->hwp + FEC_X_DES_ACTIVE(queue_id));
-}
-
-static void
-fec_enet_tx(struct net_device *ndev)
-{
-	struct fec_enet_private *fep = netdev_priv(ndev);
-	u16 queue_id;
-	/* First process class A queue, then Class B and Best Effort queue */
-	for_each_set_bit(queue_id, &fep->work_tx, FEC_ENET_MAX_TX_QS) {
-		clear_bit(queue_id, &fep->work_tx);
-		fec_enet_tx_queue(ndev, queue_id);
-	}
-	return;
+	    readl(fep->hwp + FEC_X_DES_ACTIVE(txq->bd.index)) == 0)
+		writel(0, fep->hwp + FEC_X_DES_ACTIVE(txq->bd.index));
 }
 
 static int
@@ -1349,11 +1330,9 @@ static bool fec_enet_copybreak(struct net_device *ndev, struct sk_buff **skb,
  * not been given to the system, we just set the empty indicator,
  * effectively tossing the packet.
  */
-static int
-fec_enet_rx_queue(struct net_device *ndev, int budget, u16 queue_id)
+static int fec_enet_rx_queue(struct net_device *ndev, int budget,
+		struct fec_enet_private *fep, struct fec_enet_priv_rx_q *rxq)
 {
-	struct fec_enet_private *fep = netdev_priv(ndev);
-	struct fec_enet_priv_rx_q *rxq;
 	struct bufdesc *bdp;
 	unsigned short status;
 	struct  sk_buff *skb_new = NULL;
@@ -1371,8 +1350,6 @@ fec_enet_rx_queue(struct net_device *ndev, int budget, u16 queue_id)
 #ifdef CONFIG_M532x
 	flush_cache_all();
 #endif
-	queue_id = FEC_ENET_GET_QUQUE(queue_id);
-	rxq = fep->rx_queue[queue_id];
 
 	/* First, grab all of the stats for the incoming packet.
 	 * These get messed up if we get called due to a busy condition.
@@ -1512,7 +1489,6 @@ rx_processing_done:
 
 		/* Mark the buffer empty */
 		status |= BD_ENET_RX_EMPTY;
-		bdp->cbd_sc = status;
 
 		if (fep->bufdesc_ex) {
 			struct bufdesc_ex *ebdp = (struct bufdesc_ex *)bdp;
@@ -1522,6 +1498,9 @@ rx_processing_done:
 			ebdp->cbd_bdu = 0;
 		}
 
+		dmb();
+		bdp->cbd_sc = status;
+
 		/* Update BD pointer to next entry */
 		bdp = fec_enet_get_nextdesc(bdp, &rxq->bd);
 
@@ -1529,48 +1508,10 @@ rx_processing_done:
 		 * incoming frames.  On a heavily loaded network, we should be
 		 * able to keep up at the expense of system resources.
 		 */
-		writel(0, fep->hwp + FEC_R_DES_ACTIVE(queue_id));
+		writel(0, fep->hwp + FEC_R_DES_ACTIVE(rxq->bd.index));
 	}
 	rxq->bd.cur = bdp;
 	return pkt_received;
-}
-
-static int
-fec_enet_rx(struct net_device *ndev, int budget)
-{
-	int     pkt_received = 0;
-	u16	queue_id;
-	struct fec_enet_private *fep = netdev_priv(ndev);
-
-	for_each_set_bit(queue_id, &fep->work_rx, FEC_ENET_MAX_RX_QS) {
-		clear_bit(queue_id, &fep->work_rx);
-		pkt_received += fec_enet_rx_queue(ndev,
-					budget - pkt_received, queue_id);
-	}
-	return pkt_received;
-}
-
-static bool
-fec_enet_collect_events(struct fec_enet_private *fep, uint int_events)
-{
-	if (int_events == 0)
-		return false;
-
-	if (int_events & FEC_ENET_RXF)
-		fep->work_rx |= (1 << 2);
-	if (int_events & FEC_ENET_RXF_1)
-		fep->work_rx |= (1 << 0);
-	if (int_events & FEC_ENET_RXF_2)
-		fep->work_rx |= (1 << 1);
-
-	if (int_events & FEC_ENET_TXF)
-		fep->work_tx |= (1 << 2);
-	if (int_events & FEC_ENET_TXF_1)
-		fep->work_tx |= (1 << 0);
-	if (int_events & FEC_ENET_TXF_2)
-		fep->work_tx |= (1 << 1);
-
-	return true;
 }
 
 static irqreturn_t
@@ -1578,24 +1519,26 @@ fec_enet_interrupt(int irq, void *dev_id)
 {
 	struct net_device *ndev = dev_id;
 	struct fec_enet_private *fep = netdev_priv(ndev);
-	uint int_events;
 	irqreturn_t ret = IRQ_NONE;
+	uint eir = readl(fep->hwp + FEC_IEVENT);
+	uint int_events = eir & readl(fep->hwp + FEC_IMASK);
 
-	int_events = readl(fep->hwp + FEC_IEVENT);
-	writel(int_events, fep->hwp + FEC_IEVENT);
-	fec_enet_collect_events(fep, int_events);
+	if (!int_events)
+		return ret;
+	last_ievents = int_events;
 
-	if ((fep->work_tx || fep->work_rx) && fep->link) {
+	if (int_events & (FEC_ENET_RXF | FEC_ENET_TXF)) {
 		ret = IRQ_HANDLED;
 
 		if (napi_schedule_prep(&fep->napi)) {
-			/* Disable the NAPI interrupts */
+			/* Disable the NAPI interrupt */
 			writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
 			__napi_schedule(&fep->napi);
 		}
 	}
 
 	if (int_events & FEC_ENET_MII) {
+		writel(FEC_ENET_MII, fep->hwp + FEC_IEVENT);
 		ret = IRQ_HANDLED;
 		complete(&fep->mdio_done);
 	}
@@ -1610,15 +1553,32 @@ static int fec_enet_rx_napi(struct napi_struct *napi, int budget)
 {
 	struct net_device *ndev = napi->dev;
 	struct fec_enet_private *fep = netdev_priv(ndev);
-	int pkts;
+	int pkts = 0;
+	uint events = readl(fep->hwp + FEC_IEVENT);
 
-	pkts = fec_enet_rx(ndev, budget);
-
-	fec_enet_tx(ndev);
-
+	writel(events & (FEC_ENET_RXF | FEC_ENET_TXF), fep->hwp + FEC_IEVENT);
+	if (events & FEC_ENET_RXF) {
+		if (events & FEC_ENET_RXF_1)
+			pkts += fec_enet_rx_queue(ndev, budget - pkts, fep, fep->rx_queue[1]);
+		if (events & FEC_ENET_RXF_2)
+			pkts += fec_enet_rx_queue(ndev, budget - pkts, fep, fep->rx_queue[2]);
+		if (events & FEC_ENET_RXF_0)
+			pkts += fec_enet_rx_queue(ndev, budget, fep, fep->rx_queue[0]);
+	}
+	if (events & FEC_ENET_TXF) {
+		if (events & FEC_ENET_TXF_1)
+			fec_enet_tx_queue(ndev, fep, fep->tx_queue[1]);
+		if (events & FEC_ENET_TXF_2)
+			fec_enet_tx_queue(ndev, fep, fep->tx_queue[2]);
+		if (events & FEC_ENET_TXF_0)
+			fec_enet_tx_queue(ndev, fep, fep->tx_queue[0]);
+	}
 	if (pkts < budget) {
-		napi_complete(napi);
-		writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
+		events = readl(fep->hwp + FEC_IEVENT);
+		if (!(events & (FEC_ENET_RXF | FEC_ENET_TXF))) {
+			napi_complete(napi);
+			writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
+		}
 	}
 	return pkts;
 }
