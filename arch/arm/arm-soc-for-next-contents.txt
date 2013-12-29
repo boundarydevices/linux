@@ -43,7 +43,9 @@ next/cleanup
 		based on depends/tegra-clk
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git clk-tegra-for-3.14
 	samsung/cleanup2
-		 git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-cleanup-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-cleanup-2
+	renesas/cleanup2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-cleanup2-for-v3.14
 
 next/soc
 	patches
