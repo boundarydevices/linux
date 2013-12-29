@@ -160,6 +160,8 @@ next/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-trusted-foundations
 	sunxi/drivers
 		https://github.com/mripard/linux.git tags/sunxi-drivers-for-3.14
+	renesas/drivers-irqchip
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-irqc-for-v3.14
 
 Patches only in for-next, not in any topic branch due to conflicts:
 
