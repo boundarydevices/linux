@@ -131,6 +131,8 @@ next/boards
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-defconfig
 	tegra/defconfig2
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-defconfig-2
+	samsung/defconfig2
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-defconfig-2
 
 next/drivers
 	mvebu/drivers
