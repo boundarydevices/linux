@@ -75,6 +75,8 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-powergate
 	tegra/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-soc
+	renesas/soc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-soc2-for-v3.14
 
 next/dt
 	ux500/dt
