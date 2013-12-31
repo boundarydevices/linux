@@ -72,8 +72,14 @@ static void set_multicast_list(struct net_device *ndev);
 
 /* Pause frame feild and FIFO threshold */
 #define FEC_ENET_FCE	(1 << 5)
+#if 0
 #define FEC_ENET_RSEM_V	0x84
 #define FEC_ENET_RSFL_V	16
+#else
+#define FEC_ENET_RSEM_V	0xB4
+#define FEC_ENET_RSFL_V	0x10
+#endif
+
 #define FEC_ENET_RAEM_V	0x8
 #define FEC_ENET_RAFL_V	0x8
 #define FEC_ENET_OPD_V	0xFFF0
@@ -280,9 +286,9 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	const struct platform_device_id *id_entry =
 				platform_get_device_id(fep->pdev);
-	struct bufdesc *bdp, *bdp_pre;
+	struct bufdesc *bdp;
 	void *bufaddr;
-	unsigned short	status;
+	unsigned short status, prev_status;
 	unsigned int index;
 
 	/* Fill in a Tx ring entry */
@@ -351,12 +357,6 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 			netdev_err(ndev, "Tx DMA memory map failed\n");
 		return NETDEV_TX_OK;
 	}
-	/* Send it on its way.  Tell FEC it's ready, interrupt when done,
-	 * it's the last BD of the frame, and to put the CRC on the end.
-	 */
-	status |= (BD_ENET_TX_READY | BD_ENET_TX_INTR
-			| BD_ENET_TX_LAST | BD_ENET_TX_TC);
-	bdp->cbd_sc = status;
 
 	if (fep->bufdesc_ex) {
 
@@ -378,13 +378,17 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		}
 	}
 
-	bdp_pre = fec_enet_get_prevdesc(bdp, &fep->bd_tx);
-	if ((id_entry->driver_data & FEC_QUIRK_ERR006358) &&
-	    !(bdp_pre->cbd_sc & BD_ENET_TX_READY)) {
-		fep->delay_work.trig_tx = true;
-		schedule_delayed_work(&(fep->delay_work.delay_work),
-					msecs_to_jiffies(1));
-	}
+	/* Ensure the next write happens after the extended writes */
+	wmb();
+	/*
+	 * Send it on its way.  Tell FEC it's ready, interrupt when done,
+	 * it's the last BD of the frame, and to put the CRC on the end.
+	 */
+	bdp->cbd_sc = BD_ENET_TX_READY | BD_ENET_TX_INTR | BD_ENET_TX_LAST |
+		BD_ENET_TX_TC | ((bdp == fep->bd_tx.last) ? BD_SC_WRAP : 0);
+
+	mb();
+	prev_status = fec_enet_get_prevdesc(bdp, &fep->bd_tx)->cbd_sc;
 
 	/* If this was the last BD in the ring, start at the beginning again. */
 	bdp = fec_enet_get_nextdesc(bdp, &fep->bd_tx);
@@ -396,6 +400,14 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	if (fep->bd_tx.cur == fep->dirty_tx)
 		netif_stop_queue(ndev);
 
+	if ((id_entry->driver_data & FEC_QUIRK_ERR006358) &&
+	    !(prev_status & BD_ENET_TX_READY)) {
+		if (readl(fep->hwp + FEC_X_DES_ACTIVE)) {
+			fep->delay_work.trig_tx = true;
+			schedule_delayed_work(&(fep->delay_work.delay_work),
+					msecs_to_jiffies(1) + 1);
+		}
+	}
 	/* Trigger transmission start */
 	writel(0, fep->hwp + FEC_X_DES_ACTIVE);
 
@@ -678,8 +690,33 @@ static void
 fec_timeout(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
+	struct bufdesc *bdp, *bdp1;
+	unsigned short status;
 
 	pr_err("%s: last=%x %x, mask %x\n", __func__, last_ievents, readl(fep->hwp + FEC_IEVENT), readl(fep->hwp + FEC_IMASK));
+	bdp = fep->dirty_tx;
+	bdp = fec_enet_get_nextdesc(bdp, &fep->bd_tx);
+	status = bdp->cbd_sc;
+	if ((status & BD_ENET_TX_READY) == 0) {
+		if (bdp != fep->bd_tx.cur) {
+			if (napi_schedule_prep(&fep->napi)) {
+				/* Disable the RX/TX interrupt */
+				writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
+				__napi_schedule(&fep->napi);
+			}
+			netif_wake_queue(fep->netdev);
+			pr_err("%s: tx int lost\n", __func__);
+			return;
+		}
+	}
+	/* Disable all interrupts */
+	writel(0, fep->hwp + FEC_IMASK);
+	bdp1 = bdp;
+	do {
+		pr_err("%s: %p %p %x %lx\n", __func__, bdp, fep->bd_tx.cur, bdp->cbd_sc, bdp->cbd_bufaddr);
+		bdp = fec_enet_get_nextdesc(bdp, &fep->bd_tx);
+	} while (bdp != bdp1);
+
 	ndev->stats.tx_errors++;
 
 	fep->delay_work.timeout = true;
@@ -719,12 +756,26 @@ fec_enet_tx(struct net_device *ndev)
 
 	/* get next bdp of dirty_tx */
 	bdp = fec_enet_get_nextdesc(bdp, &fep->bd_tx);
-
-	while (((status = bdp->cbd_sc) & BD_ENET_TX_READY) == 0) {
-
-		/* current queue is empty */
-		if (bdp == fep->bd_tx.cur)
+	while (bdp != fep->bd_tx.cur) {
+		status = bdp->cbd_sc;
+		if (status & BD_ENET_TX_READY) {
+			/* Test for ERR006358 workaround */
+			if (readl(fep->hwp + FEC_X_DES_ACTIVE)) {
+				const struct platform_device_id *id_entry =
+					platform_get_device_id(fep->pdev);
+				if (id_entry->driver_data & FEC_QUIRK_ERR006358) {
+					fep->delay_work.trig_tx = true;
+					schedule_delayed_work(
+						&fep->delay_work.delay_work,
+						msecs_to_jiffies(1) + 1);
+				}
+			} else {
+				/* ERR006358 has hit, restart tx */
+				writel(0, fep->hwp + FEC_X_DES_ACTIVE);
+			}
 			break;
+		}
+		bdp->cbd_sc = (bdp == fep->bd_tx.last) ? BD_SC_WRAP : 0;
 
 		if (fep->bufdesc_ex)
 			index = (struct bufdesc_ex *)bdp -
@@ -976,7 +1027,7 @@ rx_processing_done:
 			ebdp->cbd_prot = 0;
 			ebdp->cbd_bdu = 0;
 		}
-		mb();
+		wmb();
 		bdp->cbd_sc = (status & BD_ENET_RX_WRAP) | BD_ENET_RX_EMPTY;
 		/* Update BD pointer to next entry */
 		bdp = fec_enet_get_nextdesc(bdp, &fep->bd_rx);
@@ -1012,6 +1063,8 @@ fec_enet_interrupt(int irq, void *dev_id)
 			if (napi_schedule_prep(&fep->napi)) {
 				/* Disable the RX/TX interrupt */
 				writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
+				/* Slow packets, until all received */
+//				writel(1, fep->hwp + FEC_R_FIFO_RSEM);
 				__napi_schedule(&fep->napi);
 			}
 		}
@@ -1041,6 +1094,8 @@ static int fec_enet_rx_napi(struct napi_struct *napi, int budget)
 
 		if (!(int_events & (FEC_ENET_RXF | FEC_ENET_TXF))) {
 			napi_complete(napi);
+			/* Speed packets up again */
+//			writel(FEC_ENET_RSEM_V, fep->hwp + FEC_R_FIFO_RSEM);
 			writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
 		}
 	}
@@ -1959,7 +2014,7 @@ static int fec_enet_init(struct net_device *ndev)
 			: sizeof(struct bufdesc);
 
 	/* Allocate memory for buffer descriptors. */
-	cbd_base = dma_alloc_coherent(NULL, PAGE_SIZE, &fep->bd_rx.dma,
+	cbd_base = dma_alloc_coherent(&fep->pdev->dev, PAGE_SIZE, &fep->bd_rx.dma,
 				      GFP_KERNEL);
 	if (!cbd_base)
 		return -ENOMEM;
