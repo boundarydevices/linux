@@ -75,8 +75,14 @@ static void set_multicast_list(struct net_device *ndev);
 
 /* Pause frame feild and FIFO threshold */
 #define FEC_ENET_FCE	(1 << 5)
+#if 0
 #define FEC_ENET_RSEM_V	0x84
 #define FEC_ENET_RSFL_V	16
+#else
+#define FEC_ENET_RSEM_V	0xB4
+#define FEC_ENET_RSFL_V	0x10
+#endif
+
 #define FEC_ENET_RAEM_V	0x8
 #define FEC_ENET_RAFL_V	0x8
 #define FEC_ENET_OPD_V	0xFFF0
@@ -279,12 +285,31 @@ static void *swap_buffer(void *bufaddr, int len)
 static void fec_dump(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
-	struct bufdesc *bdp = fep->bd_tx.base;
+	struct bufdesc *bdp;
 	unsigned int index = 0;
+	unsigned mask;
+
+	bdp = fep->dirty_tx;
+	bdp = fec_enet_get_nextdesc(bdp, &fep->bd_tx);
+	if ((bdp->cbd_sc & BD_ENET_TX_READY) == 0) {
+		if (bdp != fep->bd_tx.cur) {
+			/* Disable the RX/TX interrupt */
+			writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
+			napi_schedule(&fep->napi);
+
+			netif_wake_queue(fep->netdev);
+			pr_err("%s: tx int lost\n", __func__);
+			return;
+		}
+	}
 
 	netdev_info(ndev, "TX ring dump\n");
 	pr_info("Nr     SC     addr       len  SKB\n");
 
+	/* Disable FEC interrupts */
+	mask = readl(fep->hwp + FEC_IMASK);
+	writel(0, fep->hwp + FEC_IMASK);
+	bdp = fep->bd_tx.base;
 	do {
 		pr_info("%3u %c%c 0x%04x 0x%08lx %4u %p\n",
 			index,
@@ -295,6 +320,7 @@ static void fec_dump(struct net_device *ndev)
 		bdp = fec_enet_get_nextdesc(bdp, &fep->bd_tx);
 		index++;
 	} while (bdp != fep->bd_tx.base);
+	writel(mask, fep->hwp + FEC_IMASK);
 }
 
 static inline bool is_ipv4_pkt(struct sk_buff *skb)
@@ -342,9 +368,8 @@ fec_enet_txq_submit_frag_skb(struct sk_buff *skb, struct net_device *ndev)
 		bdp = fec_enet_get_nextdesc(bdp, &fep->bd_tx);
 		ebdp = (struct bufdesc_ex *)bdp;
 
-		status = bdp->cbd_sc;
-		status &= ~BD_ENET_TX_STATS;
-		status |= (BD_ENET_TX_TC | BD_ENET_TX_READY);
+		status = (BD_ENET_TX_TC | BD_ENET_TX_READY) |
+			((bdp == fep->bd_tx.last) ? BD_SC_WRAP : 0);
 		frag_len = skb_shinfo(skb)->frags[frag].size;
 
 		/* Handle the last BD specially */
@@ -388,6 +413,7 @@ fec_enet_txq_submit_frag_skb(struct sk_buff *skb, struct net_device *ndev)
 
 		bdp->cbd_bufaddr = addr;
 		bdp->cbd_datlen = frag_len;
+		wmb();
 		bdp->cbd_sc = status;
 	}
 
@@ -437,8 +463,8 @@ static int fec_enet_txq_submit_skb(struct sk_buff *skb, struct net_device *ndev)
 
 	/* Fill in a Tx ring entry */
 	bdp = fep->bd_tx.cur;
-	status = bdp->cbd_sc;
-	status &= ~BD_ENET_TX_STATS;
+	status = (BD_ENET_TX_TC | BD_ENET_TX_READY) |
+		((bdp == fep->bd_tx.last) ? BD_SC_WRAP : 0);
 
 	/* Set buffer length and buffer pointer */
 	bufaddr = skb->data;
@@ -500,10 +526,11 @@ static int fec_enet_txq_submit_skb(struct sk_buff *skb, struct net_device *ndev)
 	bdp->cbd_datlen = buflen;
 	bdp->cbd_bufaddr = addr;
 
+	/* Ensure the next write happens after the extended writes */
+	wmb();
 	/* Send it on its way.  Tell FEC it's ready, interrupt when done,
 	 * it's the last BD of the frame, and to put the CRC on the end.
 	 */
-	status |= (BD_ENET_TX_READY | BD_ENET_TX_TC);
 	bdp->cbd_sc = status;
 
 	/* If this was the last BD in the ring, start at the beginning again. */
@@ -1047,12 +1074,18 @@ fec_enet_tx(struct net_device *ndev)
 
 	/* get next bdp of dirty_tx */
 	bdp = fec_enet_get_nextdesc(bdp, &fep->bd_tx);
-
-	while (((status = bdp->cbd_sc) & BD_ENET_TX_READY) == 0) {
-
-		/* current queue is empty */
-		if (bdp == fep->bd_tx.cur)
+	while (bdp != fep->bd_tx.cur) {
+		status = bdp->cbd_sc;
+		if (status & BD_ENET_TX_READY) {
+			/* Test for ERR006358 workaround */
+			if (readl(fep->hwp + FEC_X_DES_ACTIVE)) {
+			} else {
+				/* ERR006358 has hit, restart tx */
+				writel(0, fep->hwp + FEC_X_DES_ACTIVE);
+			}
 			break;
+		}
+		bdp->cbd_sc = (bdp == fep->bd_tx.last) ? BD_SC_WRAP : 0;
 
 		index = fec_enet_get_bd_index(bdp, &fep->bd_tx);
 
@@ -1286,7 +1319,7 @@ rx_processing_done:
 			ebdp->cbd_prot = 0;
 			ebdp->cbd_bdu = 0;
 		}
-		mb();
+		wmb();
 		bdp->cbd_sc = (status & BD_ENET_RX_WRAP) | BD_ENET_RX_EMPTY;
 		/* Update BD pointer to next entry */
 		bdp = fec_enet_get_nextdesc(bdp, &fep->bd_rx);
@@ -1323,6 +1356,8 @@ fec_enet_interrupt(int irq, void *dev_id)
 
 			/* Disable the NAPI interrupts */
 			writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
+			/* Slow packets, until all received */
+//			writel(1, fep->hwp + FEC_R_FIFO_RSEM);
 			napi_schedule(&fep->napi);
 		}
 
@@ -1356,6 +1391,8 @@ static int fec_enet_rx_napi(struct napi_struct *napi, int budget)
 
 		if (!(int_events & (FEC_ENET_RXF | FEC_ENET_TXF))) {
 			napi_complete(napi);
+			/* Speed packets up again */
+//			writel(FEC_ENET_RSEM_V, fep->hwp + FEC_R_FIFO_RSEM);
 			writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
 		}
 	}
