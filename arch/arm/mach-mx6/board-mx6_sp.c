@@ -253,32 +253,6 @@ static const struct imxuart_platform_data mx6_arm2_uart2_data __initconst = {
 	.flags      = IMXUART_HAVE_RTSCTS,
 };
 
-static int mx6_fec_phy_init(struct phy_device *phydev)
-{
-	/* prefer master mode */
-	phy_write(phydev, 0x9, 0x1f00);
-
-	/* min rx data delay */
-	phy_write(phydev, 0x0b, 0x8105);
-	phy_write(phydev, 0x0c, 0x0000);
-
-	/* min tx data delay */
-	phy_write(phydev, 0x0b, 0x8106);
-	phy_write(phydev, 0x0c, 0x0000);
-
-	/* max rx/tx clock delay, min rx/tx control delay */
-	phy_write(phydev, 0x0b, 0x8104);
-	phy_write(phydev, 0x0c, 0xf0f0);
-	phy_write(phydev, 0x0b, 0x104);
-	return 0;
-}
-
-static struct fec_platform_data fec_data __initdata = {
-	.init = mx6_fec_phy_init,
-	.phy = PHY_INTERFACE_MODE_RGMII,
-	.phy_irq = gpio_to_irq(ENET_PHY_IRQ)
-};
-
 static int mx6_spi_cs[] = {
 	ST_ECSPI1_CS1,
 };
@@ -893,7 +867,6 @@ static void __init mx6_board_init(void)
 	imx6q_add_mxc_hdmi(&hdmi_data);
 
 	imx6q_add_anatop_thermal_imx(1, &mx6_anatop_thermal_data);
-	imx6_init_fec(fec_data);
 	imx6q_add_pm_imx(0, &mx6_pm_data);
 	imx6q_add_sdhci_usdhc_imx(2, &mx6_sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
