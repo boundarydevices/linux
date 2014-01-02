@@ -50,6 +50,8 @@ next/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-sh-sci-for-v3.14
 	qcom/fixes
 		patch ARM: msm: trout: fix uninit var warning
+	renesas/drivers-sci2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-sh-sci2-for-v3.14
 
 next/soc
 	patches
