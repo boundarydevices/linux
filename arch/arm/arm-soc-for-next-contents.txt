@@ -19,6 +19,8 @@ next/fixes-non-critical
 	u300/misc
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson.git tags/u300-for-arm-soc-1
 
+	patch ARM: bcm2835: Fix grammar in help message                                     
+
 next/cleanup
 	renesas/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-cleanup-for-v3.14
@@ -143,6 +145,7 @@ next/dt
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.14-5
 	sunxi/dt
 		https://github.com/mripard/linux.git tags/sunxi-dt-for-3.14
+	patch ARM: bcm2835: add USB controller to device tree                               
 
 next/boards
 	renesas/defconfig
@@ -174,6 +177,7 @@ next/boards
 		patch ARM: msm_defconfig: Enable restart driver
 	renesas/boards2
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-boards2-for-v3.14
+	patch ARM: bcm2835: bcm2835_defconfig updates   
 
 next/drivers
 	mvebu/drivers
