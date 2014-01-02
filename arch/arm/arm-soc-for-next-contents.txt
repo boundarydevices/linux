@@ -141,6 +141,8 @@ next/dt
 		patch ARM: dts: MSM8974: Add MMIO architected timer node
 	mvebu/dt-5
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.14-5
+	sunxi/dt
+		https://github.com/mripard/linux.git tags/sunxi-dt-for-3.14
 
 next/boards
 	renesas/defconfig
