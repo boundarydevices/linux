@@ -62,10 +62,6 @@
 #include <mach/imx-uart.h>
 #include <mach/viv_gpu.h>
 #include <mach/ipu-v3.h>
-#include <mach/mxc_hdmi.h>
-#include <mach/mxc_asrc.h>
-#include <linux/i2c/tsc2007.h>
-#include <linux/wl12xx.h>
 
 #include <asm/irq.h>
 #include <asm/setup.h>
@@ -79,8 +75,6 @@
 #include "cpu_op-mx6.h"
 
 #define GP_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
-
-#define AUDIO_MUTE		IMX_GPIO_NR(5, 2)	/* EIM_A25 - active low */
 
 #define DISP_I2C_EN		IMX_GPIO_NR(2, 17)	/* EIM_A21 - active high */
 #define DISP_BACKLIGHT_12V_EN	IMX_GPIO_NR(4, 5)	/* GPIO_19 - active high */
@@ -150,8 +144,6 @@ int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
 
 #define GPIOF_HIGH	GPIOF_OUT_INIT_HIGH
 struct gpio mx6_init_gpios[] __initdata = {
-	{.label = "audio_mute",		.gpio = AUDIO_MUTE,	.flags = 0},		/* GPIO5[2]: EIM_A25 - active low */
-
 //	{.label = "edid_i2c_en",	.gpio = DISP_I2C_EN,	.flags = 0},		/* GPIO2[17]: EIM_A21 - active high */
 	{.label = "backlight_12V_en",	.gpio = DISP_BACKLIGHT_12V_EN, .flags = 0},	/* GPIO4[5]: GPIO_19 - active high */
 
@@ -307,108 +299,20 @@ static void spi_device_init(void)
 				ARRAY_SIZE(imx6_spi_nor_device));
 }
 
-static struct mxc_audio_platform_data mx6_audio_data;
-
-static int mx6_sgtl5000_init(void)
-{
-	struct clk *clko;
-	struct clk *new_parent;
-	int rate;
-
-	clko = clk_get(NULL, "clko_clk");
-	if (IS_ERR(clko)) {
-		pr_err("can't get CLKO clock.\n");
-		return PTR_ERR(clko);
-	}
-	new_parent = clk_get(NULL, "ahb");
-	if (!IS_ERR(new_parent)) {
-		clk_set_parent(clko, new_parent);
-		clk_put(new_parent);
-	}
-	rate = clk_round_rate(clko, 16000000);
-	if (rate < 8000000 || rate > 27000000) {
-		pr_err("Error:SGTL5000 mclk freq %d out of range!\n", rate);
-		clk_put(clko);
-		return -1;
-	}
-	pr_info("%s: rate=%d\n", __func__, rate);
-	mx6_audio_data.sysclk = rate;
-	clk_set_rate(clko, rate);
-	clk_enable(clko);
-	return 0;
-}
-
-static int mx6_amp_enable(int enable)
-{
-	gpio_set_value(AUDIO_MUTE, enable ? 1 : 0);
-	return 0;
-}
-
-static struct imx_ssi_platform_data mx6_ssi_pdata = {
-	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
-};
-
-static struct mxc_audio_platform_data mx6_audio_data = {
-	.ssi_num = 1,
-	.src_port = 2,
-	.ext_port = 3,
-	.init = mx6_sgtl5000_init,
-	.hp_gpio = -1,
-	.mic_gpio = -1,
-	.amp_enable = mx6_amp_enable,
-};
-
-static struct platform_device mx6_audio_device = {
-	.name = "imx-sgtl5000",
-};
-
 static struct imxi2c_platform_data mx6_i2c_data = {
 	.bitrate = 100000,
 };
 
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("sgtl5000", 0x0a),
-	},
 };
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
-	},
-};
-
-static struct tsc2007_platform_data tsc2007_info = {
-	.model			= 2004,
-	.x_plate_ohms		= 500,
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
-#if defined(CONFIG_TOUCHSCREEN_EGALAX) \
-	|| defined(CONFIG_TOUCHSCREEN_EGALAX_MODULE)
-	{
-		I2C_BOARD_INFO("egalax_ts", 0x4),
-		.irq = gpio_to_irq(CAP_TCH_INT),
-	},
-#endif
-#if defined(CONFIG_TOUCHSCREEN_TSC2004) \
-	|| defined(CONFIG_TOUCHSCREEN_TSC2004_MODULE)
-	{
-		I2C_BOARD_INFO("tsc2004", 0x48),
-		.platform_data	= &tsc2007_info,
-		.irq = gpio_to_irq(TOUCH_IRQ),
-	},
-#endif
 	{
 		I2C_BOARD_INFO("isl1208", 0x6f),	/* Real time clock */
 	},
-#if defined(CONFIG_TOUCHSCREEN_FT5X06) \
-	|| defined(CONFIG_TOUCHSCREEN_FT5X06_MODULE)
-	{
-		I2C_BOARD_INFO("ft5x06-ts", 0x38),
-		.irq = gpio_to_irq(CAP_TCH_INT),
-	},
-#endif
 };
 
 /*
@@ -444,11 +348,6 @@ static struct viv_gpu_platform_data imx6_gpu_pdata __initdata = {
 	.reserved_mem_size = SZ_128M,
 };
 
-static struct imx_asrc_platform_data imx_asrc_data = {
-	.channel_bits = 4,
-	.clk_map_ver = 2,
-};
-
 static struct ipuv3_fb_platform_data oc_fb_data[] = {
 	{ /*fb0*/
 	.disp_dev = "ldb",
@@ -475,56 +374,6 @@ static struct ipuv3_fb_platform_data oc_fb_data[] = {
 	.default_bpp = 16,
 	.int_clk = false,
 	},
-};
-
-static void hdmi_init(int ipu_id, int disp_id)
-{
-	int hdmi_mux_setting;
-
-	if ((ipu_id > 1) || (ipu_id < 0)) {
-		pr_err("Invalid IPU select for HDMI: %d. Set to 0\n", ipu_id);
-		ipu_id = 0;
-	}
-
-	if ((disp_id > 1) || (disp_id < 0)) {
-		pr_err("Invalid DI select for HDMI: %d. Set to 0\n", disp_id);
-		disp_id = 0;
-	}
-
-	/* Configure the connection between IPU1/2 and HDMI */
-	hdmi_mux_setting = 2*ipu_id + disp_id;
-
-	/* GPR3, bits 2-3 = HDMI_MUX_CTL */
-	mxc_iomux_set_gpr_register(3, 2, 2, hdmi_mux_setting);
-
-	/* Set HDMI event as SDMA event2 while Chip version later than TO1.2 */
-	if ((mx6q_revision() > IMX_CHIP_REVISION_1_1))
-		mxc_iomux_set_gpr_register(0, 0, 1, 1);
-}
-
-static void hdmi_enable_ddc_pin(void)
-{
-}
-
-static void hdmi_disable_ddc_pin(void)
-{
-}
-
-static struct fsl_mxc_hdmi_platform_data hdmi_data = {
-	.init = hdmi_init,
-	.enable_pins = hdmi_enable_ddc_pin,
-	.disable_pins = hdmi_disable_ddc_pin,
-};
-
-static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
-	.ipu_id = 0,
-	.disp_id = 1,
-};
-
-static struct fsl_mxc_lcd_platform_data lcdif_data = {
-	.ipu_id = 0,
-	.disp_id = 0,
-	.default_ifmt = IPU_PIX_FMT_RGB565,
 };
 
 static struct fsl_mxc_ldb_platform_data ldb_data = {
@@ -616,98 +465,6 @@ static struct platform_device oc_vmmc_reg_devices = {
 		.platform_data = &oc_vmmc_reg_config,
 	},
 };
-
-#ifdef CONFIG_SND_SOC_SGTL5000
-
-static struct regulator_consumer_supply sgtl5000_oc_consumer_vdda = {
-	.supply = "VDDA",
-	.dev_name = "0-000a",
-};
-
-static struct regulator_consumer_supply sgtl5000_oc_consumer_vddio = {
-	.supply = "VDDIO",
-	.dev_name = "0-000a",
-};
-
-static struct regulator_consumer_supply sgtl5000_oc_consumer_vddd = {
-	.supply = "VDDD",
-	.dev_name = "0-000a",
-};
-
-static struct regulator_init_data sgtl5000_oc_vdda_reg_initdata = {
-	.num_consumer_supplies = 1,
-	.consumer_supplies = &sgtl5000_oc_consumer_vdda,
-};
-
-static struct regulator_init_data sgtl5000_oc_vddio_reg_initdata = {
-	.num_consumer_supplies = 1,
-	.consumer_supplies = &sgtl5000_oc_consumer_vddio,
-};
-
-static struct regulator_init_data sgtl5000_oc_vddd_reg_initdata = {
-	.num_consumer_supplies = 1,
-	.consumer_supplies = &sgtl5000_oc_consumer_vddd,
-};
-
-static struct fixed_voltage_config sgtl5000_oc_vdda_reg_config = {
-	.supply_name		= "VDDA",
-	.microvolts		= 2500000,
-	.gpio			= -1,
-	.init_data		= &sgtl5000_oc_vdda_reg_initdata,
-};
-
-static struct fixed_voltage_config sgtl5000_oc_vddio_reg_config = {
-	.supply_name		= "VDDIO",
-	.microvolts		= 3300000,
-	.gpio			= -1,
-	.init_data		= &sgtl5000_oc_vddio_reg_initdata,
-};
-
-static struct fixed_voltage_config sgtl5000_oc_vddd_reg_config = {
-	.supply_name		= "VDDD",
-	.microvolts		= 3300000,
-	.gpio			= -1,
-	.init_data		= &sgtl5000_oc_vddd_reg_initdata,
-};
-
-static struct platform_device sgtl5000_oc_vdda_reg_devices = {
-	.name	= "reg-fixed-voltage",
-	.id	= 0,
-	.dev	= {
-		.platform_data = &sgtl5000_oc_vdda_reg_config,
-	},
-};
-
-static struct platform_device sgtl5000_oc_vddio_reg_devices = {
-	.name	= "reg-fixed-voltage",
-	.id	= 1,
-	.dev	= {
-		.platform_data = &sgtl5000_oc_vddio_reg_config,
-	},
-};
-
-static struct platform_device sgtl5000_oc_vddd_reg_devices = {
-	.name	= "reg-fixed-voltage",
-	.id	= 2,
-	.dev	= {
-		.platform_data = &sgtl5000_oc_vddd_reg_config,
-	},
-};
-
-#endif /* CONFIG_SND_SOC_SGTL5000 */
-
-static int imx6_init_audio(void)
-{
-	mxc_register_device(&mx6_audio_device,
-			    &mx6_audio_data);
-	imx6q_add_imx_ssi(1, &mx6_ssi_pdata);
-#ifdef CONFIG_SND_SOC_SGTL5000
-	platform_device_register(&sgtl5000_oc_vdda_reg_devices);
-	platform_device_register(&sgtl5000_oc_vddio_reg_devices);
-	platform_device_register(&sgtl5000_oc_vddd_reg_devices);
-#endif
-	return 0;
-}
 
 int mx6_bl_notify(struct device *dev, int brightness)
 {
@@ -832,7 +589,6 @@ static void __init mx6_board_init(void)
 		ldb_data.ipu_id = 0;
 		ldb_data.sec_ipu_id = 0;
 	}
-	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
 
 	imx6q_add_ipuv3(0, &ipu_data[0]);
 	if (cpu_is_mx6q()) {
@@ -845,7 +601,6 @@ static void __init mx6_board_init(void)
 		imx6q_add_ipuv3fb(i, &oc_fb_data[i]);
 
 	imx6q_add_vdoa();
-	imx6q_add_lcdif(&lcdif_data);
 	imx6q_add_ldb(&ldb_data);
 	imx6q_add_v4l2_output(0);
 	imx6q_add_imx_snvs_rtc();
@@ -864,19 +619,13 @@ static void __init mx6_board_init(void)
 	imx6q_add_ecspi(0, &mx6_spi_data);
 	spi_device_init();
 
-	imx6q_add_mxc_hdmi(&hdmi_data);
-
 	imx6q_add_anatop_thermal_imx(1, &mx6_anatop_thermal_data);
 	imx6q_add_pm_imx(0, &mx6_pm_data);
 	imx6q_add_sdhci_usdhc_imx(2, &mx6_sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
 	imx6_init_usb();
 	imx6q_add_vpu();
-	imx6_init_audio();
 	platform_device_register(&oc_vmmc_reg_devices);
-	imx_asrc_data.asrc_core_clk = clk_get(NULL, "asrc_clk");
-	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
-	imx6q_add_asrc(&imx_asrc_data);
 
 	/* release USB Hub reset */
 	gpio_set_value(USB_HUB_RESET, 1);
@@ -895,9 +644,6 @@ static void __init mx6_board_init(void)
 	imx6q_add_dvfs_core(&oc_dvfscore_data);
 
 	add_device_buttons();
-
-	imx6q_add_hdmi_soc();
-	imx6q_add_hdmi_soc_dai();
 
 	clko2 = clk_get(NULL, "clko2_clk");
 	if (IS_ERR(clko2)) {
