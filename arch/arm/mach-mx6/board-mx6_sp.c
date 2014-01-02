@@ -90,7 +90,7 @@
 #define ST_ECSPI1_CS1		IMX_GPIO_NR(3, 19)	/* EIM_D19 - active low */
 
 #define TOUCH_RESET		IMX_GPIO_NR(1, 4)	/* GPIO_4 - active low */
-#define TOUCH_IRQ		IMX_GPIO_NR(2, 27)	/* EIM_LBA - active low */
+#define TOUCH_IRQ		IMX_GPIO_NR(7, 1)	/* SD3_DAT4 - active low */
 
 #define CAP_TCH_INT		IMX_GPIO_NR(1, 9)	/* GPIO_9 - J7: pin 4: active low */
 
@@ -304,6 +304,10 @@ static struct imxi2c_platform_data mx6_i2c_data = {
 };
 
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("ar1020_i2c", 0x4d),	/* Touchscreen */
+		.irq = gpio_to_irq(TOUCH_IRQ),		/* GPIO_7 */
+	},
 };
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {

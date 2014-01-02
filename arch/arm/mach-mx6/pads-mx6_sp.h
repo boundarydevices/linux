@@ -108,9 +108,9 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(EIM_D18__ECSPI1_MOSI),
 	NEW_PAD_CTRL(MX6PAD(EIM_D19__GPIO_3_19), WEAK),		/*SS1*/
 
-	/* Touchscreen - tsc2004 - I2C3 */
+	/* Touchscreen - AR1020 - I2C3 */
 	NEW_PAD_CTRL(MX6PAD(GPIO_4__GPIO_1_4), WEAK),		/* Reset - active low */
-	NEW_PAD_CTRL(MX6PAD(EIM_LBA__GPIO_2_27), WEAK_IRQ),	/* interrrupt */
+	NEW_PAD_CTRL(MX6PAD(SD3_DAT4__GPIO_7_1), WEAK_IRQ),	/* interrrupt */
 
 	/* UART1  */
 	MX6PAD(SD3_DAT6__UART1_RXD),
