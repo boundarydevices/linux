@@ -16,6 +16,8 @@ next/fixes-non-critical
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-fixes
 	samsung/fixes2
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-fixes-2
+	u300/misc
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson.git tags/u300-for-arm-soc-1
 
 next/cleanup
 	renesas/cleanup
