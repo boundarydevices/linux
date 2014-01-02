@@ -135,6 +135,8 @@ next/dt
 		contains qcom/fixes and qcom/soc
 		patch ARM: dts: MSM8974: Add restart node
 		patch ARM: dts: MSM8974: Add MMIO architected timer node
+	mvebu/dt-5
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.14-5
 
 next/boards
 	renesas/defconfig
@@ -164,6 +166,8 @@ next/boards
 		patch ARM: msm: Add support for APQ8074 Dragonboard
 		patch defconfig: msm_defconfig: Enable CONFIG_ARCH_MSM8974
 		patch ARM: msm_defconfig: Enable restart driver
+	renesas/boards2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-boards2-for-v3.14
 
 next/drivers
 	mvebu/drivers
@@ -183,6 +187,11 @@ next/drivers
 		https://github.com/mripard/linux.git tags/sunxi-drivers-for-3.14
 	renesas/drivers-irqchip
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-irqc-for-v3.14
+	renesas/sh-sci
+		contains renesas/drivers-sci2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-sh-soc-for-v3.14
+	renesas/sci3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-sh-sci3-for-v3.14
 
 Patches only in for-next, not in any topic branch due to conflicts:
 
