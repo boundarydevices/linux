@@ -85,6 +85,8 @@ next/soc
 		contains qcom/fixes
 		patch ARM: msm: Add support for MSM8974 SoC
 		patch ARM: msm: Simplify ARCH_MSM_DT config
+	renesas/soc3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-soc3-for-v3.14
     
 next/dt
 	ux500/dt
