@@ -24,6 +24,7 @@
 #include <linux/irq.h>
 #include <linux/init.h>
 #include <linux/input.h>
+#include <linux/leds_pwm.h>
 #include <linux/nodemask.h>
 #include <linux/clk.h>
 #include <linux/platform_device.h>
@@ -567,6 +568,28 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 {
 }
 
+static struct led_pwm pwms[] = {
+	[0] = {
+		.name           = "buzzer",
+		.default_trigger = "what_default_trigger",
+		.pwm_id         = 0,
+		.active_low     = 0,
+		.max_brightness = 0x100,
+		.pwm_period_ns  = 3822192,	/* middle "C" is 261.63 hz or */
+	},
+};
+
+static struct led_pwm_platform_data plat_led = {
+	.num_leds = 1,
+	.leds = pwms,
+};
+static struct platform_device platdev_leds_pwd = {
+	.name   = "leds_pwm",
+	.dev    = {
+			.platform_data  = &plat_led,
+	},
+};
+
 /*!
  * Board specific initialization.
  */
@@ -641,10 +664,10 @@ static void __init mx6_board_init(void)
 	/* release USB Hub reset */
 	gpio_set_value(USB_HUB_RESET, 1);
 
-	imx6q_add_mxc_pwm(2);
-	imx6q_add_mxc_pwm(3);
+	imx6q_add_mxc_pwm(0);
+	platform_device_register(&platdev_leds_pwd);
 
-	imx6q_add_mxc_pwm_backlight(2, &mx6_pwm3_backlight_data);
+	imx6q_add_mxc_pwm(3);
 	imx6q_add_mxc_pwm_backlight(3, &mx6_pwm4_backlight_data);
 
 	imx6q_add_otp();

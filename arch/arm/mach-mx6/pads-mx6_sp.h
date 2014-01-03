@@ -93,11 +93,8 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	 */
 	NEW_PAD_CTRL(MX6PAD(SD1_CMD__PWM4_PWMO), WEAK),		/* GPIO1[18], J9 pin 10 */
 
-	/*
-	 * Display - RGB Backlight
-	 * 4.3 inch is WQVGA 480x272
-	 */
-	MX6PAD(SD1_DAT1__PWM3_PWMO),		/* GPIO1[17], J9 pin 9, also pwm3 */
+        /* PWM1: Buzzer */
+        MX6PAD(SD1_DAT3__PWM1_PWMO),            /* GPIO1[21] */
 
 	/*
 	 * I2C1, used by
