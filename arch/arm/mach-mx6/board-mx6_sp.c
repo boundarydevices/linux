@@ -85,7 +85,6 @@
 #define RTC_I2C_EN		IMX_GPIO_NR(2, 23)	/* EIM_CS0 - active high */
 #define RTC_IRQ			IMX_GPIO_NR(2, 26)	/* EIM_RW - active low */
 
-#define ST_EMMC_RESET		IMX_GPIO_NR(2, 5)	/* NANDF_D5 - active low */
 #define ST_SD3_CD		IMX_GPIO_NR(7, 0)	/* SD3_DAT5 - active low */
 #define ST_ECSPI1_CS1		IMX_GPIO_NR(3, 19)	/* EIM_D19 - active low */
 
@@ -95,6 +94,8 @@
 #define CAP_TCH_INT		IMX_GPIO_NR(1, 9)	/* GPIO_9 - J7: pin 4: active low */
 
 #define USB_HUB_RESET		IMX_GPIO_NR(7, 12)	/* GPIO_17 - active low */
+
+#define EMMC_RESET		IMX_GPIO_NR(2, 7)	/* NANDF_D7 - active low */
 
 #define WL_BT_RESET		IMX_GPIO_NR(6, 8)	/* NANDF_ALE - active low */
 #define WL_BT_REG_EN		IMX_GPIO_NR(6, 15)	/* NANDF_CS2 - active high */
@@ -166,12 +167,7 @@ struct gpio mx6_init_gpios[] __initdata = {
 	{.label = "wl_clk_req_irq",	.gpio = WL_CLK_REQ_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[9]: NANDF_WP_B - active low */
 	{.label = "wl_wake_irq",	.gpio = WL_WAKE_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[14]: NANDF_CS1 - active low */
 
-	{.label = "gled",		.gpio = MX6_N6L_GLED,		.flags = 0},	/* J14 pin1: GPIO2 */
-	{.label = "rled",		.gpio = MX6_N6L_RLED,		.flags = 0},	/* J14 pin3: GPIO3 */
-	{.label = "drycontact",		.gpio = MX6_N6L_DRYCONTACT,	.flags = 0},	/* J14 pins 8/9: GPIO6 */
-	{.label = "drycontact2",	.gpio = MX6_N6L_DRYCONTACT2,	.flags = 0},	/* J14 pins 8/9: GPIO6 */
-	{.label = "volup",		.gpio = MX6_N6L_VOLUP,		.flags = GPIOF_DIR_IN},	/* J14 pin5: GPIO_18 */
-	{.label = "voldown",		.gpio = MX6_N6L_VOLDOWN,	.flags = GPIOF_DIR_IN},	/* J14 pin7: GPIO_19 */
+	{.label = "emmc_reset"	,	.gpio = EMMC_RESET,		.flags = 0},
 };
 
 enum sd_pad_mode {
@@ -233,6 +229,15 @@ static struct esdhc_platform_data mx6_sd3_data = {
 	.cd_gpio = ST_SD3_CD,
 	.wp_gpio = -1,
 	.keep_power_at_suspend = 1,
+	.platform_pad_change = plt_sd_pad_change,
+};
+
+static const struct esdhc_platform_data mx6_sd4_data __initconst = {
+	.cd_gpio = -1,
+	.wp_gpio = -1,
+	.always_present = 1,
+	.keep_power_at_suspend = 1,
+	.support_8bit = 1,
 	.platform_pad_change = plt_sd_pad_change,
 };
 
@@ -588,6 +593,7 @@ static void __init mx6_board_init(void)
 	imx6q_add_imx_uart(0, NULL);
 	imx6q_add_imx_uart(1, NULL);
 	imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
+	imx6q_add_imx_uart(3, NULL);
 
 	if (!cpu_is_mx6q()) {
 		ldb_data.ipu_id = 0;
@@ -626,6 +632,7 @@ static void __init mx6_board_init(void)
 	imx6q_add_anatop_thermal_imx(1, &mx6_anatop_thermal_data);
 	imx6q_add_pm_imx(0, &mx6_pm_data);
 	imx6q_add_sdhci_usdhc_imx(2, &mx6_sd3_data);
+	imx6q_add_sdhci_usdhc_imx(3, &mx6_sd4_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
 	imx6_init_usb();
 	imx6q_add_vpu();
