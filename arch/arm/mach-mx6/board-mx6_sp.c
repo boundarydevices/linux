@@ -147,7 +147,10 @@ struct gpio mx6_init_gpios[] __initdata = {
 	{.label = "wl_en",		.gpio = WL_EN,		.flags = 0},		/* GPIO6[7]: NANDF_CLE - active high */
 	{.label = "wl_clk_req_irq",	.gpio = WL_CLK_REQ_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[9]: NANDF_WP_B - active low */
 	{.label = "wl_wake_irq",	.gpio = WL_WAKE_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[14]: NANDF_CS1 - active low */
-	{.label = "emmc_reset"	,	.gpio = EMMC_RESET,		.flags = 0},
+	{.label = "emmc_reset"	,	.gpio = EMMC_RESET,	.flags = 0},
+	{.label = "gpio7"	,	.gpio = GPIO7_OUT,	.flags = 0},
+	{.label = "gpio8"	,	.gpio = GPIO8_OUT,	.flags = 0},
+	{.label = "onoff"	,	.gpio = ONOFF,		.flags = 0},
 };
 
 enum sd_pad_mode {
@@ -578,6 +581,10 @@ static void __init mx6_board_init(void)
 	}
 	IOMUX_SETUP(common_pads);
 
+	for (i=0; i < ARRAY_SIZE(mx6_init_gpios); i++) {
+		if (0 == (mx6_init_gpios[i].flags & GPIOF_DIR_IN))
+			gpio_export(mx6_init_gpios[i].gpio,1);
+	}
 
 	gp_reg_id = oc_dvfscore_data.reg_id;
 	soc_reg_id = oc_dvfscore_data.soc_id;
