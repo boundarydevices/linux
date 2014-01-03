@@ -97,28 +97,24 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
         MX6PAD(SD1_DAT3__PWM1_PWMO),            /* GPIO1[21] */
 
 	/*
-	 * I2C1, used by
-	 * SGTL5000
+	 * I2C1, used by ADS1000, AR1020 touch screen
 	 */
 	MX6PAD(EIM_D21__I2C1_SCL),	/* GPIO3[21] */
 	MX6PAD(EIM_D28__I2C1_SDA),	/* GPIO3[28] */
 
 	/*
-	 * I2C2, used by
-	 * HDMI
+	 * I2C2, (unused)
 	 */
 	MX6PAD(KEY_COL3__I2C2_SCL),	/* GPIO4[12] */
 	MX6PAD(KEY_ROW3__I2C2_SDA),	/* GPIO4[13] */
 
 	/*
-	 * I2C3, used by -
-	 * TSC2004
-	 * ISL1208
+	 * I2C3, used by external touch, ISL1208
 	 */
 	MX6PAD(GPIO_5__I2C3_SCL),	/* GPIO1[5] */
 	MX6PAD(GPIO_16__I2C3_SDA),	/* GPIO7[11] */
 
-	/* Real Time Clock-  RTC(I2C1) */
+	/* Real Time Clock-  RTC(I2C3) */
 	NEW_PAD_CTRL(MX6PAD(EIM_CS0__GPIO_2_23), WEAK), 	/* RTC_I2C_EN - high active (I2C1) */
 	NEW_PAD_CTRL(MX6PAD(EIM_RW__GPIO_2_26), WEAK_IRQ),	/* RTC_IRQ - low active */
 
