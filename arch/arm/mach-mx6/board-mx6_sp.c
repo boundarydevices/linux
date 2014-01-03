@@ -83,18 +83,12 @@
 #define ENET_PHY_RESET		IMX_GPIO_NR(1, 27)	/* ENET_RXD0 - active low */
 #define ENET_PHY_IRQ		IMX_GPIO_NR(1, 28)	/* ENET_TX_EN - active low */
 
-#define RTC_I2C_EN		IMX_GPIO_NR(2, 23)	/* EIM_CS0 - active high */
 #define RTC_IRQ			IMX_GPIO_NR(2, 26)	/* EIM_RW - active low */
 
 #define ST_SD3_CD		IMX_GPIO_NR(7, 0)	/* SD3_DAT5 - active low */
 #define ST_ECSPI1_CS1		IMX_GPIO_NR(3, 19)	/* EIM_D19 - active low */
 
-#define TOUCH_RESET		IMX_GPIO_NR(1, 4)	/* GPIO_4 - active low */
 #define TOUCH_IRQ		IMX_GPIO_NR(7, 1)	/* SD3_DAT4 - active low */
-
-#define CAP_TCH_INT		IMX_GPIO_NR(1, 9)	/* GPIO_9 - J7: pin 4: active low */
-
-#define USB_HUB_RESET		IMX_GPIO_NR(7, 12)	/* GPIO_17 - active low */
 
 #define EMMC_RESET		IMX_GPIO_NR(2, 7)	/* NANDF_D7 - active low */
 
@@ -146,28 +140,14 @@ int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
 
 #define GPIOF_HIGH	GPIOF_OUT_INIT_HIGH
 struct gpio mx6_init_gpios[] __initdata = {
-//	{.label = "edid_i2c_en",	.gpio = DISP_I2C_EN,	.flags = 0},		/* GPIO2[17]: EIM_A21 - active high */
-	{.label = "backlight_12V_en",	.gpio = DISP_BACKLIGHT_12V_EN, .flags = 0},	/* GPIO4[5]: GPIO_19 - active high */
-
-	{.label = "phy_reset",		.gpio = ENET_PHY_RESET,	.flags = GPIOF_HIGH},	/* GPIO1[27]: ENET_RXD0 - active low */
-//	{.label = "phy_irq",		.gpio = ENET_PHY_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO1[28]: ENET_TX_EN - active low */
-
-//	{.label = "rtc_i2c_en",		.gpio = RTC_I2C_EN,	.flags = 0},		/* GPIO2[23]: EIM_CS0 - active high */
-	{.label = "rtc_irq",		.gpio = RTC_IRQ,		.flags = GPIOF_DIR_IN},	/* GPIO2[24]:* EIM_CS1 - active low */
-
-	{.label = "touch_reset",	.gpio = TOUCH_RESET,	.flags = GPIOF_HIGH},	/* GPIO1[4]: GPIO_4 - active low */
+	{.label = "rtc_irq",		.gpio = RTC_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO2[24]:* EIM_CS1 - active low */
 	{.label = "touch_irq",		.gpio = TOUCH_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO2[27]: EIM_LBA - active low */
-
-	{.label = "usb_hub_reset",	.gpio = USB_HUB_RESET,	.flags = 0},		/* GPIO7[12]: GPIO_17 - active low */
-
 	{.label = "bt_reset",		.gpio = WL_BT_RESET,	.flags = 0},		/* GPIO6[8]: NANDF_ALE - active low */
 	{.label = "bt_reg_en",		.gpio = WL_BT_REG_EN,	.flags = 0},		/* GPIO6[15]: NANDF_CS2 - active high */
 	{.label = "bt_wake_irq",	.gpio = WL_BT_WAKE_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[16]: NANDF_CS3 - active low */
-
 	{.label = "wl_en",		.gpio = WL_EN,		.flags = 0},		/* GPIO6[7]: NANDF_CLE - active high */
 	{.label = "wl_clk_req_irq",	.gpio = WL_CLK_REQ_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[9]: NANDF_WP_B - active low */
 	{.label = "wl_wake_irq",	.gpio = WL_WAKE_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[14]: NANDF_CS1 - active low */
-
 	{.label = "emmc_reset"	,	.gpio = EMMC_RESET,		.flags = 0},
 };
 
@@ -483,15 +463,6 @@ int mx6_bl_notify(struct device *dev, int brightness)
 	return brightness;
 }
 
-/* PWM3_PWMO: backlight control on RGB connector */
-static struct platform_pwm_backlight_data mx6_pwm3_backlight_data = {
-	.pwm_id = 2,	/* pin SD1_DAT1 - PWM3 */
-	.max_brightness = 256,
-	.dft_brightness = 256,
-	.pwm_period_ns = 50000,
-	.notify = mx6_bl_notify,
-};
-
 /* PWM4_PWMO: backlight control on LDB connector */
 static struct platform_pwm_backlight_data mx6_pwm4_backlight_data = {
 	.pwm_id = 3,	/* pin SD1_CMD - PWM4 */
@@ -660,9 +631,6 @@ static void __init mx6_board_init(void)
 	imx6_init_usb();
 	imx6q_add_vpu();
 	platform_device_register(&oc_vmmc_reg_devices);
-
-	/* release USB Hub reset */
-	gpio_set_value(USB_HUB_RESET, 1);
 
 	imx6q_add_mxc_pwm(0);
 	platform_device_register(&platdev_leds_pwd);

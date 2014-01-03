@@ -115,7 +115,6 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(GPIO_16__I2C3_SDA),	/* GPIO7[11] */
 
 	/* Real Time Clock-  RTC(I2C3) */
-	NEW_PAD_CTRL(MX6PAD(EIM_CS0__GPIO_2_23), WEAK), 	/* RTC_I2C_EN - high active (I2C1) */
 	NEW_PAD_CTRL(MX6PAD(EIM_RW__GPIO_2_26), WEAK_IRQ),	/* RTC_IRQ - low active */
 
 	/* Storage - SD Card J18 */
@@ -129,7 +128,6 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	NEW_PAD_CTRL(MX6PAD(EIM_D19__GPIO_3_19), WEAK),		/*SS1*/
 
 	/* Touchscreen - AR1020 - I2C3 */
-	NEW_PAD_CTRL(MX6PAD(GPIO_4__GPIO_1_4), WEAK),		/* Reset - active low */
 	NEW_PAD_CTRL(MX6PAD(SD3_DAT4__GPIO_7_1), WEAK_IRQ),	/* interrrupt */
 
 	/* UART1  */
@@ -143,9 +141,6 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	/* UART4  */
 	MX6PAD(KEY_COL0__UART4_TXD),
 	MX6PAD(KEY_ROW0__UART4_RXD),
-
-	/* USB hub reset */
-	NEW_PAD_CTRL(MX6PAD(GPIO_17__GPIO_7_12), WEAK),		/* USB Hub Reset */
 
 	/* Wireless - bluetooth - Broadcom */
 	MX6PAD(EIM_D23__UART3_CTS),
