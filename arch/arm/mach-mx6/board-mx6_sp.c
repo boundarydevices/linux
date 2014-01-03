@@ -563,6 +563,12 @@ static struct platform_device platdev_leds_pwd = {
 	},
 };
 
+static void poweroff(void)
+{
+	gpio_direction_output(ONOFF, 0);
+	while (1);
+}
+
 /*!
  * Board specific initialization.
  */
@@ -666,6 +672,8 @@ static void __init mx6_board_init(void)
 		clk_set_rate(clko2, rate);
 		clk_enable(clko2);
 	}
+
+	pm_power_off = poweroff;
 	imx6q_add_busfreq();
 
 	imx6q_add_sdhci_usdhc_imx(1, &mx6_sd2_data);
