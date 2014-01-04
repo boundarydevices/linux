@@ -148,6 +148,11 @@ next/dt
 	sunxi/dt
 		https://github.com/mripard/linux.git tags/sunxi-dt-for-3.14
 	patch ARM: bcm2835: add USB controller to device tree                               
+	renesas/dt3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-dt3-for-v3.14
+		depends on depends/clk-next-shmobile
+		depends on depends/clksource-shmobile
+		depends on depends/pinctrl-for-next
 
 next/boards
 	renesas/defconfig
