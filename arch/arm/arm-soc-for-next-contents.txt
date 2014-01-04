@@ -211,6 +211,9 @@ next/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-sh-sci3-for-v3.14
 	davinci/gpio
 		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci.git tags/davinci-for-v3.14/gpio
+	sunxi/core
+		 https://github.com/mripard/linux.git tags/sunxi-core-for-3.14
+		 based on sunxi/drivers
 
 Patches only in for-next, not in any topic branch due to conflicts:
 
