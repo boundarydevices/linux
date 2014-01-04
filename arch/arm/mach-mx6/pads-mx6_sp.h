@@ -176,6 +176,9 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	SD_PINS8(4, USDHC_PAD_CTRL_50MHZ),
 	MX6PAD(NANDF_D7__GPIO_2_7),			/* eMMC reset */
 
+	/* PCIe reset */
+	NEW_PAD_CTRL(MX6PAD(EIM_A25__GPIO_5_2), WEAK),
+
 	/* GPIOs connector (J46) */
 	NEW_PAD_CTRL(MX6PAD(GPIO_7__GPIO_1_7), WEAK),
 	NEW_PAD_CTRL(MX6PAD(GPIO_8__GPIO_1_8), WEAK),

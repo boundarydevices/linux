@@ -569,6 +569,13 @@ static void poweroff(void)
 	while (1);
 }
 
+static const struct imx_pcie_platform_data pcie_data  __initconst = {
+	.pcie_pwr_en	= -EINVAL,
+	.pcie_rst	= IMX_GPIO_NR(5,2),
+	.pcie_wake_up	= -EINVAL,
+	.pcie_dis	= -EINVAL,
+};
+
 /*!
  * Board specific initialization.
  */
@@ -699,6 +706,7 @@ static void __init mx6_board_init(void)
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
 //	regulator_has_full_constraints();
+	imx6q_add_pcie(&pcie_data);
 }
 
 extern void __iomem *twd_base;
