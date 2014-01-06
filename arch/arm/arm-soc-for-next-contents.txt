@@ -153,6 +153,8 @@ next/dt
 		depends on depends/clk-next-shmobile
 		depends on depends/clksource-shmobile
 		depends on depends/pinctrl-for-next
+	samsung/dt3
+		 git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-dt-3
 
 next/boards
 	renesas/defconfig
@@ -214,6 +216,8 @@ next/drivers
 	sunxi/core
 		 https://github.com/mripard/linux.git tags/sunxi-core-for-3.14
 		 based on sunxi/drivers
+	integrator/core
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator.git tags/integrator-for-v3.14
 
 Patches only in for-next, not in any topic branch due to conflicts:
 
