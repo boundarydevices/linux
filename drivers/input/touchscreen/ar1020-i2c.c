@@ -26,6 +26,36 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 
+static int calibration[9];
+module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
+
+#define CALIBRATION_XRES 7
+#define CALIBRATION_YRES 8
+
+static void translate(int *px, int *py)
+{
+	int x, y, x1, y1;
+	if (calibration[6]) {
+		x1 = *px;
+		y1 = *py;
+
+		x = calibration[0] * x1 +
+			calibration[1] * y1 +
+			calibration[2];
+		x /= calibration[6];
+		if (x < 0)
+			x = 0;
+		y = calibration[3] * x1 +
+			calibration[4] * y1 +
+			calibration[5];
+		y /= calibration[6];
+		if (y < 0)
+			y = 0;
+		*px = x ;
+		*py = y ;
+	}
+}
+
 /* The private data structure that is referenced within the I2C bus driver */
 struct ar1020_i2c_priv {
 	struct i2c_client *client;
@@ -287,6 +317,7 @@ static irqreturn_t touch_irq_handler_func(int irq, void *dev_id)
 		return IRQ_HANDLED;
 
 	priv->button = button;
+	translate(&x, &y);
 	input_report_abs(priv->input, ABS_X, x);
 	input_report_abs(priv->input, ABS_Y, y);
 	input_report_key(priv->input, BTN_TOUCH, button);
@@ -374,8 +405,17 @@ static int __devinit ar1020_i2c_probe(struct i2c_client *client,
 	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
 	input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
 
-	input_set_abs_params(input_dev, ABS_X, 0, 4095, 0, 0);
-	input_set_abs_params(input_dev, ABS_Y, 0, 4095, 0, 0);
+	if ((0 != calibration[CALIBRATION_XRES])
+	    &&
+	    (0 != calibration[CALIBRATION_YRES])) {
+		input_set_abs_params(input_dev, ABS_X, 0,
+				     calibration[CALIBRATION_XRES], 0, 0);
+		input_set_abs_params(input_dev, ABS_Y, 0,
+				     calibration[CALIBRATION_YRES], 0, 0);
+	} else {
+		input_set_abs_params(input_dev, ABS_X, 0, 4095, 0, 0);
+		input_set_abs_params(input_dev, ABS_Y, 0, 4095, 0, 0);
+	}
 	input_set_drvdata(input_dev, priv);
 	err = input_register_device(input_dev);
 	if (err) {
