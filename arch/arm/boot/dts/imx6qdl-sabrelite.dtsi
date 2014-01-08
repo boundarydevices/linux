@@ -220,12 +220,14 @@
 		status = "okay";
 	};
 
+#if 0
 	mipi_dsi_reset: mipi-dsi-reset {
 		compatible = "gpio-reset";
 		reset-gpios = <&gpio2 5 GPIO_ACTIVE_LOW>;
 		reset-delay-us = <50>;
 		#reset-cells = <0>;
 	};
+#endif
 };
 
 &audmux {
@@ -427,6 +429,7 @@
 	status = "okay";
 };
 
+#if 0
 &mipi_dsi {
 	dev_id = <0>;
 	disp_id = <0>;
@@ -435,6 +438,7 @@
 	resets = <&mipi_dsi_reset>;
 	status = "okay";
 };
+#endif
 
 &mipi_csi {
 	ipu_id = <0>;
