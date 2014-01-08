@@ -255,6 +255,24 @@ static void bch_data_insert_keys(struct closure *cl)
 	closure_return(cl);
 }
 
+static int bch_keylist_realloc(struct keylist *l, unsigned u64s,
+			       struct cache_set *c)
+{
+	size_t oldsize = bch_keylist_nkeys(l);
+	size_t newsize = oldsize + u64s;
+
+	/*
+	 * The journalling code doesn't handle the case where the keys to insert
+	 * is bigger than an empty write: If we just return -ENOMEM here,
+	 * bio_insert() and bio_invalidate() will insert the keys created so far
+	 * and finish the rest when the keylist is empty.
+	 */
+	if (newsize * sizeof(uint64_t) > block_bytes(c) - sizeof(struct jset))
+		return -ENOMEM;
+
+	return __bch_keylist_realloc(l, u64s);
+}
+
 static void bch_data_invalidate(struct closure *cl)
 {
 	struct data_insert_op *op = container_of(cl, struct data_insert_op, cl);
@@ -267,7 +285,7 @@ static void bch_data_invalidate(struct closure *cl)
 		unsigned sectors = min(bio_sectors(bio),
 				       1U << (KEY_SIZE_BITS - 1));
 
-		if (bch_keylist_realloc(&op->insert_keys, 0, op->c))
+		if (bch_keylist_realloc(&op->insert_keys, 2, op->c))
 			goto out;
 
 		bio->bi_iter.bi_sector	+= sectors;
@@ -357,7 +375,7 @@ static void bch_data_insert_start(struct closure *cl)
 
 		/* 1 for the device pointer and 1 for the chksum */
 		if (bch_keylist_realloc(&op->insert_keys,
-					1 + (op->csum ? 1 : 0),
+					3 + (op->csum ? 1 : 0),
 					op->c))
 			continue_at(cl, bch_data_insert_keys, bcache_wq);
 
@@ -597,14 +615,12 @@ struct search {
 	/* Stack frame for bio_complete */
 	struct closure		cl;
 
-	struct bcache_device	*d;
-
 	struct bbio		bio;
 	struct bio		*orig_bio;
 	struct bio		*cache_miss;
+	struct bcache_device	*d;
 
 	unsigned		insert_bio_sectors;
-
 	unsigned		recoverable:1;
 	unsigned		write:1;
 	unsigned		read_dirty_data:1;
@@ -630,7 +646,8 @@ static void bch_cache_read_endio(struct bio *bio, int error)
 
 	if (error)
 		s->iop.error = error;
-	else if (ptr_stale(s->iop.c, &b->key, 0)) {
+	else if (!KEY_DIRTY(&b->key) &&
+		 ptr_stale(s->iop.c, &b->key, 0)) {
 		atomic_long_inc(&s->iop.c->cache_read_races);
 		s->iop.error = -EINTR;
 	}
@@ -711,10 +728,13 @@ static void cache_lookup(struct closure *cl)
 {
 	struct search *s = container_of(cl, struct search, iop.cl);
 	struct bio *bio = &s->bio.bio;
+	int ret;
 
-	int ret = bch_btree_map_keys(&s->op, s->iop.c,
-				     &KEY(s->iop.inode, bio->bi_iter.bi_sector, 0),
-				     cache_lookup_fn, MAP_END_KEY);
+	bch_btree_op_init(&s->op, -1);
+
+	ret = bch_btree_map_keys(&s->op, s->iop.c,
+				 &KEY(s->iop.inode, bio->bi_iter.bi_sector, 0),
+				 cache_lookup_fn, MAP_END_KEY);
 	if (ret == -EAGAIN)
 		continue_at(cl, cache_lookup, bcache_wq);
 
@@ -755,12 +775,12 @@ static void bio_complete(struct search *s)
 	}
 }
 
-static void do_bio_hook(struct search *s)
+static void do_bio_hook(struct search *s, struct bio *orig_bio)
 {
 	struct bio *bio = &s->bio.bio;
 
 	bio_init(bio);
-	__bio_clone_fast(bio, s->orig_bio);
+	__bio_clone_fast(bio, orig_bio);
 	bio->bi_end_io		= request_endio;
 	bio->bi_private		= &s->cl;
 
@@ -779,26 +799,32 @@ static void search_free(struct closure *cl)
 	mempool_free(s, s->d->c->search);
 }
 
-static struct search *search_alloc(struct bio *bio, struct bcache_device *d)
+static inline struct search *search_alloc(struct bio *bio,
+					  struct bcache_device *d)
 {
 	struct search *s;
 
 	s = mempool_alloc(d->c->search, GFP_NOIO);
-	memset(s, 0, offsetof(struct search, iop.insert_keys));
 
-	__closure_init(&s->cl, NULL);
+	closure_init(&s->cl, NULL);
+	do_bio_hook(s, bio);
 
-	s->iop.inode		= d->id;
-	s->iop.c		= d->c;
-	s->d			= d;
-	s->op.lock		= -1;
-	s->iop.write_point	= hash_long((unsigned long) current, 16);
 	s->orig_bio		= bio;
-	s->write		= (bio->bi_rw & REQ_WRITE) != 0;
-	s->iop.flush_journal	= (bio->bi_rw & (REQ_FLUSH|REQ_FUA)) != 0;
+	s->cache_miss		= NULL;
+	s->d			= d;
 	s->recoverable		= 1;
+	s->write		= (bio->bi_rw & REQ_WRITE) != 0;
+	s->read_dirty_data	= 0;
 	s->start_time		= jiffies;
-	do_bio_hook(s);
+
+	s->iop.c		= d->c;
+	s->iop.bio		= NULL;
+	s->iop.inode		= d->id;
+	s->iop.write_point	= hash_long((unsigned long) current, 16);
+	s->iop.write_prio	= 0;
+	s->iop.error		= 0;
+	s->iop.flags		= 0;
+	s->iop.flush_journal	= (bio->bi_rw & (REQ_FLUSH|REQ_FUA)) != 0;
 
 	return s;
 }
@@ -844,7 +870,7 @@ static void cached_dev_read_error(struct closure *cl)
 		trace_bcache_read_retry(s->orig_bio);
 
 		s->iop.error = 0;
-		do_bio_hook(s);
+		do_bio_hook(s, s->orig_bio);
 
 		/* XXX: invalidate cache */
 
