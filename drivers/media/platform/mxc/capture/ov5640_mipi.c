@@ -3358,8 +3358,10 @@ static int ov5640_probe(struct i2c_client *client,
 	}
 	retval = devm_gpio_request_one(dev, pwn_gpio, GPIOF_OUT_INIT_HIGH,
 					"ov5640_mipi_pwdn");
-	if (retval < 0)
+	if (retval < 0) {
+		dev_warn(dev, "request of pwn_gpio failed");
 		return retval;
+	}
 
 	/* request reset pin */
 	rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
@@ -3369,8 +3371,10 @@ static int ov5640_probe(struct i2c_client *client,
 	}
 	retval = devm_gpio_request_one(dev, rst_gpio, GPIOF_OUT_INIT_HIGH,
 					"ov5640_mipi_reset");
-	if (retval < 0)
+	if (retval < 0) {
+		dev_warn(dev, "request of ov5640_mipi_reset failed");
 		return retval;
+	}
 
 	/* Set initial values for the sensor struct. */
 	memset(&ov5640_data, 0, sizeof(ov5640_data));
