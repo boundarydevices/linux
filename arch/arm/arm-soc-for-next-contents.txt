@@ -223,6 +223,11 @@ next/drivers
 		 based on sunxi/drivers
 	integrator/core
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator.git tags/integrator-for-v3.14
+	qcom/drivers
+		patches
+			tty: serial: Limit msm_serial_hs driver to platforms that use it              
+			mmc: msm_sdcc: Limit driver to platforms that use it                          
+			usb: phy: msm: Move mach dependent code to platform data  
 
 Patches only in for-next, not in any topic branch due to conflicts:
 
