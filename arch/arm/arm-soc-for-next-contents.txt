@@ -100,6 +100,11 @@ next/soc
 		local branch: v12 series + khilman fixups + rename series
 	ux500/core
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-core-v3.14
+	qcom/soc2
+		patches
+			ARM: msm: Move MSM's DT based hardware to multi-platform support              
+			ARM: msm: Only build timer.c if required                                      
+			ARM: msm: Only build clock.c on proc_comm based platforms   
     
 next/dt
 	ux500/dt
@@ -224,6 +229,7 @@ next/drivers
 	integrator/core
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator.git tags/integrator-for-v3.14
 	qcom/drivers
+		based on qcom/boards
 		patches
 			tty: serial: Limit msm_serial_hs driver to platforms that use it              
 			mmc: msm_sdcc: Limit driver to platforms that use it                          
