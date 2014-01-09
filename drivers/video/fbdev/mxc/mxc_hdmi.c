@@ -76,6 +76,10 @@ static int only_cea = 1;
 module_param(only_cea, int, 0644);
 MODULE_PARM_DESC(only_cea, "Allow only CEA modes");
 
+static int keepalive = 1;
+module_param(keepalive, int, 0644);
+MODULE_PARM_DESC(keepalive, "Keep HDMI PHY running when unplugged");
+
 /*
  * We follow a flowchart which is in the "Synopsys DesignWare Courses
  * HDMI Transmitter Controller User Guide, 1.30a", section 3.1
@@ -938,7 +942,6 @@ static u8 hdmi_edid_i2c_read(struct mxc_hdmi *hdmi,
 	hdmi_writeb(0xFF, HDMI_IH_I2CM_STAT0);
 	return data;
 }
-
 
 /* "Power-down enable (active low)"
  * That mean that power up == 1! */
@@ -2034,7 +2037,9 @@ static void hotplug_worker(struct work_struct *work)
 #ifdef CONFIG_MXC_HDMI_CEC
 		mxc_hdmi_cec_handle(0x80);
 #endif
-	} else {
+		if (keepalive)
+                        hdmi_writeb(HDMI_DVI_STAT, HDMI_PHY_POL0);
+	} else if (!keepalive) {
 		/* Plugout event */
 		dev_dbg(&hdmi->pdev->dev, "EVENT=plugout\n");
 		hdmi_set_cable_state(0);
@@ -2052,16 +2057,18 @@ static void hotplug_worker(struct work_struct *work)
 	 * completed before next interrupt processed */
 	spin_lock_irqsave(&hdmi->irq_lock, flags);
 
-	/* Re-enable HPD interrupts */
-	hdmi_phy_mask0 = hdmi_readb(HDMI_PHY_MASK0);
-	hdmi_phy_mask0 &= ~HDMI_DVI_STAT;
-	hdmi_writeb(hdmi_phy_mask0, HDMI_PHY_MASK0);
+	if (!keepalive) {
+		/* Re-enable HPD interrupts */
+		hdmi_phy_mask0 = hdmi_readb(HDMI_PHY_MASK0);
+		hdmi_phy_mask0 &= ~HDMI_DVI_STAT;
+		hdmi_writeb(hdmi_phy_mask0, HDMI_PHY_MASK0);
 
-	/* Unmute interrupts */
-	hdmi_writeb(~HDMI_DVI_IH_STAT, HDMI_IH_MUTE_PHY_STAT0);
+		/* Unmute interrupts */
+		hdmi_writeb(~HDMI_DVI_IH_STAT, HDMI_IH_MUTE_PHY_STAT0);
 
-	if (hdmi_readb(HDMI_IH_FC_STAT2) & HDMI_IH_FC_STAT2_OVERFLOW_MASK)
-		mxc_hdmi_clear_overflow(hdmi);
+		if (hdmi_readb(HDMI_IH_FC_STAT2) & HDMI_IH_FC_STAT2_OVERFLOW_MASK)
+			mxc_hdmi_clear_overflow(hdmi);
+	}
 
 	spin_unlock_irqrestore(&hdmi->irq_lock, flags);
 }
