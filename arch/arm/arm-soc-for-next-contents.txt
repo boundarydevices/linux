@@ -20,6 +20,7 @@ next/fixes-non-critical
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson.git tags/u300-for-arm-soc-1
 
 	patch ARM: bcm2835: Fix grammar in help message                                     
+	patch irqchip: sirf: set IRQ_LEVEL status_flags
 
 next/cleanup
 	renesas/cleanup
@@ -97,6 +98,8 @@ next/soc
 		git://git.linaro.org/people/shawnguo/linux-2.6.git tags/imx-soc-3.14
 	hisi/soc
 		local branch: v12 series + khilman fixups + rename series
+	ux500/core
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-core-v3.14
     
 next/dt
 	ux500/dt
