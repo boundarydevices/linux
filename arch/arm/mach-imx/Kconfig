@@ -125,8 +125,8 @@ config SOC_IMX35
 	select CPU_V6K
 	select HAVE_EPIT
 	select MXC_AVIC
+	select PINCTRL_IMX35
 	select SMP_ON_UP if SMP
-	select PINCTRL
 
 config SOC_IMX5
 	bool
