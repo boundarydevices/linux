@@ -105,6 +105,7 @@ next/soc
 			ARM: msm: Move MSM's DT based hardware to multi-platform support              
 			ARM: msm: Only build timer.c if required                                      
 			ARM: msm: Only build clock.c on proc_comm based platforms   
+			ARM: msm_defconfig: Update for multi-platform
     
 next/dt
 	ux500/dt
