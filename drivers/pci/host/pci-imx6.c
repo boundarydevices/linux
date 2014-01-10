@@ -281,6 +281,18 @@ static int imx6q_pcie_abort_handler(unsigned long addr,
 	return 0;
 }
 
+static int imx6_pcie_assert_core_reset(struct pcie_port *pp)
+{
+	struct imx6_pcie *imx6_pcie = to_imx6_pcie(pp);
+
+	regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
+			IMX6Q_GPR1_PCIE_TEST_PD, 1 << 18);
+	regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
+			IMX6Q_GPR1_PCIE_REF_CLK_EN, 0 << 16);
+
+	return 0;
+}
+
 static int imx6_pcie_deassert_core_reset(struct pcie_port *pp)
 {
 	struct imx6_pcie *imx6_pcie = to_imx6_pcie(pp);
@@ -541,6 +553,8 @@ static int imx6_pcie_start_link(struct pcie_port *pp)
 static int imx6_pcie_host_init(struct pcie_port *pp)
 {
 	int ret;
+
+	imx6_pcie_assert_core_reset(pp);
 
 	imx6_pcie_init_phy(pp);
 
