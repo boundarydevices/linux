@@ -2765,37 +2765,33 @@ static int ov5640_init_mode(enum ov5640_frame_rate frame_rate,
 	msleep(msec_wait4stable);
 
 	if (mipi_csi2_info) {
-		unsigned int i;
-
-		i = 0;
+		unsigned int i = 0;
 
 		/* wait for mipi sensor ready */
-		mipi_reg = mipi_csi2_dphy_status(mipi_csi2_info);
-		while ((mipi_reg == 0x200) && (i < 10)) {
+		while (1) {
 			mipi_reg = mipi_csi2_dphy_status(mipi_csi2_info);
-			i++;
+			if (mipi_reg != 0x200)
+				break;
+			if (i++ >= 20) {
+				pr_err("mipi csi2 can not receive sensor clk! %x\n", mipi_reg);
+				return -1;
+			}
 			msleep(10);
-		}
-
-		if (i >= 10) {
-			pr_err("mipi csi2 can not receive sensor clk!\n");
-			return -1;
 		}
 
 		i = 0;
-
 		/* wait for mipi stable */
-		mipi_reg = mipi_csi2_get_error1(mipi_csi2_info);
-		while ((mipi_reg != 0x0) && (i < 10)) {
+		while (1) {
 			mipi_reg = mipi_csi2_get_error1(mipi_csi2_info);
-			i++;
+			if (!mipi_reg)
+				break;
+			if (i++ >= 20) {
+				pr_err("mipi csi2 can not receive data correctly!\n");
+				return -1;
+			}
 			msleep(10);
 		}
 
-		if (i >= 10) {
-			pr_err("mipi csi2 can not reveive data correctly!\n");
-			return -1;
-		}
 	}
 err:
 	return retval;
