@@ -331,13 +331,10 @@ static int imx6_pcie_deassert_core_reset(struct pcie_port *pp)
 		goto err_pcie_ref;
 	}
 
-	if (!IS_ENABLED(CONFIG_EP_MODE_IN_EP_RC_SYS)
-			&& !IS_ENABLED(CONFIG_RC_MODE_IN_EP_RC_SYS)) {
-		ret = clk_prepare_enable(imx6_pcie->lvds_gate);
-		if (ret) {
-			dev_err(pp->dev, "unable to enable lvds_gate\n");
-			goto err_lvds_gate;
-		}
+	ret = clk_prepare_enable(imx6_pcie->lvds_gate);
+	if (ret) {
+		dev_err(pp->dev, "unable to enable lvds_gate\n");
+		goto err_lvds_gate;
 	}
 
 	ret = clk_prepare_enable(imx6_pcie->pcie_axi);
