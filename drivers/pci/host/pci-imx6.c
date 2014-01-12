@@ -347,13 +347,10 @@ static int imx6_pcie_deassert_core_reset(struct pcie_port *pp)
 		goto err_pcie_phy;
 	}
 
-	if (!IS_ENABLED(CONFIG_EP_MODE_IN_EP_RC_SYS)
-			&& !IS_ENABLED(CONFIG_RC_MODE_IN_EP_RC_SYS)) {
-		ret = clk_prepare_enable(imx6_pcie->pcie_bus);
-		if (ret) {
-			dev_err(pp->dev, "unable to enable pcie_bus clock\n");
-			goto err_pcie_bus;
-		}
+	ret = clk_prepare_enable(imx6_pcie->pcie_bus);
+	if (ret) {
+		dev_err(pp->dev, "unable to enable pcie_bus clock\n");
+		goto err_pcie_bus;
 	}
 
 	ret = clk_prepare_enable(imx6_pcie->pcie);
