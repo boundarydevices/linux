@@ -371,22 +371,19 @@ static int imx6_pcie_deassert_core_reset(struct pcie_port *pp)
 		goto err_pcie;
 	}
 
-	if (!IS_ENABLED(CONFIG_EP_MODE_IN_EP_RC_SYS)
-			&& !IS_ENABLED(CONFIG_RC_MODE_IN_EP_RC_SYS)) {
-		if (imx6_pcie->ext_osc) {
-			clk_set_parent(imx6_pcie->pcie_ext,
-					imx6_pcie->pcie_ext_src);
-			ret = clk_prepare_enable(imx6_pcie->pcie_ext);
-			if (ret) {
-				dev_err(pp->dev, "unable to enable pcie_ext clock\n");
-				goto err_pcie_bus;
-			}
-		} else {
-			ret = clk_prepare_enable(imx6_pcie->pcie_bus);
-			if (ret) {
-				dev_err(pp->dev, "unable to enable pcie_bus clock\n");
-				goto err_pcie_bus;
-			}
+	if (imx6_pcie->ext_osc) {
+		clk_set_parent(imx6_pcie->pcie_ext,
+				imx6_pcie->pcie_ext_src);
+		ret = clk_prepare_enable(imx6_pcie->pcie_ext);
+		if (ret) {
+			dev_err(pp->dev, "unable to enable pcie_ext clock\n");
+			goto err_pcie_bus;
+		}
+	} else {
+		ret = clk_prepare_enable(imx6_pcie->pcie_bus);
+		if (ret) {
+			dev_err(pp->dev, "unable to enable pcie_bus clock\n");
+			goto err_pcie_bus;
 		}
 	}
 
