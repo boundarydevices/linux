@@ -20,6 +20,8 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/of_gpio.h>
+#include <linux/of_irq.h>
 #include <linux/rfkill.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
@@ -39,32 +41,30 @@ enum rfkill_gpio_clk_state {
 #define PWR_CLK_DISABLED(_RF) ((_RF)->pwr_clk_enabled != PWR_ENABLED)
 
 struct rfkill_gpio_data {
-	struct rfkill_gpio_platform_data	*pdata;
 	struct rfkill				*rfkill_dev;
 	char					*reset_name;
 	char					*shutdown_name;
 	enum rfkill_gpio_clk_state		pwr_clk_enabled;
 	struct clk				*pwr_clk;
+	int					gpio_cnt;
+	int					gpiolist[5];
 };
 
 static int rfkill_gpio_set_power(void *data, bool blocked)
 {
 	struct rfkill_gpio_data *rfkill = data;
+	int i;
 
 	if (blocked) {
-		if (gpio_is_valid(rfkill->pdata->shutdown_gpio))
-			gpio_direction_output(rfkill->pdata->shutdown_gpio, 0);
-		if (gpio_is_valid(rfkill->pdata->reset_gpio))
-			gpio_direction_output(rfkill->pdata->reset_gpio, 0);
+		for (i = rfkill->gpio_cnt - 1; i >= 0; i--)
+			gpio_direction_output(rfkill->gpiolist[i], 0);
 		if (rfkill->pwr_clk && PWR_CLK_ENABLED(rfkill))
 			clk_disable(rfkill->pwr_clk);
 	} else {
 		if (rfkill->pwr_clk && PWR_CLK_DISABLED(rfkill))
 			clk_enable(rfkill->pwr_clk);
-		if (gpio_is_valid(rfkill->pdata->reset_gpio))
-			gpio_direction_output(rfkill->pdata->reset_gpio, 1);
-		if (gpio_is_valid(rfkill->pdata->shutdown_gpio))
-			gpio_direction_output(rfkill->pdata->shutdown_gpio, 1);
+		for (i = 0; i < rfkill->gpio_cnt; i++)
+			gpio_direction_output(rfkill->gpiolist[i], 1);
 	}
 
 	if (rfkill->pwr_clk)
@@ -77,16 +77,46 @@ static const struct rfkill_ops rfkill_gpio_ops = {
 	.set_block = rfkill_gpio_set_power,
 };
 
+static struct rfkill_gpio_platform_data *rfkill_gpio_get_pdata_from_of(struct device *dev)
+{
+	struct rfkill_gpio_platform_data *pdata;
+	struct device_node *np = dev->of_node;
+
+	if (!np) {
+		np = of_find_matching_node(NULL, dev->driver->of_match_table);
+		if (!np) {
+			dev_notice(dev, "device tree node not available\n");
+			return ERR_PTR(-ENODEV);
+		}
+	}
+
+	pdata = kzalloc(sizeof(*pdata), GFP_KERNEL);
+	if (!pdata) {
+		dev_err(dev, "can't allocate platform data\n");
+		return ERR_PTR(-ENODEV);
+	}
+	pdata->reset_gpio = of_get_named_gpio(np, "gpios", 0);
+	pdata->shutdown_gpio = of_get_named_gpio(np, "gpios", 1);
+	of_property_read_u32(np, "type", &pdata->type);
+	of_property_read_string(np, "name", &pdata->name);
+	return pdata;
+}
+
 static int rfkill_gpio_probe(struct platform_device *pdev)
 {
 	struct rfkill_gpio_data *rfkill;
 	struct rfkill_gpio_platform_data *pdata = pdev->dev.platform_data;
+	struct rfkill_gpio_platform_data *p = NULL;
 	int ret = 0;
 	int len = 0;
+	int gpio_cnt = 0;
 
 	if (!pdata) {
-		pr_warn("%s: No platform data specified\n", __func__);
-		return -EINVAL;
+		p = pdata = rfkill_gpio_get_pdata_from_of(&pdev->dev);
+		if (IS_ERR(p)) {
+			dev_err(&pdev->dev, "no platform data\n");
+			return PTR_ERR(p);
+		}
 	}
 
 	/* make sure at-least one of the GPIO is defined and that
@@ -108,8 +138,6 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 			goto fail_alloc;
 		}
 	}
-
-	rfkill->pdata = pdata;
 
 	len = strlen(pdata->name);
 	rfkill->reset_name = kzalloc(len + 7, GFP_KERNEL);
@@ -142,6 +170,7 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 			pr_warn("%s: failed to get reset gpio.\n", __func__);
 			goto fail_clock;
 		}
+		rfkill->gpiolist[gpio_cnt++] = pdata->reset_gpio;
 	}
 
 	if (gpio_is_valid(pdata->shutdown_gpio)) {
@@ -150,8 +179,9 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 			pr_warn("%s: failed to get shutdown gpio.\n", __func__);
 			goto fail_reset;
 		}
+		rfkill->gpiolist[gpio_cnt++] = pdata->shutdown_gpio;
 	}
-
+	rfkill->gpio_cnt = gpio_cnt;
 	rfkill->rfkill_dev = rfkill_alloc(pdata->name, &pdev->dev, pdata->type,
 					  &rfkill_gpio_ops, rfkill);
 	if (!rfkill->rfkill_dev) {
@@ -166,7 +196,7 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, rfkill);
 
 	dev_info(&pdev->dev, "%s device registered.\n", pdata->name);
-
+	kfree(p);
 	return 0;
 
 fail_rfkill:
@@ -186,7 +216,7 @@ fail_reset_name:
 	kfree(rfkill->reset_name);
 fail_alloc:
 	kfree(rfkill);
-
+	kfree(p);
 	return ret;
 }
 
@@ -194,15 +224,14 @@ static int rfkill_gpio_remove(struct platform_device *pdev)
 {
 	struct rfkill_gpio_data *rfkill = platform_get_drvdata(pdev);
 	struct rfkill_gpio_platform_data *pdata = pdev->dev.platform_data;
+	int i;
 
 	if (pdata->gpio_runtime_close)
 		pdata->gpio_runtime_close(pdev);
 	rfkill_unregister(rfkill->rfkill_dev);
 	rfkill_destroy(rfkill->rfkill_dev);
-	if (gpio_is_valid(rfkill->pdata->shutdown_gpio))
-		gpio_free(rfkill->pdata->shutdown_gpio);
-	if (gpio_is_valid(rfkill->pdata->reset_gpio))
-		gpio_free(rfkill->pdata->reset_gpio);
+	for (i = 0; i < rfkill->gpio_cnt; i++)
+		gpio_free(rfkill->gpiolist[i]);
 	if (rfkill->pwr_clk && PWR_CLK_ENABLED(rfkill))
 		clk_disable(rfkill->pwr_clk);
 	if (rfkill->pwr_clk)
@@ -214,12 +243,19 @@ static int rfkill_gpio_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id rfkill_gpio_of_match_table[] = {
+	{ .compatible = "net,rfkill-gpio" },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, rfkill_gpio_of_match_table);
+
 static struct platform_driver rfkill_gpio_driver = {
 	.probe = rfkill_gpio_probe,
 	.remove = rfkill_gpio_remove,
 	.driver = {
 		   .name = "rfkill_gpio",
 		   .owner = THIS_MODULE,
+		   .of_match_table = of_match_ptr(rfkill_gpio_of_match_table),
 	},
 };
 
