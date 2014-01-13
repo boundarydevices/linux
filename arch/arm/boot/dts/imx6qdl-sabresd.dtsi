@@ -1108,6 +1108,8 @@
 	bus-width = <8>;
 	cd-gpios = <&gpio2 2 GPIO_ACTIVE_LOW>;
 	wp-gpios = <&gpio2 3 GPIO_ACTIVE_HIGH>;
+	no-1-8-v;
+	keep-power-in-suspend;
 	status = "okay";
 };
 
@@ -1117,6 +1119,8 @@
 	bus-width = <8>;
 	cd-gpios = <&gpio2 0 GPIO_ACTIVE_LOW>;
 	wp-gpios = <&gpio2 1 GPIO_ACTIVE_HIGH>;
+	no-1-8-v;
+	keep-power-in-suspend;
 	status = "okay";
 };
 
@@ -1126,6 +1130,7 @@
 	bus-width = <8>;
 	non-removable;
 	no-1-8-v;
+	keep-power-in-suspend;
 	status = "okay";
 };
 
