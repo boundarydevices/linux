@@ -20,6 +20,8 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/of_gpio.h>
+#include <linux/of_irq.h>
 #include <linux/rfkill.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
@@ -46,6 +48,7 @@ struct rfkill_gpio_data {
 static int rfkill_gpio_set_power(void *data, bool blocked)
 {
 	struct rfkill_gpio_data *rfkill = data;
+	int i;
 
 	if (blocked) {
 		gpiod_set_value(rfkill->shutdown_gpio, 0);
@@ -83,6 +86,23 @@ static int rfkill_gpio_acpi_probe(struct device *dev,
 	return 0;
 }
 
+static int rfkill_gpio_get_pdata_from_of(struct device *dev,
+		struct rfkill_gpio_data *rfkill)
+{
+	struct device_node *np = dev->of_node;
+
+	if (!np) {
+		np = of_find_matching_node(NULL, dev->driver->of_match_table);
+		if (!np) {
+			dev_notice(dev, "device tree node not available\n");
+			return -ENODEV;
+		}
+	}
+	of_property_read_u32(np, "type", &rfkill->type);
+	of_property_read_string(np, "name", &rfkill->name);
+	return 0;
+}
+
 static int rfkill_gpio_probe(struct platform_device *pdev)
 {
 	struct rfkill_gpio_platform_data *pdata = pdev->dev.platform_data;
@@ -105,7 +125,11 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 		rfkill->name = pdata->name;
 		rfkill->type = pdata->type;
 	} else {
-		return -ENODEV;
+		ret = rfkill_gpio_get_pdata_from_of(&pdev->dev, rfkill);
+		if (ret) {
+			dev_err(&pdev->dev, "no platform data\n");
+			return ret;
+		}
 	}
 
 	len = strlen(rfkill->name);
@@ -152,6 +176,7 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "can't set up gpio\n");
 			return ret;
 		}
+		rfkill->gpiolist[gpio_cnt++] = pdata->shutdown_gpio;
 	}
 
 	rfkill->rfkill_dev = rfkill_alloc(rfkill->name, &pdev->dev,
@@ -175,6 +200,7 @@ static int rfkill_gpio_remove(struct platform_device *pdev)
 {
 	struct rfkill_gpio_data *rfkill = platform_get_drvdata(pdev);
 	struct rfkill_gpio_platform_data *pdata = pdev->dev.platform_data;
+	int i;
 
 	if (pdata && pdata->gpio_runtime_close)
 		pdata->gpio_runtime_close(pdev);
@@ -189,6 +215,12 @@ static const struct acpi_device_id rfkill_acpi_match[] = {
 	{ },
 };
 
+static const struct of_device_id rfkill_gpio_of_match_table[] = {
+	{ .compatible = "net,rfkill-gpio" },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, rfkill_gpio_of_match_table);
+
 static struct platform_driver rfkill_gpio_driver = {
 	.probe = rfkill_gpio_probe,
 	.remove = rfkill_gpio_remove,
@@ -196,6 +228,7 @@ static struct platform_driver rfkill_gpio_driver = {
 		.name = "rfkill_gpio",
 		.owner = THIS_MODULE,
 		.acpi_match_table = ACPI_PTR(rfkill_acpi_match),
+		.of_match_table = of_match_ptr(rfkill_gpio_of_match_table),
 	},
 };
 
