@@ -35,7 +35,7 @@
  */
 
 struct rfkill_gpio_platform_data {
-	char			*name;
+	const char		*name;
 	int			reset_gpio;
 	int			shutdown_gpio;
 	const char		*power_clk_name;
