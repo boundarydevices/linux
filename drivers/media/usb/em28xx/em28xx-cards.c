@@ -2106,7 +2106,7 @@ struct em28xx_board em28xx_boards[] = {
 	},
 	/* 1b80:e1cc Delock 61959
 	 * Empia EM2874B + Micronas DRX 3913KA2 + NXP TDA18271HDC2
-         * mostly the same as MaxMedia UB-425-TC but different remote */
+	 * mostly the same as MaxMedia UB-425-TC but different remote */
 	[EM2874_BOARD_DELOCK_61959] = {
 		.name          = "Delock 61959",
 		.tuner_type    = TUNER_ABSENT,
@@ -2159,6 +2159,8 @@ struct em28xx_board em28xx_boards[] = {
 		.ir_codes      = RC_MAP_PINNACLE_PCTV_HD,
 	},
 };
+EXPORT_SYMBOL_GPL(em28xx_boards);
+
 const unsigned int em28xx_bcount = ARRAY_SIZE(em28xx_boards);
 
 /* table of devices that work with this driver */
@@ -2360,24 +2362,6 @@ static struct em28xx_hash_table em28xx_i2c_hash[] = {
 };
 /* NOTE: introduce a separate hash table for devices with 16 bit eeproms */
 
-/* I2C possible address to saa7115, tvp5150, msp3400, tvaudio */
-static unsigned short saa711x_addrs[] = {
-	0x4a >> 1, 0x48 >> 1,   /* SAA7111, SAA7111A and SAA7113 */
-	0x42 >> 1, 0x40 >> 1,   /* SAA7114, SAA7115 and SAA7118 */
-	I2C_CLIENT_END };
-
-static unsigned short tvp5150_addrs[] = {
-	0xb8 >> 1,
-	0xba >> 1,
-	I2C_CLIENT_END
-};
-
-static unsigned short msp3400_addrs[] = {
-	0x80 >> 1,
-	0x88 >> 1,
-	I2C_CLIENT_END
-};
-
 int em28xx_tuner_callback(void *ptr, int component, int command, int arg)
 {
 	struct em28xx_i2c_bus *i2c_bus = ptr;
@@ -2527,113 +2511,6 @@ static void em28xx_pre_card_setup(struct em28xx *dev)
 
 	/* Unlock device */
 	em28xx_set_mode(dev, EM28XX_SUSPEND);
-}
-
-static void em28xx_setup_xc3028(struct em28xx *dev, struct xc2028_ctrl *ctl)
-{
-	memset(ctl, 0, sizeof(*ctl));
-
-	ctl->fname   = XC2028_DEFAULT_FIRMWARE;
-	ctl->max_len = 64;
-	ctl->mts = em28xx_boards[dev->model].mts_firmware;
-
-	switch (dev->model) {
-	case EM2880_BOARD_EMPIRE_DUAL_TV:
-	case EM2880_BOARD_HAUPPAUGE_WINTV_HVR_900:
-	case EM2882_BOARD_TERRATEC_HYBRID_XS:
-		ctl->demod = XC3028_FE_ZARLINK456;
-		break;
-	case EM2880_BOARD_TERRATEC_HYBRID_XS:
-	case EM2880_BOARD_TERRATEC_HYBRID_XS_FR:
-	case EM2881_BOARD_PINNACLE_HYBRID_PRO:
-		ctl->demod = XC3028_FE_ZARLINK456;
-		break;
-	case EM2880_BOARD_HAUPPAUGE_WINTV_HVR_900_R2:
-	case EM2882_BOARD_PINNACLE_HYBRID_PRO_330E:
-		ctl->demod = XC3028_FE_DEFAULT;
-		break;
-	case EM2880_BOARD_AMD_ATI_TV_WONDER_HD_600:
-		ctl->demod = XC3028_FE_DEFAULT;
-		ctl->fname = XC3028L_DEFAULT_FIRMWARE;
-		break;
-	case EM2883_BOARD_HAUPPAUGE_WINTV_HVR_850:
-	case EM2883_BOARD_HAUPPAUGE_WINTV_HVR_950:
-	case EM2880_BOARD_PINNACLE_PCTV_HD_PRO:
-		/* FIXME: Better to specify the needed IF */
-		ctl->demod = XC3028_FE_DEFAULT;
-		break;
-	case EM2883_BOARD_KWORLD_HYBRID_330U:
-	case EM2882_BOARD_DIKOM_DK300:
-	case EM2882_BOARD_KWORLD_VS_DVBT:
-		ctl->demod = XC3028_FE_CHINA;
-		ctl->fname = XC2028_DEFAULT_FIRMWARE;
-		break;
-	case EM2882_BOARD_EVGA_INDTUBE:
-		ctl->demod = XC3028_FE_CHINA;
-		ctl->fname = XC3028L_DEFAULT_FIRMWARE;
-		break;
-	default:
-		ctl->demod = XC3028_FE_OREN538;
-	}
-}
-
-static void em28xx_tuner_setup(struct em28xx *dev)
-{
-	struct tuner_setup           tun_setup;
-	struct v4l2_frequency        f;
-
-	if (dev->tuner_type == TUNER_ABSENT)
-		return;
-
-	memset(&tun_setup, 0, sizeof(tun_setup));
-
-	tun_setup.mode_mask = T_ANALOG_TV | T_RADIO;
-	tun_setup.tuner_callback = em28xx_tuner_callback;
-
-	if (dev->board.radio.type) {
-		tun_setup.type = dev->board.radio.type;
-		tun_setup.addr = dev->board.radio_addr;
-
-		v4l2_device_call_all(&dev->v4l2_dev, 0, tuner, s_type_addr, &tun_setup);
-	}
-
-	if ((dev->tuner_type != TUNER_ABSENT) && (dev->tuner_type)) {
-		tun_setup.type   = dev->tuner_type;
-		tun_setup.addr   = dev->tuner_addr;
-
-		v4l2_device_call_all(&dev->v4l2_dev, 0, tuner, s_type_addr, &tun_setup);
-	}
-
-	if (dev->tda9887_conf) {
-		struct v4l2_priv_tun_config tda9887_cfg;
-
-		tda9887_cfg.tuner = TUNER_TDA9887;
-		tda9887_cfg.priv = &dev->tda9887_conf;
-
-		v4l2_device_call_all(&dev->v4l2_dev, 0, tuner, s_config, &tda9887_cfg);
-	}
-
-	if (dev->tuner_type == TUNER_XC2028) {
-		struct v4l2_priv_tun_config  xc2028_cfg;
-		struct xc2028_ctrl           ctl;
-
-		memset(&xc2028_cfg, 0, sizeof(xc2028_cfg));
-		memset(&ctl, 0, sizeof(ctl));
-
-		em28xx_setup_xc3028(dev, &ctl);
-
-		xc2028_cfg.tuner = TUNER_XC2028;
-		xc2028_cfg.priv  = &ctl;
-
-		v4l2_device_call_all(&dev->v4l2_dev, 0, tuner, s_config, &xc2028_cfg);
-	}
-
-	/* configure tuner */
-	f.tuner = 0;
-	f.type = V4L2_TUNER_ANALOG_TV;
-	f.frequency = 9076;     /* just a magic number */
-	dev->ctl_freq = f.frequency;
-	v4l2_device_call_all(&dev->v4l2_dev, 0, tuner, s_frequency, &f);
 }
 
 static int em28xx_hint_board(struct em28xx *dev)
@@ -2889,57 +2766,56 @@ static void em28xx_card_setup(struct em28xx *dev)
 	/* Allow override tuner type by a module parameter */
 	if (tuner >= 0)
 		dev->tuner_type = tuner;
-
-	/* request some modules */
-	if (dev->board.has_msp34xx)
-		v4l2_i2c_new_subdev(&dev->v4l2_dev, &dev->i2c_adap[dev->def_i2c_bus],
-			"msp3400", 0, msp3400_addrs);
-
-	if (dev->board.decoder == EM28XX_SAA711X)
-		v4l2_i2c_new_subdev(&dev->v4l2_dev, &dev->i2c_adap[dev->def_i2c_bus],
-			"saa7115_auto", 0, saa711x_addrs);
-
-	if (dev->board.decoder == EM28XX_TVP5150)
-		v4l2_i2c_new_subdev(&dev->v4l2_dev, &dev->i2c_adap[dev->def_i2c_bus],
-			"tvp5150", 0, tvp5150_addrs);
-
-	if (dev->board.adecoder == EM28XX_TVAUDIO)
-		v4l2_i2c_new_subdev(&dev->v4l2_dev, &dev->i2c_adap[dev->def_i2c_bus],
-			"tvaudio", dev->board.tvaudio_addr, NULL);
-
-	if (dev->board.tuner_type != TUNER_ABSENT) {
-		int has_demod = (dev->tda9887_conf & TDA9887_PRESENT);
-
-		if (dev->board.radio.type)
-			v4l2_i2c_new_subdev(&dev->v4l2_dev, &dev->i2c_adap[dev->def_i2c_bus],
-				"tuner", dev->board.radio_addr, NULL);
-
-		if (has_demod)
-			v4l2_i2c_new_subdev(&dev->v4l2_dev,
-				&dev->i2c_adap[dev->def_i2c_bus], "tuner",
-				0, v4l2_i2c_tuner_addrs(ADDRS_DEMOD));
-		if (dev->tuner_addr == 0) {
-			enum v4l2_i2c_tuner_type type =
-				has_demod ? ADDRS_TV_WITH_DEMOD : ADDRS_TV;
-			struct v4l2_subdev *sd;
-
-			sd = v4l2_i2c_new_subdev(&dev->v4l2_dev,
-				&dev->i2c_adap[dev->def_i2c_bus], "tuner",
-				0, v4l2_i2c_tuner_addrs(type));
-
-			if (sd)
-				dev->tuner_addr = v4l2_i2c_subdev_addr(sd);
-		} else {
-			v4l2_i2c_new_subdev(&dev->v4l2_dev, &dev->i2c_adap[dev->def_i2c_bus],
-				"tuner", dev->tuner_addr, NULL);
-		}
-	}
-
-	em28xx_tuner_setup(dev);
-
-	em28xx_init_camera(dev);
 }
 
+void em28xx_setup_xc3028(struct em28xx *dev, struct xc2028_ctrl *ctl)
+{
+	memset(ctl, 0, sizeof(*ctl));
+
+	ctl->fname   = XC2028_DEFAULT_FIRMWARE;
+	ctl->max_len = 64;
+	ctl->mts = em28xx_boards[dev->model].mts_firmware;
+
+	switch (dev->model) {
+	case EM2880_BOARD_EMPIRE_DUAL_TV:
+	case EM2880_BOARD_HAUPPAUGE_WINTV_HVR_900:
+	case EM2882_BOARD_TERRATEC_HYBRID_XS:
+		ctl->demod = XC3028_FE_ZARLINK456;
+		break;
+	case EM2880_BOARD_TERRATEC_HYBRID_XS:
+	case EM2880_BOARD_TERRATEC_HYBRID_XS_FR:
+	case EM2881_BOARD_PINNACLE_HYBRID_PRO:
+		ctl->demod = XC3028_FE_ZARLINK456;
+		break;
+	case EM2880_BOARD_HAUPPAUGE_WINTV_HVR_900_R2:
+	case EM2882_BOARD_PINNACLE_HYBRID_PRO_330E:
+		ctl->demod = XC3028_FE_DEFAULT;
+		break;
+	case EM2880_BOARD_AMD_ATI_TV_WONDER_HD_600:
+		ctl->demod = XC3028_FE_DEFAULT;
+		ctl->fname = XC3028L_DEFAULT_FIRMWARE;
+		break;
+	case EM2883_BOARD_HAUPPAUGE_WINTV_HVR_850:
+	case EM2883_BOARD_HAUPPAUGE_WINTV_HVR_950:
+	case EM2880_BOARD_PINNACLE_PCTV_HD_PRO:
+		/* FIXME: Better to specify the needed IF */
+		ctl->demod = XC3028_FE_DEFAULT;
+		break;
+	case EM2883_BOARD_KWORLD_HYBRID_330U:
+	case EM2882_BOARD_DIKOM_DK300:
+	case EM2882_BOARD_KWORLD_VS_DVBT:
+		ctl->demod = XC3028_FE_CHINA;
+		ctl->fname = XC2028_DEFAULT_FIRMWARE;
+		break;
+	case EM2882_BOARD_EVGA_INDTUBE:
+		ctl->demod = XC3028_FE_CHINA;
+		ctl->fname = XC3028L_DEFAULT_FIRMWARE;
+		break;
+	default:
+		ctl->demod = XC3028_FE_OREN538;
+	}
+}
+EXPORT_SYMBOL_GPL(em28xx_setup_xc3028);
 
 static void request_module_async(struct work_struct *work)
 {
@@ -2952,14 +2828,27 @@ static void request_module_async(struct work_struct *work)
 	 * can be initialised right now. Otherwise, the module init
 	 * code will do it.
 	 */
+
+	/*
+	 * Devicdes with an audio-only interface also have a V4L/DVB/RC
+	 * interface. Don't register extensions twice on those devices.
+	 */
+	if (dev->is_audio_only) {
+#if defined(CONFIG_MODULES) && defined(MODULE)
+		request_module("em28xx-alsa");
+#endif
+		return;
+	}
+
 	em28xx_init_extension(dev);
 
 #if defined(CONFIG_MODULES) && defined(MODULE)
+	if (dev->has_video)
+		request_module("em28xx-v4l");
 	if (dev->has_audio_class)
 		request_module("snd-usb-audio");
 	else if (dev->has_alsa_audio)
 		request_module("em28xx-alsa");
-
 	if (dev->board.has_dvb)
 		request_module("em28xx-dvb");
 	if (dev->board.buttons ||
@@ -2988,23 +2877,18 @@ void em28xx_release_resources(struct em28xx *dev)
 {
 	/*FIXME: I2C IR should be disconnected */
 
-	em28xx_release_analog_resources(dev);
-
 	if (dev->def_i2c_bus)
 		em28xx_i2c_unregister(dev, 1);
 	em28xx_i2c_unregister(dev, 0);
 	if (dev->clk)
 		v4l2_clk_unregister_fixed(dev->clk);
 
-	v4l2_ctrl_handler_free(&dev->ctrl_handler);
-
-	v4l2_device_unregister(&dev->v4l2_dev);
-
 	usb_put_dev(dev->udev);
 
 	/* Mark device as unused */
 	clear_bit(dev->devno, &em28xx_devused);
 };
+EXPORT_SYMBOL_GPL(em28xx_release_resources);
 
 /*
  * em28xx_init_dev()
@@ -3014,7 +2898,6 @@ static int em28xx_init_dev(struct em28xx *dev, struct usb_device *udev,
 			   struct usb_interface *interface,
 			   int minor)
 {
-	struct v4l2_ctrl_handler *hdl = &dev->ctrl_handler;
 	int retval;
 	static const char *default_chip_name = "em28xx";
 	const char *chip_name = default_chip_name;
@@ -3109,6 +2992,16 @@ static int em28xx_init_dev(struct em28xx *dev, struct usb_device *udev,
 		}
 	}
 
+	if (dev->chip_id == CHIP_ID_EM2870 ||
+	    dev->chip_id == CHIP_ID_EM2874 ||
+	    dev->chip_id == CHIP_ID_EM28174 ||
+	    dev->chip_id == CHIP_ID_EM28178) {
+		/* Digital only device - don't load any alsa module */
+		dev->audio_mode.has_audio = false;
+		dev->has_audio_class = false;
+		dev->has_alsa_audio = false;
+	}
+
 	if (chip_name != default_chip_name)
 		printk(KERN_INFO DRIVER_NAME
 		       ": chip ID is %s\n", chip_name);
@@ -3141,15 +3034,6 @@ static int em28xx_init_dev(struct em28xx *dev, struct usb_device *udev,
 		}
 	}
 
-	retval = v4l2_device_register(&interface->dev, &dev->v4l2_dev);
-	if (retval < 0) {
-		em28xx_errdev("Call to v4l2_device_register() failed!\n");
-		return retval;
-	}
-
-	v4l2_ctrl_handler_init(hdl, 8);
-	dev->v4l2_dev.ctrl_handler = hdl;
-
 	rt_mutex_init(&dev->i2c_bus_lock);
 
 	/* register i2c bus 0 */
@@ -3160,7 +3044,7 @@ static int em28xx_init_dev(struct em28xx *dev, struct usb_device *udev,
 	if (retval < 0) {
 		em28xx_errdev("%s: em28xx_i2c_register bus 0 - error [%d]!\n",
 			__func__, retval);
-		goto unregister_dev;
+		return retval;
 	}
 
 	/* register i2c bus 1 */
@@ -3174,88 +3058,17 @@ static int em28xx_init_dev(struct em28xx *dev, struct usb_device *udev,
 		if (retval < 0) {
 			em28xx_errdev("%s: em28xx_i2c_register bus 1 - error [%d]!\n",
 				__func__, retval);
-			goto unregister_dev;
+
+			em28xx_i2c_unregister(dev, 0);
+
+			return retval;
 		}
 	}
-
-	/*
-	 * Default format, used for tvp5150 or saa711x output formats
-	 */
-	dev->vinmode = 0x10;
-	dev->vinctl  = EM28XX_VINCTRL_INTERLACED |
-		       EM28XX_VINCTRL_CCIR656_ENABLE;
 
 	/* Do board specific init and eeprom reading */
 	em28xx_card_setup(dev);
 
-	/* Configure audio */
-	retval = em28xx_audio_setup(dev);
-	if (retval < 0) {
-		em28xx_errdev("%s: Error while setting audio - error [%d]!\n",
-			__func__, retval);
-		goto fail;
-	}
-	if (dev->audio_mode.ac97 != EM28XX_NO_AC97) {
-		v4l2_ctrl_new_std(hdl, &em28xx_ctrl_ops,
-			V4L2_CID_AUDIO_MUTE, 0, 1, 1, 1);
-		v4l2_ctrl_new_std(hdl, &em28xx_ctrl_ops,
-			V4L2_CID_AUDIO_VOLUME, 0, 0x1f, 1, 0x1f);
-	} else {
-		/* install the em28xx notify callback */
-		v4l2_ctrl_notify(v4l2_ctrl_find(hdl, V4L2_CID_AUDIO_MUTE),
-				em28xx_ctrl_notify, dev);
-		v4l2_ctrl_notify(v4l2_ctrl_find(hdl, V4L2_CID_AUDIO_VOLUME),
-				em28xx_ctrl_notify, dev);
-	}
-
-	/* wake i2c devices */
-	em28xx_wake_i2c(dev);
-
-	/* init video dma queues */
-	INIT_LIST_HEAD(&dev->vidq.active);
-	INIT_LIST_HEAD(&dev->vbiq.active);
-
-	if (dev->board.has_msp34xx) {
-		/* Send a reset to other chips via gpio */
-		retval = em28xx_write_reg(dev, EM2820_R08_GPIO_CTRL, 0xf7);
-		if (retval < 0) {
-			em28xx_errdev("%s: em28xx_write_reg - "
-				      "msp34xx(1) failed! error [%d]\n",
-				      __func__, retval);
-			goto fail;
-		}
-		msleep(3);
-
-		retval = em28xx_write_reg(dev, EM2820_R08_GPIO_CTRL, 0xff);
-		if (retval < 0) {
-			em28xx_errdev("%s: em28xx_write_reg - "
-				      "msp34xx(2) failed! error [%d]\n",
-				      __func__, retval);
-			goto fail;
-		}
-		msleep(3);
-	}
-
-	retval = em28xx_register_analog_devices(dev);
-	if (retval < 0) {
-		goto fail;
-	}
-
-	/* Save some power by putting tuner to sleep */
-	v4l2_device_call_all(&dev->v4l2_dev, 0, core, s_power, 0);
-
 	return 0;
-
-fail:
-	if (dev->def_i2c_bus)
-		em28xx_i2c_unregister(dev, 1);
-	em28xx_i2c_unregister(dev, 0);
-	v4l2_ctrl_handler_free(&dev->ctrl_handler);
-
-unregister_dev:
-	v4l2_device_unregister(&dev->v4l2_dev);
-
-	return retval;
 }
 
 /* high bandwidth multiplier, as encoded in highspeed endpoint descriptors */
@@ -3458,6 +3271,8 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 	dev->alt   = -1;
 	dev->is_audio_only = has_audio && !(has_video || has_dvb);
 	dev->has_alsa_audio = has_audio;
+	dev->audio_mode.has_audio = has_audio;
+	dev->has_video = has_video;
 	dev->audio_ifnum = ifnum;
 
 	/* Checks if audio is provided by some interface */
@@ -3495,15 +3310,11 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 	/* save our data pointer in this interface device */
 	usb_set_intfdata(interface, dev);
 
-	/* initialize videobuf2 stuff */
-	em28xx_vb2_setup(dev);
-
 	/* allocate device struct */
 	mutex_init(&dev->lock);
-	mutex_lock(&dev->lock);
 	retval = em28xx_init_dev(dev, udev, interface, nr);
 	if (retval) {
-		goto unlock_and_free;
+		goto err_free;
 	}
 
 	if (usb_xfer_mode < 0) {
@@ -3546,7 +3357,7 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 		if (retval) {
 			printk(DRIVER_NAME
 			       ": Failed to pre-allocate USB transfer buffers for DVB.\n");
-			goto unlock_and_free;
+			goto err_free;
 		}
 	}
 
@@ -3555,12 +3366,8 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 	/* Should be the last thing to do, to avoid newer udev's to
 	   open the device before fully initializing it
 	 */
-	mutex_unlock(&dev->lock);
 
 	return 0;
-
-unlock_and_free:
-	mutex_unlock(&dev->lock);
 
 err_free:
 	kfree(dev->alt_max_pkt_size_isoc);
@@ -3592,9 +3399,7 @@ static void em28xx_usb_disconnect(struct usb_interface *interface)
 	dev->disconnected = 1;
 
 	if (dev->is_audio_only) {
-		mutex_lock(&dev->lock);
 		em28xx_close_extension(dev);
-		mutex_unlock(&dev->lock);
 		return;
 	}
 
@@ -3613,10 +3418,13 @@ static void em28xx_usb_disconnect(struct usb_interface *interface)
 		em28xx_uninit_usb_xfer(dev, EM28XX_ANALOG_MODE);
 		em28xx_uninit_usb_xfer(dev, EM28XX_DIGITAL_MODE);
 	}
+	mutex_unlock(&dev->lock);
 
 	em28xx_close_extension(dev);
+
 	/* NOTE: must be called BEFORE the resources are released */
 
+	mutex_lock(&dev->lock);
 	if (!dev->users)
 		em28xx_release_resources(dev);
 

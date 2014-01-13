@@ -54,9 +54,11 @@
 #include "m88ds3103.h"
 #include "m88ts2022.h"
 
-MODULE_DESCRIPTION("driver for em28xx based DVB cards");
 MODULE_AUTHOR("Mauro Carvalho Chehab <mchehab@infradead.org>");
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION(DRIVER_DESC " - digital TV interface");
+MODULE_VERSION(EM28XX_VERSION);
+
 
 static unsigned int debug;
 module_param(debug, int, 0644);
@@ -274,7 +276,7 @@ static int em28xx_stop_feed(struct dvb_demux_feed *feed)
 static int em28xx_dvb_bus_ctrl(struct dvb_frontend *fe, int acquire)
 {
 	struct em28xx_i2c_bus *i2c_bus = fe->dvb->priv;
-        struct em28xx *dev = i2c_bus->dev;
+	struct em28xx *dev = i2c_bus->dev;
 
 	if (acquire)
 		return em28xx_set_mode(dev, EM28XX_DIGITAL_MODE);
@@ -826,10 +828,15 @@ static int em28xx_attach_xc3028(u8 addr, struct em28xx *dev)
 {
 	struct dvb_frontend *fe;
 	struct xc2028_config cfg;
+	struct xc2028_ctrl ctl;
 
 	memset(&cfg, 0, sizeof(cfg));
 	cfg.i2c_adap  = &dev->i2c_adap[dev->def_i2c_bus];
 	cfg.i2c_addr  = addr;
+
+	memset(&ctl, 0, sizeof(ctl));
+	em28xx_setup_xc3028(dev, &ctl);
+	cfg.ctrl  = &ctl;
 
 	if (!dev->dvb->fe[0]) {
 		em28xx_errdev("/2: dvb frontend not attached. "
@@ -990,11 +997,17 @@ static int em28xx_dvb_init(struct em28xx *dev)
 	int result = 0, mfe_shared = 0;
 	struct em28xx_dvb *dvb;
 
-	if (!dev->board.has_dvb) {
-		/* This device does not support the extension */
-		printk(KERN_INFO "em28xx_dvb: This device does not support the extension\n");
+	if (dev->is_audio_only) {
+		/* Shouldn't initialize IR for this interface */
 		return 0;
 	}
+
+	if (!dev->board.has_dvb) {
+		/* This device does not support the extension */
+		return 0;
+	}
+
+	em28xx_info("Binding DVB extension\n");
 
 	dvb = kzalloc(sizeof(struct em28xx_dvb), GFP_KERNEL);
 
@@ -1407,7 +1420,7 @@ static int em28xx_dvb_init(struct em28xx *dev)
 	/* MFE lock */
 	dvb->adapter.mfe_shared = mfe_shared;
 
-	em28xx_info("Successfully loaded em28xx-dvb\n");
+	em28xx_info("DVB extension successfully initialized\n");
 ret:
 	em28xx_set_mode(dev, EM28XX_SUSPEND);
 	mutex_unlock(&dev->lock);
@@ -1428,6 +1441,11 @@ static inline void prevent_sleep(struct dvb_frontend_ops *ops)
 
 static int em28xx_dvb_fini(struct em28xx *dev)
 {
+	if (dev->is_audio_only) {
+		/* Shouldn't initialize IR for this interface */
+		return 0;
+	}
+
 	if (!dev->board.has_dvb) {
 		/* This device does not support the extension */
 		return 0;

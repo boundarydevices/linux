@@ -359,7 +359,7 @@ static int s5k5baf_fw_parse(struct device *dev, struct s5k5baf_fw **fw,
 	int ret;
 
 	if (count < S5K5BAG_FW_TAG_LEN + 1) {
-		dev_err(dev, "firmware file too short (%d)\n", count);
+		dev_err(dev, "firmware file too short (%zu)\n", count);
 		return -EINVAL;
 	}
 
@@ -379,7 +379,7 @@ static int s5k5baf_fw_parse(struct device *dev, struct s5k5baf_fw **fw,
 
 	f = (struct s5k5baf_fw *)d;
 	if (count < 1 + 2 * f->count) {
-		dev_err(dev, "invalid firmware header (count=%d size=%d)\n",
+		dev_err(dev, "invalid firmware header (count=%d size=%zu)\n",
 			f->count, 2 * (count + S5K5BAG_FW_TAG_LEN));
 		return -EINVAL;
 	}
@@ -548,11 +548,13 @@ static void s5k5baf_synchronize(struct s5k5baf *state, int timeout, u16 addr)
 static u16 *s5k5baf_fw_get_seq(struct s5k5baf *state, u16 seq_id)
 {
 	struct s5k5baf_fw *fw = state->fw;
-	u16 *data = fw->data + 2 * fw->count;
+	u16 *data;
 	int i;
 
 	if (fw == NULL)
 		return NULL;
+
+	data = fw->data + 2 * fw->count;
 
 	for (i = 0; i < fw->count; ++i) {
 		if (fw->seq[i].id == seq_id)
@@ -1350,8 +1352,8 @@ static enum selection_rect s5k5baf_get_sel_rect(u32 pad, u32 target)
 
 static int s5k5baf_is_bound_target(u32 target)
 {
-	return (target == V4L2_SEL_TGT_CROP_BOUNDS ||
-		target == V4L2_SEL_TGT_COMPOSE_BOUNDS);
+	return target == V4L2_SEL_TGT_CROP_BOUNDS ||
+		target == V4L2_SEL_TGT_COMPOSE_BOUNDS;
 }
 
 static int s5k5baf_get_selection(struct v4l2_subdev *sd,

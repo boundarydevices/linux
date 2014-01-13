@@ -557,10 +557,8 @@ static int em28xx_register_snapshot_button(struct em28xx *dev)
 
 	em28xx_info("Registering snapshot button...\n");
 	input_dev = input_allocate_device();
-	if (!input_dev) {
-		em28xx_errdev("input_allocate_device failed\n");
+	if (!input_dev)
 		return -ENOMEM;
-	}
 
 	usb_make_path(dev->udev, dev->snapshot_button_path,
 		      sizeof(dev->snapshot_button_path));
@@ -673,6 +671,11 @@ static int em28xx_ir_init(struct em28xx *dev)
 	u64 rc_type;
 	u16 i2c_rc_dev_addr = 0;
 
+	if (dev->is_audio_only) {
+		/* Shouldn't initialize IR for this interface */
+		return 0;
+	}
+
 	if (dev->board.buttons)
 		em28xx_init_buttons(dev);
 
@@ -691,6 +694,8 @@ static int em28xx_ir_init(struct em28xx *dev)
 				"this card.\n");
 		return 0;
 	}
+
+	em28xx_info("Registering input extension\n");
 
 	ir = kzalloc(sizeof(*ir), GFP_KERNEL);
 	rc = rc_allocate_device();
@@ -785,6 +790,8 @@ static int em28xx_ir_init(struct em28xx *dev)
 	if (err)
 		goto error;
 
+	em28xx_info("Input extension successfully initalized\n");
+
 	return 0;
 
 error:
@@ -797,6 +804,11 @@ error:
 static int em28xx_ir_fini(struct em28xx *dev)
 {
 	struct em28xx_IR *ir = dev->ir;
+
+	if (dev->is_audio_only) {
+		/* Shouldn't initialize IR for this interface */
+		return 0;
+	}
 
 	em28xx_shutdown_buttons(dev);
 
@@ -832,7 +844,8 @@ static void __exit em28xx_rc_unregister(void)
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Mauro Carvalho Chehab <mchehab@redhat.com>");
-MODULE_DESCRIPTION("Em28xx Input driver");
+MODULE_DESCRIPTION(DRIVER_DESC " - input interface");
+MODULE_VERSION(EM28XX_VERSION);
 
 module_init(em28xx_rc_register);
 module_exit(em28xx_rc_unregister);
