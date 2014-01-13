@@ -960,6 +960,7 @@ static const struct sdio_device_id brcmf_sdmmc_ids[] = {
 	{SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_43362)},
 	{SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM,
 		     SDIO_DEVICE_ID_BROADCOM_4335_4339)},
+	{SDIO_DEVICE(0xe0f8, 0x5332)},
 	{ /* end: all zeroes */ },
 };
 MODULE_DEVICE_TABLE(sdio, brcmf_sdmmc_ids);
