@@ -30,7 +30,7 @@
  */
 
 struct rfkill_gpio_platform_data {
-	char			*name;
+	const char		*name;
 	enum rfkill_type	type;
 };
 
