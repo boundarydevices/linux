@@ -67,15 +67,6 @@
 			startup-delay-us = <70000>;
 			enable-active-high;
 		};
-
-		brm_bt_en: brm_bt {
-			compatible = "regulator-fixed";
-			regulator-name = "brm_bt_en";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			gpio = <&gpio6 15 0>;
-			enable-active-high;
-		};
 	};
 
 	gpio-keys {
@@ -176,10 +167,10 @@
 	};
 
 	wlan_bt_rfkill {
-		compatible = "net,rfkill-reg";
+		compatible = "net,rfkill-gpio";
 		name = "wlan_bt_rfkill";
 		type = <2>;     /* bluetooth */
-		vrfkill-supply = <&brm_bt_en>;
+		gpios = <&gpio6 15 0>, <&gpio6 8 0>;
 	};
 
 };
