@@ -106,6 +106,8 @@ next/soc
 			ARM: msm: Only build timer.c if required                                      
 			ARM: msm: Only build clock.c on proc_comm based platforms   
 			ARM: msm_defconfig: Update for multi-platform
+	patch
+		ARM: tegra: fix tegra_powergate_sequence_power_up() inline
     
 next/dt
 	ux500/dt
