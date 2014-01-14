@@ -21,6 +21,8 @@ next/fixes-non-critical
 
 	patch ARM: bcm2835: Fix grammar in help message                                     
 	patch irqchip: sirf: set IRQ_LEVEL status_flags
+	mvebu/fixes
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-fixes-3.13
 
 next/cleanup
 	renesas/cleanup
