@@ -108,6 +108,8 @@ next/soc
 			ARM: msm_defconfig: Update for multi-platform
 	patch
 		ARM: tegra: fix tegra_powergate_sequence_power_up() inline
+	renesas/fixes (based on renesas/soc3)
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-soc-fixes-for-v3.14
     
 next/dt
 	ux500/dt
