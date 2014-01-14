@@ -68,15 +68,6 @@
 			startup-delay-us = <70000>;
 			enable-active-high;
 		};
-
-		wilink_bt_en: tiwi_bt {
-			compatible = "regulator-fixed";
-			regulator-name = "wilink_bt_en";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			gpio = <&gpio6 16 0>;
-			enable-active-high;
-		};
 	};
 
 	gpio-keys {
@@ -255,10 +246,10 @@
 	};
 
 	wlan_bt_rfkill {
-		compatible = "net,rfkill-reg";
+		compatible = "net,rfkill-gpio";
 		name = "wlan_bt_rfkill";
 		type = <2>;     /* bluetooth */
-		vrfkill-supply = <&wilink_bt_en>;
+		gpios = <&gpio6 16 0>;
 	};
 
 #if 0
@@ -315,6 +306,14 @@
 	phy-reset-gpios = <&gpio1 27 0>;
 #endif
 	status = "okay";
+
+	#address-cells = <0>;
+	#size-cells = <1>;
+	phy_int {
+		reg = <0x6>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <28 IRQ_TYPE_LEVEL_LOW>;
+	};
 };
 
 &hdmi_audio {
@@ -447,6 +446,7 @@
 				MX6QDL_PAD_EIM_D19__GPIO3_IO19		0x80000000	/* spi-nor CS */
 				MX6QDL_PAD_EIM_D22__GPIO3_IO22		0x80000000	/* otg power en */
 				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27	0x000b0		/* ethernet phy reset */
+				MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28	0x1b0b0		/* ethernet phy interrupt */
 				MX6QDL_PAD_SD3_DAT5__GPIO7_IO00		0x80000000	/* USDHC3 CD */
 				MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1f0b0		/* Spare */
 				MX6QDL_PAD_NANDF_D6__GPIO2_IO06		0x80000000	/* uSDHC4 CD */
@@ -567,7 +567,8 @@
 	pinctrl-0 = <&pinctrl_usdhc2_2>;
 	bus-width = <4>;
 	non-removable;
-	vmmc-supply = <&wilink_wl_en>;
+	vmmc-supply = <&reg_3p3v>;
+	vqmmc-supply = <&wilink_wl_en>;
 	ocr-limit = <0x80>;     /* 1.65v - 1.95v */
 	power-off-card;
 	keep-power-in-suspend;
