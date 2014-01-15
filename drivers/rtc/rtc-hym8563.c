@@ -87,7 +87,9 @@ struct hym8563 {
 	struct i2c_client	*client;
 	struct rtc_device	*rtc;
 	bool			valid;
+#ifdef CONFIG_COMMON_CLK
 	struct clk_hw		clkout_hw;
+#endif
 };
 
 /*
@@ -290,6 +292,7 @@ static const struct rtc_class_ops hym8563_rtc_ops = {
  * Handling of the clkout
  */
 
+#ifdef CONFIG_COMMON_CLK
 #define clkout_hw_to_hym8563(_hw) container_of(_hw, struct hym8563, clkout_hw)
 
 static int clkout_rates[] = {
@@ -423,6 +426,7 @@ static struct clk *hym8563_clkout_register_clk(struct hym8563 *hym8563)
 
 	return clk;
 }
+#endif
 
 /*
  * The alarm interrupt is implemented as a level-low interrupt in the
@@ -565,8 +569,9 @@ static int hym8563_probe(struct i2c_client *client,
 	if (IS_ERR(hym8563->rtc))
 		return PTR_ERR(hym8563->rtc);
 
-	if (IS_ENABLED(CONFIG_COMMON_CLK))
-		hym8563_clkout_register_clk(hym8563);
+#ifdef CONFIG_COMMON_CLK
+	hym8563_clkout_register_clk(hym8563);
+#endif
 
 	return 0;
 }
