@@ -129,6 +129,9 @@ struct msdos_inode_info {
 	struct hlist_node i_dir_hash;	/* hash by i_logstart */
 	struct rw_semaphore truncate_lock; /* protect bmap against truncate */
 	struct inode vfs_inode;
+
+	/* for getting block number beyond file size in case of fallocate */
+	atomic_t beyond_isize;
 };
 
 struct fat_slot_info {

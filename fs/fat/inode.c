@@ -256,7 +256,10 @@ static sector_t _fat_bmap(struct address_space *mapping, sector_t block)
 
 	/* fat_get_cluster() assumes the requested blocknr isn't truncated. */
 	down_read(&MSDOS_I(mapping->host)->truncate_lock);
+	/* To get block number beyond file size in fallocated region */
+	atomic_set(&MSDOS_I(mapping->host)->beyond_isize, 1);
 	blocknr = generic_block_bmap(mapping, block, fat_get_block);
+	atomic_set(&MSDOS_I(mapping->host)->beyond_isize, 0);
 	up_read(&MSDOS_I(mapping->host)->truncate_lock);
 
 	return blocknr;
