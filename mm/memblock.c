@@ -788,7 +788,7 @@ void __init_memblock __next_free_mem_range(u64 *idx, int nid,
 	bool check_node = (nid != NUMA_NO_NODE) && (nid != MAX_NUMNODES);
 
 	if (nid == MAX_NUMNODES)
-		pr_warn_once("%s: Usage of MAX_NUMNODES is depricated. Use NUMA_NO_NODE instead\n",
+		pr_warn_once("%s: Usage of MAX_NUMNODES is deprecated. Use NUMA_NO_NODE instead\n",
 			     __func__);
 
 	for ( ; mi < mem->cnt; mi++) {
@@ -861,7 +861,7 @@ void __init_memblock __next_free_mem_range_rev(u64 *idx, int nid,
 	bool check_node = (nid != NUMA_NO_NODE) && (nid != MAX_NUMNODES);
 
 	if (nid == MAX_NUMNODES)
-		pr_warn_once("%s: Usage of MAX_NUMNODES is depricated. Use NUMA_NO_NODE instead\n",
+		pr_warn_once("%s: Usage of MAX_NUMNODES is deprecated. Use NUMA_NO_NODE instead\n",
 			     __func__);
 
 	if (*idx == (u64)ULLONG_MAX) {
@@ -1068,7 +1068,7 @@ static void * __init memblock_virt_alloc_internal(
 	void *ptr;
 
 	if (nid == MAX_NUMNODES)
-		pr_warn("%s: usage of MAX_NUMNODES is depricated. Use NUMA_NO_NODE\n",
+		pr_warn("%s: usage of MAX_NUMNODES is deprecated. Use NUMA_NO_NODE\n",
 			__func__);
 
 	if (WARN_ON_ONCE(slab_is_available()))
