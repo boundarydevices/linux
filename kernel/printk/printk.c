@@ -1600,7 +1600,10 @@ asmlinkage int vprintk_emit(int facility, int level,
 			if (!(lflags & LOG_PREFIX))
 				stored = cont_add(facility, level, text, text_len);
 			cont_flush(LOG_NEWLINE);
-		}
+		/* Flush conflicting buffer. An earlier newline was missing
+		* and current print is from different task */
+		} else if (cont.len && cont.owner != current)
+			cont_flush(LOG_NEWLINE);
 
 		if (!stored)
 			log_store(facility, level, lflags, 0,
