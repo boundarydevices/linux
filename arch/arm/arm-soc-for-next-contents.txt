@@ -182,6 +182,16 @@ next/dt
 		depends on depends/pinctrl-for-next
 	samsung/dt3
 		 git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-dt-3
+	renesas/dt-fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-fixes-for-v3.14
+	ux500/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-devicetree-v3.14-2
+	sunxi/dt-2
+		https://github.com/mripard/linux.git tags/sunxi-dt-for-3.14-2
+	socfpga/dt
+		git://git.rocketboards.org/linux-socfpga-next.git tags/socfpga-dt-for-3.14
+	sirf/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/baohua/linux.git tags/sirf-dts-for-3.14
 
 next/boards
 	renesas/defconfig
