@@ -211,10 +211,11 @@ static int ____call_usermodehelper(void *data)
 	spin_unlock_irq(&current->sighand->siglock);
 
 	/*
-	 * Kthreadd can be restricted to a set of processors if the user wants to
-	 * protect other processors from OS latencies. If that has happened then
-	 * we do not want to disturb the other processors here either so we start
-	 * the usermode helper threads only on the processors allowed for kthreadd.
+	 * Kthreadd can be restricted to a set of processors if the user wants
+	 * to protect other processors from OS latencies. If that has happened
+	 * then we do not want to disturb the other processors here either so we
+	 * start the usermode helper threads only on the processors allowed for
+	 * kthreadd.
 	 */
 	set_kthreadd_affinity();
 
