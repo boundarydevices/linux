@@ -599,7 +599,7 @@ SYSCALL_DEFINE3(semget, key_t, key, int, nsems, int, semflg)
 static int perform_atomic_semop(struct sem_array *sma, struct sembuf *sops,
 			     int nsops, struct sem_undo *un, int pid)
 {
-	int result, undo, sem_op;
+	int result, sem_op;
 	struct sembuf *sop;
 	struct sem * curr;
 
@@ -618,7 +618,7 @@ static int perform_atomic_semop(struct sem_array *sma, struct sembuf *sops,
 			goto out_of_range;
 
 		if (sop->sem_flg & SEM_UNDO) {
-			undo = un->semadj[sop->sem_num] - sem_op;
+			int undo = un->semadj[sop->sem_num] - sem_op;
 			/* Exceeding the undo range is an error. */
 			if (undo < (-SEMAEM - 1) || undo > SEMAEM)
 				goto out_of_range;
