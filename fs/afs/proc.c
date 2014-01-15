@@ -147,11 +147,11 @@ int afs_proc_init(void)
 	if (!proc_afs)
 		goto error_dir;
 
-	p = proc_create("cells", 0, proc_afs, &afs_proc_cells_fops);
+	p = proc_create("cells", S_IFREG | S_IRUGO | S_IWUSR, proc_afs, &afs_proc_cells_fops);
 	if (!p)
 		goto error_cells;
 
-	p = proc_create("rootcell", 0, proc_afs, &afs_proc_rootcell_fops);
+	p = proc_create("rootcell", S_IFREG | S_IRUGO | S_IWUSR, proc_afs, &afs_proc_rootcell_fops);
 	if (!p)
 		goto error_rootcell;
 
