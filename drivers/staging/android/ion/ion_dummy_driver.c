@@ -17,6 +17,7 @@
 #include <linux/err.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/init.h>
 #include <linux/bootmem.h>
 #include <linux/memblock.h>
 #include <linux/sizes.h>
@@ -128,6 +129,7 @@ err:
 	}
 	return err;
 }
+device_initcall(ion_dummy_init);
 
 static void __exit ion_dummy_exit(void)
 {
@@ -152,7 +154,4 @@ static void __exit ion_dummy_exit(void)
 
 	return;
 }
-
-module_init(ion_dummy_init);
-module_exit(ion_dummy_exit);
-
+__exitcall(ion_dummy_exit);
