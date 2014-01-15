@@ -183,7 +183,7 @@ void __init ipc_init_proc_interface(const char *path, const char *header,
  * ipc_findkey	- find a key in an ipc identifier set
  * @ids: ipc identifier set
  * @key: key to find
- *	
+ *
  * Returns the locked pointer to the ipc structure if found or NULL
  * otherwise. If key is found ipc points to the owning ipc structure
  *
@@ -375,47 +375,53 @@ static int ipc_check_perms(struct ipc_namespace *ns,
  * On success, the ipc id is returned.
  */
 static int ipcget_public(struct ipc_namespace *ns, struct ipc_ids *ids,
-		struct ipc_ops *ops, struct ipc_params *params)
+			 struct ipc_ops *ops, struct ipc_params *params)
 {
 	struct kern_ipc_perm *ipcp;
 	int flg = params->flg;
-	int err;
+	int err = 0;
 
-	/*
-	 * Take the lock as a writer since we are potentially going to add
-	 * a new entry + read locks are not "upgradable"
-	 */
 	down_write(&ids->rwsem);
 	ipcp = ipc_findkey(ids, params->key);
-	if (ipcp == NULL) {
+
+	if (!ipcp) {
 		/* key not used */
 		if (!(flg & IPC_CREAT))
 			err = -ENOENT;
-		else
+		else /* create new ipc object */
 			err = ops->getnew(ns, params);
-	} else {
-		/* ipc object has been locked by ipc_findkey() */
 
-		if (flg & IPC_CREAT && flg & IPC_EXCL)
-			err = -EEXIST;
-		else {
-			err = 0;
-			if (ops->more_checks)
-				err = ops->more_checks(ipcp, params);
-			if (!err)
-				/*
-				 * ipc_check_perms returns the IPC id on
-				 * success
-				 */
-				err = ipc_check_perms(ns, ipcp, ops, params);
-		}
-		ipc_unlock(ipcp);
+		goto done_write;
 	}
-	up_write(&ids->rwsem);
 
+	if ((flg & IPC_CREAT) && (flg & IPC_EXCL)) {
+		/* ipc object was locked by successful ipc_findkey() lookup */
+		ipc_unlock(ipcp);
+		err = -ENOENT;
+
+		goto done_write;
+	}
+
+	/*
+	 * The key was found, so we will just perform routinary checks on
+	 * ipc the object. Share the lock among other readers.
+	 */
+	downgrade_write(&ids->rwsem);
+
+	if (ops->more_checks)
+		err = ops->more_checks(ipcp, params);
+	if (!err)
+		/* returns the IPC id on success */
+		err = ipc_check_perms(ns, ipcp, ops, params);
+
+	ipc_unlock(ipcp);
+
+	up_read(&ids->rwsem);
+	return err;
+done_write:
+	up_write(&ids->rwsem);
 	return err;
 }
-
 
 /**
  * ipc_rmid - remove an ipc identifier
