@@ -6532,9 +6532,9 @@ void dump_page_badflags(struct page *page, char *reason, unsigned long badflags)
 		page->mapping, page->index);
 	dump_page_flags(page->flags);
 	if (reason)
-		printk(KERN_ALERT "page dumped because: %s\n", reason);
+		pr_alert("page dumped because: %s\n", reason);
 	if (page->flags & badflags) {
-		printk(KERN_ALERT "bad because of flags:\n");
+		pr_alert("bad because of flags:\n");
 		dump_page_flags(page->flags & badflags);
 	}
 	mem_cgroup_print_bad_page(page);
