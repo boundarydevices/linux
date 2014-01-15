@@ -37,16 +37,19 @@ static bool should_merge(struct fsnotify_event *old_fsn,
 static struct fsnotify_event *fanotify_merge(struct list_head *list,
 					     struct fsnotify_event *event)
 {
-	struct fsnotify_event *test_event = NULL;
+	struct fsnotify_event *test_event;
+	bool do_merge = false;
 
 	pr_debug("%s: list=%p event=%p\n", __func__, list, event);
 
 	list_for_each_entry_reverse(test_event, list, list) {
-		if (should_merge(test_event, event))
+		if (should_merge(test_event, event)) {
+			do_merge = true;
 			break;
+		}
 	}
 
-	if (!test_event)
+	if (!do_merge)
 		return NULL;
 
 	test_event->mask |= event->mask;
