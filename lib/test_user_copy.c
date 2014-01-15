@@ -38,6 +38,7 @@ static int __init test_user_copy_init(void)
 	int ret = 0;
 	char *kmem;
 	char __user *usermem;
+	char *bad_usermem;
 	unsigned long user_addr;
 	unsigned long value = 0x5A;
 
@@ -55,6 +56,7 @@ static int __init test_user_copy_init(void)
 	}
 
 	usermem = (char __user *)user_addr;
+	bad_usermem = (char *)user_addr;
 
 	/* Legitimate usage: none of these should fail. */
 	ret |= test(copy_from_user(kmem, usermem, PAGE_SIZE),
@@ -70,13 +72,13 @@ static int __init test_user_copy_init(void)
 	ret |= test(!copy_from_user(kmem, (char __user *)(kmem + PAGE_SIZE),
 				    PAGE_SIZE),
 		    "illegal all-kernel copy_from_user passed");
-	ret |= test(!copy_from_user((char *)usermem, (char __user *)kmem,
+	ret |= test(!copy_from_user(bad_usermem, (char __user *)kmem,
 				    PAGE_SIZE),
 		    "illegal reversed copy_from_user passed");
 	ret |= test(!copy_to_user((char __user *)kmem, kmem + PAGE_SIZE,
 				  PAGE_SIZE),
 		    "illegal all-kernel copy_to_user passed");
-	ret |= test(!copy_to_user((char __user *)kmem, (char *)usermem,
+	ret |= test(!copy_to_user((char __user *)kmem, bad_usermem,
 				  PAGE_SIZE),
 		    "illegal reversed copy_to_user passed");
 	ret |= test(!get_user(value, (unsigned long __user *)kmem),
