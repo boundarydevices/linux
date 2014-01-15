@@ -647,7 +647,7 @@ static inline int memcg_alloc_cache_params(struct mem_cgroup *memcg,
 	return 0;
 }
 
-static inline void memcg_free_cache_params(struct kmem_cache *s);
+static inline void memcg_free_cache_params(struct kmem_cache *s)
 {
 }
 
