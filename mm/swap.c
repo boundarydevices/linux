@@ -99,7 +99,7 @@ static void put_compound_page(struct page *page)
 		 * from under us. And if "page" is part of a THP page
 		 * under splitting, if the head page pointed by the
 		 * THP tail isn't a THP head anymore, we'll find
-		 * PageTail clear after smp_rmb() and we'll threat it
+		 * PageTail clear after smp_rmb() and we'll treat it
 		 * as a single page.
 		 */
 		if (PageSlab(page_head) || PageHeadHuge(page_head)) {
