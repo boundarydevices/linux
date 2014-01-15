@@ -935,10 +935,6 @@ static int get_protocol_version(struct ocfs2_cluster_connection *conn)
 			goto out;
 		lvb_to_version(lc->oc_lvb, &pv);
 
-		if (pv.pv_minor < 0) {
-			ret = -ERANGE;
-			goto out;
-		}
 		if ((pv.pv_major != running_proto.pv_major) ||
 				(pv.pv_minor > running_proto.pv_minor)) {
 			ret = -EINVAL;
