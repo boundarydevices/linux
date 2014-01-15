@@ -663,9 +663,6 @@ void show_mem(unsigned int filter)
 
 			total += zone->present_pages;
 			reserved = zone->present_pages - zone->managed_pages;
-
-			if (is_highmem_idx(zoneid))
-				highmem += zone->present_pages;
 		}
 		pgdat_resize_unlock(pgdat, &flags);
 	}
