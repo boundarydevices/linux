@@ -80,8 +80,14 @@ static inline bool movable_node_is_enabled(void)
 	return movable_node_enabled;
 }
 #else
-static inline bool memblock_is_hotpluggable(struct memblock_region *m){ return false; }
-static inline bool movable_node_is_enabled(void) { return false; }
+static inline bool memblock_is_hotpluggable(struct memblock_region *m)
+{
+	return false;
+}
+static inline bool movable_node_is_enabled(void)
+{
+	return false;
+}
 #endif
 
 #ifdef CONFIG_HAVE_MEMBLOCK_NODE_MAP
