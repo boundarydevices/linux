@@ -1101,7 +1101,7 @@ void __init setup_arch(char **cmdline_p)
 
 	setup_real_mode();
 
-	memblock_set_current_limit(get_max_mapped());
+	memblock_set_current_limit(get_max_low_mapped());
 	dma_contiguous_reserve(0);
 
 	/*
