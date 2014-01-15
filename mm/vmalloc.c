@@ -225,7 +225,7 @@ int is_vmalloc_or_module_addr(const void *x)
 unsigned long vmalloc_to_pfn(const void *vmalloc_addr)
 {
 	unsigned long addr = (unsigned long) vmalloc_addr;
-	unsigned long pfn;
+	unsigned long pfn = 0;
 	pgd_t *pgd = pgd_offset_k(addr);
 
 	/*
@@ -244,7 +244,7 @@ unsigned long vmalloc_to_pfn(const void *vmalloc_addr)
 				ptep = pte_offset_map(pmd, addr);
 				pte = *ptep;
 				if (pte_present(pte))
-					pfn = pte_page(pte);
+					pfn = pte_pfn(pte);
 				pte_unmap(ptep);
 			}
 		}
