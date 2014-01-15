@@ -142,7 +142,7 @@ void *kthread_data(struct task_struct *task)
  */
 void set_kthreadd_affinity(void)
 {
-	set_cpus_allowed(current, kthreadd_task->cpus_allowed);
+	set_cpus_allowed_ptr(current, &kthreadd_task->cpus_allowed);
 }
 
 /**
