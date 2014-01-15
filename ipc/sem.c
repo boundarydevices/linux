@@ -599,7 +599,7 @@ SYSCALL_DEFINE3(semget, key_t, key, int, nsems, int, semflg)
 static int perform_atomic_semop(struct sem_array *sma, struct sembuf *sops,
 			     int nsops, struct sem_undo *un, int pid)
 {
-	int result, sem_op;
+	int result, undo, sem_op;
 	struct sembuf *sop;
 	struct sem * curr;
 
@@ -607,7 +607,7 @@ static int perform_atomic_semop(struct sem_array *sma, struct sembuf *sops,
 		curr = sma->sem_base + sop->sem_num;
 		sem_op = sop->sem_op;
 		result = curr->semval;
-  
+
 		if (!sem_op && result)
 			goto would_block;
 
@@ -616,25 +616,24 @@ static int perform_atomic_semop(struct sem_array *sma, struct sembuf *sops,
 			goto would_block;
 		if (result > SEMVMX)
 			goto out_of_range;
+
 		if (sop->sem_flg & SEM_UNDO) {
-			int undo = un->semadj[sop->sem_num] - sem_op;
-			/*
-	 		 *	Exceeding the undo range is an error.
-			 */
+			undo = un->semadj[sop->sem_num] - sem_op;
+			/* Exceeding the undo range is an error. */
 			if (undo < (-SEMAEM - 1) || undo > SEMAEM)
 				goto out_of_range;
+			un->semadj[sop->sem_num] = undo;
 		}
+
 		curr->semval = result;
 	}
 
 	sop--;
 	while (sop >= sops) {
 		sma->sem_base[sop->sem_num].sempid = pid;
-		if (sop->sem_flg & SEM_UNDO)
-			un->semadj[sop->sem_num] -= sop->sem_op;
 		sop--;
 	}
-	
+
 	return 0;
 
 out_of_range:
@@ -650,7 +649,10 @@ would_block:
 undo:
 	sop--;
 	while (sop >= sops) {
-		sma->sem_base[sop->sem_num].semval -= sop->sem_op;
+		sem_op = sop->sem_op;
+		sma->sem_base[sop->sem_num].semval -= sem_op;
+		if (sop->sem_flg & SEM_UNDO)
+			un->semadj[sop->sem_num] += sem_op;
 		sop--;
 	}
 
