@@ -258,7 +258,7 @@ static void expunge_all(struct msg_queue *msq, int res)
 		/*
 		 * Ensure that the wakeup is visible before setting r_msg as
 		 * the receiving end depends on it: either spinning on a nil,
-		 * or dealing with -EAGAIN cases. See lockless reveice part 1
+		 * or dealing with -EAGAIN cases. See lockless receive part 1
 		 * and 2 in do_msgrcv().
 		 */
 		smp_mb();
