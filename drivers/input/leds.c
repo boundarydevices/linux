@@ -211,9 +211,11 @@ err:
 	return error;
 }
 
-/* Disconnected input device. Clean it, and deregister now-useless VT LEDs
- * and triggers.  */
-extern void input_led_disconnect(struct input_dev *dev)
+/*
+ * Disconnected input device. Clean it, and deregister now-useless VT LEDs and
+ * triggers.
+ */
+void input_led_disconnect(struct input_dev *dev)
 {
 	int i;
 	struct led_classdev *leds = dev->leds;
