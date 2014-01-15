@@ -1071,6 +1071,11 @@ static void * __init memblock_virt_alloc_internal(
 		pr_warn("%s: usage of MAX_NUMNODES is deprecated. Use NUMA_NO_NODE\n",
 			__func__);
 
+	/*
+	 * Detect any accidental use of these APIs after slab is ready, as at
+	 * this moment memblock may be deinitialized already and its
+	 * internal data may be destroyed (after execution of free_all_bootmem)
+	 */
 	if (WARN_ON_ONCE(slab_is_available()))
 		return kzalloc_node(size, GFP_NOWAIT, nid);
 
@@ -1107,7 +1112,9 @@ done:
 
 	/*
 	 * The min_count is set to 0 so that bootmem allocated blocks
-	 * are never reported as leaks.
+	 * are never reported as leaks. This is because many of these blocks
+	 * are only referred via the physical address which is not
+	 * looked up by kmemleak.
 	 */
 	kmemleak_alloc(ptr, size, 0, 0);
 
