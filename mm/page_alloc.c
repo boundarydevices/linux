@@ -3968,7 +3968,7 @@ static void setup_zone_migrate_reserve(struct zone *zone)
 			}
 		} else if (!old_reserve) {
 			/*
-			 * When boot time, we don't need scan whole zone
+			 * At boot time we don't need to scan the whole zone
 			 * for turning off MIGRATE_RESERVE.
 			 */
 			break;
