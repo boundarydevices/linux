@@ -5189,7 +5189,7 @@ static int memcg_update_kmem_limit(struct mem_cgroup *memcg,
 
 static int memcg_propagate_kmem(struct mem_cgroup *memcg)
 {
-	int ret;
+	int ret = 0;
 	struct mem_cgroup *parent = parent_mem_cgroup(memcg);
 
 	if (!parent)
