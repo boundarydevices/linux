@@ -728,7 +728,8 @@ int __init_memblock memblock_clear_hotplug(phys_addr_t base, phys_addr_t size)
 		return ret;
 
 	for (i = start_rgn; i < end_rgn; i++)
-		memblock_clear_region_flags(&type->regions[i], MEMBLOCK_HOTPLUG);
+		memblock_clear_region_flags(&type->regions[i],
+					    MEMBLOCK_HOTPLUG);
 
 	memblock_merge_regions(type);
 	return 0;
