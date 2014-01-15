@@ -657,7 +657,7 @@ static inline int pipelined_send(struct msg_queue *msq, struct msg_msg *msg)
 				/*
 				 * Ensure that the wakeup is visible before
 				 * setting r_msg, as the receiving end depends
-				 * on it. See lockless reveice part 1 and 2 in
+				 * on it. See lockless receive part 1 and 2 in
 				 * do_msgrcv().
 				 */
 				smp_mb();
