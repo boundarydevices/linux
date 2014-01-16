@@ -85,4 +85,8 @@ static struct platform_driver zynq_cpuidle_driver = {
 	.probe = zynq_cpuidle_probe,
 };
 
-module_platform_driver(zynq_cpuidle_driver);
+static int __init zynq_cpuidle_driver_init(void)
+{
+	return platform_driver_register(&zynq_cpuidle_driver);
+}
+device_initcall(zynq_cpuidle_driver_init);
