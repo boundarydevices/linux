@@ -11,6 +11,7 @@
 
 /dts-v1/;
 
+#include <dt-bindings/gpio/gpio.h>
 #include "imx6q.dtsi"
 
 / {
@@ -56,6 +57,31 @@
 			regulator-max-microvolt = <3300000>;
 			gpio = <&gpio3 31 0>;
 			enable-active-high;
+		};
+	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		led-blue {
+			label = "blue";
+			gpios = <&stmpe_gpio 8 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+		};
+
+		led-green {
+			label = "green";
+			gpios = <&stmpe_gpio 9 GPIO_ACTIVE_HIGH>;
+		};
+
+		led-pink {
+			label = "pink";
+			gpios = <&stmpe_gpio 10 GPIO_ACTIVE_HIGH>;
+		};
+
+		led-red {
+			label = "red";
+			gpios = <&stmpe_gpio 11 GPIO_ACTIVE_HIGH>;
 		};
 	};
 };
@@ -186,6 +212,7 @@
 		interrupt-parent = <&gpio3>;
 
 		stmpe_gpio: stmpe_gpio {
+			#gpio-cells = <2>;
 			compatible = "st,stmpe-gpio";
 		};
 	};
