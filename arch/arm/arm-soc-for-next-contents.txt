@@ -265,6 +265,8 @@ next/drivers
 			tty: serial: Limit msm_serial_hs driver to platforms that use it              
 			mmc: msm_sdcc: Limit driver to platforms that use it                          
 			usb: phy: msm: Move mach dependent code to platform data  
+	davinci/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci.git tags/davinci-for-v3.14/watchdog
 
 Patches only in for-next, not in any topic branch due to conflicts:
 
