@@ -141,6 +141,10 @@
 		pinctrl_usdhc3: usdhc3grp {
 			fsl,pins = <MX6QDL_USDHC3_PINGRP_D4>;
 		};
+
+		pinctrl_usdhc4: usdhc4grp {
+			fsl,pins = <MX6QDL_USDHC4_PINGRP_D8>;
+		};
 	};
 };
 
@@ -174,5 +178,14 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc3>;
 	vmmc-supply = <&reg_3p3v>;
+	status = "okay";
+};
+
+&usdhc4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usdhc4>;
+	vmmc-supply = <&reg_3p3v>;
+	non-removable;
+	bus-width = <8>;
 	status = "okay";
 };
