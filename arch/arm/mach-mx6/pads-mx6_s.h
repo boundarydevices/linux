@@ -263,6 +263,9 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	NEW_PAD_CTRL(MX6PAD(NANDF_D7__GPIO_2_7),
                      WEAK_PULLUP
 		     |PAD_CTL_DSE_40ohm),	/* parallel with ONOFF */
+	NEW_PAD_CTRL(MX6PAD(SD3_DAT4__GPIO_7_1),
+                     WEAK_PULLDOWN
+		     |PAD_CTL_DSE_40ohm),	/* Power-down request (active high) */
 	0
 };
 

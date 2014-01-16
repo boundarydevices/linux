@@ -90,6 +90,7 @@
 #define GP_CSI0_PWN		IMX_GPIO_NR(1, 6)
 #define GP_ENET_PHY_INT	IMX_GPIO_NR(1, 28)
 #define GP_KEY_ONOFF		IMX_GPIO_NR(2, 7)
+#define GP_POWERDOWN		IMX_GPIO_NR(7, 1)
 
 #define N6_WL1271_WL_IRQ		IMX_GPIO_NR(6, 14)
 #define N6_WL1271_WL_EN			IMX_GPIO_NR(6, 15)
@@ -101,6 +102,9 @@
 
 #define WEAK_PULLUP	(PAD_CTL_HYS | PAD_CTL_PKE \
 			 | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP)
+
+#define WEAK_PULLDOWN	(PAD_CTL_HYS | PAD_CTL_PKE \
+			 | PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN)
 
 #define N6_IRQ_PADCFG		(PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 #define N6_IRQ_TEST_PADCFG	(PAD_CTL_PKE | N6_IRQ_PADCFG)
@@ -154,6 +158,7 @@ struct gpio gpios[] __initdata = {
 	{.label = "GPO_1",		.gpio = IMX_GPIO_NR(2,16),	.flags = 0},
 	{.label = "BGPI_2",		.gpio = IMX_GPIO_NR(6,6),	.flags = GPIOF_DIR_IN},
 	{.label = "BGPI_1",		.gpio = IMX_GPIO_NR(5,4),	.flags = GPIOF_DIR_IN},
+	{.label = "POWERDOWN",		.gpio = GP_POWERDOWN,		.flags = 0},
 };
 
 enum sd_pad_mode {
@@ -1038,7 +1043,7 @@ static void __init add_device_buttons(void)
 static void poweroff(void)
 {
 	while (1) {
-                gpio_direction_output(GP_KEY_ONOFF, 0);
+                gpio_direction_output(GP_POWERDOWN, 1);
 	}
 }
 
@@ -1058,7 +1063,7 @@ static void __init board_init(void)
 	audio_data.ext_port = 3;
 	sd3_data.wp_gpio = -1 ;
 	IOMUX_SETUP(nitrogen6x_pads);
-	printk(KERN_ERR "Board type Nitrogen6S\n");
+	printk(KERN_ERR "Board type Nitrogen6-S\n");
 
 #ifdef CONFIG_FEC_1588
 	/* Set GPIO_16 input for IEEE-1588 ts_clk and RMII reference clock
@@ -1200,6 +1205,7 @@ static void __init board_init(void)
 
 	imx6q_add_pcie(&pcie_data);
 
+	gpio_set_value(GP_POWERDOWN, 0);
 	gpio_request_array(gpios,ARRAY_SIZE(gpios));
 	for (i=0; i < ARRAY_SIZE(gpios);i++) {
 		int gpio = gpios[i].gpio;
