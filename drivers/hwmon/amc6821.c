@@ -24,7 +24,6 @@
 
 #include <linux/kernel.h>	/* Needed for KERN_INFO */
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/jiffies.h>
 #include <linux/i2c.h>

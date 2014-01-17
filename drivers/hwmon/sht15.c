@@ -20,7 +20,6 @@
 #include <linux/irq.h>
 #include <linux/gpio.h>
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/hwmon.h>
 #include <linux/hwmon-sysfs.h>
 #include <linux/mutex.h>

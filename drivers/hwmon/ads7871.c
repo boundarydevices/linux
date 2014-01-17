@@ -61,7 +61,6 @@
 #define OSC_RBG_BM	(1 << 0)
 
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/spi/spi.h>
 #include <linux/hwmon.h>
 #include <linux/hwmon-sysfs.h>

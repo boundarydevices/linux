@@ -45,7 +45,6 @@
 #include <linux/hwmon-sysfs.h>
 #include <linux/hwmon-vid.h>
 #include <linux/err.h>
-#include <linux/init.h>
 #include <linux/jiffies.h>
 #include <linux/mutex.h>
 #include "lm75.h"
