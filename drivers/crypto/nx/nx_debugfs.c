@@ -24,7 +24,6 @@
 #include <linux/string.h>
 #include <linux/debugfs.h>
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/crypto.h>
 #include <crypto/hash.h>
 #include <asm/vio.h>
