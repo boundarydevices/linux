@@ -28,7 +28,6 @@
 #include <linux/kthread.h>
 #include <linux/string.h>
 #include <linux/mm.h>
-#include <linux/init.h>
 #include <linux/completion.h>
 #include <linux/transport_class.h>
 #include <linux/platform_device.h>

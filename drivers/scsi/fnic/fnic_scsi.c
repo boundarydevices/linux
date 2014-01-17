@@ -17,7 +17,6 @@
  */
 #include <linux/mempool.h>
 #include <linux/errno.h>
-#include <linux/init.h>
 #include <linux/workqueue.h>
 #include <linux/pci.h>
 #include <linux/scatterlist.h>
