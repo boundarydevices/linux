@@ -16,7 +16,6 @@
 #include <linux/clk.h>
 #include <linux/cpufreq.h>
 #include <linux/err.h>
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
 #include <linux/slab.h>
