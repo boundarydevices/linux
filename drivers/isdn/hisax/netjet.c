@@ -14,7 +14,6 @@
  *
  */
 
-#include <linux/init.h>
 #include "hisax.h"
 #include "isac.h"
 #include "hscx.h"

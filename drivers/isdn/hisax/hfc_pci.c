@@ -15,7 +15,6 @@
  *
  */
 
-#include <linux/init.h>
 #include "hisax.h"
 #include "hfc_pci.h"
 #include "isdnl1.h"

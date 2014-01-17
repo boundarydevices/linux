@@ -14,7 +14,6 @@
  *
  */
 
-#include <linux/init.h>
 #include "hisax.h"
 #include "icc.h"
 // #include "arcofi.h"

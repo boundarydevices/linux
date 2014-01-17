@@ -10,7 +10,6 @@
  *
  */
 
-#include <linux/init.h>
 #include <linux/gfp.h>
 #include <linux/usb.h>
 #include <linux/netdevice.h>

@@ -10,7 +10,6 @@
  *
  */
 
-#include <linux/init.h>
 #include <linux/usb.h>
 #include <linux/slab.h>
 #include "st5481.h"
