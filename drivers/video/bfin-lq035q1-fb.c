@@ -15,7 +15,6 @@
 #include <linux/fb.h>
 #include <linux/gpio.h>
 #include <linux/slab.h>
-#include <linux/init.h>
 #include <linux/types.h>
 #include <linux/interrupt.h>
 #include <linux/device.h>

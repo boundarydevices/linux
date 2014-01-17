@@ -5,7 +5,6 @@
  *     Loosely based upon the vesafb driver.
  *
  */
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/skbuff.h>

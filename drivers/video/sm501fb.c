@@ -20,7 +20,6 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/fb.h>
-#include <linux/init.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-mapping.h>
 #include <linux/interrupt.h>

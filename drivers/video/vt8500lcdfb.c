@@ -19,7 +19,6 @@
 #include <linux/dma-mapping.h>
 #include <linux/errno.h>
 #include <linux/fb.h>
-#include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/kernel.h>

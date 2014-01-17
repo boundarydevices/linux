@@ -18,7 +18,6 @@
 #include <linux/device.h>
 #include <linux/errno.h>
 #include <linux/fb.h>
-#include <linux/init.h>
 #include <linux/ioport.h>
 #include <linux/kernel.h>
 #include <linux/mm.h>
