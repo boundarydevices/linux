@@ -7,7 +7,6 @@
 #define FBIO_CURSOR            _IOWR('F', 0x08, struct fb_cursor_user)
 
 #include <linux/fs.h>
-#include <linux/init.h>
 #include <linux/workqueue.h>
 #include <linux/notifier.h>
 #include <linux/list.h>

@@ -6,7 +6,6 @@
  *  Copyright (C) 1994-2002  Linus Torvalds & authors
  */
 
-#include <linux/init.h>
 #include <linux/ioport.h>
 #include <linux/ata.h>
 #include <linux/blkdev.h>

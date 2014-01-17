@@ -22,7 +22,6 @@ typedef enum {
 typedef int (*kdb_func_t)(int, const char **);
 
 #ifdef	CONFIG_KGDB_KDB
-#include <linux/init.h>
 #include <linux/sched.h>
 #include <linux/atomic.h>
 

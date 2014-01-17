@@ -17,7 +17,6 @@
 
 #include <linux/device.h>
 #include <linux/errno.h>
-#include <linux/init.h>
 #include <linux/list.h>
 #include <linux/slab.h>
 #include <linux/scatterlist.h>

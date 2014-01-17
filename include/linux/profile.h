@@ -2,7 +2,6 @@
 #define _LINUX_PROFILE_H
 
 #include <linux/kernel.h>
-#include <linux/init.h>
 #include <linux/cpumask.h>
 #include <linux/cache.h>
 
