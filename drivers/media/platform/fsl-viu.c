@@ -18,7 +18,6 @@
 #include <linux/clk.h>
 #include <linux/kernel.h>
 #include <linux/i2c.h>
-#include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/of_address.h>

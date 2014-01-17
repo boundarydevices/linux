@@ -14,7 +14,6 @@
  * the Free Software Foundation; either version 2
  */
 
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/mm.h>
 #include <linux/pagemap.h>

@@ -28,7 +28,6 @@
  * GNU General Public License ("GPL").
  */
 
-#include <linux/init.h>
 #include <linux/list.h>
 #include <linux/module.h>
 #include <linux/slab.h>

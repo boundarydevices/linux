@@ -22,7 +22,6 @@
 #ifndef _PCB_CONFIG_H_
 #define _PCB_CONFIG_H_
 
-#include <linux/init.h>
 #include <linux/module.h>
 
 /***************************************************************************

@@ -10,7 +10,6 @@
  * (at your option) any later version.
  */
 
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/io.h>
 #include <linux/delay.h>

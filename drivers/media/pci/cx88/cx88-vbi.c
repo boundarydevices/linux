@@ -2,7 +2,6 @@
  */
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/init.h>
 
 #include "cx88.h"
 

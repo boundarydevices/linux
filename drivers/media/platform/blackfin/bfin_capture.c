@@ -22,7 +22,6 @@
 #include <linux/errno.h>
 #include <linux/fs.h>
 #include <linux/i2c.h>
-#include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/mm.h>

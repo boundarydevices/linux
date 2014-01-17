@@ -29,7 +29,6 @@
 #include <linux/interrupt.h>
 #include <linux/firmware.h>
 #include <linux/crc32.h>
-#include <linux/init.h>
 #include <linux/input.h>
 
 #include <linux/mutex.h>

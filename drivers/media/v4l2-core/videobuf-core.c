@@ -13,7 +13,6 @@
  * the Free Software Foundation; either version 2
  */
 
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/mm.h>

@@ -1,6 +1,5 @@
 #include <linux/kernel.h>
 #include <linux/usb.h>
-#include <linux/init.h>
 #include <linux/sound.h>
 #include <linux/spinlock.h>
 #include <linux/soundcard.h>

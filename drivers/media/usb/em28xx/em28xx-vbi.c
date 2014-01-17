@@ -24,7 +24,6 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/hardirq.h>
-#include <linux/init.h>
 
 #include "em28xx.h"
 #include "em28xx-v4l.h"

@@ -24,7 +24,6 @@
 #ifndef CX25821_VIDEO_H_
 #define CX25821_VIDEO_H_
 
-#include <linux/init.h>
 #include <linux/list.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
