@@ -38,7 +38,6 @@
 #include <linux/skbuff.h>
 #include <linux/ip.h>
 #include <linux/tcp.h>
-#include <linux/init.h>
 #include <linux/if_arp.h>
 #include <linux/if_vlan.h>
 #include <linux/notifier.h>

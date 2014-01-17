@@ -43,7 +43,6 @@
 #include <linux/in.h>
 #include <linux/ip.h>
 #include <linux/tcp.h>
-#include <linux/init.h>
 
 #include <asm/io.h>
 #include <asm/irq.h>
