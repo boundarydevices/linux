@@ -11,7 +11,6 @@
 
 /*************************** INCLUDES *****************************************/
 
-#include <linux/init.h>
 #include <linux/moduleparam.h>
 #include <linux/major.h>
 #include <linux/blkdev.h>
