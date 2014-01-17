@@ -14,9 +14,6 @@
  *  but should contain %s to display the version
  */
 
-#include <linux/init.h>
-
-
 #define LINUX_LOGO_MONO		1	/* monochrome black/white */
 #define LINUX_LOGO_VGA16	2	/* 16 colors VGA text palette */
 #define LINUX_LOGO_CLUT224	3	/* 224 colors */

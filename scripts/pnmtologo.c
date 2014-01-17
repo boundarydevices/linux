@@ -243,6 +243,7 @@ static void write_header(void)
     fputs(" *\n", out);
     fprintf(out, " *  Linux logo %s\n", logoname);
     fputs(" */\n\n", out);
+    fputs("#include <linux/init.h>\n", out);
     fputs("#include <linux/linux_logo.h>\n\n", out);
     fprintf(out, "static unsigned char %s_data[] __initdata = {\n",
 	    logoname);
