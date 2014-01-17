@@ -15,7 +15,6 @@
 
 #include <linux/bcd.h>
 #include <linux/i2c.h>
-#include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/rtc.h>

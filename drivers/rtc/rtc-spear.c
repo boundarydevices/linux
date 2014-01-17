@@ -12,7 +12,6 @@
 #include <linux/bcd.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
-#include <linux/init.h>
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/module.h>

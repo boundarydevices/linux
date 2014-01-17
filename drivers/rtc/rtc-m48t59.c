@@ -12,7 +12,6 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/io.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>

@@ -16,7 +16,6 @@
 #include <linux/i2c.h>
 #include <linux/slab.h>
 #include <linux/rtc.h>
-#include <linux/init.h>
 #include <linux/err.h>
 #include <linux/errno.h>
 #include <linux/bcd.h>
