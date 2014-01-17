@@ -11,7 +11,6 @@
 #include <linux/kernel.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
-#include <linux/init.h>
 #include <linux/wait.h>
 #include <linux/i2c.h>
 #include <asm/prom.h>
