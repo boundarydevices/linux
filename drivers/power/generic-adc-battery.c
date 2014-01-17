@@ -17,7 +17,6 @@
 #include <linux/timer.h>
 #include <linux/jiffies.h>
 #include <linux/errno.h>
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/iio/consumer.h>

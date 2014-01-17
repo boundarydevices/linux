@@ -22,7 +22,6 @@
  * This driver is based on max17040_battery.c
  */
 
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
