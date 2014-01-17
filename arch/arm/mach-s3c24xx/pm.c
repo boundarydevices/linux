@@ -26,7 +26,6 @@
  * Thanks to Dimitry Andric for debugging
 */
 
-#include <linux/init.h>
 #include <linux/suspend.h>
 #include <linux/errno.h>
 #include <linux/time.h>

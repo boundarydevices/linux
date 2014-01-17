@@ -16,7 +16,6 @@
 #include <linux/errno.h>
 #include <linux/interrupt.h>
 #include <linux/ioport.h>
-#include <linux/init.h>
 #include <linux/io.h>
 
 #include <mach/hardware.h>

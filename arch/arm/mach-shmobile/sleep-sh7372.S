@@ -30,7 +30,6 @@
  */
 
 #include <linux/linkage.h>
-#include <linux/init.h>
 #include <asm/memory.h>
 #include <asm/assembler.h>
 

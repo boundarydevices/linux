@@ -11,7 +11,6 @@
  */
 
 #include <linux/linkage.h>
-#include <linux/init.h>
 #include <asm/asm-offsets.h>
 #include <asm/hardware/cache-l2x0.h>
 

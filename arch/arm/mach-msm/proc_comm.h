@@ -16,7 +16,6 @@
 #ifndef _ARCH_ARM_MACH_MSM_PROC_COMM_H_
 #define _ARCH_ARM_MACH_MSM_PROC_COMM_H_
 
-#include <linux/init.h>
 
 enum {
 	PCOM_CMD_IDLE = 0x0,

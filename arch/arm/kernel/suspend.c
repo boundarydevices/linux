@@ -1,4 +1,3 @@
-#include <linux/init.h>
 #include <linux/slab.h>
 
 #include <asm/cacheflush.h>

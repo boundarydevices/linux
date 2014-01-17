@@ -38,7 +38,6 @@
 #endif /* __CHECKER__ */
 
 #include <linux/kernel.h>
-#include <linux/init.h>
 #include <linux/export.h>
 #include <linux/sched.h>
 #include <linux/slab.h>

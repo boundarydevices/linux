@@ -15,7 +15,6 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/init.h>
 #include <linux/of.h>
 #include <asm/firmware.h>
 #include <asm/trusted_foundations.h>

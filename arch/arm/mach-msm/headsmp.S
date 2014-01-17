@@ -9,7 +9,6 @@
  * published by the Free Software Foundation.
  */
 #include <linux/linkage.h>
-#include <linux/init.h>
 
 /*
  * MSM specific entry point for secondary CPUs.  This provides

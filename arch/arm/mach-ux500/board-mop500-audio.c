@@ -5,7 +5,6 @@
  */
 
 #include <linux/platform_device.h>
-#include <linux/init.h>
 #include <linux/gpio.h>
 #include <linux/platform_data/dma-ste-dma40.h>
 

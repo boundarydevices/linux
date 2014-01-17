@@ -16,7 +16,6 @@
  */
 
 #include <linux/linkage.h>
-#include <linux/init.h>
 
 #include "omap44xx.h"
 

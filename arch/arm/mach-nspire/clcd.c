@@ -9,7 +9,6 @@
  *
  */
 
-#include <linux/init.h>
 #include <linux/of.h>
 #include <linux/amba/bus.h>
 #include <linux/amba/clcd.h>

@@ -7,7 +7,6 @@
  */
 
 #include <linux/linkage.h>
-#include <linux/init.h>
 
 /*
  * SIRFSOC specific entry point for secondary CPUs.  This provides

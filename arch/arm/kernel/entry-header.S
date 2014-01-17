@@ -1,4 +1,3 @@
-#include <linux/init.h>
 #include <linux/linkage.h>
 
 #include <asm/assembler.h>
