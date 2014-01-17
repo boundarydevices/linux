@@ -17,7 +17,6 @@
 #include <linux/kernel.h>
 #include <linux/types.h>
 #include <linux/smp.h>
-#include <linux/init.h>
 #include <linux/sysctl.h>
 #include <linux/highmem.h>
 #include <linux/timer.h>

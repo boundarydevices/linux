@@ -64,7 +64,6 @@
 
 #include <linux/module.h>
 #include <linux/ctype.h>
-#include <linux/init.h>
 #include <linux/pci.h>
 #include <linux/pci_ids.h>
 #include <linux/slab.h>
