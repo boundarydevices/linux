@@ -13,7 +13,6 @@
 
 /* A trivial fmc driver that can load a gateware file and reports interrupts */
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/gpio.h>
 #include <linux/fmc.h>

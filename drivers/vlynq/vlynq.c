@@ -19,7 +19,6 @@
  * http://www.ti.com/litv/pdf/sprue36a
  */
 
-#include <linux/init.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/string.h>

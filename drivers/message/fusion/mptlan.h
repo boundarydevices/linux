@@ -62,7 +62,6 @@
 // #include <linux/fddidevice.h>
 #include <linux/skbuff.h>
 #include <linux/if_arp.h>
-#include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/miscdevice.h>

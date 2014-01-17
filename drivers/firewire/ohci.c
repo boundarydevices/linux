@@ -26,7 +26,6 @@
 #include <linux/dma-mapping.h>
 #include <linux/firewire.h>
 #include <linux/firewire-constants.h>
-#include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/kernel.h>

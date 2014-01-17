@@ -23,7 +23,6 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/device.h>
-#include <linux/init.h>
 #include <linux/spinlock.h>
 #include <linux/pps_kernel.h>
 

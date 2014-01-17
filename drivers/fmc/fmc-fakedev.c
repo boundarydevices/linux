@@ -11,7 +11,6 @@
  * applicable law.
  */
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/string.h>
 #include <linux/device.h>
 #include <linux/slab.h>
