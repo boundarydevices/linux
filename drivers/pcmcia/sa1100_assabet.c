@@ -9,7 +9,6 @@
 #include <linux/errno.h>
 #include <linux/interrupt.h>
 #include <linux/device.h>
-#include <linux/init.h>
 #include <linux/gpio.h>
 
 #include <asm/mach-types.h>
