@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -146,11 +146,17 @@ void imx_cpu_die(unsigned int cpu);
 int imx_cpu_kill(unsigned int cpu);
 
 #ifdef CONFIG_PM
+void imx6_suspend(void __iomem *ocram_vbase);
 void imx6q_pm_init(void);
+void imx6dl_pm_init(void);
+void imx6sl_pm_init(void);
 void imx6q_pm_set_ccm_base(void __iomem *base);
 void imx5_pm_init(void);
 #else
+static inline void imx6_suspend(void __iomem *ocram_vbase) {}
 static inline void imx6q_pm_init(void) {}
+static inline void imx6dl_pm_init(void) {}
+static inline void imx6sl_pm_init(void) {}
 static inline void imx6q_pm_set_ccm_base(void __iomem *base) {}
 static inline void imx5_pm_init(void) {}
 #endif
