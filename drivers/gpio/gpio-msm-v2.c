@@ -21,7 +21,6 @@
 #include <linux/bitops.h>
 #include <linux/err.h>
 #include <linux/gpio.h>
-#include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/irqchip/chained_irq.h>

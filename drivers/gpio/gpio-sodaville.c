@@ -11,7 +11,6 @@
 
 #include <linux/errno.h>
 #include <linux/gpio.h>
-#include <linux/init.h>
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
