@@ -139,6 +139,8 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx53-qsb.dtb \
 	imx53-qsrb.dtb \
 	imx53-smd.dtb \
+	imx53-tx53-x03x.dtb \
+	imx53-tx53-x13x.dtb \
 	imx53-voipac-bsb.dtb \
 	imx6dl-gw51xx.dtb \
 	imx6dl-gw52xx.dtb \
