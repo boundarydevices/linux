@@ -221,20 +221,15 @@ free_resources:
 	return ret;
 }
 
-static int goldfish_pdev_bus_remove(struct platform_device *pdev)
-{
-	iounmap(pdev_bus_base);
-	free_irq(pdev_bus_irq, pdev);
-	release_mem_region(pdev_bus_addr, pdev_bus_len);
-	return 0;
-}
-
 static struct platform_driver goldfish_pdev_bus_driver = {
 	.probe = goldfish_pdev_bus_probe,
-	.remove = goldfish_pdev_bus_remove,
 	.driver = {
 		.name = "goldfish_pdev_bus"
 	}
 };
 
-module_platform_driver(goldfish_pdev_bus_driver);
+static int __init goldfish_pdev_bus_driver_init(void)
+{
+	return platform_driver_register(&goldfish_pdev_bus_driver);
+}
+device_initcall(goldfish_pdev_bus_driver_init);
