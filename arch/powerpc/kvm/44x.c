@@ -222,12 +222,4 @@ static int __init kvmppc_44x_init(void)
 err_out:
 	return r;
 }
-
-static void __exit kvmppc_44x_exit(void)
-{
-	kvmppc_pr_ops = NULL;
-	kvmppc_booke_exit();
-}
-
-module_init(kvmppc_44x_init);
-module_exit(kvmppc_44x_exit);
+subsys_initcall(kvmppc_44x_init);
