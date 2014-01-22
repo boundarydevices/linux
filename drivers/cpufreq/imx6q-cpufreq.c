@@ -3,17 +3,20 @@
  * Copyright (C) 2013 Freescale Semiconductor, Inc.
  */
 
+#include <soc/imx/revision.h>
 #include <linux/busfreq-imx.h>
 #include <linux/clk.h>
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
 #include <linux/err.h>
+#include <linux/mfd/syscon.h>
 #include <linux/module.h>
 #include <linux/nvmem-consumer.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/pm_opp.h>
 #include <linux/platform_device.h>
+#include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
 #include <linux/suspend.h>
 
@@ -317,6 +320,13 @@ static int imx6q_opp_check_speed_grading(struct device *dev)
 	val >>= OCOTP_CFG3_SPEED_SHIFT;
 	val &= 0x3;
 
+	if (of_machine_is_compatible("fsl,imx6q")) {
+		if (!val) {
+			/* fuses not set for IMX_CHIP_REVISION_1_0 */
+			if (imx_get_soc_revision() == IMX_CHIP_REVISION_1_0)
+				val = OCOTP_CFG3_SPEED_996MHZ;
+		}
+	}
 	if (val < OCOTP_CFG3_SPEED_996MHZ)
 		if (dev_pm_opp_disable(dev, 996000000))
 			dev_warn(dev, "failed to disable 996MHz OPP\n");
