@@ -265,13 +265,13 @@
 		mux-gpios = <&gpio2 23 0>;
 		i2c-parent = <&i2c2>;
 
-		i2c4: i2c@0 {
+		i2c2a: i2c@0 {
 			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
 
-		i2c5: i2c@1 {
+		i2c2b: i2c@1 {
 			reg = <1>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -426,7 +426,7 @@
 	};
 };
 
-&i2c4 {
+&i2c2a {
 	ov564x: ov564x@3c {
 		compatible = "ovti,ov564x";
 		reg = <0x3c>;
@@ -446,7 +446,7 @@
 	};
 };
 
-&i2c5 {
+&i2c2b {
 	ov5640_mipi: ov5640_mipi@3c {
 		compatible = "ovti,ov5640_mipi";
 		reg = <0x3c>;
@@ -585,10 +585,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg_1>;
 	disable-over-current;
-	status = "okay";
-};
-
-&sata {
 	status = "okay";
 };
 
