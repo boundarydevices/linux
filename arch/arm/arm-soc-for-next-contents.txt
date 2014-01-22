@@ -268,6 +268,14 @@ next/drivers
 	davinci/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci.git tags/davinci-for-v3.14/watchdog
 
+late/drivers
+	bcm/drivers
+		git://github.com/broadcom/bcm11351.git tags/bcm-for-3.14-drivers
+
+late/dt
+	bcm/dt
+		git://github.com/broadcom/bcm11351.git tags/bcm-for-3.14-dt
+									
 Patches only in for-next, not in any topic branch due to conflicts:
 
 ARM: multi_v7: copy most options from tegra_defconfig
