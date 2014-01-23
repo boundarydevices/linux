@@ -23,8 +23,9 @@
 
 #include <dma-coherence.h>
 
+#ifdef CONFIG_DMA_MAYBE_COHERENT
 int coherentio = 0;	/* User defined DMA coherency from command line. */
-EXPORT_SYMBOL_GPL(coherentio);
+EXPORT_SYMBOL(coherentio);
 int hw_coherentio = 0;	/* Actual hardware supported DMA coherency setting. */
 
 static int __init setcoherentio(char *str)
@@ -42,30 +43,7 @@ static int __init setnocoherentio(char *str)
 	return 0;
 }
 early_param("nocoherentio", setnocoherentio);
-
-static inline struct page *dma_addr_to_page(struct device *dev,
-	dma_addr_t dma_addr)
-{
-	return pfn_to_page(
-		plat_dma_addr_to_phys(dev, dma_addr) >> PAGE_SHIFT);
-}
-
-/*
- * The affected CPUs below in 'cpu_needs_post_dma_flush()' can
- * speculatively fill random cachelines with stale data at any time,
- * requiring an extra flush post-DMA.
- *
- * Warning on the terminology - Linux calls an uncached area coherent;
- * MIPS terminology calls memory areas with hardware maintained coherency
- * coherent.
- */
-static inline int cpu_needs_post_dma_flush(struct device *dev)
-{
-	return !plat_device_is_coherent(dev) &&
-	       (boot_cpu_type() == CPU_R10000 ||
-		boot_cpu_type() == CPU_R12000 ||
-		boot_cpu_type() == CPU_BMIPS5000);
-}
+#endif
 
 static gfp_t massage_gfp_flags(const struct device *dev, gfp_t gfp)
 {
@@ -122,8 +100,9 @@ void *dma_alloc_noncoherent(struct device *dev, size_t size,
 }
 EXPORT_SYMBOL(dma_alloc_noncoherent);
 
-static void *mips_dma_alloc_coherent(struct device *dev, size_t size,
-	dma_addr_t * dma_handle, gfp_t gfp, struct dma_attrs *attrs)
+void *mips_dma_alloc_coherent(struct device *dev, size_t size,
+			      dma_addr_t *dma_handle, gfp_t gfp,
+			      struct dma_attrs *attrs)
 {
 	void *ret;
 
@@ -147,6 +126,7 @@ static void *mips_dma_alloc_coherent(struct device *dev, size_t size,
 
 	return ret;
 }
+EXPORT_SYMBOL(mips_dma_alloc_coherent);
 
 
 void dma_free_noncoherent(struct device *dev, size_t size, void *vaddr,
@@ -157,8 +137,8 @@ void dma_free_noncoherent(struct device *dev, size_t size, void *vaddr,
 }
 EXPORT_SYMBOL(dma_free_noncoherent);
 
-static void mips_dma_free_coherent(struct device *dev, size_t size, void *vaddr,
-	dma_addr_t dma_handle, struct dma_attrs *attrs)
+void mips_dma_free_coherent(struct device *dev, size_t size, void *vaddr,
+			    dma_addr_t dma_handle, struct dma_attrs *attrs)
 {
 	unsigned long addr = (unsigned long) vaddr;
 	int order = get_order(size);
@@ -173,6 +153,7 @@ static void mips_dma_free_coherent(struct device *dev, size_t size, void *vaddr,
 
 	free_pages(addr, get_order(size));
 }
+EXPORT_SYMBOL(mips_dma_free_coherent);
 
 static inline void __dma_sync_virtual(void *addr, size_t size,
 	enum dma_data_direction direction)
@@ -201,8 +182,8 @@ static inline void __dma_sync_virtual(void *addr, size_t size,
  * If highmem is not configured then the bulk of this loop gets
  * optimized out.
  */
-static inline void __dma_sync(struct page *page,
-	unsigned long offset, size_t size, enum dma_data_direction direction)
+void __dma_sync(struct page *page, unsigned long offset, size_t size,
+		enum dma_data_direction direction)
 {
 	size_t left = size;
 
@@ -231,108 +212,7 @@ static inline void __dma_sync(struct page *page,
 		left -= len;
 	} while (left);
 }
-
-static void mips_dma_unmap_page(struct device *dev, dma_addr_t dma_addr,
-	size_t size, enum dma_data_direction direction, struct dma_attrs *attrs)
-{
-	if (cpu_needs_post_dma_flush(dev))
-		__dma_sync(dma_addr_to_page(dev, dma_addr),
-			   dma_addr & ~PAGE_MASK, size, direction);
-
-	plat_unmap_dma_mem(dev, dma_addr, size, direction);
-}
-
-static int mips_dma_map_sg(struct device *dev, struct scatterlist *sg,
-	int nents, enum dma_data_direction direction, struct dma_attrs *attrs)
-{
-	int i;
-
-	for (i = 0; i < nents; i++, sg++) {
-		if (!plat_device_is_coherent(dev))
-			__dma_sync(sg_page(sg), sg->offset, sg->length,
-				   direction);
-#ifdef CONFIG_NEED_SG_DMA_LENGTH
-		sg->dma_length = sg->length;
-#endif
-		sg->dma_address = plat_map_dma_mem_page(dev, sg_page(sg)) +
-				  sg->offset;
-	}
-
-	return nents;
-}
-
-static dma_addr_t mips_dma_map_page(struct device *dev, struct page *page,
-	unsigned long offset, size_t size, enum dma_data_direction direction,
-	struct dma_attrs *attrs)
-{
-	if (!plat_device_is_coherent(dev))
-		__dma_sync(page, offset, size, direction);
-
-	return plat_map_dma_mem_page(dev, page) + offset;
-}
-
-static void mips_dma_unmap_sg(struct device *dev, struct scatterlist *sg,
-	int nhwentries, enum dma_data_direction direction,
-	struct dma_attrs *attrs)
-{
-	int i;
-
-	for (i = 0; i < nhwentries; i++, sg++) {
-		if (!plat_device_is_coherent(dev) &&
-		    direction != DMA_TO_DEVICE)
-			__dma_sync(sg_page(sg), sg->offset, sg->length,
-				   direction);
-		plat_unmap_dma_mem(dev, sg->dma_address, sg->length, direction);
-	}
-}
-
-static void mips_dma_sync_single_for_cpu(struct device *dev,
-	dma_addr_t dma_handle, size_t size, enum dma_data_direction direction)
-{
-	if (cpu_needs_post_dma_flush(dev))
-		__dma_sync(dma_addr_to_page(dev, dma_handle),
-			   dma_handle & ~PAGE_MASK, size, direction);
-}
-
-static void mips_dma_sync_single_for_device(struct device *dev,
-	dma_addr_t dma_handle, size_t size, enum dma_data_direction direction)
-{
-	if (!plat_device_is_coherent(dev))
-		__dma_sync(dma_addr_to_page(dev, dma_handle),
-			   dma_handle & ~PAGE_MASK, size, direction);
-}
-
-static void mips_dma_sync_sg_for_cpu(struct device *dev,
-	struct scatterlist *sg, int nelems, enum dma_data_direction direction)
-{
-	int i;
-
-	if (cpu_needs_post_dma_flush(dev))
-		for (i = 0; i < nelems; i++, sg++)
-			__dma_sync(sg_page(sg), sg->offset, sg->length,
-				   direction);
-}
-
-static void mips_dma_sync_sg_for_device(struct device *dev,
-	struct scatterlist *sg, int nelems, enum dma_data_direction direction)
-{
-	int i;
-
-	if (!plat_device_is_coherent(dev))
-		for (i = 0; i < nelems; i++, sg++)
-			__dma_sync(sg_page(sg), sg->offset, sg->length,
-				   direction);
-}
-
-int mips_dma_mapping_error(struct device *dev, dma_addr_t dma_addr)
-{
-	return 0;
-}
-
-int mips_dma_supported(struct device *dev, u64 mask)
-{
-	return plat_dma_supported(dev, mask);
-}
+EXPORT_SYMBOL(__dma_sync);
 
 void dma_cache_sync(struct device *dev, void *vaddr, size_t size,
 			 enum dma_data_direction direction)
@@ -345,23 +225,10 @@ void dma_cache_sync(struct device *dev, void *vaddr, size_t size,
 
 EXPORT_SYMBOL(dma_cache_sync);
 
-static struct dma_map_ops mips_default_dma_map_ops = {
-	.alloc = mips_dma_alloc_coherent,
-	.free = mips_dma_free_coherent,
-	.map_page = mips_dma_map_page,
-	.unmap_page = mips_dma_unmap_page,
-	.map_sg = mips_dma_map_sg,
-	.unmap_sg = mips_dma_unmap_sg,
-	.sync_single_for_cpu = mips_dma_sync_single_for_cpu,
-	.sync_single_for_device = mips_dma_sync_single_for_device,
-	.sync_sg_for_cpu = mips_dma_sync_sg_for_cpu,
-	.sync_sg_for_device = mips_dma_sync_sg_for_device,
-	.mapping_error = mips_dma_mapping_error,
-	.dma_supported = mips_dma_supported
-};
-
-struct dma_map_ops *mips_dma_map_ops = &mips_default_dma_map_ops;
+#ifdef CONFIG_SYS_HAS_DMA_OPS
+struct dma_map_ops *mips_dma_map_ops = NULL;
 EXPORT_SYMBOL(mips_dma_map_ops);
+#endif
 
 #define PREALLOC_DMA_DEBUG_ENTRIES (1 << 16)
 
