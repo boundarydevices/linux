@@ -1100,9 +1100,11 @@ static int go7007_usb_probe(struct usb_interface *intf,
 	case GO7007_BOARDID_LIFEVIEW_LR192:
 		dev_err(&intf->dev, "The Lifeview TV Walker Ultra is not supported. Sorry!\n");
 		return -ENODEV;
+#if 0
 		name = "Lifeview TV Walker Ultra";
 		board = &board_lifeview_lr192;
 		break;
+#endif
 	case GO7007_BOARDID_SENSORAY_2250:
 		dev_info(&intf->dev, "Sensoray 2250 found\n");
 		name = "Sensoray 2250/2251";
