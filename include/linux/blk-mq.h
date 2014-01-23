@@ -36,12 +36,15 @@ struct blk_mq_hw_ctx {
 	struct list_head	page_list;
 	struct blk_mq_tags	*tags;
 
+	atomic_t		pending_flush;
+
 	unsigned long		queued;
 	unsigned long		run;
 #define BLK_MQ_MAX_DISPATCH_ORDER	10
 	unsigned long		dispatched[BLK_MQ_MAX_DISPATCH_ORDER];
 
 	unsigned int		queue_depth;
+	unsigned int		reserved_tags;
 	unsigned int		numa_node;
 	unsigned int		cmd_size;	/* per-request extra data */
 
@@ -113,7 +116,6 @@ enum {
 };
 
 struct request_queue *blk_mq_init_queue(struct blk_mq_reg *, void *);
-void blk_mq_free_queue(struct request_queue *);
 int blk_mq_register_disk(struct gendisk *);
 void blk_mq_unregister_disk(struct gendisk *);
 void blk_mq_init_commands(struct request_queue *, void (*init)(void *data, struct blk_mq_hw_ctx *, struct request *, unsigned int), void *data);

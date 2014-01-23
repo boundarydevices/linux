@@ -284,9 +284,8 @@ static void mq_flush_work(struct work_struct *work)
 
 	q = container_of(work, struct request_queue, mq_flush_work);
 
-	/* We don't need set REQ_FLUSH_SEQ, it's for consistency */
 	rq = blk_mq_alloc_request(q, WRITE_FLUSH|REQ_FLUSH_SEQ,
-		__GFP_WAIT|GFP_ATOMIC, true);
+		__GFP_WAIT|GFP_ATOMIC, false);
 	rq->cmd_type = REQ_TYPE_FS;
 	rq->end_io = flush_end_io;
 
@@ -408,8 +407,11 @@ void blk_insert_flush(struct request *rq)
 	/*
 	 * @policy now records what operations need to be done.  Adjust
 	 * REQ_FLUSH and FUA for the driver.
+	 * We keep REQ_FLUSH for mq to track flush requests. For !FUA,
+	 * we never dispatch the request directly.
 	 */
-	rq->cmd_flags &= ~REQ_FLUSH;
+	if (rq->cmd_flags & REQ_FUA)
+		rq->cmd_flags &= ~REQ_FLUSH;
 	if (!(fflags & REQ_FUA))
 		rq->cmd_flags &= ~REQ_FUA;
 
@@ -548,7 +550,7 @@ int blkdev_issue_flush(struct block_device *bdev, gfp_t gfp_mask,
 	 * copied from blk_rq_pos(rq).
 	 */
 	if (error_sector)
-		*error_sector = bio->bi_sector;
+		*error_sector = bio->bi_iter.bi_sector;
 
 	bio_put(bio);
 	return ret;
