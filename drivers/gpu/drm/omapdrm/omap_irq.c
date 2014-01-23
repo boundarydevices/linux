@@ -173,7 +173,7 @@ void omap_irq_disable_vblank(struct drm_device *dev, int crtc_id)
 	dispc_runtime_put();
 }
 
-irqreturn_t omap_irq_handler(DRM_IRQ_ARGS)
+irqreturn_t omap_irq_handler(int irq, void *arg)
 {
 	struct drm_device *dev = (struct drm_device *) arg;
 	struct omap_drm_private *priv = dev->dev_private;
@@ -308,7 +308,7 @@ int omap_drm_irq_uninstall(struct drm_device *dev)
 	if (dev->num_crtcs) {
 		spin_lock_irqsave(&dev->vbl_lock, irqflags);
 		for (i = 0; i < dev->num_crtcs; i++) {
-			DRM_WAKEUP(&dev->vblank[i].queue);
+			wake_up(&dev->vblank[i].queue);
 			dev->vblank[i].enabled = false;
 			dev->vblank[i].last =
 				dev->driver->get_vblank_counter(dev, i);
