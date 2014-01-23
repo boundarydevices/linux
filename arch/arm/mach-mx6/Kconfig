@@ -365,6 +365,7 @@ config MACH_MX6_NIT6XLITE
 	select IMX_HAVE_PLATFORM_IMX_ASRC
 	select IMX_HAVE_PLATFORM_IMX_CAAM
 	select IMX_HAVE_PLATFORM_IMX_DVFS
+	select IMX_HAVE_PLATFORM_IMX_PCIE
 	select IMX_HAVE_PLATFORM_PERFMON
 	help
 	  Include support for i.MX 6Quad Nit6xLite platform. This includes specific
