@@ -217,7 +217,8 @@ static void *eeh_report_mmio_enabled(void *data, void *userdata)
 	if (!driver) return NULL;
 
 	if (!driver->err_handler ||
-	    !driver->err_handler->mmio_enabled) {
+	    !driver->err_handler->mmio_enabled ||
+	    (edev->mode & EEH_DEV_NO_HANDLER)) {
 		eeh_pcid_put(dev);
 		return NULL;
 	}
@@ -258,7 +259,8 @@ static void *eeh_report_reset(void *data, void *userdata)
 	eeh_enable_irq(dev);
 
 	if (!driver->err_handler ||
-	    !driver->err_handler->slot_reset) {
+	    !driver->err_handler->slot_reset ||
+	    (edev->mode & EEH_DEV_NO_HANDLER)) {
 		eeh_pcid_put(dev);
 		return NULL;
 	}
@@ -297,7 +299,9 @@ static void *eeh_report_resume(void *data, void *userdata)
 	eeh_enable_irq(dev);
 
 	if (!driver->err_handler ||
-	    !driver->err_handler->resume) {
+	    !driver->err_handler->resume ||
+	    (edev->mode & EEH_DEV_NO_HANDLER)) {
+		edev->mode &= ~EEH_DEV_NO_HANDLER;
 		eeh_pcid_put(dev);
 		return NULL;
 	}
@@ -468,7 +472,7 @@ static int eeh_reset_device(struct eeh_pe *pe, struct pci_bus *bus)
 /* The longest amount of time to wait for a pci device
  * to come back on line, in seconds.
  */
-#define MAX_WAIT_FOR_RECOVERY 150
+#define MAX_WAIT_FOR_RECOVERY 300
 
 static void eeh_handle_normal_event(struct eeh_pe *pe)
 {

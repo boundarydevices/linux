@@ -90,7 +90,8 @@ struct eeh_pe {
 #define EEH_DEV_IRQ_DISABLED	(1 << 3)	/* Interrupt disabled	*/
 #define EEH_DEV_DISCONNECTED	(1 << 4)	/* Removing from PE	*/
 
-#define EEH_DEV_SYSFS		(1 << 8)	/* Sysfs created        */
+#define EEH_DEV_NO_HANDLER	(1 << 8)	/* No error handler	*/
+#define EEH_DEV_SYSFS		(1 << 9)	/* Sysfs created	*/
 
 struct eeh_dev {
 	int mode;			/* EEH mode			*/
@@ -157,6 +158,7 @@ struct eeh_ops {
 	int (*read_config)(struct device_node *dn, int where, int size, u32 *val);
 	int (*write_config)(struct device_node *dn, int where, int size, u32 val);
 	int (*next_error)(struct eeh_pe **pe);
+	int (*restore_config)(struct device_node *dn);
 };
 
 extern struct eeh_ops *eeh_ops;
