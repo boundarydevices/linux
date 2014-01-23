@@ -1,0 +1,281 @@
+Contents of arm-soc branches contained in for-next
+
+dependencies:
+
+depends/asoc-dma
+	git://git.kernel.org/pub/scm/linux/kernel/git/broonie/sound.git asoc-dma-v3.14
+depends/dma-defer-probe
+	git://git.infradead.org/users/vkoul/slave-dma.git topic/defer_probe
+depends/dma-of
+	git://git.infradead.org/users/vkoul/slave-dma.git topic/of
+depends/tegra-clk
+	git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git clk-tegra-for-3.14
+
+next/fixes-non-critical
+	samsung/fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-fixes
+	samsung/fixes2
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-fixes-2
+	u300/misc
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson.git tags/u300-for-arm-soc-1
+
+	patch ARM: bcm2835: Fix grammar in help message                                     
+	patch irqchip: sirf: set IRQ_LEVEL status_flags
+	mvebu/fixes
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-fixes-3.13
+	omap/fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.14/fixes-not-urgent-signed
+	omap/fixes-dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.14/dt-signed
+
+next/cleanup
+	renesas/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-cleanup-for-v3.14
+	mvebu/soc
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-soc-3.14
+	at91/sama5-ccf
+		git://github.com/at91linux/linux-at91.git tags/at91-cleanup
+	patches
+		ARM: at91: remove redundant dependency
+		ARM: clean up cache handling in platform code
+		ARM: pxa: Remove unused variables
+		ARM: pxa: remove IRQF_DISABLED
+		ARM: mmp: build sram driver alone
+	patch
+		ARM: at91: remove AT91_PROGRAMMABLE_CLOCKS configuration option
+	zynq/cleanup
+		git://git.xilinx.com/linux-xlnx.git tags/zynq-cleanup-for-3.14
+	samsung/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-cleanup
+	tegra/dma-reset-rework
+		based on depends/asoc-dma
+		based on depends/dma-defer-probe
+		based on depends/dma-of
+		based on depends/tegra-clk
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git clk-tegra-for-3.14
+	samsung/cleanup2
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-cleanup-2
+	renesas/cleanup2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-cleanup2-for-v3.14
+	renesas/drivers-sci
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-sh-sci-for-v3.14
+	qcom/fixes
+		patch ARM: msm: trout: fix uninit var warning
+	renesas/drivers-sci2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-sh-sci2-for-v3.14
+	mvebu/soc-2
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-soc-3.14-20
+	at91/cleanup-2
+		git://github.com/at91linux/linux-at91.git tags/at91-cleanup2
+
+next/soc
+	patches
+		ARM: ep93xx: remove deprecated IRQF_DISABLED
+		ARM: ep93xx: use soc bus
+	soc/sched_clock
+		local branch: rebased onto tip/timers-core-for-linus for dependencies
+	patch
+		ARM: at91: sama5d3: add support for sama5d36 chip
+	berlin/soc
+		https://github.com/shesselba/linux-berlin.git tags/berlin-3.14
+	efm32/soc
+		git://git.pengutronix.de/git/ukl/linux.git tags/efm32
+	keystone/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone.git for_3.14/soc
+	renesas/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-soc-for-v3.14
+	patch
+		ARM: moxart: add MOXA ART SoC platform files
+		MAINTAINERS: take maintainership for Energy Micro efm32 SoCs
+	samsung/dev
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-dev
+	tegra/powergate
+		based on tegra/dma-reset-rework
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-powergate
+	tegra/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-soc
+	renesas/soc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-soc2-for-v3.14
+	qcom/soc
+		contains qcom/fixes
+		patch ARM: msm: Add support for MSM8974 SoC
+		patch ARM: msm: Simplify ARCH_MSM_DT config
+	renesas/soc3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-soc3-for-v3.14
+	imx/soc
+		git://git.linaro.org/people/shawnguo/linux-2.6.git tags/imx-soc-3.14
+	hisi/soc
+		local branch: v12 series + khilman fixups + rename series
+	ux500/core
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-core-v3.14
+	qcom/soc2
+		patches
+			ARM: msm: Move MSM's DT based hardware to multi-platform support              
+			ARM: msm: Only build timer.c if required                                      
+			ARM: msm: Only build clock.c on proc_comm based platforms   
+			ARM: msm_defconfig: Update for multi-platform
+	patch
+		ARM: tegra: fix tegra_powergate_sequence_power_up() inline
+	renesas/fixes (based on renesas/soc3)
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-soc-fixes-for-v3.14
+	sunxi/core-2
+		https://github.com/mripard/linux.git tags/sunxi-core-for-3.14-2
+	versatile/core
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator.git tags/versatile-for-v3.14
+	davinci/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci.git tags/davinci-for-v3.14/soc
+
+next/dt
+	ux500/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-devicetree-v3.14-1
+	mvebu/dt
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.14
+	sti/dt
+		http://git.stlinux.com/devel/kernel/linux-sti.git tags/DT-for-v3.14-part-1
+	mvebu/dt-2
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.14-2		
+	patch
+		ARM: at91: sama5d3/dt: add sama5d36ek dts files (based on next/cleanup for dependencies)
+	at91/dt
+		git://github.com/at91linux/linux-at91.git tags/at91-dt
+	integrator/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator.git tags/integrator-v3.14-1
+	patches
+		ARM: pxa: add PWM nodes to pxa27x.dtsi
+	nomadik/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-nomadik.git tags/nomadik-dt-v3.14
+	mvebu/dt-3
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.14-3
+	mvebu/dt-4
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.14-4
+	keystone/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone.git tags/keystone-dts
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-dt-for-v3.14
+	zynq/dt
+		git://git.xilinx.com/linux-xlnx.git tags/zynq-dt-for-3.14
+	patch
+		ARM: moxart: add MOXA ART SoC device tree files
+	samsung/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-dt
+	at91/dt-2
+		git://github.com/at91linux/linux-at91.git tags/at91-dt2
+	samsung/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-dt-2
+	tegra/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-dt
+	tegra/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-dt-2
+	renesas/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-dt2-for-v3.14
+	qcom/dt
+		contains qcom/fixes and qcom/soc
+		patch ARM: dts: MSM8974: Add restart node
+		patch ARM: dts: MSM8974: Add MMIO architected timer node
+	mvebu/dt-5
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.14-5
+	sunxi/dt
+		https://github.com/mripard/linux.git tags/sunxi-dt-for-3.14
+	patch ARM: bcm2835: add USB controller to device tree                               
+	renesas/dt3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-dt3-for-v3.14
+		depends on depends/clk-next-shmobile
+		depends on depends/clksource-shmobile
+		depends on depends/pinctrl-for-next
+	samsung/dt3
+		 git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-dt-3
+	renesas/dt-fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-fixes-for-v3.14
+	ux500/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-devicetree-v3.14-2
+	sunxi/dt-2
+		https://github.com/mripard/linux.git tags/sunxi-dt-for-3.14-2
+	socfpga/dt
+		git://git.rocketboards.org/linux-socfpga-next.git tags/socfpga-dt-for-3.14
+	sirf/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/baohua/linux.git tags/sirf-dts-for-3.14
+	davinci/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci.git tags/davinci-for-v3.14/dt
+
+next/boards
+	renesas/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-defconfig-for-v3.14
+	mvebu/defconfig
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-defconfig-3.14
+	patch
+		ARM: multi_v7_defconfig: Fix STi support
+	omap/board-removal
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.14/board-removal-safe
+	samsung/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-defconfig
+	mvebu/defconfig-2
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-defconfig-3.14-2
+	tegra/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-defconfig
+	tegra/defconfig2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-defconfig-2
+	samsung/defconfig2
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-defconfig-2
+	renesas/boards
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-boards-for-v3.14
+	renesas/defconfig2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-defconfig2-for-v3.14
+	qcom/boards
+		contains qcom/fixes, qcom/soc and qcom/dt
+		patch ARM: msm: Add support for APQ8074 Dragonboard
+		patch defconfig: msm_defconfig: Enable CONFIG_ARCH_MSM8974
+		patch ARM: msm_defconfig: Enable restart driver
+	renesas/boards2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-boards2-for-v3.14
+	patch ARM: bcm2835: bcm2835_defconfig updates   
+
+next/drivers
+	mvebu/drivers
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-drivers-3.14
+	samsung/s3c64xx-dmaengine
+		git://git.kernel.org/pub/scm/linux/kernel/git/broonie/misc.git tags/s3c64xx-dmaengine
+	renesas/drivers-usb
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-usb-r8a66597-hcd-for-v3.14
+	at91/drivers
+		git://github.com/at91linux/linux-at91.git tags/at91-drivers
+		Contains at91/dt
+	samsung/irq
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung.git tags/samsung-irq
+	tegra/trusted-foundations
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux.git tegra-for-3.14-trusted-foundations
+	sunxi/drivers
+		https://github.com/mripard/linux.git tags/sunxi-drivers-for-3.14
+	renesas/drivers-irqchip
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-irqc-for-v3.14
+	renesas/sh-sci
+		contains renesas/drivers-sci2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-sh-soc-for-v3.14
+	renesas/sci3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git tags/renesas-sh-sci3-for-v3.14
+	davinci/gpio
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci.git tags/davinci-for-v3.14/gpio
+	sunxi/core
+		 https://github.com/mripard/linux.git tags/sunxi-core-for-3.14
+		 based on sunxi/drivers
+	integrator/core
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator.git tags/integrator-for-v3.14
+	qcom/drivers
+		based on qcom/boards
+		patches
+			tty: serial: Limit msm_serial_hs driver to platforms that use it              
+			mmc: msm_sdcc: Limit driver to platforms that use it                          
+			usb: phy: msm: Move mach dependent code to platform data  
+	davinci/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci.git tags/davinci-for-v3.14/watchdog
+
+late/drivers
+	bcm/drivers
+		git://github.com/broadcom/bcm11351.git tags/bcm-for-3.14-drivers
+
+late/dt
+	bcm/dt
+		git://github.com/broadcom/bcm11351.git tags/bcm-for-3.14-dt
+									
+Patches only in for-next, not in any topic branch due to conflicts:
+
+ARM: multi_v7: copy most options from tegra_defconfig

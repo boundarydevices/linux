@@ -14,6 +14,7 @@ obj-$(CONFIG_ARCH_BCM2835)	+= clk-bcm2835.o
 obj-$(CONFIG_ARCH_EFM32)	+= clk-efm32gg.o
 obj-$(CONFIG_ARCH_NOMADIK)	+= clk-nomadik.o
 obj-$(CONFIG_ARCH_HIGHBANK)	+= clk-highbank.o
+obj-$(CONFIG_ARCH_HI3xxx)	+= hisilicon/
 obj-$(CONFIG_ARCH_NSPIRE)	+= clk-nspire.o
 obj-$(CONFIG_ARCH_MXS)		+= mxs/
 obj-$(CONFIG_ARCH_SOCFPGA)	+= socfpga/
@@ -35,8 +36,11 @@ obj-$(CONFIG_ARCH_TEGRA)	+= tegra/
 obj-$(CONFIG_PLAT_SAMSUNG)	+= samsung/
 obj-$(CONFIG_COMMON_CLK_XGENE)  += clk-xgene.o
 obj-$(CONFIG_COMMON_CLK_KEYSTONE)	+= keystone/
+obj-$(CONFIG_COMMON_CLK_AT91)	+= at91/
+obj-$(CONFIG_ARCH_SHMOBILE_MULTI)	+= shmobile/
 
 obj-$(CONFIG_X86)		+= x86/
+obj-$(CONFIG_ARCH_BCM)		+= bcm/
 
 # Chip specific
 obj-$(CONFIG_COMMON_CLK_AXI_CLKGEN) += clk-axi-clkgen.o
