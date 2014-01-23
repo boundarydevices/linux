@@ -36,7 +36,6 @@
 #include <linux/console.h>
 #include <linux/selection.h>
 #include <linux/ioport.h>
-#include <linux/init.h>
 #include <linux/timer.h>
 #include <linux/pci.h>
 #include <linux/spinlock.h>

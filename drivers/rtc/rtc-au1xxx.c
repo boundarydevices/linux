@@ -20,7 +20,6 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/rtc.h>
-#include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
 #include <asm/mach-au1x00/au1000.h>

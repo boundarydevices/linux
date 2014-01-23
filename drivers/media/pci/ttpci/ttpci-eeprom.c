@@ -32,7 +32,6 @@
 */
 
 #include <asm/errno.h>
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/string.h>
 #include <linux/i2c.h>

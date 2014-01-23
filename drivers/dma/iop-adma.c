@@ -22,7 +22,6 @@
  * on the Intel Xscale(R) family of I/O Processors (IOP 32x, 33x, 134x)
  */
 
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>

@@ -14,7 +14,6 @@
 
 #include <linux/types.h>
 #include <linux/errno.h>
-#include <linux/init.h>
 #include <linux/delay.h>
 
 #include "ams.h"

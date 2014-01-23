@@ -7,7 +7,6 @@
  */
 
 #include <linux/module.h>
-#include <linux/init.h>
 
 #include <asm/ccwdev.h>
 #include <asm/cio.h>

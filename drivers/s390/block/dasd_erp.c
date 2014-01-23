@@ -11,7 +11,6 @@
 #define KMSG_COMPONENT "dasd"
 
 #include <linux/ctype.h>
-#include <linux/init.h>
 
 #include <asm/debug.h>
 #include <asm/ebcdic.h>

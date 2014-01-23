@@ -5,7 +5,6 @@
  *
  */
 
-#include <linux/init.h>
 #include "hisax.h"
 #include "icc.h"
 #include "isdnl1.h"

@@ -8,7 +8,6 @@
 *	(at your option) any later version.
 *
 */
-#include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/string.h>

@@ -46,7 +46,6 @@
 #include <linux/in.h>
 #include <linux/ip.h>
 #include <linux/tcp.h>
-#include <linux/init.h>
 #include <linux/dma-mapping.h>
 #include <linux/mm.h>
 #include <linux/inet.h>

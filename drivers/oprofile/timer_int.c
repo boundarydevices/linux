@@ -12,7 +12,6 @@
 #include <linux/smp.h>
 #include <linux/oprofile.h>
 #include <linux/profile.h>
-#include <linux/init.h>
 #include <linux/cpu.h>
 #include <linux/hrtimer.h>
 #include <asm/irq_regs.h>

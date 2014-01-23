@@ -1,5 +1,4 @@
 #include <linux/linkage.h>
-#include <linux/init.h>
 
         .section ".text.head", "ax"
 

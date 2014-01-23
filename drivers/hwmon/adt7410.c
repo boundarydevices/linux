@@ -8,7 +8,6 @@
  */
 
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/i2c.h>
 
 #include "adt7x10.h"

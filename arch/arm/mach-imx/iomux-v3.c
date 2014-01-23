@@ -19,7 +19,6 @@
  * MA 02110-1301, USA.
  */
 #include <linux/errno.h>
-#include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/string.h>

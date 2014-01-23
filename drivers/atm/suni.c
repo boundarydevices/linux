@@ -18,7 +18,6 @@
 #include <linux/sonet.h>
 #include <linux/delay.h>
 #include <linux/timer.h>
-#include <linux/init.h>
 #include <linux/capability.h>
 #include <linux/atm_suni.h>
 #include <linux/slab.h>

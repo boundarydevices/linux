@@ -30,7 +30,6 @@
 #include <linux/fs.h>
 #include <linux/genhd.h>
 #include <linux/idr.h>
-#include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/kdev_t.h>

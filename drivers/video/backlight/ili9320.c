@@ -14,7 +14,6 @@
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/fb.h>
-#include <linux/init.h>
 #include <linux/lcd.h>
 #include <linux/module.h>
 #include <linux/slab.h>

@@ -36,7 +36,6 @@
 #include <linux/string.h>
 #include <linux/delay.h>
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/pci.h>
 #include <linux/mm.h>
 #include <linux/jiffies.h>

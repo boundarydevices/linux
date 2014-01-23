@@ -31,7 +31,6 @@
 #include <linux/highmem.h>
 #include <linux/vmalloc.h>
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/spinlock.h>
 #include <linux/io.h>
 #include <linux/videodev2.h>

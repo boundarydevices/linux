@@ -1,5 +1,4 @@
 #include <linux/linkage.h>
-#include <linux/init.h>
 
 #include "sleep.h"
 

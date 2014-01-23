@@ -8,7 +8,6 @@
  * License.  See the file "COPYING" in the main directory of this archive
  * for more details.
  */
-#include <linux/init.h>
 #include <linux/kernel.h>
 #include <cpu/sh7734.h>
 

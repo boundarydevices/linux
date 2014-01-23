@@ -9,7 +9,6 @@
  * published by the Free Software Foundation.
  */
 #include <linux/linkage.h>
-#include <linux/init.h>
 
 /*
  * U8500 specific entry point for secondary CPUs.

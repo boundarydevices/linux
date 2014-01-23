@@ -8,7 +8,6 @@
  *
  */
 
-#include <linux/init.h>
 #include "hisax.h"
 #include "isar.h"
 #include "isdnl1.h"

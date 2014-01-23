@@ -27,7 +27,6 @@
 */
 
 #include <linux/errno.h>
-#include <linux/init.h>
 #include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/poll.h>

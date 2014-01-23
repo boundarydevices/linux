@@ -14,7 +14,6 @@
  * published by the Free Software Foundation.
  */
 #include <linux/linkage.h>
-#include <linux/init.h>
 
 /*
  * ST specific entry point for secondary CPUs.  This provides

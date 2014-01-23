@@ -23,7 +23,6 @@
  */
 
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/crc-ccitt.h>
 #include <linux/isdn/hdlc.h>
 #include <linux/bitrev.h>

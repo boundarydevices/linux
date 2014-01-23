@@ -28,7 +28,6 @@
 #include <linux/slab.h>
 #include <linux/mm.h>
 #include <linux/ioport.h>
-#include <linux/init.h>
 #include <linux/sched.h>
 #include <linux/random.h>
 #include <linux/usb.h>

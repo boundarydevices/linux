@@ -33,7 +33,6 @@
  * V1.1 Gerard v.d. Horst  Added some debugoutput, reset the video-standard
  */
 
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/delay.h>
 #include <linux/errno.h>

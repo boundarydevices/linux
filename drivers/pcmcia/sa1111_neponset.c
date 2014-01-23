@@ -7,7 +7,6 @@
 #include <linux/kernel.h>
 #include <linux/device.h>
 #include <linux/errno.h>
-#include <linux/init.h>
 
 #include <mach/hardware.h>
 #include <asm/mach-types.h>

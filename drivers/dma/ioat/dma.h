@@ -24,7 +24,6 @@
 #include <linux/dmaengine.h>
 #include "hw.h"
 #include "registers.h"
-#include <linux/init.h>
 #include <linux/dmapool.h>
 #include <linux/cache.h>
 #include <linux/pci_ids.h>

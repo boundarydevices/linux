@@ -33,7 +33,6 @@
 
 #include <linux/cpufreq.h>
 #include <linux/gpio.h>
-#include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/irq.h>

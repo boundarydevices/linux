@@ -1,7 +1,7 @@
 #ifndef _LINUX_NLS_H
 #define _LINUX_NLS_H
 
-#include <linux/init.h>
+#include <linux/types.h>
 
 /* Unicode has changed over the years.  Unicode code points no longer
  * fit into 16 bits; as of Unicode 5 valid code points range from 0

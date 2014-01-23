@@ -18,7 +18,6 @@
 #include <linux/delay.h>
 #include <linux/uaccess.h>
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/pci.h>
 #if defined(CONFIG_OF)

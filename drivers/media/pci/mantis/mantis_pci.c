@@ -25,7 +25,6 @@
 #include <asm/page.h>
 #include <linux/kmod.h>
 #include <linux/vmalloc.h>
-#include <linux/init.h>
 #include <linux/device.h>
 #include <linux/pci.h>
 

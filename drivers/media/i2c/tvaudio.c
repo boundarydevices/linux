@@ -32,7 +32,6 @@
 #include <linux/slab.h>
 #include <linux/videodev2.h>
 #include <linux/i2c.h>
-#include <linux/init.h>
 #include <linux/kthread.h>
 #include <linux/freezer.h>
 

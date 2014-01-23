@@ -27,7 +27,6 @@
 #include <linux/delay.h>
 #include <linux/fb.h>
 #include <linux/ioport.h>
-#include <linux/init.h>
 #include <linux/pci.h>
 #include <linux/vmalloc.h>
 #include <linux/pagemap.h>

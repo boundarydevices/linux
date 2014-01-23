@@ -7,7 +7,6 @@
  */
 
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/errno.h>
 #include <linux/pm.h>
 #include <linux/platform_device.h>

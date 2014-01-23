@@ -20,7 +20,6 @@
 #include <linux/slab.h>
 #include <linux/fb.h>
 #include <linux/delay.h>
-#include <linux/init.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
 #include <linux/platform_device.h>

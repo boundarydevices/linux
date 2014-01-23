@@ -13,7 +13,6 @@
 #include <linux/pci.h>
 #include <linux/delay.h>
 #include <linux/string.h>
-#include <linux/init.h>
 
 #include <asm/io.h>
 #include <asm/prom.h>

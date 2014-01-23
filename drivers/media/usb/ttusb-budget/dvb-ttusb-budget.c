@@ -9,7 +9,6 @@
  *	published by the Free Software Foundation; either version 2 of
  *	the License, or (at your option) any later version.
  */
-#include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/wait.h>
 #include <linux/fs.h>

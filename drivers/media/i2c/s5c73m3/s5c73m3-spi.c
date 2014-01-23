@@ -17,7 +17,6 @@
 
 #include <linux/sizes.h>
 #include <linux/delay.h>
-#include <linux/init.h>
 #include <linux/media.h>
 #include <linux/module.h>
 #include <linux/slab.h>

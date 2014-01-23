@@ -13,7 +13,6 @@
  * for more details.
  */
 
-#include <linux/init.h>
 #include <linux/kernel.h>
 #include <cpu/sh7786.h>
 

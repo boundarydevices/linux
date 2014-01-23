@@ -12,7 +12,6 @@
  *
  */
 
-#include <linux/init.h>
 #include <linux/isapnp.h>
 #include "hisax.h"
 #include "isac.h"

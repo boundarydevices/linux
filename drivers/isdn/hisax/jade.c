@@ -11,7 +11,6 @@
  */
 
 
-#include <linux/init.h>
 #include "hisax.h"
 #include "hscx.h"
 #include "jade.h"

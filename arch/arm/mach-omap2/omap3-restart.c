@@ -11,7 +11,6 @@
  * published by the Free Software Foundation.
  */
 #include <linux/kernel.h>
-#include <linux/init.h>
 #include <linux/reboot.h>
 
 #include "iomap.h"

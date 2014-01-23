@@ -25,7 +25,6 @@
 #include <linux/module.h>
 #include <linux/clk.h>
 #include <linux/rtc.h>
-#include <linux/init.h>
 #include <linux/fs.h>
 #include <linux/interrupt.h>
 #include <linux/slab.h>

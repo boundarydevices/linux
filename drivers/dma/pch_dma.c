@@ -19,7 +19,6 @@
 
 #include <linux/dmaengine.h>
 #include <linux/dma-mapping.h>
-#include <linux/init.h>
 #include <linux/pci.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>

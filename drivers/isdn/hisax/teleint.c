@@ -10,7 +10,6 @@
  *
  */
 
-#include <linux/init.h>
 #include "hisax.h"
 #include "isac.h"
 #include "hfc_2bs0.h"

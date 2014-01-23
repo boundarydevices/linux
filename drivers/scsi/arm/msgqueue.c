@@ -12,7 +12,6 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/stddef.h>
-#include <linux/init.h>
 
 #include "msgqueue.h"
 

@@ -11,7 +11,6 @@
 #include <linux/sonet.h>
 #include <linux/delay.h>
 #include <linux/timer.h>
-#include <linux/init.h>
 #include <linux/capability.h>
 #include <linux/atm_idt77105.h>
 #include <linux/spinlock.h>

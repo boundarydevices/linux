@@ -7,7 +7,6 @@
  * published by the Free Software Foundation.
  */
 #include <linux/linkage.h>
-#include <linux/init.h>
 
 ENTRY(zynq_secondary_trampoline)
 	ldr	r0, [pc]

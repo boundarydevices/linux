@@ -47,7 +47,6 @@
 #define CRC_CCIT_MASK 0x1021
 
 #include <linux/kernel.h>
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/string.h>

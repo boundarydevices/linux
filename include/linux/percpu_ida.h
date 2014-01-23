@@ -3,7 +3,6 @@
 
 #include <linux/types.h>
 #include <linux/bitops.h>
-#include <linux/init.h>
 #include <linux/spinlock_types.h>
 #include <linux/wait.h>
 #include <linux/cpumask.h>

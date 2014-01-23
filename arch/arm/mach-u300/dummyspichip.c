@@ -6,7 +6,6 @@
  * This is a dummy loopback SPI "chip" used for testing SPI.
  * Author: Linus Walleij <linus.walleij@stericsson.com>
  */
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/device.h>

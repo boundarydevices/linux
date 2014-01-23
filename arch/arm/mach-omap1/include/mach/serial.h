@@ -11,7 +11,6 @@
 #ifndef __ASM_ARCH_SERIAL_H
 #define __ASM_ARCH_SERIAL_H
 
-#include <linux/init.h>
 
 /*
  * Memory entry used for the DEBUG_LL UART configuration, relative to

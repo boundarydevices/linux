@@ -14,7 +14,6 @@
 #define pr_fmt(fmt) KMSG_COMPONENT ": " fmt
 
 #include <linux/module.h>
-#include <linux/init.h>	     // for kernel parameters
 #include <linux/kmod.h>	     // for requesting modules
 #include <linux/spinlock.h>  // for locks
 #include <linux/vmalloc.h>

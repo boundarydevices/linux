@@ -29,7 +29,6 @@
 
 /* FIXME - some of these can probably be removed */
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/poll.h>

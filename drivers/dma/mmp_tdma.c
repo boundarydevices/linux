@@ -11,7 +11,6 @@
 
 #include <linux/err.h>
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/types.h>
 #include <linux/interrupt.h>
 #include <linux/dma-mapping.h>

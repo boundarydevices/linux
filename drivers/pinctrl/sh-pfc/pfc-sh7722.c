@@ -1,4 +1,3 @@
-#include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/gpio.h>
 #include <cpu/sh7722.h>

@@ -17,7 +17,6 @@
  *	max block length up to 1023
  */
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/ioport.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>

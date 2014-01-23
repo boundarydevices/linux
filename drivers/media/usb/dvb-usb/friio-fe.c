@@ -10,7 +10,6 @@
  *
  * see Documentation/dvb/README.dvb-usb for more information
  */
-#include <linux/init.h>
 #include <linux/string.h>
 #include <linux/slab.h>
 

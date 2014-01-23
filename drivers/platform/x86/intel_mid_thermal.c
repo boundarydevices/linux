@@ -25,7 +25,6 @@
 #define pr_fmt(fmt) "intel_mid_thermal: " fmt
 
 #include <linux/module.h>
-#include <linux/init.h>
 #include <linux/err.h>
 #include <linux/param.h>
 #include <linux/device.h>

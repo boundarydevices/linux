@@ -28,7 +28,6 @@
 #include <linux/pci.h>
 #include <linux/io.h>
 #include <linux/uaccess.h>
-#include <linux/init.h>
 #include <linux/proc_fs.h>
 #include <linux/console.h>
 #include <linux/timer.h>

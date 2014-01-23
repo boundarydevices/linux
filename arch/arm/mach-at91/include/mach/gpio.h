@@ -14,6 +14,7 @@
 #define __ASM_ARCH_AT91RM9200_GPIO_H
 
 #include <linux/kernel.h>
+#include <linux/module.h>	/* for __init_or_module */
 #include <asm/irq.h>
 
 #define MAX_GPIO_BANKS		5

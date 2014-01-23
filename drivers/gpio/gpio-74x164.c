@@ -9,7 +9,6 @@
  *  published by the Free Software Foundation.
  */
 
-#include <linux/init.h>
 #include <linux/mutex.h>
 #include <linux/spi/spi.h>
 #include <linux/gpio.h>

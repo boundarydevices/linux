@@ -16,7 +16,6 @@
 
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/init.h>
 #include "hisax.h"
 
 #define FSM_TIMER_DEBUG 0

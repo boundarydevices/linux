@@ -16,7 +16,6 @@
 #include <linux/dmaengine.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
-#include <linux/init.h>
 #include <linux/list.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>

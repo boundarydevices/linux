@@ -22,7 +22,6 @@
 #include <linux/delay.h>
 #include <linux/mm.h>
 #include <linux/fb.h>
-#include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/ioport.h>
 #include <linux/platform_device.h>

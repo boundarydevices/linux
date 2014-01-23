@@ -9,7 +9,6 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/io.h>
 #include <linux/slab.h>

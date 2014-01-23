@@ -18,7 +18,6 @@
  */
 
 #include <linux/device.h>
-#include <linux/init.h>
 #include <linux/dma-mapping.h>
 #include <linux/amba/bus.h>
 #include <linux/amba/clcd.h>

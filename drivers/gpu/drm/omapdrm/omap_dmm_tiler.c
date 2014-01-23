@@ -15,7 +15,6 @@
  * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/platform_device.h> /* platform_device() */
 #include <linux/errno.h>

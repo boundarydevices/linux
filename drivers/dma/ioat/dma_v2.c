@@ -25,7 +25,6 @@
  * does asynchronous data movement and checksumming operations.
  */
 
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/pci.h>

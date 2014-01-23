@@ -36,7 +36,6 @@
 #include <linux/genhd.h>
 #include <linux/blkpg.h>
 #include <linux/slab.h>
-#include <linux/init.h>
 #include <linux/pci.h>
 #include <linux/delay.h>
 #include <linux/ide.h>

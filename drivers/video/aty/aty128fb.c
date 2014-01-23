@@ -57,7 +57,6 @@
 #include <linux/interrupt.h>
 #include <linux/uaccess.h>
 #include <linux/fb.h>
-#include <linux/init.h>
 #include <linux/pci.h>
 #include <linux/ioport.h>
 #include <linux/console.h>

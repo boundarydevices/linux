@@ -27,7 +27,6 @@
 #include <linux/string.h>
 #include <linux/mm.h>
 #include <linux/fb.h>
-#include <linux/init.h>
 #include <linux/dma-mapping.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>

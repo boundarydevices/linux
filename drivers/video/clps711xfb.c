@@ -24,7 +24,6 @@
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/fb.h>
-#include <linux/init.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
 

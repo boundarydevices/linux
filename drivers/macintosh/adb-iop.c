@@ -16,7 +16,6 @@
 #include <linux/kernel.h>
 #include <linux/mm.h>
 #include <linux/delay.h>
-#include <linux/init.h>
 #include <linux/proc_fs.h>
 
 #include <asm/macintosh.h> 

@@ -21,7 +21,6 @@
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/types.h>
-#include <linux/init.h>
 
 struct persistent_ram_buffer;
 struct rs_control;

@@ -22,7 +22,6 @@
 
 #include <linux/delay.h>
 #include <linux/fb.h>
-#include <linux/init.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/uaccess.h>

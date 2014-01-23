@@ -10,7 +10,6 @@
 #include <linux/console.h>
 #include <linux/vt_kern.h>
 #include <linux/screen_info.h>
-#include <linux/init.h>
 #include <linux/module.h>
 
 /*

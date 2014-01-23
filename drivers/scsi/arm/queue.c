@@ -21,7 +21,6 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/list.h>
-#include <linux/init.h>
 
 #include "../scsi.h"
 

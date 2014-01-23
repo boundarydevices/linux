@@ -382,12 +382,4 @@ static int __init kvmppc_e500mc_init(void)
 err_out:
 	return r;
 }
-
-static void __exit kvmppc_e500mc_exit(void)
-{
-	kvmppc_pr_ops = NULL;
-	kvmppc_booke_exit();
-}
-
-module_init(kvmppc_e500mc_init);
-module_exit(kvmppc_e500mc_exit);
+subsys_initcall(kvmppc_e500mc_init);

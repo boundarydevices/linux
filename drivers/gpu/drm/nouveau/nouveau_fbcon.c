@@ -33,7 +33,6 @@
 #include <linux/sysrq.h>
 #include <linux/delay.h>
 #include <linux/fb.h>
-#include <linux/init.h>
 #include <linux/screen_info.h>
 #include <linux/vga_switcheroo.h>
 #include <linux/console.h>

@@ -21,7 +21,6 @@
 
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/init.h>
 #include <linux/debugfs.h>
 #include <linux/spinlock.h>
 #include <linux/usb.h>

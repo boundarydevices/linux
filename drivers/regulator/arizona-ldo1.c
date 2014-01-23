@@ -13,7 +13,6 @@
 
 #include <linux/module.h>
 #include <linux/moduleparam.h>
-#include <linux/init.h>
 #include <linux/bitops.h>
 #include <linux/err.h>
 #include <linux/platform_device.h>

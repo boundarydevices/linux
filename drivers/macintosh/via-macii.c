@@ -30,7 +30,6 @@
 #include <linux/delay.h>
 #include <linux/adb.h>
 #include <linux/interrupt.h>
-#include <linux/init.h>
 #include <asm/macintosh.h>
 #include <asm/macints.h>
 #include <asm/mac_via.h>

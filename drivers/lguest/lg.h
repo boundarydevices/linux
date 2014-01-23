@@ -3,7 +3,6 @@
 
 #ifndef __ASSEMBLY__
 #include <linux/types.h>
-#include <linux/init.h>
 #include <linux/stringify.h>
 #include <linux/lguest.h>
 #include <linux/lguest_launcher.h>
