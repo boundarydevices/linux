@@ -1,5 +1,8 @@
 /*
  * Copyright (C) 2013,2014 Russell King
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License version 2.
  */
 /dts-v1/;
 
@@ -75,7 +78,7 @@
 
 &i2c1 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_i2c1_1>;
+	pinctrl-0 = <&pinctrl_hummingboard_i2c1>;
 
 	/*
 	 * Not fitted on Carrier-1 board... yet
@@ -101,6 +104,10 @@
 			fsl,pins = <
 				MX6QDL_PAD_GPIO_2__GPIO1_IO02 0x80000000
 			>;
+		};
+
+		pinctrl_hummingboard_i2c1: hummingboard-i2c1 {
+			fsl,pins = <MX6QDL_I2C1_PINGRP1>;
 		};
 
 		pinctrl_hummingboard_spdif: hummingboard-spdif {

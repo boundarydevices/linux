@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Freescale Semiconductor, Inc.
+ * Copyright 2013-2014 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,27 +18,27 @@
 #include "clk.h"
 #include "common.h"
 
-static const char const *step_sels[]		= { "osc", "pll2_pfd2", };
-static const char const *pll1_sw_sels[]		= { "pll1_sys", "step", };
-static const char const *ocram_alt_sels[]	= { "pll2_pfd2", "pll3_pfd1", };
-static const char const *ocram_sels[]		= { "periph", "ocram_alt_sels", };
-static const char const *pre_periph_sels[]	= { "pll2_bus", "pll2_pfd2", "pll2_pfd0", "pll2_198m", };
-static const char const *periph_clk2_sels[]	= { "pll3_usb_otg", "osc", "osc", "dummy", };
-static const char const *periph2_clk2_sels[]	= { "pll3_usb_otg", "pll2_bus", };
-static const char const *periph_sels[]		= { "pre_periph_sel", "periph_clk2_podf", };
-static const char const *periph2_sels[]		= { "pre_periph2_sel", "periph2_clk2_podf", };
-static const char const *csi_lcdif_sels[]	= { "mmdc", "pll2_pfd2", "pll3_120m", "pll3_pfd1", };
-static const char const *usdhc_sels[]		= { "pll2_pfd2", "pll2_pfd0", };
-static const char const *ssi_sels[]		= { "pll3_pfd2", "pll3_pfd3", "pll4_audio_div", "dummy", };
-static const char const *perclk_sels[]		= { "ipg", "osc", };
-static const char const *epdc_pxp_sels[]	= { "mmdc", "pll3_usb_otg", "pll5_video_div", "pll2_pfd0", "pll2_pfd2", "pll3_pfd1", };
-static const char const *gpu2d_ovg_sels[]	= { "pll3_pfd1", "pll3_usb_otg", "pll2_bus", "pll2_pfd2", };
-static const char const *gpu2d_sels[]		= { "pll2_pfd2", "pll3_usb_otg", "pll3_pfd1", "pll2_bus", };
-static const char const *lcdif_pix_sels[]	= { "pll2_bus", "pll3_usb_otg", "pll5_video_div", "pll2_pfd0", "pll3_pfd0", "pll3_pfd1", };
-static const char const *epdc_pix_sels[]	= { "pll2_bus", "pll3_usb_otg", "pll5_video_div", "pll2_pfd0", "pll2_pfd1", "pll3_pfd1", };
-static const char const *audio_sels[]		= { "pll4_audio_div", "pll3_pfd2", "pll3_pfd3", "pll3_usb_otg", };
-static const char const *ecspi_sels[]		= { "pll3_60m", "osc", };
-static const char const *uart_sels[]		= { "pll3_80m", "osc", };
+static const char *step_sels[]		= { "osc", "pll2_pfd2", };
+static const char *pll1_sw_sels[]	= { "pll1_sys", "step", };
+static const char *ocram_alt_sels[]	= { "pll2_pfd2", "pll3_pfd1", };
+static const char *ocram_sels[]		= { "periph", "ocram_alt_sels", };
+static const char *pre_periph_sels[]	= { "pll2_bus", "pll2_pfd2", "pll2_pfd0", "pll2_198m", };
+static const char *periph_clk2_sels[]	= { "pll3_usb_otg", "osc", "osc", "dummy", };
+static const char *periph2_clk2_sels[]	= { "pll3_usb_otg", "pll2_bus", };
+static const char *periph_sels[]	= { "pre_periph_sel", "periph_clk2_podf", };
+static const char *periph2_sels[]	= { "pre_periph2_sel", "periph2_clk2_podf", };
+static const char *csi_lcdif_sels[]	= { "mmdc", "pll2_pfd2", "pll3_120m", "pll3_pfd1", };
+static const char *usdhc_sels[]		= { "pll2_pfd2", "pll2_pfd0", };
+static const char *ssi_sels[]		= { "pll3_pfd2", "pll3_pfd3", "pll4_audio_div", "dummy", };
+static const char *perclk_sels[]	= { "ipg", "osc", };
+static const char *epdc_pxp_sels[]	= { "mmdc", "pll3_usb_otg", "pll5_video_div", "pll2_pfd0", "pll2_pfd2", "pll3_pfd1", };
+static const char *gpu2d_ovg_sels[]	= { "pll3_pfd1", "pll3_usb_otg", "pll2_bus", "pll2_pfd2", };
+static const char *gpu2d_sels[]		= { "pll2_pfd2", "pll3_usb_otg", "pll3_pfd1", "pll2_bus", };
+static const char *lcdif_pix_sels[]	= { "pll2_bus", "pll3_usb_otg", "pll5_video_div", "pll2_pfd0", "pll3_pfd0", "pll3_pfd1", };
+static const char *epdc_pix_sels[]	= { "pll2_bus", "pll3_usb_otg", "pll5_video_div", "pll2_pfd0", "pll2_pfd1", "pll3_pfd1", };
+static const char *audio_sels[]		= { "pll4_audio_div", "pll3_pfd2", "pll3_pfd3", "pll3_usb_otg", };
+static const char *ecspi_sels[]		= { "pll3_60m", "osc", };
+static const char *uart_sels[]		= { "pll3_80m", "osc", };
 
 static struct clk_div_table clk_enet_ref_table[] = {
 	{ .val = 0, .div = 20, },
@@ -66,12 +66,39 @@ static struct clk_div_table video_div_table[] = {
 static struct clk *clks[IMX6SL_CLK_END];
 static struct clk_onecell_data clk_data;
 
+/*
+ * ERR005311 CCM: After exit from WAIT mode, unwanted interrupt(s) taken
+ *           during WAIT mode entry process could cause cache memory
+ *           corruption.
+ *
+ * Software workaround:
+ *     To prevent this issue from occurring, software should ensure that the
+ * ARM to IPG clock ratio is less than 12:5 (that is < 2.4x), before
+ * entering WAIT mode.
+ *
+ * This function will set the ARM clk to max value within the 12:5 limit.
+ */
+void imx6sl_set_wait_clk(bool enter)
+{
+	static unsigned long saved_arm_rate;
+
+	if (enter) {
+		unsigned long ipg_rate = clk_get_rate(clks[IMX6SL_CLK_IPG]);
+		unsigned long max_arm_wait_rate = (12 * ipg_rate) / 5;
+		saved_arm_rate = clk_get_rate(clks[IMX6SL_CLK_ARM]);
+		clk_set_rate(clks[IMX6SL_CLK_ARM], max_arm_wait_rate);
+	} else {
+		clk_set_rate(clks[IMX6SL_CLK_ARM], saved_arm_rate);
+	}
+}
+
 static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 {
 	struct device_node *np;
 	void __iomem *base;
 	int irq;
 	int i;
+	int ret;
 
 	clks[IMX6SL_CLK_DUMMY] = imx_clk_fixed("dummy", 0);
 	clks[IMX6SL_CLK_CKIL] = imx_obtain_fixed_clock("ckil", 0);
@@ -257,6 +284,12 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 
 	clk_register_clkdev(clks[IMX6SL_CLK_GPT], "ipg", "imx-gpt.0");
 	clk_register_clkdev(clks[IMX6SL_CLK_GPT_SERIAL], "per", "imx-gpt.0");
+
+	/* Ensure the AHB clk is at 132MHz. */
+	ret = clk_set_rate(clks[IMX6SL_CLK_AHB], 132000000);
+	if (ret)
+		pr_warn("%s: failed to set AHB clock rate %d!\n",
+			__func__, ret);
 
 	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
 		clk_prepare_enable(clks[IMX6SL_CLK_USBPHY1_GATE]);

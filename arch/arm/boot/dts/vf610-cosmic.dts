@@ -36,12 +36,24 @@
 &fec1 {
 	phy-mode = "rmii";
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_fec1_1>;
+	pinctrl-0 = <&pinctrl_fec1>;
 	status = "okay";
+};
+
+&iomuxc {
+	vf610-cosmic {
+		pinctrl_fec1: fec1grp {
+			fsl,pins = <VF610_FEC1_PINGRP1>;
+		};
+
+		pinctrl_uart1: uart1grp {
+			fsl,pins = <VF610_UART1_PINGRP1>;
+		};
+	};
 };
 
 &uart1 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart1_1>;
+	pinctrl-0 = <&pinctrl_uart1>;
 	status = "okay";
 };
