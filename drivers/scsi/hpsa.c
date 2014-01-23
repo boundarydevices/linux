@@ -29,7 +29,6 @@
 #include <linux/delay.h>
 #include <linux/fs.h>
 #include <linux/timer.h>
-#include <linux/seq_file.h>
 #include <linux/init.h>
 #include <linux/spinlock.h>
 #include <linux/compat.h>
@@ -96,7 +95,6 @@ static const struct pci_device_id hpsa_pci_device_id[] = {
 	{PCI_VENDOR_ID_HP,     PCI_DEVICE_ID_HP_CISSF,     0x103C, 0x3351},
 	{PCI_VENDOR_ID_HP,     PCI_DEVICE_ID_HP_CISSF,     0x103C, 0x3352},
 	{PCI_VENDOR_ID_HP,     PCI_DEVICE_ID_HP_CISSF,     0x103C, 0x3353},
-	{PCI_VENDOR_ID_HP,     PCI_DEVICE_ID_HP_CISSF,     0x103C, 0x334D},
 	{PCI_VENDOR_ID_HP,     PCI_DEVICE_ID_HP_CISSF,     0x103C, 0x3354},
 	{PCI_VENDOR_ID_HP,     PCI_DEVICE_ID_HP_CISSF,     0x103C, 0x3355},
 	{PCI_VENDOR_ID_HP,     PCI_DEVICE_ID_HP_CISSF,     0x103C, 0x3356},
@@ -143,7 +141,6 @@ static struct board_type products[] = {
 	{0x3351103C, "Smart Array P420", &SA5_access},
 	{0x3352103C, "Smart Array P421", &SA5_access},
 	{0x3353103C, "Smart Array P822", &SA5_access},
-	{0x334D103C, "Smart Array P822se", &SA5_access},
 	{0x3354103C, "Smart Array P420i", &SA5_access},
 	{0x3355103C, "Smart Array P220i", &SA5_access},
 	{0x3356103C, "Smart Array P721m", &SA5_access},
@@ -223,6 +220,8 @@ static int hpsa_lookup_board_id(struct pci_dev *pdev, u32 *board_id);
 static int hpsa_wait_for_board_state(struct pci_dev *pdev, void __iomem *vaddr,
 				     int wait_for_ready);
 static inline void finish_cmd(struct CommandList *c);
+static unsigned char hpsa_format_in_progress(struct ctlr_info *h,
+		unsigned char scsi3addr[]);
 #define BOARD_NOT_READY 0
 #define BOARD_READY 1
 
@@ -947,6 +946,112 @@ static int hpsa_scsi_find_entry(struct hpsa_scsi_dev_t *needle,
 	return DEVICE_NOT_FOUND;
 }
 
+#define OFFLINE_DEVICE_POLL_INTERVAL (120 * HZ)
+static int hpsa_offline_device_thread(void *v)
+{
+	struct ctlr_info *h = v;
+	unsigned long flags;
+	struct offline_device_entry *d;
+	unsigned char need_rescan = 0;
+	struct list_head *this, *tmp;
+
+	while (1) {
+		schedule_timeout_interruptible(OFFLINE_DEVICE_POLL_INTERVAL);
+		if (kthread_should_stop())
+			break;
+
+		/* Check if any of the offline devices have become ready */
+		spin_lock_irqsave(&h->offline_device_lock, flags);
+		list_for_each_safe(this, tmp, &h->offline_device_list) {
+			d = list_entry(this, struct offline_device_entry,
+					offline_list);
+			spin_unlock_irqrestore(&h->offline_device_lock, flags);
+			if (!hpsa_format_in_progress(h, d->scsi3addr)) {
+				need_rescan = 1;
+				goto do_rescan;
+			}
+			spin_lock_irqsave(&h->offline_device_lock, flags);
+		}
+		spin_unlock_irqrestore(&h->offline_device_lock, flags);
+	}
+
+do_rescan:
+
+	/* Remove all entries from the list and rescan and exit this thread.
+	 * If there are still offline devices, the rescan will make a new list
+	 * and create a new offline device monitor thread.
+	 */
+	spin_lock_irqsave(&h->offline_device_lock, flags);
+	list_for_each_safe(this, tmp, &h->offline_device_list) {
+		d = list_entry(this, struct offline_device_entry, offline_list);
+		list_del_init(this);
+		kfree(d);
+	}
+	h->offline_device_monitor = NULL;
+	h->offline_device_thread_state = OFFLINE_DEVICE_THREAD_STOPPED;
+	spin_unlock_irqrestore(&h->offline_device_lock, flags);
+	if (need_rescan)
+		hpsa_scan_start(h->scsi_host);
+	return 0;
+}
+
+static void hpsa_monitor_offline_device(struct ctlr_info *h,
+					unsigned char scsi3addr[])
+{
+	struct offline_device_entry *device;
+	unsigned long flags;
+
+	/* Check to see if device is already on the list */
+	spin_lock_irqsave(&h->offline_device_lock, flags);
+	list_for_each_entry(device, &h->offline_device_list, offline_list) {
+		if (memcmp(device->scsi3addr, scsi3addr,
+				sizeof(device->scsi3addr)) == 0) {
+			spin_unlock_irqrestore(&h->offline_device_lock, flags);
+			return;
+		}
+	}
+	spin_unlock_irqrestore(&h->offline_device_lock, flags);
+
+	/* Device is not on the list, add it. */
+	device = kmalloc(sizeof(*device), GFP_KERNEL);
+	if (!device) {
+		dev_warn(&h->pdev->dev, "out of memory in %s\n", __func__);
+		return;
+	}
+	memcpy(device->scsi3addr, scsi3addr, sizeof(device->scsi3addr));
+	spin_lock_irqsave(&h->offline_device_lock, flags);
+	list_add_tail(&device->offline_list, &h->offline_device_list);
+	if (h->offline_device_thread_state == OFFLINE_DEVICE_THREAD_STOPPED) {
+		h->offline_device_thread_state = OFFLINE_DEVICE_THREAD_RUNNING;
+		spin_unlock_irqrestore(&h->offline_device_lock, flags);
+		h->offline_device_monitor =
+			kthread_run(hpsa_offline_device_thread, h, HPSA "-odm");
+		spin_lock_irqsave(&h->offline_device_lock, flags);
+	}
+	if (!h->offline_device_monitor) {
+		dev_warn(&h->pdev->dev, "failed to start offline device monitor thread.\n");
+		h->offline_device_thread_state = OFFLINE_DEVICE_THREAD_STOPPED;
+	}
+	spin_unlock_irqrestore(&h->offline_device_lock, flags);
+}
+
+static void stop_offline_device_monitor(struct ctlr_info *h)
+{
+	unsigned long flags;
+	int stop_thread;
+
+	spin_lock_irqsave(&h->offline_device_lock, flags);
+	stop_thread = (h->offline_device_thread_state ==
+				OFFLINE_DEVICE_THREAD_RUNNING);
+	if (stop_thread)
+		/* STOPPING state prevents new thread from starting. */
+		h->offline_device_thread_state =
+				OFFLINE_DEVICE_THREAD_STOPPING;
+	spin_unlock_irqrestore(&h->offline_device_lock, flags);
+	if (stop_thread)
+		kthread_stop(h->offline_device_monitor);
+}
+
 static void adjust_hpsa_scsi_table(struct ctlr_info *h, int hostno,
 	struct hpsa_scsi_dev_t *sd[], int nsds)
 {
@@ -1011,6 +1116,23 @@ static void adjust_hpsa_scsi_table(struct ctlr_info *h, int hostno,
 	for (i = 0; i < nsds; i++) {
 		if (!sd[i]) /* if already added above. */
 			continue;
+
+		/* Don't add devices which are NOT READY, FORMAT IN PROGRESS
+		 * as the SCSI mid-layer does not handle such devices well.
+		 * It relentlessly loops sending TUR at 3Hz, then READ(10)
+		 * at 160Hz, and prevents the system from coming up.
+		 */
+		if (sd[i]->format_in_progress) {
+			dev_info(&h->pdev->dev,
+				"c%db%dt%dl%d: Logical drive parity initialization, erase or format in progress\n",
+				h->scsi_host->host_no,
+				sd[i]->bus, sd[i]->target, sd[i]->lun);
+			dev_info(&h->pdev->dev, "c%db%dt%dl%d: temporarily offline\n",
+				h->scsi_host->host_no,
+				sd[i]->bus, sd[i]->target, sd[i]->lun);
+			continue;
+		}
+
 		device_change = hpsa_scsi_find_entry(sd[i], h->dev,
 					h->ndevices, &entry);
 		if (device_change == DEVICE_NOT_FOUND) {
@@ -1028,6 +1150,17 @@ static void adjust_hpsa_scsi_table(struct ctlr_info *h, int hostno,
 		}
 	}
 	spin_unlock_irqrestore(&h->devlock, flags);
+
+	/* Monitor devices which are NOT READY, FORMAT IN PROGRESS to be
+	 * brought online later. This must be done without holding h->devlock,
+	 * so don't touch h->dev[]
+	 */
+	for (i = 0; i < nsds; i++) {
+		if (!sd[i]) /* if already added above. */
+			continue;
+		if (sd[i]->format_in_progress)
+			hpsa_monitor_offline_device(h, sd[i]->scsi3addr);
+	}
 
 	/* Don't notify scsi mid layer of any changes the first time through
 	 * (or if there are no changes) scsi_scan_host will do it later the
@@ -1716,6 +1849,34 @@ static inline void hpsa_set_bus_target_lun(struct hpsa_scsi_dev_t *device,
 	device->lun = lun;
 }
 
+static unsigned char hpsa_format_in_progress(struct ctlr_info *h,
+		unsigned char scsi3addr[])
+{
+	struct CommandList *c;
+	unsigned char *sense, sense_key, asc, ascq;
+#define ASC_LUN_NOT_READY 0x04
+#define ASCQ_LUN_NOT_READY_FORMAT_IN_PROGRESS 0x04
+
+
+	c = cmd_special_alloc(h);
+	if (!c)
+		return 0;
+	fill_cmd(c, TEST_UNIT_READY, h, NULL, 0, 0, scsi3addr, TYPE_CMD);
+	hpsa_scsi_do_simple_cmd_core(h, c);
+	sense = c->err_info->SenseInfo;
+	sense_key = sense[2];
+	asc = sense[12];
+	ascq = sense[13];
+	if (c->err_info->CommandStatus == CMD_TARGET_STATUS &&
+		c->err_info->ScsiStatus == SAM_STAT_CHECK_CONDITION &&
+		sense_key == NOT_READY &&
+		asc == ASC_LUN_NOT_READY &&
+		ascq == ASCQ_LUN_NOT_READY_FORMAT_IN_PROGRESS)
+		return 1;
+	cmd_special_free(h, c);
+	return 0;
+}
+
 static int hpsa_update_device_info(struct ctlr_info *h,
 	unsigned char scsi3addr[], struct hpsa_scsi_dev_t *this_device,
 	unsigned char *is_OBDR_device)
@@ -1754,10 +1915,14 @@ static int hpsa_update_device_info(struct ctlr_info *h,
 		sizeof(this_device->device_id));
 
 	if (this_device->devtype == TYPE_DISK &&
-		is_logical_dev_addr_mode(scsi3addr))
+		is_logical_dev_addr_mode(scsi3addr)) {
 		hpsa_get_raid_level(h, scsi3addr, &this_device->raid_level);
-	else
+		this_device->format_in_progress =
+			hpsa_format_in_progress(h, scsi3addr);
+	} else {
 		this_device->raid_level = RAID_UNKNOWN;
+		this_device->format_in_progress = 0;
+	}
 
 	if (is_OBDR_device) {
 		/* See if this is a One-Button-Disaster-Recovery device
@@ -1783,6 +1948,7 @@ static unsigned char *ext_target_model[] = {
 	"MSA2312",
 	"MSA2324",
 	"P2000 G3 SAS",
+	"MSA 2040 SAS",
 	NULL,
 };
 
@@ -3171,7 +3337,7 @@ static int hpsa_big_passthru_ioctl(struct ctlr_info *h, void __user *argp)
 				hpsa_pci_unmap(h->pdev, c, i,
 					PCI_DMA_BIDIRECTIONAL);
 				status = -ENOMEM;
-				goto cleanup1;
+				goto cleanup0;
 			}
 			c->SG[i].Addr.lower = temp64.val32.lower;
 			c->SG[i].Addr.upper = temp64.val32.upper;
@@ -3187,24 +3353,23 @@ static int hpsa_big_passthru_ioctl(struct ctlr_info *h, void __user *argp)
 	/* Copy the error information out */
 	memcpy(&ioc->error_info, c->err_info, sizeof(ioc->error_info));
 	if (copy_to_user(argp, ioc, sizeof(*ioc))) {
-		cmd_special_free(h, c);
 		status = -EFAULT;
-		goto cleanup1;
+		goto cleanup0;
 	}
 	if (ioc->Request.Type.Direction == XFER_READ && ioc->buf_size > 0) {
 		/* Copy the data out of the buffer we created */
 		BYTE __user *ptr = ioc->buf;
 		for (i = 0; i < sg_used; i++) {
 			if (copy_to_user(ptr, buff[i], buff_size[i])) {
-				cmd_special_free(h, c);
 				status = -EFAULT;
-				goto cleanup1;
+				goto cleanup0;
 			}
 			ptr += buff_size[i];
 		}
 	}
-	cmd_special_free(h, c);
 	status = 0;
+cleanup0:
+	cmd_special_free(h, c);
 cleanup1:
 	if (buff) {
 		for (i = 0; i < sg_used; i++)
@@ -3223,6 +3388,36 @@ static void check_ioctl_unit_attention(struct ctlr_info *h,
 			c->err_info->ScsiStatus != SAM_STAT_CHECK_CONDITION)
 		(void) check_for_unit_attention(h, c);
 }
+
+static int increment_passthru_count(struct ctlr_info *h)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&h->passthru_count_lock, flags);
+	if (h->passthru_count >= HPSA_MAX_CONCURRENT_PASSTHRUS) {
+		spin_unlock_irqrestore(&h->passthru_count_lock, flags);
+		return -1;
+	}
+	h->passthru_count++;
+	spin_unlock_irqrestore(&h->passthru_count_lock, flags);
+	return 0;
+}
+
+static void decrement_passthru_count(struct ctlr_info *h)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&h->passthru_count_lock, flags);
+	if (h->passthru_count <= 0) {
+		spin_unlock_irqrestore(&h->passthru_count_lock, flags);
+		/* not expecting to get here. */
+		dev_warn(&h->pdev->dev, "Bug detected, passthru_count seems to be incorrect.\n");
+		return;
+	}
+	h->passthru_count--;
+	spin_unlock_irqrestore(&h->passthru_count_lock, flags);
+}
+
 /*
  * ioctl
  */
@@ -3230,6 +3425,7 @@ static int hpsa_ioctl(struct scsi_device *dev, int cmd, void *arg)
 {
 	struct ctlr_info *h;
 	void __user *argp = (void __user *)arg;
+	int rc;
 
 	h = sdev_to_hba(dev);
 
@@ -3244,9 +3440,17 @@ static int hpsa_ioctl(struct scsi_device *dev, int cmd, void *arg)
 	case CCISS_GETDRIVVER:
 		return hpsa_getdrivver_ioctl(h, argp);
 	case CCISS_PASSTHRU:
-		return hpsa_passthru_ioctl(h, argp);
+		if (increment_passthru_count(h))
+			return -EAGAIN;
+		rc = hpsa_passthru_ioctl(h, argp);
+		decrement_passthru_count(h);
+		return rc;
 	case CCISS_BIG_PASSTHRU:
-		return hpsa_big_passthru_ioctl(h, argp);
+		if (increment_passthru_count(h))
+			return -EAGAIN;
+		rc = hpsa_big_passthru_ioctl(h, argp);
+		decrement_passthru_count(h);
+		return rc;
 	default:
 		return -ENOTTY;
 	}
@@ -3445,9 +3649,11 @@ static void start_io(struct ctlr_info *h)
 		c = list_entry(h->reqQ.next, struct CommandList, list);
 		/* can't do anything if fifo is full */
 		if ((h->access.fifo_full(h))) {
+			h->fifo_recently_full = 1;
 			dev_warn(&h->pdev->dev, "fifo full\n");
 			break;
 		}
+		h->fifo_recently_full = 0;
 
 		/* Get the first entry from the Request Q */
 		removeQ(c);
@@ -3501,15 +3707,41 @@ static inline int bad_tag(struct ctlr_info *h, u32 tag_index,
 static inline void finish_cmd(struct CommandList *c)
 {
 	unsigned long flags;
+	int io_may_be_stalled = 0;
+	struct ctlr_info *h = c->h;
 
-	spin_lock_irqsave(&c->h->lock, flags);
+	spin_lock_irqsave(&h->lock, flags);
 	removeQ(c);
-	spin_unlock_irqrestore(&c->h->lock, flags);
+
+	/*
+	 * Check for possibly stalled i/o.
+	 *
+	 * If a fifo_full condition is encountered, requests will back up
+	 * in h->reqQ.  This queue is only emptied out by start_io which is
+	 * only called when a new i/o request comes in.  If no i/o's are
+	 * forthcoming, the i/o's in h->reqQ can get stuck.  So we call
+	 * start_io from here if we detect such a danger.
+	 *
+	 * Normally, we shouldn't hit this case, but pounding on the
+	 * CCISS_PASSTHRU ioctl can provoke it.  Only call start_io if
+	 * commands_outstanding is low.  We want to avoid calling
+	 * start_io from in here as much as possible, and esp. don't
+	 * want to get in a cycle where we call start_io every time
+	 * through here.
+	 */
+	if (unlikely(h->fifo_recently_full) &&
+		h->commands_outstanding < 5)
+		io_may_be_stalled = 1;
+
+	spin_unlock_irqrestore(&h->lock, flags);
+
 	dial_up_lockup_detection_on_fw_flash_complete(c->h, c);
 	if (likely(c->cmd_type == CMD_SCSI))
 		complete_scsi_command(c);
 	else if (c->cmd_type == CMD_IOCTL_PEND)
 		complete(c->waiting);
+	if (unlikely(io_may_be_stalled))
+		start_io(h);
 }
 
 static inline u32 hpsa_tag_contains_index(u32 tag)
@@ -3785,6 +4017,13 @@ static int hpsa_controller_hard_reset(struct pci_dev *pdev,
 		 */
 		dev_info(&pdev->dev, "using doorbell to reset controller\n");
 		writel(use_doorbell, vaddr + SA5_DOORBELL);
+
+		/* PMC hardware guys tell us we need a 5 second delay after
+		 * doorbell reset and before any attempt to talk to the board
+		 * at all to ensure that this actually works and doesn't fall
+		 * over in some weird corner cases.
+		 */
+		msleep(5000);
 	} else { /* Try to do it the PCI power state way */
 
 		/* Quoting from the Open CISS Specification: "The Power
@@ -3981,15 +4220,22 @@ static int hpsa_kdump_hard_reset_controller(struct pci_dev *pdev)
 	   need a little pause here */
 	msleep(HPSA_POST_RESET_PAUSE_MSECS);
 
-	/* Wait for board to become not ready, then ready. */
-	dev_info(&pdev->dev, "Waiting for board to reset.\n");
-	rc = hpsa_wait_for_board_state(pdev, vaddr, BOARD_NOT_READY);
-	if (rc) {
-		dev_warn(&pdev->dev,
-			"failed waiting for board to reset."
-			" Will try soft reset.\n");
-		rc = -ENOTSUPP; /* Not expected, but try soft reset later */
-		goto unmap_cfgtable;
+	if (!use_doorbell) {
+		/* Wait for board to become not ready, then ready.
+		 * (if we used the doorbell, then we already waited 5 secs
+		 * so the "not ready" state is already gone by so we
+		 * won't catch it.)
+		 */
+		dev_info(&pdev->dev, "Waiting for board to reset.\n");
+		rc = hpsa_wait_for_board_state(pdev, vaddr, BOARD_NOT_READY);
+		if (rc) {
+			dev_warn(&pdev->dev,
+				"failed waiting for board to reset."
+				" Will try soft reset.\n");
+			/* Not expected, but try soft reset later */
+			rc = -ENOTSUPP;
+			goto unmap_cfgtable;
+		}
 	}
 	rc = hpsa_wait_for_board_state(pdev, vaddr, BOARD_READY);
 	if (rc) {
@@ -4820,8 +5066,11 @@ reinit_after_soft_reset:
 	h->intr_mode = hpsa_simple_mode ? SIMPLE_MODE_INT : PERF_MODE_INT;
 	INIT_LIST_HEAD(&h->cmpQ);
 	INIT_LIST_HEAD(&h->reqQ);
+	INIT_LIST_HEAD(&h->offline_device_list);
 	spin_lock_init(&h->lock);
 	spin_lock_init(&h->scan_lock);
+	spin_lock_init(&h->offline_device_lock);
+	spin_lock_init(&h->passthru_count_lock);
 	rc = hpsa_pci_init(h);
 	if (rc != 0)
 		goto clean1;
@@ -4829,6 +5078,7 @@ reinit_after_soft_reset:
 	sprintf(h->devname, HPSA "%d", number_of_controllers);
 	h->ctlr = number_of_controllers;
 	number_of_controllers++;
+	h->offline_device_thread_state = OFFLINE_DEVICE_THREAD_STOPPED;
 
 	/* configure PCI DMA stuff */
 	rc = pci_set_dma_mask(pdev, DMA_BIT_MASK(64));
@@ -4942,6 +5192,15 @@ static void hpsa_flush_cache(struct ctlr_info *h)
 {
 	char *flush_buf;
 	struct CommandList *c;
+	unsigned long flags;
+
+	/* Don't bother trying to flush the cache if locked up */
+	spin_lock_irqsave(&h->lock, flags);
+	if (unlikely(h->lockup_detected)) {
+		spin_unlock_irqrestore(&h->lock, flags);
+		return;
+	}
+	spin_unlock_irqrestore(&h->lock, flags);
 
 	flush_buf = kzalloc(4, GFP_KERNEL);
 	if (!flush_buf)
@@ -4998,6 +5257,7 @@ static void hpsa_remove_one(struct pci_dev *pdev)
 	}
 	h = pci_get_drvdata(pdev);
 	stop_controller_lockup_detector(h);
+	stop_offline_device_monitor(h);
 	hpsa_unregister_scsi(h);	/* unhook from SCSI subsystem */
 	hpsa_shutdown(pdev);
 	iounmap(h->vaddr);
