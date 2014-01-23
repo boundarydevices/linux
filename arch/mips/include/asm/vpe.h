@@ -62,7 +62,6 @@ struct vpe {
 	unsigned long len;
 	char *pbuffer;
 	unsigned long plen;
-	unsigned int uid, gid;
 	char cwd[VPE_PATH_MAX];
 
 	unsigned long __start;
@@ -112,8 +111,6 @@ extern const struct file_operations vpe_fops;
 int vpe_notify(int index, struct vpe_notifications *notify);
 
 void *vpe_get_shared(int index);
-int vpe_getuid(int index);
-int vpe_getgid(int index);
 char *vpe_getcwd(int index);
 
 struct vpe *get_vpe(int minor);
