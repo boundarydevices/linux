@@ -582,7 +582,7 @@ static void cpsw_intr_disable(struct cpsw_priv *priv)
 	return;
 }
 
-void cpsw_tx_handler(void *token, int len, int status)
+static void cpsw_tx_handler(void *token, int len, int status)
 {
 	struct sk_buff		*skb = token;
 	struct net_device	*ndev = skb->dev;
@@ -599,7 +599,7 @@ void cpsw_tx_handler(void *token, int len, int status)
 	dev_kfree_skb_any(skb);
 }
 
-void cpsw_rx_handler(void *token, int len, int status)
+static void cpsw_rx_handler(void *token, int len, int status)
 {
 	struct sk_buff		*skb = token;
 	struct sk_buff		*new_skb;
@@ -1331,7 +1331,7 @@ static void cpsw_hwtstamp_v2(struct cpsw_priv *priv)
 	__raw_writel(ETH_P_1588, &priv->regs->ts_ltype);
 }
 
-static int cpsw_hwtstamp_ioctl(struct net_device *dev, struct ifreq *ifr)
+static int cpsw_hwtstamp_set(struct net_device *dev, struct ifreq *ifr)
 {
 	struct cpsw_priv *priv = netdev_priv(dev);
 	struct cpts *cpts = priv->cpts;
@@ -1392,6 +1392,24 @@ static int cpsw_hwtstamp_ioctl(struct net_device *dev, struct ifreq *ifr)
 	return copy_to_user(ifr->ifr_data, &cfg, sizeof(cfg)) ? -EFAULT : 0;
 }
 
+static int cpsw_hwtstamp_get(struct net_device *dev, struct ifreq *ifr)
+{
+	struct cpsw_priv *priv = netdev_priv(dev);
+	struct cpts *cpts = priv->cpts;
+	struct hwtstamp_config cfg;
+
+	if (priv->version != CPSW_VERSION_1 &&
+	    priv->version != CPSW_VERSION_2)
+		return -EOPNOTSUPP;
+
+	cfg.flags = 0;
+	cfg.tx_type = cpts->tx_enable ? HWTSTAMP_TX_ON : HWTSTAMP_TX_OFF;
+	cfg.rx_filter = (cpts->rx_enable ?
+			 HWTSTAMP_FILTER_PTP_V2_EVENT : HWTSTAMP_FILTER_NONE);
+
+	return copy_to_user(ifr->ifr_data, &cfg, sizeof(cfg)) ? -EFAULT : 0;
+}
+
 #endif /*CONFIG_TI_CPTS*/
 
 static int cpsw_ndo_ioctl(struct net_device *dev, struct ifreq *req, int cmd)
@@ -1406,7 +1424,9 @@ static int cpsw_ndo_ioctl(struct net_device *dev, struct ifreq *req, int cmd)
 	switch (cmd) {
 #ifdef CONFIG_TI_CPTS
 	case SIOCSHWTSTAMP:
-		return cpsw_hwtstamp_ioctl(dev, req);
+		return cpsw_hwtstamp_set(dev, req);
+	case SIOCGHWTSTAMP:
+		return cpsw_hwtstamp_get(dev, req);
 #endif
 	case SIOCGMIIPHY:
 		data->phy_id = priv->slaves[slave_no].phy->addr;
@@ -2137,8 +2157,8 @@ static int cpsw_probe(struct platform_device *pdev)
 			  data->cpts_clock_mult, data->cpts_clock_shift))
 		dev_err(priv->dev, "error registering cpts device\n");
 
-	cpsw_notice(priv, probe, "initialized device (regs %x, irq %d)\n",
-		    ss_res->start, ndev->irq);
+	cpsw_notice(priv, probe, "initialized device (regs %pa, irq %d)\n",
+		    &ss_res->start, ndev->irq);
 
 	if (priv->data.dual_emac) {
 		ret = cpsw_probe_dual_emac(pdev, priv);

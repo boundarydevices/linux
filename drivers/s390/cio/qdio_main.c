@@ -1757,7 +1757,7 @@ EXPORT_SYMBOL(qdio_stop_irq);
  * @schid:		Subchannel ID.
  * @cnc:		Boolean Change-Notification Control
  * @response:		Response code will be stored at this address
- * @cb: 		Callback function will be executed for each element
+ * @cb:			Callback function will be executed for each element
  *			of the address list
  * @priv:		Pointer passed from the caller to qdio_pnso_brinfo()
  * @type:		Type of the address entry passed to the callback
