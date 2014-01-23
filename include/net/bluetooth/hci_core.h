@@ -114,8 +114,10 @@ struct link_key {
 struct oob_data {
 	struct list_head list;
 	bdaddr_t bdaddr;
-	u8 hash[16];
-	u8 randomizer[16];
+	u8 hash192[16];
+	u8 randomizer192[16];
+	u8 hash256[16];
+	u8 randomizer256[16];
 };
 
 #define HCI_MAX_SHORT_NAME_LENGTH	10
@@ -446,6 +448,7 @@ enum {
 	HCI_CONN_LE_SMP_PEND,
 	HCI_CONN_MGMT_CONNECTED,
 	HCI_CONN_SSP_ENABLED,
+	HCI_CONN_SC_ENABLED,
 	HCI_CONN_POWER_SAVE,
 	HCI_CONN_REMOTE_OOB,
 	HCI_CONN_6LOWPAN,
@@ -456,6 +459,13 @@ static inline bool hci_conn_ssp_enabled(struct hci_conn *conn)
 	struct hci_dev *hdev = conn->hdev;
 	return test_bit(HCI_SSP_ENABLED, &hdev->dev_flags) &&
 	       test_bit(HCI_CONN_SSP_ENABLED, &conn->flags);
+}
+
+static inline bool hci_conn_sc_enabled(struct hci_conn *conn)
+{
+	struct hci_dev *hdev = conn->hdev;
+	return test_bit(HCI_SC_ENABLED, &hdev->dev_flags) &&
+	       test_bit(HCI_CONN_SC_ENABLED, &conn->flags);
 }
 
 static inline void hci_conn_hash_add(struct hci_dev *hdev, struct hci_conn *c)
@@ -759,9 +769,12 @@ int hci_remove_link_key(struct hci_dev *hdev, bdaddr_t *bdaddr);
 
 int hci_remote_oob_data_clear(struct hci_dev *hdev);
 struct oob_data *hci_find_remote_oob_data(struct hci_dev *hdev,
-							bdaddr_t *bdaddr);
-int hci_add_remote_oob_data(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 *hash,
-								u8 *randomizer);
+					  bdaddr_t *bdaddr);
+int hci_add_remote_oob_data(struct hci_dev *hdev, bdaddr_t *bdaddr,
+			    u8 *hash, u8 *randomizer);
+int hci_add_remote_oob_ext_data(struct hci_dev *hdev, bdaddr_t *bdaddr,
+				u8 *hash192, u8 *randomizer192,
+				u8 *hash256, u8 *randomizer256);
 int hci_remove_remote_oob_data(struct hci_dev *hdev, bdaddr_t *bdaddr);
 
 void hci_event_packet(struct hci_dev *hdev, struct sk_buff *skb);
@@ -803,9 +816,12 @@ void hci_conn_del_sysfs(struct hci_conn *conn);
 #define lmp_csb_slave_capable(dev)  ((dev)->features[2][0] & LMP_CSB_SLAVE)
 #define lmp_sync_train_capable(dev) ((dev)->features[2][0] & LMP_SYNC_TRAIN)
 #define lmp_sync_scan_capable(dev)  ((dev)->features[2][0] & LMP_SYNC_SCAN)
+#define lmp_sc_capable(dev)         ((dev)->features[2][1] & LMP_SC)
+#define lmp_ping_capable(dev)       ((dev)->features[2][1] & LMP_PING)
 
 /* ----- Host capabilities ----- */
 #define lmp_host_ssp_capable(dev)  ((dev)->features[1][0] & LMP_HOST_SSP)
+#define lmp_host_sc_capable(dev)   ((dev)->features[1][0] & LMP_HOST_SC)
 #define lmp_host_le_capable(dev)   (!!((dev)->features[1][0] & LMP_HOST_LE))
 #define lmp_host_le_br_capable(dev) (!!((dev)->features[1][0] & LMP_HOST_LE_BREDR))
 
@@ -1122,11 +1138,13 @@ void mgmt_auth_failed(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 link_type,
 		      u8 addr_type, u8 status);
 void mgmt_auth_enable_complete(struct hci_dev *hdev, u8 status);
 void mgmt_ssp_enable_complete(struct hci_dev *hdev, u8 enable, u8 status);
+void mgmt_sc_enable_complete(struct hci_dev *hdev, u8 enable, u8 status);
 void mgmt_set_class_of_dev_complete(struct hci_dev *hdev, u8 *dev_class,
 				    u8 status);
 void mgmt_set_local_name_complete(struct hci_dev *hdev, u8 *name, u8 status);
-void mgmt_read_local_oob_data_reply_complete(struct hci_dev *hdev, u8 *hash,
-					     u8 *randomizer, u8 status);
+void mgmt_read_local_oob_data_complete(struct hci_dev *hdev, u8 *hash192,
+				       u8 *randomizer192, u8 *hash256,
+				       u8 *randomizer256, u8 status);
 void mgmt_device_found(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 link_type,
 		       u8 addr_type, u8 *dev_class, s8 rssi, u8 cfm_name,
 		       u8 ssp, u8 *eir, u16 eir_len);

@@ -415,6 +415,70 @@ static int ssp_debug_mode_get(void *data, u64 *val)
 DEFINE_SIMPLE_ATTRIBUTE(ssp_debug_mode_fops, ssp_debug_mode_get,
 			ssp_debug_mode_set, "%llu\n");
 
+static ssize_t force_sc_support_read(struct file *file, char __user *user_buf,
+				     size_t count, loff_t *ppos)
+{
+	struct hci_dev *hdev = file->private_data;
+	char buf[3];
+
+	buf[0] = test_bit(HCI_FORCE_SC, &hdev->dev_flags) ? 'Y': 'N';
+	buf[1] = '\n';
+	buf[2] = '\0';
+	return simple_read_from_buffer(user_buf, count, ppos, buf, 2);
+}
+
+static ssize_t force_sc_support_write(struct file *file,
+				      const char __user *user_buf,
+				      size_t count, loff_t *ppos)
+{
+	struct hci_dev *hdev = file->private_data;
+	char buf[32];
+	size_t buf_size = min(count, (sizeof(buf)-1));
+	bool enable;
+
+	if (test_bit(HCI_UP, &hdev->flags))
+		return -EBUSY;
+
+	if (copy_from_user(buf, user_buf, buf_size))
+		return -EFAULT;
+
+	buf[buf_size] = '\0';
+	if (strtobool(buf, &enable))
+		return -EINVAL;
+
+	if (enable == test_bit(HCI_FORCE_SC, &hdev->dev_flags))
+		return -EALREADY;
+
+	change_bit(HCI_FORCE_SC, &hdev->dev_flags);
+
+	return count;
+}
+
+static const struct file_operations force_sc_support_fops = {
+	.open		= simple_open,
+	.read		= force_sc_support_read,
+	.write		= force_sc_support_write,
+	.llseek		= default_llseek,
+};
+
+static ssize_t sc_only_mode_read(struct file *file, char __user *user_buf,
+				 size_t count, loff_t *ppos)
+{
+	struct hci_dev *hdev = file->private_data;
+	char buf[3];
+
+	buf[0] = test_bit(HCI_SC_ONLY, &hdev->dev_flags) ? 'Y': 'N';
+	buf[1] = '\n';
+	buf[2] = '\0';
+	return simple_read_from_buffer(user_buf, count, ppos, buf, 2);
+}
+
+static const struct file_operations sc_only_mode_fops = {
+	.open		= simple_open,
+	.read		= sc_only_mode_read,
+	.llseek		= default_llseek,
+};
+
 static int idle_timeout_set(void *data, u64 val)
 {
 	struct hci_dev *hdev = data;
@@ -1288,6 +1352,10 @@ static void hci_set_event_mask_page_2(struct hci_request *req)
 		events[2] |= 0x08;	/* Truncated Page Complete */
 	}
 
+	/* Enable Authenticated Payload Timeout Expired event if supported */
+	if (lmp_ping_capable(hdev))
+		events[2] |= 0x80;
+
 	hci_req_add(req, HCI_OP_SET_EVENT_MASK_PAGE_2, sizeof(events), events);
 }
 
@@ -1359,6 +1427,15 @@ static void hci_init4_req(struct hci_request *req, unsigned long opt)
 	/* Check for Synchronization Train support */
 	if (lmp_sync_train_capable(hdev))
 		hci_req_add(req, HCI_OP_READ_SYNC_TRAIN_PARAMS, 0, NULL);
+
+	/* Enable Secure Connections if supported and configured */
+	if ((lmp_sc_capable(hdev) ||
+	     test_bit(HCI_FORCE_SC, &hdev->dev_flags)) &&
+	    test_bit(HCI_SC_ENABLED, &hdev->dev_flags)) {
+		u8 support = 0x01;
+		hci_req_add(req, HCI_OP_WRITE_SC_SUPPORT,
+			    sizeof(support), &support);
+	}
 }
 
 static int __hci_init(struct hci_dev *hdev)
@@ -1430,6 +1507,10 @@ static int __hci_init(struct hci_dev *hdev)
 				    hdev, &auto_accept_delay_fops);
 		debugfs_create_file("ssp_debug_mode", 0644, hdev->debugfs,
 				    hdev, &ssp_debug_mode_fops);
+		debugfs_create_file("force_sc_support", 0644, hdev->debugfs,
+				    hdev, &force_sc_support_fops);
+		debugfs_create_file("sc_only_mode", 0444, hdev->debugfs,
+				    hdev, &sc_only_mode_fops);
 	}
 
 	if (lmp_sniff_capable(hdev)) {
@@ -2733,13 +2814,12 @@ int hci_remote_oob_data_clear(struct hci_dev *hdev)
 	return 0;
 }
 
-int hci_add_remote_oob_data(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 *hash,
-			    u8 *randomizer)
+int hci_add_remote_oob_data(struct hci_dev *hdev, bdaddr_t *bdaddr,
+			    u8 *hash, u8 *randomizer)
 {
 	struct oob_data *data;
 
 	data = hci_find_remote_oob_data(hdev, bdaddr);
-
 	if (!data) {
 		data = kmalloc(sizeof(*data), GFP_ATOMIC);
 		if (!data)
@@ -2749,8 +2829,38 @@ int hci_add_remote_oob_data(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 *hash,
 		list_add(&data->list, &hdev->remote_oob_data);
 	}
 
-	memcpy(data->hash, hash, sizeof(data->hash));
-	memcpy(data->randomizer, randomizer, sizeof(data->randomizer));
+	memcpy(data->hash192, hash, sizeof(data->hash192));
+	memcpy(data->randomizer192, randomizer, sizeof(data->randomizer192));
+
+	memset(data->hash256, 0, sizeof(data->hash256));
+	memset(data->randomizer256, 0, sizeof(data->randomizer256));
+
+	BT_DBG("%s for %pMR", hdev->name, bdaddr);
+
+	return 0;
+}
+
+int hci_add_remote_oob_ext_data(struct hci_dev *hdev, bdaddr_t *bdaddr,
+				u8 *hash192, u8 *randomizer192,
+				u8 *hash256, u8 *randomizer256)
+{
+	struct oob_data *data;
+
+	data = hci_find_remote_oob_data(hdev, bdaddr);
+	if (!data) {
+		data = kmalloc(sizeof(*data), GFP_ATOMIC);
+		if (!data)
+			return -ENOMEM;
+
+		bacpy(&data->bdaddr, bdaddr);
+		list_add(&data->list, &hdev->remote_oob_data);
+	}
+
+	memcpy(data->hash192, hash192, sizeof(data->hash192));
+	memcpy(data->randomizer192, randomizer192, sizeof(data->randomizer192));
+
+	memcpy(data->hash256, hash256, sizeof(data->hash256));
+	memcpy(data->randomizer256, randomizer256, sizeof(data->randomizer256));
 
 	BT_DBG("%s for %pMR", hdev->name, bdaddr);
 
