@@ -136,6 +136,15 @@ void *kthread_data(struct task_struct *task)
 	return to_kthread(task)->data;
 }
 
+/*
+ * Set the affinity of the calling task to be the same
+ * as the kthreadd affinities.
+ */
+void set_kthreadd_affinity(void)
+{
+	set_cpus_allowed_ptr(current, &kthreadd_task->cpus_allowed);
+}
+
 /**
  * probe_kthread_data - speculative version of kthread_data()
  * @task: possible kthread task in question

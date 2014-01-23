@@ -71,11 +71,11 @@ void ufs_free_inode (struct inode * inode)
 	
 	ino = inode->i_ino;
 
-	mutex_lock(&UFS_SB(sb)->s_lock);
+	lock_ufs(sb);
 
 	if (!((ino > 1) && (ino < (uspi->s_ncg * uspi->s_ipg )))) {
 		ufs_warning(sb, "ufs_free_inode", "reserved inode or nonexistent inode %u\n", ino);
-		mutex_unlock(&UFS_SB(sb)->s_lock);
+		unlock_ufs(sb);
 		return;
 	}
 	
@@ -83,7 +83,7 @@ void ufs_free_inode (struct inode * inode)
 	bit = ufs_inotocgoff (ino);
 	ucpi = ufs_load_cylinder (sb, cg);
 	if (!ucpi) {
-		mutex_unlock(&UFS_SB(sb)->s_lock);
+		unlock_ufs(sb);
 		return;
 	}
 	ucg = ubh_get_ucg(UCPI_UBH(ucpi));
@@ -117,7 +117,7 @@ void ufs_free_inode (struct inode * inode)
 		ubh_sync_block(UCPI_UBH(ucpi));
 	
 	ufs_mark_sb_dirty(sb);
-	mutex_unlock(&UFS_SB(sb)->s_lock);
+	unlock_ufs(sb);
 	UFSD("EXIT\n");
 }
 
@@ -197,7 +197,7 @@ struct inode *ufs_new_inode(struct inode *dir, umode_t mode)
 	uspi = sbi->s_uspi;
 	usb1 = ubh_get_usb_first(uspi);
 
-	mutex_lock(&sbi->s_lock);
+	lock_ufs(sb);
 
 	/*
 	 * Try to place the inode in its parent directory
@@ -332,21 +332,20 @@ cg_found:
 			sync_dirty_buffer(bh);
 		brelse(bh);
 	}
-
-	mutex_unlock(&sbi->s_lock);
+	unlock_ufs(sb);
 
 	UFSD("allocating inode %lu\n", inode->i_ino);
 	UFSD("EXIT\n");
 	return inode;
 
 fail_remove_inode:
-	mutex_unlock(&sbi->s_lock);
+	unlock_ufs(sb);
 	clear_nlink(inode);
 	iput(inode);
 	UFSD("EXIT (FAILED): err %d\n", err);
 	return ERR_PTR(err);
 failed:
-	mutex_unlock(&sbi->s_lock);
+	unlock_ufs(sb);
 	make_bad_inode(inode);
 	iput (inode);
 	UFSD("EXIT (FAILED): err %d\n", err);

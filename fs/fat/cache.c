@@ -325,19 +325,26 @@ int fat_bmap(struct inode *inode, sector_t sector, sector_t *phys,
 
 	last_block = (i_size_read(inode) + (blocksize - 1)) >> blocksize_bits;
 	if (sector >= last_block) {
-		if (!create)
-			return 0;
-
 		/*
-		 * ->mmu_private can access on only allocation path.
-		 * (caller must hold ->i_mutex)
+		 * Both ->mmu_private and ->i_disksize can access
+		 * on only allocation path. (caller must hold ->i_mutex)
 		 */
-		last_block = (MSDOS_I(inode)->mmu_private + (blocksize - 1))
+		last_block = (MSDOS_I(inode)->i_disksize + (blocksize - 1))
 			>> blocksize_bits;
+		if (!create) {
+			/* Map a block in fallocated region */
+			if (atomic_read(&MSDOS_I(inode)->beyond_isize))
+				if (sector < last_block)
+					goto out_map_cluster;
+
+			return 0;
+		}
+
 		if (sector >= last_block)
 			return 0;
 	}
 
+out_map_cluster:
 	cluster = sector >> (sbi->cluster_bits - sb->s_blocksize_bits);
 	offset  = sector & (sbi->sec_per_clus - 1);
 	cluster = fat_bmap_cluster(inode, cluster);
