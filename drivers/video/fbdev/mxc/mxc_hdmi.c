@@ -72,6 +72,10 @@
 #define YCBCR422_8BITS		3
 #define XVYCC444            4
 
+static int only_cea = 1;
+module_param(only_cea, int, 0644);
+MODULE_PARM_DESC(only_cea, "Allow only CEA modes");
+
 /*
  * We follow a flowchart which is in the "Synopsys DesignWare Courses
  * HDMI Transmitter Controller User Guide, 1.30a", section 3.1
@@ -1800,7 +1804,7 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 		mode = &hdmi->fbi->monspecs.modedb[i];
 
 		if (!(mode->vmode & FB_VMODE_INTERLACED) &&
-				(mxc_edid_mode_to_vic(mode) != 0)) {
+				(!only_cea || mxc_edid_mode_to_vic(mode))) {
 
 			dev_dbg(&hdmi->pdev->dev, "Added mode %d:", i);
 			dev_dbg(&hdmi->pdev->dev,
@@ -1948,8 +1952,9 @@ static void mxc_hdmi_cable_connected(struct mxc_hdmi *hdmi)
 		mxc_hdmi_edid_rebuild_modelist(hdmi);
 		break;
 
-	/* Nothing to do if EDID same */
+	/* Rebuild even if they're the same in case only_cea changed */
 	case HDMI_EDID_SAME:
+		mxc_hdmi_edid_rebuild_modelist(hdmi);
 		break;
 
 	case HDMI_EDID_FAIL:
