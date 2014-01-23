@@ -894,6 +894,13 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 	}
 }
 
+static const struct imx_pcie_platform_data pcie_data  __initconst = {
+	.pcie_pwr_en	= -EINVAL,
+	.pcie_rst	= -EINVAL, //GP_CAP_TCH_INT1,
+	.pcie_wake_up	= -EINVAL,
+	.pcie_dis	= -EINVAL,
+};
+
 /*!
  * Board specific initialization.
  */
@@ -1035,6 +1042,7 @@ static void __init mx6_board_init(void)
 	gpio_free(WL_BT_REG_EN);
 	gpio_free(WL_BT_RESET);
 	mdelay(1);
+	imx6q_add_pcie(&pcie_data);
 
 	imx6q_add_perfmon(0);
 	imx6q_add_perfmon(1);
