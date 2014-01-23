@@ -28,7 +28,7 @@ static void print_chunk(struct extent_buffer *eb, struct btrfs_chunk *chunk)
 	       "num_stripes %d\n",
 	       btrfs_chunk_length(eb, chunk), btrfs_chunk_owner(eb, chunk),
 	       btrfs_chunk_type(eb, chunk), num_stripes);
-	for (i = 0 ; i < num_stripes ; i++) {
+	for (i = 0; i < num_stripes; i++) {
 		printk(KERN_INFO "\t\t\tstripe %d devid %llu offset %llu\n", i,
 		      btrfs_stripe_devid_nr(eb, chunk, i),
 		      btrfs_stripe_offset_nr(eb, chunk, i));
@@ -154,7 +154,7 @@ static void print_uuid_item(struct extent_buffer *l, unsigned long offset,
 			    u32 item_size)
 {
 	if (!IS_ALIGNED(item_size, sizeof(u64))) {
-		pr_warn("btrfs: uuid item with illegal size %lu!\n",
+		pr_warn("BTRFS: uuid item with illegal size %lu!\n",
 			(unsigned long)item_size);
 		return;
 	}

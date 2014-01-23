@@ -62,7 +62,8 @@ void btrfs_put_transaction(struct btrfs_transaction *transaction)
 	WARN_ON(atomic_read(&transaction->use_count) == 0);
 	if (atomic_dec_and_test(&transaction->use_count)) {
 		BUG_ON(!list_empty(&transaction->list));
-		WARN_ON(transaction->delayed_refs.root.rb_node);
+		WARN_ON(!RB_EMPTY_ROOT(&transaction->delayed_refs.root));
+		WARN_ON(!RB_EMPTY_ROOT(&transaction->delayed_refs.href_root));
 		while (!list_empty(&transaction->pending_chunks)) {
 			struct extent_map *em;
 
@@ -184,6 +185,7 @@ loop:
 	cur_trans->start_time = get_seconds();
 
 	cur_trans->delayed_refs.root = RB_ROOT;
+	cur_trans->delayed_refs.href_root = RB_ROOT;
 	cur_trans->delayed_refs.num_entries = 0;
 	cur_trans->delayed_refs.num_heads_ready = 0;
 	cur_trans->delayed_refs.num_heads = 0;
@@ -196,10 +198,10 @@ loop:
 	 */
 	smp_mb();
 	if (!list_empty(&fs_info->tree_mod_seq_list))
-		WARN(1, KERN_ERR "btrfs: tree_mod_seq_list not empty when "
+		WARN(1, KERN_ERR "BTRFS: tree_mod_seq_list not empty when "
 			"creating a fresh transaction\n");
 	if (!RB_EMPTY_ROOT(&fs_info->tree_mod_log))
-		WARN(1, KERN_ERR "btrfs: tree_mod_log rb tree not empty when "
+		WARN(1, KERN_ERR "BTRFS: tree_mod_log rb tree not empty when "
 			"creating a fresh transaction\n");
 	atomic64_set(&fs_info->tree_mod_seq, 0);
 
@@ -788,12 +790,6 @@ int btrfs_end_transaction_throttle(struct btrfs_trans_handle *trans,
 	return __btrfs_end_transaction(trans, root, 1);
 }
 
-int btrfs_end_transaction_dmeta(struct btrfs_trans_handle *trans,
-				struct btrfs_root *root)
-{
-	return __btrfs_end_transaction(trans, root, 1);
-}
-
 /*
  * when btree blocks are allocated, they have some corresponding bits set for
  * them in one of two extent_io trees.  This is used to make sure all of
@@ -1105,7 +1101,7 @@ int btrfs_defrag_root(struct btrfs_root *root)
 			break;
 
 		if (btrfs_defrag_cancelled(root->fs_info)) {
-			printk(KERN_DEBUG "btrfs: defrag_root cancelled\n");
+			pr_debug("BTRFS: defrag_root cancelled\n");
 			ret = -EAGAIN;
 			break;
 		}
@@ -1746,6 +1742,8 @@ int btrfs_commit_transaction(struct btrfs_trans_handle *trans,
 		goto cleanup_transaction;
 
 	btrfs_wait_delalloc_flush(root->fs_info);
+
+	btrfs_scrub_pause(root);
 	/*
 	 * Ok now we need to make sure to block out any other joins while we
 	 * commit the transaction.  We could have started a join before setting
@@ -1810,7 +1808,6 @@ int btrfs_commit_transaction(struct btrfs_trans_handle *trans,
 
 	WARN_ON(cur_trans != trans->transaction);
 
-	btrfs_scrub_pause(root);
 	/* btrfs_commit_tree_roots is responsible for getting the
 	 * various roots consistent with each other.  Every pointer
 	 * in the tree of tree roots has to point to the most up to date
@@ -1978,7 +1975,7 @@ int btrfs_clean_one_deleted_snapshot(struct btrfs_root *root)
 	list_del_init(&root->root_list);
 	spin_unlock(&fs_info->trans_lock);
 
-	pr_debug("btrfs: cleaner removing %llu\n", root->objectid);
+	pr_debug("BTRFS: cleaner removing %llu\n", root->objectid);
 
 	btrfs_kill_all_delayed_nodes(root);
 

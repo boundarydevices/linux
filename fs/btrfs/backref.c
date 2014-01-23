@@ -1107,38 +1107,6 @@ int btrfs_find_all_roots(struct btrfs_trans_handle *trans,
 	return 0;
 }
 
-
-static int __inode_info(u64 inum, u64 ioff, u8 key_type,
-			struct btrfs_root *fs_root, struct btrfs_path *path,
-			struct btrfs_key *found_key)
-{
-	int ret;
-	struct btrfs_key key;
-	struct extent_buffer *eb;
-
-	key.type = key_type;
-	key.objectid = inum;
-	key.offset = ioff;
-
-	ret = btrfs_search_slot(NULL, fs_root, &key, path, 0, 0);
-	if (ret < 0)
-		return ret;
-
-	eb = path->nodes[0];
-	if (ret && path->slots[0] >= btrfs_header_nritems(eb)) {
-		ret = btrfs_next_leaf(fs_root, path);
-		if (ret)
-			return ret;
-		eb = path->nodes[0];
-	}
-
-	btrfs_item_key_to_cpu(eb, found_key, path->slots[0]);
-	if (found_key->type != key.type || found_key->objectid != key.objectid)
-		return 1;
-
-	return 0;
-}
-
 /*
  * this makes the path point to (inum INODE_ITEM ioff)
  */
@@ -1146,16 +1114,16 @@ int inode_item_info(u64 inum, u64 ioff, struct btrfs_root *fs_root,
 			struct btrfs_path *path)
 {
 	struct btrfs_key key;
-	return __inode_info(inum, ioff, BTRFS_INODE_ITEM_KEY, fs_root, path,
-				&key);
+	return btrfs_find_item(fs_root, path, inum, ioff,
+			BTRFS_INODE_ITEM_KEY, &key);
 }
 
 static int inode_ref_info(u64 inum, u64 ioff, struct btrfs_root *fs_root,
 				struct btrfs_path *path,
 				struct btrfs_key *found_key)
 {
-	return __inode_info(inum, ioff, BTRFS_INODE_REF_KEY, fs_root, path,
-				found_key);
+	return btrfs_find_item(fs_root, path, inum, ioff,
+			BTRFS_INODE_REF_KEY, found_key);
 }
 
 int btrfs_find_one_extref(struct btrfs_root *root, u64 inode_objectid,
@@ -1601,7 +1569,6 @@ static int iterate_inode_refs(u64 inum, struct btrfs_root *fs_root,
 	struct btrfs_key found_key;
 
 	while (!ret) {
-		path->leave_spinning = 1;
 		ret = inode_ref_info(inum, parent ? parent+1 : 0, fs_root, path,
 				     &found_key);
 		if (ret < 0)
@@ -1614,9 +1581,12 @@ static int iterate_inode_refs(u64 inum, struct btrfs_root *fs_root,
 
 		parent = found_key.offset;
 		slot = path->slots[0];
-		eb = path->nodes[0];
-		/* make sure we can use eb after releasing the path */
-		atomic_inc(&eb->refs);
+		eb = btrfs_clone_extent_buffer(path->nodes[0]);
+		if (!eb) {
+			ret = -ENOMEM;
+			break;
+		}
+		extent_buffer_get(eb);
 		btrfs_tree_read_lock(eb);
 		btrfs_set_lock_blocking_rw(eb, BTRFS_READ_LOCK);
 		btrfs_release_path(path);
@@ -1674,17 +1644,20 @@ static int iterate_inode_extrefs(u64 inum, struct btrfs_root *fs_root,
 		++found;
 
 		slot = path->slots[0];
-		eb = path->nodes[0];
-		/* make sure we can use eb after releasing the path */
-		atomic_inc(&eb->refs);
+		eb = btrfs_clone_extent_buffer(path->nodes[0]);
+		if (!eb) {
+			ret = -ENOMEM;
+			break;
+		}
+		extent_buffer_get(eb);
 
 		btrfs_tree_read_lock(eb);
 		btrfs_set_lock_blocking_rw(eb, BTRFS_READ_LOCK);
 		btrfs_release_path(path);
 
 		leaf = path->nodes[0];
-		item_size = btrfs_item_size_nr(leaf, path->slots[0]);
-		ptr = btrfs_item_ptr_offset(leaf, path->slots[0]);
+		item_size = btrfs_item_size_nr(leaf, slot);
+		ptr = btrfs_item_ptr_offset(leaf, slot);
 		cur_offset = 0;
 
 		while (cur_offset < item_size) {

@@ -88,8 +88,6 @@ struct send_ctx {
 	u64 cmd_send_size[BTRFS_SEND_C_MAX + 1];
 	u64 flags;	/* 'flags' member of btrfs_ioctl_send_args is u64 */
 
-	struct vfsmount *mnt;
-
 	struct btrfs_root *send_root;
 	struct btrfs_root *parent_root;
 	struct clone_root *clone_roots;
@@ -111,6 +109,7 @@ struct send_ctx {
 	int cur_inode_deleted;
 	u64 cur_inode_size;
 	u64 cur_inode_mode;
+	u64 cur_inode_last_extent;
 
 	u64 send_progress;
 
@@ -144,6 +143,13 @@ struct name_cache_entry {
 	int name_len;
 	char name[];
 };
+
+static int need_send_hole(struct send_ctx *sctx)
+{
+	return (sctx->parent_root && !sctx->cur_inode_new &&
+		!sctx->cur_inode_new_gen && !sctx->cur_inode_deleted &&
+		S_ISREG(sctx->cur_inode_mode));
+}
 
 static void fs_path_reset(struct fs_path *p)
 {
@@ -336,16 +342,6 @@ out:
 	return ret;
 }
 
-#if 0
-static void fs_path_remove(struct fs_path *p)
-{
-	BUG_ON(p->reversed);
-	while (p->start != p->end && *p->end != '/')
-		p->end--;
-	*p->end = 0;
-}
-#endif
-
 static int fs_path_copy(struct fs_path *p, struct fs_path *from)
 {
 	int ret;
@@ -436,30 +432,15 @@ static int tlv_put(struct send_ctx *sctx, u16 attr, const void *data, int len)
 	return 0;
 }
 
-#if 0
-static int tlv_put_u8(struct send_ctx *sctx, u16 attr, u8 value)
-{
-	return tlv_put(sctx, attr, &value, sizeof(value));
-}
+#define TLV_PUT_DEFINE_INT(bits) \
+	static int tlv_put_u##bits(struct send_ctx *sctx,	 	\
+			u##bits attr, u##bits value)			\
+	{								\
+		__le##bits __tmp = cpu_to_le##bits(value);		\
+		return tlv_put(sctx, attr, &__tmp, sizeof(__tmp));	\
+	}
 
-static int tlv_put_u16(struct send_ctx *sctx, u16 attr, u16 value)
-{
-	__le16 tmp = cpu_to_le16(value);
-	return tlv_put(sctx, attr, &tmp, sizeof(tmp));
-}
-
-static int tlv_put_u32(struct send_ctx *sctx, u16 attr, u32 value)
-{
-	__le32 tmp = cpu_to_le32(value);
-	return tlv_put(sctx, attr, &tmp, sizeof(tmp));
-}
-#endif
-
-static int tlv_put_u64(struct send_ctx *sctx, u16 attr, u64 value)
-{
-	__le64 tmp = cpu_to_le64(value);
-	return tlv_put(sctx, attr, &tmp, sizeof(tmp));
-}
+TLV_PUT_DEFINE_INT(64)
 
 static int tlv_put_string(struct send_ctx *sctx, u16 attr,
 			  const char *str, int len)
@@ -474,17 +455,6 @@ static int tlv_put_uuid(struct send_ctx *sctx, u16 attr,
 {
 	return tlv_put(sctx, attr, uuid, BTRFS_UUID_SIZE);
 }
-
-#if 0
-static int tlv_put_timespec(struct send_ctx *sctx, u16 attr,
-			    struct timespec *ts)
-{
-	struct btrfs_timespec bts;
-	bts.sec = cpu_to_le64(ts->tv_sec);
-	bts.nsec = cpu_to_le32(ts->tv_nsec);
-	return tlv_put(sctx, attr, &bts, sizeof(bts));
-}
-#endif
 
 static int tlv_put_btrfs_timespec(struct send_ctx *sctx, u16 attr,
 				  struct extent_buffer *eb,
@@ -530,12 +500,6 @@ static int tlv_put_btrfs_timespec(struct send_ctx *sctx, u16 attr,
 #define TLV_PUT_UUID(sctx, attrtype, uuid) \
 	do { \
 		ret = tlv_put_uuid(sctx, attrtype, uuid); \
-		if (ret < 0) \
-			goto tlv_put_failure; \
-	} while (0)
-#define TLV_PUT_TIMESPEC(sctx, attrtype, ts) \
-	do { \
-		ret = tlv_put_timespec(sctx, attrtype, ts); \
 		if (ret < 0) \
 			goto tlv_put_failure; \
 	} while (0)
@@ -1270,7 +1234,7 @@ static int find_extent_clone(struct send_ctx *sctx,
 	if (!backref_ctx->found_itself) {
 		/* found a bug in backref code? */
 		ret = -EIO;
-		printk(KERN_ERR "btrfs: ERROR did not find backref in "
+		btrfs_err(sctx->send_root->fs_info, "did not find backref in "
 				"send_root. inode=%llu, offset=%llu, "
 				"disk_byte=%llu found extent=%llu\n",
 				ino, data_offset, disk_byte, found_key.objectid);
@@ -2180,12 +2144,12 @@ static int send_subvol_begin(struct send_ctx *sctx)
 	TLV_PUT_UUID(sctx, BTRFS_SEND_A_UUID,
 			sctx->send_root->root_item.uuid);
 	TLV_PUT_U64(sctx, BTRFS_SEND_A_CTRANSID,
-			sctx->send_root->root_item.ctransid);
+		    le64_to_cpu(sctx->send_root->root_item.ctransid));
 	if (parent_root) {
 		TLV_PUT_UUID(sctx, BTRFS_SEND_A_CLONE_UUID,
 				sctx->parent_root->root_item.uuid);
 		TLV_PUT_U64(sctx, BTRFS_SEND_A_CLONE_CTRANSID,
-				sctx->parent_root->root_item.ctransid);
+			    le64_to_cpu(sctx->parent_root->root_item.ctransid));
 	}
 
 	ret = send_cmd(sctx);
@@ -3706,7 +3670,7 @@ verbose_printk("btrfs: send_clone offset=%llu, len=%d, clone_root=%llu, "
 	TLV_PUT_UUID(sctx, BTRFS_SEND_A_CLONE_UUID,
 			clone_root->root->root_item.uuid);
 	TLV_PUT_U64(sctx, BTRFS_SEND_A_CLONE_CTRANSID,
-			clone_root->root->root_item.ctransid);
+		    le64_to_cpu(clone_root->root->root_item.ctransid));
 	TLV_PUT_PATH(sctx, BTRFS_SEND_A_CLONE_PATH, p);
 	TLV_PUT_U64(sctx, BTRFS_SEND_A_CLONE_OFFSET,
 			clone_root->offset);
@@ -3748,6 +3712,39 @@ static int send_update_extent(struct send_ctx *sctx,
 
 tlv_put_failure:
 out:
+	fs_path_free(p);
+	return ret;
+}
+
+static int send_hole(struct send_ctx *sctx, u64 end)
+{
+	struct fs_path *p = NULL;
+	u64 offset = sctx->cur_inode_last_extent;
+	u64 len;
+	int ret = 0;
+
+	p = fs_path_alloc();
+	if (!p)
+		return -ENOMEM;
+	memset(sctx->read_buf, 0, BTRFS_SEND_READ_SIZE);
+	while (offset < end) {
+		len = min_t(u64, end - offset, BTRFS_SEND_READ_SIZE);
+
+		ret = begin_cmd(sctx, BTRFS_SEND_C_WRITE);
+		if (ret < 0)
+			break;
+		ret = get_cur_path(sctx, sctx->cur_ino, sctx->cur_inode_gen, p);
+		if (ret < 0)
+			break;
+		TLV_PUT_PATH(sctx, BTRFS_SEND_A_PATH, p);
+		TLV_PUT_U64(sctx, BTRFS_SEND_A_FILE_OFFSET, offset);
+		TLV_PUT(sctx, BTRFS_SEND_A_DATA, sctx->read_buf, len);
+		ret = send_cmd(sctx);
+		if (ret < 0)
+			break;
+		offset += len;
+	}
+tlv_put_failure:
 	fs_path_free(p);
 	return ret;
 }
@@ -3979,6 +3976,84 @@ out:
 	return ret;
 }
 
+static int get_last_extent(struct send_ctx *sctx, u64 offset)
+{
+	struct btrfs_path *path;
+	struct btrfs_root *root = sctx->send_root;
+	struct btrfs_file_extent_item *fi;
+	struct btrfs_key key;
+	u64 extent_end;
+	u8 type;
+	int ret;
+
+	path = alloc_path_for_send();
+	if (!path)
+		return -ENOMEM;
+
+	sctx->cur_inode_last_extent = 0;
+
+	key.objectid = sctx->cur_ino;
+	key.type = BTRFS_EXTENT_DATA_KEY;
+	key.offset = offset;
+	ret = btrfs_search_slot_for_read(root, &key, path, 0, 1);
+	if (ret < 0)
+		goto out;
+	ret = 0;
+	btrfs_item_key_to_cpu(path->nodes[0], &key, path->slots[0]);
+	if (key.objectid != sctx->cur_ino || key.type != BTRFS_EXTENT_DATA_KEY)
+		goto out;
+
+	fi = btrfs_item_ptr(path->nodes[0], path->slots[0],
+			    struct btrfs_file_extent_item);
+	type = btrfs_file_extent_type(path->nodes[0], fi);
+	if (type == BTRFS_FILE_EXTENT_INLINE) {
+		u64 size = btrfs_file_extent_inline_len(path->nodes[0], fi);
+		extent_end = ALIGN(key.offset + size,
+				   sctx->send_root->sectorsize);
+	} else {
+		extent_end = key.offset +
+			btrfs_file_extent_num_bytes(path->nodes[0], fi);
+	}
+	sctx->cur_inode_last_extent = extent_end;
+out:
+	btrfs_free_path(path);
+	return ret;
+}
+
+static int maybe_send_hole(struct send_ctx *sctx, struct btrfs_path *path,
+			   struct btrfs_key *key)
+{
+	struct btrfs_file_extent_item *fi;
+	u64 extent_end;
+	u8 type;
+	int ret = 0;
+
+	if (sctx->cur_ino != key->objectid || !need_send_hole(sctx))
+		return 0;
+
+	if (sctx->cur_inode_last_extent == (u64)-1) {
+		ret = get_last_extent(sctx, key->offset - 1);
+		if (ret)
+			return ret;
+	}
+
+	fi = btrfs_item_ptr(path->nodes[0], path->slots[0],
+			    struct btrfs_file_extent_item);
+	type = btrfs_file_extent_type(path->nodes[0], fi);
+	if (type == BTRFS_FILE_EXTENT_INLINE) {
+		u64 size = btrfs_file_extent_inline_len(path->nodes[0], fi);
+		extent_end = ALIGN(key->offset + size,
+				   sctx->send_root->sectorsize);
+	} else {
+		extent_end = key->offset +
+			btrfs_file_extent_num_bytes(path->nodes[0], fi);
+	}
+	if (sctx->cur_inode_last_extent < key->offset)
+		ret = send_hole(sctx, key->offset);
+	sctx->cur_inode_last_extent = extent_end;
+	return ret;
+}
+
 static int process_extent(struct send_ctx *sctx,
 			  struct btrfs_path *path,
 			  struct btrfs_key *key)
@@ -3995,7 +4070,7 @@ static int process_extent(struct send_ctx *sctx,
 			goto out;
 		if (ret) {
 			ret = 0;
-			goto out;
+			goto out_hole;
 		}
 	} else {
 		struct btrfs_file_extent_item *ei;
@@ -4031,7 +4106,10 @@ static int process_extent(struct send_ctx *sctx,
 		goto out;
 
 	ret = send_write_or_clone(sctx, path, key, found_clone);
-
+	if (ret)
+		goto out;
+out_hole:
+	ret = maybe_send_hole(sctx, path, key);
 out:
 	return ret;
 }
@@ -4157,6 +4235,19 @@ static int finish_inode_if_needed(struct send_ctx *sctx, int at_end)
 	}
 
 	if (S_ISREG(sctx->cur_inode_mode)) {
+		if (need_send_hole(sctx)) {
+			if (sctx->cur_inode_last_extent == (u64)-1) {
+				ret = get_last_extent(sctx, (u64)-1);
+				if (ret)
+					goto out;
+			}
+			if (sctx->cur_inode_last_extent <
+			    sctx->cur_inode_size) {
+				ret = send_hole(sctx, sctx->cur_inode_size);
+				if (ret)
+					goto out;
+			}
+		}
 		ret = send_truncate(sctx, sctx->cur_ino, sctx->cur_inode_gen,
 				sctx->cur_inode_size);
 		if (ret < 0)
@@ -4200,6 +4291,7 @@ static int changed_inode(struct send_ctx *sctx,
 
 	sctx->cur_ino = key->objectid;
 	sctx->cur_inode_new_gen = 0;
+	sctx->cur_inode_last_extent = (u64)-1;
 
 	/*
 	 * Set send_progress to current inode. This will tell all get_cur_xxx
@@ -4480,14 +4572,18 @@ static int changed_cb(struct btrfs_root *left_root,
 	struct send_ctx *sctx = ctx;
 
 	if (result == BTRFS_COMPARE_TREE_SAME) {
-		if (key->type != BTRFS_INODE_REF_KEY &&
-		    key->type != BTRFS_INODE_EXTREF_KEY)
+		if (key->type == BTRFS_INODE_REF_KEY ||
+		    key->type == BTRFS_INODE_EXTREF_KEY) {
+			ret = compare_refs(sctx, left_path, key);
+			if (!ret)
+				return 0;
+			if (ret < 0)
+				return ret;
+		} else if (key->type == BTRFS_EXTENT_DATA_KEY) {
+			return maybe_send_hole(sctx, left_path, key);
+		} else {
 			return 0;
-		ret = compare_refs(sctx, left_path, key);
-		if (!ret)
-			return 0;
-		if (ret < 0)
-			return ret;
+		}
 		result = BTRFS_COMPARE_TREE_CHANGED;
 		ret = 0;
 	}
@@ -4522,7 +4618,6 @@ out:
 static int full_send_tree(struct send_ctx *sctx)
 {
 	int ret;
-	struct btrfs_trans_handle *trans = NULL;
 	struct btrfs_root *send_root = sctx->send_root;
 	struct btrfs_key key;
 	struct btrfs_key found_key;
@@ -4544,19 +4639,6 @@ static int full_send_tree(struct send_ctx *sctx)
 	key.type = BTRFS_INODE_ITEM_KEY;
 	key.offset = 0;
 
-join_trans:
-	/*
-	 * We need to make sure the transaction does not get committed
-	 * while we do anything on commit roots. Join a transaction to prevent
-	 * this.
-	 */
-	trans = btrfs_join_transaction(send_root);
-	if (IS_ERR(trans)) {
-		ret = PTR_ERR(trans);
-		trans = NULL;
-		goto out;
-	}
-
 	/*
 	 * Make sure the tree has not changed after re-joining. We detect this
 	 * by comparing start_ctransid and ctransid. They should always match.
@@ -4566,7 +4648,7 @@ join_trans:
 	spin_unlock(&send_root->root_item_lock);
 
 	if (ctransid != start_ctransid) {
-		WARN(1, KERN_WARNING "btrfs: the root that you're trying to "
+		WARN(1, KERN_WARNING "BTRFS: the root that you're trying to "
 				     "send was modified in between. This is "
 				     "probably a bug.\n");
 		ret = -EIO;
@@ -4580,19 +4662,6 @@ join_trans:
 		goto out_finish;
 
 	while (1) {
-		/*
-		 * When someone want to commit while we iterate, end the
-		 * joined transaction and rejoin.
-		 */
-		if (btrfs_should_end_transaction(trans, send_root)) {
-			ret = btrfs_end_transaction(trans, send_root);
-			trans = NULL;
-			if (ret < 0)
-				goto out;
-			btrfs_release_path(path);
-			goto join_trans;
-		}
-
 		eb = path->nodes[0];
 		slot = path->slots[0];
 		btrfs_item_key_to_cpu(eb, &found_key, slot);
@@ -4620,12 +4689,6 @@ out_finish:
 
 out:
 	btrfs_free_path(path);
-	if (trans) {
-		if (!ret)
-			ret = btrfs_end_transaction(trans, send_root);
-		else
-			btrfs_end_transaction(trans, send_root);
-	}
 	return ret;
 }
 
@@ -4662,6 +4725,21 @@ out:
 	return ret;
 }
 
+static void btrfs_root_dec_send_in_progress(struct btrfs_root* root)
+{
+	spin_lock(&root->root_item_lock);
+	root->send_in_progress--;
+	/*
+	 * Not much left to do, we don't know why it's unbalanced and
+	 * can't blindly reset it to 0.
+	 */
+	if (root->send_in_progress < 0)
+		btrfs_err(root->fs_info,
+			"send_in_progres unbalanced %d root %llu\n",
+			root->send_in_progress, root->root_key.objectid);
+	spin_unlock(&root->root_item_lock);
+}
+
 long btrfs_ioctl_send(struct file *mnt_file, void __user *arg_)
 {
 	int ret = 0;
@@ -4673,12 +4751,21 @@ long btrfs_ioctl_send(struct file *mnt_file, void __user *arg_)
 	struct send_ctx *sctx = NULL;
 	u32 i;
 	u64 *clone_sources_tmp = NULL;
+	int clone_sources_to_rollback = 0;
 
 	if (!capable(CAP_SYS_ADMIN))
 		return -EPERM;
 
 	send_root = BTRFS_I(file_inode(mnt_file))->root;
 	fs_info = send_root->fs_info;
+
+	/*
+	 * The subvolume must remain read-only during send, protect against
+	 * making it RW.
+	 */
+	spin_lock(&send_root->root_item_lock);
+	send_root->send_in_progress++;
+	spin_unlock(&send_root->root_item_lock);
 
 	/*
 	 * This is done when we lookup the root, it should already be complete
@@ -4713,6 +4800,15 @@ long btrfs_ioctl_send(struct file *mnt_file, void __user *arg_)
 		}
 	} else {
 		up_read(&send_root->fs_info->extent_commit_sem);
+	}
+
+	/*
+	 * Userspace tools do the checks and warn the user if it's
+	 * not RO.
+	 */
+	if (!btrfs_root_readonly(send_root)) {
+		ret = -EPERM;
+		goto out;
 	}
 
 	arg = memdup_user(arg_, sizeof(*arg));
@@ -4752,8 +4848,6 @@ long btrfs_ioctl_send(struct file *mnt_file, void __user *arg_)
 		ret = -EBADF;
 		goto out;
 	}
-
-	sctx->mnt = mnt_file->f_path.mnt;
 
 	sctx->send_root = send_root;
 	sctx->clone_roots_cnt = arg->clone_sources_count;
@@ -4803,6 +4897,15 @@ long btrfs_ioctl_send(struct file *mnt_file, void __user *arg_)
 				ret = PTR_ERR(clone_root);
 				goto out;
 			}
+			clone_sources_to_rollback = i + 1;
+			spin_lock(&clone_root->root_item_lock);
+			clone_root->send_in_progress++;
+			if (!btrfs_root_readonly(clone_root)) {
+				spin_unlock(&clone_root->root_item_lock);
+				ret = -EPERM;
+				goto out;
+			}
+			spin_unlock(&clone_root->root_item_lock);
 			sctx->clone_roots[i].root = clone_root;
 		}
 		vfree(clone_sources_tmp);
@@ -4818,6 +4921,14 @@ long btrfs_ioctl_send(struct file *mnt_file, void __user *arg_)
 			ret = PTR_ERR(sctx->parent_root);
 			goto out;
 		}
+		spin_lock(&sctx->parent_root->root_item_lock);
+		sctx->parent_root->send_in_progress++;
+		if (!btrfs_root_readonly(sctx->parent_root)) {
+			spin_unlock(&sctx->parent_root->root_item_lock);
+			ret = -EPERM;
+			goto out;
+		}
+		spin_unlock(&sctx->parent_root->root_item_lock);
 	}
 
 	/*
@@ -4846,6 +4957,12 @@ long btrfs_ioctl_send(struct file *mnt_file, void __user *arg_)
 	}
 
 out:
+	for (i = 0; sctx && i < clone_sources_to_rollback; i++)
+		btrfs_root_dec_send_in_progress(sctx->clone_roots[i].root);
+	if (sctx && !IS_ERR_OR_NULL(sctx->parent_root))
+		btrfs_root_dec_send_in_progress(sctx->parent_root);
+	btrfs_root_dec_send_in_progress(send_root);
+
 	kfree(arg);
 	vfree(clone_sources_tmp);
 
