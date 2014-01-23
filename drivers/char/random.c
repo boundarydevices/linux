@@ -295,17 +295,17 @@
  * The minimum number of bits of entropy before we wake up a read on
  * /dev/random.  Should be enough to do a significant reseed.
  */
-static int random_read_wakeup_thresh = 64;
+static int random_read_wakeup_bits = 64;
 
 /*
  * If the entropy count falls under this number of bits, then we
  * should wake up processes which are selecting or polling on write
  * access to /dev/random.
  */
-static int random_write_wakeup_thresh = 28 * OUTPUT_POOL_WORDS;
+static int random_write_wakeup_bits = 28 * OUTPUT_POOL_WORDS;
 
 /*
- * The minimum number of seconds between urandom pool resending.  We
+ * The minimum number of seconds between urandom pool reseeding.  We
  * do this to limit the amount of entropy that can be drained from the
  * input pool even if there are heavy demands on /dev/urandom.
  */
@@ -322,7 +322,7 @@ static int random_min_urandom_seed = 60;
  * Register.  (See M. Matsumoto & Y. Kurita, 1992.  Twisted GFSR
  * generators.  ACM Transactions on Modeling and Computer Simulation
  * 2(3):179-194.  Also see M. Matsumoto & Y. Kurita, 1994.  Twisted
- * GFSR generators II.  ACM Transactions on Mdeling and Computer
+ * GFSR generators II.  ACM Transactions on Modeling and Computer
  * Simulation 4:254-266)
  *
  * Thanks to Colin Plumb for suggesting this.
@@ -666,10 +666,10 @@ retry:
 				  r->entropy_total, _RET_IP_);
 
 	if (r == &input_pool) {
-		int entropy_bytes = entropy_count >> ENTROPY_SHIFT;
+		int entropy_bits = entropy_count >> ENTROPY_SHIFT;
 
 		/* should we wake readers? */
-		if (entropy_bytes >= random_read_wakeup_thresh) {
+		if (entropy_bits >= random_read_wakeup_bits) {
 			wake_up_interruptible(&random_read_wait);
 			kill_fasync(&fasync, SIGIO, POLL_IN);
 		}
@@ -678,9 +678,9 @@ retry:
 		 * forth between them, until the output pools are 75%
 		 * full.
 		 */
-		if (entropy_bytes > random_write_wakeup_thresh &&
+		if (entropy_bits > random_write_wakeup_bits &&
 		    r->initialized &&
-		    r->entropy_total >= 2*random_read_wakeup_thresh) {
+		    r->entropy_total >= 2*random_read_wakeup_bits) {
 			static struct entropy_store *last = &blocking_pool;
 			struct entropy_store *other = &blocking_pool;
 
@@ -924,19 +924,19 @@ static void _xfer_secondary_pool(struct entropy_store *r, size_t nbytes)
 {
 	__u32	tmp[OUTPUT_POOL_WORDS];
 
-	/* For /dev/random's pool, always leave two wakeup worth's BITS */
-	int rsvd = r->limit ? 0 : random_read_wakeup_thresh/4;
+	/* For /dev/random's pool, always leave two wakeups' worth */
+	int rsvd_bytes = r->limit ? 0 : random_read_wakeup_bits / 4;
 	int bytes = nbytes;
 
-	/* pull at least as many as BYTES as wakeup BITS */
-	bytes = max_t(int, bytes, random_read_wakeup_thresh / 8);
+	/* pull at least as much as a wakeup */
+	bytes = max_t(int, bytes, random_read_wakeup_bits / 8);
 	/* but never more than the buffer size */
 	bytes = min_t(int, bytes, sizeof(tmp));
 
 	trace_xfer_secondary_pool(r->name, bytes * 8, nbytes * 8,
 				  ENTROPY_BITS(r), ENTROPY_BITS(r->pull));
 	bytes = extract_entropy(r->pull, tmp, bytes,
-				random_read_wakeup_thresh / 8, rsvd);
+				random_read_wakeup_bits / 8, rsvd_bytes);
 	mix_pool_bytes(r, tmp, bytes, NULL);
 	credit_entropy_bits(r, bytes*8);
 }
@@ -952,34 +952,21 @@ static void push_to_pool(struct work_struct *work)
 	struct entropy_store *r = container_of(work, struct entropy_store,
 					      push_work);
 	BUG_ON(!r);
-	_xfer_secondary_pool(r, random_read_wakeup_thresh/8);
+	_xfer_secondary_pool(r, random_read_wakeup_bits/8);
 	trace_push_to_pool(r->name, r->entropy_count >> ENTROPY_SHIFT,
 			   r->pull->entropy_count >> ENTROPY_SHIFT);
 }
 
 /*
- * These functions extracts randomness from the "entropy pool", and
- * returns it in a buffer.
- *
- * The min parameter specifies the minimum amount we can pull before
- * failing to avoid races that defeat catastrophic reseeding while the
- * reserved parameter indicates how much entropy we must leave in the
- * pool after each pull to avoid starving other readers.
- *
- * Note: extract_entropy() assumes that .poolwords is a multiple of 16 words.
+ * This function decides how many bytes to actually take from the
+ * given pool, and also debits the entropy count accordingly.
  */
-
 static size_t account(struct entropy_store *r, size_t nbytes, int min,
 		      int reserved)
 {
-	unsigned long flags;
-	int wakeup_write = 0;
 	int have_bytes;
 	int entropy_count, orig;
 	size_t ibytes;
-
-	/* Hold lock while accounting */
-	spin_lock_irqsave(&r->lock, flags);
 
 	BUG_ON(r->entropy_count > r->poolinfo->poolfracbits);
 
@@ -988,29 +975,19 @@ retry:
 	entropy_count = orig = ACCESS_ONCE(r->entropy_count);
 	have_bytes = entropy_count >> (ENTROPY_SHIFT + 3);
 	ibytes = nbytes;
-	if (have_bytes < min + reserved) {
+	/* If limited, never pull more than available */
+	if (r->limit)
+		ibytes = min_t(size_t, ibytes, have_bytes - reserved);
+	if (ibytes < min)
 		ibytes = 0;
-	} else {
-		/* If limited, never pull more than available */
-		if (r->limit && ibytes + reserved >= have_bytes)
-			ibytes = have_bytes - reserved;
-
-		if (have_bytes >= ibytes + reserved)
-			entropy_count -= ibytes << (ENTROPY_SHIFT + 3);
-		else
-			entropy_count = reserved << (ENTROPY_SHIFT + 3);
-
-		if (cmpxchg(&r->entropy_count, orig, entropy_count) != orig)
-			goto retry;
-
-		if ((r->entropy_count >> ENTROPY_SHIFT)
-		    < random_write_wakeup_thresh)
-			wakeup_write = 1;
-	}
-	spin_unlock_irqrestore(&r->lock, flags);
+	entropy_count = max_t(int, 0,
+			      entropy_count - (ibytes << (ENTROPY_SHIFT + 3)));
+	if (cmpxchg(&r->entropy_count, orig, entropy_count) != orig)
+		goto retry;
 
 	trace_debit_entropy(r->name, 8 * ibytes);
-	if (wakeup_write) {
+	if (ibytes &&
+	    (r->entropy_count >> ENTROPY_SHIFT) < random_write_wakeup_bits) {
 		wake_up_interruptible(&random_write_wait);
 		kill_fasync(&fasync, SIGIO, POLL_OUT);
 	}
@@ -1018,6 +995,12 @@ retry:
 	return ibytes;
 }
 
+/*
+ * This function does the actual extraction for extract_entropy and
+ * extract_entropy_user.
+ *
+ * Note: we assume that .poolwords is a multiple of 16 words.
+ */
 static void extract_buf(struct entropy_store *r, __u8 *out)
 {
 	int i;
@@ -1029,22 +1012,22 @@ static void extract_buf(struct entropy_store *r, __u8 *out)
 	__u8 extract[64];
 	unsigned long flags;
 
-	/* Generate a hash across the pool, 16 words (512 bits) at a time */
-	sha_init(hash.w);
-	spin_lock_irqsave(&r->lock, flags);
-	for (i = 0; i < r->poolinfo->poolwords; i += 16)
-		sha_transform(hash.w, (__u8 *)(r->pool + i), workspace);
-
 	/*
-	 * If we have a architectural hardware random number
-	 * generator, mix that in, too.
+	 * If we have an architectural hardware random number
+	 * generator, use it for SHA's initial vector
 	 */
+	sha_init(hash.w);
 	for (i = 0; i < LONGS(20); i++) {
 		unsigned long v;
 		if (!arch_get_random_long(&v))
 			break;
-		hash.l[i] ^= v;
+		hash.l[i] = v;
 	}
+
+	/* Generate a hash across the pool, 16 words (512 bits) at a time */
+	spin_lock_irqsave(&r->lock, flags);
+	for (i = 0; i < r->poolinfo->poolwords; i += 16)
+		sha_transform(hash.w, (__u8 *)(r->pool + i), workspace);
 
 	/*
 	 * We mix the hash back into the pool to prevent backtracking
@@ -1079,6 +1062,15 @@ static void extract_buf(struct entropy_store *r, __u8 *out)
 	memset(&hash, 0, sizeof(hash));
 }
 
+/*
+ * This function extracts randomness from the "entropy pool", and
+ * returns it in a buffer.
+ *
+ * The min parameter specifies the minimum amount we can pull before
+ * failing to avoid races that defeat catastrophic reseeding while the
+ * reserved parameter indicates how much entropy we must leave in the
+ * pool after each pull to avoid starving other readers.
+ */
 static ssize_t extract_entropy(struct entropy_store *r, void *buf,
 				 size_t nbytes, int min, int reserved)
 {
@@ -1129,6 +1121,10 @@ static ssize_t extract_entropy(struct entropy_store *r, void *buf,
 	return ret;
 }
 
+/*
+ * This function extracts randomness from the "entropy pool", and
+ * returns it in a userspace buffer.
+ */
 static ssize_t extract_entropy_user(struct entropy_store *r, void __user *buf,
 				    size_t nbytes)
 {
@@ -1170,8 +1166,9 @@ static ssize_t extract_entropy_user(struct entropy_store *r, void __user *buf,
 /*
  * This function is the exported kernel interface.  It returns some
  * number of good random numbers, suitable for key generation, seeding
- * TCP sequence numbers, etc.  It does not use the hw random number
- * generator, if available; use get_random_bytes_arch() for that.
+ * TCP sequence numbers, etc.  It does not rely on the hardware random
+ * number generator.  For random bytes direct from the hardware RNG
+ * (when available), use get_random_bytes_arch().
  */
 void get_random_bytes(void *buf, int nbytes)
 {
@@ -1284,53 +1281,32 @@ void rand_initialize_disk(struct gendisk *disk)
 static ssize_t
 random_read(struct file *file, char __user *buf, size_t nbytes, loff_t *ppos)
 {
-	ssize_t n, retval = 0, count = 0;
+	ssize_t n;
 
 	if (nbytes == 0)
 		return 0;
 
-	while (nbytes > 0) {
-		n = nbytes;
-		if (n > SEC_XFER_SIZE)
-			n = SEC_XFER_SIZE;
-
-		n = extract_entropy_user(&blocking_pool, buf, n);
-
-		if (n < 0) {
-			retval = n;
-			break;
-		}
-
+	nbytes = min_t(size_t, nbytes, SEC_XFER_SIZE);
+	while (1) {
+		n = extract_entropy_user(&blocking_pool, buf, nbytes);
+		if (n < 0)
+			return n;
 		trace_random_read(n*8, (nbytes-n)*8,
 				  ENTROPY_BITS(&blocking_pool),
 				  ENTROPY_BITS(&input_pool));
+		if (n > 0)
+			return n;
+		/* Pool is (near) empty.  Maybe wait and retry. */
 
-		if (n == 0) {
-			if (file->f_flags & O_NONBLOCK) {
-				retval = -EAGAIN;
-				break;
-			}
+		if (file->f_flags & O_NONBLOCK)
+			return -EAGAIN;
 
-			wait_event_interruptible(random_read_wait,
-				ENTROPY_BITS(&input_pool) >=
-				random_read_wakeup_thresh);
-
-			if (signal_pending(current)) {
-				retval = -ERESTARTSYS;
-				break;
-			}
-
-			continue;
-		}
-
-		count += n;
-		buf += n;
-		nbytes -= n;
-		break;		/* This break makes the device work */
-				/* like a named pipe */
+		wait_event_interruptible(random_read_wait,
+			ENTROPY_BITS(&input_pool) >=
+			random_read_wakeup_bits);
+		if (signal_pending(current))
+			return -ERESTARTSYS;
 	}
-
-	return (count ? count : retval);
 }
 
 static ssize_t
@@ -1358,9 +1334,9 @@ random_poll(struct file *file, poll_table * wait)
 	poll_wait(file, &random_read_wait, wait);
 	poll_wait(file, &random_write_wait, wait);
 	mask = 0;
-	if (ENTROPY_BITS(&input_pool) >= random_read_wakeup_thresh)
+	if (ENTROPY_BITS(&input_pool) >= random_read_wakeup_bits)
 		mask |= POLLIN | POLLRDNORM;
-	if (ENTROPY_BITS(&input_pool) < random_write_wakeup_thresh)
+	if (ENTROPY_BITS(&input_pool) < random_write_wakeup_bits)
 		mask |= POLLOUT | POLLWRNORM;
 	return mask;
 }
@@ -1507,18 +1483,18 @@ EXPORT_SYMBOL(generate_random_uuid);
 #include <linux/sysctl.h>
 
 static int min_read_thresh = 8, min_write_thresh;
-static int max_read_thresh = INPUT_POOL_WORDS * 32;
+static int max_read_thresh = OUTPUT_POOL_WORDS * 32;
 static int max_write_thresh = INPUT_POOL_WORDS * 32;
 static char sysctl_bootid[16];
 
 /*
- * These functions is used to return both the bootid UUID, and random
+ * This function is used to return both the bootid UUID, and random
  * UUID.  The difference is in whether table->data is NULL; if it is,
  * then a new UUID is generated and returned to the user.
  *
- * If the user accesses this via the proc interface, it will be returned
- * as an ASCII string in the standard UUID format.  If accesses via the
- * sysctl system call, it is returned as 16 bytes of binary data.
+ * If the user accesses this via the proc interface, the UUID will be
+ * returned as an ASCII string in the standard UUID format; if via the
+ * sysctl system call, as 16 bytes of binary data.
  */
 static int proc_do_uuid(struct ctl_table *table, int write,
 			void __user *buffer, size_t *lenp, loff_t *ppos)
@@ -1583,7 +1559,7 @@ struct ctl_table random_table[] = {
 	},
 	{
 		.procname	= "read_wakeup_threshold",
-		.data		= &random_read_wakeup_thresh,
+		.data		= &random_read_wakeup_bits,
 		.maxlen		= sizeof(int),
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec_minmax,
@@ -1592,7 +1568,7 @@ struct ctl_table random_table[] = {
 	},
 	{
 		.procname	= "write_wakeup_threshold",
-		.data		= &random_write_wakeup_thresh,
+		.data		= &random_write_wakeup_bits,
 		.maxlen		= sizeof(int),
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec_minmax,
