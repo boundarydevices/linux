@@ -105,7 +105,7 @@ struct image_header_t {
 
 struct validate_flash_t {
 	int		status;		/* Return status */
-	void		*buf;		/* Candiate image buffer */
+	void		*buf;		/* Candidate image buffer */
 	uint32_t	buf_size;	/* Image size */
 	uint32_t	result;		/* Update results token */
 };
@@ -481,7 +481,7 @@ static int alloc_image_buf(char *buffer, size_t count)
 
 	memcpy(&image_header, (void *)buffer, sizeof(struct image_header_t));
 	image_data.size = be32_to_cpu(image_header.size);
-	pr_debug("FLASH: Candiate image size = %u\n", image_data.size);
+	pr_debug("FLASH: Candidate image size = %u\n", image_data.size);
 
 	if (image_data.size > MAX_IMAGE_SIZE) {
 		pr_warn("FLASH: Too large image\n");
