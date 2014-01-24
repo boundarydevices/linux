@@ -523,19 +523,20 @@ static int imx6_pcie_start_link(struct pcie_port *pp)
 	writel(tmp, pp->dbi_base + PCIE_LINK_WIDTH_SPEED_CONTROL);
 
 	count = 200;
-	while (count--) {
+	while (1) {
 		tmp = readl(pp->dbi_base + PCIE_LINK_WIDTH_SPEED_CONTROL);
 		/* Test if the speed change finished. */
 		if (!(tmp & PORT_LOGIC_SPEED_CHANGE))
 			break;
+		if (count-- == 0) {
+			dev_err(pp->dev, "Change to gen 2 speed timeout\n");
+			return -EINVAL;
+		}
 		usleep_range(100, 1000);
 	}
 
 	/* Make sure link training is finished as well! */
-	if (count)
-		ret = imx6_pcie_wait_for_link(pp);
-	else
-		ret = -EINVAL;
+	ret = imx6_pcie_wait_for_link(pp);
 
 	if (ret) {
 		dev_err(pp->dev, "Failed to bring link up!\n");
