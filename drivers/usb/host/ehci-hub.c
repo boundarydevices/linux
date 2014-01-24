@@ -299,6 +299,15 @@ static int ehci_bus_suspend (struct usb_hcd *hcd)
 						USB_PORT_STAT_HIGH_SPEED)
 				fs_idle_delay = true;
 			ehci_writel(ehci, t2, reg);
+			if ((t2 & PORT_WKDISC_E)
+				&& (ehci_port_speed(ehci, t2) ==
+					USB_PORT_STAT_HIGH_SPEED))
+				/*
+				 * If the high-speed device has not switched
+				 * to full-speed idle before WKDISC_E has
+				 * effected, there will be a WKDISC event.
+				 */
+				mdelay(4);
 			changed = 1;
 		}
 	}
