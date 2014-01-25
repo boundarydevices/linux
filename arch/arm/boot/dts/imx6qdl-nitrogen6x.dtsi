@@ -10,6 +10,7 @@
  * http://www.opensource.org/licenses/gpl-license.html
  * http://www.gnu.org/copyleft/gpl.html
  */
+#include <dt-bindings/input/input.h>
 
 / {
 	aliases {
@@ -75,38 +76,38 @@
 		power {
 			label = "Power Button";
 			gpios = <&gpio2 3 0>;
-			linux,code = <116>; /* KEY_POWER, or search */
+			linux,code = <KEY_POWER>;	/* or KEY_SEARCH */
 			gpio-key,wakeup;
 		};
 
 		menu {
 			label = "Menu";
 			gpios = <&gpio2 1 0>;
-			linux,code = <139>; /* KEY_MENU */
+			linux,code = <KEY_MENU>;
 		};
 
 		home {
 			label = "Home";
 			gpios = <&gpio2 4 0>;
-			linux,code = <102>; /* KEY_HOME */
+			linux,code = <KEY_HOME>;
 		};
 
 		back {
 			label = "Back";
 			gpios = <&gpio2 2 0>;
-			linux,code = <158>; /* KEY_BACK */
+			linux,code = <KEY_BACK>;
 		};
 
 		volume-up {
 			label = "Volume Up";
 			gpios = <&gpio7 13 0>;
-			linux,code = <115>; /* KEY_VOLUMEUP */
+			linux,code = <KEY_VOLUMEUP>;
 		};
 
 		volume-down {
 			label = "Volume Down";
 			gpios = <&gpio4 5 0>;
-			linux,code = <114>; /* KEY_VOLUMEDOWN */
+			linux,code = <KEY_VOLUMEDOWN>;
 		};
 	};
 
