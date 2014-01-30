@@ -113,5 +113,6 @@ source "drivers/media/radio/Kconfig"
 #
 
 source "drivers/media/dvb/Kconfig"
+source "drivers/media/pci/Kconfig"
 
 endif # MEDIA_SUPPORT
