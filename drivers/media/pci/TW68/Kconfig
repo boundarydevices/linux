@@ -1,0 +1,10 @@
+config VIDEO_TW68
+	tristate "TW686x cards"
+	depends on PCI
+	select VIDEOBUF_DMA_SG
+	select VIDEOBUF_VMALLOC
+	help
+	  Support for TW6869 PCIe cards.
+
+	  Say Y or M if you own such a device and want to use it.
+
