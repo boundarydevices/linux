@@ -361,16 +361,17 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	},
 };
 
+static int accelerometer_pos = 0;
+
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("isl1208", 0x6f),	/* Real time clock */
 		.irq = gpio_to_irq(IMX_GPIO_NR(6, 7)),	/* NANDF_CLE */
 	},
-#if 0
         {
-                I2C_BOARD_INFO("mma8451", 0x1c)	/* Accelerometer */
+                I2C_BOARD_INFO("mma8451", 0x1c),	/* Accelerometer */
+                .platform_data = (void *)&accelerometer_pos
         },
-#endif
 };
 
 static void usbotg_vbus(bool on)
