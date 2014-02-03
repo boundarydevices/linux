@@ -601,7 +601,7 @@ static struct gpio_keys_button buttons[] = {
 	GPIO_BUTTON(IMX_GPIO_NR(3, 3), KEY_LEFT, 1, "key-left", 0),
 	GPIO_BUTTON(IMX_GPIO_NR(7, 13), KEY_RIGHT, 1, "key-right", 0),
 	GPIO_BUTTON(IMX_GPIO_NR(4, 5), KEY_DOWN, 1, "key-down", 0),
-	GPIO_BUTTON(IMX_GPIO_NR(7, 1), KEY_POWER, 0, "key-power", 1),
+	GPIO_BUTTON(IMX_GPIO_NR(6, 1), KEY_POWER, 0, "key-power", 1),
 };
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)

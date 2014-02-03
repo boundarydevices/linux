@@ -131,7 +131,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	NEW_PAD_CTRL(MX6PAD(GPIO_19__GPIO_4_5), WEAK_PULLUP),	/* pin 6 - down */
 	NEW_PAD_CTRL(MX6PAD(KEY_COL2__GPIO_4_10), WEAK_PULLUP),	/* pin 7 - NC */
 	NEW_PAD_CTRL(MX6PAD(KEY_ROW2__GPIO_4_11), WEAK_PULLUP),	/* pin 8 - NC */
-	NEW_PAD_CTRL(MX6PAD(SD3_DAT4__GPIO_7_1), WEAK_PULLDN),	/* pin 9 inverted, Main power off request */
+	NEW_PAD_CTRL(MX6PAD(CSI0_DAT15__GPIO_6_1),WEAK_PULLDN),	/* pin 9 inverted, Main power off request */
 	NEW_PAD_CTRL(MX6PAD(NANDF_CS0__GPIO_6_11), WEAK_PULLUP), /* pin 10 - NC */
 	NEW_PAD_CTRL(MX6PAD(SD1_DAT1__GPIO_1_17), WEAK_PULLUP),	/* pin 11 - NC */
 
