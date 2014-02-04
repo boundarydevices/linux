@@ -32,6 +32,7 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/flash.h>
 #include <linux/i2c.h>
+#include <linux/i2c/ads1000.h>
 #include <linux/i2c/pca953x.h>
 #include <linux/ata.h>
 #include <linux/mtd/mtd.h>
@@ -291,10 +292,19 @@ static struct imxi2c_platform_data mx6_i2c_data = {
 	.bitrate = 100000,
 };
 
+static struct ads1000_platform_data ads1000_data = {
+	.numerator = 55000,	/* 5V supply 500/50 (1/11) voltage divider */
+	.denominator = 2048	/* 12-bit A/D */
+};
+
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("ar1020_i2c", 0x4d),	/* Touchscreen */
 		.irq = gpio_to_irq(TOUCH_IRQ),		/* GPIO_7 */
+	},
+	{
+		I2C_BOARD_INFO("ads1000", 0x49),	/* A/D converter */
+                .platform_data = (void *)&ads1000_data,
 	},
 };
 
@@ -563,12 +573,6 @@ static struct platform_device platdev_leds_pwd = {
 	},
 };
 
-static void poweroff(void)
-{
-	gpio_direction_output(ONOFF, 0);
-	while (1);
-}
-
 static const struct imx_pcie_platform_data pcie_data  __initconst = {
 	.pcie_pwr_en	= -EINVAL,
 	.pcie_rst	= IMX_GPIO_NR(5,2),
@@ -680,7 +684,6 @@ static void __init mx6_board_init(void)
 		clk_enable(clko2);
 	}
 
-	pm_power_off = poweroff;
 	imx6q_add_busfreq();
 
 	imx6q_add_sdhci_usdhc_imx(1, &mx6_sd2_data);
