@@ -185,6 +185,9 @@ static struct esdhc_platform_data mx6_sd_data = {
 #if !defined(CONFIG_MACH_MX6_NW_REV2)
 	.cd_gpio = ST_SD3_CD,
 #else
+	.always_present = 1,
+	.support_18v = 1,
+	.support_8bit = 1,
 	.cd_gpio = -1, /* always present */
 #endif
 	.wp_gpio = -1,
@@ -512,9 +515,9 @@ static void __init mx6_board_init(void)
 	imx6q_add_anatop_thermal_imx(1, &mx6_anatop_thermal_data);
 	imx6q_add_pm_imx(0, &mx6_pm_data);
 #if !defined(CONFIG_MACH_MX6_NW_REV2)
-	imx6q_add_sdhci_usdhc_imx(3, &mx6_sd_data);
+	imx6q_add_sdhci_usdhc_imx(2, &mx6_sd_data);
 #else
-	imx6q_add_sdhci_usdhc_imx(4, &mx6_sd_data);
+	imx6q_add_sdhci_usdhc_imx(3, &mx6_sd_data);
 #endif
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
 	imx6_init_usb();
