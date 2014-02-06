@@ -359,29 +359,10 @@ unsigned long TW68_buffer_base(struct TW68_buf *buf)
 
 int AudioDMA_PB_alloc(struct pci_dev *pci, struct TW68_pgtable *pt)
 {
-	dma_addr_t   dma_addr;
-	int audio_ch;
-	//__le32 *clean;
-	__le32 *pdmaP, *pdmaB;
-	__le32 *AudioPages;
-
-	// for audio  CH  P/B
-
-	AudioPages = pci_alloc_consistent(pci, PAGE_SIZE * MAX_NUM_DATA_DMA * 2, &dma_addr);
-
-	if (NULL == AudioPages) {
+	pt->size = AUDIO_CH_BUF_SIZE * AUDIO_NCH;  //pt;  //2
+	pt->cpu = pci_alloc_consistent(pci, pt->size, &pt->dma);
+	if (!pt->cpu)
 		return -ENOMEM;
-	}
-
-	pt->size = PAGE_SIZE * MAX_NUM_DATA_DMA * 2;  //pt;  //2
-	pt->cpu  = AudioPages;
-	pt->dma  = dma_addr;
-
-	for (audio_ch =0; audio_ch < MAX_NUM_DATA_DMA; audio_ch++) {
-		pdmaP = pt->cpu + (PAGE_SIZE <<1)* audio_ch /4 + 100;
-		pdmaB = pt->cpu + ((PAGE_SIZE <<1)* audio_ch + PAGE_SIZE)/4 + 100;
-
-	}
 	return 0;
 }
 
@@ -1139,13 +1120,7 @@ void DecoderResize(struct TW68_dev *dev, int nId, int nHeight, int nWidth)
 		nH = (240*256)/nH;
 	}
 
-	if(nId >= 4) {
-		nAddr = (EX_VSCALE1_LO +  ((nId-4)<<1) + (nId-4)) + 0x100; //EX_VSCALE1_LO + 0|3|6|9
-		nAddr = VSCALE1_LO + ((nId-4)<<4) + 0x100; //6869 0x200 VSCALE1_LO + 0|0x10|0x20|0x30
-	} else {
-		nAddr = VSCALE1_LO + (nId<<4); //VSCALE1_LO + 0|0x10|0x20|0x30
-	}
-
+	nAddr = VSCALE1_LO + ((nId & 3) << 4) + ((nId & 4) * 0x40); //VSCALE1_LO + 0|0x10|0x20|0x30
 	nVal = nH & 0xFF;  //V
 
 /*
@@ -1402,8 +1377,6 @@ int VideoDecoderDetect(struct TW68_dev *dev, unsigned int DMA_nCH)
 		regDW = reg_readl(DECODER0_STATUS + (DMA_nCH* 0x10));
 		dwReg = reg_readl(DECODER0_SDT + (DMA_nCH* 0x10));
 	} else {		// 6869  VD 5-8
-		//regDW = (ULONG)DeviceRead2864(this, VIDEO_STATUS_0 + ((nID -4)* 0x10));
-		//dwReg = (ULONG)DeviceRead2864(this, exVD0_SDT + ((nID -4)* 0x10));
 		regDW = reg_readl(DECODER0_STATUS + ((DMA_nCH -4)* 0x10) + 0x100);
 		dwReg = reg_readl(DECODER0_SDT + ((DMA_nCH -4)* 0x10) + 0x100);
 		//pr_debug("\n\n Decoder 0x%X VideoStandardDetect DMA_nCH %d  regDW 0x%x  dwReg%d \n", (DECODER0_STATUS + (DMA_nCH* 0x10) + 0x100), regDW, dwReg );
@@ -1428,7 +1401,6 @@ static irqreturn_t TW68_irq(int irq, void *dev_id)    //hardware dev id for the 
 	unsigned long flags, audio_ch, k, eno, handled;
 	u32 dwRegST, dwRegER, dwRegPB, dwRegE, dwRegF, dwRegVP, dwErrBit;
 	static int INT1st = 1;
-	static u32 lastPB = 0;
 
 	//__le32  *pdmaP, *pdmaB;
 	audio_ch = 1;
@@ -1436,33 +1408,23 @@ static irqreturn_t TW68_irq(int irq, void *dev_id)    //hardware dev id for the 
 
 	spin_lock_irqsave(&dev->slock, flags);
 
+	dwRegPB = reg_readl(DMA_PB_STATUS);
 	dwRegST = reg_readl(DMA_INT_STATUS);
 	dwRegER = reg_readl(DMA_INT_ERROR);
-	dwRegPB = reg_readl(DMA_PB_STATUS);
 	dwRegE = reg_readl(DMA_CHANNEL_ENABLE);
 	dwRegVP = reg_readl(VIDEO_PARSER_STATUS);
 	dwRegF = reg_readl(DMA_CMD);
 	spin_unlock_irqrestore(&dev->slock, flags);
 
+	pr_debug("%s: PB=0x%x ST=0x%x ER=0x%x E=0x%x VP=0x%x CMD=0x%x\n",
+		__func__, dwRegPB, dwRegST, dwRegER, dwRegE, dwRegVP, dwRegF);
 
 	if (dev->videoDMA_ID != dwRegE) {
 		INT1st++;
-		if (INT1st <10)
-			pr_debug(" -------------Check DMA   DMA_CHANNEL_ENABLE 0x%X,  DMA_CMD 0x%X,  DMA_INT_STATUS 0x%08X   videoDMA_ID 0x%X\n",
-					dwRegE, dwRegF,  dwRegST,   dev->videoDMA_ID    );
+		if (INT1st < 10)
+			pr_debug("%s: dwRegE=0x%x, dwRegF=0x%x, dwRegST=0x%x videoDMA_ID=0x%x\n",
+				__func__, dwRegE, dwRegF, dwRegST, dev->videoDMA_ID);
 	}
-
-	/*
-	for (audio_ch =0; audio_ch < MAX_NUM_DATA_DMA; audio_ch++) {
-		//pdmaP = dev->m_AudioBuffer.cpu + (PAGE_SIZE <<1)* audio_ch + 100;
-		//pdmaB = dev->m_AudioBuffer.cpu + (PAGE_SIZE <<1)* audio_ch + PAGE_SIZE + 100;
-
-		pdmaP = dev->m_AudioBuffer.cpu + (PAGE_SIZE <<1)* audio_ch /4 + 100;
-		pdmaB = dev->m_AudioBuffer.cpu + ((PAGE_SIZE <<1)* audio_ch + PAGE_SIZE)/4 + 100;
-		//pr_debug("---Audio DMA 0x19-0x29 config --- CH%02d    *dmaP 0X%x  *dmaB 0X%x  dword 0X%x 0X%x   \n",
-		//	    audio_ch, pdmaP, pdmaB, *pdmaP, *pdmaB );
-	}
-	*/
 
 	if((dwRegER &0xFF000000) && dev->video_DMA_1st_started && dev->err_times<9) {
 		dev->video_DMA_1st_started --;
@@ -1470,7 +1432,8 @@ static irqreturn_t TW68_irq(int irq, void *dev_id)    //hardware dev id for the 
 			dev->video_DMA_1st_started = 0;
 
 		dev->err_times++;
-		pr_debug("DeviceInterrupt: 1st startup err_times:%d ## dma_status (err) =0x%x   dwRegVP (video parser)=0X%x   int_status 0x%x   dwRegE 0X%x \n", dev->err_times, dwRegER, dwRegVP, dwRegST, dwRegE);
+		pr_debug("%s: err_times:%d dwRegER=0x%x dwRegVP=0x%x dwRegST=0x%x dwRegE=0x%x\n",
+			__func__, dev->err_times, dwRegER, dwRegVP, dwRegST, dwRegE);
 	} else {
 		if((dwRegER>>16 ) || dwRegVP || (dwRegST >>24)) {   //stop
 			//err_exist, such as cpl error, tlp error, time-out
@@ -1502,25 +1465,20 @@ static irqreturn_t TW68_irq(int irq, void *dev_id)    //hardware dev id for the 
 			dwRegF = reg_readl(DMA_CMD);
 			spin_unlock_irqrestore(&dev->slock, flags);
 
-			pr_debug("DeviceInterrupt: errors  ## dma_status  0x%X   (err) =0x%X   dwRegVP (video parser)=0X%x   int_status 0x%x  # dwRegE 0X%x dwRegF 0X%x \n",
-				dwErrBit, dwRegER, dwRegVP, dwRegST, dwRegE, dwRegF);
+			pr_debug("%s:dwErrBit=0x%x dwRegER=0x%x dwRegVP=0x%x dwRegST=0x%x dwRegE=0x%x dwRegF=0x%x\n",
+				__func__, dwErrBit, dwRegER, dwRegVP, dwRegST, dwRegE, dwRegF);
 			dev->errlog[0] =  jiffies;
 		} else {
 			// Normal interrupt:
-			// pr_debug("  Normal interrupt:  ++++ ## dma_status 0x%X   FIFO =0x%X   (video parser)=0X%x   int_status 0x%x  PB 0x%x  # dwRegE 0X%x dwRegF 0X%x \n",
-			//	     dwRegST, dwRegER, dwRegVP,  dwRegST, dwRegPB, dwRegE, dwRegF);
-
 			if (dwRegST & (0xFF00) & dev->videoDMA_ID) {
 				TW68_alsa_irq(dev, dwRegST, dwRegPB);
 			}
 
-			if (lastPB != dwRegPB)   // skip the conflict interrupt
-				if ((dwRegST & (0xFF)) && (!(dwRegER >>16))) {
-					for(k=0; k<8; k++) {
-						if ((dwRegST & dev->videoDMA_ID) & (1 << k)) {     //exclude  inactive dev
-							TW68_irq_video_done(dev, k+1, dwRegPB);
-
-							if (!dev->video_dmaq[k+1].FieldPB) {	// first time after dma start
+			if ((dwRegST & (0xFF)) && (!(dwRegER >>16))) {
+				for(k=0; k<8; k++) {
+					if ((dwRegST & dev->videoDMA_ID) & (1 << k)) {     //exclude  inactive dev
+						TW68_irq_video_done(dev, k+1, dwRegPB);
+						if (!dev->video_dmaq[k+1].FieldPB) {	// first time after dma start
 							/*
 								Reg8b <<= 16;
 								dev->video_dmaq[k+1].FieldPB &= 0x0000FFFF;
@@ -1530,23 +1488,23 @@ static irqreturn_t TW68_irq(int irq, void *dev_id)    //hardware dev id for the 
 								if (Reg8b &0x10)
 									dev->video_dmaq[k].FieldPB |= 0xF0;
 							*/
-							}
+						}
 
-							if  (dev->video_dmaq[k+1].FieldPB & 0xF0) {
-								dev->video_dmaq[k+1].FieldPB &= 0xFFFF0000;
-							} else {
-								dev->video_dmaq[k+1].FieldPB &= 0xFFFF00FF;     // clear  PB
-								dev->video_dmaq[k+1].FieldPB |= (dwRegPB & (1<<k))<<8;
-								dev->video_dmaq[k+1].FCN++;
-							}
+						if  (dev->video_dmaq[k+1].FieldPB & 0xF0) {
+							dev->video_dmaq[k+1].FieldPB &= 0xFFFF0000;
+						} else {
+							dev->video_dmaq[k+1].FieldPB &= 0xFFFF00FF;     // clear  PB
+							dev->video_dmaq[k+1].FieldPB |= (dwRegPB & (1<<k))<<8;
+							dev->video_dmaq[k+1].FCN++;
 						}
 					}
 				}
+			}
 
 			if (dev->videoRS_ID) {
 				dev->videoDMA_ID |= dev->videoRS_ID;
-				dev-> videoRS_ID =0;
-				dwRegE = dev ->videoDMA_ID;
+				dev->videoRS_ID = 0;
+				dwRegE = dev->videoDMA_ID;
 
 				reg_writel(DMA_CHANNEL_ENABLE, dwRegE);
 				dwRegF = reg_readl(DMA_CHANNEL_ENABLE);
@@ -1590,10 +1548,10 @@ static int TW68_hwinit1(struct TW68_dev *dev)
 	u32 m_StartIdx, m_EndIdx, m_nVideoFormat, m_dwCHConfig,   dwReg;
 	u32 m_bHorizontalDecimate=0, m_bVerticalDecimate=0, m_nDropChannelNum;
 	u32 m_bDropMasterOrSlave, m_bDropField, m_bDropOddOrEven, m_nCurVideoChannelNum;
-	u32 regDW, val1, addr, k, ChannelOffset, pgn;
+	u32 regDW, val1, k, ChannelOffset, pgn;
 	// Audio P
 	int audio_ch;
-	u32 dmaP, dmaB;
+	u32 dmaP;
 
 	pr_debug(" TW6869 hwinit1 \n");
 	mutex_init(&dev->lock);
@@ -1745,28 +1703,16 @@ static int TW68_hwinit1(struct TW68_dev *dev)
 	}
 
 // setup audio DMA
-	for (audio_ch =0; audio_ch < MAX_NUM_DATA_DMA; audio_ch++) {
-		dmaP = dev->m_AudioBuffer.dma + (PAGE_SIZE <<1)* audio_ch;
-		dmaB = dev->m_AudioBuffer.dma + (PAGE_SIZE <<1)* audio_ch + PAGE_SIZE;
-
+	for (audio_ch =0; audio_ch < AUDIO_NCH; audio_ch++) {
+		dmaP = dev->m_AudioBuffer.dma + AUDIO_CH_BUF_SIZE * audio_ch;
 		reg_writel(DMA_CH8_CONFIG_P + audio_ch*2, dmaP );
 		//Audio B = P+1
-		reg_writel(DMA_CH8_CONFIG_B + audio_ch*2, dmaB );
+		reg_writel(DMA_CH8_CONFIG_B + audio_ch*2, dmaP + AUDIO_DMA_PAGE);
 
-		//pr_debug("---Audio DMA 0x19-0x29 config --- CH%02d   write dmaP 0X%p  dmaB 0X%p  read 0X%x 0X%x   \n",
-		//	    audio_ch, dmaP, dmaB, reg_readl(DMA_CH8_CONFIG_P + audio_ch*2), reg_readl(DMA_CH8_CONFIG_B + audio_ch*2) );
+		//pr_debug("---Audio DMA 0x19-0x29 config --- CH%02d   write dmaP 0X%p read 0X%x 0X%x\n",
+		//	    audio_ch, dmaP, reg_readl(DMA_CH8_CONFIG_P + audio_ch*2), reg_readl(DMA_CH8_CONFIG_B + audio_ch*2) );
 	}
 
-	/*
-	pr_debug(" \n");
-	u8 *Audioptr = (u8*)dev->m_AudioBuffer.cpu;
-
-	for (k=0; k<(4096*16); k++) {
-		*(Audioptr +k)= 0xF0;
-		//pr_debug(" 0x%x ", (*(Audioptr +k)));
-	}
-	pr_debug(" \n");
-	*/
 	//pr_debug(" Mmio %s: CFG[0x78]  cpu 0x%x    dma 0x%x \n", dev->name,  (unsigned int)dev->m_Page0.cpu, dev->m_Page0.dma );
 
 	regDW = reg_readl((DMA_PAGE_TABLE0_ADDR) );
@@ -1805,11 +1751,11 @@ static int TW68_hwinit1(struct TW68_dev *dev)
 	regDW = reg_readl(DMA_CHANNEL_ENABLE );
 	pr_debug("DMA %s: tw DMA_CHANNEL_ENABLE %x :: 0x%x    \n",  dev->name, DMA_CHANNEL_ENABLE, regDW );
 	//reg_writel(DMA_CHANNEL_TIMEOUT, 0x180c8F88);   //  860 a00  0x140c8560  0x1F0c8b08     0xF00F00   140c8E08   0x140c8D08
-	reg_writel(DMA_CHANNEL_TIMEOUT, 0x3EFF0FF0);     // longer timeout setting
+	reg_writel(DMA_CHANNEL_TIMEOUT, (0x3E << 24) | (0x7f0 << 12) | 0xff0);     // longer timeout setting
 	regDW = reg_readl(DMA_CHANNEL_TIMEOUT );
 	pr_debug("DMA %s: tw DMA_CHANNEL_TIMEOUT %x :: 0x%x    \n",  dev->name, DMA_CHANNEL_TIMEOUT, regDW );
 
-	reg_writel(DMA_INT_REF, 0x38000);   //  2a000 2b000 2c000  3932e     0x3032e
+	reg_writel(DMA_INT_REF, 0x1c000);   //  2a000 2b000 2c000  3932e     0x3032e
 	regDW = reg_readl(DMA_INT_REF );
 	pr_debug("DMA %s: tw DMA_INT_REF %x :: 0x%x    \n",  dev->name, DMA_INT_REF, regDW );
 
@@ -1865,19 +1811,6 @@ static int TW68_hwinit1(struct TW68_dev *dev)
 	val1 |= 0x8002;  // Pull out from reset and enable I2S
 	reg_writel(CSR_REG, val1);
 	//pr_debug("2864 init CSR_REG 0x%x]=  I2C 2864   val1:0X%x  %x\n", CSR_REG,  val1 );
-
-	addr = CLKOCTRL | 0x100;
-	//val0 = DeviceRead2864(dev, addr);
-	val1 = 0x40 | (VIDEO_IN_MODE | (VIDEO_IN_MODE<<2) ) ; // Out enable
-	//DeviceWrite2864(dev, addr, (unsigned char)val1);
-	//val2=DeviceRead2864(dev, addr);
-	//pr_debug("2864[CLKOCTRL 0x%x]=  I2C 2864  val0:0X%x   val1:0X%x   val2:0X%x\n", CLKOCTRL, val0, val1, val2 );
-
-	addr = NOVID | 0x100;
-	val1 = 0x73;					// CHID with 656 Sync code, 656 output even no video input
-	//val0 = DeviceRead2864(dev,addr);
-	//DeviceWrite2864(dev,addr,val1);
-	//val2 = DeviceRead2864(dev,addr);
 
 	// device data structure initialization
 	TW68_video_init1(dev);
