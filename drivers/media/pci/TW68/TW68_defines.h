@@ -4,6 +4,11 @@
 
 #pragma once
 
+#define AUDIO_NCH		8
+#define AUDIO_DMA_PAGE		4096
+#define AUDIO_CH_PERIODS	4
+#define AUDIO_CH_BUF_SIZE	AUDIO_DMA_PAGE * AUDIO_CH_PERIODS
+
 #define   DMA_MODE_SG_RT		0		//Scatter Gather, Real-Time
 #define   DMA_MODE_SG_SWITCH	1		//Scatter Gather, Non-Real-Time
 #define   DMA_MODE_BLOCK		2		//Block Memory
@@ -58,8 +63,7 @@
 //NO NOT CHANGE
 //These 3 definitions are matched with hardware
 #define MAX_NUM_SG_DMA				8
-#define	MAX_NUM_DATA_DMA			9
-#define MAX_NUM_DMA					(MAX_NUM_SG_DMA+MAX_NUM_DATA_DMA)
+#define MAX_NUM_DMA				(MAX_NUM_SG_DMA + AUDIO_NCH)
 
 
 //////////////////////////////////////////////////
@@ -70,7 +74,7 @@
 #define DMA_INT_STATUS          0x00  //RO
 #define DMA_PB_STATUS           0x01  //RO
 #define DMA_CMD                 0x02
-#define DMA_INT_ERROR			0x03
+#define DMA_INT_ERROR		0x03
 #define DMA_FIFO_VLOSS          0x03   // B3 B2  B0 VLOSS
 #define VIDEO_CHID              0x04
 #define VIDEO_PARSER_STATUS     0x05
@@ -80,8 +84,8 @@
 #define DMA_PAGE_TABLE1_ADDR    0x09
 #define DMA_CHANNEL_ENABLE      0x0a
 #define DMA_CONFIG              0x0b
-#define DMA_INT_REF				0x0c
-#define DMA_CHANNEL_TIMEOUT		0x0d
+#define DMA_INT_REF		0x0c
+#define DMA_CHANNEL_TIMEOUT	0x0d
 
 #define DMA_CH0_CONFIG          0x10  //DMA_CH0_CONFIG ~ DMA_CH7_CONFIG are continusly
 #define DMA_CH1_CONFIG          0x11
@@ -174,11 +178,12 @@
 #define BDMA_ADDR_P_F2_0		0x84
 #define BDMA_WHP_F2_0			0x85
 #define BDMA_ADDR_B_F2_0		0x86
+#define PIN_CFG_CTRL			0xfb
 #define CSR_REG                 0xFD
 #define EP_REG_ADDR             0xFE
 #define EP_REG_DATA             0xFF
 
-//Part 2: Video Decoder portion
+//Part 2: Video Decoder portion - ch0 - ch3, ch4 - ch7 starts at 0x200
 #define DECODER0_STATUS			0x100
 #define DECODER1_STATUS			0x110
 #define DECODER2_STATUS			0x120
@@ -288,95 +293,13 @@
 #define CH3_SHARPNESS_REG       0x123
 #define CH4_SHARPNESS_REG       0x133
 
+#define POWER_DOWN_CTRL		0x1ce
+#define AUDIO_GAIN_CH0		0x1d0
+#define AUDIO_DET_PERIOD	0x1e1
+#define AUDIO_DET_THRESHOLD1	0x1e2
+#define AUDIO_DET_THRESHOLD2	0x1e3
+
 //////////////////////////////////////////////////
-//NO NOT CHANGE
-//Register definition for external 2864 registers, See Tw2864 Spec for details
-//
-
-#define CLK_SEL_2865			0x61 //specfic to TW2865
-
-#define I2C_ADDR_2864_0			0x50
-#define I2C_ADDR_2864_1			0x52
-
-#define VIDEO_STATUS_0			0x00
-#define VIDEO_STATUS_1			0x10
-#define VIDEO_STATUS_2			0x20
-#define VIDEO_STATUS_3			0x30
-
-#define exVD0_SDT			0x0E
-#define exVD1_SDT			0x1E
-#define exVD2_SDT			0x2E
-#define exVD3_SDT			0x3E
-
-#define VD0_SDTEN			0x0F
-#define VD1_SDTEN			0x1F
-#define VD2_SDTEN			0x2F
-#define VD3_SDTEN			0x3F
-
-
-#define EX_VDELAY0				0x08
-#define EX_VDELAY1				0x18
-#define EX_VDELAY2				0x28
-#define EX_VDELAY3				0x38
-#define EX_HDELAY0				0x0A
-#define EX_HDELAY1				0x1A
-#define EX_HDELAY2				0x2A
-#define EX_HDELAY3				0x3A
-#define EX_MISC_CONTROL2		0x96
-#define MPP_MODE_1				0xC8
-#define MPP_MODE_2				0xC9
-#define NOVID					0x9E
-#define CLKODEL					0x9F
-#define VIDEO_OUT_CTRL			0xCA
-#define SMD						0xCF
-#define MASTER_CTRL				0xDB
-#define AUDIO_GAIN_0			0xD0
-#define AUDIO_GAIN_1			0xD1
-#define NUM_ADUIOR				0xD2
-#define SEQ_ADUIOR				0xD7
-#define MIX_OUT_SEL				0xE0
-#define EX_VSCALE1_LO			0xE4
-#define EX_VHSCALE1_HI			0xE5
-#define EX_HSCALE1_LO			0xE6
-#define EX_VSCALE2_LO			0xE7
-#define EX_VHSCALE2_HI			0xE8
-#define EX_HSCALE2_LO			0xE9
-#define EX_VSCALE3_LO			0xEA
-#define EX_VHSCALE3_HI			0xEB
-#define EX_HSCALE3_LO			0xEC
-#define EX_VSCALE4_LO			0xED
-#define EX_VHSCALE4_HI			0xEE
-#define EX_HSCALE4_LO			0xEF
-#define VIDEO_MISC				0xF9
-#define CLKOCTRL				0xFA
-#define CLKOPOL					0xFB
-#define DEV_REV					0xFE
-#define EX_BRIGHTNESS1			0x01
-#define EX_BRIGHTNESS2			0x11
-#define EX_BRIGHTNESS3			0x21
-#define EX_BRIGHTNESS4			0x31
-#define EX_CONTRAST1			0x02
-#define EX_CONTRAST2			0x12
-#define EX_CONTRAST3			0x22
-#define EX_CONTRAST4			0x32
-#define EX_SHARPNESS1			0x03
-#define EX_SHARPNESS2			0x13
-#define EX_SHARPNESS3			0x23
-#define EX_SHARPNESS4			0x33
-#define EX_SAT_U1			    0x04
-#define EX_SAT_U2			    0x14
-#define EX_SAT_U3			    0x24
-#define EX_SAT_U4				0x34
-#define EX_SAT_V1				0x05
-#define EX_SAT_V2				0x15
-#define EX_SAT_V3				0x25
-#define EX_SAT_V4				0x35
-#define EX_HUE1					0x06
-#define EX_HUE2					0x16
-#define EX_HUE3					0x26
-#define EX_HUE4					0x36
-
-
 //////////////////////////////////////////////////
 // Constantants definitions
 #define DMA_STATUS_HOST_NOT_AVAIABLE    0
