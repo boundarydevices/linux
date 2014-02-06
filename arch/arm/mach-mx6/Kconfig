@@ -326,6 +326,13 @@ config MACH_MX6_NW
 	  Include support for i.MX 6Quad NW platform. This includes specific
 	  configurations for the board and its peripherals.
 
+config MACH_MX6_NW_REV2
+	bool "Revision 2 of NW platform"
+    depends on MACH_MX6_NW
+    default y
+	help
+	  Build for revision 2 of NW platform (with eMMC instead of SD card)
+
 config MACH_MX6_UTC
 	bool "Support Boundary Devices i.MX6 UTC"
 	select ARCH_MX6Q
