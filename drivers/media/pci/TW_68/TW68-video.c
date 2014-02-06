@@ -666,9 +666,7 @@ int buffer_setup(struct videobuf_queue *q, unsigned int *count, unsigned int *si
 		//pr_debug(" ####%%%%%%%%%%%%%%%%%%%%%%% buffer_setup::  DECODER0_SDT %d,  0X%X \n", nId, dwReg);
 		reg_writel(DECODER0_SDT+ (nId*0x10), 7);		/// 0 NTSC
 	} else {
-		///dwReg =  DeviceRead2864(dev,(exVD0_SDT + ((nId-4)*0x10)));
 		//pr_debug(" ####%%%%%%%%%%%%%%%%%%%%%%% buffer_setup::  DECODER0_SDT %d,  0X%X \n", nId, dwReg);
-		///DeviceWrite2864(dev,(exVD0_SDT + ((nId-4)*0x10)), 7);    /// 7 auto detect   slower
 	}
 
 ////////////////////////////// decoder resize //////////////////////////////////////////
@@ -858,9 +856,6 @@ int TW68_g_ctrl_internal(struct TW68_dev *dev, struct TW68_fh *fh, struct v4l2_c
 			regval = reg_readl(CH1_BRIGHTNESS_REG + DMA_nCH *0x10 );
 			regval = (regval + 0x80) &0xFF;
 		} else {
-			//regval = DeviceRead2864(dev, (EX_BRIGHTNESS1 | 0x100) +(DMA_nCH-4) *0x10);
-			//regval = regval * 5 /4;
-			//if (regval > 255) regval = 255;
 			regval = reg_readl(CH1_BRIGHTNESS_REG + 0x100 + (DMA_nCH -4) *0x10 );
 			regval = (regval + 0x80) &0xFF;
 		}
@@ -871,7 +866,6 @@ int TW68_g_ctrl_internal(struct TW68_dev *dev, struct TW68_fh *fh, struct v4l2_c
 		if (DMA_nCH<4) {
 			regval = reg_readl(CH1_HUE_REG + DMA_nCH *0x10 );
 		} else {
-			//regval = DeviceRead2864(dev, (EX_HUE1 | 0x100) +(DMA_nCH-4) *0x10);
 			regval = reg_readl(CH1_HUE_REG + 0x100 + (DMA_nCH -4) *0x10 );
 		}
 		if (regval < 0x80)
@@ -884,7 +878,6 @@ int TW68_g_ctrl_internal(struct TW68_dev *dev, struct TW68_fh *fh, struct v4l2_c
 		if (DMA_nCH<4) {
 			regval = reg_readl(CH1_CONTRAST_REG + DMA_nCH *0x10 );
 		} else {
-			// regval = DeviceRead2864(dev, (EX_CONTRAST1 | 0x100) +(DMA_nCH-4) *0x10);
 			regval = reg_readl(CH1_CONTRAST_REG + 0x100 + (DMA_nCH -4) *0x10 );
 		}
 		c->value = dev->video_param[nId].ctl_contrast = regval;
@@ -894,7 +887,6 @@ int TW68_g_ctrl_internal(struct TW68_dev *dev, struct TW68_fh *fh, struct v4l2_c
 		if (DMA_nCH<4) {
 			regval = reg_readl(CH1_SAT_U_REG + DMA_nCH *0x10 );
 		} else {
-			//regval = DeviceRead2864(dev, (EX_SAT_U1 | 0x100) +(DMA_nCH-4) *0x10);
 			regval = reg_readl(CH1_SAT_U_REG + 0x100 + (DMA_nCH -4) *0x10 );
 		}
 		c->value = dev->video_param[nId].ctl_saturation = regval /2;
@@ -978,9 +970,6 @@ int TW68_s_ctrl_internal(struct TW68_dev *dev,  struct TW68_fh *fh, struct v4l2_
 			reg_writel(CH1_BRIGHTNESS_REG + DMA_nCH *0x10, regval );
 		} else {
 			if (DMA_nCH<8) {
-				//regval = c->value  &0xFF;
-				//regval = regval * 4 /5;
-				//DeviceWrite2864(dev, (EX_BRIGHTNESS1 | 0x100) +(DMA_nCH-4) *0x10, regval);
 				reg_writel(CH1_BRIGHTNESS_REG + 0x100 +(DMA_nCH -4) *0x10, regval);
 			} else if (DMA_nCH == 0xF) {
 				reg_writel(CH1_BRIGHTNESS_REG, regval);
@@ -996,7 +985,6 @@ int TW68_s_ctrl_internal(struct TW68_dev *dev,  struct TW68_fh *fh, struct v4l2_
 			reg_writel(CH1_CONTRAST_REG + DMA_nCH *0x10, c->value);
 		} else {
 			if (DMA_nCH<8) {
-				//DeviceWrite2864(dev, (EX_CONTRAST1 | 0x100) +(DMA_nCH-4) *0x10, c->value);
 				reg_writel(CH1_CONTRAST_REG + 0x100 +(DMA_nCH -4) *0x10, c->value);
 			} else if (DMA_nCH == 0xF) {
 				reg_writel(CH1_CONTRAST_REG, c->value);
@@ -1014,7 +1002,6 @@ int TW68_s_ctrl_internal(struct TW68_dev *dev,  struct TW68_fh *fh, struct v4l2_
 			reg_writel(CH1_HUE_REG + DMA_nCH *0x10, regval);
 		} else {
 			if (DMA_nCH<8) {
-				//DeviceWrite2864(dev, (EX_HUE1 | 0x100) +(DMA_nCH-4) *0x10, regval);
 				reg_writel(CH1_HUE_REG + 0x100 +(DMA_nCH -4) *0x10, regval);
 			} else if (DMA_nCH == 0xF) {
 				reg_writel(CH1_HUE_REG, regval);
@@ -1033,8 +1020,6 @@ int TW68_s_ctrl_internal(struct TW68_dev *dev,  struct TW68_fh *fh, struct v4l2_
 			reg_writel(CH1_SAT_V_REG + DMA_nCH *0x10, regval);
 		} else {
 			if (DMA_nCH<8) {
-				//DeviceWrite2864(dev, (EX_SAT_U1 | 0x100) +(DMA_nCH-4) *0x10, regval);
-				//DeviceWrite2864(dev, (EX_SAT_V1 | 0x100) +(DMA_nCH-4) *0x10, regval);
 				reg_writel(CH1_SAT_U_REG + 0x100 + (DMA_nCH -4)*0x10, regval);
 				reg_writel(CH1_SAT_V_REG + 0x100 + (DMA_nCH -4)*0x10, regval);
 			} else if (DMA_nCH == 0xF) { // write wrong addr  hang
@@ -1143,18 +1128,22 @@ static int video_open(struct file *file)
 	mutex_lock(&TW686v_devlist_lock);
 
 	list_for_each_entry(dev, &TW686v_devlist, devlist) {
-		pr_debug("%s: minor=%d  type=%s  openned:%X \n",
+		pr_debug("%s: minor=%d  type=%s  opened:%x\n",
 			__func__, minor, v4l2_type_names[type], dev->video_opened);
 
 		//if (dev->video_dev && (dev->video_dev->minor == minor))v->video_open
 		//if (dev->video_device[0] && (dev->video_device[0]->minor == minor))
 
-		for (k=0; k<9; k++) {   // 8 - 9
-			pr_debug("%s: search  dev->video_device[k]:%p,  dev->video_device[k]->minor:%d  \n",
-				__func__, dev->video_device[k],  dev->video_device[k]->minor );
+		for (k=0; k < ARRAY_SIZE(dev->video_device); k++) {
+			struct video_device *vdev = dev->video_device[k];
 
-			if (dev->video_device[k] && (dev->video_device[k]->minor == minor))
-				goto found;
+			if (vdev) {
+				pr_debug("%s: search  k=%d vdev=%p, vdev->minor:%d\n",
+						__func__, k, vdev,  vdev->minor);
+
+				if (vdev->minor == minor)
+					goto found;
+			}
 		}
 	}
 
@@ -2360,14 +2349,6 @@ int TW68_video_init1(struct TW68_dev *dev)
 			dev->video_param[k].ctl_hue        = reg_readl(CH1_HUE_REG + (k-4) *0x10 +0x100);
 			dev->video_param[k].ctl_saturation = reg_readl(CH1_SAT_U_REG + (k-4) *0x10 +0x100) /2;
 			dev->video_param[k].ctl_mute	   = reg_readl(CH1_SAT_V_REG + (k-4) *0x10 +0x100) /2;
-
-#if 0
-			dev->video_param[k].ctl_bright     = DeviceRead2864(dev, (EX_BRIGHTNESS1 | 0x100) + (k-4) *0x10);
-			dev->video_param[k].ctl_contrast   = DeviceRead2864(dev, (EX_CONTRAST1 | 0x100) + (k-4) *0x10);
-			dev->video_param[k].ctl_hue        = DeviceRead2864(dev, (EX_HUE1 | 0x100) +(k-4) *0x10);
-			dev->video_param[k].ctl_saturation = DeviceRead2864(dev, (EX_SAT_U1 | 0x100) +(k-4) *0x10) /2;
-			dev->video_param[k].ctl_mute	   = DeviceRead2864(dev, (EX_SAT_V1 | 0x100) +(k-4) *0x10) /2;
-#endif
 		}
 
 		pr_debug("%s: get decoder %d default AMP: BRIGHTNESS %d  CONTRAST %d  HUE_ %d  SAT_U_%d SAT_V_%d\n",
@@ -2429,8 +2410,6 @@ int TW68_video_init2(struct TW68_dev *dev)
 	return 0;
 }
 
-
-
 void TW68_irq_video_done(struct TW68_dev *dev, unsigned int nId, u32 dwRegPB)
 {
 	enum v4l2_field field;
@@ -2440,14 +2419,14 @@ void TW68_irq_video_done(struct TW68_dev *dev, unsigned int nId, u32 dwRegPB)
 	Fn = (dwRegPB >>24) & (1<< (nId-1));
 	PB = (dwRegPB ) & (1<< (nId-1));
 
-	if ((dev->video_dmaq[0].DMA_nCH == 0xF ) && ((nId-1) <4) ) {
+	if ((dev->video_dmaq[0].DMA_nCH == 0xF ) && ((nId-1) < 4) ) {
 		if ((dev->video_dmaq[0].curr)) {
 			//if (dev->QFbit ^ (1 << nId)) {
 			dev->video_dmaq[0].FieldPB = dwRegPB;
 			QF_Field_Copy(dev, (nId-1), Fn, PB);
 			dev->QFbit |= (1 << (nId-1));
 			//}
-			//pr_debug("%s: dev->QFbit 0X%X  nId= 0X%x \n", __func__, dev->QFbit, nId);
+			pr_debug("%s: dev->QFbit=0X%x nId=0X%x\n", __func__, dev->QFbit, nId);
 
 			if ((dev->QFbit & 0xF) == 0xF) {
 				dev->QFbit =0;
@@ -2459,8 +2438,7 @@ void TW68_irq_video_done(struct TW68_dev *dev, unsigned int nId, u32 dwRegPB)
 	}
 
 
-	//pr_debug("%s: .curr%p    nId= 0X%x    dwRegPB 0X%X\n", __func__, dev->video_dmaq[nId].curr, nId, dwRegPB);
-	//pr_debug("%s: nId= 0X%x\n", __func__, nId);
+	pr_debug("%s: nId=0x%x .curr(%p) dwRegPB=0x%x\n", __func__, nId, dev->video_dmaq[nId].curr, dwRegPB);
 	if (dev->video_dmaq[nId].curr) {
 		dev->video_fieldcount[nId]++;
 		field = dev->video_dmaq[nId].curr->vb.field;
@@ -2540,10 +2518,6 @@ int buffer_setup_QF(struct videobuf_queue *q, unsigned int *count, unsigned int 
 			pr_debug("%s: nId %d,  0X%X    nW%d nH%d nSize%d\n",
 				__func__, nId, dwReg, nW, nH, nSize);
 			reg_writel(DECODER0_SDT+ (nId*0x10), 7);		/// 0 NTSC
-		} else {
-			//dwReg =  DeviceRead2864(dev,(exVD0_SDT + ((nId-4)*0x10)));
-			//pr_debug("%s: DECODER0_SDT %d,  0X%X  nW%d nH%d nSize%d\n", __func__, nId, dwReg, nW, nH, nSize);
-			// DeviceWrite2864(dev,(exVD0_SDT + ((nId-4)*0x10)), 7);    /// 7 auto detect   slower
 		}
 		////////////////////////////// decoder resize //////////////////////////////////////////
 
