@@ -264,6 +264,12 @@ static struct imxi2c_platform_data mx6_i2c_data = {
 	.bitrate = 100000,
 };
 
+static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("rv4162", 0x68),
+	},
+};
+
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
@@ -502,8 +508,13 @@ static void __init mx6_board_init(void)
 	imx6q_add_imx_snvs_rtc();
 
 	imx6q_add_imx_i2c(0, &mx6_i2c_data);
+	imx6q_add_imx_i2c(1, &mx6_i2c_data);
+
 	pr_err ("%s: enabling three I2C devices\n", __func__);
-	i2c_register_board_info(0, mxc_i2c1_board_info,
+	i2c_register_board_info(0, mxc_i2c0_board_info,
+			ARRAY_SIZE(mxc_i2c0_board_info));
+
+	i2c_register_board_info(1, mxc_i2c1_board_info,
 			ARRAY_SIZE(mxc_i2c1_board_info));
 
 	/* SPI */
