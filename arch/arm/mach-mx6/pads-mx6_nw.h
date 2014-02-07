@@ -121,7 +121,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 
 	/*
 	 * I2C1, used by
-	 * SGTL5000
+	 * RTC
 	 */
 	MX6PAD(EIM_D21__I2C1_SCL),	/* GPIO3[21] */
 	MX6PAD(EIM_D28__I2C1_SDA),	/* GPIO3[28] */
