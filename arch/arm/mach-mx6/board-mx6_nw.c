@@ -74,6 +74,7 @@
 
 #define ST_ECSPI1_CS1		IMX_GPIO_NR(3, 19)	/* EIM_D19 - active low */
 
+#define USB_HUB_RESET		IMX_GPIO_NR(4, 15)	/* KEY_ROW4 - active low */
 #define USB_OTG_POWER		IMX_GPIO_NR(3, 22)	/* EIM_D22 - power enable for devices: active high */
 
 #define WL_BT_RESET		IMX_GPIO_NR(6, 8)	/* NANDF_ALE - active low */
@@ -120,6 +121,7 @@ int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
 
 #define GPIOF_HIGH	GPIOF_OUT_INIT_HIGH
 struct gpio mx6_init_gpios[] __initdata = {
+	{.label = "usb_hub_reset",	.gpio = USB_HUB_RESET,	.flags = 0},		/* GPIO7[12]: GPIO_17 - active low */
 	{.label = "usbotg_pwr_en",	.gpio = USB_OTG_POWER,	.flags = 0},		/* GPIO3[22]: EIM_D22 - active high */
 	{.label = "wl_en",		.gpio = WL_EN,		.flags = 0},		/* GPIO6[7]: NANDF_CLE - active high */
 	{.label = "wl_clk_req_irq",	.gpio = WL_CLK_REQ_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[9]: NANDF_WP_B - active low */
@@ -537,6 +539,9 @@ static void __init mx6_board_init(void)
 	imx_asrc_data.asrc_core_clk = clk_get(NULL, "asrc_clk");
 	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
 	imx6q_add_asrc(&imx_asrc_data);
+
+	/* release USB Hub reset */
+	gpio_set_value(USB_HUB_RESET, 1);
 
 	imx6q_add_otp();
 	imx6q_add_viim();
