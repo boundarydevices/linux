@@ -78,3 +78,9 @@ config RTL8192C_COMMON
 	tristate
 	depends on RTL8192CE || RTL8192CU
 	default m
+
+config RTL8723AS
+    tristate "Realtek RTL8723as Wireless Network Adapter"
+    depends on RTLWIFI
+    ---help---
+    This is the driver for Realtek RTL8723as sdio wireless network adapters
