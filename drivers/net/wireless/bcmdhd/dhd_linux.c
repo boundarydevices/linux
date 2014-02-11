@@ -3467,6 +3467,7 @@ dhd_net_attach(dhd_pub_t *dhdp, int ifidx)
 		net->stop = dhd_stop;
 #else
 		net->netdev_ops = &dhd_ops_pri;
+		memcpy(temp_addr, dhdp->mac.octet, ETHER_ADDR_LEN);
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31) */
 	} else {
 		/*
