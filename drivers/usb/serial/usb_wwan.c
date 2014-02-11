@@ -38,6 +38,8 @@
 #include "usb-wwan.h"
 
 static int debug;
+#define HW_bcdUSB				0x0110
+#define HUAWEI_VENDOR_ID			0x12D1
 
 void usb_wwan_dtr_rts(struct usb_serial_port *port, int on)
 {
@@ -244,7 +246,15 @@ int usb_wwan_write(struct tty_struct *tty, struct usb_serial_port *port,
 		/* send the data */
 		memcpy(this_urb->transfer_buffer, buf, todo);
 		this_urb->transfer_buffer_length = todo;
+		if ((HUAWEI_VENDOR_ID == port->serial->dev->descriptor.idVendor)
+				&& (HW_bcdUSB != port->serial->dev->descriptor.bcdUSB)) {
+			struct usb_host_endpoint *ep = usb_pipe_endpoint(this_urb->dev, this_urb->pipe);
 
+			if (ep && this_urb->transfer_buffer_length
+					&& !(this_urb->transfer_buffer_length % ep->desc.wMaxPacketSize)) {
+				this_urb->transfer_flags |= URB_ZERO_PACKET;
+			}
+		}
 		spin_lock_irqsave(&intfdata->susp_lock, flags);
 		if (intfdata->suspended) {
 			usb_anchor_urb(this_urb, &portdata->delayed);
