@@ -434,7 +434,7 @@ wl_cfgp2p_ifidx(struct wl_priv *wl, struct ether_addr *mac, s32 *index)
 		sizeof(getbuf), wl_to_p2p_bss_bssidx(wl, P2PAPI_BSSCFG_PRIMARY), NULL);
 
 	if (ret == 0) {
-		memcpy(index, getbuf, sizeof(index));
+		memcpy(index, getbuf, sizeof(*index));
 		CFGP2P_INFO(("---wl p2p_if   ==> %d\n", *index));
 	}
 
