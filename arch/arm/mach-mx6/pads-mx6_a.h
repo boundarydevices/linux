@@ -108,8 +108,8 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(GPIO_2__GPIO_1_2),		/* STNDBY */
 
 	/* gpio1 */
-	NEW_PAD_CTRL(MX6PAD(GPIO_3__GPIO_1_3), WEAK_PULLDN),	/* RX_ACT led */
-	NEW_PAD_CTRL(MX6PAD(GPIO_4__GPIO_1_4), WEAK_PULLDN),	/* TX_ACT led */
+	NEW_PAD_CTRL(MX6PAD(GPIO_3__GPIO_1_3), WEAK_PULLUP),	/* RX_ACT led */
+	NEW_PAD_CTRL(MX6PAD(GPIO_4__GPIO_1_4), WEAK_PULLUP),	/* TX_ACT led */
 
 	/* gpio2 */
 	NEW_PAD_CTRL(MX6PAD(NANDF_D5__GPIO_2_5), WEAK_PULLUP),	/* Modem On/Off */
