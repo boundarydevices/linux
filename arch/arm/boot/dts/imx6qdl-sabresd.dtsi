@@ -242,6 +242,10 @@
 		reset-delay-us = <50>;
 		#reset-cells = <0>;
 	};
+
+	minipcie_ctrl {
+		power-on-gpio = <&gpio3 19 0>;
+	};
 };
 
 &audmux {
