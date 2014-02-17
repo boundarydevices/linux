@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015 Freescale Semiconductor, Inc.
+ * Copyright 2011-2016 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -22,6 +22,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
+#include <linux/of_gpio.h>
 #include <linux/of_platform.h>
 #include <linux/pm_opp.h>
 #include <linux/pci.h>
@@ -291,6 +292,28 @@ static void __init imx6q_axi_init(void)
 	}
 }
 
+/*
+ * Init GPIO PCIE_PWR_EN to keep power supply to miniPCIE 3G modem
+ *
+*/
+static void __init imx6q_mini_pcie_init(void)
+{
+	struct device_node *np = NULL;
+	int ret, power_on_gpio;
+	np = of_find_node_by_name(NULL, "minipcie_ctrl");
+	if (!np)
+		return;
+
+	power_on_gpio = of_get_named_gpio(np, "power-on-gpio", 0);
+	if (gpio_is_valid(power_on_gpio)) {
+		ret = gpio_request_one(power_on_gpio, GPIOF_OUT_INIT_HIGH,
+			"miniPCIE Power On");
+		pr_warn("!!request miniPCIE Power On gpio\n");
+		if (ret)
+			pr_warn("failed to request miniPCIE Power On gpio\n");
+	}
+}
+
 static void __init imx6q_enet_clk_sel(void)
 {
 	struct regmap *gpr;
@@ -333,6 +356,7 @@ static void __init imx6q_init_machine(void)
 	imx6q_csi_mux_init();
 	cpu_is_imx6q() ?  imx6q_pm_init() : imx6dl_pm_init();
 	imx6q_axi_init();
+	imx6q_mini_pcie_init();
 }
 
 #define OCOTP_CFG3			0x440
