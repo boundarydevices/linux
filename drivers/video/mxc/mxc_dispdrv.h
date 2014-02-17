@@ -49,4 +49,6 @@ struct mxc_dispdrv_handle *mxc_dispdrv_gethandle(char *name,
 void mxc_dispdrv_puthandle(struct mxc_dispdrv_handle *handle);
 int mxc_dispdrv_setdata(struct mxc_dispdrv_handle *handle, void *data);
 void *mxc_dispdrv_getdata(struct mxc_dispdrv_handle *handle);
+void mxc_dispdrv_setdev(struct mxc_dispdrv_handle *drv_handle, struct device *dev);
+struct device *mxc_dispdrv_getdev(struct mxc_dispdrv_handle *drv_handle);
 #endif

@@ -48,7 +48,22 @@ struct mxc_dispdrv_entry {
 	bool active;
 	void *priv;
 	struct list_head list;
+	struct device *dev;
 };
+
+void mxc_dispdrv_setdev(struct mxc_dispdrv_handle *drv_handle, struct device *dev)
+{
+	struct mxc_dispdrv_entry *dentry;
+	dentry = (struct mxc_dispdrv_entry *)drv_handle;
+	dentry->dev = dev;
+}
+
+struct device *mxc_dispdrv_getdev(struct mxc_dispdrv_handle *drv_handle)
+{
+	struct mxc_dispdrv_entry *dentry;
+	dentry = (struct mxc_dispdrv_entry *)drv_handle;
+	return dentry->dev;
+}
 
 struct mxc_dispdrv_handle *mxc_dispdrv_register(struct mxc_dispdrv_driver *drv)
 {
