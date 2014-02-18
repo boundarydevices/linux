@@ -978,6 +978,71 @@ static const struct net_device_ops ax88772_netdev_ops = {
 	.ndo_set_multicast_list = asix_set_multicast,
 };
 
+static int parse_mac(unsigned char *mac, unsigned char const *str_mac)
+{
+	int i = 0;
+	char *end;
+	int ret = -EINVAL;
+
+	for (;;) {
+		mac[i++] = simple_strtoul(str_mac, &end, 16);
+		if (i == 6) {
+			if (!*end || (*end == ' '))
+				ret = 0;
+			break;
+		}
+		str_mac = end + 1;
+		if ((*end != '-') && (*end != ':'))
+			break;
+	}
+	return ret;
+}
+
+static char *ethaddr1;
+static char *ethaddr2;
+module_param(ethaddr1, charp, S_IRUGO | S_IWUSR);
+module_param(ethaddr2, charp, S_IRUGO | S_IWUSR);
+
+int check_mac_var(struct usbnet *dev, unsigned char* p)
+{
+	unsigned char mac[ETH_ALEN];
+
+	if (!p)
+		return 0;
+	if (parse_mac(mac, p))
+		memset(mac, 0, ETH_ALEN);
+	if (is_valid_ether_addr(mac)) {
+		memcpy(dev->net->dev_addr, mac, ETH_ALEN);
+		*p = 0;
+		return 1;
+	}
+	return 0;
+}
+
+void ax8817x_get_mac(struct usbnet *dev, void *buf)
+{
+	int ret;
+
+	/* allow mac overrides */
+	if (check_mac_var(dev, ethaddr1))
+		goto out1;
+	if (check_mac_var(dev, ethaddr2))
+		goto out1;
+	if ((ret = asix_read_cmd(dev, AX_CMD_READ_NODE_ID,
+				0, 0, ETH_ALEN, buf)) < 0) {
+		dbg("Failed to read MAC address: %d", ret);
+	}
+	if (is_valid_ether_addr(buf)) {
+		memcpy(dev->net->dev_addr, buf, ETH_ALEN);
+		return;
+	}
+	random_ether_addr(dev->net->dev_addr);
+out1:
+	/* Set the MAC address */
+	asix_write_cmd(dev, AX_CMD_WRITE_NODE_ID,
+			   0, 0, ETH_ALEN, dev->net->dev_addr);
+}
+
 static int ax88772_bind(struct usbnet *dev, struct usb_interface *intf)
 {
 	int ret, embd_phy;
@@ -1029,12 +1094,7 @@ static int ax88772_bind(struct usbnet *dev, struct usb_interface *intf)
 	dbg("RX_CTL is 0x%04x setting to 0x0000", rx_ctl);
 
 	/* Get the MAC address */
-	if ((ret = asix_read_cmd(dev, AX_CMD_READ_NODE_ID,
-				0, 0, ETH_ALEN, buf)) < 0) {
-		dbg("Failed to read MAC address: %d", ret);
-		goto out;
-	}
-	memcpy(dev->net->dev_addr, buf, ETH_ALEN);
+	ax8817x_get_mac(dev, buf);
 
 	/* Initialize MII structure */
 	dev->mii.dev = dev->net;
@@ -1327,12 +1387,7 @@ static int ax88178_bind(struct usbnet *dev, struct usb_interface *intf)
 	asix_write_rx_ctl(dev, 0);
 
 	/* Get the MAC address */
-	if ((ret = asix_read_cmd(dev, AX_CMD_READ_NODE_ID,
-				0, 0, ETH_ALEN, buf)) < 0) {
-		dbg("Failed to read MAC address: %d", ret);
-		goto out;
-	}
-	memcpy(dev->net->dev_addr, buf, ETH_ALEN);
+	ax8817x_get_mac(dev, buf);
 
 	/* Initialize MII structure */
 	dev->mii.dev = dev->net;
