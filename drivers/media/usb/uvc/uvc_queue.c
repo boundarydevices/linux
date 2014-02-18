@@ -60,9 +60,14 @@ static int uvc_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 	if (*nbuffers > UVC_MAX_VIDEO_BUFFERS)
 		*nbuffers = UVC_MAX_VIDEO_BUFFERS;
 
+	/* Make sure the image size is large enough. */
+	if (fmt && fmt->fmt.pix.sizeimage < stream->ctrl.dwMaxVideoFrameSize)
+		return -EINVAL;
+
 	*nplanes = 1;
 	psize = stream->psize;
-	sz = stream->ctrl.dwMaxVideoFrameSize;
+	sz = fmt ? fmt->fmt.pix.sizeimage
+		: stream->ctrl.dwMaxVideoFrameSize;
 	if (queue->dma_mode == DMA_MODE_CONTIG) {
 		/*
 		 * let the last segment transfer an entire payload
