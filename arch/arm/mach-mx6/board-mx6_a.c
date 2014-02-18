@@ -131,13 +131,15 @@ struct gpio mx6_init_gpios[] __initdata = {
 	{.label = "usb-pwr",		.gpio = GP_USB_OTG_PWR,		.flags = 0},
 //	{.label = "factory_default",	.gpio = IMX_GPIO_NR(4, 6),	.flags = GPIOF_DIR_IN},
 
-	{.label = "led1",		.gpio = IMX_GPIO_NR(2, 22),	.flags = 0},	/* high - on */
-	{.label = "led2",		.gpio = IMX_GPIO_NR(2, 21),	.flags = 0},	/* high - on */
-	{.label = "led3",		.gpio = IMX_GPIO_NR(2, 20),	.flags = 0},	/* high - on */
-	{.label = "led4",		.gpio = IMX_GPIO_NR(2, 19),	.flags = 0},	/* high - on */
-	{.label = "led5",		.gpio = IMX_GPIO_NR(6, 6),	.flags = 0},	/* high - on */
-	{.label = "rxact",		.gpio = IMX_GPIO_NR(1, 3),	.flags = GPIOF_HIGH},	/* low - on */
-	{.label = "txact",		.gpio = IMX_GPIO_NR(1, 4),	.flags = GPIOF_HIGH},	/* low - on */
+#if 0
+	{.label = "led1",		.gpio = IMX_GPIO_NR(2, 22),	.flags = 0},
+	{.label = "led2",		.gpio = IMX_GPIO_NR(2, 21),	.flags = 0},
+	{.label = "led3",		.gpio = IMX_GPIO_NR(2, 20),	.flags = 0},
+	{.label = "led4",		.gpio = IMX_GPIO_NR(2, 19),	.flags = 0},
+	{.label = "led5",		.gpio = IMX_GPIO_NR(6, 6),	.flags = 0},
+	{.label = "rxact",		.gpio = IMX_GPIO_NR(1, 3),	.flags = 0},
+	{.label = "txact",		.gpio = IMX_GPIO_NR(1, 4),	.flags = 0},
+#endif
 };
 
 enum sd_pad_mode {
