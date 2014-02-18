@@ -1323,6 +1323,8 @@ static struct device_type wwan_type = {
 	.name	= "wwan",
 };
 
+#define HUAWEI_VENDOR_ID 0x12d1
+
 int
 usbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 {
@@ -1470,6 +1472,9 @@ usbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 	// ok, it's ready to go.
 	usb_set_intfdata (udev, dev);
 
+	if ((xdev->descriptor.idVendor == HUAWEI_VENDOR_ID) &&
+			(xdev->config->desc.bmAttributes & 0x20))
+		usb_enable_autosuspend(xdev);
 	netif_device_attach (net);
 
 	if (dev->driver_info->flags & FLAG_LINK_INTR)
