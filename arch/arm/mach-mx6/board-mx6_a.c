@@ -78,7 +78,8 @@
 #include "crm_regs.h"
 #include "cpu_op-mx6.h"
 
-#define GP_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
+#define GP_CAN1_STBY		IMX_GPIO_NR(1, 2)
+#define GP_USB_OTG_PWR		IMX_GPIO_NR(3, 22)
 
 #define GP_ENET_PHY_RESET	IMX_GPIO_NR(1, 27)	/* ENET_RXD0 - active low */
 #define GP_ENET_PHY_IRQ		IMX_GPIO_NR(1, 28)	/* ENET_TX_EN - active low */
@@ -130,6 +131,7 @@ struct gpio mx6_init_gpios[] __initdata = {
 	{.label = "Modem_onoff",	.gpio = GP_MODEM_ONOFF,		.flags = GPIOF_DIR_IN},
 	{.label = "usb-pwr",		.gpio = GP_USB_OTG_PWR,		.flags = 0},
 //	{.label = "factory_default",	.gpio = IMX_GPIO_NR(4, 6),	.flags = GPIOF_DIR_IN},
+	{.label = "flexcan1-stby",	.gpio = GP_CAN1_STBY,		.flags = GPIOF_HIGH},
 
 #if 0
 	{.label = "led1",		.gpio = IMX_GPIO_NR(2, 22),	.flags = 0},
@@ -347,6 +349,16 @@ static const struct imx_pcie_platform_data plat_pcie  __initconst = {
 	.pcie_dis	= -EINVAL,
 };
 
+static void flexcan0_tja1040_switch(int enable)
+{
+	gpio_set_value(GP_CAN1_STBY, enable ^ 1);
+}
+
+static const struct flexcan_platform_data
+	flexcan0_tja1040_pdata __initconst = {
+	.transceiver_switch = flexcan0_tja1040_switch,
+};
+
 static void oc_suspend_enter(void)
 {
 	/* suspend preparation */
@@ -499,6 +511,7 @@ static void __init mx6_board_init(void)
 	add_device_buttons();
 
 	imx6q_add_busfreq();
+	imx6q_add_flexcan0(&flexcan0_tja1040_pdata);
 
 	imx6q_add_pcie(&plat_pcie);
 
