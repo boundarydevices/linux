@@ -340,6 +340,13 @@ static void __init imx6_init_usb(void)
 	gpio_direction_input(GP_MODEM_RESET);		/* modem reset high */
 }
 
+static const struct imx_pcie_platform_data plat_pcie  __initconst = {
+	.pcie_pwr_en	= -EINVAL,
+	.pcie_rst	= -EINVAL, //GP_CAP_TCH_INT1,
+	.pcie_wake_up	= -EINVAL,
+	.pcie_dis	= -EINVAL,
+};
+
 static void oc_suspend_enter(void)
 {
 	/* suspend preparation */
@@ -492,6 +499,8 @@ static void __init mx6_board_init(void)
 	add_device_buttons();
 
 	imx6q_add_busfreq();
+
+	imx6q_add_pcie(&plat_pcie);
 
 	imx6q_add_perfmon(0);
 	imx6q_add_perfmon(1);
