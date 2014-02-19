@@ -177,9 +177,9 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	/* PWM2 */
 	MX6PAD(SD1_DAT2__PWM2_PWMO),		/* GPIO1[19] */
 
-	/* UART1  */
-	MX6PAD(SD3_DAT7__UART1_TXD),
-	MX6PAD(SD3_DAT6__UART1_RXD),
+	/* UART4  */
+	MX6PAD(CSI0_DAT12__UART4_TXD),
+	MX6PAD(CSI0_DAT13__UART4_RXD),
 
 	/* UART2 for debug */
 	MX6PAD(EIM_D26__UART2_TXD),
