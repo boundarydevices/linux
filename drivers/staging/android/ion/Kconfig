@@ -23,3 +23,8 @@ config ION_TEGRA
 	help
 	  Choose this option if you wish to use ion on an nVidia Tegra.
 
+config ION_MXC
+	tristate "Ion for imx platform"
+	depends on ARCH_MXC && ION
+	help
+	  Choose this option if you wish to use ion on imx platform.

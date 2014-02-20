@@ -5,3 +5,4 @@ ifdef CONFIG_COMPAT
 obj-$(CONFIG_ION) += compat_ion.o
 endif
 obj-$(CONFIG_ION_TEGRA) += tegra/
+obj-$(CONFIG_ION_MXC) += mxc/

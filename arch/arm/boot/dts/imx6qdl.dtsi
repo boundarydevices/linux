@@ -1036,6 +1036,12 @@
 			resets = <&src 2>;
 			bypass_reset = <0>;
 		};
+
+                imx_ion {
+                        compatible = "fsl,mxc-ion";
+                        fsl,heap-id = <0>;
+                        fsl,heap-cacheable = <1>;
+                };
 	};
 };
 
