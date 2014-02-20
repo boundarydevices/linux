@@ -345,19 +345,19 @@ static const struct flexcan_platform_data
 	.transceiver_switch = flexcan0_tja1040_switch,
 };
 
-static void oc_suspend_enter(void)
+static void suspend_enter(void)
 {
 	/* suspend preparation */
 }
 
-static void oc_suspend_exit(void)
+static void suspend_exit(void)
 {
 	/* resume restore */
 }
 static const struct pm_platform_data mx6_pm_data __initconst = {
 	.name = "imx_pm",
-	.suspend_enter = oc_suspend_enter,
-	.suspend_exit = oc_suspend_exit,
+	.suspend_enter = suspend_enter,
+	.suspend_exit = suspend_exit,
 };
 
 static struct regulator_consumer_supply mx6_vmmc_consumers[] = {
@@ -384,7 +384,7 @@ static struct platform_device mx6_vmmc_reg_devices = {
 	},
 };
 
-static struct mxc_dvfs_platform_data oc_dvfscore_data = {
+static struct mxc_dvfs_platform_data dvfscore_data = {
 	.reg_id = "cpu_vddgp",
 	.soc_id = "cpu_vddsoc",
 	.pu_id = "cpu_vddvpu",
@@ -465,9 +465,9 @@ static void __init mx6_board_init(void)
 	IOMUX_SETUP(common_pads);
 
 
-	gp_reg_id = oc_dvfscore_data.reg_id;
-	soc_reg_id = oc_dvfscore_data.soc_id;
-	pu_reg_id = oc_dvfscore_data.pu_id;
+	gp_reg_id = dvfscore_data.reg_id;
+	soc_reg_id = dvfscore_data.soc_id;
+	pu_reg_id = dvfscore_data.pu_id;
 
 	imx6q_add_imx_uart(0, NULL);
 	imx6q_add_imx_uart(1, NULL);
@@ -492,7 +492,7 @@ static void __init mx6_board_init(void)
 	imx6q_add_imx2_wdt(0, NULL);
 	imx6q_add_dma();
 
-	imx6q_add_dvfs_core(&oc_dvfscore_data);
+	imx6q_add_dvfs_core(&dvfscore_data);
 
 	add_device_buttons();
 
