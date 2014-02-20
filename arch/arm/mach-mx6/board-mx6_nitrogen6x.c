@@ -456,7 +456,15 @@ static struct mxc_pwm_platform_data pwm3_data = {
 };
 
 #if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
-static struct pwm_device *mipi_pwm = 0;
+/*
+ * (ov5640 Mipi) - J16
+ * NANDF_WP_B	GPIO[6]:9	Nitrogen6x - power down, SOM - NC
+ * NANDF_D5 	GPIO[2]:5	Nitrogen6x/SOM - CSI0 reset
+ * NANDF_CS0	GPIO[6]:11	reset, old rev SOM jumpered
+ * SD1_DAT1	GPIO[1]:16	24 Mhz XCLK/XVCLK (pwm3)
+ */
+static struct pwm_device	*mipi_pwm;
+static struct fsl_mxc_camera_platform_data ov5640_mipi_data;
 
 static void mx6_mipi_sensor_io_init(void)
 {
@@ -473,9 +481,16 @@ static void mx6_mipi_sensor_io_init(void)
 	}
 
 	camera_reset(IMX_GPIO_NR(6, 9), 1, IMX_GPIO_NR(2, 5), IMX_GPIO_NR(6, 11));
-/*for mx6dl, mipi virtual channel 1 connect to csi 1*/
-	if (cpu_is_mx6dl())
-		mxc_iomux_set_gpr_register(13, 3, 3, 1);
+	if (cpu_is_mx6dl()) {
+		/*
+		 * for mx6dl, mipi virtual channel 0 connect to csi0
+		 * virtual channel 1 connect to csi1
+		 */
+		mxc_iomux_set_gpr_register(13, ov5640_mipi_data.csi * 3, 3, ov5640_mipi_data.csi);
+	} else {
+		/* select mipi IPU1 CSI0/ IPU2/CSI1 */
+		mxc_iomux_set_gpr_register(1, 19 + ov5640_mipi_data.csi, 1, 0);
+	}
 }
 
 static struct fsl_mxc_camera_platform_data ov5640_mipi_data = {
