@@ -31,18 +31,10 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/flash.h>
 #include <linux/i2c.h>
-#include <linux/i2c/pca953x.h>
-#include <linux/ata.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/map.h>
 #include <linux/mtd/partitions.h>
 #include <linux/regulator/consumer.h>
-#include <linux/pmic_external.h>
-#include <linux/pmic_status.h>
-#include <linux/ipu.h>
-#include <linux/mxcfb.h>
-#include <linux/pwm.h>
-#include <linux/pwm_backlight.h>
 #include <linux/fec.h>
 #include <linux/memblock.h>
 #include <linux/gpio.h>
@@ -60,12 +52,6 @@
 #include <mach/iomux-mx6q.h>
 #include <mach/iomux-mx6dl.h>
 #include <mach/imx-uart.h>
-#include <mach/viv_gpu.h>
-#include <mach/ipu-v3.h>
-#include <mach/mxc_hdmi.h>
-#include <mach/mxc_asrc.h>
-#include <linux/i2c/tsc2007.h>
-#include <linux/wl12xx.h>
 
 #include <asm/irq.h>
 #include <asm/setup.h>
