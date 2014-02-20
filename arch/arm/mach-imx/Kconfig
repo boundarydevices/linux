@@ -32,6 +32,9 @@ config MXC_DEBUG_BOARD
 	  data/address de-multiplexing and decode, signal level shift,
 	  interrupt control and various board functions.
 
+config HAVE_IMX_RNG
+       bool
+
 config HAVE_IMX_ANATOP
 	bool
 
@@ -514,6 +517,7 @@ config SOC_IMX6Q
 
 config SOC_IMX6SL
 	bool "i.MX6 SoloLite support"
+	select HAVE_IMX_RNG
 	select PINCTRL_IMX6SL
 	select SOC_IMX6
 
