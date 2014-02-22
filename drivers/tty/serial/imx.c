@@ -48,6 +48,7 @@
 #include <linux/slab.h>
 #include <linux/dma-mapping.h>
 #include <linux/uaccess.h>
+#include <linux/workqueue.h>
 
 #include <asm/io.h>
 #include <asm/ioctls.h>
@@ -205,17 +206,15 @@ struct imx_port {
 	unsigned int		half_duplex:1;
 	unsigned short		trcv_delay; /* transceiver delay */
 	struct clk		*clk;
-	const unsigned short	*gpios;
-	unsigned		pflags;
 	unsigned 		gpios_mask;
-	unsigned		rs485_txen_mask;
-	unsigned		rs485_txen_levels;
-	unsigned		rs485_levels;
-	unsigned		rs232_levels;
-	unsigned		off_levels;
-	unsigned int            rs485_transmitting;
-	struct serial_rs485	rs485conf;
+	unsigned		txen_mask;
+	unsigned		txen_levels;
+	unsigned		txing;
+	unsigned		rxing;
 
+	struct serial_rs485	rs485conf;
+	struct delayed_work	rxact_work;
+	struct imxuart_platform_data plat;
 	/* DMA fields */
 	int			enable_dma;
 	struct imx_dma_data	dma_data;
@@ -309,7 +308,7 @@ static void imx_timeout(unsigned long data)
 
 void imx_set_gpios(struct imx_port *sport, unsigned mask, unsigned levels, unsigned ascending)
 {
-	const unsigned short *gpios = sport->gpios;
+	const unsigned short *gpios = sport->plat.gpios;
 
 	if (!gpios)
 		return;
@@ -367,11 +366,7 @@ static void imx_stop_tx(struct uart_port *port)
 			temp = readl(sport->port.membase + UCR4);
 			temp |= UCR4_DREN;
 			writel(temp, sport->port.membase + UCR4);
-
-			if (sport->rs485_transmitting) {
-				sport->rs485_transmitting = 0;
-				imx_set_gpios(sport, sport->rs485_txen_mask, ~sport->rs485_txen_levels, 0);
-			}
+			goto out1;
 
 		}
 		return;
@@ -379,6 +374,11 @@ static void imx_stop_tx(struct uart_port *port)
 
 	temp = readl(sport->port.membase + UCR1);
 	writel(temp & ~UCR1_TXMPTYEN, sport->port.membase + UCR1);
+out1:
+	if (sport->txing) {
+		sport->txing = 0;
+		imx_set_gpios(sport, sport->txen_mask, ~sport->txen_levels, 0);
+	}
 }
 
 /*
@@ -527,11 +527,9 @@ static void imx_start_tx(struct uart_port *port)
 		writel(temp | UCR1_TXMPTYEN, sport->port.membase + UCR1);
 	}
 
-	if ((sport->rs485conf.flags & SER_RS485_ENABLED) &&
-			(!sport->rs485_transmitting)) {
-		imx_set_gpios(sport, sport->rs485_txen_mask,
-				sport->rs485_txen_levels, 1);
-		sport->rs485_transmitting = 1;
+	if (!sport->txing && sport->txen_mask) {
+		imx_set_gpios(sport, sport->txen_mask, sport->txen_levels, 1);
+		sport->txing = 1;
 	}
 	if (sport->half_duplex) {
 		temp = readl(sport->port.membase + UCR1);
@@ -598,6 +596,15 @@ out:
 	return IRQ_HANDLED;
 }
 
+static void rxact_work_func(struct work_struct *work)
+{
+	struct imx_port *sport = container_of(work, struct imx_port,
+			rxact_work.work);
+
+	imx_set_gpios(sport, sport->plat.rxact_mask, ~sport->plat.rxact_levels, 0);
+	sport->rxing = 0;
+}
+
 static irqreturn_t imx_rxint(int irq, void *dev_id)
 {
 	struct imx_port *sport = dev_id;
@@ -612,13 +619,19 @@ static irqreturn_t imx_rxint(int irq, void *dev_id)
 		sport->port.icount.rx++;
 
 		rx = readl(sport->port.membase + URXD0);
-		if (sport->rs485_transmitting && sport->half_duplex)
+		if (sport->txing && sport->half_duplex)
 			continue;
 		temp = readl(sport->port.membase + USR2);
 		if (temp & USR2_BRCD) {
 			writel(USR2_BRCD, sport->port.membase + USR2);
 			if (uart_handle_break(&sport->port))
 				continue;
+		}
+
+		if (!sport->rxing && sport->plat.rxact_mask) {
+			sport->rxing = 1;
+			imx_set_gpios(sport, sport->plat.rxact_mask, sport->plat.rxact_levels, 1);
+			schedule_delayed_work(&sport->rxact_work, msecs_to_jiffies(10));
 		}
 
 		if (uart_handle_sysrq_char(&sport->port, (unsigned char)rx))
@@ -1008,22 +1021,26 @@ err:
 	return ret;
 }
 
-void imx_startup485(struct imx_port *sport)
+void imx_startup_gpios(struct imx_port *sport)
 {
-	if (sport->rs485conf.flags & SER_RS485_ENABLED) {
-		unsigned levels = sport->rs485_levels;
+	unsigned levels;
 
-		if (sport->rs485_transmitting) {
-			levels &= ~sport->rs485_txen_mask;
-			levels |= sport->rs485_txen_levels & sport->rs485_txen_mask;
-		}
-		imx_set_gpios(sport, sport->gpios_mask, levels, 1);
-		sport->half_duplex = (sport->pflags & IMXUART_RS485_HALF_DUPLEX) ? 1 : 0;
+	if (sport->rs485conf.flags & SER_RS485_ENABLED) {
+		levels = sport->plat.rs485_levels;
+		sport->txen_mask = sport->plat.rs485_txen_mask;
+		sport->txen_levels = sport->plat.rs485_txen_levels;
+		sport->half_duplex = (sport->plat.flags & IMXUART_RS485_HALF_DUPLEX) ? 1 : 0;
 	} else {
-		imx_set_gpios(sport, sport->gpios_mask, sport->rs232_levels, 1);
+		levels = sport->plat.rs232_levels;
+		sport->txen_mask = sport->plat.rs232_txen_mask;
+		sport->txen_levels = sport->plat.rs232_txen_levels;
 		sport->half_duplex = 0;
-		sport->rs485_transmitting = 0;
 	}
+	if (sport->txing) {
+		levels &= ~sport->txen_mask;
+		levels |= sport->txen_levels & sport->txen_mask;
+	}
+	imx_set_gpios(sport, sport->gpios_mask, levels, 1);
 }
 
 /* half the RX buffer size */
@@ -1102,7 +1119,7 @@ static int imx_startup(struct uart_port *port)
 		}
 	}
 
-	imx_startup485(sport);
+	imx_startup_gpios(sport);
 	/* Enable the SDMA for uart. */
 	if (sport->enable_dma) {
 		int ret;
@@ -1270,7 +1287,7 @@ static void imx_shutdown(struct uart_port *port)
 	}
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 	clk_disable(sport->clk);
-	imx_set_gpios(sport, sport->gpios_mask, sport->off_levels, 0);
+	imx_set_gpios(sport, sport->gpios_mask, sport->plat.off_levels, 0);
 }
 
 static void
@@ -1575,7 +1592,7 @@ static void imx_poll_put_char(struct uart_port *port, unsigned char c)
 void imx_config_rs485(struct imx_port *sport, struct serial_rs485 *rs485conf)
 {
 	sport->rs485conf = *rs485conf;
-	imx_startup485(sport);
+	imx_startup_gpios(sport);
 }
 
 static int imx_ioctl(struct uart_port *port, unsigned int cmd, unsigned long arg)
@@ -1911,6 +1928,8 @@ static int serial_imx_probe(struct platform_device *pdev)
 	init_timer(&sport->timer);
 	sport->timer.function = imx_timeout;
 	sport->timer.data     = (unsigned long)sport;
+	INIT_DELAYED_WORK(&sport->rxact_work, rxact_work_func);
+
 
 	sport->clk = clk_get(&pdev->dev, "uart");
 	if (IS_ERR(sport->clk)) {
@@ -1936,16 +1955,10 @@ static int serial_imx_probe(struct platform_device *pdev)
 	if (pdata) {
 		const unsigned short *gpios = pdata->gpios;
 
-		sport->gpios = gpios;
-		sport->pflags = pdata->flags;
-		sport->rs485_txen_mask = pdata->rs485_txen_mask;
-		sport->rs485_txen_levels = pdata->rs485_txen_levels;
-		sport->rs485_levels = pdata->rs485_levels;
-		sport->rs232_levels = pdata->rs232_levels;
-		sport->off_levels = pdata->off_levels;
+		sport->plat = *pdata;
 		if (gpios) {
 			unsigned mask = 0;
-			unsigned off_levels = sport->off_levels;
+			unsigned off_levels = sport->plat.off_levels;
 			int i = 0;
 			while (gpio_is_valid(gpios[i])) {
 				ret = gpio_request_one(gpios[i], (off_levels & 1) ?
@@ -1954,7 +1967,6 @@ static int serial_imx_probe(struct platform_device *pdev)
 				if (ret < 0) {
 					dev_err(&pdev->dev, "could not obtain gpio %d\n", gpios[i]);
 				} else {
-					dev_err(&pdev->dev, "obtained gpio %d\n", gpios[i]);
 					mask |= (1 << i);
 				}
 				off_levels >>= 1;
@@ -2012,6 +2024,7 @@ static int serial_imx_remove(struct platform_device *pdev)
 	if (sport) {
 		uart_remove_one_port(&imx_reg, &sport->port);
 		clk_put(sport->clk);
+		cancel_delayed_work_sync(&sport->rxact_work);
 	}
 
 	device_remove_file(&pdev->dev, &dev_attr_rs485_en);

@@ -36,11 +36,15 @@ struct imxuart_platform_data {
 	unsigned int dma_req_rx;
 	unsigned int dma_req_tx;
 	const unsigned short *gpios;
+	unsigned off_levels;
+	unsigned rxact_mask;
+	unsigned rxact_levels;
+	unsigned rs232_levels;
+	unsigned rs232_txen_mask;
+	unsigned rs232_txen_levels;
+	unsigned rs485_levels;
 	unsigned rs485_txen_mask;
 	unsigned rs485_txen_levels;
-	unsigned rs485_levels;
-	unsigned rs232_levels;
-	unsigned off_levels;
 };
 
 #endif
