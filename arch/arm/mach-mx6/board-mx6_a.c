@@ -452,21 +452,34 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 
 /* Order gpios with 1st to be set/cleared when enabling transmit */
 const unsigned short uart2_gpios[] = {
-	IMX_GPIO_NR(2, 16),		/* rx enable, active high */
-	IMX_GPIO_NR(2, 17),		/* tx enable, active high */
-	IMX_GPIO_NR(2, 18),		/* rs485 enable, active high */
-	IMX_GPIO_NR(7, 13),		/* all on, active high */
+	IMX_GPIO_NR(2, 16),		/* 0 - rx enable, active high */
+	IMX_GPIO_NR(2, 17),		/* 1 - tx enable, active high */
+	IMX_GPIO_NR(1, 4),		/* 2 - tx led, active low */
+	IMX_GPIO_NR(2, 18),		/* 3 - rs485 enable, active high */
+	IMX_GPIO_NR(7, 13),		/* 4 - all on, active high */
+	IMX_GPIO_NR(1, 3),		/* 5 - rx led, active low */
 	-1
 };
+
+#define M_RX_EN		1
+#define M_TX_EN		2
+#define M_TXLED_OFF	4
+#define M_RS485		8
+#define M_AON		0x10
+#define M_RXLED_OFF	0x20
 
 static const struct imxuart_platform_data uart2_data __initconst = {
 	.gpios = uart2_gpios,
 	.flags = IMXUART_RS485_HALF_DUPLEX,
-	.rs485_txen_mask = 0x3,
-	.rs485_txen_levels = 0x2,
-	.rs485_levels = 0xd,
-	.rs232_levels = 0x1,
-	.off_levels = 0,
+	.off_levels = M_TXLED_OFF | M_RXLED_OFF,
+	.rxact_mask = M_RXLED_OFF,
+	.rxact_levels = 0,
+	.rs232_levels = M_RX_EN | M_TXLED_OFF | M_RXLED_OFF,
+	.rs232_txen_mask = M_TXLED_OFF,
+	.rs232_txen_levels = 0,
+	.rs485_levels = M_RX_EN | M_TXLED_OFF | M_RS485 |  M_AON | M_RXLED_OFF,
+	.rs485_txen_mask = M_RX_EN | M_TX_EN | M_TXLED_OFF,
+	.rs485_txen_levels = M_TX_EN,
 };
 
 /*!
