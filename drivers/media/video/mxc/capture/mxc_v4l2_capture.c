@@ -3016,8 +3016,9 @@ static int mxc_v4l2_master_attach(struct v4l2_int_device *slave)
 		return -1;
 	}
 
-	if (sdata->csi != cam->csi) {
-		pr_debug("%s: csi doesn't match\n", __func__);
+	if ((sdata->ipu != cam->ipu_id) || (sdata->csi != cam->csi)) {
+		pr_info("%s: ipu(%d:%d)/csi(%d:%d) doesn't match\n", __func__,
+			sdata->ipu, cam->ipu_id, sdata->csi, cam->csi);
 		return -1;
 	}
 
