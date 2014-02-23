@@ -668,43 +668,63 @@ static int ov5640_driver_capability(int strength)
 	return 0;
 }
 
+static const int sclk_rdiv_map[] = {1, 2, 4, 8};
+
 /* calculate sysclk */
 static int ov5640_get_sysclk(void)
 {
-	int xvclk = ov5640_data.mclk / 10000;
-	int sysclk;
-	int temp1, temp2;
-	int Multiplier, PreDiv, VCO, SysDiv, Pll_rdiv, Bit_div2x, sclk_rdiv;
-	int sclk_rdiv_map[] = {1, 2, 4, 8};
-	u8 regval = 0;
+	 /* calculate sysclk */
+	int tmp;
+	unsigned Multiplier, PreDiv, SysDiv, Pll_rdiv, Bit_div2x = 1;
+	unsigned div, sclk_rdiv, sysclk;
+	u8 temp;
 
-	temp1 = ov5640_read_reg(0x3034, &regval);
-	temp2 = temp1 & 0x0f;
-	if (temp2 == 8 || temp2 == 10) {
-		Bit_div2x = temp2 / 2;
-	} else {
-		pr_err("ov5640: unsupported bit mode %d\n", temp2);
-		return -1;
-	}
+	tmp = ov5640_read_reg(0x3034, &temp);
+	if (tmp < 0)
+		return tmp;
+	tmp &= 0x0f;
+	if (tmp == 8 || tmp == 10)
+		Bit_div2x = tmp / 2;
 
-	temp1 = ov5640_read_reg(0x3035, &regval);
-	SysDiv = temp1 >> 4;
+	tmp = ov5640_read_reg(0x3035, &temp);
+	if (tmp < 0)
+		return tmp;
+	SysDiv = tmp >> 4;
 	if (SysDiv == 0)
-		SysDiv = 16;
+	       SysDiv = 16;
 
-	temp1 = ov5640_read_reg(0x3036, &regval);
-	Multiplier = temp1;
-	temp1 = ov5640_read_reg(0x3037, &regval);
-	PreDiv = temp1 & 0x0f;
-	Pll_rdiv = ((temp1 >> 4) & 0x01) + 1;
+	tmp = ov5640_read_reg(0x3036, &temp);
+	if (tmp < 0)
+		return tmp;
+	Multiplier = tmp;
 
-	temp1 = ov5640_read_reg(0x3108, &regval);
-	temp2 = temp1 & 0x03;
+	tmp = ov5640_read_reg(0x3037, &temp);
+	if (tmp < 0)
+		return tmp;
+	PreDiv = tmp & 0x0f;
+	Pll_rdiv = ((tmp >> 4) & 0x01) + 1;
 
-	sclk_rdiv = sclk_rdiv_map[temp2];
-	VCO = xvclk * Multiplier / PreDiv;
-	sysclk = VCO / SysDiv / Pll_rdiv * 2 / Bit_div2x / sclk_rdiv;
+	tmp = ov5640_read_reg(0x3108, &temp);
+	if (tmp < 0)
+		return tmp;
+	sclk_rdiv = sclk_rdiv_map[tmp & 0x03];
 
+	sysclk = ov5640_data.mclk / 10000 * Multiplier;
+	div = PreDiv * SysDiv * Pll_rdiv * Bit_div2x * sclk_rdiv;
+	if (!div) {
+		pr_err("%s:Error divide by 0, (%d * %d * %d * %d * %d)\n",
+			__func__, PreDiv, SysDiv, Pll_rdiv, Bit_div2x, sclk_rdiv);
+		return -EINVAL;
+	}
+	if (!sysclk) {
+		pr_err("%s:Error 0 clk, ov5640_data.mclk=%d, Multiplier=%d\n",
+			__func__, ov5640_data.mclk, Multiplier);
+		return -EINVAL;
+	}
+	sysclk /= div;
+	pr_info("%s: sysclk(%d) = %d / 10000 * %d / (%d * %d * %d * %d * %d)\n",
+		__func__, sysclk, ov5640_data.mclk, Multiplier,
+		PreDiv, SysDiv, Pll_rdiv, Bit_div2x, sclk_rdiv);
 	return sysclk;
 }
 
@@ -1660,7 +1680,7 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 	ov5640_data.mclk = tgt_xclk;
 
 	pr_debug("   Setting mclk to %d MHz\n", tgt_xclk / 1000000);
-	set_mclk_rate(&ov5640_data.mclk, ov5640_data.mclk_source);
+//	set_mclk_rate(&ov5640_data.mclk, ov5640_data.mclk_source);
 
 	/* Default camera frame rate is set in probe */
 	tgt_fps = sensor->streamcap.timeperframe.denominator /
@@ -1796,6 +1816,7 @@ static int ov5640_probe(struct i2c_client *client,
 	ov5640_data.mclk = plat_data->mclk;
 	ov5640_data.mclk_source = plat_data->mclk_source;
 	ov5640_data.csi = plat_data->csi;
+	ov5640_data.ipu = plat_data->ipu;
 	ov5640_data.io_init = plat_data->io_init;
 
 	ov5640_data.i2c_client = client;
@@ -1870,7 +1891,7 @@ static int ov5640_probe(struct i2c_client *client,
 		plat_data->pwdn(0);
 
 #ifdef CONFIG_SOC_IMX6SL
-	csi_enable_mclk(CSI_MCLK_I2C, true, true);
+//	csi_enable_mclk(CSI_MCLK_I2C, true, true);
 #endif
 	retval = ov5640_read_reg(OV5640_CHIP_ID_HIGH_BYTE, &chip_id_high);
 	if (retval < 0 || chip_id_high != 0x56) {
@@ -1889,7 +1910,7 @@ static int ov5640_probe(struct i2c_client *client,
 		plat_data->pwdn(1);
 
 #ifdef CONFIG_SOC_IMX6SL
-	csi_enable_mclk(CSI_MCLK_I2C, false, false);
+//	csi_enable_mclk(CSI_MCLK_I2C, false, false);
 #endif
 
 	camera_plat = plat_data;
