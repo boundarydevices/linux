@@ -651,6 +651,47 @@ static struct fsl_mxc_lcd_platform_data adv7391_data = {
 	.default_ifmt = IPU_PIX_FMT_BT656,
 };
 
+#if defined(CONFIG_MXC_CAMERA_OV5640) || defined(CONFIG_MXC_CAMERA_OV5640_MODULE)
+#define GPIO_CSI1_POWER IMX_GPIO_NR(3, 13)
+#define GPIO_CSI1_RESET IMX_GPIO_NR(3, 14)
+
+static struct fsl_mxc_camera_platform_data ov5640_csi1_data;
+
+static void ov5640_csi1_camera_io_init(void)
+{
+	pr_info("%s\n", __func__);
+
+	camera_reset(GPIO_CSI1_POWER, 1, GPIO_CSI1_RESET, -1);
+	if (cpu_is_mx6dl()) {
+		/*
+		 * for mx6dl, parallel connect to csi0
+		 * or parallel connect to csi1
+		 */
+		mxc_iomux_set_gpr_register(13, ov5640_csi1_data.csi * 3, 3, 4);
+	} else {
+		/* select mipi IPU1 CSI0/ IPU2/CSI1 */
+		mxc_iomux_set_gpr_register(1, 19 + ov5640_csi1_data.csi, 1, 1);
+	}
+}
+
+static void ov5640_csi1_camera_powerdown(int powerdown)
+{
+	pr_info("%s: powerdown=%d, reset_gp=0x%x, power_gp=0x%x\n",
+			__func__, powerdown, GPIO_CSI1_RESET, GPIO_CSI1_POWER);
+	gpio_set_value(GPIO_CSI1_RESET, powerdown ? 0 : 1);
+	gpio_set_value(GPIO_CSI1_POWER, powerdown ? 1 : 0);
+	if (!powerdown)
+		msleep(2);
+}
+
+static struct fsl_mxc_camera_platform_data ov5640_csi1_data = {
+	.mclk = 24000000,
+	.csi = 1,
+	.ipu = 1,
+	.io_init = ov5640_csi1_camera_io_init,
+	.pwdn = ov5640_csi1_camera_powerdown,
+};
+#endif
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
@@ -678,6 +719,12 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		.platform_data = (void *)&adv7180_data,
 		.irq = gpio_to_irq(IMX_GPIO_NR(5, 0)),  /* EIM_WAIT */
 	},
+#if defined(CONFIG_MXC_CAMERA_OV5640) || defined(CONFIG_MXC_CAMERA_OV5640_MODULE)
+	{
+		I2C_BOARD_INFO("ov5640", 0x3c),
+		.platform_data = (void *)&ov5640_csi1_data,
+	},
+#endif
 };
 
 static void usbotg_vbus(bool on)
@@ -956,7 +1003,8 @@ static struct fsl_mxc_capture_platform_data capture_data[] = {
 		.is_mipi = 1,
 	},
 #endif
-#if defined(CONFIG_MXC_TVIN_ADV7180) || defined(CONFIG_MXC_TVIN_ADV7180_MODULE)
+#if defined(CONFIG_MXC_TVIN_ADV7180) || defined(CONFIG_MXC_TVIN_ADV7180_MODULE) || \
+		 defined(CONFIG_MXC_CAMERA_OV5640) || defined(CONFIG_MXC_CAMERA_OV5640_MODULE)
 	{
 		.ipu = 1,
 		.csi = 1,
@@ -1359,6 +1407,8 @@ static void __init board_init(void)
 			capture_data[i].ipu = 0;
 		imx6q_add_v4l2_capture(i, &capture_data[i]);
 	}
+	if (!cpu_is_mx6q())
+		ov5640_csi1_data.ipu = 0;
 
 	imx6q_add_mipi_csi2(&mipi_csi2_pdata);
 	imx6q_add_imx_snvs_rtc();
