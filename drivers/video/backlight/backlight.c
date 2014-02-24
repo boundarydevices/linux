@@ -317,8 +317,18 @@ struct backlight_device *backlight_device_register(const char *name,
 {
 	struct backlight_device *new_bd;
 	int rc;
+	static int bk_id;
+	char tmp_name[64];
+	int  i = 0;
+	char *p = NULL;
 
 	pr_debug("backlight_device_register: name=%s\n", name);
+
+	memset(tmp_name , 0x00, sizeof(tmp_name));
+	p = strchr(name, '.');
+	i = p - name;
+	strncpy(tmp_name, name, i);
+	sprintf(tmp_name, "%s.%d", tmp_name, bk_id++);
 
 	new_bd = kzalloc(sizeof(struct backlight_device), GFP_KERNEL);
 	if (!new_bd)
@@ -330,7 +340,7 @@ struct backlight_device *backlight_device_register(const char *name,
 	new_bd->dev.class = backlight_class;
 	new_bd->dev.parent = parent;
 	new_bd->dev.release = bl_device_release;
-	dev_set_name(&new_bd->dev, "%s", name);
+	dev_set_name(&new_bd->dev, "%s", tmp_name);
 	dev_set_drvdata(&new_bd->dev, devdata);
 
 	/* Set default properties */
