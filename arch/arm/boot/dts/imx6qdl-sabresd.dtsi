@@ -110,18 +110,21 @@
 			gpios = <&gpio3 29 1>;
 			linux,code = <116>; /* KEY_POWER */
 			gpio-key,wakeup;
+			debounce-interval = <1>;
 		};
 
 		volume-up {
 			label = "Volume Up";
 			gpios = <&gpio1 4 1>;
 			linux,code = <115>; /* KEY_VOLUMEUP */
+			debounce-interval = <1>;
 		};
 
 		volume-down {
 			label = "Volume Down";
 			gpios = <&gpio1 5 1>;
 			linux,code = <114>; /* KEY_VOLUMEDOWN */
+			debounce-interval = <1>;
 		};
 	};
 
@@ -205,7 +208,7 @@
 		status = "okay";
 	};
 
-	backlight {
+	pwm-backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm1 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;

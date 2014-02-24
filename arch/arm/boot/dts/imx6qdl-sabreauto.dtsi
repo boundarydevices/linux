@@ -53,10 +53,11 @@
 			gpio-key,wakeup;
 		};
 
-		program {
-			label = "Program";
+		/* Reconfig to power key in Android*/
+		power {
+			label = "Power Button";
 			gpios = <&gpio2 12 1>;
-			linux,code = <362>; /* KEY_PROGRAM */
+			linux,code = <116>; /* KEY_POWER */
 			gpio-key,wakeup;
 		};
 
