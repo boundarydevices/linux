@@ -31,7 +31,7 @@
 #include "power.h"
 
 const char *const pm_states[PM_SUSPEND_MAX] = {
-	[PM_SUSPEND_FREEZE]	= "freeze",
+	[PM_SUSPEND_ON]		= "on",
 	[PM_SUSPEND_STANDBY]	= "standby",
 	[PM_SUSPEND_MEM]	= "mem",
 };
@@ -381,7 +381,6 @@ static void pm_suspend_marker(char *annotation)
 int pm_suspend(suspend_state_t state)
 {
 	int error;
-
 	if (state <= PM_SUSPEND_ON || state >= PM_SUSPEND_MAX)
 		return -EINVAL;
 
