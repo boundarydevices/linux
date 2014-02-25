@@ -760,7 +760,7 @@ int uvc_queue_init(struct uvc_video_queue *queue, enum v4l2_buf_type type,
 		&vb2_dma_contig_memops : &vb2_vmalloc_memops;
 	queue->dma_mode = dma_mode;
 
-	queue->queue.timestamp_type = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
+	queue->queue.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
 //	queue->queue.dma_attrs = &uvc_dma_attrs;
 
 	ret = vb2_queue_init(&queue->queue);

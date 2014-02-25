@@ -888,7 +888,7 @@ int tw686x_video_init(struct tw686x_dev *dev)
 		vc->vidq.buf_struct_size = sizeof(struct tw686x_v4l2_buf);
 		vc->vidq.ops = &tw686x_video_qops;
 		vc->vidq.mem_ops = &vb2_vmalloc_memops;
-		vc->vidq.timestamp_type = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
+		vc->vidq.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
 		vc->vidq.lock = &vc->vb_mutex;
 
 		err = vb2_queue_init(&vc->vidq);

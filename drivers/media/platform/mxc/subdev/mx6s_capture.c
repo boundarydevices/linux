@@ -1174,7 +1174,7 @@ static int mx6s_csi_open(struct file *file)
 	q->ops = &mx6s_videobuf_ops;
 	q->mem_ops = &vb2_dma_contig_memops;
 	q->buf_struct_size = sizeof(struct mx6s_buffer);
-	q->timestamp_type = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
+	q->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
 	q->lock = &csi_dev->lock;
 
 	ret = vb2_queue_init(q);
