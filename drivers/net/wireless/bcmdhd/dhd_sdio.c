@@ -5799,6 +5799,9 @@ dhd_bus_select_firmware_name_by_chip(struct dhd_bus *bus, char *dst, char *src)
 	if(src[0] == '\0')
 		return;
      
+	if (strstr(src,".bin"))
+		return;
+
 	strcpy(dst, src);
 
 	/* find out the last '/' */
