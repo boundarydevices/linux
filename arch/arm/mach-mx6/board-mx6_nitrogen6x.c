@@ -67,6 +67,10 @@
 #include <mach/mxc_asrc.h>
 #include <mach/imx_rfkill.h>
 #include <linux/i2c/tsc2007.h>
+#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT) || \
+	defined(CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
+#include <linux/i2c/atmel_mxt_ts.h>
+#endif
 #include <linux/wl12xx.h>
 
 #include <asm/irq.h>
@@ -555,6 +559,13 @@ static struct tsc2007_platform_data tsc2007_info = {
 	.x_plate_ohms		= 500,
 };
 
+#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT) || \
+	defined(CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
+static struct mxt_platform_data mxt_data = {
+        .irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+};
+#endif
+
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("egalax_ts", 0x4),
@@ -570,6 +581,14 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("ft5x06-ts", 0x38),
 		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
+	},
+#endif
+#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT) || \
+	defined(CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
+	{
+		I2C_BOARD_INFO("atmel_mxt_ts", 0x4c), /* i2c address */
+		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
+                .platform_data = &mxt_data,
 	},
 #endif
 };
