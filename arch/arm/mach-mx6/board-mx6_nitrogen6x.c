@@ -591,6 +591,13 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
                 .platform_data = &mxt_data,
 	},
 #endif
+#if defined(CONFIG_TOUCHSCREEN_FUSION_F0710A) \
+       || defined(CONFIG_TOUCHSCREEN_FUSION_F0710A_MODULE)
+       {
+               I2C_BOARD_INFO("fusion_F0710A", 0x10),
+               .irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
+       },
+#endif
 };
 
 static void imx6_sabrelite_usbotg_vbus(bool on)
