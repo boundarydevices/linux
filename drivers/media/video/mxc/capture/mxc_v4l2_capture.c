@@ -3071,7 +3071,8 @@ static int mxc_v4l2_master_attach(struct v4l2_int_device *slave)
 		 __func__,
 		 cam->crop_current.width, cam->crop_current.height);
 
-	pr_info("%s: ipu%d:/csi%d attached\n", __func__, cam->ipu_id, cam->csi);
+	pr_info("%s: ipu%d:/csi%d attached %s:%s\n", __func__, cam->ipu_id, cam->csi,
+		slave->name, slave->u.slave->master->name);
 	return 0;
 }
 
