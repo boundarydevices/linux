@@ -710,6 +710,13 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		.irq = gpio_to_irq(GP_CAP_TCH_INT1),
 	},
 #endif
+#if defined(CONFIG_TOUCHSCREEN_FUSION_F0710A) \
+	|| defined(CONFIG_TOUCHSCREEN_FUSION_F0710A_MODULE)
+	{
+		I2C_BOARD_INFO("fusion_F0710A", 0x10),
+		.irq = gpio_to_irq(GP_CAP_TCH_INT1),
+	},
+#endif
 	{
 		I2C_BOARD_INFO("mxc_adv739x", 0x2a),
 		.platform_data = (void *)&adv7391_data,
