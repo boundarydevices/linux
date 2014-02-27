@@ -67,6 +67,10 @@
 #include <mach/mxc_asrc.h>
 #include <mach/imx_rfkill.h>
 #include <linux/i2c/tsc2007.h>
+#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT) || \
+	defined(CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
+#include <linux/i2c/atmel_mxt_ts.h>
+#endif
 #include <linux/wl12xx.h>
 
 #include <asm/irq.h>
@@ -555,6 +559,13 @@ static struct tsc2007_platform_data tsc2007_info = {
 	.x_plate_ohms		= 500,
 };
 
+#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT) || \
+	defined(CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
+static struct mxt_platform_data mxt_data = {
+        .irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+};
+#endif
+
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("egalax_ts", 0x4),
@@ -570,6 +581,14 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("ft5x06-ts", 0x38),
 		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
+	},
+#endif
+#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT) || \
+	defined(CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
+	{
+		I2C_BOARD_INFO("atmel_mxt_ts", 0x4c), /* i2c address */
+		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
+                .platform_data = &mxt_data,
 	},
 #endif
 };
@@ -1134,6 +1153,27 @@ static const struct imx_pcie_platform_data pcie_data  __initconst = {
 	.pcie_dis	= -EINVAL,
 };
 
+void rcu_cpu_stall_reset(void);
+static void poweroff(void)
+{
+	int i=0;
+	pr_info("%s: %s\n", __FILE__, __func__);
+	while (1) {
+                touch_softlockup_watchdog_sync();
+                touch_all_softlockup_watchdogs();
+                rcu_cpu_stall_reset();
+		__raw_writew(0x5555, IO_ADDRESS(MX6Q_WDOG2_BASE_ADDR+2));
+		__raw_writew(0xaaaa, IO_ADDRESS(MX6Q_WDOG2_BASE_ADDR+2));
+		__raw_writew(0x5555, IO_ADDRESS(MX6Q_WDOG1_BASE_ADDR+2));
+		__raw_writew(0xaaaa, IO_ADDRESS(MX6Q_WDOG1_BASE_ADDR+2));
+		mdelay(100);
+		if (0 == (i &127)) {
+			pr_info("%s\n", __func__);
+		}
+		i++;
+	}
+}
+
 /*!
  * Board specific initialization.
  */
@@ -1304,6 +1344,7 @@ static void __init mx6_sabrelite_board_init(void)
 	clk_set_rate(clko2, rate);
 	clk_enable(clko2);
 	imx6q_add_busfreq();
+	pm_power_off = poweroff;
 
 	imx6q_add_perfmon(0);
 	imx6q_add_perfmon(1);
