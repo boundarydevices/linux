@@ -1033,24 +1033,27 @@ static int ov5640_change_mode_direct(enum ov5640_frame_rate frame_rate,
 	struct reg_value *pModeSetting = NULL;
 	s32 ArySize = 0;
 	int retval = 0;
+	struct ov5640_mode_info *info;
 
 	if (mode > ov5640_mode_MAX || mode < ov5640_mode_MIN) {
 		pr_err("Wrong ov5640 mode detected!\n");
 		return -1;
 	}
 
-	pModeSetting = ov5640_mode_info_data[frame_rate][mode].init_data_ptr;
-	ArySize =
-		ov5640_mode_info_data[frame_rate][mode].init_data_size;
+	info = &ov5640_mode_info_data[frame_rate][mode];
+	pModeSetting = info->init_data_ptr;
+	ArySize = info->init_data_size;
 
-	ov5640_data.pix.width = ov5640_mode_info_data[frame_rate][mode].width;
-	ov5640_data.pix.height = ov5640_mode_info_data[frame_rate][mode].height;
+	ov5640_data.pix.width = info->width;
+	ov5640_data.pix.height = info->height;
 
 	if (ov5640_data.pix.width == 0 || ov5640_data.pix.height == 0 ||
 	    pModeSetting == NULL || ArySize == 0)
 		return -EINVAL;
 
 	/* set ov5640 to subsampling mode */
+	pr_info("%s:width=%d, height=%d frame_rate=%d\n", __func__, info->width,
+		info->height, frame_rate ? 30 : 15);
 	retval = ov5640_download_firmware(pModeSetting, ArySize);
 
 	/* turn on AE AG for subsampling mode, in case the firmware didn't */
@@ -1098,17 +1101,14 @@ static int ov5640_change_mode_exposure_calc(enum ov5640_frame_rate frame_rate,
 	struct reg_value *pModeSetting = NULL;
 	s32 ArySize = 0;
 	int retval = 0;
+	struct ov5640_mode_info *info = &ov5640_mode_info_data[frame_rate][mode];
 
 	/* check if the input mode and frame rate is valid */
-	pModeSetting =
-		ov5640_mode_info_data[frame_rate][mode].init_data_ptr;
-	ArySize =
-		ov5640_mode_info_data[frame_rate][mode].init_data_size;
+	pModeSetting = info->init_data_ptr;
+	ArySize = info->init_data_size;
 
-	ov5640_data.pix.width =
-		ov5640_mode_info_data[frame_rate][mode].width;
-	ov5640_data.pix.height =
-		ov5640_mode_info_data[frame_rate][mode].height;
+	ov5640_data.pix.width = info->width;
+	ov5640_data.pix.height = info->height;
 
 	if (ov5640_data.pix.width == 0 || ov5640_data.pix.height == 0 ||
 		pModeSetting == NULL || ArySize == 0)
