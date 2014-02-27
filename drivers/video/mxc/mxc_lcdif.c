@@ -38,6 +38,12 @@ static struct fb_videomode lcdif_modedb[] = {
 	"CLAA-WVGA", 57, 800, 480, 37037, 40, 60, 10, 10, 20, 10,
 	FB_SYNC_CLK_LAT_FALL,
 	FB_VMODE_NONINTERLACED,
+	0,
+	},{
+	/* 800x480M@60 with falling-edge pixel clock */
+	"fusion7", 57, 800, 480, 33898, 96, 24, 3, 10, 72, 7,
+	FB_SYNC_CLK_LAT_FALL,
+	FB_VMODE_NONINTERLACED,
 	0,},
 	{
 	/* 800x480 @ 60 Hz , pixel clk @ 32MHz */
