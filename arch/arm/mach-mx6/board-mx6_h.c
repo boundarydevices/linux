@@ -694,7 +694,6 @@ static struct fsl_mxc_capture_platform_data plat_capture = {
 	.csi = 1,
 	.ipu = 0,
 	.mclk_source = 0,
-	.is_mipi = 1,
 };
 
 
