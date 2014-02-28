@@ -1937,7 +1937,7 @@ MODULE_DEVICE_TABLE(of, ov5640_of_match);
 #endif
 
 static const struct i2c_device_id ov5640_id[] = {
-	{"ov564x_mipi", 0},
+	{"ov5640_mipi", 0},
 	{},
 };
 
@@ -1946,7 +1946,7 @@ MODULE_DEVICE_TABLE(i2c, ov5640_id);
 static struct i2c_driver ov5640_i2c_driver = {
 	.driver = {
 		  .owner = THIS_MODULE,
-		  .name  = "ov564x_mipi",
+		  .name  = "ov5640_mipi",
 #ifdef CONFIG_OF
 		  .of_match_table = of_match_ptr(ov5640_of_match),
 #endif
@@ -3356,7 +3356,7 @@ static struct v4l2_int_slave ov5640_slave = {
 
 static struct v4l2_int_device ov5640_int_device = {
 	.module = THIS_MODULE,
-	.name = "ov564x",
+	.name = "ov5640_mipi",
 	.type = v4l2_int_type_slave,
 	.u = {
 		.slave = &ov5640_slave,
