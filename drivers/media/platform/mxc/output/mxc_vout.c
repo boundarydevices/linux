@@ -361,8 +361,7 @@ static int update_setting_from_fbi(struct mxc_vout_output *vout,
 			if (!strcmp(fbi->fix.id, g_fb_setting[i].name)) {
 				vout->crop_bounds = g_fb_setting[i].crop_bounds;
 				vout->disp_fmt = g_fb_setting[i].disp_fmt;
-				vout->disp_support_csc =
-					g_fb_setting[i].disp_support_csc;
+				vout->disp_support_csc = false;
 				vout->disp_support_windows =
 					g_fb_setting[i].disp_support_windows;
 				found = true;
