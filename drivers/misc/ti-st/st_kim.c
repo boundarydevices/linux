@@ -720,6 +720,7 @@ static int kim_probe(struct platform_device *pdev)
 {
 	struct kim_data_s	*kim_gdata;
 	struct ti_st_plat_data	*pdata = pdev->dev.platform_data;
+	int status;
 	int err;
 
 	if ((pdev->id != -1) && (pdev->id < MAX_ST_DEVICES)) {
