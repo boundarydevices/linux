@@ -72,7 +72,7 @@
 #include <linux/i2c/atmel_mxt_ts.h>
 #endif
 #include <linux/wl12xx.h>
-
+#include <linux/ti_wilink_st.h>
 #include <asm/irq.h>
 #include <asm/setup.h>
 #include <asm/mach-types.h>
@@ -268,22 +268,64 @@ static const struct imxuart_platform_data mx6_arm2_uart2_data __initconst = {
 	.flags      = IMXUART_HAVE_RTSCTS,
 };
 
-static int bt_enable(int enable)
+#ifdef CONFIG_TI_ST
+/* TI-ST for WL1271 BT */
+
+int plat_kim_suspend(struct platform_device *pdev, pm_message_t state)
 {
-	int do_enable= (0 != enable);
-	gpio_set_value(N6_WL1271_BT_EN,do_enable);
-	msleep(10*(10*do_enable)); 	/* 10ms for disable, 100 for enable */
-	pr_debug("%s: %d\n",__func__,enable);
+	return 0;
+}
+int plat_kim_resume(struct platform_device *pdev)
+{
 	return 0;
 }
 
-static struct platform_device bt_rfkill = {
-	.name = "mxc_bt_rfkill",
+int plat_kim_chip_enable(struct kim_data_s *kim_data)
+{
+	/* reset pulse to the BT controller */
+	usleep_range(150, 220);
+	gpio_set_value_cansleep(kim_data->nshutdown, 0);
+	usleep_range(150, 220);
+	gpio_set_value_cansleep(kim_data->nshutdown, 1);
+	usleep_range(150, 220);
+	gpio_set_value_cansleep(kim_data->nshutdown, 0);
+	usleep_range(150, 220);
+	gpio_set_value_cansleep(kim_data->nshutdown, 1);
+	usleep_range(1, 2);
+
+	return 0;
+}
+
+int plat_kim_chip_disable(struct kim_data_s *kim_data)
+{
+	gpio_set_value_cansleep(kim_data->nshutdown, 0);
+
+	return 0;
+}
+
+struct ti_st_plat_data wilink_pdata = {
+	.nshutdown_gpio = N6_WL1271_BT_EN,
+	.dev_name = "/dev/ttymxc2",
+	.flow_cntrl = 1,
+	.baud_rate = 3000000,
+	.suspend = plat_kim_suspend,
+	.resume = plat_kim_resume,
+	.chip_enable = plat_kim_chip_enable,
+	.chip_disable = plat_kim_chip_disable
 };
 
-static struct imx_bt_rfkill_platform_data rfkill_data = {
-	.power_change = bt_enable,
+static struct platform_device wl127x_bt_device = {
+	.name		= "kim",
+	.id		= -1,
+	.dev.platform_data = &wilink_pdata,
 };
+
+static struct platform_device btwilink_device = {
+	.name = "btwilink",
+	.id = -1,
+};
+
+#endif
 
 static int mx6_sabrelite_fec_phy_init(struct phy_device *phydev)
 {
@@ -1380,7 +1422,10 @@ static void __init mx6_sabrelite_board_init(void)
 	gpio_export(N6_WL1271_BT_EN,1);
 
 	imx6q_add_pcie(&pcie_data);
-	mxc_register_device(&bt_rfkill, &rfkill_data);
+#ifdef CONFIG_TI_ST
+	platform_device_register (&wl127x_bt_device);
+	platform_device_register (&btwilink_device);
+#endif
 	imx6_add_armpmu();
 }
 
