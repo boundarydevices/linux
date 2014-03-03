@@ -1932,6 +1932,32 @@ static struct i2c_driver ov5640_i2c_driver = {
 };
 
 
+static s32 update_device_addr(struct sensor_data *sensor)
+{
+	int ret;
+	u8 buf[4];
+	unsigned reg = 0x3100;
+	unsigned default_addr = 0x3c;
+	struct i2c_msg msg;
+
+	if (sensor->i2c_client->addr == default_addr)
+		return 0;
+
+	buf[0] = reg >> 8;
+	buf[1] = reg & 0xff;
+	buf[2] = sensor->i2c_client->addr << 1;
+	msg.addr = default_addr;
+	msg.flags = 0;
+	msg.len = 3;
+	msg.buf = buf;
+
+
+	ret = i2c_transfer(sensor->i2c_client->adapter, &msg, 1);
+	if (ret < 0)
+		pr_err("%s: ov5640_mipi ret=%d\n", __func__, ret);
+	return ret;
+}
+
 static s32 ov5640_write_reg(u16 reg, u8 val)
 {
 	u8 au8Buf[3] = {0};
@@ -1972,6 +1998,18 @@ static s32 ov5640_read_reg(u16 reg, u8 *val)
 	*val = u8RdVal;
 
 	return u8RdVal;
+}
+
+static s32 power_control(struct sensor_data *sensor, int on)
+{
+	struct fsl_mxc_camera_platform_data *plat = camera_plat;
+
+	if (sensor->on != on) {
+		if (plat->pwdn)
+			plat->pwdn(on ? 0 : 1);
+		sensor->on = on;
+	}
+	return 0;
 }
 
 static int prev_sysclk, prev_HTS;
@@ -2200,6 +2238,12 @@ void OV5640_set_bandingfilter(void)
 
 	/* read preview VTS */
 	prev_VTS = OV5640_get_VTS();
+	if (prev_HTS <= 0) {
+		pr_err("%s: error: prev_sysclk=%x, prev_HTS=%x, prev_VTS=%x\n",
+			__func__, prev_sysclk, prev_HTS, prev_VTS);
+		prev_HTS = 640;
+		return;
+	}
 	pr_debug("prev_sysclk=%x, prev_HTS=%x, prev_VTS=%x\n", prev_sysclk, prev_HTS, prev_VTS);
 
 	/* calculate banding filter */
@@ -2642,7 +2686,7 @@ static int ov5640_init_mode(enum ov5640_frame_rate frame_rate,
 	OV5640_set_AE_target(AE_Target);
 	OV5640_get_light_freq();
 	OV5640_set_bandingfilter();
-	ov5640_set_virtual_channel(ov5640_data.csi);
+	ov5640_set_virtual_channel((ov5640_data.ipu << 1) + ov5640_data.csi);
 
 	/* add delay to wait for sensor stable */
 	if (mode == ov5640_mode_QSXGA_2592_1944) {
@@ -2742,8 +2786,7 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 			if (regulator_enable(analog_regulator) != 0)
 				return -EIO;
 		/* Make sure power on */
-		if (camera_plat->pwdn)
-			camera_plat->pwdn(0);
+		power_control(sensor, 1);
 
 	} else if (!on && sensor->on) {
 		if (analog_regulator)
@@ -2755,12 +2798,8 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 		if (gpo_regulator)
 			regulator_disable(gpo_regulator);
 
-		if (camera_plat->pwdn)
-			camera_plat->pwdn(1);
+		power_control(sensor, 0);
 	}
-
-	sensor->on = on;
-
 	return 0;
 }
 
@@ -2826,8 +2865,7 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	int ret = 0;
 
 	/* Make sure power on */
-	if (camera_plat->pwdn)
-		camera_plat->pwdn(0);
+	power_control(sensor, 1);
 
 	switch (a->type) {
 	/* This is the only case currently handled. */
@@ -3193,7 +3231,7 @@ static struct v4l2_int_slave ov5640_slave = {
 
 static struct v4l2_int_device ov5640_int_device = {
 	.module = THIS_MODULE,
-	.name = "ov5640",
+	.name = "ov5640_mipi",
 	.type = v4l2_int_type_slave,
 	.u = {
 		.slave = &ov5640_slave,
@@ -3261,6 +3299,7 @@ static int ov5640_probe(struct i2c_client *client,
 	ov5640_data.mclk = 24000000; /* 6 - 54 MHz, typical 24MHz */
 	ov5640_data.mclk = plat_data->mclk;
 	ov5640_data.mclk_source = plat_data->mclk_source;
+	ov5640_data.ipu = plat_data->ipu;
 	ov5640_data.csi = plat_data->csi;
 	ov5640_data.io_init = plat_data->io_init;
 
@@ -3273,6 +3312,7 @@ static int ov5640_probe(struct i2c_client *client,
 	ov5640_data.streamcap.capturemode = 0;
 	ov5640_data.streamcap.timeperframe.denominator = DEFAULT_FPS;
 	ov5640_data.streamcap.timeperframe.numerator = 1;
+	camera_plat = plat_data;
 
 	if (plat_data->io_regulator) {
 		io_regulator = regulator_get(&client->dev,
@@ -3335,8 +3375,12 @@ static int ov5640_probe(struct i2c_client *client,
 	if (plat_data->io_init)
 		plat_data->io_init();
 
-	if (plat_data->pwdn)
-		plat_data->pwdn(0);
+	if (plat_data->lock)
+		plat_data->lock();
+	power_control(&ov5640_data, 1);
+	update_device_addr(&ov5640_data);
+	if (plat_data->unlock)
+		plat_data->unlock();
 
 	retval = ov5640_read_reg(OV5640_CHIP_ID_HIGH_BYTE, &chip_id_high);
 	if (retval < 0 || chip_id_high != 0x56) {
@@ -3351,10 +3395,7 @@ static int ov5640_probe(struct i2c_client *client,
 		goto err4;
 	}
 
-	if (plat_data->pwdn)
-		plat_data->pwdn(1);
-
-	camera_plat = plat_data;
+	power_control(&ov5640_data, 0);
 
 	ov5640_int_device.priv = &ov5640_data;
 	retval = v4l2_int_device_register(&ov5640_int_device);
