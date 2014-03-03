@@ -4903,20 +4903,59 @@ static struct i2c_driver ov5642_i2c_driver = {
 	.id_table = ov5642_id,
 };
 
+static s32 update_device_addr(struct sensor_data *sensor)
+{
+	int ret;
+	u8 buf[4];
+	unsigned reg = 0x3100;
+	unsigned default_addr = 0x3c;
+	struct i2c_msg msg;
+
+	if (sensor->i2c_client->addr == default_addr)
+		return 0;
+
+	buf[0] = reg >> 8;
+	buf[1] = reg & 0xff;
+	buf[2] = sensor->i2c_client->addr << 1;
+	msg.addr = default_addr;
+	msg.flags = 0;
+	msg.len = 3;
+	msg.buf = buf;
+
+
+	ret = i2c_transfer(sensor->i2c_client->adapter, &msg, 1);
+	if (ret < 0)
+		pr_err("%s: ov5642 ret=%d\n", __func__, ret);
+	return ret;
+}
+
 static s32 ov5642_write_reg(u16 reg, u8 val)
 {
+	int ret;
 	u8 au8Buf[3] = {0};
 
 	au8Buf[0] = reg >> 8;
 	au8Buf[1] = reg & 0xff;
 	au8Buf[2] = val;
 
-	if (i2c_master_send(ov5642_data.i2c_client, au8Buf, 3) < 0) {
-		pr_err("%s:write reg error:reg=%x,val=%x\n",
-			__func__, reg, val);
-		return -1;
+	if ((reg == 0x3008) && (val & 0x80)) {
+		if (camera_plat->lock)
+			camera_plat->lock();
+
+		ret = i2c_master_send(ov5642_data.i2c_client, au8Buf, 3);
+		update_device_addr(&ov5642_data);
+
+		if (camera_plat->unlock)
+			camera_plat->unlock();
+	} else {
+		ret = i2c_master_send(ov5642_data.i2c_client, au8Buf, 3);
 	}
 
+	if (ret < 0) {
+		pr_err("%s:write reg error:reg=%x,val=%x ret=%d\n",
+			__func__, reg, val, ret);
+		return ret;
+	}
 	return 0;
 }
 
@@ -4943,6 +4982,18 @@ static s32 ov5642_read_reg(u16 reg, u8 *val)
 	*val = u8RdVal;
 
 	return u8RdVal;
+}
+
+static s32 power_control(struct sensor_data *sensor, int on)
+{
+	struct fsl_mxc_camera_platform_data *plat = camera_plat;
+
+	if (sensor->on != on) {
+		if (plat->pwdn)
+			plat->pwdn(on ? 0 : 1);
+		sensor->on = on;
+	}
+	return 0;
 }
 
 static int ov5642_set_idle_mode(void) {
@@ -5350,8 +5401,7 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 			if (regulator_enable(analog_regulator) != 0)
 				return -EIO;
 		/* Make sure power on */
-		if (camera_plat->pwdn)
-			camera_plat->pwdn(0);
+		power_control(sensor, 1);
 
 	} else if (!on && sensor->on) {
 		if (analog_regulator)
@@ -5363,12 +5413,8 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 		if (gpo_regulator)
 			regulator_disable(gpo_regulator);
 
-		if (camera_plat->pwdn)
-			camera_plat->pwdn(1);
+		power_control(sensor, 0);
 	}
-
-	sensor->on = on;
-
 	return 0;
 }
 
@@ -5433,8 +5479,7 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	int ret = 0;
 
 	/* Make sure power on */
-	if (camera_plat->pwdn)
-		camera_plat->pwdn(0);
+	power_control(sensor, 1);
 
 	switch (a->type) {
 	/* This is the only case currently handled. */
@@ -5996,7 +6041,6 @@ static int write_proc(struct file *file, const char __user *buffer, unsigned lon
 			printk(KERN_ERR "Error reading user buf\n" );
 		} else {
 			int addr0 ;
-			int addr1 ;
 			int value ;
 			int numScanned ;
 			if(2 == (numScanned = sscanf(localbuf,"%04x %02x", &addr0, &value)) ){
@@ -6064,6 +6108,7 @@ static int ov5642_probe(struct i2c_client *client,
 	ov5642_data.streamcap.capturemode = 0;
 	ov5642_data.streamcap.timeperframe.denominator = DEFAULT_FPS;
 	ov5642_data.streamcap.timeperframe.numerator = 1;
+	camera_plat = plat_data;
 
 	if (plat_data->io_regulator) {
 		io_regulator = regulator_get(&client->dev,
@@ -6126,8 +6171,12 @@ static int ov5642_probe(struct i2c_client *client,
 	if (plat_data->io_init)
 		plat_data->io_init();
 
-	if (plat_data->pwdn)
-		plat_data->pwdn(0);
+	if (plat_data->lock)
+		plat_data->lock();
+	power_control(&ov5642_data, 1);
+	update_device_addr(&ov5642_data);
+	if (plat_data->unlock)
+		plat_data->unlock();
 
 	retval = ov5642_read_reg(OV5642_CHIP_ID_HIGH_BYTE, &chip_id_high);
 	if (retval < 0 || chip_id_high != 0x56) {
@@ -6141,11 +6190,6 @@ static int ov5642_probe(struct i2c_client *client,
 		retval = -ENODEV;
 		goto err4;
 	}
-
-	if (plat_data->pwdn)
-		plat_data->pwdn(1);
-
-	camera_plat = plat_data;
 
 	ov5642_int_device.priv = &ov5642_data;
 
@@ -6165,6 +6209,8 @@ static int ov5642_probe(struct i2c_client *client,
 		if (retval < 0)
 			break;
 	}
+
+	power_control(&ov5642_data, 0);
 
 	retval = v4l2_int_device_register(&ov5642_int_device);
 
