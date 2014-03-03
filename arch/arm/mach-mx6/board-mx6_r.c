@@ -476,6 +476,12 @@ static struct ipuv3_fb_platform_data fb_data[] = {
 	.mode_str = "LB043",
 	.default_bpp = 32,
 	.int_clk = false,
+	}, {
+	.disp_dev = "hdmi",
+	.interface_pix_fmt = IPU_PIX_FMT_RGB24,
+	.mode_str = "1280x720M@60",
+	.default_bpp = 32,
+	.int_clk = false,
 	},
 };
 
@@ -525,8 +531,8 @@ static struct fsl_mxc_hdmi_platform_data hdmi_data = {
 };
 
 static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
-	.ipu_id = 0,
-	.disp_id = 1,
+	.ipu_id = 1,
+	.disp_id = 0,
 };
 
 static void lcd_enable_pins(void)
@@ -852,10 +858,15 @@ static void __init board_init(void)
 	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
 
 	imx6q_add_ipuv3(0, &ipu_data[0]);
+	j = ARRAY_SIZE(fb_data);
 	if (cpu_is_mx6q()) {
 		imx6q_add_ipuv3(1, &ipu_data[1]);
+	} else {
+		if (j > 2)
+			j = 2;
+		hdmi_core_data.ipu_id = 0;
+		hdmi_core_data.disp_id = 1;
 	}
-	j = ARRAY_SIZE(fb_data);
 	for (i = 0; i < j; i++)
 		imx6q_add_ipuv3fb(i, &fb_data[i]);
 
