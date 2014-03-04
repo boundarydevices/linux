@@ -1423,8 +1423,10 @@ static void __init mx6_sabrelite_board_init(void)
 
 	imx6q_add_pcie(&pcie_data);
 #ifdef CONFIG_TI_ST
-	platform_device_register (&wl127x_bt_device);
-	platform_device_register (&btwilink_device);
+	if (isn6) {
+		platform_device_register (&wl127x_bt_device);
+		platform_device_register (&btwilink_device);
+	}
 #endif
 	imx6_add_armpmu();
 }
