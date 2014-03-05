@@ -2814,7 +2814,7 @@ static int fec_enet_init(struct net_device *ndev)
 					fep->tx_queue[i]->tx_stop_threshold) / 2;
 		fep->total_tx_ring_size += fep->tx_queue[i]->bd.ring_size;
 
-		fep->tx_queue[i]->tso_hdrs = dma_alloc_coherent(NULL,
+		fep->tx_queue[i]->tso_hdrs = dma_alloc_coherent(&fep->pdev->dev,
 					fep->tx_queue[i]->bd.ring_size * TSO_HEADER_SIZE,
 					&fep->tx_queue[i]->tso_hdrs_dma,
 					GFP_KERNEL);
@@ -2839,7 +2839,7 @@ static int fec_enet_init(struct net_device *ndev)
 	/* Allocate memory for buffer descriptors. */
 	bd_size = (fep->total_tx_ring_size + fep->total_rx_ring_size) *
 			desc_size;
-	cbd_base = dma_alloc_coherent(NULL, bd_size, &bd_dma, GFP_KERNEL);
+	cbd_base = dma_alloc_coherent(&fep->pdev->dev, bd_size, &bd_dma, GFP_KERNEL);
 	if (!cbd_base) {
 		ret = -ENOMEM;
 		goto tso_alloc_failed;
@@ -2912,7 +2912,7 @@ static int fec_enet_init(struct net_device *ndev)
 tso_alloc_failed:
 	for (i = 0; i < fep->num_tx_queues; i++)
 		if (fep->tx_queue[i])
-			dma_free_coherent(NULL,
+			dma_free_coherent(&fep->pdev->dev,
 				fep->tx_queue[i]->bd.ring_size * TSO_HEADER_SIZE,
 				fep->tx_queue[i]->tso_hdrs,
 				fep->tx_queue[i]->tso_hdrs_dma);
