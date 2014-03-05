@@ -2032,7 +2032,7 @@ static int fec_enet_init(struct net_device *ndev)
 			: sizeof(struct bufdesc);
 
 	/* Allocate memory for buffer descriptors. */
-	cbd_base = dma_alloc_coherent(NULL, PAGE_SIZE, &fep->bd_rx.dma,
+	cbd_base = dma_alloc_coherent(&fep->pdev->dev, PAGE_SIZE, &fep->bd_rx.dma,
 				      GFP_KERNEL);
 	if (!cbd_base)
 		return -ENOMEM;
