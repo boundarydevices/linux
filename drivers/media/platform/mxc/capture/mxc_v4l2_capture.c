@@ -34,6 +34,7 @@
 #include <linux/fb.h>
 #include <linux/dma-mapping.h>
 #include <linux/delay.h>
+#include <linux/mutex.h>
 #include <linux/mxcfb.h>
 #include <linux/of_device.h>
 #include <media/v4l2-chip-ident.h>
@@ -2680,6 +2681,7 @@ static int init_camera_struct(cam_data *cam, struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	int ipu_id, csi_id, mclk_source;
 	int ret = 0;
+	static int camera_id;
 
 	pr_debug("%s\n", __func__);
 
@@ -2785,7 +2787,7 @@ static int init_camera_struct(cam_data *cam, struct platform_device *pdev)
 
 	cam->self = kmalloc(sizeof(struct v4l2_int_device), GFP_KERNEL);
 	cam->self->module = THIS_MODULE;
-	sprintf(cam->self->name, "mxc_v4l2_cap%d", cam->csi);
+	sprintf(cam->self->name, "mxc_v4l2_cap%d", camera_id++);
 	cam->self->type = v4l2_int_type_master;
 	cam->self->u.master = &mxc_v4l2_master;
 
@@ -3133,6 +3135,20 @@ static void mxc_v4l2_master_detach(struct v4l2_int_device *slave)
 	cam->sensor_index--;
 	vidioc_int_dev_exit(slave);
 }
+
+DEFINE_MUTEX(camera_common_mutex);
+
+void mxc_camera_common_lock(void)
+{
+	mutex_lock(&camera_common_mutex);
+}
+EXPORT_SYMBOL(mxc_camera_common_lock);
+
+void mxc_camera_common_unlock(void)
+{
+	mutex_unlock(&camera_common_mutex);
+}
+EXPORT_SYMBOL(mxc_camera_common_unlock);
 
 /*!
  * Entry point for the V4L2
