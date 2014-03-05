@@ -290,22 +290,6 @@ fec_enet_clear_csum(struct sk_buff *skb, struct net_device *ndev)
 	return 0;
 }
 
-static void fec_enet_submit_work(struct bufdesc *bdp,
-	struct fec_enet_private *fep, int queue)
-{
-	const struct platform_device_id *id_entry =
-				platform_get_device_id(fep->pdev);
-	struct bufdesc *bdp_pre;
-
-	bdp_pre = fec_enet_get_prevdesc(bdp, &fep->tx_queue[queue]->bd);
-	if ((id_entry->driver_data & FEC_QUIRK_ERR006358) &&
-	    !(bdp_pre->cbd_sc & BD_ENET_TX_READY)) {
-		fep->delay_work.trig_tx = queue + 1;
-		schedule_delayed_work(&(fep->delay_work.delay_work),
-					msecs_to_jiffies(1));
-	}
-}
-
 static int fec_enet_txq_submit_frag_skb(struct fec_enet_priv_tx_q *txq,
 			struct sk_buff *skb, struct net_device *ndev)
 {
@@ -407,6 +391,7 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 	unsigned short buflen;
 	unsigned short queue;
 	unsigned int estatus = 0;
+	unsigned short prev_status;
 	unsigned int index;
 	int entries_free;
 	int ret;
@@ -506,7 +491,8 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 	 */
 	bdp->cbd_sc = status;
 
-	fec_enet_submit_work(bdp, fep, queue);
+	mb();
+	prev_status = fec_enet_get_prevdesc(bdp, &txq->bd)->cbd_sc;
 
 	/* If this was the last BD in the ring, start at the beginning again. */
 	bdp = fec_enet_get_nextdesc(last_bdp, &txq->bd);
@@ -515,6 +501,17 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 
 	txq->bd.cur = bdp;
 
+	if (!(prev_status & BD_ENET_TX_READY)) {
+		const struct platform_device_id *id_entry =
+				platform_get_device_id(fep->pdev);
+
+		if ((id_entry->driver_data & FEC_QUIRK_ERR006358) &&
+		    (__raw_readl(fep->hwp + FEC_X_DES_ACTIVE(queue)))) {
+			fep->delay_work.trig_tx = queue + 1;
+			schedule_delayed_work(&(fep->delay_work.delay_work),
+					msecs_to_jiffies(1) + 1);
+		}
+	}
 	/* Trigger transmission start */
 	if (!(id_entry->driver_data & FEC_QUIRK_TKT210582) ||
 		!__raw_readl(fep->hwp + FEC_X_DES_ACTIVE(queue)) ||
@@ -655,6 +652,7 @@ static int fec_enet_txq_submit_tso(struct fec_enet_priv_tx_q *txq,
 	struct bufdesc *bdp = txq->bd.cur;
 	unsigned short queue = skb_get_queue_mapping(skb);
 	struct tso_t tso;
+	unsigned short prev_status;
 	unsigned int index = 0;
 	int ret;
 
@@ -712,11 +710,23 @@ static int fec_enet_txq_submit_tso(struct fec_enet_priv_tx_q *txq,
 	/* Save skb pointer */
 	txq->tx_skbuff[index] = skb;
 
-	fec_enet_submit_work(bdp, fep, queue);
+	mb();
+	prev_status = fec_enet_get_prevdesc(bdp, &txq->bd)->cbd_sc;
 
 	skb_tx_timestamp(skb);
 	txq->bd.cur = bdp;
 
+	if (!(prev_status & BD_ENET_TX_READY)) {
+		const struct platform_device_id *id_entry =
+				platform_get_device_id(fep->pdev);
+
+		if ((id_entry->driver_data & FEC_QUIRK_ERR006358) &&
+		    (__raw_readl(fep->hwp + FEC_X_DES_ACTIVE(queue)))) {
+			fep->delay_work.trig_tx = queue + 1;
+			schedule_delayed_work(&(fep->delay_work.delay_work),
+					msecs_to_jiffies(1) + 1);
+		}
+	}
 	/* Trigger transmission start */
 	if (!(id_entry->driver_data & FEC_QUIRK_TKT210582) ||
 		!__raw_readl(fep->hwp + FEC_X_DES_ACTIVE(queue)) ||
