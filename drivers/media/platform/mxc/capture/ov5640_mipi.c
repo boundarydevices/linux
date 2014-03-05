@@ -1953,8 +1953,36 @@ static void ov5640_standby(s32 enable)
 	pr_debug("ov5640_mipi_camera_powerdown: powerdown=%x, power_gp=0x%x\n", enable, pwn_gpio);
 }
 
+static s32 update_device_addr(struct sensor_data *sensor)
+{
+	int ret;
+	u8 buf[4];
+	unsigned reg = 0x3100;
+	unsigned default_addr = 0x3c;
+	struct i2c_msg msg;
+
+	if (sensor->i2c_client->addr == default_addr)
+		return 0;
+
+	buf[0] = reg >> 8;
+	buf[1] = reg & 0xff;
+	buf[2] = sensor->i2c_client->addr << 1;
+	msg.addr = default_addr;
+	msg.flags = 0;
+	msg.len = 3;
+	msg.buf = buf;
+
+
+	ret = i2c_transfer(sensor->i2c_client->adapter, &msg, 1);
+	if (ret < 0)
+		pr_err("%s: ov5642 ret=%d\n", __func__, ret);
+	return ret;
+}
+
 static void ov5640_reset(void)
 {
+	mxc_camera_common_lock();
+
 	/* camera reset */
 	gpio_set_value(rst_gpio, 1);
 
@@ -1969,7 +1997,9 @@ static void ov5640_reset(void)
 	msleep(1);
 
 	gpio_set_value(rst_gpio, 1);
-	msleep(5);
+	msleep(20);
+	update_device_addr(&ov5640_data);
+	mxc_camera_common_unlock();
 
 	gpio_set_value(pwn_gpio, 1);
 }
@@ -2038,16 +2068,28 @@ static int ov5640_power_on(struct device *dev)
 
 static s32 ov5640_write_reg(u16 reg, u8 val)
 {
+	int ret;
 	u8 au8Buf[3] = {0};
 
 	au8Buf[0] = reg >> 8;
 	au8Buf[1] = reg & 0xff;
 	au8Buf[2] = val;
 
-	if (i2c_master_send(ov5640_data.i2c_client, au8Buf, 3) < 0) {
-		pr_err("%s:write reg error:reg=%x,val=%x\n",
-			__func__, reg, val);
-		return -1;
+	if ((reg == 0x3008) && (val & 0x80)) {
+		mxc_camera_common_lock();
+
+		ret = i2c_master_send(ov5640_data.i2c_client, au8Buf, 3);
+		update_device_addr(&ov5640_data);
+
+		mxc_camera_common_unlock();
+	} else {
+		ret = i2c_master_send(ov5640_data.i2c_client, au8Buf, 3);
+	}
+
+	if (ret < 0) {
+		pr_err("%s:write reg error:reg=%x,val=%x ret=%d\n",
+			__func__, reg, val, ret);
+		return ret;
 	}
 	pr_debug("reg=%x,val=%x\n", reg, val);
 	return 0;
