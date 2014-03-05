@@ -358,12 +358,6 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		netdev_err(ndev, "Tx DMA memory map failed\n");
 		return NETDEV_TX_OK;
 	}
-	/* Send it on its way.  Tell FEC it's ready, interrupt when done,
-	 * it's the last BD of the frame, and to put the CRC on the end.
-	 */
-	status |= (BD_ENET_TX_READY | BD_ENET_TX_INTR
-			| BD_ENET_TX_LAST | BD_ENET_TX_TC);
-	bdp->cbd_sc = status;
 
 	if (fep->bufdesc_ex) {
 
@@ -385,6 +379,16 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 				ebdp->cbd_esc |= BD_ENET_TX_PINS;
 		}
 	}
+
+	/* Ensure the next write happens after the extended writes */
+	wmb();
+	/*
+	 * Send it on its way.  Tell FEC it's ready, interrupt when done,
+	 * it's the last BD of the frame, and to put the CRC on the end.
+	 */
+	status |= (BD_ENET_TX_READY | BD_ENET_TX_INTR
+			| BD_ENET_TX_LAST | BD_ENET_TX_TC);
+	bdp->cbd_sc = status;
 
 	bdp_pre = fec_enet_get_prevdesc(bdp, &fep->bd_tx);
 	if ((id_entry->driver_data & FEC_QUIRK_ERR006358) &&
