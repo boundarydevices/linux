@@ -260,4 +260,7 @@ struct sensor_data {
 };
 
 void set_mclk_rate(uint32_t *p_mclk_freq, uint32_t csi);
+void mxc_camera_common_lock(void);
+void mxc_camera_common_unlock(void);
+
 #endif				/* __MXC_V4L2_CAPTURE_H__ */
