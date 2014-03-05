@@ -292,15 +292,12 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 				platform_get_device_id(fep->pdev);
 	struct bufdesc *bdp, *bdp_pre;
 	void *bufaddr;
-	unsigned short	status;
 	unsigned int index;
 
 	/* Fill in a Tx ring entry */
 	bdp = fep->bd_tx.cur;
 
-	status = bdp->cbd_sc;
-
-	if (status & BD_ENET_TX_READY) {
+	if (bdp->cbd_sc & BD_ENET_TX_READY) {
 		/* Ooops.  All transmit buffers are full.  Bail out.
 		 * This should not happen, since ndev->tbusy should be set.
 		 */
@@ -313,9 +310,6 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		kfree_skb(skb);
 		return NETDEV_TX_OK;
 	}
-
-	/* Clear all of the status flags */
-	status &= ~BD_ENET_TX_STATS;
 
 	/* Set buffer length and buffer pointer */
 	bufaddr = skb->data;
@@ -386,9 +380,8 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	 * Send it on its way.  Tell FEC it's ready, interrupt when done,
 	 * it's the last BD of the frame, and to put the CRC on the end.
 	 */
-	status |= (BD_ENET_TX_READY | BD_ENET_TX_INTR
-			| BD_ENET_TX_LAST | BD_ENET_TX_TC);
-	bdp->cbd_sc = status;
+	bdp->cbd_sc = BD_ENET_TX_READY | BD_ENET_TX_INTR | BD_ENET_TX_LAST |
+		BD_ENET_TX_TC | ((bdp == fep->bd_tx.last) ? BD_SC_WRAP : 0);
 
 	bdp_pre = fec_enet_get_prevdesc(bdp, &fep->bd_tx);
 	if ((id_entry->driver_data & FEC_QUIRK_ERR006358) &&
