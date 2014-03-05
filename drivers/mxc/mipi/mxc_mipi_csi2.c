@@ -464,7 +464,7 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, gmipi_csi2);
 
-	dev_info(&pdev->dev, "i.MX MIPI CSI2 driver probed\n");
+	dev_info(&pdev->dev, "i.MX MIPI CSI2 driver probed ipu%d csi%d\n", gmipi_csi2->ipu_id, gmipi_csi2->csi_id);
 	dev_info(&pdev->dev, "i.MX MIPI CSI2 dphy version is 0x%x\n",
 						mipi_csi2_dphy_ver);
 
