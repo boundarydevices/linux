@@ -290,8 +290,9 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	const struct platform_device_id *id_entry =
 				platform_get_device_id(fep->pdev);
-	struct bufdesc *bdp, *bdp_pre;
+	struct bufdesc *bdp;
 	void *bufaddr;
+	unsigned short prev_status;
 	unsigned int index;
 
 	/* Fill in a Tx ring entry */
@@ -383,13 +384,8 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	bdp->cbd_sc = BD_ENET_TX_READY | BD_ENET_TX_INTR | BD_ENET_TX_LAST |
 		BD_ENET_TX_TC | ((bdp == fep->bd_tx.last) ? BD_SC_WRAP : 0);
 
-	bdp_pre = fec_enet_get_prevdesc(bdp, &fep->bd_tx);
-	if ((id_entry->driver_data & FEC_QUIRK_ERR006358) &&
-	    !(bdp_pre->cbd_sc & BD_ENET_TX_READY)) {
-		fep->delay_work.trig_tx = true;
-		schedule_delayed_work(&(fep->delay_work.delay_work),
-					msecs_to_jiffies(1));
-	}
+	mb();
+	prev_status = fec_enet_get_prevdesc(bdp, &fep->bd_tx)->cbd_sc;
 
 	/* If this was the last BD in the ring, start at the beginning again. */
 	bdp = fec_enet_get_nextdesc(bdp, &fep->bd_tx);
@@ -401,6 +397,14 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	if (fep->bd_tx.cur == fep->dirty_tx)
 		netif_stop_queue(ndev);
 
+	if ((id_entry->driver_data & FEC_QUIRK_ERR006358) &&
+	    !(prev_status & BD_ENET_TX_READY)) {
+		if (readl(fep->hwp + FEC_X_DES_ACTIVE)) {
+			fep->delay_work.trig_tx = true;
+			schedule_delayed_work(&(fep->delay_work.delay_work),
+					msecs_to_jiffies(1) + 1);
+		}
+	}
 	/* Trigger transmission start */
 	writel(0, fep->hwp + FEC_X_DES_ACTIVE);
 
