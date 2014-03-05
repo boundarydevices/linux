@@ -3486,17 +3486,17 @@ static int ov5640_probe(struct i2c_client *client,
 
 	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
 	if (!IS_ERR(gpr)) {
-		if (sensor->csi == sensor->ipu_id) {
-			if (of_machine_is_compatible("fsl,imx6q")) {
+		if (of_machine_is_compatible("fsl,imx6q")) {
+			if (sensor->csi == sensor->ipu_id) {
 				int mask = sensor->csi ? (1 << 20) : (1 << 19);
 
 				regmap_update_bits(gpr, IOMUXC_GPR1, mask, 0);
-			} else if (of_machine_is_compatible("fsl,imx6dl")) {
-				int mask = sensor->csi ? (7 << 3) : (7 << 0);
-				int val =  sensor->csi ? (3 << 3) : (0 << 0);
-
-				regmap_update_bits(gpr, IOMUXC_GPR13, mask, val);
 			}
+		} else if (of_machine_is_compatible("fsl,imx6dl")) {
+			int mask = sensor->csi ? (7 << 3) : (7 << 0);
+			int val =  sensor->csi ? (3 << 3) : (0 << 0);
+
+			regmap_update_bits(gpr, IOMUXC_GPR13, mask, val);
 		}
 	} else {
 		pr_err("%s: failed to find fsl,imx6q-iomux-gpr regmap\n",
