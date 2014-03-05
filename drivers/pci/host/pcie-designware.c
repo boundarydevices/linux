@@ -17,6 +17,7 @@
 #include <linux/module.h>
 #include <linux/msi.h>
 #include <linux/of_address.h>
+#include <linux/of_pci.h>
 #include <linux/pci.h>
 #include <linux/pci_regs.h>
 #include <linux/types.h>
@@ -511,7 +512,7 @@ int __init dw_pcie_host_init(struct pcie_port *pp)
 	dw_pci.nr_controllers = 1;
 	dw_pci.private_data = (void **)&pp;
 
-	pci_common_init(&dw_pci);
+	pci_common_init_dev(pp->dev, &dw_pci);
 	pci_assign_unassigned_resources();
 #ifdef CONFIG_PCI_DOMAINS
 	dw_pci.domain++;
@@ -721,6 +722,13 @@ static int dw_pcie_map_irq(const struct pci_dev *dev, u8 slot, u8 pin)
 {
 	struct pcie_port *pp = sys_to_pcie(dev->bus->sysdata);
 
+	if (!pp->irq) {
+		int irq;
+		irq = of_irq_parse_and_map_pci(dev, slot, pin);
+		if (irq)
+			return irq;
+		return -1;
+	}
 	switch (pin) {
 	case 1: return pp->irq;
 	case 2: return pp->irq - 1;
