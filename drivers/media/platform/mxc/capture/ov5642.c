@@ -6294,11 +6294,6 @@ static int ov5642_probe(struct i2c_client *client,
 		return retval;
 	}
 
-	if (sensor->csi != sensor->ipu_id) {
-		pr_warning("%s: csi_id != ipu_id\n", __func__);
-		return -ENODEV;
-	}
-
 	clk_prepare_enable(ov5642_data.sensor_clk);
 
 	ov5642_data.io_init = ov5642_reset;
@@ -6336,6 +6331,10 @@ static int ov5642_probe(struct i2c_client *client,
 		if (of_machine_is_compatible("fsl,imx6q")) {
 			int mask = ov5642_data.csi ? (1 << 20) : (1 << 19);
 
+			if (sensor->csi != sensor->ipu_id) {
+				pr_warning("%s: csi_id != ipu_id\n", __func__);
+				return -ENODEV;
+			}
 			regmap_update_bits(gpr, IOMUXC_GPR1, mask, mask);
 		} else if (of_machine_is_compatible("fsl,imx6dl")) {
 			int mask = ov5642_data.csi ? (7 << 3) : (7 << 0);
