@@ -693,8 +693,33 @@ static void
 fec_timeout(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
+	struct bufdesc *bdp, *bdp1;
+	unsigned short status;
 
 	pr_err("%s: last=%x %x, mask %x\n", __func__, last_ievents, readl(fep->hwp + FEC_IEVENT), readl(fep->hwp + FEC_IMASK));
+	bdp = fep->dirty_tx;
+	bdp = fec_enet_get_nextdesc(bdp, &fep->bd_tx);
+	status = bdp->cbd_sc;
+	if ((status & BD_ENET_TX_READY) == 0) {
+		if (bdp != fep->bd_tx.cur) {
+			if (napi_schedule_prep(&fep->napi)) {
+				/* Disable the RX/TX interrupt */
+				writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
+				__napi_schedule(&fep->napi);
+			}
+			netif_wake_queue(fep->netdev);
+			pr_err("%s: tx int lost\n", __func__);
+			return;
+		}
+	}
+	/* Disable all interrupts */
+	writel(0, fep->hwp + FEC_IMASK);
+	bdp1 = bdp;
+	do {
+		pr_err("%s: %p %p %x %lx\n", __func__, bdp, fep->bd_tx.cur, bdp->cbd_sc, bdp->cbd_bufaddr);
+		bdp = fec_enet_get_nextdesc(bdp, &fep->bd_tx);
+	} while (bdp != bdp1);
+
 	ndev->stats.tx_errors++;
 
 	fep->delay_work.timeout = true;
@@ -754,6 +779,7 @@ fec_enet_tx(struct net_device *ndev)
 			}
 			break;
 		}
+		bdp->cbd_sc = (bdp == fep->bd_tx.last) ? BD_SC_WRAP : 0;
 
 		if (fep->bufdesc_ex)
 			index = (struct bufdesc_ex *)bdp -
