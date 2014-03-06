@@ -327,9 +327,7 @@ static int csi_enc_disabling_tasks(void *private)
  */
 static int csi_enc_enable_csi(void *private)
 {
-	cam_data *cam = (cam_data *) private;
-
-	return ipu_enable_csi(cam->ipu, cam->csi);
+	return cam_ipu_enable_csi((cam_data *)private);
 }
 
 /*!
@@ -346,8 +344,7 @@ static int csi_enc_disable_csi(void *private)
 	 * when disable csi, wait for idmac eof.
 	 * it requests eof irq again */
 	ipu_free_irq(cam->ipu, IPU_IRQ_CSI0_OUT_EOF, cam);
-
-	return ipu_disable_csi(cam->ipu, cam->csi);
+	return cam_ipu_disable_csi(cam);
 }
 
 /*!
