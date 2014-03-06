@@ -168,7 +168,7 @@ static int prp_still_start(void *private)
 
 	ipu_select_buffer(cam->ipu, CSI_MEM, IPU_OUTPUT_BUFFER, 0);
 	ipu_enable_channel(cam->ipu, CSI_MEM);
-	ipu_enable_csi(cam->ipu, cam->csi);
+	cam_ipu_enable_csi(cam);
 #endif
 
 	return err;
@@ -192,7 +192,7 @@ static int prp_still_stop(void *private)
 	ipu_free_irq(cam->ipu, IPU_IRQ_CSI0_OUT_EOF, cam);
 #endif
 
-	ipu_disable_csi(cam->ipu, cam->csi);
+	cam_ipu_disable_csi(cam);
 	ipu_disable_channel(cam->ipu, CSI_MEM, true);
 	ipu_uninit_channel(cam->ipu, CSI_MEM, NULL);
 
