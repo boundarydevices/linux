@@ -198,6 +198,22 @@
 	status = "okay";
 };
 
+&flexcan1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan1>;
+	trx-en-gpio = <&gpio4 25 GPIO_ACTIVE_HIGH>;
+	trx-stby-gpio = <&gpio4 27 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
+&flexcan2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan2>;
+	trx-en-gpio = <&gpio4 25 GPIO_ACTIVE_HIGH>;
+	trx-stby-gpio = <&gpio4 27 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
 &qspi2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_qspi2_1>;
@@ -337,6 +353,20 @@
 				MX6SX_PAD_RGMII1_RD2__ENET1_RX_DATA_2	0x3081
 				MX6SX_PAD_RGMII1_RD3__ENET1_RX_DATA_3	0x3081
 				MX6SX_PAD_RGMII1_RX_CTL__ENET1_RX_EN	0x3081
+			>;
+		};
+
+		pinctrl_flexcan1: flexcan1grp {
+			fsl,pins = <
+				MX6SX_PAD_QSPI1B_DQS__CAN1_TX		0x1b0b0
+				MX6SX_PAD_QSPI1A_SS1_B__CAN1_RX		0x1b0b0
+			>;
+		};
+
+		pinctrl_flexcan2: flexcan2grp {
+			fsl,pins = <
+				MX6SX_PAD_QSPI1B_SS1_B__CAN2_RX		0x1b0b0
+				MX6SX_PAD_QSPI1A_DQS__CAN2_TX		0x1b0b0
 			>;
 		};
 
