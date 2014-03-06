@@ -384,6 +384,7 @@ static int prp_enc_enabling_tasks(void *private)
 {
 	cam_data *cam = (cam_data *) private;
 	int err = 0;
+	int irq;
 	CAMERA_TRACE("IPU:In prp_enc_enabling_tasks\n");
 
 	cam->dummy_frame.vaddress = dma_alloc_coherent(0,
@@ -400,15 +401,12 @@ static int prp_enc_enabling_tasks(void *private)
 	    PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage);
 	cam->dummy_frame.buffer.m.offset = cam->dummy_frame.paddress;
 
-	if (cam->rotation >= IPU_ROTATE_90_RIGHT) {
-		err = ipu_request_irq(cam->ipu, IPU_IRQ_PRP_ENC_ROT_OUT_EOF,
-				      prp_enc_callback, 0, "Mxc Camera", cam);
-	} else {
-		err = ipu_request_irq(cam->ipu, IPU_IRQ_PRP_ENC_OUT_EOF,
-				      prp_enc_callback, 0, "Mxc Camera", cam);
-	}
-	if (err != 0) {
-		printk(KERN_ERR "Error registering rot irq\n");
+	irq = (cam->rotation >= IPU_ROTATE_90_RIGHT) ?
+		IPU_IRQ_PRP_ENC_ROT_OUT_EOF : IPU_IRQ_PRP_ENC_OUT_EOF;
+	err = ipu_request_irq(cam->ipu, irq,
+			      prp_enc_callback, 0, "Mxc Camera", cam);
+	if (err) {
+		pr_err("%s: Error requesting irq=%d\n", __func__, irq);
 		return err;
 	}
 
