@@ -1148,13 +1148,51 @@ fec_stop(struct net_device *ndev)
 }
 
 static uint last_ievents;
+uint txint_flags[] = {FEC_ENET_TXF_0, FEC_ENET_TXF_1, FEC_ENET_TXF_2};
 
 static void
 fec_timeout(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
+	struct bufdesc *bdp, *bdp1;
+	unsigned short status;
+	int i;
+	uint events = 0;
 
 	pr_err("%s: last=%x %x, mask %x\n", __func__, last_ievents, readl(fep->hwp + FEC_IEVENT), readl(fep->hwp + FEC_IMASK));
+	for (i = 0; i < FEC_ENET_MAX_TX_QS; i++) {
+		struct fec_enet_priv_tx_q *txq = fep->tx_queue[i];
+		bdp = txq->dirty_tx;
+		bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
+		status = bdp->cbd_sc;
+		if ((status & BD_ENET_TX_READY) == 0) {
+			if (bdp != txq->bd.cur) {
+				events |= txint_flags[i];
+			}
+		}
+	}
+	if (events) {
+		fep->events |= events;
+		if (napi_schedule_prep(&fep->napi)) {
+			/* Disable the RX/TX interrupt */
+			writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
+			__napi_schedule(&fep->napi);
+		}
+		netif_wake_queue(fep->netdev);
+		pr_err("%s: tx int lost\n", __func__);
+		return;
+	}
+	/* Disable all interrupts */
+	writel(0, fep->hwp + FEC_IMASK);
+	for (i = 0; i < FEC_ENET_MAX_TX_QS; i++) {
+		struct fec_enet_priv_tx_q *txq = fep->tx_queue[i];
+		bdp = txq->dirty_tx;
+		bdp1 = bdp;
+		do {
+			pr_err("%s: %p %p %x %lx\n", __func__, bdp, txq->bd.cur, bdp->cbd_sc, bdp->cbd_bufaddr);
+			bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
+		} while (bdp != bdp1);
+	}
 	ndev->stats.tx_errors++;
 
 	fep->delay_work.timeout = true;
@@ -1219,6 +1257,7 @@ static void fec_enet_tx(struct net_device *ndev, struct fec_enet_private *fep,
 			}
 			break;
 		}
+		bdp->cbd_sc = (bdp == txq->bd.last) ? BD_SC_WRAP : 0;
 
 		index = fec_enet_get_bd_index(bdp, &txq->bd);
 
@@ -1578,6 +1617,10 @@ static int fec_enet_rx_napi(struct napi_struct *napi, int budget)
 	int pkts = 0;
 	uint events = __raw_readl(fep->hwp + FEC_IEVENT);
 
+	if (fep->events) {
+		events |= fep->events;
+		fep->events = 0;
+	}
 	writel(events & (FEC_ENET_RXF | FEC_ENET_TXF), fep->hwp + FEC_IEVENT);
 	if (events & FEC_ENET_RXF) {
 		if (events & FEC_ENET_RXF_1)
