@@ -1189,11 +1189,23 @@ static void fec_enet_tx_queue(struct net_device *ndev,
 	/* get next bdp of dirty_tx */
 	bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
 
-	while (((status = bdp->cbd_sc) & BD_ENET_TX_READY) == 0) {
-
-		/* current queue is empty */
-		if (bdp == txq->bd.cur)
+	while (bdp != txq->bd.cur) {
+		status = bdp->cbd_sc;
+		if (status & BD_ENET_TX_READY) {
+			/* Test for ERR006358 workaround */
+			if (readl(fep->hwp + FEC_X_DES_ACTIVE(txq->bd.index))) {
+				const struct platform_device_id *id_entry =
+					platform_get_device_id(fep->pdev);
+				if (id_entry->driver_data & FEC_QUIRK_ERR006358) {
+					if (!readl(fep->hwp + FEC_X_DES_ACTIVE(txq->bd.index)))
+						writel(0, fep->hwp + FEC_X_DES_ACTIVE(txq->bd.index));
+				}
+			} else {
+				/* ERR006358 has hit, restart tx */
+				writel(0, fep->hwp + FEC_X_DES_ACTIVE(txq->bd.index));
+			}
 			break;
+		}
 
 		bdp_t = bdp;
 		bdnum = 1;
