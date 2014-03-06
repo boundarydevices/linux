@@ -257,7 +257,7 @@ static int csi_enc_enabling_tasks(void *private)
 	err = ipu_request_irq(cam->ipu, IPU_IRQ_CSI0_OUT_EOF,
 			      csi_enc_callback, 0, "Mxc Camera", cam);
 	if (err != 0) {
-		printk(KERN_ERR "Error registering rot irq\n");
+		pr_err("%s: Error requesting IPU_IRQ_CSI0_OUT_EOF\n", __func__);
 		return err;
 	}
 
