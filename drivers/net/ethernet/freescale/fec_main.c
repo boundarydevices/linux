@@ -1377,8 +1377,13 @@ static void fec_txq(struct net_device *ndev, struct fec_enet_priv_tx_q *txq)
 		/* Order the load of bd.cur and cbd_sc */
 		rmb();
 		status = fec16_to_cpu(READ_ONCE(bdp->cbd_sc));
-		if (status & BD_ENET_TX_READY)
+		if (status & BD_ENET_TX_READY) {
+			if (!readl(txq->bd.reg_desc_active)) {
+				/* ERR006358 has hit, restart tx */
+				writel(0, txq->bd.reg_desc_active);
+			}
 			break;
+		}
 
 		index = fec_enet_get_bd_index(bdp, &txq->bd);
 
@@ -1453,11 +1458,6 @@ skb_done:
 				netif_tx_wake_queue(nq);
 		}
 	}
-
-	/* ERR006358: Keep the transmitter going */
-	if (bdp != txq->bd.cur &&
-	    readl(txq->bd.reg_desc_active) == 0)
-		writel(0, txq->bd.reg_desc_active);
 }
 
 static void fec_enet_update_cbd(struct fec_enet_priv_rx_q *rxq,
