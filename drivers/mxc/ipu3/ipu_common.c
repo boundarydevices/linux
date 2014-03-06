@@ -2823,14 +2823,16 @@ void ipu_free_irq(struct ipu_soc *ipu, uint32_t irq, void *dev_id)
 
 	_ipu_get(ipu);
 
+	if (ipu->irq_list[irq].dev_id != dev_id)
+		return;
+
 	spin_lock_irqsave(&ipu->int_reg_spin_lock, lock_flags);
 
 	/* disable the interrupt */
 	reg = ipu_cm_read(ipu, IPUIRQ_2_CTRLREG(irq));
 	reg &= ~IPUIRQ_2_MASK(irq);
 	ipu_cm_write(ipu, reg, IPUIRQ_2_CTRLREG(irq));
-	if (ipu->irq_list[irq].dev_id == dev_id)
-		memset(&ipu->irq_list[irq], 0, sizeof(ipu->irq_list[irq]));
+	memset(&ipu->irq_list[irq], 0, sizeof(ipu->irq_list[irq]));
 
 	spin_unlock_irqrestore(&ipu->int_reg_spin_lock, lock_flags);
 
