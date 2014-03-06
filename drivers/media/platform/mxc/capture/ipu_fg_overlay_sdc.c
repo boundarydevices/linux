@@ -541,9 +541,7 @@ static int foreground_stop(void *private)
  */
 static int foreground_enable_csi(void *private)
 {
-	cam_data *cam = (cam_data *) private;
-
-	return ipu_enable_csi(cam->ipu, cam->csi);
+	return cam_ipu_enable_csi((cam_data *)private);
 }
 
 /*!
@@ -561,7 +559,7 @@ static int foreground_disable_csi(void *private)
 	 * it requests eof irq again */
 	ipu_free_irq(cam->ipu, IPU_IRQ_CSI0_OUT_EOF + cam->csi, cam);
 
-	return ipu_disable_csi(cam->ipu, cam->csi);
+	return cam_ipu_disable_csi(cam);
 }
 
 /*!
