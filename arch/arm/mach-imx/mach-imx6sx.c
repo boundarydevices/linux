@@ -138,6 +138,9 @@ static void __init imx6sx_init_late(void)
 		imx6sx_opp_init(&imx6sx_cpufreq_pdev.dev);
 		platform_device_register(&imx6sx_cpufreq_pdev);
 	}
+
+	if (of_machine_is_compatible("fsl,imx6sx-sdb"))
+		imx6sx_arm2_flexcan_fixup();
 }
 
 DT_MACHINE_START(IMX6SX, "Freescale i.MX6 SoloX (Device Tree)")
