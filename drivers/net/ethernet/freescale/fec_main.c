@@ -735,11 +735,25 @@ fec_enet_tx(struct net_device *ndev)
 	/* get next bdp of dirty_tx */
 	bdp = fec_enet_get_nextdesc(bdp, &fep->bd_tx);
 
-	while (((status = bdp->cbd_sc) & BD_ENET_TX_READY) == 0) {
-
-		/* current queue is empty */
-		if (bdp == fep->bd_tx.cur)
+	while (bdp != fep->bd_tx.cur) {
+		status = bdp->cbd_sc;
+		if (status & BD_ENET_TX_READY) {
+			/* Test for ERR006358 workaround */
+			if (readl(fep->hwp + FEC_X_DES_ACTIVE)) {
+				const struct platform_device_id *id_entry =
+					platform_get_device_id(fep->pdev);
+				if (id_entry->driver_data & FEC_QUIRK_ERR006358) {
+					fep->delay_work.trig_tx = true;
+					schedule_delayed_work(
+						&fep->delay_work.delay_work,
+						msecs_to_jiffies(1) + 1);
+				}
+			} else {
+				/* ERR006358 has hit, restart tx */
+				writel(0, fep->hwp + FEC_X_DES_ACTIVE);
+			}
 			break;
+		}
 
 		if (fep->bufdesc_ex)
 			index = (struct bufdesc_ex *)bdp -
