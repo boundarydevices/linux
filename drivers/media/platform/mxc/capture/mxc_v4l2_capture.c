@@ -483,8 +483,9 @@ static int mxc_streamoff(cam_data *cam)
 {
 	int err = 0;
 
-	pr_debug("%s\n", __func__);
-
+	pr_debug("%s: ipu%d/csi%d capture_on=%d %s\n", __func__, cam->ipu_id,
+			cam->csi, cam->capture_on,
+			mxc_capture_inputs[cam->current_input].name);
 	if (cam->capture_on == false)
 		return 0;
 
@@ -1575,6 +1576,7 @@ static void power_down_callback(struct work_struct *work)
 
 	down(&cam->busy_lock);
 	if (!cam->open_count) {
+		pr_info("%s: ipu%d/csi%d\n", __func__, cam->ipu_id, cam->csi);
 		vidioc_int_s_power(cam->sensor, 0);
 		cam->power_on = 0;
 	}
