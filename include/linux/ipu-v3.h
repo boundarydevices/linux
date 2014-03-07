@@ -587,6 +587,12 @@ struct ipu_soc;
 struct ipu_soc *ipu_get_soc(int id);
 int32_t ipu_init_channel(struct ipu_soc *ipu, ipu_channel_t channel, ipu_channel_params_t *params);
 void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel, ipu_channel_params_t *params);
+
+struct ipu_chan;
+int32_t ipu_channel_request(struct ipu_soc *ipu, ipu_channel_t channel, ipu_channel_params_t *params, struct ipu_chan **p_ipu_chan);
+void ipu_channel_free(struct ipu_chan **p_ipu_chan);
+int32_t ipu_channel_disable(struct ipu_chan *ipu_chan, bool wait_for_stop);
+
 void ipu_disable_hsp_clk(struct ipu_soc *ipu);
 
 static inline bool ipu_can_rotate_in_place(ipu_rotate_mode_t rot)
