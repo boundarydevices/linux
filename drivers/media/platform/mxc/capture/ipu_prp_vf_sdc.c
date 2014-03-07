@@ -199,9 +199,11 @@ static int prpvf_start(void *private)
 	}
 #endif
 
-	err = ipu_init_channel(cam->ipu, CSI_PRP_VF_MEM, &vf);
-	if (err != 0)
+	err = ipu_channel_request(cam->ipu, CSI_PRP_VF_MEM, &vf, &cam->ipu_chan);
+	if (err) {
+		pr_err("%s:ipu_channel_request %d\n", __func__, err);
 		goto out_5;
+	}
 
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -252,9 +254,9 @@ static int prpvf_start(void *private)
 		if (err != 0)
 			goto out_3;
 
-		err = ipu_init_channel(cam->ipu, MEM_ROT_VF_MEM, NULL);
-		if (err != 0) {
-			printk(KERN_ERR "Error MEM_ROT_VF_MEM channel\n");
+		err = ipu_channel_request(cam->ipu, MEM_ROT_VF_MEM, NULL, &cam->ipu_chan_rot);
+		if (err) {
+			pr_err("%s:ipu_channel_request %d for rot\n", __func__, err);
 			goto out_3;
 		}
 
@@ -359,8 +361,7 @@ static int prpvf_start(void *private)
 out_1:
 	ipu_free_irq(cam->ipu, IPU_IRQ_PRP_VF_OUT_EOF, NULL);
 out_2:
-	if (cam->vf_rotation >= IPU_ROTATE_VERT_FLIP)
-		ipu_uninit_channel(cam->ipu, MEM_ROT_VF_MEM, NULL);
+	ipu_channel_free(&cam->ipu_chan_rot);
 out_3:
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -377,7 +378,7 @@ out_3:
 		cam->vf_bufs[1] = 0;
 	}
 out_4:
-	ipu_uninit_channel(cam->ipu, CSI_PRP_VF_MEM, NULL);
+	ipu_channel_free(&cam->ipu_chan);
 out_5:
 	return err;
 }
@@ -423,13 +424,10 @@ static int prpvf_stop(void *private)
 	}
 	buffer_num = 0;
 
-	ipu_disable_channel(cam->ipu, CSI_PRP_VF_MEM, true);
-
-	if (cam->vf_rotation >= IPU_ROTATE_VERT_FLIP) {
-		ipu_disable_channel(cam->ipu, MEM_ROT_VF_MEM, true);
-		ipu_uninit_channel(cam->ipu, MEM_ROT_VF_MEM, NULL);
-	}
-	ipu_uninit_channel(cam->ipu, CSI_PRP_VF_MEM, NULL);
+	ipu_channel_disable(cam->ipu_chan, true);
+	ipu_channel_disable(cam->ipu_chan_rot, true);
+	ipu_channel_free(&cam->ipu_chan_rot);
+	ipu_channel_free(&cam->ipu_chan);
 
 	console_lock();
 	fb_blank(fbi, FB_BLANK_POWERDOWN);
