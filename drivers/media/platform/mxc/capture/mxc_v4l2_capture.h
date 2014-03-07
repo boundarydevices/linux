@@ -204,6 +204,8 @@ typedef struct _cam_data {
 	bool overlay_on;
 	bool capture_on;
 	bool ipu_enable_csi_called;
+	struct ipu_chan *ipu_chan;
+	struct ipu_chan *ipu_chan_rot;
 	int overlay_pid;
 	int capture_pid;
 	bool low_power;
