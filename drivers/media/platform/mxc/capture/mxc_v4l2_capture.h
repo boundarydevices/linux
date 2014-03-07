@@ -35,6 +35,7 @@
 #include <linux/pxp_dma.h>
 #include <linux/ipu-v3.h>
 #include <linux/platform_data/dma-imx.h>
+#include <linux/mipi_csi2.h>
 
 #include <media/v4l2-dev.h>
 #include <media/v4l2-int-device.h>
@@ -203,6 +204,7 @@ typedef struct _cam_data {
 	bool overlay_on;
 	bool capture_on;
 	bool ipu_enable_csi_called;
+	bool mipi_pixelclk_enabled;
 	struct ipu_chan *ipu_chan;
 	struct ipu_chan *ipu_chan_rot;
 	int overlay_pid;
@@ -282,5 +284,71 @@ static inline int cam_ipu_disable_csi(cam_data *cam)
 	return ipu_disable_csi(cam->ipu, cam->csi);
 }
 
+static inline int cam_mipi_csi2_enable(cam_data *cam, struct mipi_fields *mf)
+{
+#ifdef CONFIG_MXC_MIPI_CSI2
+	void *mipi_csi2_info;
+	int ipu_id;
+	int csi_id;
 
+	mipi_csi2_info = mipi_csi2_get_info();
+
+	if (!mipi_csi2_info) {
+		printk(KERN_ERR "%s() in %s: Fail to get mipi_csi2_info!\n",
+		       __func__, __FILE__);
+		return -EPERM;
+	}
+	if (mipi_csi2_get_status(mipi_csi2_info)) {
+		ipu_id = mipi_csi2_get_bind_ipu(mipi_csi2_info);
+		csi_id = mipi_csi2_get_bind_csi(mipi_csi2_info);
+
+		if (cam->ipu == ipu_get_soc(ipu_id)
+				&& cam->csi == csi_id) {
+			mf->en = true;
+			mf->vc = mipi_csi2_get_virtual_channel(mipi_csi2_info);
+			mf->id = mipi_csi2_get_datatype(mipi_csi2_info);
+			if (!mipi_csi2_pixelclk_enable(mipi_csi2_info))
+				cam->mipi_pixelclk_enabled = 1;
+		} else {
+			mf->en = false;
+			mf->vc = 0;
+			mf->id = 0;
+		}
+	} else {
+		mf->en = false;
+		mf->vc = 0;
+		mf->id = 0;
+	}
+#endif
+	return 0;
+}
+
+static inline int cam_mipi_csi2_disable(cam_data *cam)
+{
+#ifdef CONFIG_MXC_MIPI_CSI2
+	void *mipi_csi2_info;
+	int ipu_id;
+	int csi_id;
+
+	if (!cam->mipi_pixelclk_enabled)
+		return 0;
+	cam->mipi_pixelclk_enabled = 0;
+
+	mipi_csi2_info = mipi_csi2_get_info();
+
+	if (!mipi_csi2_info) {
+		printk(KERN_ERR "%s() in %s: Fail to get mipi_csi2_info!\n",
+		       __func__, __FILE__);
+		return -EPERM;
+	}
+	if (mipi_csi2_get_status(mipi_csi2_info)) {
+		ipu_id = mipi_csi2_get_bind_ipu(mipi_csi2_info);
+		csi_id = mipi_csi2_get_bind_csi(mipi_csi2_info);
+
+		if ((cam->ipu == ipu_get_soc(ipu_id)) && (cam->csi == csi_id))
+			mipi_csi2_pixelclk_disable(mipi_csi2_info);
+	}
+#endif
+	return 0;
+}
 #endif				/* __MXC_V4L2_CAPTURE_H__ */

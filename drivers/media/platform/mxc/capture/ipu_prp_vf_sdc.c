@@ -78,11 +78,6 @@ static int prpvf_start(void *private)
 	u32 size = 2, temp = 0;
 	int err = 0, i = 0;
 	short *tmp, color;
-#ifdef CONFIG_MXC_MIPI_CSI2
-	void *mipi_csi2_info;
-	int ipu_id;
-	int csi_id;
-#endif
 
 	if (!cam) {
 		printk(KERN_ERR "private is NULL\n");
@@ -169,39 +164,9 @@ static int prpvf_start(void *private)
 	vf.csi_prp_vf_mem.out_pixel_fmt = vf_out_format;
 	size = cam->win.w.width * cam->win.w.height * size;
 
-#ifdef CONFIG_MXC_MIPI_CSI2
-	mipi_csi2_info = mipi_csi2_get_info();
-
-	if (mipi_csi2_info) {
-		if (mipi_csi2_get_status(mipi_csi2_info)) {
-			ipu_id = mipi_csi2_get_bind_ipu(mipi_csi2_info);
-			csi_id = mipi_csi2_get_bind_csi(mipi_csi2_info);
-
-			if (cam->ipu == ipu_get_soc(ipu_id)
-				&& cam->csi == csi_id) {
-				vf.csi_prp_vf_mem.mipi_en = true;
-				vf.csi_prp_vf_mem.mipi_vc =
-				mipi_csi2_get_virtual_channel(mipi_csi2_info);
-				vf.csi_prp_vf_mem.mipi_id =
-				mipi_csi2_get_datatype(mipi_csi2_info);
-
-				mipi_csi2_pixelclk_enable(mipi_csi2_info);
-			} else {
-				vf.csi_prp_vf_mem.mipi_en = false;
-				vf.csi_prp_vf_mem.mipi_vc = 0;
-				vf.csi_prp_vf_mem.mipi_id = 0;
-			}
-		} else {
-			vf.csi_prp_vf_mem.mipi_en = false;
-			vf.csi_prp_vf_mem.mipi_vc = 0;
-			vf.csi_prp_vf_mem.mipi_id = 0;
-		}
-	} else {
-		printk(KERN_ERR "%s() in %s: Fail to get mipi_csi2_info!\n",
-		       __func__, __FILE__);
-		return -EPERM;
-	}
-#endif
+	err = cam_mipi_csi2_enable(cam, &vf.csi_prp_vf_mem.mipi);
+	if (err)
+		return err;
 
 	err = ipu_channel_request(cam->ipu, CSI_PRP_VF_MEM, &vf, &cam->ipu_chan);
 	if (err) {
@@ -399,11 +364,6 @@ static int prpvf_stop(void *private)
 	int err = 0, i = 0;
 	struct fb_info *fbi = NULL;
 	struct fb_var_screeninfo fbvar;
-#ifdef CONFIG_MXC_MIPI_CSI2
-	void *mipi_csi2_info;
-	int ipu_id;
-	int csi_id;
-#endif
 
 	if (cam->overlay_active == false)
 		return 0;
@@ -443,25 +403,7 @@ static int prpvf_stop(void *private)
 	fbvar.nonstd = cam->fb_origin_std;
 	fbvar.activate |= FB_ACTIVATE_FORCE;
 	fb_set_var(fbi, &fbvar);
-
-#ifdef CONFIG_MXC_MIPI_CSI2
-	mipi_csi2_info = mipi_csi2_get_info();
-
-	if (mipi_csi2_info) {
-		if (mipi_csi2_get_status(mipi_csi2_info)) {
-			ipu_id = mipi_csi2_get_bind_ipu(mipi_csi2_info);
-			csi_id = mipi_csi2_get_bind_csi(mipi_csi2_info);
-
-			if (cam->ipu == ipu_get_soc(ipu_id)
-				&& cam->csi == csi_id)
-				mipi_csi2_pixelclk_disable(mipi_csi2_info);
-		}
-	} else {
-		printk(KERN_ERR "%s() in %s: Fail to get mipi_csi2_info!\n",
-		       __func__, __FILE__);
-		return -EPERM;
-	}
-#endif
+	err2 = cam_mipi_csi2_disable(cam);
 
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -479,7 +421,7 @@ static int prpvf_stop(void *private)
 	}
 
 	cam->overlay_active = false;
-	return err;
+	return err ? err : err2;
 }
 
 /*!
