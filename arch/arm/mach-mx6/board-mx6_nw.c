@@ -56,6 +56,7 @@
 #include <mach/ipu-v3.h>
 #include <mach/mxc_hdmi.h>
 #include <mach/mxc_asrc.h>
+#include <mach/imx_rfkill.h>
 
 #include <asm/irq.h>
 #include <asm/setup.h>
@@ -208,6 +209,23 @@ static const struct imxuart_platform_data mx6_arm2_uart2_data __initconst = {
 	.flags      = IMXUART_HAVE_RTSCTS | IMXUART_SDMA,
 	.dma_req_rx = MX6Q_DMA_REQ_UART3_RX,
 	.dma_req_tx = MX6Q_DMA_REQ_UART3_TX,
+};
+
+static int bt_enable(int enable)
+{
+	int do_enable= (0 != enable);
+	gpio_set_value(WL_BT_REG_EN,do_enable);
+	msleep(10*(10*do_enable)); 	/* 10ms for disable, 100 for enable */
+	pr_debug("%s: %d\n",__func__,enable);
+	return 0;
+}
+
+static struct platform_device bt_rfkill = {
+	.name = "mxc_bt_rfkill",
+};
+
+static struct imx_bt_rfkill_platform_data rfkill_data = {
+	.power_change = bt_enable,
 };
 
 static int mx6_spi_cs[] = {
@@ -573,20 +591,27 @@ static void __init mx6_board_init(void)
 	imx6q_add_sdhci_usdhc_imx(1, &mx6_sd2_data);
 	platform_device_register(&mx6_vwifi_reg_devices);
 
-	gpio_set_value(WL_EN, 1);		/* momentarily enable */
-	gpio_set_value(WL_BT_REG_EN, 1);
+	gpio_request(WL_EN, "wl-en");
+	gpio_request(WL_BT_REG_EN, "bt-reg-en");
+	gpio_request(WL_BT_RESET, "bt-reset");
+
+	gpio_direction_output(WL_EN, 1);		/* momentarily enable */
+	gpio_direction_output(WL_BT_REG_EN, 1);
+        gpio_direction_output(WL_BT_RESET, 1);
+
 	mdelay(2);
 	gpio_set_value(WL_EN, 0);
-	gpio_set_value(WL_BT_REG_EN, 0);
 
 	gpio_free(WL_EN);
 	gpio_free(WL_BT_REG_EN);
+	gpio_free(WL_BT_RESET);
 	mdelay(1);
 
 	imx6q_add_perfmon(0);
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
 //	regulator_has_full_constraints();
+	mxc_register_device(&bt_rfkill, &rfkill_data);
 }
 
 extern void __iomem *twd_base;
