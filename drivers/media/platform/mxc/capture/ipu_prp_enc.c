@@ -159,9 +159,9 @@ static int prp_enc_setup(cam_data *cam)
 	}
 #endif
 
-	err = ipu_init_channel(cam->ipu, CSI_PRP_ENC_MEM, &enc);
-	if (err != 0) {
-		printk(KERN_ERR "ipu_init_channel %d\n", err);
+	err = ipu_channel_request(cam->ipu, CSI_PRP_ENC_MEM, &enc, &cam->ipu_chan);
+	if (err) {
+		pr_err("%s:ipu_channel_request %d\n", __func__, err);
 		return err;
 	}
 
@@ -217,9 +217,9 @@ static int prp_enc_setup(cam_data *cam)
 			return err;
 		}
 
-		err = ipu_init_channel(cam->ipu, MEM_ROT_ENC_MEM, NULL);
-		if (err != 0) {
-			printk(KERN_ERR "MEM_ROT_ENC_MEM channel err\n");
+		err = ipu_channel_request(cam->ipu, MEM_ROT_ENC_MEM, NULL, &cam->ipu_chan_rot);
+		if (err) {
+			pr_err("%s:ipu_channel_request %d for rot\n", __func__, err);
 			return err;
 		}
 
@@ -424,6 +424,7 @@ static int prp_enc_disabling_tasks(void *private)
 {
 	cam_data *cam = (cam_data *) private;
 	int err = 0;
+	int err2 = 0;
 #ifdef CONFIG_MXC_MIPI_CSI2
 	void *mipi_csi2_info;
 	int ipu_id;
@@ -435,13 +436,11 @@ static int prp_enc_disabling_tasks(void *private)
 		ipu_unlink_channels(cam->ipu, CSI_PRP_ENC_MEM, MEM_ROT_ENC_MEM);
 	}
 
-	err = ipu_disable_channel(cam->ipu, CSI_PRP_ENC_MEM, true);
-	if (cam->rotation >= IPU_ROTATE_90_RIGHT)
-		err |= ipu_disable_channel(cam->ipu, MEM_ROT_ENC_MEM, true);
+	err = ipu_channel_disable(cam->ipu_chan, true);
+	err2 = ipu_channel_disable(cam->ipu_chan_rot, true);
 
-	ipu_uninit_channel(cam->ipu, CSI_PRP_ENC_MEM, NULL);
-	if (cam->rotation >= IPU_ROTATE_90_RIGHT)
-		ipu_uninit_channel(cam->ipu, MEM_ROT_ENC_MEM, NULL);
+	ipu_channel_free(&cam->ipu_chan);
+	ipu_channel_free(&cam->ipu_chan_rot);
 
 	if (cam->dummy_frame.vaddress != 0) {
 		dma_free_coherent(cam->dev, cam->dummy_frame.buffer.length,
@@ -465,7 +464,7 @@ static int prp_enc_disabling_tasks(void *private)
 	}
 #endif
 
-	return err;
+	return err ? err : err2;
 }
 
 /*!
