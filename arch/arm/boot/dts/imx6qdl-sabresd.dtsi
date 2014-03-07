@@ -366,12 +366,14 @@
 		mclk_source = <0>;
 	};
 
-	mma8451@1c {
-		compatible = "fsl,mma8451";
+	mma8x5x@1c {
+		compatible = "fsl,mma8x5x";
 		reg = <0x1c>;
-		position = <1>;
+		position = <0>;
 		vdd-supply = <&reg_sensor>;
 		vddio-supply = <&reg_sensor>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <18 1>;
 	};
 };
 
@@ -436,7 +438,7 @@
 	mag3110@0e {
 		compatible = "fsl,mag3110";
 		reg = <0x0e>;
-		position = <2>;
+		position = <1>;
 		vdd-supply = <&reg_sensor>;
 		vddio-supply = <&reg_sensor>;
 		interrupt-parent = <&gpio3>;
@@ -501,6 +503,7 @@
 				MX6QDL_PAD_GPIO_9__GPIO1_IO09 0x80000000
 				MX6QDL_PAD_GPIO_1__WDOG2_B 0x80000000
 				MX6QDL_PAD_GPIO_2__GPIO1_IO02 0x80000000
+				MX6QDL_PAD_SD1_CMD__GPIO1_IO18 0x80000000
 			>;
 		};
 	};
