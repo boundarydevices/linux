@@ -127,15 +127,18 @@ typedef enum {
 	XY
 } display_addressing_t;
 
+struct mipi_fields {
+	uint32_t id;
+	uint32_t vc;
+	bool en;
+};
 /*!
  * Union of initialization parameters for a logical channel.
  */
 typedef union {
 	struct {
 		uint32_t csi;
-		uint32_t mipi_id;
-		uint32_t mipi_vc;
-		bool mipi_en;
+		struct mipi_fields mipi;
 		bool interlaced;
 	} csi_mem;
 	struct {
@@ -148,9 +151,7 @@ typedef union {
 		uint32_t outh_resize_ratio;
 		uint32_t outv_resize_ratio;
 		uint32_t csi;
-		uint32_t mipi_id;
-		uint32_t mipi_vc;
-		bool mipi_en;
+		struct mipi_fields mipi;
 	} csi_prp_enc_mem;
 	struct {
 		uint32_t in_width;
@@ -189,9 +190,7 @@ typedef union {
 		ipu_motion_sel motion_sel;
 		enum v4l2_field field_fmt;
 		uint32_t csi;
-		uint32_t mipi_id;
-		uint32_t mipi_vc;
-		bool mipi_en;
+		struct mipi_fields mipi;
 	} csi_prp_vf_mem;
 	struct {
 		uint32_t in_width;
