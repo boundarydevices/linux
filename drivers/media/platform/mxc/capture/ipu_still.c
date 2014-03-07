@@ -123,9 +123,11 @@ static int prp_still_start(void *private)
 	}
 
 	memset(&params, 0, sizeof(params));
-	err = ipu_init_channel(cam->ipu, CSI_MEM, &params);
-	if (err != 0)
+	err = ipu_channel_request(cam->ipu, CSI_MEM, &params, &cam->ipu_chan);
+	if (err) {
+		pr_err("%s:ipu_channel_request %d\n", __func__, err);
 		return err;
+	}
 
 	err = ipu_init_channel_buffer(cam->ipu, CSI_MEM, IPU_OUTPUT_BUFFER,
 				      pixel_fmt, cam->v2f.fmt.pix.width,
@@ -193,9 +195,8 @@ static int prp_still_stop(void *private)
 #endif
 
 	cam_ipu_disable_csi(cam);
-	ipu_disable_channel(cam->ipu, CSI_MEM, true);
-	ipu_uninit_channel(cam->ipu, CSI_MEM);
-
+	ipu_channel_disable(cam->ipu_chan, true);
+	ipu_channel_free(&cam->ipu_chan);
 	return err;
 }
 
