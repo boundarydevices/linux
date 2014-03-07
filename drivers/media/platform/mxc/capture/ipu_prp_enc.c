@@ -71,11 +71,6 @@ static int prp_enc_setup(cam_data *cam)
 	ipu_channel_params_t enc;
 	int err = 0;
 	dma_addr_t dummy = cam->dummy_frame.buffer.m.offset;
-#ifdef CONFIG_MXC_MIPI_CSI2
-	void *mipi_csi2_info;
-	int ipu_id;
-	int csi_id;
-#endif
 
 	CAMERA_TRACE("In prp_enc_setup\n");
 	if (!cam) {
@@ -133,36 +128,9 @@ static int prp_enc_setup(cam_data *cam)
 		printk(KERN_ERR "format not supported\n");
 		return -EINVAL;
 	}
-
-#ifdef CONFIG_MXC_MIPI_CSI2
-	mipi_csi2_info = mipi_csi2_get_info();
-
-	if (mipi_csi2_info) {
-		if (mipi_csi2_get_status(mipi_csi2_info)) {
-			ipu_id = mipi_csi2_get_bind_ipu(mipi_csi2_info);
-			csi_id = mipi_csi2_get_bind_csi(mipi_csi2_info);
-
-			if (cam->ipu == ipu_get_soc(ipu_id)
-				&& cam->csi == csi_id) {
-				enc.csi_prp_enc_mem.mipi_en = true;
-				enc.csi_prp_enc_mem.mipi_vc =
-				mipi_csi2_get_virtual_channel(mipi_csi2_info);
-				enc.csi_prp_enc_mem.mipi_id =
-				mipi_csi2_get_datatype(mipi_csi2_info);
-
-				mipi_csi2_pixelclk_enable(mipi_csi2_info);
-			} else {
-				enc.csi_prp_enc_mem.mipi_en = false;
-				enc.csi_prp_enc_mem.mipi_vc = 0;
-				enc.csi_prp_enc_mem.mipi_id = 0;
-			}
-		} else {
-			enc.csi_prp_enc_mem.mipi_en = false;
-			enc.csi_prp_enc_mem.mipi_vc = 0;
-			enc.csi_prp_enc_mem.mipi_id = 0;
-		}
-	}
-#endif
+	err = cam_mipi_csi2_enable(cam, &enc.csi_prp_enc_mem.mipi);
+	if (err)
+		return err;
 
 	err = ipu_channel_request(cam->ipu, CSI_PRP_ENC_MEM, &enc, &cam->ipu_chan);
 	if (err) {
@@ -430,11 +398,7 @@ static int prp_enc_disabling_tasks(void *private)
 	cam_data *cam = (cam_data *) private;
 	int err = 0;
 	int err2 = 0;
-#ifdef CONFIG_MXC_MIPI_CSI2
-	void *mipi_csi2_info;
-	int ipu_id;
-	int csi_id;
-#endif
+	int err3 = 0;
 
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT) {
 		ipu_free_irq(cam->ipu, IPU_IRQ_PRP_ENC_ROT_OUT_EOF, cam);
@@ -453,23 +417,8 @@ static int prp_enc_disabling_tasks(void *private)
 				  cam->dummy_frame.paddress);
 		cam->dummy_frame.vaddress = 0;
 	}
-
-#ifdef CONFIG_MXC_MIPI_CSI2
-	mipi_csi2_info = mipi_csi2_get_info();
-
-	if (mipi_csi2_info) {
-		if (mipi_csi2_get_status(mipi_csi2_info)) {
-			ipu_id = mipi_csi2_get_bind_ipu(mipi_csi2_info);
-			csi_id = mipi_csi2_get_bind_csi(mipi_csi2_info);
-
-			if (cam->ipu == ipu_get_soc(ipu_id)
-				&& cam->csi == csi_id)
-				mipi_csi2_pixelclk_disable(mipi_csi2_info);
-		}
-	}
-#endif
-
-	return err ? err : err2;
+	err3 = cam_mipi_csi2_disable(cam);
+	return err ? err : (err2 ? err2 : err3);
 }
 
 /*!
