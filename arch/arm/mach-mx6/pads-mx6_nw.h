@@ -174,7 +174,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	/* USB */
 	MX6PAD(KEY_ROW4__GPIO_4_15),					/* USB Hub reset */
 	MX6PAD(GPIO_1__USBOTG_ID),					/* USBOTG ID pin */
-	NEW_PAD_CTRL(MX6PAD(EIM_D22__GPIO_3_22), WEAK_PULLUP),		/* usbotg power */
+	NEW_PAD_CTRL(MX6PAD(EIM_D22__GPIO_3_22), WEAK_PULLUP240),	/* usbotg power */
 	MX6PAD(KEY_COL4__USBOH3_USBOTG_OC),				/* USBOTG OC pin */
 
 	/* Wireless - bluetooth - Broadcom */

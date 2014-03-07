@@ -87,6 +87,8 @@
 
 #define WEAK_PULLUP	(PAD_CTL_HYS | PAD_CTL_PKE \
 			 | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP)
+#define WEAK_PULLUP240	(PAD_CTL_HYS | PAD_CTL_PKE \
+			 | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP | PAD_CTL_DSE_240ohm)
 
 #include "pads-mx6_nw.h"
 #define FOR_DL_SOLO
