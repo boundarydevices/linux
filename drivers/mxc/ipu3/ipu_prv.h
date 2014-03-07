@@ -62,6 +62,14 @@ struct ipu_pltfm_data {
 	bool bypass_reset;
 };
 
+struct ipu_soc;
+
+struct ipu_chan {
+	struct ipu_soc *ipu;
+	ipu_channel_t channel;
+	struct ipu_chan **p_ipu_chan;
+};
+
 struct ipu_soc {
 	bool online;
 	struct ipu_pltfm_data *pdata;
@@ -78,7 +86,7 @@ struct ipu_soc {
 	int irq_sync;
 	int irq_err;
 	struct ipu_irq_node irq_list[IPU_IRQ_COUNT];
-
+	struct ipu_chan chan[32];
 	/*reg*/
 	u32 *cm_reg;
 	u32 *idmac_reg;

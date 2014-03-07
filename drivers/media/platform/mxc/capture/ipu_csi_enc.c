@@ -164,9 +164,9 @@ static int csi_enc_setup(cam_data *cam)
 	}
 #endif
 
-	err = ipu_init_channel(cam->ipu, CSI_MEM, &params);
-	if (err != 0) {
-		printk(KERN_ERR "ipu_init_channel %d\n", err);
+	err = ipu_channel_request(cam->ipu, CSI_MEM, &params, &cam->ipu_chan);
+	if (err) {
+		pr_err("%s:ipu_channel_request %d\n", __func__, err);
 		return err;
 	}
 
@@ -286,9 +286,9 @@ static int csi_enc_disabling_tasks(void *private)
 	int csi_id;
 #endif
 
-	err = ipu_disable_channel(cam->ipu, CSI_MEM, true);
+	err = ipu_channel_disable(cam->ipu_chan, true);
 
-	ipu_uninit_channel(cam->ipu, CSI_MEM);
+	ipu_channel_free(&cam->ipu_chan);
 
 	if (cam->dummy_frame.vaddress != 0) {
 		dma_free_coherent(0, cam->dummy_frame.buffer.length,

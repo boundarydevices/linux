@@ -188,9 +188,11 @@ static int prpvf_start(void *private)
 	}
 #endif
 
-	err = ipu_init_channel(cam->ipu, CSI_PRP_VF_MEM, &vf);
-	if (err != 0)
+	err = ipu_channel_request(cam->ipu, CSI_PRP_VF_MEM, &vf, &cam->ipu_chan);
+	if (err) {
+		pr_err("%s:ipu_channel_request %d\n", __func__, err);
 		goto out_4;
+	}
 
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -236,9 +238,9 @@ static int prpvf_start(void *private)
 		printk(KERN_ERR "Error initializing CSI_PRP_VF_MEM\n");
 		goto out_3;
 	}
-	err = ipu_init_channel(cam->ipu, MEM_ROT_VF_MEM, NULL);
-	if (err != 0) {
-		printk(KERN_ERR "Error MEM_ROT_VF_MEM channel\n");
+	err = ipu_channel_request(cam->ipu, MEM_ROT_VF_MEM, NULL, &cam->ipu_chan_rot);
+	if (err) {
+		pr_err("%s:ipu_channel_request %d for rot\n", __func__, err);
 		goto out_3;
 	}
 
@@ -317,9 +319,9 @@ static int prpvf_start(void *private)
 out_1:
 	ipu_free_irq(cam->ipu, IPU_IRQ_PRP_VF_OUT_EOF, NULL);
 out_2:
-	ipu_uninit_channel(cam->ipu, MEM_ROT_VF_MEM);
+	ipu_channel_free(&cam->ipu_chan_rot);
 out_3:
-	ipu_uninit_channel(cam->ipu, CSI_PRP_VF_MEM);
+	ipu_channel_free(&cam->ipu_chan);
 out_4:
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -370,10 +372,10 @@ static int prpvf_stop(void *private)
 
 	ipu_free_irq(disp_ipu, IPU_IRQ_BG_SF_END, cam);
 
-	ipu_disable_channel(cam->ipu, CSI_PRP_VF_MEM, true);
-	ipu_disable_channel(cam->ipu, MEM_ROT_VF_MEM, true);
-	ipu_uninit_channel(cam->ipu, CSI_PRP_VF_MEM);
-	ipu_uninit_channel(cam->ipu, MEM_ROT_VF_MEM);
+	ipu_channel_disable(cam->ipu_chan, true);
+	ipu_channel_disable(cam->ipu_chan_rot, true);
+	ipu_channel_free(&cam->ipu_chan);
+	ipu_channel_free(&cam->ipu_chan_rot);
 
 #ifdef CONFIG_MXC_MIPI_CSI2
 	mipi_csi2_info = mipi_csi2_get_info();

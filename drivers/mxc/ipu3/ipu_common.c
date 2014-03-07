@@ -931,6 +931,38 @@ err:
 }
 EXPORT_SYMBOL(ipu_init_channel);
 
+int32_t ipu_channel_request(struct ipu_soc *ipu, ipu_channel_t channel,
+		ipu_channel_params_t *params, struct ipu_chan **p_ipu_chan)
+{
+	struct ipu_chan *ipu_chan;
+	unsigned channel_id = IPU_CHAN_ID(channel);
+	int32_t ret;
+
+	dev_dbg(ipu->dev, "init channel = %d\n", channel_id);
+	*p_ipu_chan = NULL;
+	if (channel_id >= ARRAY_SIZE(ipu->chan)) {
+		dev_err(ipu->dev, "%s: ch = %d is too big!\n", __func__,
+				channel_id);
+		return -ENODEV;
+	}
+	ipu_chan = &ipu->chan[channel_id];
+	if (ipu_chan->p_ipu_chan && (ipu_chan->p_ipu_chan != p_ipu_chan)) {
+		dev_err(ipu->dev, "%s: ch = %d is busy!\n", __func__,
+				channel_id);
+		return -EBUSY;
+	}
+	ipu_chan->p_ipu_chan = p_ipu_chan;
+	ipu_chan->ipu = ipu;
+	ipu_chan->channel = channel;
+	ret = ipu_init_channel(ipu, channel, params);
+	if (ret)
+		ipu_chan->p_ipu_chan = NULL;
+	else
+		*p_ipu_chan = ipu_chan;
+	return ret;
+}
+EXPORT_SYMBOL(ipu_channel_request);
+
 /*!
  * This function is called to uninitialize a logical IPU channel.
  *
@@ -1169,6 +1201,18 @@ void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel)
 	WARN_ON(ipu->smfc_use_count < 0);
 }
 EXPORT_SYMBOL(ipu_uninit_channel);
+
+void ipu_channel_free(struct ipu_chan **p_ipu_chan)
+{
+	struct ipu_chan *ipu_chan = *p_ipu_chan;
+
+	*p_ipu_chan = NULL;
+	if (ipu_chan) {
+		ipu_chan->p_ipu_chan = NULL;
+		ipu_uninit_channel(ipu_chan->ipu, ipu_chan->channel);
+	}
+}
+EXPORT_SYMBOL(ipu_channel_free);
 
 /*!
  * This function is called to initialize buffer(s) for logical IPU channel.
@@ -2471,6 +2515,15 @@ int32_t ipu_disable_channel(struct ipu_soc *ipu, ipu_channel_t channel, bool wai
 	return 0;
 }
 EXPORT_SYMBOL(ipu_disable_channel);
+
+int32_t ipu_channel_disable(struct ipu_chan *ipu_chan, bool wait_for_stop)
+{
+	if (ipu_chan)
+		if (!IS_ERR(ipu_chan))
+			return ipu_disable_channel(ipu_chan->ipu, ipu_chan->channel, wait_for_stop);
+	return 0;
+}
+EXPORT_SYMBOL(ipu_channel_disable);
 
 /*!
  * This function enables CSI.
