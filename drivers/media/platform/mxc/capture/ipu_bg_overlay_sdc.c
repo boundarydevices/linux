@@ -235,9 +235,9 @@ static int csi_enc_setup(cam_data *cam)
 	}
 	pr_debug("vf_bufs %x %x\n", cam->vf_bufs[0], cam->vf_bufs[1]);
 
-	err = ipu_init_channel(cam->ipu, chan, &params);
-	if (err != 0) {
-		printk(KERN_ERR "ipu_init_channel %d\n", err);
+	err = ipu_channel_request(cam->ipu, chan, &params, &cam->ipu_chan);
+	if (err) {
+		pr_err("%s:ipu_channel_request %d\n", __func__, err);
 		goto out_1;
 	}
 
@@ -385,7 +385,6 @@ static int bg_overlay_stop(void *private)
 {
 	int err = 0;
 	cam_data *cam = (cam_data *) private;
-	ipu_channel_t chan = (cam->csi == 0) ? CSI_MEM0 : CSI_MEM1;
 #ifdef CONFIG_MXC_MIPI_CSI2
 	void *mipi_csi2_info;
 	int ipu_id;
@@ -395,9 +394,9 @@ static int bg_overlay_stop(void *private)
 	if (cam->overlay_active == false)
 		return 0;
 
-	err = ipu_disable_channel(cam->ipu, chan, true);
+	err = ipu_channel_disable(cam->ipu_chan, true);
 
-	ipu_uninit_channel(cam->ipu, chan, NULL);
+	ipu_channel_free(&cam->ipu_chan);
 
 	csi_buffer_num = 0;
 
