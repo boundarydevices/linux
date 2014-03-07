@@ -34,8 +34,10 @@ struct mipi_csi2_info {
 	unsigned int	v_channel;
 	unsigned int	lanes;
 	unsigned int	datatype;
-	struct clk	*dphy_clk;
-	struct clk	*pixel_clk;
+#define DPHY_CLK	0
+#define PIXEL_CLK	1
+#define CFG_CLK		2
+	struct clk	*clks[3];
 	unsigned int	*mipi_csi2_base;
 	struct platform_device	*pdev;
 

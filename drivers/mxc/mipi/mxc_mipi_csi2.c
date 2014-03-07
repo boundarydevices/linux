@@ -77,7 +77,8 @@ bool mipi_csi2_enable(struct mipi_csi2_info *info)
 
 	if (!info->mipi_en) {
 		info->mipi_en = true;
-		clk_prepare_enable(info->dphy_clk);
+		clk_prepare_enable(info->clks[DPHY_CLK]);
+		clk_prepare_enable(info->clks[CFG_CLK]);
 	} else
 		mipi_dbg("mipi csi2 already enabled!\n");
 
@@ -103,7 +104,8 @@ bool mipi_csi2_disable(struct mipi_csi2_info *info)
 
 	if (info->mipi_en) {
 		info->mipi_en = false;
-		clk_disable_unprepare(info->dphy_clk);
+		clk_disable_unprepare(info->clks[CFG_CLK]);
+		clk_disable_unprepare(info->clks[DPHY_CLK]);
 	} else
 		mipi_dbg("mipi csi2 already disabled!\n");
 
@@ -252,7 +254,7 @@ EXPORT_SYMBOL(mipi_csi2_get_error2);
  */
 int mipi_csi2_pixelclk_enable(struct mipi_csi2_info *info)
 {
-	return clk_prepare_enable(info->pixel_clk);
+	return clk_prepare_enable(info->clks[PIXEL_CLK]);
 }
 EXPORT_SYMBOL(mipi_csi2_pixelclk_enable);
 
@@ -264,7 +266,7 @@ EXPORT_SYMBOL(mipi_csi2_pixelclk_enable);
  */
 void mipi_csi2_pixelclk_disable(struct mipi_csi2_info *info)
 {
-	clk_disable_unprepare(info->pixel_clk);
+	clk_disable_unprepare(info->clks[PIXEL_CLK]);
 }
 EXPORT_SYMBOL(mipi_csi2_pixelclk_disable);
 
@@ -364,6 +366,10 @@ unsigned int mipi_csi2_get_virtual_channel(struct mipi_csi2_info *info)
 }
 EXPORT_SYMBOL(mipi_csi2_get_virtual_channel);
 
+static const unsigned char * const clks[] = {
+	"dphy_clk", "pixel_clk", "cfg_clk",
+};
+
 /**
  * This function is called by the driver framework to initialize the MIPI CSI2
  * device.
@@ -380,6 +386,7 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 	struct resource *res;
 	u32 mipi_csi2_dphy_ver;
 	int ret;
+	int i;
 
 	gmipi_csi2 = kmalloc(sizeof(struct mipi_csi2_info), GFP_KERNEL);
 	if (!gmipi_csi2) {
@@ -426,20 +433,13 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 	gmipi_csi2->pdev = pdev;
 	gmipi_csi2->mipi_en = false;
 
-	/* get mipi dphy clk */
-	gmipi_csi2->dphy_clk = devm_clk_get(dev, "dphy_clk");
-	if (IS_ERR(gmipi_csi2->dphy_clk)) {
-		dev_err(&pdev->dev, "failed to get dphy pll_ref_clk\n");
-		ret = PTR_ERR(gmipi_csi2->dphy_clk);
-		goto err;
-	}
-
-	/* get mipi to ipu pixel clk */
-	gmipi_csi2->pixel_clk = devm_clk_get(dev, "pixel_clk");
-	if (IS_ERR(gmipi_csi2->pixel_clk)) {
-		dev_err(&pdev->dev, "failed to get mipi pixel clk\n");
-		ret = PTR_ERR(gmipi_csi2->pixel_clk);
-		goto err;
+	for (i = 0; i < ARRAY_SIZE(clks); i++) {
+		gmipi_csi2->clks[i] = devm_clk_get(dev, clks[i]);
+		if (IS_ERR(gmipi_csi2->clks[i])) {
+			dev_err(&pdev->dev, "failed to get %s\n", clks[i]);
+			ret = PTR_ERR(gmipi_csi2->clks[i]);
+			goto err;
+		}
 	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -456,11 +456,11 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 	}
 
 	/* mipi dphy clk enable for register access */
-	clk_prepare_enable(gmipi_csi2->dphy_clk);
+	clk_prepare_enable(gmipi_csi2->clks[DPHY_CLK]);
 	/* get mipi csi2 dphy version */
 	mipi_csi2_dphy_ver = mipi_csi2_read(gmipi_csi2, CSI2_VERSION);
 
-	clk_disable_unprepare(gmipi_csi2->dphy_clk);
+	clk_disable_unprepare(gmipi_csi2->clks[DPHY_CLK]);
 
 	platform_set_drvdata(pdev, gmipi_csi2);
 
