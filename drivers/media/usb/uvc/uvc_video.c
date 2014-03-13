@@ -1875,10 +1875,17 @@ static int uvc_alloc_submit_urbs(struct uvc_streaming *stream)
 			uvc_printk(KERN_ERR, "Failed to submit URB %u "
 					"(%d).\n", i, ret);
 			uvc_uninit_video(stream, 1);
-			break;
+			return ret;
 		}
 	}
-	return ret;
+
+	/* The Logitech C920 temporarily forgets that it should not be adjusting
+	 * Exposure Absolute during init so restore controls to stored values.
+	 */
+	if (stream->dev->quirks & UVC_QUIRK_RESTORE_CTRLS_ON_INIT)
+		uvc_ctrl_restore_values(stream->dev);
+
+	return 0;
 }
 
 /* --------------------------------------------------------------------------
