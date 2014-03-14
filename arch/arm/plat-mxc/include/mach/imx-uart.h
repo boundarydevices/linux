@@ -24,6 +24,7 @@
 #define IMXUART_USE_DCEDTE  (1<<2)
 #define IMXUART_SDMA        (1<<3)
 #define IMXUART_RS485_HALF_DUPLEX (1<<4)
+#define IMXUART_RS485_MODE	(1<<5)
 
 struct imxuart_platform_data {
 	int (*init)(struct platform_device *pdev);
