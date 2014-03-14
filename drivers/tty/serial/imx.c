@@ -1977,6 +1977,8 @@ static int serial_imx_probe(struct platform_device *pdev)
 				i++;
 			}
 			sport->gpios_mask = mask;
+			if (pdata->flags & IMXUART_RS485_MODE)
+				sport->rs485conf.flags |= SER_RS485_ENABLED;
 		}
 	}
 #ifdef CONFIG_IRDA
