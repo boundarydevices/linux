@@ -471,6 +471,44 @@ static struct platform_device button_device = {
 	}
 };
 
+#define M_TX_EN		1
+
+static const unsigned short uart3_gpios[] = {
+	IMX_GPIO_NR(2, 26),		/* 1 - tx enable, active high */
+	-1
+};
+
+static const struct imxuart_platform_data uart3_data __initconst = {
+	.gpios = uart3_gpios,
+	.flags = IMXUART_RS485_HALF_DUPLEX | IMXUART_RS485_MODE,
+	.rs485_txen_mask = M_TX_EN,
+	.rs485_txen_levels = M_TX_EN,
+};
+
+static const unsigned short uart4_gpios[] = {
+	IMX_GPIO_NR(2, 25),		/* 1 - tx enable, active high */
+	-1
+};
+
+static const struct imxuart_platform_data uart4_data __initconst = {
+	.gpios = uart4_gpios,
+	.flags = IMXUART_RS485_HALF_DUPLEX | IMXUART_RS485_MODE,
+	.rs485_txen_mask = M_TX_EN,
+	.rs485_txen_levels = M_TX_EN,
+};
+
+static const unsigned short uart5_gpios[] = {
+	IMX_GPIO_NR(2, 27),		/* 1 - tx enable, active high */
+	-1
+};
+
+static const struct imxuart_platform_data uart5_data __initconst = {
+	.gpios = uart5_gpios,
+	.flags = IMXUART_RS485_HALF_DUPLEX | IMXUART_RS485_MODE,
+	.rs485_txen_mask = M_TX_EN,
+	.rs485_txen_levels = M_TX_EN,
+};
+
 /*!
  * Board specific initialization.
  */
@@ -495,9 +533,9 @@ static void __init board_init(void)
 
 	imx6q_add_imx_uart(0, NULL);
 	imx6q_add_imx_uart(1, NULL);
-	imx6q_add_imx_uart(2, NULL);
-	imx6q_add_imx_uart(3, NULL);
-	imx6q_add_imx_uart(4, NULL);
+	imx6q_add_imx_uart(2, &uart3_data);
+	imx6q_add_imx_uart(3, &uart4_data);
+	imx6q_add_imx_uart(4, &uart5_data);
 
 	imx6q_add_ipuv3(0, &ipu_data[0]);
 	imx6q_add_ipuv3fb(0, &oc_fb_data);
