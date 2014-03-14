@@ -19,6 +19,7 @@ obj-$(CONFIG_MACH_MX6_R) += board-mx6_r.o
 obj-$(CONFIG_MACH_MX6_UTC) += board-mx6_utc.o
 obj-$(CONFIG_MACH_MX6_S) += board-mx6_s.o
 obj-$(CONFIG_MACH_MX6_SP) += board-mx6_sp.o
+obj-$(CONFIG_MACH_MX6_MCS) += board-mx6_mcs.o
 obj-$(CONFIG_MACH_MX6_OC) += board-mx6_oc.o
 obj-$(CONFIG_MACH_MX6_NIT6XLITE) += board-mx6_nit6xlite.o
 obj-$(CONFIG_MACH_MX6Q_SABRESD) += board-mx6q_sabresd.o mx6q_sabresd_pmic_pfuze100.o
