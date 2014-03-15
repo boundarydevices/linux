@@ -132,7 +132,7 @@ struct gpio init_gpios[] __initdata = {
 	{.label = "touch_reset",	.gpio = TOUCH_RESET,	.flags = GPIOF_HIGH},	/* GPIO1[4]: GPIO_4 - active low */
 	{.label = "touch_irq",		.gpio = TOUCH_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO1[9]: GPIO_9 - active low */
 	{.label = "usb_hub_reset",	.gpio = USB_HUB_RESET,	.flags = 0},		/* GPIO7[12]: GPIO_17 - active low */
-	{.label = "ar1021_4wire",	.gpio = AR1021_5WIRE,	.flags = GPIOF_HIGH},	/* GPIO7[1]: SD3_DAT4 - default to 5-wire */
+	{.label = "ar1021_5wire",	.gpio = AR1021_5WIRE,	.flags = GPIOF_DIR_IN},	/* GPIO7[1]: SD3_DAT4 - 1 == 5-wire */
 };
 
 

@@ -106,7 +106,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	 */
 	MX6PAD(GPIO_5__I2C3_SCL),		/* GPIO1[5] */
 	MX6PAD(GPIO_16__I2C3_SDA),		/* GPIO7[11] */
-	NEW_PAD_CTRL(MX6PAD(SD3_DAT4__GPIO_7_1), WEAK), /* AR1021 4/5 wire select */
+	MX6PAD(SD3_DAT4__GPIO_7_1), 		/* AR1021 4/5 wire select */
 
 	/* PCIE */
 	NEW_PAD_CTRL(MX6PAD(EIM_D22__GPIO_3_22), WEAK),		/* Reset - active low */
