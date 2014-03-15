@@ -95,6 +95,8 @@
 
 #define GP_KEY_ONOFF		IMX_GPIO_NR(4, 15)
 
+#define GP_USB_OTG_PWR		IMX_GPIO_NR(1, 1)
+
 #include "pads-mx6_mcs.h"
 #define FOR_DL_SOLO
 #include "pads-mx6_mcs.h"
@@ -308,6 +310,7 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 
 static void usbotg_vbus(bool on)
 {
+	gpio_set_value(GP_USB_OTG_PWR, on ? 1 : 0);
 }
 
 static void __init init_usb(void)
