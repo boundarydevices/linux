@@ -106,6 +106,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	 */
 	MX6PAD(GPIO_5__I2C3_SCL),		/* GPIO1[5] */
 	MX6PAD(GPIO_16__I2C3_SDA),		/* GPIO7[11] */
+	NEW_PAD_CTRL(MX6PAD(SD3_DAT4__GPIO_7_1), WEAK), /* AR1021 4/5 wire select */
 
 	/* PCIE */
 	NEW_PAD_CTRL(MX6PAD(EIM_D22__GPIO_3_22), WEAK),		/* Reset - active low */
@@ -161,7 +162,6 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	/* USB OTG */
 	MX6PAD(GPIO_1__USBOTG_ID),
 
-	NEW_PAD_CTRL(MX6PAD(SD3_DAT4__GPIO_7_1), WEAK), /* NC: labelled SD3_WP */
 	NEW_PAD_CTRL(MX6PAD(NANDF_D7__GPIO_2_7), WEAK), /* NC: labelled SD4_WP */
 
 	/*
