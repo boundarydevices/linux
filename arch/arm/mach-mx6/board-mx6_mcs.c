@@ -59,6 +59,7 @@
 #include <mach/iomux-mx6q.h>
 #include <mach/iomux-mx6dl.h>
 #include <mach/imx-uart.h>
+#include <mach/system.h>
 #include <mach/viv_gpu.h>
 #include <mach/ipu-v3.h>
 
@@ -90,6 +91,8 @@
 #define USB_HUB_RESET		IMX_GPIO_NR(7, 12)	/* GPIO_17 - active low */
 
 #define AR1021_5WIRE		IMX_GPIO_NR(7, 1)	/* SD3_DAT4 - low is 4-wire */
+
+#define GP_KEY_ONOFF		IMX_GPIO_NR(4, 15)
 
 #include "pads-mx6_mcs.h"
 #define FOR_DL_SOLO
@@ -514,6 +517,32 @@ static const struct imxuart_platform_data uart5_data __initconst = {
 	.rs485_txen_levels = M_TX_EN,
 };
 
+static void poweroff(void)
+{
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	int waspressed = 0;
+	int i;
+	for (i=0; i < num_registered_fb; i++) {
+		if (registered_fb[i])
+                        fb_blank(registered_fb[i],FB_BLANK_POWERDOWN);
+	}
+
+	while (1) {
+		int pressed=(0 == gpio_get_value(GP_KEY_ONOFF));
+		if (!pressed && waspressed) {
+			break;
+		}
+		if (waspressed != pressed) {
+			waspressed=pressed;
+		} else {
+			dsb();
+			isb();
+		}
+	}
+	arch_reset('h',"");
+#endif
+}
+
 /*!
  * Board specific initialization.
  */
@@ -608,6 +637,7 @@ static void __init board_init(void)
 		clk_set_rate(clko2, rate);
 		clk_enable(clko2);
 	}
+	pm_power_off = poweroff;
 	imx6q_add_busfreq();
 	imx6q_add_pcie(&pcie_data);
 
