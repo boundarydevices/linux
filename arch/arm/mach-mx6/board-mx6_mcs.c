@@ -200,6 +200,7 @@ static const struct anatop_thermal_platform_data
 		.name = "anatop_thermal",
 };
 
+#ifdef CONFIG_FEC
 static int fec_phy_init(struct phy_device *phydev)
 {
 	/* prefer master mode */
@@ -225,6 +226,7 @@ static struct fec_platform_data fec_data __initdata = {
 	.phy = PHY_INTERFACE_MODE_RGMII,
 	.phy_irq = gpio_to_irq(ENET_PHY_IRQ)
 };
+#endif
 
 static int spi_cs[] = {
 	ST_ECSPI1_CS1,
@@ -563,7 +565,10 @@ static void __init board_init(void)
 	spi_device_init();
 
 	imx6q_add_anatop_thermal_imx(1, &anatop_thermal_data);
+#ifdef CONFIG_FEC
 	imx6_init_fec(fec_data);
+#endif
+
 	imx6q_add_pm_imx(0, &pm_data);
 	imx6q_add_sdhci_usdhc_imx(2, &sd3_data);
 	imx6q_add_sdhci_usdhc_imx(1, &sd2_data);
