@@ -20,6 +20,7 @@
 #include <linux/sched.h>
 #include <linux/delay.h>
 #include <linux/pm.h>
+#include <linux/console.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/init.h>
@@ -522,6 +523,7 @@ static void poweroff(void)
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
 	int waspressed = 0;
 	int i;
+	console_lock();
 	for (i=0; i < num_registered_fb; i++) {
 		if (registered_fb[i])
                         fb_blank(registered_fb[i],FB_BLANK_POWERDOWN);
