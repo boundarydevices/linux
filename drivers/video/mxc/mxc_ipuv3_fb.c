@@ -856,7 +856,7 @@ static int mxcfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	if (var->xres_virtual < var->xres)
 		var->xres_virtual = var->xres;
 
-	if (var->yres_virtual < var->yres)
+	if (var->yres_virtual <= var->yres)
 		var->yres_virtual = var->yres * 3;
 
 	if ((var->bits_per_pixel != 32) && (var->bits_per_pixel != 24) &&
