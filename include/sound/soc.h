@@ -1186,6 +1186,20 @@ static inline bool snd_soc_volsw_is_stereo(struct soc_mixer_control *mc)
 	return 1;
 }
 
+/**
+ * snd_soc_kcontrol_codec() - Returns the CODEC that registered the control
+ * @kcontrol: The control for which to get the CODEC
+ *
+ * Note: This function will only work correctly if the control has been
+ * registered with snd_soc_add_codec_controls() or via table based setup of
+ * snd_soc_codec_driver. Otherwise the behavior is undefined.
+ */
+static inline struct snd_soc_codec *snd_soc_kcontrol_codec(
+	struct snd_kcontrol *kcontrol)
+{
+	return snd_kcontrol_chip(kcontrol);
+}
+
 int snd_soc_util_init(void);
 void snd_soc_util_exit(void);
 
