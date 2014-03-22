@@ -81,6 +81,7 @@
 #define WL_BT_RESET		IMX_GPIO_NR(6, 8)	/* NANDF_ALE - active low */
 #define WL_BT_REG_EN		IMX_GPIO_NR(6, 15)	/* NANDF_CS2 - active high */
 #define WL_BT_WAKE_IRQ		IMX_GPIO_NR(6, 16)	/* NANDF_CS3 - active low */
+#define WL_BT_WAKE		IMX_GPIO_NR(2, 2)	/* NANDF_D2 - active high: keeps device awake */
 
 #define WL_EN			IMX_GPIO_NR(6, 7)	/* NANDF_CLE - active high */
 #define WL_CLK_REQ_IRQ		IMX_GPIO_NR(6, 9)	/* NANDF_WP_B - active low */
@@ -592,10 +593,12 @@ static void __init mx6_board_init(void)
 	gpio_request(WL_EN, "wl-en");
 	gpio_request(WL_BT_REG_EN, "bt-reg-en");
 	gpio_request(WL_BT_RESET, "bt-reset");
+	gpio_request(WL_BT_WAKE, "bt-wake");
 
 	gpio_direction_output(WL_EN, 1);		/* momentarily enable */
 	gpio_direction_output(WL_BT_REG_EN, 1);
         gpio_direction_output(WL_BT_RESET, 1);
+        gpio_direction_output(WL_BT_WAKE, 1);
 
 	mdelay(2);
 	gpio_set_value(WL_EN, 0);
