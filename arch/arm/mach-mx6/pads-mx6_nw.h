@@ -186,6 +186,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	NEW_PAD_CTRL(MX6PAD(NANDF_ALE__GPIO_6_8), WEAK),	/* BT_RESET */
 	NEW_PAD_CTRL(MX6PAD(NANDF_CS2__GPIO_6_15), WEAK),	/* BT_REG_EN */
 	NEW_PAD_CTRL(MX6PAD(NANDF_CS3__GPIO_6_16), WEAK_IRQ),	/* BT_WAKE_IRQ */
+	NEW_PAD_CTRL(MX6PAD(NANDF_D2__GPIO_2_2), WEAK),	/* BT_WAKE (keep device awake) */
 
 	/* Wireless - WiFi - Broadcom */
 	SD_PINS(2, USDHC_PAD_CTRL_22KPU_40OHM_50MHZ),
@@ -194,7 +195,6 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	NEW_PAD_CTRL(MX6PAD(NANDF_CS1__GPIO_6_14), WEAK_IRQ),	/* WL_WAKE_IRQ */
 	NEW_PAD_CTRL(MX6PAD(NANDF_D0__GPIO_2_0), WEAK),	/* Reserved */
 	NEW_PAD_CTRL(MX6PAD(NANDF_D1__GPIO_2_1), WEAK),	/* Reserved */
-	NEW_PAD_CTRL(MX6PAD(NANDF_D2__GPIO_2_2), WEAK),	/* Reserved */
 	NEW_PAD_CTRL(MX6PAD(NANDF_D3__GPIO_2_3), WEAK),	/* Reserved */
 	NEW_PAD_CTRL(MX6PAD(NANDF_D4__GPIO_2_4), WEAK),	/* Reserved */
 
