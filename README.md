@@ -6,7 +6,7 @@ Boundary Devices Kernel tree for i.MX6.
 This repository contains kernel source trees for Boundary Devices'
 i.MX6 based boards: the [SABRE Lite][sabrelite], [Nitrogen6X][nitrogen6x],
 [Nitrogen6X SOM][nitrogen6x-som] and [Nitrogen6 Lite][nitrogen6-lite]
-based largely on Freescale's kernel trees at [http://git.freescale.com/][freescale].
+based largely on Freescale's kernel trees at [git.freescale.com][freescale].
 
 Latest kernel releases:
 
