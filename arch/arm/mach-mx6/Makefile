@@ -11,6 +11,7 @@ obj-$(CONFIG_ARCH_MX6) += clock.o mx6_suspend.o clock_mx6sl.o
 obj-$(CONFIG_MACH_MX6Q_ARM2) += board-mx6q_arm2.o
 obj-$(CONFIG_MACH_MX6SL_ARM2) += board-mx6sl_arm2.o mx6sl_arm2_pmic_pfuze100.o
 obj-$(CONFIG_MACH_MX6SL_EVK) += board-mx6sl_evk.o mx6sl_evk_pmic_pfuze100.o
+obj-$(CONFIG_MACH_MX6Q_MED) += board-mx6q_med.o
 obj-$(CONFIG_MACH_MX6Q_SABRELITE) += board-mx6q_sabrelite.o
 obj-$(CONFIG_MACH_MX6_NITROGEN6X) += board-mx6_nitrogen6x.o
 obj-$(CONFIG_MACH_MX6_OC) += board-mx6_oc.o
