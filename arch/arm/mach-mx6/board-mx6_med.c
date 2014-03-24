@@ -753,7 +753,6 @@ static void __init board_init(void)
 	}
 	imx6q_add_v4l2_capture(0, &capture_data[0]);
 	imx6q_add_v4l2_capture(1, &capture_data[1]);
-	imx6q_add_imx_snvs_rtc();
 
 	imx6q_add_imx_caam();
 
