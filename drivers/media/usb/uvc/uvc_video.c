@@ -1185,6 +1185,17 @@ static int uvc_video_encode_data(struct uvc_streaming *stream,
  */
 
 /*
+ * Set error flag for incomplete buffer.
+ */
+static void uvc_video_validate_buffer(const struct uvc_streaming *stream,
+				      struct uvc_buffer *buf)
+{
+	if (stream->ctrl.dwMaxVideoFrameSize != buf->bytesused &&
+	    !(stream->cur_format->flags & UVC_FMT_FLAG_COMPRESSED))
+		buf->error = 1;
+}
+
+/*
  * Completion handler for video URBs.
  */
 static void uvc_video_decode_isoc(struct urb *urb, struct uvc_streaming *stream,
@@ -1227,6 +1238,7 @@ static void uvc_video_decode_isoc(struct urb *urb, struct uvc_streaming *stream,
 			ret = uvc_video_decode_start(stream, buf, mem,
 				urb->iso_frame_desc[i].actual_length);
 			if (ret == -EAGAIN) {
+				uvc_video_validate_buffer(stream, buf);
 				uvc_put_buffer(&stream->queue);
 				buf = uvc_get_buffer(&stream->queue, urb_buf);
 			}
@@ -1244,14 +1256,7 @@ static void uvc_video_decode_isoc(struct urb *urb, struct uvc_streaming *stream,
 			urb->iso_frame_desc[i].actual_length);
 
 		if (buf->ready) {
-			if (stream->ctrl.dwMaxVideoFrameSize != buf->bytesused
-					&& !(stream->cur_format->flags &
-					UVC_FMT_FLAG_COMPRESSED)) {
-				buf->error = 1;
-				pr_err("%s: Bad frame size %x\n", __func__, buf->bytesused);
-			} else {
-				if (0) pr_info("%s: error=%x, bytesused=%x\n", __func__, buf->error, buf->bytesused);
-			}
+			uvc_video_validate_buffer(stream, buf);
 			uvc_put_buffer(&stream->queue);
 		}
 	}
