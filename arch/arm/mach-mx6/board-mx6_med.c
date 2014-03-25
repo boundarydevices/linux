@@ -157,6 +157,7 @@ static struct esdhc_platform_data sd3_data = {
 	.wp_gpio = -1,
 	.always_present = 1,
 	.keep_power_at_suspend = 1,
+	.support_18v = 1,
 	.support_8bit = 1,
 	.platform_pad_change = plt_sd_pad_change,
 };
@@ -322,10 +323,7 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 
 static void usbotg_vbus(bool on)
 {
-	if (on)
-		gpio_set_value(USB_OTG_PWR, 1);
-	else
-		gpio_set_value(USB_OTG_PWR, 0);
+	gpio_set_value(USB_OTG_PWR, (0 != on));
 }
 
 static void __init init_usb(void)
@@ -349,7 +347,7 @@ static void __init init_usb(void)
 }
 
 static struct viv_gpu_platform_data imx6_gpu_pdata __initdata = {
-	.reserved_mem_size = SZ_128M + SZ_64M - SZ_16M,
+	.reserved_mem_size = SZ_128M,
 };
 
 static struct imx_asrc_platform_data imx_asrc_data = {
@@ -357,12 +355,21 @@ static struct imx_asrc_platform_data imx_asrc_data = {
 	.clk_map_ver = 2,
 };
 
-static struct ipuv3_fb_platform_data fb_data = {
-	.disp_dev = "ldb",
-	.interface_pix_fmt = IPU_PIX_FMT_RGB666,
-	.mode_str = "LDB-WXGA",
-	.default_bpp = 16,
+static struct ipuv3_fb_platform_data fb_data[] = {
+	{/*fb0*/
+	.disp_dev = "hdmi",
+	.interface_pix_fmt = IPU_PIX_FMT_RGB24,
+	.mode_str = "1920x1080M@60",
+	.default_bpp = 32,
 	.int_clk = false,
+	},
+	{/*fb0*/
+	.disp_dev = "hdmi",
+	.interface_pix_fmt = IPU_PIX_FMT_RGB24,
+	.mode_str = "1280x720M@60",
+	.default_bpp = 32,
+	.int_clk = false,
+	},
 };
 
 static void hdmi_init(int ipu_id, int disp_id)
@@ -424,14 +431,8 @@ static struct fsl_mxc_ldb_platform_data ldb_data = {
 	.sec_disp_id = 1,
 };
 
-static struct imx_ipuv3_platform_data ipu_data[] = {
-	{
+static struct imx_ipuv3_platform_data ipu_data = {
 	.rev = 4,
-	.csi_clk[0] = "clko2_clk",
-	}, {
-	.rev = 4,
-	.csi_clk[0] = "clko2_clk",
-	},
 };
 
 static struct ion_platform_data imx_ion_data = {
@@ -444,21 +445,6 @@ static struct ion_platform_data imx_ion_data = {
 		},
 	},
 };
-
-static struct fsl_mxc_capture_platform_data capture_data[] = {
-	{
-		.csi = 0,
-		.ipu = 0,
-		.mclk_source = 0,
-		.is_mipi = 0,
-	}, {
-		.csi = 1,
-		.ipu = 0,
-		.mclk_source = 0,
-		.is_mipi = 1,
-	},
-};
-
 
 struct imx_vout_mem {
        resource_size_t res_mbase;
@@ -666,6 +652,7 @@ static void __init fixup_board(struct machine_desc *desc, struct tag *tags,
 	char *str;
 	struct tag *t;
 
+pr_err("%s:%s\n", __FILE__, __func__);
 	for_each_tag(t, tags) {
 		if (t->hdr.tag == ATAG_CMDLINE) {
 			/* GPU reserved memory */
@@ -723,6 +710,7 @@ static void __init board_init(void)
 	int rate;
 	struct platform_device *voutdev;
 
+pr_err("%s:%s\n", __FILE__, __func__);
 	IOMUX_SETUP(common_pads);
 
 	audio_data.ext_port = 3;
@@ -733,12 +721,14 @@ static void __init board_init(void)
 	soc_reg_id = dvfscore_data.soc_id;
 	pu_reg_id = dvfscore_data.pu_id;
 
+	imx6q_add_imx_uart(0, NULL);
 	imx6q_add_imx_uart(1, NULL);
 	imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
 	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
-	imx6q_add_ipuv3(0, &ipu_data[0]);
-	imx6q_add_ipuv3(1, &ipu_data[1]);
-	imx6q_add_ipuv3fb(0, &fb_data);
+	imx6q_add_ipuv3(0, &ipu_data);
+	imx6q_add_ipuv3(1, &ipu_data);
+	imx6q_add_ipuv3fb(0, &fb_data[0]);
+	imx6q_add_ipuv3fb(1, &fb_data[0]);
 	imx6q_add_vdoa();
 	imx6q_add_ldb(&ldb_data);
 
@@ -751,11 +741,10 @@ static void __init board_init(void)
                                             (DMA_MEMORY_MAP |
                                              DMA_MEMORY_EXCLUSIVE));
 	}
-	imx6q_add_v4l2_capture(0, &capture_data[0]);
-	imx6q_add_v4l2_capture(1, &capture_data[1]);
 
 	imx6q_add_imx_caam();
 
+pr_err("%s:%s: add i2c\n", __FILE__, __func__);
 	imx6q_add_imx_i2c(0, &i2c_data);
 	imx6q_add_imx_i2c(1, &i2c_data);
 	imx6q_add_imx_i2c(2, &i2c_data);
@@ -800,6 +789,7 @@ static void __init board_init(void)
 	imx6q_add_ion(0, &imx_ion_data,
 		sizeof(imx_ion_data) + sizeof(struct ion_platform_heap));
 
+pr_err("%s:%s: add buttons\n", __FILE__, __func__);
 	add_device_buttons();
 
 	imx6q_add_hdmi_soc();
@@ -825,12 +815,14 @@ static void __init board_init(void)
 	imx6q_add_perfmon(2);
 
 	imx6_add_armpmu();
+pr_err("%s:%s: done with init\n", __FILE__, __func__);
 }
 
 extern void __iomem *twd_base;
 static void __init timer_init(void)
 {
 	struct clk *uart_clk;
+pr_err("%s:%s\n", __FILE__, __func__);
 #ifdef CONFIG_LOCAL_TIMERS
 	twd_base = ioremap(LOCAL_TWD_ADDR, SZ_256);
 	BUG_ON(!twd_base);
@@ -841,13 +833,14 @@ static void __init timer_init(void)
 	early_console_setup(UART2_BASE_ADDR, uart_clk);
 }
 
-static struct sys_timer timer = {
+static struct sys_timer mx6_timer = {
 	.init   = timer_init,
 };
 
 static void __init reserve(void)
 {
 	phys_addr_t phys;
+pr_err("%s:%s\n", __FILE__, __func__);
 #if defined(CONFIG_MXC_GPU_VIV) || defined(CONFIG_MXC_GPU_VIV_MODULE)
 	if (imx6_gpu_pdata.reserved_mem_size) {
 		phys = memblock_alloc_base(imx6_gpu_pdata.reserved_mem_size,
@@ -864,14 +857,10 @@ static void __init reserve(void)
 		imx_ion_data.heaps[0].base = phys;
 	}
 #endif
-
-	phys = memblock_alloc(20*SZ_1M,SZ_4K);
-	memblock_remove(phys, fb_data.res_size[0]);
-	fb_data.res_base[0] = phys;
 }
 
 /*
- * initialize __mach_desc_MX6Q_SABRELITE data structure.
+ * initialize board data structure.
  */
 MACHINE_START(MX6_MED, "Boundary Devices MED Board")
 	/* Maintainer: Boundary Devices */
@@ -880,6 +869,6 @@ MACHINE_START(MX6_MED, "Boundary Devices MED Board")
 	.map_io = mx6_map_io,
 	.init_irq = mx6_init_irq,
 	.init_machine = board_init,
-	.timer = &timer,
+	.timer = &mx6_timer,
 	.reserve = reserve,
 MACHINE_END
