@@ -170,6 +170,9 @@ struct gpio n6w_wl1271_gpios[] __initdata = {
 	{.label = "wl1271_wl_en",	.gpio = N6_WL1271_WL_EN,	.flags = 0},
 };
 
+static int forcen6 = 0;
+module_param(forcen6, int, S_IRUGO | S_IWUSR);
+
 int is_nitrogen6w(void)
 {
 	int ret = gpio_request_array(n6w_wl1271_gpios,
@@ -179,7 +182,7 @@ int is_nitrogen6w(void)
 				"%d) for n6w_wl1271_gpios\n", __func__, ret);
 		return ret;
 	}
-	ret = gpio_get_value(N6_WL1271_WL_IRQ);
+	ret = gpio_get_value(N6_WL1271_WL_IRQ) || forcen6;
 	if (ret <= 0) {
 		/* Sabrelite, not nitrogen6w */
 		gpio_free(N6_WL1271_WL_IRQ);
