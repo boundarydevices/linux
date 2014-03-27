@@ -17,18 +17,18 @@
 
 	pwm-backlight {
 		compatible = "pwm-backlight";
-		pwms = <&pwm3 0 5000000>;
-		brightness-levels = <0 4 8 16 32 64 128 255>;
-		default-brightness-level = <6>;
-		fb-names = "mxs-lcdif0";
-	};
-
-	backlight2 {
-		compatible = "pwm-backlight";
 		pwms = <&pwm4 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
 		default-brightness-level = <6>;
 		fb-names = "mxs-lcdif1";
+	};
+
+	backlight1 {
+		compatible = "pwm-backlight";
+		pwms = <&pwm3 0 5000000>;
+		brightness-levels = <0 4 8 16 32 64 128 255>;
+		default-brightness-level = <6>;
+		fb-names = "mxs-lcdif0";
 	};
 
 	hannstar_cabc {
@@ -519,7 +519,7 @@
 		     &pinctrl_lcdif_ctrl_0>;
 	lcd-supply = <&reg_lcd_3v3>;
 	display = <&display0>;
-	status = "okay";
+	status = "disabled";
 
 	display0: display {
 		bits-per-pixel = <32>;
@@ -552,7 +552,7 @@
 	status = "okay";
 
 	display1: display {
-		bits-per-pixel = <16>;
+		bits-per-pixel = <32>;
 		bus-width = <18>;
 	};
 };
