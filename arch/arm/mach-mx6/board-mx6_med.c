@@ -363,7 +363,7 @@ static struct ipuv3_fb_platform_data fb_data[] = {
 	{ /*fb0*/
 	.disp_dev = "ldb",
 	.interface_pix_fmt = IPU_PIX_FMT_RGB666,
-	.mode_str = "1024x600M@60",
+	.mode_str = "1280x800M@60",
 	.default_bpp = 32,
 	.int_clk = false,
 	.late_init = false,
