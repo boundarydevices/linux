@@ -146,6 +146,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(EIM_DA2__GPIO_3_2), /* output - 74LVC1G32 - WDT active low - reset to I.MX */
 	MX6PAD(EIM_DA1__GPIO_3_1), /* output - to NXP P4-30 */
 	MX6PAD(EIM_OE__GPIO_2_25), /* output - to NXP P4-31 */
+	MX6PAD(EIM_RW__GPIO_2_26), /* output - WDT_DISABLE */
 	MX6PAD(EIM_D20__GPIO_3_20), /* output - to NXP P1-10 */
 	MX6PAD(GPIO_18__GPIO_7_13), /* bidirectional - NXP P0-8 */
 	MX6PAD(NANDF_WP_B__GPIO_6_9), /* bidirectional - NXP P0-14 */
