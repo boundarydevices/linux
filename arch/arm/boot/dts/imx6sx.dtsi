@@ -44,6 +44,26 @@
 			device_type = "cpu";
 			reg = <0>;
 			next-level-cache = <&L2>;
+			operating-points = <
+				/* kHz   uV */
+				996000  1275000
+				792000  1175000
+				396000  975000
+			>;
+			fsl,soc-operating-points = <
+				/* ARM kHz      SOC-PU uV */
+				996000            1225000
+				792000            1175000
+				396000            1175000
+			>;
+			clocks = <&clks IMX6SX_CLK_ARM>, <&clks IMX6SX_CLK_PLL2_PFD2>,
+					 <&clks IMX6SX_CLK_STEP>, <&clks IMX6SX_CLK_PLL1_SW>,
+					 <&clks IMX6SX_CLK_PLL1_SYS>;
+			clock-names = "arm", "pll2_pfd2_396m", "step",
+						  "pll1_sw", "pll1_sys";
+			arm-supply = <&reg_arm>;
+			pu-supply = <&reg_pu>;
+			soc-supply = <&reg_soc>;
 		};
 	};
 
@@ -87,6 +107,23 @@
 		compatible = "simple-bus";
 		interrupt-parent = <&intc>;
 		ranges;
+		busfreq { /* BUSFREQ */
+			compatible = "fsl,imx6_busfreq";
+			clocks = <&clks IMX6SX_CLK_PLL2_BUS>, <&clks IMX6SX_CLK_PLL2_PFD2>,
+					<&clks IMX6SX_CLK_PLL2_198M>, <&clks IMX6SX_CLK_ARM>,
+					<&clks IMX6SX_CLK_PLL3_USB_OTG>, <&clks IMX6SX_CLK_PERIPH>,
+					<&clks IMX6SX_CLK_PERIPH_CLK2>, <&clks IMX6SX_CLK_PERIPH_CLK2_SEL>,
+					<&clks IMX6SX_CLK_OSC>, <&clks IMX6SX_CLK_PLL1_SYS>,
+					<&clks IMX6SX_CLK_PERIPH2>,
+					<&clks IMX6SX_CLK_AHB>, <&clks IMX6SX_CLK_OCRAM>,
+					<&clks IMX6SX_CLK_PLL1_SW>,
+					<&clks IMX6SX_CLK_PERIPH2_CLK2_SEL>, <&clks IMX6SX_CLK_PERIPH2_CLK2>,
+					<&clks IMX6SX_CLK_STEP>;
+			clock-names = "pll2_bus", "pll2_pfd2_396m", "pll2_198m", "arm", "pll3_usb_otg", "periph",
+						  "periph_clk2", "periph_clk2_sel", "osc", "pll1_sys", "periph2", "ahb", "ocram", "pll1_sw",
+						  "periph2_clk2_sel", "periph2_clk2", "step";
+			fsl,max_ddr_freq = <400000000>;
+		};
 
 		pmu {
 			compatible = "arm,cortex-a9-pmu";
@@ -428,6 +465,21 @@
 					anatop-max-voltage = <1450000>;
 				};
 
+				reg_pu: regulator-vddpu@140 {
+					compatible = "fsl,anatop-regulator";
+					regulator-name = "vddpu";
+					regulator-min-microvolt = <725000>;
+					regulator-max-microvolt = <1450000>;
+					anatop-reg-offset = <0x140>;
+					anatop-vol-bit-shift = <9>;
+					anatop-vol-bit-width = <5>;
+					anatop-delay-reg-offset = <0x170>;
+					anatop-delay-bit-shift = <26>;
+					anatop-delay-bit-width = <2>;
+					anatop-min-bit-val = <1>;
+					anatop-min-voltage = <725000>;
+					anatop-max-voltage = <1450000>;
+				};
 				reg_soc: regulator-vddsoc@140 {
 					compatible = "fsl,anatop-regulator";
 					regulator-name = "vddsoc";
@@ -1132,6 +1184,11 @@
 			clock-names = "pcie_ref_125m", "pcie_axi", "lvds_gate", "display_axi";
 			pcie-supply = <&reg_pcie>;
 			status = "disabled";
+		};
+		imx_ion {
+			compatible = "fsl,mxc-ion";
+			fsl,heap-id = <0>;
+			fsl,heap-cacheable = <1>;
 		};
 	};
 };
