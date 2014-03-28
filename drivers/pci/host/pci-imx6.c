@@ -433,15 +433,6 @@ static void imx6_pcie_init_phy(struct pcie_port *pp)
 			IMX6Q_GPR8_TX_SWING_LOW, 127 << 25);
 }
 
-static irqreturn_t imx_pcie_msi_irq_handler(int irq, void *arg)
-{
-	struct pcie_port *pp = arg;
-
-	dw_handle_msi_irq(pp);
-
-	return IRQ_HANDLED;
-}
-
 static int imx6_pcie_wait_for_link(struct pcie_port *pp)
 {
 	int count = 200;
@@ -482,6 +473,13 @@ static int imx6_pcie_wait_for_link(struct pcie_port *pp)
 	}
 
 	return 0;
+}
+
+static irqreturn_t imx6_pcie_msi_handler(int irq, void *arg)
+{
+	struct pcie_port *pp = arg;
+
+	return dw_handle_msi_irq(pp);
 }
 
 static int imx6_pcie_start_link(struct pcie_port *pp)
@@ -671,24 +669,18 @@ static int imx6_add_pcie_port(struct pcie_port *pp,
 {
 	int ret;
 
-	pp->irq = platform_get_irq(pdev, 0);
-	if (!pp->irq) {
-		dev_err(&pdev->dev, "failed to get irq\n");
+	pp->msi_irq = platform_get_irq_byname(pdev, "msi");
+	if (pp->msi_irq <= 0) {
+		dev_err(&pdev->dev, "failed to get MSI irq\n");
 		return -ENODEV;
 	}
-
+	pp->irq = pp->msi_irq + 3;
 	if (IS_ENABLED(CONFIG_PCI_MSI)) {
-		pp->msi_irq = pp->irq - 3;
-		if (!pp->msi_irq) {
-			dev_err(&pdev->dev, "failed to get msi irq\n");
-			return -ENODEV;
-		}
-
 		ret = devm_request_irq(&pdev->dev, pp->msi_irq,
-					imx_pcie_msi_irq_handler,
-					IRQF_SHARED, "imx6q-pcie", pp);
+		                       imx6_pcie_msi_handler,
+		                       IRQF_SHARED, "mx6-pcie-msi", pp);
 		if (ret) {
-			dev_err(&pdev->dev, "failed to request msi irq\n");
+			dev_err(&pdev->dev, "failed to request MSI irq\n");
 			return ret;
 		}
 	}
