@@ -73,6 +73,8 @@ static int fusion_F0710A_register_input(void)
 	set_bit(EV_KEY, dev->evbit);
 	set_bit(EV_ABS, dev->evbit);
 
+	input_set_abs_params(dev, ABS_X, 0, fusion_F0710A.info.xres-1, 0, 0);
+	input_set_abs_params(dev, ABS_Y, 0, fusion_F0710A.info.yres-1, 0, 0);
 	input_set_abs_params(dev, ABS_MT_POSITION_X, 0, fusion_F0710A.info.xres-1, 0, 0);
 	input_set_abs_params(dev, ABS_MT_POSITION_Y, 0, fusion_F0710A.info.yres-1, 0, 0);
 	input_set_abs_params(dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
