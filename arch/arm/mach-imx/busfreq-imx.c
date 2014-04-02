@@ -834,10 +834,10 @@ static int __init imx_dt_find_ddr_sram(unsigned long node,
 		const char *uname, int depth, void *data)
 {
 	unsigned long ddr_iram_addr;
-	__be32 *prop;
+	const __be32 *prop;
 
 	if (of_flat_dt_match(node, ddr_freq_iram_match)) {
-		unsigned long len;
+		int len;
 		prop = of_get_flat_dt_prop(node, "reg", &len);
 		if (prop == NULL || len != (sizeof(unsigned long) * 2))
 			return EINVAL;

@@ -879,7 +879,7 @@ static int __init imx6_dt_find_lpsram(unsigned long node, const char *uname,
 				      int depth, void *data)
 {
 	unsigned long lpram_addr;
-	__be32 *prop;
+	const __be32 *prop;
 
 	if (of_flat_dt_match(node, low_power_ocram_match)) {
 		prop = of_get_flat_dt_prop(node, "reg", NULL);
