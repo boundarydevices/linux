@@ -252,6 +252,10 @@ config MACH_MX6_NITROGEN6X
 	  This includes specific configurations for the board and its 
 	  peripherals and supports 6Quad/6Dual/6DualLite/6Solo variants.
 
+config GPIO_ON_RGBIF
+        bool "Configure RGB panel interface as GPIO/SPI/I2C"
+        depends on MACH_MX6_NITROGEN6X
+
 config MACH_MX6_OC
 	bool "Support i.MX 6Quad OC platform"
 	select ARCH_MX6Q
