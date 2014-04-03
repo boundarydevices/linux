@@ -65,6 +65,7 @@
 #include <mach/ahci_sata.h>
 #include <mach/ipu-v3.h>
 #include <mach/mxc_hdmi.h>
+#include <mach/system.h>
 #include <mach/mxc_asrc.h>
 #include <linux/i2c/tsc2007.h>
 #include <linux/wl12xx.h>
@@ -1409,6 +1410,32 @@ struct gpio initial_gpios[] __initdata = {
 	{.label = "ov5640_csi1_reset",	.gpio = GP_CSI1_RST,	.flags = 0},
 };
 
+static void poweroff(void)
+{
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	int waspressed = 0;
+	int i;
+	for (i=0; i < num_registered_fb; i++) {
+		if (registered_fb[i])
+                        fb_blank(registered_fb[i],FB_BLANK_POWERDOWN);
+	}
+
+	while (1) {
+		int pressed=(0 == gpio_get_value(GP_ONOFF_KEY));
+		if (!pressed && waspressed) {
+			break;
+		}
+		if (waspressed != pressed) {
+			waspressed=pressed;
+		} else {
+			dsb();
+			isb();
+		}
+	}
+	arch_reset('h',"");
+#endif
+}
+
 /*!
  * Board specific initialization.
  */
@@ -1621,6 +1648,7 @@ static void __init board_init(void)
 	rate = clk_round_rate(clko2, 24000000);
 	clk_set_rate(clko2, rate);
 	clk_enable(clko2);
+	pm_power_off = poweroff;
 	imx6q_add_busfreq();
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
