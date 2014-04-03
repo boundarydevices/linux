@@ -239,6 +239,18 @@ config TOUCHSCREEN_S3C2410
 	  To compile this driver as a module, choose M here: the
 	  module will be called s3c2410_ts.
 
+config TOUCHSCREEN_GOODIX_9XX
+	tristate "Goodix 9XX USB Touch screen"
+	select USB
+	help
+	  Say Y here if you have a Goodix USB touch screen connected
+          to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called gt9xx_usb.
+
 config TOUCHSCREEN_GUNZE
 	tristate "Gunze AHL-51S touchscreen"
 	select SERIO
