@@ -21,6 +21,15 @@ config SUSPEND_FREEZER
 config HAS_WAKELOCK
 	bool
 	default y
+config HAS_EARLYSUSPEND
+	bool
+	default y
+config EARLYSUSPEND
+       bool
+       default y
+config FB_EARLYSUSPEND
+        bool
+	default y
 
 config WAKELOCK
 	bool
