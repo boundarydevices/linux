@@ -164,6 +164,7 @@ config VXLAN
 
 config NETCONSOLE
 	tristate "Network console logging support"
+	depends on !PREEMPT_RT_FULL
 	---help---
 	If you want to log kernel messages over the network, enable this.
 	See <file:Documentation/networking/netconsole.txt> for details.

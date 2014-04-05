@@ -50,7 +50,8 @@
 #include <linux/compiler.h>
 #include <linux/workqueue.h>
 
-#if defined(CC_HAVE_ASM_GOTO) && defined(CONFIG_JUMP_LABEL)
+#if defined(CC_HAVE_ASM_GOTO) && defined(CONFIG_JUMP_LABEL) && \
+	!defined(CONFIG_PREEMPT_BASE)
 
 struct static_key {
 	atomic_t enabled;

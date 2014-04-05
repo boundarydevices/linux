@@ -3,6 +3,14 @@
 
 #include <linux/thread_info.h>
 
+#if defined CONFIG_PREEMPT_RT_FULL && defined CONFIG_HIGHMEM
+void switch_kmaps(struct task_struct *prev_p, struct task_struct *next_p);
+#else
+static inline void
+switch_kmaps(struct task_struct *prev_p, struct task_struct *next_p) { }
+#endif
+
+
 /*
  * switch_to(prev, next) should switch from task `prev' to `next'
  * `prev' will never be the same as `next'.  schedule() itself
@@ -12,6 +20,7 @@ extern struct task_struct *__switch_to(struct task_struct *, struct thread_info 
 
 #define switch_to(prev,next,last)					\
 do {									\
+	switch_kmaps(prev, next);					\
 	last = __switch_to(prev,task_thread_info(prev), task_thread_info(next));	\
 } while (0)
 

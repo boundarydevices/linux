@@ -89,7 +89,7 @@ asmlinkage void __kprobes do_page_fault(struct pt_regs *regs, unsigned long writ
 	 * If we're in an interrupt or have no user
 	 * context, we must not take the fault..
 	 */
-	if (in_atomic() || !mm)
+	if (!mm || pagefault_disabled())
 		goto bad_area_nosemaphore;
 
 retry:

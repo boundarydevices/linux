@@ -296,7 +296,8 @@ static inline int do_exception(struct pt_regs *regs, int access)
 	 * user context.
 	 */
 	fault = VM_FAULT_BADCONTEXT;
-	if (unlikely(!user_space_fault(trans_exc_code) || in_atomic() || !mm))
+	if (unlikely(!user_space_fault(trans_exc_code) ||
+		     !mm || pagefault_disabled()))
 		goto out;
 
 	address = trans_exc_code & __FAIL_ADDR_MASK;
@@ -440,7 +441,8 @@ void __kprobes do_asce_exception(struct pt_regs *regs)
 	clear_tsk_thread_flag(current, TIF_PER_TRAP);
 
 	trans_exc_code = regs->int_parm_long;
-	if (unlikely(!user_space_fault(trans_exc_code) || in_atomic() || !mm))
+	if (unlikely(!user_space_fault(trans_exc_code) || !mm ||
+		     pagefault_disabled()))
 		goto no_context;
 
 	down_read(&mm->mmap_sem);
