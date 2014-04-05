@@ -23,8 +23,7 @@
  *     this 32 bit free-running counter. the second channel is not used.
  *
  *   - The third channel may be used to provide a 16-bit clockevent
- *     source, used in either periodic or oneshot mode.  This runs
- *     at 32 KiHZ, and can handle delays of up to two seconds.
+ *     source, used in either periodic or oneshot mode.
  *
  * A boot clocksource and clockevent source are also currently needed,
  * unless the relevant platforms (ARM/AT91, AVR32/AT32) are changed so
@@ -74,6 +73,7 @@ static struct clocksource clksrc = {
 struct tc_clkevt_device {
 	struct clock_event_device	clkevt;
 	struct clk			*clk;
+	u32				freq;
 	void __iomem			*regs;
 };
 
@@ -82,13 +82,6 @@ static struct tc_clkevt_device *to_tc_clkevt(struct clock_event_device *clkevt)
 	return container_of(clkevt, struct tc_clkevt_device, clkevt);
 }
 
-/* For now, we always use the 32K clock ... this optimizes for NO_HZ,
- * because using one of the divided clocks would usually mean the
- * tick rate can never be less than several dozen Hz (vs 0.5 Hz).
- *
- * A divided clock could be good for high resolution timers, since
- * 30.5 usec resolution can seem "low".
- */
 static u32 timer_clock;
 
 static void tc_mode(enum clock_event_mode m, struct clock_event_device *d)
@@ -111,11 +104,12 @@ static void tc_mode(enum clock_event_mode m, struct clock_event_device *d)
 	case CLOCK_EVT_MODE_PERIODIC:
 		clk_enable(tcd->clk);
 
-		/* slow clock, count up to RC, then irq and restart */
+		/* count up to RC, then irq and restart */
 		__raw_writel(timer_clock
 				| ATMEL_TC_WAVE | ATMEL_TC_WAVESEL_UP_AUTO,
 				regs + ATMEL_TC_REG(2, CMR));
-		__raw_writel((32768 + HZ/2) / HZ, tcaddr + ATMEL_TC_REG(2, RC));
+		__raw_writel((tcd->freq + HZ/2)/HZ,
+			     tcaddr + ATMEL_TC_REG(2, RC));
 
 		/* Enable clock and interrupts on RC compare */
 		__raw_writel(ATMEL_TC_CPCS, regs + ATMEL_TC_REG(2, IER));
@@ -128,7 +122,7 @@ static void tc_mode(enum clock_event_mode m, struct clock_event_device *d)
 	case CLOCK_EVT_MODE_ONESHOT:
 		clk_enable(tcd->clk);
 
-		/* slow clock, count up to RC, then irq and stop */
+		/* count up to RC, then irq and stop */
 		__raw_writel(timer_clock | ATMEL_TC_CPCSTOP
 				| ATMEL_TC_WAVE | ATMEL_TC_WAVESEL_UP_AUTO,
 				regs + ATMEL_TC_REG(2, CMR));
@@ -157,8 +151,12 @@ static struct tc_clkevt_device clkevt = {
 		.name		= "tc_clkevt",
 		.features	= CLOCK_EVT_FEAT_PERIODIC
 					| CLOCK_EVT_FEAT_ONESHOT,
+#ifdef CONFIG_ATMEL_TCB_CLKSRC_USE_SLOW_CLOCK
 		/* Should be lower than at91rm9200's system timer */
 		.rating		= 125,
+#else
+		.rating		= 200,
+#endif
 		.set_next_event	= tc_next_event,
 		.set_mode	= tc_mode,
 	},
@@ -184,8 +182,9 @@ static struct irqaction tc_irqaction = {
 	.handler	= ch2_irq,
 };
 
-static void __init setup_clkevents(struct atmel_tc *tc, int clk32k_divisor_idx)
+static void __init setup_clkevents(struct atmel_tc *tc, int divisor_idx)
 {
+	unsigned divisor = atmel_tc_divisors[divisor_idx];
 	struct clk *t2_clk = tc->clk[2];
 	int irq = tc->irq[2];
 
@@ -322,8 +321,11 @@ static int __init tcb_clksrc_init(void)
 	clocksource_register_hz(&clksrc, divided_rate);
 
 	/* channel 2:  periodic and oneshot timer support */
+#ifdef CONFIG_ATMEL_TCB_CLKSRC_USE_SLOW_CLOCK
 	setup_clkevents(tc, clk32k_divisor_idx);
-
+#else
+	setup_clkevents(tc, best_divisor_idx);
+#endif
 	return 0;
 }
 arch_initcall(tcb_clksrc_init);

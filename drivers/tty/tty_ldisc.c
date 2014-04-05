@@ -197,9 +197,10 @@ static inline void tty_ldisc_put(struct tty_ldisc *ld)
 	WARN_ON(!atomic_dec_and_test(&ld->users));
 
 	ld->ops->refcount--;
+	raw_spin_unlock_irqrestore(&tty_ldisc_lock, flags);
+
 	module_put(ld->ops->owner);
 	kfree(ld);
-	raw_spin_unlock_irqrestore(&tty_ldisc_lock, flags);
 }
 
 static void *tty_ldiscs_seq_start(struct seq_file *m, loff_t *pos)

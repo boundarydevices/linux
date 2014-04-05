@@ -78,6 +78,9 @@ struct tvec_root {
 struct tvec_base {
 	spinlock_t lock;
 	struct timer_list *running_timer;
+#ifdef CONFIG_PREEMPT_RT_FULL
+	wait_queue_head_t wait_for_running_timer;
+#endif
 	unsigned long timer_jiffies;
 	unsigned long next_timer;
 	unsigned long active_timers;
@@ -720,6 +723,36 @@ static struct tvec_base *lock_timer_base(struct timer_list *timer,
 	}
 }
 
+#ifndef CONFIG_PREEMPT_RT_FULL
+static inline struct tvec_base *switch_timer_base(struct timer_list *timer,
+						  struct tvec_base *old,
+						  struct tvec_base *new)
+{
+	/* See the comment in lock_timer_base() */
+	timer_set_base(timer, NULL);
+	spin_unlock(&old->lock);
+	spin_lock(&new->lock);
+	timer_set_base(timer, new);
+	return new;
+}
+#else
+static inline struct tvec_base *switch_timer_base(struct timer_list *timer,
+						  struct tvec_base *old,
+						  struct tvec_base *new)
+{
+	/*
+	 * We cannot do the above because we might be preempted and
+	 * then the preempter would see NULL and loop forever.
+	 */
+	if (spin_trylock(&new->lock)) {
+		timer_set_base(timer, new);
+		spin_unlock(&old->lock);
+		return new;
+	}
+	return old;
+}
+#endif
+
 static inline int
 __mod_timer(struct timer_list *timer, unsigned long expires,
 						bool pending_only, int pinned)
@@ -739,12 +772,15 @@ __mod_timer(struct timer_list *timer, unsigned long expires,
 
 	debug_activate(timer, expires);
 
+	preempt_disable_rt();
 	cpu = smp_processor_id();
 
 #if defined(CONFIG_NO_HZ_COMMON) && defined(CONFIG_SMP)
 	if (!pinned && get_sysctl_timer_migration() && idle_cpu(cpu))
 		cpu = get_nohz_timer_target();
 #endif
+	preempt_enable_rt();
+
 	new_base = per_cpu(tvec_bases, cpu);
 
 	if (base != new_base) {
@@ -755,14 +791,8 @@ __mod_timer(struct timer_list *timer, unsigned long expires,
 		 * handler yet has not finished. This also guarantees that
 		 * the timer is serialized wrt itself.
 		 */
-		if (likely(base->running_timer != timer)) {
-			/* See the comment in lock_timer_base() */
-			timer_set_base(timer, NULL);
-			spin_unlock(&base->lock);
-			base = new_base;
-			spin_lock(&base->lock);
-			timer_set_base(timer, base);
-		}
+		if (likely(base->running_timer != timer))
+			base = switch_timer_base(timer, base, new_base);
 	}
 
 	timer->expires = expires;
@@ -945,6 +975,29 @@ void add_timer_on(struct timer_list *timer, int cpu)
 }
 EXPORT_SYMBOL_GPL(add_timer_on);
 
+#ifdef CONFIG_PREEMPT_RT_FULL
+/*
+ * Wait for a running timer
+ */
+static void wait_for_running_timer(struct timer_list *timer)
+{
+	struct tvec_base *base = timer->base;
+
+	if (base->running_timer == timer)
+		wait_event(base->wait_for_running_timer,
+			   base->running_timer != timer);
+}
+
+# define wakeup_timer_waiters(b)	wake_up(&(b)->wait_for_running_timer)
+#else
+static inline void wait_for_running_timer(struct timer_list *timer)
+{
+	cpu_relax();
+}
+
+# define wakeup_timer_waiters(b)	do { } while (0)
+#endif
+
 /**
  * del_timer - deactive a timer.
  * @timer: the timer to be deactivated
@@ -1002,7 +1055,7 @@ int try_to_del_timer_sync(struct timer_list *timer)
 }
 EXPORT_SYMBOL(try_to_del_timer_sync);
 
-#ifdef CONFIG_SMP
+#if defined(CONFIG_SMP) || defined(CONFIG_PREEMPT_RT_FULL)
 /**
  * del_timer_sync - deactivate a timer and wait for the handler to finish.
  * @timer: the timer to be deactivated
@@ -1062,7 +1115,7 @@ int del_timer_sync(struct timer_list *timer)
 		int ret = try_to_del_timer_sync(timer);
 		if (ret >= 0)
 			return ret;
-		cpu_relax();
+		wait_for_running_timer(timer);
 	}
 }
 EXPORT_SYMBOL(del_timer_sync);
@@ -1179,15 +1232,17 @@ static inline void __run_timers(struct tvec_base *base)
 			if (irqsafe) {
 				spin_unlock(&base->lock);
 				call_timer_fn(timer, fn, data);
+				base->running_timer = NULL;
 				spin_lock(&base->lock);
 			} else {
 				spin_unlock_irq(&base->lock);
 				call_timer_fn(timer, fn, data);
+				base->running_timer = NULL;
 				spin_lock_irq(&base->lock);
 			}
 		}
 	}
-	base->running_timer = NULL;
+	wakeup_timer_waiters(base);
 	spin_unlock_irq(&base->lock);
 }
 
@@ -1327,17 +1382,31 @@ unsigned long get_next_timer_interrupt(unsigned long now)
 	if (cpu_is_offline(smp_processor_id()))
 		return expires;
 
+#ifdef CONFIG_PREEMPT_RT_FULL
+	/*
+	 * On PREEMPT_RT we cannot sleep here. If the trylock does not
+	 * succeed then we return the worst-case 'expires in 1 tick'
+	 * value.  We use the rt functions here directly to avoid a
+	 * migrate_disable() call.
+	 */
+	if (!spin_do_trylock(&base->lock))
+		return  now + 1;
+#else
 	spin_lock(&base->lock);
+#endif
 	if (base->active_timers) {
 		if (time_before_eq(base->next_timer, base->timer_jiffies))
 			base->next_timer = __next_timer_interrupt(base);
 		expires = base->next_timer;
 	}
+#ifdef CONFIG_PREEMPT_RT_FULL
+	rt_spin_unlock(&base->lock);
+#else
 	spin_unlock(&base->lock);
+#endif
 
 	if (time_before_eq(expires, now))
 		return now;
-
 	return cmp_next_hrtimer_event(now, expires);
 }
 #endif
@@ -1353,13 +1422,13 @@ void update_process_times(int user_tick)
 
 	/* Note: this timer irq context must be accounted for as well. */
 	account_process_tick(p, user_tick);
+	scheduler_tick();
 	run_local_timers();
 	rcu_check_callbacks(cpu, user_tick);
-#ifdef CONFIG_IRQ_WORK
+#if defined(CONFIG_IRQ_WORK) && !defined(CONFIG_PREEMPT_RT_FULL)
 	if (in_irq())
 		irq_work_run();
 #endif
-	scheduler_tick();
 	run_posix_cpu_timers(p);
 }
 
@@ -1369,6 +1438,10 @@ void update_process_times(int user_tick)
 static void run_timer_softirq(struct softirq_action *h)
 {
 	struct tvec_base *base = __this_cpu_read(tvec_bases);
+
+#if defined(CONFIG_IRQ_WORK) && defined(CONFIG_PREEMPT_RT_FULL)
+	irq_work_run();
+#endif
 
 	hrtimer_run_pending();
 
@@ -1547,6 +1620,9 @@ static int __cpuinit init_timers_cpu(int cpu)
 		base = per_cpu(tvec_bases, cpu);
 	}
 
+#ifdef CONFIG_PREEMPT_RT_FULL
+	init_waitqueue_head(&base->wait_for_running_timer);
+#endif
 
 	for (j = 0; j < TVN_SIZE; j++) {
 		INIT_LIST_HEAD(base->tv5.vec + j);
@@ -1585,7 +1661,7 @@ static void __cpuinit migrate_timers(int cpu)
 
 	BUG_ON(cpu_online(cpu));
 	old_base = per_cpu(tvec_bases, cpu);
-	new_base = get_cpu_var(tvec_bases);
+	new_base = get_local_var(tvec_bases);
 	/*
 	 * The caller is globally serialized and nobody else
 	 * takes two locks at once, deadlock is not possible.
@@ -1606,7 +1682,7 @@ static void __cpuinit migrate_timers(int cpu)
 
 	spin_unlock(&old_base->lock);
 	spin_unlock_irq(&new_base->lock);
-	put_cpu_var(tvec_bases);
+	put_local_var(tvec_bases);
 }
 #endif /* CONFIG_HOTPLUG_CPU */
 

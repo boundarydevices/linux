@@ -1,15 +1,15 @@
 /*
  * include/linux/cpu.h - generic cpu definition
  *
- * This is mainly for topological representation. We define the 
- * basic 'struct cpu' here, which can be embedded in per-arch 
+ * This is mainly for topological representation. We define the
+ * basic 'struct cpu' here, which can be embedded in per-arch
  * definitions of processors.
  *
  * Basic handling of the devices is done in drivers/base/cpu.c
- * and system devices are handled in drivers/base/sys.c. 
+ * and system devices are handled in drivers/base/sys.c.
  *
  * CPUs are exported via sysfs in the class/cpu/devices/
- * directory. 
+ * directory.
  */
 #ifndef _LINUX_CPU_H_
 #define _LINUX_CPU_H_
@@ -177,6 +177,8 @@ extern void get_online_cpus(void);
 extern void put_online_cpus(void);
 extern void cpu_hotplug_disable(void);
 extern void cpu_hotplug_enable(void);
+extern void pin_current_cpu(void);
+extern void unpin_current_cpu(void);
 #define hotcpu_notifier(fn, pri)	cpu_notifier(fn, pri)
 #define register_hotcpu_notifier(nb)	register_cpu_notifier(nb)
 #define unregister_hotcpu_notifier(nb)	unregister_cpu_notifier(nb)
@@ -202,6 +204,8 @@ static inline void cpu_hotplug_driver_unlock(void)
 #define put_online_cpus()	do { } while (0)
 #define cpu_hotplug_disable()	do { } while (0)
 #define cpu_hotplug_enable()	do { } while (0)
+static inline void pin_current_cpu(void) { }
+static inline void unpin_current_cpu(void) { }
 #define hotcpu_notifier(fn, pri)	do { (void)(fn); } while (0)
 /* These aren't inline functions due to a GCC bug. */
 #define register_hotcpu_notifier(nb)	({ (void)(nb); 0; })

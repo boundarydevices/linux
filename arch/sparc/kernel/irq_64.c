@@ -698,6 +698,7 @@ void __irq_entry handler_irq(int pil, struct pt_regs *regs)
 	set_irq_regs(old_regs);
 }
 
+#ifndef CONFIG_PREEMPT_RT_FULL
 void do_softirq(void)
 {
 	unsigned long flags;
@@ -723,6 +724,7 @@ void do_softirq(void)
 
 	local_irq_restore(flags);
 }
+#endif
 
 #ifdef CONFIG_HOTPLUG_CPU
 void fixup_irqs(void)

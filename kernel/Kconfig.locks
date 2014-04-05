@@ -222,4 +222,4 @@ endif
 
 config MUTEX_SPIN_ON_OWNER
 	def_bool y
-	depends on SMP && !DEBUG_MUTEXES
+	depends on SMP && !DEBUG_MUTEXES && !PREEMPT_RT_FULL

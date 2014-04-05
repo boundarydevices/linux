@@ -253,10 +253,18 @@ static void expunge_all(struct msg_queue *msq, int res)
 	struct msg_receiver *msr, *t;
 
 	list_for_each_entry_safe(msr, t, &msq->q_receivers, r_list) {
+		/*
+		 * Make sure that the wakeup doesnt preempt
+		 * this CPU prematurely. (on PREEMPT_RT)
+		 */
+		preempt_disable_rt();
+
 		msr->r_msg = NULL;
 		wake_up_process(msr->r_tsk);
 		smp_mb();
 		msr->r_msg = ERR_PTR(res);
+
+		preempt_enable_rt();
 	}
 }
 
@@ -636,6 +644,12 @@ static inline int pipelined_send(struct msg_queue *msq, struct msg_msg *msg)
 		    !security_msg_queue_msgrcv(msq, msg, msr->r_tsk,
 					       msr->r_msgtype, msr->r_mode)) {
 
+			/*
+			 * Make sure that the wakeup doesnt preempt
+			 * this CPU prematurely. (on PREEMPT_RT)
+			 */
+			preempt_disable_rt();
+
 			list_del(&msr->r_list);
 			if (msr->r_maxsize < msg->m_ts) {
 				msr->r_msg = NULL;
@@ -649,9 +663,11 @@ static inline int pipelined_send(struct msg_queue *msq, struct msg_msg *msg)
 				wake_up_process(msr->r_tsk);
 				smp_mb();
 				msr->r_msg = msg;
+				preempt_enable_rt();
 
 				return 1;
 			}
+			preempt_enable_rt();
 		}
 	}
 	return 0;

@@ -1034,6 +1034,7 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
 {
 	char *text;
 	int len = 0;
+	int attempts = 0;
 
 	text = kmalloc(LOG_LINE_MAX + PREFIX_MAX, GFP_KERNEL);
 	if (!text)
@@ -1045,7 +1046,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
 		u64 seq;
 		u32 idx;
 		enum log_flags prev;
-
+		int num_msg;
+try_again:
+		attempts++;
+		if (attempts > 10) {
+			len = -EBUSY;
+			goto out;
+		}
+		num_msg = 0;
 		if (clear_seq < log_first_seq) {
 			/* messages are gone, move to first available one */
 			clear_seq = log_first_seq;
@@ -1066,6 +1074,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
 			prev = msg->flags;
 			idx = log_next(idx);
 			seq++;
+			num_msg++;
+			if (num_msg > 5) {
+				num_msg = 0;
+				raw_spin_unlock_irq(&logbuf_lock);
+				raw_spin_lock_irq(&logbuf_lock);
+				if (clear_seq < log_first_seq)
+					goto try_again;
+			}
 		}
 
 		/* move first record forward until length fits into the buffer */
@@ -1079,6 +1095,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
 			prev = msg->flags;
 			idx = log_next(idx);
 			seq++;
+			num_msg++;
+			if (num_msg > 5) {
+				num_msg = 0;
+				raw_spin_unlock_irq(&logbuf_lock);
+				raw_spin_lock_irq(&logbuf_lock);
+				if (clear_seq < log_first_seq)
+					goto try_again;
+			}
 		}
 
 		/* last message fitting into this dump */
@@ -1120,6 +1144,7 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
 		clear_seq = log_next_seq;
 		clear_idx = log_next_idx;
 	}
+out:
 	raw_spin_unlock_irq(&logbuf_lock);
 
 	kfree(text);
@@ -1277,6 +1302,7 @@ static void call_console_drivers(int level, const char *text, size_t len)
 	if (!console_drivers)
 		return;
 
+	migrate_disable();
 	for_each_console(con) {
 		if (exclusive_console && con != exclusive_console)
 			continue;
@@ -1289,6 +1315,7 @@ static void call_console_drivers(int level, const char *text, size_t len)
 			continue;
 		con->write(con, text, len);
 	}
+	migrate_enable();
 }
 
 /*
@@ -1348,12 +1375,18 @@ static inline int can_use_console(unsigned int cpu)
  * interrupts disabled. It should return with 'lockbuf_lock'
  * released but interrupts still disabled.
  */
-static int console_trylock_for_printk(unsigned int cpu)
+static int console_trylock_for_printk(unsigned int cpu, unsigned long flags)
 	__releases(&logbuf_lock)
 {
 	int retval = 0, wake = 0;
+#ifdef CONFIG_PREEMPT_RT_FULL
+	int lock = !early_boot_irqs_disabled && !irqs_disabled_flags(flags) &&
+		(preempt_count() <= 1);
+#else
+	int lock = 1;
+#endif
 
-	if (console_trylock()) {
+	if (lock && console_trylock()) {
 		retval = 1;
 
 		/*
@@ -1493,6 +1526,62 @@ static size_t cont_print_text(char *text, size_t size)
 	return textlen;
 }
 
+#ifdef CONFIG_EARLY_PRINTK
+struct console *early_console;
+
+void early_vprintk(const char *fmt, va_list ap)
+{
+	if (early_console) {
+		char buf[512];
+		int n = vscnprintf(buf, sizeof(buf), fmt, ap);
+
+		early_console->write(early_console, buf, n);
+	}
+}
+
+asmlinkage void early_printk(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	early_vprintk(fmt, ap);
+	va_end(ap);
+}
+
+/*
+ * This is independent of any log levels - a global
+ * kill switch that turns off all of printk.
+ *
+ * Used by the NMI watchdog if early-printk is enabled.
+ */
+static bool __read_mostly printk_killswitch;
+
+static int __init force_early_printk_setup(char *str)
+{
+	printk_killswitch = true;
+	return 0;
+}
+early_param("force_early_printk", force_early_printk_setup);
+
+void printk_kill(void)
+{
+	printk_killswitch = true;
+}
+
+static int forced_early_printk(const char *fmt, va_list ap)
+{
+	if (!printk_killswitch)
+		return 0;
+	early_vprintk(fmt, ap);
+	return 1;
+}
+#else
+static inline int forced_early_printk(const char *fmt, va_list ap)
+{
+	return 0;
+}
+#endif
+
 asmlinkage int vprintk_emit(int facility, int level,
 			    const char *dict, size_t dictlen,
 			    const char *fmt, va_list args)
@@ -1505,6 +1594,13 @@ asmlinkage int vprintk_emit(int facility, int level,
 	unsigned long flags;
 	int this_cpu;
 	int printed_len = 0;
+
+	/*
+	 * Fall back to early_printk if a debugging subsystem has
+	 * killed printk output
+	 */
+	if (unlikely(forced_early_printk(fmt, args)))
+		return 1;
 
 	boot_delay_msec(level);
 	printk_delay();
@@ -1625,8 +1721,15 @@ asmlinkage int vprintk_emit(int facility, int level,
 	 * The console_trylock_for_printk() function will release 'logbuf_lock'
 	 * regardless of whether it actually gets the console semaphore or not.
 	 */
-	if (console_trylock_for_printk(this_cpu))
+	if (console_trylock_for_printk(this_cpu, flags)) {
+#ifndef CONFIG_PREEMPT_RT_FULL
 		console_unlock();
+#else
+		raw_local_irq_restore(flags);
+		console_unlock();
+		raw_local_irq_save(flags);
+#endif
+	}
 
 	lockdep_on();
 out_restore_irqs:
@@ -1727,29 +1830,6 @@ static size_t msg_print_text(const struct log *msg, enum log_flags prev,
 static size_t cont_print_text(char *text, size_t size) { return 0; }
 
 #endif /* CONFIG_PRINTK */
-
-#ifdef CONFIG_EARLY_PRINTK
-struct console *early_console;
-
-void early_vprintk(const char *fmt, va_list ap)
-{
-	if (early_console) {
-		char buf[512];
-		int n = vscnprintf(buf, sizeof(buf), fmt, ap);
-
-		early_console->write(early_console, buf, n);
-	}
-}
-
-asmlinkage void early_printk(const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	early_vprintk(fmt, ap);
-	va_end(ap);
-}
-#endif
 
 static int __add_preferred_console(char *name, int idx, char *options,
 				   char *brl_options)
@@ -2003,11 +2083,16 @@ static void console_cont_flush(char *text, size_t size)
 		goto out;
 
 	len = cont_print_text(text, size);
+#ifndef CONFIG_PREEMPT_RT_FULL
 	raw_spin_unlock(&logbuf_lock);
 	stop_critical_timings();
 	call_console_drivers(cont.level, text, len);
 	start_critical_timings();
 	local_irq_restore(flags);
+#else
+	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
+	call_console_drivers(cont.level, text, len);
+#endif
 	return;
 out:
 	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
@@ -2090,12 +2175,17 @@ skip:
 		console_idx = log_next(console_idx);
 		console_seq++;
 		console_prev = msg->flags;
-		raw_spin_unlock(&logbuf_lock);
 
+#ifndef CONFIG_PREEMPT_RT_FULL
+		raw_spin_unlock(&logbuf_lock);
 		stop_critical_timings();	/* don't trace print latency */
 		call_console_drivers(level, text, len);
 		start_critical_timings();
 		local_irq_restore(flags);
+#else
+		raw_spin_unlock_irqrestore(&logbuf_lock, flags);
+		call_console_drivers(level, text, len);
+#endif
 	}
 	console_locked = 0;
 	mutex_release(&console_lock_dep_map, 1, _RET_IP_);

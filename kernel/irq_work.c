@@ -119,8 +119,9 @@ static void __irq_work_run(void)
 	if (llist_empty(this_list))
 		return;
 
+#ifndef CONFIG_PREEMPT_RT_FULL
 	BUG_ON(!irqs_disabled());
-
+#endif
 	llnode = llist_del_all(this_list);
 	while (llnode != NULL) {
 		work = llist_entry(llnode, struct irq_work, llnode);
@@ -152,7 +153,9 @@ static void __irq_work_run(void)
  */
 void irq_work_run(void)
 {
+#ifndef CONFIG_PREEMPT_RT_FULL
 	BUG_ON(!in_irq());
+#endif
 	__irq_work_run();
 }
 EXPORT_SYMBOL_GPL(irq_work_run);
