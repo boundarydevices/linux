@@ -24,7 +24,7 @@
 
 struct address_space;
 
-#define USE_SPLIT_PTLOCKS	(NR_CPUS >= CONFIG_SPLIT_PTLOCK_CPUS)
+#define USE_SPLIT_PTLOCKS	(0)
 
 /*
  * Each physical page in the system has a struct page associated with
