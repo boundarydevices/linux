@@ -3043,7 +3043,7 @@ gckOS_CreateMutex(
     gcmkONERROR(gckOS_Allocate(Os, gcmSIZEOF(struct mutex), Mutex));
 
     /* Initialize the mutex. */
-    mutex_init(*Mutex);
+    mutex_init((struct mutex*)*Mutex);
 
     /* Return status. */
     gcmkFOOTER_ARG("*Mutex=0x%X", *Mutex);
@@ -3088,7 +3088,7 @@ gckOS_DeleteMutex(
     gcmkVERIFY_ARGUMENT(Mutex != gcvNULL);
 
     /* Destroy the mutex. */
-    mutex_destroy(Mutex);
+    mutex_destroy((struct mutex*)Mutex);
 
     /* Free the mutex structure. */
     gcmkONERROR(gckOS_Free(Os, Mutex));
