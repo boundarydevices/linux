@@ -48,7 +48,7 @@
 #ifdef UART_PADDR
 #error "CONFIG_DEBUG_LL is incompatible with multiple archs"
 #endif
-#define UART_PADDR	MX6Q_UART4_BASE_ADDR
+#define UART_PADDR	MX6Q_UART2_BASE_ADDR
 #endif
 
 #define UART_VADDR	IMX_IO_ADDRESS(UART_PADDR)
