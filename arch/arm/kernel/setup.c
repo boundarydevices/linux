@@ -459,6 +459,7 @@ void __init dump_machine_table(void)
 int __init arm_add_memory(phys_addr_t start, unsigned long size)
 {
 	struct membank *bank = &meminfo.bank[meminfo.nr_banks];
+	phys_addr_t end = start + size;
 
 	if (meminfo.nr_banks >= NR_BANKS) {
 		printk(KERN_CRIT "NR_BANKS too low, "
@@ -470,6 +471,8 @@ int __init arm_add_memory(phys_addr_t start, unsigned long size)
 	 * Ensure that start/size are aligned to a page boundary.
 	 * Size is appropriately rounded down, start is rounded up.
 	 */
+	if ((end == 0) && (size > 0x100000))
+		size -= 0x100000;
 	size -= start & ~PAGE_MASK;
 	bank->start = PAGE_ALIGN(start);
 	bank->size  = size & PAGE_MASK;
