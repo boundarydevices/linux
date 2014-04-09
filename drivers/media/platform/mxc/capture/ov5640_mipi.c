@@ -2076,6 +2076,7 @@ static s32 ov5640_write_reg(u16 reg, u8 val)
 	au8Buf[1] = reg & 0xff;
 	au8Buf[2] = val;
 
+#if 0	/* Software reset does not affect the i2c address register like it does on ov5642 */
 	if ((reg == 0x3008) && (val & 0x80)) {
 		mxc_camera_common_lock();
 
@@ -2084,7 +2085,9 @@ static s32 ov5640_write_reg(u16 reg, u8 val)
 		update_device_addr(&ov5640_data);
 
 		mxc_camera_common_unlock();
-	} else {
+	} else
+#endif
+	{
 		ret = i2c_master_send(ov5640_data.i2c_client, au8Buf, 3);
 	}
 
