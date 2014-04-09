@@ -1970,7 +1970,7 @@ static s32 update_device_addr(struct sensor_data *sensor)
 
 	ret = i2c_transfer(sensor->i2c_client->adapter, &msg, 1);
 	if (ret < 0)
-		pr_err("%s: ov5642 ret=%d\n", __func__, ret);
+		pr_err("%s: ov5640_mipi ret=%d\n", __func__, ret);
 	return ret;
 }
 
@@ -1993,6 +1993,7 @@ static void ov5640_reset(void)
 
 	gpio_set_value(rst_gpio, 1);
 	msleep(20);
+	pr_debug("%s(mipi): reset released\n", __func__);
 	update_device_addr(&ov5640_data);
 	mxc_camera_common_unlock();
 
@@ -2074,6 +2075,7 @@ static s32 ov5640_write_reg(u16 reg, u8 val)
 		mxc_camera_common_lock();
 
 		ret = i2c_master_send(ov5640_data.i2c_client, au8Buf, 3);
+		pr_debug("%s(mipi): software reset %d\n", __func__, ret);
 		update_device_addr(&ov5640_data);
 
 		mxc_camera_common_unlock();
@@ -2082,11 +2084,11 @@ static s32 ov5640_write_reg(u16 reg, u8 val)
 	}
 
 	if (ret < 0) {
-		pr_err("%s:write reg error:reg=%x,val=%x ret=%d\n",
+		pr_err("%s(mipi):reg=%x,val=%x error=%d\n",
 			__func__, reg, val, ret);
 		return ret;
 	}
-	pr_debug("reg=%x,val=%x\n", reg, val);
+	pr_debug("%s(mipi):reg=%x,val=%x\n", __func__, reg, val);
 	return 0;
 }
 
@@ -2099,19 +2101,19 @@ static s32 ov5640_read_reg(u16 reg, u8 *val)
 	au8RegBuf[1] = reg & 0xff;
 
 	if (2 != i2c_master_send(ov5640_data.i2c_client, au8RegBuf, 2)) {
-		pr_err("%s:write reg error:reg=%x\n",
+		pr_err("%s(mipi):write reg error:reg=%x\n",
 				__func__, reg);
 		return -1;
 	}
 
 	if (1 != i2c_master_recv(ov5640_data.i2c_client, &u8RdVal, 1)) {
-		pr_err("%s:read reg error:reg=%x,val=%x\n",
+		pr_err("%s(mipi):read reg error:reg=%x,val=%x\n",
 				__func__, reg, u8RdVal);
 		return -1;
 	}
 
 	*val = u8RdVal;
-
+	pr_debug("%s(mipi):reg=%x,val=%x\n", __func__, reg, u8RdVal);
 	return u8RdVal;
 }
 
@@ -2636,7 +2638,7 @@ static int ov5640_download_autofocus(void)
 	u8  r;
 	int sval = ov5640_read_reg(0x3000, &r);
 	if (0 > sval) {
-		pr_err("%s:Error reading control reg\n",
+		pr_err("%s(mipi):Error reading control reg\n",
 		       __func__);
 		return sval;
 	}
@@ -2646,10 +2648,10 @@ static int ov5640_download_autofocus(void)
 		ov5640_af_firmware,
 		ARRAY_SIZE(ov5640_af_firmware));
 	if (0 > sval) {
-		pr_err("%s: Error downloading firmware\n",
+		pr_err("%s(mipi): Error downloading firmware\n",
 		       __func__);
 	} else
-		pr_info("%s: Downloaded firmware successfully: %d\n",
+		pr_info("%s(mipi): Downloaded firmware successfully: %d\n",
 		       __func__,sval);
 	r &= ~0x20;
 	ov5640_write_reg(0x3000,r);
