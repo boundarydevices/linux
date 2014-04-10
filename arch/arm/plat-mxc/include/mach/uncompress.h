@@ -131,6 +131,7 @@ static __inline__ void __arch_decomp_setup(unsigned long arch_id)
 #if defined(CONFIG_MACH_MX6_NITROGEN6X)
 	case MACH_TYPE_MX6_NITROGEN6X:
 #endif
+	case MACH_TYPE_MX6_NITROGEN6_MAX:
 #if defined(CONFIG_MACH_MX6_UTC)
 	case MACH_TYPE_MX6_UTC:
 #endif
