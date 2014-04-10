@@ -566,9 +566,13 @@ int fsl_usb_host_init(struct platform_device *pdev)
 		if (!strcmp("Host 1", pdata->name)) {
 			if (machine_is_mx6q_arm2())
 				USB_H1_CTRL &= ~UCTRL_OVER_CUR_POL;
-			else if (machine_is_mx6q_sabrelite()
-				 || machine_is_mx6_oc()
-				 || machine_is_mx6_utc())
+			else if (  machine_is_mx6_nit6xlite()
+				|| machine_is_mx6_nitrogen6x()
+				|| machine_is_mx6_nitrogen6_max()
+				|| machine_is_mx6_oc()
+				|| machine_is_mx6_utc()
+				|| machine_is_mx6q_sabrelite()
+				)
 				USB_H1_CTRL |= UCTRL_OVER_CUR_POL;
 			USB_H1_CTRL |= UCTRL_OVER_CUR_DIS;
 		}
@@ -879,7 +883,13 @@ int usbotg_init(struct platform_device *pdev)
 #ifdef CONFIG_ARCH_MX6
 			if (machine_is_mx6q_arm2())
 				USB_OTG_CTRL &= ~UCTRL_OVER_CUR_POL;
-			else if (machine_is_mx6q_sabrelite() || machine_is_mx6_oc())
+			else if (  machine_is_mx6_nit6xlite()
+				|| machine_is_mx6_nitrogen6x()
+				|| machine_is_mx6_nitrogen6_max()
+				|| machine_is_mx6_oc()
+				|| machine_is_mx6_utc()
+				|| machine_is_mx6q_sabrelite()
+				)
 				USB_OTG_CTRL |= UCTRL_OVER_CUR_POL;
 			USB_OTG_CTRL |= UCTRL_OVER_CUR_DIS;
 #endif
