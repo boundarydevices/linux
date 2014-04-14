@@ -22,7 +22,7 @@
 		reg = <0x10000000 0x80000000>;
 	};
 
-	backlight {
+	pwm-backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm3 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
