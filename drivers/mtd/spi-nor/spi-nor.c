@@ -3,7 +3,7 @@
  * influence from lart.c (Abraham Van Der Merwe) and mtd_dataflash.c
  *
  * Copyright (C) 2005, Intec Automation Inc.
- * Copyright (C) 2014, Freescale Semiconductor, Inc.
+ * Copyright (C) 2014 Freescale Semiconductor, Inc.
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -383,7 +383,7 @@ struct flash_info {
 	 * then a two byte device id.
 	 */
 	u32		jedec_id;
-	u16             ext_id;
+	u32		ext_id;
 
 	/* The size listed here is what works with SPINOR_OP_SE, which isn't
 	 * necessarily called a "sector" by the vendor.
@@ -505,6 +505,7 @@ const struct spi_device_id spi_nor_ids[] = {
 	{ "s70fl01gs",  INFO(0x010221, 0x4d00, 256 * 1024, 256, 0) },
 	{ "s25sl12800", INFO(0x012018, 0x0300, 256 * 1024,  64, 0) },
 	{ "s25sl12801", INFO(0x012018, 0x0301,  64 * 1024, 256, 0) },
+	{ "s25fl128s",	INFO(0x012018, 0x4d0180, 64 * 1024, 256, SPI_NOR_QUAD_READ) },
 	{ "s25fl129p0", INFO(0x012018, 0x4d00, 256 * 1024,  64, 0) },
 	{ "s25fl129p1", INFO(0x012018, 0x4d01,  64 * 1024, 256, 0) },
 	{ "s25sl004a",  INFO(0x010212,      0,  64 * 1024,   8, 0) },
@@ -593,12 +594,13 @@ EXPORT_SYMBOL_GPL(spi_nor_ids);
 static const struct spi_device_id *spi_nor_read_id(struct spi_nor *nor)
 {
 	int			tmp;
-	u8			id[5];
+	u8			id[6];
 	u32			jedec;
-	u16                     ext_jedec;
+	u32                     ext_jedec;
 	struct flash_info	*info;
+	int			matched = -1;
 
-	tmp = nor->read_reg(nor, SPINOR_OP_RDID, id, 5);
+	tmp = nor->read_reg(nor, SPINOR_OP_RDID, id, 6);
 	if (tmp < 0) {
 		dev_dbg(nor->dev, " error %d reading JEDEC ID\n", tmp);
 		return ERR_PTR(tmp);
@@ -614,8 +616,26 @@ static const struct spi_device_id *spi_nor_read_id(struct spi_nor *nor)
 	for (tmp = 0; tmp < ARRAY_SIZE(spi_nor_ids) - 1; tmp++) {
 		info = (void *)spi_nor_ids[tmp].driver_data;
 		if (info->jedec_id == jedec) {
-			if (info->ext_id == 0 || info->ext_id == ext_jedec)
+			if (info->ext_id == 0)
 				return &spi_nor_ids[tmp];
+
+			/* the legacy two bytes ext_id */
+			if ((info->ext_id >> 16) == 0) {
+				if (info->ext_id == ext_jedec)
+					matched = tmp;
+			} else {
+				/* check the sixth byte now */
+				ext_jedec = ext_jedec << 8 | id[5];
+				if (info->ext_id == ext_jedec)
+					return &spi_nor_ids[tmp];
+
+				/* reset back the ext_jedec */
+				ext_jedec >>= 8;
+			}
+		} else {
+			/* shortcut */
+			if (matched != -1)
+				return &spi_nor_ids[matched];
 		}
 	}
 	dev_err(nor->dev, "unrecognized JEDEC id %06x\n", jedec);
