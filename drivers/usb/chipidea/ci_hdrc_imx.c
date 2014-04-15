@@ -87,6 +87,11 @@ static const struct of_device_id ci_hdrc_imx_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, ci_hdrc_imx_dt_ids);
 
+struct gpio_desc {
+	int gpio;
+	int active_low;
+};
+
 struct ci_hdrc_imx_data {
 	struct usb_phy *phy;
 	struct platform_device *ci_pdev;
@@ -107,6 +112,7 @@ struct ci_hdrc_imx_data {
 	struct clk *clk_ahb;
 	struct clk *clk_per;
 	/* --------------------------------- */
+	struct gpio_desc reset_gpios[2];
 };
 
 static char *imx_usb_charger_supplied_to[] = {
@@ -441,6 +447,35 @@ static int imx_usb_register_charger(struct usb_charger *charger,
 	return 0;
 }
 
+static int setup_reset_gpios(struct platform_device *pdev, struct ci_hdrc_imx_data *data)
+{
+	int err = 0;
+	int i;
+	int gpio;
+	enum of_gpio_flags flags;
+	struct device *dev = &pdev->dev;
+	struct device_node *np = dev->of_node;
+
+	for (i = 0 ; i < ARRAY_SIZE(data->reset_gpios); i++) {
+		data->reset_gpios[i].gpio = -1;
+		gpio = of_get_named_gpio_flags(np, "reset-gpios", i, &flags);
+		pr_info("%s:%d\n", __func__, gpio);
+		if (!gpio_is_valid(gpio))
+			break;
+
+		data->reset_gpios[i].active_low = flags & OF_GPIO_ACTIVE_LOW;
+		err = devm_gpio_request_one(dev, gpio, flags & OF_GPIO_ACTIVE_LOW ?
+				GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW,
+				"ehci_reset_gpio");
+		if (err) {
+			dev_err(dev, "can't request reset gpio %d", gpio);
+			break;
+		}
+		data->reset_gpios[i].gpio = gpio;
+	}
+	return err;
+}
+
 static int ci_hdrc_imx_probe(struct platform_device *pdev)
 {
 	struct ci_hdrc_imx_data *data;
@@ -449,7 +484,7 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 		.capoffset	= DEF_CAPOFFSET,
 		.notify_event	= ci_hdrc_imx_notify_event,
 	};
-	int ret;
+	int i, ret;
 	const struct of_device_id *of_id =
 			of_match_device(ci_hdrc_imx_dt_ids, &pdev->dev);
 	const struct ci_hdrc_imx_platform_flag *imx_platform_flag = of_id->data;
@@ -461,6 +496,7 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	platform_set_drvdata(pdev, data);
+	setup_reset_gpios(pdev, data);
 
 	data->data = imx_platform_flag;
 	data->usbmisc_data = usbmisc_get_init_data(&pdev->dev);
@@ -504,6 +540,12 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 	ret = imx_prepare_enable_clks(&pdev->dev);
 	if (ret)
 		goto err_bus_freq;
+
+	for (i = 0 ; i < ARRAY_SIZE(data->reset_gpios); i++) {
+		if (!gpio_is_valid(data->reset_gpios[i].gpio))
+			break;
+		gpio_set_value(data->reset_gpios[i].gpio, data->reset_gpios[i].active_low ? 0 : 1);
+	}
 
 	data->phy = devm_usb_get_phy_by_phandle(&pdev->dev, "fsl,usbphy", 0);
 	if (IS_ERR(data->phy)) {
