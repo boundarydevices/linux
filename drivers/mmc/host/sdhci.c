@@ -1886,6 +1886,9 @@ int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 
+	if (host->quirks2 & SDHCI_QUIRK2_VQMMC_1_8_V)
+		ios->signal_voltage = MMC_SIGNAL_VOLTAGE_180;
+
 	switch (ios->signal_voltage) {
 	case MMC_SIGNAL_VOLTAGE_330:
 		if (!(host->flags & SDHCI_SIGNALING_330))
@@ -3502,7 +3505,8 @@ int sdhci_setup_host(struct sdhci_host *host)
 		mmc->caps |= MMC_CAP_SD_HIGHSPEED | MMC_CAP_MMC_HIGHSPEED;
 
 	/* If vqmmc regulator and no 1.8V signalling, then there's no UHS */
-	if (!IS_ERR(mmc->supply.vqmmc)) {
+	if (!IS_ERR(mmc->supply.vqmmc) &&
+		!(host->quirks2 & SDHCI_QUIRK2_VQMMC_1_8_V)) {
 		ret = regulator_enable(mmc->supply.vqmmc);
 		if (!regulator_is_supported_voltage(mmc->supply.vqmmc, 1700000,
 						    1950000))
