@@ -45,6 +45,7 @@ struct esdhc_platform_data {
 	int max_bus_width;
 	unsigned int f_max;
 	bool support_vsel;
+	bool vqmmc_18v;
 	unsigned int delay_line;
 	unsigned int tuning_step;	/* The delay cell steps in tuning procedure */
 };
