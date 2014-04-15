@@ -983,6 +983,9 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	else
 		boarddata->support_vsel = true;
 
+	if (of_find_property(np, "vqmmc-1-8-v", NULL))
+		boarddata->vqmmc_18v = true;
+
 	if (of_property_read_u32(np, "fsl,delay-line", &boarddata->delay_line))
 		boarddata->delay_line = 0;
 
@@ -1178,6 +1181,8 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 	} else {
 		host->quirks2 |= SDHCI_QUIRK2_NO_1_8_V;
 	}
+	if (boarddata->vqmmc_18v)
+		host->quirks2 |= SDHCI_QUIRK2_VQMMC_1_8_V;
 
 	device_set_wakeup_capable(&pdev->dev, 1);
 
