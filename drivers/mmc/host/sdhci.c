@@ -2641,6 +2641,9 @@ int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 
+	if (host->quirks2 & SDHCI_QUIRK2_VQMMC_1_8_V)
+		ios->signal_voltage = MMC_SIGNAL_VOLTAGE_180;
+
 	switch (ios->signal_voltage) {
 	case MMC_SIGNAL_VOLTAGE_330:
 		if (!(host->flags & SDHCI_SIGNALING_330))
@@ -4524,7 +4527,7 @@ int sdhci_setup_host(struct sdhci_host *host)
 		mmc->caps |= MMC_CAP_NEEDS_POLL;
 
 	if (!IS_ERR(mmc->supply.vqmmc)) {
-		if (enable_vqmmc) {
+		if (enable_vqmmc && !(host->quirks2 & SDHCI_QUIRK2_VQMMC_1_8_V)) {
 			ret = regulator_enable(mmc->supply.vqmmc);
 			host->sdhci_core_to_disable_vqmmc = !ret;
 		}

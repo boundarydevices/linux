@@ -229,6 +229,7 @@ struct esdhc_platform_data {
 	enum wp_types wp_type;
 	enum cd_types cd_type;
 	int max_bus_width;
+	bool vqmmc_18v;
 	unsigned int delay_line;
 	unsigned int tuning_step;       /* The delay cell steps in tuning procedure */
 	unsigned int tuning_start_tap;	/* The start delay cell point in tuning procedure */
@@ -1611,6 +1612,9 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	if (of_find_property(np, "no-1-8-v", NULL))
 		host->quirks2 |= SDHCI_QUIRK2_NO_1_8_V;
 
+	if (of_find_property(np, "vqmmc-1-8-v", NULL))
+		boarddata->vqmmc_18v = true;
+
 	if (of_property_read_u32(np, "fsl,delay-line", &boarddata->delay_line))
 		boarddata->delay_line = 0;
 
@@ -1722,6 +1726,8 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 	err = sdhci_esdhc_imx_probe_dt(pdev, host, imx_data);
 	if (err)
 		goto disable_ahb_clk;
+	if (imx_data->boarddata.vqmmc_18v)
+		host->quirks2 |= SDHCI_QUIRK2_VQMMC_1_8_V;
 
 	if (imx_data->socdata->flags & ESDHC_FLAG_MAN_TUNING)
 		sdhci_esdhc_ops.platform_execute_tuning =
