@@ -1555,6 +1555,9 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	if (of_property_read_bool(np, "fsl,sdio-interrupt-enabled"))
 		boarddata->sdio_interrupt_enabled = true;
 
+	if (of_find_property(np, "vqmmc-1-8-v", NULL))
+		boarddata->vqmmc_18v = true;
+
 	if (of_property_read_u32(np, "fsl,delay-line", &boarddata->delay_line))
 		boarddata->delay_line = 0;
 
@@ -1783,6 +1786,8 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		err = sdhci_esdhc_imx_probe_nondt(pdev, host, imx_data);
 	if (err)
 		goto disable_ahb_clk;
+	if (imx_data->boarddata.vqmmc_18v)
+		host->quirks2 |= SDHCI_QUIRK2_VQMMC_1_8_V;
 
 	sdhci_esdhc_imx_hwinit(host);
 
