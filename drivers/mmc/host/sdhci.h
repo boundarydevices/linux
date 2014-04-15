@@ -459,6 +459,7 @@ struct sdhci_host {
 #define SDHCI_QUIRK2_DISABLE_HW_TIMEOUT			(1<<17)
 /* Host or Card can't support no thread sdio irq */
 #define SDHCI_QUIRK2_SDIO_IRQ_THREAD			(1<<17)
+#define SDHCI_QUIRK2_VQMMC_1_8_V			(1<<31)
 
 	int irq;		/* Device IRQ */
 	void __iomem *ioaddr;	/* Mapped address */
