@@ -439,6 +439,7 @@ struct sdhci_host {
 #define SDHCI_QUIRK2_RSP_136_HAS_CRC			(1<<16)
 /* Host or Card can't support no thread sdio irq */
 #define SDHCI_QUIRK2_SDIO_IRQ_THREAD			(1<<17)
+#define SDHCI_QUIRK2_VQMMC_1_8_V			(1<<31)
 
 	int irq;		/* Device IRQ */
 	void __iomem *ioaddr;	/* Mapped address */
