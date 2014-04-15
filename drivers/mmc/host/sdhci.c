@@ -1848,6 +1848,9 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 
+	if (host->quirks2 & SDHCI_QUIRK2_VQMMC_1_8_V)
+		ios->signal_voltage = MMC_SIGNAL_VOLTAGE_180;
+
 	switch (ios->signal_voltage) {
 	case MMC_SIGNAL_VOLTAGE_330:
 		if (!(host->flags & SDHCI_SIGNALING_330))
@@ -1879,7 +1882,8 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 	case MMC_SIGNAL_VOLTAGE_180:
 		if (!(host->flags & SDHCI_SIGNALING_180))
 			return -EINVAL;
-		if (!IS_ERR(mmc->supply.vqmmc)) {
+		if (!IS_ERR(mmc->supply.vqmmc) &&
+				!(host->quirks2 & SDHCI_QUIRK2_VQMMC_1_8_V)) {
 			ret = mmc_regulator_set_vqmmc(mmc, ios);
 			if (ret) {
 				pr_warn("%s: Switching to 1.8V signalling voltage failed\n",
