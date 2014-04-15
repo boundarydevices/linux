@@ -44,6 +44,7 @@ struct esdhc_platform_data {
 	enum cd_types cd_type;
 	int max_bus_width;
 	bool support_vsel;
+	bool vqmmc_18v;
 	unsigned int delay_line;
 };
 #endif /* __ASM_ARCH_IMX_ESDHC_H */
