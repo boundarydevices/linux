@@ -427,6 +427,7 @@ struct sdhci_host {
 #define SDHCI_QUIRK2_CLOCK_DIV_ZERO_BROKEN		(1<<15)
 /* Host or Card can't support no thread sdio irq */
 #define SDHCI_QUIRK2_SDIO_IRQ_THREAD			(1<<16)
+#define SDHCI_QUIRK2_VQMMC_1_8_V			(1<<31)
 
 
 	int irq;		/* Device IRQ */
