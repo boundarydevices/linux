@@ -86,7 +86,7 @@ MODULE_PARM_DESC(only_cea, "Allow only CEA modes");
 
 static int keepalive=1;
 module_param(keepalive, bool, 0644);
-MODULE_PARM_DESC(keepalive, "Allow only CEA modes");
+MODULE_PARM_DESC(keepalive, "Keep alive through disconnects");
 
 /*
  * We follow a flowchart which is in the "Synopsys DesignWare Courses
