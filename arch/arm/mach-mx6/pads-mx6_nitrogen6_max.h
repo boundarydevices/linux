@@ -337,7 +337,7 @@ static iomux_v3_cfg_t MX6NAME(board_pads)[] = {
 	NEW_PAD_CTRL(MX6PAD(NANDF_CLE__GPIO_6_7), WEAK_PULLDN),		/* RS485 TX Enable */
 #define GP_UART5_RS485_EN	IMX_GPIO_NR(2, 24)
 	NEW_PAD_CTRL(MX6PAD(EIM_CS1__GPIO_2_24), WEAK_PULLDN),		/* RS485/RS232 Select 2.5V */
-#define GP_UART5_AON		IMX_GPIO_NR(2, 24)
+#define GP_UART5_AON		IMX_GPIO_NR(6, 8)
 	NEW_PAD_CTRL(MX6PAD(NANDF_ALE__GPIO_6_8), WEAK_PULLDN),		/* ON - meaning depends on others */
 
 	/* USBH1 */
