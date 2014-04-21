@@ -10,6 +10,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/module.h>
 #include <linux/i2c.h>
 #include <linux/rtc.h>
 
@@ -151,9 +152,15 @@ static struct i2c_device_id rv4162_id[] = {
 	{ }
 };
 
+static struct of_device_id rv4162_dt_ids[] = {
+	{ .compatible = "mcrystal,rv4162" },
+	{ /* sentinel */ }
+};
+
 static struct i2c_driver rv4162_driver = {
 	.driver = {
 		   .name = "rtc-rv4162",
+		   .of_match_table = of_match_ptr(rv4162_dt_ids),
 		   },
 	.probe = &rv4162_probe,
 	.remove = &rv4162_remove,
