@@ -378,14 +378,14 @@
 	pinctrl-0 = <&pinctrl_kpp_1>;
 	pinctrl-1 = <&pinctrl_kpp_1_sleep>;
 	linux,keymap = <
-			0x00000067      /* KEY_UP */
-			0x0001006c      /* KEY_DOWN */
-			0x0002001c      /* KEY_ENTER */
-			0x01000066      /* KEY_HOME */
-			0x0101006a      /* KEY_RIGHT */
-			0x01020069      /* KEY_LEFT */
-			0x02000072      /* KEY_VOLUMEDOWN */
-			0x02010073      /* KEY_VOLUMEUP */
+            0x00000073      /* KEY_VOLUMEUP */
+            0x00010072      /* KEY_VOLUMEDOWN */
+            0x0002006a      /* KEY_RIGHT */
+            0x01000069      /* KEY_LEFT */
+            0x01010067      /* KEY_UP */
+            0x01020074      /* KEY_POWER */
+            0x0200009e      /* KEY_BACK */
+            0x0201006c      /* KEY_DOWN */
 		>;
         status = "okay";
 };
