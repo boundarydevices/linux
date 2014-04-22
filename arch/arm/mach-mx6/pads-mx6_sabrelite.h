@@ -226,7 +226,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(GPIO_7__GPIO_1_7),		/* J7 - Display Connector GP */
 	MX6PAD(GPIO_9__GPIO_1_9),		/* J7 - Display Connector GP */
 
-#ifndef CONFIG_GPIO_ON_RGBIF
+#ifdef CONFIG_GPIO_ON_RGBIF
 	/* DISPLAY */
 	MX6PAD(DI0_DISP_CLK__GPIO_4_16),
 	MX6PAD(DI0_PIN15__GPIO_4_17),
