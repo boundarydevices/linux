@@ -75,6 +75,7 @@ bool mipi_csi2_enable(struct mipi_csi2_info *info)
 
 	if (!info->mipi_en) {
 		info->mipi_en = true;
+		clk_enable(info->cfg_clk);
 		clk_enable(info->dphy_clk);
 	} else
 		mipi_dbg("mipi csi2 already enabled!\n");
@@ -102,6 +103,7 @@ bool mipi_csi2_disable(struct mipi_csi2_info *info)
 	if (info->mipi_en) {
 		info->mipi_en = false;
 		clk_disable(info->dphy_clk);
+		clk_disable(info->cfg_clk);
 	} else
 		mipi_dbg("mipi csi2 already disabled!\n");
 
@@ -402,6 +404,14 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 	gmipi_csi2->v_channel = plat_data->v_channel;
 	gmipi_csi2->lanes = plat_data->lanes;
 
+	/* get mipi cfg clk */
+	gmipi_csi2->cfg_clk = clk_get(&pdev->dev, plat_data->cfg_clk);
+	if (IS_ERR(gmipi_csi2->cfg_clk)) {
+		dev_err(&pdev->dev, "failed to get cfg clk\n");
+		ret = PTR_ERR(gmipi_csi2->cfg_clk);
+		goto err_clk0;
+	}
+
 	/* get mipi dphy clk */
 	gmipi_csi2->dphy_clk = clk_get(&pdev->dev, plat_data->dphy_clk);
 	if (IS_ERR(gmipi_csi2->dphy_clk)) {
@@ -432,11 +442,13 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 	}
 
 	/* mipi dphy clk enable for register access */
+	clk_enable(gmipi_csi2->cfg_clk);
 	clk_enable(gmipi_csi2->dphy_clk);
 	/* get mipi csi2 dphy version */
 	mipi_csi2_dphy_ver = mipi_csi2_read(gmipi_csi2, CSI2_VERSION);
 
 	clk_disable(gmipi_csi2->dphy_clk);
+	clk_disable(gmipi_csi2->cfg_clk);
 
 	platform_set_drvdata(pdev, gmipi_csi2);
 
@@ -452,6 +464,8 @@ failed_get_res:
 err_clk2:
 	clk_put(gmipi_csi2->dphy_clk);
 err_clk1:
+	clk_put(gmipi_csi2->cfg_clk);
+err_clk0:
 	kfree(gmipi_csi2);
 alloc_failed:
 	return ret;
