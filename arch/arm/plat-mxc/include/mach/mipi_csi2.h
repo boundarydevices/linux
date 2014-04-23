@@ -114,6 +114,7 @@ struct mipi_csi2_platform_data {
 	unsigned int	lanes;
 	char	*dphy_clk;
 	char	*pixel_clk;
+	char	*cfg_clk;
 	int	(*init)(struct platform_device *);
 	void	(*exit)(struct platform_device *);
 };

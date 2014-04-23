@@ -36,6 +36,7 @@ struct mipi_csi2_info {
 	unsigned int	datatype;
 	struct clk	*dphy_clk;
 	struct clk	*pixel_clk;
+	struct clk	*cfg_clk;
 	unsigned int	*mipi_csi2_base;
 	struct platform_device	*pdev;
 
