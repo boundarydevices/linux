@@ -327,6 +327,7 @@ struct _mmc_csd {
 #define EXT_CSD_POWER_OFF_LONG_TIME	247	/* RO */
 #define EXT_CSD_GENERIC_CMD6_TIME	248	/* RO */
 #define EXT_CSD_CACHE_SIZE		249	/* RO, 4 bytes */
+#define EXT_CSD_PWR_CL_DDR_200_360     253     /* RO */
 #define EXT_CSD_TAG_UNIT_SIZE		498	/* RO */
 #define EXT_CSD_DATA_TAG_SUPPORT	499	/* RO */
 #define EXT_CSD_MAX_PACKED_WRITES	500	/* RO */
@@ -368,6 +369,11 @@ struct _mmc_csd {
 #define EXT_CSD_CARD_TYPE_SDR_1_8V	(1<<4)	/* Card can run at 200MHz */
 #define EXT_CSD_CARD_TYPE_SDR_1_2V	(1<<5)	/* Card can run at 200MHz */
 						/* SDR mode @1.2V I/O */
+#define EXT_CSD_CARD_TYPE_DDR_HS400_1_8V	(1<<6)	/* Card can run at 200MHz */
+#define EXT_CSD_CARD_TYPE_DDR_HS400_1_2V	(1<<7)	/* Card can run at 200MHz */
+						/* DDR mode @1.2V I/O */
+#define EXT_CSD_CARD_TYPE_DDR_HS400		(EXT_CSD_CARD_TYPE_DDR_HS400_1_8V | \
+										 EXT_CSD_CARD_TYPE_DDR_HS400_1_2V)
 
 #define EXT_CSD_BUS_WIDTH_1	0	/* Card is in 1 bit mode */
 #define EXT_CSD_BUS_WIDTH_4	1	/* Card is in 4 bit mode */
