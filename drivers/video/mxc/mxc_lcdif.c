@@ -49,6 +49,12 @@ static struct fb_videomode lcdif_modedb[] = {
 	 .vmode = FB_VMODE_NONINTERLACED,
 	 .flag = 0,},
 	{
+	/* 800x480M@60 with falling-edge pixel clock */
+	"fusion7", 57, 800, 480, 33898, 96, 24, 3, 10, 72, 7,
+	FB_SYNC_CLK_LAT_FALL,
+	FB_VMODE_NONINTERLACED,
+	0,},
+	{
 	/* 800x480 @ 57 Hz , pixel clk @ 27MHz */
 	"INNOLUX-WVGA", 57, 800, 480, 25000,
 	.left_margin = 45, .right_margin = 1056 - 1 - 45 - 800,
