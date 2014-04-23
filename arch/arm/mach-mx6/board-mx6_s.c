@@ -197,6 +197,7 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 	return IOMUX_SETUP(sd_pads[i]);
 }
 
+#ifdef CONFIG_WL12XX_PLATFORM_DATA
 static void sdio_set_power(int on)
 {
 	pr_debug("%s:%s: set power(%d)\n",
@@ -204,7 +205,6 @@ static void sdio_set_power(int on)
         gpio_set_value(N6_WL1271_WL_EN,on);
 }
 
-#ifdef CONFIG_WL12XX_PLATFORM_DATA
 static struct esdhc_platform_data sd2_data = {
 	.always_present = 1,
 	.cd_gpio = -1,
@@ -432,6 +432,7 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	},
 };
 
+#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE)
 static void camera_reset(int power_gp, int poweroff_level, int reset_gp, int reset_gp2)
 {
 	pr_info("%s: power_gp=0x%x, reset_gp=0x%x reset_gp2=0x%x\n",
@@ -455,7 +456,6 @@ static void camera_reset(int power_gp, int poweroff_level, int reset_gp, int res
 }
 
 
-#if defined(CONFIG_MXC_CAMERA_OV5642) || defined(CONFIG_MXC_CAMERA_OV5642_MODULE)
 /*
  * GPIO_6	GPIO[1]:6	(ov5642) - J5 - CSI0 power down
  * GPIO_8	GPIO[1]:8	(ov5642) - J5 - CSI0 reset
@@ -1187,12 +1187,12 @@ static void __init board_init(void)
 	pm_power_off = poweroff;
 	imx6q_add_busfreq();
 
+#ifdef CONFIG_WL12XX_PLATFORM_DATA
 	imx6q_add_sdhci_usdhc_imx(1, &sd2_data);
 	/* WL12xx WLAN Init */
 	if (wl12xx_set_platform_data(&n6q_wlan_data))
 		pr_err("error setting wl12xx data\n");
 	platform_device_register(&n6q_vwl1271_reg_devices);
-
 	gpio_set_value(N6_WL1271_WL_EN, 1);		/* momentarily enable */
 	gpio_set_value(N6_WL1271_BT_EN, 1);
 	mdelay(2);
@@ -1202,6 +1202,7 @@ static void __init board_init(void)
 	gpio_free(N6_WL1271_WL_EN);
 	gpio_free(N6_WL1271_BT_EN);
 	mdelay(1);
+#endif
 
 	imx6q_add_pcie(&pcie_data);
 
