@@ -61,6 +61,7 @@
 #include <mach/memory.h>
 #include <mach/iomux-mx6q.h>
 #include <mach/iomux-mx6dl.h>
+#include <mach/imx_rfkill.h>
 #include <mach/imx-uart.h>
 #include <mach/viv_gpu.h>
 #include <mach/ahci_sata.h>
@@ -764,19 +765,10 @@ static void usbotg_vbus(bool on)
 
 static void __init init_usb(void)
 {
-	int ret = 0;
-
 	imx_otg_base = MX6_IO_ADDRESS(MX6Q_USB_OTG_BASE_ADDR);
 	/* disable external charger detect,
 	 * or it will affect signal quality at dp .
 	 */
-	ret = gpio_request(GP_USB_OTG_PWR, "usb-pwr");
-	if (ret) {
-		pr_err("failed to get GPIO USB_OTG_PWR: %d\n",
-			ret);
-		return;
-	}
-	gpio_direction_output(GP_USB_OTG_PWR, 0);
 	mxc_iomux_set_gpr_register(1, 13, 1, 1);
 
 	mx6_set_otghost_vbus_func(usbotg_vbus);
@@ -1263,11 +1255,19 @@ static struct platform_pwm_backlight_data pwm1_backlight_data = {
 	.pwm_period_ns = 1000000000/32768,
 };
 
+/* PWM2_PWMO: backlight control on LVDS1 connector */
+static struct platform_pwm_backlight_data pwm2_backlight_data = {
+	.pwm_id = 1,	/* pin SD1_DAT2 - PWM2 */
+	.max_brightness = 256,
+	.dft_brightness = 128,
+	.pwm_period_ns = 50000,
+};
+
 static struct mxc_pwm_platform_data pwm3_data = {
 	.clk_select = PWM_CLK_HIGHPERF,
 };
 
-/* PWM4_PWMO: backlight control on LDB connector */
+/* PWM4_PWMO: backlight control on LVDS0 connector */
 static struct platform_pwm_backlight_data pwm4_backlight_data = {
 	.pwm_id = 3,	/* pin SD1_CMD - PWM4 */
 	.max_brightness = 256,
@@ -1360,6 +1360,7 @@ static struct imx_pcie_platform_data pcie_data = {
 #define GPIOF_HIGH GPIOF_OUT_INIT_HIGH
 
 static struct gpio initial_gpios[] __initdata = {
+	{.label = "emmc_reset",		.gpio = GP_EMMC_RESET,		.flags = 0},
 	{.label = "wl1271_int",		.gpio = GP_WL1271_WL_IRQ,	.flags = GPIOF_DIR_IN},
 	{.label = "wl1271_bt_en",	.gpio = GP_WL1271_BT_EN,	.flags = 0},
 	{.label = "wl1271_wl_en",	.gpio = GP_WL1271_WL_EN,	.flags = 0},
@@ -1369,7 +1370,22 @@ static struct gpio initial_gpios[] __initdata = {
 	{.label = "ov5640_mipi_reset",	.gpio = GP_OV5640_MIPI_RESET,	.flags = 0},
 	{.label = "ov5640_csi1_pwdn",	.gpio = GP_OV5640_CSI1_PWRDN,	.flags = GPIOF_HIGH},
 	{.label = "ov5640_csi1_reset",	.gpio = GP_OV5640_CSI1_RESET,	.flags = 0},
-	{.label = "flexcan1-stby",	.gpio = GP_CAN1_STBY,	.flags = GPIOF_OUT_INIT_LOW},
+	{.label = "flexcan1-stby",	.gpio = GP_CAN1_STBY,		.flags = 0},
+	{.label = "usb-pwr",		.gpio = GP_USB_OTG_PWR,		.flags = 0},
+};
+
+static int bt_power_change(int status)
+{
+	gpio_set_value(GP_WL1271_BT_EN, status ? 1 : 0);
+	return 0;
+}
+
+static struct platform_device mxc_bt_rfkill = {
+	.name = "mxc_bt_rfkill",
+};
+
+static struct imx_bt_rfkill_platform_data mxc_bt_rfkill_data = {
+	.power_change = bt_power_change,
 };
 
 static void poweroff(void)
@@ -1598,6 +1614,7 @@ static void __init board_init(void)
 	imx6q_add_mxc_pwm(3);
 
 	imx6q_add_mxc_pwm_backlight(0, &pwm1_backlight_data);
+	imx6q_add_mxc_pwm_backlight(1, &pwm2_backlight_data);
 	imx6q_add_mxc_pwm_backlight(3, &pwm4_backlight_data);
 
 	imx6q_add_otp();
@@ -1628,6 +1645,9 @@ static void __init board_init(void)
 	clk_enable(clko2);
 	pm_power_off = poweroff;
 	imx6q_add_busfreq();
+
+	mxc_register_device(&mxc_bt_rfkill, &mxc_bt_rfkill_data);
+	gpio_set_value(GP_EMMC_RESET, 1);
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
 	imx6q_add_sdhci_usdhc_imx(1, &sd2_data);
