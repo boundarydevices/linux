@@ -133,6 +133,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(EIM_A22__GPIO_2_16),
 	MX6PAD(EIM_A23__GPIO_6_6),
 	MX6PAD(EIM_A24__GPIO_5_4),
+	MX6PAD(EIM_A25__GPIO_5_2),
 
 	MX6PAD(EIM_DA13__GPIO_3_13),		/* Power */
 	MX6PAD(EIM_DA14__GPIO_3_14),		/* Reset */
