@@ -2011,13 +2011,15 @@ static void hotplug_worker(struct work_struct *work)
 
 			hdmi_set_cable_state(1);
 
+			if (!hdmi->hdmi_data.video_mode.mDVI)
+				switch_set_state(&hdmi->sdev_audio, 1);
+			switch_set_state(&hdmi->sdev_display, 1);
+
 			sprintf(event_string, "EVENT=plugin");
 			kobject_uevent_env(&hdmi->pdev->dev.kobj, KOBJ_CHANGE, envp);
 #ifdef CONFIG_MXC_HDMI_CEC
 			mxc_hdmi_cec_handle(0x80);
 #endif
-			switch_set_state(&hdmi->sdev_audio, 1);
-			switch_set_state(&hdmi->sdev_display, 1);
 
 		} else if (!(phy_int_pol & HDMI_PHY_HPD)) {
 			/* Plugout event */
