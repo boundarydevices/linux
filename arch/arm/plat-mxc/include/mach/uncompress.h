@@ -128,6 +128,7 @@ static __inline__ void __arch_decomp_setup(unsigned long arch_id)
 #if defined(CONFIG_MACH_MX6Q_SABRELITE)
 	case MACH_TYPE_MX6Q_SABRELITE:
 #endif
+	case MACH_TYPE_MX6_MTP:
 #if defined(CONFIG_MACH_MX6_NITROGEN6X)
 	case MACH_TYPE_MX6_NITROGEN6X:
 #endif
