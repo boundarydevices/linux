@@ -758,6 +758,7 @@ static struct mipi_csi2_platform_data mipi_csi2_pdata = {
 	.lanes = 2,
 	.dphy_clk = "mipi_pllref_clk",
 	.pixel_clk = "emi_clk",
+	.cfg_clk = "hdmi_isfr_clk",
 };
 
 #define GPIOF_HIGH GPIOF_OUT_INIT_HIGH
