@@ -894,7 +894,7 @@ int spi_nor_scan(struct spi_nor *nor, const struct spi_device_id *id,
 	struct flash_platform_data	*data;
 	struct device *dev = nor->dev;
 	struct mtd_info *mtd = nor->mtd;
-	struct device_node *np = dev->of_node;
+	struct device_node *np = nor->np;
 	int ret;
 	int i;
 
