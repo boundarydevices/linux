@@ -1210,6 +1210,10 @@ static void poweroff(void)
 {
 	int i=0;
 	pr_info("%s: %s\n", __FILE__, __func__);
+	for (i=0; i < num_registered_fb; i++) {
+		if (registered_fb[i])
+                        fb_blank(registered_fb[i],FB_BLANK_POWERDOWN);
+	}
 	while (1) {
                 touch_softlockup_watchdog_sync();
                 touch_all_softlockup_watchdogs();
