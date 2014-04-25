@@ -9,6 +9,7 @@
  * http://www.opensource.org/licenses/gpl-license.html
  * http://www.gnu.org/copyleft/gpl.html
  */
+#include <dt-bindings/input/input.h>
 
 / {
 	aliases {
@@ -20,6 +21,14 @@
 
 	memory {
 		reg = <0x10000000 0x40000000>;
+	};
+
+	clocks {
+		clk24m: clk24m {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <24000000>;
+		};
 	};
 
 	regulators {
@@ -64,38 +73,38 @@
 		power {
 			label = "Power Button";
 			gpios = <&gpio2 3 0>;
-			linux,code = <116>; /* KEY_POWER, or search */
+			linux,code = <KEY_POWER>;	/* or KEY_SEARCH */
 			gpio-key,wakeup;
 		};
 
 		menu {
 			label = "Menu";
 			gpios = <&gpio2 1 0>;
-			linux,code = <139>; /* KEY_MENU */
+			linux,code = <KEY_MENU>;
 		};
 
 		home {
 			label = "Home";
 			gpios = <&gpio2 4 0>;
-			linux,code = <102>; /* KEY_HOME */
+			linux,code = <KEY_HOME>;
 		};
 
 		back {
 			label = "Back";
 			gpios = <&gpio2 2 0>;
-			linux,code = <158>; /* KEY_BACK */
+			linux,code = <KEY_BACK>;
 		};
 
 		volume-up {
 			label = "Volume Up";
 			gpios = <&gpio7 13 0>;
-			linux,code = <115>; /* KEY_VOLUMEUP */
+			linux,code = <KEY_VOLUMEUP>;
 		};
 
 		volume-down {
 			label = "Volume Down";
 			gpios = <&gpio4 5 0>;
-			linux,code = <114>; /* KEY_VOLUMEDOWN */
+			linux,code = <KEY_VOLUMEDOWN>;
 		};
 	};
 
@@ -206,7 +215,7 @@
 		mclk_source = <0>;
 		status = "okay";
 	};
-#if 0
+
 	v4l2_cap_1 {
 		compatible = "fsl,imx6q-v4l2-capture";
 		ipu_id = <0>;
@@ -214,18 +223,23 @@
 		mclk_source = <0>;
 		status = "okay";
 	};
-#endif
+
+	v4l2_cap_2: v4l2_cap_2 {
+	};
+
 	v4l2_out {
 		compatible = "fsl,mxc_v4l2_output";
 		status = "okay";
 	};
 
+#if 0
 	mipi_dsi_reset: mipi-dsi-reset {
 		compatible = "gpio-reset";
 		reset-gpios = <&gpio2 5 GPIO_ACTIVE_LOW>;
 		reset-delay-us = <50>;
 		#reset-cells = <0>;
 	};
+#endif
 };
 
 &audmux {
@@ -271,6 +285,21 @@
 #if 0
 	phy-reset-gpios = <&gpio3 23 0>;
 #endif
+	status = "okay";
+
+	#address-cells = <0>;
+	#size-cells = <1>;
+	phy_int {
+		reg = <0x6>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <28 IRQ_TYPE_LEVEL_LOW>;
+	};
+};
+
+&flexcan1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan1_1>;
+	trx-stby-gpio = <&gpio1 2 GPIO_ACTIVE_LOW>;
 	status = "okay";
 };
 
@@ -321,10 +350,10 @@
 		compatible = "fsl,imx6-hdmi-i2c";
 		reg = <0x50>;
 	};
-#if 0
-	ov564x: ov564x@3c {
-		compatible = "ovti,ov564x";
-		reg = <0x3c>;
+
+	ov5642: ov5642@3d {
+		compatible = "ovti,ov5642";
+		reg = <0x3d>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ipu1_2>;
 		clocks = <&clks 200>;
@@ -339,10 +368,10 @@
 		mclk = <24000000>;
 		mclk_source = <0>;
 	};
-#else
-	ov5640_mipi: ov5640_mipi@3c {
+
+	ov5640_mipi: ov5640_mipi@3e {
 		compatible = "ovti,ov5640_mipi";
-		reg = <0x3c>;
+		reg = <0x3e>;
 		clocks = <&clks 147>;
 		clock-names = "csi_mclk";
 		DOVDD-supply = <&reg_1p8v>;
@@ -351,12 +380,11 @@
 		pwn-gpios = <&gpio6 9 1>;
 		rst-gpios = <&gpio2 5 0>;
 		ipu_id = <0>;
-		csi_id = <0>;
+		csi_id = <1>;
 		mclk = <22000000>;
 		mclk_source = <0>;
 		pwms = <&pwm3 0 45>;
 	};
-#endif
 };
 
 &i2c3 {
@@ -372,6 +400,7 @@
                 interrupts = <9 2>;
                 wakeup-gpios = <&gpio1 9 0>;
         };
+
         ft5x06_ts@38 {
 		compatible = "ft5x06-ts,ft5x06-ts";
 		reg = <0x38>;
@@ -379,6 +408,24 @@
 		interrupts = <9 2>;
 		wakeup-gpios = <&gpio1 9 0>;
 	};
+
+	ov5640: ov5640@3c {
+		compatible = "ovti,ov5640";
+		reg = <0x3c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ov5640 &pinctrl_ov5640_gpios>;
+		clocks = <&clk24m 0>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&reg_1p8v>;
+		AVDD-supply = <&reg_2p5v>;
+		DVDD-supply = <&reg_1p8v>;
+		pwn-gpios = <&gpio3 13 1>;
+		rst-gpios = <&gpio3 14 0>;
+		csi_id = <1>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+	};
+
 	tsc2004@48 {
 		compatible = "tsc2004,tsc2004";
 		reg = <0x48>;
@@ -392,30 +439,51 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog_1>;
 
-	hog {
+	imx6q-sabrelite {
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
-				MX6QDL_PAD_NANDF_D6__GPIO2_IO06	0x80000000	/* uSDHC4 CD */
-				MX6QDL_PAD_NANDF_D7__GPIO2_IO07	0x80000000	/* uSDHC4 WP */
-				MX6QDL_PAD_EIM_D19__GPIO3_IO19	0x80000000	/* spi-nor CS */
-				MX6QDL_PAD_EIM_D22__GPIO3_IO22	0x80000000	/* otg power en */
-				MX6QDL_PAD_EIM_D23__GPIO3_IO23	0x80000000	/* ethernet phy reset */
-				MX6QDL_PAD_SD3_DAT5__GPIO7_IO00	0x80000000	/* USDHC3 CD */
-				MX6QDL_PAD_SD3_DAT4__GPIO7_IO01	0x1f0b0		/* USDHC3 WP */
-				MX6QDL_PAD_GPIO_0__CCM_CLKO1	0x000b0		/* SGTL5000 sys_mclk */
-				MX6QDL_PAD_GPIO_4__GPIO1_IO04	0x80000000	/* CAN enable */
-				MX6QDL_PAD_GPIO_2__GPIO1_IO02	0x80000000	/* CAN standby */
-				MX6QDL_PAD_GPIO_9__GPIO1_IO09	0x80000000	/* J7: I2C3 interrupt */
-				MX6QDL_PAD_DI0_PIN4__GPIO4_IO20	0x1b0b0		/* tsc2004 interrupt */
-				MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09 0x0b0b0	/* ov5640 mipi powerdown */
-				MX6QDL_PAD_NANDF_D5__GPIO2_IO05 0x000b0		/* ov5640 mipi reset */
-				MX6QDL_PAD_GPIO_3__CCM_CLKO2	0x000b0		/* ov5642 mclk */
-				MX6QDL_PAD_GPIO_6__GPIO1_IO06	0x000b0		/* ov5642 Power Down */
-				MX6QDL_PAD_GPIO_8__GPIO1_IO08	0x000b0		/* ov5642 Reset */
-#if 0
-				MX6QDL_PAD_NANDF_CS0__GPIO6_IO11 0x000b0	/* ov5642 Reset */
-				MX6QDL_PAD_SD1_DAT0__GPIO1_IO16 0x000b0		/* ov5642 Power Down */
-#endif
+				/* Power Button */
+                                MX6QDL_PAD_NANDF_D3__GPIO2_IO03         0x1b0b0
+                                /* Menu Button */
+                                MX6QDL_PAD_NANDF_D1__GPIO2_IO01         0x1b0b0
+                                /* Home Button */
+                                MX6QDL_PAD_NANDF_D4__GPIO2_IO04         0x1b0b0
+                                /* Back Button */
+                                MX6QDL_PAD_NANDF_D2__GPIO2_IO02         0x1b0b0
+                                /* Volume Up Button */
+                                MX6QDL_PAD_GPIO_18__GPIO7_IO13          0x1b0b0
+                                /* Volume Down Button */
+                                MX6QDL_PAD_GPIO_19__GPIO4_IO05          0x1b0b0
+				MX6QDL_PAD_EIM_D19__GPIO3_IO19		0x80000000	/* spi-nor CS */
+				MX6QDL_PAD_EIM_D22__GPIO3_IO22		0x80000000	/* otg power en */
+				MX6QDL_PAD_EIM_D23__GPIO3_IO23		0x80000000	/* ethernet phy reset */
+				MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28	0x1b0b0		/* ethernet phy interrupt */
+				MX6QDL_PAD_SD3_DAT5__GPIO7_IO00		0x80000000	/* USDHC3 CD */
+				MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1f0b0		/* USDHC3 WP */
+				MX6QDL_PAD_NANDF_D6__GPIO2_IO06		0x80000000	/* uSDHC4 CD */
+				MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x80000000	/* Spare */
+				MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0		/* SGTL5000 sys_mclk */
+				MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x80000000	/* CAN standby */
+				MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x80000000	/* CAN enable */
+				MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x80000000	/* I2C3 touch screen interrupt */
+				MX6QDL_PAD_DI0_PIN4__GPIO4_IO20		0x1b0b0		/* tsc2004 interrupt */
+				MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x0b0b0		/* ov5640 mipi powerdown */
+				MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x000b0		/* ov5640 mipi reset */
+				MX6QDL_PAD_GPIO_3__CCM_CLKO2		0x000b0		/* ov5642 mclk */
+				MX6QDL_PAD_GPIO_6__GPIO1_IO06		0x000b0		/* ov5642 Power Down */
+				MX6QDL_PAD_GPIO_8__GPIO1_IO08		0x000b0		/* ov5642 Reset */
+				MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x0b0b0		/* USB Hub Reset */
+			>;
+		};
+
+		pinctrl_ov5640: pinctrl_ov5640 {
+			/* parallel camera on CSI1, pins differ for iMX6Q/iMX6DL */
+		};
+
+		pinctrl_ov5640_gpios: pinctrl_ov5640_gpios {
+			fsl,pins = <
+				MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x0b0b0		/* Power */
+				MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x030b0		/* Reset */
 			>;
 		};
 	};
@@ -431,6 +499,7 @@
 	status = "okay";
 };
 
+#if 0
 &mipi_dsi {
 	dev_id = <0>;
 	disp_id = <0>;
@@ -439,10 +508,11 @@
 	resets = <&mipi_dsi_reset>;
 	status = "okay";
 };
+#endif
 
 &mipi_csi {
 	ipu_id = <0>;
-	csi_id = <0>;
+	csi_id = <1>;
 	v_channel = <0>;
 	lanes = <2>;
 	status = "okay";
@@ -496,10 +566,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg_1>;
 	disable-over-current;
-	status = "okay";
-};
-
-&sata {
 	status = "okay";
 };
 
