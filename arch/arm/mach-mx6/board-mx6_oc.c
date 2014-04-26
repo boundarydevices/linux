@@ -416,11 +416,21 @@ static struct tsc2007_platform_data tsc2007_info = {
 };
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
+#if defined(CONFIG_TOUCHSCREEN_TSC2004) \
+	|| defined(CONFIG_TOUCHSCREEN_TSC2004_MODULE)
 	{
 		I2C_BOARD_INFO("tsc2004", 0x48),
 		.platform_data	= &tsc2007_info,
 		.irq = gpio_to_irq(MX6_OC_TOUCH_IRQ),
 	},
+#endif
+#if defined(CONFIG_TOUCHSCREEN_FT5X06) \
+	|| defined(CONFIG_TOUCHSCREEN_FT5X06_MODULE)
+	{
+		I2C_BOARD_INFO("ft5x06-ts", 0x38),
+		.irq = gpio_to_irq(MX6_OC_TOUCH_IRQ),
+	},
+#endif
 };
 /*
  **********************************************************************
