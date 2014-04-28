@@ -750,7 +750,7 @@ static int imx6_init_audio(void)
 
 int mx6_bl_notify(struct device *dev, int brightness)
 {
-	pr_info("%s: brightness=%d\n", __func__, brightness);
+	pr_debug("%s: brightness=%d\n", __func__, brightness);
 	gpio_set_value(DISP_BACKLIGHT_12V_EN, brightness ? 1 : 0);
 	return brightness;
 }
