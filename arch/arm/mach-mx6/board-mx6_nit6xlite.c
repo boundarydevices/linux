@@ -427,6 +427,7 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 #endif
 	{
 		I2C_BOARD_INFO("isl1208", 0x6f),	/* Real time clock */
+		.irq = gpio_to_irq(RTC_IRQ)
 	},
 #if defined(CONFIG_TOUCHSCREEN_FT5X06) \
 	|| defined(CONFIG_TOUCHSCREEN_FT5X06_MODULE)
