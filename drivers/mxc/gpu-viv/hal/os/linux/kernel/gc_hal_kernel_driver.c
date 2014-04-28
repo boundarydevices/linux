@@ -37,8 +37,7 @@
 #endif
 
 
-#ifdef CONFIG_ANDROID_RESERVED_MEMORY_ACCOUNT
-#    include <linux/resmem_account.h>
+#ifdef CONFIG_GPU_LOW_MEMORY_KILLER
 #    include <linux/kernel.h>
 #    include <linux/mm.h>
 #    include <linux/oom.h>
@@ -428,30 +427,6 @@ gckOS_DumpParam(
 #endif
     printk("  gpuProfiler       = %d\n",      gpuProfiler);
 }
-
-#ifdef CONFIG_ANDROID_RESERVED_MEMORY_ACCOUNT
-static size_t viv_gpu_resmem_query(struct task_struct *p, struct reserved_memory_account *m);
-static struct reserved_memory_account viv_gpu_resmem_handler = {
-    .name = "viv_gpu",
-    .get_page_used_by_process = viv_gpu_resmem_query,
-};
-
-size_t viv_gpu_resmem_query(struct task_struct *p, struct reserved_memory_account *m)
-{
-    gcuDATABASE_INFO info;
-    unsigned int processid = p->pid;
-    gckKERNEL gpukernel = m->data;
-
-    /* ignore error happens in this api. */
-    if (gckKERNEL_QueryProcessDB(gpukernel, processid, false, gcvDB_VIDEO_MEMORY, &info) != gcvSTATUS_OK)
-       return 0;
-
-    /* we return pages. */
-    if (info.counters.bytes > 0)
-       return info.counters.bytes / PAGE_SIZE;
-    return 0;
-}
-#endif
 
 int drv_open(
     struct inode* inode,
@@ -1123,10 +1098,8 @@ static int drv_init(struct device *pdev)
         device->baseAddress = 0;
     }
 
-#ifdef CONFIG_ANDROID_RESERVED_MEMORY_ACCOUNT
+#ifdef CONFIG_GPU_LOW_MEMORY_KILLER
     task_free_register(&task_nb);
-    viv_gpu_resmem_handler.data = device->kernels[gcvCORE_MAJOR];
-    register_reserved_memory_account(&viv_gpu_resmem_handler);
 #endif
 
 
@@ -1219,9 +1192,8 @@ static void drv_exit(void)
 {
     gcmkHEADER();
 
-#ifdef CONFIG_ANDROID_RESERVED_MEMORY_ACCOUNT
+#ifdef CONFIG_GPU_LOW_MEMORY_KILLER
     task_free_unregister(&task_nb);
-    unregister_reserved_memory_account(&viv_gpu_resmem_handler);
 #endif
 
     gcmkASSERT(gpuClass != gcvNULL);

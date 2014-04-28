@@ -629,7 +629,7 @@ gckKERNEL_Destroy(
     return gcvSTATUS_OK;
 }
 
-#ifdef CONFIG_ANDROID_RESERVED_MEMORY_ACCOUNT
+#ifdef CONFIG_GPU_LOW_MEMORY_KILLER
 #include <linux/kernel.h>
 #include <linux/mm.h>
 #include <linux/oom.h>
@@ -674,13 +674,15 @@ static int force_contiguous_lowmem_shrink(IN gckKERNEL Kernel)
 			task_unlock(p);
 			continue;
 		}
-		oom_adj = sig->oom_adj;
+		oom_adj = sig->oom_score_adj;
 		if (oom_adj < min_adj) {
 			task_unlock(p);
 			continue;
 		}
 
 		tasksize = 0;
+		task_unlock(p);
+		read_unlock(&tasklist_lock);
 		if (gckKERNEL_QueryProcessDB(Kernel, p->pid, gcvFALSE, gcvDB_VIDEO_MEMORY, &info) == gcvSTATUS_OK){
 			tasksize += info.counters.bytes / PAGE_SIZE;
 		}
@@ -688,7 +690,7 @@ static int force_contiguous_lowmem_shrink(IN gckKERNEL Kernel)
 			tasksize += info.counters.bytes / PAGE_SIZE;
 		}
 
-		task_unlock(p);
+		read_lock(&tasklist_lock);
 
 		if (tasksize <= 0)
 			continue;
@@ -772,7 +774,7 @@ gckKERNEL_AllocateLinearMemory(
     gcmkVERIFY_ARGUMENT(Pool != gcvNULL);
     gcmkVERIFY_ARGUMENT(Bytes != 0);
 
-#ifdef CONFIG_ANDROID_RESERVED_MEMORY_ACCOUNT
+#ifdef CONFIG_GPU_LOW_MEMORY_KILLER
 _AllocateMemory_Retry:
 #endif
     /* Get initial pool. */
@@ -972,7 +974,7 @@ _AllocateMemory_Retry:
 
     if (node == gcvNULL)
     {
-#ifdef CONFIG_ANDROID_RESERVED_MEMORY_ACCOUNT
+#ifdef CONFIG_GPU_LOW_MEMORY_KILLER
         if(forceContiguous == gcvTRUE)
         {
             if(force_contiguous_lowmem_shrink(Kernel) == 0)
