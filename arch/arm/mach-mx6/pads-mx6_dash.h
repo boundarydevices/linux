@@ -220,6 +220,9 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 
 	NEW_PAD_CTRL(MX6PAD(NANDF_CS1__GPIO_6_14), N6_IRQ_PADCFG),	/* wl1271 wl_irq */
 
+	/* RTC IRQ */
+	NEW_PAD_CTRL(MX6PAD(NANDF_CLE__GPIO_6_7), N6_IRQ_PADCFG),
+
 	/* USDHC2 */
 	SD_PINS(2, USDHC_PAD_CTRL_22KPU_40OHM_50MHZ),
         MX6PAD(SD1_CLK__OSC32K_32K_OUT), /* wl1271 clock */

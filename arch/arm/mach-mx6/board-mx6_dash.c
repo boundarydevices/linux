@@ -98,6 +98,8 @@
 #define N6_WL1271_WL_EN			IMX_GPIO_NR(6, 15)
 #define N6_WL1271_BT_EN			IMX_GPIO_NR(6, 16)
 
+#define RTC_IRQ				IMX_GPIO_NR(6, 7)
+
 #define MX6_SABRELITE_CAN1_ERR_TEST_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE | \
 		PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | \
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
@@ -355,6 +357,7 @@ static struct imxi2c_platform_data mx6_sabrelite_i2c_data = {
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("isl1208", 0x6f),	/* Real time clock */
+		.irq = gpio_to_irq(RTC_IRQ)
 	},
 };
 
@@ -796,7 +799,6 @@ static void __init mx6_sabrelite_board_init(void)
                                             (DMA_MEMORY_MAP |
                                              DMA_MEMORY_EXCLUSIVE));
 	}
-	imx6q_add_imx_snvs_rtc();
 
 	imx6q_add_imx_caam();
 
