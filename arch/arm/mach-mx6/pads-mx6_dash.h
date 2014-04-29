@@ -324,6 +324,9 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	SD_PINS(4, USDHC_PAD_CTRL_50MHZ),
 	MX6PAD(NANDF_D6__GPIO_2_6),		/* J20 - SD4_CD */
 	MX6PAD(NANDF_D7__GPIO_2_7),		/* SD4_WP */
+
+	MX6PAD(KEY_COL3__I2C2_SCL),	/* I2C2 SCL */
+	MX6PAD(KEY_ROW3__I2C2_SDA),	/* I2C2 SDA */
 	0
 };
 
@@ -361,18 +364,6 @@ static iomux_v3_cfg_t MX6NAME(sabrelite_csi0_sensor_pads)[] = {
 	0
 };
 #endif
-
-static iomux_v3_cfg_t MX6NAME(sabrelite_hdmi_ddc_pads)[] = {
-	MX6PAD(KEY_COL3__HDMI_TX_DDC_SCL), /* HDMI DDC SCL */
-	MX6PAD(KEY_ROW3__HDMI_TX_DDC_SDA), /* HDMI DDC SDA */
-	0
-};
-
-static iomux_v3_cfg_t MX6NAME(sabrelite_i2c2_pads)[] = {
-	MX6PAD(KEY_COL3__I2C2_SCL),	/* I2C2 SCL */
-	MX6PAD(KEY_ROW3__I2C2_SDA),	/* I2C2 SDA */
-	0
-};
 
 static iomux_v3_cfg_t MX6NAME(sabrelite_mc33902_flexcan_pads)[] = {
 	NEW_PAD_CTRL(MX6PAD(GPIO_7__GPIO_1_7), MX6_SABRELITE_CAN1_ERR_PADCFG),

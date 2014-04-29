@@ -63,7 +63,6 @@
 #include <mach/viv_gpu.h>
 #include <mach/ahci_sata.h>
 #include <mach/ipu-v3.h>
-#include <mach/mxc_hdmi.h>
 #include <mach/mxc_asrc.h>
 #include <mach/imx_rfkill.h>
 #include <linux/i2c/tsc2007.h>
@@ -583,9 +582,6 @@ static struct fsl_mxc_camera_platform_data camera_data = {
 #endif
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
-	},
 #if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
 	{
 		I2C_BOARD_INFO("ov5640_mipi", 0x3c),
@@ -807,56 +803,6 @@ static struct ipuv3_fb_platform_data sabrelite_fb_data[] = {
 	.default_bpp = 16,
 	.int_clk = false,
 	},
-};
-
-static void hdmi_init(int ipu_id, int disp_id)
-{
-	int hdmi_mux_setting;
-
-	if ((ipu_id > 1) || (ipu_id < 0)) {
-		pr_err("Invalid IPU select for HDMI: %d. Set to 0\n", ipu_id);
-		ipu_id = 0;
-	}
-
-	if ((disp_id > 1) || (disp_id < 0)) {
-		pr_err("Invalid DI select for HDMI: %d. Set to 0\n", disp_id);
-		disp_id = 0;
-	}
-
-	/* Configure the connection between IPU1/2 and HDMI */
-	hdmi_mux_setting = 2*ipu_id + disp_id;
-
-	/* GPR3, bits 2-3 = HDMI_MUX_CTL */
-	mxc_iomux_set_gpr_register(3, 2, 2, hdmi_mux_setting);
-
-	/* Set HDMI event as SDMA event2 while Chip version later than TO1.2 */
-	if ((mx6q_revision() > IMX_CHIP_REVISION_1_1))
-		mxc_iomux_set_gpr_register(0, 0, 1, 1);
-}
-
-/* On mx6x sbarelite board i2c2 iomux with hdmi ddc,
- * the pins default work at i2c2 function,
- when hdcp enable, the pins should work at ddc function */
-
-static void hdmi_enable_ddc_pin(void)
-{
-	IOMUX_SETUP(sabrelite_hdmi_ddc_pads);
-}
-
-static void hdmi_disable_ddc_pin(void)
-{
-	IOMUX_SETUP(sabrelite_i2c2_pads);
-}
-
-static struct fsl_mxc_hdmi_platform_data hdmi_data = {
-	.init = hdmi_init,
-	.enable_pins = hdmi_enable_ddc_pin,
-	.disable_pins = hdmi_disable_ddc_pin,
-};
-
-static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
-	.ipu_id = 0,
-	.disp_id = 1,
 };
 
 static struct fsl_mxc_lcd_platform_data lcdif_data = {
@@ -1278,7 +1224,6 @@ static void __init mx6_sabrelite_board_init(void)
 		ldb_data.ipu_id = 0;
 		ldb_data.sec_ipu_id = 0;
 	}
-	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
 
 	imx6q_add_ipuv3(0, &ipu_data[0]);
 	if (cpu_is_mx6q()) {
@@ -1327,8 +1272,6 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_ecspi(0, &mx6_sabrelite_spi_data);
 	spi_device_init();
 
-	imx6q_add_mxc_hdmi(&hdmi_data);
-
 	imx6q_add_anatop_thermal_imx(1, &mx6_sabrelite_anatop_thermal_data);
 	imx6_init_fec(fec_data);
 	imx6q_add_pm_imx(0, &mx6_sabrelite_pm_data);
@@ -1365,9 +1308,6 @@ static void __init mx6_sabrelite_board_init(void)
 		sizeof(imx_ion_data) + sizeof(struct ion_platform_heap));
 
 	sabrelite_add_device_buttons();
-
-	imx6q_add_hdmi_soc();
-	imx6q_add_hdmi_soc_dai();
 
 	ret = gpio_request_array(mx6_sabrelite_flexcan_gpios,
 			ARRAY_SIZE(mx6_sabrelite_flexcan_gpios));
