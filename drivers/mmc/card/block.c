@@ -1949,6 +1949,25 @@ static inline int mmc_blk_readonly(struct mmc_card *card)
 	       !(card->csd.cmdclass & CCC_BLOCK_WRITE);
 }
 
+static inline int get_preferred_bit(unsigned bit, unsigned long *addr,
+		unsigned long max)
+{
+	if (bit >= max)
+		bit = 0;
+	while (bit < max) {
+		if (!test_and_set_bit(bit, addr))
+			return bit;
+#ifdef CONFIG_MMC_BLOCK_PREFER_SAME_NUMBER
+		if (bit < 5)
+			bit = 5;
+		else
+#endif
+			bit++;
+	}
+	return -ENOSPC;
+}
+
+
 static struct mmc_blk_data *mmc_blk_alloc_req(struct mmc_card *card,
 					      struct device *parent,
 					      sector_t size,
@@ -1957,18 +1976,12 @@ static struct mmc_blk_data *mmc_blk_alloc_req(struct mmc_card *card,
 					      int area_type)
 {
 	struct mmc_blk_data *md;
-	int devidx, ret;
-
-	devidx = find_first_zero_bit(dev_use, max_devices);
-	if (devidx >= max_devices)
-		return ERR_PTR(-ENOSPC);
-	__set_bit(devidx, dev_use);
-
-	md = kzalloc(sizeof(struct mmc_blk_data), GFP_KERNEL);
-	if (!md) {
-		ret = -ENOMEM;
-		goto out;
-	}
+	int devidx, name_idx, ret;
+#ifdef CONFIG_MMC_BLOCK_PREFER_SAME_NUMBER
+	int preferred = card->host->index;
+#else
+	int preferred = 0;
+#endif
 
 	/*
 	 * !subname implies we are creating main mmc_blk_data that will be
@@ -1976,13 +1989,25 @@ static struct mmc_blk_data *mmc_blk_alloc_req(struct mmc_card *card,
 	 * partitions, devidx will not coincide with a per-physical card
 	 * index anymore so we keep track of a name index.
 	 */
-	if (!subname) {
-		md->name_idx = find_first_zero_bit(name_use, max_devices);
-		__set_bit(md->name_idx, name_use);
-	} else
-		md->name_idx = ((struct mmc_blk_data *)
-				dev_to_disk(parent)->private_data)->name_idx;
+	if (subname)
+		preferred = ((struct mmc_blk_data *)dev_to_disk(parent)->private_data)->name_idx;
 
+	devidx = get_preferred_bit(preferred, dev_use, max_devices);
+	if (devidx < 0) {
+		ret = devidx;
+		goto out1;
+	}
+	name_idx = get_preferred_bit(preferred, name_use, max_devices);
+	if (name_idx < 0) {
+		ret = name_idx;
+		goto out2;
+	}
+	md = kzalloc(sizeof(struct mmc_blk_data), GFP_KERNEL);
+	if (!md) {
+		ret = -ENOMEM;
+		goto out3;
+	}
+	md->name_idx = name_idx;
 	md->area_type = area_type;
 
 	/*
@@ -2070,7 +2095,11 @@ static struct mmc_blk_data *mmc_blk_alloc_req(struct mmc_card *card,
 	put_disk(md->disk);
  err_kfree:
 	kfree(md);
- out:
+ out3:
+	clear_bit(name_idx, name_use);
+ out2:
+	clear_bit(devidx, dev_use);
+ out1:
 	return ERR_PTR(ret);
 }
 

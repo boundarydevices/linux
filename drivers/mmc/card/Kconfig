@@ -14,6 +14,14 @@ config MMC_BLOCK
 	  mount the filesystem. Almost everyone wishing MMC support
 	  should say Y or M here.
 
+config MMC_BLOCK_PREFER_SAME_NUMBER
+	bool "MMC block prefer same number"
+	depends on MMC_BLOCK
+	help
+	  Say Y here to prefer having mmcn associated with mmcblkn.
+	  Default is n so that boot device number won't change
+	  unless this is requested.
+
 config MMC_BLOCK_MINORS
 	int "Number of minors per block device"
 	depends on MMC_BLOCK
