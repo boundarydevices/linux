@@ -43,6 +43,7 @@ static void mmc_host_classdev_release(struct device *dev)
 	spin_lock(&mmc_host_lock);
 	idr_remove(&mmc_host_idr, host->index);
 	spin_unlock(&mmc_host_lock);
+	destroy_workqueue(host->workqueue);
 	kfree(host);
 }
 
@@ -590,6 +591,11 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 	}
 
 	dev_set_name(&host->class_dev, "mmc%d", host->index);
+	host->workqueue = alloc_ordered_workqueue("kmmcd%d", 0, host->index);
+	if (!host->workqueue) {
+		kfree(host);
+		return NULL;
+	}
 
 	host->class_dev.parent = dev;
 	host->class_dev.class = &mmc_host_class;
