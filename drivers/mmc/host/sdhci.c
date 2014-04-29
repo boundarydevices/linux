@@ -2204,8 +2204,9 @@ static void sdhci_timeout_timer(unsigned long data)
 	spin_lock_irqsave(&host->lock, flags);
 
 	if (host->mrq) {
-		pr_err("%s: Timeout waiting for hardware "
-			"interrupt.\n", mmc_hostname(host->mmc));
+		pr_err("%s: Timeout waiting for hardware interrupt. retries left=%d opcode=%x\n",
+				mmc_hostname(host->mmc), host->cmd ? host->cmd->retries : 0,
+				host->cmd ? host->cmd->opcode : 0);
 		sdhci_dumpregs(host);
 
 		if (host->data) {
