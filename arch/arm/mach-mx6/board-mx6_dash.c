@@ -43,7 +43,6 @@
 #include <linux/mxcfb.h>
 #include <linux/pwm.h>
 #include <linux/pwm_backlight.h>
-#include <linux/fec.h>
 #include <linux/memblock.h>
 #include <linux/gpio.h>
 #include <linux/ion.h>
@@ -101,7 +100,6 @@
 #else
 #define GP_CSI0_PWN		IMX_GPIO_NR(1, 6)
 #endif
-#define MX6_SABRELITE_ENET_PHY_INT	IMX_GPIO_NR(1, 28)
 
 #define N6_WL1271_WL_IRQ		IMX_GPIO_NR(6, 14)
 #define N6_WL1271_WL_EN			IMX_GPIO_NR(6, 15)
@@ -322,33 +320,6 @@ static struct platform_device btwilink_device = {
 };
 
 #endif
-
-static int mx6_sabrelite_fec_phy_init(struct phy_device *phydev)
-{
-	/* prefer master mode */
-	phy_write(phydev, 0x9, 0x1f00);
-
-	/* min rx data delay */
-	phy_write(phydev, 0x0b, 0x8105);
-	phy_write(phydev, 0x0c, 0x0000);
-
-	/* min tx data delay */
-	phy_write(phydev, 0x0b, 0x8106);
-	phy_write(phydev, 0x0c, 0x0000);
-
-	/* max rx/tx clock delay, min rx/tx control delay */
-	phy_write(phydev, 0x0b, 0x8104);
-	phy_write(phydev, 0x0c, 0xf0f0);
-	phy_write(phydev, 0x0b, 0x104);
-
-	return 0;
-}
-
-static struct fec_platform_data fec_data __initdata = {
-	.init = mx6_sabrelite_fec_phy_init,
-	.phy = PHY_INTERFACE_MODE_RGMII,
-	.phy_irq = gpio_to_irq(MX6_SABRELITE_ENET_PHY_INT)
-};
 
 static int mx6_sabrelite_spi_cs[] = {
 	MX6_SABRELITE_ECSPI1_CS1,
@@ -1121,15 +1092,6 @@ static void __init mx6_sabrelite_board_init(void)
 	printk(KERN_ERR "------------ Board type %s\n",
                isn6 ? "Nitrogen6X/W" : "Sabre Lite");
 
-#ifdef CONFIG_FEC_1588
-	/* Set GPIO_16 input for IEEE-1588 ts_clk and RMII reference clock
-	 * For MX6 GPR1 bit21 meaning:
-	 * Bit21:       0 - GPIO_16 pad output
-	 *              1 - GPIO_16 pad input
-	 */
-	mxc_iomux_set_gpr_register(1, 21, 1, 1);
-#endif
-
 	gp_reg_id = sabrelite_dvfscore_data.reg_id;
 	soc_reg_id = sabrelite_dvfscore_data.soc_id;
 	pu_reg_id = sabrelite_dvfscore_data.pu_id;
@@ -1191,7 +1153,6 @@ static void __init mx6_sabrelite_board_init(void)
 	spi_device_init();
 
 	imx6q_add_anatop_thermal_imx(1, &mx6_sabrelite_anatop_thermal_data);
-	imx6_init_fec(fec_data);
 	imx6q_add_pm_imx(0, &mx6_sabrelite_pm_data);
 	imx6q_add_sdhci_usdhc_imx(3, &mx6_sabrelite_sd4_data);
 	imx6q_add_sdhci_usdhc_imx(2, &mx6_sabrelite_sd3_data);
