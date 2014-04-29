@@ -93,12 +93,6 @@
 #define MX6_SABRELITE_HOME_KEY		IMX_GPIO_NR(2, 4)
 #define MX6_SABRELITE_VOL_UP_KEY	IMX_GPIO_NR(7, 13)
 #define MX6_SABRELITE_VOL_DOWN_KEY	IMX_GPIO_NR(4, 5)
-#define GP_CSI0_RST		IMX_GPIO_NR(1, 8)
-#if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
-#define GP_CSI0_PWN		IMX_GPIO_NR(6, 9)
-#else
-#define GP_CSI0_PWN		IMX_GPIO_NR(1, 6)
-#endif
 
 #define N6_WL1271_WL_IRQ		IMX_GPIO_NR(6, 14)
 #define N6_WL1271_WL_EN			IMX_GPIO_NR(6, 15)
@@ -364,129 +358,11 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	},
 };
 
-static void mx6_csi0_cam_powerdown(int powerdown)
-{
-	gpio_set_value(GP_CSI0_PWN, powerdown ? 1 : 0);
-	msleep(2);
-}
-
-static void camera_reset(int power_gp, int poweroff_level, int reset_gp, int reset_gp2)
-{
-	pr_info("%s: power_gp=0x%x, reset_gp=0x%x reset_gp2=0x%x\n",
-			__func__, power_gp, reset_gp, reset_gp2);
-	/* Camera power down */
-	gpio_request(power_gp, "cam-pwdn");
-	gpio_request(reset_gp, "cam-reset");
-	if (reset_gp2 >= 0)
-		gpio_request(reset_gp2, "cam-reset2");
-	gpio_direction_output(power_gp, poweroff_level);
-	/* Camera reset */
-	gpio_direction_output(reset_gp, 0);
-	if (reset_gp2 >= 0)
-		gpio_direction_output(reset_gp2, 0);
-	msleep(1);
-	gpio_set_value(power_gp, poweroff_level ^ 1);
-	msleep(1);
-	gpio_set_value(reset_gp, 1);
-	if (reset_gp2 >= 0)
-		gpio_set_value(reset_gp2, 1);
-}
-
-
 static struct mxc_pwm_platform_data pwm3_data = {
 	.clk_select = PWM_CLK_HIGHPERF,
 };
 
-#if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
-/*
- * (ov5640 Mipi) - J16
- * NANDF_WP_B	GPIO[6]:9	Nitrogen6x - power down, SOM - NC
- * NANDF_D5 	GPIO[2]:5	Nitrogen6x/SOM - CSI0 reset
- * NANDF_CS0	GPIO[6]:11	reset, old rev SOM jumpered
- * SD1_DAT1	GPIO[1]:16	24 Mhz XCLK/XVCLK (pwm3)
- */
-static struct pwm_device	*mipi_pwm;
-static struct fsl_mxc_camera_platform_data ov5640_mipi_data;
-
-static void mx6_mipi_sensor_io_init(void)
-{
-	IOMUX_SETUP(sabrelite_mipi_pads);
-
-	mipi_pwm = pwm_request(2, "mipi_clock");
-	if (IS_ERR(mipi_pwm)) {
-		pr_err("unable to request PWM for mipi_clock\n");
-	} else {
-		unsigned period = 1000/22;
-		pr_info("got pwm for mipi_clock\n");
-		pwm_config(mipi_pwm, period >> 1, period);
-		pwm_enable(mipi_pwm);
-	}
-
-	camera_reset(IMX_GPIO_NR(6, 9), 1, IMX_GPIO_NR(2, 5), IMX_GPIO_NR(6, 11));
-	if (cpu_is_mx6dl()) {
-		/*
-		 * for mx6dl, mipi virtual channel 0 connect to csi0
-		 * virtual channel 1 connect to csi1
-		 */
-		mxc_iomux_set_gpr_register(13, ov5640_mipi_data.csi * 3, 3, ov5640_mipi_data.csi);
-	} else {
-		/* select mipi IPU1 CSI0/ IPU2/CSI1 */
-		mxc_iomux_set_gpr_register(1, 19 + ov5640_mipi_data.csi, 1, 0);
-	}
-}
-
-static struct fsl_mxc_camera_platform_data ov5640_mipi_data = {
-	.mclk = 24000000,
-	.csi = 0,
-	.io_init = mx6_mipi_sensor_io_init,
-	.pwdn = mx6_csi0_cam_powerdown,
-};
-#else
-static void mx6_csi0_io_init(void)
-{
-	IOMUX_SETUP(sabrelite_csi0_sensor_pads);
-
-	camera_reset(GP_CSI0_PWN, 1, GP_CSI0_RST, IMX_GPIO_NR(6, 11));
-	/* For MX6Q GPR1 bit19 and bit20 meaning:
-	 * Bit19:       0 - Enable mipi to IPU1 CSI0
-	 *                      virtual channel is fixed to 0
-	 *              1 - Enable parallel interface to IPU1 CSI0
-	 * Bit20:       0 - Enable mipi to IPU2 CSI1
-	 *                      virtual channel is fixed to 3
-	 *              1 - Enable parallel interface to IPU2 CSI1
-	 * IPU1 CSI1 directly connect to mipi csi2,
-	 *      virtual channel is fixed to 1
-	 * IPU2 CSI0 directly connect to mipi csi2,
-	 *      virtual channel is fixed to 2
-	 */
-	if (cpu_is_mx6q())
-		mxc_iomux_set_gpr_register(1, 19, 1, 1);
-	else
-		mxc_iomux_set_gpr_register(13, 0, 3, 4);
-}
-
-static struct fsl_mxc_camera_platform_data camera_data = {
-	.mclk = 24000000,
-	.mclk_source = 0,
-	.csi = 0,
-	.io_init = mx6_csi0_io_init,
-	.pwdn = mx6_csi0_cam_powerdown,
-};
-
-#endif
-
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
-#if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
-	{
-		I2C_BOARD_INFO("ov5640_mipi", 0x3c),
-		.platform_data = (void *)&ov5640_mipi_data,
-	},
-#else
-	{
-		I2C_BOARD_INFO("ov564x", 0x3c),
-		.platform_data = (void *)&camera_data,
-	},
-#endif
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
@@ -645,10 +521,8 @@ static struct fsl_mxc_ldb_platform_data ldb_data = {
 static struct imx_ipuv3_platform_data ipu_data[] = {
 	{
 	.rev = 4,
-	.csi_clk[0] = "clko2_clk",
 	}, {
 	.rev = 4,
-	.csi_clk[0] = "clko2_clk",
 	},
 };
 
@@ -662,21 +536,6 @@ static struct ion_platform_data imx_ion_data = {
 		},
 	},
 };
-
-static struct fsl_mxc_capture_platform_data capture_data[] = {
-	{
-		.csi = 0,
-		.ipu = 0,
-		.mclk_source = 0,
-		.is_mipi = 0,
-	}, {
-		.csi = 1,
-		.ipu = 0,
-		.mclk_source = 0,
-		.is_mipi = 1,
-	},
-};
-
 
 struct imx_vout_mem {
        resource_size_t res_mbase;
@@ -857,15 +716,6 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 	}
 }
 
-static struct mipi_csi2_platform_data mipi_csi2_pdata = {
-	.ipu_id	 = 0,
-	.csi_id = 0,
-	.v_channel = 0,
-	.lanes = 2,
-	.dphy_clk = "mipi_pllref_clk",
-	.pixel_clk = "emi_clk",
-};
-
 static const struct imx_pcie_platform_data pcie_data  __initconst = {
 	.pcie_pwr_en	= -EINVAL,
 	.pcie_rst	= -EINVAL, //MX6_SABRELITE_CAP_TCH_INT1,
@@ -946,9 +796,6 @@ static void __init mx6_sabrelite_board_init(void)
                                             (DMA_MEMORY_MAP |
                                              DMA_MEMORY_EXCLUSIVE));
 	}
-	imx6q_add_v4l2_capture(0, &capture_data[0]);
-	imx6q_add_v4l2_capture(1, &capture_data[1]);
-	imx6q_add_mipi_csi2(&mipi_csi2_pdata);
 	imx6q_add_imx_snvs_rtc();
 
 	imx6q_add_imx_caam();

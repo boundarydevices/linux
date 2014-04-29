@@ -162,7 +162,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(EIM_D21__I2C1_SCL),	/* GPIO3[21] */
 	MX6PAD(EIM_D28__I2C1_SDA),	/* GPIO3[28] */
 
-	/* I2C2 Camera, MIPI */
+	/* I2C2 */
 	MX6PAD(KEY_COL3__I2C2_SCL),	/* GPIO4[12] */
 	MX6PAD(KEY_ROW3__I2C2_SDA),	/* GPIO4[13] */
 
@@ -231,41 +231,6 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(EIM_D31__UART3_RTS),
 	0
 };
-
-#if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
-static iomux_v3_cfg_t MX6NAME(sabrelite_mipi_pads)[] = {
-	MX6PAD(NANDF_WP_B__GPIO_6_9),		/* J16 - MIPI Powerdown - Nitrogen6x, SOM is NC */
-	MX6PAD(NANDF_D5__GPIO_2_5),		/* J16 - MIPI camera reset - Nitrogen6x/SOM */
-	MX6PAD(NANDF_CS0__GPIO_6_11),		/* Camera Reset, SOM jumpered */
-	MX6PAD(GPIO_6__GPIO_1_6),		/* Camera GP */
-	0
-};
-#else
-static iomux_v3_cfg_t MX6NAME(sabrelite_csi0_sensor_pads)[] = {
-	/* IPU1 Camera */
-	MX6PAD(CSI0_DAT8__IPU1_CSI0_D_8),
-	MX6PAD(CSI0_DAT9__IPU1_CSI0_D_9),
-	MX6PAD(CSI0_DAT10__IPU1_CSI0_D_10),
-	MX6PAD(CSI0_DAT11__IPU1_CSI0_D_11),
-	MX6PAD(CSI0_DAT12__IPU1_CSI0_D_12),
-	MX6PAD(CSI0_DAT13__IPU1_CSI0_D_13),
-	MX6PAD(CSI0_DAT14__IPU1_CSI0_D_14),
-	MX6PAD(CSI0_DAT15__IPU1_CSI0_D_15),
-	MX6PAD(CSI0_DAT16__IPU1_CSI0_D_16),
-	MX6PAD(CSI0_DAT17__IPU1_CSI0_D_17),
-	MX6PAD(CSI0_DAT18__IPU1_CSI0_D_18),
-	MX6PAD(CSI0_DAT19__IPU1_CSI0_D_19),
-	MX6PAD(CSI0_DATA_EN__IPU1_CSI0_DATA_EN),
-	MX6PAD(CSI0_MCLK__IPU1_CSI0_HSYNC),
-	MX6PAD(CSI0_PIXCLK__IPU1_CSI0_PIXCLK),
-	MX6PAD(CSI0_VSYNC__IPU1_CSI0_VSYNC),
-	MX6PAD(GPIO_6__GPIO_1_6),		/* J5 - Camera GP */
-	MX6PAD(GPIO_8__GPIO_1_8),		/* J5 - Camera Reset */
-	MX6PAD(NANDF_CS0__GPIO_6_11),		/* J5 - Camera Reset */
-	MX6PAD(SD1_DAT0__GPIO_1_16),		/* J5 - Camera GP */
-	0
-};
-#endif
 
 static iomux_v3_cfg_t MX6NAME(sabrelite_mc33902_flexcan_pads)[] = {
 	NEW_PAD_CTRL(MX6PAD(GPIO_7__GPIO_1_7), MX6_SABRELITE_CAN1_ERR_PADCFG),
