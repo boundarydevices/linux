@@ -375,61 +375,11 @@ static void spi_device_init(void)
 				ARRAY_SIZE(imx6_sabrelite_spi_nor_device));
 }
 
-static struct mxc_audio_platform_data mx6_sabrelite_audio_data;
-
-static int mx6_sabrelite_sgtl5000_init(void)
-{
-	struct clk *clko;
-	struct clk *new_parent;
-	int rate;
-
-	clko = clk_get(NULL, "clko_clk");
-	if (IS_ERR(clko)) {
-		pr_err("can't get CLKO clock.\n");
-		return PTR_ERR(clko);
-	}
-	new_parent = clk_get(NULL, "ahb");
-	if (!IS_ERR(new_parent)) {
-		clk_set_parent(clko, new_parent);
-		clk_put(new_parent);
-	}
-	rate = clk_round_rate(clko, 16000000);
-	if (rate < 8000000 || rate > 27000000) {
-		pr_err("Error:SGTL5000 mclk freq %d out of range!\n", rate);
-		clk_put(clko);
-		return -1;
-	}
-
-	mx6_sabrelite_audio_data.sysclk = rate;
-	clk_set_rate(clko, rate);
-	clk_enable(clko);
-	return 0;
-}
-
-static struct imx_ssi_platform_data mx6_sabrelite_ssi_pdata = {
-	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
-};
-
-static struct mxc_audio_platform_data mx6_sabrelite_audio_data = {
-	.ssi_num = 1,
-	.src_port = 2,
-	.ext_port = 4,
-	.init = mx6_sabrelite_sgtl5000_init,
-	.hp_gpio = -1,
-};
-
-static struct platform_device mx6_sabrelite_audio_device = {
-	.name = "imx-sgtl5000",
-};
-
 static struct imxi2c_platform_data mx6_sabrelite_i2c_data = {
 	.bitrate = 100000,
 };
 
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("sgtl5000", 0x0a),
-	},
 	{
 		I2C_BOARD_INFO("isl1208", 0x6f),	/* Real time clock */
 	},
@@ -860,98 +810,6 @@ static struct platform_device sabrelite_vmmc_reg_devices = {
 	},
 };
 
-#ifdef CONFIG_SND_SOC_SGTL5000
-
-static struct regulator_consumer_supply sgtl5000_sabrelite_consumer_vdda = {
-	.supply = "VDDA",
-	.dev_name = "0-000a",
-};
-
-static struct regulator_consumer_supply sgtl5000_sabrelite_consumer_vddio = {
-	.supply = "VDDIO",
-	.dev_name = "0-000a",
-};
-
-static struct regulator_consumer_supply sgtl5000_sabrelite_consumer_vddd = {
-	.supply = "VDDD",
-	.dev_name = "0-000a",
-};
-
-static struct regulator_init_data sgtl5000_sabrelite_vdda_reg_initdata = {
-	.num_consumer_supplies = 1,
-	.consumer_supplies = &sgtl5000_sabrelite_consumer_vdda,
-};
-
-static struct regulator_init_data sgtl5000_sabrelite_vddio_reg_initdata = {
-	.num_consumer_supplies = 1,
-	.consumer_supplies = &sgtl5000_sabrelite_consumer_vddio,
-};
-
-static struct regulator_init_data sgtl5000_sabrelite_vddd_reg_initdata = {
-	.num_consumer_supplies = 1,
-	.consumer_supplies = &sgtl5000_sabrelite_consumer_vddd,
-};
-
-static struct fixed_voltage_config sgtl5000_sabrelite_vdda_reg_config = {
-	.supply_name		= "VDDA",
-	.microvolts		= 2500000,
-	.gpio			= -1,
-	.init_data		= &sgtl5000_sabrelite_vdda_reg_initdata,
-};
-
-static struct fixed_voltage_config sgtl5000_sabrelite_vddio_reg_config = {
-	.supply_name		= "VDDIO",
-	.microvolts		= 3300000,
-	.gpio			= -1,
-	.init_data		= &sgtl5000_sabrelite_vddio_reg_initdata,
-};
-
-static struct fixed_voltage_config sgtl5000_sabrelite_vddd_reg_config = {
-	.supply_name		= "VDDD",
-	.microvolts		= 0,
-	.gpio			= -1,
-	.init_data		= &sgtl5000_sabrelite_vddd_reg_initdata,
-};
-
-static struct platform_device sgtl5000_sabrelite_vdda_reg_devices = {
-	.name	= "reg-fixed-voltage",
-	.id	= 0,
-	.dev	= {
-		.platform_data = &sgtl5000_sabrelite_vdda_reg_config,
-	},
-};
-
-static struct platform_device sgtl5000_sabrelite_vddio_reg_devices = {
-	.name	= "reg-fixed-voltage",
-	.id	= 1,
-	.dev	= {
-		.platform_data = &sgtl5000_sabrelite_vddio_reg_config,
-	},
-};
-
-static struct platform_device sgtl5000_sabrelite_vddd_reg_devices = {
-	.name	= "reg-fixed-voltage",
-	.id	= 2,
-	.dev	= {
-		.platform_data = &sgtl5000_sabrelite_vddd_reg_config,
-	},
-};
-
-#endif /* CONFIG_SND_SOC_SGTL5000 */
-
-static int imx6_init_audio(void)
-{
-	mxc_register_device(&mx6_sabrelite_audio_device,
-			    &mx6_sabrelite_audio_data);
-	imx6q_add_imx_ssi(1, &mx6_sabrelite_ssi_pdata);
-#ifdef CONFIG_SND_SOC_SGTL5000
-	platform_device_register(&sgtl5000_sabrelite_vdda_reg_devices);
-	platform_device_register(&sgtl5000_sabrelite_vddio_reg_devices);
-	platform_device_register(&sgtl5000_sabrelite_vddd_reg_devices);
-#endif
-	return 0;
-}
-
 /* PWM3_PWMO: backlight control on LDB connector */
 static struct platform_pwm_backlight_data mx6_sabrelite_pwm_backlight_data = {
 	.pwm_id = 3,
@@ -1083,7 +941,6 @@ static void __init mx6_sabrelite_board_init(void)
 
 	isn6 = is_nitrogen6w();
 	if (isn6) {
-		mx6_sabrelite_audio_data.ext_port = 3;
 		mx6_sabrelite_sd3_data.wp_gpio = -1 ;
 		IOMUX_SETUP(nitrogen6x_pads);
 	} else {
@@ -1161,7 +1018,6 @@ static void __init mx6_sabrelite_board_init(void)
 	if (cpu_is_mx6q())
 		imx6q_add_ahci(0, &mx6_sabrelite_sata_data);
 	imx6q_add_vpu();
-	imx6_init_audio();
 	platform_device_register(&sabrelite_vmmc_reg_devices);
 	imx_asrc_data.asrc_core_clk = clk_get(NULL, "asrc_clk");
 	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");

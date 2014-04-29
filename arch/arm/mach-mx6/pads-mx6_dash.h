@@ -94,7 +94,6 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(GPIO_4__GPIO_1_4),		/* Enable */
 
 	/* CCM  */
-	MX6PAD(GPIO_0__CCM_CLKO),		/* SGTL500 sys_mclk */
 	MX6PAD(GPIO_3__CCM_CLKO2),		/* J5 - Camera MCLK */
 
 	/* ECSPI1 */
@@ -187,7 +186,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(GPIO_17__GPIO_7_12),	/* USB Hub Reset */
 	MX6PAD(GPIO_18__GPIO_7_13),	/* J14 - Volume Up */
 
-	/* I2C1, SGTL5000 */
+	/* I2C1 */
 	MX6PAD(EIM_D21__I2C1_SCL),	/* GPIO3[21] */
 	MX6PAD(EIM_D28__I2C1_SDA),	/* GPIO3[28] */
 
