@@ -65,11 +65,6 @@
 #include <mach/ipu-v3.h>
 #include <mach/mxc_asrc.h>
 #include <mach/imx_rfkill.h>
-#include <linux/i2c/tsc2007.h>
-#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT) || \
-	defined(CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
-#include <linux/i2c/atmel_mxt_ts.h>
-#endif
 #include <linux/wl12xx.h>
 #include <linux/ti_wilink_st.h>
 #include <asm/irq.h>
@@ -90,7 +85,6 @@
 #define MX6_SABRELITE_ECSPI1_CS1	IMX_GPIO_NR(3, 19)
 #define MX6_SABRELITE_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
 #define MX6_SABRELITE_CAP_TCH_INT1	IMX_GPIO_NR(1, 9)
-#define MX6_SABRELITE_DRGB_IRQGPIO	IMX_GPIO_NR(4, 20)
 #define MX6_SABRELITE_USB_HUB_RESET	IMX_GPIO_NR(7, 12)
 #define MX6_SABRELITE_CAN1_STBY		IMX_GPIO_NR(1, 2)
 #define MX6_SABRELITE_CAN1_EN		IMX_GPIO_NR(1, 4)
@@ -595,50 +589,7 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 #endif
 };
 
-static struct tsc2007_platform_data tsc2007_info = {
-	.model			= 2004,
-	.x_plate_ohms		= 500,
-};
-
-#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT) || \
-	defined(CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
-static struct mxt_platform_data mxt_data = {
-        .irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
-};
-#endif
-
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("egalax_ts", 0x4),
-		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
-	},
-	{
-		I2C_BOARD_INFO("tsc2004", 0x48),
-		.platform_data	= &tsc2007_info,
-		.irq = gpio_to_irq(MX6_SABRELITE_DRGB_IRQGPIO),
-	},
-#if defined(CONFIG_TOUCHSCREEN_FT5X06) \
-	|| defined(CONFIG_TOUCHSCREEN_FT5X06_MODULE)
-	{
-		I2C_BOARD_INFO("ft5x06-ts", 0x38),
-		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
-	},
-#endif
-#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT) || \
-	defined(CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
-	{
-		I2C_BOARD_INFO("atmel_mxt_ts", 0x4c), /* i2c address */
-		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
-                .platform_data = &mxt_data,
-	},
-#endif
-#if defined(CONFIG_TOUCHSCREEN_FUSION_F0710A) \
-       || defined(CONFIG_TOUCHSCREEN_FUSION_F0710A_MODULE)
-       {
-               I2C_BOARD_INFO("fusion_F0710A", 0x10),
-               .irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
-       },
-#endif
 };
 
 static void imx6_sabrelite_usbotg_vbus(bool on)
@@ -781,34 +732,10 @@ static struct ipuv3_fb_platform_data sabrelite_fb_data[] = {
 	{ /*fb0*/
 	.disp_dev = "ldb",
 	.interface_pix_fmt = IPU_PIX_FMT_RGB666,
-	.mode_str = "LDB-XGA",
-	.default_bpp = 16,
+	.mode_str = "LDB-WXGA",
+	.default_bpp = 32,
 	.int_clk = false,
-	}, {
-	.disp_dev = "lcd",
-	.interface_pix_fmt = IPU_PIX_FMT_RGB565,
-	.mode_str = "CLAA-WVGA",
-	.default_bpp = 16,
-	.int_clk = false,
-	}, {
-	.disp_dev = "ldb",
-	.interface_pix_fmt = IPU_PIX_FMT_RGB666,
-	.mode_str = "LDB-SVGA",
-	.default_bpp = 16,
-	.int_clk = false,
-	}, {
-	.disp_dev = "ldb",
-	.interface_pix_fmt = IPU_PIX_FMT_RGB666,
-	.mode_str = "LDB-VGA",
-	.default_bpp = 16,
-	.int_clk = false,
-	},
-};
-
-static struct fsl_mxc_lcd_platform_data lcdif_data = {
-	.ipu_id = 0,
-	.disp_id = 0,
-	.default_ifmt = IPU_PIX_FMT_RGB565,
+	}
 };
 
 static struct fsl_mxc_ldb_platform_data ldb_data = {
@@ -1054,14 +981,6 @@ static int imx6_init_audio(void)
 	return 0;
 }
 
-/* PWM0_PWMO: backlight control on DRGB connector */
-static struct platform_pwm_backlight_data mx6_sabrelite_pwm0_backlight_data = {
-	.pwm_id = 0,
-	.max_brightness = 255,
-	.dft_brightness = 255,
-	.pwm_period_ns = 1000000000/32768,
-};
-
 /* PWM3_PWMO: backlight control on LDB connector */
 static struct platform_pwm_backlight_data mx6_sabrelite_pwm_backlight_data = {
 	.pwm_id = 3,
@@ -1236,7 +1155,6 @@ static void __init mx6_sabrelite_board_init(void)
 		imx6q_add_ipuv3fb(i, &sabrelite_fb_data[i]);
 
 	imx6q_add_vdoa();
-	imx6q_add_lcdif(&lcdif_data);
 	imx6q_add_ldb(&ldb_data);
 	voutdev = imx6q_add_v4l2_output(0);
 	if (vout_mem.res_msize && voutdev) {
@@ -1295,7 +1213,6 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_mxc_pwm(1);
 	imx6q_add_mxc_pwm_pdata(2, &pwm3_data);
 	imx6q_add_mxc_pwm(3);
-	imx6q_add_mxc_pwm_backlight(0, &mx6_sabrelite_pwm0_backlight_data);
 	imx6q_add_mxc_pwm_backlight(3, &mx6_sabrelite_pwm_backlight_data);
 
 	imx6q_add_otp();
