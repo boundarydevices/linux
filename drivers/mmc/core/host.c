@@ -36,6 +36,7 @@ static void mmc_host_classdev_release(struct device *dev)
 {
 	struct mmc_host *host = cls_dev_to_mmc_host(dev);
 	mutex_destroy(&host->slot.lock);
+	destroy_workqueue(host->workqueue);
 	kfree(host);
 }
 
@@ -460,6 +461,9 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 		goto free;
 
 	dev_set_name(&host->class_dev, "mmc%d", host->index);
+	host->workqueue = alloc_ordered_workqueue("kmmcd%d", 0, host->index);
+	if (!host->workqueue)
+		goto free;
 
 	host->class_dev.parent = dev;
 	host->class_dev.class = &mmc_host_class;

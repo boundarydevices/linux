@@ -329,6 +329,7 @@ struct mmc_host {
 	struct task_struct	*claimer;	/* task that has host claimed */
 	int			claim_cnt;	/* "claim" nesting count */
 
+	struct workqueue_struct *workqueue;
 	struct delayed_work	detect;
 	struct wake_lock	detect_wake_lock;
 	int			detect_change;	/* card detect flag */
