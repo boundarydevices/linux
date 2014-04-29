@@ -62,7 +62,6 @@
 #include <mach/viv_gpu.h>
 #include <mach/ahci_sata.h>
 #include <mach/ipu-v3.h>
-#include <mach/mxc_asrc.h>
 #include <mach/imx_rfkill.h>
 #include <linux/wl12xx.h>
 #include <linux/ti_wilink_st.h>
@@ -163,26 +162,6 @@ struct gpio n6w_wl1271_gpios[] __initdata = {
 
 static int forcen6 = 0;
 module_param(forcen6, int, S_IRUGO | S_IWUSR);
-
-int is_nitrogen6w(void)
-{
-	int ret = gpio_request_array(n6w_wl1271_gpios,
-			ARRAY_SIZE(n6w_wl1271_gpios));
-	if (ret) {
-		printk(KERN_ERR "%s gpio_request_array failed("
-				"%d) for n6w_wl1271_gpios\n", __func__, ret);
-		return ret;
-	}
-	ret = gpio_get_value(N6_WL1271_WL_IRQ) || forcen6;
-	if (ret <= 0) {
-		/* Sabrelite, not nitrogen6w */
-		gpio_free(N6_WL1271_WL_IRQ);
-		gpio_free(N6_WL1271_WL_EN);
-		gpio_free(N6_WL1271_BT_EN);
-		ret = 0;
-	}
-	return ret;
-}
 
 enum sd_pad_mode {
 	SD_PAD_MODE_LOW_SPEED,
@@ -644,11 +623,6 @@ static struct viv_gpu_platform_data imx6_gpu_pdata __initdata = {
 	.reserved_mem_size = SZ_128M + SZ_64M - SZ_16M,
 };
 
-static struct imx_asrc_platform_data imx_asrc_data = {
-	.channel_bits = 4,
-	.clk_map_ver = 2,
-};
-
 static struct ipuv3_fb_platform_data sabrelite_fb_data[] = {
 	{ /*fb0*/
 	.disp_dev = "ldb",
@@ -934,20 +908,9 @@ static void __init mx6_sabrelite_board_init(void)
 	struct clk *clko2;
 	struct clk *new_parent;
 	int rate;
-	int isn6 ;
 	struct platform_device *voutdev;
 
 	IOMUX_SETUP(common_pads);
-
-	isn6 = is_nitrogen6w();
-	if (isn6) {
-		mx6_sabrelite_sd3_data.wp_gpio = -1 ;
-		IOMUX_SETUP(nitrogen6x_pads);
-	} else {
-		IOMUX_SETUP(sabrelite_pads);
-	}
-	printk(KERN_ERR "------------ Board type %s\n",
-               isn6 ? "Nitrogen6X/W" : "Sabre Lite");
 
 	gp_reg_id = sabrelite_dvfscore_data.reg_id;
 	soc_reg_id = sabrelite_dvfscore_data.soc_id;
@@ -955,8 +918,7 @@ static void __init mx6_sabrelite_board_init(void)
 
 	imx6q_add_imx_uart(0, NULL);
 	imx6q_add_imx_uart(1, NULL);
-	if (isn6)
-		imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
+	imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
 
 	if (!cpu_is_mx6q()) {
 		ldb_data.ipu_id = 0;
@@ -998,8 +960,7 @@ static void __init mx6_sabrelite_board_init(void)
 	 * SABRE Lite does not have an ISL1208 RTC
 	 */
 	i2c_register_board_info(0, mxc_i2c0_board_info,
-			isn6    ? ARRAY_SIZE(mxc_i2c0_board_info)
-				: ARRAY_SIZE(mxc_i2c0_board_info)-1);
+				ARRAY_SIZE(mxc_i2c0_board_info));
 	i2c_register_board_info(1, mxc_i2c1_board_info,
 			ARRAY_SIZE(mxc_i2c1_board_info));
 	i2c_register_board_info(2, mxc_i2c2_board_info,
@@ -1019,9 +980,6 @@ static void __init mx6_sabrelite_board_init(void)
 		imx6q_add_ahci(0, &mx6_sabrelite_sata_data);
 	imx6q_add_vpu();
 	platform_device_register(&sabrelite_vmmc_reg_devices);
-	imx_asrc_data.asrc_core_clk = clk_get(NULL, "asrc_clk");
-	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
-	imx6q_add_asrc(&imx_asrc_data);
 
 	/* release USB Hub reset */
 	gpio_set_value(MX6_SABRELITE_USB_HUB_RESET, 1);
@@ -1080,35 +1038,27 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
 
-#ifdef CONFIG_WL12XX_PLATFORM_DATA
-	if (isn6) {
-		imx6q_add_sdhci_usdhc_imx(1, &mx6_sabrelite_sd2_data);
-		/* WL12xx WLAN Init */
-		if (wl12xx_set_platform_data(&n6q_wlan_data))
-			pr_err("error setting wl12xx data\n");
+	imx6q_add_sdhci_usdhc_imx(1, &mx6_sabrelite_sd2_data);
+	/* WL12xx WLAN Init */
+	if (wl12xx_set_platform_data(&n6q_wlan_data))
+		pr_err("error setting wl12xx data\n");
 
-		gpio_set_value(N6_WL1271_WL_EN, 1);		/* momentarily enable */
-		gpio_set_value(N6_WL1271_BT_EN, 1);
-		mdelay(2);
-		/* gpio_set_value(N6_WL1271_WL_EN, 0);		leave enabled for enumeration */
-		gpio_set_value(N6_WL1271_BT_EN, 0);
+	gpio_set_value(N6_WL1271_WL_EN, 1);		/* momentarily enable */
+	gpio_set_value(N6_WL1271_BT_EN, 1);
+	mdelay(2);
+	/* gpio_set_value(N6_WL1271_WL_EN, 0);		leave enabled for enumeration */
+	gpio_set_value(N6_WL1271_BT_EN, 0);
 
-		gpio_free(N6_WL1271_WL_EN);
-		gpio_free(N6_WL1271_BT_EN);
-		mdelay(1);
-	}
-#endif
+	gpio_free(N6_WL1271_WL_EN);
+	gpio_free(N6_WL1271_BT_EN);
+	mdelay(1);
 
 	gpio_export(N6_WL1271_WL_EN,1);
 	gpio_export(N6_WL1271_BT_EN,1);
 
 	imx6q_add_pcie(&pcie_data);
-#ifdef CONFIG_TI_ST
-	if (isn6) {
-		platform_device_register (&wl127x_bt_device);
-		platform_device_register (&btwilink_device);
-	}
-#endif
+	platform_device_register (&wl127x_bt_device);
+	platform_device_register (&btwilink_device);
 	imx6_add_armpmu();
 }
 
