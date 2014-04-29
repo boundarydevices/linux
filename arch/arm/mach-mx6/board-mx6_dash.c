@@ -76,8 +76,6 @@
 #include "crm_regs.h"
 #include "cpu_op-mx6.h"
 
-#define MX6_SABRELITE_SD3_CD		IMX_GPIO_NR(7, 0)
-#define MX6_SABRELITE_SD3_WP		IMX_GPIO_NR(7, 1)
 #define MX6_SABRELITE_SD4_CD		IMX_GPIO_NR(2, 6)
 #define MX6_SABRELITE_SD4_WP		IMX_GPIO_NR(2, 7)
 #define MX6_SABRELITE_ECSPI1_CS1	IMX_GPIO_NR(3, 19)
@@ -105,9 +103,6 @@
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 #define MX6_SABRELITE_CAN1_ERR_PADCFG		(PAD_CTL_PUE | \
 		PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | \
-		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
-#define MX6_SABRELITE_SD3_WP_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE |	\
-		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_MED |	\
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 
 #define WEAK_PULLUP	(PAD_CTL_HYS | PAD_CTL_PKE \
@@ -213,13 +208,6 @@ static struct esdhc_platform_data mx6_sabrelite_sd2_data = {
 	.set_power = sdio_set_power,
 };
 #endif
-
-static struct esdhc_platform_data mx6_sabrelite_sd3_data = {
-	.cd_gpio = MX6_SABRELITE_SD3_CD,
-	.wp_gpio = MX6_SABRELITE_SD3_WP,
-	.keep_power_at_suspend = 1,
-	.platform_pad_change = plt_sd_pad_change,
-};
 
 static const struct esdhc_platform_data mx6_sabrelite_sd4_data __initconst = {
 	.cd_gpio = MX6_SABRELITE_SD4_CD,
@@ -822,7 +810,6 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_anatop_thermal_imx(1, &mx6_sabrelite_anatop_thermal_data);
 	imx6q_add_pm_imx(0, &mx6_sabrelite_pm_data);
 	imx6q_add_sdhci_usdhc_imx(3, &mx6_sabrelite_sd4_data);
-	imx6q_add_sdhci_usdhc_imx(2, &mx6_sabrelite_sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
 	imx6_sabrelite_init_usb();
 	if (cpu_is_mx6q())
