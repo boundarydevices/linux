@@ -47,6 +47,9 @@ obj-$(CONFIG_MXC_CAMERA_OV5640) += ov5640_camera.o
 ov5640_camera_mipi-objs := ov5640_mipi.o
 obj-$(CONFIG_MXC_CAMERA_OV5640_MIPI) += ov5640_camera_mipi.o
 
+tc358743_h2c_bridge-objs := tc358743_h2c.o
+obj-$(CONFIG_MXC_HDMI_CSI2_TC358743) += tc358743_h2c_bridge.o
+
 ov8820_camera_mipi-objs := ov8820_mipi.o
 obj-$(CONFIG_MXC_CAMERA_OV8820_MIPI) += ov8820_camera_mipi.o
 
