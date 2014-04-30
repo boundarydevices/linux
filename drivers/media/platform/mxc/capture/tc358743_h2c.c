@@ -2762,7 +2762,7 @@ static int tc358743_audio_list[16] =
 };
 
 static char str_on[80];
-static report_netlink(void)
+static void report_netlink(void)
 {
 	char *envp[2];
 	envp[0] = &str_on[0];
@@ -2784,7 +2784,7 @@ static void det_worker(struct work_struct *work)
 		reg = 0x8621;
 		ret = tc358743_read_reg(reg, &u32val);
 		if (ret > 0) {
-			if (audio != ((unsigned char)u32val) & 0x0f) {
+			if (audio != (((unsigned char)u32val) & 0x0f)) {
 				audio = ((unsigned char)u32val) & 0x0f;
 				report_netlink();
 			}
@@ -2829,9 +2829,10 @@ static void det_worker(struct work_struct *work)
 					}
 					reg = 0x8621;
 					ret = tc358743_read_reg(reg, &u32val);
-					if (ret > 0)
+					if (ret > 0) {
 						audio = ((unsigned char)u32val) & 0x0f;
-					report_netlink();
+						report_netlink();
+					}
 				}
 				break;
 			}
