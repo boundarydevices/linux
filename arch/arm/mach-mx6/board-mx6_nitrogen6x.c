@@ -143,6 +143,10 @@
 #define MIPI_CAMERA
 #endif
 
+#if defined(CONFIG_MXC_HDMI_CSI2_TC358743) || defined(CONFIG_MXC_HDMI_CSI2_TC358743_MODULE)
+#define TC358743_MIPI_CAMERA
+#endif
+
 #if !defined(MIPI_CAMERA)
 #define OV5640_MIPI_IPU -1
 #define OV5640_MIPI_CSI -1
@@ -602,6 +606,61 @@ static struct fsl_mxc_camera_platform_data ov5640_mipi_data = {
 };
 #endif
 
+#ifdef TC358743_MIPI_CAMERA
+/*
+ * (tc358743 Mipi-CSI2 bridge) - J16
+ * NANDF_WP_B	GPIO[6]:9	Nitrogen6x - RESET
+ * NANDF_D5 	GPIO[2]:5	Nitrogen6x/SOM - TC358743 INT
+ * NANDF_CS0	GPIO[6]:11	reset, old rev SOM jumpered
+ * SD1_DAT1	GPIO[1]:16	24 Mhz XCLK/XVCLK (pwm3)
+ */
+struct pwm_device	*mipi_pwm;
+static struct fsl_mxc_camera_platform_data tc358743_mipi_data;
+
+static void tc358743_mipi_camera_io_init(void)
+{
+	IOMUX_SETUP(mipi_pads);
+
+	pr_info("%s\n", __func__);
+	mipi_pwm = pwm_request(2, "mipi_clock");
+	if (IS_ERR(mipi_pwm)) {
+		pr_err("unable to request PWM for mipi_clock\n");
+	} else {
+		unsigned period = 1000/22;
+		pr_info("got pwm for mipi_clock\n");
+		pwm_config(mipi_pwm, period >> 1, period);
+		pwm_enable(mipi_pwm);
+	}
+
+	if (cpu_is_mx6dl()) {
+		/*
+		 * for mx6dl, mipi virtual channel 0 connect to csi0
+		 * virtual channel 1 connect to csi1
+		 */
+		mxc_iomux_set_gpr_register(13, tc358743_mipi_data.csi * 3, 3, tc358743_mipi_data.csi);
+	} else {
+		/* select mipi IPU1 CSI0/ IPU2/CSI1 */
+		mxc_iomux_set_gpr_register(1, 19 + tc358743_mipi_data.csi, 1, 0);//MIPI sensor to IPU-1 mux control
+								//0 Enable mipi to IPU1 CSI0 - virtual channel is fixed to 0.
+								//1 Enable parallel interface to IPU1 CSI0.
+	}
+}
+
+static void tc358743_mipi_camera_powerdown(int powerdown)
+{
+	pr_info("%s: powerdown=%d, power_gp=0x%x\n",
+			__func__, powerdown, IMX_GPIO_NR(6, 9));
+}
+
+static struct fsl_mxc_camera_platform_data tc358743_mipi_data = {
+	.mclk = 27000000,
+	.ipu = 0,
+	.csi = 0,
+	.io_init = tc358743_mipi_camera_io_init,
+	.pwdn = tc358743_mipi_camera_powerdown,
+};
+#endif
+
 #if defined(CSI0_CAMERA)
 static int ov564x_reset_active;
 
@@ -705,6 +764,13 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("ov5640_mipi", 0x3e),
 		.platform_data = (void *)&ov5640_mipi_data,
+	},
+#endif
+#ifdef TC358743_MIPI_CAMERA
+	{
+		I2C_BOARD_INFO("tc358743_mipi", 0x0f),
+		.platform_data = (void *)&tc358743_mipi_data,
+		.irq = gpio_to_irq(IMX_GPIO_NR(2, 5)),
 	},
 #endif
 };
@@ -1068,7 +1134,7 @@ static struct imx_ipuv3_platform_data ipu_data[] = {
 };
 
 static struct fsl_mxc_capture_platform_data capture_data[] = {
-#if defined(CSI0_CAMERA) || ((OV5640_MIPI_IPU == 0) && (OV5640_MIPI_CSI == 0))
+#if defined(CSI0_CAMERA) || defined(TC358743_MIPI_CAMERA) || ((OV5640_MIPI_IPU == 0) && (OV5640_MIPI_CSI == 0))
 	{
 		.ipu = 0,
 		.csi = 0,
@@ -1376,8 +1442,13 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 }
 
 static struct mipi_csi2_platform_data mipi_csi2_pdata = {
+#ifdef  TC358743_MIPI_CAMERA
+	.ipu_id	 = 0,
+	.csi_id = 0,
+#else
 	.ipu_id	 = OV5640_MIPI_IPU,
 	.csi_id = OV5640_MIPI_CSI,
+#endif
 	.v_channel = 0,
 	.lanes = 2,
 	.dphy_clk = "mipi_pllref_clk",
