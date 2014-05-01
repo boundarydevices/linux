@@ -364,10 +364,18 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 static int accelerometer_pos = 0;
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
+#if defined(CONFIG_RTC_DRV_ISL1208) || defined(CONFIG_RTC_DRV_ISL1208_MODULE)
 	{
 		I2C_BOARD_INFO("isl1208", 0x6f),	/* Real time clock */
 		.irq = gpio_to_irq(IMX_GPIO_NR(6, 7)),	/* NANDF_CLE */
 	},
+#endif
+#if defined(CONFIG_RTC_DRV_ISL12022) || defined(CONFIG_RTC_DRV_ISL12022_MODULE)
+	{
+		I2C_BOARD_INFO("isl12022", 0x6f),	/* Real time clock */
+		.irq = gpio_to_irq(IMX_GPIO_NR(6, 7)),	/* NANDF_CLE */
+	},
+#endif
         {
                 I2C_BOARD_INFO("mma8451", 0x1c),	/* Accelerometer */
                 .platform_data = (void *)&accelerometer_pos
