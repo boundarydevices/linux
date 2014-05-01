@@ -383,7 +383,7 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 	if ((plat_data->ipu_id < 0) || (plat_data->ipu_id > 1) ||
 		(plat_data->csi_id > 1) || (plat_data->v_channel > 3) ||
 		(plat_data->lanes > 4)) {
-		dev_err(&pdev->dev, "invalid param for mimp csi2!\n");
+		dev_err(&pdev->dev, "invalid param for mipi csi2!\n");
 		return -EINVAL;
 	}
 
