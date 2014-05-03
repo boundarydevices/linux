@@ -434,8 +434,19 @@ static struct platform_device imx6q_cpufreq_pdev = {
 	.name = "imx6q-cpufreq",
 };
 
+extern unsigned int system_rev;
+
 static void __init imx6q_init_late(void)
 {
+	if (!system_rev) {
+		if (cpu_is_imx6q())
+			system_rev = 0x63000;
+		else if (cpu_is_imx6dl())
+			system_rev = 0x61000;
+		else if (cpu_is_imx6sl())
+			system_rev = 0x60000;
+		system_rev |= imx_get_soc_revision();
+	}
 	/*
 	 * WAIT mode is broken on TO 1.0 and 1.1, so there is no point
 	 * to run cpuidle on them.
