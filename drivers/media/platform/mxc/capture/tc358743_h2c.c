@@ -28,11 +28,16 @@
 #include <linux/types.h>
 #include <linux/delay.h>
 #include <linux/device.h>
+#include <linux/clk.h>
 #include <linux/i2c.h>
+#include <linux/mfd/syscon.h>
+#include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
+#include <linux/of_gpio.h>
 #include <linux/regulator/consumer.h>
 #include <linux/fsl_devices.h>
 #include <linux/mutex.h>
-#include <mach/mipi_csi2.h>
+#include <linux/mipi_csi2.h>
+#include <linux/pwm.h>
 #include <media/v4l2-chip-ident.h>
 #include <media/v4l2-int-device.h>
 #include <sound/core.h>
@@ -41,7 +46,7 @@
 #include <sound/jack.h>
 #include <sound/soc-dapm.h>
 #include <asm/mach-types.h>
-#include <mach/audmux.h>
+//#include <mach/audmux.h>
 #include <linux/slab.h>
 #include "mxc_v4l2_capture.h"
 
@@ -64,6 +69,10 @@
 #define TC358743_CHIP_ID_HIGH_BYTE		0x0
 #define TC358743_CHIP_ID_LOW_BYTE		0x0
 #define TC3587430_HDMI_DETECT			0x0f //0x10
+
+#define TC_VOLTAGE_ANALOG               2800000
+#define TC_VOLTAGE_DIGITAL_CORE         1500000
+#define TC_VOLTAGE_DIGITAL_IO           1800000
 
 enum tc358743_mode {
 	tc358743_mode_INIT, /*only for sensor init*/
@@ -109,6 +118,12 @@ struct tc358743_mode_info {
 };
 
 static struct delayed_work det_work;
+static struct sensor_data tc358743_data;
+static int pwn_gpio, rst_gpio;
+static struct regulator *io_regulator;
+static struct regulator *core_regulator;
+static struct regulator *analog_regulator;
+static struct regulator *gpo_regulator;
 
 static	u16 hpd_active = 1;
 
@@ -125,6 +140,100 @@ static int tc358743_init_mode(enum tc358743_frame_rate frame_rate,
 			    enum tc358743_mode mode);
 
 static int tc358743_toggle_hpd(int active);
+
+static void tc_standby(s32 enable)
+{
+	if (gpio_is_valid(pwn_gpio))
+		gpio_set_value(pwn_gpio, enable ? 1 : 0);
+	pr_debug("tc_standby: powerdown=%x, power_gp=0x%x\n", enable, pwn_gpio);
+	msleep(2);
+}
+
+static void tc_reset(void)
+{
+	/* camera reset */
+	gpio_set_value(rst_gpio, 1);
+
+	/* camera power dowmn */
+	if (gpio_is_valid(pwn_gpio)) {
+		gpio_set_value(pwn_gpio, 1);
+		msleep(5);
+
+		gpio_set_value(pwn_gpio, 0);
+	}
+	msleep(5);
+
+	gpio_set_value(rst_gpio, 0);
+	msleep(1);
+
+	gpio_set_value(rst_gpio, 1);
+	msleep(20);
+
+	if (gpio_is_valid(pwn_gpio))
+		gpio_set_value(pwn_gpio, 1);
+}
+
+static int tc_power_on(struct device *dev)
+{
+	int ret = 0;
+
+	io_regulator = devm_regulator_get(dev, "DOVDD");
+	if (!IS_ERR(io_regulator)) {
+		regulator_set_voltage(io_regulator,
+				      TC_VOLTAGE_DIGITAL_IO,
+				      TC_VOLTAGE_DIGITAL_IO);
+		ret = regulator_enable(io_regulator);
+		if (ret) {
+			pr_err("%s:io set voltage error\n", __func__);
+			return ret;
+		} else {
+			dev_dbg(dev,
+				"%s:io set voltage ok\n", __func__);
+		}
+	} else {
+		pr_err("%s: cannot get io voltage error\n", __func__);
+		io_regulator = NULL;
+	}
+
+	core_regulator = devm_regulator_get(dev, "DVDD");
+	if (!IS_ERR(core_regulator)) {
+		regulator_set_voltage(core_regulator,
+				      TC_VOLTAGE_DIGITAL_CORE,
+				      TC_VOLTAGE_DIGITAL_CORE);
+		ret = regulator_enable(core_regulator);
+		if (ret) {
+			pr_err("%s:core set voltage error\n", __func__);
+			return ret;
+		} else {
+			dev_dbg(dev,
+				"%s:core set voltage ok\n", __func__);
+		}
+	} else {
+		core_regulator = NULL;
+		pr_err("%s: cannot get core voltage error\n", __func__);
+	}
+
+	analog_regulator = devm_regulator_get(dev, "AVDD");
+	if (!IS_ERR(analog_regulator)) {
+		regulator_set_voltage(analog_regulator,
+				      TC_VOLTAGE_ANALOG,
+				      TC_VOLTAGE_ANALOG);
+		ret = regulator_enable(analog_regulator);
+		if (ret) {
+			pr_err("%s:analog set voltage error\n",
+				__func__);
+			return ret;
+		} else {
+			dev_dbg(dev,
+				"%s:analog set voltage ok\n", __func__);
+		}
+	} else {
+		analog_regulator = NULL;
+		pr_err("%s: cannot get analog voltage error\n", __func__);
+	}
+
+	return ret;
+}
 
 static void det_work_enable(int i)
 {
@@ -164,7 +273,6 @@ static u8 cHDMIEDID[256] = {
 /*!
  * Maintains the information on the current state of the sesor.
  */
-static struct sensor_data tc358743_data;
 
 static struct reg_value tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz[] = {
   {0x7080, 0x00000000, 0x00000000, 2, 0},
@@ -1318,12 +1426,6 @@ static struct tc358743_mode_info tc358743_mode_info_data[2][tc358743_mode_MAX] =
 		},		
 };
 
-static struct regulator *io_regulator;
-static struct regulator *core_regulator;
-static struct regulator *analog_regulator;
-static struct regulator *gpo_regulator;
-static struct fsl_mxc_camera_platform_data *camera_plat;
-
 static int tc358743_probe(struct i2c_client *adapter,
 				const struct i2c_device_id *device_id);
 static int tc358743_remove(struct i2c_client *client);
@@ -1501,13 +1603,10 @@ static int tc358743_reset(struct sensor_data *sensor)
 
 	det_work_enable(0);
 	while (ret) {
-		if (camera_plat->pwdn) {
-			pr_debug("%s: RESET\n", __func__);
-			camera_plat->pwdn(1);
-			mdelay(100);
-			camera_plat->pwdn(0);
-			mdelay(1000);
-		}
+		tc_standby(1);
+		mdelay(100);
+		tc_standby(0);
+		mdelay(1000);
 
 		tgt_fps = sensor->streamcap.timeperframe.denominator /
 				sensor->streamcap.timeperframe.numerator;
@@ -1787,8 +1886,7 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 			if (regulator_enable(analog_regulator) != 0)
 				return -EIO;
 		/* Make sure power on */
-		if (camera_plat->pwdn)
-			camera_plat->pwdn(0);
+		tc_standby(0);
 
 	} else if (!on && sensor->on) {
 		if (analog_regulator)
@@ -1890,8 +1988,7 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	pr_debug("%s\n", __func__);
 	det_work_enable(0);
 	/* Make sure power on */
-	if (camera_plat->pwdn)
-		camera_plat->pwdn(0);
+	tc_standby(0);
 
 	switch (a->type) {
 	/* This is the only case currently handled. */
@@ -2267,8 +2364,8 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 	tc358743_data.mclk = tgt_xclk;
 
 	pr_debug("%s: Setting mclk to %d MHz\n", __func__, tc358743_data.mclk / 1000000);
-	set_mclk_rate(&tc358743_data.mclk, tc358743_data.mclk_source);
-	pr_debug("%s: After mclk to %d MHz\n", __func__, tc358743_data.mclk / 1000000);
+//	set_mclk_rate(&tc358743_data.mclk, tc358743_data.mclk_source);
+//	pr_debug("%s: After mclk to %d MHz\n", __func__, tc358743_data.mclk / 1000000);
 
 	/* Default camera frame rate is set in probe */
 	tgt_fps = sensor->streamcap.timeperframe.denominator /
@@ -2879,9 +2976,6 @@ static irqreturn_t tc358743_detect_handler(int irq, void *data)
  * @param adapter	    struct i2c_adapter *
  * @return  Error code indicating success or failure
  */
-#include <mach/hardware.h>
-#include <mach/iomux-v3.h>
-
 #define DUMP_LENGTH 256
 static	u16 regoffs = 0;
 
@@ -2998,120 +3092,146 @@ static DEVICE_ATTR(audio, S_IRUGO, tc358743_show_audio, NULL);
 static int tc358743_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
-	int retval = -1;
-	struct fsl_mxc_camera_platform_data *plat_data = client->dev.platform_data;
-	u8 chip_id_high;
+	struct pwm_device *pwm;
+	struct device *dev = &client->dev;
+	int retval;
+	struct regmap *gpr;
+	struct sensor_data *sensor = &tc358743_data;
 	u32 u32val;
 
-	pr_debug("%s: started, error=%d\n", __func__, retval);
+
+	/* request power down pin */
+	pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
+	if (!gpio_is_valid(pwn_gpio)) {
+		dev_warn(dev, "no sensor pwdn pin available");
+	} else {
+		retval = devm_gpio_request_one(dev, pwn_gpio, GPIOF_OUT_INIT_HIGH,
+					"tc_mipi_pwdn");
+		if (retval < 0) {
+			dev_warn(dev, "request of pwn_gpio failed");
+			return retval;
+		}
+	}
+	/* request reset pin */
+	rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
+	if (!gpio_is_valid(rst_gpio)) {
+		dev_warn(dev, "no sensor reset pin available");
+		return -EINVAL;
+	}
+	retval = devm_gpio_request_one(dev, rst_gpio, GPIOF_OUT_INIT_HIGH,
+					"tc_mipi_reset");
+	if (retval < 0) {
+		dev_warn(dev, "request of tc_mipi_reset failed");
+		return retval;
+	}
 
 	/* Set initial values for the sensor struct. */
-	memset(&tc358743_data, 0, sizeof(tc358743_data));
-	tc358743_data.mclk = 27000000; /* 6 - 54 MHz, typical 24MHz */
-	tc358743_data.mclk_source = plat_data->mclk_source;
-	tc358743_data.csi = plat_data->csi;
-	tc358743_data.io_init = plat_data->io_init;
+	memset(sensor, 0, sizeof(*sensor));
 
-	tc358743_data.i2c_client = client;
-	tc358743_data.pix.pixelformat = tc358743_formats[0].pixelformat;
-	tc358743_data.streamcap.capability = V4L2_MODE_HIGHQUALITY |
+	sensor->sensor_clk = devm_clk_get(dev, "csi_mclk");
+	if (IS_ERR(sensor->sensor_clk)) {
+		/* assuming clock enabled by default */
+		sensor->sensor_clk = NULL;
+		dev_err(dev, "clock-frequency missing or invalid\n");
+		return PTR_ERR(sensor->sensor_clk);
+	}
+
+	retval = of_property_read_u32(dev->of_node, "mclk",
+					&(sensor->mclk));
+	if (retval) {
+		dev_err(dev, "mclk missing or invalid\n");
+		return retval;
+	}
+
+	retval = of_property_read_u32(dev->of_node, "mclk_source",
+					(u32 *) &(sensor->mclk_source));
+	if (retval) {
+		dev_err(dev, "mclk_source missing or invalid\n");
+		return retval;
+	}
+
+	retval = of_property_read_u32(dev->of_node, "ipu_id",
+					&sensor->ipu_id);
+	if (retval) {
+		dev_err(dev, "ipu_id missing or invalid\n");
+		return retval;
+	}
+
+	retval = of_property_read_u32(dev->of_node, "csi_id",
+					&(sensor->csi));
+	if (retval) {
+		dev_err(dev, "csi id missing or invalid\n");
+		return retval;
+	}
+	if (((unsigned)sensor->ipu_id > 1) || ((unsigned)sensor->csi > 1)) {
+		dev_err(dev, "invalid ipu/csi\n");
+		return -EINVAL;
+	}
+
+	clk_prepare_enable(sensor->sensor_clk);
+
+	sensor->io_init = tc_reset;
+	sensor->i2c_client = client;
+	sensor->pix.pixelformat = tc358743_formats[0].pixelformat;
+	sensor->streamcap.capability = V4L2_MODE_HIGHQUALITY |
 					   V4L2_CAP_TIMEPERFRAME;
-	tc358743_data.streamcap.capturemode = 0;
-	tc358743_data.streamcap.extendedmode = tc358743_mode_1080P_1920_1080;
-	tc358743_data.streamcap.timeperframe.denominator = DEFAULT_FPS;
-	tc358743_data.streamcap.timeperframe.numerator = 1;
+	sensor->streamcap.capturemode = 0;
+	sensor->streamcap.extendedmode = tc358743_mode_1080P_1920_1080;
+	sensor->streamcap.timeperframe.denominator = DEFAULT_FPS;
+	sensor->streamcap.timeperframe.numerator = 1;
 
-	tc358743_data.pix.width = tc358743_mode_info_data[0][tc358743_data.streamcap.capturemode].width;
-	tc358743_data.pix.height = tc358743_mode_info_data[0][tc358743_data.streamcap.capturemode].height;
+	sensor->pix.width = tc358743_mode_info_data[0][sensor->streamcap.capturemode].width;
+	sensor->pix.height = tc358743_mode_info_data[0][sensor->streamcap.capturemode].height;
 	pr_debug("%s: format: %x, capture mode: %d extended mode: %d fps: %d width: %d height: %d\n",__func__,
-	tc358743_data.pix.pixelformat,
-	tc358743_data.streamcap.capturemode, tc358743_data.streamcap.extendedmode,
-	tc358743_data.streamcap.timeperframe.denominator *
-	tc358743_data.streamcap.timeperframe.numerator,
-	tc358743_data.pix.width,
-	tc358743_data.pix.height);
+	sensor->pix.pixelformat,
+	sensor->streamcap.capturemode, sensor->streamcap.extendedmode,
+	sensor->streamcap.timeperframe.denominator *
+	sensor->streamcap.timeperframe.numerator,
+	sensor->pix.width,
+	sensor->pix.height);
 
-	if (plat_data->io_regulator) {
-		io_regulator = regulator_get(&client->dev,
-					     plat_data->io_regulator);
-		if (!IS_ERR(io_regulator)) {
-			regulator_set_voltage(io_regulator,
-					      TC358743_VOLTAGE_DIGITAL_IO,
-					      TC358743_VOLTAGE_DIGITAL_IO);
-			retval = regulator_enable(io_regulator);
-			if (retval) {
-				pr_err("%s:io set voltage error\n", __func__);
-				goto err1;
-			} else {
-				dev_dbg(&client->dev,
-					"%s:io set voltage ok\n", __func__);
-			}
-		} else
-			io_regulator = NULL;
+	pwm = pwm_get(dev, NULL);
+	if (!IS_ERR(pwm)) {
+		dev_info(dev, "found pwm%d, period=%d\n", pwm->pwm, pwm->period);
+		pwm_config(pwm, pwm->period >> 1, pwm->period);
+		pwm_enable(pwm);
 	}
 
-	if (plat_data->core_regulator) {
-		core_regulator = regulator_get(&client->dev,
-						plat_data->core_regulator);
-		if (!IS_ERR(core_regulator)) {
-			regulator_set_voltage(core_regulator,
-					      TC358743_VOLTAGE_DIGITAL_CORE,
-					      TC358743_VOLTAGE_DIGITAL_CORE);
-			retval = regulator_enable(core_regulator);
-			if (retval) {
-				pr_err("%s:core set voltage error\n", __func__);
-				goto err2;
-			} else {
-				dev_dbg(&client->dev,
-					"%s:core set voltage ok\n", __func__);
-			}
-		} else
-			core_regulator = NULL;
-	}
-
-	if (plat_data->analog_regulator) {
-		analog_regulator = regulator_get(&client->dev,
-						 plat_data->analog_regulator);
-		if (!IS_ERR(analog_regulator)) {
-			regulator_set_voltage(analog_regulator,
-					      TC358743_VOLTAGE_ANALOG,
-					      TC358743_VOLTAGE_ANALOG);
-			retval = regulator_enable(analog_regulator);
-			if (retval) {
-				pr_err("%s:analog set voltage error\n",
-					__func__);
-				goto err3;
-			} else {
-				dev_dbg(&client->dev,
-					"%s:analog set voltage ok\n", __func__);
-			}
-		} else
-			analog_regulator = NULL;
-	}
-
-	if (plat_data->io_init)
-		plat_data->io_init();
-
-	if (plat_data->pwdn)
-		plat_data->pwdn(0);
+	tc_power_on(dev);
+	tc_reset();
+	tc_standby(0);
 
 	retval = tc358743_read_reg(TC358743_CHIP_ID_HIGH_BYTE, &u32val);
-	chip_id_high = (u8)u32val;
-	if (retval < 0 /* || chip_id_high != 0x00*/) {
+	if (retval < 0) {
 		pr_err("%s:cannot find camera\n", __func__);
 		retval = -ENODEV;
 		goto err4;
 	}
 
-	camera_plat = plat_data;
+	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
+	if (!IS_ERR(gpr)) {
+		if (of_machine_is_compatible("fsl,imx6q")) {
+			if (sensor->csi == sensor->ipu_id) {
+				int mask = sensor->csi ? (1 << 20) : (1 << 19);
 
-	tc358743_int_device.priv = &tc358743_data;
-	retval = v4l2_int_device_register(&tc358743_int_device);
-	if (retval) {
-		pr_err("%s:  v4l2_int_device_register failed, error=%d\n",
-			__func__, retval);
-		goto err4;
+				regmap_update_bits(gpr, IOMUXC_GPR1, mask, 0);
+			}
+		} else if (of_machine_is_compatible("fsl,imx6dl")) {
+			int mask = sensor->csi ? (7 << 3) : (7 << 0);
+			int val =  sensor->csi ? (3 << 3) : (0 << 0);
+
+			if (sensor->ipu_id) {
+				dev_err(dev, "invalid ipu\n");
+				return -EINVAL;
+			}
+			regmap_update_bits(gpr, IOMUXC_GPR13, mask, val);
+		}
+	} else {
+		pr_err("%s: failed to find fsl,imx6q-iomux-gpr regmap\n",
+		       __func__);
 	}
+
+	tc358743_int_device.priv = sensor;
 
 	//retval = device_create_file(&client->dev, &dev_attr_audio);
 	retval = device_create_file(&client->dev, &dev_attr_fps);
@@ -3163,40 +3283,32 @@ static int tc358743_probe(struct i2c_client *client,
 
 #if 1
 	INIT_DELAYED_WORK(&(det_work), det_worker);
-	if (tc358743_data.i2c_client->irq) {
-		retval = request_irq(tc358743_data.i2c_client->irq, tc358743_detect_handler,
+	if (sensor->i2c_client->irq) {
+		retval = request_irq(sensor->i2c_client->irq, tc358743_detect_handler,
 				IRQF_SHARED | IRQF_TRIGGER_FALLING,
-				"tc358743_det", &tc358743_data);
+				"tc358743_det", sensor);
 		if (retval < 0)
-			dev_warn(&tc358743_data.i2c_client->dev,
+			dev_warn(&sensor->i2c_client->dev,
 				"cound not request det irq %d\n",
-				tc358743_data.i2c_client->irq);
+				sensor->i2c_client->irq);
 	}
 
 	schedule_delayed_work(&(det_work), msecs_to_jiffies(det_work_timeout));
 #endif
-	retval = tc358743_reset(&tc358743_data);
+	retval = tc358743_reset(sensor);
 
+	tc_standby(1);
+	retval = v4l2_int_device_register(&tc358743_int_device);
+	if (retval) {
+		pr_err("%s:  v4l2_int_device_register failed, error=%d\n",
+			__func__, retval);
+		goto err4;
+	}
 	pr_debug("%s: finished, error=%d\n",
 			__func__, retval);
 	return retval;
 
 err4:
-	if (analog_regulator) {
-		regulator_disable(analog_regulator);
-		regulator_put(analog_regulator);
-	}
-err3:
-	if (core_regulator) {
-		regulator_disable(core_regulator);
-		regulator_put(core_regulator);
-	}
-err2:
-	if (io_regulator) {
-		regulator_disable(io_regulator);
-		regulator_put(io_regulator);
-	}
-err1:
 	pr_err("%s: failed, error=%d\n",
 			__func__, retval);
 	return retval;
