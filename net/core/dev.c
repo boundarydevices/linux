@@ -154,6 +154,7 @@
 #include <linux/once_lite.h>
 #include <net/netdev_rx_queue.h>
 #include <trace/hooks/net.h>
+#include <linux/of.h>
 
 #include "dev.h"
 #include "net-sysfs.h"
@@ -1076,13 +1077,19 @@ EXPORT_SYMBOL(dev_valid_name);
  *	Returns the number of the unit assigned or a negative errno code.
  */
 
-static int __dev_alloc_name(struct net *net, const char *name, char *buf)
+static int __dev_alloc_name(struct net *net, struct net_device *dev,
+			    const char *name, char *buf)
 {
 	int i = 0;
+	int of_id = -EINVAL;
 	const char *p;
 	const int max_netdevices = 8*PAGE_SIZE;
 	unsigned long *inuse;
 	struct net_device *d;
+	struct device_node *np = NULL;
+
+	if (dev->dev.parent)
+		np = dev->dev.parent->of_node;
 
 	if (!dev_valid_name(name))
 		return -EINVAL;
@@ -1097,10 +1104,37 @@ static int __dev_alloc_name(struct net *net, const char *name, char *buf)
 		if (p[1] != 'd' || strchr(p + 2, '%'))
 			return -EINVAL;
 
+		if (np) {
+			strlcpy(buf, name, (size_t)(p + 1 - name));
+			of_id = of_alias_get_id(np, buf);
+		}
+
 		/* Use one page as a bit array of possible slots */
 		inuse = bitmap_zalloc(max_netdevices, GFP_ATOMIC);
 		if (!inuse)
 			return -ENOMEM;
+
+#ifdef CONFIG_OF
+		/* iterate over aliases to reserve interfaces names */
+		np = of_find_node_by_path("/aliases");
+		if (np) {
+			struct property *pp;
+			for_each_property_of_node(np, pp) {
+				if (!sscanf(pp->name, name, &i))
+					continue;
+				if (i < 0 || i >= max_netdevices)
+					continue;
+
+				/* avoid cases where sscanf is not exact
+				 * inverse of printf
+				 */
+				snprintf(buf, IFNAMSIZ, name, i);
+				if (!strncmp(buf, pp->name, IFNAMSIZ) &&
+				    i != of_id)
+					set_bit(i, inuse);
+			}
+		}
+#endif
 
 		for_each_netdev(net, d) {
 			struct netdev_name_node *name_node;
@@ -1127,7 +1161,10 @@ static int __dev_alloc_name(struct net *net, const char *name, char *buf)
 				__set_bit(i, inuse);
 		}
 
-		i = find_first_zero_bit(inuse, max_netdevices);
+		if (of_id >= 0 && !test_bit(of_id, inuse))
+			i = of_id;
+		else
+			i = find_first_zero_bit(inuse, max_netdevices);
 		bitmap_free(inuse);
 	}
 
@@ -1151,7 +1188,7 @@ static int dev_prep_valid_name(struct net *net, struct net_device *dev,
 		return -EINVAL;
 
 	if (strchr(want_name, '%')) {
-		ret = __dev_alloc_name(net, want_name, out_name);
+		ret = __dev_alloc_name(net, dev, want_name, out_name);
 		return ret < 0 ? ret : 0;
 	} else if (netdev_name_in_use(net, want_name)) {
 		return -EEXIST;
@@ -1170,7 +1207,7 @@ static int dev_alloc_name_ns(struct net *net,
 	int ret;
 
 	BUG_ON(!net);
-	ret = __dev_alloc_name(net, name, buf);
+	ret = __dev_alloc_name(net, dev, name, buf);
 	if (ret >= 0)
 		strscpy(dev->name, buf, IFNAMSIZ);
 	return ret;
