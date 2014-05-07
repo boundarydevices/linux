@@ -29,9 +29,6 @@
 /* driver private data */
 struct mipi_csi2_info {
 	bool		mipi_en;
-	int		ipu_id;
-	unsigned int	csi_id;
-	unsigned int	v_channel;
 	unsigned int	lanes;
 	unsigned int	datatype;
 	struct clk	*cfg_clk;
