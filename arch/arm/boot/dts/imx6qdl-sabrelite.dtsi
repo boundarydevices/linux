@@ -511,9 +511,6 @@
 #endif
 
 &mipi_csi {
-	ipu_id = <0>;
-	csi_id = <1>;
-	v_channel = <0>;
 	lanes = <2>;
 	status = "okay";
 };
