@@ -51,6 +51,7 @@ static u8 camera_power(cam_data *cam, bool cameraOn);
 struct v4l2_crop crop_current;
 struct v4l2_window win_current;
 static struct v4l2_format cam_input_fmt;
+static bool bswapenable;
 
 /*! Information about this driver. */
 static struct v4l2_int_master csi_v4l2_master = {
@@ -963,6 +964,9 @@ static int csi_v4l2_s_fmt(cam_data *cam, struct v4l2_format *f)
 			       "resize to %d.\n", *height);
 		}
 
+		/* disable swap function */
+		csi_format_swap16(false);
+
 		cam_input_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		vidioc_int_g_fmt_cap(cam->sensor, &cam_input_fmt);
 
@@ -978,12 +982,20 @@ static int csi_v4l2_s_fmt(cam_data *cam, struct v4l2_format *f)
 			csi_set_16bit_imagpara(f->fmt.pix.width,
 					       f->fmt.pix.height);
 			bytesperline = f->fmt.pix.width * 2;
+			if (f->fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV) {
+				csi_format_swap16(true);
+				bswapenable = true;
+			}
 			break;
 		case V4L2_PIX_FMT_YUYV:
 			size = f->fmt.pix.width * f->fmt.pix.height * 2;
 			csi_set_16bit_imagpara(f->fmt.pix.width,
 					       f->fmt.pix.height);
 			bytesperline = f->fmt.pix.width * 2;
+			if (f->fmt.pix.pixelformat == V4L2_PIX_FMT_UYVY) {
+				csi_format_swap16(true);
+				bswapenable = true;
+			}
 			break;
 		case V4L2_PIX_FMT_YUV420:
 			size = f->fmt.pix.width * f->fmt.pix.height * 3 / 2;
@@ -1309,7 +1321,8 @@ static int csi_v4l_dqueue(cam_data *cam, struct v4l2_buffer *buf)
 	 * If want to do preview on LCD, use PxP CSC to convert from UYVY
 	 * to RGB565; but for encoding, usually we don't use RGB format.
 	 */
-	if (cam->v2f.fmt.pix.pixelformat != cam_input_fmt.fmt.pix.pixelformat) {
+	if (cam->v2f.fmt.pix.pixelformat != cam_input_fmt.fmt.pix.pixelformat
+			&& !bswapenable) {
 		sg_dma_address(&cam->sg[0]) = buf->m.offset;
 		/* last frame buffer as pxp output buffer  */
 		sg_dma_address(&cam->sg[1]) =
