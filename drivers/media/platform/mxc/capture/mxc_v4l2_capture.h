@@ -262,6 +262,8 @@ struct sensor_data {
 	struct clk *sensor_clk;
 	int ipu_id;
 	int csi;
+	unsigned mipi_camera;
+	unsigned virtual_channel;	/* Used with mipi */
 
 	void (*io_init)(void);
 };
@@ -290,9 +292,15 @@ static inline int cam_mipi_csi2_enable(cam_data *cam, struct mipi_fields *mf)
 {
 #ifdef CONFIG_MXC_MIPI_CSI2
 	void *mipi_csi2_info;
-	int ipu_id;
-	int csi_id;
+	struct sensor_data *sensor;
 
+	if (!cam->sensor)
+		return 0;
+	sensor = cam->sensor->priv;
+	if (!sensor)
+		return 0;
+	if (!sensor->mipi_camera)
+		return 0;
 	mipi_csi2_info = mipi_csi2_get_info();
 
 	if (!mipi_csi2_info) {
@@ -302,18 +310,12 @@ static inline int cam_mipi_csi2_enable(cam_data *cam, struct mipi_fields *mf)
 		return 0;
 	}
 	if (mipi_csi2_get_status(mipi_csi2_info)) {
-		ipu_id = mipi_csi2_get_bind_ipu(mipi_csi2_info);
-		csi_id = mipi_csi2_get_bind_csi(mipi_csi2_info);
-
-		if (cam->ipu == ipu_get_soc(ipu_id)
-				&& cam->csi == csi_id) {
-			mf->en = true;
-			mf->vc = mipi_csi2_get_virtual_channel(mipi_csi2_info);
-			mf->id = mipi_csi2_get_datatype(mipi_csi2_info);
-			if (!mipi_csi2_pixelclk_enable(mipi_csi2_info))
-				cam->mipi_pixelclk_enabled = 1;
-			return 0;
-		}
+		mf->en = true;
+		mf->vc = 0;//sensor->virtual_channel;
+		mf->id = mipi_csi2_get_datatype(mipi_csi2_info);
+		if (!mipi_csi2_pixelclk_enable(mipi_csi2_info))
+			cam->mipi_pixelclk_enabled = 1;
+		return 0;
 	}
 	mf->en = false;
 	mf->vc = 0;
@@ -326,9 +328,15 @@ static inline int cam_mipi_csi2_disable(cam_data *cam)
 {
 #ifdef CONFIG_MXC_MIPI_CSI2
 	void *mipi_csi2_info;
-	int ipu_id;
-	int csi_id;
+	struct sensor_data *sensor;
 
+	if (!cam->sensor)
+		return 0;
+	sensor = cam->sensor->priv;
+	if (!sensor)
+		return 0;
+	if (!sensor->mipi_camera)
+		return 0;
 	if (!cam->mipi_pixelclk_enabled)
 		return 0;
 	cam->mipi_pixelclk_enabled = 0;
@@ -341,13 +349,8 @@ static inline int cam_mipi_csi2_disable(cam_data *cam)
 //		return -EPERM;
 		return 0;
 	}
-	if (mipi_csi2_get_status(mipi_csi2_info)) {
-		ipu_id = mipi_csi2_get_bind_ipu(mipi_csi2_info);
-		csi_id = mipi_csi2_get_bind_csi(mipi_csi2_info);
-
-		if ((cam->ipu == ipu_get_soc(ipu_id)) && (cam->csi == csi_id))
-			mipi_csi2_pixelclk_disable(mipi_csi2_info);
-	}
+	if (mipi_csi2_get_status(mipi_csi2_info))
+		mipi_csi2_pixelclk_disable(mipi_csi2_info);
 #endif
 	return 0;
 }
