@@ -65,12 +65,6 @@ bool mipi_csi2_disable(struct mipi_csi2_info *info);
 
 bool mipi_csi2_get_status(struct mipi_csi2_info *info);
 
-int mipi_csi2_get_bind_ipu(struct mipi_csi2_info *info);
-
-unsigned int mipi_csi2_get_bind_csi(struct mipi_csi2_info *info);
-
-unsigned int mipi_csi2_get_virtual_channel(struct mipi_csi2_info *info);
-
 unsigned int mipi_csi2_set_lanes(struct mipi_csi2_info *info);
 
 unsigned int mipi_csi2_set_datatype(struct mipi_csi2_info *info,
