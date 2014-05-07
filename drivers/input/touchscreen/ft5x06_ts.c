@@ -88,6 +88,7 @@ struct ft5x06_ts {
 	int			irq;
 	unsigned		gp;
 	int			buttons;
+	struct proc_dir_entry  *procentry;
 };
 static const char *client_name = "ft5x06";
 
@@ -240,12 +241,10 @@ static void set_mode(struct ft5x06_ts *ts, int mode)
 
 static int proc_regnum = 0;
 static int ft5x06_proc_read
-	(char *page,
-	 char **start,
-	 off_t off,
-	 int count,
-	 int *eof,
-	 void *data)
+	(struct file *f,
+	 char __user *ubuf,
+	 size_t count,
+	 loff_t *off)
 {
 	int ret;
 	unsigned char startch[1] = { (u8)proc_regnum };
@@ -269,12 +268,17 @@ static int
 ft5x06_proc_write
 	(struct file *file,
 	 const char __user *buffer,
-	 unsigned long count,
-	 void *data)
+	 size_t count,
+	 loff_t *data)
 {
 	proc_regnum = simple_strtoul(buffer,0,0);
 	return count ;
 }
+
+struct file_operations proc_fops = {
+	.read = ft5x06_proc_read,
+	.write = ft5x06_proc_write,
+};
 
 /*-----------------------------------------------------------------------*/
 static void irq_reenable_work(struct work_struct *work)
@@ -548,6 +552,8 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	err = ts_register(ts);
 	if (err == 0) {
 		gts = ts;
+		ts->procentry = proc_create(procentryname, 0x660, NULL,
+					    &proc_fops);
 		return 0;
 	}
 err_create_wq_failed:
@@ -560,6 +566,7 @@ err_create_wq_failed:
 static int ts_remove(struct i2c_client *client)
 {
 	struct ft5x06_ts *ts = i2c_get_clientdata(client);
+	remove_proc_entry(procentryname, 0);
 	if (ts == gts) {
 		gts = NULL;
 		ts_deregister(ts);
