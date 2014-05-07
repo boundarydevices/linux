@@ -2800,7 +2800,7 @@ static int ov5640_init_mode(enum ov5640_frame_rate frame_rate,
 	OV5640_set_AE_target(AE_Target);
 	OV5640_get_light_freq();
 	OV5640_set_bandingfilter();
-	ov5640_set_virtual_channel(ov5640_data.csi | (ov5640_data.ipu_id << 1));
+	ov5640_set_virtual_channel(ov5640_data.virtual_channel);
 
 	/* add delay to wait for sensor stable */
 	if (mode == ov5640_mode_QSXGA_2592_1944) {
@@ -3426,6 +3426,8 @@ static int ov5640_probe(struct i2c_client *client,
 
 	/* Set initial values for the sensor struct. */
 	memset(&ov5640_data, 0, sizeof(ov5640_data));
+
+	sensor->mipi_camera = 1;
 	ov5640_data.sensor_clk = devm_clk_get(dev, "csi_mclk");
 	if (IS_ERR(ov5640_data.sensor_clk)) {
 		/* assuming clock enabled by default */
@@ -3512,7 +3514,7 @@ static int ov5640_probe(struct i2c_client *client,
 		pr_err("%s: failed to find fsl,imx6q-iomux-gpr regmap\n",
 		       __func__);
 	}
-
+	sensor->virtual_channel = sensor->csi | (sensor->ipu_id << 1);
 	ov5640_standby(1);
 
 	ov5640_int_device.priv = &ov5640_data;
