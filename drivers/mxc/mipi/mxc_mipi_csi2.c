@@ -315,57 +315,6 @@ struct mipi_csi2_info *mipi_csi2_get_info(void)
 }
 EXPORT_SYMBOL(mipi_csi2_get_info);
 
-/*!
- * This function is called to get mipi csi2 bind ipu num.
- *
- * @return      Returns mipi csi2 bind ipu num
- */
-int mipi_csi2_get_bind_ipu(struct mipi_csi2_info *info)
-{
-	int ipu_id;
-
-	_mipi_csi2_lock(info);
-	ipu_id = info->ipu_id;
-	_mipi_csi2_unlock(info);
-
-	return ipu_id;
-}
-EXPORT_SYMBOL(mipi_csi2_get_bind_ipu);
-
-/*!
- * This function is called to get mipi csi2 bind csi num.
- *
- * @return      Returns mipi csi2 bind csi num
- */
-unsigned int mipi_csi2_get_bind_csi(struct mipi_csi2_info *info)
-{
-	unsigned int csi_id;
-
-	_mipi_csi2_lock(info);
-	csi_id = info->csi_id;
-	_mipi_csi2_unlock(info);
-
-	return csi_id;
-}
-EXPORT_SYMBOL(mipi_csi2_get_bind_csi);
-
-/*!
- * This function is called to get mipi csi2 virtual channel.
- *
- * @return      Returns mipi csi2 virtual channel num
- */
-unsigned int mipi_csi2_get_virtual_channel(struct mipi_csi2_info *info)
-{
-	unsigned int v_channel;
-
-	_mipi_csi2_lock(info);
-	v_channel = info->v_channel;
-	_mipi_csi2_unlock(info);
-
-	return v_channel;
-}
-EXPORT_SYMBOL(mipi_csi2_get_virtual_channel);
-
 /**
  * This function is called by the driver framework to initialize the MIPI CSI2
  * device.
@@ -389,33 +338,13 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 		goto alloc_failed;
 	}
 
-	ret = of_property_read_u32(np, "ipu_id", &(gmipi_csi2->ipu_id));
-	if (ret) {
-		dev_err(&pdev->dev, "ipu_id missing or invalid\n");
-		goto err;
-	}
-
-	ret = of_property_read_u32(np, "csi_id", &(gmipi_csi2->csi_id));
-	if (ret) {
-		dev_err(&pdev->dev, "csi_id missing or invalid\n");
-		goto err;
-	}
-
-	ret = of_property_read_u32(np, "v_channel", &(gmipi_csi2->v_channel));
-	if (ret) {
-		dev_err(&pdev->dev, "v_channel missing or invalid\n");
-		goto err;
-	}
-
 	ret = of_property_read_u32(np, "lanes", &(gmipi_csi2->lanes));
 	if (ret) {
 		dev_err(&pdev->dev, "lanes missing or invalid\n");
 		goto err;
 	}
 
-	if ((gmipi_csi2->ipu_id < 0) || (gmipi_csi2->ipu_id > 1) ||
-		(gmipi_csi2->csi_id > 1) || (gmipi_csi2->v_channel > 3) ||
-		(gmipi_csi2->lanes > 4)) {
+	if (gmipi_csi2->lanes > 4) {
 		dev_err(&pdev->dev, "invalid param for mipi csi2!\n");
 		ret = -EINVAL;
 		goto err;
