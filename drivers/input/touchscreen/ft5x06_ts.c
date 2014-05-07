@@ -120,6 +120,7 @@ static inline void ts_evt_add(struct ft5x06_ts *ts,
 #endif
 	} else {
 		for (i = 0; i < buttons; i++) {
+			translate(&p[i].x, &p[i].y);
 #ifdef USE_ABS_MT
 			input_event(idev, EV_ABS, ABS_MT_POSITION_X, p[i].x);
 			input_event(idev, EV_ABS, ABS_MT_POSITION_Y, p[i].y);
