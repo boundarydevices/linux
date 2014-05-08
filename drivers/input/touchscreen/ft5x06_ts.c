@@ -124,6 +124,7 @@ static inline void ts_evt_add(struct ft5x06_ts *ts,
 #ifdef USE_ABS_MT
 			input_event(idev, EV_ABS, ABS_MT_POSITION_X, p[i].x);
 			input_event(idev, EV_ABS, ABS_MT_POSITION_Y, p[i].y);
+			input_event(idev, EV_ABS, ABS_MT_TRACKING_ID, i);
 			input_event(idev, EV_ABS, ABS_MT_TOUCH_MAJOR, 1);
 			input_mt_sync(idev);
 #else
@@ -173,6 +174,7 @@ static inline int ts_register(struct ft5x06_ts *ts)
 #ifdef USE_ABS_MT
 	input_set_abs_params(idev, ABS_MT_POSITION_X, 0, screenres[0]-1, 0, 0);
 	input_set_abs_params(idev, ABS_MT_POSITION_Y, 0, screenres[1]-1, 0, 0);
+	input_set_abs_params(idev, ABS_MT_TRACKING_ID, 0, 5, 0, 0);
 	input_set_abs_params(idev, ABS_X, 0, screenres[0]-1, 0, 0);
 	input_set_abs_params(idev, ABS_Y, 0, screenres[1]-1, 0, 0);
 	input_set_abs_params(idev, ABS_MT_TOUCH_MAJOR, 0, 1, 0, 0);
