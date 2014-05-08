@@ -88,6 +88,8 @@ void mipi_csi2_pixelclk_disable(struct mipi_csi2_info *info);
 
 int mipi_csi2_reset(struct mipi_csi2_info *info);
 
+struct platform_device;
+
 /**
  * struct mipi_csi2_platform_data - MIPI CSI2 driver platform data.
  *
