@@ -3752,7 +3752,6 @@ int xhci_alloc_dev(struct usb_hcd *hcd, struct usb_device *udev)
 				timeleft == 0 ? "Timeout" : "Signal");
 		/* cancel the enable slot request */
 		ret = xhci_cancel_cmd(xhci, NULL, command->command_trb);
-		kfree(command);
 		return ret;
 	}
 
@@ -3911,7 +3910,6 @@ static int xhci_setup_device(struct usb_hcd *hcd, struct usb_device *udev,
 			  timeleft == 0 ? "Timeout" : "Signal", act);
 		/* cancel the address device command */
 		ret = xhci_cancel_cmd(xhci, NULL, command->command_trb);
-		kfree(command);
 		if (ret < 0)
 			return ret;
 		return -ETIME;
