@@ -354,14 +354,8 @@ static int ts_thread(void *_ts)
 							 ts->bReady, HZ/20);
 		else
 			wait_event_interruptible(ts->sample_waitq, ts->bReady);
-		if (gpio_get_value(ts->gp)) {
-			if (buttons) {
-				buttons = 0;
-				ts_evt_add(ts, buttons, points);
-			}
-			if (signal_pending(tsk))
-				break;
-		}
+		if (signal_pending(tsk))
+			break;
 	} while (1);
 
 	ts->rtask = NULL;
