@@ -46,6 +46,8 @@ module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
 static int screenres[2] = {1024, 600};
 module_param_array(screenres, int, NULL, S_IRUGO | S_IWUSR);
 
+#define MAX_TOUCHES 12
+
 static void translate(int *px, int *py)
 {
 	int x, y, x1, y1;
@@ -174,7 +176,7 @@ static inline int ts_register(struct ft5x06_ts *ts)
 #ifdef USE_ABS_MT
 	input_set_abs_params(idev, ABS_MT_POSITION_X, 0, screenres[0]-1, 0, 0);
 	input_set_abs_params(idev, ABS_MT_POSITION_Y, 0, screenres[1]-1, 0, 0);
-	input_set_abs_params(idev, ABS_MT_TRACKING_ID, 0, 5, 0, 0);
+	input_set_abs_params(idev, ABS_MT_TRACKING_ID, 0, MAX_TOUCHES, 0, 0);
 	input_set_abs_params(idev, ABS_X, 0, screenres[0]-1, 0, 0);
 	input_set_abs_params(idev, ABS_Y, 0, screenres[1]-1, 0, 0);
 	input_set_abs_params(idev, ABS_MT_TOUCH_MAJOR, 0, 1, 0, 0);
@@ -301,8 +303,9 @@ static void ts_work_func(struct work_struct *work)
 	struct ft5x06_ts *ts = container_of(work,
 			struct ft5x06_ts, work);
 	int ret;
-	struct point points[5];
-	unsigned char buf[33];
+	struct point points[MAX_TOUCHES];
+	unsigned char buf[3+(6*MAX_TOUCHES)];
+
 	unsigned char startch[1] = { 0 };
 	struct i2c_msg readpkt[2] = {
 		{ts->client->addr, 0, 1, startch},
@@ -326,11 +329,11 @@ static void ts_work_func(struct work_struct *work)
 			printHex(buf, sizeof(buf));
 #endif
 			buttons = buf[2];
-			if (buttons > 5) {
+			if (buttons > MAX_TOUCHES) {
 				printk(KERN_ERR
 				       "%s: invalid button count %02x\n",
 				       __func__, buttons);
-				buttons = 0 ;
+				buttons = MAX_TOUCHES;
 			} else {
 				for (i = 0; i < buttons; i++) {
 					points[i].x = ((p[0] << 8)
