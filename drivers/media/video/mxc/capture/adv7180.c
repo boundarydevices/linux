@@ -194,8 +194,7 @@ static inline int adv7180_read(struct adv7180_priv *adv, u8 reg)
 	val = i2c_smbus_read_byte_data(adv->sen.i2c_client, reg);
 	if (val < 0) {
 		dev_dbg(&adv->sen.i2c_client->dev,
-			"%s:read reg error: reg=%2x\n", __func__, reg);
-		return -1;
+			"%s:read reg error: reg=%2x val=%d\n", __func__, reg, val);
 	}
 	return val;
 }
@@ -254,10 +253,12 @@ void get_std(struct adv7180_priv *adv)
 		/* PAL */
 		std_id = V4L2_STD_PAL;
 		idx = ADV7180_PAL;
+		dev_dbg(&adv->sen.i2c_client->dev, "pal\n");
 	} else if (tmp == 0) {
 		/*NTSC*/
 		std_id = V4L2_STD_NTSC;
 		idx = ADV7180_NTSC;
+		dev_dbg(&adv->sen.i2c_client->dev, "ntsc\n");
 	} else {
 		std_id = V4L2_STD_ALL;
 		idx = ADV7180_NOT_LOCKED;
@@ -1247,15 +1248,18 @@ static int adv7180_probe(struct i2c_client *client,
 
 	gpio_sensor_active();
 
-	dev_dbg(&adv->sen.i2c_client->dev,
-		"%s:adv7180 probe i2c address is 0x%02X\n",
-		__func__, adv->sen.i2c_client->addr);
+	dev_dbg(&client->dev, "%s:adv7180 probe i2c address is 0x%02X\n",
+		__func__, client->addr);
 
 	/*! Read the revision ID of the tvin chip */
 	rev_id = adv7180_read(adv, ADV7180_IDENT);
-	dev_dbg(&adv->sen.i2c_client->dev,
-		"%s:Analog Device adv7%2X0 detected!\n", __func__,
-		rev_id);
+	if (rev_id < 0) {
+		dev_err(&client->dev, "%s:i2c error %d\n", __func__, rev_id);
+		kfree(adv);
+		return rev_id;
+	}
+	dev_dbg(&client->dev, "%s:Analog Device adv7%2X0 detected!\n",
+			__func__, rev_id);
 
 	set_power(adv, 0);
 
