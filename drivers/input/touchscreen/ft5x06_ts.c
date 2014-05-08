@@ -570,6 +570,7 @@ static int ts_remove(struct i2c_client *client)
 	remove_proc_entry(procentryname, 0);
 	if (ts == gts) {
 		gts = NULL;
+		gpio_free(ts->gp);
 		ts_deregister(ts);
 	} else {
 		printk(KERN_ERR "%s: Error ts!=gts\n", client_name);
