@@ -1058,6 +1058,22 @@ static int fsl_qspi_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int fsl_qspi_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	return 0;
+}
+
+static int fsl_qspi_resume(struct platform_device *pdev)
+{
+	struct fsl_qspi *q = platform_get_drvdata(pdev);
+
+	fsl_qspi_nor_setup(q);
+	fsl_qspi_set_map_addr(q);
+	fsl_qspi_nor_setup_last(q);
+
+	return 0;
+}
+
 static struct platform_driver fsl_qspi_driver = {
 	.driver = {
 		.name	= "fsl-quadspi",
@@ -1067,6 +1083,8 @@ static struct platform_driver fsl_qspi_driver = {
 	},
 	.probe          = fsl_qspi_probe,
 	.remove		= fsl_qspi_remove,
+	.suspend	= fsl_qspi_suspend,
+	.resume		= fsl_qspi_resume,
 };
 module_platform_driver(fsl_qspi_driver);
 
