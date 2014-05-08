@@ -75,6 +75,7 @@ static void translate(int *px, int *py)
 struct point {
 	int	x;
 	int	y;
+	int	id;
 };
 
 struct ft5x06_ts {
@@ -126,7 +127,7 @@ static inline void ts_evt_add(struct ft5x06_ts *ts,
 #ifdef USE_ABS_MT
 			input_event(idev, EV_ABS, ABS_MT_POSITION_X, p[i].x);
 			input_event(idev, EV_ABS, ABS_MT_POSITION_Y, p[i].y);
-			input_event(idev, EV_ABS, ABS_MT_TRACKING_ID, i);
+			input_event(idev, EV_ABS, ABS_MT_TRACKING_ID, p[i].id);
 			input_event(idev, EV_ABS, ABS_MT_TOUCH_MAJOR, 1);
 			input_mt_sync(idev);
 #else
@@ -336,9 +337,10 @@ static void ts_work_func(struct work_struct *work)
 				buttons = MAX_TOUCHES;
 			} else {
 				for (i = 0; i < buttons; i++) {
-					points[i].x = ((p[0] << 8)
+					points[i].x = (((p[0] & 0x0f) << 8)
 						       | p[1]) & 0x7ff;
-					points[i].y = ((p[2] << 8)
+					points[i].id = (p[2]>>4);
+					points[i].y = (((p[2] & 0x0f) << 8)
 						       | p[3]) & 0x7ff;
 					p += 6;
 				}
