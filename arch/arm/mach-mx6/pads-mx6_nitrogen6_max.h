@@ -287,7 +287,7 @@ static iomux_v3_cfg_t MX6NAME(board_pads)[] = {
 	MX6PAD(SD1_DAT3__PWM1_PWMO),		/* J15, pin 37 - backlight */
 
 	/* PCIe */
-#define GP_PCIE_RESET		IMX_GPIO_NR(1, 6)
+#define GP_PCIE_RESET		IMX_GPIO_NR(6, 31)
 	NEW_PAD_CTRL(MX6PAD(EIM_BCLK__GPIO_6_31), OUTPUT_40OHM),
 
 	/* rtc */
