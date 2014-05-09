@@ -605,6 +605,7 @@ static const struct pm_platform_data pm_data __initconst = {
 	.active_low	= act_low,				\
 	.desc		= "btn " descr,				\
 	.wakeup		= wake,					\
+	.debounce_interval = 20 \
 }
 
 static struct gpio_keys_button buttons[] = {
