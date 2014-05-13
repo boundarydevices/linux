@@ -1206,6 +1206,12 @@
 				MX6QDL_PAD_KEY_ROW2__FLEXCAN1_RX 0x80000000
 			>;
 		};
+		pinctrl_flexcan1_3: flexcan1grp-3 {
+			fsl,pins = <
+				MX6QDL_PAD_GPIO_7__FLEXCAN1_TX   0x1b0b0
+				MX6QDL_PAD_GPIO_8__FLEXCAN1_RX   0x1b0b0
+			>;
+		};
 	};
 
 	flexcan2 {
