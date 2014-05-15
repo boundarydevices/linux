@@ -548,6 +548,7 @@
 	hog {
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
+				MX6QDL_PAD_GPIO_19__GPIO4_IO05	0x130b0 /* Enable CAN tranceiver */
 				MX6QDL_PAD_GPIO_4__GPIO1_IO04   0x80000000
 				MX6QDL_PAD_GPIO_5__GPIO1_IO05   0x80000000
 				MX6QDL_PAD_NANDF_D0__GPIO2_IO00 0x80000000
