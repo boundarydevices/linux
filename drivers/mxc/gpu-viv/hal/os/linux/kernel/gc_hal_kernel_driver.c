@@ -186,7 +186,7 @@ module_param(physSize, ulong, 0644);
 static uint logFileSize = 0;
 module_param(logFileSize,uint, 0644);
 
-static uint recovery = 1;
+static uint recovery = 0;
 module_param(recovery, uint, 0644);
 MODULE_PARM_DESC(recovery, "Recover GPU from stuck (1: Enable, 0: Disable)");
 
