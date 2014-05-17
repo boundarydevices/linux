@@ -659,7 +659,7 @@ static void wl1271_set_power(bool enable)
 	}
 }
 
-struct wl12xx_platform_data n6q_wlan_data __initdata = {
+static struct wl12xx_platform_data n6q_wlan_data __initdata = {
 	.irq = gpio_to_irq(GP_WL1271_WL_IRQ),
 	.board_ref_clock = WL12XX_REFCLOCK_38, /* 38.4 MHz */
 	.set_power = wl1271_set_power,
