@@ -152,7 +152,8 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(NANDF_WP_B__GPIO_6_9), /* bidirectional - NXP P0-14 */
 	MX6PAD(KEY_COL2__GPIO_4_10), /* bidirectional - NXP P0-21 */
 	MX6PAD(KEY_ROW2__GPIO_4_11), /* bidirectional - NXP P0-22 */
-	MX6PAD(CSI0_DATA_EN__GPIO_5_20), /* bidirectional - NXP P2-10 - ISP_ENABLE_N */
+	NEW_PAD_CTRL(MX6PAD(GPIO_19__GPIO_4_5), N6_EN_PADCFG),	/* NXP reset high active */
+	NEW_PAD_CTRL(MX6PAD(CSI0_DATA_EN__GPIO_5_20),N6_EN_PADCFG), /* bidirectional - NXP P2-10 - ISP_ENABLE_N */
 	MX6PAD(SD1_DAT1__GPIO_1_17), /* bidirectional - NXP RST_OUT */
 	0
 };
