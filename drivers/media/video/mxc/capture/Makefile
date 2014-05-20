@@ -58,3 +58,6 @@ obj-$(CONFIG_MXC_TVIN_ADV7180) += adv7180_tvin.o
 
 adv7280_tvin-objs := adv7280_mipi_tvin.o
 obj-$(CONFIG_MXC_MIPI_CSI2_TVIN_ADV7280) += adv7280_mipi_tvin.o
+
+gs2971_video-objs := gs2971.o
+obj-$(CONFIG_MXC_VIDEO_GS2971) += gs2971_video.o
