@@ -390,6 +390,16 @@ static const struct spi_imx_master ecspi2_data __initconst = {
 };
 #endif
 
+#if defined(CONFIG_MXC_VIDEO_GS2971) || defined(CONFIG_MXC_VIDEO_GS2971_MODULE)
+static int spi3_cs[] = {
+	GP_ECSPI3_CS1,
+};
+static const struct spi_imx_master spi3_data __initconst = {
+	.chipselect     = spi3_cs,
+	.num_chipselect = ARRAY_SIZE(spi3_cs),
+};
+#endif
+
 #if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
 static struct mtd_partition spi_nor_partitions[] = {
 	{
@@ -429,10 +439,35 @@ static struct spi_board_info spi_nor_device[] __initdata = {
 #endif
 };
 
+#if defined(CONFIG_MXC_VIDEO_GS2971) || defined(CONFIG_MXC_VIDEO_GS2971_MODULE)
+static struct fsl_mxc_camera_platform_data gs2971_data;
+
+static struct spi_board_info spi_gs2971_device[] __initdata = {
+	{
+		.modalias = "gs2971",
+		.max_speed_hz = 20000000, /* max spi clock (SCK) speed in HZ */
+		.bus_num = 2,
+		.chip_select = 0,
+		.platform_data = &gs2971_data,
+	},
+};
+#endif
+
 static void spi_device_init(void)
 {
 	spi_register_board_info(spi_nor_device,
 				ARRAY_SIZE(spi_nor_device));
+#if defined(CONFIG_MXC_VIDEO_GS2971) || defined(CONFIG_MXC_VIDEO_GS2971_MODULE)
+	{
+		int ret;
+		/*Testing*/
+		printk(KERN_ERR "*****CS Array size = %d\n",ARRAY_SIZE(spi_cs));
+		printk(KERN_ERR "****************Initializing gs2971 SPI...\n");
+		printk(KERN_ERR "****************Array size: %d\n",ARRAY_SIZE(spi_gs2971_device));
+		ret = spi_register_board_info(spi_gs2971_device, ARRAY_SIZE(spi_gs2971_device));
+		printk(KERN_ERR "Returned value: %d\n", ret);
+	}
+#endif
 }
 
 static struct mxc_audio_platform_data audio_data;
@@ -749,6 +784,68 @@ static struct fsl_mxc_tvin_platform_data adv7180_data = {
 	.ipu = 1,
 	.csi = 1,
 };
+
+#if defined(CONFIG_MXC_VIDEO_GS2971) || defined(CONFIG_MXC_VIDEO_GS2971_MODULE)
+/*
+ * GS2971
+ * EIM_LBA__GPIO_2_27 - power down
+ * DISP0_DAT9__GPIO_4_30 - Reset
+ */
+
+static void gs2971_io_init(void)
+{
+	printk(KERN_ERR "**********************In function %s\n",__FUNCTION__);
+
+	IOMUX_SETUP(gs2971_video_pads);
+
+	pr_info("%s\n", __func__);
+
+	camera_reset(IMX_GPIO_NR(2, 27), 1, IMX_GPIO_NR(4, 30), -1);
+
+	/* Enable parallel port to IPU1/CSI1 */
+	if (cpu_is_mx6q())
+		mxc_iomux_set_gpr_register(1, 20, 1, 1);
+	else
+		mxc_iomux_set_gpr_register(13, 3, 3, 4);
+
+	/* Set control pin values */
+	gpio_request(IMX_GPIO_NR(4, 28), "TIM_861");
+	gpio_request(IMX_GPIO_NR(5, 5), "IOPROC_EN");
+	gpio_request(IMX_GPIO_NR(4, 31), "SW_EN");
+	gpio_request(IMX_GPIO_NR(3, 13), "PWR_DN");
+
+	gpio_direction_output(IMX_GPIO_NR(4, 28), 1); // TIM_861 = 1
+	gpio_direction_output(IMX_GPIO_NR(5, 5), 1); // Enable IOPROC
+	gpio_direction_output(IMX_GPIO_NR(4, 31), 0); // sw_en =0
+	gpio_direction_output(IMX_GPIO_NR(3, 13), 1); // Enable voltage regulator
+
+	gpio_set_value(IMX_GPIO_NR(4, 28), 1); // TIM_861 = 1
+	gpio_set_value(IMX_GPIO_NR(5, 5), 1); // Enable IOPROC
+	gpio_set_value(IMX_GPIO_NR(4, 31), 0); // sw_en =0
+	gpio_set_value(IMX_GPIO_NR(3, 13), 1); // Enable voltage regulator
+
+}
+
+static void gs2971_pwdn(int powerdown)
+{
+	printk(KERN_ERR "**********************In function %s\n",__FUNCTION__);
+
+	pr_info("%s: powerdown=%d, power_gp=0x%x\n",
+			__func__, powerdown, IMX_GPIO_NR(2, 27));
+	gpio_set_value(IMX_GPIO_NR(2, 27), powerdown ? 1 : 0);
+	if (!powerdown)
+		msleep(2);
+}
+
+static struct fsl_mxc_camera_platform_data gs2971_data = {
+	.mclk = 24000000,
+	.pwdn = gs2971_pwdn,
+	.io_init = gs2971_io_init,
+	//.cvbs = true,
+	.ipu = 1,
+	.csi = 1,
+};
+#endif
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
@@ -1149,7 +1246,8 @@ static struct fsl_mxc_capture_platform_data capture_data[] = {
 	},
 #endif
 #if defined(CSI1_CAMERA) || ((OV5640_MIPI_IPU == 1) && (OV5640_MIPI_CSI == 1)) || \
-	defined(CONFIG_MXC_TVIN_ADV7180) || defined(CONFIG_MXC_TVIN_ADV7180_MODULE)
+	defined(CONFIG_MXC_TVIN_ADV7180) || defined(CONFIG_MXC_TVIN_ADV7180_MODULE) || \
+	defined(CONFIG_MXC_VIDEO_GS2971) || defined(CONFIG_MXC_VIDEO_GS2971_MODULE)
 	{
 		.ipu = 1,
 		.csi = 1,
@@ -1531,6 +1629,10 @@ static void __init board_init(void)
 	IOMUX_SETUP(common_pads);
 	lcd_disable_pins();
 
+#if defined(CONFIG_MXC_VIDEO_GS2971) || defined(CONFIG_MXC_VIDEO_GS2971_MODULE)
+	IOMUX_SETUP(ecspi3_pads);
+#endif
+
 	isn6 = is_nitrogen6w();
 	if (isn6) {
 		audio_data.ext_port = 3;
@@ -1591,7 +1693,9 @@ static void __init board_init(void)
 		imx6q_add_ipuv3fb(i, &fb_data[i]);
 
 	imx6q_add_vdoa();
+#if ! defined(CONFIG_MXC_VIDEO_GS2971) && ! defined(CONFIG_MXC_VIDEO_GS2971_MODULE) /* We need the pads for GS2971 */
 	imx6q_add_lcdif(&lcdif_data);
+#endif
 	imx6q_add_ldb(&ldb_data);
 	imx6q_add_v4l2_output(0);
 	imx6q_add_bt656(&bt656_data);
@@ -1646,6 +1750,9 @@ static void __init board_init(void)
 	imx6q_add_ecspi(0, &spi_data);
 #ifdef ONE_WIRE
 	imx6q_add_ecspi(1, &ecspi2_data);
+#endif
+#if defined(CONFIG_MXC_VIDEO_GS2971) || defined(CONFIG_MXC_VIDEO_GS2971_MODULE)
+	imx6q_add_ecspi(2, &spi3_data);
 #endif
 	spi_device_init();
 
