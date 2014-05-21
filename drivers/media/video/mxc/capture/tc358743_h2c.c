@@ -1565,9 +1565,6 @@ static int tc358743_init_mode(enum tc358743_frame_rate frame_rate,
 	if (mipi_csi2_info) {
 		pr_debug("%s: mipi_csi2_info:\n"
 		"mipi_en:       %d\n"
-		"ipu_id:        %d\n"
-		"csi_id:        %d\n"
-		"v_channel:     %d\n"
 		"lanes:         %d\n"
 		"datatype:      %d\n"
 		"dphy_clk:      %p\n"
@@ -1576,9 +1573,6 @@ static int tc358743_init_mode(enum tc358743_frame_rate frame_rate,
 		"pdev:          %p\n"
 		, __func__,
 		((struct mipi_csi2_info *)mipi_csi2_info)->mipi_en,
-		((struct mipi_csi2_info *)mipi_csi2_info)->ipu_id,
-		((struct mipi_csi2_info *)mipi_csi2_info)->csi_id,
-		((struct mipi_csi2_info *)mipi_csi2_info)->v_channel,
 		((struct mipi_csi2_info *)mipi_csi2_info)->lanes,
 		((struct mipi_csi2_info *)mipi_csi2_info)->datatype,
 		((struct mipi_csi2_info *)mipi_csi2_info)->dphy_clk,
@@ -2998,6 +2992,7 @@ static DEVICE_ATTR(audio, S_IRUGO, tc358743_show_audio, NULL);
 static int tc358743_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
+	struct sensor_data *sensor = &tc358743_data;
 	int retval = -1;
 	struct fsl_mxc_camera_platform_data *plat_data = client->dev.platform_data;
 	u8 chip_id_high;
@@ -3007,6 +3002,9 @@ static int tc358743_probe(struct i2c_client *client,
 
 	/* Set initial values for the sensor struct. */
 	memset(&tc358743_data, 0, sizeof(tc358743_data));
+	sensor->mipi_camera = 1;
+	sensor->virtual_channel = 0;
+
 	tc358743_data.mclk = 27000000; /* 6 - 54 MHz, typical 24MHz */
 	tc358743_data.mclk_source = plat_data->mclk_source;
 	tc358743_data.csi = plat_data->csi;
