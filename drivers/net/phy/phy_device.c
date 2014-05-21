@@ -33,6 +33,7 @@
 #include <linux/mdio.h>
 #include <linux/io.h>
 #include <linux/uaccess.h>
+#include <linux/of.h>
 
 #include <asm/irq.h>
 
@@ -1124,6 +1125,38 @@ static int gen10g_resume(struct phy_device *phydev)
 	return 0;
 }
 
+static void of_set_phy_supported(struct phy_device *phydev)
+{
+	struct device_node *node = phydev->dev.of_node;
+	u32 max_speed;
+
+	if (!IS_ENABLED(CONFIG_OF_MDIO))
+		return;
+
+	if (!node)
+		return;
+
+	if (!of_property_read_u32(node, "max-speed", &max_speed)) {
+		/* The default values for phydev->supported are provided by the PHY
+		 * driver "features" member, we want to reset to sane defaults fist
+		 * before supporting higher speeds.
+		 */
+		phydev->supported &= PHY_DEFAULT_FEATURES;
+
+		switch (max_speed) {
+		default:
+			return;
+
+		case SPEED_1000:
+			phydev->supported |= PHY_1000BT_FEATURES;
+		case SPEED_100:
+			phydev->supported |= PHY_100BT_FEATURES;
+		case SPEED_10:
+			phydev->supported |= PHY_10BT_FEATURES;
+		}
+	}
+}
+
 /**
  * phy_probe - probe and init a PHY device
  * @dev: device to probe and init
@@ -1158,7 +1191,8 @@ static int phy_probe(struct device *dev)
 	 * or both of these values
 	 */
 	phydev->supported = phydrv->features;
-	phydev->advertising = phydrv->features;
+	of_set_phy_supported(phydev);
+	phydev->advertising = phydev->supported;
 
 	/* Set the state to READY by default */
 	phydev->state = PHY_READY;
