@@ -297,10 +297,67 @@ static struct spi_board_info spi_nor_device[] __initdata = {
 #endif
 };
 
+static struct fsl_mxc_camera_platform_data gs2971_data;
+
+static struct spi_board_info spi_gs2971_device[] __initdata = {
+	{
+		.modalias = "gs2971",
+		.max_speed_hz = 20000000, /* max spi clock (SCK) speed in HZ */
+		.bus_num = 1,
+		.chip_select = 0,
+		.platform_data = &gs2971_data,
+	},
+};
+
+/*
+ * GS2971
+ * EIM_LBA__GPIO_2_27 - power down
+ * DISP0_DAT9__GPIO_4_30 - Reset
+ */
+
+static void gs2971_io_init(void)
+{
+
+	pr_info("%s\n", __func__);
+	gpio_set_value(GP_GS2971_RESET, 0);
+
+
+	/* Enable parallel port to IPU1/CSI1 */
+	if (cpu_is_mx6q())
+		mxc_iomux_set_gpr_register(1, 20, 1, 1);
+	else
+		mxc_iomux_set_gpr_register(13, 3, 3, 4);
+
+	/* Set control pin values */
+	gpio_set_value(GP_GS2971_TIM_861, 1);
+	gpio_set_value(GP_GS2971_IOPROC_EN, 1);
+	gpio_set_value(GP_GS2971_SW_EN, 0);
+	gpio_set_value(GP_GS2971_STANDBY, 0);
+	gpio_set_value(GP_GS2971_RESET, 1);
+}
+
+static void gs2971_pwdn(int powerdown)
+{
+	printk(KERN_ERR "**********************In function %s\n",__FUNCTION__);
+
+	gpio_set_value(GP_GS2971_STANDBY, powerdown ? 1 : 0);
+	if (!powerdown)
+		msleep(2);
+}
+
+static struct fsl_mxc_camera_platform_data gs2971_data = {
+	.mclk = 24000000,
+	.pwdn = gs2971_pwdn,
+	.io_init = gs2971_io_init,
+	.ipu = 1,
+	.csi = 1,
+};
+
 static void spi_device_init(void)
 {
 	spi_register_board_info(spi_nor_device,
 				ARRAY_SIZE(spi_nor_device));
+	spi_register_board_info(spi_gs2971_device, ARRAY_SIZE(spi_gs2971_device));
 }
 
 static int gs2971_audio_init(void)
