@@ -35,8 +35,6 @@
 
 #include "gs2971.h"
 
-#define GS2971_SPI_TRANSFER_MAX 1024
-
 #define DRIVER_NAME     "gs2971"
 
 /* Debug functions */
@@ -82,10 +80,7 @@ int gs2971_read_buffer(struct spi_device *spi, u16 offset, u16 *values, int leng
 	struct spi_message msg;
 	struct spi_transfer spi_xfer;
 	int status;
-	u16 txbuf[GS2971_SPI_TRANSFER_MAX+1] = {
-			0x9000,  // read, auto-increment
-	};
-	u16 rxbuf[GS2971_SPI_TRANSFER_MAX+1];
+	struct gs2971_spidata *sp = spidata;
 
 	if (!spi)
 		return -ENODEV;
@@ -93,11 +88,11 @@ int gs2971_read_buffer(struct spi_device *spi, u16 offset, u16 *values, int leng
 	if (length > GS2971_SPI_TRANSFER_MAX)
 		return -EINVAL;
 
-	txbuf[0] = txbuf[0] | (offset & 0xfff);
+	sp->txbuf[0] = 0x9000 | (offset & 0xfff);	/* read, auto-increment */
 
 	memset( &spi_xfer, '\0', sizeof(spi_xfer) );
-	spi_xfer.tx_buf = txbuf;
-	spi_xfer.rx_buf = rxbuf;
+	spi_xfer.tx_buf = sp->txbuf;
+	spi_xfer.rx_buf = sp->rxbuf;
 	spi_xfer.cs_change = 1;
 	spi_xfer.bits_per_word = 16;
 	spi_xfer.delay_usecs = 0;
@@ -109,7 +104,7 @@ int gs2971_read_buffer(struct spi_device *spi, u16 offset, u16 *values, int leng
 
 	status = spi_sync(spi, &msg);
 
-	memcpy( values, &rxbuf[1], sizeof(*values)*length );
+	memcpy( values, &sp->rxbuf[1], sizeof(*values)*length );
 
 	return status;
 }
@@ -119,15 +114,13 @@ int gs2971_read_register(struct spi_device *spi, u16 offset, u16 *value)
 	struct spi_message msg;
 	struct spi_transfer spi_xfer;
 	int status;
-	u32 txbuf[1] = {
-			0x90000000,  // read, auto-increment
-	};
+	u32 txbuf[1];
 	u32 rxbuf[1];
 
 	if (!spi)
 		return -ENODEV;
 
-	txbuf[0] = txbuf[0] | ((offset & 0xfff)<<16);
+	txbuf[0] = 0x90000000 | ((offset & 0xfff)<<16);	/* read, auto-increment */
 
 	memset( &spi_xfer, '\0', sizeof(spi_xfer) );
 	spi_xfer.tx_buf = txbuf;
@@ -160,11 +153,7 @@ int gs2971_write_buffer(struct spi_device *spi, u16 offset, u16 *values, int len
 	struct spi_message msg;
 	struct spi_transfer spi_xfer;
 	int status;
-	u16 txbuf[GS2971_SPI_TRANSFER_MAX] = {
-			0x1000,  // write, auto-increment
-	};
-	u16 rxbuf[GS2971_SPI_TRANSFER_MAX] = {
-	};
+	struct gs2971_spidata *sp = spidata;
 
 	if (!spi)
 		return -ENODEV;
@@ -172,12 +161,12 @@ int gs2971_write_buffer(struct spi_device *spi, u16 offset, u16 *values, int len
 	if (length > GS2971_SPI_TRANSFER_MAX-1)
 		return -EINVAL;
 
-	txbuf[0] = txbuf[0] | (offset & 0xfff);
-	memcpy( &txbuf[1], values, sizeof(*values)*length );
+	sp->txbuf[0] = 0x1000 | (offset & 0xfff);	/* write, auto-increment */
+	memcpy( &sp->txbuf[1], values, sizeof(*values)*length );
 
 	memset( &spi_xfer, '\0', sizeof(spi_xfer) );
-	spi_xfer.tx_buf = txbuf;
-	spi_xfer.rx_buf = rxbuf;
+	spi_xfer.tx_buf = sp->txbuf;
+	spi_xfer.rx_buf = sp->rxbuf;
 	spi_xfer.cs_change = 0; // ??
 	spi_xfer.bits_per_word = 16;
 	spi_xfer.delay_usecs = 0;
@@ -206,7 +195,7 @@ static struct spi_device *gs2971_get_spi( struct gs2971_spidata *spidata )
 	return spidata->spi;
 }
 
-void get_mode()
+void get_mode(void)
 {
 	int S_B, D_A;
 
@@ -230,7 +219,7 @@ void get_mode()
 	}
 }
 
-void get_std(struct v4l2_int_device *s, v4l2_std_id *id)
+static void get_std(struct v4l2_int_device *s, v4l2_std_id *id)
 {
 	struct spi_device     *spi = NULL;
 	//struct gs2971_channel *ch  = NULL;
@@ -252,8 +241,8 @@ void get_std(struct v4l2_int_device *s, v4l2_std_id *id)
 
 	//ch = to_gs2971( sd );
 	spi = gs2971_get_spi( spidata );
-	if (!spi )
-		return -ENODEV;
+	if (!spi)
+		return;
 
 	/*testing*/
 	/*
@@ -319,9 +308,9 @@ void get_std(struct v4l2_int_device *s, v4l2_std_id *id)
 		v4l2_dbg(1, debug, s, "HD audio status 0x%x\n", (unsigned int)hd_audio_status_value );
 	}
 	printk(KERN_ERR "***** Status(%d) : %d\n",__LINE__,status);
-	if ( 0 == lines_per_frame_value ) {
-		return -EINVAL;
-	}
+	if (!lines_per_frame_value)
+		return;
+
 	printk(KERN_ERR "***** Status(%d) : %d\n",__LINE__,status);
 	if ( interlaced_flag != 0
 			&& lines_per_frame_value == 525 ) {
@@ -390,7 +379,7 @@ void get_std(struct v4l2_int_device *s, v4l2_std_id *id)
 				(sync_lock_value & GS2971_REG_HVLOCK_VLOCK_MASK) ? "Vsync" : "NoVsync",
 				(sync_lock_value & GS2971_REG_HVLOCK_HLOCK_MASK) ? "Hsync" : "NoHsync",
 				(unsigned int)(std_lock_value) );
-		return -EINVAL;
+		return;
 	}
 
 	sd_audio_config_value = 0xaaaa; // 16-bit, right-justified
@@ -450,7 +439,7 @@ void get_std(struct v4l2_int_device *s, v4l2_std_id *id)
 			(GS2971_REG_AUDIO_CONFIG_SCLK_INV_MASK | GS2971_REG_AUDIO_CONFIG_MCLK_SEL_128FS));
 #endif
 	*id = V4L2_STD_NTSC;
-	return 0;
+	return;
 }
 
 static void gs2971_workqueue_handler(struct work_struct * data);
@@ -630,6 +619,7 @@ static int set_power(int on)
 	return 0;
 }
 
+#if 0
 /*!
  * Return attributes of current video standard.
  * Since this device autodetects the current standard, this function also
@@ -642,6 +632,7 @@ static void gs2971_get_std(struct v4l2_int_device *s, v4l2_std_id *std)
 {
 	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
 }
+#endif
 
 /***********************************************************************
  * IOCTL Functions from v4l2_int_ioctl_desc.
@@ -697,7 +688,6 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
  */
 static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 {
-	struct sensor_data *sensor = s->priv;
 	struct v4l2_captureparm *cparm = &a->parm.capture;
 
 	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
@@ -790,20 +780,20 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
  */
 static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 {
-	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
-	struct sensor_data *sensor = s->priv;
-	int std;
+	v4l2_std_id std;
 
+	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
 	switch (f->type) {
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
 		//pr_debug("   Returning size of %dx%d\n",
 		//adv->sen.pix.width, adv->sen.pix.height);
 		printk(KERN_ERR "********In V4L2_BUF_TYPE_VIDEO_CAPTURE\n");
-		get_std(s,&std);
+		get_std(s, &std);
 		f->fmt.pix = gs2971_data.pix;
 		break;
 
 	case V4L2_BUF_TYPE_PRIVATE:
+		get_std(s, &std);
 		f->fmt.pix.pixelformat = (u32)std;
 		printk(KERN_ERR "********In V4L2_BUF_TYPE_PRIVATE\n");
 		break;
@@ -893,49 +883,49 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 
 	switch (vc->id) {
 	case V4L2_CID_BRIGHTNESS:
-		dev_dbg(spidata->spi, "   V4L2_CID_BRIGHTNESS\n");
+		dev_dbg(&spidata->spi->dev, "   V4L2_CID_BRIGHTNESS\n");
 		break;
 	case V4L2_CID_CONTRAST:
-		dev_dbg(spidata->spi, "   V4L2_CID_CONTRAST\n");
+		dev_dbg(&spidata->spi->dev, "   V4L2_CID_CONTRAST\n");
 		break;
 	case V4L2_CID_SATURATION:
-		dev_dbg(spidata->spi, "   V4L2_CID_SATURATION\n");
+		dev_dbg(&spidata->spi->dev, "   V4L2_CID_SATURATION\n");
 		break;
 	case V4L2_CID_HUE:
-		dev_dbg(spidata->spi, "   V4L2_CID_HUE\n");
+		dev_dbg(&spidata->spi->dev, "   V4L2_CID_HUE\n");
 		break;
 	case V4L2_CID_AUTO_WHITE_BALANCE:
-		dev_dbg(spidata->spi, "   V4L2_CID_AUTO_WHITE_BALANCE\n");
+		dev_dbg(&spidata->spi->dev, "   V4L2_CID_AUTO_WHITE_BALANCE\n");
 		break;
 	case V4L2_CID_DO_WHITE_BALANCE:
-		dev_dbg(spidata->spi, "   V4L2_CID_DO_WHITE_BALANCE\n");
+		dev_dbg(&spidata->spi->dev, "   V4L2_CID_DO_WHITE_BALANCE\n");
 		break;
 	case V4L2_CID_RED_BALANCE:
-		dev_dbg(spidata->spi, "   V4L2_CID_RED_BALANCE\n");
+		dev_dbg(&spidata->spi->dev, "   V4L2_CID_RED_BALANCE\n");
 		break;
 	case V4L2_CID_BLUE_BALANCE:
-		dev_dbg(spidata->spi, "   V4L2_CID_BLUE_BALANCE\n");
+		dev_dbg(&spidata->spi->dev, "   V4L2_CID_BLUE_BALANCE\n");
 		break;
 	case V4L2_CID_GAMMA:
-		dev_dbg(spidata->spi, "   V4L2_CID_GAMMA\n");
+		dev_dbg(&spidata->spi->dev, "   V4L2_CID_GAMMA\n");
 		break;
 	case V4L2_CID_EXPOSURE:
-		dev_dbg(spidata->spi, "   V4L2_CID_EXPOSURE\n");
+		dev_dbg(&spidata->spi->dev, "   V4L2_CID_EXPOSURE\n");
 		break;
 	case V4L2_CID_AUTOGAIN:
-		dev_dbg(spidata->spi, "   V4L2_CID_AUTOGAIN\n");
+		dev_dbg(&spidata->spi->dev, "   V4L2_CID_AUTOGAIN\n");
 		break;
 	case V4L2_CID_GAIN:
-		dev_dbg(spidata->spi, "   V4L2_CID_GAIN\n");
+		dev_dbg(&spidata->spi->dev, "   V4L2_CID_GAIN\n");
 		break;
 	case V4L2_CID_HFLIP:
-		dev_dbg(spidata->spi, "   V4L2_CID_HFLIP\n");
+		dev_dbg(&spidata->spi->dev, "   V4L2_CID_HFLIP\n");
 		break;
 	case V4L2_CID_VFLIP:
-		dev_dbg(spidata->spi, "   V4L2_CID_VFLIP\n");
+		dev_dbg(&spidata->spi->dev, "   V4L2_CID_VFLIP\n");
 		break;
 	default:
-		dev_dbg(spidata->spi, "   Default case\n");
+		dev_dbg(&spidata->spi->dev, "   Default case\n");
 		retval = -EPERM;
 		break;
 	}
@@ -992,8 +982,6 @@ static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
 			      struct v4l2_fmtdesc *fmt)
 {
 	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
-	struct sensor_data *gs = s->priv;
-
 	if (fmt->index > 0)
 		return -EINVAL;
 	fmt->pixelformat = gs2971_data.pix.pixelformat;//gs->pix.pixelformat;

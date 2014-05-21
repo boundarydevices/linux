@@ -173,12 +173,16 @@ typedef enum {
 #define SMPTE_BYPASS		IMX_GPIO_NR(5, 8)
 #define DVB_ASI		IMX_GPIO_NR(5, 9)
 
+#define GS2971_SPI_TRANSFER_MAX 1024
+
 struct gs2971_spidata {
 	struct spi_device	*spi;
 
 	struct mutex		buf_lock;
 	unsigned		users;
 	u8			*buffer;
+	u16 txbuf[GS2971_SPI_TRANSFER_MAX+1];
+	u16 rxbuf[GS2971_SPI_TRANSFER_MAX+1];
 };
 
 struct gs2971_params {
@@ -192,12 +196,6 @@ struct gs2971_channel {
      struct gs2971_spidata *spidata;
      struct gs2971_params   params;
      u16    anc_buf[GS2971_ANC_BANK_SIZE];
-};
-
-static struct gs2971_channel gs2971_channel_info[GS2971_NUM_CHANNELS] = {
-     [0] = {
-          .spidata = NULL,
-     },
 };
 
 #endif
