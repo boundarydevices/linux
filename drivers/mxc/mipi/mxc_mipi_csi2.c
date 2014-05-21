@@ -313,57 +313,6 @@ struct mipi_csi2_info *mipi_csi2_get_info(void)
 }
 EXPORT_SYMBOL(mipi_csi2_get_info);
 
-/*!
- * This function is called to get mipi csi2 bind ipu num.
- *
- * @return      Returns mipi csi2 bind ipu num
- */
-int mipi_csi2_get_bind_ipu(struct mipi_csi2_info *info)
-{
-	int ipu_id;
-
-	_mipi_csi2_lock(info);
-	ipu_id = info->ipu_id;
-	_mipi_csi2_unlock(info);
-
-	return ipu_id;
-}
-EXPORT_SYMBOL(mipi_csi2_get_bind_ipu);
-
-/*!
- * This function is called to get mipi csi2 bind csi num.
- *
- * @return      Returns mipi csi2 bind csi num
- */
-unsigned int mipi_csi2_get_bind_csi(struct mipi_csi2_info *info)
-{
-	unsigned int csi_id;
-
-	_mipi_csi2_lock(info);
-	csi_id = info->csi_id;
-	_mipi_csi2_unlock(info);
-
-	return csi_id;
-}
-EXPORT_SYMBOL(mipi_csi2_get_bind_csi);
-
-/*!
- * This function is called to get mipi csi2 virtual channel.
- *
- * @return      Returns mipi csi2 virtual channel num
- */
-unsigned int mipi_csi2_get_virtual_channel(struct mipi_csi2_info *info)
-{
-	unsigned int v_channel;
-
-	_mipi_csi2_lock(info);
-	v_channel = info->v_channel;
-	_mipi_csi2_unlock(info);
-
-	return v_channel;
-}
-EXPORT_SYMBOL(mipi_csi2_get_virtual_channel);
-
 /**
  * This function is called by the driver framework to initialize the MIPI CSI2
  * device.
@@ -380,10 +329,8 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 	u32 mipi_csi2_dphy_ver;
 	int ret;
 
-	if ((plat_data->ipu_id < 0) || (plat_data->ipu_id > 1) ||
-		(plat_data->csi_id > 1) || (plat_data->v_channel > 3) ||
-		(plat_data->lanes > 4)) {
-		dev_err(&pdev->dev, "invalid param for mimp csi2!\n");
+	if (plat_data->lanes > 4) {
+		dev_err(&pdev->dev, "invalid param for mipi csi2!\n");
 		return -EINVAL;
 	}
 
@@ -399,9 +346,6 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 	/* get mipi csi2 informaiton */
 	gmipi_csi2->pdev = pdev;
 	gmipi_csi2->mipi_en = false;
-	gmipi_csi2->ipu_id = plat_data->ipu_id;
-	gmipi_csi2->csi_id = plat_data->csi_id;
-	gmipi_csi2->v_channel = plat_data->v_channel;
 	gmipi_csi2->lanes = plat_data->lanes;
 
 	/* get mipi cfg clk */
