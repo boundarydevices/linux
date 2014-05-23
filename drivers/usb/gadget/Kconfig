@@ -168,6 +168,14 @@ config USB_GADGET_ARC
 	   dynamically linked module called "arc_udc" and force all
 	   gadget drivers to also be dynamically linked.
 
+config GADGET_ARC_FORCE_FULLSPEED
+	boolean "Freescale USB Device force full speed"
+	depends on USB_GADGET_ARC
+        default n
+	help
+	   Say "y" to disable high-speed links on the USB OTG
+           controller.
+
 config USB_STATIC_IRAM_PPH
 	bool "Apply static IRAM patch"
 	depends on USB_GADGET_ARC && (ARCH_MX37 || ARCH_MX3 || ARCH_MX25 || ARCH_MX51)

@@ -380,6 +380,12 @@ static int dr_controller_setup(struct fsl_udc *udc)
 	tmp |= USB_CMD_CTRL_RESET;
 	fsl_writel(tmp, &dr_regs->usbcmd);
 
+#ifdef CONFIG_GADGET_ARC_FORCE_FULLSPEED
+	portctrl = readl(&dr_regs->portsc1)
+			|PORTSCX_PORT_FORCE_FULL_SPEED;
+        fsl_writel(portctrl,&dr_regs->portsc1);
+#endif
+
 	/* Wait for reset to complete */
 	timeout = jiffies + FSL_UDC_RESET_TIMEOUT;
 	while (fsl_readl(&dr_regs->usbcmd) & USB_CMD_CTRL_RESET) {
