@@ -157,7 +157,7 @@ config USB_ATMEL_USBA
 config USB_GADGET_ARC
 	boolean "Freescale USB Device Controller"
 	depends on ARCH_MXC || ARCH_STMP3XXX || ARCH_MXS
-	select USB_GADGET_DUALSPEED
+	select USB_GADGET_DUALSPEED if !GADGET_ARC_FORCE_FULLSPEED
 	select USB_OTG_UTILS
 	select POWER_SUPPLY
 	help
