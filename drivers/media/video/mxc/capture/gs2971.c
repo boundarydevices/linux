@@ -44,22 +44,13 @@ MODULE_PARM_DESC(debug, "Debug level (0-2)");
 
 static struct sensor_data gs2971_data;
 static struct gs2971_spidata *spidata;
+static struct fsl_mxc_camera_platform_data *camera_plat;
 
-static int gs2971_probe(struct spi_device *spi);
-static int gs2971_remove(struct spi_device *spi);
-static int gs2971_initialize(void);
-static int set_power(int on);
-
-static struct spi_driver gs2971_spi = {
-	.driver = {
-		.name =		"gs2971",
-		.bus	= &spi_bus_type,
-		.owner =	THIS_MODULE,
-	},
-	.probe =	gs2971_probe,
-	.remove =	__devexit_p(gs2971_remove),
-};
-
+#ifdef USE_CEA861	//use hysnc/vsync/de not h:v:f eav mode
+#define YUV_FORMAT	V4L2_PIX_FMT_UYVY
+#else
+#define YUV_FORMAT	V4L2_PIX_FMT_YUYV
+#endif
 
 static inline struct gs2971_channel *to_gs2971(struct v4l2_subdev *sd)
 {
@@ -88,7 +79,9 @@ int gs2971_read_buffer(struct spi_device *spi, u16 offset, u16 *values, int leng
 	if (length > GS2971_SPI_TRANSFER_MAX)
 		return -EINVAL;
 
-	sp->txbuf[0] = 0x9000 | (offset & 0xfff);	/* read, auto-increment */
+	sp->txbuf[0] = 0x8000 | (offset & 0xfff);	/* read */
+	if (length > 1)
+		sp->txbuf[0] |= 0x1000;		/* autoinc */
 
 	memset( &spi_xfer, '\0', sizeof(spi_xfer) );
 	spi_xfer.tx_buf = sp->txbuf;
@@ -105,6 +98,8 @@ int gs2971_read_buffer(struct spi_device *spi, u16 offset, u16 *values, int leng
 	status = spi_sync(spi, &msg);
 
 	memcpy( values, &sp->rxbuf[1], sizeof(*values)*length );
+	if (status)
+		pr_err(">> Read buffer(%d) (%x): %x %x, %x %x\n", status, offset, sp->txbuf[0], sp->txbuf[1], sp->rxbuf[0], sp->rxbuf[1]);
 
 	return status;
 }
@@ -120,12 +115,12 @@ int gs2971_read_register(struct spi_device *spi, u16 offset, u16 *value)
 	if (!spi)
 		return -ENODEV;
 
-	txbuf[0] = 0x90000000 | ((offset & 0xfff)<<16);	/* read, auto-increment */
+	txbuf[0] = 0x80000000 | ((offset & 0xfff)<<16);	/* read */
 
-	memset( &spi_xfer, '\0', sizeof(spi_xfer) );
+	memset(&spi_xfer, '\0', sizeof(spi_xfer));
 	spi_xfer.tx_buf = txbuf;
 	spi_xfer.rx_buf = rxbuf;
-	spi_xfer.cs_change = 0; // ??
+	spi_xfer.cs_change = 1;
 	spi_xfer.bits_per_word = 32;
 	spi_xfer.delay_usecs = 0;
 	spi_xfer.speed_hz = 1000000;
@@ -140,13 +135,13 @@ int gs2971_read_register(struct spi_device *spi, u16 offset, u16 *value)
 		dev_dbg( &spi->dev, "read_reg failed\n" );
 		*value = 0xffff;
 	} else {
-		*value = (u16)(rxbuf[0] & 0xffff);
+		*value = (u16)rxbuf[0];
 	}
 
-	printk(KERN_ERR ">> Read register (%x) with value: %x",offset, *value);
+	if (status)
+		pr_err(">> Read register(%d) (%x): %x, %x\n",status, offset, txbuf[0], rxbuf[0]);
 	return status;
 }
-
 
 int gs2971_write_buffer(struct spi_device *spi, u16 offset, u16 *values, int length)
 {
@@ -161,13 +156,15 @@ int gs2971_write_buffer(struct spi_device *spi, u16 offset, u16 *values, int len
 	if (length > GS2971_SPI_TRANSFER_MAX-1)
 		return -EINVAL;
 
-	sp->txbuf[0] = 0x1000 | (offset & 0xfff);	/* write, auto-increment */
+	sp->txbuf[0] = (offset & 0xfff);	/* write  */
+	if (length > 1)
+		sp->txbuf[0] |= 0x1000;		/* autoinc */
 	memcpy( &sp->txbuf[1], values, sizeof(*values)*length );
 
 	memset( &spi_xfer, '\0', sizeof(spi_xfer) );
 	spi_xfer.tx_buf = sp->txbuf;
 	spi_xfer.rx_buf = sp->rxbuf;
-	spi_xfer.cs_change = 0; // ??
+	spi_xfer.cs_change = 1;
 	spi_xfer.bits_per_word = 16;
 	spi_xfer.delay_usecs = 0;
 	spi_xfer.speed_hz = 1000000;
@@ -177,15 +174,28 @@ int gs2971_write_buffer(struct spi_device *spi, u16 offset, u16 *values, int len
 	spi_message_add_tail( &spi_xfer, &msg );
 
 	status = spi_sync(spi, &msg);
+	if (status)
+		pr_err(">> Write register(%d) (%x): %x %x, %x %x\n", status, offset, sp->txbuf[0], sp->txbuf[1], sp->rxbuf[0], sp->rxbuf[1]);
 	return status;
 }
 
 
 int gs2971_write_register(struct spi_device *spi, u16 offset, u16 value)
 {
-	printk(KERN_ERR ">> Writing to address (%x) : %x\n",offset,value);
-
+//	pr_err(">> Writing to address (%x) : %x\n",offset,value);
 	return gs2971_write_buffer(spi, offset, &value, 1);
+}
+
+static s32 power_control(struct sensor_data *sensor, int on)
+{
+	struct fsl_mxc_camera_platform_data *plat = camera_plat;
+
+	if (sensor->on != on) {
+		if (plat->pwdn)
+			plat->pwdn(on ? 0 : 1);
+		sensor->on = on;
+	}
+	return 0;
 }
 
 static struct spi_device *gs2971_get_spi( struct gs2971_spidata *spidata )
@@ -208,18 +218,18 @@ void get_mode(void)
 	S_B = gpio_get_value(SMPTE_BYPASS);
 	D_A = gpio_get_value(DVB_ASI);
 
-	printk(KERN_ERR "***SMPTE = %d \n ***DVB = %d \n",S_B, D_A);
+	pr_err("***SMPTE = %d \n ***DVB = %d \n",S_B, D_A);
 
 	if (S_B == 0) {
-		if (D_A == 0) printk(KERN_ERR "***Data-through mode\n");
-		else printk(KERN_ERR "***DVB_ASI Mode\n");
+		if (D_A == 0) pr_err("***Data-through mode\n");
+		else pr_err("***DVB_ASI Mode\n");
 	} else {
-		if (D_A == 0) printk(KERN_ERR "***SMPTE Mode \n");
-		else printk(KERN_ERR "***Default \n");
+		if (D_A == 0) pr_err("***SMPTE Mode \n");
+		else pr_err("***Default \n");
 	}
 }
 
-static void get_std(struct v4l2_int_device *s, v4l2_std_id *id)
+static int get_std(struct sensor_data *sensor, v4l2_std_id *id)
 {
 	struct spi_device     *spi = NULL;
 	//struct gs2971_channel *ch  = NULL;
@@ -238,11 +248,12 @@ static void get_std(struct v4l2_int_device *s, v4l2_std_id *id)
 	u16 sd_audio_config_value;
 	u16 hd_audio_config_value;
 	u16 readback_value;
+	u16 ds1, ds2;
 
 	//ch = to_gs2971( sd );
 	spi = gs2971_get_spi( spidata );
 	if (!spi)
-		return;
+		return -ENODEV;
 
 	/*testing*/
 	/*
@@ -257,139 +268,148 @@ static void get_std(struct v4l2_int_device *s, v4l2_std_id *id)
 	get_mode();
 	/*testing*/
 
-//	*id = V4L2_STD_1080P_60;
+	*id = V4L2_STD_UNKNOWN;
 //	return 0;
 
-	status = gs2971_read_register(spi, GS2971_REG_STD_LOCK, &std_lock_value);
-	actlines_per_frame_value = std_lock_value & GS2971_REG_STD_LOCK_ACT_LINES_MASK;
-	interlaced_flag = std_lock_value & GS2971_REG_STD_LOCK_INT_PROG_MASK;
-	interlaced_flag = !!interlaced_flag;
+	status = gs2971_read_register(spi, GS2971_RASTER_STRUCT4, &std_lock_value);
+	actlines_per_frame_value = std_lock_value & GS_RS4_ACTLINES_PER_FIELD;
+	interlaced_flag = std_lock_value & GS_RS4_INT_nPROG;
 
-	printk(KERN_ERR "***** Status(%d) : %d\n",__LINE__,status);
+	status = gs2971_read_register(spi, GS2971_FLYWHEEL_STATUS, &sync_lock_value);
+	if (status)
+		return status;
+	pr_err("lock_value %x\n", sync_lock_value);
 
-	if (!status)
-          status = gs2971_read_register(spi, GS2971_REG_HVLOCK, &sync_lock_value);
+	status = gs2971_read_register(spi, GS2971_DATA_FORMAT_DS1, &ds1);
+	if (status)
+		return status;
+	status = gs2971_read_register(spi, GS2971_DATA_FORMAT_DS2, &ds2);
+	if (status)
+		return status;
+	pr_err("ds1=%x, ds2=%x\n", ds1, ds2);
 
-	printk(KERN_ERR "***** Status(%d) : %d, lock_value %x\n",__LINE__,status, sync_lock_value);
-	if (!status) {
-		status = gs2971_read_register(spi, GS2971_REG_WORDS_PER_ACTLINE, &words_per_actline_value);
-		words_per_actline_value &= GS2971_REG_WORDS_PER_ACTLINE_MASK;
-	}
-	printk(KERN_ERR "***** Status(%d) : %d\n, words_per_actline_value = %d\n",__LINE__,status, words_per_actline_value);
-	if (!status) {
-		status = gs2971_read_register(spi, GS2971_REG_WORDS_PER_LINE, &words_per_line_value);
-		words_per_line_value &= GS2971_REG_WORDS_PER_LINE_MASK;
-	}
-	printk(KERN_ERR "***** Status(%d) : %d\n words_per_line_value = %d\n",__LINE__,status,words_per_line_value);
-	if (!status) {
-		status = gs2971_read_register(spi, GS2971_REG_LINES_PER_FRAME, &lines_per_frame_value);
-		lines_per_frame_value &= GS2971_REG_LINES_PER_FRAME_MASK;
-	}
-	printk(KERN_ERR "***** Status(%d) : %d\n lines_per_frame_value = %d\n",__LINE__,status, lines_per_frame_value);
-	if (!status) {
-		printk(KERN_ERR "Words per line %u/%u Lines per frame %u/%u\n",
-				(unsigned int) words_per_actline_value,
-				(unsigned int) words_per_line_value,
-				(unsigned int) actlines_per_frame_value,
-				(unsigned int) lines_per_frame_value );
-		printk(KERN_ERR "SyncLock: %s %s StdLock: 0x%04x\n",
-				(sync_lock_value & GS2971_REG_HVLOCK_VLOCK_MASK) ? "Vsync" : "NoVsync",
-				(sync_lock_value & GS2971_REG_HVLOCK_HLOCK_MASK) ? "Hsync" : "NoHsync",
-				(unsigned int)(std_lock_value) );
-	}
-	printk(KERN_ERR "***** Status(%d) : %d\n",__LINE__,status);
-	if (!status) {
-		status = gs2971_read_register( spi, GS2971_REG_SD_AUDIO_STATUS, &sd_audio_status_value );
-		v4l2_dbg(1, debug, s, "SD audio status 0x%x\n", (unsigned int)sd_audio_status_value );
-	}
-	printk(KERN_ERR "***** Status(%d) : %d\n",__LINE__,status);
-	if (!status) {
-		status = gs2971_read_register( spi, GS2971_REG_HD_AUDIO_STATUS, &hd_audio_status_value );
-		v4l2_dbg(1, debug, s, "HD audio status 0x%x\n", (unsigned int)hd_audio_status_value );
-	}
-	printk(KERN_ERR "***** Status(%d) : %d\n",__LINE__,status);
+	status = gs2971_read_register(spi, GS2971_RASTER_STRUCT1, &words_per_actline_value);
+	if (status)
+		return status;
+	words_per_actline_value &= GS_RS1_WORDS_PER_ACTLINE;
+
+	status = gs2971_read_register(spi, GS2971_RASTER_STRUCT2, &words_per_line_value);
+	if (status)
+		return status;
+	words_per_line_value &= GS_RS2_WORDS_PER_LINE;
+
+	status = gs2971_read_register(spi, GS2971_RASTER_STRUCT3, &lines_per_frame_value);
+	if (status)
+		return status;
+	lines_per_frame_value &= GS_RS3_LINES_PER_FRAME;
+
+	pr_err("Words per line %u/%u Lines per frame %u/%u\n",
+			(unsigned int) words_per_actline_value,
+			(unsigned int) words_per_line_value,
+			(unsigned int) actlines_per_frame_value,
+			(unsigned int) lines_per_frame_value );
+	pr_err("SyncLock: %s %s StdLock: 0x%04x\n",
+			(sync_lock_value & GS_FLY_V_LOCK_DS1) ? "Vsync" : "NoVsync",
+			(sync_lock_value & GS_FLY_H_LOCK_DS1) ? "Hsync" : "NoHsync",
+			(unsigned int)(std_lock_value) );
+
+	status = gs2971_read_register( spi, GS2971_CH_VALID, &sd_audio_status_value );
+	if (status)
+		return status;
+//	v4l2_dbg(1, debug, s, "SD audio status 0x%x\n", (unsigned int)sd_audio_status_value );
+	status = gs2971_read_register( spi, GS2971_HD_CH_VALID, &hd_audio_status_value );
+	if (status)
+		return status;
+//		v4l2_dbg(1, debug, s, "HD audio status 0x%x\n", (unsigned int)hd_audio_status_value );
 	if (!lines_per_frame_value)
-		return;
+		return -1;
 
-	printk(KERN_ERR "***** Status(%d) : %d\n",__LINE__,status);
-	if ( interlaced_flag != 0
-			&& lines_per_frame_value == 525 ) {
-		printk(KERN_ERR "****STD (V4L2_STD_525_60)\n");
-		// *id = V4L2_STD_525_60;
-	}
-	else if ( interlaced_flag != 0
-			&& lines_per_frame_value == 625 ) {
-		printk(KERN_ERR "****STD (V4L2_STD_625_50)\n");
-		// *id = V4L2_STD_625_50;
-	}
-	else if ( interlaced_flag == 0
-			&& lines_per_frame_value == 525 ) {
-		printk(KERN_ERR "****STD (V4L2_STD_525P_60)\n");
-		//*id = V4L2_STD_525P_60;
-	}
-	else if ( interlaced_flag == 0
-			&& lines_per_frame_value == 625 ) {
-		printk(KERN_ERR "****STD (V4L2_STD_625P_50)\n");
-		//*id = V4L2_STD_625P_50;
-	}
-	else if ( interlaced_flag == 0
-			&& 749 <= lines_per_frame_value
+#ifdef USE_CEA861	//use hysnc/vsync/de not h:v:f eav mode
+	sensor->pix.swidth = words_per_line_value;
+	sensor->pix.sheight = lines_per_frame_value;
+#endif
+	if (interlaced_flag && lines_per_frame_value == 525 ) {
+		pr_err("****STD (V4L2_STD_525_60)\n");
+		*id = V4L2_STD_525_60;
+	} else if (interlaced_flag && lines_per_frame_value == 625 ) {
+		pr_err("****STD (V4L2_STD_625_50)\n");
+		*id = V4L2_STD_625_50;
+	} else if (interlaced_flag && lines_per_frame_value == 525 ) {
+		pr_err("****STD (V4L2_STD_525P_60)\n");
+//		*id = V4L2_STD_525P_60;
+		*id = YUV_FORMAT;
+	} else if (interlaced_flag && lines_per_frame_value == 625 ) {
+		pr_err("****STD (V4L2_STD_625P_50)\n");
+//		*id = V4L2_STD_625P_50;
+		*id = YUV_FORMAT;
+	} else if (!interlaced_flag && 749 <= lines_per_frame_value
 			&& lines_per_frame_value <= 750 ) {
-
+#ifdef USE_CEA861	//use hysnc/vsync/de not h:v:f eav mode
+		sensor->pix.swidth = words_per_line_value - 1;
+		sensor->pix.left = 220;
+		sensor->pix.top = 25;
+#endif
+		sensor->pix.width = 1280;
+		sensor->pix.height = 720;
 		if ( words_per_line_value > 1650  ) {
-			printk(KERN_ERR "****STD (V4L2_STD_720P_50)\n");
-			//         *id = V4L2_STD_720P_50;
+			pr_err("****STD (V4L2_STD_720P_50)\n");
+//			*id = V4L2_STD_720P_50;
+			*id = YUV_FORMAT;
 		} else {
-			printk(KERN_ERR "****STD (V4L2_STD_720P_60)\n");
-			//        *id = V4L2_STD_720P_60;
+			pr_err("****STD (V4L2_STD_720P_60)\n");
+//			*id = V4L2_STD_720P_60;
+			*id = YUV_FORMAT;
 		}
-	} else if ( interlaced_flag == 0
-			&& 1124 <= lines_per_frame_value
+	} else if (!interlaced_flag && 1124 <= lines_per_frame_value
 			&& lines_per_frame_value <= 1125 ) {
+		sensor->pix.width = 1920;
+		sensor->pix.height = 1080;
 		if ( words_per_line_value >= 2200+550 ) {
-			printk(KERN_ERR "****STD (V4L2_STD_1080P_24)\n");
-			//      *id = V4L2_STD_1080P_24;
-		}
-		else if ( words_per_line_value >= 2200+440 ) {
-			printk(KERN_ERR "****STD (V4L2_STD_1080P_25)\n");
-			//     *id = V4L2_STD_1080P_25;
+			pr_err("****STD (V4L2_STD_1080P_24)\n");
+//			*id = V4L2_STD_1080P_24;
+			*id = YUV_FORMAT;
+		} else if ( words_per_line_value >= 2200+440 ) {
+			pr_err("****STD (V4L2_STD_1080P_25)\n");
+//			*id = V4L2_STD_1080P_25;
+			*id = YUV_FORMAT;
 		} else {
 			//               *id = V4L2_STD_1080P_30;
-			printk(KERN_ERR "****STD (V4L2_STD_1080P_60)\n");
-			//*id = V4L2_STD_1080P_60;
+			pr_err("****STD (V4L2_STD_1080P_60)\n");
+//			*id = V4L2_STD_1080P_60;
+			*id = YUV_FORMAT;
 		}
-	} else if ( interlaced_flag == 1
-			&& 1124 <= lines_per_frame_value
+	} else if (interlaced_flag && 1124 <= lines_per_frame_value
 			&& lines_per_frame_value <= 1125 ) {
 
+		sensor->pix.width = 1920;
+		sensor->pix.height = 1080;
 		if ( words_per_line_value >= 2200+440 ) {
-			printk(KERN_ERR "****STD (V4L2_STD_1080I_50)\n");
-			//*id = V4L2_STD_1080I_50;
+			pr_err("****STD (V4L2_STD_1080I_50)\n");
+//			*id = V4L2_STD_1080I_50;
+			*id = YUV_FORMAT;
 		} else {
-			printk(KERN_ERR "****STD (V4L2_STD_1080I_60)\n");
-			//*id = V4L2_STD_1080I_60;
+			pr_err("****STD (V4L2_STD_1080I_60)\n");
+//			*id = V4L2_STD_1080I_60;
+			*id = YUV_FORMAT;
 		}
 	} else {
 		dev_err( &spi->dev, "Std detection failed: interlaced_flag: %u words per line %u/%u Lines per frame %u/%u SyncLock: %s %s StdLock: 0x%04x\n",
-				(unsigned int) interlaced_flag,
-				(unsigned int) words_per_actline_value,
-				(unsigned int) words_per_line_value,
-				(unsigned int) actlines_per_frame_value,
-				(unsigned int) lines_per_frame_value,
-				(sync_lock_value & GS2971_REG_HVLOCK_VLOCK_MASK) ? "Vsync" : "NoVsync",
-				(sync_lock_value & GS2971_REG_HVLOCK_HLOCK_MASK) ? "Hsync" : "NoHsync",
+				(unsigned int)interlaced_flag,
+				(unsigned int)words_per_actline_value,
+				(unsigned int)words_per_line_value,
+				(unsigned int)actlines_per_frame_value,
+				(unsigned int)lines_per_frame_value,
+				(sync_lock_value & GS_FLY_V_LOCK_DS1) ? "Vsync" : "NoVsync",
+				(sync_lock_value & GS_FLY_H_LOCK_DS1) ? "Hsync" : "NoHsync",
 				(unsigned int)(std_lock_value) );
-		return;
+		return -1;
 	}
 
 	sd_audio_config_value = 0xaaaa; // 16-bit, right-justified
 
-	if (!status)
-		status = gs2971_write_register(spi, GS2971_REG_SD_AUDIO_CONFIG, sd_audio_config_value );
-
-	printk(KERN_ERR "***** Status(%d) : %d\n",__LINE__,status);
+	status = gs2971_write_register(spi, GS2971_CFG_AUD, sd_audio_config_value );
 	if (!status) {
-		status = gs2971_read_register(spi, GS2971_REG_SD_AUDIO_CONFIG, &readback_value );
+		status = gs2971_read_register(spi, GS2971_CFG_AUD, &readback_value );
 		if (!status) {
 			if ( sd_audio_config_value != readback_value ) {
 				dev_dbg( &spi->dev, "SD audio readback failed, wanted x%04x, got x%04x\n",
@@ -398,48 +418,30 @@ static void get_std(struct v4l2_int_device *s, v4l2_std_id *id)
 			}
 		}
 	}
-	printk(KERN_ERR "***** Status(%d) : %d\n",__LINE__,status);
+
+	hd_audio_config_value = 0x0aa4; // 16-bit, right-justified
+	status = gs2971_write_register(spi, GS2971_HD_CFG_AUD, hd_audio_config_value );
 	if (!status) {
-		hd_audio_config_value = 0x0aa4; // 16-bit, right-justified
-		status = gs2971_write_register(spi, GS2971_REG_HD_AUDIO_CONFIG, hd_audio_config_value );
-	}
-	printk(KERN_ERR "***** Status(%d) : %d\n",__LINE__,status);
-	if (!status) {
-		status = gs2971_read_register( spi,
-				GS2971_REG_HD_AUDIO_CONFIG,
-				&readback_value );
+		status = gs2971_read_register( spi, GS2971_HD_CFG_AUD, &readback_value );
 		if (!status) {
 			if ( hd_audio_config_value != readback_value ) {
 				dev_dbg( &spi->dev, "HD audio readback failed, wanted x%04x, got x%04x\n",
 						(unsigned int) hd_audio_config_value,
-						(unsigned int) readback_value
-				);
+						(unsigned int) readback_value);
 			}
 		}
 	}
 
-	printk(KERN_ERR "***** Status(%d) : %d\n",__LINE__,status);
-	switch ( *id ) {
-	case V4L2_STD_525_60:
-	case V4L2_STD_625_50:
-		dev_dbg( &spi->dev, "Set SD-SDI input, 8-bits width\n");
-//		dec_device->if_type = INTERFACE_TYPE_BT656;
-		gs2971_write_register(spi, GS2971_REG_ANC_CONFIG, 2);
-		break;
-
-	default:
-		dev_dbg( &spi->dev, "Set HD-SDI input, 16-bits width\n");
-//		dec_device->if_type = INTERFACE_TYPE_BT1120;
-		gs2971_write_register(spi, GS2971_REG_ANC_CONFIG, 0);
-		break;
-	}
+	status = gs2971_write_register(spi, GS2971_ANC_CONTROL, ANCCTL_ANC_DATA_DEL);
+	if (status)
+		return status;
+	pr_err("remove anc data\n");
 
 #if 0
-	status = gs2971_write_register( spi, GS2971_REG_AUDIO_CONFIG,
-			(GS2971_REG_AUDIO_CONFIG_SCLK_INV_MASK | GS2971_REG_AUDIO_CONFIG_MCLK_SEL_128FS));
+	status = gs2971_write_register( spi, GS2971_ACGEN_CTRL,
+			(GS2971_ACGEN_CTRL_SCLK_INV_MASK | GS2971_ACGEN_CTRL_MCLK_SEL_128FS));
 #endif
-	*id = V4L2_STD_NTSC;
-	return;
+	return 0;
 }
 
 static void gs2971_workqueue_handler(struct work_struct * data);
@@ -458,7 +460,7 @@ static void gs2971_workqueue_handler(struct work_struct *ignored)
 	int    status;
 	u16    did,sdid;
 
-	printk(KERN_ERR "****** In function %s\n",__FUNCTION__);
+	pr_err("****** In function %s\n",__FUNCTION__);
 	for ( ch_id = 0; ch_id < GS2971_NUM_CHANNELS; ch_id++ ) {
 		//ch = &gs2971_channel_info[ch_id];
 
@@ -467,8 +469,8 @@ static void gs2971_workqueue_handler(struct work_struct *ignored)
 			continue;
 
 		/* Step 2: start writing to other bank */
-		gs2971_write_register(spi, GS2971_REG_ANC_CONFIG,
-				GS2971_ANC_CONFIG_ANC_DATA_SWITCH);
+		gs2971_write_register(spi, GS2971_ANC_CONTROL,
+				ANCCTL_ANC_DATA_DEL | ANCCTL_ANC_DATA_SWITCH);
 
 #if 1
 		/* Step 1: read ancillary data */
@@ -506,7 +508,7 @@ static void gs2971_workqueue_handler(struct work_struct *ignored)
 #endif
 
 		/* Step 3: switch reads to other bank */
-		gs2971_write_register(spi, GS2971_REG_ANC_CONFIG, 0);
+		gs2971_write_register(spi, GS2971_ANC_CONTROL, ANCCTL_ANC_DATA_DEL);
 	}
 }
 
@@ -548,11 +550,12 @@ static int gs2971_init_ancillary(struct spi_device *spi)
 
 	/* Clear old ancillary data */
 	if (!status)
-		status = gs2971_write_register(spi, GS2971_REG_ANC_CONFIG, GS2971_ANC_CONFIG_ANC_DATA_SWITCH);
+		status = gs2971_write_register(spi, GS2971_ANC_CONTROL,
+				ANCCTL_ANC_DATA_DEL | ANCCTL_ANC_DATA_SWITCH);
 
 	/* Step 2: start writing to other bank */
 	if (!status)
-		status = gs2971_write_register(spi, GS2971_REG_ANC_CONFIG, 0);
+		status = gs2971_write_register(spi, GS2971_ANC_CONTROL, ANCCTL_ANC_DATA_DEL);
 	return status;
 }
 #endif
@@ -561,22 +564,44 @@ static int gs2971_init_ancillary(struct spi_device *spi)
 /* gs2971_initialize :
  * This function will set the video format standard
  */
-static int gs2971_initialize(void)
+static int gs2971_initialize(struct spi_device *spi)
 {
-	// struct gs2971_channel *ch;
-	struct spi_device *spi;
 	int status = 0;
-
-	// ch = to_gs2971(sd);
-	try_module_get(THIS_MODULE);
-
-	spi = gs2971_get_spi( spidata );
-
-#if 0
-	gs2971_write_register( spi, GS2971_REG_VIDEO_CONFIG,
-			(GS2971_REG_VIDEO_CONFIG_861_PIN_DISABLE_MASK|
-					GS2971_REG_VIDEO_CONFIG_TIMING_861_MASK));
+	u16 value;
+#ifdef USE_CEA861	//use hysnc/vsync/de not h:v:f eav mode
+	u16 cfg = GS_VCFG1_861_PIN_DISABLE_MASK | GS_VCFG1_TIMING_861_MASK;
+#else
+	u16 cfg = GS_VCFG1_861_PIN_DISABLE_MASK;
 #endif
+
+	status = gs2971_write_register(spi, GS2971_VCFG1, cfg);
+	if (status)
+		return status;
+	status = gs2971_read_register(spi, GS2971_VCFG1, &value);
+	if (status)
+		return status;
+	if (value != cfg) {
+		dev_dbg( &spi->dev, "status=%x, read value of x%04x\n", status, (unsigned int)value);
+		return -ENODEV;
+	}
+//	status = gs2971_write_register(spi, GS2971_VCFG2, GS_VCFG2_DS_SWAP_3G);
+	status = gs2971_write_register(spi, GS2971_VCFG2, 0);
+	if (status)
+		return status;
+
+	status = gs2971_write_register(spi, GS2971_IO_CONFIG,
+			(GS_IOCFG_HSYNC << 0) | (GS_IOCFG_VSYNC << 5) | (GS_IOCFG_DE << 10));
+	if (status)
+		return status;
+
+	status = gs2971_write_register(spi, GS2971_IO_CONFIG2,
+			(GS_IOCFG_LOCKED << 0) | (GS_IOCFG_Y_ANC << 5) | (GS_IOCFG_DATA_ERROR << 10));
+	if (status)
+		return status;
+
+	status = gs2971_write_register(spi, GS2971_TIM_861_CFG, GS_TIMCFG_TRS_861);
+	if (status)
+		return status;
 
 #if defined(GS2971_ENABLE_ANCILLARY_DATA)
 	gs2971_init_ancillary(spi);
@@ -593,32 +618,6 @@ static int gs2971_initialize(void)
 	return status;
 }
 
-static int set_power(int on)
-{
-	struct fsl_mxc_camera_platform_data *gs2971_plat;
-	struct spi_device  *spi;
-
-	printk(KERN_ERR "***** In function %s\n",__FUNCTION__);
-	spi = gs2971_get_spi(spidata);
-	if (!spi)
-		return -ENODEV;
-
-	gs2971_plat = spi->dev.platform_data;
-	if (on != gs2971_data.on ) {
-		if (on) {
-			if (gs2971_plat->pwdn)
-				gs2971_plat->pwdn(0);
-			msleep(400);
-			//get_std();
-		} else {
-			if (gs2971_plat->pwdn)
-				gs2971_plat->pwdn(1);
-		}
-		gs2971_data.on = on;
-	}
-	return 0;
-}
-
 #if 0
 /*!
  * Return attributes of current video standard.
@@ -630,7 +629,7 @@ static int set_power(int on)
  */
 static void gs2971_get_std(struct v4l2_int_device *s, v4l2_std_id *std)
 {
-	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
+	pr_err("********In function: %s\n",__FUNCTION__);
 }
 #endif
 
@@ -655,28 +654,48 @@ static void gs2971_get_std(struct v4l2_int_device *s, v4l2_std_id *std)
  */
 static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 {
-	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
+	struct sensor_data *sensor = s->priv;
 
-	if (!s) {
-		pr_err("   ERROR!! no slave device set!\n");
-		return -1;
-	}
+	pr_err("********In function: %s\n",__FUNCTION__);
 
 	/* Initialize structure to 0s then set any non-0 values. */
 	memset(p, 0, sizeof(*p));
-	p->u.bt656.clock_curr = gs2971_data.mclk;
+	p->u.bt656.clock_curr = sensor->mclk;
+#ifdef USE_CEA861	//use hysnc/vsync/de not h:v:f eav mode
 	p->if_type = V4L2_IF_TYPE_BT656; /* This is the only possibility. */
-	p->u.bt656.mode = V4L2_IF_TYPE_BT656_MODE_NOBT_8BIT;
-	//p->u.bt656.clock_min = 6000000;
-	//p->u.bt656.clock_max = 24000000;
-	//p->u.bt656.bt_sync_correct = 1;
+	p->u.bt656.mode = V4L2_IF_TYPE_BT656_MODE_NOBT_10BIT;
+	p->u.bt656.bt_sync_correct = 1;
+//	p->u.bt656.nobt_vs_inv = 1;
+	p->u.bt656.nobt_hs_inv = 1;
+#else
+	/*
+	 * p->if_type = V4L2_IF_TYPE_BT656_PROGRESSIVE;
+	 * BT.656 - 20/10bit pin low doesn't work because then EAV of DS1/2 are also interleaved
+	 * and imx only recognizes 4 word EAV/SAV codes, not 8
+	 */
+	p->if_type = V4L2_IF_TYPE_BT1120_PROGRESSIVE_SDR;
+	p->u.bt656.mode = V4L2_IF_TYPE_BT656_MODE_BT_10BIT;
+	p->u.bt656.bt_sync_correct = 0;
+	p->u.bt656.nobt_vs_inv = 1;
+//	p->u.bt656.nobt_hs_inv = 1;
+#endif
+	p->u.bt656.latch_clk_inv = 1;
+	p->u.bt656.clock_min = 6000000;
+	p->u.bt656.clock_max = 27000000;
 	return 0;
 }
 
 static int ioctl_s_power(struct v4l2_int_device *s, int on)
 {
-	printk(KERN_ERR "********In function: %s with on in %d\n",__FUNCTION__, on);
-	return set_power(on);
+	struct sensor_data *sensor = s->priv;
+
+	pr_err("********In function: %s with on in %d\n",__FUNCTION__, on);
+	if (on && !sensor->on) {
+		power_control(sensor, 1);
+	} else if (!on && sensor->on) {
+		power_control(sensor, 0);
+	}
+	return 0;
 }
 
 /*!
@@ -688,18 +707,19 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
  */
 static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 {
+	struct sensor_data *sensor = s->priv;
 	struct v4l2_captureparm *cparm = &a->parm.capture;
 
-	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
+	pr_err("********In function: %s\n",__FUNCTION__);
 	switch (a->type) {
 	/* These are all the possible cases. */
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
 		pr_debug("   type is V4L2_BUF_TYPE_VIDEO_CAPTURE\n");
 		memset(a, 0, sizeof(*a));
 		a->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		cparm->capability = gs2971_data.streamcap.capability;
-		cparm->timeperframe = gs2971_data.streamcap.timeperframe;
-		cparm->capturemode = gs2971_data.streamcap.capturemode;
+		cparm->capability = sensor->streamcap.capability;
+		cparm->timeperframe = sensor->streamcap.timeperframe;
+		cparm->capturemode = sensor->streamcap.capturemode;
 		break;
 
 	case V4L2_BUF_TYPE_VIDEO_OUTPUT:
@@ -730,12 +750,13 @@ static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
  */
 static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 {
+	struct sensor_data *sensor = s->priv;
 	struct v4l2_fract *timeperframe = &a->parm.capture.timeperframe;
 	int ret = 0;
 
-	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
+	pr_err("********In function: %s\n",__FUNCTION__);
 	/* Make sure power on */
-	set_power(1);
+	power_control(sensor, 1);
 
 	switch (a->type) {
 	/* This is the only case currently handled. */
@@ -746,8 +767,8 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 			timeperframe->denominator = 60;
 			timeperframe->numerator = 1;
 		}
-		gs2971_data.streamcap.timeperframe = *timeperframe;
-		gs2971_data.streamcap.capturemode =
+		sensor->streamcap.timeperframe = *timeperframe;
+		sensor->streamcap.capturemode =
 				(u32)a->parm.capture.capturemode;
 		break;
 
@@ -780,27 +801,29 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
  */
 static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 {
-	v4l2_std_id std;
+	struct sensor_data *sensor = s->priv;
+	v4l2_std_id std = V4L2_STD_UNKNOWN;
 
-	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
+	pr_err("********In function: %s\n",__FUNCTION__);
+	power_control(sensor, 1);
 	switch (f->type) {
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
 		//pr_debug("   Returning size of %dx%d\n",
 		//adv->sen.pix.width, adv->sen.pix.height);
-		printk(KERN_ERR "********In V4L2_BUF_TYPE_VIDEO_CAPTURE\n");
-		get_std(s, &std);
-		f->fmt.pix = gs2971_data.pix;
+		pr_err("********In V4L2_BUF_TYPE_VIDEO_CAPTURE\n");
+		get_std(sensor, &std);
+		f->fmt.pix = sensor->pix;
 		break;
 
 	case V4L2_BUF_TYPE_PRIVATE:
-		get_std(s, &std);
-		f->fmt.pix.pixelformat = (u32)std;
-		printk(KERN_ERR "********In V4L2_BUF_TYPE_PRIVATE\n");
+		get_std(sensor, &std);
+//		f->fmt.pix.pixelformat = (u32)std;
+		pr_err("********In V4L2_BUF_TYPE_PRIVATE\n");
 		break;
 
 	default:
-		printk(KERN_ERR "********In DEFAULT\n");
-		f->fmt.pix = gs2971_data.pix;
+		pr_err("********In DEFAULT\n");
+		f->fmt.pix = sensor->pix;
 		break;
 	}
 	return 0;
@@ -818,7 +841,7 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 static int ioctl_queryctrl(struct v4l2_int_device *s,
 			   struct v4l2_queryctrl *qc)
 {
-	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
+	pr_err("********In function: %s\n",__FUNCTION__);
 	return -EINVAL;
 }
 
@@ -833,30 +856,31 @@ static int ioctl_queryctrl(struct v4l2_int_device *s,
  */
 static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 {
+	struct sensor_data *sensor = s->priv;
 	int ret = 0;
 
-	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
+	pr_err("********In function: %s\n",__FUNCTION__);
 	switch (vc->id) {
 	case V4L2_CID_BRIGHTNESS:
-		vc->value = gs2971_data.brightness;
+		vc->value = sensor->brightness;
 		break;
 	case V4L2_CID_HUE:
-		vc->value = gs2971_data.hue;
+		vc->value = sensor->hue;
 		break;
 	case V4L2_CID_CONTRAST:
-		vc->value = gs2971_data.contrast;
+		vc->value = sensor->contrast;
 		break;
 	case V4L2_CID_SATURATION:
-		vc->value = gs2971_data.saturation;
+		vc->value = sensor->saturation;
 		break;
 	case V4L2_CID_RED_BALANCE:
-		vc->value = gs2971_data.red;
+		vc->value = sensor->red;
 		break;
 	case V4L2_CID_BLUE_BALANCE:
-		vc->value = gs2971_data.blue;
+		vc->value = sensor->blue;
 		break;
 	case V4L2_CID_EXPOSURE:
-		vc->value = gs2971_data.ae_mode;
+		vc->value = sensor->ae_mode;
 		break;
 	default:
 		ret = -EINVAL;
@@ -875,11 +899,12 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
  */
 static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 {
+	struct sensor_data *sensor = s->priv;
 	int retval = 0;
 
-	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
+	pr_err("********In function: %s\n",__FUNCTION__);
 	///* Make sure power on */
-	set_power(1);
+	power_control(sensor, 1);
 
 	switch (vc->id) {
 	case V4L2_CID_BRIGHTNESS:
@@ -943,11 +968,13 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 				 struct v4l2_frmsizeenum *fsize)
 {
-	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
+	struct sensor_data *sensor = s->priv;
+
+	pr_err("********In function: %s\n",__FUNCTION__);
 	if (fsize->index > 2)
 		return -EINVAL;
 
-	fsize->pixel_format = gs2971_data.pix.pixelformat;
+	fsize->pixel_format = sensor->pix.pixelformat;
 	fsize->discrete.width = 1280;//video_fmts[fsize->index].active_width;
 	fsize->discrete.height = 720; //video_fmts[fsize->index].active_height;
 	return 0;
@@ -963,7 +990,7 @@ static int ioctl_enum_framesizes(struct v4l2_int_device *s,
  */
 static int ioctl_g_chip_ident(struct v4l2_int_device *s, int *id)
 {
-	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
+	pr_err("********In function: %s\n",__FUNCTION__);
 	((struct v4l2_dbg_chip_ident *)id)->match.type =
 					V4L2_CHIP_MATCH_I2C_DRIVER;
 	strcpy(((struct v4l2_dbg_chip_ident *)id)->match.name, "gs2971_video");
@@ -981,10 +1008,12 @@ static int ioctl_g_chip_ident(struct v4l2_int_device *s, int *id)
 static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
 			      struct v4l2_fmtdesc *fmt)
 {
-	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
+	struct sensor_data *sensor = s->priv;
+
+	pr_err("********In function: %s\n",__FUNCTION__);
 	if (fmt->index > 0)
 		return -EINVAL;
-	fmt->pixelformat = gs2971_data.pix.pixelformat;//gs->pix.pixelformat;
+	fmt->pixelformat = sensor->pix.pixelformat;//gs->pix.pixelformat;
 	return 0;
 }
 
@@ -994,7 +1023,7 @@ static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
  */
 static int ioctl_init(struct v4l2_int_device *s)
 {
-	printk(KERN_ERR "********In function: %s\n",__FUNCTION__);
+	pr_err("********In function: %s\n",__FUNCTION__);
 	return 0;
 }
 
@@ -1095,49 +1124,48 @@ static struct v4l2_int_device gs2971_int_device = {
  */
 static int gs2971_probe(struct spi_device *spi)
 {
+	struct sensor_data *sensor = &gs2971_data;
+	struct proc_dir_entry *pde;
 	struct fsl_mxc_camera_platform_data *gs2971_plat = spi->dev.platform_data;
-	struct proc_dir_entry *pde ;
 	//struct gs2971_spidata	*spidata;
-	int			status = 0;
+	int status = 0;
 	//struct gs2971_channel      *channel;
 
-	printk(KERN_ERR "In function %s\n",__FUNCTION__);
+	pr_err("In function %s\n",__FUNCTION__);
 	dev_dbg( &spi->dev, "Enter gs2971_probe\n" );
+	if (!gs2971_plat) {
+		pr_err("%s: Platform data needed\n", __func__);
+		return -ENOMEM;
+	}
 
 	/* Allocate driver data */
 	spidata = kzalloc(sizeof(*spidata), GFP_KERNEL);
 	if (!spidata)
-	  return -ENOMEM;
+		return -ENOMEM;
 
 	/* Initialize the driver data */
 	spidata->spi = spi;
 	mutex_init(&spidata->buf_lock);
 
 	/* Set initial values for the sensor struct. */
-	memset(&gs2971_data, 0, sizeof(gs2971_data));
-	gs2971_data.mclk = 24000000; /* 6 - 54 MHz, typical 24MHz */
-	gs2971_data.mclk = gs2971_plat->mclk;
-	gs2971_data.mclk_source = gs2971_plat->mclk_source;
-	gs2971_data.csi = gs2971_plat->csi;
-	gs2971_data.ipu = gs2971_plat->ipu;
-	gs2971_data.io_init = gs2971_plat->io_init;
+	memset(sensor, 0, sizeof(*sensor));
+	sensor->mclk = gs2971_plat->mclk;	/* 27 MHz */
+	sensor->mclk_source = gs2971_plat->mclk_source;
+	sensor->csi = gs2971_plat->csi;
+	sensor->ipu = gs2971_plat->ipu;
+	sensor->io_init = gs2971_plat->io_init;
 
 	//ov5642_data.i2c_client = client;
-	gs2971_data.pix.pixelformat = V4L2_PIX_FMT_YUYV;
-	gs2971_data.pix.width = 1280;
-	gs2971_data.pix.height = 720;
-	gs2971_data.streamcap.capability = V4L2_MODE_HIGHQUALITY |
+	sensor->pix.pixelformat = YUV_FORMAT;
+	sensor->pix.width = 1280;
+	sensor->pix.height = 720;
+	sensor->streamcap.capability = V4L2_MODE_HIGHQUALITY |
 					   V4L2_CAP_TIMEPERFRAME;
-	gs2971_data.streamcap.capturemode = 0;
-	gs2971_data.streamcap.timeperframe.denominator = 60;//DEFAULT_FPS;
-	gs2971_data.streamcap.timeperframe.numerator = 1;
-	//gs2971_data.pix.priv = 1;  /* 1 is used to indicate TV in */
-	gs2971_data.on = true;
-
-	if (!gs2971_plat) {
-		pr_err("%s: Platform data needed\n", __func__);
-		return -ENOMEM;
-	}
+	sensor->streamcap.capturemode = 0;
+	sensor->streamcap.timeperframe.denominator = 60;//DEFAULT_FPS;
+	sensor->streamcap.timeperframe.numerator = 1;
+	//sensor->pix.priv = 1;  /* 1 is used to indicate TV in */
+	camera_plat = gs2971_plat;
 
 	if (gs2971_plat->io_init)
 		gs2971_plat->io_init();
@@ -1145,38 +1173,50 @@ static int gs2971_probe(struct spi_device *spi)
 	/*if (gs2971_plat->reset)
 		gs2971_plat->reset();*/
 
-	if (gs2971_plat->pwdn)
-		gs2971_plat->pwdn(0);
-
-	msleep(1);
-
-	gs2971_int_device.priv = &gs2971_data;
+	power_control(sensor, 1);
+	gs2971_int_device.priv = sensor;
+	if (!status)
+		status = gs2971_initialize(spi);
+	if (status)
+		goto exit;
+	power_control(sensor, 0);
 
 	pde = create_proc_entry("driver/gs2971", 0, 0);
-	if( pde ) {
+	if (pde) {
 		//pde->write_proc = write_proc ;
 		pde->data = &gs2971_int_device ;
 	} else {
-		printk( KERN_ERR "Error creating gs2971 proc entry\n" );
+		pr_err("Error creating gs2971 proc entry\n" );
 	}
-	status = v4l2_int_device_register(&gs2971_int_device);
 
-	if (!status) {
-             status = gs2971_initialize();
-     }
-     printk (KERN_ERR "gs2971_probe returns %d\n",status );
-     return status;
-     //return 0;
+	status = v4l2_int_device_register(&gs2971_int_device);
+exit:
+	if (status) {
+		kfree(spidata);
+		pr_err("gs2971_probe returns %d\n",status );
+	}
+	return status;
+
 }
 
 static int gs2971_remove(struct spi_device *spi)
 {
-	printk(KERN_ERR "In function %s\n",__FUNCTION__);
+	pr_err("In function %s\n",__FUNCTION__);
 	remove_proc_entry("driver/gs2971", NULL);
 	kfree( spidata );
 	v4l2_int_device_unregister(&gs2971_int_device);
 	return 0;
 }
+
+static struct spi_driver gs2971_spi = {
+	.driver = {
+		.name  = "gs2971",
+		.bus   = &spi_bus_type,
+		.owner = THIS_MODULE,
+	},
+	.probe  = gs2971_probe,
+	.remove = __devexit_p(gs2971_remove),
+};
 
 /*!
  * gs2971 init function.
@@ -1188,9 +1228,9 @@ static int __init gs2971_init(void)
 {
 	int status;
 
-	printk(KERN_ERR "In function %s\n",__FUNCTION__);
+	pr_err("In function %s\n",__FUNCTION__);
 	status = spi_register_driver(&gs2971_spi);
-	printk(KERN_ERR "Status: %d\n",status);
+	pr_err("Status: %d\n",status);
 	return status;
 }
 
@@ -1202,11 +1242,13 @@ static int __init gs2971_init(void)
  */
 static void __exit gs2971_exit(void)
 {
-	printk(KERN_ERR "In function %s\n",__FUNCTION__);
+	pr_err("In function %s\n",__FUNCTION__);
 	spi_unregister_driver(&gs2971_spi);
 }
 
-
 module_init(gs2971_init);
 module_exit(gs2971_exit);
+MODULE_DESCRIPTION("gs2971 video input Driver");
 MODULE_LICENSE("GPL");
+MODULE_VERSION("1.0");
+MODULE_ALIAS("CSI");
