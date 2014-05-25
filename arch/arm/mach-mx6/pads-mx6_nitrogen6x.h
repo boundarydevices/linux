@@ -3,6 +3,7 @@
 #undef MX6
 
 //#define ONE_WIRE
+//#define USE_CEA861	//use hysnc/vsync/de not h:v:f eav mode
 
 #ifdef FOR_DL_SOLO
 #define MX6(a) MX6DL_##a
@@ -134,7 +135,6 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 
 	/* GPIO4 */
 	MX6PAD(GPIO_19__GPIO_4_5),	/* J14 - Volume Down */
-
 
 	/* CSI1/Bootmode pins - J12 */
 #ifdef FOR_DL_SOLO
@@ -424,6 +424,23 @@ static iomux_v3_cfg_t MX6NAME(ecspi3_pads)[] = {
 
 static iomux_v3_cfg_t MX6NAME(gs2971_video_pads)[] = {
 	/* GS2971  J15 configuration*/
+#ifdef USE_CEA861
+#ifdef FOR_DL_SOLO
+	MX6PAD(EIM_DA10__IPU1_CSI1_DATA_EN),	/* GPIO3[10] */
+	MX6PAD(EIM_DA11__IPU1_CSI1_HSYNC),	/* GPIO3[11] */
+	MX6PAD(EIM_DA12__IPU1_CSI1_VSYNC),	/* GPIO3[12] */
+#else
+	MX6PAD(EIM_DA10__IPU2_CSI1_DATA_EN),	/* GPIO3[10] */
+	MX6PAD(EIM_DA11__IPU2_CSI1_HSYNC),	/* GPIO3[11] */
+	MX6PAD(EIM_DA12__IPU2_CSI1_VSYNC),	/* GPIO3[12] */
+#endif
+
+#else
+	NEW_PAD_CTRL(MX6PAD(EIM_DA10__GPIO_3_10), WEAK_PULLUP),	/* pin B5 stat2 */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA11__GPIO_3_11), WEAK_PULLUP),	/* pin A5 stat0 */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA12__GPIO_3_12), WEAK_PULLUP),	/* pin A6 stat1 */
+#endif
+
 	MX6PAD(DISP0_DAT7__GPIO_4_28), /* GS2971  TIM_861*/
 	MX6PAD(DISP0_DAT6__GPIO_4_27), /*  AUDIO_EN */
 	MX6PAD(DISP0_DAT15__GPIO_5_9), /*  DVB_ASI */

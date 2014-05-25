@@ -814,16 +814,10 @@ static void gs2971_io_init(void)
 	gpio_request(IMX_GPIO_NR(4, 31), "SW_EN");
 	gpio_request(IMX_GPIO_NR(3, 13), "PWR_DN");
 
-	gpio_direction_output(IMX_GPIO_NR(4, 28), 1); // TIM_861 = 1
+	gpio_direction_output(IMX_GPIO_NR(4, 28), 0); // TIM_861 = 0
 	gpio_direction_output(IMX_GPIO_NR(5, 5), 1); // Enable IOPROC
 	gpio_direction_output(IMX_GPIO_NR(4, 31), 0); // sw_en =0
 	gpio_direction_output(IMX_GPIO_NR(3, 13), 1); // Enable voltage regulator
-
-	gpio_set_value(IMX_GPIO_NR(4, 28), 1); // TIM_861 = 1
-	gpio_set_value(IMX_GPIO_NR(5, 5), 1); // Enable IOPROC
-	gpio_set_value(IMX_GPIO_NR(4, 31), 0); // sw_en =0
-	gpio_set_value(IMX_GPIO_NR(3, 13), 1); // Enable voltage regulator
-
 }
 
 static void gs2971_pwdn(int powerdown)
@@ -838,7 +832,7 @@ static void gs2971_pwdn(int powerdown)
 }
 
 static struct fsl_mxc_camera_platform_data gs2971_data = {
-	.mclk = 24000000,
+	.mclk = 27000000,
 	.pwdn = gs2971_pwdn,
 	.io_init = gs2971_io_init,
 	//.cvbs = true,
