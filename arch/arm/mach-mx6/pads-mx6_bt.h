@@ -3,6 +3,8 @@
 #undef MX6
 
 //#define ONE_WIRE
+//#define USE_CEA861	//use hysnc/vsync/de not h:v:f eav mode
+
 
 #ifdef FOR_DL_SOLO
 #define MX6(a) MX6DL_##a
@@ -278,9 +280,15 @@ static iomux_v3_cfg_t MX6NAME(board_pads)[] = {
 	MX6PAD(EIM_DA7__IPU1_CSI1_D_2),		/* GPIO3[7] */
 	MX6PAD(EIM_DA8__IPU1_CSI1_D_1),		/* GPIO3[8] */
 	MX6PAD(EIM_DA9__IPU1_CSI1_D_0),		/* GPIO3[9] */
+#ifdef USE_CEA861
 	MX6PAD(EIM_DA10__IPU1_CSI1_DATA_EN),	/* GPIO3[10] */
 	MX6PAD(EIM_DA11__IPU1_CSI1_HSYNC),	/* GPIO3[11] */
 	MX6PAD(EIM_DA12__IPU1_CSI1_VSYNC),	/* GPIO3[12] */
+#else
+	NEW_PAD_CTRL(MX6PAD(EIM_DA10__GPIO_3_10), WEAK_PULLUP),	/* pin B5 stat2 */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA11__GPIO_3_11), WEAK_PULLUP),	/* pin A5 stat0 */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA12__GPIO_3_12), WEAK_PULLUP),	/* pin A6 stat1 */
+#endif
 	MX6PAD(EIM_A16__IPU1_CSI1_PIXCLK),	/* GPIO2[22] */
 #else
 	MX6PAD(EIM_A24__IPU2_CSI1_D_19),	/* GPIO2[30] */
@@ -303,9 +311,15 @@ static iomux_v3_cfg_t MX6NAME(board_pads)[] = {
 	MX6PAD(EIM_DA7__IPU2_CSI1_D_2),		/* GPIO3[7] */
 	MX6PAD(EIM_DA8__IPU2_CSI1_D_1),		/* GPIO3[8] */
 	MX6PAD(EIM_DA9__IPU2_CSI1_D_0),		/* GPIO3[9] */
+#ifdef USE_CEA861
 	MX6PAD(EIM_DA10__IPU2_CSI1_DATA_EN),	/* GPIO3[10] - pin B5 stat2 */
 	MX6PAD(EIM_DA11__IPU2_CSI1_HSYNC),	/* GPIO3[11] - pin A5 stat0 */
 	MX6PAD(EIM_DA12__IPU2_CSI1_VSYNC),	/* GPIO3[12] - pin A6 stat1 */
+#else
+	NEW_PAD_CTRL(MX6PAD(EIM_DA10__GPIO_3_10), WEAK_PULLUP),	/* pin B5 stat2 */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA11__GPIO_3_11), WEAK_PULLUP),	/* pin A5 stat0 */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA12__GPIO_3_12), WEAK_PULLUP),	/* pin A6 stat1 */
+#endif
 	MX6PAD(EIM_A16__IPU2_CSI1_PIXCLK),	/* GPIO2[22] - pin A8 */
 #endif
 #define GP_GS2971_SMPTE_BYPASS	IMX_GPIO_NR(2, 24)

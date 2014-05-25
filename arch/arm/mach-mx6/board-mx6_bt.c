@@ -297,24 +297,6 @@ static struct spi_board_info spi_nor_device[] __initdata = {
 #endif
 };
 
-static struct fsl_mxc_camera_platform_data gs2971_data;
-
-static struct spi_board_info spi_gs2971_device[] __initdata = {
-	{
-		.modalias = "gs2971",
-		.max_speed_hz = 20000000, /* max spi clock (SCK) speed in HZ */
-		.bus_num = 1,
-		.chip_select = 0,
-		.platform_data = &gs2971_data,
-	},
-};
-
-/*
- * GS2971
- * EIM_LBA__GPIO_2_27 - power down
- * DISP0_DAT9__GPIO_4_30 - Reset
- */
-
 static void gs2971_io_init(void)
 {
 
@@ -329,28 +311,39 @@ static void gs2971_io_init(void)
 		mxc_iomux_set_gpr_register(13, 3, 3, 4);
 
 	/* Set control pin values */
-	gpio_set_value(GP_GS2971_TIM_861, 1);
+	gpio_set_value(GP_GS2971_TIM_861, 0);
 	gpio_set_value(GP_GS2971_IOPROC_EN, 1);
 	gpio_set_value(GP_GS2971_SW_EN, 0);
-	gpio_set_value(GP_GS2971_STANDBY, 0);
+	gpio_set_value(GP_GS2971_STANDBY, 1);
+	msleep(1);
 	gpio_set_value(GP_GS2971_RESET, 1);
 }
 
 static void gs2971_pwdn(int powerdown)
 {
-	printk(KERN_ERR "**********************In function %s\n",__FUNCTION__);
+	printk(KERN_ERR "%s: reset=gp%d, standby=%d, powerdown=%d\n", __func__, GP_GS2971_RESET, GP_GS2971_STANDBY, powerdown);
 
 	gpio_set_value(GP_GS2971_STANDBY, powerdown ? 1 : 0);
 	if (!powerdown)
-		msleep(2);
+		msleep(1000);
 }
 
 static struct fsl_mxc_camera_platform_data gs2971_data = {
-	.mclk = 24000000,
+	.mclk = 27000000,
 	.pwdn = gs2971_pwdn,
 	.io_init = gs2971_io_init,
 	.ipu = 1,
 	.csi = 1,
+};
+
+static struct spi_board_info spi_gs2971_device[] __initdata = {
+	{
+		.modalias = "gs2971",
+		.max_speed_hz = 20000000, /* max spi clock (SCK) speed in HZ */
+		.bus_num = 2,
+		.chip_select = 0,
+		.platform_data = &gs2971_data,
+	},
 };
 
 static void spi_device_init(void)
@@ -506,13 +499,11 @@ static struct imx_ipuv3_platform_data ipu_data[] = {
 };
 
 static struct fsl_mxc_capture_platform_data capture_data[] = {
-#if defined(CONFIG_GS2971) || defined(CONFIG_GS2971_MODULES)
 	{
 		.ipu = 1,	/* GS2971 */
 		.csi = 1,
 		.mclk_source = 0,
 	},
-#endif
 };
 
 
@@ -749,11 +740,12 @@ static void __init board_init(void)
 		if (!(mask & (1 << j))) {
 			mask |= (1 << j);
 			imx6q_add_v4l2_capture(i, &capture_data[i]);
+			pr_info("%s: added capture for ipu%d:csi%d\n", __func__, capture_data[i].ipu, capture_data[i].csi);
 		}
 	}
-	if (!cpu_is_mx6q()) {
-//		gs2971.ipu = 0;
-	}
+	if (!cpu_is_mx6q())
+		gs2971_data.ipu = 0;
+
 
 	imx6q_add_imx_snvs_rtc();
 
@@ -769,7 +761,7 @@ static void __init board_init(void)
 
 	/* SPI */
 	imx6q_add_ecspi(0, &ecspi1_data);
-	imx6q_add_ecspi(1, &ecspi3_data);
+	imx6q_add_ecspi(2, &ecspi3_data);
 	spi_device_init();
 
 	imx6q_add_mxc_hdmi(&hdmi_data);
