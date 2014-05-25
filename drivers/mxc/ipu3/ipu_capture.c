@@ -109,6 +109,7 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 		cfg_param.data_fmt = CSI_SENS_CONF_DATA_FMT_RGB555;
 		break;
 	default:
+		dev_dbg(ipu->dev, "%s:pixel_fmt=%x\n", __func__, pixel_fmt);
 		return -EINVAL;
 	}
 
@@ -132,12 +133,23 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 	ipu_csi_write(ipu, csi, data, CSI_SENS_CONF);
 
 	/* Setup sensor frame size */
-	ipu_csi_write(ipu, csi, (width - 1) | (height - 1) << 16, CSI_SENS_FRM_SIZE);
+
+	dev_dbg(ipu->dev, "%s: %dx%d\n", __func__, width, height);
 
 	/* Set CCIR registers */
+	ipu_csi_write(ipu, csi,
+			(cfg_param.data_width == IPU_CSI_DATA_WIDTH_10) ?
+			0x03FF00000 : 0x00FF0000, CSI_CCIR_CODE_3);
 	if (cfg_param.clk_mode == IPU_CSI_CLK_MODE_CCIR656_PROGRESSIVE) {
-		ipu_csi_write(ipu, csi, 0x40030, CSI_CCIR_CODE_1);
-		ipu_csi_write(ipu, csi, 0xFF0000, CSI_CCIR_CODE_3);
+/*
+ * 		bit 5-3: start of blanking line command
+ * 		bit 18-16: End of active line command
+ * 		bit 21-19: start of active line command
+ * 		10 bit mode of GS2971 interleaves this streams, giving
+ * 		0x3ff,0x3ff,0x000,0x000,0x000,0x000,xy,xy
+ * 		so, it cannot be used in 656 mode. It needs 1120 mode.
+ */
+		ipu_csi_write(ipu, csi, (6 << 3) | (4 << 16), CSI_CCIR_CODE_1);
 	} else if (cfg_param.clk_mode == IPU_CSI_CLK_MODE_CCIR656_INTERLACED) {
 		if (width == 720 && height == 625) {
 			/* PAL case */
@@ -151,9 +163,6 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 			 * Field1ActiveEnd = 0x5, Field1ActiveStart = 0x1
 			 */
 			ipu_csi_write(ipu, csi, 0xD07DF, CSI_CCIR_CODE_2);
-
-			ipu_csi_write(ipu, csi, 0xFF0000, CSI_CCIR_CODE_3);
-
 		} else if (width == 720 && height == 525) {
 			/* NTSC case */
 			/*
@@ -166,7 +175,6 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 			 * Field1ActiveEnd = 0x4, Field1ActiveStart = 0
 			 */
 			ipu_csi_write(ipu, csi, 0x40596, CSI_CCIR_CODE_2);
-			ipu_csi_write(ipu, csi, 0xFF0000, CSI_CCIR_CODE_3);
 		} else {
 			dev_err(ipu->dev, "Unsupported CCIR656 interlaced "
 					"video mode\n");
@@ -184,10 +192,10 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 		(cfg_param.clk_mode ==
 			IPU_CSI_CLK_MODE_CCIR1120_INTERLACED_SDR)) {
 		ipu_csi_write(ipu, csi, 0x40030, CSI_CCIR_CODE_1);
-		ipu_csi_write(ipu, csi, 0xFF0000, CSI_CCIR_CODE_3);
 		_ipu_csi_ccir_err_detection_enable(ipu, csi);
 	} else if ((cfg_param.clk_mode == IPU_CSI_CLK_MODE_GATED_CLK) ||
 		   (cfg_param.clk_mode == IPU_CSI_CLK_MODE_NONGATED_CLK)) {
+		ipu_csi_write(ipu, csi, (6 << 3) | (4 << 16), CSI_CCIR_CODE_1);
 		_ipu_csi_ccir_err_detection_disable(ipu, csi);
 	}
 
