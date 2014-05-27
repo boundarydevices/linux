@@ -2686,7 +2686,7 @@ static int ov5640_init_mode(enum ov5640_frame_rate frame_rate,
 	OV5640_set_AE_target(AE_Target);
 	OV5640_get_light_freq();
 	OV5640_set_bandingfilter();
-	ov5640_set_virtual_channel((ov5640_data.ipu << 1) + ov5640_data.csi);
+	ov5640_set_virtual_channel(ov5640_data.virtual_channel);
 
 	/* add delay to wait for sensor stable */
 	if (mode == ov5640_mode_QSXGA_2592_1944) {
@@ -3289,6 +3289,7 @@ static int write_proc(struct file *file, const char __user *buffer, unsigned lon
 static int ov5640_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
+	struct sensor_data *sensor = &ov5640_data;
 	int retval;
 	struct fsl_mxc_camera_platform_data *plat_data = client->dev.platform_data;
 	u8 chip_id_high, chip_id_low;
@@ -3296,12 +3297,15 @@ static int ov5640_probe(struct i2c_client *client,
 
 	/* Set initial values for the sensor struct. */
 	memset(&ov5640_data, 0, sizeof(ov5640_data));
+
+	sensor->mipi_camera = 1;
 	ov5640_data.mclk = 24000000; /* 6 - 54 MHz, typical 24MHz */
 	ov5640_data.mclk = plat_data->mclk;
 	ov5640_data.mclk_source = plat_data->mclk_source;
 	ov5640_data.ipu = plat_data->ipu;
 	ov5640_data.csi = plat_data->csi;
 	ov5640_data.io_init = plat_data->io_init;
+	sensor->virtual_channel = sensor->csi | (sensor->ipu << 1);
 
 	ov5640_data.i2c_client = client;
 	ov5640_data.pix.pixelformat = V4L2_PIX_FMT_UYVY;
