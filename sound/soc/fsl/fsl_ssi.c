@@ -133,6 +133,12 @@ struct fsl_ssi_rxtx_reg_val {
 	struct fsl_ssi_reg_val tx;
 };
 
+struct fsl_ssi_soc_data {
+	bool imx;
+	bool offline_config;
+	u32 sisr_write_mask;
+};
+
 /**
  * fsl_ssi_private: per-SSI private data
  *
@@ -154,7 +160,6 @@ struct fsl_ssi_private {
 	struct platform_device *pdev;
 	unsigned int dai_fmt;
 
-	enum fsl_ssi_type hw_type;
 	bool use_dma;
 	bool baudclk_locked;
 	bool use_dual_fifo;
@@ -169,35 +174,9 @@ struct fsl_ssi_private {
 	struct fsl_ssi_rxtx_reg_val rxtx_reg_val;
 
 	struct fsl_ssi_dbg dbg_stats;
+
+	const struct fsl_ssi_soc_data *soc;
 };
-
-static const struct of_device_id fsl_ssi_ids[] = {
-	{ .compatible = "fsl,mpc8610-ssi", .data = (void *) FSL_SSI_MCP8610},
-	{ .compatible = "fsl,imx51-ssi", .data = (void *) FSL_SSI_MX51},
-	{ .compatible = "fsl,imx35-ssi", .data = (void *) FSL_SSI_MX35},
-	{ .compatible = "fsl,imx21-ssi", .data = (void *) FSL_SSI_MX21},
-	{}
-};
-MODULE_DEVICE_TABLE(of, fsl_ssi_ids);
-
-static bool fsl_ssi_is_ac97(struct fsl_ssi_private *ssi_private)
-{
-	return !!(ssi_private->dai_fmt & SND_SOC_DAIFMT_AC97);
-}
-
-static bool fsl_ssi_on_imx(struct fsl_ssi_private *ssi_private)
-{
-	switch (ssi_private->hw_type) {
-	case FSL_SSI_MX21:
-	case FSL_SSI_MX35:
-	case FSL_SSI_MX51:
-		return true;
-	case FSL_SSI_MCP8610:
-		return false;
-	}
-
-	return false;
-}
 
 /*
  * imx51 and later SoCs have a slightly different IP that allows the
@@ -214,18 +193,48 @@ static bool fsl_ssi_on_imx(struct fsl_ssi_private *ssi_private)
  * while the SSI unit is running (SSIEN). So we support the necessary
  * online configuration of fsl-ssi starting at imx51.
  */
-static bool fsl_ssi_offline_config(struct fsl_ssi_private *ssi_private)
-{
-	switch (ssi_private->hw_type) {
-	case FSL_SSI_MCP8610:
-	case FSL_SSI_MX21:
-	case FSL_SSI_MX35:
-		return true;
-	case FSL_SSI_MX51:
-		return false;
-	}
 
-	return true;
+static struct fsl_ssi_soc_data fsl_ssi_mpc8610 = {
+	.imx = false,
+	.offline_config = true,
+	.sisr_write_mask = CCSR_SSI_SISR_RFRC | CCSR_SSI_SISR_TFRC |
+			CCSR_SSI_SISR_ROE0 | CCSR_SSI_SISR_ROE1 |
+			CCSR_SSI_SISR_TUE0 | CCSR_SSI_SISR_TUE1,
+};
+
+static struct fsl_ssi_soc_data fsl_ssi_imx21 = {
+	.imx = true,
+	.offline_config = true,
+	.sisr_write_mask = 0,
+};
+
+static struct fsl_ssi_soc_data fsl_ssi_imx35 = {
+	.imx = true,
+	.offline_config = true,
+	.sisr_write_mask = CCSR_SSI_SISR_RFRC | CCSR_SSI_SISR_TFRC |
+			CCSR_SSI_SISR_ROE0 | CCSR_SSI_SISR_ROE1 |
+			CCSR_SSI_SISR_TUE0 | CCSR_SSI_SISR_TUE1,
+};
+
+static struct fsl_ssi_soc_data fsl_ssi_imx51 = {
+	.imx = true,
+	.offline_config = false,
+	.sisr_write_mask = CCSR_SSI_SISR_ROE0 | CCSR_SSI_SISR_ROE1 |
+		CCSR_SSI_SISR_TUE0 | CCSR_SSI_SISR_TUE1,
+};
+
+static const struct of_device_id fsl_ssi_ids[] = {
+	{ .compatible = "fsl,mpc8610-ssi", .data = &fsl_ssi_mpc8610 },
+	{ .compatible = "fsl,imx51-ssi", .data = &fsl_ssi_imx51 },
+	{ .compatible = "fsl,imx35-ssi", .data = &fsl_ssi_imx35 },
+	{ .compatible = "fsl,imx21-ssi", .data = &fsl_ssi_imx21 },
+	{}
+};
+MODULE_DEVICE_TABLE(of, fsl_ssi_ids);
+
+static bool fsl_ssi_is_ac97(struct fsl_ssi_private *ssi_private)
+{
+	return !!(ssi_private->dai_fmt & SND_SOC_DAIFMT_AC97);
 }
 
 /**
@@ -246,25 +255,6 @@ static irqreturn_t fsl_ssi_isr(int irq, void *dev_id)
 	struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
 	__be32 sisr;
 	__be32 sisr2;
-	__be32 sisr_write_mask = 0;
-
-	switch (ssi_private->hw_type) {
-	case FSL_SSI_MX21:
-		sisr_write_mask = 0;
-		break;
-
-	case FSL_SSI_MCP8610:
-	case FSL_SSI_MX35:
-		sisr_write_mask = CCSR_SSI_SISR_RFRC | CCSR_SSI_SISR_TFRC |
-			CCSR_SSI_SISR_ROE0 | CCSR_SSI_SISR_ROE1 |
-			CCSR_SSI_SISR_TUE0 | CCSR_SSI_SISR_TUE1;
-		break;
-
-	case FSL_SSI_MX51:
-		sisr_write_mask = CCSR_SSI_SISR_ROE0 | CCSR_SSI_SISR_ROE1 |
-			CCSR_SSI_SISR_TUE0 | CCSR_SSI_SISR_TUE1;
-		break;
-	}
 
 	/* We got an interrupt, so read the status register to see what we
 	   were interrupted for.  We mask it with the Interrupt Enable register
@@ -272,7 +262,7 @@ static irqreturn_t fsl_ssi_isr(int irq, void *dev_id)
 	 */
 	sisr = read_ssi(&ssi->sisr);
 
-	sisr2 = sisr & sisr_write_mask;
+	sisr2 = sisr & ssi_private->soc->sisr_write_mask;
 	/* Clear the bits that we set */
 	if (sisr2)
 		write_ssi(sisr2, &ssi->sisr);
@@ -360,7 +350,7 @@ static void fsl_ssi_config(struct fsl_ssi_private *ssi_private, bool enable,
 	 * reconfiguration, so we have to enable all necessary flags at once
 	 * even if we do not use them later (capture and playback configuration)
 	 */
-	if (fsl_ssi_offline_config(ssi_private)) {
+	if (ssi_private->soc->offline_config) {
 		if ((enable && !nr_active_streams) ||
 				(!enable && !keep_active))
 			fsl_ssi_rxtx_config(ssi_private, enable);
@@ -916,7 +906,7 @@ static int fsl_ssi_dai_probe(struct snd_soc_dai *dai)
 {
 	struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(dai);
 
-	if (fsl_ssi_on_imx(ssi_private) && ssi_private->use_dma) {
+	if (ssi_private->soc->imx && ssi_private->use_dma) {
 		dai->playback_dma_data = &ssi_private->dma_params_tx;
 		dai->capture_dma_data = &ssi_private->dma_params_rx;
 	}
@@ -1142,7 +1132,6 @@ static int fsl_ssi_probe(struct platform_device *pdev)
 	int ret = 0;
 	struct device_node *np = pdev->dev.of_node;
 	const struct of_device_id *of_id;
-	enum fsl_ssi_type hw_type;
 	const char *p, *sprop;
 	const uint32_t *iprop;
 	struct resource res;
@@ -1157,9 +1146,8 @@ static int fsl_ssi_probe(struct platform_device *pdev)
 		return -ENODEV;
 
 	of_id = of_match_device(fsl_ssi_ids, &pdev->dev);
-	if (!of_id)
+	if (!of_id || !of_id->data)
 		return -EINVAL;
-	hw_type = (enum fsl_ssi_type) of_id->data;
 
 	sprop = of_get_property(np, "fsl,mode", NULL);
 	if (!sprop) {
@@ -1176,9 +1164,10 @@ static int fsl_ssi_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	ssi_private->soc = of_id->data;
+
 	ssi_private->use_dma = !of_property_read_bool(np,
 			"fsl,fiq-stream-filter");
-	ssi_private->hw_type = hw_type;
 
 	if (ac97) {
 		memcpy(&ssi_private->cpu_dai_drv, &fsl_ssi_ac97_dai,
@@ -1233,7 +1222,7 @@ static int fsl_ssi_probe(struct platform_device *pdev)
 
 	dev_set_drvdata(&pdev->dev, ssi_private);
 
-	if (fsl_ssi_on_imx(ssi_private)) {
+	if (ssi_private->soc->imx) {
 		ret = fsl_ssi_imx_probe(pdev, ssi_private, ssi_private->ssi);
 		if (ret)
 			goto error_irqmap;
@@ -1300,7 +1289,7 @@ error_irq:
 	snd_soc_unregister_component(&pdev->dev);
 
 error_asoc_register:
-	if (fsl_ssi_on_imx(ssi_private))
+	if (ssi_private->soc->imx)
 		fsl_ssi_imx_clean(pdev, ssi_private);
 
 error_irqmap:
@@ -1320,7 +1309,7 @@ static int fsl_ssi_remove(struct platform_device *pdev)
 		platform_device_unregister(ssi_private->pdev);
 	snd_soc_unregister_component(&pdev->dev);
 
-	if (fsl_ssi_on_imx(ssi_private))
+	if (ssi_private->soc->imx)
 		fsl_ssi_imx_clean(pdev, ssi_private);
 
 	if (ssi_private->use_dma)
