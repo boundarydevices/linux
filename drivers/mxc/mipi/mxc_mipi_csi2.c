@@ -141,16 +141,16 @@ EXPORT_SYMBOL(mipi_csi2_get_status);
  * @param	info		mipi csi2 hander
  * @return      Returns setted value
  */
-unsigned int mipi_csi2_set_lanes(struct mipi_csi2_info *info)
+int mipi_csi2_set_lanes(struct mipi_csi2_info *info, unsigned lanes)
 {
-	unsigned int lanes;
+	if (--lanes > 3)
+		return -EINVAL;
 
 	_mipi_csi2_lock(info);
-	mipi_csi2_write(info, info->lanes - 1, MIPI_CSI2_N_LANES);
+	mipi_csi2_write(info, lanes, MIPI_CSI2_N_LANES);
 	lanes = mipi_csi2_read(info, MIPI_CSI2_N_LANES);
 	_mipi_csi2_unlock(info);
-
-	return lanes;
+	return ++lanes;
 }
 EXPORT_SYMBOL(mipi_csi2_set_lanes);
 
@@ -327,7 +327,6 @@ EXPORT_SYMBOL(mipi_csi2_get_info);
 static int mipi_csi2_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct device_node *np = pdev->dev.of_node;
 	struct resource *res;
 	u32 mipi_csi2_dphy_ver;
 	int ret;
@@ -336,18 +335,6 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 	if (!gmipi_csi2) {
 		ret = -ENOMEM;
 		goto alloc_failed;
-	}
-
-	ret = of_property_read_u32(np, "lanes", &(gmipi_csi2->lanes));
-	if (ret) {
-		dev_err(&pdev->dev, "lanes missing or invalid\n");
-		goto err;
-	}
-
-	if (gmipi_csi2->lanes > 4) {
-		dev_err(&pdev->dev, "invalid param for mipi csi2!\n");
-		ret = -EINVAL;
-		goto err;
 	}
 
 	/* initialize mutex */
