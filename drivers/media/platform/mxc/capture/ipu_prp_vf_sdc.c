@@ -362,6 +362,7 @@ static int prpvf_stop(void *private)
 {
 	cam_data *cam = (cam_data *) private;
 	int err = 0, i = 0;
+	int err2;
 	struct fb_info *fbi = NULL;
 	struct fb_var_screeninfo fbvar;
 
