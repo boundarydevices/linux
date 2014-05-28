@@ -2624,7 +2624,7 @@ static int ov5640_init_mode(enum ov5640_frame_rate frame_rate,
 			mipi_csi2_enable(mipi_csi2_info);
 
 		if (mipi_csi2_get_status(mipi_csi2_info)) {
-			mipi_csi2_set_lanes(mipi_csi2_info);
+			mipi_csi2_set_lanes(mipi_csi2_info, 2);
 
 			/*Only reset MIPI CSI2 HW at sensor initialize*/
 			if (mode == ov5640_mode_INIT)
