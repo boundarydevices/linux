@@ -37,7 +37,7 @@
 static const char *step_sels[]		= { "osc", "pll2_pfd2", };
 static const char *pll1_sw_sels[]	= { "pll1_sys", "step", };
 static const char *ocram_alt_sels[]	= { "pll2_pfd2", "pll3_pfd1", };
-static const char *ocram_sels[]		= { "periph", "ocram_alt_sels", };
+static const char *ocram_sels[]		= { "periph", "ocram_alt_sel", };
 static const char *pre_periph_sels[]	= { "pll2_bus", "pll2_pfd2", "pll2_pfd0", "pll2_198m", };
 static const char *periph_clk2_sels[]	= { "pll3_usb_otg", "osc", "osc", "dummy", };
 static const char *periph2_clk2_sels[]	= { "pll3_usb_otg", "pll2_bus", };
