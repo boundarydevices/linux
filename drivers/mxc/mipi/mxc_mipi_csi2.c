@@ -139,16 +139,16 @@ EXPORT_SYMBOL(mipi_csi2_get_status);
  * @param	info		mipi csi2 hander
  * @return      Returns setted value
  */
-unsigned int mipi_csi2_set_lanes(struct mipi_csi2_info *info)
+int mipi_csi2_set_lanes(struct mipi_csi2_info *info, unsigned lanes)
 {
-	unsigned int lanes;
+	if (--lanes > 3)
+		return -EINVAL;
 
 	_mipi_csi2_lock(info);
-	mipi_csi2_write(info, info->lanes - 1, CSI2_N_LANES);
+	mipi_csi2_write(info, lanes, CSI2_N_LANES);
 	lanes = mipi_csi2_read(info, CSI2_N_LANES);
 	_mipi_csi2_unlock(info);
-
-	return lanes;
+	return ++lanes;
 }
 EXPORT_SYMBOL(mipi_csi2_set_lanes);
 
@@ -329,11 +329,6 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 	u32 mipi_csi2_dphy_ver;
 	int ret;
 
-	if (plat_data->lanes > 4) {
-		dev_err(&pdev->dev, "invalid param for mipi csi2!\n");
-		return -EINVAL;
-	}
-
 	gmipi_csi2 = kmalloc(sizeof(struct mipi_csi2_info), GFP_KERNEL);
 	if (!gmipi_csi2) {
 		ret = -ENOMEM;
@@ -346,7 +341,6 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 	/* get mipi csi2 informaiton */
 	gmipi_csi2->pdev = pdev;
 	gmipi_csi2->mipi_en = false;
-	gmipi_csi2->lanes = plat_data->lanes;
 
 	/* get mipi cfg clk */
 	gmipi_csi2->cfg_clk = clk_get(&pdev->dev, plat_data->cfg_clk);
