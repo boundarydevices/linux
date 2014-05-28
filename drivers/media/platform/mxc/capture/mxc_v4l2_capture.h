@@ -328,15 +328,7 @@ static inline int cam_mipi_csi2_disable(cam_data *cam)
 {
 #ifdef CONFIG_MXC_MIPI_CSI2
 	void *mipi_csi2_info;
-	struct sensor_data *sensor;
 
-	if (!cam->sensor)
-		return 0;
-	sensor = cam->sensor->priv;
-	if (!sensor)
-		return 0;
-	if (!sensor->mipi_camera)
-		return 0;
 	if (!cam->mipi_pixelclk_enabled)
 		return 0;
 	cam->mipi_pixelclk_enabled = 0;
