@@ -1664,7 +1664,6 @@ static int tc358743_init_mode(enum tc358743_frame_rate frame_rate,
 	if (mipi_csi2_info) {
 		pr_debug("%s: mipi_csi2_info:\n"
 		"mipi_en:       %d\n"
-		"lanes:         %d\n"
 		"datatype:      %d\n"
 		"dphy_clk:      %p\n"
 		"pixel_clk:     %p\n"
@@ -1672,7 +1671,6 @@ static int tc358743_init_mode(enum tc358743_frame_rate frame_rate,
 		"pdev:          %p\n"
 		, __func__,
 		((struct mipi_csi2_info *)mipi_csi2_info)->mipi_en,
-		((struct mipi_csi2_info *)mipi_csi2_info)->lanes,
 		((struct mipi_csi2_info *)mipi_csi2_info)->datatype,
 		((struct mipi_csi2_info *)mipi_csi2_info)->dphy_clk,
 		((struct mipi_csi2_info *)mipi_csi2_info)->pixel_clk,
@@ -1684,12 +1682,11 @@ static int tc358743_init_mode(enum tc358743_frame_rate frame_rate,
 
 		if (mipi_csi2_get_status(mipi_csi2_info)) {
 			int ifmt;
-			if (tc358743_mode_info_data[frame_rate][mode].lanes != 0) {
-				pr_debug("%s Change lanes: from %d to %d\n", __func__, ((struct mipi_csi2_info *)mipi_csi2_info)->lanes, tc358743_mode_info_data[frame_rate][mode].lanes);
-				((struct mipi_csi2_info *)mipi_csi2_info)->lanes = tc358743_mode_info_data[frame_rate][mode].lanes;
-				((struct mipi_csi2_info *)mipi_csi2_info)->lanes = tc358743_mode_info_data[frame_rate][mode].lanes;
-			}
-			pr_debug("Now Using %d lanes\n",mipi_csi2_set_lanes(mipi_csi2_info));
+			int lanes = tc358743_mode_info_data[frame_rate][mode].lanes;
+			if (!lanes)
+				lanes = 4;
+			lanes = mipi_csi2_set_lanes(mipi_csi2_info, lanes);
+			pr_debug("Now Using %d lanes\n", lanes);
 
 			/*Only reset MIPI CSI2 HW at sensor initialize*/
 			if (!hdmi_mode)	// is this during reset
