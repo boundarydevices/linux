@@ -191,7 +191,7 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 			IPU_CSI_CLK_MODE_CCIR1120_INTERLACED_DDR) ||
 		(cfg_param.clk_mode ==
 			IPU_CSI_CLK_MODE_CCIR1120_INTERLACED_SDR)) {
-		ipu_csi_write(ipu, csi, 0x40030, CSI_CCIR_CODE_1);
+		ipu_csi_write(ipu, csi, (6 << 3) | (4 << 16), CSI_CCIR_CODE_1);
 		_ipu_csi_ccir_err_detection_enable(ipu, csi);
 	} else if ((cfg_param.clk_mode == IPU_CSI_CLK_MODE_GATED_CLK) ||
 		   (cfg_param.clk_mode == IPU_CSI_CLK_MODE_NONGATED_CLK)) {
