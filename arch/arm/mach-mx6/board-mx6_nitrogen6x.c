@@ -458,15 +458,7 @@ static void spi_device_init(void)
 	spi_register_board_info(spi_nor_device,
 				ARRAY_SIZE(spi_nor_device));
 #if defined(CONFIG_MXC_VIDEO_GS2971) || defined(CONFIG_MXC_VIDEO_GS2971_MODULE)
-	{
-		int ret;
-		/*Testing*/
-		printk(KERN_ERR "*****CS Array size = %d\n",ARRAY_SIZE(spi_cs));
-		printk(KERN_ERR "****************Initializing gs2971 SPI...\n");
-		printk(KERN_ERR "****************Array size: %d\n",ARRAY_SIZE(spi_gs2971_device));
-		ret = spi_register_board_info(spi_gs2971_device, ARRAY_SIZE(spi_gs2971_device));
-		printk(KERN_ERR "Returned value: %d\n", ret);
-	}
+	spi_register_board_info(spi_gs2971_device, ARRAY_SIZE(spi_gs2971_device));
 #endif
 }
 
@@ -794,13 +786,15 @@ static struct fsl_mxc_tvin_platform_data adv7180_data = {
 
 static void gs2971_io_init(void)
 {
-	printk(KERN_ERR "**********************In function %s\n",__FUNCTION__);
 
 	IOMUX_SETUP(gs2971_video_pads);
 
 	pr_info("%s\n", __func__);
 
-	camera_reset(IMX_GPIO_NR(2, 27), 1, IMX_GPIO_NR(4, 30), -1);
+	camera_reset(GP_GS2971_PWN, 1, GP_GS2971_RST, -1);
+	gpio_set_value(GP_GS2971_PWN, 0);
+	msleep(2);
+	gpio_set_value(GP_GS2971_RST, 1);
 
 	/* Enable parallel port to IPU1/CSI1 */
 	if (cpu_is_mx6q())
@@ -813,26 +807,28 @@ static void gs2971_io_init(void)
 	gpio_request(IMX_GPIO_NR(5, 5), "IOPROC_EN");
 	gpio_request(IMX_GPIO_NR(4, 31), "SW_EN");
 	gpio_request(IMX_GPIO_NR(3, 13), "PWR_DN");
+	gpio_request(IMX_GPIO_NR(5, 7), "LB_CONT");
 
 	gpio_direction_output(IMX_GPIO_NR(4, 28), 0); // TIM_861 = 0
 	gpio_direction_output(IMX_GPIO_NR(5, 5), 1); // Enable IOPROC
 	gpio_direction_output(IMX_GPIO_NR(4, 31), 0); // sw_en =0
 	gpio_direction_output(IMX_GPIO_NR(3, 13), 1); // Enable voltage regulator
+	gpio_direction_output(IMX_GPIO_NR(5, 7), 0); // LB_CONT = 0
 }
 
 static void gs2971_pwdn(int powerdown)
 {
-	printk(KERN_ERR "**********************In function %s\n",__FUNCTION__);
+	pr_debug("-> In function %s\n",__FUNCTION__);
 
 	pr_info("%s: powerdown=%d, power_gp=0x%x\n",
 			__func__, powerdown, IMX_GPIO_NR(2, 27));
-	gpio_set_value(IMX_GPIO_NR(2, 27), powerdown ? 1 : 0);
+	gpio_set_value(GP_GS2971_PWN, powerdown ? 1 : 0);
 	if (!powerdown)
 		msleep(2);
 }
 
 static struct fsl_mxc_camera_platform_data gs2971_data = {
-	.mclk = 27000000,
+	.mclk = 74250000,
 	.pwdn = gs2971_pwdn,
 	.io_init = gs2971_io_init,
 	//.cvbs = true,
@@ -1572,6 +1568,10 @@ struct gpio initial_gpios[] __initdata = {
 	{.label = "ov5640_mipi_reset2",	.gpio = GP_MIPI_RST2,	.flags = 0},
 	{.label = "ov5640_csi1_pwdn",	.gpio = GP_CSI1_PWN,	.flags = GPIOF_HIGH},
 	{.label = "ov5640_csi1_reset",	.gpio = GP_CSI1_RST,	.flags = 0},
+#if defined(CONFIG_MXC_VIDEO_GS2971) || defined(CONFIG_MXC_VIDEO_GS2971_MODULE)
+	{.label = "gs2971_csi1_pwdn",	.gpio = GP_GS2971_PWN,	.flags = GPIOF_HIGH},
+	{.label = "gs2971_csi1_reset",	.gpio = GP_GS2971_RST,	.flags = 0},
+#endif
 };
 
 static void poweroff(void)
