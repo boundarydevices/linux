@@ -288,6 +288,10 @@ static int get_std(struct v4l2_int_device *s, v4l2_std_id * id)
 	if (status)
 		return status;
 	pr_debug("--> lock_value %x\n", sync_lock_value);
+	if (!sync_lock_value) {
+		pr_err("%s: no lock\n", __func__);
+		return -EBUSY;
+	}
 
 	status = gs2971_read_register(spi, GS2971_DATA_FORMAT_DS1, &ds1);
 	if (status)
@@ -339,8 +343,10 @@ static int get_std(struct v4l2_int_device *s, v4l2_std_id * id)
 	if (status)
 		return status;
 
-	if (!lines_per_frame_value)
-		return -1;
+	if (!lines_per_frame_value) {
+		pr_err("%s: 0 frame size\n", __func__);
+		return -EBUSY;
+	}
 
 #ifdef USE_CEA861		//use hysnc/vsync/de not h:v:f eav mode
 	sensor->pix.swidth = words_per_line_value;
