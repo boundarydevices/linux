@@ -1,39 +1,70 @@
 #ifndef _GS2971_H
 #define _GS2971_H
 
-
 #ifdef __KERNEL__
 #include <linux/spi/spi.h>
 #include <linux/device.h>
-//#include <linux/videodev.h>
 #include <linux/gpio.h>
 #include <linux/videodev2.h>
 #endif				/* __KERNEL__ */
 
-
-//#define USE_CEA861	//use hysnc/vsync/de not h:v:f eav mode
-
-//#include <media/davinci/videohd.h> // For HD std (V4L2_STD_1080I, etc)
+//#define USE_CEA861    //use hysnc/vsync/de not h:v:f eav mode
 
 typedef enum {
-     GS2971_VID_STD_1920_1080_60FPS = 0x2B,
-     GS2971_VID_STD_1920_1080_50FPS = 0x2D,
-     GS2971_VID_STD_1920_1080_60FPS_DBLSAMPLED = 0x2A,
-     GS2971_VID_STD_1920_1080_50FPS_DBLSAMPLED = 0x2C,
-     GS2971_VID_STD_1280_720_60FPS = 0x20,
-     GS2971_VID_STD_1280_720_50FPS = 0x24,
+	GS2971_VID_STD_1920_1080_60FPS = 0x2B,
+	GS2971_VID_STD_1920_1080_50FPS = 0x2D,
+	GS2971_VID_STD_1920_1080_60FPS_DBLSAMPLED = 0x2A,
+	GS2971_VID_STD_1920_1080_50FPS_DBLSAMPLED = 0x2C,
+	GS2971_VID_STD_1280_720_60FPS = 0x20,
+	GS2971_VID_STD_1280_720_50FPS = 0x24,
 
-     GS2971_VID_STD_1920_1080_30FPS = 0x0B,
-     GS2971_VID_STD_1920_1080_25FPS = 0x0D,
+	GS2971_VID_STD_1920_1080_30FPS = 0x0B,
+	GS2971_VID_STD_1920_1080_25FPS = 0x0D,
 } gs2971_vid_std_t;
 
+enum gs2971_mode {
+	gs2971_mode_720p = 0,
+	gs2971_mode_1080p = 1,
+	gs2971_mode_MAX = gs2971_mode_1080p,
+	gs2971_mode_default = gs2971_mode_720p,
+	gs2971_mode_not_supported = gs2971_mode_MAX + 1
+};
+
+/*! Video resolution structure. */
+typedef struct {
+	u16 width;		/*!< width. */
+	u16 height;		/*!< height. */
+} video_res_t;
+
+static video_res_t gs2971_res[] = {
+	{			/*! 1280x720 */
+	 .width = 1280,
+	 .height = 720,
+	 },
+	{			/*! 1920x1080 */
+	 .width = 1920,
+	 .height = 1080,
+	 },
+};
+
+enum gs2971_frame_rate {
+	gs2971_30_fps = 0,
+	gs2971_60_fps = 1,
+	gs2971_default_fps = gs2971_60_fps
+};
+
+static int gs2971_framerates[] = {
+	[gs2971_30_fps] = 30,
+	[gs2971_60_fps] = 60,
+};
+
+#define DEFAULT_FPS 60
 
 #define GS2971_NUM_CHANNELS  1
 
 #define GS2971_MAX_NO_CONTROLS  0
 #define GS2971_MAX_NO_INPUTS    1
 #define GS2971_MAX_NO_STANDARDS 11
-
 
 /* Video core registers */
 
@@ -42,12 +73,12 @@ typedef enum {
 #define GS_VCFG1_TRS_REMAP_DISABLE_MASK       0x4000
 #define GS_VCFG1_EDH_FLAG_DISABLE_MASK        0x1000
 #define GS_VCFG1_EDH_CRC_DISABLE_MASK         0x0800
-#define GS_VCFG1_H_CONFIG_MASK                0x0400 /* 1=TRS-based blanking, 0=active-line blanking */
+#define GS_VCFG1_H_CONFIG_MASK                0x0400	/* 1=TRS-based blanking, 0=active-line blanking */
 
 #define GS_VCFG1_ANC_DATA_DISABLE_MASK        0x0200
 #define GS_VCFG1_AUDIO_DISABLE_MASK           0x0100
 #define GS_VCFG1_861_PIN_DISABLE_MASK         0x0080
-#define GS_VCFG1_TIMING_861_MASK              0x0040 /* 1=CEA-861 timing, 0=F/V/H timing */
+#define GS_VCFG1_TIMING_861_MASK              0x0040	/* 1=CEA-861 timing, 0=F/V/H timing */
 #define GS_VCFG1_ILLEGAL_REMAP_DISABLE_MASK   0x0010
 #define GS_VCFG1_ANC_CRC_DISABLE_MASK         0x0008
 #define GS_VCFG1_CRC_INS_DISABLE_MASK         0x0004
@@ -67,12 +98,10 @@ typedef enum {
 #define GS_VCFG2_LNUM_INS_DS2_MASK		(1 << 1)
 #define GS_VCFG2_TRS_INS_DS2_MASK		(1 << 0)
 
-
 #define GS2971_ERROR_STAT_1		0x02
 #define GS2971_ERROR_STAT_2		0x03
 #define GS2971_EDH_FLAG_IN		0x04
 #define GS2971_EDH_FLAG_OUT		0x05
-
 
 #define GS2971_DATA_FORMAT_DS1		0x06
 #define GS2971_DATA_FORMAT_DS2		0x07
@@ -80,19 +109,19 @@ typedef enum {
 
 #define GS2971_IO_CONFIG		0x08
 #define GS2971_IO_CONFIG2		0x09
-#define GS_IOCFG_HSYNC		0x00 // horiz blank signal or HSYNC
-#define GS_IOCFG_VSYNC		0x01 // vert blank signal or VSYNC
-#define GS_IOCFG_DE		0x02 // field signal or DE
-#define GS_IOCFG_LOCKED		0x03 // locked indication
-#define GS_IOCFG_Y_ANC		0x04 // Luma anciallary indication
-#define GS_IOCFG_C_ANC		0x05 // Chroma anciallary indication
-#define GS_IOCFG_DATA_ERROR	0x06 // Data error
-#define GS_IOCFG_VIDEO_ERROR	0x07 // Video error
-#define GS_IOCFG_AUDIO_ERROR	0x08 // Audio error
-#define GS_IOCFG_EDH_DETECT	0x09 // EDH detected
-#define GS_IOCFG_CARRIER_DETECT	0x0A // Carrier detected
-#define GS_IOCFG_RATE_DET0	0x0B // Rate detect bit 0
-#define GS_IOCFG_RATE_DET1	0x0C // Rate detect bit 1
+#define GS_IOCFG_HSYNC		0x00	// horiz blank signal or HSYNC
+#define GS_IOCFG_VSYNC		0x01	// vert blank signal or VSYNC
+#define GS_IOCFG_DE		0x02	// field signal or DE
+#define GS_IOCFG_LOCKED		0x03	// locked indication
+#define GS_IOCFG_Y_ANC		0x04	// Luma anciallary indication
+#define GS_IOCFG_C_ANC		0x05	// Chroma anciallary indication
+#define GS_IOCFG_DATA_ERROR	0x06	// Data error
+#define GS_IOCFG_VIDEO_ERROR	0x07	// Video error
+#define GS_IOCFG_AUDIO_ERROR	0x08	// Audio error
+#define GS_IOCFG_EDH_DETECT	0x09	// EDH detected
+#define GS_IOCFG_CARRIER_DETECT	0x0A	// Carrier detected
+#define GS_IOCFG_RATE_DET0	0x0B	// Rate detect bit 0
+#define GS_IOCFG_RATE_DET1	0x0C	// Rate detect bit 1
 
 #define GS2971_ANC_CONTROL		0x0a
 #define ANCCTL_ANC_DATA_SWITCH		(1 << 3)
@@ -119,13 +148,13 @@ typedef enum {
 #define GS2971_VIDEO_FORMAT_352_INS_A	0x1d
 #define GS2971_VIDEO_FORMAT_352_INS_B	0x1e
 
-#define GS2971_RASTER_STRUCT1		0x1f // words per active line
+#define GS2971_RASTER_STRUCT1		0x1f	// words per active line
 #define GS_RS1_WORDS_PER_ACTLINE	0x3fff
 
-#define GS2971_RASTER_STRUCT2		0x20 // words per line (including blanking)
+#define GS2971_RASTER_STRUCT2		0x20	// words per line (including blanking)
 #define GS_RS2_WORDS_PER_LINE		0x3fff
 
-#define GS2971_RASTER_STRUCT3		0x21 // lines per frame (including blanking)
+#define GS2971_RASTER_STRUCT3		0x21	// lines per frame (including blanking)
 #define GS_RS3_LINES_PER_FRAME		0x7ff
 
 #define GS2971_RASTER_STRUCT4		0x22
@@ -156,7 +185,6 @@ typedef enum {
 #define GS_TIMCFG_HSYNC_INVERT		(1 << 1)
 #define GS_TIMCFG_TRS_861		(1 << 0)	/* BT.656 timing (7 extra lines of blanks) for 525i */
 
-
 #define GS2971_ERROR_MASK_1		0x37
 #define GS2971_ERROR_MASK_2		0x38
 #define GS2971_ACGEN_CTRL		0x39
@@ -168,6 +196,7 @@ typedef enum {
 #define GS_ACGEN_AMCLK_SEL_512FS	(2 << 0)
 
 #define GS2971_CLK_GEN			0x6c
+#define GS_DEL_LINE_CLK_SEL		(1 << 5)
 #define GS2971_IO_DRIVE_STRENGTH	0x6d
 #define GS_IODS_DOUT_MSB		(3 << 4)
 #define GS_IODS_STAT			(3 << 2)
@@ -188,7 +217,6 @@ typedef enum {
 #define GS2971_HD_REGEN			0x204
 #define GS2971_HD_CH_MUTE		0x205
 #define GS2971_HD_CH_VALID		0x206
-
 
 /* SD Audio registers - regs 0x400-0x496*/
 
@@ -245,7 +273,6 @@ typedef enum {
 #define GS2971_ACSR3_4B_BYTE(byte)	(0x470 + ((byte) >> 1))	/* byte 0 - 22 */
 #define GS2971_ACSR_BYTE(byte)		(0x480 + (byte))	/* byte 0 - 22 */
 
-
 /* ANC data extraction - regs 0x800-0xBFF */
 #define GS2971_ANC_BANK_REG                      0x800
 
@@ -258,26 +285,31 @@ typedef enum {
 #define GS2971_SPI_TRANSFER_MAX 1024
 
 struct gs2971_spidata {
-	struct spi_device	*spi;
+	struct spi_device *spi;
 
-	struct mutex		buf_lock;
-	unsigned		users;
-	u8			*buffer;
-	u16 txbuf[GS2971_SPI_TRANSFER_MAX+1];
-	u16 rxbuf[GS2971_SPI_TRANSFER_MAX+1];
+	struct mutex buf_lock;
+	unsigned users;
+	u8 *buffer;
+	u16 txbuf[GS2971_SPI_TRANSFER_MAX + 1];
+	u16 rxbuf[GS2971_SPI_TRANSFER_MAX + 1];
 };
 
 struct gs2971_params {
 	v4l2_std_id std;
-	int         inputidx;
+	int mode;
+	int framerate;
 	struct v4l2_format fmt;
 };
 
 struct gs2971_channel {
-    // struct v4l2_subdev    sd;
-     struct gs2971_spidata *spidata;
-     struct gs2971_params   params;
-     u16    anc_buf[GS2971_ANC_BANK_SIZE];
+	struct gs2971_spidata *spidata;
+	struct gs2971_params params;
+	u16 anc_buf[GS2971_ANC_BANK_SIZE];
+};
+
+struct gs2971_priv {
+	struct sensor_data sensor;
+	struct gs2971_params params;
 };
 
 #endif
