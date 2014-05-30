@@ -699,14 +699,16 @@ int __init early_init_dt_scan_chosen(unsigned long node, const char *uname,
 	early_init_dt_check_for_initrd(node);
 
 	/* Put CONFIG_CMDLINE in if forced or if data had nothing in it to start */
+
 	if (overwrite_incoming_cmdline || !((char *)data)[0])
 		strlcpy(data, config_cmdline, COMMAND_LINE_SIZE);
 
 	/* Retrieve command line unless forcing */
 	if (read_dt_cmdline) {
 		p = of_get_flat_dt_prop(node, "bootargs", &l);
-		if (p != NULL && l > 0) {
-			if (concat_cmdline) {
+
+	if (p != NULL && l > 0) {
+		if (concat_cmdline) {
 				strlcat(data, " ", COMMAND_LINE_SIZE);
 				strlcat(data, p, min_t(int, (int)l,
 						       COMMAND_LINE_SIZE));

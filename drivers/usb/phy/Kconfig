@@ -22,6 +22,7 @@ config USB_OTG_WAKELOCK
 	  Select this to automatically hold a wakelock when USB is
 	  connected, preventing suspend.
 
+
 #
 # USB Transceiver Drivers
 #

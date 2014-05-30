@@ -2,6 +2,9 @@ ccflags-y += -I$(src)			# needed for trace events
 
 obj-y					+= ion/
 
+obj-$(CONFIG_FIQ_DEBUGGER)		+= fiq_debugger/
+
+
 obj-$(CONFIG_ANDROID_BINDER_IPC)	+= binder.o
 obj-$(CONFIG_ASHMEM)			+= ashmem.o
 obj-$(CONFIG_ANDROID_LOGGER)		+= logger.o

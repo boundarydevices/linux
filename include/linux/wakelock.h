@@ -39,6 +39,7 @@ struct wake_lock {
 #endif
 	struct wakeup_source ws;
 };
+
 static inline void wake_lock_init(struct wake_lock *lock, int type,
 				  const char *name)
 {
@@ -80,5 +81,6 @@ void android_wake_unlock(struct wake_lock *lock);
 int android_wake_lock_active(struct wake_lock *lock);
 long android_has_wake_lock(int type);
 #endif
+
 
 #endif
