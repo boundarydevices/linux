@@ -1292,6 +1292,7 @@ void setup_ifparm(cam_data *cam, int init_defrect)
 
 	vidioc_int_g_ifparm(cam->sensor, &ifparm);
 
+	memset(&cam_fmt, 0, sizeof(cam_fmt));
 	csi_param.data_width = 0;
 	csi_param.clk_mode = 0;
 	csi_param.ext_vsync = 0;
