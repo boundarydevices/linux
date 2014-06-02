@@ -384,6 +384,15 @@ static iomux_v3_cfg_t MX6NAME(mipi_pads)[] = {
 };
 #endif
 
+#ifdef CONFIG_TC358743_AUDIO
+static iomux_v3_cfg_t MX6NAME(tc_audio_pads)[] = {
+	MX6PAD(DISP0_DAT13__AUDMUX_AUD5_RXFS),
+	MX6PAD(DISP0_DAT14__AUDMUX_AUD5_RXC),
+	MX6PAD(DISP0_DAT19__AUDMUX_AUD5_RXD),
+	0
+};
+#endif
+
 #if defined(CSI0_CAMERA)
 static iomux_v3_cfg_t MX6NAME(csi0_sensor_pads)[] = {
 	/* IPU1 Camera */
@@ -451,9 +460,9 @@ static iomux_v3_cfg_t MX6NAME(gs2971_video_pads)[] = {
 	MX6PAD(EIM_LBA__GPIO_2_27),	/* Power Down */
 #define GP_GS2971_RST	IMX_GPIO_NR(4, 30)
 	MX6PAD(DISP0_DAT9__GPIO_4_30), /*  GS29_RESET */
-	MX6PAD(DISP0_DAT23__AUDMUX_AUD4_RXD), /*  AUD4_RXD */
-	MX6PAD(DISP0_DAT19__AUDMUX_AUD4_RXC), /*  AUD4_RXC */
-	MX6PAD(DISP0_DAT18__AUDMUX_AUD5_TXFS), /*  AUD4_RXFS */
+//	MX6PAD(DISP0_DAT18__AUDMUX_AUD4_RXFS),	/* Warning!!! Sabrelite uses AUD4 for sgtl5000 */
+//	MX6PAD(DISP0_DAT19__AUDMUX_AUD4_RXC),
+//	MX6PAD(DISP0_DAT23__AUDMUX_AUD4_RXD),
 	0
 };
 #endif

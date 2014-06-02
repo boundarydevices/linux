@@ -634,6 +634,22 @@ static struct fsl_mxc_camera_platform_data ov5640_mipi_data = {
 #endif
 
 #ifdef TC358743_MIPI_CAMERA
+#ifdef CONFIG_TC358743_AUDIO
+static struct imx_ssi_platform_data tc_ssi_pdata = {
+	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
+};
+
+static struct platform_device tc_audio_device = {
+	.name = "imx-tc358743",
+};
+
+static struct mxc_audio_platform_data tc_audio_data = {
+	.ssi_num = 2,
+	.src_port = 3,
+	.ext_port = 5,
+	.hp_gpio = -1,
+};
+#endif
 /*
  * (tc358743 Mipi-CSI2 bridge) - J16
  * NANDF_WP_B	GPIO[6]:9	Nitrogen6x - RESET
@@ -647,7 +663,9 @@ static struct fsl_mxc_camera_platform_data tc358743_mipi_data;
 static void tc358743_mipi_camera_io_init(void)
 {
 	IOMUX_SETUP(mipi_pads);
-
+#ifdef CONFIG_TC358743_AUDIO
+	IOMUX_SETUP(tc_audio_pads);
+#endif
 	pr_info("%s\n", __func__);
 	mipi_pwm = pwm_request(2, "mipi_clock");
 	if (IS_ERR(mipi_pwm)) {
@@ -680,7 +698,7 @@ static void tc358743_mipi_camera_powerdown(int powerdown)
 }
 
 static struct fsl_mxc_camera_platform_data tc358743_mipi_data = {
-	.mclk = 27000000,
+	.mclk = 22000000,
 	.ipu = 0,
 	.csi = 0,
 	.io_init = tc358743_mipi_camera_io_init,
@@ -1475,6 +1493,11 @@ static int imx6_init_audio(void)
 	platform_device_register(&sgtl5000_vdda_reg_devices);
 	platform_device_register(&sgtl5000_vddio_reg_devices);
 	platform_device_register(&sgtl5000_vddd_reg_devices);
+#endif
+#ifdef CONFIG_TC358743_AUDIO
+	mxc_register_device(&tc_audio_device,
+			    &tc_audio_data);
+	imx6q_add_imx_ssi(2, &tc_ssi_pdata);
 #endif
 	return 0;
 }
