@@ -338,6 +338,13 @@ void ipu_csi_window_size_crop(struct ipu_soc *ipu, uint32_t swidth, uint32_t she
 {
 	uint32_t temp;
 
+	if ((left >= (1 << 13)) || (top >= (1 << 12))) {
+		pr_err("%s: Error left=%x top=%x\n", __func__, left, top);
+		left = 0;
+		top = 0;
+		swidth = width;
+		sheight = height;
+	}
 	_ipu_get(ipu);
 
 	mutex_lock(&ipu->mutex_lock);
@@ -762,6 +769,8 @@ int _ipu_csi_init(struct ipu_soc *ipu, ipu_channel_t channel, uint32_t csi)
 	uint32_t csi_sens_conf, csi_dest;
 	int retval = 0;
 
+	csi_sens_conf = ipu_csi_read(ipu, csi, CSI_SENS_CONF);
+	csi_sens_conf &= ~CSI_SENS_CONF_DATA_DEST_MASK;
 	switch (channel) {
 	case CSI_MEM0:
 	case CSI_MEM1:
@@ -777,14 +786,11 @@ int _ipu_csi_init(struct ipu_soc *ipu, ipu_channel_t channel, uint32_t csi)
 		retval = -EINVAL;
 		goto err;
 	}
+	csi_sens_conf |= csi_dest << CSI_SENS_CONF_DATA_DEST_SHIFT;
 
-	csi_sens_conf = ipu_csi_read(ipu, csi, CSI_SENS_CONF);
-	csi_sens_conf &= ~CSI_SENS_CONF_DATA_DEST_MASK;
 	dev_dbg(ipu->dev, "%s:CSI_SENS_CONF: ipu=%p,csi=%x,data=%x\n", __func__,
-			ipu, csi, csi_sens_conf |
-			(csi_dest << CSI_SENS_CONF_DATA_DEST_SHIFT));
-	ipu_csi_write(ipu, csi, csi_sens_conf | (csi_dest <<
-		CSI_SENS_CONF_DATA_DEST_SHIFT), CSI_SENS_CONF);
+			ipu, csi, csi_sens_conf);
+	ipu_csi_write(ipu, csi, csi_sens_conf, CSI_SENS_CONF);
 err:
 	return retval;
 }
