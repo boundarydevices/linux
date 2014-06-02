@@ -776,6 +776,8 @@ int _ipu_csi_init(struct ipu_soc *ipu, ipu_channel_t channel, uint32_t csi)
 	uint32_t csi_sens_conf, csi_dest;
 	int retval = 0;
 
+	csi_sens_conf = ipu_csi_read(ipu, csi, CSI_SENS_CONF);
+	csi_sens_conf &= ~CSI_SENS_CONF_DATA_DEST_MASK;
 	switch (channel) {
 	case CSI_MEM0:
 	case CSI_MEM1:
@@ -791,11 +793,11 @@ int _ipu_csi_init(struct ipu_soc *ipu, ipu_channel_t channel, uint32_t csi)
 		retval = -EINVAL;
 		goto err;
 	}
+	csi_sens_conf |= csi_dest << CSI_SENS_CONF_DATA_DEST_SHIFT;
 
-	csi_sens_conf = ipu_csi_read(ipu, csi, CSI_SENS_CONF);
-	csi_sens_conf &= ~CSI_SENS_CONF_DATA_DEST_MASK;
-	ipu_csi_write(ipu, csi, csi_sens_conf | (csi_dest <<
-		CSI_SENS_CONF_DATA_DEST_SHIFT), CSI_SENS_CONF);
+	dev_dbg(ipu->dev, "%s:CSI_SENS_CONF: ipu=%p,csi=%x,data=%x\n", __func__,
+			ipu, csi, csi_sens_conf);
+	ipu_csi_write(ipu, csi, csi_sens_conf, CSI_SENS_CONF);
 err:
 	return retval;
 }
