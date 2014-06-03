@@ -104,7 +104,7 @@ source "drivers/media/common/tuners/Kconfig"
 # Video/Radio/Hybrid adapters
 #
 
-source "drivers/media/video/Kconfig"
+source "drivers/media/platform/Kconfig"
 
 source "drivers/media/radio/Kconfig"
 
