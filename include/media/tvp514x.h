@@ -1,5 +1,5 @@
 /*
- * drivers/media/video/tvp514x.h
+ * include/media/tvp514x.h
  *
  * Copyright (C) 2008 Texas Instruments Inc
  * Author: Vaibhav Hiremath <hvaibhav@ti.com>
