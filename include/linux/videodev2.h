@@ -1964,7 +1964,7 @@ struct v4l2_dbg_chip_ident {
 #define VIDIOC_SEND_COMMAND		_IOWR('V', 92, struct v4l2_send_command_control)
 
 /* Reminder: when adding new ioctls please add support for them to
-   drivers/media/video/v4l2-compat-ioctl32.c as well! */
+   drivers/media/platform/v4l2-compat-ioctl32.c as well! */
 
 #define BASE_VIDIOC_PRIVATE	192		/* 192-255 are private */
 

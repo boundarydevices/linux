@@ -1073,7 +1073,7 @@ L:	linux-media@vger.kernel.org
 S:	Maintained
 F:	arch/arm/plat-s5p/dev-fimc*
 F:	arch/arm/plat-samsung/include/plat/*fimc*
-F:	drivers/media/video/s5p-fimc/
+F:	drivers/media/platform/s5p-fimc/
 
 ARM/SHMOBILE ARM ARCHITECTURE
 M:	Paul Mundt <lethal@linux-sh.org>
@@ -1601,7 +1601,7 @@ W:	http://linuxtv.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 S:	Maintained
 F:	Documentation/video4linux/bttv/
-F:	drivers/media/video/bt8xx/bttv*
+F:	drivers/media/platform/bt8xx/bttv*
 
 C-MEDIA CMI8788 DRIVER
 M:	Clemens Ladisch <clemens@ladisch.de>
@@ -1623,7 +1623,7 @@ L:	linux-media@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 S:	Maintained
 F:	Documentation/video4linux/cafe_ccic
-F:	drivers/media/video/cafe_ccic*
+F:	drivers/media/platform/cafe_ccic*
 
 CAIF NETWORK LAYER
 M:	Sjur Braendeland <sjur.brandeland@stericsson.com>
@@ -1965,7 +1965,7 @@ W:	http://linuxtv.org
 W:	http://www.ivtvdriver.org/index.php/Cx18
 S:	Maintained
 F:	Documentation/video4linux/cx18.txt
-F:	drivers/media/video/cx18/
+F:	drivers/media/platform/cx18/
 
 CXGB3 ETHERNET DRIVER (CXGB3)
 M:	Divy Le Ray <divy@chelsio.com>
@@ -2846,42 +2846,42 @@ M:	Frank Zago <frank@zago.net>
 L:	linux-media@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 S:	Maintained
-F:	drivers/media/video/gspca/finepix.c
+F:	drivers/media/platform/gspca/finepix.c
 
 GSPCA GL860 SUBDRIVER
 M:	Olivier Lorin <o.lorin@laposte.net>
 L:	linux-media@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 S:	Maintained
-F:	drivers/media/video/gspca/gl860/
+F:	drivers/media/platform/gspca/gl860/
 
 GSPCA M5602 SUBDRIVER
 M:	Erik Andren <erik.andren@gmail.com>
 L:	linux-media@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 S:	Maintained
-F:	drivers/media/video/gspca/m5602/
+F:	drivers/media/platform/gspca/m5602/
 
 GSPCA PAC207 SONIXB SUBDRIVER
 M:	Hans de Goede <hdegoede@redhat.com>
 L:	linux-media@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 S:	Maintained
-F:	drivers/media/video/gspca/pac207.c
+F:	drivers/media/platform/gspca/pac207.c
 
 GSPCA SN9C20X SUBDRIVER
 M:	Brian Johnson <brijohn@gmail.com>
 L:	linux-media@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 S:	Maintained
-F:	drivers/media/video/gspca/sn9c20x.c
+F:	drivers/media/platform/gspca/sn9c20x.c
 
 GSPCA T613 SUBDRIVER
 M:	Leandro Costantino <lcostantino@gmail.com>
 L:	linux-media@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 S:	Maintained
-F:	drivers/media/video/gspca/t613.c
+F:	drivers/media/platform/gspca/t613.c
 
 GSPCA USB WEBCAM DRIVER
 M:	Jean-Francois Moine <moinejf@free.fr>
@@ -2889,7 +2889,7 @@ W:	http://moinejf.free.fr
 L:	linux-media@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 S:	Maintained
-F:	drivers/media/video/gspca/
+F:	drivers/media/platform/gspca/
 
 HARD DRIVE ACTIVE PROTECTION SYSTEM (HDAPS) DRIVER
 M:	Frank Seidel <frank@f-seidel.de>
@@ -3548,7 +3548,7 @@ T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 W:	http://www.ivtvdriver.org
 S:	Maintained
 F:	Documentation/video4linux/*.ivtv
-F:	drivers/media/video/ivtv/
+F:	drivers/media/platform/ivtv/
 F:	include/linux/ivtv*
 
 JC42.4 TEMPERATURE SENSOR DRIVER
@@ -4218,7 +4218,7 @@ MOTION EYE VAIO PICTUREBOOK CAMERA DRIVER
 W:	http://popies.net/meye/
 S:	Orphan
 F:	Documentation/video4linux/meye.txt
-F:	drivers/media/video/meye.*
+F:	drivers/media/platform/meye.*
 F:	include/linux/meye.h
 
 MOTOROLA IMX MMC/SD HOST CONTROLLER INTERFACE DRIVER
@@ -4612,7 +4612,7 @@ OMAP IMAGE SIGNAL PROCESSOR (ISP)
 M:	Laurent Pinchart <laurent.pinchart@ideasonboard.com>
 L:	linux-media@vger.kernel.org
 S:	Maintained
-F:	drivers/media/video/omap3isp/*
+F:	drivers/media/platform/omap3isp/*
 
 OMAP USB SUPPORT
 M:	Felipe Balbi <balbi@ti.com>
@@ -4646,7 +4646,7 @@ M:	Jonathan Corbet <corbet@lwn.net>
 L:	linux-media@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 S:	Maintained
-F:	drivers/media/video/ov7670.c
+F:	drivers/media/platform/ov7670.c
 
 ONENAND FLASH DRIVER
 M:	Kyungmin Park <kyungmin.park@samsung.com>
@@ -5109,7 +5109,7 @@ W:	http://www.isely.net/pvrusb2/
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 S:	Maintained
 F:	Documentation/video4linux/README.pvrusb2
-F:	drivers/media/video/pvrusb2/
+F:	drivers/media/platform/pvrusb2/
 
 PXA2xx/PXA3xx SUPPORT
 M:	Eric Miao <eric.y.miao@gmail.com>
@@ -5447,7 +5447,7 @@ T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 W:	http://www.mihu.de/linux/saa7146
 S:	Maintained
 F:	drivers/media/common/saa7146*
-F:	drivers/media/video/*7146*
+F:	drivers/media/platform/*7146*
 F:	include/media/*7146*
 
 SAMSUNG AUDIO (ASoC) DRIVERS
@@ -5486,7 +5486,7 @@ M:	Huang Shijie <shijie8@gmail.com>
 M:	Kang Yong <kangyong@telegent.com>
 M:	Zhang Xiaobing <xbzhang@telegent.com>
 S:	Supported
-F:	drivers/media/video/tlg2300
+F:	drivers/media/platform/tlg2300
 
 SC1200 WDT DRIVER
 M:	Zwane Mwaikambo <zwane@arm.linux.org.uk>
@@ -5854,7 +5854,7 @@ L:	linux-media@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 S:	Maintained
 F:	include/media/v4l2*
-F:	drivers/media/video/v4l2*
+F:	drivers/media/platform/v4l2*
 
 SOEKRIS NET48XX LED SUPPORT
 M:	Chris Boot <bootc@bootc.net>
@@ -6458,7 +6458,7 @@ L:	linux-media@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 W:	http://www.linux-projects.org
 S:	Maintained
-F:	drivers/media/video/et61x251/
+F:	drivers/media/platform/et61x251/
 
 USB GADGET/PERIPHERAL SUBSYSTEM
 M:	Felipe Balbi <balbi@ti.com>
@@ -6623,7 +6623,7 @@ T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 W:	http://www.linux-projects.org
 S:	Maintained
 F:	Documentation/video4linux/sn9c102.txt
-F:	drivers/media/video/sn9c102/
+F:	drivers/media/platform/sn9c102/
 
 USB SUBSYSTEM
 M:	Greg Kroah-Hartman <gregkh@suse.de>
@@ -6658,7 +6658,7 @@ L:	linux-media@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 W:	http://www.ideasonboard.org/uvc/
 S:	Maintained
-F:	drivers/media/video/uvc/
+F:	drivers/media/platform/uvc/
 
 USB W996[87]CF DRIVER
 M:	Luca Risolia <luca.risolia@studio.unibo.it>
@@ -6668,7 +6668,7 @@ T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 W:	http://www.linux-projects.org
 S:	Maintained
 F:	Documentation/video4linux/w9968cf.txt
-F:	drivers/media/video/w996*
+F:	drivers/media/platform/w996*
 
 USB WIRELESS RNDIS DRIVER (rndis_wlan)
 M:	Jussi Kivilinna <jussi.kivilinna@mbnet.fi>
@@ -6697,7 +6697,7 @@ T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mchehab/linux-2.6.git
 W:	http://royale.zerezo.com/zr364xx/
 S:	Maintained
 F:	Documentation/video4linux/zr364xx.txt
-F:	drivers/media/video/zr364xx.c
+F:	drivers/media/platform/zr364xx.c
 
 USER-MODE LINUX (UML)
 M:	Jeff Dike <jdike@addtoit.com>
@@ -6746,7 +6746,7 @@ M:	Marek Szyprowski <m.szyprowski@samsung.com>
 M:	Kyungmin Park <kyungmin.park@samsung.com>
 L:	linux-media@vger.kernel.org
 S:	Maintained
-F:	drivers/media/video/videobuf2-*
+F:	drivers/media/platform/videobuf2-*
 F:	include/media/videobuf2-*
 
 VIRTIO CONSOLE DRIVER
@@ -7128,7 +7128,7 @@ L:	linux-media@vger.kernel.org
 W:	http://mjpeg.sourceforge.net/driver-zoran/
 T:	Mercurial http://linuxtv.org/hg/v4l-dvb
 S:	Odd Fixes
-F:	drivers/media/video/zoran/
+F:	drivers/media/platform/zoran/
 
 ZS DECSTATION Z85C30 SERIAL DRIVER
 M:	"Maciej W. Rozycki" <macro@linux-mips.org>
