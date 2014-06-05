@@ -646,6 +646,7 @@ isl1208_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int rc = 0;
 	struct rtc_device *rtc;
+	u8 regs[6] = {0};
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
 		return -ENODEV;
@@ -688,9 +689,14 @@ isl1208_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto exit_unregister;
 	}
 
-	if (rc & ISL1208_REG_SR_RTCF)
-		dev_warn(&client->dev, "rtc power failure detected, "
-			 "please set clock.\n");
+	if (rc & ISL1208_REG_SR_RTCF) {
+                dev_warn(&client->dev, "rtc power failure detected, "
+                         "please set clock.\n");
+		regs[0] = 0x90;
+                isl1208_i2c_set_regs(client, ISL1208_REG_SR, regs, 1);
+                regs[0] = 0;
+		isl1208_i2c_set_regs(client, 0, regs, sizeof(regs));
+	}
 
 	rc = sysfs_create_group(&client->dev.kobj, &isl1208_rtc_sysfs_files);
 	if (rc)
