@@ -1664,10 +1664,6 @@ static int tc358743_init_mode(enum tc358743_frame_rate frame_rate,
 	if (mipi_csi2_info) {
 		pr_debug("%s: mipi_csi2_info:\n"
 		"mipi_en:       %d\n"
-		"ipu_id:        %d\n"
-		"csi_id:        %d\n"
-		"v_channel:     %d\n"
-		"lanes:         %d\n"
 		"datatype:      %d\n"
 		"dphy_clk:      %p\n"
 		"pixel_clk:     %p\n"
@@ -1675,10 +1671,6 @@ static int tc358743_init_mode(enum tc358743_frame_rate frame_rate,
 		"pdev:          %p\n"
 		, __func__,
 		((struct mipi_csi2_info *)mipi_csi2_info)->mipi_en,
-		((struct mipi_csi2_info *)mipi_csi2_info)->ipu_id,
-		((struct mipi_csi2_info *)mipi_csi2_info)->csi_id,
-		((struct mipi_csi2_info *)mipi_csi2_info)->v_channel,
-		((struct mipi_csi2_info *)mipi_csi2_info)->lanes,
 		((struct mipi_csi2_info *)mipi_csi2_info)->datatype,
 		((struct mipi_csi2_info *)mipi_csi2_info)->dphy_clk,
 		((struct mipi_csi2_info *)mipi_csi2_info)->pixel_clk,
@@ -1690,12 +1682,11 @@ static int tc358743_init_mode(enum tc358743_frame_rate frame_rate,
 
 		if (mipi_csi2_get_status(mipi_csi2_info)) {
 			int ifmt;
-			if (tc358743_mode_info_data[frame_rate][mode].lanes != 0) {
-				pr_debug("%s Change lanes: from %d to %d\n", __func__, ((struct mipi_csi2_info *)mipi_csi2_info)->lanes, tc358743_mode_info_data[frame_rate][mode].lanes);
-				((struct mipi_csi2_info *)mipi_csi2_info)->lanes = tc358743_mode_info_data[frame_rate][mode].lanes;
-				((struct mipi_csi2_info *)mipi_csi2_info)->lanes = tc358743_mode_info_data[frame_rate][mode].lanes;
-			}
-			pr_debug("Now Using %d lanes\n",mipi_csi2_set_lanes(mipi_csi2_info));
+			int lanes = tc358743_mode_info_data[frame_rate][mode].lanes;
+			if (!lanes)
+				lanes = 4;
+			lanes = mipi_csi2_set_lanes(mipi_csi2_info, lanes);
+			pr_debug("Now Using %d lanes\n", lanes);
 
 			/*Only reset MIPI CSI2 HW at sensor initialize*/
 			if (!hdmi_mode)	// is this during reset
@@ -3128,6 +3119,8 @@ static int tc358743_probe(struct i2c_client *client,
 	/* Set initial values for the sensor struct. */
 	memset(sensor, 0, sizeof(*sensor));
 
+	sensor->mipi_camera = 1;
+	sensor->virtual_channel = 0;
 	sensor->sensor_clk = devm_clk_get(dev, "csi_mclk");
 	if (IS_ERR(sensor->sensor_clk)) {
 		/* assuming clock enabled by default */
@@ -3163,7 +3156,7 @@ static int tc358743_probe(struct i2c_client *client,
 		dev_err(dev, "csi id missing or invalid\n");
 		return retval;
 	}
-	if (((unsigned)sensor->ipu_id > 1) || ((unsigned)sensor->csi > 1)) {
+	if ((unsigned)sensor->ipu_id || (unsigned)sensor->csi) {
 		dev_err(dev, "invalid ipu/csi\n");
 		return -EINVAL;
 	}
