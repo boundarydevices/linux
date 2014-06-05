@@ -391,7 +391,7 @@ static struct i2c_board_info i2c1_board_info[] __initdata = {
 		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
 	},
 	{
-		I2C_BOARD_INFO("sc16is752", 0x49),
+		I2C_BOARD_INFO("sc16is7xx-uart", 0x49),
 		.irq = gpio_to_irq(GP_SC16IS752_IRQ),
 	},
 };

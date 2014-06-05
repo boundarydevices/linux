@@ -119,6 +119,11 @@ config MXC_HDMI_CSI2_TC358743
 	---help---
 	  Toshina HDMI to MIPI-CSI2 bridge
 
+config TC358743_AUDIO
+	bool "TC358743 audio support"
+	depends on MXC_HDMI_CSI2_TC358743
+
+
 config MXC_MIPI_CSI2_TVIN_ADV7280
 	tristate "Analog Devices adv7280 TV Decoder Input support using mipi-csi2"
 	depends on (!VIDEO_MXC_EMMA_CAMERA)

@@ -191,7 +191,7 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 			IPU_CSI_CLK_MODE_CCIR1120_INTERLACED_DDR) ||
 		(cfg_param.clk_mode ==
 			IPU_CSI_CLK_MODE_CCIR1120_INTERLACED_SDR)) {
-		ipu_csi_write(ipu, csi, 0x40030, CSI_CCIR_CODE_1);
+		ipu_csi_write(ipu, csi, (6 << 3) | (4 << 16), CSI_CCIR_CODE_1);
 		_ipu_csi_ccir_err_detection_enable(ipu, csi);
 	} else if ((cfg_param.clk_mode == IPU_CSI_CLK_MODE_GATED_CLK) ||
 		   (cfg_param.clk_mode == IPU_CSI_CLK_MODE_NONGATED_CLK)) {
@@ -338,6 +338,13 @@ void ipu_csi_window_size_crop(struct ipu_soc *ipu, uint32_t swidth, uint32_t she
 {
 	uint32_t temp;
 
+	if ((left >= (1 << 13)) || (top >= (1 << 12))) {
+		pr_err("%s: Error left=%x top=%x\n", __func__, left, top);
+		left = 0;
+		top = 0;
+		swidth = width;
+		sheight = height;
+	}
 	_ipu_get(ipu);
 
 	mutex_lock(&ipu->mutex_lock);
@@ -762,6 +769,8 @@ int _ipu_csi_init(struct ipu_soc *ipu, ipu_channel_t channel, uint32_t csi)
 	uint32_t csi_sens_conf, csi_dest;
 	int retval = 0;
 
+	csi_sens_conf = ipu_csi_read(ipu, csi, CSI_SENS_CONF);
+	csi_sens_conf &= ~CSI_SENS_CONF_DATA_DEST_MASK;
 	switch (channel) {
 	case CSI_MEM0:
 	case CSI_MEM1:
@@ -777,14 +786,11 @@ int _ipu_csi_init(struct ipu_soc *ipu, ipu_channel_t channel, uint32_t csi)
 		retval = -EINVAL;
 		goto err;
 	}
+	csi_sens_conf |= csi_dest << CSI_SENS_CONF_DATA_DEST_SHIFT;
 
-	csi_sens_conf = ipu_csi_read(ipu, csi, CSI_SENS_CONF);
-	csi_sens_conf &= ~CSI_SENS_CONF_DATA_DEST_MASK;
 	dev_dbg(ipu->dev, "%s:CSI_SENS_CONF: ipu=%p,csi=%x,data=%x\n", __func__,
-			ipu, csi, csi_sens_conf |
-			(csi_dest << CSI_SENS_CONF_DATA_DEST_SHIFT));
-	ipu_csi_write(ipu, csi, csi_sens_conf | (csi_dest <<
-		CSI_SENS_CONF_DATA_DEST_SHIFT), CSI_SENS_CONF);
+			ipu, csi, csi_sens_conf);
+	ipu_csi_write(ipu, csi, csi_sens_conf, CSI_SENS_CONF);
 err:
 	return retval;
 }

@@ -304,7 +304,7 @@ void *fec_enet_get_pre_txbd(struct net_device *ndev)
  * clearing the TDAR bit occurring coincident or momentarily after
  * the software sets the bit.
  * This forces ENET module to check the Transmit buffer descriptor
- * and take action if the “ready” flag is set. Otherwise the ENET
+ * and take action if the ready flag is set. Otherwise the ENET
  * returns to idle mode.
  */
 static void fixup_trigger_tx_func(struct work_struct *work)
@@ -907,7 +907,18 @@ static void __inline__ fec_get_mac(struct net_device *ndev)
 	iap = macaddr;
 
 	/*
-	 * 2) from flash or fuse (via platform data)
+	 * 2) FEC mac registers set by bootloader
+	 */
+	if (!is_valid_ether_addr(iap)) {
+		*((unsigned long *) &tmpaddr[0]) =
+			be32_to_cpu(readl(fep->hwp + FEC_ADDR_LOW));
+		*((unsigned short *) &tmpaddr[4]) =
+			be16_to_cpu(readl(fep->hwp + FEC_ADDR_HIGH) >> 16);
+		iap = &tmpaddr[0];
+	}
+
+	/*
+	 * 3) from flash or fuse (via platform data)
 	 */
 	if (!is_valid_ether_addr(iap)) {
 #ifdef CONFIG_M5272
@@ -915,18 +926,15 @@ static void __inline__ fec_get_mac(struct net_device *ndev)
 			iap = (unsigned char *)FEC_FLASHMAC;
 #else
 		if (pdata)
-			memcpy(iap, pdata->mac, ETH_ALEN);
+			iap = pdata->mac;
 #endif
 	}
 
 	/*
-	 * 3) FEC mac registers set by bootloader
+	 * 4) random mac
 	 */
 	if (!is_valid_ether_addr(iap)) {
-		*((unsigned long *) &tmpaddr[0]) =
-			be32_to_cpu(readl(fep->hwp + FEC_ADDR_LOW));
-		*((unsigned short *) &tmpaddr[4]) =
-			be16_to_cpu(readl(fep->hwp + FEC_ADDR_HIGH) >> 16);
+		random_ether_addr(tmpaddr);
 		iap = &tmpaddr[0];
 	}
 
