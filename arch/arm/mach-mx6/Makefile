@@ -15,6 +15,7 @@ obj-$(CONFIG_MACH_MX6_MED) += board-mx6_med.o
 obj-$(CONFIG_MACH_MX6Q_SABRELITE) += board-mx6q_sabrelite.o
 obj-$(CONFIG_MACH_MX6_NITROGEN6X) += board-mx6_nitrogen6x.o
 obj-$(CONFIG_MACH_MX6_NITROGEN6_MAX) += board-mx6_nitrogen6_max.o
+obj-$(CONFIG_MACH_MX6_PER) += board-mx6_per.o
 obj-$(CONFIG_MACH_MX6_OC) += board-mx6_oc.o
 obj-$(CONFIG_MACH_MX6_NIT6XLITE) += board-mx6_nit6xlite.o
 obj-$(CONFIG_MACH_MX6_NW) += board-mx6_nw.o
