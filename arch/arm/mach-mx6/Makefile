@@ -18,6 +18,7 @@ obj-$(CONFIG_MACH_MX6_BT) += board-mx6_bt.o
 obj-$(CONFIG_MACH_MX6_MTP) += board-mx6_mtp.o
 obj-$(CONFIG_MACH_MX6_NITROGEN6X) += board-mx6_nitrogen6x.o
 obj-$(CONFIG_MACH_MX6_NITROGEN6_MAX) += board-mx6_nitrogen6_max.o
+obj-$(CONFIG_MACH_MX6_PER) += board-mx6_per.o
 obj-$(CONFIG_MACH_MX6_R) += board-mx6_r.o
 obj-$(CONFIG_MACH_MX6_UTC) += board-mx6_utc.o
 obj-$(CONFIG_MACH_MX6_S) += board-mx6_s.o
