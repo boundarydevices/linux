@@ -657,7 +657,6 @@ static struct mxc_audio_platform_data tc_audio_data = {
  * NANDF_CS0	GPIO[6]:11	reset, old rev SOM jumpered
  * SD1_DAT1	GPIO[1]:16	24 Mhz XCLK/XVCLK (pwm3)
  */
-struct pwm_device	*mipi_pwm;
 static struct fsl_mxc_camera_platform_data tc358743_mipi_data;
 
 static void tc358743_mipi_camera_io_init(void)
@@ -667,15 +666,6 @@ static void tc358743_mipi_camera_io_init(void)
 	IOMUX_SETUP(tc_audio_pads);
 #endif
 	pr_info("%s\n", __func__);
-	mipi_pwm = pwm_request(2, "mipi_clock");
-	if (IS_ERR(mipi_pwm)) {
-		pr_err("unable to request PWM for mipi_clock\n");
-	} else {
-		unsigned period = 1000/22;
-		pr_info("got pwm for mipi_clock\n");
-		pwm_config(mipi_pwm, period >> 1, period);
-		pwm_enable(mipi_pwm);
-	}
 
 	if (cpu_is_mx6dl()) {
 		/*
@@ -698,7 +688,7 @@ static void tc358743_mipi_camera_powerdown(int powerdown)
 }
 
 static struct fsl_mxc_camera_platform_data tc358743_mipi_data = {
-	.mclk = 22000000,
+	.mclk = 27000000,
 	.ipu = 0,
 	.csi = 0,
 	.io_init = tc358743_mipi_camera_io_init,
