@@ -38,7 +38,6 @@
 #include <linux/fsl_devices.h>
 #include <linux/mutex.h>
 #include <linux/mipi_csi2.h>
-#include <linux/pwm.h>
 #include <media/v4l2-chip-ident.h>
 #include <media/v4l2-int-device.h>
 #include <sound/core.h>
@@ -121,7 +120,7 @@ struct tc_data {
 	struct sensor_data sensor;
 	struct delayed_work det_work;
 	struct mutex access_lock;
-	int det_work_disable;
+	int det_work_enable;
 	int det_work_timeout;
 	int det_changed;
 #define REGULATOR_IO		0
@@ -219,19 +218,15 @@ static int tc_regulator_init(struct tc_data *td, struct device *dev)
 	return ret;
 }
 
-static void det_work_enable(struct tc_data *td, int i)
+static void det_work_enable(struct tc_data *td, int enable)
 {
 	mutex_lock(&td->access_lock);
-	if (i) {
-		td->det_work_timeout = DET_WORK_TIMEOUT_DEFERRED;
-		schedule_delayed_work(&(td->det_work), msecs_to_jiffies(td->det_work_timeout));
-		td->det_work_disable = 0;
-	} else {
-		td->det_work_disable = 1;
-		td->det_work_timeout = DET_WORK_TIMEOUT_DEFERRED;
-	}
+	td->det_work_enable = enable;
+	td->det_work_timeout = DET_WORK_TIMEOUT_DEFERRED;
+	if (enable)
+		schedule_delayed_work(&td->det_work, msecs_to_jiffies(10));
 	mutex_unlock(&td->access_lock);
-	pr_debug("%s: %d %d\n", __func__, td->det_work_disable, td->det_work_timeout);
+	pr_debug("%s: %d %d\n", __func__, td->det_work_enable, td->det_work_timeout);
 }
 
 static const u8 cHDMIEDID[256] = {
@@ -255,10 +250,6 @@ static const u8 cHDMIEDID[256] = {
 };
 
 static const struct reg_value tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz[] = {
-  {0x7080, 0x00000000, 0x00000000, 2, 0},
-  {0x0004, 0x00000004, 0x00000000, 2, 0},
-  {0x0002, 0x00000f00, 0x00000000, 2, 100},
-  {0x0002, 0x00000000, 0x00000000, 2, 1000},
   {0x0006, 0x00000040, 0x00000000, 2, 0},
   {0x0014, 0x00000000, 0x00000000, 2, 0},
   {0x0016, 0x000005ff, 0x00000000, 2, 0},
@@ -291,10 +282,8 @@ static const struct reg_value tc358743_setting_YUV422_2lane_30fps_720P_1280_720_
   {0x8514, 0x00000000, 0x00000000, 1, 0},
   {0x8515, 0x00000000, 0x00000000, 1, 0},
   {0x8516, 0x00000000, 0x00000000, 1, 0},
-// HDMI Audio RefClk (26 MHz)
+// HDMI Audio
   {0x8531, 0x00000001, 0x00000000, 1, 0},
-  {0x8540, 0x0000008c, 0x00000000, 1, 0},
-  {0x8541, 0x0000000a, 0x00000000, 1, 0},
   {0x8630, 0x000000b0, 0x00000000, 1, 0},
   {0x8631, 0x0000001e, 0x00000000, 1, 0},
   {0x8632, 0x00000004, 0x00000000, 1, 0},
@@ -303,13 +292,7 @@ static const struct reg_value tc358743_setting_YUV422_2lane_30fps_720P_1280_720_
   {0x8532, 0x00000080, 0x00000000, 1, 0},
   {0x8536, 0x00000040, 0x00000000, 1, 0},
   {0x853f, 0x0000000a, 0x00000000, 1, 0},
-// EDID
-  {0x85c7, 0x00000001, 0x00000000, 1, 0},
-  {0x85cb, 0x00000001, 0x00000000, 1, 0},
 // HDMI System
-  {0x8543, 0x00000032, 0x00000000, 1, 0},
-//  {0x8544, 0x00000000, 0x00000000, 1, 1000},
-//  {0x8544, 0x00000001, 0x00000000, 1, 100},
   {0x8545, 0x00000031, 0x00000000, 1, 0},
   {0x8546, 0x0000002d, 0x00000000, 1, 0},
 // HDCP Setting
@@ -348,10 +331,6 @@ static const struct reg_value tc358743_setting_YUV422_2lane_30fps_720P_1280_720_
   };
 
 static const struct reg_value tc358743_setting_YUV422_4lane_720P_60fps_1280_720_133Mhz[] = {
-  {0x7080, 0x00000000, 0x00000000, 2, 0},
-  {0x0004, 0x00000004, 0x00000000, 2, 0},
-  {0x0002, 0x00000f00, 0x00000000, 2, 100},
-  {0x0002, 0x00000000, 0x00000000, 2, 1000},
   {0x0006, 0x00000000, 0x00000000, 2, 0},
   {0x0014, 0x0000ffff, 0x00000000, 2, 0},
   {0x0016, 0x000005ff, 0x00000000, 2, 0},
@@ -384,9 +363,8 @@ static const struct reg_value tc358743_setting_YUV422_4lane_720P_60fps_1280_720_
   {0x8514, 0x00000000, 0x00000000, 1, 0},
   {0x8515, 0x00000000, 0x00000000, 1, 0},
   {0x8516, 0x00000000, 0x00000000, 1, 0},
-// HDMI Audio RefClk (26 MHz)
+// HDMI Audio
   {0x8531, 0x00000001, 0x00000000, 1, 0},
-  {0x8540, 0x00000a8c, 0x00000000, 1, 0},
   {0x8630, 0x00041eb0, 0x00000000, 1, 0},
   {0x8670, 0x00000001, 0x00000000, 1, 0},
 // HDMI PHY
@@ -394,13 +372,8 @@ static const struct reg_value tc358743_setting_YUV422_4lane_720P_60fps_1280_720_
   {0x8536, 0x00000040, 0x00000000, 1, 0},
   {0x853f, 0x0000000a, 0x00000000, 1, 0},
 // HDMI System
-  {0x8543, 0x00000032, 0x00000000, 1, 0},
-  {0x8544, 0x00000000, 0x00000000, 1, 0},
   {0x8545, 0x00000031, 0x00000000, 1, 0},
   {0x8546, 0x0000002d, 0x00000000, 1, 0},
-// EDID
-  {0x85c7, 0x00000001, 0x00000000, 1, 0},
-  {0x85cb, 0x00000001, 0x00000000, 1, 0},
 // HDCP Setting
   {0x85d1, 0x00000001, 0x00000000, 1, 0},
   {0x8560, 0x00000024, 0x00000000, 1, 0},
@@ -436,9 +409,6 @@ static const struct reg_value tc358743_setting_YUV422_4lane_720P_60fps_1280_720_
 };
 
 static const struct reg_value tc358743_setting_YUV422_2lane_color_bar_1280_720_125MHz[] = {
-  {0x7080, 0x00000000, 0x00000000, 2, 0},
-  {0x0002, 0x00000f00, 0x00000000, 2, 100},
-  {0x0002, 0x00000000, 0x00000000, 2, 1000},
   {0x0006, 0x00000000, 0x00000000, 2, 0},
   {0x0004, 0x00000084, 0x00000000, 2, 0},
   {0x0010, 0x0000001e, 0x00000000, 2, 0},
@@ -499,9 +469,6 @@ static const struct reg_value tc358743_setting_YUV422_2lane_color_bar_1280_720_1
 };
 
 static const struct reg_value tc358743_setting_YUV422_4lane_color_bar_1280_720_125MHz[] = {
-  {0x7080, 0x00000000, 0x00000000, 2, 0},
-  {0x0002, 0x00000f00, 0x00000000, 2, 100},
-  {0x0002, 0x00000000, 0x00000000, 2, 1000},
   {0x0006, 0x00000000, 0x00000000, 2, 0},
   {0x0004, 0x00000084, 0x00000000, 2, 0},
   {0x0010, 0x0000001e, 0x00000000, 2, 0},
@@ -563,9 +530,6 @@ static const struct reg_value tc358743_setting_YUV422_4lane_color_bar_1280_720_1
 
 
 static const struct reg_value tc358743_setting_YUV422_4lane_color_bar_1024_720_200MHz[] = {
-  {0x7080, 0x00000000, 0x00000000, 2, 0},
-  {0x0002, 0x00000f00, 0x00000000, 2, 100},
-  {0x0002, 0x00000000, 0x00000000, 2, 1000},
   {0x0006, 0x00000000, 0x00000000, 2, 0},
   {0x0004, 0x00000084, 0x00000000, 2, 0},
   {0x0010, 0x0000001e, 0x00000000, 2, 0},
@@ -627,9 +591,6 @@ static const struct reg_value tc358743_setting_YUV422_4lane_color_bar_1024_720_2
 };
 
 static const struct reg_value tc358743_setting_YUV422_4lane_color_bar_1280_720_300MHz[] = {
-  {0x7080, 0x00000000, 0x00000000, 2, 0},
-  {0x0002, 0x00000f00, 0x00000000, 2, 100},
-  {0x0002, 0x00000000, 0x00000000, 2, 1000},
   {0x0006, 0x00000000, 0x00000000, 2, 0},
   {0x0004, 0x00000084, 0x00000000, 2, 0},
   {0x0010, 0x0000001e, 0x00000000, 2, 0},
@@ -690,9 +651,6 @@ static const struct reg_value tc358743_setting_YUV422_4lane_color_bar_1280_720_3
 };
 
 static const struct reg_value tc358743_setting_YUV422_4lane_color_bar_1920_1023_300MHz[] = {
-  {0x7080, 0x00000000, 0x00000000, 2, 0},
-  {0x0002, 0x00000f00, 0x00000000, 2, 100},
-  {0x0002, 0x00000000, 0x00000000, 2, 1000},
   {0x0006, 0x00000000, 0x00000000, 2, 0},
   {0x0004, 0x00000084, 0x00000000, 2, 0},
   {0x0010, 0x0000001e, 0x00000000, 2, 0},
@@ -753,9 +711,6 @@ static const struct reg_value tc358743_setting_YUV422_4lane_color_bar_1920_1023_
 };
 
 static const struct reg_value tc358743_setting_YUV422_2lane_color_bar_640_480_174MHz[] = {
-  {0x7080, 0x00000000, 0x00000000, 2, 0},
-  {0x0002, 0x00000f00, 0x00000000, 2, 100},
-  {0x0002, 0x00000000, 0x00000000, 2, 1000},
   {0x0006, 0x00000000, 0x00000000, 2, 0},
   {0x0004, 0x00000084, 0x00000000, 2, 0},
   {0x0010, 0x0000001e, 0x00000000, 2, 0},
@@ -816,9 +771,6 @@ static const struct reg_value tc358743_setting_YUV422_2lane_color_bar_640_480_17
 };
 
 static const struct reg_value tc358743_setting_YUV422_2lane_color_bar_640_480_108MHz_cont[] = {
-  {0x7080, 0x00000000, 0x00000000, 2, 0},
-  {0x0002, 0x00000f00, 0x00000000, 2, 100},
-  {0x0002, 0x00000000, 0x00000000, 2, 1000},
   {0x0006, 0x00000000, 0x00000000, 2, 0},
   {0x0004, 0x00000084, 0x00000000, 2, 0},
   {0x0010, 0x0000001e, 0x00000000, 2, 0},
@@ -880,10 +832,6 @@ static const struct reg_value tc358743_setting_YUV422_2lane_color_bar_640_480_10
 
 //480p RGB2YUV442
 static const struct reg_value tc358743_setting_YUV422_2lane_60fps_640_480_125Mhz[] = {
-  {0x7080, 0x00000000, 0x00000000, 2, 0},
-  {0x0004, 0x00000004, 0x00000000, 2, 0},
-  {0x0002, 0x00000f00, 0x00000000, 2, 100},
-  {0x0002, 0x00000000, 0x00000000, 2, 1000},
   {0x0006, 0x00000040, 0x00000000, 2, 0},
 //  {0x000a, 0x000005a0, 0x00000000, 2, 0},
 //  {0x0010, 0x0000001e, 0x00000000, 2, 0},
@@ -918,9 +866,8 @@ static const struct reg_value tc358743_setting_YUV422_2lane_60fps_640_480_125Mhz
   {0x8514, 0x00000000, 0x00000000, 1, 0},
   {0x8515, 0x00000000, 0x00000000, 1, 0},
   {0x8516, 0x00000000, 0x00000000, 1, 0},
-// HDMI Audio RefClk (26 MHz)
+// HDMI Audio
   {0x8531, 0x00000001, 0x00000000, 1, 0},
-  {0x8540, 0x00000a8c, 0x00000000, 1, 0},
   {0x8630, 0x00041eb0, 0x00000000, 1, 0},
   {0x8670, 0x00000001, 0x00000000, 1, 0},
 // HDMI PHY
@@ -928,14 +875,8 @@ static const struct reg_value tc358743_setting_YUV422_2lane_60fps_640_480_125Mhz
   {0x8536, 0x00000040, 0x00000000, 1, 0},
   {0x853f, 0x0000000a, 0x00000000, 1, 0},
 // HDMI System
-  {0x8543, 0x00000032, 0x00000000, 1, 0},
-  {0x8544, 0x00000000, 0x00000000, 1, 100},
-//  {0x8544, 0x00000001, 0x00000000, 1, 100},
   {0x8545, 0x00000031, 0x00000000, 1, 0},
   {0x8546, 0x0000002d, 0x00000000, 1, 0},
-// EDID
-  {0x85c7, 0x00000001, 0x00000000, 1, 0},
-  {0x85cb, 0x00000001, 0x00000000, 1, 0},
 // HDCP Setting
   {0x85d1, 0x00000001, 0x00000000, 1, 0},
   {0x8560, 0x00000024, 0x00000000, 1, 0},
@@ -971,10 +912,6 @@ static const struct reg_value tc358743_setting_YUV422_2lane_60fps_640_480_125Mhz
 
 //480p RGB2YUV442
 static const struct reg_value tc358743_setting_YUV422_2lane_60fps_720_480_125Mhz[] = {
-  {0x7080, 0x00000000, 0x00000000, 2, 0},
-  {0x0004, 0x00000004, 0x00000000, 2, 0},
-  {0x0002, 0x00000f00, 0x00000000, 2, 100},
-  {0x0002, 0x00000000, 0x00000000, 2, 1000},
   {0x0006, 0x00000040, 0x00000000, 2, 0},
   {0x000a, 0x000005a0, 0x00000000, 2, 0},
 //  {0x0010, 0x0000001e, 0x00000000, 2, 0},
@@ -1009,9 +946,8 @@ static const struct reg_value tc358743_setting_YUV422_2lane_60fps_720_480_125Mhz
   {0x8514, 0x00000000, 0x00000000, 1, 0},
   {0x8515, 0x00000000, 0x00000000, 1, 0},
   {0x8516, 0x00000000, 0x00000000, 1, 0},
-// HDMI Audio RefClk (27 MHz)
+// HDMI Audio
   {0x8531, 0x00000001, 0x00000000, 1, 0},
-  {0x8540, 0x00000a8c, 0x00000000, 1, 0},
   {0x8630, 0x00041eb0, 0x00000000, 1, 0},
   {0x8670, 0x00000001, 0x00000000, 1, 0},
 // HDMI PHY
@@ -1019,14 +955,8 @@ static const struct reg_value tc358743_setting_YUV422_2lane_60fps_720_480_125Mhz
   {0x8536, 0x00000040, 0x00000000, 1, 0},
   {0x853f, 0x0000000a, 0x00000000, 1, 0},
 // HDMI System
-  {0x8543, 0x00000032, 0x00000000, 1, 0},
-  {0x8544, 0x00000000, 0x00000000, 1, 100},
-//  {0x8544, 0x00000001, 0x00000000, 1, 100},
   {0x8545, 0x00000031, 0x00000000, 1, 0},
   {0x8546, 0x0000002d, 0x00000000, 1, 0},
-// EDID
-  {0x85c7, 0x00000001, 0x00000000, 1, 0},
-  {0x85cb, 0x00000001, 0x00000000, 1, 0},
 // HDCP Setting
   {0x85d1, 0x00000001, 0x00000000, 1, 0},
   {0x8560, 0x00000024, 0x00000000, 1, 0},
@@ -1061,10 +991,7 @@ static const struct reg_value tc358743_setting_YUV422_2lane_60fps_720_480_125Mhz
   };
 
 static const struct reg_value tc358743_setting_YUV422_4lane_1080P_60fps_1920_1080_300MHz[] = {
-  {0x7080, 0x00000000, 0x00000000, 2, 0},
   {0x0004, 0x00000084, 0x00000000, 2, 0},
-  {0x0002, 0x00000f00, 0x00000000, 2, 100},//0},
-  {0x0002, 0x00000000, 0x00000000, 2, 1000},//0},
   {0x0006, 0x00000000, 0x00000000, 2, 0},
   {0x0014, 0x00000000, 0x00000000, 2, 0},
   {0x0016, 0x000005ff, 0x00000000, 2, 0},
@@ -1097,9 +1024,8 @@ static const struct reg_value tc358743_setting_YUV422_4lane_1080P_60fps_1920_108
   {0x8514, 0x00000000, 0x00000000, 1, 0},
   {0x8515, 0x00000000, 0x00000000, 1, 0},
   {0x8516, 0x00000000, 0x00000000, 1, 0},
-// HDMI Audio RefClk (27 MHz)
+// HDMI Audio
   {0x8531, 0x00000001, 0x00000000, 1, 0},
-  {0x8540, 0x00000a8c, 0x00000000, 1, 0},
   {0x8630, 0x00041eb0, 0x00000000, 1, 0},
   {0x8670, 0x00000001, 0x00000000, 1, 0},
 // HDMI PHY
@@ -1107,13 +1033,8 @@ static const struct reg_value tc358743_setting_YUV422_4lane_1080P_60fps_1920_108
   {0x8536, 0x00000040, 0x00000000, 1, 0},
   {0x853f, 0x0000000a, 0x00000000, 1, 0},
 // HDMI System
-  {0x8543, 0x00000032, 0x00000000, 1, 0},
-  {0x8544, 0x00000010, 0x00000000, 1, 100},
   {0x8545, 0x00000031, 0x00000000, 1, 0},
   {0x8546, 0x0000002d, 0x00000000, 1, 0},
-// EDID
-  {0x85c7, 0x00000001, 0x00000000, 1, 0},
-  {0x85cb, 0x00000001, 0x00000000, 1, 0},
 // HDCP Setting
   {0x85d1, 0x00000001, 0x00000000, 1, 0},
   {0x8560, 0x00000024, 0x00000000, 1, 0},
@@ -1149,10 +1070,7 @@ static const struct reg_value tc358743_setting_YUV422_4lane_1080P_60fps_1920_108
 };
 
 static const struct reg_value tc358743_setting_YUV422_4lane_1080P_30fps_1920_1080_300MHz[] = {
-  {0x7080, 0x00000000, 0x00000000, 2, 0},		// IR control resister
   {0x0004, 0x00000084, 0x00000000, 2, 0},		//  Internal Generated output pattern,Do not send InfoFrame data out to CSI2,Audio output to CSI2-TX i/f,I2C address index increments on every data byte transfer, disable audio and video TX buffers
-  {0x0002, 0x00000f00, 0x00000000, 2, 100},//0},	// Reset devices and set normal operatio (not sleep)
-  {0x0002, 0x00000000, 0x00000000, 2, 1000},//0}, 	// Clear reset bits
   {0x0006, 0x000001f8, 0x00000000, 2, 0},		// FIFO level = 1f8 = 504
   {0x0014, 0x00000000, 0x00000000, 2, 0},		// Clear interrupt status bits
   {0x0016, 0x000005ff, 0x00000000, 2, 0},		// Mask audio mute, CSI-TX, and the other interrups
@@ -1186,23 +1104,17 @@ static const struct reg_value tc358743_setting_YUV422_4lane_1080P_30fps_1920_108
   {0x8514, 0x00000000, 0x00000000, 1, 0},		// PACKET INTERRUPT MASK: unmask all
   {0x8515, 0x00000000, 0x00000000, 1, 0},		// CBIT INTERRUPT MASK: unmask all
   {0x8516, 0x00000000, 0x00000000, 1, 0},		// AUDIO INTERRUPT MASK: unmask all
-// HDMI Audio RefClk (27 MHz)
+// HDMI Audio
   {0x8531, 0x00000001, 0x00000000, 1, 0},		// PHY CONTROL0: 27MHz, DDC5V detection operation.
-  {0x8540, 0x00000a8c, 0x00000000, 1, 0},		// SYS FREQ0 Register: 27MHz
   {0x8630, 0x00041eb0, 0x00000000, 1, 0},		// Audio FS Lock Detect Control: for 27MHz
-  {0x8670, 0x00000001, 0x00000000, 1, 0},		// AUDIO PLL Setting: For REFCLK = 27MHz
+  {0x8670, 0x00000001, 0x00000000, 1, 0},
 // HDMI PHY
   {0x8532, 0x00000080, 0x00000000, 1, 0},		//
   {0x8536, 0x00000040, 0x00000000, 1, 0},		//
   {0x853f, 0x0000000a, 0x00000000, 1, 0},		//
 // HDMI System
-  {0x8543, 0x00000032, 0x00000000, 1, 0},		// DDC CONTROL: DDC_ACK output terminal H active, DDC5V_active detect delay 200ms
-  {0x8544, 0x00000010, 0x00000000, 1, 100},		// HPD Control Register: HOTPLUG output ON/OFF control mode = DDC5V detection interlock
   {0x8545, 0x00000031, 0x00000000, 1, 0},		// ANA CONTROL: PLL charge pump setting for Audio = normal, DAC/PLL power ON/OFF setting for Audio = ON
   {0x8546, 0x0000002d, 0x00000000, 1, 0},		// AVMUTE CONTROL: AVM_CTL = 0x2d
-// EDID
-  {0x85c7, 0x00000001, 0x00000000, 1, 0},		// EDID MODE REGISTER: nternal EDID-RAM & DDC2B mode
-  {0x85cb, 0x00000001, 0x00000000, 1, 0},		// EDID Length REGISTER 2: EDID data size stored in RAM (upper address bits) = 0x1 (Size = 0x100 = 256)
 // HDCP Setting
   {0x85d1, 0x00000001, 0x00000000, 1, 0},		//
   {0x8560, 0x00000024, 0x00000000, 1, 0},		// HDCP MODE: HDCP automatic reset when DVI⇔HDMI switched = on, HDCP Line Rekey timing switch = 7clk mode (Data island delay ON), Bcaps[5] KSVINFO_READY(0x8840[5]) auto clear mode = Auto clear using AKSV write
@@ -1450,93 +1362,134 @@ static const struct _reg_size tc358743_read_reg_size[] =
 	{0, 0, 0},
 };
 
-static s32 tc358743_write_reg(struct sensor_data *sensor, u16 reg, u32 val, int len)
+int get_reg_size(u16 reg, int len)
 {
-	int i = 0;
-	u32 data = val;
-	u8 au8Buf[6] = {0};
-	int size = 0;
+	const struct _reg_size *p = tc358743_read_reg_size;
+	int size;
 
-	while (0 != tc358743_read_reg_size[i].startaddr ||
-	      0 != tc358743_read_reg_size[i].endaddr ||
-	      0 != tc358743_read_reg_size[i].size) {
-		if (tc358743_read_reg_size[i].startaddr <= reg
-				&& tc358743_read_reg_size[i].endaddr >= reg) {
-			size = tc358743_read_reg_size[i].size;
-			break;
+#if 0	//later #ifndef DEBUG
+	if (len)
+		return len;
+#endif
+	while (p->size) {
+		if ((p->startaddr <= reg) && (reg <= p->endaddr)) {
+			size = p->size;
+			if (len && (size != len)) {
+				pr_err("%s:reg len error:reg=%x %d instead of %d\n",
+						__func__, reg, len, size);
+				return 0;
+			}
+			if (reg % size) {
+				pr_err("%s:cannot read from the middle of a register, reg(%x) size(%d)\n",
+						__func__, reg, size);
+				return 0;
+			}
+			return size;
 		}
-		i++;
+		p++;
 	}
-	if (!size) {
-		pr_err("%s:write reg error:reg=%x is not found\n",__func__, reg);
-		return -1;
-	}
-	if (size == 3) {
-		size = 2;
-	} else if (size != len) {
-		pr_err("%s:write reg len error:reg=%x %d instead of %d\n",
-					__func__, reg, len, size);
-		return 0;
-	}
-
-	while (len > 0) {
-		i = 0;
-		au8Buf[i++] = (reg >> 8) & 0xff;
-		au8Buf[i++] = reg & 0xff;
-		while (size-- > 0)
-		{
-			au8Buf[i++] = (u8)data;
-			data >>= 8;
-		}
-
-		if (i2c_master_send(sensor->i2c_client, au8Buf, i) < 0) {
-			pr_err("%s:write reg error:reg=%x,val=%x\n",
-				__func__, reg, val);
-			return -1;
-		}
-		len -= (u8)size;
-		reg += (u16)size; 
-	}
-
+	pr_err("%s:reg=%x size is not defined\n",__func__, reg);
 	return 0;
 }
 
-static s32 tc358743_read_reg(struct sensor_data *sensor, u16 reg, u32 *val)
+static s32 tc358743_read_reg(struct sensor_data *sensor, u16 reg, void *rxbuf)
 {
-	u8 au8RegBuf[2] = {0};
-	u32 u32RdVal = 0;
-	int i=0;
-	int size = 0;
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msgs[2];
+	u8 txbuf[2];
+	int ret;
+	int size = get_reg_size(reg, 0);
 
-	while (0 != tc358743_read_reg_size[i].startaddr ||
-	      0 != tc358743_read_reg_size[i].endaddr ||
-	      0 != tc358743_read_reg_size[i].size) {
-		if (tc358743_read_reg_size[i].startaddr <= reg &&
-			tc358743_read_reg_size[i].endaddr >= reg) {
-			size = tc358743_read_reg_size[i].size;
-			break;
-		}
-		i++;
-	}
 	if (!size)
-		return -1;
+		return -EINVAL;
 
-	au8RegBuf[0] = reg >> 8;
-	au8RegBuf[1] = reg & 0xff;
+	txbuf[0] = reg >> 8;
+	txbuf[1] = reg & 0xff;
+	msgs[0].addr = client->addr;
+	msgs[0].flags = 0;
+	msgs[0].len = 2;
+	msgs[0].buf = txbuf;
 
-	if (2 != i2c_master_send(sensor->i2c_client, au8RegBuf, 2)) {
-		pr_err("%s:read reg error:reg=%x\n",
-				__func__, reg);
-		return -1;
+	msgs[1].addr = client->addr;
+	msgs[1].flags = I2C_M_RD;
+	msgs[1].len = size;
+	msgs[1].buf = rxbuf;
+
+	ret = i2c_transfer(client->adapter, msgs, 2);
+	if (ret < 0) {
+		pr_err("%s:reg=%x ret=%d\n", __func__, reg, ret);
+		return ret;
+	}
+//	pr_debug("%s:reg=%x,val=%x\n", __func__, reg, ((char *)rxbuf)[0]);
+	return 0;
+}
+
+static s32 tc358743_read_reg_val(struct sensor_data *sensor, u16 reg)
+{
+	u32 val = 0;
+	tc358743_read_reg(sensor, reg, &val);
+	return val;
+}
+
+static s32 tc358743_write_reg(struct sensor_data *sensor, u16 reg, u32 val, int len)
+{
+	int ret;
+	int i = 0;
+	u32 data = val;
+	u8 au8Buf[6] = {0};
+	int size = get_reg_size(reg, len);
+
+	if (!size)
+		return -EINVAL;
+
+	au8Buf[i++] = reg >> 8;
+	au8Buf[i++] = reg & 0xff;
+	while (size-- > 0) {
+		au8Buf[i++] = (u8)data;
+		data >>= 8;
 	}
 
-	if (size /*of(u32RdVal)*/ != i2c_master_recv(sensor->i2c_client, (char *)&u32RdVal, size /*of(u32RdVal)*/)) {
-		pr_err("%s:read reg error:reg=%x,val=%x\n",
-				__func__, reg, u32RdVal);
-		return -1;
+	ret = i2c_master_send(sensor->i2c_client, au8Buf, i);
+	if (ret < 0) {
+		pr_err("%s:write reg error(%d):reg=%x,val=%x\n",
+				__func__, ret, reg, val);
+		return ret;
 	}
-	*val = u32RdVal;
-	return size;
+	if ((reg < 0x7000) || (reg >= 0x7100)) {
+		pr_debug("%s:reg=%x,val=%x 8543=%02x\n", __func__, reg, val, tc358743_read_reg_val(sensor, 0x8543));
+	}
+	return 0;
+}
+
+static void tc358743_software_reset(struct sensor_data *sensor)
+{
+	int freq = sensor->mclk / 10000;
+	tc358743_write_reg(sensor, 0x7080, 0, 2);
+	tc358743_write_reg(sensor, 0x0002, 0x0f00, 2);
+	msleep(100);
+	tc358743_write_reg(sensor, 0x0002, 0x0000, 2);
+	msleep(1000);
+	tc358743_write_reg(sensor, 0x0004, 0x0004, 2);	/* autoinc */
+	pr_info("%s:freq=%d\n", __func__, freq);
+	tc358743_write_reg(sensor, 0x8540, freq, 1);
+	tc358743_write_reg(sensor, 0x8541, freq >> 8, 1);
+}
+
+static void tc358743_enable_edid(struct sensor_data *sensor)
+{
+	pr_debug("Activate EDID\n");
+	// EDID
+	tc358743_write_reg(sensor, 0x85c7, 0x01, 1);		// EDID MODE REGISTER: nternal EDID-RAM & DDC2B mode
+	tc358743_write_reg(sensor, 0x85ca, 0x00, 1);
+	tc358743_write_reg(sensor, 0x85cb, 0x01, 1);		// 0x85cb:0x85ca - EDID Length = 0x01:00 (Size = 0x100 = 256)
+	tc358743_write_reg(sensor, 0x8543, 0x36, 1);		// DDC CONTROL: DDC_ACK output terminal H active, DDC5V_active detect delay 200ms
+	tc358743_write_reg(sensor, 0x854a, 0x01, 1);		// mark init done
+	pr_debug("%s: c7=%02x ca=%02x cb=%02x 43=%02x 4a=%02x\n", __func__,
+		tc358743_read_reg_val(sensor, 0x85c7),
+		tc358743_read_reg_val(sensor, 0x85ca),
+		tc358743_read_reg_val(sensor, 0x85cb),
+		tc358743_read_reg_val(sensor, 0x8543),
+		tc358743_read_reg_val(sensor, 0x854a));
 }
 
 static int tc358743_write_edid(struct sensor_data *sensor, const u8 *edid, int len)
@@ -1568,15 +1521,12 @@ static int tc358743_write_edid(struct sensor_data *sensor, const u8 *edid, int l
 		len -= (u8)size;
 		reg += (u16)size;
 	}
-	pr_debug("Activate EDID\n");
-	tc358743_write_reg(sensor, 0x85c7, 0x01, 1);
-	tc358743_write_reg(sensor, 0x85ca, 0x00, 1);
-	tc358743_write_reg(sensor, 0x85cb, 0x01, 1);
+	tc358743_enable_edid(sensor);
 	return 0;
 }
 
 static s32 power_control(struct tc_data *td, int on)
- {
+{
 	struct sensor_data *sensor = &td->sensor;
 	int i;
 	int ret = 0;
@@ -1642,7 +1592,6 @@ static int tc358743_init_mode(struct tc_data *td,
 	register u32 Mask = 0;
 	register u32 Val = 0;
 	u8  Length;
-	u32 RegVal = 0;
 	int retval = 0;
 	void *mipi_csi2_info;
 	u32 mipi_reg;
@@ -1695,19 +1644,18 @@ static int tc358743_init_mode(struct tc_data *td,
 			lanes = mipi_csi2_set_lanes(mipi_csi2_info, lanes);
 			pr_debug("Now Using %d lanes\n", lanes);
 
-			/*Only reset MIPI CSI2 HW at sensor initialize*/
-			if (!td->hdmi_mode)	// is this during reset
-				mipi_csi2_reset(mipi_csi2_info);
+			mipi_csi2_reset(mipi_csi2_info);
 
 			
 			pr_debug("%s format: %x\n", __func__, sensor->pix.pixelformat);
-			for (ifmt = 0; ifmt < ARRAY_SIZE(tc358743_formats); ifmt++)
+			for (ifmt = 0; ifmt < ARRAY_SIZE(tc358743_formats); ifmt++) {
 				if (tc358743_mode_info_data[frame_rate][mode].flags == tc358743_formats[ifmt].flags) {
 					sensor->pix.pixelformat = tc358743_formats[ifmt].pixelformat;
 					pr_debug("%s: %s (%x, %x)\n", __func__, tc358743_formats[ifmt].description, sensor->pix.pixelformat, tc358743_formats[ifmt].flags);
 					mipi_csi2_set_datatype(mipi_csi2_info, tc358743_formats[ifmt].flags);
 					break;
 				}
+			}
 			if (ifmt >= ARRAY_SIZE(tc358743_formats)) {
 				pr_err("currently this sensor format (0x%x) can not be supported!\n", sensor->pix.pixelformat);
 				return -1;
@@ -1738,6 +1686,7 @@ static int tc358743_init_mode(struct tc_data *td,
 			mode,
 			sensor->pix.width,
 			sensor->pix.height);
+		tc358743_software_reset(sensor);
 		for (i = 0; i < iModeSettingArySize; ++i) {
 			pModeSetting = tc358743_mode_info_data[frame_rate][mode].init_data_ptr + i;
 
@@ -1747,6 +1696,8 @@ static int tc358743_init_mode(struct tc_data *td,
 			Mask = pModeSetting->u32Mask;
 			Length = pModeSetting->u8Length;
 			if (Mask) {
+				u32 RegVal = 0;
+
 				retval = tc358743_read_reg(sensor, RegAddr, &RegVal);
 				if (retval < 0)
 					break;
@@ -1773,6 +1724,7 @@ static int tc358743_init_mode(struct tc_data *td,
 				}
 			}
 		}
+		tc358743_enable_edid(sensor);
 		if (retval < 0) {
 			pr_err("%s: Fail to write REGS to tc35874!\n", __func__);
 			goto err;
@@ -2077,8 +2029,7 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 		break;
 	}
 
-	if (ret)
-		det_work_enable(td, 1);
+	det_work_enable(td, 1);
 	return ret;
 }
 
@@ -2313,17 +2264,11 @@ static int ioctl_try_fmt_cap(struct v4l2_int_device *s,
 	}
 
 	{
-		u32 u32val;
-		int ret = tc358743_read_reg(sensor, 0x8520,&u32val);
-		pr_debug("SYS_STATUS: 0x%x, ret val: %d \n",u32val,ret);
-		ret = tc358743_read_reg(sensor, 0x8521,&u32val);
-		pr_debug("VI_STATUS0: 0x%x, ret val: %d \n",u32val,ret);
-		ret = tc358743_read_reg(sensor, 0x8522,&u32val);
-		pr_debug("VI_STATUS1: 0x%x, ret val: %d \n",u32val,ret);
-		ret = tc358743_read_reg(sensor, 0x8525,&u32val);
-		pr_debug("VI_STATUS2: 0x%x, ret val: %d \n",u32val,ret);
-		ret = tc358743_read_reg(sensor, 0x8528,&u32val);
-		pr_debug("VI_STATUS3: 0x%x, ret val: %d \n",u32val,ret);
+		pr_debug("SYS_STATUS: 0x%x\n", tc358743_read_reg_val(sensor, 0x8520));
+		pr_debug("VI_STATUS0: 0x%x\n", tc358743_read_reg_val(sensor, 0x8521));
+		pr_debug("VI_STATUS1: 0x%x\n", tc358743_read_reg_val(sensor, 0x8522));
+		pr_debug("VI_STATUS2: 0x%x\n", tc358743_read_reg_val(sensor, 0x8525));
+		pr_debug("VI_STATUS3: 0x%x\n", tc358743_read_reg_val(sensor, 0x8528));
 		pr_debug("%s %d:%d format: %x\n", __func__, pix->width, pix->height, pix->pixelformat);
 	}
 	return 0;
@@ -2884,79 +2829,94 @@ static void det_worker(struct work_struct *work)
 {
 	struct tc_data *td = container_of(work, struct tc_data, det_work.work);
 	struct sensor_data *sensor = &td->sensor;
-	u32 u32val;
-	u16 reg;
 	int ret;
+	u32 u32val;
 
+	if (!td->det_work_enable)
+		return;
 	mutex_lock(&td->access_lock);
-	if (!td->det_work_disable) {
-		reg = 0x8621;
-		ret = tc358743_read_reg(sensor, reg, &u32val);
-		if (ret > 0) {
-			if (td->audio != (((unsigned char)u32val) & 0x0f)) {
+
+	if (!td->det_work_enable) {
+		mutex_unlock(&td->access_lock);
+		return;
+	}
+	u32val = 0;
+	ret = tc358743_read_reg(sensor, 0x8621, &u32val);
+	if (ret >= 0) {
+		if (td->audio != (((unsigned char)u32val) & 0x0f)) {
+			td->audio = ((unsigned char)u32val) & 0x0f;
+			report_netlink(td);
+		}
+	}
+	u32val = 0;
+	ret = tc358743_read_reg(sensor, 0x852f, &u32val);
+	if (ret < 0) {
+		pr_err("%s: Error reading lock\n", __func__);
+		td->det_work_timeout = DET_WORK_TIMEOUT_DEFERRED;
+		goto out;
+	}
+	pr_info("%s: 852f=%x\n", __func__, u32val);
+	if (u32val & TC3587430_HDMI_DETECT) {
+		pr_info("%s: hdmi detect %x\n", __func__, u32val);
+		td->lock = u32val & TC3587430_HDMI_DETECT;
+		u32val = 0;
+		ret = tc358743_read_reg(sensor, 0x8521, &u32val);
+		if (ret < 0) {
+			pr_err("%s: Error reading mode\n", __func__);
+		}
+		pr_info("%s: detect 8521=%x\n", __func__, u32val);
+	} else {
+		if (td->lock) {		// check if it is realy un-plug
+			td->lock = 0;
+			u32val = 0x0;
+			td->hdmi_mode = 0xF0;	// fake mode to detect un-plug if mode was not detected before.
+		}
+		u32val = 0;
+		ret = tc358743_read_reg(sensor, 0x8521, &u32val);
+		if (ret < 0) {
+			pr_err("%s: Error reading mode\n", __func__);
+		}
+		pr_info("%s: 8521=%x\n", __func__, u32val);
+	}
+	if ((unsigned char)td->hdmi_mode != (unsigned char)u32val) {
+		td->det_work_timeout = DET_WORK_TIMEOUT_DEFAULT;
+		td->bounce = MAX_BOUNCE;
+		pr_debug("%s: HDMI RX (%d != %d) mode: %s fps: %d (%d, %d)\n",
+				__func__, (unsigned char)td->hdmi_mode,
+				(unsigned char)u32val,
+				tc358743_mode_list[td->hdmi_mode & 0xf].name,
+				td->fps, td->bounce, td->det_work_timeout);
+		td->hdmi_mode = u32val;
+		sensor->streamcap.capturemode = tc358743_mode_list[td->hdmi_mode & 0xf].mode;
+		td->det_changed = 1;
+	} else if (td->bounce) {
+		td->bounce--;
+		td->det_work_timeout = DET_WORK_TIMEOUT_DEFAULT;
+
+		if (!td->bounce) {
+			if (td->hdmi_mode >= 0xe) {
+				u32val = 0;
+				ret = tc358743_read_reg(sensor, 0x852f, &u32val);
+				if (ret >= 0)
+					td->fps = ((((unsigned char)u32val) & 0x0f) > 0xa)? tc358743_60_fps: tc358743_30_fps;
+			}
+			u32val = 0;
+			ret = tc358743_read_reg(sensor, 0x8621, &u32val);
+			if (ret >= 0) {
 				td->audio = ((unsigned char)u32val) & 0x0f;
 				report_netlink(td);
 			}
-		}
-		reg = 0x852f;
-		ret = tc358743_read_reg(sensor, reg, &u32val);
-		if (ret > 0) {
-			while (1) {
-				if (u32val & TC3587430_HDMI_DETECT) {
-					td->lock = u32val & TC3587430_HDMI_DETECT;
-					reg = 0x8521;
-					ret = tc358743_read_reg(sensor, reg, &u32val);
-					if (ret < 0) {
-						pr_err("%s: Error reading mode\n", __func__);
-					}
-				} else {
-					if (td->lock) {		// check if it is realy un-plug
-						td->lock = 0;
-						u32val = 0x0;
-						td->hdmi_mode = 0xF0;	// fake mode to detect un-plug if mode was not detected before.
-					}
-				}
-				if ((unsigned char)td->hdmi_mode != (unsigned char)u32val) {
-					if (u32val)
-						td->det_work_timeout = DET_WORK_TIMEOUT_DEFERRED;
-					else
-						td->det_work_timeout = DET_WORK_TIMEOUT_DEFAULT;
-					td->bounce = MAX_BOUNCE;
-					pr_debug("%s: HDMI RX (%d != %d) mode: %s fps: %d (%d, %d)\n",
-						__func__, (unsigned char)td->hdmi_mode,
-						(unsigned char)u32val,
-						tc358743_mode_list[td->hdmi_mode & 0xf].name,
-						td->fps, td->bounce, td->det_work_timeout);
-					td->hdmi_mode = u32val;
-					sensor->streamcap.capturemode = tc358743_mode_list[td->hdmi_mode & 0xf].mode;
-					td->det_changed = 1;
-				} else if (td->bounce) {
-					td->bounce--;
-					td->det_work_timeout = DET_WORK_TIMEOUT_DEFAULT;
-				}
-
-				if (1 == td->bounce) {
-					if (td->hdmi_mode >= 0xe) {
-						reg = 0x852f;
-						ret = tc358743_read_reg(sensor, reg, &u32val);
-						if (ret > 0)
-							td->fps = ((((unsigned char)u32val) & 0x0f) > 0xa)? tc358743_60_fps: tc358743_30_fps;
-					}
-					reg = 0x8621;
-					ret = tc358743_read_reg(sensor, reg, &u32val);
-					if (ret > 0) {
-						td->audio = ((unsigned char)u32val) & 0x0f;
-						report_netlink(td);
-					}
-				}
-				break;
+			if (td->hdmi_mode) {
+				td->det_work_timeout = DET_WORK_TIMEOUT_DEFERRED;
+				mutex_unlock(&td->access_lock);
+				return;
 			}
-		} else {
-			pr_err("%s: Error reading lock\n", __func__);
 		}
-	} else {
-		td->det_work_timeout = DET_WORK_TIMEOUT_DEFERRED;
+	} else if (td->hdmi_mode && !td->bounce) {
+		mutex_unlock(&td->access_lock);
+		return;
 	}
+out:
 	mutex_unlock(&td->access_lock);
 	schedule_delayed_work(&td->det_work, msecs_to_jiffies(td->det_work_timeout));
 }
@@ -2967,7 +2927,7 @@ static irqreturn_t tc358743_detect_handler(int irq, void *data)
 	struct sensor_data *sensor = &td->sensor;
 
 	pr_debug("%s: IRQ %d\n", __func__, sensor->i2c_client->irq);
-	schedule_delayed_work(&td->det_work, msecs_to_jiffies(td->det_work_timeout));
+	schedule_delayed_work(&td->det_work, msecs_to_jiffies(10));
 	return IRQ_HANDLED;
 }
 
@@ -2988,24 +2948,29 @@ static ssize_t tc358743_show_regdump(struct device *dev,
 	struct sensor_data *sensor = &td->sensor;
 	int i, len = 0;
 	int retval;
-	u32 u32val;
 
 	if (!td)
 		return len;
 	mutex_lock(&td->access_lock);
 	for (i=0; i<DUMP_LENGTH; ) {
-		retval = tc358743_read_reg(sensor, regoffs+i, &u32val);
+		u32 u32val = 0;
+		int reg = regoffs+i;
+		int size = get_reg_size(reg, 0);
+
+		retval = tc358743_read_reg(sensor, reg, &u32val);
 		if (retval < 0) {
-			u32val =0xff;
+			u32val = 0xff;
 			retval = 1;
 		}
-		while (retval-- > 0) {
-			if (0 == (i & 0xf))
-				len += sprintf(buf+len, "\n%04X:", regoffs+i);
+		if (!(i & 0xf))
+			len += sprintf(buf+len, "\n%04X:", reg);
+		if (size == 1)
 			len += sprintf(buf+len, " %02X", u32val&0xff);
-			u32val >>= 8;
-			i++;
-		}
+		else if (size == 2)
+			len += sprintf(buf+len, " %04X", u32val&0xffff);
+		else
+			len += sprintf(buf+len, " %08X", u32val);
+		i += size;
 	}
 	mutex_unlock(&td->access_lock);
 	len += sprintf(buf+len, "\n");
@@ -3103,12 +3068,12 @@ static DEVICE_ATTR(audio, S_IRUGO, tc358743_show_audio, NULL);
 static int tc358743_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
-	struct pwm_device *pwm;
 	struct device *dev = &client->dev;
 	int retval;
 	struct regmap *gpr;
 	struct tc_data *td;
 	struct sensor_data *sensor;
+	u8 chip_id_high;
 	u32 u32val;
 
 	td = kzalloc(sizeof(*td), GFP_KERNEL);
@@ -3210,23 +3175,18 @@ static int tc358743_probe(struct i2c_client *client,
 	sensor->pix.width,
 	sensor->pix.height);
 
-	pwm = pwm_get(dev, NULL);
-	if (!IS_ERR(pwm)) {
-		dev_info(dev, "found pwm%d, period=%d\n", pwm->pwm, pwm->period);
-		pwm_config(pwm, pwm->period >> 1, pwm->period);
-		pwm_enable(pwm);
-	}
-
 	tc_regulator_init(td, dev);
 	power_control(td, 1);
 	tc_reset(td);
 
+	u32val = 0;
 	retval = tc358743_read_reg(sensor, TC358743_CHIP_ID_HIGH_BYTE, &u32val);
 	if (retval < 0) {
 		pr_err("%s:cannot find camera\n", __func__);
 		retval = -ENODEV;
 		goto err4;
 	}
+	chip_id_high = (u8)u32val;
 
 	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
 	if (!IS_ERR(gpr)) {
@@ -3317,7 +3277,7 @@ static int tc358743_probe(struct i2c_client *client,
 				sensor->i2c_client->irq);
 	}
 
-	schedule_delayed_work(&(td->det_work), msecs_to_jiffies(td->det_work_timeout));
+	schedule_delayed_work(&td->det_work, msecs_to_jiffies(td->det_work_timeout));
 #endif
 	retval = tc358743_reset(td);
 	if (retval)
