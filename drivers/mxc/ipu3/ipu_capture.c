@@ -151,19 +151,7 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
  */
 		ipu_csi_write(ipu, csi, (6 << 3) | (4 << 16), CSI_CCIR_CODE_1);
 	} else if (cfg_param.clk_mode == IPU_CSI_CLK_MODE_CCIR656_INTERLACED) {
-		if (width == 720 && height == 625) {
-			/* PAL case */
-			/*
-			 * Field0BlankEnd = 0x6, Field0BlankStart = 0x2,
-			 * Field0ActiveEnd = 0x4, Field0ActiveStart = 0
-			 */
-			ipu_csi_write(ipu, csi, 0x40596, CSI_CCIR_CODE_1);
-			/*
-			 * Field1BlankEnd = 0x7, Field1BlankStart = 0x3,
-			 * Field1ActiveEnd = 0x5, Field1ActiveStart = 0x1
-			 */
-			ipu_csi_write(ipu, csi, 0xD07DF, CSI_CCIR_CODE_2);
-		} else if (width == 720 && height == 525) {
+		if (width == 720 && height <= 525) {
 			/* NTSC case */
 			/*
 			 * Field0BlankEnd = 0x7, Field0BlankStart = 0x3,
@@ -175,6 +163,18 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 			 * Field1ActiveEnd = 0x4, Field1ActiveStart = 0
 			 */
 			ipu_csi_write(ipu, csi, 0x40596, CSI_CCIR_CODE_2);
+		} else if (width == 720 && height <= 625) {
+			/* PAL case */
+			/*
+			 * Field0BlankEnd = 0x6, Field0BlankStart = 0x2,
+			 * Field0ActiveEnd = 0x4, Field0ActiveStart = 0
+			 */
+			ipu_csi_write(ipu, csi, 0x40596, CSI_CCIR_CODE_1);
+			/*
+			 * Field1BlankEnd = 0x7, Field1BlankStart = 0x3,
+			 * Field1ActiveEnd = 0x5, Field1ActiveStart = 0x1
+			 */
+			ipu_csi_write(ipu, csi, 0xD07DF, CSI_CCIR_CODE_2);
 		} else {
 			dev_err(ipu->dev, "Unsupported CCIR656 interlaced "
 					"video mode\n");
