@@ -250,7 +250,7 @@ static const struct spi_imx_master ecspi1_data __initconst = {
 };
 
 static int ecspi3_cs[] = {
-	GP_ECSPI3_CS0,
+	GP_ECSPI3_GS2971_CS,
 };
 
 static const struct spi_imx_master ecspi3_data __initconst = {
@@ -297,10 +297,16 @@ static struct spi_board_info spi_nor_device[] __initdata = {
 #endif
 };
 
+static struct fsl_mxc_camera_platform_data gs2971_data;
+
 static void gs2971_io_init(void)
 {
 
 	pr_info("%s\n", __func__);
+	if (gs2971_data.cea861)
+		IOMUX_SETUP(gs2971_video_pads_cea861);
+	else
+		IOMUX_SETUP(gs2971_video_pads_no_cea861);
 	gpio_set_value(GP_GS2971_RESET, 0);
 
 
@@ -334,6 +340,7 @@ static struct fsl_mxc_camera_platform_data gs2971_data = {
 	.io_init = gs2971_io_init,
 	.ipu = 1,
 	.csi = 1,
+	.cea861 = 0,
 };
 
 static struct spi_board_info spi_gs2971_device[] __initdata = {
