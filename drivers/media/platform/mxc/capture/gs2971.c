@@ -55,11 +55,7 @@ MODULE_PARM_DESC(debug, "Debug level (0-2)");
 static struct gs2971_spidata *spidata;
 static struct fsl_mxc_camera_platform_data *camera_plat;
 
-#ifdef USE_CEA861		//use hysnc/vsync/de not h:v:f eav mode
-#define YUV_FORMAT	V4L2_PIX_FMT_UYVY
-#else
-#define YUV_FORMAT	V4L2_PIX_FMT_YUYV
-#endif
+#define YUV_FORMAT(gs) ((gs->cea861) ? V4L2_PIX_FMT_UYVY : V4L2_PIX_FMT_YUYV)
 
 /*! @brief This mutex is used to provide mutual exclusion.
  *
@@ -250,7 +246,6 @@ int get_std(struct v4l2_int_device *s, v4l2_std_id * id)
 {
 	struct gs2971_priv *gs = s->priv;
 	struct sensor_data *sensor = &gs->sensor;
-	struct gs2971_params *params = &gs->params;
 	struct spi_device *spi = NULL;
 	u16 std_lock_value;
 	u16 sync_lock_value;
@@ -269,8 +264,8 @@ int get_std(struct v4l2_int_device *s, v4l2_std_id * id)
 
 	pr_debug("-> In function %s\n", __FUNCTION__);
 
-	params->mode = gs2971_mode_not_supported;
-	params->framerate = gs2971_default_fps;
+	gs->mode = gs2971_mode_not_supported;
+	gs->framerate = gs2971_default_fps;
 
 	spi = gs2971_get_spi(spidata);
 	if (!spi)
@@ -348,10 +343,10 @@ int get_std(struct v4l2_int_device *s, v4l2_std_id * id)
 		return -EBUSY;
 	}
 
-#ifdef USE_CEA861		//use hysnc/vsync/de not h:v:f eav mode
-	sensor->pix.swidth = words_per_line_value;
-	sensor->pix.sheight = lines_per_frame_value;
-#endif
+	if (gs->cea861) {
+		sensor->pix.swidth = words_per_line_value - 1;
+		sensor->pix.sheight = lines_per_frame_value;
+	}
 	if (interlaced_flag && lines_per_frame_value == 525) {
 		pr_debug("--> V4L2_STD_525_60\n");
 		*id = V4L2_STD_525_60;
@@ -360,44 +355,43 @@ int get_std(struct v4l2_int_device *s, v4l2_std_id * id)
 		*id = V4L2_STD_625_50;
 	} else if (interlaced_flag && lines_per_frame_value == 525) {
 		pr_debug("--> V4L2_STD_525P_60\n");
-		*id = YUV_FORMAT;
+		*id = YUV_FORMAT(gs);
 	} else if (interlaced_flag && lines_per_frame_value == 625) {
 		pr_debug("--> V4L2_STD_625P_50\n");
-		*id = YUV_FORMAT;
+		*id = YUV_FORMAT(gs);
 	} else if (!interlaced_flag && 749 <= lines_per_frame_value
 		   && lines_per_frame_value <= 750) {
-#ifdef USE_CEA861		//use hysnc/vsync/de not h:v:f eav mode
-		sensor->pix.swidth = words_per_line_value - 1;
-		sensor->pix.left = 220;
-		sensor->pix.top = 25;
-#endif
+		if (gs->cea861) {
+			sensor->pix.left = 220;
+			sensor->pix.top = 25;
+		}
 		sensor->pix.width = 1280;
 		sensor->pix.height = 720;
 		if (words_per_line_value > 1650) {
 			pr_debug("--> V4L2_STD_720P_50\n");
-			*id = YUV_FORMAT;
+			*id = YUV_FORMAT(gs);
 		} else {
 			pr_debug("--> V4L2_STD_720P_60\n");
-			params->mode = gs2971_mode_720p;
-			params->framerate = gs2971_60_fps;
-			*id = YUV_FORMAT;
+			gs->mode = gs2971_mode_720p;
+			gs->framerate = gs2971_60_fps;
+			*id = YUV_FORMAT(gs);
 		}
 	} else if (!interlaced_flag && 1124 <= lines_per_frame_value
 		   && lines_per_frame_value <= 1125) {
 		sensor->pix.width = 1920;
 		sensor->pix.height = 1080;
-		params->mode = gs2971_mode_1080p;
-		params->framerate = gs2971_30_fps;	// Currently only 1080p30 is supported
+		gs->mode = gs2971_mode_1080p;
+		gs->framerate = gs2971_30_fps;	// Currently only 1080p30 is supported
 
 		if (words_per_line_value >= 2200 + 550) {
 			pr_debug("--> V4L2_STD_1080P_24\n");
-			*id = YUV_FORMAT;
+			*id = YUV_FORMAT(gs);
 		} else if (words_per_line_value >= 2200 + 440) {
 			pr_debug("--> V4L2_STD_1080P_25\n");
-			*id = YUV_FORMAT;
+			*id = YUV_FORMAT(gs);
 		} else {
 			pr_debug("--> V4L2_STD_1080P_60\n");
-			*id = YUV_FORMAT;
+			*id = YUV_FORMAT(gs);
 		}
 	} else if (interlaced_flag && 1124 <= lines_per_frame_value
 		   && lines_per_frame_value <= 1125) {
@@ -406,10 +400,10 @@ int get_std(struct v4l2_int_device *s, v4l2_std_id * id)
 		sensor->pix.height = 1080;
 		if (words_per_line_value >= 2200 + 440) {
 			pr_debug("--> V4L2_STD_1080I_50\n");
-			*id = YUV_FORMAT;
+			*id = YUV_FORMAT(gs);
 		} else {
 			pr_debug("--> V4L2_STD_1080I_60\n");
-			*id = YUV_FORMAT;
+			*id = YUV_FORMAT(gs);
 		}
 	} else {
 		dev_err(&spi->dev,
@@ -603,16 +597,15 @@ static int gs2971_init_ancillary(struct spi_device *spi)
 /* gs2971_initialize :
  * This function will set the video format standard
  */
-static int gs2971_initialize(struct spi_device *spi)
+static int gs2971_initialize(struct gs2971_priv *gs, struct spi_device *spi)
 {
 	int status = 0;
 	u16 value;
 
-#ifdef USE_CEA861		//use hysnc/vsync/de not h:v:f eav mode
-	u16 cfg = GS_VCFG1_861_PIN_DISABLE_MASK | GS_VCFG1_TIMING_861_MASK;
-#else
 	u16 cfg = GS_VCFG1_861_PIN_DISABLE_MASK;
-#endif
+
+	if (gs->cea861)
+		cfg |= GS_VCFG1_TIMING_861_MASK;
 
 	pr_debug("-> In function %s\n", __FUNCTION__);
 
@@ -710,25 +703,26 @@ static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 	/* Initialize structure to 0s then set any non-0 values. */
 	memset(p, 0, sizeof(*p));
 	p->u.bt656.clock_curr = sensor->mclk;
-#ifdef USE_CEA861		//use hysnc/vsync/de not h:v:f eav mode
-	p->if_type = V4L2_IF_TYPE_BT656;	/* This is the only possibility. */
-	p->u.bt656.mode = V4L2_IF_TYPE_BT656_MODE_NOBT_10BIT;
-	p->u.bt656.bt_sync_correct = 1;
-//      p->u.bt656.nobt_vs_inv = 1;
-	p->u.bt656.nobt_hs_inv = 1;
-#else
-	/*
-	 * p->if_type = V4L2_IF_TYPE_BT656_PROGRESSIVE;
-	 * BT.656 - 20/10bit pin low doesn't work because then EAV of DS1/2 are also interleaved
-	 * and imx only recognizes 4 word EAV/SAV codes, not 8
-	 */
-	p->if_type = V4L2_IF_TYPE_BT1120_PROGRESSIVE_SDR;
-	p->u.bt656.mode = V4L2_IF_TYPE_BT656_MODE_BT_10BIT;
-	p->u.bt656.bt_sync_correct = 0;	// Use embedded sync
-	p->u.bt656.nobt_vs_inv = 1;
-//      p->u.bt656.nobt_hs_inv = 1;
-#endif
-	p->u.bt656.latch_clk_inv = 1;
+	if (gs->cea861) {
+		p->if_type = V4L2_IF_TYPE_BT656;	/* This is the only possibility. */
+		p->u.bt656.mode = V4L2_IF_TYPE_BT656_MODE_NOBT_10BIT;
+		p->u.bt656.bt_sync_correct = 1;
+//      	p->u.bt656.nobt_vs_inv = 1;
+		p->u.bt656.nobt_hs_inv = 1;
+	} else {
+		/*
+		 * p->if_type = V4L2_IF_TYPE_BT656_PROGRESSIVE;
+		 * BT.656 - 20/10bit pin low doesn't work because then EAV of
+		 * DS1/2 are also interleaved and imx only recognizes 4 word
+		 * EAV/SAV codes, not 8
+		 */
+		p->if_type = V4L2_IF_TYPE_BT1120_PROGRESSIVE_SDR;
+		p->u.bt656.mode = V4L2_IF_TYPE_BT656_MODE_BT_10BIT;
+		p->u.bt656.bt_sync_correct = 0;	// Use embedded sync
+		p->u.bt656.nobt_vs_inv = 1;
+//		p->u.bt656.nobt_hs_inv = 1;
+	}
+	p->u.bt656.latch_clk_inv = 0;	/* pixel clk polarity */
 	p->u.bt656.clock_min = 6000000;
 	p->u.bt656.clock_max = 180000000;
 	return 0;
@@ -805,7 +799,6 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 {
 	struct gs2971_priv *gs = s->priv;
 	struct sensor_data *sensor = &gs->sensor;
-	struct gs2971_params *params = &gs->params;
 	struct v4l2_fract *timeperframe = &a->parm.capture.timeperframe;
 	int ret = 0;
 
@@ -826,10 +819,10 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 			pr_warning("   Setting framerate to default (%dfps)!\n",
 				   gs2971_framerates[gs2971_default_fps]);
 		} else if (timeperframe->denominator !=
-			   gs2971_framerates[params->framerate]) {
+			   gs2971_framerates[gs->framerate]) {
 			pr_warning
 			    ("   Input framerate is %dfps and you are trying to set %dfps!\n",
-			     gs2971_framerates[params->framerate],
+			     gs2971_framerates[gs->framerate],
 			     timeperframe->denominator);
 		}
 		sensor->streamcap.timeperframe = *timeperframe;
@@ -1036,16 +1029,15 @@ static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 {
 	struct gs2971_priv *gs = s->priv;
 	struct sensor_data *sensor = &gs->sensor;
-	struct gs2971_params *params = &gs->params;
 
 	pr_debug("-> In function %s\n", __FUNCTION__);
 
-	if (fsize->index > gs2971_mode_MAX || params->mode > gs2971_mode_MAX)
+	if (fsize->index > gs2971_mode_MAX || gs->mode > gs2971_mode_MAX)
 		return -EINVAL;
 
 	fsize->pixel_format = sensor->pix.pixelformat;
-	fsize->discrete.width = gs2971_res[params->mode].width;
-	fsize->discrete.height = gs2971_res[params->mode].height;
+	fsize->discrete.width = gs2971_res[gs->mode].width;
+	fsize->discrete.height = gs2971_res[gs->mode].height;
 	return 0;
 }
 
@@ -1195,8 +1187,10 @@ static int gs2971_probe(struct spi_device *spi)
 	gs->sensor.csi = gs2971_plat->csi;
 	gs->sensor.ipu = gs2971_plat->ipu;
 	gs->sensor.io_init = gs2971_plat->io_init;
+	gs->cea861 = gs2971_plat->cea861;
+	pr_info("%s:cea861=%d\n", __func__, gs->cea861);
 
-	gs->sensor.pix.pixelformat = YUV_FORMAT;
+	gs->sensor.pix.pixelformat = YUV_FORMAT(gs);
 	gs->sensor.pix.width = gs2971_res[gs2971_mode_default].width;
 	gs->sensor.pix.height = gs2971_res[gs2971_mode_default].height;
 	gs->sensor.streamcap.capability = V4L2_MODE_HIGHQUALITY |
@@ -1214,7 +1208,7 @@ static int gs2971_probe(struct spi_device *spi)
 	gs2971_int_device.priv = gs;
 
 	if (!status)
-		status = gs2971_initialize(spi);
+		status = gs2971_initialize(gs, spi);
 	if (status)
 		goto exit;
 	power_control(&gs->sensor, 0);
