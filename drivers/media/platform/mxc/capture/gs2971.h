@@ -8,8 +8,6 @@
 #include <linux/videodev2.h>
 #endif				/* __KERNEL__ */
 
-//#define USE_CEA861    //use hysnc/vsync/de not h:v:f eav mode
-
 typedef enum {
 	GS2971_VID_STD_1920_1080_60FPS = 0x2B,
 	GS2971_VID_STD_1920_1080_50FPS = 0x2D,
@@ -294,22 +292,13 @@ struct gs2971_spidata {
 	u16 rxbuf[GS2971_SPI_TRANSFER_MAX + 1];
 };
 
-struct gs2971_params {
+struct gs2971_priv {
+	struct sensor_data sensor;
 	v4l2_std_id std;
 	int mode;
 	int framerate;
 	struct v4l2_format fmt;
-};
-
-struct gs2971_channel {
-	struct gs2971_spidata *spidata;
-	struct gs2971_params params;
-	u16 anc_buf[GS2971_ANC_BANK_SIZE];
-};
-
-struct gs2971_priv {
-	struct sensor_data sensor;
-	struct gs2971_params params;
+	int cea861;	/* use hysnc/vsync/de not h:v:f eav mode */
 };
 
 #endif
