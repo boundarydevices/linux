@@ -72,6 +72,7 @@ struct adv7180_priv {
 	struct regulator *regulators[4];
 	int pwn_gpio;
 	int cvbs;
+	int cea861;
 };
 
 
@@ -317,8 +318,14 @@ static void adv7180_get_std(struct adv7180_priv *adv, v4l2_std_id *std)
 	if (*std != adv->std_id) {
 		video_idx = idx;
 		adv->std_id = *std;
-		adv->sen.pix.width = video_fmts[video_idx].raw_width;
-		adv->sen.pix.height = video_fmts[video_idx].raw_height;
+		adv->sen.pix.width = video_fmts[video_idx].active_width;
+		adv->sen.pix.height = video_fmts[video_idx].active_height;
+		if (adv->cea861) {
+			adv->sen.spix.swidth = video_fmts[video_idx].raw_width - 1;
+			adv->sen.spix.sheight = video_fmts[video_idx].raw_height;
+			adv->sen.spix.left = 0;
+			adv->sen.spix.top = 0;
+		}
 	}
 }
 
@@ -353,11 +360,17 @@ static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 
 	/* Initialize structure to 0s then set any non-0 values. */
 	memset(p, 0, sizeof(*p));
-	p->if_type = V4L2_IF_TYPE_BT656; /* This is the only possibility. */
-	p->u.bt656.mode = V4L2_IF_TYPE_BT656_MODE_NOBT_8BIT;
-	p->u.bt656.nobt_hs_inv = 1;
-	p->u.bt656.bt_sync_correct = 1;
-
+	p->u.bt656.clock_curr = adv->sen.mclk;
+	if (adv->cea861) {
+		p->if_type = V4L2_IF_TYPE_BT656;
+		p->u.bt656.mode = V4L2_IF_TYPE_BT656_MODE_NOBT_8BIT;
+		p->u.bt656.nobt_hs_inv = 1;
+		p->u.bt656.bt_sync_correct = 1;
+	} else {
+		p->if_type = V4L2_IF_TYPE_BT656_INTERLACED;
+		p->u.bt656.mode = V4L2_IF_TYPE_BT656_MODE_BT_8BIT;
+		p->u.bt656.nobt_vs_inv = 1;
+	}
 	/* ADV7180 has a dedicated clock so no clock settings needed. */
 
 	return 0;
@@ -1228,8 +1241,14 @@ static int adv7180_probe(struct i2c_client *client,
 	adv->sen.streamcap.timeperframe.numerator = 1;
 	adv->std_id = V4L2_STD_ALL;
 	video_idx = ADV7180_NOT_LOCKED;
-	adv->sen.pix.width = video_fmts[video_idx].raw_width;
-	adv->sen.pix.height = video_fmts[video_idx].raw_height;
+	adv->sen.pix.width = video_fmts[video_idx].active_width;
+	adv->sen.pix.height = video_fmts[video_idx].active_height;
+	if (adv->cea861) {
+		adv->sen.spix.swidth = video_fmts[video_idx].raw_width - 1;
+		adv->sen.spix.sheight = video_fmts[video_idx].raw_height;
+		adv->sen.spix.left = 0;
+		adv->sen.spix.top = 0;
+	}
 	adv->sen.pix.pixelformat = V4L2_PIX_FMT_UYVY;  /* YUV422 */
 	adv->sen.pix.priv = 1;  /* 1 is used to indicate TV in */
 	adv->sen.on = true;
