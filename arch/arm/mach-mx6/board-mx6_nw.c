@@ -213,7 +213,7 @@ static const struct imxuart_platform_data mx6_arm2_uart2_data __initconst = {
 static int bt_enable(int enable)
 {
 	int do_enable= (0 != enable);
-	gpio_set_value(WL_BT_REG_EN,do_enable);
+	gpio_set_value(WL_BT_RESET,do_enable);
 	msleep(10*(10*do_enable)); 	/* 10ms for disable, 100 for enable */
 	pr_debug("%s: %d\n",__func__,enable);
 	return 0;
