@@ -3447,7 +3447,7 @@ static int _clk_can_root_set_rate(struct clk *clk, unsigned long rate)
 	if (((parent_rate / div) != rate) || (div > 64))
 		return -EINVAL;
 
-	reg = __raw_readl(MXC_CCM_CSCMR2) & MXC_CCM_CSCMR2_CAN_CLK_PODF_MASK;
+	reg = __raw_readl(MXC_CCM_CSCMR2) & ~MXC_CCM_CSCMR2_CAN_CLK_PODF_MASK;
 	reg |= ((div - 1) << MXC_CCM_CSCMR2_CAN_CLK_PODF_OFFSET);
 
 	__raw_writel(reg, MXC_CCM_CSCMR2);
