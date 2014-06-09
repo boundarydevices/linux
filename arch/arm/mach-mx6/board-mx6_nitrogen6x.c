@@ -150,7 +150,7 @@
 #if !defined(MIPI_CAMERA)
 #define OV5640_MIPI_IPU -1
 #define OV5640_MIPI_CSI -1
-#elif !defined(CSI0_CAMERA)
+#elif !defined(CSI0_CAMERA) && !defined(TC358743_MIPI_CAMERA)
 #define OV5640_MIPI_IPU 0
 #define OV5640_MIPI_CSI 0
 #elif !defined(CSI1_CAMERA)
@@ -1229,21 +1229,30 @@ static struct imx_ipuv3_platform_data ipu_data[] = {
 };
 
 static struct fsl_mxc_capture_platform_data capture_data[] = {
-#if defined(CSI0_CAMERA) || defined(TC358743_MIPI_CAMERA) || ((OV5640_MIPI_IPU == 0) && (OV5640_MIPI_CSI == 0))
+#ifdef CSI0_CAMERA
 	{
 		.ipu = 0,
 		.csi = 0,
 		.mclk_source = 0,
 	},
 #endif
-#if (OV5640_MIPI_IPU != OV5640_MIPI_CSI)
+#ifdef TC358743_MIPI_CAMERA
 	{
-		.ipu = OV5640_MIPI_IPU,
-		.csi = OV5640_MIPI_CSI,
+		.ipu = 0,
+		.csi = 0,
+		.is_mipi = 1,
 		.mclk_source = 0,
 	},
 #endif
-#if defined(CSI1_CAMERA) || ((OV5640_MIPI_IPU == 1) && (OV5640_MIPI_CSI == 1)) || \
+#ifdef MIPI_CAMERA
+	{
+		.ipu = OV5640_MIPI_IPU,
+		.csi = OV5640_MIPI_CSI,
+		.is_mipi = 1,
+		.mclk_source = 0,
+	},
+#endif
+#if defined(CSI1_CAMERA) || \
 	defined(CONFIG_MXC_TVIN_ADV7180) || defined(CONFIG_MXC_TVIN_ADV7180_MODULE) || \
 	defined(CONFIG_MXC_VIDEO_GS2971) || defined(CONFIG_MXC_VIDEO_GS2971_MODULE)
 	{
@@ -1543,15 +1552,6 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 }
 
 static struct mipi_csi2_platform_data mipi_csi2_pdata = {
-#ifdef  TC358743_MIPI_CAMERA
-	.ipu_id	 = 0,
-	.csi_id = 0,
-#else
-	.ipu_id	 = OV5640_MIPI_IPU,
-	.csi_id = OV5640_MIPI_CSI,
-#endif
-	.v_channel = 0,
-	.lanes = 2,
 	.dphy_clk = "mipi_pllref_clk",
 	.pixel_clk = "emi_clk",
 	.cfg_clk = "hdmi_isfr_clk",
@@ -1711,7 +1711,7 @@ static void __init board_init(void)
 	for (i = 0; i < ARRAY_SIZE(capture_data); i++) {
 		if (!cpu_is_mx6q())
 			capture_data[i].ipu = 0;
-		j = (capture_data[i].ipu << 1) | capture_data[i].csi;
+		j = (capture_data[i].is_mipi << 2) | (capture_data[i].ipu << 1) | capture_data[i].csi;
 		if (!(mask & (1 << j))) {
 			mask |= (1 << j);
 			imx6q_add_v4l2_capture(i, &capture_data[i]);
