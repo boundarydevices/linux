@@ -577,6 +577,7 @@ static struct fsl_mxc_capture_platform_data capture_data[] = {
 	{
 		.ipu = 0,
 		.csi = 0,
+		.is_mipi = 1,
 		.mclk_source = 0,
 	},
 };
@@ -885,8 +886,6 @@ static void __init board_init(void)
 	imx6q_add_v4l2_output(0);
 
 	for (i = 0; i < ARRAY_SIZE(capture_data); i++) {
-		if (!cpu_is_mx6q())
-			capture_data[i].ipu = 0;
 		imx6q_add_v4l2_capture(i, &capture_data[i]);
 	}
 
