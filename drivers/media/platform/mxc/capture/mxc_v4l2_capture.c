@@ -1359,6 +1359,8 @@ void setup_ifparm(cam_data *cam, int init_defrect)
 		(ifparm.u.bt656.mode == V4L2_IF_TYPE_BT656_MODE_BT_10BIT) ?
 		IPU_CSI_DATA_WIDTH_10 : IPU_CSI_DATA_WIDTH_8;
 
+	csi_param.pack_tight = (csi_param.data_width == IPU_CSI_DATA_WIDTH_10) ? 1 : 0;
+
 	csi_param.Vsync_pol = ifparm.u.bt656.nobt_vs_inv;
 	csi_param.Hsync_pol = ifparm.u.bt656.nobt_hs_inv;
 	csi_param.ext_vsync = ifparm.u.bt656.bt_sync_correct;
