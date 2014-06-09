@@ -691,8 +691,9 @@ static struct imx_ipuv3_platform_data plat_ipu[] = {
 };
 
 static struct fsl_mxc_capture_platform_data plat_capture = {
-	.csi = 1,
+	.csi = 0,
 	.ipu = 0,
+	.is_mipi = 1,
 	.mclk_source = 0,
 };
 
@@ -1010,10 +1011,6 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 }
 
 static struct mipi_csi2_platform_data plat_mipi_csi2 = {
-	.ipu_id	 = 0,
-	.csi_id = 0,
-	.v_channel = 0,
-	.lanes = 2,
 	.dphy_clk = "mipi_pllref_clk",
 	.pixel_clk = "emi_clk",
 	.cfg_clk = "hdmi_isfr_clk",
@@ -1129,7 +1126,7 @@ static void __init board_init(void)
 	imx6q_add_lcdif(&plat_lcdif);
 	imx6q_add_ldb(&plat_ldb);
 	imx6q_add_v4l2_output(0);
-	imx6q_add_v4l2_capture(1, &plat_capture);
+	imx6q_add_v4l2_capture(0, &plat_capture);
 	imx6q_add_mipi_csi2(&plat_mipi_csi2);
 	imx6q_add_imx_snvs_rtc();
 
