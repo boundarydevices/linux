@@ -764,8 +764,14 @@ static void adv7180_pwdn(int powerdown)
 	gpio_set_value(GP_CSI1_PWN, powerdown ? 0 : 1);
 }
 
+static struct fsl_mxc_tvin_platform_data adv7180_data;
+
 static void adv7180_io_init(void)
 {
+	if (adv7180_data.cea861)
+		IOMUX_SETUP(adv7180_video_pads_cea861);
+	else
+		IOMUX_SETUP(adv7180_video_pads_no_cea861);
 	camera_reset(GP_CSI1_PWN, 0, GP_CSI1_RST, -1);
 	gpio_set_value(GP_CSI1_PWN, 1);
 	msleep(2);
@@ -783,6 +789,7 @@ static struct fsl_mxc_tvin_platform_data adv7180_data = {
 	.cvbs = true,
 	.ipu = 1,
 	.csi = 1,
+	.cea861 = 0,
 };
 
 #if defined(CONFIG_MXC_VIDEO_GS2971) || defined(CONFIG_MXC_VIDEO_GS2971_MODULE)
@@ -791,11 +798,15 @@ static struct fsl_mxc_tvin_platform_data adv7180_data = {
  * EIM_LBA__GPIO_2_27 - power down
  * DISP0_DAT9__GPIO_4_30 - Reset
  */
+static struct fsl_mxc_camera_platform_data gs2971_data;
 
 static void gs2971_io_init(void)
 {
 
 	IOMUX_SETUP(gs2971_video_pads);
+
+	if (gs2971_data.cea861)
+		IOMUX_SETUP(gs2971_video_pads_cea861);
 
 	pr_info("%s\n", __func__);
 
@@ -842,6 +853,7 @@ static struct fsl_mxc_camera_platform_data gs2971_data = {
 	//.cvbs = true,
 	.ipu = 1,
 	.csi = 1,
+	.cea861 = 0,
 };
 #endif
 

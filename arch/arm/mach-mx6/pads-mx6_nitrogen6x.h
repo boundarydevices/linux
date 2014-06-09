@@ -3,7 +3,6 @@
 #undef MX6
 
 //#define ONE_WIRE
-//#define USE_CEA861	//use hysnc/vsync/de not h:v:f eav mode
 
 #ifdef FOR_DL_SOLO
 #define MX6(a) MX6DL_##a
@@ -14,6 +13,15 @@
 #define MX6PAD(a) MX6Q_PAD_##a
 #define MX6NAME(a) mx6q_##a
 #endif
+
+#define PADCFG_INPUT		(PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+#define PADCFG_INPUT_L		(PAD_CTL_SPEED_LOW | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+#define PADCFG_INPUT_DN		(PADCFG_INPUT | PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN)
+#define PADCFG_INPUT_UP		(PADCFG_INPUT | PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP)
+#define PADCFG_INPUT_L_UP	(PADCFG_INPUT_L | PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP)
+
+#define AUD_PAD_CTRL	(PADCFG_INPUT_L_UP | PAD_CTL_SRE_FAST)
+#define CSI_PAD_CTRL	(PADCFG_INPUT_UP | PAD_CTL_SRE_FAST)
 
 #define MX6Q_USDHC_PAD_CTRL_22KPU_40OHM_50MHZ	(PAD_CTL_PKE | PAD_CTL_PUE |	\
 		PAD_CTL_PUS_22K_UP  | PAD_CTL_SPEED_LOW |		\
@@ -433,19 +441,9 @@ static iomux_v3_cfg_t MX6NAME(ecspi3_pads)[] = {
 
 static iomux_v3_cfg_t MX6NAME(gs2971_video_pads)[] = {
 	/* GS2971  J15 configuration*/
-#ifdef USE_CEA861
-#ifdef FOR_DL_SOLO
-	MX6PAD(EIM_DA11__IPU1_CSI1_HSYNC),	/* GPIO3[11] */
-	MX6PAD(EIM_DA12__IPU1_CSI1_VSYNC),	/* GPIO3[12] */
-#else
-	MX6PAD(EIM_DA11__IPU2_CSI1_HSYNC),	/* GPIO3[11] */
-	MX6PAD(EIM_DA12__IPU2_CSI1_VSYNC),	/* GPIO3[12] */
-#endif
-
-#else
+	/* sav/eav codes are used, not hsync/vsync */
 	NEW_PAD_CTRL(MX6PAD(EIM_DA11__GPIO_3_11), WEAK_PULLUP),	/* pin A5 stat0 */
 	NEW_PAD_CTRL(MX6PAD(EIM_DA12__GPIO_3_12), WEAK_PULLUP),	/* pin A6 stat1 */
-#endif
 	NEW_PAD_CTRL(MX6PAD(EIM_DA10__GPIO_3_10), WEAK_PULLUP),	/* don't use data_en signal, pin B5 stat2 */
 
 	MX6PAD(DISP0_DAT7__GPIO_4_28), /* GS2971  TIM_861*/
@@ -465,7 +463,39 @@ static iomux_v3_cfg_t MX6NAME(gs2971_video_pads)[] = {
 //	MX6PAD(DISP0_DAT23__AUDMUX_AUD4_RXD),
 	0
 };
+
+static iomux_v3_cfg_t MX6NAME(gs2971_video_pads_cea861)[] = {
+	/* hsync/vsync are used, not sav/eav codes */
+#ifdef FOR_DL_SOLO
+	NEW_PAD_CTRL(MX6PAD(EIM_DA11__IPU1_CSI1_HSYNC), CSI_PAD_CTRL),	/* GPIO3[11] - pin A5 stat0 */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA12__IPU1_CSI1_VSYNC), CSI_PAD_CTRL),	/* GPIO3[12] - pin A6 stat1 */
+#else
+	NEW_PAD_CTRL(MX6PAD(EIM_DA11__IPU2_CSI1_HSYNC), CSI_PAD_CTRL),	/* GPIO3[11] - pin A5 stat0 */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA12__IPU2_CSI1_VSYNC), CSI_PAD_CTRL),	/* GPIO3[12] - pin A6 stat1 */
 #endif
+};
+#endif
+
+static iomux_v3_cfg_t MX6NAME(adv7180_video_pads_no_cea861)[] = {
+	/* sav/eav codes are used */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA11__GPIO_3_11), WEAK_PULLUP),	/* Not HSYNC */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA12__GPIO_3_12), WEAK_PULLUP),	/* Not VSYNC */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA10__GPIO_3_10), WEAK_PULLUP),	/* don't use data_en signal, pin B5 stat2 */
+	0
+};
+
+static iomux_v3_cfg_t MX6NAME(adv7180_video_pads_cea861)[] = {
+	/* hsync/vsync are used, not sav/eav codes */
+#ifdef FOR_DL_SOLO
+	NEW_PAD_CTRL(MX6PAD(EIM_DA11__IPU1_CSI1_HSYNC), CSI_PAD_CTRL),	/* GPIO3[11] */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA12__IPU1_CSI1_VSYNC), CSI_PAD_CTRL),	/* GPIO3[12] */
+#else
+	NEW_PAD_CTRL(MX6PAD(EIM_DA11__IPU2_CSI1_HSYNC), CSI_PAD_CTRL),	/* GPIO3[11] */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA12__IPU2_CSI1_VSYNC), CSI_PAD_CTRL),	/* GPIO3[12] */
+#endif
+	NEW_PAD_CTRL(MX6PAD(EIM_DA10__GPIO_3_10), WEAK_PULLUP),	/* don't use data_en signal, pin B5 stat2 */
+	0
+};
 
 static iomux_v3_cfg_t MX6NAME(hdmi_ddc_pads)[] = {
 	MX6PAD(KEY_COL3__HDMI_TX_DDC_SCL), /* HDMI DDC SCL */
