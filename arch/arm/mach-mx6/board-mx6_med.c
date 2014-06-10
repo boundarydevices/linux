@@ -724,7 +724,6 @@ pr_err("%s:%s\n", __FILE__, __func__);
 	soc_reg_id = dvfscore_data.soc_id;
 	pu_reg_id = dvfscore_data.pu_id;
 
-	imx6q_add_imx_uart(0, NULL);
 	imx6q_add_imx_uart(1, NULL);
 	imx6q_add_imx_uart(2, &mx6_arm2_uart2_data);
 	imx6q_add_imx_uart(3, NULL);
