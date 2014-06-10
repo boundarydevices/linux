@@ -2,6 +2,7 @@
 //
 // Driver for the IMX keypad port.
 // Copyright (C) 2009 Alberto Panizzo <maramaopercheseimorto@gmail.com>
+// Copyright (C) 2014 Freescale Semiconductor, Inc.
 
 #include <linux/clk.h>
 #include <linux/delay.h>
@@ -263,6 +264,7 @@ static void imx_keypad_check_for_events(struct timer_list *t)
 		reg_val |= KBD_STAT_KDIE;
 		reg_val &= ~KBD_STAT_KRIE;
 		writew(reg_val, keypad->mmio_base + KPSR);
+		pm_relax(keypad->input_dev->dev.parent);
 	} else {
 		/*
 		 * Some keys are still pressed. Schedule a rescan in
@@ -298,6 +300,7 @@ static irqreturn_t imx_keypad_irq_handler(int irq, void *dev_id)
 	writew(reg_val, keypad->mmio_base + KPSR);
 
 	if (keypad->enabled) {
+		pm_stay_awake(keypad->input_dev->dev.parent);
 		/* The matrix is supposed to be changed */
 		keypad->stable_count = 0;
 
