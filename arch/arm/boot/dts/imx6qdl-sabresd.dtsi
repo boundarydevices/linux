@@ -47,16 +47,15 @@
 		};
 	};
 
-	leds {
+/*	leds {
 		compatible = "gpio-leds";
-
 		charger-led {
 			gpios = <&gpio1 2 0>;
 			linux,default-trigger = "max8903-charger-charging";
 			retain-state-suspended;
 		};
 	};
-
+*/
 	regulators {
 		compatible = "simple-bus";
 
@@ -245,6 +244,12 @@
 
 	minipcie_ctrl {
 		power-on-gpio = <&gpio3 19 0>;
+	};
+
+	bt_rfkill {
+		compatible = "fsl,mxc_bt_rfkill";
+		bt-power-gpios = <&gpio1 2 0>;
+		status = "okay";
 	};
 };
 
@@ -502,7 +507,7 @@
 				MX6QDL_PAD_SD3_RST__GPIO7_IO08 0x80000000
 				MX6QDL_PAD_GPIO_9__GPIO1_IO09 0x80000000
 				MX6QDL_PAD_GPIO_1__WDOG2_B 0x80000000
-				MX6QDL_PAD_GPIO_2__GPIO1_IO02 0x80000000
+				MX6QDL_PAD_GPIO_2__GPIO1_IO02 0x1b0b0
 				MX6QDL_PAD_SD1_CMD__GPIO1_IO18 0x80000000
 			>;
 		};
@@ -594,6 +599,13 @@
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1_1>;
+	status = "okay";
+};
+
+&uart5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart5_1>;
+	fsl,uart-has-rtscts;
 	status = "okay";
 };
 
