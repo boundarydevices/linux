@@ -34,6 +34,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/delay.h>
 #include <linux/mxcfb.h>
+#include <mach/iomux-v3.h>
+#include <mach/hardware.h>
 #include <media/v4l2-chip-ident.h>
 #include <media/v4l2-ioctl.h>
 #include <media/v4l2-int-device.h>
@@ -1663,6 +1665,8 @@ void power_off_camera(cam_data *cam)
 	schedule_delayed_work(&cam->power_down_work, (HZ * 2));
 }
 
+unsigned long csi_in_use;
+
 /*!
  * V4L interface - open function
  *
@@ -1676,6 +1680,7 @@ static int mxc_v4l_open(struct file *file)
 	struct video_device *dev = video_devdata(file);
 	cam_data *cam = video_get_drvdata(dev);
 	int err = 0;
+	int csi_bit;
 
 
 	if (!cam) {
@@ -1698,11 +1703,27 @@ static int mxc_v4l_open(struct file *file)
 		cam->ipu_id, cam->csi);
 
 	down(&cam->busy_lock);
+
 	err = 0;
 	if (signal_pending(current))
 		goto oops;
 
 	if (cam->open_count++ == 0) {
+		csi_bit = (cam->ipu_id << 1) | cam->csi;
+		if (test_and_set_bit(csi_bit, &csi_in_use)) {
+			pr_err("%s: %s CSI already in use\n", __func__, dev->name);
+			err = -EBUSY;
+			cam->open_count = 0;
+			goto oops;
+		}
+		cam->csi_in_use = 1;
+		if (cpu_is_mx6q()) {
+			if (cam->ipu_id == cam->csi)
+				mxc_iomux_set_gpr_register(1, 19 + cam->csi, 1, cam->mipi_camera ? 0 : 1);
+		} else {
+			mxc_iomux_set_gpr_register(13, cam->csi * 3, 3, cam->mipi_camera ? csi_bit : 4);
+		}
+
 		wait_event_interruptible(cam->power_queue,
 					 cam->low_power == false);
 
@@ -1806,6 +1827,13 @@ static int mxc_v4l_close(struct file *file)
 		mxc_free_frames(cam);
 		cam->enc_counter++;
 		power_off_camera(cam);
+
+		if (cam->csi_in_use) {
+			int csi_bit = (cam->ipu_id << 1) | cam->csi;
+
+			clear_bit(csi_bit, &csi_in_use);
+			cam->csi_in_use = 0;
+		}
 	}
 
 	up(&cam->busy_lock);
@@ -2699,6 +2727,7 @@ static void init_camera_struct(cam_data *cam, struct platform_device *pdev)
 
 	cam->ipu_id = pdata->ipu;
 	cam->csi = pdata->csi;
+	cam->mipi_camera = pdata->is_mipi;
 	cam->mclk_source = pdata->mclk_source;
 	cam->mclk_on[cam->mclk_source] = false;
 
@@ -2965,9 +2994,9 @@ static int mxc_v4l2_master_attach(struct v4l2_int_device *slave)
 		return -1;
 	}
 
-	if ((sdata->ipu != cam->ipu_id) || (sdata->csi != cam->csi)) {
-		pr_info("%s: ipu(%d:%d)/csi(%d:%d) doesn't match\n", __func__,
-			sdata->ipu, cam->ipu_id, sdata->csi, cam->csi);
+	if ((sdata->ipu != cam->ipu_id) || (sdata->csi != cam->csi) || (sdata->mipi_camera != cam->mipi_camera)) {
+		pr_info("%s: ipu(%d:%d)/csi(%d:%d)/mipi(%d:%d) doesn't match\n", __func__,
+			sdata->ipu, cam->ipu_id, sdata->csi, cam->csi, sdata->mipi_camera, cam->mipi_camera);
 		return -1;
 	}
 
@@ -3020,7 +3049,8 @@ static int mxc_v4l2_master_attach(struct v4l2_int_device *slave)
 		 __func__,
 		 cam->crop_current.width, cam->crop_current.height);
 
-	pr_info("%s: ipu%d:/csi%d attached %s:%s\n", __func__, cam->ipu_id, cam->csi,
+	pr_info("%s: ipu%d:/csi%d %s attached %s:%s\n", __func__,
+		cam->ipu_id, cam->csi, cam->mipi_camera ? "mipi" : "parallel",
 		slave->name, slave->u.slave->master->name);
 	return 0;
 }
