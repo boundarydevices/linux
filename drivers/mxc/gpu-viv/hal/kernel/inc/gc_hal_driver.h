@@ -42,6 +42,7 @@ extern "C" {
 #define IOCTL_GCHAL_KERNEL_INTERFACE    30001
 #define IOCTL_GCHAL_TERMINATE           30002
 
+#undef CONFIG_ANDROID_RESERVED_MEMORY_ACCOUNT
 /******************************************************************************\
 ********************************* Command Codes ********************************
 \******************************************************************************/
@@ -179,6 +180,10 @@ typedef enum _gceHAL_COMMAND_CODES
 
     /* Destory MMU. */
     gcvHAL_DESTROY_MMU,
+
+    /* Shared buffer. */
+    gcvHAL_SHBUF,
+
 }
 gceHAL_COMMAND_CODES;
 
@@ -399,6 +404,9 @@ typedef struct _gcsHAL_INTERFACE
             /* Type of allocation. */
             IN gceSURF_TYPE             type;
 
+            /* Flag of allocation. */
+            IN gctUINT32                flag;
+
             /* Memory pool to allocate from. */
             IN OUT gcePOOL              pool;
 
@@ -466,6 +474,9 @@ typedef struct _gcsHAL_INTERFACE
 
             /* Mapped logical address. */
             OUT gctUINT64               memory;
+
+            /* Bus address of a contiguous video node. */
+            OUT gctUINT64               physicalAddress;
         }
         LockVideoMemory;
 
@@ -1074,6 +1085,22 @@ typedef struct _gcsHAL_INTERFACE
             IN gctUINT64                mmu;
         }
         DestroyMmu;
+
+        struct _gcsHAL_SHBUF
+        {
+            gceSHBUF_COMMAND_CODES      command;
+
+            /* Shared buffer. */
+            IN OUT gctUINT64            id;
+
+            /* User data to be shared. */
+            IN gctUINT64                data;
+
+            /* Data size. */
+            IN OUT gctUINT32            bytes;
+        }
+        ShBuf;
+
     }
     u;
 }

@@ -19,25 +19,26 @@
 *****************************************************************************/
 
 
-extern gceSTATUS
-_DefaultAlloctorInit(
-    IN gckOS Os,
-    OUT gckALLOCATOR * Allocator
-    );
+#include "gc_hal_kernel_linux.h"
+#include "gc_hal_kernel_platform.h"
 
-extern gceSTATUS
-_CMAFSLAlloctorInit(
-    IN gckOS Os,
-    OUT gckALLOCATOR * Allocator
-    );
-
-gcsALLOCATOR_DESC allocatorArray[] =
+gctBOOL
+_NeedAddDevice(
+    IN gckPLATFORM Platform
+    )
 {
-    /* Default allocator. */
-    gcmkDEFINE_ALLOCATOR_DESC("default", _DefaultAlloctorInit),
-#if LINUX_CMA_FSL
-    gcmkDEFINE_ALLOCATOR_DESC("cmafsl", _CMAFSLAlloctorInit),
-#endif
+    return gcvTRUE;
+}
+
+gcsPLATFORM_OPERATIONS platformOperations =
+{
+    .needAddDevice = _NeedAddDevice,
 };
 
-
+void
+gckPLATFORM_QueryOperations(
+    IN gcsPLATFORM_OPERATIONS ** Operations
+    )
+{
+     *Operations = &platformOperations;
+}
