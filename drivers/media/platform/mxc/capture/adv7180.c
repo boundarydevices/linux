@@ -97,6 +97,8 @@ typedef struct {
 	u16 active_width;	/*!< Active width. */
 	u16 active_height;	/*!< Active height. */
 	int frame_rate;		/*!< Frame rate. */
+	u16 lines_per_field;
+	u16 skip_lines;
 } video_fmt_t;
 
 /*! Description of video formats supported.
@@ -108,11 +110,13 @@ static video_fmt_t video_fmts[] = {
 	{			/*! NTSC */
 	 .v4l2_id = V4L2_STD_NTSC,
 	 .name = "NTSC",
-	 .raw_width = 720,	/* SENS_FRM_WIDTH */
-	 .raw_height = 525,	/* SENS_FRM_HEIGHT */
+	 .raw_width = 720 + 138,	/* SENS_FRM_WIDTH */
+	 .raw_height = 480 + 45,	/* SENS_FRM_HEIGHT */
 	 .active_width = 720,	/* ACT_FRM_WIDTH plus 1 */
 	 .active_height = 480,	/* ACT_FRM_WIDTH plus 1 */
 	 .frame_rate = 30,
+	 .lines_per_field = 0,
+	 .skip_lines = 12,
 	 },
 	{			/*! (B, G, H, I, N) PAL */
 	 .v4l2_id = V4L2_STD_PAL,
@@ -318,11 +322,15 @@ static void adv7180_get_std(struct adv7180_priv *adv, v4l2_std_id *std)
 		adv->std_id = *std;
 		adv->sen.pix.width = video_fmts[video_idx].active_width;
 		adv->sen.pix.height = video_fmts[video_idx].active_height;
+		adv->sen.spix.swidth = video_fmts[video_idx].raw_width - 1;
+		adv->sen.spix.sheight = video_fmts[video_idx].raw_height;
+		adv->sen.spix.top = video_fmts[video_idx].skip_lines;
 		if (adv->cea861) {
-			adv->sen.spix.swidth = video_fmts[video_idx].raw_width - 1;
-			adv->sen.spix.sheight = video_fmts[video_idx].raw_height;
 			adv->sen.spix.left = 0;
-			adv->sen.spix.top = 0;
+		} else {
+			adv->sen.spix.swidth = video_fmts[video_idx].active_width;
+//			adv->sen.spix.sheight = video_fmts[video_idx].active_height;
+			adv->sen.spix.left = video_fmts[video_idx].lines_per_field;
 		}
 	}
 }
@@ -367,7 +375,7 @@ static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 	} else {
 		p->if_type = V4L2_IF_TYPE_BT656_INTERLACED;
 		p->u.bt656.mode = V4L2_IF_TYPE_BT656_MODE_BT_8BIT;
-		p->u.bt656.nobt_vs_inv = 1;
+//		p->u.bt656.nobt_vs_inv = 1;
 	}
 	/* ADV7180 has a dedicated clock so no clock settings needed. */
 
@@ -1231,6 +1239,13 @@ static int adv7180_probe(struct i2c_client *client,
 	if (ret < 0)
 		goto exit1;
 
+	ret = of_property_read_u32(dev->of_node, "cea861",
+					&adv->cea861);
+	if (ret) {
+		dev_err(dev, "cea861 missing or invalid\n");
+		goto exit1;
+	}
+	pr_info("%s: cea861=%d\n", __func__, adv->cea861);
 
 	adv7180_power_down(adv, 0);
 
@@ -1244,11 +1259,15 @@ static int adv7180_probe(struct i2c_client *client,
 	video_idx = ADV7180_NOT_LOCKED;
 	adv->sen.pix.width = video_fmts[video_idx].active_width;
 	adv->sen.pix.height = video_fmts[video_idx].active_height;
+	adv->sen.spix.swidth = video_fmts[video_idx].raw_width - 1;
+	adv->sen.spix.sheight = video_fmts[video_idx].raw_height;
+	adv->sen.spix.top = video_fmts[video_idx].skip_lines;
 	if (adv->cea861) {
-		adv->sen.spix.swidth = video_fmts[video_idx].raw_width - 1;
-		adv->sen.spix.sheight = video_fmts[video_idx].raw_height;
 		adv->sen.spix.left = 0;
-		adv->sen.spix.top = 0;
+	} else {
+		adv->sen.spix.swidth = video_fmts[video_idx].active_width;
+//		adv->sen.spix.sheight = video_fmts[video_idx].active_height;
+		adv->sen.spix.left = video_fmts[video_idx].lines_per_field;
 	}
 	adv->sen.pix.pixelformat = V4L2_PIX_FMT_UYVY;  /* YUV422 */
 	adv->sen.pix.priv = 1;  /* 1 is used to indicate TV in */
