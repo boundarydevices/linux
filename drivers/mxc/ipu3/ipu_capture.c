@@ -347,6 +347,11 @@ void ipu_csi_window_size_crop(struct ipu_soc *ipu, uint32_t swidth, uint32_t she
 	}
 	_ipu_get(ipu);
 
+	/*
+	 * sheight >= top + height
+	 * swidth >= left + width,  unless interlaced
+	 * left = # of lines/field if interlaced
+	 */
 	mutex_lock(&ipu->mutex_lock);
 	ipu_csi_write(ipu, csi, (swidth - 1) | (sheight - 1) << 16, CSI_SENS_FRM_SIZE);
 	ipu_csi_write(ipu, csi, (width - 1) | (height - 1) << 16, CSI_ACT_FRM_SIZE);
