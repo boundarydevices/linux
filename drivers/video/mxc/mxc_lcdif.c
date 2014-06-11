@@ -51,6 +51,38 @@ static struct fb_videomode lcdif_modedb[] = {
 	FB_SYNC_CLK_LAT_FALL,
 	FB_VMODE_NONINTERLACED,
 	0,},
+	{
+	/* 800x480 @ 57 Hz , pixel clk @ 27MHz */
+	"INNOLUX-WVGA", 57, 800, 480, 25000,
+	.left_margin = 45, .right_margin = 1056 - 1 - 45 - 800,
+	.upper_margin = 22, .lower_margin = 635 - 1 - 22 - 480,
+	.hsync_len = 1, .vsync_len = 1,
+	.sync = FB_SYNC_CLK_LAT_FALL,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,},
+	{
+	/* 480x800 @ 57 Hz , pixel clk @ 27MHz */
+	"LB043", 57, 480, 800, 25000,
+	.left_margin = 40, .right_margin = 60,
+	.upper_margin = 10, .lower_margin = 10,
+	.hsync_len = 20, .vsync_len = 10,
+	.sync = FB_SYNC_CLK_LAT_FALL,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,},
+	{
+	 /*
+	  * hitachi 640x240
+	  * vsync = 60
+	  * hsync = 260 * vsync = 15.6 Khz
+	  * pixclk = 800 * hsync = 12.48 MHz
+	  */
+	 "hitachi_hvga", 60, 640, 240, 1000000000 / 800 * 1000 / 260 / 60,	//80128, (12.48 MHz)
+	 .left_margin = 34, .right_margin = 1,
+	 .upper_margin = 8, .lower_margin = 3,
+	 .hsync_len = 125, .vsync_len = 9,
+	 .sync = FB_SYNC_CLK_LAT_FALL,
+	 .vmode = FB_VMODE_NONINTERLACED,
+	 .flag = 0,},
 };
 static int lcdif_modedb_sz = ARRAY_SIZE(lcdif_modedb);
 
