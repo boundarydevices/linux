@@ -257,7 +257,7 @@ static void _ipu_di_sync_config(struct ipu_soc *ipu,
 	u32 reg;
 
 	if ((run_count >= 0x1000) || (offset_count >= 0x1000) || (repeat_count >= 0x1000) ||
-		(cnt_up >= 0x400) || (cnt_down >= 0x400)) {
+		(cnt_up >= 0x200) || (cnt_down >= 0x200)) {
 		dev_err(ipu->dev, "DI%d counters out of range.\n", di);
 		return;
 	}
