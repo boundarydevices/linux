@@ -214,6 +214,8 @@ typedef struct _cam_data {
 	wait_queue_head_t power_queue;
 	unsigned int ipu_id;
 	unsigned int csi;
+	unsigned mipi_camera;
+	int csi_in_use;
 	u8 mclk_source;
 	bool mclk_on[2];	/* two mclk sources at most now */
 	int current_input;
