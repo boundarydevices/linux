@@ -163,6 +163,13 @@ config MFD_DA9063
 	  Additional drivers must be enabled in order to use the functionality
 	  of the device.
 
+config MFD_MXC_HDMI
+	tristate "Freescale HDMI Core"
+	select MFD_CORE
+	help
+	  This is the core driver for the Freescale i.MX6 on-chip HDMI.
+	  This MFD driver connects with the video and audio drivers for HDMI.
+
 config MFD_MC13XXX
 	tristate
 	depends on (SPI_MASTER || I2C)
