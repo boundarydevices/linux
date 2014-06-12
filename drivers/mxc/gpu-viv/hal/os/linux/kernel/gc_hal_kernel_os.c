@@ -7503,7 +7503,7 @@ gckOS_Signal(
     else
     {
         /* Set the event to an unsignaled state. */
-        INIT_COMPLETION(signal->obj);
+        reinit_completion(&signal->obj);
     }
 
     gcmkVERIFY_OK(gckOS_ReleaseMutex(Os, Os->signalMutex));
