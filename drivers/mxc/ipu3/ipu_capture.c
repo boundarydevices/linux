@@ -775,6 +775,7 @@ int _ipu_csi_init(struct ipu_soc *ipu, ipu_channel_t channel, uint32_t csi)
 {
 	uint32_t csi_sens_conf, csi_dest;
 	int retval = 0;
+	uint32_t ctrl = ipu_csi_read(ipu, csi, CSI_CPD_CTRL) & ~0x13;
 
 	csi_sens_conf = ipu_csi_read(ipu, csi, CSI_SENS_CONF);
 	csi_sens_conf &= ~CSI_SENS_CONF_DATA_DEST_MASK;
@@ -784,6 +785,32 @@ int _ipu_csi_init(struct ipu_soc *ipu, ipu_channel_t channel, uint32_t csi)
 	case CSI_MEM2:
 	case CSI_MEM3:
 		csi_dest = CSI_DATA_DEST_IDMAC;
+
+		if (((csi_sens_conf >> CSI_SENS_CONF_DATA_WIDTH_SHIFT) & 0x0f) == IPU_CSI_DATA_WIDTH_10) {
+			/* Send to compander before memory to reduce to 8 bits */
+			/* y = Min[255, (y1[k] + (((x-x1[k])*slope[k])>>6 + 1))>>1] */
+			int i;
+
+			ctrl |= (1 << 4);
+			ipu_csi_write(ipu, csi, 0, CSI_CPD_OFFSET1);
+			ipu_csi_write(ipu, csi, 0, CSI_CPD_OFFSET2);
+			for (i = 0; i < 16; i += 2) {
+				uint32_t c = ((i+1) << (16 + 5)) | (i << (0 + 5));
+
+				ipu_csi_write(ipu, csi, c, CSI_CPD_RC((i >> 1)));
+				ipu_csi_write(ipu, csi, c, CSI_CPD_GRC((i >> 1)));
+				ipu_csi_write(ipu, csi, c, CSI_CPD_GBC((i >> 1)));
+				ipu_csi_write(ipu, csi, c, CSI_CPD_BC((i >> 1)));
+			}
+			for (i = 0; i < 16; i += 4) {
+				uint32_t slope = 1 << 5;
+				uint32_t s = (slope << 24) | (slope << 16) | (slope << 8) | (slope << 0);
+				ipu_csi_write(ipu, csi, s, CSI_CPD_RS((i >> 2)));
+				ipu_csi_write(ipu, csi, s, CSI_CPD_GRS((i >> 2)));
+				ipu_csi_write(ipu, csi, s, CSI_CPD_GBS((i >> 2)));
+				ipu_csi_write(ipu, csi, s, CSI_CPD_BS((i >> 2)));
+			}
+		}
 		break;
 	case CSI_PRP_ENC_MEM:
 	case CSI_PRP_VF_MEM:
@@ -797,6 +824,7 @@ int _ipu_csi_init(struct ipu_soc *ipu, ipu_channel_t channel, uint32_t csi)
 
 	dev_dbg(ipu->dev, "%s:CSI_SENS_CONF: ipu=%p,csi=%x,data=%x\n", __func__,
 			ipu, csi, csi_sens_conf);
+	ipu_csi_write(ipu, csi, ctrl, CSI_CPD_CTRL);
 	ipu_csi_write(ipu, csi, csi_sens_conf, CSI_SENS_CONF);
 err:
 	return retval;
