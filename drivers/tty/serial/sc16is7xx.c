@@ -1363,6 +1363,10 @@ static ssize_t sc16is7xx_reg_show(struct device *dev,
 
 static DEVICE_ATTR(sc16is7xx_reg, 0444, sc16is7xx_reg_show, NULL);
 
+struct sc16is7xx_plat {
+	unsigned	freq;
+};
+
 static int sc16is7xx_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int ret;
@@ -1370,6 +1374,7 @@ static int sc16is7xx_probe(struct i2c_client *client, const struct i2c_device_id
 	struct uart_sc16is7xx_sc *sc;
 	struct uart_sc16is7xx_chan *ch;
 	struct device *dev = &client->dev;
+	struct sc16is7xx_plat *plat = client->dev.platform_data;
 
 	printk(KERN_ERR "%s: %s version 1.0\n", __func__, client_name);
 	sc = kzalloc(sizeof(struct uart_sc16is7xx_sc), GFP_KERNEL);
@@ -1399,7 +1404,7 @@ static int sc16is7xx_probe(struct i2c_client *client, const struct i2c_device_id
 		ch->port.line = i;
 		ch->port.dev = dev;
 		ch->port.flags = UPF_BOOT_AUTOCONF;
-		ch->port.uartclk = 3686400/2;
+		ch->port.uartclk = plat ? plat->freq : 3686400;
 		ch->sc = sc;
 		ch->channel_no = i;
 		ch->tx_empty = 1;
