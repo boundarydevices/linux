@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Freescale Semiconductor, Inc.
+ * Copyright (C) 2012-2014 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -123,6 +123,9 @@
 #define IMX6Q_GPR1_USB_OTG_ID_SEL_ENET_RX_ER	0x0
 #define IMX6Q_GPR1_USB_OTG_ID_SEL_GPIO_1	BIT(13)
 #define IMX6Q_GPR1_GINT				BIT(12)
+#define IMX6Q_GPR1_GINT_MASK			BIT(12)
+#define IMX6Q_GPR1_GINT_CLEAR			0x0
+#define IMX6Q_GPR1_GINT_ASSERT			BIT(12)
 #define IMX6Q_GPR1_ADDRS3_MASK			(0x3 << 10)
 #define IMX6Q_GPR1_ADDRS3_32MB			(0x0 << 10)
 #define IMX6Q_GPR1_ADDRS3_64MB			(0x1 << 10)
@@ -212,7 +215,6 @@
 #define IMX6Q_GPR3_MIPI_MUX_CTL_IPU1_DI1	(0x1 << 4)
 #define IMX6Q_GPR3_MIPI_MUX_CTL_IPU2_DI0	(0x2 << 4)
 #define IMX6Q_GPR3_MIPI_MUX_CTL_IPU2_DI1	(0x3 << 4)
-#define IMX6Q_GPR3_HDMI_MUX_CTL_SHIFT		2
 #define IMX6Q_GPR3_HDMI_MUX_CTL_MASK		(0x3 << 2)
 #define IMX6Q_GPR3_HDMI_MUX_CTL_IPU1_DI0	(0x0 << 2)
 #define IMX6Q_GPR3_HDMI_MUX_CTL_IPU1_DI1	(0x1 << 2)
@@ -373,8 +375,49 @@
 #define IMX6Q_GPR13_SATA_MPLL_CLK_EN		BIT(1)
 #define IMX6Q_GPR13_SATA_TX_EDGE_RATE		BIT(0)
 
+/* For imx6dl iomux gpr register field definitions */
+#define IMX6DL_GPR3_LVDS1_MUX_CTL_MASK		(0x3 << 8)
+#define IMX6DL_GPR3_LVDS1_MUX_CTL_IPU1_DI0	(0x0 << 8)
+#define IMX6DL_GPR3_LVDS1_MUX_CTL_IPU1_DI1	(0x1 << 8)
+#define IMX6DL_GPR3_LVDS1_MUX_CTL_LCDIF		(0x2 << 8)
+#define IMX6DL_GPR3_LVDS0_MUX_CTL_MASK		(0x3 << 6)
+#define IMX6DL_GPR3_LVDS0_MUX_CTL_IPU1_DI0	(0x0 << 6)
+#define IMX6DL_GPR3_LVDS0_MUX_CTL_IPU1_DI1	(0x1 << 6)
+#define IMX6DL_GPR3_LVDS0_MUX_CTL_LCDIF		(0x2 << 6)
+
 /* For imx6sl iomux gpr register field define */
 #define IMX6SL_GPR1_FEC_CLOCK_MUX1_SEL_MASK    (0x3 << 17)
 #define IMX6SL_GPR1_FEC_CLOCK_MUX2_SEL_MASK    (0x1 << 14)
 
+/* For imx6sx iomux gpr register field define */
+#define IMX6SX_GPR1_VDEC_SW_RST_MASK			(0x1 << 20)
+#define IMX6SX_GPR1_VDEC_SW_RST_RESET			(0x1 << 20)
+#define IMX6SX_GPR1_VDEC_SW_RST_RELEASE			(0x0 << 20)
+#define IMX6SX_GPR1_VADC_SW_RST_MASK			(0x1 << 19)
+#define IMX6SX_GPR1_VADC_SW_RST_RESET			(0x1 << 19)
+#define IMX6SX_GPR1_VADC_SW_RST_RELEASE			(0x0 << 19)
+#define IMX6SX_GPR1_FEC_CLOCK_MUX_SEL_MASK      (0x3 << 13)
+#define IMX6SX_GPR1_FEC_CLOCK_PAD_DIR_MASK      (0x3 << 17)
+#define IMX6SX_GPR1_FEC_CLOCK_MUX_SEL_EXT       (0x3 << 13)
+
+#define IMX6SX_GPR4_FEC_ENET1_STOP_REQ		(0x1 << 3)
+#define IMX6SX_GPR4_FEC_ENET2_STOP_REQ		(0x1 << 4)
+
+#define IMX6SX_GPR5_DISP_MUX_LDB_CTRL_MASK		(0x1 << 3)
+#define IMX6SX_GPR5_DISP_MUX_LDB_CTRL_LCDIF1	(0x0 << 3)
+#define IMX6SX_GPR5_DISP_MUX_LDB_CTRL_LCDIF2	(0x1 << 3)
+
+#define IMX6SX_GPR5_CSI2_MUX_CTRL_MASK			(0x3 << 27)
+#define IMX6SX_GPR5_CSI2_MUX_CTRL_EXT_PIN		(0x0 << 27)
+#define IMX6SX_GPR5_CSI2_MUX_CTRL_CVD			(0x1 << 27)
+#define IMX6SX_GPR5_CSI2_MUX_CTRL_VDAC_TO_CSI	(0x2 << 27)
+#define IMX6SX_GPR5_CSI2_MUX_CTRL_GND			(0x3 << 27)
+#define IMX6SX_GPR5_VADC_TO_CSI_CAPTURE_EN_MASK			(0x1 << 26)
+#define IMX6SX_GPR5_VADC_TO_CSI_CAPTURE_EN_ENABLE		(0x1 << 26)
+#define IMX6SX_GPR5_VADC_TO_CSI_CAPTURE_EN_DISABLE		(0x0 << 26)
+#define IMX6SX_GPR5_CSI1_MUX_CTRL_MASK			(0x3 << 4)
+#define IMX6SX_GPR5_CSI1_MUX_CTRL_EXT_PIN		(0x0 << 4)
+#define IMX6SX_GPR5_CSI1_MUX_CTRL_CVD			(0x1 << 4)
+#define IMX6SX_GPR5_CSI1_MUX_CTRL_VDAC_TO_CSI	(0x2 << 4)
+#define IMX6SX_GPR5_CSI1_MUX_CTRL_GND			(0x3 << 4)
 #endif /* __LINUX_IMX6Q_IOMUXC_GPR_H */
