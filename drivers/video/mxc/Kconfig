@@ -1,0 +1,72 @@
+config FB_MXC
+	tristate "MXC Framebuffer support"
+	depends on FB
+	select FB_CFB_FILLRECT
+	select FB_CFB_COPYAREA
+	select FB_CFB_IMAGEBLIT
+	select FB_MODE_HELPERS
+	default y
+	help
+	  This is a framebuffer device for the MXC LCD Controller.
+	  See <http://www.linux-fbdev.org/> for information on framebuffer
+	  devices.
+
+	  If you plan to use the LCD display with your MXC system, say
+	  Y here.
+
+config FB_MXC_SYNC_PANEL
+	depends on FB_MXC
+	tristate "Synchronous Panel Framebuffer"
+
+config FB_MXC_LDB
+	tristate "MXC LDB"
+	depends on FB_MXC_SYNC_PANEL
+	depends on MXC_IPU_V3 || FB_MXS
+	select VIDEOMODE_HELPERS
+
+config FB_MXC_MIPI_DSI
+	tristate "MXC MIPI_DSI"
+	depends on FB_MXC_SYNC_PANEL
+	depends on MXC_IPU_V3
+
+config FB_MXC_TRULY_WVGA_SYNC_PANEL
+	tristate "TRULY WVGA Panel"
+	depends on FB_MXC_SYNC_PANEL
+	depends on FB_MXC_MIPI_DSI
+
+config FB_MXC_HDMI
+	depends on FB_MXC_SYNC_PANEL
+	depends on MXC_IPU_V3
+	depends on I2C
+	tristate "MXC HDMI driver support"
+	select MFD_MXC_HDMI
+	help
+	  Driver for the on-chip MXC HDMI controller.
+
+config FB_MXC_EDID
+     depends on FB_MXC && I2C
+     tristate "MXC EDID support"
+     default y
+
+config FB_MXC_EINK_PANEL
+	depends on FB_MXC
+	depends on DMA_ENGINE
+	select FB_DEFERRED_IO
+	tristate "E-Ink Panel Framebuffer"
+
+config FB_MXC_EINK_AUTO_UPDATE_MODE
+    bool "E-Ink Auto-update Mode Support"
+    default n
+    depends on FB_MXC_EINK_PANEL
+
+config FB_MXS_SII902X
+	tristate "Si Image SII9022 DVI/HDMI Interface Chip"
+	depends on FB_MXS && I2C
+
+config HANNSTAR_CABC
+	tristate "Hannstar CABC function"
+	help
+	  Say yes here to support switching on/off Hannstar CABC
+	  function.  This function turns backlight density of a
+	  display panel automatically according to the content
+	  shown on the panel.
