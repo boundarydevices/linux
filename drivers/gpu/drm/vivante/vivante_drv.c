@@ -65,7 +65,6 @@ static const struct file_operations viv_driver_fops = {
 	.unlocked_ioctl = drm_ioctl,
 	.mmap = drm_mmap,
 	.poll = drm_poll,
-	.fasync = drm_fasync,
 	.llseek = noop_llseek,
 };
 
