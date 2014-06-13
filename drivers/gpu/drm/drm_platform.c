@@ -53,6 +53,14 @@ static int drm_get_platform_dev(struct platform_device *platdev,
 
 	dev->platformdev = platdev;
 
+	/*
+	 * If drvdata is not used by platform driver, let's set drm_device
+	 * pointer into it.  We take this as the default usage of drvdata,
+	 * and platform driver is free to overwrite it later as needed.
+	 */
+	if (platform_get_drvdata(platdev) == NULL)
+		platform_set_drvdata(platdev, dev);
+
 	ret = drm_dev_register(dev, 0);
 	if (ret)
 		goto err_free;
