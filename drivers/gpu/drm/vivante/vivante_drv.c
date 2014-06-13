@@ -95,7 +95,8 @@ static int __init vivante_init(void)
 static void __exit vivante_exit(void)
 {
 	if (pplatformdev) {
-		drm_platform_exit(&driver, pplatformdev);
+		/* The drvdata is set in drm_get_platform_dev() */
+		drm_put_dev(platform_get_drvdata(pplatformdev));
 		platform_device_unregister(pplatformdev);
 		pplatformdev = NULL;
 	}
