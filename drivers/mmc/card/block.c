@@ -1228,13 +1228,15 @@ static inline int mmc_blk_readonly(struct mmc_card *card)
 static inline int get_preferred_bit(unsigned bit, unsigned long *addr,
 		unsigned long max)
 {
-	for (;;) {
-		if (bit < max)
-			if (!test_and_set_bit(bit, addr))
-				return bit;
-		bit = find_first_zero_bit(addr, max);
-		if (bit >= max)
-			break;
+	if (bit >= max)
+		bit = 0;
+	while (bit < max) {
+		if (!test_and_set_bit(bit, addr))
+			return bit;
+		if (bit < 5)
+			bit = 5;
+		else
+			bit++;
 	}
 	return -ENOSPC;
 }
