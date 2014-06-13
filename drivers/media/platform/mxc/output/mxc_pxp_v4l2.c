@@ -603,9 +603,9 @@ static int pxp_try_fmt_output_overlay(struct file *file, void *fh,
 	wf->w.left = srect.left;
 	wf->w.top = srect.top;
 	wf->w.width = min(srect.width,
-			((__s32)pxp->pxp_conf.s0_param.width - wf->w.left));
+			((__u32)pxp->pxp_conf.s0_param.width - wf->w.left));
 	wf->w.height = min(srect.height,
-			((__s32)pxp->pxp_conf.s0_param.height - wf->w.top));
+			((__u32)pxp->pxp_conf.s0_param.height - wf->w.top));
 
 	return 0;
 }
