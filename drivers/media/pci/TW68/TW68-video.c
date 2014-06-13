@@ -1351,6 +1351,7 @@ static int video_release(struct file *file)
 	}
 
 	pr_debug("%s: dev->video_opened: 0x%x \n", __func__, dev->video_opened);
+	synchronize_irq(dev->pci->irq);
 	videobuf_streamoff(&fh->cap);
 
 	//pr_debug(" stop video capture  CALLED   ! \n");
@@ -2179,6 +2180,7 @@ static int TW68_streamoff(struct file *file, void *priv,
 		__func__, dev->name, fh->DMA_nCH);
 	stop_video_DMA(dev, fh->DMA_nCH);
 
+	synchronize_irq(dev->pci->irq);
 	err = videobuf_streamoff(q);
 	res_free(fh, res);
 	pr_debug("%s: %s:%d q->streaming:%x  return err:%x \n",
