@@ -863,6 +863,10 @@ int Field_Copy(struct TW68_dev *dev, int nDMA_channel, int field_PB)
 	if (q->curr) {
 		buf = q->curr;
 		vbuf = videobuf_to_vmalloc(&buf->vb);
+		if (!vbuf) {
+			pr_err("%s:videobuf_to_vmalloc failed (%p)\n", __func__, buf);
+			return 0;
+		}
 
 		Hmax  = buf->vb.height/2;
 		Wmax  = buf->vb.width;
@@ -929,6 +933,10 @@ int BF_Copy(struct TW68_dev *dev, int nDMA_channel, u32 Fn, u32 PB)
 	{
 		buf = q->curr;
 		vbuf = videobuf_to_vmalloc(&buf->vb);
+		if (!vbuf) {
+			pr_err("%s:videobuf_to_vmalloc failed (%p)\n", __func__, buf);
+			return 0;
+		}
 
 		Hmax  = buf->vb.height/2;
 		Wmax  = buf->vb.width;
@@ -1009,6 +1017,10 @@ int  QF_Field_Copy(struct TW68_dev *dev, int nDMA_channel, u32 Fn, u32 PB)
 
 
 		vbuf = videobuf_to_vmalloc(&buf->vb);
+		if (!vbuf) {
+			pr_err("%s:videobuf_to_vmalloc failed (%p)\n", __func__, buf);
+			return 0;
+		}
 
 		for (h = 0; h < Hmax-0; h++) {
 			memcpy(vbuf + pos, srcbuf, stride);
@@ -1469,35 +1481,35 @@ static irqreturn_t TW68_irq(int irq, void *dev_id)    //hardware dev id for the 
 				__func__, dwErrBit, dwRegER, dwRegVP, dwRegST, dwRegE, dwRegF);
 			dev->errlog[0] =  jiffies;
 		} else {
+			unsigned mask;
 			// Normal interrupt:
 			if (dwRegST & (0xFF00) & dev->videoDMA_ID) {
 				TW68_alsa_irq(dev, dwRegST, dwRegPB);
 			}
 
-			if ((dwRegST & (0xFF)) && (!(dwRegER >>16))) {
-				for(k=0; k<8; k++) {
-					if ((dwRegST & dev->videoDMA_ID) & (1 << k)) {     //exclude  inactive dev
-						TW68_irq_video_done(dev, k+1, dwRegPB);
-						if (!dev->video_dmaq[k+1].FieldPB) {	// first time after dma start
-							/*
-								Reg8b <<= 16;
-								dev->video_dmaq[k+1].FieldPB &= 0x0000FFFF;
-								dev->video_dmaq[k+1].FieldPB |= Reg8b;	// add
-								//pr_debug(" IRQ DMA normal ist time  k:%d  Reg8b 0x%x: PB 0x%x  FieldPB 0X%X DMA_CHANNEL_ENABLE %x  DMA_CMD %X \n",
-								//	k, Reg8b, dwRegPB, dev->video_dmaq[k].FieldPB,  dwRegE, dwRegF);
-								if (Reg8b &0x10)
-									dev->video_dmaq[k].FieldPB |= 0xF0;
-							*/
-						}
+			mask = dwRegST & 0xff & dev->videoDMA_ID;
+			while (mask) {
+				k = __ffs(mask);
+				mask &= ~(1 << k);
+				TW68_irq_video_done(dev, k+1, dwRegPB);
+				if (!dev->video_dmaq[k+1].FieldPB) {	// first time after dma start
+					/*
+					Reg8b <<= 16;
+					dev->video_dmaq[k+1].FieldPB &= 0x0000FFFF;
+					dev->video_dmaq[k+1].FieldPB |= Reg8b;	// add
+					//pr_debug(" IRQ DMA normal ist time  k:%d  Reg8b 0x%x: PB 0x%x  FieldPB 0X%X DMA_CHANNEL_ENABLE %x  DMA_CMD %X \n",
+					//	k, Reg8b, dwRegPB, dev->video_dmaq[k].FieldPB,  dwRegE, dwRegF);
+					if (Reg8b &0x10)
+						dev->video_dmaq[k].FieldPB |= 0xF0;
+					 */
+				}
 
-						if  (dev->video_dmaq[k+1].FieldPB & 0xF0) {
-							dev->video_dmaq[k+1].FieldPB &= 0xFFFF0000;
-						} else {
-							dev->video_dmaq[k+1].FieldPB &= 0xFFFF00FF;     // clear  PB
-							dev->video_dmaq[k+1].FieldPB |= (dwRegPB & (1<<k))<<8;
-							dev->video_dmaq[k+1].FCN++;
-						}
-					}
+				if  (dev->video_dmaq[k+1].FieldPB & 0xF0) {
+					dev->video_dmaq[k+1].FieldPB &= 0xFFFF0000;
+				} else {
+					dev->video_dmaq[k+1].FieldPB &= 0xFFFF00FF;     // clear  PB
+					dev->video_dmaq[k+1].FieldPB |= (dwRegPB & (1<<k))<<8;
+					dev->video_dmaq[k+1].FCN++;
 				}
 			}
 
