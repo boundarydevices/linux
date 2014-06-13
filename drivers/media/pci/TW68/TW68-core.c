@@ -525,8 +525,10 @@ void TW68_buffer_finish(struct TW68_dev *dev,
 			   struct TW68_dmaqueue *q,
 			   unsigned int state)
 {
-
-	if (q->dev != dev)	return;
+	if (q->dev != dev) {
+		WARN(1, "dev=%p q=%p q->dev=%p \n", dev, q, q->dev);
+		return;
+	}
 	q->curr->vb.state = state;
 	do_gettimeofday(&q->curr->vb.ts);
 
@@ -539,7 +541,21 @@ void TW68_buffer_next(struct TW68_dev *dev,
 			 struct TW68_dmaqueue *q)
 {
 	struct TW68_buf *buf,*next = NULL;
-	BUG_ON(NULL != q->curr);
+
+	if (q->dev != dev) {
+		WARN(1, "dev=%p q=%p q->dev=%p \n", dev, q, q->dev);
+		return;
+	}
+	if (q->curr) {
+		int nId = q->DMA_nCH;
+		u32 dwRegE, dwRegF;
+
+		dwRegE = reg_readl(DMA_CHANNEL_ENABLE);
+		dwRegF = reg_readl(DMA_CMD);
+
+		WARN(1, "DMA %d  enable=0x%X cmd=0X%X  queue %p\n", nId,  dwRegE, dwRegF, q->curr);
+		TW68_buffer_finish(dev, q, VIDEOBUF_ERROR);
+	}
 
 	if (!list_empty(&q->queued)) {
 		/* activate next one from  dma queue */
@@ -1287,19 +1303,9 @@ u64 GetDelay(struct TW68_dev *dev, int eno)
 
 void TW68_buffer_timeout(unsigned long data)
 {
-	u32 dwRegE, dwRegF;
 	struct TW68_dmaqueue *q = (struct TW68_dmaqueue*)data;
 	struct TW68_dev *dev = q->dev;
-	//unsigned long flags;
-	int nId = q->DMA_nCH;
 
-	if (q->curr) {
-		dwRegE = reg_readl(DMA_CHANNEL_ENABLE);
-		dwRegF = reg_readl(DMA_CMD);
-
-		pr_debug(" TW68_buffer_timeout ????????  DMA %d  || 0x%X  ||0X%X     timeout on dma queue %p\n", nId,  dwRegE, dwRegF, q->curr);
-		TW68_buffer_finish(dev,q,VIDEOBUF_ERROR);
-	}
 	TW68_buffer_next(dev,q);
 }
 
