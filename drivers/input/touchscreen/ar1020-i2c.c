@@ -320,6 +320,7 @@ static irqreturn_t touch_irq_handler_func(int irq, void *dev_id)
 	translate(&x, &y);
 	input_report_abs(priv->input, ABS_X, x);
 	input_report_abs(priv->input, ABS_Y, y);
+	input_report_abs(priv->input, ABS_PRESSURE, button);
 	input_report_key(priv->input, BTN_TOUCH, button);
 	input_sync(priv->input);
 	return IRQ_HANDLED;
@@ -416,6 +417,7 @@ static int __devinit ar1020_i2c_probe(struct i2c_client *client,
 		input_set_abs_params(input_dev, ABS_X, 0, 4095, 0, 0);
 		input_set_abs_params(input_dev, ABS_Y, 0, 4095, 0, 0);
 	}
+	input_set_abs_params(input_dev, ABS_PRESSURE, 0, 1, 0, 0);
 	input_set_drvdata(input_dev, priv);
 	err = input_register_device(input_dev);
 	if (err) {
