@@ -150,7 +150,7 @@ static const char driver_name [] = "asix";
 
 #define AX_EEPROM_MAGIC		0xdeadbeef
 #define AX88172_EEPROM_LEN	0x40
-#define AX88772_EEPROM_LEN	0xff
+#define AX_EEPROM_LEN	0x200
 
 #define PHY_MODE_MARVELL	0x0000
 #define MII_MARVELL_LED_CTRL	0x0018
@@ -170,7 +170,7 @@ struct asix_data {
 	u8 mac_addr[ETH_ALEN];
 	u8 phymode;
 	u8 ledmode;
-	u8 eeprom_len;
+	u16 eeprom_len;
 };
 
 struct ax88172_int_data {
@@ -716,24 +716,118 @@ static int asix_get_eeprom(struct net_device *net,
 			      struct ethtool_eeprom *eeprom, u8 *data)
 {
 	struct usbnet *dev = netdev_priv(net);
-	__le16 *ebuf = (__le16 *)data;
+	u16 *eeprom_buff;
+	int first_word, last_word;
 	int i;
 
-	/* Crude hack to ensure that we don't overwrite memory
-	 * if an odd length is supplied
-	 */
-	if (eeprom->len % 2)
+	if (eeprom->len == 0)
 		return -EINVAL;
 
 	eeprom->magic = AX_EEPROM_MAGIC;
 
+	first_word = eeprom->offset >> 1;
+	last_word = (eeprom->offset + eeprom->len - 1) >> 1;
+
+	eeprom_buff = kmalloc(sizeof(u16) * (last_word - first_word + 1),
+			      GFP_KERNEL);
+	if (!eeprom_buff)
+		return -ENOMEM;
+
 	/* ax8817x returns 2 bytes from eeprom on read */
-	for (i=0; i < eeprom->len / 2; i++) {
-		if (asix_read_cmd(dev, AX_CMD_READ_EEPROM,
-			eeprom->offset + i, 0, 2, &ebuf[i]) < 0)
-			return -EINVAL;
+	for (i = first_word; i <= last_word; i++) {
+		int ret = asix_read_cmd(dev, AX_CMD_READ_EEPROM, i, 0, 2,
+				  &(eeprom_buff[i - first_word]));
+		if (ret < 0) {
+			kfree(eeprom_buff);
+			return ret;
+		}
 	}
+
+	memcpy(data, (u8 *)eeprom_buff + (eeprom->offset & 1), eeprom->len);
+	kfree(eeprom_buff);
 	return 0;
+}
+
+int asix_set_eeprom(struct net_device *net, struct ethtool_eeprom *eeprom,
+		    u8 *data)
+{
+	struct usbnet *dev = netdev_priv(net);
+	u16 *eeprom_buff;
+	int first_word, last_word;
+	int i;
+	int ret;
+
+	netdev_dbg(net, "write EEPROM len %d, offset %d, magic 0x%x\n",
+		   eeprom->len, eeprom->offset, eeprom->magic);
+
+	if (eeprom->len == 0)
+		return -EINVAL;
+
+	if (eeprom->magic != AX_EEPROM_MAGIC)
+		return -EINVAL;
+
+	first_word = eeprom->offset >> 1;
+	last_word = (eeprom->offset + eeprom->len - 1) >> 1;
+
+	eeprom_buff = kmalloc(sizeof(u16) * (last_word - first_word + 1),
+			      GFP_KERNEL);
+	if (!eeprom_buff)
+		return -ENOMEM;
+
+	/* align data to 16 bit boundaries, read the missing data from
+	   the EEPROM */
+	if (eeprom->offset & 1) {
+		ret = asix_read_cmd(dev, AX_CMD_READ_EEPROM, first_word, 0, 2,
+				    &(eeprom_buff[0]));
+		if (ret < 0) {
+			netdev_err(net, "Failed to read EEPROM at offset 0x%02x.\n", first_word);
+			goto free;
+		}
+	}
+
+	if ((eeprom->offset + eeprom->len) & 1) {
+		ret = asix_read_cmd(dev, AX_CMD_READ_EEPROM, last_word, 0, 2,
+				    &(eeprom_buff[last_word - first_word]));
+		if (ret < 0) {
+			netdev_err(net, "Failed to read EEPROM at offset 0x%02x.\n", last_word);
+			goto free;
+		}
+	}
+
+	memcpy((u8 *)eeprom_buff + (eeprom->offset & 1), data, eeprom->len);
+
+	/* write data to EEPROM */
+	ret = asix_write_cmd(dev, AX_CMD_WRITE_ENABLE, 0x0000, 0, 0, NULL);
+	if (ret < 0) {
+		netdev_err(net, "Failed to enable EEPROM write\n");
+		goto free;
+	}
+	msleep(20);
+
+	/* write backwards so that offset 0 is last in case of power failure */
+	for (i = last_word; i >= first_word; i--) {
+		netdev_dbg(net, "write to EEPROM at offset 0x%02x, data 0x%04x\n",
+			   i, eeprom_buff[i - first_word]);
+		ret = asix_write_cmd(dev, AX_CMD_WRITE_EEPROM, i,
+				     eeprom_buff[i - first_word], 0, NULL);
+		if (ret < 0) {
+			netdev_err(net, "Failed to write EEPROM at offset 0x%02x.\n",
+				   i);
+			goto free;
+		}
+		msleep(20);
+	}
+
+	ret = asix_write_cmd(dev, AX_CMD_WRITE_DISABLE, 0x0000, 0, 0, NULL);
+	if (ret < 0) {
+		netdev_err(net, "Failed to disable EEPROM write\n");
+		goto free;
+	}
+
+	ret = 0;
+free:
+	kfree(eeprom_buff);
+	return ret;
 }
 
 static void asix_get_drvinfo (struct net_device *net,
@@ -799,6 +893,7 @@ static const struct ethtool_ops ax88172_ethtool_ops = {
 	.set_wol		= asix_set_wol,
 	.get_eeprom_len		= asix_get_eeprom_len,
 	.get_eeprom		= asix_get_eeprom,
+	.set_eeprom		= asix_set_eeprom,
 	.get_settings		= usbnet_get_settings,
 	.set_settings		= usbnet_set_settings,
 	.nway_reset		= usbnet_nway_reset,
@@ -938,6 +1033,7 @@ static const struct ethtool_ops ax88772_ethtool_ops = {
 	.set_wol		= asix_set_wol,
 	.get_eeprom_len		= asix_get_eeprom_len,
 	.get_eeprom		= asix_get_eeprom,
+	.set_eeprom		= asix_set_eeprom,
 	.get_settings		= usbnet_get_settings,
 	.set_settings		= usbnet_set_settings,
 	.nway_reset		= usbnet_nway_reset,
@@ -1051,7 +1147,7 @@ static int ax88772_bind(struct usbnet *dev, struct usb_interface *intf)
 	u8 buf[ETH_ALEN];
 	u32 phyid;
 
-	data->eeprom_len = AX88772_EEPROM_LEN;
+	data->eeprom_len = AX_EEPROM_LEN;
 
 	usbnet_get_endpoints(dev,intf);
 
@@ -1166,6 +1262,7 @@ static struct ethtool_ops ax88178_ethtool_ops = {
 	.set_wol		= asix_set_wol,
 	.get_eeprom_len		= asix_get_eeprom_len,
 	.get_eeprom		= asix_get_eeprom,
+	.set_eeprom		= asix_set_eeprom,
 	.get_settings		= usbnet_get_settings,
 	.set_settings		= usbnet_set_settings,
 	.nway_reset		= usbnet_nway_reset,
