@@ -183,12 +183,13 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(SD2_DAT3__USDHC2_DAT3),
 
 	/* GPIO connector (J14) */
-	NEW_PAD_CTRL(MX6PAD(GPIO_2__GPIO_1_2), WEAK),	/* J14 pin1 - GLED */
-	NEW_PAD_CTRL(MX6PAD(GPIO_3__GPIO_1_3), WEAK),	/* J14 pin3 - RLED */
-	NEW_PAD_CTRL(MX6PAD(GPIO_6__GPIO_1_6), WEAK),	/* J14 pins 8/9 (dry contact) - ALED */
-	NEW_PAD_CTRL(MX6PAD(GPIO_7__GPIO_1_7), WEAK),	/* J46 pins 2/3 (dry contact) - Lock */
-	NEW_PAD_CTRL(MX6PAD(GPIO_18__GPIO_7_13), WEAK),	/* J14 pin5 - VOL+ */
-	NEW_PAD_CTRL(MX6PAD(GPIO_19__GPIO_4_5), WEAK),	/* J14 pin7 - VOL- */
+	NEW_PAD_CTRL(MX6PAD(GPIO_2__GPIO_1_2), WEAK),		/* J14 pin1 - GLED */
+	NEW_PAD_CTRL(MX6PAD(GPIO_3__GPIO_1_3), WEAK),		/* J14 pin3 - RLED */
+	NEW_PAD_CTRL(MX6PAD(EIM_D29__GPIO_3_29), WEAK_PD),	/* J14 pins 8/9 (dry contact) */
+	NEW_PAD_CTRL(MX6PAD(GPIO_7__GPIO_1_7), WEAK),		/* J46 pin 2 */
+	NEW_PAD_CTRL(MX6PAD(GPIO_8__GPIO_1_8), WEAK),		/* J46 pin 3 */
+	NEW_PAD_CTRL(MX6PAD(GPIO_18__GPIO_7_13), WEAK),		/* J14 pin5 - VOL+ */
+	NEW_PAD_CTRL(MX6PAD(GPIO_19__GPIO_4_5), WEAK),		/* J14 pin7 - VOL- */
 	0
 };
 
