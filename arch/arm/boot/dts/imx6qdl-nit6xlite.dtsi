@@ -22,6 +22,35 @@
 		reg = <0x10000000 0x40000000>;
 	};
 
+	leds {
+		compatible = "gpio-leds";
+
+		j14-pin1 {
+			gpios = <&gpio1 2 0>;
+			retain-state-suspended;
+			default-state = "off";
+		};
+		j14-pin3 {
+			gpios = <&gpio1 3 0>;
+			retain-state-suspended;
+			default-state = "off";
+		};
+		j14-pins8-9 {
+			gpios = <&gpio3 29 0>;
+			retain-state-suspended;
+			default-state = "off";
+		};
+		j46-pin2 {
+			gpios = <&gpio1 7 0>;
+			retain-state-suspended;
+			default-state = "off";
+		};
+		j46-pin3 {
+			gpios = <&gpio1 8 0>;
+			retain-state-suspended;
+			default-state = "off";
+		};
+	};
 	regulators {
 		compatible = "simple-bus";
 
