@@ -339,7 +339,7 @@
 				MX6QDL_PAD_NANDF_D4__GPIO2_IO04		0x1b0b0		/* J10 pin 18 - Reserved(Broadcom) */
 				MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x100b0		/* RTC_IRQ - falling edge */
 				MX6QDL_PAD_EIM_LBA__GPIO2_IO27		0x1b0b0		/* tsc2004(I2C3) irq */
-				MX6QDL_PAD_EIM_D29__GPIO3_IO29		0x0b0b0		/* J14 pin 8/9(dry contact) */
+				MX6QDL_PAD_EIM_D29__GPIO3_IO29		0x030b0		/* J14 pin 8/9(dry contact) */
 				MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x0b0b0		/* J14 pin 7 - back button */
 				MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x0b0b0		/* tsc2004(I2C3) *reset */
 				MX6QDL_PAD_KEY_ROW4__GPIO4_IO15		0x0b0b0		/* 12v Supply Enable, high active */
