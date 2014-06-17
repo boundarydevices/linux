@@ -32,6 +32,11 @@ int pwm_enable(struct pwm_device *pwm);
  * pwm_disable - stop a PWM output toggling
  */
 void pwm_disable(struct pwm_device *pwm);
+
+/*
+ * pwm_out_enable - enable/disable PWM output pin
+ */
+ void pwm_out_enable(struct pwm_device *pwm, bool enable);
 #else
 static inline struct pwm_device *pwm_request(int pwm_id, const char *label)
 {
@@ -53,6 +58,10 @@ static inline int pwm_enable(struct pwm_device *pwm)
 }
 
 static inline void pwm_disable(struct pwm_device *pwm)
+{
+}
+
+static inline void pwm_out_enable(struct pwm_device *pwm, bool enable)
 {
 }
 #endif
@@ -131,6 +140,7 @@ struct pwm_ops {
 					  struct pwm_device *pwm);
 	void			(*disable)(struct pwm_chip *chip,
 					   struct pwm_device *pwm);
+	void			(*out_enable)(struct pwm_chip *pwm, bool enable);
 #ifdef CONFIG_DEBUG_FS
 	void			(*dbg_show)(struct pwm_chip *chip,
 					    struct seq_file *s);

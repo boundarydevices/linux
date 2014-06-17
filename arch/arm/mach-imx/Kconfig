@@ -49,7 +49,7 @@ config MXC_DEBUG_BOARD
 	  interrupt control and various board functions.
 
 config HAVE_EPIT
-	bool
+	bool "Enable MXC EPIT driver"
 
 config MXC_USE_EPIT
 	bool "Use EPIT instead of GPT"
@@ -903,6 +903,14 @@ config MACH_IMX_BLUETOOTH_RFKILL
 
 	help
 	Say Y to get the standard rfkill interface of Bluetooth
+
+config MX6_IR
+	bool "MX6 IR Support"
+	depends on PWM_IMX
+	default n
+	help
+	 This config is for MX6 IR support. Enable it if hardware supported.
+
 
 source "arch/arm/mach-imx/devices/Kconfig"
 

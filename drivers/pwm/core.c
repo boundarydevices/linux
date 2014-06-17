@@ -455,6 +455,17 @@ void pwm_disable(struct pwm_device *pwm)
 }
 EXPORT_SYMBOL_GPL(pwm_disable);
 
+/**
+ * pwm_out_enable() - a PWM output toggling
+ * @pwm: PWM device
+ */
+void pwm_out_enable(struct pwm_device *pwm, bool enable)
+{
+	if (pwm && test_bit(PWMF_ENABLED, &pwm->flags))
+		pwm->chip->ops->out_enable(pwm->chip, enable);
+}
+EXPORT_SYMBOL_GPL(pwm_out_enable);
+
 static struct pwm_chip *of_node_to_pwmchip(struct device_node *np)
 {
 	struct pwm_chip *chip;

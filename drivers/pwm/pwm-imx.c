@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2013-2014 Freescale Semiconductor, Inc.
  * simple driver for PWM (Pulse Width Modulator) controller
  *
  * This program is free software; you can redistribute it and/or modify
@@ -41,7 +41,7 @@
 #define MX3_PWMCR_CLKSRC_IPG      (1 << 16)
 #define MX3_PWMCR_SWR		  (1 << 3)
 #define MX3_PWMCR_EN              (1 << 0)
-
+#define MX3_PWMCR_OUTPIN_DISCONNECT     (3 << 18)
 #define MX3_PWM_SWR_LOOP	  5
 
 struct imx_chip {
@@ -55,6 +55,7 @@ struct imx_chip {
 	int (*config)(struct pwm_chip *chip,
 		struct pwm_device *pwm, int duty_ns, int period_ns);
 	void (*set_enable)(struct pwm_chip *chip, bool enable);
+	void (*out_enable)(struct pwm_chip *chip, bool enable);
 };
 
 #define to_imx_chip(chip)	container_of(chip, struct imx_chip, chip)
@@ -89,6 +90,21 @@ static int imx_pwm_config_v1(struct pwm_chip *chip,
 }
 
 static void imx_pwm_set_enable_v1(struct pwm_chip *chip, bool enable)
+{
+	struct imx_chip *imx = to_imx_chip(chip);
+	u32 val;
+
+	val = readl(imx->mmio_base + MX1_PWMC);
+
+	if (enable)
+		val |= MX1_PWMC_EN;
+	else
+		val &= ~MX1_PWMC_EN;
+
+	writel(val, imx->mmio_base + MX1_PWMC);
+}
+
+static void imx_pwm_out_enable_v1(struct pwm_chip *chip, bool enable)
 {
 	struct imx_chip *imx = to_imx_chip(chip);
 	u32 val;
@@ -175,6 +191,21 @@ static void imx_pwm_set_enable_v2(struct pwm_chip *chip, bool enable)
 	writel(val, imx->mmio_base + MX3_PWMCR);
 }
 
+static void imx_pwm_out_enable_v2(struct pwm_chip *chip, bool enable)
+{
+	struct imx_chip *imx = to_imx_chip(chip);
+	u32 val;
+
+	val = readl(imx->mmio_base + MX3_PWMCR);
+
+	if (enable)
+		val &= ~(MX3_PWMCR_OUTPIN_DISCONNECT);
+	else
+		val |= (MX3_PWMCR_OUTPIN_DISCONNECT);
+
+	writel(val, imx->mmio_base + MX3_PWMCR);
+}
+
 static int imx_pwm_config(struct pwm_chip *chip,
 		struct pwm_device *pwm, int duty_ns, int period_ns)
 {
@@ -215,10 +246,18 @@ static void imx_pwm_disable(struct pwm_chip *chip, struct pwm_device *pwm)
 	clk_disable_unprepare(imx->clk_per);
 }
 
+static void imx_pwm_out_enable(struct pwm_chip *chip, bool enable)
+{
+	struct imx_chip *imx = to_imx_chip(chip);
+
+	imx->out_enable(chip, enable);
+}
+
 static struct pwm_ops imx_pwm_ops = {
 	.enable = imx_pwm_enable,
 	.disable = imx_pwm_disable,
 	.config = imx_pwm_config,
+	.out_enable = imx_pwm_out_enable,
 	.owner = THIS_MODULE,
 };
 
@@ -226,16 +265,19 @@ struct imx_pwm_data {
 	int (*config)(struct pwm_chip *chip,
 		struct pwm_device *pwm, int duty_ns, int period_ns);
 	void (*set_enable)(struct pwm_chip *chip, bool enable);
+	void (*out_enable)(struct pwm_chip *chip, bool enable);
 };
 
 static struct imx_pwm_data imx_pwm_data_v1 = {
 	.config = imx_pwm_config_v1,
 	.set_enable = imx_pwm_set_enable_v1,
+	.out_enable = imx_pwm_out_enable_v1,
 };
 
 static struct imx_pwm_data imx_pwm_data_v2 = {
 	.config = imx_pwm_config_v2,
 	.set_enable = imx_pwm_set_enable_v2,
+	.out_enable = imx_pwm_out_enable_v2,
 };
 
 static const struct of_device_id imx_pwm_dt_ids[] = {
@@ -290,6 +332,7 @@ static int imx_pwm_probe(struct platform_device *pdev)
 	data = of_id->data;
 	imx->config = data->config;
 	imx->set_enable = data->set_enable;
+	imx->out_enable = data->out_enable;
 
 	ret = pwmchip_add(&imx->chip);
 	if (ret < 0)
