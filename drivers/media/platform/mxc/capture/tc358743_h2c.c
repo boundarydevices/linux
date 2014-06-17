@@ -22,7 +22,6 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#define DEBUG
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/slab.h>
@@ -34,6 +33,10 @@
 #include <linux/regulator/consumer.h>
 #include <linux/fsl_devices.h>
 #include <linux/mutex.h>
+#include <linux/slab.h>
+#include <mach/audmux.h>
+#include <mach/hardware.h>
+#include <mach/iomux-v3.h>
 #include <mach/mipi_csi2.h>
 #include <media/v4l2-chip-ident.h>
 #include <media/v4l2-int-device.h>
@@ -43,19 +46,11 @@
 #include <sound/jack.h>
 #include <sound/soc-dapm.h>
 #include <asm/mach-types.h>
-#include <mach/audmux.h>
-#include <linux/slab.h>
 #include "mxc_v4l2_capture.h"
 
 #define CODEC_CLOCK 16500000
 /* SSI clock sources */
 #define IMX_SSP_SYS_CLK		0
-
-
-#define TC358743_VOLTAGE_DIGITAL_IO	1800000
-#define TC358743_VOLTAGE_DIGITAL_CORE	1500000
-#define TC358743_VOLTAGE_DIGITAL_GPO	1500000
-#define TC358743_VOLTAGE_ANALOG		2800000
 
 #define MIN_FPS 30
 #define MAX_FPS 60
@@ -67,6 +62,11 @@
 #define TC358743_CHIP_ID_HIGH_BYTE		0x0
 #define TC358743_CHIP_ID_LOW_BYTE		0x0
 #define TC3587430_HDMI_DETECT			0x0f //0x10
+
+#define TC_VOLTAGE_DIGITAL_IO           1800000
+#define TC_VOLTAGE_DIGITAL_CORE         1500000
+#define TC_VOLTAGE_DIGITAL_GPO		1500000
+#define TC_VOLTAGE_ANALOG               2800000
 
 enum tc358743_mode {
 	tc358743_mode_INIT, /*only for sensor init*/
@@ -146,6 +146,33 @@ static struct tc_data *g_td;
 #define DET_WORK_TIMEOUT_DEFERRED 2000
 #define MAX_BOUNCE 5
 
+
+static const int voltages[REGULATOR_CNT] = {
+	[REGULATOR_IO] = TC_VOLTAGE_DIGITAL_IO,
+	[REGULATOR_CORE] = TC_VOLTAGE_DIGITAL_CORE,
+	[REGULATOR_GPO] = TC_VOLTAGE_DIGITAL_GPO,
+	[REGULATOR_ANALOG] = TC_VOLTAGE_ANALOG,
+};
+
+static int tc_regulator_init(struct tc_data *td, struct device *dev, char **sregulator)
+{
+	int i;
+	int ret = 0;
+
+	for (i = 0; i < REGULATOR_CNT; i++) {
+		if (!sregulator[i])
+			continue;
+		td->regulator[i] = regulator_get(dev, sregulator[i]);
+		if (!IS_ERR(td->regulator[i])) {
+			regulator_set_voltage(td->regulator[i],
+				voltages[i], voltages[i]);
+		} else {
+			pr_err("%s:%s devm_regulator_get failed\n", __func__, sregulator[i]);
+			td->regulator[i] = NULL;
+		}
+	}
+	return ret;
+}
 
 static void det_work_enable(struct tc_data *td, int enable)
 {
@@ -1729,7 +1756,7 @@ static int tc358743_minit(struct tc_data *td)
 
 	ret = tc358743_init_mode(td, frame_rate, sensor->streamcap.capturemode);
 	if (ret)
-		pr_err("%s: Fail to init tc35874! - retry\n", __func__);
+		pr_err("%s: Fail to init tc35874!\n", __func__);
 	return ret;
 }
 
@@ -2244,7 +2271,7 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 
 	pr_debug("%s: Setting mclk to %d MHz\n", __func__, sensor->mclk / 1000000);
 //	set_mclk_rate(&sensor->mclk, sensor->mclk_source);
-	pr_debug("%s: After mclk to %d MHz\n", __func__, sensor->mclk / 1000000);
+//	pr_debug("%s: After mclk to %d MHz\n", __func__, sensor->mclk / 1000000);
 
 	/* Default camera frame rate is set in probe */
 	tgt_fps = sensor->streamcap.timeperframe.denominator /
@@ -2862,9 +2889,6 @@ static irqreturn_t tc358743_detect_handler(int irq, void *data)
  * @param adapter	    struct i2c_adapter *
  * @return  Error code indicating success or failure
  */
-#include <mach/hardware.h>
-#include <mach/iomux-v3.h>
-
 #define DUMP_LENGTH 256
 static	u16 regoffs = 0;
 
@@ -2992,26 +3016,19 @@ static ssize_t tc358743_show_audio(struct device *dev,
 static DEVICE_ATTR(audio, S_IRUGO, tc358743_show_audio, NULL);
 #endif
 
-static const int voltages[REGULATOR_CNT] = {
-	[REGULATOR_IO] = TC358743_VOLTAGE_DIGITAL_IO,
-	[REGULATOR_CORE] = TC358743_VOLTAGE_DIGITAL_CORE,
-	[REGULATOR_GPO] = TC358743_VOLTAGE_DIGITAL_GPO,
-	[REGULATOR_ANALOG] = TC358743_VOLTAGE_ANALOG,
-};
-
 static int tc358743_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
+	struct device *dev = &client->dev;
 	struct tc_data *td;
 	struct sensor_data *sensor;
 	int retval = -1;
 	int i;
-	struct fsl_mxc_camera_platform_data *plat = client->dev.platform_data;
+	struct fsl_mxc_camera_platform_data *plat = dev->platform_data;
 	char *sregulator[REGULATOR_CNT];
 	u8 chip_id_high;
 	u32 u32val;
 
-	pr_debug("%s: started\n", __func__);
 	td = kzalloc(sizeof(*td), GFP_KERNEL);
 	if (!td)
 		return -ENOMEM;
@@ -3020,7 +3037,6 @@ static int tc358743_probe(struct i2c_client *client,
 	td->det_work_timeout = DET_WORK_TIMEOUT_DEFAULT;
 	td->audio = 2;
 	mutex_init(&td->access_lock);
-
 	sensor = &td->sensor;
 
 	/* Set initial values for the sensor struct. */
@@ -3055,31 +3071,11 @@ static int tc358743_probe(struct i2c_client *client,
 	sregulator[REGULATOR_CORE] = plat->core_regulator;
 	sregulator[REGULATOR_GPO] = plat->gpo_regulator;
 	sregulator[REGULATOR_ANALOG] = plat->analog_regulator;
-	for (i = 0; i < REGULATOR_CNT; i++) {
-		if (!sregulator[i])
-			continue;
-		td->regulator[i] = regulator_get(&client->dev,
-				sregulator[i]);
-		if (IS_ERR(td->regulator[i])) {
-			retval = PTR_ERR(td->regulator[i]);
-			td->regulator[i] = NULL;
-			goto err1;
-		}
-		regulator_set_voltage(td->regulator[i],
-				voltages[i], voltages[i]);
-		retval = regulator_enable(td->regulator[i]);
-		if (retval) {
-			pr_err("%s:%s set voltage error\n", __func__,
-					sregulator[i]);
-			goto err1;
-		}
-		dev_dbg(&client->dev, "%s:%s set voltage ok\n",
-				__func__, sregulator[i]);
-	}
 
 	if (plat->io_init)
 		plat->io_init();
 
+	tc_regulator_init(td, dev, sregulator);
 	power_control(td, 1);
 
 	u32val = 0;
@@ -3094,6 +3090,7 @@ static int tc358743_probe(struct i2c_client *client,
 	tc358743_int_device.priv = td;
 	if (!g_td)
 		g_td = td;
+
 #ifdef CONFIG_TC358743_AUDIO
 	retval = device_create_file(&client->dev, &dev_attr_audio);
 #endif
@@ -3173,7 +3170,6 @@ static int tc358743_probe(struct i2c_client *client,
 	pr_debug("%s: finished, error=%d\n", __func__, retval);
 	return retval;
 err4:
-err1:
 	for (i = REGULATOR_CNT - 1; i >= 0; i--) {
 		if (td->regulator[i]) {
 			regulator_disable(td->regulator[i]);
