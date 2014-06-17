@@ -631,7 +631,7 @@
 			};
 
 			tempmon: tempmon {
-				compatible = "fsl,imx6sx-tempmon", "fsl,imx6q-tempmon";
+				compatible = "fsl,imx6sx-tempmon";
 				interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
 				fsl,tempmon = <&anatop>;
 				fsl,tempmon-data = <&ocotp>;
