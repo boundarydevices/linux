@@ -62,10 +62,6 @@
 	status = "okay";
 };
 
-&v4l2_cap_2 {
-	compatible = "fsl,imx6q-v4l2-capture";
+&v4l2_cap_3 {
 	ipu_id = <1>;
-	csi_id = <1>;
-	mclk_source = <0>;
-	status = "okay";
 };
