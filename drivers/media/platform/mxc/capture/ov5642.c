@@ -27,8 +27,6 @@
 #include <linux/clk.h>
 #include <linux/of_device.h>
 #include <linux/i2c.h>
-#include <linux/mfd/syscon.h>
-#include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 #include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/regmap.h>
@@ -6222,7 +6220,6 @@ static int ov5642_probe(struct i2c_client *client,
 	struct device *dev = &client->dev;
 	int retval;
 	u8 chip_id_high, chip_id_low;
-	struct regmap *gpr;
 	struct reg_value *firmware_regs;
 	int i;
 	struct sensor_data *sensor = &ov5642_data;
@@ -6324,27 +6321,6 @@ static int ov5642_probe(struct i2c_client *client,
 		pr_warning("camera ov5642 is not found\n");
 		clk_disable_unprepare(ov5642_data.sensor_clk);
 		return -ENODEV;
-	}
-
-	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
-	if (!IS_ERR(gpr)) {
-		if (of_machine_is_compatible("fsl,imx6q")) {
-			int mask = ov5642_data.csi ? (1 << 20) : (1 << 19);
-
-			if (sensor->csi != sensor->ipu_id) {
-				pr_warning("%s: csi_id != ipu_id\n", __func__);
-				return -ENODEV;
-			}
-			regmap_update_bits(gpr, IOMUXC_GPR1, mask, mask);
-		} else if (of_machine_is_compatible("fsl,imx6dl")) {
-			int mask = ov5642_data.csi ? (7 << 3) : (7 << 0);
-			int val =  ov5642_data.csi ? (4 << 3) : (4 << 0);
-
-			regmap_update_bits(gpr, IOMUXC_GPR13, mask, val);
-		}
-	} else {
-		pr_err("%s: failed to find fsl,imx6q-iomux-gpr regmap\n",
-		       __func__);
 	}
 
 	ov5642_standby(1);
