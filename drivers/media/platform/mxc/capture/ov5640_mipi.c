@@ -27,8 +27,6 @@
 #include <linux/clk.h>
 #include <linux/of_device.h>
 #include <linux/i2c.h>
-#include <linux/mfd/syscon.h>
-#include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 #include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/proc_fs.h>
@@ -3395,7 +3393,6 @@ static int ov5640_probe(struct i2c_client *client,
 	struct device *dev = &client->dev;
 	int retval;
 	u8 chip_id_high, chip_id_low;
-	struct regmap *gpr;
 	struct sensor_data *sensor = &ov5640_data;
 
 	/* request power down pin */
@@ -3496,24 +3493,6 @@ static int ov5640_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
-	if (!IS_ERR(gpr)) {
-		if (of_machine_is_compatible("fsl,imx6q")) {
-			if (sensor->csi == sensor->ipu_id) {
-				int mask = sensor->csi ? (1 << 20) : (1 << 19);
-
-				regmap_update_bits(gpr, IOMUXC_GPR1, mask, 0);
-			}
-		} else if (of_machine_is_compatible("fsl,imx6dl")) {
-			int mask = sensor->csi ? (7 << 3) : (7 << 0);
-			int val =  sensor->csi ? (3 << 3) : (0 << 0);
-
-			regmap_update_bits(gpr, IOMUXC_GPR13, mask, val);
-		}
-	} else {
-		pr_err("%s: failed to find fsl,imx6q-iomux-gpr regmap\n",
-		       __func__);
-	}
 	sensor->virtual_channel = sensor->csi | (sensor->ipu_id << 1);
 	ov5640_standby(1);
 
