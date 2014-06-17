@@ -31,8 +31,6 @@
 #include <linux/device.h>
 #include <linux/clk.h>
 #include <linux/i2c.h>
-#include <linux/mfd/syscon.h>
-#include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 #include <linux/of_gpio.h>
 #include <linux/regulator/consumer.h>
 #include <linux/fsl_devices.h>
@@ -3070,7 +3068,6 @@ static int tc358743_probe(struct i2c_client *client,
 {
 	struct device *dev = &client->dev;
 	int retval;
-	struct regmap *gpr;
 	struct tc_data *td;
 	struct sensor_data *sensor;
 	u8 chip_id_high;
@@ -3187,29 +3184,6 @@ static int tc358743_probe(struct i2c_client *client,
 		goto err4;
 	}
 	chip_id_high = (u8)u32val;
-
-	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
-	if (!IS_ERR(gpr)) {
-		if (of_machine_is_compatible("fsl,imx6q")) {
-			if (sensor->csi == sensor->ipu_id) {
-				int mask = sensor->csi ? (1 << 20) : (1 << 19);
-
-				regmap_update_bits(gpr, IOMUXC_GPR1, mask, 0);
-			}
-		} else if (of_machine_is_compatible("fsl,imx6dl")) {
-			int mask = sensor->csi ? (7 << 3) : (7 << 0);
-			int val =  sensor->csi ? (3 << 3) : (0 << 0);
-
-			if (sensor->ipu_id) {
-				dev_err(dev, "invalid ipu\n");
-				return -EINVAL;
-			}
-			regmap_update_bits(gpr, IOMUXC_GPR13, mask, val);
-		}
-	} else {
-		pr_err("%s: failed to find fsl,imx6q-iomux-gpr regmap\n",
-		       __func__);
-	}
 
 	tc358743_int_device.priv = td;
 	if (!g_td)
