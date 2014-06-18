@@ -12,6 +12,7 @@
 #include <linux/cpufreq.h>
 #include <linux/delay.h>
 #include <linux/device.h>
+#include <linux/device_cooling.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -94,7 +95,7 @@ static struct thermal_soc_data thermal_imx6sx_data = {
 
 struct imx_thermal_data {
 	struct thermal_zone_device *tz;
-	struct thermal_cooling_device *cdev;
+	struct thermal_cooling_device *cdev[2];
 	enum thermal_device_mode mode;
 	struct regmap *tempmon;
 	u32 c1, c2; /* See formula in imx_get_sensor_data() */
@@ -536,11 +537,19 @@ static int imx_thermal_probe(struct platform_device *pdev)
 	regmap_write(map, TEMPSENSE0 + REG_SET, TEMPSENSE0_POWER_DOWN);
 
 	cpumask_set_cpu(0, &clip_cpus);
-	data->cdev = cpufreq_cooling_register(&clip_cpus);
-	if (IS_ERR(data->cdev)) {
-		ret = PTR_ERR(data->cdev);
+	data->cdev[0] = cpufreq_cooling_register(&clip_cpus);
+	if (IS_ERR(data->cdev[0])) {
+		ret = PTR_ERR(data->cdev[0]);
 		dev_err(&pdev->dev,
 			"failed to register cpufreq cooling device: %d\n", ret);
+		return ret;
+	}
+
+	data->cdev[1] = devfreq_cooling_register();
+	if (IS_ERR(data->cdev[1])) {
+		ret = PTR_ERR(data->cdev[1]);
+		dev_err(&pdev->dev,
+			"failed to register devfreq cooling device: %d\n", ret);
 		return ret;
 	}
 
@@ -554,7 +563,8 @@ static int imx_thermal_probe(struct platform_device *pdev)
 		ret = PTR_ERR(data->tz);
 		dev_err(&pdev->dev,
 			"failed to register thermal zone device %d\n", ret);
-		cpufreq_cooling_unregister(data->cdev);
+		cpufreq_cooling_unregister(data->cdev[0]);
+		devfreq_cooling_unregister(data->cdev[1]);
 		return ret;
 	}
 
@@ -603,7 +613,8 @@ static int imx_thermal_remove(struct platform_device *pdev)
 		clk_disable_unprepare(data->thermal_clk);
 
 	thermal_zone_device_unregister(data->tz);
-	cpufreq_cooling_unregister(data->cdev);
+	cpufreq_cooling_unregister(data->cdev[0]);
+	devfreq_cooling_unregister(data->cdev[1]);
 
 	return 0;
 }
@@ -654,7 +665,13 @@ static struct platform_driver imx_thermal = {
 	.probe		= imx_thermal_probe,
 	.remove		= imx_thermal_remove,
 };
-module_platform_driver(imx_thermal);
+
+static int __init imx_thermal_init(void)
+{
+	return platform_driver_register(&imx_thermal);
+}
+
+late_initcall(imx_thermal_init);
 
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_DESCRIPTION("Thermal driver for Freescale i.MX SoCs");
