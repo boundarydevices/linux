@@ -83,6 +83,10 @@
 		};
 
 		aips1: aips-bus@02000000 {
+			vpu@02040000 {
+				iramsize = <0>;
+			};
+
 			iomuxc: iomuxc@020e0000 {
 				compatible = "fsl,imx6dl-iomuxc";
 			};
