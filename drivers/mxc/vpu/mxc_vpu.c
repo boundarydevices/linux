@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2006-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -145,8 +145,10 @@ static int vpu_jpu_irq;
 static unsigned int regBk[64];
 static unsigned int pc_before_suspend;
 #endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0) || LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
 static struct regulator *vpu_regulator;
+#endif
 #endif
 static atomic_t clk_cnt_from_ioc = ATOMIC_INIT(0);
 
@@ -186,6 +188,7 @@ static long vpu_power_get(bool on)
 {
 	long ret = 0;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0)
 	if (on) {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0)
 		vpu_regulator = regulator_get(NULL, "cpu_vddvpu");
@@ -200,29 +203,38 @@ static long vpu_power_get(bool on)
 			regulator_put(vpu_regulator);
 #endif
 	}
+#endif
 	return ret;
 }
 
 static void vpu_power_up(bool on)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0) || LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
-	int ret = 0;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
+	if (on)
+		pm_runtime_get_sync(vpu_dev);
+#endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 5, 0) || LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
 	if (on) {
 		if (!IS_ERR(vpu_regulator)) {
-			ret = regulator_enable(vpu_regulator);
-			if (ret)
+			if (regulator_enable(vpu_regulator))
 				dev_err(vpu_dev, "failed to power up vpu\n");
 		}
 	} else {
 		if (!IS_ERR(vpu_regulator)) {
-			ret = regulator_disable(vpu_regulator);
-			if (ret)
+			if (regulator_disable(vpu_regulator))
 				dev_err(vpu_dev, "failed to power down vpu\n");
 		}
 	}
 #else
 	imx_gpc_power_up_pu(on);
+#endif
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
+	if (!on)
+		pm_runtime_put_sync_suspend(vpu_dev);
 #endif
 }
 
@@ -376,10 +388,6 @@ static int vpu_open(struct inode *inode, struct file *filp)
 	mutex_lock(&vpu_data.lock);
 
 	if (open_count++ == 0) {
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
-		pm_runtime_get_sync(vpu_dev);
-#endif
 		vpu_power_up(true);
 
 #ifdef CONFIG_SOC_IMX6Q
@@ -771,10 +779,6 @@ static int vpu_release(struct inode *inode, struct file *filp)
 		}
 
 		vpu_power_up(false);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)
-		pm_runtime_put_sync_suspend(vpu_dev);
-#endif
-
 	}
 	mutex_unlock(&vpu_data.lock);
 
