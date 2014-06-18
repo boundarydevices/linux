@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Freescale Semiconductor, Inc.
+ * Copyright 2013-2014 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -366,16 +366,16 @@ static int imx_get_sensor_data(struct platform_device *pdev)
 	data->c2 = n1 * data->c1 + 1000 * t1;
 
 	/*
-	 * Set the default passive cooling trip point to 20 °C below the
-	 * maximum die temperature. Can be changed from userspace.
+	 * Set the default passive cooling trip point to IMX_TEMP_PASSIVE.
+	 * Can be changed from userspace.
 	 */
-	data->temp_passive = 1000 * (t2 - 20);
+	data->temp_passive = IMX_TEMP_PASSIVE;
 
 	/*
-	 * The maximum die temperature is t2, let's give 5 °C cushion
-	 * for noise and possible temperature rise between measurements.
+	 * Set the default critical trip point to 20 C higher
+	 * than passive trip point. Can be changed from userspace.
 	 */
-	data->temp_critical = 1000 * (t2 - 5);
+	data->temp_critical = IMX_TEMP_PASSIVE + 20 * 1000;
 
 	return 0;
 }
