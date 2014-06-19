@@ -218,12 +218,10 @@ static int tc_regulator_init(struct tc_data *td, struct device *dev)
 
 static void det_work_enable(struct tc_data *td, int enable)
 {
-	mutex_lock(&td->access_lock);
 	td->det_work_enable = enable;
 	td->det_work_timeout = DET_WORK_TIMEOUT_DEFERRED;
 	if (enable)
 		schedule_delayed_work(&td->det_work, msecs_to_jiffies(10));
-	mutex_unlock(&td->access_lock);
 	pr_debug("%s: %d %d\n", __func__, td->det_work_enable, td->det_work_timeout);
 }
 
@@ -1454,7 +1452,7 @@ static s32 tc358743_write_reg(struct sensor_data *sensor, u16 reg, u32 val, int 
 		return ret;
 	}
 	if ((reg < 0x7000) || (reg >= 0x7100)) {
-		pr_debug("%s:reg=%x,val=%x 8543=%02x\n", __func__, reg, val, tc358743_read_reg_val(sensor, 0x8543));
+		if (0) pr_debug("%s:reg=%x,val=%x 8543=%02x\n", __func__, reg, val, tc358743_read_reg_val(sensor, 0x8543));
 	}
 	return 0;
 }
@@ -1468,7 +1466,7 @@ static void tc358743_software_reset(struct sensor_data *sensor)
 	tc358743_write_reg(sensor, 0x0002, 0x0000, 2);
 	msleep(1000);
 	tc358743_write_reg(sensor, 0x0004, 0x0004, 2);	/* autoinc */
-	pr_info("%s:freq=%d\n", __func__, freq);
+	pr_debug("%s:freq=%d\n", __func__, freq);
 	tc358743_write_reg(sensor, 0x8540, freq, 1);
 	tc358743_write_reg(sensor, 0x8541, freq >> 8, 1);
 }
@@ -1482,7 +1480,7 @@ static void tc358743_enable_edid(struct sensor_data *sensor)
 	tc358743_write_reg(sensor, 0x85cb, 0x01, 1);		// 0x85cb:0x85ca - EDID Length = 0x01:00 (Size = 0x100 = 256)
 	tc358743_write_reg(sensor, 0x8543, 0x36, 1);		// DDC CONTROL: DDC_ACK output terminal H active, DDC5V_active detect delay 200ms
 	tc358743_write_reg(sensor, 0x854a, 0x01, 1);		// mark init done
-	pr_debug("%s: c7=%02x ca=%02x cb=%02x 43=%02x 4a=%02x\n", __func__,
+	if (0) pr_debug("%s: c7=%02x ca=%02x cb=%02x 43=%02x 4a=%02x\n", __func__,
 		tc358743_read_reg_val(sensor, 0x85c7),
 		tc358743_read_reg_val(sensor, 0x85ca),
 		tc358743_read_reg_val(sensor, 0x85cb),
@@ -1531,7 +1529,6 @@ static s32 power_control(struct tc_data *td, int on)
 
 	pr_debug("%s: %d\n", __func__, on);
 	if (sensor->on != on) {
-		mutex_lock(&td->access_lock);
 		if (on) {
 			for (i = 0; i < REGULATOR_CNT; i++) {
 				if (td->regulator[i]) {
@@ -1553,7 +1550,6 @@ static s32 power_control(struct tc_data *td, int on)
 					regulator_disable(td->regulator[i]);
 			}
 		}
-		mutex_unlock(&td->access_lock);
 	}
 	return ret;
 }
@@ -1573,11 +1569,35 @@ static int tc358743_toggle_hpd(struct sensor_data *sensor, int active)
 	return ret;
 }
 
-void mipi_csi2_swreset(struct mipi_csi2_info *info);
-#include "../../../../mxc/mipi/mxc_mipi_csi2.h"
-static int tc358743_init_mode(struct tc_data *td,
-		enum tc358743_frame_rate frame_rate,
-		enum tc358743_mode mode)
+static int get_format_index(enum tc358743_frame_rate frame_rate, enum tc358743_mode mode)
+{
+	int ifmt;
+	u32 flags = tc358743_mode_info_data[frame_rate][mode].flags;
+
+	for (ifmt = 0; ifmt < ARRAY_SIZE(tc358743_formats); ifmt++) {
+		if (flags == tc358743_formats[ifmt].flags)
+			return ifmt;
+	}
+	return -1;
+}
+
+static int get_pixelformat(enum tc358743_frame_rate frame_rate, enum tc358743_mode mode)
+{
+	int ifmt = get_format_index(frame_rate, mode);
+
+	if (ifmt < 0) {
+		pr_debug("%s: unsupported format, %d, %d\n", __func__, frame_rate, mode);
+		return 0;
+	}
+	pr_debug("%s: %s (%x, %x)\n", __func__,
+		tc358743_formats[ifmt].description,
+		tc358743_formats[ifmt].pixelformat,
+		tc358743_formats[ifmt].flags);
+	return tc358743_formats[ifmt].pixelformat;
+}
+
+int set_frame_rate_mode(struct tc_data *td,
+		enum tc358743_frame_rate frame_rate, enum tc358743_mode mode)
 {
 	struct sensor_data *sensor = &td->sensor;
 	const struct reg_value *pModeSetting = NULL;
@@ -1591,198 +1611,207 @@ static int tc358743_init_mode(struct tc_data *td,
 	register u32 Val = 0;
 	u8  Length;
 	int retval = 0;
-	void *mipi_csi2_info;
-	u32 mipi_reg;
-	u32 mipi_reg_test[10];
 
-	pr_debug("%s rate: %d mode: %d\n", __func__, frame_rate, mode);
-	if ((mode > tc358743_mode_MAX || mode < 0)
-		&& (mode != tc358743_mode_INIT)) {
-		pr_debug("%s Wrong tc358743 mode detected! %d. Set mode 0\n", __func__, mode);
-		mode = 0;
-	}
+	pModeSetting =
+		tc358743_mode_info_data[frame_rate][mode].init_data_ptr;
+	iModeSettingArySize =
+		tc358743_mode_info_data[frame_rate][mode].init_data_size;
 
-	mipi_csi2_info = mipi_csi2_get_info();
-	pr_debug("%s rate: %d mode: %d, info %p\n", __func__, frame_rate, mode, mipi_csi2_info);
+	sensor->pix.pixelformat = get_pixelformat(frame_rate, mode);
+	sensor->pix.width =
+		tc358743_mode_info_data[frame_rate][mode].width;
+	sensor->pix.height =
+		tc358743_mode_info_data[frame_rate][mode].height;
+	pr_debug("%s: Set %d regs from %p for frs %d mode %d with width %d height %d\n", __func__,
+		iModeSettingArySize,
+		pModeSetting,
+		frame_rate,
+		mode,
+		sensor->pix.width,
+		sensor->pix.height);
+	for (i = 0; i < iModeSettingArySize; ++i) {
+		pModeSetting = tc358743_mode_info_data[frame_rate][mode].init_data_ptr + i;
 
-	/* initial mipi dphy */
-	tc358743_toggle_hpd(sensor, !td->hpd_active);
-	if (mipi_csi2_info) {
-		pr_debug("%s: mipi_csi2_info:\n"
-		"mipi_en:       %d\n"
-		"ipu_id:        %d\n"
-		"csi_id:        %d\n"
-		"v_channel:     %d\n"
-		"lanes:         %d\n"
-		"datatype:      %d\n"
-		"dphy_clk:      %p\n"
-		"pixel_clk:     %p\n"
-		"mipi_csi2_base:%p\n"
-		"pdev:          %p\n"
-		, __func__,
-		((struct mipi_csi2_info *)mipi_csi2_info)->mipi_en,
-		((struct mipi_csi2_info *)mipi_csi2_info)->ipu_id,
-		((struct mipi_csi2_info *)mipi_csi2_info)->csi_id,
-		((struct mipi_csi2_info *)mipi_csi2_info)->v_channel,
-		((struct mipi_csi2_info *)mipi_csi2_info)->lanes,
-		((struct mipi_csi2_info *)mipi_csi2_info)->datatype,
-		((struct mipi_csi2_info *)mipi_csi2_info)->dphy_clk,
-		((struct mipi_csi2_info *)mipi_csi2_info)->pixel_clk,
-		((struct mipi_csi2_info *)mipi_csi2_info)->mipi_csi2_base,
-		((struct mipi_csi2_info *)mipi_csi2_info)->pdev
-		);
-		if (!mipi_csi2_get_status(mipi_csi2_info))
-			mipi_csi2_enable(mipi_csi2_info);
+		Delay_ms = pModeSetting->u32Delay_ms & (0xffff);
+		RegAddr = pModeSetting->u16RegAddr;
+		Val = pModeSetting->u32Val;
+		Mask = pModeSetting->u32Mask;
+		Length = pModeSetting->u8Length;
+		if (Mask) {
+			u32 RegVal = 0;
 
-		if (mipi_csi2_get_status(mipi_csi2_info)) {
-			int ifmt;
-			int lanes = tc358743_mode_info_data[frame_rate][mode].lanes;
-			if (!lanes)
-				lanes = 4;
-			lanes = mipi_csi2_set_lanes(mipi_csi2_info, lanes);
-			pr_debug("Now Using %d lanes\n", lanes);
-
-			mipi_csi2_reset(mipi_csi2_info);
-
-			
-			pr_debug("%s format: %x\n", __func__, sensor->pix.pixelformat);
-			for (ifmt = 0; ifmt < ARRAY_SIZE(tc358743_formats); ifmt++) {
-				if (tc358743_mode_info_data[frame_rate][mode].flags == tc358743_formats[ifmt].flags) {
-					sensor->pix.pixelformat = tc358743_formats[ifmt].pixelformat;
-					pr_debug("%s: %s (%x, %x)\n", __func__, tc358743_formats[ifmt].description, sensor->pix.pixelformat, tc358743_formats[ifmt].flags);
-					mipi_csi2_set_datatype(mipi_csi2_info, tc358743_formats[ifmt].flags);
-					break;
-				}
+			retval = tc358743_read_reg(sensor, RegAddr, &RegVal);
+			if (retval < 0) {
+				pr_err("%s: read failed, reg=0x%x\n", __func__, RegAddr);
+				return retval;
 			}
-			if (ifmt >= ARRAY_SIZE(tc358743_formats)) {
-				pr_err("currently this sensor format (0x%x) can not be supported!\n", sensor->pix.pixelformat);
-				return -1;
-			}
-		} else {
-			pr_err("Can not enable mipi csi2 driver!\n");
-			return -1;
+			RegVal &= ~(u8)Mask;
+			Val &= Mask;
+			Val |= RegVal;
 		}
-	} else {
-		pr_err("Fail to get mipi_csi2_info!\n");
-		return -1;
-	}
 
-	{
-		pModeSetting =
-			tc358743_mode_info_data[frame_rate][mode].init_data_ptr;
-		iModeSettingArySize =
-			tc358743_mode_info_data[frame_rate][mode].init_data_size;
-
-		sensor->pix.width =
-			tc358743_mode_info_data[frame_rate][mode].width;
-		sensor->pix.height =
-			tc358743_mode_info_data[frame_rate][mode].height;
-		pr_debug("%s: Set %d regs from %p for frs %d mode %d with width %d height %d\n", __func__,
-			iModeSettingArySize,
-			pModeSetting,
-			frame_rate,
-			mode,
-			sensor->pix.width,
-			sensor->pix.height);
-		tc358743_software_reset(sensor);
-		for (i = 0; i < iModeSettingArySize; ++i) {
-			pModeSetting = tc358743_mode_info_data[frame_rate][mode].init_data_ptr + i;
-
-			Delay_ms = pModeSetting->u32Delay_ms & (0xffff);
-			RegAddr = pModeSetting->u16RegAddr;
-			Val = pModeSetting->u32Val;
-			Mask = pModeSetting->u32Mask;
-			Length = pModeSetting->u8Length;
-			if (Mask) {
-				u32 RegVal = 0;
-
-				retval = tc358743_read_reg(sensor, RegAddr, &RegVal);
-				if (retval < 0)
-					break;
-
-				RegVal &= ~(u8)Mask;
-				Val &= Mask;
-				Val |= RegVal;
-			}
-
-			retval = tc358743_write_reg(sensor, RegAddr, Val, Length);
-			if (retval < 0)
-				break;
-
-			if (Delay_ms)
-				msleep(Delay_ms);
-
-			if (0 != ((pModeSetting->u32Delay_ms>>16) & (0xff))) {
-				if (!RepeateTimes) {
-					RepeateTimes = (pModeSetting->u32Delay_ms>>16) & (0xff);
-					RepeateLines = (pModeSetting->u32Delay_ms>>24) & (0xff);
-				}
-				if (--RepeateTimes > 0) {
-					i -= RepeateLines;
-				}
-			}
-		}
-		tc358743_enable_edid(sensor);
+		retval = tc358743_write_reg(sensor, RegAddr, Val, Length);
 		if (retval < 0) {
-			pr_err("%s: Fail to write REGS to tc35874!\n", __func__);
-			goto err;
+			pr_err("%s: write failed, reg=0x%x\n", __func__, RegAddr);
+			return retval;
+		}
+		if (Delay_ms)
+			msleep(Delay_ms);
+
+		if (0 != ((pModeSetting->u32Delay_ms>>16) & (0xff))) {
+			if (!RepeateTimes) {
+				RepeateTimes = (pModeSetting->u32Delay_ms>>16) & (0xff);
+				RepeateLines = (pModeSetting->u32Delay_ms>>24) & (0xff);
+			}
+			if (--RepeateTimes > 0) {
+				i -= RepeateLines;
+			}
 		}
 	}
+	tc358743_enable_edid(sensor);
 	if (!td->hdmi_mode)	// is this during reset
 		if ((retval = tc358743_write_edid(sensor, cHDMIEDID, ARRAY_SIZE(cHDMIEDID))))
 			pr_err("%s: Fail to write EDID to tc35874!\n", __func__);
 
-	tc358743_toggle_hpd(sensor, td->hpd_active);
-	if (mipi_csi2_info) {
-		unsigned int i = 0;
+	return retval;
+}
 
-		/* wait for mipi sensor ready */
+void mipi_csi2_swreset(struct mipi_csi2_info *info);
+#include "../../../../mxc/mipi/mxc_mipi_csi2.h"
+
+int mipi_reset(void *mipi_csi2_info,
+		enum tc358743_frame_rate frame_rate,
+		enum tc358743_mode mode)
+{
+	int lanes = tc358743_mode_info_data[frame_rate][mode].lanes;
+
+	if (!lanes)
+		lanes = 4;
+
+	pr_debug("%s: mipi_csi2_info:\n"
+	"mipi_en:       %d\n"
+	"datatype:      %d\n"
+	"dphy_clk:      %p\n"
+	"pixel_clk:     %p\n"
+	"mipi_csi2_base:%p\n"
+	"pdev:          %p\n"
+	, __func__,
+	((struct mipi_csi2_info *)mipi_csi2_info)->mipi_en,
+	((struct mipi_csi2_info *)mipi_csi2_info)->datatype,
+	((struct mipi_csi2_info *)mipi_csi2_info)->dphy_clk,
+	((struct mipi_csi2_info *)mipi_csi2_info)->pixel_clk,
+	((struct mipi_csi2_info *)mipi_csi2_info)->mipi_csi2_base,
+	((struct mipi_csi2_info *)mipi_csi2_info)->pdev
+	);
+	if (mipi_csi2_get_status(mipi_csi2_info)) {
+		mipi_csi2_disable(mipi_csi2_info);
+		msleep(1);
+	}
+	mipi_csi2_enable(mipi_csi2_info);
+
+	if (!mipi_csi2_get_status(mipi_csi2_info)) {
+		pr_err("Can not enable mipi csi2 driver!\n");
+		return -1;
+	}
+	lanes = mipi_csi2_set_lanes(mipi_csi2_info, lanes);
+	pr_debug("Now Using %d lanes\n", lanes);
+
+	mipi_csi2_reset(mipi_csi2_info);
+	mipi_csi2_set_datatype(mipi_csi2_info, tc358743_mode_info_data[frame_rate][mode].flags);
+	return 0;
+}
+
+int mipi_wait(void *mipi_csi2_info)
+{
+	unsigned i = 0;
+	unsigned j;
+	u32 mipi_reg;
+	u32 mipi_reg_test[10];
+
+	/* wait for mipi sensor ready */
+	for (;;) {
 		mipi_reg = mipi_csi2_dphy_status(mipi_csi2_info);
-		while ((mipi_reg == 0x200) && (i < 10)) {
-			mipi_reg_test[i] = mipi_reg;
-			mipi_reg = mipi_csi2_dphy_status(mipi_csi2_info);
-			i++;
-			msleep(10);
-		}
-
+		mipi_reg_test[i++] = mipi_reg;
+		if (mipi_reg != 0x200)
+			break;
 		if (i >= 10) {
 			pr_err("mipi csi2 can not receive sensor clk!\n");
 			return -1;
 		}
+		msleep(10);
+	}
 
-		{
-			int j;
-			for (j = 0; j < i; j++)
-			{
-				pr_debug("%d  mipi csi2 dphy status %x\n", j, mipi_reg_test[j]);
-			}
-		}
+	for (j = 0; j < i; j++) {
+		pr_debug("%d  mipi csi2 dphy status %x\n", j, mipi_reg_test[j]);
+	}
 
-		i = 0;
+	i = 0;
 
-		/* wait for mipi stable */
+	/* wait for mipi stable */
+	for (;;) {
 		mipi_reg = mipi_csi2_get_error1(mipi_csi2_info);
-		while ((mipi_reg != 0x0) && (i < 10)) {
-			mipi_reg_test[i] = mipi_reg;
-			mipi_reg = mipi_csi2_get_error1(mipi_csi2_info);
-			i++;
-			msleep(10);
-		}
-
+		mipi_reg_test[i++] = mipi_reg;
+		if (!mipi_reg)
+			break;
 		if (i >= 10) {
 			pr_err("mipi csi2 can not reveive data correctly!\n");
 			return -1;
 		}
-
-		{
-			int j;
-			for (j = 0; j < i; j++) {
-				pr_debug("%d  mipi csi2 err1 %x\n", j, mipi_reg_test[j]);
-			}
-		}
+		msleep(10);
 	}
-err:
-	return (retval>0)?0:retval;
+
+	for (j = 0; j < i; j++) {
+		pr_debug("%d  mipi csi2 err1 %x\n", j, mipi_reg_test[j]);
+	}
+	return 0;
+}
+
+static int tc358743_init_mode(struct tc_data *td,
+		enum tc358743_frame_rate frame_rate,
+		enum tc358743_mode mode)
+{
+	struct sensor_data *sensor = &td->sensor;
+	int retval = 0;
+	void *mipi_csi2_info;
+
+	pr_debug("%s rate: %d mode: %d\n", __func__, frame_rate, mode);
+	if ((mode >= tc358743_mode_MAX || mode < 0)
+		&& (mode != tc358743_mode_INIT)) {
+		pr_debug("%s Wrong tc358743 mode detected! %d. Set mode 0\n", __func__, mode);
+		mode = 0;
+	}
+	/* initial mipi dphy */
+	tc358743_toggle_hpd(sensor, 0);
+	tc358743_software_reset(sensor);
+
+	mipi_csi2_info = mipi_csi2_get_info();
+	pr_debug("%s rate: %d mode: %d, info %p\n", __func__, frame_rate, mode, mipi_csi2_info);
+
+	if (!mipi_csi2_info) {
+		pr_err("Fail to get mipi_csi2_info!\n");
+		return -1;
+	}
+	retval = mipi_reset(mipi_csi2_info, frame_rate, tc358743_mode_INIT);
+	if (retval)
+		return retval;
+	retval = set_frame_rate_mode(td, frame_rate, tc358743_mode_INIT);
+	if (retval)
+		return retval;
+	retval = mipi_wait(mipi_csi2_info);
+
+	if (mode != tc358743_mode_INIT) {
+		tc358743_software_reset(sensor);
+		retval = mipi_reset(mipi_csi2_info, frame_rate, mode);
+		if (retval)
+			return retval;
+		retval = set_frame_rate_mode(td, frame_rate, mode);
+		if (retval)
+			return retval;
+		retval = mipi_wait(mipi_csi2_info);
+	}
+	if (td->hpd_active)
+		tc358743_toggle_hpd(sensor, td->hpd_active);
+	return retval;
 }
 
 static int tc358743_minit(struct tc_data *td)
@@ -1798,9 +1827,8 @@ static int tc358743_minit(struct tc_data *td)
 	else if (tgt_fps == 30)
 		frame_rate = tc358743_30_fps;
 
-	pr_debug("%s: capture mode: %d extended mode: %d fps: %d\n", __func__,
-			sensor->streamcap.capturemode,
-			sensor->streamcap.extendedmode, tgt_fps);
+	pr_debug("%s: capture mode: %d fps: %d\n", __func__,
+		sensor->streamcap.capturemode, tgt_fps);
 
 	ret = tc358743_init_mode(td, frame_rate, sensor->streamcap.capturemode);
 	if (ret)
@@ -1849,7 +1877,6 @@ static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 	p->u.bt656.mode = V4L2_IF_TYPE_BT656_MODE_NOBT_8BIT;
 	p->u.bt656.clock_min = TC358743_XCLK_MIN;
 	p->u.bt656.clock_max = TC358743_XCLK_MAX;
-	p->u.bt656.bt_sync_correct = 1;  /* Indicate external vsync */
 
 	return 0;
 }
@@ -1865,10 +1892,16 @@ static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 static int ioctl_s_power(struct v4l2_int_device *s, int on)
 {
 	struct tc_data *td = s->priv;
-	if (on)
-		if (!td->hdmi_mode)
-			return tc358743_reset(td);
-	return power_control(td, on);
+	int ret;
+
+	mutex_lock(&td->access_lock);
+	if (on && !td->hdmi_mode) {
+		ret = tc358743_reset(td);
+	} else {
+		ret = power_control(td, on);
+	}
+	mutex_unlock(&td->access_lock);
+	return ret;
 }
 
 /*!
@@ -1913,8 +1946,6 @@ static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 		ret = -EINVAL;
 		break;
 	}
-
-	det_work_enable(td, 1);
 	pr_debug("%s done %d\n", __func__, ret);
 	return ret;
 }
@@ -1938,6 +1969,7 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	int ret = 0;
 
 	pr_debug("%s\n", __func__);
+	mutex_lock(&td->access_lock);
 	det_work_enable(td, 0);
 	/* Make sure power on */
 	power_control(td, 1);
@@ -1977,9 +2009,10 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 			break;
 		}
 
-		if ((u32)a->parm.capture.capturemode > tc358743_mode_MAX) {
+		if ((u32)a->parm.capture.capturemode >= tc358743_mode_MAX) {
 			a->parm.capture.capturemode = 0;
-			pr_debug("%s: Forse extended mode: %d \n", __func__,(u32)a->parm.capture.capturemode);
+			pr_debug("%s: Force mode: %d \n", __func__,
+				(u32)a->parm.capture.capturemode);
 		}
 
 		tgt_fps = sensor->streamcap.timeperframe.denominator /
@@ -1993,16 +2026,23 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 		if (frame_rate_now != frame_rate ||
 		   sensor->streamcap.capturemode != (u32)a->parm.capture.capturemode ||
 		   sensor->streamcap.extendedmode != (u32)a->parm.capture.extendedmode) {
-			sensor->streamcap.timeperframe = *timeperframe;
-			sensor->streamcap.capturemode =
-					(u32)a->parm.capture.capturemode;
-			sensor->streamcap.extendedmode =
-					(u32)a->parm.capture.extendedmode;
+			enum tc358743_mode mode;
 
-			pr_debug("%s: capture mode: %d extended mode: %d \n", __func__,sensor->streamcap.capturemode, sensor->streamcap.extendedmode);
+			mode = (u32)a->parm.capture.capturemode;
 
-			ret = tc358743_init_mode(td, frame_rate,
-						sensor->streamcap.capturemode);
+			if (mode != tc358743_mode_INIT) {
+				sensor->streamcap.capturemode = mode;
+				sensor->streamcap.timeperframe = *timeperframe;
+				sensor->streamcap.extendedmode =
+						(u32)a->parm.capture.extendedmode;
+				pr_debug("%s: capture mode: %d\n", __func__,
+					mode);
+				ret = tc358743_init_mode(td, frame_rate, mode);
+			} else {
+				a->parm.capture.capturemode = sensor->streamcap.capturemode;
+				*timeperframe = sensor->streamcap.timeperframe;
+				a->parm.capture.extendedmode = sensor->streamcap.extendedmode;
+			}
 		} else {
 			pr_debug("%s: Keep current settings\n", __func__);
 		}
@@ -2028,6 +2068,7 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	}
 
 	det_work_enable(td, 1);
+	mutex_unlock(&td->access_lock);
 	return ret;
 }
 
@@ -2129,19 +2170,6 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	return retval;
 }
 
-static int get_pixelformat(int index)
-{
-	int ifmt;
-
-	for (ifmt = 0; ifmt < ARRAY_SIZE(tc358743_formats); ifmt++)
-		if (tc358743_mode_info_data[0][index].flags == tc358743_formats[ifmt].flags)
-			break;
-
-	if (ifmt == ARRAY_SIZE(tc358743_formats))
-		ifmt = 0;	/* Default = RBG888 */
-	return ifmt;
-}
-
 /*!
  * ioctl_enum_framesizes - V4L2 sensor interface handler for
  *			   VIDIOC_ENUM_FRAMESIZES ioctl
@@ -2153,15 +2181,21 @@ static int get_pixelformat(int index)
 static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 				 struct v4l2_frmsizeenum *fsize)
 {
-	pr_debug("%s, INDEX: %d\n", __func__,fsize->index);
-	if (fsize->index > tc358743_mode_MAX)
+	struct tc_data *td = s->priv;
+	struct sensor_data *sensor = &td->sensor;
+	int index = fsize->index;
+
+	if (!index)
+		index = sensor->streamcap.capturemode;
+	pr_debug("%s, INDEX: %d\n", __func__, index);
+	if (index >= tc358743_mode_MAX)
 		return -EINVAL;
 
-	fsize->pixel_format = tc358743_formats[get_pixelformat(fsize->index)].pixelformat; 
+	fsize->pixel_format = get_pixelformat(0, index);
 	fsize->discrete.width =
-			    tc358743_mode_info_data[0][fsize->index].width;
+			    tc358743_mode_info_data[0][index].width;
 	fsize->discrete.height =
-			    tc358743_mode_info_data[0][fsize->index].height;
+			    tc358743_mode_info_data[0][index].height;
 	pr_debug("%s %d:%d format: %x\n", __func__, fsize->discrete.width, fsize->discrete.height, fsize->pixel_format);
 	return 0;
 }
@@ -2204,11 +2238,17 @@ static int ioctl_init(struct v4l2_int_device *s)
 static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
 			      struct v4l2_fmtdesc *fmt)
 {
-	pr_debug("%s\n", __func__);
-	if (fmt->index > tc358743_mode_MAX)
+	struct tc_data *td = s->priv;
+	struct sensor_data *sensor = &td->sensor;
+	int index = fmt->index;
+
+	if (!index)
+		index = sensor->streamcap.capturemode;
+	pr_debug("%s, INDEX: %d\n", __func__, index);
+	if (index >= tc358743_mode_MAX)
 		return -EINVAL;
 
-	fmt->pixelformat = tc358743_formats[get_pixelformat(fmt->index)].pixelformat;
+	fmt->pixelformat = get_pixelformat(0, index);
 
 	pr_debug("%s: format: %x\n", __func__, fmt->pixelformat);
 	return 0;
@@ -2222,10 +2262,13 @@ static int ioctl_try_fmt_cap(struct v4l2_int_device *s,
 	u32 tgt_fps;	/* target frames per secound */
 	enum tc358743_frame_rate frame_rate;
 //	enum image_size isize;
-	int ifmt;
+	int ret = 0;
 	struct v4l2_pix_format *pix = &f->fmt.pix;
+	int mode;
+
 	pr_debug("%s\n", __func__);
 
+	mutex_lock(&td->access_lock);
 	tgt_fps = sensor->streamcap.timeperframe.denominator /
 		  sensor->streamcap.timeperframe.numerator;
 
@@ -2235,20 +2278,16 @@ static int ioctl_try_fmt_cap(struct v4l2_int_device *s,
 		frame_rate = tc358743_30_fps;
 	} else {
 		pr_debug("%s: %d fps (%d,%d) is not supported\n", __func__, tgt_fps, sensor->streamcap.timeperframe.denominator,sensor->streamcap.timeperframe.numerator);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
+	mode = sensor->streamcap.capturemode;
+	sensor->pix.pixelformat = get_pixelformat(frame_rate, mode);
+	sensor->pix.width = pix->width = tc358743_mode_info_data[frame_rate][mode].width;
+	sensor->pix.height = pix->height = tc358743_mode_info_data[frame_rate][mode].height;
+	pr_debug("%s: %dx%d\n", __func__, sensor->pix.width, sensor->pix.height);
 
-	sensor->pix.width = pix->width = tc358743_mode_info_data[frame_rate][sensor->streamcap.capturemode].width;
-	sensor->pix.height = pix->height = tc358743_mode_info_data[frame_rate][sensor->streamcap.capturemode].height;
-
-	for (ifmt = 0; ifmt < ARRAY_SIZE(tc358743_formats); ifmt++)
-		if (tc358743_mode_info_data[frame_rate][sensor->streamcap.capturemode].flags == tc358743_formats[ifmt].flags)
-			break;
-
-	if (ifmt == ARRAY_SIZE(tc358743_formats))
-		ifmt = 0;	/* Default = RBG888 */
-
-	sensor->pix.pixelformat = pix->pixelformat = tc358743_formats[ifmt].pixelformat;
+	pix->pixelformat = sensor->pix.pixelformat;
 	pix->field = V4L2_FIELD_NONE;
 	pix->bytesperline = pix->width * 4;
 	pix->sizeimage = pix->bytesperline * pix->height;
@@ -2269,7 +2308,9 @@ static int ioctl_try_fmt_cap(struct v4l2_int_device *s,
 		pr_debug("VI_STATUS3: 0x%x\n", tc358743_read_reg_val(sensor, 0x8528));
 		pr_debug("%s %d:%d format: %x\n", __func__, pix->width, pix->height, pix->pixelformat);
 	}
-	return 0;
+out:
+	mutex_unlock(&td->access_lock);
+	return ret;
 }
 
 /*!
@@ -2283,13 +2324,15 @@ static int ioctl_try_fmt_cap(struct v4l2_int_device *s,
 static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 {
 	struct tc_data *td = s->priv;
+	struct sensor_data *sensor = &td->sensor;
+	int mode = sensor->streamcap.capturemode;
 
-	pr_debug("%s\n", __func__);
-	if (td->det_changed) {
-		td->det_changed = 0;
-		tc358743_minit(td);
-	}
-	return ioctl_try_fmt_cap(s, f);
+	sensor->pix.pixelformat = get_pixelformat(0, mode);
+	sensor->pix.width = tc358743_mode_info_data[0][mode].width;
+	sensor->pix.height = tc358743_mode_info_data[0][mode].height;
+	f->fmt.pix = sensor->pix;
+	pr_debug("%s: %dx%d\n", __func__, sensor->pix.width, sensor->pix.height);
+	return 0;
 }
 
 /*!
@@ -2301,48 +2344,16 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 static int ioctl_dev_init(struct v4l2_int_device *s)
 {
 	struct tc_data *td = s->priv;
-	struct sensor_data *sensor = &td->sensor;
-	u32 tgt_xclk;	/* target xclk */
-	u32 tgt_fps;	/* target frames per secound */
-	int ret = 0;
-	enum tc358743_frame_rate frame_rate;
-	void *mipi_csi2_info;
 
-	pr_debug("%s\n", __func__);
-
-	/* mclk */
-	tgt_xclk = sensor->mclk;
-	tgt_xclk = min(tgt_xclk, (u32)TC358743_XCLK_MAX);
-	tgt_xclk = max(tgt_xclk, (u32)TC358743_XCLK_MIN);
-//	sensor->mclk = tgt_xclk;
-
-	pr_debug("%s: Setting mclk to %d MHz\n", __func__, sensor->mclk / 1000000);
-//	set_mclk_rate(&sensor->mclk, sensor->mclk_source);
-//	pr_debug("%s: After mclk to %d MHz\n", __func__, sensor->mclk / 1000000);
-
-	/* Default camera frame rate is set in probe */
-	tgt_fps = sensor->streamcap.timeperframe.denominator /
-		  sensor->streamcap.timeperframe.numerator;
-
-	if (tgt_fps == 60)
-		frame_rate = tc358743_60_fps;
-	else if (tgt_fps == 30)
-		frame_rate = tc358743_30_fps;
-	else
-		return -EINVAL;
-
-	mipi_csi2_info = mipi_csi2_get_info();
-
-	/* enable mipi csi2 */
-	if (mipi_csi2_info) {
-		mipi_csi2_enable(mipi_csi2_info);
-	} else {
-		pr_err("Fail to get mipi_csi2_info!\n");
-		return -EPERM;
+	if (td->det_changed) {
+		mutex_lock(&td->access_lock);
+		td->det_changed = 0;
+		pr_debug("%s\n", __func__);
+		tc358743_minit(td);
+		mutex_unlock(&td->access_lock);
 	}
-
-	pr_debug("%s done\n", __func__);
-	return ret;
+	pr_debug("%s\n", __func__);
+	return 0;
 }
 
 /*!
@@ -2835,8 +2846,7 @@ static void det_worker(struct work_struct *work)
 	mutex_lock(&td->access_lock);
 
 	if (!td->det_work_enable) {
-		mutex_unlock(&td->access_lock);
-		return;
+		goto out2;
 	}
 	u32val = 0;
 	ret = tc358743_read_reg(sensor, 0x8621, &u32val);
@@ -2906,17 +2916,16 @@ static void det_worker(struct work_struct *work)
 			}
 			if (td->hdmi_mode) {
 				td->det_work_timeout = DET_WORK_TIMEOUT_DEFERRED;
-				mutex_unlock(&td->access_lock);
-				return;
+				goto out2;
 			}
 		}
 	} else if (td->hdmi_mode && !td->bounce) {
-		mutex_unlock(&td->access_lock);
-		return;
+		goto out2;
 	}
 out:
-	mutex_unlock(&td->access_lock);
 	schedule_delayed_work(&td->det_work, msecs_to_jiffies(td->det_work_timeout));
+out2:
+	mutex_unlock(&td->access_lock);
 }
 
 static irqreturn_t tc358743_detect_handler(int irq, void *data)
@@ -3072,6 +3081,7 @@ static int tc358743_probe(struct i2c_client *client,
 	struct sensor_data *sensor;
 	u8 chip_id_high;
 	u32 u32val;
+	int mode = tc358743_mode_INIT;
 
 	td = kzalloc(sizeof(*td), GFP_KERNEL);
 	if (!td)
@@ -3080,6 +3090,7 @@ static int tc358743_probe(struct i2c_client *client,
 	td->det_work_timeout = DET_WORK_TIMEOUT_DEFAULT;
 	td->audio = 2;
 	mutex_init(&td->access_lock);
+	mutex_lock(&td->access_lock);
 	sensor = &td->sensor;
 
 	/* request power down pin */
@@ -3108,8 +3119,8 @@ static int tc358743_probe(struct i2c_client *client,
 	}
 
 	/* Set initial values for the sensor struct. */
-	memset(sensor, 0, sizeof(*sensor));
-
+	sensor->mipi_camera = 1;
+	sensor->virtual_channel = 0;
 	sensor->sensor_clk = devm_clk_get(dev, "csi_mclk");
 
 	retval = of_property_read_u32(dev->of_node, "mclk",
@@ -3139,7 +3150,7 @@ static int tc358743_probe(struct i2c_client *client,
 		dev_err(dev, "csi id missing or invalid\n");
 		return retval;
 	}
-	if (((unsigned)sensor->ipu_id > 1) || ((unsigned)sensor->csi > 1)) {
+	if ((unsigned)sensor->ipu_id || (unsigned)sensor->csi) {
 		dev_err(dev, "invalid ipu/csi\n");
 		return -EINVAL;
 	}
@@ -3149,23 +3160,21 @@ static int tc358743_probe(struct i2c_client *client,
 
 	sensor->io_init = tc_io_init;
 	sensor->i2c_client = client;
-	sensor->pix.pixelformat = tc358743_formats[0].pixelformat;
 	sensor->streamcap.capability = V4L2_MODE_HIGHQUALITY |
 					   V4L2_CAP_TIMEPERFRAME;
-	sensor->streamcap.capturemode = 0;
-	sensor->streamcap.extendedmode = tc358743_mode_1080P_1920_1080;
+	sensor->streamcap.capturemode = mode;
 	sensor->streamcap.timeperframe.denominator = DEFAULT_FPS;
 	sensor->streamcap.timeperframe.numerator = 1;
 
-	sensor->pix.width = tc358743_mode_info_data[0][sensor->streamcap.capturemode].width;
-	sensor->pix.height = tc358743_mode_info_data[0][sensor->streamcap.capturemode].height;
-	pr_debug("%s: format: %x, capture mode: %d extended mode: %d fps: %d width: %d height: %d\n",__func__,
-	sensor->pix.pixelformat,
-	sensor->streamcap.capturemode, sensor->streamcap.extendedmode,
-	sensor->streamcap.timeperframe.denominator *
-	sensor->streamcap.timeperframe.numerator,
-	sensor->pix.width,
-	sensor->pix.height);
+	sensor->pix.pixelformat = get_pixelformat(0, mode);
+	sensor->pix.width = tc358743_mode_info_data[0][mode].width;
+	sensor->pix.height = tc358743_mode_info_data[0][mode].height;
+	pr_debug("%s: format: %x, capture mode: %d fps: %d width: %d height: %d\n",
+		__func__, sensor->pix.pixelformat, mode,
+		sensor->streamcap.timeperframe.denominator *
+		sensor->streamcap.timeperframe.numerator,
+		sensor->pix.width,
+		sensor->pix.height);
 
 	tc_regulator_init(td, dev);
 	power_control(td, 1);
@@ -3253,20 +3262,26 @@ static int tc358743_probe(struct i2c_client *client,
 		goto err4;
 
 	i2c_set_clientdata(client, td);
+	mutex_unlock(&td->access_lock);
 	retval = v4l2_int_device_register(&tc358743_int_device);
+	mutex_lock(&td->access_lock);
 	if (retval) {
 		pr_err("%s:  v4l2_int_device_register failed, error=%d\n",
 			__func__, retval);
 		goto err4;
 	}
 	power_control(td, 0);
+	mutex_unlock(&td->access_lock);
 	pr_debug("%s: finished, error=%d\n", __func__, retval);
 	return retval;
 
 err4:
+	power_control(td, 0);
+	mutex_unlock(&td->access_lock);
 	pr_err("%s: failed, error=%d\n", __func__, retval);
 	if (g_td == td)
 		g_td = NULL;
+	mutex_destroy(&td->access_lock);
 	kfree(td);
 	return retval;
 }
@@ -3285,6 +3300,7 @@ static int tc358743_remove(struct i2c_client *client)
 
 	// Stop delayed work
 	cancel_delayed_work_sync(&td->det_work);
+	mutex_lock(&td->access_lock);
 
 	power_control(td, 0);
 	// Remove IRQ
@@ -3308,6 +3324,7 @@ static int tc358743_remove(struct i2c_client *client)
 	device_remove_file(&client->dev, &dev_attr_regoffs);
 	device_remove_file(&client->dev, &dev_attr_regdump);
 
+	mutex_unlock(&td->access_lock);
 	v4l2_int_device_unregister(&tc358743_int_device);
 
 	for (i = REGULATOR_CNT - 1; i >= 0; i--) {
