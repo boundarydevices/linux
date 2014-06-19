@@ -330,6 +330,19 @@
 
 &iomuxc {
 	imx6x-sdb {
+		pinctrl_canfd1: canfd1grp-1 {
+			fsl,pins = <
+				MX6SX_PAD_QSPI1B_DQS__CANFD_TX1         0x1b0b0
+				MX6SX_PAD_QSPI1A_SS1_B__CANFD_RX1       0x1b0b0
+			>;
+		};
+
+		pinctrl_canfd2: canfd2grp-1 {
+			fsl,pins = <
+				MX6SX_PAD_QSPI1B_SS1_B__CANFD_RX2       0x1b0b0
+				MX6SX_PAD_QSPI1A_DQS__CANFD_TX2         0x1b0b0
+			>;
+		};
 
 		pinctrl_egalax_int: egalax_intgrp {
 			fsl,pins = <
