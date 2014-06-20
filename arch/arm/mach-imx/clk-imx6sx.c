@@ -25,12 +25,15 @@
 #include "hardware.h"
 
 #define CCM_CCGR_OFFSET(index)	(index * 2)
+#define CCDR    0x4
+#define BM_CCM_CCDR_MMDC_CH0_MASK       (0x2 << 16)
 
 static const char *step_sels[]		= { "osc", "pll2_pfd2_396m", };
 static const char *pll1_sw_sels[]	= { "pll1_sys", "step", };
 static const char *periph_pre_sels[]	= { "pll2_bus", "pll2_pfd2_396m", "pll2_pfd0_352m", "pll2_198m", };
+static const char *periph2_pre_sels[]	= { "pll2_bus", "pll2_pfd2_396m", "pll2_pfd0_352m", "pll4_audio_div", };
 static const char *periph_clk2_sels[]	= { "pll3_usb_otg", "osc", "osc", };
-static const char *periph2_clk2_sels[]	= { "pll3_usb_otg", "pll2_bus", };
+static const char *periph2_clk2_sels[]	= { "pll3_usb_otg", "osc", };
 static const char *periph_sels[]	= { "periph_pre", "periph_clk2", };
 static const char *periph2_sels[]	= { "periph2_pre", "periph2_clk2", };
 static const char *ocram_sels[]		= { "periph", "pll2_pfd2_396m", "periph", "pll3_pfd1_540m", };
@@ -72,7 +75,7 @@ static const char *cko2_sels[]		= {
 	"ecspi_root", "dummy", "usdhc3", "pcie", "arm", "csi_core",
 	"lcdif_axi", "dummy", "osc", "dummy", "gpu2d_ovg_core",
 	"usdhc2", "ssi1", "ssi2", "ssi3", "gpu2d_core", "dummy",
-	"dummy", "dummy", "dummy", "esai", "eim_slow", "uart_serial",
+	"dummy", "dummy", "dummy", "esai_extal", "eim_slow", "uart_serial",
 	"spdif", "asrc", "dummy",
 };
 static const char *cko_sels[] = { "cko1", "cko2", };
@@ -121,6 +124,7 @@ static struct clk_div_table video_div_table[] = {
 
 static u32 share_count_asrc;
 static u32 share_count_audio;
+static u32 share_count_esai;
 
 static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 {
@@ -222,7 +226,7 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SX_CLK_PLL1_SW]            = imx_clk_mux("pll1_sw",          base + 0xc,   2,      1,      pll1_sw_sels,      ARRAY_SIZE(pll1_sw_sels));
 	clks[IMX6SX_CLK_OCRAM_SEL]          = imx_clk_mux("ocram_sel",        base + 0x14,  6,      2,      ocram_sels,        ARRAY_SIZE(ocram_sels));
 	clks[IMX6SX_CLK_PERIPH_PRE]         = imx_clk_mux("periph_pre",       base + 0x18,  18,     2,      periph_pre_sels,   ARRAY_SIZE(periph_pre_sels));
-	clks[IMX6SX_CLK_PERIPH2_PRE]        = imx_clk_mux("periph2_pre",      base + 0x18,  21,     2,      periph_pre_sels,   ARRAY_SIZE(periph_pre_sels));
+	clks[IMX6SX_CLK_PERIPH2_PRE]        = imx_clk_mux("periph2_pre",      base + 0x18,  21,     2,      periph2_pre_sels,   ARRAY_SIZE(periph2_pre_sels));
 	clks[IMX6SX_CLK_PERIPH_CLK2_SEL]    = imx_clk_mux("periph_clk2_sel",  base + 0x18,  12,     2,      periph_clk2_sels,  ARRAY_SIZE(periph_clk2_sels));
 	clks[IMX6SX_CLK_PERIPH2_CLK2_SEL]   = imx_clk_mux("periph2_clk2_sel", base + 0x18,  20,     1,      periph2_clk2_sels, ARRAY_SIZE(periph2_clk2_sels));
 	clks[IMX6SX_CLK_PCIE_AXI_SEL]       = imx_clk_mux("pcie_axi_sel",     base + 0x18,  10,     1,      pcie_axi_sels,     ARRAY_SIZE(pcie_axi_sels));
@@ -347,7 +351,9 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SX_CLK_ECSPI5]       = imx_clk_gate2("ecspi5",        "ecspi_podf",        base + 0x6c, 8);
 	clks[IMX6SX_CLK_EPIT1]        = imx_clk_gate2("epit1",         "perclk",            base + 0x6c, 12);
 	clks[IMX6SX_CLK_EPIT2]        = imx_clk_gate2("epit2",         "perclk",            base + 0x6c, 14);
-	clks[IMX6SX_CLK_ESAI]         = imx_clk_gate2("esai",          "esai_podf",         base + 0x6c, 16);
+	clks[IMX6SX_CLK_ESAI_EXTAL]   = imx_clk_gate2_shared("esai_extal", "esai_podf",     base + 0x6c, 16, &share_count_esai);
+	clks[IMX6SX_CLK_ESAI_IPG]     = imx_clk_gate2_shared("esai_ipg",   "ahb",           base + 0x6c, 16, &share_count_esai);
+	clks[IMX6SX_CLK_ESAI_MEM]     = imx_clk_gate2_shared("esai_mem",   "ahb",           base + 0x6c, 16, &share_count_esai);
 	clks[IMX6SX_CLK_WAKEUP]       = imx_clk_gate2("wakeup",        "ipg",               base + 0x6c, 18);
 	clks[IMX6SX_CLK_GPT_BUS]      = imx_clk_gate2("gpt_bus",       "perclk",            base + 0x6c, 20);
 	clks[IMX6SX_CLK_GPT_SERIAL]   = imx_clk_gate2("gpt_serial",    "perclk",            base + 0x6c, 22);
@@ -432,6 +438,9 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 
 	clks[IMX6SX_CLK_CKO1]         = imx_clk_gate("cko1",           "cko1_podf",         base + 0x60, 7);
 	clks[IMX6SX_CLK_CKO2]         = imx_clk_gate("cko2",           "cko2_podf",         base + 0x60, 24);
+
+	/* mask handshake of mmdc */
+	writel_relaxed(BM_CCM_CCDR_MMDC_CH0_MASK, base + CCDR);
 
 	for (i = 0; i < ARRAY_SIZE(clks); i++)
 		if (IS_ERR(clks[i]))

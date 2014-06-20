@@ -633,7 +633,6 @@ gckKERNEL_Destroy(
 #if gcdSECURITY
     gcmkVERIFY_OK(gckKERNEL_SecurityClose(Kernel->securityChannel));
 #endif
-
     gcmkVERIFY_OK(gckOS_DeleteMutex(Kernel->os, Kernel->vidmemMutex));
 
     /* Mark the gckKERNEL object as unknown. */

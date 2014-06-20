@@ -45,24 +45,23 @@
 			reg = <0>;
 			next-level-cache = <&L2>;
 			operating-points = <
-				/* kHz   uV */
-				996000  1275000
+				/* kHz    uV */
+				996000  1250000
 				792000  1175000
-				396000  975000
+				396000  1075000
 			>;
 			fsl,soc-operating-points = <
-				/* ARM kHz      SOC-PU uV */
-				996000            1225000
+				/* ARM kHz      SOC uV */
+				996000            1175000
 				792000            1175000
 				396000            1175000
 			>;
-			clocks = <&clks IMX6SX_CLK_ARM>, <&clks IMX6SX_CLK_PLL2_PFD2>,
-					 <&clks IMX6SX_CLK_STEP>, <&clks IMX6SX_CLK_PLL1_SW>,
-					 <&clks IMX6SX_CLK_PLL1_SYS>;
+			clock-latency = <61036>; /* two CLK32 periods */
+			clocks = <&clks IMX6SX_CLK_ARM>, <&clks IMX6SX_CLK_PLL2_PFD2>, <&clks IMX6SX_CLK_STEP>,
+				 <&clks IMX6SX_CLK_PLL1_SW>, <&clks IMX6SX_CLK_PLL1_SYS>;
 			clock-names = "arm", "pll2_pfd2_396m", "step",
-						  "pll1_sw", "pll1_sys";
+				      "pll1_sw", "pll1_sys";
 			arm-supply = <&reg_arm>;
-			pu-supply = <&reg_pu>;
 			soc-supply = <&reg_soc>;
 		};
 	};
@@ -107,21 +106,22 @@
 		compatible = "simple-bus";
 		interrupt-parent = <&intc>;
 		ranges;
-		busfreq { /* BUSFREQ */
+
+		busfreq {
 			compatible = "fsl,imx6_busfreq";
 			clocks = <&clks IMX6SX_CLK_PLL2_BUS>, <&clks IMX6SX_CLK_PLL2_PFD2>,
-					<&clks IMX6SX_CLK_PLL2_198M>, <&clks IMX6SX_CLK_ARM>,
-					<&clks IMX6SX_CLK_PLL3_USB_OTG>, <&clks IMX6SX_CLK_PERIPH>,
-					<&clks IMX6SX_CLK_PERIPH_CLK2>, <&clks IMX6SX_CLK_PERIPH_CLK2_SEL>,
-					<&clks IMX6SX_CLK_OSC>, <&clks IMX6SX_CLK_PLL1_SYS>,
-					<&clks IMX6SX_CLK_PERIPH2>,
-					<&clks IMX6SX_CLK_AHB>, <&clks IMX6SX_CLK_OCRAM>,
-					<&clks IMX6SX_CLK_PLL1_SW>,
-					<&clks IMX6SX_CLK_PERIPH2_CLK2_SEL>, <&clks IMX6SX_CLK_PERIPH2_CLK2>,
-					<&clks IMX6SX_CLK_STEP>;
+				<&clks IMX6SX_CLK_PLL2_198M>, <&clks IMX6SX_CLK_ARM>,
+				<&clks IMX6SX_CLK_PLL3_USB_OTG>, <&clks IMX6SX_CLK_PERIPH>,
+				<&clks IMX6SX_CLK_PERIPH_PRE>, <&clks IMX6SX_CLK_PERIPH_CLK2>,
+				<&clks IMX6SX_CLK_PERIPH_CLK2_SEL>, <&clks IMX6SX_CLK_OSC>,
+				<&clks IMX6SX_CLK_PLL1_SYS>, <&clks IMX6SX_CLK_PERIPH2>,
+				<&clks IMX6SX_CLK_AHB>, <&clks IMX6SX_CLK_OCRAM>,
+				<&clks IMX6SX_CLK_PLL1_SW>, <&clks IMX6SX_CLK_PERIPH2_PRE>,
+				<&clks IMX6SX_CLK_PERIPH2_CLK2_SEL>, <&clks IMX6SX_CLK_PERIPH2_CLK2>,
+				<&clks IMX6SX_CLK_STEP>, <&clks IMX6SX_CLK_MMDC_P0_FAST>;
 			clock-names = "pll2_bus", "pll2_pfd2_396m", "pll2_198m", "arm", "pll3_usb_otg", "periph",
-						  "periph_clk2", "periph_clk2_sel", "osc", "pll1_sys", "periph2", "ahb", "ocram", "pll1_sw",
-						  "periph2_clk2_sel", "periph2_clk2", "step";
+				"periph_pre", "periph_clk2", "periph_clk2_sel", "osc", "pll1_sys", "periph2", "ahb", "ocram", "pll1_sw",
+				"periph2_pre", "periph2_clk2_sel", "periph2_clk2", "step", "mmdc";
 			fsl,max_ddr_freq = <400000000>;
 		};
 
@@ -136,9 +136,15 @@
 			clocks = <&clks IMX6SX_CLK_OCRAM_S>;
 		};
 
-		ocram: sram@00900000 {
+		ocrams_ddr: sram@00900000 {
+			compatible = "fsl,ddr-lpm-sram";
+			reg = <0x00900000 0x1000>;
+			clocks = <&clks IMX6SX_CLK_OCRAM>;
+		};
+
+		ocram: sram@00901000 {
 			compatible = "mmio-sram";
-			reg = <0x00900000 0x20000>;
+			reg = <0x00901000 0x1F000>;
 			clocks = <&clks IMX6SX_CLK_OCRAM>;
 		};
 
@@ -281,11 +287,15 @@
 				};
 
 				esai: esai@02024000 {
-					compatible = "fsl,imx6q-esai";
+					compatible = "fsl,imx35-esai";
 					reg = <0x02024000 0x4000>;
 					interrupts = <0 51 0x04>;
-					clocks = <&clks IMX6SX_CLK_ESAI>, <&clks IMX6SX_CLK_SPBA>;
-					clock-names = "core", "dma";
+					clocks = <&clks IMX6SX_CLK_ESAI_IPG>,
+					        <&clks IMX6SX_CLK_ESAI_MEM>,
+					        <&clks IMX6SX_CLK_ESAI_EXTAL>,
+					        <&clks IMX6SX_CLK_ESAI_IPG>,
+					        <&clks IMX6SX_CLK_SPBA>;
+					clock-names = "core", "mem", "extal", "fsys", "dma";
 					fsl,esai-dma-events = <24 23>;
 					fsl,flags = <1>;
 					status = "disabled";
@@ -465,21 +475,6 @@
 					anatop-max-voltage = <1450000>;
 				};
 
-				reg_pu: regulator-vddpu@140 {
-					compatible = "fsl,anatop-regulator";
-					regulator-name = "vddpu";
-					regulator-min-microvolt = <725000>;
-					regulator-max-microvolt = <1450000>;
-					anatop-reg-offset = <0x140>;
-					anatop-vol-bit-shift = <9>;
-					anatop-vol-bit-width = <5>;
-					anatop-delay-reg-offset = <0x170>;
-					anatop-delay-bit-shift = <26>;
-					anatop-delay-bit-width = <2>;
-					anatop-min-bit-val = <1>;
-					anatop-min-voltage = <725000>;
-					anatop-max-voltage = <1450000>;
-				};
 				reg_soc: regulator-vddsoc@140 {
 					compatible = "fsl,anatop-regulator";
 					regulator-name = "vddsoc";
@@ -562,6 +557,7 @@
 				clock-names = "gpu3d_core", "ipg";
 				pu-supply = <&pu_dummy>;
 				pcie-supply = <&reg_pcie>;
+				fsl,mf-mix-wakeup-irq = <0x4000000 0x3d00 0x0 0x0>;
 			};
 
 			gpio1: gpio@0209c000 {
@@ -676,6 +672,8 @@
 					status = "disabled";
 				};
 			};
+
+
 
 			pwm1: pwm@02080000 {
 				#pwm-cells = <2>;
@@ -1227,6 +1225,8 @@
 				MX6SX_PAD_SD3_DATA3__ECSPI4_MISO 0x100b1
 				MX6SX_PAD_SD3_CMD__ECSPI4_MOSI   0x100b1
 				MX6SX_PAD_SD3_CLK__ECSPI4_SCLK   0x100b1
+
+
 			>;
 		};
 	};

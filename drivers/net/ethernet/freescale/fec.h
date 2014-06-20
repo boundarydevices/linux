@@ -243,7 +243,7 @@ struct bufdesc_ex {
 #define BD_ENET_TX_RCMASK       ((ushort)0x003c)
 #define BD_ENET_TX_UN           ((ushort)0x0002)
 #define BD_ENET_TX_CSL          ((ushort)0x0001)
-#define BD_ENET_TX_STATS        ((ushort)0x03ff)        /* All status bits */
+#define BD_ENET_TX_STATS        ((ushort)0x0fff)        /* All status bits */
 
 /*enhanced buffer descriptor control/status used by Ethernet transmit*/
 #define BD_ENET_TX_INT          0x40000000
@@ -307,6 +307,7 @@ struct bufdesc_ex {
 #define FEC_ENET_RXB    ((uint)0x01000000)      /* A buffer was received */
 #define FEC_ENET_MII    ((uint)0x00800000)      /* MII interrupt */
 #define FEC_ENET_EBERR  ((uint)0x00400000)      /* SDMA bus error */
+#define FEC_ENET_WAKEUP	((uint)0x00020000)	/* Wakeup request */
 #define FEC_ENET_TXF	(FEC_ENET_TXF_0 | FEC_ENET_TXF_1 | FEC_ENET_TXF_2)
 #define FEC_ENET_RXF	(FEC_ENET_RXF_0 | FEC_ENET_RXF_1 | FEC_ENET_RXF_2)
 #define FEC_ENET_TS_AVAIL       ((uint)0x00010000)
@@ -518,6 +519,12 @@ struct fec_enet_priv_tx_q {
 
 	struct bufdesc	*cur_tx;
 	struct bufdesc	*dirty_tx;
+
+	/* Software TSO */
+	unsigned short tx_stop_threshold;
+	unsigned short tx_wake_threshold;
+	char *tso_hdrs;
+	dma_addr_t tso_hdrs_dma;
 };
 
 struct fec_enet_priv_rx_q {
@@ -558,6 +565,7 @@ struct fec_enet_private {
 	struct fec_enet_priv_tx_q *tx_queue[FEC_ENET_MAX_TX_QS];
 	struct fec_enet_priv_rx_q *rx_queue[FEC_ENET_MAX_RX_QS];
 
+	unsigned short bufdesc_size;
 	unsigned int total_tx_ring_size;
 	unsigned int total_rx_ring_size;
 
@@ -591,6 +599,7 @@ struct fec_enet_private {
 	u64 prtc;
 	int	bufdesc_ex;
 	int	pause_flag;
+	int	wol_flag;
 
 	struct	napi_struct napi;
 	int	csum_flags;

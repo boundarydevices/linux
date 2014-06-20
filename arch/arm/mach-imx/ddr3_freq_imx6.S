@@ -43,6 +43,8 @@
 #define L2_CACHE_SYNC		0x730
 
 .extern iram_tlb_phys_addr
+.globl mx6_ddr3_freq_change_start
+.globl mx6_ddr3_freq_change_end
 
 	.align 3
 
@@ -331,6 +333,7 @@ wait_div_update:
  */
 ENTRY(mx6_ddr3_freq_change)
 
+mx6_ddr3_freq_change_start:
 	stmfd	sp!, {r4-r12}
 
 	/*
@@ -344,7 +347,6 @@ ENTRY(mx6_ddr3_freq_change)
 	mov	r9, r2
 	mov	r11, r3
 
-ddr_freq_change:
 	/*
 	 * To ensure no page table walks occur in DDR, we
 	 * have a another page table stored in IRAM that only
@@ -358,15 +360,23 @@ ddr_freq_change:
 	 *     and 2-4G is translated by TTBR1.
 	 */
 
+	ldr	r6, =iram_tlb_phys_addr
+	ldr	r7, [r6]
+
+	/* Disable Branch Prediction, Z bit in SCTLR. */
+	mrc	p15, 0, r6, c1, c0, 0
+	bic	r6, r6, #0x800
+	mcr	p15, 0, r6, c1, c0, 0
+
 	/* Flush the Branch Target Address Cache (BTAC) */
 	ldr	r6, =0x0
 	mcr	p15, 0, r6, c7, c1, 6
-	ldr	r6, =iram_tlb_phys_addr
-	ldr	r6, [r6]
+
 	dsb
 	isb
+
 	/* Store the IRAM table in TTBR1 */
-	mcr	p15, 0, r6, c2, c0, 1
+	mcr	p15, 0, r7, c2, c0, 1
 
 	/* Read TTBCR and set PD0=1, N = 1 */
 	mrc	p15, 0, r6, c2, c0, 2
@@ -379,22 +389,44 @@ ddr_freq_change:
 	/* flush the TLB */
 	ldr	r6, =0x0
 	mcr	p15, 0, r6, c8, c3, 0
+
 	dsb
 	isb
 
-	ldr	r5, =IMX_IO_P2V(MX6Q_MMDC_P0_BASE_ADDR)
-	ldr	r6, =IMX_IO_P2V(MX6Q_CCM_BASE_ADDR)
-	ldr	r7, =IMX_IO_P2V(MX6Q_IOMUXC_BASE_ADDR)
-	ldr	r12, =IMX_IO_P2V(MX6Q_L2_BASE_ADDR)
+	/* Disable L1 data cache. */
+	mrc	p15, 0, r6, c1, c0, 0
+	bic	r6, r6, #0x4
+	mcr	p15, 0, r6, c1, c0, 0
 
 #ifdef CONFIG_CACHE_L2X0
 	/*
-	  * Make sure the L2 buffers are drained.
-	  * Sync operation on L2 drains the buffers.
-	  */
-	mov    r1, #0x0
-	str      r1, [r12, #L2_CACHE_SYNC]
+	 * Make sure the L2 buffers are drained.
+	 * Sync operation on L2 drains the buffers.
+	 */
+	ldr	r12, =IMX_IO_P2V(MX6Q_L2_BASE_ADDR)
+
+	/* Wait for background operations to complete. */
+wait_for_l2_to_idle:
+	ldr	r1, [r12, #L2_CACHE_SYNC]
+	cmp	r1, #0x0
+	bne	wait_for_l2_to_idle
+
+	mov	r1, #0x0
+	str	r1, [r12, #L2_CACHE_SYNC]
+
+	/* Disable L2. */
+	str	r1, [r12, #0x100]
+
+	/*
+	 * The second dsb might be needed to keep cache sync (device write)
+	 * ordering with the memory accesses before it.
+	 */
+	dsb
+	isb
 #endif
+	ldr	r5, =IMX_IO_P2V(MX6Q_MMDC_P0_BASE_ADDR)
+	ldr	r6, =IMX_IO_P2V(MX6Q_CCM_BASE_ADDR)
+	ldr	r7, =IMX_IO_P2V(MX6Q_IOMUXC_BASE_ADDR)
 
 	/* disable automatic power saving. */
 	ldr	r0, [r5, #MMDC0_MAPSR]
@@ -887,9 +919,23 @@ poll_conreq_clear_2:
 	beq	poll_conreq_clear_2
 
 done:
+
+#ifdef CONFIG_CACHE_L2X0
+	/* Enable L2. */
+	ldr	r7, =IMX_IO_P2V(MX6Q_L2_BASE_ADDR)
+	ldr	r6, =0x1
+	str	r6, [r7, #0x100]
+#endif
+
+	/* Enable L1 data cache. */
+	mrc	p15, 0, r6, c1, c0, 0
+	orr	r6, r6, #0x4
+	mcr	p15, 0, r6, c1, c0, 0
+
 	/* Restore the TTBCR */
 	dsb
 	isb
+
 	/* Read TTBCR and set PD0=0, N = 0 */
 	mrc	p15, 0, r6, c2, c0, 2
 	bic	r6, r6, #0x11
@@ -900,15 +946,28 @@ done:
 	/* flush the TLB */
 	ldr	r6, =0x0
 	mcr	p15, 0, r6, c8, c3, 0
+
 	dsb
 	isb
+
+	/* Enable Branch Prediction, Z bit in SCTLR. */
+	mrc	p15, 0, r6, c1, c0, 0
+	orr	r6, r6, #0x800
+	mcr	p15, 0, r6, c1, c0, 0
+
+	/* Flush the Branch Target Address Cache (BTAC) */
+	ldr	r6, =0x0
+	mcr	p15, 0, r6, c7, c1, 6
 
 	/* restore registers */
 
 	ldmfd	sp!, {r4-r12}
 	mov	pc, lr
 
-	.type	mx6_do_ddr3_freq_change, #object
-ENTRY(mx6_do_ddr_freq_change)
-	.word	mx6_ddr3_freq_change
-	.size	mx6_ddr3_freq_change, . - mx6_ddr3_freq_change
+	/*
+	 * Add ltorg here to ensure that all
+	 * literals are stored here and are
+	 * within the text space.
+	 */
+	.ltorg
+mx6_ddr3_freq_change_end:

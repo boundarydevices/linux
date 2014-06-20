@@ -31,17 +31,291 @@
 #define MX6Q_CCM_CCR	0x0
 #define MX6Q_ANATOP_CORE	0x140
 
+.globl imx6_suspend_start
+.globl imx6_suspend_end
+
 	.align 3
 
+	.macro reset_fifo
+
+	/* reset read FIFO, RST_RD_FIFO */
+	ldr	r7, =MX6Q_MMDC_MPDGCTRL0
+	ldr	r6, [r8, r7]
+	orr	r6, r6, #(1 << 31)
+	str	r6, [r8, r7]
+2:
+	ldr	r6, [r8, r7]
+	and	r6, r6, #(1 << 31)
+	cmp	r6, #0
+	bne	2b
+
+	/* reset FIFO a second time */
+	ldr	r6, [r8, r7]
+	orr	r6, r6, #(1 << 31)
+	str	r6, [r8, r7]
+3:
+	ldr	r6, [r8, r7]
+	and	r6, r6, #(1 << 31)
+	cmp	r6, #0
+	bne	3b
+
+	.endm
+
 	.macro	imx6sx_ddr_io_save
+
+	ldr	r4, [r8, #0x2ec] /* DRAM_DQM0 */
+	ldr	r5, [r8, #0x2f0] /* DRAM_DQM1 */
+	ldr	r6, [r8, #0x2f4] /* DRAM_DQM2 */
+	ldr	r7, [r8, #0x2f8] /* DRAM_DQM3 */
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x300] /* DRAM_CAS */
+	ldr	r5, [r8, #0x2fc] /* DRAM_RAS */
+	ldr	r6, [r8, #0x32c] /* DRAM_SDCLK_0 */
+	ldr	r7, [r8, #0x5f4] /* GPR_ADDDS */
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x5f8] /* DDRMODE_CTL */
+	ldr	r5, [r8, #0x608] /* DDRMODE */
+	ldr	r6, [r8, #0x310] /* DRAM_SODT0*/
+	ldr	r7, [r8, #0x314] /* DRAM_SODT1*/
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x330] /* DRAM_SDQS0 */
+	ldr	r5, [r8, #0x334] /* DRAM_SDQS1 */
+	ldr	r6, [r8, #0x338] /* DRAM_SDQS2 */
+	ldr	r7, [r8, #0x33c] /* DRAM_SDQS3 */
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x60c] /* GPR_B0DS */
+	ldr	r5, [r8, #0x610] /* GPR_B1DS */
+	ldr	r6, [r8, #0x61c] /* GPR_B2DS */
+	ldr	r7, [r8, #0x620] /* GPR_B3DS */
+	stmfd	r10!, {r4-r7}
+
+	.endm
+
+	.macro	imx6sx_mmdc_save
+
+	ldr	r4, [r8, #0x800]
+	ldr	r5, [r8, #0x80c]
+	ldr	r6, [r8, #0x810]
+	ldr	r7, [r8, #0x83c]
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x840]
+	ldr	r5, [r8, #0x848]
+	ldr	r6, [r8, #0x850]
+	ldr	r7, [r8, #0x81c]
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x820]
+	ldr	r5, [r8, #0x824]
+	ldr	r6, [r8, #0x828]
+	ldr	r7, [r8, #0x8b8]
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x004]
+	ldr	r5, [r8, #0x008]
+	ldr	r6, [r8, #0x00c]
+	ldr	r7, [r8, #0x010]
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x014]
+	ldr	r5, [r8, #0x018]
+	ldr	r6, [r8, #0x01c]
+	ldr	r7, [r8, #0x02c]
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x030]
+	ldr	r5, [r8, #0x040]
+	ldr	r6, [r8, #0x000]
+	ldr	r7, [r8, #0x020]
+	stmfd	r10!, {r4-r7}
+
+	ldr	r4, [r8, #0x818]
+	ldr	r5, [r8, #0x01c]
+	stmfd	r10!, {r4-r5}
 
 	.endm
 
 	.macro	imx6sx_ddr_io_restore
 
+	ldmea	r10!, {r4-r7}
+	str	r4, [r8, #0x2ec] /* DRAM_DQM0 */
+	str	r5, [r8, #0x2f0] /* DRAM_DQM1 */
+	str	r6, [r8, #0x2f4] /* DRAM_DQM2 */
+	str	r7, [r8, #0x2f8] /* DRAM_DQM3 */
+
+	ldmea	r10!, {r4-r7}
+	str	r4, [r8, #0x300] /* DRAM_CAS */
+	str	r5, [r8, #0x2fc] /* DRAM_RAS */
+	str	r6, [r8, #0x32c] /* DRAM_SDCLK_0 */
+	str	r7, [r8, #0x5f4] /* GPR_ADDDS */
+
+	ldmea	r10!, {r4-r7}
+	str	r4, [r8, #0x5f8] /* DDRMODE_CTL */
+	str	r5, [r8, #0x608] /* DDRMODE */
+	str	r6, [r8, #0x310] /* DRAM_SODT0*/
+	str	r7, [r8, #0x314] /* DRAM_SODT1*/
+
+	ldmea	r10!, {r4-r7}
+	str	r4, [r8, #0x330] /* DRAM_SDQS0 */
+	str	r5, [r8, #0x334] /* DRAM_SDQS1 */
+	str	r6, [r8, #0x338] /* DRAM_SDQS2 */
+	str	r7, [r8, #0x33c] /* DRAM_SDQS3 */
+
+	ldmea	r10!, {r4-r7}
+	str	r4, [r8, #0x60c] /* GPR_B0DS */
+	str	r5, [r8, #0x610] /* GPR_B1DS */
+	str	r6, [r8, #0x61c] /* GPR_B2DS */
+	str	r7, [r8, #0x620] /* GPR_B3DS */
+
+	.endm
+
+	.macro	imx6sx_mmdc_restore
+
+	ldr	r7, =0x4000
+	add	r8, r8, r7
+	ldr	r4, [r8, #0x8] /* DRAM_RESET_BYPASS */
+	bic	r4, r4, #(0x1 << 27)
+	str	r4, [r8, #0x8]
+
+	ldr	r4, [r8, #0x8] /* DRAM_CKE_BYPASS */
+	bic	r4, r4, #(0x1 << 31)
+	str	r4, [r8, #0x8]
+
+	.endm
+
+	.macro	imx6sx_mmdc_restore_dsm
+
+	ldmea	r10!, {r4-r7}
+	str	r4, [r8, #0x800]
+	str	r5, [r8, #0x80c]
+	str	r6, [r8, #0x810]
+	str	r7, [r8, #0x83c]
+
+	ldmea   r10!, {r4-r7}
+	str	r4, [r8, #0x840]
+	str	r5, [r8, #0x848]
+	str	r6, [r8, #0x850]
+	str	r7, [r8, #0x81c]
+
+	ldmea   r10!, {r4-r7}
+	str	r4, [r8, #0x820]
+	str	r5, [r8, #0x824]
+	str	r6, [r8, #0x828]
+	str	r7, [r8, #0x8b8]
+
+	ldmea   r10!, {r4-r7}
+	str	r4, [r8, #0x004]
+	str	r5, [r8, #0x008]
+	str	r6, [r8, #0x00c]
+	str	r7, [r8, #0x010]
+
+	ldmea   r10!, {r4-r7}
+	str	r4, [r8, #0x014]
+	str	r5, [r8, #0x018]
+	str	r6, [r8, #0x01c]
+	str	r7, [r8, #0x02c]
+
+	ldmea   r10!, {r4-r7}
+	bic	r4, #0xff00
+	bic	r4, #0xff
+	orr	r4, #0x0200
+	orr	r4, #0x02
+	str	r4, [r8, #0x030]
+	str	r5, [r8, #0x040]
+	str	r6, [r8, #0x000]
+	/* make sure MMDC is ready */
+	ldr	r4, =0x8033
+	str	r4, [r8, #0x01c]
+	str	r7, [r8, #0x020]
+
+	ldmea   r10!, {r4-r5}
+	str	r4, [r8, #0x818]
+	str	r5, [r8, #0x01c]
+
+	/* make the DDR explicitly enter self-refresh. */
+	ldr	r7, [r8, #MX6Q_MMDC_MAPSR]
+	orr	r7, r7, #(1 << 20)
+	str	r7, [r8, #MX6Q_MMDC_MAPSR]
+4:
+	ldr	r7, [r8, #0x404]
+	ands	r7, r7, #(1 << 24)
+	beq	4b
+
+	ldr	r7, =0x4000
+	add	r11, r11, r7
+	ldr	r4, [r11, #0x8] /* DRAM_RESET_BYPASS */
+	bic	r4, r4, #(0x1 << 27)
+	str	r4, [r11, #0x8]
+
+	ldr	r4, [r11, #0x8] /* DRAM_CKE_BYPASS */
+	bic	r4, r4, #(0x1 << 31)
+	str	r4, [r11, #0x8]
+
+	/* make the DDR explicitly exit self-refresh. */
+	ldr	r7, [r8, #MX6Q_MMDC_MAPSR]
+	bic	r7, r7, #(1 << 20)
+	str	r7, [r8, #MX6Q_MMDC_MAPSR]
+
+5:
+	ldr	r7, [r8, #0x404]
+	ands	r7, r7, #(1 << 24)
+	bne	5b
+
+	ldr	r4, =0x0
+	str	r4, [r8, #0x1c]
+
 	.endm
 
 	.macro	imx6sx_ddr_io_set_lpm
+
+	mov     r10, #0
+	str	r10, [r8, #0x2ec] /* DRAM_DQM0 */
+	str	r10, [r8, #0x2f0] /* DRAM_DQM1 */
+	str	r10, [r8, #0x2f4] /* DRAM_DQM2 */
+	str	r10, [r8, #0x2f8] /* DRAM_DQM3 */
+
+	str	r10, [r8, #0x300] /* DRAM_CAS */
+	str	r10, [r8, #0x2fc] /* DRAM_RAS */
+	str	r10, [r8, #0x32c] /* DRAM_SDCLK_0 */
+	str	r10, [r8, #0x5f4] /* GPR_ADDDS */
+
+	str	r10, [r8, #0x5f8] /* DDRMODE_CTL */
+	str	r10, [r8, #0x608] /* DDRMODE */
+	str	r10, [r8, #0x310] /* DRAM_SODT0*/
+	str	r10, [r8, #0x314] /* DRAM_SODT1*/
+
+	str	r10, [r8, #0x330] /* DRAM_SDQS0 */
+	str	r10, [r8, #0x334] /* DRAM_SDQS1 */
+	str	r10, [r8, #0x338] /* DRAM_SDQS2 */
+	str	r10, [r8, #0x33c] /* DRAM_SDQS3 */
+
+	str	r10, [r8, #0x60c] /* GPR_B0DS */
+	str	r10, [r8, #0x610] /* GPR_B1DS */
+	str	r10, [r8, #0x61c] /* GPR_B2DS */
+	str	r10, [r8, #0x620] /* GPR_B3DS */
+
+	.endm
+
+	.macro	imx6sx_mmdc_set_lpm
+
+	ldr	r7, =0x4000
+	add	r11, r8, r7
+
+	ldr	r4, [r11, #0x8] /* DRAM_RESET */
+	orr	r4, r4, #(0x1 << 28)
+	str	r4, [r11, #0x8]
+
+	ldr	r4, [r11, #0x8] /* DRAM_RESET_BYPASS */
+	orr	r4, r4, #(0x1 << 27)
+	str	r4, [r11, #0x8]
+
+	ldr	r4, [r11, #0x8] /* DRAM_CKE_BYPASS */
+	orr	r4, r4, #(0x1 << 31)
+	str	r4, [r11, #0x8]
 
 	.endm
 
@@ -471,6 +745,8 @@
 	.endm
 
 ENTRY(imx6_suspend)
+imx6_suspend_start:
+	push {r4-r12}
 
 	/*
 	 * counting the resume address in iram
@@ -502,15 +778,19 @@ ENTRY(imx6_suspend)
 	 * is for the jump when we finish DDR IO
 	 * restore.
 	 */
+	ldr r7,=total_suspend_size
+	ldr r7, [r7]
+	add r10, r0, r7
+
 	ldr	r5, [r8, #MX6Q_SRC_GPR1]
-	add	r10, r0, #MX6_SUSPEND_IRAM_SIZE
 	stmfd	r10!, {r5}
 
 	/* save cpu type */
 	stmfd	r10!, {r2}
 
 	str	r9, [r8, #MX6Q_SRC_GPR1]
-	add	r3, r1, #MX6_SUSPEND_IRAM_SIZE
+	add	r3, r1, r7
+
 	str	r3, [r8, #MX6Q_SRC_GPR2]
 
 	ldr	r8, =IMX_IO_P2V(MX6Q_IOMUXC_BASE_ADDR)
@@ -530,7 +810,10 @@ sl_io_save:
 	imx6sl_ddr_io_save
 	b	ddr_io_save_dsm_done
 sx_io_save:
+	ldr	r8, =IMX_IO_P2V(MX6Q_IOMUXC_BASE_ADDR)
 	imx6sx_ddr_io_save
+	ldr	r8, =IMX_IO_P2V(MX6Q_MMDC_P0_BASE_ADDR)
+	imx6sx_mmdc_save
 ddr_io_save_dsm_done:
 
 	/* need to sync L2 cache before DSM. */
@@ -548,9 +831,15 @@ ddr_io_save_dsm_done:
 	 * 4. Set TTBR0.N=1, implying 0-2G is translated by TTBR0
 	 *     and 2-4G is translated by TTBR1.
 	 */
+	/* Disable Branch Prediction, Z bit in SCTLR. */
+	mrc	p15, 0, r6, c1, c0, 0
+	bic	r6, r6, #0x800
+	mcr	p15, 0, r6, c1, c0, 0
+
 	/* Flush the BTAC. */
 	ldr r6, =0x0
 	mcr p15, 0, r6, c7, c1, 6
+
 
 	ldr r6, =iram_tlb_phys_addr
 	ldr r6, [r6]
@@ -570,6 +859,23 @@ ddr_io_save_dsm_done:
 	/* flush the TLB */
 	ldr r6, =0x0
 	mcr p15, 0, r6, c8, c3, 0
+
+	/* Disable L1 data cache. */
+	mrc	p15, 0, r6, c1, c0, 0
+	bic	r6, r6, #0x4
+	mcr	p15, 0, r6, c1, c0, 0
+
+	dsb
+	isb
+
+#ifdef CONFIG_CACHE_L2X0
+	ldr	r8, =IMX_IO_P2V(MX6Q_L2_BASE_ADDR)
+	mov	r6, #0x0
+	str	r6, [r8, #0x100]
+
+	dsb
+	isb
+#endif
 
 	ldr	r8, =IMX_IO_P2V(MX6Q_MMDC_P0_BASE_ADDR)
 	/*
@@ -608,6 +914,7 @@ sl_io_dsm_set_lpm:
 	b	ddr_io_set_lpm_dsm_done
 sx_io_dsm_set_lpm:
 	imx6sx_ddr_io_set_lpm
+	imx6sx_mmdc_set_lpm
 ddr_io_set_lpm_dsm_done:
 
 	/*
@@ -710,8 +1017,9 @@ ldo_bypass_restore:
 	orr	r7, r7, #0x1f
 	str	r7, [r8, #MX6Q_ANATOP_CORE]
 ldo_check_done2:
+	adrl	r7, imx6_suspend_end
+	add	r10, r7, #MX6_SUSPEND_IRAM_DATA_SIZE
 
-	add	r10, r0, #MX6_SUSPEND_IRAM_SIZE
 	/* skip the lr saved in iram */
 	sub	r10, r10, #0x4
 	/* skip the cpu type saved in iram */
@@ -733,29 +1041,12 @@ sl_io_restore:
 	bne	sx_io_restore
 	imx6sl_ddr_io_restore
 	ldr	r8, =IMX_IO_P2V(MX6Q_MMDC_P0_BASE_ADDR)
-	/* reset read FIFO, RST_RD_FIFO */
-	ldr	r7, =MX6Q_MMDC_MPDGCTRL0
-	ldr	r6, [r8, r7]
-	orr     r6, r6, #(1 << 31)
-	str	r6, [r8, r7]
-fifo_reset1_wait:
-	ldr	r6, [r8, r7]
-	and	r6, r6, #(1 << 31)
-	cmp	r6, #0
-	bne	fifo_reset1_wait
-
-	/* reset FIFO a second time */
-	ldr	r6, [r8, r7]
-	orr     r6, r6, #(1 << 31)
-	str	r6, [r8, r7]
-fifo_reset2_wait:
-	ldr	r6, [r8, r7]
-	and	r6, r6, #(1 << 31)
-	cmp	r6, #0
-	bne	fifo_reset2_wait
+	reset_fifo
 	b	ddr_io_restore_done
 sx_io_restore:
+	ldr	r8, =IMX_IO_P2V(MX6Q_IOMUXC_BASE_ADDR)
 	imx6sx_ddr_io_restore
+	imx6sx_mmdc_restore
 ddr_io_restore_done:
 
 	ldr	r8, =IMX_IO_P2V(MX6Q_MMDC_P0_BASE_ADDR)
@@ -773,6 +1064,18 @@ poll_dvfs_clear_2:
 	bic	r7, r7, #0x1
 	str	r7, [r8, #MX6Q_MMDC_MAPSR]
 
+#ifdef CONFIG_CACHE_L2X0
+	/* Enable L2. */
+	ldr	r8, =IMX_IO_P2V(MX6Q_L2_BASE_ADDR)
+	ldr	r7, =0x1
+	str	r7, [r8, #0x100]
+#endif
+
+	/* Enable L1 data cache. */
+	mrc	p15, 0, r6, c1, c0, 0
+	orr	r6, r6, #0x4
+	mcr	p15, 0, r6, c1, c0, 0
+
 	/* Restore TTBCR */
 	dsb
 	isb
@@ -786,6 +1089,17 @@ poll_dvfs_clear_2:
 	/* flush the TLB */
 	ldr	r6, =0x0
 	mcr	p15, 0, r6, c8, c3, 0
+
+	/* Enable Branch Prediction, Z bit in SCTLR. */
+	mrc	p15, 0, r6, c1, c0, 0
+	orr	r6, r6, #0x800
+	mcr	p15, 0, r6, c1, c0, 0
+
+	/* Flush the Branch Target Address Cache (BTAC) */
+	ldr	r6, =0x0
+	mcr	p15, 0, r6, c7, c1, 6
+
+	pop {r4-r12}
 
 	/* return to suspend finish */
 	mov	pc, lr
@@ -841,29 +1155,24 @@ sl_io_dsm_restore:
 	bne	sx_io_dsm_restore
 	imx6sl_ddr_io_restore
 	ldr	r8, =MX6Q_MMDC_P0_BASE_ADDR
-	/* reset read FIFO, RST_RD_FIFO */
-	ldr	r7, =MX6Q_MMDC_MPDGCTRL0
-	ldr	r6, [r8, r7]
-	orr     r6, r6, #(1 << 31)
-	str	r6, [r8, r7]
-dsm_fifo_reset1_wait:
-	ldr	r6, [r8, r7]
-	and	r6, r6, #(1 << 31)
-	cmp	r6, #0
-	bne	dsm_fifo_reset1_wait
-
-	/* reset FIFO a second time */
-	ldr	r6, [r8, r7]
-	orr     r6, r6, #(1 << 31)
-	str	r6, [r8, r7]
-dsm_fifo_reset2_wait:
-	ldr	r6, [r8, r7]
-	and	r6, r6, #(1 << 31)
-	cmp	r6, #0
-	bne	dsm_fifo_reset2_wait
+	reset_fifo
 	b	ddr_io_restore_dsm_done
 sx_io_dsm_restore:
+	ldr	r8, =MX6Q_IOMUXC_BASE_ADDR
 	imx6sx_ddr_io_restore
+	/* check whether M/F mix is powered off */
+	ldr	r8, =MX6Q_GPC_BASE_ADDR
+	ldr	r7, [r8, #0x220]
+	ands	r7, #0x1
+	bne	mega_fast_off
+	ldr     r8, =MX6Q_IOMUXC_BASE_ADDR
+	imx6sx_mmdc_restore
+	b	ddr_io_restore_dsm_done
+mega_fast_off:
+	ldr     r8, =MX6Q_MMDC_P0_BASE_ADDR
+	ldr     r11, =MX6Q_IOMUXC_BASE_ADDR
+	imx6sx_mmdc_restore_dsm
+	reset_fifo
 ddr_io_restore_dsm_done:
 
 	ldr	r8, =MX6Q_MMDC_P0_BASE_ADDR
@@ -881,3 +1190,11 @@ poll_dvfs_clear_1:
 	bic	r7, r7, #0x1
 	str	r7, [r8, #MX6Q_MMDC_MAPSR]
 	mov	pc, lr
+
+	/*
+	 * Add ltorg here to ensure that all
+	 * literals are stored here and are
+	 * within the text space.
+	 */
+	.ltorg
+imx6_suspend_end:

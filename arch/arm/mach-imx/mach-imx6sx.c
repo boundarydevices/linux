@@ -10,8 +10,10 @@
 #include <linux/can/platform/flexcan.h>
 #include <linux/clk-provider.h>
 #include <linux/delay.h>
+#include <linux/fec.h>
 #include <linux/gpio.h>
 #include <linux/irqchip.h>
+#include <linux/netdevice.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_gpio.h>
@@ -33,6 +35,7 @@ static struct platform_device imx6slx_cpufreq_pdev = {
 	.name = "imx6-cpufreq",
 };
 static struct flexcan_platform_data flexcan_pdata[2];
+static struct fec_platform_data fec_pdata[2];
 static int flexcan_en_gpio;
 static int flexcan_stby_gpio;
 static int flexcan0_en;
@@ -70,6 +73,7 @@ static void imx6sx_arm2_flexcan1_switch(int enable)
 static int __init imx6sx_arm2_flexcan_fixup(void)
 {
 	struct device_node *np;
+	bool canfd_en = false;
 
 	np = of_find_node_by_path("/soc/aips-bus@02000000/can@02090000");
 	if (!np)
@@ -84,6 +88,21 @@ static int __init imx6sx_arm2_flexcan_fixup(void)
 		flexcan_pdata[0].transceiver_switch = imx6sx_arm2_flexcan0_switch;
 		flexcan_pdata[1].transceiver_switch = imx6sx_arm2_flexcan1_switch;
 	}
+
+	/*
+	 * Switch on the transceiver by default for board with canfd enabled
+	 * since canfd driver does not handle it.
+	 * Two CAN instances share the same switch.
+	 */
+	for_each_node_by_name(np, "canfd") {
+		if (of_device_is_available(np)) {
+			canfd_en = true;
+			break;
+		}
+	}
+
+	if (of_machine_is_compatible("fsl,imx6sx-sdb") && canfd_en)
+		imx6sx_arm2_flexcan0_switch(1);
 
 	return 0;
 }
@@ -112,6 +131,21 @@ static void __init imx6sx_enet_clk_sel(void)
 static int ar8031_phy_fixup(struct phy_device *dev)
 {
 	u16 val;
+	unsigned char *addr = NULL;
+
+	/* Fill Wake-on-LAN Internal Address */
+	if (dev->attached_dev) {
+		addr = dev->attached_dev->dev_addr;
+		phy_write(dev, 0xd, 0x3);
+		phy_write(dev, 0xe, 0x804A);
+		phy_write(dev, 0xd, 0xc003);
+		val = (addr[0] << 0x8) | addr[1];
+		phy_write(dev, 0xe, val);
+		val = (addr[2] << 0x8) | addr[3];
+		phy_write(dev, 0xe, val);
+		val = (addr[4] << 0x8) | addr[5];
+		phy_write(dev, 0xe, val);
+	}
 
 	/* Set RGMII IO voltage to 1.8V */
 	phy_write(dev, 0x1d, 0x1f);
@@ -142,17 +176,68 @@ static void __init imx6sx_enet_phy_init(void)
 			ar8031_phy_fixup);
 }
 
+static void imx6sx_fec1_stop_enable(int enabled)
+{
+	struct regmap *gpr;
+
+	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6sx-iomuxc-gpr");
+	if (!IS_ERR(gpr)) {
+		if (enabled)
+			regmap_update_bits(gpr, IOMUXC_GPR4,
+				IMX6SX_GPR4_FEC_ENET1_STOP_REQ,
+				IMX6SX_GPR4_FEC_ENET1_STOP_REQ);
+		else
+			regmap_update_bits(gpr, IOMUXC_GPR4,
+				IMX6SX_GPR4_FEC_ENET1_STOP_REQ, 0);
+
+	} else
+		pr_err("failed to find fsl,imx6sx-iomux-gpr regmap\n");
+}
+
+static void imx6sx_fec2_stop_enable(int enabled)
+{
+	struct regmap *gpr;
+
+	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6sx-iomuxc-gpr");
+	if (!IS_ERR(gpr)) {
+		if (enabled)
+			regmap_update_bits(gpr, IOMUXC_GPR4,
+				IMX6SX_GPR4_FEC_ENET2_STOP_REQ,
+				IMX6SX_GPR4_FEC_ENET2_STOP_REQ);
+		else
+			regmap_update_bits(gpr, IOMUXC_GPR4,
+				IMX6SX_GPR4_FEC_ENET2_STOP_REQ, 0);
+
+	} else
+		pr_err("failed to find fsl,imx6sx-iomux-gpr regmap\n");
+}
+
+static void __init imx6sx_enet_plt_init(void)
+{
+	struct device_node *np;
+
+	np = of_find_node_by_path("/soc/aips-bus@02100000/ethernet@02188000");
+	if (np && of_get_property(np, "fsl,magic-packet", NULL))
+		fec_pdata[0].sleep_mode_enable = imx6sx_fec1_stop_enable;
+	np = of_find_node_by_path("/soc/aips-bus@02100000/ethernet@021b4000");
+	if (np && of_get_property(np, "fsl,magic-packet", NULL))
+		fec_pdata[1].sleep_mode_enable = imx6sx_fec2_stop_enable;
+}
+
 static inline void imx6sx_enet_init(void)
 {
 	imx6_enet_mac_init("fsl,imx6sx-fec");
 	imx6sx_enet_phy_init();
 	imx6sx_enet_clk_sel();
+	imx6sx_enet_plt_init();
 }
 
 /* Add auxdata to pass platform data */
 static const struct of_dev_auxdata imx6sx_auxdata_lookup[] __initconst = {
 	OF_DEV_AUXDATA("fsl,imx6q-flexcan", 0x02090000, NULL, &flexcan_pdata[0]),
 	OF_DEV_AUXDATA("fsl,imx6q-flexcan", 0x02094000, NULL, &flexcan_pdata[1]),
+	OF_DEV_AUXDATA("fsl,imx6sx-fec", 0x02188000, NULL, &fec_pdata[0]),
+	OF_DEV_AUXDATA("fsl,imx6sx-fec", 0x021b4000, NULL, &fec_pdata[1]),
 	{ /* sentinel */ }
 };
 
@@ -193,7 +278,7 @@ static void __init imx6sx_init_machine(void)
 	imx6sx_qos_init();
 }
 
-static void __init imx6slx_opp_init(struct device *cpu_dev)
+static void __init imx6sx_opp_init(struct device *cpu_dev)
 {
 	struct device_node *np;
 
@@ -204,14 +289,16 @@ static void __init imx6slx_opp_init(struct device *cpu_dev)
 	}
 
 	cpu_dev->of_node = np;
-	if (of_init_opp_table(cpu_dev)) {
+	if (of_init_opp_table(cpu_dev))
 		pr_warn("failed to init OPP table\n");
-		goto put_node;
-	}
 
-put_node:
 	of_node_put(np);
 }
+
+static struct platform_device imx6sx_cpufreq_pdev = {
+	.name = "imx6-cpufreq",
+};
+
 static void __init imx6sx_init_late(void)
 {
 	struct regmap *gpr;
@@ -233,8 +320,8 @@ static void __init imx6sx_init_late(void)
 		imx6sx_arm2_flexcan_fixup();
 
 	if (IS_ENABLED(CONFIG_ARM_IMX6_CPUFREQ)) {
-		imx6slx_opp_init(&imx6slx_cpufreq_pdev.dev);
-		platform_device_register(&imx6slx_cpufreq_pdev);
+		imx6sx_opp_init(&imx6sx_cpufreq_pdev.dev);
+		platform_device_register(&imx6sx_cpufreq_pdev);
 	}
 }
 
@@ -242,6 +329,7 @@ static void __init imx6sx_map_io(void)
 {
 	debug_ll_io_init();
 	imx6_pm_map_io();
+	imx6_busfreq_map_io();
 }
 
 #define MX6SX_SRC_SMBR_L2_AS_OCRAM_MASK 0x100

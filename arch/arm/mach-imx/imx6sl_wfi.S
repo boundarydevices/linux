@@ -20,6 +20,8 @@
 #include "hardware.h"
 
 .extern iram_tlb_phys_addr
+.globl mx6sl_lpm_wfi_start
+.globl mx6sl_lpm_wfi_end
 
 	.macro	sl_ddr_io_save
 
@@ -161,9 +163,10 @@ fifo_reset2_wait:
 	.align 3
 ENTRY(imx6sl_low_power_wfi)
 
+mx6sl_lpm_wfi_start:
+
 	push {r4-r12}
 
-mx6sl_lpm_wfi:
 	/* Can LDO2p5 be disabled */
 	mov	r12, r1
 	/* Store audio_bus_freq_mode */
@@ -172,7 +175,8 @@ mx6sl_lpm_wfi:
 	/* Get the IRAM data storage address. */
 	mov	r10, r0
 	mov	r9, r0		/* get wfi_iram_base */
-	add	r9, r9, #MX6SL_WFI_IRAM_CODE_SIZE
+	adrl	r4, mx6sl_lpm_wfi_end
+	add	r9, r4, #MX6SL_WFI_IRAM_DATA_SIZE
 
 	/*
 	 * To ensure no page table walks occur in DDR, we
@@ -186,17 +190,24 @@ mx6sl_lpm_wfi:
 	 * 4. Set TTBR0.N=1, implying 0-2G is translated by TTBR0
 	 *     and 2-4G is translated by TTBR1.
 	 */
+
+	ldr	r6, =iram_tlb_phys_addr
+	ldr	r7, [r6]
+
+	/* Disable Branch Prediction, Z bit in SCTLR. */
+	mrc	p15, 0, r6, c1, c0, 0
+	bic	r6, r6, #0x800
+	mcr	p15, 0, r6, c1, c0, 0
+
 	/* Flush the BTAC. */
 	ldr	r6, =0x0
 	mcr	p15, 0, r6, c7, c1, 6
 
-	ldr	r6, =iram_tlb_phys_addr
-	ldr	r6, [r6]
 	dsb
 	isb
 
 	/* Store the IRAM table in TTBR1 */
-	mcr	p15, 0, r6, c2, c0, 1
+	mcr	p15, 0, r7, c2, c0, 1
 
 	/* Read TTBCR and set PD0=1, N = 1 */
 	mrc	p15, 0, r6, c2, c0, 2
@@ -210,29 +221,32 @@ mx6sl_lpm_wfi:
 	ldr	r6, =0x0
 	mcr	p15, 0, r6, c8, c3, 0
 
+	/* Disable L1 data cache. */
+	mrc	p15, 0, r6, c1, c0, 0
+	bic	r6, r6, #0x4
+	mcr	p15, 0, r6, c1, c0, 0
+
 	dsb
 	isb
-
-	ldr	r1, =IMX_IO_P2V(MX6Q_IOMUXC_BASE_ADDR)
-	ldr	r3, =IMX_IO_P2V(MX6Q_ANATOP_BASE_ADDR)
-	ldr	r2, =IMX_IO_P2V(MX6Q_CCM_BASE_ADDR)
-	ldr	r8, =IMX_IO_P2V(MX6Q_MMDC_P0_BASE_ADDR)
-	ldr	r7, =IMX_IO_P2V(MX6Q_L2_BASE_ADDR)
-
-	/* Store the original ARM PODF. */
-	ldr	r0, [r2, #0x10]
-
-	/* Drain all the L1 buffers. */
-	dsb
 
 #ifdef CONFIG_CACHE_L2X0
 	/*
 	 * Need to make sure the buffers in L2 are drained.
 	 * Performing a sync operation does this.
 	 */
+	ldr	r7, =IMX_IO_P2V(MX6Q_L2_BASE_ADDR)
+
+	/* Wait for background operations to complete. */
+wait_for_l2_to_idle:
+	ldr	r6, [r7, #0x730]
+	cmp	r6, #0x0
+	bne	wait_for_l2_to_idle
+
 	mov	r6, #0x0
 	str	r6, [r7, #0x730]
-#endif
+
+	/* Disable L2. */
+	str	r6, [r7, #0x100]
 
 	/*
 	 * The second dsb might be needed to keep cache sync (device write)
@@ -240,6 +254,16 @@ mx6sl_lpm_wfi:
 	 */
 	dsb
 	isb
+#endif
+
+
+	ldr	r1, =IMX_IO_P2V(MX6Q_IOMUXC_BASE_ADDR)
+	ldr	r3, =IMX_IO_P2V(MX6Q_ANATOP_BASE_ADDR)
+	ldr	r2, =IMX_IO_P2V(MX6Q_CCM_BASE_ADDR)
+	ldr	r8, =IMX_IO_P2V(MX6Q_MMDC_P0_BASE_ADDR)
+
+	/* Store the original ARM PODF. */
+	ldr	r0, [r2, #0x10]
 
 	/* Save the DDR IO state. */
 	sl_ddr_io_save
@@ -595,9 +619,9 @@ audio_arm_clk_restore:
 	str	r6, [r2, #0xC]
 
 wfi_restore:
-	/* get suspend_iram_base */
-	mov	r9, r10
-	add	r9, r9, #MX6SL_WFI_IRAM_CODE_SIZE
+	/* get wfi_iram_base */
+	adrl	r9, mx6sl_lpm_wfi_end
+	add	r9, r9, #MX6SL_WFI_IRAM_DATA_SIZE
 
 	/* Restore the DDR IO before exiting self-refresh. */
 	sl_ddr_io_restore
@@ -637,10 +661,23 @@ poll_dvfs_clear_1:
 	bic	r6, r6, #0x100
 	str	r6, [r8, #0x410]
 
+#ifdef CONFIG_CACHE_L2X0
+	/* Enable L2. */
+	ldr	r7, =IMX_IO_P2V(MX6Q_L2_BASE_ADDR)
+	ldr	r6, =0x1
+	str	r6, [r7, #0x100]
+#endif
+
+	/* Enable L1 data cache. */
+	mrc	p15, 0, r6, c1, c0, 0
+	orr	r6, r6, #0x4
+	mcr	p15, 0, r6, c1, c0, 0
+
 	/* Restore the TTBCR */
 
 	dsb
 	isb
+
 	/* Read TTBCR and set PD0=0, N = 0 */
 	mrc	p15, 0, r6, c2, c0, 2
 	bic	r6, r6, #0x11
@@ -655,6 +692,15 @@ poll_dvfs_clear_1:
 
 	dsb
 	isb
+
+	/* Enable Branch Prediction, Z bit in SCTLR. */
+	mrc	p15, 0, r6, c1, c0, 0
+	orr	r6, r6, #0x800
+	mcr	p15, 0, r6, c1, c0, 0
+
+	/* Flush the Branch Target Address Cache (BTAC) */
+	ldr	r6, =0x0
+	mcr	p15, 0, r6, c7, c1, 6
 
 	/*
 	 * Add these nops so that the
@@ -693,8 +739,14 @@ poll_dvfs_clear_1:
 	nop
 	nop
 
-
 	pop {r4-r12}
 
 	/* Restore registers */
 	mov	pc, lr
+	/*
+	 * Add ltorg here to ensure that all
+	 * literals are stored here and are
+	 * within the text space.
+	 */
+	.ltorg
+mx6sl_lpm_wfi_end:

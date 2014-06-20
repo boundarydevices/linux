@@ -1,7 +1,7 @@
 /*
  * Driver for the IMX keypad port.
  * Copyright (C) 2009 Alberto Panizzo <maramaopercheseimorto@gmail.com>
- * Copyright (C) 2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -271,6 +271,7 @@ static void imx_keypad_check_for_events(unsigned long data)
 		reg_val |= KBD_STAT_KDIE;
 		reg_val &= ~KBD_STAT_KRIE;
 		writew(reg_val, keypad->mmio_base + KPSR);
+		pm_relax(keypad->input_dev->dev.parent);
 	} else {
 		/*
 		 * Some keys are still pressed. Schedule a rescan in
@@ -283,11 +284,6 @@ static void imx_keypad_check_for_events(unsigned long data)
 
 		reg_val = readw(keypad->mmio_base + KPSR);
 		reg_val |= KBD_STAT_KPKR | KBD_STAT_KRSS;
-		writew(reg_val, keypad->mmio_base + KPSR);
-
-		reg_val = readw(keypad->mmio_base + KPSR);
-		reg_val |= KBD_STAT_KRIE;
-		reg_val &= ~KBD_STAT_KDIE;
 		writew(reg_val, keypad->mmio_base + KPSR);
 	}
 }
@@ -306,6 +302,7 @@ static irqreturn_t imx_keypad_irq_handler(int irq, void *dev_id)
 	writew(reg_val, keypad->mmio_base + KPSR);
 
 	if (keypad->enabled) {
+		pm_stay_awake(keypad->input_dev->dev.parent);
 		/* The matrix is supposed to be changed */
 		keypad->stable_count = 0;
 
@@ -543,6 +540,7 @@ static int imx_kbd_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct imx_keypad *kbd = platform_get_drvdata(pdev);
 	struct input_dev *input_dev = kbd->input_dev;
+	unsigned short reg_val = readw(kbd->mmio_base + KPSR);
 
 	/* imx kbd can wake up system even clock is disabled */
 	mutex_lock(&input_dev->mutex);
@@ -552,8 +550,14 @@ static int imx_kbd_suspend(struct device *dev)
 
 	mutex_unlock(&input_dev->mutex);
 
-	if (device_may_wakeup(&pdev->dev))
+	if (device_may_wakeup(&pdev->dev)) {
+		/* make sure KDI interrupt enabled */
+		reg_val |= KBD_STAT_KDIE;
+		reg_val &= ~KBD_STAT_KRIE;
+		writew(reg_val, kbd->mmio_base + KPSR);
+
 		enable_irq_wake(kbd->irq);
+	}
 	else
 		pinctrl_pm_select_sleep_state(dev);
 

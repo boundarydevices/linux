@@ -295,24 +295,16 @@ static void vdec_init(struct vadc_data *vadc)
 
 	/* setup the luma agc for automatic gain. */
 	reg32_write(VDEC_LMAGC2, 0x5e);
-	reg32_write(VDEC_BASE + (0x40*4), 0x81);
+	reg32_write(VDEC_LMAGC1, 0x81);
 
 	/* setup chroma agc */
-	reg32_write(VDEC_CHAGC2, 0x09);
-	reg32_write(VDEC_BASE + (0x43*4), 0xa0);
+	reg32_write(VDEC_CHAGC2, 0xa0);
+	reg32_write(VDEC_CHAGC1, 0x01);
 
 	/* setup the MV thresh lower nibble
 	 * setup the sync top cap, upper nibble */
 	reg32_write(VDEC_BASE + (0x3a*4), 0x80);
 	reg32_write(VDEC_SHPIMP, 0x00);
-
-	/* enable div by 4 on out for 10 bit output
-	 * enable vga progressive output. */
-	reg32_write(VDEC_BASE + (0xf3*4), 0x0c);
-
-	/* set for 11 bit intput
-	 * also enable dc offset integrator to go on every clock. */
-	reg32_write(VDEC_BASE + (0xf4*4), 0x10);
 
 	/* setup the vsync block */
 	reg32_write(VDEC_VSCON1, 0x87);
@@ -323,9 +315,6 @@ static void vdec_init(struct vadc_data *vadc)
 
 	/* set length for min hphase filter (or saturate limit if saturate is chosen) */
 	reg32_write(VDEC_BASE + (0x45*4), 0x40);
-
-	/* choose the internal 66Mhz clock */
-	reg32_write(VDEC_BASE + (0xf8*4), 0x01);
 
 	/* enable the internal resampler,
 	 * select min filter not saturate for hphase noise filter for vcr detect.
@@ -459,8 +448,8 @@ static void vadc_get_std(struct vadc_data *vadc, v4l2_std_id *std)
 	if (*std != vadc->std_id) {
 		video_idx = idx;
 		vadc->std_id = *std;
-		vadc->sen.pix.width = video_fmts[video_idx].raw_width;
-		vadc->sen.pix.height = video_fmts[video_idx].raw_height;
+		vadc->sen.pix.width = video_fmts[video_idx].active_width;
+		vadc->sen.pix.height = video_fmts[video_idx].active_height;
 	}
 }
 
@@ -843,8 +832,8 @@ static int vadc_probe(struct platform_device *pdev)
 	vadc->sen.streamcap.timeperframe.numerator = 1;
 	vadc->std_id = V4L2_STD_ALL;
 	video_idx = VADC_NTSC;
-	vadc->sen.pix.width = video_fmts[video_idx].raw_width;
-	vadc->sen.pix.height = video_fmts[video_idx].raw_height;
+	vadc->sen.pix.width = video_fmts[video_idx].active_width;
+	vadc->sen.pix.height = video_fmts[video_idx].active_height;
 	vadc->sen.pix.pixelformat = V4L2_PIX_FMT_YUV444;  /* YUV444 */
 	vadc->sen.pix.priv = 1;  /* 1 is used to indicate TV in */
 	vadc->sen.on = true;
