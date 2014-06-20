@@ -44,6 +44,7 @@
 #include <linux/mmc/sd.h>
 
 #include <linux/uaccess.h>
+#include <linux/of.h>
 
 #include "queue.h"
 #include "block.h"
@@ -1843,9 +1844,19 @@ static struct mmc_blk_data *mmc_blk_alloc_req(struct mmc_card *card,
 					      int area_type)
 {
 	struct mmc_blk_data *md;
-	int devidx, ret;
+	int devidx = -1;
+	int ret;
 
-	devidx = ida_simple_get(&mmc_blk_ida, 0, max_devices, GFP_KERNEL);
+	int idx;
+
+	idx = of_alias_get_id(card->host->parent->of_node, "mmc");
+	if (idx < 0)
+		idx = 0;
+
+	devidx = ida_simple_get(&mmc_blk_ida, idx, max_devices, GFP_KERNEL);
+	if ((devidx < 0) && !idx)
+		devidx = ida_simple_get(&mmc_blk_ida, 0, max_devices, GFP_KERNEL);
+
 	if (devidx < 0)
 		return ERR_PTR(devidx);
 
