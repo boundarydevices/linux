@@ -116,7 +116,7 @@ static video_fmt_t video_fmts[] = {
 	 .active_height = 480,	/* ACT_FRM_WIDTH plus 1 */
 	 .frame_rate = 30,
 	 .lines_per_field = 0,
-	 .skip_lines = 12,
+	 .skip_lines = 13,
 	 },
 	{			/*! (B, G, H, I, N) PAL */
 	 .v4l2_id = V4L2_STD_PAL,
