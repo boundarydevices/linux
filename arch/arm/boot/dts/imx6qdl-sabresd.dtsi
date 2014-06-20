@@ -251,14 +251,6 @@
 		bt-power-gpios = <&gpio1 2 0>;
 		status = "okay";
 	};
-
-	consumer_ir {
-		compatible = "fsl,mxc-ir";
-		pwms = <&pwm2 0 5000000>;
-		epit = <0>;
-		status = "okay";
-	};
-
 };
 
 &audmux {
@@ -599,13 +591,6 @@
 	status = "okay";
 };
 
-&pwm2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm2_1>;
-	status = "okay";
-};
-
-
 &ssi2 {
 	fsl,mode = "i2s-slave";
 	status = "okay";
@@ -673,13 +658,18 @@
 	pu-supply = <&pu_dummy>; /* ldo-bypass:use pu_dummy if VDDSOC share with VDDPU */
 };
 
-
-&epit1 {
-	epit-id = < 0 >;
-	status = "okay";
+&caam_sm  {
+	status = "disable";
 };
 
-&epit2 {
-	epit-id = < 1 >;
-	status = "okay";
+&irq_sec_vio  {
+	status = "disable";
+};
+
+&caam_snvs  {
+	status = "disable";
+};
+
+&crypto {
+	status = "disable";
 };
