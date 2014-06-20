@@ -986,7 +986,7 @@
 			clocks = <&clks IMX6QDL_CLK_IPU1>,
 				 <&clks IMX6QDL_CLK_IPU1_DI0>, <&clks IMX6QDL_CLK_IPU1_DI1>,
 				 <&clks IMX6QDL_CLK_IPU1_DI0_SEL>, <&clks IMX6QDL_CLK_IPU1_DI1_SEL>,
-				 <&clks IMX6QDL_CLK_LDB_DI0>, <&clks IMX6QDL_CLK_LDB_DI0>;
+				 <&clks IMX6QDL_CLK_LDB_DI0>, <&clks IMX6QDL_CLK_LDB_DI1>;
 			clock-names = "bus",
 				      "di0", "di1",
 				      "di0_sel", "di1_sel",
