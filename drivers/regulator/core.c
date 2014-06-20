@@ -1342,7 +1342,7 @@ static struct regulator *_regulator_get(struct device *dev, const char *id,
 	 * If we have return value from dev_lookup fail, we do not expect to
 	 * succeed, so, quit with appropriate error value
 	 */
-	if (ret && ret == -ENODEV)
+	if (ret && ret != -ENODEV)
 		goto out;
 
 	if (!devname)
