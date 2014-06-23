@@ -42,6 +42,11 @@
 	ipu_id = <1>;
 };
 
+&ov5640_mipi {
+       csi_id = <1>;
+       ipu_id = <1>;
+};
+
 &pinctrl_ov5640 { /* parallel camera */
 	fsl,pins = <
 		MX6QDL_PAD_EIM_A17__IPU2_CSI1_DATA12	0xb0b1
