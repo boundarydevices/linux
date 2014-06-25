@@ -741,3 +741,18 @@
 				0x0000c000 0x1404a38e 0x00000000>;
 	};
 };
+&caam_sm  {
+	status = "disable";
+};
+
+&irq_sec_vio  {
+	status = "disable";
+};
+
+&caam_snvs  {
+	status = "disable";
+};
+
+&crypto {
+	status = "disable";
+};
