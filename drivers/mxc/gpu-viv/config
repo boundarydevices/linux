@@ -35,4 +35,3 @@ BANK_BIT_END                      ?= 15
 BANK_CHANNEL_BIT                  ?= 12
 PLATFORM                          ?= freescale/gc_hal_kernel_platform_imx6q14
 
-

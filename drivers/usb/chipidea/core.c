@@ -23,7 +23,7 @@
  * - BUS:    bus glue code, bus abstraction layer
  *
  * Compile Options
- * - CONFIG_USB_GADGET_DEBUG_FILES: enable debug facilities
+ * - CONFIG_USB_CHIPIDEA_DEBUG: enable debug facilities
  * - STALL_IN:  non-empty bulk-in pipes cannot be halted
  *              if defined mass storage compliance succeeds but with warnings
  *              => case 4: Hi >  Dn
@@ -42,9 +42,6 @@
  * - Not Supported: 15 & 16 (ISO)
  *
  * TODO List
- * - Interrupt Traffic
- * - GET_STATUS(device) - always reports 0
- * - Gadget API (majority of optional features)
  * - Suspend & Remote Wakeup
  */
 #include <linux/delay.h>
@@ -451,8 +448,7 @@ static irqreturn_t ci_irq(int irq, void *data)
 	if (ci->is_otg && (otgsc & OTGSC_IDIE) && (otgsc & OTGSC_IDIS)) {
 		ci->id_event = true;
 		hw_write_otgsc(ci, OTGSC_IDIS, OTGSC_IDIS);
-		disable_irq_nosync(ci->irq);
-		queue_work(ci->wq, &ci->work);
+		ci_otg_queue_work(ci);
 		return IRQ_HANDLED;
 	}
 
@@ -463,8 +459,7 @@ static irqreturn_t ci_irq(int irq, void *data)
 	if (ci->is_otg && (otgsc & OTGSC_BSVIE) && (otgsc & OTGSC_BSVIS)) {
 		ci->b_sess_valid_event = true;
 		hw_write_otgsc(ci, OTGSC_BSVIS, OTGSC_BSVIS);
-		disable_irq_nosync(ci->irq);
-		queue_work(ci->wq, &ci->work);
+		ci_otg_queue_work(ci);
 		return IRQ_HANDLED;
 	}
 
@@ -827,8 +822,7 @@ static void ci_otg_fsm_wakeup_by_srp(struct ci_hdrc *ci)
 		if (!hw_read_otgsc(ci, OTGSC_ID)) {
 			ci->fsm.a_srp_det = 1;
 			ci->fsm.a_bus_drop = 0;
-			disable_irq_nosync(ci->irq);
-			queue_work(ci->wq, &ci->work);
+			ci_otg_queue_work(ci);
 		} else {
 			ci->fsm.id = 1;
 		}
@@ -954,6 +948,7 @@ static struct platform_driver ci_hdrc_driver = {
 	.driver	= {
 		.name	= "ci_hdrc",
 		.pm	= &ci_pm_ops,
+		.owner	= THIS_MODULE,
 	},
 };
 
