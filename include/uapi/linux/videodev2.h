@@ -153,6 +153,7 @@ enum v4l2_buf_type {
 	V4L2_BUF_TYPE_SDR_OUTPUT           = 12,
 	V4L2_BUF_TYPE_META_CAPTURE         = 13,
 	V4L2_BUF_TYPE_META_OUTPUT	   = 14,
+	V4L2_BUF_TYPE_SENSOR		   = 15,
 	/* Deprecated, do not use */
 	V4L2_BUF_TYPE_PRIVATE              = 0x80,
 };
@@ -532,6 +533,13 @@ struct v4l2_pix_format {
 	};
 	__u32			quantization;	/* enum v4l2_quantization */
 	__u32			xfer_func;	/* enum v4l2_xfer_func */
+};
+
+struct v4l2_sensor_dimension {
+	__u32	swidth;
+	__u32	sheight;
+	__u32	top;
+	__u32	left;
 };
 
 /*      Pixel format         FOURCC                          depth  Description  */
@@ -2411,6 +2419,7 @@ struct v4l2_format {
 	__u32	 type;
 	union {
 		struct v4l2_pix_format		pix;     /* V4L2_BUF_TYPE_VIDEO_CAPTURE */
+		struct v4l2_sensor_dimension	spix;	 /* V4L2_BUF_TYPE_SENSOR */
 		struct v4l2_pix_format_mplane	pix_mp;  /* V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE */
 		struct v4l2_window		win;     /* V4L2_BUF_TYPE_VIDEO_OVERLAY */
 		struct v4l2_vbi_format		vbi;     /* V4L2_BUF_TYPE_VBI_CAPTURE */
