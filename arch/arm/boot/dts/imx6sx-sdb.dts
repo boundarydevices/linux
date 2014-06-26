@@ -145,6 +145,12 @@
 		compatible = "fsl,imx6sx-csi-v4l2", "fsl,imx6sl-csi-v4l2";
 		status = "okay";
 	};
+
+	bt_rfkill {
+		compatible = "fsl,mxc_bt_rfkill";
+		bt-power-gpios = <&gpio4 10 0>;
+		status = "okay";
+	};
 };
 
 &csi1 {
