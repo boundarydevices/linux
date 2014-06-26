@@ -138,9 +138,17 @@ static void imx_gpc_mf_mix_off(void)
 		if ((gpc_wake_irqs[i] & gpc_mf_irqs[i]) != 0)
 			return;
 
-	pr_info("Turn off M/F mix!\n");
-	/* turn off mega/fast mix */
-	writel_relaxed(0x1, gpc_base + GPC_PGC_MF_PDN);
+	/*
+	 * As some drivers are not ready for this
+	 * Mega/Fast mix off feature, so just skip the
+	 * setting of turning off M/F mix, if anyone
+	 * want to enable this feature, just add below
+	 * two lines back.
+	 *
+	 * pr_info("Turn off M/F mix!\n");
+	 * writel_relaxed(0x1, gpc_base + GPC_PGC_MF_PDN);
+	 *
+	 */
 }
 
 void imx_gpc_pre_suspend(bool arm_power_off)
