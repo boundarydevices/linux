@@ -71,6 +71,7 @@ struct adv7180_priv {
 #define PVDD_REG        3
 	struct regulator *regulators[4];
 	int pwn_gpio;
+	int cvbs;
 };
 
 
@@ -1139,7 +1140,7 @@ const unsigned char sensor_init_data[] = {
  *
  *  @return		None.
  */
-static void adv7180_hard_reset(struct adv7180_priv *adv, bool cvbs)
+static void adv7180_hard_reset(struct adv7180_priv *adv)
 {
 	int i;
 	const unsigned char *p;
@@ -1147,7 +1148,7 @@ static void adv7180_hard_reset(struct adv7180_priv *adv, bool cvbs)
 	dev_dbg(&adv->sen.i2c_client->dev,
 		"In adv7180:adv7180_hard_reset\n");
 
-	if (cvbs) {
+	if (adv->cvbs) {
 		/* Set CVBS input on AIN1 */
 		adv7180_write_reg(adv, ADV7180_INPUT_CTL, 0x00);
 	} else {
@@ -1184,7 +1185,6 @@ static int adv7180_probe(struct i2c_client *client,
 	struct adv7180_priv *adv;
 	int rev_id;
 	int ret = 0;
-	u32 cvbs = true;
 	struct pinctrl *pinctrl;
 	struct device *dev = &client->dev;
 
@@ -1273,14 +1273,14 @@ static int adv7180_probe(struct i2c_client *client,
 		"%s:Analog Device adv7%2X0 detected!\n", __func__,
 		rev_id);
 
-	ret = of_property_read_u32(dev->of_node, "cvbs", &(cvbs));
+	ret = of_property_read_u32(dev->of_node, "cvbs", &adv->cvbs);
 	if (ret) {
 		dev_err(dev, "cvbs setting is not found\n");
-		cvbs = true;
+		adv->cvbs = true;
 	}
 
 	/*! ADV7180 initialization. */
-	adv7180_hard_reset(adv, cvbs);
+	adv7180_hard_reset(adv);
 
 	pr_debug("   type is %d (expect %d)\n",
 		 adv7180_int_device.type, v4l2_int_type_slave);
