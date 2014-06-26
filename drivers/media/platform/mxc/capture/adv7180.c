@@ -38,10 +38,6 @@
 #define ADV7180_VOLTAGE_DIGITAL_IO           3300000
 #define ADV7180_VOLTAGE_PLL                  1800000
 
-static struct regulator *dvddio_regulator;
-static struct regulator *dvdd_regulator;
-static struct regulator *avdd_regulator;
-static struct regulator *pvdd_regulator;
 static int pwn_gpio;
 
 static int adv7180_probe(struct i2c_client *adapter,
@@ -71,6 +67,11 @@ static struct i2c_driver adv7180_i2c_driver = {
 struct adv7180_priv {
 	struct sensor_data sen;
 	v4l2_std_id std_id;
+#define DVDDIO_REG      0
+#define DVDD_REG        1
+#define AVDD_REG        2
+#define PVDD_REG        3
+	struct regulator *regulators[4];
 };
 
 
@@ -185,81 +186,50 @@ static inline void adv7180_power_down(int enable)
 	msleep(2);
 }
 
-static int adv7180_regulator_enable(struct device *dev)
+static const char * const regulator_names[] = {
+	[DVDDIO_REG] = "DOVDD",
+	[DVDD_REG] = "DVDD",
+	[AVDD_REG] = "AVDD",
+	[PVDD_REG] = "PVDD",
+};
+static const unsigned reg_volt[] = {
+	[DVDDIO_REG] = ADV7180_VOLTAGE_DIGITAL_IO,
+	[DVDD_REG] = ADV7180_VOLTAGE_DIGITAL_CORE,
+	[AVDD_REG] = ADV7180_VOLTAGE_ANALOG,
+	[PVDD_REG] = ADV7180_VOLTAGE_PLL,
+};
+
+static int adv7180_regulator_enable(struct adv7180_priv *adv, struct device *dev)
 {
 	int ret = 0;
+	int i;
 
-	dvddio_regulator = devm_regulator_get(dev, "DOVDD");
+	for (i = 0; i < ARRAY_SIZE(adv->regulators); i++) {
+		const char *p = regulator_names[i];
 
-	if (!IS_ERR(dvddio_regulator)) {
-		regulator_set_voltage(dvddio_regulator,
-				      ADV7180_VOLTAGE_DIGITAL_IO,
-				      ADV7180_VOLTAGE_DIGITAL_IO);
-		ret = regulator_enable(dvddio_regulator);
-		if (ret) {
-			dev_err(dev, "set io voltage failed\n");
-			return ret;
-		} else {
-			dev_dbg(dev, "set io voltage ok\n");
+		if (p) {
+			adv->regulators[i] = devm_regulator_get(dev, p);
+			if (!IS_ERR(adv->regulators[i])) {
+				regulator_set_voltage(adv->regulators[i],
+						reg_volt[i], reg_volt[i]);
+				ret = regulator_enable(adv->regulators[i]);
+				if (ret) {
+					dev_err(dev, "set %s voltage failed\n", p);
+					return ret;
+				} else {
+					dev_dbg(dev, "set %s voltage ok\n", p);
+				}
+			} else {
+				dev_warn(dev, "cannot get %s voltage\n", p);
+			}
 		}
-	} else {
-		dev_warn(dev, "cannot get io voltage\n");
 	}
-
-	dvdd_regulator = devm_regulator_get(dev, "DVDD");
-	if (!IS_ERR(dvdd_regulator)) {
-		regulator_set_voltage(dvdd_regulator,
-				      ADV7180_VOLTAGE_DIGITAL_CORE,
-				      ADV7180_VOLTAGE_DIGITAL_CORE);
-		ret = regulator_enable(dvdd_regulator);
-		if (ret) {
-			dev_err(dev, "set core voltage failed\n");
-			return ret;
-		} else {
-			dev_dbg(dev, "set core voltage ok\n");
-		}
-	} else {
-		dev_warn(dev, "cannot get core voltage\n");
-	}
-
-	avdd_regulator = devm_regulator_get(dev, "AVDD");
-	if (!IS_ERR(avdd_regulator)) {
-		regulator_set_voltage(avdd_regulator,
-				      ADV7180_VOLTAGE_ANALOG,
-				      ADV7180_VOLTAGE_ANALOG);
-		ret = regulator_enable(avdd_regulator);
-		if (ret) {
-			dev_err(dev, "set analog voltage failed\n");
-			return ret;
-		} else {
-			dev_dbg(dev, "set analog voltage ok\n");
-		}
-	} else {
-		dev_warn(dev, "cannot get analog voltage\n");
-	}
-
-	pvdd_regulator = devm_regulator_get(dev, "PVDD");
-	if (!IS_ERR(pvdd_regulator)) {
-		regulator_set_voltage(pvdd_regulator,
-				      ADV7180_VOLTAGE_PLL,
-				      ADV7180_VOLTAGE_PLL);
-		ret = regulator_enable(pvdd_regulator);
-		if (ret) {
-			dev_err(dev, "set pll voltage failed\n");
-			return ret;
-		} else {
-			dev_dbg(dev, "set pll voltage ok\n");
-		}
-	} else {
-		dev_warn(dev, "cannot get pll voltage\n");
-	}
-
 	return ret;
 }
 
 
 /***********************************************************************
- * I2C transfert.
+ * I2C transfer.
  ***********************************************************************/
 
 /*! Read one register from a ADV7180 i2c slave device.
@@ -1242,7 +1212,10 @@ static int adv7180_probe(struct i2c_client *client,
 			goto exit1;
 		}
 	}
-	adv7180_regulator_enable(dev);
+	ret = adv7180_regulator_enable(adv, dev);
+	if (ret < 0)
+		goto exit1;
+
 
 	adv7180_power_down(0);
 
@@ -1338,6 +1311,7 @@ exit1:
 static int adv7180_detach(struct i2c_client *client)
 {
 	struct adv7180_priv *adv = i2c_get_clientdata(client);
+	int i;
 
 	dev_dbg(&adv->sen.i2c_client->dev,
 		"%s:Removing %s video decoder @ 0x%02X from adapter %s\n",
@@ -1346,20 +1320,15 @@ static int adv7180_detach(struct i2c_client *client)
 	/* Power down via i2c */
 	adv7180_write_reg(adv, ADV7180_PWR_MNG, 0x24);
 
-	if (dvddio_regulator)
-		regulator_disable(dvddio_regulator);
+	for (i = 0; i < ARRAY_SIZE(adv->regulators); i++) {
+		struct regulator *reg = adv->regulators[i];
 
-	if (dvdd_regulator)
-		regulator_disable(dvdd_regulator);
-
-	if (avdd_regulator)
-		regulator_disable(avdd_regulator);
-
-	if (pvdd_regulator)
-		regulator_disable(pvdd_regulator);
+		if (reg)
+			regulator_disable(reg);
+	}
 
 	v4l2_int_device_unregister(&adv7180_int_device);
-
+	kfree(adv);
 	return 0;
 }
 
