@@ -39,8 +39,6 @@
 #define ADV7180_VOLTAGE_DIGITAL_IO           3300000
 #define ADV7180_VOLTAGE_PLL                  1800000
 
-static int pwn_gpio;
-
 static int adv7180_probe(struct i2c_client *adapter,
 			 const struct i2c_device_id *id);
 static void adv7180_detach(struct i2c_client *client);
@@ -86,6 +84,7 @@ struct adv7180_priv {
 #define AVDD_REG        2
 #define PVDD_REG        3
 	struct regulator *regulators[4];
+	int pwn_gpio;
 };
 
 
@@ -194,10 +193,12 @@ static struct v4l2_queryctrl adv7180_qctrl[] = {
 	}
 };
 
-static inline void adv7180_power_down(int enable)
+static inline void adv7180_power_down(struct adv7180_priv *adv, int enable)
 {
-	gpio_set_value_cansleep(pwn_gpio, !enable);
-	msleep(2);
+	if (gpio_is_valid(adv->pwn_gpio)) {
+		gpio_set_value_cansleep(adv->pwn_gpio, !enable);
+		msleep(2);
+	}
 }
 
 static const char * const regulator_names[] = {
@@ -1218,33 +1219,33 @@ static int adv7180_probe(struct i2c_client *client,
 		return -ENOMEM;
 
 	/* request power down pin */
-	pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
-	if (!gpio_is_valid(pwn_gpio)) {
-		dev_err(dev, "no sensor pwdn pin available\n");
-		return -ENODEV;
-	}
-
-	while (retries) {
-		ret = devm_gpio_request_one(dev, pwn_gpio, GPIOF_OUT_INIT_HIGH,
-						"adv7180_pwdn");
-		if (!ret) {
-			break;
-		} else {
-			dev_warn(dev, "no power pin available! re-try...\n");
-			retries--;
-			msleep(1);
+	adv->pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
+	if (!gpio_is_valid(adv->pwn_gpio)) {
+		dev_info(dev, "no sensor pwdn pin available\n");
+	} else {
+		while (retries) {
+			ret = devm_gpio_request_one(dev, adv->pwn_gpio,
+					GPIOF_OUT_INIT_HIGH,
+					"adv7180_pwdn");
+			if (!ret) {
+				break;
+			} else {
+				dev_warn(dev, "no power pin available! re-try...\n");
+				retries--;
+				msleep(1);
+			}
 		}
-	}
 
-	if (retries == 0) {
-		dev_err(dev, "no power pin available!\n");
-		return ret;
+		if (retries == 0) {
+			dev_err(dev, "no power pin available!\n");
+			return ret;
+		}
 	}
 	ret = adv7180_regulator_enable(adv, dev);
 	if (ret < 0)
 		goto exit1;
 
-	adv7180_power_down(0);
+	adv7180_power_down(adv, 0);
 
 	msleep(1);
 
