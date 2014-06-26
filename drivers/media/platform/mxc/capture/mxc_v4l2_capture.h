@@ -246,6 +246,7 @@ struct sensor_data {
 	struct v4l2_int_device *v4l2_int_device;
 	struct i2c_client *i2c_client;
 	struct v4l2_pix_format pix;
+	struct v4l2_sensor_dimension spix;
 	struct v4l2_captureparm streamcap;
 	bool on;
 
