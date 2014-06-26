@@ -3111,12 +3111,6 @@ static int tc358743_probe(struct i2c_client *client,
 	memset(sensor, 0, sizeof(*sensor));
 
 	sensor->sensor_clk = devm_clk_get(dev, "csi_mclk");
-	if (IS_ERR(sensor->sensor_clk)) {
-		/* assuming clock enabled by default */
-		sensor->sensor_clk = NULL;
-		dev_err(dev, "clock-frequency missing or invalid\n");
-		return PTR_ERR(sensor->sensor_clk);
-	}
 
 	retval = of_property_read_u32(dev->of_node, "mclk",
 					&(sensor->mclk));
@@ -3150,7 +3144,8 @@ static int tc358743_probe(struct i2c_client *client,
 		return -EINVAL;
 	}
 
-	clk_prepare_enable(sensor->sensor_clk);
+	if (!IS_ERR(sensor->sensor_clk))
+		clk_prepare_enable(sensor->sensor_clk);
 
 	sensor->io_init = tc_io_init;
 	sensor->i2c_client = client;
