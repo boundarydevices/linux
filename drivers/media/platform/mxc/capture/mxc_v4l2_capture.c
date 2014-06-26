@@ -1793,7 +1793,8 @@ static int mxc_v4l_open(struct file *file)
 					cam->crop_bounds.height,
 					cam_fmt.fmt.pix.pixelformat,
 					csi_param);
-		clk_prepare_enable(sensor->sensor_clk);
+		if (!IS_ERR(sensor->sensor_clk))
+			clk_prepare_enable(sensor->sensor_clk);
 		power_up_camera(cam);
 	}
 
@@ -1850,7 +1851,8 @@ static int mxc_v4l_close(struct file *file)
 	}
 
 	if (--cam->open_count == 0) {
-		clk_disable_unprepare(sensor->sensor_clk);
+		if (!IS_ERR(sensor->sensor_clk))
+			clk_disable_unprepare(sensor->sensor_clk);
 		wait_event_interruptible(cam->power_queue,
 					 cam->low_power == false);
 		pr_debug("mxc_v4l_close: release resource\n");
