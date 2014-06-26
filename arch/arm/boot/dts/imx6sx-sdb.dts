@@ -15,6 +15,10 @@
 	model = "Freescale i.MX6 SoloX SDB Board";
 	compatible = "fsl,imx6sx-sdb", "fsl,imx6sx";
 
+	aliases {
+		mmc0 = &usdhc4;
+	};
+
 	pwm-backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm4 0 5000000>;
