@@ -2644,7 +2644,9 @@ static void mxcfb_early_suspend(struct early_suspend *h)
 	mxcfb_core_suspend(pdev, state);
 	event.info = fbi;
 	event.data = &blank;
+	console_lock();
 	fb_notifier_call_chain(FB_EVENT_BLANK, &event);
+	console_unlock();
 }
 
 static void mxcfb_later_resume(struct early_suspend *h)
@@ -2664,7 +2666,9 @@ static void mxcfb_later_resume(struct early_suspend *h)
 	mxcfb_core_resume(pdev);
 	event.info = fbi;
 	event.data = &mxcfbi->next_blank;
+	console_lock();
 	fb_notifier_call_chain(FB_EVENT_BLANK, &event);
+	console_unlock();
 }
 #endif
 
