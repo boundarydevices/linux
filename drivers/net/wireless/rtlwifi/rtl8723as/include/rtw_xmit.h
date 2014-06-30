@@ -39,7 +39,7 @@
 #endif
 
 #if defined CONFIG_SDIO_HCI
-#define NR_XMITBUFF	(16)
+#define NR_XMITBUFF	(64)
 #endif
 #if defined(CONFIG_GSPI_HCI)
 #define NR_XMITBUFF	(128)

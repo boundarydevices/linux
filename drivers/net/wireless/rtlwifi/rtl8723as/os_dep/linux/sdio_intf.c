@@ -283,12 +283,12 @@ _func_enter_;
 		goto release;
 	}
 
-	err = sdio_set_block_size(func, 512);
+	err = sdio_set_block_size(func, 256);
 	if (err) {
 		DBG_8192C(KERN_CRIT "%s: sdio_set_block_size FAIL(%d)!\n", __func__, err);
 		goto release;
 	}
-	psdio_data->block_transfer_len = 512;
+	psdio_data->block_transfer_len = 256;
 	psdio_data->tx_block_mode = 1;
 	psdio_data->rx_block_mode = 1;
 

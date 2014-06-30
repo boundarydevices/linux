@@ -794,16 +794,7 @@ s32 sdio_local_write(
 		return err;
 	}
 
-	ptmpbuf = (u8*)rtw_malloc(cnt);
-	if (!ptmpbuf)
-		return (-1);
-
-	_rtw_memcpy(ptmpbuf, pbuf, cnt);
-
-	err = sd_write(pintfhdl, addr, cnt, ptmpbuf);
-
-	if (ptmpbuf)
-		rtw_mfree(ptmpbuf, cnt);
+	err = sd_write(pintfhdl, addr, cnt, pbuf);
 
 	return err;
 }
