@@ -59,8 +59,7 @@
 	add	r9, r9, #4
 	cmp	r9, #16
 	bne	2b
-	sub	r8, r8, #1
-	cmp	r8, #0
+	subs	r8, r8, #1
 	bgt	1b
 
 	.endm
@@ -79,7 +78,33 @@
 	/* check whether periph2_clk is already from top path */
 	ldr	r8, [r5, #CCM_CBCDR]
 	ands	r8, #(1 << 26)
-	beq	skip_periph2_clk2_switch_400m
+	bne	skip_periph2_clk2_switch_400m
+
+	/* change periph2_clk2 to be sourced from pll3_clk. */
+	ldr	r8, [r5, #CCM_CBCMR]
+	bic	r8, r8, #(1 << 20)
+	str	r8, [r5, #CCM_CBCMR]
+
+	/* make sure periph2_clk2 freq not exceed 400MHz */
+	ldr	r8, [r5, #CCM_CBCDR]
+	bic	r8, r8, #0x7
+	orr	r8, r8, #0x1
+	str	r8, [r5, #CCM_CBCDR]
+
+	/* now switch periph2_clk to pll3_main_clk. */
+	ldr	r8, [r5, #CCM_CBCDR]
+	orr	r8, r8, #(1 << 26)
+	str	r8, [r5, #CCM_CBCDR]
+
+	wait_for_ccm_handshake
+
+skip_periph2_clk2_switch_400m:
+
+	/* now switch pre_periph2_clk to PFD_400MHz. */
+	ldr	r8, [r5, #CCM_CBCMR]
+	bic	r8, r8, #(0x3 << 21)
+	orr	r8, r8, #(0x1 << 21)
+	str	r8, [r5, #CCM_CBCMR]
 
 	/* now switch periph2_clk back. */
 	ldr	r8, [r5, #CCM_CBCDR]
@@ -87,13 +112,6 @@
 	str	r8, [r5, #CCM_CBCDR]
 
 	wait_for_ccm_handshake
-
-	/*
-	 * on i.MX6SX, pre_periph2_clk will be always from
-	 * pll2_pfd2, so no need to set pre_periph2_clk
-	 * parent, just set the mmdc divider directly.
-	 */
-skip_periph2_clk2_switch_400m:
 
 	/* fabric_mmdc_podf to 0 */
 	ldr	r8, [r5, #CCM_CBCDR]
@@ -109,7 +127,32 @@ skip_periph2_clk2_switch_400m:
 	/* check whether periph2_clk is already from top path */
 	ldr	r8, [r5, #CCM_CBCDR]
 	ands	r8, #(1 << 26)
-	beq	skip_periph2_clk2_switch_50m
+	bne	skip_periph2_clk2_switch_50m
+
+	/* change periph2_clk2 to be sourced from pll3_clk. */
+	ldr	r8, [r5, #CCM_CBCMR]
+	bic	r8, r8, #(1 << 20)
+	str	r8, [r5, #CCM_CBCMR]
+
+	ldr	r8, [r5, #CCM_CBCDR]
+	bic	r8, r8, #0x7
+	orr	r8, r8, #0x1
+	str	r8, [r5, #CCM_CBCDR]
+
+	/* now switch periph2_clk to pll3_main_clk. */
+	ldr	r8, [r5, #CCM_CBCDR]
+	orr	r8, r8, #(1 << 26)
+	str	r8, [r5, #CCM_CBCDR]
+
+	wait_for_ccm_handshake
+
+skip_periph2_clk2_switch_50m:
+
+	/* now switch pre_periph2_clk to PFD_400MHz. */
+	ldr	r8, [r5, #CCM_CBCMR]
+	bic	r8, r8, #(0x3 << 21)
+	orr	r8, r8, #(0x1 << 21)
+	str	r8, [r5, #CCM_CBCMR]
 
 	/* now switch periph2_clk back. */
 	ldr	r8, [r5, #CCM_CBCDR]
@@ -117,13 +160,6 @@ skip_periph2_clk2_switch_400m:
 	str	r8, [r5, #CCM_CBCDR]
 
 	wait_for_ccm_handshake
-
-	/*
-	 * on i.MX6SX, pre_periph2_clk will be always from
-	 * pll2_pfd2, so no need to set pre_periph2_clk
-	 * parent, just set the mmdc divider directly.
-	 */
-skip_periph2_clk2_switch_50m:
 
 	/* fabric_mmdc_podf to 7 so that mmdc is 400 / 8 = 50MHz */
 	ldr	r8, [r5, #CCM_CBCDR]
@@ -191,24 +227,22 @@ imx6sx_ddr3_freq_change_start:
 	 *    and 2-4G is translated by TTBR1.
 	 */
 
-	ldr	r6, =iram_tlb_phys_addr
-	ldr	r7, [r6]
-
 	/* Disable Branch Prediction, Z bit in SCTLR. */
-	mrc	p15, 0, r6, c1, c0, 0
-	bic	r6, r6, #0x800
-	mcr	p15, 0, r6, c1, c0, 0
+	mrc	p15, 0, r7, c1, c0, 0
+	bic	r7, r7, #0x800
+	mcr	p15, 0, r7, c1, c0, 0
 
 	/* Flush the Branch Target Address Cache (BTAC) */
 	ldr	r6, =0x0
 	mcr	p15, 0, r6, c7, c1, 6
+	ldr	r6, =iram_tlb_phys_addr
+	ldr	r6, [r6]
 
 	dsb
 	isb
 
 	/* Store the IRAM table in TTBR1 */
-	mcr	p15, 0, r7, c2, c0, 1
-
+	mcr	p15, 0, r6, c2, c0, 1
 	/* Read TTBCR and set PD0=1, N = 1 */
 	mrc	p15, 0, r6, c2, c0, 2
 	orr	r6, r6, #0x11
@@ -225,9 +259,9 @@ imx6sx_ddr3_freq_change_start:
 	isb
 
 	/* Disable L1 data cache. */
-	mrc	p15, 0, r6, c1, c0, 0
-	bic	r6, r6, #0x4
-	mcr	p15, 0, r6, c1, c0, 0
+	mrc	p15, 0, r7, c1, c0, 0
+	bic	r7, r7, #0x4
+	mcr	p15, 0, r7, c1, c0, 0
 
 	ldr	r4, =IMX_IO_P2V(MX6Q_MMDC_P0_BASE_ADDR)
 	ldr	r5, =IMX_IO_P2V(MX6Q_CCM_BASE_ADDR)
@@ -274,6 +308,20 @@ wait_for_l2_to_idle:
 	/* delay for a while */
 	ldr	r8, =4
 	do_delay
+
+	/* set CON_REG */
+	ldr	r8, =0x8000
+	str	r8, [r4, #MMDC0_MDSCR]
+poll_conreq_set_1:
+	ldr	r8, [r4, #MMDC0_MDSCR]
+	and	r8, r8, #(0x4 << 12)
+	cmp	r8, #(0x4 << 12)
+	bne	poll_conreq_set_1
+
+	ldr	r8, =0x00008010
+	str	r8, [r4, #MMDC0_MDSCR]
+	ldr	r8, =0x00008018
+	str	r8, [r4, #MMDC0_MDSCR]
 
 	/*
 	 * if requested frequency is greater than
@@ -352,10 +400,10 @@ poll_dvfs_clear_1:
 	ldr	r8, =0x00018039
 	str	r8, [r4, #MMDC0_MDSCR]
 
-	ldr	r8, =0x04208030
+	ldr	r8, =0x08208030
 	str	r8, [r4, #MMDC0_MDSCR]
 
-	ldr	r8, =0x04208038
+	ldr	r8, =0x08208038
 	str	r8, [r4, #MMDC0_MDSCR]
 
 	ldr	r8, =0x00088032
@@ -393,8 +441,7 @@ update_iomux:
 	orr	r11, r11, #0x28
 	str	r11, [r6, r10]
 	add	r3, r3, #8
-	sub	r8, r8, #1
-	cmp	r8, #0
+	subs	r8, r8, #1
 	bgt	update_iomux
 
 	/*  ODT disabled. */
@@ -407,10 +454,10 @@ update_iomux:
 	str	r8, [r4, #MMDC0_MPDGCTRL0]
 
 	/* frc_msr + mu bypass */
-	ldr	r8, =0x00000160
+	ldr	r8, =0x00000060
 	str	r8, [r4, #MMDC0_MPMUR0]
 
-	ldr	r8, =0x00000560
+	ldr	r8, =0x00000460
 	str	r8, [r4, #MMDC0_MPMUR0]
 
 	ldr	r8, =0x00000c60
@@ -437,6 +484,10 @@ dll_on_mode:
 	ldr	r8, [r4, #MMDC0_MAPSR]
 	orr	r8, r8, #(1 << 21)
 	str	r8, [r4, #MMDC0_MAPSR]
+
+	/* de-assert CON_REQ. */
+	mov	r8, #0x0
+	str	r8, [r4, #MMDC0_MDSCR]
 
 	/* poll DVFS ack. */
 poll_dvfs_set_2:
@@ -490,8 +541,7 @@ update_iomux1:
 	ldr	r11, [r3, #0x4]
 	str	r11, [r6, r10]
 	add	r3, r3, #8
-	sub	r8, r8, #1
-	cmp	r8, #0
+	subs	r8, r8, #1
 	bgt	update_iomux1
 
 	/* config MMDC timings to 400MHz. */
@@ -524,10 +574,10 @@ update_iomux1:
 	do_delay
 
 	/* reset dll. */
-	ldr	r8, =0x05208030
+	ldr	r8, =0x09208030
 	str	r8, [r4, #MMDC0_MDSCR]
 
-	ldr	r8, =0x05208038
+	ldr	r8, =0x09208038
 	str	r8, [r4, #MMDC0_MDSCR]
 
 	/* delay for while. */
@@ -600,8 +650,7 @@ update_calib:
 	ldr	r11, [r1, #0x4]
 	str	r11, [r4, r10]
 	add	r1, r1, #8
-	sub	r8, r8, #1
-	cmp	r8, #0
+	subs	r8, r8, #1
 	bgt	update_calib
 
 	/* perform a force measurement. */
@@ -622,6 +671,10 @@ poll_conreq_clear_2:
 	beq	poll_conreq_clear_2
 
 done:
+	/* Enable L1 data cache. */
+	mrc	p15, 0, r7, c1, c0, 0
+	orr	r7, r7, #0x4
+	mcr	p15, 0, r7, c1, c0, 0
 
 	/* MMDC0_MAPSR adopt power down enable. */
 	ldr	r8, [r4, #MMDC0_MAPSR]
@@ -634,11 +687,6 @@ done:
 	ldr	r7, =0x1
 	str	r7, [r8, #0x100]
 #endif
-
-	/* Enable L1 data cache. */
-	mrc	p15, 0, r7, c1, c0, 0
-	orr	r7, r7, #0x4
-	mcr	p15, 0, r7, c1, c0, 0
 
 	/* Restore the TTBCR */
 	dsb
