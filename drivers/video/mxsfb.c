@@ -211,6 +211,7 @@ struct mxsfb_info {
 	char disp_dev[32];
 	struct mxc_dispdrv_handle *dispdrv;
 	int id;
+	struct fb_var_screeninfo var;
 };
 
 #define mxsfb_is_v3(host) (host->devdata->ipversion == 3)
@@ -573,12 +574,38 @@ static void mxsfb_disable_controller(struct fb_info *fb_info)
 	}
 }
 
+/**
+   This function compare the fb parameter see whether it was different
+   parameter for hardware, if it was different parameter, the hardware
+   will reinitialize. All will compared except x/y offset.
+ */
+static bool mxsfb_par_equal(struct fb_info *fbi, struct mxsfb_info *host)
+{
+	/* Here we set the xoffset, yoffset to zero, and compare two
+	 * var see have different or not. */
+	struct fb_var_screeninfo oldvar = host->var;
+	struct fb_var_screeninfo newvar = fbi->var;
+
+	if ((fbi->var.activate & FB_ACTIVATE_MASK) == FB_ACTIVATE_NOW &&
+	    fbi->var.activate & FB_ACTIVATE_FORCE)
+		return false;
+
+	oldvar.xoffset = newvar.xoffset = 0;
+	oldvar.yoffset = newvar.yoffset = 0;
+
+	return memcmp(&oldvar, &newvar, sizeof(struct fb_var_screeninfo)) == 0;
+}
+
 static int mxsfb_set_par(struct fb_info *fb_info)
 {
 	struct mxsfb_info *host = to_imxfb_host(fb_info);
 	u32 ctrl, vdctrl0, vdctrl4;
 	int line_size, fb_size;
 	int reenable = 0;
+
+	/* If parameter no change, don't reconfigure. */
+	if (mxsfb_par_equal(fb_info, host))
+		return 0;
 
 	clk_enable_axi(host);
 	clk_enable_disp_axi(host);
@@ -593,6 +620,7 @@ static int mxsfb_set_par(struct fb_info *fb_info)
 		reenable = 1;
 		mxsfb_disable_controller(fb_info);
 	}
+
 
 	sema_init(&host->flip_sem, 1);
 
@@ -708,6 +736,12 @@ static int mxsfb_set_par(struct fb_info *fb_info)
 	if (reenable)
 		mxsfb_enable_controller(fb_info);
 
+	/* Clear activate as not Reconfiguring framebuffer again */
+	if ((fb_info->var.activate & FB_ACTIVATE_FORCE) &&
+		(fb_info->var.activate & FB_ACTIVATE_MASK) == FB_ACTIVATE_NOW)
+		fb_info->var.activate = FB_ACTIVATE_NOW;
+
+	host->var = fb_info->var;
 	return 0;
 }
 
