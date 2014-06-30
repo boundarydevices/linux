@@ -663,6 +663,11 @@ static int mxcfb_set_par(struct fb_info *fbi)
 	if (ovfbi_enable)
 		ipu_enable_channel(mxc_fbi_fg->ipu, mxc_fbi_fg->ipu_ch);
 
+	/* Clear activate as not Reconfiguring framebuffer again */
+	if ((fbi->var.activate & FB_ACTIVATE_FORCE) &&
+		(fbi->var.activate & FB_ACTIVATE_MASK) == FB_ACTIVATE_NOW)
+		fbi->var.activate = FB_ACTIVATE_NOW;
+
 	if (mxc_fbi->dispdrv && mxc_fbi->dispdrv->drv->enable) {
 		retval = mxc_fbi->dispdrv->drv->enable(mxc_fbi->dispdrv, fbi);
 		if (retval < 0) {
