@@ -860,6 +860,8 @@ static int mxsfb_blank(int blank, struct fb_info *fb_info)
 		break;
 
 	case FB_BLANK_UNBLANK:
+		fb_info->var.activate = (fb_info->var.activate & ~FB_ACTIVATE_MASK) |
+				FB_ACTIVATE_NOW | FB_ACTIVATE_FORCE;
 		if (!host->enabled)
 			mxsfb_enable_controller(fb_info);
 		mxsfb_set_par(&host->fb_info);
