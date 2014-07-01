@@ -392,11 +392,6 @@ static int mma8x5x_fifo_setting(struct mma8x5x_data *pdata,
 		i2c_smbus_write_byte_data(client,
 					MMA8X5X_CTRL_REG5,
 					pin_cfg | (0x01 << 6));
-	/*route to pin 1*/
-	else
-		i2c_smbus_write_byte_data(client,
-					MMA8X5X_CTRL_REG5,
-					pin_cfg & ~(0x01 << 6));
 
 	i2c_smbus_write_byte_data(client, MMA8X5X_CTRL_REG1, sys_mode);
 
