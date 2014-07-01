@@ -32,6 +32,8 @@ struct adv739x_data {
 	struct i2c_client *client;
 	struct mxc_dispdrv_handle *disp_adv739x;
 	struct fb_info *fbi;
+	void (*enable_pins) (void);
+	void (*disable_pins) (void);
 
 	int ipu_id;
 	int disp_id;
@@ -335,6 +337,8 @@ static int adv739x_disp_init(struct mxc_dispdrv_handle *disp,
 			ret = -EACCES;
 			goto get_pins_failed;
 		}
+	if (adv739x->enable_pins)
+		adv739x->enable_pins();
 
 	adv739x->nb.notifier_call = adv739x_fb_event;
 	ret = fb_register_client(&adv739x->nb);
@@ -362,6 +366,8 @@ static void adv739x_disp_deinit(struct mxc_dispdrv_handle *disp)
 
 	adv739x_poweroff(adv739x);
 
+	if (adv739x->disable_pins)
+		adv739x->disable_pins();
 	/* Release pins */
 	if (plat->put_pins)
 		plat->put_pins();
@@ -396,6 +402,8 @@ static int __devinit adv739x_probe(struct i2c_client *client,
 	
 	adv739x->client = client;
 	adv739x->ifmt = plat->default_ifmt;
+	adv739x->enable_pins = plat->enable_pins;
+	adv739x->disable_pins = plat->disable_pins;
 
 	adv739x->disp_adv739x = mxc_dispdrv_register(&adv739x_drv);
 	mxc_dispdrv_setdata(adv739x->disp_adv739x, adv739x);
@@ -411,6 +419,8 @@ static int __devexit adv739x_remove(struct i2c_client *client)
 {
 	struct adv739x_data *adv739x = i2c_get_clientdata(client);
 
+	if (adv739x->disable_pins)
+		adv739x->disable_pins();
 	mxc_dispdrv_puthandle(adv739x->disp_adv739x);
 	mxc_dispdrv_unregister(adv739x->disp_adv739x);
 	device_remove_file(&client->dev, &dev_attr_adv739x_reg);
@@ -420,6 +430,7 @@ static int __devexit adv739x_remove(struct i2c_client *client)
 
 static const struct i2c_device_id adv739x_id[] = {
 	{ "mxc_adv739x", 0 },
+	{},
 };
 
 MODULE_DEVICE_TABLE(i2c, adv739x_id);
