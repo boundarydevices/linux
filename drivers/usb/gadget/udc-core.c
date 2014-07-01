@@ -372,7 +372,6 @@ static int udc_bind_to_driver(struct usb_udc *udc, struct usb_gadget_driver *dri
 	 *
 	 * usb_gadget_connect(udc->gadget);
 	 */
-	usb_gadget_connect(udc->gadget);
 	driver->attached = true;
 
 	kobject_uevent(&udc->dev.kobj, KOBJ_CHANGE);
