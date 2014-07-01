@@ -660,12 +660,12 @@ static struct gpio initial_gpios[] __initdata = {
 };
 
 static struct gpio export_gpios[] __initdata = {
-	{.label = "pwr-j1",		.gpio = GP_PWR_J1,		.flags = 0},
-	{.label = "pwr-j2",		.gpio = GP_PWR_J2,		.flags = 0},
-	{.label = "pwr-j3",		.gpio = GP_PWR_J3,		.flags = 0},
-	{.label = "pwr-j4",		.gpio = GP_PWR_J4,		.flags = 0},
-	{.label = "pwr-j6",		.gpio = GP_PWR_J6,		.flags = 0},
-	{.label = "pwr-j7",		.gpio = GP_PWR_J7,		.flags = 0},
+	{.label = "pwr-j1",		.gpio = GP_PWR_J1,		.flags = GPIOF_OUT_INIT_HIGH},
+	{.label = "pwr-j2",		.gpio = GP_PWR_J2,		.flags = GPIOF_OUT_INIT_HIGH},
+	{.label = "pwr-j3",		.gpio = GP_PWR_J3,		.flags = GPIOF_OUT_INIT_HIGH},
+	{.label = "pwr-j4",		.gpio = GP_PWR_J4,		.flags = GPIOF_OUT_INIT_HIGH},
+	{.label = "pwr-j6",		.gpio = GP_PWR_J6,		.flags = GPIOF_OUT_INIT_HIGH},
+	{.label = "pwr-j7",		.gpio = GP_PWR_J7,		.flags = GPIOF_OUT_INIT_HIGH},
 	{.label = "dry_contact",	.gpio = GP_DRY_CONTACT,		.flags = GPIOF_OUT_INIT_HIGH},
 	{.label = "bt_gpio1",		.gpio = GP_BT_GPIO1,		.flags = GPIOF_DIR_IN},
 	{.label = "bt_gpio2",		.gpio = GP_BT_GPIO2,		.flags = GPIOF_DIR_IN},
