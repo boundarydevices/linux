@@ -30,6 +30,9 @@
 #include <linux/input.h>
 #include <linux/wait.h>
 #include <linux/workqueue.h>
+#include <linux/of.h>
+#include <linux/pm.h>
+#include <linux/regulator/consumer.h>
 
 #define ABS_STATUS ABS_WHEEL
 
@@ -446,10 +449,30 @@ static int mag3110_probe(struct i2c_client *client,
 	struct i2c_adapter *adapter;
 	struct input_dev *idev;
 	struct mag3110_data *mag;
-    struct device_node *of_node = client->dev.of_node;
+	struct regulator *vdd, *vdd_io;
+	u32 irq_flag;
+	struct irq_data *irq_data;
+	struct device_node *of_node = client->dev.of_node;
+	bool shared_irq;
 	int ret = 0;
-    u32 pos;
+	u32 pos;
+	vdd = devm_regulator_get(&client->dev, "vdd");
+	if (!IS_ERR(vdd)) {
+		ret = regulator_enable(vdd);
+		if (ret) {
+			dev_err(&client->dev, "vdd set voltage error\n");
+			return ret;
+		}
+	}
 
+	vdd_io = devm_regulator_get(&client->dev, "vddio");
+	if (!IS_ERR(vdd_io)) {
+		ret = regulator_enable(vdd_io);
+		if (ret) {
+			dev_err(&client->dev, "vddio set voltage error\n");
+			return ret;
+		}
+	}
 	adapter = to_i2c_adapter(client->dev.parent);
 	if (!i2c_check_functionality(adapter,
 				     I2C_FUNC_SMBUS_BYTE |
@@ -471,9 +494,9 @@ static int mag3110_probe(struct i2c_client *client,
 		return -ENOMEM;
 	mag->client = client;
 	mag->active = MAG_STANDBY;
-    ret = of_property_read_u32(of_node, "position", &pos);
-    if (ret)
-        pos = 2;
+	ret = of_property_read_u32(of_node, "position", &pos);
+	if (ret)
+		pos = 2;
 	mag->position = (int)pos;
 	mutex_init(&mag->data_lock);
 	i2c_set_clientdata(client, mag);
@@ -520,12 +543,20 @@ static int mag3110_probe(struct i2c_client *client,
 
 	/* set irq type to edge rising */
 #if MAG3110_IRQ_USED
-	ret = request_irq(client->irq, mag3110_irq_handler,
-			  IRQF_TRIGGER_RISING, client->dev.driver->name, mag);
-	if (ret < 0) {
-		dev_err(&client->dev, "failed to register irq %d!\n",
-			client->irq);
-		goto error_reg_irq;
+	shared_irq = of_property_read_bool(of_node, "shared-interrupt");
+	if (client->irq) {
+		irq_data = irq_get_irq_data(client->irq);
+		irq_flag = irqd_get_trigger_type(irq_data);
+		irq_flag |= IRQF_ONESHOT;
+		if (shared_irq)
+				irq_flag |= IRQF_SHARED;
+		ret = request_irq(client->irq, mag3110_irq_handler,
+			irq_flag, client->dev.driver->name, mag);
+		if (ret < 0) {
+			dev_err(&client->dev, "failed to register irq %d!\n",
+					client->irq);
+			goto error_reg_irq;
+	}
 	}
 #endif
 	/* Initialize mag3110 chip */
@@ -612,11 +643,14 @@ static const struct i2c_device_id mag3110_id[] = {
 };
 
 MODULE_DEVICE_TABLE(i2c, mag3110_id);
+
+static SIMPLE_DEV_PM_OPS(mag3110_pm_ops, mag3110_suspend, mag3110_resume);
 static struct i2c_driver mag3110_driver = {
-	.driver			= { .name    = MAG3110_DRV_NAME,
-			       .owner		   = THIS_MODULE,  },
-	.suspend		= mag3110_suspend,
-	.resume			= mag3110_resume,
+	.driver		= {
+		.name	= MAG3110_DRV_NAME,
+		.owner	= THIS_MODULE,
+		.pm	= &mag3110_pm_ops,
+	},
 	.probe			= mag3110_probe,
 	.remove			= mag3110_remove,
 	.id_table		= mag3110_id,
