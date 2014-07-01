@@ -403,7 +403,33 @@ static struct i2c_board_info i2c1_board_info[] __initdata = {
 	},
 };
 
+static void adv7391_enable_pins(void)
+{
+	pr_info("%s\n", __func__);
+	IOMUX_SETUP(lcd_pads_enable);
+	gpio_set_value(GP_ADV7391_RESET, 1);
+}
+
+static void adv7391_disable_pins(void)
+{
+	pr_info("%s\n", __func__);
+	gpio_set_value(GP_ADV7391_RESET, 0);
+	IOMUX_SETUP(lcd_pads_disable);
+}
+
+static struct fsl_mxc_lcd_platform_data adv7391_data = {
+	.ipu_id = 0,
+	.disp_id = 0,
+	.default_ifmt = IPU_PIX_FMT_BT656,
+	.enable_pins = adv7391_enable_pins,
+	.disable_pins = adv7391_disable_pins,
+};
+
 static struct i2c_board_info i2c2_board_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("mxc_adv739x", 0x2a),
+		.platform_data = (void *)&adv7391_data,
+	},
 };
 
 static void usbotg_vbus(bool on)
@@ -439,6 +465,13 @@ static struct ipuv3_fb_platform_data fb_data[] = {
 	.disp_dev = "hdmi",
 	.interface_pix_fmt = IPU_PIX_FMT_RGB24,
 	.mode_str = "1280x720M@60",
+	.default_bpp = 16,
+	.int_clk = false,
+	},
+	{ /*fb1*/
+	.disp_dev = "adv739x",
+	.interface_pix_fmt = IPU_PIX_FMT_BT656,
+	.mode_str = "BT656-NTSC",
 	.default_bpp = 16,
 	.int_clk = false,
 	},
@@ -491,7 +524,7 @@ static struct fsl_mxc_hdmi_platform_data hdmi_data = {
 };
 
 static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
-	.ipu_id = 0,
+	.ipu_id = 1,
 	.disp_id = 0,
 };
 
@@ -623,6 +656,7 @@ static struct gpio initial_gpios[] __initdata = {
 	{.label = "gs-sw_en",		.gpio = GP_GS2971_SW_EN,	.flags = 0},
 	{.label = "gs-standby",		.gpio = GP_GS2971_STANDBY,	.flags = GPIOF_OUT_INIT_HIGH},
 	{.label = "gs-dvb_asi",		.gpio = GP_GS2971_DVB_ASI,	.flags = 0},
+	{.label = "adv7391_reset",	.gpio = GP_ADV7391_RESET,	.flags = 0},
 };
 
 static struct gpio export_gpios[] __initdata = {
@@ -708,6 +742,7 @@ static void __init board_init(void)
 				__func__, ret);
 	}
 	IOMUX_SETUP(board_pads);
+	adv7391_disable_pins();
 
 	printk(KERN_ERR "------------ Board type BT\n");
 	for (i=0; i < ARRAY_SIZE(export_gpios);i++) {
