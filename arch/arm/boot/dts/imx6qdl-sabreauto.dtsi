@@ -12,7 +12,6 @@
 
 / {
 	aliases {
-		mmc0   = &usdhc3;
 		mxcfb0 = &mxcfb1;
 		mxcfb1 = &mxcfb2;
 		mxcfb2 = &mxcfb3;
@@ -492,12 +491,13 @@
 		#gpio-cells = <2>;
 	};
 
-	mma8x5x@1c {
-		compatible = "fsl,mma8x5x";
+	mma8451@1c {
+		compatible = "fsl,mma8451";
 		reg = <0x1c>;
 		position = <7>;
 		interrupt-parent = <&gpio6>;
-		interrupts = <31 1>;
+		interrupts = <31 8>;
+		interrupt-route = <1>;
 	};
 
 	mag3110@0e {
@@ -743,17 +743,17 @@
 	};
 };
 &caam_sm  {
-	status = "disable";
+	status = "disabled";
 };
 
 &irq_sec_vio  {
-	status = "disable";
+	status = "disabled";
 };
 
 &caam_snvs  {
-	status = "disable";
+	status = "disabled";
 };
 
 &crypto {
-	status = "disable";
+	status = "disabled";
 };

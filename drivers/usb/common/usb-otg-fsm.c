@@ -84,6 +84,8 @@ void otg_leave_state(struct otg_fsm *fsm, enum usb_otg_state old_state)
 		fsm->b_ase0_brst_tmout = 0;
 		break;
 	case OTG_STATE_B_HOST:
+		if (fsm->otg->gadget)
+			fsm->otg->gadget->host_request_flag = 0;
 		break;
 	case OTG_STATE_A_IDLE:
 		fsm->adp_prb = 0;
@@ -98,6 +100,8 @@ void otg_leave_state(struct otg_fsm *fsm, enum usb_otg_state old_state)
 		break;
 	case OTG_STATE_A_HOST:
 		otg_del_timer(fsm, A_WAIT_ENUM);
+		if (fsm->otg->gadget)
+			fsm->otg->gadget->host_request_flag = 0;
 		break;
 	case OTG_STATE_A_SUSPEND:
 		otg_del_timer(fsm, A_AIDL_BDIS);
@@ -169,6 +173,7 @@ int otg_set_state(struct otg_fsm *fsm, enum usb_otg_state new_state)
 		otg_set_protocol(fsm, PROTO_HOST);
 		usb_bus_start_enum(fsm->otg->host,
 				fsm->otg->host->otg_port);
+		otg_add_timer(fsm, HNP_POLLING);
 		break;
 	case OTG_STATE_A_IDLE:
 		otg_drv_vbus(fsm, 0);
@@ -203,6 +208,7 @@ int otg_set_state(struct otg_fsm *fsm, enum usb_otg_state new_state)
 		 */
 		if (!fsm->a_bus_req || fsm->a_suspend_req_inf)
 			otg_add_timer(fsm, A_WAIT_ENUM);
+		otg_add_timer(fsm, HNP_POLLING);
 		break;
 	case OTG_STATE_A_SUSPEND:
 		otg_drv_vbus(fsm, 1);
@@ -364,3 +370,60 @@ int otg_statemachine(struct otg_fsm *fsm)
 	return state_changed;
 }
 EXPORT_SYMBOL_GPL(otg_statemachine);
+
+/*
+ * Called by host to poll peripheral if it wants to be host
+ * Return value:
+ * - host request flag(1) if the device wants to be host,
+ * - host request flag(0) if the device keeps peripheral role,
+ * - otherwise, error code.
+ */
+int otg_hnp_polling(struct otg_fsm *fsm)
+{
+	struct usb_device *udev;
+	u8 host_req_flag;
+	int retval;
+	enum usb_otg_state state = fsm->otg->phy->state;
+
+	if (state != OTG_STATE_A_HOST && state != OTG_STATE_B_HOST)
+		return -EINVAL;
+
+	udev = usb_hub_find_child(fsm->otg->host->root_hub, 1);
+	if (!udev) {
+		dev_err(fsm->otg->host->controller,
+			"no usb dev connected, can't start HNP polling\n");
+		return -ENODEV;
+	}
+
+	/* Get host request flag from connected USB device */
+	retval = usb_control_msg(udev,
+				usb_rcvctrlpipe(udev, 0),
+				USB_REQ_GET_STATUS,
+				USB_DIR_IN | USB_RECIP_DEVICE,
+				0,
+				OTG_STS_SELECTOR,
+				&host_req_flag,
+				1,
+				USB_CTRL_GET_TIMEOUT);
+	if (retval == 1) {
+		if (host_req_flag == HOST_REQUEST_FLAG) {
+			if (state == OTG_STATE_A_HOST)
+				fsm->a_bus_req = 0;
+			else if (state == OTG_STATE_B_HOST)
+				fsm->b_bus_req = 0;
+			retval = HOST_REQUEST_FLAG;
+		} else if (host_req_flag == 0) {
+			/* Continue polling */
+			otg_add_timer(fsm, HNP_POLLING);
+			retval = 0;
+		} else {
+			dev_err(&udev->dev, "host request flag is invalid\n");
+			retval = -EINVAL;
+		}
+	} else {
+		dev_err(&udev->dev, "Get one byte OTG status failed\n");
+		retval = -EIO;
+	}
+	return retval;
+}
+EXPORT_SYMBOL_GPL(otg_hnp_polling);

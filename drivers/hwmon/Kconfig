@@ -1582,4 +1582,10 @@ config SENSORS_MMA8X5X
       If you say yes here you get support for the Freescale
       MMA8451/MMA8452/MMA8453/MMA8652/MMA8653 sensors.
 
+config MXC_MMA8x5x
+	tristate "MMA8x5x device driver"
+	depends on I2C && SYSFS
+	default n
+	help
+	  This configure is used by android sensor driver.
 endif # HWMON

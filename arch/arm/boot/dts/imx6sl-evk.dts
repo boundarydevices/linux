@@ -14,9 +14,6 @@
 / {
 	model = "Freescale i.MX6 SoloLite EVK Board(PFUZE100)";
 	compatible = "fsl,imx6sl-evk", "fsl,imx6sl";
-	aliases {
-		mmc0 = &usdhc2;
-	};
 };
 
 &i2c1 {

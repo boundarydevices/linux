@@ -63,6 +63,7 @@ static u32 gpc_saved_imrs[IMR_NUM];
 static struct clk *gpu3d_clk, *gpu3d_shader_clk, *gpu2d_clk, *gpu2d_axi_clk;
 static struct clk *lcd_axi_clk, *lcd_pix_clk, *epdc_axi_clk, *epdc_pix_clk;
 static struct clk *pxp_axi_clk;
+static struct clk *disp_axi_clk, *lcdif_axi_clk, *lcdif1_pix_clk, *lcdif2_pix_clk, *csi_mclk;
 static struct clk *openvg_axi_clk, *vpu_clk, *ipg_clk;
 static struct device *gpc_dev;
 static struct regulator *pu_reg;
@@ -80,25 +81,43 @@ static int pu_dummy_enable;
 
 static void imx_disp_clk(bool enable)
 {
-	if (enable) {
-		clk_prepare_enable(lcd_axi_clk);
-		clk_prepare_enable(lcd_pix_clk);
-		clk_prepare_enable(epdc_axi_clk);
-		clk_prepare_enable(epdc_pix_clk);
-		clk_prepare_enable(pxp_axi_clk);
-	} else {
-		clk_disable_unprepare(lcd_axi_clk);
-		clk_disable_unprepare(lcd_pix_clk);
-		clk_disable_unprepare(epdc_axi_clk);
-		clk_disable_unprepare(epdc_pix_clk);
-		clk_disable_unprepare(pxp_axi_clk);
+	if (cpu_is_imx6sl()) {
+		if (enable) {
+			clk_prepare_enable(lcd_axi_clk);
+			clk_prepare_enable(lcd_pix_clk);
+			clk_prepare_enable(epdc_axi_clk);
+			clk_prepare_enable(epdc_pix_clk);
+			clk_prepare_enable(pxp_axi_clk);
+		} else {
+			clk_disable_unprepare(lcd_axi_clk);
+			clk_disable_unprepare(lcd_pix_clk);
+			clk_disable_unprepare(epdc_axi_clk);
+			clk_disable_unprepare(epdc_pix_clk);
+			clk_disable_unprepare(pxp_axi_clk);
+		}
+	} else if (cpu_is_imx6sx()) {
+		if (enable) {
+			clk_prepare_enable(lcdif_axi_clk);
+			clk_prepare_enable(lcdif1_pix_clk);
+			clk_prepare_enable(lcdif2_pix_clk);
+			clk_prepare_enable(pxp_axi_clk);
+			clk_prepare_enable(csi_mclk);
+			clk_prepare_enable(disp_axi_clk);
+		} else {
+			clk_disable_unprepare(lcdif_axi_clk);
+			clk_disable_unprepare(lcdif1_pix_clk);
+			clk_disable_unprepare(lcdif2_pix_clk);
+			clk_disable_unprepare(pxp_axi_clk);
+			clk_disable_unprepare(csi_mclk);
+			clk_disable_unprepare(disp_axi_clk);
+		}
 	}
 }
 
 static void imx_gpc_dispmix_on(void)
 {
-	if (cpu_is_imx6sl() &&
-		imx_get_soc_revision() >= IMX_CHIP_REVISION_1_2) {
+	if ((cpu_is_imx6sl() &&
+		imx_get_soc_revision() >= IMX_CHIP_REVISION_1_2) || cpu_is_imx6sx()) {
 		imx_disp_clk(true);
 
 		writel_relaxed(0x0, gpc_base + GPC_PGC_DISP_PGCR_OFFSET);
@@ -113,8 +132,8 @@ static void imx_gpc_dispmix_on(void)
 
 static void imx_gpc_dispmix_off(void)
 {
-	if (cpu_is_imx6sl() &&
-		imx_get_soc_revision() >= IMX_CHIP_REVISION_1_2) {
+	if ((cpu_is_imx6sl() &&
+		imx_get_soc_revision() >= IMX_CHIP_REVISION_1_2) || cpu_is_imx6sx()) {
 		imx_disp_clk(true);
 
 		writel_relaxed(0xFFFFFFFF,
@@ -138,9 +157,17 @@ static void imx_gpc_mf_mix_off(void)
 		if ((gpc_wake_irqs[i] & gpc_mf_irqs[i]) != 0)
 			return;
 
-	pr_info("Turn off M/F mix!\n");
-	/* turn off mega/fast mix */
-	writel_relaxed(0x1, gpc_base + GPC_PGC_MF_PDN);
+	/*
+	 * As some drivers are not ready for this
+	 * Mega/Fast mix off feature, so just skip the
+	 * setting of turning off M/F mix, if anyone
+	 * want to enable this feature, just add below
+	 * two lines back.
+	 *
+	 * pr_info("Turn off M/F mix!\n");
+	 * writel_relaxed(0x1, gpc_base + GPC_PGC_MF_PDN);
+	 *
+	 */
 }
 
 void imx_gpc_pre_suspend(bool arm_power_off)
@@ -585,7 +612,14 @@ static int imx_gpc_probe(struct platform_device *pdev)
 	} else if (cpu_is_imx6sx()) {
 		gpu3d_clk = devm_clk_get(gpc_dev, "gpu3d_core");
 		ipg_clk = devm_clk_get(gpc_dev, "ipg");
-		if (IS_ERR(gpu3d_clk) || IS_ERR(ipg_clk)) {
+		pxp_axi_clk = devm_clk_get(gpc_dev, "pxp_axi");
+		disp_axi_clk = devm_clk_get(gpc_dev, "disp_axi");
+		lcdif1_pix_clk = devm_clk_get(gpc_dev, "lcdif1_pix");
+		lcdif_axi_clk = devm_clk_get(gpc_dev, "lcdif_axi");
+		lcdif2_pix_clk = devm_clk_get(gpc_dev, "lcdif2_pix");
+		csi_mclk = devm_clk_get(gpc_dev, "csi_mclk");
+		if (IS_ERR(gpu3d_clk) || IS_ERR(ipg_clk) || IS_ERR(pxp_axi_clk) || IS_ERR(disp_axi_clk) ||
+			IS_ERR(lcdif1_pix_clk) || IS_ERR(lcdif_axi_clk) || IS_ERR(lcdif2_pix_clk) || IS_ERR(csi_mclk)) {
 			dev_err(gpc_dev, "failed to get clk!\n");
 			return -ENOENT;
 		}

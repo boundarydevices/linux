@@ -1601,7 +1601,7 @@ fec_enet_interrupt(int irq, void *dev_id)
 			fep->work_ts = 0;
 		}
 
-		if (fep->work_tx || fep->work_rx) {
+		if ((fep->work_tx || fep->work_rx) && fep->link) {
 			ret = IRQ_HANDLED;
 
 			/* Disable the RX interrupt */
@@ -2359,8 +2359,7 @@ fec_enet_set_wol(struct net_device *ndev, struct ethtool_wolinfo *wol)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 
-	if (!(fep->wol_flag & FEC_WOL_HAS_MAGIC_PACKET) &&
-			wol->wolopts != 0)
+	if (!(fep->wol_flag & FEC_WOL_HAS_MAGIC_PACKET))
 		return -EINVAL;
 
 	if (wol->wolopts & ~WAKE_MAGIC)

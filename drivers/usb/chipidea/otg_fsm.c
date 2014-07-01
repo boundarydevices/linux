@@ -29,6 +29,7 @@
 #include "bits.h"
 #include "otg.h"
 #include "otg_fsm.h"
+#include "host.h"
 
 static struct ci_otg_fsm_timer *otg_timer_initializer
 (struct ci_hdrc *ci, void (*function)(void *, unsigned long),
@@ -82,6 +83,11 @@ set_a_bus_req(struct device *dev, struct device_attribute *attr,
 			return count;
 		}
 		ci->fsm.a_bus_req = 1;
+		if (ci->transceiver->state == OTG_STATE_A_PERIPHERAL) {
+			ci->gadget.host_request_flag = 1;
+			mutex_unlock(&ci->fsm.lock);
+			return count;
+		}
 	}
 
 	ci_otg_queue_work(ci);
@@ -160,8 +166,14 @@ set_b_bus_req(struct device *dev, struct device_attribute *attr,
 	mutex_lock(&ci->fsm.lock);
 	if (buf[0] == '0')
 		ci->fsm.b_bus_req = 0;
-	else if (buf[0] == '1')
+	else if (buf[0] == '1') {
 		ci->fsm.b_bus_req = 1;
+		if (ci->transceiver->state == OTG_STATE_B_PERIPHERAL) {
+			ci->gadget.host_request_flag = 1;
+			mutex_unlock(&ci->fsm.lock);
+			return count;
+		}
+	}
 
 	ci_otg_queue_work(ci);
 	mutex_unlock(&ci->fsm.lock);
@@ -369,6 +381,14 @@ static void b_data_pulse_end(void *ptr, unsigned long indicator)
 	ci_otg_queue_work(ci);
 }
 
+static void hnp_polling_timer_work(unsigned long arg)
+{
+	struct ci_hdrc *ci = (struct ci_hdrc *)arg;
+
+	ci->hnp_polling_req = true;
+	ci_otg_queue_work(ci);
+}
+
 /* Initialize timers */
 static int ci_otg_init_timers(struct ci_hdrc *ci)
 {
@@ -439,7 +459,15 @@ static int ci_otg_init_timers(struct ci_hdrc *ci)
 	if (ci->fsm_timer->timer_list[B_SESS_VLD] == NULL)
 		return -ENOMEM;
 
+	setup_timer(&ci->hnp_polling_timer, hnp_polling_timer_work,
+							(unsigned long)ci);
 	return 0;
+}
+
+static void ci_otg_add_hnp_polling_timer(struct ci_hdrc *ci)
+{
+	mod_timer(&ci->hnp_polling_timer,
+			jiffies + msecs_to_jiffies(T_HOST_REQ_POLL));
 }
 
 /* -------------------------------------------------------------*/
@@ -449,8 +477,12 @@ static void ci_otg_fsm_add_timer(struct otg_fsm *fsm, enum otg_fsm_timer t)
 {
 	struct ci_hdrc	*ci = container_of(fsm, struct ci_hdrc, fsm);
 
-	if (t < NUM_OTG_FSM_TIMERS)
-		ci_otg_add_timer(ci, t);
+	if (t < NUM_OTG_FSM_TIMERS) {
+		if (t == HNP_POLLING)
+			ci_otg_add_hnp_polling_timer(ci);
+		else
+			ci_otg_add_timer(ci, t);
+	}
 	return;
 }
 
@@ -605,6 +637,14 @@ int ci_otg_fsm_work(struct ci_hdrc *ci)
 	}
 
 	pm_runtime_get_sync(ci->dev);
+	if (ci->hnp_polling_req) {
+		ci->hnp_polling_req = false;
+		if (otg_hnp_polling(&ci->fsm) != HOST_REQUEST_FLAG) {
+			pm_runtime_put_sync(ci->dev);
+			return 0;
+		}
+	}
+
 	if (otg_statemachine(&ci->fsm)) {
 		if (ci->transceiver->state == OTG_STATE_A_IDLE) {
 			/*
@@ -763,13 +803,8 @@ irqreturn_t ci_otg_fsm_irq(struct ci_hdrc *ci)
 			}
 		} else if (otg_int_src & OTGSC_BSVIS) {
 			hw_write_otgsc(ci, OTGSC_BSVIS, OTGSC_BSVIS);
-			ci->b_sess_valid_event = true;
-			if (otgsc & OTGSC_BSV) {
-				fsm->b_sess_vld = 1;
-				ci_otg_del_timer(ci, B_SSEND_SRP);
-				ci_otg_del_timer(ci, B_SRP_FAIL);
-				fsm->b_ssend_srp = 0;
-			} else {
+			ci->vbus_glitch_check_event = true;
+			if (!(otgsc & OTGSC_BSV) && fsm->b_sess_vld) {
 				fsm->b_sess_vld = 0;
 				if (fsm->id)
 					ci_otg_add_timer(ci, B_SSEND_SRP);
@@ -863,4 +898,41 @@ int ci_hdrc_otg_fsm_init(struct ci_hdrc *ci)
 void ci_hdrc_otg_fsm_remove(struct ci_hdrc *ci)
 {
 	sysfs_remove_group(&ci->dev->kobj, &inputs_attr_group);
+	del_timer_sync(&ci->hnp_polling_timer);
+}
+
+/* Restart OTG fsm if resume from power lost */
+void ci_hdrc_otg_fsm_restart(struct ci_hdrc *ci)
+{
+	struct otg_fsm *fsm = &ci->fsm;
+	int id_status = fsm->id;
+
+	/* Update fsm if power lost in peripheral state */
+	if (ci->transceiver->state == OTG_STATE_B_PERIPHERAL) {
+		fsm->b_sess_vld = 0;
+		otg_statemachine(fsm);
+	}
+
+	hw_write_otgsc(ci, OTGSC_IDIE, OTGSC_IDIE);
+	hw_write_otgsc(ci, OTGSC_AVVIE, OTGSC_AVVIE);
+
+	/* Update fsm variables for restart */
+	fsm->id = hw_read_otgsc(ci, OTGSC_ID) ? 1 : 0;
+	if (fsm->id) {
+		fsm->b_ssend_srp =
+			hw_read_otgsc(ci, OTGSC_BSV) ? 0 : 1;
+		fsm->b_sess_vld =
+			hw_read_otgsc(ci, OTGSC_BSV) ? 1 : 0;
+	} else if (fsm->id != id_status) {
+		/* ID changes to be 0 */
+		fsm->a_bus_drop = 0;
+		fsm->a_bus_req = 1;
+		ci->id_event = true;
+	}
+
+	if (ci_hdrc_host_has_device(ci) &&
+			!hw_read(ci, OP_PORTSC, PORTSC_CCS))
+		fsm->b_conn = 0;
+
+	ci_otg_fsm_work(ci);
 }

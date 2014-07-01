@@ -26,6 +26,12 @@
 		gpio6 = &gpio7;
 		lcdif0 = &lcdif1;
 		lcdif1 = &lcdif2;
+		csi0 = &csi1;
+		csi1 = &csi2;
+		mmc0 = &usdhc1;
+		mmc1 = &usdhc2;
+		mmc2 = &usdhc3;
+		mmc3 = &usdhc4;
 		serial0 = &uart1;
 		serial1 = &uart2;
 		serial2 = &uart3;
@@ -553,8 +559,12 @@
 				compatible = "fsl,imx6q-gpc";
 				reg = <0x020dc000 0x4000>;
 				interrupts = <0 89 0x04>;
-				clocks = <&clks IMX6SX_CLK_GPU>, <&clks IMX6SX_CLK_IPG>;
-				clock-names = "gpu3d_core", "ipg";
+				clocks = <&clks IMX6SX_CLK_GPU>, <&clks IMX6SX_CLK_IPG>,
+					<&clks IMX6SX_CLK_PXP_AXI>, <&clks IMX6SX_CLK_DISPLAY_AXI>,
+					<&clks IMX6SX_CLK_LCDIF1_PIX>, <&clks IMX6SX_CLK_LCDIF_APB>,
+					<&clks IMX6SX_CLK_LCDIF2_PIX>, <&clks IMX6SX_CLK_CSI>;
+				clock-names = "gpu3d_core", "ipg", "pxp_axi", "disp_axi", "lcdif1_pix",
+						"lcdif_axi", "lcdif2_pix", "csi_mclk";
 				pu-supply = <&pu_dummy>;
 				pcie-supply = <&reg_pcie>;
 				fsl,mf-mix-wakeup-irq = <0x7c00000 0x3d00 0x0 0x400200>;
@@ -1567,6 +1577,12 @@
 			fsl,pins = <
 				MX6SX_PAD_ENET1_RX_CLK__SPDIF_OUT	0x1b0b0
 				MX6SX_PAD_ENET2_COL__SPDIF_IN		0x1b0b0
+			>;
+		};
+
+		pinctrl_spdif_2: spdifgrp-2 {
+			fsl,pins = <
+				MX6SX_PAD_SD4_DATA4__SPDIF_OUT		0x1b0b0
 			>;
 		};
 	};

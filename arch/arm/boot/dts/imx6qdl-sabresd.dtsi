@@ -12,8 +12,6 @@
 
 / {
 	aliases {
-		mmc0 = &usdhc4;
-		mmc1 = &usdhc3;
 		mxcfb0 = &mxcfb1;
 		mxcfb1 = &mxcfb2;
 		mxcfb2 = &mxcfb3;
@@ -378,14 +376,15 @@
 		mclk_source = <0>;
 	};
 
-	mma8x5x@1c {
-		compatible = "fsl,mma8x5x";
+	mma8451@1c {
+		compatible = "fsl,mma8451";
 		reg = <0x1c>;
 		position = <0>;
 		vdd-supply = <&reg_sensor>;
 		vddio-supply = <&reg_sensor>;
 		interrupt-parent = <&gpio1>;
-		interrupts = <18 1>;
+		interrupts = <18 8>;
+		interrupt-route = <1>;
 	};
 };
 
@@ -674,17 +673,17 @@
 };
 
 &caam_sm  {
-	status = "disable";
+	status = "disabled";
 };
 
 &irq_sec_vio  {
-	status = "disable";
+	status = "disabled";
 };
 
 &caam_snvs  {
-	status = "disable";
+	status = "disabled";
 };
 
 &crypto {
-	status = "disable";
+	status = "disabled";
 };

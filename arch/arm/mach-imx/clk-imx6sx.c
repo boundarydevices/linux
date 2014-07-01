@@ -36,7 +36,8 @@ static const char *periph_clk2_sels[]	= { "pll3_usb_otg", "osc", "osc", };
 static const char *periph2_clk2_sels[]	= { "pll3_usb_otg", "osc", };
 static const char *periph_sels[]	= { "periph_pre", "periph_clk2", };
 static const char *periph2_sels[]	= { "periph2_pre", "periph2_clk2", };
-static const char *ocram_sels[]		= { "periph", "pll2_pfd2_396m", "periph", "pll3_pfd1_540m", };
+static const char *ocram_alt_sels[]	= { "pll2_pfd2_396m", "pll3_pfd1_540m", };
+static const char *ocram_sels[]		= { "periph", "ocram_alt_sel", };
 static const char *audio_sels[]		= { "pll4_audio_div", "pll3_pfd2_508m", "pll5_video_div", "pll3_usb_otg", };
 static const char *gpu_axi_sels[]	= { "pll2_pfd2_396m", "pll3_pfd0_720m", "pll3_pfd1_540m", "pll2_bus", };
 static const char *gpu_core_sels[]	= { "pll3_pfd1_540m", "pll3_pfd0_720m", "pll2_bus", "pll2_pfd2_396m", };
@@ -205,13 +206,13 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SX_CLK_GPT_3M]    = imx_clk_fixed_factor("gpt_3m",    "osc",            1,   8);
 
 	clks[IMX6SX_CLK_PLL4_POST_DIV]  = clk_register_divider_table(NULL, "pll4_post_div", "pll4_audio",
-				CLK_SET_RATE_PARENT, base + 0x70, 19, 2, 0, post_div_table, &imx_ccm_lock);
+				CLK_SET_RATE_PARENT | CLK_SET_RATE_GATE, base + 0x70, 19, 2, 0, post_div_table, &imx_ccm_lock);
 	clks[IMX6SX_CLK_PLL4_AUDIO_DIV] = clk_register_divider(NULL, "pll4_audio_div", "pll4_post_div",
-				CLK_SET_RATE_PARENT, base + 0x170, 15, 1, 0, &imx_ccm_lock);
+				CLK_SET_RATE_PARENT | CLK_SET_RATE_GATE, base + 0x170, 15, 1, 0, &imx_ccm_lock);
 	clks[IMX6SX_CLK_PLL5_POST_DIV]  = clk_register_divider_table(NULL, "pll5_post_div", "pll5_video",
-				CLK_SET_RATE_PARENT, base + 0xa0, 19, 2, 0, post_div_table, &imx_ccm_lock);
+				CLK_SET_RATE_PARENT | CLK_SET_RATE_GATE, base + 0xa0, 19, 2, 0, post_div_table, &imx_ccm_lock);
 	clks[IMX6SX_CLK_PLL5_VIDEO_DIV] = clk_register_divider_table(NULL, "pll5_video_div", "pll5_post_div",
-				CLK_SET_RATE_PARENT, base + 0x170, 30, 2, 0, video_div_table, &imx_ccm_lock);
+				CLK_SET_RATE_PARENT | CLK_SET_RATE_GATE, base + 0x170, 30, 2, 0, video_div_table, &imx_ccm_lock);
 
 	/*                                                name                reg           shift   width   parent_names       num_parents */
 	clks[IMX6SX_CLK_LVDS1_SEL]          = imx_clk_mux("lvds1_sel",        base + 0x160, 0,      5,      lvds_sels,         ARRAY_SIZE(lvds_sels));
@@ -224,7 +225,8 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	/*                                                name                reg           shift   width   parent_names       num_parents */
 	clks[IMX6SX_CLK_STEP]               = imx_clk_mux("step",             base + 0xc,   8,      1,      step_sels,         ARRAY_SIZE(step_sels));
 	clks[IMX6SX_CLK_PLL1_SW]            = imx_clk_mux("pll1_sw",          base + 0xc,   2,      1,      pll1_sw_sels,      ARRAY_SIZE(pll1_sw_sels));
-	clks[IMX6SX_CLK_OCRAM_SEL]          = imx_clk_mux("ocram_sel",        base + 0x14,  6,      2,      ocram_sels,        ARRAY_SIZE(ocram_sels));
+	clks[IMX6SX_CLK_OCRAM_ALT_SEL]      = imx_clk_mux("ocram_alt_sel",    base + 0x14,  7,      1,      ocram_alt_sels,    ARRAY_SIZE(ocram_alt_sels));
+	clks[IMX6SX_CLK_OCRAM_SEL]          = imx_clk_mux("ocram_sel",        base + 0x14,  6,      1,      ocram_sels,        ARRAY_SIZE(ocram_sels));
 	clks[IMX6SX_CLK_PERIPH_PRE]         = imx_clk_mux("periph_pre",       base + 0x18,  18,     2,      periph_pre_sels,   ARRAY_SIZE(periph_pre_sels));
 	clks[IMX6SX_CLK_PERIPH2_PRE]        = imx_clk_mux("periph2_pre",      base + 0x18,  21,     2,      periph2_pre_sels,   ARRAY_SIZE(periph2_pre_sels));
 	clks[IMX6SX_CLK_PERIPH_CLK2_SEL]    = imx_clk_mux("periph_clk2_sel",  base + 0x18,  12,     2,      periph_clk2_sels,  ARRAY_SIZE(periph_clk2_sels));
@@ -240,13 +242,13 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SX_CLK_SSI3_SEL]           = imx_clk_mux("ssi3_sel",         base + 0x1c,  14,     2,      ssi_sels,          ARRAY_SIZE(ssi_sels));
 	clks[IMX6SX_CLK_SSI2_SEL]           = imx_clk_mux("ssi2_sel",         base + 0x1c,  12,     2,      ssi_sels,          ARRAY_SIZE(ssi_sels));
 	clks[IMX6SX_CLK_SSI1_SEL]           = imx_clk_mux("ssi1_sel",         base + 0x1c,  10,     2,      ssi_sels,          ARRAY_SIZE(ssi_sels));
-	clks[IMX6SX_CLK_QSPI1_SEL]          = imx_clk_mux_flags_reparent("qspi1_sel", base + 0x1c,  7, 3, qspi1_sels, ARRAY_SIZE(qspi1_sels), CLK_SET_RATE_PARENT);
+	clks[IMX6SX_CLK_QSPI1_SEL]          = imx_clk_mux_flags("qspi1_sel", base + 0x1c,  7, 3, qspi1_sels, ARRAY_SIZE(qspi1_sels), CLK_SET_RATE_PARENT);
 	clks[IMX6SX_CLK_PERCLK_SEL]         = imx_clk_mux("perclk_sel",       base + 0x1c,  6,      1,      perclk_sels,       ARRAY_SIZE(perclk_sels));
 	clks[IMX6SX_CLK_VID_SEL]            = imx_clk_mux("vid_sel",          base + 0x20,  21,     3,      vid_sels,          ARRAY_SIZE(vid_sels));
 	clks[IMX6SX_CLK_ESAI_SEL]           = imx_clk_mux("esai_sel",         base + 0x20,  19,     2,      audio_sels,        ARRAY_SIZE(audio_sels));
 	clks[IMX6SX_CLK_CAN_SEL]            = imx_clk_mux("can_sel",          base + 0x20,  8,      2,      can_sels,          ARRAY_SIZE(can_sels));
 	clks[IMX6SX_CLK_UART_SEL]           = imx_clk_mux("uart_sel",         base + 0x24,  6,      1,      uart_sels,         ARRAY_SIZE(uart_sels));
-	clks[IMX6SX_CLK_QSPI2_SEL]          = imx_clk_mux_flags_reparent("qspi2_sel", base + 0x2c, 15, 3, qspi2_sels, ARRAY_SIZE(qspi2_sels), CLK_SET_RATE_PARENT);
+	clks[IMX6SX_CLK_QSPI2_SEL]          = imx_clk_mux_flags("qspi2_sel", base + 0x2c, 15, 3, qspi2_sels, ARRAY_SIZE(qspi2_sels), CLK_SET_RATE_PARENT);
 	clks[IMX6SX_CLK_SPDIF_SEL]          = imx_clk_mux("spdif_sel",        base + 0x30,  20,     2,      audio_sels,        ARRAY_SIZE(audio_sels));
 	clks[IMX6SX_CLK_AUDIO_SEL]          = imx_clk_mux("audio_sel",        base + 0x30,  7,      2,      audio_sels,        ARRAY_SIZE(audio_sels));
 	clks[IMX6SX_CLK_ENET_PRE_SEL]       = imx_clk_mux("enet_pre_sel",     base + 0x34,  15,     3,      enet_pre_sels,     ARRAY_SIZE(enet_pre_sels));
