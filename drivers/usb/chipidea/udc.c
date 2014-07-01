@@ -85,10 +85,8 @@ static int hw_device_state(struct ci_hdrc *ci, u32 dma)
 		/* interrupt, error, port change, reset, sleep/suspend */
 		hw_write(ci, OP_USBINTR, ~0,
 			     USBi_UI|USBi_UEI|USBi_PCI|USBi_URI|USBi_SLI);
-		hw_write(ci, OP_USBCMD, USBCMD_RS, USBCMD_RS);
 	} else {
 		hw_write(ci, OP_USBINTR, ~0, 0);
-		hw_write(ci, OP_USBCMD, USBCMD_RS, 0);
 	}
 	return 0;
 }
@@ -1545,11 +1543,13 @@ static int ci_udc_vbus_session(struct usb_gadget *_gadget, int is_active)
 			pm_runtime_get_sync(&_gadget->dev);
 			hw_device_reset(ci, USBMODE_CM_DC);
 			hw_device_state(ci, ci->ep0out->qh.dma);
+			hw_write(ci, OP_USBCMD, USBCMD_RS, USBCMD_RS);
 			usb_gadget_set_state(_gadget, USB_STATE_POWERED);
 		} else {
 			if (ci->driver)
 				ci->driver->disconnect(&ci->gadget);
 			hw_device_state(ci, 0);
+			hw_write(ci, OP_USBCMD, USBCMD_RS, 0);
 			if (ci->platdata->notify_event)
 				ci->platdata->notify_event(ci,
 				CI_HDRC_CONTROLLER_STOPPED_EVENT);
