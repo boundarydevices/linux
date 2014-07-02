@@ -359,7 +359,7 @@
 				MX6QDL_PAD_GPIO_8__GPIO1_IO08		0x0b0b0		/* J46 pin 3 - gp(inverted) */
 				MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		/* J7 pin 4 - I2C3 irq */
 				MX6QDL_PAD_SD1_CLK__OSC32K_32K_OUT	0x000b0		/* Broadcom slow clock */
-				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27	0x0b0b0		/* ethernet phy reset */
+				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27	0x0f0b0		/* ethernet phy reset */
 				MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28	0x1b0b0		/* ethernet phy interrupt */
 				MX6QDL_PAD_NANDF_D0__GPIO2_IO00		0x1b0b0		/* J10 pin 14 - Reserved(Broadcom) */
 				MX6QDL_PAD_NANDF_D1__GPIO2_IO01		0x1b0b0		/* J10 pin 15 - Reserved(Broadcom) */
