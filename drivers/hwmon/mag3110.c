@@ -599,8 +599,9 @@ static int mag3110_remove(struct i2c_client *client)
 }
 
 #ifdef CONFIG_PM
-static int mag3110_suspend(struct i2c_client *client, pm_message_t mesg)
+static int mag3110_suspend(struct device *dev)
 {
+	struct i2c_client *client = to_i2c_client(dev);
 	struct mag3110_data *mag = i2c_get_clientdata(client);
 	int ret = 0;
 
@@ -612,10 +613,11 @@ static int mag3110_suspend(struct i2c_client *client, pm_message_t mesg)
 	return ret;
 }
 
-static int mag3110_resume(struct i2c_client *client)
+static int mag3110_resume(struct device *dev)
 {
 	int ret = 0;
 	u8 tmp_data[MAG3110_XYZ_DATA_LEN];
+	struct i2c_client *client = to_i2c_client(dev);
 	struct mag3110_data *mag = i2c_get_clientdata(client);
 
 	if (mag->active == MAG_ACTIVED) {
