@@ -103,6 +103,7 @@ typedef struct {
 	u16 raw_height;		/*!< Raw height. */
 	u16 active_width;	/*!< Active width. */
 	u16 active_height;	/*!< Active height. */
+	int frame_rate;		/*!< Frame rate. */
 	u16 lines_per_field;
 	u16 skip_lines;
 } video_fmt_t;
@@ -120,6 +121,7 @@ static video_fmt_t video_fmts[] = {
 	 .raw_height = 480 + 45,	/* SENS_FRM_HEIGHT */
 	 .active_width = 720,	/* ACT_FRM_WIDTH plus 1 */
 	 .active_height = 480,	/* ACT_FRM_WIDTH plus 1 */
+	 .frame_rate = 30,
 	 .lines_per_field = 0,
 	 .skip_lines = 13,
 	 },
@@ -130,6 +132,7 @@ static video_fmt_t video_fmts[] = {
 	 .raw_height = 625,
 	 .active_width = 720,
 	 .active_height = 576,
+	 .frame_rate = 25,
 	 },
 	{			/*! Unlocked standard */
 	 .v4l2_id = V4L2_STD_ALL,
@@ -138,6 +141,7 @@ static video_fmt_t video_fmts[] = {
 	 .raw_height = 625,
 	 .active_width = 720,
 	 .active_height = 576,
+	 .frame_rate = 0,
 	 },
 };
 
@@ -839,6 +843,37 @@ static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 }
 
 /*!
+ * ioctl_enum_frameintervals - V4L2 sensor interface handler for
+ *			       VIDIOC_ENUM_FRAMEINTERVALS ioctl
+ * @s: pointer to standard V4L2 device structure
+ * @fival: standard V4L2 VIDIOC_ENUM_FRAMEINTERVALS ioctl structure
+ *
+ * Return 0 if successful, otherwise -EINVAL.
+ */
+static int ioctl_enum_frameintervals(struct v4l2_int_device *s,
+					 struct v4l2_frmivalenum *fival)
+{
+	video_fmt_t fmt;
+	int i;
+
+	if (fival->index != 0)
+		return -EINVAL;
+
+	for (i = 0; i < ARRAY_SIZE(video_fmts) - 1; i++) {
+		fmt = video_fmts[i];
+		if (fival->width  == fmt.active_width &&
+		    fival->height == fmt.active_height) {
+			fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+			fival->discrete.numerator = 1;
+			fival->discrete.denominator = fmt.frame_rate;
+			return 0;
+		}
+	}
+
+	return -EINVAL;
+}
+
+/*!
  * ioctl_g_chip_ident - V4L2 sensor interface handler for
  *			VIDIOC_DBG_G_CHIP_IDENT ioctl
  * @s: pointer to standard V4L2 device structure
@@ -931,6 +966,8 @@ static struct v4l2_int_ioctl_desc adv7180_ioctl_desc[] = {
 	{vidioc_int_s_ctrl_num, (v4l2_int_ioctl_func*)ioctl_s_ctrl},
 	{vidioc_int_enum_framesizes_num,
 				(v4l2_int_ioctl_func *) ioctl_enum_framesizes},
+	{vidioc_int_enum_frameintervals_num,
+				(v4l2_int_ioctl_func *) ioctl_enum_frameintervals},
 	{vidioc_int_g_chip_ident_num,
 				(v4l2_int_ioctl_func *)ioctl_g_chip_ident},
 };
