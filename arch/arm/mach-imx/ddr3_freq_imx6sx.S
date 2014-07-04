@@ -275,6 +275,15 @@ wait_for_l2_to_idle:
 	ldr	r8, =4
 	do_delay
 
+	/* set CON_REG */
+	ldr	r8, =0x8000
+	str	r8, [r4, #MMDC0_MDSCR]
+poll_conreq_set_1:
+	ldr	r8, [r4, #MMDC0_MDSCR]
+	and	r8, r8, #(0x4 << 12)
+	cmp	r8, #(0x4 << 12)
+	bne	poll_conreq_set_1
+
 	/*
 	 * if requested frequency is greater than
 	 * 300MHz go to DLL on mode.
@@ -407,10 +416,10 @@ update_iomux:
 	str	r8, [r4, #MMDC0_MPDGCTRL0]
 
 	/* frc_msr + mu bypass */
-	ldr	r8, =0x00000160
+	ldr	r8, =0x00000060
 	str	r8, [r4, #MMDC0_MPMUR0]
 
-	ldr	r8, =0x00000560
+	ldr	r8, =0x00000460
 	str	r8, [r4, #MMDC0_MPMUR0]
 
 	ldr	r8, =0x00000c60
@@ -437,6 +446,10 @@ dll_on_mode:
 	ldr	r8, [r4, #MMDC0_MAPSR]
 	orr	r8, r8, #(1 << 21)
 	str	r8, [r4, #MMDC0_MAPSR]
+
+	/* de-assert CON_REQ. */
+	mov	r8, #0x0
+	str	r8, [r4, #MMDC0_MDSCR]
 
 	/* poll DVFS ack. */
 poll_dvfs_set_2:
@@ -524,10 +537,10 @@ update_iomux1:
 	do_delay
 
 	/* reset dll. */
-	ldr	r8, =0x05208030
+	ldr	r8, =0x09208030
 	str	r8, [r4, #MMDC0_MDSCR]
 
-	ldr	r8, =0x05208038
+	ldr	r8, =0x09208038
 	str	r8, [r4, #MMDC0_MDSCR]
 
 	/* delay for while. */
