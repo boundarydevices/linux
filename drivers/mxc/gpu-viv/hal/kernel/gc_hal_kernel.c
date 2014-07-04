@@ -691,6 +691,8 @@ gckKERNEL_AllocateLinearMemory(
     gctSIZE_T bytes = Bytes;
     gctUINT32 handle = 0;
     gceDATABASE_TYPE type;
+    gctBOOL memlimit = gcvFALSE;
+
 
     gcmkHEADER_ARG("Kernel=0x%x *Pool=%d Bytes=%lu Alignment=%lu Type=%d",
                    Kernel, *Pool, Bytes, Alignment, Type);
@@ -704,7 +706,7 @@ gckKERNEL_AllocateLinearMemory(
     /* Check flags. */
     contiguous = Flag & gcvALLOC_FLAG_CONTIGUOUS;
     cacheable  = Flag & gcvALLOC_FLAG_CACHEABLE;
-
+    memlimit = Flag & gcvALLOC_FLAG_MEMLIMIT;
 AllocateMemory:
 
     /* Get initial pool. */
@@ -746,7 +748,7 @@ AllocateMemory:
         {
             /* Create a gcuVIDMEM_NODE for virtual memory. */
             gcmkONERROR(
-                gckVIDMEM_ConstructVirtual(Kernel, gcvFALSE, Bytes, gcvTRUE, &node));
+                gckVIDMEM_ConstructVirtual(Kernel, ( memlimit ? (gcvFALSE + gcvALLOC_FLAG_MEMLIMIT):gcvFALSE), Bytes, gcvTRUE, &node));
 
             bytes = node->Virtual.bytes;
             node->Virtual.type = Type;
@@ -767,7 +769,7 @@ AllocateMemory:
 #endif
             {
                 /* Create a gcuVIDMEM_NODE from contiguous memory. */
-                status = gckVIDMEM_ConstructVirtual(Kernel, gcvTRUE, Bytes, cacheable, &node);
+                status = gckVIDMEM_ConstructVirtual(Kernel, ( memlimit ? (gcvTRUE + gcvALLOC_FLAG_MEMLIMIT):gcvTRUE), Bytes, cacheable, &node);
             }
 
             if (gcmIS_SUCCESS(status))
@@ -923,6 +925,12 @@ OnError:
         /* Free video memory allocated. */
         gcmkVERIFY_OK(gckVIDMEM_Free(Kernel, node));
     }
+
+    /* For some case like chrome with webgl test, it needs too much memory so that it invokes oom_killer
+    * And the case is killed by oom_killer, the user wants not to see the crash and hope the case iteself handles the condition
+    * So the patch reports the out_of_memory to the case */
+    if (status == gcvSTATUS_OUT_OF_MEMORY)
+	gcmkPRINT("OUT of memory\n");
 
     /* Return the status. */
     gcmkFOOTER();
