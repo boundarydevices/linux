@@ -28,6 +28,10 @@
 #define SNVS_HPSR_BTN	(0x1 << 6)
 #define SNVS_LPSR_SPO	(0x1 << 18)
 #define SNVS_LPCR_DEP_EN (0x1 << 5)
+#define SNVS_LPCR_BTN_PRESSTIME_5S (0x0 << 16)
+#define SNVS_LPCR_BTN_PRESSTIME_10S (0x1 << 16)
+#define SNVS_LPCR_BTN_PRESSTIME_15S (0x2 << 16)
+#define SNVS_LPCR_BTN_PRESSTIME_DISABLE (0x3 << 16)
 
 struct pwrkey_drv_data {
 	void __iomem *ioaddr;
@@ -116,7 +120,9 @@ static int imx_snvs_pwrkey_probe(struct platform_device *pdev)
 
 	ioaddr = pdata->ioaddr;
 	val = readl_relaxed(ioaddr + SNVS_LPCR_REG);
-	val |= SNVS_LPCR_DEP_EN,
+	val |= SNVS_LPCR_DEP_EN;
+	val &= ~SNVS_LPCR_BTN_PRESSTIME_DISABLE;
+	val |= SNVS_LPCR_BTN_PRESSTIME_15S;
 	writel_relaxed(val, ioaddr + SNVS_LPCR_REG);
 	/* clear the unexpected interrupt before driver ready */
 	val = readl_relaxed(ioaddr + SNVS_LPSR_REG);
