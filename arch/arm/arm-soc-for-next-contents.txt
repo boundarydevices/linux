@@ -1,0 +1,41 @@
+next/fixes-non-critical
+
+next/cleanup
+	patch
+		ARM: clps711x: Remove IO_ADDRESS() macro
+		ARM: clps711x: Move debug include into arch/arm/include/debug/
+		ARM: clps711x: Switch CLPS711X subarch to use cpuidle driver
+		ARM: clps711x: clep7312: Add common devices initialization
+		ARM: clps711x: edb7211: Remove excess layer to calling clps711x_devices_init()
+	renesas/header-cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-header-cleanup-for-v3.17
+	renesas/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc-cleanup-for-v3.17
+
+next/soc
+	renesas/clock
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-clock-for-v3.17
+	renesas/cpufreq
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cpufreq-for-v3.17
+	<no branch> (c1a0f9932b66b2298163c31f8ac3f2844476e1c2)
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-r8a7779-multiplatform-for-v3.17
+		contains renesas/header-cleanup
+
+next/boards
+
+next/dt
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v3.17
+
+next/drivers
+
+next/defconfig
+	patch
+		ARM: multi_v7_defconfig: Enable ST's I2C driver
+		ARM: multi_v7: enable igb, stmpe, lm95245, pwm leds
+	renesas/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig-for-v3.17
+
+fixes
+	<no branch> (0b514fdb52073e348ade842355f37f6976768e44)
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-maintainers-for-v3.17
