@@ -11,6 +11,12 @@ next/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-header-cleanup-for-v3.17
 	renesas/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc-cleanup-for-v3.17
+	patch
+		ARM: sti: Staticize local variables
+		ARM: vt8500: Staticize local symbols
+		ARM: spear: Staticize spear13xx_io_desc
+		ARM: spear: Staticize spear1310_io_desc in spear1310.c
+		ARM: spear: Staticize local symbols in spear1340.c
 
 next/soc
 	renesas/clock
@@ -20,6 +26,8 @@ next/soc
 	<no branch> (c1a0f9932b66b2298163c31f8ac3f2844476e1c2)
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-r8a7779-multiplatform-for-v3.17
 		contains renesas/header-cleanup
+	tegra/delay-timer
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-3.17-delay-timer
 
 next/boards
 
@@ -39,3 +47,4 @@ next/defconfig
 fixes
 	<no branch> (0b514fdb52073e348ade842355f37f6976768e44)
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-maintainers-for-v3.17
+
