@@ -930,8 +930,8 @@ static struct gpio initial_gpios[] __initdata = {
 	{.label = "gs-tim_861",		.gpio = GP_GS2971_TIM_861,	.flags = 0},
 	{.label = "gs-sw_en",		.gpio = GP_GS2971_SW_EN,	.flags = 0},
 	{.label = "gs-dvb_asi",		.gpio = GP_GS2971_DVB_ASI,	.flags = 0},
-	{.label = "kl04-reset",		.gpio = GP_KL04_RESET,		.flags = GPIOF_OUT_INIT_HIGH},
-	{.label = "kl04-program",	.gpio = GP_KL04_PROGRAM,	.flags = GPIOF_OUT_INIT_HIGH},
+	{.label = "kl04-reset",		.gpio = GP_KL04_RESET,		.flags = 0},	/* inverted before kl04 */
+	{.label = "kl04-program",	.gpio = GP_KL04_PROGRAM,	.flags = 0},	/* inverted before kl04 */
 };
 
 static void poweroff(void)
