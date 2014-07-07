@@ -174,7 +174,7 @@ out:
 	return ret;
 }
 
-static int gs_bind(struct usb_composite_dev *cdev)
+static int __init gs_bind(struct usb_composite_dev *cdev)
 {
 	int			status;
 
@@ -267,7 +267,7 @@ static int __init init(void)
 
 	return usb_composite_probe(&gserial_driver);
 }
-module_init(init);
+late_initcall(init);
 
 static void __exit cleanup(void)
 {

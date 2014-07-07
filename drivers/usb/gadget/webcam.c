@@ -323,7 +323,7 @@ static const struct uvc_descriptor_header * const uvc_ss_streaming_cls[] = {
  * USB configuration
  */
 
-static int
+static int __init
 webcam_config_bind(struct usb_configuration *c)
 {
 	return uvc_bind_config(c, uvc_fs_control_cls, uvc_ss_control_cls,
@@ -345,7 +345,7 @@ webcam_unbind(struct usb_composite_dev *cdev)
 	return 0;
 }
 
-static int
+static int __init
 webcam_bind(struct usb_composite_dev *cdev)
 {
 	int ret;
@@ -402,7 +402,7 @@ webcam_cleanup(void)
 	usb_composite_unregister(&webcam_driver);
 }
 
-module_init(webcam_init);
+late_initcall(webcam_init);
 module_exit(webcam_cleanup);
 
 MODULE_AUTHOR("Laurent Pinchart");

@@ -127,7 +127,7 @@ static struct usb_configuration nokia_config_100ma_driver = {
 
 static struct usb_function_instance *fi_acm;
 
-static int nokia_bind_config(struct usb_configuration *c)
+static int __init nokia_bind_config(struct usb_configuration *c)
 {
 	struct usb_function *f_acm;
 	int status = 0;
@@ -170,7 +170,7 @@ err_conf:
 	return status;
 }
 
-static int nokia_bind(struct usb_composite_dev *cdev)
+static int __init nokia_bind(struct usb_composite_dev *cdev)
 {
 	struct usb_gadget	*gadget = cdev->gadget;
 	int			status;
@@ -270,7 +270,7 @@ static int __init nokia_init(void)
 {
 	return usb_composite_probe(&nokia_driver);
 }
-module_init(nokia_init);
+late_initcall(nokia_init);
 
 static void __exit nokia_cleanup(void)
 {

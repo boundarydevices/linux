@@ -683,7 +683,25 @@
 				};
 			};
 
+			canfd1: canfd@020e8000 {
+				compatible = "bosch,m_can";
+				reg = <0x020e8000 0x4000>, <0x02298000 0x4000>;
+				reg-names = "canfd", "message_ram";
+				interrupts = <0 114 0x04>;
+				clocks = <&clks IMX6SX_CLK_CANFD>;
+				mram-cfg = <0x0 0 0 32 0 0 0 1>;
+				status = "disabled";
+			};
 
+			canfd2: canfd@020f0000 {
+				compatible = "bosch,m_can";
+				reg = <0x020f0000 0x4000>, <0x02298000 0x4000>;
+				reg-names = "canfd", "message_ram";
+				interrupts = <0 115 0x04>;
+				clocks = <&clks IMX6SX_CLK_CANFD>;
+				mram-cfg = <0x400 0 0 32 0 0 0 1>;
+				status = "disabled";
+			};
 
 			pwm1: pwm@02080000 {
 				#pwm-cells = <2>;
@@ -1263,6 +1281,23 @@
 		};
 	};
 
+	canfd1 {
+		pinctrl_canfd1_1: canfd1grp-1 {
+			fsl,pins = <
+				MX6SX_PAD_QSPI1B_DQS__CANFD_TX1		0x1b0b0
+				MX6SX_PAD_QSPI1A_SS1_B__CANFD_RX1	0x1b0b0
+			>;
+		};
+	};
+
+	canfd2 {
+		pinctrl_canfd2_1: canfd2grp-1 {
+			fsl,pins = <
+				MX6SX_PAD_QSPI1B_SS1_B__CANFD_RX2	0x1b0b0
+				MX6SX_PAD_QSPI1A_DQS__CANFD_TX2		0x1b0b0
+			>;
+		};
+	};
 	csi {
 		pinctrl_csi_0: csigrp-0 {
 			fsl,pins = <
