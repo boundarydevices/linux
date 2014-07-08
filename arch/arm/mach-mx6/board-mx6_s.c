@@ -1042,8 +1042,12 @@ static void __init add_device_buttons(void)
 
 static void poweroff(void)
 {
+	gpio_direction_output(GP_POWERDOWN, 1);
+	msleep(1);
+	gpio_direction_output(GP_POWERDOWN, 0);
+	gpio_direction_output(GP_KEY_ONOFF, 1);
 	while (1) {
-                gpio_direction_output(GP_POWERDOWN, 1);
+		gpio_direction_output(GP_KEY_ONOFF, 0);
 	}
 }
 
