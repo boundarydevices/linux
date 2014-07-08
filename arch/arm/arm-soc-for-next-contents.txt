@@ -17,19 +17,30 @@ next/cleanup
 		ARM: spear: Staticize spear13xx_io_desc
 		ARM: spear: Staticize spear1310_io_desc in spear1310.c
 		ARM: spear: Staticize local symbols in spear1340.c
+	versatile/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/versatile-1
 
 next/soc
 	renesas/clock
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-clock-for-v3.17
 	renesas/cpufreq
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cpufreq-for-v3.17
-	<no branch> (c1a0f9932b66b2298163c31f8ac3f2844476e1c2)
+	renesas/r8a7779-multiplatform
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-r8a7779-multiplatform-for-v3.17
 		contains renesas/header-cleanup
 	tegra/delay-timer
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-3.17-delay-timer
+	versatile/irq-clock
+		git://git.kernel.org/pub/scm/linux/kernel/git/robh/linux tags/versatile-for-3.17
+	renesas/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc-for-v3.17
+	mvebu/soc
+		git://git.infradead.org/linux-mvebu tags/mvebu-soc-3.17
 
 next/boards
+	renesas/boards
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-boards-for-v3.17
+		contains renesas/header-cleanup
 
 next/dt
 	renesas/dt
@@ -43,8 +54,14 @@ next/defconfig
 		ARM: multi_v7: enable igb, stmpe, lm95245, pwm leds
 	renesas/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig-for-v3.17
+	mvebu/defconfig
+		git://git.infradead.org/linux-mvebu tags/mvebu-defconfig-3.17
 
 fixes
 	<no branch> (0b514fdb52073e348ade842355f37f6976768e44)
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-maintainers-for-v3.17
+	<no branch> (35e75645f16c86918f26df1bfc2c24ad8ebb5a17)
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-fixes-2
+	patch
+		ARM: imx: fix shared gate clock
 
