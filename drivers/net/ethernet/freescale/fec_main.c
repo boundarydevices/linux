@@ -1917,6 +1917,7 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 	}
 	else
 		phy_dev->supported &= PHY_BASIC_FEATURES;
+	phy_dev->supported &= ~SUPPORTED_1000baseT_Half;
 
 	phy_dev->advertising = phy_dev->supported;
 
