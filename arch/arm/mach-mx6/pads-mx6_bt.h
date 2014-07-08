@@ -254,9 +254,16 @@ static iomux_v3_cfg_t MX6NAME(board_pads)[] = {
 #define GP_PWR_J7	IMX_GPIO_NR(2, 27)
 	NEW_PAD_CTRL(MX6PAD(EIM_LBA__GPIO_2_27), WEAK_PULLUP),		/* J7 */
 
-	/* Dry Contact */
-#define GP_DRY_CONTACT	IMX_GPIO_NR(3, 31)
-	NEW_PAD_CTRL(MX6PAD(EIM_D31__GPIO_3_31), WEAK_PULLDN),
+	/* J92 pins */
+#define GP_J92_PIN7	IMX_GPIO_NR(3, 31)
+	NEW_PAD_CTRL(MX6PAD(EIM_D31__GPIO_3_31), WEAK_PULLUP),		/* OUT_1 - Dry contact to J92 pin 7 */
+#define GP_J92_PIN9	IMX_GPIO_NR(1, 8)
+	NEW_PAD_CTRL(MX6PAD(GPIO_8__GPIO_1_8), WEAK_PULLDN),		/* OUT_2 - Dry contact to J92 pin 9 */
+#define GP_J92_PIN10	IMX_GPIO_NR(5, 22)
+	NEW_PAD_CTRL(MX6PAD(CSI0_DAT4__GPIO_5_22), WEAK_PULLUP),	/* GPI_1 - J92 - pin 10 */
+#define GP_J92_PIN12	IMX_GPIO_NR(5, 23)
+	NEW_PAD_CTRL(MX6PAD(CSI0_DAT5__GPIO_5_23), WEAK_PULLUP),	/* GPI_2 - J92 - pin 12 */
+
 	/*
 	 * PCIe - tw6869 dedicated,
 	 * VIN1-4 used,
