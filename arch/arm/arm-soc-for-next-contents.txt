@@ -36,6 +36,8 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc-for-v3.17
 	mvebu/soc
 		git://git.infradead.org/linux-mvebu tags/mvebu-soc-3.17
+	berlin/soc
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-soc-3.17-1
 
 next/boards
 	renesas/boards
@@ -45,6 +47,8 @@ next/boards
 next/dt
 	renesas/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v3.17
+	berlin/dt
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-dt-3.17-1
 
 next/drivers
 
