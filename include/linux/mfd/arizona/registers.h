@@ -76,6 +76,8 @@
 #define ARIZONA_ASYNC_SAMPLE_RATE_2              0x114
 #define ARIZONA_ASYNC_SAMPLE_RATE_1_STATUS       0x11B
 #define ARIZONA_ASYNC_SAMPLE_RATE_2_STATUS       0x11C
+#define WM8285_DSP_CLOCK_1                       0x120
+#define WM8285_DSP_CLOCK_2                       0x122
 #define ARIZONA_OUTPUT_SYSTEM_CLOCK              0x149
 #define ARIZONA_OUTPUT_ASYNC_CLOCK               0x14A
 #define ARIZONA_RATE_ESTIMATOR_1                 0x152
@@ -120,6 +122,24 @@
 #define ARIZONA_FLL2_SYNCHRONISER_7              0x1A7
 #define ARIZONA_FLL2_SPREAD_SPECTRUM             0x1A9
 #define ARIZONA_FLL2_GPIO_CLOCK                  0x1AA
+#define ARIZONA_FLL3_CONTROL_1                   0x1B1
+#define ARIZONA_FLL3_CONTROL_2                   0x1B2
+#define ARIZONA_FLL3_CONTROL_3                   0x1B3
+#define ARIZONA_FLL3_CONTROL_4                   0x1B4
+#define ARIZONA_FLL3_CONTROL_5                   0x1B5
+#define ARIZONA_FLL3_CONTROL_6                   0x1B6
+#define ARIZONA_FLL3_LOOP_FILTER_TEST_1          0x1B7
+#define ARIZONA_FLL3_NCO_TEST_0                  0x1B8
+#define ARIZONA_FLL3_CONTROL_7                   0x1B9
+#define ARIZONA_FLL3_SYNCHRONISER_1              0x1C1
+#define ARIZONA_FLL3_SYNCHRONISER_2              0x1C2
+#define ARIZONA_FLL3_SYNCHRONISER_3              0x1C3
+#define ARIZONA_FLL3_SYNCHRONISER_4              0x1C4
+#define ARIZONA_FLL3_SYNCHRONISER_5              0x1C5
+#define ARIZONA_FLL3_SYNCHRONISER_6              0x1C6
+#define ARIZONA_FLL3_SYNCHRONISER_7              0x1C7
+#define ARIZONA_FLL3_SPREAD_SPECTRUM             0x1C9
+#define ARIZONA_FLL3_GPIO_CLOCK                  0x1CA
 #define ARIZONA_MIC_CHARGE_PUMP_1                0x200
 #define ARIZONA_LDO1_CONTROL_1                   0x210
 #define ARIZONA_LDO1_CONTROL_2                   0x212
@@ -127,6 +147,7 @@
 #define ARIZONA_MIC_BIAS_CTRL_1                  0x218
 #define ARIZONA_MIC_BIAS_CTRL_2                  0x219
 #define ARIZONA_MIC_BIAS_CTRL_3                  0x21A
+#define ARIZONA_MIC_BIAS_CTRL_4                  0x21B
 #define ARIZONA_HP_CTRL_1L                       0x225
 #define ARIZONA_HP_CTRL_1R                       0x226
 #define ARIZONA_HP_CTRL_2L                       0x227
@@ -148,6 +169,7 @@
 #define ARIZONA_MIC_DETECT_LEVEL_4		 0x2A9
 #define ARIZONA_MIC_DETECT_4                     0x2AB
 #define ARIZONA_MIC_NOISE_MIX_CONTROL_1          0x2C3
+#define WM8285_MICD_CLAMP_CONTROL                0x2C6
 #define ARIZONA_ISOLATION_CONTROL                0x2CB
 #define ARIZONA_JACK_DETECT_ANALOGUE             0x2D3
 #define ARIZONA_INPUT_ENABLES                    0x300
@@ -179,6 +201,18 @@
 #define ARIZONA_IN4R_CONTROL                     0x32C
 #define ARIZONA_ADC_DIGITAL_VOLUME_4R            0x32D
 #define ARIZONA_DMIC4R_CONTROL                   0x32E
+#define ARIZONA_IN5L_CONTROL                     0x330
+#define ARIZONA_ADC_DIGITAL_VOLUME_5L            0x331
+#define ARIZONA_DMIC5L_CONTROL                   0x332
+#define ARIZONA_IN5R_CONTROL                     0x334
+#define ARIZONA_ADC_DIGITAL_VOLUME_5R            0x335
+#define ARIZONA_DMIC5R_CONTROL                   0x336
+#define ARIZONA_IN6L_CONTROL                     0x338
+#define ARIZONA_ADC_DIGITAL_VOLUME_6L            0x339
+#define ARIZONA_DMIC6L_CONTROL                   0x33A
+#define ARIZONA_IN6R_CONTROL                     0x33C
+#define ARIZONA_ADC_DIGITAL_VOLUME_6R            0x33D
+#define ARIZONA_DMIC6R_CONTROL                   0x33E
 #define ARIZONA_ADC_VCO_CAL_4                    0x393
 #define ARIZONA_ADC_VCO_CAL_5                    0x394
 #define ARIZONA_ADC_VCO_CAL_6                    0x395
@@ -304,12 +338,16 @@
 #define ARIZONA_AIF2_FRAME_CTRL_6                0x54C
 #define ARIZONA_AIF2_FRAME_CTRL_7                0x54D
 #define ARIZONA_AIF2_FRAME_CTRL_8                0x54E
+#define ARIZONA_AIF2_FRAME_CTRL_9                0x54F
+#define ARIZONA_AIF2_FRAME_CTRL_10               0x550
 #define ARIZONA_AIF2_FRAME_CTRL_11               0x551
 #define ARIZONA_AIF2_FRAME_CTRL_12               0x552
 #define ARIZONA_AIF2_FRAME_CTRL_13               0x553
 #define ARIZONA_AIF2_FRAME_CTRL_14               0x554
 #define ARIZONA_AIF2_FRAME_CTRL_15               0x555
 #define ARIZONA_AIF2_FRAME_CTRL_16               0x556
+#define ARIZONA_AIF2_FRAME_CTRL_17               0x557
+#define ARIZONA_AIF2_FRAME_CTRL_18               0x558
 #define ARIZONA_AIF2_TX_ENABLES                  0x559
 #define ARIZONA_AIF2_RX_ENABLES                  0x55A
 #define ARIZONA_AIF2_FORCE_WRITE                 0x55B
@@ -329,6 +367,22 @@
 #define ARIZONA_AIF3_TX_ENABLES                  0x599
 #define ARIZONA_AIF3_RX_ENABLES                  0x59A
 #define ARIZONA_AIF3_FORCE_WRITE                 0x59B
+#define ARIZONA_AIF4_BCLK_CTRL                   0x5A0
+#define ARIZONA_AIF4_TX_PIN_CTRL                 0x5A1
+#define ARIZONA_AIF4_RX_PIN_CTRL                 0x5A2
+#define ARIZONA_AIF4_RATE_CTRL                   0x5A3
+#define ARIZONA_AIF4_FORMAT                      0x5A4
+#define ARIZONA_AIF4_TX_BCLK_RATE                0x5A5
+#define ARIZONA_AIF4_RX_BCLK_RATE                0x5A6
+#define ARIZONA_AIF4_FRAME_CTRL_1                0x5A7
+#define ARIZONA_AIF4_FRAME_CTRL_2                0x5A8
+#define ARIZONA_AIF4_FRAME_CTRL_3                0x5A9
+#define ARIZONA_AIF4_FRAME_CTRL_4                0x5AA
+#define ARIZONA_AIF4_FRAME_CTRL_11               0x5B1
+#define ARIZONA_AIF4_FRAME_CTRL_12               0x5B2
+#define ARIZONA_AIF4_TX_ENABLES                  0x5B9
+#define ARIZONA_AIF4_RX_ENABLES                  0x5BA
+#define ARIZONA_AIF4_FORCE_WRITE                 0x5BB
 #define ARIZONA_SPD1_TX_CONTROL                  0x5C2
 #define ARIZONA_SPD1_TX_CHANNEL_STATUS_1         0x5C3
 #define ARIZONA_SPD1_TX_CHANNEL_STATUS_2         0x5C4
@@ -586,6 +640,22 @@
 #define ARIZONA_AIF2TX6MIX_INPUT_3_VOLUME        0x76D
 #define ARIZONA_AIF2TX6MIX_INPUT_4_SOURCE        0x76E
 #define ARIZONA_AIF2TX6MIX_INPUT_4_VOLUME        0x76F
+#define ARIZONA_AIF2TX7MIX_INPUT_1_SOURCE        0x770
+#define ARIZONA_AIF2TX7MIX_INPUT_1_VOLUME        0x771
+#define ARIZONA_AIF2TX7MIX_INPUT_2_SOURCE        0x772
+#define ARIZONA_AIF2TX7MIX_INPUT_2_VOLUME        0x773
+#define ARIZONA_AIF2TX7MIX_INPUT_3_SOURCE        0x774
+#define ARIZONA_AIF2TX7MIX_INPUT_3_VOLUME        0x775
+#define ARIZONA_AIF2TX7MIX_INPUT_4_SOURCE        0x776
+#define ARIZONA_AIF2TX7MIX_INPUT_4_VOLUME        0x777
+#define ARIZONA_AIF2TX8MIX_INPUT_1_SOURCE        0x778
+#define ARIZONA_AIF2TX8MIX_INPUT_1_VOLUME        0x779
+#define ARIZONA_AIF2TX8MIX_INPUT_2_SOURCE        0x77A
+#define ARIZONA_AIF2TX8MIX_INPUT_2_VOLUME        0x77B
+#define ARIZONA_AIF2TX8MIX_INPUT_3_SOURCE        0x77C
+#define ARIZONA_AIF2TX8MIX_INPUT_3_VOLUME        0x77D
+#define ARIZONA_AIF2TX8MIX_INPUT_4_SOURCE        0x77E
+#define ARIZONA_AIF2TX8MIX_INPUT_4_VOLUME        0x77F
 #define ARIZONA_AIF3TX1MIX_INPUT_1_SOURCE        0x780
 #define ARIZONA_AIF3TX1MIX_INPUT_1_VOLUME        0x781
 #define ARIZONA_AIF3TX1MIX_INPUT_2_SOURCE        0x782
@@ -602,6 +672,22 @@
 #define ARIZONA_AIF3TX2MIX_INPUT_3_VOLUME        0x78D
 #define ARIZONA_AIF3TX2MIX_INPUT_4_SOURCE        0x78E
 #define ARIZONA_AIF3TX2MIX_INPUT_4_VOLUME        0x78F
+#define ARIZONA_AIF4TX1MIX_INPUT_1_SOURCE        0x7A0
+#define ARIZONA_AIF4TX1MIX_INPUT_1_VOLUME        0x7A1
+#define ARIZONA_AIF4TX1MIX_INPUT_2_SOURCE        0x7A2
+#define ARIZONA_AIF4TX1MIX_INPUT_2_VOLUME        0x7A3
+#define ARIZONA_AIF4TX1MIX_INPUT_3_SOURCE        0x7A4
+#define ARIZONA_AIF4TX1MIX_INPUT_3_VOLUME        0x7A5
+#define ARIZONA_AIF4TX1MIX_INPUT_4_SOURCE        0x7A6
+#define ARIZONA_AIF4TX1MIX_INPUT_4_VOLUME        0x7A7
+#define ARIZONA_AIF4TX2MIX_INPUT_1_SOURCE        0x7A8
+#define ARIZONA_AIF4TX2MIX_INPUT_1_VOLUME        0x7A9
+#define ARIZONA_AIF4TX2MIX_INPUT_2_SOURCE        0x7AA
+#define ARIZONA_AIF4TX2MIX_INPUT_2_VOLUME        0x7AB
+#define ARIZONA_AIF4TX2MIX_INPUT_3_SOURCE        0x7AC
+#define ARIZONA_AIF4TX2MIX_INPUT_3_VOLUME        0x7AD
+#define ARIZONA_AIF4TX2MIX_INPUT_4_SOURCE        0x7AE
+#define ARIZONA_AIF4TX2MIX_INPUT_4_VOLUME        0x7AF
 #define ARIZONA_SLIMTX1MIX_INPUT_1_SOURCE        0x7C0
 #define ARIZONA_SLIMTX1MIX_INPUT_1_VOLUME        0x7C1
 #define ARIZONA_SLIMTX1MIX_INPUT_2_SOURCE        0x7C2
@@ -854,6 +940,28 @@
 #define ARIZONA_DSP4AUX4MIX_INPUT_1_SOURCE       0xA28
 #define ARIZONA_DSP4AUX5MIX_INPUT_1_SOURCE       0xA30
 #define ARIZONA_DSP4AUX6MIX_INPUT_1_SOURCE       0xA38
+#define WM8285_DSP5LMIX_INPUT_1_SOURCE          0xA40
+#define WM8285_DSP5LMIX_INPUT_1_VOLUME          0xA41
+#define WM8285_DSP5LMIX_INPUT_2_SOURCE          0xA42
+#define WM8285_DSP5LMIX_INPUT_2_VOLUME          0xA43
+#define WM8285_DSP5LMIX_INPUT_3_SOURCE          0xA44
+#define WM8285_DSP5LMIX_INPUT_3_VOLUME          0xA45
+#define WM8285_DSP5LMIX_INPUT_4_SOURCE          0xA46
+#define WM8285_DSP5LMIX_INPUT_4_VOLUME          0xA47
+#define WM8285_DSP5RMIX_INPUT_1_SOURCE          0xA48
+#define WM8285_DSP5RMIX_INPUT_1_VOLUME          0xA49
+#define WM8285_DSP5RMIX_INPUT_2_SOURCE          0xA4A
+#define WM8285_DSP5RMIX_INPUT_2_VOLUME          0xA4B
+#define WM8285_DSP5RMIX_INPUT_3_SOURCE          0xA4C
+#define WM8285_DSP5RMIX_INPUT_3_VOLUME          0xA4D
+#define WM8285_DSP5RMIX_INPUT_4_SOURCE          0xA4E
+#define WM8285_DSP5RMIX_INPUT_4_VOLUME          0xA4F
+#define WM8285_DSP5AUX1MIX_INPUT_1_SOURCE       0xA50
+#define WM8285_DSP5AUX2MIX_INPUT_1_SOURCE       0xA58
+#define WM8285_DSP5AUX3MIX_INPUT_1_SOURCE       0xA60
+#define WM8285_DSP5AUX4MIX_INPUT_1_SOURCE       0xA68
+#define WM8285_DSP5AUX5MIX_INPUT_1_SOURCE       0xA70
+#define WM8285_DSP5AUX6MIX_INPUT_1_SOURCE       0xA78
 #define ARIZONA_ASRC1LMIX_INPUT_1_SOURCE         0xA80
 #define ARIZONA_ASRC1RMIX_INPUT_1_SOURCE         0xA88
 #define ARIZONA_ASRC2LMIX_INPUT_1_SOURCE         0xA90
@@ -888,6 +996,54 @@
 #define ARIZONA_ISRC3INT2MIX_INPUT_1_SOURCE      0xBA8
 #define ARIZONA_ISRC3INT3MIX_INPUT_1_SOURCE      0xBB0
 #define ARIZONA_ISRC3INT4MIX_INPUT_1_SOURCE      0xBB8
+#define ARIZONA_ISRC4DEC1MIX_INPUT_1_SOURCE      0xBC0
+#define ARIZONA_ISRC4DEC2MIX_INPUT_1_SOURCE      0xBC8
+#define ARIZONA_ISRC4INT1MIX_INPUT_1_SOURCE      0xBE0
+#define ARIZONA_ISRC4INT2MIX_INPUT_1_SOURCE      0xBE8
+#define WM8285_DSP6LMIX_INPUT_1_SOURCE           0xC00
+#define WM8285_DSP6LMIX_INPUT_1_VOLUME           0xC01
+#define WM8285_DSP6LMIX_INPUT_2_SOURCE           0xC02
+#define WM8285_DSP6LMIX_INPUT_2_VOLUME           0xC03
+#define WM8285_DSP6LMIX_INPUT_3_SOURCE           0xC04
+#define WM8285_DSP6LMIX_INPUT_3_VOLUME           0xC05
+#define WM8285_DSP6LMIX_INPUT_4_SOURCE           0xC06
+#define WM8285_DSP6LMIX_INPUT_4_VOLUME           0xC07
+#define WM8285_DSP6RMIX_INPUT_1_SOURCE           0xC08
+#define WM8285_DSP6RMIX_INPUT_1_VOLUME           0xC09
+#define WM8285_DSP6RMIX_INPUT_2_SOURCE           0xC0A
+#define WM8285_DSP6RMIX_INPUT_2_VOLUME           0xC0B
+#define WM8285_DSP6RMIX_INPUT_3_SOURCE           0xC0C
+#define WM8285_DSP6RMIX_INPUT_3_VOLUME           0xC0D
+#define WM8285_DSP6RMIX_INPUT_4_SOURCE           0xC0E
+#define WM8285_DSP6RMIX_INPUT_4_VOLUME           0xC0F
+#define WM8285_DSP6AUX1MIX_INPUT_1_SOURCE        0xC10
+#define WM8285_DSP6AUX2MIX_INPUT_1_SOURCE        0xC18
+#define WM8285_DSP6AUX3MIX_INPUT_1_SOURCE        0xC20
+#define WM8285_DSP6AUX4MIX_INPUT_1_SOURCE        0xC28
+#define WM8285_DSP6AUX5MIX_INPUT_1_SOURCE        0xC30
+#define WM8285_DSP6AUX6MIX_INPUT_1_SOURCE        0xC38
+#define WM8285_DSP7LMIX_INPUT_1_SOURCE           0xC40
+#define WM8285_DSP7LMIX_INPUT_1_VOLUME           0xC41
+#define WM8285_DSP7LMIX_INPUT_2_SOURCE           0xC42
+#define WM8285_DSP7LMIX_INPUT_2_VOLUME           0xC43
+#define WM8285_DSP7LMIX_INPUT_3_SOURCE           0xC44
+#define WM8285_DSP7LMIX_INPUT_3_VOLUME           0xC45
+#define WM8285_DSP7LMIX_INPUT_4_SOURCE           0xC46
+#define WM8285_DSP7LMIX_INPUT_4_VOLUME           0xC47
+#define WM8285_DSP7RMIX_INPUT_1_SOURCE           0xC48
+#define WM8285_DSP7RMIX_INPUT_1_VOLUME           0xC49
+#define WM8285_DSP7RMIX_INPUT_2_SOURCE           0xC4A
+#define WM8285_DSP7RMIX_INPUT_2_VOLUME           0xC4B
+#define WM8285_DSP7RMIX_INPUT_3_SOURCE           0xC4C
+#define WM8285_DSP7RMIX_INPUT_3_VOLUME           0xC4D
+#define WM8285_DSP7RMIX_INPUT_4_SOURCE           0xC4E
+#define WM8285_DSP7RMIX_INPUT_4_VOLUME           0xC4F
+#define WM8285_DSP7AUX1MIX_INPUT_1_SOURCE        0xC50
+#define WM8285_DSP7AUX2MIX_INPUT_1_SOURCE        0xC58
+#define WM8285_DSP7AUX3MIX_INPUT_1_SOURCE        0xC60
+#define WM8285_DSP7AUX4MIX_INPUT_1_SOURCE        0xC68
+#define WM8285_DSP7AUX5MIX_INPUT_1_SOURCE        0xC70
+#define WM8285_DSP7AUX6MIX_INPUT_1_SOURCE        0xC78
 #define ARIZONA_GPIO1_CTRL                       0xC00
 #define ARIZONA_GPIO2_CTRL                       0xC01
 #define ARIZONA_GPIO3_CTRL                       0xC02
@@ -896,6 +1052,7 @@
 #define ARIZONA_IRQ_CTRL_1                       0xC0F
 #define ARIZONA_GPIO_DEBOUNCE_CONFIG             0xC10
 #define ARIZONA_GP_SWITCH_1                      0xC18
+#define WM8285_GP_SWITCH_1                       0x2C8
 #define ARIZONA_MISC_PAD_CTRL_1                  0xC20
 #define ARIZONA_MISC_PAD_CTRL_2                  0xC21
 #define ARIZONA_MISC_PAD_CTRL_3                  0xC22
@@ -1053,6 +1210,11 @@
 #define ARIZONA_DRC2_CTRL3                       0xE8B
 #define ARIZONA_DRC2_CTRL4                       0xE8C
 #define ARIZONA_DRC2_CTRL5                       0xE8D
+#define WM8285_DRC2_CTRL1                        0xE88
+#define WM8285_DRC2_CTRL2                        0xE89
+#define WM8285_DRC2_CTRL3                        0xE8A
+#define WM8285_DRC2_CTRL4                        0xE8B
+#define WM8285_DRC2_CTRL5                        0xE8C
 #define ARIZONA_HPLPF1_1                         0xEC0
 #define ARIZONA_HPLPF1_2                         0xEC1
 #define ARIZONA_HPLPF2_1                         0xEC4
@@ -1074,6 +1236,9 @@
 #define ARIZONA_ISRC_3_CTRL_1                    0xEF6
 #define ARIZONA_ISRC_3_CTRL_2                    0xEF7
 #define ARIZONA_ISRC_3_CTRL_3                    0xEF8
+#define ARIZONA_ISRC_4_CTRL_1                    0xEF9
+#define ARIZONA_ISRC_4_CTRL_2                    0xEFA
+#define ARIZONA_ISRC_4_CTRL_3                    0xEFB
 #define ARIZONA_CLOCK_CONTROL                    0xF00
 #define ARIZONA_ANC_SRC                          0xF01
 #define ARIZONA_DSP_STATUS                       0xF02
@@ -1084,9 +1249,13 @@
 #define ARIZONA_FCL_COEFF_START                  0xF18
 #define ARIZONA_FCL_COEFF_END                    0xF69
 #define ARIZONA_FCR_FILTER_CONTROL               0xF70
+#define WM8285_FCR_FILTER_CONTROL                0xF71
 #define ARIZONA_FCR_ADC_REFORMATTER_CONTROL      0xF72
+#define WM8285_FCR_ADC_REFORMATTER_CONTROL       0xF73
 #define ARIZONA_FCR_COEFF_START                  0xF73
 #define ARIZONA_FCR_COEFF_END                    0xFC4
+#define WM8285_FCR_COEFF_START                   0xF74
+#define WM8285_FCR_COEFF_END                     0xFC5
 #define ARIZONA_DSP1_CONTROL_1                   0x1100
 #define ARIZONA_DSP1_CLOCKING_1                  0x1101
 #define ARIZONA_DSP1_STATUS_1                    0x1104
@@ -1213,7 +1382,813 @@
 #define ARIZONA_FRF_COEFF_4                      0x1703
 #define ARIZONA_V2_DAC_COMP_1                    0x1704
 #define ARIZONA_V2_DAC_COMP_2                    0x1705
-
+#define WM8285_ADSP2_IRQ0                        0x1600
+#define WM8285_ADSP2_IRQ1                        0x1601
+#define WM8285_ADSP2_IRQ2                        0x1602
+#define WM8285_ADSP2_IRQ3                        0x1603
+#define WM8285_ADSP2_IRQ4                        0x1604
+#define WM8285_ADSP2_IRQ5                        0x1605
+#define WM8285_ADSP2_IRQ6                        0x1606
+#define WM8285_ADSP2_IRQ7                        0x1607
+#define WM8285_GPIO1_CTRL_1                      0x1700
+#define WM8285_GPIO1_CTRL_2                      0x1701
+#define WM8285_GPIO2_CTRL_1                      0x1702
+#define WM8285_GPIO2_CTRL_2                      0x1703
+#define WM8285_GPIO3_CTRL_1                      0x1704
+#define WM8285_GPIO3_CTRL_2                      0x1705
+#define WM8285_GPIO4_CTRL_1                      0x1706
+#define WM8285_GPIO4_CTRL_2                      0x1707
+#define WM8285_GPIO5_CTRL_1                      0x1708
+#define WM8285_GPIO5_CTRL_2                      0x1709
+#define WM8285_GPIO6_CTRL_1                      0x170A
+#define WM8285_GPIO6_CTRL_2                      0x170B
+#define WM8285_GPIO7_CTRL_1                      0x170C
+#define WM8285_GPIO7_CTRL_2                      0x170D
+#define WM8285_GPIO8_CTRL_1                      0x170E
+#define WM8285_GPIO8_CTRL_2                      0x170F
+#define WM8285_GPIO9_CTRL_1                      0x1710
+#define WM8285_GPIO9_CTRL_2                      0x1711
+#define WM8285_GPIO10_CTRL_1                     0x1712
+#define WM8285_GPIO10_CTRL_2                     0x1713
+#define WM8285_GPIO11_CTRL_1                     0x1714
+#define WM8285_GPIO11_CTRL_2                     0x1715
+#define WM8285_GPIO12_CTRL_1                     0x1716
+#define WM8285_GPIO12_CTRL_2                     0x1717
+#define WM8285_GPIO13_CTRL_1                     0x1718
+#define WM8285_GPIO13_CTRL_2                     0x1719
+#define WM8285_GPIO14_CTRL_1                     0x171A
+#define WM8285_GPIO14_CTRL_2                     0x171B
+#define WM8285_GPIO15_CTRL_1                     0x171C
+#define WM8285_GPIO15_CTRL_2                     0x171D
+#define WM8285_GPIO16_CTRL_1                     0x171E
+#define WM8285_GPIO16_CTRL_2                     0x171F
+#define WM8285_GPIO17_CTRL_1                     0x1720
+#define WM8285_GPIO17_CTRL_2                     0x1721
+#define WM8285_GPIO18_CTRL_1                     0x1722
+#define WM8285_GPIO18_CTRL_2                     0x1723
+#define WM8285_GPIO19_CTRL_1                     0x1724
+#define WM8285_GPIO19_CTRL_2                     0x1725
+#define WM8285_GPIO20_CTRL_1                     0x1726
+#define WM8285_GPIO20_CTRL_2                     0x1727
+#define WM8285_GPIO21_CTRL_1                     0x1728
+#define WM8285_GPIO21_CTRL_2                     0x1729
+#define WM8285_GPIO22_CTRL_1                     0x172A
+#define WM8285_GPIO22_CTRL_2                     0x172B
+#define WM8285_GPIO23_CTRL_1                     0x172C
+#define WM8285_GPIO23_CTRL_2                     0x172D
+#define WM8285_GPIO24_CTRL_1                     0x172E
+#define WM8285_GPIO24_CTRL_2                     0x172F
+#define WM8285_GPIO25_CTRL_1                     0x1730
+#define WM8285_GPIO25_CTRL_2                     0x1731
+#define WM8285_GPIO26_CTRL_1                     0x1732
+#define WM8285_GPIO26_CTRL_2                     0x1733
+#define WM8285_GPIO27_CTRL_1                     0x1734
+#define WM8285_GPIO27_CTRL_2                     0x1735
+#define WM8285_GPIO28_CTRL_1                     0x1736
+#define WM8285_GPIO28_CTRL_2                     0x1737
+#define WM8285_GPIO29_CTRL_1                     0x1738
+#define WM8285_GPIO29_CTRL_2                     0x1739
+#define WM8285_GPIO30_CTRL_1                     0x173A
+#define WM8285_GPIO30_CTRL_2                     0x173B
+#define WM8285_GPIO31_CTRL_1                     0x173C
+#define WM8285_GPIO31_CTRL_2                     0x173D
+#define WM8285_GPIO32_CTRL_1                     0x173E
+#define WM8285_GPIO32_CTRL_2                     0x173F
+#define WM8285_GPIO33_CTRL_1                     0x1740
+#define WM8285_GPIO33_CTRL_2                     0x1741
+#define WM8285_GPIO34_CTRL_1                     0x1742
+#define WM8285_GPIO34_CTRL_2                     0x1743
+#define WM8285_GPIO35_CTRL_1                     0x1744
+#define WM8285_GPIO35_CTRL_2                     0x1745
+#define WM8285_GPIO36_CTRL_1                     0x1746
+#define WM8285_GPIO36_CTRL_2                     0x1747
+#define WM8285_GPIO37_CTRL_1                     0x1748
+#define WM8285_GPIO37_CTRL_2                     0x1749
+#define WM8285_GPIO38_CTRL_1                     0x174A
+#define WM8285_GPIO38_CTRL_2                     0x174B
+#define WM8285_GPIO39_CTRL_1                     0x174C
+#define WM8285_GPIO39_CTRL_2                     0x174D
+#define WM8285_GPIO40_CTRL_1                     0x174E
+#define WM8285_GPIO40_CTRL_2                     0x174F
+#define WM8285_IRQ1_STATUS_1                     0x1800
+#define WM8285_IRQ1_STATUS_2                     0x1801
+#define WM8285_IRQ1_STATUS_6                     0x1805
+#define WM8285_IRQ1_STATUS_7                     0x1806
+#define WM8285_IRQ1_STATUS_9                     0x1808
+#define WM8285_IRQ1_STATUS_11                    0x180A
+#define WM8285_IRQ1_STATUS_12                    0x180B
+#define WM8285_IRQ1_STATUS_13                    0x180C
+#define WM8285_IRQ1_STATUS_14                    0x180D
+#define WM8285_IRQ1_STATUS_15                    0x180E
+#define WM8285_IRQ1_STATUS_17                    0x1810
+#define WM8285_IRQ1_STATUS_18                    0x1811
+#define WM8285_IRQ1_STATUS_19                    0x1812
+#define WM8285_IRQ1_STATUS_21                    0x1814
+#define WM8285_IRQ1_STATUS_22                    0x1815
+#define WM8285_IRQ1_STATUS_23                    0x1816
+#define WM8285_IRQ1_STATUS_24                    0x1817
+#define WM8285_IRQ1_STATUS_25                    0x1818
+#define WM8285_IRQ1_STATUS_27                    0x181A
+#define WM8285_IRQ1_STATUS_28                    0x181B
+#define WM8285_IRQ1_STATUS_30                    0x181D
+#define WM8285_IRQ1_STATUS_31                    0x181E
+#define WM8285_IRQ1_STATUS_32                    0x181F
+#define WM8285_IRQ1_MASK_1                       0x1840
+#define WM8285_IRQ1_MASK_2                       0x1841
+#define WM8285_IRQ1_MASK_6                       0x1845
+#define WM8285_IRQ1_MASK_7                       0x1846
+#define WM8285_IRQ1_MASK_9                       0x1848
+#define WM8285_IRQ1_MASK_11                      0x184A
+#define WM8285_IRQ1_MASK_12                      0x184B
+#define WM8285_IRQ1_MASK_13                      0x184C
+#define WM8285_IRQ1_MASK_14                      0x184D
+#define WM8285_IRQ1_MASK_15                      0x184E
+#define WM8285_IRQ1_MASK_17                      0x1850
+#define WM8285_IRQ1_MASK_18                      0x1851
+#define WM8285_IRQ1_MASK_19                      0x1852
+#define WM8285_IRQ1_MASK_21                      0x1854
+#define WM8285_IRQ1_MASK_22                      0x1855
+#define WM8285_IRQ1_MASK_23                      0x1856
+#define WM8285_IRQ1_MASK_24                      0x1857
+#define WM8285_IRQ1_MASK_25                      0x1858
+#define WM8285_IRQ1_MASK_27                      0x185A
+#define WM8285_IRQ1_MASK_28                      0x185B
+#define WM8285_IRQ1_MASK_30                      0x185D
+#define WM8285_IRQ1_MASK_31                      0x185E
+#define WM8285_IRQ1_MASK_32                      0x185F
+#define WM8285_IRQ1_RAW_STATUS_1                 0x1880
+#define WM8285_IRQ1_RAW_STATUS_2                 0x1881
+#define WM8285_IRQ1_RAW_STATUS_6                 0x1885
+#define WM8285_IRQ1_RAW_STATUS_7                 0x1886
+#define WM8285_IRQ1_RAW_STATUS_9                 0x1888
+#define WM8285_IRQ1_RAW_STATUS_10                0x1889
+#define WM8285_IRQ1_RAW_STATUS_11                0x188A
+#define WM8285_IRQ1_RAW_STATUS_12                0x188B
+#define WM8285_IRQ1_RAW_STATUS_13                0x188C
+#define WM8285_IRQ1_RAW_STATUS_14                0x188D
+#define WM8285_IRQ1_RAW_STATUS_15                0x188E
+#define WM8285_IRQ1_RAW_STATUS_17                0x1890
+#define WM8285_IRQ1_RAW_STATUS_18                0x1891
+#define WM8285_IRQ1_RAW_STATUS_19                0x1892
+#define WM8285_IRQ1_RAW_STATUS_21                0x1894
+#define WM8285_IRQ1_RAW_STATUS_22                0x1895
+#define WM8285_IRQ1_RAW_STATUS_23                0x1896
+#define WM8285_IRQ1_RAW_STATUS_24                0x1897
+#define WM8285_IRQ1_RAW_STATUS_25                0x1898
+#define WM8285_IRQ1_RAW_STATUS_30                0x189D
+#define WM8285_IRQ1_RAW_STATUS_31                0x189E
+#define WM8285_IRQ1_RAW_STATUS_32                0x189F
+#define WM8285_IRQ2_STATUS_1                     0x1900
+#define WM8285_IRQ2_STATUS_2                     0x1901
+#define WM8285_IRQ2_STATUS_6                     0x1905
+#define WM8285_IRQ2_STATUS_7                     0x1906
+#define WM8285_IRQ2_STATUS_9                     0x1908
+#define WM8285_IRQ2_STATUS_11                    0x190A
+#define WM8285_IRQ2_STATUS_12                    0x190B
+#define WM8285_IRQ2_STATUS_13                    0x190C
+#define WM8285_IRQ2_STATUS_14                    0x190D
+#define WM8285_IRQ2_STATUS_15                    0x190E
+#define WM8285_IRQ2_STATUS_17                    0x1910
+#define WM8285_IRQ2_STATUS_18                    0x1911
+#define WM8285_IRQ2_STATUS_19                    0x1912
+#define WM8285_IRQ2_STATUS_21                    0x1914
+#define WM8285_IRQ2_STATUS_22                    0x1915
+#define WM8285_IRQ2_STATUS_23                    0x1916
+#define WM8285_IRQ2_STATUS_24                    0x1917
+#define WM8285_IRQ2_STATUS_25                    0x1918
+#define WM8285_IRQ2_STATUS_27                    0x191A
+#define WM8285_IRQ2_STATUS_28                    0x191B
+#define WM8285_IRQ2_STATUS_30                    0x191D
+#define WM8285_IRQ2_STATUS_31                    0x191E
+#define WM8285_IRQ2_STATUS_32                    0x191F
+#define WM8285_IRQ2_MASK_1                       0x1940
+#define WM8285_IRQ2_MASK_2                       0x1941
+#define WM8285_IRQ2_MASK_6                       0x1945
+#define WM8285_IRQ2_MASK_7                       0x1946
+#define WM8285_IRQ2_MASK_9                       0x1948
+#define WM8285_IRQ2_MASK_11                      0x194A
+#define WM8285_IRQ2_MASK_12                      0x194B
+#define WM8285_IRQ2_MASK_13                      0x194C
+#define WM8285_IRQ2_MASK_14                      0x194D
+#define WM8285_IRQ2_MASK_15                      0x194E
+#define WM8285_IRQ2_MASK_17                      0x1950
+#define WM8285_IRQ2_MASK_18                      0x1951
+#define WM8285_IRQ2_MASK_19                      0x1952
+#define WM8285_IRQ2_MASK_21                      0x1954
+#define WM8285_IRQ2_MASK_22                      0x1955
+#define WM8285_IRQ2_MASK_23                      0x1956
+#define WM8285_IRQ2_MASK_24                      0x1957
+#define WM8285_IRQ2_MASK_25                      0x1958
+#define WM8285_IRQ2_MASK_27                      0x195A
+#define WM8285_IRQ2_MASK_28                      0x195B
+#define WM8285_IRQ2_MASK_30                      0x195D
+#define WM8285_IRQ2_MASK_31                      0x195E
+#define WM8285_IRQ2_MASK_32                      0x195F
+#define WM8285_IRQ2_RAW_STATUS_1                 0x1980
+#define WM8285_IRQ2_RAW_STATUS_2                 0x1981
+#define WM8285_IRQ2_RAW_STATUS_6                 0x1985
+#define WM8285_IRQ2_RAW_STATUS_7                 0x1986
+#define WM8285_IRQ2_RAW_STATUS_9                 0x1988
+#define WM8285_IRQ2_RAW_STATUS_10                0x1989
+#define WM8285_IRQ2_RAW_STATUS_11                0x198A
+#define WM8285_IRQ2_RAW_STATUS_12                0x198B
+#define WM8285_IRQ2_RAW_STATUS_13                0x198C
+#define WM8285_IRQ2_RAW_STATUS_14                0x198D
+#define WM8285_IRQ2_RAW_STATUS_15                0x198E
+#define WM8285_IRQ2_RAW_STATUS_17                0x1990
+#define WM8285_IRQ2_RAW_STATUS_18                0x1991
+#define WM8285_IRQ2_RAW_STATUS_19                0x1992
+#define WM8285_IRQ2_RAW_STATUS_21                0x1994
+#define WM8285_IRQ2_RAW_STATUS_22                0x1995
+#define WM8285_IRQ2_RAW_STATUS_23                0x1996
+#define WM8285_IRQ2_RAW_STATUS_24                0x1997
+#define WM8285_IRQ2_RAW_STATUS_25                0x1998
+#define WM8285_IRQ2_RAW_STATUS_30                0x199D
+#define WM8285_IRQ2_RAW_STATUS_31                0x199E
+#define WM8285_IRQ2_RAW_STATUS_32                0x199F
+#define WM8285_INTERRUPT_DEBOUNCE_7              0x1A06
+#define WM8285_INTERRUPT_DEBOUNCE_15             0x1A0E
+#define WM8285_IRQ1_CTRL                         0x1A80
+#define WM8285_IRQ2_CTRL                         0x1A82
+#define WM8285_INTERRUPT_RAW_STATUS_1            0x1AA0
+#define ARIZONA_WSEQ_SEQUENCE_1                   0x3000
+#define ARIZONA_WSEQ_SEQUENCE_2                   0x3002
+#define ARIZONA_WSEQ_SEQUENCE_3                   0x3004
+#define ARIZONA_WSEQ_SEQUENCE_4                   0x3006
+#define ARIZONA_WSEQ_SEQUENCE_5                   0x3008
+#define ARIZONA_WSEQ_SEQUENCE_6                   0x300A
+#define ARIZONA_WSEQ_SEQUENCE_7                   0x300C
+#define ARIZONA_WSEQ_SEQUENCE_8                   0x300E
+#define ARIZONA_WSEQ_SEQUENCE_9                   0x3010
+#define ARIZONA_WSEQ_SEQUENCE_10                  0x3012
+#define ARIZONA_WSEQ_SEQUENCE_11                  0x3014
+#define ARIZONA_WSEQ_SEQUENCE_12                  0x3016
+#define ARIZONA_WSEQ_SEQUENCE_13                  0x3018
+#define ARIZONA_WSEQ_SEQUENCE_14                  0x301A
+#define ARIZONA_WSEQ_SEQUENCE_15                  0x301C
+#define ARIZONA_WSEQ_SEQUENCE_16                  0x301E
+#define ARIZONA_WSEQ_SEQUENCE_17                  0x3020
+#define ARIZONA_WSEQ_SEQUENCE_18                  0x3022
+#define ARIZONA_WSEQ_SEQUENCE_19                  0x3024
+#define ARIZONA_WSEQ_SEQUENCE_20                  0x3026
+#define ARIZONA_WSEQ_SEQUENCE_21                  0x3028
+#define ARIZONA_WSEQ_SEQUENCE_22                  0x302A
+#define ARIZONA_WSEQ_SEQUENCE_23                  0x302C
+#define ARIZONA_WSEQ_SEQUENCE_24                  0x302E
+#define ARIZONA_WSEQ_SEQUENCE_25                  0x3030
+#define ARIZONA_WSEQ_SEQUENCE_26                  0x3032
+#define ARIZONA_WSEQ_SEQUENCE_27                  0x3034
+#define ARIZONA_WSEQ_SEQUENCE_28                  0x3036
+#define ARIZONA_WSEQ_SEQUENCE_29                  0x3038
+#define ARIZONA_WSEQ_SEQUENCE_30                  0x303A
+#define ARIZONA_WSEQ_SEQUENCE_31                  0x303C
+#define ARIZONA_WSEQ_SEQUENCE_32                  0x303E
+#define ARIZONA_WSEQ_SEQUENCE_33                  0x3040
+#define ARIZONA_WSEQ_SEQUENCE_34                  0x3042
+#define ARIZONA_WSEQ_SEQUENCE_35                  0x3044
+#define ARIZONA_WSEQ_SEQUENCE_36                  0x3046
+#define ARIZONA_WSEQ_SEQUENCE_37                  0x3048
+#define ARIZONA_WSEQ_SEQUENCE_38                  0x304A
+#define ARIZONA_WSEQ_SEQUENCE_39                  0x304C
+#define ARIZONA_WSEQ_SEQUENCE_40                  0x304E
+#define ARIZONA_WSEQ_SEQUENCE_41                  0x3050
+#define ARIZONA_WSEQ_SEQUENCE_42                  0x3052
+#define ARIZONA_WSEQ_SEQUENCE_43                  0x3054
+#define ARIZONA_WSEQ_SEQUENCE_44                  0x3056
+#define ARIZONA_WSEQ_SEQUENCE_45                  0x3058
+#define ARIZONA_WSEQ_SEQUENCE_46                  0x305A
+#define ARIZONA_WSEQ_SEQUENCE_47                  0x305C
+#define ARIZONA_WSEQ_SEQUENCE_48                  0x305E
+#define ARIZONA_WSEQ_SEQUENCE_49                  0x3060
+#define ARIZONA_WSEQ_SEQUENCE_50                  0x3062
+#define ARIZONA_WSEQ_SEQUENCE_51                  0x3064
+#define ARIZONA_WSEQ_SEQUENCE_52                  0x3066
+#define ARIZONA_WSEQ_SEQUENCE_53                  0x3068
+#define ARIZONA_WSEQ_SEQUENCE_54                  0x306A
+#define ARIZONA_WSEQ_SEQUENCE_55                  0x306C
+#define ARIZONA_WSEQ_SEQUENCE_56                  0x306E
+#define ARIZONA_WSEQ_SEQUENCE_57                  0x3070
+#define ARIZONA_WSEQ_SEQUENCE_58                  0x3072
+#define ARIZONA_WSEQ_SEQUENCE_59                  0x3074
+#define ARIZONA_WSEQ_SEQUENCE_60                  0x3076
+#define ARIZONA_WSEQ_SEQUENCE_61                  0x3078
+#define ARIZONA_WSEQ_SEQUENCE_62                  0x307A
+#define ARIZONA_WSEQ_SEQUENCE_63                  0x307C
+#define ARIZONA_WSEQ_SEQUENCE_64                  0x307E
+#define ARIZONA_WSEQ_SEQUENCE_65                  0x3080
+#define ARIZONA_WSEQ_SEQUENCE_66                  0x3082
+#define ARIZONA_WSEQ_SEQUENCE_67                  0x3084
+#define ARIZONA_WSEQ_SEQUENCE_68                  0x3086
+#define ARIZONA_WSEQ_SEQUENCE_69                  0x3088
+#define ARIZONA_WSEQ_SEQUENCE_70                  0x308A
+#define ARIZONA_WSEQ_SEQUENCE_71                  0x308C
+#define ARIZONA_WSEQ_SEQUENCE_72                  0x308E
+#define ARIZONA_WSEQ_SEQUENCE_73                  0x3090
+#define ARIZONA_WSEQ_SEQUENCE_74                  0x3092
+#define ARIZONA_WSEQ_SEQUENCE_75                  0x3094
+#define ARIZONA_WSEQ_SEQUENCE_76                  0x3096
+#define ARIZONA_WSEQ_SEQUENCE_77                  0x3098
+#define ARIZONA_WSEQ_SEQUENCE_78                  0x309A
+#define ARIZONA_WSEQ_SEQUENCE_79                  0x309C
+#define ARIZONA_WSEQ_SEQUENCE_80                  0x309E
+#define ARIZONA_WSEQ_SEQUENCE_81                  0x30A0
+#define ARIZONA_WSEQ_SEQUENCE_82                  0x30A2
+#define ARIZONA_WSEQ_SEQUENCE_83                  0x30A4
+#define ARIZONA_WSEQ_SEQUENCE_84                  0x30A6
+#define ARIZONA_WSEQ_SEQUENCE_85                  0x30A8
+#define ARIZONA_WSEQ_SEQUENCE_86                  0x30AA
+#define ARIZONA_WSEQ_SEQUENCE_87                  0x30AC
+#define ARIZONA_WSEQ_SEQUENCE_88                  0x30AE
+#define ARIZONA_WSEQ_SEQUENCE_89                  0x30B0
+#define ARIZONA_WSEQ_SEQUENCE_90                  0x30B2
+#define ARIZONA_WSEQ_SEQUENCE_91                  0x30B4
+#define ARIZONA_WSEQ_SEQUENCE_92                  0x30B6
+#define ARIZONA_WSEQ_SEQUENCE_93                  0x30B8
+#define ARIZONA_WSEQ_SEQUENCE_94                  0x30BA
+#define ARIZONA_WSEQ_SEQUENCE_95                  0x30BC
+#define ARIZONA_WSEQ_SEQUENCE_96                  0x30BE
+#define ARIZONA_WSEQ_SEQUENCE_97                  0x30C0
+#define ARIZONA_WSEQ_SEQUENCE_98                  0x30C2
+#define ARIZONA_WSEQ_SEQUENCE_99                  0x30C4
+#define ARIZONA_WSEQ_SEQUENCE_100                 0x30C6
+#define ARIZONA_WSEQ_SEQUENCE_101                 0x30C8
+#define ARIZONA_WSEQ_SEQUENCE_102                 0x30CA
+#define ARIZONA_WSEQ_SEQUENCE_103                 0x30CC
+#define ARIZONA_WSEQ_SEQUENCE_104                 0x30CE
+#define ARIZONA_WSEQ_SEQUENCE_105                 0x30D0
+#define ARIZONA_WSEQ_SEQUENCE_106                 0x30D2
+#define ARIZONA_WSEQ_SEQUENCE_107                 0x30D4
+#define ARIZONA_WSEQ_SEQUENCE_108                 0x30D6
+#define ARIZONA_WSEQ_SEQUENCE_109                 0x30D8
+#define ARIZONA_WSEQ_SEQUENCE_110                 0x30DA
+#define ARIZONA_WSEQ_SEQUENCE_111                 0x30DC
+#define ARIZONA_WSEQ_SEQUENCE_112                 0x30DE
+#define ARIZONA_WSEQ_SEQUENCE_113                 0x30E0
+#define ARIZONA_WSEQ_SEQUENCE_114                 0x30E2
+#define ARIZONA_WSEQ_SEQUENCE_115                 0x30E4
+#define ARIZONA_WSEQ_SEQUENCE_116                 0x30E6
+#define ARIZONA_WSEQ_SEQUENCE_117                 0x30E8
+#define ARIZONA_WSEQ_SEQUENCE_118                 0x30EA
+#define ARIZONA_WSEQ_SEQUENCE_119                 0x30EC
+#define ARIZONA_WSEQ_SEQUENCE_120                 0x30EE
+#define ARIZONA_WSEQ_SEQUENCE_121                 0x30F0
+#define ARIZONA_WSEQ_SEQUENCE_122                 0x30F2
+#define ARIZONA_WSEQ_SEQUENCE_123                 0x30F4
+#define ARIZONA_WSEQ_SEQUENCE_124                 0x30F6
+#define ARIZONA_WSEQ_SEQUENCE_125                 0x30F8
+#define ARIZONA_WSEQ_SEQUENCE_126                 0x30FA
+#define ARIZONA_WSEQ_SEQUENCE_127                 0x30FC
+#define ARIZONA_WSEQ_SEQUENCE_128                 0x30FE
+#define ARIZONA_WSEQ_SEQUENCE_129                 0x3100
+#define ARIZONA_WSEQ_SEQUENCE_130                 0x3102
+#define ARIZONA_WSEQ_SEQUENCE_131                 0x3104
+#define ARIZONA_WSEQ_SEQUENCE_132                 0x3106
+#define ARIZONA_WSEQ_SEQUENCE_133                 0x3108
+#define ARIZONA_WSEQ_SEQUENCE_134                 0x310A
+#define ARIZONA_WSEQ_SEQUENCE_135                 0x310C
+#define ARIZONA_WSEQ_SEQUENCE_136                 0x310E
+#define ARIZONA_WSEQ_SEQUENCE_137                 0x3110
+#define ARIZONA_WSEQ_SEQUENCE_138                 0x3112
+#define ARIZONA_WSEQ_SEQUENCE_139                 0x3114
+#define ARIZONA_WSEQ_SEQUENCE_140                 0x3116
+#define ARIZONA_WSEQ_SEQUENCE_141                 0x3118
+#define ARIZONA_WSEQ_SEQUENCE_142                 0x311A
+#define ARIZONA_WSEQ_SEQUENCE_143                 0x311C
+#define ARIZONA_WSEQ_SEQUENCE_144                 0x311E
+#define ARIZONA_WSEQ_SEQUENCE_145                 0x3120
+#define ARIZONA_WSEQ_SEQUENCE_146                 0x3122
+#define ARIZONA_WSEQ_SEQUENCE_147                 0x3124
+#define ARIZONA_WSEQ_SEQUENCE_148                 0x3126
+#define ARIZONA_WSEQ_SEQUENCE_149                 0x3128
+#define ARIZONA_WSEQ_SEQUENCE_150                 0x312A
+#define ARIZONA_WSEQ_SEQUENCE_151                 0x312C
+#define ARIZONA_WSEQ_SEQUENCE_152                 0x312E
+#define ARIZONA_WSEQ_SEQUENCE_153                 0x3130
+#define ARIZONA_WSEQ_SEQUENCE_154                 0x3132
+#define ARIZONA_WSEQ_SEQUENCE_155                 0x3134
+#define ARIZONA_WSEQ_SEQUENCE_156                 0x3136
+#define ARIZONA_WSEQ_SEQUENCE_157                 0x3138
+#define ARIZONA_WSEQ_SEQUENCE_158                 0x313A
+#define ARIZONA_WSEQ_SEQUENCE_159                 0x313C
+#define ARIZONA_WSEQ_SEQUENCE_160                 0x313E
+#define ARIZONA_WSEQ_SEQUENCE_161                 0x3140
+#define ARIZONA_WSEQ_SEQUENCE_162                 0x3142
+#define ARIZONA_WSEQ_SEQUENCE_163                 0x3144
+#define ARIZONA_WSEQ_SEQUENCE_164                 0x3146
+#define ARIZONA_WSEQ_SEQUENCE_165                 0x3148
+#define ARIZONA_WSEQ_SEQUENCE_166                 0x314A
+#define ARIZONA_WSEQ_SEQUENCE_167                 0x314C
+#define ARIZONA_WSEQ_SEQUENCE_168                 0x314E
+#define ARIZONA_WSEQ_SEQUENCE_169                 0x3150
+#define ARIZONA_WSEQ_SEQUENCE_170                 0x3152
+#define ARIZONA_WSEQ_SEQUENCE_171                 0x3154
+#define ARIZONA_WSEQ_SEQUENCE_172                 0x3156
+#define ARIZONA_WSEQ_SEQUENCE_173                 0x3158
+#define ARIZONA_WSEQ_SEQUENCE_174                 0x315A
+#define ARIZONA_WSEQ_SEQUENCE_175                 0x315C
+#define ARIZONA_WSEQ_SEQUENCE_176                 0x315E
+#define ARIZONA_WSEQ_SEQUENCE_177                 0x3160
+#define ARIZONA_WSEQ_SEQUENCE_178                 0x3162
+#define ARIZONA_WSEQ_SEQUENCE_179                 0x3164
+#define ARIZONA_WSEQ_SEQUENCE_180                 0x3166
+#define ARIZONA_WSEQ_SEQUENCE_181                 0x3168
+#define ARIZONA_WSEQ_SEQUENCE_182                 0x316A
+#define ARIZONA_WSEQ_SEQUENCE_183                 0x316C
+#define ARIZONA_WSEQ_SEQUENCE_184                 0x316E
+#define ARIZONA_WSEQ_SEQUENCE_185                 0x3170
+#define ARIZONA_WSEQ_SEQUENCE_186                 0x3172
+#define ARIZONA_WSEQ_SEQUENCE_187                 0x3174
+#define ARIZONA_WSEQ_SEQUENCE_188                 0x3176
+#define ARIZONA_WSEQ_SEQUENCE_189                 0x3178
+#define ARIZONA_WSEQ_SEQUENCE_190                 0x317A
+#define ARIZONA_WSEQ_SEQUENCE_191                 0x317C
+#define ARIZONA_WSEQ_SEQUENCE_192                 0x317E
+#define ARIZONA_WSEQ_SEQUENCE_193                 0x3180
+#define ARIZONA_WSEQ_SEQUENCE_194                 0x3182
+#define ARIZONA_WSEQ_SEQUENCE_195                 0x3184
+#define ARIZONA_WSEQ_SEQUENCE_196                 0x3186
+#define ARIZONA_WSEQ_SEQUENCE_197                 0x3188
+#define ARIZONA_WSEQ_SEQUENCE_198                 0x318A
+#define ARIZONA_WSEQ_SEQUENCE_199                 0x318C
+#define ARIZONA_WSEQ_SEQUENCE_200                 0x318E
+#define ARIZONA_WSEQ_SEQUENCE_201                 0x3190
+#define ARIZONA_WSEQ_SEQUENCE_202                 0x3192
+#define ARIZONA_WSEQ_SEQUENCE_203                 0x3194
+#define ARIZONA_WSEQ_SEQUENCE_204                 0x3196
+#define ARIZONA_WSEQ_SEQUENCE_205                 0x3198
+#define ARIZONA_WSEQ_SEQUENCE_206                 0x319A
+#define ARIZONA_WSEQ_SEQUENCE_207                 0x319C
+#define ARIZONA_WSEQ_SEQUENCE_208                 0x319E
+#define ARIZONA_WSEQ_SEQUENCE_209                 0x31A0
+#define ARIZONA_WSEQ_SEQUENCE_210                 0x31A2
+#define ARIZONA_WSEQ_SEQUENCE_211                 0x31A4
+#define ARIZONA_WSEQ_SEQUENCE_212                 0x31A6
+#define ARIZONA_WSEQ_SEQUENCE_213                 0x31A8
+#define ARIZONA_WSEQ_SEQUENCE_214                 0x31AA
+#define ARIZONA_WSEQ_SEQUENCE_215                 0x31AC
+#define ARIZONA_WSEQ_SEQUENCE_216                 0x31AE
+#define ARIZONA_WSEQ_SEQUENCE_217                 0x31B0
+#define ARIZONA_WSEQ_SEQUENCE_218                 0x31B2
+#define ARIZONA_WSEQ_SEQUENCE_219                 0x31B4
+#define ARIZONA_WSEQ_SEQUENCE_220                 0x31B6
+#define ARIZONA_WSEQ_SEQUENCE_221                 0x31B8
+#define ARIZONA_WSEQ_SEQUENCE_222                 0x31BA
+#define ARIZONA_WSEQ_SEQUENCE_223                 0x31BC
+#define ARIZONA_WSEQ_SEQUENCE_224                 0x31BE
+#define ARIZONA_WSEQ_SEQUENCE_225                 0x31C0
+#define ARIZONA_WSEQ_SEQUENCE_226                 0x31C2
+#define ARIZONA_WSEQ_SEQUENCE_227                 0x31C4
+#define ARIZONA_WSEQ_SEQUENCE_228                 0x31C6
+#define ARIZONA_WSEQ_SEQUENCE_229                 0x31C8
+#define ARIZONA_WSEQ_SEQUENCE_230                 0x31CA
+#define ARIZONA_WSEQ_SEQUENCE_231                 0x31CC
+#define ARIZONA_WSEQ_SEQUENCE_232                 0x31CE
+#define ARIZONA_WSEQ_SEQUENCE_233                 0x31D0
+#define ARIZONA_WSEQ_SEQUENCE_234                 0x31D2
+#define ARIZONA_WSEQ_SEQUENCE_235                 0x31D4
+#define ARIZONA_WSEQ_SEQUENCE_236                 0x31D6
+#define ARIZONA_WSEQ_SEQUENCE_237                 0x31D8
+#define ARIZONA_WSEQ_SEQUENCE_238                 0x31DA
+#define ARIZONA_WSEQ_SEQUENCE_239                 0x31DC
+#define ARIZONA_WSEQ_SEQUENCE_240                 0x31DE
+#define ARIZONA_WSEQ_SEQUENCE_241                 0x31E0
+#define ARIZONA_WSEQ_SEQUENCE_242                 0x31E2
+#define ARIZONA_WSEQ_SEQUENCE_243                 0x31E4
+#define ARIZONA_WSEQ_SEQUENCE_244                 0x31E6
+#define ARIZONA_WSEQ_SEQUENCE_245                 0x31E8
+#define ARIZONA_WSEQ_SEQUENCE_246                 0x31EA
+#define ARIZONA_WSEQ_SEQUENCE_247                 0x31EC
+#define ARIZONA_WSEQ_SEQUENCE_248                 0x31EE
+#define ARIZONA_WSEQ_SEQUENCE_249                 0x31F0
+#define ARIZONA_WSEQ_SEQUENCE_250                 0x31F2
+#define ARIZONA_WSEQ_SEQUENCE_251                 0x31F4
+#define ARIZONA_WSEQ_SEQUENCE_252                 0x31F6
+#define ARIZONA_WSEQ_SEQUENCE_253                 0x31F8
+#define ARIZONA_WSEQ_SEQUENCE_254                 0x31FA
+#define ARIZONA_WSEQ_SEQUENCE_255                 0x31FC
+#define ARIZONA_WSEQ_SEQUENCE_256                 0x31FE
+#define ARIZONA_WSEQ_SEQUENCE_257                 0x3200
+#define ARIZONA_WSEQ_SEQUENCE_258                 0x3202
+#define ARIZONA_WSEQ_SEQUENCE_259                 0x3204
+#define ARIZONA_WSEQ_SEQUENCE_260                 0x3206
+#define ARIZONA_WSEQ_SEQUENCE_261                 0x3208
+#define ARIZONA_WSEQ_SEQUENCE_262                 0x320A
+#define ARIZONA_WSEQ_SEQUENCE_263                 0x320C
+#define ARIZONA_WSEQ_SEQUENCE_264                 0x320E
+#define ARIZONA_WSEQ_SEQUENCE_265                 0x3210
+#define ARIZONA_WSEQ_SEQUENCE_266                 0x3212
+#define ARIZONA_WSEQ_SEQUENCE_267                 0x3214
+#define ARIZONA_WSEQ_SEQUENCE_268                 0x3216
+#define ARIZONA_WSEQ_SEQUENCE_269                 0x3218
+#define ARIZONA_WSEQ_SEQUENCE_270                 0x321A
+#define ARIZONA_WSEQ_SEQUENCE_271                 0x321C
+#define ARIZONA_WSEQ_SEQUENCE_272                 0x321E
+#define ARIZONA_WSEQ_SEQUENCE_273                 0x3220
+#define ARIZONA_WSEQ_SEQUENCE_274                 0x3222
+#define ARIZONA_WSEQ_SEQUENCE_275                 0x3224
+#define ARIZONA_WSEQ_SEQUENCE_276                 0x3226
+#define ARIZONA_WSEQ_SEQUENCE_277                 0x3228
+#define ARIZONA_WSEQ_SEQUENCE_278                 0x322A
+#define ARIZONA_WSEQ_SEQUENCE_279                 0x322C
+#define ARIZONA_WSEQ_SEQUENCE_280                 0x322E
+#define ARIZONA_WSEQ_SEQUENCE_281                 0x3230
+#define ARIZONA_WSEQ_SEQUENCE_282                 0x3232
+#define ARIZONA_WSEQ_SEQUENCE_283                 0x3234
+#define ARIZONA_WSEQ_SEQUENCE_284                 0x3236
+#define ARIZONA_WSEQ_SEQUENCE_285                 0x3238
+#define ARIZONA_WSEQ_SEQUENCE_286                 0x323A
+#define ARIZONA_WSEQ_SEQUENCE_287                 0x323C
+#define ARIZONA_WSEQ_SEQUENCE_288                 0x323E
+#define ARIZONA_WSEQ_SEQUENCE_289                 0x3240
+#define ARIZONA_WSEQ_SEQUENCE_290                 0x3242
+#define ARIZONA_WSEQ_SEQUENCE_291                 0x3244
+#define ARIZONA_WSEQ_SEQUENCE_292                 0x3246
+#define ARIZONA_WSEQ_SEQUENCE_293                 0x3248
+#define ARIZONA_WSEQ_SEQUENCE_294                 0x324A
+#define ARIZONA_WSEQ_SEQUENCE_295                 0x324C
+#define ARIZONA_WSEQ_SEQUENCE_296                 0x324E
+#define ARIZONA_WSEQ_SEQUENCE_297                 0x3250
+#define ARIZONA_WSEQ_SEQUENCE_298                 0x3252
+#define ARIZONA_WSEQ_SEQUENCE_299                 0x3254
+#define ARIZONA_WSEQ_SEQUENCE_300                 0x3256
+#define ARIZONA_WSEQ_SEQUENCE_301                 0x3258
+#define ARIZONA_WSEQ_SEQUENCE_302                 0x325A
+#define ARIZONA_WSEQ_SEQUENCE_303                 0x325C
+#define ARIZONA_WSEQ_SEQUENCE_304                 0x325E
+#define ARIZONA_WSEQ_SEQUENCE_305                 0x3260
+#define ARIZONA_WSEQ_SEQUENCE_306                 0x3262
+#define ARIZONA_WSEQ_SEQUENCE_307                 0x3264
+#define ARIZONA_WSEQ_SEQUENCE_308                 0x3266
+#define ARIZONA_WSEQ_SEQUENCE_309                 0x3268
+#define ARIZONA_WSEQ_SEQUENCE_310                 0x326A
+#define ARIZONA_WSEQ_SEQUENCE_311                 0x326C
+#define ARIZONA_WSEQ_SEQUENCE_312                 0x326E
+#define ARIZONA_WSEQ_SEQUENCE_313                 0x3270
+#define ARIZONA_WSEQ_SEQUENCE_314                 0x3272
+#define ARIZONA_WSEQ_SEQUENCE_315                 0x3274
+#define ARIZONA_WSEQ_SEQUENCE_316                 0x3276
+#define ARIZONA_WSEQ_SEQUENCE_317                 0x3278
+#define ARIZONA_WSEQ_SEQUENCE_318                 0x327A
+#define ARIZONA_WSEQ_SEQUENCE_319                 0x327C
+#define ARIZONA_WSEQ_SEQUENCE_320                 0x327E
+#define ARIZONA_WSEQ_SEQUENCE_321                 0x3280
+#define ARIZONA_WSEQ_SEQUENCE_322                 0x3282
+#define ARIZONA_WSEQ_SEQUENCE_323                 0x3284
+#define ARIZONA_WSEQ_SEQUENCE_324                 0x3286
+#define ARIZONA_WSEQ_SEQUENCE_325                 0x3288
+#define ARIZONA_WSEQ_SEQUENCE_326                 0x328A
+#define ARIZONA_WSEQ_SEQUENCE_327                 0x328C
+#define ARIZONA_WSEQ_SEQUENCE_328                 0x328E
+#define ARIZONA_WSEQ_SEQUENCE_329                 0x3290
+#define ARIZONA_WSEQ_SEQUENCE_330                 0x3292
+#define ARIZONA_WSEQ_SEQUENCE_331                 0x3294
+#define ARIZONA_WSEQ_SEQUENCE_332                 0x3296
+#define ARIZONA_WSEQ_SEQUENCE_333                 0x3298
+#define ARIZONA_WSEQ_SEQUENCE_334                 0x329A
+#define ARIZONA_WSEQ_SEQUENCE_335                 0x329C
+#define ARIZONA_WSEQ_SEQUENCE_336                 0x329E
+#define ARIZONA_WSEQ_SEQUENCE_337                 0x32A0
+#define ARIZONA_WSEQ_SEQUENCE_338                 0x32A2
+#define ARIZONA_WSEQ_SEQUENCE_339                 0x32A4
+#define ARIZONA_WSEQ_SEQUENCE_340                 0x32A6
+#define ARIZONA_WSEQ_SEQUENCE_341                 0x32A8
+#define ARIZONA_WSEQ_SEQUENCE_342                 0x32AA
+#define ARIZONA_WSEQ_SEQUENCE_343                 0x32AC
+#define ARIZONA_WSEQ_SEQUENCE_344                 0x32AE
+#define ARIZONA_WSEQ_SEQUENCE_345                 0x32B0
+#define ARIZONA_WSEQ_SEQUENCE_346                 0x32B2
+#define ARIZONA_WSEQ_SEQUENCE_347                 0x32B4
+#define ARIZONA_WSEQ_SEQUENCE_348                 0x32B6
+#define ARIZONA_WSEQ_SEQUENCE_349                 0x32B8
+#define ARIZONA_WSEQ_SEQUENCE_350                 0x32BA
+#define ARIZONA_WSEQ_SEQUENCE_351                 0x32BC
+#define ARIZONA_WSEQ_SEQUENCE_352                 0x32BE
+#define ARIZONA_WSEQ_SEQUENCE_353                 0x32C0
+#define ARIZONA_WSEQ_SEQUENCE_354                 0x32C2
+#define ARIZONA_WSEQ_SEQUENCE_355                 0x32C4
+#define ARIZONA_WSEQ_SEQUENCE_356                 0x32C6
+#define ARIZONA_WSEQ_SEQUENCE_357                 0x32C8
+#define ARIZONA_WSEQ_SEQUENCE_358                 0x32CA
+#define ARIZONA_WSEQ_SEQUENCE_359                 0x32CC
+#define ARIZONA_WSEQ_SEQUENCE_360                 0x32CE
+#define ARIZONA_WSEQ_SEQUENCE_361                 0x32D0
+#define ARIZONA_WSEQ_SEQUENCE_362                 0x32D2
+#define ARIZONA_WSEQ_SEQUENCE_363                 0x32D4
+#define ARIZONA_WSEQ_SEQUENCE_364                 0x32D6
+#define ARIZONA_WSEQ_SEQUENCE_365                 0x32D8
+#define ARIZONA_WSEQ_SEQUENCE_366                 0x32DA
+#define ARIZONA_WSEQ_SEQUENCE_367                 0x32DC
+#define ARIZONA_WSEQ_SEQUENCE_368                 0x32DE
+#define ARIZONA_WSEQ_SEQUENCE_369                 0x32E0
+#define ARIZONA_WSEQ_SEQUENCE_370                 0x32E2
+#define ARIZONA_WSEQ_SEQUENCE_371                 0x32E4
+#define ARIZONA_WSEQ_SEQUENCE_372                 0x32E6
+#define ARIZONA_WSEQ_SEQUENCE_373                 0x32E8
+#define ARIZONA_WSEQ_SEQUENCE_374                 0x32EA
+#define ARIZONA_WSEQ_SEQUENCE_375                 0x32EC
+#define ARIZONA_WSEQ_SEQUENCE_376                 0x32EE
+#define ARIZONA_WSEQ_SEQUENCE_377                 0x32F0
+#define ARIZONA_WSEQ_SEQUENCE_378                 0x32F2
+#define ARIZONA_WSEQ_SEQUENCE_379                 0x32F4
+#define ARIZONA_WSEQ_SEQUENCE_380                 0x32F6
+#define ARIZONA_WSEQ_SEQUENCE_381                 0x32F8
+#define ARIZONA_WSEQ_SEQUENCE_382                 0x32FA
+#define ARIZONA_WSEQ_SEQUENCE_383                 0x32FC
+#define ARIZONA_WSEQ_SEQUENCE_384                 0x32FE
+#define ARIZONA_WSEQ_SEQUENCE_385                 0x3300
+#define ARIZONA_WSEQ_SEQUENCE_386                 0x3302
+#define ARIZONA_WSEQ_SEQUENCE_387                 0x3304
+#define ARIZONA_WSEQ_SEQUENCE_388                 0x3306
+#define ARIZONA_WSEQ_SEQUENCE_389                 0x3308
+#define ARIZONA_WSEQ_SEQUENCE_390                 0x330A
+#define ARIZONA_WSEQ_SEQUENCE_391                 0x330C
+#define ARIZONA_WSEQ_SEQUENCE_392                 0x330E
+#define ARIZONA_WSEQ_SEQUENCE_393                 0x3310
+#define ARIZONA_WSEQ_SEQUENCE_394                 0x3312
+#define ARIZONA_WSEQ_SEQUENCE_395                 0x3314
+#define ARIZONA_WSEQ_SEQUENCE_396                 0x3316
+#define ARIZONA_WSEQ_SEQUENCE_397                 0x3318
+#define ARIZONA_WSEQ_SEQUENCE_398                 0x331A
+#define ARIZONA_WSEQ_SEQUENCE_399                 0x331C
+#define ARIZONA_WSEQ_SEQUENCE_400                 0x331E
+#define ARIZONA_WSEQ_SEQUENCE_401                 0x3320
+#define ARIZONA_WSEQ_SEQUENCE_402                 0x3322
+#define ARIZONA_WSEQ_SEQUENCE_403                 0x3324
+#define ARIZONA_WSEQ_SEQUENCE_404                 0x3326
+#define ARIZONA_WSEQ_SEQUENCE_405                 0x3328
+#define ARIZONA_WSEQ_SEQUENCE_406                 0x332A
+#define ARIZONA_WSEQ_SEQUENCE_407                 0x332C
+#define ARIZONA_WSEQ_SEQUENCE_408                 0x332E
+#define ARIZONA_WSEQ_SEQUENCE_409                 0x3330
+#define ARIZONA_WSEQ_SEQUENCE_410                 0x3332
+#define ARIZONA_WSEQ_SEQUENCE_411                 0x3334
+#define ARIZONA_WSEQ_SEQUENCE_412                 0x3336
+#define ARIZONA_WSEQ_SEQUENCE_413                 0x3338
+#define ARIZONA_WSEQ_SEQUENCE_414                 0x333A
+#define ARIZONA_WSEQ_SEQUENCE_415                 0x333C
+#define ARIZONA_WSEQ_SEQUENCE_416                 0x333E
+#define ARIZONA_WSEQ_SEQUENCE_417                 0x3340
+#define ARIZONA_WSEQ_SEQUENCE_418                 0x3342
+#define ARIZONA_WSEQ_SEQUENCE_419                 0x3344
+#define ARIZONA_WSEQ_SEQUENCE_420                 0x3346
+#define ARIZONA_WSEQ_SEQUENCE_421                 0x3348
+#define ARIZONA_WSEQ_SEQUENCE_422                 0x334A
+#define ARIZONA_WSEQ_SEQUENCE_423                 0x334C
+#define ARIZONA_WSEQ_SEQUENCE_424                 0x334E
+#define ARIZONA_WSEQ_SEQUENCE_425                 0x3350
+#define ARIZONA_WSEQ_SEQUENCE_426                 0x3352
+#define ARIZONA_WSEQ_SEQUENCE_427                 0x3354
+#define ARIZONA_WSEQ_SEQUENCE_428                 0x3356
+#define ARIZONA_WSEQ_SEQUENCE_429                 0x3358
+#define ARIZONA_WSEQ_SEQUENCE_430                 0x335A
+#define ARIZONA_WSEQ_SEQUENCE_431                 0x335C
+#define ARIZONA_WSEQ_SEQUENCE_432                 0x335E
+#define ARIZONA_WSEQ_SEQUENCE_433                 0x3360
+#define ARIZONA_WSEQ_SEQUENCE_434                 0x3362
+#define ARIZONA_WSEQ_SEQUENCE_435                 0x3364
+#define ARIZONA_WSEQ_SEQUENCE_436                 0x3366
+#define ARIZONA_WSEQ_SEQUENCE_437                 0x3368
+#define ARIZONA_WSEQ_SEQUENCE_438                 0x336A
+#define ARIZONA_WSEQ_SEQUENCE_439                 0x336C
+#define ARIZONA_WSEQ_SEQUENCE_440                 0x336E
+#define ARIZONA_WSEQ_SEQUENCE_441                 0x3370
+#define ARIZONA_WSEQ_SEQUENCE_442                 0x3372
+#define ARIZONA_WSEQ_SEQUENCE_443                 0x3374
+#define ARIZONA_WSEQ_SEQUENCE_444                 0x3376
+#define ARIZONA_WSEQ_SEQUENCE_445                 0x3378
+#define ARIZONA_WSEQ_SEQUENCE_446                 0x337A
+#define ARIZONA_WSEQ_SEQUENCE_447                 0x337C
+#define ARIZONA_WSEQ_SEQUENCE_448                 0x337E
+#define ARIZONA_WSEQ_SEQUENCE_449                 0x3380
+#define ARIZONA_WSEQ_SEQUENCE_450                 0x3382
+#define ARIZONA_WSEQ_SEQUENCE_451                 0x3384
+#define ARIZONA_WSEQ_SEQUENCE_452                 0x3386
+#define ARIZONA_WSEQ_SEQUENCE_453                 0x3388
+#define ARIZONA_WSEQ_SEQUENCE_454                 0x338A
+#define ARIZONA_WSEQ_SEQUENCE_455                 0x338C
+#define ARIZONA_WSEQ_SEQUENCE_456                 0x338E
+#define ARIZONA_WSEQ_SEQUENCE_457                 0x3390
+#define ARIZONA_WSEQ_SEQUENCE_458                 0x3392
+#define ARIZONA_WSEQ_SEQUENCE_459                 0x3394
+#define ARIZONA_WSEQ_SEQUENCE_460                 0x3396
+#define ARIZONA_WSEQ_SEQUENCE_461                 0x3398
+#define ARIZONA_WSEQ_SEQUENCE_462                 0x339A
+#define ARIZONA_WSEQ_SEQUENCE_463                 0x339C
+#define ARIZONA_WSEQ_SEQUENCE_464                 0x339E
+#define ARIZONA_WSEQ_SEQUENCE_465                 0x33A0
+#define ARIZONA_WSEQ_SEQUENCE_466                 0x33A2
+#define ARIZONA_WSEQ_SEQUENCE_467                 0x33A4
+#define ARIZONA_WSEQ_SEQUENCE_468                 0x33A6
+#define ARIZONA_WSEQ_SEQUENCE_469                 0x33A8
+#define ARIZONA_WSEQ_SEQUENCE_470                 0x33AA
+#define ARIZONA_WSEQ_SEQUENCE_471                 0x33AC
+#define ARIZONA_WSEQ_SEQUENCE_472                 0x33AE
+#define ARIZONA_WSEQ_SEQUENCE_473                 0x33B0
+#define ARIZONA_WSEQ_SEQUENCE_474                 0x33B2
+#define ARIZONA_WSEQ_SEQUENCE_475                 0x33B4
+#define ARIZONA_WSEQ_SEQUENCE_476                 0x33B6
+#define ARIZONA_WSEQ_SEQUENCE_477                 0x33B8
+#define ARIZONA_WSEQ_SEQUENCE_478                 0x33BA
+#define ARIZONA_WSEQ_SEQUENCE_479                 0x33BC
+#define ARIZONA_WSEQ_SEQUENCE_480                 0x33BE
+#define ARIZONA_WSEQ_SEQUENCE_481                 0x33C0
+#define ARIZONA_WSEQ_SEQUENCE_482                 0x33C2
+#define ARIZONA_WSEQ_SEQUENCE_483                 0x33C4
+#define ARIZONA_WSEQ_SEQUENCE_484                 0x33C6
+#define ARIZONA_WSEQ_SEQUENCE_485                 0x33C8
+#define ARIZONA_WSEQ_SEQUENCE_486                 0x33CA
+#define ARIZONA_WSEQ_SEQUENCE_487                 0x33CC
+#define ARIZONA_WSEQ_SEQUENCE_488                 0x33CE
+#define ARIZONA_WSEQ_SEQUENCE_489                 0x33D0
+#define ARIZONA_WSEQ_SEQUENCE_490                 0x33D2
+#define ARIZONA_WSEQ_SEQUENCE_491                 0x33D4
+#define ARIZONA_WSEQ_SEQUENCE_492                 0x33D6
+#define ARIZONA_WSEQ_SEQUENCE_493                 0x33D8
+#define ARIZONA_WSEQ_SEQUENCE_494                 0x33DA
+#define ARIZONA_WSEQ_SEQUENCE_495                 0x33DC
+#define ARIZONA_WSEQ_SEQUENCE_496                 0x33DE
+#define ARIZONA_WSEQ_SEQUENCE_497                 0x33E0
+#define ARIZONA_WSEQ_SEQUENCE_498                 0x33E2
+#define ARIZONA_WSEQ_SEQUENCE_499                 0x33E4
+#define ARIZONA_WSEQ_SEQUENCE_500                 0x33E6
+#define ARIZONA_WSEQ_SEQUENCE_501                 0x33E8
+#define ARIZONA_WSEQ_SEQUENCE_502                 0x33EA
+#define ARIZONA_WSEQ_SEQUENCE_503                 0x33EC
+#define ARIZONA_WSEQ_SEQUENCE_504                 0x33EE
+#define ARIZONA_WSEQ_SEQUENCE_505                 0x33F0
+#define ARIZONA_WSEQ_SEQUENCE_506                 0x33F2
+#define ARIZONA_WSEQ_SEQUENCE_507                 0x33F4
+#define ARIZONA_WSEQ_SEQUENCE_508                 0x33F6
+#define WM8285_DSP1_CONFIG                       0x0FFE00
+#define WM8285_DSP1_STATUS_1                     0x0FFE04
+#define WM8285_DSP1_STATUS_2                     0x0FFE05
+#define WM8285_DSP1_WDMA_CONFIG_1                0x0FFE30
+#define WM8285_DSP1_WDMA_CONFIG_2                0x0FFE31
+#define WM8285_DSP1_RDMA_CONFIG_1                0x0FFE34
+#define WM8285_DSP1_SCRATCH_0                    0x0FFE40
+#define WM8285_DSP1_SCRATCH_1                    0x0FFE41
+#define WM8285_DSP1_SCRATCH_2                    0x0FFE42
+#define WM8285_DSP1_SCRATCH_3                    0x0FFE43
+#define WM8285_DSP2_CONFIG                       0x17FE00
+#define WM8285_DSP2_STATUS_1                     0x17FE04
+#define WM8285_DSP2_STATUS_2                     0x17FE05
+#define WM8285_DSP2_WDMA_CONFIG_1                0x17FE30
+#define WM8285_DSP2_WDMA_CONFIG_2                0x17FE31
+#define WM8285_DSP2_RDMA_CONFIG_1                0x17FE34
+#define WM8285_DSP2_SCRATCH_0                    0x17FE40
+#define WM8285_DSP2_SCRATCH_1                    0x17FE41
+#define WM8285_DSP2_SCRATCH_2                    0x17FE42
+#define WM8285_DSP2_SCRATCH_3                    0x17FE43
+#define WM8285_DSP3_CONFIG                       0x1FFE00
+#define WM8285_DSP3_STATUS_1                     0x1FFE04
+#define WM8285_DSP3_STATUS_2                     0x1FFE05
+#define WM8285_DSP3_WDMA_CONFIG_1                0x1FFE30
+#define WM8285_DSP3_WDMA_CONFIG_2                0x1FFE31
+#define WM8285_DSP3_RDMA_CONFIG_1                0x1FFE34
+#define WM8285_DSP3_SCRATCH_0                    0x1FFE40
+#define WM8285_DSP3_SCRATCH_1                    0x1FFE41
+#define WM8285_DSP3_SCRATCH_2                    0x1FFE42
+#define WM8285_DSP3_SCRATCH_3                    0x1FFE43
+#define WM8285_DSP4_CONFIG                       0x27FE00
+#define WM8285_DSP4_STATUS_1                     0x27FE04
+#define WM8285_DSP4_STATUS_2                     0x27FE05
+#define WM8285_DSP4_WDMA_CONFIG_1                0x27FE30
+#define WM8285_DSP4_WDMA_CONFIG_2                0x27FE31
+#define WM8285_DSP4_RDMA_CONFIG_1                0x27FE34
+#define WM8285_DSP4_SCRATCH_0                    0x27FE40
+#define WM8285_DSP4_SCRATCH_1                    0x27FE41
+#define WM8285_DSP4_SCRATCH_2                    0x27FE42
+#define WM8285_DSP4_SCRATCH_3                    0x27FE43
+#define WM8285_DSP5_CONFIG                       0x2FFE00
+#define WM8285_DSP5_STATUS_1                     0x2FFE04
+#define WM8285_DSP5_STATUS_2                     0x2FFE05
+#define WM8285_DSP5_WDMA_CONFIG_1                0x2FFE30
+#define WM8285_DSP5_WDMA_CONFIG_2                0x2FFE31
+#define WM8285_DSP5_RDMA_CONFIG_1                0x2FFE34
+#define WM8285_DSP5_SCRATCH_0                    0x2FFE40
+#define WM8285_DSP5_SCRATCH_1                    0x2FFE41
+#define WM8285_DSP5_SCRATCH_2                    0x2FFE42
+#define WM8285_DSP5_SCRATCH_3                    0x2FFE43
+#define WM8285_DSP6_CONFIG                       0x37FE00
+#define WM8285_DSP6_STATUS_1                     0x37FE04
+#define WM8285_DSP6_STATUS_2                     0x37FE05
+#define WM8285_DSP6_WDMA_CONFIG_1                0x37FE30
+#define WM8285_DSP6_WDMA_CONFIG_2                0x37FE31
+#define WM8285_DSP6_RDMA_CONFIG_1                0x37FE34
+#define WM8285_DSP6_SCRATCH_0                    0x37FE40
+#define WM8285_DSP6_SCRATCH_1                    0x37FE41
+#define WM8285_DSP6_SCRATCH_2                    0x37FE42
+#define WM8285_DSP6_SCRATCH_3                    0x37FE43
+#define WM8285_DSP7_CONFIG                       0x3FFE00
+#define WM8285_DSP7_STATUS_1                     0x3FFE04
+#define WM8285_DSP7_STATUS_2                     0x3FFE05
+#define WM8285_DSP7_WDMA_CONFIG_1                0x3FFE30
+#define WM8285_DSP7_WDMA_CONFIG_2                0x3FFE31
+#define WM8285_DSP7_RDMA_CONFIG_1                0x3FFE34
+#define WM8285_DSP7_SCRATCH_0                    0x3FFE40
+#define WM8285_DSP7_SCRATCH_1                    0x3FFE41
+#define WM8285_DSP7_SCRATCH_2                    0x3FFE42
+#define WM8285_DSP7_SCRATCH_3                    0x3FFE43
 
 /*
  * Field Definitions.
@@ -2138,6 +3113,162 @@
 #define ARIZONA_FLL2_GPDIV_ENA_WIDTH                  1  /* FLL2_GPDIV_ENA */
 
 /*
+ * R433 (0x1B1) - FLL3 Control 1
+ */
+#define ARIZONA_FLL3_FREERUN                     0x0002  /* FLL3_FREERUN */
+#define ARIZONA_FLL3_FREERUN_MASK                0x0002  /* FLL3_FREERUN */
+#define ARIZONA_FLL3_FREERUN_SHIFT                    1  /* FLL3_FREERUN */
+#define ARIZONA_FLL3_FREERUN_WIDTH                    1  /* FLL3_FREERUN */
+#define ARIZONA_FLL3_ENA                         0x0001  /* FLL3_ENA */
+#define ARIZONA_FLL3_ENA_MASK                    0x0001  /* FLL3_ENA */
+#define ARIZONA_FLL3_ENA_SHIFT                        0  /* FLL3_ENA */
+#define ARIZONA_FLL3_ENA_WIDTH                        1  /* FLL3_ENA */
+
+/*
+ * R434 (0x1B2) - FLL3 Control 2
+ */
+#define ARIZONA_FLL3_CTRL_UPD                    0x8000  /* FLL3_CTRL_UPD */
+#define ARIZONA_FLL3_CTRL_UPD_MASK               0x8000  /* FLL3_CTRL_UPD */
+#define ARIZONA_FLL3_CTRL_UPD_SHIFT                  15  /* FLL3_CTRL_UPD */
+#define ARIZONA_FLL3_CTRL_UPD_WIDTH                   1  /* FLL3_CTRL_UPD */
+#define ARIZONA_FLL3_N_MASK                      0x03FF  /* FLL3_N - [9:0] */
+#define ARIZONA_FLL3_N_SHIFT                          0  /* FLL3_N - [9:0] */
+#define ARIZONA_FLL3_N_WIDTH                         10  /* FLL3_N - [9:0] */
+
+/*
+ * R435 (0x1B3) - FLL3 Control 3
+ */
+#define ARIZONA_FLL3_THETA_MASK                  0xFFFF  /* FLL3_THETA - [15:0] */
+#define ARIZONA_FLL3_THETA_SHIFT                      0  /* FLL3_THETA - [15:0] */
+#define ARIZONA_FLL3_THETA_WIDTH                     16  /* FLL3_THETA - [15:0] */
+
+/*
+ * R436 (0x1B4) - FLL3 Control 4
+ */
+#define ARIZONA_FLL3_LAMBDA_MASK                 0xFFFF  /* FLL3_LAMBDA - [15:0] */
+#define ARIZONA_FLL3_LAMBDA_SHIFT                     0  /* FLL3_LAMBDA - [15:0] */
+#define ARIZONA_FLL3_LAMBDA_WIDTH                    16  /* FLL3_LAMBDA - [15:0] */
+
+/*
+ * R437 (0x1B5) - FLL3 Control 5
+ */
+#define ARIZONA_FLL3_FRATIO_MASK                 0x0700  /* FLL3_FRATIO - [10:8] */
+#define ARIZONA_FLL3_FRATIO_SHIFT                     8  /* FLL3_FRATIO - [10:8] */
+#define ARIZONA_FLL3_FRATIO_WIDTH                     3  /* FLL3_FRATIO - [10:8] */
+#define ARIZONA_FLL3_OUTDIV_MASK                 0x000E  /* FLL3_OUTDIV - [3:1] */
+#define ARIZONA_FLL3_OUTDIV_SHIFT                     1  /* FLL3_OUTDIV - [3:1] */
+#define ARIZONA_FLL3_OUTDIV_WIDTH                     3  /* FLL3_OUTDIV - [3:1] */
+
+/*
+ * R438 (0x1B6) - FLL3 Control 6
+ */
+#define ARIZONA_FLL3_CLK_REF_DIV_MASK            0x00C0  /* FLL3_CLK_REF_DIV - [7:6] */
+#define ARIZONA_FLL3_CLK_REF_DIV_SHIFT                6  /* FLL3_CLK_REF_DIV - [7:6] */
+#define ARIZONA_FLL3_CLK_REF_DIV_WIDTH                2  /* FLL3_CLK_REF_DIV - [7:6] */
+#define ARIZONA_FLL3_CLK_REF_SRC_MASK            0x000F  /* FLL3_CLK_REF_SRC - [3:0] */
+#define ARIZONA_FLL3_CLK_REF_SRC_SHIFT                0  /* FLL3_CLK_REF_SRC - [3:0] */
+#define ARIZONA_FLL3_CLK_REF_SRC_WIDTH                4  /* FLL3_CLK_REF_SRC - [3:0] */
+
+/*
+ * R439 (0x1B7) - FLL3 Loop Filter Test 1
+ */
+#define ARIZONA_FLL3_FRC_INTEG_UPD               0x8000  /* FLL3_FRC_INTEG_UPD */
+#define ARIZONA_FLL3_FRC_INTEG_UPD_MASK          0x8000  /* FLL3_FRC_INTEG_UPD */
+#define ARIZONA_FLL3_FRC_INTEG_UPD_SHIFT             15  /* FLL3_FRC_INTEG_UPD */
+#define ARIZONA_FLL3_FRC_INTEG_UPD_WIDTH              1  /* FLL3_FRC_INTEG_UPD */
+#define ARIZONA_FLL3_FRC_INTEG_VAL_MASK          0x0FFF  /* FLL3_FRC_INTEG_VAL - [11:0] */
+#define ARIZONA_FLL3_FRC_INTEG_VAL_SHIFT              0  /* FLL3_FRC_INTEG_VAL - [11:0] */
+#define ARIZONA_FLL3_FRC_INTEG_VAL_WIDTH             12  /* FLL3_FRC_INTEG_VAL - [11:0] */
+
+/*
+ * R441 (0x1B9) - FLL3 Control 7
+ */
+#define ARIZONA_FLL3_GAIN_MASK                   0x003c  /* FLL3_GAIN */
+#define ARIZONA_FLL3_GAIN_SHIFT                       2  /* FLL3_GAIN */
+#define ARIZONA_FLL3_GAIN_WIDTH                       4  /* FLL3_GAIN */
+
+/*
+ * R449 (0x1C1) - FLL3 Synchroniser 1
+ */
+#define ARIZONA_FLL3_SYNC_ENA                    0x0001  /* FLL3_SYNC_ENA */
+#define ARIZONA_FLL3_SYNC_ENA_MASK               0x0001  /* FLL3_SYNC_ENA */
+#define ARIZONA_FLL3_SYNC_ENA_SHIFT                   0  /* FLL3_SYNC_ENA */
+#define ARIZONA_FLL3_SYNC_ENA_WIDTH                   1  /* FLL3_SYNC_ENA */
+
+/*
+ * R450 (0x1C2) - FLL3 Synchroniser 2
+ */
+#define ARIZONA_FLL3_SYNC_N_MASK                 0x03FF  /* FLL3_SYNC_N - [9:0] */
+#define ARIZONA_FLL3_SYNC_N_SHIFT                     0  /* FLL3_SYNC_N - [9:0] */
+#define ARIZONA_FLL3_SYNC_N_WIDTH                    10  /* FLL3_SYNC_N - [9:0] */
+
+/*
+ * R451 (0x1C3) - FLL3 Synchroniser 3
+ */
+#define ARIZONA_FLL3_SYNC_THETA_MASK             0xFFFF  /* FLL3_SYNC_THETA - [15:0] */
+#define ARIZONA_FLL3_SYNC_THETA_SHIFT                 0  /* FLL3_SYNC_THETA - [15:0] */
+#define ARIZONA_FLL3_SYNC_THETA_WIDTH                16  /* FLL3_SYNC_THETA - [15:0] */
+
+/*
+ * R452 (0x1C4) - FLL3 Synchroniser 4
+ */
+#define ARIZONA_FLL3_SYNC_LAMBDA_MASK            0xFFFF  /* FLL3_SYNC_LAMBDA - [15:0] */
+#define ARIZONA_FLL3_SYNC_LAMBDA_SHIFT                0  /* FLL3_SYNC_LAMBDA - [15:0] */
+#define ARIZONA_FLL3_SYNC_LAMBDA_WIDTH               16  /* FLL3_SYNC_LAMBDA - [15:0] */
+
+/*
+ * R453 (0x1C5) - FLL3 Synchroniser 5
+ */
+#define ARIZONA_FLL3_SYNC_FRATIO_MASK            0x0700  /* FLL3_SYNC_FRATIO - [10:8] */
+#define ARIZONA_FLL3_SYNC_FRATIO_SHIFT                8  /* FLL3_SYNC_FRATIO - [10:8] */
+#define ARIZONA_FLL3_SYNC_FRATIO_WIDTH                3  /* FLL3_SYNC_FRATIO - [10:8] */
+
+/*
+ * R454 (0x1C6) - FLL3 Synchroniser 6
+ */
+#define ARIZONA_FLL3_CLK_SYNC_DIV_MASK           0x00C0  /* FLL3_CLK_SYNC_DIV - [7:6] */
+#define ARIZONA_FLL3_CLK_SYNC_DIV_SHIFT               6  /* FLL3_CLK_SYNC_DIV - [7:6] */
+#define ARIZONA_FLL3_CLK_SYNC_DIV_WIDTH               2  /* FLL3_CLK_SYNC_DIV - [7:6] */
+#define ARIZONA_FLL3_CLK_SYNC_SRC_MASK           0x000F  /* FLL3_CLK_SYNC_SRC - [3:0] */
+#define ARIZONA_FLL3_CLK_SYNC_SRC_SHIFT               0  /* FLL3_CLK_SYNC_SRC - [3:0] */
+#define ARIZONA_FLL3_CLK_SYNC_SRC_WIDTH               4  /* FLL3_CLK_SYNC_SRC - [3:0] */
+
+/*
+ * R455 (0x1C7) - FLL3 Synchroniser 7
+ */
+#define ARIZONA_FLL3_SYNC_GAIN_MASK              0x003c  /* FLL3_SYNC_GAIN */
+#define ARIZONA_FLL3_SYNC_GAIN_SHIFT                  2  /* FLL3_SYNC_GAIN */
+#define ARIZONA_FLL3_SYNC_GAIN_WIDTH                  4  /* FLL3_SYNC_GAIN */
+#define ARIZONA_FLL3_SYNC_BW                     0x0001  /* FLL3_SYNC_BW */
+#define ARIZONA_FLL3_SYNC_BW_MASK                0x0001  /* FLL3_SYNC_BW */
+#define ARIZONA_FLL3_SYNC_BW_SHIFT                    0  /* FLL3_SYNC_BW */
+#define ARIZONA_FLL3_SYNC_BW_WIDTH                    1  /* FLL3_SYNC_BW */
+
+/*
+ * R457 (0x1C9) - FLL3 Spread Spectrum
+ */
+#define ARIZONA_FLL3_SS_AMPL_MASK                0x0030  /* FLL3_SS_AMPL - [5:4] */
+#define ARIZONA_FLL3_SS_AMPL_SHIFT                    4  /* FLL3_SS_AMPL - [5:4] */
+#define ARIZONA_FLL3_SS_AMPL_WIDTH                    2  /* FLL3_SS_AMPL - [5:4] */
+#define ARIZONA_FLL3_SS_FREQ_MASK                0x000C  /* FLL3_SS_FREQ - [3:2] */
+#define ARIZONA_FLL3_SS_FREQ_SHIFT                    2  /* FLL3_SS_FREQ - [3:2] */
+#define ARIZONA_FLL3_SS_FREQ_WIDTH                    2  /* FLL3_SS_FREQ - [3:2] */
+#define ARIZONA_FLL3_SS_SEL_MASK                 0x0003  /* FLL3_SS_SEL - [1:0] */
+#define ARIZONA_FLL3_SS_SEL_SHIFT                     0  /* FLL3_SS_SEL - [1:0] */
+#define ARIZONA_FLL3_SS_SEL_WIDTH                     2  /* FLL3_SS_SEL - [1:0] */
+
+/*
+ * R458 (0x1CA) - FLL3 GPIO Clock
+ */
+#define ARIZONA_FLL3_GPDIV_MASK                  0x00FE  /* FLL3_GPDIV - [7:1] */
+#define ARIZONA_FLL3_GPDIV_SHIFT                      1  /* FLL3_GPDIV - [7:1] */
+#define ARIZONA_FLL3_GPDIV_WIDTH                      7  /* FLL3_GPDIV - [7:1] */
+#define ARIZONA_FLL3_GPDIV_ENA                   0x0001  /* FLL3_GPDIV_ENA */
+#define ARIZONA_FLL3_GPDIV_ENA_MASK              0x0001  /* FLL3_GPDIV_ENA */
+#define ARIZONA_FLL3_GPDIV_ENA_SHIFT                  0  /* FLL3_GPDIV_ENA */
+#define ARIZONA_FLL3_GPDIV_ENA_WIDTH                  1  /* FLL3_GPDIV_ENA */
+
+/*
  * R512 (0x200) - Mic Charge Pump 1
  */
 #define ARIZONA_CPMIC_DISCH                      0x0004  /* CPMIC_DISCH */
@@ -2298,6 +3429,37 @@
 #define ARIZONA_MICB3_ENA_MASK                   0x0001  /* MICB3_ENA */
 #define ARIZONA_MICB3_ENA_SHIFT                       0  /* MICB3_ENA */
 #define ARIZONA_MICB3_ENA_WIDTH                       1  /* MICB3_ENA */
+
+/*
+ * R539 (0x21B) - Mic Bias Ctrl 4
+ */
+#define ARIZONA_MICB4_EXT_CAP                    0x8000  /* MICB4_EXT_CAP */
+#define ARIZONA_MICB4_EXT_CAP_MASK               0x8000  /* MICB4_EXT_CAP */
+#define ARIZONA_MICB4_EXT_CAP_SHIFT                  15  /* MICB4_EXT_CAP */
+#define ARIZONA_MICB4_EXT_CAP_WIDTH                   1  /* MICB4_EXT_CAP */
+#define ARIZONA_MICB4_LVL_MASK                   0x01E0  /* MICB4_LVL - [8:5] */
+#define ARIZONA_MICB4_LVL_SHIFT                       5  /* MICB4_LVL - [8:5] */
+#define ARIZONA_MICB4_LVL_WIDTH                       4  /* MICB4_LVL - [8:5] */
+#define ARIZONA_MICB4_FAST                       0x0010  /* MICB4_FAST */
+#define ARIZONA_MICB4_FAST_MASK                  0x0010  /* MICB4_FAST */
+#define ARIZONA_MICB4_FAST_SHIFT                      4  /* MICB4_FAST */
+#define ARIZONA_MICB4_FAST_WIDTH                      1  /* MICB4_FAST */
+#define ARIZONA_MICB4_RATE                       0x0008  /* MICB4_RATE */
+#define ARIZONA_MICB4_RATE_MASK                  0x0008  /* MICB4_RATE */
+#define ARIZONA_MICB4_RATE_SHIFT                      3  /* MICB4_RATE */
+#define ARIZONA_MICB4_RATE_WIDTH                      1  /* MICB4_RATE */
+#define ARIZONA_MICB4_DISCH                      0x0004  /* MICB4_DISCH */
+#define ARIZONA_MICB4_DISCH_MASK                 0x0004  /* MICB4_DISCH */
+#define ARIZONA_MICB4_DISCH_SHIFT                     2  /* MICB4_DISCH */
+#define ARIZONA_MICB4_DISCH_WIDTH                     1  /* MICB4_DISCH */
+#define ARIZONA_MICB4_BYPASS                     0x0002  /* MICB4_BYPASS */
+#define ARIZONA_MICB4_BYPASS_MASK                0x0002  /* MICB4_BYPASS */
+#define ARIZONA_MICB4_BYPASS_SHIFT                    1  /* MICB4_BYPASS */
+#define ARIZONA_MICB4_BYPASS_WIDTH                    1  /* MICB4_BYPASS */
+#define ARIZONA_MICB4_ENA                        0x0001  /* MICB4_ENA */
+#define ARIZONA_MICB4_ENA_MASK                   0x0001  /* MICB4_ENA */
+#define ARIZONA_MICB4_ENA_SHIFT                       0  /* MICB4_ENA */
+#define ARIZONA_MICB4_ENA_WIDTH                       1  /* MICB4_ENA */
 
 /*
  * R549 (0x225) - HP Ctrl 1L
@@ -2508,6 +3670,22 @@
 /*
  * R768 (0x300) - Input Enables
  */
+#define ARIZONA_IN6L_ENA                         0x0800  /* IN6L_ENA */
+#define ARIZONA_IN6L_ENA_MASK                    0x0800  /* IN6L_ENA */
+#define ARIZONA_IN6L_ENA_SHIFT                       11  /* IN6L_ENA */
+#define ARIZONA_IN6L_ENA_WIDTH                        1  /* IN6L_ENA */
+#define ARIZONA_IN6R_ENA                         0x0400  /* IN6R_ENA */
+#define ARIZONA_IN6R_ENA_MASK                    0x0400  /* IN6R_ENA */
+#define ARIZONA_IN6R_ENA_SHIFT                       10  /* IN6R_ENA */
+#define ARIZONA_IN6R_ENA_WIDTH                        1  /* IN6R_ENA */
+#define ARIZONA_IN5L_ENA                         0x0200  /* IN5L_ENA */
+#define ARIZONA_IN5L_ENA_MASK                    0x0200  /* IN5L_ENA */
+#define ARIZONA_IN5L_ENA_SHIFT                        9  /* IN5L_ENA */
+#define ARIZONA_IN5L_ENA_WIDTH                        1  /* IN5L_ENA */
+#define ARIZONA_IN5R_ENA                         0x0100  /* IN5R_ENA */
+#define ARIZONA_IN5R_ENA_MASK                    0x0100  /* IN5R_ENA */
+#define ARIZONA_IN5R_ENA_SHIFT                        8  /* IN5R_ENA */
+#define ARIZONA_IN5R_ENA_WIDTH                        1  /* IN5R_ENA */
 #define ARIZONA_IN4L_ENA                         0x0080  /* IN4L_ENA */
 #define ARIZONA_IN4L_ENA_MASK                    0x0080  /* IN4L_ENA */
 #define ARIZONA_IN4L_ENA_SHIFT                        7  /* IN4L_ENA */
@@ -2614,6 +3792,9 @@
 #define ARIZONA_IN1_DMICL_DLY_MASK               0x003F  /* IN1_DMICL_DLY - [5:0] */
 #define ARIZONA_IN1_DMICL_DLY_SHIFT                   0  /* IN1_DMICL_DLY - [5:0] */
 #define ARIZONA_IN1_DMICL_DLY_WIDTH                   6  /* IN1_DMICL_DLY - [5:0] */
+#define WM8285_IN1_OSR_MASK                      0x0700  /* IN1_OSR - [8:10] */
+#define WM8285_IN1_OSR_SHIFT                          8  /* IN1_OSR - [8:10] */
+#define WM8285_IN1_OSR_WIDTH                          3  /* IN1_OSR - [8:10] */
 
 /*
  * R788 (0x314) - IN1R Control
@@ -2702,6 +3883,9 @@
 #define ARIZONA_IN2_DMICL_DLY_MASK               0x003F  /* IN2_DMICL_DLY - [5:0] */
 #define ARIZONA_IN2_DMICL_DLY_SHIFT                   0  /* IN2_DMICL_DLY - [5:0] */
 #define ARIZONA_IN2_DMICL_DLY_WIDTH                   6  /* IN2_DMICL_DLY - [5:0] */
+#define WM8285_IN2_OSR_MASK                      0x0700  /* IN2_OSR - [8:10] */
+#define WM8285_IN2_OSR_SHIFT                          8  /* IN2_OSR - [8:10] */
+#define WM8285_IN2_OSR_WIDTH                          3  /* IN2_OSR - [8:10] */
 
 /*
  * R796 (0x31C) - IN2R Control
@@ -2716,6 +3900,12 @@
 /*
  * R797 (0x31D) - ADC Digital Volume 2R
  */
+#define ARIZONA_IN2R_SRC_MASK                    0x4000  /* IN2R_SRC - [14] */
+#define ARIZONA_IN2R_SRC_SHIFT                       14  /* IN2R_SRC - [14] */
+#define ARIZONA_IN2R_SRC_WIDTH                        1  /* IN2R_SRC - [14] */
+#define ARIZONA_IN2R_SRC_SE_MASK                 0x2000  /* IN2R_SRC - [13] */
+#define ARIZONA_IN2R_SRC_SE_SHIFT                    13  /* IN2R_SRC - [13] */
+#define ARIZONA_IN2R_SRC_SE_WIDTH                     1  /* IN2R_SRC - [13] */
 #define ARIZONA_IN_VU                            0x0200  /* IN_VU */
 #define ARIZONA_IN_VU_MASK                       0x0200  /* IN_VU */
 #define ARIZONA_IN_VU_SHIFT                           9  /* IN_VU */
@@ -2778,6 +3968,9 @@
 #define ARIZONA_IN3_DMICL_DLY_MASK               0x003F  /* IN3_DMICL_DLY - [5:0] */
 #define ARIZONA_IN3_DMICL_DLY_SHIFT                   0  /* IN3_DMICL_DLY - [5:0] */
 #define ARIZONA_IN3_DMICL_DLY_WIDTH                   6  /* IN3_DMICL_DLY - [5:0] */
+#define WM8285_IN3_OSR_MASK                      0x0700  /* IN3_OSR - [8:10] */
+#define WM8285_IN3_OSR_SHIFT                          8  /* IN3_OSR - [8:10] */
+#define WM8285_IN3_OSR_WIDTH                          3  /* IN3_OSR - [8:10] */
 
 /*
  * R804 (0x324) - IN3R Control
@@ -2845,6 +4038,9 @@
 #define ARIZONA_IN4L_DMIC_DLY_MASK               0x003F  /* IN4L_DMIC_DLY - [5:0] */
 #define ARIZONA_IN4L_DMIC_DLY_SHIFT                   0  /* IN4L_DMIC_DLY - [5:0] */
 #define ARIZONA_IN4L_DMIC_DLY_WIDTH                   6  /* IN4L_DMIC_DLY - [5:0] */
+#define WM8285_IN4_OSR_MASK                      0x0700  /* IN4_OSR - [8:10] */
+#define WM8285_IN4_OSR_SHIFT                          8  /* IN4_OSR - [8:10] */
+#define WM8285_IN4_OSR_WIDTH                          3  /* IN4_OSR - [8:10] */
 
 /*
  * R812 (0x32C) - IN4R Control
@@ -2874,6 +4070,140 @@
 #define ARIZONA_IN4R_DMIC_DLY_MASK               0x003F  /* IN4R_DMIC_DLY - [5:0] */
 #define ARIZONA_IN4R_DMIC_DLY_SHIFT                   0  /* IN4R_DMIC_DLY - [5:0] */
 #define ARIZONA_IN4R_DMIC_DLY_WIDTH                   6  /* IN4R_DMIC_DLY - [5:0] */
+
+/*
+ * R816 (0x330) - IN5L Control
+ */
+#define ARIZONA_IN5L_HPF_MASK                    0x8000  /* IN5L_HPF - [15] */
+#define ARIZONA_IN5L_HPF_SHIFT                       15  /* IN5L_HPF - [15] */
+#define ARIZONA_IN5L_HPF_WIDTH                        1  /* IN5L_HPF - [15] */
+#define ARIZONA_IN5_OSR_MASK                     0x6000  /* IN5_OSR - [14:13] */
+#define ARIZONA_IN5_OSR_SHIFT                        13  /* IN5_OSR - [14:13] */
+#define ARIZONA_IN5_OSR_WIDTH                         2  /* IN5_OSR - [14:13] */
+#define ARIZONA_IN5_DMIC_SUP_MASK                0x1800  /* IN5_DMIC_SUP - [12:11] */
+#define ARIZONA_IN5_DMIC_SUP_SHIFT                   11  /* IN5_DMIC_SUP - [12:11] */
+#define ARIZONA_IN5_DMIC_SUP_WIDTH                    2  /* IN5_DMIC_SUP - [12:11] */
+
+/*
+ * R817 (0x331) - ADC Digital Volume 5L
+ */
+#define ARIZONA_IN_VU                            0x0200  /* IN_VU */
+#define ARIZONA_IN_VU_MASK                       0x0200  /* IN_VU */
+#define ARIZONA_IN_VU_SHIFT                           9  /* IN_VU */
+#define ARIZONA_IN_VU_WIDTH                           1  /* IN_VU */
+#define ARIZONA_IN5L_MUTE                        0x0100  /* IN5L_MUTE */
+#define ARIZONA_IN5L_MUTE_MASK                   0x0100  /* IN5L_MUTE */
+#define ARIZONA_IN5L_MUTE_SHIFT                       8  /* IN5L_MUTE */
+#define ARIZONA_IN5L_MUTE_WIDTH                       1  /* IN5L_MUTE */
+#define ARIZONA_IN5L_DIG_VOL_MASK                0x00FF  /* IN5L_DIG_VOL - [7:0] */
+#define ARIZONA_IN5L_DIG_VOL_SHIFT                    0  /* IN5L_DIG_VOL - [7:0] */
+#define ARIZONA_IN5L_DIG_VOL_WIDTH                    8  /* IN5L_DIG_VOL - [7:0] */
+
+/*
+ * R818 (0x332) - DMIC5L Control
+ */
+#define ARIZONA_IN5L_DMIC_DLY_MASK               0x003F  /* IN5L_DMIC_DLY - [5:0] */
+#define ARIZONA_IN5L_DMIC_DLY_SHIFT                   0  /* IN5L_DMIC_DLY - [5:0] */
+#define ARIZONA_IN5L_DMIC_DLY_WIDTH                   6  /* IN5L_DMIC_DLY - [5:0] */
+#define WM8285_IN5_OSR_MASK                      0x0700  /* IN5_OSR - [8:10] */
+#define WM8285_IN5_OSR_SHIFT                          8  /* IN5_OSR - [8:10] */
+#define WM8285_IN5_OSR_WIDTH                          3  /* IN5_OSR - [8:10] */
+
+/*
+ * R820 (0x334) - IN5R Control
+ */
+#define ARIZONA_IN5R_HPF_MASK                    0x8000  /* IN5R_HPF - [15] */
+#define ARIZONA_IN5R_HPF_SHIFT                       15  /* IN5R_HPF - [15] */
+#define ARIZONA_IN5R_HPF_WIDTH                        1  /* IN5R_HPF - [15] */
+
+/*
+ * R821 (0x335) - ADC Digital Volume 5R
+ */
+#define ARIZONA_IN_VU                            0x0200  /* IN_VU */
+#define ARIZONA_IN_VU_MASK                       0x0200  /* IN_VU */
+#define ARIZONA_IN_VU_SHIFT                           9  /* IN_VU */
+#define ARIZONA_IN_VU_WIDTH                           1  /* IN_VU */
+#define ARIZONA_IN5R_MUTE                        0x0100  /* IN5R_MUTE */
+#define ARIZONA_IN5R_MUTE_MASK                   0x0100  /* IN5R_MUTE */
+#define ARIZONA_IN5R_MUTE_SHIFT                       8  /* IN5R_MUTE */
+#define ARIZONA_IN5R_MUTE_WIDTH                       1  /* IN5R_MUTE */
+#define ARIZONA_IN5R_DIG_VOL_MASK                0x00FF  /* IN5R_DIG_VOL - [7:0] */
+#define ARIZONA_IN5R_DIG_VOL_SHIFT                    0  /* IN5R_DIG_VOL - [7:0] */
+#define ARIZONA_IN5R_DIG_VOL_WIDTH                    8  /* IN5R_DIG_VOL - [7:0] */
+
+/*
+ * R822 (0x336) - DMIC5R Control
+ */
+#define ARIZONA_IN5R_DMIC_DLY_MASK               0x003F  /* IN5R_DMIC_DLY - [5:0] */
+#define ARIZONA_IN5R_DMIC_DLY_SHIFT                   0  /* IN5R_DMIC_DLY - [5:0] */
+#define ARIZONA_IN5R_DMIC_DLY_WIDTH                   6  /* IN5R_DMIC_DLY - [5:0] */
+
+/*
+ * R824 (0x338) - IN6L Control
+ */
+#define ARIZONA_IN6L_HPF_MASK                    0x8000  /* IN6L_HPF - [15] */
+#define ARIZONA_IN6L_HPF_SHIFT                       15  /* IN6L_HPF - [15] */
+#define ARIZONA_IN6L_HPF_WIDTH                        1  /* IN6L_HPF - [15] */
+#define ARIZONA_IN6_OSR_MASK                     0x6000  /* IN6_OSR - [14:13] */
+#define ARIZONA_IN6_OSR_SHIFT                        13  /* IN6_OSR - [14:13] */
+#define ARIZONA_IN6_OSR_WIDTH                         2  /* IN6_OSR - [14:13] */
+#define ARIZONA_IN6_DMIC_SUP_MASK                0x1800  /* IN6_DMIC_SUP - [12:11] */
+#define ARIZONA_IN6_DMIC_SUP_SHIFT                   11  /* IN6_DMIC_SUP - [12:11] */
+#define ARIZONA_IN6_DMIC_SUP_WIDTH                    2  /* IN6_DMIC_SUP - [12:11] */
+
+/*
+ * R825 (0x339) - ADC Digital Volume 6L
+ */
+#define ARIZONA_IN_VU                            0x0200  /* IN_VU */
+#define ARIZONA_IN_VU_MASK                       0x0200  /* IN_VU */
+#define ARIZONA_IN_VU_SHIFT                           9  /* IN_VU */
+#define ARIZONA_IN_VU_WIDTH                           1  /* IN_VU */
+#define ARIZONA_IN6L_MUTE                        0x0100  /* IN6L_MUTE */
+#define ARIZONA_IN6L_MUTE_MASK                   0x0100  /* IN6L_MUTE */
+#define ARIZONA_IN6L_MUTE_SHIFT                       8  /* IN6L_MUTE */
+#define ARIZONA_IN6L_MUTE_WIDTH                       1  /* IN6L_MUTE */
+#define ARIZONA_IN6L_DIG_VOL_MASK                0x00FF  /* IN6L_DIG_VOL - [7:0] */
+#define ARIZONA_IN6L_DIG_VOL_SHIFT                    0  /* IN6L_DIG_VOL - [7:0] */
+#define ARIZONA_IN6L_DIG_VOL_WIDTH                    8  /* IN6L_DIG_VOL - [7:0] */
+
+/*
+ * R826 (0x33A) - DMIC6L Control
+ */
+#define ARIZONA_IN6L_DMIC_DLY_MASK               0x003F  /* IN6L_DMIC_DLY - [5:0] */
+#define ARIZONA_IN6L_DMIC_DLY_SHIFT                   0  /* IN6L_DMIC_DLY - [5:0] */
+#define ARIZONA_IN6L_DMIC_DLY_WIDTH                   6  /* IN6L_DMIC_DLY - [5:0] */
+#define WM8285_IN6_OSR_MASK                      0x0700  /* IN6_OSR - [8:10] */
+#define WM8285_IN6_OSR_SHIFT                          8  /* IN6_OSR - [8:10] */
+#define WM8285_IN6_OSR_WIDTH                          3  /* IN6_OSR - [8:10] */
+
+/*
+ * R828 (0x33C) - IN6R Control
+ */
+#define ARIZONA_IN6R_HPF_MASK                    0x8000  /* IN6R_HPF - [15] */
+#define ARIZONA_IN6R_HPF_SHIFT                       15  /* IN6R_HPF - [15] */
+#define ARIZONA_IN6R_HPF_WIDTH                        1  /* IN6R_HPF - [15] */
+
+/*
+ * R829 (0x33D) - ADC Digital Volume 6R
+ */
+#define ARIZONA_IN_VU                            0x0200  /* IN_VU */
+#define ARIZONA_IN_VU_MASK                       0x0200  /* IN_VU */
+#define ARIZONA_IN_VU_SHIFT                           9  /* IN_VU */
+#define ARIZONA_IN_VU_WIDTH                           1  /* IN_VU */
+#define ARIZONA_IN6R_MUTE                        0x0100  /* IN6R_MUTE */
+#define ARIZONA_IN6R_MUTE_MASK                   0x0100  /* IN6R_MUTE */
+#define ARIZONA_IN6R_MUTE_SHIFT                       8  /* IN6R_MUTE */
+#define ARIZONA_IN6R_MUTE_WIDTH                       1  /* IN6R_MUTE */
+#define ARIZONA_IN6R_DIG_VOL_MASK                0x00FF  /* IN6R_DIG_VOL - [7:0] */
+#define ARIZONA_IN6R_DIG_VOL_SHIFT                    0  /* IN6R_DIG_VOL - [7:0] */
+#define ARIZONA_IN6R_DIG_VOL_WIDTH                    8  /* IN6R_DIG_VOL - [7:0] */
+
+/*
+ * R830 (0x33E) - DMIC6R Control
+ */
+#define ARIZONA_IN6R_DMIC_DLY_MASK               0x003F  /* IN6R_DMIC_DLY - [5:0] */
+#define ARIZONA_IN6R_DMIC_DLY_SHIFT                   0  /* IN6R_DMIC_DLY - [5:0] */
+#define ARIZONA_IN6R_DMIC_DLY_WIDTH                   6  /* IN6R_DMIC_DLY - [5:0] */
 
 /*
  * R915 (0x393) -  ADC VCO Cal 4
@@ -4170,6 +5500,19 @@
 #define ARIZONA_AIF2TX6_SLOT_WIDTH                    6  /* AIF2TX6_SLOT - [5:0] */
 
 /*
+ * R1359 (0x54F) - AIF2 Frame Ctrl 9
+ */
+#define ARIZONA_AIF2TX7_SLOT_MASK                0x003F  /* AIF2TX7_SLOT - [5:0] */
+#define ARIZONA_AIF2TX7_SLOT_SHIFT                    0  /* AIF2TX7_SLOT - [5:0] */
+#define ARIZONA_AIF2TX7_SLOT_WIDTH                    6  /* AIF2TX7_SLOT - [5:0] */
+/*
+ * R1360 (0x550) - AIF2 Frame Ctrl 10
+ */
+#define ARIZONA_AIF2TX8_SLOT_MASK                0x003F  /* AIF2TX8_SLOT - [5:0] */
+#define ARIZONA_AIF2TX8_SLOT_SHIFT                    0  /* AIF2TX8_SLOT - [5:0] */
+#define ARIZONA_AIF2TX8_SLOT_WIDTH                    6  /* AIF2TX8_SLOT - [5:0] */
+
+/*
  * R1361 (0x551) - AIF2 Frame Ctrl 11
  */
 #define ARIZONA_AIF2RX1_SLOT_MASK                0x003F  /* AIF2RX1_SLOT - [5:0] */
@@ -4212,8 +5555,30 @@
 #define ARIZONA_AIF2RX6_SLOT_WIDTH                    6  /* AIF2RX6_SLOT - [5:0] */
 
 /*
+ * R1367 (0x557) - AIF2 Frame Ctrl 17
+ */
+#define ARIZONA_AIF2RX7_SLOT_MASK                0x003F  /* AIF2RX7_SLOT - [5:0] */
+#define ARIZONA_AIF2RX7_SLOT_SHIFT                    0  /* AIF2RX7_SLOT - [5:0] */
+#define ARIZONA_AIF2RX7_SLOT_WIDTH                    6  /* AIF2RX7_SLOT - [5:0] */
+
+/*
+ * R1368 (0x558) - AIF2 Frame Ctrl 18
+ */
+#define ARIZONA_AIF2RX8_SLOT_MASK                0x003F  /* AIF2RX8_SLOT - [5:0] */
+#define ARIZONA_AIF2RX8_SLOT_SHIFT                    0  /* AIF2RX8_SLOT - [5:0] */
+#define ARIZONA_AIF2RX8_SLOT_WIDTH                    6  /* AIF2RX8_SLOT - [5:0] */
+
+/*
  * R1369 (0x559) - AIF2 Tx Enables
  */
+#define ARIZONA_AIF2TX8_ENA                      0x0080  /* AIF2TX8_ENA */
+#define ARIZONA_AIF2TX8_ENA_MASK                 0x0080  /* AIF2TX8_ENA */
+#define ARIZONA_AIF2TX8_ENA_SHIFT                     7  /* AIF2TX8_ENA */
+#define ARIZONA_AIF2TX8_ENA_WIDTH                     1  /* AIF2TX8_ENA */
+#define ARIZONA_AIF2TX7_ENA                      0x0040  /* AIF2TX7_ENA */
+#define ARIZONA_AIF2TX7_ENA_MASK                 0x0040  /* AIF2TX7_ENA */
+#define ARIZONA_AIF2TX7_ENA_SHIFT                     6  /* AIF2TX7_ENA */
+#define ARIZONA_AIF2TX7_ENA_WIDTH                     1  /* AIF2TX7_ENA */
 #define ARIZONA_AIF2TX6_ENA                      0x0020  /* AIF2TX6_ENA */
 #define ARIZONA_AIF2TX6_ENA_MASK                 0x0020  /* AIF2TX6_ENA */
 #define ARIZONA_AIF2TX6_ENA_SHIFT                     5  /* AIF2TX6_ENA */
@@ -4242,6 +5607,14 @@
 /*
  * R1370 (0x55A) - AIF2 Rx Enables
  */
+#define ARIZONA_AIF2RX8_ENA                      0x0080  /* AIF2RX8_ENA */
+#define ARIZONA_AIF2RX8_ENA_MASK                 0x0080  /* AIF2RX8_ENA */
+#define ARIZONA_AIF2RX8_ENA_SHIFT                     7  /* AIF2RX8_ENA */
+#define ARIZONA_AIF2RX8_ENA_WIDTH                     1  /* AIF2RX8_ENA */
+#define ARIZONA_AIF2RX7_ENA                      0x0040  /* AIF2RX7_ENA */
+#define ARIZONA_AIF2RX7_ENA_MASK                 0x0040  /* AIF2RX7_ENA */
+#define ARIZONA_AIF2RX7_ENA_SHIFT                     6  /* AIF2RX7_ENA */
+#define ARIZONA_AIF2RX7_ENA_WIDTH                     1  /* AIF2RX7_ENA */
 #define ARIZONA_AIF2RX6_ENA                      0x0020  /* AIF2RX6_ENA */
 #define ARIZONA_AIF2RX6_ENA_MASK                 0x0020  /* AIF2RX6_ENA */
 #define ARIZONA_AIF2RX6_ENA_SHIFT                     5  /* AIF2RX6_ENA */
@@ -4445,6 +5818,177 @@
 #define ARIZONA_AIF3_FRC_WR_MASK                 0x0001  /* AIF3_FRC_WR */
 #define ARIZONA_AIF3_FRC_WR_SHIFT                     0  /* AIF3_FRC_WR */
 #define ARIZONA_AIF3_FRC_WR_WIDTH                     1  /* AIF3_FRC_WR */
+
+/*
+ * R1440 (0x5A0) - AIF4 BCLK Ctrl
+ */
+#define ARIZONA_AIF4_BCLK_INV                    0x0080  /* AIF4_BCLK_INV */
+#define ARIZONA_AIF4_BCLK_INV_MASK               0x0080  /* AIF4_BCLK_INV */
+#define ARIZONA_AIF4_BCLK_INV_SHIFT                   7  /* AIF4_BCLK_INV */
+#define ARIZONA_AIF4_BCLK_INV_WIDTH                   1  /* AIF4_BCLK_INV */
+#define ARIZONA_AIF4_BCLK_FRC                    0x0040  /* AIF4_BCLK_FRC */
+#define ARIZONA_AIF4_BCLK_FRC_MASK               0x0040  /* AIF4_BCLK_FRC */
+#define ARIZONA_AIF4_BCLK_FRC_SHIFT                   6  /* AIF4_BCLK_FRC */
+#define ARIZONA_AIF4_BCLK_FRC_WIDTH                   1  /* AIF4_BCLK_FRC */
+#define ARIZONA_AIF4_BCLK_MSTR                   0x0020  /* AIF4_BCLK_MSTR */
+#define ARIZONA_AIF4_BCLK_MSTR_MASK              0x0020  /* AIF4_BCLK_MSTR */
+#define ARIZONA_AIF4_BCLK_MSTR_SHIFT                  5  /* AIF4_BCLK_MSTR */
+#define ARIZONA_AIF4_BCLK_MSTR_WIDTH                  1  /* AIF4_BCLK_MSTR */
+#define ARIZONA_AIF4_BCLK_FREQ_MASK              0x001F  /* AIF4_BCLK_FREQ - [4:0] */
+#define ARIZONA_AIF4_BCLK_FREQ_SHIFT                  0  /* AIF4_BCLK_FREQ - [4:0] */
+#define ARIZONA_AIF4_BCLK_FREQ_WIDTH                  5  /* AIF4_BCLK_FREQ - [4:0] */
+
+/*
+ * R1441 (0x5A1) - AIF4 Tx Pin Ctrl
+ */
+#define ARIZONA_AIF4TX_DAT_TRI                   0x0020  /* AIF4TX_DAT_TRI */
+#define ARIZONA_AIF4TX_DAT_TRI_MASK              0x0020  /* AIF4TX_DAT_TRI */
+#define ARIZONA_AIF4TX_DAT_TRI_SHIFT                  5  /* AIF4TX_DAT_TRI */
+#define ARIZONA_AIF4TX_DAT_TRI_WIDTH                  1  /* AIF4TX_DAT_TRI */
+#define ARIZONA_AIF4TX_LRCLK_SRC                 0x0008  /* AIF4TX_LRCLK_SRC */
+#define ARIZONA_AIF4TX_LRCLK_SRC_MASK            0x0008  /* AIF4TX_LRCLK_SRC */
+#define ARIZONA_AIF4TX_LRCLK_SRC_SHIFT                3  /* AIF4TX_LRCLK_SRC */
+#define ARIZONA_AIF4TX_LRCLK_SRC_WIDTH                1  /* AIF4TX_LRCLK_SRC */
+#define ARIZONA_AIF4TX_LRCLK_INV                 0x0004  /* AIF4TX_LRCLK_INV */
+#define ARIZONA_AIF4TX_LRCLK_INV_MASK            0x0004  /* AIF4TX_LRCLK_INV */
+#define ARIZONA_AIF4TX_LRCLK_INV_SHIFT                2  /* AIF4TX_LRCLK_INV */
+#define ARIZONA_AIF4TX_LRCLK_INV_WIDTH                1  /* AIF4TX_LRCLK_INV */
+#define ARIZONA_AIF4TX_LRCLK_FRC                 0x0002  /* AIF4TX_LRCLK_FRC */
+#define ARIZONA_AIF4TX_LRCLK_FRC_MASK            0x0002  /* AIF4TX_LRCLK_FRC */
+#define ARIZONA_AIF4TX_LRCLK_FRC_SHIFT                1  /* AIF4TX_LRCLK_FRC */
+#define ARIZONA_AIF4TX_LRCLK_FRC_WIDTH                1  /* AIF4TX_LRCLK_FRC */
+#define ARIZONA_AIF4TX_LRCLK_MSTR                0x0001  /* AIF4TX_LRCLK_MSTR */
+#define ARIZONA_AIF4TX_LRCLK_MSTR_MASK           0x0001  /* AIF4TX_LRCLK_MSTR */
+#define ARIZONA_AIF4TX_LRCLK_MSTR_SHIFT               0  /* AIF4TX_LRCLK_MSTR */
+#define ARIZONA_AIF4TX_LRCLK_MSTR_WIDTH               1  /* AIF4TX_LRCLK_MSTR */
+
+/*
+ * R1442 (0x5A2) - AIF4 Rx Pin Ctrl
+ */
+#define ARIZONA_AIF4RX_LRCLK_INV                 0x0004  /* AIF4RX_LRCLK_INV */
+#define ARIZONA_AIF4RX_LRCLK_INV_MASK            0x0004  /* AIF4RX_LRCLK_INV */
+#define ARIZONA_AIF4RX_LRCLK_INV_SHIFT                2  /* AIF4RX_LRCLK_INV */
+#define ARIZONA_AIF4RX_LRCLK_INV_WIDTH                1  /* AIF4RX_LRCLK_INV */
+#define ARIZONA_AIF4RX_LRCLK_FRC                 0x0002  /* AIF4RX_LRCLK_FRC */
+#define ARIZONA_AIF4RX_LRCLK_FRC_MASK            0x0002  /* AIF4RX_LRCLK_FRC */
+#define ARIZONA_AIF4RX_LRCLK_FRC_SHIFT                1  /* AIF4RX_LRCLK_FRC */
+#define ARIZONA_AIF4RX_LRCLK_FRC_WIDTH                1  /* AIF4RX_LRCLK_FRC */
+#define ARIZONA_AIF4RX_LRCLK_MSTR                0x0001  /* AIF4RX_LRCLK_MSTR */
+#define ARIZONA_AIF4RX_LRCLK_MSTR_MASK           0x0001  /* AIF4RX_LRCLK_MSTR */
+#define ARIZONA_AIF4RX_LRCLK_MSTR_SHIFT               0  /* AIF4RX_LRCLK_MSTR */
+#define ARIZONA_AIF4RX_LRCLK_MSTR_WIDTH               1  /* AIF4RX_LRCLK_MSTR */
+
+/*
+ * R1443 (0x5A3) - AIF4 Rate Ctrl
+ */
+#define ARIZONA_AIF4_RATE_MASK                   0x7800  /* AIF4_RATE - [14:11] */
+#define ARIZONA_AIF4_RATE_SHIFT                      11  /* AIF4_RATE - [14:11] */
+#define ARIZONA_AIF4_RATE_WIDTH                       4  /* AIF4_RATE - [14:11] */
+#define ARIZONA_AIF4_TRI                         0x0040  /* AIF4_TRI */
+#define ARIZONA_AIF4_TRI_MASK                    0x0040  /* AIF4_TRI */
+#define ARIZONA_AIF4_TRI_SHIFT                        6  /* AIF4_TRI */
+#define ARIZONA_AIF4_TRI_WIDTH                        1  /* AIF4_TRI */
+
+/*
+ * R1444 (0x5A4) - AIF4 Format
+ */
+#define ARIZONA_AIF4_FMT_MASK                    0x0007  /* AIF4_FMT - [2:0] */
+#define ARIZONA_AIF4_FMT_SHIFT                        0  /* AIF4_FMT - [2:0] */
+#define ARIZONA_AIF4_FMT_WIDTH                        3  /* AIF4_FMT - [2:0] */
+
+/*
+ * R1445 (0x5A5) - AIF4 Tx BCLK Rate
+ */
+#define ARIZONA_AIF4TX_BCPF_MASK                 0x1FFF  /* AIF4TX_BCPF - [12:0] */
+#define ARIZONA_AIF4TX_BCPF_SHIFT                     0  /* AIF4TX_BCPF - [12:0] */
+#define ARIZONA_AIF4TX_BCPF_WIDTH                    13  /* AIF4TX_BCPF - [12:0] */
+
+/*
+ * R1446 (0x5A6) - AIF4 Rx BCLK Rate
+ */
+#define ARIZONA_AIF4RX_BCPF_MASK                 0x1FFF  /* AIF4RX_BCPF - [12:0] */
+#define ARIZONA_AIF4RX_BCPF_SHIFT                     0  /* AIF4RX_BCPF - [12:0] */
+#define ARIZONA_AIF4RX_BCPF_WIDTH                    13  /* AIF4RX_BCPF - [12:0] */
+
+/*
+ * R1447 (0x5A7) - AIF4 Frame Ctrl 1
+ */
+#define ARIZONA_AIF4TX_WL_MASK                   0x3F00  /* AIF4TX_WL - [13:8] */
+#define ARIZONA_AIF4TX_WL_SHIFT                       8  /* AIF4TX_WL - [13:8] */
+#define ARIZONA_AIF4TX_WL_WIDTH                       6  /* AIF4TX_WL - [13:8] */
+#define ARIZONA_AIF4TX_SLOT_LEN_MASK             0x00FF  /* AIF4TX_SLOT_LEN - [7:0] */
+#define ARIZONA_AIF4TX_SLOT_LEN_SHIFT                 0  /* AIF4TX_SLOT_LEN - [7:0] */
+#define ARIZONA_AIF4TX_SLOT_LEN_WIDTH                 8  /* AIF4TX_SLOT_LEN - [7:0] */
+
+/*
+ * R1448 (0x5A8) - AIF4 Frame Ctrl 2
+ */
+#define ARIZONA_AIF4RX_WL_MASK                   0x3F00  /* AIF4RX_WL - [13:8] */
+#define ARIZONA_AIF4RX_WL_SHIFT                       8  /* AIF4RX_WL - [13:8] */
+#define ARIZONA_AIF4RX_WL_WIDTH                       6  /* AIF4RX_WL - [13:8] */
+#define ARIZONA_AIF4RX_SLOT_LEN_MASK             0x00FF  /* AIF4RX_SLOT_LEN - [7:0] */
+#define ARIZONA_AIF4RX_SLOT_LEN_SHIFT                 0  /* AIF4RX_SLOT_LEN - [7:0] */
+#define ARIZONA_AIF4RX_SLOT_LEN_WIDTH                 8  /* AIF4RX_SLOT_LEN - [7:0] */
+
+/*
+ * R1449 (0x5A9) - AIF4 Frame Ctrl 3
+ */
+#define ARIZONA_AIF4TX1_SLOT_MASK                0x003F  /* AIF4TX1_SLOT - [5:0] */
+#define ARIZONA_AIF4TX1_SLOT_SHIFT                    0  /* AIF4TX1_SLOT - [5:0] */
+#define ARIZONA_AIF4TX1_SLOT_WIDTH                    6  /* AIF4TX1_SLOT - [5:0] */
+
+/*
+ * R1450 (0x5AA) - AIF4 Frame Ctrl 4
+ */
+#define ARIZONA_AIF4TX2_SLOT_MASK                0x003F  /* AIF4TX2_SLOT - [5:0] */
+#define ARIZONA_AIF4TX2_SLOT_SHIFT                    0  /* AIF4TX2_SLOT - [5:0] */
+#define ARIZONA_AIF4TX2_SLOT_WIDTH                    6  /* AIF4TX2_SLOT - [5:0] */
+
+/*
+ * R1457 (0x5B1) - AIF4 Frame Ctrl 11
+ */
+#define ARIZONA_AIF4RX1_SLOT_MASK                0x003F  /* AIF4RX1_SLOT - [5:0] */
+#define ARIZONA_AIF4RX1_SLOT_SHIFT                    0  /* AIF4RX1_SLOT - [5:0] */
+#define ARIZONA_AIF4RX1_SLOT_WIDTH                    6  /* AIF4RX1_SLOT - [5:0] */
+
+/*
+ * R1458 (0x5B2) - AIF4 Frame Ctrl 12
+ */
+#define ARIZONA_AIF4RX2_SLOT_MASK                0x003F  /* AIF4RX2_SLOT - [5:0] */
+#define ARIZONA_AIF4RX2_SLOT_SHIFT                    0  /* AIF4RX2_SLOT - [5:0] */
+#define ARIZONA_AIF4RX2_SLOT_WIDTH                    6  /* AIF4RX2_SLOT - [5:0] */
+
+/*
+ * R1465 (0x5B9) - AIF4 Tx Enables
+ */
+#define ARIZONA_AIF4TX2_ENA                      0x0002  /* AIF4TX2_ENA */
+#define ARIZONA_AIF4TX2_ENA_MASK                 0x0002  /* AIF4TX2_ENA */
+#define ARIZONA_AIF4TX2_ENA_SHIFT                     1  /* AIF4TX2_ENA */
+#define ARIZONA_AIF4TX2_ENA_WIDTH                     1  /* AIF4TX2_ENA */
+#define ARIZONA_AIF4TX1_ENA                      0x0001  /* AIF4TX1_ENA */
+#define ARIZONA_AIF4TX1_ENA_MASK                 0x0001  /* AIF4TX1_ENA */
+#define ARIZONA_AIF4TX1_ENA_SHIFT                     0  /* AIF4TX1_ENA */
+#define ARIZONA_AIF4TX1_ENA_WIDTH                     1  /* AIF4TX1_ENA */
+
+/*
+ * R1466 (0x5BA) - AIF4 Rx Enables
+ */
+#define ARIZONA_AIF4RX2_ENA                      0x0002  /* AIF4RX2_ENA */
+#define ARIZONA_AIF4RX2_ENA_MASK                 0x0002  /* AIF4RX2_ENA */
+#define ARIZONA_AIF4RX2_ENA_SHIFT                     1  /* AIF4RX2_ENA */
+#define ARIZONA_AIF4RX2_ENA_WIDTH                     1  /* AIF4RX2_ENA */
+#define ARIZONA_AIF4RX1_ENA                      0x0001  /* AIF4RX1_ENA */
+#define ARIZONA_AIF4RX1_ENA_MASK                 0x0001  /* AIF4RX1_ENA */
+#define ARIZONA_AIF4RX1_ENA_SHIFT                     0  /* AIF4RX1_ENA */
+#define ARIZONA_AIF4RX1_ENA_WIDTH                     1  /* AIF4RX1_ENA */
+
+/*
+ * R1467 (0x5BB) - AIF4 Force Write
+ */
+#define ARIZONA_AIF4_FRC_WR                      0x0001  /* AIF4_FRC_WR */
+#define ARIZONA_AIF4_FRC_WR_MASK                 0x0001  /* AIF4_FRC_WR */
+#define ARIZONA_AIF4_FRC_WR_SHIFT                     0  /* AIF4_FRC_WR */
+#define ARIZONA_AIF4_FRC_WR_WIDTH                     1  /* AIF4_FRC_WR */
 
 /*
  * R1474 (0x5C2) - SPD1 TX Control
@@ -8016,6 +9560,63 @@
 #define ARIZONA_ISRC3_NOTCH_ENA_WIDTH                 1  /* ISRC3_NOTCH_ENA */
 
 /*
+ * R3833 (0xEF9) - ISRC 4 CTRL 1
+ */
+#define ARIZONA_ISRC4_FSH_MASK                   0x7800  /* ISRC4_FSH - [14:11] */
+#define ARIZONA_ISRC4_FSH_SHIFT                      11  /* ISRC4_FSH - [14:11] */
+#define ARIZONA_ISRC4_FSH_WIDTH                       4  /* ISRC4_FSH - [14:11] */
+#define ARIZONA_ISRC4_CLK_SEL_MASK               0x0700  /* ISRC4_CLK_SEL - [10:8] */
+#define ARIZONA_ISRC4_CLK_SEL_SHIFT                   8  /* ISRC4_CLK_SEL - [10:8] */
+#define ARIZONA_ISRC4_CLK_SEL_WIDTH                   3  /* ISRC4_CLK_SEL - [10:8] */
+
+/*
+ * R3834 (0xEFA) - ISRC 4 CTRL 2
+ */
+#define ARIZONA_ISRC4_FSL_MASK                   0x7800  /* ISRC4_FSL - [14:11] */
+#define ARIZONA_ISRC4_FSL_SHIFT                      11  /* ISRC4_FSL - [14:11] */
+#define ARIZONA_ISRC4_FSL_WIDTH                       4  /* ISRC4_FSL - [14:11] */
+
+/*
+ * R3835 (0xEFB) - ISRC 4 CTRL 3
+ */
+#define ARIZONA_ISRC4_INT0_ENA                   0x8000  /* ISRC4_INT0_ENA */
+#define ARIZONA_ISRC4_INT0_ENA_MASK              0x8000  /* ISRC4_INT0_ENA */
+#define ARIZONA_ISRC4_INT0_ENA_SHIFT                 15  /* ISRC4_INT0_ENA */
+#define ARIZONA_ISRC4_INT0_ENA_WIDTH                  1  /* ISRC4_INT0_ENA */
+#define ARIZONA_ISRC4_INT1_ENA                   0x4000  /* ISRC4_INT1_ENA */
+#define ARIZONA_ISRC4_INT1_ENA_MASK              0x4000  /* ISRC4_INT1_ENA */
+#define ARIZONA_ISRC4_INT1_ENA_SHIFT                 14  /* ISRC4_INT1_ENA */
+#define ARIZONA_ISRC4_INT1_ENA_WIDTH                  1  /* ISRC4_INT1_ENA */
+#define ARIZONA_ISRC4_INT2_ENA                   0x2000  /* ISRC4_INT2_ENA */
+#define ARIZONA_ISRC4_INT2_ENA_MASK              0x2000  /* ISRC4_INT2_ENA */
+#define ARIZONA_ISRC4_INT2_ENA_SHIFT                 13  /* ISRC4_INT2_ENA */
+#define ARIZONA_ISRC4_INT2_ENA_WIDTH                  1  /* ISRC4_INT2_ENA */
+#define ARIZONA_ISRC4_INT3_ENA                   0x1000  /* ISRC4_INT3_ENA */
+#define ARIZONA_ISRC4_INT3_ENA_MASK              0x1000  /* ISRC4_INT3_ENA */
+#define ARIZONA_ISRC4_INT3_ENA_SHIFT                 12  /* ISRC4_INT3_ENA */
+#define ARIZONA_ISRC4_INT3_ENA_WIDTH                  1  /* ISRC4_INT3_ENA */
+#define ARIZONA_ISRC4_DEC0_ENA                   0x0200  /* ISRC4_DEC0_ENA */
+#define ARIZONA_ISRC4_DEC0_ENA_MASK              0x0200  /* ISRC4_DEC0_ENA */
+#define ARIZONA_ISRC4_DEC0_ENA_SHIFT                  9  /* ISRC4_DEC0_ENA */
+#define ARIZONA_ISRC4_DEC0_ENA_WIDTH                  1  /* ISRC4_DEC0_ENA */
+#define ARIZONA_ISRC4_DEC1_ENA                   0x0100  /* ISRC4_DEC1_ENA */
+#define ARIZONA_ISRC4_DEC1_ENA_MASK              0x0100  /* ISRC4_DEC1_ENA */
+#define ARIZONA_ISRC4_DEC1_ENA_SHIFT                  8  /* ISRC4_DEC1_ENA */
+#define ARIZONA_ISRC4_DEC1_ENA_WIDTH                  1  /* ISRC4_DEC1_ENA */
+#define ARIZONA_ISRC4_DEC2_ENA                   0x0080  /* ISRC4_DEC2_ENA */
+#define ARIZONA_ISRC4_DEC2_ENA_MASK              0x0080  /* ISRC4_DEC2_ENA */
+#define ARIZONA_ISRC4_DEC2_ENA_SHIFT                  7  /* ISRC4_DEC2_ENA */
+#define ARIZONA_ISRC4_DEC2_ENA_WIDTH                  1  /* ISRC4_DEC2_ENA */
+#define ARIZONA_ISRC4_DEC3_ENA                   0x0040  /* ISRC4_DEC3_ENA */
+#define ARIZONA_ISRC4_DEC3_ENA_MASK              0x0040  /* ISRC4_DEC3_ENA */
+#define ARIZONA_ISRC4_DEC3_ENA_SHIFT                  6  /* ISRC4_DEC3_ENA */
+#define ARIZONA_ISRC4_DEC3_ENA_WIDTH                  1  /* ISRC4_DEC3_ENA */
+#define ARIZONA_ISRC4_NOTCH_ENA                  0x0001  /* ISRC4_NOTCH_ENA */
+#define ARIZONA_ISRC4_NOTCH_ENA_MASK             0x0001  /* ISRC4_NOTCH_ENA */
+#define ARIZONA_ISRC4_NOTCH_ENA_SHIFT                 0  /* ISRC4_NOTCH_ENA */
+#define ARIZONA_ISRC4_NOTCH_ENA_WIDTH                 1  /* ISRC4_NOTCH_ENA */
+
+/*
  * R3840 (0xF00) - Clock Control
  */
 #define ARIZONA_CLK_R_ENA_CLR                    0x0020  /* CLK_R_ENA_CLR */
@@ -8111,5 +9712,1842 @@
 #define ARIZONA_DSP1_WDMA_ACTIVE_CHANNELS_MASK   0x00FF  /* DSP1_WDMA_ACTIVE_CHANNELS - [7:0] */
 #define ARIZONA_DSP1_WDMA_ACTIVE_CHANNELS_SHIFT       0  /* DSP1_WDMA_ACTIVE_CHANNELS - [7:0] */
 #define ARIZONA_DSP1_WDMA_ACTIVE_CHANNELS_WIDTH       8  /* DSP1_WDMA_ACTIVE_CHANNELS - [7:0] */
+
+/*
+ * R6144 (0x1800) - IRQ1 Status 1
+ */
+#define WM8285_DSP_SHARED_WR_COLL_EINT1            0x8000  /* DSP_SHARED_WR_COLL_EINT1 */
+#define WM8285_DSP_SHARED_WR_COLL_EINT1_MASK       0x8000  /* DSP_SHARED_WR_COLL_EINT1 */
+#define WM8285_DSP_SHARED_WR_COLL_EINT1_SHIFT          15  /* DSP_SHARED_WR_COLL_EINT1 */
+#define WM8285_DSP_SHARED_WR_COLL_EINT1_WIDTH           1  /* DSP_SHARED_WR_COLL_EINT1 */
+#define WM8285_CTRLIF_ERR_EINT1                    0x1000  /* CTRLIF_ERR_EINT1 */
+#define WM8285_CTRLIF_ERR_EINT1_MASK               0x1000  /* CTRLIF_ERR_EINT1 */
+#define WM8285_CTRLIF_ERR_EINT1_SHIFT                  12  /* CTRLIF_ERR_EINT1 */
+#define WM8285_CTRLIF_ERR_EINT1_WIDTH                   1  /* CTRLIF_ERR_EINT1 */
+#define WM8285_IRQ_NO_CLOCK_EINT1                  0x0200  /* IRQ_NO_CLOCK_EINT1 */
+#define WM8285_IRQ_NO_CLOCK_EINT1_MASK             0x0200  /* IRQ_NO_CLOCK_EINT1 */
+#define WM8285_IRQ_NO_CLOCK_EINT1_SHIFT                 9  /* IRQ_NO_CLOCK_EINT1 */
+#define WM8285_IRQ_NO_CLOCK_EINT1_WIDTH                 1  /* IRQ_NO_CLOCK_EINT1 */
+#define WM8285_CLOCK_DETECT_EINT1                  0x0100  /* CLOCK_DETECT_EINT1 */
+#define WM8285_CLOCK_DETECT_EINT1_MASK             0x0100  /* CLOCK_DETECT_EINT1 */
+#define WM8285_CLOCK_DETECT_EINT1_SHIFT                 8  /* CLOCK_DETECT_EINT1 */
+#define WM8285_CLOCK_DETECT_EINT1_WIDTH                 1  /* CLOCK_DETECT_EINT1 */
+#define WM8285_BOOT_DONE_EINT1                     0x0080  /* BOOT_DONE_EINT1 */
+#define WM8285_BOOT_DONE_EINT1_MASK                0x0080  /* BOOT_DONE_EINT1 */
+#define WM8285_BOOT_DONE_EINT1_SHIFT                    7  /* BOOT_DONE_EINT1 */
+#define WM8285_BOOT_DONE_EINT1_WIDTH                    1  /* BOOT_DONE_EINT1 */
+
+/*
+ * R6145 (0x1801) - IRQ1 Status 2
+ */
+#define WM8285_FLL3_LOCK_EINT1                     0x0400  /* FLL3_LOCK_EINT1 */
+#define WM8285_FLL3_LOCK_EINT1_MASK                0x0400  /* FLL3_LOCK_EINT1 */
+#define WM8285_FLL3_LOCK_EINT1_SHIFT                   10  /* FLL3_LOCK_EINT1 */
+#define WM8285_FLL3_LOCK_EINT1_WIDTH                    1  /* FLL3_LOCK_EINT1 */
+#define WM8285_FLL2_LOCK_EINT1                     0x0200  /* FLL2_LOCK_EINT1 */
+#define WM8285_FLL2_LOCK_EINT1_MASK                0x0200  /* FLL2_LOCK_EINT1 */
+#define WM8285_FLL2_LOCK_EINT1_SHIFT                    9  /* FLL2_LOCK_EINT1 */
+#define WM8285_FLL2_LOCK_EINT1_WIDTH                    1  /* FLL2_LOCK_EINT1 */
+#define WM8285_FLL1_LOCK_EINT1                     0x0100  /* FLL1_LOCK_EINT1 */
+#define WM8285_FLL1_LOCK_EINT1_MASK                0x0100  /* FLL1_LOCK_EINT1 */
+#define WM8285_FLL1_LOCK_EINT1_SHIFT                    8  /* FLL1_LOCK_EINT1 */
+#define WM8285_FLL1_LOCK_EINT1_WIDTH                    1  /* FLL1_LOCK_EINT1 */
+
+/*
+ * R6149 (0x1805) - IRQ1 Status 6
+ */
+#define WM8285_MICDET_EINT1                        0x0100  /* MICDET_EINT1 */
+#define WM8285_MICDET_EINT1_MASK                   0x0100  /* MICDET_EINT1 */
+#define WM8285_MICDET_EINT1_SHIFT                       8  /* MICDET_EINT1 */
+#define WM8285_MICDET_EINT1_WIDTH                       1  /* MICDET_EINT1 */
+#define WM8285_HPDET_EINT1                         0x0001  /* HPDET_EINT1 */
+#define WM8285_HPDET_EINT1_MASK                    0x0001  /* HPDET_EINT1 */
+#define WM8285_HPDET_EINT1_SHIFT                        0  /* HPDET_EINT1 */
+#define WM8285_HPDET_EINT1_WIDTH                        1  /* HPDET_EINT1 */
+
+/*
+ * R6150 (0x1806) - IRQ1 Status 7
+ */
+#define WM8285_MICD_CLAMP_FALL_EINT1               0x0020  /* MICD_CLAMP_FALL_EINT1 */
+#define WM8285_MICD_CLAMP_FALL_EINT1_MASK          0x0020  /* MICD_CLAMP_FALL_EINT1 */
+#define WM8285_MICD_CLAMP_FALL_EINT1_SHIFT              5  /* MICD_CLAMP_FALL_EINT1 */
+#define WM8285_MICD_CLAMP_FALL_EINT1_WIDTH              1  /* MICD_CLAMP_FALL_EINT1 */
+#define WM8285_MICD_CLAMP_RISE_EINT1               0x0010  /* MICD_CLAMP_RISE_EINT1 */
+#define WM8285_MICD_CLAMP_RISE_EINT1_MASK          0x0010  /* MICD_CLAMP_RISE_EINT1 */
+#define WM8285_MICD_CLAMP_RISE_EINT1_SHIFT              4  /* MICD_CLAMP_RISE_EINT1 */
+#define WM8285_MICD_CLAMP_RISE_EINT1_WIDTH              1  /* MICD_CLAMP_RISE_EINT1 */
+#define WM8285_JD2_FALL_EINT1                      0x0008  /* JD2_FALL_EINT1 */
+#define WM8285_JD2_FALL_EINT1_MASK                 0x0008  /* JD2_FALL_EINT1 */
+#define WM8285_JD2_FALL_EINT1_SHIFT                     3  /* JD2_FALL_EINT1 */
+#define WM8285_JD2_FALL_EINT1_WIDTH                     1  /* JD2_FALL_EINT1 */
+#define WM8285_JD2_RISE_EINT1                      0x0004  /* JD2_RISE_EINT1 */
+#define WM8285_JD2_RISE_EINT1_MASK                 0x0004  /* JD2_RISE_EINT1 */
+#define WM8285_JD2_RISE_EINT1_SHIFT                     2  /* JD2_RISE_EINT1 */
+#define WM8285_JD2_RISE_EINT1_WIDTH                     1  /* JD2_RISE_EINT1 */
+#define WM8285_JD1_FALL_EINT1                      0x0002  /* JD1_FALL_EINT1 */
+#define WM8285_JD1_FALL_EINT1_MASK                 0x0002  /* JD1_FALL_EINT1 */
+#define WM8285_JD1_FALL_EINT1_SHIFT                     1  /* JD1_FALL_EINT1 */
+#define WM8285_JD1_FALL_EINT1_WIDTH                     1  /* JD1_FALL_EINT1 */
+#define WM8285_JD1_RISE_EINT1                      0x0001  /* JD1_RISE_EINT1 */
+#define WM8285_JD1_RISE_EINT1_MASK                 0x0001  /* JD1_RISE_EINT1 */
+#define WM8285_JD1_RISE_EINT1_SHIFT                     0  /* JD1_RISE_EINT1 */
+#define WM8285_JD1_RISE_EINT1_WIDTH                     1  /* JD1_RISE_EINT1 */
+
+/*
+ * R6152 (0x1808) - IRQ1 Status 9
+ */
+#define WM8285_ASRC2_IN2_LOCK_EINT1                0x0800  /* ASRC2_IN2_LOCK_EINT1 */
+#define WM8285_ASRC2_IN2_LOCK_EINT1_MASK           0x0800  /* ASRC2_IN2_LOCK_EINT1 */
+#define WM8285_ASRC2_IN2_LOCK_EINT1_SHIFT              11  /* ASRC2_IN2_LOCK_EINT1 */
+#define WM8285_ASRC2_IN2_LOCK_EINT1_WIDTH               1  /* ASRC2_IN2_LOCK_EINT1 */
+#define WM8285_ASRC2_IN1_LOCK_EINT1                0x0400  /* ASRC2_IN1_LOCK_EINT1 */
+#define WM8285_ASRC2_IN1_LOCK_EINT1_MASK           0x0400  /* ASRC2_IN1_LOCK_EINT1 */
+#define WM8285_ASRC2_IN1_LOCK_EINT1_SHIFT              10  /* ASRC2_IN1_LOCK_EINT1 */
+#define WM8285_ASRC2_IN1_LOCK_EINT1_WIDTH               1  /* ASRC2_IN1_LOCK_EINT1 */
+#define WM8285_ASRC1_IN2_LOCK_EINT1                0x0200  /* ASRC1_IN2_LOCK_EINT1 */
+#define WM8285_ASRC1_IN2_LOCK_EINT1_MASK           0x0200  /* ASRC1_IN2_LOCK_EINT1 */
+#define WM8285_ASRC1_IN2_LOCK_EINT1_SHIFT               9  /* ASRC1_IN2_LOCK_EINT1 */
+#define WM8285_ASRC1_IN2_LOCK_EINT1_WIDTH               1  /* ASRC1_IN2_LOCK_EINT1 */
+#define WM8285_ASRC1_IN1_LOCK_EINT1                0x0100  /* ASRC1_IN1_LOCK_EINT1 */
+#define WM8285_ASRC1_IN1_LOCK_EINT1_MASK           0x0100  /* ASRC1_IN1_LOCK_EINT1 */
+#define WM8285_ASRC1_IN1_LOCK_EINT1_SHIFT               8  /* ASRC1_IN1_LOCK_EINT1 */
+#define WM8285_ASRC1_IN1_LOCK_EINT1_WIDTH               1  /* ASRC1_IN1_LOCK_EINT1 */
+#define WM8285_DRC2_SIG_DET_EINT1                  0x0002  /* DRC2_SIG_DET_EINT1 */
+#define WM8285_DRC2_SIG_DET_EINT1_MASK             0x0002  /* DRC2_SIG_DET_EINT1 */
+#define WM8285_DRC2_SIG_DET_EINT1_SHIFT                 1  /* DRC2_SIG_DET_EINT1 */
+#define WM8285_DRC2_SIG_DET_EINT1_WIDTH                 1  /* DRC2_SIG_DET_EINT1 */
+#define WM8285_DRC1_SIG_DET_EINT1                  0x0001  /* DRC1_SIG_DET_EINT1 */
+#define WM8285_DRC1_SIG_DET_EINT1_MASK             0x0001  /* DRC1_SIG_DET_EINT1 */
+#define WM8285_DRC1_SIG_DET_EINT1_SHIFT                 0  /* DRC1_SIG_DET_EINT1 */
+#define WM8285_DRC1_SIG_DET_EINT1_WIDTH                 1  /* DRC1_SIG_DET_EINT1 */
+
+/*
+ * R6154 (0x180A) - IRQ1 Status 11
+ */
+#define WM8285_DSP_IRQ16_EINT1                     0x8000  /* DSP_IRQ16_EINT1 */
+#define WM8285_DSP_IRQ16_EINT1_MASK                0x8000  /* DSP_IRQ16_EINT1 */
+#define WM8285_DSP_IRQ16_EINT1_SHIFT                   15  /* DSP_IRQ16_EINT1 */
+#define WM8285_DSP_IRQ16_EINT1_WIDTH                    1  /* DSP_IRQ16_EINT1 */
+#define WM8285_DSP_IRQ15_EINT1                     0x4000  /* DSP_IRQ15_EINT1 */
+#define WM8285_DSP_IRQ15_EINT1_MASK                0x4000  /* DSP_IRQ15_EINT1 */
+#define WM8285_DSP_IRQ15_EINT1_SHIFT                   14  /* DSP_IRQ15_EINT1 */
+#define WM8285_DSP_IRQ15_EINT1_WIDTH                    1  /* DSP_IRQ15_EINT1 */
+#define WM8285_DSP_IRQ14_EINT1                     0x2000  /* DSP_IRQ14_EINT1 */
+#define WM8285_DSP_IRQ14_EINT1_MASK                0x2000  /* DSP_IRQ14_EINT1 */
+#define WM8285_DSP_IRQ14_EINT1_SHIFT                   13  /* DSP_IRQ14_EINT1 */
+#define WM8285_DSP_IRQ14_EINT1_WIDTH                    1  /* DSP_IRQ14_EINT1 */
+#define WM8285_DSP_IRQ13_EINT1                     0x1000  /* DSP_IRQ13_EINT1 */
+#define WM8285_DSP_IRQ13_EINT1_MASK                0x1000  /* DSP_IRQ13_EINT1 */
+#define WM8285_DSP_IRQ13_EINT1_SHIFT                   12  /* DSP_IRQ13_EINT1 */
+#define WM8285_DSP_IRQ13_EINT1_WIDTH                    1  /* DSP_IRQ13_EINT1 */
+#define WM8285_DSP_IRQ12_EINT1                     0x0800  /* DSP_IRQ12_EINT1 */
+#define WM8285_DSP_IRQ12_EINT1_MASK                0x0800  /* DSP_IRQ12_EINT1 */
+#define WM8285_DSP_IRQ12_EINT1_SHIFT                   11  /* DSP_IRQ12_EINT1 */
+#define WM8285_DSP_IRQ12_EINT1_WIDTH                    1  /* DSP_IRQ12_EINT1 */
+#define WM8285_DSP_IRQ11_EINT1                     0x0400  /* DSP_IRQ11_EINT1 */
+#define WM8285_DSP_IRQ11_EINT1_MASK                0x0400  /* DSP_IRQ11_EINT1 */
+#define WM8285_DSP_IRQ11_EINT1_SHIFT                   10  /* DSP_IRQ11_EINT1 */
+#define WM8285_DSP_IRQ11_EINT1_WIDTH                    1  /* DSP_IRQ11_EINT1 */
+#define WM8285_DSP_IRQ10_EINT1                     0x0200  /* DSP_IRQ10_EINT1 */
+#define WM8285_DSP_IRQ10_EINT1_MASK                0x0200  /* DSP_IRQ10_EINT1 */
+#define WM8285_DSP_IRQ10_EINT1_SHIFT                    9  /* DSP_IRQ10_EINT1 */
+#define WM8285_DSP_IRQ10_EINT1_WIDTH                    1  /* DSP_IRQ10_EINT1 */
+#define WM8285_DSP_IRQ9_EINT1                      0x0100  /* DSP_IRQ9_EINT1 */
+#define WM8285_DSP_IRQ9_EINT1_MASK                 0x0100  /* DSP_IRQ9_EINT1 */
+#define WM8285_DSP_IRQ9_EINT1_SHIFT                     8  /* DSP_IRQ9_EINT1 */
+#define WM8285_DSP_IRQ9_EINT1_WIDTH                     1  /* DSP_IRQ9_EINT1 */
+#define WM8285_DSP_IRQ8_EINT1                      0x0080  /* DSP_IRQ8_EINT1 */
+#define WM8285_DSP_IRQ8_EINT1_MASK                 0x0080  /* DSP_IRQ8_EINT1 */
+#define WM8285_DSP_IRQ8_EINT1_SHIFT                     7  /* DSP_IRQ8_EINT1 */
+#define WM8285_DSP_IRQ8_EINT1_WIDTH                     1  /* DSP_IRQ8_EINT1 */
+#define WM8285_DSP_IRQ7_EINT1                      0x0040  /* DSP_IRQ7_EINT1 */
+#define WM8285_DSP_IRQ7_EINT1_MASK                 0x0040  /* DSP_IRQ7_EINT1 */
+#define WM8285_DSP_IRQ7_EINT1_SHIFT                     6  /* DSP_IRQ7_EINT1 */
+#define WM8285_DSP_IRQ7_EINT1_WIDTH                     1  /* DSP_IRQ7_EINT1 */
+#define WM8285_DSP_IRQ6_EINT1                      0x0020  /* DSP_IRQ6_EINT1 */
+#define WM8285_DSP_IRQ6_EINT1_MASK                 0x0020  /* DSP_IRQ6_EINT1 */
+#define WM8285_DSP_IRQ6_EINT1_SHIFT                     5  /* DSP_IRQ6_EINT1 */
+#define WM8285_DSP_IRQ6_EINT1_WIDTH                     1  /* DSP_IRQ6_EINT1 */
+#define WM8285_DSP_IRQ5_EINT1                      0x0010  /* DSP_IRQ5_EINT1 */
+#define WM8285_DSP_IRQ5_EINT1_MASK                 0x0010  /* DSP_IRQ5_EINT1 */
+#define WM8285_DSP_IRQ5_EINT1_SHIFT                     4  /* DSP_IRQ5_EINT1 */
+#define WM8285_DSP_IRQ5_EINT1_WIDTH                     1  /* DSP_IRQ5_EINT1 */
+#define WM8285_DSP_IRQ4_EINT1                      0x0008  /* DSP_IRQ4_EINT1 */
+#define WM8285_DSP_IRQ4_EINT1_MASK                 0x0008  /* DSP_IRQ4_EINT1 */
+#define WM8285_DSP_IRQ4_EINT1_SHIFT                     3  /* DSP_IRQ4_EINT1 */
+#define WM8285_DSP_IRQ4_EINT1_WIDTH                     1  /* DSP_IRQ4_EINT1 */
+#define WM8285_DSP_IRQ3_EINT1                      0x0004  /* DSP_IRQ3_EINT1 */
+#define WM8285_DSP_IRQ3_EINT1_MASK                 0x0004  /* DSP_IRQ3_EINT1 */
+#define WM8285_DSP_IRQ3_EINT1_SHIFT                     2  /* DSP_IRQ3_EINT1 */
+#define WM8285_DSP_IRQ3_EINT1_WIDTH                     1  /* DSP_IRQ3_EINT1 */
+#define WM8285_DSP_IRQ2_EINT1                      0x0002  /* DSP_IRQ2_EINT1 */
+#define WM8285_DSP_IRQ2_EINT1_MASK                 0x0002  /* DSP_IRQ2_EINT1 */
+#define WM8285_DSP_IRQ2_EINT1_SHIFT                     1  /* DSP_IRQ2_EINT1 */
+#define WM8285_DSP_IRQ2_EINT1_WIDTH                     1  /* DSP_IRQ2_EINT1 */
+#define WM8285_DSP_IRQ1_EINT1                      0x0001  /* DSP_IRQ1_EINT1 */
+#define WM8285_DSP_IRQ1_EINT1_MASK                 0x0001  /* DSP_IRQ1_EINT1 */
+#define WM8285_DSP_IRQ1_EINT1_SHIFT                     0  /* DSP_IRQ1_EINT1 */
+#define WM8285_DSP_IRQ1_EINT1_WIDTH                     1  /* DSP_IRQ1_EINT1 */
+
+/*
+ * R6155 (0x180B) - IRQ1 Status 12
+ */
+#define WM8285_SPKOUTR_SC_EINT1                    0x0080  /* SPKOUTR_SC_EINT1 */
+#define WM8285_SPKOUTR_SC_EINT1_MASK               0x0080  /* SPKOUTR_SC_EINT1 */
+#define WM8285_SPKOUTR_SC_EINT1_SHIFT                   7  /* SPKOUTR_SC_EINT1 */
+#define WM8285_SPKOUTR_SC_EINT1_WIDTH                   1  /* SPKOUTR_SC_EINT1 */
+#define WM8285_SPKOUTL_SC_EINT1                    0x0040  /* SPKOUTL_SC_EINT1 */
+#define WM8285_SPKOUTL_SC_EINT1_MASK               0x0040  /* SPKOUTL_SC_EINT1 */
+#define WM8285_SPKOUTL_SC_EINT1_SHIFT                   6  /* SPKOUTL_SC_EINT1 */
+#define WM8285_SPKOUTL_SC_EINT1_WIDTH                   1  /* SPKOUTL_SC_EINT1 */
+#define WM8285_HP3R_SC_EINT1                       0x0020  /* HP3R_SC_EINT1 */
+#define WM8285_HP3R_SC_EINT1_MASK                  0x0020  /* HP3R_SC_EINT1 */
+#define WM8285_HP3R_SC_EINT1_SHIFT                      5  /* HP3R_SC_EINT1 */
+#define WM8285_HP3R_SC_EINT1_WIDTH                      1  /* HP3R_SC_EINT1 */
+#define WM8285_HP3L_SC_EINT1                       0x0010  /* HP3L_SC_EINT1 */
+#define WM8285_HP3L_SC_EINT1_MASK                  0x0010  /* HP3L_SC_EINT1 */
+#define WM8285_HP3L_SC_EINT1_SHIFT                      4  /* HP3L_SC_EINT1 */
+#define WM8285_HP3L_SC_EINT1_WIDTH                      1  /* HP3L_SC_EINT1 */
+#define WM8285_HP2R_SC_EINT1                       0x0008  /* HP2R_SC_EINT1 */
+#define WM8285_HP2R_SC_EINT1_MASK                  0x0008  /* HP2R_SC_EINT1 */
+#define WM8285_HP2R_SC_EINT1_SHIFT                      3  /* HP2R_SC_EINT1 */
+#define WM8285_HP2R_SC_EINT1_WIDTH                      1  /* HP2R_SC_EINT1 */
+#define WM8285_HP2L_SC_EINT1                       0x0004  /* HP2L_SC_EINT1 */
+#define WM8285_HP2L_SC_EINT1_MASK                  0x0004  /* HP2L_SC_EINT1 */
+#define WM8285_HP2L_SC_EINT1_SHIFT                      2  /* HP2L_SC_EINT1 */
+#define WM8285_HP2L_SC_EINT1_WIDTH                      1  /* HP2L_SC_EINT1 */
+#define WM8285_HP1R_SC_EINT1                       0x0002  /* HP1R_SC_EINT1 */
+#define WM8285_HP1R_SC_EINT1_MASK                  0x0002  /* HP1R_SC_EINT1 */
+#define WM8285_HP1R_SC_EINT1_SHIFT                      1  /* HP1R_SC_EINT1 */
+#define WM8285_HP1R_SC_EINT1_WIDTH                      1  /* HP1R_SC_EINT1 */
+#define WM8285_HP1L_SC_EINT1                       0x0001  /* HP1L_SC_EINT1 */
+#define WM8285_HP1L_SC_EINT1_MASK                  0x0001  /* HP1L_SC_EINT1 */
+#define WM8285_HP1L_SC_EINT1_SHIFT                      0  /* HP1L_SC_EINT1 */
+#define WM8285_HP1L_SC_EINT1_WIDTH                      1  /* HP1L_SC_EINT1 */
+
+/*
+ * R6156 (0x180C) - IRQ1 Status 13
+ */
+#define WM8285_SPKOUTR_ENABLE_DONE_EINT1           0x0080  /* SPKOUTR_ENABLE_DONE_EINT1 */
+#define WM8285_SPKOUTR_ENABLE_DONE_EINT1_MASK      0x0080  /* SPKOUTR_ENABLE_DONE_EINT1 */
+#define WM8285_SPKOUTR_ENABLE_DONE_EINT1_SHIFT          7  /* SPKOUTR_ENABLE_DONE_EINT1 */
+#define WM8285_SPKOUTR_ENABLE_DONE_EINT1_WIDTH          1  /* SPKOUTR_ENABLE_DONE_EINT1 */
+#define WM8285_SPKOUTL_ENABLE_DONE_EINT1           0x0040  /* SPKOUTL_ENABLE_DONE_EINT1 */
+#define WM8285_SPKOUTL_ENABLE_DONE_EINT1_MASK      0x0040  /* SPKOUTL_ENABLE_DONE_EINT1 */
+#define WM8285_SPKOUTL_ENABLE_DONE_EINT1_SHIFT          6  /* SPKOUTL_ENABLE_DONE_EINT1 */
+#define WM8285_SPKOUTL_ENABLE_DONE_EINT1_WIDTH          1  /* SPKOUTL_ENABLE_DONE_EINT1 */
+#define WM8285_HP3R_ENABLE_DONE_EINT1              0x0020  /* HP3R_ENABLE_DONE_EINT1 */
+#define WM8285_HP3R_ENABLE_DONE_EINT1_MASK         0x0020  /* HP3R_ENABLE_DONE_EINT1 */
+#define WM8285_HP3R_ENABLE_DONE_EINT1_SHIFT             5  /* HP3R_ENABLE_DONE_EINT1 */
+#define WM8285_HP3R_ENABLE_DONE_EINT1_WIDTH             1  /* HP3R_ENABLE_DONE_EINT1 */
+#define WM8285_HP3L_ENABLE_DONE_EINT1              0x0010  /* HP3L_ENABLE_DONE_EINT1 */
+#define WM8285_HP3L_ENABLE_DONE_EINT1_MASK         0x0010  /* HP3L_ENABLE_DONE_EINT1 */
+#define WM8285_HP3L_ENABLE_DONE_EINT1_SHIFT             4  /* HP3L_ENABLE_DONE_EINT1 */
+#define WM8285_HP3L_ENABLE_DONE_EINT1_WIDTH             1  /* HP3L_ENABLE_DONE_EINT1 */
+#define WM8285_HP2R_ENABLE_DONE_EINT1              0x0008  /* HP2R_ENABLE_DONE_EINT1 */
+#define WM8285_HP2R_ENABLE_DONE_EINT1_MASK         0x0008  /* HP2R_ENABLE_DONE_EINT1 */
+#define WM8285_HP2R_ENABLE_DONE_EINT1_SHIFT             3  /* HP2R_ENABLE_DONE_EINT1 */
+#define WM8285_HP2R_ENABLE_DONE_EINT1_WIDTH             1  /* HP2R_ENABLE_DONE_EINT1 */
+#define WM8285_HP2L_ENABLE_DONE_EINT1              0x0004  /* HP2L_ENABLE_DONE_EINT1 */
+#define WM8285_HP2L_ENABLE_DONE_EINT1_MASK         0x0004  /* HP2L_ENABLE_DONE_EINT1 */
+#define WM8285_HP2L_ENABLE_DONE_EINT1_SHIFT             2  /* HP2L_ENABLE_DONE_EINT1 */
+#define WM8285_HP2L_ENABLE_DONE_EINT1_WIDTH             1  /* HP2L_ENABLE_DONE_EINT1 */
+#define WM8285_HP1R_ENABLE_DONE_EINT1              0x0002  /* HP1R_ENABLE_DONE_EINT1 */
+#define WM8285_HP1R_ENABLE_DONE_EINT1_MASK         0x0002  /* HP1R_ENABLE_DONE_EINT1 */
+#define WM8285_HP1R_ENABLE_DONE_EINT1_SHIFT             1  /* HP1R_ENABLE_DONE_EINT1 */
+#define WM8285_HP1R_ENABLE_DONE_EINT1_WIDTH             1  /* HP1R_ENABLE_DONE_EINT1 */
+#define WM8285_HP1L_ENABLE_DONE_EINT1              0x0001  /* HP1L_ENABLE_DONE_EINT1 */
+#define WM8285_HP1L_ENABLE_DONE_EINT1_MASK         0x0001  /* HP1L_ENABLE_DONE_EINT1 */
+#define WM8285_HP1L_ENABLE_DONE_EINT1_SHIFT             0  /* HP1L_ENABLE_DONE_EINT1 */
+#define WM8285_HP1L_ENABLE_DONE_EINT1_WIDTH             1  /* HP1L_ENABLE_DONE_EINT1 */
+
+/*
+ * R6157 (0x180D) - IRQ1 Status 14
+ */
+#define WM8285_SPKOUTR_DISABLE_DONE_EINT1          0x0080  /* SPKOUTR_DISABLE_DONE_EINT1 */
+#define WM8285_SPKOUTR_DISABLE_DONE_EINT1_MASK     0x0080  /* SPKOUTR_DISABLE_DONE_EINT1 */
+#define WM8285_SPKOUTR_DISABLE_DONE_EINT1_SHIFT         7  /* SPKOUTR_DISABLE_DONE_EINT1 */
+#define WM8285_SPKOUTR_DISABLE_DONE_EINT1_WIDTH         1  /* SPKOUTR_DISABLE_DONE_EINT1 */
+#define WM8285_SPKOUTL_DISABLE_DONE_EINT1          0x0040  /* SPKOUTL_DISABLE_DONE_EINT1 */
+#define WM8285_SPKOUTL_DISABLE_DONE_EINT1_MASK     0x0040  /* SPKOUTL_DISABLE_DONE_EINT1 */
+#define WM8285_SPKOUTL_DISABLE_DONE_EINT1_SHIFT         6  /* SPKOUTL_DISABLE_DONE_EINT1 */
+#define WM8285_SPKOUTL_DISABLE_DONE_EINT1_WIDTH         1  /* SPKOUTL_DISABLE_DONE_EINT1 */
+#define WM8285_HP3R_DISABLE_DONE_EINT1             0x0020  /* HP3R_DISABLE_DONE_EINT1 */
+#define WM8285_HP3R_DISABLE_DONE_EINT1_MASK        0x0020  /* HP3R_DISABLE_DONE_EINT1 */
+#define WM8285_HP3R_DISABLE_DONE_EINT1_SHIFT            5  /* HP3R_DISABLE_DONE_EINT1 */
+#define WM8285_HP3R_DISABLE_DONE_EINT1_WIDTH            1  /* HP3R_DISABLE_DONE_EINT1 */
+#define WM8285_HP3L_DISABLE_DONE_EINT1             0x0010  /* HP3L_DISABLE_DONE_EINT1 */
+#define WM8285_HP3L_DISABLE_DONE_EINT1_MASK        0x0010  /* HP3L_DISABLE_DONE_EINT1 */
+#define WM8285_HP3L_DISABLE_DONE_EINT1_SHIFT            4  /* HP3L_DISABLE_DONE_EINT1 */
+#define WM8285_HP3L_DISABLE_DONE_EINT1_WIDTH            1  /* HP3L_DISABLE_DONE_EINT1 */
+#define WM8285_HP2R_DISABLE_DONE_EINT1             0x0008  /* HP2R_DISABLE_DONE_EINT1 */
+#define WM8285_HP2R_DISABLE_DONE_EINT1_MASK        0x0008  /* HP2R_DISABLE_DONE_EINT1 */
+#define WM8285_HP2R_DISABLE_DONE_EINT1_SHIFT            3  /* HP2R_DISABLE_DONE_EINT1 */
+#define WM8285_HP2R_DISABLE_DONE_EINT1_WIDTH            1  /* HP2R_DISABLE_DONE_EINT1 */
+#define WM8285_HP2L_DISABLE_DONE_EINT1             0x0004  /* HP2L_DISABLE_DONE_EINT1 */
+#define WM8285_HP2L_DISABLE_DONE_EINT1_MASK        0x0004  /* HP2L_DISABLE_DONE_EINT1 */
+#define WM8285_HP2L_DISABLE_DONE_EINT1_SHIFT            2  /* HP2L_DISABLE_DONE_EINT1 */
+#define WM8285_HP2L_DISABLE_DONE_EINT1_WIDTH            1  /* HP2L_DISABLE_DONE_EINT1 */
+#define WM8285_HP1R_DISABLE_DONE_EINT1             0x0002  /* HP1R_DISABLE_DONE_EINT1 */
+#define WM8285_HP1R_DISABLE_DONE_EINT1_MASK         0x0002  /* HP1R_DISABLE_DONE_EINT1 */
+#define WM8285_HP1R_DISABLE_DONE_EINT1_SHIFT            1  /* HP1R_DISABLE_DONE_EINT1 */
+#define WM8285_HP1R_DISABLE_DONE_EINT1_WIDTH            1  /* HP1R_DISABLE_DONE_EINT1 */
+#define WM8285_HP1L_DISABLE_DONE_EINT1             0x0001  /* HP1L_DISABLE_DONE_EINT1 */
+#define WM8285_HP1L_DISABLE_DONE_EINT1_MASK        0x0001  /* HP1L_DISABLE_DONE_EINT1 */
+#define WM8285_HP1L_DISABLE_DONE_EINT1_SHIFT            0  /* HP1L_DISABLE_DONE_EINT1 */
+#define WM8285_HP1L_DISABLE_DONE_EINT1_WIDTH            1  /* HP1L_DISABLE_DONE_EINT1 */
+
+/*
+ * R6158 (0x180E) - IRQ1 Status 15
+ */
+#define WM8285_SPK_OVERHEAT_WARN_EINT1             0x0004  /* SPK_OVERHEAT_WARN_EINT1 */
+#define WM8285_SPK_OVERHEAT_WARN_EINT1_MASK        0x0004  /* SPK_OVERHEAT_WARN_EINT1 */
+#define WM8285_SPK_OVERHEAT_WARN_EINT1_SHIFT            2  /* SPK_OVERHEAT_WARN_EINT1 */
+#define WM8285_SPK_OVERHEAT_WARN_EINT1_WIDTH            1  /* SPK_OVERHEAT_WARN_EINT1 */
+#define WM8285_SPK_OVERHEAT_EINT1                  0x0002  /* SPK_OVERHEAT_EINT1 */
+#define WM8285_SPK_OVERHEAT_EINT1_MASK             0x0002  /* SPK_OVERHEAT_EINT1 */
+#define WM8285_SPK_OVERHEAT_EINT1_SHIFT                 1  /* SPK_OVERHEAT_EINT1 */
+#define WM8285_SPK_OVERHEAT_EINT1_WIDTH                 1  /* SPK_OVERHEAT_EINT1 */
+#define WM8285_SPK_SHUTDOWN_EINT1                  0x0001  /* SPK_SHUTDOWN_EINT1 */
+#define WM8285_SPK_SHUTDOWN_EINT1_MASK             0x0001  /* SPK_SHUTDOWN_EINT1 */
+#define WM8285_SPK_SHUTDOWN_EINT1_SHIFT                 0  /* SPK_SHUTDOWN_EINT1 */
+#define WM8285_SPK_SHUTDOWN_EINT1_WIDTH                 1  /* SPK_SHUTDOWN_EINT1 */
+
+/*
+ * R6208 (0x1840) - IRQ1 Mask 1
+ */
+#define WM8285_IM_DSP_SHARED_WR_COLL_EINT1         0x8000  /* IM_DSP_SHARED_WR_COLL_EINT1 */
+#define WM8285_IM_DSP_SHARED_WR_COLL_EINT1_MASK    0x8000  /* IM_DSP_SHARED_WR_COLL_EINT1 */
+#define WM8285_IM_DSP_SHARED_WR_COLL_EINT1_SHIFT       15  /* IM_DSP_SHARED_WR_COLL_EINT1 */
+#define WM8285_IM_DSP_SHARED_WR_COLL_EINT1_WIDTH        1  /* IM_DSP_SHARED_WR_COLL_EINT1 */
+#define WM8285_IM_CTRLIF_ERR_EINT1                 0x1000  /* IM_CTRLIF_ERR_EINT1 */
+#define WM8285_IM_CTRLIF_ERR_EINT1_MASK            0x1000  /* IM_CTRLIF_ERR_EINT1 */
+#define WM8285_IM_CTRLIF_ERR_EINT1_SHIFT               12  /* IM_CTRLIF_ERR_EINT1 */
+#define WM8285_IM_CTRLIF_ERR_EINT1_WIDTH                1  /* IM_CTRLIF_ERR_EINT1 */
+#define WM8285_IM_IRQ_NO_CLOCK_EINT1               0x0200  /* IM_IRQ_NO_CLOCK_EINT1 */
+#define WM8285_IM_IRQ_NO_CLOCK_EINT1_MASK          0x0200  /* IM_IRQ_NO_CLOCK_EINT1 */
+#define WM8285_IM_IRQ_NO_CLOCK_EINT1_SHIFT              9  /* IM_IRQ_NO_CLOCK_EINT1 */
+#define WM8285_IM_IRQ_NO_CLOCK_EINT1_WIDTH              1  /* IM_IRQ_NO_CLOCK_EINT1 */
+#define WM8285_IM_CLOCK_DETECT_EINT1               0x0100  /* IM_CLOCK_DETECT_EINT1 */
+#define WM8285_IM_CLOCK_DETECT_EINT1_MASK          0x0100  /* IM_CLOCK_DETECT_EINT1 */
+#define WM8285_IM_CLOCK_DETECT_EINT1_SHIFT              8  /* IM_CLOCK_DETECT_EINT1 */
+#define WM8285_IM_CLOCK_DETECT_EINT1_WIDTH              1  /* IM_CLOCK_DETECT_EINT1 */
+#define WM8285_IM_BOOT_DONE_EINT1                  0x0080  /* IM_BOOT_DONE_EINT1 */
+#define WM8285_IM_BOOT_DONE_EINT1_MASK             0x0080  /* IM_BOOT_DONE_EINT1 */
+#define WM8285_IM_BOOT_DONE_EINT1_SHIFT                 7  /* IM_BOOT_DONE_EINT1 */
+#define WM8285_IM_BOOT_DONE_EINT1_WIDTH                 1  /* IM_BOOT_DONE_EINT1 */
+
+/*
+ * R6209 (0x1841) - IRQ1 Mask 2
+ */
+#define WM8285_IM_FLL3_LOCK_EINT1                  0x0400  /* IM_FLL3_LOCK_EINT1 */
+#define WM8285_IM_FLL3_LOCK_EINT1_MASK             0x0400  /* IM_FLL3_LOCK_EINT1 */
+#define WM8285_IM_FLL3_LOCK_EINT1_SHIFT                10  /* IM_FLL3_LOCK_EINT1 */
+#define WM8285_IM_FLL3_LOCK_EINT1_WIDTH                 1  /* IM_FLL3_LOCK_EINT1 */
+#define WM8285_IM_FLL2_LOCK_EINT1                  0x0200  /* IM_FLL2_LOCK_EINT1 */
+#define WM8285_IM_FLL2_LOCK_EINT1_MASK             0x0200  /* IM_FLL2_LOCK_EINT1 */
+#define WM8285_IM_FLL2_LOCK_EINT1_SHIFT                 9  /* IM_FLL2_LOCK_EINT1 */
+#define WM8285_IM_FLL2_LOCK_EINT1_WIDTH                 1  /* IM_FLL2_LOCK_EINT1 */
+#define WM8285_IM_FLL1_LOCK_EINT1                  0x0100  /* IM_FLL1_LOCK_EINT1 */
+#define WM8285_IM_FLL1_LOCK_EINT1_MASK             0x0100  /* IM_FLL1_LOCK_EINT1 */
+#define WM8285_IM_FLL1_LOCK_EINT1_SHIFT                 8  /* IM_FLL1_LOCK_EINT1 */
+#define WM8285_IM_FLL1_LOCK_EINT1_WIDTH                 1  /* IM_FLL1_LOCK_EINT1 */
+
+/*
+ * R6213 (0x1845) - IRQ1 Mask 6
+ */
+#define WM8285_IM_MICDET_EINT1                     0x0100  /* IM_MICDET_EINT1 */
+#define WM8285_IM_MICDET_EINT1_MASK                0x0100  /* IM_MICDET_EINT1 */
+#define WM8285_IM_MICDET_EINT1_SHIFT                    8  /* IM_MICDET_EINT1 */
+#define WM8285_IM_MICDET_EINT1_WIDTH                    1  /* IM_MICDET_EINT1 */
+#define WM8285_IM_HPDET_EINT1                      0x0001  /* IM_HPDET_EINT1 */
+#define WM8285_IM_HPDET_EINT1_MASK                 0x0001  /* IM_HPDET_EINT1 */
+#define WM8285_IM_HPDET_EINT1_SHIFT                     0  /* IM_HPDET_EINT1 */
+#define WM8285_IM_HPDET_EINT1_WIDTH                     1  /* IM_HPDET_EINT1 */
+
+/*
+ * R6214 (0x1846) - IRQ1 Mask 7
+ */
+#define WM8285_IM_MICD_CLAMP_FALL_EINT1            0x0020  /* IM_MICD_CLAMP_FALL_EINT1 */
+#define WM8285_IM_MICD_CLAMP_FALL_EINT1_MASK       0x0020  /* IM_MICD_CLAMP_FALL_EINT1 */
+#define WM8285_IM_MICD_CLAMP_FALL_EINT1_SHIFT           5  /* IM_MICD_CLAMP_FALL_EINT1 */
+#define WM8285_IM_MICD_CLAMP_FALL_EINT1_WIDTH           1  /* IM_MICD_CLAMP_FALL_EINT1 */
+#define WM8285_IM_MICD_CLAMP_RISE_EINT1            0x0010  /* IM_MICD_CLAMP_RISE_EINT1 */
+#define WM8285_IM_MICD_CLAMP_RISE_EINT1_MASK       0x0010  /* IM_MICD_CLAMP_RISE_EINT1 */
+#define WM8285_IM_MICD_CLAMP_RISE_EINT1_SHIFT           4  /* IM_MICD_CLAMP_RISE_EINT1 */
+#define WM8285_IM_MICD_CLAMP_RISE_EINT1_WIDTH           1  /* IM_MICD_CLAMP_RISE_EINT1 */
+#define WM8285_IM_JD2_FALL_EINT1                   0x0008  /* IM_JD2_FALL_EINT1 */
+#define WM8285_IM_JD2_FALL_EINT1_MASK              0x0008  /* IM_JD2_FALL_EINT1 */
+#define WM8285_IM_JD2_FALL_EINT1_SHIFT                  3  /* IM_JD2_FALL_EINT1 */
+#define WM8285_IM_JD2_FALL_EINT1_WIDTH                  1  /* IM_JD2_FALL_EINT1 */
+#define WM8285_IM_JD2_RISE_EINT1                   0x0004  /* IM_JD2_RISE_EINT1 */
+#define WM8285_IM_JD2_RISE_EINT1_MASK              0x0004  /* IM_JD2_RISE_EINT1 */
+#define WM8285_IM_JD2_RISE_EINT1_SHIFT                  2  /* IM_JD2_RISE_EINT1 */
+#define WM8285_IM_JD2_RISE_EINT1_WIDTH                  1  /* IM_JD2_RISE_EINT1 */
+#define WM8285_IM_JD1_FALL_EINT1                   0x0002  /* IM_JD1_FALL_EINT1 */
+#define WM8285_IM_JD1_FALL_EINT1_MASK              0x0002  /* IM_JD1_FALL_EINT1 */
+#define WM8285_IM_JD1_FALL_EINT1_SHIFT                  1  /* IM_JD1_FALL_EINT1 */
+#define WM8285_IM_JD1_FALL_EINT1_WIDTH                  1  /* IM_JD1_FALL_EINT1 */
+#define WM8285_IM_JD1_RISE_EINT1                   0x0001  /* IM_JD1_RISE_EINT1 */
+#define WM8285_IM_JD1_RISE_EINT1_MASK              0x0001  /* IM_JD1_RISE_EINT1 */
+#define WM8285_IM_JD1_RISE_EINT1_SHIFT                  0  /* IM_JD1_RISE_EINT1 */
+#define WM8285_IM_JD1_RISE_EINT1_WIDTH                  1  /* IM_JD1_RISE_EINT1 */
+
+/*
+ * R6216 (0x1848) - IRQ1 Mask 9
+ */
+#define WM8285_IM_ASRC2_IN2_LOCK_EINT1             0x0800  /* IM_ASRC2_IN2_LOCK_EINT1 */
+#define WM8285_IM_ASRC2_IN2_LOCK_EINT1_MASK        0x0800  /* IM_ASRC2_IN2_LOCK_EINT1 */
+#define WM8285_IM_ASRC2_IN2_LOCK_EINT1_SHIFT           11  /* IM_ASRC2_IN2_LOCK_EINT1 */
+#define WM8285_IM_ASRC2_IN2_LOCK_EINT1_WIDTH            1  /* IM_ASRC2_IN2_LOCK_EINT1 */
+#define WM8285_IM_ASRC2_IN1_LOCK_EINT1             0x0400  /* IM_ASRC2_IN1_LOCK_EINT1 */
+#define WM8285_IM_ASRC2_IN1_LOCK_EINT1_MASK        0x0400  /* IM_ASRC2_IN1_LOCK_EINT1 */
+#define WM8285_IM_ASRC2_IN1_LOCK_EINT1_SHIFT           10  /* IM_ASRC2_IN1_LOCK_EINT1 */
+#define WM8285_IM_ASRC2_IN1_LOCK_EINT1_WIDTH            1  /* IM_ASRC2_IN1_LOCK_EINT1 */
+#define WM8285_IM_ASRC1_IN2_LOCK_EINT1             0x0200  /* IM_ASRC1_IN2_LOCK_EINT1 */
+#define WM8285_IM_ASRC1_IN2_LOCK_EINT1_MASK        0x0200  /* IM_ASRC1_IN2_LOCK_EINT1 */
+#define WM8285_IM_ASRC1_IN2_LOCK_EINT1_SHIFT            9  /* IM_ASRC1_IN2_LOCK_EINT1 */
+#define WM8285_IM_ASRC1_IN2_LOCK_EINT1_WIDTH            1  /* IM_ASRC1_IN2_LOCK_EINT1 */
+#define WM8285_IM_ASRC1_IN1_LOCK_EINT1             0x0100  /* IM_ASRC1_IN1_LOCK_EINT1 */
+#define WM8285_IM_ASRC1_IN1_LOCK_EINT1_MASK        0x0100  /* IM_ASRC1_IN1_LOCK_EINT1 */
+#define WM8285_IM_ASRC1_IN1_LOCK_EINT1_SHIFT            8  /* IM_ASRC1_IN1_LOCK_EINT1 */
+#define WM8285_IM_ASRC1_IN1_LOCK_EINT1_WIDTH            1  /* IM_ASRC1_IN1_LOCK_EINT1 */
+#define WM8285_IM_DRC2_SIG_DET_EINT1               0x0002  /* IM_DRC2_SIG_DET_EINT1 */
+#define WM8285_IM_DRC2_SIG_DET_EINT1_MASK          0x0002  /* IM_DRC2_SIG_DET_EINT1 */
+#define WM8285_IM_DRC2_SIG_DET_EINT1_SHIFT              1  /* IM_DRC2_SIG_DET_EINT1 */
+#define WM8285_IM_DRC2_SIG_DET_EINT1_WIDTH              1  /* IM_DRC2_SIG_DET_EINT1 */
+#define WM8285_IM_DRC1_SIG_DET_EINT1               0x0001  /* IM_DRC1_SIG_DET_EINT1 */
+#define WM8285_IM_DRC1_SIG_DET_EINT1_MASK          0x0001  /* IM_DRC1_SIG_DET_EINT1 */
+#define WM8285_IM_DRC1_SIG_DET_EINT1_SHIFT              0  /* IM_DRC1_SIG_DET_EINT1 */
+#define WM8285_IM_DRC1_SIG_DET_EINT1_WIDTH              1  /* IM_DRC1_SIG_DET_EINT1 */
+
+/*
+ * R6218 (0x184A) - IRQ1 Mask 11
+ */
+#define WM8285_IM_DSP_IRQ16_EINT1                  0x8000  /* IM_DSP_IRQ16_EINT1 */
+#define WM8285_IM_DSP_IRQ16_EINT1_MASK             0x8000  /* IM_DSP_IRQ16_EINT1 */
+#define WM8285_IM_DSP_IRQ16_EINT1_SHIFT                15  /* IM_DSP_IRQ16_EINT1 */
+#define WM8285_IM_DSP_IRQ16_EINT1_WIDTH                 1  /* IM_DSP_IRQ16_EINT1 */
+#define WM8285_IM_DSP_IRQ15_EINT1                  0x4000  /* IM_DSP_IRQ15_EINT1 */
+#define WM8285_IM_DSP_IRQ15_EINT1_MASK             0x4000  /* IM_DSP_IRQ15_EINT1 */
+#define WM8285_IM_DSP_IRQ15_EINT1_SHIFT                14  /* IM_DSP_IRQ15_EINT1 */
+#define WM8285_IM_DSP_IRQ15_EINT1_WIDTH                 1  /* IM_DSP_IRQ15_EINT1 */
+#define WM8285_IM_DSP_IRQ14_EINT1                  0x2000  /* IM_DSP_IRQ14_EINT1 */
+#define WM8285_IM_DSP_IRQ14_EINT1_MASK             0x2000  /* IM_DSP_IRQ14_EINT1 */
+#define WM8285_IM_DSP_IRQ14_EINT1_SHIFT                13  /* IM_DSP_IRQ14_EINT1 */
+#define WM8285_IM_DSP_IRQ14_EINT1_WIDTH                 1  /* IM_DSP_IRQ14_EINT1 */
+#define WM8285_IM_DSP_IRQ13_EINT1                  0x1000  /* IM_DSP_IRQ13_EINT1 */
+#define WM8285_IM_DSP_IRQ13_EINT1_MASK             0x1000  /* IM_DSP_IRQ13_EINT1 */
+#define WM8285_IM_DSP_IRQ13_EINT1_SHIFT                12  /* IM_DSP_IRQ13_EINT1 */
+#define WM8285_IM_DSP_IRQ13_EINT1_WIDTH                 1  /* IM_DSP_IRQ13_EINT1 */
+#define WM8285_IM_DSP_IRQ12_EINT1                  0x0800  /* IM_DSP_IRQ12_EINT1 */
+#define WM8285_IM_DSP_IRQ12_EINT1_MASK             0x0800  /* IM_DSP_IRQ12_EINT1 */
+#define WM8285_IM_DSP_IRQ12_EINT1_SHIFT                11  /* IM_DSP_IRQ12_EINT1 */
+#define WM8285_IM_DSP_IRQ12_EINT1_WIDTH                 1  /* IM_DSP_IRQ12_EINT1 */
+#define WM8285_IM_DSP_IRQ11_EINT1                  0x0400  /* IM_DSP_IRQ11_EINT1 */
+#define WM8285_IM_DSP_IRQ11_EINT1_MASK             0x0400  /* IM_DSP_IRQ11_EINT1 */
+#define WM8285_IM_DSP_IRQ11_EINT1_SHIFT                10  /* IM_DSP_IRQ11_EINT1 */
+#define WM8285_IM_DSP_IRQ11_EINT1_WIDTH                 1  /* IM_DSP_IRQ11_EINT1 */
+#define WM8285_IM_DSP_IRQ10_EINT1                  0x0200  /* IM_DSP_IRQ10_EINT1 */
+#define WM8285_IM_DSP_IRQ10_EINT1_MASK             0x0200  /* IM_DSP_IRQ10_EINT1 */
+#define WM8285_IM_DSP_IRQ10_EINT1_SHIFT                 9  /* IM_DSP_IRQ10_EINT1 */
+#define WM8285_IM_DSP_IRQ10_EINT1_WIDTH                 1  /* IM_DSP_IRQ10_EINT1 */
+#define WM8285_IM_DSP_IRQ9_EINT1                   0x0100  /* IM_DSP_IRQ9_EINT1 */
+#define WM8285_IM_DSP_IRQ9_EINT1_MASK              0x0100  /* IM_DSP_IRQ9_EINT1 */
+#define WM8285_IM_DSP_IRQ9_EINT1_SHIFT                  8  /* IM_DSP_IRQ9_EINT1 */
+#define WM8285_IM_DSP_IRQ9_EINT1_WIDTH                  1  /* IM_DSP_IRQ9_EINT1 */
+#define WM8285_IM_DSP_IRQ8_EINT1                   0x0080  /* IM_DSP_IRQ8_EINT1 */
+#define WM8285_IM_DSP_IRQ8_EINT1_MASK              0x0080  /* IM_DSP_IRQ8_EINT1 */
+#define WM8285_IM_DSP_IRQ8_EINT1_SHIFT                  7  /* IM_DSP_IRQ8_EINT1 */
+#define WM8285_IM_DSP_IRQ8_EINT1_WIDTH                  1  /* IM_DSP_IRQ8_EINT1 */
+#define WM8285_IM_DSP_IRQ7_EINT1                   0x0040  /* IM_DSP_IRQ7_EINT1 */
+#define WM8285_IM_DSP_IRQ7_EINT1_MASK              0x0040  /* IM_DSP_IRQ7_EINT1 */
+#define WM8285_IM_DSP_IRQ7_EINT1_SHIFT                  6  /* IM_DSP_IRQ7_EINT1 */
+#define WM8285_IM_DSP_IRQ7_EINT1_WIDTH                  1  /* IM_DSP_IRQ7_EINT1 */
+#define WM8285_IM_DSP_IRQ6_EINT1                   0x0020  /* IM_DSP_IRQ6_EINT1 */
+#define WM8285_IM_DSP_IRQ6_EINT1_MASK              0x0020  /* IM_DSP_IRQ6_EINT1 */
+#define WM8285_IM_DSP_IRQ6_EINT1_SHIFT                  5  /* IM_DSP_IRQ6_EINT1 */
+#define WM8285_IM_DSP_IRQ6_EINT1_WIDTH                  1  /* IM_DSP_IRQ6_EINT1 */
+#define WM8285_IM_DSP_IRQ5_EINT1                   0x0010  /* IM_DSP_IRQ5_EINT1 */
+#define WM8285_IM_DSP_IRQ5_EINT1_MASK              0x0010  /* IM_DSP_IRQ5_EINT1 */
+#define WM8285_IM_DSP_IRQ5_EINT1_SHIFT                  4  /* IM_DSP_IRQ5_EINT1 */
+#define WM8285_IM_DSP_IRQ5_EINT1_WIDTH                  1  /* IM_DSP_IRQ5_EINT1 */
+#define WM8285_IM_DSP_IRQ4_EINT1                   0x0008  /* IM_DSP_IRQ4_EINT1 */
+#define WM8285_IM_DSP_IRQ4_EINT1_MASK              0x0008  /* IM_DSP_IRQ4_EINT1 */
+#define WM8285_IM_DSP_IRQ4_EINT1_SHIFT                  3  /* IM_DSP_IRQ4_EINT1 */
+#define WM8285_IM_DSP_IRQ4_EINT1_WIDTH                  1  /* IM_DSP_IRQ4_EINT1 */
+#define WM8285_IM_DSP_IRQ3_EINT1                   0x0004  /* IM_DSP_IRQ3_EINT1 */
+#define WM8285_IM_DSP_IRQ3_EINT1_MASK              0x0004  /* IM_DSP_IRQ3_EINT1 */
+#define WM8285_IM_DSP_IRQ3_EINT1_SHIFT                  2  /* IM_DSP_IRQ3_EINT1 */
+#define WM8285_IM_DSP_IRQ3_EINT1_WIDTH                  1  /* IM_DSP_IRQ3_EINT1 */
+#define WM8285_IM_DSP_IRQ2_EINT1                   0x0002  /* IM_DSP_IRQ2_EINT1 */
+#define WM8285_IM_DSP_IRQ2_EINT1_MASK              0x0002  /* IM_DSP_IRQ2_EINT1 */
+#define WM8285_IM_DSP_IRQ2_EINT1_SHIFT                  1  /* IM_DSP_IRQ2_EINT1 */
+#define WM8285_IM_DSP_IRQ2_EINT1_WIDTH                  1  /* IM_DSP_IRQ2_EINT1 */
+#define WM8285_IM_DSP_IRQ1_EINT1                   0x0001  /* IM_DSP_IRQ1_EINT1 */
+#define WM8285_IM_DSP_IRQ1_EINT1_MASK              0x0001  /* IM_DSP_IRQ1_EINT1 */
+#define WM8285_IM_DSP_IRQ1_EINT1_SHIFT                  0  /* IM_DSP_IRQ1_EINT1 */
+#define WM8285_IM_DSP_IRQ1_EINT1_WIDTH                  1  /* IM_DSP_IRQ1_EINT1 */
+
+/*
+ * R6219 (0x184B) - IRQ1 Mask 12
+ */
+#define WM8285_IM_SPKOUTR_SC_EINT1                 0x0080  /* IM_SPKOUTR_SC_EINT1 */
+#define WM8285_IM_SPKOUTR_SC_EINT1_MASK            0x0080  /* IM_SPKOUTR_SC_EINT1 */
+#define WM8285_IM_SPKOUTR_SC_EINT1_SHIFT                7  /* IM_SPKOUTR_SC_EINT1 */
+#define WM8285_IM_SPKOUTR_SC_EINT1_WIDTH                1  /* IM_SPKOUTR_SC_EINT1 */
+#define WM8285_IM_SPKOUTL_SC_EINT1                 0x0040  /* IM_SPKOUTL_SC_EINT1 */
+#define WM8285_IM_SPKOUTL_SC_EINT1_MASK            0x0040  /* IM_SPKOUTL_SC_EINT1 */
+#define WM8285_IM_SPKOUTL_SC_EINT1_SHIFT                6  /* IM_SPKOUTL_SC_EINT1 */
+#define WM8285_IM_SPKOUTL_SC_EINT1_WIDTH                1  /* IM_SPKOUTL_SC_EINT1 */
+#define WM8285_IM_HP3R_SC_EINT1                    0x0020  /* IM_HP3R_SC_EINT1 */
+#define WM8285_IM_HP3R_SC_EINT1_MASK               0x0020  /* IM_HP3R_SC_EINT1 */
+#define WM8285_IM_HP3R_SC_EINT1_SHIFT                   5  /* IM_HP3R_SC_EINT1 */
+#define WM8285_IM_HP3R_SC_EINT1_WIDTH                   1  /* IM_HP3R_SC_EINT1 */
+#define WM8285_IM_HP3L_SC_EINT1                    0x0010  /* IM_HP3L_SC_EINT1 */
+#define WM8285_IM_HP3L_SC_EINT1_MASK               0x0010  /* IM_HP3L_SC_EINT1 */
+#define WM8285_IM_HP3L_SC_EINT1_SHIFT                   4  /* IM_HP3L_SC_EINT1 */
+#define WM8285_IM_HP3L_SC_EINT1_WIDTH                   1  /* IM_HP3L_SC_EINT1 */
+#define WM8285_IM_HP2R_SC_EINT1                    0x0008  /* IM_HP2R_SC_EINT1 */
+#define WM8285_IM_HP2R_SC_EINT1_MASK               0x0008  /* IM_HP2R_SC_EINT1 */
+#define WM8285_IM_HP2R_SC_EINT1_SHIFT                   3  /* IM_HP2R_SC_EINT1 */
+#define WM8285_IM_HP2R_SC_EINT1_WIDTH                   1  /* IM_HP2R_SC_EINT1 */
+#define WM8285_IM_HP2L_SC_EINT1                    0x0004  /* IM_HP2L_SC_EINT1 */
+#define WM8285_IM_HP2L_SC_EINT1_MASK               0x0004  /* IM_HP2L_SC_EINT1 */
+#define WM8285_IM_HP2L_SC_EINT1_SHIFT                   2  /* IM_HP2L_SC_EINT1 */
+#define WM8285_IM_HP2L_SC_EINT1_WIDTH                   1  /* IM_HP2L_SC_EINT1 */
+#define WM8285_IM_HP1R_SC_EINT1                    0x0002  /* IM_HP1R_SC_EINT1 */
+#define WM8285_IM_HP1R_SC_EINT1_MASK               0x0002  /* IM_HP1R_SC_EINT1 */
+#define WM8285_IM_HP1R_SC_EINT1_SHIFT                   1  /* IM_HP1R_SC_EINT1 */
+#define WM8285_IM_HP1R_SC_EINT1_WIDTH                   1  /* IM_HP1R_SC_EINT1 */
+#define WM8285_IM_HP1L_SC_EINT1                    0x0001  /* IM_HP1L_SC_EINT1 */
+#define WM8285_IM_HP1L_SC_EINT1_MASK               0x0001  /* IM_HP1L_SC_EINT1 */
+#define WM8285_IM_HP1L_SC_EINT1_SHIFT                   0  /* IM_HP1L_SC_EINT1 */
+#define WM8285_IM_HP1L_SC_EINT1_WIDTH                   1  /* IM_HP1L_SC_EINT1 */
+
+/*
+ * R6220 (0x184C) - IRQ1 Mask 13
+ */
+#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT1        0x0080  /* IM_SPKOUTR_ENABLE_DONE_EINT1 */
+#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT1_MASK   0x0080  /* IM_SPKOUTR_ENABLE_DONE_EINT1 */
+#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT1_SHIFT       7  /* IM_SPKOUTR_ENABLE_DONE_EINT1 */
+#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT1_WIDTH       1  /* IM_SPKOUTR_ENABLE_DONE_EINT1 */
+#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT1        0x0040  /* IM_SPKOUTL_ENABLE_DONE_EINT1 */
+#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT1_MASK   0x0040  /* IM_SPKOUTL_ENABLE_DONE_EINT1 */
+#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT1_SHIFT       6  /* IM_SPKOUTL_ENABLE_DONE_EINT1 */
+#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT1_WIDTH       1  /* IM_SPKOUTL_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP3R_ENABLE_DONE_EINT1           0x0020  /* IM_HP3R_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP3R_ENABLE_DONE_EINT1_MASK      0x0020  /* IM_HP3R_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP3R_ENABLE_DONE_EINT1_SHIFT          5  /* IM_HP3R_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP3R_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP3R_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP3L_ENABLE_DONE_EINT1           0x0010  /* IM_HP3L_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP3L_ENABLE_DONE_EINT1_MASK      0x0010  /* IM_HP3L_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP3L_ENABLE_DONE_EINT1_SHIFT          4  /* IM_HP3L_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP3L_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP3L_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP2R_ENABLE_DONE_EINT1           0x0008  /* IM_HP2R_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP2R_ENABLE_DONE_EINT1_MASK      0x0008  /* IM_HP2R_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP2R_ENABLE_DONE_EINT1_SHIFT          3  /* IM_HP2R_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP2R_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP2R_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP2L_ENABLE_DONE_EINT1           0x0004  /* IM_HP2L_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP2L_ENABLE_DONE_EINT1_MASK      0x0004  /* IM_HP2L_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP2L_ENABLE_DONE_EINT1_SHIFT          2  /* IM_HP2L_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP2L_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP2L_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP1R_ENABLE_DONE_EINT1           0x0002  /* IM_HP1R_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP1R_ENABLE_DONE_EINT1_MASK      0x0002  /* IM_HP1R_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP1R_ENABLE_DONE_EINT1_SHIFT          1  /* IM_HP1R_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP1R_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP1R_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP1L_ENABLE_DONE_EINT1           0x0001  /* IM_HP1L_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP1L_ENABLE_DONE_EINT1_MASK      0x0001  /* IM_HP1L_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP1L_ENABLE_DONE_EINT1_SHIFT          0  /* IM_HP1L_ENABLE_DONE_EINT1 */
+#define WM8285_IM_HP1L_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP1L_ENABLE_DONE_EINT1 */
+
+/*
+ * R6221 (0x184D) - IRQ1 Mask 14
+ */
+#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT1       0x0080  /* IM_SPKOUTR_DISABLE_DONE_EINT1 */
+#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT1_MASK  0x0080  /* IM_SPKOUTR_DISABLE_DONE_EINT1 */
+#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT1_SHIFT      7  /* IM_SPKOUTR_DISABLE_DONE_EINT1 */
+#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT1_WIDTH      1  /* IM_SPKOUTR_DISABLE_DONE_EINT1 */
+#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT1       0x0040  /* IM_SPKOUTL_DISABLE_DONE_EINT1 */
+#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT1_MASK  0x0040  /* IM_SPKOUTL_DISABLE_DONE_EINT1 */
+#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT1_SHIFT      6  /* IM_SPKOUTL_DISABLE_DONE_EINT1 */
+#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT1_WIDTH      1  /* IM_SPKOUTL_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP3R_DISABLE_DONE_EINT1          0x0020  /* IM_HP3R_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP3R_DISABLE_DONE_EINT1_MASK     0x0020  /* IM_HP3R_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP3R_DISABLE_DONE_EINT1_SHIFT         5  /* IM_HP3R_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP3R_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP3R_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP3L_DISABLE_DONE_EINT1          0x0010  /* IM_HP3L_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP3L_DISABLE_DONE_EINT1_MASK     0x0010  /* IM_HP3L_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP3L_DISABLE_DONE_EINT1_SHIFT         4  /* IM_HP3L_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP3L_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP3L_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP2R_DISABLE_DONE_EINT1          0x0008  /* IM_HP2R_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP2R_DISABLE_DONE_EINT1_MASK     0x0008  /* IM_HP2R_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP2R_DISABLE_DONE_EINT1_SHIFT         3  /* IM_HP2R_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP2R_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP2R_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP2L_DISABLE_DONE_EINT1          0x0004  /* IM_HP2L_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP2L_DISABLE_DONE_EINT1_MASK     0x0004  /* IM_HP2L_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP2L_DISABLE_DONE_EINT1_SHIFT         2  /* IM_HP2L_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP2L_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP2L_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP1R_DISABLE_DONE_EINT1          0x0002  /* IM_HP1R_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP1R_DISABLE_DONE_EINT1_MASK     0x0002  /* IM_HP1R_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP1R_DISABLE_DONE_EINT1_SHIFT         1  /* IM_HP1R_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP1R_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP1R_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP1L_DISABLE_DONE_EINT1          0x0001  /* IM_HP1L_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP1L_DISABLE_DONE_EINT1_MASK     0x0001  /* IM_HP1L_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP1L_DISABLE_DONE_EINT1_SHIFT         0  /* IM_HP1L_DISABLE_DONE_EINT1 */
+#define WM8285_IM_HP1L_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP1L_DISABLE_DONE_EINT1 */
+
+/*
+ * R6222 (0x184E) - IRQ1 Mask 15
+ */
+#define WM8285_IM_SPK_OVERHEAT_WARN_EINT1          0x0004  /* IM_SPK_OVERHEAT_WARN_EINT1 */
+#define WM8285_IM_SPK_OVERHEAT_WARN_EINT1_MASK     0x0004  /* IM_SPK_OVERHEAT_WARN_EINT1 */
+#define WM8285_IM_SPK_OVERHEAT_WARN_EINT1_SHIFT         2  /* IM_SPK_OVERHEAT_WARN_EINT1 */
+#define WM8285_IM_SPK_OVERHEAT_WARN_EINT1_WIDTH         1  /* IM_SPK_OVERHEAT_WARN_EINT1 */
+#define WM8285_IM_SPK_OVERHEAT_EINT1               0x0002  /* IM_SPK_OVERHEAT_EINT1 */
+#define WM8285_IM_SPK_OVERHEAT_EINT1_MASK          0x0002  /* IM_SPK_OVERHEAT_EINT1 */
+#define WM8285_IM_SPK_OVERHEAT_EINT1_SHIFT              1  /* IM_SPK_OVERHEAT_EINT1 */
+#define WM8285_IM_SPK_OVERHEAT_EINT1_WIDTH              1  /* IM_SPK_OVERHEAT_EINT1 */
+#define WM8285_IM_SPK_SHUTDOWN_EINT1               0x0001  /* IM_SPK_SHUTDOWN_EINT1 */
+#define WM8285_IM_SPK_SHUTDOWN_EINT1_MASK          0x0001  /* IM_SPK_SHUTDOWN_EINT1 */
+#define WM8285_IM_SPK_SHUTDOWN_EINT1_SHIFT              0  /* IM_SPK_SHUTDOWN_EINT1 */
+#define WM8285_IM_SPK_SHUTDOWN_EINT1_WIDTH              1  /* IM_SPK_SHUTDOWN_EINT1 */
+
+/*
+ * R6400 (0x1900) - IRQ2 Status 1
+ */
+#define WM8285_DSP_SHARED_WR_COLL_EINT2            0x8000  /* DSP_SHARED_WR_COLL_EINT2 */
+#define WM8285_DSP_SHARED_WR_COLL_EINT2_MASK       0x8000  /* DSP_SHARED_WR_COLL_EINT2 */
+#define WM8285_DSP_SHARED_WR_COLL_EINT2_SHIFT          15  /* DSP_SHARED_WR_COLL_EINT2 */
+#define WM8285_DSP_SHARED_WR_COLL_EINT2_WIDTH           1  /* DSP_SHARED_WR_COLL_EINT2 */
+#define WM8285_CTRLIF_ERR_EINT2                    0x1000  /* CTRLIF_ERR_EINT2 */
+#define WM8285_CTRLIF_ERR_EINT2_MASK               0x1000  /* CTRLIF_ERR_EINT2 */
+#define WM8285_CTRLIF_ERR_EINT2_SHIFT                  12  /* CTRLIF_ERR_EINT2 */
+#define WM8285_CTRLIF_ERR_EINT2_WIDTH                   1  /* CTRLIF_ERR_EINT2 */
+#define WM8285_IRQ_NO_CLOCK_EINT2                  0x0200  /* IRQ_NO_CLOCK_EINT2 */
+#define WM8285_IRQ_NO_CLOCK_EINT2_MASK             0x0200  /* IRQ_NO_CLOCK_EINT2 */
+#define WM8285_IRQ_NO_CLOCK_EINT2_SHIFT                 9  /* IRQ_NO_CLOCK_EINT2 */
+#define WM8285_IRQ_NO_CLOCK_EINT2_WIDTH                 1  /* IRQ_NO_CLOCK_EINT2 */
+#define WM8285_CLOCK_DETECT_EINT2                  0x0100  /* CLOCK_DETECT_EINT2 */
+#define WM8285_CLOCK_DETECT_EINT2_MASK             0x0100  /* CLOCK_DETECT_EINT2 */
+#define WM8285_CLOCK_DETECT_EINT2_SHIFT                 8  /* CLOCK_DETECT_EINT2 */
+#define WM8285_CLOCK_DETECT_EINT2_WIDTH                 1  /* CLOCK_DETECT_EINT2 */
+#define WM8285_BOOT_DONE_EINT2                     0x0080  /* BOOT_DONE_EINT2 */
+#define WM8285_BOOT_DONE_EINT2_MASK                0x0080  /* BOOT_DONE_EINT2 */
+#define WM8285_BOOT_DONE_EINT2_SHIFT                    7  /* BOOT_DONE_EINT2 */
+#define WM8285_BOOT_DONE_EINT2_WIDTH                    1  /* BOOT_DONE_EINT2 */
+
+/*
+ * R6401 (0x1901) - IRQ2 Status 2
+ */
+#define WM8285_FLL3_LOCK_EINT2                     0x0400  /* FLL3_LOCK_EINT2 */
+#define WM8285_FLL3_LOCK_EINT2_MASK                0x0400  /* FLL3_LOCK_EINT2 */
+#define WM8285_FLL3_LOCK_EINT2_SHIFT                   10  /* FLL3_LOCK_EINT2 */
+#define WM8285_FLL3_LOCK_EINT2_WIDTH                    1  /* FLL3_LOCK_EINT2 */
+#define WM8285_FLL2_LOCK_EINT2                     0x0200  /* FLL2_LOCK_EINT2 */
+#define WM8285_FLL2_LOCK_EINT2_MASK                0x0200  /* FLL2_LOCK_EINT2 */
+#define WM8285_FLL2_LOCK_EINT2_SHIFT                    9  /* FLL2_LOCK_EINT2 */
+#define WM8285_FLL2_LOCK_EINT2_WIDTH                    1  /* FLL2_LOCK_EINT2 */
+#define WM8285_FLL1_LOCK_EINT2                     0x0100  /* FLL1_LOCK_EINT2 */
+#define WM8285_FLL1_LOCK_EINT2_MASK                0x0100  /* FLL1_LOCK_EINT2 */
+#define WM8285_FLL1_LOCK_EINT2_SHIFT                    8  /* FLL1_LOCK_EINT2 */
+#define WM8285_FLL1_LOCK_EINT2_WIDTH                    1  /* FLL1_LOCK_EINT2 */
+
+/*
+ * R6405 (0x1905) - IRQ2 Status 6
+ */
+#define WM8285_MICDET_EINT2                        0x0100  /* MICDET_EINT2 */
+#define WM8285_MICDET_EINT2_MASK                   0x0100  /* MICDET_EINT2 */
+#define WM8285_MICDET_EINT2_SHIFT                       8  /* MICDET_EINT2 */
+#define WM8285_MICDET_EINT2_WIDTH                       1  /* MICDET_EINT2 */
+#define WM8285_HPDET_EINT2                         0x0001  /* HPDET_EINT2 */
+#define WM8285_HPDET_EINT2_MASK                    0x0001  /* HPDET_EINT2 */
+#define WM8285_HPDET_EINT2_SHIFT                        0  /* HPDET_EINT2 */
+#define WM8285_HPDET_EINT2_WIDTH                        1  /* HPDET_EINT2 */
+
+/*
+ * R6406 (0x1906) - IRQ2 Status 7
+ */
+#define WM8285_MICD_CLAMP_FALL_EINT2               0x0020  /* MICD_CLAMP_FALL_EINT2 */
+#define WM8285_MICD_CLAMP_FALL_EINT2_MASK          0x0020  /* MICD_CLAMP_FALL_EINT2 */
+#define WM8285_MICD_CLAMP_FALL_EINT2_SHIFT              5  /* MICD_CLAMP_FALL_EINT2 */
+#define WM8285_MICD_CLAMP_FALL_EINT2_WIDTH              1  /* MICD_CLAMP_FALL_EINT2 */
+#define WM8285_MICD_CLAMP_RISE_EINT2               0x0010  /* MICD_CLAMP_RISE_EINT2 */
+#define WM8285_MICD_CLAMP_RISE_EINT2_MASK          0x0010  /* MICD_CLAMP_RISE_EINT2 */
+#define WM8285_MICD_CLAMP_RISE_EINT2_SHIFT              4  /* MICD_CLAMP_RISE_EINT2 */
+#define WM8285_MICD_CLAMP_RISE_EINT2_WIDTH              1  /* MICD_CLAMP_RISE_EINT2 */
+#define WM8285_JD2_FALL_EINT2                      0x0008  /* JD2_FALL_EINT2 */
+#define WM8285_JD2_FALL_EINT2_MASK                 0x0008  /* JD2_FALL_EINT2 */
+#define WM8285_JD2_FALL_EINT2_SHIFT                     3  /* JD2_FALL_EINT2 */
+#define WM8285_JD2_FALL_EINT2_WIDTH                     1  /* JD2_FALL_EINT2 */
+#define WM8285_JD2_RISE_EINT2                      0x0004  /* JD2_RISE_EINT2 */
+#define WM8285_JD2_RISE_EINT2_MASK                 0x0004  /* JD2_RISE_EINT2 */
+#define WM8285_JD2_RISE_EINT2_SHIFT                     2  /* JD2_RISE_EINT2 */
+#define WM8285_JD2_RISE_EINT2_WIDTH                     1  /* JD2_RISE_EINT2 */
+#define WM8285_JD1_FALL_EINT2                      0x0002  /* JD1_FALL_EINT2 */
+#define WM8285_JD1_FALL_EINT2_MASK                 0x0002  /* JD1_FALL_EINT2 */
+#define WM8285_JD1_FALL_EINT2_SHIFT                     1  /* JD1_FALL_EINT2 */
+#define WM8285_JD1_FALL_EINT2_WIDTH                     1  /* JD1_FALL_EINT2 */
+#define WM8285_JD1_RISE_EINT2                      0x0001  /* JD1_RISE_EINT2 */
+#define WM8285_JD1_RISE_EINT2_MASK                 0x0001  /* JD1_RISE_EINT2 */
+#define WM8285_JD1_RISE_EINT2_SHIFT                     0  /* JD1_RISE_EINT2 */
+#define WM8285_JD1_RISE_EINT2_WIDTH                     1  /* JD1_RISE_EINT2 */
+
+/*
+ * R6408 (0x1908) - IRQ2 Status 9
+ */
+#define WM8285_ASRC2_IN2_LOCK_EINT2                0x0800  /* ASRC2_IN2_LOCK_EINT2 */
+#define WM8285_ASRC2_IN2_LOCK_EINT2_MASK           0x0800  /* ASRC2_IN2_LOCK_EINT2 */
+#define WM8285_ASRC2_IN2_LOCK_EINT2_SHIFT              11  /* ASRC2_IN2_LOCK_EINT2 */
+#define WM8285_ASRC2_IN2_LOCK_EINT2_WIDTH               1  /* ASRC2_IN2_LOCK_EINT2 */
+#define WM8285_ASRC2_IN1_LOCK_EINT2                0x0400  /* ASRC2_IN1_LOCK_EINT2 */
+#define WM8285_ASRC2_IN1_LOCK_EINT2_MASK           0x0400  /* ASRC2_IN1_LOCK_EINT2 */
+#define WM8285_ASRC2_IN1_LOCK_EINT2_SHIFT              10  /* ASRC2_IN1_LOCK_EINT2 */
+#define WM8285_ASRC2_IN1_LOCK_EINT2_WIDTH               1  /* ASRC2_IN1_LOCK_EINT2 */
+#define WM8285_ASRC1_IN2_LOCK_EINT2                0x0200  /* ASRC1_IN2_LOCK_EINT2 */
+#define WM8285_ASRC1_IN2_LOCK_EINT2_MASK           0x0200  /* ASRC1_IN2_LOCK_EINT2 */
+#define WM8285_ASRC1_IN2_LOCK_EINT2_SHIFT               9  /* ASRC1_IN2_LOCK_EINT2 */
+#define WM8285_ASRC1_IN2_LOCK_EINT2_WIDTH               1  /* ASRC1_IN2_LOCK_EINT2 */
+#define WM8285_ASRC1_IN1_LOCK_EINT2                0x0100  /* ASRC1_IN1_LOCK_EINT2 */
+#define WM8285_ASRC1_IN1_LOCK_EINT2_MASK           0x0100  /* ASRC1_IN1_LOCK_EINT2 */
+#define WM8285_ASRC1_IN1_LOCK_EINT2_SHIFT               8  /* ASRC1_IN1_LOCK_EINT2 */
+#define WM8285_ASRC1_IN1_LOCK_EINT2_WIDTH               1  /* ASRC1_IN1_LOCK_EINT2 */
+#define WM8285_DRC2_SIG_DET_EINT2                  0x0002  /* DRC2_SIG_DET_EINT2 */
+#define WM8285_DRC2_SIG_DET_EINT2_MASK             0x0002  /* DRC2_SIG_DET_EINT2 */
+#define WM8285_DRC2_SIG_DET_EINT2_SHIFT                 1  /* DRC2_SIG_DET_EINT2 */
+#define WM8285_DRC2_SIG_DET_EINT2_WIDTH                 1  /* DRC2_SIG_DET_EINT2 */
+#define WM8285_DRC1_SIG_DET_EINT2                  0x0001  /* DRC1_SIG_DET_EINT2 */
+#define WM8285_DRC1_SIG_DET_EINT2_MASK             0x0001  /* DRC1_SIG_DET_EINT2 */
+#define WM8285_DRC1_SIG_DET_EINT2_SHIFT                 0  /* DRC1_SIG_DET_EINT2 */
+#define WM8285_DRC1_SIG_DET_EINT2_WIDTH                 1  /* DRC1_SIG_DET_EINT2 */
+
+/*
+ * R6410 (0x190A) - IRQ2 Status 11
+ */
+#define WM8285_DSP_IRQ16_EINT2                     0x8000  /* DSP_IRQ16_EINT2 */
+#define WM8285_DSP_IRQ16_EINT2_MASK                0x8000  /* DSP_IRQ16_EINT2 */
+#define WM8285_DSP_IRQ16_EINT2_SHIFT                   15  /* DSP_IRQ16_EINT2 */
+#define WM8285_DSP_IRQ16_EINT2_WIDTH                    1  /* DSP_IRQ16_EINT2 */
+#define WM8285_DSP_IRQ15_EINT2                     0x4000  /* DSP_IRQ15_EINT2 */
+#define WM8285_DSP_IRQ15_EINT2_MASK                0x4000  /* DSP_IRQ15_EINT2 */
+#define WM8285_DSP_IRQ15_EINT2_SHIFT                   14  /* DSP_IRQ15_EINT2 */
+#define WM8285_DSP_IRQ15_EINT2_WIDTH                    1  /* DSP_IRQ15_EINT2 */
+#define WM8285_DSP_IRQ14_EINT2                     0x2000  /* DSP_IRQ14_EINT2 */
+#define WM8285_DSP_IRQ14_EINT2_MASK                0x2000  /* DSP_IRQ14_EINT2 */
+#define WM8285_DSP_IRQ14_EINT2_SHIFT                   13  /* DSP_IRQ14_EINT2 */
+#define WM8285_DSP_IRQ14_EINT2_WIDTH                    1  /* DSP_IRQ14_EINT2 */
+#define WM8285_DSP_IRQ13_EINT2                     0x1000  /* DSP_IRQ13_EINT2 */
+#define WM8285_DSP_IRQ13_EINT2_MASK                0x1000  /* DSP_IRQ13_EINT2 */
+#define WM8285_DSP_IRQ13_EINT2_SHIFT                   12  /* DSP_IRQ13_EINT2 */
+#define WM8285_DSP_IRQ13_EINT2_WIDTH                    1  /* DSP_IRQ13_EINT2 */
+#define WM8285_DSP_IRQ12_EINT2                     0x0800  /* DSP_IRQ12_EINT2 */
+#define WM8285_DSP_IRQ12_EINT2_MASK                0x0800  /* DSP_IRQ12_EINT2 */
+#define WM8285_DSP_IRQ12_EINT2_SHIFT                   11  /* DSP_IRQ12_EINT2 */
+#define WM8285_DSP_IRQ12_EINT2_WIDTH                    1  /* DSP_IRQ12_EINT2 */
+#define WM8285_DSP_IRQ11_EINT2                     0x0400  /* DSP_IRQ11_EINT2 */
+#define WM8285_DSP_IRQ11_EINT2_MASK                0x0400  /* DSP_IRQ11_EINT2 */
+#define WM8285_DSP_IRQ11_EINT2_SHIFT                   10  /* DSP_IRQ11_EINT2 */
+#define WM8285_DSP_IRQ11_EINT2_WIDTH                    1  /* DSP_IRQ11_EINT2 */
+#define WM8285_DSP_IRQ10_EINT2                     0x0200  /* DSP_IRQ10_EINT2 */
+#define WM8285_DSP_IRQ10_EINT2_MASK                0x0200  /* DSP_IRQ10_EINT2 */
+#define WM8285_DSP_IRQ10_EINT2_SHIFT                    9  /* DSP_IRQ10_EINT2 */
+#define WM8285_DSP_IRQ10_EINT2_WIDTH                    1  /* DSP_IRQ10_EINT2 */
+#define WM8285_DSP_IRQ9_EINT2                      0x0100  /* DSP_IRQ9_EINT2 */
+#define WM8285_DSP_IRQ9_EINT2_MASK                 0x0100  /* DSP_IRQ9_EINT2 */
+#define WM8285_DSP_IRQ9_EINT2_SHIFT                     8  /* DSP_IRQ9_EINT2 */
+#define WM8285_DSP_IRQ9_EINT2_WIDTH                     1  /* DSP_IRQ9_EINT2 */
+#define WM8285_DSP_IRQ8_EINT2                      0x0080  /* DSP_IRQ8_EINT2 */
+#define WM8285_DSP_IRQ8_EINT2_MASK                 0x0080  /* DSP_IRQ8_EINT2 */
+#define WM8285_DSP_IRQ8_EINT2_SHIFT                     7  /* DSP_IRQ8_EINT2 */
+#define WM8285_DSP_IRQ8_EINT2_WIDTH                     1  /* DSP_IRQ8_EINT2 */
+#define WM8285_DSP_IRQ7_EINT2                      0x0040  /* DSP_IRQ7_EINT2 */
+#define WM8285_DSP_IRQ7_EINT2_MASK                 0x0040  /* DSP_IRQ7_EINT2 */
+#define WM8285_DSP_IRQ7_EINT2_SHIFT                     6  /* DSP_IRQ7_EINT2 */
+#define WM8285_DSP_IRQ7_EINT2_WIDTH                     1  /* DSP_IRQ7_EINT2 */
+#define WM8285_DSP_IRQ6_EINT2                      0x0020  /* DSP_IRQ6_EINT2 */
+#define WM8285_DSP_IRQ6_EINT2_MASK                 0x0020  /* DSP_IRQ6_EINT2 */
+#define WM8285_DSP_IRQ6_EINT2_SHIFT                     5  /* DSP_IRQ6_EINT2 */
+#define WM8285_DSP_IRQ6_EINT2_WIDTH                     1  /* DSP_IRQ6_EINT2 */
+#define WM8285_DSP_IRQ5_EINT2                      0x0010  /* DSP_IRQ5_EINT2 */
+#define WM8285_DSP_IRQ5_EINT2_MASK                 0x0010  /* DSP_IRQ5_EINT2 */
+#define WM8285_DSP_IRQ5_EINT2_SHIFT                     4  /* DSP_IRQ5_EINT2 */
+#define WM8285_DSP_IRQ5_EINT2_WIDTH                     1  /* DSP_IRQ5_EINT2 */
+#define WM8285_DSP_IRQ4_EINT2                      0x0008  /* DSP_IRQ4_EINT2 */
+#define WM8285_DSP_IRQ4_EINT2_MASK                 0x0008  /* DSP_IRQ4_EINT2 */
+#define WM8285_DSP_IRQ4_EINT2_SHIFT                     3  /* DSP_IRQ4_EINT2 */
+#define WM8285_DSP_IRQ4_EINT2_WIDTH                     1  /* DSP_IRQ4_EINT2 */
+#define WM8285_DSP_IRQ3_EINT2                      0x0004  /* DSP_IRQ3_EINT2 */
+#define WM8285_DSP_IRQ3_EINT2_MASK                 0x0004  /* DSP_IRQ3_EINT2 */
+#define WM8285_DSP_IRQ3_EINT2_SHIFT                     2  /* DSP_IRQ3_EINT2 */
+#define WM8285_DSP_IRQ3_EINT2_WIDTH                     1  /* DSP_IRQ3_EINT2 */
+#define WM8285_DSP_IRQ2_EINT2                      0x0002  /* DSP_IRQ2_EINT2 */
+#define WM8285_DSP_IRQ2_EINT2_MASK                 0x0002  /* DSP_IRQ2_EINT2 */
+#define WM8285_DSP_IRQ2_EINT2_SHIFT                     1  /* DSP_IRQ2_EINT2 */
+#define WM8285_DSP_IRQ2_EINT2_WIDTH                     1  /* DSP_IRQ2_EINT2 */
+#define WM8285_DSP_IRQ1_EINT2                      0x0001  /* DSP_IRQ1_EINT2 */
+#define WM8285_DSP_IRQ1_EINT2_MASK                 0x0001  /* DSP_IRQ1_EINT2 */
+#define WM8285_DSP_IRQ1_EINT2_SHIFT                     0  /* DSP_IRQ1_EINT2 */
+#define WM8285_DSP_IRQ1_EINT2_WIDTH                     1  /* DSP_IRQ1_EINT2 */
+
+/*
+ * R6411 (0x190B) - IRQ2 Status 12
+ */
+#define WM8285_SPKOUTR_SC_EINT2                    0x0080  /* SPKOUTR_SC_EINT2 */
+#define WM8285_SPKOUTR_SC_EINT2_MASK               0x0080  /* SPKOUTR_SC_EINT2 */
+#define WM8285_SPKOUTR_SC_EINT2_SHIFT                   7  /* SPKOUTR_SC_EINT2 */
+#define WM8285_SPKOUTR_SC_EINT2_WIDTH                   1  /* SPKOUTR_SC_EINT2 */
+#define WM8285_SPKOUTL_SC_EINT2                    0x0040  /* SPKOUTL_SC_EINT2 */
+#define WM8285_SPKOUTL_SC_EINT2_MASK               0x0040  /* SPKOUTL_SC_EINT2 */
+#define WM8285_SPKOUTL_SC_EINT2_SHIFT                   6  /* SPKOUTL_SC_EINT2 */
+#define WM8285_SPKOUTL_SC_EINT2_WIDTH                   1  /* SPKOUTL_SC_EINT2 */
+#define WM8285_HP3R_SC_EINT2                       0x0020  /* HP3R_SC_EINT2 */
+#define WM8285_HP3R_SC_EINT2_MASK                  0x0020  /* HP3R_SC_EINT2 */
+#define WM8285_HP3R_SC_EINT2_SHIFT                      5  /* HP3R_SC_EINT2 */
+#define WM8285_HP3R_SC_EINT2_WIDTH                      1  /* HP3R_SC_EINT2 */
+#define WM8285_HP3L_SC_EINT2                       0x0010  /* HP3L_SC_EINT2 */
+#define WM8285_HP3L_SC_EINT2_MASK                  0x0010  /* HP3L_SC_EINT2 */
+#define WM8285_HP3L_SC_EINT2_SHIFT                      4  /* HP3L_SC_EINT2 */
+#define WM8285_HP3L_SC_EINT2_WIDTH                      1  /* HP3L_SC_EINT2 */
+#define WM8285_HP2R_SC_EINT2                       0x0008  /* HP2R_SC_EINT2 */
+#define WM8285_HP2R_SC_EINT2_MASK                  0x0008  /* HP2R_SC_EINT2 */
+#define WM8285_HP2R_SC_EINT2_SHIFT                      3  /* HP2R_SC_EINT2 */
+#define WM8285_HP2R_SC_EINT2_WIDTH                      1  /* HP2R_SC_EINT2 */
+#define WM8285_HP2L_SC_EINT2                       0x0004  /* HP2L_SC_EINT2 */
+#define WM8285_HP2L_SC_EINT2_MASK                  0x0004  /* HP2L_SC_EINT2 */
+#define WM8285_HP2L_SC_EINT2_SHIFT                      2  /* HP2L_SC_EINT2 */
+#define WM8285_HP2L_SC_EINT2_WIDTH                      1  /* HP2L_SC_EINT2 */
+#define WM8285_HP1R_SC_EINT2                       0x0002  /* HP1R_SC_EINT2 */
+#define WM8285_HP1R_SC_EINT2_MASK                  0x0002  /* HP1R_SC_EINT2 */
+#define WM8285_HP1R_SC_EINT2_SHIFT                      1  /* HP1R_SC_EINT2 */
+#define WM8285_HP1R_SC_EINT2_WIDTH                      1  /* HP1R_SC_EINT2 */
+#define WM8285_HP1L_SC_EINT2                       0x0001  /* HP1L_SC_EINT2 */
+#define WM8285_HP1L_SC_EINT2_MASK                  0x0001  /* HP1L_SC_EINT2 */
+#define WM8285_HP1L_SC_EINT2_SHIFT                      0  /* HP1L_SC_EINT2 */
+#define WM8285_HP1L_SC_EINT2_WIDTH                      1  /* HP1L_SC_EINT2 */
+
+/*
+ * R6412 (0x190C) - IRQ2 Status 13
+ */
+#define WM8285_SPKOUTR_ENABLE_DONE_EINT2           0x0080  /* SPKOUTR_ENABLE_DONE_EINT2 */
+#define WM8285_SPKOUTR_ENABLE_DONE_EINT2_MASK      0x0080  /* SPKOUTR_ENABLE_DONE_EINT2 */
+#define WM8285_SPKOUTR_ENABLE_DONE_EINT2_SHIFT          7  /* SPKOUTR_ENABLE_DONE_EINT2 */
+#define WM8285_SPKOUTR_ENABLE_DONE_EINT2_WIDTH          1  /* SPKOUTR_ENABLE_DONE_EINT2 */
+#define WM8285_SPKOUTL_ENABLE_DONE_EINT2           0x0040  /* SPKOUTL_ENABLE_DONE_EINT2 */
+#define WM8285_SPKOUTL_ENABLE_DONE_EINT2_MASK      0x0040  /* SPKOUTL_ENABLE_DONE_EINT2 */
+#define WM8285_SPKOUTL_ENABLE_DONE_EINT2_SHIFT          6  /* SPKOUTL_ENABLE_DONE_EINT2 */
+#define WM8285_SPKOUTL_ENABLE_DONE_EINT2_WIDTH          1  /* SPKOUTL_ENABLE_DONE_EINT2 */
+#define WM8285_HP3R_ENABLE_DONE_EINT2              0x0020  /* HP3R_ENABLE_DONE_EINT2 */
+#define WM8285_HP3R_ENABLE_DONE_EINT2_MASK         0x0020  /* HP3R_ENABLE_DONE_EINT2 */
+#define WM8285_HP3R_ENABLE_DONE_EINT2_SHIFT             5  /* HP3R_ENABLE_DONE_EINT2 */
+#define WM8285_HP3R_ENABLE_DONE_EINT2_WIDTH             1  /* HP3R_ENABLE_DONE_EINT2 */
+#define WM8285_HP3L_ENABLE_DONE_EINT2              0x0010  /* HP3L_ENABLE_DONE_EINT2 */
+#define WM8285_HP3L_ENABLE_DONE_EINT2_MASK         0x0010  /* HP3L_ENABLE_DONE_EINT2 */
+#define WM8285_HP3L_ENABLE_DONE_EINT2_SHIFT             4  /* HP3L_ENABLE_DONE_EINT2 */
+#define WM8285_HP3L_ENABLE_DONE_EINT2_WIDTH             1  /* HP3L_ENABLE_DONE_EINT2 */
+#define WM8285_HP2R_ENABLE_DONE_EINT2              0x0008  /* HP2R_ENABLE_DONE_EINT2 */
+#define WM8285_HP2R_ENABLE_DONE_EINT2_MASK         0x0008  /* HP2R_ENABLE_DONE_EINT2 */
+#define WM8285_HP2R_ENABLE_DONE_EINT2_SHIFT             3  /* HP2R_ENABLE_DONE_EINT2 */
+#define WM8285_HP2R_ENABLE_DONE_EINT2_WIDTH             1  /* HP2R_ENABLE_DONE_EINT2 */
+#define WM8285_HP2L_ENABLE_DONE_EINT2              0x0004  /* HP2L_ENABLE_DONE_EINT2 */
+#define WM8285_HP2L_ENABLE_DONE_EINT2_MASK         0x0004  /* HP2L_ENABLE_DONE_EINT2 */
+#define WM8285_HP2L_ENABLE_DONE_EINT2_SHIFT             2  /* HP2L_ENABLE_DONE_EINT2 */
+#define WM8285_HP2L_ENABLE_DONE_EINT2_WIDTH             1  /* HP2L_ENABLE_DONE_EINT2 */
+#define WM8285_HP1R_ENABLE_DONE_EINT2              0x0002  /* HP1R_ENABLE_DONE_EINT2 */
+#define WM8285_HP1R_ENABLE_DONE_EINT2_MASK         0x0002  /* HP1R_ENABLE_DONE_EINT2 */
+#define WM8285_HP1R_ENABLE_DONE_EINT2_SHIFT             1  /* HP1R_ENABLE_DONE_EINT2 */
+#define WM8285_HP1R_ENABLE_DONE_EINT2_WIDTH             1  /* HP1R_ENABLE_DONE_EINT2 */
+#define WM8285_HP1L_ENABLE_DONE_EINT2              0x0001  /* HP1L_ENABLE_DONE_EINT2 */
+#define WM8285_HP1L_ENABLE_DONE_EINT2_MASK         0x0001  /* HP1L_ENABLE_DONE_EINT2 */
+#define WM8285_HP1L_ENABLE_DONE_EINT2_SHIFT             0  /* HP1L_ENABLE_DONE_EINT2 */
+#define WM8285_HP1L_ENABLE_DONE_EINT2_WIDTH             1  /* HP1L_ENABLE_DONE_EINT2 */
+
+/*
+ * R6413 (0x190D) - IRQ2 Status 14
+ */
+#define WM8285_SPKOUTR_DISABLE_DONE_EINT2          0x0080  /* SPKOUTR_DISABLE_DONE_EINT2 */
+#define WM8285_SPKOUTR_DISABLE_DONE_EINT2_MASK     0x0080  /* SPKOUTR_DISABLE_DONE_EINT2 */
+#define WM8285_SPKOUTR_DISABLE_DONE_EINT2_SHIFT         7  /* SPKOUTR_DISABLE_DONE_EINT2 */
+#define WM8285_SPKOUTR_DISABLE_DONE_EINT2_WIDTH         1  /* SPKOUTR_DISABLE_DONE_EINT2 */
+#define WM8285_SPKOUTL_DISABLE_DONE_EINT2          0x0040  /* SPKOUTL_DISABLE_DONE_EINT2 */
+#define WM8285_SPKOUTL_DISABLE_DONE_EINT2_MASK     0x0040  /* SPKOUTL_DISABLE_DONE_EINT2 */
+#define WM8285_SPKOUTL_DISABLE_DONE_EINT2_SHIFT         6  /* SPKOUTL_DISABLE_DONE_EINT2 */
+#define WM8285_SPKOUTL_DISABLE_DONE_EINT2_WIDTH         1  /* SPKOUTL_DISABLE_DONE_EINT2 */
+#define WM8285_HP3R_DISABLE_DONE_EINT2             0x0020  /* HP3R_DISABLE_DONE_EINT2 */
+#define WM8285_HP3R_DISABLE_DONE_EINT2_MASK        0x0020  /* HP3R_DISABLE_DONE_EINT2 */
+#define WM8285_HP3R_DISABLE_DONE_EINT2_SHIFT            5  /* HP3R_DISABLE_DONE_EINT2 */
+#define WM8285_HP3R_DISABLE_DONE_EINT2_WIDTH            1  /* HP3R_DISABLE_DONE_EINT2 */
+#define WM8285_HP3L_DISABLE_DONE_EINT2             0x0010  /* HP3L_DISABLE_DONE_EINT2 */
+#define WM8285_HP3L_DISABLE_DONE_EINT2_MASK        0x0010  /* HP3L_DISABLE_DONE_EINT2 */
+#define WM8285_HP3L_DISABLE_DONE_EINT2_SHIFT            4  /* HP3L_DISABLE_DONE_EINT2 */
+#define WM8285_HP3L_DISABLE_DONE_EINT2_WIDTH            1  /* HP3L_DISABLE_DONE_EINT2 */
+#define WM8285_HP2R_DISABLE_DONE_EINT2             0x0008  /* HP2R_DISABLE_DONE_EINT2 */
+#define WM8285_HP2R_DISABLE_DONE_EINT2_MASK        0x0008  /* HP2R_DISABLE_DONE_EINT2 */
+#define WM8285_HP2R_DISABLE_DONE_EINT2_SHIFT            3  /* HP2R_DISABLE_DONE_EINT2 */
+#define WM8285_HP2R_DISABLE_DONE_EINT2_WIDTH            1  /* HP2R_DISABLE_DONE_EINT2 */
+#define WM8285_HP2L_DISABLE_DONE_EINT2             0x0004  /* HP2L_DISABLE_DONE_EINT2 */
+#define WM8285_HP2L_DISABLE_DONE_EINT2_MASK        0x0004  /* HP2L_DISABLE_DONE_EINT2 */
+#define WM8285_HP2L_DISABLE_DONE_EINT2_SHIFT            2  /* HP2L_DISABLE_DONE_EINT2 */
+#define WM8285_HP2L_DISABLE_DONE_EINT2_WIDTH            1  /* HP2L_DISABLE_DONE_EINT2 */
+#define WM8285_HP1R_DISABLE_DONE_EINT2             0x0002  /* HP1R_DISABLE_DONE_EINT2 */
+#define WM8285_HP1R_DISABLE_DONE_EINT2_MASK        0x0002  /* HP1R_DISABLE_DONE_EINT2 */
+#define WM8285_HP1R_DISABLE_DONE_EINT2_SHIFT            1  /* HP1R_DISABLE_DONE_EINT2 */
+#define WM8285_HP1R_DISABLE_DONE_EINT2_WIDTH            1  /* HP1R_DISABLE_DONE_EINT2 */
+#define WM8285_HP1L_DISABLE_DONE_EINT2             0x0001  /* HP1L_DISABLE_DONE_EINT2 */
+#define WM8285_HP1L_DISABLE_DONE_EINT2_MASK        0x0001  /* HP1L_DISABLE_DONE_EINT2 */
+#define WM8285_HP1L_DISABLE_DONE_EINT2_SHIFT            0  /* HP1L_DISABLE_DONE_EINT2 */
+#define WM8285_HP1L_DISABLE_DONE_EINT2_WIDTH            1  /* HP1L_DISABLE_DONE_EINT2 */
+
+/*
+ * R6414 (0x190E) - IRQ2 Status 15
+ */
+#define WM8285_SPK_OVERHEAT_WARN_EINT2             0x0004  /* SPK_OVERHEAT_WARN_EINT2 */
+#define WM8285_SPK_OVERHEAT_WARN_EINT2_MASK        0x0004  /* SPK_OVERHEAT_WARN_EINT2 */
+#define WM8285_SPK_OVERHEAT_WARN_EINT2_SHIFT            2  /* SPK_OVERHEAT_WARN_EINT2 */
+#define WM8285_SPK_OVERHEAT_WARN_EINT2_WIDTH            1  /* SPK_OVERHEAT_WARN_EINT2 */
+#define WM8285_SPK_OVERHEAT_EINT2                  0x0002  /* SPK_OVERHEAT_EINT2 */
+#define WM8285_SPK_OVERHEAT_EINT2_MASK             0x0002  /* SPK_OVERHEAT_EINT2 */
+#define WM8285_SPK_OVERHEAT_EINT2_SHIFT                 1  /* SPK_OVERHEAT_EINT2 */
+#define WM8285_SPK_OVERHEAT_EINT2_WIDTH                 1  /* SPK_OVERHEAT_EINT2 */
+#define WM8285_SPK_SHUTDOWN_EINT2                  0x0001  /* SPK_SHUTDOWN_EINT2 */
+#define WM8285_SPK_SHUTDOWN_EINT2_MASK             0x0001  /* SPK_SHUTDOWN_EINT2 */
+#define WM8285_SPK_SHUTDOWN_EINT2_SHIFT                 0  /* SPK_SHUTDOWN_EINT2 */
+#define WM8285_SPK_SHUTDOWN_EINT2_WIDTH                 1  /* SPK_SHUTDOWN_EINT2 */
+
+/*
+ * R6464 (0x1940) - IRQ2 Mask 1
+ */
+#define WM8285_IM_DSP_SHARED_WR_COLL_EINT2         0x8000  /* IM_DSP_SHARED_WR_COLL_EINT2 */
+#define WM8285_IM_DSP_SHARED_WR_COLL_EINT2_MASK    0x8000  /* IM_DSP_SHARED_WR_COLL_EINT2 */
+#define WM8285_IM_DSP_SHARED_WR_COLL_EINT2_SHIFT       15  /* IM_DSP_SHARED_WR_COLL_EINT2 */
+#define WM8285_IM_DSP_SHARED_WR_COLL_EINT2_WIDTH        1  /* IM_DSP_SHARED_WR_COLL_EINT2 */
+#define WM8285_IM_CTRLIF_ERR_EINT2                 0x1000  /* IM_CTRLIF_ERR_EINT2 */
+#define WM8285_IM_CTRLIF_ERR_EINT2_MASK            0x1000  /* IM_CTRLIF_ERR_EINT2 */
+#define WM8285_IM_CTRLIF_ERR_EINT2_SHIFT               12  /* IM_CTRLIF_ERR_EINT2 */
+#define WM8285_IM_CTRLIF_ERR_EINT2_WIDTH                1  /* IM_CTRLIF_ERR_EINT2 */
+#define WM8285_IM_IRQ_NO_CLOCK_EINT2               0x0200  /* IM_IRQ_NO_CLOCK_EINT2 */
+#define WM8285_IM_IRQ_NO_CLOCK_EINT2_MASK          0x0200  /* IM_IRQ_NO_CLOCK_EINT2 */
+#define WM8285_IM_IRQ_NO_CLOCK_EINT2_SHIFT              9  /* IM_IRQ_NO_CLOCK_EINT2 */
+#define WM8285_IM_IRQ_NO_CLOCK_EINT2_WIDTH              1  /* IM_IRQ_NO_CLOCK_EINT2 */
+#define WM8285_IM_CLOCK_DETECT_EINT2               0x0100  /* IM_CLOCK_DETECT_EINT2 */
+#define WM8285_IM_CLOCK_DETECT_EINT2_MASK          0x0100  /* IM_CLOCK_DETECT_EINT2 */
+#define WM8285_IM_CLOCK_DETECT_EINT2_SHIFT              8  /* IM_CLOCK_DETECT_EINT2 */
+#define WM8285_IM_CLOCK_DETECT_EINT2_WIDTH              1  /* IM_CLOCK_DETECT_EINT2 */
+#define WM8285_IM_BOOT_DONE_EINT2                  0x0080  /* IM_BOOT_DONE_EINT2 */
+#define WM8285_IM_BOOT_DONE_EINT2_MASK             0x0080  /* IM_BOOT_DONE_EINT2 */
+#define WM8285_IM_BOOT_DONE_EINT2_SHIFT                 7  /* IM_BOOT_DONE_EINT2 */
+#define WM8285_IM_BOOT_DONE_EINT2_WIDTH                 1  /* IM_BOOT_DONE_EINT2 */
+
+/*
+ * R6465 (0x1941) - IRQ2 Mask 2
+ */
+#define WM8285_IM_FLL3_LOCK_EINT2                  0x0400  /* IM_FLL3_LOCK_EINT2 */
+#define WM8285_IM_FLL3_LOCK_EINT2_MASK             0x0400  /* IM_FLL3_LOCK_EINT2 */
+#define WM8285_IM_FLL3_LOCK_EINT2_SHIFT                10  /* IM_FLL3_LOCK_EINT2 */
+#define WM8285_IM_FLL3_LOCK_EINT2_WIDTH                 1  /* IM_FLL3_LOCK_EINT2 */
+#define WM8285_IM_FLL2_LOCK_EINT2                  0x0200  /* IM_FLL2_LOCK_EINT2 */
+#define WM8285_IM_FLL2_LOCK_EINT2_MASK             0x0200  /* IM_FLL2_LOCK_EINT2 */
+#define WM8285_IM_FLL2_LOCK_EINT2_SHIFT                 9  /* IM_FLL2_LOCK_EINT2 */
+#define WM8285_IM_FLL2_LOCK_EINT2_WIDTH                 1  /* IM_FLL2_LOCK_EINT2 */
+#define WM8285_IM_FLL1_LOCK_EINT2                  0x0100  /* IM_FLL1_LOCK_EINT2 */
+#define WM8285_IM_FLL1_LOCK_EINT2_MASK             0x0100  /* IM_FLL1_LOCK_EINT2 */
+#define WM8285_IM_FLL1_LOCK_EINT2_SHIFT                 8  /* IM_FLL1_LOCK_EINT2 */
+#define WM8285_IM_FLL1_LOCK_EINT2_WIDTH                 1  /* IM_FLL1_LOCK_EINT2 */
+
+/*
+ * R6469 (0x1945) - IRQ2 Mask 6
+ */
+#define WM8285_IM_MICDET_EINT2                     0x0100  /* IM_MICDET_EINT2 */
+#define WM8285_IM_MICDET_EINT2_MASK                0x0100  /* IM_MICDET_EINT2 */
+#define WM8285_IM_MICDET_EINT2_SHIFT                    8  /* IM_MICDET_EINT2 */
+#define WM8285_IM_MICDET_EINT2_WIDTH                    1  /* IM_MICDET_EINT2 */
+#define WM8285_IM_HPDET_EINT2                      0x0001  /* IM_HPDET_EINT2 */
+#define WM8285_IM_HPDET_EINT2_MASK                 0x0001  /* IM_HPDET_EINT2 */
+#define WM8285_IM_HPDET_EINT2_SHIFT                     0  /* IM_HPDET_EINT2 */
+#define WM8285_IM_HPDET_EINT2_WIDTH                     1  /* IM_HPDET_EINT2 */
+
+/*
+ * R6470 (0x1946) - IRQ2 Mask 7
+ */
+#define WM8285_IM_MICD_CLAMP_FALL_EINT2            0x0020  /* IM_MICD_CLAMP_FALL_EINT2 */
+#define WM8285_IM_MICD_CLAMP_FALL_EINT2_MASK       0x0020  /* IM_MICD_CLAMP_FALL_EINT2 */
+#define WM8285_IM_MICD_CLAMP_FALL_EINT2_SHIFT           5  /* IM_MICD_CLAMP_FALL_EINT2 */
+#define WM8285_IM_MICD_CLAMP_FALL_EINT2_WIDTH           1  /* IM_MICD_CLAMP_FALL_EINT2 */
+#define WM8285_IM_MICD_CLAMP_RISE_EINT2            0x0010  /* IM_MICD_CLAMP_RISE_EINT2 */
+#define WM8285_IM_MICD_CLAMP_RISE_EINT2_MASK       0x0010  /* IM_MICD_CLAMP_RISE_EINT2 */
+#define WM8285_IM_MICD_CLAMP_RISE_EINT2_SHIFT           4  /* IM_MICD_CLAMP_RISE_EINT2 */
+#define WM8285_IM_MICD_CLAMP_RISE_EINT2_WIDTH           1  /* IM_MICD_CLAMP_RISE_EINT2 */
+#define WM8285_IM_JD2_FALL_EINT2                   0x0008  /* IM_JD2_FALL_EINT2 */
+#define WM8285_IM_JD2_FALL_EINT2_MASK              0x0008  /* IM_JD2_FALL_EINT2 */
+#define WM8285_IM_JD2_FALL_EINT2_SHIFT                  3  /* IM_JD2_FALL_EINT2 */
+#define WM8285_IM_JD2_FALL_EINT2_WIDTH                  1  /* IM_JD2_FALL_EINT2 */
+#define WM8285_IM_JD2_RISE_EINT2                   0x0004  /* IM_JD2_RISE_EINT2 */
+#define WM8285_IM_JD2_RISE_EINT2_MASK              0x0004  /* IM_JD2_RISE_EINT2 */
+#define WM8285_IM_JD2_RISE_EINT2_SHIFT                  2  /* IM_JD2_RISE_EINT2 */
+#define WM8285_IM_JD2_RISE_EINT2_WIDTH                  1  /* IM_JD2_RISE_EINT2 */
+#define WM8285_IM_JD1_FALL_EINT2                   0x0002  /* IM_JD1_FALL_EINT2 */
+#define WM8285_IM_JD1_FALL_EINT2_MASK              0x0002  /* IM_JD1_FALL_EINT2 */
+#define WM8285_IM_JD1_FALL_EINT2_SHIFT                  1  /* IM_JD1_FALL_EINT2 */
+#define WM8285_IM_JD1_FALL_EINT2_WIDTH                  1  /* IM_JD1_FALL_EINT2 */
+#define WM8285_IM_JD1_RISE_EINT2                   0x0001  /* IM_JD1_RISE_EINT2 */
+#define WM8285_IM_JD1_RISE_EINT2_MASK              0x0001  /* IM_JD1_RISE_EINT2 */
+#define WM8285_IM_JD1_RISE_EINT2_SHIFT                  0  /* IM_JD1_RISE_EINT2 */
+#define WM8285_IM_JD1_RISE_EINT2_WIDTH                  1  /* IM_JD1_RISE_EINT2 */
+
+/*
+ * R6472 (0x1948) - IRQ2 Mask 9
+ */
+#define WM8285_IM_ASRC2_IN2_LOCK_EINT2             0x0800  /* IM_ASRC2_IN2_LOCK_EINT2 */
+#define WM8285_IM_ASRC2_IN2_LOCK_EINT2_MASK        0x0800  /* IM_ASRC2_IN2_LOCK_EINT2 */
+#define WM8285_IM_ASRC2_IN2_LOCK_EINT2_SHIFT           11  /* IM_ASRC2_IN2_LOCK_EINT2 */
+#define WM8285_IM_ASRC2_IN2_LOCK_EINT2_WIDTH            1  /* IM_ASRC2_IN2_LOCK_EINT2 */
+#define WM8285_IM_ASRC2_IN1_LOCK_EINT2             0x0400  /* IM_ASRC2_IN1_LOCK_EINT2 */
+#define WM8285_IM_ASRC2_IN1_LOCK_EINT2_MASK        0x0400  /* IM_ASRC2_IN1_LOCK_EINT2 */
+#define WM8285_IM_ASRC2_IN1_LOCK_EINT2_SHIFT           10  /* IM_ASRC2_IN1_LOCK_EINT2 */
+#define WM8285_IM_ASRC2_IN1_LOCK_EINT2_WIDTH            1  /* IM_ASRC2_IN1_LOCK_EINT2 */
+#define WM8285_IM_ASRC1_IN2_LOCK_EINT2             0x0200  /* IM_ASRC1_IN2_LOCK_EINT2 */
+#define WM8285_IM_ASRC1_IN2_LOCK_EINT2_MASK        0x0200  /* IM_ASRC1_IN2_LOCK_EINT2 */
+#define WM8285_IM_ASRC1_IN2_LOCK_EINT2_SHIFT            9  /* IM_ASRC1_IN2_LOCK_EINT2 */
+#define WM8285_IM_ASRC1_IN2_LOCK_EINT2_WIDTH            1  /* IM_ASRC1_IN2_LOCK_EINT2 */
+#define WM8285_IM_ASRC1_IN1_LOCK_EINT2             0x0100  /* IM_ASRC1_IN1_LOCK_EINT2 */
+#define WM8285_IM_ASRC1_IN1_LOCK_EINT2_MASK        0x0100  /* IM_ASRC1_IN1_LOCK_EINT2 */
+#define WM8285_IM_ASRC1_IN1_LOCK_EINT2_SHIFT            8  /* IM_ASRC1_IN1_LOCK_EINT2 */
+#define WM8285_IM_ASRC1_IN1_LOCK_EINT2_WIDTH            1  /* IM_ASRC1_IN1_LOCK_EINT2 */
+#define WM8285_IM_DRC2_SIG_DET_EINT2               0x0002  /* IM_DRC2_SIG_DET_EINT2 */
+#define WM8285_IM_DRC2_SIG_DET_EINT2_MASK          0x0002  /* IM_DRC2_SIG_DET_EINT2 */
+#define WM8285_IM_DRC2_SIG_DET_EINT2_SHIFT              1  /* IM_DRC2_SIG_DET_EINT2 */
+#define WM8285_IM_DRC2_SIG_DET_EINT2_WIDTH              1  /* IM_DRC2_SIG_DET_EINT2 */
+#define WM8285_IM_DRC1_SIG_DET_EINT2               0x0001  /* IM_DRC1_SIG_DET_EINT2 */
+#define WM8285_IM_DRC1_SIG_DET_EINT2_MASK          0x0001  /* IM_DRC1_SIG_DET_EINT2 */
+#define WM8285_IM_DRC1_SIG_DET_EINT2_SHIFT              0  /* IM_DRC1_SIG_DET_EINT2 */
+#define WM8285_IM_DRC1_SIG_DET_EINT2_WIDTH              1  /* IM_DRC1_SIG_DET_EINT2 */
+
+/*
+ * R6474 (0x194A) - IRQ2 Mask 11
+ */
+#define WM8285_IM_DSP_IRQ16_EINT2                  0x8000  /* IM_DSP_IRQ16_EINT2 */
+#define WM8285_IM_DSP_IRQ16_EINT2_MASK             0x8000  /* IM_DSP_IRQ16_EINT2 */
+#define WM8285_IM_DSP_IRQ16_EINT2_SHIFT                15  /* IM_DSP_IRQ16_EINT2 */
+#define WM8285_IM_DSP_IRQ16_EINT2_WIDTH                 1  /* IM_DSP_IRQ16_EINT2 */
+#define WM8285_IM_DSP_IRQ15_EINT2                  0x4000  /* IM_DSP_IRQ15_EINT2 */
+#define WM8285_IM_DSP_IRQ15_EINT2_MASK             0x4000  /* IM_DSP_IRQ15_EINT2 */
+#define WM8285_IM_DSP_IRQ15_EINT2_SHIFT                14  /* IM_DSP_IRQ15_EINT2 */
+#define WM8285_IM_DSP_IRQ15_EINT2_WIDTH                 1  /* IM_DSP_IRQ15_EINT2 */
+#define WM8285_IM_DSP_IRQ14_EINT2                  0x2000  /* IM_DSP_IRQ14_EINT2 */
+#define WM8285_IM_DSP_IRQ14_EINT2_MASK             0x2000  /* IM_DSP_IRQ14_EINT2 */
+#define WM8285_IM_DSP_IRQ14_EINT2_SHIFT                13  /* IM_DSP_IRQ14_EINT2 */
+#define WM8285_IM_DSP_IRQ14_EINT2_WIDTH                 1  /* IM_DSP_IRQ14_EINT2 */
+#define WM8285_IM_DSP_IRQ13_EINT2                  0x1000  /* IM_DSP_IRQ13_EINT2 */
+#define WM8285_IM_DSP_IRQ13_EINT2_MASK             0x1000  /* IM_DSP_IRQ13_EINT2 */
+#define WM8285_IM_DSP_IRQ13_EINT2_SHIFT                12  /* IM_DSP_IRQ13_EINT2 */
+#define WM8285_IM_DSP_IRQ13_EINT2_WIDTH                 1  /* IM_DSP_IRQ13_EINT2 */
+#define WM8285_IM_DSP_IRQ12_EINT2                  0x0800  /* IM_DSP_IRQ12_EINT2 */
+#define WM8285_IM_DSP_IRQ12_EINT2_MASK             0x0800  /* IM_DSP_IRQ12_EINT2 */
+#define WM8285_IM_DSP_IRQ12_EINT2_SHIFT                11  /* IM_DSP_IRQ12_EINT2 */
+#define WM8285_IM_DSP_IRQ12_EINT2_WIDTH                 1  /* IM_DSP_IRQ12_EINT2 */
+#define WM8285_IM_DSP_IRQ11_EINT2                  0x0400  /* IM_DSP_IRQ11_EINT2 */
+#define WM8285_IM_DSP_IRQ11_EINT2_MASK             0x0400  /* IM_DSP_IRQ11_EINT2 */
+#define WM8285_IM_DSP_IRQ11_EINT2_SHIFT                10  /* IM_DSP_IRQ11_EINT2 */
+#define WM8285_IM_DSP_IRQ11_EINT2_WIDTH                 1  /* IM_DSP_IRQ11_EINT2 */
+#define WM8285_IM_DSP_IRQ10_EINT2                  0x0200  /* IM_DSP_IRQ10_EINT2 */
+#define WM8285_IM_DSP_IRQ10_EINT2_MASK             0x0200  /* IM_DSP_IRQ10_EINT2 */
+#define WM8285_IM_DSP_IRQ10_EINT2_SHIFT                 9  /* IM_DSP_IRQ10_EINT2 */
+#define WM8285_IM_DSP_IRQ10_EINT2_WIDTH                 1  /* IM_DSP_IRQ10_EINT2 */
+#define WM8285_IM_DSP_IRQ9_EINT2                   0x0100  /* IM_DSP_IRQ9_EINT2 */
+#define WM8285_IM_DSP_IRQ9_EINT2_MASK              0x0100  /* IM_DSP_IRQ9_EINT2 */
+#define WM8285_IM_DSP_IRQ9_EINT2_SHIFT                  8  /* IM_DSP_IRQ9_EINT2 */
+#define WM8285_IM_DSP_IRQ9_EINT2_WIDTH                  1  /* IM_DSP_IRQ9_EINT2 */
+#define WM8285_IM_DSP_IRQ8_EINT2                   0x0080  /* IM_DSP_IRQ8_EINT2 */
+#define WM8285_IM_DSP_IRQ8_EINT2_MASK              0x0080  /* IM_DSP_IRQ8_EINT2 */
+#define WM8285_IM_DSP_IRQ8_EINT2_SHIFT                  7  /* IM_DSP_IRQ8_EINT2 */
+#define WM8285_IM_DSP_IRQ8_EINT2_WIDTH                  1  /* IM_DSP_IRQ8_EINT2 */
+#define WM8285_IM_DSP_IRQ7_EINT2                   0x0040  /* IM_DSP_IRQ7_EINT2 */
+#define WM8285_IM_DSP_IRQ7_EINT2_MASK              0x0040  /* IM_DSP_IRQ7_EINT2 */
+#define WM8285_IM_DSP_IRQ7_EINT2_SHIFT                  6  /* IM_DSP_IRQ7_EINT2 */
+#define WM8285_IM_DSP_IRQ7_EINT2_WIDTH                  1  /* IM_DSP_IRQ7_EINT2 */
+#define WM8285_IM_DSP_IRQ6_EINT2                   0x0020  /* IM_DSP_IRQ6_EINT2 */
+#define WM8285_IM_DSP_IRQ6_EINT2_MASK              0x0020  /* IM_DSP_IRQ6_EINT2 */
+#define WM8285_IM_DSP_IRQ6_EINT2_SHIFT                  5  /* IM_DSP_IRQ6_EINT2 */
+#define WM8285_IM_DSP_IRQ6_EINT2_WIDTH                  1  /* IM_DSP_IRQ6_EINT2 */
+#define WM8285_IM_DSP_IRQ5_EINT2                   0x0010  /* IM_DSP_IRQ5_EINT2 */
+#define WM8285_IM_DSP_IRQ5_EINT2_MASK              0x0010  /* IM_DSP_IRQ5_EINT2 */
+#define WM8285_IM_DSP_IRQ5_EINT2_SHIFT                  4  /* IM_DSP_IRQ5_EINT2 */
+#define WM8285_IM_DSP_IRQ5_EINT2_WIDTH                  1  /* IM_DSP_IRQ5_EINT2 */
+#define WM8285_IM_DSP_IRQ4_EINT2                   0x0008  /* IM_DSP_IRQ4_EINT2 */
+#define WM8285_IM_DSP_IRQ4_EINT2_MASK              0x0008  /* IM_DSP_IRQ4_EINT2 */
+#define WM8285_IM_DSP_IRQ4_EINT2_SHIFT                  3  /* IM_DSP_IRQ4_EINT2 */
+#define WM8285_IM_DSP_IRQ4_EINT2_WIDTH                  1  /* IM_DSP_IRQ4_EINT2 */
+#define WM8285_IM_DSP_IRQ3_EINT2                   0x0004  /* IM_DSP_IRQ3_EINT2 */
+#define WM8285_IM_DSP_IRQ3_EINT2_MASK              0x0004  /* IM_DSP_IRQ3_EINT2 */
+#define WM8285_IM_DSP_IRQ3_EINT2_SHIFT                  2  /* IM_DSP_IRQ3_EINT2 */
+#define WM8285_IM_DSP_IRQ3_EINT2_WIDTH                  1  /* IM_DSP_IRQ3_EINT2 */
+#define WM8285_IM_DSP_IRQ2_EINT2                   0x0002  /* IM_DSP_IRQ2_EINT2 */
+#define WM8285_IM_DSP_IRQ2_EINT2_MASK              0x0002  /* IM_DSP_IRQ2_EINT2 */
+#define WM8285_IM_DSP_IRQ2_EINT2_SHIFT                  1  /* IM_DSP_IRQ2_EINT2 */
+#define WM8285_IM_DSP_IRQ2_EINT2_WIDTH                  1  /* IM_DSP_IRQ2_EINT2 */
+#define WM8285_IM_DSP_IRQ1_EINT2                   0x0001  /* IM_DSP_IRQ1_EINT2 */
+#define WM8285_IM_DSP_IRQ1_EINT2_MASK              0x0001  /* IM_DSP_IRQ1_EINT2 */
+#define WM8285_IM_DSP_IRQ1_EINT2_SHIFT                  0  /* IM_DSP_IRQ1_EINT2 */
+#define WM8285_IM_DSP_IRQ1_EINT2_WIDTH                  1  /* IM_DSP_IRQ1_EINT2 */
+
+/*
+ * R6272 (0x1880) - IRQ1 Raw Status 1
+ */
+#define WM8285_DSP_SHARED_WR_COLL_STS1            0x8000  /* DSP_SHARED_WR_COLL_STS1 */
+#define WM8285_DSP_SHARED_WR_COLL_STS1_MASK       0x8000  /* DSP_SHARED_WR_COLL_STS1 */
+#define WM8285_DSP_SHARED_WR_COLL_STS1_SHIFT          15  /* DSP_SHARED_WR_COLL_STS1 */
+#define WM8285_DSP_SHARED_WR_COLL_STS1_WIDTH           1  /* DSP_SHARED_WR_COLL_STS1 */
+#define WM8285_CTRLIF_ERR_STS1                    0x1000  /* CTRLIF_ERR_STS1 */
+#define WM8285_CTRLIF_ERR_STS1_MASK               0x1000  /* CTRLIF_ERR_STS1 */
+#define WM8285_CTRLIF_ERR_STS1_SHIFT                  12  /* CTRLIF_ERR_STS1 */
+#define WM8285_CTRLIF_ERR_STS1_WIDTH                   1  /* CTRLIF_ERR_STS1 */
+#define WM8285_IRQ_NO_CLOCK_STS1                  0x0200  /* IRQ_NO_CLOCK_STS1 */
+#define WM8285_IRQ_NO_CLOCK_STS1_MASK             0x0200  /* IRQ_NO_CLOCK_STS1 */
+#define WM8285_IRQ_NO_CLOCK_STS1_SHIFT                 9  /* IRQ_NO_CLOCK_STS1 */
+#define WM8285_IRQ_NO_CLOCK_STS1_WIDTH                 1  /* IRQ_NO_CLOCK_STS1 */
+#define WM8285_CLOCK_DETECT_STS1                  0x0100  /* CLOCK_DETECT_STS1 */
+#define WM8285_CLOCK_DETECT_STS1_MASK             0x0100  /* CLOCK_DETECT_STS1 */
+#define WM8285_CLOCK_DETECT_STS1_SHIFT                 8  /* CLOCK_DETECT_STS1 */
+#define WM8285_CLOCK_DETECT_STS1_WIDTH                 1  /* CLOCK_DETECT_STS1 */
+#define WM8285_BOOT_DONE_STS1                     0x0080  /* BOOT_DONE_STS1 */
+#define WM8285_BOOT_DONE_STS1_MASK                0x0080  /* BOOT_DONE_STS1 */
+#define WM8285_BOOT_DONE_STS1_SHIFT                    7  /* BOOT_DONE_STS1 */
+#define WM8285_BOOT_DONE_STS1_WIDTH                    1  /* BOOT_DONE_STS1 */
+
+/*
+ * R6273 (0x1881) - IRQ1 Raw Status 2
+ */
+#define WM8285_FLL3_LOCK_STS1                     0x0400  /* FLL3_LOCK_STS1 */
+#define WM8285_FLL3_LOCK_STS1_MASK                0x0400  /* FLL3_LOCK_STS1 */
+#define WM8285_FLL3_LOCK_STS1_SHIFT                   10  /* FLL3_LOCK_STS1 */
+#define WM8285_FLL3_LOCK_STS1_WIDTH                    1  /* FLL3_LOCK_STS1 */
+#define WM8285_FLL2_LOCK_STS1                     0x0200  /* FLL2_LOCK_STS1 */
+#define WM8285_FLL2_LOCK_STS1_MASK                0x0200  /* FLL2_LOCK_STS1 */
+#define WM8285_FLL2_LOCK_STS1_SHIFT                    9  /* FLL2_LOCK_STS1 */
+#define WM8285_FLL2_LOCK_STS1_WIDTH                    1  /* FLL2_LOCK_STS1 */
+#define WM8285_FLL1_LOCK_STS1                     0x0100  /* FLL1_LOCK_STS1 */
+#define WM8285_FLL1_LOCK_STS1_MASK                0x0100  /* FLL1_LOCK_STS1 */
+#define WM8285_FLL1_LOCK_STS1_SHIFT                    8  /* FLL1_LOCK_STS1 */
+#define WM8285_FLL1_LOCK_STS1_WIDTH                    1  /* FLL1_LOCK_STS1 */
+
+/*
+ * R6277 (0x1885) - IRQ1 Raw Status 6
+ */
+#define WM8285_MICDET_STS1                        0x0100  /* MICDET_STS1 */
+#define WM8285_MICDET_STS1_MASK                   0x0100  /* MICDET_STS1 */
+#define WM8285_MICDET_STS1_SHIFT                       8  /* MICDET_STS1 */
+#define WM8285_MICDET_STS1_WIDTH                       1  /* MICDET_STS1 */
+#define WM8285_HPDET_STS1                         0x0001  /* HPDET_STS1 */
+#define WM8285_HPDET_STS1_MASK                    0x0001  /* HPDET_STS1 */
+#define WM8285_HPDET_STS1_SHIFT                        0  /* HPDET_STS1 */
+#define WM8285_HPDET_STS1_WIDTH                        1  /* HPDET_STS1 */
+
+/*
+ * R6278 (0x1886) - IRQ1 Raw Status 7
+ */
+#define WM8285_MICD_CLAMP_FALL_STS1               0x0020  /* MICD_CLAMP_FALL_STS1 */
+#define WM8285_MICD_CLAMP_FALL_STS1_MASK          0x0020  /* MICD_CLAMP_FALL_STS1 */
+#define WM8285_MICD_CLAMP_FALL_STS1_SHIFT              5  /* MICD_CLAMP_FALL_STS1 */
+#define WM8285_MICD_CLAMP_FALL_STS1_WIDTH              1  /* MICD_CLAMP_FALL_STS1 */
+#define WM8285_MICD_CLAMP_RISE_STS1               0x0010  /* MICD_CLAMP_RISE_STS1 */
+#define WM8285_MICD_CLAMP_RISE_STS1_MASK          0x0010  /* MICD_CLAMP_RISE_STS1 */
+#define WM8285_MICD_CLAMP_RISE_STS1_SHIFT              4  /* MICD_CLAMP_RISE_STS1 */
+#define WM8285_MICD_CLAMP_RISE_STS1_WIDTH              1  /* MICD_CLAMP_RISE_STS1 */
+#define WM8285_JD2_FALL_STS1                      0x0008  /* JD2_FALL_STS1 */
+#define WM8285_JD2_FALL_STS1_MASK                 0x0008  /* JD2_FALL_STS1 */
+#define WM8285_JD2_FALL_STS1_SHIFT                     3  /* JD2_FALL_STS1 */
+#define WM8285_JD2_FALL_STS1_WIDTH                     1  /* JD2_FALL_STS1 */
+#define WM8285_JD2_RISE_STS1                      0x0004  /* JD2_RISE_STS1 */
+#define WM8285_JD2_RISE_STS1_MASK                 0x0004  /* JD2_RISE_STS1 */
+#define WM8285_JD2_RISE_STS1_SHIFT                     2  /* JD2_RISE_STS1 */
+#define WM8285_JD2_RISE_STS1_WIDTH                     1  /* JD2_RISE_STS1 */
+#define WM8285_JD1_FALL_STS1                      0x0002  /* JD1_FALL_STS1 */
+#define WM8285_JD1_FALL_STS1_MASK                 0x0002  /* JD1_FALL_STS1 */
+#define WM8285_JD1_FALL_STS1_SHIFT                     1  /* JD1_FALL_STS1 */
+#define WM8285_JD1_FALL_STS1_WIDTH                     1  /* JD1_FALL_STS1 */
+#define WM8285_JD1_RISE_STS1                      0x0001  /* JD1_RISE_STS1 */
+#define WM8285_JD1_RISE_STS1_MASK                 0x0001  /* JD1_RISE_STS1 */
+#define WM8285_JD1_RISE_STS1_SHIFT                     0  /* JD1_RISE_STS1 */
+#define WM8285_JD1_RISE_STS1_WIDTH                     1  /* JD1_RISE_STS1 */
+
+/*
+ * R6280 (0x1888) - IRQ1 Raw Status 9
+ */
+#define WM8285_ASRC2_IN2_LOCK_STS1                0x0800  /* ASRC2_IN2_LOCK_STS1 */
+#define WM8285_ASRC2_IN2_LOCK_STS1_MASK           0x0800  /* ASRC2_IN2_LOCK_STS1 */
+#define WM8285_ASRC2_IN2_LOCK_STS1_SHIFT              11  /* ASRC2_IN2_LOCK_STS1 */
+#define WM8285_ASRC2_IN2_LOCK_STS1_WIDTH               1  /* ASRC2_IN2_LOCK_STS1 */
+#define WM8285_ASRC2_IN1_LOCK_STS1                0x0400  /* ASRC2_IN1_LOCK_STS1 */
+#define WM8285_ASRC2_IN1_LOCK_STS1_MASK           0x0400  /* ASRC2_IN1_LOCK_STS1 */
+#define WM8285_ASRC2_IN1_LOCK_STS1_SHIFT              10  /* ASRC2_IN1_LOCK_STS1 */
+#define WM8285_ASRC2_IN1_LOCK_STS1_WIDTH               1  /* ASRC2_IN1_LOCK_STS1 */
+#define WM8285_ASRC1_IN2_LOCK_STS1                0x0200  /* ASRC1_IN2_LOCK_STS1 */
+#define WM8285_ASRC1_IN2_LOCK_STS1_MASK           0x0200  /* ASRC1_IN2_LOCK_STS1 */
+#define WM8285_ASRC1_IN2_LOCK_STS1_SHIFT               9  /* ASRC1_IN2_LOCK_STS1 */
+#define WM8285_ASRC1_IN2_LOCK_STS1_WIDTH               1  /* ASRC1_IN2_LOCK_STS1 */
+#define WM8285_ASRC1_IN1_LOCK_STS1                0x0100  /* ASRC1_IN1_LOCK_STS1 */
+#define WM8285_ASRC1_IN1_LOCK_STS1_MASK           0x0100  /* ASRC1_IN1_LOCK_STS1 */
+#define WM8285_ASRC1_IN1_LOCK_STS1_SHIFT               8  /* ASRC1_IN1_LOCK_STS1 */
+#define WM8285_ASRC1_IN1_LOCK_STS1_WIDTH               1  /* ASRC1_IN1_LOCK_STS1 */
+#define WM8285_DRC2_SIG_DET_STS1                  0x0002  /* DRC2_SIG_DET_STS1 */
+#define WM8285_DRC2_SIG_DET_STS1_MASK             0x0002  /* DRC2_SIG_DET_STS1 */
+#define WM8285_DRC2_SIG_DET_STS1_SHIFT                 1  /* DRC2_SIG_DET_STS1 */
+#define WM8285_DRC2_SIG_DET_STS1_WIDTH                 1  /* DRC2_SIG_DET_STS1 */
+#define WM8285_DRC1_SIG_DET_STS1                  0x0001  /* DRC1_SIG_DET_STS1 */
+#define WM8285_DRC1_SIG_DET_STS1_MASK             0x0001  /* DRC1_SIG_DET_STS1 */
+#define WM8285_DRC1_SIG_DET_STS1_SHIFT                 0  /* DRC1_SIG_DET_STS1 */
+#define WM8285_DRC1_SIG_DET_STS1_WIDTH                 1  /* DRC1_SIG_DET_STS1 */
+
+/*
+ * R6282 (0x188A) - IRQ1 Raw Status 11
+ */
+#define WM8285_DSP_IRQ16_STS1                     0x8000  /* DSP_IRQ16_STS1 */
+#define WM8285_DSP_IRQ16_STS1_MASK                0x8000  /* DSP_IRQ16_STS1 */
+#define WM8285_DSP_IRQ16_STS1_SHIFT                   15  /* DSP_IRQ16_STS1 */
+#define WM8285_DSP_IRQ16_STS1_WIDTH                    1  /* DSP_IRQ16_STS1 */
+#define WM8285_DSP_IRQ15_STS1                     0x4000  /* DSP_IRQ15_STS1 */
+#define WM8285_DSP_IRQ15_STS1_MASK                0x4000  /* DSP_IRQ15_STS1 */
+#define WM8285_DSP_IRQ15_STS1_SHIFT                   14  /* DSP_IRQ15_STS1 */
+#define WM8285_DSP_IRQ15_STS1_WIDTH                    1  /* DSP_IRQ15_STS1 */
+#define WM8285_DSP_IRQ14_STS1                     0x2000  /* DSP_IRQ14_STS1 */
+#define WM8285_DSP_IRQ14_STS1_MASK                0x2000  /* DSP_IRQ14_STS1 */
+#define WM8285_DSP_IRQ14_STS1_SHIFT                   13  /* DSP_IRQ14_STS1 */
+#define WM8285_DSP_IRQ14_STS1_WIDTH                    1  /* DSP_IRQ14_STS1 */
+#define WM8285_DSP_IRQ13_STS1                     0x1000  /* DSP_IRQ13_STS1 */
+#define WM8285_DSP_IRQ13_STS1_MASK                0x1000  /* DSP_IRQ13_STS1 */
+#define WM8285_DSP_IRQ13_STS1_SHIFT                   12  /* DSP_IRQ13_STS1 */
+#define WM8285_DSP_IRQ13_STS1_WIDTH                    1  /* DSP_IRQ13_STS1 */
+#define WM8285_DSP_IRQ12_STS1                     0x0800  /* DSP_IRQ12_STS1 */
+#define WM8285_DSP_IRQ12_STS1_MASK                0x0800  /* DSP_IRQ12_STS1 */
+#define WM8285_DSP_IRQ12_STS1_SHIFT                   11  /* DSP_IRQ12_STS1 */
+#define WM8285_DSP_IRQ12_STS1_WIDTH                    1  /* DSP_IRQ12_STS1 */
+#define WM8285_DSP_IRQ11_STS1                     0x0400  /* DSP_IRQ11_STS1 */
+#define WM8285_DSP_IRQ11_STS1_MASK                0x0400  /* DSP_IRQ11_STS1 */
+#define WM8285_DSP_IRQ11_STS1_SHIFT                   10  /* DSP_IRQ11_STS1 */
+#define WM8285_DSP_IRQ11_STS1_WIDTH                    1  /* DSP_IRQ11_STS1 */
+#define WM8285_DSP_IRQ10_STS1                     0x0200  /* DSP_IRQ10_STS1 */
+#define WM8285_DSP_IRQ10_STS1_MASK                0x0200  /* DSP_IRQ10_STS1 */
+#define WM8285_DSP_IRQ10_STS1_SHIFT                    9  /* DSP_IRQ10_STS1 */
+#define WM8285_DSP_IRQ10_STS1_WIDTH                    1  /* DSP_IRQ10_STS1 */
+#define WM8285_DSP_IRQ9_STS1                      0x0100  /* DSP_IRQ9_STS1 */
+#define WM8285_DSP_IRQ9_STS1_MASK                 0x0100  /* DSP_IRQ9_STS1 */
+#define WM8285_DSP_IRQ9_STS1_SHIFT                     8  /* DSP_IRQ9_STS1 */
+#define WM8285_DSP_IRQ9_STS1_WIDTH                     1  /* DSP_IRQ9_STS1 */
+#define WM8285_DSP_IRQ8_STS1                      0x0080  /* DSP_IRQ8_STS1 */
+#define WM8285_DSP_IRQ8_STS1_MASK                 0x0080  /* DSP_IRQ8_STS1 */
+#define WM8285_DSP_IRQ8_STS1_SHIFT                     7  /* DSP_IRQ8_STS1 */
+#define WM8285_DSP_IRQ8_STS1_WIDTH                     1  /* DSP_IRQ8_STS1 */
+#define WM8285_DSP_IRQ7_STS1                      0x0040  /* DSP_IRQ7_STS1 */
+#define WM8285_DSP_IRQ7_STS1_MASK                 0x0040  /* DSP_IRQ7_STS1 */
+#define WM8285_DSP_IRQ7_STS1_SHIFT                     6  /* DSP_IRQ7_STS1 */
+#define WM8285_DSP_IRQ7_STS1_WIDTH                     1  /* DSP_IRQ7_STS1 */
+#define WM8285_DSP_IRQ6_STS1                      0x0020  /* DSP_IRQ6_STS1 */
+#define WM8285_DSP_IRQ6_STS1_MASK                 0x0020  /* DSP_IRQ6_STS1 */
+#define WM8285_DSP_IRQ6_STS1_SHIFT                     5  /* DSP_IRQ6_STS1 */
+#define WM8285_DSP_IRQ6_STS1_WIDTH                     1  /* DSP_IRQ6_STS1 */
+#define WM8285_DSP_IRQ5_STS1                      0x0010  /* DSP_IRQ5_STS1 */
+#define WM8285_DSP_IRQ5_STS1_MASK                 0x0010  /* DSP_IRQ5_STS1 */
+#define WM8285_DSP_IRQ5_STS1_SHIFT                     4  /* DSP_IRQ5_STS1 */
+#define WM8285_DSP_IRQ5_STS1_WIDTH                     1  /* DSP_IRQ5_STS1 */
+#define WM8285_DSP_IRQ4_STS1                      0x0008  /* DSP_IRQ4_STS1 */
+#define WM8285_DSP_IRQ4_STS1_MASK                 0x0008  /* DSP_IRQ4_STS1 */
+#define WM8285_DSP_IRQ4_STS1_SHIFT                     3  /* DSP_IRQ4_STS1 */
+#define WM8285_DSP_IRQ4_STS1_WIDTH                     1  /* DSP_IRQ4_STS1 */
+#define WM8285_DSP_IRQ3_STS1                      0x0004  /* DSP_IRQ3_STS1 */
+#define WM8285_DSP_IRQ3_STS1_MASK                 0x0004  /* DSP_IRQ3_STS1 */
+#define WM8285_DSP_IRQ3_STS1_SHIFT                     2  /* DSP_IRQ3_STS1 */
+#define WM8285_DSP_IRQ3_STS1_WIDTH                     1  /* DSP_IRQ3_STS1 */
+#define WM8285_DSP_IRQ2_STS1                      0x0002  /* DSP_IRQ2_STS1 */
+#define WM8285_DSP_IRQ2_STS1_MASK                 0x0002  /* DSP_IRQ2_STS1 */
+#define WM8285_DSP_IRQ2_STS1_SHIFT                     1  /* DSP_IRQ2_STS1 */
+#define WM8285_DSP_IRQ2_STS1_WIDTH                     1  /* DSP_IRQ2_STS1 */
+#define WM8285_DSP_IRQ1_STS1                      0x0001  /* DSP_IRQ1_STS1 */
+#define WM8285_DSP_IRQ1_STS1_MASK                 0x0001  /* DSP_IRQ1_STS1 */
+#define WM8285_DSP_IRQ1_STS1_SHIFT                     0  /* DSP_IRQ1_STS1 */
+#define WM8285_DSP_IRQ1_STS1_WIDTH                     1  /* DSP_IRQ1_STS1 */
+
+
+/*
+ * R6283 (0x188B) - IRQ1 Raw Status 12
+ */
+#define WM8285_SPKOUTR_SC_STS1                    0x0080  /* SPKOUTR_SC_STS1 */
+#define WM8285_SPKOUTR_SC_STS1_MASK               0x0080  /* SPKOUTR_SC_STS1 */
+#define WM8285_SPKOUTR_SC_STS1_SHIFT                   7  /* SPKOUTR_SC_STS1 */
+#define WM8285_SPKOUTR_SC_STS1_WIDTH                   1  /* SPKOUTR_SC_STS1 */
+#define WM8285_SPKOUTL_SC_STS1                    0x0040  /* SPKOUTL_SC_STS1 */
+#define WM8285_SPKOUTL_SC_STS1_MASK               0x0040  /* SPKOUTL_SC_STS1 */
+#define WM8285_SPKOUTL_SC_STS1_SHIFT                   6  /* SPKOUTL_SC_STS1 */
+#define WM8285_SPKOUTL_SC_STS1_WIDTH                   1  /* SPKOUTL_SC_STS1 */
+#define WM8285_HP3R_SC_STS1                       0x0020  /* HP3R_SC_STS1 */
+#define WM8285_HP3R_SC_STS1_MASK                  0x0020  /* HP3R_SC_STS1 */
+#define WM8285_HP3R_SC_STS1_SHIFT                      5  /* HP3R_SC_STS1 */
+#define WM8285_HP3R_SC_STS1_WIDTH                      1  /* HP3R_SC_STS1 */
+#define WM8285_HP3L_SC_STS1                       0x0010  /* HP3L_SC_STS1 */
+#define WM8285_HP3L_SC_STS1_MASK                  0x0010  /* HP3L_SC_STS1 */
+#define WM8285_HP3L_SC_STS1_SHIFT                      4  /* HP3L_SC_STS1 */
+#define WM8285_HP3L_SC_STS1_WIDTH                      1  /* HP3L_SC_STS1 */
+#define WM8285_HP2R_SC_STS1                       0x0008  /* HP2R_SC_STS1 */
+#define WM8285_HP2R_SC_STS1_MASK                  0x0008  /* HP2R_SC_STS1 */
+#define WM8285_HP2R_SC_STS1_SHIFT                      3  /* HP2R_SC_STS1 */
+#define WM8285_HP2R_SC_STS1_WIDTH                      1  /* HP2R_SC_STS1 */
+#define WM8285_HP2L_SC_STS1                       0x0004  /* HP2L_SC_STS1 */
+#define WM8285_HP2L_SC_STS1_MASK                  0x0004  /* HP2L_SC_STS1 */
+#define WM8285_HP2L_SC_STS1_SHIFT                      2  /* HP2L_SC_STS1 */
+#define WM8285_HP2L_SC_STS1_WIDTH                      1  /* HP2L_SC_STS1 */
+#define WM8285_HP1R_SC_STS1                       0x0002  /* HP1R_SC_STS1 */
+#define WM8285_HP1R_SC_STS1_MASK                  0x0002  /* HP1R_SC_STS1 */
+#define WM8285_HP1R_SC_STS1_SHIFT                      1  /* HP1R_SC_STS1 */
+#define WM8285_HP1R_SC_STS1_WIDTH                      1  /* HP1R_SC_STS1 */
+#define WM8285_HP1L_SC_STS1                       0x0001  /* HP1L_SC_STS1 */
+#define WM8285_HP1L_SC_STS1_MASK                  0x0001  /* HP1L_SC_STS1 */
+#define WM8285_HP1L_SC_STS1_SHIFT                      0  /* HP1L_SC_STS1 */
+#define WM8285_HP1L_SC_STS1_WIDTH                      1  /* HP1L_SC_STS1 */
+
+/*
+ * R6284 (0x188C) - IRQ1 Raw Status 13
+ */
+#define WM8285_SPKOUTR_ENABLE_DONE_STS1           0x0080  /* SPKOUTR_ENABLE_DONE_STS1 */
+#define WM8285_SPKOUTR_ENABLE_DONE_STS1_MASK      0x0080  /* SPKOUTR_ENABLE_DONE_STS1 */
+#define WM8285_SPKOUTR_ENABLE_DONE_STS1_SHIFT          7  /* SPKOUTR_ENABLE_DONE_STS1 */
+#define WM8285_SPKOUTR_ENABLE_DONE_STS1_WIDTH          1  /* SPKOUTR_ENABLE_DONE_STS1 */
+#define WM8285_SPKOUTL_ENABLE_DONE_STS1           0x0040  /* SPKOUTL_ENABLE_DONE_STS1 */
+#define WM8285_SPKOUTL_ENABLE_DONE_STS1_MASK      0x0040  /* SPKOUTL_ENABLE_DONE_STS1 */
+#define WM8285_SPKOUTL_ENABLE_DONE_STS1_SHIFT          6  /* SPKOUTL_ENABLE_DONE_STS1 */
+#define WM8285_SPKOUTL_ENABLE_DONE_STS1_WIDTH          1  /* SPKOUTL_ENABLE_DONE_STS1 */
+#define WM8285_HP3R_ENABLE_DONE_STS1              0x0020  /* HP3R_ENABLE_DONE_STS1 */
+#define WM8285_HP3R_ENABLE_DONE_STS1_MASK         0x0020  /* HP3R_ENABLE_DONE_STS1 */
+#define WM8285_HP3R_ENABLE_DONE_STS1_SHIFT             5  /* HP3R_ENABLE_DONE_STS1 */
+#define WM8285_HP3R_ENABLE_DONE_STS1_WIDTH             1  /* HP3R_ENABLE_DONE_STS1 */
+#define WM8285_HP3L_ENABLE_DONE_STS1              0x0010  /* HP3L_ENABLE_DONE_STS1 */
+#define WM8285_HP3L_ENABLE_DONE_STS1_MASK         0x0010  /* HP3L_ENABLE_DONE_STS1 */
+#define WM8285_HP3L_ENABLE_DONE_STS1_SHIFT             4  /* HP3L_ENABLE_DONE_STS1 */
+#define WM8285_HP3L_ENABLE_DONE_STS1_WIDTH             1  /* HP3L_ENABLE_DONE_STS1 */
+#define WM8285_HP2R_ENABLE_DONE_STS1              0x0008  /* HP2R_ENABLE_DONE_STS1 */
+#define WM8285_HP2R_ENABLE_DONE_STS1_MASK         0x0008  /* HP2R_ENABLE_DONE_STS1 */
+#define WM8285_HP2R_ENABLE_DONE_STS1_SHIFT             3  /* HP2R_ENABLE_DONE_STS1 */
+#define WM8285_HP2R_ENABLE_DONE_STS1_WIDTH             1  /* HP2R_ENABLE_DONE_STS1 */
+#define WM8285_HP2L_ENABLE_DONE_STS1              0x0004  /* HP2L_ENABLE_DONE_STS1 */
+#define WM8285_HP2L_ENABLE_DONE_STS1_MASK         0x0004  /* HP2L_ENABLE_DONE_STS1 */
+#define WM8285_HP2L_ENABLE_DONE_STS1_SHIFT             2  /* HP2L_ENABLE_DONE_STS1 */
+#define WM8285_HP2L_ENABLE_DONE_STS1_WIDTH             1  /* HP2L_ENABLE_DONE_STS1 */
+#define WM8285_HP1R_ENABLE_DONE_STS1              0x0002  /* HP1R_ENABLE_DONE_STS1 */
+#define WM8285_HP1R_ENABLE_DONE_STS1_MASK         0x0002  /* HP1R_ENABLE_DONE_STS1 */
+#define WM8285_HP1R_ENABLE_DONE_STS1_SHIFT             1  /* HP1R_ENABLE_DONE_STS1 */
+#define WM8285_HP1R_ENABLE_DONE_STS1_WIDTH             1  /* HP1R_ENABLE_DONE_STS1 */
+#define WM8285_HP1L_ENABLE_DONE_STS1              0x0001  /* HP1L_ENABLE_DONE_STS1 */
+#define WM8285_HP1L_ENABLE_DONE_STS1_MASK         0x0001  /* HP1L_ENABLE_DONE_STS1 */
+#define WM8285_HP1L_ENABLE_DONE_STS1_SHIFT             0  /* HP1L_ENABLE_DONE_STS1 */
+#define WM8285_HP1L_ENABLE_DONE_STS1_WIDTH             1  /* HP1L_ENABLE_DONE_STS1 */
+
+/*
+ * R6285 (0x188D) - IRQ1 Raw Status 14
+ */
+#define WM8285_SPKOUTR_DISABLE_DONE_STS1          0x0080  /* SPKOUTR_DISABLE_DONE_STS1 */
+#define WM8285_SPKOUTR_DISABLE_DONE_STS1_MASK     0x0080  /* SPKOUTR_DISABLE_DONE_STS1 */
+#define WM8285_SPKOUTR_DISABLE_DONE_STS1_SHIFT         7  /* SPKOUTR_DISABLE_DONE_STS1 */
+#define WM8285_SPKOUTR_DISABLE_DONE_STS1_WIDTH         1  /* SPKOUTR_DISABLE_DONE_STS1 */
+#define WM8285_SPKOUTL_DISABLE_DONE_STS1          0x0040  /* SPKOUTL_DISABLE_DONE_STS1 */
+#define WM8285_SPKOUTL_DISABLE_DONE_STS1_MASK     0x0040  /* SPKOUTL_DISABLE_DONE_STS1 */
+#define WM8285_SPKOUTL_DISABLE_DONE_STS1_SHIFT         6  /* SPKOUTL_DISABLE_DONE_STS1 */
+#define WM8285_SPKOUTL_DISABLE_DONE_STS1_WIDTH         1  /* SPKOUTL_DISABLE_DONE_STS1 */
+#define WM8285_HP3R_DISABLE_DONE_STS1             0x0020  /* HP3R_DISABLE_DONE_STS1 */
+#define WM8285_HP3R_DISABLE_DONE_STS1_MASK        0x0020  /* HP3R_DISABLE_DONE_STS1 */
+#define WM8285_HP3R_DISABLE_DONE_STS1_SHIFT            5  /* HP3R_DISABLE_DONE_STS1 */
+#define WM8285_HP3R_DISABLE_DONE_STS1_WIDTH            1  /* HP3R_DISABLE_DONE_STS1 */
+#define WM8285_HP3L_DISABLE_DONE_STS1             0x0010  /* HP3L_DISABLE_DONE_STS1 */
+#define WM8285_HP3L_DISABLE_DONE_STS1_MASK        0x0010  /* HP3L_DISABLE_DONE_STS1 */
+#define WM8285_HP3L_DISABLE_DONE_STS1_SHIFT            4  /* HP3L_DISABLE_DONE_STS1 */
+#define WM8285_HP3L_DISABLE_DONE_STS1_WIDTH            1  /* HP3L_DISABLE_DONE_STS1 */
+#define WM8285_HP2R_DISABLE_DONE_STS1             0x0008  /* HP2R_DISABLE_DONE_STS1 */
+#define WM8285_HP2R_DISABLE_DONE_STS1_MASK        0x0008  /* HP2R_DISABLE_DONE_STS1 */
+#define WM8285_HP2R_DISABLE_DONE_STS1_SHIFT            3  /* HP2R_DISABLE_DONE_STS1 */
+#define WM8285_HP2R_DISABLE_DONE_STS1_WIDTH            1  /* HP2R_DISABLE_DONE_STS1 */
+#define WM8285_HP2L_DISABLE_DONE_STS1             0x0004  /* HP2L_DISABLE_DONE_STS1 */
+#define WM8285_HP2L_DISABLE_DONE_STS1_MASK        0x0004  /* HP2L_DISABLE_DONE_STS1 */
+#define WM8285_HP2L_DISABLE_DONE_STS1_SHIFT            2  /* HP2L_DISABLE_DONE_STS1 */
+#define WM8285_HP2L_DISABLE_DONE_STS1_WIDTH            1  /* HP2L_DISABLE_DONE_STS1 */
+#define WM8285_HP1R_DISABLE_DONE_STS1             0x0002  /* HP1R_DISABLE_DONE_STS1 */
+#define WM8285_HP1R_DISABLE_DONE_STS1_MASK        0x0002  /* HP1R_DISABLE_DONE_STS1 */
+#define WM8285_HP1R_DISABLE_DONE_STS1_SHIFT            1  /* HP1R_DISABLE_DONE_STS1 */
+#define WM8285_HP1R_DISABLE_DONE_STS1_WIDTH            1  /* HP1R_DISABLE_DONE_STS1 */
+#define WM8285_HP1L_DISABLE_DONE_STS1             0x0001  /* HP1L_DISABLE_DONE_STS1 */
+#define WM8285_HP1L_DISABLE_DONE_STS1_MASK        0x0001  /* HP1L_DISABLE_DONE_STS1 */
+#define WM8285_HP1L_DISABLE_DONE_STS1_SHIFT            0  /* HP1L_DISABLE_DONE_STS1 */
+#define WM8285_HP1L_DISABLE_DONE_STS1_WIDTH            1  /* HP1L_DISABLE_DONE_STS1 */
+
+/*
+ * R6286 (0x188E) - IRQ1 Raw Status 15
+ */
+#define WM8285_SPK_OVERHEAT_WARN_STS1             0x0004  /* SPK_OVERHEAT_WARN_STS1 */
+#define WM8285_SPK_OVERHEAT_WARN_STS1_MASK        0x0004  /* SPK_OVERHEAT_WARN_STS1 */
+#define WM8285_SPK_OVERHEAT_WARN_STS1_SHIFT            2  /* SPK_OVERHEAT_WARN_STS1 */
+#define WM8285_SPK_OVERHEAT_WARN_STS1_WIDTH            1  /* SPK_OVERHEAT_WARN_STS1 */
+#define WM8285_SPK_OVERHEAT_STS1                  0x0002  /* SPK_OVERHEAT_STS1 */
+#define WM8285_SPK_OVERHEAT_STS1_MASK             0x0002  /* SPK_OVERHEAT_STS1 */
+#define WM8285_SPK_OVERHEAT_STS1_SHIFT                 1  /* SPK_OVERHEAT_STS1 */
+#define WM8285_SPK_OVERHEAT_STS1_WIDTH                 1  /* SPK_OVERHEAT_STS1 */
+#define WM8285_SPK_SHUTDOWN_STS1                  0x0001  /* SPK_SHUTDOWN_STS1 */
+#define WM8285_SPK_SHUTDOWN_STS1_MASK             0x0001  /* SPK_SHUTDOWN_STS1 */
+#define WM8285_SPK_SHUTDOWN_STS1_SHIFT                 0  /* SPK_SHUTDOWN_STS1 */
+#define WM8285_SPK_SHUTDOWN_STS1_WIDTH                 1  /* SPK_SHUTDOWN_STS1 */
+
+/*
+ * R6475 (0x194B) - IRQ2 Mask 12
+ */
+#define WM8285_IM_SPKOUTR_SC_EINT2                 0x0080  /* IM_SPKOUTR_SC_EINT2 */
+#define WM8285_IM_SPKOUTR_SC_EINT2_MASK            0x0080  /* IM_SPKOUTR_SC_EINT2 */
+#define WM8285_IM_SPKOUTR_SC_EINT2_SHIFT                7  /* IM_SPKOUTR_SC_EINT2 */
+#define WM8285_IM_SPKOUTR_SC_EINT2_WIDTH                1  /* IM_SPKOUTR_SC_EINT2 */
+#define WM8285_IM_SPKOUTL_SC_EINT2                 0x0040  /* IM_SPKOUTL_SC_EINT2 */
+#define WM8285_IM_SPKOUTL_SC_EINT2_MASK            0x0040  /* IM_SPKOUTL_SC_EINT2 */
+#define WM8285_IM_SPKOUTL_SC_EINT2_SHIFT                6  /* IM_SPKOUTL_SC_EINT2 */
+#define WM8285_IM_SPKOUTL_SC_EINT2_WIDTH                1  /* IM_SPKOUTL_SC_EINT2 */
+#define WM8285_IM_HP3R_SC_EINT2                    0x0020  /* IM_HP3R_SC_EINT2 */
+#define WM8285_IM_HP3R_SC_EINT2_MASK               0x0020  /* IM_HP3R_SC_EINT2 */
+#define WM8285_IM_HP3R_SC_EINT2_SHIFT                   5  /* IM_HP3R_SC_EINT2 */
+#define WM8285_IM_HP3R_SC_EINT2_WIDTH                   1  /* IM_HP3R_SC_EINT2 */
+#define WM8285_IM_HP3L_SC_EINT2                    0x0010  /* IM_HP3L_SC_EINT2 */
+#define WM8285_IM_HP3L_SC_EINT2_MASK               0x0010  /* IM_HP3L_SC_EINT2 */
+#define WM8285_IM_HP3L_SC_EINT2_SHIFT                   4  /* IM_HP3L_SC_EINT2 */
+#define WM8285_IM_HP3L_SC_EINT2_WIDTH                   1  /* IM_HP3L_SC_EINT2 */
+#define WM8285_IM_HP2R_SC_EINT2                    0x0008  /* IM_HP2R_SC_EINT2 */
+#define WM8285_IM_HP2R_SC_EINT2_MASK               0x0008  /* IM_HP2R_SC_EINT2 */
+#define WM8285_IM_HP2R_SC_EINT2_SHIFT                   3  /* IM_HP2R_SC_EINT2 */
+#define WM8285_IM_HP2R_SC_EINT2_WIDTH                   1  /* IM_HP2R_SC_EINT2 */
+#define WM8285_IM_HP2L_SC_EINT2                    0x0004  /* IM_HP2L_SC_EINT2 */
+#define WM8285_IM_HP2L_SC_EINT2_MASK               0x0004  /* IM_HP2L_SC_EINT2 */
+#define WM8285_IM_HP2L_SC_EINT2_SHIFT                   2  /* IM_HP2L_SC_EINT2 */
+#define WM8285_IM_HP2L_SC_EINT2_WIDTH                   1  /* IM_HP2L_SC_EINT2 */
+#define WM8285_IM_HP1R_SC_EINT2                    0x0002  /* IM_HP1R_SC_EINT2 */
+#define WM8285_IM_HP1R_SC_EINT2_MASK               0x0002  /* IM_HP1R_SC_EINT2 */
+#define WM8285_IM_HP1R_SC_EINT2_SHIFT                   1  /* IM_HP1R_SC_EINT2 */
+#define WM8285_IM_HP1R_SC_EINT2_WIDTH                   1  /* IM_HP1R_SC_EINT2 */
+#define WM8285_IM_HP1L_SC_EINT2                    0x0001  /* IM_HP1L_SC_EINT2 */
+#define WM8285_IM_HP1L_SC_EINT2_MASK               0x0001  /* IM_HP1L_SC_EINT2 */
+#define WM8285_IM_HP1L_SC_EINT2_SHIFT                   0  /* IM_HP1L_SC_EINT2 */
+#define WM8285_IM_HP1L_SC_EINT2_WIDTH                   1  /* IM_HP1L_SC_EINT2 */
+
+/*
+ * R6476 (0x194C) - IRQ2 Mask 13
+ */
+#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT2        0x0080  /* IM_SPKOUTR_ENABLE_DONE_EINT2 */
+#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT2_MASK   0x0080  /* IM_SPKOUTR_ENABLE_DONE_EINT2 */
+#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT2_SHIFT       7  /* IM_SPKOUTR_ENABLE_DONE_EINT2 */
+#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT2_WIDTH       1  /* IM_SPKOUTR_ENABLE_DONE_EINT2 */
+#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT2        0x0040  /* IM_SPKOUTL_ENABLE_DONE_EINT2 */
+#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT2_MASK   0x0040  /* IM_SPKOUTL_ENABLE_DONE_EINT2 */
+#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT2_SHIFT       6  /* IM_SPKOUTL_ENABLE_DONE_EINT2 */
+#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT2_WIDTH       1  /* IM_SPKOUTL_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP3R_ENABLE_DONE_EINT2           0x0020  /* IM_HP3R_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP3R_ENABLE_DONE_EINT2_MASK      0x0020  /* IM_HP3R_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP3R_ENABLE_DONE_EINT2_SHIFT          5  /* IM_HP3R_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP3R_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP3R_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP3L_ENABLE_DONE_EINT2           0x0010  /* IM_HP3L_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP3L_ENABLE_DONE_EINT2_MASK      0x0010  /* IM_HP3L_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP3L_ENABLE_DONE_EINT2_SHIFT          4  /* IM_HP3L_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP3L_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP3L_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP2R_ENABLE_DONE_EINT2           0x0008  /* IM_HP2R_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP2R_ENABLE_DONE_EINT2_MASK      0x0008  /* IM_HP2R_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP2R_ENABLE_DONE_EINT2_SHIFT          3  /* IM_HP2R_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP2R_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP2R_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP2L_ENABLE_DONE_EINT2           0x0004  /* IM_HP2L_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP2L_ENABLE_DONE_EINT2_MASK      0x0004  /* IM_HP2L_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP2L_ENABLE_DONE_EINT2_SHIFT          2  /* IM_HP2L_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP2L_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP2L_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP1R_ENABLE_DONE_EINT2           0x0002  /* IM_HP1R_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP1R_ENABLE_DONE_EINT2_MASK      0x0002  /* IM_HP1R_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP1R_ENABLE_DONE_EINT2_SHIFT          1  /* IM_HP1R_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP1R_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP1R_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP1L_ENABLE_DONE_EINT2           0x0001  /* IM_HP1L_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP1L_ENABLE_DONE_EINT2_MASK      0x0001  /* IM_HP1L_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP1L_ENABLE_DONE_EINT2_SHIFT          0  /* IM_HP1L_ENABLE_DONE_EINT2 */
+#define WM8285_IM_HP1L_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP1L_ENABLE_DONE_EINT2 */
+
+/*
+ * R6477 (0x194D) - IRQ2 Mask 14
+ */
+#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT2       0x0080  /* IM_SPKOUTR_DISABLE_DONE_EINT2 */
+#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT2_MASK  0x0080  /* IM_SPKOUTR_DISABLE_DONE_EINT2 */
+#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT2_SHIFT      7  /* IM_SPKOUTR_DISABLE_DONE_EINT2 */
+#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT2_WIDTH      1  /* IM_SPKOUTR_DISABLE_DONE_EINT2 */
+#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT2       0x0040  /* IM_SPKOUTL_DISABLE_DONE_EINT2 */
+#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT2_MASK  0x0040  /* IM_SPKOUTL_DISABLE_DONE_EINT2 */
+#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT2_SHIFT      6  /* IM_SPKOUTL_DISABLE_DONE_EINT2 */
+#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT2_WIDTH      1  /* IM_SPKOUTL_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP3R_DISABLE_DONE_EINT2          0x0020  /* IM_HP3R_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP3R_DISABLE_DONE_EINT2_MASK     0x0020  /* IM_HP3R_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP3R_DISABLE_DONE_EINT2_SHIFT         5  /* IM_HP3R_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP3R_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP3R_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP3L_DISABLE_DONE_EINT2          0x0010  /* IM_HP3L_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP3L_DISABLE_DONE_EINT2_MASK     0x0010  /* IM_HP3L_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP3L_DISABLE_DONE_EINT2_SHIFT         4  /* IM_HP3L_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP3L_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP3L_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP2R_DISABLE_DONE_EINT2          0x0008  /* IM_HP2R_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP2R_DISABLE_DONE_EINT2_MASK     0x0008  /* IM_HP2R_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP2R_DISABLE_DONE_EINT2_SHIFT         3  /* IM_HP2R_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP2R_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP2R_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP2L_DISABLE_DONE_EINT2          0x0004  /* IM_HP2L_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP2L_DISABLE_DONE_EINT2_MASK     0x0004  /* IM_HP2L_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP2L_DISABLE_DONE_EINT2_SHIFT         2  /* IM_HP2L_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP2L_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP2L_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP1R_DISABLE_DONE_EINT2          0x0002  /* IM_HP1R_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP1R_DISABLE_DONE_EINT2_MASK     0x0002  /* IM_HP1R_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP1R_DISABLE_DONE_EINT2_SHIFT         1  /* IM_HP1R_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP1R_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP1R_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP1L_DISABLE_DONE_EINT2          0x0001  /* IM_HP1L_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP1L_DISABLE_DONE_EINT2_MASK     0x0001  /* IM_HP1L_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP1L_DISABLE_DONE_EINT2_SHIFT         0  /* IM_HP1L_DISABLE_DONE_EINT2 */
+#define WM8285_IM_HP1L_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP1L_DISABLE_DONE_EINT2 */
+
+/*
+ * R6478 (0x194E) - IRQ2 Mask 15
+ */
+#define WM8285_IM_SPK_OVERHEAT_WARN_EINT2          0x0004  /* IM_SPK_OVERHEAT_WARN_EINT2 */
+#define WM8285_IM_SPK_OVERHEAT_WARN_EINT2_MASK     0x0004  /* IM_SPK_OVERHEAT_WARN_EINT2 */
+#define WM8285_IM_SPK_OVERHEAT_WARN_EINT2_SHIFT         2  /* IM_SPK_OVERHEAT_WARN_EINT2 */
+#define WM8285_IM_SPK_OVERHEAT_WARN_EINT2_WIDTH         1  /* IM_SPK_OVERHEAT_WARN_EINT2 */
+#define WM8285_IM_SPK_OVERHEAT_EINT2               0x0002  /* IM_SPK_OVERHEAT_EINT2 */
+#define WM8285_IM_SPK_OVERHEAT_EINT2_MASK          0x0002  /* IM_SPK_OVERHEAT_EINT2 */
+#define WM8285_IM_SPK_OVERHEAT_EINT2_SHIFT              1  /* IM_SPK_OVERHEAT_EINT2 */
+#define WM8285_IM_SPK_OVERHEAT_EINT2_WIDTH              1  /* IM_SPK_OVERHEAT_EINT2 */
+#define WM8285_IM_SPK_SHUTDOWN_EINT2               0x0001  /* IM_SPK_SHUTDOWN_EINT2 */
+#define WM8285_IM_SPK_SHUTDOWN_EINT2_MASK          0x0001  /* IM_SPK_SHUTDOWN_EINT2 */
+#define WM8285_IM_SPK_SHUTDOWN_EINT2_SHIFT              0  /* IM_SPK_SHUTDOWN_EINT2 */
+#define WM8285_IM_SPK_SHUTDOWN_EINT2_WIDTH              1  /* IM_SPK_SHUTDOWN_EINT2 */
+
+/*
+ * R6528 (0x1980) - IRQ2 Raw Status 1
+ */
+#define WM8285_DSP_SHARED_WR_COLL_STS2            0x8000  /* DSP_SHARED_WR_COLL_STS2 */
+#define WM8285_DSP_SHARED_WR_COLL_STS2_MASK       0x8000  /* DSP_SHARED_WR_COLL_STS2 */
+#define WM8285_DSP_SHARED_WR_COLL_STS2_SHIFT          15  /* DSP_SHARED_WR_COLL_STS2 */
+#define WM8285_DSP_SHARED_WR_COLL_STS2_WIDTH           1  /* DSP_SHARED_WR_COLL_STS2 */
+#define WM8285_CTRLIF_ERR_STS2                    0x1000  /* CTRLIF_ERR_STS2 */
+#define WM8285_CTRLIF_ERR_STS2_MASK               0x1000  /* CTRLIF_ERR_STS2 */
+#define WM8285_CTRLIF_ERR_STS2_SHIFT                  12  /* CTRLIF_ERR_STS2 */
+#define WM8285_CTRLIF_ERR_STS2_WIDTH                   1  /* CTRLIF_ERR_STS2 */
+#define WM8285_IRQ_NO_CLOCK_STS2                  0x0200  /* IRQ_NO_CLOCK_STS2 */
+#define WM8285_IRQ_NO_CLOCK_STS2_MASK             0x0200  /* IRQ_NO_CLOCK_STS2 */
+#define WM8285_IRQ_NO_CLOCK_STS2_SHIFT                 9  /* IRQ_NO_CLOCK_STS2 */
+#define WM8285_IRQ_NO_CLOCK_STS2_WIDTH                 1  /* IRQ_NO_CLOCK_STS2 */
+#define WM8285_CLOCK_DETECT_STS2                  0x0100  /* CLOCK_DETECT_STS2 */
+#define WM8285_CLOCK_DETECT_STS2_MASK             0x0100  /* CLOCK_DETECT_STS2 */
+#define WM8285_CLOCK_DETECT_STS2_SHIFT                 8  /* CLOCK_DETECT_STS2 */
+#define WM8285_CLOCK_DETECT_STS2_WIDTH                 1  /* CLOCK_DETECT_STS2 */
+#define WM8285_BOOT_DONE_STS2                     0x0080  /* BOOT_DONE_STS2 */
+#define WM8285_BOOT_DONE_STS2_MASK                0x0080  /* BOOT_DONE_STS2 */
+#define WM8285_BOOT_DONE_STS2_SHIFT                    7  /* BOOT_DONE_STS2 */
+#define WM8285_BOOT_DONE_STS2_WIDTH                    1  /* BOOT_DONE_STS2 */
+
+/*
+ * R6529 (0x1981) - IRQ2 Raw Status 2
+ */
+#define WM8285_FLL3_LOCK_STS2                     0x0400  /* FLL3_LOCK_STS2 */
+#define WM8285_FLL3_LOCK_STS2_MASK                0x0400  /* FLL3_LOCK_STS2 */
+#define WM8285_FLL3_LOCK_STS2_SHIFT                   10  /* FLL3_LOCK_STS2 */
+#define WM8285_FLL3_LOCK_STS2_WIDTH                    1  /* FLL3_LOCK_STS2 */
+#define WM8285_FLL2_LOCK_STS2                     0x0200  /* FLL2_LOCK_STS2 */
+#define WM8285_FLL2_LOCK_STS2_MASK                0x0200  /* FLL2_LOCK_STS2 */
+#define WM8285_FLL2_LOCK_STS2_SHIFT                    9  /* FLL2_LOCK_STS2 */
+#define WM8285_FLL2_LOCK_STS2_WIDTH                    1  /* FLL2_LOCK_STS2 */
+#define WM8285_FLL1_LOCK_STS2                     0x0100  /* FLL1_LOCK_STS2 */
+#define WM8285_FLL1_LOCK_STS2_MASK                0x0100  /* FLL1_LOCK_STS2 */
+#define WM8285_FLL1_LOCK_STS2_SHIFT                    8  /* FLL1_LOCK_STS2 */
+#define WM8285_FLL1_LOCK_STS2_WIDTH                    1  /* FLL1_LOCK_STS2 */
+
+/*
+ * R6533 (0x1985) - IRQ2 Raw Status 6
+ */
+#define WM8285_MICDET_STS2                        0x0100  /* MICDET_STS2 */
+#define WM8285_MICDET_STS2_MASK                   0x0100  /* MICDET_STS2 */
+#define WM8285_MICDET_STS2_SHIFT                       8  /* MICDET_STS2 */
+#define WM8285_MICDET_STS2_WIDTH                       1  /* MICDET_STS2 */
+#define WM8285_HPDET_STS2                         0x0001  /* HPDET_STS2 */
+#define WM8285_HPDET_STS2_MASK                    0x0001  /* HPDET_STS2 */
+#define WM8285_HPDET_STS2_SHIFT                        0  /* HPDET_STS2 */
+#define WM8285_HPDET_STS2_WIDTH                        1  /* HPDET_STS2 */
+
+/*
+ * R6534 (0x1986) - IRQ2 Raw Status 7
+ */
+#define WM8285_MICD_CLAMP_FALL_STS2               0x0020  /* MICD_CLAMP_FALL_STS2 */
+#define WM8285_MICD_CLAMP_FALL_STS2_MASK          0x0020  /* MICD_CLAMP_FALL_STS2 */
+#define WM8285_MICD_CLAMP_FALL_STS2_SHIFT              5  /* MICD_CLAMP_FALL_STS2 */
+#define WM8285_MICD_CLAMP_FALL_STS2_WIDTH              1  /* MICD_CLAMP_FALL_STS2 */
+#define WM8285_MICD_CLAMP_RISE_STS2               0x0010  /* MICD_CLAMP_RISE_STS2 */
+#define WM8285_MICD_CLAMP_RISE_STS2_MASK          0x0010  /* MICD_CLAMP_RISE_STS2 */
+#define WM8285_MICD_CLAMP_RISE_STS2_SHIFT              4  /* MICD_CLAMP_RISE_STS2 */
+#define WM8285_MICD_CLAMP_RISE_STS2_WIDTH              1  /* MICD_CLAMP_RISE_STS2 */
+#define WM8285_JD2_FALL_STS2                      0x0008  /* JD2_FALL_STS2 */
+#define WM8285_JD2_FALL_STS2_MASK                 0x0008  /* JD2_FALL_STS2 */
+#define WM8285_JD2_FALL_STS2_SHIFT                     3  /* JD2_FALL_STS2 */
+#define WM8285_JD2_FALL_STS2_WIDTH                     1  /* JD2_FALL_STS2 */
+#define WM8285_JD2_RISE_STS2                      0x0004  /* JD2_RISE_STS2 */
+#define WM8285_JD2_RISE_STS2_MASK                 0x0004  /* JD2_RISE_STS2 */
+#define WM8285_JD2_RISE_STS2_SHIFT                     2  /* JD2_RISE_STS2 */
+#define WM8285_JD2_RISE_STS2_WIDTH                     1  /* JD2_RISE_STS2 */
+#define WM8285_JD1_FALL_STS2                      0x0002  /* JD1_FALL_STS2 */
+#define WM8285_JD1_FALL_STS2_MASK                 0x0002  /* JD1_FALL_STS2 */
+#define WM8285_JD1_FALL_STS2_SHIFT                     1  /* JD1_FALL_STS2 */
+#define WM8285_JD1_FALL_STS2_WIDTH                     1  /* JD1_FALL_STS2 */
+#define WM8285_JD1_RISE_STS2                      0x0001  /* JD1_RISE_STS2 */
+#define WM8285_JD1_RISE_STS2_MASK                 0x0001  /* JD1_RISE_STS2 */
+#define WM8285_JD1_RISE_STS2_SHIFT                     0  /* JD1_RISE_STS2 */
+#define WM8285_JD1_RISE_STS2_WIDTH                     1  /* JD1_RISE_STS2 */
+
+/*
+ * R6536 (0x1988) - IRQ2 Raw Status 9
+ */
+#define WM8285_ASRC2_IN2_LOCK_STS2                0x0800  /* ASRC2_IN2_LOCK_STS2 */
+#define WM8285_ASRC2_IN2_LOCK_STS2_MASK           0x0800  /* ASRC2_IN2_LOCK_STS2 */
+#define WM8285_ASRC2_IN2_LOCK_STS2_SHIFT              11  /* ASRC2_IN2_LOCK_STS2 */
+#define WM8285_ASRC2_IN2_LOCK_STS2_WIDTH               1  /* ASRC2_IN2_LOCK_STS2 */
+#define WM8285_ASRC2_IN1_LOCK_STS2                0x0400  /* ASRC2_IN1_LOCK_STS2 */
+#define WM8285_ASRC2_IN1_LOCK_STS2_MASK           0x0400  /* ASRC2_IN1_LOCK_STS2 */
+#define WM8285_ASRC2_IN1_LOCK_STS2_SHIFT              10  /* ASRC2_IN1_LOCK_STS2 */
+#define WM8285_ASRC2_IN1_LOCK_STS2_WIDTH               1  /* ASRC2_IN1_LOCK_STS2 */
+#define WM8285_ASRC1_IN2_LOCK_STS2                0x0200  /* ASRC1_IN2_LOCK_STS2 */
+#define WM8285_ASRC1_IN2_LOCK_STS2_MASK           0x0200  /* ASRC1_IN2_LOCK_STS2 */
+#define WM8285_ASRC1_IN2_LOCK_STS2_SHIFT               9  /* ASRC1_IN2_LOCK_STS2 */
+#define WM8285_ASRC1_IN2_LOCK_STS2_WIDTH               1  /* ASRC1_IN2_LOCK_STS2 */
+#define WM8285_ASRC1_IN1_LOCK_STS2                0x0100  /* ASRC1_IN1_LOCK_STS2 */
+#define WM8285_ASRC1_IN1_LOCK_STS2_MASK           0x0100  /* ASRC1_IN1_LOCK_STS2 */
+#define WM8285_ASRC1_IN1_LOCK_STS2_SHIFT               8  /* ASRC1_IN1_LOCK_STS2 */
+#define WM8285_ASRC1_IN1_LOCK_STS2_WIDTH               1  /* ASRC1_IN1_LOCK_STS2 */
+#define WM8285_DRC2_SIG_DET_STS2                  0x0002  /* DRC2_SIG_DET_STS2 */
+#define WM8285_DRC2_SIG_DET_STS2_MASK             0x0002  /* DRC2_SIG_DET_STS2 */
+#define WM8285_DRC2_SIG_DET_STS2_SHIFT                 1  /* DRC2_SIG_DET_STS2 */
+#define WM8285_DRC2_SIG_DET_STS2_WIDTH                 1  /* DRC2_SIG_DET_STS2 */
+#define WM8285_DRC1_SIG_DET_STS2                  0x0001  /* DRC1_SIG_DET_STS2 */
+#define WM8285_DRC1_SIG_DET_STS2_MASK             0x0001  /* DRC1_SIG_DET_STS2 */
+#define WM8285_DRC1_SIG_DET_STS2_SHIFT                 0  /* DRC1_SIG_DET_STS2 */
+#define WM8285_DRC1_SIG_DET_STS2_WIDTH                 1  /* DRC1_SIG_DET_STS2 */
+
+/*
+ * R6538 (0x198A) - IRQ2 Raw Status 11
+ */
+#define WM8285_DSP_IRQ26_STS2                     0x8000  /* DSP_IRQ26_STS2 */
+#define WM8285_DSP_IRQ26_STS2_MASK                0x8000  /* DSP_IRQ26_STS2 */
+#define WM8285_DSP_IRQ26_STS2_SHIFT                   15  /* DSP_IRQ26_STS2 */
+#define WM8285_DSP_IRQ26_STS2_WIDTH                    1  /* DSP_IRQ26_STS2 */
+#define WM8285_DSP_IRQ25_STS2                     0x4000  /* DSP_IRQ25_STS2 */
+#define WM8285_DSP_IRQ25_STS2_MASK                0x4000  /* DSP_IRQ25_STS2 */
+#define WM8285_DSP_IRQ25_STS2_SHIFT                   14  /* DSP_IRQ25_STS2 */
+#define WM8285_DSP_IRQ25_STS2_WIDTH                    1  /* DSP_IRQ25_STS2 */
+#define WM8285_DSP_IRQ24_STS2                     0x2000  /* DSP_IRQ24_STS2 */
+#define WM8285_DSP_IRQ24_STS2_MASK                0x2000  /* DSP_IRQ24_STS2 */
+#define WM8285_DSP_IRQ24_STS2_SHIFT                   13  /* DSP_IRQ24_STS2 */
+#define WM8285_DSP_IRQ24_STS2_WIDTH                    1  /* DSP_IRQ24_STS2 */
+#define WM8285_DSP_IRQ23_STS2                     0x1000  /* DSP_IRQ23_STS2 */
+#define WM8285_DSP_IRQ23_STS2_MASK                0x1000  /* DSP_IRQ23_STS2 */
+#define WM8285_DSP_IRQ23_STS2_SHIFT                   12  /* DSP_IRQ23_STS2 */
+#define WM8285_DSP_IRQ23_STS2_WIDTH                    1  /* DSP_IRQ23_STS2 */
+#define WM8285_DSP_IRQ22_STS2                     0x0800  /* DSP_IRQ22_STS2 */
+#define WM8285_DSP_IRQ22_STS2_MASK                0x0800  /* DSP_IRQ22_STS2 */
+#define WM8285_DSP_IRQ22_STS2_SHIFT                   11  /* DSP_IRQ22_STS2 */
+#define WM8285_DSP_IRQ22_STS2_WIDTH                    1  /* DSP_IRQ22_STS2 */
+#define WM8285_DSP_IRQ21_STS2                     0x0400  /* DSP_IRQ21_STS2 */
+#define WM8285_DSP_IRQ21_STS2_MASK                0x0400  /* DSP_IRQ21_STS2 */
+#define WM8285_DSP_IRQ21_STS2_SHIFT                   10  /* DSP_IRQ21_STS2 */
+#define WM8285_DSP_IRQ21_STS2_WIDTH                    1  /* DSP_IRQ21_STS2 */
+#define WM8285_DSP_IRQ20_STS2                     0x0200  /* DSP_IRQ20_STS2 */
+#define WM8285_DSP_IRQ20_STS2_MASK                0x0200  /* DSP_IRQ20_STS2 */
+#define WM8285_DSP_IRQ20_STS2_SHIFT                    9  /* DSP_IRQ20_STS2 */
+#define WM8285_DSP_IRQ20_STS2_WIDTH                    1  /* DSP_IRQ20_STS2 */
+#define WM8285_DSP_IRQ9_STS2                      0x0100  /* DSP_IRQ9_STS2 */
+#define WM8285_DSP_IRQ9_STS2_MASK                 0x0100  /* DSP_IRQ9_STS2 */
+#define WM8285_DSP_IRQ9_STS2_SHIFT                     8  /* DSP_IRQ9_STS2 */
+#define WM8285_DSP_IRQ9_STS2_WIDTH                     1  /* DSP_IRQ9_STS2 */
+#define WM8285_DSP_IRQ8_STS2                      0x0080  /* DSP_IRQ8_STS2 */
+#define WM8285_DSP_IRQ8_STS2_MASK                 0x0080  /* DSP_IRQ8_STS2 */
+#define WM8285_DSP_IRQ8_STS2_SHIFT                     7  /* DSP_IRQ8_STS2 */
+#define WM8285_DSP_IRQ8_STS2_WIDTH                     1  /* DSP_IRQ8_STS2 */
+#define WM8285_DSP_IRQ7_STS2                      0x0040  /* DSP_IRQ7_STS2 */
+#define WM8285_DSP_IRQ7_STS2_MASK                 0x0040  /* DSP_IRQ7_STS2 */
+#define WM8285_DSP_IRQ7_STS2_SHIFT                     6  /* DSP_IRQ7_STS2 */
+#define WM8285_DSP_IRQ7_STS2_WIDTH                     1  /* DSP_IRQ7_STS2 */
+#define WM8285_DSP_IRQ6_STS2                      0x0020  /* DSP_IRQ6_STS2 */
+#define WM8285_DSP_IRQ6_STS2_MASK                 0x0020  /* DSP_IRQ6_STS2 */
+#define WM8285_DSP_IRQ6_STS2_SHIFT                     5  /* DSP_IRQ6_STS2 */
+#define WM8285_DSP_IRQ6_STS2_WIDTH                     1  /* DSP_IRQ6_STS2 */
+#define WM8285_DSP_IRQ5_STS2                      0x0010  /* DSP_IRQ5_STS2 */
+#define WM8285_DSP_IRQ5_STS2_MASK                 0x0010  /* DSP_IRQ5_STS2 */
+#define WM8285_DSP_IRQ5_STS2_SHIFT                     4  /* DSP_IRQ5_STS2 */
+#define WM8285_DSP_IRQ5_STS2_WIDTH                     1  /* DSP_IRQ5_STS2 */
+#define WM8285_DSP_IRQ4_STS2                      0x0008  /* DSP_IRQ4_STS2 */
+#define WM8285_DSP_IRQ4_STS2_MASK                 0x0008  /* DSP_IRQ4_STS2 */
+#define WM8285_DSP_IRQ4_STS2_SHIFT                     3  /* DSP_IRQ4_STS2 */
+#define WM8285_DSP_IRQ4_STS2_WIDTH                     1  /* DSP_IRQ4_STS2 */
+#define WM8285_DSP_IRQ3_STS2                      0x0004  /* DSP_IRQ3_STS2 */
+#define WM8285_DSP_IRQ3_STS2_MASK                 0x0004  /* DSP_IRQ3_STS2 */
+#define WM8285_DSP_IRQ3_STS2_SHIFT                     2  /* DSP_IRQ3_STS2 */
+#define WM8285_DSP_IRQ3_STS2_WIDTH                     1  /* DSP_IRQ3_STS2 */
+#define WM8285_DSP_IRQ2_STS2                      0x0002  /* DSP_IRQ2_STS2 */
+#define WM8285_DSP_IRQ2_STS2_MASK                 0x0002  /* DSP_IRQ2_STS2 */
+#define WM8285_DSP_IRQ2_STS2_SHIFT                     1  /* DSP_IRQ2_STS2 */
+#define WM8285_DSP_IRQ2_STS2_WIDTH                     1  /* DSP_IRQ2_STS2 */
+#define WM8285_DSP_IRQ1_STS2                      0x0001  /* DSP_IRQ1_STS2 */
+#define WM8285_DSP_IRQ1_STS2_MASK                 0x0001  /* DSP_IRQ1_STS2 */
+#define WM8285_DSP_IRQ1_STS2_SHIFT                     0  /* DSP_IRQ1_STS2 */
+#define WM8285_DSP_IRQ1_STS2_WIDTH                     1  /* DSP_IRQ1_STS2 */
+
+
+/*
+ * R6539 (0x198B) - IRQ2 Raw Status 12
+ */
+#define WM8285_SPKOUTR_SC_STS2                    0x0080  /* SPKOUTR_SC_STS2 */
+#define WM8285_SPKOUTR_SC_STS2_MASK               0x0080  /* SPKOUTR_SC_STS2 */
+#define WM8285_SPKOUTR_SC_STS2_SHIFT                   7  /* SPKOUTR_SC_STS2 */
+#define WM8285_SPKOUTR_SC_STS2_WIDTH                   1  /* SPKOUTR_SC_STS2 */
+#define WM8285_SPKOUTL_SC_STS2                    0x0040  /* SPKOUTL_SC_STS2 */
+#define WM8285_SPKOUTL_SC_STS2_MASK               0x0040  /* SPKOUTL_SC_STS2 */
+#define WM8285_SPKOUTL_SC_STS2_SHIFT                   6  /* SPKOUTL_SC_STS2 */
+#define WM8285_SPKOUTL_SC_STS2_WIDTH                   1  /* SPKOUTL_SC_STS2 */
+#define WM8285_HP3R_SC_STS2                       0x0020  /* HP3R_SC_STS2 */
+#define WM8285_HP3R_SC_STS2_MASK                  0x0020  /* HP3R_SC_STS2 */
+#define WM8285_HP3R_SC_STS2_SHIFT                      5  /* HP3R_SC_STS2 */
+#define WM8285_HP3R_SC_STS2_WIDTH                      1  /* HP3R_SC_STS2 */
+#define WM8285_HP3L_SC_STS2                       0x0010  /* HP3L_SC_STS2 */
+#define WM8285_HP3L_SC_STS2_MASK                  0x0010  /* HP3L_SC_STS2 */
+#define WM8285_HP3L_SC_STS2_SHIFT                      4  /* HP3L_SC_STS2 */
+#define WM8285_HP3L_SC_STS2_WIDTH                      1  /* HP3L_SC_STS2 */
+#define WM8285_HP2R_SC_STS2                       0x0008  /* HP2R_SC_STS2 */
+#define WM8285_HP2R_SC_STS2_MASK                  0x0008  /* HP2R_SC_STS2 */
+#define WM8285_HP2R_SC_STS2_SHIFT                      3  /* HP2R_SC_STS2 */
+#define WM8285_HP2R_SC_STS2_WIDTH                      1  /* HP2R_SC_STS2 */
+#define WM8285_HP2L_SC_STS2                       0x0004  /* HP2L_SC_STS2 */
+#define WM8285_HP2L_SC_STS2_MASK                  0x0004  /* HP2L_SC_STS2 */
+#define WM8285_HP2L_SC_STS2_SHIFT                      2  /* HP2L_SC_STS2 */
+#define WM8285_HP2L_SC_STS2_WIDTH                      1  /* HP2L_SC_STS2 */
+#define WM8285_HP1R_SC_STS2                       0x0002  /* HP1R_SC_STS2 */
+#define WM8285_HP1R_SC_STS2_MASK                  0x0002  /* HP1R_SC_STS2 */
+#define WM8285_HP1R_SC_STS2_SHIFT                      1  /* HP1R_SC_STS2 */
+#define WM8285_HP1R_SC_STS2_WIDTH                      1  /* HP1R_SC_STS2 */
+#define WM8285_HP1L_SC_STS2                       0x0001  /* HP1L_SC_STS2 */
+#define WM8285_HP1L_SC_STS2_MASK                  0x0001  /* HP1L_SC_STS2 */
+#define WM8285_HP1L_SC_STS2_SHIFT                      0  /* HP1L_SC_STS2 */
+#define WM8285_HP1L_SC_STS2_WIDTH                      1  /* HP1L_SC_STS2 */
+
+/*
+ * R6540 (0x198C) - IRQ2 Raw Status 13
+ */
+#define WM8285_SPKOUTR_ENABLE_DONE_STS2           0x0080  /* SPKOUTR_ENABLE_DONE_STS2 */
+#define WM8285_SPKOUTR_ENABLE_DONE_STS2_MASK      0x0080  /* SPKOUTR_ENABLE_DONE_STS2 */
+#define WM8285_SPKOUTR_ENABLE_DONE_STS2_SHIFT          7  /* SPKOUTR_ENABLE_DONE_STS2 */
+#define WM8285_SPKOUTR_ENABLE_DONE_STS2_WIDTH          1  /* SPKOUTR_ENABLE_DONE_STS2 */
+#define WM8285_SPKOUTL_ENABLE_DONE_STS2           0x0040  /* SPKOUTL_ENABLE_DONE_STS2 */
+#define WM8285_SPKOUTL_ENABLE_DONE_STS2_MASK      0x0040  /* SPKOUTL_ENABLE_DONE_STS2 */
+#define WM8285_SPKOUTL_ENABLE_DONE_STS2_SHIFT          6  /* SPKOUTL_ENABLE_DONE_STS2 */
+#define WM8285_SPKOUTL_ENABLE_DONE_STS2_WIDTH          1  /* SPKOUTL_ENABLE_DONE_STS2 */
+#define WM8285_HP3R_ENABLE_DONE_STS2              0x0020  /* HP3R_ENABLE_DONE_STS2 */
+#define WM8285_HP3R_ENABLE_DONE_STS2_MASK         0x0020  /* HP3R_ENABLE_DONE_STS2 */
+#define WM8285_HP3R_ENABLE_DONE_STS2_SHIFT             5  /* HP3R_ENABLE_DONE_STS2 */
+#define WM8285_HP3R_ENABLE_DONE_STS2_WIDTH             1  /* HP3R_ENABLE_DONE_STS2 */
+#define WM8285_HP3L_ENABLE_DONE_STS2              0x0010  /* HP3L_ENABLE_DONE_STS2 */
+#define WM8285_HP3L_ENABLE_DONE_STS2_MASK         0x0010  /* HP3L_ENABLE_DONE_STS2 */
+#define WM8285_HP3L_ENABLE_DONE_STS2_SHIFT             4  /* HP3L_ENABLE_DONE_STS2 */
+#define WM8285_HP3L_ENABLE_DONE_STS2_WIDTH             1  /* HP3L_ENABLE_DONE_STS2 */
+#define WM8285_HP2R_ENABLE_DONE_STS2              0x0008  /* HP2R_ENABLE_DONE_STS2 */
+#define WM8285_HP2R_ENABLE_DONE_STS2_MASK         0x0008  /* HP2R_ENABLE_DONE_STS2 */
+#define WM8285_HP2R_ENABLE_DONE_STS2_SHIFT             3  /* HP2R_ENABLE_DONE_STS2 */
+#define WM8285_HP2R_ENABLE_DONE_STS2_WIDTH             1  /* HP2R_ENABLE_DONE_STS2 */
+#define WM8285_HP2L_ENABLE_DONE_STS2              0x0004  /* HP2L_ENABLE_DONE_STS2 */
+#define WM8285_HP2L_ENABLE_DONE_STS2_MASK         0x0004  /* HP2L_ENABLE_DONE_STS2 */
+#define WM8285_HP2L_ENABLE_DONE_STS2_SHIFT             2  /* HP2L_ENABLE_DONE_STS2 */
+#define WM8285_HP2L_ENABLE_DONE_STS2_WIDTH             1  /* HP2L_ENABLE_DONE_STS2 */
+#define WM8285_HP1R_ENABLE_DONE_STS2              0x0002  /* HP1R_ENABLE_DONE_STS2 */
+#define WM8285_HP1R_ENABLE_DONE_STS2_MASK         0x0002  /* HP1R_ENABLE_DONE_STS2 */
+#define WM8285_HP1R_ENABLE_DONE_STS2_SHIFT             1  /* HP1R_ENABLE_DONE_STS2 */
+#define WM8285_HP1R_ENABLE_DONE_STS2_WIDTH             1  /* HP1R_ENABLE_DONE_STS2 */
+#define WM8285_HP1L_ENABLE_DONE_STS2              0x0001  /* HP1L_ENABLE_DONE_STS2 */
+#define WM8285_HP1L_ENABLE_DONE_STS2_MASK         0x0001  /* HP1L_ENABLE_DONE_STS2 */
+#define WM8285_HP1L_ENABLE_DONE_STS2_SHIFT             0  /* HP1L_ENABLE_DONE_STS2 */
+#define WM8285_HP1L_ENABLE_DONE_STS2_WIDTH             1  /* HP1L_ENABLE_DONE_STS2 */
+
+/*
+ * R6541 (0x198D) - IRQ2 Raw Status 14
+ */
+#define WM8285_SPKOUTR_DISABLE_DONE_STS2          0x0080  /* SPKOUTR_DISABLE_DONE_STS2 */
+#define WM8285_SPKOUTR_DISABLE_DONE_STS2_MASK     0x0080  /* SPKOUTR_DISABLE_DONE_STS2 */
+#define WM8285_SPKOUTR_DISABLE_DONE_STS2_SHIFT         7  /* SPKOUTR_DISABLE_DONE_STS2 */
+#define WM8285_SPKOUTR_DISABLE_DONE_STS2_WIDTH         1  /* SPKOUTR_DISABLE_DONE_STS2 */
+#define WM8285_SPKOUTL_DISABLE_DONE_STS2          0x0040  /* SPKOUTL_DISABLE_DONE_STS2 */
+#define WM8285_SPKOUTL_DISABLE_DONE_STS2_MASK     0x0040  /* SPKOUTL_DISABLE_DONE_STS2 */
+#define WM8285_SPKOUTL_DISABLE_DONE_STS2_SHIFT         6  /* SPKOUTL_DISABLE_DONE_STS2 */
+#define WM8285_SPKOUTL_DISABLE_DONE_STS2_WIDTH         1  /* SPKOUTL_DISABLE_DONE_STS2 */
+#define WM8285_HP3R_DISABLE_DONE_STS2             0x0020  /* HP3R_DISABLE_DONE_STS2 */
+#define WM8285_HP3R_DISABLE_DONE_STS2_MASK        0x0020  /* HP3R_DISABLE_DONE_STS2 */
+#define WM8285_HP3R_DISABLE_DONE_STS2_SHIFT            5  /* HP3R_DISABLE_DONE_STS2 */
+#define WM8285_HP3R_DISABLE_DONE_STS2_WIDTH            1  /* HP3R_DISABLE_DONE_STS2 */
+#define WM8285_HP3L_DISABLE_DONE_STS2             0x0010  /* HP3L_DISABLE_DONE_STS2 */
+#define WM8285_HP3L_DISABLE_DONE_STS2_MASK        0x0010  /* HP3L_DISABLE_DONE_STS2 */
+#define WM8285_HP3L_DISABLE_DONE_STS2_SHIFT            4  /* HP3L_DISABLE_DONE_STS2 */
+#define WM8285_HP3L_DISABLE_DONE_STS2_WIDTH            1  /* HP3L_DISABLE_DONE_STS2 */
+#define WM8285_HP2R_DISABLE_DONE_STS2             0x0008  /* HP2R_DISABLE_DONE_STS2 */
+#define WM8285_HP2R_DISABLE_DONE_STS2_MASK        0x0008  /* HP2R_DISABLE_DONE_STS2 */
+#define WM8285_HP2R_DISABLE_DONE_STS2_SHIFT            3  /* HP2R_DISABLE_DONE_STS2 */
+#define WM8285_HP2R_DISABLE_DONE_STS2_WIDTH            1  /* HP2R_DISABLE_DONE_STS2 */
+#define WM8285_HP2L_DISABLE_DONE_STS2             0x0004  /* HP2L_DISABLE_DONE_STS2 */
+#define WM8285_HP2L_DISABLE_DONE_STS2_MASK        0x0004  /* HP2L_DISABLE_DONE_STS2 */
+#define WM8285_HP2L_DISABLE_DONE_STS2_SHIFT            2  /* HP2L_DISABLE_DONE_STS2 */
+#define WM8285_HP2L_DISABLE_DONE_STS2_WIDTH            1  /* HP2L_DISABLE_DONE_STS2 */
+#define WM8285_HP1R_DISABLE_DONE_STS2             0x0002  /* HP1R_DISABLE_DONE_STS2 */
+#define WM8285_HP1R_DISABLE_DONE_STS2_MASK        0x0002  /* HP1R_DISABLE_DONE_STS2 */
+#define WM8285_HP1R_DISABLE_DONE_STS2_SHIFT            1  /* HP1R_DISABLE_DONE_STS2 */
+#define WM8285_HP1R_DISABLE_DONE_STS2_WIDTH            1  /* HP1R_DISABLE_DONE_STS2 */
+#define WM8285_HP1L_DISABLE_DONE_STS2             0x0001  /* HP1L_DISABLE_DONE_STS2 */
+#define WM8285_HP1L_DISABLE_DONE_STS2_MASK        0x0001  /* HP1L_DISABLE_DONE_STS2 */
+#define WM8285_HP1L_DISABLE_DONE_STS2_SHIFT            0  /* HP1L_DISABLE_DONE_STS2 */
+#define WM8285_HP1L_DISABLE_DONE_STS2_WIDTH            1  /* HP1L_DISABLE_DONE_STS2 */
+
+/*
+ * R6542 (0x198E) - IRQ2 Raw Status 15
+ */
+#define WM8285_SPK_OVERHEAT_WARN_STS2             0x0004  /* SPK_OVERHEAT_WARN_STS2 */
+#define WM8285_SPK_OVERHEAT_WARN_STS2_MASK        0x0004  /* SPK_OVERHEAT_WARN_STS2 */
+#define WM8285_SPK_OVERHEAT_WARN_STS2_SHIFT            2  /* SPK_OVERHEAT_WARN_STS2 */
+#define WM8285_SPK_OVERHEAT_WARN_STS2_WIDTH            1  /* SPK_OVERHEAT_WARN_STS2 */
+#define WM8285_SPK_OVERHEAT_STS2                  0x0002  /* SPK_OVERHEAT_STS2 */
+#define WM8285_SPK_OVERHEAT_STS2_MASK             0x0002  /* SPK_OVERHEAT_STS2 */
+#define WM8285_SPK_OVERHEAT_STS2_SHIFT                 1  /* SPK_OVERHEAT_STS2 */
+#define WM8285_SPK_OVERHEAT_STS2_WIDTH                 1  /* SPK_OVERHEAT_STS2 */
+#define WM8285_SPK_SHUTDOWN_STS2                  0x0001  /* SPK_SHUTDOWN_STS2 */
+#define WM8285_SPK_SHUTDOWN_STS2_MASK             0x0001  /* SPK_SHUTDOWN_STS2 */
+#define WM8285_SPK_SHUTDOWN_STS2_SHIFT                 0  /* SPK_SHUTDOWN_STS2 */
+#define WM8285_SPK_SHUTDOWN_STS2_WIDTH                 1  /* SPK_SHUTDOWN_STS2 */
+
+/*
+ * R6662 (0x1A06) - Interrupt Debounce 7
+ */
+#define WM8285_MICD_CLAMP_DB                       0x0010  /* MICD_CLAMP_DB */
+#define WM8285_MICD_CLAMP_DB_MASK                  0x0010  /* MICD_CLAMP_DB */
+#define WM8285_MICD_CLAMP_DB_SHIFT                      4  /* MICD_CLAMP_DB */
+#define WM8285_MICD_CLAMP_DB_WIDTH                      1  /* MICD_CLAMP_DB */
+#define WM8285_JD2_DB                              0x0004  /* JD2_DB */
+#define WM8285_JD2_DB_MASK                         0x0004  /* JD2_DB */
+#define WM8285_JD2_DB_SHIFT                             2  /* JD2_DB */
+#define WM8285_JD2_DB_WIDTH                             1  /* JD2_DB */
+#define WM8285_JD1_DB                              0x0001  /* JD1_DB */
+#define WM8285_JD1_DB_MASK                         0x0001  /* JD1_DB */
+#define WM8285_JD1_DB_SHIFT                             0  /* JD1_DB */
+#define WM8285_JD1_DB_WIDTH                             1  /* JD1_DB */
+
+/*
+ * R6670 (0x1A0E) - Interrupt Debounce 15
+ */
+#define WM8285_SPK_OVERHEAT_WARN_DB                0x0004  /* SPK_OVERHEAT_WARN_DB */
+#define WM8285_SPK_OVERHEAT_WARN_DB_MASK           0x0004  /* SPK_OVERHEAT_WARN_DB */
+#define WM8285_SPK_OVERHEAT_WARN_DB_SHIFT               2  /* SPK_OVERHEAT_WARN_DB */
+#define WM8285_SPK_OVERHEAT_WARN_DB_WIDTH               1  /* SPK_OVERHEAT_WARN_DB */
+#define WM8285_SPK_OVERHEAT_DB                     0x0002  /* SPK_OVERHEAT_DB */
+#define WM8285_SPK_OVERHEAT_DB_MASK                0x0002  /* SPK_OVERHEAT_DB */
+#define WM8285_SPK_OVERHEAT_DB_SHIFT                    1  /* SPK_OVERHEAT_DB */
+#define WM8285_SPK_OVERHEAT_DB_WIDTH                    1  /* SPK_OVERHEAT_DB */
+
+/*
+ * R6848 (0x1AC0) - GPIO Debounce Config
+ */
+#define WM8285_GP_DBTIME_MASK                      0x000F  /* GP_DBTIME - [3:0] */
+#define WM8285_GP_DBTIME_SHIFT                          0  /* GP_DBTIME - [3:0] */
+#define WM8285_GP_DBTIME_WIDTH                          4  /* GP_DBTIME - [3:0] */
 
 #endif

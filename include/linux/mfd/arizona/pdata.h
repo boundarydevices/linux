@@ -45,7 +45,8 @@
 #define ARIZONA_GPN_FN_SHIFT                          0  /* GPN_FN - [6:0] */
 #define ARIZONA_GPN_FN_WIDTH                          7  /* GPN_FN - [6:0] */
 
-#define ARIZONA_MAX_GPIO 5
+#define ARIZONA_MAX_GPIO_REGS 5
+#define WM8285_MAX_GPIO_REGS 80
 
 #define ARIZONA_32KZ_MCLK1 1
 #define ARIZONA_32KZ_MCLK2 2
@@ -58,7 +59,7 @@
 #define ARIZONA_DMIC_MICBIAS2 2
 #define ARIZONA_DMIC_MICBIAS3 3
 
-#define ARIZONA_MAX_MICBIAS 3
+#define ARIZONA_MAX_MICBIAS 4
 
 #define ARIZONA_INMODE_DIFF 0
 #define ARIZONA_INMODE_SE   1
@@ -76,7 +77,7 @@
 /* Treat INT_MAX impedance as open circuit */
 #define ARIZONA_HP_Z_OPEN INT_MAX
 
-#define ARIZONA_MAX_DSP	4
+#define ARIZONA_MAX_DSP	7
 
 struct regulator_init_data;
 
@@ -121,7 +122,7 @@ struct arizona_pdata {
 	int gpio_base;
 
 	/** Pin state for GPIO pins */
-	int gpio_defaults[ARIZONA_MAX_GPIO];
+	unsigned int gpio_defaults[WM8285_MAX_GPIO_REGS];
 
 	/**
 	 * Maximum number of channels clocks will be generated for,

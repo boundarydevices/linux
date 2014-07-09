@@ -27,6 +27,7 @@ static int arizona_i2c_probe(struct i2c_client *i2c,
 {
 	struct arizona *arizona;
 	const struct regmap_config *regmap_config;
+	const struct regmap_config *regmap_32bit_config = NULL;
 	unsigned long type;
 	int ret;
 
@@ -58,6 +59,13 @@ static int arizona_i2c_probe(struct i2c_client *i2c,
 		regmap_config = &wm8998_i2c_regmap;
 		break;
 #endif
+#ifdef CONFIG_MFD_WM8285
+	case WM8285:
+	case WM1840:
+		regmap_config = &wm8285_16bit_i2c_regmap;
+		regmap_32bit_config = &wm8285_32bit_i2c_regmap;
+		break;
+#endif
 	default:
 		dev_err(&i2c->dev, "Unknown device type %ld\n",
 			id->driver_data);
@@ -74,6 +82,18 @@ static int arizona_i2c_probe(struct i2c_client *i2c,
 		dev_err(&i2c->dev, "Failed to allocate register map: %d\n",
 			ret);
 		return ret;
+	}
+
+	if (regmap_32bit_config) {
+		arizona->regmap_32bit = devm_regmap_init_i2c(i2c,
+							   regmap_32bit_config);
+		if (IS_ERR(arizona->regmap_32bit)) {
+			ret = PTR_ERR(arizona->regmap_32bit);
+			dev_err(&i2c->dev,
+				"Failed to allocate dsp register map: %d\n",
+				ret);
+			return ret;
+		}
 	}
 
 	arizona->type = id->driver_data;
@@ -98,6 +118,8 @@ static const struct i2c_device_id arizona_i2c_id[] = {
 	{ "wm8997", WM8997 },
 	{ "wm8998", WM8998 },
 	{ "wm1814", WM1814 },
+	{ "wm8285", WM8285 },
+	{ "wm1840", WM1840 },
 	{ }
 };
 MODULE_DEVICE_TABLE(i2c, arizona_i2c_id);

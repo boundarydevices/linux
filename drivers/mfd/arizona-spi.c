@@ -28,6 +28,7 @@ static int arizona_spi_probe(struct spi_device *spi)
 	const struct spi_device_id *id = spi_get_device_id(spi);
 	struct arizona *arizona;
 	const struct regmap_config *regmap_config;
+	const struct regmap_config *regmap_32bit_config = NULL;
 	unsigned long type;
 	int ret;
 
@@ -46,6 +47,13 @@ static int arizona_spi_probe(struct spi_device *spi)
 	case WM8280:
 	case WM5110:
 		regmap_config = &florida_spi_regmap;
+		break;
+#endif
+#ifdef CONFIG_MFD_WM8285
+	case WM8285:
+	case WM1840:
+		regmap_config = &wm8285_16bit_spi_regmap;
+		regmap_32bit_config = &wm8285_32bit_spi_regmap;
 		break;
 #endif
 #ifdef CONFIG_MFD_CS47L24
@@ -72,6 +80,18 @@ static int arizona_spi_probe(struct spi_device *spi)
 		return ret;
 	}
 
+	if (regmap_32bit_config) {
+		arizona->regmap_32bit = devm_regmap_init_spi(spi,
+							   regmap_32bit_config);
+		if (IS_ERR(arizona->regmap_32bit)) {
+			ret = PTR_ERR(arizona->regmap_32bit);
+			dev_err(&spi->dev,
+				"Failed to allocate dsp register map: %d\n",
+				ret);
+			return ret;
+		}
+	}
+
 	arizona->type = id->driver_data;
 	arizona->dev = &spi->dev;
 	arizona->irq = spi->irq;
@@ -91,6 +111,8 @@ static const struct spi_device_id arizona_spi_ids[] = {
 	{ "wm8280", WM8280 },
 	{ "wm8281", WM8280 },
 	{ "wm5110", WM5110 },
+	{ "wm8285", WM8285 },
+	{ "wm1840", WM1840 },
 	{ "wm1831", WM1831 },
 	{ "cs47l24", CS47L24 },
 	{ },

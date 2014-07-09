@@ -342,12 +342,34 @@ static int arizona_wait_for_boot(struct arizona *arizona)
 	 * we won't race with the interrupt handler as it'll be blocked on
 	 * runtime resume.
 	 */
-	ret = arizona_poll_reg(arizona, 5, ARIZONA_INTERRUPT_RAW_STATUS_5,
-			       ARIZONA_BOOT_DONE_STS, ARIZONA_BOOT_DONE_STS);
+	switch (arizona->type) {
+	case WM5102:
+	case WM8997:
+	case WM1814:
+	case WM8998:
+	case WM5110:
+	case WM8280:
+	case WM1831:
+	case CS47L24:
+		ret = arizona_poll_reg(arizona, 5,
+				       ARIZONA_INTERRUPT_RAW_STATUS_5,
+				       ARIZONA_BOOT_DONE_STS,
+				       ARIZONA_BOOT_DONE_STS);
+		if (!ret)
+			regmap_write(arizona->regmap,
+				     ARIZONA_INTERRUPT_STATUS_5,
+				     ARIZONA_BOOT_DONE_STS);
+		break;
+	default:
+		ret = arizona_poll_reg(arizona, 5, WM8285_IRQ1_RAW_STATUS_1,
+				       WM8285_BOOT_DONE_STS1,
+				       WM8285_BOOT_DONE_STS1);
 
-	if (!ret)
-		regmap_write(arizona->regmap, ARIZONA_INTERRUPT_STATUS_5,
-			     ARIZONA_BOOT_DONE_STS);
+		if (!ret)
+			regmap_write(arizona->regmap, WM8285_IRQ1_STATUS_1,
+				     WM8285_BOOT_DONE_EINT1);
+		break;
+	}
 
 	pm_runtime_mark_last_busy(arizona->dev);
 
@@ -834,13 +856,19 @@ static int arizona_of_get_gpio_defaults(struct arizona *arizona,
 					const char *prop)
 {
 	struct arizona_pdata *pdata = &arizona->pdata;
-	int i, ret;
+	struct device_node *np = arizona->dev->of_node;
+	struct property *tempprop;
+	const __be32 *cur;
+	u32 val;
+	int i;
 
-	ret = arizona_of_read_u32_array(arizona, prop, false,
-					pdata->gpio_defaults,
-					ARRAY_SIZE(pdata->gpio_defaults));
-	if (ret < 0)
-		return ret;
+	i = 0;
+	of_property_for_each_u32(np, prop, tempprop, cur, val) {
+		if (i == ARRAY_SIZE(pdata->gpio_defaults))
+			break;
+
+		pdata->gpio_defaults[i++] = val;
+	}
 
 	/*
 	 * All values are literal except out of range values
@@ -855,7 +883,7 @@ static int arizona_of_get_gpio_defaults(struct arizona *arizona,
 			pdata->gpio_defaults[i] = 0x10000;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int arizona_of_get_u32_num_groups(struct arizona *arizona,
@@ -1008,6 +1036,7 @@ static int arizona_of_get_core_pdata(struct arizona *arizona)
 	arizona_of_get_micbias(arizona, "wlf,micbias1", 0);
 	arizona_of_get_micbias(arizona, "wlf,micbias2", 1);
 	arizona_of_get_micbias(arizona, "wlf,micbias3", 2);
+	arizona_of_get_micbias(arizona, "wlf,micbias4", 3);
 
 	arizona_of_get_gpio_defaults(arizona, "wlf,gpio-defaults");
 
@@ -1042,6 +1071,8 @@ const struct of_device_id arizona_of_match[] = {
 	{ .compatible = "wlf,wm8997", .data = (void *)WM8997 },
 	{ .compatible = "wlf,wm8998", .data = (void *)WM8998 },
 	{ .compatible = "wlf,wm1814", .data = (void *)WM1814 },
+	{ .compatible = "wlf,wm8285", .data = (void *)WM8285 },
+	{ .compatible = "wlf,wm1840", .data = (void *)WM1840 },
 	{ .compatible = "wlf,wm1831", .data = (void *)WM1831 },
 	{ .compatible = "cirrus,cs47l24", .data = (void *)CS47L24 },
 	{},
@@ -1099,6 +1130,15 @@ static struct mfd_cell wm8998_devs[] = {
 	{ .name = "arizona-haptics" },
 	{ .name = "arizona-pwm" },
 	{ .name = "wm8998-codec" },
+};
+
+static struct mfd_cell wm8285_devs[] = {
+	{ .name = "arizona-micsupp" },
+	{ .name = "arizona-extcon" },
+	{ .name = "arizona-gpio" },
+	{ .name = "arizona-haptics" },
+	{ .name = "arizona-pwm" },
+	{ .name = "wm8285-codec" },
 };
 
 static const struct {
@@ -1261,6 +1301,8 @@ int arizona_dev_init(struct arizona *arizona)
 	case WM8997:
 	case WM8998:
 	case WM1814:
+	case WM8285:
+	case WM1840:
 	case WM1831:
 	case CS47L24:
 		for (i = 0; i < ARRAY_SIZE(wm5102_core_supplies); i++)
@@ -1366,6 +1408,7 @@ int arizona_dev_init(struct arizona *arizona)
 	case 0x6349:
 	case 0x6363:
 	case 0x8997:
+	case 0x6338:
 		break;
 	default:
 		dev_err(arizona->dev, "Unknown device ID: %x\n", reg);
@@ -1524,6 +1567,27 @@ int arizona_dev_init(struct arizona *arizona)
 		revision_char = arizona->rev + 'A';
 		break;
 #endif
+#ifdef CONFIG_MFD_WM8285
+	case 0x6338:
+		switch (arizona->type) {
+		case WM8285:
+			type_name = "WM8285";
+			break;
+
+		case WM1840:
+			type_name = "WM1840";
+			break;
+
+		default:
+			dev_err(arizona->dev,
+				"Unknown Clearwater codec registered as WM8285\n");
+			arizona->type = WM8285;
+		}
+
+		revision_char = arizona->rev + 'A';
+		apply_patch = wm8285_patch;
+		break;
+#endif
 	default:
 		dev_err(arizona->dev, "Unknown device ID %x\n", reg);
 		goto err_reset;
@@ -1564,12 +1628,32 @@ int arizona_dev_init(struct arizona *arizona)
 		}
 	}
 
-	for (i = 0; i < ARRAY_SIZE(arizona->pdata.gpio_defaults); i++) {
-		if (!arizona->pdata.gpio_defaults[i])
-			continue;
+	switch (arizona->type) {
+	case WM5102:
+	case WM5110:
+	case WM8280:
+	case WM8997:
+	case WM8998:
+	case WM1814:
+	case WM1831:
+	case CS47L24:
+		for (i = 0; i < ARIZONA_MAX_GPIO_REGS; i++) {
+			if (!arizona->pdata.gpio_defaults[i])
+				continue;
 
-		regmap_write(arizona->regmap, ARIZONA_GPIO1_CTRL + i,
-			     arizona->pdata.gpio_defaults[i]);
+			regmap_write(arizona->regmap, ARIZONA_GPIO1_CTRL + i,
+				     arizona->pdata.gpio_defaults[i]);
+		}
+		break;
+	default:
+		for (i = 0; i < ARRAY_SIZE(arizona->pdata.gpio_defaults); i++) {
+			if (!arizona->pdata.gpio_defaults[i])
+				continue;
+
+			regmap_write(arizona->regmap, WM8285_GPIO1_CTRL_1 + i,
+				     arizona->pdata.gpio_defaults[i]);
+		}
+		break;
 	}
 
 	pm_runtime_set_autosuspend_delay(arizona->dev, 100);
@@ -1740,6 +1824,11 @@ int arizona_dev_init(struct arizona *arizona)
 	case WM1814:
 		ret = mfd_add_devices(arizona->dev, -1, wm8998_devs,
 				      ARRAY_SIZE(wm8998_devs), NULL, 0, NULL);
+		break;
+	case WM8285:
+	case WM1840:
+		ret = mfd_add_devices(arizona->dev, -1, wm8285_devs,
+				      ARRAY_SIZE(wm8285_devs), NULL, 0, NULL);
 		break;
 	}
 
