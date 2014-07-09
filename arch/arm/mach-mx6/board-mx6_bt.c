@@ -668,6 +668,8 @@ static struct gpio export_gpios[] __initdata = {
 	{.label = "pwr-j7",		.gpio = GP_PWR_J7,		.flags = GPIOF_OUT_INIT_HIGH},
 	{.label = "dry_contact1",	.gpio = GP_J92_PIN7,		.flags = GPIOF_OUT_INIT_HIGH},
 	{.label = "dry_contact2",	.gpio = GP_J92_PIN9,		.flags = 0},
+	{.label = "gpi_1",		.gpio = GP_J92_PIN10,		.flags = GPIOF_DIR_IN},
+	{.label = "gpi_2",		.gpio = GP_J92_PIN12,		.flags = GPIOF_DIR_IN},
 	{.label = "bt_gpio1",		.gpio = GP_BT_GPIO1,		.flags = GPIOF_DIR_IN},
 	{.label = "bt_gpio2",		.gpio = GP_BT_GPIO2,		.flags = GPIOF_DIR_IN},
 	{.label = "bt_gpio3",		.gpio = GP_BT_GPIO3,		.flags = GPIOF_DIR_IN},
