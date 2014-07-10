@@ -151,6 +151,17 @@
 #define ADSP2_CLK_SEL_WIDTH                    3  /* CLK_SEL_ENA */
 
 /*
+ * ADSP2V2 clocking
+ */
+#define ADSP2V2_CLK_SEL_MASK               0x70000 /* CLK_SEL_ENA */
+#define ADSP2V2_CLK_SEL_SHIFT                   16  /* CLK_SEL_ENA */
+#define ADSP2V2_CLK_SEL_WIDTH                    3  /* CLK_SEL_ENA */
+
+#define ADSP2V2_RATE_MASK                   0x7800  /* DSP_RATE */
+#define ADSP2V2_RATE_SHIFT                      11  /* DSP_RATE */
+#define ADSP2V2_RATE_WIDTH                       4  /* DSP_RATE */
+
+/*
  * ADSP2 Status 1
  */
 #define ADSP2_RAM_RDY                     0x0001
@@ -469,11 +480,71 @@ static int wm_adsp_fw_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int wm_adsp2v2_rate_get(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	struct wm_adsp *adsps = snd_soc_codec_get_drvdata(codec);
+	struct wm_adsp *adsp = &adsps[e->shift_l];
+	unsigned int item;
+
+	mutex_lock(&adsp->rate_lock);
+
+	for (item = 0; item < e->max; item++) {
+		if (e->values[item] == adsp->rate_cache) {
+			ucontrol->value.enumerated.item[0] = item;
+			mutex_unlock(&adsp->rate_lock);
+			return 0;
+		}
+	}
+
+	mutex_unlock(&adsp->rate_lock);
+
+	return -EINVAL;
+}
+
+static int wm_adsp2v2_rate_put(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	struct wm_adsp *adsps = snd_soc_codec_get_drvdata(codec);
+	struct wm_adsp *adsp = &adsps[e->shift_l];
+	unsigned int item = ucontrol->value.enumerated.item[0];
+	unsigned int val;
+	int ret = 0;
+
+	if (item >= e->max)
+		return -EINVAL;
+
+	mutex_lock(&adsp->rate_lock);
+
+	if (item != adsp->rate_cache) {
+		val = e->values[item];
+		adsp->rate_cache = val;
+
+		if (adsp->running) {
+			ret = regmap_update_bits(adsp->regmap,
+						 adsp->base,
+						 ADSP2V2_RATE_MASK,
+						 val << ADSP2V2_RATE_SHIFT);
+		}
+	}
+
+	mutex_unlock(&adsp->rate_lock);
+
+	return ret;
+}
+
 static struct soc_enum wm_adsp_fw_enum[] = {
 	SOC_ENUM_SINGLE(0, 0, ARRAY_SIZE(wm_adsp_fw_text), wm_adsp_fw_text),
 	SOC_ENUM_SINGLE(0, 1, ARRAY_SIZE(wm_adsp_fw_text), wm_adsp_fw_text),
 	SOC_ENUM_SINGLE(0, 2, ARRAY_SIZE(wm_adsp_fw_text), wm_adsp_fw_text),
 	SOC_ENUM_SINGLE(0, 3, ARRAY_SIZE(wm_adsp_fw_text), wm_adsp_fw_text),
+	SOC_ENUM_SINGLE(0, 4, ARRAY_SIZE(wm_adsp_fw_text), wm_adsp_fw_text),
+	SOC_ENUM_SINGLE(0, 5, ARRAY_SIZE(wm_adsp_fw_text), wm_adsp_fw_text),
+	SOC_ENUM_SINGLE(0, 6, ARRAY_SIZE(wm_adsp_fw_text), wm_adsp_fw_text),
 };
 
 const struct snd_kcontrol_new wm_adsp1_fw_controls[] = {
@@ -521,6 +592,55 @@ const struct snd_kcontrol_new wm_adsp2_fw_controls[] = {
 	SOC_ENUM("DSP4 Rate", wm_adsp2_rate_enum[3]),
 };
 EXPORT_SYMBOL_GPL(wm_adsp2_fw_controls);
+
+static const struct soc_enum wm_adsp2v2_rate_enum[] = {
+	SOC_VALUE_ENUM_SINGLE(0, 0, 0xf, ARIZONA_RATE_ENUM_SIZE,
+			      arizona_rate_text, arizona_rate_val),
+	SOC_VALUE_ENUM_SINGLE(0, 1, 0xf, ARIZONA_RATE_ENUM_SIZE,
+			      arizona_rate_text, arizona_rate_val),
+	SOC_VALUE_ENUM_SINGLE(0, 2, 0xf, ARIZONA_RATE_ENUM_SIZE,
+			      arizona_rate_text, arizona_rate_val),
+	SOC_VALUE_ENUM_SINGLE(0, 3, 0xf, ARIZONA_RATE_ENUM_SIZE,
+			      arizona_rate_text, arizona_rate_val),
+	SOC_VALUE_ENUM_SINGLE(0, 4, 0xf, ARIZONA_RATE_ENUM_SIZE,
+			      arizona_rate_text, arizona_rate_val),
+	SOC_VALUE_ENUM_SINGLE(0, 5, 0xf, ARIZONA_RATE_ENUM_SIZE,
+			      arizona_rate_text, arizona_rate_val),
+	SOC_VALUE_ENUM_SINGLE(0, 6, 0xf, ARIZONA_RATE_ENUM_SIZE,
+			      arizona_rate_text, arizona_rate_val),
+};
+
+const struct snd_kcontrol_new wm_adsp2v2_fw_controls[] = {
+	SOC_ENUM_EXT("DSP1 Firmware", wm_adsp_fw_enum[0],
+		     wm_adsp_fw_get, wm_adsp_fw_put),
+	SOC_ENUM_EXT("DSP1 Rate", wm_adsp2v2_rate_enum[0],
+		     wm_adsp2v2_rate_get, wm_adsp2v2_rate_put),
+	SOC_ENUM_EXT("DSP2 Firmware", wm_adsp_fw_enum[1],
+		     wm_adsp_fw_get, wm_adsp_fw_put),
+	SOC_ENUM_EXT("DSP2 Rate", wm_adsp2v2_rate_enum[1],
+		     wm_adsp2v2_rate_get, wm_adsp2v2_rate_put),
+	SOC_ENUM_EXT("DSP3 Firmware", wm_adsp_fw_enum[2],
+		     wm_adsp_fw_get, wm_adsp_fw_put),
+	SOC_ENUM_EXT("DSP3 Rate", wm_adsp2v2_rate_enum[2],
+		     wm_adsp2v2_rate_get, wm_adsp2v2_rate_put),
+	SOC_ENUM_EXT("DSP4 Firmware", wm_adsp_fw_enum[3],
+		     wm_adsp_fw_get, wm_adsp_fw_put),
+	SOC_ENUM_EXT("DSP4 Rate", wm_adsp2v2_rate_enum[3],
+		     wm_adsp2v2_rate_get, wm_adsp2v2_rate_put),
+	SOC_ENUM_EXT("DSP5 Firmware", wm_adsp_fw_enum[4],
+		     wm_adsp_fw_get, wm_adsp_fw_put),
+	SOC_ENUM_EXT("DSP5 Rate", wm_adsp2v2_rate_enum[4],
+		     wm_adsp2v2_rate_get, wm_adsp2v2_rate_put),
+	SOC_ENUM_EXT("DSP6 Firmware", wm_adsp_fw_enum[5],
+		     wm_adsp_fw_get, wm_adsp_fw_put),
+	SOC_ENUM_EXT("DSP6 Rate", wm_adsp2v2_rate_enum[5],
+		     wm_adsp2v2_rate_get, wm_adsp2v2_rate_put),
+	SOC_ENUM_EXT("DSP7 Firmware", wm_adsp_fw_enum[6],
+		     wm_adsp_fw_get, wm_adsp_fw_put),
+	SOC_ENUM_EXT("DSP7 Rate", wm_adsp2v2_rate_enum[6],
+		     wm_adsp2v2_rate_get, wm_adsp2v2_rate_put),
+};
+EXPORT_SYMBOL_GPL(wm_adsp2v2_fw_controls);
 #endif
 
 static struct wm_adsp_region const *wm_adsp_find_region(struct wm_adsp *dsp,
@@ -1985,30 +2105,42 @@ static int wm_adsp2_ena(struct wm_adsp *dsp)
 	unsigned int val;
 	int ret, count;
 
-	ret = regmap_update_bits(dsp->regmap, dsp->base + ADSP2_CONTROL,
+	switch (dsp->rev) {
+	case 0:
+		ret = regmap_update_bits(dsp->regmap, dsp->base + ADSP2_CONTROL,
 				 ADSP2_SYS_ENA, ADSP2_SYS_ENA);
-	if (ret != 0)
-		return ret;
 
-	/* Wait for the RAM to start, should be near instantaneous */
-	for (count = 0; count < 10; ++count) {
-		ret = regmap_read(dsp->regmap, dsp->base + ADSP2_STATUS1,
-				  &val);
 		if (ret != 0)
 			return ret;
 
-		if (val & ADSP2_RAM_RDY)
-			break;
+		/* Wait for the RAM to start, should be near instantaneous */
+		for (count = 0; count < 10; ++count) {
+			ret = regmap_read(dsp->regmap, dsp->base + ADSP2_STATUS1,
+					  &val);
+			if (ret != 0)
+				return ret;
 
-		msleep(1);
+			if (val & ADSP2_RAM_RDY)
+				break;
+
+			msleep(1);
+		}
+
+		if (!(val & ADSP2_RAM_RDY)) {
+			adsp_err(dsp, "Failed to start DSP RAM\n");
+			return -EBUSY;
+		}
+		adsp_dbg(dsp, "RAM ready after %d polls\n", count);
+		break;
+	default:
+		ret = regmap_update_bits(dsp->regmap, dsp->base + ADSP2_CONTROL,
+				 ADSP2_MEM_ENA, ADSP2_MEM_ENA);
+
+		if (ret != 0)
+			return ret;
+
+		break;
 	}
-
-	if (!(val & ADSP2_RAM_RDY)) {
-		adsp_err(dsp, "Failed to start DSP RAM\n");
-		return -EBUSY;
-	}
-
-	adsp_dbg(dsp, "RAM ready after %d polls\n", count);
 
 	return 0;
 }
@@ -2019,26 +2151,46 @@ static void wm_adsp2_boot_work(struct work_struct *work)
 					   struct wm_adsp,
 					   boot_work);
 	int ret;
-	unsigned int val;
+	unsigned int val, mask;
 
-	/*
-	 * For simplicity set the DSP clock rate to be the
-	 * SYSCLK rate rather than making it configurable.
-	 */
-	ret = regmap_read(dsp->regmap, ARIZONA_SYSTEM_CLOCK_1, &val);
-	if (ret != 0) {
-		adsp_err(dsp, "Failed to read SYSCLK state: %d\n", ret);
-		return;
-	}
-	val = (val & ARIZONA_SYSCLK_FREQ_MASK)
-		>> ARIZONA_SYSCLK_FREQ_SHIFT;
+	switch (dsp->rev) {
+	case 0:
+		/*
+		 * For simplicity set the DSP clock rate to be the
+		 * SYSCLK rate rather than making it configurable.
+		 */
+		ret = regmap_read(dsp->regmap, ARIZONA_SYSTEM_CLOCK_1, &val);
+		if (ret != 0) {
+			adsp_err(dsp, "Failed to read SYSCLK state: %d\n", ret);
+			return;
+		}
+		val = (val & ARIZONA_SYSCLK_FREQ_MASK)
+			>> ARIZONA_SYSCLK_FREQ_SHIFT;
 
-	ret = regmap_update_bits(dsp->regmap,
-				 dsp->base + ADSP2_CLOCKING,
-				 ADSP2_CLK_SEL_MASK, val);
-	if (ret != 0) {
-		adsp_err(dsp, "Failed to set clock rate: %d\n", ret);
-		return;
+		ret = regmap_update_bits(dsp->regmap,
+					 dsp->base + ADSP2_CLOCKING,
+					 ADSP2_CLK_SEL_MASK, val);
+		if (ret != 0) {
+			adsp_err(dsp, "Failed to set clock rate: %d\n", ret);
+			return;
+		}
+		break;
+	default:
+		mutex_lock(&dsp->rate_lock);
+
+		mask = ADSP2V2_CLK_SEL_MASK | ADSP2V2_RATE_MASK;
+		val = WM8285_DSP_CLK_147MHZ << ADSP2V2_CLK_SEL_SHIFT;
+		val |= dsp->rate_cache << ADSP2V2_RATE_SHIFT;
+
+		ret = regmap_update_bits(dsp->regmap, dsp->base, mask, val);
+		if (ret != 0) {
+			adsp_err(dsp, "Failed to set DSP_CLK rate: %d\n", ret);
+			mutex_unlock(&dsp->rate_lock);
+			return;
+		}
+
+		mutex_unlock(&dsp->rate_lock);
+		break;
 	}
 
 	ret = wm_adsp2_ena(dsp);
@@ -2157,9 +2309,10 @@ int wm_adsp2_event(struct snd_soc_dapm_widget *w,
 			return -EIO;
 
 		ret = regmap_update_bits(dsp->regmap,
-					 dsp->base + ADSP2_CONTROL,
-					 ADSP2_CORE_ENA | ADSP2_START,
-					 ADSP2_CORE_ENA | ADSP2_START);
+			 dsp->base + ADSP2_CONTROL,
+			 ADSP2_CORE_ENA | ADSP2_START,
+			 ADSP2_CORE_ENA | ADSP2_START);
+
 		if (ret != 0)
 			goto err;
 		break;
@@ -2178,14 +2331,24 @@ int wm_adsp2_event(struct snd_soc_dapm_widget *w,
 
 		dsp->running = false;
 
-		regmap_update_bits(dsp->regmap, dsp->base + ADSP2_CONTROL,
-				   ADSP2_SYS_ENA | ADSP2_CORE_ENA |
-				   ADSP2_START, 0);
+		switch (dsp->rev) {
+		case 1:
+			regmap_update_bits(dsp->regmap, dsp->base + ADSP2_CONTROL,
+					   ADSP2_MEM_ENA, 0);
+				/* Fall through
+				 * MEM_ENA is cleared to disable the RAM on WM8285
+				 */
+		default:
+			regmap_update_bits(dsp->regmap, dsp->base + ADSP2_CONTROL,
+					   ADSP2_SYS_ENA | ADSP2_CORE_ENA |
+					   ADSP2_START, 0);
 
-		/* Make sure DMAs are quiesced */
-		regmap_write(dsp->regmap, dsp->base + ADSP2_WDMA_CONFIG_1, 0);
-		regmap_write(dsp->regmap, dsp->base + ADSP2_WDMA_CONFIG_2, 0);
-		regmap_write(dsp->regmap, dsp->base + ADSP2_RDMA_CONFIG_1, 0);
+			/* Make sure DMAs are quiesced */
+			regmap_write(dsp->regmap, dsp->base + ADSP2_WDMA_CONFIG_1, 0);
+			regmap_write(dsp->regmap, dsp->base + ADSP2_WDMA_CONFIG_2, 0);
+			regmap_write(dsp->regmap, dsp->base + ADSP2_RDMA_CONFIG_1, 0);
+			break;
+		}
 
 		list_for_each_entry(ctl, &dsp->ctl_list, list)
 			ctl->enabled = 0;
@@ -2386,6 +2549,7 @@ int wm_adsp2_init(struct wm_adsp *adsp, struct mutex *fw_lock)
 	INIT_LIST_HEAD(&adsp->ctl_list);
 	INIT_WORK(&adsp->boot_work, wm_adsp2_boot_work);
 	mutex_init(&adsp->ctl_lock);
+	mutex_init(&adsp->rate_lock);
 
 	adsp->fw_lock = fw_lock;
 

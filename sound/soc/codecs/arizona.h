@@ -26,14 +26,17 @@
 #define ARIZONA_CLK_SYSCLK_2       5
 #define ARIZONA_CLK_SYSCLK_3       6
 #define ARIZONA_CLK_ASYNCCLK_2     7
+#define ARIZONA_CLK_DSPCLK         8
 
 #define ARIZONA_CLK_SRC_MCLK1    0x0
 #define ARIZONA_CLK_SRC_MCLK2    0x1
 #define ARIZONA_CLK_SRC_FLL1     0x4
 #define ARIZONA_CLK_SRC_FLL2     0x5
+#define ARIZONA_CLK_SRC_FLL3     0x6
 #define ARIZONA_CLK_SRC_AIF1BCLK 0x8
 #define ARIZONA_CLK_SRC_AIF2BCLK 0x9
 #define ARIZONA_CLK_SRC_AIF3BCLK 0xa
+#define ARIZONA_CLK_SRC_AIF4BCLK 0xb
 
 #define ARIZONA_FLL_SRC_NONE      -1
 #define ARIZONA_FLL_SRC_MCLK1      0
@@ -44,9 +47,11 @@
 #define ARIZONA_FLL_SRC_AIF1BCLK   8
 #define ARIZONA_FLL_SRC_AIF2BCLK   9
 #define ARIZONA_FLL_SRC_AIF3BCLK  10
+#define ARIZONA_FLL_SRC_AIF4BCLK  11
 #define ARIZONA_FLL_SRC_AIF1LRCLK 12
 #define ARIZONA_FLL_SRC_AIF2LRCLK 13
 #define ARIZONA_FLL_SRC_AIF3LRCLK 14
+#define ARIZONA_FLL_SRC_AIF4LRCLK 15
 
 #define ARIZONA_MIXER_VOL_MASK             0x00FE
 #define ARIZONA_MIXER_VOL_SHIFT                 1
@@ -57,11 +62,18 @@
 #define ARIZONA_CLK_24MHZ  2
 #define ARIZONA_CLK_49MHZ  3
 #define ARIZONA_CLK_73MHZ  4
+#define WM8285_CLK_98MHZ   4
 #define ARIZONA_CLK_98MHZ  5
 #define ARIZONA_CLK_147MHZ 6
 
-#define ARIZONA_MAX_DAI  10
-#define ARIZONA_MAX_ADSP 4
+#define WM8285_DSP_CLK_9MHZ   0
+#define WM8285_DSP_CLK_18MHZ  1
+#define WM8285_DSP_CLK_36MHZ  2
+#define WM8285_DSP_CLK_73MHZ  3
+#define WM8285_DSP_CLK_147MHZ 4
+
+#define ARIZONA_MAX_DAI  11
+#define ARIZONA_MAX_ADSP 7
 
 struct arizona;
 struct wm_adsp;
@@ -76,13 +88,14 @@ struct arizona_priv {
 	struct arizona *arizona;
 	int sysclk;
 	int asyncclk;
+	int dspclk;
 	struct arizona_dai_priv dai[ARIZONA_MAX_DAI];
 
 	int num_inputs;
 	unsigned int in_pending;
 };
 
-#define ARIZONA_NUM_MIXER_INPUTS 104
+#define ARIZONA_NUM_MIXER_INPUTS 134
 
 extern const unsigned int arizona_mixer_tlv[];
 extern const char *arizona_mixer_texts[ARIZONA_NUM_MIXER_INPUTS];
@@ -204,9 +217,13 @@ extern int arizona_mixer_values[ARIZONA_NUM_MIXER_INPUTS];
 		{.base = xbase, .num_regs = 20, \
 		 .mask = ~ARIZONA_EQ1_B1_MODE }) }
 
+#define WM8285_OSR_ENUM_SIZE 5
 #define ARIZONA_RATE_ENUM_SIZE 4
 #define ARIZONA_SYNC_RATE_ENUM_SIZE 3
 #define ARIZONA_SAMPLE_RATE_ENUM_SIZE 14
+#define ARIZONA_ANC_INPUT_ENUM_SIZE 19
+#define WM8280_ANC_INPUT_ENUM_SIZE 13
+#define WM8285_ANC_INPUT_ENUM_SIZE 19
 
 extern const char *arizona_rate_text[ARIZONA_RATE_ENUM_SIZE];
 extern const int arizona_rate_val[ARIZONA_RATE_ENUM_SIZE];
@@ -236,8 +253,10 @@ extern const struct soc_enum arizona_lhpf4_mode;
 extern const struct soc_enum arizona_ng_hold;
 extern const struct soc_enum arizona_in_hpf_cut_enum;
 extern const struct soc_enum arizona_in_dmic_osr[];
+extern const struct soc_enum wm8285_in_dmic_osr[];
 
 extern const struct soc_enum arizona_anc_input_src[];
+extern const struct soc_enum wm8285_anc_input_src[];
 extern const struct soc_enum arizona_output_anc_src[];
 
 extern int arizona_put_anc_input(struct snd_kcontrol *kcontrol,

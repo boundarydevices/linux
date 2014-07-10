@@ -70,6 +70,7 @@ struct wm_adsp {
 	const char *part;
 	int num;
 	int type;
+	int rev;
 	struct device *dev;
 	struct regmap *regmap;
 	struct snd_soc_card *card;
@@ -78,6 +79,9 @@ struct wm_adsp {
 	int sysclk_reg;
 	int sysclk_mask;
 	int sysclk_shift;
+
+	unsigned int rate_cache;
+	struct mutex rate_lock;
 
 	struct list_head alg_regions;
 
@@ -129,6 +133,7 @@ struct wm_adsp {
 
 extern const struct snd_kcontrol_new wm_adsp1_fw_controls[];
 extern const struct snd_kcontrol_new wm_adsp2_fw_controls[];
+extern const struct snd_kcontrol_new wm_adsp2v2_fw_controls[];
 
 int wm_adsp1_init(struct wm_adsp *adsp);
 int wm_adsp2_init(struct wm_adsp *adsp, struct mutex *fw_lock);

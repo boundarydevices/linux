@@ -262,6 +262,21 @@ static const char * const arizona_dmic_inputs[] = {
 	"IN4R",
 };
 
+static const char * const wm8285_dmic_inputs[] = {
+	"IN1L Mux",
+	"IN1R",
+	"IN2L Mux",
+	"IN2R Mux",
+	"IN3L",
+	"IN3R",
+	"IN4L",
+	"IN4R",
+	"IN5L",
+	"IN5R",
+	"IN6L",
+	"IN6R",
+};
+
 int arizona_init_input(struct snd_soc_codec *codec)
 {
 	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);
@@ -276,8 +291,17 @@ int arizona_init_input(struct snd_soc_codec *codec)
 		routes[0].source = arizona_dmic_refs[pdata->dmic_ref[i]];
 		routes[1].source = arizona_dmic_refs[pdata->dmic_ref[i]];
 
-		routes[0].sink = arizona_dmic_inputs[i * 2];
-		routes[1].sink = arizona_dmic_inputs[(i * 2) + 1];
+		switch (arizona->type) {
+		case WM8285:
+		case WM1840:
+			routes[0].sink = wm8285_dmic_inputs[i * 2];
+			routes[1].sink = wm8285_dmic_inputs[(i * 2) + 1];
+			break;
+		default:
+			routes[0].sink = arizona_dmic_inputs[i * 2];
+			routes[1].sink = arizona_dmic_inputs[(i * 2) + 1];
+			break;
+		}
 
 		ret = snd_soc_dapm_add_routes(&codec->dapm, routes, 2);
 	}
@@ -345,6 +369,10 @@ const char *arizona_mixer_texts[ARIZONA_NUM_MIXER_INPUTS] = {
 	"IN3R",
 	"IN4L",
 	"IN4R",
+	"IN5L",
+	"IN5R",
+	"IN6L",
+	"IN6R",
 	"AIF1RX1",
 	"AIF1RX2",
 	"AIF1RX3",
@@ -359,8 +387,12 @@ const char *arizona_mixer_texts[ARIZONA_NUM_MIXER_INPUTS] = {
 	"AIF2RX4",
 	"AIF2RX5",
 	"AIF2RX6",
+	"AIF2RX7",
+	"AIF2RX8",
 	"AIF3RX1",
 	"AIF3RX2",
+	"AIF4RX1",
+	"AIF4RX2",
 	"SLIMRX1",
 	"SLIMRX2",
 	"SLIMRX3",
@@ -405,6 +437,24 @@ const char *arizona_mixer_texts[ARIZONA_NUM_MIXER_INPUTS] = {
 	"DSP4.4",
 	"DSP4.5",
 	"DSP4.6",
+	"DSP5.1",
+	"DSP5.2",
+	"DSP5.3",
+	"DSP5.4",
+	"DSP5.5",
+	"DSP5.6",
+	"DSP6.1",
+	"DSP6.2",
+	"DSP6.3",
+	"DSP6.4",
+	"DSP6.5",
+	"DSP6.6",
+	"DSP7.1",
+	"DSP7.2",
+	"DSP7.3",
+	"DSP7.4",
+	"DSP7.5",
+	"DSP7.6",
 	"ASRC1L",
 	"ASRC1R",
 	"ASRC2L",
@@ -433,6 +483,10 @@ const char *arizona_mixer_texts[ARIZONA_NUM_MIXER_INPUTS] = {
 	"ISRC3DEC2",
 	"ISRC3DEC3",
 	"ISRC3DEC4",
+	"ISRC4INT1",
+	"ISRC4INT2",
+	"ISRC4DEC1",
+	"ISRC4DEC2",
 };
 EXPORT_SYMBOL_GPL(arizona_mixer_texts);
 
@@ -453,6 +507,10 @@ int arizona_mixer_values[ARIZONA_NUM_MIXER_INPUTS] = {
 	0x15,
 	0x16,
 	0x17,
+	0x18,
+	0x19,
+	0x1A,
+	0x1B,
 	0x20,  /* AIF1RX1 */
 	0x21,
 	0x22,
@@ -467,8 +525,12 @@ int arizona_mixer_values[ARIZONA_NUM_MIXER_INPUTS] = {
 	0x2b,
 	0x2c,
 	0x2d,
+	0x2e,
+	0x2f,
 	0x30,  /* AIF3RX1 */
 	0x31,
+	0x34,  /* AIF4RX1 */
+	0x35,
 	0x38,  /* SLIMRX1 */
 	0x39,
 	0x3a,
@@ -513,6 +575,24 @@ int arizona_mixer_values[ARIZONA_NUM_MIXER_INPUTS] = {
 	0x83,
 	0x84,
 	0x85,
+	0x88,  /* DSP5.1 */
+	0x89,
+	0x8a,
+	0x8b,
+	0x8c,
+	0x8d,
+	0xc0,  /* DSP6.1 */
+	0xc1,
+	0xc2,
+	0xc3,
+	0xc4,
+	0xc5,
+	0xc8,  /* DSP7.1 */
+	0xc9,
+	0xca,
+	0xcb,
+	0xcc,
+	0xcd,
 	0x90,  /* ASRC1L */
 	0x91,
 	0x92,
@@ -541,6 +621,10 @@ int arizona_mixer_values[ARIZONA_NUM_MIXER_INPUTS] = {
 	0xb5,
 	0xb6,
 	0xb7,
+	0xb8,  /* ISRC4INT1 */
+	0xb9,
+	0xbc,  /* ISRC4DEC1 */
+	0xbd,
 };
 EXPORT_SYMBOL_GPL(arizona_mixer_values);
 
@@ -631,6 +715,11 @@ const struct soc_enum arizona_isrc_fsh[] = {
 			      ARIZONA_ISRC3_FSH_SHIFT, 0xf,
 			      ARIZONA_RATE_ENUM_SIZE,
 			      arizona_rate_text, arizona_rate_val),
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_ISRC_4_CTRL_1,
+			      ARIZONA_ISRC4_FSH_SHIFT, 0xf,
+			      ARIZONA_RATE_ENUM_SIZE,
+			      arizona_rate_text, arizona_rate_val),
+
 };
 EXPORT_SYMBOL_GPL(arizona_isrc_fsh);
 
@@ -647,6 +736,11 @@ const struct soc_enum arizona_isrc_fsl[] = {
 			      ARIZONA_ISRC3_FSL_SHIFT, 0xf,
 			      ARIZONA_RATE_ENUM_SIZE,
 			      arizona_rate_text, arizona_rate_val),
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_ISRC_4_CTRL_2,
+			      ARIZONA_ISRC4_FSL_SHIFT, 0xf,
+			      ARIZONA_RATE_ENUM_SIZE,
+			      arizona_rate_text, arizona_rate_val),
+
 };
 EXPORT_SYMBOL_GPL(arizona_isrc_fsl);
 
@@ -754,13 +848,46 @@ const struct soc_enum arizona_in_dmic_osr[] = {
 };
 EXPORT_SYMBOL_GPL(arizona_in_dmic_osr);
 
-static const char *arizona_anc_input_src_text[] = {
-	"None", "IN1L", "IN1R", "IN1L + IN1R", "IN2L", "IN2R", "IN2L + IN2R",
-	"IN3L", "IN3R", "IN3L + IN3R", "IN4L", "IN4R", "IN4L + IN4R",
+static const char * const wm8285_in_dmic_osr_text[WM8285_OSR_ENUM_SIZE] = {
+	"384kHz", "768kHz", "1.536MHz", "3.072MHz", "6.144MHz",
 };
-static const int arizona_anc_input_src_val[] = {
+
+static const int wm8285_in_dmic_osr_val[WM8285_OSR_ENUM_SIZE] = {
+	2, 3, 4, 5, 6,
+};
+
+const struct soc_enum wm8285_in_dmic_osr[] = {
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC1L_CONTROL, WM8285_IN1_OSR_SHIFT,
+			      0x7, WM8285_OSR_ENUM_SIZE,
+			      wm8285_in_dmic_osr_text, wm8285_in_dmic_osr_val),
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC2L_CONTROL, WM8285_IN2_OSR_SHIFT,
+			      0x7, WM8285_OSR_ENUM_SIZE,
+			      wm8285_in_dmic_osr_text, wm8285_in_dmic_osr_val),
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC3L_CONTROL, WM8285_IN3_OSR_SHIFT,
+			      0x7, WM8285_OSR_ENUM_SIZE,
+			      wm8285_in_dmic_osr_text, wm8285_in_dmic_osr_val),
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC4L_CONTROL, WM8285_IN4_OSR_SHIFT,
+			      0x7, WM8285_OSR_ENUM_SIZE,
+			      wm8285_in_dmic_osr_text, wm8285_in_dmic_osr_val),
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC5L_CONTROL, WM8285_IN5_OSR_SHIFT,
+			      0x7, WM8285_OSR_ENUM_SIZE,
+			      wm8285_in_dmic_osr_text, wm8285_in_dmic_osr_val),
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC6L_CONTROL, WM8285_IN6_OSR_SHIFT,
+			      0x7, WM8285_OSR_ENUM_SIZE,
+			      wm8285_in_dmic_osr_text, wm8285_in_dmic_osr_val),
+};
+EXPORT_SYMBOL_GPL(wm8285_in_dmic_osr);
+
+static const char *arizona_anc_input_src_text[ARIZONA_ANC_INPUT_ENUM_SIZE] = {
+	"None", "IN1L", "IN1R", "IN1L + IN1R", "IN2L", "IN2R", "IN2L + IN2R",
+	"IN3L", "IN3R", "IN3L + IN3R", "IN4L", "IN4R", "IN4L + IN4R", "IN5L",
+	"IN5R", "IN5L + IN5R", "IN6L", "IN6R", "IN6L + IN6R",
+};
+
+static const int arizona_anc_input_src_val[ARIZONA_ANC_INPUT_ENUM_SIZE] = {
 	0x0000, 0x0101, 0x0201, 0x0301, 0x0102, 0x0202, 0x0302,
-	0x0103, 0x0203, 0x0303, 0x0104, 0x0204, 0x0304,
+	0x0103, 0x0203, 0x0303, 0x0104, 0x0204, 0x0304, 0x0105,
+	0x0205, 0x0305, 0x0106, 0x0206, 0x0306,
 };
 
 int arizona_put_anc_input(struct snd_kcontrol *kcontrol,
@@ -783,6 +910,7 @@ int arizona_put_anc_input(struct snd_kcontrol *kcontrol,
 		shift = ARIZONA_IN_RXANCL_SEL_SHIFT;
 		break;
 	case ARIZONA_FCR_ADC_REFORMATTER_CONTROL:
+	case WM8285_FCR_ADC_REFORMATTER_CONTROL:
 		mask = ARIZONA_IN_RXANCR_SEL_MASK;
 		shift = ARIZONA_IN_RXANCR_SEL_SHIFT;
 		break;
@@ -803,16 +931,30 @@ EXPORT_SYMBOL_GPL(arizona_put_anc_input);
 const struct soc_enum arizona_anc_input_src[] = {
 	SOC_VALUE_ENUM_SINGLE(ARIZONA_FCL_ADC_REFORMATTER_CONTROL,
 			      ARIZONA_FCL_MIC_MODE_SEL_SHIFT, 0,
-			      ARRAY_SIZE(arizona_anc_input_src_text),
+			      WM8280_ANC_INPUT_ENUM_SIZE,
 			      arizona_anc_input_src_text,
 			      arizona_anc_input_src_val),
 	SOC_VALUE_ENUM_SINGLE(ARIZONA_FCR_ADC_REFORMATTER_CONTROL,
 			      ARIZONA_FCR_MIC_MODE_SEL_SHIFT, 0,
-			      ARRAY_SIZE(arizona_anc_input_src_text),
+			      WM8280_ANC_INPUT_ENUM_SIZE,
 			      arizona_anc_input_src_text,
 			      arizona_anc_input_src_val),
 };
 EXPORT_SYMBOL_GPL(arizona_anc_input_src);
+
+const struct soc_enum wm8285_anc_input_src[] = {
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_FCL_ADC_REFORMATTER_CONTROL,
+			      ARIZONA_FCL_MIC_MODE_SEL_SHIFT, 0,
+			      WM8285_ANC_INPUT_ENUM_SIZE,
+			      arizona_anc_input_src_text,
+			      arizona_anc_input_src_val),
+	SOC_VALUE_ENUM_SINGLE(WM8285_FCR_ADC_REFORMATTER_CONTROL,
+			      ARIZONA_FCR_MIC_MODE_SEL_SHIFT, 0,
+			      WM8285_ANC_INPUT_ENUM_SIZE,
+			      arizona_anc_input_src_text,
+			      arizona_anc_input_src_val),
+};
+EXPORT_SYMBOL_GPL(wm8285_anc_input_src);
 
 static const char *arizona_output_anc_src_text[] = {
 	"None", "RXANCL", "RXANCR",
@@ -1390,70 +1532,159 @@ static int arizona_set_opclk(struct snd_soc_codec *codec, unsigned int clk,
 	return -EINVAL;
 }
 
+static int arizona_get_sysclk_setting(unsigned int freq)
+{
+	switch (freq) {
+	case 0:
+	case 5644800:
+	case 6144000:
+		return 0;
+	case 11289600:
+	case 12288000:
+		return ARIZONA_CLK_12MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
+	case 22579200:
+	case 24576000:
+		return ARIZONA_CLK_24MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
+	case 45158400:
+	case 49152000:
+		return ARIZONA_CLK_49MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
+	case 67737600:
+	case 73728000:
+		return ARIZONA_CLK_73MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
+	case 90316800:
+	case 98304000:
+		return ARIZONA_CLK_98MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
+	case 135475200:
+	case 147456000:
+		return ARIZONA_CLK_147MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
+	default:
+		return -EINVAL;
+	}
+}
+
+static int wm8285_get_sysclk_setting(unsigned int freq)
+{
+	switch (freq) {
+	case 0:
+	case 5644800:
+	case 6144000:
+		return 0;
+	case 11289600:
+	case 12288000:
+		return ARIZONA_CLK_12MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
+	case 22579200:
+	case 24576000:
+		return ARIZONA_CLK_24MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
+	case 45158400:
+	case 49152000:
+		return ARIZONA_CLK_49MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
+	case 90316800:
+	case 98304000:
+		return WM8285_CLK_98MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
+	default:
+		return -EINVAL;
+	}
+}
+
+static int wm8285_get_dspclk_setting(unsigned int freq)
+{
+	switch (freq) {
+	case 0:
+		return 0;
+	/* For now we only support top speed for the DSP */
+	case 135475200:
+	case 147456000:
+		return WM8285_DSP_CLK_147MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
+	default:
+		return -EINVAL;
+	}
+}
+
 int arizona_set_sysclk(struct snd_soc_codec *codec, int clk_id,
 		       int source, unsigned int freq, int dir)
 {
 	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);
 	struct arizona *arizona = priv->arizona;
+	int ret = 0;
 	char *name;
 	unsigned int reg;
 	unsigned int mask = ARIZONA_SYSCLK_FREQ_MASK | ARIZONA_SYSCLK_SRC_MASK;
 	unsigned int val = source << ARIZONA_SYSCLK_SRC_SHIFT;
+	int clk_freq;
 	unsigned int *clk;
 
-	switch (clk_id) {
-	case ARIZONA_CLK_SYSCLK:
-		name = "SYSCLK";
-		reg = ARIZONA_SYSTEM_CLOCK_1;
-		clk = &priv->sysclk;
-		mask |= ARIZONA_SYSCLK_FRAC;
+	switch (arizona->type) {
+	case WM8997:
+	case WM8998:
+	case WM1814:
+	case WM5102:
+	case WM8280:
+	case WM5110:
+	case WM1831:
+	case CS47L24:
+		switch (clk_id) {
+		case ARIZONA_CLK_SYSCLK:
+			name = "SYSCLK";
+			reg = ARIZONA_SYSTEM_CLOCK_1;
+			clk = &priv->sysclk;
+			mask |= ARIZONA_SYSCLK_FRAC;
+			clk_freq = arizona_get_sysclk_setting(freq);
+			break;
+		case ARIZONA_CLK_ASYNCCLK:
+			name = "ASYNCCLK";
+			reg = ARIZONA_ASYNC_CLOCK_1;
+			clk = &priv->asyncclk;
+			clk_freq = arizona_get_sysclk_setting(freq);
+			break;
+		case ARIZONA_CLK_OPCLK:
+		case ARIZONA_CLK_ASYNC_OPCLK:
+			return arizona_set_opclk(codec, clk_id, freq);
+		default:
+			return -EINVAL;
+		}
 		break;
-	case ARIZONA_CLK_ASYNCCLK:
-		name = "ASYNCCLK";
-		reg = ARIZONA_ASYNC_CLOCK_1;
-		clk = &priv->asyncclk;
-		break;
-	case ARIZONA_CLK_OPCLK:
-	case ARIZONA_CLK_ASYNC_OPCLK:
-		return arizona_set_opclk(codec, clk_id, freq);
 	default:
-		return -EINVAL;
+		switch (clk_id) {
+		case ARIZONA_CLK_SYSCLK:
+			name = "SYSCLK";
+			reg = ARIZONA_SYSTEM_CLOCK_1;
+			clk = &priv->sysclk;
+			clk_freq = wm8285_get_sysclk_setting(freq);
+			mask |= ARIZONA_SYSCLK_FRAC;
+			break;
+		case ARIZONA_CLK_ASYNCCLK:
+			name = "ASYNCCLK";
+			reg = ARIZONA_ASYNC_CLOCK_1;
+			clk = &priv->asyncclk;
+			clk_freq = wm8285_get_sysclk_setting(freq);
+			break;
+		case ARIZONA_CLK_OPCLK:
+		case ARIZONA_CLK_ASYNC_OPCLK:
+			return arizona_set_opclk(codec, clk_id, freq);
+		case ARIZONA_CLK_DSPCLK:
+			name = "DSPCLK";
+			reg = WM8285_DSP_CLOCK_1;
+			clk = &priv->dspclk;
+			clk_freq = wm8285_get_dspclk_setting(freq);
+			break;
+		default:
+			return -EINVAL;
+		}
+		break;
 	}
 
-	switch (freq) {
-	case  5644800:
-	case  6144000:
-		break;
-	case 11289600:
-	case 12288000:
-		val |= ARIZONA_CLK_12MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
-		break;
-	case 22579200:
-	case 24576000:
-		val |= ARIZONA_CLK_24MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
-		break;
-	case 45158400:
-	case 49152000:
-		val |= ARIZONA_CLK_49MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
-		break;
-	case 67737600:
-	case 73728000:
-		val |= ARIZONA_CLK_73MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
-		break;
-	case 90316800:
-	case 98304000:
-		val |= ARIZONA_CLK_98MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
-		break;
-	case 135475200:
-	case 147456000:
-		val |= ARIZONA_CLK_147MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
-		break;
-	case 0:
+	if (clk_freq < 0) {
+		dev_err(arizona->dev, "Failed to get clk setting for %dHZ\n",
+			freq);
+		return ret;
+	}
+
+	val |= clk_freq;
+
+	if (freq == 0) {
 		dev_dbg(arizona->dev, "%s cleared\n", name);
 		*clk = freq;
 		return 0;
-	default:
-		return -EINVAL;
 	}
 
 	*clk = freq;
@@ -2282,20 +2513,17 @@ static int arizona_calc_fratio(struct arizona_fll *fll,
 	}
 
 	switch (fll->arizona->type) {
+	case WM5102:
+	case WM8997:
+		return init_ratio;
 	case WM8280:
 	case WM5110:
 		if (fll->arizona->rev < 3 || sync)
 			return init_ratio;
 		break;
-	case WM8998:
-	case WM1814:
-	case WM1831:
-	case CS47L24:
+	default:
 		if (sync)
 			return init_ratio;
-		break;
-	default:
-		return init_ratio;
 	}
 
 	cfg->fratio = init_ratio - 1;
@@ -2468,15 +2696,34 @@ static int arizona_is_enabled_fll(struct arizona_fll *fll)
 static int arizona_wait_for_fll(struct arizona_fll *fll, bool requested)
 {
 	struct arizona *arizona = fll->arizona;
+	unsigned int reg, mask;
 	unsigned int val = 0;
 	bool status;
 	int i;
 
 	arizona_fll_dbg(fll, "Waiting for FLL...\n");
 
+	switch (arizona->type) {
+	case WM5102:
+	case WM5110:
+	case WM8997:
+	case WM8280:
+	case WM8998:
+	case WM1814:
+	case WM1831:
+	case CS47L24:
+		reg = ARIZONA_INTERRUPT_RAW_STATUS_5;
+		mask = ARIZONA_FLL1_CLOCK_OK_STS;
+		break;
+	default:
+		reg = WM8285_IRQ1_RAW_STATUS_2;
+		mask = WM8285_FLL1_LOCK_STS1;
+		break;
+	}
+
 	for (i = 0; i < 25; i++) {
-		regmap_read(arizona->regmap, ARIZONA_INTERRUPT_RAW_STATUS_5, &val);
-		status = val & (ARIZONA_FLL1_CLOCK_OK_STS << (fll->id - 1));
+		regmap_read(arizona->regmap, reg, &val);
+		status = val & (mask << (fll->id - 1));
 		if (status == requested)
 			return 0;
 		msleep(10);
@@ -2807,6 +3054,8 @@ int arizona_enable_force_bypass(struct snd_soc_codec *codec)
 			   ARIZONA_MICB2_BYPASS, ARIZONA_MICB2_BYPASS);
 	regmap_update_bits(arizona->regmap, ARIZONA_MIC_BIAS_CTRL_3,
 			   ARIZONA_MICB3_BYPASS, ARIZONA_MICB3_BYPASS);
+	regmap_update_bits(arizona->regmap, ARIZONA_MIC_BIAS_CTRL_4,
+			   ARIZONA_MICB4_BYPASS, ARIZONA_MICB4_BYPASS);
 
 	return 0;
 }
@@ -2837,6 +3086,9 @@ int arizona_disable_force_bypass(struct snd_soc_codec *codec)
 	if (!micbias[2].bypass && micbias[2].mV)
 		regmap_update_bits(arizona->regmap, ARIZONA_MIC_BIAS_CTRL_3,
 				   ARIZONA_MICB3_BYPASS, 0);
+	if (!micbias[3].bypass && micbias[3].mV)
+		regmap_update_bits(arizona->regmap, ARIZONA_MIC_BIAS_CTRL_4,
+				   ARIZONA_MICB4_BYPASS, 0);
 
 	return 0;
 }
