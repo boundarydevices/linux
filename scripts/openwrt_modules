@@ -1,0 +1,27 @@
+#! /bin/sh
+if [ $# -lt 1 ]; then
+	echo "Usage: $0 /path/to/openwrt-rootfs/"
+	exit -1 ;
+fi
+
+if ! [ -d $1 ]; then
+	echo "Error: Directory $1 not found"
+	exit -1 ;
+fi
+
+if ! [ -f include/config/kernel.release ]; then
+	echo "Usage: $0 must be run from within a kernel tree after building"
+        exit -1 ;
+fi
+
+kernelver=`cat include/config/kernel.release`;
+
+if [ -z "$kernelver" ]; then
+	echo "Usage: $0 must be run from within a kernel tree after building"
+        exit -1 ;
+fi
+
+rm -rf $1/lib/modules/
+mkdir -p $1/lib/modules/$kernelver
+find . -type f -name \*.ko -exec cp -fv {} $1/lib/modules/$kernelver \;
+
