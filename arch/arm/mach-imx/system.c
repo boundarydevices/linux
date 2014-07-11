@@ -88,9 +88,9 @@ void do_switch_fastboot(void)
 static void arch_reset_special_mode(char mode, const char *cmd)
 {
 #ifdef CONFIG_MXC_REBOOT_ANDROID_CMD
-	if (strcmp(cmd, "recovery") == 0)
+	if (cmd && strcmp(cmd, "recovery") == 0)
 		do_switch_recovery();
-	else if (strcmp(cmd, "fastboot") == 0)
+	else if (cmd && strcmp(cmd, "fastboot") == 0)
 		do_switch_fastboot();
 #endif
 }
