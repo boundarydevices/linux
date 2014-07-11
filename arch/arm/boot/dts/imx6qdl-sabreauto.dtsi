@@ -29,14 +29,14 @@
 		home {
 			label = "Home";
 			gpios = <&gpio1 11 GPIO_ACTIVE_LOW>;
-			gpio-key,wakeup;
+			gpio-key;
 			linux,code = <KEY_HOME>;
 		};
 
 		back {
 			label = "Back";
 			gpios = <&gpio1 12 GPIO_ACTIVE_LOW>;
-			gpio-key,wakeup;
+			gpio-key;
 			linux,code = <KEY_BACK>;
 		};
 
