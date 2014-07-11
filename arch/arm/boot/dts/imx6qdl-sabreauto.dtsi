@@ -43,14 +43,12 @@
 			label = "Home";
 			gpios = <&gpio1 11 1>;
 			linux,code = <102>; /* KEY_HOME */
-			gpio-key,wakeup;
 		};
 
 		back {
 			label = "Back";
 			gpios = <&gpio1 12 1>;
 			linux,code = <158>; /* KEY_BACK */
-			gpio-key,wakeup;
 		};
 
 		/* Reconfig to power key in Android*/
@@ -65,14 +63,12 @@
 			label = "Volume Up";
 			gpios = <&gpio2 15 1>;
 			linux,code = <115>; /* KEY_VOLUMEUP */
-			gpio-key,wakeup;
 		};
 
 		volume-down {
 			label = "Volume Down";
 			gpios = <&gpio5 14 1>;
 			linux,code = <114>; /* KEY_VOLUMEDOWN */
-			gpio-key,wakeup;
 		};
 	};
 
