@@ -19,6 +19,19 @@ next/cleanup
 		ARM: spear: Staticize local symbols in spear1340.c
 	versatile/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/versatile-1
+	renesas/cleanup2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc-cleanup2-for-v3.17
+	mmp/cleanup
+		https://git.kernel.org/pub/scm/linux/kernel/git/hzhuang1/linux tags/mmp-for-v3.17
+	pxa/cleanup
+		https://git.kernel.org/pub/scm/linux/kernel/git/hzhuang1/linux tags/pxa-for-v3.17-2
+	patch
+		ARM: pxa: Don't hardcode addresses and size in map_desc tables
+		ARM: pxa: Move UNCACHED_PHYS_0 mapping from generic.c to pxa2[57]x.c
+		ARM: pxa: pxa27x: Don't map IMEMC region statically
+		ARM: pxa: Move iotable mapping inside vmalloc region
+	samsung/s5p-cleanup-v2
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/s5p-cleanup-v2
 
 next/soc
 	renesas/clock
@@ -38,6 +51,13 @@ next/soc
 		git://git.infradead.org/linux-mvebu tags/mvebu-soc-3.17
 	berlin/soc
 		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-soc-3.17-1
+	renesas/r8a7779-multiplatform2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-r8a7779-multiplatform2-for-v3.17
+	renesas/cleanup2
+		Merge branch 'renesas/cleanup2' into next/soc
+		contains renesas/cleanup
+	renesas/soc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc2-for-v3.17
 
 next/boards
 	renesas/boards
@@ -49,6 +69,8 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v3.17
 	berlin/dt
 		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-dt-3.17-1
+	renesas/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt2-for-v3.17
 
 next/drivers
 
@@ -60,6 +82,8 @@ next/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig-for-v3.17
 	mvebu/defconfig
 		git://git.infradead.org/linux-mvebu tags/mvebu-defconfig-3.17
+	renesas/defconfig2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig2-for-v3.17
 
 fixes
 	<no branch> (0b514fdb52073e348ade842355f37f6976768e44)
@@ -68,4 +92,10 @@ fixes
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-fixes-2
 	patch
 		ARM: imx: fix shared gate clock
+	<no branch> (1d29a0722f6c38f79785c9ffb911730598de84e2)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.16/fixes-rc4
+	patch
+		ARM: at91: at91sam9x5: add clocks for usb device
+	<no branch> (bed7118988ef48063c72f67cc2701c72663b3870)
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-fixes-3
 
