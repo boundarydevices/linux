@@ -32,6 +32,8 @@ next/cleanup
 		ARM: pxa: Move iotable mapping inside vmalloc region
 	samsung/s5p-cleanup-v2
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/s5p-cleanup-v2
+	ux500/core
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-core-for-v3.17-1
 
 next/soc
 	renesas/clock
@@ -58,6 +60,8 @@ next/soc
 		contains renesas/cleanup
 	renesas/soc2
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc2-for-v3.17
+	renesas/soc3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc3-for-v3.17
 
 next/boards
 	renesas/boards
@@ -71,8 +75,14 @@ next/dt
 		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-dt-3.17-1
 	renesas/dt2
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt2-for-v3.17
+	at91/dt
+		git://github.com/at91linux/linux-at91 tags/at91-dt
+	ux500/devicetree
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-devicetree-v3.16-1
 
 next/drivers
+	at91/drivers
+		git://github.com/at91linux/linux-at91 tags/at91-drivers
 
 next/defconfig
 	patch
