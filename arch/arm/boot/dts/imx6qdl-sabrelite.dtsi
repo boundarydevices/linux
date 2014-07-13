@@ -409,6 +409,14 @@
 		wakeup-gpios = <&gpio1 9 0>;
 	};
 
+        ili210x@41 {
+		compatible = "ili210x";
+		reg = <0x41>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <9 2>;
+		wakeup-gpios = <&gpio1 9 0>;
+	};
+
 	ov5640: ov5640@3c {
 		compatible = "ovti,ov5640";
 		reg = <0x3c>;
