@@ -62,6 +62,10 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc2-for-v3.17
 	renesas/soc3
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc3-for-v3.17
+	renesas/cpufreq2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cpufreq2-for-v3.17
+	renesas/r8a7779-multiplatform3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-r8a7779-multiplatform3-for-v3.17
 
 next/boards
 	renesas/boards
@@ -94,6 +98,8 @@ next/defconfig
 		git://git.infradead.org/linux-mvebu tags/mvebu-defconfig-3.17
 	renesas/defconfig2
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig2-for-v3.17
+	renesas/defconfig3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig3-for-v3.17
 
 fixes
 	<no branch> (0b514fdb52073e348ade842355f37f6976768e44)
