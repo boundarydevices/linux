@@ -85,12 +85,6 @@
 #define MX6_SABRELITE_CAN1_STBY		IMX_GPIO_NR(1, 2)
 #define MX6_SABRELITE_CAN1_EN		IMX_GPIO_NR(1, 4)
 #define MX6_SABRELITE_CAN1_ERR		IMX_GPIO_NR(1, 7)
-#define MX6_SABRELITE_MENU_KEY		IMX_GPIO_NR(2, 1)
-#define MX6_SABRELITE_BACK_KEY		IMX_GPIO_NR(2, 2)
-#define MX6_SABRELITE_ONOFF_KEY		IMX_GPIO_NR(2, 3)
-#define MX6_SABRELITE_HOME_KEY		IMX_GPIO_NR(2, 4)
-#define MX6_SABRELITE_VOL_UP_KEY	IMX_GPIO_NR(7, 13)
-#define MX6_SABRELITE_VOL_DOWN_KEY	IMX_GPIO_NR(4, 5)
 
 #define N6_WL1271_WL_IRQ		IMX_GPIO_NR(6, 14)
 #define N6_WL1271_WL_EN			IMX_GPIO_NR(6, 15)
@@ -552,56 +546,6 @@ static const struct pm_platform_data mx6_sabrelite_pm_data __initconst = {
 	.suspend_exit = sabrelite_suspend_exit,
 };
 
-#define GPIO_BUTTON(gpio_num, ev_code, act_low, descr, wake)	\
-{								\
-	.gpio		= gpio_num,				\
-	.type		= EV_KEY,				\
-	.code		= ev_code,				\
-	.active_low	= act_low,				\
-	.desc		= "btn " descr,				\
-	.wakeup		= wake,					\
-}
-
-static struct gpio_keys_button sabrelite_buttons[] = {
-	GPIO_BUTTON(MX6_SABRELITE_ONOFF_KEY, KEY_POWER, 1, "key-power", 1),
-	GPIO_BUTTON(MX6_SABRELITE_MENU_KEY, KEY_MENU, 1, "key-memu", 0),
-	GPIO_BUTTON(MX6_SABRELITE_HOME_KEY, KEY_HOME, 1, "key-home", 0),
-	GPIO_BUTTON(MX6_SABRELITE_BACK_KEY, KEY_BACK, 1, "key-back", 0),
-	GPIO_BUTTON(MX6_SABRELITE_VOL_UP_KEY, KEY_VOLUMEUP, 1, "volume-up", 0),
-	GPIO_BUTTON(MX6_SABRELITE_VOL_DOWN_KEY, KEY_VOLUMEDOWN, 1, "volume-down", 0),
-};
-
-#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
-static struct gpio_keys_platform_data sabrelite_button_data = {
-	.buttons	= sabrelite_buttons,
-	.nbuttons	= ARRAY_SIZE(sabrelite_buttons),
-};
-
-static struct platform_device sabrelite_button_device = {
-	.name		= "gpio-keys",
-	.id		= -1,
-	.num_resources  = 0,
-	.dev		= {
-		.platform_data = &sabrelite_button_data,
-	}
-};
-
-static void __init sabrelite_add_device_buttons(void)
-{
-	platform_device_register(&sabrelite_button_device);
-}
-#else
-static void __init sabrelite_add_device_buttons(void)
-{
-	int i;
-	for (i=0; i < ARRAY_SIZE(sabrelite_buttons);i++) {
-		int gpio = sabrelite_buttons[i].gpio;
-		pr_debug("%s: exporting gpio %d\n", __func__, gpio);
-		gpio_export(gpio,1);
-	}
-}
-#endif
-
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
 struct wl12xx_platform_data n6q_wlan_data __initdata = {
 	.irq = gpio_to_irq(N6_WL1271_WL_IRQ),
@@ -834,8 +778,6 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_dvfs_core(&sabrelite_dvfscore_data);
 	imx6q_add_ion(0, &imx_ion_data,
 		sizeof(imx_ion_data) + sizeof(struct ion_platform_heap));
-
-	sabrelite_add_device_buttons();
 
 	ret = gpio_request_array(mx6_sabrelite_flexcan_gpios,
 			ARRAY_SIZE(mx6_sabrelite_flexcan_gpios));

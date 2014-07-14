@@ -65,16 +65,6 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	/* GPIO1 */
 	MX6PAD(ENET_RX_ER__GPIO_1_24),		/* J9 - Microphone Detect */
 
-	/* GPIO2 */
-	MX6PAD(NANDF_D1__GPIO_2_1),	/* J14 - Menu Button */
-	MX6PAD(NANDF_D2__GPIO_2_2),	/* J14 - Back Button */
-	MX6PAD(NANDF_D3__GPIO_2_3),	/* J14 - Search Button */
-	MX6PAD(NANDF_D4__GPIO_2_4),	/* J14 - Home Button */
-
-	/* GPIO4 */
-	MX6PAD(GPIO_19__GPIO_4_5),	/* J14 - Volume Down */
-
-
 	/* CSI1/Bootmode pins - J12 */
 #ifdef FOR_DL_SOLO
 	/* Dualite/Solo doesn't have IPU2 */
@@ -144,7 +134,6 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 
 	/* GPIO7 */
 	MX6PAD(GPIO_17__GPIO_7_12),	/* USB Hub Reset */
-	MX6PAD(GPIO_18__GPIO_7_13),	/* J14 - Volume Up */
 
 	/* I2C1 */
 	MX6PAD(EIM_D21__I2C1_SCL),	/* GPIO3[21] */
