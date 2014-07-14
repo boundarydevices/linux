@@ -628,6 +628,14 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
 	},
 #endif
+#if defined(CONFIG_TOUCHSCREEN_ILI210X) \
+	|| defined(CONFIG_TOUCHSCREEN_ILI210X_MODULE)
+	{
+		I2C_BOARD_INFO("ili210x", 0x41),
+		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
+		.gp = MX6_SABRELITE_CAP_TCH_INT1
+	},
+#endif
 #if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT) || \
 	defined(CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
 	{
