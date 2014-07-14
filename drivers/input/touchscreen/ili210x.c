@@ -10,6 +10,7 @@
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/sizes.h>
 #include <linux/slab.h>
 #include <asm/unaligned.h>
@@ -59,6 +60,7 @@ struct ili2xxx_chip {
 struct ili210x {
 	struct i2c_client *client;
 	struct input_dev *input;
+	int gp;
 	struct gpio_desc *reset_gpio;
 	struct touchscreen_properties prop;
 	const struct ili2xxx_chip *chip;
@@ -327,6 +329,13 @@ static bool ili210x_report_events(struct ili210x *priv, u8 *touchdata)
 	return contact;
 }
 
+static bool ili210x_interrupt_pending(struct ili210x *priv)
+{
+	if (priv->gp > 0)
+		return gpio_get_value(priv->gp) ? false : true;
+	return false;
+}
+
 static irqreturn_t ili210x_irq(int irq, void *irq_data)
 {
 	struct ili210x *priv = irq_data;
@@ -350,12 +359,17 @@ static irqreturn_t ili210x_irq(int irq, void *irq_data)
 
 		touch = ili210x_report_events(priv, touchdata);
 		keep_polling = chip->continue_polling(touchdata, touch);
-		if (keep_polling) {
-			time_delta = ktime_us_delta(time_next, ktime_get());
-			if (time_delta > 0)
-				usleep_range(time_delta, time_delta + 1000);
+		if (!keep_polling) {
+			keep_polling = ili210x_interrupt_pending(priv);
+			if (!keep_polling)
+				break;
 		}
-	} while (!priv->stop && keep_polling);
+		if (priv->stop)
+			break;
+		time_delta = ktime_us_delta(time_next, ktime_get());
+		if (time_delta > 0)
+			usleep_range(time_delta, time_delta + 1000);
+	} while (1);
 
 	return IRQ_HANDLED;
 }
@@ -923,6 +937,7 @@ static int ili210x_i2c_probe(struct i2c_client *client,
 	struct input_dev *input;
 	int error;
 	unsigned int max_xy;
+        struct device_node *np = client->dev.of_node;
 
 	dev_dbg(dev, "Probing for ILI210X I2C Touschreen driver");
 
@@ -962,6 +977,7 @@ static int ili210x_i2c_probe(struct i2c_client *client,
 
 	priv->client = client;
 	priv->input = input;
+	priv->gp = np ? of_get_named_gpio(np, "wakeup-gpios", 0) : -1;
 	priv->reset_gpio = reset_gpio;
 	priv->chip = chip;
 	i2c_set_clientdata(client, priv);
