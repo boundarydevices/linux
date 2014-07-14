@@ -1599,8 +1599,7 @@ static void __init board_init(void)
 	imx6q_add_mxc_hdmi(&hdmi_data);
 
 	imx6q_add_anatop_thermal_imx(1, &anatop_thermal_data);
-	if (0)
-		imx6_init_fec(fec_data);
+	imx6_init_fec(fec_data);
 	imx6q_add_pm_imx(0, &pm_data);
 	imx6q_add_sdhci_usdhc_imx(2, &sd3_data);
 	imx6q_add_sdhci_usdhc_imx(3, &sd4_data);
