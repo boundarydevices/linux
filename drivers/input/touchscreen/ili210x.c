@@ -7,6 +7,7 @@
 #include <linux/delay.h>
 #include <linux/workqueue.h>
 #include <linux/input/ili210x.h>
+#include <linux/of_gpio.h>
 
 #define MAX_TOUCHES		2
 #define DEFAULT_POLL_PERIOD	20
@@ -46,6 +47,7 @@ struct ili210x {
 	struct input_dev *input;
 	bool (*get_pendown_state)(void);
 	unsigned int poll_period;
+	int gp;
 	struct delayed_work dwork;
 };
 
@@ -109,6 +111,8 @@ static bool get_pendown_state(const struct ili210x *priv)
 
 	if (priv->get_pendown_state)
 		state = priv->get_pendown_state();
+	else if (0 < priv->gp)
+		state = !gpio_get_value(priv->gp);
 
 	return state;
 }
@@ -191,13 +195,12 @@ static int ili210x_i2c_probe(struct i2c_client *client,
 	struct firmware_version firmware;
 	int xmax, ymax;
 	int error;
+        struct device_node *np = client->dev.of_node;
 
 	dev_dbg(dev, "Probing for ILI210X I2C Touschreen driver");
 
-	if (!pdata) {
-		dev_err(dev, "No platform data!\n");
-		return -EINVAL;
-	}
+	if (!pdata)
+		dev_warn(dev, "No platform data!\n");
 
 	if (client->irq <= 0) {
 		dev_err(dev, "No IRQ!\n");
@@ -233,8 +236,10 @@ static int ili210x_i2c_probe(struct i2c_client *client,
 
 	priv->client = client;
 	priv->input = input;
-	priv->get_pendown_state = pdata->get_pendown_state;
-	priv->poll_period = pdata->poll_period ? : DEFAULT_POLL_PERIOD;
+	priv->get_pendown_state = pdata ? pdata->get_pendown_state : 0 ;
+	priv->poll_period = pdata ? (pdata->poll_period ? pdata->poll_period : DEFAULT_POLL_PERIOD) : DEFAULT_POLL_PERIOD;
+	priv->gp = pdata ? pdata->gp
+			 : np ? of_get_named_gpio(np, "wakeup-gpios", 0) : -1;
 	INIT_DELAYED_WORK(&priv->dwork, ili210x_work);
 
 	/* Setup input device */
@@ -259,7 +264,7 @@ static int ili210x_i2c_probe(struct i2c_client *client,
 	input_set_drvdata(input, priv);
 	i2c_set_clientdata(client, priv);
 
-	error = request_irq(client->irq, ili210x_irq, pdata->irq_flags,
+	error = request_irq(client->irq, ili210x_irq, IRQF_TRIGGER_FALLING,
 			    client->name, priv);
 	if (error) {
 		dev_err(dev, "Unable to request touchscreen IRQ, err: %d\n",
