@@ -10,6 +10,7 @@
 #include <linux/workqueue.h>
 #include <linux/gpio/consumer.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <asm/unaligned.h>
 
 #define ILI210X_TOUCHES		2
@@ -37,6 +38,7 @@ struct ili210x {
 	struct i2c_client *client;
 	struct input_dev *input;
 	unsigned int poll_period;
+	int gp;
 	struct delayed_work dwork;
 	struct gpio_desc *reset_gpio;
 	struct touchscreen_properties prop;
@@ -170,6 +172,13 @@ static bool ili210x_report_events(struct ili210x *priv, u8 *touchdata)
 	return contact;
 }
 
+static bool ili210x_interrupt_pending(struct ili210x *priv)
+{
+	if (priv->gp > 0)
+		return gpio_get_value(priv->gp) ? false : true;
+	return false;
+}
+
 static void ili210x_work(struct work_struct *work)
 {
 	struct ili210x *priv = container_of(work, struct ili210x,
@@ -197,7 +206,7 @@ static void ili210x_work(struct work_struct *work)
 
 	touch = ili210x_report_events(priv, touchdata);
 
-	if (touch)
+	if (touch || ili210x_interrupt_pending(priv))
 		schedule_delayed_work(&priv->dwork,
 				      msecs_to_jiffies(priv->poll_period));
 }
@@ -270,6 +279,7 @@ static int ili210x_i2c_probe(struct i2c_client *client,
 	struct firmware_version firmware;
 	enum ili2xxx_model model;
 	int error;
+        struct device_node *np = client->dev.of_node;
 
 	model = (enum ili2xxx_model)id->driver_data;
 
@@ -306,6 +316,7 @@ static int ili210x_i2c_probe(struct i2c_client *client,
 	priv->client = client;
 	priv->input = input;
 	priv->poll_period = DEFAULT_POLL_PERIOD;
+	priv->gp = np ? of_get_named_gpio(np, "wakeup-gpios", 0) : -1;
 	INIT_DELAYED_WORK(&priv->dwork, ili210x_work);
 	priv->reset_gpio = reset_gpio;
 	priv->model = model;
