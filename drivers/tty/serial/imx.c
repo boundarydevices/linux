@@ -208,7 +208,6 @@ struct imx_port {
 	unsigned int		have_rtscts:1;
 	unsigned int		dte_mode:1;
 	unsigned int		use_irda:1;
-	unsigned int		dma_mode:1;
 	unsigned int		irda_inv_rx:1;
 	unsigned int		irda_inv_tx:1;
 	unsigned short		trcv_delay; /* transceiver delay */
@@ -226,8 +225,11 @@ struct imx_port {
 	void			*rx_buf;
 	unsigned int		tx_bytes;
 	unsigned int		dma_tx_nents;
+	struct work_struct	tsk_dma_tx;
 	wait_queue_head_t	dma_wait;
 	unsigned int            saved_reg[11];
+#define DMA_TX_IS_WORKING 1
+	unsigned long		flags;
 };
 
 struct imx_port_ucrs {
@@ -504,7 +506,11 @@ static void dma_tx_callback(void *data)
 
 	dev_dbg(sport->port.dev, "we finish the TX DMA.\n");
 
+	clear_bit(DMA_TX_IS_WORKING, &sport->flags);
+	smp_mb__after_clear_bit();
 	uart_write_wakeup(&sport->port);
+
+	schedule_work(&sport->tsk_dma_tx);
 
 	if (waitqueue_active(&sport->dma_wait)) {
 		wake_up(&sport->dma_wait);
@@ -513,54 +519,62 @@ static void dma_tx_callback(void *data)
 	}
 }
 
-static void imx_dma_tx(struct imx_port *sport)
+static void dma_tx_work(struct work_struct *w)
 {
+	struct imx_port *sport = container_of(w, struct imx_port, tsk_dma_tx);
 	struct circ_buf *xmit = &sport->port.state->xmit;
 	struct scatterlist *sgl = sport->tx_sgl;
 	struct dma_async_tx_descriptor *desc;
 	struct dma_chan	*chan = sport->dma_chan_tx;
 	struct device *dev = sport->port.dev;
-	enum dma_status status;
+	unsigned long flags;
 	int ret;
 
-	status = dmaengine_tx_status(chan, (dma_cookie_t)0, NULL);
-	if (DMA_IN_PROGRESS == status)
+	if (test_and_set_bit(DMA_TX_IS_WORKING, &sport->flags))
 		return;
 
+	spin_lock_irqsave(&sport->port.lock, flags);
 	sport->tx_bytes = uart_circ_chars_pending(xmit);
 
-	if (xmit->tail > xmit->head && xmit->head > 0) {
-		sport->dma_tx_nents = 2;
-		sg_init_table(sgl, 2);
-		sg_set_buf(sgl, xmit->buf + xmit->tail,
-				UART_XMIT_SIZE - xmit->tail);
-		sg_set_buf(sgl + 1, xmit->buf, xmit->head);
-	} else {
-		sport->dma_tx_nents = 1;
-		sg_init_one(sgl, xmit->buf + xmit->tail, sport->tx_bytes);
-	}
+	if (sport->tx_bytes > 0) {
+		if (xmit->tail > xmit->head && xmit->head > 0) {
+			sport->dma_tx_nents = 2;
+			sg_init_table(sgl, 2);
+			sg_set_buf(sgl, xmit->buf + xmit->tail,
+					UART_XMIT_SIZE - xmit->tail);
+			sg_set_buf(sgl + 1, xmit->buf, xmit->head);
+		} else {
+			sport->dma_tx_nents = 1;
+			sg_init_one(sgl, xmit->buf + xmit->tail, sport->tx_bytes);
+		}
+		spin_unlock_irqrestore(&sport->port.lock, flags);
 
-	ret = dma_map_sg(dev, sgl, sport->dma_tx_nents, DMA_TO_DEVICE);
-	if (ret == 0) {
-		dev_err(dev, "DMA mapping error for TX.\n");
+		ret = dma_map_sg(dev, sgl, sport->dma_tx_nents, DMA_TO_DEVICE);
+		if (ret == 0) {
+			dev_err(dev, "DMA mapping error for TX.\n");
+			goto err_out;
+		}
+		desc = dmaengine_prep_slave_sg(chan, sgl, sport->dma_tx_nents,
+						DMA_MEM_TO_DEV, DMA_PREP_INTERRUPT);
+		if (!desc) {
+			dev_err(dev, "We cannot prepare for the TX slave dma!\n");
+			goto err_out;
+		}
+		desc->callback = dma_tx_callback;
+		desc->callback_param = sport;
+
+		dev_dbg(dev, "TX: prepare to send %lu bytes by DMA.\n",
+				uart_circ_chars_pending(xmit));
+		/* fire it */
+		sport->dma_is_txing = 1;
+		dmaengine_submit(desc);
+		dma_async_issue_pending(chan);
 		return;
 	}
-	desc = dmaengine_prep_slave_sg(chan, sgl, sport->dma_tx_nents,
-					DMA_MEM_TO_DEV, DMA_PREP_INTERRUPT);
-	if (!desc) {
-		dev_err(dev, "We cannot prepare for the TX slave dma!\n");
-		return;
-	}
-	desc->callback = dma_tx_callback;
-	desc->callback_param = sport;
-
-	dev_dbg(dev, "TX: prepare to send %lu bytes by DMA.\n",
-			uart_circ_chars_pending(xmit));
-	/* fire it */
-	sport->dma_is_txing = 1;
-	dmaengine_submit(desc);
-	dma_async_issue_pending(chan);
-	return;
+	spin_unlock_irqrestore(&sport->port.lock, flags);
+err_out:
+	clear_bit(DMA_TX_IS_WORKING, &sport->flags);
+	smp_mb__after_clear_bit();
 }
 
 /*
@@ -605,7 +619,7 @@ static void imx_start_tx(struct uart_port *port)
 	}
 
 	if (sport->dma_is_enabled) {
-		imx_dma_tx(sport);
+		schedule_work(&sport->tsk_dma_tx);
 		return;
 	}
 
@@ -824,11 +838,9 @@ static void imx_set_mctrl(struct uart_port *port, unsigned int mctrl)
 	struct imx_port *sport = (struct imx_port *)port;
 	unsigned long temp;
 
-	temp = readl(sport->port.membase + UCR2) & ~UCR2_CTS;
-
+	temp = readl(sport->port.membase + UCR2) & ~(UCR2_CTS | UCR2_CTSC);
 	if (mctrl & TIOCM_RTS)
-		if (!sport->dma_is_enabled)
-			temp |= UCR2_CTS;
+		temp |= UCR2_CTS | UCR2_CTSC;
 
 	writel(temp, sport->port.membase + UCR2);
 
@@ -921,8 +933,21 @@ static void dma_rx_callback(void *data)
 		tty_flip_buffer_push(port);
 
 		start_rx_dma(sport);
-	} else
+	} else if (readl(sport->port.membase + USR2) & USR2_RDR) {
+		/*
+		 * start rx_dma directly once data in RXFIFO, more efficient
+		 * than before:
+		 * 	1. call imx_rx_dma_done to stop dma if no data received
+		 *	2. wait next  RDR interrupt to start dma transfer.
+		 */
+		start_rx_dma(sport);
+	} else {
+		/*
+		 * stop dma to prevent too many IDLE event trigged if no data
+		 * in RXFIFO
+		 */
 		imx_rx_dma_done(sport);
+	}
 }
 
 static int start_rx_dma(struct imx_port *sport)
@@ -1034,6 +1059,7 @@ static void imx_enable_dma(struct imx_port *sport)
 	unsigned long temp;
 
 	init_waitqueue_head(&sport->dma_wait);
+	sport->flags = 0;
 
 	/* set UCR1 */
 	temp = readl(sport->port.membase + UCR1);
@@ -1146,6 +1172,8 @@ static int imx_startup(struct uart_port *port)
 			goto error_out1;
 		}
 	}
+
+	INIT_WORK(&sport->tsk_dma_tx, dma_tx_work);
 
 	spin_lock_irqsave(&sport->port.lock, flags);
 	/*
@@ -1358,7 +1386,7 @@ imx_set_termios(struct uart_port *port, struct ktermios *termios,
 
 			/* Can we enable the DMA support? */
 			if (is_imx6q_uart(sport) && !uart_console(port)
-				&& !sport->dma_is_inited && sport->dma_mode)
+				&& !sport->dma_is_inited)
 				imx_uart_dma_init(sport);
 		} else {
 			termios->c_cflag &= ~CRTSCTS;
@@ -1920,9 +1948,6 @@ static int serial_imx_probe_dt(struct imx_port *sport,
 
 	if (of_get_property(np, "fsl,dte-mode", NULL))
 		sport->dte_mode = 1;
-
-	if (of_get_property(np, "fsl,dma-mode", NULL))
-		sport->dma_mode = 1;
 
 	sport->devdata = of_id->data;
 
