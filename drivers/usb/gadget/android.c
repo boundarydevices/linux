@@ -34,7 +34,6 @@
 #include "f_fs.c"
 #include "f_audio_source.c"
 #include "f_mass_storage.c"
-#include "f_adb.c"
 #include "f_mtp.c"
 #include "f_accessory.c"
 #define USB_ETH_RNDIS y
@@ -213,28 +212,6 @@ struct functionfs_config {
 	bool opened;
 	bool enabled;
 	struct ffs_data *data;
-};
-
-static int adb_function_init(struct android_usb_function *f, struct usb_composite_dev *cdev)
-{
-	return adb_setup();
-}
-
-static void adb_function_cleanup(struct android_usb_function *f)
-{
-	adb_cleanup();
-}
-
-static int adb_function_bind_config(struct android_usb_function *f, struct usb_configuration *c)
-{
-	return adb_bind_config(c);
-}
-
-static struct android_usb_function adb_function = {
-	.name		= "adb",
-	.init		= adb_function_init,
-	.cleanup	= adb_function_cleanup,
-	.bind_config	= adb_function_bind_config,
 };
 
 static int ffs_function_init(struct android_usb_function *f,
@@ -956,7 +933,6 @@ static struct android_usb_function audio_source_function = {
 };
 
 static struct android_usb_function *supported_functions[] = {
-	&adb_function,
 	&ffs_function,
 	&acm_function,
 	&mtp_function,
