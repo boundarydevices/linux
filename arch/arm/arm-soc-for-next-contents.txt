@@ -83,6 +83,8 @@ next/dt
 		git://github.com/at91linux/linux-at91 tags/at91-dt
 	ux500/devicetree
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-devicetree-v3.16-1
+	patch
+		ARM: socfpga: Add missing #reset-cells to socfpga device tree
 
 next/drivers
 	at91/drivers
@@ -100,6 +102,8 @@ next/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig2-for-v3.17
 	renesas/defconfig3
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig3-for-v3.17
+	patch
+		ARM: socfpga: Update socfpga_defconfig
 
 fixes
 	<no branch> (0b514fdb52073e348ade842355f37f6976768e44)
