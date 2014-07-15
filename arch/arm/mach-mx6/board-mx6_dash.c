@@ -187,6 +187,7 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 	return IOMUX_SETUP(sd_pads[i]);
 }
 
+#ifdef CONFIG_WL12XX_PLATFORM_DATA
 static void sdio_set_power(int on)
 {
 	pr_debug("%s:%s: set power(%d)\n",
@@ -194,7 +195,6 @@ static void sdio_set_power(int on)
 	gpio_set_value(N6_WL1271_WL_EN,on);
 }
 
-#ifdef CONFIG_WL12XX_PLATFORM_DATA
 static struct esdhc_platform_data mx6_dash_sd2_data = {
 	.always_present = 1,
 	.cd_gpio = -1,
@@ -845,6 +845,7 @@ static void __init mx6_dash_board_init(void)
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
 
+#ifdef CONFIG_WL12XX_PLATFORM_DATA
 	imx6q_add_sdhci_usdhc_imx(1, &mx6_dash_sd2_data);
 	/* WL12xx WLAN Init */
 	if (wl12xx_set_platform_data(&n6q_wlan_data))
@@ -862,6 +863,7 @@ static void __init mx6_dash_board_init(void)
 
 	gpio_export(N6_WL1271_WL_EN,1);
 	gpio_export(N6_WL1271_BT_EN,1);
+#endif
 
 	imx6q_add_pcie(&pcie_data);
 	platform_device_register (&wl127x_bt_device);
