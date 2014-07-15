@@ -592,8 +592,6 @@ static struct platform_device dash_vmmc_reg_devices = {
 
 static int backlight_notify(struct device *dev, int brightness)
 {
-	pr_err("%s:%s: brightness(%d)\n",
-		 __FILE__, __func__, brightness);
 	gpio_set_value(MX6_DASH_BCKLT_EN, (0 != brightness));
 	return 0;
 }
