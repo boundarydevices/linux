@@ -490,6 +490,12 @@ static struct viv_gpu_platform_data imx6_gpu_pdata __initdata = {
 	.reserved_mem_size = SZ_128M + SZ_64M - SZ_16M,
 };
 
+static struct gpio power_display_gpios[] = {
+	{ MX6_SABRELITE_BCKLT_EN, GPIOF_OUT_INIT_HIGH, "backlight-en" },
+	{ MX6_SABRELITE_DISPLAY_EN, GPIOF_OUT_INIT_HIGH, "display-en" },
+	{ MX6_SABRELITE_POWER_OFF, GPIOF_OUT_INIT_LOW, "power-off" },
+};
+
 static struct ipuv3_fb_platform_data sabrelite_fb_data[] = {
 	{ /*fb0*/
 	.disp_dev = "ldb",
@@ -712,6 +718,10 @@ static void __init mx6_sabrelite_board_init(void)
 
 	IOMUX_SETUP(common_pads);
 
+	ret = gpio_request_array(power_display_gpios,
+			ARRAY_SIZE(power_display_gpios));
+	if (ret)
+		pr_err("failed to request power and display gpios: %d\n", ret);
 	gpio_direction_output(MX6_SABRELITE_POWER_OFF, 0);
 	gpio_direction_output(MX6_SABRELITE_DISPLAY_EN, 1);
 	gpio_direction_output(MX6_SABRELITE_BCKLT_EN, 0);
