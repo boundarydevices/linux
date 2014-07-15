@@ -85,6 +85,7 @@
 #define MX6_SABRELITE_CAN1_STBY		IMX_GPIO_NR(1, 2)
 #define MX6_SABRELITE_CAN1_EN		IMX_GPIO_NR(1, 4)
 #define MX6_SABRELITE_CAN1_ERR		IMX_GPIO_NR(1, 7)
+#define MX6_SABRELITE_BCKLT_EN		IMX_GPIO_NR(3, 2)
 
 #define N6_WL1271_WL_IRQ		IMX_GPIO_NR(6, 14)
 #define N6_WL1271_WL_EN			IMX_GPIO_NR(6, 15)
@@ -578,12 +579,21 @@ static struct platform_device sabrelite_vmmc_reg_devices = {
 	},
 };
 
+static int backlight_notify(struct device *dev, int brightness)
+{
+	pr_err("%s:%s: brightness(%d)\n",
+		 __FILE__, __func__, brightness);
+	gpio_set_value(MX6_SABRELITE_BCKLT_EN, (0 != brightness));
+	return 0;
+}
+
 /* PWM3_PWMO: backlight control on LDB connector */
 static struct platform_pwm_backlight_data mx6_sabrelite_pwm_backlight_data = {
 	.pwm_id = 3,
 	.max_brightness = 255,
 	.dft_brightness = 128,
 	.pwm_period_ns = 50000,
+	.notify = backlight_notify,
 };
 
 static struct mxc_dvfs_platform_data sabrelite_dvfscore_data = {
@@ -696,6 +706,8 @@ static void __init mx6_sabrelite_board_init(void)
 	struct platform_device *voutdev;
 
 	IOMUX_SETUP(common_pads);
+
+	gpio_direction_output(MX6_SABRELITE_BCKLT_EN, 0);
 
 	gp_reg_id = sabrelite_dvfscore_data.reg_id;
 	soc_reg_id = sabrelite_dvfscore_data.soc_id;
