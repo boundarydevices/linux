@@ -71,6 +71,10 @@
 	defined(CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
 #include <linux/i2c/atmel_mxt_ts.h>
 #endif
+#if defined(CONFIG_TOUCHSCREEN_ILI210X) \
+	|| defined(CONFIG_TOUCHSCREEN_ILI210X_MODULE)
+#include <linux/input/ili210x.h>
+#endif
 #include <linux/wl12xx.h>
 #include <linux/ti_wilink_st.h>
 #include <asm/irq.h>
@@ -611,6 +615,15 @@ static struct mxt_platform_data mxt_data = {
 };
 #endif
 
+#if defined(CONFIG_TOUCHSCREEN_ILI210X) \
+	|| defined(CONFIG_TOUCHSCREEN_ILI210X_MODULE)
+static struct ili210x_platform_data ili_pdata = {
+	.irq_flags = IRQF_TRIGGER_FALLING,
+	.poll_period = 20,
+	.gp = MX6_SABRELITE_CAP_TCH_INT1
+};
+#endif
+
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("egalax_ts", 0x4),
@@ -633,7 +646,7 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("ili210x", 0x41),
 		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
-		.gp = MX6_SABRELITE_CAP_TCH_INT1
+		.platform_data = &ili_pdata
 	},
 #endif
 #if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT) || \
