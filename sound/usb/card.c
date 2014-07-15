@@ -724,7 +724,7 @@ int snd_usb_autoresume(struct snd_usb_audio *chip)
 	int err = -ENODEV;
 
 	down_read(&chip->shutdown_rwsem);
-	if (chip->probing)
+	if (chip->probing && chip->in_pm)
 		err = 0;
 	else if (!chip->shutdown)
 		err = usb_autopm_get_interface(chip->pm_intf);
@@ -736,7 +736,7 @@ int snd_usb_autoresume(struct snd_usb_audio *chip)
 void snd_usb_autosuspend(struct snd_usb_audio *chip)
 {
 	down_read(&chip->shutdown_rwsem);
-	if (!chip->shutdown && !chip->probing)
+	if (!chip->shutdown && !chip->probing && !chip->in_pm)
 		usb_autopm_put_interface(chip->pm_intf);
 	up_read(&chip->shutdown_rwsem);
 }
@@ -768,13 +768,14 @@ static int usb_audio_suspend(struct usb_interface *intf, pm_message_t message)
 			chip->autosuspended = 1;
 	}
 
-	list_for_each_entry(mixer, &chip->mixer_list, list)
-		snd_usb_mixer_inactivate(mixer);
+	if (chip->num_suspended_intf == 1)
+		list_for_each_entry(mixer, &chip->mixer_list, list)
+			snd_usb_mixer_suspend(mixer);
 
 	return 0;
 }
 
-static int usb_audio_resume(struct usb_interface *intf)
+static int __usb_audio_resume(struct usb_interface *intf, bool reset_resume)
 {
 	struct snd_usb_audio *chip = usb_get_intfdata(intf);
 	struct usb_mixer_interface *mixer;
@@ -784,12 +785,14 @@ static int usb_audio_resume(struct usb_interface *intf)
 		return 0;
 	if (--chip->num_suspended_intf)
 		return 0;
+
+	chip->in_pm = 1;
 	/*
 	 * ALSA leaves material resumption to user space
 	 * we just notify and restart the mixers
 	 */
 	list_for_each_entry(mixer, &chip->mixer_list, list) {
-		err = snd_usb_mixer_activate(mixer);
+		err = snd_usb_mixer_resume(mixer, reset_resume);
 		if (err < 0)
 			goto err_out;
 	}
@@ -799,11 +802,23 @@ static int usb_audio_resume(struct usb_interface *intf)
 	chip->autosuspended = 0;
 
 err_out:
+	chip->in_pm = 0;
 	return err;
+}
+
+static int usb_audio_resume(struct usb_interface *intf)
+{
+	return __usb_audio_resume(intf, false);
+}
+
+static int usb_audio_reset_resume(struct usb_interface *intf)
+{
+	return __usb_audio_resume(intf, true);
 }
 #else
 #define usb_audio_suspend	NULL
 #define usb_audio_resume	NULL
+#define usb_audio_reset_resume	NULL
 #endif		/* CONFIG_PM */
 
 static struct usb_device_id usb_audio_ids [] = {
@@ -825,6 +840,7 @@ static struct usb_driver usb_audio_driver = {
 	.disconnect =	usb_audio_disconnect,
 	.suspend =	usb_audio_suspend,
 	.resume =	usb_audio_resume,
+	.reset_resume =	usb_audio_reset_resume,
 	.id_table =	usb_audio_ids,
 	.supports_autosuspend = 1,
 };
