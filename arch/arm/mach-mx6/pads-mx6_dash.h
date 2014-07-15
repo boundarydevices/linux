@@ -65,6 +65,9 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	/* GPIO1 */
 	MX6PAD(ENET_RX_ER__GPIO_1_24),		/* J9 - Microphone Detect */
 
+	/* LCD_DISPLAY_EN */
+	MX6PAD(EIM_DA1__GPIO_3_1),		/* GPIO3[1] */
+
 	/* LCD_BCKLT_EN */
 	MX6PAD(EIM_DA2__GPIO_3_2),		/* GPIO3[2] */
 
