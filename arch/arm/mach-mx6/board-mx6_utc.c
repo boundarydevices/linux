@@ -134,7 +134,7 @@ static int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
 	return 0;
 }
 
-struct gpio n6w_wl1271_gpios[] __initdata = {
+static struct gpio n6w_wl1271_gpios[] __initdata = {
 	{.label = "wl1271_int",		.gpio = GP_WL1271_WL_IRQ,	.flags = GPIOF_DIR_IN},
 	{.label = "wl1271_bt_en",	.gpio = GP_WL1271_BT_EN,	.flags = 0},
 	{.label = "wl1271_wl_en",	.gpio = GP_WL1271_WL_EN,	.flags = 0},
@@ -755,7 +755,7 @@ static void wl1271_set_power(bool enable)
 	}
 }
 
-struct wl12xx_platform_data n6q_wlan_data __initdata = {
+static struct wl12xx_platform_data n6q_wlan_data __initdata = {
 	.irq = gpio_to_irq(GP_WL1271_WL_IRQ),
 	.board_ref_clock = WL12XX_REFCLOCK_38, /* 38.4 MHz */
 	.set_power = wl1271_set_power,
