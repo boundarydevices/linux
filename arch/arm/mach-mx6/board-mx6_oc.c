@@ -133,7 +133,7 @@ extern void (*put_cpu_regulator)(void);
 #define IOMUX_SETUP(pad_list)	mxc_iomux_v3_setup_pads(mx6q_##pad_list, \
 		mx6dl_solo_##pad_list)
 
-int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
+static int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
 		iomux_v3_cfg_t *mx6dl_solo_pad_list)
 {
         iomux_v3_cfg_t *p = cpu_is_mx6q() ? mx6q_pad_list : mx6dl_solo_pad_list;
