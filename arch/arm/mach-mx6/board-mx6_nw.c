@@ -108,7 +108,7 @@ extern void (*put_cpu_regulator)(void);
 #define IOMUX_SETUP(pad_list)	mxc_iomux_v3_setup_pads(mx6q_##pad_list, \
 		mx6dl_solo_##pad_list)
 
-int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
+static int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
 		iomux_v3_cfg_t *mx6dl_solo_pad_list)
 {
         iomux_v3_cfg_t *p = cpu_is_mx6q() ? mx6q_pad_list : mx6dl_solo_pad_list;
@@ -124,7 +124,7 @@ int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
 }
 
 #define GPIOF_HIGH	GPIOF_OUT_INIT_HIGH
-struct gpio mx6_init_gpios[] __initdata = {
+static struct gpio mx6_init_gpios[] __initdata = {
 	{.label = "usb_hub_reset",	.gpio = USB_HUB_RESET,	.flags = 0},		/* GPIO7[12]: GPIO_17 - active low */
 	{.label = "usbotg_pwr_en",	.gpio = USB_OTG_POWER,	.flags = 0},		/* GPIO3[22]: EIM_D22 - active high */
 	{.label = "wl_en",		.gpio = WL_EN,		.flags = 0},		/* GPIO6[7]: NANDF_CLE - active high */
