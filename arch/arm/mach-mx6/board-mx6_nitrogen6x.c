@@ -153,7 +153,7 @@ extern void mx6_cpu_regulator_init(void);
 #define IOMUX_SETUP(pad_list)	mxc_iomux_v3_setup_pads(mx6q_##pad_list, \
 		mx6dl_solo_##pad_list)
 
-int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
+static int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
 		iomux_v3_cfg_t *mx6dl_solo_pad_list)
 {
         iomux_v3_cfg_t *p = cpu_is_mx6q() ? mx6q_pad_list : mx6dl_solo_pad_list;
@@ -168,7 +168,7 @@ int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
         return 0;
 }
 
-struct gpio n6w_wl1271_gpios[] __initdata = {
+static struct gpio n6w_wl1271_gpios[] __initdata = {
 	{.label = "wl1271_int",		.gpio = N6_WL1271_WL_IRQ,	.flags = GPIOF_DIR_IN},
 	{.label = "wl1271_bt_en",	.gpio = N6_WL1271_BT_EN,	.flags = 0},
 	{.label = "wl1271_wl_en",	.gpio = N6_WL1271_WL_EN,	.flags = 0},
@@ -1006,7 +1006,7 @@ static void __init sabrelite_add_device_buttons(void)
 #endif
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
-struct wl12xx_platform_data n6q_wlan_data __initdata = {
+static struct wl12xx_platform_data n6q_wlan_data __initdata = {
 	.irq = gpio_to_irq(N6_WL1271_WL_IRQ),
 	.board_ref_clock = WL12XX_REFCLOCK_38, /* 38.4 MHz */
 };
