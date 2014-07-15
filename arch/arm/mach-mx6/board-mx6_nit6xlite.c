@@ -788,7 +788,7 @@ int mx6_bl_notify(struct device *dev, int brightness)
 	return brightness;
 }
 
-/* PWM4_PWMO: backlight control on LDB connector */
+/* PWM3_PWMO: backlight control on RGB connector */
 static struct platform_pwm_backlight_data mx6_pwm3_backlight_data = {
 	.pwm_id = 2,	/* pin SD1_DAT1 - PWM3 */
 	.max_brightness = 256,
@@ -1032,9 +1032,9 @@ static void __init mx6_board_init(void)
 	gpio_request(WL_BT_REG_EN, "bt-reg-en");
 	gpio_request(WL_BT_RESET, "bt-reset");
 
-	gpio_direction_output(WL_EN, 1);		/* momentarily enable */
+	gpio_direction_output(WL_EN, 1);	/* momentarily enable */
 	gpio_direction_output(WL_BT_REG_EN, 1);
-        gpio_direction_output(WL_BT_RESET, 1);
+	gpio_direction_output(WL_BT_RESET, 1);
 
 	mdelay(2);
 	gpio_set_value(WL_EN, 0);
