@@ -50,7 +50,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(KEY_COL2__CAN1_TXCAN),
 	MX6PAD(GPIO_2__GPIO_1_2),		/* STNDBY */
 	MX6PAD(GPIO_7__GPIO_1_7),		/* NERR */
-	NEW_PAD_CTRL(MX6PAD(GPIO_7__GPIO_1_7), MX6_SABRELITE_CAN1_ERR_TEST_PADCFG),
+	NEW_PAD_CTRL(MX6PAD(GPIO_7__GPIO_1_7), MX6_DASH_CAN1_ERR_TEST_PADCFG),
 	MX6PAD(GPIO_4__GPIO_1_4),		/* Enable */
 
 	/* CCM  */
@@ -83,7 +83,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(EIM_WAIT__GPIO_5_0),		/* GPIO5[0] - unused */
 	MX6PAD(EIM_A24__GPIO_5_4),		/* GPIO5[4] - unused */
 
-	/* NANDF_CS1/2/3 are unused for sabrelite */
+	/* NANDF_CS1/2/3 are unused for dash */
 	NEW_PAD_CTRL(MX6PAD(NANDF_CS1__GPIO_6_14), N6_IRQ_TEST_PADCFG),	/* wl1271 wl_irq */
 	NEW_PAD_CTRL(MX6PAD(NANDF_CS2__GPIO_6_15), N6_EN_PADCFG),	/* wl1271 wl_en */
 	NEW_PAD_CTRL(MX6PAD(NANDF_CS3__GPIO_6_16), N6_EN_PADCFG),	/* wl1271 bt_en */
@@ -163,8 +163,8 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	0
 };
 
-static iomux_v3_cfg_t MX6NAME(sabrelite_mc33902_flexcan_pads)[] = {
-	NEW_PAD_CTRL(MX6PAD(GPIO_7__GPIO_1_7), MX6_SABRELITE_CAN1_ERR_PADCFG),
+static iomux_v3_cfg_t MX6NAME(dash_mc33902_flexcan_pads)[] = {
+	NEW_PAD_CTRL(MX6PAD(GPIO_7__GPIO_1_7), MX6_DASH_CAN1_ERR_PADCFG),
 	0
 };
 
