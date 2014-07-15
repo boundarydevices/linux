@@ -87,6 +87,7 @@
 #define MX6_SABRELITE_CAN1_ERR		IMX_GPIO_NR(1, 7)
 #define MX6_SABRELITE_BCKLT_EN		IMX_GPIO_NR(3, 2)
 #define MX6_SABRELITE_DISPLAY_EN	IMX_GPIO_NR(3, 1)
+#define MX6_SABRELITE_POWER_OFF		IMX_GPIO_NR(3, 0)
 
 #define N6_WL1271_WL_IRQ		IMX_GPIO_NR(6, 14)
 #define N6_WL1271_WL_EN			IMX_GPIO_NR(6, 15)
@@ -708,6 +709,7 @@ static void __init mx6_sabrelite_board_init(void)
 
 	IOMUX_SETUP(common_pads);
 
+	gpio_direction_output(MX6_SABRELITE_POWER_OFF, 0);
 	gpio_direction_output(MX6_SABRELITE_DISPLAY_EN, 1);
 	gpio_direction_output(MX6_SABRELITE_BCKLT_EN, 0);
 
