@@ -12,6 +12,15 @@
 #define MX6NAME(a) mx6q_##a
 #endif
 
+#define PADCFG_INPUT		(PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+#define PADCFG_INPUT_L		(PAD_CTL_SPEED_LOW | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+#define PADCFG_INPUT_DN		(PADCFG_INPUT | PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN)
+#define PADCFG_INPUT_UP		(PADCFG_INPUT | PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP)
+#define PADCFG_INPUT_L_UP	(PADCFG_INPUT_L | PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP)
+
+#define AUD_PAD_CTRL	(PADCFG_INPUT_L_UP | PAD_CTL_SRE_FAST)
+#define CSI_PAD_CTRL	(PADCFG_INPUT_UP | PAD_CTL_SRE_FAST)
+
 #define MX6Q_USDHC_PAD_CTRL_22KPU_40OHM_50MHZ	(PAD_CTL_PKE | PAD_CTL_PUE |	\
 		PAD_CTL_PUS_22K_UP  | PAD_CTL_SPEED_LOW |		\
 		PAD_CTL_DSE_40ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
@@ -133,7 +142,6 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	/* GPIO4 */
 	MX6PAD(GPIO_19__GPIO_4_5),	/* J14 - Volume Down */
 
-
 	/* CSI1/Bootmode pins - J12 */
 #ifdef FOR_DL_SOLO
 	/* Dualite/Solo doesn't have IPU2 */
@@ -187,14 +195,15 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(EIM_DA12__IPU2_CSI1_VSYNC),	/* GPIO3[12] */
 	MX6PAD(EIM_A16__IPU2_CSI1_PIXCLK),	/* GPIO2[22] */
 #endif
-	MX6PAD(EIM_DA13__GPIO_3_13),		/* GPIO3[13] - power down */
-	MX6PAD(EIM_DA14__GPIO_3_14),		/* GPIO3[14] - camera reset */
+	MX6PAD(EIM_DA13__GPIO_3_13),		/* Power */
+	MX6PAD(EIM_DA14__GPIO_3_14),		/* Reset */
+	MX6PAD(EIM_WAIT__GPIO_5_0),		/* Irq */
+	MX6PAD(EIM_A24__GPIO_5_4),		/* Field */
+
 	MX6PAD(EIM_RW__GPIO_2_26),		/* GPIO2[26] - unused */
 	MX6PAD(EIM_LBA__GPIO_2_27),		/* GPIO2[27] - unused */
 	MX6PAD(EIM_EB3__GPIO_2_31),		/* GPIO2[31] - unused */
 	MX6PAD(EIM_DA15__GPIO_3_15),		/* GPIO3[15] - unused */
-	MX6PAD(EIM_WAIT__GPIO_5_0),		/* GPIO5[0] - unused */
-	MX6PAD(EIM_A24__GPIO_5_4),		/* GPIO5[4] - unused */
 
 	/* NANDF_CS1/2/3 are unused for sabrelite */
 	NEW_PAD_CTRL(MX6PAD(NANDF_CS1__GPIO_6_14), N6_IRQ_TEST_PADCFG),	/* wl1271 wl_irq */
@@ -226,8 +235,8 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 		     WEAK_PULLUP),			/* I2C Touch IRQ */
 	MX6PAD(GPIO_7__GPIO_1_7),		/* J7 - Display Connector GP */
 	MX6PAD(GPIO_9__GPIO_1_9),		/* J7 - Display Connector GP */
-
 	MX6PAD(NANDF_D0__GPIO_2_0),		/* J6 - LVDS Display contrast */
+
 
 	/* PWM1 */
 	MX6PAD(SD1_DAT3__PWM1_PWMO),		/* GPIO1[21] */
@@ -268,6 +277,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	0
 };
 
+#if !defined(CONFIG_MXC_VIDEO_GS2971) && !defined(CONFIG_MXC_VIDEO_GS2971_MODULE) /* We need the pads for GS2971 */
 static iomux_v3_cfg_t MX6NAME(lcd_pads_enable)[] = {
 	NEW_PAD_CTRL(MX6PAD(DI0_DISP_CLK__IPU1_DI0_DISP_CLK),PAD_CTL_DSE_120ohm),
 	NEW_PAD_CTRL(MX6PAD(DI0_PIN15__IPU1_DI0_PIN15),PAD_CTL_DSE_120ohm),		/* DE */
@@ -299,6 +309,7 @@ static iomux_v3_cfg_t MX6NAME(lcd_pads_enable)[] = {
 	NEW_PAD_CTRL(MX6PAD(DISP0_DAT23__IPU1_DISP0_DAT_23),PAD_CTL_DSE_120ohm),
 	0
 };
+#endif
 
 static iomux_v3_cfg_t MX6NAME(lcd_pads_disable)[] = {
 	MX6PAD(DI0_DISP_CLK__GPIO_4_16),
@@ -332,15 +343,27 @@ static iomux_v3_cfg_t MX6NAME(lcd_pads_disable)[] = {
 	0
 };
 
-#if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
+#if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE) || \
+    defined(CONFIG_MXC_HDMI_CSI2_TC358743) || defined(CONFIG_MXC_HDMI_CSI2_TC358743_MODULE)
 static iomux_v3_cfg_t MX6NAME(mipi_pads)[] = {
-	MX6PAD(NANDF_WP_B__GPIO_6_9),		/* J16 - MIPI Powerdown - Nitrogen6x, SOM is NC */
-	MX6PAD(NANDF_D5__GPIO_2_5),		/* J16 - MIPI camera reset - Nitrogen6x/SOM */
+	MX6PAD(NANDF_WP_B__GPIO_6_9),		/* J16 - MIPI Powerdown - Nitrogen6x, SOM is NC, Reset For TC358743 */
+	MX6PAD(NANDF_D5__GPIO_2_5),		/* J16 - MIPI camera reset - Nitrogen6x/SOM, INT for TC358743 */
 	MX6PAD(NANDF_CS0__GPIO_6_11),		/* Camera Reset, SOM jumpered */
 	MX6PAD(GPIO_6__GPIO_1_6),		/* Camera GP */
 	0
 };
-#else
+#endif
+
+#ifdef CONFIG_TC358743_AUDIO
+static iomux_v3_cfg_t MX6NAME(tc_audio_pads)[] = {
+	MX6PAD(DISP0_DAT13__AUDMUX_AUD5_RXFS),
+	MX6PAD(DISP0_DAT14__AUDMUX_AUD5_RXC),
+	MX6PAD(DISP0_DAT19__AUDMUX_AUD5_RXD),
+	0
+};
+#endif
+
+#if defined(CSI0_CAMERA)
 static iomux_v3_cfg_t MX6NAME(csi0_sensor_pads)[] = {
 	/* IPU1 Camera */
 	MX6PAD(CSI0_DAT8__IPU1_CSI0_D_8),
@@ -366,6 +389,75 @@ static iomux_v3_cfg_t MX6NAME(csi0_sensor_pads)[] = {
 	0
 };
 #endif
+
+#if defined(CONFIG_MXC_VIDEO_GS2971) || defined(CONFIG_MXC_VIDEO_GS2971_MODULE)
+static iomux_v3_cfg_t MX6NAME(ecspi3_pads)[] = {
+	/* ECSPI3 */
+#define GP_ECSPI3_CS1   IMX_GPIO_NR(4, 24)
+	MX6PAD(DISP0_DAT3__GPIO_4_24), // CSI0
+	MX6PAD(DISP0_DAT2__ECSPI3_MISO), // MISO
+	MX6PAD(DISP0_DAT1__ECSPI3_MOSI), // Mosi
+	MX6PAD(DISP0_DAT0__ECSPI3_SCLK), // SCLK
+	0
+};
+
+static iomux_v3_cfg_t MX6NAME(gs2971_video_pads)[] = {
+	/* GS2971  J15 configuration*/
+	/* sav/eav codes are used, not hsync/vsync */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA11__GPIO_3_11), WEAK_PULLUP),	/* pin A5 stat0 */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA12__GPIO_3_12), WEAK_PULLUP),	/* pin A6 stat1 */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA10__GPIO_3_10), WEAK_PULLUP),	/* don't use data_en signal, pin B5 stat2 */
+
+	MX6PAD(DISP0_DAT7__GPIO_4_28), /* GS2971  TIM_861*/
+	MX6PAD(DISP0_DAT6__GPIO_4_27), /*  AUDIO_EN */
+	MX6PAD(DISP0_DAT15__GPIO_5_9), /*  DVB_ASI */
+	MX6PAD(DISP0_DAT14__GPIO_5_8), /*  SMPTE_BYPASS */
+	MX6PAD(DISP0_DAT13__GPIO_5_7), /*  LB_CONT */
+	MX6PAD(DISP0_DAT12__GPIO_5_6), /*  RC_PYP */
+	MX6PAD(DISP0_DAT11__GPIO_5_5), /*  IOPROC_EN */
+	MX6PAD(DISP0_DAT10__GPIO_4_31), /*  SW_EN */
+#define GP_GS2971_PWN	IMX_GPIO_NR(2, 27)
+	MX6PAD(EIM_LBA__GPIO_2_27),	/* Power Down */
+#define GP_GS2971_RST	IMX_GPIO_NR(4, 30)
+	MX6PAD(DISP0_DAT9__GPIO_4_30), /*  GS29_RESET */
+//	MX6PAD(DISP0_DAT18__AUDMUX_AUD4_RXFS),	/* Warning!!! Sabrelite uses AUD4 for sgtl5000 */
+//	MX6PAD(DISP0_DAT19__AUDMUX_AUD4_RXC),
+//	MX6PAD(DISP0_DAT23__AUDMUX_AUD4_RXD),
+	0
+};
+
+static iomux_v3_cfg_t MX6NAME(gs2971_video_pads_cea861)[] = {
+	/* hsync/vsync are used, not sav/eav codes */
+#ifdef FOR_DL_SOLO
+	NEW_PAD_CTRL(MX6PAD(EIM_DA11__IPU1_CSI1_HSYNC), CSI_PAD_CTRL),	/* GPIO3[11] - pin A5 stat0 */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA12__IPU1_CSI1_VSYNC), CSI_PAD_CTRL),	/* GPIO3[12] - pin A6 stat1 */
+#else
+	NEW_PAD_CTRL(MX6PAD(EIM_DA11__IPU2_CSI1_HSYNC), CSI_PAD_CTRL),	/* GPIO3[11] - pin A5 stat0 */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA12__IPU2_CSI1_VSYNC), CSI_PAD_CTRL),	/* GPIO3[12] - pin A6 stat1 */
+#endif
+};
+#endif
+
+static iomux_v3_cfg_t MX6NAME(adv7180_video_pads_no_cea861)[] = {
+	/* sav/eav codes are used */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA11__GPIO_3_11), WEAK_PULLUP),	/* Not HSYNC */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA12__GPIO_3_12), WEAK_PULLUP),	/* Not VSYNC */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA10__GPIO_3_10), WEAK_PULLUP),	/* don't use data_en signal, pin B5 stat2 */
+	0
+};
+
+static iomux_v3_cfg_t MX6NAME(adv7180_video_pads_cea861)[] = {
+	/* hsync/vsync are used, not sav/eav codes */
+#ifdef FOR_DL_SOLO
+	NEW_PAD_CTRL(MX6PAD(EIM_DA11__IPU1_CSI1_HSYNC), CSI_PAD_CTRL),	/* GPIO3[11] */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA12__IPU1_CSI1_VSYNC), CSI_PAD_CTRL),	/* GPIO3[12] */
+#else
+	NEW_PAD_CTRL(MX6PAD(EIM_DA11__IPU2_CSI1_HSYNC), CSI_PAD_CTRL),	/* GPIO3[11] */
+	NEW_PAD_CTRL(MX6PAD(EIM_DA12__IPU2_CSI1_VSYNC), CSI_PAD_CTRL),	/* GPIO3[12] */
+#endif
+	NEW_PAD_CTRL(MX6PAD(EIM_DA10__GPIO_3_10), WEAK_PULLUP),	/* don't use data_en signal, pin B5 stat2 */
+	0
+};
 
 static iomux_v3_cfg_t MX6NAME(hdmi_ddc_pads)[] = {
 	MX6PAD(KEY_COL3__HDMI_TX_DDC_SCL), /* HDMI DDC SCL */
