@@ -90,7 +90,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(KEY_COL2__CAN1_TXCAN),
 	MX6PAD(GPIO_2__GPIO_1_2),		/* STNDBY */
 	MX6PAD(GPIO_7__GPIO_1_7),		/* NERR */
-	NEW_PAD_CTRL(MX6PAD(GPIO_7__GPIO_1_7), MX6_SABRELITE_CAN1_ERR_TEST_PADCFG),
+	NEW_PAD_CTRL(MX6PAD(GPIO_7__GPIO_1_7), CAN1_ERR_TEST_PADCFG),
 	MX6PAD(GPIO_4__GPIO_1_4),		/* Enable */
 
 	/* CCM  */
@@ -318,7 +318,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	/* USDHC3 */
 	SD_PINS(3, USDHC_PAD_CTRL_50MHZ),
 	MX6PAD(SD3_DAT5__GPIO_7_0),		/* J18 - SD3_CD */
-	NEW_PAD_CTRL(MX6PAD(SD3_DAT4__GPIO_7_1), MX6_SABRELITE_SD3_WP_PADCFG),
+	NEW_PAD_CTRL(MX6PAD(SD3_DAT4__GPIO_7_1), SD3_WP_PADCFG),
 
 	/* USDHC4 */
 	SD_PINS(4, USDHC_PAD_CTRL_50MHZ),
@@ -328,7 +328,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 };
 
 #if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
-static iomux_v3_cfg_t MX6NAME(sabrelite_mipi_pads)[] = {
+static iomux_v3_cfg_t MX6NAME(mipi_pads)[] = {
 	MX6PAD(NANDF_WP_B__GPIO_6_9),		/* J16 - MIPI Powerdown - Nitrogen6x, SOM is NC */
 	MX6PAD(NANDF_D5__GPIO_2_5),		/* J16 - MIPI camera reset - Nitrogen6x/SOM */
 	MX6PAD(NANDF_CS0__GPIO_6_11),		/* Camera Reset, SOM jumpered */
@@ -336,7 +336,7 @@ static iomux_v3_cfg_t MX6NAME(sabrelite_mipi_pads)[] = {
 	0
 };
 #else
-static iomux_v3_cfg_t MX6NAME(sabrelite_csi0_sensor_pads)[] = {
+static iomux_v3_cfg_t MX6NAME(csi0_sensor_pads)[] = {
 	/* IPU1 Camera */
 	MX6PAD(CSI0_DAT8__IPU1_CSI0_D_8),
 	MX6PAD(CSI0_DAT9__IPU1_CSI0_D_9),
@@ -362,20 +362,20 @@ static iomux_v3_cfg_t MX6NAME(sabrelite_csi0_sensor_pads)[] = {
 };
 #endif
 
-static iomux_v3_cfg_t MX6NAME(sabrelite_hdmi_ddc_pads)[] = {
+static iomux_v3_cfg_t MX6NAME(hdmi_ddc_pads)[] = {
 	MX6PAD(KEY_COL3__HDMI_TX_DDC_SCL), /* HDMI DDC SCL */
 	MX6PAD(KEY_ROW3__HDMI_TX_DDC_SDA), /* HDMI DDC SDA */
 	0
 };
 
-static iomux_v3_cfg_t MX6NAME(sabrelite_i2c2_pads)[] = {
+static iomux_v3_cfg_t MX6NAME(i2c2_pads)[] = {
 	MX6PAD(KEY_COL3__I2C2_SCL),	/* I2C2 SCL */
 	MX6PAD(KEY_ROW3__I2C2_SDA),	/* I2C2 SDA */
 	0
 };
 
-static iomux_v3_cfg_t MX6NAME(sabrelite_mc33902_flexcan_pads)[] = {
-	NEW_PAD_CTRL(MX6PAD(GPIO_7__GPIO_1_7), MX6_SABRELITE_CAN1_ERR_PADCFG),
+static iomux_v3_cfg_t MX6NAME(mc33902_flexcan_pads)[] = {
+	NEW_PAD_CTRL(MX6PAD(GPIO_7__GPIO_1_7), CAN1_ERR_PADCFG),
 	0
 };
 

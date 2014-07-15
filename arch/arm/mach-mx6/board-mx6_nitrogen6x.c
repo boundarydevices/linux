@@ -88,43 +88,43 @@
 #include "crm_regs.h"
 #include "cpu_op-mx6.h"
 
-#define MX6_SABRELITE_SD3_CD		IMX_GPIO_NR(7, 0)
-#define MX6_SABRELITE_SD3_WP		IMX_GPIO_NR(7, 1)
-#define MX6_SABRELITE_SD4_CD		IMX_GPIO_NR(2, 6)
-#define MX6_SABRELITE_SD4_WP		IMX_GPIO_NR(2, 7)
-#define MX6_SABRELITE_ECSPI1_CS1	IMX_GPIO_NR(3, 19)
-#define MX6_SABRELITE_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
-#define MX6_SABRELITE_CAP_TCH_INT1	IMX_GPIO_NR(1, 9)
-#define MX6_SABRELITE_DRGB_IRQGPIO	IMX_GPIO_NR(4, 20)
-#define MX6_SABRELITE_USB_HUB_RESET	IMX_GPIO_NR(7, 12)
-#define MX6_SABRELITE_CAN1_STBY		IMX_GPIO_NR(1, 2)
-#define MX6_SABRELITE_CAN1_EN		IMX_GPIO_NR(1, 4)
-#define MX6_SABRELITE_CAN1_ERR		IMX_GPIO_NR(1, 7)
-#define MX6_SABRELITE_MENU_KEY		IMX_GPIO_NR(2, 1)
-#define MX6_SABRELITE_BACK_KEY		IMX_GPIO_NR(2, 2)
-#define MX6_SABRELITE_ONOFF_KEY		IMX_GPIO_NR(2, 3)
-#define MX6_SABRELITE_HOME_KEY		IMX_GPIO_NR(2, 4)
-#define MX6_SABRELITE_VOL_UP_KEY	IMX_GPIO_NR(7, 13)
-#define MX6_SABRELITE_VOL_DOWN_KEY	IMX_GPIO_NR(4, 5)
+#define GP_SD3_CD		IMX_GPIO_NR(7, 0)
+#define GP_SD3_WP		IMX_GPIO_NR(7, 1)
+#define GP_SD4_CD		IMX_GPIO_NR(2, 6)
+#define GP_SD4_WP		IMX_GPIO_NR(2, 7)
+#define GP_ECSPI1_CS1		IMX_GPIO_NR(3, 19)
+#define GP_USB_OTG_PWR		IMX_GPIO_NR(3, 22)
+#define GP_CAP_TCH_INT1		IMX_GPIO_NR(1, 9)
+#define GP_DRGB_IRQGPIO		IMX_GPIO_NR(4, 20)
+#define GP_USB_HUB_RESET	IMX_GPIO_NR(7, 12)
+#define GP_CAN1_STBY		IMX_GPIO_NR(1, 2)
+#define GP_CAN1_EN		IMX_GPIO_NR(1, 4)
+#define GP_CAN1_ERR		IMX_GPIO_NR(1, 7)
+#define GP_MENU_KEY		IMX_GPIO_NR(2, 1)
+#define GP_BACK_KEY		IMX_GPIO_NR(2, 2)
+#define GP_ONOFF_KEY		IMX_GPIO_NR(2, 3)
+#define GP_HOME_KEY		IMX_GPIO_NR(2, 4)
+#define GP_VOL_UP_KEY		IMX_GPIO_NR(7, 13)
+#define GP_VOL_DOWN_KEY		IMX_GPIO_NR(4, 5)
 #define GP_CSI0_RST		IMX_GPIO_NR(1, 8)
 #if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE)
 #define GP_CSI0_PWN		IMX_GPIO_NR(6, 9)
 #else
 #define GP_CSI0_PWN		IMX_GPIO_NR(1, 6)
 #endif
-#define MX6_SABRELITE_ENET_PHY_INT	IMX_GPIO_NR(1, 28)
+#define GP_ENET_PHY_INT	IMX_GPIO_NR(1, 28)
 
 #define N6_WL1271_WL_IRQ		IMX_GPIO_NR(6, 14)
 #define N6_WL1271_WL_EN			IMX_GPIO_NR(6, 15)
 #define N6_WL1271_BT_EN			IMX_GPIO_NR(6, 16)
 
-#define MX6_SABRELITE_CAN1_ERR_TEST_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE | \
+#define CAN1_ERR_TEST_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE | \
 		PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | \
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
-#define MX6_SABRELITE_CAN1_ERR_PADCFG		(PAD_CTL_PUE | \
+#define CAN1_ERR_PADCFG		(PAD_CTL_PUE | \
 		PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | \
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
-#define MX6_SABRELITE_SD3_WP_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE |	\
+#define SD3_WP_PADCFG	(PAD_CTL_PKE | PAD_CTL_PUE |	\
 		PAD_CTL_PUS_22K_UP | PAD_CTL_SPEED_MED |	\
 		PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 
@@ -135,9 +135,9 @@
 #define N6_IRQ_TEST_PADCFG	(PAD_CTL_PKE | N6_IRQ_PADCFG)
 #define N6_EN_PADCFG		(PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm)
 
-#include "pads-mx6_sabrelite.h"
+#include "pads-mx6_nitrogen6x.h"
 #define FOR_DL_SOLO
-#include "pads-mx6_sabrelite.h"
+#include "pads-mx6_nitrogen6x.h"
 
 void __init early_console_setup(unsigned long base, struct clk *clk);
 static struct clk *sata_clk;
@@ -241,7 +241,7 @@ static void sdio_set_power(int on)
 }
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
-static struct esdhc_platform_data mx6_sabrelite_sd2_data = {
+static struct esdhc_platform_data sd2_data = {
 	.always_present = 1,
 	.cd_gpio = -1,
 	.wp_gpio = -1,
@@ -252,22 +252,22 @@ static struct esdhc_platform_data mx6_sabrelite_sd2_data = {
 };
 #endif
 
-static struct esdhc_platform_data mx6_sabrelite_sd3_data = {
-	.cd_gpio = MX6_SABRELITE_SD3_CD,
-	.wp_gpio = MX6_SABRELITE_SD3_WP,
+static struct esdhc_platform_data sd3_data = {
+	.cd_gpio = GP_SD3_CD,
+	.wp_gpio = GP_SD3_WP,
 	.keep_power_at_suspend = 1,
 	.platform_pad_change = plt_sd_pad_change,
 };
 
-static const struct esdhc_platform_data mx6_sabrelite_sd4_data __initconst = {
-	.cd_gpio = MX6_SABRELITE_SD4_CD,
+static const struct esdhc_platform_data sd4_data __initconst = {
+	.cd_gpio = GP_SD4_CD,
 	.wp_gpio = -1,
 	.keep_power_at_suspend = 1,
 	.platform_pad_change = plt_sd_pad_change,
 };
 
 static const struct anatop_thermal_platform_data
-	mx6_sabrelite_anatop_thermal_data __initconst = {
+	anatop_thermal_data __initconst = {
 		.name = "anatop_thermal",
 };
 
@@ -334,7 +334,7 @@ static struct platform_device btwilink_device = {
 
 #endif
 
-static int mx6_sabrelite_fec_phy_init(struct phy_device *phydev)
+static int fec_phy_init(struct phy_device *phydev)
 {
 	/* prefer master mode */
 	phy_write(phydev, 0x9, 0x1f00);
@@ -356,22 +356,22 @@ static int mx6_sabrelite_fec_phy_init(struct phy_device *phydev)
 }
 
 static struct fec_platform_data fec_data __initdata = {
-	.init = mx6_sabrelite_fec_phy_init,
+	.init = fec_phy_init,
 	.phy = PHY_INTERFACE_MODE_RGMII,
-	.phy_irq = gpio_to_irq(MX6_SABRELITE_ENET_PHY_INT)
+	.phy_irq = gpio_to_irq(GP_ENET_PHY_INT)
 };
 
-static int mx6_sabrelite_spi_cs[] = {
-	MX6_SABRELITE_ECSPI1_CS1,
+static int spi_cs[] = {
+	GP_ECSPI1_CS1,
 };
 
-static const struct spi_imx_master mx6_sabrelite_spi_data __initconst = {
-	.chipselect     = mx6_sabrelite_spi_cs,
-	.num_chipselect = ARRAY_SIZE(mx6_sabrelite_spi_cs),
+static const struct spi_imx_master spi_data __initconst = {
+	.chipselect     = spi_cs,
+	.num_chipselect = ARRAY_SIZE(spi_cs),
 };
 
 #if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
-static struct mtd_partition imx6_sabrelite_spi_nor_partitions[] = {
+static struct mtd_partition spi_nor_partitions[] = {
 	{
 	 .name = "bootloader",
 	 .offset = 0,
@@ -389,35 +389,35 @@ static struct mtd_partition imx6_sabrelite_spi_nor_partitions[] = {
 	},
 };
 
-static struct flash_platform_data imx6_sabrelite__spi_flash_data = {
+static struct flash_platform_data spi_flash_data = {
 	.name = "m25p80",
-	.parts = imx6_sabrelite_spi_nor_partitions,
-	.nr_parts = ARRAY_SIZE(imx6_sabrelite_spi_nor_partitions),
+	.parts = spi_nor_partitions,
+	.nr_parts = ARRAY_SIZE(spi_nor_partitions),
 	.type = "sst25vf016b",
 };
 #endif
 
-static struct spi_board_info imx6_sabrelite_spi_nor_device[] __initdata = {
+static struct spi_board_info spi_nor_device[] __initdata = {
 #if defined(CONFIG_MTD_M25P80)
 	{
 		.modalias = "m25p80",
 		.max_speed_hz = 20000000, /* max spi clock (SCK) speed in HZ */
 		.bus_num = 0,
 		.chip_select = 0,
-		.platform_data = &imx6_sabrelite__spi_flash_data,
+		.platform_data = &spi_flash_data,
 	},
 #endif
 };
 
 static void spi_device_init(void)
 {
-	spi_register_board_info(imx6_sabrelite_spi_nor_device,
-				ARRAY_SIZE(imx6_sabrelite_spi_nor_device));
+	spi_register_board_info(spi_nor_device,
+				ARRAY_SIZE(spi_nor_device));
 }
 
-static struct mxc_audio_platform_data mx6_sabrelite_audio_data;
+static struct mxc_audio_platform_data audio_data;
 
-static int mx6_sabrelite_sgtl5000_init(void)
+static int sgtl5000_init(void)
 {
 	struct clk *clko;
 	struct clk *new_parent;
@@ -440,29 +440,29 @@ static int mx6_sabrelite_sgtl5000_init(void)
 		return -1;
 	}
 
-	mx6_sabrelite_audio_data.sysclk = rate;
+	audio_data.sysclk = rate;
 	clk_set_rate(clko, rate);
 	clk_enable(clko);
 	return 0;
 }
 
-static struct imx_ssi_platform_data mx6_sabrelite_ssi_pdata = {
+static struct imx_ssi_platform_data ssi_pdata = {
 	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
 };
 
-static struct mxc_audio_platform_data mx6_sabrelite_audio_data = {
+static struct mxc_audio_platform_data audio_data = {
 	.ssi_num = 1,
 	.src_port = 2,
 	.ext_port = 4,
-	.init = mx6_sabrelite_sgtl5000_init,
+	.init = sgtl5000_init,
 	.hp_gpio = -1,
 };
 
-static struct platform_device mx6_sabrelite_audio_device = {
+static struct platform_device audio_device = {
 	.name = "imx-sgtl5000",
 };
 
-static struct imxi2c_platform_data mx6_sabrelite_i2c_data = {
+static struct imxi2c_platform_data i2c_data = {
 	.bitrate = 100000,
 };
 
@@ -521,7 +521,7 @@ static struct fsl_mxc_camera_platform_data ov5640_mipi_data;
 
 static void mx6_mipi_sensor_io_init(void)
 {
-	IOMUX_SETUP(sabrelite_mipi_pads);
+	IOMUX_SETUP(mipi_pads);
 
 	mipi_pwm = pwm_request(2, "mipi_clock");
 	if (IS_ERR(mipi_pwm)) {
@@ -555,7 +555,7 @@ static struct fsl_mxc_camera_platform_data ov5640_mipi_data = {
 #else
 static void mx6_csi0_io_init(void)
 {
-	IOMUX_SETUP(sabrelite_csi0_sensor_pads);
+	IOMUX_SETUP(csi0_sensor_pads);
 
 	camera_reset(GP_CSI0_PWN, 1, GP_CSI0_RST, IMX_GPIO_NR(6, 11));
 	/* For MX6Q GPR1 bit19 and bit20 meaning:
@@ -627,18 +627,18 @@ static struct ili210x_platform_data ili_pdata = {
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("egalax_ts", 0x4),
-		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
+		.irq = gpio_to_irq(GP_CAP_TCH_INT1),
 	},
 	{
 		I2C_BOARD_INFO("tsc2004", 0x48),
 		.platform_data	= &tsc2007_info,
-		.irq = gpio_to_irq(MX6_SABRELITE_DRGB_IRQGPIO),
+		.irq = gpio_to_irq(GP_DRGB_IRQGPIO),
 	},
 #if defined(CONFIG_TOUCHSCREEN_FT5X06) \
 	|| defined(CONFIG_TOUCHSCREEN_FT5X06_MODULE)
 	{
 		I2C_BOARD_INFO("ft5x06-ts", 0x38),
-		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
+		.irq = gpio_to_irq(GP_CAP_TCH_INT1),
 	},
 #endif
 #if defined(CONFIG_TOUCHSCREEN_ILI210X) \
@@ -653,7 +653,7 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	defined(CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
 	{
 		I2C_BOARD_INFO("atmel_mxt_ts", 0x4c), /* i2c address */
-		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
+		.irq = gpio_to_irq(GP_CAP_TCH_INT1),
                 .platform_data = &mxt_data,
 	},
 #endif
@@ -661,20 +661,20 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
        || defined(CONFIG_TOUCHSCREEN_FUSION_F0710A_MODULE)
        {
                I2C_BOARD_INFO("fusion_F0710A", 0x10),
-               .irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
+               .irq = gpio_to_irq(GP_CAP_TCH_INT1),
        },
 #endif
 };
 
-static void imx6_sabrelite_usbotg_vbus(bool on)
+static void usbotg_vbus(bool on)
 {
 	if (on)
-		gpio_set_value(MX6_SABRELITE_USB_OTG_PWR, 1);
+		gpio_set_value(GP_USB_OTG_PWR, 1);
 	else
-		gpio_set_value(MX6_SABRELITE_USB_OTG_PWR, 0);
+		gpio_set_value(GP_USB_OTG_PWR, 0);
 }
 
-static void __init imx6_sabrelite_init_usb(void)
+static void __init init_usb(void)
 {
 	int ret = 0;
 
@@ -682,20 +682,20 @@ static void __init imx6_sabrelite_init_usb(void)
 	/* disable external charger detect,
 	 * or it will affect signal quality at dp .
 	 */
-	ret = gpio_request(MX6_SABRELITE_USB_OTG_PWR, "usb-pwr");
+	ret = gpio_request(GP_USB_OTG_PWR, "usb-pwr");
 	if (ret) {
-		pr_err("failed to get GPIO MX6_SABRELITE_USB_OTG_PWR: %d\n",
+		pr_err("failed to get GPIO GP_USB_OTG_PWR: %d\n",
 			ret);
 		return;
 	}
-	gpio_direction_output(MX6_SABRELITE_USB_OTG_PWR, 0);
+	gpio_direction_output(GP_USB_OTG_PWR, 0);
 	mxc_iomux_set_gpr_register(1, 13, 1, 1);
 
-	mx6_set_otghost_vbus_func(imx6_sabrelite_usbotg_vbus);
+	mx6_set_otghost_vbus_func(usbotg_vbus);
 }
 
 /* HW Initialization, if return 0, initialization is successful. */
-static int mx6_sabrelite_sata_init(struct device *dev, void __iomem *addr)
+static int init_sata(struct device *dev, void __iomem *addr)
 {
 	u32 tmpdata;
 	int ret = 0;
@@ -755,42 +755,42 @@ put_sata_clk:
 	return ret;
 }
 
-static void mx6_sabrelite_sata_exit(struct device *dev)
+static void exit_sata(struct device *dev)
 {
 	clk_disable(sata_clk);
 	clk_put(sata_clk);
 }
 
-static struct ahci_platform_data mx6_sabrelite_sata_data = {
-	.init = mx6_sabrelite_sata_init,
-	.exit = mx6_sabrelite_sata_exit,
+static struct ahci_platform_data sata_data = {
+	.init = init_sata,
+	.exit = exit_sata,
 };
 
-static struct gpio mx6_sabrelite_flexcan_gpios[] = {
-	{ MX6_SABRELITE_CAN1_ERR, GPIOF_DIR_IN, "flexcan1-err" },
-	{ MX6_SABRELITE_CAN1_EN, GPIOF_OUT_INIT_LOW, "flexcan1-en" },
-	{ MX6_SABRELITE_CAN1_STBY, GPIOF_OUT_INIT_LOW, "flexcan1-stby" },
+static struct gpio flexcan_gpios[] = {
+	{ GP_CAN1_ERR, GPIOF_DIR_IN, "flexcan1-err" },
+	{ GP_CAN1_EN, GPIOF_OUT_INIT_LOW, "flexcan1-en" },
+	{ GP_CAN1_STBY, GPIOF_OUT_INIT_LOW, "flexcan1-stby" },
 };
 
-static void mx6_sabrelite_flexcan0_mc33902_switch(int enable)
+static void flexcan0_mc33902_switch(int enable)
 {
-	gpio_set_value(MX6_SABRELITE_CAN1_EN, enable);
-	gpio_set_value(MX6_SABRELITE_CAN1_STBY, enable);
+	gpio_set_value(GP_CAN1_EN, enable);
+	gpio_set_value(GP_CAN1_STBY, enable);
 }
 
-static void mx6_sabrelite_flexcan0_tja1040_switch(int enable)
+static void flexcan0_tja1040_switch(int enable)
 {
-	gpio_set_value(MX6_SABRELITE_CAN1_STBY, enable ^ 1);
+	gpio_set_value(GP_CAN1_STBY, enable ^ 1);
 }
 
 static const struct flexcan_platform_data
-	mx6_sabrelite_flexcan0_mc33902_pdata __initconst = {
-	.transceiver_switch = mx6_sabrelite_flexcan0_mc33902_switch,
+	flexcan0_mc33902_pdata __initconst = {
+	.transceiver_switch = flexcan0_mc33902_switch,
 };
 
 static const struct flexcan_platform_data
-	mx6_sabrelite_flexcan0_tja1040_pdata __initconst = {
-	.transceiver_switch = mx6_sabrelite_flexcan0_tja1040_switch,
+	flexcan0_tja1040_pdata __initconst = {
+	.transceiver_switch = flexcan0_tja1040_switch,
 };
 
 static struct viv_gpu_platform_data imx6_gpu_pdata __initdata = {
@@ -802,7 +802,7 @@ static struct imx_asrc_platform_data imx_asrc_data = {
 	.clk_map_ver = 2,
 };
 
-static struct ipuv3_fb_platform_data sabrelite_fb_data[] = {
+static struct ipuv3_fb_platform_data fb_data[] = {
 	{ /*fb0*/
 	.disp_dev = "ldb",
 	.interface_pix_fmt = IPU_PIX_FMT_RGB666,
@@ -861,12 +861,12 @@ static void hdmi_init(int ipu_id, int disp_id)
 
 static void hdmi_enable_ddc_pin(void)
 {
-	IOMUX_SETUP(sabrelite_hdmi_ddc_pads);
+	IOMUX_SETUP(hdmi_ddc_pads);
 }
 
 static void hdmi_disable_ddc_pin(void)
 {
-	IOMUX_SETUP(sabrelite_i2c2_pads);
+	IOMUX_SETUP(i2c2_pads);
 }
 
 static struct fsl_mxc_hdmi_platform_data hdmi_data = {
@@ -940,19 +940,19 @@ static struct imx_vout_mem vout_mem __initdata = {
        .res_msize = 0,
 };
 
-static void sabrelite_suspend_enter(void)
+static void suspend_enter(void)
 {
 	/* suspend preparation */
 }
 
-static void sabrelite_suspend_exit(void)
+static void suspend_exit(void)
 {
 	/* resume restore */
 }
-static const struct pm_platform_data mx6_sabrelite_pm_data __initconst = {
+static const struct pm_platform_data pm_data __initconst = {
 	.name = "imx_pm",
-	.suspend_enter = sabrelite_suspend_enter,
-	.suspend_exit = sabrelite_suspend_exit,
+	.suspend_enter = suspend_enter,
+	.suspend_exit = suspend_exit,
 };
 
 #define GPIO_BUTTON(gpio_num, ev_code, act_low, descr, wake)	\
@@ -965,40 +965,40 @@ static const struct pm_platform_data mx6_sabrelite_pm_data __initconst = {
 	.wakeup		= wake,					\
 }
 
-static struct gpio_keys_button sabrelite_buttons[] = {
-	GPIO_BUTTON(MX6_SABRELITE_ONOFF_KEY, KEY_POWER, 1, "key-power", 1),
-	GPIO_BUTTON(MX6_SABRELITE_MENU_KEY, KEY_MENU, 1, "key-memu", 0),
-	GPIO_BUTTON(MX6_SABRELITE_HOME_KEY, KEY_HOME, 1, "key-home", 0),
-	GPIO_BUTTON(MX6_SABRELITE_BACK_KEY, KEY_BACK, 1, "key-back", 0),
-	GPIO_BUTTON(MX6_SABRELITE_VOL_UP_KEY, KEY_VOLUMEUP, 1, "volume-up", 0),
-	GPIO_BUTTON(MX6_SABRELITE_VOL_DOWN_KEY, KEY_VOLUMEDOWN, 1, "volume-down", 0),
+static struct gpio_keys_button buttons[] = {
+	GPIO_BUTTON(GP_ONOFF_KEY, KEY_POWER, 1, "key-power", 1),
+	GPIO_BUTTON(GP_MENU_KEY, KEY_MENU, 1, "key-memu", 0),
+	GPIO_BUTTON(GP_HOME_KEY, KEY_HOME, 1, "key-home", 0),
+	GPIO_BUTTON(GP_BACK_KEY, KEY_BACK, 1, "key-back", 0),
+	GPIO_BUTTON(GP_VOL_UP_KEY, KEY_VOLUMEUP, 1, "volume-up", 0),
+	GPIO_BUTTON(GP_VOL_DOWN_KEY, KEY_VOLUMEDOWN, 1, "volume-down", 0),
 };
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
-static struct gpio_keys_platform_data sabrelite_button_data = {
-	.buttons	= sabrelite_buttons,
-	.nbuttons	= ARRAY_SIZE(sabrelite_buttons),
+static struct gpio_keys_platform_data button_data = {
+	.buttons	= buttons,
+	.nbuttons	= ARRAY_SIZE(buttons),
 };
 
-static struct platform_device sabrelite_button_device = {
+static struct platform_device button_device = {
 	.name		= "gpio-keys",
 	.id		= -1,
 	.num_resources  = 0,
 	.dev		= {
-		.platform_data = &sabrelite_button_data,
+		.platform_data = &button_data,
 	}
 };
 
-static void __init sabrelite_add_device_buttons(void)
+static void __init add_device_buttons(void)
 {
-	platform_device_register(&sabrelite_button_device);
+	platform_device_register(&button_device);
 }
 #else
-static void __init sabrelite_add_device_buttons(void)
+static void __init add_device_buttons(void)
 {
 	int i;
-	for (i=0; i < ARRAY_SIZE(sabrelite_buttons);i++) {
-		int gpio = sabrelite_buttons[i].gpio;
+	for (i=0; i < ARRAY_SIZE(buttons);i++) {
+		int gpio = buttons[i].gpio;
 		pr_debug("%s: exporting gpio %d\n", __func__, gpio);
 		gpio_export(gpio,1);
 	}
@@ -1012,105 +1012,105 @@ static struct wl12xx_platform_data n6q_wlan_data __initdata = {
 };
 #endif
 
-static struct regulator_consumer_supply sabrelite_vmmc_consumers[] = {
+static struct regulator_consumer_supply vmmc_consumers[] = {
 	REGULATOR_SUPPLY("vmmc", "sdhci-esdhc-imx.2"),
 	REGULATOR_SUPPLY("vmmc", "sdhci-esdhc-imx.3"),
 };
 
-static struct regulator_init_data sabrelite_vmmc_init = {
-	.num_consumer_supplies = ARRAY_SIZE(sabrelite_vmmc_consumers),
-	.consumer_supplies = sabrelite_vmmc_consumers,
+static struct regulator_init_data vmmc_init = {
+	.num_consumer_supplies = ARRAY_SIZE(vmmc_consumers),
+	.consumer_supplies = vmmc_consumers,
 };
 
-static struct fixed_voltage_config sabrelite_vmmc_reg_config = {
+static struct fixed_voltage_config vmmc_reg_config = {
 	.supply_name		= "vmmc",
 	.microvolts		= 3300000,
 	.gpio			= -1,
-	.init_data		= &sabrelite_vmmc_init,
+	.init_data		= &vmmc_init,
 };
 
-static struct platform_device sabrelite_vmmc_reg_devices = {
+static struct platform_device vmmc_reg_devices = {
 	.name	= "reg-fixed-voltage",
 	.id	= 3,
 	.dev	= {
-		.platform_data = &sabrelite_vmmc_reg_config,
+		.platform_data = &vmmc_reg_config,
 	},
 };
 
 #ifdef CONFIG_SND_SOC_SGTL5000
 
-static struct regulator_consumer_supply sgtl5000_sabrelite_consumer_vdda = {
+static struct regulator_consumer_supply sgtl5000_consumer_vdda = {
 	.supply = "VDDA",
 	.dev_name = "0-000a",
 };
 
-static struct regulator_consumer_supply sgtl5000_sabrelite_consumer_vddio = {
+static struct regulator_consumer_supply sgtl5000_consumer_vddio = {
 	.supply = "VDDIO",
 	.dev_name = "0-000a",
 };
 
-static struct regulator_consumer_supply sgtl5000_sabrelite_consumer_vddd = {
+static struct regulator_consumer_supply sgtl5000_consumer_vddd = {
 	.supply = "VDDD",
 	.dev_name = "0-000a",
 };
 
-static struct regulator_init_data sgtl5000_sabrelite_vdda_reg_initdata = {
+static struct regulator_init_data sgtl5000_vdda_reg_initdata = {
 	.num_consumer_supplies = 1,
-	.consumer_supplies = &sgtl5000_sabrelite_consumer_vdda,
+	.consumer_supplies = &sgtl5000_consumer_vdda,
 };
 
-static struct regulator_init_data sgtl5000_sabrelite_vddio_reg_initdata = {
+static struct regulator_init_data sgtl5000_vddio_reg_initdata = {
 	.num_consumer_supplies = 1,
-	.consumer_supplies = &sgtl5000_sabrelite_consumer_vddio,
+	.consumer_supplies = &sgtl5000_consumer_vddio,
 };
 
-static struct regulator_init_data sgtl5000_sabrelite_vddd_reg_initdata = {
+static struct regulator_init_data sgtl5000_vddd_reg_initdata = {
 	.num_consumer_supplies = 1,
-	.consumer_supplies = &sgtl5000_sabrelite_consumer_vddd,
+	.consumer_supplies = &sgtl5000_consumer_vddd,
 };
 
-static struct fixed_voltage_config sgtl5000_sabrelite_vdda_reg_config = {
+static struct fixed_voltage_config sgtl5000_vdda_reg_config = {
 	.supply_name		= "VDDA",
 	.microvolts		= 2500000,
 	.gpio			= -1,
-	.init_data		= &sgtl5000_sabrelite_vdda_reg_initdata,
+	.init_data		= &sgtl5000_vdda_reg_initdata,
 };
 
-static struct fixed_voltage_config sgtl5000_sabrelite_vddio_reg_config = {
+static struct fixed_voltage_config sgtl5000_vddio_reg_config = {
 	.supply_name		= "VDDIO",
 	.microvolts		= 3300000,
 	.gpio			= -1,
-	.init_data		= &sgtl5000_sabrelite_vddio_reg_initdata,
+	.init_data		= &sgtl5000_vddio_reg_initdata,
 };
 
-static struct fixed_voltage_config sgtl5000_sabrelite_vddd_reg_config = {
+static struct fixed_voltage_config sgtl5000_vddd_reg_config = {
 	.supply_name		= "VDDD",
 	.microvolts		= 0,
 	.gpio			= -1,
-	.init_data		= &sgtl5000_sabrelite_vddd_reg_initdata,
+	.init_data		= &sgtl5000_vddd_reg_initdata,
 };
 
-static struct platform_device sgtl5000_sabrelite_vdda_reg_devices = {
+static struct platform_device sgtl5000_vdda_reg_devices = {
 	.name	= "reg-fixed-voltage",
 	.id	= 0,
 	.dev	= {
-		.platform_data = &sgtl5000_sabrelite_vdda_reg_config,
+		.platform_data = &sgtl5000_vdda_reg_config,
 	},
 };
 
-static struct platform_device sgtl5000_sabrelite_vddio_reg_devices = {
+static struct platform_device sgtl5000_vddio_reg_devices = {
 	.name	= "reg-fixed-voltage",
 	.id	= 1,
 	.dev	= {
-		.platform_data = &sgtl5000_sabrelite_vddio_reg_config,
+		.platform_data = &sgtl5000_vddio_reg_config,
 	},
 };
 
-static struct platform_device sgtl5000_sabrelite_vddd_reg_devices = {
+static struct platform_device sgtl5000_vddd_reg_devices = {
 	.name	= "reg-fixed-voltage",
 	.id	= 2,
 	.dev	= {
-		.platform_data = &sgtl5000_sabrelite_vddd_reg_config,
+		.platform_data = &sgtl5000_vddd_reg_config,
 	},
 };
 
@@ -1118,19 +1118,19 @@ static struct platform_device sgtl5000_sabrelite_vddd_reg_devices = {
 
 static int imx6_init_audio(void)
 {
-	mxc_register_device(&mx6_sabrelite_audio_device,
-			    &mx6_sabrelite_audio_data);
-	imx6q_add_imx_ssi(1, &mx6_sabrelite_ssi_pdata);
+	mxc_register_device(&audio_device,
+			    &audio_data);
+	imx6q_add_imx_ssi(1, &ssi_pdata);
 #ifdef CONFIG_SND_SOC_SGTL5000
-	platform_device_register(&sgtl5000_sabrelite_vdda_reg_devices);
-	platform_device_register(&sgtl5000_sabrelite_vddio_reg_devices);
-	platform_device_register(&sgtl5000_sabrelite_vddd_reg_devices);
+	platform_device_register(&sgtl5000_vdda_reg_devices);
+	platform_device_register(&sgtl5000_vddio_reg_devices);
+	platform_device_register(&sgtl5000_vddd_reg_devices);
 #endif
 	return 0;
 }
 
 /* PWM0_PWMO: backlight control on DRGB connector */
-static struct platform_pwm_backlight_data mx6_sabrelite_pwm0_backlight_data = {
+static struct platform_pwm_backlight_data pwm0_backlight_data = {
 	.pwm_id = 0,
 	.max_brightness = 255,
 	.dft_brightness = 255,
@@ -1138,14 +1138,14 @@ static struct platform_pwm_backlight_data mx6_sabrelite_pwm0_backlight_data = {
 };
 
 /* PWM3_PWMO: backlight control on LDB connector */
-static struct platform_pwm_backlight_data mx6_sabrelite_pwm_backlight_data = {
+static struct platform_pwm_backlight_data pwm_backlight_data = {
 	.pwm_id = 3,
 	.max_brightness = 255,
 	.dft_brightness = 128,
 	.pwm_period_ns = 50000,
 };
 
-static struct mxc_dvfs_platform_data sabrelite_dvfscore_data = {
+static struct mxc_dvfs_platform_data dvfscore_data = {
 	.reg_id = "cpu_vddgp",
 	.soc_id = "cpu_vddsoc",
 	.pu_id = "cpu_vddvpu",
@@ -1176,7 +1176,7 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 	char *str;
 	struct tag *t;
 	int i = 0;
-	struct ipuv3_fb_platform_data *pdata_fb = sabrelite_fb_data;
+	struct ipuv3_fb_platform_data *pdata_fb = fb_data;
 
 	for_each_tag(t, tags) {
 		if (t->hdr.tag == ATAG_CMDLINE) {
@@ -1186,7 +1186,7 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 				str += 6;
 				pdata_fb[i++].res_size[0] = memparse(str, &str);
 				while (*str == ',' &&
-					i < ARRAY_SIZE(sabrelite_fb_data)) {
+					i < ARRAY_SIZE(fb_data)) {
 					str++;
 					pdata_fb[i++].res_size[0] = memparse(str, &str);
 				}
@@ -1222,7 +1222,7 @@ static struct mipi_csi2_platform_data mipi_csi2_pdata = {
 
 static const struct imx_pcie_platform_data pcie_data  __initconst = {
 	.pcie_pwr_en	= -EINVAL,
-	.pcie_rst	= -EINVAL, //MX6_SABRELITE_CAP_TCH_INT1,
+	.pcie_rst	= -EINVAL, //GP_CAP_TCH_INT1,
 	.pcie_wake_up	= -EINVAL,
 	.pcie_dis	= -EINVAL,
 };
@@ -1255,7 +1255,7 @@ static void poweroff(void)
 /*!
  * Board specific initialization.
  */
-static void __init mx6_sabrelite_board_init(void)
+static void __init board_init(void)
 {
 	int i, j;
 	int ret;
@@ -1269,8 +1269,8 @@ static void __init mx6_sabrelite_board_init(void)
 
 	isn6 = is_nitrogen6w();
 	if (isn6) {
-		mx6_sabrelite_audio_data.ext_port = 3;
-		mx6_sabrelite_sd3_data.wp_gpio = -1 ;
+		audio_data.ext_port = 3;
+		sd3_data.wp_gpio = -1 ;
 		IOMUX_SETUP(nitrogen6x_pads);
 	} else {
 		IOMUX_SETUP(sabrelite_pads);
@@ -1287,9 +1287,9 @@ static void __init mx6_sabrelite_board_init(void)
 	mxc_iomux_set_gpr_register(1, 21, 1, 1);
 #endif
 
-	gp_reg_id = sabrelite_dvfscore_data.reg_id;
-	soc_reg_id = sabrelite_dvfscore_data.soc_id;
-	pu_reg_id = sabrelite_dvfscore_data.pu_id;
+	gp_reg_id = dvfscore_data.reg_id;
+	soc_reg_id = dvfscore_data.soc_id;
+	pu_reg_id = dvfscore_data.pu_id;
 
 	imx6q_add_imx_uart(0, NULL);
 	imx6q_add_imx_uart(1, NULL);
@@ -1305,12 +1305,12 @@ static void __init mx6_sabrelite_board_init(void)
 	imx6q_add_ipuv3(0, &ipu_data[0]);
 	if (cpu_is_mx6q()) {
 		imx6q_add_ipuv3(1, &ipu_data[1]);
-		j = ARRAY_SIZE(sabrelite_fb_data);
+		j = ARRAY_SIZE(fb_data);
 	} else {
-		j = (ARRAY_SIZE(sabrelite_fb_data) + 1) / 2;
+		j = (ARRAY_SIZE(fb_data) + 1) / 2;
 	}
 	for (i = 0; i < j; i++)
-		imx6q_add_ipuv3fb(i, &sabrelite_fb_data[i]);
+		imx6q_add_ipuv3fb(i, &fb_data[i]);
 
 	imx6q_add_vdoa();
 	imx6q_add_lcdif(&lcdif_data);
@@ -1331,9 +1331,9 @@ static void __init mx6_sabrelite_board_init(void)
 
 	imx6q_add_imx_caam();
 
-	imx6q_add_imx_i2c(0, &mx6_sabrelite_i2c_data);
-	imx6q_add_imx_i2c(1, &mx6_sabrelite_i2c_data);
-	imx6q_add_imx_i2c(2, &mx6_sabrelite_i2c_data);
+	imx6q_add_imx_i2c(0, &i2c_data);
+	imx6q_add_imx_i2c(1, &i2c_data);
+	imx6q_add_imx_i2c(2, &i2c_data);
 	/*
 	 * SABRE Lite does not have an ISL1208 RTC
 	 */
@@ -1346,63 +1346,63 @@ static void __init mx6_sabrelite_board_init(void)
 			ARRAY_SIZE(mxc_i2c2_board_info));
 
 	/* SPI */
-	imx6q_add_ecspi(0, &mx6_sabrelite_spi_data);
+	imx6q_add_ecspi(0, &spi_data);
 	spi_device_init();
 
 	imx6q_add_mxc_hdmi(&hdmi_data);
 
-	imx6q_add_anatop_thermal_imx(1, &mx6_sabrelite_anatop_thermal_data);
+	imx6q_add_anatop_thermal_imx(1, &anatop_thermal_data);
 	imx6_init_fec(fec_data);
-	imx6q_add_pm_imx(0, &mx6_sabrelite_pm_data);
-	imx6q_add_sdhci_usdhc_imx(3, &mx6_sabrelite_sd4_data);
-	imx6q_add_sdhci_usdhc_imx(2, &mx6_sabrelite_sd3_data);
+	imx6q_add_pm_imx(0, &pm_data);
+	imx6q_add_sdhci_usdhc_imx(3, &sd4_data);
+	imx6q_add_sdhci_usdhc_imx(2, &sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
-	imx6_sabrelite_init_usb();
+	init_usb();
 	if (cpu_is_mx6q())
-		imx6q_add_ahci(0, &mx6_sabrelite_sata_data);
+		imx6q_add_ahci(0, &sata_data);
 	imx6q_add_vpu();
 	imx6_init_audio();
-	platform_device_register(&sabrelite_vmmc_reg_devices);
+	platform_device_register(&vmmc_reg_devices);
 	imx_asrc_data.asrc_core_clk = clk_get(NULL, "asrc_clk");
 	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
 	imx6q_add_asrc(&imx_asrc_data);
 
 	/* release USB Hub reset */
-	gpio_set_value(MX6_SABRELITE_USB_HUB_RESET, 1);
+	gpio_set_value(GP_USB_HUB_RESET, 1);
 
 	imx6q_add_mxc_pwm(0);
 	imx6q_add_mxc_pwm(1);
 	imx6q_add_mxc_pwm_pdata(2, &pwm3_data);
 	imx6q_add_mxc_pwm(3);
-	imx6q_add_mxc_pwm_backlight(0, &mx6_sabrelite_pwm0_backlight_data);
-	imx6q_add_mxc_pwm_backlight(3, &mx6_sabrelite_pwm_backlight_data);
+	imx6q_add_mxc_pwm_backlight(0, &pwm0_backlight_data);
+	imx6q_add_mxc_pwm_backlight(3, &pwm_backlight_data);
 
 	imx6q_add_otp();
 	imx6q_add_viim();
 	imx6q_add_imx2_wdt(0, NULL);
 	imx6q_add_dma();
 
-	imx6q_add_dvfs_core(&sabrelite_dvfscore_data);
+	imx6q_add_dvfs_core(&dvfscore_data);
 	imx6q_add_ion(0, &imx_ion_data,
 		sizeof(imx_ion_data) + sizeof(struct ion_platform_heap));
 
-	sabrelite_add_device_buttons();
+	add_device_buttons();
 
 	imx6q_add_hdmi_soc();
 	imx6q_add_hdmi_soc_dai();
 
-	ret = gpio_request_array(mx6_sabrelite_flexcan_gpios,
-			ARRAY_SIZE(mx6_sabrelite_flexcan_gpios));
+	ret = gpio_request_array(flexcan_gpios,
+			ARRAY_SIZE(flexcan_gpios));
 	if (ret) {
 		pr_err("failed to request flexcan1-gpios: %d\n", ret);
 	} else {
-		int ret = gpio_get_value(MX6_SABRELITE_CAN1_ERR);
+		int ret = gpio_get_value(GP_CAN1_ERR);
 		if (ret == 0) {
-			imx6q_add_flexcan0(&mx6_sabrelite_flexcan0_tja1040_pdata);
+			imx6q_add_flexcan0(&flexcan0_tja1040_pdata);
 			pr_info("Flexcan NXP tja1040\n");
 		} else if (ret == 1) {
-			IOMUX_SETUP(sabrelite_mc33902_flexcan_pads);
-			imx6q_add_flexcan0(&mx6_sabrelite_flexcan0_mc33902_pdata);
+			IOMUX_SETUP(mc33902_flexcan_pads);
+			imx6q_add_flexcan0(&flexcan0_mc33902_pdata);
 			pr_info("Flexcan Freescale mc33902\n");
 		} else {
 			pr_info("Flexcan gpio_get_value CAN1_ERR failed\n");
@@ -1430,7 +1430,7 @@ static void __init mx6_sabrelite_board_init(void)
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
 	if (isn6) {
-		imx6q_add_sdhci_usdhc_imx(1, &mx6_sabrelite_sd2_data);
+		imx6q_add_sdhci_usdhc_imx(1, &sd2_data);
 		/* WL12xx WLAN Init */
 		if (wl12xx_set_platform_data(&n6q_wlan_data))
 			pr_err("error setting wl12xx data\n");
@@ -1461,7 +1461,7 @@ static void __init mx6_sabrelite_board_init(void)
 }
 
 extern void __iomem *twd_base;
-static void __init mx6_sabrelite_timer_init(void)
+static void __init timer_init(void)
 {
 	struct clk *uart_clk;
 #ifdef CONFIG_LOCAL_TIMERS
@@ -1474,11 +1474,11 @@ static void __init mx6_sabrelite_timer_init(void)
 	early_console_setup(UART2_BASE_ADDR, uart_clk);
 }
 
-static struct sys_timer mx6_sabrelite_timer = {
-	.init   = mx6_sabrelite_timer_init,
+static struct sys_timer timer = {
+	.init   = timer_init,
 };
 
-static void __init mx6_sabrelite_reserve(void)
+static void __init reserve(void)
 {
 	phys_addr_t phys;
 	int i;
@@ -1499,13 +1499,13 @@ static void __init mx6_sabrelite_reserve(void)
 	}
 #endif
 
-	for (i = 0; i < ARRAY_SIZE(sabrelite_fb_data); i++)
-		if (sabrelite_fb_data[i].res_size[0]) {
+	for (i = 0; i < ARRAY_SIZE(fb_data); i++)
+		if (fb_data[i].res_size[0]) {
 			/* reserve for background buffer */
-			phys = memblock_alloc(sabrelite_fb_data[i].res_size[0],
+			phys = memblock_alloc(fb_data[i].res_size[0],
 						SZ_4K);
-			memblock_remove(phys, sabrelite_fb_data[i].res_size[0]);
-			sabrelite_fb_data[i].res_base[0] = phys;
+			memblock_remove(phys, fb_data[i].res_size[0]);
+			fb_data[i].res_base[0] = phys;
 		}
 	if (vout_mem.res_msize) {
 		phys = memblock_alloc_base(vout_mem.res_msize,
@@ -1516,15 +1516,15 @@ static void __init mx6_sabrelite_reserve(void)
 }
 
 /*
- * initialize __mach_desc_MX6Q_SABRELITE data structure.
+ * initialize data structure.
  */
-MACHINE_START(MX6Q_SABRELITE, "Freescale i.MX 6Quad Sabre-Lite Board")
-	/* Maintainer: Freescale Semiconductor, Inc. */
+MACHINE_START(MX6_NITROGEN6X, "Boundary Devices Nitrogen6X/SABRE Lite Board")
+	/* Maintainer: Boundary Devices */
 	.boot_params = MX6_PHYS_OFFSET + 0x100,
 	.fixup = fixup_mxc_board,
 	.map_io = mx6_map_io,
 	.init_irq = mx6_init_irq,
-	.init_machine = mx6_sabrelite_board_init,
-	.timer = &mx6_sabrelite_timer,
-	.reserve = mx6_sabrelite_reserve,
+	.init_machine = board_init,
+	.timer = &timer,
+	.reserve = reserve,
 MACHINE_END
