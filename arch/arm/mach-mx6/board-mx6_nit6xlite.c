@@ -223,9 +223,9 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 
 static void sdio_set_power(int on)
 {
-	pr_err("%s:%s: set power(%d)\n",
+	pr_debug("%s:%s: set power(%d)\n",
 		 __FILE__, __func__, on);
-        gpio_set_value(WL_EN,on);
+	gpio_set_value(WL_EN,on);
 }
 
 /* Broadcom wifi */
