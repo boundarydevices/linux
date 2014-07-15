@@ -1,5 +1,5 @@
 /*
- * Silicon Labs Si2157 silicon tuner driver
+ * Silicon Labs Si2157/2158 silicon tuner driver
  *
  * Copyright (C) 2014 Antti Palosaari <crope@iki.fi>
  *
@@ -17,6 +17,7 @@
 #ifndef SI2157_PRIV_H
 #define SI2157_PRIV_H
 
+#include <linux/firmware.h>
 #include "si2157.h"
 
 /* state struct */
@@ -31,7 +32,10 @@ struct si2157 {
 #define SI2157_ARGLEN      30
 struct si2157_cmd {
 	u8 args[SI2157_ARGLEN];
-	unsigned len;
+	unsigned wlen;
+	unsigned rlen;
 };
+
+#define SI2158_A20_FIRMWARE "dvb-tuner-si2158-a20-01.fw"
 
 #endif

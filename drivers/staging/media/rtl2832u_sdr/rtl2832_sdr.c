@@ -348,6 +348,7 @@ static unsigned int rtl2832_sdr_convert_stream(struct rtl2832_sdr_state *s,
 		/* convert u8 to u16 */
 		unsigned int i;
 		u16 *u16dst = dst;
+
 		for (i = 0; i < src_len; i++)
 			*u16dst++ = (src[i] << 8) | (src[i] >> 0);
 		dst_len = 2 * src_len;
@@ -359,6 +360,7 @@ static unsigned int rtl2832_sdr_convert_stream(struct rtl2832_sdr_state *s,
 	if (unlikely(time_is_before_jiffies(s->jiffies_next))) {
 #define MSECS 10000UL
 		unsigned int samples = s->sample - s->sample_measured;
+
 		s->jiffies_next = jiffies + msecs_to_jiffies(MSECS);
 		s->sample_measured = s->sample;
 		dev_dbg(&s->udev->dev,
@@ -560,11 +562,13 @@ static int rtl2832_sdr_alloc_urbs(struct rtl2832_sdr_state *s)
 static void rtl2832_sdr_cleanup_queued_bufs(struct rtl2832_sdr_state *s)
 {
 	unsigned long flags = 0;
+
 	dev_dbg(&s->udev->dev, "%s:\n", __func__);
 
 	spin_lock_irqsave(&s->queued_bufs_lock, flags);
 	while (!list_empty(&s->queued_bufs)) {
 		struct rtl2832_sdr_frame_buf *buf;
+
 		buf = list_entry(s->queued_bufs.next,
 				struct rtl2832_sdr_frame_buf, list);
 		list_del(&buf->list);
@@ -577,6 +581,7 @@ static void rtl2832_sdr_cleanup_queued_bufs(struct rtl2832_sdr_state *s)
 static void rtl2832_sdr_release_sec(struct dvb_frontend *fe)
 {
 	struct rtl2832_sdr_state *s = fe->sec_priv;
+
 	dev_dbg(&s->udev->dev, "%s:\n", __func__);
 
 	mutex_lock(&s->vb_queue_lock);
@@ -598,6 +603,7 @@ static int rtl2832_sdr_querycap(struct file *file, void *fh,
 		struct v4l2_capability *cap)
 {
 	struct rtl2832_sdr_state *s = video_drvdata(file);
+
 	dev_dbg(&s->udev->dev, "%s:\n", __func__);
 
 	strlcpy(cap->driver, KBUILD_MODNAME, sizeof(cap->driver));
@@ -615,6 +621,7 @@ static int rtl2832_sdr_queue_setup(struct vb2_queue *vq,
 		unsigned int *nplanes, unsigned int sizes[], void *alloc_ctxs[])
 {
 	struct rtl2832_sdr_state *s = vb2_get_drv_priv(vq);
+
 	dev_dbg(&s->udev->dev, "%s: *nbuffers=%d\n", __func__, *nbuffers);
 
 	/* Need at least 8 buffers */
@@ -665,6 +672,7 @@ static int rtl2832_sdr_set_adc(struct rtl2832_sdr_state *s)
 	u8 buf[4], u8tmp1, u8tmp2;
 	u64 u64tmp;
 	u32 u32tmp;
+
 	dev_dbg(&s->udev->dev, "%s: f_adc=%u\n", __func__, s->f_adc);
 
 	if (!test_bit(POWER_ON, &s->flags))
@@ -935,7 +943,8 @@ static int rtl2832_sdr_set_tuner_freq(struct rtl2832_sdr_state *s)
 	/*
 	 * bandwidth (Hz)
 	 */
-	bandwidth_auto = v4l2_ctrl_find(&s->hdl, V4L2_CID_RF_TUNER_BANDWIDTH_AUTO);
+	bandwidth_auto = v4l2_ctrl_find(&s->hdl,
+					V4L2_CID_RF_TUNER_BANDWIDTH_AUTO);
 	bandwidth = v4l2_ctrl_find(&s->hdl, V4L2_CID_RF_TUNER_BANDWIDTH);
 	if (v4l2_ctrl_g_ctrl(bandwidth_auto)) {
 		c->bandwidth_hz = s->f_adc;
@@ -987,6 +996,7 @@ static int rtl2832_sdr_start_streaming(struct vb2_queue *vq, unsigned int count)
 {
 	struct rtl2832_sdr_state *s = vb2_get_drv_priv(vq);
 	int ret;
+
 	dev_dbg(&s->udev->dev, "%s:\n", __func__);
 
 	if (!s->udev)
@@ -1035,6 +1045,7 @@ err:
 static void rtl2832_sdr_stop_streaming(struct vb2_queue *vq)
 {
 	struct rtl2832_sdr_state *s = vb2_get_drv_priv(vq);
+
 	dev_dbg(&s->udev->dev, "%s:\n", __func__);
 
 	mutex_lock(&s->v4l2_lock);
@@ -1068,6 +1079,7 @@ static int rtl2832_sdr_g_tuner(struct file *file, void *priv,
 		struct v4l2_tuner *v)
 {
 	struct rtl2832_sdr_state *s = video_drvdata(file);
+
 	dev_dbg(&s->udev->dev, "%s: index=%d type=%d\n",
 			__func__, v->index, v->type);
 
@@ -1094,6 +1106,7 @@ static int rtl2832_sdr_s_tuner(struct file *file, void *priv,
 		const struct v4l2_tuner *v)
 {
 	struct rtl2832_sdr_state *s = video_drvdata(file);
+
 	dev_dbg(&s->udev->dev, "%s:\n", __func__);
 
 	if (v->index > 1)
@@ -1105,6 +1118,7 @@ static int rtl2832_sdr_enum_freq_bands(struct file *file, void *priv,
 		struct v4l2_frequency_band *band)
 {
 	struct rtl2832_sdr_state *s = video_drvdata(file);
+
 	dev_dbg(&s->udev->dev, "%s: tuner=%d type=%d index=%d\n",
 			__func__, band->tuner, band->type, band->index);
 
@@ -1130,6 +1144,7 @@ static int rtl2832_sdr_g_frequency(struct file *file, void *priv,
 {
 	struct rtl2832_sdr_state *s = video_drvdata(file);
 	int ret  = 0;
+
 	dev_dbg(&s->udev->dev, "%s: tuner=%d type=%d\n",
 			__func__, f->tuner, f->type);
 
@@ -1193,6 +1208,7 @@ static int rtl2832_sdr_enum_fmt_sdr_cap(struct file *file, void *priv,
 		struct v4l2_fmtdesc *f)
 {
 	struct rtl2832_sdr_state *s = video_drvdata(file);
+
 	dev_dbg(&s->udev->dev, "%s:\n", __func__);
 
 	if (f->index >= NUM_FORMATS)
@@ -1208,6 +1224,7 @@ static int rtl2832_sdr_g_fmt_sdr_cap(struct file *file, void *priv,
 		struct v4l2_format *f)
 {
 	struct rtl2832_sdr_state *s = video_drvdata(file);
+
 	dev_dbg(&s->udev->dev, "%s:\n", __func__);
 
 	f->fmt.sdr.pixelformat = s->pixelformat;
@@ -1222,6 +1239,7 @@ static int rtl2832_sdr_s_fmt_sdr_cap(struct file *file, void *priv,
 	struct rtl2832_sdr_state *s = video_drvdata(file);
 	struct vb2_queue *q = &s->vb_queue;
 	int i;
+
 	dev_dbg(&s->udev->dev, "%s: pixelformat fourcc %4.4s\n", __func__,
 			(char *)&f->fmt.sdr.pixelformat);
 
@@ -1247,6 +1265,7 @@ static int rtl2832_sdr_try_fmt_sdr_cap(struct file *file, void *priv,
 {
 	struct rtl2832_sdr_state *s = video_drvdata(file);
 	int i;
+
 	dev_dbg(&s->udev->dev, "%s: pixelformat fourcc %4.4s\n", __func__,
 			(char *)&f->fmt.sdr.pixelformat);
 
@@ -1316,6 +1335,7 @@ static int rtl2832_sdr_s_ctrl(struct v4l2_ctrl *ctrl)
 	struct dvb_frontend *fe = s->fe;
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	int ret;
+
 	dev_dbg(&s->udev->dev,
 			"%s: id=%d name=%s val=%d min=%d max=%d step=%d\n",
 			__func__, ctrl->id, ctrl->name, ctrl->val,
@@ -1329,9 +1349,12 @@ static int rtl2832_sdr_s_ctrl(struct v4l2_ctrl *ctrl)
 			/* Round towards the closest legal value */
 			s32 val = s->f_adc + s->bandwidth->step / 2;
 			u32 offset;
-			val = clamp(val, s->bandwidth->minimum, s->bandwidth->maximum);
+
+			val = clamp(val, s->bandwidth->minimum,
+				    s->bandwidth->maximum);
 			offset = val - s->bandwidth->minimum;
-			offset = s->bandwidth->step * (offset / s->bandwidth->step);
+			offset = s->bandwidth->step *
+				(offset / s->bandwidth->step);
 			s->bandwidth->val = s->bandwidth->minimum + offset;
 		}
 
@@ -1420,15 +1443,24 @@ struct dvb_frontend *rtl2832_sdr_attach(struct dvb_frontend *fe,
 		break;
 	case RTL2832_TUNER_R820T:
 		v4l2_ctrl_handler_init(&s->hdl, 2);
-		s->bandwidth_auto = v4l2_ctrl_new_std(&s->hdl, ops, V4L2_CID_RF_TUNER_BANDWIDTH_AUTO, 0, 1, 1, 1);
-		s->bandwidth = v4l2_ctrl_new_std(&s->hdl, ops, V4L2_CID_RF_TUNER_BANDWIDTH, 0, 8000000, 100000, 0);
+		s->bandwidth_auto = v4l2_ctrl_new_std(&s->hdl, ops,
+						      V4L2_CID_RF_TUNER_BANDWIDTH_AUTO,
+						      0, 1, 1, 1);
+		s->bandwidth = v4l2_ctrl_new_std(&s->hdl, ops,
+						 V4L2_CID_RF_TUNER_BANDWIDTH,
+						 0, 8000000, 100000, 0);
 		v4l2_ctrl_auto_cluster(2, &s->bandwidth_auto, 0, false);
 		break;
 	case RTL2832_TUNER_FC0012:
 	case RTL2832_TUNER_FC0013:
 		v4l2_ctrl_handler_init(&s->hdl, 2);
-		s->bandwidth_auto = v4l2_ctrl_new_std(&s->hdl, ops, V4L2_CID_RF_TUNER_BANDWIDTH_AUTO, 0, 1, 1, 1);
-		s->bandwidth = v4l2_ctrl_new_std(&s->hdl, ops, V4L2_CID_RF_TUNER_BANDWIDTH, 6000000, 8000000, 1000000, 6000000);
+		s->bandwidth_auto = v4l2_ctrl_new_std(&s->hdl, ops,
+						      V4L2_CID_RF_TUNER_BANDWIDTH_AUTO,
+						      0, 1, 1, 1);
+		s->bandwidth = v4l2_ctrl_new_std(&s->hdl, ops,
+						 V4L2_CID_RF_TUNER_BANDWIDTH,
+						 6000000, 8000000, 1000000,
+						 6000000);
 		v4l2_ctrl_auto_cluster(2, &s->bandwidth_auto, 0, false);
 		break;
 	default:
@@ -1448,7 +1480,6 @@ struct dvb_frontend *rtl2832_sdr_attach(struct dvb_frontend *fe,
 	s->vdev = rtl2832_sdr_template;
 	s->vdev.queue = &s->vb_queue;
 	s->vdev.queue->lock = &s->vb_queue_lock;
-	set_bit(V4L2_FL_USE_FH_PRIO, &s->vdev.flags);
 	video_set_drvdata(&s->vdev, s);
 
 	/* Register the v4l2_device structure */
