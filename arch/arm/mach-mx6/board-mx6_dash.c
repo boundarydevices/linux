@@ -351,6 +351,9 @@ static struct mxc_pwm_platform_data pwm3_data = {
 };
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("bh1780", 0x29),	/* Ambient light sensor*/
+	},
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
