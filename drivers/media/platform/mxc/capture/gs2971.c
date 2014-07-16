@@ -284,7 +284,7 @@ static int get_std(struct v4l2_int_device *s, v4l2_std_id * id)
 		return status;
 	pr_debug("--> lock_value %x\n", sync_lock_value);
 	if (!sync_lock_value) {
-		pr_err("%s: no lock\n", __func__);
+		pr_err("%s: no lock, gs2971\n", __func__);
 		return -EBUSY;
 	}
 
