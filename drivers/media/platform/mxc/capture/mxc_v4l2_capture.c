@@ -2973,6 +2973,7 @@ static int mxc_v4l2_probe(struct platform_device *pdev)
 static int mxc_v4l2_remove(struct platform_device *pdev)
 {
 	cam_data *cam = (cam_data *)platform_get_drvdata(pdev);
+
 	if (cam->open_count) {
 		pr_err("ERROR: v4l2 capture:camera open "
 			"-- setting ops to NULL\n");
