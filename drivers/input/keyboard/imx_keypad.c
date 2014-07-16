@@ -558,8 +558,8 @@ static int imx_kbd_suspend(struct device *dev)
 
 		enable_irq_wake(kbd->irq);
 	}
-	else
-		pinctrl_pm_select_sleep_state(dev);
+
+	pinctrl_pm_select_sleep_state(dev);
 
 	return 0;
 }
@@ -573,8 +573,8 @@ static int imx_kbd_resume(struct device *dev)
 
 	if (device_may_wakeup(&pdev->dev))
 		disable_irq_wake(kbd->irq);
-	else
-		pinctrl_pm_select_default_state(dev);
+
+	pinctrl_pm_select_default_state(dev);
 
 	mutex_lock(&input_dev->mutex);
 
