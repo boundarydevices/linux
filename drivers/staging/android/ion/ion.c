@@ -3,6 +3,7 @@
  * drivers/staging/android/ion/ion.c
  *
  * Copyright (C) 2011 Google, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -398,6 +399,12 @@ static int ion_handle_put(struct ion_handle *handle)
 	mutex_unlock(&client->lock);
 
 	return ret;
+}
+
+/* for used in mxc_ion.c */
+int ion_handle_put_wrap(struct ion_handle *handle)
+{
+	return ion_handle_put(handle);
 }
 
 static struct ion_handle *ion_handle_lookup(struct ion_client *client,
