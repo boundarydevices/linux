@@ -1816,7 +1816,6 @@ static int mxc_v4l_close(struct file *file)
 			err |= mxc_streamoff(cam);
 			wake_up_interruptible(&cam->enc_queue);
 		}
-
 		if (cam->mclk_on[cam->mclk_source]) {
 			ipu_csi_enable_mclk_if(cam->ipu, CSI_MCLK_I2C,
 					       cam->mclk_source,
@@ -2876,13 +2875,6 @@ static int mxc_v4l2_remove(struct platform_device *pdev)
 {
 	cam_data *cam = (cam_data *)platform_get_drvdata(pdev);
 
-	if (cam->dummy_frame.vaddress != 0) {
-		dma_free_coherent(0, cam->dummy_frame.buffer.length,
-				  cam->dummy_frame.vaddress,
-				  cam->dummy_frame.paddress);
-		cam->dummy_frame.vaddress = 0;
-	}
-
 	if (cam->open_count) {
 		pr_err("ERROR: v4l2 capture:camera open "
 			"-- setting ops to NULL\n");
@@ -2898,6 +2890,13 @@ static int mxc_v4l2_remove(struct platform_device *pdev)
 		pr_info("V4L2 freeing image input device\n");
 		v4l2_int_device_unregister(cam->self);
 		video_unregister_device(cam->video_dev);
+
+		if (cam->dummy_frame.vaddress != 0) {
+			dma_free_coherent(0, cam->dummy_frame.buffer.length,
+					  cam->dummy_frame.vaddress,
+					  cam->dummy_frame.paddress);
+			cam->dummy_frame.vaddress = 0;
+		}
 
 		mxc_free_frame_buf(cam);
 		kfree(cam);
