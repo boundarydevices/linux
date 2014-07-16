@@ -20,7 +20,7 @@
 		compatible = "pwm-backlight";
 		pwms = <&pwm4 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
-		default-brightness-level = <6>;
+		default-brightness-level = <7>;
 		fb-names = "mxs-lcdif1";
 	};
 
@@ -28,7 +28,7 @@
 		compatible = "pwm-backlight";
 		pwms = <&pwm3 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
-		default-brightness-level = <6>;
+		default-brightness-level = <7>;
 		fb-names = "mxs-lcdif0";
 	};
 
