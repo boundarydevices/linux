@@ -141,7 +141,7 @@ static int csi_enc_setup(cam_data *cam)
 				      pixel_fmt, cam->v2f.fmt.pix.width,
 				      cam->v2f.fmt.pix.height,
 				      cam->v2f.fmt.pix.bytesperline,
-				      IPU_ROTATE_NONE,
+				      cam->rotation,
 				      dummy, dummy, 0,
 				      cam->offset.u_offset,
 				      cam->offset.v_offset);
