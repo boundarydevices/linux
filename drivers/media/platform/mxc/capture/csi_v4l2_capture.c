@@ -1440,12 +1440,8 @@ static long csi_v4l_do_ioctl(struct file *file,
 		}
 
 		csi_streamoff(cam);
-		if (req->memory & V4L2_MEMORY_MMAP)
-			csi_free_frame_buf(cam);
-		INIT_LIST_HEAD(&cam->ready_q);
-		INIT_LIST_HEAD(&cam->working_q);
-		INIT_LIST_HEAD(&cam->done_q);
 		if (req->memory & V4L2_MEMORY_MMAP) {
+			csi_free_frame_buf(cam);
 			retval = csi_allocate_frame_buf(cam, req->count + 1);
 			req_buf_number = req->count;
 		}
