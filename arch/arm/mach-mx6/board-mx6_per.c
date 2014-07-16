@@ -49,6 +49,7 @@
 #include <linux/mutex.h>
 #include <linux/gpio.h>
 #include <linux/gpio-i2cmux.h>
+//#include <linux/ion.h>
 #include <linux/etherdevice.h>
 #include <linux/regulator/anatop-regulator.h>
 #include <linux/regulator/consumer.h>
@@ -592,8 +593,8 @@ static void __init init_usb(void)
 	mx6_set_otghost_vbus_func(usbotg_vbus);
 }
 
-static struct viv_gpu_platform_data gpu_pdata __initdata = {
-	.reserved_mem_size = SZ_128M,
+static struct viv_gpu_platform_data imx6_gpu_pdata __initdata = {
+	.reserved_mem_size = SZ_128M + SZ_64M - SZ_16M,
 };
 
 static struct imx_asrc_platform_data imx_asrc_data = {
@@ -670,6 +671,19 @@ static struct imx_ipuv3_platform_data ipu_data[] = {
 	},
 };
 
+#ifdef CONFIG_ION
+static struct ion_platform_data imx_ion_data = {
+	.nr = 1,
+	.heaps = {
+		{
+		.type = ION_HEAP_TYPE_CARVEOUT,
+		.name = "vpu_ion",
+		.size = SZ_64M,
+		},
+	},
+};
+#endif
+
 static struct fsl_mxc_capture_platform_data capture_data[] = {
 	{	/* Adv7180 */
 		.ipu = 0,
@@ -686,6 +700,15 @@ static struct fsl_mxc_capture_platform_data capture_data[] = {
 	},
 };
 
+
+struct imx_vout_mem {
+       resource_size_t res_mbase;
+       resource_size_t res_msize;
+};
+
+static struct imx_vout_mem vout_mem __initdata = {
+       .res_msize = 0,
+};
 
 static void suspend_enter(void)
 {
@@ -885,6 +908,44 @@ static struct mxc_dvfs_platform_data dvfscore_data = {
 static void __init fixup_board(struct machine_desc *desc, struct tag *tags,
 				   char **cmdline, struct meminfo *mi)
 {
+	char *str;
+	struct tag *t;
+	int i = 0;
+	struct ipuv3_fb_platform_data *pdata_fb = fb_data;
+
+	for_each_tag(t, tags) {
+		if (t->hdr.tag == ATAG_CMDLINE) {
+			str = t->u.cmdline.cmdline;
+			str = strstr(str, "fbmem=");
+			if (str != NULL) {
+				str += 6;
+				pdata_fb[i].res_size[0] = memparse(str, &str);
+				if (i == 0)
+					pdata_fb[i].res_size[1] = pdata_fb[i].res_size[0];
+				i++;
+				while (*str == ',' &&
+					i < ARRAY_SIZE(fb_data)) {
+					str++;
+					pdata_fb[i++].res_size[0] = memparse(str, &str);
+				}
+			}
+			/* GPU reserved memory */
+			str = t->u.cmdline.cmdline;
+			str = strstr(str, "gpumem=");
+			if (str != NULL) {
+				str += 7;
+				imx6_gpu_pdata.reserved_mem_size = memparse(str, &str);
+			}
+			/* VPU reserved memory */
+			str = t->u.cmdline.cmdline;
+			str = strstr(str, "vpumem=");
+			if (str != NULL) {
+				str += 7;
+				vout_mem.res_msize = memparse(str, &str);
+			}
+			break;
+		}
+	}
 }
 
 static struct mipi_csi2_platform_data mipi_csi2_pdata = {
@@ -967,6 +1028,7 @@ static void __init board_init(void)
 {
 	int i;
 	int ret;
+	struct platform_device *voutdev;
 
 	ret = gpio_request_array(initial_gpios, ARRAY_SIZE(initial_gpios));
 	if (ret)
@@ -1000,7 +1062,15 @@ static void __init board_init(void)
 		imx6q_add_ipuv3fb(i, &fb_data[i]);
 
 	imx6q_add_vdoa();
-	imx6q_add_v4l2_output(0);
+	voutdev = imx6q_add_v4l2_output(0);
+	if (vout_mem.res_msize && voutdev) {
+		dma_declare_coherent_memory(&voutdev->dev,
+                                            vout_mem.res_mbase,
+                                            vout_mem.res_mbase,
+                                            vout_mem.res_msize,
+                                            (DMA_MEMORY_MAP |
+                                             DMA_MEMORY_EXCLUSIVE));
+	}
 
 	for (i = 0; i < ARRAY_SIZE(capture_data); i++) {
 		if (!cpu_is_mx6q())
@@ -1038,7 +1108,7 @@ static void __init board_init(void)
 	imx6_init_fec(fec_data);
 	imx6q_add_pm_imx(0, &pm_data);
 	imx6q_add_sdhci_usdhc_imx(3, &sd4_data);
-	imx_add_viv_gpu(&imx6_gpu_data, &gpu_pdata);
+	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
 	init_usb();
 	imx6q_add_vpu();
 	init_audio();
@@ -1065,7 +1135,10 @@ static void __init board_init(void)
 	imx6q_add_dma();
 
 	imx6q_add_dvfs_core(&dvfscore_data);
-
+#ifdef CONFIG_ION
+	imx6q_add_ion(0, &imx_ion_data,
+		sizeof(imx_ion_data) + sizeof(struct ion_platform_heap));
+#endif
 	imx6q_add_hdmi_soc();
 	imx6q_add_hdmi_soc_dai();
 
@@ -1102,16 +1175,45 @@ static struct sys_timer timer __initdata = {
 
 static void __init reserve(void)
 {
-#if defined(CONFIG_MXC_GPU_VIV) || defined(CONFIG_MXC_GPU_VIV_MODULE)
 	phys_addr_t phys;
+	int i, j;
 
-	if (gpu_pdata.reserved_mem_size) {
-		phys = memblock_alloc_base(gpu_pdata.reserved_mem_size,
-					   SZ_4K, SZ_1G);
-		memblock_remove(phys, gpu_pdata.reserved_mem_size);
-		gpu_pdata.reserved_mem_base = phys;
+#if defined(CONFIG_MXC_GPU_VIV) || defined(CONFIG_MXC_GPU_VIV_MODULE)
+	if (imx6_gpu_pdata.reserved_mem_size) {
+		phys = memblock_alloc_base(imx6_gpu_pdata.reserved_mem_size,
+					   SZ_4K, SZ_2G);
+		memblock_remove(phys, imx6_gpu_pdata.reserved_mem_size);
+		imx6_gpu_pdata.reserved_mem_base = phys;
 	}
 #endif
+
+#if defined(CONFIG_ION)
+	if (imx_ion_data.heaps[0].size) {
+		phys = memblock_alloc(imx_ion_data.heaps[0].size, SZ_4K);
+		memblock_remove(phys, imx_ion_data.heaps[0].size);
+		imx_ion_data.heaps[0].base = phys;
+	}
+#endif
+
+	for (i = 0; i < ARRAY_SIZE(fb_data); i++) {
+		for (j = 0; j < ARRAY_SIZE(fb_data[i].res_size); j++) {
+			resource_size_t sz = fb_data[i].res_size[j];
+
+			if (!sz)
+				continue;
+			pr_info("%s: fb%d reserve %x\n", __func__, i, sz);
+			/* reserve for background buffer */
+			phys = memblock_alloc(sz, SZ_4K);
+			memblock_remove(phys, sz);
+			fb_data[i].res_base[j] = phys;
+		}
+	}
+	if (vout_mem.res_msize) {
+		phys = memblock_alloc_base(vout_mem.res_msize,
+					   SZ_4K, SZ_2G);
+		memblock_remove(phys, vout_mem.res_msize);
+		vout_mem.res_mbase = phys;
+	}
 }
 
 /*
