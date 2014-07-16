@@ -34,6 +34,8 @@ next/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/s5p-cleanup-v2
 	ux500/core
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-core-for-v3.17-1
+	cleanup/gpio-header-removal
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-gpio tags/gpio-h-purge
 
 next/soc
 	renesas/clock
@@ -106,16 +108,4 @@ next/defconfig
 		ARM: socfpga: Update socfpga_defconfig
 
 fixes
-	<no branch> (0b514fdb52073e348ade842355f37f6976768e44)
-		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-maintainers-for-v3.17
-	<no branch> (35e75645f16c86918f26df1bfc2c24ad8ebb5a17)
-		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-fixes-2
-	patch
-		ARM: imx: fix shared gate clock
-	<no branch> (1d29a0722f6c38f79785c9ffb911730598de84e2)
-		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.16/fixes-rc4
-	patch
-		ARM: at91: at91sam9x5: add clocks for usb device
-	<no branch> (bed7118988ef48063c72f67cc2701c72663b3870)
-		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-fixes-3
 
