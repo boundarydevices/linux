@@ -31,6 +31,7 @@ static int num_heaps = 1;
 static struct ion_heap **heaps;
 static int cacheable;
 
+extern int ion_handle_put_wrap(struct ion_handle *handle);
 extern struct ion_handle *ion_handle_get_by_id(struct ion_client *client,
 						 int id);
 
@@ -93,6 +94,8 @@ static long mxc_custom_ioctl(struct ion_client *client,
 			return PTR_ERR(handle);
 
 		valid = ion_phys(client, handle, &phys, &len);
+		ion_handle_put_wrap(handle);
+
 		if (valid)
 			return -1;
 		data.phys = phys;
