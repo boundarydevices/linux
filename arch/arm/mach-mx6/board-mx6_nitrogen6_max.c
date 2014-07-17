@@ -1608,7 +1608,7 @@ static void __init board_init(void)
                                             (DMA_MEMORY_MAP |
                                              DMA_MEMORY_EXCLUSIVE));
 	}
-//	imx6q_add_bt656(&bt656_data);
+	imx6q_add_bt656(&bt656_data);
 
 	mask = 0;
 	for (i = 0; i < ARRAY_SIZE(capture_data); i++) {
