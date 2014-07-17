@@ -18,7 +18,7 @@ Non-Android
 ------------------
 The latest 3.0.35 kernel is in branch [boundary-imx\_3.0.35\_4.1.0][latest-3.0.35]
 
-The latest 3.10.17 kernel is in branch [boundary-imx\_3.10.17\_1.0.0\_beta][latest-3.10.17]
+The latest 3.10.17 kernel is in branch [boundary-imx\_3.10.17\_1.0.0\_ga][latest-3.10.17]
 
 These branches are based on Freescale releases of the same name (minus the 'boundary').
 
