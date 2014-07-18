@@ -36,6 +36,8 @@ next/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-core-for-v3.17-1
 	cleanup/gpio-header-removal
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-gpio tags/gpio-h-purge
+	patch
+		MAINTAINERS: Remove Kirkwood
 
 next/soc
 	renesas/clock
@@ -108,4 +110,10 @@ next/defconfig
 		ARM: socfpga: Update socfpga_defconfig
 
 fixes
+	<no branch> (a728b977429383b3fe92b6e3bff9e69365609e0f)
+		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-3.16-3
+	<no branch> (e0d69e119fc6bf7cc3c9f791478108c1b925bb2e)
+		git://github.com/at91linux/linux-at91 tags/at91-fixes
+	<no branch> (03e97220b99b8b691ea5b130b7b4c135c9662792)
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-3.16-2
 
