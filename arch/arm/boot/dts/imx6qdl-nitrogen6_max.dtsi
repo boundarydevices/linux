@@ -364,6 +364,7 @@
 	phy-reset-gpios = <&gpio1 27 0>;
 	status = "okay";
 #endif
+	status = "okay";
 
 	#address-cells = <0>;
 	#size-cells = <1>;
