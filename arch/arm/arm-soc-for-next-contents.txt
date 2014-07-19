@@ -72,6 +72,10 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-r8a7779-multiplatform3-for-v3.17
 	renesas/clock2
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-clock2-for-v3.17
+	imx/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-soc-3.17
+	sunxi/core
+		git://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-core-for-3.17
 
 next/boards
 	renesas/boards
@@ -97,6 +101,15 @@ next/dt
 		contains renesas/clock2
 	omap/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.17/dt-part1
+	keystone/dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone-dts
+	imx/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-3.17
+		contains imx/soc
+	zynq/dt
+		git://git.xilinx.com/linux-xlnx tags/zynq-dt-for-3.17
+	sunxi/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-3.17
 
 next/drivers
 	at91/drivers
@@ -118,14 +131,8 @@ next/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig3-for-v3.17
 	patch
 		ARM: socfpga: Update socfpga_defconfig
+	renesas/defconfig4
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig4-for-v3.17
 
 fixes
-	<no branch> (a728b977429383b3fe92b6e3bff9e69365609e0f)
-		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-3.16-3
-	<no branch> (e0d69e119fc6bf7cc3c9f791478108c1b925bb2e)
-		git://github.com/at91linux/linux-at91 tags/at91-fixes
-	<no branch> (03e97220b99b8b691ea5b130b7b4c135c9662792)
-		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-3.16-2
-	patch
-		ARM: EXYNOS: Fix core ID used by platsmp and hotplug code
 
