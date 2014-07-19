@@ -70,6 +70,8 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cpufreq2-for-v3.17
 	renesas/r8a7779-multiplatform3
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-r8a7779-multiplatform3-for-v3.17
+	renesas/clock2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-clock2-for-v3.17
 
 next/boards
 	renesas/boards
@@ -89,10 +91,18 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-devicetree-v3.16-1
 	patch
 		ARM: socfpga: Add missing #reset-cells to socfpga device tree
+	renesas/dt3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt3-for-v3.17
+		contains renesas/clock
+		contains renesas/clock2
+	omap/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.17/dt-part1
 
 next/drivers
 	at91/drivers
 		git://github.com/at91linux/linux-at91 tags/at91-drivers
+	spear/pcie
+		git://git.kernel.org/pub/scm/linux/kernel/git/vireshk/linux spear/pcie-support-v10
 
 next/defconfig
 	patch
