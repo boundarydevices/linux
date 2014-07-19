@@ -38,6 +38,10 @@ next/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-gpio tags/gpio-h-purge
 	patch
 		MAINTAINERS: Remove Kirkwood
+	<no branch> (2fa937a767bd0933dfe6017cabd038ce52594171)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-3.17-fuse-move
+	<no branch> (7232398abc6a7186e315425638c367d50c674718)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-3.17-soc
 
 next/soc
 	renesas/clock
@@ -116,6 +120,8 @@ next/drivers
 		git://github.com/at91linux/linux-at91 tags/at91-drivers
 	spear/pcie
 		git://git.kernel.org/pub/scm/linux/kernel/git/vireshk/linux spear/pcie-support-v10
+	<no branch> (122ee17dc2adb5c4a63d3a29af9f4e6e331087e5)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-3.17-pcie-regulators
 
 next/defconfig
 	patch
