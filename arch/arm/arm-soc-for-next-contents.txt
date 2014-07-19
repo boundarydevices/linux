@@ -116,4 +116,6 @@ fixes
 		git://github.com/at91linux/linux-at91 tags/at91-fixes
 	<no branch> (03e97220b99b8b691ea5b130b7b4c135c9662792)
 		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-3.16-2
+	patch
+		ARM: EXYNOS: Fix core ID used by platsmp and hotplug code
 
