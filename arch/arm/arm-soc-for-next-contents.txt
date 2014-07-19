@@ -38,9 +38,9 @@ next/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-gpio tags/gpio-h-purge
 	patch
 		MAINTAINERS: Remove Kirkwood
-	<no branch> (2fa937a767bd0933dfe6017cabd038ce52594171)
+	tegra/fuse-move
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-3.17-fuse-move
-	<no branch> (7232398abc6a7186e315425638c367d50c674718)
+	tegra/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-3.17-soc
 
 next/soc
@@ -114,13 +114,19 @@ next/dt
 		git://git.xilinx.com/linux-xlnx tags/zynq-dt-for-3.17
 	sunxi/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-3.17
+	tegra/xusb-padctrl
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-3.17-xusb-padctl
+	tegra/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-3.17-dt
+		contains shared/dt-cros-ec-kbd
+		contains tegra/fuse-move
 
 next/drivers
 	at91/drivers
 		git://github.com/at91linux/linux-at91 tags/at91-drivers
 	spear/pcie
 		git://git.kernel.org/pub/scm/linux/kernel/git/vireshk/linux spear/pcie-support-v10
-	<no branch> (122ee17dc2adb5c4a63d3a29af9f4e6e331087e5)
+	tegra/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-3.17-pcie-regulators
 
 next/defconfig
@@ -139,6 +145,8 @@ next/defconfig
 		ARM: socfpga: Update socfpga_defconfig
 	renesas/defconfig4
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig4-for-v3.17
+	tegra/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-3.17-defconfig
 
 fixes
 
