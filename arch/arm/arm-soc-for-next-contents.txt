@@ -132,6 +132,10 @@ next/dt
 		contains tegra/fuse-move
 	samsung/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-dt
+	mvebu/dt
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-3.17
+	mvebu/dt2
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-3.17-2
 
 next/drivers
 	at91/drivers
@@ -140,6 +144,9 @@ next/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/vireshk/linux spear/pcie-support-v10
 	tegra/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-3.17-pcie-regulators
+	patch
+		PCI: spear: Fix Section mismatch compilation warning for probe()
+		PCI: spear: Remove spear13xx_pcie_remove()
 
 next/defconfig
 	patch
