@@ -1495,6 +1495,9 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 	}
 
 	sdhci_set_power(host, ios->power_mode, ios->vdd);
+	if (host->ops->platform_set_power)
+		host->ops->platform_set_power(host,
+				MMC_POWER_OFF != ios->power_mode);
 
 	if (host->ops->platform_send_init_74_clocks)
 		host->ops->platform_send_init_74_clocks(host, ios->power_mode);
