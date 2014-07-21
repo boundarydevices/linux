@@ -1452,7 +1452,10 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 		vdd_bit = sdhci_set_power(host, -1);
 	else
 		vdd_bit = sdhci_set_power(host, ios->vdd);
-
+	if (host->ops->platform_set_power)
+                host->ops->platform_set_power
+			(host,
+			 MMC_POWER_OFF != ios->power_mode);
 	if (host->vmmc && vdd_bit != -1) {
 		spin_unlock_irqrestore(&host->lock, flags);
 		mmc_regulator_set_ocr(host->mmc, host->vmmc, vdd_bit);
