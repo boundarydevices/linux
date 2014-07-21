@@ -1,28 +1,17 @@
 /*
- * ARM Ltd. Versatile Express
+ * ARM Ltd. Fast Models
  *
- * Motherboard Express uATX
- * V2M-P1
+ * Versatile Express (VE) system model
+ * Motherboard component
  *
- * HBI-0190D
- *
- * RS1 memory map ("ARM Cortex-A Series memory map" in the board's
- * Technical Reference Manual)
- *
- * WARNING! The hardware described in this file is independent from the
- * original variant (vexpress-v2m.dtsi), but there is a strong
- * correspondence between the two configurations.
- *
- * TAKE CARE WHEN MAINTAINING THIS FILE TO PROPAGATE ANY RELEVANT
- * CHANGES TO vexpress-v2m.dtsi!
+ * VEMotherBoard.lisa
  */
 
 	motherboard {
-		model = "V2M-P1";
+		compatible = "arm,vexpress,v2m-p1", "simple-bus";
 		arm,hbi = <0x190>;
 		arm,vexpress,site = <0>;
 		arm,v2m-memory-map = "rs1";
-		compatible = "arm,vexpress,v2m-p1", "simple-bus";
 		#address-cells = <2>; /* SMB chipselect number and offset */
 		#size-cells = <1>;
 		#interrupt-cells = <1>;
@@ -35,34 +24,15 @@
 			bank-width = <4>;
 		};
 
-		psram@1,00000000 {
-			compatible = "arm,vexpress-psram", "mtd-ram";
-			reg = <1 0x00000000 0x02000000>;
-			bank-width = <4>;
-		};
-
 		vram@2,00000000 {
 			compatible = "arm,vexpress-vram";
 			reg = <2 0x00000000 0x00800000>;
 		};
 
 		ethernet@2,02000000 {
-			compatible = "smsc,lan9118", "smsc,lan9115";
+			compatible = "smsc,lan91c111";
 			reg = <2 0x02000000 0x10000>;
 			interrupts = <15>;
-			phy-mode = "mii";
-			reg-io-width = <4>;
-			smsc,irq-active-high;
-			smsc,irq-push-pull;
-			vdd33a-supply = <&v2m_fixed_3v3>;
-			vddvario-supply = <&v2m_fixed_3v3>;
-		};
-
-		usb@2,03000000 {
-			compatible = "nxp,usb-isp1761";
-			reg = <2 0x03000000 0x20000>;
-			interrupts = <16>;
-			port1-otg;
 		};
 
 		iofpga@3,00000000 {
@@ -85,20 +55,6 @@
 				clock-names = "refclk", "timclk", "apb_pclk";
 				#clock-cells = <1>;
 				clock-output-names = "timerclken0", "timerclken1", "timerclken2", "timerclken3";
-			};
-
-			/* PCI-E I2C bus */
-			v2m_i2c_pcie: i2c@030000 {
-				compatible = "arm,versatile-i2c";
-				reg = <0x030000 0x1000>;
-
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				pcie-switch@60 {
-					compatible = "idt,89hpes32h8";
-					reg = <0x60>;
-				};
 			};
 
 			aaci@040000 {
@@ -141,7 +97,7 @@
 				compatible = "arm,pl011", "arm,primecell";
 				reg = <0x090000 0x1000>;
 				interrupts = <5>;
-				clocks = <&v2m_oscclk2>, <&smbclk>;
+				clocks = <&v2m_clk24mhz>, <&smbclk>;
 				clock-names = "uartclk", "apb_pclk";
 			};
 
@@ -149,7 +105,7 @@
 				compatible = "arm,pl011", "arm,primecell";
 				reg = <0x0a0000 0x1000>;
 				interrupts = <6>;
-				clocks = <&v2m_oscclk2>, <&smbclk>;
+				clocks = <&v2m_clk24mhz>, <&smbclk>;
 				clock-names = "uartclk", "apb_pclk";
 			};
 
@@ -157,7 +113,7 @@
 				compatible = "arm,pl011", "arm,primecell";
 				reg = <0x0b0000 0x1000>;
 				interrupts = <7>;
-				clocks = <&v2m_oscclk2>, <&smbclk>;
+				clocks = <&v2m_clk24mhz>, <&smbclk>;
 				clock-names = "uartclk", "apb_pclk";
 			};
 
@@ -165,7 +121,7 @@
 				compatible = "arm,pl011", "arm,primecell";
 				reg = <0x0c0000 0x1000>;
 				interrupts = <8>;
-				clocks = <&v2m_oscclk2>, <&smbclk>;
+				clocks = <&v2m_clk24mhz>, <&smbclk>;
 				clock-names = "uartclk", "apb_pclk";
 			};
 
@@ -193,25 +149,6 @@
 				clock-names = "timclken1", "timclken2", "apb_pclk";
 			};
 
-			/* DVI I2C bus */
-			v2m_i2c_dvi: i2c@160000 {
-				compatible = "arm,versatile-i2c";
-				reg = <0x160000 0x1000>;
-
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				dvi-transmitter@39 {
-					compatible = "sil,sii9022-tpi", "sil,sii9022";
-					reg = <0x39>;
-				};
-
-				dvi-transmitter@60 {
-					compatible = "sil,sii9022-cpi", "sil,sii9022";
-					reg = <0x60>;
-				};
-			};
-
 			rtc@170000 {
 				compatible = "arm,pl031", "arm,primecell";
 				reg = <0x170000 0x1000>;
@@ -220,21 +157,23 @@
 				clock-names = "apb_pclk";
 			};
 
-			compact-flash@1a0000 {
-				compatible = "arm,vexpress-cf", "ata-generic";
-				reg = <0x1a0000 0x100
-				       0x1a0100 0xf00>;
-				reg-shift = <2>;
-			};
-
 			clcd@1f0000 {
-				status = "disabled";
 				compatible = "arm,pl111", "arm,primecell";
 				reg = <0x1f0000 0x1000>;
 				interrupts = <14>;
 				clocks = <&v2m_oscclk1>, <&smbclk>;
-				clock-names = "clcdclk", "apb_pclk";
+				clock-names = "v2m:oscclk1", "apb_pclk";
+				mode = "VGA";
+				use_dma = <0>;
+				framebuffer = <0x18000000 0x00180000>;
 			};
+
+			virtio_block@0130000 {
+				compatible = "virtio,mmio";
+				reg = <0x130000 0x200>;
+				interrupts = <42>;
+			};
+
 		};
 
 		v2m_fixed_3v3: fixedregulator@0 {
@@ -267,17 +206,8 @@
 		};
 
 		mcc {
-			compatible = "arm,vexpress,config-bus";
+			compatible = "simple-bus";
 			arm,vexpress,config-bridge = <&v2m_sysreg>;
-
-			osc@0 {
-				/* MCC static memory clock */
-				compatible = "arm,vexpress-osc";
-				arm,vexpress-sysreg,func = <1 0>;
-				freq-range = <25000000 60000000>;
-				#clock-cells = <0>;
-				clock-output-names = "v2m:oscclk0";
-			};
 
 			v2m_oscclk1: osc@1 {
 				/* CLCD clock */
@@ -288,36 +218,6 @@
 				clock-output-names = "v2m:oscclk1";
 			};
 
-			v2m_oscclk2: osc@2 {
-				/* IO FPGA peripheral clock */
-				compatible = "arm,vexpress-osc";
-				arm,vexpress-sysreg,func = <1 2>;
-				freq-range = <24000000 24000000>;
-				#clock-cells = <0>;
-				clock-output-names = "v2m:oscclk2";
-			};
-
-			volt@0 {
-				/* Logic level voltage */
-				compatible = "arm,vexpress-volt";
-				arm,vexpress-sysreg,func = <2 0>;
-				regulator-name = "VIO";
-				regulator-always-on;
-				label = "VIO";
-			};
-
-			temp@0 {
-				/* MCC internal operating temperature */
-				compatible = "arm,vexpress-temp";
-				arm,vexpress-sysreg,func = <4 0>;
-				label = "MCC";
-			};
-
-			reset@0 {
-				compatible = "arm,vexpress-reset";
-				arm,vexpress-sysreg,func = <5 0>;
-			};
-
 			muxfpga@0 {
 				compatible = "arm,vexpress-muxfpga";
 				arm,vexpress-sysreg,func = <7 0>;
@@ -326,16 +226,6 @@
 			shutdown@0 {
 				compatible = "arm,vexpress-shutdown";
 				arm,vexpress-sysreg,func = <8 0>;
-			};
-
-			reboot@0 {
-				compatible = "arm,vexpress-reboot";
-				arm,vexpress-sysreg,func = <9 0>;
-			};
-
-			dvimode@0 {
-				compatible = "arm,vexpress-dvimode";
-				arm,vexpress-sysreg,func = <11 0>;
 			};
 		};
 	};
