@@ -243,7 +243,7 @@
 	wlan {
 		compatible = "ti,wilink6";
 		interrupt-parent = <&gpio6>;
-		interrupts = <14 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <11 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&refclock>;
 		clock-names = "refclock";
 
@@ -566,7 +566,8 @@
 				MX6QDL_PAD_EIM_D29__GPIO3_IO29		0x000b0		/* ov5642 Power Down */
 				MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x000b0		/* ov5642 Reset */
 				MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x0b0b0		/* USB Hub Reset */
-				MX6QDL_PAD_NANDF_CS1__GPIO6_IO14	0x100b0		/* wl12xx_wl_irq */
+				MX6QDL_PAD_NANDF_CS0__GPIO6_IO11	0x100b0		/* wl12xx_wl_irq */
+				MX6QDL_PAD_NANDF_CS1__GPIO6_IO14	0x100b0		/* sd3 voltage select */
 				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x000b0		/* wl12xx_wl_en */
 				MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x000b0		/* wl12xx_bt_en */
 				MX6QDL_PAD_SD1_CLK__OSC32K_32K_OUT	0x000b0		/* TiWi slow clock */
