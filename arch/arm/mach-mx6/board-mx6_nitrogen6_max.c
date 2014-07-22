@@ -546,7 +546,6 @@ static struct fsl_mxc_camera_platform_data tc358743_mipi_data;
 
 static void tc358743_mipi_camera_io_init(void)
 {
-	IOMUX_SETUP(mipi_pads);
 #ifdef CONFIG_TC358743_AUDIO
 	IOMUX_SETUP(tc_audio_pads);
 #endif
@@ -1672,6 +1671,7 @@ static void __init board_init(void)
 		imx6q_add_ipuv3fb(i, &fb_data[i]);
 
 	imx6q_add_vdoa();
+	IOMUX_SETUP(mipi_pads);
 	imx6q_add_lcdif(&lcdif_data);
 	imx6q_add_ldb(&ldb_data);
 	voutdev = imx6q_add_v4l2_output(0);
