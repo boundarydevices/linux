@@ -278,6 +278,18 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 	if (ret)
 		goto err;
 
+	/* set DVB-C symbol rate */
+	if (c->delivery_system == SYS_DVBC_ANNEX_A) {
+		memcpy(cmd.args, "\x14\x00\x02\x11", 4);
+		cmd.args[4] = (c->symbol_rate / 1000) & 0xff;
+		cmd.args[5] = ((c->symbol_rate / 1000) >> 8) & 0xff;
+		cmd.wlen = 6;
+		cmd.rlen = 4;
+		ret = si2168_cmd_execute(s, &cmd);
+		if (ret)
+			goto err;
+	}
+
 	memcpy(cmd.args, "\x14\x00\x0f\x10\x10\x00", 6);
 	cmd.wlen = 6;
 	cmd.rlen = 4;
@@ -307,6 +319,13 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 		goto err;
 
 	memcpy(cmd.args, "\x14\x00\x01\x12\x00\x00", 6);
+	cmd.wlen = 6;
+	cmd.rlen = 4;
+	ret = si2168_cmd_execute(s, &cmd);
+	if (ret)
+		goto err;
+
+	memcpy(cmd.args, "\x14\x00\x01\x03\x0c\x00", 6);
 	cmd.wlen = 6;
 	cmd.rlen = 4;
 	ret = si2168_cmd_execute(s, &cmd);
@@ -379,10 +398,14 @@ static int si2168_init(struct dvb_frontend *fe)
 	chip_id = cmd.args[1] << 24 | cmd.args[2] << 16 | cmd.args[3] << 8 |
 			cmd.args[4] << 0;
 
+	#define SI2168_A20 ('A' << 24 | 68 << 16 | '2' << 8 | '0' << 0)
 	#define SI2168_A30 ('A' << 24 | 68 << 16 | '3' << 8 | '0' << 0)
 	#define SI2168_B40 ('B' << 24 | 68 << 16 | '4' << 8 | '0' << 0)
 
 	switch (chip_id) {
+	case SI2168_A20:
+		fw_file = SI2168_A20_FIRMWARE;
+		break;
 	case SI2168_A30:
 		fw_file = SI2168_A30_FIRMWARE;
 		break;
@@ -597,7 +620,6 @@ static int si2168_probe(struct i2c_client *client,
 	struct si2168_config *config = client->dev.platform_data;
 	struct si2168 *s;
 	int ret;
-	struct si2168_cmd cmd;
 
 	dev_dbg(&client->dev, "%s:\n", __func__);
 
@@ -611,18 +633,13 @@ static int si2168_probe(struct i2c_client *client,
 	s->client = client;
 	mutex_init(&s->i2c_mutex);
 
-	/* check if the demod is there */
-	cmd.wlen = 0;
-	cmd.rlen = 1;
-	ret = si2168_cmd_execute(s, &cmd);
-	if (ret)
-		goto err;
-
 	/* create mux i2c adapter for tuner */
 	s->adapter = i2c_add_mux_adapter(client->adapter, &client->dev, s,
 			0, 0, 0, si2168_select, si2168_deselect);
-	if (s->adapter == NULL)
+	if (s->adapter == NULL) {
+		ret = -ENODEV;
 		goto err;
+	}
 
 	/* create dvb_frontend */
 	memcpy(&s->fe.ops, &si2168_ops, sizeof(struct dvb_frontend_ops));
@@ -680,5 +697,6 @@ module_i2c_driver(si2168_driver);
 MODULE_AUTHOR("Antti Palosaari <crope@iki.fi>");
 MODULE_DESCRIPTION("Silicon Labs Si2168 DVB-T/T2/C demodulator driver");
 MODULE_LICENSE("GPL");
+MODULE_FIRMWARE(SI2168_A20_FIRMWARE);
 MODULE_FIRMWARE(SI2168_A30_FIRMWARE);
 MODULE_FIRMWARE(SI2168_B40_FIRMWARE);

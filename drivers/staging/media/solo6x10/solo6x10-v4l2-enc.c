@@ -16,10 +16,6 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include <linux/kernel.h>
@@ -243,6 +239,8 @@ static int solo_enc_on(struct solo_enc_dev *solo_enc)
 	if (solo_enc->bw_weight > solo_dev->enc_bw_remain)
 		return -EBUSY;
 	solo_enc->sequence = 0;
+	solo_enc->motion_last_state = false;
+	solo_enc->frames_since_last_motion = 0;
 	solo_dev->enc_bw_remain -= solo_enc->bw_weight;
 
 	if (solo_enc->type == SOLO_ENC_TYPE_EXT)
@@ -476,8 +474,9 @@ static int solo_fill_jpeg(struct solo_enc_dev *solo_enc,
 	vb2_set_plane_payload(vb, 0, vop_jpeg_size(vh) + solo_enc->jpeg_len);
 
 	/* may discard all previous data in vbuf->sgl */
-	dma_map_sg(&solo_dev->pdev->dev, vbuf->sgl, vbuf->nents,
-			DMA_FROM_DEVICE);
+	if (!dma_map_sg(&solo_dev->pdev->dev, vbuf->sgl, vbuf->nents,
+			DMA_FROM_DEVICE))
+		return -ENOMEM;
 	ret = solo_send_desc(solo_enc, solo_enc->jpeg_len, vbuf,
 			     vop_jpeg_offset(vh) - SOLO_JPEG_EXT_ADDR(solo_dev),
 			     frame_size, SOLO_JPEG_EXT_ADDR(solo_dev),
@@ -523,8 +522,9 @@ static int solo_fill_mpeg(struct solo_enc_dev *solo_enc,
 	frame_size = ALIGN(vop_mpeg_size(vh) + skip, DMA_ALIGN);
 
 	/* may discard all previous data in vbuf->sgl */
-	dma_map_sg(&solo_dev->pdev->dev, vbuf->sgl, vbuf->nents,
-			DMA_FROM_DEVICE);
+	if (!dma_map_sg(&solo_dev->pdev->dev, vbuf->sgl, vbuf->nents,
+			DMA_FROM_DEVICE))
+		return -ENOMEM;
 	ret = solo_send_desc(solo_enc, skip, vbuf, frame_off, frame_size,
 			SOLO_MP4E_EXT_ADDR(solo_dev),
 			SOLO_MP4E_EXT_SIZE(solo_dev));
@@ -544,15 +544,6 @@ static int solo_enc_fillbuf(struct solo_enc_dev *solo_enc,
 	const vop_header *vh = enc_buf->vh;
 	int ret;
 
-	/* Check for motion flags */
-	vb->v4l2_buf.flags &= ~(V4L2_BUF_FLAG_MOTION_ON |
-				V4L2_BUF_FLAG_MOTION_DETECTED);
-	if (solo_is_motion_on(solo_enc)) {
-		vb->v4l2_buf.flags |= V4L2_BUF_FLAG_MOTION_ON;
-		if (enc_buf->motion)
-			vb->v4l2_buf.flags |= V4L2_BUF_FLAG_MOTION_DETECTED;
-	}
-
 	switch (solo_enc->fmt) {
 	case V4L2_PIX_FMT_MPEG4:
 	case V4L2_PIX_FMT_H264:
@@ -564,9 +555,49 @@ static int solo_enc_fillbuf(struct solo_enc_dev *solo_enc,
 	}
 
 	if (!ret) {
+		bool send_event = false;
+
 		vb->v4l2_buf.sequence = solo_enc->sequence++;
 		vb->v4l2_buf.timestamp.tv_sec = vop_sec(vh);
 		vb->v4l2_buf.timestamp.tv_usec = vop_usec(vh);
+
+		/* Check for motion flags */
+		if (solo_is_motion_on(solo_enc)) {
+			/* It takes a few frames for the hardware to detect
+			 * motion. Once it does it clears the motion detection
+			 * register and it takes again a few frames before
+			 * motion is seen. This means in practice that when the
+			 * motion field is 1, it will go back to 0 for the next
+			 * frame. This leads to motion detection event being
+			 * sent all the time, which is not what we want.
+			 * Instead wait a few frames before deciding that the
+			 * motion has halted. After some experimentation it
+			 * turns out that waiting for 5 frames works well.
+			 */
+			if (enc_buf->motion == 0 &&
+			    solo_enc->motion_last_state &&
+			    solo_enc->frames_since_last_motion++ > 5)
+				send_event = true;
+			else if (enc_buf->motion) {
+				solo_enc->frames_since_last_motion = 0;
+				send_event = !solo_enc->motion_last_state;
+			}
+		}
+
+		if (send_event) {
+			struct v4l2_event ev = {
+				.type = V4L2_EVENT_MOTION_DET,
+				.u.motion_det = {
+					.flags = V4L2_EVENT_MD_FL_HAVE_FRAME_SEQ,
+					.frame_sequence = vb->v4l2_buf.sequence,
+					.region_mask = enc_buf->motion ? 1 : 0,
+				},
+			};
+
+			solo_enc->motion_last_state = enc_buf->motion;
+			solo_enc->frames_since_last_motion = 0;
+			v4l2_event_queue(solo_enc->vfd, &ev);
+		}
 	}
 
 	vb2_buffer_done(vb, ret ? VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
@@ -669,6 +700,7 @@ static int solo_ring_thread(void *data)
 
 	for (;;) {
 		long timeout = schedule_timeout_interruptible(HZ);
+
 		if (timeout == -ERESTARTSYS || kthread_should_stop())
 			break;
 		solo_irq_off(solo_dev, SOLO_IRQ_ENCODER);
@@ -715,6 +747,7 @@ static int solo_ring_start(struct solo_dev *solo_dev)
 					    SOLO6X10_NAME "_ring");
 	if (IS_ERR(solo_dev->ring_thread)) {
 		int err = PTR_ERR(solo_dev->ring_thread);
+
 		solo_dev->ring_thread = NULL;
 		return err;
 	}
@@ -1068,31 +1101,6 @@ static int solo_s_parm(struct file *file, void *priv,
 	return solo_g_parm(file, priv, sp);
 }
 
-static long solo_enc_default(struct file *file, void *fh,
-			bool valid_prio, unsigned int cmd, void *arg)
-{
-	struct solo_enc_dev *solo_enc = video_drvdata(file);
-	struct solo_dev *solo_dev = solo_enc->solo_dev;
-	struct solo_motion_thresholds *thresholds = arg;
-
-	switch (cmd) {
-	case SOLO_IOC_G_MOTION_THRESHOLDS:
-		*thresholds = solo_enc->motion_thresholds;
-		return 0;
-
-	case SOLO_IOC_S_MOTION_THRESHOLDS:
-		if (!valid_prio)
-			return -EBUSY;
-		solo_enc->motion_thresholds = *thresholds;
-		if (solo_enc->motion_enabled && !solo_enc->motion_global)
-			return solo_set_motion_block(solo_dev, solo_enc->ch,
-						&solo_enc->motion_thresholds);
-		return 0;
-	default:
-		return -ENOTTY;
-	}
-}
-
 static int solo_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct solo_enc_dev *solo_enc =
@@ -1110,28 +1118,40 @@ static int solo_s_ctrl(struct v4l2_ctrl *ctrl)
 					 ctrl->val);
 	case V4L2_CID_MPEG_VIDEO_GOP_SIZE:
 		solo_enc->gop = ctrl->val;
+		solo_reg_write(solo_dev, SOLO_VE_CH_GOP(solo_enc->ch), solo_enc->gop);
+		solo_reg_write(solo_dev, SOLO_VE_CH_GOP_E(solo_enc->ch), solo_enc->gop);
 		return 0;
-	case V4L2_CID_MOTION_THRESHOLD:
-		solo_enc->motion_thresh = ctrl->val;
+	case V4L2_CID_MPEG_VIDEO_H264_MIN_QP:
+		solo_enc->qp = ctrl->val;
+		solo_reg_write(solo_dev, SOLO_VE_CH_QP(solo_enc->ch), solo_enc->qp);
+		solo_reg_write(solo_dev, SOLO_VE_CH_QP_E(solo_enc->ch), solo_enc->qp);
+		return 0;
+	case V4L2_CID_DETECT_MD_GLOBAL_THRESHOLD:
+		solo_enc->motion_thresh = ctrl->val << 8;
 		if (!solo_enc->motion_global || !solo_enc->motion_enabled)
 			return 0;
 		return solo_set_motion_threshold(solo_dev, solo_enc->ch,
-			ctrl->val);
-	case V4L2_CID_MOTION_MODE:
-		solo_enc->motion_global = ctrl->val == 1;
-		solo_enc->motion_enabled = ctrl->val > 0;
+				solo_enc->motion_thresh);
+	case V4L2_CID_DETECT_MD_MODE:
+		solo_enc->motion_global = ctrl->val == V4L2_DETECT_MD_MODE_GLOBAL;
+		solo_enc->motion_enabled = ctrl->val > V4L2_DETECT_MD_MODE_DISABLED;
 		if (ctrl->val) {
 			if (solo_enc->motion_global)
-				solo_set_motion_threshold(solo_dev,
-					solo_enc->ch, solo_enc->motion_thresh);
+				solo_set_motion_threshold(solo_dev, solo_enc->ch,
+					solo_enc->motion_thresh);
 			else
 				solo_set_motion_block(solo_dev, solo_enc->ch,
-						&solo_enc->motion_thresholds);
+					solo_enc->md_thresholds->p_cur.p_u16);
 		}
 		solo_motion_toggle(solo_enc, ctrl->val);
 		return 0;
+	case V4L2_CID_DETECT_MD_THRESHOLD_GRID:
+		if (solo_enc->motion_enabled && !solo_enc->motion_global)
+			return solo_set_motion_block(solo_dev, solo_enc->ch,
+					solo_enc->md_thresholds->p_new.p_u16);
+		break;
 	case V4L2_CID_OSD_TEXT:
-		strcpy(solo_enc->osd_text, ctrl->string);
+		strcpy(solo_enc->osd_text, ctrl->p_new.p_char);
 		err = solo_osd_print(solo_enc);
 		return err;
 	default:
@@ -1139,6 +1159,21 @@ static int solo_s_ctrl(struct v4l2_ctrl *ctrl)
 	}
 
 	return 0;
+}
+
+static int solo_subscribe_event(struct v4l2_fh *fh,
+				const struct v4l2_event_subscription *sub)
+{
+
+	switch (sub->type) {
+	case V4L2_EVENT_CTRL:
+		return v4l2_ctrl_subscribe_event(fh, sub);
+	case V4L2_EVENT_MOTION_DET:
+		/* Allow for up to 30 events (1 second for NTSC) to be
+		 * stored. */
+		return v4l2_event_subscribe(fh, sub, 30, NULL);
+	}
+	return -EINVAL;
 }
 
 static const struct v4l2_file_operations solo_enc_fops = {
@@ -1179,9 +1214,8 @@ static const struct v4l2_ioctl_ops solo_enc_ioctl_ops = {
 	.vidioc_g_parm			= solo_g_parm,
 	/* Logging and events */
 	.vidioc_log_status		= v4l2_ctrl_log_status,
-	.vidioc_subscribe_event		= v4l2_ctrl_subscribe_event,
+	.vidioc_subscribe_event		= solo_subscribe_event,
 	.vidioc_unsubscribe_event	= v4l2_event_unsubscribe,
-	.vidioc_default			= solo_enc_default,
 };
 
 static const struct video_device solo_enc_template = {
@@ -1197,33 +1231,6 @@ static const struct v4l2_ctrl_ops solo_ctrl_ops = {
 	.s_ctrl = solo_s_ctrl,
 };
 
-static const struct v4l2_ctrl_config solo_motion_threshold_ctrl = {
-	.ops = &solo_ctrl_ops,
-	.id = V4L2_CID_MOTION_THRESHOLD,
-	.name = "Motion Detection Threshold",
-	.type = V4L2_CTRL_TYPE_INTEGER,
-	.max = 0xffff,
-	.def = SOLO_DEF_MOT_THRESH,
-	.step = 1,
-	.flags = V4L2_CTRL_FLAG_SLIDER,
-};
-
-static const char * const solo_motion_mode_menu[] = {
-	"Disabled",
-	"Global Threshold",
-	"Regional Threshold",
-	NULL
-};
-
-static const struct v4l2_ctrl_config solo_motion_enable_ctrl = {
-	.ops = &solo_ctrl_ops,
-	.id = V4L2_CID_MOTION_MODE,
-	.name = "Motion Detection Mode",
-	.type = V4L2_CTRL_TYPE_MENU,
-	.qmenu = solo_motion_mode_menu,
-	.max = 2,
-};
-
 static const struct v4l2_ctrl_config solo_osd_text_ctrl = {
 	.ops = &solo_ctrl_ops,
 	.id = V4L2_CID_OSD_TEXT,
@@ -1233,13 +1240,22 @@ static const struct v4l2_ctrl_config solo_osd_text_ctrl = {
 	.step = 1,
 };
 
+/* Motion Detection Threshold matrix */
+static const struct v4l2_ctrl_config solo_md_thresholds = {
+	.ops = &solo_ctrl_ops,
+	.id = V4L2_CID_DETECT_MD_THRESHOLD_GRID,
+	.dims = { SOLO_MOTION_SZ, SOLO_MOTION_SZ },
+	.def = SOLO_DEF_MOT_THRESH,
+	.max = 65535,
+	.step = 1,
+};
+
 static struct solo_enc_dev *solo_enc_alloc(struct solo_dev *solo_dev,
 					   u8 ch, unsigned nr)
 {
 	struct solo_enc_dev *solo_enc;
 	struct v4l2_ctrl_handler *hdl;
 	int ret;
-	int x, y;
 
 	solo_enc = kzalloc(sizeof(*solo_enc), GFP_KERNEL);
 	if (!solo_enc)
@@ -1260,9 +1276,18 @@ static struct solo_enc_dev *solo_enc_alloc(struct solo_dev *solo_dev,
 			V4L2_CID_SHARPNESS, 0, 15, 1, 0);
 	v4l2_ctrl_new_std(hdl, &solo_ctrl_ops,
 			V4L2_CID_MPEG_VIDEO_GOP_SIZE, 1, 255, 1, solo_dev->fps);
-	v4l2_ctrl_new_custom(hdl, &solo_motion_threshold_ctrl, NULL);
-	v4l2_ctrl_new_custom(hdl, &solo_motion_enable_ctrl, NULL);
+	v4l2_ctrl_new_std(hdl, &solo_ctrl_ops,
+			V4L2_CID_MPEG_VIDEO_H264_MIN_QP, 0, 31, 1, SOLO_DEFAULT_QP);
+	v4l2_ctrl_new_std_menu(hdl, &solo_ctrl_ops,
+			V4L2_CID_DETECT_MD_MODE,
+			V4L2_DETECT_MD_MODE_THRESHOLD_GRID, 0,
+			V4L2_DETECT_MD_MODE_DISABLED);
+	v4l2_ctrl_new_std(hdl, &solo_ctrl_ops,
+			V4L2_CID_DETECT_MD_GLOBAL_THRESHOLD, 0, 0xff, 1,
+			SOLO_DEF_MOT_THRESH >> 8);
 	v4l2_ctrl_new_custom(hdl, &solo_osd_text_ctrl, NULL);
+	solo_enc->md_thresholds =
+		v4l2_ctrl_new_custom(hdl, &solo_md_thresholds, NULL);
 	if (hdl->error) {
 		ret = hdl->error;
 		goto hdl_free;
@@ -1283,11 +1308,6 @@ static struct solo_enc_dev *solo_enc_alloc(struct solo_dev *solo_dev,
 	solo_enc->mode = SOLO_ENC_MODE_CIF;
 	solo_enc->motion_global = true;
 	solo_enc->motion_thresh = SOLO_DEF_MOT_THRESH;
-	for (y = 0; y < SOLO_MOTION_SZ; y++)
-		for (x = 0; x < SOLO_MOTION_SZ; x++)
-			solo_enc->motion_thresholds.thresholds[y][x] =
-							SOLO_DEF_MOT_THRESH;
-
 	solo_enc->vidq.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	solo_enc->vidq.io_modes = VB2_MMAP | VB2_USERPTR | VB2_READ;
 	solo_enc->vidq.ops = &solo_enc_video_qops;
@@ -1380,6 +1400,7 @@ int solo_enc_v4l2_init(struct solo_dev *solo_dev, unsigned nr)
 
 	if (i != solo_dev->nr_chans) {
 		int ret = PTR_ERR(solo_dev->v4l2_enc[i]);
+
 		while (i--)
 			solo_enc_free(solo_dev->v4l2_enc[i]);
 		pci_free_consistent(solo_dev->pdev, solo_dev->vh_size,
