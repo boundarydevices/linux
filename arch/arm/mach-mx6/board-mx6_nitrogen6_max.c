@@ -1456,7 +1456,7 @@ static struct gpio initial_gpios[] __initdata = {
 	{.label = "ov5640_mipi_reset",	.gpio = GP_OV5640_MIPI_RESET,	.flags = 0},
 	{.label = "ov5640_csi1_pwdn",	.gpio = GP_OV5640_CSI1_PWRDN,	.flags = GPIOF_HIGH},
 	{.label = "ov5640_csi1_reset",	.gpio = GP_OV5640_CSI1_RESET,	.flags = 0},
-	{.label = "flexcan1-stby",	.gpio = GP_CAN1_STBY,		.flags = 0},
+	{.label = "flexcan1-stby",	.gpio = GP_CAN1_STBY,		.flags = GPIOF_HIGH},
 	{.label = "usb-pwr",		.gpio = GP_USB_OTG_PWR,		.flags = 0},
 };
 
