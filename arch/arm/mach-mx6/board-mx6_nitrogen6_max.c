@@ -455,6 +455,7 @@ static int ov5640_mipi_reset_active;
 static void ov5640_mipi_camera_io_init(void)
 {
 	pr_info("%s\n", __func__);
+	gpio_direction_output(GP_OV5640_MIPI_RESET, 0);
 	if (!mipi_pwm)
 		mipi_pwm = pwm_request(2, "mipi_clock");
 	if (IS_ERR(mipi_pwm)) {
@@ -538,18 +539,18 @@ static struct mxc_audio_platform_data tc_audio_data = {
  * (tc358743 Mipi-CSI2 bridge) - J16
  * NANDF_WP_B	GPIO[6]:9	Nitrogen6x - RESET
  * NANDF_D5	GPIO[2]:5	Nitrogen6x/SOM - TC358743 INT
- * NANDF_CS0	GPIO[6]:11	reset, old rev SOM jumpered
  * SD1_DAT1	GPIO[1]:16	24 Mhz XCLK/XVCLK (pwm3)
  */
 static struct fsl_mxc_camera_platform_data tc358743_mipi_data;
 
 static void tc358743_mipi_camera_io_init(void)
 {
-	IOMUX_SETUP(mipi_pads);
+	gpio_direction_input(GP_TC3587_IRQ);
 #ifdef CONFIG_TC358743_AUDIO
 	IOMUX_SETUP(tc_audio_pads);
 #endif
 	pr_info("%s\n", __func__);
+	gpio_set_value(GP_TC3587_RESET, 1);
 
 	if (cpu_is_mx6dl()) {
 		/*
@@ -568,7 +569,7 @@ static void tc358743_mipi_camera_io_init(void)
 static void tc358743_mipi_camera_powerdown(int powerdown)
 {
 	pr_info("%s: powerdown=%d, power_gp=0x%x\n",
-			__func__, powerdown, IMX_GPIO_NR(6, 9));
+			__func__, powerdown, GP_TC3587_RESET);
 }
 
 static struct fsl_mxc_camera_platform_data tc358743_mipi_data = {
@@ -725,7 +726,7 @@ static struct i2c_board_info i2c4_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("tc358743_mipi", 0x0f),
 		.platform_data = (void *)&tc358743_mipi_data,
-		.irq = gpio_to_irq(IMX_GPIO_NR(2, 5)),
+		.irq = gpio_to_irq(GP_TC3587_IRQ),
 	},
 #endif
 };

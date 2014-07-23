@@ -247,8 +247,10 @@ static iomux_v3_cfg_t MX6NAME(board_pads)[] = {
 	/* Camera(Mipi) - J16 */
 	MX6PAD(SD1_DAT1__PWM3_PWMO),		/* pin 10 */
 #define GP_OV5640_MIPI_PWRDN	IMX_GPIO_NR(6, 9)
+#define GP_TC3587_RESET		IMX_GPIO_NR(6, 9)
 	MX6PAD(NANDF_WP_B__GPIO_6_9),
 #define GP_OV5640_MIPI_RESET	IMX_GPIO_NR(2, 5)
+#define GP_TC3587_IRQ		IMX_GPIO_NR(2, 5)
 	MX6PAD(NANDF_D5__GPIO_2_5),
 
 
@@ -445,17 +447,6 @@ static iomux_v3_cfg_t MX6NAME(lcd_pads_disable)[] = {
 	MX6PAD(DISP0_DAT23__GPIO_5_17),
 	0
 };
-
-#if defined(CONFIG_MXC_CAMERA_OV5640_MIPI) || defined(CONFIG_MXC_CAMERA_OV5640_MIPI_MODULE) || \
-    defined(CONFIG_MXC_HDMI_CSI2_TC358743) || defined(CONFIG_MXC_HDMI_CSI2_TC358743_MODULE)
-static iomux_v3_cfg_t MX6NAME(mipi_pads)[] = {
-	MX6PAD(NANDF_WP_B__GPIO_6_9),		/* J16 - MIPI Powerdown - Nitrogen6x, SOM is NC, Reset For TC358743 */
-	MX6PAD(NANDF_D5__GPIO_2_5),		/* J16 - MIPI camera reset - Nitrogen6x/SOM, INT for TC358743 */
-	MX6PAD(NANDF_CS0__GPIO_6_11),		/* Camera Reset, SOM jumpered */
-	MX6PAD(GPIO_6__GPIO_1_6),		/* Camera GP */
-	0
-};
-#endif
 
 #ifdef CONFIG_TC358743_AUDIO
 static iomux_v3_cfg_t MX6NAME(tc_audio_pads)[] = {
