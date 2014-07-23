@@ -2882,7 +2882,7 @@ static void det_worker(struct work_struct *work)
 		td->det_work_timeout = DET_WORK_TIMEOUT_DEFERRED;
 		goto out;
 	}
-	pr_info("%s: 852f=%x\n", __func__, u32val);
+//	pr_info("%s: 852f=%x\n", __func__, u32val);
 	if (u32val & TC3587430_HDMI_DETECT) {
 		pr_info("%s: hdmi detect %x\n", __func__, u32val);
 		td->lock = u32val & TC3587430_HDMI_DETECT;
@@ -2903,7 +2903,7 @@ static void det_worker(struct work_struct *work)
 		if (ret < 0) {
 			pr_err("%s: Error reading mode\n", __func__);
 		}
-		pr_info("%s: 8521=%x\n", __func__, u32val);
+//		pr_info("%s: 8521=%x\n", __func__, u32val);
 	}
 	if ((unsigned char)td->hdmi_mode != (unsigned char)u32val) {
 		td->det_work_timeout = DET_WORK_TIMEOUT_DEFAULT;
