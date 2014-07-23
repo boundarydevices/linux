@@ -30,7 +30,7 @@
  *
  *	Corrupted registers: x0-x7, x9-x11
  */
-ENTRY(__flush_dcache_all)
+__flush_dcache_all:
 	dsb	sy				// ensure ordering with previous memory accesses
 	mrs	x0, clidr_el1			// read clidr
 	and	x3, x0, #0x7000000		// extract loc from clidr
@@ -168,6 +168,14 @@ ENTRY(__flush_dcache_area)
 ENDPROC(__flush_dcache_area)
 
 /*
+ *	__inval_cache_range(start, end)
+ *	- start   - start address of region
+ *	- end     - end address of region
+ */
+ENTRY(__inval_cache_range)
+	/* FALLTHROUGH */
+
+/*
  *	__dma_inv_range(start, end)
  *	- start   - virtual start address of region
  *	- end     - virtual end address of region
@@ -190,6 +198,7 @@ __dma_inv_range:
 	b.lo	2b
 	dsb	sy
 	ret
+ENDPROC(__inval_cache_range)
 ENDPROC(__dma_inv_range)
 
 /*
