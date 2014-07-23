@@ -383,7 +383,7 @@ static void camera_reset(int power_gp, int poweroff_level, int reset_gp)
  * EIM_BCLK 	GPIO[6]:31	reset
  * SD1_DAT1	GPIO[1]:16	24 Mhz XCLK/XVCLK (pwm3)
  */
-struct pwm_device	*mipi_pwm;
+static struct pwm_device	*mipi_pwm;
 
 static void ov5640_mipi_camera_io_init(void)
 {
