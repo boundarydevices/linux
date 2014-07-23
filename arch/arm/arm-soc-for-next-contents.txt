@@ -51,6 +51,8 @@ next/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-cleanup
 	omap/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.17/soc-cleanup
+	patch
+		video: fix up versatile CLCD helper move
 
 next/soc
 	renesas/clock
