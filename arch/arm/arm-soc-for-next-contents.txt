@@ -141,6 +141,10 @@ next/dt
 		git://git.infradead.org/linux-mvebu tags/mvebu-dt-3.17
 	mvebu/dt2
 		git://git.infradead.org/linux-mvebu tags/mvebu-dt-3.17-2
+	mvebu/dt3
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-3.17-3
+	zynq/dt2
+		git://git.xilinx.com/linux-xlnx zynq-dt-for-3.17-2
 
 next/drivers
 	at91/drivers
@@ -152,6 +156,7 @@ next/drivers
 	patch
 		PCI: spear: Fix Section mismatch compilation warning for probe()
 		PCI: spear: Remove spear13xx_pcie_remove()
+		bus: ARM CCN PMU driver
 
 next/defconfig
 	patch
