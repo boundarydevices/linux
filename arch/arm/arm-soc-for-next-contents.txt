@@ -95,6 +95,8 @@ next/soc
 		git://git.infradead.org/linux-mvebu tags/mvebu-soc-3.17-2
 	samsung/cpuidle
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/exynos-cpuidle
+	mediatek/soc
+		https://github.com/mbgg/linux-mediatek.git tags/v3.17-next-mediatek-support
 
 next/boards
 	renesas/boards
