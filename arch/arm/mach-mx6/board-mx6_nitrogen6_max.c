@@ -72,7 +72,7 @@
 #include <mach/mxc_asrc.h>
 #include <linux/i2c/tsc2007.h>
 #include <linux/wl12xx.h>
-
+#include <linux/ti_wilink_st.h>
 #include <asm/irq.h>
 #include <asm/setup.h>
 #include <asm/mach-types.h>
@@ -224,6 +224,34 @@ static const struct anatop_thermal_platform_data
 	anatop_thermal_data __initconst = {
 		.name = "anatop_thermal",
 };
+
+#ifdef CONFIG_TI_ST
+/* TI-ST for WL1271 BT */
+#include "wl12xx-bt.h"
+
+static struct ti_st_plat_data wilink_pdata = {
+	.nshutdown_gpio = GP_WL1271_BT_EN,
+	.dev_name = "/dev/ttymxc2",
+	.flow_cntrl = 1,
+	.baud_rate = 3000000,
+	.suspend = plat_kim_suspend,
+	.resume = plat_kim_resume,
+	.chip_enable = plat_kim_chip_enable,
+	.chip_disable = plat_kim_chip_disable
+};
+
+static struct platform_device wl127x_bt_device = {
+	.name		= "kim",
+	.id		= -1,
+	.dev.platform_data = &wilink_pdata,
+};
+
+static struct platform_device btwilink_device = {
+	.name = "btwilink",
+	.id = -1,
+};
+
+#endif
 
 static unsigned short ksz9031_por_cmds[] = {
 	0x0204, 0x0,		/* RX_CTL/TX_CTL output pad skew */
@@ -1821,9 +1849,14 @@ static void __init board_init(void)
 	gpio_free(GP_WL1271_BT_EN);
 	mdelay(1);
 #endif
-
 	imx6q_add_pcie(&pcie_data);
 
+	gpio_export(GP_WL1271_BT_EN,1);
+
+#ifdef CONFIG_TI_ST
+	platform_device_register (&wl127x_bt_device);
+	platform_device_register (&btwilink_device);
+#endif
 	spdif_data.spdif_core_clk = clk_get_sys("mxc_spdif.0", NULL);
 	clk_put(spdif_data.spdif_core_clk);
 	imx6q_add_spdif(&spdif_data);
