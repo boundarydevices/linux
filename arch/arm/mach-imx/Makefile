@@ -141,4 +141,5 @@ obj-$(CONFIG_SOC_IMX53) += mach-imx53.o
 
 obj-$(CONFIG_SOC_VF610) += clk-vf610.o mach-vf610.o
 
+obj-$(CONFIG_MX6_RAMOOPS) += mx6_ramoops.o
 obj-y += devices/

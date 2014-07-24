@@ -880,6 +880,13 @@ config MXC_REBOOT_ANDROID_CMD
 
 endif
 
+config MX6_RAMOOPS
+	bool "MX6 ramoops Support"
+	depends on PSTORE_RAM
+	default n
+	help
+	 This config is for MX6 ramoop support
+
 source "arch/arm/mach-imx/devices/Kconfig"
 
 endmenu
