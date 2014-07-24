@@ -26,6 +26,7 @@
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
 #include <asm/system_misc.h>
+#include <linux/memblock.h>
 
 #include "common.h"
 #include "cpuidle.h"
@@ -358,6 +359,21 @@ static const char *imx6sx_dt_compat[] __initdata = {
 	NULL,
 };
 
+extern unsigned long int ramoops_phys_addr;
+extern unsigned long int ramoops_mem_size;
+static void imx6sx_reserve(void)
+{
+#ifdef CONFIG_PSTORE_RAM
+	if (ramoops_mem_size) {
+		memblock_reserve(ramoops_phys_addr, ramoops_mem_size);
+		memblock_remove(ramoops_phys_addr, ramoops_mem_size);
+	} else {
+		pr_err("no memory reserve for ramoops.\n");
+	}
+#endif
+	return;
+}
+
 DT_MACHINE_START(IMX6SX, "Freescale i.MX6 SoloX (Device Tree)")
 	.map_io		= imx6sx_map_io,
 	.init_irq	= imx6sx_init_irq,
@@ -365,5 +381,6 @@ DT_MACHINE_START(IMX6SX, "Freescale i.MX6 SoloX (Device Tree)")
 	.init_machine	= imx6sx_init_machine,
 	.init_late	= imx6sx_init_late,
 	.dt_compat	= imx6sx_dt_compat,
+	.reserve    = imx6sx_reserve,
 	.restart	= mxc_restart,
 MACHINE_END
