@@ -727,7 +727,6 @@ AllocateMemory:
 
     case gcvPOOL_CONTIGUOUS:
         loopCount = (gctINT) gcvPOOL_NUMBER_OF_POOLS;
-        cacheable = gcvTRUE; /*For be compatiable with android usage*/
         break;
 
     case gcvPOOL_DEFAULT_FORCE_CONTIGUOUS_CACHEABLE:
