@@ -352,11 +352,34 @@ static void spi_device_init(void)
 
 static struct mxc_audio_platform_data audio_data;
 
+static int dapm_enable;
+static int curr_enable;
+
+static int amp_enable(int enable)
+{
+	dapm_enable = enable;
+	if (gpio_get_value(GP_HEADPHONE_DET))
+		enable = 0;
+	else
+		enable |= curr_enable;
+	curr_enable = enable;
+	gpio_set_value(GP_AUDIO_MUTE, enable ? 1 : 0);
+	return 0;
+}
+
+irqreturn_t headphone_change(int irq, void *dev_id)
+{
+	amp_enable(dapm_enable);
+	return IRQ_HANDLED;
+}
+
+
 static int sgtl5000_init(void)
 {
 	struct clk *clko;
 	struct clk *new_parent;
 	int rate;
+	int ret;
 
 	clko = clk_get(NULL, "clko_clk");
 	if (IS_ERR(clko)) {
@@ -378,6 +401,15 @@ static int sgtl5000_init(void)
 	audio_data.sysclk = rate;
 	clk_set_rate(clko, rate);
 	clk_enable(clko);
+	ret = request_irq(gpio_to_irq(GP_HEADPHONE_DET), headphone_change, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, "headphone_det", NULL);
+	if (ret)
+		pr_err("Error:Unable to get headphone detect irq\n");
+	return 0;
+}
+
+static int sgtl5000_finit(void)
+{
+	free_irq(gpio_to_irq(GP_HEADPHONE_DET), NULL);
 	return 0;
 }
 
@@ -390,7 +422,10 @@ static struct mxc_audio_platform_data audio_data = {
 	.src_port = 2,
 	.ext_port = 3,
 	.init = sgtl5000_init,
+	.finit = sgtl5000_finit,
 	.hp_gpio = -1,
+	.mic_gpio = -1,
+	.amp_enable = amp_enable,
 };
 
 static struct platform_device audio_device = {
@@ -1458,6 +1493,8 @@ static struct gpio initial_gpios[] __initdata = {
 	{.label = "ov5640_csi1_reset",	.gpio = GP_OV5640_CSI1_RESET,	.flags = 0},
 	{.label = "flexcan1-stby",	.gpio = GP_CAN1_STBY,		.flags = GPIOF_HIGH},
 	{.label = "usb-pwr",		.gpio = GP_USB_OTG_PWR,		.flags = 0},
+	{.label = "headphone_detect",	.gpio = GP_HEADPHONE_DET,	.flags = GPIOF_DIR_IN},
+	{.label = "audio_mute",		.gpio = GP_AUDIO_MUTE,		.flags = 0},
 };
 
 static int bt_power_change(int status)
