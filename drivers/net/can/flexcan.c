@@ -38,6 +38,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/regmap.h>
@@ -226,6 +227,8 @@ struct flexcan_priv {
 	struct flexcan_platform_data *pdata;
 	const struct flexcan_devtype_data *devtype_data;
 	struct flexcan_stop_mode stm;
+	int stby_gpio;
+	enum of_gpio_flags stby_gpio_flags;
 	int id;
 };
 
@@ -297,6 +300,11 @@ static void flexcan_transceiver_switch(const struct flexcan_priv *priv, int on)
 {
 	if (priv->pdata && priv->pdata->transceiver_switch)
 		priv->pdata->transceiver_switch(on);
+	else if (gpio_is_valid(priv->stby_gpio)) {
+		if (priv->stby_gpio_flags & OF_GPIO_ACTIVE_LOW)
+			on = !on ;
+		gpio_set_value(priv->stby_gpio, on);
+	}
 }
 
 static inline int flexcan_has_and_handle_berr(const struct flexcan_priv *priv,
@@ -1178,6 +1186,14 @@ static int flexcan_probe(struct platform_device *pdev)
 	priv->pdata = pdev->dev.platform_data;
 	priv->devtype_data = devtype_data;
 
+	priv->stby_gpio = of_get_named_gpio_flags(pdev->dev.of_node,
+						  "trx-stby-gpio", 0,
+						  &priv->stby_gpio_flags);
+	if (gpio_is_valid(priv->stby_gpio)){
+		gpio_request_one(priv->stby_gpio, GPIOF_DIR_OUT, "flexcan-trx-stby");
+		gpio_direction_output(priv->stby_gpio,1);
+	}
+
 	netif_napi_add(dev, &priv->napi, flexcan_poll, FLEXCAN_NAPI_WEIGHT);
 
 	dev_set_drvdata(&pdev->dev, dev);
@@ -1227,6 +1243,9 @@ static int flexcan_remove(struct platform_device *pdev)
 	unregister_flexcandev(dev);
 	platform_set_drvdata(pdev, NULL);
 	iounmap(priv->base);
+
+	if (gpio_is_valid(priv->stby_gpio))
+		gpio_free(priv->stby_gpio);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	release_mem_region(mem->start, resource_size(mem));
