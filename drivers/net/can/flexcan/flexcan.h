@@ -114,6 +114,7 @@ struct flexcan_priv {
 	/* Read and Write APIs */
 	u32 (*read)(void __iomem *addr);
 	void (*write)(u32 val, void __iomem *addr);
+	struct gpio_desc *gpiod_stby;
 };
 
 extern const struct ethtool_ops flexcan_ethtool_ops;

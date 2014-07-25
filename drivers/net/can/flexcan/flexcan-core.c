@@ -24,6 +24,7 @@
 #include <linux/netdevice.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/can/platform/flexcan.h>
@@ -630,6 +631,8 @@ static void flexcan_clks_disable(const struct flexcan_priv *priv)
 
 static inline int flexcan_transceiver_enable(const struct flexcan_priv *priv)
 {
+	gpiod_set_value(priv->gpiod_stby, 0);
+
 	if (!priv->reg_xceiver)
 		return 0;
 
@@ -638,6 +641,8 @@ static inline int flexcan_transceiver_enable(const struct flexcan_priv *priv)
 
 static inline int flexcan_transceiver_disable(const struct flexcan_priv *priv)
 {
+	gpiod_set_value(priv->gpiod_stby, 1);
+
 	if (!priv->reg_xceiver)
 		return 0;
 
@@ -2182,6 +2187,9 @@ static int flexcan_probe(struct platform_device *pdev)
 			goto failed_platform_get_irq;
 		}
 	}
+
+	priv->gpiod_stby = devm_gpiod_get_optional(&pdev->dev,
+						  "trx-stby", GPIOD_OUT_HIGH);
 
 	if (priv->devtype_data.quirks & FLEXCAN_QUIRK_SUPPORT_FD) {
 		priv->can.ctrlmode_supported |= CAN_CTRLMODE_FD |
