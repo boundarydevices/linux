@@ -26,6 +26,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/of_gpio.h>	
 #include <linux/regulator/consumer.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/regmap.h>
@@ -338,6 +339,8 @@ struct flexcan_priv {
 	/* Read and Write APIs */
 	u32 (*read)(void __iomem *addr);
 	void (*write)(u32 val, void __iomem *addr);
+	int stby_gpio;
+	enum of_gpio_flags stby_gpio_flags;
 };
 
 static const struct flexcan_devtype_data fsl_p1010_devtype_data = {
@@ -629,6 +632,11 @@ static inline int flexcan_transceiver_enable(const struct flexcan_priv *priv)
 	if (!priv->reg_xceiver)
 		return 0;
 
+	if (gpio_is_valid(priv->stby_gpio)) {
+		gpio_set_value(priv->stby_gpio,
+			(priv->stby_gpio_flags & OF_GPIO_ACTIVE_LOW) ? 1 : 0);
+	}
+
 	return regulator_enable(priv->reg_xceiver);
 }
 
@@ -636,6 +644,11 @@ static inline int flexcan_transceiver_disable(const struct flexcan_priv *priv)
 {
 	if (!priv->reg_xceiver)
 		return 0;
+
+	if (gpio_is_valid(priv->stby_gpio)) {
+		gpio_set_value(priv->stby_gpio,
+			(priv->stby_gpio_flags & OF_GPIO_ACTIVE_LOW) ? 0 : 1);
+	}
 
 	return regulator_disable(priv->reg_xceiver);
 }
@@ -1945,6 +1958,14 @@ static int flexcan_probe(struct platform_device *pdev)
 	priv->devtype_data = devtype_data;
 	priv->reg_xceiver = reg_xceiver;
 
+	priv->stby_gpio = of_get_named_gpio_flags(pdev->dev.of_node,
+						  "trx-stby-gpio", 0,
+						  &priv->stby_gpio_flags);
+	if (gpio_is_valid(priv->stby_gpio)){
+		gpio_request_one(priv->stby_gpio, GPIOF_DIR_OUT, "flexcan-trx-stby");
+		gpio_direction_output(priv->stby_gpio,1);
+	}
+
 	if (priv->devtype_data->quirks & FLEXCAN_QUIRK_TIMESTAMP_SUPPORT_FD) {
 		if (priv->devtype_data->quirks & FLEXCAN_QUIRK_USE_OFF_TIMESTAMP) {
 			priv->can.ctrlmode_supported |= CAN_CTRLMODE_FD | CAN_CTRLMODE_FD_NON_ISO;
@@ -1998,6 +2019,9 @@ static int flexcan_remove(struct platform_device *pdev)
 
 	unregister_flexcandev(dev);
 	pm_runtime_disable(&pdev->dev);
+	if (gpio_is_valid(priv->stby_gpio))
+		gpio_free(priv->stby_gpio);
+
 	free_candev(dev);
 
 	return 0;
