@@ -26,6 +26,7 @@
 #include <linux/netdevice.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/can/platform/flexcan.h>
@@ -384,6 +385,8 @@ struct flexcan_priv {
 	/* Read and Write APIs */
 	u32 (*read)(void __iomem *addr);
 	void (*write)(u32 val, void __iomem *addr);
+	int stby_gpio;
+	enum of_gpio_flags stby_gpio_flags;
 };
 
 static const struct flexcan_devtype_data fsl_mcf5441x_devtype_data = {
@@ -703,6 +706,11 @@ static void flexcan_clks_disable(const struct flexcan_priv *priv)
 
 static inline int flexcan_transceiver_enable(const struct flexcan_priv *priv)
 {
+	if (gpio_is_valid(priv->stby_gpio)) {
+		gpio_set_value(priv->stby_gpio,
+			(priv->stby_gpio_flags & OF_GPIO_ACTIVE_LOW) ? 1 : 0);
+	}
+
 	if (!priv->reg_xceiver)
 		return 0;
 
@@ -711,6 +719,11 @@ static inline int flexcan_transceiver_enable(const struct flexcan_priv *priv)
 
 static inline int flexcan_transceiver_disable(const struct flexcan_priv *priv)
 {
+	if (gpio_is_valid(priv->stby_gpio)) {
+		gpio_set_value(priv->stby_gpio,
+			(priv->stby_gpio_flags & OF_GPIO_ACTIVE_LOW) ? 0 : 1);
+	}
+
 	if (!priv->reg_xceiver)
 		return 0;
 
@@ -2266,6 +2279,14 @@ static int flexcan_probe(struct platform_device *pdev)
 		}
 	}
 
+	priv->stby_gpio = of_get_named_gpio_flags(pdev->dev.of_node,
+						  "trx-stby-gpio", 0,
+						  &priv->stby_gpio_flags);
+	if (gpio_is_valid(priv->stby_gpio)){
+		gpio_request_one(priv->stby_gpio, GPIOF_DIR_OUT, "flexcan-trx-stby");
+		gpio_direction_output(priv->stby_gpio,1);
+	}
+
 	if (priv->devtype_data.quirks & FLEXCAN_QUIRK_SUPPORT_FD) {
 		priv->can.ctrlmode_supported |= CAN_CTRLMODE_FD |
 			CAN_CTRLMODE_FD_NON_ISO;
@@ -2311,11 +2332,15 @@ static int flexcan_probe(struct platform_device *pdev)
 static int flexcan_remove(struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
+	struct flexcan_priv *priv = netdev_priv(dev);
 
 	device_set_wakeup_enable(&pdev->dev, false);
 	device_set_wakeup_capable(&pdev->dev, false);
 	unregister_flexcandev(dev);
 	pm_runtime_disable(&pdev->dev);
+	if (gpio_is_valid(priv->stby_gpio))
+		gpio_free(priv->stby_gpio);
+
 	free_candev(dev);
 
 	return 0;
