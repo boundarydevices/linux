@@ -90,12 +90,20 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 	int other_file = global_page_state(NR_FILE_PAGES) -
 						global_page_state(NR_SHMEM);
 
+	/*reduce CMA pages from free pages when allocate non-movable memory.*/
+	if (allocflags_to_migratetype(sc->gfp_mask) != MIGRATE_MOVABLE)
+		other_free = other_free - global_page_state(NR_FREE_CMA_PAGES);
+
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
 	if (lowmem_minfree_size < array_size)
 		array_size = lowmem_minfree_size;
 	for (i = 0; i < array_size; i++) {
 		minfree = lowmem_minfree[i];
+		/*low down minfree to half when allocate non-movable memory.*/
+		if (allocflags_to_migratetype(sc->gfp_mask) != MIGRATE_MOVABLE)
+			minfree = minfree / 2;
+
 		if (other_free < minfree && other_file < minfree) {
 			min_score_adj = lowmem_adj[i];
 			break;
