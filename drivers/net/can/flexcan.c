@@ -27,6 +27,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
@@ -371,6 +372,8 @@ struct flexcan_priv {
 #endif
 	bool wakeup;
 	bool in_stop_mode;
+	int stby_gpio;
+	enum of_gpio_flags stby_gpio_flags;
 
 	/* Selects the clock source to CAN Protocol Engine (PE), 1 by default*/
 	u32 clk_src;
@@ -646,6 +649,11 @@ static inline int flexcan_transceiver_enable(const struct flexcan_priv *priv)
 		return 0;
 	}
 
+	if (gpio_is_valid(priv->stby_gpio)) {
+		gpio_set_value(priv->stby_gpio,
+			(priv->stby_gpio_flags & OF_GPIO_ACTIVE_LOW) ? 1 : 0);
+	}
+
 	if (!priv->reg_xceiver)
 		return 0;
 
@@ -657,6 +665,11 @@ static inline int flexcan_transceiver_disable(const struct flexcan_priv *priv)
 	if (priv->pdata && priv->pdata->transceiver_switch) {
 		priv->pdata->transceiver_switch(0);
 		return 0;
+	}
+
+	if (gpio_is_valid(priv->stby_gpio)) {
+		gpio_set_value(priv->stby_gpio,
+			(priv->stby_gpio_flags & OF_GPIO_ACTIVE_LOW) ? 0 : 1);
 	}
 
 	if (!priv->reg_xceiver)
@@ -1925,6 +1938,14 @@ static int flexcan_probe(struct platform_device *pdev)
 	priv->devtype_data = devtype_data;
 	priv->reg_xceiver = reg_xceiver;
 
+	priv->stby_gpio = of_get_named_gpio_flags(pdev->dev.of_node,
+						  "trx-stby-gpio", 0,
+						  &priv->stby_gpio_flags);
+	if (gpio_is_valid(priv->stby_gpio)){
+		gpio_request_one(priv->stby_gpio, GPIOF_DIR_OUT, "flexcan-trx-stby");
+		gpio_direction_output(priv->stby_gpio,1);
+	}
+
 	if (priv->devtype_data->quirks & FLEXCAN_QUIRK_TIMESTAMP_SUPPORT_FD) {
 		priv->can.ctrlmode_supported |= CAN_CTRLMODE_FD | CAN_CTRLMODE_FD_NON_ISO;
 		priv->can.bittiming_const = &flexcan_fd_bittiming_const;
@@ -1987,6 +2008,9 @@ static int flexcan_remove(struct platform_device *pdev)
 	unregister_flexcandev(dev);
 	pm_runtime_disable(&pdev->dev);
 	can_rx_offload_del(&priv->offload);
+	if (gpio_is_valid(priv->stby_gpio))
+		gpio_free(priv->stby_gpio);
+
 	free_candev(dev);
 
 	return 0;
