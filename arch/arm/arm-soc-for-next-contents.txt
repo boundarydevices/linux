@@ -4,6 +4,8 @@ next/fixes-non-critical
 	patch
 		ARM: EXYNOS: Fix build breakge with PM_SLEEP=n
 		MAINTAINERS: Add sdhci-st file to ARCH/STI architecture
+	omap/fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap omap-for-v3.17/fixes-not-urgent-signed
 
 next/cleanup
 	patch
@@ -97,6 +99,24 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/exynos-cpuidle
 	mediatek/soc
 		https://github.com/mbgg/linux-mediatek.git tags/v3.17-next-mediatek-support
+	omap/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap
+		contains omap/cleanup
+	samsung/power
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung power-exynos
+		contains samsung/cleanup and v3.16-rc6
+	samsung/s5pv210-dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung
+		contains samsung/s5p-cleanup-v2
+		resolved conflicts against cleanup/gpio-header-removal
+	hisi/maintainer
+		git://github.com/hisilicon/linux-hisi misc-for-3.17
+	rockchip/smp
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip v3.17-rockchip-smp-hotplug
+	mvebu/soc3
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-soc-3.17-3
+	mvebu/soc4
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-soc-3.17-4
 
 next/boards
 	renesas/boards
