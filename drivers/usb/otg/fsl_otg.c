@@ -986,6 +986,7 @@ static int fsl_otg_conf(struct platform_device *pdev)
 	fsl_otg_tc->fsm.ops = &fsl_otg_ops;
 
 	/* initialize the otg structure */
+	spin_lock_init(&fsl_otg_tc->otg.notifier.lock);
 	fsl_otg_tc->otg.label = DRIVER_DESC;
 	fsl_otg_tc->otg.set_host = fsl_otg_set_host;
 	fsl_otg_tc->otg.set_peripheral = fsl_otg_set_peripheral;
