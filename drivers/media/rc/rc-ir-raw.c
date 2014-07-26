@@ -1,4 +1,4 @@
-/* ir-raw.c - handle IR pulse/space events
+/* rc-ir-raw.c - handle IR pulse/space events
  *
  * Copyright (C) 2010 by Mauro Carvalho Chehab
  *
@@ -240,6 +240,12 @@ ir_raw_get_allowed_protocols(void)
 	return protocols;
 }
 
+static int change_protocol(struct rc_dev *dev, u64 *rc_type)
+{
+	/* the caller will update dev->enabled_protocols */
+	return 0;
+}
+
 /*
  * Used to (un)register raw event clients
  */
@@ -256,7 +262,8 @@ int ir_raw_event_register(struct rc_dev *dev)
 		return -ENOMEM;
 
 	dev->raw->dev = dev;
-	rc_set_enabled_protocols(dev, ~0);
+	dev->enabled_protocols = ~0;
+	dev->change_protocol = change_protocol;
 	rc = kfifo_alloc(&dev->raw->kfifo,
 			 sizeof(struct ir_raw_event) * MAX_IR_EVENT_SIZE,
 			 GFP_KERNEL);

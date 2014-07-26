@@ -512,7 +512,8 @@ static u8 rc_request[] = { REQUEST_POLL_RC, 0 };
 static int dib0700_rc_query_old_firmware(struct dvb_usb_device *d)
 {
 	u8 key[4];
-	u32 keycode;
+	enum rc_type protocol;
+	u32 scancode;
 	u8 toggle;
 	int i;
 	struct dib0700_state *st = d->priv;
@@ -539,28 +540,29 @@ static int dib0700_rc_query_old_firmware(struct dvb_usb_device *d)
 
 	dib0700_rc_setup(d, NULL); /* reset ir sensor data to prevent false events */
 
-	d->last_event = 0;
 	switch (d->props.rc.core.protocol) {
 	case RC_BIT_NEC:
 		/* NEC protocol sends repeat code as 0 0 0 FF */
 		if ((key[3-2] == 0x00) && (key[3-3] == 0x00) &&
-		    (key[3] == 0xff))
-			keycode = d->last_event;
-		else {
-			keycode = key[3-2] << 8 | key[3-3];
-			d->last_event = keycode;
+		    (key[3] == 0xff)) {
+			rc_repeat(d->rc_dev);
+			return 0;
 		}
 
-		rc_keydown(d->rc_dev, keycode, 0);
+		protocol = RC_TYPE_NEC;
+		scancode = RC_SCANCODE_NEC(key[3-2], key[3-3]);
+		toggle = 0;
 		break;
+
 	default:
 		/* RC-5 protocol changes toggle bit on new keypress */
-		keycode = key[3-2] << 8 | key[3-3];
+		protocol = RC_TYPE_RC5;
+		scancode = RC_SCANCODE_RC5(key[3-2], key[3-3]);
 		toggle = key[3-1];
-		rc_keydown(d->rc_dev, keycode, toggle);
-
 		break;
 	}
+
+	rc_keydown(d->rc_dev, protocol, scancode, toggle);
 	return 0;
 }
 
@@ -721,7 +723,6 @@ static int stk7700p_frontend_attach(struct dvb_usb_adapter *adap)
 		adap->fe_adap[0].fe = state->dib7000p_ops.init(&adap->dev->i2c_adap, 18, &stk7700p_dib7000p_config);
 		st->is_dib7000pc = 1;
 	} else {
-		dvb_detach(&state->dib7000p_ops);
 		memset(&state->dib7000p_ops, 0, sizeof(state->dib7000p_ops));
 		adap->fe_adap[0].fe = dvb_attach(dib7000m_attach, &adap->dev->i2c_adap, 18, &stk7700p_dib7000m_config);
 	}
@@ -3802,6 +3803,7 @@ struct dvb_usb_device_properties dib0700_devices[] = {
 
 				DIB0700_DEFAULT_STREAMING_CONFIG(0x02),
 			}},
+				.size_of_priv     = sizeof(struct dib0700_adapter_state),
 			},
 		},
 
