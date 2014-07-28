@@ -178,6 +178,8 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip.git tags/v3.17-rockchip-rk3xxx-dts
 	mvebu/dt4
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.17-4
+	bcm/dt
+		git://github.com/broadcom/mach-bcm tags/for-3.17/bcm-dt
 
 next/drivers
 	at91/drivers
