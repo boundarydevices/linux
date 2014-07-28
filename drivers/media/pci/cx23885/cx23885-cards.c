@@ -619,7 +619,12 @@ struct cx23885_board cx23885_boards[] = {
 	},
 	[CX23885_BOARD_HAUPPAUGE_HVR4400] = {
 		.name		= "Hauppauge WinTV-HVR4400",
+		.porta		= CX23885_ANALOG_VIDEO,
 		.portb		= CX23885_MPEG_DVB,
+		.portc		= CX23885_MPEG_DVB,
+		.tuner_type	= TUNER_NXP_TDA18271,
+		.tuner_addr	= 0x60, /* 0xc0 >> 1 */
+		.tuner_bus	= 1,
 	},
 	[CX23885_BOARD_AVERMEDIA_HC81R] = {
 		.name		= "AVerTV Hybrid Express Slim HC81R",
@@ -649,6 +654,11 @@ struct cx23885_board cx23885_boards[] = {
 				  CX25840_NONE1_CH3,
 			.amux   = CX25840_AUDIO6,
 		} },
+	},
+	[CX23885_BOARD_DVICO_FUSIONHDTV_DVB_T_DUAL_EXP2] = {
+		.name		= "DViCO FusionHDTV DVB-T Dual Express2",
+		.portb		= CX23885_MPEG_DVB,
+		.portc		= CX23885_MPEG_DVB,
 	},
 	[CX23885_BOARD_HAUPPAUGE_IMPACTVCBE] = {
 		.name		= "Hauppauge ImpactVCB-e",
@@ -920,6 +930,10 @@ struct cx23885_subid cx23885_subids[] = {
 		.subvendor = 0x0070,
 		.subdevice = 0x7133,
 		.card      = CX23885_BOARD_HAUPPAUGE_IMPACTVCBE,
+	}, {
+		.subvendor = 0x18ac,
+		.subdevice = 0xdb98,
+		.card      = CX23885_BOARD_DVICO_FUSIONHDTV_DVB_T_DUAL_EXP2,
 	},
 };
 const unsigned int cx23885_idcount = ARRAY_SIZE(cx23885_subids);
@@ -1163,6 +1177,7 @@ int cx23885_tuner_callback(void *priv, int component, int command, int arg)
 		break;
 	case CX23885_BOARD_DVICO_FUSIONHDTV_7_DUAL_EXP:
 	case CX23885_BOARD_DVICO_FUSIONHDTV_DVB_T_DUAL_EXP:
+	case CX23885_BOARD_DVICO_FUSIONHDTV_DVB_T_DUAL_EXP2:
 		/* Two identical tuners on two different i2c buses,
 		 * we need to reset the correct gpio. */
 		if (port->nr == 1)
@@ -1306,6 +1321,7 @@ void cx23885_gpio_setup(struct cx23885_dev *dev)
 		cx_set(GP0_IO, 0x000f000f);
 		break;
 	case CX23885_BOARD_DVICO_FUSIONHDTV_DVB_T_DUAL_EXP:
+	case CX23885_BOARD_DVICO_FUSIONHDTV_DVB_T_DUAL_EXP2:
 		/* GPIO-0 portb xc3028 reset */
 		/* GPIO-1 portb zl10353 reset */
 		/* GPIO-2 portc xc3028 reset */
@@ -1475,13 +1491,16 @@ void cx23885_gpio_setup(struct cx23885_dev *dev)
 		break;
 	case CX23885_BOARD_HAUPPAUGE_HVR4400:
 		/* GPIO-8 tda10071 demod reset */
+		/* GPIO-9 si2165 demod reset */
 
 		/* Put the parts into reset and back */
-		cx23885_gpio_enable(dev, GPIO_8, 1);
-		cx23885_gpio_clear(dev, GPIO_8);
+		cx23885_gpio_enable(dev, GPIO_8 | GPIO_9, 1);
+
+		cx23885_gpio_clear(dev, GPIO_8 | GPIO_9);
 		mdelay(100);
-		cx23885_gpio_set(dev, GPIO_8);
+		cx23885_gpio_set(dev, GPIO_8 | GPIO_9);
 		mdelay(100);
+
 		break;
 	case CX23885_BOARD_AVERMEDIA_HC81R:
 		cx_clear(MC417_CTL, 1);
@@ -1611,6 +1630,7 @@ int cx23885_ir_init(struct cx23885_dev *dev)
 				 ir_rxtx_pin_cfg_count, ir_rxtx_pin_cfg);
 		break;
 	case CX23885_BOARD_DVICO_FUSIONHDTV_DVB_T_DUAL_EXP:
+	case CX23885_BOARD_DVICO_FUSIONHDTV_DVB_T_DUAL_EXP2:
 		request_module("ir-kbd-i2c");
 		break;
 	}
@@ -1747,6 +1767,7 @@ void cx23885_card_setup(struct cx23885_dev *dev)
 		break;
 	case CX23885_BOARD_DVICO_FUSIONHDTV_7_DUAL_EXP:
 	case CX23885_BOARD_DVICO_FUSIONHDTV_DVB_T_DUAL_EXP:
+	case CX23885_BOARD_DVICO_FUSIONHDTV_DVB_T_DUAL_EXP2:
 		ts2->gen_ctrl_val  = 0xc; /* Serial bus + punctured clock */
 		ts2->ts_clk_en_val = 0x1; /* Enable TS_CLK */
 		ts2->src_sel_val   = CX23885_SRC_SEL_PARALLEL_MPEG_VIDEO;
@@ -1826,6 +1847,9 @@ void cx23885_card_setup(struct cx23885_dev *dev)
 		ts1->gen_ctrl_val  = 0xc; /* Serial bus + punctured clock */
 		ts1->ts_clk_en_val = 0x1; /* Enable TS_CLK */
 		ts1->src_sel_val   = CX23885_SRC_SEL_PARALLEL_MPEG_VIDEO;
+		ts2->gen_ctrl_val  = 0xc; /* Serial bus + punctured clock */
+		ts2->ts_clk_en_val = 0x1; /* Enable TS_CLK */
+		ts2->src_sel_val   = CX23885_SRC_SEL_PARALLEL_MPEG_VIDEO;
 		break;
 	case CX23885_BOARD_HAUPPAUGE_HVR1250:
 	case CX23885_BOARD_HAUPPAUGE_HVR1500:
