@@ -40,6 +40,7 @@ enum cd_types {
 struct esdhc_platform_data {
 	unsigned int wp_gpio;
 	unsigned int cd_gpio;
+	unsigned int power_gpio;
 	enum wp_types wp_type;
 	enum cd_types cd_type;
 	int max_bus_width;
