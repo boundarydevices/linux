@@ -118,6 +118,8 @@ next/soc
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-soc-3.17-3
 	mvebu/soc4
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-soc-3.17-4
+	depends/clk-rockchip
+		git://git.linaro.org/people/mike.turquette/linux.git clk-rockchip
 
 next/boards
 	renesas/boards
@@ -168,6 +170,12 @@ next/dt
 		git://git.infradead.org/linux-mvebu tags/mvebu-dt-3.17-3
 	zynq/dt2
 		git://git.xilinx.com/linux-xlnx zynq-dt-for-3.17-2
+	depends/clk-rockchip
+		git://git.linaro.org/people/mike.turquette/linux.git clk-rockchip
+	rockchip/rk3288
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip.git tags/v3.17-rockchip-rk3288
+	rockchip/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip.git tags/v3.17-rockchip-rk3xxx-dts
 
 next/drivers
 	at91/drivers
