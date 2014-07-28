@@ -120,6 +120,9 @@ next/soc
 		git://git.infradead.org/linux-mvebu.git tags/mvebu-soc-3.17-4
 	depends/clk-rockchip
 		git://git.linaro.org/people/mike.turquette/linux.git clk-rockchip
+	bcm/soc
+		git://github.com/broadcom/mach-bcm tags/for-3.17/bcm-soc
+
 
 next/boards
 	renesas/boards
