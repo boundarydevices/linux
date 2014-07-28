@@ -67,16 +67,6 @@
 			gpio = <&gpio3 22 0>;
 			enable-active-high;
 		};
-
-		wilink_wl_en: tiwi_wlan {
-			compatible = "regulator-fixed";
-			regulator-name = "wilink_wl_en";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			gpio = <&gpio6 15 0>;
-			startup-delay-us = <70000>;
-			enable-active-high;
-		};
 	};
 
 	gpio-keys {
@@ -651,8 +641,8 @@
 	bus-width = <4>;
 	non-removable;
 	vmmc-supply = <&reg_3p3v>;
-	vqmmc-supply = <&wilink_wl_en>;
 	vqmmc-1-8-v;
+	power-gpio = <&gpio6 15 0>;
 	ocr-limit = <0x80>;     /* 1.65v - 1.95v */
 	power-off-card;
 	keep-power-in-suspend;
