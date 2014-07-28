@@ -894,6 +894,20 @@ static void esdhc_set_timeout(struct sdhci_host *host, struct mmc_command *cmd)
 			SDHCI_TIMEOUT_CONTROL);
 }
 
+static void sdhci_platform_set_power
+	(struct sdhci_host *host, int on)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct pltfm_imx_data *imx_data = pltfm_host ? pltfm_host->priv : 0;
+	struct esdhc_platform_data *boarddata = &imx_data->boarddata;
+
+	if (imx_data && gpio_is_valid(boarddata->power_gpio)) {
+		dev_dbg(mmc_dev(host->mmc),"%s: imx_data %p, power-gpio %d, on %d\n",
+			 __func__, imx_data, imx_data ? boarddata->power_gpio : -2, on);
+		gpio_direction_output(boarddata->power_gpio, on);
+	}
+}
+
 static struct sdhci_ops sdhci_esdhc_ops = {
 	.read_l = esdhc_readl_le,
 	.read_w = esdhc_readw_le,
@@ -925,6 +939,7 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 			 struct esdhc_platform_data *boarddata)
 {
 	struct device_node *np = pdev->dev.of_node;
+	struct sdhci_host *host = platform_get_drvdata(pdev);
 
 	if (!np)
 		return -ENODEV;
@@ -945,6 +960,19 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	boarddata->wp_gpio = of_get_named_gpio(np, "wp-gpios", 0);
 	if (gpio_is_valid(boarddata->wp_gpio))
 		boarddata->wp_type = ESDHC_WP_GPIO;
+
+	boarddata->power_gpio = of_get_named_gpio(np, "power-gpio", 0);
+	dev_info(mmc_dev(host->mmc),
+		"%s: power-gpio %d\n", __func__, boarddata->power_gpio);
+	if (gpio_is_valid(boarddata->power_gpio)) {
+		int rc = gpio_request(boarddata->power_gpio, "sdhci_power");
+		if (rc) {
+			dev_err(mmc_dev(host->mmc),
+				"failed to allocate power gpio\n");
+			boarddata->power_gpio = -ENODEV;
+		}
+		gpio_direction_output(boarddata->power_gpio, 0);
+	}
 
 	of_property_read_u32(np, "bus-width", &boarddata->max_bus_width);
 
@@ -1073,6 +1101,9 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 					host->mmc->parent->platform_data);
 	}
 
+	if (gpio_is_valid(boarddata->power_gpio))
+		sdhci_esdhc_ops.platform_set_power = sdhci_platform_set_power;
+
 	/* write_protect */
 	if (boarddata->wp_type == ESDHC_WP_GPIO) {
 		err = mmc_gpio_request_ro(host->mmc, boarddata->wp_gpio);
@@ -1167,6 +1198,12 @@ static int sdhci_esdhc_imx_remove(struct platform_device *pdev)
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct pltfm_imx_data *imx_data = pltfm_host->priv;
 	int dead = (readl(host->ioaddr + SDHCI_INT_STATUS) == 0xffffffff);
+	struct esdhc_platform_data *boarddata = &imx_data->boarddata;
+
+	if (imx_data && gpio_is_valid(boarddata->power_gpio)) {
+		gpio_direction_output(boarddata->power_gpio, 0);
+		gpio_free(boarddata->power_gpio);
+	}
 
 	sdhci_remove_host(host, dead);
 
