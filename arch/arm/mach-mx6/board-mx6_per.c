@@ -96,8 +96,6 @@
 #define FOR_DL_SOLO
 #include "pads-mx6_per.h"
 
-void __init early_console_setup(unsigned long base, struct clk *clk);
-
 extern char *gp_reg_id;
 extern char *soc_reg_id;
 extern char *pu_reg_id;
@@ -971,7 +969,6 @@ static struct imx_pcie_platform_data pcie_data = {
 static struct gpio initial_gpios[] __initdata = {
 	{.label = "emmc_reset",		.gpio = GP_EMMC_RESET,		.flags = 0},
 	{.label = "usb-pwr",		.gpio = GP_USB_OTG_PWR,		.flags = 0},
-	{.label = "radio-on",		.gpio = GP_PCIE_RADIO_ON,	.flags = 0},
 	{.label = "adv7180_reset",	.gpio = GP_ADV7180_RESET,	.flags = 0},
 	{.label = "tc3587_reset",	.gpio = GP_TC3587_RESET,	.flags = 0},
 	{.label = "tc3587_video_detect", .gpio = GP_TC3587_VIDEO_DETECT,	.flags = GPIOF_DIR_IN},
@@ -989,6 +986,10 @@ static struct gpio initial_gpios[] __initdata = {
 	{.label = "gs-tim_861",		.gpio = GP_GS2971_TIM_861,	.flags = 0},
 	{.label = "gs-sw_en",		.gpio = GP_GS2971_SW_EN,	.flags = 0},
 	{.label = "gs-dvb_asi",		.gpio = GP_GS2971_DVB_ASI,	.flags = 0},
+};
+
+static struct gpio export_gpios[] __initdata = {
+	{.label = "radio-on",		.gpio = GP_PCIE_RADIO_ON,	.flags = 0},
 	{.label = "kl04-reset",		.gpio = GP_KL04_RESET,		.flags = 0},	/* inverted before kl04 */
 	{.label = "kl04-program",	.gpio = GP_KL04_PROGRAM,	.flags = 0},	/* inverted before kl04 */
 };
@@ -1032,9 +1033,20 @@ static void __init board_init(void)
 	if (ret)
 		printk(KERN_ERR "%s gpio_request_array failed("
 			"%d) for initial_gpios\n", __func__, ret);
+	ret = gpio_request_array(export_gpios, ARRAY_SIZE(export_gpios));
+	if (ret) {
+		pr_err("%s gpio_request_array failed(%d) for export_gpios\n",
+				__func__, ret);
+	}
 	IOMUX_SETUP(board_pads);
 
 	printk(KERN_ERR "------------ Board type PER\n");
+	for (i = 0; i < ARRAY_SIZE(export_gpios); i++) {
+		int gpio = export_gpios[i].gpio;
+
+		pr_info("%s: exporting gpio %d\n", __func__, gpio);
+		gpio_export(gpio, 1);
+	}
 
 	gp_reg_id = dvfscore_data.reg_id;
 	soc_reg_id = dvfscore_data.soc_id;
