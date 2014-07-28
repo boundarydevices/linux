@@ -176,6 +176,8 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip.git tags/v3.17-rockchip-rk3288
 	rockchip/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip.git tags/v3.17-rockchip-rk3xxx-dts
+	mvebu/dt4
+		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.17-4
 
 next/drivers
 	at91/drivers
