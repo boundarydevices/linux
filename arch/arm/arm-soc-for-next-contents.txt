@@ -195,6 +195,8 @@ next/drivers
 		PCI: spear: Fix Section mismatch compilation warning for probe()
 		PCI: spear: Remove spear13xx_pcie_remove()
 		bus: ARM CCN PMU driver
+	omap/mailbox-cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.17/mailbox-cleanup
 
 next/defconfig
 	patch
