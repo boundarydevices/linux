@@ -358,7 +358,7 @@ static const iomux_v3_cfg_t MX6NAME(board_pads)[] = {
 	NEW_PAD_CTRL(MX6PAD(EIM_D22__GPIO_3_22), OUTPUT_40OHM),
 
 	/* USDHC4 - eMMC */
-	SD_PINS8(4, USDHC_PAD_CTRL_50MHZ),
+	SD_PINS8(4, USDHC_PAD_CTRL_47KPU_40OHM_50MHZ),
 #define GP_EMMC_RESET	IMX_GPIO_NR(6, 7)
 	NEW_PAD_CTRL(MX6PAD(NANDF_CLE__GPIO_6_7), OUTPUT_40OHM),	/* eMMC reset */
 
@@ -435,7 +435,7 @@ static iomux_v3_cfg_t MX6NAME(i2c2_pads)[] = {
 #define MX6_USDHC_PAD_SETTING8(id, speed, pad_ctl)	\
 		MX6NAME(sd##id##_##speed##mhz)[] = { SD_PINS8(id, pad_ctl), 0 }
 
-static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING8(4, 50, USDHC_PAD_CTRL_50MHZ);
+static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING8(4, 50, USDHC_PAD_CTRL_47KPU_40OHM_50MHZ);
 static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING8(4, 100, USDHC_PAD_CTRL_100MHZ);
 static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING8(4, 200, USDHC_PAD_CTRL_200MHZ);
 
