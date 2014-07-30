@@ -259,7 +259,7 @@ static int imx_sata_enable(struct ahci_host_priv *hpriv)
 		ret = imx_sata_phy_reset(hpriv);
 		if (ret) {
 			dev_err(dev, "failed to reset phy: %d\n", ret);
-			goto disable_regulator;
+			goto disable_clk;
 		}
 	}
 
@@ -267,6 +267,8 @@ static int imx_sata_enable(struct ahci_host_priv *hpriv)
 
 	return 0;
 
+disable_clk:
+	clk_disable_unprepare(imxpriv->sata_ref_clk);
 disable_regulator:
 	if (hpriv->target_pwr)
 		regulator_disable(hpriv->target_pwr);
