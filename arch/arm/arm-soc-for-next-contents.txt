@@ -5,7 +5,7 @@ next/fixes-non-critical
 		ARM: EXYNOS: Fix build breakge with PM_SLEEP=n
 		MAINTAINERS: Add sdhci-st file to ARCH/STI architecture
 	omap/fixes
-		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap omap-for-v3.17/fixes-not-urgent-signed
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.17/fixes-not-urgent-signed
 
 next/cleanup
 	patch
@@ -99,30 +99,34 @@ next/soc
 	samsung/cpuidle
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/exynos-cpuidle
 	mediatek/soc
-		https://github.com/mbgg/linux-mediatek.git tags/v3.17-next-mediatek-support
+		https://github.com/mbgg/linux-mediatek tags/v3.17-next-mediatek-support
+	omap/cleanup
+		Merge branch 'omap/cleanup' into next/soc
 	omap/soc
-		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap
-		contains omap/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.17/soc-new
+		contains omap/mailbox
+	<no branch> (9a3c4145af32125c5ee39c0272662b47307a8323)
+		Merge branches 'samsung/cleanup' and 'samsung/s5p-cleanup-v2', tag 'v3.16-rc6' into next/soc
 	samsung/power
-		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung power-exynos
-		contains samsung/cleanup and v3.16-rc6
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/power-exynos
 	samsung/s5pv210-dt
-		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung
-		contains samsung/s5p-cleanup-v2
-		resolved conflicts against cleanup/gpio-header-removal
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/s5pv210-dt
 	hisi/maintainer
-		git://github.com/hisilicon/linux-hisi misc-for-3.17
+		git://github.com/hisilicon/linux-hisi tags/misc-for-3.17
 	rockchip/smp
-		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip v3.17-rockchip-smp-hotplug
-	mvebu/soc3
-		git://git.infradead.org/linux-mvebu.git tags/mvebu-soc-3.17-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v3.17-rockchip-smp-hotplug
+	next/fixes-non-critical
+		Merge branch 'next/fixes-non-critical' into next/soc
+		contains omap/fixes
+	cleanup/gpio-header-removal
+		Merge branch 'cleanup/gpio-header-removal' into next/soc
 	mvebu/soc4
-		git://git.infradead.org/linux-mvebu.git tags/mvebu-soc-3.17-4
+		git://git.infradead.org/linux-mvebu tags/mvebu-soc-3.17-4
+		contains mvebu/soc3
 	depends/clk-rockchip
-		git://git.linaro.org/people/mike.turquette/linux.git clk-rockchip
+		git://git.linaro.org/people/mike.turquette/linux clk-rockchip
 	bcm/soc
 		git://github.com/broadcom/mach-bcm tags/for-3.17/bcm-soc
-
 
 next/boards
 	renesas/boards
@@ -172,17 +176,26 @@ next/dt
 	mvebu/dt3
 		git://git.infradead.org/linux-mvebu tags/mvebu-dt-3.17-3
 	zynq/dt2
-		git://git.xilinx.com/linux-xlnx zynq-dt-for-3.17-2
+		git://git.xilinx.com/linux-xlnx tags/zynq-dt-for-3.17-2
 	depends/clk-rockchip
-		git://git.linaro.org/people/mike.turquette/linux.git clk-rockchip
+		git://git.linaro.org/people/mike.turquette/linux clk-rockchip
 	rockchip/rk3288
-		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip.git tags/v3.17-rockchip-rk3288
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v3.17-rockchip-rk3288
 	rockchip/dt
-		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip.git tags/v3.17-rockchip-rk3xxx-dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v3.17-rockchip-rk3xxx-dts
 	mvebu/dt4
-		git://git.infradead.org/linux-mvebu.git tags/mvebu-dt-3.17-4
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-3.17-4
+	<no branch> (9a3c4145af32125c5ee39c0272662b47307a8323)
+		Merge tag 'v3.16-rc6' into next/dt
 	bcm/dt
 		git://github.com/broadcom/mach-bcm tags/for-3.17/bcm-dt
+	renesas/clock3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-clock3-for-v3.17
+	patch
+		ARM: tegra: paz00: Fix some indentation inconsistencies
+		ARM: tegra: apalis t30: fix device tree compatible node
+	zynq/dt3
+		git://git.xilinx.com/linux-xlnx tags/zynq-dt-for-3.17-3
 
 next/drivers
 	at91/drivers
@@ -195,6 +208,9 @@ next/drivers
 		PCI: spear: Fix Section mismatch compilation warning for probe()
 		PCI: spear: Remove spear13xx_pcie_remove()
 		bus: ARM CCN PMU driver
+		bus: ARM CCN: add PERF_EVENTS dependency
+	omap/mailbox
+		Merge branch 'omap-for-v3.17/mailbox' into next/drivers
 	omap/mailbox-cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.17/mailbox-cleanup
 
@@ -222,7 +238,10 @@ next/defconfig
 		ARM: exynos_defconfig: Update exynos_defconfig
 	sti/defconfig
 		git://git.stlinux.com/devel/kernel/linux-sti tags/sti-defconfig-for-v3.17-1
-		contains fixes
 
 fixes
+	patch
+		ARM: nomadik: fix up double inversion in DT
+		MAINTAINERS: Update Tegra Git URL
+		drivers: CCI: Correct use of ! and &
 
