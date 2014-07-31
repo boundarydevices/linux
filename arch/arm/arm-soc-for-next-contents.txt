@@ -6,6 +6,8 @@ next/fixes-non-critical
 		MAINTAINERS: Add sdhci-st file to ARCH/STI architecture
 	omap/fixes
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.17/fixes-not-urgent-signed
+	patch
+		drivers: CCI: Correct use of ! and &
 
 next/cleanup
 	patch
@@ -115,7 +117,7 @@ next/soc
 		git://github.com/hisilicon/linux-hisi tags/misc-for-3.17
 	rockchip/smp
 		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v3.17-rockchip-smp-hotplug
-	next/fixes-non-critical
+	<no branch> (fd9f5edf6e7e8a666f3672fd809f3289c2da388a)
 		Merge branch 'next/fixes-non-critical' into next/soc
 		contains omap/fixes
 	cleanup/gpio-header-removal
@@ -256,5 +258,4 @@ fixes
 	patch
 		ARM: nomadik: fix up double inversion in DT
 		MAINTAINERS: Update Tegra Git URL
-		drivers: CCI: Correct use of ! and &
 
