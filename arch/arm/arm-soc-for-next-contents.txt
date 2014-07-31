@@ -127,6 +127,13 @@ next/soc
 		git://git.linaro.org/people/mike.turquette/linux clk-rockchip
 	bcm/soc
 		git://github.com/broadcom/mach-bcm tags/for-3.17/bcm-soc
+	patch
+		ARM: hisi: add ARCH_HISI
+		ARM: hisi: enable hix5hd2 SoC
+		ARM: debug: Rename Hi3716 to HIX5HD2
+		ARM: dts: Add hix5hd2-dkb dts file.
+		power: reset: move hisilicon reboot code
+		ARM: hisi: remove smp from machine descriptor
 
 next/boards
 	renesas/boards
@@ -196,6 +203,10 @@ next/dt
 		ARM: tegra: apalis t30: fix device tree compatible node
 	zynq/dt3
 		git://git.xilinx.com/linux-xlnx tags/zynq-dt-for-3.17-3
+	rockchip/rk3288-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v3.17-rockchip-rk3288-2
+	rockchip/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v3.17-rockchip-rk3xxx-dts-2
 
 next/drivers
 	at91/drivers
@@ -238,6 +249,8 @@ next/defconfig
 		ARM: exynos_defconfig: Update exynos_defconfig
 	sti/defconfig
 		git://git.stlinux.com/devel/kernel/linux-sti tags/sti-defconfig-for-v3.17-1
+	patch
+		ARM: config: enable ARCH_HIX5HD2
 
 fixes
 	patch
