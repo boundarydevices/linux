@@ -808,7 +808,8 @@ int rndis_msg_parser(u8 configNr, u8 *buf)
 	MsgType   = get_unaligned_le32(tmp++);
 	MsgLength = get_unaligned_le32(tmp++);
 
-	if (configNr >= RNDIS_MAX_CONFIGS)
+	if ((configNr >= RNDIS_MAX_CONFIGS) ||
+		(rndis_per_dev_params[configNr].used == 0))
 		return -ENOTSUPP;
 	params = &rndis_per_dev_params[configNr];
 
