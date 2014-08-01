@@ -41,19 +41,6 @@ unsigned long int ramoops_mem_size;
 EXPORT_SYMBOL(ramoops_phys_addr);
 EXPORT_SYMBOL(ramoops_mem_size);
 
-static int __init early_ramoops_phys(char *p)
-{
-	ramoops_phys_addr = memparse(p, &p);
-	return 0;
-}
-early_param("ramoops_phys_addr", early_ramoops_phys);
-
-static int __init early_ramoops_mem_size(char *p)
-{
-	ramoops_mem_size = memparse(p, &p);
-	return 0;
-}
-early_param("ramoops_mem_size", early_ramoops_mem_size);
 
 static struct ramoops_platform_data ramoops_data;
 
