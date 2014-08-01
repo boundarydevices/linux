@@ -209,6 +209,11 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v3.17-rockchip-rk3288-2
 	rockchip/dt2
 		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v3.17-rockchip-rk3xxx-dts-2
+	samsung/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-dt-2
+		contains samsung/cleanup
+		contains samsung/cpuidle
+		contains samsung/power
 
 next/drivers
 	at91/drivers
@@ -226,6 +231,8 @@ next/drivers
 		Merge branch 'omap-for-v3.17/mailbox' into next/drivers
 	omap/mailbox-cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v3.17/mailbox-cleanup
+	patch
+		bus: arm-ccn: Fix error handling at event allocation
 
 next/defconfig
 	patch
