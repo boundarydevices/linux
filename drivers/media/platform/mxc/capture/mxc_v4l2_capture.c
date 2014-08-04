@@ -190,7 +190,7 @@ static video_fmt_t video_fmts[] = {
 	 .raw_height = 525,		/* SENS_FRM_HEIGHT */
 	 .active_width = 720,		/* ACT_FRM_WIDTH */
 	 .active_height = 480,		/* ACT_FRM_HEIGHT */
-	 .active_top = 13,
+	 .active_top = 0,
 	 .active_left = 0,
 	 },
 	{			/*! (B, G, H, I, N) PAL */
@@ -1304,25 +1304,45 @@ void setup_ifparm(cam_data *cam, int init_defrect)
 	csi_param.mclk = ifparm.u.bt656.clock_curr;
 
 	pr_debug("   clock_curr=mclk=%d\n", ifparm.u.bt656.clock_curr);
-	if (ifparm.u.bt656.clock_curr == 0)
+	switch (ifparm.if_type) {
+	case V4L2_IF_TYPE_BT1120_PROGRESSIVE_DDR:
+		csi_param.clk_mode = IPU_CSI_CLK_MODE_CCIR1120_PROGRESSIVE_DDR;
+		break;
+	case V4L2_IF_TYPE_BT1120_PROGRESSIVE_SDR:
+		csi_param.clk_mode = IPU_CSI_CLK_MODE_CCIR1120_PROGRESSIVE_SDR;
+		break;
+	case V4L2_IF_TYPE_BT1120_INTERLACED_DDR:
+		csi_param.clk_mode = IPU_CSI_CLK_MODE_CCIR1120_INTERLACED_DDR;
+		break;
+	case V4L2_IF_TYPE_BT1120_INTERLACED_SDR:
+		csi_param.clk_mode = IPU_CSI_CLK_MODE_CCIR1120_INTERLACED_SDR;
+		break;
+	case V4L2_IF_TYPE_BT656_PROGRESSIVE:
+		csi_param.clk_mode = IPU_CSI_CLK_MODE_CCIR656_PROGRESSIVE;
+		break;
+	case V4L2_IF_TYPE_BT656_INTERLACED:
 		csi_param.clk_mode = IPU_CSI_CLK_MODE_CCIR656_INTERLACED;
-	else
-		csi_param.clk_mode = IPU_CSI_CLK_MODE_GATED_CLK;
+		break;
+	case V4L2_IF_TYPE_BT656:
+//		csi_param.clk_mode = IPU_CSI_CLK_MODE_CCIR656_PROGRESSIVE;
+//		break;
+	default:
+		csi_param.clk_mode = (ifparm.u.bt656.clock_curr == 0) ?
+				IPU_CSI_CLK_MODE_CCIR656_INTERLACED :
+				IPU_CSI_CLK_MODE_GATED_CLK;
+	}
 
 	csi_param.pixclk_pol = ifparm.u.bt656.latch_clk_inv;
 
-	if (ifparm.u.bt656.mode == V4L2_IF_TYPE_BT656_MODE_NOBT_8BIT) {
-		csi_param.data_width = IPU_CSI_DATA_WIDTH_8;
-	} else if (ifparm.u.bt656.mode
-				== V4L2_IF_TYPE_BT656_MODE_NOBT_10BIT) {
-		csi_param.data_width = IPU_CSI_DATA_WIDTH_10;
-	} else {
-		csi_param.data_width = IPU_CSI_DATA_WIDTH_8;
-	}
+	csi_param.data_width =
+		(ifparm.u.bt656.mode == V4L2_IF_TYPE_BT656_MODE_NOBT_10BIT) ||
+		(ifparm.u.bt656.mode == V4L2_IF_TYPE_BT656_MODE_BT_10BIT) ?
+		IPU_CSI_DATA_WIDTH_10 : IPU_CSI_DATA_WIDTH_8;
 
 	csi_param.Vsync_pol = ifparm.u.bt656.nobt_vs_inv;
 	csi_param.Hsync_pol = ifparm.u.bt656.nobt_hs_inv;
 	csi_param.ext_vsync = ifparm.u.bt656.bt_sync_correct;
+	pr_debug("vsync_pol(%d) hsync_pol(%d) ext_vsync(%d)\n", csi_param.Vsync_pol, csi_param.Hsync_pol, csi_param.ext_vsync);
 
 	/* if the capturemode changed, the size bounds will have changed. */
 	cam_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -1366,16 +1386,30 @@ void setup_ifparm(cam_data *cam, int init_defrect)
 		pr_debug("End of %s: crop_current widthxheight %d x %d\n", __func__,
 			cam->crop_current.width, cam->crop_current.height);
 	}
+	swidth = cam->crop_current.width;
+	sheight = cam->crop_current.height;
+	sleft = 0;
+	stop = 0;
+	cam_fmt.type = V4L2_BUF_TYPE_SENSOR;
+	cam_fmt.fmt.spix.swidth = 0;
+	vidioc_int_g_fmt_cap(cam->sensor, &cam_fmt);
+	if (cam_fmt.fmt.spix.swidth) {
+		swidth = cam_fmt.fmt.spix.swidth;
+		sheight = cam_fmt.fmt.spix.sheight;
+		sleft =  cam_fmt.fmt.spix.left;
+		stop =  cam_fmt.fmt.spix.top;
+	}
 	/* This essentially loses the data at the left and bottom of the image
 	 * giving a digital zoom image, if crop_current is less than the full
 	 * size of the image. */
-	ipu_csi_set_window_size(cam->ipu, cam->crop_current.width,
-				cam->crop_current.height, cam->csi);
-	ipu_csi_set_window_pos(cam->ipu, cam->crop_current.left,
-			       cam->crop_current.top, cam->csi);
+	ipu_csi_window_size_crop(cam->ipu,
+			swidth, sheight,
+			cam->crop_current.width, cam->crop_current.height,
+			sleft + cam->crop_current.left, stop + cam->crop_current.top,
+			cam->csi);
 	ipu_csi_init_interface(cam->ipu, cam->crop_bounds.width,
 			       cam->crop_bounds.height,
-			       cam_fmt.fmt.pix.pixelformat, csi_param);
+			       csi_param.data_fmt, csi_param);
 }
 
 /*!
@@ -1639,9 +1673,6 @@ unsigned long csi_in_use;
  */
 static int mxc_v4l_open(struct file *file)
 {
-	struct v4l2_ifparm ifparm;
-	struct v4l2_format cam_fmt;
-	ipu_csi_signal_cfg_t csi_param;
 	struct video_device *dev = video_devdata(file);
 	cam_data *cam = video_get_drvdata(dev);
 	int err = 0;
