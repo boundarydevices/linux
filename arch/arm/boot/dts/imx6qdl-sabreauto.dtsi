@@ -15,6 +15,14 @@
 		reg = <0x10000000 0x80000000>;
 	};
 
+	clocks {
+		codec_osc: anaclk2 {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <24576000>;
+		};
+	};
+
 	sound-spdif {
 		compatible = "fsl,imx-audio-spdif",
 			   "fsl,imx-sabreauto-spdif";
@@ -36,6 +44,38 @@
 		reset-delay-us = <1>;
 		#reset-cells = <0>;
 	};
+
+	sound-cs42888 {
+		compatible = "fsl,imx6-sabreauto-cs42888",
+				"fsl,imx-audio-cs42888";
+		model = "imx-cs42888";
+		esai-controller = <&esai>;
+		audio-codec = <&codec>;
+	};
+
+	regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		reg_audio: regulator@0 {
+			compatible = "regulator-fixed";
+			reg = <0>;
+			regulator-name = "cs42888_supply";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
+	};
+};
+
+&clks {
+	assigned-clocks = <&clks IMX6QDL_PLL4_BYPASS_SRC>,
+			  <&clks IMX6QDL_PLL4_BYPASS>,
+			  <&clks IMX6QDL_CLK_PLL4_POST_DIV>;
+	assigned-clock-parents = <&clks IMX6QDL_CLK_LVDS2_IN>,
+				<&clks IMX6QDL_PLL4_BYPASS_SRC>;
+	assigned-clock-rates = <0>, <0>, <24576000>;
 };
 
 &ecspi1 {
@@ -52,6 +92,16 @@
 		spi-max-frequency = <20000000>;
 		reg = <0>;
 	};
+};
+
+&esai {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_esai>;
+	assigned-clocks = <&clks IMX6QDL_CLK_ESAI_SEL>,
+			  <&clks IMX6QDL_CLK_ESAI_EXTAL>;
+	assigned-clock-parents = <&clks IMX6QDL_CLK_PLL4_AUDIO_DIV>;
+	assigned-clock-rates = <0>, <24576000>;
+	status = "okay";
 };
 
 &fec {
@@ -186,6 +236,17 @@
 		compatible = "fsl,imx6-hdmi-i2c";
 		reg = <0x50>;
 	};
+
+	codec: cs42888@48 {
+		compatible = "cirrus,cs42888";
+		reg = <0x48>;
+		clocks = <&codec_osc>;
+		clock-names = "mclk";
+		VA-supply = <&reg_audio>;
+		VD-supply = <&reg_audio>;
+		VLS-supply = <&reg_audio>;
+		VLC-supply = <&reg_audio>;
+	};
 };
 
 &i2c3 {
@@ -294,6 +355,21 @@
 				MX6QDL_PAD_RGMII_RD2__RGMII_RD2		0x1b0b0
 				MX6QDL_PAD_RGMII_RD3__RGMII_RD3		0x1b0b0
 				MX6QDL_PAD_RGMII_RX_CTL__RGMII_RX_CTL	0x1b0b0
+			>;
+		};
+
+		pinctrl_esai: esaigrp {
+			fsl,pins = <
+				MX6QDL_PAD_ENET_CRS_DV__ESAI_TX_CLK 0x1b030
+				MX6QDL_PAD_ENET_RXD1__ESAI_TX_FS    0x1b030
+				MX6QDL_PAD_ENET_TX_EN__ESAI_TX3_RX2 0x1b030
+				MX6QDL_PAD_GPIO_5__ESAI_TX2_RX3     0x1b030
+				MX6QDL_PAD_ENET_TXD0__ESAI_TX4_RX1  0x1b030
+				MX6QDL_PAD_ENET_MDC__ESAI_TX5_RX0   0x1b030
+				MX6QDL_PAD_GPIO_17__ESAI_TX0        0x1b030
+				MX6QDL_PAD_NANDF_CS3__ESAI_TX1      0x1b030
+				MX6QDL_PAD_ENET_MDIO__ESAI_RX_CLK   0x1b030
+				MX6QDL_PAD_GPIO_9__ESAI_RX_FS       0x1b030
 			>;
 		};
 
