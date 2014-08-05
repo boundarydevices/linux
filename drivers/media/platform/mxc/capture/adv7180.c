@@ -510,6 +510,9 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 			 adv->sen.pix.width, adv->sen.pix.height);
 		f->fmt.pix = adv->sen.pix;
 		break;
+	case V4L2_BUF_TYPE_SENSOR:
+		f->fmt.spix = adv->sen.spix;
+		break;
 
 	case V4L2_BUF_TYPE_PRIVATE: {
 		v4l2_std_id std;
