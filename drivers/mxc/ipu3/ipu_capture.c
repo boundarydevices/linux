@@ -327,6 +327,40 @@ void ipu_csi_set_window_pos(struct ipu_soc *ipu, uint32_t left, uint32_t top, ui
 }
 EXPORT_SYMBOL(ipu_csi_set_window_pos);
 
+void ipu_csi_window_size_crop(struct ipu_soc *ipu, uint32_t swidth, uint32_t sheight,
+		uint32_t width, uint32_t height, uint32_t left, uint32_t top, uint32_t csi)
+{
+	uint32_t temp;
+
+	if ((left >= (1 << 13)) || (top >= (1 << 12))) {
+		pr_err("%s: Error left=%x top=%x\n", __func__, left, top);
+		left = 0;
+		top = 0;
+		swidth = width;
+		sheight = height;
+	}
+	_ipu_get(ipu);
+
+	/*
+	 * sheight >= top + height
+	 * swidth >= left + width,  unless interlaced
+	 * left = # of lines/field if interlaced
+	 */
+	mutex_lock(&ipu->mutex_lock);
+	ipu_csi_write(ipu, csi, (swidth - 1) | (sheight - 1) << 16, CSI_SENS_FRM_SIZE);
+	ipu_csi_write(ipu, csi, (width - 1) | (height - 1) << 16, CSI_ACT_FRM_SIZE);
+
+	temp = ipu_csi_read(ipu, csi, CSI_OUT_FRM_CTRL);
+	temp &= ~(CSI_HSC_MASK | CSI_VSC_MASK);
+	temp |= ((top << CSI_VSC_SHIFT) | (left << CSI_HSC_SHIFT));
+	ipu_csi_write(ipu, csi, temp, CSI_OUT_FRM_CTRL);
+
+	mutex_unlock(&ipu->mutex_lock);
+
+	_ipu_put(ipu);
+}
+EXPORT_SYMBOL(ipu_csi_window_size_crop);
+
 /*!
  * _ipu_csi_horizontal_downsize_enable
  *	Enable horizontal downsizing(decimation) by 2.
