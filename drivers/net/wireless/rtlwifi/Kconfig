@@ -84,3 +84,8 @@ config RTL8723AS
     depends on RTLWIFI
     ---help---
     This is the driver for Realtek RTL8723as sdio wireless network adapters
+config RTL8821AS
+    tristate "Realtek 8821A SDIO WiFi"
+    ---help---
+      Help message of RTL8821AS
+
