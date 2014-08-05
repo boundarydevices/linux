@@ -341,7 +341,12 @@ bool ci_hdrc_host_has_device(struct ci_hdrc *ci)
 
 void ci_hdrc_host_save_for_power_lost(struct ci_hdrc *ci)
 {
-	struct ehci_hcd *ehci = hcd_to_ehci(ci->hcd);
+	struct ehci_hcd *ehci;
+
+	if (!ci->hcd)
+		return;
+
+	ehci = hcd_to_ehci(ci->hcd);
 
 	/* save EHCI registers */
 	ci->pm_command = ehci_readl(ehci, &ehci->regs->command);
