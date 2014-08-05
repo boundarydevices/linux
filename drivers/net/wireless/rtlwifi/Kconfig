@@ -79,6 +79,7 @@ config RTL8192CU
 
 config RTLWIFI
 	tristate
+    default y
 	select FW_LOADER
 
 config RTLWIFI_PCI
@@ -100,5 +101,10 @@ config RTL8192C_COMMON
 	tristate
 	depends on RTL8192CE || RTL8192CU
 	default y
+
+config RTL8821AS
+    tristate "Realtek 8821A SDIO WiFi"
+    ---help---
+      Help message of RTL8821AS
 
 endif
