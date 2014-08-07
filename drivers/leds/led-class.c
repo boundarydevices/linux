@@ -9,15 +9,15 @@
  * published by the Free Software Foundation.
  */
 
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/init.h>
-#include <linux/list.h>
-#include <linux/spinlock.h>
+#include <linux/ctype.h>
 #include <linux/device.h>
 #include <linux/err.h>
-#include <linux/ctype.h>
+#include <linux/init.h>
+#include <linux/kernel.h>
 #include <linux/leds.h>
+#include <linux/list.h>
+#include <linux/module.h>
+#include <linux/spinlock.h>
 #include <linux/workqueue.h>
 #include "leds.h"
 

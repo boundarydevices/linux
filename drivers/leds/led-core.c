@@ -12,10 +12,10 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/leds.h>
 #include <linux/list.h>
 #include <linux/module.h>
 #include <linux/rwsem.h>
-#include <linux/leds.h>
 #include <linux/workqueue.h>
 #include "leds.h"
 
