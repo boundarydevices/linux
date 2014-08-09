@@ -790,6 +790,8 @@
 			 <&tegra_car TEGRA30_CLK_PLL_U>,
 			 <&tegra_car TEGRA30_CLK_USBD>;
 		clock-names = "reg", "pll_u", "utmi-pads";
+		resets = <&tegra_car 22>, <&tegra_car 22>;
+		reset-names = "usb", "utmi-pads";
 		nvidia,hssync-start-delay = <9>;
 		nvidia,idle-wait-delay = <17>;
 		nvidia,elastic-limit = <16>;
@@ -801,6 +803,7 @@
 		nvidia,xcvr-hsslew = <32>;
 		nvidia,hssquelch-level = <2>;
 		nvidia,hsdiscon-level = <5>;
+		nvidia,has-utmi-pad-registers;
 		status = "disabled";
 	};
 
@@ -824,6 +827,8 @@
 			 <&tegra_car TEGRA30_CLK_PLL_U>,
 			 <&tegra_car TEGRA30_CLK_USBD>;
 		clock-names = "reg", "pll_u", "utmi-pads";
+		resets = <&tegra_car 58>, <&tegra_car 22>;
+		reset-names = "usb", "utmi-pads";
 		nvidia,hssync-start-delay = <9>;
 		nvidia,idle-wait-delay = <17>;
 		nvidia,elastic-limit = <16>;
@@ -858,6 +863,8 @@
 			 <&tegra_car TEGRA30_CLK_PLL_U>,
 			 <&tegra_car TEGRA30_CLK_USBD>;
 		clock-names = "reg", "pll_u", "utmi-pads";
+		resets = <&tegra_car 59>, <&tegra_car 22>;
+		reset-names = "usb", "utmi-pads";
 		nvidia,hssync-start-delay = <0>;
 		nvidia,idle-wait-delay = <17>;
 		nvidia,elastic-limit = <16>;
