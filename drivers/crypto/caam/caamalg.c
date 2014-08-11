@@ -3627,6 +3627,15 @@ int caam_algapi_init(struct device *ctrldev)
 	unsigned int md_limit = SHA512_DIGEST_SIZE;
 	bool registered = false, gcm_support;
 
+	if (!priv) {
+		dev_err(ctrldev, "dev_get_drvdata failed\n");
+		msleep(10);
+		priv = dev_get_drvdata(ctrldev);
+		if (!priv)
+			return -ENODEV;
+		dev_err(ctrldev, "dev_get_drvdata succeeded after pause\n");
+	}
+
 	/*
 	 * Register crypto algorithms the device supports.
 	 * First, detect presence and attributes of DES, AES, and MD blocks.
