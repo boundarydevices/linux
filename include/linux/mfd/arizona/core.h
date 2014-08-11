@@ -117,6 +117,7 @@ enum arizona_type {
 #define ARIZONA_HP_SHORT_IMPEDANCE        4
 struct snd_soc_dapm_context;
 struct arizona_extcon_info;
+struct clk;
 
 struct arizona {
 	struct regmap *regmap;
@@ -171,6 +172,8 @@ struct arizona {
 #endif
 
 	struct mutex rate_lock;
+	struct clk *mclk1;
+	struct clk *mclk2;
 };
 
 #define ARIZONA_DVFS_SR1_RQ          0x00000001
