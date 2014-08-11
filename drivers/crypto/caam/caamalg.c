@@ -4701,6 +4701,14 @@ static int __init caam_algapi_init(void)
 
 	ctrldev = &pdev->dev;
 	priv = dev_get_drvdata(ctrldev);
+	if (!priv) {
+		dev_err(ctrldev, "dev_get_drvdata failed\n");
+		msleep(10);
+		priv = dev_get_drvdata(ctrldev);
+		if (!priv)
+			return -ENODEV;
+		dev_err(ctrldev, "dev_get_drvdata succeeded after pause\n");
+	}
 	of_node_put(dev_node);
 
 	/*
