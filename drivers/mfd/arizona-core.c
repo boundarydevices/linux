@@ -1032,6 +1032,8 @@ static const struct mfd_cell wm8998_devs[] = {
 
 int arizona_dev_init(struct arizona *arizona)
 {
+	struct clk *mclk1 = ERR_PTR(-EINVAL);
+	struct clk *mclk2 = ERR_PTR(-EINVAL);
 	const char * const mclk_name[] = { "mclk1", "mclk2" };
 	struct device *dev = arizona->dev;
 	const char *type_name = NULL;
@@ -1087,6 +1089,30 @@ int arizona_dev_init(struct arizona *arizona)
 	/* Mark DCVDD as external, LDO1 driver will clear if internal */
 	arizona->external_dcvdd = true;
 
+	mclk1 = devm_clk_get(dev, "mclk1");
+	if (IS_ERR(mclk1)) {
+		dev_err(dev, "Failed to get mclk1: %ld\n", PTR_ERR(mclk1));
+	} else {
+		ret = clk_prepare_enable(mclk1);
+		if (ret) {
+			dev_err(dev, "mclk1 prepare_enable failed %d\n", ret);
+			return ret;
+		}
+	}
+	mclk2 = devm_clk_get(dev, "mclk2");
+	if (IS_ERR(mclk1)) {
+		dev_err(dev, "Failed to get mclk2: %ld\n", PTR_ERR(mclk2));
+	} else {
+		ret = clk_prepare_enable(mclk2);
+		if (ret) {
+			dev_err(dev, "mclk2 prepare_enable failed %d\n", ret);
+			goto err_early;
+		}
+	}
+	arizona->mclk1 = mclk1;
+	arizona->mclk2 = mclk2;
+	pr_info("%s: add devices\n", __func__);
+
 	switch (arizona->type) {
 	case WM1831:
 	case CS47L24:
@@ -1096,7 +1122,7 @@ int arizona_dev_init(struct arizona *arizona)
 				      ARRAY_SIZE(early_devs), NULL, 0, NULL);
 		if (ret != 0) {
 			dev_err(dev, "Failed to add early children: %d\n", ret);
-			return ret;
+			goto err_early;
 		}
 		break;
 	}
@@ -1151,24 +1177,33 @@ int arizona_dev_init(struct arizona *arizona)
 
 	regcache_cache_only(arizona->regmap, false);
 
-	/* Verify that this is a chip we know about */
-	ret = regmap_read(arizona->regmap, ARIZONA_SOFTWARE_RESET, &reg);
-	if (ret != 0) {
-		dev_err(dev, "Failed to read ID register: %d\n", ret);
-		goto err_reset;
-	}
+	i = 0;
+	for (;;) {
+		/* Verify that this is a chip we know about */
+		ret = regmap_read(arizona->regmap, ARIZONA_SOFTWARE_RESET, &reg);
+		if (ret != 0) {
+			dev_err(dev, "Failed to read ID register: %d\n", ret);
+			goto err_reset;
+		}
 
-	switch (reg) {
-	case 0x5102:
-	case 0x5110:
-	case 0x6349:
-	case 0x6363:
-	case 0x8997:
+		switch (reg) {
+		case 0x5102:
+		case 0x5110:
+		case 0x6349:
+		case 0x6363:
+		case 0x8997:
+			break;
+		default:
+			dev_err(arizona->dev, "Unknown device ID: %x\n", reg);
+			msleep(20);
+			i++;
+			if (i >= 10) {
+				ret = -ENODEV;
+				goto err_reset;
+			}
+			continue;
+		}
 		break;
-	default:
-		dev_err(arizona->dev, "Unknown device ID: %x\n", reg);
-		ret = -ENODEV;
-		goto err_reset;
 	}
 
 	/* If we have a /RESET GPIO we'll already be reset */
@@ -1546,6 +1581,10 @@ err_enable:
 err_dcvdd:
 	regulator_put(arizona->dcvdd);
 err_early:
+	if (!IS_ERR(mclk2))
+		clk_disable_unprepare(mclk2);
+	if (!IS_ERR(mclk1))
+		clk_disable_unprepare(mclk1);
 	mfd_remove_devices(dev);
 	return ret;
 }
@@ -1567,6 +1606,11 @@ int arizona_dev_exit(struct arizona *arizona)
 
 	regulator_bulk_disable(arizona->num_core_supplies,
 			       arizona->core_supplies);
+	if (!IS_ERR(arizona->mclk1))
+		clk_disable_unprepare(arizona->mclk1);
+	if (!IS_ERR(arizona->mclk2))
+		clk_disable_unprepare(arizona->mclk2);
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(arizona_dev_exit);
