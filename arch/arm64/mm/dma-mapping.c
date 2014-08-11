@@ -36,10 +36,8 @@ EXPORT_SYMBOL(dma_ops);
 static pgprot_t __get_dma_pgprot(struct dma_attrs *attrs, pgprot_t prot,
 				 bool coherent)
 {
-	if (dma_get_attr(DMA_ATTR_WRITE_COMBINE, attrs))
+	if (!coherent || dma_get_attr(DMA_ATTR_WRITE_COMBINE, attrs))
 		return pgprot_writecombine(prot);
-	else if (!coherent)
-		return pgprot_dmacoherent(prot);
 	return prot;
 }
 
@@ -117,7 +115,7 @@ static void *__dma_alloc_noncoherent(struct device *dev, size_t size,
 	for (i = 0; i < (size >> PAGE_SHIFT); i++)
 		map[i] = page + i;
 	coherent_ptr = vmap(map, size >> PAGE_SHIFT, VM_MAP,
-			    __get_dma_pgprot(attrs, pgprot_default, false));
+			    __get_dma_pgprot(attrs, __pgprot(PROT_NORMAL_NC), false));
 	kfree(map);
 	if (!coherent_ptr)
 		goto no_map;

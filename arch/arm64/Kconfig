@@ -19,6 +19,7 @@ config ARM64
 	select GENERIC_CLOCKEVENTS
 	select GENERIC_CLOCKEVENTS_BROADCAST if SMP
 	select GENERIC_CPU_AUTOPROBE
+	select GENERIC_EARLY_IOREMAP
 	select GENERIC_IOMAP
 	select GENERIC_IRQ_PROBE
 	select GENERIC_IRQ_SHOW
@@ -116,6 +117,9 @@ config IOMMU_HELPER
 	def_bool SWIOTLB
 
 config KERNEL_MODE_NEON
+	def_bool y
+
+config FIX_EARLYCON_MEM
 	def_bool y
 
 source "init/Kconfig"
