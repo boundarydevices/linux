@@ -105,6 +105,14 @@ config SND_SOC_EUKREA_TLV320
 	  Enable I2S based access to the TLV320AIC23B codec attached
 	  to the SSI interface
 
+config SND_SOC_IMX_WM5102
+	tristate "SoC Audio support for i.MX boards with WM5102"
+	select SND_SOC_WM5102
+	select SND_MXC_SOC_MX2
+	help
+	  Say Y if you want to add support for SoC audio on an i.MX board with
+	  a WM5102 codec.
+
 config SND_SOC_IMX_SPDIF
 	tristate "SoC Audio support for IMX - S/PDIF"
 	default n
