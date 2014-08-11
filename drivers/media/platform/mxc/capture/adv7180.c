@@ -1290,7 +1290,8 @@ static int adv7180_probe(struct i2c_client *client,
 		goto exit1;
 	}
 
-	clk_prepare_enable(adv->sen.sensor_clk);
+	if (!IS_ERR(adv->sen.sensor_clk))
+		clk_prepare_enable(adv->sen.sensor_clk);
 
 	dev_dbg(&adv->sen.i2c_client->dev,
 		"%s:adv7180 probe i2c address is 0x%02X\n",
@@ -1321,7 +1322,8 @@ static int adv7180_probe(struct i2c_client *client,
 	adv7180_int_device.priv = adv;
 	ret = v4l2_int_device_register(&adv7180_int_device);
 
-	clk_disable_unprepare(adv->sen.sensor_clk);
+	if (!IS_ERR(adv->sen.sensor_clk))
+		clk_disable_unprepare(adv->sen.sensor_clk);
 
 	return ret;
 
