@@ -82,6 +82,7 @@ enum arizona_type {
 #define ARIZONA_NUM_IRQ                   52
 
 struct snd_soc_dapm_context;
+struct clk;
 
 struct arizona {
 	struct regmap *regmap;
@@ -110,6 +111,8 @@ struct arizona {
 	int clk32k_ref;
 
 	struct snd_soc_dapm_context *dapm;
+	struct clk *mclk1;
+	struct clk *mclk2;
 };
 
 int arizona_clk32k_enable(struct arizona *arizona);
