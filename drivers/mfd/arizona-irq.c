@@ -333,7 +333,7 @@ int arizona_irq_init(struct arizona *arizona)
 	if (aod) {
 		ret = regmap_add_irq_chip(arizona->regmap,
 					irq_create_mapping(arizona->virq, 0),
-					IRQF_ONESHOT, -1, aod,
+					IRQF_ONESHOT, 0, aod,
 					&arizona->aod_irq_chip);
 		if (ret != 0) {
 			dev_err(arizona->dev, "Failed to add AOD IRQs: %d\n",
@@ -345,7 +345,7 @@ int arizona_irq_init(struct arizona *arizona)
 	if (irq) {
 		ret = regmap_add_irq_chip(arizona->regmap,
 					  irq_create_mapping(arizona->virq, 1),
-					  IRQF_ONESHOT, -1, irq,
+					  IRQF_ONESHOT, 0, irq,
 					  &arizona->irq_chip);
 		if (ret != 0) {
 			dev_err(arizona->dev, "Failed to add main IRQs: %d\n", ret);
