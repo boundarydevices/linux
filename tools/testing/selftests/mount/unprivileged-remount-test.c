@@ -118,7 +118,8 @@ static void create_and_enter_userns(void)
 }
 
 static
-bool test_unpriv_remount(int mount_flags, int remount_flags, int invalid_flags)
+bool test_unpriv_remount(const char *fstype, const char *mount_options,
+			 int mount_flags, int remount_flags, int invalid_flags)
 {
 	pid_t child;
 
@@ -151,9 +152,11 @@ bool test_unpriv_remount(int mount_flags, int remount_flags, int invalid_flags)
 			strerror(errno));
 	}
 
-	if (mount("testing", "/tmp", "ramfs", mount_flags, NULL) != 0) {
-		die("mount of /tmp failed: %s\n",
-			strerror(errno));
+	if (mount("testing", "/tmp", fstype, mount_flags, mount_options) != 0) {
+		die("mount of %s with options '%s' on /tmp failed: %s\n",
+		    fstype,
+		    mount_options? mount_options : "",
+		    strerror(errno));
 	}
 
 	create_and_enter_userns();
@@ -181,60 +184,60 @@ bool test_unpriv_remount(int mount_flags, int remount_flags, int invalid_flags)
 
 static bool test_unpriv_remount_simple(int mount_flags)
 {
-	return test_unpriv_remount(mount_flags, mount_flags, 0);
+	return test_unpriv_remount("ramfs", NULL, mount_flags, mount_flags, 0);
 }
 
 static bool test_unpriv_remount_atime(int mount_flags, int invalid_flags)
 {
-	return test_unpriv_remount(mount_flags, mount_flags, invalid_flags);
+	return test_unpriv_remount("ramfs", NULL, mount_flags, mount_flags,
+				   invalid_flags);
 }
 
 int main(int argc, char **argv)
 {
-	if (!test_unpriv_remount_simple(MS_RDONLY|MS_NODEV)) {
+	if (!test_unpriv_remount_simple(MS_RDONLY)) {
 		die("MS_RDONLY malfunctions\n");
 	}
-	if (!test_unpriv_remount_simple(MS_NODEV)) {
+	if (!test_unpriv_remount("devpts", "newinstance", MS_NODEV, MS_NODEV, 0)) {
 		die("MS_NODEV malfunctions\n");
 	}
-	if (!test_unpriv_remount_simple(MS_NOSUID|MS_NODEV)) {
+	if (!test_unpriv_remount_simple(MS_NOSUID)) {
 		die("MS_NOSUID malfunctions\n");
 	}
-	if (!test_unpriv_remount_simple(MS_NOEXEC|MS_NODEV)) {
+	if (!test_unpriv_remount_simple(MS_NOEXEC)) {
 		die("MS_NOEXEC malfunctions\n");
 	}
-	if (!test_unpriv_remount_atime(MS_RELATIME|MS_NODEV,
-				       MS_NOATIME|MS_NODEV))
+	if (!test_unpriv_remount_atime(MS_RELATIME,
+				       MS_NOATIME))
 	{
 		die("MS_RELATIME malfunctions\n");
 	}
-	if (!test_unpriv_remount_atime(MS_STRICTATIME|MS_NODEV,
-				       MS_NOATIME|MS_NODEV))
+	if (!test_unpriv_remount_atime(MS_STRICTATIME,
+				       MS_NOATIME))
 	{
 		die("MS_STRICTATIME malfunctions\n");
 	}
-	if (!test_unpriv_remount_atime(MS_NOATIME|MS_NODEV,
-				       MS_STRICTATIME|MS_NODEV))
+	if (!test_unpriv_remount_atime(MS_NOATIME,
+				       MS_STRICTATIME))
 	{
 		die("MS_RELATIME malfunctions\n");
 	}
-	if (!test_unpriv_remount_atime(MS_RELATIME|MS_NODIRATIME|MS_NODEV,
-				       MS_NOATIME|MS_NODEV))
+	if (!test_unpriv_remount_atime(MS_RELATIME|MS_NODIRATIME,
+				       MS_NOATIME))
 	{
 		die("MS_RELATIME malfunctions\n");
 	}
-	if (!test_unpriv_remount_atime(MS_STRICTATIME|MS_NODIRATIME|MS_NODEV,
-				       MS_NOATIME|MS_NODEV))
+	if (!test_unpriv_remount_atime(MS_STRICTATIME|MS_NODIRATIME,
+				       MS_NOATIME))
 	{
 		die("MS_RELATIME malfunctions\n");
 	}
-	if (!test_unpriv_remount_atime(MS_NOATIME|MS_NODIRATIME|MS_NODEV,
-				       MS_STRICTATIME|MS_NODEV))
+	if (!test_unpriv_remount_atime(MS_NOATIME|MS_NODIRATIME,
+				       MS_STRICTATIME))
 	{
 		die("MS_RELATIME malfunctions\n");
 	}
-	if (!test_unpriv_remount(MS_STRICTATIME|MS_NODEV, MS_NODEV,
-				 MS_NOATIME|MS_NODEV))
+	if (!test_unpriv_remount("ramfs", NULL, MS_STRICTATIME, 0, MS_NOATIME))
 	{
 		die("Default atime malfunctions\n");
 	}
