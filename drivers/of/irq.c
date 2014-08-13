@@ -293,16 +293,33 @@ int of_irq_map_one(struct device_node *device, int index, struct of_irq *out_irq
 	if (of_irq_workarounds & OF_IMAP_OLDWORLD_MAC)
 		return of_irq_map_oldworld(device, index, out_irq);
 
+	/* Get the reg property (if any) */
+	addr = of_get_property(device, "reg", NULL);
+
 	/* Get the interrupts property */
 	intspec = of_get_property(device, "interrupts", &intlen);
-	if (intspec == NULL)
-		return -EINVAL;
+	if (intspec == NULL) {
+		u32* pargs;
+		int i;
+		__be32 args[OF_MAX_IRQ_SPEC];
+		struct of_phandle_args oirq;
+		/* Try the new-style interrupts-extended */
+		res = of_parse_phandle_with_args(device, "interrupts-extended",
+				"#interrupt-cells", index, &oirq);
+		if (res)
+			return -EINVAL;
+		intsize = oirq.args_count;
+		pargs = &oirq.args[index * intsize];
+		for (i = 0; i < OF_MAX_IRQ_SPEC; i++) {
+			args[i] = cpu_to_be32p(pargs);
+			pargs++;
+		}
+		return of_irq_map_raw(oirq.np, args, intsize,
+				addr, out_irq);
+	}
 	intlen /= sizeof(*intspec);
 
 	pr_debug(" intspec=%d intlen=%d\n", be32_to_cpup(intspec), intlen);
-
-	/* Get the reg property (if any) */
-	addr = of_get_property(device, "reg", NULL);
 
 	/* Look for the interrupt parent. */
 	p = of_irq_find_parent(device);
