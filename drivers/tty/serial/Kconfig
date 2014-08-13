@@ -1147,6 +1147,26 @@ config SERIAL_QE
 	  This driver supports the QE serial ports on Freescale embedded
 	  PowerPC that contain a QUICC Engine.
 
+config SERIAL_SC16IS7XX
+	tristate "i2c serial port sc16is7xx support"
+	select SERIAL_CORE
+	help
+	  If you have a i2c serial chip sc16is7xx you
+	  can enable it with this option.
+
+config SERIAL_SC16IS7XX_CONSOLE
+	bool "Console on sc16is7xx serial port"
+	depends on SERIAL_SC16IS7XX=y
+	select SERIAL_CORE_CONSOLE
+	help
+	  If you have enabled the sc16is7xx, you can make it the console by
+	  answering Y to this option.
+
+	  Even if you say Y here, the currently visible virtual console
+	  (/dev/tty0) will still be used as the system console by default, but
+	  you can alter that using a kernel command line option such as
+	  "console=ttySC0".
+
 config SERIAL_SC26XX
 	tristate "SC2681/SC2692 serial port support"
 	depends on SNI_RM
