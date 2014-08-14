@@ -413,7 +413,7 @@ int bl_notify(struct device *dev, int brightness)
 static struct platform_pwm_backlight_data pwm4_backlight_data = {
 	.pwm_id = 3,	/* pin SD1_CMD - PWM4 */
 	.max_brightness = 256,
-	.dft_brightness = 128,
+	.dft_brightness = 255,
 	.pwm_period_ns = 50000,
 	.notify = bl_notify,
 };
