@@ -58,16 +58,14 @@
 #define MICROPHONE_MIN_OHM      1257
 #define MICROPHONE_MAX_OHM      30000
 
-enum {
-	MICD_LVL_1_TO_7 = ARIZONA_MICD_LVL_1 | ARIZONA_MICD_LVL_2 |
-			  ARIZONA_MICD_LVL_3 | ARIZONA_MICD_LVL_4 |
-			  ARIZONA_MICD_LVL_5 | ARIZONA_MICD_LVL_6 |
-			  ARIZONA_MICD_LVL_7,
+#define MICD_LVL_1_TO_7 (ARIZONA_MICD_LVL_1 | ARIZONA_MICD_LVL_2 | \
+			 ARIZONA_MICD_LVL_3 | ARIZONA_MICD_LVL_4 | \
+			 ARIZONA_MICD_LVL_5 | ARIZONA_MICD_LVL_6 | \
+			 ARIZONA_MICD_LVL_7)
 
-	MICD_LVL_0_TO_7 = ARIZONA_MICD_LVL_0 | MICD_LVL_1_TO_7,
+#define MICD_LVL_0_TO_7 (ARIZONA_MICD_LVL_0 | MICD_LVL_1_TO_7)
 
-	MICD_LVL_0_TO_8 = MICD_LVL_0_TO_7 | ARIZONA_MICD_LVL_8,
-};
+#define MICD_LVL_0_TO_8 (MICD_LVL_0_TO_7 | ARIZONA_MICD_LVL_8)
 
 struct arizona_extcon_info {
 	struct device *dev;
@@ -396,6 +394,8 @@ static struct {
 	{ 169, 11065, 65460395 },
 };
 
+#define ARIZONA_HPDET_B_RANGE_MAX 0x3fb
+
 static struct {
 	int min;
 	int max;
@@ -451,7 +451,7 @@ static int arizona_hpdet_read(struct arizona_extcon_info *info)
 
 		if (range < ARRAY_SIZE(arizona_hpdet_b_ranges) - 1 &&
 		    (val < arizona_hpdet_b_ranges[range].threshold ||
-		     val >= 0x3fb)) {
+		     val >= ARIZONA_HPDET_B_RANGE_MAX)) {
 			range++;
 			dev_dbg(arizona->dev, "Moving to HPDET range %d\n",
 				range);
@@ -465,7 +465,7 @@ static int arizona_hpdet_read(struct arizona_extcon_info *info)
 
 		/* If we go out of range report top of range */
 		if (val < arizona_hpdet_b_ranges[range].threshold ||
-		    val >= 0x3fb) {
+		    val >= ARIZONA_HPDET_B_RANGE_MAX) {
 			dev_dbg(arizona->dev, "Measurement out of range\n");
 			return ARIZONA_HPDET_MAX;
 		}
@@ -489,6 +489,7 @@ static int arizona_hpdet_read(struct arizona_extcon_info *info)
 		}
 
 		val &= ARIZONA_HP_LVL_B_MASK;
+		/* Convert to ohms, the value is in 0.5 ohm increments */
 		val /= 2;
 
 		regmap_read(arizona->regmap, ARIZONA_HEADPHONE_DETECT_1,
@@ -573,7 +574,7 @@ static int arizona_hpdet_do_id(struct arizona_extcon_info *info, int *reading,
 		}
 
 		/*
-		 * If we measure the mic as 
+		 * If we measure the mic as high impedance
 		 */
 		if (!id_gpio || info->hpdet_res[1] > 50) {
 			dev_dbg(arizona->dev, "Detected mic\n");
@@ -1210,7 +1211,7 @@ static void arizona_micd_set_level(struct arizona *arizona, int index,
 }
 
 #ifdef CONFIG_OF
-static int arizona_extcon_get_pdata(struct arizona *arizona)
+static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 {
 	struct arizona_pdata *pdata = &arizona->pdata;
 
@@ -1262,7 +1263,7 @@ static int arizona_extcon_get_pdata(struct arizona *arizona)
 	return 0;
 }
 #else
-static inline int arizona_extcon_get_pdata(struct arizona *arizona)
+static inline int arizona_extcon_of_get_pdata(struct arizona *arizona)
 {
 	return 0;
 }
@@ -1291,13 +1292,16 @@ static int arizona_extcon_probe(struct platform_device *pdev)
 	if (!arizona->dapm || !arizona->dapm->card)
 		return -EPROBE_DEFER;
 
-	arizona_extcon_get_pdata(arizona);
-
 	info = devm_kzalloc(&pdev->dev, sizeof(*info), GFP_KERNEL);
-	if (!info) {
-		dev_err(&pdev->dev, "Failed to allocate memory\n");
-		ret = -ENOMEM;
-		goto err;
+	if (!info)
+		return -ENOMEM;
+
+	if (IS_ENABLED(CONFIG_OF)) {
+		if (!dev_get_platdata(arizona->dev)) {
+			ret = arizona_extcon_of_get_pdata(arizona);
+			if (ret < 0)
+				return ret;
+		}
 	}
 
 	/* Set of_node to parent from the SPI device to allow
@@ -1308,7 +1312,7 @@ static int arizona_extcon_probe(struct platform_device *pdev)
 	if (IS_ERR(info->micvdd)) {
 		ret = PTR_ERR(info->micvdd);
 		dev_err(arizona->dev, "Failed to get MICVDD: %d\n", ret);
-		goto err;
+		return ret;
 	}
 
 	mutex_init(&info->lock);
@@ -1359,7 +1363,7 @@ static int arizona_extcon_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(arizona->dev, "extcon_dev_register() failed: %d\n",
 			ret);
-		goto err;
+		return ret;
 	}
 
 	info->input = devm_input_allocate_device(&pdev->dev);
@@ -1627,7 +1631,6 @@ err_input:
 err_register:
 	pm_runtime_disable(&pdev->dev);
 	extcon_dev_unregister(&info->edev);
-err:
 	return ret;
 }
 
