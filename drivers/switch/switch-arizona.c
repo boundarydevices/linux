@@ -232,8 +232,8 @@ static void arizona_jds_timeout_work(struct work_struct *work)
 	mutex_unlock(&info->lock);
 }
 
-static void arizona_extcon_do_magic(struct arizona_extcon_info *info,
-				    unsigned int magic)
+static void arizona_extcon_hp_clamp(struct arizona_extcon_info *info,
+				    bool clamp)
 {
 	struct arizona *arizona = info->arizona;
 	unsigned int mask, val = 0;
@@ -246,25 +246,26 @@ static void arizona_extcon_do_magic(struct arizona_extcon_info *info,
 		break;
 	case WM8280:
 	case WM5110:
-		mask = 0x0007;
-		if (magic)
-			val = 0x0001;
+		mask = ARIZONA_HP1L_SHRTO | ARIZONA_HP1L_FLWR |
+		       ARIZONA_HP1L_SHRTI;
+		if (clamp)
+			val = ARIZONA_HP1L_SHRTO;
 		else
-			val = 0x0006;
+			val = ARIZONA_HP1L_FLWR | ARIZONA_HP1L_SHRTI;
 		break;
 	default:
-		mask = 0x4000;
-		if (magic)
-			val = 0x4000;
+		mask = ARIZONA_RMV_SHRT_HP1L;
+		if (clamp)
+			val = ARIZONA_RMV_SHRT_HP1L;
 		break;
 	};
 
 	mutex_lock(&arizona->dapm->card->dapm_mutex);
 
-	arizona->hpdet_magic = magic;
+	arizona->hpdet_clamp = clamp;
 
-	/* Keep the HP output stages disabled while doing the magic */
-	if (magic) {
+	/* Keep the HP output stages disabled while doing the clamp */
+	if (clamp) {
 		ret = regmap_update_bits(arizona->regmap,
 					 ARIZONA_OUTPUT_ENABLES_1,
 					 ARIZONA_OUT1L_ENA |
@@ -276,19 +277,21 @@ static void arizona_extcon_do_magic(struct arizona_extcon_info *info,
 	}
 
 	if (mask) {
-		ret = regmap_update_bits(arizona->regmap, 0x225, mask, val);
+		ret = regmap_update_bits(arizona->regmap, ARIZONA_HP_CTRL_1L,
+					 mask, val);
 		if (ret != 0)
-			dev_warn(arizona->dev, "Failed to do magic: %d\n",
+			dev_warn(arizona->dev, "Failed to do clamp: %d\n",
 				 ret);
 
-		ret = regmap_update_bits(arizona->regmap, 0x226, mask, val);
+		ret = regmap_update_bits(arizona->regmap, ARIZONA_HP_CTRL_1R,
+					 mask, val);
 		if (ret != 0)
-			dev_warn(arizona->dev, "Failed to do magic: %d\n",
+			dev_warn(arizona->dev, "Failed to do clamp: %d\n",
 				 ret);
 	}
 
-	/* Restore the desired state while not doing the magic */
-	if (!magic && (arizona->hp_impedance > arizona->pdata.hpdet_short_circuit_imp)) {
+	/* Restore the desired state while not doing the clamp */
+	if (!clamp && (arizona->hp_impedance > arizona->pdata.hpdet_short_circuit_imp)) {
 		ret = regmap_update_bits(arizona->regmap,
 					 ARIZONA_OUTPUT_ENABLES_1,
 					 ARIZONA_OUT1L_ENA |
@@ -826,7 +829,7 @@ int arizona_hpdet_start(struct arizona_extcon_info *info)
 	/* Make sure we keep the device enabled during the measurement */
 	pm_runtime_get_sync(info->dev);
 
-	arizona_extcon_do_magic(info, 0x4000);
+	arizona_extcon_hp_clamp(info, true);
 
 	ret = regmap_update_bits(arizona->regmap,
 				 ARIZONA_ACCESSORY_DETECT_MODE_1,
@@ -849,7 +852,7 @@ int arizona_hpdet_start(struct arizona_extcon_info *info)
 	return 0;
 
 err:
-	arizona_extcon_do_magic(info, 0);
+	arizona_extcon_hp_clamp(info, false);
 
 	pm_runtime_put_autosuspend(info->dev);
 
@@ -889,7 +892,7 @@ void arizona_hpdet_stop(struct arizona_extcon_info *info)
 			   ARIZONA_ACCESSORY_DETECT_MODE_1,
 			   ARIZONA_ACCDET_MODE_MASK, 0);
 
-	arizona_extcon_do_magic(info, 0);
+	arizona_extcon_hp_clamp(info, false);
 
 	pm_runtime_mark_last_busy(info->dev);
 	pm_runtime_put_autosuspend(info->dev);
@@ -902,7 +905,7 @@ static int arizona_hpdet_moisture_start(struct arizona_extcon_info *info)
 
 	ret = arizona_hpdet_start(info);
 
-	arizona_extcon_do_magic(info, 0);
+	arizona_extcon_hp_clamp(info, false);
 
 	return ret;
 }
@@ -1293,7 +1296,7 @@ static int arizona_hpdet_acc_id_start(struct arizona_extcon_info *info)
 	/* Make sure we keep the device enabled during the measurement */
 	pm_runtime_get_sync(info->dev);
 
-	arizona_extcon_do_magic(info, 0x4000);
+	arizona_extcon_hp_clamp(info, true);
 
 	ret = regmap_update_bits(arizona->regmap,
 				 ARIZONA_ACCESSORY_DETECT_MODE_1,
@@ -1326,7 +1329,7 @@ static int arizona_hpdet_acc_id_start(struct arizona_extcon_info *info)
 	return 0;
 
 err:
-	arizona_extcon_do_magic(info, 0x0);
+	arizona_extcon_hp_clamp(info, false);
 
 	pm_runtime_put_autosuspend(info->dev);
 
