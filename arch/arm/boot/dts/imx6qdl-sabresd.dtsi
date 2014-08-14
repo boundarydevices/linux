@@ -796,3 +796,11 @@
 	wp-gpios = <&gpio2 1 0>;
 	status = "okay";
 };
+
+&wdog1 {
+	status = "disabled";
+};
+
+&wdog2 {
+	status = "okay";
+};
