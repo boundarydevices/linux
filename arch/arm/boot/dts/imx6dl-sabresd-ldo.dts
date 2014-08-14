@@ -19,3 +19,11 @@
 	/* watchdog select of reset source */
 	fsl,wdog-reset = <1>;
 };
+
+&wdog1 {
+	status = "okay";
+};
+
+&wdog2 {
+	status = "disabled";
+};
