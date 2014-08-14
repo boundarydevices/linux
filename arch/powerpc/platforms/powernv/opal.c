@@ -50,7 +50,7 @@ int __init early_init_dt_scan_opal(unsigned long node,
 				   const char *uname, int depth, void *data)
 {
 	const void *basep, *entryp;
-	unsigned long basesz, entrysz;
+	int basesz, entrysz, runtimesz;
 
 	if (depth != 1 || strcmp(uname, "ibm,opal") != 0)
 		return 0;
@@ -64,10 +64,10 @@ int __init early_init_dt_scan_opal(unsigned long node,
 	opal.base = of_read_number(basep, basesz/4);
 	opal.entry = of_read_number(entryp, entrysz/4);
 
-	pr_debug("OPAL Base  = 0x%llx (basep=%p basesz=%ld)\n",
+	pr_debug("OPAL Base  = 0x%llx (basep=%p basesz=%d)\n",
 		 opal.base, basep, basesz);
-	pr_debug("OPAL Entry = 0x%llx (entryp=%p basesz=%ld)\n",
-		 opal.entry, entryp, entrysz);
+	pr_debug("OPAL Entry = 0x%llx (sizep=%p runtimesz=%d)\n",
+		 opal.size, sizep, runtimesz);
 
 	powerpc_firmware_features |= FW_FEATURE_OPAL;
 	if (of_flat_dt_is_compatible(node, "ibm,opal-v3")) {
@@ -84,6 +84,68 @@ int __init early_init_dt_scan_opal(unsigned long node,
 	return 1;
 }
 
+<<<<<<< HEAD
+=======
+int __init early_init_dt_scan_recoverable_ranges(unsigned long node,
+				   const char *uname, int depth, void *data)
+{
+	int i, psize, size;
+	const __be32 *prop;
+
+	if (depth != 1 || strcmp(uname, "ibm,opal") != 0)
+		return 0;
+
+	prop = of_get_flat_dt_prop(node, "mcheck-recoverable-ranges", &psize);
+
+	if (!prop)
+		return 1;
+
+	pr_debug("Found machine check recoverable ranges.\n");
+
+	/*
+	 * Calculate number of available entries.
+	 *
+	 * Each recoverable address range entry is (start address, len,
+	 * recovery address), 2 cells each for start and recovery address,
+	 * 1 cell for len, totalling 5 cells per entry.
+	 */
+	mc_recoverable_range_len = psize / (sizeof(*prop) * 5);
+
+	/* Sanity check */
+	if (!mc_recoverable_range_len)
+		return 1;
+
+	/* Size required to hold all the entries. */
+	size = mc_recoverable_range_len *
+			sizeof(struct mcheck_recoverable_range);
+
+	/*
+	 * Allocate a buffer to hold the MC recoverable ranges. We would be
+	 * accessing them in real mode, hence it needs to be within
+	 * RMO region.
+	 */
+	mc_recoverable_range =__va(memblock_alloc_base(size, __alignof__(u64),
+							ppc64_rma_size));
+	memset(mc_recoverable_range, 0, size);
+
+	for (i = 0; i < mc_recoverable_range_len; i++) {
+		mc_recoverable_range[i].start_addr =
+					of_read_number(prop + (i * 5) + 0, 2);
+		mc_recoverable_range[i].end_addr =
+					mc_recoverable_range[i].start_addr +
+					of_read_number(prop + (i * 5) + 2, 1);
+		mc_recoverable_range[i].recover_addr =
+					of_read_number(prop + (i * 5) + 3, 2);
+
+		pr_debug("Machine check recoverable range: %llx..%llx: %llx\n",
+				mc_recoverable_range[i].start_addr,
+				mc_recoverable_range[i].end_addr,
+				mc_recoverable_range[i].recover_addr);
+	}
+	return 1;
+}
+
+>>>>>>> 9d0c4dfedd96... of/fdt: update of_get_flat_dt_prop in prep for libfdt
 static int __init opal_register_exception_handlers(void)
 {
 #ifdef __BIG_ENDIAN__
@@ -269,7 +331,7 @@ int opal_get_chars(uint32_t vtermno, char *buf, int count)
 	if ((be64_to_cpu(evt) & OPAL_EVENT_CONSOLE_INPUT) == 0)
 		return 0;
 	len = cpu_to_be64(count);
-	rc = opal_console_read(vtermno, &len, buf);	
+	rc = opal_console_read(vtermno, &len, buf);
 	if (rc == OPAL_SUCCESS)
 		return be64_to_cpu(len);
 	return 0;
