@@ -376,6 +376,7 @@ int videoDMA_pgtable_alloc(struct pci_dev *pci, struct TW68_pgtable *pt)
 	cpu = pci_alloc_consistent(pci, PAGE_SIZE<<3, &dma_addr);   // 8* 4096 contiguous  //*2
 
 	if (NULL == cpu) {
+		pr_err("%s:pci_alloc_consistent failed\n", __func__);
 		return -ENOMEM;
 	}
 
@@ -384,7 +385,7 @@ int videoDMA_pgtable_alloc(struct pci_dev *pci, struct TW68_pgtable *pt)
 	pt->dma  = dma_addr;
 	phy_addr = dma_addr + (PAGE_SIZE<<2) + (PAGE_SIZE<<1);  //6 pages
 
-	pr_debug("%s: cpu:0X%p pt->size: 0x%x BD:0X%x\n", __func__, cpu, pt->size, (unsigned int)pt->cpu + pt->size );
+	pr_debug("%s: cpu:0X%p(%x) pt->size: 0x%x BD:0X%x\n", __func__, cpu, dma_addr, pt->size, (unsigned int)pt->cpu + pt->size );
 
 #if 0
 	for (clean = cpu; (unsigned int)clean < ((unsigned int)pt->cpu + pt->size); clean++ ) {
@@ -1569,6 +1570,7 @@ static int TW68_hwinit1(struct TW68_dev *dev)
 	u32 regDW, val1, k, ChannelOffset, pgn;
 	// Audio P
 	int audio_ch;
+	int ret;
 	u32 dmaP;
 
 	pr_debug(" TW6869 hwinit1 \n");
@@ -1638,18 +1640,23 @@ static int TW68_hwinit1(struct TW68_dev *dev)
 
 	//Trasmit Posted FC credit Status
 	reg_writel(EP_REG_ADDR, 0x730);   //
+	regDW = reg_readl(EP_REG_ADDR);
+	if (regDW != 0x730) {
+		pr_debug("%s: expected 0x730, read 0x%x\n", dev->name,  regDW );
+		return -ENODEV;
+	}
 	regDW = reg_readl(EP_REG_DATA );
-	//pr_debug("%s: PCI_CFG[Posted 0x730]= 0x%lx\n", dev->name,  regDW );
+	pr_debug("%s: PCI_CFG[Posted 0x730]= 0x%x\n", dev->name,  regDW );
 
 	//Trasnmit Non-Posted FC credit Status
 	reg_writel(EP_REG_ADDR, 0x734);   //
 	regDW = reg_readl(EP_REG_DATA );
-	//pr_debug("%s: PCI_CFG[Non-Posted 0x734]= 0x%lx\n", dev->name,  regDW );
+	pr_debug("%s: PCI_CFG[Non-Posted 0x734]= 0x%x\n", dev->name,  regDW );
 
 	//CPL FC credit Status
 	reg_writel(EP_REG_ADDR, 0x738);   //
 	regDW = reg_readl(EP_REG_DATA );
-	//pr_debug("%s: PCI_CFG[CPL 0x738]= 0x%lx\n", dev->name,  regDW );
+	pr_debug("%s: PCI_CFG[CPL 0x738]= 0x%x\n", dev->name,  regDW );
 
 	regDW = reg_readl((SYS_SOFT_RST) );
 	//pr_debug("HWinit %s: SYS_SOFT_RST  0x%lx    \n",  dev->name, regDW );
@@ -1667,7 +1674,9 @@ static int TW68_hwinit1(struct TW68_dev *dev)
 	reg_writel(PHASE_REF_CONFIG, regDW&0xFFFF );
 
 	//  Allocate PB DMA pagetable  total 16K  filled with 0xFF
-	videoDMA_pgtable_alloc(dev->pci, &dev->m_Page0);
+	ret = videoDMA_pgtable_alloc(dev->pci, &dev->m_Page0);
+	if (ret)
+		return ret;
 	AudioDMA_PB_alloc(dev->pci, &dev->m_AudioBuffer);
 
 	for (k =0; k<8; k++) {
@@ -1743,7 +1752,7 @@ static int TW68_hwinit1(struct TW68_dev *dev)
 
 
 	regDW = reg_readl((DMA_PAGE_TABLE0_ADDR) );
-	pr_debug("DMA %s: DMA_PAGE_TABLE0_ADDR  0x%x    \n",  dev->name, regDW );
+	pr_debug("DMA %s: DMA_PAGE_TABLE0_ADDR  0x%x(%x)    \n",  dev->name, regDW, dev->m_Page0.dma);
 	regDW = reg_readl((DMA_PAGE_TABLE1_ADDR) );
 	pr_debug("DMA %s: DMA_PAGE_TABLE1_ADDR  0x%x    \n",  dev->name, regDW );
 
@@ -2017,6 +2026,7 @@ static int TW68_initdev(struct pci_dev *pci_dev,
 
 	// no cache
 	dev->lmmio = ioremap_nocache(pci_resource_start(pci_dev, 0),  pci_resource_len(pci_dev, 0));
+	pr_debug("%s: %s: lmmio %p\n", __func__, dev->name, dev->lmmio);
 
 	dev->bmmio = (__u8 __iomem *)dev->lmmio;
 
@@ -2030,7 +2040,9 @@ static int TW68_initdev(struct pci_dev *pci_dev,
         //  pci_resource_start(pci_dev, 0), (unsigned int)dev->lmmio, (unsigned int)dev->bmmio, (unsigned int)pci_resource_len(pci_dev,0) );
 
 	/* initialize hardware #1 */
-	TW68_hwinit1(dev);
+	err = TW68_hwinit1(dev);
+	if (err)
+		goto fail3;
 	//InitExternal2864(dev);
 	/* get irq */
 	pr_debug("%s: %s: request IRQ %d\n", __func__, dev->name,pci_dev->irq);
