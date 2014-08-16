@@ -109,6 +109,10 @@ config PCI_IMX6_COMPLIANCE_TEST
 	  Say Y here if you want do the compliance tests on imx6 pcie rc found
 	  on FSL iMX SoCs.
 
+config PCIE_FORCE_GEN1
+	bool "PCI Express force gen1 speed"
+	depends on PCI_IMX6
+
 config PCI_IMX6_EP
 	bool "Freescale i.MX6/7/8 PCIe controller endpoint mode"
 	depends on ARCH_MXC || COMPILE_TEST
