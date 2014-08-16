@@ -1598,11 +1598,13 @@ static int imx_pcie_establish_link(struct imx_pcie *imx_pcie)
 		goto err_reset_phy;
 
 	if (imx_pcie->link_gen >= 2) {
+#ifndef CONFIG_PCIE_FORCE_GEN1
 		/* Allow Gen2 mode after the link is up. */
 		tmp = dw_pcie_readl_dbi(pci, PCIE_RC_LCR);
 		tmp &= ~PCIE_RC_LCR_MAX_LINK_SPEEDS_MASK;
 		tmp |= imx_pcie->link_gen;
 		dw_pcie_writel_dbi(pci, PCIE_RC_LCR, tmp);
+#endif
 
 		/*
 		 * Start Directed Speed Change so the best possible
