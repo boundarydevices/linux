@@ -748,11 +748,13 @@ static int imx6_pcie_establish_link(struct imx6_pcie *imx6_pcie)
 	}
 
 	if (imx6_pcie->link_gen == 2) {
+#ifndef CONFIG_PCIE_FORCE_GEN1
 		/* Allow Gen2 mode after the link is up. */
 		tmp = dw_pcie_readl_rc(pp, PCIE_RC_LCR);
 		tmp &= ~PCIE_RC_LCR_MAX_LINK_SPEEDS_MASK;
 		tmp |= PCIE_RC_LCR_MAX_LINK_SPEEDS_GEN2;
 		dw_pcie_writel_rc(pp, PCIE_RC_LCR, tmp);
+#endif
 	} else {
 		dev_info(dev, "Link: Gen2 disabled\n");
 		goto out;
