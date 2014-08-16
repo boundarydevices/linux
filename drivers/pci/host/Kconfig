@@ -76,6 +76,10 @@ config PCI_IMX6_COMPLIANCE_TEST
 	  on FSL iMX SoCs. The pcie clks wouldn't be turned off, and the link
 	  speed wouldn't be limited to gen1 when the Y is set here.
 
+config PCIE_FORCE_GEN1
+	bool "PCI Express force gen1 speed"
+	depends on PCI_IMX6
+
 config EP_MODE_IN_EP_RC_SYS
 	bool "PCI Express EP mode in the IMX6 RC/EP interconnection system"
 	depends on PCI_IMX6
