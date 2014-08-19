@@ -30,7 +30,7 @@
 
 #include <engine/disp.h>
 
-#include <core/class.h>
+#include <nvif/class.h>
 
 #include "dport.h"
 #include "outpdp.h"
@@ -241,7 +241,9 @@ dp_link_train_eq(struct dp_state *dp)
 		dp_set_training_pattern(dp, 2);
 
 	do {
-		if (dp_link_train_update(dp, dp->pc2, 400))
+		if ((tries &&
+		    dp_link_train_commit(dp, dp->pc2)) ||
+		    dp_link_train_update(dp, dp->pc2, 400))
 			break;
 
 		eq_done = !!(dp->stat[2] & DPCD_LS04_INTERLANE_ALIGN_DONE);
@@ -253,9 +255,6 @@ dp_link_train_eq(struct dp_state *dp)
 			    !(lane & DPCD_LS02_LANE0_SYMBOL_LOCKED))
 				eq_done = false;
 		}
-
-		if (dp_link_train_commit(dp, dp->pc2))
-			break;
 	} while (!eq_done && cr_done && ++tries <= 5);
 
 	return eq_done ? 0 : -1;
@@ -336,7 +335,7 @@ nouveau_dp_train(struct work_struct *w)
 	int ret;
 
 	/* bring capabilities within encoder limits */
-	if (nv_mclass(disp) < NVD0_DISP_CLASS)
+	if (nv_mclass(disp) < GF110_DISP)
 		outp->dpcd[2] &= ~DPCD_RC02_TPS3_SUPPORTED;
 	if ((outp->dpcd[2] & 0x1f) > outp->base.info.dpconf.link_nr) {
 		outp->dpcd[2] &= ~DPCD_RC02_MAX_LANE_COUNT;
@@ -355,7 +354,7 @@ nouveau_dp_train(struct work_struct *w)
 	cfg--;
 
 	/* disable link interrupt handling during link training */
-	nouveau_event_put(outp->irq);
+	nvkm_notify_put(&outp->irq);
 
 	/* enable down-spreading and execute pre-train script from vbios */
 	dp_link_train_init(dp, outp->dpcd[3] & 0x01);
@@ -396,5 +395,5 @@ nouveau_dp_train(struct work_struct *w)
 	DBG("training complete\n");
 	atomic_set(&outp->lt.done, 1);
 	wake_up(&outp->lt.wait);
-	nouveau_event_get(outp->irq);
+	nvkm_notify_get(&outp->irq);
 }

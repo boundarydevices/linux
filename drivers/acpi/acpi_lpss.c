@@ -34,6 +34,9 @@ ACPI_MODULE_NAME("acpi_lpss");
 
 /* Offsets relative to LPSS_PRIVATE_OFFSET */
 #define LPSS_CLK_DIVIDER_DEF_MASK	(BIT(1) | BIT(16))
+#define LPSS_RESETS			0x04
+#define LPSS_RESETS_RESET_FUNC		BIT(0)
+#define LPSS_RESETS_RESET_APB		BIT(1)
 #define LPSS_GENERAL			0x08
 #define LPSS_GENERAL_LTR_MODE_SW	BIT(2)
 #define LPSS_GENERAL_UART_RTS_OVRD	BIT(3)
@@ -98,6 +101,25 @@ static void lpss_uart_setup(struct lpss_private_data *pdata)
 	reg = readl(pdata->mmio_base + offset);
 	writel(reg | LPSS_GENERAL_UART_RTS_OVRD, pdata->mmio_base + offset);
 }
+
+static void lpss_i2c_setup(struct lpss_private_data *pdata)
+{
+	unsigned int offset;
+	u32 val;
+
+	offset = pdata->dev_desc->prv_offset + LPSS_RESETS;
+	val = readl(pdata->mmio_base + offset);
+	val |= LPSS_RESETS_RESET_APB | LPSS_RESETS_RESET_FUNC;
+	writel(val, pdata->mmio_base + offset);
+}
+
+static struct lpss_device_desc wpt_dev_desc = {
+	.clk_required = true,
+	.prv_offset = 0x800,
+	.ltr_required = true,
+	.clk_divider = true,
+	.clk_gate = true,
+};
 
 static struct lpss_device_desc lpt_dev_desc = {
 	.clk_required = true,
@@ -171,6 +193,7 @@ static struct lpss_device_desc byt_i2c_dev_desc = {
 	.prv_offset = 0x800,
 	.save_ctx = true,
 	.shared_clock = &i2c_clock,
+	.setup = lpss_i2c_setup,
 };
 
 #else
@@ -210,6 +233,8 @@ static const struct acpi_device_id acpi_lpss_device_ids[] = {
 	{ "INT3435", LPSS_ADDR(lpt_uart_dev_desc) },
 	{ "INT3436", LPSS_ADDR(lpt_sdio_dev_desc) },
 	{ "INT3437", },
+
+	{ "INT3438", LPSS_ADDR(wpt_dev_desc) },
 
 	{ }
 };
