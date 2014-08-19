@@ -243,8 +243,8 @@ static const struct spi_imx_master ecspi1_data __initconst = {
 };
 
 static int ecspi3_cs[] = {
-	GP_ECSPI3_WM5102_CS,
 	GP_ECSPI3_GS2971_CS,
+	GP_ECSPI3_WM5102_CS,
 };
 
 static const struct spi_imx_master ecspi3_data __initconst = {
@@ -343,7 +343,7 @@ static struct fsl_mxc_camera_platform_data gs2971_data = {
 	.cea861 = 0,
 };
 
-static struct spi_board_info spi_nor_device[] __initdata = {
+static struct spi_board_info spi_devices[] __initdata = {
 #if defined(CONFIG_MTD_M25P80)
 	{
 		.modalias = "m25p80",
@@ -353,30 +353,31 @@ static struct spi_board_info spi_nor_device[] __initdata = {
 		.platform_data = &spi_flash_data,
 	},
 #endif
+	{
+		.modalias = "gs2971",
+		.max_speed_hz = 20000000, /* max spi clock (SCK) speed in HZ */
+		.bus_num = 2,
+		.chip_select = 0,
+		.mode = SPI_MODE_0,
+		.platform_data = &gs2971_data,
+	},
 #ifdef CONFIG_SND_SOC_WM5102
 	{
 		.modalias       = "wm5102",
 		.max_speed_hz   = 10000000,
 		.bus_num        = 2,
-		.chip_select    = 0,
+		.chip_select    = 1,
 		.mode           = SPI_MODE_0,
 		.irq            = gpio_to_irq(GP_WM5102_IRQ),
 		.platform_data = &wm5102_reva_pdata,
 	},
 #endif
-	{
-		.modalias = "gs2971",
-		.max_speed_hz = 20000000, /* max spi clock (SCK) speed in HZ */
-		.bus_num = 2,
-		.chip_select = 1,
-		.platform_data = &gs2971_data,
-	},
 };
 
 static void spi_device_init(void)
 {
-	spi_register_board_info(spi_nor_device,
-				ARRAY_SIZE(spi_nor_device));
+	spi_register_board_info(spi_devices,
+				ARRAY_SIZE(spi_devices));
 }
 
 static struct mxc_audio_platform_data wm5102_audio_data;
