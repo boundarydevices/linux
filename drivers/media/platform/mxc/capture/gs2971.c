@@ -193,8 +193,9 @@ int gs2971_write_register(struct spi_device *spi, u16 offset, u16 value)
 	return gs2971_write_buffer(spi, offset, &value, 1);
 }
 
-static s32 power_control(struct sensor_data *sensor, int on)
+static s32 power_control(struct gs2971_priv *gs, int on)
 {
+	struct sensor_data *sensor = &gs->sensor;
 	struct fsl_mxc_camera_platform_data *plat = camera_plat;
 
 	if (sensor->on != on) {
@@ -210,36 +211,6 @@ static struct spi_device *gs2971_get_spi(struct gs2971_spidata *spidata)
 	if (!spidata)
 		return NULL;
 	return spidata->spi;
-}
-
-void get_mode(void)
-{
-	int S_B, D_A;
-
-	pr_debug("-> In function %s\n", __FUNCTION__);
-
-	gpio_request(SMPTE_BYPASS, "SMPTE_BYPASS");
-	gpio_request(DVB_ASI, "DVB_ASI");
-
-	gpio_direction_input(SMPTE_BYPASS);
-	gpio_direction_input(DVB_ASI);
-
-	S_B = gpio_get_value(SMPTE_BYPASS);
-	D_A = gpio_get_value(DVB_ASI);
-
-	pr_debug("--> SMPTE = %d \n--> DVB = %d \n", S_B, D_A);
-
-	if (S_B == 0) {
-		if (D_A == 0)
-			pr_debug("---> Data-through mode\n");
-		else
-			pr_debug("---> DVB_ASI Mode\n");
-	} else {
-		if (D_A == 0)
-			pr_debug("---> SMPTE Mode \n");
-		else
-			pr_debug("---> Default \n");
-	}
 }
 
 static int get_std(struct v4l2_int_device *s, v4l2_std_id * id)
@@ -262,7 +233,7 @@ static int get_std(struct v4l2_int_device *s, v4l2_std_id * id)
 	u16 readback_value;
 	u16 ds1, ds2;
 
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
 	gs->mode = gs2971_mode_not_supported;
 	gs->framerate = gs2971_default_fps;
@@ -484,7 +455,7 @@ static void gs2971_workqueue_handler(struct work_struct *ignored)
 	int status;
 	u16 did, sdid;
 
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
 	for (ch_id = 0; ch_id < GS2971_NUM_CHANNELS; ch_id++) {
 
@@ -542,7 +513,7 @@ static void gs2971_workqueue_handler(struct work_struct *ignored)
 #if defined(GS2971_ENABLE_ANCILLARY_DATA)
 static int gs2971_init_ancillary(struct spi_device *spi)
 {
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
 	u16 value;
 	int offset;
@@ -600,6 +571,7 @@ static int gs2971_init_ancillary(struct spi_device *spi)
 static int gs2971_initialize(struct gs2971_priv *gs, struct spi_device *spi)
 {
 	int status = 0;
+	int retry = 0;
 	u16 value;
 
 	u16 cfg = GS_VCFG1_861_PIN_DISABLE_MASK;
@@ -607,19 +579,23 @@ static int gs2971_initialize(struct gs2971_priv *gs, struct spi_device *spi)
 	if (gs->cea861)
 		cfg |= GS_VCFG1_TIMING_861_MASK;
 
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
-	status = gs2971_write_register(spi, GS2971_VCFG1, cfg);
-	if (status)
-		return status;
+	for (;;) {
+		status = gs2971_write_register(spi, GS2971_VCFG1, cfg);
+		if (status)
+			return status;
 
-	status = gs2971_read_register(spi, GS2971_VCFG1, &value);
-	if (status)
-		return status;
-	if (value != cfg) {
-		dev_dbg(&spi->dev, "status=%x, read value of x%04x\n", status,
-			(unsigned int)value);
-		return -ENODEV;
+		status = gs2971_read_register(spi, GS2971_VCFG1, &value);
+		if (status)
+			return status;
+		if (value == cfg)
+			break;
+		dev_err(&spi->dev, "status=%x, read value of 0x%04x, expected 0x%04x\n", status,
+			(unsigned int)value, cfg);
+		if (retry++ >= 20)
+			return -ENODEV;
+		msleep(50);
 	}
 //      status = gs2971_write_register(spi, GS2971_VCFG2, GS_VCFG2_DS_SWAP_3G);
 	status = gs2971_write_register(spi, GS2971_VCFG2, 0);
@@ -670,7 +646,7 @@ static int gs2971_initialize(struct gs2971_priv *gs, struct spi_device *spi)
  */
 static void gs2971_get_std(struct v4l2_int_device *s, v4l2_std_id * std)
 {
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 }
 #endif
 
@@ -698,7 +674,7 @@ static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 	struct gs2971_priv *gs = s->priv;
 	struct sensor_data *sensor = &gs->sensor;
 
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
 	/* Initialize structure to 0s then set any non-0 values. */
 	memset(p, 0, sizeof(*p));
@@ -733,12 +709,12 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 	struct gs2971_priv *gs = s->priv;
 	struct sensor_data *sensor = &gs->sensor;
 
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
 	if (on && !sensor->on) {
-		power_control(sensor, 1);
+		power_control(gs, 1);
 	} else if (!on && sensor->on) {
-		power_control(sensor, 0);
+		power_control(gs, 0);
 	}
 	return 0;
 }
@@ -756,7 +732,7 @@ static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	struct sensor_data *sensor = &gs->sensor;
 	struct v4l2_captureparm *cparm = &a->parm.capture;
 
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
 	switch (a->type) {
 		/* These are all the possible cases. */
@@ -802,10 +778,10 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	struct v4l2_fract *timeperframe = &a->parm.capture.timeperframe;
 	int ret = 0;
 
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
 	/* Make sure power on */
-	power_control(sensor, 1);
+	power_control(gs, 1);
 
 	switch (a->type) {
 		/* This is the only case currently handled. */
@@ -864,9 +840,9 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 	struct sensor_data *sensor = &gs->sensor;
 	v4l2_std_id std = V4L2_STD_UNKNOWN;
 
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
-	power_control(sensor, 1);
+	power_control(gs, 1);
 	switch (f->type) {
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
 		get_std(s, &std);
@@ -896,7 +872,7 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
  */
 static int ioctl_queryctrl(struct v4l2_int_device *s, struct v4l2_queryctrl *qc)
 {
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 	return -EINVAL;
 }
 
@@ -915,7 +891,7 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	struct sensor_data *sensor = &gs->sensor;
 	int ret = 0;
 
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
 	switch (vc->id) {
 	case V4L2_CID_BRIGHTNESS:
@@ -957,13 +933,12 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 {
 	struct gs2971_priv *gs = s->priv;
-	struct sensor_data *sensor = &gs->sensor;
 	int retval = 0;
 
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
 	///* Make sure power on */
-	power_control(sensor, 1);
+	power_control(gs, 1);
 
 	switch (vc->id) {
 	case V4L2_CID_BRIGHTNESS:
@@ -1030,7 +1005,7 @@ static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 	struct gs2971_priv *gs = s->priv;
 	struct sensor_data *sensor = &gs->sensor;
 
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
 	if (fsize->index > gs2971_mode_MAX || gs->mode > gs2971_mode_MAX)
 		return -EINVAL;
@@ -1051,7 +1026,7 @@ static int ioctl_enum_framesizes(struct v4l2_int_device *s,
  */
 static int ioctl_g_chip_ident(struct v4l2_int_device *s, int *id)
 {
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
 	((struct v4l2_dbg_chip_ident *)id)->match.type =
 	    V4L2_CHIP_MATCH_I2C_DRIVER;
@@ -1073,7 +1048,7 @@ static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
 	struct gs2971_priv *gs = s->priv;
 	struct sensor_data *sensor = &gs->sensor;
 
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
 	if (fmt->index > 0)
 		return -EINVAL;
@@ -1087,7 +1062,7 @@ static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
  */
 static int ioctl_init(struct v4l2_int_device *s)
 {
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 	return 0;
 }
 
@@ -1099,7 +1074,7 @@ static int ioctl_init(struct v4l2_int_device *s)
  */
 static int ioctl_dev_init(struct v4l2_int_device *s)
 {
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 	return 0;
 }
 
@@ -1156,12 +1131,12 @@ static struct v4l2_int_device gs2971_int_device = {
 static int gs2971_probe(struct spi_device *spi)
 {
 	struct gs2971_priv *gs;
-
+	struct sensor_data *sensor;
 	struct fsl_mxc_camera_platform_data *gs2971_plat =
 	    spi->dev.platform_data;
-	int status = 0;
+	int ret = 0;
 
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 	if (!gs2971_plat) {
 		pr_err("%s: Platform data needed\n", __func__);
 		return -ENOMEM;
@@ -1173,60 +1148,63 @@ static int gs2971_probe(struct spi_device *spi)
 
 	/* Allocate driver data */
 	spidata = kzalloc(sizeof(*spidata), GFP_KERNEL);
-	if (!spidata)
-		return -ENOMEM;
+	if (!spidata) {
+		ret = -ENOMEM;
+		goto exit;
+	}
 
 	/* Initialize the driver data */
 	spidata->spi = spi;
 	mutex_init(&spidata->buf_lock);
+	sensor = &gs->sensor;
 
 	/* Set initial values for the sensor struct. */
 	memset(gs, 0, sizeof(*gs));
-	gs->sensor.mclk = gs2971_plat->mclk;	/* 27 MHz */
-	gs->sensor.mclk_source = gs2971_plat->mclk_source;
-	gs->sensor.csi = gs2971_plat->csi;
-	gs->sensor.ipu = gs2971_plat->ipu;
-	gs->sensor.io_init = gs2971_plat->io_init;
+	sensor->mclk = gs2971_plat->mclk;	/* 27 MHz */
+	sensor->mclk_source = gs2971_plat->mclk_source;
+	sensor->csi = gs2971_plat->csi;
+	sensor->ipu = gs2971_plat->ipu;
+	sensor->io_init = gs2971_plat->io_init;
 	gs->cea861 = gs2971_plat->cea861;
 	pr_info("%s:cea861=%d\n", __func__, gs->cea861);
 
-	gs->sensor.pix.pixelformat = YUV_FORMAT(gs);
-	gs->sensor.pix.width = gs2971_res[gs2971_mode_default].width;
-	gs->sensor.pix.height = gs2971_res[gs2971_mode_default].height;
-	gs->sensor.streamcap.capability = V4L2_MODE_HIGHQUALITY |
+	sensor->pix.pixelformat = YUV_FORMAT(gs);
+	sensor->pix.width = gs2971_res[gs2971_mode_default].width;
+	sensor->pix.height = gs2971_res[gs2971_mode_default].height;
+	sensor->streamcap.capability = V4L2_MODE_HIGHQUALITY |
 	    V4L2_CAP_TIMEPERFRAME;
-	gs->sensor.streamcap.capturemode = 0;
-	gs->sensor.streamcap.timeperframe.denominator = DEFAULT_FPS;
-	gs->sensor.streamcap.timeperframe.numerator = 1;
+	sensor->streamcap.capturemode = 0;
+	sensor->streamcap.timeperframe.denominator = DEFAULT_FPS;
+	sensor->streamcap.timeperframe.numerator = 1;
 	//sensor->pix.priv = 1;  /* 1 is used to indicate TV in */
 	camera_plat = gs2971_plat;
 
 	if (gs2971_plat->io_init)
 		gs2971_plat->io_init();
 
-	power_control(&gs->sensor, 1);
+	power_control(gs, 1);
 	gs2971_int_device.priv = gs;
 
-	if (!status)
-		status = gs2971_initialize(gs, spi);
-	if (status)
+	ret = gs2971_initialize(gs, spi);
+	if (ret)
 		goto exit;
-	power_control(&gs->sensor, 0);
+	power_control(gs, 0);
 
-	status = v4l2_int_device_register(&gs2971_int_device);
+	ret = v4l2_int_device_register(&gs2971_int_device);
  exit:
-	if (status) {
+	if (ret) {
 		kfree(spidata);
-		pr_err("gs2971_probe returns %d\n", status);
+		kfree(gs);
+		pr_err("gs2971_probe returns %d\n", ret);
 	}
-	return status;
+	return ret;
 
 }
 
 static int gs2971_remove(struct spi_device *spi)
 {
-	pr_debug("-> In function %s\n", __FUNCTION__);
-
+	pr_debug("-> In function %s\n", __func__);
+	kfree(gs2971_int_device.priv);
 	kfree(spidata);
 	v4l2_int_device_unregister(&gs2971_int_device);
 	return 0;
@@ -1250,13 +1228,13 @@ static struct spi_driver gs2971_spi = {
  */
 static int __init gs2971_init(void)
 {
-	int status;
+	int ret;
 
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
-	status = spi_register_driver(&gs2971_spi);
+	ret = spi_register_driver(&gs2971_spi);
 
-	return status;
+	return ret;
 }
 
 /*!
@@ -1267,7 +1245,7 @@ static int __init gs2971_init(void)
  */
 static void __exit gs2971_exit(void)
 {
-	pr_debug("-> In function %s\n", __FUNCTION__);
+	pr_debug("-> In function %s\n", __func__);
 
 	spi_unregister_driver(&gs2971_spi);
 }
