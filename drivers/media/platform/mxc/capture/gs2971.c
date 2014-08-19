@@ -86,7 +86,6 @@ int gs2971_read_buffer(struct spi_device *spi, u16 offset, u16 * values,
 	memset(&spi_xfer, '\0', sizeof(spi_xfer));
 	spi_xfer.tx_buf = sp->txbuf;
 	spi_xfer.rx_buf = sp->rxbuf;
-	spi_xfer.cs_change = 1;
 	spi_xfer.bits_per_word = 16;
 	spi_xfer.delay_usecs = 0;
 	spi_xfer.speed_hz = 1000000;
@@ -122,7 +121,6 @@ int gs2971_read_register(struct spi_device *spi, u16 offset, u16 * value)
 	memset(&spi_xfer, '\0', sizeof(spi_xfer));
 	spi_xfer.tx_buf = txbuf;
 	spi_xfer.rx_buf = rxbuf;
-	spi_xfer.cs_change = 1;
 	spi_xfer.bits_per_word = 32;
 	spi_xfer.delay_usecs = 0;
 	spi_xfer.speed_hz = 1000000;
@@ -170,7 +168,6 @@ int gs2971_write_buffer(struct spi_device *spi, u16 offset, u16 * values,
 	memset(&spi_xfer, '\0', sizeof(spi_xfer));
 	spi_xfer.tx_buf = sp->txbuf;
 	spi_xfer.rx_buf = sp->rxbuf;
-	spi_xfer.cs_change = 1;
 	spi_xfer.bits_per_word = 16;
 	spi_xfer.delay_usecs = 0;
 	spi_xfer.speed_hz = 1000000;
