@@ -276,10 +276,6 @@ static int gs2971_framerates[] = {
 
 #define GS2971_ANC_BANK_SIZE                     0x400
 
-// Control pins
-#define SMPTE_BYPASS		IMX_GPIO_NR(5, 8)
-#define DVB_ASI		IMX_GPIO_NR(5, 9)
-
 #define GS2971_SPI_TRANSFER_MAX 1024
 
 struct gs2971_spidata {
