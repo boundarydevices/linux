@@ -85,6 +85,71 @@ static void arizona_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
 			   ARIZONA_GPN_LVL, value);
 }
 
+static int wm8285_gpio_direction_in(struct gpio_chip *chip, unsigned offset)
+{
+	struct arizona_gpio *arizona_gpio = to_arizona_gpio(chip);
+	struct arizona *arizona = arizona_gpio->arizona;
+
+	offset *= 2;
+
+	return regmap_update_bits(arizona->regmap, WM8285_GPIO1_CTRL_2 + offset,
+				  ARIZONA_GPN_DIR, ARIZONA_GPN_DIR);
+}
+
+static int wm8285_gpio_get(struct gpio_chip *chip, unsigned offset)
+{
+	struct arizona_gpio *arizona_gpio = to_arizona_gpio(chip);
+	struct arizona *arizona = arizona_gpio->arizona;
+	unsigned int val;
+	int ret;
+
+	offset *= 2;
+
+	ret = regmap_read(arizona->regmap, WM8285_GPIO1_CTRL_1 + offset, &val);
+	if (ret < 0)
+		return ret;
+
+	if (val & WM8285_GPN_LVL)
+		return 1;
+	else
+		return 0;
+}
+
+static int wm8285_gpio_direction_out(struct gpio_chip *chip,
+				     unsigned offset, int value)
+{
+	struct arizona_gpio *arizona_gpio = to_arizona_gpio(chip);
+	struct arizona *arizona = arizona_gpio->arizona;
+	int ret;
+
+	offset *= 2;
+
+	if (value)
+		value = WM8285_GPN_LVL;
+
+	ret = regmap_update_bits(arizona->regmap, WM8285_GPIO1_CTRL_2 + offset,
+				  ARIZONA_GPN_DIR, 0);
+	if (ret < 0)
+		return ret;
+
+	return regmap_update_bits(arizona->regmap, WM8285_GPIO1_CTRL_1 + offset,
+				  WM8285_GPN_LVL, value);
+}
+
+static void wm8285_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
+{
+	struct arizona_gpio *arizona_gpio = to_arizona_gpio(chip);
+	struct arizona *arizona = arizona_gpio->arizona;
+
+	offset *= 2;
+
+	if (value)
+		value = WM8285_GPN_LVL;
+
+	regmap_update_bits(arizona->regmap, WM8285_GPIO1_CTRL_1 + offset,
+			   WM8285_GPN_LVL, value);
+}
+
 static struct gpio_chip template_chip = {
 	.label			= "arizona",
 	.owner			= THIS_MODULE,
@@ -122,6 +187,17 @@ static int arizona_gpio_probe(struct platform_device *pdev)
 	case WM8998:
 	case WM1814:
 		arizona_gpio->gpio_chip.ngpio = 5;
+		break;
+	case WM8285:
+	case WM1840:
+		arizona_gpio->gpio_chip.direction_input =
+			wm8285_gpio_direction_in;
+		arizona_gpio->gpio_chip.get = wm8285_gpio_get;
+		arizona_gpio->gpio_chip.direction_output =
+			wm8285_gpio_direction_out;
+		arizona_gpio->gpio_chip.set = wm8285_gpio_set;
+
+		arizona_gpio->gpio_chip.ngpio = 40;
 		break;
 	case WM1831:
 	case CS47L24:

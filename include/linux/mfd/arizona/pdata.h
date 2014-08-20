@@ -45,6 +45,11 @@
 #define ARIZONA_GPN_FN_SHIFT                          0  /* GPN_FN - [6:0] */
 #define ARIZONA_GPN_FN_WIDTH                          7  /* GPN_FN - [6:0] */
 
+#define WM8285_GPN_LVL                           0x8000  /* GPN_LVL */
+#define WM8285_GPN_LVL_MASK                      0x8000  /* GPN_LVL */
+#define WM8285_GPN_LVL_SHIFT                         15  /* GPN_LVL */
+#define WM8285_GPN_LVL_WIDTH                          1  /* GPN_LVL */
+
 #define ARIZONA_MAX_GPIO_REGS 5
 #define WM8285_MAX_GPIO_REGS 80
 
