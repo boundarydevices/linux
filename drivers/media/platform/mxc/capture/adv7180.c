@@ -59,23 +59,6 @@ static struct i2c_driver adv7180_i2c_driver = {
 	.id_table = adv7180_id,
 };
 
-/*!
- * Maintains the information on the current state of the sensor.
- */
-struct adv7180_priv {
-	struct sensor_data sen;
-	v4l2_std_id std_id;
-#define DVDDIO_REG	0
-#define DVDD_REG	1
-#define AVDD_REG	2
-#define PVDD_REG	3
-	struct regulator *regulators[4];
-	int pwn_gpio;
-	int cvbs;
-	int cea861;
-};
-
-
 /*! List of input video formats supported. The video formats is corresponding
  * with v4l2 id in video_fmt_t
  */
@@ -87,6 +70,24 @@ typedef enum {
 
 /*! Number of video standards supported (including 'not locked' signal). */
 #define ADV7180_STD_MAX		(ADV7180_PAL + 1)
+
+/*!
+ * Maintains the information on the current state of the sensor.
+ */
+struct adv7180_priv {
+	struct sensor_data sen;
+	v4l2_std_id std_id;
+	video_fmt_idx idx;
+#define DVDDIO_REG	0
+#define DVDD_REG	1
+#define AVDD_REG	2
+#define PVDD_REG	3
+	struct regulator *regulators[4];
+	int pwn_gpio;
+	int cvbs;
+	int cea861;
+};
+
 
 /*! Video format structure. */
 typedef struct {
@@ -137,9 +138,6 @@ static video_fmt_t video_fmts[] = {
 	 .frame_rate = 0,
 	 },
 };
-
-/*!* Standard index of ADV7180. */
-static video_fmt_idx video_idx = ADV7180_PAL;
 
 /*! @brief This mutex is used to provide mutual exclusion.
  *
@@ -328,18 +326,18 @@ static void adv7180_detect_std(struct adv7180_priv *adv, unsigned long msec)
 	/* This assumes autodetect which this device uses. */
 	if (adv->std_id != std_id) {
 		adv->std_id = std_id;
-		video_idx = idx;
-		adv->sen.pix.width = video_fmts[video_idx].active_width;
-		adv->sen.pix.height = video_fmts[video_idx].active_height;
-		adv->sen.spix.swidth = video_fmts[video_idx].raw_width - 1;
-		adv->sen.spix.sheight = video_fmts[video_idx].raw_height;
-		adv->sen.spix.top = video_fmts[video_idx].skip_lines;
+		adv->idx = idx;
+		adv->sen.pix.width = video_fmts[idx].active_width;
+		adv->sen.pix.height = video_fmts[idx].active_height;
+		adv->sen.spix.swidth = video_fmts[idx].raw_width - 1;
+		adv->sen.spix.sheight = video_fmts[idx].raw_height;
+		adv->sen.spix.top = video_fmts[idx].skip_lines;
 		if (adv->cea861) {
 			adv->sen.spix.left = 0;
 		} else {
-			adv->sen.spix.swidth = video_fmts[video_idx].active_width;
-//			adv->sen.spix.sheight = video_fmts[video_idx].active_height;
-			adv->sen.spix.left = video_fmts[video_idx].lines_per_field;
+			adv->sen.spix.swidth = video_fmts[idx].active_width;
+//			adv->sen.spix.sheight = video_fmts[idx].active_height;
+			adv->sen.spix.left = video_fmts[idx].lines_per_field;
 		}
 	}
 	mutex_unlock(&mutex);
@@ -784,11 +782,12 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 				 struct v4l2_frmsizeenum *fsize)
 {
+	struct adv7180_priv *adv = s->priv;
 	if (fsize->index >= 1)
 		return -EINVAL;
 
-	fsize->discrete.width = video_fmts[video_idx].active_width;
-	fsize->discrete.height  = video_fmts[video_idx].active_height;
+	fsize->discrete.width = video_fmts[adv->idx].active_width;
+	fsize->discrete.height  = video_fmts[adv->idx].active_height;
 
 	return 0;
 }
@@ -1234,6 +1233,7 @@ static int adv7180_probe(struct i2c_client *client,
 	int ret = 0;
 	struct pinctrl *pinctrl;
 	struct device *dev = &client->dev;
+	video_fmt_idx idx = ADV7180_NOT_LOCKED;
 
 	pr_debug("%s\n", __func__);
 
@@ -1281,18 +1281,18 @@ static int adv7180_probe(struct i2c_client *client,
 	adv->sen.streamcap.timeperframe.denominator = 30;
 	adv->sen.streamcap.timeperframe.numerator = 1;
 	adv->std_id = V4L2_STD_ALL;
-	video_idx = ADV7180_NOT_LOCKED;
-	adv->sen.pix.width = video_fmts[video_idx].active_width;
-	adv->sen.pix.height = video_fmts[video_idx].active_height;
-	adv->sen.spix.swidth = video_fmts[video_idx].raw_width - 1;
-	adv->sen.spix.sheight = video_fmts[video_idx].raw_height;
-	adv->sen.spix.top = video_fmts[video_idx].skip_lines;
+	adv->idx = idx;
+	adv->sen.pix.width = video_fmts[idx].active_width;
+	adv->sen.pix.height = video_fmts[idx].active_height;
+	adv->sen.spix.swidth = video_fmts[idx].raw_width - 1;
+	adv->sen.spix.sheight = video_fmts[idx].raw_height;
+	adv->sen.spix.top = video_fmts[idx].skip_lines;
 	if (adv->cea861) {
 		adv->sen.spix.left = 0;
 	} else {
-		adv->sen.spix.swidth = video_fmts[video_idx].active_width;
-//		adv->sen.spix.sheight = video_fmts[video_idx].active_height;
-		adv->sen.spix.left = video_fmts[video_idx].lines_per_field;
+		adv->sen.spix.swidth = video_fmts[idx].active_width;
+//		adv->sen.spix.sheight = video_fmts[idx].active_height;
+		adv->sen.spix.left = video_fmts[idx].lines_per_field;
 	}
 	adv->sen.pix.pixelformat = V4L2_PIX_FMT_UYVY;  /* YUV422 */
 	adv->sen.pix.priv = 1;  /* 1 is used to indicate TV in */
