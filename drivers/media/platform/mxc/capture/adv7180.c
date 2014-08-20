@@ -257,15 +257,14 @@ static int adv7180_regulator_enable(struct adv7180_priv *adv, struct device *dev
  */
 static inline int adv7180_read(struct adv7180_priv *adv, u8 reg)
 {
-	int val;
+	int ret;
 
-	val = i2c_smbus_read_byte_data(adv->sen.i2c_client, reg);
-	if (val < 0) {
-		dev_dbg(&adv->sen.i2c_client->dev,
-			"%s:read reg error: reg=%2x\n", __func__, reg);
-		return -1;
+	ret = i2c_smbus_read_byte_data(adv->sen.i2c_client, reg);
+	if (ret < 0) {
+		dev_err(&adv->sen.i2c_client->dev,
+			"%s:read reg error: reg=%2x ret=%d\n", __func__, reg, ret);
 	}
-	return val;
+	return ret;
 }
 
 /*! Write one register of a ADV7180 i2c slave device.
@@ -280,10 +279,9 @@ static int adv7180_write_reg(struct adv7180_priv *adv, u8 reg, u8 val)
 
 	ret = i2c_smbus_write_byte_data(adv->sen.i2c_client, reg, val);
 	if (ret < 0) {
-		dev_dbg(&adv->sen.i2c_client->dev,
+		dev_err(&adv->sen.i2c_client->dev,
 			"%s:write reg error:reg=%2x,val=%2x\n", __func__,
 			reg, val);
-		return -1;
 	}
 	return 0;
 }
@@ -1326,6 +1324,10 @@ static int adv7180_probe(struct i2c_client *client,
 
 	/*! Read the revision ID of the tvin chip */
 	rev_id = adv7180_read(adv, ADV7180_IDENT);
+	if (rev_id < 0) {
+		ret = rev_id;
+		goto exit1;
+	}
 	dev_dbg(dev,
 		"%s:Analog Device adv7%2X0 detected!\n", __func__,
 		rev_id);
@@ -1347,6 +1349,7 @@ static int adv7180_probe(struct i2c_client *client,
 	/* This function attaches this structure to the /dev/video0 device.
 	 * The pointer in priv points to the adv7180_priv structure here.*/
 	adv7180_int_device.priv = adv;
+	i2c_set_clientdata(client, adv);
 	ret = v4l2_int_device_register(&adv7180_int_device);
 
 	if (!IS_ERR(adv->sen.sensor_clk))
