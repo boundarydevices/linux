@@ -152,6 +152,14 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 	return IOMUX_SETUP(sd_pads[i]);
 }
 
+/* SD card */
+static struct esdhc_platform_data sd4_data = {
+	.cd_gpio = -1,
+	.wp_gpio = -1,
+	.keep_power_at_suspend = 1,
+	.platform_pad_change = plt_sd_pad_change,
+};
+
 static struct esdhc_platform_data sd3_data = {
 	.cd_gpio = -1,
 	.wp_gpio = -1,
@@ -767,6 +775,7 @@ pr_err("%s:%s: add i2c\n", __FILE__, __func__);
 	imx6q_add_anatop_thermal_imx(1, &anatop_thermal_data);
 	imx6_init_fec(fec_data);
 	imx6q_add_pm_imx(0, &pm_data);
+	imx6q_add_sdhci_usdhc_imx(3, &sd4_data);
 	imx6q_add_sdhci_usdhc_imx(2, &sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
 	init_usb();
