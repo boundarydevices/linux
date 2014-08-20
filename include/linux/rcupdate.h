@@ -989,7 +989,7 @@ static inline notrace void rcu_read_unlock_sched_notrace(void)
  */
 #define RCU_INIT_POINTER(p, v) \
 	do { \
-		p = RCU_INITIALIZER(v); \
+		ACCESS_ONCE(p) = (v); \
 	} while (0)
 
 /**
