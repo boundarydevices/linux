@@ -95,6 +95,10 @@ static unsigned char macaddr[ETH_ALEN];
 module_param_array(macaddr, byte, NULL, 0);
 MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
 
+static int disable_giga=0;
+module_param(disable_giga, int, 0664);
+MODULE_PARM_DESC(disable_giga, "disable gigabit speeds");
+
 #if defined(CONFIG_M5272)
 /*
  * Some hardware gets it MAC address out of local flash memory.
@@ -1090,7 +1094,7 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 	}
 
 	/* mask with MAC supported features */
-	if (cpu_is_mx6q() || cpu_is_mx6dl()) {
+	if ((cpu_is_mx6q() || cpu_is_mx6dl()) && !disable_giga) {
 		/* SUPPORTED_Asym_Pause prevents my switch from linking up */
 		phy_dev->supported &= PHY_GBIT_FEATURES | SUPPORTED_Pause;
 		phy_dev->supported &= ~SUPPORTED_1000baseT_Half;
