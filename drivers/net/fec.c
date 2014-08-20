@@ -1093,6 +1093,7 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 	if (cpu_is_mx6q() || cpu_is_mx6dl()) {
 		/* SUPPORTED_Asym_Pause prevents my switch from linking up */
 		phy_dev->supported &= PHY_GBIT_FEATURES | SUPPORTED_Pause;
+		phy_dev->supported &= ~SUPPORTED_1000baseT_Half;
 	} else
 		phy_dev->supported &= PHY_BASIC_FEATURES;
 
