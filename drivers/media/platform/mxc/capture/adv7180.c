@@ -86,6 +86,7 @@ struct adv7180_priv {
 	int pwn_gpio;
 	int cvbs;
 	int cea861;
+	struct pinctrl *pinctrl;
 };
 
 
@@ -1231,6 +1232,7 @@ static int adv7180_probe(struct i2c_client *client,
 	struct adv7180_priv *adv;
 	int rev_id;
 	int ret = 0;
+	struct pinctrl_state *pins;
 	struct pinctrl *pinctrl;
 	struct device *dev = &client->dev;
 	video_fmt_idx idx = ADV7180_NOT_LOCKED;
@@ -1271,6 +1273,23 @@ static int adv7180_probe(struct i2c_client *client,
 		goto exit1;
 	}
 	pr_info("%s: cea861=%d\n", __func__, adv->cea861);
+
+	adv->pinctrl = devm_pinctrl_get(dev);
+	if (IS_ERR(adv->pinctrl)) {
+		ret = PTR_ERR(adv->pinctrl);
+		goto exit1;
+	}
+
+
+	pins = pinctrl_lookup_state(adv->pinctrl, adv->cea861 ? "cea861" : "no_cea861");
+	if (IS_ERR(pins)) {
+		ret = PTR_ERR(pins);
+		goto exit1;
+	}
+
+	ret = pinctrl_select_state(adv->pinctrl, pins);
+	if (ret)
+		goto exit1;
 
 	adv7180_power_down(adv, 0);
 
