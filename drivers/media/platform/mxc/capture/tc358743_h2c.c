@@ -2330,8 +2330,27 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 	sensor->pix.pixelformat = get_pixelformat(0, mode);
 	sensor->pix.width = tc358743_mode_info_data[0][mode].width;
 	sensor->pix.height = tc358743_mode_info_data[0][mode].height;
-	f->fmt.pix = sensor->pix;
-	pr_debug("%s: %dx%d\n", __func__, sensor->pix.width, sensor->pix.height);
+
+	switch (f->type) {
+	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+		f->fmt.pix = sensor->pix;
+		pr_debug("%s: %dx%d\n", __func__, sensor->pix.width, sensor->pix.height);
+		break;
+
+	case V4L2_BUF_TYPE_SENSOR:
+		pr_debug("%s: left=%d, top=%d, %dx%d\n", __func__,
+			sensor->spix.left, sensor->spix.top,
+			sensor->spix.swidth, sensor->spix.sheight);
+		f->fmt.spix = sensor->spix;
+		break;
+
+	case V4L2_BUF_TYPE_PRIVATE:
+		break;
+
+	default:
+		f->fmt.pix = sensor->pix;
+		break;
+	}
 	return 0;
 }
 
