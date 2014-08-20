@@ -186,7 +186,7 @@ struct _gckOS
     /* signal id database. */
     gcsINTEGER_DB               signalDB;
 
-#if gcdANDROID_NATIVE_FENCE_SYNC
+#if gcdANDROID_NATIVE_FENCE_SYNC && defined(ANDROID)
     /* Lock. */
     gctPOINTER                  syncPointMutex;
 
@@ -248,7 +248,7 @@ typedef struct _gcsSIGNAL
 }
 gcsSIGNAL;
 
-#if gcdANDROID_NATIVE_FENCE_SYNC
+#if gcdANDROID_NATIVE_FENCE_SYNC && defined(ANDROID)
 typedef struct _gcsSYNC_POINT * gcsSYNC_POINT_PTR;
 typedef struct _gcsSYNC_POINT
 {

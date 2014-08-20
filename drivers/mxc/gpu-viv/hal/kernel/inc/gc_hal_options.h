@@ -998,7 +998,7 @@
              'acquireFenceFd' for framebuffer target for DC
  */
 #ifndef gcdANDROID_NATIVE_FENCE_SYNC
-#   define gcdANDROID_NATIVE_FENCE_SYNC         0
+#   define gcdANDROID_NATIVE_FENCE_SYNC         3
 #endif
 
 /*

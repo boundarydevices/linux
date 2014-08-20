@@ -387,7 +387,7 @@ gckKERNEL_Construct(
     kernel->profileCleanRegister = gcvTRUE;
 #endif
 
-#if gcdANDROID_NATIVE_FENCE_SYNC
+#if gcdANDROID_NATIVE_FENCE_SYNC && defined(ANDROID)
     gcmkONERROR(gckOS_CreateSyncTimeline(Os, &kernel->timeline));
 #endif
 
@@ -483,7 +483,7 @@ OnError:
         }
 #endif
 
-#if gcdANDROID_NATIVE_FENCE_SYNC
+#if gcdANDROID_NATIVE_FENCE_SYNC && defined(ANDROID)
         if (kernel->timeline)
         {
             gcmkVERIFY_OK(gckOS_DestroySyncTimeline(Os, kernel->timeline));
@@ -626,7 +626,7 @@ gckKERNEL_Destroy(
     }
 #endif
 
-#if gcdANDROID_NATIVE_FENCE_SYNC
+#if gcdANDROID_NATIVE_FENCE_SYNC && defined(ANDROID)
     gcmkVERIFY_OK(gckOS_DestroySyncTimeline(Kernel->os, Kernel->timeline));
 #endif
 
@@ -2477,7 +2477,7 @@ gckKERNEL_Dispatch(
         gcmRELEASE_NAME(Interface->u.FreeVirtualCommandBuffer.physical);
         break;
 
-#if gcdANDROID_NATIVE_FENCE_SYNC
+#if gcdANDROID_NATIVE_FENCE_SYNC && defined(ANDROID)
     case gcvHAL_SYNC_POINT:
         {
             gctSYNC_POINT syncPoint;

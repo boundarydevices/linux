@@ -34,7 +34,7 @@
 #endif
 #include <linux/delay.h>
 
-#if gcdANDROID_NATIVE_FENCE_SYNC
+#if gcdANDROID_NATIVE_FENCE_SYNC && defined(ANDROID)
 #include <linux/file.h>
 #include "gc_hal_kernel_sync.h"
 #endif
@@ -869,7 +869,7 @@ gckOS_Construct(
     /* Initialize signal id database. */
     idr_init(&os->signalDB.idr);
 
-#if gcdANDROID_NATIVE_FENCE_SYNC
+#if gcdANDROID_NATIVE_FENCE_SYNC && defined(ANDROID)
     /*
      * Initialize the sync point manager.
      */
@@ -929,7 +929,7 @@ gckOS_Construct(
 
 OnError:
 
-#if gcdANDROID_NATIVE_FENCE_SYNC
+#if gcdANDROID_NATIVE_FENCE_SYNC && defined(ANDROID)
     if (os->syncPointMutex != gcvNULL)
     {
         gcmkVERIFY_OK(
@@ -1009,7 +1009,7 @@ gckOS_Destroy(
     _FreeAllNonPagedMemoryCache(Os);
 #endif
 
-#if gcdANDROID_NATIVE_FENCE_SYNC
+#if gcdANDROID_NATIVE_FENCE_SYNC && defined(ANDROID)
     /*
      * Destroy the sync point manager.
      */
@@ -8581,7 +8581,7 @@ gckOS_DetectProcessByName(
                               : gcvSTATUS_FALSE;
 }
 
-#if gcdANDROID_NATIVE_FENCE_SYNC
+#if gcdANDROID_NATIVE_FENCE_SYNC && defined(ANDROID)
 
 gceSTATUS
 gckOS_CreateSyncPoint(
