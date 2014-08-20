@@ -194,14 +194,14 @@ static struct v4l2_queryctrl adv7180_qctrl[] = {
  */
 static inline int adv7180_read(struct adv7180_priv *adv, u8 reg)
 {
-	int val;
+	int ret;
 
-	val = i2c_smbus_read_byte_data(adv->sen.i2c_client, reg);
-	if (val < 0) {
-		dev_dbg(&adv->sen.i2c_client->dev,
-			"%s:read reg error: reg=%2x val=%d\n", __func__, reg, val);
+	ret = i2c_smbus_read_byte_data(adv->sen.i2c_client, reg);
+	if (ret < 0) {
+		dev_err(&adv->sen.i2c_client->dev,
+			"%s:read reg error: reg=%2x ret=%d\n", __func__, reg, ret);
 	}
-	return val;
+	return ret;
 }
 
 /*! Write one register of a ADV7180 i2c slave device.
@@ -216,10 +216,9 @@ static int adv7180_write_reg(struct adv7180_priv *adv, u8 reg, u8 val)
 
 	ret = i2c_smbus_write_byte_data(adv->sen.i2c_client, reg, val);
 	if (ret < 0) {
-		dev_dbg(&adv->sen.i2c_client->dev,
+		dev_err(&adv->sen.i2c_client->dev,
 			"%s:write reg error:reg=%2x,val=%2x\n", __func__,
 			reg, val);
-		return -1;
 	}
 	return 0;
 }
