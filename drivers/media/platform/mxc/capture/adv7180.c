@@ -56,12 +56,25 @@ static struct i2c_driver adv7180_i2c_driver = {
 	.id_table = adv7180_id,
 };
 
+/*! List of input video formats supported. The video formats is corresponding
+ * with v4l2 id in video_fmt_t
+ */
+typedef enum {
+	ADV7180_NTSC = 0,	/*!< Locked on (M) NTSC video signal. */
+	ADV7180_PAL,		/*!< (B, G, H, I, N)PAL video signal. */
+	ADV7180_NOT_LOCKED,	/*!< Not locked on a signal. */
+} video_fmt_idx;
+
+/*! Number of video standards supported (including 'not locked' signal). */
+#define ADV7180_STD_MAX		(ADV7180_PAL + 1)
+
 /*!
  * Maintains the information on the current state of the sensor.
  */
 struct adv7180_priv {
 	struct sensor_data sen;
 	v4l2_std_id std_id;
+	video_fmt_idx idx;
 #define DVDDIO_REG	0
 #define DVDD_REG	1
 #define AVDD_REG	2
@@ -75,18 +88,6 @@ struct adv7180_priv {
 
 static void adv7180_hard_reset(struct adv7180_priv *adv);
 static int set_power(struct adv7180_priv *adv, int on);
-
-/*! List of input video formats supported. The video formats is corresponding
- * with v4l2 id in video_fmt_t
- */
-typedef enum {
-	ADV7180_NTSC = 0,	/*!< Locked on (M) NTSC video signal. */
-	ADV7180_PAL,		/*!< (B, G, H, I, N)PAL video signal. */
-	ADV7180_NOT_LOCKED,	/*!< Not locked on a signal. */
-} video_fmt_idx;
-
-/*! Number of video standards supported (including 'not locked' signal). */
-#define ADV7180_STD_MAX		(ADV7180_PAL + 1)
 
 /*! Video format structure. */
 typedef struct {
@@ -133,9 +134,6 @@ static video_fmt_t video_fmts[] = {
 	 .active_height = 576,
 	 },
 };
-
-/*!* Standard index of ADV7180. */
-static video_fmt_idx video_idx = ADV7180_PAL;
 
 /*! @brief This mutex is used to provide mutual exclusion.
  *
@@ -275,18 +273,18 @@ void get_std(struct adv7180_priv *adv)
 	/* This assumes autodetect which this device uses. */
 	if (adv->std_id != std_id) {
 		adv->std_id = std_id;
-		video_idx = idx;
-		adv->sen.pix.width = video_fmts[video_idx].active_width;
-		adv->sen.pix.height = video_fmts[video_idx].active_height;
-		adv->sen.pix.swidth = video_fmts[video_idx].raw_width - 1;
-		adv->sen.pix.sheight = video_fmts[video_idx].raw_height;
-		adv->sen.pix.top = video_fmts[video_idx].skip_lines;
+		adv->idx = idx;
+		adv->sen.pix.width = video_fmts[idx].active_width;
+		adv->sen.pix.height = video_fmts[idx].active_height;
+		adv->sen.pix.swidth = video_fmts[idx].raw_width - 1;
+		adv->sen.pix.sheight = video_fmts[idx].raw_height;
+		adv->sen.pix.top = video_fmts[idx].skip_lines;
 		if (adv->cea861) {
 			adv->sen.pix.left = 0;
 		} else {
-			adv->sen.pix.swidth = video_fmts[video_idx].active_width;
-//			adv->sen.pix.sheight = video_fmts[video_idx].active_height;
-			adv->sen.pix.left = video_fmts[video_idx].lines_per_field;
+			adv->sen.pix.swidth = video_fmts[idx].active_width;
+//			adv->sen.pix.sheight = video_fmts[idx].active_height;
+			adv->sen.pix.left = video_fmts[idx].lines_per_field;
 		}
 	}
 	mutex_unlock(&mutex);
@@ -1203,6 +1201,7 @@ static int adv7180_probe(struct i2c_client *client,
 	char *regulator_names[4];
 	unsigned reg_volt[4];
 	struct fsl_mxc_tvin_platform_data *tvin_plat = client->dev.platform_data;
+	video_fmt_idx idx = ADV7180_NOT_LOCKED;
 
 
 	pr_debug("In adv7180_probe\n");
@@ -1262,18 +1261,18 @@ static int adv7180_probe(struct i2c_client *client,
 	adv->sen.streamcap.timeperframe.denominator = 30;
 	adv->sen.streamcap.timeperframe.numerator = 1;
 	adv->std_id = V4L2_STD_ALL;
-	video_idx = ADV7180_NOT_LOCKED;
-	adv->sen.pix.width = video_fmts[video_idx].active_width;
-	adv->sen.pix.height = video_fmts[video_idx].active_height;
-	adv->sen.pix.swidth = video_fmts[video_idx].raw_width - 1;
-	adv->sen.pix.sheight = video_fmts[video_idx].raw_height;
-	adv->sen.pix.top = video_fmts[video_idx].skip_lines;
+	adv->idx = idx;
+	adv->sen.pix.width = video_fmts[idx].active_width;
+	adv->sen.pix.height = video_fmts[idx].active_height;
+	adv->sen.pix.swidth = video_fmts[idx].raw_width - 1;
+	adv->sen.pix.sheight = video_fmts[idx].raw_height;
+	adv->sen.pix.top = video_fmts[idx].skip_lines;
 	if (adv->cea861) {
 		adv->sen.pix.left = 0;
 	} else {
-		adv->sen.pix.swidth = video_fmts[video_idx].active_width;
-//		adv->sen.pix.sheight = video_fmts[video_idx].active_height;
-		adv->sen.pix.left = video_fmts[video_idx].lines_per_field;
+		adv->sen.pix.swidth = video_fmts[idx].active_width;
+//		adv->sen.pix.sheight = video_fmts[idx].active_height;
+		adv->sen.pix.left = video_fmts[idx].lines_per_field;
 	}
 	adv->sen.pix.pixelformat = V4L2_PIX_FMT_UYVY;  /* YUV422 */
 	adv->sen.pix.priv = 1;  /* 1 is used to indicate TV in */
