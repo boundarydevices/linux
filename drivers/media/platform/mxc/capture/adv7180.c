@@ -65,10 +65,10 @@ static struct i2c_driver adv7180_i2c_driver = {
 struct adv7180_priv {
 	struct sensor_data sen;
 	v4l2_std_id std_id;
-#define DVDDIO_REG      0
-#define DVDD_REG        1
-#define AVDD_REG        2
-#define PVDD_REG        3
+#define DVDDIO_REG	0
+#define DVDD_REG	1
+#define AVDD_REG	2
+#define PVDD_REG	3
 	struct regulator *regulators[4];
 	int pwn_gpio;
 	int cvbs;
@@ -152,6 +152,7 @@ static DEFINE_MUTEX(mutex);
 #define IF_NAME                    "adv7180"
 #define ADV7180_INPUT_CTL              0x00	/* Input Control */
 #define ADV7180_STATUS_1               0x10	/* Status #1 */
+#define ADV7180_STATUS_2               0x12	/* Status #2 */
 #define ADV7180_BRIGHTNESS             0x0a	/* Brightness */
 #define ADV7180_IDENT                  0x11	/* IDENT */
 #define ADV7180_VSYNC_FIELD_CTL_1      0x31	/* VSYNC Field Control #1 */
@@ -280,46 +281,54 @@ static int adv7180_write_reg(struct adv7180_priv *adv, u8 reg, u8 val)
  * mxc_v4l2_capture interface.
  ***********************************************************************/
 
-/*!
- * Return attributes of current video standard.
- * Since this device autodetects the current standard, this function also
- * sets the values that need to be changed if the standard changes.
- * There is no set std equivalent function.
- *
- *  @return		None.
- */
-static void adv7180_get_std(struct adv7180_priv *adv, v4l2_std_id *std)
+static void adv7180_detect_std(struct adv7180_priv *adv, unsigned long msec)
 {
 	int status_1, standard, idx;
 	bool locked;
+	unsigned long orig_jiffies = jiffies;
+	v4l2_std_id std_id;
 
 	dev_dbg(&adv->sen.i2c_client->dev, "In adv7180_get_std\n");
 
-	status_1 = adv7180_read(adv, ADV7180_STATUS_1);
+	while (1) {
+		status_1 = adv7180_read(adv, ADV7180_STATUS_1);
+		if ((status_1 & 0x35) == 5)
+			break;
+		if (!msec)
+			break;
+		if (time_after(jiffies, orig_jiffies + msecs_to_jiffies(msec))) {
+			dev_err(&adv->sen.i2c_client->dev,
+					"no video lock\n");
+			status_1 = 0;	/* default to NTSC */
+			break;
+		}
+		msleep(10);
+	}
 	locked = status_1 & 0x1;
 	standard = status_1 & 0x70;
 
 	mutex_lock(&mutex);
-	*std = V4L2_STD_ALL;
+	std_id = V4L2_STD_ALL;
 	idx = ADV7180_NOT_LOCKED;
 	if (locked) {
 		if (standard == 0x40) {
-			*std = V4L2_STD_PAL;
+			std_id = V4L2_STD_PAL;
 			idx = ADV7180_PAL;
 		} else if (standard == 0) {
-			*std = V4L2_STD_NTSC;
+			std_id = V4L2_STD_NTSC;
 			idx = ADV7180_NTSC;
 		} else {
-			dev_dbg(&adv->sen.i2c_client->dev,
-					"Got invalid video standard!\n");
+			dev_err(&adv->sen.i2c_client->dev,
+					"Got invalid video standard(%x,%x)!\n",
+					adv7180_read(adv, ADV7180_STATUS_1),
+					adv7180_read(adv, ADV7180_STATUS_2));
 		}
 	}
-	mutex_unlock(&mutex);
 
 	/* This assumes autodetect which this device uses. */
-	if (*std != adv->std_id) {
+	if (adv->std_id != std_id) {
+		adv->std_id = std_id;
 		video_idx = idx;
-		adv->std_id = *std;
 		adv->sen.pix.width = video_fmts[video_idx].active_width;
 		adv->sen.pix.height = video_fmts[video_idx].active_height;
 		adv->sen.spix.swidth = video_fmts[video_idx].raw_width - 1;
@@ -333,6 +342,22 @@ static void adv7180_get_std(struct adv7180_priv *adv, v4l2_std_id *std)
 			adv->sen.spix.left = video_fmts[video_idx].lines_per_field;
 		}
 	}
+	mutex_unlock(&mutex);
+}
+
+/*!
+ * Return attributes of current video standard.
+ * Since this device autodetects the current standard, this function also
+ * sets the values that need to be changed if the standard changes.
+ * There is no set std equivalent function.
+ *
+ *  @return		None.
+ */
+static void adv7180_get_std(struct adv7180_priv *adv, v4l2_std_id *std)
+{
+	dev_dbg(&adv->sen.i2c_client->dev, "In adv7180_get_std\n");
+	adv7180_detect_std(adv, (adv->std_id == V4L2_STD_ALL) ? 2500 : 0);
+	*std = adv->std_id;
 }
 
 /***********************************************************************
