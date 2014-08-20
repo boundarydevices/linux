@@ -83,10 +83,14 @@ struct adv7180_priv {
 #define AVDD_REG	2
 #define PVDD_REG	3
 	struct regulator *regulators[4];
-	int pwn_gpio;
 	int cvbs;
 	int cea861;
 	struct pinctrl *pinctrl;
+#define GPIO_STANDBY		0	/* 1 - powerdown */
+#define GPIO_RESET		1	/* 0 - reset */
+#define GPIO_CNT		2
+	int	gpios[GPIO_CNT];
+	enum of_gpio_flags gpio_flags[GPIO_CNT];
 };
 
 
@@ -185,12 +189,55 @@ static struct v4l2_queryctrl adv7180_qctrl[] = {
 	}
 };
 
-static inline void adv7180_power_down(struct adv7180_priv *adv, int enable)
+const char *gpio_names[] = {
+[GPIO_STANDBY] = "pwn-gpios",
+[GPIO_RESET] = "rst-gpios",
+};
+
+int adv7180_gpio_state(struct adv7180_priv *adv, int index, int active)
 {
-	if (gpio_is_valid(adv->pwn_gpio)) {
-		gpio_set_value_cansleep(adv->pwn_gpio, !enable);
-		msleep(2);
+	if (gpio_is_valid(adv->gpios[index])) {
+		int state = (adv->gpio_flags[index] & OF_GPIO_ACTIVE_LOW) ? 1 : 0;
+
+		state ^= active;
+		gpio_set_value_cansleep(adv->gpios[index], state);
+		pr_info("%s: active=%d, %s(%d)=0x%x\n", __func__, active, gpio_names[index], adv->gpios[index], state);
+		return 0;
 	}
+	return 1;
+}
+
+static int adv7180_get_gpios(struct adv7180_priv *adv, struct device *dev)
+{
+	int i;
+	int ret;
+	enum of_gpio_flags flags;
+
+	for (i = 0; i < GPIO_CNT; i++) {
+		adv->gpios[i] = of_get_named_gpio_flags(dev->of_node, gpio_names[i], 0, &flags);
+		if (!gpio_is_valid(adv->gpios[i])) {
+			dev_info(dev, "%s: gpio %s not available\n", __func__, gpio_names[i]);
+		} else {
+			int gflags = (flags & OF_GPIO_ACTIVE_LOW) ? GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW;
+
+			if ((i == GPIO_STANDBY) || (i == GPIO_RESET))
+				gflags ^= GPIOF_INIT_HIGH;
+			if (flags == 2)
+				gflags = GPIOF_IN;
+
+			adv->gpio_flags[i] = flags;
+			dev_info(dev, "%s: %s flags(%d -> %d)\n", __func__, gpio_names[i], flags, gflags);
+			ret = devm_gpio_request_one(dev, adv->gpios[i], gflags, gpio_names[i]);
+			if (ret < 0) {
+				pr_info("%s: request of %s failed(%d)\n", __func__, gpio_names[i], ret);
+				return ret;
+			}
+		}
+	}
+	msleep(7);
+	adv7180_gpio_state(adv, GPIO_RESET, 0);	//remove reset
+	msleep(4);
+	return 0;
 }
 
 static const char * const regulator_names[] = {
@@ -536,6 +583,7 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 
 	switch (f->type) {
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+		adv7180_detect_std(adv, (adv->std_id == V4L2_STD_ALL) ? 2500 : 0);
 		pr_debug("   Returning size of %dx%d\n",
 			 adv->sen.pix.width, adv->sen.pix.height);
 		f->fmt.pix = adv->sen.pix;
@@ -789,7 +837,6 @@ static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 
 	fsize->discrete.width = video_fmts[adv->idx].active_width;
 	fsize->discrete.height  = video_fmts[adv->idx].active_height;
-
 	return 0;
 }
 
@@ -1250,18 +1297,10 @@ static int adv7180_probe(struct i2c_client *client,
 	if (!adv)
 		return -ENOMEM;
 
-	/* request power down pin */
-	adv->pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
-	if (!gpio_is_valid(adv->pwn_gpio)) {
-		dev_info(dev, "no sensor pwdn pin available\n");
-	} else {
-		ret = devm_gpio_request_one(dev, adv->pwn_gpio, GPIOF_OUT_INIT_HIGH,
-					"adv7180_pwdn");
-		if (ret < 0) {
-			dev_err(dev, "no power pin available!\n");
-			goto exit1;
-		}
-	}
+	ret = adv7180_get_gpios(adv, dev);
+	if (ret)
+		goto exit1;
+
 	ret = adv7180_regulator_enable(adv, dev);
 	if (ret < 0)
 		goto exit1;
@@ -1291,9 +1330,8 @@ static int adv7180_probe(struct i2c_client *client,
 	if (ret)
 		goto exit1;
 
-	adv7180_power_down(adv, 0);
-
-	msleep(1);
+	if (!adv7180_gpio_state(adv, GPIO_STANDBY, 0))
+		msleep(2);
 
 	/* Set initial values for the sensor struct. */
 	adv->sen.i2c_client = client;
