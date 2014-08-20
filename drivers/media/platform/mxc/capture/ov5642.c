@@ -5696,8 +5696,26 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 {
 	struct sensor_data *sensor = s->priv;
 
-	f->fmt.pix = sensor->pix;
+	switch (f->type) {
+	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+		f->fmt.pix = sensor->pix;
+		pr_debug("%s: %dx%d\n", __func__, sensor->pix.width, sensor->pix.height);
+		break;
 
+	case V4L2_BUF_TYPE_SENSOR:
+		pr_debug("%s: left=%d, top=%d, %dx%d\n", __func__,
+			sensor->spix.left, sensor->spix.top,
+			sensor->spix.swidth, sensor->spix.sheight);
+		f->fmt.spix = sensor->spix;
+		break;
+
+	case V4L2_BUF_TYPE_PRIVATE:
+		break;
+
+	default:
+		f->fmt.pix = sensor->pix;
+		break;
+	}
 	return 0;
 }
 
