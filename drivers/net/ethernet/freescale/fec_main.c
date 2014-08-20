@@ -142,6 +142,10 @@ static const struct of_device_id fec_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, fec_dt_ids);
 
+static int disable_giga=0;
+module_param(disable_giga, int, 0664);
+MODULE_PARM_DESC(disable_giga, "disable gigabit speeds");
+
 static unsigned char macaddr[ETH_ALEN];
 module_param_array(macaddr, byte, NULL, 0);
 MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
@@ -1909,7 +1913,8 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 	}
 
 	/* mask with MAC supported features */
-	if (id_entry->driver_data & FEC_QUIRK_HAS_GBIT) {
+	if ((id_entry->driver_data & FEC_QUIRK_HAS_GBIT)
+	    && !disable_giga) {
 		phy_dev->supported &= PHY_GBIT_FEATURES;
 #if !defined(CONFIG_M5272)
 		phy_dev->supported |= SUPPORTED_Pause;
