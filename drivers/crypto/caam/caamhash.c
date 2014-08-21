@@ -2161,8 +2161,17 @@ static int __init caam_algapi_hash_init(void)
 		return -ENODEV;
 	}
 	ctrldev = &pdev->dev;
-	priv = dev_get_drvdata(ctrldev);
-
+	for (;;) {
+		priv = dev_get_drvdata(ctrldev);
+		if (priv)
+			break;
+		if (i++ > 10) {
+			of_node_put(dev_node);
+			return -ENODEV;
+		}
+		pr_info("waiting for driver to load\n");
+		msleep(100);
+	}
 	INIT_LIST_HEAD(&priv->hash_list);
 
 	atomic_set(&priv->tfm_count, -1);
