@@ -254,13 +254,13 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 
 	/*                                              name                reg       shift width parent_names     num_parents */
 	clks[IMX6SL_CLK_STEP]             = imx_clk_mux("step",             base + 0xc,  8,  1, step_sels,         ARRAY_SIZE(step_sels));
-	clks[IMX6SL_CLK_PLL1_SW]          = imx_clk_mux("pll1_sw",          base + 0xc,  2,  1, pll1_sw_sels,      ARRAY_SIZE(pll1_sw_sels));
+	clks[IMX6SL_CLK_PLL1_SW]          = imx_clk_mux_glitchless("pll1_sw", base + 0xc, 2, 1, pll1_sw_sels,      ARRAY_SIZE(pll1_sw_sels));
 	clks[IMX6SL_CLK_OCRAM_ALT_SEL]    = imx_clk_mux("ocram_alt_sel",    base + 0x14, 7,  1, ocram_alt_sels,    ARRAY_SIZE(ocram_alt_sels));
-	clks[IMX6SL_CLK_OCRAM_SEL]        = imx_clk_mux("ocram_sel",        base + 0x14, 6,  1, ocram_sels,        ARRAY_SIZE(ocram_sels));
-	clks[IMX6SL_CLK_PRE_PERIPH2_SEL]  = imx_clk_mux("pre_periph2_sel",  base + 0x18, 21, 2, pre_periph_sels,   ARRAY_SIZE(pre_periph_sels));
-	clks[IMX6SL_CLK_PRE_PERIPH_SEL]   = imx_clk_mux("pre_periph_sel",   base + 0x18, 18, 2, pre_periph_sels,   ARRAY_SIZE(pre_periph_sels));
-	clks[IMX6SL_CLK_PERIPH2_CLK2_SEL] = imx_clk_mux("periph2_clk2_sel", base + 0x18, 20, 1, periph2_clk2_sels, ARRAY_SIZE(periph2_clk2_sels));
-	clks[IMX6SL_CLK_PERIPH_CLK2_SEL]  = imx_clk_mux("periph_clk2_sel",  base + 0x18, 12, 2, periph_clk2_sels,  ARRAY_SIZE(periph_clk2_sels));
+	clks[IMX6SL_CLK_OCRAM_SEL]        = imx_clk_mux_glitchless("ocram_sel", base + 0x14, 6, 1, ocram_sels,     ARRAY_SIZE(ocram_sels));
+	clks[IMX6SL_CLK_PRE_PERIPH2_SEL]  = imx_clk_mux_bus("pre_periph2_sel",  base + 0x18, 21, 2, pre_periph_sels,   ARRAY_SIZE(pre_periph_sels));
+	clks[IMX6SL_CLK_PRE_PERIPH_SEL]   = imx_clk_mux_bus("pre_periph_sel",   base + 0x18, 18, 2, pre_periph_sels,   ARRAY_SIZE(pre_periph_sels));
+	clks[IMX6SL_CLK_PERIPH2_CLK2_SEL] = imx_clk_mux_bus("periph2_clk2_sel", base + 0x18, 20, 1, periph2_clk2_sels, ARRAY_SIZE(periph2_clk2_sels));
+	clks[IMX6SL_CLK_PERIPH_CLK2_SEL]  = imx_clk_mux_bus("periph_clk2_sel",  base + 0x18, 12, 2, periph_clk2_sels,  ARRAY_SIZE(periph_clk2_sels));
 	clks[IMX6SL_CLK_CSI_SEL]          = imx_clk_mux("csi_sel",          base + 0x3c, 9,  2, csi_sels,          ARRAY_SIZE(csi_sels));
 	clks[IMX6SL_CLK_LCDIF_AXI_SEL]    = imx_clk_mux("lcdif_axi_sel",    base + 0x3c, 14, 2, lcdif_axi_sels,    ARRAY_SIZE(lcdif_axi_sels));
 	clks[IMX6SL_CLK_USDHC1_SEL]       = imx_clk_fixup_mux("usdhc1_sel", base + 0x1c, 16, 1, usdhc_sels,        ARRAY_SIZE(usdhc_sels),  imx_cscmr1_fixup);
@@ -402,30 +402,6 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 	/* Ensure the AHB clk is at 132MHz. */
 	imx_clk_set_rate(clks[IMX6SL_CLK_AHB], 132000000);
 
-	/*
-	 * To prevent the bus clock from being disabled accidently when
-	 * clk_disable() gets called on child clock, let's increment the use
-	 * count of IPG clock by initially calling clk_prepare_enable() on it.
-	 */
-	imx_clk_prepare_enable(clks[IMX6SL_CLK_IPG]);
-
-	/*
-	 * Make sure the ARM clk is enabled to maintain the correct usecount
-	 * and enabling/disabling of parent PLLs.
-	 */
-	imx_clk_prepare_enable(clks[IMX6SL_CLK_ARM]);
-
-	/*
-	 * Make sure the MMDC clk is enabled to maintain the correct usecount
-	 * and enabling/disabling of parent PLLs.
-	 */
-	imx_clk_prepare_enable(clks[IMX6SL_CLK_MMDC_ROOT]);
-
-	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
-		imx_clk_prepare_enable(clks[IMX6SL_CLK_USBPHY1_GATE]);
-		imx_clk_prepare_enable(clks[IMX6SL_CLK_USBPHY2_GATE]);
-	}
-
 	imx_clk_set_parent(clks[IMX6SL_CLK_GPU2D_OVG_SEL],
 		clks[IMX6SL_CLK_PLL2_BUS]);
 	imx_clk_set_parent(clks[IMX6SL_CLK_GPU2D_SEL], clks[IMX6SL_CLK_PLL2_BUS]);
@@ -473,6 +449,35 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 	/* Set the UART parent if needed. */
 	if (uart_from_osc)
 		imx_clk_set_parent(clks[IMX6SL_CLK_UART_SEL], clks[IMX6SL_CLK_UART_OSC_4M]);
+
+	/*
+	 * Enable clocks only after both parent and rate are all initialized
+	 * as needed
+	 */
+
+	/*
+	 * To prevent the bus clock from being disabled accidently when
+	 * clk_disable() gets called on child clock, let's increment the use
+	 * count of IPG clock by initially calling clk_prepare_enable() on it.
+	 */
+	imx_clk_prepare_enable(clks[IMX6SL_CLK_IPG]);
+
+	/*
+	 * Make sure the ARM clk is enabled to maintain the correct usecount
+	 * and enabling/disabling of parent PLLs.
+	 */
+	imx_clk_prepare_enable(clks[IMX6SL_CLK_ARM]);
+
+	/*
+	 * Make sure the MMDC clk is enabled to maintain the correct usecount
+	 * and enabling/disabling of parent PLLs.
+	 */
+	imx_clk_prepare_enable(clks[IMX6SL_CLK_MMDC_ROOT]);
+
+	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
+		imx_clk_prepare_enable(clks[IMX6SL_CLK_USBPHY1_GATE]);
+		imx_clk_prepare_enable(clks[IMX6SL_CLK_USBPHY2_GATE]);
+	}
 
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6sl-gpt");
 	base = of_iomap(np, 0);

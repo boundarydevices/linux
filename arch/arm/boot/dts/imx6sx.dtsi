@@ -37,6 +37,7 @@
 		serial2 = &uart3;
 		serial3 = &uart4;
 		serial4 = &uart5;
+		serial5 = &uart6;
 		usbphy0 = &usbphy1;
 		usbphy1 = &usbphy2;
 	};
@@ -1211,6 +1212,17 @@
 				interrupts = <0 99 0x04>;
 			};
 
+			uart6: serial@022a0000 {
+				compatible = "fsl,imx6q-uart", "fsl,imx21-uart";
+				reg = <0x022a0000 0x4000>;
+				interrupts = <0 17 0x04>;
+				clocks = <&clks IMX6SX_CLK_UART_IPG>, <&clks IMX6SX_CLK_UART_SERIAL>;
+				clock-names = "ipg", "per";
+				dmas = <&sdma 0 4 0>, <&sdma 47 4 0>;
+				dma-names = "rx", "tx";
+				status = "disabled";
+			};
+
 			mccdemo: mccdemo{
 				compatible = "fsl,imx6sx-mcc-demo";
 				status = "okay";
@@ -1347,7 +1359,7 @@
 			fsl,pins = <
 				MX6SX_PAD_ENET1_MDIO__ENET1_MDIO        0xa0b1
 				MX6SX_PAD_ENET1_MDC__ENET1_MDC          0xa0b1
-				MX6SX_PAD_RGMII1_TXC__ENET1_RGMII_TXC   0xa0b1
+				MX6SX_PAD_RGMII1_TXC__ENET1_RGMII_TXC   0xa0b9
 				MX6SX_PAD_RGMII1_TD0__ENET1_TX_DATA_0   0xa0b1
 				MX6SX_PAD_RGMII1_TD1__ENET1_TX_DATA_1   0xa0b1
 				MX6SX_PAD_RGMII1_TD2__ENET1_TX_DATA_2   0xa0b1
@@ -1372,12 +1384,12 @@
 	enet2 {
 		pinctrl_enet2_1: enet2grp-1 {
 			fsl,pins = <
-				MX6SX_PAD_RGMII2_TXC__ENET2_RGMII_TXC   0xa0b1
+				MX6SX_PAD_RGMII2_TXC__ENET2_RGMII_TXC   0xa0b9
 				MX6SX_PAD_RGMII2_TD0__ENET2_TX_DATA_0   0xa0b1
-				MX6SX_PAD_RGMII2_TD1__ENET2_TX_DATA_1   0xa0b0
-				MX6SX_PAD_RGMII2_TD2__ENET2_TX_DATA_2   0xa0b0
-				MX6SX_PAD_RGMII2_TD3__ENET2_TX_DATA_3   0xa0b0
-				MX6SX_PAD_RGMII2_TX_CTL__ENET2_TX_EN    0xa0b0
+				MX6SX_PAD_RGMII2_TD1__ENET2_TX_DATA_1   0xa0b1
+				MX6SX_PAD_RGMII2_TD2__ENET2_TX_DATA_2   0xa0b1
+				MX6SX_PAD_RGMII2_TD3__ENET2_TX_DATA_3   0xa0b1
+				MX6SX_PAD_RGMII2_TX_CTL__ENET2_TX_EN    0xa0b1
 				MX6SX_PAD_RGMII2_RXC__ENET2_RX_CLK      0x3081
 				MX6SX_PAD_RGMII2_RD0__ENET2_RX_DATA_0   0x3081
 				MX6SX_PAD_RGMII2_RD1__ENET2_RX_DATA_1   0x3081

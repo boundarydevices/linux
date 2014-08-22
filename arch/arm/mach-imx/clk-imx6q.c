@@ -377,6 +377,10 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	clk[twd]       = imx_clk_fixed_factor("twd",       "arm",            1, 2);
 	clk[gpt_3m]    = imx_clk_fixed_factor("gpt_3m",    "osc",            1, 8);
 	clk[video_27m] = imx_clk_fixed_factor("video_27m", "pll3_pfd1_540m", 1, 20);
+	if (cpu_is_imx6dl()) {
+		clk[gpu2d_axi] = imx_clk_fixed_factor("gpu2d_axi", "mmdc_ch0_axi_podf", 1, 1);
+		clk[gpu3d_axi] = imx_clk_fixed_factor("gpu3d_axi", "mmdc_ch0_axi_podf", 1, 1);
+	}
 
 	clk[pll4_post_div] = clk_register_divider_table(NULL, "pll4_post_div", "pll4_audio", CLK_SET_RATE_PARENT, base + 0x70, 19, 2, 0, post_div_table, &imx_ccm_lock);
 	clk[pll4_audio_div] = clk_register_divider(NULL, "pll4_audio_div", "pll4_post_div", CLK_SET_RATE_PARENT, base + 0x170, 15, 1, 0, &imx_ccm_lock);
@@ -390,18 +394,20 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 
 	/*                                  name                reg       shift width parent_names     num_parents */
 	clk[step]             = imx_clk_mux("step",	        base + 0xc,  8,  1, step_sels,	       ARRAY_SIZE(step_sels));
-	clk[pll1_sw]          = imx_clk_mux("pll1_sw",	        base + 0xc,  2,  1, pll1_sw_sels,      ARRAY_SIZE(pll1_sw_sels));
-	clk[periph_pre]       = imx_clk_mux("periph_pre",       base + 0x18, 18, 2, periph_pre_sels,   ARRAY_SIZE(periph_pre_sels));
+	clk[pll1_sw]          = imx_clk_mux_glitchless("pll1_sw", base + 0xc, 2, 1, pll1_sw_sels,      ARRAY_SIZE(pll1_sw_sels));
+	clk[periph_pre]       = imx_clk_mux_bus("periph_pre",       base + 0x18, 18, 2, periph_pre_sels,   ARRAY_SIZE(periph_pre_sels));
 	clk[periph2_pre]      = imx_clk_mux("periph2_pre",      base + 0x18, 21, 2, periph_pre_sels,   ARRAY_SIZE(periph_pre_sels));
-	clk[periph_clk2_sel]  = imx_clk_mux("periph_clk2_sel",  base + 0x18, 12, 2, periph_clk2_sels,  ARRAY_SIZE(periph_clk2_sels));
+	clk[periph_clk2_sel]  = imx_clk_mux_bus("periph_clk2_sel",  base + 0x18, 12, 2, periph_clk2_sels,  ARRAY_SIZE(periph_clk2_sels));
 	clk[periph2_clk2_sel] = imx_clk_mux("periph2_clk2_sel", base + 0x18, 20, 1, periph2_clk2_sels, ARRAY_SIZE(periph2_clk2_sels));
 	clk[axi_alt_sel]      = imx_clk_mux("axi_alt_sel",      base + 0x14, 7,  1, axi_alt_sels,      ARRAY_SIZE(axi_alt_sels));
-	clk[axi_sel]          = imx_clk_mux("axi_sel",          base + 0x14, 6,  1, axi_sels,          ARRAY_SIZE(axi_sels));
+	clk[axi_sel]          = imx_clk_mux_glitchless("axi_sel", base + 0x14, 6, 1, axi_sels,         ARRAY_SIZE(axi_sels));
 	clk[esai_sel]         = imx_clk_mux("esai_sel",         base + 0x20, 19, 2, audio_sels,        ARRAY_SIZE(audio_sels));
 	clk[spdif1_sel]       = imx_clk_mux("spdif1_sel",       base + 0x30, 7,  2, audio_sels,        ARRAY_SIZE(audio_sels));
 	clk[spdif_sel]        = imx_clk_mux("spdif_sel",        base + 0x30, 20, 2, audio_sels,        ARRAY_SIZE(audio_sels));
-	clk[gpu2d_axi]        = imx_clk_mux("gpu2d_axi",        base + 0x18, 0,  1, gpu_axi_sels,      ARRAY_SIZE(gpu_axi_sels));
-	clk[gpu3d_axi]        = imx_clk_mux("gpu3d_axi",        base + 0x18, 1,  1, gpu_axi_sels,      ARRAY_SIZE(gpu_axi_sels));
+	if (cpu_is_imx6q()) {
+		clk[gpu2d_axi]        = imx_clk_mux("gpu2d_axi",        base + 0x18, 0,  1, gpu_axi_sels,      ARRAY_SIZE(gpu_axi_sels));
+		clk[gpu3d_axi]        = imx_clk_mux("gpu3d_axi",        base + 0x18, 1,  1, gpu_axi_sels,      ARRAY_SIZE(gpu_axi_sels));
+	}
 	clk[gpu2d_core_sel]   = imx_clk_mux("gpu2d_core_sel",   base + 0x18, 16, 2, gpu2d_core_sels,   ARRAY_SIZE(gpu2d_core_sels));
 	clk[gpu3d_core_sel]   = imx_clk_mux("gpu3d_core_sel",   base + 0x18, 4,  2, gpu3d_core_sels,   ARRAY_SIZE(gpu3d_core_sels));
 	clk[gpu3d_shader_sel] = imx_clk_mux("gpu3d_shader_sel", base + 0x18, 8,  2, gpu3d_shader_sels, ARRAY_SIZE(gpu3d_shader_sels));
@@ -699,16 +705,6 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 		imx_clk_set_parent(clk[gpu2d_core_sel], clk[pll3_usb_otg]);
 	}
 
-
-
-	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
-		imx_clk_prepare_enable(clk[clks_init_on[i]]);
-
-	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
-		imx_clk_prepare_enable(clk[usbphy1_gate]);
-		imx_clk_prepare_enable(clk[usbphy2_gate]);
-	}
-
 	/* ipu clock initialization */
 	init_ldb_clks();
 	imx_clk_set_parent(clk[ipu1_di0_pre_sel], clk[pll5_video_div]);
@@ -766,6 +762,18 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	imx_clk_set_parent(clk[vpu_axi_sel], clk[pll2_pfd2_396m]);
 	pr_info("VPU 352M is enabled!\n");
 #endif
+
+	/*
+	 * Enable clocks only after both parent and rate are all initialized
+	 * as needed
+	 */
+	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
+		imx_clk_prepare_enable(clk[clks_init_on[i]]);
+
+	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
+		imx_clk_prepare_enable(clk[usbphy1_gate]);
+		imx_clk_prepare_enable(clk[usbphy2_gate]);
+	}
 
 	/* Set initial power mode */
 	imx6_set_lpm(WAIT_CLOCKED);
