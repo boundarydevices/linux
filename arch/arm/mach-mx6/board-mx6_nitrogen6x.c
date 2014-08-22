@@ -339,8 +339,10 @@ static struct platform_device btwilink_device = {
 
 static int fec_phy_init(struct phy_device *phydev)
 {
+	int reg9 = (phydev->supported & SUPPORTED_1000baseT_Full)
+			? 0x1e00 : 0x1c00 ;
 	/* prefer master mode */
-	phy_write(phydev, 0x9, 0x1f00);
+	phy_write(phydev, 0x9, reg9);
 
 	/* min rx data delay */
 	phy_write(phydev, 0x0b, 0x8105);
