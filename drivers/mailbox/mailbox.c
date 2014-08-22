@@ -252,7 +252,7 @@ int mbox_send_message(struct mbox_chan *chan, void *mssg)
 
 	msg_submit(chan);
 
-	INIT_COMPLETION(chan->tx_complete);
+	reinit_completion(&chan->tx_complete);
 
 	if (chan->txdone_method	== TXDONE_BY_POLL)
 		poll_txdone((unsigned long)chan->mbox);
