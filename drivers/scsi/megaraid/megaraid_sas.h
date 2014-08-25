@@ -33,9 +33,9 @@
 /*
  * MegaRAID SAS Driver meta data
  */
-#define MEGASAS_VERSION				"06.803.01.00-rc1"
-#define MEGASAS_RELDATE				"Mar. 10, 2014"
-#define MEGASAS_EXT_VERSION			"Mon. Mar. 10 17:00:00 PDT 2014"
+#define MEGASAS_VERSION				"06.803.02.00-rc1"
+#define MEGASAS_RELDATE				"Jun. 19, 2014"
+#define MEGASAS_EXT_VERSION			"Thu. Jun. 19 17:00:00 PDT 2014"
 
 /*
  * Device IDs
@@ -1633,8 +1633,6 @@ struct megasas_instance {
 	struct timer_list sriov_heartbeat_timer;
 	char skip_heartbeat_timer_del;
 	u8 requestorId;
-	u64 initiator_sas_address;
-	u64 ld_sas_address[64];
 	char PlasmaFW111;
 	char mpio;
 	int throttlequeuedepth;
@@ -1661,6 +1659,7 @@ struct MR_LD_VF_AFFILIATION {
 /* Plasma 1.11 FW backward compatibility structures */
 #define IOV_111_OFFSET 0x7CE
 #define MAX_VIRTUAL_FUNCTIONS 8
+#define MR_LD_ACCESS_HIDDEN 15
 
 struct IOV_111 {
 	u8 maxVFsSupported;

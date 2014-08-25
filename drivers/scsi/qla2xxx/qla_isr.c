@@ -730,7 +730,7 @@ skip_rio:
 		else
 			ha->link_data_rate = mb[1];
 
-		ql_dbg(ql_dbg_async, vha, 0x500a,
+		ql_log(ql_log_info, vha, 0x500a,
 		    "LOOP UP detected (%s Gbps).\n",
 		    qla2x00_get_link_speed_str(ha, ha->link_data_rate));
 
@@ -743,7 +743,7 @@ skip_rio:
 			? RD_REG_WORD(&reg24->mailbox4) : 0;
 		mbx = (IS_P3P_TYPE(ha)) ? RD_REG_WORD(&reg82->mailbox_out[4])
 			: mbx;
-		ql_dbg(ql_dbg_async, vha, 0x500b,
+		ql_log(ql_log_info, vha, 0x500b,
 		    "LOOP DOWN detected (%x %x %x %x).\n",
 		    mb[1], mb[2], mb[3], mbx);
 
@@ -908,7 +908,8 @@ skip_rio:
 		 * it.  Otherwise ignore it and Wait for RSCN to come in.
 		 */
 		atomic_set(&vha->loop_down_timer, 0);
-		if (mb[1] != 0xffff || (mb[2] != 0x6 && mb[2] != 0x4)) {
+		if (atomic_read(&vha->loop_state) != LOOP_DOWN &&
+		    atomic_read(&vha->loop_state) != LOOP_DEAD) {
 			ql_dbg(ql_dbg_async, vha, 0x5011,
 			    "Asynchronous PORT UPDATE ignored %04x/%04x/%04x.\n",
 			    mb[1], mb[2], mb[3]);
@@ -920,9 +921,6 @@ skip_rio:
 		ql_dbg(ql_dbg_async, vha, 0x5012,
 		    "Port database changed %04x %04x %04x.\n",
 		    mb[1], mb[2], mb[3]);
-		ql_log(ql_log_warn, vha, 0x505f,
-		    "Link is operational (%s Gbps).\n",
-		    qla2x00_get_link_speed_str(ha, ha->link_data_rate));
 
 		/*
 		 * Mark all devices as missing so we will login again.
@@ -2923,27 +2921,22 @@ qla24xx_enable_msix(struct qla_hw_data *ha, struct rsp_que *rsp)
 	for (i = 0; i < ha->msix_count; i++)
 		entries[i].entry = i;
 
-	ret = pci_enable_msix(ha->pdev, entries, ha->msix_count);
-	if (ret) {
-		if (ret < MIN_MSIX_COUNT)
-			goto msix_failed;
-
+	ret = pci_enable_msix_range(ha->pdev,
+				    entries, MIN_MSIX_COUNT, ha->msix_count);
+	if (ret < 0) {
+		ql_log(ql_log_fatal, vha, 0x00c7,
+		    "MSI-X: Failed to enable support, "
+		    "giving   up -- %d/%d.\n",
+		    ha->msix_count, ret);
+		goto msix_out;
+	} else if (ret < ha->msix_count) {
 		ql_log(ql_log_warn, vha, 0x00c6,
 		    "MSI-X: Failed to enable support "
 		    "-- %d/%d\n Retry with %d vectors.\n",
 		    ha->msix_count, ret, ret);
-		ha->msix_count = ret;
-		ret = pci_enable_msix(ha->pdev, entries, ha->msix_count);
-		if (ret) {
-msix_failed:
-			ql_log(ql_log_fatal, vha, 0x00c7,
-			    "MSI-X: Failed to enable support, "
-			    "giving   up -- %d/%d.\n",
-			    ha->msix_count, ret);
-			goto msix_out;
-		}
-		ha->max_rsp_queues = ha->msix_count - 1;
 	}
+	ha->msix_count = ret;
+	ha->max_rsp_queues = ha->msix_count - 1;
 	ha->msix_entries = kzalloc(sizeof(struct qla_msix_entry) *
 				ha->msix_count, GFP_KERNEL);
 	if (!ha->msix_entries) {
