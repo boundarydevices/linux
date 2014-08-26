@@ -7059,6 +7059,7 @@ F:	drivers/scsi/pmcraid.*
 PMC SIERRA PM8001 DRIVER
 M:	xjtuwjp@gmail.com
 M:	lindar_liu@usish.com
+L:	pmchba@pmcs.com
 L:	linux-scsi@vger.kernel.org
 S:	Supported
 F:	drivers/scsi/pm8001/
@@ -10016,7 +10017,7 @@ F:	arch/x86/
 X86 PLATFORM DRIVERS
 M:	Matthew Garrett <matthew.garrett@nebula.com>
 L:	platform-driver-x86@vger.kernel.org
-T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mjg59/platform-drivers-x86.git
+T:	git git://cavan.codon.org.uk/platform-drivers-x86.git
 S:	Maintained
 F:	drivers/platform/x86/
 
