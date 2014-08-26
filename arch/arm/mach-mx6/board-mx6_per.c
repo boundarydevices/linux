@@ -298,12 +298,13 @@ static struct flash_platform_data spi_flash_data = {
 };
 #endif
 
-#ifdef CONFIG_SND_SOC_WM5102
+#if defined(CONFIG_SND_SOC_WM5102) || defined(CONFIG_SND_SOC_WM5102_MODULE)
 static struct arizona_pdata wm5102_reva_pdata = {
-	.ldoena = GP_WM5102_LDO_EN,
-	.irq_flags = IRQF_TRIGGER_HIGH,
-	.micd_pol_gpio = CODEC_GPIO_BASE + 4,
-	.micd_rate = 6,
+	.reset = GP_WM5102_RESET,
+	.ldoena = GP_WM5102_LDOENA,
+	.clk32k_src = ARIZONA_32KZ_MCLK2,
+	.inmode = {1, 1, 1, 1},
+	.irq_base = MXC_BOARD_IRQ_START,
 };
 #endif
 
@@ -380,7 +381,7 @@ static struct spi_board_info spi_devices[] __initdata = {
 		.mode = SPI_MODE_0,
 		.platform_data = &gs2971_data,
 	},
-#ifdef CONFIG_SND_SOC_WM5102
+#if defined(CONFIG_SND_SOC_WM5102) || defined(CONFIG_SND_SOC_WM5102_MODULE)
 	{
 		.modalias       = "wm5102",
 		.max_speed_hz   = 10000000,
@@ -768,80 +769,79 @@ static struct platform_device vmmc_reg_devices = {
 	},
 };
 
-#ifdef CONFIG_SND_SOC_WM5102
+#if defined(CONFIG_SND_SOC_WM5102) || defined(CONFIG_SND_SOC_WM5102_MODULE)
 
-static struct regulator_consumer_supply wm5102_consumer_vdda = {
-	.supply = "VDDA",
-	.dev_name = "0-000a",
+static struct regulator_consumer_supply wm5102_consumer_5v[] = {
+{
+	.supply = "SPKVDDL",
+	.dev_name = "spi2.1",
+},
+{
+	.supply = "SPKVDDR",
+	.dev_name = "spi2.1",
+},
 };
 
-static struct regulator_consumer_supply wm5102_consumer_vddio = {
-	.supply = "VDDIO",
-	.dev_name = "0-000a",
+static struct regulator_consumer_supply wm5102_consumer_1p8v[] = {
+{
+	.supply = "DBVDD1",
+	.dev_name = "spi2.1",
+},
+{
+	.supply = "DBVDD2",
+	.dev_name = "spi2.1",
+},
+{
+	.supply = "DBVDD3",
+	.dev_name = "spi2.1",
+},
+{
+	.supply = "AVDD",
+	.dev_name = "spi2.1",
+},
+{
+	.supply = "CPVDD",
+	.dev_name = "spi2.1",
+},
 };
 
-static struct regulator_consumer_supply wm5102_consumer_vddd = {
-	.supply = "VDDD",
-	.dev_name = "0-000a",
+static struct regulator_init_data wm5102_5v_reg_initdata = {
+	.num_consumer_supplies = ARRAY_SIZE(wm5102_consumer_5v),
+	.consumer_supplies = wm5102_consumer_5v,
 };
 
-static struct regulator_init_data wm5102_vdda_reg_initdata = {
-	.num_consumer_supplies = 1,
-	.consumer_supplies = &wm5102_consumer_vdda,
+static struct regulator_init_data wm5102_1p8v_reg_initdata = {
+	.num_consumer_supplies = ARRAY_SIZE(wm5102_consumer_1p8v),
+	.consumer_supplies = wm5102_consumer_1p8v,
 };
 
-static struct regulator_init_data wm5102_vddio_reg_initdata = {
-	.num_consumer_supplies = 1,
-	.consumer_supplies = &wm5102_consumer_vddio,
-};
-
-static struct regulator_init_data wm5102_vddd_reg_initdata = {
-	.num_consumer_supplies = 1,
-	.consumer_supplies = &wm5102_consumer_vddd,
-};
-
-static struct fixed_voltage_config wm5102_vdda_reg_config = {
-	.supply_name		= "VDDA",
-	.microvolts		= 2500000,
+static struct fixed_voltage_config wm5102_5v_reg_config = {
+	.supply_name		= "V_5",
+	.microvolts		= 5000000,
 	.gpio			= -1,
-	.init_data		= &wm5102_vdda_reg_initdata,
+	.init_data		= &wm5102_5v_reg_initdata,
 };
 
-static struct fixed_voltage_config wm5102_vddio_reg_config = {
-	.supply_name		= "VDDIO",
-	.microvolts		= 3300000,
+static struct fixed_voltage_config wm5102_1p8v_reg_config = {
+	.supply_name		= "V_1P8",
+	.microvolts		= 1800000,
 	.gpio			= -1,
-	.init_data		= &wm5102_vddio_reg_initdata,
+	.init_data		= &wm5102_1p8v_reg_initdata,
 };
 
-static struct fixed_voltage_config wm5102_vddd_reg_config = {
-	.supply_name		= "VDDD",
-	.microvolts		= 0,
-	.gpio			= -1,
-	.init_data		= &wm5102_vddd_reg_initdata,
-};
-
-static struct platform_device wm5102_vdda_reg_devices = {
-	.name	= "reg-fixed-voltage",
-	.id	= 0,
-	.dev	= {
-		.platform_data = &wm5102_vdda_reg_config,
-	},
-};
-
-static struct platform_device wm5102_vddio_reg_devices = {
+static struct platform_device wm5102_5v_reg_devices = {
 	.name	= "reg-fixed-voltage",
 	.id	= 1,
 	.dev	= {
-		.platform_data = &wm5102_vddio_reg_config,
+		.platform_data = &wm5102_5v_reg_config,
 	},
 };
 
-static struct platform_device wm5102_vddd_reg_devices = {
+static struct platform_device wm5102_1p8v_reg_devices = {
 	.name	= "reg-fixed-voltage",
 	.id	= 2,
 	.dev	= {
-		.platform_data = &wm5102_vddd_reg_config,
+		.platform_data = &wm5102_1p8v_reg_config,
 	},
 };
 
@@ -852,10 +852,9 @@ static int init_audio(void)
 	mxc_register_device(&wm5102_audio_device,
 			    &wm5102_audio_data);
 	imx6q_add_imx_ssi(0, &ssi_pdata);
-#ifdef CONFIG_SND_SOC_WM5102
-	platform_device_register(&wm5102_vdda_reg_devices);
-	platform_device_register(&wm5102_vddio_reg_devices);
-	platform_device_register(&wm5102_vddd_reg_devices);
+#if defined(CONFIG_SND_SOC_WM5102) || defined(CONFIG_SND_SOC_WM5102_MODULE)
+	platform_device_register(&wm5102_1p8v_reg_devices);
+	platform_device_register(&wm5102_5v_reg_devices);
 #endif
 #ifdef CONFIG_GS2971_AUDIO
 	mxc_register_device(&gs2971_audio_device,
