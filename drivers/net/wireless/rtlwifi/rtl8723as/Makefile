@@ -308,9 +308,9 @@ _HAL_INTFS_FILES += $(CHIP_FILES)
 ifeq ($(CONFIG_AUTOCFG_CP), y)
 
 ifeq ($(CONFIG_RTL8188E)$(CONFIG_SDIO_HCI),yy) 
-$(shell cp $(TopDIR)/autoconf_rtl8189e_$(HCI_NAME)_linux.h $(TopDIR)/include/autoconf.h)
+$(shell cp $(TopDIR)/drivers/net/wireless/rtlwifi/rtl8723as/autoconf_rtl8189e_$(HCI_NAME)_linux.h $(TopDIR)/drivers/net/wireless/rtlwifi/rtl8723as/include/autoconf.h)
 else
-$(shell cp $(TopDIR)/autoconf_$(RTL871X)_$(HCI_NAME)_linux.h $(TopDIR)/include/autoconf.h)
+$(shell cp $(TopDIR)/drivers/net/wireless/rtlwifi/rtl8723as/autoconf_$(RTL871X)_$(HCI_NAME)_linux.h $(TopDIR)/drivers/net/wireless/rtlwifi/rtl8723as/include/autoconf.h)
 endif
 endif
 
