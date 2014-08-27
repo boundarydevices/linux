@@ -88,7 +88,7 @@ static struct fb_videomode lcdif_modedb[] = {
 	  .left_margin = 16, .right_margin = 16,
 	  .upper_margin = 16, .lower_margin = 5,
 	  .hsync_len = 48, .vsync_len = 1,
-	 .sync = FB_SYNC_CLK_LAT_FALL,
+	 .sync = 0,
 	 .vmode = FB_VMODE_NONINTERLACED,
 	 .flag = 0,},
 };
