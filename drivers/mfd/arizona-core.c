@@ -340,8 +340,6 @@ int __devinit arizona_dev_init(struct arizona *arizona)
 			dev_err(dev, "Failed to request /RESET: %d\n", ret);
 			goto err_enable;
 		}
-
-		gpio_set_value_cansleep(arizona->pdata.reset, 1);
 	}
 
 	if (arizona->pdata.ldoena) {
@@ -352,7 +350,10 @@ int __devinit arizona_dev_init(struct arizona *arizona)
 			dev_err(dev, "Failed to request LDOENA: %d\n", ret);
 			goto err_reset;
 		}
+		msleep(3);
 	}
+	if (arizona->pdata.reset)
+		gpio_set_value_cansleep(arizona->pdata.reset, 1);
 
 	regcache_cache_only(arizona->regmap, false);
 
