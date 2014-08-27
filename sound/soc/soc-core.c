@@ -2389,16 +2389,20 @@ int snd_soc_update_bits(struct snd_soc_codec *codec, unsigned short reg,
 	int ret;
 
 	ret = snd_soc_read(codec, reg);
-	if (ret < 0)
+	if (ret < 0) {
+		pr_err("%s: read of reg 0x%x failed(%d)\n", __func__, reg, ret);
 		return ret;
+	}
 
 	old = ret;
 	new = (old & ~mask) | value;
 	change = old != new;
 	if (change) {
 		ret = snd_soc_write(codec, reg, new);
-		if (ret < 0)
+		if (ret < 0) {
+			pr_err("%s: change of reg 0x%x from %x to %x failed(%d)\n", __func__, reg, old, new, ret);
 			return ret;
+		}
 	}
 
 	return change;
