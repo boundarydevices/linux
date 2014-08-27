@@ -57,6 +57,23 @@ static struct fb_videomode lcdif_modedb[] = {
 	 .sync = FB_SYNC_CLK_LAT_FALL,
 	 .vmode = FB_VMODE_NONINTERLACED,
 	 .flag = 0,},
+	{
+		/* 1280x120 @ 60 Hz , pixel clk @ 32MHz */
+		"TRULY-1U",
+		60, /* refresh rate in Hz */
+		1280, /* xres in pixels */
+		120, /* yres in pixels */
+		45000, /* pixel clock in picoseconds (dot clock or just clock) */
+		54, /* left_margin (Horizontal Back Porch) in pixel clock units */
+		54, /* right_margin (Horizontal Front Porch) in pixel clock units */
+		3, /* upper_margin (Vertical Back Porch) in pixel clock units */
+		3, /* lower_margin (Vertical Front Porch) in pixel clock units */
+		3, /* hsync_len (Hsync pulse width) */
+		3, /* vsync_len (Vsync pulse width) */
+		0, /* sync (Polarity on the Data Enable) */
+		FB_VMODE_NONINTERLACED, /* vmode (Video Mode) */
+		0, /* flags */
+	}
 };
 static int lcdif_modedb_sz = ARRAY_SIZE(lcdif_modedb);
 
