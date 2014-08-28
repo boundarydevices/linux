@@ -2342,10 +2342,38 @@ void snd_soc_free_ac97_codec(struct snd_soc_codec *codec)
 }
 EXPORT_SYMBOL_GPL(snd_soc_free_ac97_codec);
 
+#ifdef DEBUG
+unsigned last_accesses[4];
+unsigned last_index;
+void spi_print_last_accesses(void);
+
+void snd_soc_print_last_accesses(void)
+{
+	unsigned *p = last_accesses;
+	unsigned i = last_index;
+	unsigned v[4];
+	v[0] = p[i];
+	v[1] = p[(i + 1) & 3];
+	v[2] = p[(i + 2) & 3];
+	v[3] = p[(i + 3) & 3];
+	p[3] = p[2] = p[1] = p[0] = 0;
+	pr_info("%s: %x %x %x %x\n", __func__, v[0], v[1], v[2], v[3]);
+	spi_print_last_accesses();
+}
+EXPORT_SYMBOL_GPL(snd_soc_print_last_accesses);
+#endif
+
 unsigned int snd_soc_read(struct snd_soc_codec *codec, unsigned int reg)
 {
 	unsigned int ret;
+#ifdef DEBUG
+	unsigned i = last_index;
 
+	last_accesses[i++] = reg | 0x80000000;
+	if (i >= ARRAY_SIZE(last_accesses))
+		i = 0;
+	last_index = i;
+#endif
 	ret = codec->read(codec, reg);
 	dev_dbg(codec->dev, "read %x => %x\n", reg, ret);
 	trace_snd_soc_reg_read(codec, reg, ret);
@@ -2357,6 +2385,14 @@ EXPORT_SYMBOL_GPL(snd_soc_read);
 unsigned int snd_soc_write(struct snd_soc_codec *codec,
 			   unsigned int reg, unsigned int val)
 {
+#ifdef DEBUG
+	unsigned i = last_index;
+
+	last_accesses[i++] = reg;
+	if (i >= ARRAY_SIZE(last_accesses))
+		i = 0;
+	last_index = i;
+#endif
 	dev_dbg(codec->dev, "write %x = %x\n", reg, val);
 	trace_snd_soc_reg_write(codec, reg, val);
 	return codec->write(codec, reg, val);
