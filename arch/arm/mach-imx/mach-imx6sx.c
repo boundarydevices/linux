@@ -33,9 +33,6 @@
 #include "cpuidle.h"
 #include "hardware.h"
 
-static struct platform_device imx6slx_cpufreq_pdev = {
-	.name = "imx6-cpufreq",
-};
 static struct flexcan_platform_data flexcan_pdata[2];
 static struct fec_platform_data fec_pdata[2];
 static int flexcan_en_gpio;

@@ -365,7 +365,6 @@ EXPORT_SYMBOL(csi_set_12bit_imagpara);
 void csi_dmareq_rff_enable(struct csi_soc *csi)
 {
 	unsigned long cr3 = __raw_readl(csi->regbase + CSI_CSICR3);
-
 	unsigned long cr2 = __raw_readl(csi->regbase + CSI_CSICR2);
 
 	/* Burst Type of DMA Transfer from RxFIFO. INCR16 */

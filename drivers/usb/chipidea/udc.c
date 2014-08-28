@@ -104,7 +104,7 @@ static int hw_ep_flush(struct ci_hdrc *ci, int num, int dir)
 
 	do {
 		/* flush any pending transfer */
-		hw_write(ci, OP_ENDPTFLUSH, BIT(n), BIT(n));
+		hw_write(ci, OP_ENDPTFLUSH, ~0, BIT(n));
 		while (hw_read(ci, OP_ENDPTFLUSH, BIT(n)))
 			cpu_relax();
 	} while (hw_read(ci, OP_ENDPTSTAT, BIT(n)));
@@ -204,7 +204,7 @@ static int hw_ep_prime(struct ci_hdrc *ci, int num, int dir, int is_ctrl)
 	if (is_ctrl && dir == RX && hw_read(ci, OP_ENDPTSETUPSTAT, BIT(num)))
 		return -EAGAIN;
 
-	hw_write(ci, OP_ENDPTPRIME, BIT(n), BIT(n));
+	hw_write(ci, OP_ENDPTPRIME, ~0, BIT(n));
 
 	while (hw_read(ci, OP_ENDPTPRIME, BIT(n)))
 		cpu_relax();
@@ -1952,7 +1952,7 @@ static void udc_suspend_for_power_lost(struct ci_hdrc *ci)
 static void udc_resume_from_power_lost(struct ci_hdrc *ci)
 {
 	/* Force disconnect if power lost with vbus on */
-	if (ci->vbus_active)
+	if (!ci_otg_is_fsm_mode(ci) && ci->vbus_active)
 		usb_gadget_vbus_disconnect(&ci->gadget);
 
 	if (ci->is_otg)
