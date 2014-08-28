@@ -1026,6 +1026,28 @@
 				reg = <0x02240000 0x40000>;
 				ranges;
 
+				dcic1: dcic@0220c000 {
+					compatible = "fsl,imx6sx-dcic";
+					reg = <0x0220c000 0x4000>;
+					interrupts = <0 124 IRQ_TYPE_LEVEL_HIGH>;
+					clocks = <&clks IMX6SX_CLK_DCIC1>,
+						<&clks IMX6SX_CLK_DISPLAY_AXI>;
+					clock-names = "dcic", "disp-axi";
+					gpr = <&gpr>;
+					status = "disabled";
+				};
+
+				dcic2: dcic@02210000 {
+					compatible = "fsl,imx6sx-dcic";
+					reg = <0x02210000 0x4000>;
+					interrupts = <0 125 IRQ_TYPE_LEVEL_HIGH>;
+					clocks = <&clks IMX6SX_CLK_DCIC2>,
+						<&clks IMX6SX_CLK_DISPLAY_AXI>;
+					clock-names = "dcic", "disp-axi";
+					gpr = <&gpr>;
+					status = "disabled";
+				};
+
 				csi1: csi@02214000 {
 					reg = <0x02214000 0x4000>;
 					interrupts = <GIC_SPI 7 IRQ_TYPE_LEVEL_HIGH>;
