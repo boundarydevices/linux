@@ -113,9 +113,8 @@ static irqreturn_t regmap_irq_thread(int irq, void *d)
 	 * doing a write per register.
 	 */
 	for (i = 0; i < data->chip->num_regs; i++) {
-		ret = regmap_read(map, chip->status_base + (i * map->reg_stride
-				   * data->irq_reg_stride),
-				   &data->status_buf[i]);
+		unsigned offset = i * map->reg_stride * data->irq_reg_stride;
+		ret = regmap_read(map, chip->status_base + offset, &data->status_buf[i]);
 
 		if (ret != 0) {
 			dev_err(map->dev, "Failed to read IRQ status: %d\n",
@@ -126,14 +125,11 @@ static irqreturn_t regmap_irq_thread(int irq, void *d)
 		data->status_buf[i] &= ~data->mask_buf[i];
 
 		if (data->status_buf[i] && chip->ack_base) {
-			ret = regmap_write(map, chip->ack_base +
-						(i * map->reg_stride *
-						data->irq_reg_stride),
+			ret = regmap_write(map, chip->ack_base + offset,
 					   data->status_buf[i]);
 			if (ret != 0)
 				dev_err(map->dev, "Failed to ack 0x%x: %d\n",
-					chip->ack_base + (i * map->reg_stride),
-					ret);
+					chip->ack_base + offset, ret);
 		}
 	}
 
