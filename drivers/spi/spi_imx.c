@@ -110,6 +110,55 @@ static void spi_imx_buf_rx_##type(struct spi_imx_data *spi_imx)		\
 	}								\
 }
 
+#ifdef DEBUG
+static unsigned last_index;
+static u8 last_buf[64];
+void spi_print_last_accesses(void)
+{
+	u8 v[sizeof(last_buf)];
+	u32 *p = (u32 *)v;
+	unsigned i = last_index;
+	unsigned rem = sizeof(last_buf) - i;
+
+	memcpy(v, &last_buf[i], rem);
+	memcpy(&v[rem], last_buf, i);
+	memset(last_buf, 0, sizeof(last_buf));
+	for (i = 0; i < sizeof(v); i += 4) {
+		u8 t = v[i];
+		v[i] = v[i+3];
+		v[i+3] = t;
+
+		t = v[i+1];
+		v[i+1] = v[i+2];
+		v[i+2] = t;
+	}
+	pr_info("%s: %x %x %x %x  %x %x %x %x  %x %x %x %x  %x %x %x %x\n", __func__,
+		p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
+		p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
+}
+EXPORT_SYMBOL_GPL(spi_print_last_accesses);
+
+#define MXC_SPI_BUF_TX(type)						\
+static void spi_imx_buf_tx_##type(struct spi_imx_data *spi_imx)		\
+{									\
+	type val = 0;							\
+	unsigned i = last_index;					\
+	type *p = (type *)(&last_buf[i]);				\
+	if (spi_imx->tx_buf) {						\
+		val = *(type *)spi_imx->tx_buf;				\
+		spi_imx->tx_buf += sizeof(type);			\
+	}								\
+									\
+	spi_imx->count -= sizeof(type);					\
+	*p = val;							\
+	i += sizeof(type);						\
+	if (i >= sizeof(last_buf))					\
+		i = 0;							\
+	last_index = i;							\
+	writel(val, spi_imx->base + MXC_CSPITXDATA);			\
+}
+#else
+
 #define MXC_SPI_BUF_TX(type)						\
 static void spi_imx_buf_tx_##type(struct spi_imx_data *spi_imx)		\
 {									\
@@ -124,6 +173,7 @@ static void spi_imx_buf_tx_##type(struct spi_imx_data *spi_imx)		\
 									\
 	writel(val, spi_imx->base + MXC_CSPITXDATA);			\
 }
+#endif
 
 MXC_SPI_BUF_RX(u8)
 MXC_SPI_BUF_TX(u8)
