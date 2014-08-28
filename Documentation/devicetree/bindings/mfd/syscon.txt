@@ -13,10 +13,11 @@ Required properties:
 - compatible: Should contain "syscon".
 - reg: the register region can be accessed from syscon
 
-Optional property:
+Optional properties:
 - reg-io-width: the size (in bytes) of the IO accesses that should be
   performed on the device.
 - hwlocks: reference to a phandle of a hardware spinlock provider node.
+- clocks: clock used for accessing the regmap
 
 Examples:
 gpr: iomuxc-gpr@20e0000 {
