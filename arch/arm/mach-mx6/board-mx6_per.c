@@ -55,7 +55,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
-//#include <linux/mfd/arizona/pdata.h>
+#include <linux/mfd/arizona/pdata.h>
 
 #include <mach/common.h>
 #include <mach/hardware.h>
