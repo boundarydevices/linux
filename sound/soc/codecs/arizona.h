@@ -171,7 +171,7 @@ struct arizona_fll {
 	struct completion ok;
 	unsigned int fref;
 	unsigned int fout;
-
+	struct mutex fll_lock;
 	char lock_name[ARIZONA_FLL_NAME_LEN];
 	char clock_ok_name[ARIZONA_FLL_NAME_LEN];
 };

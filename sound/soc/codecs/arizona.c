@@ -837,16 +837,17 @@ int arizona_set_fll(struct arizona_fll *fll, int source,
 	unsigned int reg, val;
 	int syncsrc;
 	bool ena;
-	int ret;
+	int ret = 0;
 
+	mutex_lock(&fll->fll_lock);
 	if (fll->fref == Fref && fll->fout == Fout)
-		return 0;
+		goto exit;
 
 	ret = regmap_read(arizona->regmap, fll->base + 1, &reg);
 	if (ret != 0) {
 		arizona_fll_err(fll, "Failed to read current state: %d\n",
 				ret);
-		return ret;
+		goto exit;
 	}
 	ena = reg & ARIZONA_FLL1_ENA;
 
@@ -868,15 +869,15 @@ int arizona_set_fll(struct arizona_fll *fll, int source,
 		if (syncsrc >= 0) {
 			ret = arizona_calc_fll(fll, &sync, Fref, Fout);
 			if (ret != 0)
-				return ret;
+				goto exit;
 
 			ret = arizona_calc_fll(fll, &cfg, 32768, Fout);
 			if (ret != 0)
-				return ret;
+				goto exit;
 		} else {
 			ret = arizona_calc_fll(fll, &cfg, Fref, Fout);
 			if (ret != 0)
-				return ret;
+				goto exit;
 		}
 	} else {
 		regmap_update_bits(arizona->regmap, fll->base + 1,
@@ -889,8 +890,7 @@ int arizona_set_fll(struct arizona_fll *fll, int source,
 
 		fll->fref = Fref;
 		fll->fout = Fout;
-
-		return 0;
+		goto exit;
 	}
 
 	regmap_update_bits(arizona->regmap, fll->base + 5,
@@ -924,8 +924,10 @@ int arizona_set_fll(struct arizona_fll *fll, int source,
 
 	fll->fref = Fref;
 	fll->fout = Fout;
-
-	return 0;
+	ret = 0;
+exit:
+	mutex_unlock(&fll->fll_lock);
+	return ret;
 }
 EXPORT_SYMBOL_GPL(arizona_set_fll);
 
@@ -936,6 +938,7 @@ int arizona_init_fll(struct arizona *arizona, int id, int base, int lock_irq,
 
 	init_completion(&fll->lock);
 	init_completion(&fll->ok);
+	mutex_init(&fll->fll_lock);
 
 	fll->id = id;
 	fll->base = base;
