@@ -194,4 +194,6 @@ config SW_SYNC_USER
          Provides a user space API to the sw sync object.
          *WARNING* improper use of this can result in deadlocking kernel
 	 drivers from userspace.
+
+source "drivers/base/regmap/Kconfig"
 endmenu
