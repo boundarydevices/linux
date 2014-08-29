@@ -273,6 +273,7 @@ static struct ath_buf *ath_tx_get_buffer(struct ath_softc *sc)
 	}
 
 	bf = list_first_entry(&sc->tx.txbuf, struct ath_buf, list);
+	bf->bf_next = NULL;
 	list_del(&bf->list);
 
 	spin_unlock_bh(&sc->tx.txbuflock);
@@ -1489,6 +1490,7 @@ static void ath_tx_send_normal(struct ath_softc *sc, struct ath_txq *txq,
 	if (tid)
 		INCR(tid->seq_start, IEEE80211_SEQ_MAX);
 
+	bf->bf_next = NULL;
 	bf->bf_lastbf = bf;
 	fi = get_frame_info(bf->bf_mpdu);
 	ath_buf_set_rate(sc, bf, fi->framelen);
@@ -2432,6 +2434,7 @@ void ath_tx_node_init(struct ath_softc *sc, struct ath_node *an)
 	for (acno = 0, ac = &an->ac[acno];
 	     acno < WME_NUM_AC; acno++, ac++) {
 		ac->sched    = false;
+		ac->clear_ps_filter = true;
 		ac->txq = sc->tx.txq_map[acno];
 		INIT_LIST_HEAD(&ac->tid_q);
 	}
