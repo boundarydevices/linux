@@ -100,7 +100,23 @@ static irqreturn_t arizona_irq_thread(int irq, void *data)
 
 	ret = pm_runtime_get_sync(arizona->dev);
 	if (ret < 0) {
+		unsigned st[5];
 		dev_err(arizona->dev, "Failed to resume device: %d\n", ret);
+
+		ret = regmap_read(arizona->regmap, ARIZONA_IRQ_PIN_STATUS, &val);
+		pr_info("%s: pin status=%x\n", __func__, val);
+
+		regmap_write(arizona->regmap, ARIZONA_INTERRUPT_CONTROL, 1);
+		regmap_write(arizona->regmap, ARIZONA_IRQ2_CONTROL, 1);
+		regmap_read(arizona->regmap, ARIZONA_AOD_IRQ1, &val);
+		pr_info("%s: aod_irq1=%x\n", __func__, val);
+		regmap_read(arizona->regmap, ARIZONA_INTERRUPT_STATUS_1, &st[0]);
+		regmap_read(arizona->regmap, ARIZONA_INTERRUPT_STATUS_2, &st[1]);
+		regmap_read(arizona->regmap, ARIZONA_INTERRUPT_STATUS_3, &st[2]);
+		regmap_read(arizona->regmap, ARIZONA_INTERRUPT_STATUS_4, &st[3]);
+		regmap_read(arizona->regmap, ARIZONA_INTERRUPT_STATUS_5, &st[4]);
+		pr_info("%s: int status=%x %x %x %x %x\n", __func__,
+				st[0], st[1], st[2], st[3], st[4]);
 		return IRQ_NONE;
 	}
 
