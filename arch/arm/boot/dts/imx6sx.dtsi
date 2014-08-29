@@ -701,6 +701,32 @@
 				reg = <0x020e4000 0x4000>;
 			};
 
+			ldb: ldb@020e0014 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "fsl,imx6sx-ldb", "fsl,imx53-ldb";
+				gpr = <&gpr>;
+				status = "disabled";
+
+				clocks = <&clks IMX6SX_CLK_LDB_DI0>,
+					 <&clks IMX6SX_CLK_LCDIF1_SEL>,
+					 <&clks IMX6SX_CLK_LCDIF2_SEL>,
+					 <&clks IMX6SX_CLK_LDB_DI0_DIV_3_5>,
+					 <&clks IMX6SX_CLK_LDB_DI0_DIV_7>,
+					 <&clks IMX6SX_CLK_LDB_DI0_DIV_SEL>;
+				clock-names = "ldb_di0",
+					      "di0_sel",
+					      "di1_sel",
+					      "ldb_di0_div_3_5",
+					      "ldb_di0_div_7",
+					      "ldb_di0_div_sel";
+
+				lvds-channel@0 {
+					reg = <0>;
+					status = "disabled";
+				};
+			};
+
 			sdma: sdma@020ec000 {
 				compatible = "fsl,imx6sx-sdma";
 				reg = <0x020ec000 0x4000>;
@@ -1078,6 +1104,7 @@
 				};
 
 				lcdif1: lcdif@02220000 {
+					compatible = "fsl,imx6sx-lcdif", "fsl,imx28-lcdif";
 					reg = <0x02220000 0x4000>;
 					interrupts = <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
 					clocks = <&clks IMX6SX_CLK_LCDIF1_PIX>,
@@ -1088,6 +1115,7 @@
 				};
 
 				lcdif2: lcdif@02224000 {
+					compatible = "fsl,imx6sx-lcdif", "fsl,imx28-lcdif";
 					reg = <0x02224000 0x4000>;
 					interrupts = <GIC_SPI 6 IRQ_TYPE_LEVEL_HIGH>;
 					clocks = <&clks IMX6SX_CLK_LCDIF2_PIX>,
