@@ -476,6 +476,7 @@ con_insert_unipair(struct uni_pagedir *p, u_short unicode, u_short fontpos)
 
 	if (!(p2 = p1[n = (unicode >> 6) & 0x1f])) {
 		p2 = p1[n] = kmalloc(64*sizeof(u16), GFP_KERNEL);
+		mb();
 		if (!p2) return -ENOMEM;
 		memset(p2, 0xff, 64*sizeof(u16)); /* No glyphs for the characters (yet) */
 	}
