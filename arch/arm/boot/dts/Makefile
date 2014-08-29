@@ -173,6 +173,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-wandboard.dtb \
 	imx6sl-evk.dtb \
 	imx6sx-sdb.dtb \
+	imx6sx-sdb-lcdif1.dtb \
 	vf610-cosmic.dtb \
 	vf610-twr.dtb
 dtb-$(CONFIG_ARCH_MXS) += imx23-evk.dtb \
