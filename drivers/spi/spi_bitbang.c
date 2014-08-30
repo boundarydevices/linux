@@ -259,16 +259,20 @@ static void bitbang_work(struct work_struct *work)
 	struct spi_bitbang	*bitbang =
 		container_of(work, struct spi_bitbang, work);
 	unsigned long		flags;
+	struct spi_device	*spi_active = NULL;
+	/* FIXME this is made-up ... the correct value is known to
+	 * word-at-a-time bitbang code, and presumably chipselect()
+	 * should enforce these requirements too?
+	 */
+	unsigned nsecs = 100;
 
 	spin_lock_irqsave(&bitbang->lock, flags);
 	bitbang->busy = 1;
 	while (!list_empty(&bitbang->queue)) {
 		struct spi_message	*m;
 		struct spi_device	*spi;
-		unsigned		nsecs;
 		struct spi_transfer	*t = NULL;
 		unsigned		tmp;
-		unsigned		cs_change;
 		int			status;
 		int			do_setup = -1;
 
@@ -277,15 +281,8 @@ static void bitbang_work(struct work_struct *work)
 		list_del_init(&m->queue);
 		spin_unlock_irqrestore(&bitbang->lock, flags);
 
-		/* FIXME this is made-up ... the correct value is known to
-		 * word-at-a-time bitbang code, and presumably chipselect()
-		 * should enforce these requirements too?
-		 */
-		nsecs = 100;
-
 		spi = m->spi;
 		tmp = 0;
-		cs_change = 1;
 		status = 0;
 
 		list_for_each_entry (t, &m->transfers, transfer_list) {
@@ -309,11 +306,16 @@ static void bitbang_work(struct work_struct *work)
 			 * (and also deselects any other chip that might be
 			 * selected ...)
 			 */
-			if (cs_change) {
+			if (spi_active != spi) {
+				if (spi_active) {
+					ndelay(nsecs);
+					bitbang->chipselect(spi_active, BITBANG_CS_INACTIVE);
+				}
+				ndelay(nsecs);
 				bitbang->chipselect(spi, BITBANG_CS_ACTIVE);
+				spi_active = spi;
 				ndelay(nsecs);
 			}
-			cs_change = t->cs_change;
 			if (!t->tx_buf && !t->rx_buf && t->len) {
 				status = -EINVAL;
 				break;
@@ -345,32 +347,37 @@ static void bitbang_work(struct work_struct *work)
 			if (t->delay_usecs)
 				udelay(t->delay_usecs);
 
-			if (!cs_change)
+			if (!t->cs_change)
 				continue;
-			if (t->transfer_list.next == &m->transfers)
-				break;
 
 			/* sometimes a short mid-message deselect of the chip
 			 * may be needed to terminate a mode or command
 			 */
-			ndelay(nsecs);
-			bitbang->chipselect(spi, BITBANG_CS_INACTIVE);
-			ndelay(nsecs);
+			if (spi_active) {
+				ndelay(nsecs);
+				bitbang->chipselect(spi_active, BITBANG_CS_INACTIVE);
+				spi_active = NULL;
+			}
 		}
 
 		m->status = status;
 		m->complete(m->context);
 
-		/* normally deactivate chipselect ... unless no error and
-		 * cs_change has hinted that the next message will probably
-		 * be for this chip too.
+		/*
+		 * deactivate chipselect if error
 		 */
-		if (!(status == 0 && cs_change)) {
+		if (spi_active && status) {
 			ndelay(nsecs);
-			bitbang->chipselect(spi, BITBANG_CS_INACTIVE);
-			ndelay(nsecs);
+			bitbang->chipselect(spi_active, BITBANG_CS_INACTIVE);
+			spi_active = NULL;
 		}
 
+		spin_lock_irqsave(&bitbang->lock, flags);
+	}
+	if (spi_active) {
+		spin_unlock_irqrestore(&bitbang->lock, flags);
+		ndelay(nsecs);
+		bitbang->chipselect(spi_active, BITBANG_CS_INACTIVE);
 		spin_lock_irqsave(&bitbang->lock, flags);
 	}
 	bitbang->busy = 0;
