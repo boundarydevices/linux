@@ -312,6 +312,12 @@ static struct mxc_pwm_platform_data pwm3_data = {
 	.clk_select = PWM_CLK_HIGHPERF,
 };
 
+static struct mipi_csi2_platform_data mipi_csi2_pdata = {
+	.dphy_clk = "mipi_pllref_clk",
+	.pixel_clk = "emi_clk",
+	.cfg_clk = "hdmi_isfr_clk",
+};
+
 static struct pwm_device *mipi_pwm;
 static struct fsl_mxc_camera_platform_data ov5640_mipi_data;
 static int ov5640_mipi_reset_active;
@@ -815,6 +821,7 @@ static void __init board_init(void)
 
 	printk(KERN_ERR "------------ Board type CAD\n");
 
+	imx6q_add_mipi_csi2(&mipi_csi2_pdata);
 	gp_reg_id = dvfscore_data.reg_id;
 	soc_reg_id = dvfscore_data.soc_id;
 	pu_reg_id = dvfscore_data.pu_id;
