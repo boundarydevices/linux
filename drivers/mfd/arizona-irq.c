@@ -27,15 +27,9 @@
 
 static int arizona_map_irq(struct arizona *arizona, int irq)
 {
-	switch (irq) {
-	case ARIZONA_IRQ_GP5_FALL:
-	case ARIZONA_IRQ_GP5_RISE:
-	case ARIZONA_IRQ_JD_FALL:
-	case ARIZONA_IRQ_JD_RISE:
-		return arizona->pdata.irq_base + 2 + irq;
-	default:
-		return arizona->pdata.irq_base + 2 + ARIZONA_NUM_IRQ + irq;
-	}
+	if (irq < ARIZONA_AOD_IRQBASE)
+		return arizona->int_base + irq;
+	return arizona->aod_base + irq - ARIZONA_AOD_IRQBASE;
 }
 
 int arizona_request_irq(struct arizona *arizona, int irq, char *name,
@@ -200,16 +194,15 @@ int arizona_irq_init(struct arizona *arizona)
 	}
 
         /* set virtual IRQs */
-	if (arizona->pdata.irq_base > 0) {
-	        arizona->virq[0] = arizona->pdata.irq_base;
-	        arizona->virq[1] = arizona->pdata.irq_base + 1;
-	} else {
+	irq_base = arizona->pdata.irq_base;
+	if (irq_base <= 0) {
 		dev_err(arizona->dev, "No irq_base specified\n");
 		return -EINVAL;
 	}
+	for (i = 0; i < ARRAY_SIZE(arizona->virq); i++)
+		arizona->virq[i] = irq_base + i;
 
-	ret = irq_alloc_descs(arizona->pdata.irq_base, 0,
-			      ARRAY_SIZE(arizona->virq), 0);
+	ret = irq_alloc_descs(irq_base, 0, ARRAY_SIZE(arizona->virq), 0);
 	if (ret < 0) {
 		dev_err(arizona->dev, "Failed to allocate IRQs: %d\n", ret);
 		return ret;
@@ -230,8 +223,9 @@ int arizona_irq_init(struct arizona *arizona)
 		irq_set_noprobe(arizona->virq[i]);
 #endif
 	}
+	irq_base += ARRAY_SIZE(arizona->virq);
 
-	irq_base = arizona->pdata.irq_base + 2;
+	arizona->aod_base = irq_base;
 	ret = regmap_add_irq_chip(arizona->regmap,
 				  arizona->virq[0],
 				  IRQF_ONESHOT, irq_base, aod,
@@ -240,8 +234,9 @@ int arizona_irq_init(struct arizona *arizona)
 		dev_err(arizona->dev, "Failed to add AOD IRQs: %d\n", ret);
 		goto err_domain;
 	}
+	irq_base += aod->num_irqs;
 
-	irq_base = arizona->pdata.irq_base + 2 + ARIZONA_NUM_IRQ;
+	arizona->int_base = irq_base;
 	ret = regmap_add_irq_chip(arizona->regmap,
 				  arizona->virq[1],
 				  IRQF_ONESHOT, irq_base, irq,

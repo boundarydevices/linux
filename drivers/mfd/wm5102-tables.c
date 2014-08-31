@@ -93,17 +93,19 @@ int wm5102_patch(struct arizona *arizona)
 	}
 }
 
-static const struct regmap_irq wm5102_aod_irqs[ARIZONA_NUM_IRQ] = {
-	[ARIZONA_IRQ_MICD_CLAMP_FALL] = {
+#define B ARIZONA_AOD_IRQBASE
+
+static const struct regmap_irq wm5102_aod_irqs[] = {
+	[ARIZONA_IRQ_GP5_FALL - B] = { .mask = ARIZONA_GP5_FALL_EINT1 },
+	[ARIZONA_IRQ_GP5_RISE - B] = { .mask = ARIZONA_GP5_RISE_EINT1 },
+	[ARIZONA_IRQ_JD_FALL - B] = { .mask = ARIZONA_JD1_FALL_EINT1 },
+	[ARIZONA_IRQ_JD_RISE - B] = { .mask = ARIZONA_JD1_RISE_EINT1 },
+	[ARIZONA_IRQ_MICD_CLAMP_FALL - B] = {
 		.mask = ARIZONA_MICD_CLAMP_FALL_EINT1
 	},
-	[ARIZONA_IRQ_MICD_CLAMP_RISE] = {
+	[ARIZONA_IRQ_MICD_CLAMP_RISE - B] = {
 		.mask = ARIZONA_MICD_CLAMP_RISE_EINT1
 	},
-	[ARIZONA_IRQ_GP5_FALL] = { .mask = ARIZONA_GP5_FALL_EINT1 },
-	[ARIZONA_IRQ_GP5_RISE] = { .mask = ARIZONA_GP5_RISE_EINT1 },
-	[ARIZONA_IRQ_JD_FALL] = { .mask = ARIZONA_JD1_FALL_EINT1 },
-	[ARIZONA_IRQ_JD_RISE] = { .mask = ARIZONA_JD1_RISE_EINT1 },
 };
 
 struct regmap_irq_chip wm5102_aod = {
@@ -116,7 +118,7 @@ struct regmap_irq_chip wm5102_aod = {
 	.num_irqs = ARRAY_SIZE(wm5102_aod_irqs),
 };
 
-static const struct regmap_irq wm5102_irqs[ARIZONA_NUM_IRQ] = {
+static const struct regmap_irq wm5102_irqs[] = {
 	[ARIZONA_IRQ_GP4] = { .reg_offset = 0, .mask = ARIZONA_GP4_EINT1 },
 	[ARIZONA_IRQ_GP3] = { .reg_offset = 0, .mask = ARIZONA_GP3_EINT1 },
 	[ARIZONA_IRQ_GP2] = { .reg_offset = 0, .mask = ARIZONA_GP2_EINT1 },
