@@ -157,7 +157,7 @@ config USB_ATMEL_USBA
 config USB_GADGET_ARC
 	boolean "Freescale USB Device Controller"
 	depends on ARCH_MXC || ARCH_STMP3XXX || ARCH_MXS
-	select USB_GADGET_DUALSPEED
+	select USB_GADGET_DUALSPEED if !GADGET_ARC_FORCE_FULLSPEED
 	select USB_OTG_UTILS
 	select POWER_SUPPLY
 	help
@@ -167,6 +167,14 @@ config USB_GADGET_ARC
 	   Say "y" to link the driver statically, or "m" to build a
 	   dynamically linked module called "arc_udc" and force all
 	   gadget drivers to also be dynamically linked.
+
+config GADGET_ARC_FORCE_FULLSPEED
+	boolean "Freescale USB Device force full speed"
+	depends on USB_GADGET_ARC
+        default n
+	help
+	   Say "y" to disable high-speed links on the USB OTG
+           controller.
 
 config USB_STATIC_IRAM_PPH
 	bool "Apply static IRAM patch"
