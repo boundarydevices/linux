@@ -501,6 +501,13 @@ static struct ion_platform_data imx_ion_data = {
 	},
 };
 
+static struct fsl_mxc_capture_platform_data capture_data = {
+	.ipu = 0,
+	.csi = 0,
+	.is_mipi = 1,
+	.mclk_source = 0,
+};
+
 struct imx_vout_mem {
 	resource_size_t res_mbase;
 	resource_size_t res_msize;
@@ -829,6 +836,7 @@ static void __init board_init(void)
 					    (DMA_MEMORY_MAP |
 					     DMA_MEMORY_EXCLUSIVE));
 	}
+	imx6q_add_v4l2_capture(0, &capture_data);
 
 	imx6q_add_imx_i2c(0, &i2c_data);
 	imx6q_add_imx_i2c(1, &i2c_data);
