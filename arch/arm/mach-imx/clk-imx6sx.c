@@ -124,6 +124,14 @@ static struct clk_div_table video_div_table[] = {
 static u32 share_count_asrc;
 static u32 share_count_audio;
 static u32 share_count_esai;
+static bool uart_from_osc;
+
+static int __init setup_uart_clk(char *uart_rate)
+{
+	uart_from_osc = true;
+	return 1;
+}
+__setup("uart_from_osc", setup_uart_clk);
 
 static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 {
@@ -454,6 +462,9 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	clk_register_clkdev(clks[IMX6SX_CLK_GPT_BUS], "ipg", "imx-gpt.0");
 	clk_register_clkdev(clks[IMX6SX_CLK_GPT_SERIAL], "per", "imx-gpt.0");
 
+	/* set perclk to from OSC */
+	clk_set_parent(clks[IMX6SX_CLK_PERCLK_SEL], clks[IMX6SX_CLK_OSC]);
+
 	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 		clk_prepare_enable(clks[clks_init_on[i]]);
 
@@ -514,6 +525,10 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	/* Update gpu clock from default 528M to 720M */
 	clk_set_parent(clks[IMX6SX_CLK_GPU_CORE_SEL], clks[IMX6SX_CLK_PLL3_PFD0]);
 	clk_set_parent(clks[IMX6SX_CLK_GPU_AXI_SEL], clks[IMX6SX_CLK_PLL3_PFD0]);
+
+	/* Set the UART parent if needed. */
+	if (uart_from_osc)
+		clk_set_parent(clks[IMX6SX_CLK_UART_SEL], clks[IMX6SX_CLK_OSC]);
 
 	/* Set initial power mode */
 	imx6q_set_lpm(WAIT_CLOCKED);
