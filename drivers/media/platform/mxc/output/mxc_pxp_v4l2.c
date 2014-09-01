@@ -41,6 +41,7 @@
 #include <media/videobuf-dma-contig.h>
 #include <media/v4l2-common.h>
 #include <media/v4l2-dev.h>
+#include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
 
 #include "mxc_pxp_v4l2.h"
@@ -1223,6 +1224,7 @@ MODULE_DEVICE_TABLE(of, imx_pxpv4l2_dt_ids);
 static int pxp_probe(struct platform_device *pdev)
 {
 	struct pxps *pxp;
+	struct v4l2_device *v4l2_dev;
 	int err = 0;
 
 	pxp = kzalloc(sizeof(*pxp), GFP_KERNEL);
@@ -1234,6 +1236,19 @@ static int pxp_probe(struct platform_device *pdev)
 
 	dev_set_drvdata(&pdev->dev, pxp);
 
+	v4l2_dev = kzalloc(sizeof(*v4l2_dev), GFP_KERNEL);
+	if (!v4l2_dev) {
+		dev_err(&pdev->dev, "failed to allocate v4l2_dev structure\n");
+		err = -ENOMEM;
+		goto freeirq;
+	}
+
+	err = v4l2_device_register(&pdev->dev, v4l2_dev);
+	if (err) {
+		dev_err(&pdev->dev, "register v4l2 device failed\n");
+		goto freev4l2;
+	}
+
 	INIT_LIST_HEAD(&pxp->outq);
 	spin_lock_init(&pxp->lock);
 	mutex_init(&pxp->mutex);
@@ -1244,10 +1259,11 @@ static int pxp_probe(struct platform_device *pdev)
 	if (!pxp->vdev) {
 		dev_err(&pdev->dev, "video_device_alloc() failed\n");
 		err = -ENOMEM;
-		goto freeirq;
+		goto relv4l2;
 	}
 
 	memcpy(pxp->vdev, &pxp_template, sizeof(pxp_template));
+	pxp->vdev->v4l2_dev = v4l2_dev;
 	video_set_drvdata(pxp->vdev, pxp);
 
 	err = video_register_device(pxp->vdev, VFL_TYPE_GRABBER, video_nr);
@@ -1263,7 +1279,10 @@ exit:
 
 freevdev:
 	video_device_release(pxp->vdev);
-
+relv4l2:
+	v4l2_device_unregister(v4l2_dev);
+freev4l2:
+	kfree(v4l2_dev);
 freeirq:
 	kfree(pxp);
 
@@ -1273,9 +1292,12 @@ freeirq:
 static int pxp_remove(struct platform_device *pdev)
 {
 	struct pxps *pxp = platform_get_drvdata(pdev);
+	struct v4l2_device *v4l2_dev = pxp->vdev->v4l2_dev;
 
 	video_unregister_device(pxp->vdev);
 	video_device_release(pxp->vdev);
+	v4l2_device_unregister(v4l2_dev);
+	kfree(v4l2_dev);
 
 	free_dma_buf(pxp, &pxp->outbuf);
 
