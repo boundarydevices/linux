@@ -56,16 +56,8 @@ qla2100_intr_handler(int irq, void *dev_id)
 	vha = pci_get_drvdata(ha->pdev);
 	for (iter = 50; iter--; ) {
 		hccr = RD_REG_WORD(&reg->hccr);
-		/* Check for PCI disconnection */
-		if (hccr == 0xffff) {
-			/*
-			 * Schedule this on the default system workqueue so that
-			 * all the adapter workqueues and the DPC thread can be
-			 * shutdown cleanly.
-			 */
-			schedule_work(&ha->board_disable);
+		if (qla2x00_check_reg16_for_disconnect(vha, hccr))
 			break;
-		}
 		if (hccr & HCCR_RISC_PAUSE) {
 			if (pci_channel_offline(ha->pdev))
 				break;
@@ -121,19 +113,29 @@ qla2100_intr_handler(int irq, void *dev_id)
 }
 
 bool
-qla2x00_check_reg_for_disconnect(scsi_qla_host_t *vha, uint32_t reg)
+qla2x00_check_reg32_for_disconnect(scsi_qla_host_t *vha, uint32_t reg)
 {
 	/* Check for PCI disconnection */
 	if (reg == 0xffffffff) {
-		/*
-		 * Schedule this on the default system workqueue so that all the
-		 * adapter workqueues and the DPC thread can be shutdown
-		 * cleanly.
-		 */
-		schedule_work(&vha->hw->board_disable);
+		if (!test_and_set_bit(PFLG_DISCONNECTED, &vha->pci_flags) &&
+		    !test_bit(PFLG_DRIVER_REMOVING, &vha->pci_flags) &&
+		    !test_bit(PFLG_DRIVER_PROBING, &vha->pci_flags)) {
+			/*
+			 * Schedule this (only once) on the default system
+			 * workqueue so that all the adapter workqueues and the
+			 * DPC thread can be shutdown cleanly.
+			 */
+			schedule_work(&vha->hw->board_disable);
+		}
 		return true;
 	} else
 		return false;
+}
+
+bool
+qla2x00_check_reg16_for_disconnect(scsi_qla_host_t *vha, uint16_t reg)
+{
+	return qla2x00_check_reg32_for_disconnect(vha, 0xffff0000 | reg);
 }
 
 /**
@@ -174,7 +176,7 @@ qla2300_intr_handler(int irq, void *dev_id)
 	vha = pci_get_drvdata(ha->pdev);
 	for (iter = 50; iter--; ) {
 		stat = RD_REG_DWORD(&reg->u.isp2300.host_status);
-		if (qla2x00_check_reg_for_disconnect(vha, stat))
+		if (qla2x00_check_reg32_for_disconnect(vha, stat))
 			break;
 		if (stat & HSR_RISC_PAUSED) {
 			if (unlikely(pci_channel_offline(ha->pdev)))
@@ -2631,7 +2633,7 @@ qla24xx_intr_handler(int irq, void *dev_id)
 	vha = pci_get_drvdata(ha->pdev);
 	for (iter = 50; iter--; ) {
 		stat = RD_REG_DWORD(&reg->host_status);
-		if (qla2x00_check_reg_for_disconnect(vha, stat))
+		if (qla2x00_check_reg32_for_disconnect(vha, stat))
 			break;
 		if (stat & HSRX_RISC_PAUSED) {
 			if (unlikely(pci_channel_offline(ha->pdev)))
@@ -2721,7 +2723,7 @@ qla24xx_msix_rsp_q(int irq, void *dev_id)
 	 * we process the response queue.
 	 */
 	stat = RD_REG_DWORD(&reg->host_status);
-	if (qla2x00_check_reg_for_disconnect(vha, stat))
+	if (qla2x00_check_reg32_for_disconnect(vha, stat))
 		goto out;
 	qla24xx_process_response_queue(vha, rsp);
 	if (!ha->flags.disable_msix_handshake) {
@@ -2761,7 +2763,7 @@ qla25xx_msix_rsp_q(int irq, void *dev_id)
 		hccr = RD_REG_DWORD_RELAXED(&reg->hccr);
 		spin_unlock_irqrestore(&ha->hardware_lock, flags);
 	}
-	if (qla2x00_check_reg_for_disconnect(vha, hccr))
+	if (qla2x00_check_reg32_for_disconnect(vha, hccr))
 		goto out;
 	queue_work_on((int) (rsp->id - 1), ha->wq, &rsp->q_work);
 
@@ -2796,7 +2798,7 @@ qla24xx_msix_default(int irq, void *dev_id)
 	vha = pci_get_drvdata(ha->pdev);
 	do {
 		stat = RD_REG_DWORD(&reg->host_status);
-		if (qla2x00_check_reg_for_disconnect(vha, stat))
+		if (qla2x00_check_reg32_for_disconnect(vha, stat))
 			break;
 		if (stat & HSRX_RISC_PAUSED) {
 			if (unlikely(pci_channel_offline(ha->pdev)))
