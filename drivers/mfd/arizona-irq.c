@@ -159,6 +159,13 @@ static void arizona_irq_dummy(struct irq_data *data)
 {
 }
 
+static int arizona_irq_set_wake(struct irq_data *data, unsigned int on)
+{
+	struct arizona *arizona = irq_data_get_irq_chip_data(data);
+
+	return irq_set_irq_wake(arizona->irq, on);
+}
+
 static struct irq_chip arizona_irq_chip = {
 	.name			= "arizona",
 	.irq_disable		= arizona_irq_dummy,
@@ -166,6 +173,7 @@ static struct irq_chip arizona_irq_chip = {
 	.irq_ack		= arizona_irq_dummy,
 	.irq_mask		= arizona_irq_dummy,
 	.irq_unmask		= arizona_irq_dummy,
+	.irq_set_wake		= arizona_irq_set_wake,
 };
 
 static int arizona_irq_map(struct irq_domain *h, unsigned int virq,
