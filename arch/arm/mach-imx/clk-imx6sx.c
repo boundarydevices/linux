@@ -459,6 +459,15 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	clk_data.clk_num = ARRAY_SIZE(clks);
 	of_clk_add_provider(np, of_clk_src_onecell_get, &clk_data);
 
+	/*
+	 * As some of the modules need to access ocotp in MSL,
+	 * need to make sure ocotp clk(CCM_CCGR2_CG6) is enabled
+	 * during MSL, as on i.MX6SX, accessing OCOTP registers
+	 * needs its clk on, it will be disabled by clk late
+	 * init and managed by ocotp driver.
+	 */
+	writel_relaxed(readl_relaxed(base + 0x70) | 1 << 12, base + 0x70);
+
 	clk_register_clkdev(clks[IMX6SX_CLK_GPT_BUS], "ipg", "imx-gpt.0");
 	clk_register_clkdev(clks[IMX6SX_CLK_GPT_SERIAL], "per", "imx-gpt.0");
 
