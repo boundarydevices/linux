@@ -163,7 +163,7 @@ static video_fmt_t video_fmts[] = {
 	 .raw_height = 525,		/* SENS_FRM_HEIGHT */
 	 .active_width = 720,		/* ACT_FRM_WIDTH */
 	 .active_height = 480,		/* ACT_FRM_HEIGHT */
-	 .active_top = 13,
+	 .active_top = 0,
 	 .active_left = 0,
 	 },
 	{			/*! (B, G, H, I, N) PAL */
