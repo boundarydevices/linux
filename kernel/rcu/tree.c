@@ -2951,6 +2951,9 @@ static int synchronize_sched_expedited_cpu_stop(void *data)
  */
 void synchronize_sched_expedited(void)
 {
+	cpumask_var_t cm;
+	bool cma = false;
+	int cpu;
 	long firstsnap, s, snap;
 	int trycount = 0;
 	struct rcu_state *rsp = &rcu_sched_state;
@@ -2985,11 +2988,24 @@ void synchronize_sched_expedited(void)
 	}
 	WARN_ON_ONCE(cpu_is_offline(raw_smp_processor_id()));
 
+	cma = zalloc_cpumask_var(&cm, GFP_KERNEL);
+	if (cma) {
+		cpumask_copy(cm, cpu_online_mask);
+		for_each_cpu(cpu, cm) {
+			struct rcu_dynticks *rdtp = &per_cpu(rcu_dynticks, cpu);
+
+			if (!(atomic_add_return(0, &rdtp->dynticks) & 0x1))
+				cpumask_clear_cpu(cpu, cm);
+		}
+		if (cpumask_weight(cm) == 0)
+			goto all_cpus_idle;
+	}
+
 	/*
 	 * Each pass through the following loop attempts to force a
 	 * context switch on each CPU.
 	 */
-	while (try_stop_cpus(cpu_online_mask,
+	while (try_stop_cpus(cma ? cm : cpu_online_mask,
 			     synchronize_sched_expedited_cpu_stop,
 			     NULL) == -EAGAIN) {
 		put_online_cpus();
@@ -3001,6 +3017,7 @@ void synchronize_sched_expedited(void)
 			/* ensure test happens before caller kfree */
 			smp_mb__before_atomic(); /* ^^^ */
 			atomic_long_inc(&rsp->expedited_workdone1);
+			free_cpumask_var(cm);
 			return;
 		}
 
@@ -3010,6 +3027,7 @@ void synchronize_sched_expedited(void)
 		} else {
 			wait_rcu_gp(call_rcu_sched);
 			atomic_long_inc(&rsp->expedited_normal);
+			free_cpumask_var(cm);
 			return;
 		}
 
@@ -3019,6 +3037,7 @@ void synchronize_sched_expedited(void)
 			/* ensure test happens before caller kfree */
 			smp_mb__before_atomic(); /* ^^^ */
 			atomic_long_inc(&rsp->expedited_workdone2);
+			free_cpumask_var(cm);
 			return;
 		}
 
@@ -3034,6 +3053,9 @@ void synchronize_sched_expedited(void)
 		smp_mb(); /* ensure read is before try_stop_cpus(). */
 	}
 	atomic_long_inc(&rsp->expedited_stoppedcpus);
+
+all_cpus_idle:
+	free_cpumask_var(cm);
 
 	/*
 	 * Everyone up to our most recent fetch is covered by our grace
