@@ -66,63 +66,63 @@
 	dev_dbg(_dai->dev, "AIF%d: " fmt, _dai->id, ##__VA_ARGS__)
 
 const char *arizona_mixer_texts[ARIZONA_NUM_MIXER_INPUTS] = {
-	"None",
-	"Tone Generator 1",
-	"Tone Generator 2",
-	"Haptics",
-	"AEC",
-	"Mic Mute Mixer",
-	"Noise Generator",
-	"IN1L",
-	"IN1R",
-	"IN2L",
-	"IN2R",
-	"IN3L",
-	"IN3R",
-	"IN4L",
-	"IN4R",
-	"AIF1RX1",
-	"AIF1RX2",
-	"AIF1RX3",
-	"AIF1RX4",
-	"AIF1RX5",
-	"AIF1RX6",
-	"AIF1RX7",
-	"AIF1RX8",
-	"AIF2RX1",
-	"AIF2RX2",
-	"AIF3RX1",
-	"AIF3RX2",
-	"SLIMRX1",
-	"SLIMRX2",
-	"SLIMRX3",
-	"SLIMRX4",
-	"SLIMRX5",
-	"SLIMRX6",
-	"SLIMRX7",
-	"SLIMRX8",
-	"EQ1",
-	"EQ2",
-	"EQ3",
-	"EQ4",
-	"DRC1L",
-	"DRC1R",
-	"DRC2L",
-	"DRC2R",
-	"LHPF1",
-	"LHPF2",
-	"LHPF3",
-	"LHPF4",
-	"DSP1.1",
-	"DSP1.2",
-	"DSP1.3",
-	"DSP1.4",
-	"DSP1.5",
-	"DSP1.6",
-	"ASRC1L",
-	"ASRC1R",
-	"ASRC2L",
-	"ASRC2R",
+	"None",			/* 0 */
+	"Tone Generator 1",	/* 1 */
+	"Tone Generator 2",	/* 2 */
+	"Haptics",		/* 3 */
+	"AEC",			/* 4 */
+	"Mic Mute Mixer",	/* 5 */
+	"Noise Generator",	/* 6 */
+	"IN1L",			/* 7 */
+	"IN1R",			/* 8 */
+	"IN2L",			/* 9 */
+	"IN2R",			/* 10 */
+	"IN3L",			/* 11 */
+	"IN3R",			/* 12 */
+	"IN4L",			/* 13 */
+	"IN4R",			/* 14 */
+	"AIF1RX1",		/* 15 */
+	"AIF1RX2",		/* 16 */
+	"AIF1RX3",		/* 17 */
+	"AIF1RX4",		/* 18 */
+	"AIF1RX5",		/* 19 */
+	"AIF1RX6",		/* 20 */
+	"AIF1RX7",		/* 21 */
+	"AIF1RX8",		/* 22 */
+	"AIF2RX1",		/* 23 */
+	"AIF2RX2",		/* 24 */
+	"AIF3RX1",		/* 25 */
+	"AIF3RX2",		/* 26 */
+	"SLIMRX1",		/* 27 */
+	"SLIMRX2",		/* 28 */
+	"SLIMRX3",		/* 29 */
+	"SLIMRX4",		/* 30 */
+	"SLIMRX5",		/* 31 */
+	"SLIMRX6",		/* 32 */
+	"SLIMRX7",		/* 33 */
+	"SLIMRX8",		/* 34 */
+	"EQ1",			/* 35 */
+	"EQ2",			/* 36 */
+	"EQ3",			/* 37 */
+	"EQ4",			/* 38 */
+	"DRC1L",		/* 39 */
+	"DRC1R",		/* 40 */
+	"DRC2L",		/* 41 */
+	"DRC2R",		/* 42 */
+	"LHPF1",		/* 43 */
+	"LHPF2",		/* 44 */
+	"LHPF3",		/* 45 */
+	"LHPF4",		/* 46 */
+	"DSP1.1",		/* 47 */
+	"DSP1.2",		/* 48 */
+	"DSP1.3",		/* 49 */
+	"DSP1.4",		/* 50 */
+	"DSP1.5",		/* 51 */
+	"DSP1.6",		/* 52 */
+	"ASRC1L",		/* 53 */
+	"ASRC1R",		/* 54 */
+	"ASRC2L",		/* 55 */
+	"ASRC2R",		/* 56 */
 };
 EXPORT_SYMBOL_GPL(arizona_mixer_texts);
 
