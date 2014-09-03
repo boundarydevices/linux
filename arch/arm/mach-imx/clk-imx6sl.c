@@ -381,6 +381,10 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 	/* Audio-related clocks configuration */
 	clk_set_parent(clks[IMX6SL_CLK_SPDIF0_SEL], clks[IMX6SL_CLK_PLL3_PFD3]);
 
+	/* Configure pxp clocks */
+	clk_set_parent(clks[IMX6SL_CLK_PXP_AXI_SEL], clks[IMX6SL_CLK_PLL2_PFD2]);
+	clk_set_rate(clks[IMX6SL_CLK_PXP_AXI], 200000000);
+
 	/* Set initial power mode */
 	imx6q_set_lpm(WAIT_CLOCKED);
 
