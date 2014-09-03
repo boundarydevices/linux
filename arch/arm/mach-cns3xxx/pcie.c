@@ -318,7 +318,7 @@ static int cns3xxx_pcie_abort_handler(unsigned long addr, unsigned int fsr,
 	return 0;
 }
 
-static int __init cns3xxx_pcie_init(void)
+int __init cns3xxx_pcie_init_late(void)
 {
 	int i;
 
@@ -340,4 +340,3 @@ static int __init cns3xxx_pcie_init(void)
 
 	return 0;
 }
-device_initcall(cns3xxx_pcie_init);
