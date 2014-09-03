@@ -50,6 +50,7 @@
 				"fsl,imx-audio-cs42888";
 		model = "imx-cs42888";
 		esai-controller = <&esai>;
+		asrc-controller = <&asrc>;
 		audio-codec = <&codec>;
 	};
 
