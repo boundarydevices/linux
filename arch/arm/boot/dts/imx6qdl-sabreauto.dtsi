@@ -108,6 +108,12 @@
 	};
 };
 
+&mlb {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_mlb>;
+	status = "okay";
+};
+
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
@@ -190,6 +196,14 @@
 			fsl,pins = <
 				MX6QDL_PAD_GPIO_3__I2C3_SCL  0x4001b8b1
 				MX6QDL_PAD_EIM_D18__I2C3_SDA 0x4001b8b1
+			>;
+		};
+
+		pinctrl_mlb: mlb {
+			fsl,pins = <
+				MX6QDL_PAD_ENET_TXD1__MLB_CLK 0x80000000
+				MX6QDL_PAD_GPIO_6__MLB_SIG    0x80000000
+				MX6QDL_PAD_GPIO_2__MLB_DATA   0x80000000
 			>;
 		};
 
