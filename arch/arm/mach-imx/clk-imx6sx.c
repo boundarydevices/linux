@@ -470,6 +470,7 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 
 	clk_register_clkdev(clks[IMX6SX_CLK_GPT_BUS], "ipg", "imx-gpt.0");
 	clk_register_clkdev(clks[IMX6SX_CLK_GPT_SERIAL], "per", "imx-gpt.0");
+	clk_register_clkdev(clks[IMX6SX_CLK_GPT_3M], "gpt_3m", "imx-gpt.0");
 
 	/* set perclk to from OSC */
 	clk_set_parent(clks[IMX6SX_CLK_PERCLK_SEL], clks[IMX6SX_CLK_OSC]);
