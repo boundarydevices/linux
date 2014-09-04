@@ -378,6 +378,9 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 		clk_prepare_enable(clks[IMX6SL_CLK_USBPHY2_GATE]);
 	}
 
+	/* set perclk to source from OSC 24MHz */
+	clk_set_parent(clks[IMX6SL_CLK_PERCLK_SEL], clks[IMX6SL_CLK_OSC]);
+
 	/* Audio-related clocks configuration */
 	clk_set_parent(clks[IMX6SL_CLK_SPDIF0_SEL], clks[IMX6SL_CLK_PLL3_PFD3]);
 
