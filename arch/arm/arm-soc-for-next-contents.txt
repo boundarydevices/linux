@@ -1,8 +1,13 @@
 next/fixes-non-critical
 
 next/cleanup
+	patch
+		ARM: clps711x: Switch CLPS711X subarch to use clk and clocksource driver
 
 next/soc
+	patch
+		ARM: clps711x: Add SOC BUS support
+		ARM: clps711x: edb7211: Use new PWM driver for backlight
 
 next/boards
 
