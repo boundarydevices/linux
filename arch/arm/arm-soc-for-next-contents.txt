@@ -3,6 +3,8 @@ next/fixes-non-critical
 next/cleanup
 	patch
 		ARM: clps711x: Switch CLPS711X subarch to use clk and clocksource driver
+	msm-cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson.git tags/msm-cleanup-for-arm-soc
 
 next/soc
 	patch
