@@ -1,4 +1,9 @@
+
 next/fixes-non-critical
+	davinci/board
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci.git tags/davinci-for-v3.18/board
+	patch
+		ARM: cns3xxx: fix allmodconfig panic in pci driver
 
 next/cleanup
 	patch
@@ -14,12 +19,18 @@ next/soc
 next/boards
 
 next/dt
+	rockchip/dts1
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip.git tags/v3.15-rockchip-fixes1
+	rockchip/dma
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip.git tags/v3.18-rockchip-dma
 
 next/drivers
 
 next/defconfig
 	patch
 		ARM: multi_v7_defconfig: Enable Zynq/Xilinx drivers
+		ARM: configs: Enable cpufreq-cpu0 for multi_v7_defconfig
+		ARM: configs: Remove REGULATOR_VIRTUAL_CONSUMER from defconfigs
 
 fixes
 	<no branch> (3bc4d037c6791c5089a04845995410aac4fdb514)
@@ -29,4 +40,6 @@ fixes
 		ARM: dts: ODROID i2c improvements
 	<no branch> (495bccf3917b04c6727d720b56620e265c693ace)
 		git://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-3.17-2
+	patch
+		ARM: edma: Fix configuration parsing for SoCs with multiple eDMA3 CC
 
