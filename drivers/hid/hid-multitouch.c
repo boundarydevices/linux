@@ -51,6 +51,7 @@ MODULE_LICENSE("GPL");
 #define MT_QUIRK_VALID_IS_CONFIDENCE	(1 << 5)
 #define MT_QUIRK_EGALAX_XYZ_FIXUP	(1 << 6)
 #define MT_QUIRK_SLOT_IS_CONTACTID_MINUS_ONE	(1 << 7)
+#define MT_QUIRK_TR_AURA		(1 << 8) /*TR Aura touch panel*/
 
 struct mt_slot {
 	__s32 x, y, p, w, h;
@@ -91,6 +92,7 @@ struct mt_class {
 #define MT_CLS_DUAL_INRANGE_CONTACTID		0x0004
 #define MT_CLS_DUAL_INRANGE_CONTACTNUMBER	0x0005
 #define MT_CLS_DUAL_NSMU_CONTACTID		0x0006
+#define MT_CLS_TR_AURA_PANEL			0x0008 /*Touch Revolution Aura touch panel*/
 
 /* vendor specific classes */
 #define MT_CLS_3M				0x0101
@@ -222,6 +224,19 @@ static int mt_input_mapping(struct hid_device *hdev, struct hid_input *hi,
 		set_bit(INPUT_PROP_POINTER, hi->input->propbit);
 	else
 		return 0;
+
+	if((USB_VENDOR_ID_TR_VID == hdev->vendor)
+	   &&
+	   (USB_DEVICE_ID_TR_AURA_PID == hdev->product))
+	{
+/*
+		input_set_abs_params(hi->input, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
+		input_set_abs_params(hi->input, ABS_MT_WIDTH_MAJOR, 0, 15, 0, 0);
+		input_set_abs_params(hi->input, ABS_MT_POSITION_X, 0, 0xfff, 0, 0);
+		input_set_abs_params(hi->input, ABS_MT_POSITION_Y, 0, 0xfff, 0, 0);
+*/
+		td->mtclass->quirks |= MT_QUIRK_TR_AURA;
+	}
 
 	switch (usage->hid & HID_USAGE_PAGE) {
 
@@ -417,7 +432,10 @@ static void mt_emit_event(struct mt_device *td, struct input_dev *input)
 			/* divided by two to match visual scale of touch */
 			int major = max(s->w, s->h) >> 1;
 			int minor = min(s->w, s->h) >> 1;
-
+			if(td->mtclass->quirks & MT_QUIRK_TR_AURA)
+				s->x =
+				input_abs_get_max(input,
+						  ABS_MT_POSITION_X) - s->x;
 			input_event(input, EV_ABS, ABS_MT_POSITION_X, s->x);
 			input_event(input, EV_ABS, ABS_MT_POSITION_Y, s->y);
 			input_event(input, EV_ABS, ABS_MT_ORIENTATION, wide);
@@ -755,6 +773,10 @@ static const struct hid_device_id mt_devices[] = {
 		HID_USB_DEVICE(USB_VENDOR_ID_UNITEC,
 			USB_DEVICE_ID_UNITEC_USB_TOUCH_0A19) },
 
+	/*Touch Revolution Aura touch panel*/
+	{ .driver_data = MT_CLS_TR_AURA_PANEL,
+		HID_USB_DEVICE(USB_VENDOR_ID_TR_VID,
+			USB_DEVICE_ID_TR_AURA_PID) },
 	{ }
 };
 MODULE_DEVICE_TABLE(hid, mt_devices);
