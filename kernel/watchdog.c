@@ -336,10 +336,12 @@ static enum hrtimer_restart watchdog_timer_fn(struct hrtimer *hrtimer)
 		/* only warn once */
 		if (__this_cpu_read(soft_watchdog_warn) == true) {
 			/*
-			 * Handle the case where multiple processes are
-			 * causing softlockups but the duration is small
-			 * enough, the softlockup detector can not reset
-			 * itself in time.  Use task pointers to detect this.
+			 * When multiple processes are causing softlockups the
+			 * softlockup detector only warns on the first one
+			 * because the code relies on a full quiet cycle to
+			 * re-arm.  The second process prevents the quiet cycle
+			 * and never gets reported.  Use task pointers to detect
+			 * this.
 			 */
 			if (__this_cpu_read(softlockup_task_ptr_saved) !=
 			    current) {
