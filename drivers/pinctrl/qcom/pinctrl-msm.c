@@ -12,6 +12,7 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/module.h>
@@ -27,12 +28,15 @@
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
 
+#include <asm/system_misc.h>
+
 #include "../core.h"
 #include "../pinconf.h"
 #include "pinctrl-msm.h"
 #include "../pinctrl-utils.h"
 
 #define MAX_NR_GPIO 300
+#define PS_HOLD_OFFSET 0x820
 
 /**
  * struct msm_pinctrl - state for a pinctrl-msm device
@@ -130,9 +134,9 @@ static int msm_get_function_groups(struct pinctrl_dev *pctldev,
 	return 0;
 }
 
-static int msm_pinmux_enable(struct pinctrl_dev *pctldev,
-			     unsigned function,
-			     unsigned group)
+static int msm_pinmux_set_mux(struct pinctrl_dev *pctldev,
+			      unsigned function,
+			      unsigned group)
 {
 	struct msm_pinctrl *pctrl = pinctrl_dev_get_drvdata(pctldev);
 	const struct msm_pingroup *g;
@@ -166,7 +170,7 @@ static const struct pinmux_ops msm_pinmux_ops = {
 	.get_functions_count	= msm_get_functions_count,
 	.get_function_name	= msm_get_function_name,
 	.get_function_groups	= msm_get_function_groups,
-	.enable			= msm_pinmux_enable,
+	.set_mux		= msm_pinmux_set_mux,
 };
 
 static int msm_config_reg(struct msm_pinctrl *pctrl,
@@ -649,8 +653,6 @@ static void msm_gpio_irq_ack(struct irq_data *d)
 	spin_unlock_irqrestore(&pctrl->lock, flags);
 }
 
-#define INTR_TARGET_PROC_APPS    4
-
 static int msm_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 {
 	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
@@ -674,7 +676,7 @@ static int msm_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 	/* Route interrupts to application cpu */
 	val = readl(pctrl->regs + g->intr_target_reg);
 	val &= ~(7 << g->intr_target_bit);
-	val |= INTR_TARGET_PROC_APPS << g->intr_target_bit;
+	val |= g->intr_target_kpss_val << g->intr_target_bit;
 	writel(val, pctrl->regs + g->intr_target_reg);
 
 	/* Update configuration for gpio.
@@ -829,6 +831,7 @@ static int msm_gpio_init(struct msm_pinctrl *pctrl)
 	ret = gpiochip_add_pin_range(&pctrl->chip, dev_name(pctrl->dev), 0, 0, chip->ngpio);
 	if (ret) {
 		dev_err(pctrl->dev, "Failed to add pin range\n");
+		gpiochip_remove(&pctrl->chip);
 		return ret;
 	}
 
@@ -839,6 +842,7 @@ static int msm_gpio_init(struct msm_pinctrl *pctrl)
 				   IRQ_TYPE_NONE);
 	if (ret) {
 		dev_err(pctrl->dev, "Failed to add irqchip to gpiochip\n");
+		gpiochip_remove(&pctrl->chip);
 		return -ENOSYS;
 	}
 
@@ -847,6 +851,30 @@ static int msm_gpio_init(struct msm_pinctrl *pctrl)
 
 	return 0;
 }
+
+#ifdef CONFIG_ARM
+static void __iomem *msm_ps_hold;
+
+static void msm_reset(enum reboot_mode reboot_mode, const char *cmd)
+{
+	writel(0, msm_ps_hold);
+	mdelay(10000);
+}
+
+static void msm_pinctrl_setup_pm_reset(struct msm_pinctrl *pctrl)
+{
+	int i = 0;
+	const struct msm_function *func = pctrl->soc->functions;
+
+	for (; i <= pctrl->soc->nfunctions; i++)
+		if (!strcmp(func[i].name, "ps_hold")) {
+			msm_ps_hold = pctrl->regs + PS_HOLD_OFFSET;
+			arm_pm_restart = msm_reset;
+		}
+}
+#else
+static void msm_pinctrl_setup_pm_reset(const struct msm_pinctrl *pctrl) {}
+#endif
 
 int msm_pinctrl_probe(struct platform_device *pdev,
 		      const struct msm_pinctrl_soc_data *soc_data)
@@ -870,6 +898,8 @@ int msm_pinctrl_probe(struct platform_device *pdev,
 	pctrl->regs = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(pctrl->regs))
 		return PTR_ERR(pctrl->regs);
+
+	msm_pinctrl_setup_pm_reset(pctrl);
 
 	pctrl->irq = platform_get_irq(pdev, 0);
 	if (pctrl->irq < 0) {
