@@ -268,21 +268,13 @@ static const struct seq_operations proc_tid_maps_ops = {
 static int maps_open(struct inode *inode, struct file *file,
 		     const struct seq_operations *ops)
 {
-	struct proc_maps_private *priv;
-	int ret = -ENOMEM;
+	struct proc_maps_private *priv = __seq_open_private(file, ops,
+					 sizeof(struct proc_maps_private));
+	if (!priv)
+		return -ENOMEM;
 
-	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	if (priv) {
-		priv->pid = proc_pid(inode);
-		ret = seq_open(file, ops);
-		if (!ret) {
-			struct seq_file *m = file->private_data;
-			m->private = priv;
-		} else {
-			kfree(priv);
-		}
-	}
-	return ret;
+	priv->pid = proc_pid(inode);
+	return 0;
 }
 
 static int pid_maps_open(struct inode *inode, struct file *file)
