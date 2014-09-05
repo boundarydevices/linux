@@ -388,7 +388,7 @@ static void handle_zero_page(struct bio_vec *bvec)
  * caller should hold this table index entry's bit_spinlock to
  * indicate this index entry is accessing.
  */
-static void zram_free_page(struct zram *zram, size_t index)
+static bool zram_free_page(struct zram *zram, size_t index)
 {
 	struct zram_meta *meta = zram->meta;
 	unsigned long handle = meta->table[index].handle;
@@ -402,7 +402,7 @@ static void zram_free_page(struct zram *zram, size_t index)
 			zram_clear_flag(meta, index, ZRAM_ZERO);
 			atomic64_dec(&zram->stats.zero_pages);
 		}
-		return;
+		return false;
 	}
 
 	zs_free(meta->mem_pool, handle);
@@ -413,6 +413,7 @@ static void zram_free_page(struct zram *zram, size_t index)
 
 	meta->table[index].handle = 0;
 	zram_set_obj_size(meta, index, 0);
+	return true;
 }
 
 static int zram_decompress_page(struct zram *zram, char *mem, u32 index)
@@ -695,12 +696,18 @@ static void zram_bio_discard(struct zram *zram, u32 index,
 	}
 
 	while (n >= PAGE_SIZE) {
+		bool discarded;
+
 		bit_spin_lock(ZRAM_ACCESS, &meta->table[index].value);
-		zram_free_page(zram, index);
+		discarded = zram_free_page(zram, index);
 		bit_spin_unlock(ZRAM_ACCESS, &meta->table[index].value);
+		if (discarded)
+			atomic64_inc(&zram->stats.num_discarded);
 		index++;
 		n -= PAGE_SIZE;
 	}
+
+	atomic64_inc(&zram->stats.num_discard_req);
 }
 
 static void zram_reset_device(struct zram *zram, bool reset_capacity)
@@ -965,6 +972,8 @@ ZRAM_ATTR_RO(num_reads);
 ZRAM_ATTR_RO(num_writes);
 ZRAM_ATTR_RO(failed_reads);
 ZRAM_ATTR_RO(failed_writes);
+ZRAM_ATTR_RO(num_discard_req);
+ZRAM_ATTR_RO(num_discarded);
 ZRAM_ATTR_RO(invalid_io);
 ZRAM_ATTR_RO(notify_free);
 ZRAM_ATTR_RO(zero_pages);
@@ -978,6 +987,8 @@ static struct attribute *zram_disk_attrs[] = {
 	&dev_attr_num_writes.attr,
 	&dev_attr_failed_reads.attr,
 	&dev_attr_failed_writes.attr,
+	&dev_attr_num_discard_req.attr,
+	&dev_attr_num_discarded.attr,
 	&dev_attr_invalid_io.attr,
 	&dev_attr_notify_free.attr,
 	&dev_attr_zero_pages.attr,

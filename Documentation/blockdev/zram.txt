@@ -105,6 +105,8 @@ size of the disk when not in use so a huge zram is wasteful.
 		num_writes
 		failed_reads
 		failed_writes
+		num_discard_req
+		num_discarded
 		invalid_io
 		notify_free
 		zero_pages
