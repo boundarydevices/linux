@@ -1,6 +1,8 @@
 #ifndef _LINUX_PRCTL_H
 #define _LINUX_PRCTL_H
 
+#include <linux/types.h>
+
 /* Values to pass as first argument to prctl() */
 
 #define PR_SET_PDEATHSIG  1  /* Second arg is a signal */
