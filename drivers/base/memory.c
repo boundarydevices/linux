@@ -373,6 +373,7 @@ static ssize_t show_phys_device(struct device *dev,
 	return sprintf(buf, "%d\n", mem->phys_device);
 }
 
+#ifdef CONFIG_MEMORY_HOTREMOVE
 static int __zones_online_to(unsigned long end_pfn,
 				struct page *first_page, unsigned long nr_pages)
 {
@@ -432,12 +433,13 @@ static ssize_t show_zones_online_to(struct device *dev,
 
 	return sprintf(buf, "%s\n", zone->name);
 }
+static DEVICE_ATTR(zones_online_to, 0444, show_zones_online_to, NULL);
+#endif
 
 static DEVICE_ATTR(phys_index, 0444, show_mem_start_phys_index, NULL);
 static DEVICE_ATTR(state, 0644, show_mem_state, store_mem_state);
 static DEVICE_ATTR(phys_device, 0444, show_phys_device, NULL);
 static DEVICE_ATTR(removable, 0444, show_mem_removable, NULL);
-static DEVICE_ATTR(zones_online_to, 0444, show_zones_online_to, NULL);
 
 /*
  * Block size attribute stuff
@@ -584,7 +586,9 @@ static struct attribute *memory_memblk_attrs[] = {
 	&dev_attr_state.attr,
 	&dev_attr_phys_device.attr,
 	&dev_attr_removable.attr,
+#ifdef CONFIG_MEMORY_HOTREMOVE
 	&dev_attr_zones_online_to.attr,
+#endif
 	NULL
 };
 
