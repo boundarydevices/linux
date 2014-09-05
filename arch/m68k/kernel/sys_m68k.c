@@ -389,7 +389,6 @@ sys_cacheflush (unsigned long addr, int scope, int cache, unsigned long len)
 			goto out;
 	} else {
 		struct vm_area_struct *vma;
-		bool invalid;
 
 		/* Check for overflow.  */
 		if (addr + len < addr)
@@ -402,10 +401,8 @@ sys_cacheflush (unsigned long addr, int scope, int cache, unsigned long len)
 		ret = -EINVAL;
 		down_read(&current->mm->mmap_sem);
 		vma = find_vma(current->mm, addr);
-		invalid = !vma || addr < vma->vm_start || addr + len > vma->vm_end;
-		up_read(&current->mm->mmap_sem);
-		if (invalid)
-			goto out;
+		if (!vma || addr < vma->vm_start || addr + len > vma->vm_end)
+			goto out_unlock;
 	}
 
 	if (CPU_IS_020_OR_030) {
@@ -435,7 +432,7 @@ sys_cacheflush (unsigned long addr, int scope, int cache, unsigned long len)
 			__asm__ __volatile__ ("movec %0, %%cacr" : : "r" (cacr));
 		}
 		ret = 0;
-		goto out;
+		goto out_unlock;
 	} else {
 	    /*
 	     * 040 or 060: don't blindly trust 'scope', someone could
@@ -452,6 +449,8 @@ sys_cacheflush (unsigned long addr, int scope, int cache, unsigned long len)
 		ret = cache_flush_060 (addr, scope, cache, len);
 	    }
 	}
+out_unlock:
+	up_read(&current->mm->mmap_sem);
 out:
 	return ret;
 }
