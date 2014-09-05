@@ -24,7 +24,7 @@ static inline void touch_nmi_watchdog(void)
 {
 	touch_softlockup_watchdog();
 }
-static inline void watchdog_enable_hardlockup_detector(bool)
+static inline void watchdog_enable_hardlockup_detector(bool val)
 {
 }
 static inline bool watchdog_hardlockup_detector_is_enabled(void)
