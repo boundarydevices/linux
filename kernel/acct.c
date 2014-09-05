@@ -472,7 +472,6 @@ static void do_acct_process(struct bsd_acct_struct *acct)
 	acct_t ac;
 	unsigned long flim;
 	const struct cred *orig_cred;
-	struct pid_namespace *ns = acct->ns;
 	struct file *file = acct->file;
 
 	/*
@@ -500,9 +499,10 @@ static void do_acct_process(struct bsd_acct_struct *acct)
 	ac.ac_gid16 = ac.ac_gid;
 #endif
 #if ACCT_VERSION == 3
-	ac.ac_pid = task_tgid_nr_ns(current, ns);
+	ac.ac_pid = task_tgid_nr_ns(current, acct->ns);
 	rcu_read_lock();
-	ac.ac_ppid = task_tgid_nr_ns(rcu_dereference(current->real_parent), ns);
+	ac.ac_ppid = task_tgid_nr_ns(rcu_dereference(current->real_parent),
+				     acct->ns);
 	rcu_read_unlock();
 #endif
 	/*
