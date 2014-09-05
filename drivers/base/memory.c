@@ -373,10 +373,71 @@ static ssize_t show_phys_device(struct device *dev,
 	return sprintf(buf, "%d\n", mem->phys_device);
 }
 
+static int __zones_online_to(unsigned long end_pfn,
+				struct page *first_page, unsigned long nr_pages)
+{
+	struct zone *zone_next;
+
+	/*The mem block is the last block of memory.*/
+	if (!pfn_valid(end_pfn + 1))
+		return 1;
+	zone_next = page_zone(first_page + nr_pages);
+	if (zone_idx(zone_next) == ZONE_MOVABLE)
+		return 1;
+	return 0;
+}
+
+static ssize_t show_zones_online_to(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct memory_block *mem = to_memory_block(dev);
+	unsigned long start_pfn, end_pfn;
+	unsigned long nr_pages = PAGES_PER_SECTION * sections_per_block;
+	struct page *first_page;
+	struct zone *zone, *zone_prev;
+
+	start_pfn = section_nr_to_pfn(mem->start_section_nr);
+	end_pfn = start_pfn + nr_pages;
+	first_page = pfn_to_page(start_pfn);
+
+	/*The block contains more than one zone can not be offlined.*/
+	if (!test_pages_in_a_zone(start_pfn, end_pfn))
+		return sprintf(buf, "none\n");
+
+	zone = page_zone(first_page);
+
+#ifdef CONFIG_HIGHMEM
+	if (zone_idx(zone) == ZONE_HIGHMEM) {
+		if (__zones_online_to(end_pfn, first_page, nr_pages))
+			return sprintf(buf, "%s %s\n",
+					zone->name, (zone + 1)->name);
+	}
+#else
+	if (zone_idx(zone) == ZONE_NORMAL) {
+		if (__zones_online_to(end_pfn, first_page, nr_pages))
+			return sprintf(buf, "%s %s\n",
+					zone->name, (zone + 1)->name);
+	}
+#endif
+
+	if (zone_idx(zone) == ZONE_MOVABLE) {
+		if (!pfn_valid(start_pfn - nr_pages))
+			return sprintf(buf, "%s %s\n",
+						zone->name, (zone - 1)->name);
+		zone_prev = page_zone(first_page - nr_pages);
+		if (zone_idx(zone_prev) != ZONE_MOVABLE)
+			return sprintf(buf, "%s %s\n",
+						zone->name, (zone - 1)->name);
+	}
+
+	return sprintf(buf, "%s\n", zone->name);
+}
+
 static DEVICE_ATTR(phys_index, 0444, show_mem_start_phys_index, NULL);
 static DEVICE_ATTR(state, 0644, show_mem_state, store_mem_state);
 static DEVICE_ATTR(phys_device, 0444, show_phys_device, NULL);
 static DEVICE_ATTR(removable, 0444, show_mem_removable, NULL);
+static DEVICE_ATTR(zones_online_to, 0444, show_zones_online_to, NULL);
 
 /*
  * Block size attribute stuff
@@ -523,6 +584,7 @@ static struct attribute *memory_memblk_attrs[] = {
 	&dev_attr_state.attr,
 	&dev_attr_phys_device.attr,
 	&dev_attr_removable.attr,
+	&dev_attr_zones_online_to.attr,
 	NULL
 };
 

@@ -155,6 +155,7 @@ Under each memory block, you can see 4 files:
 /sys/devices/system/memory/memoryXXX/phys_device
 /sys/devices/system/memory/memoryXXX/state
 /sys/devices/system/memory/memoryXXX/removable
+/sys/devices/system/memory/memoryXXX/zones_online_to
 
 'phys_index'      : read-only and contains memory block id, same as XXX.
 'state'           : read-write
@@ -170,6 +171,8 @@ Under each memory block, you can see 4 files:
                     block is removable and a value of 0 indicates that
                     it is not removable. A memory block is removable only if
                     every section in the block is removable.
+'zones_online_to' : read-only: designed to show which zone this memory block
+		    can be onlined to.
 
 NOTE:
   These directories/files appear after physical memory hotplug phase.
@@ -408,7 +411,6 @@ node if necessary.
   - allowing memory hot-add to ZONE_MOVABLE. maybe we need some switch like
     sysctl or new control file.
   - showing memory block and physical device relationship.
-  - showing memory block is under ZONE_MOVABLE or not
   - test and make it better memory offlining.
   - support HugeTLB page migration and offlining.
   - memmap removing at memory offline.
