@@ -389,8 +389,7 @@ int dlm_proxy_ast_handler(struct o2net_msg *msg, u32 len, void *data,
 		if (lock->ml.cookie == cookie) {
 			if (lock->unlock_pending)
 				break;
-			else
-				goto do_ast;
+			goto do_ast;
 		}
 	}
 
