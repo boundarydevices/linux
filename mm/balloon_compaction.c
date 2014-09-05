@@ -10,6 +10,20 @@
 #include <linux/export.h>
 #include <linux/balloon_compaction.h>
 
+void __SetPageBalloon(struct page *page)
+{
+	VM_BUG_ON_PAGE(atomic_read(&page->_mapcount) != -1, page);
+	atomic_set(&page->_mapcount, PAGE_BALLOON_MAPCOUNT_VALUE);
+	inc_zone_page_state(page, NR_BALLOON_PAGES);
+}
+
+void __ClearPageBalloon(struct page *page)
+{
+	VM_BUG_ON_PAGE(!PageBalloon(page), page);
+	atomic_set(&page->_mapcount, -1);
+	dec_zone_page_state(page, NR_BALLOON_PAGES);
+}
+
 /*
  * balloon_devinfo_alloc - allocates a balloon device information descriptor.
  * @balloon_dev_descriptor: pointer to reference the balloon device which

@@ -554,6 +554,16 @@ static inline void __ClearPageBuddy(struct page *page)
 	atomic_set(&page->_mapcount, -1);
 }
 
+#define PAGE_BALLOON_MAPCOUNT_VALUE (-256)
+
+static inline int PageBalloon(struct page *page)
+{
+	return IS_ENABLED(CONFIG_MEMORY_BALLOON) &&
+		atomic_read(&page->_mapcount) == PAGE_BALLOON_MAPCOUNT_VALUE;
+}
+void __SetPageBalloon(struct page *page);
+void __ClearPageBalloon(struct page *page);
+
 void put_page(struct page *page);
 void put_pages_list(struct list_head *pages);
 

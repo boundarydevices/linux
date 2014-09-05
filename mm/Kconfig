@@ -228,6 +228,11 @@ config ARCH_ENABLE_SPLIT_PMD_PTLOCK
 	boolean
 
 #
+# support for memory ballooning
+config MEMORY_BALLOON
+	boolean
+
+#
 # support for memory balloon compaction
 config BALLOON_COMPACTION
 	bool "Allow for balloon memory compaction/migration"
