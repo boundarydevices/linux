@@ -67,6 +67,10 @@ config ARCH_R8A7791
 	bool "R-Car M2-W (R8A77910)"
 	select ARCH_RCAR_GEN2
 
+config ARCH_R8A7794
+	bool "R-Car E2 (R8A77940)"
+	select ARCH_RCAR_GEN2
+
 comment "Renesas ARM SoCs Board Type"
 
 config MACH_KOELSCH
