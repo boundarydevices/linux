@@ -292,7 +292,7 @@ static int __init do_skip(void)
 
 static int __init do_reset(void)
 {
-	while(byte_count && *victim == '\0')
+	while (byte_count && *victim == '\0')
 		eat(1);
 	if (byte_count && (this_header & 3))
 		error("broken padding");
