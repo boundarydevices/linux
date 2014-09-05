@@ -19,9 +19,11 @@
 #define GIC_CPU_EOI			0x10
 #define GIC_CPU_RUNNINGPRI		0x14
 #define GIC_CPU_HIGHPRI			0x18
+#define GIC_CPU_ABINPOINT		0x1C
 
 #define GIC_DIST_CTRL			0x000
-#define GIC_DIST_CTR			0x004
+#define GIC_DIST_TYPER			0x004
+#define GIC_DIST_GROUP			0x080
 #define GIC_DIST_ENABLE_SET		0x100
 #define GIC_DIST_ENABLE_CLEAR		0x180
 #define GIC_DIST_PENDING_SET		0x200
@@ -31,6 +33,13 @@
 #define GIC_DIST_TARGET			0x800
 #define GIC_DIST_CONFIG			0xc00
 #define GIC_DIST_SOFTINT		0xf00
+
+#define GIC_ICPIDR2			0xfe8
+#define GIC_ICPIDR2_ARCHREV_MASK	0x0F0
+#define GIC_ICPIDR2_ARCHREV_V1		0x010
+#define GIC_ICPIDR2_ARCHREV_V2		0x020
+
+#define GIC_DIST_TYPER_SECURITY_EXTN	0x400
 
 #ifndef __ASSEMBLY__
 extern void __iomem *gic_cpu_base_addr;
@@ -60,6 +69,7 @@ struct gic_cpu_state {
 	u32	iccicr;			/* 0x000 */
 	u32	iccpmr;			/* 0x004 */
 	u32	iccbpr;			/* 0x008 */
+	u32	iccabpr;		/* 0x01C */
 };
 
 void gic_init(unsigned int, unsigned int, void __iomem *, void __iomem *);
@@ -72,6 +82,8 @@ void save_gic_cpu_state(unsigned int gic_nr, struct gic_cpu_state *gcs);
 void restore_gic_cpu_state(unsigned int gic_nr, struct gic_cpu_state *gcs);
 void save_gic_dist_state(unsigned int gic_nr, struct gic_dist_state *gds);
 void restore_gic_dist_state(unsigned int gic_nr, struct gic_dist_state *gds);
+#ifdef CONFIG_GIC_FIQ
+void gic_enable_fiq(unsigned int irq, int enable);
 #endif
-
+#endif
 #endif
