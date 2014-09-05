@@ -496,8 +496,8 @@ EXPORT_SYMBOL_GPL(page_is_ram);
  * If found, return 1 if it is RAM, 0 if not.
  * If not found, or region is not fully contained, return -1
  *
- * Used by the ioremap functions to insure user not remapping RAM and is as
- * vast speed up over walking through the resource table page by page.
+ * Used by the ioremap functions to ensure the user is not remapping RAM and is
+ * a vast speed up over walking through the resource table page by page.
  */
 int region_is_ram(resource_size_t start, unsigned long size)
 {
