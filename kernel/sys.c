@@ -1692,61 +1692,37 @@ exit:
  * WARNING: we don't require any capability here so be very careful
  * in what is allowed for modification from userspace.
  */
-static int validate_prctl_map_locked(struct prctl_mm_map *prctl_map)
+static int validate_prctl_map(struct prctl_mm_map *prctl_map)
 {
 	unsigned long mmap_max_addr = TASK_SIZE;
 	struct mm_struct *mm = current->mm;
-	struct vm_area_struct *stack_vma;
-	int error = 0;
+	int error = -EINVAL, i;
+
+	static const unsigned char offsets[] = {
+		offsetof(struct prctl_mm_map, start_code),
+		offsetof(struct prctl_mm_map, end_code),
+		offsetof(struct prctl_mm_map, start_data),
+		offsetof(struct prctl_mm_map, end_data),
+		offsetof(struct prctl_mm_map, start_brk),
+		offsetof(struct prctl_mm_map, brk),
+		offsetof(struct prctl_mm_map, start_stack),
+		offsetof(struct prctl_mm_map, arg_start),
+		offsetof(struct prctl_mm_map, arg_end),
+		offsetof(struct prctl_mm_map, env_start),
+		offsetof(struct prctl_mm_map, env_end),
+	};
 
 	/*
 	 * Make sure the members are not somewhere outside
 	 * of allowed address space.
 	 */
-#define __prctl_check_addr_space(__member)					\
-	({									\
-		int __rc;							\
-		if ((unsigned long)prctl_map->__member < mmap_max_addr &&	\
-		    (unsigned long)prctl_map->__member >= mmap_min_addr)	\
-			__rc = 0;						\
-		else								\
-			__rc = -EINVAL;						\
-		__rc;								\
-	})
-	error |= __prctl_check_addr_space(start_code);
-	error |= __prctl_check_addr_space(end_code);
-	error |= __prctl_check_addr_space(start_data);
-	error |= __prctl_check_addr_space(end_data);
-	error |= __prctl_check_addr_space(start_stack);
-	error |= __prctl_check_addr_space(start_brk);
-	error |= __prctl_check_addr_space(brk);
-	error |= __prctl_check_addr_space(arg_start);
-	error |= __prctl_check_addr_space(arg_end);
-	error |= __prctl_check_addr_space(env_start);
-	error |= __prctl_check_addr_space(env_end);
-	if (error)
-		goto out;
-#undef __prctl_check_addr_space
+	for (i = 0; i < ARRAY_SIZE(offsets); i++) {
+		u64 val = *(u64 *)((char *)prctl_map + offsets[i]);
 
-	/*
-	 * Stack, brk, command line arguments and environment must exist.
-	 */
-	stack_vma = find_vma(mm, (unsigned long)prctl_map->start_stack);
-	if (!stack_vma) {
-		error = -EINVAL;
-		goto out;
+		if ((unsigned long)val >= mmap_max_addr ||
+		    (unsigned long)val < mmap_min_addr)
+			goto out;
 	}
-#define __prctl_check_vma(__member)						\
-	find_vma(mm, (unsigned long)prctl_map->__member) ? 0 : -EINVAL
-	error |= __prctl_check_vma(start_brk);
-	error |= __prctl_check_vma(brk);
-	error |= __prctl_check_vma(arg_start);
-	error |= __prctl_check_vma(arg_end);
-	error |= __prctl_check_vma(env_start);
-	error |= __prctl_check_vma(env_end);
-	if (error)
-		goto out;
-#undef __prctl_check_vma
 
 	/*
 	 * Make sure the pairs are ordered.
@@ -1754,7 +1730,7 @@ static int validate_prctl_map_locked(struct prctl_mm_map *prctl_map)
 #define __prctl_check_order(__m1, __op, __m2)					\
 	((unsigned long)prctl_map->__m1 __op					\
 	 (unsigned long)prctl_map->__m2) ? 0 : -EINVAL
-	error |= __prctl_check_order(start_code, <, end_code);
+	error  = __prctl_check_order(start_code, <, end_code);
 	error |= __prctl_check_order(start_data, <, end_data);
 	error |= __prctl_check_order(start_brk, <=, brk);
 	error |= __prctl_check_order(arg_start, <=, arg_end);
@@ -1780,23 +1756,11 @@ static int validate_prctl_map_locked(struct prctl_mm_map *prctl_map)
 			      prctl_map->start_data))
 			goto out;
 
-#ifdef CONFIG_STACK_GROWSUP
-	if (check_data_rlimit(rlimit(RLIMIT_STACK),
-			      stack_vma->vm_end,
-			      prctl_map->start_stack, 0, 0))
-#else
-	if (check_data_rlimit(rlimit(RLIMIT_STACK),
-			      prctl_map->start_stack,
-			      stack_vma->vm_start, 0, 0))
-#endif
-		goto out;
-
 	/*
 	 * Someone is trying to cheat the auxv vector.
 	 */
 	if (prctl_map->auxv_size) {
-		if (!prctl_map->auxv ||
-		    prctl_map->auxv_size > sizeof(mm->saved_auxv))
+		if (!prctl_map->auxv || prctl_map->auxv_size > sizeof(mm->saved_auxv))
 			goto out;
 	}
 
@@ -1824,9 +1788,10 @@ static int prctl_set_mm_map(int opt, const void __user *addr, unsigned long data
 	struct prctl_mm_map prctl_map = { .exe_fd = (u32)-1, };
 	unsigned long user_auxv[AT_VECTOR_SIZE];
 	struct mm_struct *mm = current->mm;
-	int error = -EINVAL;
+	int error;
 
 	BUILD_BUG_ON(sizeof(user_auxv) != sizeof(mm->saved_auxv));
+	BUILD_BUG_ON(sizeof(struct prctl_mm_map) > 256);
 
 	if (opt == PR_SET_MM_MAP_SIZE)
 		return put_user((unsigned int)sizeof(prctl_map),
@@ -1838,37 +1803,41 @@ static int prctl_set_mm_map(int opt, const void __user *addr, unsigned long data
 	if (copy_from_user(&prctl_map, addr, sizeof(prctl_map)))
 		return -EFAULT;
 
-	down_read(&mm->mmap_sem);
-
-	if (validate_prctl_map_locked(&prctl_map))
-		goto out;
+	error = validate_prctl_map(&prctl_map);
+	if (error)
+		return error;
 
 	if (prctl_map.auxv_size) {
-		up_read(&mm->mmap_sem);
 		memset(user_auxv, 0, sizeof(user_auxv));
 		error = copy_from_user(user_auxv,
 				       (const void __user *)prctl_map.auxv,
 				       prctl_map.auxv_size);
-		down_read(&mm->mmap_sem);
 		if (error)
-			goto out;
-	}
+			return error;
 
-	if (prctl_map.exe_fd != (u32)-1) {
-		error = prctl_set_mm_exe_file_locked(mm, prctl_map.exe_fd);
-		if (error)
-			goto out;
-	}
-
-	if (prctl_map.auxv_size) {
 		/* Last entry must be AT_NULL as specification requires */
 		user_auxv[AT_VECTOR_SIZE - 2] = AT_NULL;
 		user_auxv[AT_VECTOR_SIZE - 1] = AT_NULL;
-
-		task_lock(current);
-		memcpy(mm->saved_auxv, user_auxv, sizeof(user_auxv));
-		task_unlock(current);
 	}
+
+	down_write(&mm->mmap_sem);
+	if (prctl_map.exe_fd != (u32)-1)
+		error = prctl_set_mm_exe_file_locked(mm, prctl_map.exe_fd);
+	downgrade_write(&mm->mmap_sem);
+	if (error)
+		goto out;
+
+	/*
+	 * We don't validate if these members are pointing to
+	 * real present VMAs because application may have correspond
+	 * VMAs already unmapped and kernel uses these members for statistics
+	 * output in procfs mostly, except
+	 *
+	 *  - @start_brk/@brk which are used in do_brk but kernel lookups
+	 *    for VMAs when updating these memvers so anything wrong written
+	 *    here cause kernel to swear at userspace program but won't lead
+	 *    to any problem in kernel itself
+	 */
 
 	mm->start_code	= prctl_map.start_code;
 	mm->end_code	= prctl_map.end_code;
@@ -1881,6 +1850,17 @@ static int prctl_set_mm_map(int opt, const void __user *addr, unsigned long data
 	mm->arg_end	= prctl_map.arg_end;
 	mm->env_start	= prctl_map.env_start;
 	mm->env_end	= prctl_map.env_end;
+
+	/*
+	 * Note this update of @saved_auxv is lockless thus
+	 * if someone reads this member in procfs while we're
+	 * updating -- it may get partly updated results. It's
+	 * known and acceptable trade off: we leave it as is to
+	 * not introduce additional locks here making the kernel
+	 * more complex.
+	 */
+	if (prctl_map.auxv_size)
+		memcpy(mm->saved_auxv, user_auxv, sizeof(user_auxv));
 
 	error = 0;
 out:
