@@ -6683,6 +6683,8 @@ void dump_page(struct page *page, const char *reason)
 }
 EXPORT_SYMBOL(dump_page);
 
+#ifdef CONFIG_DEBUG_VM
+
 static const struct trace_print_flags vmaflags_names[] = {
 	{VM_READ,			"read"		},
 	{VM_WRITE,			"write"		},
@@ -6740,3 +6742,5 @@ void dump_vma(const struct vm_area_struct *vma)
 	dump_flags(vma->vm_flags, vmaflags_names, ARRAY_SIZE(vmaflags_names));
 }
 EXPORT_SYMBOL(dump_vma);
+
+#endif		/* CONFIG_DEBUG_VM */
