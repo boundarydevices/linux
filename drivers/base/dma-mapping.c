@@ -270,6 +270,7 @@ int dma_common_mmap(struct device *dev, struct vm_area_struct *vma,
 }
 EXPORT_SYMBOL(dma_common_mmap);
 
+#ifdef CONFIG_MMU
 /*
  * remaps an array of PAGE_SIZE pages into another vm_area
  * Cannot be used in non-sleeping contexts
@@ -335,3 +336,4 @@ void dma_common_free_remap(void *cpu_addr, size_t size, unsigned long vm_flags)
 	unmap_kernel_range((unsigned long)cpu_addr, size);
 	vunmap(cpu_addr);
 }
+#endif
