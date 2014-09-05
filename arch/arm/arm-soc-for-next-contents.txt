@@ -14,6 +14,8 @@ next/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson.git tags/msm-cleanup-for-arm-soc
 	renesas/kconfig-cleanups
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-kconfig-cleanups-for-v3.18
+	at91/cleanup
+		git://github.com/at91linux/linux-at91.git tags/at91-cleanup
 
 next/soc
 	patch
@@ -31,6 +33,10 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-dt-timers-for-v3.18
 	renesas/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-cleanup-for-v3.18
+	renesas/clk
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-clk-for-v3.18
+	integrator/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator.git tags/integrator-for-v3.18-1
 
 next/boards
 	renesas/boards
@@ -47,8 +53,16 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-dt2-for-v3.18
 	renesas/dt3
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-dt3-for-v3.18
+	at91/dt
+		git://github.com/at91linux/linux-at91.git tags/at91-dt
+	at91/dt2
+		git://github.com/at91linux/linux-at91.git tags/at91-dt2
+	davinci/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci.git tags/davinci-for-v3.18/dt
 
 next/drivers
+	at91/drivers
+		git://github.com/at91linux/linux-at91.git tags/at91-drivers2
 
 next/defconfig
 	patch
@@ -57,6 +71,8 @@ next/defconfig
 		ARM: configs: Remove REGULATOR_VIRTUAL_CONSUMER from defconfigs
 	renesas/defconfig3
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-defconfig3-for-v3.18
+	at91/defconfig
+		git://github.com/at91linux/linux-at91.git tags/at91-defconfig
 
 fixes
 	<no branch> (3bc4d037c6791c5089a04845995410aac4fdb514)
