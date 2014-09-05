@@ -1809,11 +1809,10 @@ static int prctl_set_mm_map(int opt, const void __user *addr, unsigned long data
 
 	if (prctl_map.auxv_size) {
 		memset(user_auxv, 0, sizeof(user_auxv));
-		error = copy_from_user(user_auxv,
-				       (const void __user *)prctl_map.auxv,
-				       prctl_map.auxv_size);
-		if (error)
-			return error;
+		if (copy_from_user(user_auxv,
+				   (const void __user *)prctl_map.auxv,
+				   prctl_map.auxv_size))
+			return -EFAULT;
 
 		/* Last entry must be AT_NULL as specification requires */
 		user_auxv[AT_VECTOR_SIZE - 2] = AT_NULL;
