@@ -155,7 +155,7 @@ Under each memory block, you can see 4 files:
 /sys/devices/system/memory/memoryXXX/phys_device
 /sys/devices/system/memory/memoryXXX/state
 /sys/devices/system/memory/memoryXXX/removable
-/sys/devices/system/memory/memoryXXX/zones_online_to
+/sys/devices/system/memory/memoryXXX/valid_zones
 
 'phys_index'      : read-only and contains memory block id, same as XXX.
 'state'           : read-write
@@ -171,8 +171,15 @@ Under each memory block, you can see 4 files:
                     block is removable and a value of 0 indicates that
                     it is not removable. A memory block is removable only if
                     every section in the block is removable.
-'zones_online_to' : read-only: designed to show which zone this memory block
+'valid_zones'     : read-only: designed to show which zones this memory block
 		    can be onlined to.
+		    The first column shows it's default zone.
+		    "memory6/valid_zones: Normal Movable" shows this memoryblock
+		    can be onlined to ZONE_NORMAL by default and to ZONE_MOVABLE
+		    by online_movable.
+		    "memory7/valid_zones: Movable Normal" shows this memoryblock
+		    can be onlined to ZONE_MOVABLE by default and to ZONE_NORMAL
+		    by online_kernel.
 
 NOTE:
   These directories/files appear after physical memory hotplug phase.

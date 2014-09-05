@@ -374,7 +374,7 @@ static ssize_t show_phys_device(struct device *dev,
 }
 
 #ifdef CONFIG_MEMORY_HOTREMOVE
-static ssize_t show_zones_online_to(struct device *dev,
+static ssize_t show_valid_zones(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
 	struct memory_block *mem = to_memory_block(dev);
@@ -409,7 +409,7 @@ static ssize_t show_zones_online_to(struct device *dev,
 
 	return sprintf(buf, "%s\n", zone->name);
 }
-static DEVICE_ATTR(zones_online_to, 0444, show_zones_online_to, NULL);
+static DEVICE_ATTR(valid_zones, 0444, show_valid_zones, NULL);
 #endif
 
 static DEVICE_ATTR(phys_index, 0444, show_mem_start_phys_index, NULL);
@@ -563,7 +563,7 @@ static struct attribute *memory_memblk_attrs[] = {
 	&dev_attr_phys_device.attr,
 	&dev_attr_removable.attr,
 #ifdef CONFIG_MEMORY_HOTREMOVE
-	&dev_attr_zones_online_to.attr,
+	&dev_attr_valid_zones.attr,
 #endif
 	NULL
 };
