@@ -16,6 +16,7 @@ void __SetPageBalloon(struct page *page)
 	atomic_set(&page->_mapcount, PAGE_BALLOON_MAPCOUNT_VALUE);
 	inc_zone_page_state(page, NR_BALLOON_PAGES);
 }
+EXPORT_SYMBOL(__SetPageBalloon);
 
 void __ClearPageBalloon(struct page *page)
 {
@@ -23,6 +24,7 @@ void __ClearPageBalloon(struct page *page)
 	atomic_set(&page->_mapcount, -1);
 	dec_zone_page_state(page, NR_BALLOON_PAGES);
 }
+EXPORT_SYMBOL(__ClearPageBalloon);
 
 /*
  * balloon_devinfo_alloc - allocates a balloon device information descriptor.
