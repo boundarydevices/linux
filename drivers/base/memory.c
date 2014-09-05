@@ -378,7 +378,7 @@ static int __zones_online_to(unsigned long end_pfn,
 {
 	struct zone *zone_next;
 
-	/*The mem block is the last block of memory.*/
+	/* The mem block is the last block of memory. */
 	if (!pfn_valid(end_pfn + 1))
 		return 1;
 	zone_next = page_zone(first_page + nr_pages);
@@ -400,7 +400,7 @@ static ssize_t show_zones_online_to(struct device *dev,
 	end_pfn = start_pfn + nr_pages;
 	first_page = pfn_to_page(start_pfn);
 
-	/*The block contains more than one zone can not be offlined.*/
+	/* The block contains more than one zone can not be offlined. */
 	if (!test_pages_in_a_zone(start_pfn, end_pfn))
 		return sprintf(buf, "none\n");
 
