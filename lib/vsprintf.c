@@ -1111,12 +1111,11 @@ char *escaped_string(char *buf, char *end, u8 *addr, struct printf_spec spec,
 	int len;
 
 	if (spec.field_width == 0)
-		/* nothing to print */
-		return buf;
+		return buf;				/* nothing to print */
 
 	if (ZERO_OR_NULL_PTR(addr))
-		/* NULL pointer */
-		return string(buf, end, NULL, spec);
+		return string(buf, end, NULL, spec);	/* NULL pointer */
+
 
 	do {
 		switch (fmt[count++]) {
