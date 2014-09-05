@@ -57,8 +57,9 @@ struct balloon_dev_info {
 	unsigned long isolated_pages;	/* # of isolated pages for migration */
 	spinlock_t pages_lock;		/* Protection to pages list */
 	struct list_head pages;		/* Pages enqueued & handled to Host */
-	int (* migrate_page)(struct balloon_dev_info *, struct page *newpage,
-			struct page *page, enum migrate_mode mode);
+	int (*migrate_page)(struct balloon_dev_info *b_dev_info,
+			    struct page *newpage, struct page *page,
+			    enum migrate_mode mode);
 };
 
 static inline void balloon_devinfo_init(struct balloon_dev_info *b_dev_info)
