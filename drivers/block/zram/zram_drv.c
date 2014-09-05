@@ -139,9 +139,13 @@ static ssize_t mem_limit_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t len)
 {
 	u64 limit;
+	char *tmp;
 	struct zram *zram = dev_to_zram(dev);
 
-	limit = memparse(buf, NULL);
+	limit = memparse(buf, &tmp);
+	if (buf == tmp) /* no chars parsed, invalid input */
+		return -EINVAL;
+
 	down_write(&zram->init_lock);
 	zram->limit_pages = PAGE_ALIGN(limit) >> PAGE_SHIFT;
 	up_write(&zram->init_lock);
