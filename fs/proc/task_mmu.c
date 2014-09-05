@@ -114,6 +114,7 @@ static void release_task_mempolicy(struct proc_maps_private *priv)
 static void vma_stop(struct proc_maps_private *priv)
 {
 	struct mm_struct *mm = priv->mm;
+
 	release_task_mempolicy(priv);
 	up_read(&mm->mmap_sem);
 	mmput(mm);
@@ -199,7 +200,7 @@ static void *m_next(struct seq_file *m, void *v, loff_t *pos)
 	if (vma && (vma != tail_vma) && vma->vm_next)
 		return vma->vm_next;
 
-	next = (vma != tail_vma)? tail_vma: NULL;
+	next = (vma != tail_vma) ? tail_vma : NULL;
 	if (!next)
 		vma_stop(priv);
 	return next;
