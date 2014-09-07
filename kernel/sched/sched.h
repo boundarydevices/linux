@@ -15,6 +15,10 @@
 
 struct rq;
 
+/* task_struct::on_rq states: */
+#define TASK_ON_RQ_QUEUED	1
+#define TASK_ON_RQ_MIGRATING	2
+
 extern __read_mostly int scheduler_running;
 
 extern unsigned long calc_load_update;
@@ -647,7 +651,7 @@ static inline int cpu_of(struct rq *rq)
 #endif
 }
 
-DECLARE_PER_CPU(struct rq, runqueues);
+DECLARE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
 
 #define cpu_rq(cpu)		(&per_cpu(runqueues, (cpu)))
 #define this_rq()		(&__get_cpu_var(runqueues))
@@ -942,6 +946,15 @@ static inline int task_running(struct rq *rq, struct task_struct *p)
 #endif
 }
 
+static inline int task_on_rq_queued(struct task_struct *p)
+{
+	return p->on_rq == TASK_ON_RQ_QUEUED;
+}
+
+static inline int task_on_rq_migrating(struct task_struct *p)
+{
+	return p->on_rq == TASK_ON_RQ_MIGRATING;
+}
 
 #ifndef prepare_arch_switch
 # define prepare_arch_switch(next)	do { } while (0)
