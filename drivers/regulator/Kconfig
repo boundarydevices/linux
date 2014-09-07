@@ -241,6 +241,22 @@ config REGULATOR_GPIO
 	  and the platform has to provide a mapping of GPIO-states
 	  to target volts/amps.
 
+config REGULATOR_HI6421
+	tristate "HiSilicon Hi6421 PMIC voltage regulator support"
+	depends on MFD_HI6421_PMIC && OF
+	help
+	  This driver provides support for the voltage regulators on the
+	  HiSilicon Hi6421 PMU / Codec IC.
+	  Hi6421 is a multi-function device which, on regulator part, provides
+	  21 general purpose LDOs, 3 dedicated LDOs, and 5 BUCKs. All
+	  of them come with support to either ECO (idle) or sleep mode.
+
+config REGULATOR_ISL9305
+	tristate "Intersil ISL9305 regulator"
+	depends on I2C
+	help
+	  This driver supports ISL9305 voltage regulator chip.
+
 config REGULATOR_ISL6271A
 	tristate "Intersil ISL6271A Power regulator"
 	depends on I2C
@@ -388,6 +404,15 @@ config REGULATOR_MAX77693
 	  and one current regulator 'CHARGER'. This is suitable for
 	  Exynos-4x12 chips.
 
+config REGULATOR_MAX77802
+	tristate "Maxim 77802 regulator"
+	depends on MFD_MAX77686
+	help
+	  This driver controls a Maxim 77802 regulator
+	  via I2C bus. The provided regulator is suitable for
+	  Exynos5420/Exynos5800 SoCs to control various voltages.
+	  It includes support for control of voltage and ramp speed.
+
 config REGULATOR_MC13XXX_CORE
 	tristate
 
@@ -456,6 +481,16 @@ config REGULATOR_RC5T583
 	help
 	  Select this option to enable the power regulator of RICOH
 	  PMIC RC5T583.
+	  This driver supports the control of different power rails of device
+	  through regulator interface. The device supports multiple DCDC/LDO
+	  outputs which can be controlled by i2c communication.
+
+config REGULATOR_RK808
+	tristate "Rockchip RK808 Power regulators"
+	depends on MFD_RK808
+	help
+	  Select this option to enable the power regulator of ROCKCHIP
+	  PMIC RK808.
 	  This driver supports the control of different power rails of device
 	  through regulator interface. The device supports multiple DCDC/LDO
 	  outputs which can be controlled by i2c communication.
