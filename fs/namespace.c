@@ -2057,6 +2057,15 @@ static int do_remount(struct path *path, int flags, int mnt_flags,
 	if (path->dentry != path->mnt->mnt_root)
 		return -EINVAL;
 
+	/* Only in special cases allow devices from mounts created
+	 * outside the initial user namespace.
+	 */
+	if ((mnt->mnt_ns->user_ns != &init_user_ns) &&
+	    !(sb->s_type->fs_flags & FS_USERNS_DEV_MOUNT)) {
+		flags |= MS_NODEV;
+		mnt_flags |= MNT_NODEV;
+	}
+
 	/* Don't allow changing of locked mnt flags.
 	 *
 	 * No locks need to be held here while testing the various
