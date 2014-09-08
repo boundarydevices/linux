@@ -355,10 +355,19 @@ static void kick_trng(struct platform_device *pdev, int ent_delay)
 	wr_reg32(&r4tst->rtsdctl, val);
 	/* min. freq. count, equal to 1/4 of the entropy sample length */
 	wr_reg32(&r4tst->rtfrqmin, ent_delay >> 2);
-	/* max. freq. count, equal to 8 times the entropy sample length */
-	wr_reg32(&r4tst->rtfrqmax, ent_delay << 3);
+	/* disable maximum frequency count */
+	wr_reg32(&r4tst->rtfrqmax, RTFRQMAX_DISABLE);
+	/* read the control register */
+	val = rd_reg32(&r4tst->rtmctl);
+	/*
+	 * select raw sampling in both entropy shifter
+	 * and statistical checker
+	 */
+	setbits32(&val, RTMCTL_SAMP_MODE_RAW_ES_SC);
 	/* put RNG4 into run mode */
-	clrbits32(&r4tst->rtmctl, RTMCTL_PRGM);
+	clrbits32(&val, RTMCTL_PRGM);
+	/* write back the control register */
+	wr_reg32(&r4tst->rtmctl, val);
 }
 
 /**
@@ -544,6 +553,9 @@ static int caam_probe(struct platform_device *pdev)
 			 * the TRNG parameters.
 			 */
 			if (!(ctrlpriv->rng4_sh_init || inst_handles)) {
+				dev_info(dev,
+					 "Entropy delay = %u\n",
+					 ent_delay);
 				kick_trng(pdev, ent_delay);
 				ent_delay += 400;
 			}
@@ -556,6 +568,12 @@ static int caam_probe(struct platform_device *pdev)
 			 */
 			ret = instantiate_rng(dev, inst_handles,
 					      gen_sk);
+			if (ret == -EAGAIN)
+				/*
+				 * if here, the loop will rerun,
+				 * so don't hog the CPU
+				 */
+				cpu_relax();
 		} while ((ret == -EAGAIN) && (ent_delay < RTSDCTL_ENT_DLY_MAX));
 		if (ret) {
 			dev_err(dev, "failed to instantiate RNG");
