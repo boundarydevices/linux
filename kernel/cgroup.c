@@ -1035,6 +1035,11 @@ static void cgroup_get(struct cgroup *cgrp)
 	css_get(&cgrp->self);
 }
 
+static bool cgroup_tryget(struct cgroup *cgrp)
+{
+	return css_tryget(&cgrp->self);
+}
+
 static void cgroup_put(struct cgroup *cgrp)
 {
 	css_put(&cgrp->self);
@@ -1147,7 +1152,8 @@ static struct cgroup *cgroup_kn_lock_live(struct kernfs_node *kn)
 	 * protection against removal.  Ensure @cgrp stays accessible and
 	 * break the active_ref protection.
 	 */
-	cgroup_get(cgrp);
+	if (!cgroup_tryget(cgrp))
+		return NULL;
 	kernfs_break_active_protection(kn);
 
 	mutex_lock(&cgroup_mutex);
@@ -3271,8 +3277,17 @@ int cgroup_add_legacy_cftypes(struct cgroup_subsys *ss, struct cftype *cfts)
 {
 	struct cftype *cft;
 
-	for (cft = cfts; cft && cft->name[0] != '\0'; cft++)
-		cft->flags |= __CFTYPE_NOT_ON_DFL;
+	/*
+	 * If legacy_flies_on_dfl, we want to show the legacy files on the
+	 * dfl hierarchy but iff the target subsystem hasn't been updated
+	 * for the dfl hierarchy yet.
+	 */
+	if (!cgroup_legacy_files_on_dfl ||
+	    ss->dfl_cftypes != ss->legacy_cftypes) {
+		for (cft = cfts; cft && cft->name[0] != '\0'; cft++)
+			cft->flags |= __CFTYPE_NOT_ON_DFL;
+	}
+
 	return cgroup_add_cftypes(ss, cfts);
 }
 
@@ -4387,6 +4402,15 @@ static void css_release_work_fn(struct work_struct *work)
 		/* cgroup release path */
 		cgroup_idr_remove(&cgrp->root->cgroup_idr, cgrp->id);
 		cgrp->id = -1;
+
+		/*
+		 * There are two control paths which try to determine
+		 * cgroup from dentry without going through kernfs -
+		 * cgroupstats_build() and css_tryget_online_from_dir().
+		 * Those are supported by RCU protecting clearing of
+		 * cgrp->kn->priv backpointer.
+		 */
+		RCU_INIT_POINTER(*(void __rcu __force **)&cgrp->kn->priv, NULL);
 	}
 
 	mutex_unlock(&cgroup_mutex);
@@ -4542,6 +4566,11 @@ static int cgroup_mkdir(struct kernfs_node *parent_kn, const char *name,
 	struct kernfs_node *kn;
 	struct cftype *base_files;
 	int ssid, ret;
+
+	/* Do not accept '\n' to prevent making /proc/<pid>/cgroup unparsable.
+	 */
+	if (strchr(name, '\n'))
+		return -EINVAL;
 
 	parent = cgroup_kn_lock_live(parent_kn);
 	if (!parent)
@@ -4819,16 +4848,6 @@ static int cgroup_rmdir(struct kernfs_node *kn)
 	ret = cgroup_destroy_locked(cgrp);
 
 	cgroup_kn_unlock(kn);
-
-	/*
-	 * There are two control paths which try to determine cgroup from
-	 * dentry without going through kernfs - cgroupstats_build() and
-	 * css_tryget_online_from_dir().  Those are supported by RCU
-	 * protecting clearing of cgrp->kn->priv backpointer, which should
-	 * happen after all files under it have been removed.
-	 */
-	if (!ret)
-		RCU_INIT_POINTER(*(void __rcu __force **)&kn->priv, NULL);
 
 	cgroup_put(cgrp);
 	return ret;
@@ -5161,7 +5180,7 @@ void cgroup_post_fork(struct task_struct *child)
 	int i;
 
 	/*
-	 * This may race against cgroup_enable_task_cg_links().  As that
+	 * This may race against cgroup_enable_task_cg_lists().  As that
 	 * function sets use_task_css_set_links before grabbing
 	 * tasklist_lock and we just went through tasklist_lock to add
 	 * @child, it's guaranteed that either we see the set
@@ -5176,7 +5195,7 @@ void cgroup_post_fork(struct task_struct *child)
 	 * when implementing operations which need to migrate all tasks of
 	 * a cgroup to another.
 	 *
-	 * Note that if we lose to cgroup_enable_task_cg_links(), @child
+	 * Note that if we lose to cgroup_enable_task_cg_lists(), @child
 	 * will remain in init_css_set.  This is safe because all tasks are
 	 * in the init_css_set before cg_links is enabled and there's no
 	 * operation which transfers all tasks out of init_css_set.
@@ -5416,7 +5435,7 @@ struct cgroup_subsys_state *css_tryget_online_from_dir(struct dentry *dentry,
 	/*
 	 * This path doesn't originate from kernfs and @kn could already
 	 * have been or be removed at any point.  @kn->priv is RCU
-	 * protected for this access.  See cgroup_rmdir() for details.
+	 * protected for this access.  See css_release_work_fn() for details.
 	 */
 	cgrp = rcu_dereference(kn->priv);
 	if (cgrp)
