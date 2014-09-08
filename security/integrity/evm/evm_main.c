@@ -126,14 +126,19 @@ static enum integrity_status evm_verify_hmac(struct dentry *dentry,
 	rc = vfs_getxattr_alloc(dentry, XATTR_NAME_EVM, (char **)&xattr_data, 0,
 				GFP_NOFS);
 	if (rc <= 0) {
-		if (rc == 0)
-			evm_status = INTEGRITY_FAIL; /* empty */
-		else if (rc == -ENODATA) {
+		evm_status = INTEGRITY_FAIL;
+		if (rc == -ENODATA) {
 			rc = evm_find_protected_xattrs(dentry);
 			if (rc > 0)
 				evm_status = INTEGRITY_NOLABEL;
-			else if (rc == 0)
-				evm_status = INTEGRITY_NOXATTRS; /* new file */
+			else if (rc == 0) {
+				if (!iint)
+					iint = integrity_iint_find(dentry->d_inode);
+				if (iint && (iint->flags & IMA_NEW_FILE))
+					evm_status = INTEGRITY_NOXATTRS;
+			}
+		} else if (rc == -EOPNOTSUPP) {
+			evm_status = INTEGRITY_UNKNOWN;
 		}
 		goto out;
 	}
@@ -277,20 +282,15 @@ static int evm_protect_xattr(struct dentry *dentry, const char *xattr_name,
 	} else if (!evm_protected_xattr(xattr_name)) {
 		if (!posix_xattr_acl(xattr_name))
 			return 0;
-		evm_status = evm_verify_current_integrity(dentry);
-		if ((evm_status == INTEGRITY_PASS) ||
-		    (evm_status == INTEGRITY_NOXATTRS))
-			return 0;
-		goto out;
 	}
 	evm_status = evm_verify_current_integrity(dentry);
-out:
-	if (evm_status != INTEGRITY_PASS)
-		integrity_audit_msg(AUDIT_INTEGRITY_METADATA, dentry->d_inode,
-				    dentry->d_name.name, "appraise_metadata",
-				    integrity_status_msg[evm_status],
-				    -EPERM, 0);
-	return evm_status == INTEGRITY_PASS ? 0 : -EPERM;
+	if ((evm_status == INTEGRITY_PASS) ||
+	    (evm_status == INTEGRITY_NOXATTRS))
+		return 0;
+	integrity_audit_msg(AUDIT_INTEGRITY_METADATA, dentry->d_inode,
+			    dentry->d_name.name, "appraise_metadata",
+			    integrity_status_msg[evm_status], -EPERM, 0);
+	return -EPERM;
 }
 
 /**
@@ -352,7 +352,6 @@ void evm_inode_post_setxattr(struct dentry *dentry, const char *xattr_name,
 		return;
 
 	evm_update_evmxattr(dentry, xattr_name, xattr_value, xattr_value_len);
-	return;
 }
 
 /**
@@ -372,7 +371,6 @@ void evm_inode_post_removexattr(struct dentry *dentry, const char *xattr_name)
 	mutex_lock(&inode->i_mutex);
 	evm_update_evmxattr(dentry, xattr_name, NULL, 0);
 	mutex_unlock(&inode->i_mutex);
-	return;
 }
 
 /**
@@ -414,7 +412,6 @@ void evm_inode_post_setattr(struct dentry *dentry, int ia_valid)
 
 	if (ia_valid & (ATTR_MODE | ATTR_UID | ATTR_GID))
 		evm_update_evmxattr(dentry, NULL, NULL, 0);
-	return;
 }
 
 /*
