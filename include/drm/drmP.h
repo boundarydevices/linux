@@ -1294,6 +1294,8 @@ extern int drm_vblank_get(struct drm_device *dev, int crtc);
 extern void drm_vblank_put(struct drm_device *dev, int crtc);
 extern int drm_crtc_vblank_get(struct drm_crtc *crtc);
 extern void drm_crtc_vblank_put(struct drm_crtc *crtc);
+extern void drm_wait_one_vblank(struct drm_device *dev, int crtc);
+extern void drm_crtc_wait_one_vblank(struct drm_crtc *crtc);
 extern void drm_vblank_off(struct drm_device *dev, int crtc);
 extern void drm_vblank_on(struct drm_device *dev, int crtc);
 extern void drm_crtc_vblank_off(struct drm_crtc *crtc);
@@ -1311,6 +1313,17 @@ extern int drm_calc_vbltimestamp_from_scanoutpos(struct drm_device *dev,
 extern void drm_calc_timestamping_constants(struct drm_crtc *crtc,
 					    const struct drm_display_mode *mode);
 
+/**
+ * drm_crtc_vblank_waitqueue - get vblank waitqueue for the CRTC
+ * @crtc: which CRTC's vblank waitqueue to retrieve
+ *
+ * This function returns a pointer to the vblank waitqueue for the CRTC.
+ * Drivers can use this to implement vblank waits using wait_event() & co.
+ */
+static inline wait_queue_head_t *drm_crtc_vblank_waitqueue(struct drm_crtc *crtc)
+{
+	return &crtc->dev->vblank[drm_crtc_index(crtc)].queue;
+}
 
 /* Modesetting support */
 extern void drm_vblank_pre_modeset(struct drm_device *dev, int crtc);

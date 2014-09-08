@@ -8,6 +8,7 @@ menuconfig DRM
 	tristate "Direct Rendering Manager (XFree86 4.1.0 and higher DRI support)"
 	depends on (AGP || AGP=n) && !EMULATED_CMPXCHG && MMU && HAS_DMA
 	select HDMI
+	select FB_CMDLINE
 	select I2C
 	select I2C_ALGOBIT
 	select DMA_SHARED_BUFFER
@@ -115,6 +116,7 @@ config DRM_RADEON
 	select HWMON
 	select BACKLIGHT_CLASS_DEVICE
 	select INTERVAL_TREE
+	select MMU_NOTIFIER
 	help
 	  Choose this option if you have an ATI Radeon graphics card.  There
 	  are both PCI and AGP versions.  You don't need to choose this to
