@@ -106,9 +106,14 @@ int __init bcm_kona_smc_init(void)
  * request result appropriately.  This result value is found in r0
  * when the "smc" request completes.
  */
+#ifdef __clang__
+#define R12	"r12"
+#else  /* !__clang__ */
+#define R12	"ip"	/* gcc calls r12 "ip" */
+#endif /* !__clang__ */
 static int bcm_kona_do_smc(u32 service_id, u32 buffer_phys)
 {
-	register u32 ip asm("ip");	/* Also called r12 */
+	register u32 ip asm(R12);	/* Also called r12 */
 	register u32 r0 asm("r0");
 	register u32 r4 asm("r4");
 	register u32 r5 asm("r5");
@@ -120,7 +125,7 @@ static int bcm_kona_do_smc(u32 service_id, u32 buffer_phys)
 
 	asm volatile (
 		/* Make sure we got the registers we want */
-		__asmeq("%0", "ip")
+		__asmeq("%0", R12)
 		__asmeq("%1", "r0")
 		__asmeq("%2", "r4")
 		__asmeq("%3", "r5")
