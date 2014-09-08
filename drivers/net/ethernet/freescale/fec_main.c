@@ -2409,15 +2409,15 @@ static int fec_enet_init(struct net_device *ndev)
 		  fep->bd_tx.ring_size * fep->bd_tx.desc_size;
 
 	/* Allocate memory for buffer descriptors. */
-	cbd_base = dma_alloc_coherent(NULL, bd_size, &fep->bd_rx.dma,
+	cbd_base = dma_alloc_coherent(&fep->pdev->dev, bd_size, &fep->bd_rx.dma,
 				      GFP_KERNEL);
 	if (!cbd_base)
 		return -ENOMEM;
 
-	fep->tso_hdrs = dma_alloc_coherent(NULL, fep->bd_tx.ring_size * TSO_HEADER_SIZE,
+	fep->tso_hdrs = dma_alloc_coherent(&fep->pdev->dev, fep->bd_tx.ring_size * TSO_HEADER_SIZE,
 						&fep->tso_hdrs_dma, GFP_KERNEL);
 	if (!fep->tso_hdrs) {
-		dma_free_coherent(NULL, bd_size, cbd_base, fep->bd_rx.dma);
+		dma_free_coherent(&fep->pdev->dev, bd_size, cbd_base, fep->bd_rx.dma);
 		return -ENOMEM;
 	}
 
