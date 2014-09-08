@@ -2108,7 +2108,7 @@ static int ni_ai_insn_read(struct comedi_device *dev,
 	unsigned int mask = (s->maxdata + 1) >> 1;
 	int i, n;
 	unsigned signbits;
-	unsigned short d;
+	unsigned int d;
 	unsigned long dl;
 
 	ni_load_channelgain_list(dev, s, 1, &insn->chanspec);
@@ -2732,9 +2732,6 @@ static int ni_ai_insn_config(struct comedi_device *dev,
 
 			calib_source = data[1] & 0xf;
 
-			if (calib_source > 0xF)
-				return -EINVAL;
-
 			devpriv->ai_calib_source = calib_source;
 			ni_writew(dev, calib_source, Calibration_Channel_6143);
 		} else {
@@ -2921,21 +2918,6 @@ static int ni_ao_config_chanlist(struct comedi_device *dev,
 		return ni_old_ao_config_chanlist(dev, s, chanspec, n_chans);
 }
 
-static int ni_ao_insn_read(struct comedi_device *dev,
-			   struct comedi_subdevice *s,
-			   struct comedi_insn *insn,
-			   unsigned int *data)
-{
-	struct ni_private *devpriv = dev->private;
-	unsigned int chan = CR_CHAN(insn->chanspec);
-	int i;
-
-	for (i = 0; i < insn->n; i++)
-		data[i] = devpriv->ao[chan];
-
-	return insn->n;
-}
-
 static int ni_ao_insn_write(struct comedi_device *dev,
 			    struct comedi_subdevice *s,
 			    struct comedi_insn *insn,
@@ -2962,7 +2944,7 @@ static int ni_ao_insn_write(struct comedi_device *dev,
 	for (i = 0; i < insn->n; i++) {
 		unsigned int val = data[i];
 
-		devpriv->ao[chan] = val;
+		s->readback[chan] = val;
 
 		if (devpriv->is_6xxx) {
 			/*
@@ -3552,12 +3534,10 @@ static int ni_cdio_cmdtest(struct comedi_device *dev,
 	if (err)
 		return 3;
 
-	/* step 4: fix up any arguments */
-
-	if (err)
-		return 4;
+	/* Step 4: fix up any arguments */
 
 	/* Step 5: check channel list if it exists */
+
 	if (cmd->chanlist && cmd->chanlist_len > 0)
 		err |= ni_cdio_check_chanlist(dev, s, cmd);
 
@@ -4176,16 +4156,15 @@ static int ni_freq_out_insn_config(struct comedi_device *dev,
 	return insn->n;
 }
 
-static int ni_8255_callback(int dir, int port, int data, unsigned long arg)
+static int ni_8255_callback(struct comedi_device *dev,
+			    int dir, int port, int data, unsigned long iobase)
 {
-	struct comedi_device *dev = (struct comedi_device *)arg;
-
 	if (dir) {
-		ni_writeb(dev, data, Port_A + 2 * port);
+		ni_writeb(dev, data, iobase + 2 * port);
 		return 0;
 	}
 
-	return ni_readb(dev, Port_A + 2 * port);
+	return ni_readb(dev, iobase + 2 * port);
 }
 
 static int ni_get_pwm_config(struct comedi_device *dev, unsigned int *data)
@@ -5491,9 +5470,13 @@ static int ni_E_init(struct comedi_device *dev,
 		s->n_chan	= board->n_aochan;
 		s->maxdata	= board->ao_maxdata;
 		s->range_table	= board->ao_range_table;
-		s->insn_read	= ni_ao_insn_read;
-		s->insn_write	= ni_ao_insn_write;
 		s->insn_config	= ni_ao_insn_config;
+		s->insn_write	= ni_ao_insn_write;
+		s->insn_read	= comedi_readback_insn_read;
+
+		ret = comedi_alloc_subdev_readback(s);
+		if (ret)
+			return ret;
 
 		/*
 		 * Along with the IRQ we need either a FIFO or DMA for
@@ -5560,8 +5543,7 @@ static int ni_E_init(struct comedi_device *dev,
 	/* 8255 device */
 	s = &dev->subdevices[NI_8255_DIO_SUBDEV];
 	if (board->has_8255) {
-		ret = subdev_8255_init(dev, s, ni_8255_callback,
-				       (unsigned long)dev);
+		ret = subdev_8255_init(dev, s, ni_8255_callback, Port_A);
 		if (ret)
 			return ret;
 	} else {

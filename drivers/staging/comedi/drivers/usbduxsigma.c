@@ -75,8 +75,6 @@
 /* Number of channels (16 AD and offset)*/
 #define NUMCHANNELS 16
 
-#define USBDUXSIGMA_NUM_AO_CHAN		4
-
 /* Size of one A/D value */
 #define SIZEADIN          ((sizeof(uint32_t)))
 
@@ -157,11 +155,9 @@ struct usbduxsigma_private {
 	/* size of the PWM buffer which holds the bit pattern */
 	int pwm_buf_sz;
 	/* input buffer for the ISO-transfer */
-	uint32_t *in_buf;
+	__be32 *in_buf;
 	/* input buffer for single insn */
 	uint8_t *insn_buf;
-
-	unsigned int ao_readback[USBDUXSIGMA_NUM_AO_CHAN];
 
 	unsigned high_speed:1;
 	unsigned ai_cmd_running:1;
@@ -428,7 +424,7 @@ static void usbduxsigma_ao_urb_complete(struct urb *urb)
 			}
 			*datap++ = val;
 			*datap++ = chan;
-			devpriv->ao_readback[chan] = val;
+			s->readback[chan] = val;
 
 			s->async->events |= COMEDI_CB_BLOCK;
 			comedi_event(dev, s);
@@ -451,7 +447,7 @@ static void usbduxsigma_ao_urb_complete(struct urb *urb)
 		dev_err(dev->class_dev,
 			"%s: urb resubmit failed (%d)\n",
 			__func__, ret);
-		if (ret == EL2NSYNC)
+		if (ret == -EL2NSYNC)
 			dev_err(dev->class_dev,
 				"buggy USB host controller or bug in IRQ handler\n");
 		usbduxsigma_ao_stop(dev, 0);	/* w/o unlink */
@@ -788,7 +784,7 @@ static int usbduxsigma_ai_insn_read(struct comedi_device *dev,
 		}
 
 		/* 32 bits big endian from the A/D converter */
-		val = be32_to_cpu(get_unaligned((uint32_t
+		val = be32_to_cpu(get_unaligned((__be32
 						 *)(devpriv->insn_buf + 1)));
 		val &= 0x00ffffff;	/* strip status byte */
 		val ^= 0x00800000;	/* convert to unsigned */
@@ -806,15 +802,13 @@ static int usbduxsigma_ao_insn_read(struct comedi_device *dev,
 				    unsigned int *data)
 {
 	struct usbduxsigma_private *devpriv = dev->private;
-	unsigned int chan = CR_CHAN(insn->chanspec);
-	int i;
+	int ret;
 
 	down(&devpriv->sem);
-	for (i = 0; i < insn->n; i++)
-		data[i] = devpriv->ao_readback[chan];
+	ret = comedi_readback_insn_read(dev, s, insn, data);
 	up(&devpriv->sem);
 
-	return insn->n;
+	return ret;
 }
 
 static int usbduxsigma_ao_insn_write(struct comedi_device *dev,
@@ -842,7 +836,7 @@ static int usbduxsigma_ao_insn_write(struct comedi_device *dev,
 			up(&devpriv->sem);
 			return ret;
 		}
-		devpriv->ao_readback[chan] = data[i];
+		s->readback[chan] = data[i];
 	}
 	up(&devpriv->sem);
 
@@ -1148,7 +1142,7 @@ static void usbduxsigma_pwm_urb_complete(struct urb *urb)
 	if (ret < 0) {
 		dev_err(dev->class_dev, "%s: urb resubmit failed (%d)\n",
 			__func__, ret);
-		if (ret == EL2NSYNC)
+		if (ret == -EL2NSYNC)
 			dev_err(dev->class_dev,
 				"buggy USB host controller or bug in IRQ handler\n");
 		usbduxsigma_pwm_stop(dev, 0);	/* w/o unlink */
@@ -1349,7 +1343,7 @@ static int usbduxsigma_getstatusinfo(struct comedi_device *dev, int chan)
 		return ret;
 
 	/* 32 bits big endian from the A/D converter */
-	val = be32_to_cpu(get_unaligned((uint32_t *)(devpriv->insn_buf + 1)));
+	val = be32_to_cpu(get_unaligned((__be32 *)(devpriv->insn_buf + 1)));
 	val &= 0x00ffffff;	/* strip status byte */
 	val ^= 0x00800000;	/* convert to unsigned */
 
@@ -1437,10 +1431,8 @@ static int usbduxsigma_alloc_usb_buffers(struct comedi_device *dev)
 	devpriv->dux_commands = kzalloc(SIZEOFDUXBUFFER, GFP_KERNEL);
 	devpriv->in_buf = kzalloc(SIZEINBUF, GFP_KERNEL);
 	devpriv->insn_buf = kzalloc(SIZEINSNBUF, GFP_KERNEL);
-	devpriv->ai_urbs = kcalloc(devpriv->n_ai_urbs, sizeof(*urb),
-				   GFP_KERNEL);
-	devpriv->ao_urbs = kcalloc(devpriv->n_ao_urbs, sizeof(*urb),
-				   GFP_KERNEL);
+	devpriv->ai_urbs = kcalloc(devpriv->n_ai_urbs, sizeof(urb), GFP_KERNEL);
+	devpriv->ao_urbs = kcalloc(devpriv->n_ao_urbs, sizeof(urb), GFP_KERNEL);
 	if (!devpriv->dux_commands || !devpriv->in_buf || !devpriv->insn_buf ||
 	    !devpriv->ai_urbs || !devpriv->ao_urbs)
 		return -ENOMEM;
@@ -1613,7 +1605,7 @@ static int usbduxsigma_auto_attach(struct comedi_device *dev,
 	dev->write_subdev = s;
 	s->type		= COMEDI_SUBD_AO;
 	s->subdev_flags	= SDF_WRITABLE | SDF_GROUND | SDF_CMD_WRITE;
-	s->n_chan	= USBDUXSIGMA_NUM_AO_CHAN;
+	s->n_chan	= 4;
 	s->len_chanlist	= s->n_chan;
 	s->maxdata	= 0x00ff;
 	s->range_table	= &range_unipolar2_5;
@@ -1622,6 +1614,10 @@ static int usbduxsigma_auto_attach(struct comedi_device *dev,
 	s->do_cmdtest	= usbduxsigma_ao_cmdtest;
 	s->do_cmd	= usbduxsigma_ao_cmd;
 	s->cancel	= usbduxsigma_ao_cancel;
+
+	ret = comedi_alloc_subdev_readback(s);
+	if (ret)
+		return ret;
 
 	/* Digital I/O subdevice */
 	s = &dev->subdevices[2];

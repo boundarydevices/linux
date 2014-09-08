@@ -49,6 +49,7 @@
 #include <linux/sched.h>
 #include <linux/io.h>
 #include <linux/if.h>
+#include <linux/crc32.h>
 //#include <linux/config.h>
 #include <linux/uaccess.h>
 #include <linux/proc_fs.h>
@@ -140,19 +141,11 @@
 
 #define	AVAIL_TD(p, q)	((p)->sOpts.nTxDescs[(q)] - ((p)->iTDUsed[(q)]))
 
-//PLICE_DEBUG ->
 #define	NUM				64
-//PLICE_DEUBG <-
 
 #define PRIVATE_Message                 0
 
 /*---------------------  Export Types  ------------------------------*/
-
-#define DBG_PRT(l, p, args...)		\
-do {					\
-	if (l <= msglevel)		\
-		printk(p, ##args);	\
-} while (0)
 
 #define PRINT_K(p, args...)		\
 do {					\
@@ -337,10 +330,7 @@ typedef struct __device_opt {
 	u32         flags;
 } OPTIONS, *POPTIONS;
 
-typedef struct __device_info {
-	struct __device_info *next;
-	struct __device_info *prev;
-
+struct vnt_private {
 	struct pci_dev *pcid;
 
 #ifdef CONFIG_PM
@@ -349,7 +339,6 @@ typedef struct __device_info {
 
 // netdev
 	struct net_device *dev;
-	struct net_device *next_module;
 	struct net_device_stats     stats;
 
 //dma addr, rx/tx pool
@@ -409,11 +398,9 @@ typedef struct __device_info {
 
 	spinlock_t                  lock;
 
-//PLICE_DEBUG ->
 	pid_t			MLMEThr_pid;
 	struct completion	notify;
 	struct semaphore	mlme_semaphore;
-//PLICE_DEBUG <-
 
 	u32                         rx_bytes;
 
@@ -483,13 +470,12 @@ typedef struct __device_info {
 	unsigned short wFragmentationThreshold;
 	unsigned char byShortRetryLimit;
 	unsigned char byLongRetryLimit;
-	CARD_OP_MODE                eOPMode;
+	enum nl80211_iftype op_mode;
 	unsigned char byOpMode;
 	bool bBSSIDFilter;
 	unsigned short wMaxTransmitMSDULifetime;
 	unsigned char abyBSSID[ETH_ALEN];
 	unsigned char abyDesireBSSID[ETH_ALEN];
-	unsigned short wCTSDuration;       // update while speed change
 	unsigned short wACKDuration;       // update while speed change
 	unsigned short wRTSTransmitLen;    // update while speed change
 	unsigned char byRTSServiceField;  // update while speed change
@@ -497,7 +483,6 @@ typedef struct __device_info {
 
 	unsigned long dwMaxReceiveLifetime;       // dot11MaxReceiveLifetime
 
-	bool bCCK;
 	bool bEncryptionEnable;
 	bool bLongHeader;
 	bool bShortSlotTime;
@@ -566,7 +551,7 @@ typedef struct __device_info {
 	SKeyManagement          sKey;
 	unsigned long dwIVCounter;
 
-	QWORD                   qwPacketNumber; //For CCMP and TKIP as TSC(6 bytes)
+	u64 qwPacketNumber; /* For CCMP and TKIP as TSC(6 bytes) */
 	unsigned int	uCurrentWEPMode;
 
 	RC4Ext                  SBox;
@@ -643,12 +628,10 @@ typedef struct __device_info {
 
 	// command timer
 	struct timer_list       sTimerCommand;
-#ifdef TxInSleep
 	struct timer_list       sTimerTxData;
 	unsigned long nTxDataTimeCout;
 	bool fTxDataInSleep;
 	bool IsTxDataTrigger;
-#endif
 
 #ifdef WPA_SM_Transtatus
 	bool fWPA_Authened;           //is WPA/WPA-PSK or WPA2/WPA2-PSK authen??
@@ -744,9 +727,10 @@ typedef struct __device_info {
 
 	struct iw_statistics	wstats;		// wireless stats
 	bool bCommit;
-} DEVICE_INFO, *PSDevice;
+};
 
-static inline bool device_get_ip(PSDevice pInfo) {
+static inline bool device_get_ip(struct vnt_private *pInfo)
+{
 	struct in_device *in_dev = (struct in_device *)pInfo->dev->ip_ptr;
 	struct in_ifaddr *ifa;
 
@@ -772,7 +756,10 @@ static inline PDEVICE_TD_INFO alloc_td_info(void)
 
 /*---------------------  Export Functions  --------------------------*/
 
-bool device_dma0_xmit(PSDevice pDevice, struct sk_buff *skb, unsigned int uNodeIndex);
-bool device_alloc_frag_buf(PSDevice pDevice, PSDeFragControlBlock pDeF);
-int Config_FileOperation(PSDevice pDevice, bool fwrite, unsigned char *Parameter);
+bool device_dma0_xmit(struct vnt_private *pDevice,
+		      struct sk_buff *skb, unsigned int uNodeIndex);
+bool device_alloc_frag_buf(struct vnt_private *pDevice,
+			   PSDeFragControlBlock pDeF);
+int Config_FileOperation(struct vnt_private *pDevice,
+			 bool fwrite, unsigned char *Parameter);
 #endif

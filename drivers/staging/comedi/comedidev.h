@@ -88,6 +88,8 @@ struct comedi_subdevice {
 
 	struct device *class_dev;
 	int minor;
+
+	unsigned int *readback;
 };
 
 struct comedi_buf_page {
@@ -448,6 +450,10 @@ unsigned int comedi_dio_update_state(struct comedi_subdevice *,
 
 void *comedi_alloc_devpriv(struct comedi_device *, size_t);
 int comedi_alloc_subdevices(struct comedi_device *, int);
+int comedi_alloc_subdev_readback(struct comedi_subdevice *);
+
+int comedi_readback_insn_read(struct comedi_device *, struct comedi_subdevice *,
+			      struct comedi_insn *, unsigned int *data);
 
 int comedi_load_firmware(struct comedi_device *, struct device *,
 			 const char *name,
@@ -503,6 +509,7 @@ struct pci_dev *comedi_to_pci_dev(struct comedi_device *);
 
 int comedi_pci_enable(struct comedi_device *);
 void comedi_pci_disable(struct comedi_device *);
+void comedi_pci_detach(struct comedi_device *);
 
 int comedi_pci_auto_config(struct pci_dev *, struct comedi_driver *,
 			   unsigned long context);
@@ -544,6 +551,10 @@ static inline int comedi_pci_enable(struct comedi_device *dev)
 }
 
 static inline void comedi_pci_disable(struct comedi_device *dev)
+{
+}
+
+static inline void comedi_pci_detach(struct comedi_device *dev)
 {
 }
 

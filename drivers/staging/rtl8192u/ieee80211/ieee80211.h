@@ -2118,7 +2118,7 @@ struct ieee80211_device {
 	 * This function can't sleep.
 	 */
 	void (*softmac_data_hard_start_xmit)(struct sk_buff *skb,
-			       struct net_device *dev,int rate);
+			       struct net_device *dev, int rate);
 
 	/* stops the HW queue for DATA frames. Useful to avoid
 	 * waste time to TX data frame when we are reassociating
@@ -2133,7 +2133,7 @@ struct ieee80211_device {
 	 * This function can sleep. the driver should ensure
 	 * the radio has been swithced before return.
 	 */
-	void (*set_chan)(struct net_device *dev,short ch);
+	void (*set_chan)(struct net_device *dev, short ch);
 
 	/* These are not used if the ieee stack takes care of
 	 * scanning (IEEE_SOFTMAC_SCAN feature set).
@@ -2484,6 +2484,10 @@ extern int ieee80211_wx_set_freq(struct ieee80211_device *ieee, struct iw_reques
 
 extern int ieee80211_wx_get_freq(struct ieee80211_device *ieee, struct iw_request_info *a,
 			     union iwreq_data *wrqu, char *b);
+
+/* ieee80211_module.c */
+extern int ieee80211_debug_init(void);
+extern void ieee80211_debug_exit(void);
 
 //extern void ieee80211_wx_sync_scan_wq(struct ieee80211_device *ieee);
 extern void ieee80211_wx_sync_scan_wq(struct work_struct *work);

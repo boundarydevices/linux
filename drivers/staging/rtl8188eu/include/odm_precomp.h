@@ -46,11 +46,6 @@
 
 #include "odm_reg.h"
 
-#include "HalHWImg8188E_MAC.h"
-#include "HalHWImg8188E_RF.h"
-#include "HalHWImg8188E_BB.h"
-
-#include "odm_RegConfig8188E.h"
 #include "odm_RTL8188E.h"
 
 void odm_CmnInfoHook_Debug(struct odm_dm_struct *pDM_Odm);

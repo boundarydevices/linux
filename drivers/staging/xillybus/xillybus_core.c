@@ -133,16 +133,8 @@ irqreturn_t xillybus_isr(int irq, void *data)
 	unsigned int msg_channel, msg_bufno, msg_data, msg_dir;
 	struct xilly_channel *channel;
 
-	/*
-	 * The endpoint structure is altered during periods when it's
-	 * guaranteed no interrupt will occur, but in theory, the cache
-	 * lines may not be updated. So a memory barrier is issued.
-	 */
-	smp_rmb();
-
 	buf = ep->msgbuf_addr;
 	buf_size = ep->msg_buf_size/sizeof(u32);
-
 
 	ep->ephw->hw_sync_sgl_for_cpu(ep,
 				      ep->msgbuf_dma_addr,
@@ -389,7 +381,6 @@ static int xilly_get_dma_buffers(struct xilly_endpoint *ep,
 			  ep->registers + fpga_dma_bufaddr_lowaddr_reg);
 		iowrite32(((u32) ((((u64) dma_addr) >> 32) & 0xffffffff)),
 			  ep->registers + fpga_dma_bufaddr_highaddr_reg);
-		mmiowb();
 
 		if (buffers) { /* Not the message buffer */
 			this_buffer->addr = s->salami;
@@ -635,12 +626,10 @@ static int xilly_obtain_idt(struct xilly_endpoint *endpoint)
 	channel = endpoint->channels[1]; /* This should be generated ad-hoc */
 
 	channel->wr_sleepy = 1;
-	wmb(); /* Setting wr_sleepy must come before the command */
 
 	iowrite32(1 |
 		   (3 << 24), /* Opcode 3 for channel 0 = Send IDT */
 		   endpoint->registers + fpga_buf_ctrl_reg);
-	mmiowb(); /* Just to appear safe */
 
 	wait_event_interruptible_timeout(channel->wr_wait,
 					 (!channel->wr_sleepy),
@@ -814,7 +803,6 @@ static ssize_t xillybus_read(struct file *filp, char __user *userbuf,
 					   | (bufidx << 12),
 					   channel->endpoint->registers +
 					   fpga_buf_ctrl_reg);
-				mmiowb(); /* Just to appear safe */
 			}
 
 			if (rc) {
@@ -901,15 +889,12 @@ static ssize_t xillybus_read(struct file *filp, char __user *userbuf,
 				iowrite32(offsetlimit,
 					  channel->endpoint->registers +
 					  fpga_buf_offset_reg);
-				mmiowb();
 
 				iowrite32(1 | (channel->chan_num << 1) |
 					   (2 << 24) |  /* 2 = offset limit */
 					   (waiting_bufidx << 12),
 					   channel->endpoint->registers +
 					   fpga_buf_ctrl_reg);
-
-				mmiowb(); /* Just to appear safe */
 
 				mutex_unlock(&channel->endpoint->
 					     register_mutex);
@@ -1001,7 +986,6 @@ desperate:
 				   (waiting_bufidx << 12),
 				   channel->endpoint->registers +
 				   fpga_buf_ctrl_reg);
-			mmiowb(); /* Just to appear safe */
 		}
 
 		/*
@@ -1113,13 +1097,11 @@ static int xillybus_myflush(struct xilly_channel *channel, long timeout)
 
 		iowrite32(end_offset_plus1 - 1,
 			  channel->endpoint->registers + fpga_buf_offset_reg);
-		mmiowb();
 
 		iowrite32((channel->chan_num << 1) | /* Channel ID */
 			   (2 << 24) |  /* Opcode 2, submit buffer */
 			   (bufidx << 12),
 			   channel->endpoint->registers + fpga_buf_ctrl_reg);
-		mmiowb(); /* Just to appear safe */
 
 		mutex_unlock(&channel->endpoint->register_mutex);
 	} else if (bufidx == 0)
@@ -1364,13 +1346,12 @@ static ssize_t xillybus_write(struct file *filp, const char __user *userbuf,
 				iowrite32(end_offset_plus1 - 1,
 					  channel->endpoint->registers +
 					  fpga_buf_offset_reg);
-				mmiowb();
+
 				iowrite32((channel->chan_num << 1) |
 					   (2 << 24) |  /* 2 = submit buffer */
 					   (bufidx << 12),
 					   channel->endpoint->registers +
 					   fpga_buf_ctrl_reg);
-				mmiowb(); /* Just to appear safe */
 
 				mutex_unlock(&channel->endpoint->
 					     register_mutex);
@@ -1566,7 +1547,6 @@ static int xillybus_open(struct inode *inode, struct file *filp)
 				  ((channel->wr_synchronous & 1) << 23),
 				  channel->endpoint->registers +
 				  fpga_buf_ctrl_reg);
-			mmiowb(); /* Just to appear safe */
 		}
 
 		channel->wr_ref_count++;
@@ -1588,7 +1568,6 @@ static int xillybus_open(struct inode *inode, struct file *filp)
 				  (4 << 24),   /* Opcode 4, open channel */
 				  channel->endpoint->registers +
 				  fpga_buf_ctrl_reg);
-			mmiowb(); /* Just to appear safe */
 		}
 
 		channel->rd_ref_count++;
@@ -1641,7 +1620,6 @@ static int xillybus_release(struct inode *inode, struct file *filp)
 				  (5 << 24),  /* Opcode 5, close channel */
 				  channel->endpoint->registers +
 				  fpga_buf_ctrl_reg);
-			mmiowb(); /* Just to appear safe */
 		}
 		mutex_unlock(&channel->rd_mutex);
 	}
@@ -1662,7 +1640,6 @@ static int xillybus_release(struct inode *inode, struct file *filp)
 				   (5 << 24),  /* Opcode 5, close channel */
 				   channel->endpoint->registers +
 				   fpga_buf_ctrl_reg);
-			mmiowb(); /* Just to appear safe */
 
 			/*
 			 * This is crazily cautious: We make sure that not
@@ -1767,11 +1744,10 @@ static loff_t xillybus_llseek(struct file *filp, loff_t offset, int whence)
 
 	iowrite32(pos >> channel->log2_element_size,
 		  channel->endpoint->registers + fpga_buf_offset_reg);
-	mmiowb();
+
 	iowrite32((channel->chan_num << 1) |
 		  (6 << 24),  /* Opcode 6, set address */
 		  channel->endpoint->registers + fpga_buf_ctrl_reg);
-	mmiowb(); /* Just to appear safe */
 
 	mutex_unlock(&channel->endpoint->register_mutex);
 
@@ -1983,10 +1959,9 @@ EXPORT_SYMBOL(xillybus_init_endpoint);
 static int xilly_quiesce(struct xilly_endpoint *endpoint)
 {
 	endpoint->idtlen = -1;
-	wmb(); /* Make sure idtlen is set before sending command */
+
 	iowrite32((u32) (endpoint->dma_using_dac & 0x0001),
 		  endpoint->registers + fpga_dma_control_reg);
-	mmiowb();
 
 	wait_event_interruptible_timeout(endpoint->ep_wait,
 					 (endpoint->idtlen >= 0),
@@ -2026,7 +2001,6 @@ int xillybus_endpoint_discovery(struct xilly_endpoint *endpoint)
 	 */
 
 	iowrite32(1, endpoint->registers + fpga_endian_reg);
-	mmiowb(); /* Writes below are affected by the one above. */
 
 	/* Bootstrap phase I: Allocate temporary message buffer */
 
@@ -2043,11 +2017,8 @@ int xillybus_endpoint_discovery(struct xilly_endpoint *endpoint)
 
 	/* Clear the message subsystem (and counter in particular) */
 	iowrite32(0x04, endpoint->registers + fpga_msg_ctrl_reg);
-	mmiowb();
 
 	endpoint->idtlen = -1;
-
-	smp_wmb();
 
 	/*
 	 * Set DMA 32/64 bit mode, quiesce the device (?!) and get IDT
@@ -2055,7 +2026,6 @@ int xillybus_endpoint_discovery(struct xilly_endpoint *endpoint)
 	 */
 	iowrite32((u32) (endpoint->dma_using_dac & 0x0001),
 		   endpoint->registers + fpga_dma_control_reg);
-	mmiowb();
 
 	wait_event_interruptible_timeout(endpoint->ep_wait,
 					 (endpoint->idtlen >= 0),
@@ -2069,7 +2039,6 @@ int xillybus_endpoint_discovery(struct xilly_endpoint *endpoint)
 	/* Enable DMA */
 	iowrite32((u32) (0x0002 | (endpoint->dma_using_dac & 0x0001)),
 		   endpoint->registers + fpga_dma_control_reg);
-	mmiowb();
 
 	/* Bootstrap phase II: Allocate buffer for IDT and obtain it */
 	while (endpoint->idtlen >= idtbuffersize) {
@@ -2083,8 +2052,6 @@ int xillybus_endpoint_discovery(struct xilly_endpoint *endpoint)
 
 	if (rc)
 		goto failed_idt;
-
-	smp_wmb();
 
 	rc = xilly_obtain_idt(endpoint);
 
@@ -2108,8 +2075,6 @@ int xillybus_endpoint_discovery(struct xilly_endpoint *endpoint)
 
 	if (rc)
 		goto failed_idt;
-
-	smp_wmb(); /* mutex_lock below should suffice, but won't hurt.*/
 
 	/*
 	 * endpoint is now completely configured. We put it on the list

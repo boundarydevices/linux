@@ -174,7 +174,7 @@ int do_lcfg(char *cfgname, lnet_nid_t nid, int cmd,
 	lcfg->lcfg_nid = nid;
 	rc = class_process_config(lcfg);
 	lustre_cfg_free(lcfg);
-	return(rc);
+	return rc;
 }
 EXPORT_SYMBOL(do_lcfg);
 
@@ -318,7 +318,8 @@ int lustre_start_mgc(struct super_block *sb)
 		   (using its local copy of the log), but we do want to connect
 		   if at all possible. */
 		recov_bk++;
-		CDEBUG(D_MOUNT, "%s: Set MGC reconnect %d\n", mgcname,recov_bk);
+		CDEBUG(D_MOUNT, "%s: Set MGC reconnect %d\n", mgcname,
+		       recov_bk);
 		rc = obd_set_info_async(NULL, obd->obd_self_export,
 					sizeof(KEY_INIT_RECOV_BACKUP),
 					KEY_INIT_RECOV_BACKUP,
@@ -817,7 +818,7 @@ int lustre_check_exclusion(struct super_block *sb, char *svname)
 	CDEBUG(D_MOUNT, "Check exclusion %s (%d) in %d of %s\n", svname,
 	       index, lmd->lmd_exclude_count, lmd->lmd_dev);
 
-	for(i = 0; i < lmd->lmd_exclude_count; i++) {
+	for (i = 0; i < lmd->lmd_exclude_count; i++) {
 		if (index == lmd->lmd_exclude[i]) {
 			CWARN("Excluding %s (on exclusion list)\n", svname);
 			return 1;
@@ -1276,7 +1277,10 @@ EXPORT_SYMBOL(lustre_register_kill_super_cb);
 struct dentry *lustre_mount(struct file_system_type *fs_type, int flags,
 				const char *devname, void *data)
 {
-	struct lustre_mount_data2 lmd2 = { data, NULL };
+	struct lustre_mount_data2 lmd2 = {
+		.lmd2_data = data,
+		.lmd2_mnt = NULL
+	};
 
 	return mount_nodev(fs_type, flags, &lmd2, lustre_fill_super);
 }

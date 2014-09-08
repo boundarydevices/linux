@@ -573,7 +573,7 @@ static u16 vnt_fill_cts_head(struct vnt_usb_send_context *tx_context,
 		memcpy(buf->data.ra, priv->current_net_addr, ETH_ALEN);
 
 		return vnt_rxtx_datahead_g(tx_context, &buf->data_head);
-        }
+	}
 
 	return 0;
 }
@@ -1036,6 +1036,7 @@ static int vnt_beacon_xmit(struct vnt_private *priv,
 	info = IEEE80211_SKB_CB(skb);
 	if (info->flags & IEEE80211_TX_CTL_ASSIGN_SEQ) {
 		struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)mgmt_hdr;
+
 		hdr->duration_id = 0;
 		hdr->seq_ctrl = cpu_to_le16(priv->seq_counter << 4);
 	}

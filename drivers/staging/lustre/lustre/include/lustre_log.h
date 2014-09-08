@@ -56,8 +56,6 @@
  * @{
  */
 
-#include "linux/lustre_log.h"
-
 #include "obd_class.h"
 #include "obd_ost.h"
 #include "lustre/lustre_idl.h"
@@ -315,18 +313,6 @@ struct llog_handle {
 	atomic_t		 lgh_refcount;
 };
 
-/* llog_lvfs.c */
-extern struct llog_operations llog_lvfs_ops;
-
-/* llog_osd.c */
-extern struct llog_operations llog_osd_ops;
-int llog_osd_get_cat_list(const struct lu_env *env, struct dt_device *d,
-			  int idx, int count,
-			  struct llog_catid *idarray);
-int llog_osd_put_cat_list(const struct lu_env *env, struct dt_device *d,
-			  int idx, int count,
-			  struct llog_catid *idarray);
-
 #define LLOG_CTXT_FLAG_UNINITIALIZED     0x00000001
 #define LLOG_CTXT_FLAG_STOP		 0x00000002
 
@@ -461,7 +447,7 @@ static inline int llog_group_ctxt_null(struct obd_llog_group *olg, int index)
 
 static inline int llog_ctxt_null(struct obd_device *obd, int index)
 {
-	return (llog_group_ctxt_null(&obd->obd_olg, index));
+	return llog_group_ctxt_null(&obd->obd_olg, index);
 }
 
 static inline int llog_destroy(const struct lu_env *env,

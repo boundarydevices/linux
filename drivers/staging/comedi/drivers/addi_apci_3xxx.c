@@ -628,16 +628,20 @@ static int apci3xxx_ao_insn_write(struct comedi_device *dev,
 	int i;
 
 	for (i = 0; i < insn->n; i++) {
+		unsigned int val = data[i];
+
 		/* Set the range selection */
 		writel(range, dev->mmio + 96);
 
 		/* Write the analog value to the selected channel */
-		writel((data[i] << 8) | chan, dev->mmio + 100);
+		writel((val << 8) | chan, dev->mmio + 100);
 
 		/* Wait the end of transfer */
 		ret = comedi_timeout(dev, s, insn, apci3xxx_ao_eoc, 0);
 		if (ret)
 			return ret;
+
+		s->readback[chan] = val;
 	}
 
 	return insn->n;
@@ -850,6 +854,11 @@ static int apci3xxx_auto_attach(struct comedi_device *dev,
 		s->maxdata	= 0x0fff;
 		s->range_table	= &apci3xxx_ao_range;
 		s->insn_write	= apci3xxx_ao_insn_write;
+		s->insn_read	= comedi_readback_insn_read;
+
+		ret = comedi_alloc_subdev_readback(s);
+		if (ret)
+			return ret;
 
 		subdev++;
 	}
@@ -901,17 +910,9 @@ static int apci3xxx_auto_attach(struct comedi_device *dev,
 
 static void apci3xxx_detach(struct comedi_device *dev)
 {
-	struct apci3xxx_private *devpriv = dev->private;
-
-	if (devpriv) {
-		if (dev->iobase)
-			apci3xxx_reset(dev);
-		if (dev->irq)
-			free_irq(dev->irq, dev);
-		if (dev->mmio)
-			iounmap(dev->mmio);
-	}
-	comedi_pci_disable(dev);
+	if (dev->iobase)
+		apci3xxx_reset(dev);
+	comedi_pci_detach(dev);
 }
 
 static struct comedi_driver apci3xxx_driver = {

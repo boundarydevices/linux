@@ -1089,8 +1089,6 @@ struct pcidas64_private {
 	unsigned int ao_dma_index;
 	/*  number of analog output samples remaining */
 	unsigned long ao_count;
-	/*  remember what the analog outputs are set to, to allow readback */
-	unsigned int ao_value[2];
 	unsigned int hw_revision;	/*  stc chip hardware revision number */
 	/*  last bits sent to INTR_ENABLE_REG register */
 	unsigned int intr_enable_bits;
@@ -1524,6 +1522,46 @@ static int alloc_and_init_dma_members(struct comedi_device *dev)
 		}
 	}
 	return 0;
+}
+
+static void cb_pcidas64_free_dma(struct comedi_device *dev)
+{
+	const struct pcidas64_board *thisboard = comedi_board(dev);
+	struct pci_dev *pcidev = comedi_to_pci_dev(dev);
+	struct pcidas64_private *devpriv = dev->private;
+	int i;
+
+	if (!devpriv)
+		return;
+
+	/* free pci dma buffers */
+	for (i = 0; i < ai_dma_ring_count(thisboard); i++) {
+		if (devpriv->ai_buffer[i])
+			pci_free_consistent(pcidev,
+					    DMA_BUFFER_SIZE,
+					    devpriv->ai_buffer[i],
+					    devpriv->ai_buffer_bus_addr[i]);
+	}
+	for (i = 0; i < AO_DMA_RING_COUNT; i++) {
+		if (devpriv->ao_buffer[i])
+			pci_free_consistent(pcidev,
+					    DMA_BUFFER_SIZE,
+					    devpriv->ao_buffer[i],
+					    devpriv->ao_buffer_bus_addr[i]);
+	}
+	/* free dma descriptors */
+	if (devpriv->ai_dma_desc)
+		pci_free_consistent(pcidev,
+				    sizeof(struct plx_dma_desc) *
+				    ai_dma_ring_count(thisboard),
+				    devpriv->ai_dma_desc,
+				    devpriv->ai_dma_desc_bus_addr);
+	if (devpriv->ao_dma_desc)
+		pci_free_consistent(pcidev,
+				    sizeof(struct plx_dma_desc) *
+				    AO_DMA_RING_COUNT,
+				    devpriv->ao_dma_desc,
+				    devpriv->ao_dma_desc_bus_addr);
 }
 
 static inline void warn_external_queue(struct comedi_device *dev)
@@ -3061,18 +3099,7 @@ static int ao_winsn(struct comedi_device *dev, struct comedi_subdevice *s,
 	}
 
 	/*  remember output value */
-	devpriv->ao_value[chan] = data[0];
-
-	return 1;
-}
-
-static int ao_readback_insn(struct comedi_device *dev,
-			    struct comedi_subdevice *s,
-			    struct comedi_insn *insn, unsigned int *data)
-{
-	struct pcidas64_private *devpriv = dev->private;
-
-	data[0] = devpriv->ao_value[CR_CHAN(insn->chanspec)];
+	s->readback[chan] = data[0];
 
 	return 1;
 }
@@ -3369,26 +3396,16 @@ static int ao_cancel(struct comedi_device *dev, struct comedi_subdevice *s)
 	return 0;
 }
 
-static int dio_callback(int dir, int port, int data, unsigned long arg)
+static int dio_callback_4020(struct comedi_device *dev,
+			     int dir, int port, int data, unsigned long iobase)
 {
-	void __iomem *iobase = (void __iomem *)arg;
+	struct pcidas64_private *devpriv = dev->private;
 
 	if (dir) {
-		writeb(data, iobase + port);
+		writew(data, devpriv->main_iobase + iobase + 2 * port);
 		return 0;
 	}
-	return readb(iobase + port);
-}
-
-static int dio_callback_4020(int dir, int port, int data, unsigned long arg)
-{
-	void __iomem *iobase = (void __iomem *)arg;
-
-	if (dir) {
-		writew(data, iobase + 2 * port);
-		return 0;
-	}
-	return readw(iobase + 2 * port);
+	return readw(devpriv->main_iobase + iobase + 2 * port);
 }
 
 static int di_rbits(struct comedi_device *dev, struct comedi_subdevice *s,
@@ -3751,7 +3768,6 @@ static int setup_subdevices(struct comedi_device *dev)
 	const struct pcidas64_board *thisboard = comedi_board(dev);
 	struct pcidas64_private *devpriv = dev->private;
 	struct comedi_subdevice *s;
-	void __iomem *dio_8255_iobase;
 	int i;
 	int ret;
 
@@ -3799,8 +3815,13 @@ static int setup_subdevices(struct comedi_device *dev)
 		s->n_chan = thisboard->ao_nchan;
 		s->maxdata = (1 << thisboard->ao_bits) - 1;
 		s->range_table = thisboard->ao_range_table;
-		s->insn_read = ao_readback_insn;
 		s->insn_write = ao_winsn;
+		s->insn_read = comedi_readback_insn_read;
+
+		ret = comedi_alloc_subdev_readback(s);
+		if (ret)
+			return ret;
+
 		if (ao_cmd_is_supported(thisboard)) {
 			dev->write_subdev = s;
 			s->do_cmdtest = ao_cmdtest;
@@ -3840,13 +3861,11 @@ static int setup_subdevices(struct comedi_device *dev)
 	s = &dev->subdevices[4];
 	if (thisboard->has_8255) {
 		if (thisboard->layout == LAYOUT_4020) {
-			dio_8255_iobase = devpriv->main_iobase + I8255_4020_REG;
 			ret = subdev_8255_init(dev, s, dio_callback_4020,
-					       (unsigned long)dio_8255_iobase);
+					       I8255_4020_REG);
 		} else {
-			dio_8255_iobase = dev->mmio + DIO_8255_OFFSET;
-			ret = subdev_8255_init(dev, s, dio_callback,
-					       (unsigned long)dio_8255_iobase);
+			ret = subdev_8255_mm_init(dev, s, NULL,
+						  DIO_8255_OFFSET);
 		}
 		if (ret)
 			return ret;
@@ -3996,54 +4015,22 @@ static int auto_attach(struct comedi_device *dev,
 
 static void detach(struct comedi_device *dev)
 {
-	const struct pcidas64_board *thisboard = comedi_board(dev);
-	struct pci_dev *pcidev = comedi_to_pci_dev(dev);
 	struct pcidas64_private *devpriv = dev->private;
-	unsigned int i;
 
 	if (dev->irq)
 		free_irq(dev->irq, dev);
 	if (devpriv) {
-		if (pcidev) {
-			if (devpriv->plx9080_iobase) {
-				disable_plx_interrupts(dev);
-				iounmap(devpriv->plx9080_iobase);
-			}
-			if (devpriv->main_iobase)
-				iounmap(devpriv->main_iobase);
-			if (dev->mmio)
-				iounmap(dev->mmio);
-			/*  free pci dma buffers */
-			for (i = 0; i < ai_dma_ring_count(thisboard); i++) {
-				if (devpriv->ai_buffer[i])
-					pci_free_consistent(pcidev,
-						DMA_BUFFER_SIZE,
-						devpriv->ai_buffer[i],
-						devpriv->ai_buffer_bus_addr[i]);
-			}
-			for (i = 0; i < AO_DMA_RING_COUNT; i++) {
-				if (devpriv->ao_buffer[i])
-					pci_free_consistent(pcidev,
-						DMA_BUFFER_SIZE,
-						devpriv->ao_buffer[i],
-						devpriv->ao_buffer_bus_addr[i]);
-			}
-			/*  free dma descriptors */
-			if (devpriv->ai_dma_desc)
-				pci_free_consistent(pcidev,
-					sizeof(struct plx_dma_desc) *
-					ai_dma_ring_count(thisboard),
-					devpriv->ai_dma_desc,
-					devpriv->ai_dma_desc_bus_addr);
-			if (devpriv->ao_dma_desc)
-				pci_free_consistent(pcidev,
-					sizeof(struct plx_dma_desc) *
-					AO_DMA_RING_COUNT,
-					devpriv->ao_dma_desc,
-					devpriv->ao_dma_desc_bus_addr);
+		if (devpriv->plx9080_iobase) {
+			disable_plx_interrupts(dev);
+			iounmap(devpriv->plx9080_iobase);
 		}
+		if (devpriv->main_iobase)
+			iounmap(devpriv->main_iobase);
+		if (dev->mmio)
+			iounmap(dev->mmio);
 	}
 	comedi_pci_disable(dev);
+	cb_pcidas64_free_dma(dev);
 }
 
 static struct comedi_driver cb_pcidas64_driver = {

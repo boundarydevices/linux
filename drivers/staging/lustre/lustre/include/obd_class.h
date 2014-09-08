@@ -45,8 +45,6 @@
 #include "lustre/lustre_idl.h"
 #include "lprocfs_status.h"
 
-#include "linux/obd_class.h"
-
 #define OBD_STATFS_NODELAY      0x0001  /* requests should be send without delay
 					 * and resends for avoid deadlocks */
 #define OBD_STATFS_FROM_CACHE   0x0002  /* the statfs callback should not update
@@ -88,12 +86,12 @@ struct obd_device *class_name2obd(const char *name);
 int class_uuid2dev(struct obd_uuid *uuid);
 struct obd_device *class_uuid2obd(struct obd_uuid *uuid);
 void class_obd_list(void);
-struct obd_device * class_find_client_obd(struct obd_uuid *tgt_uuid,
-					  const char * typ_name,
+struct obd_device *class_find_client_obd(struct obd_uuid *tgt_uuid,
+					  const char *typ_name,
 					  struct obd_uuid *grp_uuid);
-struct obd_device * class_devices_in_group(struct obd_uuid *grp_uuid,
+struct obd_device *class_devices_in_group(struct obd_uuid *grp_uuid,
 					   int *next);
-struct obd_device * class_num2obd(int num);
+struct obd_device *class_num2obd(int num);
 int get_devices_count(void);
 
 int class_notify_sptlrpc_conf(const char *fsname, int namelen);
@@ -110,7 +108,7 @@ void obd_zombie_impexp_cull(void);
 void obd_zombie_barrier(void);
 void obd_exports_barrier(struct obd_device *obd);
 int kuc_len(int payload_len);
-struct kuc_hdr * kuc_ptr(void *p);
+struct kuc_hdr *kuc_ptr(void *p);
 int kuc_ispayload(void *p);
 void *kuc_alloc(int payload_len, int transport, int type);
 void kuc_free(void *p, int payload_len);
@@ -207,7 +205,7 @@ struct lustre_profile {
 	char	    *lp_md;
 };
 
-struct lustre_profile *class_get_profile(const char * prof);
+struct lustre_profile *class_get_profile(const char *prof);
 void class_del_profile(const char *prof);
 void class_del_profiles(void);
 
@@ -219,8 +217,8 @@ extern void (*class_export_dump_hook)(struct obd_export *);
 
 #else
 
-#define __class_export_add_lock_ref(exp, lock)	     do {} while(0)
-#define __class_export_del_lock_ref(exp, lock)	     do {} while(0)
+#define __class_export_add_lock_ref(exp, lock)	     do {} while (0)
+#define __class_export_del_lock_ref(exp, lock)	     do {} while (0)
 
 #endif
 
@@ -307,13 +305,20 @@ static inline enum obd_option exp_flags_from_obd(struct obd_device *obd)
 		0);
 }
 
+struct inode;
+struct lu_attr;
+struct obdo;
+void obdo_from_la(struct obdo *dst, struct lu_attr *la, __u64 valid);
+void la_from_obdo(struct lu_attr *la, struct obdo *dst, u32 valid);
+void obdo_refresh_inode(struct inode *dst, struct obdo *src, u32 valid);
+void obdo_to_inode(struct inode *dst, struct obdo *src, u32 valid);
 
-void obdo_cpy_md(struct obdo *dst, struct obdo *src, obd_flag valid);
+void obdo_cpy_md(struct obdo *dst, struct obdo *src, u32 valid);
 void obdo_to_ioobj(struct obdo *oa, struct obd_ioobj *ioobj);
 void obdo_from_iattr(struct obdo *oa, struct iattr *attr,
 		     unsigned int ia_valid);
-void iattr_from_obdo(struct iattr *attr, struct obdo *oa, obd_flag valid);
-void md_from_obdo(struct md_op_data *op_data, struct obdo *oa, obd_flag valid);
+void iattr_from_obdo(struct iattr *attr, struct obdo *oa, u32 valid);
+void md_from_obdo(struct md_op_data *op_data, struct obdo *oa, u32 valid);
 void obdo_from_md(struct obdo *oa, struct md_op_data *op_data,
 		  unsigned int valid);
 
@@ -510,8 +515,8 @@ static inline int obd_get_info(const struct lu_env *env,
 }
 
 static inline int obd_set_info_async(const struct lu_env *env,
-				     struct obd_export *exp, obd_count keylen,
-				     void *key, obd_count vallen, void *val,
+				     struct obd_export *exp, u32 keylen,
+				     void *key, u32 vallen, void *val,
 				     struct ptlrpc_request_set *set)
 {
 	int rc;
@@ -943,7 +948,7 @@ static inline struct obd_uuid *obd_get_uuid(struct obd_export *exp)
  *    by obd are returned.
  */
 static inline int obd_connect(const struct lu_env *env,
-			      struct obd_export **exp,struct obd_device *obd,
+			      struct obd_export **exp, struct obd_device *obd,
 			      struct obd_uuid *cluuid,
 			      struct obd_connect_data *data,
 			      void *localdata)
@@ -1123,7 +1128,7 @@ static inline int obd_destroy_export(struct obd_export *exp)
 
 static inline int obd_extent_calc(struct obd_export *exp,
 				  struct lov_stripe_md *md,
-				  int cmd, obd_off *offset)
+				  int cmd, u64 *offset)
 {
 	int rc;
 
@@ -1165,7 +1170,8 @@ static inline int obd_statfs_async(struct obd_export *exp,
 	if (cfs_time_before_64(obd->obd_osfs_age, max_age)) {
 		rc = OBP(obd, statfs_async)(exp, oinfo, max_age, rqset);
 	} else {
-		CDEBUG(D_SUPER,"%s: use %p cache blocks %llu/%llu objects %llu/%llu\n",
+		CDEBUG(D_SUPER,
+		       "%s: use %p cache blocks %llu/%llu objects %llu/%llu\n",
 		       obd->obd_name, &obd->obd_osfs,
 		       obd->obd_osfs.os_bavail, obd->obd_osfs.os_blocks,
 		       obd->obd_osfs.os_ffree, obd->obd_osfs.os_files);
@@ -1239,7 +1245,7 @@ static inline int obd_statfs(const struct lu_env *env, struct obd_export *exp,
 }
 
 static inline int obd_sync_rqset(struct obd_export *exp, struct obd_info *oinfo,
-				 obd_size start, obd_size end)
+				 u64 start, u64 end)
 {
 	struct ptlrpc_request_set *set = NULL;
 	int rc;
@@ -1259,7 +1265,7 @@ static inline int obd_sync_rqset(struct obd_export *exp, struct obd_info *oinfo,
 }
 
 static inline int obd_sync(const struct lu_env *env, struct obd_export *exp,
-			   struct obd_info *oinfo, obd_size start, obd_size end,
+			   struct obd_info *oinfo, u64 start, u64 end,
 			   struct ptlrpc_request_set *set)
 {
 	int rc;
@@ -1306,7 +1312,7 @@ static inline int obd_punch(const struct lu_env *env, struct obd_export *exp,
 }
 
 static inline int obd_brw(int cmd, struct obd_export *exp,
-			  struct obd_info *oinfo, obd_count oa_bufs,
+			  struct obd_info *oinfo, u32 oa_bufs,
 			  struct brw_page *pg, struct obd_trans_info *oti)
 {
 	int rc;
@@ -1371,7 +1377,7 @@ static inline int obd_merge_lvb(struct obd_export *exp,
 }
 
 static inline int obd_adjust_kms(struct obd_export *exp,
-				 struct lov_stripe_md *lsm, obd_off size,
+				 struct lov_stripe_md *lsm, u64 size,
 				 int shrink)
 {
 	int rc;
@@ -1962,7 +1968,7 @@ static inline int md_free_lustre_md(struct obd_export *exp,
 
 static inline int md_setxattr(struct obd_export *exp,
 			      const struct lu_fid *fid, struct obd_capa *oc,
-			      obd_valid valid, const char *name,
+			      u64 valid, const char *name,
 			      const char *input, int input_size,
 			      int output_size, int flags, __u32 suppgid,
 			      struct ptlrpc_request **request)
@@ -1976,7 +1982,7 @@ static inline int md_setxattr(struct obd_export *exp,
 
 static inline int md_getxattr(struct obd_export *exp,
 			      const struct lu_fid *fid, struct obd_capa *oc,
-			      obd_valid valid, const char *name,
+			      u64 valid, const char *name,
 			      const char *input, int input_size,
 			      int output_size, int flags,
 			      struct ptlrpc_request **request)
@@ -2124,12 +2130,12 @@ extern struct kmem_cache *obdo_cachep;
 #define OBDO_ALLOC(ptr)						       \
 do {									  \
 	OBD_SLAB_ALLOC_PTR_GFP((ptr), obdo_cachep, GFP_NOFS);             \
-} while(0)
+} while (0)
 
 #define OBDO_FREE(ptr)							\
 do {									  \
 	OBD_SLAB_FREE_PTR((ptr), obdo_cachep);				\
-} while(0)
+} while (0)
 
 
 static inline void obdo2fid(struct obdo *oa, struct lu_fid *fid)
@@ -2175,10 +2181,6 @@ int class_del_uuid (const char *uuid);
 int class_check_uuid(struct obd_uuid *uuid, __u64 nid);
 void class_init_uuidlist(void);
 void class_exit_uuidlist(void);
-
-/* mea.c */
-int mea_name2idx(struct lmv_stripe_md *mea, const char *name, int namelen);
-int raw_name2idx(int hashtype, int count, const char *name, int namelen);
 
 /* class_obd.c */
 extern char obd_jobid_node[];

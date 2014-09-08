@@ -93,7 +93,7 @@ do {									\
 
 static int ptlrpc_connect_interpret(const struct lu_env *env,
 				    struct ptlrpc_request *request,
-				    void * data, int rc);
+				    void *data, int rc);
 int ptlrpc_import_recovery_state_machine(struct obd_import *imp);
 
 /* Only this function is allowed to change the import state when it is
@@ -297,7 +297,8 @@ void ptlrpc_invalidate_import(struct obd_import *imp)
 			timeout = 1;
 		}
 
-		CDEBUG(D_RPCTRACE,"Sleeping %d sec for inflight to error out\n",
+		CDEBUG(D_RPCTRACE,
+		       "Sleeping %d sec for inflight to error out\n",
 		       timeout);
 
 		/* Wait for all requests to error out and call completion
@@ -843,7 +844,7 @@ static int ptlrpc_connect_interpret(const struct lu_env *env,
 	if ((ocd->ocd_connect_flags & imp->imp_connect_flags_orig) !=
 	    ocd->ocd_connect_flags) {
 		CERROR("%s: Server didn't granted asked subset of flags: asked=%#llx grranted=%#llx\n",
-		       imp->imp_obd->obd_name,imp->imp_connect_flags_orig,
+		       imp->imp_obd->obd_name, imp->imp_connect_flags_orig,
 		       ocd->ocd_connect_flags);
 		GOTO(out, rc = -EPROTO);
 	}
@@ -921,7 +922,7 @@ static int ptlrpc_connect_interpret(const struct lu_env *env,
 			 * participate since we can reestablish all of our state
 			 * with server again */
 			if ((MSG_CONNECT_RECOVERING & msg_flags)) {
-				CDEBUG(level,"%s@%s changed server handle from %#llx to %#llx but is still in recovery\n",
+				CDEBUG(level, "%s@%s changed server handle from %#llx to %#llx but is still in recovery\n",
 				       obd2cli_tgt(imp->imp_obd),
 				       imp->imp_connection->c_remote_uuid.uuid,
 				       imp->imp_remote_handle.cookie,
@@ -1024,10 +1025,17 @@ finish:
 
 		spin_unlock(&imp->imp_lock);
 
-		if (!ocd->ocd_ibits_known &&
-		    ocd->ocd_connect_flags & OBD_CONNECT_IBITS)
-			CERROR("Inodebits aware server returned zero compatible"
-			       " bits?\n");
+		if ((imp->imp_connect_flags_orig & OBD_CONNECT_IBITS) &&
+		    !(ocd->ocd_connect_flags & OBD_CONNECT_IBITS)) {
+			LCONSOLE_WARN("%s: MDS %s does not support ibits "
+				      "lock, either very old or invalid: "
+				      "requested %llx, replied %llx\n",
+				      imp->imp_obd->obd_name,
+				      imp->imp_connection->c_remote_uuid.uuid,
+				      imp->imp_connect_flags_orig,
+				      ocd->ocd_connect_flags);
+			GOTO(out, rc = -EPROTO);
+		}
 
 		if ((ocd->ocd_connect_flags & OBD_CONNECT_VERSION) &&
 		    (ocd->ocd_version > LUSTRE_VERSION_CODE +
@@ -1096,7 +1104,7 @@ finish:
 			 * Enforce ADLER for backward compatibility*/
 			cli->cl_supp_cksum_types = OBD_CKSUM_ADLER;
 		}
-		cli->cl_cksum_type =cksum_type_select(cli->cl_supp_cksum_types);
+		cli->cl_cksum_type = cksum_type_select(cli->cl_supp_cksum_types);
 
 		if (ocd->ocd_connect_flags & OBD_CONNECT_BRW_SIZE)
 			cli->cl_max_pages_per_rpc =
@@ -1209,7 +1217,7 @@ out:
  */
 static int completed_replay_interpret(const struct lu_env *env,
 				      struct ptlrpc_request *req,
-				      void * data, int rc)
+				      void *data, int rc)
 {
 	atomic_dec(&req->rq_import->imp_replay_inflight);
 	if (req->rq_status == 0 &&

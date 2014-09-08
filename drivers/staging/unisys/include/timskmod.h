@@ -62,64 +62,11 @@
 #if !defined SUCCESS
 #define SUCCESS 0
 #endif
-#define FAILURE (-1)
-#define DRIVERNAMEMAX 50
 #define MIN(a, b)     (((a) < (b)) ? (a) : (b))
 #define MAX(a, b)     (((a) > (b)) ? (a) : (b))
 #define STRUCTSEQUAL(x, y) (memcmp(&x, &y, sizeof(x)) == 0)
 #ifndef HOSTADDRESS
 #define HOSTADDRESS unsigned long long
-#endif
-
-typedef long VMMIO;  /**< Virtual MMIO address (returned from ioremap), which
-    *   is a virtual address pointer to a memory-mapped region.
-    *   These are declared as "long" instead of u32* to force you to
-    *   use readb()/writeb()/memcpy_fromio()/etc to access them.
-    *   (On x86 we could probably get away with treating them as
-    *   pointers.)
-    */
-typedef long VMMIO8; /**< #VMMIO pointing to  8-bit data */
-typedef long VMMIO16;/**< #VMMIO pointing to 16-bit data */
-typedef long VMMIO32;/**< #VMMIO pointing to 32-bit data */
-
-#define LOCKSEM(sem)                   down_interruptible(sem)
-#define LOCKSEM_UNINTERRUPTIBLE(sem)   down(sem)
-#define UNLOCKSEM(sem)                 up(sem)
-
-/** lock read/write semaphore for reading.
-    Note that all read/write semaphores are of the "uninterruptible" variety.
-    @param sem (rw_semaphore *) points to semaphore to lock
- */
-#define LOCKREADSEM(sem)               down_read(sem)
-
-/** unlock read/write semaphore for reading.
-    Note that all read/write semaphores are of the "uninterruptible" variety.
-    @param sem (rw_semaphore *) points to semaphore to unlock
- */
-#define UNLOCKREADSEM(sem)             up_read(sem)
-
-/** lock read/write semaphore for writing.
-    Note that all read/write semaphores are of the "uninterruptible" variety.
-    @param sem (rw_semaphore *) points to semaphore to lock
- */
-#define LOCKWRITESEM(sem)              down_write(sem)
-
-/** unlock read/write semaphore for writing.
-    Note that all read/write semaphores are of the "uninterruptible" variety.
-    @param sem (rw_semaphore *) points to semaphore to unlock
- */
-#define UNLOCKWRITESEM(sem)            up_write(sem)
-
-#ifdef ENABLE_RETURN_TRACE
-#define RETTRACE(x)                                            \
-	do {						       \
-		if (1) {				       \
-			INFODRV("RET 0x%lx in %s",	       \
-				(ulong)(x), __func__);     \
-		}					   \
-	} while (0)
-#else
-#define RETTRACE(x)
 #endif
 
 /** Try to evaulate the provided expression, and do a RETINT(x) iff
@@ -304,6 +251,7 @@ static inline struct cdev *cdev_alloc_init(struct module *owner,
 					   const struct file_operations *fops)
 {
 	struct cdev *cdev = NULL;
+
 	cdev = cdev_alloc();
 	if (!cdev)
 		return NULL;

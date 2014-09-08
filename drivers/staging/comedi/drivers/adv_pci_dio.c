@@ -66,7 +66,6 @@ enum hw_io_access {
 				 * subdevice) */
 
 #define SIZE_8254	   4	/* 8254 IO space length */
-#define SIZE_8255	   4	/* 8255 IO space length */
 
 #define PCIDIO_MAINREG	   2	/* main I/O region for all Advantech cards? */
 
@@ -394,7 +393,6 @@ static const struct dio_boardtype boardtypes[] = {
 };
 
 struct pci_dio_private {
-	char valid;		/*  card is usable */
 	char GlobalIrqEnabled;	/*  1= any IRQ source is enabled */
 	/*  PCI-1760 specific data */
 	unsigned char IDICntEnable;	/* counter's counting enable status */
@@ -1132,9 +1130,8 @@ static int pci_dio_auto_attach(struct comedi_device *dev,
 		for (j = 0; j < this_board->sdio[i].regs; j++) {
 			s = &dev->subdevices[subdev];
 			ret = subdev_8255_init(dev, s, NULL,
-					       dev->iobase +
 					       this_board->sdio[i].addr +
-					       SIZE_8255 * j);
+					       j * I8255_SIZE);
 			if (ret)
 				return ret;
 			subdev++;
@@ -1157,8 +1154,6 @@ static int pci_dio_auto_attach(struct comedi_device *dev,
 	if (this_board->cardtype == TYPE_PCI1760)
 		pci1760_attach(dev);
 
-	devpriv->valid = 1;
-
 	pci_dio_reset(dev);
 
 	return 0;
@@ -1166,13 +1161,9 @@ static int pci_dio_auto_attach(struct comedi_device *dev,
 
 static void pci_dio_detach(struct comedi_device *dev)
 {
-	struct pci_dio_private *devpriv = dev->private;
-
-	if (devpriv) {
-		if (devpriv->valid)
-			pci_dio_reset(dev);
-	}
-	comedi_pci_disable(dev);
+	if (dev->iobase)
+		pci_dio_reset(dev);
+	comedi_pci_detach(dev);
 }
 
 static struct comedi_driver adv_pci_dio_driver = {

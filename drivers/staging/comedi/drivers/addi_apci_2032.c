@@ -147,10 +147,9 @@ static int apci2032_int_cmdtest(struct comedi_device *dev,
 	if (err)
 		return 3;
 
-	/* step 4: ignored */
+	/* Step 4: fix up any arguments */
 
-	if (err)
-		return 4;
+	/* Step 5: check channel list if it exists */
 
 	return 0;
 }
@@ -339,11 +338,9 @@ static void apci2032_detach(struct comedi_device *dev)
 {
 	if (dev->iobase)
 		apci2032_reset(dev);
-	if (dev->irq)
-		free_irq(dev->irq, dev);
+	comedi_pci_detach(dev);
 	if (dev->read_subdev)
 		kfree(dev->read_subdev->private);
-	comedi_pci_disable(dev);
 }
 
 static struct comedi_driver apci2032_driver = {

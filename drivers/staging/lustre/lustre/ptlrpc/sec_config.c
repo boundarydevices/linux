@@ -746,7 +746,7 @@ void sptlrpc_conf_log_update_begin(const char *logname)
 
 	conf = sptlrpc_conf_get(fsname, 0);
 	if (conf) {
-		if(conf->sc_local) {
+		if (conf->sc_local) {
 			LASSERT(conf->sc_updated == 0);
 			sptlrpc_conf_free_rsets(conf);
 		}
@@ -815,7 +815,7 @@ void sptlrpc_conf_log_stop(const char *logname)
 }
 EXPORT_SYMBOL(sptlrpc_conf_log_stop);
 
-static void inline flavor_set_flags(struct sptlrpc_flavor *sf,
+static inline void flavor_set_flags(struct sptlrpc_flavor *sf,
 				    enum lustre_sec_part from,
 				    enum lustre_sec_part to,
 				    unsigned int fl_udesc)
@@ -908,7 +908,7 @@ void sptlrpc_conf_client_adapt(struct obd_device *obd)
 	struct obd_import  *imp;
 
 	LASSERT(strcmp(obd->obd_type->typ_name, LUSTRE_MDC_NAME) == 0 ||
-		strcmp(obd->obd_type->typ_name, LUSTRE_OSC_NAME) ==0);
+		strcmp(obd->obd_type->typ_name, LUSTRE_OSC_NAME) == 0);
 	CDEBUG(D_SEC, "obd %s\n", obd->u.cli.cl_target_uuid.uuid);
 
 	/* serialize with connect/disconnect import */
@@ -1201,7 +1201,7 @@ int sptlrpc_conf_target_get_rules(struct obd_device *obd,
 	conf_tgt = sptlrpc_conf_get_tgt(conf, obd->obd_name, 0);
 
 	rc = sptlrpc_rule_set_extract(&conf->sc_rset,
-				      conf_tgt ? &conf_tgt->sct_rset: NULL,
+				      conf_tgt ? &conf_tgt->sct_rset : NULL,
 				      LUSTRE_SP_ANY, sp_dst, rset);
 out:
 	mutex_unlock(&sptlrpc_conf_lock);

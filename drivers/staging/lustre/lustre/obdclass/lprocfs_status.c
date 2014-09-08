@@ -751,7 +751,7 @@ int lprocfs_rd_import(struct seq_file *m, void *data)
 		      ret.lc_sum, header->lc_units);
 
 	k = 0;
-	for(j = 0; j < IMP_AT_MAX_PORTALS; j++) {
+	for (j = 0; j < IMP_AT_MAX_PORTALS; j++) {
 		if (imp->imp_at.iat_portal[j] == 0)
 			break;
 		k = max_t(unsigned int, k,
@@ -883,7 +883,7 @@ int lprocfs_rd_timeouts(struct seq_file *m, void *data)
 		       "network", cur, worst, worstt, DHMS_VARS(&ts));
 	lprocfs_at_hist_helper(m, &imp->imp_at.iat_net_latency);
 
-	for(i = 0; i < IMP_AT_MAX_PORTALS; i++) {
+	for (i = 0; i < IMP_AT_MAX_PORTALS; i++) {
 		if (imp->imp_at.iat_portal[i] == 0)
 			break;
 		cur = at_get(&imp->imp_at.iat_service_estimate[i]);
@@ -927,7 +927,7 @@ EXPORT_SYMBOL(lprocfs_rd_num_exports);
 
 int lprocfs_rd_numrefs(struct seq_file *m, void *data)
 {
-	struct obd_type *class = (struct obd_type*) data;
+	struct obd_type *class = (struct obd_type *) data;
 
 	LASSERT(class != NULL);
 	return seq_printf(m, "%d\n", class->typ_refcnt);
@@ -947,7 +947,8 @@ int lprocfs_obd_setup(struct obd_device *obd, struct lprocfs_vars *list)
 					       list, obd);
 	if (IS_ERR(obd->obd_proc_entry)) {
 		rc = PTR_ERR(obd->obd_proc_entry);
-		CERROR("error %d setting up lprocfs for %s\n",rc,obd->obd_name);
+		CERROR("error %d setting up lprocfs for %s\n",
+		       rc, obd->obd_name);
 		obd->obd_proc_entry = NULL;
 	}
 	return rc;
@@ -1572,7 +1573,10 @@ lproc_exp_hash_seq_show(struct seq_file *m, void *unused)
 {
 	struct nid_stat *stats = (struct nid_stat *)m->private;
 	struct obd_device *obd = stats->nid_obd;
-	struct exp_hash_cb_data cb_data = {m, true};
+	struct exp_hash_cb_data cb_data = {
+		.m = m,
+		.first = true
+	};
 
 	cfs_hash_for_each_key(obd->obd_nid_hash, &stats->nid,
 			      lprocfs_exp_print_hash, &cb_data);
@@ -1593,7 +1597,7 @@ static int lprocfs_nid_stats_clear_write_cb(void *obj, void *data)
 {
 	struct nid_stat *stat = obj;
 
-	CDEBUG(D_INFO,"refcnt %d\n", atomic_read(&stat->nid_exp_ref_count));
+	CDEBUG(D_INFO, "refcnt %d\n", atomic_read(&stat->nid_exp_ref_count));
 	if (atomic_read(&stat->nid_exp_ref_count) == 1) {
 		/* object has only hash references. */
 		spin_lock(&stat->nid_obd->obd_nid_lock);
@@ -1741,7 +1745,7 @@ int lprocfs_exp_cleanup(struct obd_export *exp)
 {
 	struct nid_stat *stat = exp->exp_nid_stats;
 
-	if(!stat || !exp->exp_obd)
+	if (!stat || !exp->exp_obd)
 		return 0;
 
 	nidstat_putref(exp->exp_nid_stats);
@@ -1783,7 +1787,8 @@ int lprocfs_seq_read_frac_helper(struct seq_file *m, long val, int mult)
 }
 EXPORT_SYMBOL(lprocfs_seq_read_frac_helper);
 
-int lprocfs_write_u64_helper(const char *buffer, unsigned long count,__u64 *val)
+int lprocfs_write_u64_helper(const char *buffer, unsigned long count,
+			     __u64 *val)
 {
 	return lprocfs_write_frac_u64_helper(buffer, count, val, 1);
 }
@@ -1828,7 +1833,7 @@ int lprocfs_write_frac_u64_helper(const char *buffer, unsigned long count,
 	}
 
 	units = 1;
-	switch(*end) {
+	switch (*end) {
 	case 'p': case 'P':
 		units <<= 10;
 	case 't': case 'T':
@@ -1922,8 +1927,8 @@ int lprocfs_obd_seq_create(struct obd_device *dev,
 			   const struct file_operations *seq_fops,
 			   void *data)
 {
-	return (lprocfs_seq_create(dev->obd_proc_entry, name,
-				   mode, seq_fops, data));
+	return lprocfs_seq_create(dev->obd_proc_entry, name,
+				  mode, seq_fops, data);
 }
 EXPORT_SYMBOL(lprocfs_obd_seq_create);
 
