@@ -1896,7 +1896,7 @@ static irqreturn_t adsp2_irq(int irq, void *data)
 	struct wm5102_priv *wm5102 = data;
 
 	if (wm5102->core.arizona->pdata.ez2ctrl_trigger &&
-	    wm5102->core.adsp[0].fw_id == 0x5f003)
+	    wm5102->core.adsp[0].fw_features.ez2control_trigger)
 		wm5102->core.arizona->pdata.ez2ctrl_trigger();
 
 	return IRQ_HANDLED;

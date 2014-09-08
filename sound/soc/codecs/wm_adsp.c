@@ -2000,6 +2000,31 @@ int wm_adsp1_init(struct wm_adsp *adsp)
 }
 EXPORT_SYMBOL_GPL(wm_adsp1_init);
 
+static int wm_adsp_get_features(struct wm_adsp *dsp)
+{
+	memset(&dsp->fw_features, 0, sizeof(dsp->fw_features));
+
+	switch (dsp->fw_id) {
+	case 0x4000d:
+	case 0x40036:
+	case 0x5f003:
+	case 0x7000d:
+	case 0x70036:
+		dsp->fw_features.ez2control_trigger = true;
+		break;
+	case 0x40019:
+	case 0x4001f:
+	case 0x5001f:
+	case 0x7001f:
+		dsp->fw_features.shutdown = true;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+
 int wm_adsp1_event(struct snd_soc_dapm_widget *w,
 		   struct snd_kcontrol *kcontrol,
 		   int event)
@@ -2219,6 +2244,11 @@ static void wm_adsp2_boot_work(struct work_struct *work)
 	if (ret != 0)
 		goto err;
 
+	/* Check firmware features */
+	ret = wm_adsp_get_features(dsp);
+	if (ret != 0)
+		goto err;
+
 	dsp->running = true;
 
 	return;
@@ -2318,16 +2348,8 @@ int wm_adsp2_event(struct snd_soc_dapm_widget *w,
 		break;
 
 	case SND_SOC_DAPM_PRE_PMD:
-		switch (dsp->fw_id) {
-		case 0x40019:
-		case 0x4001f:
-		case 0x5001f:
-		case 0x7001f:
+		if (dsp->fw_features.shutdown)
 			wm_adsp_edac_shutdown(dsp);
-			break;
-		default:
-			break;
-		}
 
 		dsp->running = false;
 

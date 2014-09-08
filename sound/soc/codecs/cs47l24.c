@@ -1105,8 +1105,7 @@ static irqreturn_t adsp2_irq(int irq, void *data)
 	mutex_lock(&cs47l24->compr_info.lock);
 
 	if (!cs47l24->compr_info.trig &&
-	    (cs47l24->core.adsp[2].fw_id == 0x7000d ||
-	    cs47l24->core.adsp[2].fw_id == 0x70036) &&
+	    cs47l24->core.adsp[2].fw_features.ez2control_trigger &&
 	    cs47l24->core.adsp[2].running) {
 		if (cs47l24->core.arizona->pdata.ez2ctrl_trigger)
 			cs47l24->core.arizona->pdata.ez2ctrl_trigger();

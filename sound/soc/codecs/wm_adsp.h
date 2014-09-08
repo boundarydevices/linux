@@ -66,6 +66,11 @@ struct wm_adsp_fw_defs {
 	struct wm_adsp_fw_caps *caps;
 };
 
+struct wm_adsp_fw_features {
+	bool shutdown:1;
+	bool ez2control_trigger:1;
+};
+
 struct wm_adsp {
 	const char *part;
 	int num;
@@ -110,6 +115,8 @@ struct wm_adsp {
 
 	int num_firmwares;
 	struct wm_adsp_fw_defs *firmwares;
+
+	struct wm_adsp_fw_features fw_features;
 
 	struct mutex *fw_lock;
 	struct work_struct boot_work;
