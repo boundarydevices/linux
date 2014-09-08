@@ -849,6 +849,7 @@ static void init_sb_info(struct f2fs_sb_info *sbi)
 		atomic_set(&sbi->nr_pages[i], 0);
 
 	sbi->dir_level = DEF_DIR_LEVEL;
+	sbi->need_fsck = false;
 }
 
 /*
@@ -1081,6 +1082,9 @@ try_onemore:
 							"%s", sb->s_id);
 	if (err)
 		goto free_proc;
+
+	if (!retry)
+		sbi->need_fsck = true;
 
 	/* recover fsynced data */
 	if (!test_opt(sbi, DISABLE_ROLL_FORWARD)) {
