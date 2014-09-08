@@ -13,6 +13,7 @@
 #include <linux/list_sort.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/gfp.h>
 #include "ext4.h"
 #include "extents_status.h"
 
@@ -1189,10 +1190,10 @@ int ext4_es_register_shrinker(struct ext4_sb_info *sbi)
 	sbi->s_es_stats.es_stats_cache_misses = 0;
 	sbi->s_es_stats.es_stats_scan_time = 0;
 	sbi->s_es_stats.es_stats_max_scan_time = 0;
-	err = percpu_counter_init(&sbi->s_es_stats.es_stats_all_cnt, 0);
+	err = percpu_counter_init(&sbi->s_es_stats.es_stats_all_cnt, 0, GFP_KERNEL);
 	if (err)
 		return err;
-	err = percpu_counter_init(&sbi->s_es_stats.es_stats_lru_cnt, 0);
+	err = percpu_counter_init(&sbi->s_es_stats.es_stats_lru_cnt, 0, GFP_KERNEL);
 	if (err)
 		goto err1;
 
