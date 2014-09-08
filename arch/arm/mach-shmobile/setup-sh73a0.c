@@ -40,6 +40,7 @@
 
 #include "common.h"
 #include "dma-register.h"
+#include "intc.h"
 #include "irqs.h"
 #include "sh73a0.h"
 
@@ -746,7 +747,7 @@ void __init sh73a0_add_standard_devices(void)
 
 void __init sh73a0_init_delay(void)
 {
-	shmobile_setup_delay(1196, 44, 46); /* Cortex-A9 @ 1196MHz */
+	shmobile_init_delay();
 }
 
 /* do nothing for !CONFIG_SMP or !CONFIG_HAVE_TWD */
@@ -775,17 +776,12 @@ void __init sh73a0_add_early_devices(void)
 
 void __init sh73a0_add_standard_devices_dt(void)
 {
-	struct platform_device_info devinfo = { .name = "cpufreq-cpu0", .id = -1, };
-
 	/* clocks are setup late during boot in the case of DT */
 	sh73a0_clock_init();
 
 	platform_add_devices(sh73a0_devices_dt,
 			     ARRAY_SIZE(sh73a0_devices_dt));
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
-
-	/* Instantiate cpufreq-cpu0 */
-	platform_device_register_full(&devinfo);
 }
 
 static const char *sh73a0_boards_compat_dt[] __initdata = {
@@ -797,8 +793,8 @@ DT_MACHINE_START(SH73A0_DT, "Generic SH73A0 (Flattened Device Tree)")
 	.smp		= smp_ops(sh73a0_smp_ops),
 	.map_io		= sh73a0_map_io,
 	.init_early	= sh73a0_init_delay,
-	.nr_irqs	= NR_IRQS_LEGACY,
 	.init_machine	= sh73a0_add_standard_devices_dt,
+	.init_late	= shmobile_init_late,
 	.dt_compat	= sh73a0_boards_compat_dt,
 MACHINE_END
 #endif /* CONFIG_USE_OF */

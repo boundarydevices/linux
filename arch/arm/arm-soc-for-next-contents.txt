@@ -1,0 +1,87 @@
+
+next/fixes-non-critical
+	davinci/board
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci.git tags/davinci-for-v3.18/board
+	patch
+		ARM: cns3xxx: fix allmodconfig panic in pci driver
+	renesas/maintainers
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-maintainers-for-v3.18
+
+next/cleanup
+	patch
+		ARM: clps711x: Switch CLPS711X subarch to use clk and clocksource driver
+	msm-cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson.git tags/msm-cleanup-for-arm-soc
+	renesas/kconfig-cleanups
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-kconfig-cleanups-for-v3.18
+	at91/cleanup
+		git://github.com/at91linux/linux-at91.git tags/at91-cleanup
+
+next/soc
+	patch
+		ARM: clps711x: Add SOC BUS support
+		ARM: clps711x: edb7211: Use new PWM driver for backlight
+	renesas/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-soc-for-v3.18
+	renesas/init-delay
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-init-delay-for-v3.18
+	renesas/soc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-soc2-for-v3.18
+	renesas/r8a7740-ccf-and-timers
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-r8a7740-ccf-and-timers-for-v3.18
+	renesas/dt-timers
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-dt-timers-for-v3.18
+	renesas/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-cleanup-for-v3.18
+	renesas/clk
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-clk-for-v3.18
+	integrator/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator.git tags/integrator-for-v3.18-1
+
+next/boards
+	renesas/boards
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-boards-for-v3.18
+
+next/dt
+	rockchip/dts1
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip.git tags/v3.15-rockchip-fixes1
+	rockchip/dma
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip.git tags/v3.18-rockchip-dma
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-dt-for-v3.18
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-dt2-for-v3.18
+	renesas/dt3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-dt3-for-v3.18
+	at91/dt
+		git://github.com/at91linux/linux-at91.git tags/at91-dt
+	at91/dt2
+		git://github.com/at91linux/linux-at91.git tags/at91-dt2
+	davinci/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci.git tags/davinci-for-v3.18/dt
+
+next/drivers
+	at91/drivers
+		git://github.com/at91linux/linux-at91.git tags/at91-drivers2
+
+next/defconfig
+	patch
+		ARM: multi_v7_defconfig: Enable Zynq/Xilinx drivers
+		ARM: configs: Enable cpufreq-cpu0 for multi_v7_defconfig
+		ARM: configs: Remove REGULATOR_VIRTUAL_CONSUMER from defconfigs
+	renesas/defconfig3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas renesas-defconfig3-for-v3.18
+	at91/defconfig
+		git://github.com/at91linux/linux-at91.git tags/at91-defconfig
+
+fixes
+	<no branch> (3bc4d037c6791c5089a04845995410aac4fdb514)
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-3.17
+	patch
+		ARM: dts: Enable PMIC interrupts on ODROID
+		ARM: dts: ODROID i2c improvements
+	<no branch> (495bccf3917b04c6727d720b56620e265c693ace)
+		git://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-3.17-2
+	patch
+		ARM: edma: Fix configuration parsing for SoCs with multiple eDMA3 CC
+
