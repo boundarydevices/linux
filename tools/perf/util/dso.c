@@ -37,6 +37,7 @@ int dso__read_binary_type_filename(const struct dso *dso,
 {
 	char build_id_hex[BUILD_ID_SIZE * 2 + 1];
 	int ret = 0;
+	size_t len;
 
 	switch (type) {
 	case DSO_BINARY_TYPE__DEBUGLINK: {
@@ -60,26 +61,25 @@ int dso__read_binary_type_filename(const struct dso *dso,
 		break;
 
 	case DSO_BINARY_TYPE__FEDORA_DEBUGINFO:
-		snprintf(filename, size, "%s/usr/lib/debug%s.debug",
-			 symbol_conf.symfs, dso->long_name);
+		len = __symbol__join_symfs(filename, size, "/usr/lib/debug");
+		snprintf(filename + len, size - len, "%s.debug", dso->long_name);
 		break;
 
 	case DSO_BINARY_TYPE__UBUNTU_DEBUGINFO:
-		snprintf(filename, size, "%s/usr/lib/debug%s",
-			 symbol_conf.symfs, dso->long_name);
+		len = __symbol__join_symfs(filename, size, "/usr/lib/debug");
+		snprintf(filename + len, size - len, "%s", dso->long_name);
 		break;
 
 	case DSO_BINARY_TYPE__OPENEMBEDDED_DEBUGINFO:
 	{
 		const char *last_slash;
-		size_t len;
 		size_t dir_size;
 
 		last_slash = dso->long_name + dso->long_name_len;
 		while (last_slash != dso->long_name && *last_slash != '/')
 			last_slash--;
 
-		len = scnprintf(filename, size, "%s", symbol_conf.symfs);
+		len = __symbol__join_symfs(filename, size, "");
 		dir_size = last_slash - dso->long_name + 2;
 		if (dir_size > (size - len)) {
 			ret = -1;
@@ -100,26 +100,24 @@ int dso__read_binary_type_filename(const struct dso *dso,
 		build_id__sprintf(dso->build_id,
 				  sizeof(dso->build_id),
 				  build_id_hex);
-		snprintf(filename, size,
-			 "%s/usr/lib/debug/.build-id/%.2s/%s.debug",
-			 symbol_conf.symfs, build_id_hex, build_id_hex + 2);
+		len = __symbol__join_symfs(filename, size, "/usr/lib/debug/.build-id/");
+		snprintf(filename + len, size - len, "%.2s/%s.debug",
+			 build_id_hex, build_id_hex + 2);
 		break;
 
 	case DSO_BINARY_TYPE__VMLINUX:
 	case DSO_BINARY_TYPE__GUEST_VMLINUX:
 	case DSO_BINARY_TYPE__SYSTEM_PATH_DSO:
-		snprintf(filename, size, "%s%s",
-			 symbol_conf.symfs, dso->long_name);
+		__symbol__join_symfs(filename, size, dso->long_name);
 		break;
 
 	case DSO_BINARY_TYPE__GUEST_KMODULE:
-		snprintf(filename, size, "%s%s%s", symbol_conf.symfs,
-			 root_dir, dso->long_name);
+		path__join3(filename, size, symbol_conf.symfs,
+			    root_dir, dso->long_name);
 		break;
 
 	case DSO_BINARY_TYPE__SYSTEM_PATH_KMODULE:
-		snprintf(filename, size, "%s%s", symbol_conf.symfs,
-			 dso->long_name);
+		__symbol__join_symfs(filename, size, dso->long_name);
 		break;
 
 	case DSO_BINARY_TYPE__KCORE:
@@ -164,13 +162,15 @@ static void close_first_dso(void);
 static int do_open(char *name)
 {
 	int fd;
+	char sbuf[STRERR_BUFSIZE];
 
 	do {
 		fd = open(name, O_RDONLY);
 		if (fd >= 0)
 			return fd;
 
-		pr_debug("dso open failed, mmap: %s\n", strerror(errno));
+		pr_debug("dso open failed, mmap: %s\n",
+			 strerror_r(errno, sbuf, sizeof(sbuf)));
 		if (!dso__data_open_cnt || errno != EMFILE)
 			break;
 
@@ -532,10 +532,12 @@ static ssize_t cached_read(struct dso *dso, u64 offset, u8 *data, ssize_t size)
 static int data_file_size(struct dso *dso)
 {
 	struct stat st;
+	char sbuf[STRERR_BUFSIZE];
 
 	if (!dso->data.file_size) {
 		if (fstat(dso->data.fd, &st)) {
-			pr_err("dso mmap failed, fstat: %s\n", strerror(errno));
+			pr_err("dso mmap failed, fstat: %s\n",
+				strerror_r(errno, sbuf, sizeof(sbuf)));
 			return -1;
 		}
 		dso->data.file_size = st.st_size;
