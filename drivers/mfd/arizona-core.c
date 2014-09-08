@@ -534,7 +534,11 @@ EXPORT_SYMBOL_GPL(arizona_of_get_named_gpio);
 static int arizona_of_get_core_pdata(struct arizona *arizona)
 {
 	struct arizona_pdata *pdata = &arizona->pdata;
+	struct property *prop;
+	const __be32 *cur;
+	u32 val;
 	int ret, i;
+	int count = 0;
 
 	pdata->reset = arizona_of_get_named_gpio(arizona, "wlf,reset", true);
 
@@ -558,6 +562,15 @@ static int arizona_of_get_core_pdata(struct arizona *arizona)
 	} else {
 		dev_err(arizona->dev, "Failed to parse GPIO defaults: %d\n",
 			ret);
+	}
+
+	of_property_for_each_u32(arizona->dev->of_node, "wlf,inmode", prop,
+				 cur, val) {
+		if (count == ARRAY_SIZE(arizona->pdata.inmode))
+			break;
+
+		arizona->pdata.inmode[count] = val;
+		count++;
 	}
 
 	return 0;
@@ -784,7 +797,8 @@ int arizona_dev_init(struct arizona *arizona)
 	/* Ensure device startup is complete */
 	switch (arizona->type) {
 	case WM5102:
-		ret = regmap_read(arizona->regmap, 0x19, &val);
+		ret = regmap_read(arizona->regmap,
+				  ARIZONA_WRITE_SEQUENCER_CTRL_3, &val);
 		if (ret != 0)
 			dev_err(dev,
 				"Failed to check write sequencer state: %d\n",
