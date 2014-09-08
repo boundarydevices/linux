@@ -129,7 +129,8 @@ int vcpu_load(struct kvm_vcpu *vcpu)
 		struct pid *oldpid = vcpu->pid;
 		struct pid *newpid = get_task_pid(current, PIDTYPE_PID);
 		rcu_assign_pointer(vcpu->pid, newpid);
-		synchronize_rcu();
+		if (oldpid)
+			synchronize_rcu();
 		put_pid(oldpid);
 	}
 	cpu = get_cpu();
@@ -707,7 +708,7 @@ static int check_memory_region_flags(struct kvm_userspace_memory_region *mem)
 {
 	u32 valid_flags = KVM_MEM_LOG_DIRTY_PAGES;
 
-#ifdef KVM_CAP_READONLY_MEM
+#ifdef __KVM_HAVE_READONLY_MEM
 	valid_flags |= KVM_MEM_READONLY;
 #endif
 
@@ -2668,7 +2669,7 @@ static void hardware_enable_nolock(void *junk)
 
 	cpumask_set_cpu(cpu, cpus_hardware_enabled);
 
-	r = kvm_arch_hardware_enable(NULL);
+	r = kvm_arch_hardware_enable();
 
 	if (r) {
 		cpumask_clear_cpu(cpu, cpus_hardware_enabled);
@@ -2693,7 +2694,7 @@ static void hardware_disable_nolock(void *junk)
 	if (!cpumask_test_cpu(cpu, cpus_hardware_enabled))
 		return;
 	cpumask_clear_cpu(cpu, cpus_hardware_enabled);
-	kvm_arch_hardware_disable(NULL);
+	kvm_arch_hardware_disable();
 }
 
 static void hardware_disable(void)
@@ -3122,6 +3123,8 @@ static void kvm_sched_in(struct preempt_notifier *pn, int cpu)
 	struct kvm_vcpu *vcpu = preempt_notifier_to_vcpu(pn);
 	if (vcpu->preempted)
 		vcpu->preempted = false;
+
+	kvm_arch_sched_in(vcpu, cpu);
 
 	kvm_arch_vcpu_load(vcpu, cpu);
 }
