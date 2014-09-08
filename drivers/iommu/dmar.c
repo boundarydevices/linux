@@ -247,7 +247,7 @@ int dmar_remove_dev_scope(struct dmar_pci_notify_info *info, u16 segment,
 
 	for_each_active_dev_scope(devices, count, index, tmp)
 		if (tmp == &info->dev->dev) {
-			rcu_assign_pointer(devices[index].dev, NULL);
+			RCU_INIT_POINTER(devices[index].dev, NULL);
 			synchronize_rcu();
 			put_device(tmp);
 			return 1;
@@ -678,8 +678,7 @@ static int __init dmar_acpi_dev_scope_init(void)
 				       andd->device_name);
 				continue;
 			}
-			acpi_bus_get_device(h, &adev);
-			if (!adev) {
+			if (acpi_bus_get_device(h, &adev)) {
 				pr_err("Failed to get device for ACPI object %s\n",
 				       andd->device_name);
 				continue;
