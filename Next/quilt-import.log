@@ -1,0 +1,21 @@
+Importing jdelvare-hwmon based on 3.15-rc7
+Unchanged quilt series jdelvare-hwmon
+Importing rd-docs based on 3.17-rc1
+$ git clone -s -l -n -q . ../quilt-tmp
+$ cd ../quilt-tmp
+$ git reset --hard 7d1311b93e58ed55f3a31cc8f94c4b8fe988a2b9
+HEAD is now at 7d1311b93e58 Linux 3.17-rc1
+$ git am --patch-format=mbox ../quilt/rd-docs/001-docum-use-subdiry-avoid-builtin.patch
+Applying: Documentation: use subdir-y to avoid unnecessary built-in.o files
+$ git am --patch-format=mbox ../quilt/rd-docs/002-docum-add-make-more-targets.patch
+Applying: Documentation: add makefiles for more targets
+$ git am --patch-format=mbox ../quilt/rd-docs/003-docum-funcs-static.patch
+Applying: Documentation: make functions static to avoid prototype warnings
+$ git am --patch-format=mbox ../quilt/rd-docs/004-docum-misc-warnings.patch
+Applying: Documentation: fix misc. warnings
+$ git am --patch-format=mbox ../quilt/rd-docs/media-v4l2-pci-skel-dep-pci.patch
+Applying: v4l2-pci-skeleton: Only build if PCI is available
+$ cd /home/sfr/kernels/next/next
+$ git fetch -f ../quilt-tmp master:rd-docs/master
+From ../quilt-tmp
+ + 1f65b1aaaa0a...51243a99459f master     -> rd-docs/master  (forced update)
