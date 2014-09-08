@@ -188,7 +188,7 @@ nfsd4_create_clid_dir(struct nfs4_client *clp)
 
 	status = mnt_want_write_file(nn->rec_file);
 	if (status)
-		return;
+		goto out_creds;
 
 	dir = nn->rec_file->f_path.dentry;
 	/* lock the parent */
@@ -228,6 +228,7 @@ out_unlock:
 				user_recovery_dirname);
 	}
 	mnt_drop_write_file(nn->rec_file);
+out_creds:
 	nfs4_reset_creds(original_cred);
 }
 
@@ -479,6 +480,16 @@ nfsd4_init_recdir(struct net *net)
 	return status;
 }
 
+static void
+nfsd4_shutdown_recdir(struct net *net)
+{
+	struct nfsd_net *nn = net_generic(net, nfsd_net_id);
+
+	if (!nn->rec_file)
+		return;
+	fput(nn->rec_file);
+	nn->rec_file = NULL;
+}
 
 static int
 nfs4_legacy_state_init(struct net *net)
@@ -512,10 +523,13 @@ nfsd4_load_reboot_recovery_data(struct net *net)
 	int status;
 
 	status = nfsd4_init_recdir(net);
-	if (!status)
-		status = nfsd4_recdir_load(net);
 	if (status)
-		printk(KERN_ERR "NFSD: Failure reading reboot recovery data\n");
+		return status;
+
+	status = nfsd4_recdir_load(net);
+	if (status)
+		nfsd4_shutdown_recdir(net);
+
 	return status;
 }
 
@@ -546,21 +560,12 @@ err:
 }
 
 static void
-nfsd4_shutdown_recdir(struct nfsd_net *nn)
-{
-	if (!nn->rec_file)
-		return;
-	fput(nn->rec_file);
-	nn->rec_file = NULL;
-}
-
-static void
 nfsd4_legacy_tracking_exit(struct net *net)
 {
 	struct nfsd_net *nn = net_generic(net, nfsd_net_id);
 
 	nfs4_release_reclaim(nn);
-	nfsd4_shutdown_recdir(nn);
+	nfsd4_shutdown_recdir(net);
 	nfs4_legacy_state_shutdown(net);
 }
 
