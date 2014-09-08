@@ -42,7 +42,8 @@ struct mmc_csd {
 	unsigned int		read_partial:1,
 				read_misalign:1,
 				write_partial:1,
-				write_misalign:1;
+				write_misalign:1,
+				dsr_imp:1;
 };
 
 struct mmc_ext_csd {
@@ -214,11 +215,12 @@ enum mmc_blk_status {
 };
 
 /* The number of MMC physical partitions.  These consist of:
- * boot partitions (2), general purpose partitions (4) in MMC v4.4.
+ * boot partitions (2), general purpose partitions (4) and
+ * RPMB partition (1) in MMC v4.4.
  */
 #define MMC_NUM_BOOT_PARTITION	2
 #define MMC_NUM_GP_PARTITION	4
-#define MMC_NUM_PHY_PARTITION	6
+#define MMC_NUM_PHY_PARTITION	7
 #define MAX_MMC_PART_NAME_LEN	20
 
 /*

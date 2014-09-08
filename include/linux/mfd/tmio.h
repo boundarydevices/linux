@@ -83,6 +83,27 @@
  */
 #define TMIO_MMC_HAVE_HIGH_REG		(1 << 6)
 
+/*
+ * Some controllers have CMD12 automatically
+ * issue/non-issue register
+ */
+#define TMIO_MMC_HAVE_CMD12_CTRL	(1 << 7)
+
+/*
+ * Some controllers needs to set 1 on SDIO status reserved bits
+ */
+#define TMIO_MMC_SDIO_STATUS_QUIRK	(1 << 8)
+
+/*
+ * Some controllers have DMA enable/disable register
+ */
+#define TMIO_MMC_HAVE_CTL_DMA_REG	(1 << 9)
+
+/*
+ * Some controllers allows to set SDx actual clock
+ */
+#define TMIO_MMC_CLK_ACTUAL		(1 << 10)
+
 int tmio_core_mmc_enable(void __iomem *cnf, int shift, unsigned long base);
 int tmio_core_mmc_resume(void __iomem *cnf, int shift, unsigned long base);
 void tmio_core_mmc_pwr(void __iomem *cnf, int shift, int state);
@@ -96,6 +117,7 @@ struct tmio_mmc_dma {
 	int slave_id_tx;
 	int slave_id_rx;
 	int alignment_shift;
+	dma_addr_t dma_rx_offset;
 	bool (*filter)(struct dma_chan *chan, void *arg);
 };
 
