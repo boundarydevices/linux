@@ -590,19 +590,11 @@ found:
 	/*
 	 * New blocks allocate and/or writing to unwritten extent
 	 * will possibly result in updating i_data, so we take
-	 * the write lock of i_data_sem, and call get_blocks()
+	 * the write lock of i_data_sem, and call get_block()
 	 * with create == 1 flag.
 	 */
 	down_write(&EXT4_I(inode)->i_data_sem);
 
-	/*
-	 * if the caller is from delayed allocation writeout path
-	 * we have already reserved fs blocks for allocation
-	 * let the underlying get_block() function know to
-	 * avoid double accounting
-	 */
-	if (flags & EXT4_GET_BLOCKS_DELALLOC_RESERVE)
-		ext4_set_inode_state(inode, EXT4_STATE_DELALLOC_RESERVED);
 	/*
 	 * We need to check for EXT4 here because migrate
 	 * could have changed the inode type in between
@@ -631,8 +623,6 @@ found:
 			(flags & EXT4_GET_BLOCKS_DELALLOC_RESERVE))
 			ext4_da_update_reserve_space(inode, retval, 1);
 	}
-	if (flags & EXT4_GET_BLOCKS_DELALLOC_RESERVE)
-		ext4_clear_inode_state(inode, EXT4_STATE_DELALLOC_RESERVED);
 
 	if (retval > 0) {
 		unsigned int status;
@@ -734,11 +724,11 @@ int ext4_get_block(struct inode *inode, sector_t iblock,
  * `handle' can be NULL if create is zero
  */
 struct buffer_head *ext4_getblk(handle_t *handle, struct inode *inode,
-				ext4_lblk_t block, int create, int *errp)
+				ext4_lblk_t block, int create)
 {
 	struct ext4_map_blocks map;
 	struct buffer_head *bh;
-	int fatal = 0, err;
+	int err;
 
 	J_ASSERT(handle != NULL || create == 0);
 
@@ -747,21 +737,14 @@ struct buffer_head *ext4_getblk(handle_t *handle, struct inode *inode,
 	err = ext4_map_blocks(handle, inode, &map,
 			      create ? EXT4_GET_BLOCKS_CREATE : 0);
 
-	/* ensure we send some value back into *errp */
-	*errp = 0;
-
-	if (create && err == 0)
-		err = -ENOSPC;	/* should never happen */
+	if (err == 0)
+		return create ? ERR_PTR(-ENOSPC) : NULL;
 	if (err < 0)
-		*errp = err;
-	if (err <= 0)
-		return NULL;
+		return ERR_PTR(err);
 
 	bh = sb_getblk(inode->i_sb, map.m_pblk);
-	if (unlikely(!bh)) {
-		*errp = -ENOMEM;
-		return NULL;
-	}
+	if (unlikely(!bh))
+		return ERR_PTR(-ENOMEM);
 	if (map.m_flags & EXT4_MAP_NEW) {
 		J_ASSERT(create != 0);
 		J_ASSERT(handle != NULL);
@@ -775,44 +758,44 @@ struct buffer_head *ext4_getblk(handle_t *handle, struct inode *inode,
 		 */
 		lock_buffer(bh);
 		BUFFER_TRACE(bh, "call get_create_access");
-		fatal = ext4_journal_get_create_access(handle, bh);
-		if (!fatal && !buffer_uptodate(bh)) {
+		err = ext4_journal_get_create_access(handle, bh);
+		if (unlikely(err)) {
+			unlock_buffer(bh);
+			goto errout;
+		}
+		if (!buffer_uptodate(bh)) {
 			memset(bh->b_data, 0, inode->i_sb->s_blocksize);
 			set_buffer_uptodate(bh);
 		}
 		unlock_buffer(bh);
 		BUFFER_TRACE(bh, "call ext4_handle_dirty_metadata");
 		err = ext4_handle_dirty_metadata(handle, inode, bh);
-		if (!fatal)
-			fatal = err;
-	} else {
+		if (unlikely(err))
+			goto errout;
+	} else
 		BUFFER_TRACE(bh, "not a new buffer");
-	}
-	if (fatal) {
-		*errp = fatal;
-		brelse(bh);
-		bh = NULL;
-	}
 	return bh;
+errout:
+	brelse(bh);
+	return ERR_PTR(err);
 }
 
 struct buffer_head *ext4_bread(handle_t *handle, struct inode *inode,
-			       ext4_lblk_t block, int create, int *err)
+			       ext4_lblk_t block, int create)
 {
 	struct buffer_head *bh;
 
-	bh = ext4_getblk(handle, inode, block, create, err);
-	if (!bh)
+	bh = ext4_getblk(handle, inode, block, create);
+	if (IS_ERR(bh))
 		return bh;
-	if (buffer_uptodate(bh))
+	if (!bh || buffer_uptodate(bh))
 		return bh;
 	ll_rw_block(READ | REQ_META | REQ_PRIO, 1, &bh);
 	wait_on_buffer(bh);
 	if (buffer_uptodate(bh))
 		return bh;
 	put_bh(bh);
-	*err = -EIO;
-	return NULL;
+	return ERR_PTR(-EIO);
 }
 
 int ext4_walk_page_buffers(handle_t *handle,
@@ -1536,7 +1519,7 @@ out_unlock:
 }
 
 /*
- * This is a special get_blocks_t callback which is used by
+ * This is a special get_block_t callback which is used by
  * ext4_da_write_begin().  It will either return mapped block or
  * reserve space for a single block.
  *
@@ -2011,12 +1994,10 @@ static int mpage_map_one_extent(handle_t *handle, struct mpage_da_data *mpd)
 	 * in data loss.  So use reserved blocks to allocate metadata if
 	 * possible.
 	 *
-	 * We pass in the magic EXT4_GET_BLOCKS_DELALLOC_RESERVE if the blocks
-	 * in question are delalloc blocks.  This affects functions in many
-	 * different parts of the allocation call path.  This flag exists
-	 * primarily because we don't want to change *many* call functions, so
-	 * ext4_map_blocks() will set the EXT4_STATE_DELALLOC_RESERVED flag
-	 * once the inode's allocation semaphore is taken.
+	 * We pass in the magic EXT4_GET_BLOCKS_DELALLOC_RESERVE if
+	 * the blocks in question are delalloc blocks.  This indicates
+	 * that the blocks and quotas has already been checked when
+	 * the data was copied into the page cache.
 	 */
 	get_blocks_flags = EXT4_GET_BLOCKS_CREATE |
 			   EXT4_GET_BLOCKS_METADATA_NOFAIL;
@@ -2658,10 +2639,7 @@ static int ext4_da_write_end(struct file *file,
 	if (copied && new_i_size > EXT4_I(inode)->i_disksize) {
 		if (ext4_has_inline_data(inode) ||
 		    ext4_da_should_update_i_disksize(page, end)) {
-			down_write(&EXT4_I(inode)->i_data_sem);
-			if (new_i_size > EXT4_I(inode)->i_disksize)
-				EXT4_I(inode)->i_disksize = new_i_size;
-			up_write(&EXT4_I(inode)->i_data_sem);
+			ext4_update_i_disksize(inode, new_i_size);
 			/* We need to mark inode dirty even if
 			 * new_i_size is less that inode->i_size
 			 * bu greater than i_disksize.(hint delalloc)
