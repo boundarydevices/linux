@@ -230,8 +230,12 @@ void locks_release_private(struct file_lock *fl)
 			fl->fl_ops->fl_release_private(fl);
 		fl->fl_ops = NULL;
 	}
-	fl->fl_lmops = NULL;
 
+	if (fl->fl_lmops) {
+		if (fl->fl_lmops->lm_put_owner)
+			fl->fl_lmops->lm_put_owner(fl);
+		fl->fl_lmops = NULL;
+	}
 }
 EXPORT_SYMBOL_GPL(locks_release_private);
 
@@ -267,21 +271,10 @@ void locks_init_lock(struct file_lock *fl)
 
 EXPORT_SYMBOL(locks_init_lock);
 
-static void locks_copy_private(struct file_lock *new, struct file_lock *fl)
-{
-	if (fl->fl_ops) {
-		if (fl->fl_ops->fl_copy_lock)
-			fl->fl_ops->fl_copy_lock(new, fl);
-		new->fl_ops = fl->fl_ops;
-	}
-	if (fl->fl_lmops)
-		new->fl_lmops = fl->fl_lmops;
-}
-
 /*
  * Initialize a new lock from an existing file_lock structure.
  */
-void __locks_copy_lock(struct file_lock *new, const struct file_lock *fl)
+void locks_copy_conflock(struct file_lock *new, struct file_lock *fl)
 {
 	new->fl_owner = fl->fl_owner;
 	new->fl_pid = fl->fl_pid;
@@ -290,22 +283,30 @@ void __locks_copy_lock(struct file_lock *new, const struct file_lock *fl)
 	new->fl_type = fl->fl_type;
 	new->fl_start = fl->fl_start;
 	new->fl_end = fl->fl_end;
+	new->fl_lmops = fl->fl_lmops;
 	new->fl_ops = NULL;
-	new->fl_lmops = NULL;
+
+	if (fl->fl_lmops) {
+		if (fl->fl_lmops->lm_get_owner)
+			fl->fl_lmops->lm_get_owner(new, fl);
+	}
 }
-EXPORT_SYMBOL(__locks_copy_lock);
+EXPORT_SYMBOL(locks_copy_conflock);
 
 void locks_copy_lock(struct file_lock *new, struct file_lock *fl)
 {
 	/* "new" must be a freshly-initialized lock */
 	WARN_ON_ONCE(new->fl_ops);
 
-	__locks_copy_lock(new, fl);
+	locks_copy_conflock(new, fl);
+
 	new->fl_file = fl->fl_file;
 	new->fl_ops = fl->fl_ops;
-	new->fl_lmops = fl->fl_lmops;
 
-	locks_copy_private(new, fl);
+	if (fl->fl_ops) {
+		if (fl->fl_ops->fl_copy_lock)
+			fl->fl_ops->fl_copy_lock(new, fl);
+	}
 }
 
 EXPORT_SYMBOL(locks_copy_lock);
@@ -735,7 +736,7 @@ posix_test_lock(struct file *filp, struct file_lock *fl)
 			break;
 	}
 	if (cfl) {
-		__locks_copy_lock(fl, cfl);
+		locks_copy_conflock(fl, cfl);
 		if (cfl->fl_nspid)
 			fl->fl_pid = pid_vnr(cfl->fl_nspid);
 	} else
@@ -941,7 +942,7 @@ static int __posix_lock_file(struct inode *inode, struct file_lock *request, str
 			if (!posix_locks_conflict(request, fl))
 				continue;
 			if (conflock)
-				__locks_copy_lock(conflock, fl);
+				locks_copy_conflock(conflock, fl);
 			error = -EAGAIN;
 			if (!(request->fl_flags & FL_SLEEP))
 				goto out;
@@ -1981,11 +1982,13 @@ int fcntl_getlk(struct file *filp, unsigned int cmd, struct flock __user *l)
 	if (file_lock.fl_type != F_UNLCK) {
 		error = posix_lock_to_flock(&flock, &file_lock);
 		if (error)
-			goto out;
+			goto rel_priv;
 	}
 	error = -EFAULT;
 	if (!copy_to_user(l, &flock, sizeof(flock)))
 		error = 0;
+rel_priv:
+	locks_release_private(&file_lock);
 out:
 	return error;
 }
@@ -2206,7 +2209,8 @@ int fcntl_getlk64(struct file *filp, unsigned int cmd, struct flock64 __user *l)
 	error = -EFAULT;
 	if (!copy_to_user(l, &flock, sizeof(flock)))
 		error = 0;
-  
+
+	locks_release_private(&file_lock);
 out:
 	return error;
 }
@@ -2592,86 +2596,6 @@ static int __init proc_locks_init(void)
 }
 module_init(proc_locks_init);
 #endif
-
-/**
- *	lock_may_read - checks that the region is free of locks
- *	@inode: the inode that is being read
- *	@start: the first byte to read
- *	@len: the number of bytes to read
- *
- *	Emulates Windows locking requirements.  Whole-file
- *	mandatory locks (share modes) can prohibit a read and
- *	byte-range POSIX locks can prohibit a read if they overlap.
- *
- *	N.B. this function is only ever called
- *	from knfsd and ownership of locks is never checked.
- */
-int lock_may_read(struct inode *inode, loff_t start, unsigned long len)
-{
-	struct file_lock *fl;
-	int result = 1;
-
-	spin_lock(&inode->i_lock);
-	for (fl = inode->i_flock; fl != NULL; fl = fl->fl_next) {
-		if (IS_POSIX(fl)) {
-			if (fl->fl_type == F_RDLCK)
-				continue;
-			if ((fl->fl_end < start) || (fl->fl_start > (start + len)))
-				continue;
-		} else if (IS_FLOCK(fl)) {
-			if (!(fl->fl_type & LOCK_MAND))
-				continue;
-			if (fl->fl_type & LOCK_READ)
-				continue;
-		} else
-			continue;
-		result = 0;
-		break;
-	}
-	spin_unlock(&inode->i_lock);
-	return result;
-}
-
-EXPORT_SYMBOL(lock_may_read);
-
-/**
- *	lock_may_write - checks that the region is free of locks
- *	@inode: the inode that is being written
- *	@start: the first byte to write
- *	@len: the number of bytes to write
- *
- *	Emulates Windows locking requirements.  Whole-file
- *	mandatory locks (share modes) can prohibit a write and
- *	byte-range POSIX locks can prohibit a write if they overlap.
- *
- *	N.B. this function is only ever called
- *	from knfsd and ownership of locks is never checked.
- */
-int lock_may_write(struct inode *inode, loff_t start, unsigned long len)
-{
-	struct file_lock *fl;
-	int result = 1;
-
-	spin_lock(&inode->i_lock);
-	for (fl = inode->i_flock; fl != NULL; fl = fl->fl_next) {
-		if (IS_POSIX(fl)) {
-			if ((fl->fl_end < start) || (fl->fl_start > (start + len)))
-				continue;
-		} else if (IS_FLOCK(fl)) {
-			if (!(fl->fl_type & LOCK_MAND))
-				continue;
-			if (fl->fl_type & LOCK_WRITE)
-				continue;
-		} else
-			continue;
-		result = 0;
-		break;
-	}
-	spin_unlock(&inode->i_lock);
-	return result;
-}
-
-EXPORT_SYMBOL(lock_may_write);
 
 static int __init filelock_init(void)
 {
