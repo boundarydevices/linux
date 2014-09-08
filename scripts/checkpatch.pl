@@ -425,7 +425,9 @@ foreach my $entry (@mode_permission_funcs) {
 
 our $allowed_asm_includes = qr{(?x:
 	irq|
-	memory
+	memory|
+	time|
+	reboot
 )};
 # memory.h: ARM has a custom one
 
@@ -2133,7 +2135,10 @@ sub process {
 # Check for improperly formed commit descriptions
 		if ($in_commit_log &&
 		    $line =~ /\bcommit\s+[0-9a-f]{5,}/i &&
-		    $line !~ /\b[Cc]ommit [0-9a-f]{12,40} \("/) {
+		    !($line =~ /\b[Cc]ommit [0-9a-f]{12,40} \("/ ||
+		      ($line =~ /\b[Cc]ommit [0-9a-f]{12,40}\s*$/ &&
+		       defined $rawlines[$linenr] &&
+		       $rawlines[$linenr] =~ /^\s*\("/))) {
 			$line =~ /\b(c)ommit\s+([0-9a-f]{5,})/i;
 			my $init_char = $1;
 			my $orig_commit = lc($2);
@@ -2338,7 +2343,7 @@ sub process {
 		}
 
 # check we are in a valid source file if not then ignore this hunk
-		next if ($realfile !~ /\.(h|c|s|S|pl|sh)$/);
+		next if ($realfile !~ /\.(h|c|s|S|pl|sh|dtsi|dts)$/);
 
 #line length limit
 		if ($line =~ /^\+/ && $prevrawline !~ /\/\*\*/ &&
@@ -2399,7 +2404,7 @@ sub process {
 		}
 
 # check we are in a valid source file C or perl if not then ignore this hunk
-		next if ($realfile !~ /\.(h|c|pl)$/);
+		next if ($realfile !~ /\.(h|c|pl|dtsi|dts)$/);
 
 # at the beginning of a line any tabs must come first and anything
 # more than 8 must use tabs.
@@ -3749,7 +3754,6 @@ sub process {
 			if (ERROR("SPACING",
 				  "space prohibited before that close parenthesis ')'\n" . $herecurr) &&
 			    $fix) {
-				print("fixlinenr: <$fixlinenr> fixed[fixlinenr]: <$fixed[$fixlinenr]>\n");
 				$fixed[$fixlinenr] =~
 				    s/\s+\)/\)/;
 			}
@@ -4123,7 +4127,7 @@ sub process {
 					      "Macros with multiple statements should be enclosed in a do - while loop\n" . "$herectx");
 				} else {
 					ERROR("COMPLEX_MACRO",
-					      "Macros with complex values should be enclosed in parenthesis\n" . "$herectx");
+					      "Macros with complex values should be enclosed in parentheses\n" . "$herectx");
 				}
 			}
 

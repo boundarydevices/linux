@@ -54,129 +54,28 @@
  * balloon driver as a page book-keeper for its registered balloon devices.
  */
 struct balloon_dev_info {
-	void *balloon_device;		/* balloon device descriptor */
-	struct address_space *mapping;	/* balloon special page->mapping */
 	unsigned long isolated_pages;	/* # of isolated pages for migration */
 	spinlock_t pages_lock;		/* Protection to pages list */
 	struct list_head pages;		/* Pages enqueued & handled to Host */
+	int (*migrate_page)(struct balloon_dev_info *b_dev_info,
+			    struct page *newpage, struct page *page,
+			    enum migrate_mode mode);
 };
+
+static inline void balloon_devinfo_init(struct balloon_dev_info *b_dev_info)
+{
+	b_dev_info->isolated_pages = 0;
+	spin_lock_init(&b_dev_info->pages_lock);
+	INIT_LIST_HEAD(&b_dev_info->pages);
+	b_dev_info->migrate_page = NULL;
+}
 
 extern struct page *balloon_page_enqueue(struct balloon_dev_info *b_dev_info);
 extern struct page *balloon_page_dequeue(struct balloon_dev_info *b_dev_info);
-extern struct balloon_dev_info *balloon_devinfo_alloc(
-						void *balloon_dev_descriptor);
-
-static inline void balloon_devinfo_free(struct balloon_dev_info *b_dev_info)
-{
-	kfree(b_dev_info);
-}
-
-/*
- * balloon_page_free - release a balloon page back to the page free lists
- * @page: ballooned page to be set free
- *
- * This function must be used to properly set free an isolated/dequeued balloon
- * page at the end of a sucessful page migration, or at the balloon driver's
- * page release procedure.
- */
-static inline void balloon_page_free(struct page *page)
-{
-	/*
-	 * Balloon pages always get an extra refcount before being isolated
-	 * and before being dequeued to help on sorting out fortuite colisions
-	 * between a thread attempting to isolate and another thread attempting
-	 * to release the very same balloon page.
-	 *
-	 * Before we handle the page back to Buddy, lets drop its extra refcnt.
-	 */
-	put_page(page);
-	__free_page(page);
-}
 
 #ifdef CONFIG_BALLOON_COMPACTION
 extern bool balloon_page_isolate(struct page *page);
 extern void balloon_page_putback(struct page *page);
-extern int balloon_page_migrate(struct page *newpage,
-				struct page *page, enum migrate_mode mode);
-extern struct address_space
-*balloon_mapping_alloc(struct balloon_dev_info *b_dev_info,
-			const struct address_space_operations *a_ops);
-
-static inline void balloon_mapping_free(struct address_space *balloon_mapping)
-{
-	kfree(balloon_mapping);
-}
-
-/*
- * page_flags_cleared - helper to perform balloon @page ->flags tests.
- *
- * As balloon pages are obtained from buddy and we do not play with page->flags
- * at driver level (exception made when we get the page lock for compaction),
- * we can safely identify a ballooned page by checking if the
- * PAGE_FLAGS_CHECK_AT_PREP page->flags are all cleared.  This approach also
- * helps us skip ballooned pages that are locked for compaction or release, thus
- * mitigating their racy check at balloon_page_movable()
- */
-static inline bool page_flags_cleared(struct page *page)
-{
-	return !(page->flags & PAGE_FLAGS_CHECK_AT_PREP);
-}
-
-/*
- * __is_movable_balloon_page - helper to perform @page mapping->flags tests
- */
-static inline bool __is_movable_balloon_page(struct page *page)
-{
-	struct address_space *mapping = page->mapping;
-	return mapping_balloon(mapping);
-}
-
-/*
- * balloon_page_movable - test page->mapping->flags to identify balloon pages
- *			  that can be moved by compaction/migration.
- *
- * This function is used at core compaction's page isolation scheme, therefore
- * most pages exposed to it are not enlisted as balloon pages and so, to avoid
- * undesired side effects like racing against __free_pages(), we cannot afford
- * holding the page locked while testing page->mapping->flags here.
- *
- * As we might return false positives in the case of a balloon page being just
- * released under us, the page->mapping->flags need to be re-tested later,
- * under the proper page lock, at the functions that will be coping with the
- * balloon page case.
- */
-static inline bool balloon_page_movable(struct page *page)
-{
-	/*
-	 * Before dereferencing and testing mapping->flags, let's make sure
-	 * this is not a page that uses ->mapping in a different way
-	 */
-	if (page_flags_cleared(page) && !page_mapped(page) &&
-	    page_count(page) == 1)
-		return __is_movable_balloon_page(page);
-
-	return false;
-}
-
-/*
- * isolated_balloon_page - identify an isolated balloon page on private
- *			   compaction/migration page lists.
- *
- * After a compaction thread isolates a balloon page for migration, it raises
- * the page refcount to prevent concurrent compaction threads from re-isolating
- * the same page. For that reason putback_movable_pages(), or other routines
- * that need to identify isolated balloon pages on private pagelists, cannot
- * rely on balloon_page_movable() to accomplish the task.
- */
-static inline bool isolated_balloon_page(struct page *page)
-{
-	/* Already isolated balloon pages, by default, have a raised refcount */
-	if (page_flags_cleared(page) && !page_mapped(page) &&
-	    page_count(page) >= 2)
-		return __is_movable_balloon_page(page);
-
-	return false;
-}
 
 /*
  * balloon_page_insert - insert a page into the balloon's page list and make
@@ -188,12 +87,12 @@ static inline bool isolated_balloon_page(struct page *page)
  * Caller must ensure the page is locked and the spin_lock protecting balloon
  * pages list is held before inserting a page into the balloon device.
  */
-static inline void balloon_page_insert(struct page *page,
-				       struct address_space *mapping,
-				       struct list_head *head)
+static inline void
+balloon_page_insert(struct balloon_dev_info *balloon, struct page *page)
 {
-	page->mapping = mapping;
-	list_add(&page->lru, head);
+	__SetPageBalloon(page);
+	set_page_private(page, (unsigned long)balloon);
+	list_add(&page->lru, &balloon->pages);
 }
 
 /*
@@ -204,11 +103,17 @@ static inline void balloon_page_insert(struct page *page,
  * Caller must ensure the page is locked and the spin_lock protecting balloon
  * pages list is held before deleting a page from the balloon device.
  */
-static inline void balloon_page_delete(struct page *page)
+static inline void balloon_page_delete(struct page *page, bool isolated)
 {
-	page->mapping = NULL;
-	list_del(&page->lru);
+	__ClearPageBalloon(page);
+	set_page_private(page, 0);
+	if (!isolated)
+		list_del(&page->lru);
 }
+
+int balloon_page_migrate(new_page_t get_new_page, free_page_t put_new_page,
+		unsigned long private, struct page *page,
+		int force, enum migrate_mode mode);
 
 /*
  * balloon_page_device - get the b_dev_info descriptor for the balloon device
@@ -216,21 +121,12 @@ static inline void balloon_page_delete(struct page *page)
  */
 static inline struct balloon_dev_info *balloon_page_device(struct page *page)
 {
-	struct address_space *mapping = page->mapping;
-	if (likely(mapping))
-		return mapping->private_data;
-
-	return NULL;
+	return (struct balloon_dev_info *)page_private(page);
 }
 
 static inline gfp_t balloon_mapping_gfp_mask(void)
 {
 	return GFP_HIGHUSER_MOVABLE;
-}
-
-static inline bool balloon_compaction_check(void)
-{
-	return true;
 }
 
 #else /* !CONFIG_BALLOON_COMPACTION */
@@ -246,26 +142,25 @@ static inline void balloon_mapping_free(struct address_space *balloon_mapping)
 	return;
 }
 
-static inline void balloon_page_insert(struct page *page,
-				       struct address_space *mapping,
-				       struct list_head *head)
+static inline void
+balloon_page_insert(struct balloon_dev_info *balloon, struct page *page)
 {
-	list_add(&page->lru, head);
+	__SetPageBalloon(page);
+	list_add(&page->lru, &balloon->pages);
 }
 
-static inline void balloon_page_delete(struct page *page)
+static inline void balloon_page_delete(struct page *page, bool isolated)
 {
-	list_del(&page->lru);
+	__ClearPageBalloon(page);
+	if (!isolated)
+		list_del(&page->lru);
 }
 
-static inline bool balloon_page_movable(struct page *page)
+static inline int balloon_page_migrate(new_page_t get_new_page,
+		free_page_t put_new_page, unsigned long private,
+		struct page *page, int force, enum migrate_mode mode)
 {
-	return false;
-}
-
-static inline bool isolated_balloon_page(struct page *page)
-{
-	return false;
+	return -EAGAIN;
 }
 
 static inline bool balloon_page_isolate(struct page *page)
@@ -278,20 +173,10 @@ static inline void balloon_page_putback(struct page *page)
 	return;
 }
 
-static inline int balloon_page_migrate(struct page *newpage,
-				struct page *page, enum migrate_mode mode)
-{
-	return 0;
-}
-
 static inline gfp_t balloon_mapping_gfp_mask(void)
 {
 	return GFP_HIGHUSER;
 }
 
-static inline bool balloon_compaction_check(void)
-{
-	return false;
-}
 #endif /* CONFIG_BALLOON_COMPACTION */
 #endif /* _LINUX_BALLOON_COMPACTION_H */

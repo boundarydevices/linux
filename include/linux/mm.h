@@ -18,6 +18,7 @@
 #include <linux/pfn.h>
 #include <linux/bit_spinlock.h>
 #include <linux/shrinker.h>
+#include <linux/resource.h>
 
 struct mempolicy;
 struct anon_vma;
@@ -346,6 +347,7 @@ static inline int put_page_unless_one(struct page *page)
 }
 
 extern int page_is_ram(unsigned long pfn);
+extern int region_is_ram(resource_size_t phys_addr, unsigned long size);
 
 /* Support for virtually mapped pages */
 struct page *vmalloc_to_page(const void *addr);
@@ -552,6 +554,16 @@ static inline void __ClearPageBuddy(struct page *page)
 	VM_BUG_ON_PAGE(!PageBuddy(page), page);
 	atomic_set(&page->_mapcount, -1);
 }
+
+#define PAGE_BALLOON_MAPCOUNT_VALUE (-256)
+
+static inline int PageBalloon(struct page *page)
+{
+	return IS_ENABLED(CONFIG_MEMORY_BALLOON) &&
+		atomic_read(&page->_mapcount) == PAGE_BALLOON_MAPCOUNT_VALUE;
+}
+void __SetPageBalloon(struct page *page);
+void __ClearPageBalloon(struct page *page);
 
 void put_page(struct page *page);
 void put_pages_list(struct list_head *pages);
@@ -1247,8 +1259,8 @@ static inline int stack_guard_page_end(struct vm_area_struct *vma,
 		!vma_growsup(vma->vm_next, addr);
 }
 
-extern pid_t
-vm_is_stack(struct task_struct *task, struct vm_area_struct *vma, int in_group);
+extern struct task_struct *task_of_stack(struct task_struct *task,
+				struct vm_area_struct *vma, bool in_group);
 
 extern unsigned long move_page_tables(struct vm_area_struct *vma,
 		unsigned long old_addr, struct vm_area_struct *new_vma,
@@ -1779,6 +1791,20 @@ extern struct vm_area_struct *copy_vma(struct vm_area_struct **,
 	unsigned long addr, unsigned long len, pgoff_t pgoff,
 	bool *need_rmap_locks);
 extern void exit_mmap(struct mm_struct *);
+
+static inline int check_data_rlimit(unsigned long rlim,
+				    unsigned long new,
+				    unsigned long start,
+				    unsigned long end_data,
+				    unsigned long start_data)
+{
+	if (rlim < RLIM_INFINITY) {
+		if (((new - start) + (end_data - start_data)) > rlim)
+			return -ENOSPC;
+	}
+
+	return 0;
+}
 
 extern int mm_take_all_locks(struct mm_struct *mm);
 extern void mm_drop_all_locks(struct mm_struct *mm);

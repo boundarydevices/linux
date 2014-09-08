@@ -30,6 +30,15 @@ LIST_HEAD(slab_caches);
 DEFINE_MUTEX(slab_mutex);
 struct kmem_cache *kmem_cache;
 
+/*
+ * Determine the size of a slab object
+ */
+unsigned int kmem_cache_size(struct kmem_cache *s)
+{
+	return s->object_size;
+}
+EXPORT_SYMBOL(kmem_cache_size);
+
 #ifdef CONFIG_DEBUG_VM
 static int kmem_cache_sanity_check(const char *name, size_t size)
 {
@@ -211,8 +220,10 @@ kmem_cache_create(const char *name, size_t size, size_t align,
 	mutex_lock(&slab_mutex);
 
 	err = kmem_cache_sanity_check(name, size);
-	if (err)
+	if (err) {
+		s = NULL;	/* suppress uninit var warning */
 		goto out_unlock;
+	}
 
 	/*
 	 * Some allocators will constraint the set of valid flags to a subset

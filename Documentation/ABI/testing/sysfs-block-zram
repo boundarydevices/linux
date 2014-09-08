@@ -57,6 +57,23 @@ Description:
 		The failed_writes file is read-only and specifies the number of
 		failed writes happened on this device.
 
+What:		/sys/block/zram<id>/num_discard_req
+Date:		August 2014
+Contact:	Chao Yu <chao2.yu@samsung.com>
+Description:
+		The num_discard_req file is read-only and specifies the number
+		of requests received by this device. These requests are sent by
+		swap layer or filesystem when they want to free blocks which are
+		no longer used.
+
+What:		/sys/block/zram<id>/num_discarded
+Date:		August 2014
+Contact:	Chao Yu <chao2.yu@samsung.com>
+Description:
+		The num_discarded file is read-only and specifies the number of
+		real discarded blocks (pages which are really freed) in this
+		device after discard request is sent to this device.
+
 What:		/sys/block/zram<id>/max_comp_streams
 Date:		February 2014
 Contact:	Sergey Senozhatsky <sergey.senozhatsky@gmail.com>
@@ -119,3 +136,22 @@ Description:
 		efficiency can be calculated using compr_data_size and this
 		statistic.
 		Unit: bytes
+
+What:		/sys/block/zram<id>/mem_used_max
+Date:		August 2014
+Contact:	Minchan Kim <minchan@kernel.org>
+Description:
+		The mem_used_max file is read/write and specifies the amount
+		of maximum memory zram have consumed to store compressed data.
+		For resetting the value, you should write "0". Otherwise,
+		you could see -EINVAL.
+		Unit: bytes
+
+What:		/sys/block/zram<id>/mem_limit
+Date:		August 2014
+Contact:	Minchan Kim <minchan@kernel.org>
+Description:
+		The mem_limit file is read/write and specifies the maximum
+		amount of memory ZRAM can use to store the compressed data.  The
+		limit could be changed in run time and "0" means disable the
+		limit.  No limit is the initial state.  Unit: bytes

@@ -3,6 +3,7 @@
 #include <linux/string.h>
 #include <linux/compiler.h>
 #include <linux/export.h>
+#include <linux/ctype.h>
 #include <linux/err.h>
 #include <linux/sched.h>
 #include <linux/security.h>
@@ -60,6 +61,35 @@ char *kstrndup(const char *s, size_t max, gfp_t gfp)
 	return buf;
 }
 EXPORT_SYMBOL(kstrndup);
+
+/**
+ * kstrimdup - Trim and copy a %NUL terminated string.
+ * @s: the string to trim and duplicate
+ * @gfp: the GFP mask used in the kmalloc() call when allocating memory
+ *
+ * Returns an address, which the caller must kfree, containing
+ * a duplicate of the passed string with leading and/or trailing
+ * whitespace (as defined by isspace) removed.
+ */
+char *kstrimdup(const char *s, gfp_t gfp)
+{
+	char *buf;
+	char *begin = skip_spaces(s);
+	size_t len = strlen(begin);
+
+	while (len && isspace(begin[len - 1]))
+		len--;
+
+	buf = kmalloc_track_caller(len + 1, gfp);
+	if (!buf)
+		return NULL;
+
+	memcpy(buf, begin, len);
+	buf[len] = '\0';
+
+	return buf;
+}
+EXPORT_SYMBOL(kstrimdup);
 
 /**
  * kmemdup - duplicate region of memory
@@ -170,32 +200,25 @@ static int vm_is_stack_for_task(struct task_struct *t,
 /*
  * Check if the vma is being used as a stack.
  * If is_group is non-zero, check in the entire thread group or else
- * just check in the current task. Returns the pid of the task that
- * the vma is stack for.
+ * just check in the current task. Returns the task_struct of the task
+ * that the vma is stack for. Must be called under rcu_read_lock().
  */
-pid_t vm_is_stack(struct task_struct *task,
-		  struct vm_area_struct *vma, int in_group)
+struct task_struct *task_of_stack(struct task_struct *task,
+				struct vm_area_struct *vma, bool in_group)
 {
-	pid_t ret = 0;
-
 	if (vm_is_stack_for_task(task, vma))
-		return task->pid;
+		return task;
 
 	if (in_group) {
 		struct task_struct *t;
 
-		rcu_read_lock();
 		for_each_thread(task, t) {
-			if (vm_is_stack_for_task(t, vma)) {
-				ret = t->pid;
-				goto done;
-			}
+			if (vm_is_stack_for_task(t, vma))
+				return t;
 		}
-done:
-		rcu_read_unlock();
 	}
 
-	return ret;
+	return NULL;
 }
 
 #if defined(CONFIG_MMU) && !defined(HAVE_ARCH_PICK_MMAP_LAYOUT)

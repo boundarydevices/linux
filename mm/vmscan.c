@@ -1160,7 +1160,7 @@ unsigned long reclaim_clean_pages_from_list(struct zone *zone,
 
 	list_for_each_entry_safe(page, next, page_list, lru) {
 		if (page_is_file_cache(page) && !PageDirty(page) &&
-		    !isolated_balloon_page(page)) {
+		    !PageBalloon(page)) {
 			ClearPageActive(page);
 			list_move(&page->lru, &clean_pages);
 		}
@@ -2315,7 +2315,10 @@ static bool shrink_zone(struct zone *zone, struct scan_control *sc)
 	return reclaimable;
 }
 
-/* Returns true if compaction should go ahead for a high-order request */
+/*
+ * Returns true if compaction should go ahead for a high-order request, or
+ * the high-order allocation would succeed without compaction.
+ */
 static inline bool compaction_ready(struct zone *zone, int order)
 {
 	unsigned long balance_gap, watermark;
@@ -2339,8 +2342,11 @@ static inline bool compaction_ready(struct zone *zone, int order)
 	if (compaction_deferred(zone, order))
 		return watermark_ok;
 
-	/* If compaction is not ready to start, keep reclaiming */
-	if (!compaction_suitable(zone, order))
+	/*
+	 * If compaction is not ready to start and allocation is not likely
+	 * to succeed without it, then keep reclaiming.
+	 */
+	if (compaction_suitable(zone, order) == COMPACT_SKIPPED)
 		return false;
 
 	return watermark_ok;
@@ -2818,7 +2824,7 @@ static bool zone_balanced(struct zone *zone, int order,
 		return false;
 
 	if (IS_ENABLED(CONFIG_COMPACTION) && order &&
-	    !compaction_suitable(zone, order))
+	    compaction_suitable(zone, order) == COMPACT_SKIPPED)
 		return false;
 
 	return true;
@@ -3791,66 +3797,3 @@ void check_move_unevictable_pages(struct page **pages, int nr_pages)
 	}
 }
 #endif /* CONFIG_SHMEM */
-
-static void warn_scan_unevictable_pages(void)
-{
-	printk_once(KERN_WARNING
-		    "%s: The scan_unevictable_pages sysctl/node-interface has been "
-		    "disabled for lack of a legitimate use case.  If you have "
-		    "one, please send an email to linux-mm@kvack.org.\n",
-		    current->comm);
-}
-
-/*
- * scan_unevictable_pages [vm] sysctl handler.  On demand re-scan of
- * all nodes' unevictable lists for evictable pages
- */
-unsigned long scan_unevictable_pages;
-
-int scan_unevictable_handler(struct ctl_table *table, int write,
-			   void __user *buffer,
-			   size_t *length, loff_t *ppos)
-{
-	warn_scan_unevictable_pages();
-	proc_doulongvec_minmax(table, write, buffer, length, ppos);
-	scan_unevictable_pages = 0;
-	return 0;
-}
-
-#ifdef CONFIG_NUMA
-/*
- * per node 'scan_unevictable_pages' attribute.  On demand re-scan of
- * a specified node's per zone unevictable lists for evictable pages.
- */
-
-static ssize_t read_scan_unevictable_node(struct device *dev,
-					  struct device_attribute *attr,
-					  char *buf)
-{
-	warn_scan_unevictable_pages();
-	return sprintf(buf, "0\n");	/* always zero; should fit... */
-}
-
-static ssize_t write_scan_unevictable_node(struct device *dev,
-					   struct device_attribute *attr,
-					const char *buf, size_t count)
-{
-	warn_scan_unevictable_pages();
-	return 1;
-}
-
-
-static DEVICE_ATTR(scan_unevictable_pages, S_IRUGO | S_IWUSR,
-			read_scan_unevictable_node,
-			write_scan_unevictable_node);
-
-int scan_unevictable_register_node(struct node *node)
-{
-	return device_create_file(&node->dev, &dev_attr_scan_unevictable_pages);
-}
-
-void scan_unevictable_unregister_node(struct node *node)
-{
-	device_remove_file(&node->dev, &dev_attr_scan_unevictable_pages);
-}
-#endif
