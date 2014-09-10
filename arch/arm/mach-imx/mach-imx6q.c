@@ -581,15 +581,16 @@ static void imx6q_reserve(void)
 		pr_err("no memory reserve for ramoops.\n");
 		return;
 	}
-	/* use memmory bank 0 for ram console store */
-	bank = &mi->bank[0];
+
+	/* use memmory last bank for ram console store */
+	bank = &mi->bank[mi->nr_banks - 1];
 	if (!bank) {
 		pr_err("no memory reserve for ramoops.\n");
 		return;
 	}
 	max_phys = bank->start + bank->size;
-	/* reserve 256M for uboot avoid ram console data is cleaned by uboot */
-	phys = memblock_alloc_base(SZ_1M, SZ_4K, max_phys - SZ_256M);
+	/* reserve 64M for uboot avoid ram console data is cleaned by uboot */
+	phys = memblock_alloc_base(SZ_1M, SZ_4K, max_phys - SZ_64M);
 	if (phys) {
 		memblock_remove(phys, SZ_1M);
 		memblock_reserve(phys, SZ_1M);
