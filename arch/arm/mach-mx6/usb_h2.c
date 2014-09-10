@@ -171,19 +171,13 @@ static void usbh2_wakeup_event_clear(void)
 	}
 }
 
+iomux_v3_cfg_t hsic_strobe_start_pad;
+
 static void hsic_start(void)
 {
 	pr_debug("%s\n", __func__);
 	/* strobe 47K pull up */
-	if (cpu_is_mx6q())
-		mxc_iomux_v3_setup_pad(
-				MX6Q_PAD_RGMII_TX_CTL__USBOH3_H2_STROBE_START);
-	else if (cpu_is_mx6dl())
-		mxc_iomux_v3_setup_pad(
-				MX6DL_PAD_RGMII_TX_CTL__USBOH3_H2_STROBE_START);
-	else if (cpu_is_mx6sl())
-		mxc_iomux_v3_setup_pad(
-				MX6SL_PAD_HSIC_STROBE__USB_H_STROBE_START);
+	mxc_iomux_v3_setup_pad(hsic_strobe_start_pad);
 }
 
 static void hsic_device_connected(void)
@@ -222,6 +216,11 @@ void __init mx6_usb_h2_init(void)
 	struct platform_device *pdev, *pdev_wakeup;
 	static void __iomem *anatop_base_addr = MX6_IO_ADDRESS(ANATOP_BASE_ADDR);
 	usbh2_config.wakeup_pdata = &usbh2_wakeup_config;
+
+	hsic_strobe_start_pad = cpu_is_mx6q() ? MX6Q_PAD_RGMII_TX_CTL__USBOH3_H2_STROBE_START :
+			(cpu_is_mx6dl() ? MX6DL_PAD_RGMII_TX_CTL__USBOH3_H2_STROBE_START :
+			(cpu_is_mx6sl() ? MX6SL_PAD_HSIC_STROBE__USB_H_STROBE_START : 0));
+
 	if (cpu_is_mx6sl())
 		pdev = imx6sl_add_fsl_ehci_hs(2, &usbh2_config);
 	else
