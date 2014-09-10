@@ -110,6 +110,15 @@ static int iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
         return 0;
 }
 
+#define IOMUX_PAD_PTR(pad_list) iomux_v3_pad_ptr(mx6q_##pad_list, \
+		mx6dl_solo_##pad_list)
+
+static const iomux_v3_cfg_t *iomux_v3_pad_ptr(iomux_v3_cfg_t *mx6q_pad_list,
+		iomux_v3_cfg_t *mx6dl_solo_pad_list)
+{
+        return cpu_is_mx6q() ? mx6q_pad_list : mx6dl_solo_pad_list;
+}
+
 enum sd_pad_mode {
 	SD_PAD_MODE_LOW_SPEED,
 	SD_PAD_MODE_MED_SPEED,
@@ -265,6 +274,8 @@ static void usbotg_vbus(bool on)
 		gpio_set_value(GP_USB_OTG_PWR, 0);
 }
 
+extern iomux_v3_cfg_t hsic_strobe_start_pad;
+
 static void __init init_usb(void)
 {
 	imx_otg_base = MX6_IO_ADDRESS(MX6Q_USB_OTG_BASE_ADDR);
@@ -275,6 +286,7 @@ static void __init init_usb(void)
 
 	mx6_set_otghost_vbus_func(usbotg_vbus);
 	mx6_usb_h2_init();
+	hsic_strobe_start_pad = IOMUX_PAD_PTR(hsic_start)[0];
 }
 
 
