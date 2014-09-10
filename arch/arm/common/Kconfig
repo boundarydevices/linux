@@ -42,7 +42,8 @@ config SHARP_SCOOP
 
 config GIC_FIQ
 	bool "enable G1 IRQ and G0 FIQ"
-	depends on FIQ
+	select FIQ
+	depends on ARM_GIC
 	default n
 	help
 	  The watchdog timer in an IMX6 processor can call an
@@ -60,9 +61,8 @@ config GIC_FIQ
 	  probably don't need this feature.
 
 config FIQ_GLUE
-	bool "FIQ glue support for serial debugger and other projects"
+	bool
 	select FIQ
-	default n
 
 config FIQ_DEBUGGER
 	bool "FIQ Mode Serial Debugger"
@@ -109,3 +109,4 @@ config FIQ_DEBUGGER_CONSOLE_DEFAULT_ENABLE
 	help
 	  If enabled, this puts the fiq debugger into console mode by default.
 	  Otherwise, the fiq debugger will start out in debug mode.
+
