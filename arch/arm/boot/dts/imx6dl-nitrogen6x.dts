@@ -22,6 +22,11 @@
 	compatible = "fsl,imx6dl-nitrogen6x", "fsl,imx6dl";
 };
 
+&adv7180 {
+	ipu_id = <1>;
+	csi_id = <1>;
+};
+
 &mxcfb1 {
 	status = "okay";
 };
@@ -32,6 +37,42 @@
 
 &ov5640 {
 	ipu_id = <0>;
+};
+
+&pinctrl_adv7180 {
+	fsl,pins = <
+		MX6QDL_PAD_EIM_A17__IPU1_CSI1_DATA12	0xb0b1
+		MX6QDL_PAD_EIM_A18__IPU1_CSI1_DATA13	0xb0b1
+		MX6QDL_PAD_EIM_A19__IPU1_CSI1_DATA14	0xb0b1
+		MX6QDL_PAD_EIM_A20__IPU1_CSI1_DATA15	0xb0b1
+		MX6QDL_PAD_EIM_A21__IPU1_CSI1_DATA16	0xb0b1
+		MX6QDL_PAD_EIM_A22__IPU1_CSI1_DATA17	0xb0b1
+		MX6QDL_PAD_EIM_A23__IPU1_CSI1_DATA18	0xb0b1
+		MX6QDL_PAD_EIM_EB2__IPU1_CSI1_DATA19	0xb0b1
+		MX6QDL_PAD_EIM_A16__IPU1_CSI1_PIXCLK	0xb0b1
+		/* No data enable pin, make sure it is not selected */
+		MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0xb0b1
+#define GP_ADV7180_PWN		<&gpio3 13 GPIO_ACTIVE_LOW>
+		MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0xb0b0
+#define GP_ADV7180_RESET	<&gpio3 14 GPIO_ACTIVE_LOW>
+		MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x000b0
+#define GP_ADV7180_IRQ		<&gpio5 0 IRQ_TYPE_LEVEL_LOW>
+		MX6QDL_PAD_EIM_WAIT__GPIO5_IO00		0x1b0b0
+	>;
+};
+
+&pinctrl_adv7180_cea861 {
+	fsl,pins = <
+		MX6QDL_PAD_EIM_DA11__IPU1_CSI1_HSYNC	0xb0b1
+		MX6QDL_PAD_EIM_DA12__IPU1_CSI1_VSYNC	0xb0b1
+	>;
+};
+
+&pinctrl_adv7180_no_cea861 {
+	fsl,pins = <
+		MX6QDL_PAD_EIM_DA11__GPIO3_IO11		0xb0b1	/* Hsync */
+		MX6QDL_PAD_EIM_DA12__GPIO3_IO12		0xb0b1	/* Vsync */
+	>;
 };
 
 &pinctrl_ov5640 { /* parallel camera */
@@ -49,4 +90,10 @@
 		MX6QDL_PAD_EIM_DA11__IPU1_CSI1_HSYNC	0xb0b1
 		MX6QDL_PAD_EIM_DA12__IPU1_CSI1_VSYNC	0xb0b1
 	>;
+};
+
+/* adv7180, ov5640 */
+&v4l2_cap_3 {
+	ipu_id = <0>;
+	csi_id = <1>;
 };
