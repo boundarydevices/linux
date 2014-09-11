@@ -131,6 +131,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-sabrelite.dtb \
 	imx6q-sabresd.dtb \
 	imx6q-sabresd-enetirq.dtb \
+	imx6q-sabresd-uart.dtb \
 	imx6q-sabresd-hdcp.dtb \
 	imx6q-sabresd-ldo.dtb \
 	imx6q-sbc6x.dtb \
@@ -138,6 +139,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6sl-evk-csi.dtb \
 	imx6sl-evk-ldo.dtb \
 	imx6sl-evk-pf200.dtb \
+	imx6sl-evk-uart.dtb \
 	imx6sx-17x17-arm2.dtb \
 	imx6sx-17x17-arm2-gpmi-weim.dtb \
 	imx6sx-17x17-arm2-sai.dtb \
