@@ -236,8 +236,6 @@
 
 	v4l2_cap_3: v4l2_cap_3 {
 		compatible = "fsl,imx6q-v4l2-capture";
-		ipu_id = <0>;
-		csi_id = <1>;
 		mclk_source = <0>;
 		status = "okay";
 	};
@@ -408,6 +406,30 @@
         pinctrl-0 = <&pinctrl_i2c3_3>;
         status = "okay";
 
+	adv7180: adv7180@20 {
+		compatible = "adv,adv7180";
+		reg = <0x20>;
+		pinctrl-names = "default", "no_cea861", "cea861";
+		pinctrl-0 = <&pinctrl_adv7180>;
+		pinctrl-1 = <&pinctrl_adv7180_no_cea861>;
+		pinctrl-2 = <&pinctrl_adv7180_cea861>;
+		cea861 = <0>;
+		DOVDD-supply = <&reg_3p3v>; /* 3.3v, enabled via 2.8 VGEN6 */
+		AVDD-supply = <&reg_3p3v>;  /* 1.8v */
+		DVDD-supply = <&reg_3p3v>;  /* 1.8v */
+		PVDD-supply = <&reg_3p3v>;  /* 1.8v */
+#define GP_ADV7180_PWN		<&gpio3 13 GPIO_ACTIVE_LOW>
+#define GP_ADV7180_RESET	<&gpio3 14 GPIO_ACTIVE_LOW>
+#define GP_ADV7180_IRQ		<&gpio5 0 IRQ_TYPE_LEVEL_LOW>
+		rst-gpios = GP_ADV7180_RESET;
+		pwn-gpios = GP_ADV7180_PWN;
+		interrupts-extended = GP_ADV7180_IRQ;
+		csi_id = <1>;
+		mclk = <28636300>;
+		mclk_source = <0>;
+		cvbs = <1>;
+        };
+
         egalax_ts@04 {
                 compatible = "eeti,egalax_ts";
                 reg = <0x04>;
@@ -497,6 +519,18 @@
 				MX6QDL_PAD_GPIO_8__GPIO1_IO08		0x000b0		/* ov5642 Reset */
 				MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x0b0b0		/* USB Hub Reset */
 			>;
+		};
+
+		pinctrl_adv7180: adv7180grp {
+			/* parallel camera on CSI1, pins differ for iMX6Q/iMX6DL */
+		};
+
+		pinctrl_adv7180_cea861: adv7180_cea861grp {
+			/* parallel camera on CSI1, pins differ for iMX6Q/iMX6DL */
+		};
+
+		pinctrl_adv7180_no_cea861: adv7180_no_cea861grp {
+			/* parallel camera on CSI1, pins differ for iMX6Q/iMX6DL */
 		};
 
 		pinctrl_ov5640: pinctrl_ov5640 {
