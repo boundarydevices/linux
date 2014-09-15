@@ -180,6 +180,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-wandboard.dtb \
 	imx6sl-evk.dtb \
 	imx6sl-evk-ldo.dtb \
+	imx6sl-evk-pf200.dtb \
 	imx6sl-evk-uart.dtb \
 	imx6sx-sdb.dtb \
 	imx6sx-sdb-lcdif1.dtb \
