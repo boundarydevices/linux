@@ -32,7 +32,8 @@ static const char *periph_clk2_sels[]	= { "pll3_usb_otg", "osc", "osc", "dummy",
 static const char *periph2_clk2_sels[]	= { "pll3_usb_otg", "pll2_bus", };
 static const char *periph_sels[]	= { "periph_pre", "periph_clk2", };
 static const char *periph2_sels[]	= { "periph2_pre", "periph2_clk2", };
-static const char *axi_sels[]		= { "periph", "pll2_pfd2_396m", "periph", "pll3_pfd1_540m", };
+static const char *axi_alt_sels[]	= { "pll2_pfd2_396m", "pll3_pfd1_540m", };
+static const char *axi_sels[]		= { "periph", "axi_alt_sel", };
 static const char *audio_sels[]	= { "pll4_audio_div", "pll3_pfd2_508m", "pll3_pfd3_454m", "pll3_usb_otg", };
 static const char *gpu_axi_sels[]	= { "axi", "ahb", };
 static const char *gpu2d_core_sels[]	= { "axi", "pll3_usb_otg", "pll2_pfd0_352m", "pll2_pfd2_396m", };
@@ -272,7 +273,8 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	clk[IMX6QDL_CLK_PERIPH2_PRE]      = imx_clk_mux("periph2_pre",      base + 0x18, 21, 2, periph_pre_sels,   ARRAY_SIZE(periph_pre_sels));
 	clk[IMX6QDL_CLK_PERIPH_CLK2_SEL]  = imx_clk_mux("periph_clk2_sel",  base + 0x18, 12, 2, periph_clk2_sels,  ARRAY_SIZE(periph_clk2_sels));
 	clk[IMX6QDL_CLK_PERIPH2_CLK2_SEL] = imx_clk_mux("periph2_clk2_sel", base + 0x18, 20, 1, periph2_clk2_sels, ARRAY_SIZE(periph2_clk2_sels));
-	clk[IMX6QDL_CLK_AXI_SEL]          = imx_clk_mux("axi_sel",          base + 0x14, 6,  2, axi_sels,          ARRAY_SIZE(axi_sels));
+	clk[IMX6QDL_CLK_AXI_ALT_SEL]      = imx_clk_mux("axi_alt_sel",      base + 0x14, 7,  1, axi_alt_sels,      ARRAY_SIZE(axi_alt_sels));
+	clk[IMX6QDL_CLK_AXI_SEL]          = imx_clk_mux("axi_sel",          base + 0x14, 6,  1, axi_sels,          ARRAY_SIZE(axi_sels));
 	clk[IMX6QDL_CLK_ESAI_SEL]         = imx_clk_mux("esai_sel",         base + 0x20, 19, 2, audio_sels,        ARRAY_SIZE(audio_sels));
 	clk[IMX6QDL_CLK_ASRC_SEL]         = imx_clk_mux("asrc_sel",         base + 0x30, 7,  2, audio_sels,        ARRAY_SIZE(audio_sels));
 	clk[IMX6QDL_CLK_SPDIF_SEL]        = imx_clk_mux("spdif_sel",        base + 0x30, 20, 2, audio_sels,        ARRAY_SIZE(audio_sels));
@@ -495,7 +497,8 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	if (cpu_is_imx6dl()) {
 		clk_set_rate(clk[IMX6QDL_CLK_PLL3_PFD1_540M], 540000000);
 		clk_set_parent(clk[IMX6QDL_CLK_IPU1_SEL], clk[IMX6QDL_CLK_PLL3_PFD1_540M]);
-		clk_set_parent(clk[IMX6QDL_CLK_AXI_SEL], clk[IMX6QDL_CLK_PLL3_PFD1_540M]);
+		clk_set_parent(clk[IMX6QDL_CLK_AXI_ALT_SEL], clk[IMX6QDL_CLK_PLL3_PFD1_540M]);
+		clk_set_parent(clk[IMX6QDL_CLK_AXI_SEL], clk[IMX6QDL_CLK_AXI_ALT_SEL]);
 		/* set epdc/pxp axi clock to 200Mhz */
 		clk_set_parent(clk[IMX6QDL_CLK_IPU2_SEL], clk[IMX6QDL_CLK_PLL2_PFD2_396M]);
 		clk_set_rate(clk[IMX6QDL_CLK_IPU2], 200000000);
