@@ -422,6 +422,27 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 	/* Ensure the AHB clk is at 132MHz. */
 	imx_clk_set_rate(clks[IMX6SL_CLK_AHB], 132000000);
 
+	/* set perclk to source from OSC 24MHz */
+	imx_clk_set_parent(clks[IMX6SL_CLK_PERCLK_SEL], clks[IMX6SL_CLK_OSC]);
+
+	/* Audio-related clocks configuration */
+	imx_clk_set_parent(clks[IMX6SL_CLK_SPDIF0_SEL], clks[IMX6SL_CLK_PLL3_PFD3]);
+
+	/* Configure pxp clocks */
+	imx_clk_set_parent(clks[IMX6SL_CLK_PXP_AXI_SEL], clks[IMX6SL_CLK_PLL2_PFD2]);
+	imx_clk_set_rate(clks[IMX6SL_CLK_PXP_AXI], 200000000);
+
+	/* Initialize Video PLLs to valid frequency (650MHz). */
+	imx_clk_set_rate(clks[IMX6SL_CLK_PLL5_VIDEO_DIV], 650000000);
+	/* set PLL5 video as lcdif pix parent clock */
+	imx_clk_set_parent(clks[IMX6SL_CLK_LCDIF_PIX_SEL],
+			clks[IMX6SL_CLK_PLL5_VIDEO_DIV]);
+
+	/*
+	 * Enable clocks only after both parent and rate are all initialized
+	 * as needed
+	 */
+
 	/*
 	 * Make sure those always on clocks are enabled to maintain the correct
 	 * usecount and enabling/disabling of parent PLLs.
@@ -434,26 +455,10 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 		imx_clk_prepare_enable(clks[IMX6SL_CLK_USBPHY2_GATE]);
 	}
 
-	/* set perclk to source from OSC 24MHz */
-	imx_clk_set_parent(clks[IMX6SL_CLK_PERCLK_SEL], clks[IMX6SL_CLK_OSC]);
-
-	/* Audio-related clocks configuration */
-	imx_clk_set_parent(clks[IMX6SL_CLK_SPDIF0_SEL], clks[IMX6SL_CLK_PLL3_PFD3]);
-
-	/* Configure pxp clocks */
-	imx_clk_set_parent(clks[IMX6SL_CLK_PXP_AXI_SEL], clks[IMX6SL_CLK_PLL2_PFD2]);
-	imx_clk_set_rate(clks[IMX6SL_CLK_PXP_AXI], 200000000);
-
 	/* Set initial power mode */
 	imx6q_set_lpm(WAIT_CLOCKED);
 
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6sl-gpt");
 	mxc_timer_init_dt(np);
-
-	/* Initialize Video PLLs to valid frequency (650MHz). */
-	imx_clk_set_rate(clks[IMX6SL_CLK_PLL5_VIDEO_DIV], 650000000);
-	/* set PLL5 video as lcdif pix parent clock */
-	imx_clk_set_parent(clks[IMX6SL_CLK_LCDIF_PIX_SEL],
-			clks[IMX6SL_CLK_PLL5_VIDEO_DIV]);
 }
 CLK_OF_DECLARE(imx6sl, "fsl,imx6sl-ccm", imx6sl_clocks_init);
