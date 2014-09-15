@@ -26,6 +26,11 @@
 	offset-usb-charger = <1685>;
 };
 
+&cpu0 {
+	arm-supply = <&sw1a_reg>;
+	soc-supply = <&sw1c_reg>;
+};
+
 &i2c2 {
 	pmic: pfuze100@08 {
 		compatible = "fsl,pfuze100";
