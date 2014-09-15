@@ -1,0 +1,5 @@
+#include "imx6dl-sabresd.dts"
+
+&pmic{
+	compatible = "fsl,pfuze200";
+};
