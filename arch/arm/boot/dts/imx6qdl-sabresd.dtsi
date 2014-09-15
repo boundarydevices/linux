@@ -554,6 +554,11 @@
 	status = "okay";
 };
 
+&gpc {
+	/* use ldo-bypass, u-boot will check it and configure */
+	fsl,ldo-bypass = <1>;
+};
+
 &hdmi_audio {
 	status = "okay";
 };
