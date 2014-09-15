@@ -31,6 +31,7 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/flash.h>
 #include <linux/i2c.h>
+#include <linux/micrel_phy.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/map.h>
 #include <linux/mtd/partitions.h>
@@ -194,11 +195,63 @@ static const struct anatop_thermal_platform_data
 		.name = "anatop_thermal",
 };
 
+static unsigned short ksz9031_por_cmds[] = {
+	0x0204, 0x0,		/* RX_CTL/TX_CTL output pad skew */
+	0x0205, 0x0,		/* RXDn pad skew */
+	0x0206, 0x0,		/* TXDn pad skew */
+	0x0208, 0x03ff,		/* TXC/RXC pad skew */
+	0x0, 0x0
+};
+
+static int ksz9031_send_phy_cmds(struct phy_device *phydev, unsigned short* p)
+{
+	for (;;) {
+		unsigned reg = *p++;
+		unsigned val = *p++;
+		if (reg == 0 && val == 0)
+			break;
+		if (reg < 32) {
+			phy_write(phydev, reg, val);
+		} else {
+			unsigned dev_addr = (reg >> 8) & 0x7f;
+			phy_write(phydev, 0x0d, dev_addr);
+			phy_write(phydev, 0x0e, reg & 0xff);
+			phy_write(phydev, 0x0d, dev_addr | 0x8000);
+			phy_write(phydev, 0x0e, val);
+		}
+	}
+	return 0;
+}
+
+#define CTRL1000_PREFER_MASTER          (1 << 10)
+#define CTRL1000_CONFIG_MASTER          (1 << 11)
+#define CTRL1000_MANUAL_CONFIG          (1 << 12)
+
 static int mx6_fec_phy_init(struct phy_device *phydev)
 {
-	/* prefer master mode */
-	phy_write(phydev, 0x9, 0x1f00);
+	unsigned ctrl1000 = 0;
+	const unsigned master = CTRL1000_PREFER_MASTER |
+			CTRL1000_CONFIG_MASTER | CTRL1000_MANUAL_CONFIG;
+	unsigned features = phydev->drv->features;
 
+#define DISABLE_GIGA
+#ifdef DISABLE_GIGA
+	features &= ~(SUPPORTED_1000baseT_Half |
+			SUPPORTED_1000baseT_Full);
+#endif
+	/* force master mode for 1000BaseT due to chip errata */
+	if (features & SUPPORTED_1000baseT_Half)
+		ctrl1000 |= ADVERTISE_1000HALF | master;
+	if (features & SUPPORTED_1000baseT_Full)
+		ctrl1000 |= ADVERTISE_1000FULL | master;
+	phydev->advertising = phydev->supported = features;
+	phy_write(phydev, MII_CTRL1000, ctrl1000);
+
+	if ((phydev->phy_id & 0x00fffff0) == PHY_ID_KSZ9031) {
+		ksz9031_send_phy_cmds(phydev, ksz9031_por_cmds);
+		return 0;
+	}
+	/* KSZ9021 */
 	/* min rx data delay */
 	phy_write(phydev, 0x0b, 0x8105);
 	phy_write(phydev, 0x0c, 0x0000);
