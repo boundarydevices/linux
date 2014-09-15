@@ -77,6 +77,11 @@
 	};
 };
 
+&cpu0 {
+	arm-supply = <&sw1a_reg>;
+	soc-supply = <&sw1c_reg>;
+};
+
 &ecspi1 {
 	fsl,spi-num-chipselects = <1>;
 	cs-gpios = <&gpio4 11 0>;
@@ -98,6 +103,11 @@
 	pinctrl-0 = <&pinctrl_fec>;
 	phy-mode = "rmii";
 	status = "okay";
+};
+
+&gpc {
+	/* use ldo-bypass, u-boot will check it and configure */
+	fsl,ldo-bypass = <1>;
 };
 
 &i2c1 {
