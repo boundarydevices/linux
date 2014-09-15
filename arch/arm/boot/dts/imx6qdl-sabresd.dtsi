@@ -79,6 +79,17 @@
 			gpio = <&gpio4 10 0>;
 			enable-active-high;
 		};
+
+		reg_sensor: regulator@3 {
+			compatible = "regulator-fixed";
+			reg = <3>;
+			regulator-name = "sensor-supply";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio2 31 0>;
+			startup-delay-us = <500>;
+			enable-active-high;
+		};
 	};
 
 	gpio-keys {
@@ -257,6 +268,17 @@
 			0x0000 /* 5:Default */
 		>;
        };
+
+	mma8451@1c {
+		compatible = "fsl,mma8451";
+		reg = <0x1c>;
+		position = <0>;
+		vdd-supply = <&reg_sensor>;
+		vddio-supply = <&reg_sensor>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <18 8>;
+		interrupt-route = <1>;
+	};
 };
 
 &i2c2 {
@@ -315,6 +337,8 @@
 				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27 0x80000000
 				MX6QDL_PAD_EIM_A25__GPIO5_IO02 0x80000000
 				MX6QDL_PAD_EIM_D23__GPIO3_IO23 0x80000000
+				MX6QDL_PAD_EIM_EB3__GPIO2_IO31 0x80000000
+				MX6QDL_PAD_SD1_CMD__GPIO1_IO18 0x80000000
 			>;
 		};
 
