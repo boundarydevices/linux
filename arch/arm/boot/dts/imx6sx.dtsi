@@ -959,7 +959,7 @@
 					 <&clks 0>, <&clks 0>;
 				clock-names = "bus", "mclk1", "mclk2", "mclk3";
 				dma-names = "rx", "tx";
-				dmas = <&sdma 31 23 0>, <&sdma 32 23 0>;
+				dmas = <&sdma 31 25 0>, <&sdma 32 25 0>;
 				dma-source = <&gpr 0 15 0 16>;
 				status = "disabled";
 			};
@@ -979,7 +979,7 @@
 					 <&clks 0>, <&clks 0>;
 				clock-names = "bus", "mclk1", "mclk2", "mclk3";
 				dma-names = "rx", "tx";
-				dmas = <&sdma 33 23 0>, <&sdma 34 23 0>;
+				dmas = <&sdma 33 25 0>, <&sdma 34 25 0>;
 				dma-source = <&gpr 0 17 0 18>;
 				status = "disabled";
 			};
