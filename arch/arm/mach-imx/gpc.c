@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2013 Freescale Semiconductor, Inc.
+ * Copyright 2011-2014 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -48,6 +48,7 @@ struct pu_domain {
 static void __iomem *gpc_base;
 static u32 gpc_wake_irqs[IMR_NUM];
 static u32 gpc_saved_imrs[IMR_NUM];
+static u32 bypass;
 
 void imx_gpc_pre_suspend(void)
 {
@@ -185,7 +186,8 @@ static int imx6q_pm_pu_power_off(struct generic_pm_domain *genpd)
 	/* Wait ISO + ISO2SW IPG clock cycles */
 	ndelay((iso + iso2sw) * 1000 / 66);
 
-	regulator_disable(pu->reg);
+	if (pu->reg)
+		regulator_disable(pu->reg);
 
 	return 0;
 }
@@ -196,12 +198,13 @@ static int imx6q_pm_pu_power_on(struct generic_pm_domain *genpd)
 	int i, ret, sw, sw2iso;
 	u32 val;
 
-	ret = regulator_enable(pu->reg);
-	if (ret) {
-		pr_err("%s: failed to enable regulator: %d\n", __func__, ret);
-		return ret;
+	if (pu->reg) {
+		ret = regulator_enable(pu->reg);
+		if (ret) {
+			pr_err("%s: failed to enable regulator: %d\n", __func__, ret);
+			return ret;
+		}
 	}
-
 	/* Enable reset clocks for all devices in the PU domain */
 	for (i = 0; i < pu->num_clks; i++)
 		clk_prepare_enable(pu->clk[i]);
@@ -305,19 +308,22 @@ static int imx_gpc_probe(struct platform_device *pdev)
 	struct regulator *pu_reg;
 	int ret;
 
+	of_property_read_u32(pdev->dev.of_node, "fsl,ldo-bypass", &bypass);
 	pu_reg = devm_regulator_get(&pdev->dev, "pu");
-	if (IS_ERR(pu_reg)) {
-		ret = PTR_ERR(pu_reg);
-		dev_err(&pdev->dev, "failed to get pu regulator: %d\n", ret);
-		return ret;
+	if (!IS_ERR(pu_reg)) {
+		/* The regulator is initially enabled */
+		ret = regulator_enable(pu_reg);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "failed to enable pu regulator: %d\n", ret);
+			return ret;
+		}
+		/* We only bypass pu since arm and soc has been set in u-boot */
+		if (bypass)
+			regulator_allow_bypass(pu_reg, true);
+	} else {
+		pu_reg = NULL;
 	}
 
-	/* The regulator is initially enabled */
-	ret = regulator_enable(pu_reg);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "failed to enable pu regulator: %d\n", ret);
-		return ret;
-	}
 	return imx_gpc_genpd_init(&pdev->dev, pu_reg);
 }
 
