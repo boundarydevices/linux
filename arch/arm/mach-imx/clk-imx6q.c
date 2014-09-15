@@ -518,14 +518,6 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	imx_clk_set_rate(clk[IMX6QDL_CLK_GPU3D_CORE], 528000000);
 	imx_clk_set_parent(clk[IMX6QDL_CLK_GPU2D_CORE_SEL], clk[IMX6QDL_CLK_PLL3_USB_OTG]);
 
-	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
-		imx_clk_prepare_enable(clk[clks_init_on[i]]);
-
-	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
-		imx_clk_prepare_enable(clk[IMX6QDL_CLK_USBPHY1_GATE]);
-		imx_clk_prepare_enable(clk[IMX6QDL_CLK_USBPHY2_GATE]);
-	}
-
 	/*
 	 * Let's initially set up CLKO with OSC24M, since this configuration
 	 * is widely used by imx6q board designs to clock audio codec.
@@ -539,6 +531,18 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	/* All existing boards with PCIe use LVDS1 */
 	if (IS_ENABLED(CONFIG_PCI_IMX6))
 		imx_clk_set_parent(clk[IMX6QDL_CLK_LVDS1_SEL], clk[IMX6QDL_CLK_SATA_REF]);
+
+	/*
+	 * Enable clocks only after both parent and rate are all initialized
+	 * as needed
+	 */
+	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
+		imx_clk_prepare_enable(clk[clks_init_on[i]]);
+
+	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
+		imx_clk_prepare_enable(clk[IMX6QDL_CLK_USBPHY1_GATE]);
+		imx_clk_prepare_enable(clk[IMX6QDL_CLK_USBPHY2_GATE]);
+	}
 
 	/* Set initial power mode */
 	imx6q_set_lpm(WAIT_CLOCKED);
