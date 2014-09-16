@@ -328,6 +328,15 @@
 		interrupts = <2 8>;
 		interrupt-route = <2>;
 	};
+
+	mag3110@0e {
+		compatible = "fsl,mag3110";
+		reg = <0x0e>;
+		position = <2>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <5 1>;
+		shared-interrupt;
+	};
 };
 
 &i2c4 {
@@ -345,6 +354,7 @@
 		pinctrl_hog: hoggrp {
 			fsl,pins = <
 				MX6SX_PAD_SD1_DATA0__GPIO6_IO_2 0x17059
+				MX6SX_PAD_SD1_DATA3__GPIO6_IO_5 0xb000
 			>;
 		};
 
