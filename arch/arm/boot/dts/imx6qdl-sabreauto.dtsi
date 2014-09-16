@@ -125,6 +125,14 @@
 		interrupts = <31 8>;
 		interrupt-route = <1>;
 	};
+
+	mag3110@0e {
+		compatible = "fsl,mag3110";
+		reg = <0x0e>;
+		position = <2>;
+		interrupt-parent = <&gpio2>;
+		interrupts = <29 1>;
+	};
 };
 
 &mlb {
@@ -146,6 +154,7 @@
 				MX6QDL_PAD_EIM_A24__GPIO5_IO04   0x80000000
 				MX6QDL_PAD_SD2_DAT0__GPIO1_IO15  0x80000000
 				MX6QDL_PAD_EIM_BCLK__GPIO6_IO31 0x80000000
+				MX6QDL_PAD_EIM_EB1__GPIO2_IO29	0x80000000
 			>;
 		};
 
