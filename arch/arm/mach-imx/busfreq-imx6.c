@@ -58,7 +58,6 @@
 #define	MMDC_MDMISC_DDR_TYPE_DDR3	0
 #define	MMDC_MDMISC_DDR_TYPE_LPDDR2	1
 
-static int ddr_type;
 int high_bus_freq_mode;
 int med_bus_freq_mode;
 int audio_bus_freq_mode;
@@ -147,6 +146,9 @@ int unregister_busfreq_notifier(struct notifier_block *nb)
 	return raw_notifier_chain_unregister(&busfreq_notifier_chain, nb);
 }
 EXPORT_SYMBOL(unregister_busfreq_notifier);
+
+#ifdef CONFIG_SOC_IMX6SX
+static int ddr_type;
 
 static bool check_m4_sleep(void)
 {
@@ -255,6 +257,7 @@ static void exit_lpm_imx6sx(void)
 	if (audio_bus_freq_mode)
 		clk_disable_unprepare(pll2_400);
 }
+#endif
 
 static void enter_lpm_imx6sl(void)
 {
@@ -437,8 +440,10 @@ static void reduce_bus_freq(void)
 		busfreq_notify(LOW_BUSFREQ_ENTER);
 	if (cpu_is_imx6sl())
 		enter_lpm_imx6sl();
+#ifdef CONFIG_SOC_IMX6SX
 	else if (cpu_is_imx6sx())
 		enter_lpm_imx6sx();
+#endif
 	else {
 		if (cpu_is_imx6dl())
 			/* Set axi to periph_clk */
@@ -556,8 +561,10 @@ static int set_high_bus_freq(int high_bus_freq)
 	clk_prepare_enable(pll3);
 	if (cpu_is_imx6sl())
 		exit_lpm_imx6sl();
+#ifdef CONFIG_SOC_IMX6SX
 	else if (cpu_is_imx6sx())
 		exit_lpm_imx6sx();
+#endif
 	else {
 		if (high_bus_freq) {
 			clk_prepare_enable(pll2_400);
@@ -1161,6 +1168,7 @@ static int busfreq_probe(struct platform_device *pdev)
 
 	if (cpu_is_imx6sl()) {
 		err = init_mmdc_lpddr2_settings(pdev);
+#ifdef CONFIG_SOC_IMX6SX
 	} else if (cpu_is_imx6sx()) {
 		ddr_type = imx_mmdc_get_ddr_type();
 		/* check whether it is a DDR3 or LPDDR2 board */
@@ -1172,6 +1180,7 @@ static int busfreq_probe(struct platform_device *pdev)
 		if (imx_src_is_m4_enabled() &&
 			(clk_get_rate(m4_clk) > LPAPM_CLK))
 			high_bus_count++;
+#endif
 	} else {
 		err = init_mmdc_ddr3_settings_imx6q(pdev);
 	}
