@@ -62,8 +62,6 @@ struct imx6_busfreq_info {
 	u32 mu_delay_val;
 } __aligned(8);
 
-static struct imx6_busfreq_info *imx6sx_busfreq_info;
-
 /* DDR settings */
 static unsigned long (*iram_ddr_settings)[2];
 static unsigned long (*normal_mmdc_settings)[2];
@@ -252,6 +250,9 @@ static irqreturn_t wait_in_wfe_irq(int irq, void *dev_id)
 }
 #endif
 
+#ifdef CONFIG_SOC_IMX6SX
+static struct imx6_busfreq_info *imx6sx_busfreq_info;
+
 int update_ddr_freq_imx6sx(int ddr_rate)
 {
 	int i;
@@ -296,7 +297,9 @@ int update_ddr_freq_imx6sx(int ddr_rate)
 
 	return 0;
 }
+#endif
 
+#ifdef CONFIG_SOC_IMX6Q
 /* change the DDR frequency. */
 int update_ddr_freq_imx_smp(int ddr_rate)
 {
@@ -433,7 +436,9 @@ int update_ddr_freq_imx_smp(int ddr_rate)
 
 	return 0;
 }
+#endif
 
+#ifdef CONFIG_SOC_IMX6SX
 int init_mmdc_ddr3_settings_imx6sx(struct platform_device *busfreq_pdev)
 {
 	int i;
@@ -515,7 +520,9 @@ int init_mmdc_ddr3_settings_imx6sx(struct platform_device *busfreq_pdev)
 
 	return 0;
 }
+#endif
 
+#ifdef CONFIG_SOC_IMX6Q
 int init_mmdc_ddr3_settings_imx6q(struct platform_device *busfreq_pdev)
 {
 	int i;
@@ -749,3 +756,4 @@ int init_ddrc_ddr_settings(struct platform_device *busfreq_pdev)
 
 	return 0;
 }
+#endif
