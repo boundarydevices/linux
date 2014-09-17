@@ -840,6 +840,12 @@ static int fsl_asrc_probe(struct platform_device *pdev)
 		return PTR_ERR(asrc_priv->ipg_clk);
 	}
 
+	asrc_priv->dma_clk = devm_clk_get(&pdev->dev, "dma");
+	if (IS_ERR(asrc_priv->dma_clk)) {
+		dev_err(&pdev->dev, "failed to get dma script clock\n");
+		return PTR_ERR(asrc_priv->dma_clk);
+	}
+
 	for (i = 0; i < ASRC_CLK_MAX_NUM; i++) {
 		sprintf(tmp, "asrck_%x", i);
 		asrc_priv->asrck_clk[i] = devm_clk_get(&pdev->dev, tmp);
@@ -922,6 +928,7 @@ static int fsl_asrc_runtime_resume(struct device *dev)
 
 	clk_prepare_enable(asrc_priv->mem_clk);
 	clk_prepare_enable(asrc_priv->ipg_clk);
+	clk_prepare_enable(asrc_priv->dma_clk);
 	for (i = 0; i < ASRC_CLK_MAX_NUM; i++)
 		clk_prepare_enable(asrc_priv->asrck_clk[i]);
 
@@ -935,6 +942,7 @@ static int fsl_asrc_runtime_suspend(struct device *dev)
 
 	for (i = 0; i < ASRC_CLK_MAX_NUM; i++)
 		clk_disable_unprepare(asrc_priv->asrck_clk[i]);
+	clk_disable_unprepare(asrc_priv->dma_clk);
 	clk_disable_unprepare(asrc_priv->ipg_clk);
 	clk_disable_unprepare(asrc_priv->mem_clk);
 
