@@ -1642,7 +1642,7 @@ static int TW68_hwinit1(struct TW68_dev *dev)
 	reg_writel(EP_REG_ADDR, 0x730);   //
 	regDW = reg_readl(EP_REG_ADDR);
 	if (regDW != 0x730) {
-		pr_debug("%s: expected 0x730, read 0x%x\n", dev->name,  regDW );
+		pr_err("%s: expected 0x730, read 0x%x\n", dev->name,  regDW );
 		return -ENODEV;
 	}
 	regDW = reg_readl(EP_REG_DATA );
