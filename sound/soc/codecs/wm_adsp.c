@@ -2955,3 +2955,5 @@ int wm_adsp_stream_avail(const struct wm_adsp *adsp)
 			adsp->capt_buf_size);
 }
 EXPORT_SYMBOL_GPL(wm_adsp_stream_avail);
+
+MODULE_LICENSE("GPL v2");
