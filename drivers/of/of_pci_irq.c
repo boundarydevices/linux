@@ -2,7 +2,6 @@
 #include <linux/of_pci.h>
 #include <linux/of_irq.h>
 #include <linux/export.h>
-#include <asm/prom.h>
 
 /**
  * of_irq_parse_pci - Resolve the interrupt for a PCI device
@@ -19,7 +18,6 @@ int of_irq_parse_pci(const struct pci_dev *pdev, struct of_phandle_args *out_irq
 {
 	struct device_node *dn, *ppnode;
 	struct pci_dev *ppdev;
-	__be32 lspec_be;
 	__be32 laddr[3];
 	u8 pin;
 	int rc;
@@ -86,7 +84,6 @@ int of_irq_parse_pci(const struct pci_dev *pdev, struct of_phandle_args *out_irq
 	out_irq->np = ppnode;
 	out_irq->args_count = 1;
 	out_irq->args[0] = pin;
-	lspec_be = cpu_to_be32(lspec);
 	laddr[0] = cpu_to_be32((pdev->bus->number << 16) | (pdev->devfn << 8));
 	laddr[1] = laddr[2] = cpu_to_be32(0);
 	return of_irq_parse_raw(laddr, out_irq);
