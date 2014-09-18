@@ -1924,6 +1924,7 @@ static int TW68_initdev(struct pci_dev *pci_dev,
 	if (NULL == dev)
 		return -ENOMEM;
 
+	TW68_video_variable_init(dev);
 	err = v4l2_device_register(&pci_dev->dev, &dev->v4l2_dev);
 	if (err) {
 		pr_err("%s: v4l2_device_register failed %d\n", __func__, err);
@@ -2085,6 +2086,7 @@ static int TW68_initdev(struct pci_dev *pci_dev,
 	TW68_unregister_video(dev);
 	free_irq(pci_dev->irq, dev);
  fail3:
+	del_timer(&dev->delay_resync);
 	TW68_hwfini(dev);
 	iounmap(dev->lmmio);
  fail2:
