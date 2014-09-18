@@ -9,6 +9,7 @@
  * http://www.opensource.org/licenses/gpl-license.html
  * http://www.gnu.org/copyleft/gpl.html
  */
+#include <dt-bindings/input/input.h>
 
 / {
 	memory {
@@ -20,6 +21,47 @@
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
 			clock-frequency = <24576000>;
+		};
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys>;
+
+		home {
+			label = "Home";
+			gpios = <&gpio1 11 0>;
+			gpio-key,wakeup;
+			linux,code = <KEY_HOME>;
+		};
+
+		back {
+			label = "Back";
+			gpios = <&gpio1 12 0>;
+			gpio-key,wakeup;
+			linux,code = <KEY_BACK>;
+		};
+
+		program {
+			label = "Program";
+			gpios = <&gpio2 12 0>;
+			gpio-key,wakeup;
+			linux,code = <KEY_PROGRAM>;
+		};
+
+		volume-up {
+			label = "Volume Up";
+			gpios = <&gpio2 15 0>;
+			gpio-key,wakeup;
+			linux,code = <KEY_VOLUMEUP>;
+		};
+
+		volume-down {
+			label = "Volume Down";
+			gpios = <&gpio5 14 0>;
+			gpio-key,wakeup;
+			linux,code = <KEY_VOLUMEDOWN>;
 		};
 	};
 
@@ -463,6 +505,16 @@
 			fsl,pins = <
 				MX6QDL_PAD_KEY_COL4__FLEXCAN2_TX	0x80000000
 				MX6QDL_PAD_KEY_ROW4__FLEXCAN2_RX	0x80000000
+			>;
+		};
+
+		pinctrl_gpio_keys: gpio_keysgrp {
+			fsl,pins = <
+				MX6QDL_PAD_SD2_CMD__GPIO1_IO11	0x1b0b0
+				MX6QDL_PAD_SD2_DAT3__GPIO1_IO12 0x1b0b0
+				MX6QDL_PAD_SD4_DAT4__GPIO2_IO12 0x1b0b0
+				MX6QDL_PAD_SD4_DAT7__GPIO2_IO15	0x1b0b0
+				MX6QDL_PAD_DISP0_DAT20__GPIO5_IO14 0x1b0b0
 			>;
 		};
 
