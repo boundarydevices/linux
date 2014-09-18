@@ -2273,6 +2273,14 @@ struct video_device TW68_video_template = {
 	.current_norm			= V4L2_STD_NTSC,
 };
 
+void TW68_video_variable_init(struct TW68_dev *dev)
+{
+	INIT_LIST_HEAD(&dev->video_q.queued);
+
+	init_timer(&dev->delay_resync);
+	dev->delay_resync.function = resync;
+	dev->delay_resync.data     = (unsigned long)dev;
+}
 
 
 int TW68_video_init1(struct TW68_dev *dev)
@@ -2309,11 +2317,6 @@ int TW68_video_init1(struct TW68_dev *dev)
 	dev->ctl_automute   = ctrl_by_id(V4L2_CID_PRIVATE_AUTOMUTE)->default_value;
 
 	////////////////////////////////////////////////////////xxxxxxxxxxx
-	INIT_LIST_HEAD(&dev->video_q.queued);
-
-	init_timer(&dev->delay_resync);      //1021
-	dev->delay_resync.function = resync;
-	dev->delay_resync.data     = (unsigned long)dev;   ///(unsigned long)(&dev);
 	mod_timer(&dev->delay_resync, jiffies+ msecs_to_jiffies(30));
 
 

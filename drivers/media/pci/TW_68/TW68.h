@@ -656,6 +656,7 @@ int TW68_s_std_internal(struct TW68_dev *dev,  struct TW68_fh *fh, v4l2_std_id i
 int TW68_videoport_init(struct TW68_dev *dev);
 // void TW68_set_tvnorm_hw(struct TW68_dev *dev);
 
+void TW68_video_variable_init(struct TW68_dev *dev);
 int TW68_video_init1(struct TW68_dev *dev);
 int TW68_video_init2(struct TW68_dev *dev);
 void TW68_irq_video_signalchange(struct TW68_dev *dev);
