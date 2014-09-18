@@ -233,8 +233,6 @@
 			MX6QDL_PAD_DISP0_DAT21__IPU1_DISP0_DATA21  0x10
 			MX6QDL_PAD_DISP0_DAT22__IPU1_DISP0_DATA22  0x10
 			MX6QDL_PAD_DISP0_DAT23__IPU1_DISP0_DATA23  0x10
-#define GP_ADV7391_RESET	<&gpio4 20 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DI0_PIN4__GPIO4_IO20		0x000b0		/* reset */
 		>;
 	};
 
@@ -251,6 +249,8 @@
 			MX6QDL_PAD_DISP0_DAT21__GPIO5_IO15	0x0b0b0
 			MX6QDL_PAD_DISP0_DAT22__GPIO5_IO16	0x0b0b0
 			MX6QDL_PAD_DISP0_DAT23__GPIO5_IO17	0x0b0b0
+#define GP_ADV7391_RESET	<&gpio4 20 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_DI0_PIN4__GPIO4_IO20		0x000b0		/* reset */
 		>;
 	};
 	pinctrl_audmux: audmuxgrp {
@@ -617,7 +617,7 @@
 };
 
 &hdmi_core {
-	ipu_id = <0>;
+	ipu_id = <1>;
 	disp_id = <0>;
 	status = "okay";
 };
@@ -672,11 +672,12 @@
 	adv7391: adv7391@2a {
 		compatible = "adv,mxc_adv739x";
 		reg = <0x2a>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_adv7391>;
+		pinctrl-names = "default", "enable";
+		pinctrl-0 = <&pinctrl_adv7391_off>;
+		pinctrl-1 = <&pinctrl_adv7391>;
 		rst-gpios = GP_ADV7391_RESET;
 		ipu_id = <0>;
-		csi_id = <0>;
+		disp_id = <0>;
         };
 };
 
