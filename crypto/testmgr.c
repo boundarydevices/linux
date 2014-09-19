@@ -190,7 +190,7 @@ static int test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
 	const char *algo = crypto_tfm_alg_driver_name(crypto_ahash_tfm(tfm));
 	unsigned int i, j, k, temp;
 	struct scatterlist sg[8];
-	char result[64];
+	char result[64]  __attribute__ (aligned(32));
 	struct ahash_request *req;
 	struct tcrypt_result tresult;
 	void *hash_buff;
