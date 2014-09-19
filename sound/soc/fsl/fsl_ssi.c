@@ -4,7 +4,7 @@
 //
 // Author: Timur Tabi <timur@freescale.com>
 //
-// Copyright 2007-2010 Freescale Semiconductor, Inc.
+// Copyright 2007-2015 Freescale Semiconductor, Inc.
 //
 // Some notes why imx-pcm-fiq is used instead of DMA on some boards:
 //
@@ -40,6 +40,8 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/pm_runtime.h>
+#include <linux/busfreq-imx.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -638,8 +640,9 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 	if (ret)
 		return ret;
 
-	/*
-	 * When using dual fifo mode, it is safer to ensure an even period
+	pm_runtime_get_sync(dai->dev);
+
+	/* When using dual fifo mode, it is safer to ensure an even period
 	 * size. If appearing to an odd number while DMA always starts its
 	 * task from fifo0, fifo1 would be neglected at the end of each
 	 * period. But SSI would still access fifo1 with an invalid data.
@@ -656,6 +659,12 @@ static void fsl_ssi_shutdown(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct fsl_ssi *ssi = snd_soc_dai_get_drvdata(rtd->cpu_dai);
+	struct fsl_ssi_private *ssi_private =
+		snd_soc_dai_get_drvdata(rtd->cpu_dai);
+
+	pm_runtime_put_sync(dai->dev);
+
+	clk_disable_unprepare(ssi_private->clk);
 
 	clk_disable_unprepare(ssi->clk);
 }
@@ -1103,13 +1112,14 @@ static int fsl_ssi_dai_probe(struct snd_soc_dai *dai)
 }
 
 static const struct snd_soc_dai_ops fsl_ssi_dai_ops = {
-	.startup = fsl_ssi_startup,
-	.shutdown = fsl_ssi_shutdown,
-	.hw_params = fsl_ssi_hw_params,
-	.hw_free = fsl_ssi_hw_free,
-	.set_fmt = fsl_ssi_set_dai_fmt,
-	.set_tdm_slot = fsl_ssi_set_dai_tdm_slot,
-	.trigger = fsl_ssi_trigger,
+	.startup	= fsl_ssi_startup,
+	.shutdown	= fsl_ssi_shutdown,
+	.hw_params	= fsl_ssi_hw_params,
+	.hw_free	= fsl_ssi_hw_free,
+	.set_fmt	= fsl_ssi_set_dai_fmt,
+	.set_sysclk	= fsl_ssi_set_dai_sysclk,
+	.set_tdm_slot	= fsl_ssi_set_dai_tdm_slot,
+	.trigger	= fsl_ssi_trigger,
 };
 
 static struct snd_soc_dai_driver fsl_ssi_dai_template = {
@@ -1553,7 +1563,9 @@ static int fsl_ssi_probe(struct platform_device *pdev)
 		break;
 	}
 
-	dev_set_drvdata(dev, ssi);
+	pm_runtime_enable(&pdev->dev);
+
+	dev_set_drvdata(&pdev->dev, ssi_private);
 
 	if (ssi->soc->imx) {
 		ret = fsl_ssi_imx_probe(pdev, ssi, iomem);
@@ -1687,8 +1699,24 @@ static int fsl_ssi_resume(struct device *dev)
 }
 #endif /* CONFIG_PM_SLEEP */
 
+#ifdef CONFIG_PM
+static int fsl_ssi_runtime_resume(struct device *dev)
+{
+	request_bus_freq(BUS_FREQ_AUDIO);
+	return 0;
+}
+
+static int fsl_ssi_runtime_suspend(struct device *dev)
+{
+	release_bus_freq(BUS_FREQ_AUDIO);
+	return 0;
+}
+#endif
+
 static const struct dev_pm_ops fsl_ssi_pm = {
 	SET_SYSTEM_SLEEP_PM_OPS(fsl_ssi_suspend, fsl_ssi_resume)
+	SET_RUNTIME_PM_OPS(fsl_ssi_runtime_suspend, fsl_ssi_runtime_resume,
+			   NULL)
 };
 
 static struct platform_driver fsl_ssi_driver = {
