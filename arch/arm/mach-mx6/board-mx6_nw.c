@@ -126,6 +126,9 @@ static int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
 #define GPIOF_HIGH	GPIOF_OUT_INIT_HIGH
 static struct gpio mx6_init_gpios[] __initdata = {
 	{.label = "usb_hub_reset",	.gpio = USB_HUB_RESET,	.flags = 0},		/* GPIO7[12]: GPIO_17 - active low */
+#ifdef CONFIG_MACH_MX6_NW_REV2
+	{.label = "emmc_reset",		.gpio = GP_EMMC_RESET,	.flags = 0},		/* GPIO2[5]: NANDF_D5 - active low */
+#endif
 	{.label = "usbotg_pwr_en",	.gpio = USB_OTG_POWER,	.flags = 0},		/* GPIO3[22]: EIM_D22 - active high */
 	{.label = "wl_en",		.gpio = WL_EN,		.flags = 0},		/* GPIO6[7]: NANDF_CLE - active high */
 	{.label = "wl_clk_req_irq",	.gpio = WL_CLK_REQ_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO6[9]: NANDF_WP_B - active low */
@@ -601,6 +604,9 @@ static void __init mx6_board_init(void)
         gpio_direction_output(WL_BT_WAKE, 1);
 
 	mdelay(2);
+#ifdef CONFIG_MACH_MX6_NW_REV2
+	gpio_direction_output(GP_EMMC_RESET, 1);
+#endif
 	gpio_set_value(WL_EN, 0);
 
 	gpio_free(WL_EN);

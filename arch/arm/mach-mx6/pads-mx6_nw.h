@@ -167,6 +167,8 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	NEW_PAD_CTRL(MX6PAD(SD3_DAT5__GPIO_7_0), WEAK_IRQ),	/* SD3_CD */
 #else
 	SD_PINS8(4, USDHC_PAD_CTRL_47KPU_40OHM_50MHZ),
+#define GP_EMMC_RESET	IMX_GPIO_NR(2, 5)
+	NEW_PAD_CTRL(MX6PAD(NANDF_D5__GPIO_2_5), WEAK_PULLUP),
 #endif
 
 	/* Storage - SPI NOR */
