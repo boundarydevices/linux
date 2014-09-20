@@ -609,6 +609,9 @@ static int ipu_probe(struct platform_device *pdev)
 		/* Set MCU_T to divide MCU access window into 2 */
 		ipu_cm_write(ipu, 0x00400000L | (IPU_MCU_T_DEFAULT << 18),
 			     IPU_DISP_GEN);
+	} else {
+		ipu->fg_csc_type = ipu->bg_csc_type = CSC_NONE;
+		ipu->color_key_4rgb = true;
 	}
 
 	/* setup ipu clk tree after ipu reset  */
