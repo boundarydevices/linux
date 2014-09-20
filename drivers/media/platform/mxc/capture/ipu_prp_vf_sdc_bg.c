@@ -313,9 +313,9 @@ static int prpvf_start(void *private)
 out_1:
 	ipu_free_irq(cam->ipu, IPU_IRQ_PRP_VF_OUT_EOF, NULL);
 out_2:
-	ipu_uninit_channel(cam->ipu, MEM_ROT_VF_MEM);
+	ipu_uninit_channel(cam->ipu, MEM_ROT_VF_MEM, NULL);
 out_3:
-	ipu_uninit_channel(cam->ipu, CSI_PRP_VF_MEM);
+	ipu_uninit_channel(cam->ipu, CSI_PRP_VF_MEM, NULL);
 out_4:
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -368,8 +368,8 @@ static int prpvf_stop(void *private)
 
 	ipu_disable_channel(cam->ipu, CSI_PRP_VF_MEM, true);
 	ipu_disable_channel(cam->ipu, MEM_ROT_VF_MEM, true);
-	ipu_uninit_channel(cam->ipu, CSI_PRP_VF_MEM);
-	ipu_uninit_channel(cam->ipu, MEM_ROT_VF_MEM);
+	ipu_uninit_channel(cam->ipu, CSI_PRP_VF_MEM, NULL);
+	ipu_uninit_channel(cam->ipu, MEM_ROT_VF_MEM, NULL);
 
 #ifdef CONFIG_MXC_MIPI_CSI2
 	mipi_csi2_info = mipi_csi2_get_info();
