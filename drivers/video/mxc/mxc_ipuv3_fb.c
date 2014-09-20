@@ -227,8 +227,11 @@ static int check_var_pixfmt(struct fb_var_screeninfo *var)
 	}
 	return ret;
 }
-
-static uint32_t fbi_to_pixfmt(struct fb_info *fbi)
+#if 0
+#define FB_PIX(fbi, mxc_fbi) mxc_fbi->fb_pix_fmt
+#else
+#define FB_PIX(fbi, mxc_fbi) fbi_to_pixfmt(fbi, mxc_fbi)
+static uint32_t fbi_to_pixfmt(struct fb_info *fbi, struct mxcfb_info *mxc_fbi)
 {
 	int i;
 	uint32_t pixfmt = 0;
@@ -251,6 +254,7 @@ static uint32_t fbi_to_pixfmt(struct fb_info *fbi)
 
 	return pixfmt;
 }
+#endif
 
 static struct fb_info *found_registered_fb(ipu_channel_t ipu_ch, int ipu_id)
 {
@@ -311,13 +315,13 @@ static int _setup_disp_channel1(struct fb_info *fbi)
 		if (fbi->var.vmode & FB_VMODE_INTERLACED)
 			params.mem_dc_sync.interlaced = true;
 		params.mem_dc_sync.out_pixel_fmt = mxc_fbi->ipu_di_pix_fmt;
-		params.mem_dc_sync.in_pixel_fmt = mxc_fbi->fb_pix_fmt;
+		params.mem_dc_sync.in_pixel_fmt = FB_PIX(fbi, mxc_fbi);
 	} else {
 		params.mem_dp_bg_sync.di = mxc_fbi->ipu_di;
 		if (fbi->var.vmode & FB_VMODE_INTERLACED)
 			params.mem_dp_bg_sync.interlaced = true;
 		params.mem_dp_bg_sync.out_pixel_fmt = mxc_fbi->ipu_di_pix_fmt;
-		params.mem_dp_bg_sync.in_pixel_fmt = mxc_fbi->fb_pix_fmt;
+		params.mem_dp_bg_sync.in_pixel_fmt = FB_PIX(fbi, mxc_fbi);
 		if (mxc_fbi->alpha_chan_en)
 			params.mem_dp_bg_sync.alpha_chan_en = true;
 	}
@@ -334,7 +338,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	unsigned long base;
 	unsigned int fr_xoff, fr_yoff, fr_w, fr_h;
 
-	switch (mxc_fbi->fb_pix_fmt) {
+	switch (FB_PIX(fbi, mxc_fbi)) {
 	case IPU_PIX_FMT_YUV420P2:
 	case IPU_PIX_FMT_YVU420P:
 	case IPU_PIX_FMT_NV12:
@@ -382,7 +386,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 
 	retval = ipu_init_channel_buffer(mxc_fbi->ipu,
 					 mxc_fbi->ipu_ch, IPU_INPUT_BUFFER,
-					 mxc_fbi->fb_pix_fmt,
+					 FB_PIX(fbi, mxc_fbi),
 					 fbi->var.xres, fbi->var.yres,
 					 fb_stride,
 					 fbi->var.rotate,
@@ -400,7 +404,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	/* update u/v offset */
 	ipu_update_channel_offset(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 			IPU_INPUT_BUFFER,
-			mxc_fbi->fb_pix_fmt,
+			FB_PIX(fbi, mxc_fbi),
 			fr_w,
 			fr_h,
 			fr_w,
@@ -467,7 +471,7 @@ static int mxcfb_set_par(struct fb_info *fbi)
 	struct mxcfb_info *mxc_fbi_fg = NULL;
 	bool ovfbi_enable = false;
 
-	if (ipu_ch_param_bad_alpha_pos(mxc_fbi->fb_pix_fmt) &&
+	if (ipu_ch_param_bad_alpha_pos(FB_PIX(fbi, mxc_fbi)) &&
 	    mxc_fbi->alpha_chan_en) {
 		dev_err(fbi->device, "Bad pixel format for "
 				"graphics plane fb\n");
@@ -491,10 +495,10 @@ static int mxcfb_set_par(struct fb_info *fbi)
 
 	if (mxc_fbi->ipu_ch == MEM_DC_SYNC) {
 		if (!((mxc_fbi->ipu_di_pix_fmt == IPU_PIX_FMT_BT656) || (mxc_fbi->ipu_di_pix_fmt == IPU_PIX_FMT_BT1120)))
-			mxc_fbi->fb_pix_fmt = fbi_to_pixfmt(fbi);
+			mxc_fbi->fb_pix_fmt = fbi_to_pixfmt(fbi, mxc_fbi);
 		params.mem_dc_sync.di = mxc_fbi->ipu_di;
 	} else {
-		mxc_fbi->fb_pix_fmt = fbi_to_pixfmt(fbi);
+		mxc_fbi->fb_pix_fmt = fbi_to_pixfmt(fbi, mxc_fbi);
 		params.mem_dp_bg_sync.di = mxc_fbi->ipu_di;
 	}
 
@@ -1052,7 +1056,7 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
 		{
 			struct mxcfb_loc_alpha la;
 			bool bad_pixfmt =
-				ipu_ch_param_bad_alpha_pos(mxc_fbi->fb_pix_fmt);
+				ipu_ch_param_bad_alpha_pos(FB_PIX(fbi, mxc_fbi));
 
 			if (copy_from_user(&la, (void *)arg, sizeof(la))) {
 				retval = -EFAULT;
@@ -1523,7 +1527,7 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	if (y_bottom > info->var.yres_virtual)
 		return -EINVAL;
 
-	switch (mxc_fbi->fb_pix_fmt) {
+	switch (FB_PIX(info, mxc_fbi)) {
 	case IPU_PIX_FMT_YUV420P2:
 	case IPU_PIX_FMT_YVU420P:
 	case IPU_PIX_FMT_NV12:
@@ -1610,7 +1614,7 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 		/* update u/v offset */
 		ipu_update_channel_offset(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 				IPU_INPUT_BUFFER,
-				mxc_fbi->fb_pix_fmt,
+				FB_PIX(info, mxc_fbi),
 				fr_w,
 				fr_h,
 				fr_w,
