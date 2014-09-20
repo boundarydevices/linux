@@ -585,7 +585,7 @@ struct ipu_soc;
 /* Common IPU API */
 struct ipu_soc *ipu_get_soc(int id);
 int32_t ipu_init_channel(struct ipu_soc *ipu, ipu_channel_t channel, ipu_channel_params_t *params);
-void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel);
+void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel, ipu_channel_params_t *params);
 
 struct ipu_chan;
 int32_t ipu_channel_request(struct ipu_soc *ipu, ipu_channel_t channel, ipu_channel_params_t *params, struct ipu_chan **p_ipu_chan);
@@ -740,6 +740,7 @@ bool ipu_ch_param_bad_alpha_pos(uint32_t fmt);
 
 struct ipuv3_fb_platform_data {
 	char				disp_dev[32];
+	u32 				fb_pix_fmt;
 	u32				interface_pix_fmt;
 	char				*mode_str;
 	int				default_bpp;
