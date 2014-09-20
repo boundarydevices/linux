@@ -360,7 +360,7 @@ out_1:
 	ipu_free_irq(cam->ipu, IPU_IRQ_PRP_VF_OUT_EOF, NULL);
 out_2:
 	if (cam->vf_rotation >= IPU_ROTATE_VERT_FLIP)
-		ipu_uninit_channel(cam->ipu, MEM_ROT_VF_MEM);
+		ipu_uninit_channel(cam->ipu, MEM_ROT_VF_MEM, NULL);
 out_3:
 	if (cam->vf_bufs_vaddr[0]) {
 		dma_free_coherent(0, cam->vf_bufs_size[0],
@@ -377,7 +377,7 @@ out_3:
 		cam->vf_bufs[1] = 0;
 	}
 out_4:
-	ipu_uninit_channel(cam->ipu, CSI_PRP_VF_MEM);
+	ipu_uninit_channel(cam->ipu, CSI_PRP_VF_MEM, NULL);
 out_5:
 	return err;
 }
@@ -427,9 +427,9 @@ static int prpvf_stop(void *private)
 
 	if (cam->vf_rotation >= IPU_ROTATE_VERT_FLIP) {
 		ipu_disable_channel(cam->ipu, MEM_ROT_VF_MEM, true);
-		ipu_uninit_channel(cam->ipu, MEM_ROT_VF_MEM);
+		ipu_uninit_channel(cam->ipu, MEM_ROT_VF_MEM, NULL);
 	}
-	ipu_uninit_channel(cam->ipu, CSI_PRP_VF_MEM);
+	ipu_uninit_channel(cam->ipu, CSI_PRP_VF_MEM, NULL);
 
 	console_lock();
 	fb_blank(fbi, FB_BLANK_POWERDOWN);
