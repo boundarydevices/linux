@@ -74,6 +74,7 @@ struct mxc_vout_fb {
 	int ipu_id;
 	struct v4l2_rect crop_bounds;
 	unsigned int disp_fmt;
+	unsigned int if_fmt;
 	bool disp_support_csc;
 	bool disp_support_windows;
 };
@@ -317,6 +318,22 @@ static unsigned int get_fb_fmt(struct fb_info *fbi)
 	return fb_fmt;
 }
 
+static unsigned int get_ipu_fmt(struct fb_info *fbi)
+{
+	mm_segment_t old_fs;
+	unsigned int di_fmt;
+
+	if (fbi->fbops->fb_ioctl) {
+		old_fs = get_fs();
+		set_fs(KERNEL_DS);
+		fbi->fbops->fb_ioctl(fbi, MXCFB_GET_DIFMT,
+				(unsigned long)&di_fmt);
+		set_fs(old_fs);
+	}
+
+	return di_fmt;
+}
+
 static void update_display_setting(void)
 {
 	int i;
@@ -340,13 +357,20 @@ static void update_display_setting(void)
 		g_fb_setting[i].crop_bounds.width = fbi->var.xres;
 		g_fb_setting[i].crop_bounds.height = fbi->var.yres;
 		g_fb_setting[i].disp_fmt = get_fb_fmt(fbi);
+		g_fb_setting[i].if_fmt = get_ipu_fmt(fbi);
 
 		if (get_ipu_channel(fbi) == MEM_BG_SYNC) {
 			bg_crop_bounds[g_fb_setting[i].ipu_id] =
 				g_fb_setting[i].crop_bounds;
-			g_fb_setting[i].disp_support_csc = true;
+			if(colorspaceofpixel(g_fb_setting[i].disp_fmt) != colorspaceofpixel(g_fb_setting[i].if_fmt))
+				g_fb_setting[i].disp_support_csc = false;  // DP CSC need be used for fb to di output.
+			else
+				g_fb_setting[i].disp_support_csc = true;
 		} else if (get_ipu_channel(fbi) == MEM_FG_SYNC) {
-			g_fb_setting[i].disp_support_csc = true;
+			if(colorspaceofpixel(g_fb_setting[i].disp_fmt) != colorspaceofpixel(g_fb_setting[i].if_fmt))
+				g_fb_setting[i].disp_support_csc = false;  // DP CSC need be used for fb to di output.
+			else
+				g_fb_setting[i].disp_support_csc = true;
 			g_fb_setting[i].disp_support_windows = true;
 		}
 	}
