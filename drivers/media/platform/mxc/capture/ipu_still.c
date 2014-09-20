@@ -194,7 +194,7 @@ static int prp_still_stop(void *private)
 
 	ipu_disable_csi(cam->ipu, cam->csi);
 	ipu_disable_channel(cam->ipu, CSI_MEM, true);
-	ipu_uninit_channel(cam->ipu, CSI_MEM);
+	ipu_uninit_channel(cam->ipu, CSI_MEM, NULL);
 
 	return err;
 }
