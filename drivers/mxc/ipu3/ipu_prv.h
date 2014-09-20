@@ -308,7 +308,7 @@ int _ipu_dp_init(struct ipu_soc *ipu, ipu_channel_t channel, uint32_t in_pixel_f
 		 uint32_t out_pixel_fmt);
 void _ipu_dp_uninit(struct ipu_soc *ipu, ipu_channel_t channel);
 void _ipu_dc_init(struct ipu_soc *ipu, int dc_chan, int di, bool interlaced, uint32_t pixel_fmt);
-void _ipu_dc_uninit(struct ipu_soc *ipu, int dc_chan);
+void _ipu_dc_uninit(struct ipu_soc *ipu, int dc_chan, int di);
 void _ipu_dp_dc_enable(struct ipu_soc *ipu, ipu_channel_t channel);
 void _ipu_dp_dc_disable(struct ipu_soc *ipu, ipu_channel_t channel, bool swap);
 void _ipu_dmfc_init(struct ipu_soc *ipu, int dmfc_type, int first);
