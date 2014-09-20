@@ -3292,6 +3292,39 @@ static int mxcfb_dispdrv_init(struct platform_device *pdev,
 	return ret;
 }
 
+static int get_interface_pix_fmt(const char *str)
+{
+	int fmt = -EINVAL;
+
+	if (!strncmp(str, "RGB24", 5))
+		fmt = IPU_PIX_FMT_RGB24;
+	else if (!strncmp(str, "BGR24", 5))
+		fmt = IPU_PIX_FMT_BGR24;
+	else if (!strncmp(str, "GBR24", 5))
+		fmt = IPU_PIX_FMT_GBR24;
+	else if (!strncmp(str, "RGB565", 6))
+		fmt = IPU_PIX_FMT_RGB565;
+	else if (!strncmp(str, "RGB666", 6))
+		fmt = IPU_PIX_FMT_RGB666;
+	else if (!strncmp(str, "YUV444", 6))
+		fmt = IPU_PIX_FMT_YUV444;
+	else if (!strncmp(str, "LVDS666", 7))
+		fmt = IPU_PIX_FMT_LVDS666;
+	else if (!strncmp(str, "YUYV16", 6))
+		fmt = IPU_PIX_FMT_YUYV;
+	else if (!strncmp(str, "UYVY16", 6))
+		fmt = IPU_PIX_FMT_UYVY;
+	else if (!strncmp(str, "YVYU16", 6))
+		fmt = IPU_PIX_FMT_YVYU;
+	else if (!strncmp(str, "VYUY16", 6))
+		fmt = IPU_PIX_FMT_VYUY;
+	else if (!strncmp(str, "BT656", 5))
+		fmt = IPU_PIX_FMT_BT656;
+	else if (!strncmp(str, "BT1120", 6))
+		fmt = IPU_PIX_FMT_BT1120;
+	return fmt;
+}
+
 /*
  * Parse user specified options (`video=trident:')
  * example:
@@ -3326,32 +3359,10 @@ static int mxcfb_option_setup(struct platform_device *pdev, struct fb_info *fbi)
 			memcpy(pdata->disp_dev, opt + 4, strlen(opt) - 4);
 			pdata->disp_dev[strlen(opt) - 4] = '\0';
 		} else if (!strncmp(opt, "if=", 3)) {
-			if (!strncmp(opt+3, "RGB24", 5))
-				pdata->interface_pix_fmt = IPU_PIX_FMT_RGB24;
-			else if (!strncmp(opt+3, "BGR24", 5))
-				pdata->interface_pix_fmt = IPU_PIX_FMT_BGR24;
-			else if (!strncmp(opt+3, "GBR24", 5))
-				pdata->interface_pix_fmt = IPU_PIX_FMT_GBR24;
-			else if (!strncmp(opt+3, "RGB565", 6))
-				pdata->interface_pix_fmt = IPU_PIX_FMT_RGB565;
-			else if (!strncmp(opt+3, "RGB666", 6))
-				pdata->interface_pix_fmt = IPU_PIX_FMT_RGB666;
-			else if (!strncmp(opt+3, "YUV444", 6))
-				pdata->interface_pix_fmt = IPU_PIX_FMT_YUV444;
-			else if (!strncmp(opt+3, "LVDS666", 7))
-				pdata->interface_pix_fmt = IPU_PIX_FMT_LVDS666;
-			else if (!strncmp(opt+3, "YUYV16", 6))
-				pdata->interface_pix_fmt = IPU_PIX_FMT_YUYV;
-			else if (!strncmp(opt+3, "UYVY16", 6))
-				pdata->interface_pix_fmt = IPU_PIX_FMT_UYVY;
-			else if (!strncmp(opt+3, "YVYU16", 6))
-				pdata->interface_pix_fmt = IPU_PIX_FMT_YVYU;
-			else if (!strncmp(opt+3, "VYUY16", 6))
-				pdata->interface_pix_fmt = IPU_PIX_FMT_VYUY;
-			else if (!strncmp(opt+3, "BT656", 5))
-				pdata->interface_pix_fmt = IPU_PIX_FMT_BT656;
-			else if (!strncmp(opt+3, "BT1120", 6))
-				pdata->interface_pix_fmt = IPU_PIX_FMT_BT1120;
+			int fmt = get_interface_pix_fmt(opt+3);
+
+			if (fmt >= 0)
+				pdata->interface_pix_fmt = fmt;
 		} else if (!strncmp(opt, "fbpix=", 6)) {
 			if (!strncmp(opt+6, "RGB24", 5))
 				fb_pix_fmt = IPU_PIX_FMT_RGB24;
@@ -3662,6 +3673,7 @@ static int mxcfb_get_of_property(struct platform_device *pdev,
 	const char *pixfmt;
 	int err;
 	int len;
+	int fmt;
 	u32 bpp, int_clk;
 	u32 late_init;
 
@@ -3696,33 +3708,11 @@ static int mxcfb_get_of_property(struct platform_device *pdev,
 
 	plat_data->prefetch = of_property_read_bool(np, "prefetch");
 
-	if (!strncmp(pixfmt, "RGB24", 5))
-		plat_data->interface_pix_fmt = IPU_PIX_FMT_RGB24;
-	else if (!strncmp(pixfmt, "BGR24", 5))
-		plat_data->interface_pix_fmt = IPU_PIX_FMT_BGR24;
-	else if (!strncmp(pixfmt, "GBR24", 5))
-		plat_data->interface_pix_fmt = IPU_PIX_FMT_GBR24;
-	else if (!strncmp(pixfmt, "RGB565", 6))
-		plat_data->interface_pix_fmt = IPU_PIX_FMT_RGB565;
-	else if (!strncmp(pixfmt, "RGB666", 6))
-		plat_data->interface_pix_fmt = IPU_PIX_FMT_RGB666;
-	else if (!strncmp(pixfmt, "YUV444", 6))
-		plat_data->interface_pix_fmt = IPU_PIX_FMT_YUV444;
-	else if (!strncmp(pixfmt, "LVDS666", 7))
-		plat_data->interface_pix_fmt = IPU_PIX_FMT_LVDS666;
-	else if (!strncmp(pixfmt, "YUYV16", 6))
-		plat_data->interface_pix_fmt = IPU_PIX_FMT_YUYV;
-	else if (!strncmp(pixfmt, "UYVY16", 6))
-		plat_data->interface_pix_fmt = IPU_PIX_FMT_UYVY;
-	else if (!strncmp(pixfmt, "YVYU16", 6))
-		plat_data->interface_pix_fmt = IPU_PIX_FMT_YVYU;
-	else if (!strncmp(pixfmt, "VYUY16", 6))
-		plat_data->interface_pix_fmt = IPU_PIX_FMT_VYUY;
-	else if (!strncmp(pixfmt, "BT656", 5))
-		plat_data->interface_pix_fmt = IPU_PIX_FMT_BT656;
-	else if (!strncmp(pixfmt, "BT1120", 6))
-		plat_data->interface_pix_fmt = IPU_PIX_FMT_BT1120;
-	else {
+	fmt = get_interface_pix_fmt(pixfmt);
+
+	if (fmt >= 0) {
+		plat_data->interface_pix_fmt = fmt;
+	} else {
 		dev_err(&pdev->dev, "err interface_pix_fmt!\n");
 		return -ENOENT;
 	}
