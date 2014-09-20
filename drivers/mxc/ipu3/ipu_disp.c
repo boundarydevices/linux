@@ -360,7 +360,7 @@ static void _ipu_dc_write_tmpl(struct ipu_soc *ipu,
 			reg |= (++wave << 11);
 			reg |= ((operand & 0x1FFFF) << 15);
 			ipu_dc_tmpl_write(ipu, reg, word * 8);
-			
+
 			opcmd = 0x01;
 			reg = (operand >> 17);
 			reg |= opcmd << 7;
@@ -1765,7 +1765,9 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 	int map;
 	int ret;
 	struct clk *ldb_di0_clk, *ldb_di1_clk;
-	struct clk *di_parent;
+	struct clk *clk540m;
+	struct clk *di_parent, *dipp;
+	uint32_t clk540m_rate, rem;
 	uint32_t bt656_h_start_width = 0;
 	uint32_t bt656_v_start_width_field0 = 0, bt656_v_end_width_field0 = 0;
 	uint32_t bt656_v_start_width_field1 = 0, bt656_v_end_width_field1 = 0;
@@ -1805,6 +1807,48 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 		dev_err(ipu->dev, "get di clk parent fail\n");
 		return -EINVAL;
 	}
+	dipp = clk_get_parent(di_parent);
+	if (IS_ERR(dipp)) {
+		dev_err(ipu->dev, "get dipp fail\n");
+		return PTR_ERR(dipp);
+	}
+	clk540m = clk_get(ipu->dev, "540m");
+	if (IS_ERR(clk540m)) {
+		dev_err(ipu->dev, "clk_get 540m failed");
+		return PTR_ERR(clk540m);
+	}
+	clk540m_rate = clk_get_rate(clk540m);
+	rem = clk540m_rate % pixel_clk;
+	if (!rem) {
+		int div;
+		ret = clk_set_parent(dipp, clk540m);
+		if (ret) {
+			dev_err(ipu->dev, "set parent error:%d\n", ret);
+			return ret;
+		}
+		div = clk540m_rate / pixel_clk;
+		if (!(div & 1))
+			div >>= 1;
+		if (!(div & 1))
+			div >>= 1;
+		dev_info(ipu->dev, "%s=%ld\n", __clk_get_name(dipp), clk_get_rate(dipp));
+		ret = clk_set_rate(di_parent, clk540m_rate / div);
+		if (ret) {
+			dev_warn(ipu->dev, "set rate error:%d\n", ret);
+			rem = 1;
+		}
+	}
+	clk_put(clk540m);
+	if (rem) {
+		struct clk *clk_video = clk_get(ipu->dev, "video_pll");
+		if (IS_ERR(clk_video)) {
+			dev_err(ipu->dev, "clk_get video_pll failed");
+			return PTR_ERR(clk_video);
+		}
+		ret = clk_set_parent(dipp, clk_video);
+		clk_put(clk_video);
+	}
+
 	ldb_di0_clk = clk_get(ipu->dev, "ldb_di0");
 	if (IS_ERR(ldb_di0_clk)) {
 		dev_err(ipu->dev, "clk_get di0 failed");
@@ -1815,20 +1859,23 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 		dev_err(ipu->dev, "clk_get di1 failed");
 		return PTR_ERR(ldb_di1_clk);
 	}
-
-	if (ldb_di0_clk == di_parent || ldb_di1_clk == di_parent) {
+	clk_put(di_parent);
+	clk_put(dipp);
+	clk_put(ldb_di0_clk);
+	clk_put(ldb_di1_clk);
+	if (ldb_di0_clk == di_parent ||
+	    ldb_di1_clk == di_parent ||
+	    !rem) {
 		/* if di clk parent is tve/ldb, then keep it;*/
-		dev_dbg(ipu->dev, "use special clk parent\n");
+		dev_info(ipu->dev, "use special clk parent\n");
 		ret = clk_set_parent(ipu->pixel_clk_sel[disp], ipu->di_clk[disp]);
 		if (ret) {
 			dev_err(ipu->dev, "set pixel clk error:%d\n", ret);
 			return ret;
 		}
-		clk_put(ldb_di0_clk);
-		clk_put(ldb_di1_clk);
 	} else {
 		/* try ipu clk first*/
-		dev_dbg(ipu->dev, "try ipu internal clk\n");
+		dev_info(ipu->dev, "try ipu internal clk\n");
 		ret = clk_set_parent(ipu->pixel_clk_sel[disp], ipu->ipu_clk);
 		if (ret) {
 			dev_err(ipu->dev, "set pixel clk error:%d\n", ret);
@@ -1840,10 +1887,9 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 		 * we will only use 1/2 fraction for ipu clk,
 		 * so if the clk rate is not fit, try ext clk.
 		 */
-		if (!(sig.int_clk &&
+		if (!sig.int_clk &&
 			((rounded_pixel_clk >= pixel_clk + pixel_clk/200) ||
-			(rounded_pixel_clk <= pixel_clk - pixel_clk/200))) || 
-			(pixel_fmt == IPU_PIX_FMT_BT656) || (pixel_fmt == IPU_PIX_FMT_BT1120)) {
+			(rounded_pixel_clk <= pixel_clk - pixel_clk/200))) {
 			dev_dbg(ipu->dev, "try ipu ext di clk\n");
 
 			rounded_pixel_clk =
@@ -1875,7 +1921,8 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 	msleep(5);
 	/* Get integer portion of divider */
 	div = clk_get_rate(clk_get_parent(ipu->pixel_clk_sel[disp])) / rounded_pixel_clk;
-	dev_dbg(ipu->dev, "div:%d\n", div);
+	dev_info(ipu->dev, "disp=%d, pixel_clk=%d %d parent=%ld div=%d\n",
+			disp, pixel_clk, rounded_pixel_clk, clk_get_rate(clk_get_parent(ipu->pixel_clk_sel[disp])),  div);
 	if (!div) {
 		dev_err(ipu->dev, "invalid pixel clk div = 0\n");
 		return -EINVAL;
