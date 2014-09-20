@@ -354,6 +354,10 @@ static uint32_t fb_to_store_pixfmt(uint32_t fb_pixfmt)
 	}
 }
 
+#if 0
+#define FB_PIX(fbi, mxc_fbi) mxc_fbi->fb_pix_fmt
+#else
+#define FB_PIX(fbi) fbi_to_pixfmt(fbi, true)
 static uint32_t fbi_to_pixfmt(struct fb_info *fbi, bool original_fb)
 {
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)fbi->par;
@@ -387,6 +391,7 @@ next:
 
 	return pixfmt;
 }
+#endif
 
 static void fmt_to_tile_alignment(uint32_t fmt, int *bw, int *bh)
 {
@@ -477,17 +482,13 @@ static int _setup_disp_channel1(struct fb_info *fbi)
 		if (fbi->var.vmode & FB_VMODE_INTERLACED)
 			params.mem_dc_sync.interlaced = true;
 		params.mem_dc_sync.out_pixel_fmt = mxc_fbi->ipu_di_pix_fmt;
-		params.mem_dc_sync.in_pixel_fmt = mxc_fbi->on_the_fly ?
-						  mxc_fbi->final_pfmt :
-						  mxc_fbi->fb_pix_fmt;
+		params.mem_dc_sync.in_pixel_fmt = FB_PIX(fbi);
 	} else {
 		params.mem_dp_bg_sync.di = mxc_fbi->ipu_di;
 		if (fbi->var.vmode & FB_VMODE_INTERLACED)
 			params.mem_dp_bg_sync.interlaced = true;
 		params.mem_dp_bg_sync.out_pixel_fmt = mxc_fbi->ipu_di_pix_fmt;
-		params.mem_dp_bg_sync.in_pixel_fmt = mxc_fbi->on_the_fly ?
-						     mxc_fbi->final_pfmt :
-						     mxc_fbi->fb_pix_fmt;
+		params.mem_dp_bg_sync.in_pixel_fmt = FB_PIX(fbi);
 		if (mxc_fbi->alpha_chan_en)
 			params.mem_dp_bg_sync.alpha_chan_en = true;
 	}
@@ -510,7 +511,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	struct ipu_pre_context pre;
 	bool post_pre_disable = false;
 
-	switch (mxc_fbi->fb_pix_fmt) {
+	switch (FB_PIX(fbi)) {
 	case IPU_PIX_FMT_YUV420P2:
 	case IPU_PIX_FMT_YVU420P:
 	case IPU_PIX_FMT_NV12:
@@ -551,7 +552,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 		fmt_to_tile_block(fbi->var.nonstd, &bw, &bh);
 	} else {
 		base += fr_yoff * fb_stride + fr_xoff *
-			bytes_per_pixel(mxc_fbi->fb_pix_fmt);
+			bytes_per_pixel(fbi_to_pixfmt(fbi, true));
 	}
 
 	if (!mxc_fbi->on_the_fly)
@@ -606,12 +607,12 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 				pre.field_inverse = 0;
 				if (fbi->var.rotate) {
 					pre.interlace_offset = ~(fbi->var.xres_virtual *
-							  bytes_per_pixel(mxc_fbi->fb_pix_fmt)) + 1;
-					pre.cur_buf += fbi->var.xres_virtual * bytes_per_pixel(mxc_fbi->fb_pix_fmt);
+							  bytes_per_pixel(fbi_to_pixfmt(fbi, true))) + 1;
+					pre.cur_buf += fbi->var.xres_virtual * bytes_per_pixel(fbi_to_pixfmt(fbi, true));
 					pre.next_buf = pre.cur_buf;
 				} else {
 					pre.interlace_offset = fbi->var.xres_virtual *
-							  bytes_per_pixel(mxc_fbi->fb_pix_fmt);
+							  bytes_per_pixel(fbi_to_pixfmt(fbi, true));
 				}
 			}
 		} else {
@@ -621,9 +622,9 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 		pre.prefetch_mode = mxc_fbi->resolve ? 1 : 0;
 		pre.tile_fmt = mxc_fbi->resolve ? fbi->var.nonstd : 0;
 		pre.read_burst = mxc_fbi->resolve ? 0x4 : 0x3;
-		if (mxc_fbi->fb_pix_fmt == IPU_PIX_FMT_RGB24 ||
-		    mxc_fbi->fb_pix_fmt == IPU_PIX_FMT_BGR24 ||
-		    mxc_fbi->fb_pix_fmt == IPU_PIX_FMT_YUV444) {
+		if (fbi_to_pixfmt(fbi, true) == IPU_PIX_FMT_RGB24 ||
+		    fbi_to_pixfmt(fbi, true) == IPU_PIX_FMT_BGR24 ||
+		    fbi_to_pixfmt(fbi, true) == IPU_PIX_FMT_YUV444) {
 			if ((fbi->var.xres * 3) % 8 == 0 &&
 			    (fbi->var.xres_virtual * 3) % 8 == 0)
 				pre.prefetch_input_bpp = 64;
@@ -637,18 +638,18 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 				pre.prefetch_input_bpp = 8;
 		} else {
 			pre.prefetch_input_bpp =
-					8 * bytes_per_pixel(mxc_fbi->fb_pix_fmt);
+					8 * bytes_per_pixel(fbi_to_pixfmt(fbi, true));
 		}
 		pre.prefetch_input_pixel_fmt = mxc_fbi->resolve ?
 					0x1 : (fbi->var.nonstd ? fbi->var.nonstd : 0);
 		pre.shift_bypass = (mxc_fbi->on_the_fly &&
-				    mxc_fbi->final_pfmt != mxc_fbi->fb_pix_fmt) ?
+				    mxc_fbi->final_pfmt != fbi_to_pixfmt(fbi, false)) ?
 					false : true;
-		pixfmt_to_var(mxc_fbi->fb_pix_fmt, &from_var);
+		pixfmt_to_var(fbi_to_pixfmt(fbi, false), &from_var);
 		pixfmt_to_var(mxc_fbi->final_pfmt, &to_var);
 		if (mxc_fbi->on_the_fly &&
-		    (format_to_colorspace(mxc_fbi->fb_pix_fmt) == RGB) &&
-		    (bytes_per_pixel(mxc_fbi->fb_pix_fmt) == 4)) {
+		    (format_to_colorspace(fbi_to_pixfmt(fbi, true)) == RGB) &&
+		    (bytes_per_pixel(fbi_to_pixfmt(fbi, true)) == 4)) {
 			pre.prefetch_shift_offset = (from_var.red.offset    << to_var.red.offset)   |
 						    (from_var.green.offset  << to_var.green.offset) |
 						    (from_var.blue.offset   << to_var.blue.offset)  |
@@ -664,22 +665,22 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 		pre.tpr_coor_offset_en = mxc_fbi->resolve ? true : false;
 		pre.prefetch_output_size.left = mxc_fbi->resolve ? (fr_xoff & ~(bw - 1)) : 0;
 		pre.prefetch_output_size.top = mxc_fbi->resolve ? (fr_yoff & ~(bh - 1)) : 0;
-		if (mxc_fbi->fb_pix_fmt == IPU_PIX_FMT_RGB24 ||
-		    mxc_fbi->fb_pix_fmt == IPU_PIX_FMT_BGR24 ||
-		    mxc_fbi->fb_pix_fmt == IPU_PIX_FMT_YUV444) {
+		if (fbi_to_pixfmt(fbi, true) == IPU_PIX_FMT_RGB24 ||
+		    fbi_to_pixfmt(fbi, true) == IPU_PIX_FMT_BGR24 ||
+		    fbi_to_pixfmt(fbi, true) == IPU_PIX_FMT_YUV444) {
 			pre.prefetch_output_size.width = (fbi->var.xres * 3) /
 						(pre.prefetch_input_bpp / 8);
 			pre.store_output_bpp = pre.prefetch_input_bpp;
 		} else {
 			pre.prefetch_output_size.width = fbi->var.xres;
 			pre.store_output_bpp = 8 *
-					bytes_per_pixel(mxc_fbi->fb_pix_fmt);
+					bytes_per_pixel(fbi_to_pixfmt(fbi, false));
 		}
 		pre.prefetch_output_size.height = fbi->var.yres;
 		pre.prefetch_input_active_width = pre.prefetch_output_size.width;
-		if (mxc_fbi->fb_pix_fmt == IPU_PIX_FMT_RGB24 ||
-		    mxc_fbi->fb_pix_fmt == IPU_PIX_FMT_BGR24 ||
-		    mxc_fbi->fb_pix_fmt == IPU_PIX_FMT_YUV444)
+		if (fbi_to_pixfmt(fbi, true) == IPU_PIX_FMT_RGB24 ||
+		    fbi_to_pixfmt(fbi, true) == IPU_PIX_FMT_BGR24 ||
+		    fbi_to_pixfmt(fbi, true) == IPU_PIX_FMT_YUV444)
 			pre.prefetch_input_width = (fbi->var.xres_virtual * 3) /
 						   (pre.prefetch_input_bpp / 8);
 		else
@@ -723,7 +724,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 
 		pre.store_en = true;
 		pre.write_burst = 0x3;
-		ipu_get_channel_offset(mxc_fbi->fb_pix_fmt,
+		ipu_get_channel_offset(fbi_to_pixfmt(fbi, true),
 				       fbi->var.xres,
 				       fr_h,
 				       fr_w,
@@ -797,7 +798,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 			prg.baddr = pre.store_addr;
 			prg.offset = mxc_fbi->resolve ? (prg.crop_line * prg.stride +
 				     (fr_xoff % bw) *
-				     bytes_per_pixel(mxc_fbi->fb_pix_fmt)) : 0;
+				     bytes_per_pixel(fbi_to_pixfmt(fbi, false))) : 0;
 			ipu_base += prg.offset;
 			if (ipu_base % 8) {
 				dev_err(fbi->device,
@@ -809,7 +810,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 			if (!mxc_fbi->on_the_fly) {
 				retval = ipu_init_channel_buffer(mxc_fbi->ipu,
 								 mxc_fbi->ipu_ch, IPU_INPUT_BUFFER,
-								 mxc_fbi->fb_pix_fmt,
+								 FB_PIX(fbi),
 								 fbi->var.xres, fbi->var.yres,
 								 ipu_stride,
 								 fbi->var.rotate,
@@ -920,7 +921,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 		retval = ipu_init_channel_buffer(mxc_fbi->ipu,
 						 mxc_fbi->ipu_ch, IPU_INPUT_BUFFER,
 						 mxc_fbi->on_the_fly ? mxc_fbi->final_pfmt :
-						 mxc_fbi->fb_pix_fmt,
+						 fbi_to_pixfmt(fbi, false),
 						 fbi->var.xres, fbi->var.yres,
 						 ipu_stride,
 						 fbi->var.rotate,
@@ -938,7 +939,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 		if (!mxc_fbi->prefetch)
 			ipu_update_channel_offset(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 					IPU_INPUT_BUFFER,
-					mxc_fbi->fb_pix_fmt,
+					FB_PIX(fbi),
 					fr_w,
 					fr_h,
 					fr_w,
@@ -1000,8 +1001,8 @@ static bool mxcfb_can_set_par_on_the_fly(struct fb_info *fbi,
 	struct mxcfb_info *mxc_fbi = fbi->par;
 	struct fb_var_screeninfo cur_var = mxc_fbi->cur_var;
 	uint32_t cur_pfmt = mxc_fbi->cur_ipu_pfmt;
-	uint32_t new_pfmt = mxc_fbi->fb_pix_fmt;
-	uint32_t new_fb_pfmt = mxc_fbi->fb_pix_fmt;
+	uint32_t new_pfmt = fbi_to_pixfmt(fbi, false);
+	uint32_t new_fb_pfmt = fbi_to_pixfmt(fbi, true);
 	int cur_bpp, new_bpp, cur_bw, cur_bh, new_bw, new_bh;
 	unsigned int mem_len;
 	ipu_color_space_t cur_space, new_space;
@@ -1116,7 +1117,7 @@ static void mxcfb_check_yuv(struct fb_info *fbi)
 	struct mxcfb_info *mxc_fbi = fbi->par;
 
 	if (fbi->var.vmode & FB_VMODE_INTERLACED) {
-		if (ipu_pixel_format_is_multiplanar_yuv(mxc_fbi->fb_pix_fmt))
+		if (ipu_pixel_format_is_multiplanar_yuv(fbi_to_pixfmt(fbi, true)))
 			mxc_fbi->prefetch = false;
 	} else {
 		if (fbi->var.nonstd == PRE_PIX_FMT_NV21 ||
@@ -1143,7 +1144,7 @@ static int mxcfb_set_par(struct fb_info *fbi)
 	bool ovfbi_enable = false, on_the_fly;
 	ipu_channel_params_t params;
 
-	if (ipu_ch_param_bad_alpha_pos(mxc_fbi->fb_pix_fmt) &&
+	if (ipu_ch_param_bad_alpha_pos(FB_PIX(fbi)) &&
 	    mxc_fbi->alpha_chan_en) {
 		dev_err(fbi->device, "Bad pixel format for "
 				"graphics plane fb\n");
@@ -1180,10 +1181,10 @@ static int mxcfb_set_par(struct fb_info *fbi)
 
 	if (mxc_fbi->ipu_ch == MEM_DC_SYNC) {
 		if (!((mxc_fbi->ipu_di_pix_fmt == IPU_PIX_FMT_BT656) || (mxc_fbi->ipu_di_pix_fmt == IPU_PIX_FMT_BT1120)))
-			mxc_fbi->fb_pix_fmt = fbi_to_pixfmt(fbi);
+			mxc_fbi->fb_pix_fmt = fbi_to_pixfmt(fbi, true);
 		params.mem_dc_sync.di = mxc_fbi->ipu_di;
 	} else {
-		mxc_fbi->fb_pix_fmt = fbi_to_pixfmt(fbi);
+		mxc_fbi->fb_pix_fmt = fbi_to_pixfmt(fbi, true);
 		params.mem_dp_bg_sync.di = mxc_fbi->ipu_di;
 	}
 
@@ -1423,8 +1424,8 @@ static int mxcfb_set_par(struct fb_info *fbi)
 
 	mxc_fbi->cur_var = fbi->var;
 	mxc_fbi->cur_ipu_pfmt = on_the_fly ? mxc_fbi->final_pfmt :
-					     mxc_fbi->fb_pix_fmt;
-	mxc_fbi->cur_fb_pfmt = mxc_fbi->fb_pix_fmt;
+					     fbi_to_pixfmt(fbi, false);
+	mxc_fbi->cur_fb_pfmt = fbi_to_pixfmt(fbi, true);
 	mxc_fbi->cur_prefetch = mxc_fbi->prefetch;
 
 	return retval;
@@ -1907,7 +1908,7 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
 		{
 			struct mxcfb_loc_alpha la;
 			bool bad_pixfmt =
-				ipu_ch_param_bad_alpha_pos(mxc_fbi->fb_pix_fmt);
+				ipu_ch_param_bad_alpha_pos(FB_PIX(fbi));
 
 			if (copy_from_user(&la, (void *)arg, sizeof(la))) {
 				retval = -EFAULT;
@@ -2091,13 +2092,13 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
 			}
 
 			if (!enable) {
-				if (ipu_pixel_format_is_gpu_tile(mxc_fbi->fb_pix_fmt)) {
+				if (ipu_pixel_format_is_gpu_tile(fbi_to_pixfmt(fbi, true))) {
 					dev_err(fbi->device, "Cannot disable prefetch in "
 						"resolving mode\n");
 					retval = -EINVAL;
 					break;
 				}
-				if (ipu_pixel_format_is_pre_yuv(mxc_fbi->fb_pix_fmt)) {
+				if (ipu_pixel_format_is_pre_yuv(fbi_to_pixfmt(fbi, true))) {
 					dev_err(fbi->device, "Cannot disable prefetch when "
 						"PRE gets NV61 or NV21\n");
 					retval = -EINVAL;
@@ -2105,7 +2106,7 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
 				}
 			} else {
 				if ((fbi->var.vmode & FB_VMODE_INTERLACED) &&
-				    ipu_pixel_format_is_multiplanar_yuv(mxc_fbi->fb_pix_fmt)) {
+				    ipu_pixel_format_is_multiplanar_yuv(fbi_to_pixfmt(fbi, true))) {
 					dev_err(fbi->device, "Cannot enable prefetch when "
 						"PRE gets multiplanar YUV frames\n");
 					retval = -EINVAL;
@@ -2483,7 +2484,7 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	if (y_bottom > info->var.yres_virtual)
 		return -EINVAL;
 
-	switch (fbi_to_pixfmt(info, true)) {
+	switch (FB_PIX(info)) {
 	case IPU_PIX_FMT_YUV420P2:
 	case IPU_PIX_FMT_YVU420P:
 	case IPU_PIX_FMT_NV12:
@@ -2634,7 +2635,7 @@ next:
 		if (!mxc_fbi->cur_prefetch) {
 			ipu_update_channel_offset(mxc_fbi->ipu, mxc_fbi->ipu_ch,
 					IPU_INPUT_BUFFER,
-					fbi_to_pixfmt(info, true),
+					FB_PIX(info),
 					fr_w,
 					fr_h,
 					fr_w,
