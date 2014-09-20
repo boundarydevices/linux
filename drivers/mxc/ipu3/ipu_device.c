@@ -463,6 +463,8 @@ cs_t colorspaceofpixel(int fmt)
 	case IPU_PIX_FMT_RGBA32:
 	case IPU_PIX_FMT_RGB32:
 	case IPU_PIX_FMT_ABGR32:
+	case IPU_PIX_FMT_LVDS666:
+	case IPU_PIX_FMT_LVDS888:
 		return RGB_CS;
 		break;
 	case IPU_PIX_FMT_UYVY:
@@ -477,6 +479,8 @@ cs_t colorspaceofpixel(int fmt)
 	case IPU_PIX_FMT_NV12:
 	case IPU_PIX_FMT_TILED_NV12:
 	case IPU_PIX_FMT_TILED_NV12F:
+	case IPU_PIX_FMT_BT656:
+	case IPU_PIX_FMT_BT1120:
 		return YUV_CS;
 		break;
 	default:
@@ -2269,10 +2273,10 @@ static void uninit_ic(struct ipu_soc *ipu, struct ipu_task_entry *t)
 		CHECK_RETCODE_CONT(ret < 0, "ipu_unlink_ch vdoa_ic",
 				STATE_UNLINK_CHAN_FAIL, ret);
 	}
-	ipu_uninit_channel(ipu, t->set.ic_chan);
+	ipu_uninit_channel(ipu, t->set.ic_chan, NULL);
 	if (deinterlace_3_field(t)) {
-		ipu_uninit_channel(ipu, t->set.vdi_ic_p_chan);
-		ipu_uninit_channel(ipu, t->set.vdi_ic_n_chan);
+		ipu_uninit_channel(ipu, t->set.vdi_ic_p_chan, NULL);
+		ipu_uninit_channel(ipu, t->set.vdi_ic_n_chan, NULL);
 	}
 }
 
@@ -2353,7 +2357,7 @@ done:
 
 static void uninit_rot(struct ipu_soc *ipu, struct ipu_task_entry *t)
 {
-	ipu_uninit_channel(ipu, t->set.rot_chan);
+	ipu_uninit_channel(ipu, t->set.rot_chan, NULL);
 }
 
 static int get_irq(struct ipu_task_entry *t)
