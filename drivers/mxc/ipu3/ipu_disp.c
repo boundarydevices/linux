@@ -360,7 +360,7 @@ static void _ipu_dc_write_tmpl(struct ipu_soc *ipu,
 			reg |= (++wave << 11);
 			reg |= ((operand & 0x1FFFF) << 15);
 			ipu_dc_tmpl_write(ipu, reg, word * 8);
-			
+
 			opcmd = 0x01;
 			reg = (operand >> 17);
 			reg |= opcmd << 7;
@@ -1778,7 +1778,7 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 	uint32_t h_total, v_total;
 	int map;
 	int ret;
-	struct clk *ldb_di0_clk, *ldb_di1_clk;
+	struct clk *ldb_di0_clk, *ldb_di1_clk, *ntsc_clk;
 	struct clk *di_parent;
 	uint32_t bt656_h_start_width = 0;
 	uint32_t bt656_v_start_width_field0 = 0, bt656_v_end_width_field0 = 0;
@@ -1829,8 +1829,15 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 		dev_err(ipu->dev, "clk_get di1 failed");
 		return PTR_ERR(ldb_di1_clk);
 	}
+	ntsc_clk = clk_get(ipu->dev, "ntsc");
+	if (IS_ERR(ntsc_clk)) {
+		dev_err(ipu->dev, "clk_get ntsc failed");
+		return PTR_ERR(ldb_di1_clk);
+	}
+
 	if (!strcmp(__clk_get_name(di_parent), __clk_get_name(ldb_di0_clk)) ||
-		!strcmp(__clk_get_name(di_parent), __clk_get_name(ldb_di1_clk))) {
+		!strcmp(__clk_get_name(di_parent), __clk_get_name(ldb_di1_clk)) ||
+		!strcmp(__clk_get_name(di_parent), __clk_get_name(ntsc_clk))) {
 		/* if di clk parent is tve/ldb, then keep it;*/
 		dev_dbg(ipu->dev, "use special clk parent\n");
 		ret = clk_set_parent(ipu->pixel_clk_sel[disp], ipu->di_clk[disp]);
@@ -1854,10 +1861,9 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 		 * we will only use 1/2 fraction for ipu clk,
 		 * so if the clk rate is not fit, try ext clk.
 		 */
-		if (!(sig.int_clk &&
+		if (!sig.int_clk &&
 			((rounded_pixel_clk >= pixel_clk + pixel_clk/200) ||
-			(rounded_pixel_clk <= pixel_clk - pixel_clk/200))) || 
-			(pixel_fmt == IPU_PIX_FMT_BT656) || (pixel_fmt == IPU_PIX_FMT_BT1120)) {
+			(rounded_pixel_clk <= pixel_clk - pixel_clk/200))) {
 			dev_dbg(ipu->dev, "try ipu ext di clk\n");
 
 			rounded_pixel_clk =
@@ -1886,6 +1892,7 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 		dev_err(ipu->dev, "set pixel clk rate error:%d\n", ret);
 		return ret;
 	}
+	pr_info("%s: disp=%d, pixel_clk=%d %ld\n", __func__, disp, pixel_clk, clk_get_rate(ipu->pixel_clk[disp]));
 	msleep(5);
 	/* Get integer portion of divider */
 	div = clk_get_rate(clk_get_parent(ipu->pixel_clk_sel[disp])) / rounded_pixel_clk;
