@@ -235,6 +235,80 @@ static struct fb_videomode lcdif_modedb[] = {
 	 .sync = 0,
 	 .vmode = FB_VMODE_NONINTERLACED,
 	 .flag = 0,},
+
+	/*
+	 * BT656/BT1120 mode
+	 *
+	 * left_margin: used for field0 vStart width in lines
+	 *
+	 * right_margin: used for field0 vEnd width in lines
+	 *
+	 * up_margin: used for field1 vStart width in lines
+	 *
+	 * down_margin: used for field1 vEnd width in lines
+	 *
+	 * hsync_len: EAV Code + Blanking Video + SAV Code (in pixel clock count)
+	 *		   For BT656 NTSC, it is 4 + 67*4 + 4 = 276.
+	 *		   For BT1120 NTSC, it is 4 + 67*2 + 4 = 142.
+	 *		   For BT656 PAL, it is 4 + 70*4 + 4 = 288.
+	 *		   For BT1120 PAL, it is 4 + 70*2 + 4 = 148.
+	 *
+	 * vsync_len: not used, set to 1
+	 */
+	{
+	 /* NTSC Interlaced output */
+	 "BT656-NTSC", 60, 720, 480, 37037,
+	 19, 3,
+	 20, 3,
+	 276, 1,
+	 FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	 FB_VMODE_INTERLACED,
+	 FB_MODE_IS_DETAILED,},
+	{
+	 /* PAL Interlaced output */
+	 "BT656-PAL", 50, 720, 576, 37037,
+	 22, 2,
+	 23, 2,
+	 288, 1,
+	 FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	 FB_VMODE_INTERLACED,
+	 FB_MODE_IS_DETAILED,},
+	{
+	 /* NTSC Interlaced output */
+	 "BT1120-NTSC", 30, 720, 480, 74074,
+	 19, 3,
+	 20, 3,
+	 142, 1,
+	 FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	 FB_VMODE_INTERLACED,
+	 FB_MODE_IS_DETAILED,},
+	{
+	 /* PAL Interlaced output */
+	 "BT1120-PAL", 25, 720, 576, 74074,
+	 22, 2,
+	 23, 2,
+	 148, 1,
+	 FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	 FB_VMODE_INTERLACED,
+	 FB_MODE_IS_DETAILED,},
+	{
+	 /* 1080I60 Interlaced output */
+	  "BT1120-1080I60", 60, 1920, 1080, 13468,
+	  20, 3,
+	  20, 2,
+	  280, 1,
+	  FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	  FB_VMODE_INTERLACED,
+	  FB_MODE_IS_DETAILED,},
+	{
+	  /* 1080I50 Interlaced output */
+	  "BT1120-1080I50", 50, 1920, 1080, 13468,
+	  20, 3,
+	  20, 2,
+	  720, 1,
+	  FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+	  FB_VMODE_INTERLACED,
+	  FB_MODE_IS_DETAILED,},
 };
 static int lcdif_modedb_sz = ARRAY_SIZE(lcdif_modedb);
 
@@ -270,13 +344,8 @@ static int lcdif_init(struct mxc_dispdrv_handle *disp,
 
 	INIT_LIST_HEAD(&setting->fbi->modelist);
 	for (i = 0; i < modedb_sz; i++) {
-		struct fb_videomode m;
-		fb_var_to_videomode(&m, &setting->fbi->var);
-		if (fb_mode_is_equal(&m, &modedb[i])) {
-			fb_add_videomode(&modedb[i],
-					&setting->fbi->modelist);
-			break;
-		}
+		fb_add_videomode(&modedb[i],
+				&setting->fbi->modelist);
 	}
 
 	return ret;
@@ -340,7 +409,11 @@ static int lcd_get_of_property(struct platform_device *pdev,
 	else if (!strncmp(default_ifmt, "YVYU16", 6))
 		plat_data->default_ifmt = IPU_PIX_FMT_YVYU;
 	else if (!strncmp(default_ifmt, "VYUY16", 6))
-				plat_data->default_ifmt = IPU_PIX_FMT_VYUY;
+		plat_data->default_ifmt = IPU_PIX_FMT_VYUY;
+	else if (!strncmp(default_ifmt, "BT656", 5))
+		plat_data->default_ifmt = IPU_PIX_FMT_BT656;
+	else if (!strncmp(default_ifmt, "BT1120", 6))
+		plat_data->default_ifmt = IPU_PIX_FMT_BT1120;
 	else {
 		dev_err(&pdev->dev, "err default_ifmt!\n");
 		return -ENOENT;
