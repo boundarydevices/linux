@@ -391,7 +391,7 @@ static int bg_overlay_stop(void *private)
 
 	err = ipu_disable_channel(cam->ipu, CSI_MEM, true);
 
-	ipu_uninit_channel(cam->ipu, CSI_MEM);
+	ipu_uninit_channel(cam->ipu, CSI_MEM, NULL);
 
 	csi_buffer_num = 0;
 

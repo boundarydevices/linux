@@ -284,7 +284,7 @@ static int csi_enc_disabling_tasks(void *private)
 
 	err = ipu_disable_channel(cam->ipu, CSI_MEM, true);
 
-	ipu_uninit_channel(cam->ipu, CSI_MEM);
+	ipu_uninit_channel(cam->ipu, CSI_MEM, NULL);
 
 	if (cam->dummy_frame.vaddress != 0) {
 		dma_free_coherent(0, cam->dummy_frame.buffer.length,
