@@ -199,6 +199,8 @@ struct mxcfb_datainfo {
 #define MXCFB_SET_GPU_SPLIT_FMT	_IOW('F', 0x2F, struct mxcfb_gpu_split_fmt)
 #define MXCFB_SET_PREFETCH	_IOW('F', 0x30, int)
 #define MXCFB_GET_PREFETCH	_IOR('F', 0x31, int)
+#define MXCFB_GET_FBFMT	       _IOR('F', 0x35, u_int32_t)
+#define MXCFB_SET_FBFMT	       _IOW('F', 0x36, u_int32_t)
 
 /* IOCTLs for E-ink panel updates */
 #define MXCFB_SET_WAVEFORM_MODES	_IOW('F', 0x2B, struct mxcfb_waveform_modes)
