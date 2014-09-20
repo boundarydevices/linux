@@ -444,9 +444,9 @@ static int prp_enc_disabling_tasks(void *private)
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT)
 		err |= ipu_disable_channel(cam->ipu, MEM_ROT_ENC_MEM, true);
 
-	ipu_uninit_channel(cam->ipu, CSI_PRP_ENC_MEM);
+	ipu_uninit_channel(cam->ipu, CSI_PRP_ENC_MEM, NULL);
 	if (cam->rotation >= IPU_ROTATE_90_RIGHT)
-		ipu_uninit_channel(cam->ipu, MEM_ROT_ENC_MEM);
+		ipu_uninit_channel(cam->ipu, MEM_ROT_ENC_MEM, NULL);
 
 	if (cam->dummy_frame.vaddress != 0) {
 		dma_free_coherent(0, cam->dummy_frame.buffer.length,
