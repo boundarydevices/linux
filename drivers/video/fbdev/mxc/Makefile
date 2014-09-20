@@ -4,6 +4,7 @@ obj-$(CONFIG_FB_MXC_MIPI_DSI_NORTHWEST)         += mipi_dsi_northwest.o
 obj-$(CONFIG_FB_MXC_TRULY_WVGA_SYNC_PANEL)      += mxcfb_hx8369_wvga.o
 obj-$(CONFIG_FB_MXC_TRULY_PANEL_TFT3P5079E)     += mxcfb_otm8018b_wvga.o
 obj-$(CONFIG_FB_MXC_TRULY_PANEL_TFT3P5581E)	+= mxcfb_hx8363_wvga.o
+obj-$(CONFIG_FB_MXC_TVOUT_ADV739X)		+= mxcfb_adv739x.o
 obj-$(CONFIG_FB_MXC_LDB) += ldb.o
 obj-$(CONFIG_FB_MXC_HDMI)			+= mxc_hdmi.o
 obj-$(CONFIG_FB_MXC_EDID)			+= mxc_edid.o
