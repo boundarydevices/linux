@@ -69,6 +69,10 @@ config FB_MXC_DCIC
 	depends on MXC_IPU_V3 || FB_MXS
 	select VIDEOMODE_HELPERS
 
+config FB_MXC_TVOUT_ADV739X
+	tristate "ADV7390/7391 TV Out Encoder"
+	depends on FB_MXC_SYNC_PANEL && I2C
+
 config HANNSTAR_CABC
 	tristate "Hannstar CABC function"
 	help
