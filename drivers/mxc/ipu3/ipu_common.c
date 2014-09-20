@@ -969,8 +969,10 @@ EXPORT_SYMBOL(ipu_channel_request);
  *
  * @param	ipu	ipu handler
  * @param       channel Input parameter for the logical channel ID to uninit.
+ * @param    params  Input parameter containing union of channel
+ *			 initialization parameters.
  */
-void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel)
+void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel, ipu_channel_params_t *params)
 {
 	uint32_t reg;
 	uint32_t in_dma, out_dma = 0;
@@ -1109,7 +1111,7 @@ void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel)
 		break;
 	case MEM_DC_SYNC:
 		dc_chan = 1;
-		_ipu_dc_uninit(ipu, 1);
+		_ipu_dc_uninit(ipu, 1, params->mem_dc_sync.di);
 		ipu->di_use_count[ipu->dc_di_assignment[1]]--;
 		ipu->dc_use_count--;
 		ipu->dmfc_use_count--;
@@ -1117,7 +1119,7 @@ void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel)
 	case MEM_BG_SYNC:
 		dc_chan = 5;
 		_ipu_dp_uninit(ipu, channel);
-		_ipu_dc_uninit(ipu, 5);
+		_ipu_dc_uninit(ipu, 5, params->mem_dp_bg_sync.di);
 		ipu->di_use_count[ipu->dc_di_assignment[5]]--;
 		ipu->dc_use_count--;
 		ipu->dp_use_count--;
@@ -1131,13 +1133,13 @@ void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel)
 		break;
 	case DIRECT_ASYNC0:
 		dc_chan = 8;
-		_ipu_dc_uninit(ipu, 8);
+		_ipu_dc_uninit(ipu, 8, params->direct_async.di);
 		ipu->di_use_count[ipu->dc_di_assignment[8]]--;
 		ipu->dc_use_count--;
 		break;
 	case DIRECT_ASYNC1:
 		dc_chan = 9;
-		_ipu_dc_uninit(ipu, 9);
+		_ipu_dc_uninit(ipu, 9, params->direct_async.di);
 		ipu->di_use_count[ipu->dc_di_assignment[9]]--;
 		ipu->dc_use_count--;
 		break;
@@ -1209,7 +1211,7 @@ void ipu_channel_free(struct ipu_chan **p_ipu_chan)
 	*p_ipu_chan = NULL;
 	if (ipu_chan) {
 		ipu_chan->p_ipu_chan = NULL;
-		ipu_uninit_channel(ipu_chan->ipu, ipu_chan->channel);
+		ipu_uninit_channel(ipu_chan->ipu, ipu_chan->channel, NULL);
 	}
 }
 EXPORT_SYMBOL(ipu_channel_free);
