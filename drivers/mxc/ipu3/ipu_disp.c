@@ -2204,7 +2204,7 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 			_ipu_di_sync_config(ipu, disp, DI_SYNC_AFIELD,
 					field0_offset ?
 					field0_offset : field1_offset - 2,
-					DI_SYNC_INT_HSYNC, v_start_width + v_sync_width, DI_SYNC_INT_HSYNC, 
+					DI_SYNC_INT_HSYNC, v_start_width + v_sync_width, DI_SYNC_INT_HSYNC,
 					2, DI_SYNC_VSYNC, 0, DI_SYNC_NONE, DI_SYNC_NONE, 0, 0);
 
 			/* Active Line */
