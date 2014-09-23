@@ -1371,11 +1371,13 @@
 			clocks = <&clks IMX6QDL_CLK_IPU1>,
 				 <&clks IMX6QDL_CLK_IPU1_DI0>, <&clks IMX6QDL_CLK_IPU1_DI1>,
 				 <&clks IMX6QDL_CLK_IPU1_DI0_SEL>, <&clks IMX6QDL_CLK_IPU1_DI1_SEL>,
-				 <&clks IMX6QDL_CLK_LDB_DI0>, <&clks IMX6QDL_CLK_LDB_DI1>;
+				 <&clks IMX6QDL_CLK_LDB_DI0>, <&clks IMX6QDL_CLK_LDB_DI1>,
+				 <&clks IMX6QDL_CLK_PLL3_PFD1_540M>, <&clks IMX6QDL_CLK_PLL5_VIDEO_DIV>;
 			clock-names = "bus",
 				      "di0", "di1",
 				      "di0_sel", "di1_sel",
-				      "ldb_di0", "ldb_di1";
+				      "ldb_di0", "ldb_di1",
+				      "540m", "video_pll";
 			resets = <&src 2>;
 			bypass_reset = <0>;
 
