@@ -1033,10 +1033,12 @@
 			interrupts = <0 6 0x4 0 5 0x4>;
 			clocks = <&clks 130>, <&clks 131>, <&clks 132>,
 				 <&clks 39>, <&clks 40>,
-				 <&clks 135>, <&clks 136>;
+				 <&clks 135>, <&clks 136>,
+				 <&clks 8>, <&clks 195>;
 			clock-names = "bus", "di0", "di1",
 				      "di0_sel", "di1_sel",
-				      "ldb_di0", "ldb_di1";
+				      "ldb_di0", "ldb_di1",
+				      "540m", "video_pll";
 			resets = <&src 2>;
 			bypass_reset = <0>;
 		};
