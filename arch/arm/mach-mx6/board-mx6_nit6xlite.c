@@ -275,11 +275,31 @@ static struct imx_bt_rfkill_platform_data rfkill_data = {
 	.power_change = bt_enable,
 };
 
+#define CTRL1000_PREFER_MASTER          (1 << 10)
+#define CTRL1000_CONFIG_MASTER          (1 << 11)
+#define CTRL1000_MANUAL_CONFIG          (1 << 12)
+
 static int mx6_fec_phy_init(struct phy_device *phydev)
 {
-	/* prefer master mode */
-	phy_write(phydev, 0x9, 0x1f00);
+	unsigned ctrl1000 = 0;
+	const unsigned master = CTRL1000_PREFER_MASTER |
+			CTRL1000_CONFIG_MASTER | CTRL1000_MANUAL_CONFIG;
+	unsigned features = phydev->drv->features;
 
+#define DISABLE_GIGA
+#ifdef DISABLE_GIGA
+	features &= ~(SUPPORTED_1000baseT_Half |
+			SUPPORTED_1000baseT_Full);
+#endif
+	/* force master mode for 1000BaseT due to chip errata */
+	if (features & SUPPORTED_1000baseT_Half)
+		ctrl1000 |= ADVERTISE_1000HALF | master;
+	if (features & SUPPORTED_1000baseT_Full)
+		ctrl1000 |= ADVERTISE_1000FULL | master;
+	phydev->advertising = phydev->supported = features;
+	phy_write(phydev, MII_CTRL1000, ctrl1000);
+
+	/* KSZ9021 */
 	/* min rx data delay */
 	phy_write(phydev, 0x0b, 0x8105);
 	phy_write(phydev, 0x0c, 0x0000);
