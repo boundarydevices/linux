@@ -44,6 +44,10 @@
 					 */
 
 #define TA_DP_END            (200)
+#define TA_TST_MAINT         (9900)	/* OTG test device session maintain
+					 * timer, 9.9s~10.1s
+					 */
+
 /*
  * B-device timing constants
  */
