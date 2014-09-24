@@ -448,6 +448,18 @@
 		cvbs = <1>;
         };
 
+	adv7391: adv7391@2a {
+		compatible = "adv,mxc_adv739x";
+		reg = <0x2a>;
+		pinctrl-names = "default", "enable";
+		pinctrl-0 = <&pinctrl_adv7391_off>;
+		pinctrl-1 = <&pinctrl_adv7391>;
+#define GP_ADV7391_RESET	<&gpio4 20 GPIO_ACTIVE_LOW>
+		rst-gpios = GP_ADV7391_RESET;
+		ipu_id = <0>;
+		disp_id = <0>;
+        };
+
         egalax_ts@04 {
                 compatible = "eeti,egalax_ts";
                 reg = <0x04>;
@@ -549,6 +561,40 @@
 
 		pinctrl_adv7180_no_cea861: adv7180_no_cea861grp {
 			/* parallel camera on CSI1, pins differ for iMX6Q/iMX6DL */
+		};
+
+		pinctrl_adv7391: adv7391grp-1 {
+			fsl,pins = <
+				MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK 0x10		/* Pixclk */
+				MX6QDL_PAD_DI0_PIN2__IPU1_DI0_PIN02        0x10		/* HSYNC */
+				MX6QDL_PAD_DI0_PIN3__IPU1_DI0_PIN03        0x10		/* VSYNC */
+				MX6QDL_PAD_DISP0_DAT16__IPU1_DISP0_DATA16  0x10
+				MX6QDL_PAD_DISP0_DAT17__IPU1_DISP0_DATA17  0x10
+				MX6QDL_PAD_DISP0_DAT18__IPU1_DISP0_DATA18  0x10
+				MX6QDL_PAD_DISP0_DAT19__IPU1_DISP0_DATA19  0x10
+				MX6QDL_PAD_DISP0_DAT20__IPU1_DISP0_DATA20  0x10
+				MX6QDL_PAD_DISP0_DAT21__IPU1_DISP0_DATA21  0x10
+				MX6QDL_PAD_DISP0_DAT22__IPU1_DISP0_DATA22  0x10
+				MX6QDL_PAD_DISP0_DAT23__IPU1_DISP0_DATA23  0x10
+			>;
+		};
+
+		pinctrl_adv7391_off: adv7391grp-2 {
+			fsl,pins = <
+				MX6QDL_PAD_DI0_DISP_CLK__GPIO4_IO16	0x0b0b0		/* Pixclk */
+				MX6QDL_PAD_DI0_PIN2__GPIO4_IO18		0x0b0b0		/* HSYNC */
+				MX6QDL_PAD_DI0_PIN3__GPIO4_IO19		0x0b0b0		/* VSYNC */
+				MX6QDL_PAD_DISP0_DAT16__GPIO5_IO10	0x0b0b0
+				MX6QDL_PAD_DISP0_DAT17__GPIO5_IO11	0x0b0b0
+				MX6QDL_PAD_DISP0_DAT18__GPIO5_IO12	0x0b0b0
+				MX6QDL_PAD_DISP0_DAT19__GPIO5_IO13	0x0b0b0
+				MX6QDL_PAD_DISP0_DAT20__GPIO5_IO14	0x0b0b0
+				MX6QDL_PAD_DISP0_DAT21__GPIO5_IO15	0x0b0b0
+				MX6QDL_PAD_DISP0_DAT22__GPIO5_IO16	0x0b0b0
+				MX6QDL_PAD_DISP0_DAT23__GPIO5_IO17	0x0b0b0
+#define GP_ADV7391_RESET	<&gpio4 20 GPIO_ACTIVE_LOW>
+				MX6QDL_PAD_DI0_PIN4__GPIO4_IO20		0x000b0		/* reset */
+			>;
 		};
 
 		pinctrl_ov5640: pinctrl_ov5640 {
