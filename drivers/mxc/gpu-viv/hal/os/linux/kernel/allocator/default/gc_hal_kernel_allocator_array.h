@@ -19,26 +19,16 @@
 *****************************************************************************/
 
 
-#include "gc_hal_kernel_linux.h"
-#include "gc_hal_kernel_platform.h"
+extern gceSTATUS
+_DefaultAlloctorInit(
+    IN gckOS Os,
+    OUT gckALLOCATOR * Allocator
+    );
 
-gctBOOL
-_NeedAddDevice(
-    IN gckPLATFORM Platform
-    )
+gcsALLOCATOR_DESC allocatorArray[] =
 {
-    return gcvTRUE;
-}
-
-gcsPLATFORM_OPERATIONS platformOperations =
-{
-    .needAddDevice = _NeedAddDevice,
+    /* Default allocator. */
+    gcmkDEFINE_ALLOCATOR_DESC("default", _DefaultAlloctorInit),
 };
 
-void
-gckPLATFORM_QueryOperations(
-    IN gcsPLATFORM_OPERATIONS ** Operations
-    )
-{
-     *Operations = &platformOperations;
-}
+

@@ -30,6 +30,7 @@
 #include "otg.h"
 #include "otg_fsm.h"
 #include "host.h"
+#include "udc.h"
 
 static struct ci_otg_fsm_timer *otg_timer_initializer
 (struct ci_hdrc *ci, void (*function)(void *, unsigned long),
@@ -333,17 +334,6 @@ static void a_wait_vfall_tmout_func(void *ptr, unsigned long indicator)
 	ci_otg_queue_work(ci);
 }
 
-static void b_ase0_brst_tmout_func(void *ptr, unsigned long indicator)
-{
-	struct ci_hdrc *ci = (struct ci_hdrc *)ptr;
-
-	set_tmout(ci, indicator);
-	if (!hw_read_otgsc(ci, OTGSC_BSV))
-		ci->fsm.b_sess_vld = 0;
-
-	ci_otg_queue_work(ci);
-}
-
 static void b_ssend_srp_tmout_func(void *ptr, unsigned long indicator)
 {
 	struct ci_hdrc *ci = (struct ci_hdrc *)ptr;
@@ -353,18 +343,6 @@ static void b_ssend_srp_tmout_func(void *ptr, unsigned long indicator)
 	/* only vbus fall below B_sess_vld in b_idle state */
 	if (ci->transceiver->state == OTG_STATE_B_IDLE)
 		ci_otg_queue_work(ci);
-}
-
-static void b_sess_vld_tmout_func(void *ptr, unsigned long indicator)
-{
-	struct ci_hdrc *ci = (struct ci_hdrc *)ptr;
-
-	/* Check if A detached */
-	if (!(hw_read_otgsc(ci, OTGSC_BSV))) {
-		ci->fsm.b_sess_vld = 0;
-		ci_otg_add_timer(ci, B_SSEND_SRP);
-		ci_otg_queue_work(ci);
-	}
 }
 
 static void b_data_pulse_end(void *ptr, unsigned long indicator)
@@ -426,7 +404,7 @@ static int ci_otg_init_timers(struct ci_hdrc *ci)
 		return -ENOMEM;
 
 	ci->fsm_timer->timer_list[B_ASE0_BRST] =
-		otg_timer_initializer(ci, &b_ase0_brst_tmout_func, TB_ASE0_BRST,
+		otg_timer_initializer(ci, &set_tmout_and_fsm, TB_ASE0_BRST,
 					(unsigned long)&fsm->b_ase0_brst_tmout);
 	if (ci->fsm_timer->timer_list[B_ASE0_BRST] == NULL)
 		return -ENOMEM;
@@ -452,11 +430,6 @@ static int ci_otg_init_timers(struct ci_hdrc *ci)
 	ci->fsm_timer->timer_list[B_DATA_PLS] =
 		otg_timer_initializer(ci, &b_data_pulse_end, TB_DATA_PLS, 0);
 	if (ci->fsm_timer->timer_list[B_DATA_PLS] == NULL)
-		return -ENOMEM;
-
-	ci->fsm_timer->timer_list[B_SESS_VLD] =	otg_timer_initializer(ci,
-					&b_sess_vld_tmout_func, TB_SESS_VLD, 0);
-	if (ci->fsm_timer->timer_list[B_SESS_VLD] == NULL)
 		return -ENOMEM;
 
 	setup_timer(&ci->hnp_polling_timer, hnp_polling_timer_work,
@@ -582,12 +555,17 @@ static int ci_otg_start_host(struct otg_fsm *fsm, int on)
 
 	mutex_unlock(&fsm->lock);
 	if (on) {
-		ci_role_stop(ci);
+		/* Disable BSV irq only for A-device */
+		if (!ci->fsm.id || ci->transceiver->state > OTG_STATE_B_HOST)
+			hw_write_otgsc(ci, OTGSC_BSVIE, 0);
 		ci_role_start(ci, CI_ROLE_HOST);
 	} else {
 		ci_role_stop(ci);
 		hw_device_reset(ci, USBMODE_CM_DC);
-		ci_role_start(ci, CI_ROLE_GADGET);
+		ci->role = CI_ROLE_GADGET;
+		/* Enable BSV irq only for B-device */
+		if (ci->fsm.id)
+			hw_write_otgsc(ci, OTGSC_BSVIE, OTGSC_BSVIE);
 	}
 	mutex_lock(&fsm->lock);
 	return 0;
@@ -598,10 +576,7 @@ static int ci_otg_start_gadget(struct otg_fsm *fsm, int on)
 	struct ci_hdrc	*ci = container_of(fsm, struct ci_hdrc, fsm);
 
 	mutex_unlock(&fsm->lock);
-	if (on)
-		usb_gadget_vbus_connect(&ci->gadget);
-	else
-		usb_gadget_vbus_disconnect(&ci->gadget);
+	ci_gadget_connect(&ci->gadget, on);
 	mutex_lock(&fsm->lock);
 
 	return 0;
@@ -621,19 +596,22 @@ static struct otg_fsm_ops ci_otg_ops = {
 int ci_otg_fsm_work(struct ci_hdrc *ci)
 {
 	/*
-	 * Don't do fsm transition for B device
-	 * when there is no gadget class driver
-	 * only handle charger notify
+	 * Handle charger notify in OTG fsm mode
 	 */
-	if (ci->fsm.id && !(ci->driver) &&
-		ci->transceiver->state < OTG_STATE_A_IDLE) {
+	if (ci->fsm.id && ci->transceiver->state < OTG_STATE_A_IDLE) {
+		unsigned long flags;
+
+		spin_lock_irqsave(&ci->lock, flags);
 		if (ci->b_sess_valid_event) {
-			if (ci->fsm.b_sess_vld)
-				usb_gadget_vbus_connect(&ci->gadget);
-			else
-				usb_gadget_vbus_disconnect(&ci->gadget);
+			ci->b_sess_valid_event = false;
+			ci->vbus_active = ci->fsm.b_sess_vld;
+			spin_unlock_irqrestore(&ci->lock, flags);
+			ci_usb_charger_connect(ci, ci->fsm.b_sess_vld);
+			spin_lock_irqsave(&ci->lock, flags);
 		}
-		return 0;
+		spin_unlock_irqrestore(&ci->lock, flags);
+		if (!ci->driver)
+			return 0;
 	}
 
 	pm_runtime_get_sync(ci->dev);
@@ -670,9 +648,7 @@ int ci_otg_fsm_work(struct ci_hdrc *ci)
 				ci_otg_queue_work(ci);
 			}
 		} else if (ci->transceiver->state == OTG_STATE_A_HOST) {
-			if (!timer_pending(&ci->timer))
-				pm_runtime_get(ci->dev);
-			mod_timer(&ci->timer, jiffies + msecs_to_jiffies(2000));
+			ci_hdrc_delay_suspend(ci, 2000);
 		}
 	}
 	pm_runtime_put_sync(ci->dev);
@@ -720,7 +696,6 @@ static void ci_otg_fsm_event(struct ci_hdrc *ci)
 			fsm->a_conn = 0;
 			fsm->b_bus_req = 0;
 			ci_otg_queue_work(ci);
-			ci_otg_add_timer(ci, B_SESS_VLD);
 		}
 		break;
 	case OTG_STATE_A_PERIPHERAL:
@@ -807,11 +782,15 @@ irqreturn_t ci_otg_fsm_irq(struct ci_hdrc *ci)
 			}
 		} else if (otg_int_src & OTGSC_BSVIS) {
 			hw_write_otgsc(ci, OTGSC_BSVIS, OTGSC_BSVIS);
-			ci->vbus_glitch_check_event = true;
 			if (!(otgsc & OTGSC_BSV) && fsm->b_sess_vld) {
+				ci->b_sess_valid_event = true;
 				fsm->b_sess_vld = 0;
 				if (fsm->id)
 					ci_otg_add_timer(ci, B_SSEND_SRP);
+				if (fsm->b_bus_req)
+					fsm->b_bus_req = 0;
+			} else {
+				ci->vbus_glitch_check_event = true;
 			}
 		} else if (otg_int_src & OTGSC_AVVIS) {
 			hw_write_otgsc(ci, OTGSC_AVVIS, OTGSC_AVVIS);

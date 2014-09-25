@@ -28,9 +28,9 @@
 
 #define gcvVERSION_PATCH        11
 
-#define gcvVERSION_BUILD     19959
+#define gcvVERSION_BUILD     23085
 
-#define gcvVERSION_STRING    "5.0.11.p1.19959"
+#define gcvVERSION_STRING    "5.0.11.p3.23085"
 
 #define gcvVERSION_DATE      __DATE__
 

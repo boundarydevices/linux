@@ -37,6 +37,7 @@
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/delay.h>
+#include <linux/mcc_imx6sx.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/of.h>
@@ -81,6 +82,8 @@ static unsigned int ddr_low_rate;
 extern unsigned long iram_tlb_phys_addr;
 extern int unsigned long iram_tlb_base_addr;
 
+extern struct completion wait_m4_done;
+
 extern int init_mmdc_lpddr2_settings(struct platform_device *dev);
 extern int init_mmdc_ddr3_settings_imx6q(struct platform_device *dev);
 extern int init_mmdc_ddr3_settings_imx6sx(struct platform_device *dev);
@@ -113,13 +116,41 @@ static struct clk *step_clk;
 static struct clk *axi_alt_sel_clk;
 static struct clk *axi_sel_clk;
 static struct clk *pll3_pfd1_540m;
+static struct clk *m4_clk;
 
 static u32 pll2_org_rate;
 static struct delayed_work low_bus_freq_handler;
 static struct delayed_work bus_freq_daemon;
 
+static int imx_lpm_handshake(u32 data)
+{
+	unsigned long timeout;
+
+	init_completion(&wait_m4_done);
+
+	mcc_send_via_mu_buffer(MU_LPM_HANDSHAKE_INDEX, data);
+
+	if (!wait_for_completion_timeout(&wait_m4_done,
+		msecs_to_jiffies(3000))) {
+		pr_err("lpm handshake(0x%x) with M4 timeout!!!\n",
+			data);
+		/* M4 need to make sure in wfi for busfreq change */
+		dump_stack();
+	}
+
+	timeout = jiffies + msecs_to_jiffies(500);
+	while (imx_gpc_is_m4_sleeping() == 0)
+		if (time_after(jiffies, timeout))
+			pr_err("M4 is NOT sleeping!!!\n");
+
+	return 0;
+}
+
 static void enter_lpm_imx6sx(void)
 {
+	if (imx_src_is_m4_enabled())
+		imx_lpm_handshake(MU_LPM_HANDSHAKE_ENTER);
+
 	/* set periph_clk2 to source from OSC for periph */
 	imx_clk_set_parent(periph_clk2_sel, osc_clk);
 	imx_clk_set_parent(periph_clk, periph_clk2);
@@ -171,6 +202,9 @@ static void enter_lpm_imx6sx(void)
 
 static void exit_lpm_imx6sx(void)
 {
+	if (imx_src_is_m4_enabled())
+		imx_lpm_handshake(MU_LPM_HANDSHAKE_ENTER);
+
 	clk_prepare_enable(pll2_400);
 
 	/*
@@ -391,6 +425,10 @@ static void reduce_bus_freq(void)
 	med_bus_freq_mode = 0;
 	high_bus_freq_mode = 0;
 
+	/* wake up M4 */
+	if (cpu_is_imx6sx() && imx_src_is_m4_enabled())
+		imx_lpm_handshake(MU_LPM_HANDSHAKE_EXIT);
+
 	if (audio_bus_freq_mode)
 		dev_dbg(busfreq_dev, "Bus freq set to audio mode. Count:\
 			high %d, med %d, audio %d\n",
@@ -506,6 +544,9 @@ static int set_high_bus_freq(int high_bus_freq)
 	audio_bus_freq_mode = 0;
 
 	clk_disable_unprepare(pll3);
+	/* wake up M4 */
+	if (cpu_is_imx6sx() && imx_src_is_m4_enabled())
+		imx_lpm_handshake(MU_LPM_HANDSHAKE_EXIT);
 
 	if (high_bus_freq_mode)
 		dev_dbg(busfreq_dev, "Bus freq set to high mode. Count:\
@@ -677,8 +718,6 @@ static int __init imx6_dt_find_ddr_sram(unsigned long node,
 		/* Make sure ddr_freq_change_iram_phys is 8 byte aligned. */
 		if ((uintptr_t)(ddr_freq_change_iram_phys) & (FNCPY_ALIGN - 1))
 			ddr_freq_change_iram_phys += FNCPY_ALIGN - ((uintptr_t)ddr_freq_change_iram_phys % (FNCPY_ALIGN));
-
-		ddr_freq_change_iram_base = IMX_IO_P2V(ddr_freq_change_iram_phys);
 	}
 	return 0;
 }
@@ -690,11 +729,16 @@ void __init imx6_busfreq_map_io(void)
 	 * change code from the device tree.
 	 */
 	WARN_ON(of_scan_flat_dt(imx6_dt_find_ddr_sram, NULL));
-	if ((iram_tlb_phys_addr & 0xFFF00000) != (ddr_freq_change_iram_phys & 0xFFF00000)) {
-		/* We need to create a 1M page table entry. */
-		ddr_iram_io_desc.virtual = IMX_IO_P2V(ddr_freq_change_iram_phys & 0xFFF00000);
-		ddr_iram_io_desc.pfn = __phys_to_pfn(ddr_freq_change_iram_phys & 0xFFF00000);
-		iotable_init(&ddr_iram_io_desc, 1);
+
+	if (ddr_freq_change_iram_phys) {
+		ddr_freq_change_iram_base = IMX_IO_P2V(ddr_freq_change_iram_phys);
+		if ((iram_tlb_phys_addr & 0xFFF00000) != (ddr_freq_change_iram_phys & 0xFFF00000)) {
+			/* We need to create a 1M page table entry. */
+			ddr_iram_io_desc.virtual = IMX_IO_P2V(ddr_freq_change_iram_phys & 0xFFF00000);
+			ddr_iram_io_desc.pfn = __phys_to_pfn(ddr_freq_change_iram_phys & 0xFFF00000);
+			iotable_init(&ddr_iram_io_desc, 1);
+		}
+		memset((void *)ddr_freq_change_iram_base, 0, ddr_freq_change_total_size);
 	}
 }
 
@@ -970,6 +1014,13 @@ static int busfreq_probe(struct platform_device *pdev)
 				__func__);
 			return PTR_ERR(mmdc_clk);
 		}
+		m4_clk = devm_clk_get(&pdev->dev, "m4");
+		if (IS_ERR(m4_clk)) {
+			dev_err(busfreq_dev,
+				"%s: failed to get m4_clk\n",
+				__func__);
+			return PTR_ERR(m4_clk);
+		}
 	}
 
 	err = sysfs_create_file(&busfreq_dev->kobj, &dev_attr_enable.attr);
@@ -1034,6 +1085,10 @@ static int busfreq_probe(struct platform_device *pdev)
 			err = init_mmdc_ddr3_settings_imx6sx(pdev);
 		else if (ddr_type == MMDC_MDMISC_DDR_TYPE_LPDDR2)
 			err = init_mmdc_lpddr2_settings(pdev);
+		/* if M4 is enabled and rate > 24MHz, add high bus count */
+		if (imx_src_is_m4_enabled() &&
+			(clk_get_rate(m4_clk) > LPAPM_CLK))
+			high_bus_count++;
 	} else {
 		err = init_mmdc_ddr3_settings_imx6q(pdev);
 	}

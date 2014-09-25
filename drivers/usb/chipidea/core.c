@@ -861,40 +861,24 @@ static void ci_otg_fsm_wakeup_by_srp(struct ci_hdrc *ci)
 	}
 }
 
-static int ci_controller_suspend(struct device *dev)
+void ci_hdrc_delay_suspend(struct ci_hdrc *ci, int ms)
 {
-	struct ci_hdrc *ci = dev_get_drvdata(dev);
+	if (!timer_pending(&ci->timer) && !ci->wakeup_int)
+		pm_runtime_get(ci->dev);
 
-	dev_dbg(dev, "at %s\n", __func__);
+	mod_timer(&ci->timer, jiffies + msecs_to_jiffies(ms));
+}
 
-	if (ci->in_lpm)
-		return 0;
-
-	/*
-	 * The registers for suspended host will not be updated
-	 * during system suspend.
-	 */
-	if (ci->roles[ci->role]->save)
-		ci->roles[ci->role]->save(ci);
-
-	if (ci_otg_is_fsm_mode(ci))
-		ci_otg_fsm_suspend_for_srp(ci);
-
+static void ci_controller_suspend(struct ci_hdrc *ci)
+{
 	disable_irq(ci->irq);
-
-	if (ci->transceiver)
-		usb_phy_set_wakeup(ci->transceiver, true);
-
 	ci_hdrc_enter_lpm(ci, true);
 
 	if (ci->transceiver)
 		usb_phy_set_suspend(ci->transceiver, 1);
 
 	ci->in_lpm = true;
-
 	enable_irq(ci->irq);
-
-	return 0;
 }
 
 static int ci_controller_resume(struct device *dev)
@@ -903,8 +887,7 @@ static int ci_controller_resume(struct device *dev)
 
 	dev_dbg(dev, "at %s\n", __func__);
 
-	if (!ci->in_lpm)
-		return 0;
+	WARN_ON(!ci->in_lpm);
 
 	ci_hdrc_enter_lpm(ci, false);
 
@@ -917,9 +900,9 @@ static int ci_controller_resume(struct device *dev)
 	ci->in_lpm = false;
 
 	if (ci->wakeup_int) {
+		ci_hdrc_delay_suspend(ci, 2000);
 		ci->wakeup_int = false;
 		enable_irq(ci->irq);
-		mod_timer(&ci->timer, jiffies + msecs_to_jiffies(2000));
 		if (ci_otg_is_fsm_mode(ci))
 			ci_otg_fsm_wakeup_by_srp(ci);
 	}
@@ -931,8 +914,9 @@ static int ci_controller_resume(struct device *dev)
 static int ci_suspend(struct device *dev)
 {
 	struct ci_hdrc *ci = dev_get_drvdata(dev);
-	int ret;
 
+	if (ci->wq)
+		flush_workqueue(ci->wq);
 	/*
 	 * Controller needs to be active during suspend, otherwise the core
 	 * may run resume when the parent is at suspend if other driver's
@@ -942,14 +926,24 @@ static int ci_suspend(struct device *dev)
 	if (ci->in_lpm)
 		pm_runtime_resume(dev);
 
-	ret = ci_controller_suspend(dev);
-	if (ret)
-		return ret;
+	/*
+	 * The registers for suspended host will not be updated
+	 * during system suspend.
+	 */
+	if (ci->roles[ci->role] && ci->roles[ci->role]->suspend)
+		ci->roles[ci->role]->suspend(ci);
 
-	if (device_may_wakeup(dev))
+	if (device_may_wakeup(dev)) {
 		enable_irq_wake(ci->irq);
+		if (ci_otg_is_fsm_mode(ci))
+			ci_otg_fsm_suspend_for_srp(ci);
+		if (ci->transceiver)
+			usb_phy_set_wakeup(ci->transceiver, true);
+	}
 
-	return ret;
+	ci_controller_suspend(ci);
+
+	return 0;
 }
 
 static int ci_resume(struct device *dev)
@@ -978,8 +972,11 @@ static int ci_resume(struct device *dev)
 		/* re-init for phy */
 		usb_phy_shutdown(ci->transceiver);
 		ci_usb_phy_init(ci);
-		if (ci->roles[ci->role]->restore)
-			ci->roles[ci->role]->restore(ci);
+	}
+	if (ci->roles[ci->role] && ci->roles[ci->role]->resume)
+		ci->roles[ci->role]->resume(ci, power_lost);
+
+	if (power_lost) {
 		disable_irq_nosync(ci->irq);
 		schedule_work(&ci->power_lost_work);
 	}
@@ -997,7 +994,21 @@ static int ci_resume(struct device *dev)
 #ifdef CONFIG_PM_RUNTIME
 static int ci_runtime_suspend(struct device *dev)
 {
-	return ci_controller_suspend(dev);
+	struct ci_hdrc *ci = dev_get_drvdata(dev);
+
+	dev_dbg(dev, "at %s\n", __func__);
+
+	WARN_ON(ci->in_lpm);
+
+	if (ci_otg_is_fsm_mode(ci))
+		ci_otg_fsm_suspend_for_srp(ci);
+
+	if (ci->transceiver)
+		usb_phy_set_wakeup(ci->transceiver, true);
+
+	ci_controller_suspend(ci);
+
+	return 0;
 }
 
 static int ci_runtime_resume(struct device *dev)

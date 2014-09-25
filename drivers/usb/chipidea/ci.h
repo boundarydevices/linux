@@ -73,16 +73,17 @@ enum ci_role {
  * start: start this role
  * stop: stop this role
  * irq: irq handler for this role
+ * suspend: system suspend handler for this role
+ * resume: system resume handler for this role
  * name: role name string (host/gadget)
  */
 struct ci_role_driver {
 	int		(*start)(struct ci_hdrc *);
 	void		(*stop)(struct ci_hdrc *);
 	irqreturn_t	(*irq)(struct ci_hdrc *);
-			/* Save before suspend */
-	void		(*save)(struct ci_hdrc *);
+	void		(*suspend)(struct ci_hdrc *);
 			/* Restore after power lost */
-	void		(*restore)(struct ci_hdrc *);
+	void		(*resume)(struct ci_hdrc *, bool power_lost);
 	const char	*name;
 };
 
@@ -380,5 +381,14 @@ u8 hw_port_test_get(struct ci_hdrc *ci);
 
 int hw_wait_reg(struct ci_hdrc *ci, enum ci_hw_regs reg, u32 mask,
 				u32 value, unsigned int timeout_ms);
+
+#ifdef CONFIG_PM
+void ci_hdrc_delay_suspend(struct ci_hdrc *ci, int ms);
+#else
+static inline void ci_hdrc_delay_suspend(struct ci_hdrc *ci, int ms)
+{
+
+}
+#endif
 
 #endif	/* __DRIVERS_USB_CHIPIDEA_CI_H */
