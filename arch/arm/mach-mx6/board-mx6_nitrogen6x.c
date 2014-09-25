@@ -967,7 +967,8 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 #if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT) || \
 	defined(CONFIG_TOUCHSCREEN_ATMEL_MXT_MODULE)
 	{
-		I2C_BOARD_INFO("atmel_mxt_ts", 0x4c), /* i2c address */
+		I2C_BOARD_INFO("atmel_mxt_ts",
+			       CONFIG_TOUCHSCREEN_ATMEL_MXT_ADDRESS),
 		.irq = gpio_to_irq(GP_CAP_TCH_INT1),
                 .platform_data = &mxt_data,
 	},
