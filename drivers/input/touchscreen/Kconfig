@@ -99,6 +99,18 @@ config TOUCHSCREEN_ATMEL_MXT
 	  To compile this driver as a module, choose M here: the
 	  module will be called atmel_mxt_ts.
 
+config TOUCHSCREEN_ATMEL_MXT_ADDRESS
+        int "Atmel mXT I2C address"
+        depends on TOUCHSCREEN_ATMEL_MXT
+        default 0x4c
+	help
+	  The Atmel mXT touch screen can be configured through
+          hardware to various addresses on the I2C bus.
+
+          Enter the value in decimal.
+
+          Common options are 0x4c (76) and 0x4b (75).
+
 config TOUCHSCREEN_BITSY
 	tristate "Compaq iPAQ H3600 (Bitsy) touchscreen"
 	depends on SA1100_BITSY
