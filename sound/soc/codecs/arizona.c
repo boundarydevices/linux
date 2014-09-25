@@ -580,21 +580,25 @@ static int arizona_hw_params(struct snd_pcm_substream *substream,
 	int base = dai->driver->base;
 	const int *rates;
 	int i;
+	int limit;
 	int bclk, lrclk, wl, frame, sr_val;
 
-	if (params_rate(params) % 8000)
-		rates = &arizona_44k1_bclk_rates[0];
-	else
-		rates = &arizona_48k_bclk_rates[0];
+	if (params_rate(params) % 8000) {
+		rates = arizona_44k1_bclk_rates;
+		limit = ARRAY_SIZE(arizona_44k1_bclk_rates);
+	} else {
+		rates = arizona_48k_bclk_rates;
+		limit = ARRAY_SIZE(arizona_48k_bclk_rates);
+	}
 
-	for (i = 0; i < ARRAY_SIZE(arizona_44k1_bclk_rates); i++) {
+	for (i = 0; i < limit; i++) {
 		if (rates[i] >= snd_soc_params_to_bclk(params) &&
 		    rates[i] % params_rate(params) == 0) {
 			bclk = i;
 			break;
 		}
 	}
-	if (i == ARRAY_SIZE(arizona_44k1_bclk_rates)) {
+	if (i == limit) {
 		arizona_aif_err(dai, "Unsupported sample rate %dHz\n",
 				params_rate(params));
 		return -EINVAL;
@@ -614,13 +618,13 @@ static int arizona_hw_params(struct snd_pcm_substream *substream,
 	}
 	sr_val = i;
 
-	lrclk = snd_soc_params_to_bclk(params) / params_rate(params);
-
-	arizona_aif_dbg(dai, "BCLK %dHz LRCLK %dHz\n",
-			rates[bclk], rates[bclk] / lrclk);
+	lrclk = rates[bclk] / params_rate(params);
 
 	wl = snd_pcm_format_width(params_format(params));
-	frame = wl << ARIZONA_AIF1TX_WL_SHIFT | wl;
+	frame = wl << ARIZONA_AIF1TX_WL_SHIFT | (lrclk >> 1);
+
+	arizona_aif_dbg(dai, "BCLK %dHz LRCLK %dHz lrclk=%d bclk=%d rate=%d wl=%d\n",
+			rates[bclk], rates[bclk] / lrclk, lrclk, snd_soc_params_to_bclk(params), params_rate(params), wl);
 
 	snd_soc_update_bits(codec, ARIZONA_SAMPLE_RATE_1,
 			    ARIZONA_SAMPLE_RATE_1_MASK, sr_val);
