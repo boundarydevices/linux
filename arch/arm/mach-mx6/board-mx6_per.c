@@ -207,25 +207,25 @@ static int ksz9031_send_phy_cmds(struct phy_device *phydev, unsigned short* p)
 
 static int fec_phy_init(struct phy_device *phydev)
 {
-        unsigned ctrl1000 = 0;
-        const unsigned master = CTRL1000_PREFER_MASTER |
-                        CTRL1000_CONFIG_MASTER | CTRL1000_MANUAL_CONFIG;
-        unsigned features = phydev->drv->features;
+	unsigned ctrl1000 = 0;
+	const unsigned master = CTRL1000_PREFER_MASTER |
+			CTRL1000_CONFIG_MASTER | CTRL1000_MANUAL_CONFIG;
+	unsigned features = phydev->drv->features;
 
 #define DISABLE_GIGA
 #ifdef DISABLE_GIGA
-        features &= ~(SUPPORTED_1000baseT_Half |
-                        SUPPORTED_1000baseT_Full);
+	features &= ~(SUPPORTED_1000baseT_Half |
+			SUPPORTED_1000baseT_Full);
 #endif
-        /* force master mode for 1000BaseT due to chip errata */
-        if (features & SUPPORTED_1000baseT_Half)
-                ctrl1000 |= ADVERTISE_1000HALF | master;
-        if (features & SUPPORTED_1000baseT_Full)
-                ctrl1000 |= ADVERTISE_1000FULL | master;
-//      phydev->advertising = phydev->supported = features;
-        phy_write(phydev, MII_CTRL1000, ctrl1000);
+	/* force master mode for 1000BaseT due to chip errata */
+	if (features & SUPPORTED_1000baseT_Half)
+		ctrl1000 |= ADVERTISE_1000HALF | master;
+	if (features & SUPPORTED_1000baseT_Full)
+		ctrl1000 |= ADVERTISE_1000FULL | master;
+	phydev->advertising = phydev->supported = features;
+	phy_write(phydev, MII_CTRL1000, ctrl1000);
 
-        if ((phydev->phy_id & 0x00fffff0) == PHY_ID_KSZ9031) {
+	if ((phydev->phy_id & 0x00fffff0) == PHY_ID_KSZ9031) {
 		ksz9031_send_phy_cmds(phydev, ksz9031_por_cmds);
 		return 0;
 	}
