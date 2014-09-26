@@ -532,6 +532,8 @@
 	tsc2004@48 {
 		compatible = "tsc2004,tsc2004";
 		reg = <0x48>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_tsc2004>;
 		interrupt-parent = <&gpio4>;
 		interrupts = <20 2>;
 		wakeup-gpios = <&gpio4 20 0>;
@@ -569,7 +571,6 @@
 				MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x80000000	/* CAN standby */
 				MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x80000000	/* Spare */
 				MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x80000000	/* I2C3 touch screen interrupt */
-				MX6QDL_PAD_DI0_PIN4__GPIO4_IO20		0x1b0b0		/* tsc2004 interrupt */
 				MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x0b0b0		/* ov5640 mipi powerdown */
 				MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x000b0		/* ov5640 mipi reset */
 				MX6QDL_PAD_GPIO_3__CCM_CLKO2		0x000b0		/* ov5642 mclk */
@@ -638,6 +639,12 @@
 			fsl,pins = <
 				MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x0b0b0		/* Power */
 				MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x030b0		/* Reset */
+			>;
+		};
+
+		pinctrl_tsc2004: tsc2004grp {
+			fsl,pins = <
+				MX6QDL_PAD_DI0_PIN4__GPIO4_IO20		0x1b0b0		/* tsc2004 interrupt */
 			>;
 		};
 	};
