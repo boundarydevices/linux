@@ -325,37 +325,33 @@ static int adv7180_write_reg(struct adv7180_priv *adv, u8 reg, u8 val)
 
 static void adv7180_detect_std(struct adv7180_priv *adv, unsigned long msec)
 {
-	int tmp;
+	int status_1;
 	int idx;
 	unsigned long orig_jiffies = jiffies;
 	v4l2_std_id std_id;
 
 	while (1) {
-		/* Read the AD_RESULT to get the detect output video standard */
-		tmp = adv7180_read(adv, ADV7180_STATUS_1);
-		pr_info("%s: status_1=%x\n", __func__, tmp);
-//		if ((tmp & 5) == 5)
-//			break;
-		if ((tmp & 0x75) == 5)
+		status_1 = adv7180_read(adv, ADV7180_STATUS_1);
+		if ((status_1 & 0x35) == 5)
 			break;
 		if (!msec)
 			break;
 		if (time_after(jiffies, orig_jiffies + msecs_to_jiffies(msec))) {
 			dev_err(&adv->sen.i2c_client->dev,
 					"no video lock\n");
-			tmp = 0;	/* default to NTSC */
+			status_1 = 0;	/* default to NTSC */
 			break;
 		}
 		msleep(10);
 	}
-	tmp &= 0x70;
+	status_1 &= 0x70;
 	mutex_lock(&mutex);
-	if (tmp == 0x40) {
+	if (status_1 == 0x40) {
 		/* PAL */
 		std_id = V4L2_STD_PAL;
 		idx = ADV7180_PAL;
 		dev_dbg(&adv->sen.i2c_client->dev, "pal\n");
-	} else if (tmp == 0) {
+	} else if (status_1 == 0) {
 		/*NTSC*/
 		std_id = V4L2_STD_NTSC;
 		idx = ADV7180_NTSC;
