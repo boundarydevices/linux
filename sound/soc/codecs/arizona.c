@@ -1649,6 +1649,7 @@ static int arizona_hw_params(struct snd_pcm_substream *substream,
 	const int *rates;
 	int i, ret, val;
 	int channels = params_channels(params);
+	int limit;
 	int chan_limit = arizona->pdata.max_channels_clocked[dai->id - 1];
 	int tdm_width = arizona->tdm_width[dai->id - 1];
 	int tdm_slots = arizona->tdm_slots[dai->id - 1];
@@ -1656,10 +1657,13 @@ static int arizona_hw_params(struct snd_pcm_substream *substream,
 	bool reconfig;
 	unsigned int aif_tx_state, aif_rx_state;
 
-	if (params_rate(params) % 4000)
-		rates = &arizona_44k1_bclk_rates[0];
-	else
-		rates = &arizona_48k_bclk_rates[0];
+	if (params_rate(params) % 4000) {
+		rates = arizona_44k1_bclk_rates;
+		limit = ARRAY_SIZE(arizona_44k1_bclk_rates);
+	} else {
+		rates = arizona_48k_bclk_rates;
+		limit = ARRAY_SIZE(arizona_48k_bclk_rates);
+	}
 
 	wl = params_width(params);
 
@@ -1688,14 +1692,14 @@ static int arizona_hw_params(struct snd_pcm_substream *substream,
 		bclk_target *= channels + 1;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(arizona_44k1_bclk_rates); i++) {
+	for (i = 0; i < limit; i++) {
 		if (rates[i] >= bclk_target &&
 		    rates[i] % params_rate(params) == 0) {
 			bclk = i;
 			break;
 		}
 	}
-	if (i == ARRAY_SIZE(arizona_44k1_bclk_rates)) {
+	if (i == limit) {
 		arizona_aif_err(dai, "Unsupported sample rate %dHz\n",
 				params_rate(params));
 		return -EINVAL;
