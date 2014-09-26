@@ -31,6 +31,7 @@ struct regmap_irq_chip_data {
 	unsigned int *mask_buf_def;
 
 	unsigned int irq_reg_stride;
+	int last_irq;
 };
 
 static inline const
@@ -105,6 +106,7 @@ static irqreturn_t regmap_irq_thread(int irq, void *d)
 	int ret, i;
 	bool handled = false;
 
+	data->last_irq = 0;
 	/*
 	 * Ignore masked IRQs and ack if we need to; we ack early so
 	 * there is no race between handling and acknowleding the
@@ -122,29 +124,51 @@ static irqreturn_t regmap_irq_thread(int irq, void *d)
 			return IRQ_NONE;
 		}
 
-		data->status_buf[i] &= ~data->mask_buf[i];
 
-		if (data->status_buf[i] && chip->ack_base) {
-			ret = regmap_write(map, chip->ack_base + offset,
-					   data->status_buf[i]);
-			if (ret != 0)
-				dev_err(map->dev, "Failed to ack 0x%x: %d\n",
-					chip->ack_base + offset, ret);
+		if (data->status_buf[i]) {
+			if (chip->ack_base) {
+				handled = true;
+				data->last_irq = -1;
+				ret = regmap_write(map, chip->ack_base + offset,
+						   data->status_buf[i]);
+				if (ret != 0)
+					dev_err(map->dev, "Failed to ack 0x%x: %d\n",
+						chip->ack_base + offset, ret);
+			}
 		}
 	}
 
 	for (i = 0; i < chip->num_irqs; i++) {
-		if (data->status_buf[chip->irqs[i].reg_offset /
-				     map->reg_stride] & chip->irqs[i].mask) {
+		unsigned j = chip->irqs[i].reg_offset / map->reg_stride;
+
+		if (data->status_buf[j] & chip->irqs[i].mask & ~data->mask_buf[j]) {
+			data->last_irq = data->irq_base + i;
 			handle_nested_irq(data->irq_base + i);
 			handled = true;
 		}
 	}
-
 	if (handled)
 		return IRQ_HANDLED;
-	else
-		return IRQ_NONE;
+#if 0
+	dev_err(map->dev, "Spurious int\n");
+	for (i = 0; i < data->chip->num_regs; i++) {
+		unsigned offset = i * map->reg_stride * data->irq_reg_stride;
+		unsigned reg = chip->status_base + offset;
+		unsigned buf;
+
+		if (!data->status_buf[i])
+			continue;
+		dev_err(map->dev, "Spurious: reg(%x) = %x, mask=%x\n", reg, data->status_buf[i], data->mask_buf[i]);
+		buf = 0;
+		ret = regmap_read(map, chip->mask_base + offset, &buf);
+
+		if (ret)
+			dev_err(map->dev, "Failed to read IRQ mask: %d\n", ret);
+		else if (buf != (unsigned)(unsigned short)data->mask_buf[i])
+			dev_err(map->dev, "mask(%x): %x expected %x\n", chip->mask_base + offset, buf, data->mask_buf[i]);
+	}
+#endif
+	return IRQ_NONE;
 }
 
 /**
@@ -256,7 +280,8 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 		dev_err(map->dev, "Failed to request IRQ %d: %d\n", irq, ret);
 		goto err_alloc;
 	}
-
+	if (data)
+		*data = d;
 	return 0;
 
 err_alloc:
@@ -299,3 +324,9 @@ int regmap_irq_chip_get_base(struct regmap_irq_chip_data *data)
 	return data->irq_base;
 }
 EXPORT_SYMBOL_GPL(regmap_irq_chip_get_base);
+
+int regmap_irq_chip_get_last_irq(struct regmap_irq_chip_data *data)
+{
+	return data->last_irq;
+}
+EXPORT_SYMBOL_GPL(regmap_irq_chip_get_last_irq);
