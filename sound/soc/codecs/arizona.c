@@ -1168,14 +1168,17 @@ static int arizona_hw_params(struct snd_pcm_substream *substream,
 	int base = dai->driver->base;
 	const int *rates;
 	int i, ret, val;
+	int limit;
 	int chan_limit = arizona->pdata.max_channels_clocked[dai->id - 1];
 	int bclk, lrclk, wl, frame, bclk_target;
 
-	if (params_rate(params) % 8000)
-		rates = &arizona_44k1_bclk_rates[0];
-	else
-		rates = &arizona_48k_bclk_rates[0];
-
+	if (params_rate(params) % 8000) {
+		rates = arizona_44k1_bclk_rates;
+		limit = ARRAY_SIZE(arizona_44k1_bclk_rates);
+	} else {
+		rates = arizona_48k_bclk_rates;
+		limit = ARRAY_SIZE(arizona_48k_bclk_rates);
+	}
 	bclk_target = snd_soc_params_to_bclk(params);
 	if (chan_limit && chan_limit < params_channels(params)) {
 		arizona_aif_dbg(dai, "Limiting to %d channels\n", chan_limit);
@@ -1190,14 +1193,14 @@ static int arizona_hw_params(struct snd_pcm_substream *substream,
 		bclk_target *= 2;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(arizona_44k1_bclk_rates); i++) {
+	for (i = 0; i < limit; i++) {
 		if (rates[i] >= bclk_target &&
 		    rates[i] % params_rate(params) == 0) {
 			bclk = i;
 			break;
 		}
 	}
-	if (i == ARRAY_SIZE(arizona_44k1_bclk_rates)) {
+	if (i == limit) {
 		arizona_aif_err(dai, "Unsupported sample rate %dHz\n",
 				params_rate(params));
 		return -EINVAL;
