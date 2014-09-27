@@ -701,8 +701,10 @@ __acquires(ci->lock)
 {
 	int retval;
 
-	if (ci_otg_is_fsm_mode(ci))
+	if (ci_otg_is_fsm_mode(ci)) {
 		ci->fsm.otg_srp_reqd = 0;
+		ci->fsm.otg_hnp_reqd = 0;
+	}
 
 	spin_unlock(&ci->lock);
 	if (ci->gadget.speed != USB_SPEED_UNKNOWN) {
@@ -967,6 +969,18 @@ static int otg_srp_reqd(struct ci_hdrc *ci)
 	}
 }
 
+static int otg_hnp_reqd(struct ci_hdrc *ci)
+{
+	if (ci_otg_is_fsm_mode(ci)) {
+		ci->fsm.otg_hnp_reqd = 1;
+		ci->fsm.b_bus_req = 1;
+		ci->gadget.host_request_flag = 1;
+		return isr_setup_status_phase(ci);
+	} else {
+		return -ENOTSUPP;
+	}
+}
+
 /**
  * isr_tr_complete_handler: transaction complete interrupt handler
  * @ci: UDC descriptor
@@ -1121,6 +1135,9 @@ __acquires(ci->lock)
 						break;
 					case TEST_OTG_SRP_REQD:
 						err = otg_srp_reqd(ci);
+						break;
+					case TEST_OTG_HNP_REQD:
+						err = otg_hnp_reqd(ci);
 						break;
 					default:
 						break;
