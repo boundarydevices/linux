@@ -711,6 +711,9 @@ __acquires(ci->lock)
 {
 	int retval;
 
+	if (ci_otg_is_fsm_mode(ci))
+		ci->fsm.otg_srp_reqd = 0;
+
 	spin_unlock(&ci->lock);
 	if (ci->gadget.speed != USB_SPEED_UNKNOWN) {
 		if (ci->driver)
@@ -971,6 +974,16 @@ static int otg_a_alt_hnp_support(struct ci_hdrc *ci)
 	return isr_setup_status_phase(ci);
 }
 
+static int otg_srp_reqd(struct ci_hdrc *ci)
+{
+	if (ci_otg_is_fsm_mode(ci)) {
+		ci->fsm.otg_srp_reqd = 1;
+		return isr_setup_status_phase(ci);
+	} else {
+		return -ENOTSUPP;
+	}
+}
+
 /**
  * isr_setup_packet_handler: setup packet handler
  * @ci: UDC descriptor
@@ -1092,6 +1105,9 @@ __acquires(ci->lock)
 					ci->test_mode = tmode;
 					err = isr_setup_status_phase(
 							ci);
+					break;
+				case TEST_OTG_SRP_REQD:
+					err = otg_srp_reqd(ci);
 					break;
 				default:
 					break;
