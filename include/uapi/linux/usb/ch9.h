@@ -143,6 +143,7 @@
 #define	TEST_SE0_NAK	3
 #define	TEST_PACKET	4
 #define	TEST_FORCE_EN	5
+#define	TEST_OTG_SRP_REQD	6
 
 /* Status Type */
 #define USB_STATUS_TYPE_STANDARD	0
