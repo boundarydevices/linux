@@ -216,6 +216,7 @@ static unsigned otg_timer_ms[] = {
 	TB_SSEND_SRP,
 	TA_DP_END,
 	TA_TST_MAINT,
+	TB_SRP_REQD,
 	0,
 };
 
@@ -385,6 +386,21 @@ static int a_tst_maint_tmout(struct ci_hdrc *ci)
 }
 
 /*
+ * otg_srp_reqd feature
+ * After A(PET) turn off vbus, B(UUT) should start this timer to do SRP
+ * when the timer expires.
+ */
+static int b_srp_reqd_tmout(struct ci_hdrc *ci)
+{
+	ci->fsm.otg_srp_reqd = 0;
+	if (ci->fsm.otg->state == OTG_STATE_B_IDLE) {
+		ci->fsm.b_bus_req = 1;
+		return 0;
+	}
+	return 1;
+}
+
+/*
  * Keep this list in the same order as timers indexed
  * by enum otg_fsm_timer in include/linux/usb/otg-fsm.h
  */
@@ -403,6 +419,7 @@ static int (*otg_timer_handlers[])(struct ci_hdrc *) = {
 	b_ssend_srp_tmout,	/* B_SSEND_SRP */
 	a_dp_end_tmout,		/* A_DP_END */
 	a_tst_maint_tmout,	/* A_TST_MAINT */
+	b_srp_reqd_tmout,	/* B_SRP_REQD */
 	NULL,			/* HNP_POLLING */
 };
 
@@ -809,6 +826,8 @@ irqreturn_t ci_otg_fsm_irq(struct ci_hdrc *ci)
 					ci_otg_add_timer(ci, B_SSEND_SRP);
 				if (fsm->b_bus_req)
 					fsm->b_bus_req = 0;
+				if (fsm->otg_srp_reqd)
+					ci_otg_add_timer(ci, B_SRP_REQD);
 			} else {
 				ci->vbus_glitch_check_event = true;
 			}
