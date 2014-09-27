@@ -144,6 +144,7 @@
 #define	TEST_PACKET	4
 #define	TEST_FORCE_EN	5
 #define	TEST_OTG_SRP_REQD	6
+#define	TEST_OTG_HNP_REQD	7
 
 /* Status Type */
 #define USB_STATUS_TYPE_STANDARD	0
