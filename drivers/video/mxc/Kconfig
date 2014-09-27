@@ -18,6 +18,11 @@ config FB_MXC_SYNC_PANEL
 	depends on FB_MXC
 	tristate "Synchronous Panel Framebuffer"
 
+config FB_MXC_LCDIF
+	tristate "lcd parallel display driver"
+	depends on FB_MXC_SYNC_PANEL
+	default y
+
 config FB_MXC_TVOUT_ADV739X
 	tristate "ADV7390/7391 TV Out Encoder"
 	depends on FB_MXC_SYNC_PANEL && I2C
