@@ -27,6 +27,10 @@
 	csi_id = <1>;
 };
 
+&hdmi_core {
+	ipu_id = <1>;
+};
+
 &mxcfb1 {
 	status = "okay";
 };
