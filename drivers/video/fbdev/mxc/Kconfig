@@ -18,6 +18,11 @@ config FB_MXC_SYNC_PANEL
 	depends on FB_MXC
 	tristate "Synchronous Panel Framebuffer"
 
+config FB_MXC_LCDIF
+	tristate "lcd parallel display driver"
+	depends on FB_MXC_SYNC_PANEL
+	default y
+
 config FB_MXC_OVERLAY
 	depends on FB_MXC
 	tristate "Overlay Framebuffer"
