@@ -86,10 +86,12 @@ static irqreturn_t arizona_ctrlif_err(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+int regmap_irq_chip_get_last_irq(struct regmap_irq_chip_data *data);
+
 static irqreturn_t arizona_irq_thread(int irq, void *data)
 {
 	struct arizona *arizona = data;
-	unsigned int val;
+	unsigned int val = 0;
 	int ret;
 
 	ret = pm_runtime_get_sync(arizona->dev);
@@ -114,19 +116,30 @@ static irqreturn_t arizona_irq_thread(int irq, void *data)
 		return IRQ_NONE;
 	}
 
-	/* Always handle the AoD domain */
-	handle_nested_irq(arizona->virq[0]);
 
-	/*
-	 * Check if one of the main interrupts is asserted and only
-	 * check that domain if it is.
-	 */
-	ret = regmap_read(arizona->regmap, ARIZONA_IRQ_PIN_STATUS, &val);
-	if (ret == 0 && val & ARIZONA_IRQ1_STS) {
-		handle_nested_irq(arizona->virq[1]);
-	} else if (ret != 0) {
-		dev_err(arizona->dev, "Failed to read main IRQ status: %d\n",
-			ret);
+	handle_nested_irq(arizona->virq[1]);
+	if (arizona->pdata.irq_gpio) {
+		val = gpio_get_value_cansleep(arizona->pdata.irq_gpio);
+		if (arizona->pdata.irq_active_high)
+				val ^= 1;
+	}
+	if (!val) {
+		/* handle the AoD domain if int still pending */
+		handle_nested_irq(arizona->virq[0]);
+		if (arizona->pdata.irq_gpio) {
+			val = gpio_get_value_cansleep(arizona->pdata.irq_gpio);
+			if (arizona->pdata.irq_active_high)
+					val ^= 1;
+		}
+		if (!val) {
+			int irq = regmap_irq_chip_get_last_irq(arizona->irq_chip);
+			if (!irq)
+				irq = regmap_irq_chip_get_last_irq(arizona->aod_irq_chip);
+			if (!irq) {
+				dev_err(arizona->dev, "No interrupts processed, still pending\n");
+				msleep(100);
+			}
+		}
 	}
 
 	pm_runtime_mark_last_busy(arizona->dev);
@@ -270,6 +283,25 @@ int arizona_irq_init(struct arizona *arizona)
 		}
 	}
 
+	/* Used to emulate edge trigger and to work around broken pinmux */
+	if (arizona->pdata.irq_gpio) {
+		if (gpio_to_irq(arizona->pdata.irq_gpio) != arizona->irq) {
+			dev_warn(arizona->dev, "IRQ %d is not GPIO %d (%d)\n",
+				 arizona->irq, arizona->pdata.irq_gpio,
+				 gpio_to_irq(arizona->pdata.irq_gpio));
+			arizona->irq = gpio_to_irq(arizona->pdata.irq_gpio);
+		}
+
+		ret = gpio_request_one(arizona->pdata.irq_gpio,
+					    GPIOF_IN, "arizona IRQ");
+		if (ret != 0) {
+			dev_err(arizona->dev,
+				"Failed to request IRQ GPIO %d:: %d\n",
+				arizona->pdata.irq_gpio, ret);
+			arizona->pdata.irq_gpio = 0;
+		}
+	}
+
 	ret = request_threaded_irq(arizona->irq, NULL, arizona_irq_thread,
 				   flags, "arizona", arizona);
 
@@ -282,6 +314,8 @@ int arizona_irq_init(struct arizona *arizona)
 	return 0;
 
 err_main_irq:
+	if (arizona->pdata.irq_gpio)
+		gpio_free(arizona->pdata.irq_gpio);
 	free_irq(arizona_map_irq(arizona, ARIZONA_IRQ_CTRLIF_ERR), arizona);
 err_ctrlif:
 	free_irq(arizona_map_irq(arizona, ARIZONA_IRQ_BOOT_DONE), arizona);
@@ -304,6 +338,8 @@ int arizona_irq_exit(struct arizona *arizona)
 			    arizona->irq_chip);
 	regmap_del_irq_chip(arizona->irq,
 			    arizona->aod_irq_chip);
+	if (arizona->pdata.irq_gpio)
+		gpio_free(arizona->pdata.irq_gpio);
 	free_irq(arizona->irq, arizona);
 
 	return 0;
