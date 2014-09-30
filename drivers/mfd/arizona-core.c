@@ -237,7 +237,7 @@ static irqreturn_t arizona_overclocked(int irq, void *data)
 	struct arizona *arizona = data;
 	unsigned int val[3];
 	int ret;
-	
+
 	ret = regmap_bulk_read(arizona->regmap, ARIZONA_INTERRUPT_RAW_STATUS_6,
 			       &val[0], 3);
 	if (ret != 0) {
