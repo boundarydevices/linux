@@ -154,8 +154,8 @@ static void adv739x_setmode(struct adv739x_data *adv739x, int mode)
 			
 			mdelay(20);
 			
-			// Reg 0x00: DAC1~3 power on
-			adv739x_write(client, 0x00, 0x1C);
+			// Reg 0x00: DAC1 power on, DAC2-3 off
+			adv739x_write(client, 0x00, 0x10);
 
 			// Reg 0x01: SD input
 			adv739x_write(client, 0x01, 0x00);
@@ -175,8 +175,8 @@ static void adv739x_setmode(struct adv739x_data *adv739x, int mode)
 			
 			mdelay(20);
 			
-			// Reg 0x00: DAC1~3 power on
-			adv739x_write(client, 0x00, 0x1C);
+			// Reg 0x00: DAC1 power on, DAC2-3 off
+			adv739x_write(client, 0x00, 0x10);
 
 			// Reg 0x01: SD input
 			adv739x_write(client, 0x01, 0x00);
