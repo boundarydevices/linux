@@ -305,6 +305,7 @@ static struct arizona_pdata wm5102_reva_pdata = {
 	.clk32k_src = ARIZONA_32KZ_MCLK2,
 	.inmode = {1, 1, 1, 1},
 	.irq_base = MXC_BOARD_IRQ_START,
+	.irq_gpio = GP_WM5102_IRQ,
 };
 #endif
 
