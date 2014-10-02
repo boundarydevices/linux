@@ -669,6 +669,7 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 err_domain:
 	/* Should really dispose of the domain but... */
 err_alloc:
+	*data = NULL;
 	kfree(d->type_buf);
 	kfree(d->type_buf_def);
 	kfree(d->wake_buf);
