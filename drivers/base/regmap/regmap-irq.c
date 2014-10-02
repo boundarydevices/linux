@@ -1066,6 +1066,7 @@ int regmap_add_irq_chip_fwnode(struct fwnode_handle *fwnode,
 err_domain:
 	/* Should really dispose of the domain but... */
 err_alloc:
+	*data = NULL;
 	kfree(d->type_buf);
 	kfree(d->type_buf_def);
 	kfree(d->wake_buf);
