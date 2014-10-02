@@ -245,7 +245,7 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 
 	/* Mask all the interrupts by default */
 	for (i = 0; i < chip->num_regs; i++) {
-		d->mask_buf[i] = d->mask_buf_def[i];
+		d->mask_buf[i] = d->mask_buf_def[i] = ~0;
 		ret = regmap_write(map, chip->mask_base + (i * map->reg_stride
 				   * d->irq_reg_stride),
 				   d->mask_buf[i]);
