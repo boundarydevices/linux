@@ -1672,7 +1672,18 @@ static void fec_get_mac(struct net_device *ndev)
 	iap = macaddr;
 
 	/*
-	 * 2) from device tree data
+	 * 2) FEC mac registers set by bootloader
+	 */
+	if (!is_valid_ether_addr(iap)) {
+		*((unsigned long *) &tmpaddr[0]) =
+			be32_to_cpu(readl(fep->hwp + FEC_ADDR_LOW));
+		*((unsigned short *) &tmpaddr[4]) =
+			be16_to_cpu(readl(fep->hwp + FEC_ADDR_HIGH) >> 16);
+		iap = &tmpaddr[0];
+	}
+
+	/*
+	 * 3) from device tree data
 	 */
 	if (!is_valid_ether_addr(iap)) {
 		struct device_node *np = fep->pdev->dev.of_node;
@@ -1684,7 +1695,7 @@ static void fec_get_mac(struct net_device *ndev)
 	}
 
 	/*
-	 * 3) from flash or fuse (via platform data)
+	 * 4) from flash or fuse (via platform data)
 	 */
 	if (!is_valid_ether_addr(iap)) {
 #ifdef CONFIG_M5272
@@ -1694,17 +1705,6 @@ static void fec_get_mac(struct net_device *ndev)
 		if (pdata)
 			iap = (unsigned char *)&pdata->mac;
 #endif
-	}
-
-	/*
-	 * 4) FEC mac registers set by bootloader
-	 */
-	if (!is_valid_ether_addr(iap)) {
-		*((unsigned long *) &tmpaddr[0]) =
-			be32_to_cpu(readl(fep->hwp + FEC_ADDR_LOW));
-		*((unsigned short *) &tmpaddr[4]) =
-			be16_to_cpu(readl(fep->hwp + FEC_ADDR_HIGH) >> 16);
-		iap = &tmpaddr[0];
 	}
 
 	/*
