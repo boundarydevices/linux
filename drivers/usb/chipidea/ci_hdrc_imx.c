@@ -81,6 +81,11 @@ static const struct of_device_id ci_hdrc_imx_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, ci_hdrc_imx_dt_ids);
 
+struct gpio_desc {
+	int gpio;
+	int active_low;
+};
+
 struct ci_hdrc_imx_data {
 	struct usb_phy *phy;
 	struct platform_device *ci_pdev;
@@ -94,8 +99,7 @@ struct ci_hdrc_imx_data {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pinctrl_hsic_active;
 	struct regulator *hsic_pad_regulator;
-	int reset_gpio;
-	int reset_active_low;
+	struct gpio_desc reset_gpios[2];
 };
 
 /* Common functions shared by usbmisc drivers */
@@ -213,28 +217,32 @@ static int ci_hdrc_imx_notify_event(struct ci_hdrc *ci, unsigned event)
 	return ret;
 }
 
-static int setup_reset_gpio(struct platform_device *pdev, struct ci_hdrc_imx_data *data)
+static int setup_reset_gpios(struct platform_device *pdev, struct ci_hdrc_imx_data *data)
 {
 	int err = 0;
+	int i;
 	int gpio;
 	enum of_gpio_flags flags;
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
 
-	data->reset_gpio = -1;
-	gpio = of_get_named_gpio_flags(np, "reset-gpios", 0, &flags);
-	pr_info("%s:%d\n", __func__, gpio);
-	if (!gpio_is_valid(gpio))
-		return 0;
+	for (i = 0 ; i < ARRAY_SIZE(data->reset_gpios); i++) {
+		data->reset_gpios[i].gpio = -1;
+		gpio = of_get_named_gpio_flags(np, "reset-gpios", i, &flags);
+		pr_info("%s:%d\n", __func__, gpio);
+		if (!gpio_is_valid(gpio))
+			break;
 
-	data->reset_active_low = flags & OF_GPIO_ACTIVE_LOW;
-	err = devm_gpio_request_one(dev, gpio, data->reset_active_low ?
-			GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW,
-				    "ehci_reset_gpio");
-	if (err)
-		dev_err(dev, "can't request reset gpio %d", gpio);
-	data->reset_gpio = gpio;
-
+		data->reset_gpios[i].active_low = flags & OF_GPIO_ACTIVE_LOW;
+		err = devm_gpio_request_one(dev, gpio, flags & OF_GPIO_ACTIVE_LOW ?
+				GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW,
+				"ehci_reset_gpio");
+		if (err) {
+			dev_err(dev, "can't request reset gpio %d", gpio);
+			break;
+		}
+		data->reset_gpios[i].gpio = gpio;
+	}
 	return err;
 }
 
@@ -262,7 +270,7 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, data);
-	setup_reset_gpio(pdev, data);
+	setup_reset_gpios(pdev, data);
 
 	data->usbmisc_data = usbmisc_get_init_data(&pdev->dev);
 	if (IS_ERR(data->usbmisc_data))
@@ -463,6 +471,7 @@ err_clk:
 static int ci_hdrc_imx_remove(struct platform_device *pdev)
 {
 	struct ci_hdrc_imx_data *data = platform_get_drvdata(pdev);
+	int i;
 
 	ci_hdrc_remove_device(data->ci_pdev);
 	if (data->supports_runtime_pm) {
@@ -476,9 +485,11 @@ static int ci_hdrc_imx_remove(struct platform_device *pdev)
 		imx6_usb_remove_charger(&data->charger);
 	if (data->hsic_pad_regulator)
 		regulator_disable(data->hsic_pad_regulator);
-	if (gpio_is_valid(data->reset_gpio))
-		gpio_set_value(data->reset_gpio, data->reset_active_low ? 0 : 1);
-
+	for (i = 0 ; i < ARRAY_SIZE(data->reset_gpios); i++) {
+		if (!gpio_is_valid(data->reset_gpios[i].gpio))
+			break;
+		gpio_set_value(data->reset_gpios[i].gpio, data->reset_gpios[i].active_low ? 0 : 1);
+	}
 	return 0;
 }
 
