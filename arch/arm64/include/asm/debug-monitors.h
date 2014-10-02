@@ -18,6 +18,15 @@
 
 #ifdef __KERNEL__
 
+/* Low-level stepping controls. */
+#define DBG_MDSCR_SS		(1 << 0)
+#define DBG_SPSR_SS		(1 << 21)
+
+/* MDSCR_EL1 enabling bits */
+#define DBG_MDSCR_KDE		(1 << 13)
+#define DBG_MDSCR_MDE		(1 << 15)
+#define DBG_MDSCR_MASK		~(DBG_MDSCR_KDE | DBG_MDSCR_MDE)
+
 #define	DBG_ESR_EVT(x)		(((x) >> 27) & 0x7)
 
 /* AArch64 */
@@ -25,11 +34,6 @@
 #define DBG_ESR_EVT_HWSS	0x1
 #define DBG_ESR_EVT_HWWP	0x2
 #define DBG_ESR_EVT_BRK		0x6
-
-enum debug_el {
-	DBG_ACTIVE_EL0 = 0,
-	DBG_ACTIVE_EL1,
-};
 
 /* AArch32 */
 #define DBG_ESR_EVT_BKPT	0x4
@@ -84,6 +88,11 @@ void register_break_hook(struct break_hook *hook);
 void unregister_break_hook(struct break_hook *hook);
 
 u8 debug_monitors_arch(void);
+
+enum debug_el {
+	DBG_ACTIVE_EL0 = 0,
+	DBG_ACTIVE_EL1,
+};
 
 void enable_debug_monitors(enum debug_el el);
 void disable_debug_monitors(enum debug_el el);
