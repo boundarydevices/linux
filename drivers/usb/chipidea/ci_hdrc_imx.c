@@ -511,6 +511,7 @@ err_clk:
 static int ci_hdrc_imx_remove(struct platform_device *pdev)
 {
 	struct ci_hdrc_imx_data *data = platform_get_drvdata(pdev);
+	int i;
 
 	ci_hdrc_remove_device(data->ci_pdev);
 	if (data->supports_runtime_pm) {
@@ -525,6 +526,11 @@ static int ci_hdrc_imx_remove(struct platform_device *pdev)
 	if (data->hsic_pad_regulator)
 		regulator_disable(data->hsic_pad_regulator);
 
+	for (i = 0 ; i < ARRAY_SIZE(data->reset_gpios); i++) {
+		if (!gpio_is_valid(data->reset_gpios[i].gpio))
+			break;
+		gpio_set_value(data->reset_gpios[i].gpio, data->reset_gpios[i].active_low ? 0 : 1);
+	}
 	return 0;
 }
 
