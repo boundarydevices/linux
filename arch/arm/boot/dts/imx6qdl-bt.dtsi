@@ -731,7 +731,7 @@
 };
 
 &usbh1 {
-	reset-gpios = GP_USB_HUB_RESET;
+	reset-gpios = GP_USB_HUB_RESET, GP_AX88772A_RESET;
 	status = "okay";
 };
 
