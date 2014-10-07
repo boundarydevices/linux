@@ -51,8 +51,8 @@
 };
 
 &ov5640_mipi {
-       csi_id = <1>;
-       ipu_id = <1>;
+	ipu_id = <1>;
+	csi_id = <0>;
 };
 
 &pinctrl_adv7180 {
@@ -112,8 +112,15 @@
 	status = "okay";
 };
 
+/* ov5640_mipi */
+&v4l2_cap_1 {
+	ipu_id = <1>;
+	csi_id = <0>;
+	mipi_camera = <1>;
+};
+
 /* adv7180, ov5640 */
-&v4l2_cap_3 {
+&v4l2_cap_2 {
 	ipu_id = <1>;
 	csi_id = <1>;
 };
