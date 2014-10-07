@@ -216,16 +216,7 @@
 		status = "okay";
 	};
 
-	v4l2_cap_1 {
-		compatible = "fsl,imx6q-v4l2-capture";
-		ipu_id = <0>;
-		csi_id = <0>;
-		mipi_camera = <1>;
-		mclk_source = <0>;
-		status = "okay";
-	};
-
-	v4l2_cap_2 {
+	v4l2_cap_1: v4l2_cap_1 {
 		compatible = "fsl,imx6q-v4l2-capture";
 		ipu_id = <0>;
 		csi_id = <1>;
@@ -234,8 +225,10 @@
 		status = "okay";
 	};
 
-	v4l2_cap_3: v4l2_cap_3 {
+	v4l2_cap_2: v4l2_cap_2 {
 		compatible = "fsl,imx6q-v4l2-capture";
+		ipu_id = <0>;
+		csi_id = <1>;
 		mclk_source = <0>;
 		status = "okay";
 	};
