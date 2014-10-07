@@ -269,8 +269,8 @@ static int imx_wm5102_probe(struct platform_device *pdev)
 		goto fail;
 	}
 	data->mclk1 = plat->sysclk;
-	data->sysclk_rate = 45158400;
-	data->asyncclk_rate = 49152000;
+	data->sysclk_rate = 45158400/2;
+	data->asyncclk_rate = 49152000/2;
 	data->card = wm5102_card;
 	data->dai[0] = data->card.dai_link[0];
 	data->card.dai_link = data->dai;
