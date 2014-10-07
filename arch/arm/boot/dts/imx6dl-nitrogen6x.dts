@@ -39,11 +39,6 @@
 	ipu_id = <0>;
 };
 
-&ov5640_mipi {
-       csi_id = <1>;
-       ipu_id = <0>;
-};
-
 &pinctrl_adv7180 {
 	fsl,pins = <
 		MX6QDL_PAD_EIM_A17__IPU1_CSI1_DATA12	0xb0b1
@@ -95,10 +90,4 @@
 		MX6QDL_PAD_EIM_DA11__IPU1_CSI1_HSYNC	0xb0b1
 		MX6QDL_PAD_EIM_DA12__IPU1_CSI1_VSYNC	0xb0b1
 	>;
-};
-
-/* adv7180, ov5640 */
-&v4l2_cap_3 {
-	ipu_id = <0>;
-	csi_id = <1>;
 };
