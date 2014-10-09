@@ -1359,6 +1359,10 @@ static void arizona_extcon_set_micd_clamp_mode(struct arizona *arizona)
 		clamp_db_reg = WM8285_INTERRUPT_DEBOUNCE_7;
 		clamp_db_mask = WM8285_MICD_CLAMP_DB;
 		clamp_db_val = WM8285_MICD_CLAMP_DB;
+
+		regmap_update_bits(arizona->regmap,
+				   WM8285_MICD_CLAMP_CONTROL,
+				   0x10, 0);
 		break;
 	}
 
