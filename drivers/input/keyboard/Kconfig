@@ -839,6 +839,12 @@ config KEYBOARD_MTK_PMIC
 	  To compile this driver as a module, choose M here: the
 	  module will be called pmic-keys.
 
+config KEYBOARD_CWC_HOOKSWITCH
+        tristate "CWC Hook switch keyboard"
+        help
+          Select this to enable the Cottonwood Creek Technologies
+          telephone hook switch virtual keyboard.
+
 config KEYBOARD_CYPRESS_SF
 	tristate "Cypress StreetFighter touchkey support"
 	depends on I2C
