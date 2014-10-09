@@ -325,8 +325,9 @@ static int ar1020_i2c_probe(struct i2c_client *client,
 {
 	struct ar1020_i2c_priv *priv = NULL;
 	struct input_dev *input_dev = NULL;
+	struct irq_data *irqd;
+
 	int err = 0;
-	int irq;
 
 	pr_info("%s: begin\n", __func__);
 
@@ -336,12 +337,15 @@ static int ar1020_i2c_probe(struct i2c_client *client,
 		goto error;
 	}
 
-	irq = client->irq;
-	if (touchIRQ)
-		irq = touchIRQ;
+	if (!client->irq) {
+		pr_err("AR1020 I2C: client irq is NULL\n");
+		err = -EINVAL;
+		goto error;
+	}
 
-	if (!irq) {
-		pr_err("AR1020 I2C: no IRQ set for touch controller\n");
+        irqd = irq_get_irq_data(client->irq);
+	if (!irqd) {
+		pr_err("%s:invalid IRQ %d\n", __func__,client->irq);
 		err = -EINVAL;
 		goto error;
 	}
@@ -361,7 +365,7 @@ static int ar1020_i2c_probe(struct i2c_client *client,
 	}
 
 	priv->client = client;
-	priv->irq = irq;
+	priv->irq = client->irq;
 	priv->input = input_dev;
 	INIT_DELAYED_WORK(&priv->reenable_work, irq_reenable_work);
 
@@ -383,10 +387,11 @@ static int ar1020_i2c_probe(struct i2c_client *client,
 		goto error;
 	}
 
+	pr_info("AR1020 I2C: irq %d, flags %08x\n", priv->irq, irqd_get_trigger_type(irqd));
 	/* set type and register gpio pin as our interrupt */
 	err = request_threaded_irq(priv->irq, NULL, touch_irq_handler_func,
-			IRQF_TRIGGER_HIGH | IRQF_ONESHOT, "AR1020 I2C IRQ",
-			priv);
+			irqd_get_trigger_type(irqd) | IRQF_ONESHOT,
+			"AR1020 I2C IRQ", priv);
 	if (err < 0)
 		goto error1;
 	disable_irq(priv->irq);			/* wait for open */
