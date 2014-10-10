@@ -795,6 +795,12 @@ static void sdma_update_channel_loop(struct sdma_channel *sdmac)
 		dmaengine_desc_get_callback_invoke(&desc->vd.tx, NULL);
 		spin_lock(&sdmac->vc.lock);
 
+		if (sdmac->peripheral_type == IMX_DMATYPE_UART) {
+			/* restore mode.count after counter readed */
+			desc->chn_real_count = bd->mode.count;
+			bd->mode.count = desc->chn_count;
+		}
+
 		if (error)
 			sdmac->status = old_status;
 	}
@@ -1528,6 +1534,9 @@ static struct dma_async_tx_descriptor *sdma_prep_dma_cyclic(
 				channel, period_len, SDMA_BD_MAX_CNT);
 		goto err_bd_out;
 	}
+
+	if (sdmac->peripheral_type == IMX_DMATYPE_UART)
+		sdmac->desc->chn_count = period_len;
 
 	while (buf < buf_len) {
 		struct sdma_buffer_descriptor *bd = &desc->bd[i];
