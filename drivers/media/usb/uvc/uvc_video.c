@@ -1939,15 +1939,11 @@ int uvc_video_resume(struct uvc_streaming *stream, int reset)
 		return 0;
 
 	ret = uvc_commit_video(stream, &stream->ctrl);
-	if (ret < 0) {
-		uvc_queue_enable(&stream->queue, 0);
+	if (ret < 0)
 		return ret;
-	}
-
 	ret = uvc_alloc_submit_urbs(stream);
 	if (ret < 0)
-		uvc_queue_enable(&stream->queue, 0);
-
+		return ret;
 	return uvc_init_video(stream, GFP_NOIO);
 }
 
@@ -2111,7 +2107,6 @@ int uvc_video_enable(struct uvc_streaming *stream, int enable)
 			usb_clear_halt(stream->dev->udev, pipe);
 		}
 
-		uvc_queue_enable(&stream->queue, 0);
 		uvc_video_clock_cleanup(stream);
 		return 0;
 	}
@@ -2124,11 +2119,7 @@ int uvc_video_enable(struct uvc_streaming *stream, int enable)
 			stream->ctrl.dwMaxVideoFrameSize :
 			stream->ctrl.dwMaxPayloadTransferSize);
 	if (ret < 0)
-		goto error_queue;
-
-	ret = uvc_queue_enable(&stream->queue, 1);
-	if (ret < 0)
-		goto error_queue;
+		goto error_commit;
 
 	/* Commit the streaming parameters. */
 	ret = uvc_commit_video(stream, &stream->ctrl);
@@ -2148,8 +2139,6 @@ int uvc_video_enable(struct uvc_streaming *stream, int enable)
 error_video:
 	usb_set_interface(stream->dev->udev, stream->intfnum, 0);
 error_commit:
-	uvc_queue_enable(&stream->queue, 0);
-error_queue:
 	uvc_video_clock_cleanup(stream);
 
 	return ret;
