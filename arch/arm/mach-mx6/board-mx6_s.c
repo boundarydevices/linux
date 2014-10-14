@@ -154,7 +154,7 @@ static struct gpio gpios[] __initdata = {
 	{.label = "TEMP_ALARM",		.gpio = IMX_GPIO_NR(2,21),	.flags = GPIOF_DIR_IN},
 	{.label = "FAN_FAIL",		.gpio = IMX_GPIO_NR(2,19),	.flags = GPIOF_DIR_IN},
 	{.label = "AC_FAIL",		.gpio = IMX_GPIO_NR(2,18),	.flags = GPIOF_DIR_IN},
-	{.label = "GPO_2",		.gpio = IMX_GPIO_NR(2,17),	.flags = 0},
+	{.label = "GPO_2",		.gpio = IMX_GPIO_NR(5,2),	.flags = 0},
 	{.label = "GPO_1",		.gpio = IMX_GPIO_NR(2,16),	.flags = 0},
 	{.label = "BGPI_2",		.gpio = IMX_GPIO_NR(6,6),	.flags = GPIOF_DIR_IN},
 	{.label = "BGPI_1",		.gpio = IMX_GPIO_NR(5,4),	.flags = GPIOF_DIR_IN},
