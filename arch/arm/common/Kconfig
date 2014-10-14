@@ -40,6 +40,26 @@ config SHARP_PARAM
 config SHARP_SCOOP
 	bool
 
+config GIC_FIQ
+	bool "enable G1 IRQ and G0 FIQ"
+	select FIQ
+	depends on ARM_GIC
+	default n
+	help
+	  The watchdog timer in an IMX6 processor can call an
+	  interrupt a few seconds before it reboots.  However, if
+	  interrupts have been disabled, this won't work.
+
+	  Activating this feature allows an interrupt to be rerouted
+	  through the FIQ interrupt vector, which is not affected by
+	  the normal irq disable functions.  This feature does not do
+	  any watchdog or other necessary rerouting, it only enables it
+	  to be done in the watchdog (or wherever else true FIQ interrupts
+	  are desired).
+
+	  If you're not debugging low-level interrupt routines, you
+	  probably don't need this feature.
+
 config FIQ_GLUE
 	bool
 	select FIQ
@@ -89,3 +109,4 @@ config FIQ_DEBUGGER_CONSOLE_DEFAULT_ENABLE
 	help
 	  If enabled, this puts the fiq debugger into console mode by default.
 	  Otherwise, the fiq debugger will start out in debug mode.
+

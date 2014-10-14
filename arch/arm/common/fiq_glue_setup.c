@@ -17,14 +17,14 @@
 #include <asm/fiq.h>
 #include <asm/fiq_glue.h>
 
-extern unsigned char fiq_glue, fiq_glue_end;
+extern unsigned char fiq_glue, fiq_glue_end;	// fiq_glue is interrupt service routine
 extern void fiq_glue_setup(void *func, void *data, void *sp);
 
 static struct fiq_handler fiq_debbuger_fiq_handler = {
 	.name = "fiq_glue",
 };
 DEFINE_PER_CPU(void *, fiq_stack);
-static struct fiq_glue_handler *current_handler;
+static struct fiq_glue_handler *current_handler = 0;
 static DEFINE_MUTEX(fiq_glue_lock);
 
 static void fiq_glue_setup_helper(void *info)

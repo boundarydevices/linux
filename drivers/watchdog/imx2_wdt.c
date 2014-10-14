@@ -2,9 +2,12 @@
  * Watchdog driver for IMX2 and later processors
  *
  *  Copyright (C) 2010 Wolfram Sang, Pengutronix e.K. <w.sang@pengutronix.de>
+ *  Copyright (C) 2014 Stan Tomlinson, Persistent Systems <stomlinson@persistentsystems.com>
  *
  * some parts adapted by similar drivers from Darius Augulis and Vladimir
  * Zapolskiy, additional improvements by Wim Van Sebroeck.
+ *
+ * stackdump routines adapted from fiq_debugger.c from Google
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -36,6 +39,14 @@
 #include <linux/interrupt.h>
 #include <mach/hardware.h>
 #include <mach/irqs.h>
+#ifdef CONFIG_GIC_FIQ
+#include <asm/hardware/gic.h>
+#include <asm/fiq.h>
+#include <asm/fiq_glue.h>
+#ifdef CONFIG_STACKTRACE
+#include <asm/stacktrace.h>
+#endif
+#endif
 
 #define DRIVER_NAME "imx2-wdt"
 
@@ -72,6 +83,9 @@ static struct {
 	unsigned pretimeout;
 	unsigned long status;
 	struct timer_list timer;	/* Pings the watchdog when closed */
+#ifdef CONFIG_GIC_FIQ
+	struct fiq_glue_handler handler;
+#endif
 } imx2_wdt;
 
 static struct miscdevice imx2_wdt_miscdev;
@@ -159,7 +173,7 @@ static void imx2_wdt_set_timeout(int new_timeout)
 }
 
 
-static int imx2_wdt_check_pretimeout_set(void)
+static inline int imx2_wdt_check_pretimeout_set(void)
 {
 	u16 val = __raw_readw(imx2_wdt.base + IMX2_WDT_WICR);
 	return (val & IMX2_WDT_WICR_WIE) ? 1 : 0;
@@ -176,7 +190,139 @@ static void imx2_wdt_set_pretimeout(int new_timeout)
 	if (!imx2_wdt_check_pretimeout_set())
 		val |= IMX2_WDT_WICR_WIE;	/*enable*/
 	__raw_writew(val, imx2_wdt.base + IMX2_WDT_WICR);
+
+	imx2_wdt.pretimeout = new_timeout;
+
+	val = __raw_readw(imx2_wdt.base + IMX2_WDT_WICR);
 }
+
+#ifdef CONFIG_ARM
+static char *mode_name(unsigned cpsr)
+{
+	switch (cpsr & MODE_MASK) {
+	case USR_MODE: return "USR";
+	case FIQ_MODE: return "FIQ";
+	case IRQ_MODE: return "IRQ";
+	case SVC_MODE: return "SVC";
+	case ABT_MODE: return "ABT";
+	case UND_MODE: return "UND";
+	case SYSTEM_MODE: return "SYS";
+	default: return "???";
+	}
+}
+
+static void dump_regs(unsigned *regs)
+{
+	printk(" r0 %08x  r1 %08x  r2 %08x  r3 %08x\n",
+			regs[0], regs[1], regs[2], regs[3]);
+	printk(" r4 %08x  r5 %08x  r6 %08x  r7 %08x\n",
+			regs[4], regs[5], regs[6], regs[7]);
+	printk(" r8 %08x  r9 %08x r10 %08x r11 %08x  mode %s\n",
+			regs[8], regs[9], regs[10], regs[11],
+			mode_name(regs[16]));
+	if ((regs[16] & MODE_MASK) == USR_MODE)
+		printk(" ip %08x  sp %08x  lr %08x  pc %08x  "
+				"cpsr %08x\n", regs[12], regs[13], regs[14],
+				regs[15], regs[16]);
+	else
+		printk(" ip %08x  sp %08x  lr %08x  pc %08x  "
+				"cpsr %08x  spsr %08x\n", regs[12], regs[13],
+				regs[14], regs[15], regs[16], regs[17]);
+}
+
+#ifdef CONFIG_STACKTRACE
+struct stacktrace_state {
+	unsigned int depth;
+};
+
+static int report_trace(struct stackframe *frame, void *d)
+{
+	struct stacktrace_state *sts = d;
+
+	if (sts->depth <= 0) {
+		printk("  ...\n");
+		return 1;
+	}
+
+	printk( "  pc: %p (%pF), lr %p (%pF), sp %p, fp %p\n",
+		(void *)frame->pc, (void *)frame->pc, (void *)frame->lr, (void *)frame->lr,
+		(void *)frame->sp, (void *)frame->fp);
+
+	sts->depth--;
+
+	return 0;
+}
+
+static void dump_stacktrace( struct pt_regs *regs, void *svc_sp)
+{
+	struct stacktrace_state sts = { 100 };
+
+	dump_regs((unsigned *)regs);
+
+	if (!user_mode(regs)) {
+		struct stackframe frame;
+		frame.fp = regs->ARM_fp;
+		frame.sp = regs->ARM_sp;
+		frame.lr = regs->ARM_lr;
+		frame.pc = regs->ARM_pc;
+		printk(
+			"  pc: %p (%pF), lr %p (%pF), sp %p, fp %p\n",
+			(void *)regs->ARM_pc, (void *)regs->ARM_pc, (void *)regs->ARM_lr,
+			(void *)regs->ARM_lr, (void *)regs->ARM_sp, (void *)regs->ARM_fp);
+		walk_stackframe(&frame, report_trace, &sts);
+		return;
+	}
+
+	printk( "USER SPACE INTERRUPT???\n" );
+	/*
+	tail = ((struct frame_tail *) regs->ARM_fp) - 1;
+	while (depth-- && tail && !((unsigned long) tail & 3))
+		tail = user_backtrace(state, tail);
+	*/
+}
+#endif
+#endif
+
+#ifdef CONFIG_GIC_FIQ
+static void imx2_wdt_fiq_handler(struct fiq_glue_handler *h, void *regs, void *svc_sp)
+{
+	u16 val = __raw_readw(imx2_wdt.base + IMX2_WDT_WICR);
+	if (val & IMX2_WDT_WICR_WTIS) {
+
+		/*interrupt status bit has been set*/
+		__raw_writew(val, imx2_wdt.base + IMX2_WDT_WICR);	// clear WTIS
+
+		printk("\n\n");
+		printk("===================================================================\n");
+		printk("===================================================================\n");
+		printk("===================================================================\n");
+		printk("===================================================================\n");
+		printk("========                                                ===========\n");
+		printk("========            watchdog pre-timeout                ===========\n");
+		printk("========                                                ===========\n");
+		printk("===================================================================\n");
+		printk("===================================================================\n");
+		printk("===================================================================\n");
+		printk("===================================================================\n");
+		printk("\n\n");
+		#ifdef CONFIG_ARM
+			#ifdef CONFIG_STACKTRACE
+				dump_stacktrace( (struct pt_regs *)regs, svc_sp );
+			#else
+				dump_regs((unsigned *)regs);
+			#endif
+		#endif
+	}
+	return;
+}
+
+static void imx2_wdt_fiq_resume(struct fiq_glue_handler *h)
+{
+	printk(KERN_INFO "watchdog fiq_resume\n");
+	fiq_glue_resume();
+	local_fiq_enable();
+}
+#endif
 
 static irqreturn_t imx2_wdt_isr(int irq, void *dev_id)
 {
@@ -184,7 +330,7 @@ static irqreturn_t imx2_wdt_isr(int irq, void *dev_id)
 	if (val & IMX2_WDT_WICR_WTIS) {
 		/*clear interrupt status bit*/
 		__raw_writew(val, imx2_wdt.base + IMX2_WDT_WICR);
-		printk(KERN_INFO "watchdog pre-timeout:%d, %d Seconds remained\n", \
+		printk(KERN_INFO "watchdog pre-timeout:%d, %d Seconds have passed\n", \
 			imx2_wdt.pretimeout, imx2_wdt.timeout-imx2_wdt.pretimeout);
 	}
 	return IRQ_HANDLED;
@@ -192,11 +338,20 @@ static irqreturn_t imx2_wdt_isr(int irq, void *dev_id)
 
 static int imx2_wdt_open(struct inode *inode, struct file *file)
 {
+	irqreturn_t irq_rv;
+
 	if (test_and_set_bit(IMX2_WDT_STATUS_OPEN, &imx2_wdt.status))
 		return -EBUSY;
 
 	imx2_wdt_start();
-	return nonseekable_open(inode, file);
+
+	irq_rv = nonseekable_open(inode, file);
+
+#ifdef CONFIG_GIC_FIQ
+	imx2_wdt_set_pretimeout(4);
+#endif
+
+	return irq_rv;
 }
 
 static int imx2_wdt_close(struct inode *inode, struct file *file)
@@ -253,7 +408,6 @@ static long imx2_wdt_ioctl(struct file *file, unsigned int cmd,
 		if ((new_value < 0) || (new_value >= imx2_wdt.timeout))
 			return -EINVAL;
 		imx2_wdt_set_pretimeout(new_value);
-		imx2_wdt.pretimeout = new_value;
 
 	case WDIOC_GETPRETIMEOUT:
 		return put_user(imx2_wdt.pretimeout, p);
@@ -315,7 +469,7 @@ static int __init imx2_wdt_probe(struct platform_device *pdev)
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
-		dev_err(&pdev->dev, "can't get device irq number\n");
+		dev_err(&pdev->dev, "can't get device irq number: %d\n", irq);
 		return -ENODEV;
 	}
 
@@ -339,6 +493,18 @@ static int __init imx2_wdt_probe(struct platform_device *pdev)
 		return PTR_ERR(imx2_wdt.clk);
 	}
 
+#ifdef CONFIG_GIC_FIQ
+	imx2_wdt.handler.fiq = &imx2_wdt_fiq_handler;
+	imx2_wdt.handler.resume = &imx2_wdt_fiq_resume;
+	ret = fiq_glue_register_handler(&imx2_wdt.handler);
+	if (ret) {
+		dev_err(&pdev->dev, "cannot register fiq handler\n");
+		goto fail;
+	}
+	gic_enable_fiq( irq, 1 );
+	local_fiq_enable();
+#endif
+
 	ret = request_irq(irq, imx2_wdt_isr, 0, pdev->name, NULL);
 	if (ret) {
 		dev_err(&pdev->dev, "can't claim irq %d\n", irq);
@@ -358,8 +524,9 @@ static int __init imx2_wdt_probe(struct platform_device *pdev)
 		goto fail;
 
 	dev_info(&pdev->dev,
-		"IMX2+ Watchdog Timer enabled. timeout=%ds (nowayout=%d)\n",
-						imx2_wdt.timeout, nowayout);
+		"IMX2+ Watchdog Timer enabled. timeout=%ds pretimeout=%ds nowayout=%d irq=%d\n",
+						imx2_wdt.timeout, imx2_wdt.pretimeout, nowayout, irq);
+
 	return 0;
 
 fail:
@@ -424,3 +591,4 @@ MODULE_DESCRIPTION("Watchdog driver for IMX2 and later");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS_MISCDEV(WATCHDOG_MINOR);
 MODULE_ALIAS("platform:" DRIVER_NAME);
+
