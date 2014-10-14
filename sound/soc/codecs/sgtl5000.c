@@ -16,6 +16,8 @@
 #include <linux/pm.h>
 #include <linux/i2c.h>
 #include <linux/clk.h>
+#include <linux/log2.h>
+#include <linux/regmap.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/consumer.h>
@@ -132,6 +134,13 @@ struct ldo_regulator {
 	bool enabled;
 };
 
+enum sgtl5000_micbias_resistor {
+	SGTL5000_MICBIAS_OFF = 0,
+	SGTL5000_MICBIAS_2K = 2,
+	SGTL5000_MICBIAS_4K = 4,
+	SGTL5000_MICBIAS_8K = 8,
+};
+
 /* sgtl5000 private structure in codec */
 struct sgtl5000_priv {
 	int sysclk;	/* sysclk rate */
@@ -141,6 +150,7 @@ struct sgtl5000_priv {
 	struct ldo_regulator *ldo;
 	struct clk *mclk;
 	int revision;
+	u8 micbias_resistor;
 };
 
 /*
@@ -155,12 +165,14 @@ struct sgtl5000_priv {
 static int mic_bias_event(struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *kcontrol, int event)
 {
+	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(w->codec);
+
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
-		/* change mic bias resistor to 4Kohm */
+		/* change mic bias resistor */
 		snd_soc_update_bits(w->codec, SGTL5000_CHIP_MIC_CTRL,
-				SGTL5000_BIAS_R_MASK,
-				SGTL5000_BIAS_R_4k << SGTL5000_BIAS_R_SHIFT);
+			SGTL5000_BIAS_R_MASK,
+			sgtl5000->micbias_resistor << SGTL5000_BIAS_R_SHIFT);
 		break;
 
 	case SND_SOC_DAPM_PRE_PMD:
@@ -1345,7 +1357,9 @@ static int sgtl5000_probe(struct snd_soc_codec *codec)
 			SGTL5000_HP_ZCD_EN |
 			SGTL5000_ADC_ZCD_EN);
 
-	snd_soc_write(codec, SGTL5000_CHIP_MIC_CTRL, 2);
+	snd_soc_update_bits(codec, SGTL5000_CHIP_MIC_CTRL,
+			SGTL5000_BIAS_R_MASK,
+			sgtl5000->micbias_resistor << SGTL5000_BIAS_R_SHIFT);
 
 	/*
 	 * disable DAP
@@ -1465,6 +1479,8 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 	struct sgtl5000_priv *sgtl5000;
 	int ret, rev, i;
 	u16 reg;
+	struct device_node *np = client->dev.of_node;
+	u32 value;
 
 	sgtl5000 = devm_kzalloc(&client->dev, sizeof(struct sgtl5000_priv),
 								GFP_KERNEL);
@@ -1510,6 +1526,33 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 	/* Restore regs back to power up conditions */
 	for (i = 0; i < ARRAY_SIZE(init_regs); i += 2)
 		sgtl5000_write16(client, init_regs[i], init_regs[i+1]);
+
+	if (np) {
+		if (!of_property_read_u32(np,
+			"micbias-resistor-k-ohms", &value)) {
+			switch (value) {
+			case SGTL5000_MICBIAS_OFF:
+				sgtl5000->micbias_resistor = 0;
+				break;
+			case SGTL5000_MICBIAS_2K:
+				sgtl5000->micbias_resistor = 1;
+				break;
+			case SGTL5000_MICBIAS_4K:
+				sgtl5000->micbias_resistor = 2;
+				break;
+			case SGTL5000_MICBIAS_8K:
+				sgtl5000->micbias_resistor = 3;
+				break;
+			default:
+				sgtl5000->micbias_resistor = 2;
+				dev_err(&client->dev,
+					"Unsuitable MicBias resistor\n");
+			}
+		} else {
+			/* default is 4Kohms */
+			sgtl5000->micbias_resistor = 2;
+		}
+	}
 
 	i2c_set_clientdata(client, sgtl5000);
 
