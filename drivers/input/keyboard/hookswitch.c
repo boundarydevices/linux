@@ -1,7 +1,7 @@
 /*
- * Keypad driver for Cottonwood Creek Technologies
+ * Keypad driver for Cottonwood Creek Technologies Hook Switch
  *
- * Copyright 2014 Securus Technologies
+ * Copyright 2014 Boundary Devices
  *
  * Licensed under the BSD or GPL-2 or later.
  */
@@ -166,7 +166,6 @@ static void cwc_hookswitch_exit(void)
 module_init(cwc_hookswitch_init);
 module_exit(cwc_hookswitch_exit);
 
-MODULE_AUTHOR("Unknown");
 MODULE_DESCRIPTION("CWC Tech Hook Switch");
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_ALIAS("platform:cwctech-keys");
