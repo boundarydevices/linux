@@ -1994,9 +1994,11 @@ void ci_gadget_connect(struct usb_gadget *_gadget, int is_active)
 		pm_runtime_get_sync(&_gadget->dev);
 		hw_device_reset(ci, USBMODE_CM_DC);
 		hw_device_state(ci, ci->ep0out->qh.dma);
+		hw_write(ci, OP_USBCMD, USBCMD_RS, USBCMD_RS);
 		usb_gadget_set_state(_gadget, USB_STATE_POWERED);
 	} else {
 		ci->driver->disconnect(_gadget);
+		hw_write(ci, OP_USBCMD, USBCMD_RS, 0);
 		hw_device_state(ci, 0);
 		if (ci->platdata->notify_event)
 			ci->platdata->notify_event(ci,
