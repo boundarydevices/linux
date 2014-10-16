@@ -574,6 +574,7 @@
 	pinctrl-0 = <&pinctrl_lcdif_dat_0
 		     &pinctrl_lcdif_ctrl_0>;
 	lcd-supply = <&reg_lcd_3v3>;
+	disp-supply = <&disp_dummy>;
 	display = <&display0>;
 	status = "disabled";
 
@@ -604,6 +605,7 @@
 
 &lcdif2 {
 	display = <&display1>;
+	disp-supply = <&disp_dummy>;
 	disp-dev = "ldb";
 	status = "okay";
 
