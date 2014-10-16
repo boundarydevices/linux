@@ -255,31 +255,6 @@ static void __init imx6q_mini_pcie_init(void)
 	}
 }
 
-static void __init imx6q_gps_init(void)
-{
-	struct device_node *np = NULL;
-	int ret, power_on_gpio;
-	np = of_find_node_by_name(NULL, "gps_ctrl");
-	if (!np)
-		return;
-	power_on_gpio = of_get_named_gpio(np, "aux-3v15-on-gpio", 0);
-	if (gpio_is_valid(power_on_gpio)) {
-		ret = gpio_request_one(power_on_gpio, GPIOF_OUT_INIT_HIGH,
-			"aux3v15 Power On");
-		pr_warn("!!request aux3v15 On gpio\n");
-		if (ret)
-			pr_warn("failed to request aux3v15 Power On gpio\n");
-	}
-	power_on_gpio = of_get_named_gpio(np, "power-on-gpio", 0);
-	if (gpio_is_valid(power_on_gpio)) {
-		ret = gpio_request_one(power_on_gpio, GPIOF_OUT_INIT_HIGH,
-			"GPS Power On");
-		pr_warn("!!request gps On gpio\n");
-		if (ret)
-			pr_warn("failed to request gps power on gpio\n");
-	}
-}
-
 #define OCOTP_MACn(n)	(0x00000620 + (n) * 0x10)
 void __init imx6_enet_mac_init(const char *compatible)
 {
@@ -389,7 +364,6 @@ static void __init imx6q_init_machine(void)
 	imx6_pm_init();
 	imx6q_csi_mux_init();
 	imx6q_mini_pcie_init();
-	imx6q_gps_init();
 }
 
 #define OCOTP_CFG3			0x440
