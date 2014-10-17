@@ -95,50 +95,85 @@ int arizona_clk32k_disable(struct arizona *arizona)
 }
 EXPORT_SYMBOL_GPL(arizona_clk32k_disable);
 
+static int arizona_dvfs_apply_boost(struct arizona *arizona)
+{
+	int ret;
+
+	ret = regulator_set_voltage(arizona->dcvdd, 1800000, 1800000);
+	if (ret != 0) {
+		dev_err(arizona->dev,
+			"Failed to boost DCVDD: %d\n", ret);
+		return ret;
+	}
+
+	ret = regmap_update_bits(arizona->regmap,
+				ARIZONA_DYNAMIC_FREQUENCY_SCALING_1,
+				ARIZONA_SUBSYS_MAX_FREQ, 1);
+	if (ret != 0) {
+		dev_err(arizona->dev,
+			"Failed to enable subsys max: %d\n", ret);
+
+		regulator_set_voltage(arizona->dcvdd, 1200000, 1800000);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int arizona_dvfs_remove_boost(struct arizona *arizona)
+{
+	int ret;
+
+	ret = regmap_update_bits(arizona->regmap,
+				ARIZONA_DYNAMIC_FREQUENCY_SCALING_1,
+				ARIZONA_SUBSYS_MAX_FREQ, 0);
+	if (ret != 0) {
+		dev_err(arizona->dev,
+			"Failed to disable subsys max: %d\n", ret);
+		return ret;
+	}
+
+	ret = regulator_set_voltage(arizona->dcvdd, 1200000, 1800000);
+	if (ret != 0) {
+		dev_err(arizona->dev,
+			"Failed to unboost DCVDD : %d\n", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
 int arizona_dvfs_up(struct arizona *arizona, unsigned int flags)
 {
-	unsigned int new_flags;
+	unsigned int old_flags;
 	int ret = 0;
 
 	mutex_lock(&arizona->subsys_max_lock);
 
-	new_flags = arizona->subsys_max_rq | flags;
+	old_flags = arizona->subsys_max_rq;
+	arizona->subsys_max_rq |= flags;
 
-	if (arizona->subsys_max_rq != new_flags) {
+	/* If currently caching the change will be applied in runtime resume */
+	if (arizona->subsys_max_cached) {
+		dev_dbg(arizona->dev, "subsys_max_cached (dvfs up)\n");
+		goto out;
+	}
+
+	if (arizona->subsys_max_rq != old_flags) {
 		switch (arizona->type) {
 		case WM5102:
 		case WM8997:
 		case WM8998:
 		case WM1814:
-			ret = regulator_set_voltage(arizona->dcvdd,
-						    1800000, 1800000);
-			if (ret != 0) {
-				dev_err(arizona->dev,
-					"Failed to set DCVDD (DVFS up): %d\n",
-					ret);
-				goto err;
-			}
-
-			ret = regmap_update_bits(arizona->regmap,
-					ARIZONA_DYNAMIC_FREQUENCY_SCALING_1,
-					ARIZONA_SUBSYS_MAX_FREQ, 1);
-			if (ret != 0) {
-				dev_err(arizona->dev,
-					"Failed to enable subsys max: %d\n",
-					ret);
-				regulator_set_voltage(arizona->dcvdd,
-						      1200000, 1800000);
-				goto err;
-			}
+			ret = arizona_dvfs_apply_boost(arizona);
 			break;
 
 		default:
 			break;
 		}
 
-		arizona->subsys_max_rq = new_flags;
 	}
-err:
+out:
 	mutex_unlock(&arizona->subsys_max_lock);
 	return ret;
 }
@@ -146,39 +181,34 @@ EXPORT_SYMBOL_GPL(arizona_dvfs_up);
 
 int arizona_dvfs_down(struct arizona *arizona, unsigned int flags)
 {
+	unsigned int old_flags;
 	int ret = 0;
 
 	mutex_lock(&arizona->subsys_max_lock);
 
+	old_flags = arizona->subsys_max_rq;
 	arizona->subsys_max_rq &= ~flags;
 
-	if (arizona->subsys_max_rq == 0) {
+	/* If currently caching the change will be applied in runtime resume */
+	if (arizona->subsys_max_cached) {
+		dev_dbg(arizona->dev, "subsys_max_cached (dvfs down)\n");
+		goto out;
+	}
+
+	if ((old_flags != 0) && (arizona->subsys_max_rq == 0)) {
 		switch (arizona->type) {
 		case WM5102:
 		case WM8997:
 		case WM8998:
 		case WM1814:
-			ret = regmap_update_bits(arizona->regmap,
-					ARIZONA_DYNAMIC_FREQUENCY_SCALING_1,
-					ARIZONA_SUBSYS_MAX_FREQ, 0);
-			if (ret != 0)
-				dev_err(arizona->dev,
-					"Failed to disable subsys max: %d\n",
-					ret);
-
-			ret = regulator_set_voltage(arizona->dcvdd,
-						    1200000, 1800000);
-			if (ret != 0)
-				dev_err(arizona->dev,
-					"Failed to set DCVDD (DVFS down): %d\n",
-					ret);
+			ret = arizona_dvfs_remove_boost(arizona);
 			break;
 
 		default:
 			break;
 		}
 	}
-
+out:
 	mutex_unlock(&arizona->subsys_max_lock);
 	return ret;
 }
@@ -518,6 +548,33 @@ err:
 }
 
 #ifdef CONFIG_PM_RUNTIME
+static int arizona_restore_dvfs(struct arizona *arizona)
+{
+	int ret;
+
+	switch (arizona->type) {
+	default:
+		return 0;	/* no DVFS */
+
+	case WM5102:
+	case WM8997:
+	case WM8998:
+	case WM1814:
+		break;
+	}
+
+	ret = 0;
+	mutex_lock(&arizona->subsys_max_lock);
+	if (arizona->subsys_max_rq != 0) {
+		dev_dbg(arizona->dev, "Restore subsys_max boost\n");
+		ret = arizona_dvfs_apply_boost(arizona);
+	}
+
+	arizona->subsys_max_cached = false;
+	mutex_unlock(&arizona->subsys_max_lock);
+	return ret;
+}
+
 static int arizona_runtime_resume(struct device *dev)
 {
 	struct arizona *arizona = dev_get_drvdata(dev);
@@ -634,31 +691,9 @@ static int arizona_runtime_resume(struct device *dev)
 		goto err;
 	}
 
-	switch(arizona->type) {
-	case WM5102:
-	case WM8997:
-	case WM8998:
-	case WM1814:
-		/* Restore DVFS setting */
-		ret = 0;
-		mutex_lock(&arizona->subsys_max_lock);
-		if (arizona->subsys_max_rq != 0) {
-			ret = regmap_update_bits(arizona->regmap,
-				ARIZONA_DYNAMIC_FREQUENCY_SCALING_1,
-				ARIZONA_SUBSYS_MAX_FREQ, 1);
-		}
-		mutex_unlock(&arizona->subsys_max_lock);
-
-		if (ret != 0) {
-			dev_err(arizona->dev,
-				"Failed to enable subsys max: %d\n",
-				ret);
-			goto err;
-		}
-		break;
-	default:
-		break;
-	}
+	ret = arizona_restore_dvfs(arizona);
+	if (ret < 0)
+		goto err;
 
 	return 0;
 
@@ -681,9 +716,10 @@ static int arizona_runtime_suspend(struct device *dev)
 	case WM8998:
 	case WM1814:
 		/* Must disable DVFS boost before powering down DCVDD */
-		regmap_update_bits(arizona->regmap,
-			ARIZONA_DYNAMIC_FREQUENCY_SCALING_1,
-			ARIZONA_SUBSYS_MAX_FREQ, 0);
+		mutex_lock(&arizona->subsys_max_lock);
+		arizona->subsys_max_cached = true;
+		arizona_dvfs_remove_boost(arizona);
+		mutex_unlock(&arizona->subsys_max_lock);
 		break;
 	default:
 		break;
@@ -697,7 +733,7 @@ static int arizona_runtime_suspend(struct device *dev)
 		if (ret != 0) {
 			dev_err(arizona->dev, "Failed to isolate DCVDD: %d\n",
 				ret);
-			return ret;
+			goto err;
 		}
 	} else {
 		switch (arizona->type) {
@@ -722,6 +758,9 @@ static int arizona_runtime_suspend(struct device *dev)
 	regulator_disable(arizona->dcvdd);
 
 	return 0;
+err:
+	arizona_restore_dvfs(arizona);
+	return ret;
 }
 #endif
 
