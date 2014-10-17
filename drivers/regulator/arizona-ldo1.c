@@ -83,7 +83,7 @@ static struct regulator_ops arizona_ldo1_ops = {
 	.set_voltage_sel = arizona_ldo_reg_set_voltage_sel,
 };
 
-static struct regulator_desc arizona_ldo1 = {
+static const struct regulator_desc arizona_ldo1 = {
 	.name = "LDO1",
 	.type = REGULATOR_VOLTAGE,
 	.ops = &arizona_ldo1_ops,
@@ -149,6 +149,7 @@ static __devinit int arizona_ldo1_probe(struct platform_device *pdev)
 	config.dev = arizona->dev;
 	config.init_data = init_data;
 	config.driver_data = ldo1;
+	config.regmap = arizona->regmap;
 	ldo1->regulator = regulator_register(&arizona_ldo1, &config);
 	if (IS_ERR(ldo1->regulator)) {
 		ret = PTR_ERR(ldo1->regulator);
