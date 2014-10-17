@@ -36,8 +36,8 @@ struct arizona_micsupp {
 	struct regulator_init_data init_data;
 };
 
-static int arizona_micsupp_reg_list_voltage(struct regulator_dev *rdev,
-					    unsigned int selector)
+static int arizona_micsupp_list_voltage(struct regulator_dev *rdev,
+					unsigned int selector)
 {
 	if (selector > ARIZONA_MICSUPP_MAX_SELECTOR)
 		return -EINVAL;
@@ -48,37 +48,28 @@ static int arizona_micsupp_reg_list_voltage(struct regulator_dev *rdev,
 		return (selector * 50000) + 1700000;
 }
 
-static int arizona_micsupp_reg_is_enabled(struct regulator_dev *rdev)
+static int arizona_micsupp_map_voltage(struct regulator_dev *rdev,
+				       int min_uV, int max_uV)
 {
-	unsigned int val;
-	int ret;
-	struct arizona_micsupp *micsupp = rdev_get_drvdata(rdev);
+	unsigned int voltage;
+	int selector;
 
-	ret = regmap_read(micsupp->arizona->regmap,
-			  ARIZONA_MIC_CHARGE_PUMP_1, &val);
-	if (ret != 0)
-		return ret;
+	if (min_uV < 1700000)
+		min_uV = 1700000;
 
-	return (val & ARIZONA_CPMIC_ENA) != 0;
-}
+	if (min_uV > 3200000)
+		selector = ARIZONA_MICSUPP_MAX_SELECTOR;
+	else
+		selector = DIV_ROUND_UP(min_uV - 1700000, 50000);
 
-static int arizona_micsupp_reg_enable(struct regulator_dev *rdev)
-{
-	struct arizona_micsupp *micsupp = rdev_get_drvdata(rdev);
+	if (selector < 0)
+		return -EINVAL;
 
-	return regmap_update_bits(micsupp->arizona->regmap,
-				  ARIZONA_MIC_CHARGE_PUMP_1,
-				  ARIZONA_CPMIC_ENA,
-				  ARIZONA_CPMIC_ENA);
-}
+	voltage = arizona_micsupp_list_voltage(rdev, selector);
+	if (voltage < min_uV || voltage > max_uV)
+		return -EINVAL;
 
-static int arizona_micsupp_reg_disable(struct regulator_dev *rdev)
-{
-	struct arizona_micsupp *micsupp = rdev_get_drvdata(rdev);
-
-	return regmap_update_bits(micsupp->arizona->regmap,
-				  ARIZONA_MIC_CHARGE_PUMP_1,
-				  ARIZONA_CPMIC_ENA, 0);
+	return selector;
 }
 
 static int arizona_micsupp_reg_get_voltage_sel(struct regulator_dev *rdev)
@@ -109,18 +100,20 @@ static int arizona_micsupp_reg_set_voltage_sel(struct regulator_dev *rdev,
 }
 
 static struct regulator_ops arizona_micsupp_ops = {
-	.enable = arizona_micsupp_reg_enable,
-	.disable = arizona_micsupp_reg_disable,
-	.is_enabled = arizona_micsupp_reg_is_enabled,
+	.enable = regulator_enable_regmap,
+	.disable = regulator_disable_regmap,
+	.is_enabled = regulator_is_enabled_regmap,
 
-	.list_voltage = arizona_micsupp_reg_list_voltage,
+	.list_voltage = arizona_micsupp_list_voltage,
+	.map_voltage = arizona_micsupp_map_voltage,
 
 	.get_voltage_sel = arizona_micsupp_reg_get_voltage_sel,
 	.set_voltage_sel = arizona_micsupp_reg_set_voltage_sel,
 };
 
-static struct regulator_desc arizona_micsupp = {
+static const struct regulator_desc arizona_micsupp = {
 	.name = "MICVDD",
+	.supply_name = "CPVDD",
 	.type = REGULATOR_VOLTAGE,
 	.n_voltages = ARIZONA_MICSUPP_MAX_SELECTOR + 1,
 	.ops = &arizona_micsupp_ops,
@@ -142,9 +135,8 @@ static const struct regulator_init_data arizona_micsupp_default = {
 static __devinit int arizona_micsupp_probe(struct platform_device *pdev)
 {
 	struct arizona *arizona = dev_get_drvdata(pdev->dev.parent);
-	struct arizona_micsupp *micsupp;
-	struct regulator_init_data *init_data;
 	struct regulator_config config = { };
+	struct arizona_micsupp *micsupp;
 	int ret;
 
 	micsupp = devm_kzalloc(&pdev->dev, sizeof(*micsupp), GFP_KERNEL);
@@ -165,18 +157,19 @@ static __devinit int arizona_micsupp_probe(struct platform_device *pdev)
 	micsupp->supply.supply = "MICVDD";
 	micsupp->supply.dev_name = dev_name(arizona->dev);
 
+	config.dev = arizona->dev;
+	config.driver_data = micsupp;
+	config.regmap = arizona->regmap;
+
 	if (arizona->pdata.micvdd)
-		init_data = arizona->pdata.micvdd;
+		config.init_data = arizona->pdata.micvdd;
 	else
-		init_data = &micsupp->init_data;
+		config.init_data = &micsupp->init_data;
 
 	/* Default to regulated mode until the API supports bypass */
 	regmap_update_bits(arizona->regmap, ARIZONA_MIC_CHARGE_PUMP_1,
 			   ARIZONA_CPMIC_BYPASS, 0);
 
-	config.dev = arizona->dev;
-	config.init_data = init_data;
-	config.driver_data = micsupp;
 	micsupp->regulator = regulator_register(&arizona_micsupp, &config);
 	if (IS_ERR(micsupp->regulator)) {
 		ret = PTR_ERR(micsupp->regulator);
