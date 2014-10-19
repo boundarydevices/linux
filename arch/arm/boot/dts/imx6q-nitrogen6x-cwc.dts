@@ -130,13 +130,9 @@
 	status = "disabled" ;
 };
 
-/* adv7180, ov5640 */
+/* adv7180, ov5640, ov5642 */
 &v4l2_cap_2 {
-	status = "disabled" ;
-};
-
-&ov5642 {
-	status = "disabled" ;
+	status = "okay" ;
 };
 
 &ov5640_mipi {
