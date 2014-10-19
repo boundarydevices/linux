@@ -23,13 +23,10 @@
 };
 
 &adv7180 {
-	ipu_id = <1>;
-	csi_id = <1>;
 	status = "disabled";
 };
 
 &hdmi_core {
-	ipu_id = <1>;
 	status = "disabled";
 };
 
@@ -50,14 +47,17 @@
 };
 
 &ov5640 {
-	ipu_id = <1>;
 	status = "disabled";
 };
 
 &ov5640_mipi {
-	ipu_id = <1>;
-	csi_id = <0>;
 	status = "disabled";
+};
+
+&ov5642 {
+	ipu_id = <0>;
+	csi_id = <0>;
+	status = "okay";
 };
 
 &pinctrl_adv7180 {
@@ -122,7 +122,10 @@
 };
 
 &v4l2_cap_0 {
-	status = "disabled" ;
+	ipu_id = <0>;
+	csi_id = <0>;
+	mipi_camera = <0>;
+	status = "okay" ;
 };
 
 /* ov5640_mipi, tc358743_mipi */
@@ -132,7 +135,7 @@
 
 /* adv7180, ov5640, ov5642 */
 &v4l2_cap_2 {
-	status = "okay" ;
+	status = "disabled" ;
 };
 
 &ov5640_mipi {
