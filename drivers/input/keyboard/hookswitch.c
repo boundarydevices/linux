@@ -22,12 +22,82 @@
 
 static struct task_struct *thread;
 static int previous_offhook_state;
+static int previous_led_state;
 struct i2c_client *myclient;
 static struct input_dev *fake_keyboard_dev;
 
-static const char fake_input_name[] = "cwc_hookswitch_fake_keyboard";
+static const char fake_input_name[] = "cwc_hookswitch";
 
 MODULE_DEVICE_TABLE(i2c, cwc_hookswitch_id);
+
+/*
+ * ATTRIBUTES:
+ *
+ * /sys/devices/platform/cwc_hookswitch/offhook [ro]
+ * /sys/devices/platform/cwc_hookswitch/leds [rw]
+ */
+static ssize_t hookswitch_show_offhook
+	(struct device *dev,
+	 struct device_attribute *attr,
+	 char *buf)
+{
+	return sprintf(buf, "%d\n", previous_offhook_state);
+}
+
+static ssize_t hookswitch_store_offhook
+	(struct device *dev,
+	 struct device_attribute *attr,
+	 const char *buf,
+	 size_t count)
+{
+	return -EINVAL;
+}
+
+static DEVICE_ATTR(offhook, S_IRUGO,
+		   hookswitch_show_offhook,
+		   hookswitch_store_offhook);
+
+static ssize_t hookswitch_show_leds
+	(struct device *dev,
+	 struct device_attribute *attr,
+	 char *buf)
+{
+	return sprintf(buf, "%d\n", previous_led_state);
+}
+
+static ssize_t hookswitch_store_leds
+        (struct device *dev,
+         struct device_attribute *attr,
+         const char *buf,
+         size_t count)
+{
+	int state;
+	if (sscanf(buf, "%u", &state) == 1) {
+		if (2 > (unsigned)state) {
+			if (state != previous_led_state) {
+				i2c_smbus_write_byte_data
+					(myclient, 1, state ? 0x20 : 0);
+				previous_led_state = state;
+			}
+			return count;
+		}
+	}
+	return -EINVAL;
+}
+
+static DEVICE_ATTR(leds, S_IWUGO | S_IRUGO,
+		   hookswitch_show_leds,
+		   hookswitch_store_leds);
+
+static struct attribute *hookswitch_attrs[] = {
+	&dev_attr_offhook.attr,
+	&dev_attr_leds.attr,
+	NULL,
+};
+
+static struct attribute_group hookswitch_attr_group = {
+	.attrs = hookswitch_attrs,
+};
 
 static void cwc_read_hookstate(void)
 {
@@ -42,8 +112,6 @@ static void cwc_read_hookstate(void)
 			if (offhook != previous_offhook_state) {
 				pr_debug("hookswitch: raw: 0x%02x  offhook: %d\n",
 					 data, offhook);
-
-				previous_offhook_state = offhook;
 
 				if (offhook)
 					key = KEY_KPLEFTPAREN;
@@ -66,9 +134,8 @@ static void cwc_read_hookstate(void)
 						 key, 0);
 				input_sync(fake_keyboard_dev);
 			}
-		} else {
-			previous_offhook_state = offhook;
 		}
+		previous_offhook_state = offhook;
 	}
 }
 
@@ -93,15 +160,16 @@ static int cwc_hookswitch_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
 	int ret = 0;
-	int error;
 
 	myclient = client;
 	previous_offhook_state = -1;
 
+	i2c_smbus_write_byte_data(myclient, 3, 0xd0);
+	i2c_smbus_write_byte_data(myclient, 1, 0x0);
 	fake_keyboard_dev = input_allocate_device();
 	if (!fake_keyboard_dev) {
 		pr_err("%s() : cannot allocate fake keyboard: ", __func__);
-		error = -ENOMEM;
+		return -ENOMEM;
 	}
 
 	set_bit(EV_KEY, fake_keyboard_dev->evbit);
@@ -116,19 +184,24 @@ static int cwc_hookswitch_probe(struct i2c_client *client,
 	fake_keyboard_dev->id.product = 0xa4a0;
 	fake_keyboard_dev->id.version = 0x0001;
 
-	error = input_register_device(fake_keyboard_dev);
-	if (error)
+	ret = input_register_device(fake_keyboard_dev);
+	if (ret)
 		pr_err(KERN_ERR "%s() : failed to register device\n", __func__);
 
 	thread = kthread_run(cwc_poll_thread, NULL, "%s", KBUILD_MODNAME);
 	if (IS_ERR(thread))
 		ret = PTR_ERR(thread);
 
+	ret = sysfs_create_group(&fake_keyboard_dev->dev.kobj, &hookswitch_attr_group);
+	if (ret)
+		dev_err(&fake_keyboard_dev->dev, "sysfs export error: %d\n", ret);
+
 	return ret;
 }
 
 static int cwc_hookswitch_remove(struct i2c_client *client)
 {
+	sysfs_remove_group(&fake_keyboard_dev->dev.kobj, &hookswitch_attr_group);
 	input_unregister_device(fake_keyboard_dev);
 
 	if (!IS_ERR_OR_NULL(thread))
