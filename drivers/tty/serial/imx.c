@@ -2121,7 +2121,6 @@ static struct platform_driver serial_imx_driver = {
 	.id_table	= imx_uart_devtype,
 	.driver		= {
 		.name	= "imx-uart",
-		.owner	= THIS_MODULE,
 		.of_match_table = imx_uart_dt_ids,
 	},
 };
