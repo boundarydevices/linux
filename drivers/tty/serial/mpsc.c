@@ -2116,7 +2116,6 @@ static struct platform_driver mpsc_driver = {
 	.remove	= mpsc_drv_remove,
 	.driver	= {
 		.name	= MPSC_CTLR_NAME,
-		.owner	= THIS_MODULE,
 	},
 };
 
