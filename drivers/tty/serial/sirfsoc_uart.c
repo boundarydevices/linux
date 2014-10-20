@@ -766,7 +766,6 @@ static struct platform_driver sirfsoc_uart_driver = {
 	.resume		= sirfsoc_uart_resume,
 	.driver		= {
 		.name	= SIRFUART_PORT_NAME,
-		.owner	= THIS_MODULE,
 		.of_match_table = sirfsoc_uart_ids,
 	},
 };
