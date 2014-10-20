@@ -406,7 +406,6 @@ static struct platform_driver imx_audmux_driver = {
 	.id_table	= imx_audmux_ids,
 	.driver	= {
 		.name	= DRIVER_NAME,
-		.owner	= THIS_MODULE,
 		.pm = &imx_audmux_pm,
 		.of_match_table = imx_audmux_dt_ids,
 	}

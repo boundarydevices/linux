@@ -1620,7 +1620,6 @@ static const struct dev_pm_ops fsl_ssi_pm = {
 static struct platform_driver fsl_ssi_driver = {
 	.driver = {
 		.name = "fsl-ssi-dai",
-		.owner = THIS_MODULE,
 		.of_match_table = fsl_ssi_ids,
 		.pm = &fsl_ssi_pm,
 	},

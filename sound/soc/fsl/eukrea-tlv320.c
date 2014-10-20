@@ -156,7 +156,6 @@ static int eukrea_tlv320_remove(struct platform_device *pdev)
 static struct platform_driver eukrea_tlv320_driver = {
 	.driver = {
 		.name = "eukrea_tlv320",
-		.owner = THIS_MODULE,
 	},
 	.probe = eukrea_tlv320_probe,
 	.remove = eukrea_tlv320_remove,

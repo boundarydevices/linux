@@ -955,7 +955,6 @@ static struct platform_driver fsl_sai_driver = {
 	.probe = fsl_sai_probe,
 	.driver = {
 		.name = "fsl-sai",
-		.owner = THIS_MODULE,
 		.pm = &fsl_sai_pm_ops,
 		.of_match_table = fsl_sai_ids,
 	},
