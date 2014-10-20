@@ -1037,7 +1037,6 @@ MODULE_DEVICE_TABLE(platform, sccnxp_id_table);
 static struct platform_driver sccnxp_uart_driver = {
 	.driver = {
 		.name	= SCCNXP_NAME,
-		.owner	= THIS_MODULE,
 	},
 	.probe		= sccnxp_probe,
 	.remove		= sccnxp_remove,

@@ -2447,7 +2447,6 @@ static struct platform_driver sci_driver = {
 	.remove		= sci_remove,
 	.driver		= {
 		.name	= "sh-sci",
-		.owner	= THIS_MODULE,
 		.pm	= &sci_dev_pm_ops,
 	},
 };
