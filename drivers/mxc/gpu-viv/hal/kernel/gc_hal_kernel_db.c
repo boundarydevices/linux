@@ -1454,7 +1454,7 @@ gckKERNEL_DestroyProcessDB(
                            gcmPTR2INT32(record->data), status);
             break;
 
-#if gcdANDROID_NATIVE_FENCE_SYNC && defined(ANDROID)
+#if gcdANDROID_NATIVE_FENCE_SYNC
         case gcvDB_SYNC_POINT:
             /* Free the user signal. */
             status = gckOS_DestroySyncPoint(Kernel->os,
@@ -1561,6 +1561,9 @@ gckKERNEL_QueryProcessDB(
     gcmkONERROR(
         gckKERNEL_FindDatabase(Kernel, ProcessID, LastProcessID, &database));
 
+
+    gcmkVERIFY_OK(gckOS_AcquireMutex(Kernel->os, database->counterMutex, gcvINFINITE));
+
     /* Get pointer to counters. */
     switch (Type)
     {
@@ -1617,6 +1620,8 @@ gckKERNEL_QueryProcessDB(
     default:
         break;
     }
+
+    gcmkVERIFY_OK(gckOS_ReleaseMutex(Kernel->os, database->counterMutex));
 
     /* Success. */
     gcmkFOOTER_NO();

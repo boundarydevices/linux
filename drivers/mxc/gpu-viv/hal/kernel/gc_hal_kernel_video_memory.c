@@ -1620,6 +1620,7 @@ gckVIDMEM_Lock(
                                      Kernel->core,
                                      node->Virtual.physical,
                                      node->Virtual.pageCount,
+                                     node->Virtual.addresses[Kernel->core],
                                      node->Virtual.pageTables[Kernel->core]));
 
 #if gcdENABLE_VG
@@ -1844,6 +1845,13 @@ gckVIDMEM_Unlock(
                                              node->Virtual.pageTables[Kernel->core],
                                              node->Virtual.pageCount));
                     }
+
+                    gcmkONERROR(gckOS_UnmapPages(
+                        Kernel->os,
+                        node->Virtual.pageCount,
+                        node->Virtual.addresses[Kernel->core]
+                        ));
+
                     /* Mark page table as freed. */
                     node->Virtual.pageTables[Kernel->core] = gcvNULL;
                     node->Virtual.lockKernels[Kernel->core] = gcvNULL;
@@ -2699,6 +2707,98 @@ OnError:
     if (acquired)
     {
         gcmkVERIFY_OK(gckOS_ReleaseMutex(Kernel->os, mutex));
+    }
+
+    gcmkFOOTER();
+    return status;
+}
+
+
+typedef struct _gcsVIDMEM_NODE_FDPRIVATE
+{
+    gcsFDPRIVATE   base;
+    gckKERNEL      kernel;
+    gckVIDMEM_NODE node;
+}
+gcsVIDMEM_NODE_FDPRIVATE;
+
+
+static gctINT
+_ReleaseFdPrivate(
+    gcsFDPRIVATE_PTR FdPrivate
+    )
+{
+    /* Cast private info. */
+    gcsVIDMEM_NODE_FDPRIVATE * private = (gcsVIDMEM_NODE_FDPRIVATE *) FdPrivate;
+
+    gckVIDMEM_NODE_Dereference(private->kernel, private->node);
+    gckOS_Free(private->kernel->os, private);
+
+    return 0;
+}
+
+/*******************************************************************************
+**
+**  gckVIDMEM_NODE_GetFd
+**
+**  Attach a gckVIDMEM_NODE object to a native fd.
+**
+**  INPUT:
+**
+**      gckKERNEL Kernel
+**          Pointer to an gckKERNEL object.
+**
+**      gctUINT32 Handle
+**          Handle to a gckVIDMEM_NODE object.
+**
+**  OUTPUT:
+**
+**      gctUINT32 * Fd
+**          Pointer to a variable receiving a native fd from os.
+*/
+gceSTATUS
+gckVIDMEM_NODE_GetFd(
+    IN gckKERNEL Kernel,
+    IN gctUINT32 Handle,
+    OUT gctINT * Fd
+    )
+{
+    gceSTATUS status;
+    gckVIDMEM_NODE node = gcvNULL;
+    gctBOOL referenced  = gcvFALSE;
+    gcsVIDMEM_NODE_FDPRIVATE * fdPrivate = gcvNULL;
+    gcmkHEADER_ARG("Kernel=0x%X Handle=%d", Kernel, Handle);
+
+    /* Query and reference handle. */
+    gcmkONERROR(gckVIDMEM_HANDLE_LookupAndReference(Kernel, Handle, &node));
+    referenced = gcvTRUE;
+
+    /* Allocate memory for private info. */
+    gcmkONERROR(gckOS_Allocate(
+        Kernel->os,
+        gcmSIZEOF(gcsVIDMEM_NODE_FDPRIVATE),
+        (gctPOINTER *)&fdPrivate
+        ));
+
+    fdPrivate->base.release = _ReleaseFdPrivate;
+    fdPrivate->kernel = Kernel;
+    fdPrivate->node   = node;
+
+    /* Allocated fd owns a reference. */
+    gcmkONERROR(gckOS_GetFd("vidmem", &fdPrivate->base, Fd));
+
+    gcmkFOOTER_ARG("*Fd=%d", *Fd);
+    return gcvSTATUS_OK;
+
+OnError:
+    if (referenced)
+    {
+        gcmkVERIFY_OK(gckVIDMEM_NODE_Dereference(Kernel, node));
+    }
+
+    if (fdPrivate)
+    {
+        gcmkVERIFY_OK(gcmkOS_SAFE_FREE(Kernel->os, fdPrivate));
     }
 
     gcmkFOOTER();
