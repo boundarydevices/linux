@@ -56,10 +56,12 @@ enum otg_fsm_timer {
 	A_AIDL_BDIS,
 	B_ASE0_BRST,
 	A_BIDL_ADIS,
+	B_AIDL_BDIS,
 
 	/* Auxiliary timers */
 	B_SE0_SRP,
 	B_SRP_FAIL,
+	A_DP_END,
 	A_WAIT_ENUM,
 	A_TST_MAINT,
 	B_SRP_REQD,

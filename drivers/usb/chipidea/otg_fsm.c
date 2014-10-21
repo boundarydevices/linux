@@ -334,6 +334,21 @@ static void a_wait_vfall_tmout_func(void *ptr, unsigned long indicator)
 	ci_otg_queue_work(ci);
 }
 
+static void set_tmout_and_show_msg(void *ptr, unsigned long indicator)
+{
+	struct ci_hdrc *ci = (struct ci_hdrc *)ptr;
+
+	dev_warn(ci->dev, "Device No Response\n");
+	set_tmout_and_fsm(ptr, indicator);
+}
+
+static void b_srp_fail_tmout_func(void *ptr, unsigned long indicator)
+{
+	struct ci_hdrc *ci = (struct ci_hdrc *)ptr;
+
+	dev_warn(ci->dev, "Device No Response\n");
+}
+
 static void b_ssend_srp_tmout_func(void *ptr, unsigned long indicator)
 {
 	struct ci_hdrc *ci = (struct ci_hdrc *)ptr;
@@ -356,6 +371,19 @@ static void b_data_pulse_end(void *ptr, unsigned long indicator)
 
 	hw_write_otgsc(ci, OTGSC_HABA, 0);
 
+	ci_otg_queue_work(ci);
+}
+
+/*
+ * Timer for A-device to turn on Vbus
+ * after detecting data pulse from B-device
+ */
+static void a_wait_dp_end_tmout_func(void *ptr, unsigned long indicator)
+{
+	struct ci_hdrc *ci = (struct ci_hdrc *)ptr;
+
+	ci->fsm.a_bus_drop = 0;
+	ci->fsm.a_srp_det = 1;
 	ci_otg_queue_work(ci);
 }
 
@@ -434,7 +462,7 @@ static int ci_otg_init_timers(struct ci_hdrc *ci)
 		return -ENOMEM;
 
 	ci->fsm_timer->timer_list[A_WAIT_BCON] =
-		otg_timer_initializer(ci, &set_tmout_and_fsm, TA_WAIT_BCON,
+		otg_timer_initializer(ci, &set_tmout_and_show_msg, TA_WAIT_BCON,
 				(unsigned long)&fsm->a_wait_bcon_tmout);
 	if (ci->fsm_timer->timer_list[A_WAIT_BCON] == NULL)
 		return -ENOMEM;
@@ -452,7 +480,7 @@ static int ci_otg_init_timers(struct ci_hdrc *ci)
 		return -ENOMEM;
 
 	ci->fsm_timer->timer_list[B_ASE0_BRST] =
-		otg_timer_initializer(ci, &set_tmout_and_fsm, TB_ASE0_BRST,
+		otg_timer_initializer(ci, &set_tmout_and_show_msg, TB_ASE0_BRST,
 					(unsigned long)&fsm->b_ase0_brst_tmout);
 	if (ci->fsm_timer->timer_list[B_ASE0_BRST] == NULL)
 		return -ENOMEM;
@@ -470,14 +498,25 @@ static int ci_otg_init_timers(struct ci_hdrc *ci)
 		return -ENOMEM;
 
 	ci->fsm_timer->timer_list[B_SRP_FAIL] =
-		otg_timer_initializer(ci, &set_tmout, TB_SRP_FAIL,
-				(unsigned long)&fsm->b_srp_done);
+		otg_timer_initializer(ci, &b_srp_fail_tmout_func,
+							TB_SRP_FAIL, 0);
 	if (ci->fsm_timer->timer_list[B_SRP_FAIL] == NULL)
 		return -ENOMEM;
 
 	ci->fsm_timer->timer_list[B_DATA_PLS] =
 		otg_timer_initializer(ci, &b_data_pulse_end, TB_DATA_PLS, 0);
 	if (ci->fsm_timer->timer_list[B_DATA_PLS] == NULL)
+		return -ENOMEM;
+
+	ci->fsm_timer->timer_list[A_DP_END] = otg_timer_initializer(ci,
+				&a_wait_dp_end_tmout_func, TA_DP_END, 0);
+	if (ci->fsm_timer->timer_list[A_DP_END] == NULL)
+		return -ENOMEM;
+
+	ci->fsm_timer->timer_list[B_AIDL_BDIS] = otg_timer_initializer(ci,
+					&set_tmout_and_fsm, TB_AIDL_BDIS,
+					(unsigned long)&fsm->a_bus_suspend);
+	if (ci->fsm_timer->timer_list[B_AIDL_BDIS] == NULL)
 		return -ENOMEM;
 
 	setup_timer(&ci->hnp_polling_timer, hnp_polling_timer_work,
@@ -748,9 +787,9 @@ static void ci_otg_fsm_event(struct ci_hdrc *ci)
 		break;
 	case OTG_STATE_B_PERIPHERAL:
 		if ((intr_sts & USBi_SLI) && port_conn && otg_bsess_vld) {
-			fsm->a_bus_suspend = 1;
-			ci_otg_queue_work(ci);
+			ci_otg_add_timer(ci, B_AIDL_BDIS);
 		} else if (intr_sts & USBi_PCI) {
+			ci_otg_del_timer(ci, B_AIDL_BDIS);
 			if (fsm->a_bus_suspend == 1)
 				fsm->a_bus_suspend = 0;
 		}
@@ -844,8 +883,7 @@ irqreturn_t ci_otg_fsm_irq(struct ci_hdrc *ci)
 			return IRQ_HANDLED;
 		} else if (otg_int_src & OTGSC_DPIS) {
 			hw_write_otgsc(ci, OTGSC_DPIS, OTGSC_DPIS);
-			fsm->a_srp_det = 1;
-			fsm->a_bus_drop = 0;
+			ci_otg_add_timer(ci, A_DP_END);
 		} else if (otg_int_src & OTGSC_IDIS) {
 			hw_write_otgsc(ci, OTGSC_IDIS, OTGSC_IDIS);
 			if (fsm->id == 0) {

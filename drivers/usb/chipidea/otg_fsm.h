@@ -43,10 +43,6 @@
 					 * for safe
 					 */
 
-#define TA_TST_MAINT         (9900)	/* OTG test device session maintain
-					 * timer, 9.9s~10.1s
-					 */
-
 /*
  * B-device timing constants
  */
@@ -65,15 +61,6 @@
 #define TB_SE0_SRP           (1000)	/* b_idle,minimum 1s, section:5.1.2 */
 /* SSEND time before SRP */
 #define TB_SSEND_SRP         (1500)	/* minimum 1.5 sec, section:5.1.2 */
-
-#define TB_SRP_REQD          (2000)	/* For otg_srp_reqd to start data
-					 * pulse after A(PET) turn off v-bus
-					 */
-
-#define TB_TST_SUSP          (20)	/* B-dev hand host role back to A-dev
-					 * via suspend bus after set config.
-					 * max: 100ms
-					 */
 
 #define T_HOST_REQ_POLL      (1500)	/* HNP polling interval 1s~2s */
 
