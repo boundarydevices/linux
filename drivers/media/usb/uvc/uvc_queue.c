@@ -39,6 +39,12 @@ struct dma_attrs uvc_dma_attrs;
  * the driver.
  */
 
+static inline struct uvc_streaming *
+uvc_queue_to_stream(struct uvc_video_queue *queue)
+{
+	return container_of(queue, struct uvc_streaming, queue);
+}
+
 /* -----------------------------------------------------------------------------
  * videobuf2 queue operations
  */
@@ -48,8 +54,7 @@ static int uvc_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 			   unsigned int sizes[], void *alloc_ctxs[])
 {
 	struct uvc_video_queue *queue = vb2_get_drv_priv(vq);
-	struct uvc_streaming *stream =
-			container_of(queue, struct uvc_streaming, queue);
+	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
 	unsigned sz;
 	unsigned npackets;
 	unsigned psize;
@@ -449,8 +454,7 @@ no_sync:
 
 static void submit_buffers(struct uvc_video_queue *queue)
 {
-	struct uvc_streaming *stream = container_of(queue,
-					struct uvc_streaming, queue);
+	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
 
 	while (submit_buffer(queue, stream))
 		;
@@ -588,7 +592,7 @@ static int uvc_buffer_prepare(struct vb2_buffer *vb)
 {
 	struct uvc_video_queue *queue = vb2_get_drv_priv(vb->vb2_queue);
 	struct uvc_buffer *buf = container_of(vb, struct uvc_buffer, buf);
-	struct uvc_streaming *stream = container_of(queue, struct uvc_streaming, queue);
+	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
 	void *req_mem;
 	unsigned int req_length;
 
@@ -639,8 +643,7 @@ static void uvc_buffer_queue(struct vb2_buffer *vb)
 static int uvc_buffer_finish(struct vb2_buffer *vb)
 {
 	struct uvc_video_queue *queue = vb2_get_drv_priv(vb->vb2_queue);
-	struct uvc_streaming *stream =
-			container_of(queue, struct uvc_streaming, queue);
+	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
 	struct uvc_buffer *buf = container_of(vb, struct uvc_buffer, buf);
 
 	uvc_video_clock_update(stream, &vb->v4l2_buf, buf);
@@ -650,8 +653,7 @@ static int uvc_buffer_finish(struct vb2_buffer *vb)
 static void uvc_buf_cleanup(struct vb2_buffer *vb)
 {
 	struct uvc_video_queue *queue = vb2_get_drv_priv(vb->vb2_queue);
-	struct uvc_streaming *stream =
-			container_of(queue, struct uvc_streaming, queue);
+	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
 	struct uvc_buffer *buf = container_of(vb, struct uvc_buffer, buf);
 
 	cleanup_buf(stream, buf);
@@ -673,8 +675,7 @@ static void uvc_wait_finish(struct vb2_queue *vq)
 
 static void stop_queue(struct uvc_video_queue *queue)
 {
-	struct uvc_streaming *stream =
-			container_of(queue, struct uvc_streaming, queue);
+	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
 	int i = 0;
 	int retry = 0;
 
