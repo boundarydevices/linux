@@ -683,7 +683,7 @@ extern int uvc_queue_init(struct uvc_video_queue *queue,
 		int dma_mode);
 extern void uvc_queue_deinit(struct uvc_video_queue *queue);
 extern void uvc_queue_release(struct uvc_video_queue *queue);
-extern int uvc_alloc_buffers(struct uvc_video_queue *queue,
+extern int uvc_request_buffers(struct uvc_video_queue *queue,
 		struct v4l2_requestbuffers *rb);
 extern int uvc_query_buffer(struct uvc_video_queue *queue,
 		struct v4l2_buffer *v4l2_buf);
