@@ -193,12 +193,7 @@ _ShrinkMemory(
 
     if (kernel != gcvNULL)
     {
-        /* Acquire the mutex. */
-        gcmkVERIFY_OK(gckOS_AcquireMutex(kernel->os, kernel->vidmemMutex, gcvINFINITE));
-
         force_contiguous_lowmem_shrink(kernel);
-
-        gcmkVERIFY_OK(gckOS_ReleaseMutex(kernel->os, kernel->vidmemMutex));
     }
     else
     {

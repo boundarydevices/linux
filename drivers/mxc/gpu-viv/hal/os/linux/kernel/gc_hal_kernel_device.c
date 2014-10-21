@@ -188,13 +188,13 @@ int gc_meminfo_show(struct seq_file* m, void* data)
     if (gcmIS_SUCCESS(status))
     {
         gcmkVERIFY_OK(
-            gckOS_AcquireMutex(kernel->os, kernel->vidmemMutex, gcvINFINITE));
+            gckOS_AcquireMutex(memory->os, memory->mutex, gcvINFINITE));
 
         free  = memory->freeBytes;
         used  = memory->bytes - memory->freeBytes;
         total = memory->bytes;
 
-        gcmkVERIFY_OK(gckOS_ReleaseMutex(kernel->os, kernel->vidmemMutex));
+        gcmkVERIFY_OK(gckOS_ReleaseMutex(memory->os, memory->mutex));
     }
 
     seq_printf(m, "VIDEO MEMORY:\n");

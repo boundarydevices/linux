@@ -336,8 +336,6 @@ gckKERNEL_Construct(
 #endif
     kernel->monitorTimer = gcvNULL;
 
-    kernel->vidmemMutex  = gcvNULL;
-
     /* Initialize the gckKERNEL object. */
     kernel->object.type = gcvOBJ_KERNEL;
     kernel->os          = Os;
@@ -496,8 +494,6 @@ gckKERNEL_Construct(
     /* Connect to security service for this GPU. */
     gcmkONERROR(gckKERNEL_SecurityOpen(kernel, kernel->core, &kernel->securityChannel));
 #endif
-    /* Construct a video memory mutex. */
-    gcmkONERROR(gckOS_GetVideoMemoryMutex(Os, &kernel->vidmemMutex));
 
 #if gcdGPU_TIMEOUT && gcdINTERRUPT_STATISTIC
     if (kernel->timeOut)
@@ -658,11 +654,13 @@ gckKERNEL_Destroy(
         {
             databaseNext = database->next;
 
+            gcmkVERIFY_OK(gckOS_DeleteMutex(Kernel->os, database->counterMutex));
             gcmkVERIFY_OK(gcmkOS_SAFE_FREE(Kernel->os, database));
         }
 
         if (Kernel->db->lastDatabase != gcvNULL)
         {
+            gcmkVERIFY_OK(gckOS_DeleteMutex(Kernel->os, Kernel->db->lastDatabase->counterMutex));
             gcmkVERIFY_OK(gcmkOS_SAFE_FREE(Kernel->os, Kernel->db->lastDatabase));
         }
 

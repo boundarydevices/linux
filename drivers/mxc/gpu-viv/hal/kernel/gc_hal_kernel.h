@@ -215,6 +215,7 @@ typedef struct _gcsDATABASE
     gcsDATABASE_COUNTERS                vidMemType[gcvSURF_NUM_TYPES];
     /* Counter for each video memory pool. */
     gcsDATABASE_COUNTERS                vidMemPool[gcvPOOL_NUMBER_OF_POOLS];
+    gctPOINTER                          counterMutex;
 
     /* Idle time management. */
     gctUINT64                           lastIdle;
@@ -564,8 +565,6 @@ struct _gckKERNEL
     gctUINT32                   timer;
     gctUINT32                   restoreAddress;
     gctUINT32                   restoreMask;
-
-    gctPOINTER                  vidmemMutex;
 };
 
 struct _FrequencyHistory
@@ -959,12 +958,18 @@ struct _gckVIDMEM
 
     /* Allocation threshold. */
     gctSIZE_T                   threshold;
+
+    /* The heap mutex. */
+    gctPOINTER                  mutex;
 };
 
 typedef struct _gcsVIDMEM_NODE
 {
     /* Pointer to gcuVIDMEM_NODE. */
     gcuVIDMEM_NODE_PTR          node;
+
+    /* Mutex to protect node. */
+    gctPOINTER                  mutex;
 
     /* Reference count. */
     gctPOINTER                  reference;
