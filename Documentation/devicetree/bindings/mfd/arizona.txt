@@ -13,6 +13,8 @@ Required properties:
         "wlf,wm8997"
         "wlf,WM8998"
         "wlf,wm1814"
+        "wlf,wm8285"
+        "wlf,wm1840"
         "wlf,wm1831"
         "cirrus,cs47l24"
 
@@ -34,9 +36,10 @@ Required properties:
     second cell is used to specify optional parameters (currently unused).
 
   - AVDD-supply, DBVDD1-supply, DBVDD2-supply, DBVDD3-supply (wm5102, wm5110),
-    CPVDD-supply, SPKVDDL-supply (wm5102, wm5110), SPKVDDR-supply (wm5102,
-    wm5110), SPKVDD-supply (wm8997, cs47l24) : Power supplies for the device,
-    as covered in Documentation/devicetree/bindings/regulator/regulator.txt
+    DBVDD4-supply (wm8285), CPVDD-supply, SPKVDDL-supply (wm5102, wm5110),
+    SPKVDDR-supply (wm5102, wm5110), SPKVDD-supply (wm8997, cs47l24) : Power
+    supplies for the device, as covered in
+    Documentation/devicetree/bindings/regulator/regulator.txt
 
 Optional properties:
 
@@ -89,12 +92,12 @@ Optional properties:
     and simply output MICVDD
   - wlf,micbias2 : See wlf,micbias1
   - wlf,micbias3 : See wlf,micbias1
+  - wlf,micbias4 : See wlf,micbias1
 
   - wlf,gpio-defaults : A list of GPIO configuration register values. If
     absent, no configuration of these registers is performed. If any
     entry has a value that is out of range for a 16 bit register then
-    the chip default will be used.  If present exactly five values must
-    be specified.
+    the chip default will be used.
 
   - wlf,max-channels-clocked : The maximum number of channels to be clocked on
     each AIF, useful for I2S systems with multiple data lines being mastered.
