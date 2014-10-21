@@ -718,20 +718,30 @@ static void stop_queue(struct uvc_video_queue *queue)
 static int uvc_start_streaming(struct vb2_queue *vq, unsigned int count)
 {
 	struct uvc_video_queue *queue = vb2_get_drv_priv(vq);
+	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
+	int ret;
 
-	if (0) pr_info("%s\n", __func__);
-	queue->streaming = 1;
-	uvc_queue_start_work(queue, NULL);
-	return 0;
+	queue->buf_used = 0;
+	ret = uvc_video_enable(stream, 1);
+	if (ret == 0) {
+		queue->streaming = 1;
+		uvc_queue_start_work(queue, NULL);
+		return 0;
+	}
+
+	stop_queue(queue);
+	pr_debug("%s\n", __func__);
+	return ret;
 }
 
 static int uvc_stop_streaming(struct vb2_queue *vq)
 {
 	struct uvc_video_queue *queue = vb2_get_drv_priv(vq);
+	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
 
-	if (0) pr_info("%s\n", __func__);
 	queue->streaming = 0;
-	stop_queue(queue);
+	uvc_video_enable(stream, 0);
+	pr_debug("%s\n", __func__);
 	return 0;
 }
 
@@ -938,21 +948,12 @@ int uvc_queue_enable(struct uvc_video_queue *queue, int enable)
 	int ret;
 
 	mutex_lock(&queue->mutex);
-	if (enable) {
+
+	if (enable)
 		ret = vb2_streamon(&queue->queue, queue->queue.type);
-		if (ret < 0)
-			goto done;
-
-		queue->buf_used = 0;
-	} else {
-		queue->streaming = 0;
+	else
 		ret = vb2_streamoff(&queue->queue, queue->queue.type);
-		if (ret < 0)
-			goto done;
 
-	}
-
-done:
 	mutex_unlock(&queue->mutex);
 	return ret;
 }
