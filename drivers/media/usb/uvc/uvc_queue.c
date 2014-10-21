@@ -799,6 +799,19 @@ void uvc_queue_deinit(struct uvc_video_queue *queue)
 		queue->workqueue = NULL;
 	}
 }
+
+void uvc_queue_release(struct uvc_video_queue *queue)
+{
+	mutex_lock(&queue->mutex);
+	stop_queue(queue);
+	vb2_queue_release(&queue->queue);
+	mutex_unlock(&queue->mutex);
+	if (queue->queue.alloc_ctx[0]) {
+		vb2_dma_contig_cleanup_ctx(queue->queue.alloc_ctx[0]);
+		queue->queue.alloc_ctx[0] = NULL;
+	}
+}
+
 /* -----------------------------------------------------------------------------
  * V4L2 queue operations
  */
@@ -813,18 +826,6 @@ int uvc_alloc_buffers(struct uvc_video_queue *queue,
 	mutex_unlock(&queue->mutex);
 
 	return ret ? ret : rb->count;
-}
-
-void uvc_free_buffers(struct uvc_video_queue *queue)
-{
-	mutex_lock(&queue->mutex);
-	stop_queue(queue);
-	vb2_queue_release(&queue->queue);
-	mutex_unlock(&queue->mutex);
-	if (queue->queue.alloc_ctx[0]) {
-		vb2_dma_contig_cleanup_ctx(queue->queue.alloc_ctx[0]);
-		queue->queue.alloc_ctx[0] = NULL;
-	}
 }
 
 int uvc_query_buffer(struct uvc_video_queue *queue, struct v4l2_buffer *buf)
