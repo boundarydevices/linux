@@ -51,6 +51,7 @@
 #include <linux/gpio-i2cmux.h>
 #include <linux/ion.h>
 #include <linux/etherdevice.h>
+#include <linux/platform_data/spi-imx.h>
 #include <linux/regulator/anatop-regulator.h>
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/machine.h>
@@ -385,7 +386,7 @@ static struct spi_board_info spi_devices[] __initdata = {
 #if defined(CONFIG_SND_SOC_WM5102) || defined(CONFIG_SND_SOC_WM5102_MODULE)
 	{
 		.modalias       = "wm5102",
-		.max_speed_hz   = 10000000,
+		.max_speed_hz   = 10000000,	/* max 13 MHz (76.8 ns)*/
 		.bus_num        = 2,
 		.chip_select    = 1,
 		.mode           = SPI_MODE_0,

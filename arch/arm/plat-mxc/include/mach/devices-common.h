@@ -340,7 +340,7 @@ struct platform_device *__init imx_add_sdhci_esdhc_imx(
 		const struct imx_sdhci_esdhc_imx_data *data,
 		const struct esdhc_platform_data *pdata);
 
-#include <mach/spi.h>
+struct spi_imx_master;
 struct imx_spi_imx_data {
 	const char *devid;
 	int id;

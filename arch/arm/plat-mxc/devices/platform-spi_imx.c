@@ -8,6 +8,7 @@
  */
 #include <mach/hardware.h>
 #include <mach/devices-common.h>
+#include <linux/platform_data/spi-imx.h>
 
 #define imx_spi_imx_data_entry_single(soc, type, _devid, _id, hwid, _size) \
 	{								\
