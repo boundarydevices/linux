@@ -666,9 +666,6 @@ static const struct reg_default florida_reg_default[] = {
 	{ 0x0000000A, 0x0001 },    /* R10    - Ctrl IF I2C2 CFG 1 */
 	{ 0x0000000B, 0x0036 },    /* R11    - Ctrl IF I2C1 CFG 2 */
 	{ 0x0000000C, 0x0036 },    /* R12    - Ctrl IF I2C2 CFG 2 */
-	{ 0x00000016, 0x0000 },    /* R22    - Write Sequencer Ctrl 0 */
-	{ 0x00000017, 0x0000 },    /* R23    - Write Sequencer Ctrl 1 */
-	{ 0x00000018, 0x0000 },    /* R24    - Write Sequencer Ctrl 2 */
 	{ 0x00000020, 0x0000 },    /* R32    - Tone Generator 1 */
 	{ 0x00000021, 0x1000 },    /* R33    - Tone Generator 2 */
 	{ 0x00000022, 0x0000 },    /* R34    - Tone Generator 3 */
@@ -3051,6 +3048,9 @@ static bool florida_volatile_register(struct device *dev, unsigned int reg)
 	switch (reg) {
 	case ARIZONA_SOFTWARE_RESET:
 	case ARIZONA_DEVICE_REVISION:
+	case ARIZONA_WRITE_SEQUENCER_CTRL_0:
+	case ARIZONA_WRITE_SEQUENCER_CTRL_1:
+	case ARIZONA_WRITE_SEQUENCER_CTRL_2:
 	case ARIZONA_HP_DETECT_CALIBRATION_1:
 	case ARIZONA_HP_DETECT_CALIBRATION_2:
 	case ARIZONA_HAPTICS_STATUS:
