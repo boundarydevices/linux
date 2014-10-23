@@ -209,6 +209,17 @@ static struct snd_soc_dai_link dai_wm5102[] = {
 	},
 };
 
+static struct snd_soc_dapm_widget imx_wm5102_widgets[] = {
+	SND_SOC_DAPM_MIC("MIC_L", NULL),
+	SND_SOC_DAPM_MIC("MIC_R", NULL),
+};
+
+static struct snd_soc_dapm_route imx_wm5102_routes[] = {
+	{ "MIC_L", NULL, "MICBIAS1" },
+	{ "MIC_R", NULL, "MICBIAS2" },
+	{ "IN1L", NULL, "MIC_L" },
+	{ "IN1R", NULL, "MIC_R" },
+};
 
 static const struct snd_soc_card wm5102_card = {
 	.name = "wm5102",
@@ -216,6 +227,11 @@ static const struct snd_soc_card wm5102_card = {
 	.dai_link = dai_wm5102,
 	.num_links = ARRAY_SIZE(dai_wm5102),
 	.late_probe = wm5102_late_probe,
+
+	.dapm_widgets = imx_wm5102_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(imx_wm5102_widgets),
+	.dapm_routes = imx_wm5102_routes,
+	.num_dapm_routes = ARRAY_SIZE(imx_wm5102_routes),
 	.set_bias_level = wm5102_set_bias_level,
 	.set_bias_level_post = wm5102_set_bias_level_post,
 };
