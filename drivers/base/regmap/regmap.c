@@ -922,44 +922,9 @@ int regmap_update_bits(struct regmap *map, unsigned int reg,
 EXPORT_SYMBOL_GPL(regmap_update_bits);
 
 /**
- * remap_update_bits_lazy: Perform a read/modify/write cycle on the register
- * map. Only write new contents if they differ from the previous ones.
- *
- * @map: Register map to update
- * @reg: Register to update
- * @mask: Bitmask to change
- * @val: New value for bitmask
- *
- * Returns zero for success, a negative number on error.
- */
-int regmap_update_bits_lazy(struct regmap *map, unsigned int reg,
-		       unsigned int mask, unsigned int val)
-{
-	int ret, new;
-	unsigned int tmp;
-
-	map->lock(map);
-
-	ret = _regmap_read(map, reg, &tmp);
-	if (ret != 0)
-		goto out;
-
-	new = tmp & ~mask;
-	new |= val & mask;
-	if (new != tmp) {
-		ret = _regmap_write(map, reg, new);
-	}
-
-out:
-	map->unlock(map);
-
-	return ret;
-}
-EXPORT_SYMBOL_GPL(regmap_update_bits_lazy);
-
-/**
  * regmap_update_bits_check: Perform a read/modify/write cycle on the
  *                           register map and report if updated
+ *
  * @map: Register map to update
  * @reg: Register to update
  * @mask: Bitmask to change
@@ -1034,7 +999,7 @@ out:
 }
 EXPORT_SYMBOL_GPL(regmap_register_patch);
 
-/**
+/*
  * regmap_get_val_bytes(): Report the size of a register value
  *
  * Report the size of a register value, mainly intended to for use by
