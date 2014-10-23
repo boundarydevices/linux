@@ -114,7 +114,6 @@ static inline void ts_evt_add(struct ft5x06_ts *ts,
 		/* send release to user space. */
 #ifdef USE_ABS_MT
 		input_event(idev, EV_ABS, ABS_MT_TOUCH_MAJOR, 0);
-		input_event(idev, EV_KEY, BTN_TOUCH, 0);
 		input_mt_sync(idev);
 #else
 		input_report_abs(idev, ABS_PRESSURE, 0);
@@ -138,7 +137,6 @@ static inline void ts_evt_add(struct ft5x06_ts *ts,
 			input_sync(idev);
 #endif
 		}
-		input_event(idev, EV_KEY, BTN_TOUCH, 1);
 	}
 #ifdef USE_ABS_MT
 	input_sync(idev);
