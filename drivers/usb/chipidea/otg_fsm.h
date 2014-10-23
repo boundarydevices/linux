@@ -25,7 +25,7 @@
 					 * ->DC Electrical Timing
 					 */
 /* Wait for VBUS Fall  */
-#define TA_WAIT_VFALL        (1000)	/* a_wait_vfall: section 7.1.7
+#define TA_WAIT_VFALL        (500)	/* a_wait_vfall: section 7.1.7
 					 * a_wait_vfall_tmr: section: 7.4.5.2
 					 */
 /* Wait for B-Connect */
@@ -38,9 +38,14 @@
 					 * TA_AIDL_BDIS: section 5.5, Table 5-1
 					 */
 /* B-Idle to A-Disconnect */
-#define TA_BIDL_ADIS         (500)	/* TA_BIDL_ADIS: section 5.2.1
-					 * 500ms is used for B switch to host
-					 * for safe
+#define TA_BIDL_ADIS         (160)	/* TA_BIDL_ADIS: section 5.2.1
+					 * 155ms ~ 200 ms
+					 */
+
+#define TA_DP_END            (200)
+
+#define TA_TST_MAINT         (9900)	/* OTG test device session maintain
+					 * timer, 9.9s~10.1s
 					 */
 
 /*
@@ -61,6 +66,17 @@
 #define TB_SE0_SRP           (1000)	/* b_idle,minimum 1s, section:5.1.2 */
 /* SSEND time before SRP */
 #define TB_SSEND_SRP         (1500)	/* minimum 1.5 sec, section:5.1.2 */
+
+#define TB_AIDL_BDIS         (20)	/* 4ms ~ 150ms, section 5.2.1 */
+
+#define TB_SRP_REQD          (2000)	/* For otg_srp_reqd to start data
+					 * pulse after A(PET) turn off v-bus
+					 */
+
+#define TB_TST_SUSP          (20)	/* B-dev hand host role back to A-dev
+					 * via suspend bus after set config.
+					 * max: 100ms
+					 */
 
 #define T_HOST_REQ_POLL      (1500)	/* HNP polling interval 1s~2s */
 
