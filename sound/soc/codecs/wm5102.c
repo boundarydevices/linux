@@ -37,25 +37,6 @@ struct wm5102_priv {
 	struct arizona_fll fll[2];
 };
 
-static struct regulator *micvdd_reg;
-
-static int micbias_ev(struct snd_soc_dapm_widget *w,
-		      struct snd_kcontrol *kcontrol, int event)
-{
-	if (!IS_ERR(micvdd_reg)) {
-		switch (event) {
-		case SND_SOC_DAPM_PRE_PMU:
-			regulator_enable(micvdd_reg);
-			break;
-		case SND_SOC_DAPM_POST_PMD:
-			regulator_disable(micvdd_reg);
-			break;
-		}
-	}
-
-	return 0;
-}
-
 static DECLARE_TLV_DB_SCALE(ana_tlv, 0, 100, 0);
 static DECLARE_TLV_DB_SCALE(eq_tlv, -1200, 100, 0);
 static DECLARE_TLV_DB_SCALE(digital_tlv, -6400, 50, 0);
@@ -896,14 +877,11 @@ SND_SOC_DAPM_PGA_E("IN3R PGA", ARIZONA_INPUT_ENABLES, ARIZONA_IN3R_ENA_SHIFT,
 		   SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMU),
 
 SND_SOC_DAPM_SUPPLY("MICBIAS1", ARIZONA_MIC_BIAS_CTRL_1,
-		    ARIZONA_MICB1_ENA_SHIFT, 0, micbias_ev,
-		    SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+		    ARIZONA_MICB1_ENA_SHIFT, 0, NULL, 0),
 SND_SOC_DAPM_SUPPLY("MICBIAS2", ARIZONA_MIC_BIAS_CTRL_2,
-		    ARIZONA_MICB1_ENA_SHIFT, 0, micbias_ev,
-		    SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+		    ARIZONA_MICB2_ENA_SHIFT, 0, NULL, 0),
 SND_SOC_DAPM_SUPPLY("MICBIAS3", ARIZONA_MIC_BIAS_CTRL_3,
-		    ARIZONA_MICB1_ENA_SHIFT, 0, micbias_ev,
-		    SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+		    ARIZONA_MICB3_ENA_SHIFT, 0, NULL, 0),
 
 SND_SOC_DAPM_PGA("Noise Generator", ARIZONA_COMFORT_NOISE_GENERATOR,
 		 ARIZONA_NOISE_GEN_ENA_SHIFT, 0, NULL, 0),
@@ -949,58 +927,58 @@ SND_SOC_DAPM_PGA("ASRC2L", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC2L_ENA_SHIFT, 0,
 SND_SOC_DAPM_PGA("ASRC2R", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC2R_ENA_SHIFT, 0,
 		 NULL, 0),
 
-SND_SOC_DAPM_AIF_OUT("AIF1TX1", "AIF1 Capture", 0,
+SND_SOC_DAPM_AIF_OUT("AIF1TX1", NULL, 0,
 		     ARIZONA_AIF1_TX_ENABLES, ARIZONA_AIF1TX1_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_OUT("AIF1TX2", "AIF1 Capture", 0,
+SND_SOC_DAPM_AIF_OUT("AIF1TX2", NULL, 0,
 		     ARIZONA_AIF1_TX_ENABLES, ARIZONA_AIF1TX2_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_OUT("AIF1TX3", "AIF1 Capture", 0,
+SND_SOC_DAPM_AIF_OUT("AIF1TX3", NULL, 0,
 		     ARIZONA_AIF1_TX_ENABLES, ARIZONA_AIF1TX3_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_OUT("AIF1TX4", "AIF1 Capture", 0,
+SND_SOC_DAPM_AIF_OUT("AIF1TX4", NULL, 0,
 		     ARIZONA_AIF1_TX_ENABLES, ARIZONA_AIF1TX4_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_OUT("AIF1TX5", "AIF1 Capture", 0,
+SND_SOC_DAPM_AIF_OUT("AIF1TX5", NULL, 0,
 		     ARIZONA_AIF1_TX_ENABLES, ARIZONA_AIF1TX5_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_OUT("AIF1TX6", "AIF1 Capture", 0,
+SND_SOC_DAPM_AIF_OUT("AIF1TX6", NULL, 0,
 		     ARIZONA_AIF1_TX_ENABLES, ARIZONA_AIF1TX6_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_OUT("AIF1TX7", "AIF1 Capture", 0,
+SND_SOC_DAPM_AIF_OUT("AIF1TX7", NULL, 0,
 		     ARIZONA_AIF1_TX_ENABLES, ARIZONA_AIF1TX7_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_OUT("AIF1TX8", "AIF1 Capture", 0,
+SND_SOC_DAPM_AIF_OUT("AIF1TX8", NULL, 0,
 		     ARIZONA_AIF1_TX_ENABLES, ARIZONA_AIF1TX8_ENA_SHIFT, 0),
 
-SND_SOC_DAPM_AIF_IN("AIF1RX1", "AIF1 Playback", 0,
+SND_SOC_DAPM_AIF_IN("AIF1RX1", NULL, 0,
 		    ARIZONA_AIF1_RX_ENABLES, ARIZONA_AIF1RX1_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_IN("AIF1RX2", "AIF1 Playback", 0,
+SND_SOC_DAPM_AIF_IN("AIF1RX2", NULL, 0,
 		    ARIZONA_AIF1_RX_ENABLES, ARIZONA_AIF1RX2_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_IN("AIF1RX3", "AIF1 Playback", 0,
+SND_SOC_DAPM_AIF_IN("AIF1RX3", NULL, 0,
 		    ARIZONA_AIF1_RX_ENABLES, ARIZONA_AIF1RX3_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_IN("AIF1RX4", "AIF1 Playback", 0,
+SND_SOC_DAPM_AIF_IN("AIF1RX4", NULL, 0,
 		    ARIZONA_AIF1_RX_ENABLES, ARIZONA_AIF1RX4_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_IN("AIF1RX5", "AIF1 Playback", 0,
+SND_SOC_DAPM_AIF_IN("AIF1RX5", NULL, 0,
 		    ARIZONA_AIF1_RX_ENABLES, ARIZONA_AIF1RX5_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_IN("AIF1RX6", "AIF1 Playback", 0,
+SND_SOC_DAPM_AIF_IN("AIF1RX6", NULL, 0,
 		    ARIZONA_AIF1_RX_ENABLES, ARIZONA_AIF1RX6_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_IN("AIF1RX7", "AIF1 Playback", 0,
+SND_SOC_DAPM_AIF_IN("AIF1RX7", NULL, 0,
 		    ARIZONA_AIF1_RX_ENABLES, ARIZONA_AIF1RX7_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_IN("AIF1RX8", "AIF1 Playback", 0,
+SND_SOC_DAPM_AIF_IN("AIF1RX8", NULL, 0,
 		    ARIZONA_AIF1_RX_ENABLES, ARIZONA_AIF1RX8_ENA_SHIFT, 0),
 
-SND_SOC_DAPM_AIF_OUT("AIF2TX1", "AIF2 Capture", 0,
+SND_SOC_DAPM_AIF_OUT("AIF2TX1", NULL, 0,
 		     ARIZONA_AIF2_TX_ENABLES, ARIZONA_AIF2TX1_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_OUT("AIF2TX2", "AIF2 Capture", 0,
+SND_SOC_DAPM_AIF_OUT("AIF2TX2", NULL, 0,
 		     ARIZONA_AIF2_TX_ENABLES, ARIZONA_AIF2TX2_ENA_SHIFT, 0),
 
-SND_SOC_DAPM_AIF_IN("AIF2RX1", "AIF2 Playback", 0,
+SND_SOC_DAPM_AIF_IN("AIF2RX1", NULL, 0,
 		    ARIZONA_AIF2_RX_ENABLES, ARIZONA_AIF2RX1_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_IN("AIF2RX2", "AIF2 Playback", 0,
+SND_SOC_DAPM_AIF_IN("AIF2RX2", NULL, 0,
 		    ARIZONA_AIF2_RX_ENABLES, ARIZONA_AIF2RX2_ENA_SHIFT, 0),
 
-SND_SOC_DAPM_AIF_OUT("AIF3TX1", "AIF3 Capture", 0,
+SND_SOC_DAPM_AIF_OUT("AIF3TX1", NULL, 0,
 		     ARIZONA_AIF3_TX_ENABLES, ARIZONA_AIF3TX1_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_OUT("AIF3TX2", "AIF3 Capture", 0,
+SND_SOC_DAPM_AIF_OUT("AIF3TX2", NULL, 0,
 		     ARIZONA_AIF3_TX_ENABLES, ARIZONA_AIF3TX2_ENA_SHIFT, 0),
 
-SND_SOC_DAPM_AIF_IN("AIF3RX1", "AIF3 Playback", 0,
+SND_SOC_DAPM_AIF_IN("AIF3RX1", NULL, 0,
 		    ARIZONA_AIF3_RX_ENABLES, ARIZONA_AIF3RX1_ENA_SHIFT, 0),
-SND_SOC_DAPM_AIF_IN("AIF3RX2", "AIF3 Playback", 0,
+SND_SOC_DAPM_AIF_IN("AIF3RX2", NULL, 0,
 		    ARIZONA_AIF3_RX_ENABLES, ARIZONA_AIF3RX2_ENA_SHIFT, 0),
 
 SND_SOC_DAPM_VALUE_MUX("AEC Loopback", ARIZONA_DAC_AEC_CONTROL_1,
@@ -1137,6 +1115,21 @@ SND_SOC_DAPM_OUTPUT("SPKDAT1R"),
 	{ name, "ASRC2R", "ASRC2R" }
 
 static const struct snd_soc_dapm_route wm5102_dapm_routes[] = {
+	{ "AIF2 Capture", NULL, "DBVDD2" },
+	{ "AIF2 Playback", NULL, "DBVDD2" },
+
+	{ "AIF3 Capture", NULL, "DBVDD3" },
+	{ "AIF3 Playback", NULL, "DBVDD3" },
+
+	{ "OUT1L", NULL, "CPVDD" },
+	{ "OUT1R", NULL, "CPVDD" },
+	{ "OUT2L", NULL, "CPVDD" },
+	{ "OUT2R", NULL, "CPVDD" },
+	{ "OUT3L", NULL, "CPVDD" },
+
+	{ "OUT4L", NULL, "SPKVDDL" },
+	{ "OUT4R", NULL, "SPKVDDR" },
+
 	{ "OUT1L", NULL, "SYSCLK" },
 	{ "OUT1R", NULL, "SYSCLK" },
 	{ "OUT2L", NULL, "SYSCLK" },
@@ -1147,16 +1140,9 @@ static const struct snd_soc_dapm_route wm5102_dapm_routes[] = {
 	{ "OUT5L", NULL, "SYSCLK" },
 	{ "OUT5R", NULL, "SYSCLK" },
 
-	{ "IN1L", NULL, "SYSCLK" },
-	{ "IN1R", NULL, "SYSCLK" },
-	{ "IN2L", NULL, "SYSCLK" },
-	{ "IN2R", NULL, "SYSCLK" },
-	{ "IN3L", NULL, "SYSCLK" },
-	{ "IN3R", NULL, "SYSCLK" },
-
-	{ "Noise Generator", NULL, "SYSCLK" },
-	{ "Tone Generator 1", NULL, "SYSCLK" },
-	{ "Tone Generator 2", NULL, "SYSCLK" },
+	{ "MICBIAS1", NULL, "MICVDD" },
+	{ "MICBIAS2", NULL, "MICVDD" },
+	{ "MICBIAS3", NULL, "MICVDD" },
 
 	{ "Noise Generator", NULL, "NOISE" },
 	{ "Tone Generator 1", NULL, "TONE" },
@@ -1165,35 +1151,43 @@ static const struct snd_soc_dapm_route wm5102_dapm_routes[] = {
 	{ "Mic Mute Mixer", NULL, "Noise Mixer" },
 	{ "Mic Mute Mixer", NULL, "Mic Mixer" },
 
-	{ "AIF1RX1", NULL, "SYSCLK" },
-	{ "AIF1RX2", NULL, "SYSCLK" },
-	{ "AIF1RX3", NULL, "SYSCLK" },
-	{ "AIF1RX4", NULL, "SYSCLK" },
-	{ "AIF1RX5", NULL, "SYSCLK" },
-	{ "AIF1RX6", NULL, "SYSCLK" },
-	{ "AIF1RX7", NULL, "SYSCLK" },
-	{ "AIF1RX8", NULL, "SYSCLK" },
+	{ "AIF1 Capture", NULL, "AIF1TX1" },
+	{ "AIF1 Capture", NULL, "AIF1TX2" },
+	{ "AIF1 Capture", NULL, "AIF1TX3" },
+	{ "AIF1 Capture", NULL, "AIF1TX4" },
+	{ "AIF1 Capture", NULL, "AIF1TX5" },
+	{ "AIF1 Capture", NULL, "AIF1TX6" },
+	{ "AIF1 Capture", NULL, "AIF1TX7" },
+	{ "AIF1 Capture", NULL, "AIF1TX8" },
 
-	{ "AIF2RX1", NULL, "SYSCLK" },
-	{ "AIF2RX2", NULL, "SYSCLK" },
+	{ "AIF1RX1", NULL, "AIF1 Playback" },
+	{ "AIF1RX2", NULL, "AIF1 Playback" },
+	{ "AIF1RX3", NULL, "AIF1 Playback" },
+	{ "AIF1RX4", NULL, "AIF1 Playback" },
+	{ "AIF1RX5", NULL, "AIF1 Playback" },
+	{ "AIF1RX6", NULL, "AIF1 Playback" },
+	{ "AIF1RX7", NULL, "AIF1 Playback" },
+	{ "AIF1RX8", NULL, "AIF1 Playback" },
 
-	{ "AIF3RX1", NULL, "SYSCLK" },
-	{ "AIF3RX2", NULL, "SYSCLK" },
+	{ "AIF2 Capture", NULL, "AIF2TX1" },
+	{ "AIF2 Capture", NULL, "AIF2TX2" },
 
-	{ "SYSCLK", NULL, "AIF1TX1" },
-	{ "SYSCLK", NULL, "AIF1TX2" },
-	{ "SYSCLK", NULL, "AIF1TX3" },
-	{ "SYSCLK", NULL, "AIF1TX4" },
-	{ "SYSCLK", NULL, "AIF1TX5" },
-	{ "SYSCLK", NULL, "AIF1TX6" },
-	{ "SYSCLK", NULL, "AIF1TX7" },
-	{ "SYSCLK", NULL, "AIF1TX8" },
+	{ "AIF2RX1", NULL, "AIF2 Playback" },
+	{ "AIF2RX2", NULL, "AIF2 Playback" },
 
-	{ "SYSCLK", NULL, "AIF2TX1" },
-	{ "SYSCLK", NULL, "AIF2TX2" },
+	{ "AIF3 Capture", NULL, "AIF3TX1" },
+	{ "AIF3 Capture", NULL, "AIF3TX2" },
 
-	{ "SYSCLK", NULL, "AIF3TX1" },
-	{ "SYSCLK", NULL, "AIF3TX1" },
+	{ "AIF3RX1", NULL, "AIF3 Playback" },
+	{ "AIF3RX2", NULL, "AIF3 Playback" },
+
+	{ "AIF1 Playback", NULL, "SYSCLK" },
+	{ "AIF2 Playback", NULL, "SYSCLK" },
+	{ "AIF3 Playback", NULL, "SYSCLK" },
+
+	{ "AIF1 Capture", NULL, "SYSCLK" },
+	{ "AIF2 Capture", NULL, "SYSCLK" },
+	{ "AIF3 Capture", NULL, "SYSCLK" },
 
 	{ "IN1L PGA", NULL, "IN1L" },
 	{ "IN1R PGA", NULL, "IN1R" },
@@ -1278,9 +1272,6 @@ static const struct snd_soc_dapm_route wm5102_dapm_routes[] = {
 	{ "SPKDAT1L", NULL, "OUT5L" },
 	{ "SPKDAT1R", NULL, "OUT5R" },
 
-	{ "MICBIAS1", NULL, "SYSCLK" },
-	{ "MICBIAS2", NULL, "SYSCLK" },
-	{ "MICBIAS3", NULL, "SYSCLK" },
 };
 
 static int wm5102_set_fll(struct snd_soc_codec *codec, int fll_id, int source,
@@ -1402,6 +1393,8 @@ static unsigned int wm5102_digital_vu[] = {
 static struct snd_soc_codec_driver soc_codec_dev_wm5102 = {
 	.probe = wm5102_codec_probe,
 
+	.idle_bias_off = true,
+
 	.set_sysclk = arizona_set_sysclk,
 	.set_pll = wm5102_set_fll,
 
@@ -1442,12 +1435,6 @@ static int __devinit wm5102_probe(struct platform_device *pdev)
 		regmap_update_bits(arizona->regmap, wm5102_digital_vu[i],
 				   WM5102_DIG_VU, WM5102_DIG_VU);
 
-	micvdd_reg = regulator_get(arizona->dev, "MICVDD");
-
-	if (IS_ERR(micvdd_reg)) {
-		dev_err(arizona->dev, "Failed to get MICVDD regulator\n");
-	}
-
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_idle(&pdev->dev);
 
@@ -1457,9 +1444,6 @@ static int __devinit wm5102_probe(struct platform_device *pdev)
 
 static int __devexit wm5102_remove(struct platform_device *pdev)
 {
-	if (micvdd_reg)
-		regulator_put(micvdd_reg);
-
 	snd_soc_unregister_codec(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 
@@ -1475,20 +1459,9 @@ static struct platform_driver wm5102_codec_driver = {
 	.remove = __devexit_p(wm5102_remove),
 };
 
-static __init int wm5102_codec_init(void)
-{
-	return platform_driver_register(&wm5102_codec_driver);
-}
-module_init(wm5102_codec_init);
-
-static __exit void wm5102_codec_exit(void)
-{
-	return platform_driver_unregister(&wm5102_codec_driver);
-}
-module_exit(wm5102_codec_exit);
+module_platform_driver(wm5102_codec_driver);
 
 MODULE_DESCRIPTION("ASoC WM5102 driver");
 MODULE_AUTHOR("Mark Brown <broonie@opensource.wolfsonmicro.com>");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:wm5102-codec");
-
