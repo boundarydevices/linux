@@ -308,10 +308,13 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 #endif
 			buttons = buf[2];
 			if (buttons > MAX_TOUCHES) {
-				printk(KERN_ERR
-				       "%s: invalid button count %02x\n",
-				       __func__, buttons);
-				buttons = MAX_TOUCHES;
+				int interrupting = (0 == gpio_get_value(ts->gp));
+				if (interrupting) {
+					printk(KERN_ERR
+					       "%s: invalid button count 0x%02x\n",
+					       __func__, buttons);
+				} /* not garbage from POR */
+				buttons = interrupting ? MAX_TOUCHES : 0;
 			} else {
 				for (i = 0; i < buttons; i++) {
 					points[i].x = (((p[0] & 0x0f) << 8)
