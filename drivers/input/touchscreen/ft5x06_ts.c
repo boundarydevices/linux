@@ -85,7 +85,6 @@ struct ft5x06_ts {
 	int			bReady;
 	int			irq;
 	unsigned		gp;
-	int			buttons;
 	struct proc_dir_entry  *procentry;
 };
 static const char *client_name = "ft5x06";
@@ -333,7 +332,6 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 #endif
 		ts_evt_add(ts, buttons, points);
 	}
-	ts->buttons = buttons;
 	return IRQ_HANDLED;
 }
 
