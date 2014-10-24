@@ -300,10 +300,26 @@ static struct flash_platform_data spi_flash_data = {
 #endif
 
 #if defined(CONFIG_SND_SOC_WM5102) || defined(CONFIG_SND_SOC_WM5102_MODULE)
-static struct arizona_pdata wm5102_reva_pdata = {
+static struct arizona_pdata wm5102_pdata = {
 	.reset = GP_WM5102_RESET,
 	.ldoena = GP_WM5102_LDOENA,
 	.clk32k_src = ARIZONA_32KZ_MCLK2,
+	.micbias = {
+		{
+			.mV = 2800,
+			.ext_cap = 1,
+			.discharge = 1,
+			.soft_start = 1,
+			.bypass = 1,
+		},
+		{
+			.mV = 2800,
+			.ext_cap = 1,
+			.discharge = 1,
+			.soft_start = 1,
+			.bypass = 1,
+		},
+	},
 	.inmode = {1, 1, 1, 1},
 	.irq_base = MXC_BOARD_IRQ_START,
 	.irq_gpio = GP_WM5102_IRQ,
@@ -391,7 +407,7 @@ static struct spi_board_info spi_devices[] __initdata = {
 		.chip_select    = 1,
 		.mode           = SPI_MODE_0,
 		.irq            = gpio_to_irq(GP_WM5102_IRQ),
-		.platform_data = &wm5102_reva_pdata,
+		.platform_data = &wm5102_pdata,
 	},
 #endif
 };
