@@ -1142,11 +1142,11 @@ static int imx_startup(struct uart_port *port)
 
 	retval = clk_prepare_enable(sport->clk_per);
 	if (retval)
-		goto error_out1;
+		return retval;
 	retval = clk_prepare_enable(sport->clk_ipg);
 	if (retval) {
 		clk_disable_unprepare(sport->clk_per);
-		goto error_out1;
+		return retval;
 	}
 
 	imx_setup_ufcr(sport, 0);
@@ -1248,9 +1248,6 @@ static int imx_startup(struct uart_port *port)
 	}
 
 	return 0;
-
-error_out1:
-	return retval;
 }
 
 static void imx_shutdown(struct uart_port *port)
