@@ -3169,8 +3169,8 @@ static int tc358743_probe(struct i2c_client *client,
 		dev_err(dev, "csi id missing or invalid\n");
 		return retval;
 	}
-	if (((unsigned)sensor->ipu_id > 1) || ((unsigned)sensor->csi > 1)) {
-		dev_err(dev, "invalid ipu/csi\n");
+	if ((unsigned)sensor->ipu_id || (unsigned)sensor->csi) {
+		dev_err(dev, "invalid ipu/csi, TC358743 does not support virtual channels\n");
 		return -EINVAL;
 	}
 
