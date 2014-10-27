@@ -4071,6 +4071,46 @@ static struct v4l2_int_device ov5642_int_device = {
 	},
 };
 
+#define MINREG 0x3000
+#define MAXREG 0x603C
+
+static int last_reg = -1 ;
+
+static ssize_t show_reg(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	if ((MINREG <= last_reg) && (MAXREG >= last_reg)) {
+		u8 val;
+		s32 rval = ov5642_read_reg(last_reg, &val);
+		if (0 <= rval)
+			return sprintf(buf, "0x%02x", val);
+		else
+			return rval;
+	} else
+		return 0;
+}
+
+static ssize_t store_reg
+	(struct device *dev,
+	 struct device_attribute *attr,
+	 const char *buf, size_t count)
+{
+	unsigned reg, value;
+	int numscanned = sscanf(buf,"%x %x\n", &reg, &value);
+	if (2 == numscanned) {
+		int rval = ov5642_write_reg(reg,value);
+		if (0 != rval)
+			dev_err(dev,"%s: error %d setting reg 0x%04x to 0x%02x\n",
+				__func__, rval, reg, value);
+	} else if (1 == numscanned) {
+		last_reg = reg;
+	} else
+		dev_err(dev,"%s: invalid register: use form 0xREG [0xVAL]\n",
+			__func__);
+	return count;
+}
+static DEVICE_ATTR(ov5642_reg, S_IRUGO|S_IWUSR|S_IWGRP, show_reg, store_reg);
+
 /*!
  * ov5642 I2C probe function
  *
@@ -4184,6 +4224,12 @@ static int ov5642_probe(struct i2c_client *client,
 
 	clk_disable_unprepare(ov5642_data.sensor_clk);
 
+	if (device_create_file(&client->dev,
+			&dev_attr_ov5642_reg))
+		dev_err(&client->dev, "Error on creating sysfs file for ov5642_reg\n");
+	else
+		dev_err(&client->dev, "created sysfs entry for reading regs\n");
+
 	pr_info("camera ov5642 is found\n");
 	return retval;
 }
@@ -4209,6 +4255,9 @@ static int ov5642_remove(struct i2c_client *client)
 
 	if (io_regulator)
 		regulator_disable(io_regulator);
+
+	device_remove_file(&client->dev,
+		&dev_attr_ov5642_reg);
 
 	return 0;
 }
