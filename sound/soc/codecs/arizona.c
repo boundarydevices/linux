@@ -604,10 +604,13 @@ const struct soc_enum arizona_fx_rate =
 			      arizona_rate_text, arizona_rate_val);
 EXPORT_SYMBOL_GPL(arizona_fx_rate);
 
-const SOC_ENUM_SINGLE_DECL(arizona_spdif_rate,
-			   ARIZONA_SPD1_TX_CONTROL,
-			   ARIZONA_SPD1_RATE_SHIFT,
-			   arizona_rate_text);
+const struct soc_enum arizona_spdif_rate =
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_SPD1_TX_CONTROL,
+			      ARIZONA_SPD1_RATE_SHIFT,
+			      0x0f,
+			      ARIZONA_SYNC_RATE_ENUM_SIZE,
+			      arizona_rate_text,
+			      arizona_rate_val);
 EXPORT_SYMBOL_GPL(arizona_spdif_rate);
 
 const int arizona_rate_val[ARIZONA_RATE_ENUM_SIZE] = {
