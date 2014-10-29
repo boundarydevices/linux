@@ -220,6 +220,9 @@ struct arizona_pdata {
 	const struct arizona_micd_range *micd_ranges;
 	int num_micd_ranges;
 
+	/** Mic detect clamp function */
+	int micd_clamp_mode;
+
 	/** Headset polarity configurations */
 	struct arizona_micd_config *micd_configs;
 	int num_micd_configs;

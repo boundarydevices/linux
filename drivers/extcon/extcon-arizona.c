@@ -1312,6 +1312,9 @@ static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 	arizona_of_read_u32(arizona, "wlf,init-mic-delay", false,
 			    &pdata->init_mic_delay);
 
+	arizona_of_read_u32(arizona, "wlf,micd-clamp-mode", false,
+			    &pdata->micd_clamp_mode);
+
 	return 0;
 }
 #else
@@ -1366,6 +1369,14 @@ static void arizona_extcon_set_micd_clamp_mode(struct arizona *arizona)
 		break;
 	}
 
+	/* If the user has supplied a micd_clamp_mode, assume they know
+	 * what they are doing and just write it out
+	 */
+	if (arizona->pdata.micd_clamp_mode) {
+		clamp_ctrl_val = arizona->pdata.micd_clamp_mode;
+		goto out;
+	}
+
 	switch (arizona->type) {
 	case WM5102:
 	case WM8997:
@@ -1412,6 +1423,7 @@ static void arizona_extcon_set_micd_clamp_mode(struct arizona *arizona)
 		break;
 	}
 
+out:
 	regmap_update_bits(arizona->regmap,
 			   clamp_ctrl_reg,
 			   clamp_ctrl_mask,
