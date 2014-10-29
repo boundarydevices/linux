@@ -205,6 +205,7 @@ struct ci_hdrc {
 	u32				pm_async_next;
 	u32				pm_configured_flag;
 	u32				pm_portsc;
+	u32				pm_usbmode;
 	struct work_struct		power_lost_work;
 };
 
@@ -379,7 +380,7 @@ u32 hw_read_intr_enable(struct ci_hdrc *ci);
 
 u32 hw_read_intr_status(struct ci_hdrc *ci);
 
-int hw_device_reset(struct ci_hdrc *ci, u32 mode);
+int hw_device_reset(struct ci_hdrc *ci);
 
 int hw_port_test_set(struct ci_hdrc *ci, u8 mode);
 
@@ -388,6 +389,7 @@ u8 hw_port_test_get(struct ci_hdrc *ci);
 int hw_wait_reg(struct ci_hdrc *ci, enum ci_hw_regs reg, u32 mask,
 				u32 value, unsigned int timeout_ms);
 
+int hw_controller_reset(struct ci_hdrc *ci);
 #ifdef CONFIG_PM
 void ci_hdrc_delay_suspend(struct ci_hdrc *ci, int ms);
 #else

@@ -349,20 +349,40 @@ static int ci_usb_phy_init(struct ci_hdrc *ci)
 }
 
 /**
+ * hw_controller_reset: do controller reset
+ * @ci: the controller
+  *
+ * This function returns an error code
+ */
+int hw_controller_reset(struct ci_hdrc *ci)
+{
+	int count = 0;
+
+	hw_write(ci, OP_USBCMD, USBCMD_RST, USBCMD_RST);
+	while (hw_read(ci, OP_USBCMD, USBCMD_RST)) {
+		udelay(10);
+		if (count++ > 1000) {
+			dev_err(ci->dev, "timeout for reset\n");
+			return -ETIMEDOUT;
+		}
+	}
+
+	return 0;
+}
+
+/**
  * hw_device_reset: resets chip (execute without interruption)
  * @ci: the controller
   *
  * This function returns an error code
  */
-int hw_device_reset(struct ci_hdrc *ci, u32 mode)
+int hw_device_reset(struct ci_hdrc *ci)
 {
 	/* should flush & stop before reset */
 	hw_write(ci, OP_ENDPTFLUSH, ~0, ~0);
 	hw_write(ci, OP_USBCMD, USBCMD_RS, 0);
 
-	hw_write(ci, OP_USBCMD, USBCMD_RST, USBCMD_RST);
-	while (hw_read(ci, OP_USBCMD, USBCMD_RST))
-		udelay(10);		/* not RTOS friendly */
+	hw_controller_reset(ci);
 
 	if (ci->platdata->notify_event)
 		ci->platdata->notify_event(ci,
@@ -380,7 +400,7 @@ int hw_device_reset(struct ci_hdrc *ci, u32 mode)
 
 	/* USBMODE should be configured step by step */
 	hw_write(ci, OP_USBMODE, USBMODE_CM, USBMODE_CM_IDLE);
-	hw_write(ci, OP_USBMODE, USBMODE_CM, mode);
+	hw_write(ci, OP_USBMODE, USBMODE_CM, USBMODE_CM_DC);
 	/* HW >= 2.3 */
 	hw_write(ci, OP_USBMODE, USBMODE_SLOM, USBMODE_SLOM);
 
@@ -390,8 +410,8 @@ int hw_device_reset(struct ci_hdrc *ci, u32 mode)
 	 */
 	hw_write(ci, OP_USBCMD, 0xff0000, 0);
 
-	if (hw_read(ci, OP_USBMODE, USBMODE_CM) != mode) {
-		pr_err("cannot enter in %s mode", ci_role(ci)->name);
+	if (hw_read(ci, OP_USBMODE, USBMODE_CM) != USBMODE_CM_DC) {
+		pr_err("cannot enter in %s device mode", ci_role(ci)->name);
 		pr_err("lpm = %i", ci->hw_bank.lpm);
 		return -ENODEV;
 	}
