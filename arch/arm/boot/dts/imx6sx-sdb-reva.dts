@@ -1,0 +1,61 @@
+/*
+ * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include "imx6sx-sdb.dts"
+
+/*
+ * The CAN transceiver is changed on RevB board.
+ * This dts is used for support the old CAN transceiver on RevA board
+ */
+
+&cpu0 {
+	operating-points = <
+		/* kHz    uV */
+		996000  1250000
+		792000  1175000
+		396000  1075000
+		>;
+	fsl,soc-operating-points = <
+		/* ARM kHz      SOC uV */
+		996000	1175000
+		792000	1175000
+		396000	1175000
+	>;
+	arm-supply = <&sw1a_reg>;
+	soc-supply = <&sw1c_reg>;
+	pu-supply = <&pu_dummy>;
+	fsl,arm-soc-shared = <0>;
+};
+
+&flexcan1 {
+	trx-en-gpio = <&gpio4 25 GPIO_ACTIVE_HIGH>;
+	trx-stby-gpio = <&gpio4 27 GPIO_ACTIVE_HIGH>;
+};
+
+&flexcan2 {
+	trx-en-gpio = <&gpio4 25 GPIO_ACTIVE_LOW>;
+	trx-stby-gpio = <&gpio4 27 GPIO_ACTIVE_LOW>;
+};
+
+&pmic {
+	compatible = "fsl,pfuze100";
+
+	regulators {
+		sw1c_reg: sw1c {
+			regulator-min-microvolt = <300000>;
+			regulator-max-microvolt = <1875000>;
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-ramp-delay = <6250>;
+		};
+		sw4_reg: sw4 {
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <3300000>;
+		};
+	};
+};
