@@ -47,7 +47,7 @@ ifneq ($(CONFIG_MFD_WM8997),n)
 obj-$(CONFIG_MFD_ARIZONA)	+= wm8997-tables.o
 endif
 ifneq ($(CONFIG_MFD_WM8998),n)
-obj-$(CONFIG_MFD_WM8998)	+= wm8998-tables.o
+obj-$(CONFIG_MFD_ARIZONA)	+= wm8998-tables.o
 endif
 ifneq ($(CONFIG_MFD_CS47L24),n)
 obj-$(CONFIG_MFD_ARIZONA)	+= cs47l24-tables.o
