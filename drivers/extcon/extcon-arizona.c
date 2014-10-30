@@ -1279,13 +1279,45 @@ static ssize_t arizona_extcon_show(struct device *dev,
 	return scnprintf(buf, PAGE_SIZE, "%d\n", info->arizona->hp_impedance);
 }
 
+static void arizona_extcon_set_micd_clamp_mode(struct arizona *arizona)
+{
+	unsigned int val, clamp_mode;
+
+	if (arizona->pdata.jd_gpio5) {
+		/* Put the GPIO into input mode with optional pull */
+		val = 0xc101;
+		if (arizona->pdata.jd_gpio5_nopull)
+			val &= ~ARIZONA_GPN_PU;
+
+		regmap_write(arizona->regmap, ARIZONA_GPIO5_CTRL,
+			     val);
+
+		if (arizona->pdata.jd_invert)
+			clamp_mode = ARIZONA_MICD_CLAMP_MODE_JDH_GP5H;
+		else
+			clamp_mode = ARIZONA_MICD_CLAMP_MODE_JDL_GP5H;
+	} else {
+		if (arizona->pdata.jd_invert)
+			clamp_mode = ARIZONA_MICD_CLAMP_MODE_JDH;
+		else
+			clamp_mode = ARIZONA_MICD_CLAMP_MODE_JDL;
+	}
+
+	regmap_update_bits(arizona->regmap,
+			   ARIZONA_MICD_CLAMP_CONTROL,
+			   ARIZONA_MICD_CLAMP_MODE_MASK, clamp_mode);
+
+	regmap_update_bits(arizona->regmap,
+			   ARIZONA_JACK_DETECT_DEBOUNCE,
+			   ARIZONA_MICD_CLAMP_DB,
+			   ARIZONA_MICD_CLAMP_DB);
+}
+
 static int arizona_extcon_probe(struct platform_device *pdev)
 {
 	struct arizona *arizona = dev_get_drvdata(pdev->dev.parent);
 	struct arizona_pdata *pdata = &arizona->pdata;
 	struct arizona_extcon_info *info;
-	unsigned int val;
-	unsigned int clamp_mode;
 	int jack_irq_fall, jack_irq_rise;
 	int ret, mode, i, j;
 
@@ -1500,36 +1532,8 @@ static int arizona_extcon_probe(struct platform_device *pdev)
 	 * If we have a clamp use it, activating in conjunction with
 	 * GPIO5 if that is connected for jack detect operation.
 	 */
-	if (info->micd_clamp) {
-		if (arizona->pdata.jd_gpio5) {
-			/* Put the GPIO into input mode with optional pull */
-			val = 0xc101;
-			if (arizona->pdata.jd_gpio5_nopull)
-				val &= ~ARIZONA_GPN_PU;
-
-			regmap_write(arizona->regmap, ARIZONA_GPIO5_CTRL,
-				     val);
-
-			if (arizona->pdata.jd_invert)
-				clamp_mode = ARIZONA_MICD_CLAMP_MODE_JDH_GP5H;
-			else
-				clamp_mode = ARIZONA_MICD_CLAMP_MODE_JDL_GP5H;
-		} else {
-			if (arizona->pdata.jd_invert)
-				clamp_mode = ARIZONA_MICD_CLAMP_MODE_JDH;
-			else
-				clamp_mode = ARIZONA_MICD_CLAMP_MODE_JDL;
-		}
-
-		regmap_update_bits(arizona->regmap,
-				   ARIZONA_MICD_CLAMP_CONTROL,
-				   ARIZONA_MICD_CLAMP_MODE_MASK, clamp_mode);
-
-		regmap_update_bits(arizona->regmap,
-				   ARIZONA_JACK_DETECT_DEBOUNCE,
-				   ARIZONA_MICD_CLAMP_DB,
-				   ARIZONA_MICD_CLAMP_DB);
-	}
+	if (info->micd_clamp)
+		arizona_extcon_set_micd_clamp_mode(arizona);
 
 	arizona_extcon_set_mode(info, 0);
 
