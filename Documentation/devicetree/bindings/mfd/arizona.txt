@@ -79,6 +79,7 @@ Optional properties:
     value indicates this should be on
   - wlf,init-mic-delay : Adds a delay in milliseconds between jack detection
     and beginning ramp of MICBIAS.
+  - wlf,micd-clamp-mode: Specifies the logic of the micdetect clamp block
 
   - wlf,micbias1 : Configuration for the micbias regulator, should include 5
     cells.
@@ -175,6 +176,7 @@ codec: wm5102@1a {
 
 	wlf,micbias2 = <2600 0 1 1 0>;
 	wlf,init-mic-delay = <10>;
+	wlf,micd-clamp-mode = <0xb>;
 
 	wlf,dmic-ref = <0 0 1 0>;
 	wlf,inmode = <0 0 2 0>;
