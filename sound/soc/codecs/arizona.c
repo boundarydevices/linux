@@ -1,6 +1,7 @@
 /*
  * arizona.c - Wolfson Arizona class device shared support
  *
+ * Copyright 2014 Cirrus Logic
  * Copyright 2012 Wolfson Microelectronics plc
  *
  * Author: Mark Brown <broonie@opensource.wolfsonmicro.com>
@@ -103,6 +104,8 @@ static int arizona_spk_ev(struct snd_soc_dapm_widget *w,
 		switch (arizona->type) {
 		case WM8280:
 		case WM5110:
+		case WM1831:
+		case CS47L24:
 			msleep(10);
 			break;
 		default:
@@ -184,6 +187,8 @@ int arizona_init_spk(struct snd_soc_codec *codec)
 
 	switch (arizona->type) {
 	case WM8997:
+	case WM1831:
+	case CS47L24:
 		break;
 	default:
 		ret = snd_soc_dapm_new_controls(&codec->dapm,
@@ -266,7 +271,7 @@ int arizona_init_input(struct snd_soc_codec *codec)
 
 	memset(&routes, 0, sizeof(routes));
 
-	for (i = 0; i < ARRAY_SIZE(pdata->dmic_ref); ++i) {
+	for (i = 0; i < priv->num_inputs / 2; ++i) {
 		routes[0].source = arizona_dmic_refs[pdata->dmic_ref[i]];
 		routes[1].source = arizona_dmic_refs[pdata->dmic_ref[i]];
 
@@ -291,6 +296,8 @@ int arizona_init_gpio(struct snd_soc_codec *codec)
 	switch (arizona->type) {
 	case WM8280:
 	case WM5110:
+	case WM1831:
+	case CS47L24:
 		snd_soc_dapm_disable_pin(&codec->dapm, "DRC2 Signal Activity");
 		break;
 	default:
@@ -2278,6 +2285,8 @@ static int arizona_calc_fratio(struct arizona_fll *fll,
 		break;
 	case WM8998:
 	case WM1814:
+	case WM1831:
+	case CS47L24:
 		if (sync)
 			return init_ratio;
 		break;
