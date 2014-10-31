@@ -969,6 +969,14 @@
 #define ARIZONA_ASRC1RMIX_INPUT_1_SOURCE         0xA88
 #define ARIZONA_ASRC2LMIX_INPUT_1_SOURCE         0xA90
 #define ARIZONA_ASRC2RMIX_INPUT_1_SOURCE         0xA98
+#define WM8285_ASRC1_1LMIX_INPUT_1_SOURCE        0xA80
+#define WM8285_ASRC1_1RMIX_INPUT_1_SOURCE        0xA88
+#define WM8285_ASRC1_2LMIX_INPUT_1_SOURCE        0xA90
+#define WM8285_ASRC1_2RMIX_INPUT_1_SOURCE        0xA98
+#define WM8285_ASRC2_1LMIX_INPUT_1_SOURCE        0xAA0
+#define WM8285_ASRC2_1RMIX_INPUT_1_SOURCE        0xAA8
+#define WM8285_ASRC2_2LMIX_INPUT_1_SOURCE        0xAB0
+#define WM8285_ASRC2_2RMIX_INPUT_1_SOURCE        0xAB8
 #define ARIZONA_ISRC1DEC1MIX_INPUT_1_SOURCE      0xB00
 #define ARIZONA_ISRC1DEC2MIX_INPUT_1_SOURCE      0xB08
 #define ARIZONA_ISRC1DEC3MIX_INPUT_1_SOURCE      0xB10
@@ -1226,6 +1234,14 @@
 #define ARIZONA_HPLPF3_2                         0xEC9
 #define ARIZONA_HPLPF4_1                         0xECC
 #define ARIZONA_HPLPF4_2                         0xECD
+#define WM8285_ASRC2_ENABLE                      0xED0
+#define WM8285_ASRC2_STATUS                      0xED1
+#define WM8285_ASRC2_RATE1                       0xED2
+#define WM8285_ASRC2_RATE2                       0xED3
+#define WM8285_ASRC1_ENABLE                      0xEE0
+#define WM8285_ASRC1_STATUS                      0xEE1
+#define WM8285_ASRC1_RATE1                       0xEE2
+#define WM8285_ASRC1_RATE2                       0xEE3
 #define ARIZONA_ASRC_ENABLE                      0xEE0
 #define ARIZONA_ASRC_STATUS                      0xEE1
 #define ARIZONA_ASRC_RATE1                       0xEE2
@@ -9545,6 +9561,74 @@
 #define ARIZONA_LHPF4_COEFF_MASK                 0xFFFF  /* LHPF4_COEFF - [15:0] */
 #define ARIZONA_LHPF4_COEFF_SHIFT                     0  /* LHPF4_COEFF - [15:0] */
 #define ARIZONA_LHPF4_COEFF_WIDTH                    16  /* LHPF4_COEFF - [15:0] */
+
+/*
+ * R3808 (0xED0) - ASRC2_ENABLE
+ */
+#define WM8285_ASRC2_IN2L_ENA                       0x0008  /* ASRC2L_ENA */
+#define WM8285_ASRC2_IN2L_ENA_MASK                  0x0008  /* ASRC2L_ENA */
+#define WM8285_ASRC2_IN2L_ENA_SHIFT                      3  /* ASRC2L_ENA */
+#define WM8285_ASRC2_IN2L_ENA_WIDTH                      1  /* ASRC2L_ENA */
+#define WM8285_ASRC2_IN2R_ENA                       0x0004  /* ASRC2R_ENA */
+#define WM8285_ASRC2_IN2R_ENA_MASK                  0x0004  /* ASRC2R_ENA */
+#define WM8285_ASRC2_IN2R_ENA_SHIFT                      2  /* ASRC2R_ENA */
+#define WM8285_ASRC2_IN2R_ENA_WIDTH                      1  /* ASRC2R_ENA */
+#define WM8285_ASRC2_IN1L_ENA                       0x0002  /* ASRC1L_ENA */
+#define WM8285_ASRC2_IN1L_ENA_MASK                  0x0002  /* ASRC1L_ENA */
+#define WM8285_ASRC2_IN1L_ENA_SHIFT                      1  /* ASRC1L_ENA */
+#define WM8285_ASRC2_IN1L_ENA_WIDTH                      1  /* ASRC1L_ENA */
+#define WM8285_ASRC2_IN1R_ENA                       0x0001  /* ASRC1R_ENA */
+#define WM8285_ASRC2_IN1R_ENA_MASK                  0x0001  /* ASRC1R_ENA */
+#define WM8285_ASRC2_IN1R_ENA_SHIFT                      0  /* ASRC1R_ENA */
+#define WM8285_ASRC2_IN1R_ENA_WIDTH                      1  /* ASRC1R_ENA */
+
+/*
+ * R3810 (0xED2) - ASRC2_RATE1
+ */
+#define WM8285_ASRC2_RATE1_MASK                  0x7800  /* ASRC_RATE1 - [14:11] */
+#define WM8285_ASRC2_RATE1_SHIFT                     11  /* ASRC_RATE1 - [14:11] */
+#define WM8285_ASRC2_RATE1_WIDTH                      4  /* ASRC_RATE1 - [14:11] */
+
+/*
+ * R3811 (0xED3) - ASRC2_RATE2
+ */
+#define WM8285_ASRC2_RATE2_MASK                  0x7800  /* ASRC_RATE2 - [14:11] */
+#define WM8285_ASRC2_RATE2_SHIFT                     11  /* ASRC_RATE2 - [14:11] */
+#define WM8285_ASRC2_RATE2_WIDTH                      4  /* ASRC_RATE2 - [14:11] */
+
+/*
+ * R3808 (0xEE0) - ASRC1_ENABLE
+ */
+#define WM8285_ASRC1_IN2L_ENA                       0x0008  /* ASRC2L_ENA */
+#define WM8285_ASRC1_IN2L_ENA_MASK                  0x0008  /* ASRC2L_ENA */
+#define WM8285_ASRC1_IN2L_ENA_SHIFT                      3  /* ASRC2L_ENA */
+#define WM8285_ASRC1_IN2L_ENA_WIDTH                      1  /* ASRC2L_ENA */
+#define WM8285_ASRC1_IN2R_ENA                       0x0004  /* ASRC2R_ENA */
+#define WM8285_ASRC1_IN2R_ENA_MASK                  0x0004  /* ASRC2R_ENA */
+#define WM8285_ASRC1_IN2R_ENA_SHIFT                      2  /* ASRC2R_ENA */
+#define WM8285_ASRC1_IN2R_ENA_WIDTH                      1  /* ASRC2R_ENA */
+#define WM8285_ASRC1_IN1L_ENA                       0x0002  /* ASRC1L_ENA */
+#define WM8285_ASRC1_IN1L_ENA_MASK                  0x0002  /* ASRC1L_ENA */
+#define WM8285_ASRC1_IN1L_ENA_SHIFT                      1  /* ASRC1L_ENA */
+#define WM8285_ASRC1_IN1L_ENA_WIDTH                      1  /* ASRC1L_ENA */
+#define WM8285_ASRC1_IN1R_ENA                       0x0001  /* ASRC1R_ENA */
+#define WM8285_ASRC1_IN1R_ENA_MASK                  0x0001  /* ASRC1R_ENA */
+#define WM8285_ASRC1_IN1R_ENA_SHIFT                      0  /* ASRC1R_ENA */
+#define WM8285_ASRC1_IN1R_ENA_WIDTH                      1  /* ASRC1R_ENA */
+
+/*
+ * R3810 (0xEE2) - ASRC1_RATE1
+ */
+#define WM8285_ASRC1_RATE1_MASK                  0x7800  /* ASRC_RATE1 - [14:11] */
+#define WM8285_ASRC1_RATE1_SHIFT                     11  /* ASRC_RATE1 - [14:11] */
+#define WM8285_ASRC1_RATE1_WIDTH                      4  /* ASRC_RATE1 - [14:11] */
+
+/*
+ * R3811 (0xEE3) - ASRC1_RATE2
+ */
+#define WM8285_ASRC1_RATE2_MASK                  0x7800  /* ASRC_RATE2 - [14:11] */
+#define WM8285_ASRC1_RATE2_SHIFT                     11  /* ASRC_RATE2 - [14:11] */
+#define WM8285_ASRC1_RATE2_WIDTH                      4  /* ASRC_RATE2 - [14:11] */
 
 /*
  * R3808 (0xEE0) - ASRC_ENABLE

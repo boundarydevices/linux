@@ -96,10 +96,13 @@ struct arizona_priv {
 };
 
 #define ARIZONA_NUM_MIXER_INPUTS 134
+#define ARIZONA_V2_NUM_MIXER_INPUTS 138
 
 extern const unsigned int arizona_mixer_tlv[];
 extern const char *arizona_mixer_texts[ARIZONA_NUM_MIXER_INPUTS];
 extern int arizona_mixer_values[ARIZONA_NUM_MIXER_INPUTS];
+extern const char *arizona_v2_mixer_texts[ARIZONA_V2_NUM_MIXER_INPUTS];
+extern int arizona_v2_mixer_values[ARIZONA_V2_NUM_MIXER_INPUTS];
 
 #define ARIZONA_GAINMUX_CONTROLS(name, base) \
 	SOC_SINGLE_RANGE_TLV(name " Input Volume", base + 1,		\
@@ -145,6 +148,28 @@ extern int arizona_mixer_values[ARIZONA_NUM_MIXER_INPUTS];
 	ARIZONA_MUX_ENUMS(name##_aux4, base_reg + 24);	\
 	ARIZONA_MUX_ENUMS(name##_aux5, base_reg + 32);	\
 	ARIZONA_MUX_ENUMS(name##_aux6, base_reg + 40)
+
+#define WM8285_MUX_ENUM_DECL(name, reg) \
+	SOC_VALUE_ENUM_SINGLE_DECL(name, reg, 0, 0xff,			\
+				   arizona_v2_mixer_texts, arizona_v2_mixer_values)
+
+#define WM8285_MUX_ENUMS(name, base_reg) \
+	static WM8285_MUX_ENUM_DECL(name##_enum, base_reg);      \
+	static ARIZONA_MUX_CTL_DECL(name)
+
+#define WM8285_MIXER_ENUMS(name, base_reg) \
+	WM8285_MUX_ENUMS(name##_in1, base_reg);     \
+	WM8285_MUX_ENUMS(name##_in2, base_reg + 2); \
+	WM8285_MUX_ENUMS(name##_in3, base_reg + 4); \
+	WM8285_MUX_ENUMS(name##_in4, base_reg + 6)
+
+#define WM8285_DSP_AUX_ENUMS(name, base_reg) \
+	WM8285_MUX_ENUMS(name##_aux1, base_reg);	\
+	WM8285_MUX_ENUMS(name##_aux2, base_reg + 8);	\
+	WM8285_MUX_ENUMS(name##_aux3, base_reg + 16);	\
+	WM8285_MUX_ENUMS(name##_aux4, base_reg + 24);	\
+	WM8285_MUX_ENUMS(name##_aux5, base_reg + 32);	\
+	WM8285_MUX_ENUMS(name##_aux6, base_reg + 40)
 
 #define ARIZONA_MUX(name, ctrl) \
 	SND_SOC_DAPM_VALUE_MUX(name, SND_SOC_NOPM, 0, 0, ctrl)
@@ -234,6 +259,8 @@ extern const struct soc_enum arizona_sample_rate[];
 extern const struct soc_enum arizona_isrc_fsl[];
 extern const struct soc_enum arizona_isrc_fsh[];
 extern const struct soc_enum arizona_asrc_rate1;
+extern const struct soc_enum wm8285_asrc1_rate1;
+extern const struct soc_enum wm8285_asrc2_rate1;
 extern const struct soc_enum arizona_input_rate;
 extern const struct soc_enum arizona_output_rate;
 extern const struct soc_enum arizona_fx_rate;
