@@ -591,8 +591,7 @@ static void zforce_input_close(struct input_dev *dev)
 	return;
 }
 
-#ifdef CONFIG_PM_SLEEP
-static int zforce_suspend(struct device *dev)
+static int __maybe_unused zforce_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct zforce_ts *ts = i2c_get_clientdata(client);
@@ -636,7 +635,7 @@ unlock:
 	return ret;
 }
 
-static int zforce_resume(struct device *dev)
+static int __maybe_unused zforce_resume(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct zforce_ts *ts = i2c_get_clientdata(client);
@@ -673,7 +672,6 @@ unlock:
 
 	return ret;
 }
-#endif
 
 static SIMPLE_DEV_PM_OPS(zforce_pm_ops, zforce_suspend, zforce_resume);
 
