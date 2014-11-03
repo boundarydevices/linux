@@ -277,6 +277,7 @@
 #define ARIZONA_DRE_CONTROL_1                    0x441
 #define ARIZONA_DRE_CONTROL_2                    0x442
 #define ARIZONA_DRE_CONTROL_3                    0x443
+#define WM8285_EDRE_ENABLE                       0x448
 #define ARIZONA_DAC_AEC_CONTROL_1                0x450
 #define ARIZONA_DAC_AEC_CONTROL_2                0x451
 #define ARIZONA_NOISE_GATE_CONTROL               0x458
@@ -4889,6 +4890,57 @@
 #define ARIZONA_DRE_LOW_LEVEL_ABS_MASK           0x000F  /* LOW_LEVEL_ABS - [3:0] */
 #define ARIZONA_DRE_LOW_LEVEL_ABS_SHIFT               0  /* LOW_LEVEL_ABS - [3:0] */
 #define ARIZONA_DRE_LOW_LEVEL_ABS_WIDTH               4  /* LOW_LEVEL_ABS - [3:0] */
+
+/* R486 (0x448) - EDRE_Enable
+ */
+#define WM8285_EDRE_OUT4L_THR3_ENA                           0x0800  /* EDRE_OUT4L_THR3_ENA */
+#define WM8285_EDRE_OUT4L_THR3_ENA_MASK                      0x0800  /* EDRE_OUT4L_THR3_ENA */
+#define WM8285_EDRE_OUT4L_THR3_ENA_SHIFT                         11  /* EDRE_OUT4L_THR3_ENA */
+#define WM8285_EDRE_OUT4L_THR3_ENA_WIDTH                          1  /* EDRE_OUT4L_THR3_ENA */
+#define WM8285_EDRE_OUT4R_THR3_ENA                           0x0400  /* EDRE_OUT4R_THR3_ENA */
+#define WM8285_EDRE_OUT4R_THR3_ENA_MASK                      0x0400  /* EDRE_OUT4R_THR3_ENA */
+#define WM8285_EDRE_OUT4R_THR3_ENA_SHIFT                         10  /* EDRE_OUT4R_THR3_ENA */
+#define WM8285_EDRE_OUT4R_THR3_ENA_WIDTH                          1  /* EDRE_OUT4R_THR3_ENA */
+#define WM8285_EDRE_OUT4L_THR2_ENA                           0x0200  /* EDRE_OUT4L_THR2_ENA */
+#define WM8285_EDRE_OUT4L_THR2_ENA_MASK                      0x0200  /* EDRE_OUT4L_THR2_ENA */
+#define WM8285_EDRE_OUT4L_THR2_ENA_SHIFT                          9  /* EDRE_OUT4L_THR2_ENA */
+#define WM8285_EDRE_OUT4L_THR2_ENA_WIDTH                          1  /* EDRE_OUT4L_THR2_ENA */
+#define WM8285_EDRE_OUT4R_THR2_ENA                           0x0100  /* EDRE_OUT4R_THR2_ENA */
+#define WM8285_EDRE_OUT4R_THR2_ENA_MASK                      0x0100  /* EDRE_OUT4R_THR2_ENA */
+#define WM8285_EDRE_OUT4R_THR2_ENA_SHIFT                          8  /* EDRE_OUT4R_THR2_ENA */
+#define WM8285_EDRE_OUT4R_THR2_ENA_WIDTH                          1  /* EDRE_OUT4R_THR2_ENA */
+#define WM8285_EDRE_OUT4L_THR1_ENA                           0x0080  /* EDRE_OUT4L_THR1_ENA */
+#define WM8285_EDRE_OUT4L_THR1_ENA_MASK                      0x0080  /* EDRE_OUT4L_THR1_ENA */
+#define WM8285_EDRE_OUT4L_THR1_ENA_SHIFT                          7  /* EDRE_OUT4L_THR1_ENA */
+#define WM8285_EDRE_OUT4L_THR1_ENA_WIDTH                          1  /* EDRE_OUT4L_THR1_ENA */
+#define WM8285_EDRE_OUT4R_THR1_ENA                           0x0040  /* EDRE_OUT4R_THR1_ENA */
+#define WM8285_EDRE_OUT4R_THR1_ENA_MASK                      0x0040  /* EDRE_OUT4R_THR1_ENA */
+#define WM8285_EDRE_OUT4R_THR1_ENA_SHIFT                          6  /* EDRE_OUT4R_THR1_ENA */
+#define WM8285_EDRE_OUT4R_THR1_ENA_WIDTH                          1  /* EDRE_OUT4R_THR1_ENA */
+#define WM8285_EDRE_OUT3L_THR1_ENA                           0x0020  /* EDRE_OUT3L_THR1_ENA */
+#define WM8285_EDRE_OUT3L_THR1_ENA_MASK                      0x0020  /* EDRE_OUT3L_THR1_ENA */
+#define WM8285_EDRE_OUT3L_THR1_ENA_SHIFT                          5  /* EDRE_OUT3L_THR1_ENA */
+#define WM8285_EDRE_OUT3L_THR1_ENA_WIDTH                          1  /* EDRE_OUT3L_THR1_ENA */
+#define WM8285_EDRE_OUT3R_THR1_ENA                           0x0010  /* EDRE_OUT3R_THR1_ENA */
+#define WM8285_EDRE_OUT3R_THR1_ENA_MASK                      0x0010  /* EDRE_OUT3R_THR1_ENA */
+#define WM8285_EDRE_OUT3R_THR1_ENA_SHIFT                          4  /* EDRE_OUT3R_THR1_ENA */
+#define WM8285_EDRE_OUT3R_THR1_ENA_WIDTH                          1  /* EDRE_OUT3R_THR1_ENA */
+#define WM8285_EDRE_OUT2L_THR1_ENA                           0x0008  /* EDRE_OUT2L_THR1_ENA */
+#define WM8285_EDRE_OUT2L_THR1_ENA_MASK                      0x0008  /* EDRE_OUT2L_THR1_ENA */
+#define WM8285_EDRE_OUT2L_THR1_ENA_SHIFT                          3  /* EDRE_OUT2L_THR1_ENA */
+#define WM8285_EDRE_OUT2L_THR1_ENA_WIDTH                          1  /* EDRE_OUT2L_THR1_ENA */
+#define WM8285_EDRE_OUT2R_THR1_ENA                           0x0004  /* EDRE_OUT2R_THR1_ENA */
+#define WM8285_EDRE_OUT2R_THR1_ENA_MASK                      0x0004  /* EDRE_OUT2R_THR1_ENA */
+#define WM8285_EDRE_OUT2R_THR1_ENA_SHIFT                          2  /* EDRE_OUT2R_THR1_ENA */
+#define WM8285_EDRE_OUT2R_THR1_ENA_WIDTH                          1  /* EDRE_OUT2R_THR1_ENA */
+#define WM8285_EDRE_OUT1L_THR1_ENA                           0x0002  /* EDRE_OUT1L_THR1_ENA */
+#define WM8285_EDRE_OUT1L_THR1_ENA_MASK                      0x0002  /* EDRE_OUT1L_THR1_ENA */
+#define WM8285_EDRE_OUT1L_THR1_ENA_SHIFT                          1  /* EDRE_OUT1L_THR1_ENA */
+#define WM8285_EDRE_OUT1L_THR1_ENA_WIDTH                          1  /* EDRE_OUT1L_THR1_ENA */
+#define WM8285_EDRE_OUT1R_THR1_ENA                           0x0001  /* EDRE_OUT1R_THR1_ENA */
+#define WM8285_EDRE_OUT1R_THR1_ENA_MASK                      0x0001  /* EDRE_OUT1R_THR1_ENA */
+#define WM8285_EDRE_OUT1R_THR1_ENA_SHIFT                          0  /* EDRE_OUT1R_THR1_ENA */
+#define WM8285_EDRE_OUT1R_THR1_ENA_WIDTH                          1  /* EDRE_OUT1R_THR1_ENA */
 
 /*
  * R1104 (0x450) - DAC AEC Control 1

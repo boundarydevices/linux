@@ -343,6 +343,7 @@ static const struct reg_default wm8285_reg_default[] = {
 	{ 0x00000441, 0xC050 }, /* R1089  - DRE Control 1 */
 	{ 0x00000442, 0x0305 }, /* R1090 (0x442) - DRE Control 2 */
 	{ 0x00000443, 0x5cfa }, /* R1091 (0x443) - DRE Control 3 */
+	{ 0x00000448, 0x0fff }, /* R1096 (0x448) - eDRE Enable */
 	{ 0x00000450, 0x0000 }, /* R1104 (0x450) - DAC AEC Control 1 */
 	{ 0x00000451, 0x0000 },
 	{ 0x00000458, 0x0000 }, /* R1112 (0x458) - Noise Gate Control */
@@ -1681,6 +1682,7 @@ static bool wm8285_16bit_readable_register(struct device *dev, unsigned int reg)
 	case ARIZONA_DAC_VOLUME_LIMIT_6R:
 	case ARIZONA_NOISE_GATE_SELECT_6R:
 	case ARIZONA_DRE_ENABLE:
+	case WM8285_EDRE_ENABLE:
 	case ARIZONA_DAC_AEC_CONTROL_1:
 	case ARIZONA_NOISE_GATE_CONTROL:
 	case ARIZONA_PDM_SPK1_CTRL_1:
