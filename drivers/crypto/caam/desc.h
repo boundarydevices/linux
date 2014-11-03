@@ -247,7 +247,12 @@ struct sec4_sg_entry {
 #define LDST_SRCDST_WORD_PKHA_B_SZ	(0x11 << LDST_SRCDST_SHIFT)
 #define LDST_SRCDST_WORD_PKHA_N_SZ	(0x12 << LDST_SRCDST_SHIFT)
 #define LDST_SRCDST_WORD_PKHA_E_SZ	(0x13 << LDST_SRCDST_SHIFT)
+#define LDST_SRCDST_WORD_CLASS_CTX	(0x20 << LDST_SRCDST_SHIFT)
 #define LDST_SRCDST_WORD_DESCBUF	(0x40 << LDST_SRCDST_SHIFT)
+#define LDST_SRCDST_WORD_DESCBUF_JOB	(0x41 << LDST_SRCDST_SHIFT)
+#define LDST_SRCDST_WORD_DESCBUF_SHARED	(0x42 << LDST_SRCDST_SHIFT)
+#define LDST_SRCDST_WORD_DESCBUF_JOB_WE	(0x45 << LDST_SRCDST_SHIFT)
+#define LDST_SRCDST_WORD_DESCBUF_SHARED_WE (0x46 << LDST_SRCDST_SHIFT)
 #define LDST_SRCDST_WORD_INFO_FIFO	(0x7a << LDST_SRCDST_SHIFT)
 
 /* Offset in source/destination */
@@ -1327,10 +1332,10 @@ struct sec4_sg_entry {
 #define SQOUT_SGF	0x01000000
 
 /* Appends to a previous pointer */
-#define SQOUT_PRE	0x00800000
+#define SQOUT_PRE	SQIN_PRE
 
 /* Restore sequence with pointer/length */
-#define SQOUT_RTO	0x00200000
+#define SQOUT_RTO	 SQIN_RTO
 
 /* Use extended length following pointer */
 #define SQOUT_EXT	0x00400000
@@ -1633,6 +1638,15 @@ struct sec4_sg_entry {
 #define NFIFOENTRY_PLEN_SHIFT	0
 #define NFIFOENTRY_PLEN_MASK	(0xFF << NFIFOENTRY_PLEN_SHIFT)
 
+/* Append Load Immediate Command */
+#define FD_CMD_APPEND_LOAD_IMMEDIATE			0x80000000
+
+/* Set SEQ LIODN equal to the Non-SEQ LIODN for the job */
+#define FD_CMD_SET_SEQ_LIODN_EQUAL_NONSEQ_LIODN		0x40000000
+
+/* Frame Descriptor Command for Replacement Job Descriptor */
+#define FD_CMD_REPLACE_JOB_DESC				0x20000000
+
 /*
  * PDB internal definitions
  */
@@ -1655,6 +1669,5 @@ struct sec4_sg_entry {
 
 #define XCBC_MAC_DIGEST_SIZE  16
 #define XCBC_MAC_BLOCK_WORDS  16
-
 
 #endif /* DESC_H */

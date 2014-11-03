@@ -1,7 +1,7 @@
 /*
  * CAAM hardware register-level view
  *
- * Copyright (C) 2008-2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2008-2014 Freescale Semiconductor, Inc.
  */
 
 #ifndef REGS_H
@@ -382,6 +382,8 @@ struct rng4tst {
 	};
 #define RTSDCTL_ENT_DLY_SHIFT 16
 #define RTSDCTL_ENT_DLY_MASK (0xffff << RTSDCTL_ENT_DLY_SHIFT)
+#define RTSDCTL_ENT_DLY_MIN 3200
+#define RTSDCTL_ENT_DLY_MAX 12800
 	u32 rtsdctl;		/* seed control register */
 	union {
 		u32 rtsblim;	/* PRGM=1: sparse bit limit register */
@@ -393,6 +395,7 @@ struct rng4tst {
 		u32 rtfrqcnt;	/* PRGM=0: freq. count register */
 	};
 	u32 rsvd1[40];
+#define RDSTA_IF0 0x00000001
 #define RDSTA_IF 0x00000003 /* state handle instantiated flags 0 and 1 */
 #define RDSTA_SKVN 0x40000000 /* Secure Key Valid Non-Test mode */
 #define RDSTA_SKVT 0x80000000 /* Secure Key Valid Test. non-test mode */
@@ -471,6 +474,8 @@ struct caam_ctrl {
 #define MCFGR_DMA_RESET		0x10000000
 #define MCFGR_LONG_PTR		0x00010000 /* Use >32-bit desc addressing */
 #define SCFGR_RDBENABLE		0x00000400
+#define DECORR_RQD0ENABLE	0x00000001 /* Enable DECO0 for direct access */
+#define DECORR_DEN0		0x00010000 /* DECO0 available for access*/
 
 /* AXI read cache control */
 #define MCFGR_ARCACHE_SHIFT	12
@@ -900,8 +905,16 @@ struct caam_deco {
 	struct deco_sg_table sctr_tbl[4];	/* DxSTR - Scatter Tables */
 	u32 rsvd29[48];
 	u32 descbuf[64];	/* DxDESB - Descriptor buffer */
-	u32 rsvd30[320];
+	u32 rscvd30[193];
+#define DESC_DBG_DECO_STAT_HOST_ERR	0x00D00000
+#define DESC_DBG_DECO_STAT_VALID	0x80000000
+#define DESC_DBG_DECO_STAT_MASK		0x00F00000
+	u32 desc_dbg;		/* DxDDR - DECO Debug Register */
+	u32 rsvd31[126];
 };
+
+#define DECO_JQCR_WHL		0x20000000
+#define DECO_JQCR_FOUR		0x10000000
 
 /*
  * Current top-level view of memory map is:
@@ -930,6 +943,7 @@ struct caam_full {
 	u64 rsvd[512];
 	struct caam_assurance assure;
 	struct caam_queue_if qi;
+	struct caam_deco deco;
 };
 
 #endif /* REGS_H */

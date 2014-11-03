@@ -17,6 +17,139 @@
 /* Used to capture the array of job rings */
 struct device **caam_jr_dev;
 
+/*
+ * Descriptor to instantiate RNG State Handle 0 in normal mode and
+ * load the JDKEK, TDKEK and TDSK registers
+ */
+static void build_instantiation_desc(u32 *desc)
+{
+	u32 *jump_cmd;
+
+	init_job_desc(desc, 0);
+
+	/* INIT RNG in non-test mode */
+	append_operation(desc, OP_TYPE_CLASS1_ALG | OP_ALG_ALGSEL_RNG |
+			 OP_ALG_AS_INIT);
+
+	/* wait for done */
+	jump_cmd = append_jump(desc, JUMP_CLASS_CLASS1);
+	set_jump_tgt_here(desc, jump_cmd);
+
+	/*
+	 * load 1 to clear written reg:
+	 * resets the done interrupt and returns the RNG to idle.
+	 */
+	append_load_imm_u32(desc, 1, LDST_SRCDST_WORD_CLRW);
+
+	/* generate secure keys (non-test) */
+	append_operation(desc, OP_TYPE_CLASS1_ALG | OP_ALG_ALGSEL_RNG |
+			 OP_ALG_RNG4_SK);
+
+	append_jump(desc, JUMP_CLASS_CLASS1 | JUMP_TYPE_HALT);
+}
+
+
+/*
+ * run_descriptor_deco0 - runs a descriptor on DECO0, under direct control of
+ *			  the software (no JR/QI used).
+ * @ctrldev - pointer to device
+ * Return: - 0 if no error occurred
+ *	   - -ENODEV if the DECO couldn't be acquired
+ *	   - -EAGAIN if an error occurred while executing the descriptor
+ */
+static inline int run_descriptor_deco0(struct device *ctrldev, u32 *desc)
+{
+	struct caam_drv_private *ctrlpriv = dev_get_drvdata(ctrldev);
+	struct caam_full __iomem *topregs;
+	unsigned int timeout = 100000;
+	u32 deco_dbg_reg, flags;
+	int i, ret = 0;
+
+	/* Set the bit to request direct access to DECO0 */
+	topregs = (struct caam_full __iomem *)ctrlpriv->ctrl;
+	setbits32(&topregs->ctrl.deco_rq, DECORR_RQD0ENABLE);
+
+	while (!(rd_reg32(&topregs->ctrl.deco_rq) & DECORR_DEN0) &&
+								 --timeout)
+		cpu_relax();
+
+	if (!timeout) {
+		dev_err(ctrldev, "failed to acquire DECO 0\n");
+		clrbits32(&topregs->ctrl.deco_rq, DECORR_RQD0ENABLE);
+		return -ENODEV;
+	}
+
+	for (i = 0; i < desc_len(desc); i++)
+		wr_reg32(&topregs->deco.descbuf[i], *(desc + i));
+
+	flags = DECO_JQCR_WHL;
+	/*
+	 * If the descriptor length is longer than 4 words, then the
+	 * FOUR bit in JRCTRL register must be set.
+	 */
+	if (desc_len(desc) >= 4)
+		flags |= DECO_JQCR_FOUR;
+
+	/* Instruct the DECO to execute it */
+	wr_reg32(&topregs->deco.jr_ctl_hi, flags);
+
+	timeout = 10000000;
+	do {
+		deco_dbg_reg = rd_reg32(&topregs->deco.desc_dbg);
+		/*
+		 * If an error occured in the descriptor, then
+		 * the DECO status field will be set to 0x0D
+		 */
+		if ((deco_dbg_reg & DESC_DBG_DECO_STAT_MASK) ==
+		    DESC_DBG_DECO_STAT_HOST_ERR)
+			break;
+		cpu_relax();
+	} while ((deco_dbg_reg & DESC_DBG_DECO_STAT_VALID) && --timeout);
+
+	if (!timeout) {
+		dev_err(ctrldev, "failed to instantiate RNG\n");
+		ret = -EIO;
+	}
+
+	/* Mark the DECO as free */
+	clrbits32(&topregs->ctrl.deco_rq, DECORR_RQD0ENABLE);
+
+	if (!timeout)
+		return -EAGAIN;
+
+	return 0;
+}
+
+/*
+ * instantiate_rng - builds and executes a descriptor on DECO0,
+ *		     which initializes the RNG block.
+ * @ctrldev - pointer to device
+ * Return: - 0 if no error occurred
+ *	   - -ENOMEM if there isn't enough memory to allocate the descriptor
+ *	   - -ENODEV if DECO0 couldn't be acquired
+ *	   - -EAGAIN if an error occurred when executing the descriptor
+ *	      f.i. there was a RNG hardware error due to not "good enough"
+ *	      entropy being aquired.
+ */
+static int instantiate_rng(struct device *ctrldev)
+{
+	u32 *desc;
+	int ret = 0;
+
+	desc = kmalloc(CAAM_CMD_SZ * 7, GFP_KERNEL);
+	if (!desc)
+		return -ENOMEM;
+	/* Create the descriptor for instantiating RNG State Handle 0 */
+	build_instantiation_desc(desc);
+
+	/* Try to run it through DECO0 */
+	ret = run_descriptor_deco0(ctrldev, desc);
+
+	kfree(desc);
+
+	return ret;
+}
+
 static int caam_remove(struct platform_device *pdev)
 {
 	struct device *ctrldev;
@@ -59,102 +192,12 @@ static int caam_remove(struct platform_device *pdev)
 }
 
 /*
- * Descriptor to instantiate RNG State Handle 0 in normal mode and
- * load the JDKEK, TDKEK and TDSK registers
+ * kick_trng - sets the various parameters for enabling the initialization
+ *	       of the RNG4 block in CAAM
+ * @pdev - pointer to the platform device
+ * @ent_delay - Defines the length (in system clocks) of each entropy sample.
  */
-static void build_instantiation_desc(u32 *desc)
-{
-	u32 *jump_cmd;
-
-	init_job_desc(desc, 0);
-
-	/* INIT RNG in non-test mode */
-	append_operation(desc, OP_TYPE_CLASS1_ALG | OP_ALG_ALGSEL_RNG |
-			 OP_ALG_AS_INIT);
-
-	/* wait for done */
-	jump_cmd = append_jump(desc, JUMP_CLASS_CLASS1);
-	set_jump_tgt_here(desc, jump_cmd);
-
-	/*
-	 * load 1 to clear written reg:
-	 * resets the done interrupt and returns the RNG to idle.
-	 */
-	append_load_imm_u32(desc, 1, LDST_SRCDST_WORD_CLRW);
-
-}
-
-static void generate_secure_keys_desc(u32 *desc)
-{
-	/* generate secure keys (non-test) */
-	append_operation(desc, OP_TYPE_CLASS1_ALG | OP_ALG_ALGSEL_RNG |
-					 OP_ALG_RNG4_SK);
-}
-
-struct instantiate_result {
-	struct completion completion;
-	int err;
-};
-
-static void rng4_init_done(struct device *dev, u32 *desc, u32 err,
-			   void *context)
-{
-	struct instantiate_result *instantiation = context;
-
-	if (err) {
-		char tmp[CAAM_ERROR_STR_MAX];
-
-		dev_err(dev, "%08x: %s\n", err, caam_jr_strstatus(tmp, err));
-	}
-
-	instantiation->err = err;
-	complete(&instantiation->completion);
-}
-
-static int instantiate_rng(struct device *jrdev, u32 keys_generated)
-{
-	struct instantiate_result instantiation;
-
-	dma_addr_t desc_dma;
-	u32 *desc;
-	int ret;
-
-	desc = kmalloc(CAAM_CMD_SZ * 6, GFP_KERNEL | GFP_DMA);
-	if (!desc) {
-		dev_err(jrdev, "cannot allocate RNG init descriptor memory\n");
-		return -ENOMEM;
-	}
-
-	build_instantiation_desc(desc);
-
-	/* If keys have not been generated, add op code to generate key. */
-	if (!keys_generated)
-		generate_secure_keys_desc(desc);
-
-	desc_dma = dma_map_single(jrdev, desc, desc_bytes(desc), DMA_TO_DEVICE);
-	dma_sync_single_for_device(jrdev, desc_dma, desc_bytes(desc),
-				   DMA_TO_DEVICE);
-	init_completion(&instantiation.completion);
-	ret = caam_jr_enqueue(jrdev, desc, rng4_init_done, &instantiation);
-	if (!ret) {
-		wait_for_completion_interruptible(&instantiation.completion);
-		ret = instantiation.err;
-		if (ret)
-			dev_err(jrdev, "unable to instantiate RNG\n");
-	}
-
-	dma_unmap_single(jrdev, desc_dma, desc_bytes(desc), DMA_TO_DEVICE);
-
-	kfree(desc);
-
-	return ret;
-}
-
-/*
- * By default, the TRNG runs for 200 clocks per sample;
- * 1600 clocks per sample generates better entropy.
- */
-static void kick_trng(struct platform_device *pdev)
+static void kick_trng(struct platform_device *pdev, int ent_delay)
 {
 	struct device *ctrldev = &pdev->dev;
 	struct caam_drv_private *ctrlpriv = dev_get_drvdata(ctrldev);
@@ -168,15 +211,31 @@ static void kick_trng(struct platform_device *pdev)
 	val = rd_reg32(&r4tst->rtmctl);
 	/* put RNG4 into program mode */
 	setbits32(&r4tst->rtmctl, RTMCTL_PRGM);
-	/* Set clocks per sample to the default, and divider to zero */
+
+	/*
+	 * Performance-wise, it does not make sense to
+	 * set the delay to a value that is lower
+	 * than the last one that worked (i.e. the state handles
+	 * were instantiated properly. Thus, instead of wasting
+	 * time trying to set the values controlling the sample
+	 * frequency, the function simply returns.
+	 */
+	val = (rd_reg32(&r4tst->rtsdctl) & RTSDCTL_ENT_DLY_MASK)
+	      >> RTSDCTL_ENT_DLY_SHIFT;
+	if (ent_delay <= val) {
+		/* put RNG4 into run mode */
+		clrbits32(&r4tst->rtmctl, RTMCTL_PRGM);
+		return;
+	}
+
 	val = rd_reg32(&r4tst->rtsdctl);
 	val = (val & ~RTSDCTL_ENT_DLY_MASK) |
-	       (RNG4_ENT_CLOCKS_SAMPLE << RTSDCTL_ENT_DLY_SHIFT);
+	      (ent_delay << RTSDCTL_ENT_DLY_SHIFT);
 	wr_reg32(&r4tst->rtsdctl, val);
-	/* min. freq. count */
-	wr_reg32(&r4tst->rtfrqmin, RNG4_ENT_CLOCKS_SAMPLE / 4);
-	/* max. freq. count */
-	wr_reg32(&r4tst->rtfrqmax, RNG4_ENT_CLOCKS_SAMPLE * 8);
+	/* min. freq. count, equal to 1/4 of the entropy sample length */
+	wr_reg32(&r4tst->rtfrqmin, ent_delay >> 2);
+	/* max. freq. count, equal to 16 times the entropy sample length */
+	wr_reg32(&r4tst->rtfrqmax, ent_delay << 4);
 	/* put RNG4 into run mode */
 	clrbits32(&r4tst->rtmctl, RTMCTL_PRGM);
 }
@@ -242,7 +301,7 @@ EXPORT_SYMBOL(caam_get_jrdev);
 /* Probe routine for CAAM top (controller) level */
 static int caam_probe(struct platform_device *pdev)
 {
-	int ret, ring, rspec;
+	int ret, ring, rspec, ent_delay = RTSDCTL_ENT_DLY_MIN;
 	u64 caam_id;
 	struct device *dev;
 	struct device_node *nprop, *np;
@@ -253,6 +312,7 @@ static int caam_probe(struct platform_device *pdev)
 #ifdef CONFIG_DEBUG_FS
 	struct caam_perfmon *perfmon;
 #endif
+	u64 cha_vid;
 
 	ctrlpriv = kzalloc(sizeof(struct caam_drv_private), GFP_KERNEL);
 	if (!ctrlpriv)
@@ -476,47 +536,35 @@ static int caam_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	cha_vid = rd_reg64(&topregs->ctrl.perfmon.cha_id);
+
 	/*
-	 * RNG4 based SECs (v5+ | >= i.MX6) need special initialization prior
+	 * If SEC has RNG version >= 4 (SEC version 5+ | >= i.MX6) and
+	 * RNG state handle has not been already instantiated, do RNG
+	 * instantiation. The RNG needs special initialization prior
 	 * to executing any descriptors. If there's a problem with init,
 	 * remove other subsystems and return; internal padding functions
 	 * cannot run without an RNG. This procedure assumes a single RNG4
 	 * instance.
 	 */
-	if ((rd_reg64(&topregs->ctrl.perfmon.cha_id) & CHA_ID_RNG_MASK)
-	    == CHA_ID_RNG_4) {
-		struct rng4tst __iomem *r4tst;
-		u32 rdsta, rng_if, rng_skvn;
-
-		/*
-		 * Check to see if the RNG has already been instantiated.
-		 * If either the state 0 or 1 instantiated flags are set,
-		 * then don't continue on and try to instantiate the RNG
-		 * again.
-		 */
-		r4tst = &topregs->ctrl.r4tst[0];
-		rdsta = rd_reg32(&r4tst->rdsta); /* Read RDSTA register */
-
-		/* Check IF bit for non-deterministic instantiation */
-		rng_if = rdsta & RDSTA_IF;
-
-		/* Check SKVN bit for non-deterministic key generation */
-		rng_skvn = rdsta & RDSTA_SKVN;
-		if (!rng_if) {
-			kick_trng(pdev);
-			ret = instantiate_rng(ctrlpriv->jrdev[0], rng_skvn);
-			if (ret) {
-				caam_remove(pdev);
-				return -ENODEV;
-			}
-			ctrlpriv->rng_inst++;
+	if ((cha_vid & CHA_ID_RNG_MASK) >> CHA_ID_RNG_SHIFT >= 4 &&
+	    !(rd_reg32(&topregs->ctrl.r4tst[0].rdsta) & RDSTA_IF0)) {
+		do {
+			kick_trng(pdev, ent_delay);
+			ret = instantiate_rng(dev);
+			ent_delay += 400;
+		} while ((ret == -EAGAIN) && (ent_delay < RTSDCTL_ENT_DLY_MAX));
+		if (ret) {
+			dev_err(dev, "failed to instantiate RNG");
+			caam_remove(pdev);
+			return ret;
 		}
+
+		/* Enable RDB bit so that RNG works faster */
+		setbits32(&topregs->ctrl.scfgr, SCFGR_RDBENABLE);
 	}
 
 	/* NOTE: RTIC detection ought to go here, around Si time */
-
-	/* Initialize queue allocator lock */
-	spin_lock_init(&ctrlpriv->jr_alloc_lock);
 
 	caam_id = rd_reg64(&topregs->ctrl.perfmon.caam_id);
 

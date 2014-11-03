@@ -66,8 +66,6 @@
 #define CAAM_MAX_IV_LENGTH		16
 
 /* length of descriptors text */
-#define DESC_JOB_IO_LEN			(CAAM_CMD_SZ * 5 + CAAM_PTR_SZ * 3)
-
 #define DESC_AEAD_BASE			(4 * CAAM_CMD_SZ)
 #define DESC_AEAD_ENC_LEN		(DESC_AEAD_BASE + 16 * CAAM_CMD_SZ)
 #define DESC_AEAD_DEC_LEN		(DESC_AEAD_BASE + 21 * CAAM_CMD_SZ)
@@ -85,8 +83,6 @@
 
 #ifdef DEBUG
 /* for print_hex_dumps with line references */
-#define xstr(s) str(s)
-#define str(s) #s
 #define debug(format, arg...) printk(format, arg)
 #else
 #define debug(format, arg...)
@@ -286,7 +282,7 @@ static int aead_set_sh_desc(struct crypto_aead *aead)
 		return -ENOMEM;
 	}
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "aead enc shdesc@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "aead enc shdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, desc,
 		       desc_bytes(desc), 1);
 #endif
@@ -356,7 +352,7 @@ static int aead_set_sh_desc(struct crypto_aead *aead)
 		return -ENOMEM;
 	}
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "aead dec shdesc@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "aead dec shdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, desc,
 		       desc_bytes(desc), 1);
 #endif
@@ -441,7 +437,7 @@ static int aead_set_sh_desc(struct crypto_aead *aead)
 		return -ENOMEM;
 	}
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "aead givenc shdesc@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "aead givenc shdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, desc,
 		       desc_bytes(desc), 1);
 #endif
@@ -507,7 +503,7 @@ static int aead_setkey(struct crypto_aead *aead,
 	       keylen, enckeylen, authkeylen);
 	printk(KERN_ERR "split_key_len %d split_key_pad_len %d\n",
 	       ctx->split_key_len, ctx->split_key_pad_len);
-	print_hex_dump(KERN_ERR, "key in @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "key in @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, key, keylen, 1);
 #endif
 
@@ -526,7 +522,7 @@ static int aead_setkey(struct crypto_aead *aead,
 		return -ENOMEM;
 	}
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "ctx.key@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "ctx.key@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, ctx->key,
 		       ctx->split_key_pad_len + enckeylen, 1);
 #endif
@@ -559,7 +555,7 @@ static int ablkcipher_setkey(struct crypto_ablkcipher *ablkcipher,
 	u32 *desc;
 
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "key in @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "key in @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, key, keylen, 1);
 #endif
 
@@ -614,7 +610,8 @@ static int ablkcipher_setkey(struct crypto_ablkcipher *ablkcipher,
 		return -ENOMEM;
 	}
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "ablkcipher enc shdesc@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR,
+		       "ablkcipher enc shdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, desc,
 		       desc_bytes(desc), 1);
 #endif
@@ -671,7 +668,8 @@ static int ablkcipher_setkey(struct crypto_ablkcipher *ablkcipher,
 	}
 
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "ablkcipher dec shdesc@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR,
+		       "ablkcipher dec shdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, desc,
 		       desc_bytes(desc), 1);
 #endif
@@ -810,13 +808,13 @@ static void aead_encrypt_done(struct device *jrdev, u32 *desc, u32 err,
 	aead_unmap(jrdev, edesc, req);
 
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "assoc  @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "assoc  @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(req->assoc),
 		       req->assoclen , 1);
-	print_hex_dump(KERN_ERR, "dstiv  @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "dstiv  @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(req->src) - ivsize,
 		       edesc->src_nents ? 100 : ivsize, 1);
-	print_hex_dump(KERN_ERR, "dst    @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "dst    @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(req->src),
 		       edesc->src_nents ? 100 : req->cryptlen +
 		       ctx->authsize + 4, 1);
@@ -844,10 +842,10 @@ static void aead_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 		 offsetof(struct aead_edesc, hw_desc));
 
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "dstiv  @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "dstiv  @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, req->iv,
 		       ivsize, 1);
-	print_hex_dump(KERN_ERR, "dst    @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "dst    @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(req->dst),
 		       req->cryptlen, 1);
 #endif
@@ -867,7 +865,7 @@ static void aead_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 		err = -EBADMSG;
 
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "iphdrout@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "iphdrout@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4,
 		       ((char *)sg_virt(req->assoc) - sizeof(struct iphdr)),
 		       sizeof(struct iphdr) + req->assoclen +
@@ -875,7 +873,7 @@ static void aead_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 		       ctx->authsize + 36, 1);
 	if (!err && edesc->sec4_sg_bytes) {
 		struct scatterlist *sg = sg_last(req->src, edesc->src_nents);
-		print_hex_dump(KERN_ERR, "sglastout@"xstr(__LINE__)": ",
+		print_hex_dump(KERN_ERR, "sglastout@"__stringify(__LINE__)": ",
 			       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(sg),
 			sg->length + ctx->authsize + 16, 1);
 	}
@@ -908,10 +906,10 @@ static void ablkcipher_encrypt_done(struct device *jrdev, u32 *desc, u32 err,
 	}
 
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "dstiv  @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "dstiv  @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, req->info,
 		       edesc->src_nents > 1 ? 100 : ivsize, 1);
-	print_hex_dump(KERN_ERR, "dst    @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "dst    @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(req->src),
 		       edesc->dst_nents > 1 ? 100 : req->nbytes, 1);
 #endif
@@ -943,10 +941,10 @@ static void ablkcipher_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 	}
 
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "dstiv  @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "dstiv  @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, req->info,
 		       ivsize, 1);
-	print_hex_dump(KERN_ERR, "dst    @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "dst    @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(req->src),
 		       edesc->dst_nents > 1 ? 100 : req->nbytes, 1);
 #endif
@@ -977,16 +975,16 @@ static void init_aead_job(u32 *sh_desc, dma_addr_t ptr,
 #ifdef DEBUG
 	debug("assoclen %d cryptlen %d authsize %d\n",
 	      req->assoclen, req->cryptlen, authsize);
-	print_hex_dump(KERN_ERR, "assoc  @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "assoc  @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(req->assoc),
 		       req->assoclen , 1);
-	print_hex_dump(KERN_ERR, "presciv@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "presciv@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, req->iv,
 		       edesc->src_nents ? 100 : ivsize, 1);
-	print_hex_dump(KERN_ERR, "src    @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "src    @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(req->src),
 			edesc->src_nents ? 100 : req->cryptlen, 1);
-	print_hex_dump(KERN_ERR, "shrdesc@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "shrdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sh_desc,
 		       desc_bytes(sh_desc), 1);
 #endif
@@ -1055,15 +1053,15 @@ static void init_aead_giv_job(u32 *sh_desc, dma_addr_t ptr,
 #ifdef DEBUG
 	debug("assoclen %d cryptlen %d authsize %d\n",
 	      req->assoclen, req->cryptlen, authsize);
-	print_hex_dump(KERN_ERR, "assoc  @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "assoc  @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(req->assoc),
 		       req->assoclen , 1);
-	print_hex_dump(KERN_ERR, "presciv@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "presciv@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, req->iv, ivsize, 1);
-	print_hex_dump(KERN_ERR, "src    @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "src    @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(req->src),
 			edesc->src_nents > 1 ? 100 : req->cryptlen, 1);
-	print_hex_dump(KERN_ERR, "shrdesc@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "shrdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sh_desc,
 		       desc_bytes(sh_desc), 1);
 #endif
@@ -1116,10 +1114,10 @@ static void init_ablkcipher_job(u32 *sh_desc, dma_addr_t ptr,
 	int len, sec4_sg_index = 0;
 
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "presciv@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "presciv@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, req->info,
 		       ivsize, 1);
-	print_hex_dump(KERN_ERR, "src    @"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "src    @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(req->src),
 		       edesc->src_nents ? 100 : req->nbytes, 1);
 #endif
@@ -1280,7 +1278,7 @@ static int aead_encrypt(struct aead_request *req)
 	init_aead_job(ctx->sh_desc_enc, ctx->sh_desc_enc_dma, edesc, req,
 		      all_contig, true);
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "aead jobdesc@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "aead jobdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, edesc->hw_desc,
 		       desc_bytes(edesc->hw_desc), 1);
 #endif
@@ -1314,7 +1312,7 @@ static int aead_decrypt(struct aead_request *req)
 		return PTR_ERR(edesc);
 
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "dec src@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "dec src@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(req->src),
 		       req->cryptlen, 1);
 #endif
@@ -1323,7 +1321,7 @@ static int aead_decrypt(struct aead_request *req)
 	init_aead_job(ctx->sh_desc_dec,
 		      ctx->sh_desc_dec_dma, edesc, req, all_contig, false);
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "aead jobdesc@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "aead jobdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, edesc->hw_desc,
 		       desc_bytes(edesc->hw_desc), 1);
 #endif
@@ -1474,7 +1472,7 @@ static int aead_givencrypt(struct aead_givcrypt_request *areq)
 		return PTR_ERR(edesc);
 
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "giv src@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "giv src@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(req->src),
 		       req->cryptlen, 1);
 #endif
@@ -1483,7 +1481,7 @@ static int aead_givencrypt(struct aead_givcrypt_request *areq)
 	init_aead_giv_job(ctx->sh_desc_givenc,
 			  ctx->sh_desc_givenc_dma, edesc, req, contig);
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "aead jobdesc@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "aead jobdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, edesc->hw_desc,
 		       desc_bytes(edesc->hw_desc), 1);
 #endif
@@ -1587,7 +1585,7 @@ static struct ablkcipher_edesc *ablkcipher_edesc_alloc(struct ablkcipher_request
 				   DMA_TO_DEVICE);
 
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "ablkcipher sec4_sg@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "ablkcipher sec4_sg@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, edesc->sec4_sg,
 		       sec4_sg_bytes, 1);
 #endif
@@ -1616,7 +1614,7 @@ static int ablkcipher_encrypt(struct ablkcipher_request *req)
 	init_ablkcipher_job(ctx->sh_desc_enc,
 		ctx->sh_desc_enc_dma, edesc, req, iv_contig);
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "ablkcipher jobdesc@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "ablkcipher jobdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, edesc->hw_desc,
 		       desc_bytes(edesc->hw_desc), 1);
 #endif
@@ -1654,7 +1652,7 @@ static int ablkcipher_decrypt(struct ablkcipher_request *req)
 		ctx->sh_desc_dec_dma, edesc, req, iv_contig);
 	desc = edesc->hw_desc;
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "ablkcipher jobdesc@"xstr(__LINE__)": ",
+	print_hex_dump(KERN_ERR, "ablkcipher jobdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, edesc->hw_desc,
 		       desc_bytes(edesc->hw_desc), 1);
 #endif
@@ -2200,7 +2198,7 @@ static int caam_cra_init(struct crypto_tfm *tfm)
 	 * distribute tfms across job rings to ensure in-order
 	 * crypto request processing per tfm
 	 */
-	ctx->jrdev = priv->algapi_jr[(tgt_jr / 2) % priv->num_jrs_for_algapi];
+	ctx->jrdev = priv->jrdev[(tgt_jr / 2) % priv->total_jobrs];
 
 	/* copy descriptor header template value */
 	ctx->class1_alg_type = OP_TYPE_CLASS1_ALG | caam_alg->class1_alg_type;
@@ -2237,7 +2235,6 @@ static void __exit caam_algapi_exit(void)
 	struct device *ctrldev;
 	struct caam_drv_private *priv;
 	struct caam_crypto_alg *t_alg, *n;
-	int i, err;
 
 	dev_node = of_find_compatible_node(NULL, NULL, "fsl,sec-v4.0");
 	if (!dev_node) {
@@ -2265,13 +2262,6 @@ static void __exit caam_algapi_exit(void)
 		list_del(&t_alg->entry);
 		kfree(t_alg);
 	}
-
-	for (i = 0; i < priv->total_jobrs; i++) {
-		err = caam_jr_deregister(priv->algapi_jr[i]);
-		if (err < 0)
-			break;
-	}
-	kfree(priv->algapi_jr);
 
 	of_node_put(dev_node);
 }
@@ -2330,7 +2320,7 @@ static int __init caam_algapi_init(void)
 {
 	struct device_node *dev_node;
 	struct platform_device *pdev;
-	struct device *ctrldev, **jrdev;
+	struct device *ctrldev;
 	struct caam_drv_private *priv;
 	int i = 0, err = 0, md_limit = 0;
 	int des_inst, aes_inst, md_inst;
@@ -2352,29 +2342,17 @@ static int __init caam_algapi_init(void)
 	ctrldev = &pdev->dev;
 	priv = dev_get_drvdata(ctrldev);
 
+	/*
+	 * If priv is NULL, it's probably because the caam driver wasn't
+	 * properly initialized (e.g. RNG4 init failed). Thus, bail out here.
+	 */
+	if (!priv) {
+		of_node_put(dev_node);
+		return -ENODEV;
+	}
+
 	INIT_LIST_HEAD(&priv->alg_list);
 
-	jrdev = kmalloc(sizeof(*jrdev) * priv->total_jobrs, GFP_KERNEL);
-	if (!jrdev) {
-		of_node_put(dev_node);
-		return -ENOMEM;
-	}
-
-	for (i = 0; i < priv->total_jobrs; i++) {
-		err = caam_jr_register(ctrldev, &jrdev[i]);
-		if (err < 0)
-			break;
-	}
-	if (err < 0 && i == 0) {
-		dev_err(ctrldev, "algapi error in job ring registration: %d\n",
-			err);
-		of_node_put(dev_node);
-		kfree(jrdev);
-		return err;
-	}
-
-	priv->num_jrs_for_algapi = i;
-	priv->algapi_jr = jrdev;
 	atomic_set(&priv->tfm_count, -1);
 
 	/*
