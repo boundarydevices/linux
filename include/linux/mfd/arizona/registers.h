@@ -1347,6 +1347,54 @@
 #define ARIZONA_DSP3_SCRATCH_1                   0x1341
 #define ARIZONA_DSP3_SCRATCH_2                   0x1342
 #define ARIZONA_DSP3_SCRATCH_3                   0x1343
+#define WM8285_FRF_COEFFICIENT_1L_1              0x1380
+#define WM8285_FRF_COEFFICIENT_1L_2              0x1381
+#define WM8285_FRF_COEFFICIENT_1L_3              0x1382
+#define WM8285_FRF_COEFFICIENT_1L_4              0x1383
+#define WM8285_FRF_COEFFICIENT_1R_1              0x1390
+#define WM8285_FRF_COEFFICIENT_1R_2              0x1391
+#define WM8285_FRF_COEFFICIENT_1R_3              0x1392
+#define WM8285_FRF_COEFFICIENT_1R_4              0x1393
+#define WM8285_FRF_COEFFICIENT_2L_1              0x13A0
+#define WM8285_FRF_COEFFICIENT_2L_2              0x13A1
+#define WM8285_FRF_COEFFICIENT_2L_3              0x13A2
+#define WM8285_FRF_COEFFICIENT_2L_4              0x13A3
+#define WM8285_FRF_COEFFICIENT_2R_1              0x13B0
+#define WM8285_FRF_COEFFICIENT_2R_2              0x13B1
+#define WM8285_FRF_COEFFICIENT_2R_3              0x13B2
+#define WM8285_FRF_COEFFICIENT_2R_4              0x13B3
+#define WM8285_FRF_COEFFICIENT_3L_1              0x13C0
+#define WM8285_FRF_COEFFICIENT_3L_2              0x13C1
+#define WM8285_FRF_COEFFICIENT_3L_3              0x13C2
+#define WM8285_FRF_COEFFICIENT_3L_4              0x13C3
+#define WM8285_FRF_COEFFICIENT_3R_1              0x13D0
+#define WM8285_FRF_COEFFICIENT_3R_2              0x13D1
+#define WM8285_FRF_COEFFICIENT_3R_3              0x13D2
+#define WM8285_FRF_COEFFICIENT_3R_4              0x13D3
+#define WM8285_FRF_COEFFICIENT_4L_1              0x13E0
+#define WM8285_FRF_COEFFICIENT_4L_2              0x13E1
+#define WM8285_FRF_COEFFICIENT_4L_3              0x13E2
+#define WM8285_FRF_COEFFICIENT_4L_4              0x13E3
+#define WM8285_FRF_COEFFICIENT_4R_1              0x13F0
+#define WM8285_FRF_COEFFICIENT_4R_2              0x13F1
+#define WM8285_FRF_COEFFICIENT_4R_3              0x13F2
+#define WM8285_FRF_COEFFICIENT_4R_4              0x13F3
+#define WM8285_FRF_COEFFICIENT_5L_1              0x1400
+#define WM8285_FRF_COEFFICIENT_5L_2              0x1401
+#define WM8285_FRF_COEFFICIENT_5L_3              0x1402
+#define WM8285_FRF_COEFFICIENT_5L_4              0x1403
+#define WM8285_FRF_COEFFICIENT_5R_1              0x1410
+#define WM8285_FRF_COEFFICIENT_5R_2              0x1411
+#define WM8285_FRF_COEFFICIENT_5R_3              0x1412
+#define WM8285_FRF_COEFFICIENT_5R_4              0x1413
+#define WM8285_FRF_COEFFICIENT_6L_1              0x1420
+#define WM8285_FRF_COEFFICIENT_6L_2              0x1421
+#define WM8285_FRF_COEFFICIENT_6L_3              0x1422
+#define WM8285_FRF_COEFFICIENT_6L_4              0x1423
+#define WM8285_FRF_COEFFICIENT_6R_1              0x1430
+#define WM8285_FRF_COEFFICIENT_6R_2              0x1431
+#define WM8285_FRF_COEFFICIENT_6R_3              0x1432
+#define WM8285_FRF_COEFFICIENT_6R_4              0x1433
 #define ARIZONA_DSP4_CONTROL_1                   0x1400
 #define ARIZONA_DSP4_CLOCKING_1                  0x1401
 #define ARIZONA_DSP4_STATUS_1                    0x1404
@@ -9764,6 +9812,342 @@
 #define ARIZONA_DSP1_WDMA_ACTIVE_CHANNELS_MASK   0x00FF  /* DSP1_WDMA_ACTIVE_CHANNELS - [7:0] */
 #define ARIZONA_DSP1_WDMA_ACTIVE_CHANNELS_SHIFT       0  /* DSP1_WDMA_ACTIVE_CHANNELS - [7:0] */
 #define ARIZONA_DSP1_WDMA_ACTIVE_CHANNELS_WIDTH       8  /* DSP1_WDMA_ACTIVE_CHANNELS - [7:0] */
+
+/*
+* R1718 (0x1380) - FRF_Coefficient_1L_1
+*/
+#define WM8285_FRF_COEFF_1L_1_MASK               0xFFFF  /* FRF_COEFF_1L_1 - [15:0] */
+#define WM8285_FRF_COEFF_1L_1_SHIFT                   0  /* FRF_COEFF_1L_1 - [15:0] */
+#define WM8285_FRF_COEFF_1L_1_WIDTH                  16  /* FRF_COEFF_1L_1 - [15:0] */
+
+/*
+ * R1719 (0x1381) - FRF_Coefficient_1L_2
+ */
+#define WM8285_FRF_COEFF_1L_2_MASK               0xFFFF  /* FRF_COEFF_1L_2 - [15:0] */
+#define WM8285_FRF_COEFF_1L_2_SHIFT                   0  /* FRF_COEFF_1L_2 - [15:0] */
+#define WM8285_FRF_COEFF_1L_2_WIDTH                  16  /* FRF_COEFF_1L_2 - [15:0] */
+
+/*
+ * R1720 (0x1382) - FRF_Coefficient_1L_3
+ */
+#define WM8285_FRF_COEFF_1L_3_MASK               0xFFFF  /* FRF_COEFF_1L_3 - [15:0] */
+#define WM8285_FRF_COEFF_1L_3_SHIFT                   0  /* FRF_COEFF_1L_3 - [15:0] */
+#define WM8285_FRF_COEFF_1L_3_WIDTH                  16  /* FRF_COEFF_1L_3 - [15:0] */
+
+/*
+ * R1721 (0x1383) - FRF_Coefficient_1L_4
+ */
+#define WM8285_FRF_COEFF_1L_4_MASK               0xFFFF  /* FRF_COEFF_1L_4 - [15:0] */
+#define WM8285_FRF_COEFF_1L_4_SHIFT                   0  /* FRF_COEFF_1L_4 - [15:0] */
+#define WM8285_FRF_COEFF_1L_4_WIDTH                  16  /* FRF_COEFF_1L_4 - [15:0] */
+
+/*
+ * R1722 (0x1390) - FRF_Coefficient_1R_1
+ */
+#define WM8285_FRF_COEFF_1R_1_MASK               0xFFFF  /* FRF_COEFF_1R_1 - [15:0] */
+#define WM8285_FRF_COEFF_1R_1_SHIFT                   0  /* FRF_COEFF_1R_1 - [15:0] */
+#define WM8285_FRF_COEFF_1R_1_WIDTH                  16  /* FRF_COEFF_1R_1 - [15:0] */
+
+/*
+ * R1723 (0x1391) - FRF_Coefficient_1R_2
+ */
+#define WM8285_FRF_COEFF_1R_2_MASK               0xFFFF  /* FRF_COEFF_1R_2 - [15:0] */
+#define WM8285_FRF_COEFF_1R_2_SHIFT                   0  /* FRF_COEFF_1R_2 - [15:0] */
+#define WM8285_FRF_COEFF_1R_2_WIDTH                  16  /* FRF_COEFF_1R_2 - [15:0] */
+
+/*
+ * R1724 (0x1392) - FRF_Coefficient_1R_3
+ */
+#define WM8285_FRF_COEFF_1R_3_MASK               0xFFFF  /* FRF_COEFF_1R_3 - [15:0] */
+#define WM8285_FRF_COEFF_1R_3_SHIFT                   0  /* FRF_COEFF_1R_3 - [15:0] */
+#define WM8285_FRF_COEFF_1R_3_WIDTH                  16  /* FRF_COEFF_1R_3 - [15:0] */
+
+/*
+ * R1725 (0x1393) - FRF_Coefficient_1R_4
+ */
+#define WM8285_FRF_COEFF_1R_4_MASK               0xFFFF  /* FRF_COEFF_1R_4 - [15:0] */
+#define WM8285_FRF_COEFF_1R_4_SHIFT                   0  /* FRF_COEFF_1R_4 - [15:0] */
+#define WM8285_FRF_COEFF_1R_4_WIDTH                  16  /* FRF_COEFF_1R_4 - [15:0] */
+
+/*
+ * R1726 (0x13A0) - FRF_Coefficient_2L_1
+ */
+#define WM8285_FRF_COEFF_2L_1_MASK               0xFFFF  /* FRF_COEFF_2L_1 - [15:0] */
+#define WM8285_FRF_COEFF_2L_1_SHIFT                   0  /* FRF_COEFF_2L_1 - [15:0] */
+#define WM8285_FRF_COEFF_2L_1_WIDTH                  16  /* FRF_COEFF_2L_1 - [15:0] */
+
+/*
+ * R1727 (0x13A1) - FRF_Coefficient_2L_2
+ */
+#define WM8285_FRF_COEFF_2L_2_MASK               0xFFFF  /* FRF_COEFF_2L_2 - [15:0] */
+#define WM8285_FRF_COEFF_2L_2_SHIFT                   0  /* FRF_COEFF_2L_2 - [15:0] */
+#define WM8285_FRF_COEFF_2L_2_WIDTH                  16  /* FRF_COEFF_2L_2 - [15:0] */
+
+/*
+ * R1728 (0x13A2) - FRF_Coefficient_2L_3
+ */
+#define WM8285_FRF_COEFF_2L_3_MASK               0xFFFF  /* FRF_COEFF_2L_3 - [15:0] */
+#define WM8285_FRF_COEFF_2L_3_SHIFT                   0  /* FRF_COEFF_2L_3 - [15:0] */
+#define WM8285_FRF_COEFF_2L_3_WIDTH                  16  /* FRF_COEFF_2L_3 - [15:0] */
+
+/*
+ * R1729 (0x13A3) - FRF_Coefficient_2L_4
+ */
+#define WM8285_FRF_COEFF_2L_4_MASK               0xFFFF  /* FRF_COEFF_2L_4 - [15:0] */
+#define WM8285_FRF_COEFF_2L_4_SHIFT                   0  /* FRF_COEFF_2L_4 - [15:0] */
+#define WM8285_FRF_COEFF_2L_4_WIDTH                  16  /* FRF_COEFF_2L_4 - [15:0] */
+
+/*
+ * R1730 (0x13B0) - FRF_Coefficient_2R_1
+ */
+#define WM8285_FRF_COEFF_2R_1_MASK               0xFFFF  /* FRF_COEFF_2R_1 - [15:0] */
+#define WM8285_FRF_COEFF_2R_1_SHIFT                   0  /* FRF_COEFF_2R_1 - [15:0] */
+#define WM8285_FRF_COEFF_2R_1_WIDTH                  16  /* FRF_COEFF_2R_1 - [15:0] */
+
+/*
+ * R1731 (0x13B1) - FRF_Coefficient_2R_2
+ */
+#define WM8285_FRF_COEFF_2R_2_MASK               0xFFFF  /* FRF_COEFF_2R_2 - [15:0] */
+#define WM8285_FRF_COEFF_2R_2_SHIFT                   0  /* FRF_COEFF_2R_2 - [15:0] */
+#define WM8285_FRF_COEFF_2R_2_WIDTH                  16  /* FRF_COEFF_2R_2 - [15:0] */
+
+/*
+ * R1732 (0x13B2) - FRF_Coefficient_2R_3
+ */
+#define WM8285_FRF_COEFF_2R_3_MASK               0xFFFF  /* FRF_COEFF_2R_3 - [15:0] */
+#define WM8285_FRF_COEFF_2R_3_SHIFT                   0  /* FRF_COEFF_2R_3 - [15:0] */
+#define WM8285_FRF_COEFF_2R_3_WIDTH                  16  /* FRF_COEFF_2R_3 - [15:0] */
+
+/*
+ * R1733 (0x13B3) - FRF_Coefficient_2R_4
+ */
+#define WM8285_FRF_COEFF_2R_4_MASK               0xFFFF  /* FRF_COEFF_2R_4 - [15:0] */
+#define WM8285_FRF_COEFF_2R_4_SHIFT                   0  /* FRF_COEFF_2R_4 - [15:0] */
+#define WM8285_FRF_COEFF_2R_4_WIDTH                  16  /* FRF_COEFF_2R_4 - [15:0] */
+
+/*
+ * R1734 (0x13C0) - FRF_Coefficient_3L_1
+ */
+#define WM8285_FRF_COEFF_3L_1_MASK               0xFFFF  /* FRF_COEFF_3L_1 - [15:0] */
+#define WM8285_FRF_COEFF_3L_1_SHIFT                   0  /* FRF_COEFF_3L_1 - [15:0] */
+#define WM8285_FRF_COEFF_3L_1_WIDTH                  16  /* FRF_COEFF_3L_1 - [15:0] */
+
+/*
+ * R1735 (0x13C1) - FRF_Coefficient_3L_2
+ */
+#define WM8285_FRF_COEFF_3L_2_MASK               0xFFFF  /* FRF_COEFF_3L_2 - [15:0] */
+#define WM8285_FRF_COEFF_3L_2_SHIFT                   0  /* FRF_COEFF_3L_2 - [15:0] */
+#define WM8285_FRF_COEFF_3L_2_WIDTH                  16  /* FRF_COEFF_3L_2 - [15:0] */
+
+/*
+ * R1736 (0x13C2) - FRF_Coefficient_3L_3
+ */
+#define WM8285_FRF_COEFF_3L_3_MASK               0xFFFF  /* FRF_COEFF_3L_3 - [15:0] */
+#define WM8285_FRF_COEFF_3L_3_SHIFT                   0  /* FRF_COEFF_3L_3 - [15:0] */
+#define WM8285_FRF_COEFF_3L_3_WIDTH                  16  /* FRF_COEFF_3L_3 - [15:0] */
+
+/*
+ * R1737 (0x13C3) - FRF_Coefficient_3L_4
+ */
+#define WM8285_FRF_COEFF_3L_4_MASK               0xFFFF  /* FRF_COEFF_3L_4 - [15:0] */
+#define WM8285_FRF_COEFF_3L_4_SHIFT                   0  /* FRF_COEFF_3L_4 - [15:0] */
+#define WM8285_FRF_COEFF_3L_4_WIDTH                  16  /* FRF_COEFF_3L_4 - [15:0] */
+
+/*
+ * R1738 (0x13D0) - FRF_Coefficient_3R_1
+ */
+#define WM8285_FRF_COEFF_3R_1_MASK               0xFFFF  /* FRF_COEFF_3R_1 - [15:0] */
+#define WM8285_FRF_COEFF_3R_1_SHIFT                   0  /* FRF_COEFF_3R_1 - [15:0] */
+#define WM8285_FRF_COEFF_3R_1_WIDTH                  16  /* FRF_COEFF_3R_1 - [15:0] */
+
+/*
+ * R1739 (0x13D1) - FRF_Coefficient_3R_2
+ */
+#define WM8285_FRF_COEFF_3R_2_MASK               0xFFFF  /* FRF_COEFF_3R_2 - [15:0] */
+#define WM8285_FRF_COEFF_3R_2_SHIFT                   0  /* FRF_COEFF_3R_2 - [15:0] */
+#define WM8285_FRF_COEFF_3R_2_WIDTH                  16  /* FRF_COEFF_3R_2 - [15:0] */
+
+/*
+ * R1740 (0x13D2) - FRF_Coefficient_3R_3
+ */
+#define WM8285_FRF_COEFF_3R_3_MASK               0xFFFF  /* FRF_COEFF_3R_3 - [15:0] */
+#define WM8285_FRF_COEFF_3R_3_SHIFT                   0  /* FRF_COEFF_3R_3 - [15:0] */
+#define WM8285_FRF_COEFF_3R_3_WIDTH                  16  /* FRF_COEFF_3R_3 - [15:0] */
+
+/*
+ * R1741 (0x13D3) - FRF_Coefficient_3R_4
+ */
+#define WM8285_FRF_COEFF_3R_4_MASK               0xFFFF  /* FRF_COEFF_3R_4 - [15:0] */
+#define WM8285_FRF_COEFF_3R_4_SHIFT                   0  /* FRF_COEFF_3R_4 - [15:0] */
+#define WM8285_FRF_COEFF_3R_4_WIDTH                  16  /* FRF_COEFF_3R_4 - [15:0] */
+
+/*
+ * R1742 (0x13E0) - FRF_Coefficient_4L_1
+ */
+#define WM8285_FRF_COEFF_4L_1_MASK               0xFFFF  /* FRF_COEFF_4L_1 - [15:0] */
+#define WM8285_FRF_COEFF_4L_1_SHIFT                   0  /* FRF_COEFF_4L_1 - [15:0] */
+#define WM8285_FRF_COEFF_4L_1_WIDTH                  16  /* FRF_COEFF_4L_1 - [15:0] */
+
+/*
+ * R1743 (0x13E1) - FRF_Coefficient_4L_2
+ */
+#define WM8285_FRF_COEFF_4L_2_MASK               0xFFFF  /* FRF_COEFF_4L_2 - [15:0] */
+#define WM8285_FRF_COEFF_4L_2_SHIFT                   0  /* FRF_COEFF_4L_2 - [15:0] */
+#define WM8285_FRF_COEFF_4L_2_WIDTH                  16  /* FRF_COEFF_4L_2 - [15:0] */
+
+/*
+ * R1744 (0x13E2) - FRF_Coefficient_4L_3
+ */
+#define WM8285_FRF_COEFF_4L_3_MASK               0xFFFF  /* FRF_COEFF_4L_3 - [15:0] */
+#define WM8285_FRF_COEFF_4L_3_SHIFT                   0  /* FRF_COEFF_4L_3 - [15:0] */
+#define WM8285_FRF_COEFF_4L_3_WIDTH                  16  /* FRF_COEFF_4L_3 - [15:0] */
+
+/*
+ * R1745 (0x13E3) - FRF_Coefficient_4L_4
+ */
+#define WM8285_FRF_COEFF_4L_4_MASK               0xFFFF  /* FRF_COEFF_4L_4 - [15:0] */
+#define WM8285_FRF_COEFF_4L_4_SHIFT                   0  /* FRF_COEFF_4L_4 - [15:0] */
+#define WM8285_FRF_COEFF_4L_4_WIDTH                  16  /* FRF_COEFF_4L_4 - [15:0] */
+
+/*
+ * R1746 (0x13F0) - FRF_Coefficient_4R_1
+ */
+#define WM8285_FRF_COEFF_4R_1_MASK               0xFFFF  /* FRF_COEFF_4R_1 - [15:0] */
+#define WM8285_FRF_COEFF_4R_1_SHIFT                   0  /* FRF_COEFF_4R_1 - [15:0] */
+#define WM8285_FRF_COEFF_4R_1_WIDTH                  16  /* FRF_COEFF_4R_1 - [15:0] */
+
+/*
+ * R1747 (0x13F1) - FRF_Coefficient_4R_2
+ */
+#define WM8285_FRF_COEFF_4R_2_MASK               0xFFFF  /* FRF_COEFF_4R_2 - [15:0] */
+#define WM8285_FRF_COEFF_4R_2_SHIFT                   0  /* FRF_COEFF_4R_2 - [15:0] */
+#define WM8285_FRF_COEFF_4R_2_WIDTH                  16  /* FRF_COEFF_4R_2 - [15:0] */
+
+/*
+ * R1748 (0x13F2) - FRF_Coefficient_4R_3
+ */
+#define WM8285_FRF_COEFF_4R_3_MASK               0xFFFF  /* FRF_COEFF_4R_3 - [15:0] */
+#define WM8285_FRF_COEFF_4R_3_SHIFT                   0  /* FRF_COEFF_4R_3 - [15:0] */
+#define WM8285_FRF_COEFF_4R_3_WIDTH                  16  /* FRF_COEFF_4R_3 - [15:0] */
+
+/*
+ * R1749 (0x13F3) - FRF_Coefficient_4R_4
+ */
+#define WM8285_FRF_COEFF_4R_4_MASK               0xFFFF  /* FRF_COEFF_4R_4 - [15:0] */
+#define WM8285_FRF_COEFF_4R_4_SHIFT                   0  /* FRF_COEFF_4R_4 - [15:0] */
+#define WM8285_FRF_COEFF_4R_4_WIDTH                  16  /* FRF_COEFF_4R_4 - [15:0] */
+
+/*
+ * R1750 (0x1400) - FRF_Coefficient_5L_1
+ */
+#define WM8285_FRF_COEFF_5L_1_MASK               0xFFFF  /* FRF_COEFF_5L_1 - [15:0] */
+#define WM8285_FRF_COEFF_5L_1_SHIFT                   0  /* FRF_COEFF_5L_1 - [15:0] */
+#define WM8285_FRF_COEFF_5L_1_WIDTH                  16  /* FRF_COEFF_5L_1 - [15:0] */
+
+/*
+ * R1751 (0x1401) - FRF_Coefficient_5L_2
+ */
+#define WM8285_FRF_COEFF_5L_2_MASK               0xFFFF  /* FRF_COEFF_5L_2 - [15:0] */
+#define WM8285_FRF_COEFF_5L_2_SHIFT                   0  /* FRF_COEFF_5L_2 - [15:0] */
+#define WM8285_FRF_COEFF_5L_2_WIDTH                  16  /* FRF_COEFF_5L_2 - [15:0] */
+
+/*
+ * R1752 (0x1402) - FRF_Coefficient_5L_3
+ */
+#define WM8285_FRF_COEFF_5L_3_MASK               0xFFFF  /* FRF_COEFF_5L_3 - [15:0] */
+#define WM8285_FRF_COEFF_5L_3_SHIFT                   0  /* FRF_COEFF_5L_3 - [15:0] */
+#define WM8285_FRF_COEFF_5L_3_WIDTH                  16  /* FRF_COEFF_5L_3 - [15:0] */
+
+/*
+ * R1753 (0x1403) - FRF_Coefficient_5L_4
+ */
+#define WM8285_FRF_COEFF_5L_4_MASK               0xFFFF  /* FRF_COEFF_5L_4 - [15:0] */
+#define WM8285_FRF_COEFF_5L_4_SHIFT                   0  /* FRF_COEFF_5L_4 - [15:0] */
+#define WM8285_FRF_COEFF_5L_4_WIDTH                  16  /* FRF_COEFF_5L_4 - [15:0] */
+
+/*
+ * R1754 (0x1410) - FRF_Coefficient_5R_1
+ */
+#define WM8285_FRF_COEFF_5R_1_MASK               0xFFFF  /* FRF_COEFF_5R_1 - [15:0] */
+#define WM8285_FRF_COEFF_5R_1_SHIFT                   0  /* FRF_COEFF_5R_1 - [15:0] */
+#define WM8285_FRF_COEFF_5R_1_WIDTH                  16  /* FRF_COEFF_5R_1 - [15:0] */
+
+/*
+ * R1755 (0x1411) - FRF_Coefficient_5R_2
+ */
+#define WM8285_FRF_COEFF_5R_2_MASK               0xFFFF  /* FRF_COEFF_5R_2 - [15:0] */
+#define WM8285_FRF_COEFF_5R_2_SHIFT                   0  /* FRF_COEFF_5R_2 - [15:0] */
+#define WM8285_FRF_COEFF_5R_2_WIDTH                  16  /* FRF_COEFF_5R_2 - [15:0] */
+
+/*
+ * R1756 (0x1412) - FRF_Coefficient_5R_3
+ */
+#define WM8285_FRF_COEFF_5R_3_MASK               0xFFFF  /* FRF_COEFF_5R_3 - [15:0] */
+#define WM8285_FRF_COEFF_5R_3_SHIFT                   0  /* FRF_COEFF_5R_3 - [15:0] */
+#define WM8285_FRF_COEFF_5R_3_WIDTH                  16  /* FRF_COEFF_5R_3 - [15:0] */
+
+/*
+ * R1757 (0x1413) - FRF_Coefficient_5R_4
+ */
+#define WM8285_FRF_COEFF_5R_4_MASK               0xFFFF  /* FRF_COEFF_5R_4 - [15:0] */
+#define WM8285_FRF_COEFF_5R_4_SHIFT                   0  /* FRF_COEFF_5R_4 - [15:0] */
+#define WM8285_FRF_COEFF_5R_4_WIDTH                  16  /* FRF_COEFF_5R_4 - [15:0] */
+
+/*
+ * R1758 (0x1420) - FRF_Coefficient_6L_1
+ */
+#define WM8285_FRF_COEFF_6L_1_MASK               0xFFFF  /* FRF_COEFF_6L_1 - [15:0] */
+#define WM8285_FRF_COEFF_6L_1_SHIFT                   0  /* FRF_COEFF_6L_1 - [15:0] */
+#define WM8285_FRF_COEFF_6L_1_WIDTH                  16  /* FRF_COEFF_6L_1 - [15:0] */
+
+/*
+ * R1759 (0x1421) - FRF_Coefficient_6L_2
+ */
+#define WM8285_FRF_COEFF_6L_2_MASK               0xFFFF  /* FRF_COEFF_6L_2 - [15:0] */
+#define WM8285_FRF_COEFF_6L_2_SHIFT                   0  /* FRF_COEFF_6L_2 - [15:0] */
+#define WM8285_FRF_COEFF_6L_2_WIDTH                  16  /* FRF_COEFF_6L_2 - [15:0] */
+
+/*
+ * R1760 (0x1422) - FRF_Coefficient_6L_3
+ */
+#define WM8285_FRF_COEFF_6L_3_MASK               0xFFFF  /* FRF_COEFF_6L_3 - [15:0] */
+#define WM8285_FRF_COEFF_6L_3_SHIFT                   0  /* FRF_COEFF_6L_3 - [15:0] */
+#define WM8285_FRF_COEFF_6L_3_WIDTH                  16  /* FRF_COEFF_6L_3 - [15:0] */
+
+/*
+ * R1761 (0x1423) - FRF_Coefficient_6L_4
+ */
+#define WM8285_FRF_COEFF_6L_4_MASK               0xFFFF  /* FRF_COEFF_6L_4 - [15:0] */
+#define WM8285_FRF_COEFF_6L_4_SHIFT                   0  /* FRF_COEFF_6L_4 - [15:0] */
+#define WM8285_FRF_COEFF_6L_4_WIDTH                  16  /* FRF_COEFF_6L_4 - [15:0] */
+
+/*
+ * R1762 (0x1430) - FRF_Coefficient_6R_1
+ */
+#define WM8285_FRF_COEFF_6R_1_MASK               0xFFFF  /* FRF_COEFF_6R_1 - [15:0] */
+#define WM8285_FRF_COEFF_6R_1_SHIFT                   0  /* FRF_COEFF_6R_1 - [15:0] */
+#define WM8285_FRF_COEFF_6R_1_WIDTH                  16  /* FRF_COEFF_6R_1 - [15:0] */
+
+/*
+ * R1763 (0x1431) - FRF_Coefficient_6R_2
+ */
+#define WM8285_FRF_COEFF_6R_2_MASK               0xFFFF  /* FRF_COEFF_6R_2 - [15:0] */
+#define WM8285_FRF_COEFF_6R_2_SHIFT                   0  /* FRF_COEFF_6R_2 - [15:0] */
+#define WM8285_FRF_COEFF_6R_2_WIDTH                  16  /* FRF_COEFF_6R_2 - [15:0] */
+
+/*
+ * R1764 (0x1432) - FRF_Coefficient_6R_3
+ */
+#define WM8285_FRF_COEFF_6R_3_MASK               0xFFFF  /* FRF_COEFF_6R_3 - [15:0] */
+#define WM8285_FRF_COEFF_6R_3_SHIFT                   0  /* FRF_COEFF_6R_3 - [15:0] */
+#define WM8285_FRF_COEFF_6R_3_WIDTH                  16  /* FRF_COEFF_6R_3 - [15:0] */
+
+/*
+ * R1765 (0x1433) - FRF_Coefficient_6R_4
+ */
+#define WM8285_FRF_COEFF_6R_4_MASK               0xFFFF  /* FRF_COEFF_6R_4 - [15:0] */
+#define WM8285_FRF_COEFF_6R_4_SHIFT                   0  /* FRF_COEFF_6R_4 - [15:0] */
+#define WM8285_FRF_COEFF_6R_4_WIDTH                  16  /* FRF_COEFF_6R_4 - [15:0] */
 
 /*
  * R6144 (0x1800) - IRQ1 Status 1
