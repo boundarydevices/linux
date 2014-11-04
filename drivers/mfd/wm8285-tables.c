@@ -1368,7 +1368,8 @@ static const struct reg_default wm8285_reg_default[] = {
 	{ 0x00001212, 0x0000 },
 	{ 0x00001214, 0x0000 },
 	{ 0x00001216, 0x0000 },
-	{ 0x00001300, 0x0000 },
+	{ 0x00001300, 0x0000 }, /* R4864  - DAC Comp 1 */
+	{ 0x00001302, 0x0000 }, /* R4866  - DAC Comp 2 */
 	{ 0x00001340, 0x0000 },
 	{ 0x00001341, 0x0000 },
 	{ 0x00001342, 0x0000 },
@@ -2581,6 +2582,8 @@ static bool wm8285_16bit_readable_register(struct device *dev, unsigned int reg)
 	case WM8285_FCR_FILTER_CONTROL:
 	case WM8285_FCR_ADC_REFORMATTER_CONTROL:
 	case WM8285_FCR_COEFF_START ... WM8285_FCR_COEFF_END:
+	case WM8285_DAC_COMP_1:
+	case WM8285_DAC_COMP_2:
 	case WM8285_FRF_COEFFICIENT_1L_1:
 	case WM8285_FRF_COEFFICIENT_1L_2:
 	case WM8285_FRF_COEFFICIENT_1L_3:

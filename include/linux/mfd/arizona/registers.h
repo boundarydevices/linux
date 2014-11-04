@@ -1320,7 +1320,9 @@
 #define ARIZONA_DSP2_SCRATCH_2                   0x1242
 #define ARIZONA_DSP2_SCRATCH_3                   0x1243
 #define ARIZONA_DSP3_CONTROL_1                   0x1300
+#define WM8285_DAC_COMP_1                        0x1300
 #define ARIZONA_DSP3_CLOCKING_1                  0x1301
+#define WM8285_DAC_COMP_2                        0x1302
 #define ARIZONA_DSP3_STATUS_1                    0x1304
 #define ARIZONA_DSP3_STATUS_2                    0x1305
 #define ARIZONA_DSP3_STATUS_3                    0x1306
