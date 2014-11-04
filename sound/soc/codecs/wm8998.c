@@ -45,38 +45,33 @@ static int wm8998_in2mux_ev(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol,
 				int event);
 
-static const char * const wm8998_in1mux_texts[] = {
-	"IN1A",
-	"IN1B",
-};
-
-static const char * const wm8998_in2mux_texts[] = {
-	"IN2A",
-	"IN2B",
+static const char * const wm8998_inmux_texts[] = {
+	"A",
+	"B",
 };
 
 static const SOC_ENUM_SINGLE_DECL(wm8998_in1muxl_enum,
 				  ARIZONA_ADC_DIGITAL_VOLUME_1L,
 				  ARIZONA_IN1L_SRC_SHIFT,
-				  wm8998_in1mux_texts);
+				  wm8998_inmux_texts);
 
 static const SOC_ENUM_SINGLE_DECL(wm8998_in1muxr_enum,
 				  ARIZONA_ADC_DIGITAL_VOLUME_1R,
 				  ARIZONA_IN1R_SRC_SHIFT,
-				  wm8998_in1mux_texts);
+				  wm8998_inmux_texts);
 
 static const SOC_ENUM_SINGLE_DECL(wm8998_in2mux_enum,
 				  ARIZONA_ADC_DIGITAL_VOLUME_2L,
 				  ARIZONA_IN2L_SRC_SHIFT,
-				  wm8998_in2mux_texts);
+				  wm8998_inmux_texts);
 
 static const struct snd_kcontrol_new wm8998_in1mux[2] = {
-	SOC_DAPM_ENUM("Route", wm8998_in1muxl_enum),
-	SOC_DAPM_ENUM("Route", wm8998_in1muxr_enum),
+	SOC_DAPM_ENUM("IN1L Mux", wm8998_in1muxl_enum),
+	SOC_DAPM_ENUM("IN1R Mux", wm8998_in1muxr_enum),
 };
 
 static const struct snd_kcontrol_new wm8998_in2mux =
-	SOC_DAPM_ENUM("Route", wm8998_in2mux_enum);
+	SOC_DAPM_ENUM("IN2 Mux", wm8998_in2mux_enum);
 
 static DECLARE_TLV_DB_SCALE(ana_tlv, 0, 100, 0);
 static DECLARE_TLV_DB_SCALE(eq_tlv, -1200, 100, 0);
@@ -450,11 +445,11 @@ SND_SOC_DAPM_INPUT("IN1BR"),
 SND_SOC_DAPM_INPUT("IN2A"),
 SND_SOC_DAPM_INPUT("IN2B"),
 
-SND_SOC_DAPM_MUX_E("IN1MUXL Input", SND_SOC_NOPM, 0, 0, &wm8998_in1mux[0],
+SND_SOC_DAPM_MUX_E("IN1L Mux", SND_SOC_NOPM, 0, 0, &wm8998_in1mux[0],
 			wm8998_in1mux_ev, SND_SOC_DAPM_PRE_PMU),
-SND_SOC_DAPM_MUX_E("IN1MUXR Input", SND_SOC_NOPM, 0, 0, &wm8998_in1mux[1],
+SND_SOC_DAPM_MUX_E("IN1R Mux", SND_SOC_NOPM, 0, 0, &wm8998_in1mux[1],
 			wm8998_in1mux_ev, SND_SOC_DAPM_PRE_PMU),
-SND_SOC_DAPM_MUX_E("IN2MUX Input", SND_SOC_NOPM, 0, 0, &wm8998_in2mux,
+SND_SOC_DAPM_MUX_E("IN2 Mux", SND_SOC_NOPM, 0, 0, &wm8998_in2mux,
 			wm8998_in2mux_ev, SND_SOC_DAPM_PRE_PMU),
 
 SND_SOC_DAPM_OUTPUT("DRC1 Signal Activity"),
@@ -922,13 +917,13 @@ static const struct snd_soc_dapm_route wm8998_dapm_routes[] = {
 	{ "Slim1 Capture", NULL, "SYSCLK" },
 	{ "Slim2 Capture", NULL, "SYSCLK" },
 
-	{ "IN1MUXL Input", "IN1A", "IN1AL" },
-	{ "IN1MUXR Input", "IN1A", "IN1AR" },
-	{ "IN1MUXL Input", "IN1B", "IN1BL" },
-	{ "IN1MUXR Input", "IN1B", "IN1BR" },
+	{ "IN1L Mux", "A", "IN1AL" },
+	{ "IN1R Mux", "A", "IN1AR" },
+	{ "IN1L Mux", "B", "IN1BL" },
+	{ "IN1R Mux", "B", "IN1BR" },
 
-	{ "IN2MUX Input", "IN2A", "IN2A" },
-	{ "IN2MUX Input", "IN2B", "IN2B" },
+	{ "IN2 Mux", "A", "IN2A" },
+	{ "IN2 Mux", "B", "IN2B" },
 
 	{ "IN1L PGA", NULL, "IN1MUXL Input" },
 	{ "IN1R PGA", NULL, "IN1MUXR Input" },
