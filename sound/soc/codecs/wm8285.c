@@ -38,6 +38,18 @@
 #define WM8285_DEFAULT_FRAGMENTS       1
 #define WM8285_DEFAULT_FRAGMENT_SIZE   4096
 
+#define WM8285_FRF_COEFFICIENT_LEN 4
+
+static int wm8285_frf_bytes_put(struct snd_kcontrol *kcontrol,
+		      struct snd_ctl_elem_value *ucontrol);
+
+#define WM8285_FRF_BYTES(xname, xbase, xregs)			\
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname,	\
+	.info = snd_soc_bytes_info, .get = snd_soc_bytes_get,	\
+	.put = wm8285_frf_bytes_put, .private_value =		\
+	((unsigned long)&(struct soc_bytes)			\
+		{.base = xbase, .num_regs = xregs }) }
+
 struct wm8285_compr {
 	struct mutex lock;
 
@@ -179,6 +191,38 @@ static int wm8285_virt_dsp_power_ev(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
+static int wm8285_frf_bytes_put(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_bytes *params = (void *)kcontrol->private_value;
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);
+	struct arizona *arizona = priv->arizona;
+	int ret, len;
+	void *data;
+
+	len = params->num_regs * codec->val_bytes;
+
+	data = kmemdup(ucontrol->value.bytes.data, len, GFP_KERNEL | GFP_DMA);
+	if (!data) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	mutex_lock(&arizona->reg_setting_lock);
+	regmap_write(arizona->regmap, 0x80, 0x3);
+
+	ret = regmap_raw_write(codec->control_data, params->base,
+			       data, len);
+
+	regmap_write(arizona->regmap, 0x80, 0x0);
+	mutex_unlock(&arizona->reg_setting_lock);
+
+out:
+	kfree(data);
+	return ret;
+}
+
 static DECLARE_TLV_DB_SCALE(ana_tlv, 0, 100, 0);
 static DECLARE_TLV_DB_SCALE(eq_tlv, -1200, 100, 0);
 static DECLARE_TLV_DB_SCALE(digital_tlv, -6400, 50, 0);
@@ -318,6 +362,31 @@ SND_SOC_BYTES("RXANCL Coefficients", ARIZONA_FCL_COEFF_START,
 SND_SOC_BYTES("RXANCR Config", WM8285_FCR_FILTER_CONTROL, 1),
 SND_SOC_BYTES("RXANCR Coefficients", WM8285_FCR_COEFF_START,
 	      WM8285_FCR_COEFF_END - WM8285_FCR_COEFF_START + 1),
+
+WM8285_FRF_BYTES("FRF COEFF 1L", WM8285_FRF_COEFFICIENT_1L_1,
+				 WM8285_FRF_COEFFICIENT_LEN),
+WM8285_FRF_BYTES("FRF COEFF 1R", WM8285_FRF_COEFFICIENT_1R_1,
+				 WM8285_FRF_COEFFICIENT_LEN),
+WM8285_FRF_BYTES("FRF COEFF 2L", WM8285_FRF_COEFFICIENT_2L_1,
+				 WM8285_FRF_COEFFICIENT_LEN),
+WM8285_FRF_BYTES("FRF COEFF 2R", WM8285_FRF_COEFFICIENT_2R_1,
+				 WM8285_FRF_COEFFICIENT_LEN),
+WM8285_FRF_BYTES("FRF COEFF 3L", WM8285_FRF_COEFFICIENT_3L_1,
+				 WM8285_FRF_COEFFICIENT_LEN),
+WM8285_FRF_BYTES("FRF COEFF 3R", WM8285_FRF_COEFFICIENT_3R_1,
+				 WM8285_FRF_COEFFICIENT_LEN),
+WM8285_FRF_BYTES("FRF COEFF 4L", WM8285_FRF_COEFFICIENT_4L_1,
+				 WM8285_FRF_COEFFICIENT_LEN),
+WM8285_FRF_BYTES("FRF COEFF 4R", WM8285_FRF_COEFFICIENT_4R_1,
+				 WM8285_FRF_COEFFICIENT_LEN),
+WM8285_FRF_BYTES("FRF COEFF 5L", WM8285_FRF_COEFFICIENT_5L_1,
+				 WM8285_FRF_COEFFICIENT_LEN),
+WM8285_FRF_BYTES("FRF COEFF 5R", WM8285_FRF_COEFFICIENT_5R_1,
+				 WM8285_FRF_COEFFICIENT_LEN),
+WM8285_FRF_BYTES("FRF COEFF 6L", WM8285_FRF_COEFFICIENT_6L_1,
+				 WM8285_FRF_COEFFICIENT_LEN),
+WM8285_FRF_BYTES("FRF COEFF 6R", WM8285_FRF_COEFFICIENT_6R_1,
+				 WM8285_FRF_COEFFICIENT_LEN),
 
 ARIZONA_MIXER_CONTROLS("EQ1", ARIZONA_EQ1MIX_INPUT_1_SOURCE),
 ARIZONA_MIXER_CONTROLS("EQ2", ARIZONA_EQ2MIX_INPUT_1_SOURCE),
