@@ -354,6 +354,8 @@ static const struct reg_default wm8285_reg_default[] = {
 	{ 0x000004A0, 0x3280 }, /* R1184  - HP1 Short Circuit Ctrl */
 	{ 0x000004A1, 0x3200 }, /* R1185  - HP2 Short Circuit Ctrl */
 	{ 0x000004A2, 0x3200 }, /* R1186  - HP3 Short Circuit Ctrl */
+	{ 0x000004A8, 0x7020 }, /* R1192  - HP Test Ctrl 5 */
+	{ 0x000004A9, 0x7020 }, /* R1193  - HP Test Ctrl 6 */
 	{ 0x000004b5, 0x0000 },
 	{ 0x000004b6, 0x8080 },
 	{ 0x000004dc, 0x6000 }, /* R1244 (0x4DC) - DAC comp 1 */
@@ -1727,6 +1729,8 @@ static bool wm8285_16bit_readable_register(struct device *dev, unsigned int reg)
 	case ARIZONA_HP1_SHORT_CIRCUIT_CTRL:
 	case ARIZONA_HP2_SHORT_CIRCUIT_CTRL:
 	case ARIZONA_HP3_SHORT_CIRCUIT_CTRL:
+	case ARIZONA_HP_TEST_CTRL_5:
+	case ARIZONA_HP_TEST_CTRL_6:
 	case ARIZONA_SPK_CTRL_3:
 	case ARIZONA_AIF1_BCLK_CTRL:
 	case ARIZONA_AIF1_TX_PIN_CTRL:

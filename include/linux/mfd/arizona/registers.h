@@ -290,6 +290,8 @@
 #define ARIZONA_HP2_SHORT_CIRCUIT_CTRL           0x4A1
 #define ARIZONA_HP3_SHORT_CIRCUIT_CTRL           0x4A2
 #define ARIZONA_HP_TEST_CTRL_1                   0x4A4
+#define ARIZONA_HP_TEST_CTRL_5                   0x4A8
+#define ARIZONA_HP_TEST_CTRL_6                   0x4A9
 #define ARIZONA_SPK_CTRL_2                       0x4B5
 #define ARIZONA_SPK_CTRL_3                       0x4B6
 #define ARIZONA_DAC_COMP_1                       0x4DC
@@ -5103,6 +5105,94 @@
 #define ARIZONA_HP1_TST_CAP_SEL_MASK             0x0003  /* HP1_TST_CAP_SEL - [1:0] */
 #define ARIZONA_HP1_TST_CAP_SEL_SHIFT                 0  /* HP1_TST_CAP_SEL - [1:0] */
 #define ARIZONA_HP1_TST_CAP_SEL_WIDTH                 2  /* HP1_TST_CAP_SEL - [1:0] */
+
+/*
+ * R539 (0x4A8) - HP_Test_Ctrl_5
+ */
+#define ARIZONA_HP1L_TST_CINT                                 0x4000  /* HP1L_TST_CINT */
+#define ARIZONA_HP1L_TST_CINT_MASK                            0x4000  /* HP1L_TST_CINT */
+#define ARIZONA_HP1L_TST_CINT_SHIFT                               14  /* HP1L_TST_CINT */
+#define ARIZONA_HP1L_TST_CINT_WIDTH                                1  /* HP1L_TST_CINT */
+#define ARIZONA_HP1L_TST_GBW                                  0x3000  /* HP1L_TST_GBW - [13:12] */
+#define ARIZONA_HP1L_TST_GBW_MASK                             0x3000  /* HP1L_TST_GBW - [13:12] */
+#define ARIZONA_HP1L_TST_GBW_SHIFT                                12  /* HP1L_TST_GBW - [13:12] */
+#define ARIZONA_HP1L_TST_GBW_WIDTH                                 2  /* HP1L_TST_GBW - [13:12] */
+#define ARIZONA_HP1L_TST_PGAS                                 0x0800  /* HP1L_TST_PGAS */
+#define ARIZONA_HP1L_TST_PGAS_MASK                            0x0800  /* HP1L_TST_PGAS */
+#define ARIZONA_HP1L_TST_PGAS_SHIFT                               11  /* HP1L_TST_PGAS */
+#define ARIZONA_HP1L_TST_PGAS_WIDTH                                1  /* HP1L_TST_PGAS */
+#define ARIZONA_HP1L_TST_DUMP                                 0x0400  /* HP1L_TST_DUMP */
+#define ARIZONA_HP1L_TST_DUMP_MASK                            0x0400  /* HP1L_TST_DUMP */
+#define ARIZONA_HP1L_TST_DUMP_SHIFT                               10  /* HP1L_TST_DUMP */
+#define ARIZONA_HP1L_TST_DUMP_WIDTH                                1  /* HP1L_TST_DUMP */
+#define ARIZONA_HP1L_TST_RST                                  0x0200  /* HP1L_TST_RST */
+#define ARIZONA_HP1L_TST_RST_MASK                             0x0200  /* HP1L_TST_RST */
+#define ARIZONA_HP1L_TST_RST_SHIFT                                 9  /* HP1L_TST_RST */
+#define ARIZONA_HP1L_TST_RST_WIDTH                                 1  /* HP1L_TST_RST */
+#define ARIZONA_HP1L_ONEFLT                                   0x0100  /* HP1L_ONEFLT */
+#define ARIZONA_HP1L_ONEFLT_MASK                              0x0100  /* HP1L_ONEFLT */
+#define ARIZONA_HP1L_ONEFLT_SHIFT                                  8  /* HP1L_ONEFLT */
+#define ARIZONA_HP1L_ONEFLT_WIDTH                                  1  /* HP1L_ONEFLT */
+#define ARIZONA_HP1L_TST_THDOFF                               0x00C0  /* HP1L_TST_THDOFF - [7:6] */
+#define ARIZONA_HP1L_TST_THDOFF_MASK                          0x00C0  /* HP1L_TST_THDOFF - [7:6] */
+#define ARIZONA_HP1L_TST_THDOFF_SHIFT                              6  /* HP1L_TST_THDOFF - [7:6] */
+#define ARIZONA_HP1L_TST_THDOFF_WIDTH                              2  /* HP1L_TST_THDOFF - [7:6] */
+#define ARIZONA_HP1L_CTRL_IOUT                                0x0030  /* HP1L_CTRL_IOUT - [5:4] */
+#define ARIZONA_HP1L_CTRL_IOUT_MASK                           0x0030  /* HP1L_CTRL_IOUT - [5:4] */
+#define ARIZONA_HP1L_CTRL_IOUT_SHIFT                               4  /* HP1L_CTRL_IOUT - [5:4] */
+#define ARIZONA_HP1L_CTRL_IOUT_WIDTH                               2  /* HP1L_CTRL_IOUT - [5:4] */
+#define ARIZONA_HP1L_TST_ILG                                  0x0008  /* HP1L_TST_ILG */
+#define ARIZONA_HP1L_TST_ILG_MASK                             0x0008  /* HP1L_TST_ILG */
+#define ARIZONA_HP1L_TST_ILG_SHIFT                                 3  /* HP1L_TST_ILG */
+#define ARIZONA_HP1L_TST_ILG_WIDTH                                 1  /* HP1L_TST_ILG */
+#define ARIZONA_HP1L_TST_IBIAS                                0x0003  /* HP1L_TST_IBIAS - [1:0] */
+#define ARIZONA_HP1L_TST_IBIAS_MASK                           0x0003  /* HP1L_TST_IBIAS - [1:0] */
+#define ARIZONA_HP1L_TST_IBIAS_SHIFT                               0  /* HP1L_TST_IBIAS - [1:0] */
+#define ARIZONA_HP1L_TST_IBIAS_WIDTH                               2  /* HP1L_TST_IBIAS - [1:0] */
+
+/*
+ * R540 (0x4A9) - HP_Test_Ctrl_6
+ */
+#define ARIZONA_HP1R_TST_CINT                                 0x4000  /* HP1R_TST_CINT */
+#define ARIZONA_HP1R_TST_CINT_MASK                            0x4000  /* HP1R_TST_CINT */
+#define ARIZONA_HP1R_TST_CINT_SHIFT                               14  /* HP1R_TST_CINT */
+#define ARIZONA_HP1R_TST_CINT_WIDTH                                1  /* HP1R_TST_CINT */
+#define ARIZONA_HP1R_TST_GBW                                  0x3000  /* HP1R_TST_GBW - [13:12] */
+#define ARIZONA_HP1R_TST_GBW_MASK                             0x3000  /* HP1R_TST_GBW - [13:12] */
+#define ARIZONA_HP1R_TST_GBW_SHIFT                                12  /* HP1R_TST_GBW - [13:12] */
+#define ARIZONA_HP1R_TST_GBW_WIDTH                                 2  /* HP1R_TST_GBW - [13:12] */
+#define ARIZONA_HP1R_TST_PGAS                                 0x0800  /* HP1R_TST_PGAS */
+#define ARIZONA_HP1R_TST_PGAS_MASK                            0x0800  /* HP1R_TST_PGAS */
+#define ARIZONA_HP1R_TST_PGAS_SHIFT                               11  /* HP1R_TST_PGAS */
+#define ARIZONA_HP1R_TST_PGAS_WIDTH                                1  /* HP1R_TST_PGAS */
+#define ARIZONA_HP1R_TST_DUMP                                 0x0400  /* HP1R_TST_DUMP */
+#define ARIZONA_HP1R_TST_DUMP_MASK                            0x0400  /* HP1R_TST_DUMP */
+#define ARIZONA_HP1R_TST_DUMP_SHIFT                               10  /* HP1R_TST_DUMP */
+#define ARIZONA_HP1R_TST_DUMP_WIDTH                                1  /* HP1R_TST_DUMP */
+#define ARIZONA_HP1R_TST_RST                                  0x0200  /* HP1R_TST_RST */
+#define ARIZONA_HP1R_TST_RST_MASK                             0x0200  /* HP1R_TST_RST */
+#define ARIZONA_HP1R_TST_RST_SHIFT                                 9  /* HP1R_TST_RST */
+#define ARIZONA_HP1R_TST_RST_WIDTH                                 1  /* HP1R_TST_RST */
+#define ARIZONA_HP1R_ONEFLT                                   0x0100  /* HP1R_ONEFLT */
+#define ARIZONA_HP1R_ONEFLT_MASK                              0x0100  /* HP1R_ONEFLT */
+#define ARIZONA_HP1R_ONEFLT_SHIFT                                  8  /* HP1R_ONEFLT */
+#define ARIZONA_HP1R_ONEFLT_WIDTH                                  1  /* HP1R_ONEFLT */
+#define ARIZONA_HP1R_TST_THDOFF                               0x00C0  /* HP1R_TST_THDOFF - [7:6] */
+#define ARIZONA_HP1R_TST_THDOFF_MASK                          0x00C0  /* HP1R_TST_THDOFF - [7:6] */
+#define ARIZONA_HP1R_TST_THDOFF_SHIFT                              6  /* HP1R_TST_THDOFF - [7:6] */
+#define ARIZONA_HP1R_TST_THDOFF_WIDTH                              2  /* HP1R_TST_THDOFF - [7:6] */
+#define ARIZONA_HP1R_CTRL_IOUT                                0x0030  /* HP1R_CTRL_IOUT - [5:4] */
+#define ARIZONA_HP1R_CTRL_IOUT_MASK                           0x0030  /* HP1R_CTRL_IOUT - [5:4] */
+#define ARIZONA_HP1R_CTRL_IOUT_SHIFT                               4  /* HP1R_CTRL_IOUT - [5:4] */
+#define ARIZONA_HP1R_CTRL_IOUT_WIDTH                               2  /* HP1R_CTRL_IOUT - [5:4] */
+#define ARIZONA_HP1R_TST_ILG                                  0x0008  /* HP1R_TST_ILG */
+#define ARIZONA_HP1R_TST_ILG_MASK                             0x0008  /* HP1R_TST_ILG */
+#define ARIZONA_HP1R_TST_ILG_SHIFT                                 3  /* HP1R_TST_ILG */
+#define ARIZONA_HP1R_TST_ILG_WIDTH                                 1  /* HP1R_TST_ILG */
+#define ARIZONA_HP1R_TST_IBIAS                                0x0003  /* HP1R_TST_IBIAS - [1:0] */
+#define ARIZONA_HP1R_TST_IBIAS_MASK                           0x0003  /* HP1R_TST_IBIAS - [1:0] */
+#define ARIZONA_HP1R_TST_IBIAS_SHIFT                               0  /* HP1R_TST_IBIAS - [1:0] */
+#define ARIZONA_HP1R_TST_IBIAS_WIDTH                               2  /* HP1R_TST_IBIAS - [1:0] */
 
 /*
  * R1244 (0x4DC) - DAC comp 1
