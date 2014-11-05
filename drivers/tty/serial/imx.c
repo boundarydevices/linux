@@ -921,13 +921,13 @@ static void dma_rx_work(struct work_struct *w)
 
 	if (sport->rx_buf.last_completed_idx < sport->rx_buf.cur_idx) {
 		dma_rx_push_data(sport, tty, sport->rx_buf.last_completed_idx + 1,
-					sport->rx_buf.cur_idx + 1);
+					sport->rx_buf.cur_idx);
 	} else if (sport->rx_buf.last_completed_idx == (IMX_RXBD_NUM - 1)) {
-		dma_rx_push_data(sport, tty, 0, sport->rx_buf.cur_idx + 1);
+		dma_rx_push_data(sport, tty, 0, sport->rx_buf.cur_idx);
 	} else {
 		dma_rx_push_data(sport, tty, sport->rx_buf.last_completed_idx + 1,
 					IMX_RXBD_NUM);
-		dma_rx_push_data(sport, tty, 0, sport->rx_buf.cur_idx + 1);
+		dma_rx_push_data(sport, tty, 0, sport->rx_buf.cur_idx);
 	}
 }
 
@@ -975,17 +975,20 @@ static void dma_rx_callback(void *data)
 		writel(USR2_IDLE, sport->port.membase + USR2);
 	}
 
-	if (count > 0) {
-		sport->rx_buf.buf_info[sport->rx_buf.cur_idx].filled = true;
-		sport->rx_buf.buf_info[sport->rx_buf.cur_idx].rx_bytes = count;
-		sport->rx_buf.cur_idx++;
-		sport->rx_buf.cur_idx %= IMX_RXBD_NUM;
-		dev_dbg(sport->port.dev, "We get %d bytes.\n", count);
+	sport->rx_buf.buf_info[sport->rx_buf.cur_idx].filled = true;
+	sport->rx_buf.buf_info[sport->rx_buf.cur_idx].rx_bytes = count;
+	sport->rx_buf.cur_idx++;
+	sport->rx_buf.cur_idx %= IMX_RXBD_NUM;
+	dev_dbg(sport->port.dev, "We get %d bytes.\n", count);
 
-		if (sport->rx_buf.cur_idx == sport->rx_buf.last_completed_idx)
-			dev_err(sport->port.dev, "overwrite!\n");
+	if (sport->rx_buf.cur_idx == sport->rx_buf.last_completed_idx)
+		dev_err(sport->port.dev, "overwrite!\n");
 
+	if (count) {
 		schedule_work(&sport->tsk_dma_rx);
+	} else {
+		sport->rx_buf.last_completed_idx++;
+		sport->rx_buf.last_completed_idx %= IMX_RXBD_NUM;
 	}
 }
 
@@ -998,7 +1001,7 @@ static int start_rx_dma(struct imx_port *sport)
 	sport->rx_buf.period_len = RX_BUF_SIZE;
 	sport->rx_buf.buf_len = IMX_RXBD_NUM * RX_BUF_SIZE;
 	sport->rx_buf.cur_idx = 0;
-	sport->rx_buf.last_completed_idx = 0;
+	sport->rx_buf.last_completed_idx = -1;
 	desc = dmaengine_prep_dma_cyclic(chan, sport->rx_buf.dmaaddr,
 		sport->rx_buf.buf_len, sport->rx_buf.period_len,
 		DMA_DEV_TO_MEM, DMA_PREP_INTERRUPT);
