@@ -291,6 +291,8 @@ struct mmc_host {
 #define MMC_CAP2_HS400_1_2V_DDR    (1 << 17)       /* Can support HS400 1.2V */
 #define MMC_CAP2_HS400         (MMC_CAP2_HS400_1_8V_DDR | \
 								MMC_CAP2_HS400_1_2V_DDR)
+#define MMC_CAP2_HSX00_1_2V    (MMC_CAP2_HS200_1_2V_SDR | \
+								MMC_CAP2_HS400_1_2V_DDR)
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 

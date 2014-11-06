@@ -1130,6 +1130,9 @@ static u16 sdhci_get_preset_value(struct sdhci_host *host)
 	case SDHCI_CTRL_UHS_DDR50:
 		preset = sdhci_readw(host, SDHCI_PRESET_FOR_DDR50);
 		break;
+	case SDHCI_CTRL_HS400:
+		preset = sdhci_readw(host, SDHCI_PRESET_FOR_HS400);
+		break;
 	default:
 		pr_warn("%s: Invalid UHS-I mode selected\n",
 			mmc_hostname(host->mmc));
@@ -1512,7 +1515,8 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 		u16 clk, ctrl_2;
 
 		/* In case of UHS-I modes, set High Speed Enable */
-		if ((ios->timing == MMC_TIMING_MMC_HS200) ||
+		if ((ios->timing == MMC_TIMING_MMC_HS400) ||
+			(ios->timing == MMC_TIMING_MMC_HS200) ||
 		    (ios->timing == MMC_TIMING_UHS_SDR50) ||
 		    (ios->timing == MMC_TIMING_UHS_SDR104) ||
 		    (ios->timing == MMC_TIMING_UHS_DDR50) ||
@@ -1575,6 +1579,8 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 				ctrl_2 |= SDHCI_CTRL_UHS_SDR50;
 			else if (ios->timing == MMC_TIMING_UHS_DDR50)
 				ctrl_2 |= SDHCI_CTRL_UHS_DDR50;
+			else if (ios->timing == MMC_TIMING_MMC_HS400)
+				ctrl_2 |= SDHCI_CTRL_HS400;
 			sdhci_writew(host, ctrl_2, SDHCI_HOST_CONTROL2);
 		}
 
@@ -1860,6 +1866,18 @@ static int sdhci_card_busy(struct mmc_host *mmc)
 	sdhci_runtime_pm_put(host);
 
 	return !(present_state & SDHCI_DATA_LVL_MASK);
+}
+
+static int sdhci_prepare_hs400_tuning(struct mmc_host *mmc, struct mmc_ios *ios)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+	unsigned long flags;
+
+	spin_lock_irqsave(&host->lock, flags);
+	host->flags |= SDHCI_HS400_TUNING;
+	spin_unlock_irqrestore(&host->lock, flags);
+
+	return 0;
 }
 
 static int sdhci_execute_tuning(struct mmc_host *mmc, u32 opcode)
@@ -2196,6 +2214,7 @@ static const struct mmc_host_ops sdhci_ops = {
 	.hw_reset	= sdhci_hw_reset,
 	.enable_sdio_irq = sdhci_enable_sdio_irq,
 	.start_signal_voltage_switch	= sdhci_start_signal_voltage_switch,
+	.prepare_hs400_tuning       = sdhci_prepare_hs400_tuning,
 	.execute_tuning			= sdhci_execute_tuning,
 	.card_event			= sdhci_card_event,
 	.card_busy	= sdhci_card_busy,
@@ -3098,8 +3117,8 @@ int sdhci_add_host(struct sdhci_host *host)
 	}
 
 	if (host->quirks2 & SDHCI_QUIRK2_NO_1_8_V)
-		caps[1] &= ~(SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_SDR50 |
-		       SDHCI_SUPPORT_DDR50);
+		caps[1] &= ~(SDHCI_SUPPORT_HS400 | SDHCI_SUPPORT_SDR104 |
+				SDHCI_SUPPORT_SDR50 | SDHCI_SUPPORT_DDR50);
 
 	/* Any UHS-I mode in caps implies SDR12 and SDR25 support. */
 	if (caps[1] & (SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_SDR50 |
@@ -3116,6 +3135,16 @@ int sdhci_add_host(struct sdhci_host *host)
 			mmc->caps2 |= MMC_CAP2_HS200;
 	} else if (caps[1] & SDHCI_SUPPORT_SDR50)
 		mmc->caps |= MMC_CAP_UHS_SDR50;
+
+	if (host->quirks2 & SDHCI_QUIRK2_CAPS_BIT63_FOR_HS400 &&
+		(caps[1] & SDHCI_SUPPORT_HS400))
+		mmc->caps2 |= MMC_CAP2_HS400;
+
+	if ((mmc->caps2 & MMC_CAP2_HSX00_1_2V) &&
+		(IS_ERR_OR_NULL(host->vqmmc) ||
+		!regulator_is_supported_voltage(host->vqmmc, 1100000,
+							1300000)))
+		mmc->caps2 &= ~MMC_CAP2_HSX00_1_2V;
 
 	if (caps[1] & SDHCI_SUPPORT_DDR50)
 		mmc->caps |= MMC_CAP_UHS_DDR50;
