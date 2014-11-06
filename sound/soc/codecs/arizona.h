@@ -196,6 +196,14 @@ extern int arizona_mixer_values[ARIZONA_NUM_MIXER_INPUTS];
 			snd_soc_get_value_enum_double,        \
 			arizona_put_sample_rate_enum)
 
+#define ARIZONA_EQ_CONTROL(xname, xbase) \
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname,	   \
+	.info = snd_soc_bytes_info, .get = snd_soc_bytes_get,      \
+	.put = arizona_eq_coeff_put, .private_value =		   \
+	((unsigned long)&(struct soc_bytes)			   \
+		{.base = xbase, .num_regs = 20, \
+		 .mask = ~ARIZONA_EQ1_B1_MODE }) }
+
 #define ARIZONA_RATE_ENUM_SIZE 4
 #define ARIZONA_SYNC_RATE_ENUM_SIZE 3
 #define ARIZONA_SAMPLE_RATE_ENUM_SIZE 14
@@ -250,6 +258,9 @@ extern int arizona_anc_ev(struct snd_soc_dapm_widget *w,
 
 extern int arizona_put_sample_rate_enum(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol);
+
+extern int arizona_eq_coeff_put(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol);
 
 extern int arizona_set_sysclk(struct snd_soc_codec *codec, int clk_id,
 			      int source, unsigned int freq, int dir);
