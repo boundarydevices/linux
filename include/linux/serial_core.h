@@ -126,6 +126,8 @@ struct uart_port {
 	void			(*pm)(struct uart_port *, unsigned int state,
 				      unsigned int old);
 	void			(*handle_break)(struct uart_port *);
+	int			(*rs485_config)(struct uart_port *,
+						struct serial_rs485 *rs485);
 	unsigned int		irq;			/* irq number */
 	unsigned long		irqflags;		/* irq flags  */
 	unsigned int		uartclk;		/* base uart clock */
@@ -199,6 +201,7 @@ struct uart_port {
 	unsigned char		suspended;
 	unsigned char		irq_wake;
 	unsigned char		unused[2];
+	struct serial_rs485     rs485;
 	void			*private_data;		/* generic platform data pointer */
 };
 
