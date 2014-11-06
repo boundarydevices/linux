@@ -20,10 +20,19 @@
 
 #define CS47L24_NUM_ISR 5
 
+static const struct reg_default cs47l24_reva_patch[] = {
+	{ 0x80,  0x3 },
+	{ 0x27C, 0x0010 },
+	{ 0x221, 0x0070 },
+	{ 0x80,  0x0 },
+};
+
 /* We use a function so we can use ARRAY_SIZE() */
 int cs47l24_patch(struct arizona *arizona)
 {
-	return 0;
+	return regmap_register_patch(arizona->regmap,
+				     cs47l24_reva_patch,
+				     ARRAY_SIZE(cs47l24_reva_patch));
 }
 EXPORT_SYMBOL_GPL(cs47l24_patch);
 
