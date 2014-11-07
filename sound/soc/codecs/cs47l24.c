@@ -100,7 +100,6 @@ static int cs47l24_virt_dsp_power_ev(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
-static DECLARE_TLV_DB_SCALE(ana_tlv, 0, 100, 0);
 static DECLARE_TLV_DB_SCALE(eq_tlv, -1200, 100, 0);
 static DECLARE_TLV_DB_SCALE(digital_tlv, -6400, 50, 0);
 static DECLARE_TLV_DB_SCALE(noise_tlv, 0, 600, 0);
