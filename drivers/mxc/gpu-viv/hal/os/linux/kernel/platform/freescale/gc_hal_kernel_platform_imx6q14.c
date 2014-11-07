@@ -178,6 +178,10 @@ static int force_contiguous_lowmem_shrink(IN gckKERNEL Kernel)
 	return ret;
 }
 
+gckKERNEL
+_GetValidKernel(
+    gckGALDEVICE Device
+    );
 
 gceSTATUS
 _ShrinkMemory(
@@ -192,7 +196,7 @@ _ShrinkMemory(
 
     galDevice = platform_get_drvdata(pdev);
 
-    kernel = galDevice->kernels[gcvCORE_MAJOR];
+    kernel = _GetValidKernel(galDevice);
 
     if (kernel != gcvNULL)
     {
