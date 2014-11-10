@@ -101,10 +101,25 @@ config FSL_OTP
 	  you access to the secure memory pages however.  You will need to
 	  write your own secure code and reader for that.
 
+	  Note that default access is read-only. To enable writes, you
+	  also need to select FSL_OTP_RW
+
 	  To compile this driver as a module, choose M here: the module
 	  will be called fsl_otp.
 
 	  If unsure, it is safe to say Y.
+
+config FSL_OTP_RW
+	bool "Freescale On-Chip OTP Memory Write Access"
+	depends on FSL_OTP
+	default n
+	help
+	  If you say Y here, you will get write access to the One Time
+	  Programmable registers on certain Freescale i.MX processors.
+	  Note that improper writes to these registers may prevent your
+	  processor from booting.
+
+	  If unsure, say N
 
 config PRINTER
 	tristate "Parallel printer support"
