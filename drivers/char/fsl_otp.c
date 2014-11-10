@@ -68,6 +68,12 @@
 #define BM_OUT_STATUS_LOCKED		(1 << 11)
 #define BM_OUT_STATUS_DED_ULP		(1 << 10)
 
+#ifdef CONFIG_FSL_OTP_RW
+#define SYSFS_MODE 0600
+#else
+#define SYSFS_MODE 0400
+#endif
+
 #define HW_OCOTP_CUST_N(n)	(0x00000400 + (n) * 0x10)
 #define BF(value, field)	(((value) << BP_##field) & BM_##field)
 
@@ -689,7 +695,7 @@ static int fsl_otp_probe(struct platform_device *pdev)
 	for (i = 0; i < num; i++) {
 		sysfs_attr_init(&otp_kattr[i].attr);
 		otp_kattr[i].attr.name = desc[i];
-		otp_kattr[i].attr.mode = 0600;
+		otp_kattr[i].attr.mode = SYSFS_MODE;
 		otp_kattr[i].show = fsl_otp_show;
 		otp_kattr[i].store = fsl_otp_store;
 		attrs[i] = &otp_kattr[i].attr;
