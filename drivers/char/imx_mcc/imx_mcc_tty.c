@@ -17,10 +17,12 @@
 #include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/tty.h>
 #include <linux/tty_driver.h>
 #include <linux/tty_flip.h>
+#include <linux/mcc_config_linux.h>
 #include <linux/mcc_common.h>
 #include <linux/mcc_api.h>
 
@@ -81,7 +83,8 @@ static void mcctty_delay_work(struct work_struct *work)
 		pr_err("failed to create a9 mcc ep.\n");
 
 	while (1) {
-		ret = mcc_recv_copy(&mcc_endpoint_a9_pingpong, &pp_msg,
+		ret = mcc_recv(&mcc_endpoint_m4_pingpong,
+				&mcc_endpoint_a9_pingpong, &pp_msg,
 				sizeof(struct mcc_pp_msg),
 				&num_of_received_bytes, 0xffffffff);
 
@@ -138,13 +141,15 @@ static int mcctty_write(struct tty_struct *tty, const unsigned char *buf,
 		 * wait until the remote endpoint is created by
 		 * the other core
 		 */
-		ret = mcc_send(&mcc_endpoint_m4_pingpong, &pp_msg,
+		ret = mcc_send(&mcc_endpoint_a9_pingpong,
+				&mcc_endpoint_m4_pingpong, &pp_msg,
 				sizeof(struct mcc_pp_msg),
 				0xffffffff);
 
 		while (MCC_ERR_ENDPOINT == ret) {
 			pr_err("\n send err ret %d, re-send\n", ret);
-			ret = mcc_send(&mcc_endpoint_m4_pingpong, &pp_msg,
+			ret = mcc_send(&mcc_endpoint_a9_pingpong,
+					&mcc_endpoint_m4_pingpong, &pp_msg,
 					sizeof(struct mcc_pp_msg),
 					0xffffffff);
 			msleep(5000);
@@ -174,7 +179,7 @@ static const struct tty_operations imxmcctty_ops = {
 
 static struct tty_driver *mcctty_driver;
 
-static int __init imxmcctty_init(void)
+static int imx_mcc_tty_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct mcctty_port *cport = &mcc_tty_port;
@@ -227,7 +232,7 @@ error:
 	return ret;
 }
 
-static void imxmcctty_exit(void)
+static int imx_mcc_tty_remove(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct mcctty_port *cport = &mcc_tty_port;
@@ -246,7 +251,49 @@ static void imxmcctty_exit(void)
 	tty_unregister_driver(mcctty_driver);
 	tty_port_destroy(&cport->port);
 	put_tty_driver(mcctty_driver);
+
+	return ret;
+}
+
+static const struct of_device_id imx6sx_mcc_tty_ids[] = {
+	{ .compatible = "fsl,imx6sx-mcc-tty", },
+	{ /* sentinel */ }
+};
+
+static struct platform_driver imxmcctty_driver = {
+	.driver = {
+		.name = "imx6sx-mcc-tty",
+		.owner  = THIS_MODULE,
+		.of_match_table = imx6sx_mcc_tty_ids,
+		},
+	.probe = imx_mcc_tty_probe,
+	.remove = imx_mcc_tty_remove,
+};
+
+/*!
+ * Initialise the imxmcctty_driver.
+ *
+ * @return  The function always returns 0.
+ */
+
+static int __init imxmcctty_init(void)
+{
+	if (platform_driver_register(&imxmcctty_driver) != 0)
+		return -ENODEV;
+
+	printk(KERN_INFO "IMX MCC TTY driver module loaded\n");
+	return 0;
+}
+
+static void __exit imxmcctty_exit(void)
+{
+	/* Unregister the device structure */
+	platform_driver_unregister(&imxmcctty_driver);
 }
 
 module_init(imxmcctty_init);
 module_exit(imxmcctty_exit);
+
+MODULE_AUTHOR("Freescale Semiconductor, Inc.");
+MODULE_DESCRIPTION("MCC TTY driver");
+MODULE_LICENSE("GPL");

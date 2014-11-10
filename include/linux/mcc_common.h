@@ -1,7 +1,6 @@
 /*
  * Copyright (C) 2014 Freescale Semiconductor, Inc.
  * Freescale IMX Linux-specific MCC implementation.
- * MCC library header file
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,31 +18,8 @@
 #ifndef __MCC_COMMON__
 #define __MCC_COMMON__
 
-/* base address of shared memory */
-#define MCC_BASE_ADDRESS               (0xB0000000)
-
-/* size (in bytes) and number of receive buffers */
-#define MCC_ATTR_NUM_RECEIVE_BUFFERS   (10)
-#define MCC_ATTR_BUFFER_SIZE_IN_BYTES  (1024)
-
-/* maximum number of receive endpoints (application specific setting),
- * do not assign it to a value greater than 255 ! */
-#define MCC_ATTR_MAX_RECEIVE_ENDPOINTS (5)
-
-/* size of the signal queue */
-#define MCC_MAX_OUTSTANDING_SIGNALS    (10)
-
-/* number of cores */
-#define MCC_NUM_CORES                  (2)
-
-/* core number */
-#define MCC_CORE_NUMBER                (_psp_core_num())
-
-/* core number */
-#define MCC_NODE_NUMBER                (MCC_NODE_LINUX_NUMBER)
-
 #define MCC_INIT_STRING    "mccisrd"
-#define MCC_VERSION_STRING "001.002"
+#define MCC_VERSION_STRING "002.000"
 #define null ((void*)0)
 
 /*!
@@ -137,6 +113,9 @@ __packed
 struct mcc_receive_buffer {
     /*! \brief Pointer to the next receive buffer */
     struct mcc_receive_buffer *next;
+
+    /*! \brief Source endpoint */
+    MCC_ENDPOINT source;
 
     /*! \brief Length of data stored in this buffer */
     MCC_MEM_SIZE data_len;
@@ -304,6 +283,28 @@ extern MCC_BOOKEEPING_STRUCT * bookeeping_data;
 #define MCC_RESERVED_PORT_NUMBER        (0)
 #define MCC_MAX_RECEIVE_ENDPOINTS_COUNT (255)
 
+/*
+ * Errors
+ */
+#define MCC_SUCCESS         (0) /* function returned successfully */
+#define MCC_ERR_TIMEOUT     (1) /* blocking function timed out before completing */
+#define MCC_ERR_INVAL       (2) /* invalid input parameter */
+#define MCC_ERR_NOMEM       (3) /* out of shared memory for message transmission */
+#define MCC_ERR_ENDPOINT    (4) /* invalid endpoint / endpoint doesn't exist */
+#define MCC_ERR_SEMAPHORE   (5) /* semaphore handling error */
+#define MCC_ERR_DEV         (6) /* Device Open Error */
+#define MCC_ERR_INT         (7) /* Interrupt Error */
+#define MCC_ERR_SQ_FULL     (8) /* Signal queue is full */
+#define MCC_ERR_SQ_EMPTY    (9) /* Signal queue is empty */
+#define MCC_ERR_VERSION     (10) /* Incorrect MCC version used - compatibility issue */
+#define MCC_ERR_OSSYNC      (11) /* OS-dependent synchronization module issue */
+
+/*
+ * OS Selection
+ */
+#define MCC_LINUX         (1) /* Linux OS used */
+#define MCC_MQX           (2) /* MQX RTOS used */
+
 MCC_RECEIVE_LIST * mcc_get_endpoint_list(MCC_ENDPOINT endpoint);
 MCC_RECEIVE_BUFFER * mcc_dequeue_buffer(MCC_RECEIVE_LIST *list);
 void mcc_queue_buffer(MCC_RECEIVE_LIST *list, MCC_RECEIVE_BUFFER * r_buffer);
@@ -321,3 +322,4 @@ int mcc_dequeue_signal(MCC_CORE core, MCC_SIGNAL *signal);
 #endif
 
 #endif /* __MCC_COMMON__ */
+

@@ -107,10 +107,6 @@ EXTRA_CFLAGS += -Idrivers/staging/android
 OBJS += $(OS_KERNEL_DIR)/gc_hal_kernel_sync.o
 endif
 
-ifneq ($(CONFIG_ANDROID),)
-EXTRA_CFLAGS += -DANDROID
-endif
-
 ifeq ($(SECURITY), 1)
 OBJS += $(OS_KERNEL_DIR)/gc_hal_kernel_security_channel.o \
         $(HAL_KERNEL_DIR)/gc_hal_kernel_security.o

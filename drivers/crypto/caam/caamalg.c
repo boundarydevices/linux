@@ -87,6 +87,7 @@
 #else
 #define debug(format, arg...)
 #endif
+static struct list_head alg_list;
 
 /* Set DK bit in class 1 operation if shared */
 static inline void append_dec_op1(u32 *desc, u32 type)
@@ -473,24 +474,10 @@ static int aead_setkey(struct crypto_aead *aead,
 	static const u8 mdpadlen[] = { 16, 20, 32, 32, 64, 64 };
 	struct caam_ctx *ctx = crypto_aead_ctx(aead);
 	struct device *jrdev = ctx->jrdev;
-	struct rtattr *rta = (void *)key;
-	struct crypto_authenc_key_param *param;
-	unsigned int authkeylen;
-	unsigned int enckeylen;
+	struct crypto_authenc_keys keys;
 	int ret = 0;
 
-	param = RTA_DATA(rta);
-	enckeylen = be32_to_cpu(param->enckeylen);
-
-	key += RTA_ALIGN(rta->rta_len);
-	keylen -= RTA_ALIGN(rta->rta_len);
-
-	if (keylen < enckeylen)
-		goto badkey;
-
-	authkeylen = keylen - enckeylen;
-
-	if (keylen > CAAM_MAX_KEY_SIZE)
+	if (crypto_authenc_extractkeys(&keys, key, keylen) != 0)
 		goto badkey;
 
 	/* Pick class 2 key length from algorithm submask */
@@ -498,25 +485,29 @@ static int aead_setkey(struct crypto_aead *aead,
 				      OP_ALG_ALGSEL_SHIFT] * 2;
 	ctx->split_key_pad_len = ALIGN(ctx->split_key_len, 16);
 
+	if (ctx->split_key_pad_len + keys.enckeylen > CAAM_MAX_KEY_SIZE)
+		goto badkey;
+
 #ifdef DEBUG
 	printk(KERN_ERR "keylen %d enckeylen %d authkeylen %d\n",
-	       keylen, enckeylen, authkeylen);
+	       keys.authkeylen + keys.enckeylen, keys.enckeylen,
+	       keys.authkeylen);
 	printk(KERN_ERR "split_key_len %d split_key_pad_len %d\n",
 	       ctx->split_key_len, ctx->split_key_pad_len);
 	print_hex_dump(KERN_ERR, "key in @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, key, keylen, 1);
 #endif
 
-	ret = gen_split_aead_key(ctx, key, authkeylen);
+	ret = gen_split_aead_key(ctx, keys.authkey, keys.authkeylen);
 	if (ret) {
 		goto badkey;
 	}
 
 	/* postpend encryption key to auth split key */
-	memcpy(ctx->key + ctx->split_key_pad_len, key + authkeylen, enckeylen);
+	memcpy(ctx->key + ctx->split_key_pad_len, keys.enckey, keys.enckeylen);
 
 	ctx->key_dma = dma_map_single(jrdev, ctx->key, ctx->split_key_pad_len +
-				       enckeylen, DMA_TO_DEVICE);
+				      keys.enckeylen, DMA_TO_DEVICE);
 	if (dma_mapping_error(jrdev, ctx->key_dma)) {
 		dev_err(jrdev, "unable to map key i/o memory\n");
 		return -ENOMEM;
@@ -524,18 +515,18 @@ static int aead_setkey(struct crypto_aead *aead,
 #ifdef DEBUG
 	print_hex_dump(KERN_ERR, "ctx.key@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, ctx->key,
-		       ctx->split_key_pad_len + enckeylen, 1);
+		       ctx->split_key_pad_len + keys.enckeylen, 1);
 #endif
 	dma_sync_single_for_device(jrdev, ctx->key_dma,
-				   ctx->split_key_pad_len + enckeylen,
+				   ctx->split_key_pad_len + keys.enckeylen,
 				   DMA_TO_DEVICE);
 
-	ctx->enckeylen = enckeylen;
+	ctx->enckeylen = keys.enckeylen;
 
 	ret = aead_set_sh_desc(aead);
 	if (ret) {
 		dma_unmap_single(jrdev, ctx->key_dma, ctx->split_key_pad_len +
-				 enckeylen, DMA_TO_DEVICE);
+				 keys.enckeylen, DMA_TO_DEVICE);
 	}
 
 	return ret;
@@ -847,7 +838,7 @@ static void aead_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 		       ivsize, 1);
 	print_hex_dump(KERN_ERR, "dst    @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, sg_virt(req->dst),
-		       req->cryptlen, 1);
+		       req->cryptlen - ctx->authsize, 1);
 #endif
 
 	if (err) {
@@ -1001,12 +992,9 @@ static void init_aead_job(u32 *sh_desc, dma_addr_t ptr,
 				 (edesc->src_nents ? : 1);
 		in_options = LDST_SGF;
 	}
-	if (encrypt)
-		append_seq_in_ptr(desc, src_dma, req->assoclen + ivsize +
-				  req->cryptlen - authsize, in_options);
-	else
-		append_seq_in_ptr(desc, src_dma, req->assoclen + ivsize +
-				  req->cryptlen, in_options);
+
+	append_seq_in_ptr(desc, src_dma, req->assoclen + ivsize + req->cryptlen,
+			  in_options);
 
 	if (likely(req->src == req->dst)) {
 		if (all_contig) {
@@ -1027,7 +1015,8 @@ static void init_aead_job(u32 *sh_desc, dma_addr_t ptr,
 		}
 	}
 	if (encrypt)
-		append_seq_out_ptr(desc, dst_dma, req->cryptlen, out_options);
+		append_seq_out_ptr(desc, dst_dma, req->cryptlen + authsize,
+				   out_options);
 	else
 		append_seq_out_ptr(desc, dst_dma, req->cryptlen - authsize,
 				   out_options);
@@ -1077,8 +1066,8 @@ static void init_aead_giv_job(u32 *sh_desc, dma_addr_t ptr,
 		sec4_sg_index += edesc->assoc_nents + 1 + edesc->src_nents;
 		in_options = LDST_SGF;
 	}
-	append_seq_in_ptr(desc, src_dma, req->assoclen + ivsize +
-			  req->cryptlen - authsize, in_options);
+	append_seq_in_ptr(desc, src_dma, req->assoclen + ivsize + req->cryptlen,
+			  in_options);
 
 	if (contig & GIV_DST_CONTIG) {
 		dst_dma = edesc->iv_dma;
@@ -1095,7 +1084,8 @@ static void init_aead_giv_job(u32 *sh_desc, dma_addr_t ptr,
 		}
 	}
 
-	append_seq_out_ptr(desc, dst_dma, ivsize + req->cryptlen, out_options);
+	append_seq_out_ptr(desc, dst_dma, ivsize + req->cryptlen + authsize,
+			   out_options);
 }
 
 /*
@@ -1159,7 +1149,8 @@ static void init_ablkcipher_job(u32 *sh_desc, dma_addr_t ptr,
  * allocate and map the aead extended descriptor
  */
 static struct aead_edesc *aead_edesc_alloc(struct aead_request *req,
-					   int desc_bytes, bool *all_contig_ptr)
+					   int desc_bytes, bool *all_contig_ptr,
+					   bool encrypt)
 {
 	struct crypto_aead *aead = crypto_aead_reqtfm(req);
 	struct caam_ctx *ctx = crypto_aead_ctx(aead);
@@ -1174,12 +1165,22 @@ static struct aead_edesc *aead_edesc_alloc(struct aead_request *req,
 	bool assoc_chained = false, src_chained = false, dst_chained = false;
 	int ivsize = crypto_aead_ivsize(aead);
 	int sec4_sg_index, sec4_sg_len = 0, sec4_sg_bytes;
+	unsigned int authsize = ctx->authsize;
 
 	assoc_nents = sg_count(req->assoc, req->assoclen, &assoc_chained);
-	src_nents = sg_count(req->src, req->cryptlen, &src_chained);
 
-	if (unlikely(req->dst != req->src))
-		dst_nents = sg_count(req->dst, req->cryptlen, &dst_chained);
+	if (unlikely(req->dst != req->src)) {
+		src_nents = sg_count(req->src, req->cryptlen, &src_chained);
+		dst_nents = sg_count(req->dst,
+				     req->cryptlen +
+					(encrypt ? authsize : (-authsize)),
+				     &dst_chained);
+	} else {
+		src_nents = sg_count(req->src,
+				     req->cryptlen +
+					(encrypt ? authsize : 0),
+				     &src_chained);
+	}
 
 	sgc = dma_map_sg_chained(jrdev, req->assoc, assoc_nents ? : 1,
 				 DMA_BIDIRECTIONAL, assoc_chained);
@@ -1266,11 +1267,9 @@ static int aead_encrypt(struct aead_request *req)
 	u32 *desc;
 	int ret = 0;
 
-	req->cryptlen += ctx->authsize;
-
 	/* allocate extended descriptor */
 	edesc = aead_edesc_alloc(req, DESC_JOB_IO_LEN *
-				 CAAM_CMD_SZ, &all_contig);
+				 CAAM_CMD_SZ, &all_contig, true);
 	if (IS_ERR(edesc))
 		return PTR_ERR(edesc);
 
@@ -1307,7 +1306,7 @@ static int aead_decrypt(struct aead_request *req)
 
 	/* allocate extended descriptor */
 	edesc = aead_edesc_alloc(req, DESC_JOB_IO_LEN *
-				 CAAM_CMD_SZ, &all_contig);
+				 CAAM_CMD_SZ, &all_contig, false);
 	if (IS_ERR(edesc))
 		return PTR_ERR(edesc);
 
@@ -1364,7 +1363,8 @@ static struct aead_edesc *aead_giv_edesc_alloc(struct aead_givcrypt_request
 	src_nents = sg_count(req->src, req->cryptlen, &src_chained);
 
 	if (unlikely(req->dst != req->src))
-		dst_nents = sg_count(req->dst, req->cryptlen, &dst_chained);
+		dst_nents = sg_count(req->dst, req->cryptlen + ctx->authsize,
+				     &dst_chained);
 
 	sgc = dma_map_sg_chained(jrdev, req->assoc, assoc_nents ? : 1,
 				 DMA_BIDIRECTIONAL, assoc_chained);
@@ -1461,8 +1461,6 @@ static int aead_givencrypt(struct aead_givcrypt_request *areq)
 	u32 contig;
 	u32 *desc;
 	int ret = 0;
-
-	req->cryptlen += ctx->authsize;
 
 	/* allocate extended descriptor */
 	edesc = aead_giv_edesc_alloc(areq, DESC_JOB_IO_LEN *
@@ -2178,7 +2176,6 @@ static struct caam_alg_template driver_algs[] = {
 
 struct caam_crypto_alg {
 	struct list_head entry;
-	struct device *ctrldev;
 	int class1_alg_type;
 	int class2_alg_type;
 	int alg_op;
@@ -2191,14 +2188,12 @@ static int caam_cra_init(struct crypto_tfm *tfm)
 	struct caam_crypto_alg *caam_alg =
 		 container_of(alg, struct caam_crypto_alg, crypto_alg);
 	struct caam_ctx *ctx = crypto_tfm_ctx(tfm);
-	struct caam_drv_private *priv = dev_get_drvdata(caam_alg->ctrldev);
-	int tgt_jr = atomic_inc_return(&priv->tfm_count);
 
-	/*
-	 * distribute tfms across job rings to ensure in-order
-	 * crypto request processing per tfm
-	 */
-	ctx->jrdev = priv->jrdev[(tgt_jr / 2) % priv->total_jobrs];
+	ctx->jrdev = caam_jr_alloc();
+	if (IS_ERR(ctx->jrdev)) {
+		pr_err("Job Ring Device allocation for transform failed\n");
+		return PTR_ERR(ctx->jrdev);
+	}
 
 	/* copy descriptor header template value */
 	ctx->class1_alg_type = OP_TYPE_CLASS1_ALG | caam_alg->class1_alg_type;
@@ -2225,49 +2220,25 @@ static void caam_cra_exit(struct crypto_tfm *tfm)
 		dma_unmap_single(ctx->jrdev, ctx->sh_desc_givenc_dma,
 				 desc_bytes(ctx->sh_desc_givenc),
 				 DMA_TO_DEVICE);
+
+	caam_jr_free(ctx->jrdev);
 }
 
 static void __exit caam_algapi_exit(void)
 {
-
-	struct device_node *dev_node;
-	struct platform_device *pdev;
-	struct device *ctrldev;
-	struct caam_drv_private *priv;
 	struct caam_crypto_alg *t_alg, *n;
 
-	dev_node = of_find_compatible_node(NULL, NULL, "fsl,sec-v4.0");
-	if (!dev_node) {
-		dev_node = of_find_compatible_node(NULL, NULL, "fsl,sec4.0");
-		if (!dev_node)
-			return;
-	}
-
-	pdev = of_find_device_by_node(dev_node);
-	if (!pdev) {
-		of_node_put(dev_node);
+	if (!alg_list.next)
 		return;
-	}
 
-	ctrldev = &pdev->dev;
-	priv = dev_get_drvdata(ctrldev);
-
-	if (!priv->alg_list.next) {
-		of_node_put(dev_node);
-		return;
-	}
-
-	list_for_each_entry_safe(t_alg, n, &priv->alg_list, entry) {
+	list_for_each_entry_safe(t_alg, n, &alg_list, entry) {
 		crypto_unregister_alg(&t_alg->crypto_alg);
 		list_del(&t_alg->entry);
 		kfree(t_alg);
 	}
-
-	of_node_put(dev_node);
 }
 
-static struct caam_crypto_alg *caam_alg_alloc(struct device *ctrldev,
-					      struct caam_alg_template
+static struct caam_crypto_alg *caam_alg_alloc(struct caam_alg_template
 					      *template)
 {
 	struct caam_crypto_alg *t_alg;
@@ -2275,7 +2246,7 @@ static struct caam_crypto_alg *caam_alg_alloc(struct device *ctrldev,
 
 	t_alg = kzalloc(sizeof(struct caam_crypto_alg), GFP_KERNEL);
 	if (!t_alg) {
-		dev_err(ctrldev, "failed to allocate t_alg\n");
+		pr_err("failed to allocate t_alg\n");
 		return ERR_PTR(-ENOMEM);
 	}
 
@@ -2311,7 +2282,6 @@ static struct caam_crypto_alg *caam_alg_alloc(struct device *ctrldev,
 	t_alg->class1_alg_type = template->class1_alg_type;
 	t_alg->class2_alg_type = template->class2_alg_type;
 	t_alg->alg_op = template->alg_op;
-	t_alg->ctrldev = ctrldev;
 
 	return t_alg;
 }
@@ -2351,9 +2321,7 @@ static int __init caam_algapi_init(void)
 		return -ENODEV;
 	}
 
-	INIT_LIST_HEAD(&priv->alg_list);
-
-	atomic_set(&priv->tfm_count, -1);
+	INIT_LIST_HEAD(&alg_list);
 
 	/*
 	 * register crypto algorithms the device supports
@@ -2398,21 +2366,21 @@ authencesn:
 			if (!aes_inst)
 				continue;
 
-		t_alg = caam_alg_alloc(ctrldev, &driver_algs[i]);
+		t_alg = caam_alg_alloc(&driver_algs[i]);
 		if (IS_ERR(t_alg)) {
 			err = PTR_ERR(t_alg);
-			dev_warn(ctrldev, "%s alg allocation failed\n",
-				 driver_algs[i].driver_name);
+			pr_warn("%s alg allocation failed\n",
+				driver_algs[i].driver_name);
 			continue;
 		}
 
 		err = crypto_register_alg(&t_alg->crypto_alg);
 		if (err) {
-			dev_warn(ctrldev, "%s alg registration failed\n",
+			pr_warn("%s alg registration failed\n",
 				t_alg->crypto_alg.cra_driver_name);
 			kfree(t_alg);
 		} else {
-			list_add_tail(&t_alg->entry, &priv->alg_list);
+			list_add_tail(&t_alg->entry, &alg_list);
 			dev_info(ctrldev, "%s\n",
 				 t_alg->crypto_alg.cra_driver_name);
 
@@ -2435,9 +2403,8 @@ authencesn:
 		}
 	}
 
-	if (!list_empty(&priv->alg_list))
-		dev_info(ctrldev, "%s algorithms registered in /proc/crypto\n",
-			 (char *)of_get_property(dev_node, "compatible", NULL));
+	if (!list_empty(&alg_list))
+		pr_info("caam algorithms registered in /proc/crypto\n");
 
 	of_node_put(dev_node);
 	return err;

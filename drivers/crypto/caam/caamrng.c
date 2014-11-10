@@ -1,7 +1,7 @@
 /*
  * caam - Freescale FSL CAAM support for hw_random
  *
- * Copyright (C) 2011-2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2011-2014 Freescale Semiconductor, Inc.
  *
  * Based on caamalg.c crypto API driver.
  *
@@ -114,6 +114,10 @@ static void rng_done(struct device *jrdev, u32 *desc, u32 err, void *context)
 
 	atomic_set(&bd->empty, BUF_NOT_EMPTY);
 	complete(&bd->filled);
+
+	/* Buffer refilled, invalidate cache */
+	dma_sync_single_for_cpu(jrdev, bd->addr, RN_BUF_SIZE, DMA_FROM_DEVICE);
+
 #ifdef DEBUG
 	print_hex_dump(KERN_ERR, "rng refreshed buf@: ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, bd->buf, RN_BUF_SIZE, 1);
@@ -322,6 +326,7 @@ static struct hwrng caam_rng = {
 
 static void __exit caam_rng_exit(void)
 {
+	caam_jr_free(rng_ctx->jrdev);
 	hwrng_unregister(&caam_rng);
 }
 
@@ -329,7 +334,7 @@ static int __init caam_rng_init(void)
 {
 	struct device_node *dev_node;
 	struct platform_device *pdev;
-	struct device *ctrldev;
+	struct device *ctrldev, *dev;
 	struct caam_drv_private *priv;
 
 	dev_node = of_find_compatible_node(NULL, NULL, "fsl,sec-v4.0");
@@ -360,13 +365,19 @@ static int __init caam_rng_init(void)
 
 	rng_ctx = kmalloc(sizeof(struct caam_rng_ctx), GFP_KERNEL | GFP_DMA);
 
-	caam_init_rng(rng_ctx, priv->jrdev[0]);
+	dev = caam_jr_alloc();
+	if (IS_ERR(dev)) {
+		pr_err("Job Ring Device allocation for transform failed\n");
+		return PTR_ERR(dev);
+	}
+
+	caam_init_rng(rng_ctx, dev);
 
 #ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_RNG_TEST
 	self_test(&caam_rng);
 #endif
 
-	dev_info(priv->jrdev[0], "registering rng-caam\n");
+	dev_info(dev, "registering rng-caam\n");
 	return hwrng_register(&caam_rng);
 }
 

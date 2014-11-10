@@ -1,7 +1,6 @@
 /*
  * Copyright (C) 2014 Freescale Semiconductor, Inc.
  * Freescale IMX Linux-specific MCC implementation.
- * iMX6sx-specific MCC library functions.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,8 +19,12 @@
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/regmap.h>
+#include <linux/mcc_config_linux.h>
+#include <linux/mcc_common.h>
 #include <linux/mcc_imx6sx.h>
 #include <linux/mcc_linux.h>
+
+#include "mcc_config.h"
 
 /*!
  * \brief This function returns the core number
@@ -30,7 +33,25 @@
  */
 unsigned int _psp_core_num(void)
 {
+#if (MCC_OS_USED == MCC_MQX)
+    return 1;
+#elif (MCC_OS_USED == MCC_LINUX)
     return 0;
+#endif
+}
+
+/*!
+ * \brief This function returns the node number
+ *
+ * \return unsigned int
+ */
+unsigned int _psp_node_num(void)
+{
+#if (MCC_OS_USED == MCC_MQX)
+    return MCC_MQX_NODE_NUMBER ;
+#elif (MCC_OS_USED == MCC_LINUX)
+    return MCC_LINUX_NODE_NUMBER;
+#endif
 }
 
 /*
@@ -72,6 +93,13 @@ unsigned int mcc_get_mu_irq(void)
 	return val;
 }
 
+void mcc_enable_receive_irq(unsigned int enable)
+{
+	u32 val = enable ? BIT(27) : 0;
+
+	regmap_update_bits(imx_mu_reg, MU_ACR, BIT(27), val);
+}
+
 void mcc_send_via_mu_buffer(unsigned int index, unsigned int data)
 {
 	regmap_write(imx_mu_reg, index * 0x4 + MU_ATR0_OFFSET, data);
@@ -86,6 +114,8 @@ unsigned int mcc_handle_mu_receive_irq(void)
 {
 	u32 val;
 
+	/* disable receive irq until last message is handled */
+	mcc_enable_receive_irq(0);
 	regmap_read(imx_mu_reg, MU_ARR0_OFFSET, &val);
 
 	return val;

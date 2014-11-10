@@ -1308,9 +1308,14 @@
 				status = "disabled";
 			};
 
-			mccdemo: mccdemo{
-				compatible = "fsl,imx6sx-mcc-demo";
-				status = "okay";
+			mcctest: mcctest{
+				compatible = "fsl,imx6sx-mcc-test";
+				status = "disabled";
+			};
+
+			mcctty: mcctty{
+				compatible = "fsl,imx6sx-mcc-tty";
+				status = "disabled";
 			};
 		};
 

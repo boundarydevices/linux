@@ -1,7 +1,6 @@
 /*
  * Copyright (C) 2014 Freescale Semiconductor, Inc.
  * Freescale IMX Linux-specific MCC implementation.
- * The main MCC configuration file
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,13 +18,8 @@
 #ifndef __MCC_CONFIG__
 #define __MCC_CONFIG__
 
-/*
- * OS Selection
- */
-#define MCC_LINUX		(1) /* Linux OS used */
-#define MCC_MQX			(2) /* MQX RTOS used */
-#define MCC_NODE_LINUX_NUMBER	(0) /* Linux OS used */
-#define MCC_NODE_MQX_NUMBER	(0) /* MQX RTOS used */
+#include <linux/mcc_config_linux.h>
+#include <linux/mcc_common.h>
 
 /* used OS */
 #define MCC_OS_USED                    (MCC_LINUX)
