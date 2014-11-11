@@ -2792,6 +2792,29 @@
 #define ARIZONA_ASYNC_SAMPLE_RATE_2_STS_WIDTH         5  /* ASYNC_SAMPLE_RATE_2_STS - [4:0] */
 
 /*
+ * R109 (0x120) - DSP_Clock_1
+ */
+#define WM8285_DSP_CLK_FREQ_LEGACY                           0x0700  /* DSP_CLK_FREQ_LEGACY - [10:8] */
+#define WM8285_DSP_CLK_FREQ_LEGACY_MASK                      0x0700  /* DSP_CLK_FREQ_LEGACY - [10:8] */
+#define WM8285_DSP_CLK_FREQ_LEGACY_SHIFT                          8  /* DSP_CLK_FREQ_LEGACY - [10:8] */
+#define WM8285_DSP_CLK_FREQ_LEGACY_WIDTH                          3  /* DSP_CLK_FREQ_LEGACY - [10:8] */
+#define WM8285_DSP_CLK_ENA                                   0x0040  /* DSP_CLK_ENA */
+#define WM8285_DSP_CLK_ENA_MASK                              0x0040  /* DSP_CLK_ENA */
+#define WM8285_DSP_CLK_ENA_SHIFT                                  6  /* DSP_CLK_ENA */
+#define WM8285_DSP_CLK_ENA_WIDTH                                  1  /* DSP_CLK_ENA */
+#define WM8285_DSP_CLK_SRC                                   0x000F  /* DSP_CLK_SRC - [3:0] */
+#define WM8285_DSP_CLK_SRC_MASK                              0x000F  /* DSP_CLK_SRC - [3:0] */
+#define WM8285_DSP_CLK_SRC_SHIFT                                  0  /* DSP_CLK_SRC - [3:0] */
+#define WM8285_DSP_CLK_SRC_WIDTH                                  4  /* DSP_CLK_SRC - [3:0] */
+
+/*
+ * R110 (0x122) - DSP_Clock_2
+ */
+#define WM8285_DSP_CLK_FREQ_MASK                             0x03FF  /* DSP_CLK_FREQ - [9:0] */
+#define WM8285_DSP_CLK_FREQ_SHIFT                                 0  /* DSP_CLK_FREQ - [9:0] */
+#define WM8285_DSP_CLK_FREQ_WIDTH                                10  /* DSP_CLK_FREQ - [9:0] */
+
+/*
  * R329 (0x149) - Output system clock
  */
 #define ARIZONA_OPCLK_ENA                        0x8000  /* OPCLK_ENA */
