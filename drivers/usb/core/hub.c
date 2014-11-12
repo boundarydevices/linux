@@ -2192,6 +2192,12 @@ static int usb_enumerate_device_otg(struct usb_device *udev)
 		struct usb_otg_descriptor	*desc = NULL;
 		struct usb_bus			*bus = udev->bus;
 
+		/* Clear otg fsm hnp flags firstly */
+		if (bus->otg_fsm) {
+			bus->otg_fsm->b_hnp_enable = 0;
+			bus->otg_fsm->a_set_b_hnp_en = 0;
+		}
+
 		/* descriptor may appear anywhere in config */
 		if (__usb_get_extra_descriptor (udev->rawdescriptors[0],
 					le16_to_cpu(udev->config[0].desc.wTotalLength),
