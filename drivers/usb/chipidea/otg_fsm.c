@@ -228,6 +228,11 @@ static void ci_otg_add_timer(struct ci_hdrc *ci, enum ci_otg_fsm_timer_index t)
 	if (t >= NUM_CI_OTG_FSM_TIMERS)
 		return;
 
+	if (!timer) {
+		dev_warn(ci->dev, "Unused otg timer, index:%d\n", t);
+		return;
+	}
+
 	/*
 	 * Check if the timer is already in the active list,
 	 * if so update timer count
@@ -604,6 +609,7 @@ static void ci_otg_drv_vbus(struct otg_fsm *fsm, int on)
 
 		fsm->a_bus_drop = 1;
 		fsm->a_bus_req = 0;
+		fsm->b_conn = 0;
 	}
 }
 
@@ -679,7 +685,8 @@ static int ci_otg_start_gadget(struct otg_fsm *fsm, int on)
 	struct ci_hdrc	*ci = container_of(fsm, struct ci_hdrc, fsm);
 
 	mutex_unlock(&fsm->lock);
-	ci_gadget_connect(&ci->gadget, on);
+	if (ci->driver)
+		ci_gadget_connect(&ci->gadget, on);
 	mutex_lock(&fsm->lock);
 
 	return 0;

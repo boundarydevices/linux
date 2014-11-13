@@ -40,6 +40,7 @@
 #define MX6SX_USB_VBUS_WAKEUP_SOURCE_BVALID	MX6SX_USB_VBUS_WAKEUP_SOURCE(2)
 #define MX6SX_USB_VBUS_WAKEUP_SOURCE_SESS_END	MX6SX_USB_VBUS_WAKEUP_SOURCE(3)
 
+#define MX6_BM_UNBURST_SETTING		BIT(1)
 #define MX6_BM_OVER_CUR_DIS		BIT(7)
 #define MX6_BM_WAKEUP_ENABLE		BIT(10)
 #define MX6_BM_UTMI_ON_CLOCK		BIT(13)
@@ -161,6 +162,27 @@ static int usbmisc_imx53_init(struct imx_usbmisc_data *data)
 	return 0;
 }
 
+static void usbmisc_imx6_init(struct imx_usbmisc_data *data)
+{
+	unsigned long flags;
+	u32 val;
+
+	spin_lock_irqsave(&usbmisc->lock, flags);
+
+	if (data->disable_oc) {
+		val = readl(usbmisc->base + data->index * 4);
+		writel(val | MX6_BM_OVER_CUR_DIS,
+			usbmisc->base + data->index * 4);
+	}
+
+	/* SoC unburst setting */
+	val = readl(usbmisc->base + data->index * 4);
+	writel(val | MX6_BM_UNBURST_SETTING,
+		usbmisc->base + data->index * 4);
+
+	spin_unlock_irqrestore(&usbmisc->lock, flags);
+}
+
 static int usbmisc_imx6q_init(struct imx_usbmisc_data *data)
 {
 	unsigned long flags;
@@ -169,13 +191,7 @@ static int usbmisc_imx6q_init(struct imx_usbmisc_data *data)
 	if (data->index > 3)
 		return -EINVAL;
 
-	if (data->disable_oc) {
-		spin_lock_irqsave(&usbmisc->lock, flags);
-		val = readl(usbmisc->base + data->index * 4);
-		writel(val | MX6_BM_OVER_CUR_DIS,
-			usbmisc->base + data->index * 4);
-		spin_unlock_irqrestore(&usbmisc->lock, flags);
-	}
+	usbmisc_imx6_init(data);
 
 	/* For HSIC controller */
 	if (data->index == 2 || data->index == 3) {
@@ -212,13 +228,7 @@ static int usbmisc_imx6sx_init(struct imx_usbmisc_data *data)
 	if (data->index > 2)
 		return -EINVAL;
 
-	if (data->disable_oc) {
-		spin_lock_irqsave(&usbmisc->lock, flags);
-		val = readl(usbmisc->base + data->index * 4);
-		writel(val | MX6_BM_OVER_CUR_DIS,
-			usbmisc->base + data->index * 4);
-		spin_unlock_irqrestore(&usbmisc->lock, flags);
-	}
+	usbmisc_imx6_init(data);
 
 	/* For HSIC controller */
 	if (data->index == 2) {

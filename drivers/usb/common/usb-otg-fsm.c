@@ -79,14 +79,14 @@ void otg_leave_state(struct otg_fsm *fsm, enum usb_otg_state old_state)
 		fsm->b_srp_done = 0;
 		break;
 	case OTG_STATE_B_PERIPHERAL:
+		if (fsm->otg->gadget)
+			fsm->otg->gadget->host_request_flag = 0;
 		break;
 	case OTG_STATE_B_WAIT_ACON:
 		otg_del_timer(fsm, B_ASE0_BRST);
 		fsm->b_ase0_brst_tmout = 0;
 		break;
 	case OTG_STATE_B_HOST:
-		if (fsm->otg->gadget)
-			fsm->otg->gadget->host_request_flag = 0;
 		if (fsm->otg_hnp_reqd) {
 			fsm->otg_hnp_reqd = 0;
 			fsm->b_bus_req = 0;
@@ -106,8 +106,6 @@ void otg_leave_state(struct otg_fsm *fsm, enum usb_otg_state old_state)
 		break;
 	case OTG_STATE_A_HOST:
 		otg_del_timer(fsm, A_WAIT_ENUM);
-		if (fsm->otg->gadget)
-			fsm->otg->gadget->host_request_flag = 0;
 		break;
 	case OTG_STATE_A_SUSPEND:
 		otg_del_timer(fsm, A_AIDL_BDIS);
@@ -117,6 +115,8 @@ void otg_leave_state(struct otg_fsm *fsm, enum usb_otg_state old_state)
 	case OTG_STATE_A_PERIPHERAL:
 		otg_del_timer(fsm, A_BIDL_ADIS);
 		fsm->a_bidl_adis_tmout = 0;
+		if (fsm->otg->gadget)
+			fsm->otg->gadget->host_request_flag = 0;
 		break;
 	case OTG_STATE_A_WAIT_VFALL:
 		otg_del_timer(fsm, A_WAIT_VFALL);
@@ -396,7 +396,8 @@ int otg_hnp_polling(struct otg_fsm *fsm)
 	enum usb_otg_state state = fsm->otg->phy->state;
 	struct usb_otg_descriptor *desc = NULL;
 
-	if (state != OTG_STATE_A_HOST && state != OTG_STATE_B_HOST)
+	if ((state != OTG_STATE_A_HOST || !fsm->b_hnp_enable) &&
+					state != OTG_STATE_B_HOST)
 		return -EINVAL;
 
 	udev = usb_hub_find_child(fsm->otg->host->root_hub, 1);
@@ -404,11 +405,6 @@ int otg_hnp_polling(struct otg_fsm *fsm)
 		dev_err(fsm->otg->host->controller,
 			"no usb dev connected, can't start HNP polling\n");
 		return -ENODEV;
-	}
-
-	if (!fsm->b_hnp_enable) {
-		dev_dbg(&udev->dev, "HNP is not supported\n");
-		return -ENOTSUPP;
 	}
 
 	/*
