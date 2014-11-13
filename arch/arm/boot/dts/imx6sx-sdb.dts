@@ -175,12 +175,6 @@
 };
 
 &cpu0 {
-	arm-supply = <&sw1a_reg>;
-	soc-supply = <&sw1c_reg>;
-	pu-supply = <&pu_dummy>;
-};
-
-&cpu0 {
 	operating-points = <
 		/* kHz    uV */
 		996000  1250000
