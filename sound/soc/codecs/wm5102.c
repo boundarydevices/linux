@@ -634,17 +634,17 @@ static int wm5102_adsp_power_ev(struct snd_soc_dapm_widget *w,
 	unsigned int v;
 	int ret;
 
+	ret = regmap_read(arizona->regmap, ARIZONA_SYSTEM_CLOCK_1, &v);
+	if (ret != 0) {
+		dev_err(codec->dev,
+			"Failed to read SYSCLK state: %d\n", ret);
+		return -EIO;
+	}
+
+	v = (v & ARIZONA_SYSCLK_FREQ_MASK) >> ARIZONA_SYSCLK_FREQ_SHIFT;
+
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		ret = regmap_read(arizona->regmap, ARIZONA_SYSTEM_CLOCK_1, &v);
-		if (ret != 0) {
-			dev_err(codec->dev,
-				"Failed to read SYSCLK state: %d\n", ret);
-			return -EIO;
-		}
-
-		v = (v & ARIZONA_SYSCLK_FREQ_MASK) >> ARIZONA_SYSCLK_FREQ_SHIFT;
-
 		if (v >= 3) {
 			ret = arizona_dvfs_up(arizona, ARIZONA_DVFS_ADSP1_RQ);
 			if (ret != 0) {
@@ -666,7 +666,7 @@ static int wm5102_adsp_power_ev(struct snd_soc_dapm_widget *w,
 		break;
 	}
 
-	return wm_adsp2_early_event(w, kcontrol, event);
+	return arizona_adsp_power_ev(w, kcontrol, event);
 }
 
 static int wm5102_out_comp_coeff_get(struct snd_kcontrol *kcontrol,
@@ -1430,7 +1430,7 @@ ARIZONA_MUX_WIDGETS(ISRC2DEC2, "ISRC2DEC2"),
 ARIZONA_MUX_WIDGETS(ISRC2INT1, "ISRC2INT1"),
 ARIZONA_MUX_WIDGETS(ISRC2INT2, "ISRC2INT2"),
 
-WM_ADSP2_E("DSP1", 0, wm5102_adsp_power_ev),
+WM_ADSP2("DSP1", 0, wm5102_adsp_power_ev),
 
 SND_SOC_DAPM_OUTPUT("DSP Virtual Output"),
 

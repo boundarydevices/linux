@@ -224,6 +224,28 @@ out:
 	return ret;
 }
 
+static int wm8285_adsp_power_ev(struct snd_soc_dapm_widget *w,
+				      struct snd_kcontrol *kcontrol,
+			      int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);
+	struct arizona *arizona = priv->arizona;
+	unsigned int freq;
+	int ret;
+
+	ret = regmap_read(arizona->regmap, WM8285_DSP_CLOCK_1, &freq);
+	if (ret != 0) {
+		dev_err(arizona->dev, "Failed to read WM8285_DSP_CLOCK_1: %d\n", ret);
+		return ret;
+	}
+
+	freq &= WM8285_DSP_CLK_FREQ_LEGACY_MASK;
+	freq >>= WM8285_DSP_CLK_FREQ_LEGACY_SHIFT;
+
+	return wm_adsp2_early_event(w, kcontrol, event, freq);
+}
+
 static DECLARE_TLV_DB_SCALE(ana_tlv, 0, 100, 0);
 static DECLARE_TLV_DB_SCALE(eq_tlv, -1200, 100, 0);
 static DECLARE_TLV_DB_SCALE(digital_tlv, -6400, 50, 0);
@@ -1006,13 +1028,13 @@ SND_SOC_DAPM_PGA("ASRC2IN2L", WM8285_ASRC2_ENABLE, WM8285_ASRC2_IN2L_ENA_SHIFT,
 SND_SOC_DAPM_PGA("ASRC2IN2R", WM8285_ASRC2_ENABLE, WM8285_ASRC2_IN2R_ENA_SHIFT,
 		 0, NULL, 0),
 
-WM_ADSP2("DSP1", 0),
-WM_ADSP2("DSP2", 1),
-WM_ADSP2("DSP3", 2),
-WM_ADSP2("DSP4", 3),
-WM_ADSP2("DSP5", 4),
-WM_ADSP2("DSP6", 5),
-WM_ADSP2("DSP7", 6),
+WM_ADSP2("DSP1", 0, wm8285_adsp_power_ev),
+WM_ADSP2("DSP2", 1, wm8285_adsp_power_ev),
+WM_ADSP2("DSP3", 2, wm8285_adsp_power_ev),
+WM_ADSP2("DSP4", 3, wm8285_adsp_power_ev),
+WM_ADSP2("DSP5", 4, wm8285_adsp_power_ev),
+WM_ADSP2("DSP6", 5, wm8285_adsp_power_ev),
+WM_ADSP2("DSP7", 6, wm8285_adsp_power_ev),
 
 SND_SOC_DAPM_PGA("ISRC1INT1", ARIZONA_ISRC_1_CTRL_3,
 		 ARIZONA_ISRC1_INT0_ENA_SHIFT, 0, NULL, 0),
