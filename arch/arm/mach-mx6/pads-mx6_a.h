@@ -114,9 +114,6 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	NEW_PAD_CTRL(MX6PAD(GPIO_4__GPIO_1_4), WEAK_PULLUP),	/* TX_ACT led */
 
 	/* gpio2 */
-	NEW_PAD_CTRL(MX6PAD(NANDF_D5__GPIO_2_5), WEAK_PULLUP),	/* Modem On/Off */
-	NEW_PAD_CTRL(MX6PAD(NANDF_D6__GPIO_2_6), PULLUP_22K),	/* Modem Reset */
-	NEW_PAD_CTRL(MX6PAD(NANDF_D7__GPIO_2_7), WEAK_PULLUP),	/* Modem Sleep stat */
 	NEW_PAD_CTRL(MX6PAD(EIM_A19__GPIO_2_19), WEAK_PULLDN),	/* Led 4 */
 	NEW_PAD_CTRL(MX6PAD(EIM_A18__GPIO_2_20), WEAK_PULLDN),	/* Led 3 */
 	NEW_PAD_CTRL(MX6PAD(EIM_A17__GPIO_2_21), WEAK_PULLDN),	/* Led 2 */
@@ -170,7 +167,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 
 	/* USB Modem */
 	NEW_PAD_CTRL(MX6PAD(NANDF_D5__GPIO_2_5), OUTPUT_40OHM),   	/* Modem OFF */
-	NEW_PAD_CTRL(MX6PAD(NANDF_D6__GPIO_2_6), WEAK_PULLUP),		/* Modem nRESET */
+	NEW_PAD_CTRL(MX6PAD(NANDF_D6__GPIO_2_6), OUTPUT_40OHM),		/* Modem nRESET */
 	MX6PAD(NANDF_D7__GPIO_2_7), 					/* Modem Sleep stat */
 	NEW_PAD_CTRL(MX6PAD(NANDF_WP_B__GPIO_6_9), OUTPUT_40OHM),	/* Modem Wakeup Out */
 	MX6PAD(NANDF_RB0__GPIO_6_10),					/* Modem Wakeup In */

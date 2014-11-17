@@ -114,8 +114,8 @@ struct gpio mx6_init_gpios[] __initdata = {
 //	{.label = "phy_irq",		.gpio = GP_ENET_PHY_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO1[28]: ENET_TX_EN - active low */
 	{.label = "eMMC_reset",		.gpio = GP_EMMC_RESET,		.flags = 0},
 	{.label = "eMMC_reset_rev0",	.gpio = GP_EMMC_RESET_REV0,	.flags = 0},
-	{.label = "Modem_reset",	.gpio = GP_MODEM_RESET,		.flags = GPIOF_DIR_IN},
-	{.label = "Modem_onoff",	.gpio = GP_MODEM_ONOFF,		.flags = GPIOF_DIR_IN},
+	{.label = "Modem_reset",	.gpio = GP_MODEM_RESET,		.flags = GPIOF_HIGH},
+	{.label = "Modem_onoff",	.gpio = GP_MODEM_ONOFF,		.flags = GPIOF_HIGH},
 	{.label = "usb-pwr",		.gpio = GP_USB_OTG_PWR,		.flags = 0},
 //	{.label = "factory_default",	.gpio = IMX_GPIO_NR(4, 6),	.flags = GPIOF_DIR_IN},
 	{.label = "flexcan1-stby",	.gpio = GP_CAN1_STBY,		.flags = GPIOF_HIGH},
@@ -332,38 +332,12 @@ static void spi_device_init(void)
  */
 static int vbus_on;
 static int vbus_state;
-static struct delayed_work usb_modem_power_work;
-
-static void usb_modem_power_handler(struct work_struct *work)
-{
-	switch (vbus_state) {
-	case 0:
-		gpio_direction_output(GP_MODEM_ONOFF, 0);	/* Power up modem pulse low */
-		/*
-		 * on  - pulse low .5 to 1 second,
-		 * off - pulse low for 3 seconds
-		 */
-		schedule_delayed_work(&usb_modem_power_work,
-			usecs_to_jiffies(vbus_on ? 750000 : 3000000));
-		vbus_state++;
-		break;
-	case 1:
-		gpio_direction_input(GP_MODEM_ONOFF);		/* ON/OFF high */
-		vbus_state++;
-		pr_info("%s: %d\n", __func__, vbus_on);
-		break;
-	}
-}
 
 static void imx6_usbotg_vbus(bool on)
 {
 	vbus_on = on;
 	vbus_state = 0;
 	gpio_set_value(GP_USB_OTG_PWR, on ? 1 : 0);
-
-	gpio_direction_input(GP_MODEM_ONOFF);		/* ON/OFF high */
-	schedule_delayed_work(&usb_modem_power_work,
-				usecs_to_jiffies(3000000));
 }
 
 static void __init imx6_init_usb(void)
@@ -373,12 +347,7 @@ static void __init imx6_init_usb(void)
 	 * or it will affect signal quality at dp .
 	 */
 	mxc_iomux_set_gpr_register(1, 13, 1, 1);
-	INIT_DELAYED_WORK(&usb_modem_power_work, usb_modem_power_handler);
 	mx6_set_otghost_vbus_func(imx6_usbotg_vbus);
-
-	gpio_direction_output(GP_MODEM_RESET, 0);	/* modem reset low */
-	mdelay(50);
-	gpio_direction_input(GP_MODEM_RESET);		/* modem reset high */
 }
 
 static const struct imx_pcie_platform_data plat_pcie  __initconst = {
@@ -547,8 +516,10 @@ static void __init mx6_board_init(void)
 		printk(KERN_ERR "%s gpio_request_array failed("
 				"%d) for mx6_init_gpios\n", __func__, ret);
 	}
+	/* allow use in /sys/class/gpio */
+	gpio_free(GP_MODEM_RESET);
+	gpio_free(GP_MODEM_ONOFF);
 	IOMUX_SETUP(common_pads);
-
 
 	gp_reg_id = dvfscore_data.reg_id;
 	soc_reg_id = dvfscore_data.soc_id;
