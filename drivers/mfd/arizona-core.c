@@ -544,24 +544,6 @@ static int arizona_runtime_resume(struct device *dev)
 	regcache_cache_only(arizona->regmap, false);
 
 	switch (arizona->type) {
-	case WM5110:
-	case WM8280:
-		if (arizona->rev == 3) {
-			if (!arizona->pdata.reset) {
-				ret = arizona_soft_reset(arizona);
-				if (ret != 0)
-					goto err;
-			} else {
-				gpio_set_value_cansleep(arizona->pdata.reset, 1);
-				msleep(1);
-			}
-		}
-		break;
-	default:
-		break;
-	}
-
-	switch (arizona->type) {
 	case WM5102:
 		if (arizona->external_dcvdd) {
 			ret = regmap_update_bits(arizona->regmap,
@@ -589,6 +571,44 @@ static int arizona_runtime_resume(struct device *dev)
 			goto err;
 		}
 		break;
+	case WM5110:
+	case WM8280:
+		if (arizona->rev == 3) {
+			if (!arizona->pdata.reset) {
+				ret = arizona_soft_reset(arizona);
+				if (ret != 0)
+					goto err;
+			} else {
+				gpio_set_value_cansleep(arizona->pdata.reset, 1);
+				msleep(1);
+			}
+		}
+
+		ret = arizona_wait_for_boot(arizona);
+		if (ret != 0) {
+			goto err;
+		}
+
+		if (arizona->external_dcvdd) {
+			ret = regmap_update_bits(arizona->regmap,
+						 ARIZONA_ISOLATION_CONTROL,
+						 ARIZONA_ISOLATE_DCVDD1, 0);
+			if (ret != 0) {
+				dev_err(arizona->dev,
+					"Failed to connect DCVDD: %d\n", ret);
+				goto err;
+			}
+		} else {
+			ret = regulator_set_voltage(arizona->dcvdd,
+						    1200000, 1200000);
+			if (ret < 0) {
+				dev_err(arizona->dev,
+					"Failed to set resume voltage: %d\n",
+					ret);
+				goto err;
+			}
+		}
+		break;
 	default:
 		ret = arizona_wait_for_boot(arizona);
 		if (ret != 0) {
@@ -605,21 +625,6 @@ static int arizona_runtime_resume(struct device *dev)
 				goto err;
 			}
 		}
-		break;
-	}
-
-	switch (arizona->type) {
-	case WM5110:
-	case WM8280:
-		ret = regulator_set_voltage(arizona->dcvdd, 1200000, 1200000);
-		if (ret < 0) {
-			dev_err(arizona->dev,
-				"Failed to set resume voltage: %d\n",
-				ret);
-			goto err;
-		}
-		break;
-	default:
 		break;
 	}
 
@@ -694,21 +699,22 @@ static int arizona_runtime_suspend(struct device *dev)
 				ret);
 			return ret;
 		}
-	}
-
-	switch (arizona->type) {
-	case WM5110:
-	case WM8280:
-		ret = regulator_set_voltage(arizona->dcvdd, 1175000, 1175000);
-		if (ret < 0) {
-			dev_err(arizona->dev,
-				"Failed to set suspend voltage: %d\n",
-				ret);
-			return ret;
+	} else {
+		switch (arizona->type) {
+		case WM5110:
+		case WM8280:
+			ret = regulator_set_voltage(arizona->dcvdd,
+						    1175000, 1175000);
+			if (ret < 0) {
+				dev_err(arizona->dev,
+					"Failed to set suspend voltage: %d\n",
+					ret);
+				return ret;
+			}
+			break;
+		default:
+			break;
 		}
-		break;
-	default:
-		break;
 	}
 
 	regcache_cache_only(arizona->regmap, true);
