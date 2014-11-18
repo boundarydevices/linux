@@ -45,6 +45,7 @@ struct florida_compr {
 	struct wm_adsp *adsp;
 
 	size_t total_copied;
+	bool allocated;
 	bool trig;
 	bool forced;
 };
@@ -1899,7 +1900,7 @@ static irqreturn_t adsp2_irq(int irq, void *data)
 		florida->compr_info.trig = true;
 	}
 
-	if (!florida->compr_info.stream)
+	if (!florida->compr_info.allocated)
 		goto out;
 
 	ret = wm_adsp_stream_handle_irq(florida->compr_info.adsp);
@@ -1970,6 +1971,7 @@ static int florida_free(struct snd_compr_stream *stream)
 
 	mutex_lock(&florida->compr_info.lock);
 
+	florida->compr_info.allocated = false;
 	florida->compr_info.stream = NULL;
 	florida->compr_info.total_copied = 0;
 	if (!florida->compr_info.forced)
@@ -2004,6 +2006,8 @@ static int florida_set_params(struct snd_compr_stream *stream,
 	}
 
 	ret = wm_adsp_stream_alloc(compr->adsp, params);
+	if (ret == 0)
+		compr->allocated = true;
 
 out:
 	mutex_unlock(&compr->lock);

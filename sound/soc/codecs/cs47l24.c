@@ -43,6 +43,7 @@ struct cs47l24_compr {
 	struct wm_adsp *adsp;
 
 	size_t total_copied;
+	bool allocated;
 	bool trig;
 	bool forced;
 };
@@ -1112,7 +1113,7 @@ static irqreturn_t adsp2_irq(int irq, void *data)
 		cs47l24->compr_info.trig = true;
 	}
 
-	if (!cs47l24->compr_info.stream)
+	if (!cs47l24->compr_info.allocated)
 		goto out;
 
 	ret = wm_adsp_stream_handle_irq(cs47l24->compr_info.adsp);
@@ -1181,6 +1182,7 @@ static int cs47l24_free(struct snd_compr_stream *stream)
 
 	mutex_lock(&cs47l24->compr_info.lock);
 
+	cs47l24->compr_info.allocated = false;
 	cs47l24->compr_info.stream = NULL;
 	cs47l24->compr_info.total_copied = 0;
 	if (!cs47l24->compr_info.forced)
@@ -1215,6 +1217,8 @@ static int cs47l24_set_params(struct snd_compr_stream *stream,
 	}
 
 	ret = wm_adsp_stream_alloc(compr->adsp, params);
+	if (ret == 0)
+		compr->allocated = true;
 
 out:
 	mutex_unlock(&compr->lock);
