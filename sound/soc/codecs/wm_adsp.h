@@ -96,6 +96,7 @@ struct wm_adsp {
 	int num_mems;
 
 	int fw;
+	int fw_ver;
 	bool running;
 
 	struct mutex ctl_lock;
