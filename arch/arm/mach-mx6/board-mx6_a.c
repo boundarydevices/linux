@@ -76,6 +76,7 @@
 #define GP_ECSPI1_CS1		IMX_GPIO_NR(3, 19)	/* EIM_D19 - active low */
 #define GP_MODEM_ONOFF		IMX_GPIO_NR(2, 5)
 #define GP_MODEM_RESET		IMX_GPIO_NR(2, 6)
+#define GP_MODEM_WAKEUP_IN	IMX_GPIO_NR(6, 10)
 
 #include "pads-mx6_a.h"
 #define FOR_DL_SOLO
@@ -116,6 +117,7 @@ struct gpio mx6_init_gpios[] __initdata = {
 	{.label = "eMMC_reset_rev0",	.gpio = GP_EMMC_RESET_REV0,	.flags = 0},
 	{.label = "Modem_reset",	.gpio = GP_MODEM_RESET,		.flags = GPIOF_HIGH},
 	{.label = "Modem_onoff",	.gpio = GP_MODEM_ONOFF,		.flags = GPIOF_HIGH},
+	{.label = "Modem sleep enable!",.gpio = GP_MODEM_WAKEUP_IN,	.flags = GPIOF_HIGH},
 	{.label = "usb-pwr",		.gpio = GP_USB_OTG_PWR,		.flags = 0},
 //	{.label = "factory_default",	.gpio = IMX_GPIO_NR(4, 6),	.flags = GPIOF_DIR_IN},
 	{.label = "flexcan1-stby",	.gpio = GP_CAN1_STBY,		.flags = GPIOF_HIGH},
@@ -519,6 +521,7 @@ static void __init mx6_board_init(void)
 	/* allow use in /sys/class/gpio */
 	gpio_free(GP_MODEM_RESET);
 	gpio_free(GP_MODEM_ONOFF);
+	gpio_free(GP_MODEM_WAKEUP_IN);
 	IOMUX_SETUP(common_pads);
 
 	gp_reg_id = dvfscore_data.reg_id;

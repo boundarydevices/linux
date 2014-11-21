@@ -132,8 +132,8 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 
 	/* gpio6 */
 	NEW_PAD_CTRL(MX6PAD(EIM_A23__GPIO_6_6), WEAK_PULLDN),	/* Led 5 */
-	NEW_PAD_CTRL(MX6PAD(NANDF_WP_B__GPIO_6_9), WEAK_PULLDN),	/* Modem Wakeup Out */
-	NEW_PAD_CTRL(MX6PAD(NANDF_RB0__GPIO_6_10), WEAK_PULLDN),	/* Modem Wakeup In */
+	NEW_PAD_CTRL(MX6PAD(NANDF_WP_B__GPIO_6_9), WEAK_PULLDN),/* Modem Wakeup Out */
+	NEW_PAD_CTRL(MX6PAD(NANDF_RB0__GPIO_6_10), PULLUP_22K),	/* Modem Wakeup In */
 
 	/* UART1  */
 	NEW_PAD_CTRL(MX6PAD(SD3_DAT7__UART1_TXD), UART_PAD_CTRL),
