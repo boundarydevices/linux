@@ -445,6 +445,7 @@ struct wm_coeff_ctl {
 	size_t len;
 	unsigned int set:1;
 	struct snd_kcontrol *kcontrol;
+	unsigned int flags;
 	struct mutex lock;
 };
 
@@ -731,18 +732,22 @@ static int wm_coeff_put(struct snd_kcontrol *kcontrol,
 {
 	struct wm_coeff_ctl *ctl = (struct wm_coeff_ctl *)kcontrol->private_value;
 	char *p = ucontrol->value.bytes.data;
-	int ret;
+	int ret = 0;
+
+	if (ctl->flags && !(ctl->flags & WMFW_CTL_FLAG_WRITEABLE))
+		return -EPERM;
 
 	mutex_lock(&ctl->lock);
+
 	memcpy(ctl->cache, p, ctl->len);
 
 	ctl->set = 1;
-	if (!ctl->enabled) {
-		mutex_unlock(&ctl->lock);
-		return 0;
-	}
+	if (!ctl->enabled)
+		goto out;
 
 	ret = wm_coeff_write_control(ctl, p, ctl->len);
+
+out:
 	mutex_unlock(&ctl->lock);
 	return ret;
 }
@@ -790,17 +795,27 @@ static int wm_coeff_get(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
 	struct wm_coeff_ctl *ctl = (struct wm_coeff_ctl *)kcontrol->private_value;
-	struct wm_adsp *dsp = ctl->dsp;
 	char *p = ucontrol->value.bytes.data;
+	int ret = 0;
+
+	if (ctl->flags && !(ctl->flags & WMFW_CTL_FLAG_READABLE))
+		return -EPERM;
 
 	mutex_lock(&ctl->lock);
 
-	if (dsp->running)
-		wm_coeff_read_control(ctl, ctl->cache, ctl->len);
+	if (ctl->flags & WMFW_CTL_FLAG_VOLATILE) {
+		if (ctl->enabled)
+			ret = wm_coeff_read_control(ctl, p, ctl->len);
+		else
+			ret = -EPERM;
+		goto out;
+	}
 
 	memcpy(p, ctl->cache, ctl->len);
+
+out:
 	mutex_unlock(&ctl->lock);
-	return 0;
+	return ret;
 }
 
 struct wmfw_ctl_work {
@@ -853,6 +868,9 @@ static int wm_coeff_init_control_caches(struct wm_adsp *dsp)
 	list_for_each_entry(ctl, &dsp->ctl_list, list) {
 		if (!ctl->enabled || ctl->set)
 			continue;
+		if (ctl->flags & WMFW_CTL_FLAG_VOLATILE)
+			continue;
+
 		mutex_lock(&ctl->lock);
 		ret = wm_coeff_read_control(ctl,
 					    ctl->cache,
@@ -873,7 +891,7 @@ static int wm_coeff_sync_controls(struct wm_adsp *dsp)
 	list_for_each_entry(ctl, &dsp->ctl_list, list) {
 		if (!ctl->enabled)
 			continue;
-		if (ctl->set) {
+		if (ctl->set && !(ctl->flags & WMFW_CTL_FLAG_VOLATILE)) {
 			mutex_lock(&ctl->lock);
 			ret = wm_coeff_write_control(ctl,
 						     ctl->cache,
@@ -901,13 +919,16 @@ static int wm_adsp_create_ctl_blk(struct wm_adsp *dsp,
 				  const struct wm_adsp_alg_region *alg_region,
 				  unsigned int offset, unsigned int len,
 				  const char *subname, unsigned int subname_len,
-				  int block)
+				  unsigned int flags, int block)
 {
 	struct wm_coeff_ctl *ctl;
 	struct wmfw_ctl_work *ctl_work;
 	char name[WM_ADSP_CONTROL_MAX];
 	char *region_name;
 	int ret;
+
+	if (flags & WMFW_CTL_FLAG_SYS)
+		return 0;
 
 	switch (alg_region->type) {
 	case WMFW_ADSP1_PM:
@@ -957,6 +978,7 @@ static int wm_adsp_create_ctl_blk(struct wm_adsp *dsp,
 	ctl->ops.xput = wm_coeff_put;
 	ctl->dsp = dsp;
 
+	ctl->flags = flags;
 	ctl->offset = offset;
 	if (len > 512) {
 		adsp_warn(dsp, "Truncating control %s from %d\n",
@@ -1001,7 +1023,8 @@ err_ctl:
 static int wm_adsp_create_control(struct wm_adsp *dsp,
 				  const struct wm_adsp_alg_region *alg_region,
 				  unsigned int offset, unsigned int len,
-				  const char *subname, unsigned int subname_len)
+				  const char *subname, unsigned int subname_len,
+				  unsigned int flags)
 {
 	unsigned int ctl_len;
 	int block = 0;
@@ -1012,8 +1035,9 @@ static int wm_adsp_create_control(struct wm_adsp *dsp,
 		if (ctl_len > 512)
 			ctl_len = 512;
 
-		ret = wm_adsp_create_ctl_blk(dsp, alg_region, offset, ctl_len,
-					     subname, subname_len, block);
+		ret = wm_adsp_create_ctl_blk(dsp, alg_region, offset,
+					     ctl_len, subname, subname_len,
+					     flags, block);
 		if (ret < 0)
 			return ret;
 
@@ -1114,7 +1138,8 @@ static int wm_adsp_parse_coeff(struct wm_adsp *dsp,
 					     coeff_blk.offset,
 					     coeff_blk.len,
 					     coeff_blk.name,
-					     coeff_blk.name_len);
+					     coeff_blk.name_len,
+					     coeff_blk.flags);
 		if (ret < 0)
 			adsp_err(dsp, "Failed to create control: %.*s, %d\n",
 				 coeff_blk.name_len, coeff_blk.name, ret);
@@ -1527,7 +1552,7 @@ static int wm_adsp1_setup_algs(struct wm_adsp *dsp)
 				len -= be32_to_cpu(adsp1_alg[i].dm);
 				len *= 4;
 				wm_adsp_create_control(dsp, alg_region, 0,
-						       len, NULL, 0);
+						       len, NULL, 0, 0);
 			} else {
 				adsp_warn(dsp, "Missing length info for region DM with ID %x\n",
 					  be32_to_cpu(adsp1_alg[i].alg.id));
@@ -1547,7 +1572,7 @@ static int wm_adsp1_setup_algs(struct wm_adsp *dsp)
 				len -= be32_to_cpu(adsp1_alg[i].zm);
 				len *= 4;
 				wm_adsp_create_control(dsp, alg_region, 0,
-						       len, NULL, 0);
+						       len, NULL, 0, 0);
 			} else {
 				adsp_warn(dsp, "Missing length info for region ZM with ID %x\n",
 					  be32_to_cpu(adsp1_alg[i].alg.id));
@@ -1637,7 +1662,7 @@ static int wm_adsp2_setup_algs(struct wm_adsp *dsp)
 				len -= be32_to_cpu(adsp2_alg[i].xm);
 				len *= 4;
 				wm_adsp_create_control(dsp, alg_region, 0,
-						       len, NULL, 0);
+						       len, NULL, 0, 0);
 			} else {
 				adsp_warn(dsp, "Missing length info for region XM with ID %x\n",
 					  be32_to_cpu(adsp2_alg[i].alg.id));
@@ -1657,7 +1682,7 @@ static int wm_adsp2_setup_algs(struct wm_adsp *dsp)
 				len -= be32_to_cpu(adsp2_alg[i].ym);
 				len *= 4;
 				wm_adsp_create_control(dsp, alg_region, 0,
-						       len, NULL, 0);
+						       len, NULL, 0, 0);
 			} else {
 				adsp_warn(dsp, "Missing length info for region YM with ID %x\n",
 					  be32_to_cpu(adsp2_alg[i].alg.id));
@@ -1677,7 +1702,7 @@ static int wm_adsp2_setup_algs(struct wm_adsp *dsp)
 				len -= be32_to_cpu(adsp2_alg[i].zm);
 				len *= 4;
 				wm_adsp_create_control(dsp, alg_region, 0,
-						       len, NULL, 0);
+						       len, NULL, 0, 0);
 			} else {
 				adsp_warn(dsp, "Missing length info for region ZM with ID %x\n",
 					  be32_to_cpu(adsp2_alg[i].alg.id));
