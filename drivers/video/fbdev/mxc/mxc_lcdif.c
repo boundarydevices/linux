@@ -73,7 +73,25 @@ static struct fb_videomode lcdif_modedb[] = {
 		0, /* sync (Polarity on the Data Enable) */
 		FB_VMODE_NONINTERLACED, /* vmode (Video Mode) */
 		0, /* flags */
-	}
+	},
+	{
+	/* 800x600 @ 60 Hz , pixel clk @ 40MHz */
+	"LSA40AT9001", 60, 800, 600, 1000000000 / (800+10+46+210) * 1000 / (600+1+23+12) / 60,
+	.left_margin = 46, .right_margin = 210,
+	.upper_margin = 23, .lower_margin = 12,
+	.hsync_len = 10, .vsync_len = 1,
+	.sync = FB_SYNC_CLK_LAT_FALL,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,},
+	{
+	/* 480x800 @ 57 Hz , pixel clk @ 27MHz */
+	"LB043", 57, 480, 800, 25000,
+	.left_margin = 40, .right_margin = 60,
+	.upper_margin = 10, .lower_margin = 10,
+	.hsync_len = 20, .vsync_len = 10,
+	.sync = FB_SYNC_CLK_LAT_FALL,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,},
 };
 static int lcdif_modedb_sz = ARRAY_SIZE(lcdif_modedb);
 
