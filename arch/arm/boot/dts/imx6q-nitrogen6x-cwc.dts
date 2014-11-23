@@ -114,7 +114,7 @@
 };
 
 &sata {
-	status = "disabled";
+	status = "okay";
 };
 
 &tc358743_mipi {
