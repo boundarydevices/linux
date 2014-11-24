@@ -262,8 +262,16 @@ static const struct spi_imx_master ecspi1_data __initconst = {
 	.num_chipselect = ARRAY_SIZE(ecspi1_cs),
 };
 
+static int ecspi2_cs[] = {
+	GP_ECSPI2_GS2971_CS,
+};
+
+static const struct spi_imx_master ecspi2_data __initconst = {
+	.chipselect     = ecspi2_cs,
+	.num_chipselect = ARRAY_SIZE(ecspi2_cs),
+};
+
 static int ecspi3_cs[] = {
-	GP_ECSPI3_GS2971_CS,
 	GP_ECSPI3_WM5102_CS,
 };
 
@@ -394,7 +402,7 @@ static struct spi_board_info spi_devices[] __initdata = {
 	{
 		.modalias = "gs2971",
 		.max_speed_hz = 20000000, /* max spi clock (SCK) speed in HZ */
-		.bus_num = 2,
+		.bus_num = 1,
 		.chip_select = 0,
 		.mode = SPI_MODE_0,
 		.platform_data = &gs2971_data,
@@ -404,19 +412,13 @@ static struct spi_board_info spi_devices[] __initdata = {
 		.modalias       = "wm5102",
 		.max_speed_hz   = 10000000,	/* max 13 MHz (76.8 ns)*/
 		.bus_num        = 2,
-		.chip_select    = 1,
+		.chip_select    = 0,
 		.mode           = SPI_MODE_0,
 		.irq            = gpio_to_irq(GP_WM5102_IRQ),
 		.platform_data = &wm5102_pdata,
 	},
 #endif
 };
-
-static void spi_device_init(void)
-{
-	spi_register_board_info(spi_devices,
-				ARRAY_SIZE(spi_devices));
-}
 
 static struct mxc_audio_platform_data wm5102_audio_data;
 
@@ -803,17 +805,17 @@ static struct platform_device vmmc_reg_devices = {
 #if defined(CONFIG_SND_SOC_WM5102) || defined(CONFIG_SND_SOC_WM5102_MODULE)
 
 static struct regulator_consumer_supply wm5102_consumer_5v[] = {
-	REGULATOR_SUPPLY("SPKVDDL", "spi2.1"),
-	REGULATOR_SUPPLY("SPKVDDR", "spi2.1"),
+	REGULATOR_SUPPLY("SPKVDDL", "spi2.0"),
+	REGULATOR_SUPPLY("SPKVDDR", "spi2.0"),
 };
 
 static struct regulator_consumer_supply wm5102_consumer_1p8v[] = {
-	REGULATOR_SUPPLY("DBVDD1", "spi2.1"),
-	REGULATOR_SUPPLY("DBVDD2", "spi2.1"),
-	REGULATOR_SUPPLY("DBVDD3", "spi2.1"),
-	REGULATOR_SUPPLY("AVDD", "spi2.1"),
-	REGULATOR_SUPPLY("LDOVDD", "spi2.1"),
-	REGULATOR_SUPPLY("CPVDD", "spi2.1"),
+	REGULATOR_SUPPLY("DBVDD1", "spi2.0"),
+	REGULATOR_SUPPLY("DBVDD2", "spi2.0"),
+	REGULATOR_SUPPLY("DBVDD3", "spi2.0"),
+	REGULATOR_SUPPLY("AVDD", "spi2.0"),
+	REGULATOR_SUPPLY("LDOVDD", "spi2.0"),
+	REGULATOR_SUPPLY("CPVDD", "spi2.0"),
 };
 
 static struct regulator_init_data wm5102_5v_reg_initdata = {
@@ -1146,8 +1148,10 @@ static void __init board_init(void)
 			ARRAY_SIZE(i2c3_board_info));
 	/* SPI */
 	imx6q_add_ecspi(0, &ecspi1_data);
+	imx6q_add_ecspi(1, &ecspi2_data);
 	imx6q_add_ecspi(2, &ecspi3_data);
-	spi_device_init();
+	spi_register_board_info(spi_devices,
+				ARRAY_SIZE(spi_devices));
 
 	imx6q_add_mxc_hdmi(&hdmi_data);
 
