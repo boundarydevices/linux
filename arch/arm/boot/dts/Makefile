@@ -161,9 +161,8 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6sx-sdb-sai.dtb \
 	imx6sx-sdb-emmc.dtb \
 	imx6sx-sdb-m4.dtb \
-	imx6sx-sdb-canfd.dtb \
-	imx6sx-sdb-canfd-reva.dtb \
 	imx6sx-sabreauto.dtb \
+	imx6sx-sabreauto-m4.dtb \
 	vf610-twr.dtb
 dtb-$(CONFIG_ARCH_MXS) += imx23-evk.dtb \
 	imx23-olinuxino.dtb \

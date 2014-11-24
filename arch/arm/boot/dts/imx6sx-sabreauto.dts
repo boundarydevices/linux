@@ -30,6 +30,13 @@
 		};
 	};
 
+	max7322_reset: max7322-reset {
+		compatible = "gpio-reset";
+		reset-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
+		reset-delay-us = <1>;
+		#reset-cells = <0>;
+	};
+
 	csi1_v4l2_cap {
 		compatible = "fsl,imx6sx-csi-v4l2", "fsl,imx6sl-csi-v4l2";
 		csi_id = <0>;
@@ -259,13 +266,15 @@
 };
 
 &fec1 {
+	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1_1>;
 	phy-mode = "rgmii";
 	phy-id = <1>;
 	fsl,num_tx_queues=<3>;
 	fsl,num_rx_queues=<3>;
+	pinctrl-assert-gpios = <&max7322 0 GPIO_ACTIVE_HIGH>;
 	fsl,magic-packet;
-	status = "disabled";
+	status = "okay";
 };
 
 &fec2 {
@@ -276,6 +285,22 @@
 	fsl,num_tx_queues=<3>;
 	fsl,num_rx_queues=<3>;
 	fsl,magic-packet;
+	status = "okay";
+};
+
+&flexcan1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan1_1>;
+	trx-en-gpio = <&max7310_b 5 GPIO_ACTIVE_HIGH>;
+	trx-stby-gpio = <&max7310_b 3 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
+&flexcan2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan2_1>;
+	trx-en-gpio = <&max7310_b 5 GPIO_ACTIVE_HIGH>;
+	trx-stby-gpio = <&max7310_b 3 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 
@@ -292,6 +317,46 @@
         pinctrl-names = "default";
         pinctrl-0 = <&pinctrl_i2c2_1>;
         status = "okay";
+
+	egalax_ts@04 {
+		compatible = "eeti,egalax_ts";
+		reg = <0x04>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <22 2>;
+		wakeup-gpios = <&gpio6 22 0>;
+	};
+
+	codec: cs42888@048 {
+		compatible = "cirrus,cs42888";
+		reg = <0x048>;
+		clocks = <&codec_osc 0>;
+		clock-names = "mclk";
+		VA-supply = <&reg_audio>;
+		VD-supply = <&reg_audio>;
+		VLS-supply = <&reg_audio>;
+		VLC-supply = <&reg_audio>;
+	};
+
+	si4763: si4763@63 {
+		compatible = "si4761";
+		reg = <0x63>;
+		va-supply = <&si4763_va>;
+		vd-supply = <&si4763_vd>;
+		vio1-supply = <&si4763_vio1>;
+		vio2-supply = <&si4763_vio2>;
+
+		si476x_codec: si476x-codec {
+			compatible = "si476x-codec";
+		};
+	};
+
+	max7322: gpio@68 {
+		compatible = "maxim,max7322";
+		reg = <0x68>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		resets = <&max7322_reset>;
+	};
 
 	pmic: pfuze100@08 {
 		compatible = "fsl,pfuze100";
@@ -391,45 +456,6 @@
 				regulator-max-microvolt = <3300000>;
 				regulator-always-on;
 			};
-		};
-	};
-};
-
-&i2c2 {
-        clock-frequency = <100000>;
-        pinctrl-names = "default";
-        pinctrl-0 = <&pinctrl_i2c2_1>;
-        status = "okay";
-
-	egalax_ts@04 {
-		compatible = "eeti,egalax_ts";
-		reg = <0x04>;
-		interrupt-parent = <&gpio6>;
-		interrupts = <22 2>;
-		wakeup-gpios = <&gpio6 22 0>;
-	};
-
-	codec: cs42888@048 {
-		compatible = "cirrus,cs42888";
-		reg = <0x048>;
-		clocks = <&codec_osc 0>;
-		clock-names = "mclk";
-		VA-supply = <&reg_audio>;
-		VD-supply = <&reg_audio>;
-		VLS-supply = <&reg_audio>;
-		VLC-supply = <&reg_audio>;
-	};
-
-	si4763: si4763@63 {
-		compatible = "si4761";
-		reg = <0x63>;
-		va-supply = <&si4763_va>;
-		vd-supply = <&si4763_vd>;
-		vio1-supply = <&si4763_vio1>;
-		vio2-supply = <&si4763_vio2>;
-
-		si476x_codec: si476x-codec {
-			compatible = "si476x-codec";
 		};
 	};
 };
@@ -551,6 +577,16 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2_1>;
 	status = "okay";
+};
+
+&uart5 { /* for bluetooth */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart5_1>;
+	fsl,uart-has-rtscts;
+	status = "okay";
+	/* for DTE mode, add below change */
+	/* fsl,dte-mode;*/
+	/* pinctrl-0 = <&pinctrl_uart5dte_1>; */
 };
 
 &usbotg1 {

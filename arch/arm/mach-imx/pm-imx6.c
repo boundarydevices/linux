@@ -551,6 +551,7 @@ static int imx6_pm_enter(suspend_state_t state)
 	if (imx_src_is_m4_enabled()) {
 		if (imx_gpc_is_m4_sleeping() && m4_freq_low) {
 			imx_gpc_hold_m4_in_sleep();
+			mcc_enable_m4_irqs_in_gic(true);
 		} else {
 			pr_info("M4 is busy, enter WAIT mode instead of STOP!\n");
 			imx6_set_lpm(WAIT_UNCLOCKED);
@@ -654,8 +655,10 @@ static int imx6_pm_enter(suspend_state_t state)
 				!IMX6Q_GPR1_PCIE_TEST_PD);
 	}
 
-	if (imx_src_is_m4_enabled())
+	if (imx_src_is_m4_enabled()) {
+		mcc_enable_m4_irqs_in_gic(false);
 		imx_gpc_release_m4_in_sleep();
+	}
 
 	return 0;
 }
@@ -860,7 +863,8 @@ Please ensure device tree has an entry fsl,lpm-sram\n");
 		if (np)
 			console_base = of_iomap(np, 0);
 		if (imx_src_is_m4_enabled()) {
-			np = of_find_node_by_path("/soc/aips-bus@02100000/qspi@021e4000");
+			np = of_find_compatible_node(NULL, NULL,
+					"fsl,imx6sx-qspi-m4-restore");
 			if (np)
 				qspi_base = of_iomap(np, 0);
 			WARN_ON(!qspi_base);

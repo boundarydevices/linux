@@ -446,7 +446,24 @@
 
 &iomuxc {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hog>;
+	pinctrl-0 = <&pinctrl_hog &pinctrl_can_gpios>;
+
+	usdhc3 {
+		pinctrl_usdhc3_1_sdb: usdhc3grp-1-sdb {
+			fsl,pins = <
+				MX6SX_PAD_SD3_CMD__USDHC3_CMD	  0x17069
+				MX6SX_PAD_SD3_CLK__USDHC3_CLK	  0x10071
+				MX6SX_PAD_SD3_DATA0__USDHC3_DATA0 0x17069
+				MX6SX_PAD_SD3_DATA1__USDHC3_DATA1 0x17069
+				MX6SX_PAD_SD3_DATA2__USDHC3_DATA2 0x17069
+				MX6SX_PAD_SD3_DATA3__USDHC3_DATA3 0x17069
+				MX6SX_PAD_SD3_DATA4__USDHC3_DATA4 0x17069
+				MX6SX_PAD_SD3_DATA5__USDHC3_DATA5 0x17069
+				MX6SX_PAD_SD3_DATA6__USDHC3_DATA6 0x17069
+				MX6SX_PAD_SD3_DATA7__USDHC3_DATA7 0x17069
+			>;
+		};
+	};
 
 	usdhc4 {
 		pinctrl_usdhc4_gpios: usdhc4-gpios {
@@ -467,14 +484,19 @@
 				MX6SX_PAD_KEY_ROW0__GPIO2_IO_15	0x17059
 				MX6SX_PAD_KEY_COL1__GPIO2_IO_11	0x17059
 				MX6SX_PAD_SD1_DATA0__GPIO6_IO_2 0x17059
-				MX6SX_PAD_QSPI1B_DATA1__GPIO4_IO_25 0x17059
 				MX6SX_PAD_QSPI1B_DATA2__GPIO4_IO_26 0x17059
-				MX6SX_PAD_QSPI1B_DATA3__GPIO4_IO_27 0x17059
 				MX6SX_PAD_CSI_DATA03__GPIO1_IO_17 0x17059
 				MX6SX_PAD_CSI_DATA04__GPIO1_IO_18 0x17059
 				MX6SX_PAD_CSI_DATA05__GPIO1_IO_19 0x17059
 				MX6SX_PAD_SD1_DATA3__GPIO6_IO_5 0xb000
 				MX6SX_PAD_GPIO1_IO13__WDOG1_WDOG_ANY 0x30b0
+			>;
+		};
+
+		pinctrl_can_gpios: can-gpios {
+			fsl,pins = <
+				MX6SX_PAD_QSPI1B_DATA1__GPIO4_IO_25 0x17059
+				MX6SX_PAD_QSPI1B_DATA3__GPIO4_IO_27 0x17059
 			>;
 		};
 	};
@@ -550,7 +572,7 @@
 
 &usdhc3 {
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
-	pinctrl-0 = <&pinctrl_usdhc3_1>;
+	pinctrl-0 = <&pinctrl_usdhc3_1_sdb>;
 	pinctrl-1 = <&pinctrl_usdhc3_1_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc3_1_200mhz>;
 	bus-width = <8>;
@@ -673,18 +695,18 @@
 	pinctrl-0 = <&pinctrl_qspi2_1>;
 	status = "okay";
 
-	flash0: s25fl128s@0 {
+	flash0: n25q256a@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "spansion,s25fl128s";
+		compatible = "micron,n25q256a";
 		spi-max-frequency = <29000000>;
 		reg = <0>;
 	};
 
-	flash1: s25fl128s@1 {
+	flash1: n25q256a@1 {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "spansion,s25fl128s";
+		compatible = "micron,n25q256a";
 		spi-max-frequency = <29000000>;
 		reg = <1>;
 	};

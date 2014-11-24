@@ -1,18 +1,13 @@
 /*
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
- * Freescale IMX Linux-specific MCC implementation.
+ * Copyright (C) 2014 Freescale Semiconductor, Inc. All Rights Reserved.
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program. If not, see <http://www.gnu.org/licenses/>.
+ * SPDX-License-Identifier: GPL-2.0+ and/or BSD-3-Clause
+ * The GPL-2.0+ license for this file can be found in the COPYING.GPL file
+ * included with this distribution or at
+ * http://www.gnu.org/licenses/gpl-2.0.html
+ * The BSD-3-Clause License for this file can be found in the COPYING.BSD file
+ * included with this distribution or at
+ * http://opensource.org/licenses/BSD-3-Clause
  */
 
 #include <linux/delay.h>
@@ -102,6 +97,18 @@ void mcc_enable_receive_irq(unsigned int enable)
 
 void mcc_send_via_mu_buffer(unsigned int index, unsigned int data)
 {
+	u32 val;
+	unsigned long timeout = jiffies + msecs_to_jiffies(500);
+
+	/* wait for transfer buffer empty */
+	do {
+		regmap_read(imx_mu_reg, MU_ASR, &val);
+		if (time_after(jiffies, timeout)) {
+			pr_err("Waiting MU transmit buffer empty timeout!\n");
+			break;
+		}
+	} while ((val & (1 << (20 + index))) == 0);
+
 	regmap_write(imx_mu_reg, index * 0x4 + MU_ATR0_OFFSET, data);
 }
 
@@ -143,7 +150,7 @@ void mcc_clear_cpu_to_cpu_interrupt(unsigned int core)
  *
  * Platform-specific software triggering the inter-CPU interrupts.
  */
-void mcc_triger_cpu_to_cpu_interrupt(void)
+int mcc_triger_cpu_to_cpu_interrupt(void)
 {
 	int i = 0;
 	u32 val;
@@ -157,11 +164,14 @@ void mcc_triger_cpu_to_cpu_interrupt(void)
 		} while (((val & BIT(19)) > 0) && (i++ < 100));
 	}
 
-	if ((val & BIT(19)) == 0)
+	if ((val & BIT(19)) == 0) {
 		/* Enable the bit19(GIR3) of MU_ACR */
 		regmap_update_bits(imx_mu_reg, MU_ACR, BIT(19), BIT(19));
-	else
+		return 0;
+	} else {
 		pr_info("mcc int still be triggered after %d ms polling!\n", i);
+		return -EIO;
+	}
 }
 
 /*!
