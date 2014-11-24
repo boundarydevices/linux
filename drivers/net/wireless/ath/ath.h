@@ -261,17 +261,10 @@ enum ATH_DEBUG {
 
 #else
 
-<<<<<<< HEAD
-static inline  __attribute__ ((format (printf, 3, 4))) int
-ath_dbg(struct ath_common *common, enum ATH_DEBUG dbg_mask,
-	const char *fmt, ...)
-=======
 static inline  __attribute__ ((format (printf, 3, 4)))
 void ath_dbg(struct ath_common *common, enum ATH_DEBUG dbg_mask,
 	     const char *fmt, ...)
->>>>>>> b9075fa... treewide: use __printf not __attribute__((format(printf,...)))
 {
-	return 0;
 }
 #define ATH_DBG_WARN(foo, arg...) do {} while (0)
 #define ATH_DBG_WARN_ON_ONCE(foo) ({				\

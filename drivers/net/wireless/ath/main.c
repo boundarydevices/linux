@@ -57,7 +57,7 @@ struct sk_buff *ath_rxbuf_alloc(struct ath_common *common,
 }
 EXPORT_SYMBOL(ath_rxbuf_alloc);
 
-int ath_printk(const char *level, struct ath_common *common,
+void ath_printk(const char *level, struct ath_common *common,
 	       const char *fmt, ...)
 {
 	struct va_format vaf;
@@ -72,7 +72,5 @@ int ath_printk(const char *level, struct ath_common *common,
 	rtn = printk("%sath: %pV", level, &vaf);
 
 	va_end(args);
-
-	return rtn;
 }
 EXPORT_SYMBOL(ath_printk);
