@@ -718,6 +718,22 @@ static const struct reg_default wm8285_reg_default[] = {
 	{ 0x0000078d, 0x0080 },
 	{ 0x0000078e, 0x0000 },
 	{ 0x0000078f, 0x0080 },
+	{ 0x000007a0, 0x0000 }, /* R1952 - AIF4TX1MIX Input 1 Source */
+	{ 0x000007a1, 0x0080 }, /* R1953 - AIF4TX1MIX Input 1 Volume */
+	{ 0x000007a2, 0x0000 }, /* R1954 - AIF4TX1MIX Input 2 Source */
+	{ 0x000007a3, 0x0080 }, /* R1955 - AIF4TX1MIX Input 2 Volume */
+	{ 0x000007a4, 0x0000 }, /* R1956 - AIF4TX1MIX Input 3 Source */
+	{ 0x000007a5, 0x0080 }, /* R1957 - AIF4TX1MIX Input 3 Volume */
+	{ 0x000007a6, 0x0000 }, /* R1958 - AIF4TX1MIX Input 4 Source */
+	{ 0x000007a7, 0x0080 }, /* R1959 - AIF4TX1MIX Input 4 Volume */
+	{ 0x000007a8, 0x0000 }, /* R1960 - AIF4TX2MIX Input 1 Source */
+	{ 0x000007a9, 0x0080 }, /* R1961 - AIF4TX2MIX Input 1 Volume */
+	{ 0x000007aa, 0x0000 }, /* R1962 - AIF4TX2MIX Input 2 Source */
+	{ 0x000007ab, 0x0080 }, /* R1963 - AIF4TX2MIX Input 2 Volume */
+	{ 0x000007ac, 0x0000 }, /* R1964 - AIF4TX2MIX Input 3 Source */
+	{ 0x000007ad, 0x0080 }, /* R1965 - AIF4TX2MIX Input 3 Volume */
+	{ 0x000007ae, 0x0000 }, /* R1966 - AIF4TX2MIX Input 4 Source */
+	{ 0x000007af, 0x0080 }, /* R1967 - AIF4TX2MIX Input 4 Volume */
 	{ 0x000007c0, 0x0000 },
 	{ 0x000007c1, 0x0080 },
 	{ 0x000007c2, 0x0000 },
@@ -1035,12 +1051,13 @@ static const struct reg_default wm8285_reg_default[] = {
 	{ 0x00000c0c, 0x0000 },
 	{ 0x00000c0d, 0x0080 },
 	{ 0x00000c0e, 0x0000 },
-	{ 0x00000c0f, 0x0080 }, /* R3087 (0xC0F) - IRQ CTRL 1 */
-	{ 0x00000c10, 0x0000 }, /* R3088 (0xC10) - GPIO Debounce Config */
-	{ 0x00000c20, 0x0000 }, /* R3104 (0xC20) - Misc Pad Ctrl 1 */
-	{ 0x00000c28, 0x0000 },
-	{ 0x00000c30, 0x0000 },
-	{ 0x00000c38, 0x0000 },
+	{ 0x00000c0f, 0x0080 },
+	{ 0x00000c10, 0x0000 }, /* R3088 (0xC10) - DSP6AUX1MIX Input 1 */
+	{ 0x00000c18, 0x0000 }, /* R3088 (0xC18) - DSP6AUX2MIX Input 1 */
+	{ 0x00000c20, 0x0000 }, /* R3088 (0xC20) - DSP6AUX3MIX Input 1 */
+	{ 0x00000c28, 0x0000 }, /* R3088 (0xC28) - DSP6AUX4MIX Input 1 */
+	{ 0x00000c30, 0x0000 }, /* R3088 (0xC30) - DSP6AUX5MIX Input 1 */
+	{ 0x00000c38, 0x0000 }, /* R3088 (0xC38) - DSP6AUX6MIX Input 1 */
 	{ 0x00000c40, 0x0000 },
 	{ 0x00000c41, 0x0080 },
 	{ 0x00000c42, 0x0000 },
