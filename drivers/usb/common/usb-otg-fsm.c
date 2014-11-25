@@ -428,6 +428,12 @@ int otg_hnp_polling(struct otg_fsm *fsm)
 		return -ENODEV;
 	}
 
+	if (udev->state != USB_STATE_CONFIGURED) {
+		dev_dbg(&udev->dev, "the B dev is not resumed!\n");
+		otg_add_timer(fsm, HNP_POLLING);
+		return -EPERM;
+	}
+
 	/* Get host request flag from connected USB device */
 	retval = usb_control_msg(udev,
 				usb_rcvctrlpipe(udev, 0),
