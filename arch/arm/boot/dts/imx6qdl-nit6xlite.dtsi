@@ -117,7 +117,7 @@
 		compatible = "fsl,imx6dl-nit6xlite-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";
 		model = "imx6dl-nit6xlite-sgtl5000";
-		ssi-controller = <&ssi1>;
+		cpu-dai = <&ssi1>;
 		audio-codec = <&codec>;
 		audio-routing =
 			"MIC_IN", "Mic Jack",
