@@ -269,8 +269,19 @@ int arizona_irq_init(struct arizona *arizona)
 		return -EINVAL;
 	}
 
-	/* Disable all wake sources by default */
-	regmap_write(arizona->regmap, ARIZONA_WAKE_CONTROL, 0);
+	switch (arizona->type) {
+	case WM5102:
+	case WM5110:
+	case WM8997:
+	case WM8998:
+	case WM1814:
+	case WM8280:
+		/* Disable all wake sources by default */
+		regmap_write(arizona->regmap, ARIZONA_WAKE_CONTROL, 0);
+		break;
+	default:
+		break;
+	}
 
 	/* Read the flags from the interrupt controller if not specified */
 	if (!arizona->pdata.irq_flags) {
