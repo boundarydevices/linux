@@ -520,7 +520,7 @@ static int wm_adsp2v2_rate_put(struct snd_kcontrol *kcontrol,
 
 	mutex_lock(&adsp->rate_lock);
 
-	if (item != adsp->rate_cache) {
+	if (e->values[item] != adsp->rate_cache) {
 		val = e->values[item];
 		adsp->rate_cache = val;
 
