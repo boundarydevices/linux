@@ -200,6 +200,7 @@ int arizona_irq_init(struct arizona *arizona)
 	const struct regmap_irq_chip *aod, *irq;
 	bool ctrlif_error = true;
 	struct irq_data *irq_data;
+	unsigned int irq_ctrl_reg = ARIZONA_IRQ_CTRL_1;
 
 	switch (arizona->type) {
 #ifdef CONFIG_MFD_WM5102
@@ -234,6 +235,7 @@ int arizona_irq_init(struct arizona *arizona)
 		irq = NULL;
 
 		ctrlif_error = false;
+		irq_ctrl_reg = WM8285_IRQ1_CTRL;
 		break;
 #endif
 #ifdef CONFIG_MFD_CS47L24
@@ -297,7 +299,7 @@ int arizona_irq_init(struct arizona *arizona)
 
 	if (arizona->pdata.irq_flags & (IRQF_TRIGGER_HIGH |
 					IRQF_TRIGGER_RISING)) {
-		ret = regmap_update_bits(arizona->regmap, ARIZONA_IRQ_CTRL_1,
+		ret = regmap_update_bits(arizona->regmap, irq_ctrl_reg,
 					 ARIZONA_IRQ_POL, 0);
 		if (ret != 0) {
 			dev_err(arizona->dev, "Couldn't set IRQ polarity: %d\n",

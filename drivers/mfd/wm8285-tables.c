@@ -1458,6 +1458,7 @@ static const struct reg_default wm8285_reg_default[] = {
 	{ 0x0000184d, 0xffff }, /* R6221 (0x184D) - IRQ1 Mask 14 */
 	{ 0x0000184e, 0xffff }, /* R6222 (0x184E) - IRQ1 Mask 15 */
 	{ 0x00001948, 0xffff }, /* R6472 (0x1948) - IRQ2 Mask 9 */
+	{ 0x00001a80, 0x0400 }, /* R6784 (0x1A80) - IRQ1 CTRL */
 };
 
 static bool wm8285_is_adsp_memory(struct device *dev, unsigned int reg)
@@ -2815,6 +2816,7 @@ static bool wm8285_16bit_readable_register(struct device *dev, unsigned int reg)
 	case WM8285_IRQ2_STATUS_9:
 	case WM8285_IRQ2_MASK_9:
 	case WM8285_IRQ2_RAW_STATUS_9:
+	case WM8285_IRQ1_CTRL:
 		return true;
 	default:
 		return false;
