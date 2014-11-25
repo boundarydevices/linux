@@ -1310,6 +1310,14 @@ const struct soc_enum arizona_output_anc_src[] = {
 };
 EXPORT_SYMBOL_GPL(arizona_output_anc_src);
 
+const struct soc_enum wm8285_output_anc_src_defs[] = {
+	SOC_ENUM_SINGLE(ARIZONA_OUTPUT_PATH_CONFIG_3R,
+			ARIZONA_OUT3R_ANC_SRC_SHIFT,
+			ARRAY_SIZE(arizona_output_anc_src_text),
+			arizona_output_anc_src_text),
+};
+EXPORT_SYMBOL_GPL(wm8285_output_anc_src_defs);
+
 static void arizona_in_set_vu(struct snd_soc_codec *codec, int ena)
 {
 	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);

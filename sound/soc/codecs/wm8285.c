@@ -834,7 +834,7 @@ static const struct snd_kcontrol_new wm8285_output_anc_src[] = {
 	SOC_DAPM_ENUM("HPOUT2L ANC Source", arizona_output_anc_src[2]),
 	SOC_DAPM_ENUM("HPOUT2R ANC Source", arizona_output_anc_src[3]),
 	SOC_DAPM_ENUM("HPOUT3L ANC Source", arizona_output_anc_src[4]),
-	SOC_DAPM_ENUM("HPOUT3R ANC Source", arizona_output_anc_src[5]),
+	SOC_DAPM_ENUM("HPOUT3R ANC Source", wm8285_output_anc_src_defs[0]),
 	SOC_DAPM_ENUM("SPKOUTL ANC Source", arizona_output_anc_src[6]),
 	SOC_DAPM_ENUM("SPKOUTR ANC Source", arizona_output_anc_src[7]),
 	SOC_DAPM_ENUM("SPKDAT1L ANC Source", arizona_output_anc_src[8]),

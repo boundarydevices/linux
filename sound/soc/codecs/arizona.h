@@ -285,6 +285,7 @@ extern const struct soc_enum wm8285_in_dmic_osr[];
 extern const struct soc_enum arizona_anc_input_src[];
 extern const struct soc_enum wm8285_anc_input_src[];
 extern const struct soc_enum arizona_output_anc_src[];
+extern const struct soc_enum wm8285_output_anc_src_defs[];
 
 extern int arizona_put_anc_input(struct snd_kcontrol *kcontrol,
 			  struct snd_ctl_elem_value *ucontrol);
