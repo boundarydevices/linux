@@ -110,33 +110,33 @@ path.
 
 A diagram of the route through the input muxes is:
 
-Input pin      ALSA control        Internal signal path
+Input pin      ALSA control      Internal signal path
 -------------------------------------------------------
 
-           +-----------------+
-IN1AL ---> |                 |
-           | "IN1MUXL Input" | --> IN1L
-IN1BL ---> |                 |
-           +-----------------+
+               +-----------+
+IN1AL ---> "A" |           |
+               | "IN1LMUX" | --> IN1L
+IN1BL ---> "B" |           |
+               +-----------+
 
-           +-----------------+
-IN1AR ---> |                 |
-           | "IN1MUXR Input" | --> IN1R
-IN1BR ---> |                 |
-           +-----------------+
+               +-----------+
+IN1AR ---> "A" |           |
+               | "IN1RMUX" | --> IN1R
+IN1BR ---> "B" |           |
+               +-----------+
 
-           +-----------------+
-IN2A  ---> |                 |
-           | "IN2MUX Input"  | --> IN2L
-IN2B  ---> |                 |
-           +-----------------+
+               +-----------+
+IN2A  ---> "A" |           |
+               | "IN2MUX"  | --> IN2L
+IN2B  ---> "B" |           |
+               +-----------+
 
 IN1A and IN2A can be set as digital. IN1B and IN2B are analogue only.
 
 It is important to note that although the left and right paths of IN1 have
-separate mux controls, these only separate for the analogue path. The setting
+separate mux controls, these are only separate for analogue paths. The setting
 of digital/analogue applies jointly to both channels of IN1. Because of this,
-if IN1A is digital _both_ the left and right mux must be set to IN1A before
+if IN1A is digital _both_ the left and right mux must be set to "A" before
 connecting the input to any internal codec blocks. When IN1 is part of an
 active path the whole of IN1 will be set to digital or analogue depending on
 mux setting and this cannot be changed while IN1 is part of an active path.
@@ -144,7 +144,7 @@ mux setting and this cannot be changed while IN1 is part of an active path.
 To change from a digital IN1A to an analogue IN1B follow this sequence:
 
 1) Disconnect IN1 from the input of any codec blocks
-2) Change the IN1MUXL and IN1MUXR to IN1B
+2) Change the IN1MUXL and IN1MUXR to "B"
 3) Connect IN1 as an input to codec blocks
 
 The input mode pdata for WM8998 is defined as:
