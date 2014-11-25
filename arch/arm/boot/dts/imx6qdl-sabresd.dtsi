@@ -260,8 +260,8 @@
 	};
 
 	gps_ctrl {
-		gps-reset-b = <&gpio2 28 GPIO_ACTIVE_LOW>;
-		power-on-gpio = <&gpio3 0 GPIO_ACTIVE_LOW>;
+		gps-reset-b = <&gpio2 28 GPIO_ACTIVE_HIGH>;
+		power-on-gpio = <&gpio3 0 GPIO_ACTIVE_HIGH>;
 	};
 
 	ramoops_device {
