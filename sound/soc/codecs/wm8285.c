@@ -2601,8 +2601,11 @@ static int wm8285_probe(struct platform_device *pdev)
 			return ret;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(wm8285->fll); i++)
+	for (i = 0; i < ARRAY_SIZE(wm8285->fll); i++) {
 		wm8285->fll[i].vco_mult = 3;
+		wm8285->fll[i].min_outdiv = 3;
+		wm8285->fll[i].max_outdiv = 3;
+	}
 
 	arizona_init_fll(arizona, 1, ARIZONA_FLL1_CONTROL_1 - 1,
 			 ARIZONA_IRQ_FLL1_LOCK, ARIZONA_IRQ_FLL1_CLOCK_OK,

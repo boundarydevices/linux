@@ -3227,10 +3227,10 @@ int arizona_set_fll(struct arizona_fll *fll, int source,
 		return 0;
 
 	if (Fout) {
-		div = ARIZONA_FLL_MIN_OUTDIV;
+		div = fll->min_outdiv;
 		while (Fout * div < ARIZONA_FLL_MIN_FVCO * fll->vco_mult) {
 			div++;
-			if (div > ARIZONA_FLL_MAX_OUTDIV) {
+			if (div > fll->max_outdiv) {
 				arizona_fll_err(fll,
 						"No FLL_OUTDIV for Fout=%uHz\n",
 						Fout);
@@ -3276,6 +3276,11 @@ int arizona_init_fll(struct arizona *arizona, int id, int base, int lock_irq,
 	fll->base = base;
 	fll->arizona = arizona;
 	fll->sync_src = ARIZONA_FLL_SRC_NONE;
+
+	if (!fll->min_outdiv)
+		fll->min_outdiv = ARIZONA_FLL_MIN_OUTDIV;
+	if (!fll->max_outdiv)
+		fll->max_outdiv = ARIZONA_FLL_MAX_OUTDIV;
 
 	/* Configure default refclk to 32kHz if we have one */
 	regmap_read(arizona->regmap, ARIZONA_CLOCK_32K_1, &val);
