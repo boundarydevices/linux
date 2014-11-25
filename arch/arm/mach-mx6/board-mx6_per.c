@@ -561,9 +561,6 @@ static struct fsl_mxc_camera_platform_data tc358743_mipi_data = {
 #endif
 
 static struct i2c_board_info i2c1_board_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
-	},
 };
 
 static struct i2c_board_info i2c2_board_info[] __initdata = {
@@ -579,30 +576,33 @@ static struct i2c_board_info i2c2_board_info[] __initdata = {
 /*
  **********************************************************************
  */
-/* i2C bus has a switch */
-static const unsigned i2c1_gpiomux_gpios[] = {
+/* i2c0 bus has a switch */
+static const unsigned i2c0_gpiomux_gpios[] = {
 	GP_TC3587_I2C_EN,	/* i2c3 */
+	GP_KL04_I2c_EN,		/* i2c4 */
+	GP_ANX7814_I2C_EN,	/* i2c5 convert to mini hdmi */
+	GP_AX7738_I2C_EN,	/* i2c6 expand from mini hdmi to TC3587 input */
 };
 
-static const unsigned i2c1_gpiomux_values[] = {
-	1,
+static const unsigned i2c0_gpiomux_values[] = {
+	1, 2, 4, 8,
 };
 
-static struct gpio_i2cmux_platform_data i2c1_i2cmux_data = {
-	.parent		= 1,
+static struct gpio_i2cmux_platform_data i2c0_i2cmux_data = {
+	.parent		= 0,
 	.base_nr	= 3, /* optional */
-	.values		= i2c1_gpiomux_values,
-	.n_values	= ARRAY_SIZE(i2c1_gpiomux_values),
-	.gpios		= i2c1_gpiomux_gpios,
-	.n_gpios	= ARRAY_SIZE(i2c1_gpiomux_gpios),
+	.values		= i2c0_gpiomux_values,
+	.n_values	= ARRAY_SIZE(i2c0_gpiomux_values),
+	.gpios		= i2c0_gpiomux_gpios,
+	.n_gpios	= ARRAY_SIZE(i2c0_gpiomux_gpios),
 	.idle		= 0,
 };
 
-static struct platform_device i2c1_i2cmux = {
+static struct platform_device i2c0_i2cmux = {
         .name           = "gpio-i2cmux",
         .id             = 0,
         .dev            = {
-                .platform_data  = &i2c1_i2cmux_data,
+                .platform_data  = &i2c0_i2cmux_data,
         },
 };
 
@@ -614,6 +614,39 @@ static struct i2c_board_info i2c3_board_info[] __initdata = {
 		.irq = gpio_to_irq(GP_TC3587_IRQ),
 	},
 #endif
+};
+
+/* i2c1 bus has a switch */
+static const unsigned i2c1_gpiomux_gpios[] = {
+	GP_ANX7814_DDC_I2C_EN,	/* i2c7 */
+};
+
+static const unsigned i2c1_gpiomux_values[] = {
+	1,
+};
+
+static struct gpio_i2cmux_platform_data i2c1_i2cmux_data = {
+	.parent		= 1,
+	.base_nr	= 7, /* optional */
+	.values		= i2c1_gpiomux_values,
+	.n_values	= ARRAY_SIZE(i2c1_gpiomux_values),
+	.gpios		= i2c1_gpiomux_gpios,
+	.n_gpios	= ARRAY_SIZE(i2c1_gpiomux_gpios),
+	.idle		= 0,
+};
+
+static struct platform_device i2c1_i2cmux = {
+        .name           = "gpio-i2cmux",
+        .id             = 1,
+        .dev            = {
+                .platform_data  = &i2c1_i2cmux_data,
+        },
+};
+
+static struct i2c_board_info i2c7_board_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
+	},
 };
 
 static void usbotg_vbus(bool on)
@@ -1143,9 +1176,12 @@ static void __init board_init(void)
 	i2c_register_board_info(2, i2c2_board_info,
 			ARRAY_SIZE(i2c2_board_info));
 
+	mxc_register_device(&i2c0_i2cmux, &i2c0_i2cmux_data);
 	mxc_register_device(&i2c1_i2cmux, &i2c1_i2cmux_data);
 	i2c_register_board_info(3, i2c3_board_info,
 			ARRAY_SIZE(i2c3_board_info));
+	i2c_register_board_info(7, i2c7_board_info,
+			ARRAY_SIZE(i2c7_board_info));
 	/* SPI */
 	imx6q_add_ecspi(0, &ecspi1_data);
 	imx6q_add_ecspi(1, &ecspi2_data);
