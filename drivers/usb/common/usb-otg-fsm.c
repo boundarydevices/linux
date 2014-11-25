@@ -443,6 +443,12 @@ int otg_hnp_polling(struct otg_fsm *fsm)
 		return -ENODEV;
 	}
 
+	if (udev->state != USB_STATE_CONFIGURED) {
+		dev_dbg(&udev->dev, "the B dev is not resumed!\n");
+		otg_add_timer(fsm, HNP_POLLING);
+		return -EPERM;
+	}
+
 	/*
 	 * Legacy otg test device does not support HNP polling,
 	 * start HNP directly for legacy otg test device.
@@ -482,7 +488,7 @@ int otg_hnp_polling(struct otg_fsm *fsm)
 			retval = -EINVAL;
 		}
 	} else {
-		dev_err(&udev->dev, "Get one byte OTG status failed\n");
+		dev_warn(&udev->dev, "Get one byte OTG status failed\n");
 		retval = -EIO;
 	}
 	return retval;
