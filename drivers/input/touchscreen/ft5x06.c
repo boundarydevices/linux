@@ -27,7 +27,6 @@
 #include <linux/io.h>
 #include <mach/hardware.h>
 #include <mach/gpio.h>
-#include <linux/proc_fs.h>
 #include <linux/delay.h>
 #include <linux/input.h>
 
@@ -35,6 +34,10 @@
 #else
 #define USE_ABS_MT
 #endif
+
+static char const devname[] = {
+   "ft5x06"
+};
 
 static int calibration[7] = {
 	65536,0,0,
@@ -89,15 +92,9 @@ struct ft5x06_ts {
 	int			bReady;
 	int			irq;
 	unsigned		gp;
-	struct proc_dir_entry  *procentry;
+	unsigned		last_reg;
 };
 static const char *client_name = "ft5x06";
-
-struct ft5x06_ts *gts;
-
-static char const procentryname[] = {
-   "ft5x06"
-};
 
 static int ts_startup(struct ft5x06_ts *ts);
 static void ts_shutdown(struct ft5x06_ts *ts);
@@ -163,7 +160,7 @@ static inline int ts_register(struct ft5x06_ts *ts)
 		return -ENOMEM;
 
 	ts->idev = idev;
-	idev->name      = procentryname ;
+	idev->name      = devname ;
 	idev->id.product = ts->client->addr;
 	idev->open      = ts_open;
 	idev->close     = ts_close;
@@ -242,46 +239,6 @@ static void set_mode(struct ft5x06_ts *ts, int mode)
 
 #define WORK_MODE 0
 #define FACTORY_MODE 4
-
-static int proc_regnum = 0;
-static int ft5x06_proc_read
-	(char *page,
-	 char **start,
-	 off_t off,
-	 int count,
-	 int *eof,
-	 void *data)
-{
-	int ret;
-	unsigned char startch[1] = { (u8)proc_regnum };
-	unsigned char buf[1];
-	struct i2c_msg readpkt[2] = {
-		{gts->client->addr, 0, 1, startch},
-		{gts->client->addr, I2C_M_RD, sizeof(buf), buf}
-	};
-	ret = i2c_transfer(gts->client->adapter, readpkt,
-			   ARRAY_SIZE(readpkt));
-	if (ret != ARRAY_SIZE(readpkt)) {
-		printk(KERN_WARNING "%s: i2c_transfer failed\n",
-		       client_name);
-	} else {
-		printk (KERN_ERR "ft5x06[0x%02x] == 0x%02x\n", (u8)proc_regnum, buf[0]);
-	}
-	return 0 ;
-}
-
-static int
-ft5x06_proc_write
-	(struct file *file,
-	 const char __user *buffer,
-	 unsigned long count,
-	 void *data)
-{
-	proc_regnum = simple_strtoul(buffer,0,0);
-	return count ;
-}
-
-/*-----------------------------------------------------------------------*/
 
 /*
  * This is a RT kernel thread that handles the I2c accesses
@@ -526,16 +483,74 @@ static int ts_detect(struct i2c_client *client,
 	return err;
 }
 
+static ssize_t ft5x06_reg_show
+	(struct device *dev,
+	 struct device_attribute *attr,
+	 char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct ft5x06_ts *priv = i2c_get_clientdata(client);
+
+	int ret;
+	unsigned char startch[1] = {(u8)priv->last_reg};
+	unsigned char regval[1];
+	struct i2c_msg readpkt[2] = {
+		{client->addr, 0, 1, startch},
+		{client->addr, I2C_M_RD, sizeof(buf), regval}
+	};
+	ret = i2c_transfer(client->adapter, readpkt,
+			   ARRAY_SIZE(readpkt));
+	if (ret != ARRAY_SIZE(readpkt))
+		pr_err("%s: i2c_transfer failed\n", __func__);
+	else {
+		ret = scnprintf(buf, PAGE_SIZE, "ft5x06[%02x]=0x%02X\n",
+				priv->last_reg, regval[0]);
+	}
+	return ret;
+}
+
+static ssize_t ft5x06_reg_store
+	(struct device *dev,
+	 struct device_attribute *attr,
+	 const char *buf, size_t count)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct ft5x06_ts *priv = i2c_get_clientdata(client);
+	int regnum, value;
+	int num_parsed = sscanf(buf, "%02x=%02x", &regnum, &value);
+	if (1 <= num_parsed) {
+		if (0xff < (unsigned)regnum){
+			pr_err("%s:invalid regnum %x\n", __func__, regnum);
+			return 0;
+		}
+		priv->last_reg = regnum;
+	}
+	if (2 == num_parsed) {
+		if (0xff < (unsigned)value) {
+			pr_err("%s:invalid value %x\n", __func__, value);
+			return 0;
+		}
+		write_reg(priv, regnum, value);
+	}
+	return count;
+}
+
+static DEVICE_ATTR(reg, 0644, ft5x06_reg_show, ft5x06_reg_store);
+
+static struct attribute *ft5x06_attributes[] = {
+	&dev_attr_reg.attr,
+	NULL,
+};
+
+static const struct attribute_group ft5x06_attr_group = {
+	.attrs = ft5x06_attributes,
+};
+
 static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int err = 0;
 	struct ft5x06_ts *ts;
 	struct device *dev = &client->dev;
-	if (gts) {
-		printk(KERN_ERR "%s: Error gts is already allocated\n",
-		       client_name);
-		return -ENOMEM;
-	}
 	if (detect_ft5x06(client) != 0) {
 		dev_err(dev, "%s: Could not detect touch screen.\n",
 			client_name);
@@ -555,32 +570,23 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	       client_name, ts->irq, ts->gp);
 	i2c_set_clientdata(client, ts);
 	err = ts_register(ts);
-	if (err == 0) {
-		gts = ts;
-		ts->procentry = create_proc_entry(procentryname, 0, NULL);
-		if (ts->procentry) {
-			ts->procentry->read_proc = ft5x06_proc_read ;
-			ts->procentry->write_proc = ft5x06_proc_write ;
-		}
-	} else {
+	if (err != 0) {
 		printk(KERN_WARNING "%s: ts_register failed\n", client_name);
 		ts_deregister(ts);
 		kfree(ts);
 	}
+	err = sysfs_create_group(&dev->kobj, &ft5x06_attr_group);
+	if (err)
+		dev_err(dev, "create sysfs err: %d\n", err);
+
 	return err;
 }
 
 static int ts_remove(struct i2c_client *client)
 {
 	struct ft5x06_ts *ts = i2c_get_clientdata(client);
-	remove_proc_entry(procentryname, 0);
-	if (ts == gts) {
-		gts = NULL;
-		gpio_free(ts->gp);
-		ts_deregister(ts);
-	} else {
-		printk(KERN_ERR "%s: Error ts!=gts\n", client_name);
-	}
+	gpio_free(ts->gp);
+	ts_deregister(ts);
 	kfree(ts);
 	return 0;
 }
