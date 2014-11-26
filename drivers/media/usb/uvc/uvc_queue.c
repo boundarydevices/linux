@@ -659,20 +659,6 @@ static void uvc_buf_cleanup(struct vb2_buffer *vb)
 	cleanup_buf(stream, buf);
 }
 
-static void uvc_wait_prepare(struct vb2_queue *vq)
-{
-	struct uvc_video_queue *queue = vb2_get_drv_priv(vq);
-
-	mutex_unlock(&queue->mutex);
-}
-
-static void uvc_wait_finish(struct vb2_queue *vq)
-{
-	struct uvc_video_queue *queue = vb2_get_drv_priv(vq);
-
-	mutex_lock(&queue->mutex);
-}
-
 static void stop_queue(struct uvc_video_queue *queue)
 {
 	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
@@ -751,8 +737,8 @@ static struct vb2_ops uvc_queue_qops = {
 	.buf_queue = uvc_buffer_queue,
 	.buf_finish = uvc_buffer_finish,
 	.buf_cleanup = uvc_buf_cleanup,
-	.wait_prepare = uvc_wait_prepare,
-	.wait_finish = uvc_wait_finish,
+	.wait_prepare = vb2_ops_wait_prepare,
+	.wait_finish = vb2_ops_wait_finish,
 	.start_streaming = uvc_start_streaming,
 	.stop_streaming = uvc_stop_streaming,
 };
@@ -774,6 +760,7 @@ int uvc_queue_init(struct uvc_video_queue *queue, enum v4l2_buf_type type,
 	queue->queue.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
 //	queue->queue.dma_attrs = &uvc_dma_attrs;
 
+	queue->queue.lock = &queue->mutex;
 	ret = vb2_queue_init(&queue->queue);
 	if (ret)
 		return ret;
