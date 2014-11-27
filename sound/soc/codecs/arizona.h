@@ -243,8 +243,9 @@ extern int arizona_v2_mixer_values[ARIZONA_V2_NUM_MIXER_INPUTS];
 		 .mask = ~ARIZONA_EQ1_B1_MODE }) }
 
 #define WM8285_OSR_ENUM_SIZE 5
-#define ARIZONA_RATE_ENUM_SIZE 4
+#define ARIZONA_RATE_ENUM_SIZE 5
 #define ARIZONA_SYNC_RATE_ENUM_SIZE 3
+#define ARIZONA_ASYNC_RATE_ENUM_SIZE 2
 #define ARIZONA_SAMPLE_RATE_ENUM_SIZE 14
 #define ARIZONA_ANC_INPUT_ENUM_SIZE 19
 #define WM8280_ANC_INPUT_ENUM_SIZE 13
@@ -259,8 +260,8 @@ extern const struct soc_enum arizona_sample_rate[];
 extern const struct soc_enum arizona_isrc_fsl[];
 extern const struct soc_enum arizona_isrc_fsh[];
 extern const struct soc_enum arizona_asrc_rate1;
-extern const struct soc_enum wm8285_asrc1_rate1;
-extern const struct soc_enum wm8285_asrc2_rate1;
+extern const struct soc_enum wm8285_asrc1_rate[];
+extern const struct soc_enum wm8285_asrc2_rate[];
 extern const struct soc_enum arizona_input_rate;
 extern const struct soc_enum arizona_output_rate;
 extern const struct soc_enum arizona_fx_rate;

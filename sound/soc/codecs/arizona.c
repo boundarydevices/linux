@@ -960,11 +960,18 @@ const struct soc_enum arizona_sample_rate[] = {
 			      ARIZONA_SAMPLE_RATE_ENUM_SIZE,
 			      arizona_sample_rate_text,
 			      arizona_sample_rate_val),
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_ASYNC_SAMPLE_RATE_2,
+			      ARIZONA_ASYNC_SAMPLE_RATE_2_SHIFT, 0x1f,
+			      ARIZONA_SAMPLE_RATE_ENUM_SIZE,
+			      arizona_sample_rate_text,
+			      arizona_sample_rate_val),
+
 };
 EXPORT_SYMBOL_GPL(arizona_sample_rate);
 
 const char *arizona_rate_text[ARIZONA_RATE_ENUM_SIZE] = {
-	"SYNCCLK rate 1", "SYNCCLK rate 2", "SYNCCLK rate 3", "ASYNCCLK rate",
+	"SYNCCLK rate 1", "SYNCCLK rate 2", "SYNCCLK rate 3",
+	"ASYNCCLK rate", "ASYNCCLK rate 2",
 };
 EXPORT_SYMBOL_GPL(arizona_rate_text);
 
@@ -1003,7 +1010,7 @@ const struct soc_enum arizona_spdif_rate =
 EXPORT_SYMBOL_GPL(arizona_spdif_rate);
 
 const int arizona_rate_val[ARIZONA_RATE_ENUM_SIZE] = {
-	0, 1, 2, 8,
+	0x0, 0x1, 0x2, 0x8, 0x9,
 };
 EXPORT_SYMBOL_GPL(arizona_rate_val);
 
@@ -1056,19 +1063,33 @@ const struct soc_enum arizona_asrc_rate1 =
 			      arizona_rate_text, arizona_rate_val);
 EXPORT_SYMBOL_GPL(arizona_asrc_rate1);
 
-const struct soc_enum wm8285_asrc1_rate1 =
+const struct soc_enum wm8285_asrc1_rate[] = {
 	SOC_VALUE_ENUM_SINGLE(WM8285_ASRC1_RATE1,
 			      WM8285_ASRC1_RATE1_SHIFT, 0xf,
 			      ARIZONA_SYNC_RATE_ENUM_SIZE,
-			      arizona_rate_text, arizona_rate_val);
-EXPORT_SYMBOL_GPL(wm8285_asrc1_rate1);
+			      arizona_rate_text, arizona_rate_val),
+	SOC_VALUE_ENUM_SINGLE(WM8285_ASRC1_RATE2,
+			      WM8285_ASRC1_RATE1_SHIFT, 0xf,
+			      ARIZONA_ASYNC_RATE_ENUM_SIZE,
+			      arizona_rate_text + ARIZONA_SYNC_RATE_ENUM_SIZE,
+			      arizona_rate_val + ARIZONA_SYNC_RATE_ENUM_SIZE),
 
-const struct soc_enum wm8285_asrc2_rate1 =
+};
+EXPORT_SYMBOL_GPL(wm8285_asrc1_rate);
+
+const struct soc_enum wm8285_asrc2_rate[] = {
 	SOC_VALUE_ENUM_SINGLE(WM8285_ASRC2_RATE1,
 			      WM8285_ASRC2_RATE1_SHIFT, 0xf,
 			      ARIZONA_SYNC_RATE_ENUM_SIZE,
-			      arizona_rate_text, arizona_rate_val);
-EXPORT_SYMBOL_GPL(wm8285_asrc2_rate1);
+			      arizona_rate_text, arizona_rate_val),
+	SOC_VALUE_ENUM_SINGLE(WM8285_ASRC2_RATE2,
+			      WM8285_ASRC2_RATE2_SHIFT, 0xf,
+			      ARIZONA_ASYNC_RATE_ENUM_SIZE,
+			      arizona_rate_text + ARIZONA_SYNC_RATE_ENUM_SIZE,
+			      arizona_rate_val + ARIZONA_SYNC_RATE_ENUM_SIZE),
+
+};
+EXPORT_SYMBOL_GPL(wm8285_asrc2_rate);
 
 static const char *arizona_vol_ramp_text[] = {
 	"0ms/6dB", "0.5ms/6dB", "1ms/6dB", "2ms/6dB", "4ms/6dB", "8ms/6dB",
