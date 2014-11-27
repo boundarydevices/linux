@@ -2592,9 +2592,11 @@ static bool wm8285_16bit_readable_register(struct device *dev, unsigned int reg)
 	case WM8285_ASRC1_ENABLE:
 	case WM8285_ASRC1_STATUS:
 	case WM8285_ASRC1_RATE1:
+	case WM8285_ASRC1_RATE2:
 	case WM8285_ASRC2_ENABLE:
 	case WM8285_ASRC2_STATUS:
 	case WM8285_ASRC2_RATE1:
+	case WM8285_ASRC2_RATE2:
 	case ARIZONA_ISRC_1_CTRL_1:
 	case ARIZONA_ISRC_1_CTRL_2:
 	case ARIZONA_ISRC_1_CTRL_3:
