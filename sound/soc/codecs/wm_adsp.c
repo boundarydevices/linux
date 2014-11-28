@@ -897,10 +897,11 @@ static void wm_adsp_ctl_work(struct work_struct *work)
 	kfree(ctl_work);
 }
 
-static int wm_adsp_create_control(struct wm_adsp *dsp,
+static int wm_adsp_create_ctl_blk(struct wm_adsp *dsp,
 				  const struct wm_adsp_alg_region *alg_region,
 				  unsigned int offset, unsigned int len,
-				  const char *subname, unsigned int subname_len)
+				  const char *subname, unsigned int subname_len,
+				  int block)
 {
 	struct wm_coeff_ctl *ctl;
 	struct wmfw_ctl_work *ctl_work;
@@ -928,8 +929,8 @@ static int wm_adsp_create_control(struct wm_adsp *dsp,
 		return -EINVAL;
 	}
 
-	snprintf(name, WM_ADSP_CONTROL_MAX, "DSP%d %s %x",
-		 dsp->num, region_name, alg_region->alg);
+	snprintf(name, WM_ADSP_CONTROL_MAX, "DSP%d %s %x:%d",
+		 dsp->num, region_name, alg_region->alg, block);
 
 	list_for_each_entry(ctl, &dsp->ctl_list,
 			    list) {
@@ -995,6 +996,34 @@ err_ctl:
 	kfree(ctl);
 
 	return ret;
+}
+
+static int wm_adsp_create_control(struct wm_adsp *dsp,
+				  const struct wm_adsp_alg_region *alg_region,
+				  unsigned int offset, unsigned int len,
+				  const char *subname, unsigned int subname_len)
+{
+	unsigned int ctl_len;
+	int block = 0;
+	int ret;
+
+	while (len) {
+		ctl_len = len;
+		if (ctl_len > 512)
+			ctl_len = 512;
+
+		ret = wm_adsp_create_ctl_blk(dsp, alg_region, offset, ctl_len,
+					     subname, subname_len, block);
+		if (ret < 0)
+			return ret;
+
+		offset += ctl_len / 4;
+		len -= ctl_len;
+
+		block++;
+	}
+
+	return 0;
 }
 
 struct wm_coeff_parsed_alg {
