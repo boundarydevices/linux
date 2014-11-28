@@ -29,7 +29,6 @@ struct wm_adsp_region {
 
 struct wm_adsp_alg_region {
 	struct list_head list;
-	unsigned int block;
 	unsigned int alg;
 	int type;
 	unsigned int base;
