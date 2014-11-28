@@ -960,6 +960,9 @@ SND_SOC_BYTES_EXT("Output Compensation Coefficient", 2,
 SOC_SINGLE_EXT("Output Compensation Switch", 0, 0, 1, 0,
 	       wm5102_out_comp_switch_get, wm5102_out_comp_switch_put),
 
+SOC_VALUE_ENUM("Output Rate 1", arizona_output_rate),
+SOC_VALUE_ENUM("In Rate", arizona_input_rate),
+
 WM5102_NG_SRC("HPOUT1L", ARIZONA_NOISE_GATE_SELECT_1L),
 WM5102_NG_SRC("HPOUT1R", ARIZONA_NOISE_GATE_SELECT_1R),
 WM5102_NG_SRC("HPOUT2L", ARIZONA_NOISE_GATE_SELECT_2L),
