@@ -1717,7 +1717,7 @@ static int hub_probe(struct usb_interface *intf, const struct usb_device_id *id)
 	 * - If user has indicated to prevent autosuspend by passing
 	 *   usbcore.autosuspend = -1 then keep autosuspend disabled.
 	 */
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	if (hdev->dev.power.autosuspend_delay >= 0)
 		pm_runtime_set_autosuspend_delay(&hdev->dev, 0);
 #endif
@@ -3390,7 +3390,7 @@ int usb_port_resume(struct usb_device *udev, pm_message_t msg)
 	return status;
 }
 
-#ifdef	CONFIG_PM_RUNTIME
+#ifdef	CONFIG_PM
 
 /* caller has locked udev */
 int usb_remote_wakeup(struct usb_device *udev)
