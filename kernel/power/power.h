@@ -299,6 +299,11 @@ extern int pm_wake_unlock(const char *buf);
 extern struct workqueue_struct *suspend_work_queue;
 extern struct wake_lock main_wake_lock;
 extern suspend_state_t requested_suspend_state;
+extern void suspend_sys_sync_queue(void);
+extern int suspend_sys_sync_wait(void);
+#else
+static inline void suspend_sys_sync_queue(void) {}
+static inline int suspend_sys_sync_wait(void) { return 0; }
 #endif
 
 #ifdef CONFIG_EARLYSUSPEND
