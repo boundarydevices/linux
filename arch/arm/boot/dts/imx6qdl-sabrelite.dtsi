@@ -179,9 +179,7 @@
 		default_ifmt = "RGB565";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ipu1_4>;
-#if 0
 		status = "okay";
-#endif
 	};
 
 	backlight_lcd {
