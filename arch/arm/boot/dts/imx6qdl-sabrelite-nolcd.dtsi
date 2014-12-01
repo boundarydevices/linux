@@ -130,15 +130,6 @@
 
 	mxcfb1: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
-#if 0
-		disp_dev = "mipi_dsi";
-		interface_pix_fmt = "RGB666";
-		mode_str ="LDB-XGA";
-		default_bpp = <16>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-#else
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
 		mode_str ="LDB-XGA";
@@ -146,7 +137,6 @@
 		int_clk = <0>;
 		late_init = <0>;
 		status = "disabled";
-#endif
 	};
 
 	mxcfb2: fb@1 {
@@ -213,14 +203,6 @@
 		status = "okay";
 	};
 
-#if 0
-	mipi_dsi_reset: mipi-dsi-reset {
-		compatible = "gpio-reset";
-		reset-gpios = <&gpio2 5 GPIO_ACTIVE_LOW>;
-		reset-delay-us = <50>;
-		#reset-cells = <0>;
-	};
-#endif
 	pwmleds {
 		compatible = "pwm-leds";
 
@@ -584,17 +566,6 @@
 	sec_disp_id = <1>;
 	status = "okay";
 };
-
-#if 0
-&mipi_dsi {
-	dev_id = <0>;
-	disp_id = <0>;
-	lcd_panel = "hitachi-1080p";
-	disp-power-on-supply = <&reg_3p3v>;
-	resets = <&mipi_dsi_reset>;
-	status = "okay";
-};
-#endif
 
 &mipi_csi {
 	lanes = <2>;
