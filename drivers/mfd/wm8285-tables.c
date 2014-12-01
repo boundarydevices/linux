@@ -131,9 +131,9 @@ const struct regmap_irq_chip wm8285_irq = {
 EXPORT_SYMBOL_GPL(wm8285_irq);
 
 static const struct reg_default wm8285_reg_default[] = {
-	{ 0x00000008, 0x0009 }, /* R8 (0x08) - Ctrl IF SPI CFG 1 */
-	{ 0x00000009, 0x0001 }, /* R9 (0x09) - Ctrl IF I2C1 CFG 1 */
-	{ 0x0000000a, 0x0009 },
+	{ 0x00000008, 0x0309 }, /* R8     - Ctrl IF CFG 1 */
+	{ 0x00000009, 0x0200 }, /* R9     - Ctrl IF CFG 2 */
+	{ 0x0000000A, 0x0309 }, /* R10    - Ctrl IF CFG 3 */
 	{ 0x00000016, 0x0000 }, /* R22 (0x16) - Write Sequencer Ctrl 0 */
 	{ 0x00000017, 0x0000 }, /* R23 (0x17) - Write Sequencer Ctrl 1 */
 	{ 0x00000018, 0x0000 }, /* R24 (0x18) - Write Sequencer Ctrl 2 */
@@ -186,7 +186,7 @@ static const struct reg_default wm8285_reg_default[] = {
 	{ 0x00000172, 0x0008 }, /* R370 (0x172) - FLL1 Control 2 */
 	{ 0x00000173, 0x0018 }, /* R371 (0x173) - FLL1 Control 3 */
 	{ 0x00000174, 0x007d }, /* R372 (0x174) - FLL1 Control 4 */
-	{ 0x00000175, 0x0006 }, /* R373 (0x175) - FLL1 Control 5 */
+	{ 0x00000175, 0x0000 }, /* R373   - FLL1 Control 5 */
 	{ 0x00000176, 0x0000 }, /* R374 (0x176) - FLL1 Control 6 */
 	{ 0x00000177, 0x0281 }, /* R375 (0x177) - FLL1 Loop Filter Test 1 */
 	{ 0x00000178, 0x0000 },
@@ -204,7 +204,7 @@ static const struct reg_default wm8285_reg_default[] = {
 	{ 0x00000192, 0x0008 }, /* R402 (0x192) - FLL2 Control 2 */
 	{ 0x00000193, 0x0018 }, /* R403 (0x193) - FLL2 Control 3 */
 	{ 0x00000194, 0x007d }, /* R404 (0x194) - FLL2 Control 4 */
-	{ 0x00000195, 0x0006 }, /* R405 (0x195) - FLL2 Control 5 */
+	{ 0x00000195, 0x0000 }, /* R405   - FLL2 Control 5 */
 	{ 0x00000196, 0x0000 }, /* R406 (0x196) - FLL2 Control 6 */
 	{ 0x00000197, 0x0281 }, /* R407 (0x197) - FLL2 Loop Filter Test 1 */
 	{ 0x00000198, 0x0000 },
@@ -222,7 +222,7 @@ static const struct reg_default wm8285_reg_default[] = {
 	{ 0x000001B2, 0x0008 }, /* R434  - FLL3 Control 2 */
 	{ 0x000001B3, 0x0018 }, /* R435  - FLL3 Control 3 */
 	{ 0x000001B4, 0x007D }, /* R436  - FLL3 Control 4 */
-	{ 0x000001B5, 0x0006 }, /* R437  - FLL3 Control 5 */
+	{ 0x000001B5, 0x0000 }, /* R437  - FLL3 Control 5 */
 	{ 0x000001B6, 0x0000 }, /* R438  - FLL3 Control 6 */
 	{ 0x000001B7, 0x0281 }, /* R439  - FLL3 Loop Filter Test 1 */
 	{ 0x000001B8, 0x0000 }, /* R440  - FLL3 NCO Test 0 */
@@ -352,7 +352,7 @@ static const struct reg_default wm8285_reg_default[] = {
 	{ 0x00000491, 0x0000 }, /* R1169 (0x491) - PDM SPK1 CTRL 2 */
 	{ 0x00000492, 0x0069 }, /* R1170 (0x492) - PDM SPK2 CTRL 1 */
 	{ 0x00000493, 0x0000 }, /* R1171 (0x493) - PDM SPK2 CTRL 2 */
-	{ 0x000004A0, 0x3280 }, /* R1184  - HP1 Short Circuit Ctrl */
+	{ 0x000004A0, 0x3210 }, /* R1184  - HP1 Short Circuit Ctrl */
 	{ 0x000004A1, 0x3200 }, /* R1185  - HP2 Short Circuit Ctrl */
 	{ 0x000004A2, 0x3200 }, /* R1186  - HP3 Short Circuit Ctrl */
 	{ 0x000004A8, 0x7020 }, /* R1192  - HP Test Ctrl 5 */
