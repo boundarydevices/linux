@@ -187,15 +187,21 @@
 		status = "okay";
 	};
 
-	v4l2_cap_1 {
+	v4l2_cap_1: v4l2_cap_1 {
 		compatible = "fsl,imx6q-v4l2-capture";
 		ipu_id = <0>;
 		csi_id = <1>;
+		mipi_camera = <1>;
 		mclk_source = <0>;
 		status = "okay";
 	};
 
 	v4l2_cap_2: v4l2_cap_2 {
+		compatible = "fsl,imx6q-v4l2-capture";
+		ipu_id = <0>;
+		csi_id = <1>;
+		mclk_source = <0>;
+		status = "okay";
 	};
 
 	v4l2_out {
@@ -465,6 +471,14 @@
 		wakeup-gpios = <&gpio1 9 0>;
 	};
 
+        ili210x@41 {
+		compatible = "ili210x";
+		reg = <0x41>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <9 2>;
+		wakeup-gpios = <&gpio1 9 0>;
+	};
+
 	ov5640: ov5640@3c {
 		compatible = "ovti,ov5640";
 		reg = <0x3c>;
@@ -524,7 +538,6 @@
 				MX6QDL_PAD_GPIO_8__GPIO1_IO08		0x000b0		/* ov5642 Reset */
 				MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x0b0b0		/* USB Hub Reset */
 			>;
-		
 		};
 
 		pinctrl_lcd_gpios_1: hoggrp-2 {
