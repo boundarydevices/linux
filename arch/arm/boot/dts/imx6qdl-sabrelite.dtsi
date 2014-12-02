@@ -172,7 +172,7 @@
 		status = "disabled";
 	};
 
-	lcd@0 {
+	lcd0: lcd@0 {
 		compatible = "fsl,lcd";
 		ipu_id = <0>;
 		disp_id = <0>;
@@ -182,7 +182,7 @@
 		status = "okay";
 	};
 
-	backlight_lcd {
+	backlight_lcd: backlight_lcd {
 		compatible = "pwm-backlight";
 		pwms = <&pwm1 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
@@ -419,7 +419,7 @@
 		mclk_source = <0>;
 	};
 
-	tsc2004@48 {
+	tsc2004: tsc2004@48 {
 		compatible = "tsc2004,tsc2004";
 		reg = <0x48>;
 		pinctrl-names = "default";
