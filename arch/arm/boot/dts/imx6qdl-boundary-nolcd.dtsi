@@ -1,0 +1,186 @@
+/*
+ * Copyright 2012 Freescale Semiconductor, Inc.
+ * Copyright 2011 Linaro Ltd.
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+&lcd0 {
+	status = "disabled";
+};
+
+&backlight_lcd {
+	status = "disabled";
+};
+
+/ {
+	pwmleds {
+		compatible = "pwm-leds";
+
+		j15_pwm1 {
+			label = "j15:pwm1";
+			pwms = <&pwm1 0 5000000>;
+			max-brightness = <255>;
+		};
+		j15_pwm2 {
+			label = "j15:pwm2";
+			pwms = <&pwm2 0 5000000>;
+			max-brightness = <255>;
+		};
+	};
+};
+
+&iomuxc {
+	ecspi1 {
+		pinctrl_ecspi1_3: ecspi1grp-3 {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT20__ECSPI1_SCLK 0x100b1
+				MX6QDL_PAD_DISP0_DAT21__ECSPI1_MOSI 0x100b1
+				MX6QDL_PAD_DISP0_DAT22__ECSPI1_MISO 0x100b1
+			>;
+		};
+	};
+	ecspi2 {
+		pinctrl_ecspi2_cs_1: ecspi2_cs_grp-1 {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT18__GPIO5_IO12 0x80000000
+			>;
+		};
+		pinctrl_ecspi2_1: ecspi2grp-1 {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT16__ECSPI2_MOSI 0x100b1
+				MX6QDL_PAD_DISP0_DAT17__ECSPI2_MISO 0x100b1
+				MX6QDL_PAD_DISP0_DAT19__ECSPI2_SCLK 0x100b1
+			>;
+		};
+	};
+	ecspi3 {
+		pinctrl_ecspi3_cs_1: ecspi3_cs_grp-1 {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT3__GPIO4_IO24 0x80000000
+			>;
+		};
+		pinctrl_ecspi3_cs_2: ecspi3_cs_grp-2 {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25 0x80000000
+			>;
+		};
+		pinctrl_ecspi3_cs_3: ecspi3_cs_grp-3 {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26 0x80000000
+			>;
+		};
+		pinctrl_ecspi3_cs_4: ecspi3_cs_grp-4 {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT6__GPIO4_IO27 0x80000000
+			>;
+		};
+	};
+};
+
+&flash {
+	status = "disabled" ;
+};
+
+&ecspi1 {
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = <&gpio5 17 0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi1_3>;
+	status = "okay";
+        spidev@0x00 {
+                compatible = "spidev";
+                spi-max-frequency = <30000000>;
+                reg = <0>;
+        };
+};
+
+&ecspi2 {
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = <&gpio5 12 0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi2_1>;
+	status = "okay";
+        spidev@0x00 {
+                compatible = "spidev";
+                spi-max-frequency = <30000000>;
+                reg = <0>;
+        };
+};
+
+&ecspi3 {
+	fsl,spi-num-chipselects = <4>;
+	cs-gpios = <&gpio4 24 0>,
+		   <&gpio4 25 0>,
+		   <&gpio4 26 0>,
+		   <&gpio4 27 0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi3_1 
+	             &pinctrl_ecspi3_cs_1
+		     &pinctrl_ecspi3_cs_2
+		     &pinctrl_ecspi3_cs_3
+		     &pinctrl_ecspi3_cs_4>;
+	status = "okay";
+        spidev@0x00 {
+                compatible = "spidev";
+                spi-max-frequency = <30000000>;
+                reg = <0>;
+        };
+        spidev@0x01 {
+                compatible = "spidev";
+                spi-max-frequency = <30000000>;
+                reg = <1>;
+        };
+        spidev@0x02 {
+                compatible = "spidev";
+                spi-max-frequency = <30000000>;
+                reg = <2>;
+        };
+        spidev@0x03 {
+                compatible = "spidev";
+                spi-max-frequency = <30000000>;
+                reg = <3>;
+        };
+};
+
+&tsc2004 {
+	status = "disabled";
+};
+
+&iomuxc {
+	pinctrl-names = "default";
+	pinctrl-0 = <
+		&pinctrl_hog_1
+		&pinctrl_lcd_gpios_1
+	>;
+
+	imx6q-sabrelite {
+		pinctrl_lcd_gpios_1: hoggrp-2 {
+			fsl,pins = <
+				MX6QDL_PAD_DI0_DISP_CLK__GPIO4_IO16	0x1b0b0
+				MX6QDL_PAD_DI0_PIN15__GPIO4_IO17	0x1b0b0
+				MX6QDL_PAD_DI0_PIN2__GPIO4_IO18		0x1b0b0
+				MX6QDL_PAD_DI0_PIN3__GPIO4_IO19		0x1b0b0
+				MX6QDL_PAD_DI0_PIN4__GPIO4_IO20		0x1b0b0
+				MX6QDL_PAD_DISP0_DAT7__GPIO4_IO28	0x1b0b0
+				MX6QDL_PAD_DISP0_DAT8__GPIO4_IO29	0x1b0b0
+				MX6QDL_PAD_DISP0_DAT10__GPIO4_IO31	0x1b0b0
+				MX6QDL_PAD_DISP0_DAT11__GPIO5_IO05	0x1b0b0
+				MX6QDL_PAD_DISP0_DAT12__GPIO5_IO06	0x1b0b0
+				MX6QDL_PAD_DISP0_DAT13__GPIO5_IO07	0x1b0b0
+				MX6QDL_PAD_DISP0_DAT14__GPIO5_IO08	0x1b0b0
+			>;
+		};
+	};
+};
+
+&pwm2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm2_1>;
+	status = "okay";
+};
+
