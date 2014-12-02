@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2010-2015 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,6 +53,7 @@ struct pxps {
 	struct video_device *vdev;
 
 	struct videobuf_queue s0_vbq;
+	bool streaming;
 	struct pxp_buffer *active;
 	struct list_head outq;
 	struct pxp_channel	*pxp_channel[1];	/* We need 1 channel */
