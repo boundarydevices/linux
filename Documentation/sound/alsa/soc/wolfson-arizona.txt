@@ -160,3 +160,47 @@ The input mode pdata for WM8998 is defined as:
                      ARIZONA_INMODE_DMIC (2) IN2A digital, IN2B analogue differential
                      ARIZONA_INMODE_DMIC |
                        ARIZONA_INMODE_SE (3) IN2A digital, IN2B analogue single-ended
+
+How firmwares are loaded
+========================
+The driver exposes an ALSA control to set the firmware for each ADSP on the
+codec. These are named:
+
+    DSP1 Firmware
+    DSP2 Firmware
+    ... etc.
+
+The control is an enumeration of the available firmwares by function. It does
+not directly set the actual filename of the firmware to be loaded. The mapping
+between control values and actual firmware filename can be found in the file
+sound/soc/codecs/wm_adsp.c
+
+Setting this control tells the driver what firmware to load WHEN THE ADSP IS
+NEXT POWERED UP. Setting the control does not force the firmware to be loaded
+immediately, nor does it reboot the ADSP if it is currently running a different
+firmware.
+
+To load a firmware, or to reboot the ADSP with different firmware you must:
+    - Disconnect the ADSP from any active audio path so that it will be powered-down
+    - Set the firmware control to the firmware you want to load
+    - Connect the ADSP to an active audio path so it will be powered-up
+
+Firmware files can have an associated file called a "bin file". This has the
+same name as the firmware file, but with the extension .bin, and goes in the
+same directory as the firmware file. The bin file contains settings to be
+patched in the ADSP memory after the firmware has been loaded. When the driver
+loads a firmware it will look for a bin file and if found will apply the patches
+from that bin file.
+
+The purpose of the bin file is to allow tuning data to be applied to the firmware
+without the need to rebuild the firmware to include this data. For example,
+some audio algorithms must be tuned to the acoustic properties of the enclosure
+the microphones or speakers are in - it would be impractical to build a new
+firmware for each device with its unique parameters; instead the device is tuned
+and the tuning data is put into the bin file.
+
+The bin file is not intended for setting parameters that are runtime-modifiable,
+such as volume controls, since the bin file is a one-shot set of parameters
+that are patched when the firmware is loaded. Runtime modifiable controls should
+be exposed by the firmware as such and the driver will create ALSA controls for
+them.
