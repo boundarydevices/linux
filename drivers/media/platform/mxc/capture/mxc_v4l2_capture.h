@@ -265,6 +265,7 @@ struct sensor_data {
 	struct clk *sensor_clk;
 	int ipu_id;
 	int csi;
+	int last_reg;
 	unsigned mipi_camera;
 	unsigned virtual_channel;	/* Used with mipi */
 
