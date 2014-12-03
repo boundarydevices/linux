@@ -3238,47 +3238,37 @@ static struct v4l2_int_device ov5640_int_device = {
 	},
 };
 
-static int write_proc(struct file *file, const char __user *buffer, unsigned long count, void *data)
+static ssize_t show_reg(struct device *dev,
+			struct device_attribute *attr, char *buf)
 {
-	char localbuf[256];
-	if( count < sizeof(localbuf) ){
-		if(copy_from_user(localbuf,buffer,count)){
-			printk(KERN_ERR "Error reading user buf\n" );
-		} else {
-			int addr0 ;
-			int value ;
-			int numScanned ;
-			if(2 == (numScanned = sscanf(localbuf,"%04x %02x", &addr0, &value)) ){
-				if( (0xFFFF >= addr0) && (0xff >= value) ){
-					s32 rval ;
+	u8 val;
+	s32 rval = ov5640_read_reg(ov5640_data.last_reg, &val);
 
-					rval = ov5640_write_reg(addr0,value);
-                                        if (rval < 0)
-						pr_err("%s, write reg 0x%x failed: %d\n", __func__, addr0, rval);
-					else
-                                                pr_err("ov5642[%04x] = %02x\n", addr0,value);
-				}
-				else
-					printk(KERN_ERR "Invalid data: %s\n", localbuf);
-			} else if(1 == numScanned){
-				if(0xFFFF > addr0){
-					s32 rval;
-					u8 value;
-					rval = ov5640_read_reg(addr0,&value);
-					if (0 == rval) {
-						pr_err("ov5642[%04x] == 0x%02x\n", addr0,value);
-					} else {
-						pr_err("%s, read reg 0x%x failed: %d\n", __func__, addr0, rval);
-					}
-				}
-			}
-			else
-				printk(KERN_ERR "Invalid data: %s\n", localbuf);
-		}
-	}
-
-	return count ;
+	return sprintf(buf, "ov5640[0x%04x]=0x%02x\n",ov5640_data.last_reg, rval);
 }
+static ssize_t set_reg(struct device *dev,
+			struct device_attribute *attr,
+		       const char *buf, size_t count)
+{
+	int regnum, value;
+	int num_parsed = sscanf(buf, "%04x=%02x", &regnum, &value);
+	if (1 <= num_parsed) {
+		if (0xffff < (unsigned)regnum){
+			pr_err("%s:invalid regnum %x\n", __func__, regnum);
+			return 0;
+		}
+		ov5640_data.last_reg = regnum;
+	}
+	if (2 == num_parsed) {
+		if (0xff < (unsigned)value) {
+			pr_err("%s:invalid value %x\n", __func__, value);
+			return 0;
+		}
+		ov5640_write_reg(ov5640_data.last_reg, value);
+	}
+	return count;
+}
+static DEVICE_ATTR(ov5640_reg, S_IRUGO|S_IWUGO, show_reg, set_reg);
 
 /*!
  * ov5640 I2C probe function
@@ -3293,7 +3283,6 @@ static int ov5640_probe(struct i2c_client *client,
 	int retval;
 	struct fsl_mxc_camera_platform_data *plat_data = client->dev.platform_data;
 	u8 chip_id_high, chip_id_low;
-        struct proc_dir_entry *pde;
 
 	/* Set initial values for the sensor struct. */
 	memset(&ov5640_data, 0, sizeof(ov5640_data));
@@ -3404,14 +3393,8 @@ static int ov5640_probe(struct i2c_client *client,
 	ov5640_int_device.priv = &ov5640_data;
 	retval = v4l2_int_device_register(&ov5640_int_device);
 
-	pde = create_proc_entry("driver/ov5640", 0, 0);
-	if( pde ) {
-		pde->write_proc = write_proc ;
-		pde->data = &ov5640_int_device ;
-	}
-	else
-		printk( KERN_ERR "Error creating ov5642 proc entry\n" );
-
+	if (device_create_file(dev, &dev_attr_ov5640_reg))
+		dev_err(dev, "%s: error creating ov5640_reg entry\n", __func__);
 	pr_info("camera ov5640_mipi is found\n");
 	return retval;
 
@@ -3442,8 +3425,6 @@ err1:
  */
 static int ov5640_remove(struct i2c_client *client)
 {
-	remove_proc_entry("driver/ov5640", NULL);
-
 	v4l2_int_device_unregister(&ov5640_int_device);
 
 	if (gpo_regulator) {

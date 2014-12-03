@@ -251,6 +251,7 @@ struct sensor_data {
 	u8 mclk_source;
 	int csi;
 	int ipu;
+	int last_reg;
 	unsigned mipi_camera;
 	unsigned virtual_channel;	/* Used with mipi */
 
