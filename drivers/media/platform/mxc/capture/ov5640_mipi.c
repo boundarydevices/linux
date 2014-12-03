@@ -2681,7 +2681,8 @@ static int trigger_auto_focus(void){
 
 static int ioctl_send_command(struct v4l2_int_device *s, struct v4l2_send_command_control *vc) {
 	int ret = -1;
-	int retval1,retval2;
+	int retval1;
+	u8 regval;
 	u8 loca_val=0;
 
 	switch (vc->id) {
@@ -2690,18 +2691,16 @@ static int ioctl_send_command(struct v4l2_int_device *s, struct v4l2_send_comman
 			if(vc->value0 < 0 || vc->value0 > 255)
 				return ret;
 			loca_val = vc->value0;
-			ov5640_write_reg(CMD_PARA3, 0);
-			ov5640_write_reg(CMD_PARA4, loca_val);
-			retval1=ov5640_write_reg(CMD_ACK, 0x01);
-			retval2=ov5640_write_reg(CMD_MAIN, 0x1a);
-			if(retval1 != 0 || retval2 != 0) {
-				pr_err("%s:error stepping to 0x%02x: %d/%d\n",
-				       __func__, vc->value0, retval1,retval2);
-				ret = -1;
-			} else {
-				pr_debug("step successful\n");
-				ret = 0;
+			retval1 = ov5640_read_reg(0x3602,&regval);
+			if (0 > retval1) {
+				pr_err("ov5640_read_reg(3602): %d\n", retval1);
+				return retval1;
 			}
+			regval &= 0x0f;
+			regval |= (loca_val&7) << 5; 	/* low 3 bits */
+			ov5640_write_reg(0x3602, regval);
+			ov5640_write_reg(0x3603, loca_val >> 3);
+			ret = 0;
 			break;
 		default:
 			pr_err("%s:Unknown ctrl 0x%x\n", __func__, vc->id);
