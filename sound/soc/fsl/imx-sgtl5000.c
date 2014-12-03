@@ -13,6 +13,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
+#include <linux/of_gpio.h>
 #include <linux/of_i2c.h>
 #include <linux/clk.h>
 #include <sound/soc.h>
@@ -22,6 +23,11 @@
 
 #define DAI_NAME_SIZE	32
 
+struct gpio_data {
+	int gpio;
+	int active_low;
+
+};
 struct imx_sgtl5000_data {
 	struct snd_soc_dai_link dai;
 	struct snd_soc_card card;
@@ -29,6 +35,8 @@ struct imx_sgtl5000_data {
 	char platform_name[DAI_NAME_SIZE];
 	struct clk *codec_clk;
 	unsigned int clk_frequency;
+	struct gpio_data mute_hp;
+	struct gpio_data mute_lo;
 };
 
 static int imx_sgtl5000_dai_init(struct snd_soc_pcm_runtime *rtd)
@@ -48,13 +56,67 @@ static int imx_sgtl5000_dai_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
+int do_mute(struct gpio_data *gd, int mute)
+{
+	if (!gpio_is_valid(gd->gpio))
+		return 0;
+
+	mute ^= gd->active_low;
+	gpio_set_value_cansleep(gd->gpio, mute);
+	return 0;
+}
+
+static int event_hp(struct snd_soc_dapm_widget *w,
+		    struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct snd_soc_card *card = dapm->card;
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+
+	return do_mute(&data->mute_hp, SND_SOC_DAPM_EVENT_ON(event) ? 0 : 1);
+}
+
+static int event_lo(struct snd_soc_dapm_widget *w,
+		    struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct snd_soc_card *card = dapm->card;
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+
+	return do_mute(&data->mute_lo, SND_SOC_DAPM_EVENT_ON(event) ? 0 : 1);
+}
+
 static const struct snd_soc_dapm_widget imx_sgtl5000_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_LINE("Line In Jack", NULL),
-	SND_SOC_DAPM_HP("Headphone Jack", NULL),
-	SND_SOC_DAPM_SPK("Line Out Jack", NULL),
+	SND_SOC_DAPM_HP("Headphone Jack", event_hp),
+	SND_SOC_DAPM_SPK("Line Out Jack", event_lo),
 	SND_SOC_DAPM_SPK("Ext Spk", NULL),
 };
+
+void init_gpio_data(struct device *dev, struct device_node *np,
+		struct gpio_data *gd, const char *name)
+{
+	int gpio;
+	enum of_gpio_flags flags;
+
+	gd->gpio = -1;
+	gpio = of_get_named_gpio_flags(np, name, 0, &flags);
+	pr_info("%s:%d\n", __func__, gpio);
+	if (gpio_is_valid(gpio)) {
+		int err;
+		gd->active_low = flags & OF_GPIO_ACTIVE_LOW;
+		err = devm_gpio_request_one(dev, gpio,
+				gd->active_low ?
+				GPIOF_OUT_INIT_LOW : GPIOF_OUT_INIT_HIGH,
+				name);
+		if (err)
+			dev_err(dev, "can't request %s gpio %d", name, gpio);
+		gd->gpio = gpio;
+	}
+}
 
 static int imx_sgtl5000_audmux_config(struct platform_device *pdev)
 {
@@ -166,6 +228,10 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	data->dai.init = &imx_sgtl5000_dai_init;
 	data->dai.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 			    SND_SOC_DAIFMT_CBM_CFM;
+	init_gpio_data(&pdev->dev, pdev->dev.of_node,
+			&data->mute_hp, "mute-gpios");
+	init_gpio_data(&pdev->dev, pdev->dev.of_node,
+			&data->mute_lo, "line-out-mute-gpios");
 
 	data->card.dev = &pdev->dev;
 	ret = snd_soc_of_parse_card_name(&data->card, "model");
