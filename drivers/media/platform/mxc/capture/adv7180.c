@@ -339,10 +339,13 @@ static void adv7180_detect_std(struct adv7180_priv *adv, unsigned long msec)
 		if (time_after(jiffies, orig_jiffies + msecs_to_jiffies(msec))) {
 			dev_err(&adv->sen.i2c_client->dev,
 					"no video lock\n");
-			status_1 = 0;	/* default to NTSC */
 			break;
 		}
 		msleep(10);
+	}
+	if ((status_1 & 5) != 5) {
+		dev_err(&adv->sen.i2c_client->dev, "status1=0x%x\n", status_1);
+		return;
 	}
 	status_1 &= 0x70;
 	mutex_lock(&mutex);
