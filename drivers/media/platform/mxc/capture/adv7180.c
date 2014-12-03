@@ -329,8 +329,7 @@ static int adv7180_write_reg(struct adv7180_priv *adv, u8 reg, u8 val)
 
 static void adv7180_detect_std(struct adv7180_priv *adv, unsigned long msec)
 {
-	int status_1, standard, idx;
-	bool locked;
+	int status_1, idx;
 	unsigned long orig_jiffies = jiffies;
 	v4l2_std_id std_id;
 
@@ -345,30 +344,29 @@ static void adv7180_detect_std(struct adv7180_priv *adv, unsigned long msec)
 		if (time_after(jiffies, orig_jiffies + msecs_to_jiffies(msec))) {
 			dev_err(&adv->sen.i2c_client->dev,
 					"no video lock\n");
-			status_1 = 0;	/* default to NTSC */
 			break;
 		}
 		msleep(10);
 	}
-	locked = status_1 & 0x1;
-	standard = status_1 & 0x70;
-
+	if ((status_1 & 5) != 5) {
+		dev_err(&adv->sen.i2c_client->dev, "status1=0x%x\n", status_1);
+		return;
+	}
+	status_1 &= 0x70;
 	mutex_lock(&mutex);
 	std_id = V4L2_STD_ALL;
 	idx = ADV7180_NOT_LOCKED;
-	if (locked) {
-		if (standard == 0x40) {
-			std_id = V4L2_STD_PAL;
-			idx = ADV7180_PAL;
-		} else if (standard == 0) {
-			std_id = V4L2_STD_NTSC;
-			idx = ADV7180_NTSC;
-		} else {
-			dev_err(&adv->sen.i2c_client->dev,
-					"Got invalid video standard(%x,%x)!\n",
-					adv7180_read(adv, ADV7180_STATUS_1),
-					adv7180_read(adv, ADV7180_STATUS_2));
-		}
+	if (status_1 == 0x40) {
+		std_id = V4L2_STD_PAL;
+		idx = ADV7180_PAL;
+	} else if (status_1 == 0) {
+		std_id = V4L2_STD_NTSC;
+		idx = ADV7180_NTSC;
+	} else {
+		dev_err(&adv->sen.i2c_client->dev,
+				"Got invalid video standard(%x,%x)!\n",
+				adv7180_read(adv, ADV7180_STATUS_1),
+				adv7180_read(adv, ADV7180_STATUS_2));
 	}
 
 	/* This assumes autodetect which this device uses. */
