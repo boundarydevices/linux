@@ -14,6 +14,7 @@
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/i2c.h>
+#include <linux/of_gpio.h>
 #include <linux/clk.h>
 #include <sound/soc.h>
 
@@ -29,6 +30,8 @@ struct imx_sgtl5000_data {
 	char platform_name[DAI_NAME_SIZE];
 	struct clk *codec_clk;
 	unsigned int clk_frequency;
+	int mute_gpio;
+	int mute_active_low;
 };
 
 static int imx_sgtl5000_dai_init(struct snd_soc_pcm_runtime *rtd)
@@ -47,10 +50,28 @@ static int imx_sgtl5000_dai_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
+static int event_hp(struct snd_soc_dapm_widget *w,
+		    struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct snd_soc_card *card = dapm->card;
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+	int level;
+
+	if (!gpio_is_valid(data->mute_gpio))
+		return 0;
+
+	level = SND_SOC_DAPM_EVENT_ON(event) ? 0 : 1;
+	level ^= data->mute_active_low;
+	gpio_set_value_cansleep(data->mute_gpio, level);
+	return 0;
+}
+
 static const struct snd_soc_dapm_widget imx_sgtl5000_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_LINE("Line In Jack", NULL),
-	SND_SOC_DAPM_HP("Headphone Jack", NULL),
+	SND_SOC_DAPM_HP("Headphone Jack", event_hp),
 	SND_SOC_DAPM_SPK("Line Out Jack", NULL),
 	SND_SOC_DAPM_SPK("Ext Spk", NULL),
 };
@@ -64,6 +85,8 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	struct imx_sgtl5000_data *data = NULL;
 	int int_port, ext_port;
 	int ret;
+	int gpio;
+	enum of_gpio_flags flags;
 
 	ret = of_property_read_u32(np, "mux-int-port", &int_port);
 	if (ret) {
@@ -144,7 +167,19 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	data->dai.init = &imx_sgtl5000_dai_init;
 	data->dai.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 			    SND_SOC_DAIFMT_CBM_CFM;
-
+	data->mute_gpio = -1;
+	gpio = of_get_named_gpio_flags(np, "mute-gpios", 0, &flags);
+	pr_info("%s:%d\n", __func__, gpio);
+	if (gpio_is_valid(gpio)) {
+		int err;
+		data->mute_active_low = flags & OF_GPIO_ACTIVE_LOW;
+		err = devm_gpio_request_one(&pdev->dev, gpio, data->mute_active_low ?
+				GPIOF_OUT_INIT_LOW : GPIOF_OUT_INIT_HIGH,
+				"sgtl5000_mute_gpio");
+		if (err)
+			dev_err(&pdev->dev, "can't request mute gpio %d", gpio);
+		data->mute_gpio = gpio;
+	}
 	data->card.dev = &pdev->dev;
 	ret = snd_soc_of_parse_card_name(&data->card, "model");
 	if (ret)
