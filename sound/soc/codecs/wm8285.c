@@ -73,8 +73,8 @@ struct wm8285_priv {
 static const struct wm_adsp_region wm8285_dsp1_regions[] = {
 	{ .type = WMFW_ADSP2_PM, .base = 0x080000 },
 	{ .type = WMFW_ADSP2_ZM, .base = 0x0e0000 },
-	{ .type = WMFW_ADSP2_XM, .base = 0x0c0000 },
-	{ .type = WMFW_ADSP2_YM, .base = 0x0a0000 },
+	{ .type = WMFW_ADSP2_XM, .base = 0x0a0000 },
+	{ .type = WMFW_ADSP2_YM, .base = 0x0c0000 },
 };
 
 static const struct wm_adsp_region wm8285_dsp2_regions[] = {
