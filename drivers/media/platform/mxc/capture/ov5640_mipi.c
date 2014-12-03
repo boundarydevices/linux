@@ -3400,6 +3400,38 @@ static struct v4l2_int_device ov5640_int_device = {
 	},
 };
 
+static ssize_t show_reg(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	u8 val;
+	s32 rval = ov5640_read_reg(ov5640_data.last_reg, &val);
+
+	return sprintf(buf, "ov5640[0x%04x]=0x%02x\n",ov5640_data.last_reg, rval);
+}
+static ssize_t set_reg(struct device *dev,
+			struct device_attribute *attr,
+		       const char *buf, size_t count)
+{
+	int regnum, value;
+	int num_parsed = sscanf(buf, "%04x=%02x", &regnum, &value);
+	if (1 <= num_parsed) {
+		if (0xffff < (unsigned)regnum){
+			pr_err("%s:invalid regnum %x\n", __func__, regnum);
+			return 0;
+		}
+		ov5640_data.last_reg = regnum;
+	}
+	if (2 == num_parsed) {
+		if (0xff < (unsigned)value) {
+			pr_err("%s:invalid value %x\n", __func__, value);
+			return 0;
+		}
+		ov5640_write_reg(ov5640_data.last_reg, value);
+	}
+	return count;
+}
+static DEVICE_ATTR(ov5640_reg, S_IRUGO|S_IWUSR|S_IWGRP, show_reg, set_reg);
+
 /*!
  * ov5640 I2C probe function
  *
@@ -3520,6 +3552,8 @@ static int ov5640_probe(struct i2c_client *client,
 
 //	clk_disable_unprepare(ov5640_data.sensor_clk);
 
+	if (device_create_file(dev, &dev_attr_ov5640_reg))
+		dev_err(dev, "%s: error creating ov5640_reg entry\n", __func__);
 	pr_info("camera ov5640_mipi is found\n");
 	return retval;
 }
