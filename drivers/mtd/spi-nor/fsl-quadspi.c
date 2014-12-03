@@ -27,6 +27,7 @@
 #include <linux/mtd/partitions.h>
 #include <linux/mtd/spi-nor.h>
 #include <linux/mutex.h>
+#include <linux/pm_qos.h>
 
 /* The registers */
 #define QUADSPI_MCR			0x00
@@ -240,7 +241,9 @@ struct fsl_qspi {
 	u32 clk_rate;
 	unsigned int chip_base_addr; /* We may support two chips. */
 	bool ddr_io_mode;
+	u32 ddr_smp;
 	struct mutex lock;
+	struct pm_qos_request	pm_qos_req;
 };
 
 static inline int is_vybrid_qspi(struct fsl_qspi *q)
@@ -673,7 +676,8 @@ static void fsl_qspi_init_abh_read(struct fsl_qspi *q)
 		/* Set the Sampling Register for DDR */
 		reg2 = readl(q->iobase + QUADSPI_SMPR);
 		reg2 &= ~QUADSPI_SMPR_DDRSMP_MASK;
-		reg2 |= (2 << QUADSPI_SMPR_DDRSMP_SHIFT);
+		reg2 |= ((q->ddr_smp << QUADSPI_SMPR_DDRSMP_SHIFT) &
+			QUADSPI_SMPR_DDRSMP_MASK);
 		writel(reg2, q->iobase + QUADSPI_SMPR);
 
 		/* Enable the module again (enable the DDR too) */
@@ -700,12 +704,17 @@ static int fsl_qspi_clk_prep_enable(struct fsl_qspi *q)
 		return ret;
 	}
 
+	pm_qos_add_request(&q->pm_qos_req,
+			PM_QOS_CPU_DMA_LATENCY,
+			0);
+
 	return 0;
 }
 
 /* This function was used to disable and unprepare QSPI clock */
 static int fsl_qspi_clk_disable_unprep(struct fsl_qspi *q)
 {
+	pm_qos_remove_request(&q->pm_qos_req);
 	clk_disable_unprepare(q->clk);
 	clk_disable_unprepare(q->clk_en);
 	return 0;
@@ -974,6 +983,12 @@ static int fsl_qspi_probe(struct platform_device *pdev)
 		ret = PTR_ERR(q->clk);
 		goto map_failed;
 	}
+
+	/* find ddrsmp value */
+	ret = of_property_read_u32(dev->of_node, "ddrsmp",
+				&q->ddr_smp);
+	if (ret)
+		q->ddr_smp = 0;
 
 	ret = fsl_qspi_clk_prep_enable(q);
 	if (ret) {

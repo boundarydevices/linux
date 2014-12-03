@@ -56,8 +56,10 @@
 #define FEC_R_FSTART		0x150 /* FIFO receive start reg */
 #define FEC_R_DES_START_1	0x160 /* Receive descriptor ring 1 */
 #define FEC_X_DES_START_1	0x164 /* Transmit descriptor ring 1 */
+#define FEC_R_BUFF_SIZE_1	0x168 /* Maximum receive buff ring1 size */
 #define FEC_R_DES_START_2	0x16c /* Receive descriptor ring 2 */
 #define FEC_X_DES_START_2	0x170 /* Transmit descriptor ring 2 */
+#define FEC_R_BUFF_SIZE_2	0x174 /* Maximum receive buff ring2 size */
 #define FEC_R_DES_START_0	0x180 /* Receive descriptor ring */
 #define FEC_X_DES_START_0	0x184 /* Transmit descriptor ring */
 #define FEC_R_BUFF_SIZE		0x188 /* Maximum receive buff size */
@@ -291,6 +293,7 @@ struct bufdesc_ex {
 
 #define FALSE                  0
 #define TRUE                   1
+#define FEC0_MII_BUS_SHARE_TRUE        1
 
 /* Interrupt events/masks. */
 #define FEC_ENET_HBERR  ((uint)0x80000000)      /* Heartbeat error */
@@ -316,6 +319,8 @@ struct bufdesc_ex {
 #define FEC_DEFAULT_IMASK (FEC_ENET_TXF | FEC_ENET_RXF | FEC_ENET_MII | FEC_ENET_TS_TIMER)
 #define FEC_RX_DISABLED_IMASK (FEC_DEFAULT_IMASK & (~(FEC_ENET_RXF | FEC_ENET_TXF)))
 
+#define FEC_ENET_ETHEREN	((uint)0x00000002)
+
 /* ENET AVB related macros define */
 #define FEC_R_DES_START(X)	((X == 1) ? FEC_R_DES_START_1 : \
 				((X == 2) ? FEC_R_DES_START_2 : FEC_R_DES_START_0))
@@ -327,6 +332,7 @@ struct bufdesc_ex {
 				((X == 2) ? FEC_X_DES_ACTIVE_2 : FEC_X_DES_ACTIVE_0))
 #define FEC_DMA_CFG(X)		((X == 2) ? FEC_DMA_CFG_2 : FEC_DMA_CFG_1)
 #define FEC_RCMR(X)		((X == 2) ? FEC_RCMR_2 : FEC_RCMR_1)
+#define FEC_MRBR(X)		((X == 2) ? FEC_R_BUFF_SIZE_2 : FEC_R_BUFF_SIZE_1)
 #define DMA_CLASS_EN		(1 << 16)
 #define IDLE_SLOPE_MASK		0xFFFF
 #define IDLE_SLOPE_1		0x200 /* BW fraction: 0.5 */
@@ -378,8 +384,9 @@ struct bufdesc_ex {
 #define PTP_HEADER_SZE         34
 #define PTP_EVENT_PORT         0x013F
 
-#define FEC_VLAN_TAG_LEN       0x04
-#define FEC_ETHTYPE_LEN                0x02
+#define FEC_VLAN_TAG_LEN	0x04
+#define FEC_ETHTYPE_LEN		0x02
+#define ETH_P_1722		0x22f0
 
 /* 1588-2008 network protocol enumeration values */
 #define FEC_PTP_PROT_IPV4              1
@@ -583,6 +590,7 @@ struct fec_enet_private {
 	struct	mii_bus *mii_bus;
 	struct	phy_device *phy_dev;
 	int	mii_timeout;
+	int	mii_bus_share;
 	uint	phy_speed;
 	uint	phy_id;
 	phy_interface_t	phy_interface;

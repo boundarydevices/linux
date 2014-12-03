@@ -882,9 +882,11 @@ static void fec_enet_enable_ring(struct net_device *ndev)
 		writel(rx_queue->bd_dma, fep->hwp + FEC_R_DES_START(i));
 
 		/* enable DMA1/2 */
-		if (i)
+		if (i) {
 			writel(RCMR_MATCHEN | RCMR_CMP(i),
 				fep->hwp + FEC_RCMR(i));
+			writel(PKT_MAXBLR_SIZE, fep->hwp + FEC_MRBR(i));
+		}
 	}
 
 	for (i = 0; i < fep->num_tx_queues; i++) {
@@ -929,7 +931,7 @@ fec_restart(struct net_device *ndev, int duplex)
 	u32 val;
 	u32 temp_mac[2];
 	u32 rcntl = OPT_FRAME_SIZE | 0x04;
-	u32 ecntl = 0x2; /* ETHEREN */
+	u32 ecntl = FEC_ENET_ETHEREN; /* ETHEREN */
 
 	if (netif_running(ndev)) {
 		netif_device_detach(ndev);
@@ -1447,10 +1449,14 @@ fec_enet_rx(struct net_device *ndev, int budget)
 				struct vlan_hdr *vlan_header =
 					(struct vlan_hdr *) (data + ETH_HLEN);
 				vlan_tag = ntohs(vlan_header->h_vlan_TCI);
+
 				if (ndev->features & NETIF_F_HW_VLAN_CTAG_RX)
 					pkt_len -= VLAN_HLEN;
 
-				vlan_packet_rcvd = true;
+				if (vlan_header->h_vlan_encapsulated_proto ==
+					htons(ETH_P_1722) ||
+					ndev->features & NETIF_F_HW_VLAN_CTAG_RX)
+					vlan_packet_rcvd = true;
 			}
 
 			/* This does 16 byte alignment, exactly what we need.
@@ -1845,6 +1851,17 @@ static inline void fec_enet_clk_enable(struct net_device *ndev, bool enable)
 	}
 }
 
+static void fec_restore_mii_bus(struct net_device *ndev)
+{
+	struct fec_enet_private *fep = netdev_priv(ndev);
+
+	fec_enet_clk_enable(ndev, true);
+	writel(0xffc00000, fep->hwp + FEC_IEVENT);
+	writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
+	writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
+	writel(FEC_ENET_ETHEREN, fep->hwp + FEC_ECNTRL);
+}
+
 static int fec_enet_mii_probe(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
@@ -1917,6 +1934,7 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 static int fec_enet_mii_init(struct platform_device *pdev)
 {
 	static struct mii_bus *fec0_mii_bus;
+	static int *fec_mii_bus_share;
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	const struct platform_device_id *id_entry =
@@ -1943,6 +1961,7 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 		/* fec1 uses fec0 mii_bus */
 		if (mii_cnt && fec0_mii_bus) {
 			fep->mii_bus = fec0_mii_bus;
+			*fec_mii_bus_share = FEC0_MII_BUS_SHARE_TRUE;
 			mii_cnt++;
 			return 0;
 		}
@@ -1995,8 +2014,10 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	mii_cnt++;
 
 	/* save fec0 mii_bus */
-	if (id_entry->driver_data & FEC_QUIRK_ENET_MAC)
+	if (id_entry->driver_data & FEC_QUIRK_ENET_MAC) {
 		fec0_mii_bus = fep->mii_bus;
+		fec_mii_bus_share = &fep->mii_bus_share;
+	}
 
 	return 0;
 
@@ -2581,8 +2602,8 @@ fec_enet_open(struct net_device *ndev)
 	ret = fec_enet_mii_probe(ndev);
 	if (ret) {
 		fec_enet_free_buffers(ndev);
-		fec_enet_clk_enable(ndev, false);
-		pinctrl_pm_select_sleep_state(&fep->pdev->dev);
+		if (!fep->mii_bus_share)
+			pinctrl_pm_select_sleep_state(&fep->pdev->dev);
 		return ret;
 	}
 
@@ -3227,9 +3248,6 @@ fec_probe(struct platform_device *pdev)
 
 	/* Carrier starts down, phylib will bring it up */
 	netif_carrier_off(ndev);
-	device_init_wakeup(&ndev->dev,
-		fep->wol_flag & FEC_WOL_HAS_MAGIC_PACKET);
-
 	fec_enet_clk_enable(ndev, false);
 
 	/* Select sleep pin state */
@@ -3238,6 +3256,9 @@ fec_probe(struct platform_device *pdev)
 	ret = register_netdev(ndev);
 	if (ret)
 		goto failed_register;
+
+	device_init_wakeup(&ndev->dev,
+		fep->wol_flag & FEC_WOL_HAS_MAGIC_PACKET);
 
 	if (fep->bufdesc_ex && fep->ptp_clock)
 		netdev_info(ndev, "registered PHC device %d\n", fep->dev_id);
@@ -3313,6 +3334,9 @@ fec_suspend(struct device *dev)
 			fec_enet_clk_enable(ndev, false);
 		pinctrl_pm_select_sleep_state(&fep->pdev->dev);
 		phy_stop(fep->phy_dev);
+	} else if (fep->mii_bus_share && !fep->phy_dev) {
+		fec_enet_clk_enable(ndev, false);
+		pinctrl_pm_select_sleep_state(&fep->pdev->dev);
 	}
 
 	if (fep->reg_phy)
@@ -3353,12 +3377,16 @@ fec_resume(struct device *dev)
 			writel(val, fep->hwp + FEC_ECNTRL);
 			fep->wol_flag &= ~FEC_WOL_FLAG_SLEEP_ON;
 		} else {
+			pinctrl_pm_select_default_state(&fep->pdev->dev);
 			fec_enet_clk_enable(ndev, true);
 		}
 
 		fec_restart(ndev, fep->full_duplex);
 		phy_start(fep->phy_dev);
 		netif_device_attach(ndev);
+	} else if (fep->mii_bus_share) {
+		pinctrl_pm_select_default_state(&fep->pdev->dev);
+		fec_restore_mii_bus(ndev);
 	}
 
 	return 0;
