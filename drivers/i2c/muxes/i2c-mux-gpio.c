@@ -281,7 +281,7 @@ static const struct of_device_id i2c_mux_gpio_of_match[] = {
 MODULE_DEVICE_TABLE(of, i2c_mux_gpio_of_match);
 
 static struct platform_driver i2c_mux_gpio_driver = {
-	.probe	= i2c_mux_gpio_probe,
+//	.probe	= i2c_mux_gpio_probe,
 	.remove	= i2c_mux_gpio_remove,
 	.driver	= {
 		.name	= "i2c-mux-gpio",
@@ -289,7 +289,17 @@ static struct platform_driver i2c_mux_gpio_driver = {
 	},
 };
 
-module_platform_driver(i2c_mux_gpio_driver);
+static int __init i2c_mux_gpio_init(void)
+{
+	return platform_driver_probe(&i2c_mux_gpio_driver, i2c_mux_gpio_probe);
+}
+subsys_initcall(i2c_mux_gpio_init);
+
+static void __exit i2c_mux_gpio_exit(void)
+{
+	platform_driver_unregister(&i2c_mux_gpio_driver);
+}
+module_exit(i2c_mux_gpio_exit);
 
 MODULE_DESCRIPTION("GPIO-based I2C multiplexer driver");
 MODULE_AUTHOR("Peter Korsgaard <peter.korsgaard@barco.com>");
