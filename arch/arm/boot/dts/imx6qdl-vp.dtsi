@@ -63,6 +63,13 @@
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 		};
+
+		reg_usbh1_vbus: usbh1_vbus {
+			compatible = "regulator-fixed";
+			regulator-name = "usb_h1_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+		};
 	};
 
 	gpio_keys: gpio_keysgrp {
@@ -372,10 +379,16 @@
 		fsl,pins = <
 #define GP_USB_HUB_RESET		<&gpio7 12 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x030b0
-#define GP_USB_DN1_PWR_EN		<&gpio1 4 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x030b0
 #define GP_5V_EN			<&gpio1 7 GPIO_ACTIVE_HIGH>		/* usb and hdmi 5v*/
 			MX6QDL_PAD_GPIO_7__GPIO1_IO07		0x030b0
+		>;
+	};
+
+	pinctrl_usbh1_vbus: usbh1_vbusgrp {
+		fsl,pins = <
+			/* power enable, high active */
+#define GP_USB_DN1_PWR_EN		<&gpio1 4 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x030b0
 		>;
 	};
 
@@ -386,7 +399,7 @@
 		>;
 	};
 
-	pinctrl_usbotg_vbus: usb_otg_vbusgrp {
+	pinctrl_usbotg_vbus: usbotg_vbusgrp {
 		fsl,pins = <
 			/* power enable, high active */
 #define GP_USB_OTG_PWR		<&gpio3 22 GPIO_ACTIVE_HIGH>
@@ -724,6 +737,13 @@
 	status = "okay";
 };
 
+&reg_usbh1_vbus {
+	gpio = GP_USB_DN1_PWR_EN;
+	enable-active-high;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbh1_vbus>;
+};
+
 &reg_usbotg_vbus {
 	gpio = GP_USB_OTG_PWR;
 	enable-active-high;
@@ -758,7 +778,10 @@
 };
 
 &usbh1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbh1>;
 	reset-gpios = GP_USB_HUB_RESET;
+	vbus-supply = <&reg_usbh1_vbus>;
 	status = "okay";
 };
 
