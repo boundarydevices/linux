@@ -600,7 +600,7 @@
 };
 
 &hdmi_core {
-	ipu_id = <0>;
+	ipu_id = <1>;
 	disp_id = <0>;
 	status = "okay";
 };
