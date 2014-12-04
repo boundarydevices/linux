@@ -393,7 +393,7 @@ static void __mxs_phy_disconnect_line(struct mxs_phy *mxs_phy, bool disconnect)
 
 	if (disconnect)
 		writel_relaxed(BM_USBPHY_DEBUG_CLKGATE,
-			base + HW_USBPHY_DEBUG_CLR);
+			base + HW_USBPHY_DEBUG_SET);
 
 	if (mxs_phy->port_id == 0) {
 		reg = disconnect ? ANADIG_USB1_LOOPBACK_SET
@@ -411,7 +411,7 @@ static void __mxs_phy_disconnect_line(struct mxs_phy *mxs_phy, bool disconnect)
 
 	if (!disconnect)
 		writel_relaxed(BM_USBPHY_DEBUG_CLKGATE,
-			base + HW_USBPHY_DEBUG_SET);
+			base + HW_USBPHY_DEBUG_CLR);
 
 	/* Delay some time, and let Linestate be SE0 for controller */
 	if (disconnect)
