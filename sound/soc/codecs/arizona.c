@@ -3383,6 +3383,26 @@ int arizona_set_custom_jd(struct snd_soc_codec *codec,
 }
 EXPORT_SYMBOL_GPL(arizona_set_custom_jd);
 
+struct regmap *arizona_get_regmap_dsp(struct snd_soc_codec *codec)
+{
+	struct arizona *arizona = dev_get_drvdata(codec->dev->parent);
+
+	switch (arizona->type) {
+	case WM5102:
+	case WM5110:
+	case WM8997:
+	case WM8280:
+	case WM8998:
+	case WM1814:
+	case WM1831:
+	case CS47L24:
+		return arizona->regmap;
+	default:
+		return arizona->regmap_32bit;
+	}
+}
+EXPORT_SYMBOL_GPL(arizona_get_regmap_dsp);
+
 int arizona_enable_force_bypass(struct snd_soc_codec *codec)
 {
 	struct arizona *arizona = dev_get_drvdata(codec->dev->parent);
