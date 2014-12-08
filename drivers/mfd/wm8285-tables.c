@@ -1475,7 +1475,7 @@ static bool wm8285_is_adsp_memory(struct device *dev, unsigned int reg)
 	    (reg >= 0x180000 && reg <= 0x18effe) ||
 	    (reg >= 0x1a0000 && reg <= 0x1b1ffe) ||
 	    (reg >= 0x1b6000 && reg <= 0x1b7ffe) ||
-	    (reg >= 0x1c8000 && reg <= 0x1cbffe) ||
+	    (reg >= 0x1c0000 && reg <= 0x1cbffe) ||
 	    (reg >= 0x1e0000 && reg <= 0x1e1ffe) ||
 	    (reg >= 0x200000 && reg <= 0x208ffe) ||
 	    (reg >= 0x220000 && reg <= 0x231ffe) ||
