@@ -1638,6 +1638,18 @@ static enum dma_status sdma_tx_status(struct dma_chan *chan,
 	}
 	spin_unlock_irqrestore(&sdmac->vc.lock, flags);
 
+	/*
+	 * For uart rx data may not receive fully, use old chn_real_count to
+	 * know the real rx count.
+	 */
+	if ((sdmac->flags & IMX_DMA_SG_LOOP) &&
+	    sdmac->peripheral_type != IMX_DMATYPE_UART)
+		residue = (sdmac->desc->num_bd - sdmac->desc->buf_ptail) *
+			   sdmac->desc->period_len -
+			   sdmac->desc->chn_real_count;
+	else
+		residue = sdmac->desc->chn_count - sdmac->desc->chn_real_count;
+
 	dma_set_tx_state(txstate, chan->completed_cookie, chan->cookie,
 			 residue);
 
