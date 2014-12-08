@@ -1761,6 +1761,8 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 	default:
 		reg = WM8285_INTERRUPT_DEBOUNCE_7;
 		mask = WM8285_MICD_CLAMP_DB | WM8285_JD1_DB;
+		if (arizona->pdata.jd_gpio5)
+			mask |= WM8285_JD2_DB;
 		break;
 	}
 
@@ -2167,6 +2169,7 @@ static int arizona_extcon_probe(struct platform_device *pdev)
 	unsigned int reg;
 	int jack_irq_fall, jack_irq_rise;
 	int ret, mode, i, j;
+	int debounce_reg, debounce_val, analog_val;
 
 	if (!arizona->dapm || !arizona->dapm->card)
 		return -EPROBE_DEFER;
@@ -2466,10 +2469,37 @@ static int arizona_extcon_probe(struct platform_device *pdev)
 	}
 
 	arizona_clk32k_enable(arizona);
-	regmap_update_bits(arizona->regmap, ARIZONA_JACK_DETECT_DEBOUNCE,
-			   ARIZONA_JD1_DB, ARIZONA_JD1_DB);
+
+	switch (arizona->type) {
+	case WM5102:
+	case WM5110:
+	case WM8997:
+	case WM8280:
+	case WM8998:
+	case WM1814:
+	case WM1831:
+	case CS47L24:
+		debounce_reg = ARIZONA_JACK_DETECT_DEBOUNCE;
+		debounce_val = ARIZONA_JD1_DB;
+		analog_val = ARIZONA_JD1_ENA;
+		break;
+	default:
+		debounce_reg = WM8285_INTERRUPT_DEBOUNCE_7;
+
+		if (arizona->pdata.jd_gpio5) {
+			debounce_val = WM8285_JD1_DB | WM8285_JD2_DB;
+			analog_val = ARIZONA_JD1_ENA | ARIZONA_JD2_ENA;
+		} else {
+			debounce_val = WM8285_JD1_DB;
+			analog_val = ARIZONA_JD1_ENA;
+		}
+		break;
+	};
+
+	regmap_update_bits(arizona->regmap, debounce_reg,
+			   debounce_val, debounce_val);
 	regmap_update_bits(arizona->regmap, ARIZONA_JACK_DETECT_ANALOGUE,
-			   ARIZONA_JD1_ENA, ARIZONA_JD1_ENA);
+			   analog_val, analog_val);
 
 	ret = regulator_allow_bypass(info->micvdd, true);
 	if (ret != 0)
@@ -2553,7 +2583,7 @@ static int arizona_extcon_remove(struct platform_device *pdev)
 	arizona_free_irq(arizona, jack_irq_fall, info);
 	cancel_delayed_work_sync(&info->hpdet_work);
 	regmap_update_bits(arizona->regmap, ARIZONA_JACK_DETECT_ANALOGUE,
-			   ARIZONA_JD1_ENA, 0);
+			   ARIZONA_JD1_ENA | ARIZONA_JD2_ENA, 0);
 	arizona_clk32k_disable(arizona);
 
 	device_remove_file(&pdev->dev, &dev_attr_hp_impedance);
