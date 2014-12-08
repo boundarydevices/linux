@@ -88,7 +88,7 @@ static const struct wm_adsp_region wm8285_dsp3_regions[] = {
 	{ .type = WMFW_ADSP2_PM, .base = 0x180000 },
 	{ .type = WMFW_ADSP2_ZM, .base = 0x1e0000 },
 	{ .type = WMFW_ADSP2_XM, .base = 0x1a0000 },
-	{ .type = WMFW_ADSP2_YM, .base = 0x1c8000 },
+	{ .type = WMFW_ADSP2_YM, .base = 0x1c0000 },
 };
 
 static const struct wm_adsp_region wm8285_dsp4_regions[] = {
