@@ -74,6 +74,7 @@
 #define IMX21_UTS 0xb4 /* UART Test Register on all other i.mx*/
 
 /* UART Control Register Bit Fields.*/
+#define URXD_DUMMY_READ (1<<16)
 #define URXD_CHARRDY	(1<<15)
 #define URXD_ERR	(1<<14)
 #define URXD_OVRRUN	(1<<13)
@@ -746,6 +747,9 @@ static irqreturn_t imx_rxint(int irq, void *dev_id)
 #endif
 		}
 
+		if (sport->port.ignore_status_mask & URXD_DUMMY_READ)
+			goto out;
+
 		tty_insert_flip_char(port, rx, flg);
 	}
 
@@ -898,7 +902,8 @@ static void dma_rx_push_data(struct imx_port *sport, struct tty_struct *tty,
 
 	for (i = start; i < end; i++) {
 		if (sport->rx_buf.buf_info[i].filled) {
-			tty_insert_flip_string(port, sport->rx_buf.buf + (i
+			if (!(sport->port.ignore_status_mask & URXD_DUMMY_READ))
+				tty_insert_flip_string(port, sport->rx_buf.buf + (i
 					* RX_BUF_SIZE), sport->rx_buf.buf_info[i].rx_bytes);
 			tty_flip_buffer_push(port);
 			sport->rx_buf.buf_info[i].filled = false;
@@ -1444,6 +1449,9 @@ imx_set_termios(struct uart_port *port, struct ktermios *termios,
 		if (termios->c_iflag & IGNPAR)
 			sport->port.ignore_status_mask |= URXD_OVRRUN;
 	}
+
+	if ((termios->c_cflag & CREAD) == 0)
+		sport->port.ignore_status_mask |= URXD_DUMMY_READ;
 
 	/*
 	 * Update the per-port timeout.
