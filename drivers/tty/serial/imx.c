@@ -543,7 +543,8 @@ static void dma_tx_callback(void *data)
 
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 
-	uart_write_wakeup(&sport->port);
+	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
+		uart_write_wakeup(&sport->port);
 
 	schedule_delayed_work(&sport->tsk_dma_tx, msecs_to_jiffies(1));
 
