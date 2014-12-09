@@ -528,20 +528,21 @@ static void dma_tx_callback(void *data)
 	struct circ_buf *xmit = &sport->port.state->xmit;
 	unsigned long flags;
 
+	spin_lock_irqsave(&sport->port.lock, flags);
 	dma_unmap_sg(sport->port.dev, sgl, sport->dma_tx_nents, DMA_TO_DEVICE);
 
-	sport->dma_is_txing = 0;
-
 	/* update the stat */
-	spin_lock_irqsave(&sport->port.lock, flags);
 	xmit->tail = (xmit->tail + sport->tx_bytes) & (UART_XMIT_SIZE - 1);
 	sport->port.icount.tx += sport->tx_bytes;
-	spin_unlock_irqrestore(&sport->port.lock, flags);
 
 	dev_dbg(sport->port.dev, "we finish the TX DMA.\n");
 
 	clear_bit(DMA_TX_IS_WORKING, &sport->flags);
 	smp_mb__after_clear_bit();
+	sport->dma_is_txing = 0;
+
+	spin_unlock_irqrestore(&sport->port.lock, flags);
+
 	uart_write_wakeup(&sport->port);
 
 	schedule_delayed_work(&sport->tsk_dma_tx, msecs_to_jiffies(1));
