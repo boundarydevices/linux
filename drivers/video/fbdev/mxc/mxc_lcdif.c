@@ -92,6 +92,20 @@ static struct fb_videomode lcdif_modedb[] = {
 	.sync = FB_SYNC_CLK_LAT_FALL,
 	.vmode = FB_VMODE_NONINTERLACED,
 	.flag = 0,},
+	{
+	 /*
+	  * hitachi 640x240
+	  * vsync = 60
+	  * hsync = 260 * vsync = 15.6 Khz
+	  * pixclk = 800 * hsync = 12.48 MHz
+	  */
+	 "hitachi_hvga", 60, 640, 240, 1000000000 / (640+34+1+125) * 1000 / (240+8+3+9) / 60,	//80128, (12.48 MHz)
+	 .left_margin = 34, .right_margin = 1,
+	 .upper_margin = 8, .lower_margin = 3,
+	 .hsync_len = 125, .vsync_len = 9,
+	 .sync = FB_SYNC_CLK_LAT_FALL,
+	 .vmode = FB_VMODE_NONINTERLACED,
+	 .flag = 0,},
 };
 static int lcdif_modedb_sz = ARRAY_SIZE(lcdif_modedb);
 
