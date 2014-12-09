@@ -161,7 +161,22 @@
 &iomuxc_imx6q_nitrogen6_vm {
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
-			MX6QDL_PAD_GPIO_7__GPIO1_IO07		0x1b0b0		/* Not used, keeps hog from being empty */
+#define GP_VM_GPIO_1			<&gpio4 6 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x0b0b0
+#define GP_VM_GPIO_2			<&gpio4 7 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_ROW0__GPIO4_IO07		0x0b0b0
+#define GP_VM_GPIO_3			<&gpio4 8 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_COL1__GPIO4_IO08		0x0b0b0
+#define GP_VM_GPIO_4			<&gpio4 9 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_ROW1__GPIO4_IO09		0x0b0b0
+#define GP_VM_GPIO_5			<&gpio4 10 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x0b0b0
+#define GP_VM_GPIO_6			<&gpio4 11 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_ROW2__GPIO4_IO11		0x0b0b0
+#define GP_VM_GPIO_7			<&gpio4 15 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_ROW4__GPIO4_IO15		0x0b0b0
+#define GP_VM_GPIO_8			<&gpio1 4 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x1b0b0
 		>;
 	};
 
@@ -287,22 +302,8 @@
 
 	pinctrl_leds: ledsgrp {
 		fsl,pins = <
-#define GP_VM_GPIO_1			<&gpio4 6 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x0b0b0
-#define GP_VM_GPIO_2			<&gpio4 7 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_KEY_ROW0__GPIO4_IO07		0x0b0b0
-#define GP_VM_GPIO_3			<&gpio4 8 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_KEY_COL1__GPIO4_IO08		0x0b0b0
-#define GP_VM_GPIO_4			<&gpio4 9 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_KEY_ROW1__GPIO4_IO09		0x0b0b0
-#define GP_VM_GPIO_5			<&gpio4 10 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x0b0b0
-#define GP_VM_GPIO_6			<&gpio4 11 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_KEY_ROW2__GPIO4_IO11		0x0b0b0
-#define GP_VM_GPIO_7			<&gpio4 15 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_KEY_ROW4__GPIO4_IO15		0x0b0b0
-#define GP_VM_GPIO_8			<&gpio1 4 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x1b0b0
+#define GP_LED_1			<&gpio1 7 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_7__GPIO1_IO07		0x1b0b0		/* Not used, keeps group from being empty */
 		>;
 	};
 
@@ -607,43 +608,8 @@
 &leds {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_leds>;
-	j48-pin9 {
-		gpios = GP_VM_GPIO_1;
-		retain-state-suspended;
-		default-state = "off";
-	};
-	j48-pin8 {
-		gpios = GP_VM_GPIO_2;
-		retain-state-suspended;
-		default-state = "off";
-	};
-	j48-pin7 {
-		gpios = GP_VM_GPIO_3;
-		retain-state-suspended;
-		default-state = "off";
-	};
-	j48-pin6 {
-		gpios = GP_VM_GPIO_4;
-		retain-state-suspended;
-		default-state = "off";
-	};
-	j48-pin5 {
-		gpios = GP_VM_GPIO_5;
-		retain-state-suspended;
-		default-state = "off";
-	};
-	j48-pin4 {
-		gpios = GP_VM_GPIO_6;
-		retain-state-suspended;
-		default-state = "off";
-	};
-	j48-pin3 {
-		gpios = GP_VM_GPIO_7;
-		retain-state-suspended;
-		default-state = "off";
-	};
-	j48-pin2 {
-		gpios = GP_VM_GPIO_8;
+	j48-pinx {
+		gpios = GP_LED_1;	/* Just a place holder */
 		retain-state-suspended;
 		default-state = "off";
 	};
