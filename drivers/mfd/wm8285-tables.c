@@ -1447,18 +1447,23 @@ static const struct reg_default wm8285_reg_default[] = {
 	{ 0x00001431, 0x0000 },
 	{ 0x00001432, 0x0000 },
 	{ 0x00001433, 0x0000 },
-	{ 0x00001840, 0xffff }, /* R6208 (0x1840) - IRQ1 Mask 1 */
-	{ 0x00001841, 0xffff }, /* R6209 (0x1841) - IRQ1 Mask 2 */
-	{ 0x00001845, 0xffff }, /* R6213 (0x1845) - IRQ1 Mask 6 */
-	{ 0x00001846, 0xffff }, /* R6214 (0x1846) - IRQ1 Mask 7 */
-	{ 0x00001848, 0xffff }, /* R6216 (0x1848) - IRQ1 Mask 9 */
-	{ 0x0000184a, 0xffff }, /* R6218 (0x184A) - IRQ1 Mask 11 */
-	{ 0x0000184b, 0xffff }, /* R6219 (0x184B) - IRQ1 Mask 12 */
-	{ 0x0000184c, 0xffff }, /* R6220 (0x184C) - IRQ1 Mask 13 */
-	{ 0x0000184d, 0xffff }, /* R6221 (0x184D) - IRQ1 Mask 14 */
-	{ 0x0000184e, 0xffff }, /* R6222 (0x184E) - IRQ1 Mask 15 */
-	{ 0x00001948, 0xffff }, /* R6472 (0x1948) - IRQ2 Mask 9 */
-	{ 0x00001a80, 0x0400 }, /* R6784 (0x1A80) - IRQ1 CTRL */
+	{ 0x00001840, 0xFFFF }, /* R6208  - IRQ1 Mask 1 */
+	{ 0x00001841, 0xFFFF }, /* R6209  - IRQ1 Mask 2 */
+	{ 0x00001842, 0xFFFF }, /* R6210  - IRQ1 Mask 3 */
+	{ 0x00001843, 0xFFFF }, /* R6211  - IRQ1 Mask 4 */
+	{ 0x00001844, 0xFFFF }, /* R6212  - IRQ1 Mask 5 */
+	{ 0x00001845, 0xFFFF }, /* R6213  - IRQ1 Mask 6 */
+	{ 0x00001846, 0xFFFF }, /* R6214  - IRQ1 Mask 7 */
+	{ 0x00001847, 0xFFFF }, /* R6215  - IRQ1 Mask 8 */
+	{ 0x00001848, 0xFFFF }, /* R6216  - IRQ1 Mask 9 */
+	{ 0x00001849, 0xFFFF }, /* R6217  - IRQ1 Mask 10 */
+	{ 0x0000184A, 0xFFFF }, /* R6218  - IRQ1 Mask 11 */
+	{ 0x0000184B, 0xFFFF }, /* R6219  - IRQ1 Mask 12 */
+	{ 0x0000184C, 0xFFFF }, /* R6220  - IRQ1 Mask 13 */
+	{ 0x0000184D, 0xFFFF }, /* R6221  - IRQ1 Mask 14 */
+	{ 0x0000184E, 0xFFFF }, /* R6222  - IRQ1 Mask 15 */
+	{ 0x00001948, 0xFFFF }, /* R6472  - IRQ2 Mask 9 */
+	{ 0x00001A80, 0x4400 }, /* R6784  - IRQ1 CTRL */
 };
 
 static bool wm8285_is_adsp_memory(struct device *dev, unsigned int reg)
@@ -2774,9 +2779,14 @@ static bool wm8285_16bit_readable_register(struct device *dev, unsigned int reg)
 	case WM8285_IRQ1_STATUS_32:
 	case WM8285_IRQ1_MASK_1:
 	case WM8285_IRQ1_MASK_2:
+	case WM8285_IRQ1_MASK_3:
+	case WM8285_IRQ1_MASK_4:
+	case WM8285_IRQ1_MASK_5:
 	case WM8285_IRQ1_MASK_6:
 	case WM8285_IRQ1_MASK_7:
+	case WM8285_IRQ1_MASK_8:
 	case WM8285_IRQ1_MASK_9:
+	case WM8285_IRQ1_MASK_10:
 	case WM8285_IRQ1_MASK_11:
 	case WM8285_IRQ1_MASK_12:
 	case WM8285_IRQ1_MASK_13:

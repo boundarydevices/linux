@@ -1564,9 +1564,14 @@
 #define WM8285_IRQ1_STATUS_32                    0x181F
 #define WM8285_IRQ1_MASK_1                       0x1840
 #define WM8285_IRQ1_MASK_2                       0x1841
+#define WM8285_IRQ1_MASK_3                       0x1842
+#define WM8285_IRQ1_MASK_4                       0x1843
+#define WM8285_IRQ1_MASK_5                       0x1844
 #define WM8285_IRQ1_MASK_6                       0x1845
 #define WM8285_IRQ1_MASK_7                       0x1846
+#define WM8285_IRQ1_MASK_8                       0x1847
 #define WM8285_IRQ1_MASK_9                       0x1848
+#define WM8285_IRQ1_MASK_10                      0x1849
 #define WM8285_IRQ1_MASK_11                      0x184A
 #define WM8285_IRQ1_MASK_12                      0x184B
 #define WM8285_IRQ1_MASK_13                      0x184C
