@@ -210,8 +210,6 @@
 
 	pinctrl_gpio_keys: gpio_keysgrp {
 		fsl,pins = <
-#define GP_HOME				<&gpio1 2 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x1b0b0		/* TP70 - Green LED */
 #define GP_BACK				<&gpio1 3 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x1b0b0		/* TP71 - Red LED */
 		>;
@@ -519,11 +517,6 @@
 &gpio_keys {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_gpio_keys>;
-	home {
-		label = "Home";
-		gpios = GP_HOME;
-		linux,code = <102>; /* KEY_HOME */
-	};
 
 	back {
 		label = "Back";
