@@ -944,7 +944,8 @@ static void dma_rx_push_data(struct imx_port *sport, struct tty_struct *tty,
 
 	for (i = start; i < end; i++) {
 		if (sport->rx_buf.buf_info[i].filled) {
-			tty_insert_flip_string(port, sport->rx_buf.buf + (i
+			if (!(sport->port.ignore_status_mask & URXD_DUMMY_READ))
+				tty_insert_flip_string(port, sport->rx_buf.buf + (i
 					* RX_BUF_SIZE), sport->rx_buf.buf_info[i].rx_bytes);
 			tty_flip_buffer_push(port);
 			sport->rx_buf.buf_info[i].filled = false;
