@@ -2577,6 +2577,7 @@ static int wm8285_probe(struct platform_device *pdev)
 
 	for (i = 0; i < WM8285_NUM_ADSP; i++) {
 		wm8285->core.adsp[i].part = "wm8285";
+		wm8285->core.adsp[i].part_rev = 'a' + arizona->rev;
 		wm8285->core.adsp[i].num = i + 1;
 		wm8285->core.adsp[i].type = WMFW_ADSP2;
 		wm8285->core.adsp[i].rev = 1;

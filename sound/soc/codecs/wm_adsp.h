@@ -73,6 +73,7 @@ struct wm_adsp_fw_features {
 
 struct wm_adsp {
 	const char *part;
+	char part_rev;
 	int num;
 	int type;
 	int rev;
