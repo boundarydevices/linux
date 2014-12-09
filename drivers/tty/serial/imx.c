@@ -540,12 +540,23 @@ static void dma_tx_work(struct work_struct *w)
 	struct dma_chan	*chan = sport->dma_chan_tx;
 	struct device *dev = sport->port.dev;
 	unsigned long flags;
+	unsigned long temp;
 	int ret;
 
 	if (test_and_set_bit(DMA_TX_IS_WORKING, &sport->flags))
 		return;
 
 	spin_lock_irqsave(&sport->port.lock, flags);
+	if (sport->port.x_char) {
+		/* We have X-char to send, so enable TX IRQ and
+		 * disable TX DMA to let TX interrupt to send X-char */
+		temp = readl(sport->port.membase + UCR1);
+		temp &= ~UCR1_TDMAEN;
+		temp |= UCR1_TXMPTYEN;
+		writel(temp, sport->port.membase + UCR1);
+		goto out1;
+	}
+
 	sport->tx_bytes = uart_circ_chars_pending(xmit);
 
 	if (sport->tx_bytes > 0) {
@@ -583,6 +594,7 @@ static void dma_tx_work(struct work_struct *w)
 		dma_async_issue_pending(chan);
 		return;
 	}
+out1:
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 err_out:
 	clear_bit(DMA_TX_IS_WORKING, &sport->flags);
