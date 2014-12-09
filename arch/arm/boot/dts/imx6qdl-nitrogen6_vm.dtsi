@@ -570,6 +570,16 @@
 		reg = <0x50>;
 	};
 
+	at24@52 {
+		compatible = "ramtron,24c256";
+		reg = <0x52>;
+	};
+
+	at24@53 {
+		compatible = "ramtron,24c256";
+		reg = <0x53>;
+	};
+
 	rv4162@68 {
 		compatible = "mcrystal,rv4162";
 		pinctrl-names = "default";
