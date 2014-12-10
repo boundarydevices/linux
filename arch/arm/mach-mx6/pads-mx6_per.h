@@ -216,8 +216,8 @@ static const iomux_v3_cfg_t MX6NAME(board_pads)[] = {
 	/* Not used, but MUST be in GPIO mode */
 	NEW_PAD_CTRL(MX6PAD(EIM_DA10__GPIO_3_10), WEAK_PULLUP),		/* CSI1_DATA_EN not used (pin B5 stat2) */
 
-#define GP_GS2971_SMPTE_BYPASS	IMX_GPIO_NR(2, 24)
-	NEW_PAD_CTRL(MX6PAD(EIM_CS1__GPIO_2_24), WEAK_PULLUP),		/* pin G7 - i/o SMPTE bypass */
+#define GP_GS2971_SMPTE_BYPASS	IMX_GPIO_NR(2, 27)
+	NEW_PAD_CTRL(MX6PAD(EIM_LBA__GPIO_2_27), WEAK_PULLUP),		/* pin G7 - i/o SMPTE bypass */
 #define GP_GS2971_RESET		IMX_GPIO_NR(3, 13)
 	NEW_PAD_CTRL(MX6PAD(EIM_DA13__GPIO_3_13), OUTPUT_40OHM),	/* 0 - pin C7 - reset */
 #define GP_GS2971_DVI_LOCK	IMX_GPIO_NR(3, 14)
