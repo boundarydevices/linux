@@ -1096,6 +1096,23 @@ int arizona_micd_start(struct arizona_extcon_info *info)
 	/* Microphone detection can't use idle mode */
 	pm_runtime_get_sync(info->dev);
 
+	if (info->micd_clamp) {
+		switch (arizona->type) {
+		case WM5102:
+		case WM5110:
+		case WM8997:
+		case WM8998:
+		case WM1814:
+		case WM8280:
+		default:
+			dev_dbg(arizona->dev, "Disabling MICD_OVD\n");
+			regmap_update_bits(arizona->regmap,
+					   WM8285_MICD_CLAMP_CONTROL,
+					   WM8285_MICD_CLAMP_OVD_MASK, 0);
+			break;
+		}
+	}
+
 	ret = regulator_enable(info->micvdd);
 	if (ret != 0) {
 		dev_err(arizona->dev, "Failed to enable MICVDD: %d\n",
@@ -1162,6 +1179,25 @@ void arizona_micd_stop(struct arizona_extcon_info *info)
 			   ARIZONA_ACCDET_MODE_MASK, 0);
 
 	regulator_disable(info->micvdd);
+
+	if (info->micd_clamp) {
+		switch (arizona->type) {
+		case WM5102:
+		case WM5110:
+		case WM8997:
+		case WM8998:
+		case WM1814:
+		case WM8280:
+		default:
+			dev_dbg(arizona->dev, "Enabling MICD_OVD\n");
+			regmap_update_bits(arizona->regmap,
+					   WM8285_MICD_CLAMP_CONTROL,
+					   WM8285_MICD_CLAMP_OVD_MASK,
+					   WM8285_MICD_CLAMP_OVD);
+			break;
+		}
+	}
+
 
 	pm_runtime_mark_last_busy(info->dev);
 	pm_runtime_put_autosuspend(info->dev);
@@ -2089,9 +2125,6 @@ static void arizona_extcon_set_micd_clamp_mode(struct arizona *arizona)
 		clamp_db_mask = WM8285_MICD_CLAMP_DB;
 		clamp_db_val = WM8285_MICD_CLAMP_DB;
 
-		regmap_update_bits(arizona->regmap,
-				   WM8285_MICD_CLAMP_CONTROL,
-				   0x10, 0);
 		break;
 	}
 
