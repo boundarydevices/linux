@@ -121,6 +121,9 @@
 		status = "okay";
 	};
 
+	i2c1mux: i2cmux@1 {
+	};
+
 	i2c2mux: i2cmux@2 {
 	};
 };
@@ -313,6 +316,19 @@
 		>;
 	};
 
+	pinctrl_i2c1mux: i2c1muxgrp {
+		fsl,pins = <
+#define GP_I2C1_MUX_TC3587	 <&gpio6 16 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x030b0
+#define GP_I2C1_MUX_KL04	<&gpio5 27 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT9__GPIO5_IO27	0x030b0
+#define GP_I2C1_MUX_ANX7814	<&gpio1 10 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_SD2_CLK__GPIO1_IO10		0x030b0
+#define GP_I2C1_MUX_AX7738	<&gpio2 1 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_D1__GPIO2_IO01		0x030b0
+		>;
+	};
+
 	pinctrl_i2c2: i2c2grp {
 		fsl,pins = <
 			MX6QDL_PAD_KEY_COL3__I2C2_SCL	0x4001b8b1
@@ -322,8 +338,8 @@
 
 	pinctrl_i2c2mux: i2c2muxgrp {
 		fsl,pins = <
-#define GP_I2C2_MUX_TC3587 <&gpio6 16 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x000b0		/* TC3587 i2c enable */
+#define GP_I2C2_MUX_ANX7814_DDC	 <&gpio1 15 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_SD2_DAT0__GPIO1_IO15		0x030b0
 		>;
 	};
 
@@ -619,42 +635,64 @@
 	/* microcontroller KL04Z32TFK4 */
 };
 
-&i2c2 {
-	clock-frequency = <100000>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_i2c2>;
-	status = "okay";
-
-	hdmi: edid@50 {
-		compatible = "fsl,imx6-hdmi-i2c";
-		reg = <0x50>;
-	};
-};
-
-&i2c2mux {
+&i2c1mux {
 	compatible = "i2c-mux-gpio";
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_i2c2mux>;
+	pinctrl-0 = <&pinctrl_i2c1mux>;
 	#address-cells = <1>;
 	#size-cells = <0>;
-	mux-gpios = GP_I2C2_MUX_TC3587;
-	i2c-parent = <&i2c2>;
+	mux-gpios = GP_I2C1_MUX_TC3587, GP_I2C1_MUX_KL04, GP_I2C1_MUX_ANX7814, GP_I2C1_MUX_AX7738;
+	i2c-parent = <&i2c1>;
 	idle-state = <0>;
 
-	i2c2a: i2c2@0 {
+	i2c1@0 {
 		reg = <0>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 	};
-
-	i2c2b: i2c2@1 {
+	i2c1a: i2c1@1 {
 		reg = <1>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+	i2c1b: i2c1@2 {
+		reg = <2>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+	i2c1@3 {
+		reg = <3>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+	i2c1c: i2c1@4 {
+		reg = <4>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+	i2c1@5 {
+		reg = <5>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+	i2c1@6 {
+		reg = <6>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+	i2c1@7 {
+		reg = <7>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+	i2c1d: i2c1@8 {
+		reg = <8>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 	};
 };
 
-&i2c2b {
+&i2c1a {
 	tc358743_mipi: tc358743_mipi@0f {
 		compatible = "tc358743_mipi";
 		reg = <0x0f>;
@@ -668,6 +706,44 @@
 		mclk_source = <0>;
 	};
 };
+
+&i2c2 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c2>;
+	status = "okay";
+};
+
+&i2c2mux {
+	compatible = "i2c-mux-gpio";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c2mux>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	mux-gpios = GP_I2C2_MUX_ANX7814_DDC;
+	i2c-parent = <&i2c2>;
+	idle-state = <0>;
+
+	i2c2@0 {
+		reg = <0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
+	i2c2a: i2c2@1 {
+		reg = <1>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+};
+
+&i2c2a {
+	hdmi: edid@50 {
+		compatible = "fsl,imx6-hdmi-i2c";
+		reg = <0x50>;
+	};
+};
+
 
 &i2c3 {
 	clock-frequency = <100000>;
