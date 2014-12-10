@@ -219,13 +219,21 @@
 		>;
 	};
 
+	pinctrl_ecspi2: ecspi2grp {
+		fsl,pins = <
+			MX6QDL_PAD_EIM_OE__ECSPI2_MISO		0x100b1
+			MX6QDL_PAD_EIM_CS1__ECSPI2_MOSI		0x100b1
+			MX6QDL_PAD_EIM_CS0__ECSPI2_SCLK		0x100b1
+#define GP_ECSPI2_GS2971_CS	<&gpio2 26 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x0b0b0
+		>;
+	};
+
 	pinctrl_ecspi3: ecspi3grp {
 		fsl,pins = <
 			MX6QDL_PAD_DISP0_DAT2__ECSPI3_MISO	0x100b1
 			MX6QDL_PAD_DISP0_DAT1__ECSPI3_MOSI	0x100b1
 			MX6QDL_PAD_DISP0_DAT0__ECSPI3_SCLK	0x100b1
-#define GP_ECSPI3_GS2971_CS	<&gpio4 24 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_DISP0_DAT3__GPIO4_IO24	0x0b0b0		/* GS2971 */
 #define GP_ECSPI3_WM5102_CS	<&gpio4 25 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25	0x0b0b0		/* WM5102 */
 		>;
@@ -290,8 +298,8 @@
 			MX6QDL_PAD_DISP0_DAT10__GPIO4_IO31	0x000b0		/* 0 - pin D7 - SW_EN - line lock enable */
 #define GP_GS2971_DVB_ASI	<&gpio5 5 GPIO_INPUT>
 			MX6QDL_PAD_DISP0_DAT11__GPIO5_IO05	0x1b0b0		/* pin G8 i/o DVB_ASI */
-#define GP_GS2971_SMPTE_BYPASS	<&gpio2 24 GPIO_INPUT>
-			MX6QDL_PAD_EIM_CS1__GPIO2_IO24		0x1b0b0		/* pin G7 - i/o SMPTE bypass */
+#define GP_GS2971_SMPTE_BYPASS	<&gpio2 27 GPIO_INPUT>
+			MX6QDL_PAD_EIM_LBA__GPIO2_IO27		0x1b0b0		/* pin G7 - i/o SMPTE bypass */
 #define GP_GS2971_DVI_LOCK	<&gpio3 14 GPIO_INPUT>
 			MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x1b0b0		/* pin B6 - stat3 - DVI_LOCK */
 #define GP_GS2971_DATA_ERR	<&gpio3 15 GPIO_INPUT>
@@ -529,11 +537,11 @@
 	};
 };
 
-&ecspi3 {
-	fsl,spi-num-chipselects = <2>;
-	cs-gpios = GP_ECSPI3_GS2971_CS, GP_ECSPI3_WM5102_CS;
+&ecspi2 {
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = GP_ECSPI2_GS2971_CS;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_ecspi3>;
+	pinctrl-0 = <&pinctrl_ecspi2>;
 	status = "okay";
 
 	gs2971: gs2971@0 {
@@ -562,9 +570,18 @@
 		lb_cont-gpios = GP_GS2971_LB_CONT;	/* in */
 		y_1anc-gpios = GP_GS2971_Y_1ANC;	/* in */
 	};
-	codec: wm5102@1 {
+};
+
+&ecspi3 {
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = GP_ECSPI3_WM5102_CS;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi3>;
+	status = "okay";
+
+	codec: wm5102@0 {
 		compatible = "wlf,wm5102";
-		reg = <1>;
+		reg = <0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_wm5102>;
 		clocks = <&clks 200>, <&clks 1>;
