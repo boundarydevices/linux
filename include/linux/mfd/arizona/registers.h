@@ -3745,6 +3745,14 @@
 #define ARIZONA_MICMUTE_MIX_ENA_WIDTH                 1  /* MICMUTE_MIX_ENA */
 
 /*
+ * R710 (0x2C6) - Micd Clamp control
+ */
+#define WM8285_MICD_CLAMP_OVD_MASK               0x0010  /* MICD_CLAMP_OVD */
+#define WM8285_MICD_CLAMP_OVD_SHIFT                   4  /* MICD_CLAMP_OVD */
+#define WM8285_MICD_CLAMP_OVD_WIDTH                   1  /* MICD_CLAMP_OVD */
+#define WM8285_MICD_CLAMP_OVD                      0x10  /* MICD_CLAMP_OVD */
+
+/*
  * R715 (0x2CB) - Isolation control
  */
 #define ARIZONA_ISOLATE_DCVDD1                   0x0001  /* ISOLATE_DCVDD1 */
