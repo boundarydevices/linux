@@ -72,7 +72,7 @@
 
 #define ARIZONA_MAX_OUTPUT 6
 
-#define ARIZONA_MAX_AIF 3
+#define ARIZONA_MAX_AIF 4
 
 #define ARIZONA_HAP_ACT_ERM 0
 #define ARIZONA_HAP_ACT_LRA 2
