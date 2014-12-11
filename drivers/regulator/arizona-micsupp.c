@@ -75,11 +75,13 @@ static int arizona_micsupp_list_voltage(struct regulator_dev *rdev,
 	struct arizona_micsupp *micsupp = rdev_get_drvdata(rdev);
 
 	switch (micsupp->arizona->type) {
-		case WM8280:
-		case WM5110:
-			return arizona_micsupp_ext_sel_to_voltage(selector);
-		default:
+		case WM5102:
+		case WM8997:
+		case WM8998:
+		case WM1814:
 			return arizona_micsupp_sel_to_voltage(selector);
+		default:
+			return arizona_micsupp_ext_sel_to_voltage(selector);
 	}
 }
 
@@ -278,14 +280,16 @@ static int arizona_micsupp_probe(struct platform_device *pdev)
 	 * platform data if provided.
 	 */
 	switch (arizona->type) {
-	case WM8280:
-	case WM5110:
-		desc = &arizona_micsupp_ext;
-		micsupp->init_data = arizona_micsupp_ext_default;
-		break;
-	default:
+	case WM5102:
+	case WM8997:
+	case WM8998:
+	case WM1814:
 		desc = &arizona_micsupp;
 		micsupp->init_data = arizona_micsupp_default;
+		break;
+	default:
+		desc = &arizona_micsupp_ext;
+		micsupp->init_data = arizona_micsupp_ext_default;
 		break;
 	}
 	micsupp->init_data.consumer_supplies = &micsupp->supply;
