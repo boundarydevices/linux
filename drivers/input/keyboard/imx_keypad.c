@@ -2,7 +2,7 @@
 //
 // Driver for the IMX keypad port.
 // Copyright (C) 2009 Alberto Panizzo <maramaopercheseimorto@gmail.com>
-// Copyright (C) 2014 Freescale Semiconductor, Inc.
+// Copyright (C) 2015 Freescale Semiconductor, Inc.
 
 #include <linux/clk.h>
 #include <linux/delay.h>
@@ -540,9 +540,10 @@ static int __maybe_unused imx_kbd_suspend(struct device *dev)
 	mutex_unlock(&input_dev->mutex);
 
 	if (device_may_wakeup(&pdev->dev)) {
-		/* make sure KDI interrupt enabled */
-		reg_val |= KBD_STAT_KDIE;
-		reg_val &= ~KBD_STAT_KRIE;
+		if (reg_val & KBD_STAT_KPKD)
+			reg_val |= KBD_STAT_KRIE;
+		if (reg_val & KBD_STAT_KPKR)
+			reg_val |= KBD_STAT_KDIE;
 		writew(reg_val, kbd->mmio_base + KPSR);
 
 		enable_irq_wake(kbd->irq);
