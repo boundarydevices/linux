@@ -256,7 +256,7 @@
 	pinctrl_i2c3_ar1021: i2c3_ar1021grp {
 		fsl,pins = <
 #define GP_AR1021_5_WIRE_SEL		<&gpio5 2 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_A25__GPIO5_IO02		0x030b0
+			MX6QDL_PAD_EIM_A25__GPIO5_IO02		0x000b0
 		>;
 	};
 
