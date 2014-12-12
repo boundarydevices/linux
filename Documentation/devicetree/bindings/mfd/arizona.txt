@@ -102,8 +102,8 @@ Optional properties:
 
   - wlf,max-channels-clocked : The maximum number of channels to be clocked on
     each AIF, useful for I2S systems with multiple data lines being mastered.
-    If specified three cells must supplied one for each AIF, specify zero for
-    AIFs that should be handled normally.
+    Specify one cell for each AIF, specify zero for AIFs that should be handled
+    normally.
 
   - wlf,dmic-ref : DMIC reference for each input, must contain four cells if
     specified. 0 indicates MICVDD and is the default, 1,2,3 indicate the

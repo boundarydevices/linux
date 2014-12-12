@@ -897,6 +897,27 @@ int arizona_of_read_u32(struct arizona *arizona,
 }
 EXPORT_SYMBOL_GPL(arizona_of_read_u32);
 
+static int arizona_of_get_max_channels(struct arizona *arizona,
+				       const char *prop)
+{
+	struct arizona_pdata *pdata = &arizona->pdata;
+	struct device_node *np = arizona->dev->of_node;
+	struct property *tempprop;
+	const __be32 *cur;
+	u32 val;
+	int i;
+
+	i = 0;
+	of_property_for_each_u32(np, prop, tempprop, cur, val) {
+		if (i == ARRAY_SIZE(pdata->max_channels_clocked))
+			break;
+
+		pdata->max_channels_clocked[i++] = val;
+	}
+
+	return 0;
+}
+
 static int arizona_of_get_gpio_defaults(struct arizona *arizona,
 					const char *prop)
 {
@@ -1085,10 +1106,7 @@ static int arizona_of_get_core_pdata(struct arizona *arizona)
 
 	arizona_of_get_gpio_defaults(arizona, "wlf,gpio-defaults");
 
-	arizona_of_read_u32_array(arizona, "wlf,max-channels-clocked",
-				  false,
-				  pdata->max_channels_clocked,
-				  ARRAY_SIZE(pdata->max_channels_clocked));
+	arizona_of_get_max_channels(arizona, "wlf,max-channels-clocked");
 
 	arizona_of_read_u32_array(arizona, "wlf,dmic-ref", false,
 				  pdata->dmic_ref, ARRAY_SIZE(pdata->dmic_ref));
