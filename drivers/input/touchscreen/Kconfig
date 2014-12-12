@@ -102,7 +102,7 @@ config TOUCHSCREEN_ATMEL_MXT
 config TOUCHSCREEN_ATMEL_MXT_ADDRESS
         int "Atmel mXT I2C address"
         depends on TOUCHSCREEN_ATMEL_MXT
-        default 0x4c
+        default 76
 	help
 	  The Atmel mXT touch screen can be configured through
           hardware to various addresses on the I2C bus.
