@@ -350,17 +350,17 @@ static struct viv_gpu_platform_data imx6_gpu_pdata __initdata = {
 static struct ipuv3_fb_platform_data fb_data = {
 	.disp_dev = "ldb",
 	.interface_pix_fmt = IPU_PIX_FMT_RGB666,
-	.mode_str = "LDB-XGA",
-	.default_bpp = 16,
+	.mode_str = "1920x1080MR@60,if=RGB24",
+	.default_bpp = 32,
 	.int_clk = false,
 };
 
 static struct fsl_mxc_ldb_platform_data ldb_data = {
-	.ipu_id = 0,
+	.ipu_id = 1,
 	.disp_id = 0,
 	.ext_ref = 1,
-	.mode = LDB_DUL_DI0,
-	.sec_ipu_id = 0,
+	.mode = LDB_SEP0,
+	.sec_ipu_id = 1,
 	.sec_disp_id = 1,
 };
 
@@ -526,6 +526,7 @@ static void __init fixup_board(struct machine_desc *desc, struct tag *tags,
 			if (str != NULL) {
 				str += 6;
 				fb_data.res_size[0] = memparse(str, &str);
+				pr_err("%s: fbmem=%lu\n", __func__, fb_data.res_size[0]);
 			}
 			/* GPU reserved memory */
 			str = t->u.cmdline.cmdline;
@@ -533,6 +534,7 @@ static void __init fixup_board(struct machine_desc *desc, struct tag *tags,
 			if (str != NULL) {
 				str += 7;
 				imx6_gpu_pdata.reserved_mem_size = memparse(str, &str);
+				pr_err("%s: gpumem=%lu\n", __func__, imx6_gpu_pdata.reserved_mem_size);
 			}
 			/* VPU reserved memory */
 			str = t->u.cmdline.cmdline;
@@ -540,6 +542,7 @@ static void __init fixup_board(struct machine_desc *desc, struct tag *tags,
 			if (str != NULL) {
 				str += 7;
 				vout_mem.res_msize = memparse(str, &str);
+				pr_err("%s: vpumem=%lu\n", __func__, vout_mem.res_msize);
 			}
 			break;
 		}
@@ -633,6 +636,9 @@ static void __init board_init(void)
 	imx6q_add_imx_uart(2, &ttymxc2_data);
 
 	imx6q_add_ipuv3(0, &ipu_data[0]);
+        imx6q_add_ipuv3(1, &ipu_data[1]);
+	imx6q_add_ipuv3fb(0, &fb_data);
+	imx6q_add_ipuv3fb(1, &fb_data);
 
 	imx6q_add_vdoa();
 	imx6q_add_ldb(&ldb_data);
@@ -750,7 +756,11 @@ static void __init reserve(void)
 	phys_addr_t phys;
 	resource_size_t sz;
 
+	pr_err("%s: fbmem=%lu\n", __func__, fb_data.res_size[0]);
+	pr_err("%s: gpumem=%lu\n", __func__, imx6_gpu_pdata.reserved_mem_size);
+	pr_err("%s: vpumem=%lu\n", __func__, vout_mem.res_msize);
 	if (imx6_gpu_pdata.reserved_mem_size) {
+		pr_info("%s: gpu reserve %x\n", __func__, imx6_gpu_pdata.reserved_mem_size);
 		phys = memblock_alloc_base(imx6_gpu_pdata.reserved_mem_size,
 					   SZ_4K, SZ_2G);
 		memblock_remove(phys, imx6_gpu_pdata.reserved_mem_size);
@@ -758,6 +768,7 @@ static void __init reserve(void)
 	}
 
 	if (imx_ion_data.heaps[0].size) {
+		pr_info("%s: ion reserve %x\n", __func__, imx_ion_data.heaps[0].size);
 		phys = memblock_alloc(imx_ion_data.heaps[0].size, SZ_4K);
 		memblock_remove(phys, imx_ion_data.heaps[0].size);
 		imx_ion_data.heaps[0].base = phys;
@@ -772,6 +783,7 @@ static void __init reserve(void)
 		fb_data.res_base[0] = phys;
 	}
 	if (vout_mem.res_msize) {
+		pr_info("%s: vout reserve %x\n", __func__, vout_mem.res_msize);
 		phys = memblock_alloc_base(vout_mem.res_msize,
 					   SZ_4K, SZ_2G);
 		memblock_remove(phys, vout_mem.res_msize);
