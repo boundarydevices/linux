@@ -61,11 +61,8 @@
 #include <mach/imx_rfkill.h>
 #include <mach/imx-uart.h>
 #include <mach/viv_gpu.h>
-#include <mach/ahci_sata.h>
 #include <mach/ipu-v3.h>
-#include <mach/mxc_hdmi.h>
 #include <mach/system.h>
-#include <mach/mxc_asrc.h>
 #include <linux/wl12xx.h>
 #include <linux/ti_wilink_st.h>
 #include <asm/irq.h>
@@ -299,7 +296,9 @@ static struct i2c_board_info i2c0_board_info[] __initdata = {
 };
 
 static struct i2c_board_info i2c1_board_info[] __initdata = {
-	/* APDS9300 driver */
+	{
+		I2C_BOARD_INFO("apds9300", 0x29),
+	},
 };
 
 static unsigned short touchkeys[4] = {
