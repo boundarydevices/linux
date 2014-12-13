@@ -39,6 +39,12 @@ config HWMON_DEBUG_CHIP
 
 comment "Native drivers"
 
+config SENSORS_APDS9300
+        tristate "Avago Technologies APDS9300 Ambient Light Sensor"
+        depends on I2C
+        help
+          Say y here to support the APDS9300 Ambient Light Sensor
+
 config SENSORS_DA9052
         tristate "Dialog DA9052 HWMon"
         depends on PMIC_DIALOG
