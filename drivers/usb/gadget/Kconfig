@@ -978,6 +978,7 @@ config USB_G_PRINTER
 config USB_G_ANDROID
 	boolean "Android Gadget"
 	depends on SWITCH
+	select SND_PCM
 	help
 	  The Android gadget driver supports multiple USB functions.
 	  The functions can be configured via a board file and may be
