@@ -174,6 +174,8 @@ struct tsc2004 {
 
 	int			(*get_pendown_state)(void);
 	void			(*clear_penirq)(void);
+	int			reset_gpio;
+	int			reset_active_low;
 };
 
 static inline int tsc2004_read_xyz_data(struct tsc2004 *tsc, u8 cmd)
@@ -429,6 +431,29 @@ static void tsc2004_free_irq(struct tsc2004 *ts)
 	}
 }
 
+static int setup_reset_gpio(struct i2c_client *client, struct tsc2004 *ts)
+{
+	int err = 0;
+	int gpio;
+	enum of_gpio_flags flags;
+	struct device_node *np = client->dev.of_node;
+
+	ts->reset_gpio = -1;
+	gpio = of_get_named_gpio_flags(np, "reset-gpios", 0, &flags);
+	pr_info("%s:%d\n", __func__, gpio);
+	if (!gpio_is_valid(gpio))
+		return 0;
+
+	ts->reset_active_low = flags & OF_GPIO_ACTIVE_LOW;
+	err = devm_gpio_request_one(&client->dev, gpio, ts->reset_active_low ?
+			GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW,
+			"tsc2004_reset_gpio");
+	if (err)
+		dev_err(&client->dev, "can't request reset gpio %d", gpio);
+	ts->reset_gpio = gpio;
+	return err;
+}
+
 static int tsc2004_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
 {
@@ -453,6 +478,7 @@ static int tsc2004_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&ts->work, tsc2004_work);
 
 	ts->x_plate_ohms      = 500;
+	setup_reset_gpio(client, ts);
 
 	snprintf(ts->phys, sizeof(ts->phys),
 		 "%s/input0", dev_name(&client->dev));
@@ -504,6 +530,8 @@ static int tsc2004_remove(struct i2c_client *client)
 	tsc2004_free_irq(ts);
 
 	input_unregister_device(ts->input);
+	if (gpio_is_valid(ts->reset_gpio))
+		gpio_set_value(ts->reset_gpio, ts->reset_active_low ? 0 : 1);
 	kfree(ts);
 
 	return 0;
