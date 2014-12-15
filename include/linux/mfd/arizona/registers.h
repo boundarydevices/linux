@@ -3629,6 +3629,9 @@
 #define ARIZONA_HP_IDAC_STEER_MASK               0x0004  /* HP_IDAC_STEER */
 #define ARIZONA_HP_IDAC_STEER_SHIFT                   2  /* HP_IDAC_STEER */
 #define ARIZONA_HP_IDAC_STEER_WIDTH                   1  /* HP_IDAC_STEER */
+#define WM8285_HP_RATE_MASK                      0x0006  /* HP_RATE - [2:1] */
+#define WM8285_HP_RATE_SHIFT                          1  /* HP_RATE - [2:1] */
+#define WM8285_HP_RATE_WIDTH                          2  /* HP_RATE - [2:1] */
 #define ARIZONA_HP_RATE                          0x0002  /* HP_RATE */
 #define ARIZONA_HP_RATE_MASK                     0x0002  /* HP_RATE */
 #define ARIZONA_HP_RATE_SHIFT                         1  /* HP_RATE */

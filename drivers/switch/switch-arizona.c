@@ -1041,13 +1041,58 @@ EXPORT_SYMBOL_GPL(arizona_hpdet_stop);
 
 static int arizona_hpdet_moisture_start(struct arizona_extcon_info *info)
 {
+	struct arizona *arizona = info->arizona;
 	int ret;
+
+	switch (arizona->type) {
+	case WM5102:
+	case WM5110:
+	case WM8997:
+	case WM8280:
+	case WM8998:
+	case WM1814:
+	case WM1831:
+	case CS47L24:
+		regmap_update_bits(arizona->regmap, ARIZONA_HEADPHONE_DETECT_1,
+				   ARIZONA_HP_RATE, ARIZONA_HP_RATE);
+		break;
+	default:
+		regmap_update_bits(arizona->regmap, ARIZONA_HEADPHONE_DETECT_1,
+				   WM8285_HP_RATE_MASK,
+				   0x2 << WM8285_HP_RATE_SHIFT);
+		break;
+	}
 
 	ret = arizona_hpdet_start(info);
 
 	arizona_extcon_hp_clamp(info, false);
 
 	return ret;
+}
+
+static void arizona_hpdet_moisture_stop(struct arizona_extcon_info *info)
+{
+	struct arizona *arizona = info->arizona;
+
+	arizona_hpdet_stop(info);
+
+	switch (arizona->type) {
+	case WM5102:
+	case WM5110:
+	case WM8997:
+	case WM8280:
+	case WM8998:
+	case WM1814:
+	case WM1831:
+	case CS47L24:
+		regmap_update_bits(arizona->regmap, ARIZONA_HEADPHONE_DETECT_1,
+				   ARIZONA_HP_RATE, 0);
+		break;
+	default:
+		regmap_update_bits(arizona->regmap, ARIZONA_HEADPHONE_DETECT_1,
+				   WM8285_HP_RATE_MASK, 0);
+		break;
+	}
 }
 
 static int arizona_hpdet_moisture_reading(struct arizona_extcon_info *info,
@@ -1660,7 +1705,7 @@ static const struct arizona_jd_state arizona_hpdet_moisture = {
 	.mode = ARIZONA_ACCDET_MODE_HPL,
 	.start = arizona_hpdet_moisture_start,
 	.reading = arizona_hpdet_moisture_reading,
-	.stop = arizona_hpdet_stop,
+	.stop = arizona_hpdet_moisture_stop,
 };
 
 const struct arizona_jd_state arizona_hpdet_left = {
