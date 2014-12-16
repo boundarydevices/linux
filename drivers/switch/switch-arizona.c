@@ -1225,6 +1225,13 @@ int arizona_micd_button_reading(struct arizona_extcon_info *info,
 
 		if (lvl && ffs(lvl) - 1 < info->num_micd_ranges) {
 			key = info->micd_ranges[ffs(lvl) - 1].key;
+
+			if (arizona->pdata.micd_button_report_delay) {
+				dev_dbg(arizona->dev, "delaying button by %dms\n",
+					arizona->pdata.micd_button_report_delay);
+				msleep(arizona->pdata.micd_button_report_delay);
+			}
+
 			input_report_key(info->input, key, 1);
 			input_sync(info->input);
 		} else {
