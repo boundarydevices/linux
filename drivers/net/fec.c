@@ -99,6 +99,10 @@ static int disable_giga=0;
 module_param(disable_giga, int, 0664);
 MODULE_PARM_DESC(disable_giga, "disable gigabit speeds");
 
+static int disable=0;
+module_param(disable, int, 0664);
+MODULE_PARM_DESC(disable, "disable FEC driver");
+
 #if defined(CONFIG_M5272)
 /*
  * Some hardware gets it MAC address out of local flash memory.
@@ -1942,8 +1946,10 @@ fec_probe(struct platform_device *pdev)
 		goto failed_init;
 
 	ret = fec_enet_mii_init(pdev, phy_irq);
-	if (ret)
+	if (ret) {
+		pr_err("%s: Failed to initialize PHY\n", __func__);
 		goto failed_mii_init;
+	}
 
 	if (fec_ptp_malloc_priv(&(fep->ptp_priv))) {
 		if (fep->ptp_priv) {
@@ -2110,15 +2116,20 @@ __setup("fec_mac=", fec_mac_addr_setup);
 static int __init
 fec_enet_module_init(void)
 {
-	printk(KERN_INFO "FEC Ethernet Driver\n");
-
-	return platform_driver_register(&fec_driver);
+	if (!disable) {
+		printk(KERN_INFO "FEC Ethernet Driver\n");
+		return platform_driver_register(&fec_driver);
+	} else {
+		printk(KERN_INFO "FEC Ethernet Driver disabled\n");
+		return 0;
+	}
 }
 
 static void __exit
 fec_enet_cleanup(void)
 {
-	platform_driver_unregister(&fec_driver);
+	if (!disable)
+		platform_driver_unregister(&fec_driver);
 }
 
 module_exit(fec_enet_cleanup);
