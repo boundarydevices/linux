@@ -131,11 +131,6 @@ Optional properties:
   - wlf,hpdet-short-circuit-imp : Specifies the maximum impedance in ohms
     that will be considered as a short circuit
 
-  - wlf,micd-button-report-delay : Specifies the delay before reporting a
-    button detect. This is desireable on some platforms where micbias is
-    forced high, such that the chip cannot control the pulsing of micbias
-    to coincide with the measurement interval rate specified by micd-rate
-
   - DCVDD-supply, MICVDD-supply : Power supplies, only need to be specified if
     they are being externally supplied. As covered in
     Documentation/devicetree/bindings/regulator/regulator.txt

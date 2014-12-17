@@ -271,12 +271,6 @@ struct arizona_pdata {
 
 	/** Some platforms add a series resistor for hpdet to suppress pops */
 	int hpdet_ext_res;
-
-	/** For platforms with micbias forced we cannot rely on hardware only
-	 *  measurements being within the sample period so delay reporting
-	    by n ms to meet upper and lower bound specs for button reporting
-	 */
-	int micd_button_report_delay;
 };
 
 #endif

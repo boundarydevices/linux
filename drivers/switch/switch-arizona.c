@@ -2038,8 +2038,6 @@ static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 	arizona_of_read_u32(arizona, "wlf,micd-clamp-mode", false,
 			    &pdata->micd_clamp_mode);
 
-	arizona_of_read_u32(arizona, "wlf,micd-button-report-delay", false,
-			    &pdata->micd_button_report_delay);
 	return 0;
 }
 #else
