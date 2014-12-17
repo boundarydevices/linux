@@ -179,6 +179,7 @@ inline void arizona_extcon_report(struct arizona_extcon_info *info, int state)
 }
 EXPORT_SYMBOL_GPL(arizona_extcon_report);
 
+static const struct arizona_jd_state arizona_micd_adc_mic;
 static const struct arizona_jd_state arizona_hpdet_moisture;
 static const struct arizona_jd_state arizona_hpdet_acc_id;
 static const struct arizona_jd_state arizona_antenna_mic_det;
@@ -445,18 +446,17 @@ static void arizona_extcon_pulse_micbias(struct arizona_extcon_info *info)
 	}
 }
 
-static int arizona_micd_read(struct arizona_extcon_info *info)
+static int arizona_micd_adc_read(struct arizona_extcon_info *info)
 {
 	struct arizona *arizona = info->arizona;
 	unsigned int val = 0;
-	int ret, i;
+	int ret;
 
 	regmap_read(arizona->regmap, ARIZONA_ACCESSORY_DETECT_MODE_1, &val);
 	val &= ARIZONA_ACCDET_MODE_MASK;
 
 	if ((info->detecting) && (val == ARIZONA_ACCDET_MODE_ADC)) {
 		bool micd_ena;
-		unsigned int micd_ena_bit;
 
 		/* Must disable MICD before we read the ADCVAL */
 		ret = regmap_update_bits_check(arizona->regmap,
@@ -469,39 +469,42 @@ static int arizona_micd_read(struct arizona_extcon_info *info)
 				ret);
 			return ret;
 		}
-
-		ret = regmap_read(arizona->regmap, ARIZONA_MIC_DETECT_4, &val);
-		if (ret != 0) {
-			dev_err(arizona->dev,
-				"Failed to read MICDET_ADCVAL: %d\n",
-				ret);
-			return ret;
-		}
-
-		dev_dbg(arizona->dev, "MICDET_ADCVAL: 0x%x\n", val);
-
-		val &= ARIZONA_MICDET_ADCVAL_MASK;
-		if (val < ARRAY_SIZE(arizona_micd_levels))
-			val = arizona_micd_levels[val];
-		else
-			val = INT_MAX;
-
-		if (micd_ena)
-			micd_ena_bit = ARIZONA_MICD_ENA;
-		else
-			micd_ena_bit = 0;
-
-		ret = regmap_update_bits(arizona->regmap, ARIZONA_MIC_DETECT_1,
-					 ARIZONA_MICD_ENA, micd_ena_bit);
-		if (ret != 0) {
-			dev_err(arizona->dev,
-				"Failed to restore MICD: %d\n",
-				ret);
-			return ret;
-		}
-
-		return val;
 	}
+
+	/* Must disable MICD before we read the ADCVAL */
+	ret = regmap_update_bits(arizona->regmap, ARIZONA_MIC_DETECT_1,
+				 ARIZONA_MICD_ENA, 0);
+	if (ret != 0) {
+		dev_err(arizona->dev,
+			"Failed to disable MICD: %d\n",
+			ret);
+		return ret;
+	}
+
+	ret = regmap_read(arizona->regmap, ARIZONA_MIC_DETECT_4, &val);
+	if (ret != 0) {
+		dev_err(arizona->dev,
+			"Failed to read MICDET_ADCVAL: %d\n",
+			ret);
+		return ret;
+	}
+
+	dev_dbg(arizona->dev, "MICDET_ADCVAL: 0x%x\n", val);
+
+	val &= ARIZONA_MICDET_ADCVAL_MASK;
+	if (val < ARRAY_SIZE(arizona_micd_levels))
+		val = arizona_micd_levels[val];
+	else
+		val = INT_MAX;
+
+	return val;
+}
+
+static int arizona_micd_read(struct arizona_extcon_info *info)
+{
+	struct arizona *arizona = info->arizona;
+	unsigned int val = 0;
+	int ret, i;
 
 	for (i = 0; i < 10 && !(val & MICD_LVL_0_TO_8); i++) {
 		ret = regmap_read(arizona->regmap, ARIZONA_MIC_DETECT_3, &val);
@@ -1228,6 +1231,8 @@ static int arizona_hpdet_moisture_reading(struct arizona_extcon_info *info,
 	} else if (val < arizona->pdata.hpdet_moisture_imp) {
 		if (arizona->pdata.antenna_supported)
 			arizona_jds_set_state(info, &arizona_antenna_mic_det);
+		else if (arizona->pdata.micd_software_compare)
+			arizona_jds_set_state(info, &arizona_micd_adc_mic);
 		else
 			arizona_jds_set_state(info, &arizona_micd_microphone);
 	} else {
@@ -1273,7 +1278,6 @@ EXPORT_SYMBOL_GPL(arizona_hpdet_reading);
 int arizona_micd_start(struct arizona_extcon_info *info)
 {
 	struct arizona *arizona = info->arizona;
-	unsigned int mode;
 	int ret;
 
 	/* Microphone detection can't use idle mode */
@@ -1311,12 +1315,8 @@ int arizona_micd_start(struct arizona_extcon_info *info)
 		mutex_unlock(&arizona->reg_setting_lock);
 	}
 
-	mode = info->state->mode;
-	if (info->detecting && arizona->pdata.micd_software_compare)
-		mode = ARIZONA_ACCDET_MODE_ADC;
-
 	regmap_update_bits(arizona->regmap, ARIZONA_ACCESSORY_DETECT_MODE_1,
-			   ARIZONA_ACCDET_MODE_MASK, mode);
+			   ARIZONA_ACCDET_MODE_MASK, info->state->mode);
 
 	arizona_extcon_pulse_micbias(info);
 
@@ -1725,6 +1725,14 @@ void arizona_micd_mic_stop(struct arizona_extcon_info *info)
 }
 EXPORT_SYMBOL_GPL(arizona_micd_mic_stop);
 
+static void arizona_micd_adc_restart(struct arizona_extcon_info *info)
+{
+	struct arizona *arizona = info->arizona;
+
+	regmap_update_bits(arizona->regmap, ARIZONA_MIC_DETECT_1,
+			   ARIZONA_MICD_ENA, ARIZONA_MICD_ENA);
+}
+
 int arizona_micd_mic_reading(struct arizona_extcon_info *info, int val)
 {
 	struct arizona *arizona = info->arizona;
@@ -1766,7 +1774,7 @@ int arizona_micd_mic_reading(struct arizona_extcon_info *info, int val)
 
 			info->jack_flips++;
 
-			return 0;
+			return -EAGAIN;
 		}
 	}
 
@@ -2017,7 +2025,10 @@ static void arizona_micd_handler(struct work_struct *work)
 
 	switch (arizona_jds_get_mode(info)) {
 	case ARIZONA_ACCDET_MODE_MIC:
+		ret = arizona_micd_read(info);
+		break;
 	case ARIZONA_ACCDET_MODE_ADC:
+		ret = arizona_micd_adc_read(info);
 		break;
 	default:
 		dev_warn(arizona->dev, "Spurious MICDET IRQ\n");
@@ -2026,7 +2037,6 @@ static void arizona_micd_handler(struct work_struct *work)
 		return;
 	}
 
-	ret = arizona_micd_read(info);
 	if (ret == -EAGAIN)
 		goto out;
 
@@ -2128,6 +2138,17 @@ const struct arizona_jd_state arizona_micd_button = {
 	.stop = arizona_micd_stop,
 };
 EXPORT_SYMBOL_GPL(arizona_micd_button);
+
+static const struct arizona_jd_state arizona_micd_adc_mic = {
+	.mode = ARIZONA_ACCDET_MODE_ADC,
+	.start = arizona_micd_mic_start,
+	.restart = arizona_micd_adc_restart,
+	.reading = arizona_micd_mic_reading,
+	.stop = arizona_micd_mic_stop,
+
+	.timeout_ms = arizona_micd_mic_timeout_ms,
+	.timeout = arizona_micd_mic_timeout,
+};
 
 const struct arizona_jd_state arizona_micd_microphone = {
 	.mode = ARIZONA_ACCDET_MODE_MIC,
@@ -2325,6 +2346,9 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 			else if (arizona->pdata.antenna_supported)
 				arizona_jds_set_state(info,
 						      &arizona_antenna_mic_det);
+			else if (arizona->pdata.micd_software_compare)
+				arizona_jds_set_state(info,
+						      &arizona_micd_adc_mic);
 			else
 				arizona_jds_set_state(info,
 						      &arizona_micd_microphone);
