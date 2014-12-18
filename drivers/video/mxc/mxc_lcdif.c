@@ -93,6 +93,15 @@ static struct fb_videomode lcdif_modedb[] = {
 	.vmode = FB_VMODE_NONINTERLACED,
 	.flag = 0,},
 	{
+	/* 480x800 @ 60 Hz , pixel clk @ 27MHz */
+	"AUO_G050", 60, 480, 800, 1000000000/516 * 1000 /836/60,
+	.left_margin = 18, .right_margin = 16,
+	.upper_margin = 18, .lower_margin = 16,
+	.hsync_len = 2, .vsync_len = 2,
+	.sync = FB_SYNC_CLK_LAT_FALL,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,},
+	{
 	 /*
 	  * hitachi 640x240
 	  * vsync = 60
