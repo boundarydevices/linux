@@ -935,6 +935,8 @@ static int arizona_of_get_gpio_defaults(struct arizona *arizona,
 
 		pdata->gpio_defaults[i++] = val;
 	}
+	if (!i)
+		return 0;
 
 	/*
 	 * All values are literal except out of range values
