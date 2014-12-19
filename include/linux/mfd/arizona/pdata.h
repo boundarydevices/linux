@@ -189,6 +189,9 @@ struct arizona_pdata {
 	/** Extra debounce timeout used during initial mic detection (ms) */
 	int micd_detect_debounce;
 
+	/** Extra software debounces during button detection */
+	int micd_manual_debounce;
+
 	/** GPIO for mic detection polarity */
 	int micd_pol_gpio;
 

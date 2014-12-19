@@ -93,6 +93,9 @@ struct arizona_extcon_info {
 
 	bool micd_reva;
 	bool micd_clamp;
+	int micd_res_old;
+	int micd_debounce;
+	int micd_count;
 
 	struct delayed_work hpdet_work;
 	struct delayed_work micd_detect_work;
@@ -1255,10 +1258,37 @@ int arizona_micd_button_reading(struct arizona_extcon_info *info,
 				int val)
 {
 	struct arizona *arizona = info->arizona;
+	int debounce_lim = arizona->pdata.micd_manual_debounce;
 	int lvl, i, key;
 
 	if (val < 0)
 		return val;
+
+	if (debounce_lim) {
+		if (info->micd_debounce != val)
+			info->micd_count = 0;
+
+		info->micd_debounce = val;
+		info->micd_count++;
+
+		if (info->micd_count == debounce_lim) {
+			info->micd_count = 0;
+			if (val == info->micd_res_old)
+				return 0;
+
+			info->micd_res_old = val;
+		} else {
+			dev_dbg(arizona->dev, "Software debounce: %d,%x\n",
+				info->micd_count, val);
+			regmap_update_bits(arizona->regmap,
+					   ARIZONA_MIC_DETECT_1,
+					   ARIZONA_MICD_ENA, 0);
+			regmap_update_bits(arizona->regmap,
+					   ARIZONA_MIC_DETECT_1,
+					   ARIZONA_MICD_ENA, ARIZONA_MICD_ENA);
+			return -EAGAIN;
+		}
+	}
 
 	if (val & MICD_LVL_0_TO_7) {
 		dev_dbg(arizona->dev, "Mic button detected\n");
@@ -1888,6 +1918,9 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 			info->hpdet_res[i] = 0;
 		info->mic = false;
 		info->hpdet_retried = false;
+		info->micd_res_old = 0;
+		info->micd_debounce = 0;
+		info->micd_count = 0;
 		arizona->hp_impedance = 0;
 		arizona_jds_set_state(info, NULL);
 
@@ -1974,6 +2007,9 @@ static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 
 	arizona_of_read_u32(arizona, "wlf,micd-detect-debounce", false,
 			    &pdata->micd_detect_debounce);
+
+	arizona_of_read_u32(arizona, "wlf,micd-manual-debounce", false,
+			    &pdata->micd_manual_debounce);
 
 	pdata->micd_pol_gpio = arizona_of_get_named_gpio(arizona,
 							 "wlf,micd-pol-gpio",
