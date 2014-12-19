@@ -981,21 +981,18 @@ static int wm_adsp_load(struct wm_adsp *dsp)
 	if (file == NULL)
 		return -ENOMEM;
 
-	snprintf(file, PAGE_SIZE, "%s-dsp%d-%s.wmfw", dsp->part, dsp->num,
-		 dsp->firmwares[dsp->fw].file);
-	file[PAGE_SIZE - 1] = '\0';
-
-	mutex_lock(dsp->fw_lock);
-	ret = request_firmware(&firmware, file, dsp->dev);
-	mutex_unlock(dsp->fw_lock);
-
-	if (dsp->part_rev && ret != 0) {
-		adsp_err(dsp, "Failed to request '%s'\n", file);
-		adsp_info(dsp, "Trying rev specific firmware...\n");
-
+	if (dsp->part_rev) {
 		snprintf(file, PAGE_SIZE, "%s%c-dsp%d-%s.wmfw",
 			 dsp->part, dsp->part_rev, dsp->num,
 			 dsp->firmwares[dsp->fw].file);
+		file[PAGE_SIZE - 1] = '\0';
+
+		mutex_lock(dsp->fw_lock);
+		ret = request_firmware(&firmware, file, dsp->dev);
+		mutex_unlock(dsp->fw_lock);
+	} else {
+		snprintf(file, PAGE_SIZE, "%s-dsp%d-%s.wmfw", dsp->part,
+			 dsp->num, dsp->firmwares[dsp->fw].file);
 		file[PAGE_SIZE - 1] = '\0';
 
 		mutex_lock(dsp->fw_lock);

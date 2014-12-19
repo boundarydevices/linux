@@ -271,6 +271,9 @@ struct arizona_pdata {
 
 	/** Some platforms add a series resistor for hpdet to suppress pops */
 	int hpdet_ext_res;
+
+	/** Load firmwares for specific chip revisions */
+	bool rev_specific_fw;
 };
 
 #endif
