@@ -221,7 +221,7 @@ static int arizona_poll_reg(struct arizona *arizona,
 		msleep(1);
 	}
 
-	dev_err(arizona->dev, "Polling reg %u timed out: %x\n", reg, val);
+	dev_err(arizona->dev, "Polling reg %u timed out, val:%x, mask:%x target:%x\n", reg, val, mask, target);
 	return -ETIMEDOUT;
 }
 
