@@ -76,7 +76,7 @@
 		compatible = "gpio-keys";
 	};
 
-	sound {
+	sound_sgtl5000: sound_sgtl5000 {
 		compatible = "fsl,imx6q-vp-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";
 		model = "imx6q-vp-sgtl5000";
@@ -87,7 +87,7 @@
 			"Mic Jack", "Mic Bias",
 			"LINE_IN", "Line In Jack",
 			"Headphone Jack", "HP_OUT",
-			"Ext Spk", "LINE_OUT";
+			"Line Out Jack", "LINE_OUT";
 		mux-int-port = <1>;
 		mux-ext-port = <3>;
 	};
@@ -132,9 +132,9 @@
 
 	backlight_lcd: backlight_lcdgrp {
 		compatible = "pwm-backlight";
-		pwms = <&pwm1 0 5000000>;
-		brightness-levels = <0 4 8 16 32 64 128 255>;
-		default-brightness-level = <7>;
+		pwms = <&pwm1 0 50000>;
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		default-brightness-level = <10>;
 	};
 
 	v4l2_out {
@@ -148,6 +148,10 @@
 		pinctrl-0 = <&pinctrl_i2c3mux>;
 		#address-cells = <1>;
 		#size-cells = <0>;
+	};
+
+	uart4_gps_rfkill: uart4_gps_rfkill {
+		compatible = "net,rfkill-gpio";
 	};
 
 	wlan_bt_rfkill: wlan_bt_rfkillgrp {
@@ -366,12 +370,18 @@
 		fsl,pins = <
 			MX6QDL_PAD_CSI0_DAT12__UART4_TX_DATA	0x1b0b1
 			MX6QDL_PAD_CSI0_DAT13__UART4_RX_DATA	0x1b0b1
-#define GP_GPS_RESET			<&gpio6 0 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_CSI0_DAT14__GPIO6_IO00	0x0b0b0
 #define GP_GPS_IRQ			<&gpio6 1 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_CSI0_DAT15__GPIO6_IO01	0x1b0b0
 #define GP_GPS_HEARTBEAT		<&gpio6 2 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_CSI0_DAT16__GPIO6_IO02	0x1b0b0
+		>;
+	};
+
+	pinctrl_uart4_gps_rfkill: uart4_gps_rfkillgrp {
+		/* GPS */
+		fsl,pins = <
+#define GP_GPS_RESET			<&gpio6 0 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_CSI0_DAT14__GPIO6_IO00	0x0b0b0
 		>;
 	};
 
@@ -416,16 +426,8 @@
 			MX6QDL_PAD_SD2_DAT1__SD2_DATA1		0x17031
 			MX6QDL_PAD_SD2_DAT2__SD2_DATA2		0x17031
 			MX6QDL_PAD_SD2_DAT3__SD2_DATA3		0x17031
-#define GP_BRM_BT_RESET			<&gpio6 8 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x0b0b0
-#define GP_BRM_BT_EN			<&gpio6 15 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x000b0
-#define GP_BRM_BT_WAKE_IRQ		<&gpio2 7 IRQ_TYPE_LEVEL_LOW>
-			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x0b0b0
-#define GP_BRM_BT_WAKEUP		<&gpio6 16 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x0b0b0
 #define GP_BRM_WL_WAKE_IRQ		<&gpio6 11 IRQ_TYPE_LEVEL_LOW>
-			MX6QDL_PAD_NANDF_CS0__GPIO6_IO11	0x0b0b0
+			MX6QDL_PAD_NANDF_CS0__GPIO6_IO11	0x1b0b0
 #define GP_BRM_CLOCK_REQUEST		<&gpio6 9 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x0b0b0
 #define GP_BRM_WL_EN			<&gpio6 7 GPIO_ACTIVE_HIGH>
@@ -517,6 +519,18 @@
 		>;
 	};
 
+	pinctrl_wlan_bt_rfkill: wlan_bt_rfkillgrp {
+		fsl,pins = <
+#define GP_BRM_BT_RESET			<&gpio6 8 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x0b0b0		/* BT reset(Broadcom) */
+#define GP_BRM_BT_EN			<&gpio6 15 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x030b0		/* BT reg en(Broadcom) */
+#define GP_BRM_BT_WAKE_IRQ		<&gpio2 7 IRQ_TYPE_LEVEL_LOW>
+			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x1b0b0
+#define GP_BRM_BT_WAKEUP		<&gpio6 16 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x0f0b0
+		>;
+	};
 };
 
 &audmux {
@@ -597,7 +611,7 @@
 
 	input2 {
 		label = "Input 2";
-		gpios = GP_INPUT1;
+		gpios = GP_INPUT2;
 		linux,code = <KEY_VOLUMEDOWN>;
 	};
 };
@@ -751,6 +765,10 @@
 	pinctrl-0 = <&pinctrl_usbotg_vbus>;
 };
 
+&sound_sgtl5000 {
+	line-out-mute-gpios = GP_SGTL5000_MUTE;
+};
+
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
@@ -775,6 +793,13 @@
 	pinctrl-0 = <&pinctrl_uart4>;
 	fsl,uart-has-rtscts;
 	status = "okay";
+};
+
+&uart4_gps_rfkill {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart4_gps_rfkill>;
+	type = <6>;     /* gps */
+	gpios = GP_GPS_RESET;
 };
 
 &usbh1 {
@@ -829,6 +854,8 @@
 };
 
 &wlan_bt_rfkill {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_wlan_bt_rfkill>;
 	type = <2>;     /* bluetooth */
 	gpios = GP_BRM_BT_EN, GP_BRM_BT_RESET;
 };
