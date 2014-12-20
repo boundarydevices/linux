@@ -71,6 +71,9 @@ void unregister_early_suspend(struct early_suspend *handler)
 }
 EXPORT_SYMBOL(unregister_early_suspend);
 
+void android_wake_lock(struct wake_lock *lock);
+void android_wake_unlock(struct wake_lock *lock);
+
 static void early_suspend(struct work_struct *work)
 {
 	struct early_suspend *pos;
