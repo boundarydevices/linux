@@ -669,7 +669,11 @@ static int arizona_runtime_resume(struct device *dev)
 			}
 		}
 		break;
-	default:
+	case WM8997:
+	case WM8998:
+	case WM1814:
+	case WM1831:
+	case CS47L24:
 		if (arizona->pdata.reset && arizona->external_dcvdd) {
 			gpio_set_value_cansleep(arizona->pdata.reset, 1);
 			msleep(1);
@@ -689,6 +693,17 @@ static int arizona_runtime_resume(struct device *dev)
 					"Failed to connect DCVDD: %d\n", ret);
 				goto err;
 			}
+		}
+		break;
+	default:
+		if (arizona->pdata.reset && arizona->external_dcvdd) {
+			gpio_set_value_cansleep(arizona->pdata.reset, 1);
+			msleep(1);
+		}
+
+		ret = arizona_wait_for_boot(arizona);
+		if (ret != 0) {
+			goto err;
 		}
 		break;
 	}
@@ -734,14 +749,27 @@ static int arizona_runtime_suspend(struct device *dev)
 	}
 
 	if (arizona->external_dcvdd) {
-		ret = regmap_update_bits(arizona->regmap,
-					 ARIZONA_ISOLATION_CONTROL,
-					 ARIZONA_ISOLATE_DCVDD1,
-					 ARIZONA_ISOLATE_DCVDD1);
-		if (ret != 0) {
-			dev_err(arizona->dev, "Failed to isolate DCVDD: %d\n",
-				ret);
-			goto err;
+		switch (arizona->type) {
+		case WM5102:
+		case WM5110:
+		case WM8997:
+		case WM8280:
+		case WM8998:
+		case WM1814:
+		case WM1831:
+		case CS47L24:
+			ret = regmap_update_bits(arizona->regmap,
+						 ARIZONA_ISOLATION_CONTROL,
+						 ARIZONA_ISOLATE_DCVDD1,
+						 ARIZONA_ISOLATE_DCVDD1);
+			if (ret != 0) {
+				dev_err(arizona->dev, "Failed to isolate DCVDD: %d\n",
+					ret);
+				goto err;
+			}
+			break;
+		default:
+			break;
 		}
 	} else {
 		switch (arizona->type) {
