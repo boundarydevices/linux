@@ -85,18 +85,18 @@ static void arizona_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
 			   ARIZONA_GPN_LVL, value);
 }
 
-static int wm8285_gpio_direction_in(struct gpio_chip *chip, unsigned offset)
+static int clearwater_gpio_direction_in(struct gpio_chip *chip, unsigned offset)
 {
 	struct arizona_gpio *arizona_gpio = to_arizona_gpio(chip);
 	struct arizona *arizona = arizona_gpio->arizona;
 
 	offset *= 2;
 
-	return regmap_update_bits(arizona->regmap, WM8285_GPIO1_CTRL_2 + offset,
+	return regmap_update_bits(arizona->regmap, CLEARWATER_GPIO1_CTRL_2 + offset,
 				  ARIZONA_GPN_DIR, ARIZONA_GPN_DIR);
 }
 
-static int wm8285_gpio_get(struct gpio_chip *chip, unsigned offset)
+static int clearwater_gpio_get(struct gpio_chip *chip, unsigned offset)
 {
 	struct arizona_gpio *arizona_gpio = to_arizona_gpio(chip);
 	struct arizona *arizona = arizona_gpio->arizona;
@@ -105,17 +105,17 @@ static int wm8285_gpio_get(struct gpio_chip *chip, unsigned offset)
 
 	offset *= 2;
 
-	ret = regmap_read(arizona->regmap, WM8285_GPIO1_CTRL_1 + offset, &val);
+	ret = regmap_read(arizona->regmap, CLEARWATER_GPIO1_CTRL_1 + offset, &val);
 	if (ret < 0)
 		return ret;
 
-	if (val & WM8285_GPN_LVL)
+	if (val & CLEARWATER_GPN_LVL)
 		return 1;
 	else
 		return 0;
 }
 
-static int wm8285_gpio_direction_out(struct gpio_chip *chip,
+static int clearwater_gpio_direction_out(struct gpio_chip *chip,
 				     unsigned offset, int value)
 {
 	struct arizona_gpio *arizona_gpio = to_arizona_gpio(chip);
@@ -125,18 +125,18 @@ static int wm8285_gpio_direction_out(struct gpio_chip *chip,
 	offset *= 2;
 
 	if (value)
-		value = WM8285_GPN_LVL;
+		value = CLEARWATER_GPN_LVL;
 
-	ret = regmap_update_bits(arizona->regmap, WM8285_GPIO1_CTRL_2 + offset,
+	ret = regmap_update_bits(arizona->regmap, CLEARWATER_GPIO1_CTRL_2 + offset,
 				  ARIZONA_GPN_DIR, 0);
 	if (ret < 0)
 		return ret;
 
-	return regmap_update_bits(arizona->regmap, WM8285_GPIO1_CTRL_1 + offset,
-				  WM8285_GPN_LVL, value);
+	return regmap_update_bits(arizona->regmap, CLEARWATER_GPIO1_CTRL_1 + offset,
+				  CLEARWATER_GPN_LVL, value);
 }
 
-static void wm8285_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
+static void clearwater_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
 {
 	struct arizona_gpio *arizona_gpio = to_arizona_gpio(chip);
 	struct arizona *arizona = arizona_gpio->arizona;
@@ -144,10 +144,10 @@ static void wm8285_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
 	offset *= 2;
 
 	if (value)
-		value = WM8285_GPN_LVL;
+		value = CLEARWATER_GPN_LVL;
 
-	regmap_update_bits(arizona->regmap, WM8285_GPIO1_CTRL_1 + offset,
-			   WM8285_GPN_LVL, value);
+	regmap_update_bits(arizona->regmap, CLEARWATER_GPIO1_CTRL_1 + offset,
+			   CLEARWATER_GPN_LVL, value);
 }
 
 static struct gpio_chip template_chip = {
@@ -191,11 +191,11 @@ static int arizona_gpio_probe(struct platform_device *pdev)
 	case WM8285:
 	case WM1840:
 		arizona_gpio->gpio_chip.direction_input =
-			wm8285_gpio_direction_in;
-		arizona_gpio->gpio_chip.get = wm8285_gpio_get;
+			clearwater_gpio_direction_in;
+		arizona_gpio->gpio_chip.get = clearwater_gpio_get;
 		arizona_gpio->gpio_chip.direction_output =
-			wm8285_gpio_direction_out;
-		arizona_gpio->gpio_chip.set = wm8285_gpio_set;
+			clearwater_gpio_direction_out;
+		arizona_gpio->gpio_chip.set = clearwater_gpio_set;
 
 		arizona_gpio->gpio_chip.ngpio = 40;
 		break;
