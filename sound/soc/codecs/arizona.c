@@ -283,7 +283,7 @@ static const char * const arizona_dmic_inputs[] = {
 	"IN4R",
 };
 
-static const char * const wm8285_dmic_inputs[] = {
+static const char * const clearwater_dmic_inputs[] = {
 	"IN1L Mux",
 	"IN1R",
 	"IN2L Mux",
@@ -315,8 +315,8 @@ int arizona_init_input(struct snd_soc_codec *codec)
 		switch (arizona->type) {
 		case WM8285:
 		case WM1840:
-			routes[0].sink = wm8285_dmic_inputs[i * 2];
-			routes[1].sink = wm8285_dmic_inputs[(i * 2) + 1];
+			routes[0].sink = clearwater_dmic_inputs[i * 2];
+			routes[1].sink = clearwater_dmic_inputs[(i * 2) + 1];
 			break;
 		default:
 			routes[0].sink = arizona_dmic_inputs[i * 2];
@@ -1063,33 +1063,33 @@ const struct soc_enum arizona_asrc_rate1 =
 			      arizona_rate_text, arizona_rate_val);
 EXPORT_SYMBOL_GPL(arizona_asrc_rate1);
 
-const struct soc_enum wm8285_asrc1_rate[] = {
-	SOC_VALUE_ENUM_SINGLE(WM8285_ASRC1_RATE1,
-			      WM8285_ASRC1_RATE1_SHIFT, 0xf,
+const struct soc_enum clearwater_asrc1_rate[] = {
+	SOC_VALUE_ENUM_SINGLE(CLEARWATER_ASRC1_RATE1,
+			      CLEARWATER_ASRC1_RATE1_SHIFT, 0xf,
 			      ARIZONA_SYNC_RATE_ENUM_SIZE,
 			      arizona_rate_text, arizona_rate_val),
-	SOC_VALUE_ENUM_SINGLE(WM8285_ASRC1_RATE2,
-			      WM8285_ASRC1_RATE1_SHIFT, 0xf,
+	SOC_VALUE_ENUM_SINGLE(CLEARWATER_ASRC1_RATE2,
+			      CLEARWATER_ASRC1_RATE1_SHIFT, 0xf,
 			      ARIZONA_ASYNC_RATE_ENUM_SIZE,
 			      arizona_rate_text + ARIZONA_SYNC_RATE_ENUM_SIZE,
 			      arizona_rate_val + ARIZONA_SYNC_RATE_ENUM_SIZE),
 
 };
-EXPORT_SYMBOL_GPL(wm8285_asrc1_rate);
+EXPORT_SYMBOL_GPL(clearwater_asrc1_rate);
 
-const struct soc_enum wm8285_asrc2_rate[] = {
-	SOC_VALUE_ENUM_SINGLE(WM8285_ASRC2_RATE1,
-			      WM8285_ASRC2_RATE1_SHIFT, 0xf,
+const struct soc_enum clearwater_asrc2_rate[] = {
+	SOC_VALUE_ENUM_SINGLE(CLEARWATER_ASRC2_RATE1,
+			      CLEARWATER_ASRC2_RATE1_SHIFT, 0xf,
 			      ARIZONA_SYNC_RATE_ENUM_SIZE,
 			      arizona_rate_text, arizona_rate_val),
-	SOC_VALUE_ENUM_SINGLE(WM8285_ASRC2_RATE2,
-			      WM8285_ASRC2_RATE2_SHIFT, 0xf,
+	SOC_VALUE_ENUM_SINGLE(CLEARWATER_ASRC2_RATE2,
+			      CLEARWATER_ASRC2_RATE2_SHIFT, 0xf,
 			      ARIZONA_ASYNC_RATE_ENUM_SIZE,
 			      arizona_rate_text + ARIZONA_SYNC_RATE_ENUM_SIZE,
 			      arizona_rate_val + ARIZONA_SYNC_RATE_ENUM_SIZE),
 
 };
-EXPORT_SYMBOL_GPL(wm8285_asrc2_rate);
+EXPORT_SYMBOL_GPL(clearwater_asrc2_rate);
 
 static const char *arizona_vol_ramp_text[] = {
 	"0ms/6dB", "0.5ms/6dB", "1ms/6dB", "2ms/6dB", "4ms/6dB", "8ms/6dB",
@@ -1188,35 +1188,35 @@ const struct soc_enum arizona_in_dmic_osr[] = {
 };
 EXPORT_SYMBOL_GPL(arizona_in_dmic_osr);
 
-static const char * const wm8285_in_dmic_osr_text[WM8285_OSR_ENUM_SIZE] = {
+static const char * const clearwater_in_dmic_osr_text[CLEARWATER_OSR_ENUM_SIZE] = {
 	"384kHz", "768kHz", "1.536MHz", "3.072MHz", "6.144MHz",
 };
 
-static const int wm8285_in_dmic_osr_val[WM8285_OSR_ENUM_SIZE] = {
+static const int clearwater_in_dmic_osr_val[CLEARWATER_OSR_ENUM_SIZE] = {
 	2, 3, 4, 5, 6,
 };
 
-const struct soc_enum wm8285_in_dmic_osr[] = {
-	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC1L_CONTROL, WM8285_IN1_OSR_SHIFT,
-			      0x7, WM8285_OSR_ENUM_SIZE,
-			      wm8285_in_dmic_osr_text, wm8285_in_dmic_osr_val),
-	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC2L_CONTROL, WM8285_IN2_OSR_SHIFT,
-			      0x7, WM8285_OSR_ENUM_SIZE,
-			      wm8285_in_dmic_osr_text, wm8285_in_dmic_osr_val),
-	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC3L_CONTROL, WM8285_IN3_OSR_SHIFT,
-			      0x7, WM8285_OSR_ENUM_SIZE,
-			      wm8285_in_dmic_osr_text, wm8285_in_dmic_osr_val),
-	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC4L_CONTROL, WM8285_IN4_OSR_SHIFT,
-			      0x7, WM8285_OSR_ENUM_SIZE,
-			      wm8285_in_dmic_osr_text, wm8285_in_dmic_osr_val),
-	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC5L_CONTROL, WM8285_IN5_OSR_SHIFT,
-			      0x7, WM8285_OSR_ENUM_SIZE,
-			      wm8285_in_dmic_osr_text, wm8285_in_dmic_osr_val),
-	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC6L_CONTROL, WM8285_IN6_OSR_SHIFT,
-			      0x7, WM8285_OSR_ENUM_SIZE,
-			      wm8285_in_dmic_osr_text, wm8285_in_dmic_osr_val),
+const struct soc_enum clearwater_in_dmic_osr[] = {
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC1L_CONTROL, CLEARWATER_IN1_OSR_SHIFT,
+			      0x7, CLEARWATER_OSR_ENUM_SIZE,
+			      clearwater_in_dmic_osr_text, clearwater_in_dmic_osr_val),
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC2L_CONTROL, CLEARWATER_IN2_OSR_SHIFT,
+			      0x7, CLEARWATER_OSR_ENUM_SIZE,
+			      clearwater_in_dmic_osr_text, clearwater_in_dmic_osr_val),
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC3L_CONTROL, CLEARWATER_IN3_OSR_SHIFT,
+			      0x7, CLEARWATER_OSR_ENUM_SIZE,
+			      clearwater_in_dmic_osr_text, clearwater_in_dmic_osr_val),
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC4L_CONTROL, CLEARWATER_IN4_OSR_SHIFT,
+			      0x7, CLEARWATER_OSR_ENUM_SIZE,
+			      clearwater_in_dmic_osr_text, clearwater_in_dmic_osr_val),
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC5L_CONTROL, CLEARWATER_IN5_OSR_SHIFT,
+			      0x7, CLEARWATER_OSR_ENUM_SIZE,
+			      clearwater_in_dmic_osr_text, clearwater_in_dmic_osr_val),
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_DMIC6L_CONTROL, CLEARWATER_IN6_OSR_SHIFT,
+			      0x7, CLEARWATER_OSR_ENUM_SIZE,
+			      clearwater_in_dmic_osr_text, clearwater_in_dmic_osr_val),
 };
-EXPORT_SYMBOL_GPL(wm8285_in_dmic_osr);
+EXPORT_SYMBOL_GPL(clearwater_in_dmic_osr);
 
 static const char *arizona_anc_input_src_text[ARIZONA_ANC_INPUT_ENUM_SIZE] = {
 	"None", "IN1L", "IN1R", "IN1L + IN1R", "IN2L", "IN2R", "IN2L + IN2R",
@@ -1250,7 +1250,7 @@ int arizona_put_anc_input(struct snd_kcontrol *kcontrol,
 		shift = ARIZONA_IN_RXANCL_SEL_SHIFT;
 		break;
 	case ARIZONA_FCR_ADC_REFORMATTER_CONTROL:
-	case WM8285_FCR_ADC_REFORMATTER_CONTROL:
+	case CLEARWATER_FCR_ADC_REFORMATTER_CONTROL:
 		mask = ARIZONA_IN_RXANCR_SEL_MASK;
 		shift = ARIZONA_IN_RXANCR_SEL_SHIFT;
 		break;
@@ -1282,19 +1282,19 @@ const struct soc_enum arizona_anc_input_src[] = {
 };
 EXPORT_SYMBOL_GPL(arizona_anc_input_src);
 
-const struct soc_enum wm8285_anc_input_src[] = {
+const struct soc_enum clearwater_anc_input_src[] = {
 	SOC_VALUE_ENUM_SINGLE(ARIZONA_FCL_ADC_REFORMATTER_CONTROL,
 			      ARIZONA_FCL_MIC_MODE_SEL_SHIFT, 0,
-			      WM8285_ANC_INPUT_ENUM_SIZE,
+			      CLEARWATER_ANC_INPUT_ENUM_SIZE,
 			      arizona_anc_input_src_text,
 			      arizona_anc_input_src_val),
-	SOC_VALUE_ENUM_SINGLE(WM8285_FCR_ADC_REFORMATTER_CONTROL,
+	SOC_VALUE_ENUM_SINGLE(CLEARWATER_FCR_ADC_REFORMATTER_CONTROL,
 			      ARIZONA_FCR_MIC_MODE_SEL_SHIFT, 0,
-			      WM8285_ANC_INPUT_ENUM_SIZE,
+			      CLEARWATER_ANC_INPUT_ENUM_SIZE,
 			      arizona_anc_input_src_text,
 			      arizona_anc_input_src_val),
 };
-EXPORT_SYMBOL_GPL(wm8285_anc_input_src);
+EXPORT_SYMBOL_GPL(clearwater_anc_input_src);
 
 static const char *arizona_output_anc_src_text[] = {
 	"None", "RXANCL", "RXANCR",
@@ -1352,13 +1352,13 @@ const struct soc_enum arizona_output_anc_src[] = {
 };
 EXPORT_SYMBOL_GPL(arizona_output_anc_src);
 
-const struct soc_enum wm8285_output_anc_src_defs[] = {
+const struct soc_enum clearwater_output_anc_src_defs[] = {
 	SOC_ENUM_SINGLE(ARIZONA_OUTPUT_PATH_CONFIG_3R,
 			ARIZONA_OUT3R_ANC_SRC_SHIFT,
 			ARRAY_SIZE(arizona_output_anc_src_text),
 			arizona_output_anc_src_text),
 };
-EXPORT_SYMBOL_GPL(wm8285_output_anc_src_defs);
+EXPORT_SYMBOL_GPL(clearwater_output_anc_src_defs);
 
 static void arizona_in_set_vu(struct snd_soc_codec *codec, int ena)
 {
@@ -1910,7 +1910,7 @@ static int arizona_get_sysclk_setting(unsigned int freq)
 	}
 }
 
-static int wm8285_get_sysclk_setting(unsigned int freq)
+static int clearwater_get_sysclk_setting(unsigned int freq)
 {
 	switch (freq) {
 	case 0:
@@ -1928,13 +1928,13 @@ static int wm8285_get_sysclk_setting(unsigned int freq)
 		return ARIZONA_CLK_49MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
 	case 90316800:
 	case 98304000:
-		return WM8285_CLK_98MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
+		return CLEARWATER_CLK_98MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
 	default:
 		return -EINVAL;
 	}
 }
 
-static int wm8285_get_dspclk_setting(unsigned int freq)
+static int clearwater_get_dspclk_setting(unsigned int freq)
 {
 	switch (freq) {
 	case 0:
@@ -1942,7 +1942,7 @@ static int wm8285_get_dspclk_setting(unsigned int freq)
 	/* For now we only support top speed for the DSP */
 	case 135475200:
 	case 147456000:
-		return WM8285_DSP_CLK_147MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
+		return CLEARWATER_DSP_CLK_147MHZ << ARIZONA_SYSCLK_FREQ_SHIFT;
 	default:
 		return -EINVAL;
 	}
@@ -1997,23 +1997,23 @@ int arizona_set_sysclk(struct snd_soc_codec *codec, int clk_id,
 			name = "SYSCLK";
 			reg = ARIZONA_SYSTEM_CLOCK_1;
 			clk = &priv->sysclk;
-			clk_freq = wm8285_get_sysclk_setting(freq);
+			clk_freq = clearwater_get_sysclk_setting(freq);
 			mask |= ARIZONA_SYSCLK_FRAC;
 			break;
 		case ARIZONA_CLK_ASYNCCLK:
 			name = "ASYNCCLK";
 			reg = ARIZONA_ASYNC_CLOCK_1;
 			clk = &priv->asyncclk;
-			clk_freq = wm8285_get_sysclk_setting(freq);
+			clk_freq = clearwater_get_sysclk_setting(freq);
 			break;
 		case ARIZONA_CLK_OPCLK:
 		case ARIZONA_CLK_ASYNC_OPCLK:
 			return arizona_set_opclk(codec, clk_id, freq);
 		case ARIZONA_CLK_DSPCLK:
 			name = "DSPCLK";
-			reg = WM8285_DSP_CLOCK_1;
+			reg = CLEARWATER_DSP_CLOCK_1;
 			clk = &priv->dspclk;
-			clk_freq = wm8285_get_dspclk_setting(freq);
+			clk_freq = clearwater_get_dspclk_setting(freq);
 			break;
 		default:
 			return -EINVAL;
@@ -3064,8 +3064,8 @@ static int arizona_wait_for_fll(struct arizona_fll *fll, bool requested)
 		mask = ARIZONA_FLL1_CLOCK_OK_STS;
 		break;
 	default:
-		reg = WM8285_IRQ1_RAW_STATUS_2;
-		mask = WM8285_FLL1_LOCK_STS1;
+		reg = CLEARWATER_IRQ1_RAW_STATUS_2;
+		mask = CLEARWATER_FLL1_LOCK_STS1;
 		break;
 	}
 

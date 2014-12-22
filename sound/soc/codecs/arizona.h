@@ -62,15 +62,15 @@
 #define ARIZONA_CLK_24MHZ  2
 #define ARIZONA_CLK_49MHZ  3
 #define ARIZONA_CLK_73MHZ  4
-#define WM8285_CLK_98MHZ   4
+#define CLEARWATER_CLK_98MHZ   4
 #define ARIZONA_CLK_98MHZ  5
 #define ARIZONA_CLK_147MHZ 6
 
-#define WM8285_DSP_CLK_9MHZ   0
-#define WM8285_DSP_CLK_18MHZ  1
-#define WM8285_DSP_CLK_36MHZ  2
-#define WM8285_DSP_CLK_73MHZ  3
-#define WM8285_DSP_CLK_147MHZ 4
+#define CLEARWATER_DSP_CLK_9MHZ   0
+#define CLEARWATER_DSP_CLK_18MHZ  1
+#define CLEARWATER_DSP_CLK_36MHZ  2
+#define CLEARWATER_DSP_CLK_73MHZ  3
+#define CLEARWATER_DSP_CLK_147MHZ 4
 
 #define ARIZONA_MAX_DAI  11
 #define ARIZONA_MAX_ADSP 7
@@ -149,27 +149,27 @@ extern int arizona_v2_mixer_values[ARIZONA_V2_NUM_MIXER_INPUTS];
 	ARIZONA_MUX_ENUMS(name##_aux5, base_reg + 32);	\
 	ARIZONA_MUX_ENUMS(name##_aux6, base_reg + 40)
 
-#define WM8285_MUX_ENUM_DECL(name, reg) \
+#define CLEARWATER_MUX_ENUM_DECL(name, reg) \
 	SOC_VALUE_ENUM_SINGLE_DECL(name, reg, 0, 0xff,			\
 				   arizona_v2_mixer_texts, arizona_v2_mixer_values)
 
-#define WM8285_MUX_ENUMS(name, base_reg) \
-	static WM8285_MUX_ENUM_DECL(name##_enum, base_reg);      \
+#define CLEARWATER_MUX_ENUMS(name, base_reg) \
+	static CLEARWATER_MUX_ENUM_DECL(name##_enum, base_reg);      \
 	static ARIZONA_MUX_CTL_DECL(name)
 
-#define WM8285_MIXER_ENUMS(name, base_reg) \
-	WM8285_MUX_ENUMS(name##_in1, base_reg);     \
-	WM8285_MUX_ENUMS(name##_in2, base_reg + 2); \
-	WM8285_MUX_ENUMS(name##_in3, base_reg + 4); \
-	WM8285_MUX_ENUMS(name##_in4, base_reg + 6)
+#define CLEARWATER_MIXER_ENUMS(name, base_reg) \
+	CLEARWATER_MUX_ENUMS(name##_in1, base_reg);     \
+	CLEARWATER_MUX_ENUMS(name##_in2, base_reg + 2); \
+	CLEARWATER_MUX_ENUMS(name##_in3, base_reg + 4); \
+	CLEARWATER_MUX_ENUMS(name##_in4, base_reg + 6)
 
-#define WM8285_DSP_AUX_ENUMS(name, base_reg) \
-	WM8285_MUX_ENUMS(name##_aux1, base_reg);	\
-	WM8285_MUX_ENUMS(name##_aux2, base_reg + 8);	\
-	WM8285_MUX_ENUMS(name##_aux3, base_reg + 16);	\
-	WM8285_MUX_ENUMS(name##_aux4, base_reg + 24);	\
-	WM8285_MUX_ENUMS(name##_aux5, base_reg + 32);	\
-	WM8285_MUX_ENUMS(name##_aux6, base_reg + 40)
+#define CLEARWATER_DSP_AUX_ENUMS(name, base_reg) \
+	CLEARWATER_MUX_ENUMS(name##_aux1, base_reg);	\
+	CLEARWATER_MUX_ENUMS(name##_aux2, base_reg + 8);	\
+	CLEARWATER_MUX_ENUMS(name##_aux3, base_reg + 16);	\
+	CLEARWATER_MUX_ENUMS(name##_aux4, base_reg + 24);	\
+	CLEARWATER_MUX_ENUMS(name##_aux5, base_reg + 32);	\
+	CLEARWATER_MUX_ENUMS(name##_aux6, base_reg + 40)
 
 #define ARIZONA_MUX(name, ctrl) \
 	SND_SOC_DAPM_VALUE_MUX(name, SND_SOC_NOPM, 0, 0, ctrl)
@@ -242,14 +242,14 @@ extern int arizona_v2_mixer_values[ARIZONA_V2_NUM_MIXER_INPUTS];
 		{.base = xbase, .num_regs = 20, \
 		 .mask = ~ARIZONA_EQ1_B1_MODE }) }
 
-#define WM8285_OSR_ENUM_SIZE 5
+#define CLEARWATER_OSR_ENUM_SIZE 5
 #define ARIZONA_RATE_ENUM_SIZE 5
 #define ARIZONA_SYNC_RATE_ENUM_SIZE 3
 #define ARIZONA_ASYNC_RATE_ENUM_SIZE 2
 #define ARIZONA_SAMPLE_RATE_ENUM_SIZE 14
 #define ARIZONA_ANC_INPUT_ENUM_SIZE 19
 #define WM8280_ANC_INPUT_ENUM_SIZE 13
-#define WM8285_ANC_INPUT_ENUM_SIZE 19
+#define CLEARWATER_ANC_INPUT_ENUM_SIZE 19
 
 extern const char *arizona_rate_text[ARIZONA_RATE_ENUM_SIZE];
 extern const int arizona_rate_val[ARIZONA_RATE_ENUM_SIZE];
@@ -260,8 +260,8 @@ extern const struct soc_enum arizona_sample_rate[];
 extern const struct soc_enum arizona_isrc_fsl[];
 extern const struct soc_enum arizona_isrc_fsh[];
 extern const struct soc_enum arizona_asrc_rate1;
-extern const struct soc_enum wm8285_asrc1_rate[];
-extern const struct soc_enum wm8285_asrc2_rate[];
+extern const struct soc_enum clearwater_asrc1_rate[];
+extern const struct soc_enum clearwater_asrc2_rate[];
 extern const struct soc_enum arizona_input_rate;
 extern const struct soc_enum arizona_output_rate;
 extern const struct soc_enum arizona_fx_rate;
@@ -281,12 +281,12 @@ extern const struct soc_enum arizona_lhpf4_mode;
 extern const struct soc_enum arizona_ng_hold;
 extern const struct soc_enum arizona_in_hpf_cut_enum;
 extern const struct soc_enum arizona_in_dmic_osr[];
-extern const struct soc_enum wm8285_in_dmic_osr[];
+extern const struct soc_enum clearwater_in_dmic_osr[];
 
 extern const struct soc_enum arizona_anc_input_src[];
-extern const struct soc_enum wm8285_anc_input_src[];
+extern const struct soc_enum clearwater_anc_input_src[];
 extern const struct soc_enum arizona_output_anc_src[];
-extern const struct soc_enum wm8285_output_anc_src_defs[];
+extern const struct soc_enum clearwater_output_anc_src_defs[];
 
 extern int arizona_put_anc_input(struct snd_kcontrol *kcontrol,
 			  struct snd_ctl_elem_value *ucontrol);
