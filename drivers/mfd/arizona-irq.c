@@ -228,14 +228,14 @@ int arizona_irq_init(struct arizona *arizona)
 		ctrlif_error = false;
 		break;
 #endif
-#ifdef CONFIG_MFD_WM8285
+#ifdef CONFIG_MFD_CLEARWATER
 	case WM8285:
 	case WM1840:
-		aod = &wm8285_irq;
+		aod = &clearwater_irq;
 		irq = NULL;
 
 		ctrlif_error = false;
-		irq_ctrl_reg = WM8285_IRQ1_CTRL;
+		irq_ctrl_reg = CLEARWATER_IRQ1_CTRL;
 		break;
 #endif
 #ifdef CONFIG_MFD_CS47L24

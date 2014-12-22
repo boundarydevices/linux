@@ -186,7 +186,7 @@ int wm5102_patch(struct arizona *arizona);
 int florida_patch(struct arizona *arizona);
 int wm8997_patch(struct arizona *arizona);
 int wm8998_patch(struct arizona *arizona);
-int wm8285_patch(struct arizona *arizona);
+int clearwater_patch(struct arizona *arizona);
 int cs47l24_patch(struct arizona *arizona);
 
 extern int arizona_of_get_named_gpio(struct arizona *arizona, const char *prop,

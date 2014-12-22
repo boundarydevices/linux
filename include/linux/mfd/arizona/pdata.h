@@ -45,13 +45,13 @@
 #define ARIZONA_GPN_FN_SHIFT                          0  /* GPN_FN - [6:0] */
 #define ARIZONA_GPN_FN_WIDTH                          7  /* GPN_FN - [6:0] */
 
-#define WM8285_GPN_LVL                           0x8000  /* GPN_LVL */
-#define WM8285_GPN_LVL_MASK                      0x8000  /* GPN_LVL */
-#define WM8285_GPN_LVL_SHIFT                         15  /* GPN_LVL */
-#define WM8285_GPN_LVL_WIDTH                          1  /* GPN_LVL */
+#define CLEARWATER_GPN_LVL                           0x8000  /* GPN_LVL */
+#define CLEARWATER_GPN_LVL_MASK                      0x8000  /* GPN_LVL */
+#define CLEARWATER_GPN_LVL_SHIFT                         15  /* GPN_LVL */
+#define CLEARWATER_GPN_LVL_WIDTH                          1  /* GPN_LVL */
 
 #define ARIZONA_MAX_GPIO_REGS 5
-#define WM8285_MAX_GPIO_REGS 80
+#define CLEARWATER_MAX_GPIO_REGS 80
 
 #define ARIZONA_32KZ_MCLK1 1
 #define ARIZONA_32KZ_MCLK2 2
@@ -127,7 +127,7 @@ struct arizona_pdata {
 	int gpio_base;
 
 	/** Pin state for GPIO pins */
-	unsigned int gpio_defaults[WM8285_MAX_GPIO_REGS];
+	unsigned int gpio_defaults[CLEARWATER_MAX_GPIO_REGS];
 
 	/**
 	 * Maximum number of channels clocks will be generated for,

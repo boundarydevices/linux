@@ -1056,11 +1056,12 @@ config MFD_WM8997
 	help
 	  Support for Wolfson Microelectronics WM8997 low power audio SoC
 
-config MFD_WM8285
-	bool "Wolfson Microelectronics WM8285"
+config MFD_CLEARWATER
+	bool "Wolfson Microelectronics ClearWater class codecs"
 	depends on MFD_ARIZONA
 	help
-	  Support for Wolfson Microelectronics WM8285 low power audio SoC
+	  Support for Wolfson Microelectronics ClearWater class low power audio SoC
+	  such as the WM8285
 
 config MFD_CS47L24
 	bool "Cirrus Logic CS47L24"

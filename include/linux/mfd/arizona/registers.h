@@ -76,8 +76,8 @@
 #define ARIZONA_ASYNC_SAMPLE_RATE_2              0x114
 #define ARIZONA_ASYNC_SAMPLE_RATE_1_STATUS       0x11B
 #define ARIZONA_ASYNC_SAMPLE_RATE_2_STATUS       0x11C
-#define WM8285_DSP_CLOCK_1                       0x120
-#define WM8285_DSP_CLOCK_2                       0x122
+#define CLEARWATER_DSP_CLOCK_1                       0x120
+#define CLEARWATER_DSP_CLOCK_2                       0x122
 #define ARIZONA_OUTPUT_SYSTEM_CLOCK              0x149
 #define ARIZONA_OUTPUT_ASYNC_CLOCK               0x14A
 #define ARIZONA_RATE_ESTIMATOR_1                 0x152
@@ -169,7 +169,7 @@
 #define ARIZONA_MIC_DETECT_LEVEL_4		 0x2A9
 #define ARIZONA_MIC_DETECT_4                     0x2AB
 #define ARIZONA_MIC_NOISE_MIX_CONTROL_1          0x2C3
-#define WM8285_MICD_CLAMP_CONTROL                0x2C6
+#define CLEARWATER_MICD_CLAMP_CONTROL                0x2C6
 #define ARIZONA_ISOLATION_CONTROL                0x2CB
 #define ARIZONA_JACK_DETECT_ANALOGUE             0x2D3
 #define ARIZONA_INPUT_ENABLES                    0x300
@@ -277,7 +277,7 @@
 #define ARIZONA_DRE_CONTROL_1                    0x441
 #define ARIZONA_DRE_CONTROL_2                    0x442
 #define ARIZONA_DRE_CONTROL_3                    0x443
-#define WM8285_EDRE_ENABLE                       0x448
+#define CLEARWATER_EDRE_ENABLE                       0x448
 #define ARIZONA_DAC_AEC_CONTROL_1                0x450
 #define ARIZONA_DAC_AEC_CONTROL_2                0x451
 #define ARIZONA_NOISE_GATE_CONTROL               0x458
@@ -943,40 +943,40 @@
 #define ARIZONA_DSP4AUX4MIX_INPUT_1_SOURCE       0xA28
 #define ARIZONA_DSP4AUX5MIX_INPUT_1_SOURCE       0xA30
 #define ARIZONA_DSP4AUX6MIX_INPUT_1_SOURCE       0xA38
-#define WM8285_DSP5LMIX_INPUT_1_SOURCE          0xA40
-#define WM8285_DSP5LMIX_INPUT_1_VOLUME          0xA41
-#define WM8285_DSP5LMIX_INPUT_2_SOURCE          0xA42
-#define WM8285_DSP5LMIX_INPUT_2_VOLUME          0xA43
-#define WM8285_DSP5LMIX_INPUT_3_SOURCE          0xA44
-#define WM8285_DSP5LMIX_INPUT_3_VOLUME          0xA45
-#define WM8285_DSP5LMIX_INPUT_4_SOURCE          0xA46
-#define WM8285_DSP5LMIX_INPUT_4_VOLUME          0xA47
-#define WM8285_DSP5RMIX_INPUT_1_SOURCE          0xA48
-#define WM8285_DSP5RMIX_INPUT_1_VOLUME          0xA49
-#define WM8285_DSP5RMIX_INPUT_2_SOURCE          0xA4A
-#define WM8285_DSP5RMIX_INPUT_2_VOLUME          0xA4B
-#define WM8285_DSP5RMIX_INPUT_3_SOURCE          0xA4C
-#define WM8285_DSP5RMIX_INPUT_3_VOLUME          0xA4D
-#define WM8285_DSP5RMIX_INPUT_4_SOURCE          0xA4E
-#define WM8285_DSP5RMIX_INPUT_4_VOLUME          0xA4F
-#define WM8285_DSP5AUX1MIX_INPUT_1_SOURCE       0xA50
-#define WM8285_DSP5AUX2MIX_INPUT_1_SOURCE       0xA58
-#define WM8285_DSP5AUX3MIX_INPUT_1_SOURCE       0xA60
-#define WM8285_DSP5AUX4MIX_INPUT_1_SOURCE       0xA68
-#define WM8285_DSP5AUX5MIX_INPUT_1_SOURCE       0xA70
-#define WM8285_DSP5AUX6MIX_INPUT_1_SOURCE       0xA78
+#define CLEARWATER_DSP5LMIX_INPUT_1_SOURCE          0xA40
+#define CLEARWATER_DSP5LMIX_INPUT_1_VOLUME          0xA41
+#define CLEARWATER_DSP5LMIX_INPUT_2_SOURCE          0xA42
+#define CLEARWATER_DSP5LMIX_INPUT_2_VOLUME          0xA43
+#define CLEARWATER_DSP5LMIX_INPUT_3_SOURCE          0xA44
+#define CLEARWATER_DSP5LMIX_INPUT_3_VOLUME          0xA45
+#define CLEARWATER_DSP5LMIX_INPUT_4_SOURCE          0xA46
+#define CLEARWATER_DSP5LMIX_INPUT_4_VOLUME          0xA47
+#define CLEARWATER_DSP5RMIX_INPUT_1_SOURCE          0xA48
+#define CLEARWATER_DSP5RMIX_INPUT_1_VOLUME          0xA49
+#define CLEARWATER_DSP5RMIX_INPUT_2_SOURCE          0xA4A
+#define CLEARWATER_DSP5RMIX_INPUT_2_VOLUME          0xA4B
+#define CLEARWATER_DSP5RMIX_INPUT_3_SOURCE          0xA4C
+#define CLEARWATER_DSP5RMIX_INPUT_3_VOLUME          0xA4D
+#define CLEARWATER_DSP5RMIX_INPUT_4_SOURCE          0xA4E
+#define CLEARWATER_DSP5RMIX_INPUT_4_VOLUME          0xA4F
+#define CLEARWATER_DSP5AUX1MIX_INPUT_1_SOURCE       0xA50
+#define CLEARWATER_DSP5AUX2MIX_INPUT_1_SOURCE       0xA58
+#define CLEARWATER_DSP5AUX3MIX_INPUT_1_SOURCE       0xA60
+#define CLEARWATER_DSP5AUX4MIX_INPUT_1_SOURCE       0xA68
+#define CLEARWATER_DSP5AUX5MIX_INPUT_1_SOURCE       0xA70
+#define CLEARWATER_DSP5AUX6MIX_INPUT_1_SOURCE       0xA78
 #define ARIZONA_ASRC1LMIX_INPUT_1_SOURCE         0xA80
 #define ARIZONA_ASRC1RMIX_INPUT_1_SOURCE         0xA88
 #define ARIZONA_ASRC2LMIX_INPUT_1_SOURCE         0xA90
 #define ARIZONA_ASRC2RMIX_INPUT_1_SOURCE         0xA98
-#define WM8285_ASRC1_1LMIX_INPUT_1_SOURCE        0xA80
-#define WM8285_ASRC1_1RMIX_INPUT_1_SOURCE        0xA88
-#define WM8285_ASRC1_2LMIX_INPUT_1_SOURCE        0xA90
-#define WM8285_ASRC1_2RMIX_INPUT_1_SOURCE        0xA98
-#define WM8285_ASRC2_1LMIX_INPUT_1_SOURCE        0xAA0
-#define WM8285_ASRC2_1RMIX_INPUT_1_SOURCE        0xAA8
-#define WM8285_ASRC2_2LMIX_INPUT_1_SOURCE        0xAB0
-#define WM8285_ASRC2_2RMIX_INPUT_1_SOURCE        0xAB8
+#define CLEARWATER_ASRC1_1LMIX_INPUT_1_SOURCE        0xA80
+#define CLEARWATER_ASRC1_1RMIX_INPUT_1_SOURCE        0xA88
+#define CLEARWATER_ASRC1_2LMIX_INPUT_1_SOURCE        0xA90
+#define CLEARWATER_ASRC1_2RMIX_INPUT_1_SOURCE        0xA98
+#define CLEARWATER_ASRC2_1LMIX_INPUT_1_SOURCE        0xAA0
+#define CLEARWATER_ASRC2_1RMIX_INPUT_1_SOURCE        0xAA8
+#define CLEARWATER_ASRC2_2LMIX_INPUT_1_SOURCE        0xAB0
+#define CLEARWATER_ASRC2_2RMIX_INPUT_1_SOURCE        0xAB8
 #define ARIZONA_ISRC1DEC1MIX_INPUT_1_SOURCE      0xB00
 #define ARIZONA_ISRC1DEC2MIX_INPUT_1_SOURCE      0xB08
 #define ARIZONA_ISRC1DEC3MIX_INPUT_1_SOURCE      0xB10
@@ -1011,50 +1011,50 @@
 #define ARIZONA_ISRC4DEC2MIX_INPUT_1_SOURCE      0xBC8
 #define ARIZONA_ISRC4INT1MIX_INPUT_1_SOURCE      0xBE0
 #define ARIZONA_ISRC4INT2MIX_INPUT_1_SOURCE      0xBE8
-#define WM8285_DSP6LMIX_INPUT_1_SOURCE           0xC00
-#define WM8285_DSP6LMIX_INPUT_1_VOLUME           0xC01
-#define WM8285_DSP6LMIX_INPUT_2_SOURCE           0xC02
-#define WM8285_DSP6LMIX_INPUT_2_VOLUME           0xC03
-#define WM8285_DSP6LMIX_INPUT_3_SOURCE           0xC04
-#define WM8285_DSP6LMIX_INPUT_3_VOLUME           0xC05
-#define WM8285_DSP6LMIX_INPUT_4_SOURCE           0xC06
-#define WM8285_DSP6LMIX_INPUT_4_VOLUME           0xC07
-#define WM8285_DSP6RMIX_INPUT_1_SOURCE           0xC08
-#define WM8285_DSP6RMIX_INPUT_1_VOLUME           0xC09
-#define WM8285_DSP6RMIX_INPUT_2_SOURCE           0xC0A
-#define WM8285_DSP6RMIX_INPUT_2_VOLUME           0xC0B
-#define WM8285_DSP6RMIX_INPUT_3_SOURCE           0xC0C
-#define WM8285_DSP6RMIX_INPUT_3_VOLUME           0xC0D
-#define WM8285_DSP6RMIX_INPUT_4_SOURCE           0xC0E
-#define WM8285_DSP6RMIX_INPUT_4_VOLUME           0xC0F
-#define WM8285_DSP6AUX1MIX_INPUT_1_SOURCE        0xC10
-#define WM8285_DSP6AUX2MIX_INPUT_1_SOURCE        0xC18
-#define WM8285_DSP6AUX3MIX_INPUT_1_SOURCE        0xC20
-#define WM8285_DSP6AUX4MIX_INPUT_1_SOURCE        0xC28
-#define WM8285_DSP6AUX5MIX_INPUT_1_SOURCE        0xC30
-#define WM8285_DSP6AUX6MIX_INPUT_1_SOURCE        0xC38
-#define WM8285_DSP7LMIX_INPUT_1_SOURCE           0xC40
-#define WM8285_DSP7LMIX_INPUT_1_VOLUME           0xC41
-#define WM8285_DSP7LMIX_INPUT_2_SOURCE           0xC42
-#define WM8285_DSP7LMIX_INPUT_2_VOLUME           0xC43
-#define WM8285_DSP7LMIX_INPUT_3_SOURCE           0xC44
-#define WM8285_DSP7LMIX_INPUT_3_VOLUME           0xC45
-#define WM8285_DSP7LMIX_INPUT_4_SOURCE           0xC46
-#define WM8285_DSP7LMIX_INPUT_4_VOLUME           0xC47
-#define WM8285_DSP7RMIX_INPUT_1_SOURCE           0xC48
-#define WM8285_DSP7RMIX_INPUT_1_VOLUME           0xC49
-#define WM8285_DSP7RMIX_INPUT_2_SOURCE           0xC4A
-#define WM8285_DSP7RMIX_INPUT_2_VOLUME           0xC4B
-#define WM8285_DSP7RMIX_INPUT_3_SOURCE           0xC4C
-#define WM8285_DSP7RMIX_INPUT_3_VOLUME           0xC4D
-#define WM8285_DSP7RMIX_INPUT_4_SOURCE           0xC4E
-#define WM8285_DSP7RMIX_INPUT_4_VOLUME           0xC4F
-#define WM8285_DSP7AUX1MIX_INPUT_1_SOURCE        0xC50
-#define WM8285_DSP7AUX2MIX_INPUT_1_SOURCE        0xC58
-#define WM8285_DSP7AUX3MIX_INPUT_1_SOURCE        0xC60
-#define WM8285_DSP7AUX4MIX_INPUT_1_SOURCE        0xC68
-#define WM8285_DSP7AUX5MIX_INPUT_1_SOURCE        0xC70
-#define WM8285_DSP7AUX6MIX_INPUT_1_SOURCE        0xC78
+#define CLEARWATER_DSP6LMIX_INPUT_1_SOURCE           0xC00
+#define CLEARWATER_DSP6LMIX_INPUT_1_VOLUME           0xC01
+#define CLEARWATER_DSP6LMIX_INPUT_2_SOURCE           0xC02
+#define CLEARWATER_DSP6LMIX_INPUT_2_VOLUME           0xC03
+#define CLEARWATER_DSP6LMIX_INPUT_3_SOURCE           0xC04
+#define CLEARWATER_DSP6LMIX_INPUT_3_VOLUME           0xC05
+#define CLEARWATER_DSP6LMIX_INPUT_4_SOURCE           0xC06
+#define CLEARWATER_DSP6LMIX_INPUT_4_VOLUME           0xC07
+#define CLEARWATER_DSP6RMIX_INPUT_1_SOURCE           0xC08
+#define CLEARWATER_DSP6RMIX_INPUT_1_VOLUME           0xC09
+#define CLEARWATER_DSP6RMIX_INPUT_2_SOURCE           0xC0A
+#define CLEARWATER_DSP6RMIX_INPUT_2_VOLUME           0xC0B
+#define CLEARWATER_DSP6RMIX_INPUT_3_SOURCE           0xC0C
+#define CLEARWATER_DSP6RMIX_INPUT_3_VOLUME           0xC0D
+#define CLEARWATER_DSP6RMIX_INPUT_4_SOURCE           0xC0E
+#define CLEARWATER_DSP6RMIX_INPUT_4_VOLUME           0xC0F
+#define CLEARWATER_DSP6AUX1MIX_INPUT_1_SOURCE        0xC10
+#define CLEARWATER_DSP6AUX2MIX_INPUT_1_SOURCE        0xC18
+#define CLEARWATER_DSP6AUX3MIX_INPUT_1_SOURCE        0xC20
+#define CLEARWATER_DSP6AUX4MIX_INPUT_1_SOURCE        0xC28
+#define CLEARWATER_DSP6AUX5MIX_INPUT_1_SOURCE        0xC30
+#define CLEARWATER_DSP6AUX6MIX_INPUT_1_SOURCE        0xC38
+#define CLEARWATER_DSP7LMIX_INPUT_1_SOURCE           0xC40
+#define CLEARWATER_DSP7LMIX_INPUT_1_VOLUME           0xC41
+#define CLEARWATER_DSP7LMIX_INPUT_2_SOURCE           0xC42
+#define CLEARWATER_DSP7LMIX_INPUT_2_VOLUME           0xC43
+#define CLEARWATER_DSP7LMIX_INPUT_3_SOURCE           0xC44
+#define CLEARWATER_DSP7LMIX_INPUT_3_VOLUME           0xC45
+#define CLEARWATER_DSP7LMIX_INPUT_4_SOURCE           0xC46
+#define CLEARWATER_DSP7LMIX_INPUT_4_VOLUME           0xC47
+#define CLEARWATER_DSP7RMIX_INPUT_1_SOURCE           0xC48
+#define CLEARWATER_DSP7RMIX_INPUT_1_VOLUME           0xC49
+#define CLEARWATER_DSP7RMIX_INPUT_2_SOURCE           0xC4A
+#define CLEARWATER_DSP7RMIX_INPUT_2_VOLUME           0xC4B
+#define CLEARWATER_DSP7RMIX_INPUT_3_SOURCE           0xC4C
+#define CLEARWATER_DSP7RMIX_INPUT_3_VOLUME           0xC4D
+#define CLEARWATER_DSP7RMIX_INPUT_4_SOURCE           0xC4E
+#define CLEARWATER_DSP7RMIX_INPUT_4_VOLUME           0xC4F
+#define CLEARWATER_DSP7AUX1MIX_INPUT_1_SOURCE        0xC50
+#define CLEARWATER_DSP7AUX2MIX_INPUT_1_SOURCE        0xC58
+#define CLEARWATER_DSP7AUX3MIX_INPUT_1_SOURCE        0xC60
+#define CLEARWATER_DSP7AUX4MIX_INPUT_1_SOURCE        0xC68
+#define CLEARWATER_DSP7AUX5MIX_INPUT_1_SOURCE        0xC70
+#define CLEARWATER_DSP7AUX6MIX_INPUT_1_SOURCE        0xC78
 #define ARIZONA_GPIO1_CTRL                       0xC00
 #define ARIZONA_GPIO2_CTRL                       0xC01
 #define ARIZONA_GPIO3_CTRL                       0xC02
@@ -1063,7 +1063,7 @@
 #define ARIZONA_IRQ_CTRL_1                       0xC0F
 #define ARIZONA_GPIO_DEBOUNCE_CONFIG             0xC10
 #define ARIZONA_GP_SWITCH_1                      0xC18
-#define WM8285_GP_SWITCH_1                       0x2C8
+#define CLEARWATER_GP_SWITCH_1                       0x2C8
 #define ARIZONA_MISC_PAD_CTRL_1                  0xC20
 #define ARIZONA_MISC_PAD_CTRL_2                  0xC21
 #define ARIZONA_MISC_PAD_CTRL_3                  0xC22
@@ -1221,11 +1221,11 @@
 #define ARIZONA_DRC2_CTRL3                       0xE8B
 #define ARIZONA_DRC2_CTRL4                       0xE8C
 #define ARIZONA_DRC2_CTRL5                       0xE8D
-#define WM8285_DRC2_CTRL1                        0xE88
-#define WM8285_DRC2_CTRL2                        0xE89
-#define WM8285_DRC2_CTRL3                        0xE8A
-#define WM8285_DRC2_CTRL4                        0xE8B
-#define WM8285_DRC2_CTRL5                        0xE8C
+#define CLEARWATER_DRC2_CTRL1                        0xE88
+#define CLEARWATER_DRC2_CTRL2                        0xE89
+#define CLEARWATER_DRC2_CTRL3                        0xE8A
+#define CLEARWATER_DRC2_CTRL4                        0xE8B
+#define CLEARWATER_DRC2_CTRL5                        0xE8C
 #define ARIZONA_HPLPF1_1                         0xEC0
 #define ARIZONA_HPLPF1_2                         0xEC1
 #define ARIZONA_HPLPF2_1                         0xEC4
@@ -1234,14 +1234,14 @@
 #define ARIZONA_HPLPF3_2                         0xEC9
 #define ARIZONA_HPLPF4_1                         0xECC
 #define ARIZONA_HPLPF4_2                         0xECD
-#define WM8285_ASRC2_ENABLE                      0xED0
-#define WM8285_ASRC2_STATUS                      0xED1
-#define WM8285_ASRC2_RATE1                       0xED2
-#define WM8285_ASRC2_RATE2                       0xED3
-#define WM8285_ASRC1_ENABLE                      0xEE0
-#define WM8285_ASRC1_STATUS                      0xEE1
-#define WM8285_ASRC1_RATE1                       0xEE2
-#define WM8285_ASRC1_RATE2                       0xEE3
+#define CLEARWATER_ASRC2_ENABLE                      0xED0
+#define CLEARWATER_ASRC2_STATUS                      0xED1
+#define CLEARWATER_ASRC2_RATE1                       0xED2
+#define CLEARWATER_ASRC2_RATE2                       0xED3
+#define CLEARWATER_ASRC1_ENABLE                      0xEE0
+#define CLEARWATER_ASRC1_STATUS                      0xEE1
+#define CLEARWATER_ASRC1_RATE1                       0xEE2
+#define CLEARWATER_ASRC1_RATE2                       0xEE3
 #define ARIZONA_ASRC_ENABLE                      0xEE0
 #define ARIZONA_ASRC_STATUS                      0xEE1
 #define ARIZONA_ASRC_RATE1                       0xEE2
@@ -1268,13 +1268,13 @@
 #define ARIZONA_FCL_COEFF_START                  0xF18
 #define ARIZONA_FCL_COEFF_END                    0xF69
 #define ARIZONA_FCR_FILTER_CONTROL               0xF70
-#define WM8285_FCR_FILTER_CONTROL                0xF71
+#define CLEARWATER_FCR_FILTER_CONTROL                0xF71
 #define ARIZONA_FCR_ADC_REFORMATTER_CONTROL      0xF72
-#define WM8285_FCR_ADC_REFORMATTER_CONTROL       0xF73
+#define CLEARWATER_FCR_ADC_REFORMATTER_CONTROL       0xF73
 #define ARIZONA_FCR_COEFF_START                  0xF73
 #define ARIZONA_FCR_COEFF_END                    0xFC4
-#define WM8285_FCR_COEFF_START                   0xF74
-#define WM8285_FCR_COEFF_END                     0xFC5
+#define CLEARWATER_FCR_COEFF_START                   0xF74
+#define CLEARWATER_FCR_COEFF_END                     0xFC5
 #define ARIZONA_DSP1_CONTROL_1                   0x1100
 #define ARIZONA_DSP1_CLOCKING_1                  0x1101
 #define ARIZONA_DSP1_STATUS_1                    0x1104
@@ -1336,9 +1336,9 @@
 #define ARIZONA_DSP2_SCRATCH_2                   0x1242
 #define ARIZONA_DSP2_SCRATCH_3                   0x1243
 #define ARIZONA_DSP3_CONTROL_1                   0x1300
-#define WM8285_DAC_COMP_1                        0x1300
+#define CLEARWATER_DAC_COMP_1                        0x1300
 #define ARIZONA_DSP3_CLOCKING_1                  0x1301
-#define WM8285_DAC_COMP_2                        0x1302
+#define CLEARWATER_DAC_COMP_2                        0x1302
 #define ARIZONA_DSP3_STATUS_1                    0x1304
 #define ARIZONA_DSP3_STATUS_2                    0x1305
 #define ARIZONA_DSP3_STATUS_3                    0x1306
@@ -1367,54 +1367,54 @@
 #define ARIZONA_DSP3_SCRATCH_1                   0x1341
 #define ARIZONA_DSP3_SCRATCH_2                   0x1342
 #define ARIZONA_DSP3_SCRATCH_3                   0x1343
-#define WM8285_FRF_COEFFICIENT_1L_1              0x1380
-#define WM8285_FRF_COEFFICIENT_1L_2              0x1381
-#define WM8285_FRF_COEFFICIENT_1L_3              0x1382
-#define WM8285_FRF_COEFFICIENT_1L_4              0x1383
-#define WM8285_FRF_COEFFICIENT_1R_1              0x1390
-#define WM8285_FRF_COEFFICIENT_1R_2              0x1391
-#define WM8285_FRF_COEFFICIENT_1R_3              0x1392
-#define WM8285_FRF_COEFFICIENT_1R_4              0x1393
-#define WM8285_FRF_COEFFICIENT_2L_1              0x13A0
-#define WM8285_FRF_COEFFICIENT_2L_2              0x13A1
-#define WM8285_FRF_COEFFICIENT_2L_3              0x13A2
-#define WM8285_FRF_COEFFICIENT_2L_4              0x13A3
-#define WM8285_FRF_COEFFICIENT_2R_1              0x13B0
-#define WM8285_FRF_COEFFICIENT_2R_2              0x13B1
-#define WM8285_FRF_COEFFICIENT_2R_3              0x13B2
-#define WM8285_FRF_COEFFICIENT_2R_4              0x13B3
-#define WM8285_FRF_COEFFICIENT_3L_1              0x13C0
-#define WM8285_FRF_COEFFICIENT_3L_2              0x13C1
-#define WM8285_FRF_COEFFICIENT_3L_3              0x13C2
-#define WM8285_FRF_COEFFICIENT_3L_4              0x13C3
-#define WM8285_FRF_COEFFICIENT_3R_1              0x13D0
-#define WM8285_FRF_COEFFICIENT_3R_2              0x13D1
-#define WM8285_FRF_COEFFICIENT_3R_3              0x13D2
-#define WM8285_FRF_COEFFICIENT_3R_4              0x13D3
-#define WM8285_FRF_COEFFICIENT_4L_1              0x13E0
-#define WM8285_FRF_COEFFICIENT_4L_2              0x13E1
-#define WM8285_FRF_COEFFICIENT_4L_3              0x13E2
-#define WM8285_FRF_COEFFICIENT_4L_4              0x13E3
-#define WM8285_FRF_COEFFICIENT_4R_1              0x13F0
-#define WM8285_FRF_COEFFICIENT_4R_2              0x13F1
-#define WM8285_FRF_COEFFICIENT_4R_3              0x13F2
-#define WM8285_FRF_COEFFICIENT_4R_4              0x13F3
-#define WM8285_FRF_COEFFICIENT_5L_1              0x1400
-#define WM8285_FRF_COEFFICIENT_5L_2              0x1401
-#define WM8285_FRF_COEFFICIENT_5L_3              0x1402
-#define WM8285_FRF_COEFFICIENT_5L_4              0x1403
-#define WM8285_FRF_COEFFICIENT_5R_1              0x1410
-#define WM8285_FRF_COEFFICIENT_5R_2              0x1411
-#define WM8285_FRF_COEFFICIENT_5R_3              0x1412
-#define WM8285_FRF_COEFFICIENT_5R_4              0x1413
-#define WM8285_FRF_COEFFICIENT_6L_1              0x1420
-#define WM8285_FRF_COEFFICIENT_6L_2              0x1421
-#define WM8285_FRF_COEFFICIENT_6L_3              0x1422
-#define WM8285_FRF_COEFFICIENT_6L_4              0x1423
-#define WM8285_FRF_COEFFICIENT_6R_1              0x1430
-#define WM8285_FRF_COEFFICIENT_6R_2              0x1431
-#define WM8285_FRF_COEFFICIENT_6R_3              0x1432
-#define WM8285_FRF_COEFFICIENT_6R_4              0x1433
+#define CLEARWATER_FRF_COEFFICIENT_1L_1              0x1380
+#define CLEARWATER_FRF_COEFFICIENT_1L_2              0x1381
+#define CLEARWATER_FRF_COEFFICIENT_1L_3              0x1382
+#define CLEARWATER_FRF_COEFFICIENT_1L_4              0x1383
+#define CLEARWATER_FRF_COEFFICIENT_1R_1              0x1390
+#define CLEARWATER_FRF_COEFFICIENT_1R_2              0x1391
+#define CLEARWATER_FRF_COEFFICIENT_1R_3              0x1392
+#define CLEARWATER_FRF_COEFFICIENT_1R_4              0x1393
+#define CLEARWATER_FRF_COEFFICIENT_2L_1              0x13A0
+#define CLEARWATER_FRF_COEFFICIENT_2L_2              0x13A1
+#define CLEARWATER_FRF_COEFFICIENT_2L_3              0x13A2
+#define CLEARWATER_FRF_COEFFICIENT_2L_4              0x13A3
+#define CLEARWATER_FRF_COEFFICIENT_2R_1              0x13B0
+#define CLEARWATER_FRF_COEFFICIENT_2R_2              0x13B1
+#define CLEARWATER_FRF_COEFFICIENT_2R_3              0x13B2
+#define CLEARWATER_FRF_COEFFICIENT_2R_4              0x13B3
+#define CLEARWATER_FRF_COEFFICIENT_3L_1              0x13C0
+#define CLEARWATER_FRF_COEFFICIENT_3L_2              0x13C1
+#define CLEARWATER_FRF_COEFFICIENT_3L_3              0x13C2
+#define CLEARWATER_FRF_COEFFICIENT_3L_4              0x13C3
+#define CLEARWATER_FRF_COEFFICIENT_3R_1              0x13D0
+#define CLEARWATER_FRF_COEFFICIENT_3R_2              0x13D1
+#define CLEARWATER_FRF_COEFFICIENT_3R_3              0x13D2
+#define CLEARWATER_FRF_COEFFICIENT_3R_4              0x13D3
+#define CLEARWATER_FRF_COEFFICIENT_4L_1              0x13E0
+#define CLEARWATER_FRF_COEFFICIENT_4L_2              0x13E1
+#define CLEARWATER_FRF_COEFFICIENT_4L_3              0x13E2
+#define CLEARWATER_FRF_COEFFICIENT_4L_4              0x13E3
+#define CLEARWATER_FRF_COEFFICIENT_4R_1              0x13F0
+#define CLEARWATER_FRF_COEFFICIENT_4R_2              0x13F1
+#define CLEARWATER_FRF_COEFFICIENT_4R_3              0x13F2
+#define CLEARWATER_FRF_COEFFICIENT_4R_4              0x13F3
+#define CLEARWATER_FRF_COEFFICIENT_5L_1              0x1400
+#define CLEARWATER_FRF_COEFFICIENT_5L_2              0x1401
+#define CLEARWATER_FRF_COEFFICIENT_5L_3              0x1402
+#define CLEARWATER_FRF_COEFFICIENT_5L_4              0x1403
+#define CLEARWATER_FRF_COEFFICIENT_5R_1              0x1410
+#define CLEARWATER_FRF_COEFFICIENT_5R_2              0x1411
+#define CLEARWATER_FRF_COEFFICIENT_5R_3              0x1412
+#define CLEARWATER_FRF_COEFFICIENT_5R_4              0x1413
+#define CLEARWATER_FRF_COEFFICIENT_6L_1              0x1420
+#define CLEARWATER_FRF_COEFFICIENT_6L_2              0x1421
+#define CLEARWATER_FRF_COEFFICIENT_6L_3              0x1422
+#define CLEARWATER_FRF_COEFFICIENT_6L_4              0x1423
+#define CLEARWATER_FRF_COEFFICIENT_6R_1              0x1430
+#define CLEARWATER_FRF_COEFFICIENT_6R_2              0x1431
+#define CLEARWATER_FRF_COEFFICIENT_6R_3              0x1432
+#define CLEARWATER_FRF_COEFFICIENT_6R_4              0x1433
 #define ARIZONA_DSP4_CONTROL_1                   0x1400
 #define ARIZONA_DSP4_CLOCKING_1                  0x1401
 #define ARIZONA_DSP4_STATUS_1                    0x1404
@@ -1451,240 +1451,240 @@
 #define ARIZONA_FRF_COEFF_4                      0x1703
 #define ARIZONA_V2_DAC_COMP_1                    0x1704
 #define ARIZONA_V2_DAC_COMP_2                    0x1705
-#define WM8285_ADSP2_IRQ0                        0x1600
-#define WM8285_ADSP2_IRQ1                        0x1601
-#define WM8285_ADSP2_IRQ2                        0x1602
-#define WM8285_ADSP2_IRQ3                        0x1603
-#define WM8285_ADSP2_IRQ4                        0x1604
-#define WM8285_ADSP2_IRQ5                        0x1605
-#define WM8285_ADSP2_IRQ6                        0x1606
-#define WM8285_ADSP2_IRQ7                        0x1607
-#define WM8285_GPIO1_CTRL_1                      0x1700
-#define WM8285_GPIO1_CTRL_2                      0x1701
-#define WM8285_GPIO2_CTRL_1                      0x1702
-#define WM8285_GPIO2_CTRL_2                      0x1703
-#define WM8285_GPIO3_CTRL_1                      0x1704
-#define WM8285_GPIO3_CTRL_2                      0x1705
-#define WM8285_GPIO4_CTRL_1                      0x1706
-#define WM8285_GPIO4_CTRL_2                      0x1707
-#define WM8285_GPIO5_CTRL_1                      0x1708
-#define WM8285_GPIO5_CTRL_2                      0x1709
-#define WM8285_GPIO6_CTRL_1                      0x170A
-#define WM8285_GPIO6_CTRL_2                      0x170B
-#define WM8285_GPIO7_CTRL_1                      0x170C
-#define WM8285_GPIO7_CTRL_2                      0x170D
-#define WM8285_GPIO8_CTRL_1                      0x170E
-#define WM8285_GPIO8_CTRL_2                      0x170F
-#define WM8285_GPIO9_CTRL_1                      0x1710
-#define WM8285_GPIO9_CTRL_2                      0x1711
-#define WM8285_GPIO10_CTRL_1                     0x1712
-#define WM8285_GPIO10_CTRL_2                     0x1713
-#define WM8285_GPIO11_CTRL_1                     0x1714
-#define WM8285_GPIO11_CTRL_2                     0x1715
-#define WM8285_GPIO12_CTRL_1                     0x1716
-#define WM8285_GPIO12_CTRL_2                     0x1717
-#define WM8285_GPIO13_CTRL_1                     0x1718
-#define WM8285_GPIO13_CTRL_2                     0x1719
-#define WM8285_GPIO14_CTRL_1                     0x171A
-#define WM8285_GPIO14_CTRL_2                     0x171B
-#define WM8285_GPIO15_CTRL_1                     0x171C
-#define WM8285_GPIO15_CTRL_2                     0x171D
-#define WM8285_GPIO16_CTRL_1                     0x171E
-#define WM8285_GPIO16_CTRL_2                     0x171F
-#define WM8285_GPIO17_CTRL_1                     0x1720
-#define WM8285_GPIO17_CTRL_2                     0x1721
-#define WM8285_GPIO18_CTRL_1                     0x1722
-#define WM8285_GPIO18_CTRL_2                     0x1723
-#define WM8285_GPIO19_CTRL_1                     0x1724
-#define WM8285_GPIO19_CTRL_2                     0x1725
-#define WM8285_GPIO20_CTRL_1                     0x1726
-#define WM8285_GPIO20_CTRL_2                     0x1727
-#define WM8285_GPIO21_CTRL_1                     0x1728
-#define WM8285_GPIO21_CTRL_2                     0x1729
-#define WM8285_GPIO22_CTRL_1                     0x172A
-#define WM8285_GPIO22_CTRL_2                     0x172B
-#define WM8285_GPIO23_CTRL_1                     0x172C
-#define WM8285_GPIO23_CTRL_2                     0x172D
-#define WM8285_GPIO24_CTRL_1                     0x172E
-#define WM8285_GPIO24_CTRL_2                     0x172F
-#define WM8285_GPIO25_CTRL_1                     0x1730
-#define WM8285_GPIO25_CTRL_2                     0x1731
-#define WM8285_GPIO26_CTRL_1                     0x1732
-#define WM8285_GPIO26_CTRL_2                     0x1733
-#define WM8285_GPIO27_CTRL_1                     0x1734
-#define WM8285_GPIO27_CTRL_2                     0x1735
-#define WM8285_GPIO28_CTRL_1                     0x1736
-#define WM8285_GPIO28_CTRL_2                     0x1737
-#define WM8285_GPIO29_CTRL_1                     0x1738
-#define WM8285_GPIO29_CTRL_2                     0x1739
-#define WM8285_GPIO30_CTRL_1                     0x173A
-#define WM8285_GPIO30_CTRL_2                     0x173B
-#define WM8285_GPIO31_CTRL_1                     0x173C
-#define WM8285_GPIO31_CTRL_2                     0x173D
-#define WM8285_GPIO32_CTRL_1                     0x173E
-#define WM8285_GPIO32_CTRL_2                     0x173F
-#define WM8285_GPIO33_CTRL_1                     0x1740
-#define WM8285_GPIO33_CTRL_2                     0x1741
-#define WM8285_GPIO34_CTRL_1                     0x1742
-#define WM8285_GPIO34_CTRL_2                     0x1743
-#define WM8285_GPIO35_CTRL_1                     0x1744
-#define WM8285_GPIO35_CTRL_2                     0x1745
-#define WM8285_GPIO36_CTRL_1                     0x1746
-#define WM8285_GPIO36_CTRL_2                     0x1747
-#define WM8285_GPIO37_CTRL_1                     0x1748
-#define WM8285_GPIO37_CTRL_2                     0x1749
-#define WM8285_GPIO38_CTRL_1                     0x174A
-#define WM8285_GPIO38_CTRL_2                     0x174B
-#define WM8285_GPIO39_CTRL_1                     0x174C
-#define WM8285_GPIO39_CTRL_2                     0x174D
-#define WM8285_GPIO40_CTRL_1                     0x174E
-#define WM8285_GPIO40_CTRL_2                     0x174F
-#define WM8285_IRQ1_STATUS_1                     0x1800
-#define WM8285_IRQ1_STATUS_2                     0x1801
-#define WM8285_IRQ1_STATUS_6                     0x1805
-#define WM8285_IRQ1_STATUS_7                     0x1806
-#define WM8285_IRQ1_STATUS_9                     0x1808
-#define WM8285_IRQ1_STATUS_11                    0x180A
-#define WM8285_IRQ1_STATUS_12                    0x180B
-#define WM8285_IRQ1_STATUS_13                    0x180C
-#define WM8285_IRQ1_STATUS_14                    0x180D
-#define WM8285_IRQ1_STATUS_15                    0x180E
-#define WM8285_IRQ1_STATUS_17                    0x1810
-#define WM8285_IRQ1_STATUS_18                    0x1811
-#define WM8285_IRQ1_STATUS_19                    0x1812
-#define WM8285_IRQ1_STATUS_21                    0x1814
-#define WM8285_IRQ1_STATUS_22                    0x1815
-#define WM8285_IRQ1_STATUS_23                    0x1816
-#define WM8285_IRQ1_STATUS_24                    0x1817
-#define WM8285_IRQ1_STATUS_25                    0x1818
-#define WM8285_IRQ1_STATUS_27                    0x181A
-#define WM8285_IRQ1_STATUS_28                    0x181B
-#define WM8285_IRQ1_STATUS_30                    0x181D
-#define WM8285_IRQ1_STATUS_31                    0x181E
-#define WM8285_IRQ1_STATUS_32                    0x181F
-#define WM8285_IRQ1_MASK_1                       0x1840
-#define WM8285_IRQ1_MASK_2                       0x1841
-#define WM8285_IRQ1_MASK_3                       0x1842
-#define WM8285_IRQ1_MASK_4                       0x1843
-#define WM8285_IRQ1_MASK_5                       0x1844
-#define WM8285_IRQ1_MASK_6                       0x1845
-#define WM8285_IRQ1_MASK_7                       0x1846
-#define WM8285_IRQ1_MASK_8                       0x1847
-#define WM8285_IRQ1_MASK_9                       0x1848
-#define WM8285_IRQ1_MASK_10                      0x1849
-#define WM8285_IRQ1_MASK_11                      0x184A
-#define WM8285_IRQ1_MASK_12                      0x184B
-#define WM8285_IRQ1_MASK_13                      0x184C
-#define WM8285_IRQ1_MASK_14                      0x184D
-#define WM8285_IRQ1_MASK_15                      0x184E
-#define WM8285_IRQ1_MASK_17                      0x1850
-#define WM8285_IRQ1_MASK_18                      0x1851
-#define WM8285_IRQ1_MASK_19                      0x1852
-#define WM8285_IRQ1_MASK_21                      0x1854
-#define WM8285_IRQ1_MASK_22                      0x1855
-#define WM8285_IRQ1_MASK_23                      0x1856
-#define WM8285_IRQ1_MASK_24                      0x1857
-#define WM8285_IRQ1_MASK_25                      0x1858
-#define WM8285_IRQ1_MASK_27                      0x185A
-#define WM8285_IRQ1_MASK_28                      0x185B
-#define WM8285_IRQ1_MASK_30                      0x185D
-#define WM8285_IRQ1_MASK_31                      0x185E
-#define WM8285_IRQ1_MASK_32                      0x185F
-#define WM8285_IRQ1_RAW_STATUS_1                 0x1880
-#define WM8285_IRQ1_RAW_STATUS_2                 0x1881
-#define WM8285_IRQ1_RAW_STATUS_6                 0x1885
-#define WM8285_IRQ1_RAW_STATUS_7                 0x1886
-#define WM8285_IRQ1_RAW_STATUS_9                 0x1888
-#define WM8285_IRQ1_RAW_STATUS_10                0x1889
-#define WM8285_IRQ1_RAW_STATUS_11                0x188A
-#define WM8285_IRQ1_RAW_STATUS_12                0x188B
-#define WM8285_IRQ1_RAW_STATUS_13                0x188C
-#define WM8285_IRQ1_RAW_STATUS_14                0x188D
-#define WM8285_IRQ1_RAW_STATUS_15                0x188E
-#define WM8285_IRQ1_RAW_STATUS_17                0x1890
-#define WM8285_IRQ1_RAW_STATUS_18                0x1891
-#define WM8285_IRQ1_RAW_STATUS_19                0x1892
-#define WM8285_IRQ1_RAW_STATUS_21                0x1894
-#define WM8285_IRQ1_RAW_STATUS_22                0x1895
-#define WM8285_IRQ1_RAW_STATUS_23                0x1896
-#define WM8285_IRQ1_RAW_STATUS_24                0x1897
-#define WM8285_IRQ1_RAW_STATUS_25                0x1898
-#define WM8285_IRQ1_RAW_STATUS_30                0x189D
-#define WM8285_IRQ1_RAW_STATUS_31                0x189E
-#define WM8285_IRQ1_RAW_STATUS_32                0x189F
-#define WM8285_IRQ2_STATUS_1                     0x1900
-#define WM8285_IRQ2_STATUS_2                     0x1901
-#define WM8285_IRQ2_STATUS_6                     0x1905
-#define WM8285_IRQ2_STATUS_7                     0x1906
-#define WM8285_IRQ2_STATUS_9                     0x1908
-#define WM8285_IRQ2_STATUS_11                    0x190A
-#define WM8285_IRQ2_STATUS_12                    0x190B
-#define WM8285_IRQ2_STATUS_13                    0x190C
-#define WM8285_IRQ2_STATUS_14                    0x190D
-#define WM8285_IRQ2_STATUS_15                    0x190E
-#define WM8285_IRQ2_STATUS_17                    0x1910
-#define WM8285_IRQ2_STATUS_18                    0x1911
-#define WM8285_IRQ2_STATUS_19                    0x1912
-#define WM8285_IRQ2_STATUS_21                    0x1914
-#define WM8285_IRQ2_STATUS_22                    0x1915
-#define WM8285_IRQ2_STATUS_23                    0x1916
-#define WM8285_IRQ2_STATUS_24                    0x1917
-#define WM8285_IRQ2_STATUS_25                    0x1918
-#define WM8285_IRQ2_STATUS_27                    0x191A
-#define WM8285_IRQ2_STATUS_28                    0x191B
-#define WM8285_IRQ2_STATUS_30                    0x191D
-#define WM8285_IRQ2_STATUS_31                    0x191E
-#define WM8285_IRQ2_STATUS_32                    0x191F
-#define WM8285_IRQ2_MASK_1                       0x1940
-#define WM8285_IRQ2_MASK_2                       0x1941
-#define WM8285_IRQ2_MASK_6                       0x1945
-#define WM8285_IRQ2_MASK_7                       0x1946
-#define WM8285_IRQ2_MASK_9                       0x1948
-#define WM8285_IRQ2_MASK_11                      0x194A
-#define WM8285_IRQ2_MASK_12                      0x194B
-#define WM8285_IRQ2_MASK_13                      0x194C
-#define WM8285_IRQ2_MASK_14                      0x194D
-#define WM8285_IRQ2_MASK_15                      0x194E
-#define WM8285_IRQ2_MASK_17                      0x1950
-#define WM8285_IRQ2_MASK_18                      0x1951
-#define WM8285_IRQ2_MASK_19                      0x1952
-#define WM8285_IRQ2_MASK_21                      0x1954
-#define WM8285_IRQ2_MASK_22                      0x1955
-#define WM8285_IRQ2_MASK_23                      0x1956
-#define WM8285_IRQ2_MASK_24                      0x1957
-#define WM8285_IRQ2_MASK_25                      0x1958
-#define WM8285_IRQ2_MASK_27                      0x195A
-#define WM8285_IRQ2_MASK_28                      0x195B
-#define WM8285_IRQ2_MASK_30                      0x195D
-#define WM8285_IRQ2_MASK_31                      0x195E
-#define WM8285_IRQ2_MASK_32                      0x195F
-#define WM8285_IRQ2_RAW_STATUS_1                 0x1980
-#define WM8285_IRQ2_RAW_STATUS_2                 0x1981
-#define WM8285_IRQ2_RAW_STATUS_6                 0x1985
-#define WM8285_IRQ2_RAW_STATUS_7                 0x1986
-#define WM8285_IRQ2_RAW_STATUS_9                 0x1988
-#define WM8285_IRQ2_RAW_STATUS_10                0x1989
-#define WM8285_IRQ2_RAW_STATUS_11                0x198A
-#define WM8285_IRQ2_RAW_STATUS_12                0x198B
-#define WM8285_IRQ2_RAW_STATUS_13                0x198C
-#define WM8285_IRQ2_RAW_STATUS_14                0x198D
-#define WM8285_IRQ2_RAW_STATUS_15                0x198E
-#define WM8285_IRQ2_RAW_STATUS_17                0x1990
-#define WM8285_IRQ2_RAW_STATUS_18                0x1991
-#define WM8285_IRQ2_RAW_STATUS_19                0x1992
-#define WM8285_IRQ2_RAW_STATUS_21                0x1994
-#define WM8285_IRQ2_RAW_STATUS_22                0x1995
-#define WM8285_IRQ2_RAW_STATUS_23                0x1996
-#define WM8285_IRQ2_RAW_STATUS_24                0x1997
-#define WM8285_IRQ2_RAW_STATUS_25                0x1998
-#define WM8285_IRQ2_RAW_STATUS_30                0x199D
-#define WM8285_IRQ2_RAW_STATUS_31                0x199E
-#define WM8285_IRQ2_RAW_STATUS_32                0x199F
-#define WM8285_INTERRUPT_DEBOUNCE_7              0x1A06
-#define WM8285_INTERRUPT_DEBOUNCE_15             0x1A0E
-#define WM8285_IRQ1_CTRL                         0x1A80
-#define WM8285_IRQ2_CTRL                         0x1A82
-#define WM8285_INTERRUPT_RAW_STATUS_1            0x1AA0
+#define CLEARWATER_ADSP2_IRQ0                        0x1600
+#define CLEARWATER_ADSP2_IRQ1                        0x1601
+#define CLEARWATER_ADSP2_IRQ2                        0x1602
+#define CLEARWATER_ADSP2_IRQ3                        0x1603
+#define CLEARWATER_ADSP2_IRQ4                        0x1604
+#define CLEARWATER_ADSP2_IRQ5                        0x1605
+#define CLEARWATER_ADSP2_IRQ6                        0x1606
+#define CLEARWATER_ADSP2_IRQ7                        0x1607
+#define CLEARWATER_GPIO1_CTRL_1                      0x1700
+#define CLEARWATER_GPIO1_CTRL_2                      0x1701
+#define CLEARWATER_GPIO2_CTRL_1                      0x1702
+#define CLEARWATER_GPIO2_CTRL_2                      0x1703
+#define CLEARWATER_GPIO3_CTRL_1                      0x1704
+#define CLEARWATER_GPIO3_CTRL_2                      0x1705
+#define CLEARWATER_GPIO4_CTRL_1                      0x1706
+#define CLEARWATER_GPIO4_CTRL_2                      0x1707
+#define CLEARWATER_GPIO5_CTRL_1                      0x1708
+#define CLEARWATER_GPIO5_CTRL_2                      0x1709
+#define CLEARWATER_GPIO6_CTRL_1                      0x170A
+#define CLEARWATER_GPIO6_CTRL_2                      0x170B
+#define CLEARWATER_GPIO7_CTRL_1                      0x170C
+#define CLEARWATER_GPIO7_CTRL_2                      0x170D
+#define CLEARWATER_GPIO8_CTRL_1                      0x170E
+#define CLEARWATER_GPIO8_CTRL_2                      0x170F
+#define CLEARWATER_GPIO9_CTRL_1                      0x1710
+#define CLEARWATER_GPIO9_CTRL_2                      0x1711
+#define CLEARWATER_GPIO10_CTRL_1                     0x1712
+#define CLEARWATER_GPIO10_CTRL_2                     0x1713
+#define CLEARWATER_GPIO11_CTRL_1                     0x1714
+#define CLEARWATER_GPIO11_CTRL_2                     0x1715
+#define CLEARWATER_GPIO12_CTRL_1                     0x1716
+#define CLEARWATER_GPIO12_CTRL_2                     0x1717
+#define CLEARWATER_GPIO13_CTRL_1                     0x1718
+#define CLEARWATER_GPIO13_CTRL_2                     0x1719
+#define CLEARWATER_GPIO14_CTRL_1                     0x171A
+#define CLEARWATER_GPIO14_CTRL_2                     0x171B
+#define CLEARWATER_GPIO15_CTRL_1                     0x171C
+#define CLEARWATER_GPIO15_CTRL_2                     0x171D
+#define CLEARWATER_GPIO16_CTRL_1                     0x171E
+#define CLEARWATER_GPIO16_CTRL_2                     0x171F
+#define CLEARWATER_GPIO17_CTRL_1                     0x1720
+#define CLEARWATER_GPIO17_CTRL_2                     0x1721
+#define CLEARWATER_GPIO18_CTRL_1                     0x1722
+#define CLEARWATER_GPIO18_CTRL_2                     0x1723
+#define CLEARWATER_GPIO19_CTRL_1                     0x1724
+#define CLEARWATER_GPIO19_CTRL_2                     0x1725
+#define CLEARWATER_GPIO20_CTRL_1                     0x1726
+#define CLEARWATER_GPIO20_CTRL_2                     0x1727
+#define CLEARWATER_GPIO21_CTRL_1                     0x1728
+#define CLEARWATER_GPIO21_CTRL_2                     0x1729
+#define CLEARWATER_GPIO22_CTRL_1                     0x172A
+#define CLEARWATER_GPIO22_CTRL_2                     0x172B
+#define CLEARWATER_GPIO23_CTRL_1                     0x172C
+#define CLEARWATER_GPIO23_CTRL_2                     0x172D
+#define CLEARWATER_GPIO24_CTRL_1                     0x172E
+#define CLEARWATER_GPIO24_CTRL_2                     0x172F
+#define CLEARWATER_GPIO25_CTRL_1                     0x1730
+#define CLEARWATER_GPIO25_CTRL_2                     0x1731
+#define CLEARWATER_GPIO26_CTRL_1                     0x1732
+#define CLEARWATER_GPIO26_CTRL_2                     0x1733
+#define CLEARWATER_GPIO27_CTRL_1                     0x1734
+#define CLEARWATER_GPIO27_CTRL_2                     0x1735
+#define CLEARWATER_GPIO28_CTRL_1                     0x1736
+#define CLEARWATER_GPIO28_CTRL_2                     0x1737
+#define CLEARWATER_GPIO29_CTRL_1                     0x1738
+#define CLEARWATER_GPIO29_CTRL_2                     0x1739
+#define CLEARWATER_GPIO30_CTRL_1                     0x173A
+#define CLEARWATER_GPIO30_CTRL_2                     0x173B
+#define CLEARWATER_GPIO31_CTRL_1                     0x173C
+#define CLEARWATER_GPIO31_CTRL_2                     0x173D
+#define CLEARWATER_GPIO32_CTRL_1                     0x173E
+#define CLEARWATER_GPIO32_CTRL_2                     0x173F
+#define CLEARWATER_GPIO33_CTRL_1                     0x1740
+#define CLEARWATER_GPIO33_CTRL_2                     0x1741
+#define CLEARWATER_GPIO34_CTRL_1                     0x1742
+#define CLEARWATER_GPIO34_CTRL_2                     0x1743
+#define CLEARWATER_GPIO35_CTRL_1                     0x1744
+#define CLEARWATER_GPIO35_CTRL_2                     0x1745
+#define CLEARWATER_GPIO36_CTRL_1                     0x1746
+#define CLEARWATER_GPIO36_CTRL_2                     0x1747
+#define CLEARWATER_GPIO37_CTRL_1                     0x1748
+#define CLEARWATER_GPIO37_CTRL_2                     0x1749
+#define CLEARWATER_GPIO38_CTRL_1                     0x174A
+#define CLEARWATER_GPIO38_CTRL_2                     0x174B
+#define CLEARWATER_GPIO39_CTRL_1                     0x174C
+#define CLEARWATER_GPIO39_CTRL_2                     0x174D
+#define CLEARWATER_GPIO40_CTRL_1                     0x174E
+#define CLEARWATER_GPIO40_CTRL_2                     0x174F
+#define CLEARWATER_IRQ1_STATUS_1                     0x1800
+#define CLEARWATER_IRQ1_STATUS_2                     0x1801
+#define CLEARWATER_IRQ1_STATUS_6                     0x1805
+#define CLEARWATER_IRQ1_STATUS_7                     0x1806
+#define CLEARWATER_IRQ1_STATUS_9                     0x1808
+#define CLEARWATER_IRQ1_STATUS_11                    0x180A
+#define CLEARWATER_IRQ1_STATUS_12                    0x180B
+#define CLEARWATER_IRQ1_STATUS_13                    0x180C
+#define CLEARWATER_IRQ1_STATUS_14                    0x180D
+#define CLEARWATER_IRQ1_STATUS_15                    0x180E
+#define CLEARWATER_IRQ1_STATUS_17                    0x1810
+#define CLEARWATER_IRQ1_STATUS_18                    0x1811
+#define CLEARWATER_IRQ1_STATUS_19                    0x1812
+#define CLEARWATER_IRQ1_STATUS_21                    0x1814
+#define CLEARWATER_IRQ1_STATUS_22                    0x1815
+#define CLEARWATER_IRQ1_STATUS_23                    0x1816
+#define CLEARWATER_IRQ1_STATUS_24                    0x1817
+#define CLEARWATER_IRQ1_STATUS_25                    0x1818
+#define CLEARWATER_IRQ1_STATUS_27                    0x181A
+#define CLEARWATER_IRQ1_STATUS_28                    0x181B
+#define CLEARWATER_IRQ1_STATUS_30                    0x181D
+#define CLEARWATER_IRQ1_STATUS_31                    0x181E
+#define CLEARWATER_IRQ1_STATUS_32                    0x181F
+#define CLEARWATER_IRQ1_MASK_1                       0x1840
+#define CLEARWATER_IRQ1_MASK_2                       0x1841
+#define CLEARWATER_IRQ1_MASK_3                       0x1842
+#define CLEARWATER_IRQ1_MASK_4                       0x1843
+#define CLEARWATER_IRQ1_MASK_5                       0x1844
+#define CLEARWATER_IRQ1_MASK_6                       0x1845
+#define CLEARWATER_IRQ1_MASK_7                       0x1846
+#define CLEARWATER_IRQ1_MASK_8                       0x1847
+#define CLEARWATER_IRQ1_MASK_9                       0x1848
+#define CLEARWATER_IRQ1_MASK_10                      0x1849
+#define CLEARWATER_IRQ1_MASK_11                      0x184A
+#define CLEARWATER_IRQ1_MASK_12                      0x184B
+#define CLEARWATER_IRQ1_MASK_13                      0x184C
+#define CLEARWATER_IRQ1_MASK_14                      0x184D
+#define CLEARWATER_IRQ1_MASK_15                      0x184E
+#define CLEARWATER_IRQ1_MASK_17                      0x1850
+#define CLEARWATER_IRQ1_MASK_18                      0x1851
+#define CLEARWATER_IRQ1_MASK_19                      0x1852
+#define CLEARWATER_IRQ1_MASK_21                      0x1854
+#define CLEARWATER_IRQ1_MASK_22                      0x1855
+#define CLEARWATER_IRQ1_MASK_23                      0x1856
+#define CLEARWATER_IRQ1_MASK_24                      0x1857
+#define CLEARWATER_IRQ1_MASK_25                      0x1858
+#define CLEARWATER_IRQ1_MASK_27                      0x185A
+#define CLEARWATER_IRQ1_MASK_28                      0x185B
+#define CLEARWATER_IRQ1_MASK_30                      0x185D
+#define CLEARWATER_IRQ1_MASK_31                      0x185E
+#define CLEARWATER_IRQ1_MASK_32                      0x185F
+#define CLEARWATER_IRQ1_RAW_STATUS_1                 0x1880
+#define CLEARWATER_IRQ1_RAW_STATUS_2                 0x1881
+#define CLEARWATER_IRQ1_RAW_STATUS_6                 0x1885
+#define CLEARWATER_IRQ1_RAW_STATUS_7                 0x1886
+#define CLEARWATER_IRQ1_RAW_STATUS_9                 0x1888
+#define CLEARWATER_IRQ1_RAW_STATUS_10                0x1889
+#define CLEARWATER_IRQ1_RAW_STATUS_11                0x188A
+#define CLEARWATER_IRQ1_RAW_STATUS_12                0x188B
+#define CLEARWATER_IRQ1_RAW_STATUS_13                0x188C
+#define CLEARWATER_IRQ1_RAW_STATUS_14                0x188D
+#define CLEARWATER_IRQ1_RAW_STATUS_15                0x188E
+#define CLEARWATER_IRQ1_RAW_STATUS_17                0x1890
+#define CLEARWATER_IRQ1_RAW_STATUS_18                0x1891
+#define CLEARWATER_IRQ1_RAW_STATUS_19                0x1892
+#define CLEARWATER_IRQ1_RAW_STATUS_21                0x1894
+#define CLEARWATER_IRQ1_RAW_STATUS_22                0x1895
+#define CLEARWATER_IRQ1_RAW_STATUS_23                0x1896
+#define CLEARWATER_IRQ1_RAW_STATUS_24                0x1897
+#define CLEARWATER_IRQ1_RAW_STATUS_25                0x1898
+#define CLEARWATER_IRQ1_RAW_STATUS_30                0x189D
+#define CLEARWATER_IRQ1_RAW_STATUS_31                0x189E
+#define CLEARWATER_IRQ1_RAW_STATUS_32                0x189F
+#define CLEARWATER_IRQ2_STATUS_1                     0x1900
+#define CLEARWATER_IRQ2_STATUS_2                     0x1901
+#define CLEARWATER_IRQ2_STATUS_6                     0x1905
+#define CLEARWATER_IRQ2_STATUS_7                     0x1906
+#define CLEARWATER_IRQ2_STATUS_9                     0x1908
+#define CLEARWATER_IRQ2_STATUS_11                    0x190A
+#define CLEARWATER_IRQ2_STATUS_12                    0x190B
+#define CLEARWATER_IRQ2_STATUS_13                    0x190C
+#define CLEARWATER_IRQ2_STATUS_14                    0x190D
+#define CLEARWATER_IRQ2_STATUS_15                    0x190E
+#define CLEARWATER_IRQ2_STATUS_17                    0x1910
+#define CLEARWATER_IRQ2_STATUS_18                    0x1911
+#define CLEARWATER_IRQ2_STATUS_19                    0x1912
+#define CLEARWATER_IRQ2_STATUS_21                    0x1914
+#define CLEARWATER_IRQ2_STATUS_22                    0x1915
+#define CLEARWATER_IRQ2_STATUS_23                    0x1916
+#define CLEARWATER_IRQ2_STATUS_24                    0x1917
+#define CLEARWATER_IRQ2_STATUS_25                    0x1918
+#define CLEARWATER_IRQ2_STATUS_27                    0x191A
+#define CLEARWATER_IRQ2_STATUS_28                    0x191B
+#define CLEARWATER_IRQ2_STATUS_30                    0x191D
+#define CLEARWATER_IRQ2_STATUS_31                    0x191E
+#define CLEARWATER_IRQ2_STATUS_32                    0x191F
+#define CLEARWATER_IRQ2_MASK_1                       0x1940
+#define CLEARWATER_IRQ2_MASK_2                       0x1941
+#define CLEARWATER_IRQ2_MASK_6                       0x1945
+#define CLEARWATER_IRQ2_MASK_7                       0x1946
+#define CLEARWATER_IRQ2_MASK_9                       0x1948
+#define CLEARWATER_IRQ2_MASK_11                      0x194A
+#define CLEARWATER_IRQ2_MASK_12                      0x194B
+#define CLEARWATER_IRQ2_MASK_13                      0x194C
+#define CLEARWATER_IRQ2_MASK_14                      0x194D
+#define CLEARWATER_IRQ2_MASK_15                      0x194E
+#define CLEARWATER_IRQ2_MASK_17                      0x1950
+#define CLEARWATER_IRQ2_MASK_18                      0x1951
+#define CLEARWATER_IRQ2_MASK_19                      0x1952
+#define CLEARWATER_IRQ2_MASK_21                      0x1954
+#define CLEARWATER_IRQ2_MASK_22                      0x1955
+#define CLEARWATER_IRQ2_MASK_23                      0x1956
+#define CLEARWATER_IRQ2_MASK_24                      0x1957
+#define CLEARWATER_IRQ2_MASK_25                      0x1958
+#define CLEARWATER_IRQ2_MASK_27                      0x195A
+#define CLEARWATER_IRQ2_MASK_28                      0x195B
+#define CLEARWATER_IRQ2_MASK_30                      0x195D
+#define CLEARWATER_IRQ2_MASK_31                      0x195E
+#define CLEARWATER_IRQ2_MASK_32                      0x195F
+#define CLEARWATER_IRQ2_RAW_STATUS_1                 0x1980
+#define CLEARWATER_IRQ2_RAW_STATUS_2                 0x1981
+#define CLEARWATER_IRQ2_RAW_STATUS_6                 0x1985
+#define CLEARWATER_IRQ2_RAW_STATUS_7                 0x1986
+#define CLEARWATER_IRQ2_RAW_STATUS_9                 0x1988
+#define CLEARWATER_IRQ2_RAW_STATUS_10                0x1989
+#define CLEARWATER_IRQ2_RAW_STATUS_11                0x198A
+#define CLEARWATER_IRQ2_RAW_STATUS_12                0x198B
+#define CLEARWATER_IRQ2_RAW_STATUS_13                0x198C
+#define CLEARWATER_IRQ2_RAW_STATUS_14                0x198D
+#define CLEARWATER_IRQ2_RAW_STATUS_15                0x198E
+#define CLEARWATER_IRQ2_RAW_STATUS_17                0x1990
+#define CLEARWATER_IRQ2_RAW_STATUS_18                0x1991
+#define CLEARWATER_IRQ2_RAW_STATUS_19                0x1992
+#define CLEARWATER_IRQ2_RAW_STATUS_21                0x1994
+#define CLEARWATER_IRQ2_RAW_STATUS_22                0x1995
+#define CLEARWATER_IRQ2_RAW_STATUS_23                0x1996
+#define CLEARWATER_IRQ2_RAW_STATUS_24                0x1997
+#define CLEARWATER_IRQ2_RAW_STATUS_25                0x1998
+#define CLEARWATER_IRQ2_RAW_STATUS_30                0x199D
+#define CLEARWATER_IRQ2_RAW_STATUS_31                0x199E
+#define CLEARWATER_IRQ2_RAW_STATUS_32                0x199F
+#define CLEARWATER_INTERRUPT_DEBOUNCE_7              0x1A06
+#define CLEARWATER_INTERRUPT_DEBOUNCE_15             0x1A0E
+#define CLEARWATER_IRQ1_CTRL                         0x1A80
+#define CLEARWATER_IRQ2_CTRL                         0x1A82
+#define CLEARWATER_INTERRUPT_RAW_STATUS_1            0x1AA0
 #define ARIZONA_WSEQ_SEQUENCE_1                   0x3000
 #define ARIZONA_WSEQ_SEQUENCE_2                   0x3002
 #define ARIZONA_WSEQ_SEQUENCE_3                   0x3004
@@ -2193,76 +2193,76 @@
 #define ARIZONA_WSEQ_SEQUENCE_506                 0x33F2
 #define ARIZONA_WSEQ_SEQUENCE_507                 0x33F4
 #define ARIZONA_WSEQ_SEQUENCE_508                 0x33F6
-#define WM8285_DSP1_CONFIG                       0x0FFE00
-#define WM8285_DSP1_STATUS_1                     0x0FFE04
-#define WM8285_DSP1_STATUS_2                     0x0FFE05
-#define WM8285_DSP1_WDMA_CONFIG_1                0x0FFE30
-#define WM8285_DSP1_WDMA_CONFIG_2                0x0FFE31
-#define WM8285_DSP1_RDMA_CONFIG_1                0x0FFE34
-#define WM8285_DSP1_SCRATCH_0                    0x0FFE40
-#define WM8285_DSP1_SCRATCH_1                    0x0FFE41
-#define WM8285_DSP1_SCRATCH_2                    0x0FFE42
-#define WM8285_DSP1_SCRATCH_3                    0x0FFE43
-#define WM8285_DSP2_CONFIG                       0x17FE00
-#define WM8285_DSP2_STATUS_1                     0x17FE04
-#define WM8285_DSP2_STATUS_2                     0x17FE05
-#define WM8285_DSP2_WDMA_CONFIG_1                0x17FE30
-#define WM8285_DSP2_WDMA_CONFIG_2                0x17FE31
-#define WM8285_DSP2_RDMA_CONFIG_1                0x17FE34
-#define WM8285_DSP2_SCRATCH_0                    0x17FE40
-#define WM8285_DSP2_SCRATCH_1                    0x17FE41
-#define WM8285_DSP2_SCRATCH_2                    0x17FE42
-#define WM8285_DSP2_SCRATCH_3                    0x17FE43
-#define WM8285_DSP3_CONFIG                       0x1FFE00
-#define WM8285_DSP3_STATUS_1                     0x1FFE04
-#define WM8285_DSP3_STATUS_2                     0x1FFE05
-#define WM8285_DSP3_WDMA_CONFIG_1                0x1FFE30
-#define WM8285_DSP3_WDMA_CONFIG_2                0x1FFE31
-#define WM8285_DSP3_RDMA_CONFIG_1                0x1FFE34
-#define WM8285_DSP3_SCRATCH_0                    0x1FFE40
-#define WM8285_DSP3_SCRATCH_1                    0x1FFE41
-#define WM8285_DSP3_SCRATCH_2                    0x1FFE42
-#define WM8285_DSP3_SCRATCH_3                    0x1FFE43
-#define WM8285_DSP4_CONFIG                       0x27FE00
-#define WM8285_DSP4_STATUS_1                     0x27FE04
-#define WM8285_DSP4_STATUS_2                     0x27FE05
-#define WM8285_DSP4_WDMA_CONFIG_1                0x27FE30
-#define WM8285_DSP4_WDMA_CONFIG_2                0x27FE31
-#define WM8285_DSP4_RDMA_CONFIG_1                0x27FE34
-#define WM8285_DSP4_SCRATCH_0                    0x27FE40
-#define WM8285_DSP4_SCRATCH_1                    0x27FE41
-#define WM8285_DSP4_SCRATCH_2                    0x27FE42
-#define WM8285_DSP4_SCRATCH_3                    0x27FE43
-#define WM8285_DSP5_CONFIG                       0x2FFE00
-#define WM8285_DSP5_STATUS_1                     0x2FFE04
-#define WM8285_DSP5_STATUS_2                     0x2FFE05
-#define WM8285_DSP5_WDMA_CONFIG_1                0x2FFE30
-#define WM8285_DSP5_WDMA_CONFIG_2                0x2FFE31
-#define WM8285_DSP5_RDMA_CONFIG_1                0x2FFE34
-#define WM8285_DSP5_SCRATCH_0                    0x2FFE40
-#define WM8285_DSP5_SCRATCH_1                    0x2FFE41
-#define WM8285_DSP5_SCRATCH_2                    0x2FFE42
-#define WM8285_DSP5_SCRATCH_3                    0x2FFE43
-#define WM8285_DSP6_CONFIG                       0x37FE00
-#define WM8285_DSP6_STATUS_1                     0x37FE04
-#define WM8285_DSP6_STATUS_2                     0x37FE05
-#define WM8285_DSP6_WDMA_CONFIG_1                0x37FE30
-#define WM8285_DSP6_WDMA_CONFIG_2                0x37FE31
-#define WM8285_DSP6_RDMA_CONFIG_1                0x37FE34
-#define WM8285_DSP6_SCRATCH_0                    0x37FE40
-#define WM8285_DSP6_SCRATCH_1                    0x37FE41
-#define WM8285_DSP6_SCRATCH_2                    0x37FE42
-#define WM8285_DSP6_SCRATCH_3                    0x37FE43
-#define WM8285_DSP7_CONFIG                       0x3FFE00
-#define WM8285_DSP7_STATUS_1                     0x3FFE04
-#define WM8285_DSP7_STATUS_2                     0x3FFE05
-#define WM8285_DSP7_WDMA_CONFIG_1                0x3FFE30
-#define WM8285_DSP7_WDMA_CONFIG_2                0x3FFE31
-#define WM8285_DSP7_RDMA_CONFIG_1                0x3FFE34
-#define WM8285_DSP7_SCRATCH_0                    0x3FFE40
-#define WM8285_DSP7_SCRATCH_1                    0x3FFE41
-#define WM8285_DSP7_SCRATCH_2                    0x3FFE42
-#define WM8285_DSP7_SCRATCH_3                    0x3FFE43
+#define CLEARWATER_DSP1_CONFIG                       0x0FFE00
+#define CLEARWATER_DSP1_STATUS_1                     0x0FFE04
+#define CLEARWATER_DSP1_STATUS_2                     0x0FFE05
+#define CLEARWATER_DSP1_WDMA_CONFIG_1                0x0FFE30
+#define CLEARWATER_DSP1_WDMA_CONFIG_2                0x0FFE31
+#define CLEARWATER_DSP1_RDMA_CONFIG_1                0x0FFE34
+#define CLEARWATER_DSP1_SCRATCH_0                    0x0FFE40
+#define CLEARWATER_DSP1_SCRATCH_1                    0x0FFE41
+#define CLEARWATER_DSP1_SCRATCH_2                    0x0FFE42
+#define CLEARWATER_DSP1_SCRATCH_3                    0x0FFE43
+#define CLEARWATER_DSP2_CONFIG                       0x17FE00
+#define CLEARWATER_DSP2_STATUS_1                     0x17FE04
+#define CLEARWATER_DSP2_STATUS_2                     0x17FE05
+#define CLEARWATER_DSP2_WDMA_CONFIG_1                0x17FE30
+#define CLEARWATER_DSP2_WDMA_CONFIG_2                0x17FE31
+#define CLEARWATER_DSP2_RDMA_CONFIG_1                0x17FE34
+#define CLEARWATER_DSP2_SCRATCH_0                    0x17FE40
+#define CLEARWATER_DSP2_SCRATCH_1                    0x17FE41
+#define CLEARWATER_DSP2_SCRATCH_2                    0x17FE42
+#define CLEARWATER_DSP2_SCRATCH_3                    0x17FE43
+#define CLEARWATER_DSP3_CONFIG                       0x1FFE00
+#define CLEARWATER_DSP3_STATUS_1                     0x1FFE04
+#define CLEARWATER_DSP3_STATUS_2                     0x1FFE05
+#define CLEARWATER_DSP3_WDMA_CONFIG_1                0x1FFE30
+#define CLEARWATER_DSP3_WDMA_CONFIG_2                0x1FFE31
+#define CLEARWATER_DSP3_RDMA_CONFIG_1                0x1FFE34
+#define CLEARWATER_DSP3_SCRATCH_0                    0x1FFE40
+#define CLEARWATER_DSP3_SCRATCH_1                    0x1FFE41
+#define CLEARWATER_DSP3_SCRATCH_2                    0x1FFE42
+#define CLEARWATER_DSP3_SCRATCH_3                    0x1FFE43
+#define CLEARWATER_DSP4_CONFIG                       0x27FE00
+#define CLEARWATER_DSP4_STATUS_1                     0x27FE04
+#define CLEARWATER_DSP4_STATUS_2                     0x27FE05
+#define CLEARWATER_DSP4_WDMA_CONFIG_1                0x27FE30
+#define CLEARWATER_DSP4_WDMA_CONFIG_2                0x27FE31
+#define CLEARWATER_DSP4_RDMA_CONFIG_1                0x27FE34
+#define CLEARWATER_DSP4_SCRATCH_0                    0x27FE40
+#define CLEARWATER_DSP4_SCRATCH_1                    0x27FE41
+#define CLEARWATER_DSP4_SCRATCH_2                    0x27FE42
+#define CLEARWATER_DSP4_SCRATCH_3                    0x27FE43
+#define CLEARWATER_DSP5_CONFIG                       0x2FFE00
+#define CLEARWATER_DSP5_STATUS_1                     0x2FFE04
+#define CLEARWATER_DSP5_STATUS_2                     0x2FFE05
+#define CLEARWATER_DSP5_WDMA_CONFIG_1                0x2FFE30
+#define CLEARWATER_DSP5_WDMA_CONFIG_2                0x2FFE31
+#define CLEARWATER_DSP5_RDMA_CONFIG_1                0x2FFE34
+#define CLEARWATER_DSP5_SCRATCH_0                    0x2FFE40
+#define CLEARWATER_DSP5_SCRATCH_1                    0x2FFE41
+#define CLEARWATER_DSP5_SCRATCH_2                    0x2FFE42
+#define CLEARWATER_DSP5_SCRATCH_3                    0x2FFE43
+#define CLEARWATER_DSP6_CONFIG                       0x37FE00
+#define CLEARWATER_DSP6_STATUS_1                     0x37FE04
+#define CLEARWATER_DSP6_STATUS_2                     0x37FE05
+#define CLEARWATER_DSP6_WDMA_CONFIG_1                0x37FE30
+#define CLEARWATER_DSP6_WDMA_CONFIG_2                0x37FE31
+#define CLEARWATER_DSP6_RDMA_CONFIG_1                0x37FE34
+#define CLEARWATER_DSP6_SCRATCH_0                    0x37FE40
+#define CLEARWATER_DSP6_SCRATCH_1                    0x37FE41
+#define CLEARWATER_DSP6_SCRATCH_2                    0x37FE42
+#define CLEARWATER_DSP6_SCRATCH_3                    0x37FE43
+#define CLEARWATER_DSP7_CONFIG                       0x3FFE00
+#define CLEARWATER_DSP7_STATUS_1                     0x3FFE04
+#define CLEARWATER_DSP7_STATUS_2                     0x3FFE05
+#define CLEARWATER_DSP7_WDMA_CONFIG_1                0x3FFE30
+#define CLEARWATER_DSP7_WDMA_CONFIG_2                0x3FFE31
+#define CLEARWATER_DSP7_RDMA_CONFIG_1                0x3FFE34
+#define CLEARWATER_DSP7_SCRATCH_0                    0x3FFE40
+#define CLEARWATER_DSP7_SCRATCH_1                    0x3FFE41
+#define CLEARWATER_DSP7_SCRATCH_2                    0x3FFE42
+#define CLEARWATER_DSP7_SCRATCH_3                    0x3FFE43
 
 /*
  * Field Definitions.
@@ -2799,25 +2799,25 @@
 /*
  * R109 (0x120) - DSP_Clock_1
  */
-#define WM8285_DSP_CLK_FREQ_LEGACY                           0x0700  /* DSP_CLK_FREQ_LEGACY - [10:8] */
-#define WM8285_DSP_CLK_FREQ_LEGACY_MASK                      0x0700  /* DSP_CLK_FREQ_LEGACY - [10:8] */
-#define WM8285_DSP_CLK_FREQ_LEGACY_SHIFT                          8  /* DSP_CLK_FREQ_LEGACY - [10:8] */
-#define WM8285_DSP_CLK_FREQ_LEGACY_WIDTH                          3  /* DSP_CLK_FREQ_LEGACY - [10:8] */
-#define WM8285_DSP_CLK_ENA                                   0x0040  /* DSP_CLK_ENA */
-#define WM8285_DSP_CLK_ENA_MASK                              0x0040  /* DSP_CLK_ENA */
-#define WM8285_DSP_CLK_ENA_SHIFT                                  6  /* DSP_CLK_ENA */
-#define WM8285_DSP_CLK_ENA_WIDTH                                  1  /* DSP_CLK_ENA */
-#define WM8285_DSP_CLK_SRC                                   0x000F  /* DSP_CLK_SRC - [3:0] */
-#define WM8285_DSP_CLK_SRC_MASK                              0x000F  /* DSP_CLK_SRC - [3:0] */
-#define WM8285_DSP_CLK_SRC_SHIFT                                  0  /* DSP_CLK_SRC - [3:0] */
-#define WM8285_DSP_CLK_SRC_WIDTH                                  4  /* DSP_CLK_SRC - [3:0] */
+#define CLEARWATER_DSP_CLK_FREQ_LEGACY                           0x0700  /* DSP_CLK_FREQ_LEGACY - [10:8] */
+#define CLEARWATER_DSP_CLK_FREQ_LEGACY_MASK                      0x0700  /* DSP_CLK_FREQ_LEGACY - [10:8] */
+#define CLEARWATER_DSP_CLK_FREQ_LEGACY_SHIFT                          8  /* DSP_CLK_FREQ_LEGACY - [10:8] */
+#define CLEARWATER_DSP_CLK_FREQ_LEGACY_WIDTH                          3  /* DSP_CLK_FREQ_LEGACY - [10:8] */
+#define CLEARWATER_DSP_CLK_ENA                                   0x0040  /* DSP_CLK_ENA */
+#define CLEARWATER_DSP_CLK_ENA_MASK                              0x0040  /* DSP_CLK_ENA */
+#define CLEARWATER_DSP_CLK_ENA_SHIFT                                  6  /* DSP_CLK_ENA */
+#define CLEARWATER_DSP_CLK_ENA_WIDTH                                  1  /* DSP_CLK_ENA */
+#define CLEARWATER_DSP_CLK_SRC                                   0x000F  /* DSP_CLK_SRC - [3:0] */
+#define CLEARWATER_DSP_CLK_SRC_MASK                              0x000F  /* DSP_CLK_SRC - [3:0] */
+#define CLEARWATER_DSP_CLK_SRC_SHIFT                                  0  /* DSP_CLK_SRC - [3:0] */
+#define CLEARWATER_DSP_CLK_SRC_WIDTH                                  4  /* DSP_CLK_SRC - [3:0] */
 
 /*
  * R110 (0x122) - DSP_Clock_2
  */
-#define WM8285_DSP_CLK_FREQ_MASK                             0x03FF  /* DSP_CLK_FREQ - [9:0] */
-#define WM8285_DSP_CLK_FREQ_SHIFT                                 0  /* DSP_CLK_FREQ - [9:0] */
-#define WM8285_DSP_CLK_FREQ_WIDTH                                10  /* DSP_CLK_FREQ - [9:0] */
+#define CLEARWATER_DSP_CLK_FREQ_MASK                             0x03FF  /* DSP_CLK_FREQ - [9:0] */
+#define CLEARWATER_DSP_CLK_FREQ_SHIFT                                 0  /* DSP_CLK_FREQ - [9:0] */
+#define CLEARWATER_DSP_CLK_FREQ_WIDTH                                10  /* DSP_CLK_FREQ - [9:0] */
 
 /*
  * R329 (0x149) - Output system clock
@@ -3629,9 +3629,9 @@
 #define ARIZONA_HP_IDAC_STEER_MASK               0x0004  /* HP_IDAC_STEER */
 #define ARIZONA_HP_IDAC_STEER_SHIFT                   2  /* HP_IDAC_STEER */
 #define ARIZONA_HP_IDAC_STEER_WIDTH                   1  /* HP_IDAC_STEER */
-#define WM8285_HP_RATE_MASK                      0x0006  /* HP_RATE - [2:1] */
-#define WM8285_HP_RATE_SHIFT                          1  /* HP_RATE - [2:1] */
-#define WM8285_HP_RATE_WIDTH                          2  /* HP_RATE - [2:1] */
+#define CLEARWATER_HP_RATE_MASK                      0x0006  /* HP_RATE - [2:1] */
+#define CLEARWATER_HP_RATE_SHIFT                          1  /* HP_RATE - [2:1] */
+#define CLEARWATER_HP_RATE_WIDTH                          2  /* HP_RATE - [2:1] */
 #define ARIZONA_HP_RATE                          0x0002  /* HP_RATE */
 #define ARIZONA_HP_RATE_MASK                     0x0002  /* HP_RATE */
 #define ARIZONA_HP_RATE_SHIFT                         1  /* HP_RATE */
@@ -3750,10 +3750,10 @@
 /*
  * R710 (0x2C6) - Micd Clamp control
  */
-#define WM8285_MICD_CLAMP_OVD_MASK               0x0010  /* MICD_CLAMP_OVD */
-#define WM8285_MICD_CLAMP_OVD_SHIFT                   4  /* MICD_CLAMP_OVD */
-#define WM8285_MICD_CLAMP_OVD_WIDTH                   1  /* MICD_CLAMP_OVD */
-#define WM8285_MICD_CLAMP_OVD                      0x10  /* MICD_CLAMP_OVD */
+#define CLEARWATER_MICD_CLAMP_OVD_MASK               0x0010  /* MICD_CLAMP_OVD */
+#define CLEARWATER_MICD_CLAMP_OVD_SHIFT                   4  /* MICD_CLAMP_OVD */
+#define CLEARWATER_MICD_CLAMP_OVD_WIDTH                   1  /* MICD_CLAMP_OVD */
+#define CLEARWATER_MICD_CLAMP_OVD                      0x10  /* MICD_CLAMP_OVD */
 
 /*
  * R715 (0x2CB) - Isolation control
@@ -3900,9 +3900,9 @@
 #define ARIZONA_IN1_DMICL_DLY_MASK               0x003F  /* IN1_DMICL_DLY - [5:0] */
 #define ARIZONA_IN1_DMICL_DLY_SHIFT                   0  /* IN1_DMICL_DLY - [5:0] */
 #define ARIZONA_IN1_DMICL_DLY_WIDTH                   6  /* IN1_DMICL_DLY - [5:0] */
-#define WM8285_IN1_OSR_MASK                      0x0700  /* IN1_OSR - [8:10] */
-#define WM8285_IN1_OSR_SHIFT                          8  /* IN1_OSR - [8:10] */
-#define WM8285_IN1_OSR_WIDTH                          3  /* IN1_OSR - [8:10] */
+#define CLEARWATER_IN1_OSR_MASK                      0x0700  /* IN1_OSR - [8:10] */
+#define CLEARWATER_IN1_OSR_SHIFT                          8  /* IN1_OSR - [8:10] */
+#define CLEARWATER_IN1_OSR_WIDTH                          3  /* IN1_OSR - [8:10] */
 
 /*
  * R788 (0x314) - IN1R Control
@@ -3991,9 +3991,9 @@
 #define ARIZONA_IN2_DMICL_DLY_MASK               0x003F  /* IN2_DMICL_DLY - [5:0] */
 #define ARIZONA_IN2_DMICL_DLY_SHIFT                   0  /* IN2_DMICL_DLY - [5:0] */
 #define ARIZONA_IN2_DMICL_DLY_WIDTH                   6  /* IN2_DMICL_DLY - [5:0] */
-#define WM8285_IN2_OSR_MASK                      0x0700  /* IN2_OSR - [8:10] */
-#define WM8285_IN2_OSR_SHIFT                          8  /* IN2_OSR - [8:10] */
-#define WM8285_IN2_OSR_WIDTH                          3  /* IN2_OSR - [8:10] */
+#define CLEARWATER_IN2_OSR_MASK                      0x0700  /* IN2_OSR - [8:10] */
+#define CLEARWATER_IN2_OSR_SHIFT                          8  /* IN2_OSR - [8:10] */
+#define CLEARWATER_IN2_OSR_WIDTH                          3  /* IN2_OSR - [8:10] */
 
 /*
  * R796 (0x31C) - IN2R Control
@@ -4076,9 +4076,9 @@
 #define ARIZONA_IN3_DMICL_DLY_MASK               0x003F  /* IN3_DMICL_DLY - [5:0] */
 #define ARIZONA_IN3_DMICL_DLY_SHIFT                   0  /* IN3_DMICL_DLY - [5:0] */
 #define ARIZONA_IN3_DMICL_DLY_WIDTH                   6  /* IN3_DMICL_DLY - [5:0] */
-#define WM8285_IN3_OSR_MASK                      0x0700  /* IN3_OSR - [8:10] */
-#define WM8285_IN3_OSR_SHIFT                          8  /* IN3_OSR - [8:10] */
-#define WM8285_IN3_OSR_WIDTH                          3  /* IN3_OSR - [8:10] */
+#define CLEARWATER_IN3_OSR_MASK                      0x0700  /* IN3_OSR - [8:10] */
+#define CLEARWATER_IN3_OSR_SHIFT                          8  /* IN3_OSR - [8:10] */
+#define CLEARWATER_IN3_OSR_WIDTH                          3  /* IN3_OSR - [8:10] */
 
 /*
  * R804 (0x324) - IN3R Control
@@ -4146,9 +4146,9 @@
 #define ARIZONA_IN4L_DMIC_DLY_MASK               0x003F  /* IN4L_DMIC_DLY - [5:0] */
 #define ARIZONA_IN4L_DMIC_DLY_SHIFT                   0  /* IN4L_DMIC_DLY - [5:0] */
 #define ARIZONA_IN4L_DMIC_DLY_WIDTH                   6  /* IN4L_DMIC_DLY - [5:0] */
-#define WM8285_IN4_OSR_MASK                      0x0700  /* IN4_OSR - [8:10] */
-#define WM8285_IN4_OSR_SHIFT                          8  /* IN4_OSR - [8:10] */
-#define WM8285_IN4_OSR_WIDTH                          3  /* IN4_OSR - [8:10] */
+#define CLEARWATER_IN4_OSR_MASK                      0x0700  /* IN4_OSR - [8:10] */
+#define CLEARWATER_IN4_OSR_SHIFT                          8  /* IN4_OSR - [8:10] */
+#define CLEARWATER_IN4_OSR_WIDTH                          3  /* IN4_OSR - [8:10] */
 
 /*
  * R812 (0x32C) - IN4R Control
@@ -4213,9 +4213,9 @@
 #define ARIZONA_IN5L_DMIC_DLY_MASK               0x003F  /* IN5L_DMIC_DLY - [5:0] */
 #define ARIZONA_IN5L_DMIC_DLY_SHIFT                   0  /* IN5L_DMIC_DLY - [5:0] */
 #define ARIZONA_IN5L_DMIC_DLY_WIDTH                   6  /* IN5L_DMIC_DLY - [5:0] */
-#define WM8285_IN5_OSR_MASK                      0x0700  /* IN5_OSR - [8:10] */
-#define WM8285_IN5_OSR_SHIFT                          8  /* IN5_OSR - [8:10] */
-#define WM8285_IN5_OSR_WIDTH                          3  /* IN5_OSR - [8:10] */
+#define CLEARWATER_IN5_OSR_MASK                      0x0700  /* IN5_OSR - [8:10] */
+#define CLEARWATER_IN5_OSR_SHIFT                          8  /* IN5_OSR - [8:10] */
+#define CLEARWATER_IN5_OSR_WIDTH                          3  /* IN5_OSR - [8:10] */
 
 /*
  * R820 (0x334) - IN5R Control
@@ -4280,9 +4280,9 @@
 #define ARIZONA_IN6L_DMIC_DLY_MASK               0x003F  /* IN6L_DMIC_DLY - [5:0] */
 #define ARIZONA_IN6L_DMIC_DLY_SHIFT                   0  /* IN6L_DMIC_DLY - [5:0] */
 #define ARIZONA_IN6L_DMIC_DLY_WIDTH                   6  /* IN6L_DMIC_DLY - [5:0] */
-#define WM8285_IN6_OSR_MASK                      0x0700  /* IN6_OSR - [8:10] */
-#define WM8285_IN6_OSR_SHIFT                          8  /* IN6_OSR - [8:10] */
-#define WM8285_IN6_OSR_WIDTH                          3  /* IN6_OSR - [8:10] */
+#define CLEARWATER_IN6_OSR_MASK                      0x0700  /* IN6_OSR - [8:10] */
+#define CLEARWATER_IN6_OSR_SHIFT                          8  /* IN6_OSR - [8:10] */
+#define CLEARWATER_IN6_OSR_WIDTH                          3  /* IN6_OSR - [8:10] */
 
 /*
  * R828 (0x33C) - IN6R Control
@@ -5000,54 +5000,54 @@
 
 /* R486 (0x448) - EDRE_Enable
  */
-#define WM8285_EDRE_OUT4L_THR3_ENA                           0x0800  /* EDRE_OUT4L_THR3_ENA */
-#define WM8285_EDRE_OUT4L_THR3_ENA_MASK                      0x0800  /* EDRE_OUT4L_THR3_ENA */
-#define WM8285_EDRE_OUT4L_THR3_ENA_SHIFT                         11  /* EDRE_OUT4L_THR3_ENA */
-#define WM8285_EDRE_OUT4L_THR3_ENA_WIDTH                          1  /* EDRE_OUT4L_THR3_ENA */
-#define WM8285_EDRE_OUT4R_THR3_ENA                           0x0400  /* EDRE_OUT4R_THR3_ENA */
-#define WM8285_EDRE_OUT4R_THR3_ENA_MASK                      0x0400  /* EDRE_OUT4R_THR3_ENA */
-#define WM8285_EDRE_OUT4R_THR3_ENA_SHIFT                         10  /* EDRE_OUT4R_THR3_ENA */
-#define WM8285_EDRE_OUT4R_THR3_ENA_WIDTH                          1  /* EDRE_OUT4R_THR3_ENA */
-#define WM8285_EDRE_OUT4L_THR2_ENA                           0x0200  /* EDRE_OUT4L_THR2_ENA */
-#define WM8285_EDRE_OUT4L_THR2_ENA_MASK                      0x0200  /* EDRE_OUT4L_THR2_ENA */
-#define WM8285_EDRE_OUT4L_THR2_ENA_SHIFT                          9  /* EDRE_OUT4L_THR2_ENA */
-#define WM8285_EDRE_OUT4L_THR2_ENA_WIDTH                          1  /* EDRE_OUT4L_THR2_ENA */
-#define WM8285_EDRE_OUT4R_THR2_ENA                           0x0100  /* EDRE_OUT4R_THR2_ENA */
-#define WM8285_EDRE_OUT4R_THR2_ENA_MASK                      0x0100  /* EDRE_OUT4R_THR2_ENA */
-#define WM8285_EDRE_OUT4R_THR2_ENA_SHIFT                          8  /* EDRE_OUT4R_THR2_ENA */
-#define WM8285_EDRE_OUT4R_THR2_ENA_WIDTH                          1  /* EDRE_OUT4R_THR2_ENA */
-#define WM8285_EDRE_OUT4L_THR1_ENA                           0x0080  /* EDRE_OUT4L_THR1_ENA */
-#define WM8285_EDRE_OUT4L_THR1_ENA_MASK                      0x0080  /* EDRE_OUT4L_THR1_ENA */
-#define WM8285_EDRE_OUT4L_THR1_ENA_SHIFT                          7  /* EDRE_OUT4L_THR1_ENA */
-#define WM8285_EDRE_OUT4L_THR1_ENA_WIDTH                          1  /* EDRE_OUT4L_THR1_ENA */
-#define WM8285_EDRE_OUT4R_THR1_ENA                           0x0040  /* EDRE_OUT4R_THR1_ENA */
-#define WM8285_EDRE_OUT4R_THR1_ENA_MASK                      0x0040  /* EDRE_OUT4R_THR1_ENA */
-#define WM8285_EDRE_OUT4R_THR1_ENA_SHIFT                          6  /* EDRE_OUT4R_THR1_ENA */
-#define WM8285_EDRE_OUT4R_THR1_ENA_WIDTH                          1  /* EDRE_OUT4R_THR1_ENA */
-#define WM8285_EDRE_OUT3L_THR1_ENA                           0x0020  /* EDRE_OUT3L_THR1_ENA */
-#define WM8285_EDRE_OUT3L_THR1_ENA_MASK                      0x0020  /* EDRE_OUT3L_THR1_ENA */
-#define WM8285_EDRE_OUT3L_THR1_ENA_SHIFT                          5  /* EDRE_OUT3L_THR1_ENA */
-#define WM8285_EDRE_OUT3L_THR1_ENA_WIDTH                          1  /* EDRE_OUT3L_THR1_ENA */
-#define WM8285_EDRE_OUT3R_THR1_ENA                           0x0010  /* EDRE_OUT3R_THR1_ENA */
-#define WM8285_EDRE_OUT3R_THR1_ENA_MASK                      0x0010  /* EDRE_OUT3R_THR1_ENA */
-#define WM8285_EDRE_OUT3R_THR1_ENA_SHIFT                          4  /* EDRE_OUT3R_THR1_ENA */
-#define WM8285_EDRE_OUT3R_THR1_ENA_WIDTH                          1  /* EDRE_OUT3R_THR1_ENA */
-#define WM8285_EDRE_OUT2L_THR1_ENA                           0x0008  /* EDRE_OUT2L_THR1_ENA */
-#define WM8285_EDRE_OUT2L_THR1_ENA_MASK                      0x0008  /* EDRE_OUT2L_THR1_ENA */
-#define WM8285_EDRE_OUT2L_THR1_ENA_SHIFT                          3  /* EDRE_OUT2L_THR1_ENA */
-#define WM8285_EDRE_OUT2L_THR1_ENA_WIDTH                          1  /* EDRE_OUT2L_THR1_ENA */
-#define WM8285_EDRE_OUT2R_THR1_ENA                           0x0004  /* EDRE_OUT2R_THR1_ENA */
-#define WM8285_EDRE_OUT2R_THR1_ENA_MASK                      0x0004  /* EDRE_OUT2R_THR1_ENA */
-#define WM8285_EDRE_OUT2R_THR1_ENA_SHIFT                          2  /* EDRE_OUT2R_THR1_ENA */
-#define WM8285_EDRE_OUT2R_THR1_ENA_WIDTH                          1  /* EDRE_OUT2R_THR1_ENA */
-#define WM8285_EDRE_OUT1L_THR1_ENA                           0x0002  /* EDRE_OUT1L_THR1_ENA */
-#define WM8285_EDRE_OUT1L_THR1_ENA_MASK                      0x0002  /* EDRE_OUT1L_THR1_ENA */
-#define WM8285_EDRE_OUT1L_THR1_ENA_SHIFT                          1  /* EDRE_OUT1L_THR1_ENA */
-#define WM8285_EDRE_OUT1L_THR1_ENA_WIDTH                          1  /* EDRE_OUT1L_THR1_ENA */
-#define WM8285_EDRE_OUT1R_THR1_ENA                           0x0001  /* EDRE_OUT1R_THR1_ENA */
-#define WM8285_EDRE_OUT1R_THR1_ENA_MASK                      0x0001  /* EDRE_OUT1R_THR1_ENA */
-#define WM8285_EDRE_OUT1R_THR1_ENA_SHIFT                          0  /* EDRE_OUT1R_THR1_ENA */
-#define WM8285_EDRE_OUT1R_THR1_ENA_WIDTH                          1  /* EDRE_OUT1R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT4L_THR3_ENA                           0x0800  /* EDRE_OUT4L_THR3_ENA */
+#define CLEARWATER_EDRE_OUT4L_THR3_ENA_MASK                      0x0800  /* EDRE_OUT4L_THR3_ENA */
+#define CLEARWATER_EDRE_OUT4L_THR3_ENA_SHIFT                         11  /* EDRE_OUT4L_THR3_ENA */
+#define CLEARWATER_EDRE_OUT4L_THR3_ENA_WIDTH                          1  /* EDRE_OUT4L_THR3_ENA */
+#define CLEARWATER_EDRE_OUT4R_THR3_ENA                           0x0400  /* EDRE_OUT4R_THR3_ENA */
+#define CLEARWATER_EDRE_OUT4R_THR3_ENA_MASK                      0x0400  /* EDRE_OUT4R_THR3_ENA */
+#define CLEARWATER_EDRE_OUT4R_THR3_ENA_SHIFT                         10  /* EDRE_OUT4R_THR3_ENA */
+#define CLEARWATER_EDRE_OUT4R_THR3_ENA_WIDTH                          1  /* EDRE_OUT4R_THR3_ENA */
+#define CLEARWATER_EDRE_OUT4L_THR2_ENA                           0x0200  /* EDRE_OUT4L_THR2_ENA */
+#define CLEARWATER_EDRE_OUT4L_THR2_ENA_MASK                      0x0200  /* EDRE_OUT4L_THR2_ENA */
+#define CLEARWATER_EDRE_OUT4L_THR2_ENA_SHIFT                          9  /* EDRE_OUT4L_THR2_ENA */
+#define CLEARWATER_EDRE_OUT4L_THR2_ENA_WIDTH                          1  /* EDRE_OUT4L_THR2_ENA */
+#define CLEARWATER_EDRE_OUT4R_THR2_ENA                           0x0100  /* EDRE_OUT4R_THR2_ENA */
+#define CLEARWATER_EDRE_OUT4R_THR2_ENA_MASK                      0x0100  /* EDRE_OUT4R_THR2_ENA */
+#define CLEARWATER_EDRE_OUT4R_THR2_ENA_SHIFT                          8  /* EDRE_OUT4R_THR2_ENA */
+#define CLEARWATER_EDRE_OUT4R_THR2_ENA_WIDTH                          1  /* EDRE_OUT4R_THR2_ENA */
+#define CLEARWATER_EDRE_OUT4L_THR1_ENA                           0x0080  /* EDRE_OUT4L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT4L_THR1_ENA_MASK                      0x0080  /* EDRE_OUT4L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT4L_THR1_ENA_SHIFT                          7  /* EDRE_OUT4L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT4L_THR1_ENA_WIDTH                          1  /* EDRE_OUT4L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT4R_THR1_ENA                           0x0040  /* EDRE_OUT4R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT4R_THR1_ENA_MASK                      0x0040  /* EDRE_OUT4R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT4R_THR1_ENA_SHIFT                          6  /* EDRE_OUT4R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT4R_THR1_ENA_WIDTH                          1  /* EDRE_OUT4R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT3L_THR1_ENA                           0x0020  /* EDRE_OUT3L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT3L_THR1_ENA_MASK                      0x0020  /* EDRE_OUT3L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT3L_THR1_ENA_SHIFT                          5  /* EDRE_OUT3L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT3L_THR1_ENA_WIDTH                          1  /* EDRE_OUT3L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT3R_THR1_ENA                           0x0010  /* EDRE_OUT3R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT3R_THR1_ENA_MASK                      0x0010  /* EDRE_OUT3R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT3R_THR1_ENA_SHIFT                          4  /* EDRE_OUT3R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT3R_THR1_ENA_WIDTH                          1  /* EDRE_OUT3R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT2L_THR1_ENA                           0x0008  /* EDRE_OUT2L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT2L_THR1_ENA_MASK                      0x0008  /* EDRE_OUT2L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT2L_THR1_ENA_SHIFT                          3  /* EDRE_OUT2L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT2L_THR1_ENA_WIDTH                          1  /* EDRE_OUT2L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT2R_THR1_ENA                           0x0004  /* EDRE_OUT2R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT2R_THR1_ENA_MASK                      0x0004  /* EDRE_OUT2R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT2R_THR1_ENA_SHIFT                          2  /* EDRE_OUT2R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT2R_THR1_ENA_WIDTH                          1  /* EDRE_OUT2R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT1L_THR1_ENA                           0x0002  /* EDRE_OUT1L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT1L_THR1_ENA_MASK                      0x0002  /* EDRE_OUT1L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT1L_THR1_ENA_SHIFT                          1  /* EDRE_OUT1L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT1L_THR1_ENA_WIDTH                          1  /* EDRE_OUT1L_THR1_ENA */
+#define CLEARWATER_EDRE_OUT1R_THR1_ENA                           0x0001  /* EDRE_OUT1R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT1R_THR1_ENA_MASK                      0x0001  /* EDRE_OUT1R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT1R_THR1_ENA_SHIFT                          0  /* EDRE_OUT1R_THR1_ENA */
+#define CLEARWATER_EDRE_OUT1R_THR1_ENA_WIDTH                          1  /* EDRE_OUT1R_THR1_ENA */
 
 /*
  * R1104 (0x450) - DAC AEC Control 1
@@ -9604,70 +9604,70 @@
 /*
  * R3808 (0xED0) - ASRC2_ENABLE
  */
-#define WM8285_ASRC2_IN2L_ENA                       0x0008  /* ASRC2L_ENA */
-#define WM8285_ASRC2_IN2L_ENA_MASK                  0x0008  /* ASRC2L_ENA */
-#define WM8285_ASRC2_IN2L_ENA_SHIFT                      3  /* ASRC2L_ENA */
-#define WM8285_ASRC2_IN2L_ENA_WIDTH                      1  /* ASRC2L_ENA */
-#define WM8285_ASRC2_IN2R_ENA                       0x0004  /* ASRC2R_ENA */
-#define WM8285_ASRC2_IN2R_ENA_MASK                  0x0004  /* ASRC2R_ENA */
-#define WM8285_ASRC2_IN2R_ENA_SHIFT                      2  /* ASRC2R_ENA */
-#define WM8285_ASRC2_IN2R_ENA_WIDTH                      1  /* ASRC2R_ENA */
-#define WM8285_ASRC2_IN1L_ENA                       0x0002  /* ASRC1L_ENA */
-#define WM8285_ASRC2_IN1L_ENA_MASK                  0x0002  /* ASRC1L_ENA */
-#define WM8285_ASRC2_IN1L_ENA_SHIFT                      1  /* ASRC1L_ENA */
-#define WM8285_ASRC2_IN1L_ENA_WIDTH                      1  /* ASRC1L_ENA */
-#define WM8285_ASRC2_IN1R_ENA                       0x0001  /* ASRC1R_ENA */
-#define WM8285_ASRC2_IN1R_ENA_MASK                  0x0001  /* ASRC1R_ENA */
-#define WM8285_ASRC2_IN1R_ENA_SHIFT                      0  /* ASRC1R_ENA */
-#define WM8285_ASRC2_IN1R_ENA_WIDTH                      1  /* ASRC1R_ENA */
+#define CLEARWATER_ASRC2_IN2L_ENA                       0x0008  /* ASRC2L_ENA */
+#define CLEARWATER_ASRC2_IN2L_ENA_MASK                  0x0008  /* ASRC2L_ENA */
+#define CLEARWATER_ASRC2_IN2L_ENA_SHIFT                      3  /* ASRC2L_ENA */
+#define CLEARWATER_ASRC2_IN2L_ENA_WIDTH                      1  /* ASRC2L_ENA */
+#define CLEARWATER_ASRC2_IN2R_ENA                       0x0004  /* ASRC2R_ENA */
+#define CLEARWATER_ASRC2_IN2R_ENA_MASK                  0x0004  /* ASRC2R_ENA */
+#define CLEARWATER_ASRC2_IN2R_ENA_SHIFT                      2  /* ASRC2R_ENA */
+#define CLEARWATER_ASRC2_IN2R_ENA_WIDTH                      1  /* ASRC2R_ENA */
+#define CLEARWATER_ASRC2_IN1L_ENA                       0x0002  /* ASRC1L_ENA */
+#define CLEARWATER_ASRC2_IN1L_ENA_MASK                  0x0002  /* ASRC1L_ENA */
+#define CLEARWATER_ASRC2_IN1L_ENA_SHIFT                      1  /* ASRC1L_ENA */
+#define CLEARWATER_ASRC2_IN1L_ENA_WIDTH                      1  /* ASRC1L_ENA */
+#define CLEARWATER_ASRC2_IN1R_ENA                       0x0001  /* ASRC1R_ENA */
+#define CLEARWATER_ASRC2_IN1R_ENA_MASK                  0x0001  /* ASRC1R_ENA */
+#define CLEARWATER_ASRC2_IN1R_ENA_SHIFT                      0  /* ASRC1R_ENA */
+#define CLEARWATER_ASRC2_IN1R_ENA_WIDTH                      1  /* ASRC1R_ENA */
 
 /*
  * R3810 (0xED2) - ASRC2_RATE1
  */
-#define WM8285_ASRC2_RATE1_MASK                  0x7800  /* ASRC_RATE1 - [14:11] */
-#define WM8285_ASRC2_RATE1_SHIFT                     11  /* ASRC_RATE1 - [14:11] */
-#define WM8285_ASRC2_RATE1_WIDTH                      4  /* ASRC_RATE1 - [14:11] */
+#define CLEARWATER_ASRC2_RATE1_MASK                  0x7800  /* ASRC_RATE1 - [14:11] */
+#define CLEARWATER_ASRC2_RATE1_SHIFT                     11  /* ASRC_RATE1 - [14:11] */
+#define CLEARWATER_ASRC2_RATE1_WIDTH                      4  /* ASRC_RATE1 - [14:11] */
 
 /*
  * R3811 (0xED3) - ASRC2_RATE2
  */
-#define WM8285_ASRC2_RATE2_MASK                  0x7800  /* ASRC_RATE2 - [14:11] */
-#define WM8285_ASRC2_RATE2_SHIFT                     11  /* ASRC_RATE2 - [14:11] */
-#define WM8285_ASRC2_RATE2_WIDTH                      4  /* ASRC_RATE2 - [14:11] */
+#define CLEARWATER_ASRC2_RATE2_MASK                  0x7800  /* ASRC_RATE2 - [14:11] */
+#define CLEARWATER_ASRC2_RATE2_SHIFT                     11  /* ASRC_RATE2 - [14:11] */
+#define CLEARWATER_ASRC2_RATE2_WIDTH                      4  /* ASRC_RATE2 - [14:11] */
 
 /*
  * R3808 (0xEE0) - ASRC1_ENABLE
  */
-#define WM8285_ASRC1_IN2L_ENA                       0x0008  /* ASRC2L_ENA */
-#define WM8285_ASRC1_IN2L_ENA_MASK                  0x0008  /* ASRC2L_ENA */
-#define WM8285_ASRC1_IN2L_ENA_SHIFT                      3  /* ASRC2L_ENA */
-#define WM8285_ASRC1_IN2L_ENA_WIDTH                      1  /* ASRC2L_ENA */
-#define WM8285_ASRC1_IN2R_ENA                       0x0004  /* ASRC2R_ENA */
-#define WM8285_ASRC1_IN2R_ENA_MASK                  0x0004  /* ASRC2R_ENA */
-#define WM8285_ASRC1_IN2R_ENA_SHIFT                      2  /* ASRC2R_ENA */
-#define WM8285_ASRC1_IN2R_ENA_WIDTH                      1  /* ASRC2R_ENA */
-#define WM8285_ASRC1_IN1L_ENA                       0x0002  /* ASRC1L_ENA */
-#define WM8285_ASRC1_IN1L_ENA_MASK                  0x0002  /* ASRC1L_ENA */
-#define WM8285_ASRC1_IN1L_ENA_SHIFT                      1  /* ASRC1L_ENA */
-#define WM8285_ASRC1_IN1L_ENA_WIDTH                      1  /* ASRC1L_ENA */
-#define WM8285_ASRC1_IN1R_ENA                       0x0001  /* ASRC1R_ENA */
-#define WM8285_ASRC1_IN1R_ENA_MASK                  0x0001  /* ASRC1R_ENA */
-#define WM8285_ASRC1_IN1R_ENA_SHIFT                      0  /* ASRC1R_ENA */
-#define WM8285_ASRC1_IN1R_ENA_WIDTH                      1  /* ASRC1R_ENA */
+#define CLEARWATER_ASRC1_IN2L_ENA                       0x0008  /* ASRC2L_ENA */
+#define CLEARWATER_ASRC1_IN2L_ENA_MASK                  0x0008  /* ASRC2L_ENA */
+#define CLEARWATER_ASRC1_IN2L_ENA_SHIFT                      3  /* ASRC2L_ENA */
+#define CLEARWATER_ASRC1_IN2L_ENA_WIDTH                      1  /* ASRC2L_ENA */
+#define CLEARWATER_ASRC1_IN2R_ENA                       0x0004  /* ASRC2R_ENA */
+#define CLEARWATER_ASRC1_IN2R_ENA_MASK                  0x0004  /* ASRC2R_ENA */
+#define CLEARWATER_ASRC1_IN2R_ENA_SHIFT                      2  /* ASRC2R_ENA */
+#define CLEARWATER_ASRC1_IN2R_ENA_WIDTH                      1  /* ASRC2R_ENA */
+#define CLEARWATER_ASRC1_IN1L_ENA                       0x0002  /* ASRC1L_ENA */
+#define CLEARWATER_ASRC1_IN1L_ENA_MASK                  0x0002  /* ASRC1L_ENA */
+#define CLEARWATER_ASRC1_IN1L_ENA_SHIFT                      1  /* ASRC1L_ENA */
+#define CLEARWATER_ASRC1_IN1L_ENA_WIDTH                      1  /* ASRC1L_ENA */
+#define CLEARWATER_ASRC1_IN1R_ENA                       0x0001  /* ASRC1R_ENA */
+#define CLEARWATER_ASRC1_IN1R_ENA_MASK                  0x0001  /* ASRC1R_ENA */
+#define CLEARWATER_ASRC1_IN1R_ENA_SHIFT                      0  /* ASRC1R_ENA */
+#define CLEARWATER_ASRC1_IN1R_ENA_WIDTH                      1  /* ASRC1R_ENA */
 
 /*
  * R3810 (0xEE2) - ASRC1_RATE1
  */
-#define WM8285_ASRC1_RATE1_MASK                  0x7800  /* ASRC_RATE1 - [14:11] */
-#define WM8285_ASRC1_RATE1_SHIFT                     11  /* ASRC_RATE1 - [14:11] */
-#define WM8285_ASRC1_RATE1_WIDTH                      4  /* ASRC_RATE1 - [14:11] */
+#define CLEARWATER_ASRC1_RATE1_MASK                  0x7800  /* ASRC_RATE1 - [14:11] */
+#define CLEARWATER_ASRC1_RATE1_SHIFT                     11  /* ASRC_RATE1 - [14:11] */
+#define CLEARWATER_ASRC1_RATE1_WIDTH                      4  /* ASRC_RATE1 - [14:11] */
 
 /*
  * R3811 (0xEE3) - ASRC1_RATE2
  */
-#define WM8285_ASRC1_RATE2_MASK                  0x7800  /* ASRC_RATE2 - [14:11] */
-#define WM8285_ASRC1_RATE2_SHIFT                     11  /* ASRC_RATE2 - [14:11] */
-#define WM8285_ASRC1_RATE2_WIDTH                      4  /* ASRC_RATE2 - [14:11] */
+#define CLEARWATER_ASRC1_RATE2_MASK                  0x7800  /* ASRC_RATE2 - [14:11] */
+#define CLEARWATER_ASRC1_RATE2_SHIFT                     11  /* ASRC_RATE2 - [14:11] */
+#define CLEARWATER_ASRC1_RATE2_WIDTH                      4  /* ASRC_RATE2 - [14:11] */
 
 /*
  * R3808 (0xEE0) - ASRC_ENABLE
@@ -10031,2174 +10031,2174 @@
 /*
 * R1718 (0x1380) - FRF_Coefficient_1L_1
 */
-#define WM8285_FRF_COEFF_1L_1_MASK               0xFFFF  /* FRF_COEFF_1L_1 - [15:0] */
-#define WM8285_FRF_COEFF_1L_1_SHIFT                   0  /* FRF_COEFF_1L_1 - [15:0] */
-#define WM8285_FRF_COEFF_1L_1_WIDTH                  16  /* FRF_COEFF_1L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1L_1_MASK               0xFFFF  /* FRF_COEFF_1L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1L_1_SHIFT                   0  /* FRF_COEFF_1L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1L_1_WIDTH                  16  /* FRF_COEFF_1L_1 - [15:0] */
 
 /*
  * R1719 (0x1381) - FRF_Coefficient_1L_2
  */
-#define WM8285_FRF_COEFF_1L_2_MASK               0xFFFF  /* FRF_COEFF_1L_2 - [15:0] */
-#define WM8285_FRF_COEFF_1L_2_SHIFT                   0  /* FRF_COEFF_1L_2 - [15:0] */
-#define WM8285_FRF_COEFF_1L_2_WIDTH                  16  /* FRF_COEFF_1L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1L_2_MASK               0xFFFF  /* FRF_COEFF_1L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1L_2_SHIFT                   0  /* FRF_COEFF_1L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1L_2_WIDTH                  16  /* FRF_COEFF_1L_2 - [15:0] */
 
 /*
  * R1720 (0x1382) - FRF_Coefficient_1L_3
  */
-#define WM8285_FRF_COEFF_1L_3_MASK               0xFFFF  /* FRF_COEFF_1L_3 - [15:0] */
-#define WM8285_FRF_COEFF_1L_3_SHIFT                   0  /* FRF_COEFF_1L_3 - [15:0] */
-#define WM8285_FRF_COEFF_1L_3_WIDTH                  16  /* FRF_COEFF_1L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1L_3_MASK               0xFFFF  /* FRF_COEFF_1L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1L_3_SHIFT                   0  /* FRF_COEFF_1L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1L_3_WIDTH                  16  /* FRF_COEFF_1L_3 - [15:0] */
 
 /*
  * R1721 (0x1383) - FRF_Coefficient_1L_4
  */
-#define WM8285_FRF_COEFF_1L_4_MASK               0xFFFF  /* FRF_COEFF_1L_4 - [15:0] */
-#define WM8285_FRF_COEFF_1L_4_SHIFT                   0  /* FRF_COEFF_1L_4 - [15:0] */
-#define WM8285_FRF_COEFF_1L_4_WIDTH                  16  /* FRF_COEFF_1L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1L_4_MASK               0xFFFF  /* FRF_COEFF_1L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1L_4_SHIFT                   0  /* FRF_COEFF_1L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1L_4_WIDTH                  16  /* FRF_COEFF_1L_4 - [15:0] */
 
 /*
  * R1722 (0x1390) - FRF_Coefficient_1R_1
  */
-#define WM8285_FRF_COEFF_1R_1_MASK               0xFFFF  /* FRF_COEFF_1R_1 - [15:0] */
-#define WM8285_FRF_COEFF_1R_1_SHIFT                   0  /* FRF_COEFF_1R_1 - [15:0] */
-#define WM8285_FRF_COEFF_1R_1_WIDTH                  16  /* FRF_COEFF_1R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1R_1_MASK               0xFFFF  /* FRF_COEFF_1R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1R_1_SHIFT                   0  /* FRF_COEFF_1R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1R_1_WIDTH                  16  /* FRF_COEFF_1R_1 - [15:0] */
 
 /*
  * R1723 (0x1391) - FRF_Coefficient_1R_2
  */
-#define WM8285_FRF_COEFF_1R_2_MASK               0xFFFF  /* FRF_COEFF_1R_2 - [15:0] */
-#define WM8285_FRF_COEFF_1R_2_SHIFT                   0  /* FRF_COEFF_1R_2 - [15:0] */
-#define WM8285_FRF_COEFF_1R_2_WIDTH                  16  /* FRF_COEFF_1R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1R_2_MASK               0xFFFF  /* FRF_COEFF_1R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1R_2_SHIFT                   0  /* FRF_COEFF_1R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1R_2_WIDTH                  16  /* FRF_COEFF_1R_2 - [15:0] */
 
 /*
  * R1724 (0x1392) - FRF_Coefficient_1R_3
  */
-#define WM8285_FRF_COEFF_1R_3_MASK               0xFFFF  /* FRF_COEFF_1R_3 - [15:0] */
-#define WM8285_FRF_COEFF_1R_3_SHIFT                   0  /* FRF_COEFF_1R_3 - [15:0] */
-#define WM8285_FRF_COEFF_1R_3_WIDTH                  16  /* FRF_COEFF_1R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1R_3_MASK               0xFFFF  /* FRF_COEFF_1R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1R_3_SHIFT                   0  /* FRF_COEFF_1R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1R_3_WIDTH                  16  /* FRF_COEFF_1R_3 - [15:0] */
 
 /*
  * R1725 (0x1393) - FRF_Coefficient_1R_4
  */
-#define WM8285_FRF_COEFF_1R_4_MASK               0xFFFF  /* FRF_COEFF_1R_4 - [15:0] */
-#define WM8285_FRF_COEFF_1R_4_SHIFT                   0  /* FRF_COEFF_1R_4 - [15:0] */
-#define WM8285_FRF_COEFF_1R_4_WIDTH                  16  /* FRF_COEFF_1R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1R_4_MASK               0xFFFF  /* FRF_COEFF_1R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1R_4_SHIFT                   0  /* FRF_COEFF_1R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_1R_4_WIDTH                  16  /* FRF_COEFF_1R_4 - [15:0] */
 
 /*
  * R1726 (0x13A0) - FRF_Coefficient_2L_1
  */
-#define WM8285_FRF_COEFF_2L_1_MASK               0xFFFF  /* FRF_COEFF_2L_1 - [15:0] */
-#define WM8285_FRF_COEFF_2L_1_SHIFT                   0  /* FRF_COEFF_2L_1 - [15:0] */
-#define WM8285_FRF_COEFF_2L_1_WIDTH                  16  /* FRF_COEFF_2L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2L_1_MASK               0xFFFF  /* FRF_COEFF_2L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2L_1_SHIFT                   0  /* FRF_COEFF_2L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2L_1_WIDTH                  16  /* FRF_COEFF_2L_1 - [15:0] */
 
 /*
  * R1727 (0x13A1) - FRF_Coefficient_2L_2
  */
-#define WM8285_FRF_COEFF_2L_2_MASK               0xFFFF  /* FRF_COEFF_2L_2 - [15:0] */
-#define WM8285_FRF_COEFF_2L_2_SHIFT                   0  /* FRF_COEFF_2L_2 - [15:0] */
-#define WM8285_FRF_COEFF_2L_2_WIDTH                  16  /* FRF_COEFF_2L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2L_2_MASK               0xFFFF  /* FRF_COEFF_2L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2L_2_SHIFT                   0  /* FRF_COEFF_2L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2L_2_WIDTH                  16  /* FRF_COEFF_2L_2 - [15:0] */
 
 /*
  * R1728 (0x13A2) - FRF_Coefficient_2L_3
  */
-#define WM8285_FRF_COEFF_2L_3_MASK               0xFFFF  /* FRF_COEFF_2L_3 - [15:0] */
-#define WM8285_FRF_COEFF_2L_3_SHIFT                   0  /* FRF_COEFF_2L_3 - [15:0] */
-#define WM8285_FRF_COEFF_2L_3_WIDTH                  16  /* FRF_COEFF_2L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2L_3_MASK               0xFFFF  /* FRF_COEFF_2L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2L_3_SHIFT                   0  /* FRF_COEFF_2L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2L_3_WIDTH                  16  /* FRF_COEFF_2L_3 - [15:0] */
 
 /*
  * R1729 (0x13A3) - FRF_Coefficient_2L_4
  */
-#define WM8285_FRF_COEFF_2L_4_MASK               0xFFFF  /* FRF_COEFF_2L_4 - [15:0] */
-#define WM8285_FRF_COEFF_2L_4_SHIFT                   0  /* FRF_COEFF_2L_4 - [15:0] */
-#define WM8285_FRF_COEFF_2L_4_WIDTH                  16  /* FRF_COEFF_2L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2L_4_MASK               0xFFFF  /* FRF_COEFF_2L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2L_4_SHIFT                   0  /* FRF_COEFF_2L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2L_4_WIDTH                  16  /* FRF_COEFF_2L_4 - [15:0] */
 
 /*
  * R1730 (0x13B0) - FRF_Coefficient_2R_1
  */
-#define WM8285_FRF_COEFF_2R_1_MASK               0xFFFF  /* FRF_COEFF_2R_1 - [15:0] */
-#define WM8285_FRF_COEFF_2R_1_SHIFT                   0  /* FRF_COEFF_2R_1 - [15:0] */
-#define WM8285_FRF_COEFF_2R_1_WIDTH                  16  /* FRF_COEFF_2R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2R_1_MASK               0xFFFF  /* FRF_COEFF_2R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2R_1_SHIFT                   0  /* FRF_COEFF_2R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2R_1_WIDTH                  16  /* FRF_COEFF_2R_1 - [15:0] */
 
 /*
  * R1731 (0x13B1) - FRF_Coefficient_2R_2
  */
-#define WM8285_FRF_COEFF_2R_2_MASK               0xFFFF  /* FRF_COEFF_2R_2 - [15:0] */
-#define WM8285_FRF_COEFF_2R_2_SHIFT                   0  /* FRF_COEFF_2R_2 - [15:0] */
-#define WM8285_FRF_COEFF_2R_2_WIDTH                  16  /* FRF_COEFF_2R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2R_2_MASK               0xFFFF  /* FRF_COEFF_2R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2R_2_SHIFT                   0  /* FRF_COEFF_2R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2R_2_WIDTH                  16  /* FRF_COEFF_2R_2 - [15:0] */
 
 /*
  * R1732 (0x13B2) - FRF_Coefficient_2R_3
  */
-#define WM8285_FRF_COEFF_2R_3_MASK               0xFFFF  /* FRF_COEFF_2R_3 - [15:0] */
-#define WM8285_FRF_COEFF_2R_3_SHIFT                   0  /* FRF_COEFF_2R_3 - [15:0] */
-#define WM8285_FRF_COEFF_2R_3_WIDTH                  16  /* FRF_COEFF_2R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2R_3_MASK               0xFFFF  /* FRF_COEFF_2R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2R_3_SHIFT                   0  /* FRF_COEFF_2R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2R_3_WIDTH                  16  /* FRF_COEFF_2R_3 - [15:0] */
 
 /*
  * R1733 (0x13B3) - FRF_Coefficient_2R_4
  */
-#define WM8285_FRF_COEFF_2R_4_MASK               0xFFFF  /* FRF_COEFF_2R_4 - [15:0] */
-#define WM8285_FRF_COEFF_2R_4_SHIFT                   0  /* FRF_COEFF_2R_4 - [15:0] */
-#define WM8285_FRF_COEFF_2R_4_WIDTH                  16  /* FRF_COEFF_2R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2R_4_MASK               0xFFFF  /* FRF_COEFF_2R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2R_4_SHIFT                   0  /* FRF_COEFF_2R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_2R_4_WIDTH                  16  /* FRF_COEFF_2R_4 - [15:0] */
 
 /*
  * R1734 (0x13C0) - FRF_Coefficient_3L_1
  */
-#define WM8285_FRF_COEFF_3L_1_MASK               0xFFFF  /* FRF_COEFF_3L_1 - [15:0] */
-#define WM8285_FRF_COEFF_3L_1_SHIFT                   0  /* FRF_COEFF_3L_1 - [15:0] */
-#define WM8285_FRF_COEFF_3L_1_WIDTH                  16  /* FRF_COEFF_3L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3L_1_MASK               0xFFFF  /* FRF_COEFF_3L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3L_1_SHIFT                   0  /* FRF_COEFF_3L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3L_1_WIDTH                  16  /* FRF_COEFF_3L_1 - [15:0] */
 
 /*
  * R1735 (0x13C1) - FRF_Coefficient_3L_2
  */
-#define WM8285_FRF_COEFF_3L_2_MASK               0xFFFF  /* FRF_COEFF_3L_2 - [15:0] */
-#define WM8285_FRF_COEFF_3L_2_SHIFT                   0  /* FRF_COEFF_3L_2 - [15:0] */
-#define WM8285_FRF_COEFF_3L_2_WIDTH                  16  /* FRF_COEFF_3L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3L_2_MASK               0xFFFF  /* FRF_COEFF_3L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3L_2_SHIFT                   0  /* FRF_COEFF_3L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3L_2_WIDTH                  16  /* FRF_COEFF_3L_2 - [15:0] */
 
 /*
  * R1736 (0x13C2) - FRF_Coefficient_3L_3
  */
-#define WM8285_FRF_COEFF_3L_3_MASK               0xFFFF  /* FRF_COEFF_3L_3 - [15:0] */
-#define WM8285_FRF_COEFF_3L_3_SHIFT                   0  /* FRF_COEFF_3L_3 - [15:0] */
-#define WM8285_FRF_COEFF_3L_3_WIDTH                  16  /* FRF_COEFF_3L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3L_3_MASK               0xFFFF  /* FRF_COEFF_3L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3L_3_SHIFT                   0  /* FRF_COEFF_3L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3L_3_WIDTH                  16  /* FRF_COEFF_3L_3 - [15:0] */
 
 /*
  * R1737 (0x13C3) - FRF_Coefficient_3L_4
  */
-#define WM8285_FRF_COEFF_3L_4_MASK               0xFFFF  /* FRF_COEFF_3L_4 - [15:0] */
-#define WM8285_FRF_COEFF_3L_4_SHIFT                   0  /* FRF_COEFF_3L_4 - [15:0] */
-#define WM8285_FRF_COEFF_3L_4_WIDTH                  16  /* FRF_COEFF_3L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3L_4_MASK               0xFFFF  /* FRF_COEFF_3L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3L_4_SHIFT                   0  /* FRF_COEFF_3L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3L_4_WIDTH                  16  /* FRF_COEFF_3L_4 - [15:0] */
 
 /*
  * R1738 (0x13D0) - FRF_Coefficient_3R_1
  */
-#define WM8285_FRF_COEFF_3R_1_MASK               0xFFFF  /* FRF_COEFF_3R_1 - [15:0] */
-#define WM8285_FRF_COEFF_3R_1_SHIFT                   0  /* FRF_COEFF_3R_1 - [15:0] */
-#define WM8285_FRF_COEFF_3R_1_WIDTH                  16  /* FRF_COEFF_3R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3R_1_MASK               0xFFFF  /* FRF_COEFF_3R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3R_1_SHIFT                   0  /* FRF_COEFF_3R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3R_1_WIDTH                  16  /* FRF_COEFF_3R_1 - [15:0] */
 
 /*
  * R1739 (0x13D1) - FRF_Coefficient_3R_2
  */
-#define WM8285_FRF_COEFF_3R_2_MASK               0xFFFF  /* FRF_COEFF_3R_2 - [15:0] */
-#define WM8285_FRF_COEFF_3R_2_SHIFT                   0  /* FRF_COEFF_3R_2 - [15:0] */
-#define WM8285_FRF_COEFF_3R_2_WIDTH                  16  /* FRF_COEFF_3R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3R_2_MASK               0xFFFF  /* FRF_COEFF_3R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3R_2_SHIFT                   0  /* FRF_COEFF_3R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3R_2_WIDTH                  16  /* FRF_COEFF_3R_2 - [15:0] */
 
 /*
  * R1740 (0x13D2) - FRF_Coefficient_3R_3
  */
-#define WM8285_FRF_COEFF_3R_3_MASK               0xFFFF  /* FRF_COEFF_3R_3 - [15:0] */
-#define WM8285_FRF_COEFF_3R_3_SHIFT                   0  /* FRF_COEFF_3R_3 - [15:0] */
-#define WM8285_FRF_COEFF_3R_3_WIDTH                  16  /* FRF_COEFF_3R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3R_3_MASK               0xFFFF  /* FRF_COEFF_3R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3R_3_SHIFT                   0  /* FRF_COEFF_3R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3R_3_WIDTH                  16  /* FRF_COEFF_3R_3 - [15:0] */
 
 /*
  * R1741 (0x13D3) - FRF_Coefficient_3R_4
  */
-#define WM8285_FRF_COEFF_3R_4_MASK               0xFFFF  /* FRF_COEFF_3R_4 - [15:0] */
-#define WM8285_FRF_COEFF_3R_4_SHIFT                   0  /* FRF_COEFF_3R_4 - [15:0] */
-#define WM8285_FRF_COEFF_3R_4_WIDTH                  16  /* FRF_COEFF_3R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3R_4_MASK               0xFFFF  /* FRF_COEFF_3R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3R_4_SHIFT                   0  /* FRF_COEFF_3R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_3R_4_WIDTH                  16  /* FRF_COEFF_3R_4 - [15:0] */
 
 /*
  * R1742 (0x13E0) - FRF_Coefficient_4L_1
  */
-#define WM8285_FRF_COEFF_4L_1_MASK               0xFFFF  /* FRF_COEFF_4L_1 - [15:0] */
-#define WM8285_FRF_COEFF_4L_1_SHIFT                   0  /* FRF_COEFF_4L_1 - [15:0] */
-#define WM8285_FRF_COEFF_4L_1_WIDTH                  16  /* FRF_COEFF_4L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4L_1_MASK               0xFFFF  /* FRF_COEFF_4L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4L_1_SHIFT                   0  /* FRF_COEFF_4L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4L_1_WIDTH                  16  /* FRF_COEFF_4L_1 - [15:0] */
 
 /*
  * R1743 (0x13E1) - FRF_Coefficient_4L_2
  */
-#define WM8285_FRF_COEFF_4L_2_MASK               0xFFFF  /* FRF_COEFF_4L_2 - [15:0] */
-#define WM8285_FRF_COEFF_4L_2_SHIFT                   0  /* FRF_COEFF_4L_2 - [15:0] */
-#define WM8285_FRF_COEFF_4L_2_WIDTH                  16  /* FRF_COEFF_4L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4L_2_MASK               0xFFFF  /* FRF_COEFF_4L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4L_2_SHIFT                   0  /* FRF_COEFF_4L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4L_2_WIDTH                  16  /* FRF_COEFF_4L_2 - [15:0] */
 
 /*
  * R1744 (0x13E2) - FRF_Coefficient_4L_3
  */
-#define WM8285_FRF_COEFF_4L_3_MASK               0xFFFF  /* FRF_COEFF_4L_3 - [15:0] */
-#define WM8285_FRF_COEFF_4L_3_SHIFT                   0  /* FRF_COEFF_4L_3 - [15:0] */
-#define WM8285_FRF_COEFF_4L_3_WIDTH                  16  /* FRF_COEFF_4L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4L_3_MASK               0xFFFF  /* FRF_COEFF_4L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4L_3_SHIFT                   0  /* FRF_COEFF_4L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4L_3_WIDTH                  16  /* FRF_COEFF_4L_3 - [15:0] */
 
 /*
  * R1745 (0x13E3) - FRF_Coefficient_4L_4
  */
-#define WM8285_FRF_COEFF_4L_4_MASK               0xFFFF  /* FRF_COEFF_4L_4 - [15:0] */
-#define WM8285_FRF_COEFF_4L_4_SHIFT                   0  /* FRF_COEFF_4L_4 - [15:0] */
-#define WM8285_FRF_COEFF_4L_4_WIDTH                  16  /* FRF_COEFF_4L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4L_4_MASK               0xFFFF  /* FRF_COEFF_4L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4L_4_SHIFT                   0  /* FRF_COEFF_4L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4L_4_WIDTH                  16  /* FRF_COEFF_4L_4 - [15:0] */
 
 /*
  * R1746 (0x13F0) - FRF_Coefficient_4R_1
  */
-#define WM8285_FRF_COEFF_4R_1_MASK               0xFFFF  /* FRF_COEFF_4R_1 - [15:0] */
-#define WM8285_FRF_COEFF_4R_1_SHIFT                   0  /* FRF_COEFF_4R_1 - [15:0] */
-#define WM8285_FRF_COEFF_4R_1_WIDTH                  16  /* FRF_COEFF_4R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4R_1_MASK               0xFFFF  /* FRF_COEFF_4R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4R_1_SHIFT                   0  /* FRF_COEFF_4R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4R_1_WIDTH                  16  /* FRF_COEFF_4R_1 - [15:0] */
 
 /*
  * R1747 (0x13F1) - FRF_Coefficient_4R_2
  */
-#define WM8285_FRF_COEFF_4R_2_MASK               0xFFFF  /* FRF_COEFF_4R_2 - [15:0] */
-#define WM8285_FRF_COEFF_4R_2_SHIFT                   0  /* FRF_COEFF_4R_2 - [15:0] */
-#define WM8285_FRF_COEFF_4R_2_WIDTH                  16  /* FRF_COEFF_4R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4R_2_MASK               0xFFFF  /* FRF_COEFF_4R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4R_2_SHIFT                   0  /* FRF_COEFF_4R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4R_2_WIDTH                  16  /* FRF_COEFF_4R_2 - [15:0] */
 
 /*
  * R1748 (0x13F2) - FRF_Coefficient_4R_3
  */
-#define WM8285_FRF_COEFF_4R_3_MASK               0xFFFF  /* FRF_COEFF_4R_3 - [15:0] */
-#define WM8285_FRF_COEFF_4R_3_SHIFT                   0  /* FRF_COEFF_4R_3 - [15:0] */
-#define WM8285_FRF_COEFF_4R_3_WIDTH                  16  /* FRF_COEFF_4R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4R_3_MASK               0xFFFF  /* FRF_COEFF_4R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4R_3_SHIFT                   0  /* FRF_COEFF_4R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4R_3_WIDTH                  16  /* FRF_COEFF_4R_3 - [15:0] */
 
 /*
  * R1749 (0x13F3) - FRF_Coefficient_4R_4
  */
-#define WM8285_FRF_COEFF_4R_4_MASK               0xFFFF  /* FRF_COEFF_4R_4 - [15:0] */
-#define WM8285_FRF_COEFF_4R_4_SHIFT                   0  /* FRF_COEFF_4R_4 - [15:0] */
-#define WM8285_FRF_COEFF_4R_4_WIDTH                  16  /* FRF_COEFF_4R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4R_4_MASK               0xFFFF  /* FRF_COEFF_4R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4R_4_SHIFT                   0  /* FRF_COEFF_4R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_4R_4_WIDTH                  16  /* FRF_COEFF_4R_4 - [15:0] */
 
 /*
  * R1750 (0x1400) - FRF_Coefficient_5L_1
  */
-#define WM8285_FRF_COEFF_5L_1_MASK               0xFFFF  /* FRF_COEFF_5L_1 - [15:0] */
-#define WM8285_FRF_COEFF_5L_1_SHIFT                   0  /* FRF_COEFF_5L_1 - [15:0] */
-#define WM8285_FRF_COEFF_5L_1_WIDTH                  16  /* FRF_COEFF_5L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5L_1_MASK               0xFFFF  /* FRF_COEFF_5L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5L_1_SHIFT                   0  /* FRF_COEFF_5L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5L_1_WIDTH                  16  /* FRF_COEFF_5L_1 - [15:0] */
 
 /*
  * R1751 (0x1401) - FRF_Coefficient_5L_2
  */
-#define WM8285_FRF_COEFF_5L_2_MASK               0xFFFF  /* FRF_COEFF_5L_2 - [15:0] */
-#define WM8285_FRF_COEFF_5L_2_SHIFT                   0  /* FRF_COEFF_5L_2 - [15:0] */
-#define WM8285_FRF_COEFF_5L_2_WIDTH                  16  /* FRF_COEFF_5L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5L_2_MASK               0xFFFF  /* FRF_COEFF_5L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5L_2_SHIFT                   0  /* FRF_COEFF_5L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5L_2_WIDTH                  16  /* FRF_COEFF_5L_2 - [15:0] */
 
 /*
  * R1752 (0x1402) - FRF_Coefficient_5L_3
  */
-#define WM8285_FRF_COEFF_5L_3_MASK               0xFFFF  /* FRF_COEFF_5L_3 - [15:0] */
-#define WM8285_FRF_COEFF_5L_3_SHIFT                   0  /* FRF_COEFF_5L_3 - [15:0] */
-#define WM8285_FRF_COEFF_5L_3_WIDTH                  16  /* FRF_COEFF_5L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5L_3_MASK               0xFFFF  /* FRF_COEFF_5L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5L_3_SHIFT                   0  /* FRF_COEFF_5L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5L_3_WIDTH                  16  /* FRF_COEFF_5L_3 - [15:0] */
 
 /*
  * R1753 (0x1403) - FRF_Coefficient_5L_4
  */
-#define WM8285_FRF_COEFF_5L_4_MASK               0xFFFF  /* FRF_COEFF_5L_4 - [15:0] */
-#define WM8285_FRF_COEFF_5L_4_SHIFT                   0  /* FRF_COEFF_5L_4 - [15:0] */
-#define WM8285_FRF_COEFF_5L_4_WIDTH                  16  /* FRF_COEFF_5L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5L_4_MASK               0xFFFF  /* FRF_COEFF_5L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5L_4_SHIFT                   0  /* FRF_COEFF_5L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5L_4_WIDTH                  16  /* FRF_COEFF_5L_4 - [15:0] */
 
 /*
  * R1754 (0x1410) - FRF_Coefficient_5R_1
  */
-#define WM8285_FRF_COEFF_5R_1_MASK               0xFFFF  /* FRF_COEFF_5R_1 - [15:0] */
-#define WM8285_FRF_COEFF_5R_1_SHIFT                   0  /* FRF_COEFF_5R_1 - [15:0] */
-#define WM8285_FRF_COEFF_5R_1_WIDTH                  16  /* FRF_COEFF_5R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5R_1_MASK               0xFFFF  /* FRF_COEFF_5R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5R_1_SHIFT                   0  /* FRF_COEFF_5R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5R_1_WIDTH                  16  /* FRF_COEFF_5R_1 - [15:0] */
 
 /*
  * R1755 (0x1411) - FRF_Coefficient_5R_2
  */
-#define WM8285_FRF_COEFF_5R_2_MASK               0xFFFF  /* FRF_COEFF_5R_2 - [15:0] */
-#define WM8285_FRF_COEFF_5R_2_SHIFT                   0  /* FRF_COEFF_5R_2 - [15:0] */
-#define WM8285_FRF_COEFF_5R_2_WIDTH                  16  /* FRF_COEFF_5R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5R_2_MASK               0xFFFF  /* FRF_COEFF_5R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5R_2_SHIFT                   0  /* FRF_COEFF_5R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5R_2_WIDTH                  16  /* FRF_COEFF_5R_2 - [15:0] */
 
 /*
  * R1756 (0x1412) - FRF_Coefficient_5R_3
  */
-#define WM8285_FRF_COEFF_5R_3_MASK               0xFFFF  /* FRF_COEFF_5R_3 - [15:0] */
-#define WM8285_FRF_COEFF_5R_3_SHIFT                   0  /* FRF_COEFF_5R_3 - [15:0] */
-#define WM8285_FRF_COEFF_5R_3_WIDTH                  16  /* FRF_COEFF_5R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5R_3_MASK               0xFFFF  /* FRF_COEFF_5R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5R_3_SHIFT                   0  /* FRF_COEFF_5R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5R_3_WIDTH                  16  /* FRF_COEFF_5R_3 - [15:0] */
 
 /*
  * R1757 (0x1413) - FRF_Coefficient_5R_4
  */
-#define WM8285_FRF_COEFF_5R_4_MASK               0xFFFF  /* FRF_COEFF_5R_4 - [15:0] */
-#define WM8285_FRF_COEFF_5R_4_SHIFT                   0  /* FRF_COEFF_5R_4 - [15:0] */
-#define WM8285_FRF_COEFF_5R_4_WIDTH                  16  /* FRF_COEFF_5R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5R_4_MASK               0xFFFF  /* FRF_COEFF_5R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5R_4_SHIFT                   0  /* FRF_COEFF_5R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_5R_4_WIDTH                  16  /* FRF_COEFF_5R_4 - [15:0] */
 
 /*
  * R1758 (0x1420) - FRF_Coefficient_6L_1
  */
-#define WM8285_FRF_COEFF_6L_1_MASK               0xFFFF  /* FRF_COEFF_6L_1 - [15:0] */
-#define WM8285_FRF_COEFF_6L_1_SHIFT                   0  /* FRF_COEFF_6L_1 - [15:0] */
-#define WM8285_FRF_COEFF_6L_1_WIDTH                  16  /* FRF_COEFF_6L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6L_1_MASK               0xFFFF  /* FRF_COEFF_6L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6L_1_SHIFT                   0  /* FRF_COEFF_6L_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6L_1_WIDTH                  16  /* FRF_COEFF_6L_1 - [15:0] */
 
 /*
  * R1759 (0x1421) - FRF_Coefficient_6L_2
  */
-#define WM8285_FRF_COEFF_6L_2_MASK               0xFFFF  /* FRF_COEFF_6L_2 - [15:0] */
-#define WM8285_FRF_COEFF_6L_2_SHIFT                   0  /* FRF_COEFF_6L_2 - [15:0] */
-#define WM8285_FRF_COEFF_6L_2_WIDTH                  16  /* FRF_COEFF_6L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6L_2_MASK               0xFFFF  /* FRF_COEFF_6L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6L_2_SHIFT                   0  /* FRF_COEFF_6L_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6L_2_WIDTH                  16  /* FRF_COEFF_6L_2 - [15:0] */
 
 /*
  * R1760 (0x1422) - FRF_Coefficient_6L_3
  */
-#define WM8285_FRF_COEFF_6L_3_MASK               0xFFFF  /* FRF_COEFF_6L_3 - [15:0] */
-#define WM8285_FRF_COEFF_6L_3_SHIFT                   0  /* FRF_COEFF_6L_3 - [15:0] */
-#define WM8285_FRF_COEFF_6L_3_WIDTH                  16  /* FRF_COEFF_6L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6L_3_MASK               0xFFFF  /* FRF_COEFF_6L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6L_3_SHIFT                   0  /* FRF_COEFF_6L_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6L_3_WIDTH                  16  /* FRF_COEFF_6L_3 - [15:0] */
 
 /*
  * R1761 (0x1423) - FRF_Coefficient_6L_4
  */
-#define WM8285_FRF_COEFF_6L_4_MASK               0xFFFF  /* FRF_COEFF_6L_4 - [15:0] */
-#define WM8285_FRF_COEFF_6L_4_SHIFT                   0  /* FRF_COEFF_6L_4 - [15:0] */
-#define WM8285_FRF_COEFF_6L_4_WIDTH                  16  /* FRF_COEFF_6L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6L_4_MASK               0xFFFF  /* FRF_COEFF_6L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6L_4_SHIFT                   0  /* FRF_COEFF_6L_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6L_4_WIDTH                  16  /* FRF_COEFF_6L_4 - [15:0] */
 
 /*
  * R1762 (0x1430) - FRF_Coefficient_6R_1
  */
-#define WM8285_FRF_COEFF_6R_1_MASK               0xFFFF  /* FRF_COEFF_6R_1 - [15:0] */
-#define WM8285_FRF_COEFF_6R_1_SHIFT                   0  /* FRF_COEFF_6R_1 - [15:0] */
-#define WM8285_FRF_COEFF_6R_1_WIDTH                  16  /* FRF_COEFF_6R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6R_1_MASK               0xFFFF  /* FRF_COEFF_6R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6R_1_SHIFT                   0  /* FRF_COEFF_6R_1 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6R_1_WIDTH                  16  /* FRF_COEFF_6R_1 - [15:0] */
 
 /*
  * R1763 (0x1431) - FRF_Coefficient_6R_2
  */
-#define WM8285_FRF_COEFF_6R_2_MASK               0xFFFF  /* FRF_COEFF_6R_2 - [15:0] */
-#define WM8285_FRF_COEFF_6R_2_SHIFT                   0  /* FRF_COEFF_6R_2 - [15:0] */
-#define WM8285_FRF_COEFF_6R_2_WIDTH                  16  /* FRF_COEFF_6R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6R_2_MASK               0xFFFF  /* FRF_COEFF_6R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6R_2_SHIFT                   0  /* FRF_COEFF_6R_2 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6R_2_WIDTH                  16  /* FRF_COEFF_6R_2 - [15:0] */
 
 /*
  * R1764 (0x1432) - FRF_Coefficient_6R_3
  */
-#define WM8285_FRF_COEFF_6R_3_MASK               0xFFFF  /* FRF_COEFF_6R_3 - [15:0] */
-#define WM8285_FRF_COEFF_6R_3_SHIFT                   0  /* FRF_COEFF_6R_3 - [15:0] */
-#define WM8285_FRF_COEFF_6R_3_WIDTH                  16  /* FRF_COEFF_6R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6R_3_MASK               0xFFFF  /* FRF_COEFF_6R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6R_3_SHIFT                   0  /* FRF_COEFF_6R_3 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6R_3_WIDTH                  16  /* FRF_COEFF_6R_3 - [15:0] */
 
 /*
  * R1765 (0x1433) - FRF_Coefficient_6R_4
  */
-#define WM8285_FRF_COEFF_6R_4_MASK               0xFFFF  /* FRF_COEFF_6R_4 - [15:0] */
-#define WM8285_FRF_COEFF_6R_4_SHIFT                   0  /* FRF_COEFF_6R_4 - [15:0] */
-#define WM8285_FRF_COEFF_6R_4_WIDTH                  16  /* FRF_COEFF_6R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6R_4_MASK               0xFFFF  /* FRF_COEFF_6R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6R_4_SHIFT                   0  /* FRF_COEFF_6R_4 - [15:0] */
+#define CLEARWATER_FRF_COEFF_6R_4_WIDTH                  16  /* FRF_COEFF_6R_4 - [15:0] */
 
 /*
  * R6144 (0x1800) - IRQ1 Status 1
  */
-#define WM8285_DSP_SHARED_WR_COLL_EINT1            0x8000  /* DSP_SHARED_WR_COLL_EINT1 */
-#define WM8285_DSP_SHARED_WR_COLL_EINT1_MASK       0x8000  /* DSP_SHARED_WR_COLL_EINT1 */
-#define WM8285_DSP_SHARED_WR_COLL_EINT1_SHIFT          15  /* DSP_SHARED_WR_COLL_EINT1 */
-#define WM8285_DSP_SHARED_WR_COLL_EINT1_WIDTH           1  /* DSP_SHARED_WR_COLL_EINT1 */
-#define WM8285_CTRLIF_ERR_EINT1                    0x1000  /* CTRLIF_ERR_EINT1 */
-#define WM8285_CTRLIF_ERR_EINT1_MASK               0x1000  /* CTRLIF_ERR_EINT1 */
-#define WM8285_CTRLIF_ERR_EINT1_SHIFT                  12  /* CTRLIF_ERR_EINT1 */
-#define WM8285_CTRLIF_ERR_EINT1_WIDTH                   1  /* CTRLIF_ERR_EINT1 */
-#define WM8285_IRQ_NO_CLOCK_EINT1                  0x0200  /* IRQ_NO_CLOCK_EINT1 */
-#define WM8285_IRQ_NO_CLOCK_EINT1_MASK             0x0200  /* IRQ_NO_CLOCK_EINT1 */
-#define WM8285_IRQ_NO_CLOCK_EINT1_SHIFT                 9  /* IRQ_NO_CLOCK_EINT1 */
-#define WM8285_IRQ_NO_CLOCK_EINT1_WIDTH                 1  /* IRQ_NO_CLOCK_EINT1 */
-#define WM8285_CLOCK_DETECT_EINT1                  0x0100  /* CLOCK_DETECT_EINT1 */
-#define WM8285_CLOCK_DETECT_EINT1_MASK             0x0100  /* CLOCK_DETECT_EINT1 */
-#define WM8285_CLOCK_DETECT_EINT1_SHIFT                 8  /* CLOCK_DETECT_EINT1 */
-#define WM8285_CLOCK_DETECT_EINT1_WIDTH                 1  /* CLOCK_DETECT_EINT1 */
-#define WM8285_BOOT_DONE_EINT1                     0x0080  /* BOOT_DONE_EINT1 */
-#define WM8285_BOOT_DONE_EINT1_MASK                0x0080  /* BOOT_DONE_EINT1 */
-#define WM8285_BOOT_DONE_EINT1_SHIFT                    7  /* BOOT_DONE_EINT1 */
-#define WM8285_BOOT_DONE_EINT1_WIDTH                    1  /* BOOT_DONE_EINT1 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_EINT1            0x8000  /* DSP_SHARED_WR_COLL_EINT1 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_EINT1_MASK       0x8000  /* DSP_SHARED_WR_COLL_EINT1 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_EINT1_SHIFT          15  /* DSP_SHARED_WR_COLL_EINT1 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_EINT1_WIDTH           1  /* DSP_SHARED_WR_COLL_EINT1 */
+#define CLEARWATER_CTRLIF_ERR_EINT1                    0x1000  /* CTRLIF_ERR_EINT1 */
+#define CLEARWATER_CTRLIF_ERR_EINT1_MASK               0x1000  /* CTRLIF_ERR_EINT1 */
+#define CLEARWATER_CTRLIF_ERR_EINT1_SHIFT                  12  /* CTRLIF_ERR_EINT1 */
+#define CLEARWATER_CTRLIF_ERR_EINT1_WIDTH                   1  /* CTRLIF_ERR_EINT1 */
+#define CLEARWATER_IRQ_NO_CLOCK_EINT1                  0x0200  /* IRQ_NO_CLOCK_EINT1 */
+#define CLEARWATER_IRQ_NO_CLOCK_EINT1_MASK             0x0200  /* IRQ_NO_CLOCK_EINT1 */
+#define CLEARWATER_IRQ_NO_CLOCK_EINT1_SHIFT                 9  /* IRQ_NO_CLOCK_EINT1 */
+#define CLEARWATER_IRQ_NO_CLOCK_EINT1_WIDTH                 1  /* IRQ_NO_CLOCK_EINT1 */
+#define CLEARWATER_CLOCK_DETECT_EINT1                  0x0100  /* CLOCK_DETECT_EINT1 */
+#define CLEARWATER_CLOCK_DETECT_EINT1_MASK             0x0100  /* CLOCK_DETECT_EINT1 */
+#define CLEARWATER_CLOCK_DETECT_EINT1_SHIFT                 8  /* CLOCK_DETECT_EINT1 */
+#define CLEARWATER_CLOCK_DETECT_EINT1_WIDTH                 1  /* CLOCK_DETECT_EINT1 */
+#define CLEARWATER_BOOT_DONE_EINT1                     0x0080  /* BOOT_DONE_EINT1 */
+#define CLEARWATER_BOOT_DONE_EINT1_MASK                0x0080  /* BOOT_DONE_EINT1 */
+#define CLEARWATER_BOOT_DONE_EINT1_SHIFT                    7  /* BOOT_DONE_EINT1 */
+#define CLEARWATER_BOOT_DONE_EINT1_WIDTH                    1  /* BOOT_DONE_EINT1 */
 
 /*
  * R6145 (0x1801) - IRQ1 Status 2
  */
-#define WM8285_FLL3_LOCK_EINT1                     0x0400  /* FLL3_LOCK_EINT1 */
-#define WM8285_FLL3_LOCK_EINT1_MASK                0x0400  /* FLL3_LOCK_EINT1 */
-#define WM8285_FLL3_LOCK_EINT1_SHIFT                   10  /* FLL3_LOCK_EINT1 */
-#define WM8285_FLL3_LOCK_EINT1_WIDTH                    1  /* FLL3_LOCK_EINT1 */
-#define WM8285_FLL2_LOCK_EINT1                     0x0200  /* FLL2_LOCK_EINT1 */
-#define WM8285_FLL2_LOCK_EINT1_MASK                0x0200  /* FLL2_LOCK_EINT1 */
-#define WM8285_FLL2_LOCK_EINT1_SHIFT                    9  /* FLL2_LOCK_EINT1 */
-#define WM8285_FLL2_LOCK_EINT1_WIDTH                    1  /* FLL2_LOCK_EINT1 */
-#define WM8285_FLL1_LOCK_EINT1                     0x0100  /* FLL1_LOCK_EINT1 */
-#define WM8285_FLL1_LOCK_EINT1_MASK                0x0100  /* FLL1_LOCK_EINT1 */
-#define WM8285_FLL1_LOCK_EINT1_SHIFT                    8  /* FLL1_LOCK_EINT1 */
-#define WM8285_FLL1_LOCK_EINT1_WIDTH                    1  /* FLL1_LOCK_EINT1 */
+#define CLEARWATER_FLL3_LOCK_EINT1                     0x0400  /* FLL3_LOCK_EINT1 */
+#define CLEARWATER_FLL3_LOCK_EINT1_MASK                0x0400  /* FLL3_LOCK_EINT1 */
+#define CLEARWATER_FLL3_LOCK_EINT1_SHIFT                   10  /* FLL3_LOCK_EINT1 */
+#define CLEARWATER_FLL3_LOCK_EINT1_WIDTH                    1  /* FLL3_LOCK_EINT1 */
+#define CLEARWATER_FLL2_LOCK_EINT1                     0x0200  /* FLL2_LOCK_EINT1 */
+#define CLEARWATER_FLL2_LOCK_EINT1_MASK                0x0200  /* FLL2_LOCK_EINT1 */
+#define CLEARWATER_FLL2_LOCK_EINT1_SHIFT                    9  /* FLL2_LOCK_EINT1 */
+#define CLEARWATER_FLL2_LOCK_EINT1_WIDTH                    1  /* FLL2_LOCK_EINT1 */
+#define CLEARWATER_FLL1_LOCK_EINT1                     0x0100  /* FLL1_LOCK_EINT1 */
+#define CLEARWATER_FLL1_LOCK_EINT1_MASK                0x0100  /* FLL1_LOCK_EINT1 */
+#define CLEARWATER_FLL1_LOCK_EINT1_SHIFT                    8  /* FLL1_LOCK_EINT1 */
+#define CLEARWATER_FLL1_LOCK_EINT1_WIDTH                    1  /* FLL1_LOCK_EINT1 */
 
 /*
  * R6149 (0x1805) - IRQ1 Status 6
  */
-#define WM8285_MICDET_EINT1                        0x0100  /* MICDET_EINT1 */
-#define WM8285_MICDET_EINT1_MASK                   0x0100  /* MICDET_EINT1 */
-#define WM8285_MICDET_EINT1_SHIFT                       8  /* MICDET_EINT1 */
-#define WM8285_MICDET_EINT1_WIDTH                       1  /* MICDET_EINT1 */
-#define WM8285_HPDET_EINT1                         0x0001  /* HPDET_EINT1 */
-#define WM8285_HPDET_EINT1_MASK                    0x0001  /* HPDET_EINT1 */
-#define WM8285_HPDET_EINT1_SHIFT                        0  /* HPDET_EINT1 */
-#define WM8285_HPDET_EINT1_WIDTH                        1  /* HPDET_EINT1 */
+#define CLEARWATER_MICDET_EINT1                        0x0100  /* MICDET_EINT1 */
+#define CLEARWATER_MICDET_EINT1_MASK                   0x0100  /* MICDET_EINT1 */
+#define CLEARWATER_MICDET_EINT1_SHIFT                       8  /* MICDET_EINT1 */
+#define CLEARWATER_MICDET_EINT1_WIDTH                       1  /* MICDET_EINT1 */
+#define CLEARWATER_HPDET_EINT1                         0x0001  /* HPDET_EINT1 */
+#define CLEARWATER_HPDET_EINT1_MASK                    0x0001  /* HPDET_EINT1 */
+#define CLEARWATER_HPDET_EINT1_SHIFT                        0  /* HPDET_EINT1 */
+#define CLEARWATER_HPDET_EINT1_WIDTH                        1  /* HPDET_EINT1 */
 
 /*
  * R6150 (0x1806) - IRQ1 Status 7
  */
-#define WM8285_MICD_CLAMP_FALL_EINT1               0x0020  /* MICD_CLAMP_FALL_EINT1 */
-#define WM8285_MICD_CLAMP_FALL_EINT1_MASK          0x0020  /* MICD_CLAMP_FALL_EINT1 */
-#define WM8285_MICD_CLAMP_FALL_EINT1_SHIFT              5  /* MICD_CLAMP_FALL_EINT1 */
-#define WM8285_MICD_CLAMP_FALL_EINT1_WIDTH              1  /* MICD_CLAMP_FALL_EINT1 */
-#define WM8285_MICD_CLAMP_RISE_EINT1               0x0010  /* MICD_CLAMP_RISE_EINT1 */
-#define WM8285_MICD_CLAMP_RISE_EINT1_MASK          0x0010  /* MICD_CLAMP_RISE_EINT1 */
-#define WM8285_MICD_CLAMP_RISE_EINT1_SHIFT              4  /* MICD_CLAMP_RISE_EINT1 */
-#define WM8285_MICD_CLAMP_RISE_EINT1_WIDTH              1  /* MICD_CLAMP_RISE_EINT1 */
-#define WM8285_JD2_FALL_EINT1                      0x0008  /* JD2_FALL_EINT1 */
-#define WM8285_JD2_FALL_EINT1_MASK                 0x0008  /* JD2_FALL_EINT1 */
-#define WM8285_JD2_FALL_EINT1_SHIFT                     3  /* JD2_FALL_EINT1 */
-#define WM8285_JD2_FALL_EINT1_WIDTH                     1  /* JD2_FALL_EINT1 */
-#define WM8285_JD2_RISE_EINT1                      0x0004  /* JD2_RISE_EINT1 */
-#define WM8285_JD2_RISE_EINT1_MASK                 0x0004  /* JD2_RISE_EINT1 */
-#define WM8285_JD2_RISE_EINT1_SHIFT                     2  /* JD2_RISE_EINT1 */
-#define WM8285_JD2_RISE_EINT1_WIDTH                     1  /* JD2_RISE_EINT1 */
-#define WM8285_JD1_FALL_EINT1                      0x0002  /* JD1_FALL_EINT1 */
-#define WM8285_JD1_FALL_EINT1_MASK                 0x0002  /* JD1_FALL_EINT1 */
-#define WM8285_JD1_FALL_EINT1_SHIFT                     1  /* JD1_FALL_EINT1 */
-#define WM8285_JD1_FALL_EINT1_WIDTH                     1  /* JD1_FALL_EINT1 */
-#define WM8285_JD1_RISE_EINT1                      0x0001  /* JD1_RISE_EINT1 */
-#define WM8285_JD1_RISE_EINT1_MASK                 0x0001  /* JD1_RISE_EINT1 */
-#define WM8285_JD1_RISE_EINT1_SHIFT                     0  /* JD1_RISE_EINT1 */
-#define WM8285_JD1_RISE_EINT1_WIDTH                     1  /* JD1_RISE_EINT1 */
+#define CLEARWATER_MICD_CLAMP_FALL_EINT1               0x0020  /* MICD_CLAMP_FALL_EINT1 */
+#define CLEARWATER_MICD_CLAMP_FALL_EINT1_MASK          0x0020  /* MICD_CLAMP_FALL_EINT1 */
+#define CLEARWATER_MICD_CLAMP_FALL_EINT1_SHIFT              5  /* MICD_CLAMP_FALL_EINT1 */
+#define CLEARWATER_MICD_CLAMP_FALL_EINT1_WIDTH              1  /* MICD_CLAMP_FALL_EINT1 */
+#define CLEARWATER_MICD_CLAMP_RISE_EINT1               0x0010  /* MICD_CLAMP_RISE_EINT1 */
+#define CLEARWATER_MICD_CLAMP_RISE_EINT1_MASK          0x0010  /* MICD_CLAMP_RISE_EINT1 */
+#define CLEARWATER_MICD_CLAMP_RISE_EINT1_SHIFT              4  /* MICD_CLAMP_RISE_EINT1 */
+#define CLEARWATER_MICD_CLAMP_RISE_EINT1_WIDTH              1  /* MICD_CLAMP_RISE_EINT1 */
+#define CLEARWATER_JD2_FALL_EINT1                      0x0008  /* JD2_FALL_EINT1 */
+#define CLEARWATER_JD2_FALL_EINT1_MASK                 0x0008  /* JD2_FALL_EINT1 */
+#define CLEARWATER_JD2_FALL_EINT1_SHIFT                     3  /* JD2_FALL_EINT1 */
+#define CLEARWATER_JD2_FALL_EINT1_WIDTH                     1  /* JD2_FALL_EINT1 */
+#define CLEARWATER_JD2_RISE_EINT1                      0x0004  /* JD2_RISE_EINT1 */
+#define CLEARWATER_JD2_RISE_EINT1_MASK                 0x0004  /* JD2_RISE_EINT1 */
+#define CLEARWATER_JD2_RISE_EINT1_SHIFT                     2  /* JD2_RISE_EINT1 */
+#define CLEARWATER_JD2_RISE_EINT1_WIDTH                     1  /* JD2_RISE_EINT1 */
+#define CLEARWATER_JD1_FALL_EINT1                      0x0002  /* JD1_FALL_EINT1 */
+#define CLEARWATER_JD1_FALL_EINT1_MASK                 0x0002  /* JD1_FALL_EINT1 */
+#define CLEARWATER_JD1_FALL_EINT1_SHIFT                     1  /* JD1_FALL_EINT1 */
+#define CLEARWATER_JD1_FALL_EINT1_WIDTH                     1  /* JD1_FALL_EINT1 */
+#define CLEARWATER_JD1_RISE_EINT1                      0x0001  /* JD1_RISE_EINT1 */
+#define CLEARWATER_JD1_RISE_EINT1_MASK                 0x0001  /* JD1_RISE_EINT1 */
+#define CLEARWATER_JD1_RISE_EINT1_SHIFT                     0  /* JD1_RISE_EINT1 */
+#define CLEARWATER_JD1_RISE_EINT1_WIDTH                     1  /* JD1_RISE_EINT1 */
 
 /*
  * R6152 (0x1808) - IRQ1 Status 9
  */
-#define WM8285_ASRC2_IN2_LOCK_EINT1                0x0800  /* ASRC2_IN2_LOCK_EINT1 */
-#define WM8285_ASRC2_IN2_LOCK_EINT1_MASK           0x0800  /* ASRC2_IN2_LOCK_EINT1 */
-#define WM8285_ASRC2_IN2_LOCK_EINT1_SHIFT              11  /* ASRC2_IN2_LOCK_EINT1 */
-#define WM8285_ASRC2_IN2_LOCK_EINT1_WIDTH               1  /* ASRC2_IN2_LOCK_EINT1 */
-#define WM8285_ASRC2_IN1_LOCK_EINT1                0x0400  /* ASRC2_IN1_LOCK_EINT1 */
-#define WM8285_ASRC2_IN1_LOCK_EINT1_MASK           0x0400  /* ASRC2_IN1_LOCK_EINT1 */
-#define WM8285_ASRC2_IN1_LOCK_EINT1_SHIFT              10  /* ASRC2_IN1_LOCK_EINT1 */
-#define WM8285_ASRC2_IN1_LOCK_EINT1_WIDTH               1  /* ASRC2_IN1_LOCK_EINT1 */
-#define WM8285_ASRC1_IN2_LOCK_EINT1                0x0200  /* ASRC1_IN2_LOCK_EINT1 */
-#define WM8285_ASRC1_IN2_LOCK_EINT1_MASK           0x0200  /* ASRC1_IN2_LOCK_EINT1 */
-#define WM8285_ASRC1_IN2_LOCK_EINT1_SHIFT               9  /* ASRC1_IN2_LOCK_EINT1 */
-#define WM8285_ASRC1_IN2_LOCK_EINT1_WIDTH               1  /* ASRC1_IN2_LOCK_EINT1 */
-#define WM8285_ASRC1_IN1_LOCK_EINT1                0x0100  /* ASRC1_IN1_LOCK_EINT1 */
-#define WM8285_ASRC1_IN1_LOCK_EINT1_MASK           0x0100  /* ASRC1_IN1_LOCK_EINT1 */
-#define WM8285_ASRC1_IN1_LOCK_EINT1_SHIFT               8  /* ASRC1_IN1_LOCK_EINT1 */
-#define WM8285_ASRC1_IN1_LOCK_EINT1_WIDTH               1  /* ASRC1_IN1_LOCK_EINT1 */
-#define WM8285_DRC2_SIG_DET_EINT1                  0x0002  /* DRC2_SIG_DET_EINT1 */
-#define WM8285_DRC2_SIG_DET_EINT1_MASK             0x0002  /* DRC2_SIG_DET_EINT1 */
-#define WM8285_DRC2_SIG_DET_EINT1_SHIFT                 1  /* DRC2_SIG_DET_EINT1 */
-#define WM8285_DRC2_SIG_DET_EINT1_WIDTH                 1  /* DRC2_SIG_DET_EINT1 */
-#define WM8285_DRC1_SIG_DET_EINT1                  0x0001  /* DRC1_SIG_DET_EINT1 */
-#define WM8285_DRC1_SIG_DET_EINT1_MASK             0x0001  /* DRC1_SIG_DET_EINT1 */
-#define WM8285_DRC1_SIG_DET_EINT1_SHIFT                 0  /* DRC1_SIG_DET_EINT1 */
-#define WM8285_DRC1_SIG_DET_EINT1_WIDTH                 1  /* DRC1_SIG_DET_EINT1 */
+#define CLEARWATER_ASRC2_IN2_LOCK_EINT1                0x0800  /* ASRC2_IN2_LOCK_EINT1 */
+#define CLEARWATER_ASRC2_IN2_LOCK_EINT1_MASK           0x0800  /* ASRC2_IN2_LOCK_EINT1 */
+#define CLEARWATER_ASRC2_IN2_LOCK_EINT1_SHIFT              11  /* ASRC2_IN2_LOCK_EINT1 */
+#define CLEARWATER_ASRC2_IN2_LOCK_EINT1_WIDTH               1  /* ASRC2_IN2_LOCK_EINT1 */
+#define CLEARWATER_ASRC2_IN1_LOCK_EINT1                0x0400  /* ASRC2_IN1_LOCK_EINT1 */
+#define CLEARWATER_ASRC2_IN1_LOCK_EINT1_MASK           0x0400  /* ASRC2_IN1_LOCK_EINT1 */
+#define CLEARWATER_ASRC2_IN1_LOCK_EINT1_SHIFT              10  /* ASRC2_IN1_LOCK_EINT1 */
+#define CLEARWATER_ASRC2_IN1_LOCK_EINT1_WIDTH               1  /* ASRC2_IN1_LOCK_EINT1 */
+#define CLEARWATER_ASRC1_IN2_LOCK_EINT1                0x0200  /* ASRC1_IN2_LOCK_EINT1 */
+#define CLEARWATER_ASRC1_IN2_LOCK_EINT1_MASK           0x0200  /* ASRC1_IN2_LOCK_EINT1 */
+#define CLEARWATER_ASRC1_IN2_LOCK_EINT1_SHIFT               9  /* ASRC1_IN2_LOCK_EINT1 */
+#define CLEARWATER_ASRC1_IN2_LOCK_EINT1_WIDTH               1  /* ASRC1_IN2_LOCK_EINT1 */
+#define CLEARWATER_ASRC1_IN1_LOCK_EINT1                0x0100  /* ASRC1_IN1_LOCK_EINT1 */
+#define CLEARWATER_ASRC1_IN1_LOCK_EINT1_MASK           0x0100  /* ASRC1_IN1_LOCK_EINT1 */
+#define CLEARWATER_ASRC1_IN1_LOCK_EINT1_SHIFT               8  /* ASRC1_IN1_LOCK_EINT1 */
+#define CLEARWATER_ASRC1_IN1_LOCK_EINT1_WIDTH               1  /* ASRC1_IN1_LOCK_EINT1 */
+#define CLEARWATER_DRC2_SIG_DET_EINT1                  0x0002  /* DRC2_SIG_DET_EINT1 */
+#define CLEARWATER_DRC2_SIG_DET_EINT1_MASK             0x0002  /* DRC2_SIG_DET_EINT1 */
+#define CLEARWATER_DRC2_SIG_DET_EINT1_SHIFT                 1  /* DRC2_SIG_DET_EINT1 */
+#define CLEARWATER_DRC2_SIG_DET_EINT1_WIDTH                 1  /* DRC2_SIG_DET_EINT1 */
+#define CLEARWATER_DRC1_SIG_DET_EINT1                  0x0001  /* DRC1_SIG_DET_EINT1 */
+#define CLEARWATER_DRC1_SIG_DET_EINT1_MASK             0x0001  /* DRC1_SIG_DET_EINT1 */
+#define CLEARWATER_DRC1_SIG_DET_EINT1_SHIFT                 0  /* DRC1_SIG_DET_EINT1 */
+#define CLEARWATER_DRC1_SIG_DET_EINT1_WIDTH                 1  /* DRC1_SIG_DET_EINT1 */
 
 /*
  * R6154 (0x180A) - IRQ1 Status 11
  */
-#define WM8285_DSP_IRQ16_EINT1                     0x8000  /* DSP_IRQ16_EINT1 */
-#define WM8285_DSP_IRQ16_EINT1_MASK                0x8000  /* DSP_IRQ16_EINT1 */
-#define WM8285_DSP_IRQ16_EINT1_SHIFT                   15  /* DSP_IRQ16_EINT1 */
-#define WM8285_DSP_IRQ16_EINT1_WIDTH                    1  /* DSP_IRQ16_EINT1 */
-#define WM8285_DSP_IRQ15_EINT1                     0x4000  /* DSP_IRQ15_EINT1 */
-#define WM8285_DSP_IRQ15_EINT1_MASK                0x4000  /* DSP_IRQ15_EINT1 */
-#define WM8285_DSP_IRQ15_EINT1_SHIFT                   14  /* DSP_IRQ15_EINT1 */
-#define WM8285_DSP_IRQ15_EINT1_WIDTH                    1  /* DSP_IRQ15_EINT1 */
-#define WM8285_DSP_IRQ14_EINT1                     0x2000  /* DSP_IRQ14_EINT1 */
-#define WM8285_DSP_IRQ14_EINT1_MASK                0x2000  /* DSP_IRQ14_EINT1 */
-#define WM8285_DSP_IRQ14_EINT1_SHIFT                   13  /* DSP_IRQ14_EINT1 */
-#define WM8285_DSP_IRQ14_EINT1_WIDTH                    1  /* DSP_IRQ14_EINT1 */
-#define WM8285_DSP_IRQ13_EINT1                     0x1000  /* DSP_IRQ13_EINT1 */
-#define WM8285_DSP_IRQ13_EINT1_MASK                0x1000  /* DSP_IRQ13_EINT1 */
-#define WM8285_DSP_IRQ13_EINT1_SHIFT                   12  /* DSP_IRQ13_EINT1 */
-#define WM8285_DSP_IRQ13_EINT1_WIDTH                    1  /* DSP_IRQ13_EINT1 */
-#define WM8285_DSP_IRQ12_EINT1                     0x0800  /* DSP_IRQ12_EINT1 */
-#define WM8285_DSP_IRQ12_EINT1_MASK                0x0800  /* DSP_IRQ12_EINT1 */
-#define WM8285_DSP_IRQ12_EINT1_SHIFT                   11  /* DSP_IRQ12_EINT1 */
-#define WM8285_DSP_IRQ12_EINT1_WIDTH                    1  /* DSP_IRQ12_EINT1 */
-#define WM8285_DSP_IRQ11_EINT1                     0x0400  /* DSP_IRQ11_EINT1 */
-#define WM8285_DSP_IRQ11_EINT1_MASK                0x0400  /* DSP_IRQ11_EINT1 */
-#define WM8285_DSP_IRQ11_EINT1_SHIFT                   10  /* DSP_IRQ11_EINT1 */
-#define WM8285_DSP_IRQ11_EINT1_WIDTH                    1  /* DSP_IRQ11_EINT1 */
-#define WM8285_DSP_IRQ10_EINT1                     0x0200  /* DSP_IRQ10_EINT1 */
-#define WM8285_DSP_IRQ10_EINT1_MASK                0x0200  /* DSP_IRQ10_EINT1 */
-#define WM8285_DSP_IRQ10_EINT1_SHIFT                    9  /* DSP_IRQ10_EINT1 */
-#define WM8285_DSP_IRQ10_EINT1_WIDTH                    1  /* DSP_IRQ10_EINT1 */
-#define WM8285_DSP_IRQ9_EINT1                      0x0100  /* DSP_IRQ9_EINT1 */
-#define WM8285_DSP_IRQ9_EINT1_MASK                 0x0100  /* DSP_IRQ9_EINT1 */
-#define WM8285_DSP_IRQ9_EINT1_SHIFT                     8  /* DSP_IRQ9_EINT1 */
-#define WM8285_DSP_IRQ9_EINT1_WIDTH                     1  /* DSP_IRQ9_EINT1 */
-#define WM8285_DSP_IRQ8_EINT1                      0x0080  /* DSP_IRQ8_EINT1 */
-#define WM8285_DSP_IRQ8_EINT1_MASK                 0x0080  /* DSP_IRQ8_EINT1 */
-#define WM8285_DSP_IRQ8_EINT1_SHIFT                     7  /* DSP_IRQ8_EINT1 */
-#define WM8285_DSP_IRQ8_EINT1_WIDTH                     1  /* DSP_IRQ8_EINT1 */
-#define WM8285_DSP_IRQ7_EINT1                      0x0040  /* DSP_IRQ7_EINT1 */
-#define WM8285_DSP_IRQ7_EINT1_MASK                 0x0040  /* DSP_IRQ7_EINT1 */
-#define WM8285_DSP_IRQ7_EINT1_SHIFT                     6  /* DSP_IRQ7_EINT1 */
-#define WM8285_DSP_IRQ7_EINT1_WIDTH                     1  /* DSP_IRQ7_EINT1 */
-#define WM8285_DSP_IRQ6_EINT1                      0x0020  /* DSP_IRQ6_EINT1 */
-#define WM8285_DSP_IRQ6_EINT1_MASK                 0x0020  /* DSP_IRQ6_EINT1 */
-#define WM8285_DSP_IRQ6_EINT1_SHIFT                     5  /* DSP_IRQ6_EINT1 */
-#define WM8285_DSP_IRQ6_EINT1_WIDTH                     1  /* DSP_IRQ6_EINT1 */
-#define WM8285_DSP_IRQ5_EINT1                      0x0010  /* DSP_IRQ5_EINT1 */
-#define WM8285_DSP_IRQ5_EINT1_MASK                 0x0010  /* DSP_IRQ5_EINT1 */
-#define WM8285_DSP_IRQ5_EINT1_SHIFT                     4  /* DSP_IRQ5_EINT1 */
-#define WM8285_DSP_IRQ5_EINT1_WIDTH                     1  /* DSP_IRQ5_EINT1 */
-#define WM8285_DSP_IRQ4_EINT1                      0x0008  /* DSP_IRQ4_EINT1 */
-#define WM8285_DSP_IRQ4_EINT1_MASK                 0x0008  /* DSP_IRQ4_EINT1 */
-#define WM8285_DSP_IRQ4_EINT1_SHIFT                     3  /* DSP_IRQ4_EINT1 */
-#define WM8285_DSP_IRQ4_EINT1_WIDTH                     1  /* DSP_IRQ4_EINT1 */
-#define WM8285_DSP_IRQ3_EINT1                      0x0004  /* DSP_IRQ3_EINT1 */
-#define WM8285_DSP_IRQ3_EINT1_MASK                 0x0004  /* DSP_IRQ3_EINT1 */
-#define WM8285_DSP_IRQ3_EINT1_SHIFT                     2  /* DSP_IRQ3_EINT1 */
-#define WM8285_DSP_IRQ3_EINT1_WIDTH                     1  /* DSP_IRQ3_EINT1 */
-#define WM8285_DSP_IRQ2_EINT1                      0x0002  /* DSP_IRQ2_EINT1 */
-#define WM8285_DSP_IRQ2_EINT1_MASK                 0x0002  /* DSP_IRQ2_EINT1 */
-#define WM8285_DSP_IRQ2_EINT1_SHIFT                     1  /* DSP_IRQ2_EINT1 */
-#define WM8285_DSP_IRQ2_EINT1_WIDTH                     1  /* DSP_IRQ2_EINT1 */
-#define WM8285_DSP_IRQ1_EINT1                      0x0001  /* DSP_IRQ1_EINT1 */
-#define WM8285_DSP_IRQ1_EINT1_MASK                 0x0001  /* DSP_IRQ1_EINT1 */
-#define WM8285_DSP_IRQ1_EINT1_SHIFT                     0  /* DSP_IRQ1_EINT1 */
-#define WM8285_DSP_IRQ1_EINT1_WIDTH                     1  /* DSP_IRQ1_EINT1 */
+#define CLEARWATER_DSP_IRQ16_EINT1                     0x8000  /* DSP_IRQ16_EINT1 */
+#define CLEARWATER_DSP_IRQ16_EINT1_MASK                0x8000  /* DSP_IRQ16_EINT1 */
+#define CLEARWATER_DSP_IRQ16_EINT1_SHIFT                   15  /* DSP_IRQ16_EINT1 */
+#define CLEARWATER_DSP_IRQ16_EINT1_WIDTH                    1  /* DSP_IRQ16_EINT1 */
+#define CLEARWATER_DSP_IRQ15_EINT1                     0x4000  /* DSP_IRQ15_EINT1 */
+#define CLEARWATER_DSP_IRQ15_EINT1_MASK                0x4000  /* DSP_IRQ15_EINT1 */
+#define CLEARWATER_DSP_IRQ15_EINT1_SHIFT                   14  /* DSP_IRQ15_EINT1 */
+#define CLEARWATER_DSP_IRQ15_EINT1_WIDTH                    1  /* DSP_IRQ15_EINT1 */
+#define CLEARWATER_DSP_IRQ14_EINT1                     0x2000  /* DSP_IRQ14_EINT1 */
+#define CLEARWATER_DSP_IRQ14_EINT1_MASK                0x2000  /* DSP_IRQ14_EINT1 */
+#define CLEARWATER_DSP_IRQ14_EINT1_SHIFT                   13  /* DSP_IRQ14_EINT1 */
+#define CLEARWATER_DSP_IRQ14_EINT1_WIDTH                    1  /* DSP_IRQ14_EINT1 */
+#define CLEARWATER_DSP_IRQ13_EINT1                     0x1000  /* DSP_IRQ13_EINT1 */
+#define CLEARWATER_DSP_IRQ13_EINT1_MASK                0x1000  /* DSP_IRQ13_EINT1 */
+#define CLEARWATER_DSP_IRQ13_EINT1_SHIFT                   12  /* DSP_IRQ13_EINT1 */
+#define CLEARWATER_DSP_IRQ13_EINT1_WIDTH                    1  /* DSP_IRQ13_EINT1 */
+#define CLEARWATER_DSP_IRQ12_EINT1                     0x0800  /* DSP_IRQ12_EINT1 */
+#define CLEARWATER_DSP_IRQ12_EINT1_MASK                0x0800  /* DSP_IRQ12_EINT1 */
+#define CLEARWATER_DSP_IRQ12_EINT1_SHIFT                   11  /* DSP_IRQ12_EINT1 */
+#define CLEARWATER_DSP_IRQ12_EINT1_WIDTH                    1  /* DSP_IRQ12_EINT1 */
+#define CLEARWATER_DSP_IRQ11_EINT1                     0x0400  /* DSP_IRQ11_EINT1 */
+#define CLEARWATER_DSP_IRQ11_EINT1_MASK                0x0400  /* DSP_IRQ11_EINT1 */
+#define CLEARWATER_DSP_IRQ11_EINT1_SHIFT                   10  /* DSP_IRQ11_EINT1 */
+#define CLEARWATER_DSP_IRQ11_EINT1_WIDTH                    1  /* DSP_IRQ11_EINT1 */
+#define CLEARWATER_DSP_IRQ10_EINT1                     0x0200  /* DSP_IRQ10_EINT1 */
+#define CLEARWATER_DSP_IRQ10_EINT1_MASK                0x0200  /* DSP_IRQ10_EINT1 */
+#define CLEARWATER_DSP_IRQ10_EINT1_SHIFT                    9  /* DSP_IRQ10_EINT1 */
+#define CLEARWATER_DSP_IRQ10_EINT1_WIDTH                    1  /* DSP_IRQ10_EINT1 */
+#define CLEARWATER_DSP_IRQ9_EINT1                      0x0100  /* DSP_IRQ9_EINT1 */
+#define CLEARWATER_DSP_IRQ9_EINT1_MASK                 0x0100  /* DSP_IRQ9_EINT1 */
+#define CLEARWATER_DSP_IRQ9_EINT1_SHIFT                     8  /* DSP_IRQ9_EINT1 */
+#define CLEARWATER_DSP_IRQ9_EINT1_WIDTH                     1  /* DSP_IRQ9_EINT1 */
+#define CLEARWATER_DSP_IRQ8_EINT1                      0x0080  /* DSP_IRQ8_EINT1 */
+#define CLEARWATER_DSP_IRQ8_EINT1_MASK                 0x0080  /* DSP_IRQ8_EINT1 */
+#define CLEARWATER_DSP_IRQ8_EINT1_SHIFT                     7  /* DSP_IRQ8_EINT1 */
+#define CLEARWATER_DSP_IRQ8_EINT1_WIDTH                     1  /* DSP_IRQ8_EINT1 */
+#define CLEARWATER_DSP_IRQ7_EINT1                      0x0040  /* DSP_IRQ7_EINT1 */
+#define CLEARWATER_DSP_IRQ7_EINT1_MASK                 0x0040  /* DSP_IRQ7_EINT1 */
+#define CLEARWATER_DSP_IRQ7_EINT1_SHIFT                     6  /* DSP_IRQ7_EINT1 */
+#define CLEARWATER_DSP_IRQ7_EINT1_WIDTH                     1  /* DSP_IRQ7_EINT1 */
+#define CLEARWATER_DSP_IRQ6_EINT1                      0x0020  /* DSP_IRQ6_EINT1 */
+#define CLEARWATER_DSP_IRQ6_EINT1_MASK                 0x0020  /* DSP_IRQ6_EINT1 */
+#define CLEARWATER_DSP_IRQ6_EINT1_SHIFT                     5  /* DSP_IRQ6_EINT1 */
+#define CLEARWATER_DSP_IRQ6_EINT1_WIDTH                     1  /* DSP_IRQ6_EINT1 */
+#define CLEARWATER_DSP_IRQ5_EINT1                      0x0010  /* DSP_IRQ5_EINT1 */
+#define CLEARWATER_DSP_IRQ5_EINT1_MASK                 0x0010  /* DSP_IRQ5_EINT1 */
+#define CLEARWATER_DSP_IRQ5_EINT1_SHIFT                     4  /* DSP_IRQ5_EINT1 */
+#define CLEARWATER_DSP_IRQ5_EINT1_WIDTH                     1  /* DSP_IRQ5_EINT1 */
+#define CLEARWATER_DSP_IRQ4_EINT1                      0x0008  /* DSP_IRQ4_EINT1 */
+#define CLEARWATER_DSP_IRQ4_EINT1_MASK                 0x0008  /* DSP_IRQ4_EINT1 */
+#define CLEARWATER_DSP_IRQ4_EINT1_SHIFT                     3  /* DSP_IRQ4_EINT1 */
+#define CLEARWATER_DSP_IRQ4_EINT1_WIDTH                     1  /* DSP_IRQ4_EINT1 */
+#define CLEARWATER_DSP_IRQ3_EINT1                      0x0004  /* DSP_IRQ3_EINT1 */
+#define CLEARWATER_DSP_IRQ3_EINT1_MASK                 0x0004  /* DSP_IRQ3_EINT1 */
+#define CLEARWATER_DSP_IRQ3_EINT1_SHIFT                     2  /* DSP_IRQ3_EINT1 */
+#define CLEARWATER_DSP_IRQ3_EINT1_WIDTH                     1  /* DSP_IRQ3_EINT1 */
+#define CLEARWATER_DSP_IRQ2_EINT1                      0x0002  /* DSP_IRQ2_EINT1 */
+#define CLEARWATER_DSP_IRQ2_EINT1_MASK                 0x0002  /* DSP_IRQ2_EINT1 */
+#define CLEARWATER_DSP_IRQ2_EINT1_SHIFT                     1  /* DSP_IRQ2_EINT1 */
+#define CLEARWATER_DSP_IRQ2_EINT1_WIDTH                     1  /* DSP_IRQ2_EINT1 */
+#define CLEARWATER_DSP_IRQ1_EINT1                      0x0001  /* DSP_IRQ1_EINT1 */
+#define CLEARWATER_DSP_IRQ1_EINT1_MASK                 0x0001  /* DSP_IRQ1_EINT1 */
+#define CLEARWATER_DSP_IRQ1_EINT1_SHIFT                     0  /* DSP_IRQ1_EINT1 */
+#define CLEARWATER_DSP_IRQ1_EINT1_WIDTH                     1  /* DSP_IRQ1_EINT1 */
 
 /*
  * R6155 (0x180B) - IRQ1 Status 12
  */
-#define WM8285_SPKOUTR_SC_EINT1                    0x0080  /* SPKOUTR_SC_EINT1 */
-#define WM8285_SPKOUTR_SC_EINT1_MASK               0x0080  /* SPKOUTR_SC_EINT1 */
-#define WM8285_SPKOUTR_SC_EINT1_SHIFT                   7  /* SPKOUTR_SC_EINT1 */
-#define WM8285_SPKOUTR_SC_EINT1_WIDTH                   1  /* SPKOUTR_SC_EINT1 */
-#define WM8285_SPKOUTL_SC_EINT1                    0x0040  /* SPKOUTL_SC_EINT1 */
-#define WM8285_SPKOUTL_SC_EINT1_MASK               0x0040  /* SPKOUTL_SC_EINT1 */
-#define WM8285_SPKOUTL_SC_EINT1_SHIFT                   6  /* SPKOUTL_SC_EINT1 */
-#define WM8285_SPKOUTL_SC_EINT1_WIDTH                   1  /* SPKOUTL_SC_EINT1 */
-#define WM8285_HP3R_SC_EINT1                       0x0020  /* HP3R_SC_EINT1 */
-#define WM8285_HP3R_SC_EINT1_MASK                  0x0020  /* HP3R_SC_EINT1 */
-#define WM8285_HP3R_SC_EINT1_SHIFT                      5  /* HP3R_SC_EINT1 */
-#define WM8285_HP3R_SC_EINT1_WIDTH                      1  /* HP3R_SC_EINT1 */
-#define WM8285_HP3L_SC_EINT1                       0x0010  /* HP3L_SC_EINT1 */
-#define WM8285_HP3L_SC_EINT1_MASK                  0x0010  /* HP3L_SC_EINT1 */
-#define WM8285_HP3L_SC_EINT1_SHIFT                      4  /* HP3L_SC_EINT1 */
-#define WM8285_HP3L_SC_EINT1_WIDTH                      1  /* HP3L_SC_EINT1 */
-#define WM8285_HP2R_SC_EINT1                       0x0008  /* HP2R_SC_EINT1 */
-#define WM8285_HP2R_SC_EINT1_MASK                  0x0008  /* HP2R_SC_EINT1 */
-#define WM8285_HP2R_SC_EINT1_SHIFT                      3  /* HP2R_SC_EINT1 */
-#define WM8285_HP2R_SC_EINT1_WIDTH                      1  /* HP2R_SC_EINT1 */
-#define WM8285_HP2L_SC_EINT1                       0x0004  /* HP2L_SC_EINT1 */
-#define WM8285_HP2L_SC_EINT1_MASK                  0x0004  /* HP2L_SC_EINT1 */
-#define WM8285_HP2L_SC_EINT1_SHIFT                      2  /* HP2L_SC_EINT1 */
-#define WM8285_HP2L_SC_EINT1_WIDTH                      1  /* HP2L_SC_EINT1 */
-#define WM8285_HP1R_SC_EINT1                       0x0002  /* HP1R_SC_EINT1 */
-#define WM8285_HP1R_SC_EINT1_MASK                  0x0002  /* HP1R_SC_EINT1 */
-#define WM8285_HP1R_SC_EINT1_SHIFT                      1  /* HP1R_SC_EINT1 */
-#define WM8285_HP1R_SC_EINT1_WIDTH                      1  /* HP1R_SC_EINT1 */
-#define WM8285_HP1L_SC_EINT1                       0x0001  /* HP1L_SC_EINT1 */
-#define WM8285_HP1L_SC_EINT1_MASK                  0x0001  /* HP1L_SC_EINT1 */
-#define WM8285_HP1L_SC_EINT1_SHIFT                      0  /* HP1L_SC_EINT1 */
-#define WM8285_HP1L_SC_EINT1_WIDTH                      1  /* HP1L_SC_EINT1 */
+#define CLEARWATER_SPKOUTR_SC_EINT1                    0x0080  /* SPKOUTR_SC_EINT1 */
+#define CLEARWATER_SPKOUTR_SC_EINT1_MASK               0x0080  /* SPKOUTR_SC_EINT1 */
+#define CLEARWATER_SPKOUTR_SC_EINT1_SHIFT                   7  /* SPKOUTR_SC_EINT1 */
+#define CLEARWATER_SPKOUTR_SC_EINT1_WIDTH                   1  /* SPKOUTR_SC_EINT1 */
+#define CLEARWATER_SPKOUTL_SC_EINT1                    0x0040  /* SPKOUTL_SC_EINT1 */
+#define CLEARWATER_SPKOUTL_SC_EINT1_MASK               0x0040  /* SPKOUTL_SC_EINT1 */
+#define CLEARWATER_SPKOUTL_SC_EINT1_SHIFT                   6  /* SPKOUTL_SC_EINT1 */
+#define CLEARWATER_SPKOUTL_SC_EINT1_WIDTH                   1  /* SPKOUTL_SC_EINT1 */
+#define CLEARWATER_HP3R_SC_EINT1                       0x0020  /* HP3R_SC_EINT1 */
+#define CLEARWATER_HP3R_SC_EINT1_MASK                  0x0020  /* HP3R_SC_EINT1 */
+#define CLEARWATER_HP3R_SC_EINT1_SHIFT                      5  /* HP3R_SC_EINT1 */
+#define CLEARWATER_HP3R_SC_EINT1_WIDTH                      1  /* HP3R_SC_EINT1 */
+#define CLEARWATER_HP3L_SC_EINT1                       0x0010  /* HP3L_SC_EINT1 */
+#define CLEARWATER_HP3L_SC_EINT1_MASK                  0x0010  /* HP3L_SC_EINT1 */
+#define CLEARWATER_HP3L_SC_EINT1_SHIFT                      4  /* HP3L_SC_EINT1 */
+#define CLEARWATER_HP3L_SC_EINT1_WIDTH                      1  /* HP3L_SC_EINT1 */
+#define CLEARWATER_HP2R_SC_EINT1                       0x0008  /* HP2R_SC_EINT1 */
+#define CLEARWATER_HP2R_SC_EINT1_MASK                  0x0008  /* HP2R_SC_EINT1 */
+#define CLEARWATER_HP2R_SC_EINT1_SHIFT                      3  /* HP2R_SC_EINT1 */
+#define CLEARWATER_HP2R_SC_EINT1_WIDTH                      1  /* HP2R_SC_EINT1 */
+#define CLEARWATER_HP2L_SC_EINT1                       0x0004  /* HP2L_SC_EINT1 */
+#define CLEARWATER_HP2L_SC_EINT1_MASK                  0x0004  /* HP2L_SC_EINT1 */
+#define CLEARWATER_HP2L_SC_EINT1_SHIFT                      2  /* HP2L_SC_EINT1 */
+#define CLEARWATER_HP2L_SC_EINT1_WIDTH                      1  /* HP2L_SC_EINT1 */
+#define CLEARWATER_HP1R_SC_EINT1                       0x0002  /* HP1R_SC_EINT1 */
+#define CLEARWATER_HP1R_SC_EINT1_MASK                  0x0002  /* HP1R_SC_EINT1 */
+#define CLEARWATER_HP1R_SC_EINT1_SHIFT                      1  /* HP1R_SC_EINT1 */
+#define CLEARWATER_HP1R_SC_EINT1_WIDTH                      1  /* HP1R_SC_EINT1 */
+#define CLEARWATER_HP1L_SC_EINT1                       0x0001  /* HP1L_SC_EINT1 */
+#define CLEARWATER_HP1L_SC_EINT1_MASK                  0x0001  /* HP1L_SC_EINT1 */
+#define CLEARWATER_HP1L_SC_EINT1_SHIFT                      0  /* HP1L_SC_EINT1 */
+#define CLEARWATER_HP1L_SC_EINT1_WIDTH                      1  /* HP1L_SC_EINT1 */
 
 /*
  * R6156 (0x180C) - IRQ1 Status 13
  */
-#define WM8285_SPKOUTR_ENABLE_DONE_EINT1           0x0080  /* SPKOUTR_ENABLE_DONE_EINT1 */
-#define WM8285_SPKOUTR_ENABLE_DONE_EINT1_MASK      0x0080  /* SPKOUTR_ENABLE_DONE_EINT1 */
-#define WM8285_SPKOUTR_ENABLE_DONE_EINT1_SHIFT          7  /* SPKOUTR_ENABLE_DONE_EINT1 */
-#define WM8285_SPKOUTR_ENABLE_DONE_EINT1_WIDTH          1  /* SPKOUTR_ENABLE_DONE_EINT1 */
-#define WM8285_SPKOUTL_ENABLE_DONE_EINT1           0x0040  /* SPKOUTL_ENABLE_DONE_EINT1 */
-#define WM8285_SPKOUTL_ENABLE_DONE_EINT1_MASK      0x0040  /* SPKOUTL_ENABLE_DONE_EINT1 */
-#define WM8285_SPKOUTL_ENABLE_DONE_EINT1_SHIFT          6  /* SPKOUTL_ENABLE_DONE_EINT1 */
-#define WM8285_SPKOUTL_ENABLE_DONE_EINT1_WIDTH          1  /* SPKOUTL_ENABLE_DONE_EINT1 */
-#define WM8285_HP3R_ENABLE_DONE_EINT1              0x0020  /* HP3R_ENABLE_DONE_EINT1 */
-#define WM8285_HP3R_ENABLE_DONE_EINT1_MASK         0x0020  /* HP3R_ENABLE_DONE_EINT1 */
-#define WM8285_HP3R_ENABLE_DONE_EINT1_SHIFT             5  /* HP3R_ENABLE_DONE_EINT1 */
-#define WM8285_HP3R_ENABLE_DONE_EINT1_WIDTH             1  /* HP3R_ENABLE_DONE_EINT1 */
-#define WM8285_HP3L_ENABLE_DONE_EINT1              0x0010  /* HP3L_ENABLE_DONE_EINT1 */
-#define WM8285_HP3L_ENABLE_DONE_EINT1_MASK         0x0010  /* HP3L_ENABLE_DONE_EINT1 */
-#define WM8285_HP3L_ENABLE_DONE_EINT1_SHIFT             4  /* HP3L_ENABLE_DONE_EINT1 */
-#define WM8285_HP3L_ENABLE_DONE_EINT1_WIDTH             1  /* HP3L_ENABLE_DONE_EINT1 */
-#define WM8285_HP2R_ENABLE_DONE_EINT1              0x0008  /* HP2R_ENABLE_DONE_EINT1 */
-#define WM8285_HP2R_ENABLE_DONE_EINT1_MASK         0x0008  /* HP2R_ENABLE_DONE_EINT1 */
-#define WM8285_HP2R_ENABLE_DONE_EINT1_SHIFT             3  /* HP2R_ENABLE_DONE_EINT1 */
-#define WM8285_HP2R_ENABLE_DONE_EINT1_WIDTH             1  /* HP2R_ENABLE_DONE_EINT1 */
-#define WM8285_HP2L_ENABLE_DONE_EINT1              0x0004  /* HP2L_ENABLE_DONE_EINT1 */
-#define WM8285_HP2L_ENABLE_DONE_EINT1_MASK         0x0004  /* HP2L_ENABLE_DONE_EINT1 */
-#define WM8285_HP2L_ENABLE_DONE_EINT1_SHIFT             2  /* HP2L_ENABLE_DONE_EINT1 */
-#define WM8285_HP2L_ENABLE_DONE_EINT1_WIDTH             1  /* HP2L_ENABLE_DONE_EINT1 */
-#define WM8285_HP1R_ENABLE_DONE_EINT1              0x0002  /* HP1R_ENABLE_DONE_EINT1 */
-#define WM8285_HP1R_ENABLE_DONE_EINT1_MASK         0x0002  /* HP1R_ENABLE_DONE_EINT1 */
-#define WM8285_HP1R_ENABLE_DONE_EINT1_SHIFT             1  /* HP1R_ENABLE_DONE_EINT1 */
-#define WM8285_HP1R_ENABLE_DONE_EINT1_WIDTH             1  /* HP1R_ENABLE_DONE_EINT1 */
-#define WM8285_HP1L_ENABLE_DONE_EINT1              0x0001  /* HP1L_ENABLE_DONE_EINT1 */
-#define WM8285_HP1L_ENABLE_DONE_EINT1_MASK         0x0001  /* HP1L_ENABLE_DONE_EINT1 */
-#define WM8285_HP1L_ENABLE_DONE_EINT1_SHIFT             0  /* HP1L_ENABLE_DONE_EINT1 */
-#define WM8285_HP1L_ENABLE_DONE_EINT1_WIDTH             1  /* HP1L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_EINT1           0x0080  /* SPKOUTR_ENABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_EINT1_MASK      0x0080  /* SPKOUTR_ENABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_EINT1_SHIFT          7  /* SPKOUTR_ENABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_EINT1_WIDTH          1  /* SPKOUTR_ENABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_EINT1           0x0040  /* SPKOUTL_ENABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_EINT1_MASK      0x0040  /* SPKOUTL_ENABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_EINT1_SHIFT          6  /* SPKOUTL_ENABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_EINT1_WIDTH          1  /* SPKOUTL_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP3R_ENABLE_DONE_EINT1              0x0020  /* HP3R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP3R_ENABLE_DONE_EINT1_MASK         0x0020  /* HP3R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP3R_ENABLE_DONE_EINT1_SHIFT             5  /* HP3R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP3R_ENABLE_DONE_EINT1_WIDTH             1  /* HP3R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP3L_ENABLE_DONE_EINT1              0x0010  /* HP3L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP3L_ENABLE_DONE_EINT1_MASK         0x0010  /* HP3L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP3L_ENABLE_DONE_EINT1_SHIFT             4  /* HP3L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP3L_ENABLE_DONE_EINT1_WIDTH             1  /* HP3L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP2R_ENABLE_DONE_EINT1              0x0008  /* HP2R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP2R_ENABLE_DONE_EINT1_MASK         0x0008  /* HP2R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP2R_ENABLE_DONE_EINT1_SHIFT             3  /* HP2R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP2R_ENABLE_DONE_EINT1_WIDTH             1  /* HP2R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP2L_ENABLE_DONE_EINT1              0x0004  /* HP2L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP2L_ENABLE_DONE_EINT1_MASK         0x0004  /* HP2L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP2L_ENABLE_DONE_EINT1_SHIFT             2  /* HP2L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP2L_ENABLE_DONE_EINT1_WIDTH             1  /* HP2L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP1R_ENABLE_DONE_EINT1              0x0002  /* HP1R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP1R_ENABLE_DONE_EINT1_MASK         0x0002  /* HP1R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP1R_ENABLE_DONE_EINT1_SHIFT             1  /* HP1R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP1R_ENABLE_DONE_EINT1_WIDTH             1  /* HP1R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP1L_ENABLE_DONE_EINT1              0x0001  /* HP1L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP1L_ENABLE_DONE_EINT1_MASK         0x0001  /* HP1L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP1L_ENABLE_DONE_EINT1_SHIFT             0  /* HP1L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_HP1L_ENABLE_DONE_EINT1_WIDTH             1  /* HP1L_ENABLE_DONE_EINT1 */
 
 /*
  * R6157 (0x180D) - IRQ1 Status 14
  */
-#define WM8285_SPKOUTR_DISABLE_DONE_EINT1          0x0080  /* SPKOUTR_DISABLE_DONE_EINT1 */
-#define WM8285_SPKOUTR_DISABLE_DONE_EINT1_MASK     0x0080  /* SPKOUTR_DISABLE_DONE_EINT1 */
-#define WM8285_SPKOUTR_DISABLE_DONE_EINT1_SHIFT         7  /* SPKOUTR_DISABLE_DONE_EINT1 */
-#define WM8285_SPKOUTR_DISABLE_DONE_EINT1_WIDTH         1  /* SPKOUTR_DISABLE_DONE_EINT1 */
-#define WM8285_SPKOUTL_DISABLE_DONE_EINT1          0x0040  /* SPKOUTL_DISABLE_DONE_EINT1 */
-#define WM8285_SPKOUTL_DISABLE_DONE_EINT1_MASK     0x0040  /* SPKOUTL_DISABLE_DONE_EINT1 */
-#define WM8285_SPKOUTL_DISABLE_DONE_EINT1_SHIFT         6  /* SPKOUTL_DISABLE_DONE_EINT1 */
-#define WM8285_SPKOUTL_DISABLE_DONE_EINT1_WIDTH         1  /* SPKOUTL_DISABLE_DONE_EINT1 */
-#define WM8285_HP3R_DISABLE_DONE_EINT1             0x0020  /* HP3R_DISABLE_DONE_EINT1 */
-#define WM8285_HP3R_DISABLE_DONE_EINT1_MASK        0x0020  /* HP3R_DISABLE_DONE_EINT1 */
-#define WM8285_HP3R_DISABLE_DONE_EINT1_SHIFT            5  /* HP3R_DISABLE_DONE_EINT1 */
-#define WM8285_HP3R_DISABLE_DONE_EINT1_WIDTH            1  /* HP3R_DISABLE_DONE_EINT1 */
-#define WM8285_HP3L_DISABLE_DONE_EINT1             0x0010  /* HP3L_DISABLE_DONE_EINT1 */
-#define WM8285_HP3L_DISABLE_DONE_EINT1_MASK        0x0010  /* HP3L_DISABLE_DONE_EINT1 */
-#define WM8285_HP3L_DISABLE_DONE_EINT1_SHIFT            4  /* HP3L_DISABLE_DONE_EINT1 */
-#define WM8285_HP3L_DISABLE_DONE_EINT1_WIDTH            1  /* HP3L_DISABLE_DONE_EINT1 */
-#define WM8285_HP2R_DISABLE_DONE_EINT1             0x0008  /* HP2R_DISABLE_DONE_EINT1 */
-#define WM8285_HP2R_DISABLE_DONE_EINT1_MASK        0x0008  /* HP2R_DISABLE_DONE_EINT1 */
-#define WM8285_HP2R_DISABLE_DONE_EINT1_SHIFT            3  /* HP2R_DISABLE_DONE_EINT1 */
-#define WM8285_HP2R_DISABLE_DONE_EINT1_WIDTH            1  /* HP2R_DISABLE_DONE_EINT1 */
-#define WM8285_HP2L_DISABLE_DONE_EINT1             0x0004  /* HP2L_DISABLE_DONE_EINT1 */
-#define WM8285_HP2L_DISABLE_DONE_EINT1_MASK        0x0004  /* HP2L_DISABLE_DONE_EINT1 */
-#define WM8285_HP2L_DISABLE_DONE_EINT1_SHIFT            2  /* HP2L_DISABLE_DONE_EINT1 */
-#define WM8285_HP2L_DISABLE_DONE_EINT1_WIDTH            1  /* HP2L_DISABLE_DONE_EINT1 */
-#define WM8285_HP1R_DISABLE_DONE_EINT1             0x0002  /* HP1R_DISABLE_DONE_EINT1 */
-#define WM8285_HP1R_DISABLE_DONE_EINT1_MASK         0x0002  /* HP1R_DISABLE_DONE_EINT1 */
-#define WM8285_HP1R_DISABLE_DONE_EINT1_SHIFT            1  /* HP1R_DISABLE_DONE_EINT1 */
-#define WM8285_HP1R_DISABLE_DONE_EINT1_WIDTH            1  /* HP1R_DISABLE_DONE_EINT1 */
-#define WM8285_HP1L_DISABLE_DONE_EINT1             0x0001  /* HP1L_DISABLE_DONE_EINT1 */
-#define WM8285_HP1L_DISABLE_DONE_EINT1_MASK        0x0001  /* HP1L_DISABLE_DONE_EINT1 */
-#define WM8285_HP1L_DISABLE_DONE_EINT1_SHIFT            0  /* HP1L_DISABLE_DONE_EINT1 */
-#define WM8285_HP1L_DISABLE_DONE_EINT1_WIDTH            1  /* HP1L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_EINT1          0x0080  /* SPKOUTR_DISABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_EINT1_MASK     0x0080  /* SPKOUTR_DISABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_EINT1_SHIFT         7  /* SPKOUTR_DISABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_EINT1_WIDTH         1  /* SPKOUTR_DISABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_EINT1          0x0040  /* SPKOUTL_DISABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_EINT1_MASK     0x0040  /* SPKOUTL_DISABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_EINT1_SHIFT         6  /* SPKOUTL_DISABLE_DONE_EINT1 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_EINT1_WIDTH         1  /* SPKOUTL_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP3R_DISABLE_DONE_EINT1             0x0020  /* HP3R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP3R_DISABLE_DONE_EINT1_MASK        0x0020  /* HP3R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP3R_DISABLE_DONE_EINT1_SHIFT            5  /* HP3R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP3R_DISABLE_DONE_EINT1_WIDTH            1  /* HP3R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP3L_DISABLE_DONE_EINT1             0x0010  /* HP3L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP3L_DISABLE_DONE_EINT1_MASK        0x0010  /* HP3L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP3L_DISABLE_DONE_EINT1_SHIFT            4  /* HP3L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP3L_DISABLE_DONE_EINT1_WIDTH            1  /* HP3L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP2R_DISABLE_DONE_EINT1             0x0008  /* HP2R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP2R_DISABLE_DONE_EINT1_MASK        0x0008  /* HP2R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP2R_DISABLE_DONE_EINT1_SHIFT            3  /* HP2R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP2R_DISABLE_DONE_EINT1_WIDTH            1  /* HP2R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP2L_DISABLE_DONE_EINT1             0x0004  /* HP2L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP2L_DISABLE_DONE_EINT1_MASK        0x0004  /* HP2L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP2L_DISABLE_DONE_EINT1_SHIFT            2  /* HP2L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP2L_DISABLE_DONE_EINT1_WIDTH            1  /* HP2L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP1R_DISABLE_DONE_EINT1             0x0002  /* HP1R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP1R_DISABLE_DONE_EINT1_MASK         0x0002  /* HP1R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP1R_DISABLE_DONE_EINT1_SHIFT            1  /* HP1R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP1R_DISABLE_DONE_EINT1_WIDTH            1  /* HP1R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP1L_DISABLE_DONE_EINT1             0x0001  /* HP1L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP1L_DISABLE_DONE_EINT1_MASK        0x0001  /* HP1L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP1L_DISABLE_DONE_EINT1_SHIFT            0  /* HP1L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_HP1L_DISABLE_DONE_EINT1_WIDTH            1  /* HP1L_DISABLE_DONE_EINT1 */
 
 /*
  * R6158 (0x180E) - IRQ1 Status 15
  */
-#define WM8285_SPK_OVERHEAT_WARN_EINT1             0x0004  /* SPK_OVERHEAT_WARN_EINT1 */
-#define WM8285_SPK_OVERHEAT_WARN_EINT1_MASK        0x0004  /* SPK_OVERHEAT_WARN_EINT1 */
-#define WM8285_SPK_OVERHEAT_WARN_EINT1_SHIFT            2  /* SPK_OVERHEAT_WARN_EINT1 */
-#define WM8285_SPK_OVERHEAT_WARN_EINT1_WIDTH            1  /* SPK_OVERHEAT_WARN_EINT1 */
-#define WM8285_SPK_OVERHEAT_EINT1                  0x0002  /* SPK_OVERHEAT_EINT1 */
-#define WM8285_SPK_OVERHEAT_EINT1_MASK             0x0002  /* SPK_OVERHEAT_EINT1 */
-#define WM8285_SPK_OVERHEAT_EINT1_SHIFT                 1  /* SPK_OVERHEAT_EINT1 */
-#define WM8285_SPK_OVERHEAT_EINT1_WIDTH                 1  /* SPK_OVERHEAT_EINT1 */
-#define WM8285_SPK_SHUTDOWN_EINT1                  0x0001  /* SPK_SHUTDOWN_EINT1 */
-#define WM8285_SPK_SHUTDOWN_EINT1_MASK             0x0001  /* SPK_SHUTDOWN_EINT1 */
-#define WM8285_SPK_SHUTDOWN_EINT1_SHIFT                 0  /* SPK_SHUTDOWN_EINT1 */
-#define WM8285_SPK_SHUTDOWN_EINT1_WIDTH                 1  /* SPK_SHUTDOWN_EINT1 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_EINT1             0x0004  /* SPK_OVERHEAT_WARN_EINT1 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_EINT1_MASK        0x0004  /* SPK_OVERHEAT_WARN_EINT1 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_EINT1_SHIFT            2  /* SPK_OVERHEAT_WARN_EINT1 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_EINT1_WIDTH            1  /* SPK_OVERHEAT_WARN_EINT1 */
+#define CLEARWATER_SPK_OVERHEAT_EINT1                  0x0002  /* SPK_OVERHEAT_EINT1 */
+#define CLEARWATER_SPK_OVERHEAT_EINT1_MASK             0x0002  /* SPK_OVERHEAT_EINT1 */
+#define CLEARWATER_SPK_OVERHEAT_EINT1_SHIFT                 1  /* SPK_OVERHEAT_EINT1 */
+#define CLEARWATER_SPK_OVERHEAT_EINT1_WIDTH                 1  /* SPK_OVERHEAT_EINT1 */
+#define CLEARWATER_SPK_SHUTDOWN_EINT1                  0x0001  /* SPK_SHUTDOWN_EINT1 */
+#define CLEARWATER_SPK_SHUTDOWN_EINT1_MASK             0x0001  /* SPK_SHUTDOWN_EINT1 */
+#define CLEARWATER_SPK_SHUTDOWN_EINT1_SHIFT                 0  /* SPK_SHUTDOWN_EINT1 */
+#define CLEARWATER_SPK_SHUTDOWN_EINT1_WIDTH                 1  /* SPK_SHUTDOWN_EINT1 */
 
 /*
  * R6208 (0x1840) - IRQ1 Mask 1
  */
-#define WM8285_IM_DSP_SHARED_WR_COLL_EINT1         0x8000  /* IM_DSP_SHARED_WR_COLL_EINT1 */
-#define WM8285_IM_DSP_SHARED_WR_COLL_EINT1_MASK    0x8000  /* IM_DSP_SHARED_WR_COLL_EINT1 */
-#define WM8285_IM_DSP_SHARED_WR_COLL_EINT1_SHIFT       15  /* IM_DSP_SHARED_WR_COLL_EINT1 */
-#define WM8285_IM_DSP_SHARED_WR_COLL_EINT1_WIDTH        1  /* IM_DSP_SHARED_WR_COLL_EINT1 */
-#define WM8285_IM_CTRLIF_ERR_EINT1                 0x1000  /* IM_CTRLIF_ERR_EINT1 */
-#define WM8285_IM_CTRLIF_ERR_EINT1_MASK            0x1000  /* IM_CTRLIF_ERR_EINT1 */
-#define WM8285_IM_CTRLIF_ERR_EINT1_SHIFT               12  /* IM_CTRLIF_ERR_EINT1 */
-#define WM8285_IM_CTRLIF_ERR_EINT1_WIDTH                1  /* IM_CTRLIF_ERR_EINT1 */
-#define WM8285_IM_IRQ_NO_CLOCK_EINT1               0x0200  /* IM_IRQ_NO_CLOCK_EINT1 */
-#define WM8285_IM_IRQ_NO_CLOCK_EINT1_MASK          0x0200  /* IM_IRQ_NO_CLOCK_EINT1 */
-#define WM8285_IM_IRQ_NO_CLOCK_EINT1_SHIFT              9  /* IM_IRQ_NO_CLOCK_EINT1 */
-#define WM8285_IM_IRQ_NO_CLOCK_EINT1_WIDTH              1  /* IM_IRQ_NO_CLOCK_EINT1 */
-#define WM8285_IM_CLOCK_DETECT_EINT1               0x0100  /* IM_CLOCK_DETECT_EINT1 */
-#define WM8285_IM_CLOCK_DETECT_EINT1_MASK          0x0100  /* IM_CLOCK_DETECT_EINT1 */
-#define WM8285_IM_CLOCK_DETECT_EINT1_SHIFT              8  /* IM_CLOCK_DETECT_EINT1 */
-#define WM8285_IM_CLOCK_DETECT_EINT1_WIDTH              1  /* IM_CLOCK_DETECT_EINT1 */
-#define WM8285_IM_BOOT_DONE_EINT1                  0x0080  /* IM_BOOT_DONE_EINT1 */
-#define WM8285_IM_BOOT_DONE_EINT1_MASK             0x0080  /* IM_BOOT_DONE_EINT1 */
-#define WM8285_IM_BOOT_DONE_EINT1_SHIFT                 7  /* IM_BOOT_DONE_EINT1 */
-#define WM8285_IM_BOOT_DONE_EINT1_WIDTH                 1  /* IM_BOOT_DONE_EINT1 */
+#define CLEARWATER_IM_DSP_SHARED_WR_COLL_EINT1         0x8000  /* IM_DSP_SHARED_WR_COLL_EINT1 */
+#define CLEARWATER_IM_DSP_SHARED_WR_COLL_EINT1_MASK    0x8000  /* IM_DSP_SHARED_WR_COLL_EINT1 */
+#define CLEARWATER_IM_DSP_SHARED_WR_COLL_EINT1_SHIFT       15  /* IM_DSP_SHARED_WR_COLL_EINT1 */
+#define CLEARWATER_IM_DSP_SHARED_WR_COLL_EINT1_WIDTH        1  /* IM_DSP_SHARED_WR_COLL_EINT1 */
+#define CLEARWATER_IM_CTRLIF_ERR_EINT1                 0x1000  /* IM_CTRLIF_ERR_EINT1 */
+#define CLEARWATER_IM_CTRLIF_ERR_EINT1_MASK            0x1000  /* IM_CTRLIF_ERR_EINT1 */
+#define CLEARWATER_IM_CTRLIF_ERR_EINT1_SHIFT               12  /* IM_CTRLIF_ERR_EINT1 */
+#define CLEARWATER_IM_CTRLIF_ERR_EINT1_WIDTH                1  /* IM_CTRLIF_ERR_EINT1 */
+#define CLEARWATER_IM_IRQ_NO_CLOCK_EINT1               0x0200  /* IM_IRQ_NO_CLOCK_EINT1 */
+#define CLEARWATER_IM_IRQ_NO_CLOCK_EINT1_MASK          0x0200  /* IM_IRQ_NO_CLOCK_EINT1 */
+#define CLEARWATER_IM_IRQ_NO_CLOCK_EINT1_SHIFT              9  /* IM_IRQ_NO_CLOCK_EINT1 */
+#define CLEARWATER_IM_IRQ_NO_CLOCK_EINT1_WIDTH              1  /* IM_IRQ_NO_CLOCK_EINT1 */
+#define CLEARWATER_IM_CLOCK_DETECT_EINT1               0x0100  /* IM_CLOCK_DETECT_EINT1 */
+#define CLEARWATER_IM_CLOCK_DETECT_EINT1_MASK          0x0100  /* IM_CLOCK_DETECT_EINT1 */
+#define CLEARWATER_IM_CLOCK_DETECT_EINT1_SHIFT              8  /* IM_CLOCK_DETECT_EINT1 */
+#define CLEARWATER_IM_CLOCK_DETECT_EINT1_WIDTH              1  /* IM_CLOCK_DETECT_EINT1 */
+#define CLEARWATER_IM_BOOT_DONE_EINT1                  0x0080  /* IM_BOOT_DONE_EINT1 */
+#define CLEARWATER_IM_BOOT_DONE_EINT1_MASK             0x0080  /* IM_BOOT_DONE_EINT1 */
+#define CLEARWATER_IM_BOOT_DONE_EINT1_SHIFT                 7  /* IM_BOOT_DONE_EINT1 */
+#define CLEARWATER_IM_BOOT_DONE_EINT1_WIDTH                 1  /* IM_BOOT_DONE_EINT1 */
 
 /*
  * R6209 (0x1841) - IRQ1 Mask 2
  */
-#define WM8285_IM_FLL3_LOCK_EINT1                  0x0400  /* IM_FLL3_LOCK_EINT1 */
-#define WM8285_IM_FLL3_LOCK_EINT1_MASK             0x0400  /* IM_FLL3_LOCK_EINT1 */
-#define WM8285_IM_FLL3_LOCK_EINT1_SHIFT                10  /* IM_FLL3_LOCK_EINT1 */
-#define WM8285_IM_FLL3_LOCK_EINT1_WIDTH                 1  /* IM_FLL3_LOCK_EINT1 */
-#define WM8285_IM_FLL2_LOCK_EINT1                  0x0200  /* IM_FLL2_LOCK_EINT1 */
-#define WM8285_IM_FLL2_LOCK_EINT1_MASK             0x0200  /* IM_FLL2_LOCK_EINT1 */
-#define WM8285_IM_FLL2_LOCK_EINT1_SHIFT                 9  /* IM_FLL2_LOCK_EINT1 */
-#define WM8285_IM_FLL2_LOCK_EINT1_WIDTH                 1  /* IM_FLL2_LOCK_EINT1 */
-#define WM8285_IM_FLL1_LOCK_EINT1                  0x0100  /* IM_FLL1_LOCK_EINT1 */
-#define WM8285_IM_FLL1_LOCK_EINT1_MASK             0x0100  /* IM_FLL1_LOCK_EINT1 */
-#define WM8285_IM_FLL1_LOCK_EINT1_SHIFT                 8  /* IM_FLL1_LOCK_EINT1 */
-#define WM8285_IM_FLL1_LOCK_EINT1_WIDTH                 1  /* IM_FLL1_LOCK_EINT1 */
+#define CLEARWATER_IM_FLL3_LOCK_EINT1                  0x0400  /* IM_FLL3_LOCK_EINT1 */
+#define CLEARWATER_IM_FLL3_LOCK_EINT1_MASK             0x0400  /* IM_FLL3_LOCK_EINT1 */
+#define CLEARWATER_IM_FLL3_LOCK_EINT1_SHIFT                10  /* IM_FLL3_LOCK_EINT1 */
+#define CLEARWATER_IM_FLL3_LOCK_EINT1_WIDTH                 1  /* IM_FLL3_LOCK_EINT1 */
+#define CLEARWATER_IM_FLL2_LOCK_EINT1                  0x0200  /* IM_FLL2_LOCK_EINT1 */
+#define CLEARWATER_IM_FLL2_LOCK_EINT1_MASK             0x0200  /* IM_FLL2_LOCK_EINT1 */
+#define CLEARWATER_IM_FLL2_LOCK_EINT1_SHIFT                 9  /* IM_FLL2_LOCK_EINT1 */
+#define CLEARWATER_IM_FLL2_LOCK_EINT1_WIDTH                 1  /* IM_FLL2_LOCK_EINT1 */
+#define CLEARWATER_IM_FLL1_LOCK_EINT1                  0x0100  /* IM_FLL1_LOCK_EINT1 */
+#define CLEARWATER_IM_FLL1_LOCK_EINT1_MASK             0x0100  /* IM_FLL1_LOCK_EINT1 */
+#define CLEARWATER_IM_FLL1_LOCK_EINT1_SHIFT                 8  /* IM_FLL1_LOCK_EINT1 */
+#define CLEARWATER_IM_FLL1_LOCK_EINT1_WIDTH                 1  /* IM_FLL1_LOCK_EINT1 */
 
 /*
  * R6213 (0x1845) - IRQ1 Mask 6
  */
-#define WM8285_IM_MICDET_EINT1                     0x0100  /* IM_MICDET_EINT1 */
-#define WM8285_IM_MICDET_EINT1_MASK                0x0100  /* IM_MICDET_EINT1 */
-#define WM8285_IM_MICDET_EINT1_SHIFT                    8  /* IM_MICDET_EINT1 */
-#define WM8285_IM_MICDET_EINT1_WIDTH                    1  /* IM_MICDET_EINT1 */
-#define WM8285_IM_HPDET_EINT1                      0x0001  /* IM_HPDET_EINT1 */
-#define WM8285_IM_HPDET_EINT1_MASK                 0x0001  /* IM_HPDET_EINT1 */
-#define WM8285_IM_HPDET_EINT1_SHIFT                     0  /* IM_HPDET_EINT1 */
-#define WM8285_IM_HPDET_EINT1_WIDTH                     1  /* IM_HPDET_EINT1 */
+#define CLEARWATER_IM_MICDET_EINT1                     0x0100  /* IM_MICDET_EINT1 */
+#define CLEARWATER_IM_MICDET_EINT1_MASK                0x0100  /* IM_MICDET_EINT1 */
+#define CLEARWATER_IM_MICDET_EINT1_SHIFT                    8  /* IM_MICDET_EINT1 */
+#define CLEARWATER_IM_MICDET_EINT1_WIDTH                    1  /* IM_MICDET_EINT1 */
+#define CLEARWATER_IM_HPDET_EINT1                      0x0001  /* IM_HPDET_EINT1 */
+#define CLEARWATER_IM_HPDET_EINT1_MASK                 0x0001  /* IM_HPDET_EINT1 */
+#define CLEARWATER_IM_HPDET_EINT1_SHIFT                     0  /* IM_HPDET_EINT1 */
+#define CLEARWATER_IM_HPDET_EINT1_WIDTH                     1  /* IM_HPDET_EINT1 */
 
 /*
  * R6214 (0x1846) - IRQ1 Mask 7
  */
-#define WM8285_IM_MICD_CLAMP_FALL_EINT1            0x0020  /* IM_MICD_CLAMP_FALL_EINT1 */
-#define WM8285_IM_MICD_CLAMP_FALL_EINT1_MASK       0x0020  /* IM_MICD_CLAMP_FALL_EINT1 */
-#define WM8285_IM_MICD_CLAMP_FALL_EINT1_SHIFT           5  /* IM_MICD_CLAMP_FALL_EINT1 */
-#define WM8285_IM_MICD_CLAMP_FALL_EINT1_WIDTH           1  /* IM_MICD_CLAMP_FALL_EINT1 */
-#define WM8285_IM_MICD_CLAMP_RISE_EINT1            0x0010  /* IM_MICD_CLAMP_RISE_EINT1 */
-#define WM8285_IM_MICD_CLAMP_RISE_EINT1_MASK       0x0010  /* IM_MICD_CLAMP_RISE_EINT1 */
-#define WM8285_IM_MICD_CLAMP_RISE_EINT1_SHIFT           4  /* IM_MICD_CLAMP_RISE_EINT1 */
-#define WM8285_IM_MICD_CLAMP_RISE_EINT1_WIDTH           1  /* IM_MICD_CLAMP_RISE_EINT1 */
-#define WM8285_IM_JD2_FALL_EINT1                   0x0008  /* IM_JD2_FALL_EINT1 */
-#define WM8285_IM_JD2_FALL_EINT1_MASK              0x0008  /* IM_JD2_FALL_EINT1 */
-#define WM8285_IM_JD2_FALL_EINT1_SHIFT                  3  /* IM_JD2_FALL_EINT1 */
-#define WM8285_IM_JD2_FALL_EINT1_WIDTH                  1  /* IM_JD2_FALL_EINT1 */
-#define WM8285_IM_JD2_RISE_EINT1                   0x0004  /* IM_JD2_RISE_EINT1 */
-#define WM8285_IM_JD2_RISE_EINT1_MASK              0x0004  /* IM_JD2_RISE_EINT1 */
-#define WM8285_IM_JD2_RISE_EINT1_SHIFT                  2  /* IM_JD2_RISE_EINT1 */
-#define WM8285_IM_JD2_RISE_EINT1_WIDTH                  1  /* IM_JD2_RISE_EINT1 */
-#define WM8285_IM_JD1_FALL_EINT1                   0x0002  /* IM_JD1_FALL_EINT1 */
-#define WM8285_IM_JD1_FALL_EINT1_MASK              0x0002  /* IM_JD1_FALL_EINT1 */
-#define WM8285_IM_JD1_FALL_EINT1_SHIFT                  1  /* IM_JD1_FALL_EINT1 */
-#define WM8285_IM_JD1_FALL_EINT1_WIDTH                  1  /* IM_JD1_FALL_EINT1 */
-#define WM8285_IM_JD1_RISE_EINT1                   0x0001  /* IM_JD1_RISE_EINT1 */
-#define WM8285_IM_JD1_RISE_EINT1_MASK              0x0001  /* IM_JD1_RISE_EINT1 */
-#define WM8285_IM_JD1_RISE_EINT1_SHIFT                  0  /* IM_JD1_RISE_EINT1 */
-#define WM8285_IM_JD1_RISE_EINT1_WIDTH                  1  /* IM_JD1_RISE_EINT1 */
+#define CLEARWATER_IM_MICD_CLAMP_FALL_EINT1            0x0020  /* IM_MICD_CLAMP_FALL_EINT1 */
+#define CLEARWATER_IM_MICD_CLAMP_FALL_EINT1_MASK       0x0020  /* IM_MICD_CLAMP_FALL_EINT1 */
+#define CLEARWATER_IM_MICD_CLAMP_FALL_EINT1_SHIFT           5  /* IM_MICD_CLAMP_FALL_EINT1 */
+#define CLEARWATER_IM_MICD_CLAMP_FALL_EINT1_WIDTH           1  /* IM_MICD_CLAMP_FALL_EINT1 */
+#define CLEARWATER_IM_MICD_CLAMP_RISE_EINT1            0x0010  /* IM_MICD_CLAMP_RISE_EINT1 */
+#define CLEARWATER_IM_MICD_CLAMP_RISE_EINT1_MASK       0x0010  /* IM_MICD_CLAMP_RISE_EINT1 */
+#define CLEARWATER_IM_MICD_CLAMP_RISE_EINT1_SHIFT           4  /* IM_MICD_CLAMP_RISE_EINT1 */
+#define CLEARWATER_IM_MICD_CLAMP_RISE_EINT1_WIDTH           1  /* IM_MICD_CLAMP_RISE_EINT1 */
+#define CLEARWATER_IM_JD2_FALL_EINT1                   0x0008  /* IM_JD2_FALL_EINT1 */
+#define CLEARWATER_IM_JD2_FALL_EINT1_MASK              0x0008  /* IM_JD2_FALL_EINT1 */
+#define CLEARWATER_IM_JD2_FALL_EINT1_SHIFT                  3  /* IM_JD2_FALL_EINT1 */
+#define CLEARWATER_IM_JD2_FALL_EINT1_WIDTH                  1  /* IM_JD2_FALL_EINT1 */
+#define CLEARWATER_IM_JD2_RISE_EINT1                   0x0004  /* IM_JD2_RISE_EINT1 */
+#define CLEARWATER_IM_JD2_RISE_EINT1_MASK              0x0004  /* IM_JD2_RISE_EINT1 */
+#define CLEARWATER_IM_JD2_RISE_EINT1_SHIFT                  2  /* IM_JD2_RISE_EINT1 */
+#define CLEARWATER_IM_JD2_RISE_EINT1_WIDTH                  1  /* IM_JD2_RISE_EINT1 */
+#define CLEARWATER_IM_JD1_FALL_EINT1                   0x0002  /* IM_JD1_FALL_EINT1 */
+#define CLEARWATER_IM_JD1_FALL_EINT1_MASK              0x0002  /* IM_JD1_FALL_EINT1 */
+#define CLEARWATER_IM_JD1_FALL_EINT1_SHIFT                  1  /* IM_JD1_FALL_EINT1 */
+#define CLEARWATER_IM_JD1_FALL_EINT1_WIDTH                  1  /* IM_JD1_FALL_EINT1 */
+#define CLEARWATER_IM_JD1_RISE_EINT1                   0x0001  /* IM_JD1_RISE_EINT1 */
+#define CLEARWATER_IM_JD1_RISE_EINT1_MASK              0x0001  /* IM_JD1_RISE_EINT1 */
+#define CLEARWATER_IM_JD1_RISE_EINT1_SHIFT                  0  /* IM_JD1_RISE_EINT1 */
+#define CLEARWATER_IM_JD1_RISE_EINT1_WIDTH                  1  /* IM_JD1_RISE_EINT1 */
 
 /*
  * R6216 (0x1848) - IRQ1 Mask 9
  */
-#define WM8285_IM_ASRC2_IN2_LOCK_EINT1             0x0800  /* IM_ASRC2_IN2_LOCK_EINT1 */
-#define WM8285_IM_ASRC2_IN2_LOCK_EINT1_MASK        0x0800  /* IM_ASRC2_IN2_LOCK_EINT1 */
-#define WM8285_IM_ASRC2_IN2_LOCK_EINT1_SHIFT           11  /* IM_ASRC2_IN2_LOCK_EINT1 */
-#define WM8285_IM_ASRC2_IN2_LOCK_EINT1_WIDTH            1  /* IM_ASRC2_IN2_LOCK_EINT1 */
-#define WM8285_IM_ASRC2_IN1_LOCK_EINT1             0x0400  /* IM_ASRC2_IN1_LOCK_EINT1 */
-#define WM8285_IM_ASRC2_IN1_LOCK_EINT1_MASK        0x0400  /* IM_ASRC2_IN1_LOCK_EINT1 */
-#define WM8285_IM_ASRC2_IN1_LOCK_EINT1_SHIFT           10  /* IM_ASRC2_IN1_LOCK_EINT1 */
-#define WM8285_IM_ASRC2_IN1_LOCK_EINT1_WIDTH            1  /* IM_ASRC2_IN1_LOCK_EINT1 */
-#define WM8285_IM_ASRC1_IN2_LOCK_EINT1             0x0200  /* IM_ASRC1_IN2_LOCK_EINT1 */
-#define WM8285_IM_ASRC1_IN2_LOCK_EINT1_MASK        0x0200  /* IM_ASRC1_IN2_LOCK_EINT1 */
-#define WM8285_IM_ASRC1_IN2_LOCK_EINT1_SHIFT            9  /* IM_ASRC1_IN2_LOCK_EINT1 */
-#define WM8285_IM_ASRC1_IN2_LOCK_EINT1_WIDTH            1  /* IM_ASRC1_IN2_LOCK_EINT1 */
-#define WM8285_IM_ASRC1_IN1_LOCK_EINT1             0x0100  /* IM_ASRC1_IN1_LOCK_EINT1 */
-#define WM8285_IM_ASRC1_IN1_LOCK_EINT1_MASK        0x0100  /* IM_ASRC1_IN1_LOCK_EINT1 */
-#define WM8285_IM_ASRC1_IN1_LOCK_EINT1_SHIFT            8  /* IM_ASRC1_IN1_LOCK_EINT1 */
-#define WM8285_IM_ASRC1_IN1_LOCK_EINT1_WIDTH            1  /* IM_ASRC1_IN1_LOCK_EINT1 */
-#define WM8285_IM_DRC2_SIG_DET_EINT1               0x0002  /* IM_DRC2_SIG_DET_EINT1 */
-#define WM8285_IM_DRC2_SIG_DET_EINT1_MASK          0x0002  /* IM_DRC2_SIG_DET_EINT1 */
-#define WM8285_IM_DRC2_SIG_DET_EINT1_SHIFT              1  /* IM_DRC2_SIG_DET_EINT1 */
-#define WM8285_IM_DRC2_SIG_DET_EINT1_WIDTH              1  /* IM_DRC2_SIG_DET_EINT1 */
-#define WM8285_IM_DRC1_SIG_DET_EINT1               0x0001  /* IM_DRC1_SIG_DET_EINT1 */
-#define WM8285_IM_DRC1_SIG_DET_EINT1_MASK          0x0001  /* IM_DRC1_SIG_DET_EINT1 */
-#define WM8285_IM_DRC1_SIG_DET_EINT1_SHIFT              0  /* IM_DRC1_SIG_DET_EINT1 */
-#define WM8285_IM_DRC1_SIG_DET_EINT1_WIDTH              1  /* IM_DRC1_SIG_DET_EINT1 */
+#define CLEARWATER_IM_ASRC2_IN2_LOCK_EINT1             0x0800  /* IM_ASRC2_IN2_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC2_IN2_LOCK_EINT1_MASK        0x0800  /* IM_ASRC2_IN2_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC2_IN2_LOCK_EINT1_SHIFT           11  /* IM_ASRC2_IN2_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC2_IN2_LOCK_EINT1_WIDTH            1  /* IM_ASRC2_IN2_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC2_IN1_LOCK_EINT1             0x0400  /* IM_ASRC2_IN1_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC2_IN1_LOCK_EINT1_MASK        0x0400  /* IM_ASRC2_IN1_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC2_IN1_LOCK_EINT1_SHIFT           10  /* IM_ASRC2_IN1_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC2_IN1_LOCK_EINT1_WIDTH            1  /* IM_ASRC2_IN1_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC1_IN2_LOCK_EINT1             0x0200  /* IM_ASRC1_IN2_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC1_IN2_LOCK_EINT1_MASK        0x0200  /* IM_ASRC1_IN2_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC1_IN2_LOCK_EINT1_SHIFT            9  /* IM_ASRC1_IN2_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC1_IN2_LOCK_EINT1_WIDTH            1  /* IM_ASRC1_IN2_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC1_IN1_LOCK_EINT1             0x0100  /* IM_ASRC1_IN1_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC1_IN1_LOCK_EINT1_MASK        0x0100  /* IM_ASRC1_IN1_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC1_IN1_LOCK_EINT1_SHIFT            8  /* IM_ASRC1_IN1_LOCK_EINT1 */
+#define CLEARWATER_IM_ASRC1_IN1_LOCK_EINT1_WIDTH            1  /* IM_ASRC1_IN1_LOCK_EINT1 */
+#define CLEARWATER_IM_DRC2_SIG_DET_EINT1               0x0002  /* IM_DRC2_SIG_DET_EINT1 */
+#define CLEARWATER_IM_DRC2_SIG_DET_EINT1_MASK          0x0002  /* IM_DRC2_SIG_DET_EINT1 */
+#define CLEARWATER_IM_DRC2_SIG_DET_EINT1_SHIFT              1  /* IM_DRC2_SIG_DET_EINT1 */
+#define CLEARWATER_IM_DRC2_SIG_DET_EINT1_WIDTH              1  /* IM_DRC2_SIG_DET_EINT1 */
+#define CLEARWATER_IM_DRC1_SIG_DET_EINT1               0x0001  /* IM_DRC1_SIG_DET_EINT1 */
+#define CLEARWATER_IM_DRC1_SIG_DET_EINT1_MASK          0x0001  /* IM_DRC1_SIG_DET_EINT1 */
+#define CLEARWATER_IM_DRC1_SIG_DET_EINT1_SHIFT              0  /* IM_DRC1_SIG_DET_EINT1 */
+#define CLEARWATER_IM_DRC1_SIG_DET_EINT1_WIDTH              1  /* IM_DRC1_SIG_DET_EINT1 */
 
 /*
  * R6218 (0x184A) - IRQ1 Mask 11
  */
-#define WM8285_IM_DSP_IRQ16_EINT1                  0x8000  /* IM_DSP_IRQ16_EINT1 */
-#define WM8285_IM_DSP_IRQ16_EINT1_MASK             0x8000  /* IM_DSP_IRQ16_EINT1 */
-#define WM8285_IM_DSP_IRQ16_EINT1_SHIFT                15  /* IM_DSP_IRQ16_EINT1 */
-#define WM8285_IM_DSP_IRQ16_EINT1_WIDTH                 1  /* IM_DSP_IRQ16_EINT1 */
-#define WM8285_IM_DSP_IRQ15_EINT1                  0x4000  /* IM_DSP_IRQ15_EINT1 */
-#define WM8285_IM_DSP_IRQ15_EINT1_MASK             0x4000  /* IM_DSP_IRQ15_EINT1 */
-#define WM8285_IM_DSP_IRQ15_EINT1_SHIFT                14  /* IM_DSP_IRQ15_EINT1 */
-#define WM8285_IM_DSP_IRQ15_EINT1_WIDTH                 1  /* IM_DSP_IRQ15_EINT1 */
-#define WM8285_IM_DSP_IRQ14_EINT1                  0x2000  /* IM_DSP_IRQ14_EINT1 */
-#define WM8285_IM_DSP_IRQ14_EINT1_MASK             0x2000  /* IM_DSP_IRQ14_EINT1 */
-#define WM8285_IM_DSP_IRQ14_EINT1_SHIFT                13  /* IM_DSP_IRQ14_EINT1 */
-#define WM8285_IM_DSP_IRQ14_EINT1_WIDTH                 1  /* IM_DSP_IRQ14_EINT1 */
-#define WM8285_IM_DSP_IRQ13_EINT1                  0x1000  /* IM_DSP_IRQ13_EINT1 */
-#define WM8285_IM_DSP_IRQ13_EINT1_MASK             0x1000  /* IM_DSP_IRQ13_EINT1 */
-#define WM8285_IM_DSP_IRQ13_EINT1_SHIFT                12  /* IM_DSP_IRQ13_EINT1 */
-#define WM8285_IM_DSP_IRQ13_EINT1_WIDTH                 1  /* IM_DSP_IRQ13_EINT1 */
-#define WM8285_IM_DSP_IRQ12_EINT1                  0x0800  /* IM_DSP_IRQ12_EINT1 */
-#define WM8285_IM_DSP_IRQ12_EINT1_MASK             0x0800  /* IM_DSP_IRQ12_EINT1 */
-#define WM8285_IM_DSP_IRQ12_EINT1_SHIFT                11  /* IM_DSP_IRQ12_EINT1 */
-#define WM8285_IM_DSP_IRQ12_EINT1_WIDTH                 1  /* IM_DSP_IRQ12_EINT1 */
-#define WM8285_IM_DSP_IRQ11_EINT1                  0x0400  /* IM_DSP_IRQ11_EINT1 */
-#define WM8285_IM_DSP_IRQ11_EINT1_MASK             0x0400  /* IM_DSP_IRQ11_EINT1 */
-#define WM8285_IM_DSP_IRQ11_EINT1_SHIFT                10  /* IM_DSP_IRQ11_EINT1 */
-#define WM8285_IM_DSP_IRQ11_EINT1_WIDTH                 1  /* IM_DSP_IRQ11_EINT1 */
-#define WM8285_IM_DSP_IRQ10_EINT1                  0x0200  /* IM_DSP_IRQ10_EINT1 */
-#define WM8285_IM_DSP_IRQ10_EINT1_MASK             0x0200  /* IM_DSP_IRQ10_EINT1 */
-#define WM8285_IM_DSP_IRQ10_EINT1_SHIFT                 9  /* IM_DSP_IRQ10_EINT1 */
-#define WM8285_IM_DSP_IRQ10_EINT1_WIDTH                 1  /* IM_DSP_IRQ10_EINT1 */
-#define WM8285_IM_DSP_IRQ9_EINT1                   0x0100  /* IM_DSP_IRQ9_EINT1 */
-#define WM8285_IM_DSP_IRQ9_EINT1_MASK              0x0100  /* IM_DSP_IRQ9_EINT1 */
-#define WM8285_IM_DSP_IRQ9_EINT1_SHIFT                  8  /* IM_DSP_IRQ9_EINT1 */
-#define WM8285_IM_DSP_IRQ9_EINT1_WIDTH                  1  /* IM_DSP_IRQ9_EINT1 */
-#define WM8285_IM_DSP_IRQ8_EINT1                   0x0080  /* IM_DSP_IRQ8_EINT1 */
-#define WM8285_IM_DSP_IRQ8_EINT1_MASK              0x0080  /* IM_DSP_IRQ8_EINT1 */
-#define WM8285_IM_DSP_IRQ8_EINT1_SHIFT                  7  /* IM_DSP_IRQ8_EINT1 */
-#define WM8285_IM_DSP_IRQ8_EINT1_WIDTH                  1  /* IM_DSP_IRQ8_EINT1 */
-#define WM8285_IM_DSP_IRQ7_EINT1                   0x0040  /* IM_DSP_IRQ7_EINT1 */
-#define WM8285_IM_DSP_IRQ7_EINT1_MASK              0x0040  /* IM_DSP_IRQ7_EINT1 */
-#define WM8285_IM_DSP_IRQ7_EINT1_SHIFT                  6  /* IM_DSP_IRQ7_EINT1 */
-#define WM8285_IM_DSP_IRQ7_EINT1_WIDTH                  1  /* IM_DSP_IRQ7_EINT1 */
-#define WM8285_IM_DSP_IRQ6_EINT1                   0x0020  /* IM_DSP_IRQ6_EINT1 */
-#define WM8285_IM_DSP_IRQ6_EINT1_MASK              0x0020  /* IM_DSP_IRQ6_EINT1 */
-#define WM8285_IM_DSP_IRQ6_EINT1_SHIFT                  5  /* IM_DSP_IRQ6_EINT1 */
-#define WM8285_IM_DSP_IRQ6_EINT1_WIDTH                  1  /* IM_DSP_IRQ6_EINT1 */
-#define WM8285_IM_DSP_IRQ5_EINT1                   0x0010  /* IM_DSP_IRQ5_EINT1 */
-#define WM8285_IM_DSP_IRQ5_EINT1_MASK              0x0010  /* IM_DSP_IRQ5_EINT1 */
-#define WM8285_IM_DSP_IRQ5_EINT1_SHIFT                  4  /* IM_DSP_IRQ5_EINT1 */
-#define WM8285_IM_DSP_IRQ5_EINT1_WIDTH                  1  /* IM_DSP_IRQ5_EINT1 */
-#define WM8285_IM_DSP_IRQ4_EINT1                   0x0008  /* IM_DSP_IRQ4_EINT1 */
-#define WM8285_IM_DSP_IRQ4_EINT1_MASK              0x0008  /* IM_DSP_IRQ4_EINT1 */
-#define WM8285_IM_DSP_IRQ4_EINT1_SHIFT                  3  /* IM_DSP_IRQ4_EINT1 */
-#define WM8285_IM_DSP_IRQ4_EINT1_WIDTH                  1  /* IM_DSP_IRQ4_EINT1 */
-#define WM8285_IM_DSP_IRQ3_EINT1                   0x0004  /* IM_DSP_IRQ3_EINT1 */
-#define WM8285_IM_DSP_IRQ3_EINT1_MASK              0x0004  /* IM_DSP_IRQ3_EINT1 */
-#define WM8285_IM_DSP_IRQ3_EINT1_SHIFT                  2  /* IM_DSP_IRQ3_EINT1 */
-#define WM8285_IM_DSP_IRQ3_EINT1_WIDTH                  1  /* IM_DSP_IRQ3_EINT1 */
-#define WM8285_IM_DSP_IRQ2_EINT1                   0x0002  /* IM_DSP_IRQ2_EINT1 */
-#define WM8285_IM_DSP_IRQ2_EINT1_MASK              0x0002  /* IM_DSP_IRQ2_EINT1 */
-#define WM8285_IM_DSP_IRQ2_EINT1_SHIFT                  1  /* IM_DSP_IRQ2_EINT1 */
-#define WM8285_IM_DSP_IRQ2_EINT1_WIDTH                  1  /* IM_DSP_IRQ2_EINT1 */
-#define WM8285_IM_DSP_IRQ1_EINT1                   0x0001  /* IM_DSP_IRQ1_EINT1 */
-#define WM8285_IM_DSP_IRQ1_EINT1_MASK              0x0001  /* IM_DSP_IRQ1_EINT1 */
-#define WM8285_IM_DSP_IRQ1_EINT1_SHIFT                  0  /* IM_DSP_IRQ1_EINT1 */
-#define WM8285_IM_DSP_IRQ1_EINT1_WIDTH                  1  /* IM_DSP_IRQ1_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ16_EINT1                  0x8000  /* IM_DSP_IRQ16_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ16_EINT1_MASK             0x8000  /* IM_DSP_IRQ16_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ16_EINT1_SHIFT                15  /* IM_DSP_IRQ16_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ16_EINT1_WIDTH                 1  /* IM_DSP_IRQ16_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ15_EINT1                  0x4000  /* IM_DSP_IRQ15_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ15_EINT1_MASK             0x4000  /* IM_DSP_IRQ15_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ15_EINT1_SHIFT                14  /* IM_DSP_IRQ15_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ15_EINT1_WIDTH                 1  /* IM_DSP_IRQ15_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ14_EINT1                  0x2000  /* IM_DSP_IRQ14_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ14_EINT1_MASK             0x2000  /* IM_DSP_IRQ14_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ14_EINT1_SHIFT                13  /* IM_DSP_IRQ14_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ14_EINT1_WIDTH                 1  /* IM_DSP_IRQ14_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ13_EINT1                  0x1000  /* IM_DSP_IRQ13_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ13_EINT1_MASK             0x1000  /* IM_DSP_IRQ13_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ13_EINT1_SHIFT                12  /* IM_DSP_IRQ13_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ13_EINT1_WIDTH                 1  /* IM_DSP_IRQ13_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ12_EINT1                  0x0800  /* IM_DSP_IRQ12_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ12_EINT1_MASK             0x0800  /* IM_DSP_IRQ12_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ12_EINT1_SHIFT                11  /* IM_DSP_IRQ12_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ12_EINT1_WIDTH                 1  /* IM_DSP_IRQ12_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ11_EINT1                  0x0400  /* IM_DSP_IRQ11_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ11_EINT1_MASK             0x0400  /* IM_DSP_IRQ11_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ11_EINT1_SHIFT                10  /* IM_DSP_IRQ11_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ11_EINT1_WIDTH                 1  /* IM_DSP_IRQ11_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ10_EINT1                  0x0200  /* IM_DSP_IRQ10_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ10_EINT1_MASK             0x0200  /* IM_DSP_IRQ10_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ10_EINT1_SHIFT                 9  /* IM_DSP_IRQ10_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ10_EINT1_WIDTH                 1  /* IM_DSP_IRQ10_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ9_EINT1                   0x0100  /* IM_DSP_IRQ9_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ9_EINT1_MASK              0x0100  /* IM_DSP_IRQ9_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ9_EINT1_SHIFT                  8  /* IM_DSP_IRQ9_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ9_EINT1_WIDTH                  1  /* IM_DSP_IRQ9_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ8_EINT1                   0x0080  /* IM_DSP_IRQ8_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ8_EINT1_MASK              0x0080  /* IM_DSP_IRQ8_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ8_EINT1_SHIFT                  7  /* IM_DSP_IRQ8_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ8_EINT1_WIDTH                  1  /* IM_DSP_IRQ8_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ7_EINT1                   0x0040  /* IM_DSP_IRQ7_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ7_EINT1_MASK              0x0040  /* IM_DSP_IRQ7_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ7_EINT1_SHIFT                  6  /* IM_DSP_IRQ7_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ7_EINT1_WIDTH                  1  /* IM_DSP_IRQ7_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ6_EINT1                   0x0020  /* IM_DSP_IRQ6_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ6_EINT1_MASK              0x0020  /* IM_DSP_IRQ6_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ6_EINT1_SHIFT                  5  /* IM_DSP_IRQ6_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ6_EINT1_WIDTH                  1  /* IM_DSP_IRQ6_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ5_EINT1                   0x0010  /* IM_DSP_IRQ5_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ5_EINT1_MASK              0x0010  /* IM_DSP_IRQ5_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ5_EINT1_SHIFT                  4  /* IM_DSP_IRQ5_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ5_EINT1_WIDTH                  1  /* IM_DSP_IRQ5_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ4_EINT1                   0x0008  /* IM_DSP_IRQ4_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ4_EINT1_MASK              0x0008  /* IM_DSP_IRQ4_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ4_EINT1_SHIFT                  3  /* IM_DSP_IRQ4_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ4_EINT1_WIDTH                  1  /* IM_DSP_IRQ4_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ3_EINT1                   0x0004  /* IM_DSP_IRQ3_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ3_EINT1_MASK              0x0004  /* IM_DSP_IRQ3_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ3_EINT1_SHIFT                  2  /* IM_DSP_IRQ3_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ3_EINT1_WIDTH                  1  /* IM_DSP_IRQ3_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ2_EINT1                   0x0002  /* IM_DSP_IRQ2_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ2_EINT1_MASK              0x0002  /* IM_DSP_IRQ2_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ2_EINT1_SHIFT                  1  /* IM_DSP_IRQ2_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ2_EINT1_WIDTH                  1  /* IM_DSP_IRQ2_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ1_EINT1                   0x0001  /* IM_DSP_IRQ1_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ1_EINT1_MASK              0x0001  /* IM_DSP_IRQ1_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ1_EINT1_SHIFT                  0  /* IM_DSP_IRQ1_EINT1 */
+#define CLEARWATER_IM_DSP_IRQ1_EINT1_WIDTH                  1  /* IM_DSP_IRQ1_EINT1 */
 
 /*
  * R6219 (0x184B) - IRQ1 Mask 12
  */
-#define WM8285_IM_SPKOUTR_SC_EINT1                 0x0080  /* IM_SPKOUTR_SC_EINT1 */
-#define WM8285_IM_SPKOUTR_SC_EINT1_MASK            0x0080  /* IM_SPKOUTR_SC_EINT1 */
-#define WM8285_IM_SPKOUTR_SC_EINT1_SHIFT                7  /* IM_SPKOUTR_SC_EINT1 */
-#define WM8285_IM_SPKOUTR_SC_EINT1_WIDTH                1  /* IM_SPKOUTR_SC_EINT1 */
-#define WM8285_IM_SPKOUTL_SC_EINT1                 0x0040  /* IM_SPKOUTL_SC_EINT1 */
-#define WM8285_IM_SPKOUTL_SC_EINT1_MASK            0x0040  /* IM_SPKOUTL_SC_EINT1 */
-#define WM8285_IM_SPKOUTL_SC_EINT1_SHIFT                6  /* IM_SPKOUTL_SC_EINT1 */
-#define WM8285_IM_SPKOUTL_SC_EINT1_WIDTH                1  /* IM_SPKOUTL_SC_EINT1 */
-#define WM8285_IM_HP3R_SC_EINT1                    0x0020  /* IM_HP3R_SC_EINT1 */
-#define WM8285_IM_HP3R_SC_EINT1_MASK               0x0020  /* IM_HP3R_SC_EINT1 */
-#define WM8285_IM_HP3R_SC_EINT1_SHIFT                   5  /* IM_HP3R_SC_EINT1 */
-#define WM8285_IM_HP3R_SC_EINT1_WIDTH                   1  /* IM_HP3R_SC_EINT1 */
-#define WM8285_IM_HP3L_SC_EINT1                    0x0010  /* IM_HP3L_SC_EINT1 */
-#define WM8285_IM_HP3L_SC_EINT1_MASK               0x0010  /* IM_HP3L_SC_EINT1 */
-#define WM8285_IM_HP3L_SC_EINT1_SHIFT                   4  /* IM_HP3L_SC_EINT1 */
-#define WM8285_IM_HP3L_SC_EINT1_WIDTH                   1  /* IM_HP3L_SC_EINT1 */
-#define WM8285_IM_HP2R_SC_EINT1                    0x0008  /* IM_HP2R_SC_EINT1 */
-#define WM8285_IM_HP2R_SC_EINT1_MASK               0x0008  /* IM_HP2R_SC_EINT1 */
-#define WM8285_IM_HP2R_SC_EINT1_SHIFT                   3  /* IM_HP2R_SC_EINT1 */
-#define WM8285_IM_HP2R_SC_EINT1_WIDTH                   1  /* IM_HP2R_SC_EINT1 */
-#define WM8285_IM_HP2L_SC_EINT1                    0x0004  /* IM_HP2L_SC_EINT1 */
-#define WM8285_IM_HP2L_SC_EINT1_MASK               0x0004  /* IM_HP2L_SC_EINT1 */
-#define WM8285_IM_HP2L_SC_EINT1_SHIFT                   2  /* IM_HP2L_SC_EINT1 */
-#define WM8285_IM_HP2L_SC_EINT1_WIDTH                   1  /* IM_HP2L_SC_EINT1 */
-#define WM8285_IM_HP1R_SC_EINT1                    0x0002  /* IM_HP1R_SC_EINT1 */
-#define WM8285_IM_HP1R_SC_EINT1_MASK               0x0002  /* IM_HP1R_SC_EINT1 */
-#define WM8285_IM_HP1R_SC_EINT1_SHIFT                   1  /* IM_HP1R_SC_EINT1 */
-#define WM8285_IM_HP1R_SC_EINT1_WIDTH                   1  /* IM_HP1R_SC_EINT1 */
-#define WM8285_IM_HP1L_SC_EINT1                    0x0001  /* IM_HP1L_SC_EINT1 */
-#define WM8285_IM_HP1L_SC_EINT1_MASK               0x0001  /* IM_HP1L_SC_EINT1 */
-#define WM8285_IM_HP1L_SC_EINT1_SHIFT                   0  /* IM_HP1L_SC_EINT1 */
-#define WM8285_IM_HP1L_SC_EINT1_WIDTH                   1  /* IM_HP1L_SC_EINT1 */
+#define CLEARWATER_IM_SPKOUTR_SC_EINT1                 0x0080  /* IM_SPKOUTR_SC_EINT1 */
+#define CLEARWATER_IM_SPKOUTR_SC_EINT1_MASK            0x0080  /* IM_SPKOUTR_SC_EINT1 */
+#define CLEARWATER_IM_SPKOUTR_SC_EINT1_SHIFT                7  /* IM_SPKOUTR_SC_EINT1 */
+#define CLEARWATER_IM_SPKOUTR_SC_EINT1_WIDTH                1  /* IM_SPKOUTR_SC_EINT1 */
+#define CLEARWATER_IM_SPKOUTL_SC_EINT1                 0x0040  /* IM_SPKOUTL_SC_EINT1 */
+#define CLEARWATER_IM_SPKOUTL_SC_EINT1_MASK            0x0040  /* IM_SPKOUTL_SC_EINT1 */
+#define CLEARWATER_IM_SPKOUTL_SC_EINT1_SHIFT                6  /* IM_SPKOUTL_SC_EINT1 */
+#define CLEARWATER_IM_SPKOUTL_SC_EINT1_WIDTH                1  /* IM_SPKOUTL_SC_EINT1 */
+#define CLEARWATER_IM_HP3R_SC_EINT1                    0x0020  /* IM_HP3R_SC_EINT1 */
+#define CLEARWATER_IM_HP3R_SC_EINT1_MASK               0x0020  /* IM_HP3R_SC_EINT1 */
+#define CLEARWATER_IM_HP3R_SC_EINT1_SHIFT                   5  /* IM_HP3R_SC_EINT1 */
+#define CLEARWATER_IM_HP3R_SC_EINT1_WIDTH                   1  /* IM_HP3R_SC_EINT1 */
+#define CLEARWATER_IM_HP3L_SC_EINT1                    0x0010  /* IM_HP3L_SC_EINT1 */
+#define CLEARWATER_IM_HP3L_SC_EINT1_MASK               0x0010  /* IM_HP3L_SC_EINT1 */
+#define CLEARWATER_IM_HP3L_SC_EINT1_SHIFT                   4  /* IM_HP3L_SC_EINT1 */
+#define CLEARWATER_IM_HP3L_SC_EINT1_WIDTH                   1  /* IM_HP3L_SC_EINT1 */
+#define CLEARWATER_IM_HP2R_SC_EINT1                    0x0008  /* IM_HP2R_SC_EINT1 */
+#define CLEARWATER_IM_HP2R_SC_EINT1_MASK               0x0008  /* IM_HP2R_SC_EINT1 */
+#define CLEARWATER_IM_HP2R_SC_EINT1_SHIFT                   3  /* IM_HP2R_SC_EINT1 */
+#define CLEARWATER_IM_HP2R_SC_EINT1_WIDTH                   1  /* IM_HP2R_SC_EINT1 */
+#define CLEARWATER_IM_HP2L_SC_EINT1                    0x0004  /* IM_HP2L_SC_EINT1 */
+#define CLEARWATER_IM_HP2L_SC_EINT1_MASK               0x0004  /* IM_HP2L_SC_EINT1 */
+#define CLEARWATER_IM_HP2L_SC_EINT1_SHIFT                   2  /* IM_HP2L_SC_EINT1 */
+#define CLEARWATER_IM_HP2L_SC_EINT1_WIDTH                   1  /* IM_HP2L_SC_EINT1 */
+#define CLEARWATER_IM_HP1R_SC_EINT1                    0x0002  /* IM_HP1R_SC_EINT1 */
+#define CLEARWATER_IM_HP1R_SC_EINT1_MASK               0x0002  /* IM_HP1R_SC_EINT1 */
+#define CLEARWATER_IM_HP1R_SC_EINT1_SHIFT                   1  /* IM_HP1R_SC_EINT1 */
+#define CLEARWATER_IM_HP1R_SC_EINT1_WIDTH                   1  /* IM_HP1R_SC_EINT1 */
+#define CLEARWATER_IM_HP1L_SC_EINT1                    0x0001  /* IM_HP1L_SC_EINT1 */
+#define CLEARWATER_IM_HP1L_SC_EINT1_MASK               0x0001  /* IM_HP1L_SC_EINT1 */
+#define CLEARWATER_IM_HP1L_SC_EINT1_SHIFT                   0  /* IM_HP1L_SC_EINT1 */
+#define CLEARWATER_IM_HP1L_SC_EINT1_WIDTH                   1  /* IM_HP1L_SC_EINT1 */
 
 /*
  * R6220 (0x184C) - IRQ1 Mask 13
  */
-#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT1        0x0080  /* IM_SPKOUTR_ENABLE_DONE_EINT1 */
-#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT1_MASK   0x0080  /* IM_SPKOUTR_ENABLE_DONE_EINT1 */
-#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT1_SHIFT       7  /* IM_SPKOUTR_ENABLE_DONE_EINT1 */
-#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT1_WIDTH       1  /* IM_SPKOUTR_ENABLE_DONE_EINT1 */
-#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT1        0x0040  /* IM_SPKOUTL_ENABLE_DONE_EINT1 */
-#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT1_MASK   0x0040  /* IM_SPKOUTL_ENABLE_DONE_EINT1 */
-#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT1_SHIFT       6  /* IM_SPKOUTL_ENABLE_DONE_EINT1 */
-#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT1_WIDTH       1  /* IM_SPKOUTL_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP3R_ENABLE_DONE_EINT1           0x0020  /* IM_HP3R_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP3R_ENABLE_DONE_EINT1_MASK      0x0020  /* IM_HP3R_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP3R_ENABLE_DONE_EINT1_SHIFT          5  /* IM_HP3R_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP3R_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP3R_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP3L_ENABLE_DONE_EINT1           0x0010  /* IM_HP3L_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP3L_ENABLE_DONE_EINT1_MASK      0x0010  /* IM_HP3L_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP3L_ENABLE_DONE_EINT1_SHIFT          4  /* IM_HP3L_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP3L_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP3L_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP2R_ENABLE_DONE_EINT1           0x0008  /* IM_HP2R_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP2R_ENABLE_DONE_EINT1_MASK      0x0008  /* IM_HP2R_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP2R_ENABLE_DONE_EINT1_SHIFT          3  /* IM_HP2R_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP2R_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP2R_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP2L_ENABLE_DONE_EINT1           0x0004  /* IM_HP2L_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP2L_ENABLE_DONE_EINT1_MASK      0x0004  /* IM_HP2L_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP2L_ENABLE_DONE_EINT1_SHIFT          2  /* IM_HP2L_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP2L_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP2L_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP1R_ENABLE_DONE_EINT1           0x0002  /* IM_HP1R_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP1R_ENABLE_DONE_EINT1_MASK      0x0002  /* IM_HP1R_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP1R_ENABLE_DONE_EINT1_SHIFT          1  /* IM_HP1R_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP1R_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP1R_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP1L_ENABLE_DONE_EINT1           0x0001  /* IM_HP1L_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP1L_ENABLE_DONE_EINT1_MASK      0x0001  /* IM_HP1L_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP1L_ENABLE_DONE_EINT1_SHIFT          0  /* IM_HP1L_ENABLE_DONE_EINT1 */
-#define WM8285_IM_HP1L_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP1L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTR_ENABLE_DONE_EINT1        0x0080  /* IM_SPKOUTR_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTR_ENABLE_DONE_EINT1_MASK   0x0080  /* IM_SPKOUTR_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTR_ENABLE_DONE_EINT1_SHIFT       7  /* IM_SPKOUTR_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTR_ENABLE_DONE_EINT1_WIDTH       1  /* IM_SPKOUTR_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTL_ENABLE_DONE_EINT1        0x0040  /* IM_SPKOUTL_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTL_ENABLE_DONE_EINT1_MASK   0x0040  /* IM_SPKOUTL_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTL_ENABLE_DONE_EINT1_SHIFT       6  /* IM_SPKOUTL_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTL_ENABLE_DONE_EINT1_WIDTH       1  /* IM_SPKOUTL_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3R_ENABLE_DONE_EINT1           0x0020  /* IM_HP3R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3R_ENABLE_DONE_EINT1_MASK      0x0020  /* IM_HP3R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3R_ENABLE_DONE_EINT1_SHIFT          5  /* IM_HP3R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3R_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP3R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3L_ENABLE_DONE_EINT1           0x0010  /* IM_HP3L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3L_ENABLE_DONE_EINT1_MASK      0x0010  /* IM_HP3L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3L_ENABLE_DONE_EINT1_SHIFT          4  /* IM_HP3L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3L_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP3L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2R_ENABLE_DONE_EINT1           0x0008  /* IM_HP2R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2R_ENABLE_DONE_EINT1_MASK      0x0008  /* IM_HP2R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2R_ENABLE_DONE_EINT1_SHIFT          3  /* IM_HP2R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2R_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP2R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2L_ENABLE_DONE_EINT1           0x0004  /* IM_HP2L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2L_ENABLE_DONE_EINT1_MASK      0x0004  /* IM_HP2L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2L_ENABLE_DONE_EINT1_SHIFT          2  /* IM_HP2L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2L_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP2L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1R_ENABLE_DONE_EINT1           0x0002  /* IM_HP1R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1R_ENABLE_DONE_EINT1_MASK      0x0002  /* IM_HP1R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1R_ENABLE_DONE_EINT1_SHIFT          1  /* IM_HP1R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1R_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP1R_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1L_ENABLE_DONE_EINT1           0x0001  /* IM_HP1L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1L_ENABLE_DONE_EINT1_MASK      0x0001  /* IM_HP1L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1L_ENABLE_DONE_EINT1_SHIFT          0  /* IM_HP1L_ENABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1L_ENABLE_DONE_EINT1_WIDTH          1  /* IM_HP1L_ENABLE_DONE_EINT1 */
 
 /*
  * R6221 (0x184D) - IRQ1 Mask 14
  */
-#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT1       0x0080  /* IM_SPKOUTR_DISABLE_DONE_EINT1 */
-#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT1_MASK  0x0080  /* IM_SPKOUTR_DISABLE_DONE_EINT1 */
-#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT1_SHIFT      7  /* IM_SPKOUTR_DISABLE_DONE_EINT1 */
-#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT1_WIDTH      1  /* IM_SPKOUTR_DISABLE_DONE_EINT1 */
-#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT1       0x0040  /* IM_SPKOUTL_DISABLE_DONE_EINT1 */
-#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT1_MASK  0x0040  /* IM_SPKOUTL_DISABLE_DONE_EINT1 */
-#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT1_SHIFT      6  /* IM_SPKOUTL_DISABLE_DONE_EINT1 */
-#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT1_WIDTH      1  /* IM_SPKOUTL_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP3R_DISABLE_DONE_EINT1          0x0020  /* IM_HP3R_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP3R_DISABLE_DONE_EINT1_MASK     0x0020  /* IM_HP3R_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP3R_DISABLE_DONE_EINT1_SHIFT         5  /* IM_HP3R_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP3R_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP3R_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP3L_DISABLE_DONE_EINT1          0x0010  /* IM_HP3L_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP3L_DISABLE_DONE_EINT1_MASK     0x0010  /* IM_HP3L_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP3L_DISABLE_DONE_EINT1_SHIFT         4  /* IM_HP3L_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP3L_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP3L_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP2R_DISABLE_DONE_EINT1          0x0008  /* IM_HP2R_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP2R_DISABLE_DONE_EINT1_MASK     0x0008  /* IM_HP2R_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP2R_DISABLE_DONE_EINT1_SHIFT         3  /* IM_HP2R_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP2R_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP2R_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP2L_DISABLE_DONE_EINT1          0x0004  /* IM_HP2L_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP2L_DISABLE_DONE_EINT1_MASK     0x0004  /* IM_HP2L_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP2L_DISABLE_DONE_EINT1_SHIFT         2  /* IM_HP2L_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP2L_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP2L_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP1R_DISABLE_DONE_EINT1          0x0002  /* IM_HP1R_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP1R_DISABLE_DONE_EINT1_MASK     0x0002  /* IM_HP1R_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP1R_DISABLE_DONE_EINT1_SHIFT         1  /* IM_HP1R_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP1R_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP1R_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP1L_DISABLE_DONE_EINT1          0x0001  /* IM_HP1L_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP1L_DISABLE_DONE_EINT1_MASK     0x0001  /* IM_HP1L_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP1L_DISABLE_DONE_EINT1_SHIFT         0  /* IM_HP1L_DISABLE_DONE_EINT1 */
-#define WM8285_IM_HP1L_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP1L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTR_DISABLE_DONE_EINT1       0x0080  /* IM_SPKOUTR_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTR_DISABLE_DONE_EINT1_MASK  0x0080  /* IM_SPKOUTR_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTR_DISABLE_DONE_EINT1_SHIFT      7  /* IM_SPKOUTR_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTR_DISABLE_DONE_EINT1_WIDTH      1  /* IM_SPKOUTR_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTL_DISABLE_DONE_EINT1       0x0040  /* IM_SPKOUTL_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTL_DISABLE_DONE_EINT1_MASK  0x0040  /* IM_SPKOUTL_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTL_DISABLE_DONE_EINT1_SHIFT      6  /* IM_SPKOUTL_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_SPKOUTL_DISABLE_DONE_EINT1_WIDTH      1  /* IM_SPKOUTL_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3R_DISABLE_DONE_EINT1          0x0020  /* IM_HP3R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3R_DISABLE_DONE_EINT1_MASK     0x0020  /* IM_HP3R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3R_DISABLE_DONE_EINT1_SHIFT         5  /* IM_HP3R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3R_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP3R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3L_DISABLE_DONE_EINT1          0x0010  /* IM_HP3L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3L_DISABLE_DONE_EINT1_MASK     0x0010  /* IM_HP3L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3L_DISABLE_DONE_EINT1_SHIFT         4  /* IM_HP3L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP3L_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP3L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2R_DISABLE_DONE_EINT1          0x0008  /* IM_HP2R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2R_DISABLE_DONE_EINT1_MASK     0x0008  /* IM_HP2R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2R_DISABLE_DONE_EINT1_SHIFT         3  /* IM_HP2R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2R_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP2R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2L_DISABLE_DONE_EINT1          0x0004  /* IM_HP2L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2L_DISABLE_DONE_EINT1_MASK     0x0004  /* IM_HP2L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2L_DISABLE_DONE_EINT1_SHIFT         2  /* IM_HP2L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP2L_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP2L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1R_DISABLE_DONE_EINT1          0x0002  /* IM_HP1R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1R_DISABLE_DONE_EINT1_MASK     0x0002  /* IM_HP1R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1R_DISABLE_DONE_EINT1_SHIFT         1  /* IM_HP1R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1R_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP1R_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1L_DISABLE_DONE_EINT1          0x0001  /* IM_HP1L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1L_DISABLE_DONE_EINT1_MASK     0x0001  /* IM_HP1L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1L_DISABLE_DONE_EINT1_SHIFT         0  /* IM_HP1L_DISABLE_DONE_EINT1 */
+#define CLEARWATER_IM_HP1L_DISABLE_DONE_EINT1_WIDTH         1  /* IM_HP1L_DISABLE_DONE_EINT1 */
 
 /*
  * R6222 (0x184E) - IRQ1 Mask 15
  */
-#define WM8285_IM_SPK_OVERHEAT_WARN_EINT1          0x0004  /* IM_SPK_OVERHEAT_WARN_EINT1 */
-#define WM8285_IM_SPK_OVERHEAT_WARN_EINT1_MASK     0x0004  /* IM_SPK_OVERHEAT_WARN_EINT1 */
-#define WM8285_IM_SPK_OVERHEAT_WARN_EINT1_SHIFT         2  /* IM_SPK_OVERHEAT_WARN_EINT1 */
-#define WM8285_IM_SPK_OVERHEAT_WARN_EINT1_WIDTH         1  /* IM_SPK_OVERHEAT_WARN_EINT1 */
-#define WM8285_IM_SPK_OVERHEAT_EINT1               0x0002  /* IM_SPK_OVERHEAT_EINT1 */
-#define WM8285_IM_SPK_OVERHEAT_EINT1_MASK          0x0002  /* IM_SPK_OVERHEAT_EINT1 */
-#define WM8285_IM_SPK_OVERHEAT_EINT1_SHIFT              1  /* IM_SPK_OVERHEAT_EINT1 */
-#define WM8285_IM_SPK_OVERHEAT_EINT1_WIDTH              1  /* IM_SPK_OVERHEAT_EINT1 */
-#define WM8285_IM_SPK_SHUTDOWN_EINT1               0x0001  /* IM_SPK_SHUTDOWN_EINT1 */
-#define WM8285_IM_SPK_SHUTDOWN_EINT1_MASK          0x0001  /* IM_SPK_SHUTDOWN_EINT1 */
-#define WM8285_IM_SPK_SHUTDOWN_EINT1_SHIFT              0  /* IM_SPK_SHUTDOWN_EINT1 */
-#define WM8285_IM_SPK_SHUTDOWN_EINT1_WIDTH              1  /* IM_SPK_SHUTDOWN_EINT1 */
+#define CLEARWATER_IM_SPK_OVERHEAT_WARN_EINT1          0x0004  /* IM_SPK_OVERHEAT_WARN_EINT1 */
+#define CLEARWATER_IM_SPK_OVERHEAT_WARN_EINT1_MASK     0x0004  /* IM_SPK_OVERHEAT_WARN_EINT1 */
+#define CLEARWATER_IM_SPK_OVERHEAT_WARN_EINT1_SHIFT         2  /* IM_SPK_OVERHEAT_WARN_EINT1 */
+#define CLEARWATER_IM_SPK_OVERHEAT_WARN_EINT1_WIDTH         1  /* IM_SPK_OVERHEAT_WARN_EINT1 */
+#define CLEARWATER_IM_SPK_OVERHEAT_EINT1               0x0002  /* IM_SPK_OVERHEAT_EINT1 */
+#define CLEARWATER_IM_SPK_OVERHEAT_EINT1_MASK          0x0002  /* IM_SPK_OVERHEAT_EINT1 */
+#define CLEARWATER_IM_SPK_OVERHEAT_EINT1_SHIFT              1  /* IM_SPK_OVERHEAT_EINT1 */
+#define CLEARWATER_IM_SPK_OVERHEAT_EINT1_WIDTH              1  /* IM_SPK_OVERHEAT_EINT1 */
+#define CLEARWATER_IM_SPK_SHUTDOWN_EINT1               0x0001  /* IM_SPK_SHUTDOWN_EINT1 */
+#define CLEARWATER_IM_SPK_SHUTDOWN_EINT1_MASK          0x0001  /* IM_SPK_SHUTDOWN_EINT1 */
+#define CLEARWATER_IM_SPK_SHUTDOWN_EINT1_SHIFT              0  /* IM_SPK_SHUTDOWN_EINT1 */
+#define CLEARWATER_IM_SPK_SHUTDOWN_EINT1_WIDTH              1  /* IM_SPK_SHUTDOWN_EINT1 */
 
 /*
  * R6400 (0x1900) - IRQ2 Status 1
  */
-#define WM8285_DSP_SHARED_WR_COLL_EINT2            0x8000  /* DSP_SHARED_WR_COLL_EINT2 */
-#define WM8285_DSP_SHARED_WR_COLL_EINT2_MASK       0x8000  /* DSP_SHARED_WR_COLL_EINT2 */
-#define WM8285_DSP_SHARED_WR_COLL_EINT2_SHIFT          15  /* DSP_SHARED_WR_COLL_EINT2 */
-#define WM8285_DSP_SHARED_WR_COLL_EINT2_WIDTH           1  /* DSP_SHARED_WR_COLL_EINT2 */
-#define WM8285_CTRLIF_ERR_EINT2                    0x1000  /* CTRLIF_ERR_EINT2 */
-#define WM8285_CTRLIF_ERR_EINT2_MASK               0x1000  /* CTRLIF_ERR_EINT2 */
-#define WM8285_CTRLIF_ERR_EINT2_SHIFT                  12  /* CTRLIF_ERR_EINT2 */
-#define WM8285_CTRLIF_ERR_EINT2_WIDTH                   1  /* CTRLIF_ERR_EINT2 */
-#define WM8285_IRQ_NO_CLOCK_EINT2                  0x0200  /* IRQ_NO_CLOCK_EINT2 */
-#define WM8285_IRQ_NO_CLOCK_EINT2_MASK             0x0200  /* IRQ_NO_CLOCK_EINT2 */
-#define WM8285_IRQ_NO_CLOCK_EINT2_SHIFT                 9  /* IRQ_NO_CLOCK_EINT2 */
-#define WM8285_IRQ_NO_CLOCK_EINT2_WIDTH                 1  /* IRQ_NO_CLOCK_EINT2 */
-#define WM8285_CLOCK_DETECT_EINT2                  0x0100  /* CLOCK_DETECT_EINT2 */
-#define WM8285_CLOCK_DETECT_EINT2_MASK             0x0100  /* CLOCK_DETECT_EINT2 */
-#define WM8285_CLOCK_DETECT_EINT2_SHIFT                 8  /* CLOCK_DETECT_EINT2 */
-#define WM8285_CLOCK_DETECT_EINT2_WIDTH                 1  /* CLOCK_DETECT_EINT2 */
-#define WM8285_BOOT_DONE_EINT2                     0x0080  /* BOOT_DONE_EINT2 */
-#define WM8285_BOOT_DONE_EINT2_MASK                0x0080  /* BOOT_DONE_EINT2 */
-#define WM8285_BOOT_DONE_EINT2_SHIFT                    7  /* BOOT_DONE_EINT2 */
-#define WM8285_BOOT_DONE_EINT2_WIDTH                    1  /* BOOT_DONE_EINT2 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_EINT2            0x8000  /* DSP_SHARED_WR_COLL_EINT2 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_EINT2_MASK       0x8000  /* DSP_SHARED_WR_COLL_EINT2 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_EINT2_SHIFT          15  /* DSP_SHARED_WR_COLL_EINT2 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_EINT2_WIDTH           1  /* DSP_SHARED_WR_COLL_EINT2 */
+#define CLEARWATER_CTRLIF_ERR_EINT2                    0x1000  /* CTRLIF_ERR_EINT2 */
+#define CLEARWATER_CTRLIF_ERR_EINT2_MASK               0x1000  /* CTRLIF_ERR_EINT2 */
+#define CLEARWATER_CTRLIF_ERR_EINT2_SHIFT                  12  /* CTRLIF_ERR_EINT2 */
+#define CLEARWATER_CTRLIF_ERR_EINT2_WIDTH                   1  /* CTRLIF_ERR_EINT2 */
+#define CLEARWATER_IRQ_NO_CLOCK_EINT2                  0x0200  /* IRQ_NO_CLOCK_EINT2 */
+#define CLEARWATER_IRQ_NO_CLOCK_EINT2_MASK             0x0200  /* IRQ_NO_CLOCK_EINT2 */
+#define CLEARWATER_IRQ_NO_CLOCK_EINT2_SHIFT                 9  /* IRQ_NO_CLOCK_EINT2 */
+#define CLEARWATER_IRQ_NO_CLOCK_EINT2_WIDTH                 1  /* IRQ_NO_CLOCK_EINT2 */
+#define CLEARWATER_CLOCK_DETECT_EINT2                  0x0100  /* CLOCK_DETECT_EINT2 */
+#define CLEARWATER_CLOCK_DETECT_EINT2_MASK             0x0100  /* CLOCK_DETECT_EINT2 */
+#define CLEARWATER_CLOCK_DETECT_EINT2_SHIFT                 8  /* CLOCK_DETECT_EINT2 */
+#define CLEARWATER_CLOCK_DETECT_EINT2_WIDTH                 1  /* CLOCK_DETECT_EINT2 */
+#define CLEARWATER_BOOT_DONE_EINT2                     0x0080  /* BOOT_DONE_EINT2 */
+#define CLEARWATER_BOOT_DONE_EINT2_MASK                0x0080  /* BOOT_DONE_EINT2 */
+#define CLEARWATER_BOOT_DONE_EINT2_SHIFT                    7  /* BOOT_DONE_EINT2 */
+#define CLEARWATER_BOOT_DONE_EINT2_WIDTH                    1  /* BOOT_DONE_EINT2 */
 
 /*
  * R6401 (0x1901) - IRQ2 Status 2
  */
-#define WM8285_FLL3_LOCK_EINT2                     0x0400  /* FLL3_LOCK_EINT2 */
-#define WM8285_FLL3_LOCK_EINT2_MASK                0x0400  /* FLL3_LOCK_EINT2 */
-#define WM8285_FLL3_LOCK_EINT2_SHIFT                   10  /* FLL3_LOCK_EINT2 */
-#define WM8285_FLL3_LOCK_EINT2_WIDTH                    1  /* FLL3_LOCK_EINT2 */
-#define WM8285_FLL2_LOCK_EINT2                     0x0200  /* FLL2_LOCK_EINT2 */
-#define WM8285_FLL2_LOCK_EINT2_MASK                0x0200  /* FLL2_LOCK_EINT2 */
-#define WM8285_FLL2_LOCK_EINT2_SHIFT                    9  /* FLL2_LOCK_EINT2 */
-#define WM8285_FLL2_LOCK_EINT2_WIDTH                    1  /* FLL2_LOCK_EINT2 */
-#define WM8285_FLL1_LOCK_EINT2                     0x0100  /* FLL1_LOCK_EINT2 */
-#define WM8285_FLL1_LOCK_EINT2_MASK                0x0100  /* FLL1_LOCK_EINT2 */
-#define WM8285_FLL1_LOCK_EINT2_SHIFT                    8  /* FLL1_LOCK_EINT2 */
-#define WM8285_FLL1_LOCK_EINT2_WIDTH                    1  /* FLL1_LOCK_EINT2 */
+#define CLEARWATER_FLL3_LOCK_EINT2                     0x0400  /* FLL3_LOCK_EINT2 */
+#define CLEARWATER_FLL3_LOCK_EINT2_MASK                0x0400  /* FLL3_LOCK_EINT2 */
+#define CLEARWATER_FLL3_LOCK_EINT2_SHIFT                   10  /* FLL3_LOCK_EINT2 */
+#define CLEARWATER_FLL3_LOCK_EINT2_WIDTH                    1  /* FLL3_LOCK_EINT2 */
+#define CLEARWATER_FLL2_LOCK_EINT2                     0x0200  /* FLL2_LOCK_EINT2 */
+#define CLEARWATER_FLL2_LOCK_EINT2_MASK                0x0200  /* FLL2_LOCK_EINT2 */
+#define CLEARWATER_FLL2_LOCK_EINT2_SHIFT                    9  /* FLL2_LOCK_EINT2 */
+#define CLEARWATER_FLL2_LOCK_EINT2_WIDTH                    1  /* FLL2_LOCK_EINT2 */
+#define CLEARWATER_FLL1_LOCK_EINT2                     0x0100  /* FLL1_LOCK_EINT2 */
+#define CLEARWATER_FLL1_LOCK_EINT2_MASK                0x0100  /* FLL1_LOCK_EINT2 */
+#define CLEARWATER_FLL1_LOCK_EINT2_SHIFT                    8  /* FLL1_LOCK_EINT2 */
+#define CLEARWATER_FLL1_LOCK_EINT2_WIDTH                    1  /* FLL1_LOCK_EINT2 */
 
 /*
  * R6405 (0x1905) - IRQ2 Status 6
  */
-#define WM8285_MICDET_EINT2                        0x0100  /* MICDET_EINT2 */
-#define WM8285_MICDET_EINT2_MASK                   0x0100  /* MICDET_EINT2 */
-#define WM8285_MICDET_EINT2_SHIFT                       8  /* MICDET_EINT2 */
-#define WM8285_MICDET_EINT2_WIDTH                       1  /* MICDET_EINT2 */
-#define WM8285_HPDET_EINT2                         0x0001  /* HPDET_EINT2 */
-#define WM8285_HPDET_EINT2_MASK                    0x0001  /* HPDET_EINT2 */
-#define WM8285_HPDET_EINT2_SHIFT                        0  /* HPDET_EINT2 */
-#define WM8285_HPDET_EINT2_WIDTH                        1  /* HPDET_EINT2 */
+#define CLEARWATER_MICDET_EINT2                        0x0100  /* MICDET_EINT2 */
+#define CLEARWATER_MICDET_EINT2_MASK                   0x0100  /* MICDET_EINT2 */
+#define CLEARWATER_MICDET_EINT2_SHIFT                       8  /* MICDET_EINT2 */
+#define CLEARWATER_MICDET_EINT2_WIDTH                       1  /* MICDET_EINT2 */
+#define CLEARWATER_HPDET_EINT2                         0x0001  /* HPDET_EINT2 */
+#define CLEARWATER_HPDET_EINT2_MASK                    0x0001  /* HPDET_EINT2 */
+#define CLEARWATER_HPDET_EINT2_SHIFT                        0  /* HPDET_EINT2 */
+#define CLEARWATER_HPDET_EINT2_WIDTH                        1  /* HPDET_EINT2 */
 
 /*
  * R6406 (0x1906) - IRQ2 Status 7
  */
-#define WM8285_MICD_CLAMP_FALL_EINT2               0x0020  /* MICD_CLAMP_FALL_EINT2 */
-#define WM8285_MICD_CLAMP_FALL_EINT2_MASK          0x0020  /* MICD_CLAMP_FALL_EINT2 */
-#define WM8285_MICD_CLAMP_FALL_EINT2_SHIFT              5  /* MICD_CLAMP_FALL_EINT2 */
-#define WM8285_MICD_CLAMP_FALL_EINT2_WIDTH              1  /* MICD_CLAMP_FALL_EINT2 */
-#define WM8285_MICD_CLAMP_RISE_EINT2               0x0010  /* MICD_CLAMP_RISE_EINT2 */
-#define WM8285_MICD_CLAMP_RISE_EINT2_MASK          0x0010  /* MICD_CLAMP_RISE_EINT2 */
-#define WM8285_MICD_CLAMP_RISE_EINT2_SHIFT              4  /* MICD_CLAMP_RISE_EINT2 */
-#define WM8285_MICD_CLAMP_RISE_EINT2_WIDTH              1  /* MICD_CLAMP_RISE_EINT2 */
-#define WM8285_JD2_FALL_EINT2                      0x0008  /* JD2_FALL_EINT2 */
-#define WM8285_JD2_FALL_EINT2_MASK                 0x0008  /* JD2_FALL_EINT2 */
-#define WM8285_JD2_FALL_EINT2_SHIFT                     3  /* JD2_FALL_EINT2 */
-#define WM8285_JD2_FALL_EINT2_WIDTH                     1  /* JD2_FALL_EINT2 */
-#define WM8285_JD2_RISE_EINT2                      0x0004  /* JD2_RISE_EINT2 */
-#define WM8285_JD2_RISE_EINT2_MASK                 0x0004  /* JD2_RISE_EINT2 */
-#define WM8285_JD2_RISE_EINT2_SHIFT                     2  /* JD2_RISE_EINT2 */
-#define WM8285_JD2_RISE_EINT2_WIDTH                     1  /* JD2_RISE_EINT2 */
-#define WM8285_JD1_FALL_EINT2                      0x0002  /* JD1_FALL_EINT2 */
-#define WM8285_JD1_FALL_EINT2_MASK                 0x0002  /* JD1_FALL_EINT2 */
-#define WM8285_JD1_FALL_EINT2_SHIFT                     1  /* JD1_FALL_EINT2 */
-#define WM8285_JD1_FALL_EINT2_WIDTH                     1  /* JD1_FALL_EINT2 */
-#define WM8285_JD1_RISE_EINT2                      0x0001  /* JD1_RISE_EINT2 */
-#define WM8285_JD1_RISE_EINT2_MASK                 0x0001  /* JD1_RISE_EINT2 */
-#define WM8285_JD1_RISE_EINT2_SHIFT                     0  /* JD1_RISE_EINT2 */
-#define WM8285_JD1_RISE_EINT2_WIDTH                     1  /* JD1_RISE_EINT2 */
+#define CLEARWATER_MICD_CLAMP_FALL_EINT2               0x0020  /* MICD_CLAMP_FALL_EINT2 */
+#define CLEARWATER_MICD_CLAMP_FALL_EINT2_MASK          0x0020  /* MICD_CLAMP_FALL_EINT2 */
+#define CLEARWATER_MICD_CLAMP_FALL_EINT2_SHIFT              5  /* MICD_CLAMP_FALL_EINT2 */
+#define CLEARWATER_MICD_CLAMP_FALL_EINT2_WIDTH              1  /* MICD_CLAMP_FALL_EINT2 */
+#define CLEARWATER_MICD_CLAMP_RISE_EINT2               0x0010  /* MICD_CLAMP_RISE_EINT2 */
+#define CLEARWATER_MICD_CLAMP_RISE_EINT2_MASK          0x0010  /* MICD_CLAMP_RISE_EINT2 */
+#define CLEARWATER_MICD_CLAMP_RISE_EINT2_SHIFT              4  /* MICD_CLAMP_RISE_EINT2 */
+#define CLEARWATER_MICD_CLAMP_RISE_EINT2_WIDTH              1  /* MICD_CLAMP_RISE_EINT2 */
+#define CLEARWATER_JD2_FALL_EINT2                      0x0008  /* JD2_FALL_EINT2 */
+#define CLEARWATER_JD2_FALL_EINT2_MASK                 0x0008  /* JD2_FALL_EINT2 */
+#define CLEARWATER_JD2_FALL_EINT2_SHIFT                     3  /* JD2_FALL_EINT2 */
+#define CLEARWATER_JD2_FALL_EINT2_WIDTH                     1  /* JD2_FALL_EINT2 */
+#define CLEARWATER_JD2_RISE_EINT2                      0x0004  /* JD2_RISE_EINT2 */
+#define CLEARWATER_JD2_RISE_EINT2_MASK                 0x0004  /* JD2_RISE_EINT2 */
+#define CLEARWATER_JD2_RISE_EINT2_SHIFT                     2  /* JD2_RISE_EINT2 */
+#define CLEARWATER_JD2_RISE_EINT2_WIDTH                     1  /* JD2_RISE_EINT2 */
+#define CLEARWATER_JD1_FALL_EINT2                      0x0002  /* JD1_FALL_EINT2 */
+#define CLEARWATER_JD1_FALL_EINT2_MASK                 0x0002  /* JD1_FALL_EINT2 */
+#define CLEARWATER_JD1_FALL_EINT2_SHIFT                     1  /* JD1_FALL_EINT2 */
+#define CLEARWATER_JD1_FALL_EINT2_WIDTH                     1  /* JD1_FALL_EINT2 */
+#define CLEARWATER_JD1_RISE_EINT2                      0x0001  /* JD1_RISE_EINT2 */
+#define CLEARWATER_JD1_RISE_EINT2_MASK                 0x0001  /* JD1_RISE_EINT2 */
+#define CLEARWATER_JD1_RISE_EINT2_SHIFT                     0  /* JD1_RISE_EINT2 */
+#define CLEARWATER_JD1_RISE_EINT2_WIDTH                     1  /* JD1_RISE_EINT2 */
 
 /*
  * R6408 (0x1908) - IRQ2 Status 9
  */
-#define WM8285_ASRC2_IN2_LOCK_EINT2                0x0800  /* ASRC2_IN2_LOCK_EINT2 */
-#define WM8285_ASRC2_IN2_LOCK_EINT2_MASK           0x0800  /* ASRC2_IN2_LOCK_EINT2 */
-#define WM8285_ASRC2_IN2_LOCK_EINT2_SHIFT              11  /* ASRC2_IN2_LOCK_EINT2 */
-#define WM8285_ASRC2_IN2_LOCK_EINT2_WIDTH               1  /* ASRC2_IN2_LOCK_EINT2 */
-#define WM8285_ASRC2_IN1_LOCK_EINT2                0x0400  /* ASRC2_IN1_LOCK_EINT2 */
-#define WM8285_ASRC2_IN1_LOCK_EINT2_MASK           0x0400  /* ASRC2_IN1_LOCK_EINT2 */
-#define WM8285_ASRC2_IN1_LOCK_EINT2_SHIFT              10  /* ASRC2_IN1_LOCK_EINT2 */
-#define WM8285_ASRC2_IN1_LOCK_EINT2_WIDTH               1  /* ASRC2_IN1_LOCK_EINT2 */
-#define WM8285_ASRC1_IN2_LOCK_EINT2                0x0200  /* ASRC1_IN2_LOCK_EINT2 */
-#define WM8285_ASRC1_IN2_LOCK_EINT2_MASK           0x0200  /* ASRC1_IN2_LOCK_EINT2 */
-#define WM8285_ASRC1_IN2_LOCK_EINT2_SHIFT               9  /* ASRC1_IN2_LOCK_EINT2 */
-#define WM8285_ASRC1_IN2_LOCK_EINT2_WIDTH               1  /* ASRC1_IN2_LOCK_EINT2 */
-#define WM8285_ASRC1_IN1_LOCK_EINT2                0x0100  /* ASRC1_IN1_LOCK_EINT2 */
-#define WM8285_ASRC1_IN1_LOCK_EINT2_MASK           0x0100  /* ASRC1_IN1_LOCK_EINT2 */
-#define WM8285_ASRC1_IN1_LOCK_EINT2_SHIFT               8  /* ASRC1_IN1_LOCK_EINT2 */
-#define WM8285_ASRC1_IN1_LOCK_EINT2_WIDTH               1  /* ASRC1_IN1_LOCK_EINT2 */
-#define WM8285_DRC2_SIG_DET_EINT2                  0x0002  /* DRC2_SIG_DET_EINT2 */
-#define WM8285_DRC2_SIG_DET_EINT2_MASK             0x0002  /* DRC2_SIG_DET_EINT2 */
-#define WM8285_DRC2_SIG_DET_EINT2_SHIFT                 1  /* DRC2_SIG_DET_EINT2 */
-#define WM8285_DRC2_SIG_DET_EINT2_WIDTH                 1  /* DRC2_SIG_DET_EINT2 */
-#define WM8285_DRC1_SIG_DET_EINT2                  0x0001  /* DRC1_SIG_DET_EINT2 */
-#define WM8285_DRC1_SIG_DET_EINT2_MASK             0x0001  /* DRC1_SIG_DET_EINT2 */
-#define WM8285_DRC1_SIG_DET_EINT2_SHIFT                 0  /* DRC1_SIG_DET_EINT2 */
-#define WM8285_DRC1_SIG_DET_EINT2_WIDTH                 1  /* DRC1_SIG_DET_EINT2 */
+#define CLEARWATER_ASRC2_IN2_LOCK_EINT2                0x0800  /* ASRC2_IN2_LOCK_EINT2 */
+#define CLEARWATER_ASRC2_IN2_LOCK_EINT2_MASK           0x0800  /* ASRC2_IN2_LOCK_EINT2 */
+#define CLEARWATER_ASRC2_IN2_LOCK_EINT2_SHIFT              11  /* ASRC2_IN2_LOCK_EINT2 */
+#define CLEARWATER_ASRC2_IN2_LOCK_EINT2_WIDTH               1  /* ASRC2_IN2_LOCK_EINT2 */
+#define CLEARWATER_ASRC2_IN1_LOCK_EINT2                0x0400  /* ASRC2_IN1_LOCK_EINT2 */
+#define CLEARWATER_ASRC2_IN1_LOCK_EINT2_MASK           0x0400  /* ASRC2_IN1_LOCK_EINT2 */
+#define CLEARWATER_ASRC2_IN1_LOCK_EINT2_SHIFT              10  /* ASRC2_IN1_LOCK_EINT2 */
+#define CLEARWATER_ASRC2_IN1_LOCK_EINT2_WIDTH               1  /* ASRC2_IN1_LOCK_EINT2 */
+#define CLEARWATER_ASRC1_IN2_LOCK_EINT2                0x0200  /* ASRC1_IN2_LOCK_EINT2 */
+#define CLEARWATER_ASRC1_IN2_LOCK_EINT2_MASK           0x0200  /* ASRC1_IN2_LOCK_EINT2 */
+#define CLEARWATER_ASRC1_IN2_LOCK_EINT2_SHIFT               9  /* ASRC1_IN2_LOCK_EINT2 */
+#define CLEARWATER_ASRC1_IN2_LOCK_EINT2_WIDTH               1  /* ASRC1_IN2_LOCK_EINT2 */
+#define CLEARWATER_ASRC1_IN1_LOCK_EINT2                0x0100  /* ASRC1_IN1_LOCK_EINT2 */
+#define CLEARWATER_ASRC1_IN1_LOCK_EINT2_MASK           0x0100  /* ASRC1_IN1_LOCK_EINT2 */
+#define CLEARWATER_ASRC1_IN1_LOCK_EINT2_SHIFT               8  /* ASRC1_IN1_LOCK_EINT2 */
+#define CLEARWATER_ASRC1_IN1_LOCK_EINT2_WIDTH               1  /* ASRC1_IN1_LOCK_EINT2 */
+#define CLEARWATER_DRC2_SIG_DET_EINT2                  0x0002  /* DRC2_SIG_DET_EINT2 */
+#define CLEARWATER_DRC2_SIG_DET_EINT2_MASK             0x0002  /* DRC2_SIG_DET_EINT2 */
+#define CLEARWATER_DRC2_SIG_DET_EINT2_SHIFT                 1  /* DRC2_SIG_DET_EINT2 */
+#define CLEARWATER_DRC2_SIG_DET_EINT2_WIDTH                 1  /* DRC2_SIG_DET_EINT2 */
+#define CLEARWATER_DRC1_SIG_DET_EINT2                  0x0001  /* DRC1_SIG_DET_EINT2 */
+#define CLEARWATER_DRC1_SIG_DET_EINT2_MASK             0x0001  /* DRC1_SIG_DET_EINT2 */
+#define CLEARWATER_DRC1_SIG_DET_EINT2_SHIFT                 0  /* DRC1_SIG_DET_EINT2 */
+#define CLEARWATER_DRC1_SIG_DET_EINT2_WIDTH                 1  /* DRC1_SIG_DET_EINT2 */
 
 /*
  * R6410 (0x190A) - IRQ2 Status 11
  */
-#define WM8285_DSP_IRQ16_EINT2                     0x8000  /* DSP_IRQ16_EINT2 */
-#define WM8285_DSP_IRQ16_EINT2_MASK                0x8000  /* DSP_IRQ16_EINT2 */
-#define WM8285_DSP_IRQ16_EINT2_SHIFT                   15  /* DSP_IRQ16_EINT2 */
-#define WM8285_DSP_IRQ16_EINT2_WIDTH                    1  /* DSP_IRQ16_EINT2 */
-#define WM8285_DSP_IRQ15_EINT2                     0x4000  /* DSP_IRQ15_EINT2 */
-#define WM8285_DSP_IRQ15_EINT2_MASK                0x4000  /* DSP_IRQ15_EINT2 */
-#define WM8285_DSP_IRQ15_EINT2_SHIFT                   14  /* DSP_IRQ15_EINT2 */
-#define WM8285_DSP_IRQ15_EINT2_WIDTH                    1  /* DSP_IRQ15_EINT2 */
-#define WM8285_DSP_IRQ14_EINT2                     0x2000  /* DSP_IRQ14_EINT2 */
-#define WM8285_DSP_IRQ14_EINT2_MASK                0x2000  /* DSP_IRQ14_EINT2 */
-#define WM8285_DSP_IRQ14_EINT2_SHIFT                   13  /* DSP_IRQ14_EINT2 */
-#define WM8285_DSP_IRQ14_EINT2_WIDTH                    1  /* DSP_IRQ14_EINT2 */
-#define WM8285_DSP_IRQ13_EINT2                     0x1000  /* DSP_IRQ13_EINT2 */
-#define WM8285_DSP_IRQ13_EINT2_MASK                0x1000  /* DSP_IRQ13_EINT2 */
-#define WM8285_DSP_IRQ13_EINT2_SHIFT                   12  /* DSP_IRQ13_EINT2 */
-#define WM8285_DSP_IRQ13_EINT2_WIDTH                    1  /* DSP_IRQ13_EINT2 */
-#define WM8285_DSP_IRQ12_EINT2                     0x0800  /* DSP_IRQ12_EINT2 */
-#define WM8285_DSP_IRQ12_EINT2_MASK                0x0800  /* DSP_IRQ12_EINT2 */
-#define WM8285_DSP_IRQ12_EINT2_SHIFT                   11  /* DSP_IRQ12_EINT2 */
-#define WM8285_DSP_IRQ12_EINT2_WIDTH                    1  /* DSP_IRQ12_EINT2 */
-#define WM8285_DSP_IRQ11_EINT2                     0x0400  /* DSP_IRQ11_EINT2 */
-#define WM8285_DSP_IRQ11_EINT2_MASK                0x0400  /* DSP_IRQ11_EINT2 */
-#define WM8285_DSP_IRQ11_EINT2_SHIFT                   10  /* DSP_IRQ11_EINT2 */
-#define WM8285_DSP_IRQ11_EINT2_WIDTH                    1  /* DSP_IRQ11_EINT2 */
-#define WM8285_DSP_IRQ10_EINT2                     0x0200  /* DSP_IRQ10_EINT2 */
-#define WM8285_DSP_IRQ10_EINT2_MASK                0x0200  /* DSP_IRQ10_EINT2 */
-#define WM8285_DSP_IRQ10_EINT2_SHIFT                    9  /* DSP_IRQ10_EINT2 */
-#define WM8285_DSP_IRQ10_EINT2_WIDTH                    1  /* DSP_IRQ10_EINT2 */
-#define WM8285_DSP_IRQ9_EINT2                      0x0100  /* DSP_IRQ9_EINT2 */
-#define WM8285_DSP_IRQ9_EINT2_MASK                 0x0100  /* DSP_IRQ9_EINT2 */
-#define WM8285_DSP_IRQ9_EINT2_SHIFT                     8  /* DSP_IRQ9_EINT2 */
-#define WM8285_DSP_IRQ9_EINT2_WIDTH                     1  /* DSP_IRQ9_EINT2 */
-#define WM8285_DSP_IRQ8_EINT2                      0x0080  /* DSP_IRQ8_EINT2 */
-#define WM8285_DSP_IRQ8_EINT2_MASK                 0x0080  /* DSP_IRQ8_EINT2 */
-#define WM8285_DSP_IRQ8_EINT2_SHIFT                     7  /* DSP_IRQ8_EINT2 */
-#define WM8285_DSP_IRQ8_EINT2_WIDTH                     1  /* DSP_IRQ8_EINT2 */
-#define WM8285_DSP_IRQ7_EINT2                      0x0040  /* DSP_IRQ7_EINT2 */
-#define WM8285_DSP_IRQ7_EINT2_MASK                 0x0040  /* DSP_IRQ7_EINT2 */
-#define WM8285_DSP_IRQ7_EINT2_SHIFT                     6  /* DSP_IRQ7_EINT2 */
-#define WM8285_DSP_IRQ7_EINT2_WIDTH                     1  /* DSP_IRQ7_EINT2 */
-#define WM8285_DSP_IRQ6_EINT2                      0x0020  /* DSP_IRQ6_EINT2 */
-#define WM8285_DSP_IRQ6_EINT2_MASK                 0x0020  /* DSP_IRQ6_EINT2 */
-#define WM8285_DSP_IRQ6_EINT2_SHIFT                     5  /* DSP_IRQ6_EINT2 */
-#define WM8285_DSP_IRQ6_EINT2_WIDTH                     1  /* DSP_IRQ6_EINT2 */
-#define WM8285_DSP_IRQ5_EINT2                      0x0010  /* DSP_IRQ5_EINT2 */
-#define WM8285_DSP_IRQ5_EINT2_MASK                 0x0010  /* DSP_IRQ5_EINT2 */
-#define WM8285_DSP_IRQ5_EINT2_SHIFT                     4  /* DSP_IRQ5_EINT2 */
-#define WM8285_DSP_IRQ5_EINT2_WIDTH                     1  /* DSP_IRQ5_EINT2 */
-#define WM8285_DSP_IRQ4_EINT2                      0x0008  /* DSP_IRQ4_EINT2 */
-#define WM8285_DSP_IRQ4_EINT2_MASK                 0x0008  /* DSP_IRQ4_EINT2 */
-#define WM8285_DSP_IRQ4_EINT2_SHIFT                     3  /* DSP_IRQ4_EINT2 */
-#define WM8285_DSP_IRQ4_EINT2_WIDTH                     1  /* DSP_IRQ4_EINT2 */
-#define WM8285_DSP_IRQ3_EINT2                      0x0004  /* DSP_IRQ3_EINT2 */
-#define WM8285_DSP_IRQ3_EINT2_MASK                 0x0004  /* DSP_IRQ3_EINT2 */
-#define WM8285_DSP_IRQ3_EINT2_SHIFT                     2  /* DSP_IRQ3_EINT2 */
-#define WM8285_DSP_IRQ3_EINT2_WIDTH                     1  /* DSP_IRQ3_EINT2 */
-#define WM8285_DSP_IRQ2_EINT2                      0x0002  /* DSP_IRQ2_EINT2 */
-#define WM8285_DSP_IRQ2_EINT2_MASK                 0x0002  /* DSP_IRQ2_EINT2 */
-#define WM8285_DSP_IRQ2_EINT2_SHIFT                     1  /* DSP_IRQ2_EINT2 */
-#define WM8285_DSP_IRQ2_EINT2_WIDTH                     1  /* DSP_IRQ2_EINT2 */
-#define WM8285_DSP_IRQ1_EINT2                      0x0001  /* DSP_IRQ1_EINT2 */
-#define WM8285_DSP_IRQ1_EINT2_MASK                 0x0001  /* DSP_IRQ1_EINT2 */
-#define WM8285_DSP_IRQ1_EINT2_SHIFT                     0  /* DSP_IRQ1_EINT2 */
-#define WM8285_DSP_IRQ1_EINT2_WIDTH                     1  /* DSP_IRQ1_EINT2 */
+#define CLEARWATER_DSP_IRQ16_EINT2                     0x8000  /* DSP_IRQ16_EINT2 */
+#define CLEARWATER_DSP_IRQ16_EINT2_MASK                0x8000  /* DSP_IRQ16_EINT2 */
+#define CLEARWATER_DSP_IRQ16_EINT2_SHIFT                   15  /* DSP_IRQ16_EINT2 */
+#define CLEARWATER_DSP_IRQ16_EINT2_WIDTH                    1  /* DSP_IRQ16_EINT2 */
+#define CLEARWATER_DSP_IRQ15_EINT2                     0x4000  /* DSP_IRQ15_EINT2 */
+#define CLEARWATER_DSP_IRQ15_EINT2_MASK                0x4000  /* DSP_IRQ15_EINT2 */
+#define CLEARWATER_DSP_IRQ15_EINT2_SHIFT                   14  /* DSP_IRQ15_EINT2 */
+#define CLEARWATER_DSP_IRQ15_EINT2_WIDTH                    1  /* DSP_IRQ15_EINT2 */
+#define CLEARWATER_DSP_IRQ14_EINT2                     0x2000  /* DSP_IRQ14_EINT2 */
+#define CLEARWATER_DSP_IRQ14_EINT2_MASK                0x2000  /* DSP_IRQ14_EINT2 */
+#define CLEARWATER_DSP_IRQ14_EINT2_SHIFT                   13  /* DSP_IRQ14_EINT2 */
+#define CLEARWATER_DSP_IRQ14_EINT2_WIDTH                    1  /* DSP_IRQ14_EINT2 */
+#define CLEARWATER_DSP_IRQ13_EINT2                     0x1000  /* DSP_IRQ13_EINT2 */
+#define CLEARWATER_DSP_IRQ13_EINT2_MASK                0x1000  /* DSP_IRQ13_EINT2 */
+#define CLEARWATER_DSP_IRQ13_EINT2_SHIFT                   12  /* DSP_IRQ13_EINT2 */
+#define CLEARWATER_DSP_IRQ13_EINT2_WIDTH                    1  /* DSP_IRQ13_EINT2 */
+#define CLEARWATER_DSP_IRQ12_EINT2                     0x0800  /* DSP_IRQ12_EINT2 */
+#define CLEARWATER_DSP_IRQ12_EINT2_MASK                0x0800  /* DSP_IRQ12_EINT2 */
+#define CLEARWATER_DSP_IRQ12_EINT2_SHIFT                   11  /* DSP_IRQ12_EINT2 */
+#define CLEARWATER_DSP_IRQ12_EINT2_WIDTH                    1  /* DSP_IRQ12_EINT2 */
+#define CLEARWATER_DSP_IRQ11_EINT2                     0x0400  /* DSP_IRQ11_EINT2 */
+#define CLEARWATER_DSP_IRQ11_EINT2_MASK                0x0400  /* DSP_IRQ11_EINT2 */
+#define CLEARWATER_DSP_IRQ11_EINT2_SHIFT                   10  /* DSP_IRQ11_EINT2 */
+#define CLEARWATER_DSP_IRQ11_EINT2_WIDTH                    1  /* DSP_IRQ11_EINT2 */
+#define CLEARWATER_DSP_IRQ10_EINT2                     0x0200  /* DSP_IRQ10_EINT2 */
+#define CLEARWATER_DSP_IRQ10_EINT2_MASK                0x0200  /* DSP_IRQ10_EINT2 */
+#define CLEARWATER_DSP_IRQ10_EINT2_SHIFT                    9  /* DSP_IRQ10_EINT2 */
+#define CLEARWATER_DSP_IRQ10_EINT2_WIDTH                    1  /* DSP_IRQ10_EINT2 */
+#define CLEARWATER_DSP_IRQ9_EINT2                      0x0100  /* DSP_IRQ9_EINT2 */
+#define CLEARWATER_DSP_IRQ9_EINT2_MASK                 0x0100  /* DSP_IRQ9_EINT2 */
+#define CLEARWATER_DSP_IRQ9_EINT2_SHIFT                     8  /* DSP_IRQ9_EINT2 */
+#define CLEARWATER_DSP_IRQ9_EINT2_WIDTH                     1  /* DSP_IRQ9_EINT2 */
+#define CLEARWATER_DSP_IRQ8_EINT2                      0x0080  /* DSP_IRQ8_EINT2 */
+#define CLEARWATER_DSP_IRQ8_EINT2_MASK                 0x0080  /* DSP_IRQ8_EINT2 */
+#define CLEARWATER_DSP_IRQ8_EINT2_SHIFT                     7  /* DSP_IRQ8_EINT2 */
+#define CLEARWATER_DSP_IRQ8_EINT2_WIDTH                     1  /* DSP_IRQ8_EINT2 */
+#define CLEARWATER_DSP_IRQ7_EINT2                      0x0040  /* DSP_IRQ7_EINT2 */
+#define CLEARWATER_DSP_IRQ7_EINT2_MASK                 0x0040  /* DSP_IRQ7_EINT2 */
+#define CLEARWATER_DSP_IRQ7_EINT2_SHIFT                     6  /* DSP_IRQ7_EINT2 */
+#define CLEARWATER_DSP_IRQ7_EINT2_WIDTH                     1  /* DSP_IRQ7_EINT2 */
+#define CLEARWATER_DSP_IRQ6_EINT2                      0x0020  /* DSP_IRQ6_EINT2 */
+#define CLEARWATER_DSP_IRQ6_EINT2_MASK                 0x0020  /* DSP_IRQ6_EINT2 */
+#define CLEARWATER_DSP_IRQ6_EINT2_SHIFT                     5  /* DSP_IRQ6_EINT2 */
+#define CLEARWATER_DSP_IRQ6_EINT2_WIDTH                     1  /* DSP_IRQ6_EINT2 */
+#define CLEARWATER_DSP_IRQ5_EINT2                      0x0010  /* DSP_IRQ5_EINT2 */
+#define CLEARWATER_DSP_IRQ5_EINT2_MASK                 0x0010  /* DSP_IRQ5_EINT2 */
+#define CLEARWATER_DSP_IRQ5_EINT2_SHIFT                     4  /* DSP_IRQ5_EINT2 */
+#define CLEARWATER_DSP_IRQ5_EINT2_WIDTH                     1  /* DSP_IRQ5_EINT2 */
+#define CLEARWATER_DSP_IRQ4_EINT2                      0x0008  /* DSP_IRQ4_EINT2 */
+#define CLEARWATER_DSP_IRQ4_EINT2_MASK                 0x0008  /* DSP_IRQ4_EINT2 */
+#define CLEARWATER_DSP_IRQ4_EINT2_SHIFT                     3  /* DSP_IRQ4_EINT2 */
+#define CLEARWATER_DSP_IRQ4_EINT2_WIDTH                     1  /* DSP_IRQ4_EINT2 */
+#define CLEARWATER_DSP_IRQ3_EINT2                      0x0004  /* DSP_IRQ3_EINT2 */
+#define CLEARWATER_DSP_IRQ3_EINT2_MASK                 0x0004  /* DSP_IRQ3_EINT2 */
+#define CLEARWATER_DSP_IRQ3_EINT2_SHIFT                     2  /* DSP_IRQ3_EINT2 */
+#define CLEARWATER_DSP_IRQ3_EINT2_WIDTH                     1  /* DSP_IRQ3_EINT2 */
+#define CLEARWATER_DSP_IRQ2_EINT2                      0x0002  /* DSP_IRQ2_EINT2 */
+#define CLEARWATER_DSP_IRQ2_EINT2_MASK                 0x0002  /* DSP_IRQ2_EINT2 */
+#define CLEARWATER_DSP_IRQ2_EINT2_SHIFT                     1  /* DSP_IRQ2_EINT2 */
+#define CLEARWATER_DSP_IRQ2_EINT2_WIDTH                     1  /* DSP_IRQ2_EINT2 */
+#define CLEARWATER_DSP_IRQ1_EINT2                      0x0001  /* DSP_IRQ1_EINT2 */
+#define CLEARWATER_DSP_IRQ1_EINT2_MASK                 0x0001  /* DSP_IRQ1_EINT2 */
+#define CLEARWATER_DSP_IRQ1_EINT2_SHIFT                     0  /* DSP_IRQ1_EINT2 */
+#define CLEARWATER_DSP_IRQ1_EINT2_WIDTH                     1  /* DSP_IRQ1_EINT2 */
 
 /*
  * R6411 (0x190B) - IRQ2 Status 12
  */
-#define WM8285_SPKOUTR_SC_EINT2                    0x0080  /* SPKOUTR_SC_EINT2 */
-#define WM8285_SPKOUTR_SC_EINT2_MASK               0x0080  /* SPKOUTR_SC_EINT2 */
-#define WM8285_SPKOUTR_SC_EINT2_SHIFT                   7  /* SPKOUTR_SC_EINT2 */
-#define WM8285_SPKOUTR_SC_EINT2_WIDTH                   1  /* SPKOUTR_SC_EINT2 */
-#define WM8285_SPKOUTL_SC_EINT2                    0x0040  /* SPKOUTL_SC_EINT2 */
-#define WM8285_SPKOUTL_SC_EINT2_MASK               0x0040  /* SPKOUTL_SC_EINT2 */
-#define WM8285_SPKOUTL_SC_EINT2_SHIFT                   6  /* SPKOUTL_SC_EINT2 */
-#define WM8285_SPKOUTL_SC_EINT2_WIDTH                   1  /* SPKOUTL_SC_EINT2 */
-#define WM8285_HP3R_SC_EINT2                       0x0020  /* HP3R_SC_EINT2 */
-#define WM8285_HP3R_SC_EINT2_MASK                  0x0020  /* HP3R_SC_EINT2 */
-#define WM8285_HP3R_SC_EINT2_SHIFT                      5  /* HP3R_SC_EINT2 */
-#define WM8285_HP3R_SC_EINT2_WIDTH                      1  /* HP3R_SC_EINT2 */
-#define WM8285_HP3L_SC_EINT2                       0x0010  /* HP3L_SC_EINT2 */
-#define WM8285_HP3L_SC_EINT2_MASK                  0x0010  /* HP3L_SC_EINT2 */
-#define WM8285_HP3L_SC_EINT2_SHIFT                      4  /* HP3L_SC_EINT2 */
-#define WM8285_HP3L_SC_EINT2_WIDTH                      1  /* HP3L_SC_EINT2 */
-#define WM8285_HP2R_SC_EINT2                       0x0008  /* HP2R_SC_EINT2 */
-#define WM8285_HP2R_SC_EINT2_MASK                  0x0008  /* HP2R_SC_EINT2 */
-#define WM8285_HP2R_SC_EINT2_SHIFT                      3  /* HP2R_SC_EINT2 */
-#define WM8285_HP2R_SC_EINT2_WIDTH                      1  /* HP2R_SC_EINT2 */
-#define WM8285_HP2L_SC_EINT2                       0x0004  /* HP2L_SC_EINT2 */
-#define WM8285_HP2L_SC_EINT2_MASK                  0x0004  /* HP2L_SC_EINT2 */
-#define WM8285_HP2L_SC_EINT2_SHIFT                      2  /* HP2L_SC_EINT2 */
-#define WM8285_HP2L_SC_EINT2_WIDTH                      1  /* HP2L_SC_EINT2 */
-#define WM8285_HP1R_SC_EINT2                       0x0002  /* HP1R_SC_EINT2 */
-#define WM8285_HP1R_SC_EINT2_MASK                  0x0002  /* HP1R_SC_EINT2 */
-#define WM8285_HP1R_SC_EINT2_SHIFT                      1  /* HP1R_SC_EINT2 */
-#define WM8285_HP1R_SC_EINT2_WIDTH                      1  /* HP1R_SC_EINT2 */
-#define WM8285_HP1L_SC_EINT2                       0x0001  /* HP1L_SC_EINT2 */
-#define WM8285_HP1L_SC_EINT2_MASK                  0x0001  /* HP1L_SC_EINT2 */
-#define WM8285_HP1L_SC_EINT2_SHIFT                      0  /* HP1L_SC_EINT2 */
-#define WM8285_HP1L_SC_EINT2_WIDTH                      1  /* HP1L_SC_EINT2 */
+#define CLEARWATER_SPKOUTR_SC_EINT2                    0x0080  /* SPKOUTR_SC_EINT2 */
+#define CLEARWATER_SPKOUTR_SC_EINT2_MASK               0x0080  /* SPKOUTR_SC_EINT2 */
+#define CLEARWATER_SPKOUTR_SC_EINT2_SHIFT                   7  /* SPKOUTR_SC_EINT2 */
+#define CLEARWATER_SPKOUTR_SC_EINT2_WIDTH                   1  /* SPKOUTR_SC_EINT2 */
+#define CLEARWATER_SPKOUTL_SC_EINT2                    0x0040  /* SPKOUTL_SC_EINT2 */
+#define CLEARWATER_SPKOUTL_SC_EINT2_MASK               0x0040  /* SPKOUTL_SC_EINT2 */
+#define CLEARWATER_SPKOUTL_SC_EINT2_SHIFT                   6  /* SPKOUTL_SC_EINT2 */
+#define CLEARWATER_SPKOUTL_SC_EINT2_WIDTH                   1  /* SPKOUTL_SC_EINT2 */
+#define CLEARWATER_HP3R_SC_EINT2                       0x0020  /* HP3R_SC_EINT2 */
+#define CLEARWATER_HP3R_SC_EINT2_MASK                  0x0020  /* HP3R_SC_EINT2 */
+#define CLEARWATER_HP3R_SC_EINT2_SHIFT                      5  /* HP3R_SC_EINT2 */
+#define CLEARWATER_HP3R_SC_EINT2_WIDTH                      1  /* HP3R_SC_EINT2 */
+#define CLEARWATER_HP3L_SC_EINT2                       0x0010  /* HP3L_SC_EINT2 */
+#define CLEARWATER_HP3L_SC_EINT2_MASK                  0x0010  /* HP3L_SC_EINT2 */
+#define CLEARWATER_HP3L_SC_EINT2_SHIFT                      4  /* HP3L_SC_EINT2 */
+#define CLEARWATER_HP3L_SC_EINT2_WIDTH                      1  /* HP3L_SC_EINT2 */
+#define CLEARWATER_HP2R_SC_EINT2                       0x0008  /* HP2R_SC_EINT2 */
+#define CLEARWATER_HP2R_SC_EINT2_MASK                  0x0008  /* HP2R_SC_EINT2 */
+#define CLEARWATER_HP2R_SC_EINT2_SHIFT                      3  /* HP2R_SC_EINT2 */
+#define CLEARWATER_HP2R_SC_EINT2_WIDTH                      1  /* HP2R_SC_EINT2 */
+#define CLEARWATER_HP2L_SC_EINT2                       0x0004  /* HP2L_SC_EINT2 */
+#define CLEARWATER_HP2L_SC_EINT2_MASK                  0x0004  /* HP2L_SC_EINT2 */
+#define CLEARWATER_HP2L_SC_EINT2_SHIFT                      2  /* HP2L_SC_EINT2 */
+#define CLEARWATER_HP2L_SC_EINT2_WIDTH                      1  /* HP2L_SC_EINT2 */
+#define CLEARWATER_HP1R_SC_EINT2                       0x0002  /* HP1R_SC_EINT2 */
+#define CLEARWATER_HP1R_SC_EINT2_MASK                  0x0002  /* HP1R_SC_EINT2 */
+#define CLEARWATER_HP1R_SC_EINT2_SHIFT                      1  /* HP1R_SC_EINT2 */
+#define CLEARWATER_HP1R_SC_EINT2_WIDTH                      1  /* HP1R_SC_EINT2 */
+#define CLEARWATER_HP1L_SC_EINT2                       0x0001  /* HP1L_SC_EINT2 */
+#define CLEARWATER_HP1L_SC_EINT2_MASK                  0x0001  /* HP1L_SC_EINT2 */
+#define CLEARWATER_HP1L_SC_EINT2_SHIFT                      0  /* HP1L_SC_EINT2 */
+#define CLEARWATER_HP1L_SC_EINT2_WIDTH                      1  /* HP1L_SC_EINT2 */
 
 /*
  * R6412 (0x190C) - IRQ2 Status 13
  */
-#define WM8285_SPKOUTR_ENABLE_DONE_EINT2           0x0080  /* SPKOUTR_ENABLE_DONE_EINT2 */
-#define WM8285_SPKOUTR_ENABLE_DONE_EINT2_MASK      0x0080  /* SPKOUTR_ENABLE_DONE_EINT2 */
-#define WM8285_SPKOUTR_ENABLE_DONE_EINT2_SHIFT          7  /* SPKOUTR_ENABLE_DONE_EINT2 */
-#define WM8285_SPKOUTR_ENABLE_DONE_EINT2_WIDTH          1  /* SPKOUTR_ENABLE_DONE_EINT2 */
-#define WM8285_SPKOUTL_ENABLE_DONE_EINT2           0x0040  /* SPKOUTL_ENABLE_DONE_EINT2 */
-#define WM8285_SPKOUTL_ENABLE_DONE_EINT2_MASK      0x0040  /* SPKOUTL_ENABLE_DONE_EINT2 */
-#define WM8285_SPKOUTL_ENABLE_DONE_EINT2_SHIFT          6  /* SPKOUTL_ENABLE_DONE_EINT2 */
-#define WM8285_SPKOUTL_ENABLE_DONE_EINT2_WIDTH          1  /* SPKOUTL_ENABLE_DONE_EINT2 */
-#define WM8285_HP3R_ENABLE_DONE_EINT2              0x0020  /* HP3R_ENABLE_DONE_EINT2 */
-#define WM8285_HP3R_ENABLE_DONE_EINT2_MASK         0x0020  /* HP3R_ENABLE_DONE_EINT2 */
-#define WM8285_HP3R_ENABLE_DONE_EINT2_SHIFT             5  /* HP3R_ENABLE_DONE_EINT2 */
-#define WM8285_HP3R_ENABLE_DONE_EINT2_WIDTH             1  /* HP3R_ENABLE_DONE_EINT2 */
-#define WM8285_HP3L_ENABLE_DONE_EINT2              0x0010  /* HP3L_ENABLE_DONE_EINT2 */
-#define WM8285_HP3L_ENABLE_DONE_EINT2_MASK         0x0010  /* HP3L_ENABLE_DONE_EINT2 */
-#define WM8285_HP3L_ENABLE_DONE_EINT2_SHIFT             4  /* HP3L_ENABLE_DONE_EINT2 */
-#define WM8285_HP3L_ENABLE_DONE_EINT2_WIDTH             1  /* HP3L_ENABLE_DONE_EINT2 */
-#define WM8285_HP2R_ENABLE_DONE_EINT2              0x0008  /* HP2R_ENABLE_DONE_EINT2 */
-#define WM8285_HP2R_ENABLE_DONE_EINT2_MASK         0x0008  /* HP2R_ENABLE_DONE_EINT2 */
-#define WM8285_HP2R_ENABLE_DONE_EINT2_SHIFT             3  /* HP2R_ENABLE_DONE_EINT2 */
-#define WM8285_HP2R_ENABLE_DONE_EINT2_WIDTH             1  /* HP2R_ENABLE_DONE_EINT2 */
-#define WM8285_HP2L_ENABLE_DONE_EINT2              0x0004  /* HP2L_ENABLE_DONE_EINT2 */
-#define WM8285_HP2L_ENABLE_DONE_EINT2_MASK         0x0004  /* HP2L_ENABLE_DONE_EINT2 */
-#define WM8285_HP2L_ENABLE_DONE_EINT2_SHIFT             2  /* HP2L_ENABLE_DONE_EINT2 */
-#define WM8285_HP2L_ENABLE_DONE_EINT2_WIDTH             1  /* HP2L_ENABLE_DONE_EINT2 */
-#define WM8285_HP1R_ENABLE_DONE_EINT2              0x0002  /* HP1R_ENABLE_DONE_EINT2 */
-#define WM8285_HP1R_ENABLE_DONE_EINT2_MASK         0x0002  /* HP1R_ENABLE_DONE_EINT2 */
-#define WM8285_HP1R_ENABLE_DONE_EINT2_SHIFT             1  /* HP1R_ENABLE_DONE_EINT2 */
-#define WM8285_HP1R_ENABLE_DONE_EINT2_WIDTH             1  /* HP1R_ENABLE_DONE_EINT2 */
-#define WM8285_HP1L_ENABLE_DONE_EINT2              0x0001  /* HP1L_ENABLE_DONE_EINT2 */
-#define WM8285_HP1L_ENABLE_DONE_EINT2_MASK         0x0001  /* HP1L_ENABLE_DONE_EINT2 */
-#define WM8285_HP1L_ENABLE_DONE_EINT2_SHIFT             0  /* HP1L_ENABLE_DONE_EINT2 */
-#define WM8285_HP1L_ENABLE_DONE_EINT2_WIDTH             1  /* HP1L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_EINT2           0x0080  /* SPKOUTR_ENABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_EINT2_MASK      0x0080  /* SPKOUTR_ENABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_EINT2_SHIFT          7  /* SPKOUTR_ENABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_EINT2_WIDTH          1  /* SPKOUTR_ENABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_EINT2           0x0040  /* SPKOUTL_ENABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_EINT2_MASK      0x0040  /* SPKOUTL_ENABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_EINT2_SHIFT          6  /* SPKOUTL_ENABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_EINT2_WIDTH          1  /* SPKOUTL_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP3R_ENABLE_DONE_EINT2              0x0020  /* HP3R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP3R_ENABLE_DONE_EINT2_MASK         0x0020  /* HP3R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP3R_ENABLE_DONE_EINT2_SHIFT             5  /* HP3R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP3R_ENABLE_DONE_EINT2_WIDTH             1  /* HP3R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP3L_ENABLE_DONE_EINT2              0x0010  /* HP3L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP3L_ENABLE_DONE_EINT2_MASK         0x0010  /* HP3L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP3L_ENABLE_DONE_EINT2_SHIFT             4  /* HP3L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP3L_ENABLE_DONE_EINT2_WIDTH             1  /* HP3L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP2R_ENABLE_DONE_EINT2              0x0008  /* HP2R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP2R_ENABLE_DONE_EINT2_MASK         0x0008  /* HP2R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP2R_ENABLE_DONE_EINT2_SHIFT             3  /* HP2R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP2R_ENABLE_DONE_EINT2_WIDTH             1  /* HP2R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP2L_ENABLE_DONE_EINT2              0x0004  /* HP2L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP2L_ENABLE_DONE_EINT2_MASK         0x0004  /* HP2L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP2L_ENABLE_DONE_EINT2_SHIFT             2  /* HP2L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP2L_ENABLE_DONE_EINT2_WIDTH             1  /* HP2L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP1R_ENABLE_DONE_EINT2              0x0002  /* HP1R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP1R_ENABLE_DONE_EINT2_MASK         0x0002  /* HP1R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP1R_ENABLE_DONE_EINT2_SHIFT             1  /* HP1R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP1R_ENABLE_DONE_EINT2_WIDTH             1  /* HP1R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP1L_ENABLE_DONE_EINT2              0x0001  /* HP1L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP1L_ENABLE_DONE_EINT2_MASK         0x0001  /* HP1L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP1L_ENABLE_DONE_EINT2_SHIFT             0  /* HP1L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_HP1L_ENABLE_DONE_EINT2_WIDTH             1  /* HP1L_ENABLE_DONE_EINT2 */
 
 /*
  * R6413 (0x190D) - IRQ2 Status 14
  */
-#define WM8285_SPKOUTR_DISABLE_DONE_EINT2          0x0080  /* SPKOUTR_DISABLE_DONE_EINT2 */
-#define WM8285_SPKOUTR_DISABLE_DONE_EINT2_MASK     0x0080  /* SPKOUTR_DISABLE_DONE_EINT2 */
-#define WM8285_SPKOUTR_DISABLE_DONE_EINT2_SHIFT         7  /* SPKOUTR_DISABLE_DONE_EINT2 */
-#define WM8285_SPKOUTR_DISABLE_DONE_EINT2_WIDTH         1  /* SPKOUTR_DISABLE_DONE_EINT2 */
-#define WM8285_SPKOUTL_DISABLE_DONE_EINT2          0x0040  /* SPKOUTL_DISABLE_DONE_EINT2 */
-#define WM8285_SPKOUTL_DISABLE_DONE_EINT2_MASK     0x0040  /* SPKOUTL_DISABLE_DONE_EINT2 */
-#define WM8285_SPKOUTL_DISABLE_DONE_EINT2_SHIFT         6  /* SPKOUTL_DISABLE_DONE_EINT2 */
-#define WM8285_SPKOUTL_DISABLE_DONE_EINT2_WIDTH         1  /* SPKOUTL_DISABLE_DONE_EINT2 */
-#define WM8285_HP3R_DISABLE_DONE_EINT2             0x0020  /* HP3R_DISABLE_DONE_EINT2 */
-#define WM8285_HP3R_DISABLE_DONE_EINT2_MASK        0x0020  /* HP3R_DISABLE_DONE_EINT2 */
-#define WM8285_HP3R_DISABLE_DONE_EINT2_SHIFT            5  /* HP3R_DISABLE_DONE_EINT2 */
-#define WM8285_HP3R_DISABLE_DONE_EINT2_WIDTH            1  /* HP3R_DISABLE_DONE_EINT2 */
-#define WM8285_HP3L_DISABLE_DONE_EINT2             0x0010  /* HP3L_DISABLE_DONE_EINT2 */
-#define WM8285_HP3L_DISABLE_DONE_EINT2_MASK        0x0010  /* HP3L_DISABLE_DONE_EINT2 */
-#define WM8285_HP3L_DISABLE_DONE_EINT2_SHIFT            4  /* HP3L_DISABLE_DONE_EINT2 */
-#define WM8285_HP3L_DISABLE_DONE_EINT2_WIDTH            1  /* HP3L_DISABLE_DONE_EINT2 */
-#define WM8285_HP2R_DISABLE_DONE_EINT2             0x0008  /* HP2R_DISABLE_DONE_EINT2 */
-#define WM8285_HP2R_DISABLE_DONE_EINT2_MASK        0x0008  /* HP2R_DISABLE_DONE_EINT2 */
-#define WM8285_HP2R_DISABLE_DONE_EINT2_SHIFT            3  /* HP2R_DISABLE_DONE_EINT2 */
-#define WM8285_HP2R_DISABLE_DONE_EINT2_WIDTH            1  /* HP2R_DISABLE_DONE_EINT2 */
-#define WM8285_HP2L_DISABLE_DONE_EINT2             0x0004  /* HP2L_DISABLE_DONE_EINT2 */
-#define WM8285_HP2L_DISABLE_DONE_EINT2_MASK        0x0004  /* HP2L_DISABLE_DONE_EINT2 */
-#define WM8285_HP2L_DISABLE_DONE_EINT2_SHIFT            2  /* HP2L_DISABLE_DONE_EINT2 */
-#define WM8285_HP2L_DISABLE_DONE_EINT2_WIDTH            1  /* HP2L_DISABLE_DONE_EINT2 */
-#define WM8285_HP1R_DISABLE_DONE_EINT2             0x0002  /* HP1R_DISABLE_DONE_EINT2 */
-#define WM8285_HP1R_DISABLE_DONE_EINT2_MASK        0x0002  /* HP1R_DISABLE_DONE_EINT2 */
-#define WM8285_HP1R_DISABLE_DONE_EINT2_SHIFT            1  /* HP1R_DISABLE_DONE_EINT2 */
-#define WM8285_HP1R_DISABLE_DONE_EINT2_WIDTH            1  /* HP1R_DISABLE_DONE_EINT2 */
-#define WM8285_HP1L_DISABLE_DONE_EINT2             0x0001  /* HP1L_DISABLE_DONE_EINT2 */
-#define WM8285_HP1L_DISABLE_DONE_EINT2_MASK        0x0001  /* HP1L_DISABLE_DONE_EINT2 */
-#define WM8285_HP1L_DISABLE_DONE_EINT2_SHIFT            0  /* HP1L_DISABLE_DONE_EINT2 */
-#define WM8285_HP1L_DISABLE_DONE_EINT2_WIDTH            1  /* HP1L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_EINT2          0x0080  /* SPKOUTR_DISABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_EINT2_MASK     0x0080  /* SPKOUTR_DISABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_EINT2_SHIFT         7  /* SPKOUTR_DISABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_EINT2_WIDTH         1  /* SPKOUTR_DISABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_EINT2          0x0040  /* SPKOUTL_DISABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_EINT2_MASK     0x0040  /* SPKOUTL_DISABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_EINT2_SHIFT         6  /* SPKOUTL_DISABLE_DONE_EINT2 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_EINT2_WIDTH         1  /* SPKOUTL_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP3R_DISABLE_DONE_EINT2             0x0020  /* HP3R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP3R_DISABLE_DONE_EINT2_MASK        0x0020  /* HP3R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP3R_DISABLE_DONE_EINT2_SHIFT            5  /* HP3R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP3R_DISABLE_DONE_EINT2_WIDTH            1  /* HP3R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP3L_DISABLE_DONE_EINT2             0x0010  /* HP3L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP3L_DISABLE_DONE_EINT2_MASK        0x0010  /* HP3L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP3L_DISABLE_DONE_EINT2_SHIFT            4  /* HP3L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP3L_DISABLE_DONE_EINT2_WIDTH            1  /* HP3L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP2R_DISABLE_DONE_EINT2             0x0008  /* HP2R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP2R_DISABLE_DONE_EINT2_MASK        0x0008  /* HP2R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP2R_DISABLE_DONE_EINT2_SHIFT            3  /* HP2R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP2R_DISABLE_DONE_EINT2_WIDTH            1  /* HP2R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP2L_DISABLE_DONE_EINT2             0x0004  /* HP2L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP2L_DISABLE_DONE_EINT2_MASK        0x0004  /* HP2L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP2L_DISABLE_DONE_EINT2_SHIFT            2  /* HP2L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP2L_DISABLE_DONE_EINT2_WIDTH            1  /* HP2L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP1R_DISABLE_DONE_EINT2             0x0002  /* HP1R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP1R_DISABLE_DONE_EINT2_MASK        0x0002  /* HP1R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP1R_DISABLE_DONE_EINT2_SHIFT            1  /* HP1R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP1R_DISABLE_DONE_EINT2_WIDTH            1  /* HP1R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP1L_DISABLE_DONE_EINT2             0x0001  /* HP1L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP1L_DISABLE_DONE_EINT2_MASK        0x0001  /* HP1L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP1L_DISABLE_DONE_EINT2_SHIFT            0  /* HP1L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_HP1L_DISABLE_DONE_EINT2_WIDTH            1  /* HP1L_DISABLE_DONE_EINT2 */
 
 /*
  * R6414 (0x190E) - IRQ2 Status 15
  */
-#define WM8285_SPK_OVERHEAT_WARN_EINT2             0x0004  /* SPK_OVERHEAT_WARN_EINT2 */
-#define WM8285_SPK_OVERHEAT_WARN_EINT2_MASK        0x0004  /* SPK_OVERHEAT_WARN_EINT2 */
-#define WM8285_SPK_OVERHEAT_WARN_EINT2_SHIFT            2  /* SPK_OVERHEAT_WARN_EINT2 */
-#define WM8285_SPK_OVERHEAT_WARN_EINT2_WIDTH            1  /* SPK_OVERHEAT_WARN_EINT2 */
-#define WM8285_SPK_OVERHEAT_EINT2                  0x0002  /* SPK_OVERHEAT_EINT2 */
-#define WM8285_SPK_OVERHEAT_EINT2_MASK             0x0002  /* SPK_OVERHEAT_EINT2 */
-#define WM8285_SPK_OVERHEAT_EINT2_SHIFT                 1  /* SPK_OVERHEAT_EINT2 */
-#define WM8285_SPK_OVERHEAT_EINT2_WIDTH                 1  /* SPK_OVERHEAT_EINT2 */
-#define WM8285_SPK_SHUTDOWN_EINT2                  0x0001  /* SPK_SHUTDOWN_EINT2 */
-#define WM8285_SPK_SHUTDOWN_EINT2_MASK             0x0001  /* SPK_SHUTDOWN_EINT2 */
-#define WM8285_SPK_SHUTDOWN_EINT2_SHIFT                 0  /* SPK_SHUTDOWN_EINT2 */
-#define WM8285_SPK_SHUTDOWN_EINT2_WIDTH                 1  /* SPK_SHUTDOWN_EINT2 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_EINT2             0x0004  /* SPK_OVERHEAT_WARN_EINT2 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_EINT2_MASK        0x0004  /* SPK_OVERHEAT_WARN_EINT2 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_EINT2_SHIFT            2  /* SPK_OVERHEAT_WARN_EINT2 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_EINT2_WIDTH            1  /* SPK_OVERHEAT_WARN_EINT2 */
+#define CLEARWATER_SPK_OVERHEAT_EINT2                  0x0002  /* SPK_OVERHEAT_EINT2 */
+#define CLEARWATER_SPK_OVERHEAT_EINT2_MASK             0x0002  /* SPK_OVERHEAT_EINT2 */
+#define CLEARWATER_SPK_OVERHEAT_EINT2_SHIFT                 1  /* SPK_OVERHEAT_EINT2 */
+#define CLEARWATER_SPK_OVERHEAT_EINT2_WIDTH                 1  /* SPK_OVERHEAT_EINT2 */
+#define CLEARWATER_SPK_SHUTDOWN_EINT2                  0x0001  /* SPK_SHUTDOWN_EINT2 */
+#define CLEARWATER_SPK_SHUTDOWN_EINT2_MASK             0x0001  /* SPK_SHUTDOWN_EINT2 */
+#define CLEARWATER_SPK_SHUTDOWN_EINT2_SHIFT                 0  /* SPK_SHUTDOWN_EINT2 */
+#define CLEARWATER_SPK_SHUTDOWN_EINT2_WIDTH                 1  /* SPK_SHUTDOWN_EINT2 */
 
 /*
  * R6464 (0x1940) - IRQ2 Mask 1
  */
-#define WM8285_IM_DSP_SHARED_WR_COLL_EINT2         0x8000  /* IM_DSP_SHARED_WR_COLL_EINT2 */
-#define WM8285_IM_DSP_SHARED_WR_COLL_EINT2_MASK    0x8000  /* IM_DSP_SHARED_WR_COLL_EINT2 */
-#define WM8285_IM_DSP_SHARED_WR_COLL_EINT2_SHIFT       15  /* IM_DSP_SHARED_WR_COLL_EINT2 */
-#define WM8285_IM_DSP_SHARED_WR_COLL_EINT2_WIDTH        1  /* IM_DSP_SHARED_WR_COLL_EINT2 */
-#define WM8285_IM_CTRLIF_ERR_EINT2                 0x1000  /* IM_CTRLIF_ERR_EINT2 */
-#define WM8285_IM_CTRLIF_ERR_EINT2_MASK            0x1000  /* IM_CTRLIF_ERR_EINT2 */
-#define WM8285_IM_CTRLIF_ERR_EINT2_SHIFT               12  /* IM_CTRLIF_ERR_EINT2 */
-#define WM8285_IM_CTRLIF_ERR_EINT2_WIDTH                1  /* IM_CTRLIF_ERR_EINT2 */
-#define WM8285_IM_IRQ_NO_CLOCK_EINT2               0x0200  /* IM_IRQ_NO_CLOCK_EINT2 */
-#define WM8285_IM_IRQ_NO_CLOCK_EINT2_MASK          0x0200  /* IM_IRQ_NO_CLOCK_EINT2 */
-#define WM8285_IM_IRQ_NO_CLOCK_EINT2_SHIFT              9  /* IM_IRQ_NO_CLOCK_EINT2 */
-#define WM8285_IM_IRQ_NO_CLOCK_EINT2_WIDTH              1  /* IM_IRQ_NO_CLOCK_EINT2 */
-#define WM8285_IM_CLOCK_DETECT_EINT2               0x0100  /* IM_CLOCK_DETECT_EINT2 */
-#define WM8285_IM_CLOCK_DETECT_EINT2_MASK          0x0100  /* IM_CLOCK_DETECT_EINT2 */
-#define WM8285_IM_CLOCK_DETECT_EINT2_SHIFT              8  /* IM_CLOCK_DETECT_EINT2 */
-#define WM8285_IM_CLOCK_DETECT_EINT2_WIDTH              1  /* IM_CLOCK_DETECT_EINT2 */
-#define WM8285_IM_BOOT_DONE_EINT2                  0x0080  /* IM_BOOT_DONE_EINT2 */
-#define WM8285_IM_BOOT_DONE_EINT2_MASK             0x0080  /* IM_BOOT_DONE_EINT2 */
-#define WM8285_IM_BOOT_DONE_EINT2_SHIFT                 7  /* IM_BOOT_DONE_EINT2 */
-#define WM8285_IM_BOOT_DONE_EINT2_WIDTH                 1  /* IM_BOOT_DONE_EINT2 */
+#define CLEARWATER_IM_DSP_SHARED_WR_COLL_EINT2         0x8000  /* IM_DSP_SHARED_WR_COLL_EINT2 */
+#define CLEARWATER_IM_DSP_SHARED_WR_COLL_EINT2_MASK    0x8000  /* IM_DSP_SHARED_WR_COLL_EINT2 */
+#define CLEARWATER_IM_DSP_SHARED_WR_COLL_EINT2_SHIFT       15  /* IM_DSP_SHARED_WR_COLL_EINT2 */
+#define CLEARWATER_IM_DSP_SHARED_WR_COLL_EINT2_WIDTH        1  /* IM_DSP_SHARED_WR_COLL_EINT2 */
+#define CLEARWATER_IM_CTRLIF_ERR_EINT2                 0x1000  /* IM_CTRLIF_ERR_EINT2 */
+#define CLEARWATER_IM_CTRLIF_ERR_EINT2_MASK            0x1000  /* IM_CTRLIF_ERR_EINT2 */
+#define CLEARWATER_IM_CTRLIF_ERR_EINT2_SHIFT               12  /* IM_CTRLIF_ERR_EINT2 */
+#define CLEARWATER_IM_CTRLIF_ERR_EINT2_WIDTH                1  /* IM_CTRLIF_ERR_EINT2 */
+#define CLEARWATER_IM_IRQ_NO_CLOCK_EINT2               0x0200  /* IM_IRQ_NO_CLOCK_EINT2 */
+#define CLEARWATER_IM_IRQ_NO_CLOCK_EINT2_MASK          0x0200  /* IM_IRQ_NO_CLOCK_EINT2 */
+#define CLEARWATER_IM_IRQ_NO_CLOCK_EINT2_SHIFT              9  /* IM_IRQ_NO_CLOCK_EINT2 */
+#define CLEARWATER_IM_IRQ_NO_CLOCK_EINT2_WIDTH              1  /* IM_IRQ_NO_CLOCK_EINT2 */
+#define CLEARWATER_IM_CLOCK_DETECT_EINT2               0x0100  /* IM_CLOCK_DETECT_EINT2 */
+#define CLEARWATER_IM_CLOCK_DETECT_EINT2_MASK          0x0100  /* IM_CLOCK_DETECT_EINT2 */
+#define CLEARWATER_IM_CLOCK_DETECT_EINT2_SHIFT              8  /* IM_CLOCK_DETECT_EINT2 */
+#define CLEARWATER_IM_CLOCK_DETECT_EINT2_WIDTH              1  /* IM_CLOCK_DETECT_EINT2 */
+#define CLEARWATER_IM_BOOT_DONE_EINT2                  0x0080  /* IM_BOOT_DONE_EINT2 */
+#define CLEARWATER_IM_BOOT_DONE_EINT2_MASK             0x0080  /* IM_BOOT_DONE_EINT2 */
+#define CLEARWATER_IM_BOOT_DONE_EINT2_SHIFT                 7  /* IM_BOOT_DONE_EINT2 */
+#define CLEARWATER_IM_BOOT_DONE_EINT2_WIDTH                 1  /* IM_BOOT_DONE_EINT2 */
 
 /*
  * R6465 (0x1941) - IRQ2 Mask 2
  */
-#define WM8285_IM_FLL3_LOCK_EINT2                  0x0400  /* IM_FLL3_LOCK_EINT2 */
-#define WM8285_IM_FLL3_LOCK_EINT2_MASK             0x0400  /* IM_FLL3_LOCK_EINT2 */
-#define WM8285_IM_FLL3_LOCK_EINT2_SHIFT                10  /* IM_FLL3_LOCK_EINT2 */
-#define WM8285_IM_FLL3_LOCK_EINT2_WIDTH                 1  /* IM_FLL3_LOCK_EINT2 */
-#define WM8285_IM_FLL2_LOCK_EINT2                  0x0200  /* IM_FLL2_LOCK_EINT2 */
-#define WM8285_IM_FLL2_LOCK_EINT2_MASK             0x0200  /* IM_FLL2_LOCK_EINT2 */
-#define WM8285_IM_FLL2_LOCK_EINT2_SHIFT                 9  /* IM_FLL2_LOCK_EINT2 */
-#define WM8285_IM_FLL2_LOCK_EINT2_WIDTH                 1  /* IM_FLL2_LOCK_EINT2 */
-#define WM8285_IM_FLL1_LOCK_EINT2                  0x0100  /* IM_FLL1_LOCK_EINT2 */
-#define WM8285_IM_FLL1_LOCK_EINT2_MASK             0x0100  /* IM_FLL1_LOCK_EINT2 */
-#define WM8285_IM_FLL1_LOCK_EINT2_SHIFT                 8  /* IM_FLL1_LOCK_EINT2 */
-#define WM8285_IM_FLL1_LOCK_EINT2_WIDTH                 1  /* IM_FLL1_LOCK_EINT2 */
+#define CLEARWATER_IM_FLL3_LOCK_EINT2                  0x0400  /* IM_FLL3_LOCK_EINT2 */
+#define CLEARWATER_IM_FLL3_LOCK_EINT2_MASK             0x0400  /* IM_FLL3_LOCK_EINT2 */
+#define CLEARWATER_IM_FLL3_LOCK_EINT2_SHIFT                10  /* IM_FLL3_LOCK_EINT2 */
+#define CLEARWATER_IM_FLL3_LOCK_EINT2_WIDTH                 1  /* IM_FLL3_LOCK_EINT2 */
+#define CLEARWATER_IM_FLL2_LOCK_EINT2                  0x0200  /* IM_FLL2_LOCK_EINT2 */
+#define CLEARWATER_IM_FLL2_LOCK_EINT2_MASK             0x0200  /* IM_FLL2_LOCK_EINT2 */
+#define CLEARWATER_IM_FLL2_LOCK_EINT2_SHIFT                 9  /* IM_FLL2_LOCK_EINT2 */
+#define CLEARWATER_IM_FLL2_LOCK_EINT2_WIDTH                 1  /* IM_FLL2_LOCK_EINT2 */
+#define CLEARWATER_IM_FLL1_LOCK_EINT2                  0x0100  /* IM_FLL1_LOCK_EINT2 */
+#define CLEARWATER_IM_FLL1_LOCK_EINT2_MASK             0x0100  /* IM_FLL1_LOCK_EINT2 */
+#define CLEARWATER_IM_FLL1_LOCK_EINT2_SHIFT                 8  /* IM_FLL1_LOCK_EINT2 */
+#define CLEARWATER_IM_FLL1_LOCK_EINT2_WIDTH                 1  /* IM_FLL1_LOCK_EINT2 */
 
 /*
  * R6469 (0x1945) - IRQ2 Mask 6
  */
-#define WM8285_IM_MICDET_EINT2                     0x0100  /* IM_MICDET_EINT2 */
-#define WM8285_IM_MICDET_EINT2_MASK                0x0100  /* IM_MICDET_EINT2 */
-#define WM8285_IM_MICDET_EINT2_SHIFT                    8  /* IM_MICDET_EINT2 */
-#define WM8285_IM_MICDET_EINT2_WIDTH                    1  /* IM_MICDET_EINT2 */
-#define WM8285_IM_HPDET_EINT2                      0x0001  /* IM_HPDET_EINT2 */
-#define WM8285_IM_HPDET_EINT2_MASK                 0x0001  /* IM_HPDET_EINT2 */
-#define WM8285_IM_HPDET_EINT2_SHIFT                     0  /* IM_HPDET_EINT2 */
-#define WM8285_IM_HPDET_EINT2_WIDTH                     1  /* IM_HPDET_EINT2 */
+#define CLEARWATER_IM_MICDET_EINT2                     0x0100  /* IM_MICDET_EINT2 */
+#define CLEARWATER_IM_MICDET_EINT2_MASK                0x0100  /* IM_MICDET_EINT2 */
+#define CLEARWATER_IM_MICDET_EINT2_SHIFT                    8  /* IM_MICDET_EINT2 */
+#define CLEARWATER_IM_MICDET_EINT2_WIDTH                    1  /* IM_MICDET_EINT2 */
+#define CLEARWATER_IM_HPDET_EINT2                      0x0001  /* IM_HPDET_EINT2 */
+#define CLEARWATER_IM_HPDET_EINT2_MASK                 0x0001  /* IM_HPDET_EINT2 */
+#define CLEARWATER_IM_HPDET_EINT2_SHIFT                     0  /* IM_HPDET_EINT2 */
+#define CLEARWATER_IM_HPDET_EINT2_WIDTH                     1  /* IM_HPDET_EINT2 */
 
 /*
  * R6470 (0x1946) - IRQ2 Mask 7
  */
-#define WM8285_IM_MICD_CLAMP_FALL_EINT2            0x0020  /* IM_MICD_CLAMP_FALL_EINT2 */
-#define WM8285_IM_MICD_CLAMP_FALL_EINT2_MASK       0x0020  /* IM_MICD_CLAMP_FALL_EINT2 */
-#define WM8285_IM_MICD_CLAMP_FALL_EINT2_SHIFT           5  /* IM_MICD_CLAMP_FALL_EINT2 */
-#define WM8285_IM_MICD_CLAMP_FALL_EINT2_WIDTH           1  /* IM_MICD_CLAMP_FALL_EINT2 */
-#define WM8285_IM_MICD_CLAMP_RISE_EINT2            0x0010  /* IM_MICD_CLAMP_RISE_EINT2 */
-#define WM8285_IM_MICD_CLAMP_RISE_EINT2_MASK       0x0010  /* IM_MICD_CLAMP_RISE_EINT2 */
-#define WM8285_IM_MICD_CLAMP_RISE_EINT2_SHIFT           4  /* IM_MICD_CLAMP_RISE_EINT2 */
-#define WM8285_IM_MICD_CLAMP_RISE_EINT2_WIDTH           1  /* IM_MICD_CLAMP_RISE_EINT2 */
-#define WM8285_IM_JD2_FALL_EINT2                   0x0008  /* IM_JD2_FALL_EINT2 */
-#define WM8285_IM_JD2_FALL_EINT2_MASK              0x0008  /* IM_JD2_FALL_EINT2 */
-#define WM8285_IM_JD2_FALL_EINT2_SHIFT                  3  /* IM_JD2_FALL_EINT2 */
-#define WM8285_IM_JD2_FALL_EINT2_WIDTH                  1  /* IM_JD2_FALL_EINT2 */
-#define WM8285_IM_JD2_RISE_EINT2                   0x0004  /* IM_JD2_RISE_EINT2 */
-#define WM8285_IM_JD2_RISE_EINT2_MASK              0x0004  /* IM_JD2_RISE_EINT2 */
-#define WM8285_IM_JD2_RISE_EINT2_SHIFT                  2  /* IM_JD2_RISE_EINT2 */
-#define WM8285_IM_JD2_RISE_EINT2_WIDTH                  1  /* IM_JD2_RISE_EINT2 */
-#define WM8285_IM_JD1_FALL_EINT2                   0x0002  /* IM_JD1_FALL_EINT2 */
-#define WM8285_IM_JD1_FALL_EINT2_MASK              0x0002  /* IM_JD1_FALL_EINT2 */
-#define WM8285_IM_JD1_FALL_EINT2_SHIFT                  1  /* IM_JD1_FALL_EINT2 */
-#define WM8285_IM_JD1_FALL_EINT2_WIDTH                  1  /* IM_JD1_FALL_EINT2 */
-#define WM8285_IM_JD1_RISE_EINT2                   0x0001  /* IM_JD1_RISE_EINT2 */
-#define WM8285_IM_JD1_RISE_EINT2_MASK              0x0001  /* IM_JD1_RISE_EINT2 */
-#define WM8285_IM_JD1_RISE_EINT2_SHIFT                  0  /* IM_JD1_RISE_EINT2 */
-#define WM8285_IM_JD1_RISE_EINT2_WIDTH                  1  /* IM_JD1_RISE_EINT2 */
+#define CLEARWATER_IM_MICD_CLAMP_FALL_EINT2            0x0020  /* IM_MICD_CLAMP_FALL_EINT2 */
+#define CLEARWATER_IM_MICD_CLAMP_FALL_EINT2_MASK       0x0020  /* IM_MICD_CLAMP_FALL_EINT2 */
+#define CLEARWATER_IM_MICD_CLAMP_FALL_EINT2_SHIFT           5  /* IM_MICD_CLAMP_FALL_EINT2 */
+#define CLEARWATER_IM_MICD_CLAMP_FALL_EINT2_WIDTH           1  /* IM_MICD_CLAMP_FALL_EINT2 */
+#define CLEARWATER_IM_MICD_CLAMP_RISE_EINT2            0x0010  /* IM_MICD_CLAMP_RISE_EINT2 */
+#define CLEARWATER_IM_MICD_CLAMP_RISE_EINT2_MASK       0x0010  /* IM_MICD_CLAMP_RISE_EINT2 */
+#define CLEARWATER_IM_MICD_CLAMP_RISE_EINT2_SHIFT           4  /* IM_MICD_CLAMP_RISE_EINT2 */
+#define CLEARWATER_IM_MICD_CLAMP_RISE_EINT2_WIDTH           1  /* IM_MICD_CLAMP_RISE_EINT2 */
+#define CLEARWATER_IM_JD2_FALL_EINT2                   0x0008  /* IM_JD2_FALL_EINT2 */
+#define CLEARWATER_IM_JD2_FALL_EINT2_MASK              0x0008  /* IM_JD2_FALL_EINT2 */
+#define CLEARWATER_IM_JD2_FALL_EINT2_SHIFT                  3  /* IM_JD2_FALL_EINT2 */
+#define CLEARWATER_IM_JD2_FALL_EINT2_WIDTH                  1  /* IM_JD2_FALL_EINT2 */
+#define CLEARWATER_IM_JD2_RISE_EINT2                   0x0004  /* IM_JD2_RISE_EINT2 */
+#define CLEARWATER_IM_JD2_RISE_EINT2_MASK              0x0004  /* IM_JD2_RISE_EINT2 */
+#define CLEARWATER_IM_JD2_RISE_EINT2_SHIFT                  2  /* IM_JD2_RISE_EINT2 */
+#define CLEARWATER_IM_JD2_RISE_EINT2_WIDTH                  1  /* IM_JD2_RISE_EINT2 */
+#define CLEARWATER_IM_JD1_FALL_EINT2                   0x0002  /* IM_JD1_FALL_EINT2 */
+#define CLEARWATER_IM_JD1_FALL_EINT2_MASK              0x0002  /* IM_JD1_FALL_EINT2 */
+#define CLEARWATER_IM_JD1_FALL_EINT2_SHIFT                  1  /* IM_JD1_FALL_EINT2 */
+#define CLEARWATER_IM_JD1_FALL_EINT2_WIDTH                  1  /* IM_JD1_FALL_EINT2 */
+#define CLEARWATER_IM_JD1_RISE_EINT2                   0x0001  /* IM_JD1_RISE_EINT2 */
+#define CLEARWATER_IM_JD1_RISE_EINT2_MASK              0x0001  /* IM_JD1_RISE_EINT2 */
+#define CLEARWATER_IM_JD1_RISE_EINT2_SHIFT                  0  /* IM_JD1_RISE_EINT2 */
+#define CLEARWATER_IM_JD1_RISE_EINT2_WIDTH                  1  /* IM_JD1_RISE_EINT2 */
 
 /*
  * R6472 (0x1948) - IRQ2 Mask 9
  */
-#define WM8285_IM_ASRC2_IN2_LOCK_EINT2             0x0800  /* IM_ASRC2_IN2_LOCK_EINT2 */
-#define WM8285_IM_ASRC2_IN2_LOCK_EINT2_MASK        0x0800  /* IM_ASRC2_IN2_LOCK_EINT2 */
-#define WM8285_IM_ASRC2_IN2_LOCK_EINT2_SHIFT           11  /* IM_ASRC2_IN2_LOCK_EINT2 */
-#define WM8285_IM_ASRC2_IN2_LOCK_EINT2_WIDTH            1  /* IM_ASRC2_IN2_LOCK_EINT2 */
-#define WM8285_IM_ASRC2_IN1_LOCK_EINT2             0x0400  /* IM_ASRC2_IN1_LOCK_EINT2 */
-#define WM8285_IM_ASRC2_IN1_LOCK_EINT2_MASK        0x0400  /* IM_ASRC2_IN1_LOCK_EINT2 */
-#define WM8285_IM_ASRC2_IN1_LOCK_EINT2_SHIFT           10  /* IM_ASRC2_IN1_LOCK_EINT2 */
-#define WM8285_IM_ASRC2_IN1_LOCK_EINT2_WIDTH            1  /* IM_ASRC2_IN1_LOCK_EINT2 */
-#define WM8285_IM_ASRC1_IN2_LOCK_EINT2             0x0200  /* IM_ASRC1_IN2_LOCK_EINT2 */
-#define WM8285_IM_ASRC1_IN2_LOCK_EINT2_MASK        0x0200  /* IM_ASRC1_IN2_LOCK_EINT2 */
-#define WM8285_IM_ASRC1_IN2_LOCK_EINT2_SHIFT            9  /* IM_ASRC1_IN2_LOCK_EINT2 */
-#define WM8285_IM_ASRC1_IN2_LOCK_EINT2_WIDTH            1  /* IM_ASRC1_IN2_LOCK_EINT2 */
-#define WM8285_IM_ASRC1_IN1_LOCK_EINT2             0x0100  /* IM_ASRC1_IN1_LOCK_EINT2 */
-#define WM8285_IM_ASRC1_IN1_LOCK_EINT2_MASK        0x0100  /* IM_ASRC1_IN1_LOCK_EINT2 */
-#define WM8285_IM_ASRC1_IN1_LOCK_EINT2_SHIFT            8  /* IM_ASRC1_IN1_LOCK_EINT2 */
-#define WM8285_IM_ASRC1_IN1_LOCK_EINT2_WIDTH            1  /* IM_ASRC1_IN1_LOCK_EINT2 */
-#define WM8285_IM_DRC2_SIG_DET_EINT2               0x0002  /* IM_DRC2_SIG_DET_EINT2 */
-#define WM8285_IM_DRC2_SIG_DET_EINT2_MASK          0x0002  /* IM_DRC2_SIG_DET_EINT2 */
-#define WM8285_IM_DRC2_SIG_DET_EINT2_SHIFT              1  /* IM_DRC2_SIG_DET_EINT2 */
-#define WM8285_IM_DRC2_SIG_DET_EINT2_WIDTH              1  /* IM_DRC2_SIG_DET_EINT2 */
-#define WM8285_IM_DRC1_SIG_DET_EINT2               0x0001  /* IM_DRC1_SIG_DET_EINT2 */
-#define WM8285_IM_DRC1_SIG_DET_EINT2_MASK          0x0001  /* IM_DRC1_SIG_DET_EINT2 */
-#define WM8285_IM_DRC1_SIG_DET_EINT2_SHIFT              0  /* IM_DRC1_SIG_DET_EINT2 */
-#define WM8285_IM_DRC1_SIG_DET_EINT2_WIDTH              1  /* IM_DRC1_SIG_DET_EINT2 */
+#define CLEARWATER_IM_ASRC2_IN2_LOCK_EINT2             0x0800  /* IM_ASRC2_IN2_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC2_IN2_LOCK_EINT2_MASK        0x0800  /* IM_ASRC2_IN2_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC2_IN2_LOCK_EINT2_SHIFT           11  /* IM_ASRC2_IN2_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC2_IN2_LOCK_EINT2_WIDTH            1  /* IM_ASRC2_IN2_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC2_IN1_LOCK_EINT2             0x0400  /* IM_ASRC2_IN1_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC2_IN1_LOCK_EINT2_MASK        0x0400  /* IM_ASRC2_IN1_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC2_IN1_LOCK_EINT2_SHIFT           10  /* IM_ASRC2_IN1_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC2_IN1_LOCK_EINT2_WIDTH            1  /* IM_ASRC2_IN1_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC1_IN2_LOCK_EINT2             0x0200  /* IM_ASRC1_IN2_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC1_IN2_LOCK_EINT2_MASK        0x0200  /* IM_ASRC1_IN2_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC1_IN2_LOCK_EINT2_SHIFT            9  /* IM_ASRC1_IN2_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC1_IN2_LOCK_EINT2_WIDTH            1  /* IM_ASRC1_IN2_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC1_IN1_LOCK_EINT2             0x0100  /* IM_ASRC1_IN1_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC1_IN1_LOCK_EINT2_MASK        0x0100  /* IM_ASRC1_IN1_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC1_IN1_LOCK_EINT2_SHIFT            8  /* IM_ASRC1_IN1_LOCK_EINT2 */
+#define CLEARWATER_IM_ASRC1_IN1_LOCK_EINT2_WIDTH            1  /* IM_ASRC1_IN1_LOCK_EINT2 */
+#define CLEARWATER_IM_DRC2_SIG_DET_EINT2               0x0002  /* IM_DRC2_SIG_DET_EINT2 */
+#define CLEARWATER_IM_DRC2_SIG_DET_EINT2_MASK          0x0002  /* IM_DRC2_SIG_DET_EINT2 */
+#define CLEARWATER_IM_DRC2_SIG_DET_EINT2_SHIFT              1  /* IM_DRC2_SIG_DET_EINT2 */
+#define CLEARWATER_IM_DRC2_SIG_DET_EINT2_WIDTH              1  /* IM_DRC2_SIG_DET_EINT2 */
+#define CLEARWATER_IM_DRC1_SIG_DET_EINT2               0x0001  /* IM_DRC1_SIG_DET_EINT2 */
+#define CLEARWATER_IM_DRC1_SIG_DET_EINT2_MASK          0x0001  /* IM_DRC1_SIG_DET_EINT2 */
+#define CLEARWATER_IM_DRC1_SIG_DET_EINT2_SHIFT              0  /* IM_DRC1_SIG_DET_EINT2 */
+#define CLEARWATER_IM_DRC1_SIG_DET_EINT2_WIDTH              1  /* IM_DRC1_SIG_DET_EINT2 */
 
 /*
  * R6474 (0x194A) - IRQ2 Mask 11
  */
-#define WM8285_IM_DSP_IRQ16_EINT2                  0x8000  /* IM_DSP_IRQ16_EINT2 */
-#define WM8285_IM_DSP_IRQ16_EINT2_MASK             0x8000  /* IM_DSP_IRQ16_EINT2 */
-#define WM8285_IM_DSP_IRQ16_EINT2_SHIFT                15  /* IM_DSP_IRQ16_EINT2 */
-#define WM8285_IM_DSP_IRQ16_EINT2_WIDTH                 1  /* IM_DSP_IRQ16_EINT2 */
-#define WM8285_IM_DSP_IRQ15_EINT2                  0x4000  /* IM_DSP_IRQ15_EINT2 */
-#define WM8285_IM_DSP_IRQ15_EINT2_MASK             0x4000  /* IM_DSP_IRQ15_EINT2 */
-#define WM8285_IM_DSP_IRQ15_EINT2_SHIFT                14  /* IM_DSP_IRQ15_EINT2 */
-#define WM8285_IM_DSP_IRQ15_EINT2_WIDTH                 1  /* IM_DSP_IRQ15_EINT2 */
-#define WM8285_IM_DSP_IRQ14_EINT2                  0x2000  /* IM_DSP_IRQ14_EINT2 */
-#define WM8285_IM_DSP_IRQ14_EINT2_MASK             0x2000  /* IM_DSP_IRQ14_EINT2 */
-#define WM8285_IM_DSP_IRQ14_EINT2_SHIFT                13  /* IM_DSP_IRQ14_EINT2 */
-#define WM8285_IM_DSP_IRQ14_EINT2_WIDTH                 1  /* IM_DSP_IRQ14_EINT2 */
-#define WM8285_IM_DSP_IRQ13_EINT2                  0x1000  /* IM_DSP_IRQ13_EINT2 */
-#define WM8285_IM_DSP_IRQ13_EINT2_MASK             0x1000  /* IM_DSP_IRQ13_EINT2 */
-#define WM8285_IM_DSP_IRQ13_EINT2_SHIFT                12  /* IM_DSP_IRQ13_EINT2 */
-#define WM8285_IM_DSP_IRQ13_EINT2_WIDTH                 1  /* IM_DSP_IRQ13_EINT2 */
-#define WM8285_IM_DSP_IRQ12_EINT2                  0x0800  /* IM_DSP_IRQ12_EINT2 */
-#define WM8285_IM_DSP_IRQ12_EINT2_MASK             0x0800  /* IM_DSP_IRQ12_EINT2 */
-#define WM8285_IM_DSP_IRQ12_EINT2_SHIFT                11  /* IM_DSP_IRQ12_EINT2 */
-#define WM8285_IM_DSP_IRQ12_EINT2_WIDTH                 1  /* IM_DSP_IRQ12_EINT2 */
-#define WM8285_IM_DSP_IRQ11_EINT2                  0x0400  /* IM_DSP_IRQ11_EINT2 */
-#define WM8285_IM_DSP_IRQ11_EINT2_MASK             0x0400  /* IM_DSP_IRQ11_EINT2 */
-#define WM8285_IM_DSP_IRQ11_EINT2_SHIFT                10  /* IM_DSP_IRQ11_EINT2 */
-#define WM8285_IM_DSP_IRQ11_EINT2_WIDTH                 1  /* IM_DSP_IRQ11_EINT2 */
-#define WM8285_IM_DSP_IRQ10_EINT2                  0x0200  /* IM_DSP_IRQ10_EINT2 */
-#define WM8285_IM_DSP_IRQ10_EINT2_MASK             0x0200  /* IM_DSP_IRQ10_EINT2 */
-#define WM8285_IM_DSP_IRQ10_EINT2_SHIFT                 9  /* IM_DSP_IRQ10_EINT2 */
-#define WM8285_IM_DSP_IRQ10_EINT2_WIDTH                 1  /* IM_DSP_IRQ10_EINT2 */
-#define WM8285_IM_DSP_IRQ9_EINT2                   0x0100  /* IM_DSP_IRQ9_EINT2 */
-#define WM8285_IM_DSP_IRQ9_EINT2_MASK              0x0100  /* IM_DSP_IRQ9_EINT2 */
-#define WM8285_IM_DSP_IRQ9_EINT2_SHIFT                  8  /* IM_DSP_IRQ9_EINT2 */
-#define WM8285_IM_DSP_IRQ9_EINT2_WIDTH                  1  /* IM_DSP_IRQ9_EINT2 */
-#define WM8285_IM_DSP_IRQ8_EINT2                   0x0080  /* IM_DSP_IRQ8_EINT2 */
-#define WM8285_IM_DSP_IRQ8_EINT2_MASK              0x0080  /* IM_DSP_IRQ8_EINT2 */
-#define WM8285_IM_DSP_IRQ8_EINT2_SHIFT                  7  /* IM_DSP_IRQ8_EINT2 */
-#define WM8285_IM_DSP_IRQ8_EINT2_WIDTH                  1  /* IM_DSP_IRQ8_EINT2 */
-#define WM8285_IM_DSP_IRQ7_EINT2                   0x0040  /* IM_DSP_IRQ7_EINT2 */
-#define WM8285_IM_DSP_IRQ7_EINT2_MASK              0x0040  /* IM_DSP_IRQ7_EINT2 */
-#define WM8285_IM_DSP_IRQ7_EINT2_SHIFT                  6  /* IM_DSP_IRQ7_EINT2 */
-#define WM8285_IM_DSP_IRQ7_EINT2_WIDTH                  1  /* IM_DSP_IRQ7_EINT2 */
-#define WM8285_IM_DSP_IRQ6_EINT2                   0x0020  /* IM_DSP_IRQ6_EINT2 */
-#define WM8285_IM_DSP_IRQ6_EINT2_MASK              0x0020  /* IM_DSP_IRQ6_EINT2 */
-#define WM8285_IM_DSP_IRQ6_EINT2_SHIFT                  5  /* IM_DSP_IRQ6_EINT2 */
-#define WM8285_IM_DSP_IRQ6_EINT2_WIDTH                  1  /* IM_DSP_IRQ6_EINT2 */
-#define WM8285_IM_DSP_IRQ5_EINT2                   0x0010  /* IM_DSP_IRQ5_EINT2 */
-#define WM8285_IM_DSP_IRQ5_EINT2_MASK              0x0010  /* IM_DSP_IRQ5_EINT2 */
-#define WM8285_IM_DSP_IRQ5_EINT2_SHIFT                  4  /* IM_DSP_IRQ5_EINT2 */
-#define WM8285_IM_DSP_IRQ5_EINT2_WIDTH                  1  /* IM_DSP_IRQ5_EINT2 */
-#define WM8285_IM_DSP_IRQ4_EINT2                   0x0008  /* IM_DSP_IRQ4_EINT2 */
-#define WM8285_IM_DSP_IRQ4_EINT2_MASK              0x0008  /* IM_DSP_IRQ4_EINT2 */
-#define WM8285_IM_DSP_IRQ4_EINT2_SHIFT                  3  /* IM_DSP_IRQ4_EINT2 */
-#define WM8285_IM_DSP_IRQ4_EINT2_WIDTH                  1  /* IM_DSP_IRQ4_EINT2 */
-#define WM8285_IM_DSP_IRQ3_EINT2                   0x0004  /* IM_DSP_IRQ3_EINT2 */
-#define WM8285_IM_DSP_IRQ3_EINT2_MASK              0x0004  /* IM_DSP_IRQ3_EINT2 */
-#define WM8285_IM_DSP_IRQ3_EINT2_SHIFT                  2  /* IM_DSP_IRQ3_EINT2 */
-#define WM8285_IM_DSP_IRQ3_EINT2_WIDTH                  1  /* IM_DSP_IRQ3_EINT2 */
-#define WM8285_IM_DSP_IRQ2_EINT2                   0x0002  /* IM_DSP_IRQ2_EINT2 */
-#define WM8285_IM_DSP_IRQ2_EINT2_MASK              0x0002  /* IM_DSP_IRQ2_EINT2 */
-#define WM8285_IM_DSP_IRQ2_EINT2_SHIFT                  1  /* IM_DSP_IRQ2_EINT2 */
-#define WM8285_IM_DSP_IRQ2_EINT2_WIDTH                  1  /* IM_DSP_IRQ2_EINT2 */
-#define WM8285_IM_DSP_IRQ1_EINT2                   0x0001  /* IM_DSP_IRQ1_EINT2 */
-#define WM8285_IM_DSP_IRQ1_EINT2_MASK              0x0001  /* IM_DSP_IRQ1_EINT2 */
-#define WM8285_IM_DSP_IRQ1_EINT2_SHIFT                  0  /* IM_DSP_IRQ1_EINT2 */
-#define WM8285_IM_DSP_IRQ1_EINT2_WIDTH                  1  /* IM_DSP_IRQ1_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ16_EINT2                  0x8000  /* IM_DSP_IRQ16_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ16_EINT2_MASK             0x8000  /* IM_DSP_IRQ16_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ16_EINT2_SHIFT                15  /* IM_DSP_IRQ16_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ16_EINT2_WIDTH                 1  /* IM_DSP_IRQ16_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ15_EINT2                  0x4000  /* IM_DSP_IRQ15_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ15_EINT2_MASK             0x4000  /* IM_DSP_IRQ15_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ15_EINT2_SHIFT                14  /* IM_DSP_IRQ15_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ15_EINT2_WIDTH                 1  /* IM_DSP_IRQ15_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ14_EINT2                  0x2000  /* IM_DSP_IRQ14_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ14_EINT2_MASK             0x2000  /* IM_DSP_IRQ14_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ14_EINT2_SHIFT                13  /* IM_DSP_IRQ14_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ14_EINT2_WIDTH                 1  /* IM_DSP_IRQ14_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ13_EINT2                  0x1000  /* IM_DSP_IRQ13_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ13_EINT2_MASK             0x1000  /* IM_DSP_IRQ13_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ13_EINT2_SHIFT                12  /* IM_DSP_IRQ13_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ13_EINT2_WIDTH                 1  /* IM_DSP_IRQ13_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ12_EINT2                  0x0800  /* IM_DSP_IRQ12_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ12_EINT2_MASK             0x0800  /* IM_DSP_IRQ12_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ12_EINT2_SHIFT                11  /* IM_DSP_IRQ12_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ12_EINT2_WIDTH                 1  /* IM_DSP_IRQ12_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ11_EINT2                  0x0400  /* IM_DSP_IRQ11_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ11_EINT2_MASK             0x0400  /* IM_DSP_IRQ11_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ11_EINT2_SHIFT                10  /* IM_DSP_IRQ11_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ11_EINT2_WIDTH                 1  /* IM_DSP_IRQ11_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ10_EINT2                  0x0200  /* IM_DSP_IRQ10_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ10_EINT2_MASK             0x0200  /* IM_DSP_IRQ10_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ10_EINT2_SHIFT                 9  /* IM_DSP_IRQ10_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ10_EINT2_WIDTH                 1  /* IM_DSP_IRQ10_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ9_EINT2                   0x0100  /* IM_DSP_IRQ9_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ9_EINT2_MASK              0x0100  /* IM_DSP_IRQ9_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ9_EINT2_SHIFT                  8  /* IM_DSP_IRQ9_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ9_EINT2_WIDTH                  1  /* IM_DSP_IRQ9_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ8_EINT2                   0x0080  /* IM_DSP_IRQ8_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ8_EINT2_MASK              0x0080  /* IM_DSP_IRQ8_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ8_EINT2_SHIFT                  7  /* IM_DSP_IRQ8_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ8_EINT2_WIDTH                  1  /* IM_DSP_IRQ8_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ7_EINT2                   0x0040  /* IM_DSP_IRQ7_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ7_EINT2_MASK              0x0040  /* IM_DSP_IRQ7_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ7_EINT2_SHIFT                  6  /* IM_DSP_IRQ7_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ7_EINT2_WIDTH                  1  /* IM_DSP_IRQ7_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ6_EINT2                   0x0020  /* IM_DSP_IRQ6_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ6_EINT2_MASK              0x0020  /* IM_DSP_IRQ6_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ6_EINT2_SHIFT                  5  /* IM_DSP_IRQ6_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ6_EINT2_WIDTH                  1  /* IM_DSP_IRQ6_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ5_EINT2                   0x0010  /* IM_DSP_IRQ5_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ5_EINT2_MASK              0x0010  /* IM_DSP_IRQ5_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ5_EINT2_SHIFT                  4  /* IM_DSP_IRQ5_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ5_EINT2_WIDTH                  1  /* IM_DSP_IRQ5_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ4_EINT2                   0x0008  /* IM_DSP_IRQ4_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ4_EINT2_MASK              0x0008  /* IM_DSP_IRQ4_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ4_EINT2_SHIFT                  3  /* IM_DSP_IRQ4_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ4_EINT2_WIDTH                  1  /* IM_DSP_IRQ4_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ3_EINT2                   0x0004  /* IM_DSP_IRQ3_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ3_EINT2_MASK              0x0004  /* IM_DSP_IRQ3_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ3_EINT2_SHIFT                  2  /* IM_DSP_IRQ3_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ3_EINT2_WIDTH                  1  /* IM_DSP_IRQ3_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ2_EINT2                   0x0002  /* IM_DSP_IRQ2_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ2_EINT2_MASK              0x0002  /* IM_DSP_IRQ2_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ2_EINT2_SHIFT                  1  /* IM_DSP_IRQ2_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ2_EINT2_WIDTH                  1  /* IM_DSP_IRQ2_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ1_EINT2                   0x0001  /* IM_DSP_IRQ1_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ1_EINT2_MASK              0x0001  /* IM_DSP_IRQ1_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ1_EINT2_SHIFT                  0  /* IM_DSP_IRQ1_EINT2 */
+#define CLEARWATER_IM_DSP_IRQ1_EINT2_WIDTH                  1  /* IM_DSP_IRQ1_EINT2 */
 
 /*
  * R6272 (0x1880) - IRQ1 Raw Status 1
  */
-#define WM8285_DSP_SHARED_WR_COLL_STS1            0x8000  /* DSP_SHARED_WR_COLL_STS1 */
-#define WM8285_DSP_SHARED_WR_COLL_STS1_MASK       0x8000  /* DSP_SHARED_WR_COLL_STS1 */
-#define WM8285_DSP_SHARED_WR_COLL_STS1_SHIFT          15  /* DSP_SHARED_WR_COLL_STS1 */
-#define WM8285_DSP_SHARED_WR_COLL_STS1_WIDTH           1  /* DSP_SHARED_WR_COLL_STS1 */
-#define WM8285_CTRLIF_ERR_STS1                    0x1000  /* CTRLIF_ERR_STS1 */
-#define WM8285_CTRLIF_ERR_STS1_MASK               0x1000  /* CTRLIF_ERR_STS1 */
-#define WM8285_CTRLIF_ERR_STS1_SHIFT                  12  /* CTRLIF_ERR_STS1 */
-#define WM8285_CTRLIF_ERR_STS1_WIDTH                   1  /* CTRLIF_ERR_STS1 */
-#define WM8285_IRQ_NO_CLOCK_STS1                  0x0200  /* IRQ_NO_CLOCK_STS1 */
-#define WM8285_IRQ_NO_CLOCK_STS1_MASK             0x0200  /* IRQ_NO_CLOCK_STS1 */
-#define WM8285_IRQ_NO_CLOCK_STS1_SHIFT                 9  /* IRQ_NO_CLOCK_STS1 */
-#define WM8285_IRQ_NO_CLOCK_STS1_WIDTH                 1  /* IRQ_NO_CLOCK_STS1 */
-#define WM8285_CLOCK_DETECT_STS1                  0x0100  /* CLOCK_DETECT_STS1 */
-#define WM8285_CLOCK_DETECT_STS1_MASK             0x0100  /* CLOCK_DETECT_STS1 */
-#define WM8285_CLOCK_DETECT_STS1_SHIFT                 8  /* CLOCK_DETECT_STS1 */
-#define WM8285_CLOCK_DETECT_STS1_WIDTH                 1  /* CLOCK_DETECT_STS1 */
-#define WM8285_BOOT_DONE_STS1                     0x0080  /* BOOT_DONE_STS1 */
-#define WM8285_BOOT_DONE_STS1_MASK                0x0080  /* BOOT_DONE_STS1 */
-#define WM8285_BOOT_DONE_STS1_SHIFT                    7  /* BOOT_DONE_STS1 */
-#define WM8285_BOOT_DONE_STS1_WIDTH                    1  /* BOOT_DONE_STS1 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_STS1            0x8000  /* DSP_SHARED_WR_COLL_STS1 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_STS1_MASK       0x8000  /* DSP_SHARED_WR_COLL_STS1 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_STS1_SHIFT          15  /* DSP_SHARED_WR_COLL_STS1 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_STS1_WIDTH           1  /* DSP_SHARED_WR_COLL_STS1 */
+#define CLEARWATER_CTRLIF_ERR_STS1                    0x1000  /* CTRLIF_ERR_STS1 */
+#define CLEARWATER_CTRLIF_ERR_STS1_MASK               0x1000  /* CTRLIF_ERR_STS1 */
+#define CLEARWATER_CTRLIF_ERR_STS1_SHIFT                  12  /* CTRLIF_ERR_STS1 */
+#define CLEARWATER_CTRLIF_ERR_STS1_WIDTH                   1  /* CTRLIF_ERR_STS1 */
+#define CLEARWATER_IRQ_NO_CLOCK_STS1                  0x0200  /* IRQ_NO_CLOCK_STS1 */
+#define CLEARWATER_IRQ_NO_CLOCK_STS1_MASK             0x0200  /* IRQ_NO_CLOCK_STS1 */
+#define CLEARWATER_IRQ_NO_CLOCK_STS1_SHIFT                 9  /* IRQ_NO_CLOCK_STS1 */
+#define CLEARWATER_IRQ_NO_CLOCK_STS1_WIDTH                 1  /* IRQ_NO_CLOCK_STS1 */
+#define CLEARWATER_CLOCK_DETECT_STS1                  0x0100  /* CLOCK_DETECT_STS1 */
+#define CLEARWATER_CLOCK_DETECT_STS1_MASK             0x0100  /* CLOCK_DETECT_STS1 */
+#define CLEARWATER_CLOCK_DETECT_STS1_SHIFT                 8  /* CLOCK_DETECT_STS1 */
+#define CLEARWATER_CLOCK_DETECT_STS1_WIDTH                 1  /* CLOCK_DETECT_STS1 */
+#define CLEARWATER_BOOT_DONE_STS1                     0x0080  /* BOOT_DONE_STS1 */
+#define CLEARWATER_BOOT_DONE_STS1_MASK                0x0080  /* BOOT_DONE_STS1 */
+#define CLEARWATER_BOOT_DONE_STS1_SHIFT                    7  /* BOOT_DONE_STS1 */
+#define CLEARWATER_BOOT_DONE_STS1_WIDTH                    1  /* BOOT_DONE_STS1 */
 
 /*
  * R6273 (0x1881) - IRQ1 Raw Status 2
  */
-#define WM8285_FLL3_LOCK_STS1                     0x0400  /* FLL3_LOCK_STS1 */
-#define WM8285_FLL3_LOCK_STS1_MASK                0x0400  /* FLL3_LOCK_STS1 */
-#define WM8285_FLL3_LOCK_STS1_SHIFT                   10  /* FLL3_LOCK_STS1 */
-#define WM8285_FLL3_LOCK_STS1_WIDTH                    1  /* FLL3_LOCK_STS1 */
-#define WM8285_FLL2_LOCK_STS1                     0x0200  /* FLL2_LOCK_STS1 */
-#define WM8285_FLL2_LOCK_STS1_MASK                0x0200  /* FLL2_LOCK_STS1 */
-#define WM8285_FLL2_LOCK_STS1_SHIFT                    9  /* FLL2_LOCK_STS1 */
-#define WM8285_FLL2_LOCK_STS1_WIDTH                    1  /* FLL2_LOCK_STS1 */
-#define WM8285_FLL1_LOCK_STS1                     0x0100  /* FLL1_LOCK_STS1 */
-#define WM8285_FLL1_LOCK_STS1_MASK                0x0100  /* FLL1_LOCK_STS1 */
-#define WM8285_FLL1_LOCK_STS1_SHIFT                    8  /* FLL1_LOCK_STS1 */
-#define WM8285_FLL1_LOCK_STS1_WIDTH                    1  /* FLL1_LOCK_STS1 */
+#define CLEARWATER_FLL3_LOCK_STS1                     0x0400  /* FLL3_LOCK_STS1 */
+#define CLEARWATER_FLL3_LOCK_STS1_MASK                0x0400  /* FLL3_LOCK_STS1 */
+#define CLEARWATER_FLL3_LOCK_STS1_SHIFT                   10  /* FLL3_LOCK_STS1 */
+#define CLEARWATER_FLL3_LOCK_STS1_WIDTH                    1  /* FLL3_LOCK_STS1 */
+#define CLEARWATER_FLL2_LOCK_STS1                     0x0200  /* FLL2_LOCK_STS1 */
+#define CLEARWATER_FLL2_LOCK_STS1_MASK                0x0200  /* FLL2_LOCK_STS1 */
+#define CLEARWATER_FLL2_LOCK_STS1_SHIFT                    9  /* FLL2_LOCK_STS1 */
+#define CLEARWATER_FLL2_LOCK_STS1_WIDTH                    1  /* FLL2_LOCK_STS1 */
+#define CLEARWATER_FLL1_LOCK_STS1                     0x0100  /* FLL1_LOCK_STS1 */
+#define CLEARWATER_FLL1_LOCK_STS1_MASK                0x0100  /* FLL1_LOCK_STS1 */
+#define CLEARWATER_FLL1_LOCK_STS1_SHIFT                    8  /* FLL1_LOCK_STS1 */
+#define CLEARWATER_FLL1_LOCK_STS1_WIDTH                    1  /* FLL1_LOCK_STS1 */
 
 /*
  * R6277 (0x1885) - IRQ1 Raw Status 6
  */
-#define WM8285_MICDET_STS1                        0x0100  /* MICDET_STS1 */
-#define WM8285_MICDET_STS1_MASK                   0x0100  /* MICDET_STS1 */
-#define WM8285_MICDET_STS1_SHIFT                       8  /* MICDET_STS1 */
-#define WM8285_MICDET_STS1_WIDTH                       1  /* MICDET_STS1 */
-#define WM8285_HPDET_STS1                         0x0001  /* HPDET_STS1 */
-#define WM8285_HPDET_STS1_MASK                    0x0001  /* HPDET_STS1 */
-#define WM8285_HPDET_STS1_SHIFT                        0  /* HPDET_STS1 */
-#define WM8285_HPDET_STS1_WIDTH                        1  /* HPDET_STS1 */
+#define CLEARWATER_MICDET_STS1                        0x0100  /* MICDET_STS1 */
+#define CLEARWATER_MICDET_STS1_MASK                   0x0100  /* MICDET_STS1 */
+#define CLEARWATER_MICDET_STS1_SHIFT                       8  /* MICDET_STS1 */
+#define CLEARWATER_MICDET_STS1_WIDTH                       1  /* MICDET_STS1 */
+#define CLEARWATER_HPDET_STS1                         0x0001  /* HPDET_STS1 */
+#define CLEARWATER_HPDET_STS1_MASK                    0x0001  /* HPDET_STS1 */
+#define CLEARWATER_HPDET_STS1_SHIFT                        0  /* HPDET_STS1 */
+#define CLEARWATER_HPDET_STS1_WIDTH                        1  /* HPDET_STS1 */
 
 /*
  * R6278 (0x1886) - IRQ1 Raw Status 7
  */
-#define WM8285_MICD_CLAMP_FALL_STS1               0x0020  /* MICD_CLAMP_FALL_STS1 */
-#define WM8285_MICD_CLAMP_FALL_STS1_MASK          0x0020  /* MICD_CLAMP_FALL_STS1 */
-#define WM8285_MICD_CLAMP_FALL_STS1_SHIFT              5  /* MICD_CLAMP_FALL_STS1 */
-#define WM8285_MICD_CLAMP_FALL_STS1_WIDTH              1  /* MICD_CLAMP_FALL_STS1 */
-#define WM8285_MICD_CLAMP_RISE_STS1               0x0010  /* MICD_CLAMP_RISE_STS1 */
-#define WM8285_MICD_CLAMP_RISE_STS1_MASK          0x0010  /* MICD_CLAMP_RISE_STS1 */
-#define WM8285_MICD_CLAMP_RISE_STS1_SHIFT              4  /* MICD_CLAMP_RISE_STS1 */
-#define WM8285_MICD_CLAMP_RISE_STS1_WIDTH              1  /* MICD_CLAMP_RISE_STS1 */
-#define WM8285_JD2_FALL_STS1                      0x0008  /* JD2_FALL_STS1 */
-#define WM8285_JD2_FALL_STS1_MASK                 0x0008  /* JD2_FALL_STS1 */
-#define WM8285_JD2_FALL_STS1_SHIFT                     3  /* JD2_FALL_STS1 */
-#define WM8285_JD2_FALL_STS1_WIDTH                     1  /* JD2_FALL_STS1 */
-#define WM8285_JD2_RISE_STS1                      0x0004  /* JD2_RISE_STS1 */
-#define WM8285_JD2_RISE_STS1_MASK                 0x0004  /* JD2_RISE_STS1 */
-#define WM8285_JD2_RISE_STS1_SHIFT                     2  /* JD2_RISE_STS1 */
-#define WM8285_JD2_RISE_STS1_WIDTH                     1  /* JD2_RISE_STS1 */
-#define WM8285_JD1_FALL_STS1                      0x0002  /* JD1_FALL_STS1 */
-#define WM8285_JD1_FALL_STS1_MASK                 0x0002  /* JD1_FALL_STS1 */
-#define WM8285_JD1_FALL_STS1_SHIFT                     1  /* JD1_FALL_STS1 */
-#define WM8285_JD1_FALL_STS1_WIDTH                     1  /* JD1_FALL_STS1 */
-#define WM8285_JD1_RISE_STS1                      0x0001  /* JD1_RISE_STS1 */
-#define WM8285_JD1_RISE_STS1_MASK                 0x0001  /* JD1_RISE_STS1 */
-#define WM8285_JD1_RISE_STS1_SHIFT                     0  /* JD1_RISE_STS1 */
-#define WM8285_JD1_RISE_STS1_WIDTH                     1  /* JD1_RISE_STS1 */
+#define CLEARWATER_MICD_CLAMP_FALL_STS1               0x0020  /* MICD_CLAMP_FALL_STS1 */
+#define CLEARWATER_MICD_CLAMP_FALL_STS1_MASK          0x0020  /* MICD_CLAMP_FALL_STS1 */
+#define CLEARWATER_MICD_CLAMP_FALL_STS1_SHIFT              5  /* MICD_CLAMP_FALL_STS1 */
+#define CLEARWATER_MICD_CLAMP_FALL_STS1_WIDTH              1  /* MICD_CLAMP_FALL_STS1 */
+#define CLEARWATER_MICD_CLAMP_RISE_STS1               0x0010  /* MICD_CLAMP_RISE_STS1 */
+#define CLEARWATER_MICD_CLAMP_RISE_STS1_MASK          0x0010  /* MICD_CLAMP_RISE_STS1 */
+#define CLEARWATER_MICD_CLAMP_RISE_STS1_SHIFT              4  /* MICD_CLAMP_RISE_STS1 */
+#define CLEARWATER_MICD_CLAMP_RISE_STS1_WIDTH              1  /* MICD_CLAMP_RISE_STS1 */
+#define CLEARWATER_JD2_FALL_STS1                      0x0008  /* JD2_FALL_STS1 */
+#define CLEARWATER_JD2_FALL_STS1_MASK                 0x0008  /* JD2_FALL_STS1 */
+#define CLEARWATER_JD2_FALL_STS1_SHIFT                     3  /* JD2_FALL_STS1 */
+#define CLEARWATER_JD2_FALL_STS1_WIDTH                     1  /* JD2_FALL_STS1 */
+#define CLEARWATER_JD2_RISE_STS1                      0x0004  /* JD2_RISE_STS1 */
+#define CLEARWATER_JD2_RISE_STS1_MASK                 0x0004  /* JD2_RISE_STS1 */
+#define CLEARWATER_JD2_RISE_STS1_SHIFT                     2  /* JD2_RISE_STS1 */
+#define CLEARWATER_JD2_RISE_STS1_WIDTH                     1  /* JD2_RISE_STS1 */
+#define CLEARWATER_JD1_FALL_STS1                      0x0002  /* JD1_FALL_STS1 */
+#define CLEARWATER_JD1_FALL_STS1_MASK                 0x0002  /* JD1_FALL_STS1 */
+#define CLEARWATER_JD1_FALL_STS1_SHIFT                     1  /* JD1_FALL_STS1 */
+#define CLEARWATER_JD1_FALL_STS1_WIDTH                     1  /* JD1_FALL_STS1 */
+#define CLEARWATER_JD1_RISE_STS1                      0x0001  /* JD1_RISE_STS1 */
+#define CLEARWATER_JD1_RISE_STS1_MASK                 0x0001  /* JD1_RISE_STS1 */
+#define CLEARWATER_JD1_RISE_STS1_SHIFT                     0  /* JD1_RISE_STS1 */
+#define CLEARWATER_JD1_RISE_STS1_WIDTH                     1  /* JD1_RISE_STS1 */
 
 /*
  * R6280 (0x1888) - IRQ1 Raw Status 9
  */
-#define WM8285_ASRC2_IN2_LOCK_STS1                0x0800  /* ASRC2_IN2_LOCK_STS1 */
-#define WM8285_ASRC2_IN2_LOCK_STS1_MASK           0x0800  /* ASRC2_IN2_LOCK_STS1 */
-#define WM8285_ASRC2_IN2_LOCK_STS1_SHIFT              11  /* ASRC2_IN2_LOCK_STS1 */
-#define WM8285_ASRC2_IN2_LOCK_STS1_WIDTH               1  /* ASRC2_IN2_LOCK_STS1 */
-#define WM8285_ASRC2_IN1_LOCK_STS1                0x0400  /* ASRC2_IN1_LOCK_STS1 */
-#define WM8285_ASRC2_IN1_LOCK_STS1_MASK           0x0400  /* ASRC2_IN1_LOCK_STS1 */
-#define WM8285_ASRC2_IN1_LOCK_STS1_SHIFT              10  /* ASRC2_IN1_LOCK_STS1 */
-#define WM8285_ASRC2_IN1_LOCK_STS1_WIDTH               1  /* ASRC2_IN1_LOCK_STS1 */
-#define WM8285_ASRC1_IN2_LOCK_STS1                0x0200  /* ASRC1_IN2_LOCK_STS1 */
-#define WM8285_ASRC1_IN2_LOCK_STS1_MASK           0x0200  /* ASRC1_IN2_LOCK_STS1 */
-#define WM8285_ASRC1_IN2_LOCK_STS1_SHIFT               9  /* ASRC1_IN2_LOCK_STS1 */
-#define WM8285_ASRC1_IN2_LOCK_STS1_WIDTH               1  /* ASRC1_IN2_LOCK_STS1 */
-#define WM8285_ASRC1_IN1_LOCK_STS1                0x0100  /* ASRC1_IN1_LOCK_STS1 */
-#define WM8285_ASRC1_IN1_LOCK_STS1_MASK           0x0100  /* ASRC1_IN1_LOCK_STS1 */
-#define WM8285_ASRC1_IN1_LOCK_STS1_SHIFT               8  /* ASRC1_IN1_LOCK_STS1 */
-#define WM8285_ASRC1_IN1_LOCK_STS1_WIDTH               1  /* ASRC1_IN1_LOCK_STS1 */
-#define WM8285_DRC2_SIG_DET_STS1                  0x0002  /* DRC2_SIG_DET_STS1 */
-#define WM8285_DRC2_SIG_DET_STS1_MASK             0x0002  /* DRC2_SIG_DET_STS1 */
-#define WM8285_DRC2_SIG_DET_STS1_SHIFT                 1  /* DRC2_SIG_DET_STS1 */
-#define WM8285_DRC2_SIG_DET_STS1_WIDTH                 1  /* DRC2_SIG_DET_STS1 */
-#define WM8285_DRC1_SIG_DET_STS1                  0x0001  /* DRC1_SIG_DET_STS1 */
-#define WM8285_DRC1_SIG_DET_STS1_MASK             0x0001  /* DRC1_SIG_DET_STS1 */
-#define WM8285_DRC1_SIG_DET_STS1_SHIFT                 0  /* DRC1_SIG_DET_STS1 */
-#define WM8285_DRC1_SIG_DET_STS1_WIDTH                 1  /* DRC1_SIG_DET_STS1 */
+#define CLEARWATER_ASRC2_IN2_LOCK_STS1                0x0800  /* ASRC2_IN2_LOCK_STS1 */
+#define CLEARWATER_ASRC2_IN2_LOCK_STS1_MASK           0x0800  /* ASRC2_IN2_LOCK_STS1 */
+#define CLEARWATER_ASRC2_IN2_LOCK_STS1_SHIFT              11  /* ASRC2_IN2_LOCK_STS1 */
+#define CLEARWATER_ASRC2_IN2_LOCK_STS1_WIDTH               1  /* ASRC2_IN2_LOCK_STS1 */
+#define CLEARWATER_ASRC2_IN1_LOCK_STS1                0x0400  /* ASRC2_IN1_LOCK_STS1 */
+#define CLEARWATER_ASRC2_IN1_LOCK_STS1_MASK           0x0400  /* ASRC2_IN1_LOCK_STS1 */
+#define CLEARWATER_ASRC2_IN1_LOCK_STS1_SHIFT              10  /* ASRC2_IN1_LOCK_STS1 */
+#define CLEARWATER_ASRC2_IN1_LOCK_STS1_WIDTH               1  /* ASRC2_IN1_LOCK_STS1 */
+#define CLEARWATER_ASRC1_IN2_LOCK_STS1                0x0200  /* ASRC1_IN2_LOCK_STS1 */
+#define CLEARWATER_ASRC1_IN2_LOCK_STS1_MASK           0x0200  /* ASRC1_IN2_LOCK_STS1 */
+#define CLEARWATER_ASRC1_IN2_LOCK_STS1_SHIFT               9  /* ASRC1_IN2_LOCK_STS1 */
+#define CLEARWATER_ASRC1_IN2_LOCK_STS1_WIDTH               1  /* ASRC1_IN2_LOCK_STS1 */
+#define CLEARWATER_ASRC1_IN1_LOCK_STS1                0x0100  /* ASRC1_IN1_LOCK_STS1 */
+#define CLEARWATER_ASRC1_IN1_LOCK_STS1_MASK           0x0100  /* ASRC1_IN1_LOCK_STS1 */
+#define CLEARWATER_ASRC1_IN1_LOCK_STS1_SHIFT               8  /* ASRC1_IN1_LOCK_STS1 */
+#define CLEARWATER_ASRC1_IN1_LOCK_STS1_WIDTH               1  /* ASRC1_IN1_LOCK_STS1 */
+#define CLEARWATER_DRC2_SIG_DET_STS1                  0x0002  /* DRC2_SIG_DET_STS1 */
+#define CLEARWATER_DRC2_SIG_DET_STS1_MASK             0x0002  /* DRC2_SIG_DET_STS1 */
+#define CLEARWATER_DRC2_SIG_DET_STS1_SHIFT                 1  /* DRC2_SIG_DET_STS1 */
+#define CLEARWATER_DRC2_SIG_DET_STS1_WIDTH                 1  /* DRC2_SIG_DET_STS1 */
+#define CLEARWATER_DRC1_SIG_DET_STS1                  0x0001  /* DRC1_SIG_DET_STS1 */
+#define CLEARWATER_DRC1_SIG_DET_STS1_MASK             0x0001  /* DRC1_SIG_DET_STS1 */
+#define CLEARWATER_DRC1_SIG_DET_STS1_SHIFT                 0  /* DRC1_SIG_DET_STS1 */
+#define CLEARWATER_DRC1_SIG_DET_STS1_WIDTH                 1  /* DRC1_SIG_DET_STS1 */
 
 /*
  * R6282 (0x188A) - IRQ1 Raw Status 11
  */
-#define WM8285_DSP_IRQ16_STS1                     0x8000  /* DSP_IRQ16_STS1 */
-#define WM8285_DSP_IRQ16_STS1_MASK                0x8000  /* DSP_IRQ16_STS1 */
-#define WM8285_DSP_IRQ16_STS1_SHIFT                   15  /* DSP_IRQ16_STS1 */
-#define WM8285_DSP_IRQ16_STS1_WIDTH                    1  /* DSP_IRQ16_STS1 */
-#define WM8285_DSP_IRQ15_STS1                     0x4000  /* DSP_IRQ15_STS1 */
-#define WM8285_DSP_IRQ15_STS1_MASK                0x4000  /* DSP_IRQ15_STS1 */
-#define WM8285_DSP_IRQ15_STS1_SHIFT                   14  /* DSP_IRQ15_STS1 */
-#define WM8285_DSP_IRQ15_STS1_WIDTH                    1  /* DSP_IRQ15_STS1 */
-#define WM8285_DSP_IRQ14_STS1                     0x2000  /* DSP_IRQ14_STS1 */
-#define WM8285_DSP_IRQ14_STS1_MASK                0x2000  /* DSP_IRQ14_STS1 */
-#define WM8285_DSP_IRQ14_STS1_SHIFT                   13  /* DSP_IRQ14_STS1 */
-#define WM8285_DSP_IRQ14_STS1_WIDTH                    1  /* DSP_IRQ14_STS1 */
-#define WM8285_DSP_IRQ13_STS1                     0x1000  /* DSP_IRQ13_STS1 */
-#define WM8285_DSP_IRQ13_STS1_MASK                0x1000  /* DSP_IRQ13_STS1 */
-#define WM8285_DSP_IRQ13_STS1_SHIFT                   12  /* DSP_IRQ13_STS1 */
-#define WM8285_DSP_IRQ13_STS1_WIDTH                    1  /* DSP_IRQ13_STS1 */
-#define WM8285_DSP_IRQ12_STS1                     0x0800  /* DSP_IRQ12_STS1 */
-#define WM8285_DSP_IRQ12_STS1_MASK                0x0800  /* DSP_IRQ12_STS1 */
-#define WM8285_DSP_IRQ12_STS1_SHIFT                   11  /* DSP_IRQ12_STS1 */
-#define WM8285_DSP_IRQ12_STS1_WIDTH                    1  /* DSP_IRQ12_STS1 */
-#define WM8285_DSP_IRQ11_STS1                     0x0400  /* DSP_IRQ11_STS1 */
-#define WM8285_DSP_IRQ11_STS1_MASK                0x0400  /* DSP_IRQ11_STS1 */
-#define WM8285_DSP_IRQ11_STS1_SHIFT                   10  /* DSP_IRQ11_STS1 */
-#define WM8285_DSP_IRQ11_STS1_WIDTH                    1  /* DSP_IRQ11_STS1 */
-#define WM8285_DSP_IRQ10_STS1                     0x0200  /* DSP_IRQ10_STS1 */
-#define WM8285_DSP_IRQ10_STS1_MASK                0x0200  /* DSP_IRQ10_STS1 */
-#define WM8285_DSP_IRQ10_STS1_SHIFT                    9  /* DSP_IRQ10_STS1 */
-#define WM8285_DSP_IRQ10_STS1_WIDTH                    1  /* DSP_IRQ10_STS1 */
-#define WM8285_DSP_IRQ9_STS1                      0x0100  /* DSP_IRQ9_STS1 */
-#define WM8285_DSP_IRQ9_STS1_MASK                 0x0100  /* DSP_IRQ9_STS1 */
-#define WM8285_DSP_IRQ9_STS1_SHIFT                     8  /* DSP_IRQ9_STS1 */
-#define WM8285_DSP_IRQ9_STS1_WIDTH                     1  /* DSP_IRQ9_STS1 */
-#define WM8285_DSP_IRQ8_STS1                      0x0080  /* DSP_IRQ8_STS1 */
-#define WM8285_DSP_IRQ8_STS1_MASK                 0x0080  /* DSP_IRQ8_STS1 */
-#define WM8285_DSP_IRQ8_STS1_SHIFT                     7  /* DSP_IRQ8_STS1 */
-#define WM8285_DSP_IRQ8_STS1_WIDTH                     1  /* DSP_IRQ8_STS1 */
-#define WM8285_DSP_IRQ7_STS1                      0x0040  /* DSP_IRQ7_STS1 */
-#define WM8285_DSP_IRQ7_STS1_MASK                 0x0040  /* DSP_IRQ7_STS1 */
-#define WM8285_DSP_IRQ7_STS1_SHIFT                     6  /* DSP_IRQ7_STS1 */
-#define WM8285_DSP_IRQ7_STS1_WIDTH                     1  /* DSP_IRQ7_STS1 */
-#define WM8285_DSP_IRQ6_STS1                      0x0020  /* DSP_IRQ6_STS1 */
-#define WM8285_DSP_IRQ6_STS1_MASK                 0x0020  /* DSP_IRQ6_STS1 */
-#define WM8285_DSP_IRQ6_STS1_SHIFT                     5  /* DSP_IRQ6_STS1 */
-#define WM8285_DSP_IRQ6_STS1_WIDTH                     1  /* DSP_IRQ6_STS1 */
-#define WM8285_DSP_IRQ5_STS1                      0x0010  /* DSP_IRQ5_STS1 */
-#define WM8285_DSP_IRQ5_STS1_MASK                 0x0010  /* DSP_IRQ5_STS1 */
-#define WM8285_DSP_IRQ5_STS1_SHIFT                     4  /* DSP_IRQ5_STS1 */
-#define WM8285_DSP_IRQ5_STS1_WIDTH                     1  /* DSP_IRQ5_STS1 */
-#define WM8285_DSP_IRQ4_STS1                      0x0008  /* DSP_IRQ4_STS1 */
-#define WM8285_DSP_IRQ4_STS1_MASK                 0x0008  /* DSP_IRQ4_STS1 */
-#define WM8285_DSP_IRQ4_STS1_SHIFT                     3  /* DSP_IRQ4_STS1 */
-#define WM8285_DSP_IRQ4_STS1_WIDTH                     1  /* DSP_IRQ4_STS1 */
-#define WM8285_DSP_IRQ3_STS1                      0x0004  /* DSP_IRQ3_STS1 */
-#define WM8285_DSP_IRQ3_STS1_MASK                 0x0004  /* DSP_IRQ3_STS1 */
-#define WM8285_DSP_IRQ3_STS1_SHIFT                     2  /* DSP_IRQ3_STS1 */
-#define WM8285_DSP_IRQ3_STS1_WIDTH                     1  /* DSP_IRQ3_STS1 */
-#define WM8285_DSP_IRQ2_STS1                      0x0002  /* DSP_IRQ2_STS1 */
-#define WM8285_DSP_IRQ2_STS1_MASK                 0x0002  /* DSP_IRQ2_STS1 */
-#define WM8285_DSP_IRQ2_STS1_SHIFT                     1  /* DSP_IRQ2_STS1 */
-#define WM8285_DSP_IRQ2_STS1_WIDTH                     1  /* DSP_IRQ2_STS1 */
-#define WM8285_DSP_IRQ1_STS1                      0x0001  /* DSP_IRQ1_STS1 */
-#define WM8285_DSP_IRQ1_STS1_MASK                 0x0001  /* DSP_IRQ1_STS1 */
-#define WM8285_DSP_IRQ1_STS1_SHIFT                     0  /* DSP_IRQ1_STS1 */
-#define WM8285_DSP_IRQ1_STS1_WIDTH                     1  /* DSP_IRQ1_STS1 */
+#define CLEARWATER_DSP_IRQ16_STS1                     0x8000  /* DSP_IRQ16_STS1 */
+#define CLEARWATER_DSP_IRQ16_STS1_MASK                0x8000  /* DSP_IRQ16_STS1 */
+#define CLEARWATER_DSP_IRQ16_STS1_SHIFT                   15  /* DSP_IRQ16_STS1 */
+#define CLEARWATER_DSP_IRQ16_STS1_WIDTH                    1  /* DSP_IRQ16_STS1 */
+#define CLEARWATER_DSP_IRQ15_STS1                     0x4000  /* DSP_IRQ15_STS1 */
+#define CLEARWATER_DSP_IRQ15_STS1_MASK                0x4000  /* DSP_IRQ15_STS1 */
+#define CLEARWATER_DSP_IRQ15_STS1_SHIFT                   14  /* DSP_IRQ15_STS1 */
+#define CLEARWATER_DSP_IRQ15_STS1_WIDTH                    1  /* DSP_IRQ15_STS1 */
+#define CLEARWATER_DSP_IRQ14_STS1                     0x2000  /* DSP_IRQ14_STS1 */
+#define CLEARWATER_DSP_IRQ14_STS1_MASK                0x2000  /* DSP_IRQ14_STS1 */
+#define CLEARWATER_DSP_IRQ14_STS1_SHIFT                   13  /* DSP_IRQ14_STS1 */
+#define CLEARWATER_DSP_IRQ14_STS1_WIDTH                    1  /* DSP_IRQ14_STS1 */
+#define CLEARWATER_DSP_IRQ13_STS1                     0x1000  /* DSP_IRQ13_STS1 */
+#define CLEARWATER_DSP_IRQ13_STS1_MASK                0x1000  /* DSP_IRQ13_STS1 */
+#define CLEARWATER_DSP_IRQ13_STS1_SHIFT                   12  /* DSP_IRQ13_STS1 */
+#define CLEARWATER_DSP_IRQ13_STS1_WIDTH                    1  /* DSP_IRQ13_STS1 */
+#define CLEARWATER_DSP_IRQ12_STS1                     0x0800  /* DSP_IRQ12_STS1 */
+#define CLEARWATER_DSP_IRQ12_STS1_MASK                0x0800  /* DSP_IRQ12_STS1 */
+#define CLEARWATER_DSP_IRQ12_STS1_SHIFT                   11  /* DSP_IRQ12_STS1 */
+#define CLEARWATER_DSP_IRQ12_STS1_WIDTH                    1  /* DSP_IRQ12_STS1 */
+#define CLEARWATER_DSP_IRQ11_STS1                     0x0400  /* DSP_IRQ11_STS1 */
+#define CLEARWATER_DSP_IRQ11_STS1_MASK                0x0400  /* DSP_IRQ11_STS1 */
+#define CLEARWATER_DSP_IRQ11_STS1_SHIFT                   10  /* DSP_IRQ11_STS1 */
+#define CLEARWATER_DSP_IRQ11_STS1_WIDTH                    1  /* DSP_IRQ11_STS1 */
+#define CLEARWATER_DSP_IRQ10_STS1                     0x0200  /* DSP_IRQ10_STS1 */
+#define CLEARWATER_DSP_IRQ10_STS1_MASK                0x0200  /* DSP_IRQ10_STS1 */
+#define CLEARWATER_DSP_IRQ10_STS1_SHIFT                    9  /* DSP_IRQ10_STS1 */
+#define CLEARWATER_DSP_IRQ10_STS1_WIDTH                    1  /* DSP_IRQ10_STS1 */
+#define CLEARWATER_DSP_IRQ9_STS1                      0x0100  /* DSP_IRQ9_STS1 */
+#define CLEARWATER_DSP_IRQ9_STS1_MASK                 0x0100  /* DSP_IRQ9_STS1 */
+#define CLEARWATER_DSP_IRQ9_STS1_SHIFT                     8  /* DSP_IRQ9_STS1 */
+#define CLEARWATER_DSP_IRQ9_STS1_WIDTH                     1  /* DSP_IRQ9_STS1 */
+#define CLEARWATER_DSP_IRQ8_STS1                      0x0080  /* DSP_IRQ8_STS1 */
+#define CLEARWATER_DSP_IRQ8_STS1_MASK                 0x0080  /* DSP_IRQ8_STS1 */
+#define CLEARWATER_DSP_IRQ8_STS1_SHIFT                     7  /* DSP_IRQ8_STS1 */
+#define CLEARWATER_DSP_IRQ8_STS1_WIDTH                     1  /* DSP_IRQ8_STS1 */
+#define CLEARWATER_DSP_IRQ7_STS1                      0x0040  /* DSP_IRQ7_STS1 */
+#define CLEARWATER_DSP_IRQ7_STS1_MASK                 0x0040  /* DSP_IRQ7_STS1 */
+#define CLEARWATER_DSP_IRQ7_STS1_SHIFT                     6  /* DSP_IRQ7_STS1 */
+#define CLEARWATER_DSP_IRQ7_STS1_WIDTH                     1  /* DSP_IRQ7_STS1 */
+#define CLEARWATER_DSP_IRQ6_STS1                      0x0020  /* DSP_IRQ6_STS1 */
+#define CLEARWATER_DSP_IRQ6_STS1_MASK                 0x0020  /* DSP_IRQ6_STS1 */
+#define CLEARWATER_DSP_IRQ6_STS1_SHIFT                     5  /* DSP_IRQ6_STS1 */
+#define CLEARWATER_DSP_IRQ6_STS1_WIDTH                     1  /* DSP_IRQ6_STS1 */
+#define CLEARWATER_DSP_IRQ5_STS1                      0x0010  /* DSP_IRQ5_STS1 */
+#define CLEARWATER_DSP_IRQ5_STS1_MASK                 0x0010  /* DSP_IRQ5_STS1 */
+#define CLEARWATER_DSP_IRQ5_STS1_SHIFT                     4  /* DSP_IRQ5_STS1 */
+#define CLEARWATER_DSP_IRQ5_STS1_WIDTH                     1  /* DSP_IRQ5_STS1 */
+#define CLEARWATER_DSP_IRQ4_STS1                      0x0008  /* DSP_IRQ4_STS1 */
+#define CLEARWATER_DSP_IRQ4_STS1_MASK                 0x0008  /* DSP_IRQ4_STS1 */
+#define CLEARWATER_DSP_IRQ4_STS1_SHIFT                     3  /* DSP_IRQ4_STS1 */
+#define CLEARWATER_DSP_IRQ4_STS1_WIDTH                     1  /* DSP_IRQ4_STS1 */
+#define CLEARWATER_DSP_IRQ3_STS1                      0x0004  /* DSP_IRQ3_STS1 */
+#define CLEARWATER_DSP_IRQ3_STS1_MASK                 0x0004  /* DSP_IRQ3_STS1 */
+#define CLEARWATER_DSP_IRQ3_STS1_SHIFT                     2  /* DSP_IRQ3_STS1 */
+#define CLEARWATER_DSP_IRQ3_STS1_WIDTH                     1  /* DSP_IRQ3_STS1 */
+#define CLEARWATER_DSP_IRQ2_STS1                      0x0002  /* DSP_IRQ2_STS1 */
+#define CLEARWATER_DSP_IRQ2_STS1_MASK                 0x0002  /* DSP_IRQ2_STS1 */
+#define CLEARWATER_DSP_IRQ2_STS1_SHIFT                     1  /* DSP_IRQ2_STS1 */
+#define CLEARWATER_DSP_IRQ2_STS1_WIDTH                     1  /* DSP_IRQ2_STS1 */
+#define CLEARWATER_DSP_IRQ1_STS1                      0x0001  /* DSP_IRQ1_STS1 */
+#define CLEARWATER_DSP_IRQ1_STS1_MASK                 0x0001  /* DSP_IRQ1_STS1 */
+#define CLEARWATER_DSP_IRQ1_STS1_SHIFT                     0  /* DSP_IRQ1_STS1 */
+#define CLEARWATER_DSP_IRQ1_STS1_WIDTH                     1  /* DSP_IRQ1_STS1 */
 
 
 /*
  * R6283 (0x188B) - IRQ1 Raw Status 12
  */
-#define WM8285_SPKOUTR_SC_STS1                    0x0080  /* SPKOUTR_SC_STS1 */
-#define WM8285_SPKOUTR_SC_STS1_MASK               0x0080  /* SPKOUTR_SC_STS1 */
-#define WM8285_SPKOUTR_SC_STS1_SHIFT                   7  /* SPKOUTR_SC_STS1 */
-#define WM8285_SPKOUTR_SC_STS1_WIDTH                   1  /* SPKOUTR_SC_STS1 */
-#define WM8285_SPKOUTL_SC_STS1                    0x0040  /* SPKOUTL_SC_STS1 */
-#define WM8285_SPKOUTL_SC_STS1_MASK               0x0040  /* SPKOUTL_SC_STS1 */
-#define WM8285_SPKOUTL_SC_STS1_SHIFT                   6  /* SPKOUTL_SC_STS1 */
-#define WM8285_SPKOUTL_SC_STS1_WIDTH                   1  /* SPKOUTL_SC_STS1 */
-#define WM8285_HP3R_SC_STS1                       0x0020  /* HP3R_SC_STS1 */
-#define WM8285_HP3R_SC_STS1_MASK                  0x0020  /* HP3R_SC_STS1 */
-#define WM8285_HP3R_SC_STS1_SHIFT                      5  /* HP3R_SC_STS1 */
-#define WM8285_HP3R_SC_STS1_WIDTH                      1  /* HP3R_SC_STS1 */
-#define WM8285_HP3L_SC_STS1                       0x0010  /* HP3L_SC_STS1 */
-#define WM8285_HP3L_SC_STS1_MASK                  0x0010  /* HP3L_SC_STS1 */
-#define WM8285_HP3L_SC_STS1_SHIFT                      4  /* HP3L_SC_STS1 */
-#define WM8285_HP3L_SC_STS1_WIDTH                      1  /* HP3L_SC_STS1 */
-#define WM8285_HP2R_SC_STS1                       0x0008  /* HP2R_SC_STS1 */
-#define WM8285_HP2R_SC_STS1_MASK                  0x0008  /* HP2R_SC_STS1 */
-#define WM8285_HP2R_SC_STS1_SHIFT                      3  /* HP2R_SC_STS1 */
-#define WM8285_HP2R_SC_STS1_WIDTH                      1  /* HP2R_SC_STS1 */
-#define WM8285_HP2L_SC_STS1                       0x0004  /* HP2L_SC_STS1 */
-#define WM8285_HP2L_SC_STS1_MASK                  0x0004  /* HP2L_SC_STS1 */
-#define WM8285_HP2L_SC_STS1_SHIFT                      2  /* HP2L_SC_STS1 */
-#define WM8285_HP2L_SC_STS1_WIDTH                      1  /* HP2L_SC_STS1 */
-#define WM8285_HP1R_SC_STS1                       0x0002  /* HP1R_SC_STS1 */
-#define WM8285_HP1R_SC_STS1_MASK                  0x0002  /* HP1R_SC_STS1 */
-#define WM8285_HP1R_SC_STS1_SHIFT                      1  /* HP1R_SC_STS1 */
-#define WM8285_HP1R_SC_STS1_WIDTH                      1  /* HP1R_SC_STS1 */
-#define WM8285_HP1L_SC_STS1                       0x0001  /* HP1L_SC_STS1 */
-#define WM8285_HP1L_SC_STS1_MASK                  0x0001  /* HP1L_SC_STS1 */
-#define WM8285_HP1L_SC_STS1_SHIFT                      0  /* HP1L_SC_STS1 */
-#define WM8285_HP1L_SC_STS1_WIDTH                      1  /* HP1L_SC_STS1 */
+#define CLEARWATER_SPKOUTR_SC_STS1                    0x0080  /* SPKOUTR_SC_STS1 */
+#define CLEARWATER_SPKOUTR_SC_STS1_MASK               0x0080  /* SPKOUTR_SC_STS1 */
+#define CLEARWATER_SPKOUTR_SC_STS1_SHIFT                   7  /* SPKOUTR_SC_STS1 */
+#define CLEARWATER_SPKOUTR_SC_STS1_WIDTH                   1  /* SPKOUTR_SC_STS1 */
+#define CLEARWATER_SPKOUTL_SC_STS1                    0x0040  /* SPKOUTL_SC_STS1 */
+#define CLEARWATER_SPKOUTL_SC_STS1_MASK               0x0040  /* SPKOUTL_SC_STS1 */
+#define CLEARWATER_SPKOUTL_SC_STS1_SHIFT                   6  /* SPKOUTL_SC_STS1 */
+#define CLEARWATER_SPKOUTL_SC_STS1_WIDTH                   1  /* SPKOUTL_SC_STS1 */
+#define CLEARWATER_HP3R_SC_STS1                       0x0020  /* HP3R_SC_STS1 */
+#define CLEARWATER_HP3R_SC_STS1_MASK                  0x0020  /* HP3R_SC_STS1 */
+#define CLEARWATER_HP3R_SC_STS1_SHIFT                      5  /* HP3R_SC_STS1 */
+#define CLEARWATER_HP3R_SC_STS1_WIDTH                      1  /* HP3R_SC_STS1 */
+#define CLEARWATER_HP3L_SC_STS1                       0x0010  /* HP3L_SC_STS1 */
+#define CLEARWATER_HP3L_SC_STS1_MASK                  0x0010  /* HP3L_SC_STS1 */
+#define CLEARWATER_HP3L_SC_STS1_SHIFT                      4  /* HP3L_SC_STS1 */
+#define CLEARWATER_HP3L_SC_STS1_WIDTH                      1  /* HP3L_SC_STS1 */
+#define CLEARWATER_HP2R_SC_STS1                       0x0008  /* HP2R_SC_STS1 */
+#define CLEARWATER_HP2R_SC_STS1_MASK                  0x0008  /* HP2R_SC_STS1 */
+#define CLEARWATER_HP2R_SC_STS1_SHIFT                      3  /* HP2R_SC_STS1 */
+#define CLEARWATER_HP2R_SC_STS1_WIDTH                      1  /* HP2R_SC_STS1 */
+#define CLEARWATER_HP2L_SC_STS1                       0x0004  /* HP2L_SC_STS1 */
+#define CLEARWATER_HP2L_SC_STS1_MASK                  0x0004  /* HP2L_SC_STS1 */
+#define CLEARWATER_HP2L_SC_STS1_SHIFT                      2  /* HP2L_SC_STS1 */
+#define CLEARWATER_HP2L_SC_STS1_WIDTH                      1  /* HP2L_SC_STS1 */
+#define CLEARWATER_HP1R_SC_STS1                       0x0002  /* HP1R_SC_STS1 */
+#define CLEARWATER_HP1R_SC_STS1_MASK                  0x0002  /* HP1R_SC_STS1 */
+#define CLEARWATER_HP1R_SC_STS1_SHIFT                      1  /* HP1R_SC_STS1 */
+#define CLEARWATER_HP1R_SC_STS1_WIDTH                      1  /* HP1R_SC_STS1 */
+#define CLEARWATER_HP1L_SC_STS1                       0x0001  /* HP1L_SC_STS1 */
+#define CLEARWATER_HP1L_SC_STS1_MASK                  0x0001  /* HP1L_SC_STS1 */
+#define CLEARWATER_HP1L_SC_STS1_SHIFT                      0  /* HP1L_SC_STS1 */
+#define CLEARWATER_HP1L_SC_STS1_WIDTH                      1  /* HP1L_SC_STS1 */
 
 /*
  * R6284 (0x188C) - IRQ1 Raw Status 13
  */
-#define WM8285_SPKOUTR_ENABLE_DONE_STS1           0x0080  /* SPKOUTR_ENABLE_DONE_STS1 */
-#define WM8285_SPKOUTR_ENABLE_DONE_STS1_MASK      0x0080  /* SPKOUTR_ENABLE_DONE_STS1 */
-#define WM8285_SPKOUTR_ENABLE_DONE_STS1_SHIFT          7  /* SPKOUTR_ENABLE_DONE_STS1 */
-#define WM8285_SPKOUTR_ENABLE_DONE_STS1_WIDTH          1  /* SPKOUTR_ENABLE_DONE_STS1 */
-#define WM8285_SPKOUTL_ENABLE_DONE_STS1           0x0040  /* SPKOUTL_ENABLE_DONE_STS1 */
-#define WM8285_SPKOUTL_ENABLE_DONE_STS1_MASK      0x0040  /* SPKOUTL_ENABLE_DONE_STS1 */
-#define WM8285_SPKOUTL_ENABLE_DONE_STS1_SHIFT          6  /* SPKOUTL_ENABLE_DONE_STS1 */
-#define WM8285_SPKOUTL_ENABLE_DONE_STS1_WIDTH          1  /* SPKOUTL_ENABLE_DONE_STS1 */
-#define WM8285_HP3R_ENABLE_DONE_STS1              0x0020  /* HP3R_ENABLE_DONE_STS1 */
-#define WM8285_HP3R_ENABLE_DONE_STS1_MASK         0x0020  /* HP3R_ENABLE_DONE_STS1 */
-#define WM8285_HP3R_ENABLE_DONE_STS1_SHIFT             5  /* HP3R_ENABLE_DONE_STS1 */
-#define WM8285_HP3R_ENABLE_DONE_STS1_WIDTH             1  /* HP3R_ENABLE_DONE_STS1 */
-#define WM8285_HP3L_ENABLE_DONE_STS1              0x0010  /* HP3L_ENABLE_DONE_STS1 */
-#define WM8285_HP3L_ENABLE_DONE_STS1_MASK         0x0010  /* HP3L_ENABLE_DONE_STS1 */
-#define WM8285_HP3L_ENABLE_DONE_STS1_SHIFT             4  /* HP3L_ENABLE_DONE_STS1 */
-#define WM8285_HP3L_ENABLE_DONE_STS1_WIDTH             1  /* HP3L_ENABLE_DONE_STS1 */
-#define WM8285_HP2R_ENABLE_DONE_STS1              0x0008  /* HP2R_ENABLE_DONE_STS1 */
-#define WM8285_HP2R_ENABLE_DONE_STS1_MASK         0x0008  /* HP2R_ENABLE_DONE_STS1 */
-#define WM8285_HP2R_ENABLE_DONE_STS1_SHIFT             3  /* HP2R_ENABLE_DONE_STS1 */
-#define WM8285_HP2R_ENABLE_DONE_STS1_WIDTH             1  /* HP2R_ENABLE_DONE_STS1 */
-#define WM8285_HP2L_ENABLE_DONE_STS1              0x0004  /* HP2L_ENABLE_DONE_STS1 */
-#define WM8285_HP2L_ENABLE_DONE_STS1_MASK         0x0004  /* HP2L_ENABLE_DONE_STS1 */
-#define WM8285_HP2L_ENABLE_DONE_STS1_SHIFT             2  /* HP2L_ENABLE_DONE_STS1 */
-#define WM8285_HP2L_ENABLE_DONE_STS1_WIDTH             1  /* HP2L_ENABLE_DONE_STS1 */
-#define WM8285_HP1R_ENABLE_DONE_STS1              0x0002  /* HP1R_ENABLE_DONE_STS1 */
-#define WM8285_HP1R_ENABLE_DONE_STS1_MASK         0x0002  /* HP1R_ENABLE_DONE_STS1 */
-#define WM8285_HP1R_ENABLE_DONE_STS1_SHIFT             1  /* HP1R_ENABLE_DONE_STS1 */
-#define WM8285_HP1R_ENABLE_DONE_STS1_WIDTH             1  /* HP1R_ENABLE_DONE_STS1 */
-#define WM8285_HP1L_ENABLE_DONE_STS1              0x0001  /* HP1L_ENABLE_DONE_STS1 */
-#define WM8285_HP1L_ENABLE_DONE_STS1_MASK         0x0001  /* HP1L_ENABLE_DONE_STS1 */
-#define WM8285_HP1L_ENABLE_DONE_STS1_SHIFT             0  /* HP1L_ENABLE_DONE_STS1 */
-#define WM8285_HP1L_ENABLE_DONE_STS1_WIDTH             1  /* HP1L_ENABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_STS1           0x0080  /* SPKOUTR_ENABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_STS1_MASK      0x0080  /* SPKOUTR_ENABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_STS1_SHIFT          7  /* SPKOUTR_ENABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_STS1_WIDTH          1  /* SPKOUTR_ENABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_STS1           0x0040  /* SPKOUTL_ENABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_STS1_MASK      0x0040  /* SPKOUTL_ENABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_STS1_SHIFT          6  /* SPKOUTL_ENABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_STS1_WIDTH          1  /* SPKOUTL_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP3R_ENABLE_DONE_STS1              0x0020  /* HP3R_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP3R_ENABLE_DONE_STS1_MASK         0x0020  /* HP3R_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP3R_ENABLE_DONE_STS1_SHIFT             5  /* HP3R_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP3R_ENABLE_DONE_STS1_WIDTH             1  /* HP3R_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP3L_ENABLE_DONE_STS1              0x0010  /* HP3L_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP3L_ENABLE_DONE_STS1_MASK         0x0010  /* HP3L_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP3L_ENABLE_DONE_STS1_SHIFT             4  /* HP3L_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP3L_ENABLE_DONE_STS1_WIDTH             1  /* HP3L_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP2R_ENABLE_DONE_STS1              0x0008  /* HP2R_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP2R_ENABLE_DONE_STS1_MASK         0x0008  /* HP2R_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP2R_ENABLE_DONE_STS1_SHIFT             3  /* HP2R_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP2R_ENABLE_DONE_STS1_WIDTH             1  /* HP2R_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP2L_ENABLE_DONE_STS1              0x0004  /* HP2L_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP2L_ENABLE_DONE_STS1_MASK         0x0004  /* HP2L_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP2L_ENABLE_DONE_STS1_SHIFT             2  /* HP2L_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP2L_ENABLE_DONE_STS1_WIDTH             1  /* HP2L_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP1R_ENABLE_DONE_STS1              0x0002  /* HP1R_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP1R_ENABLE_DONE_STS1_MASK         0x0002  /* HP1R_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP1R_ENABLE_DONE_STS1_SHIFT             1  /* HP1R_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP1R_ENABLE_DONE_STS1_WIDTH             1  /* HP1R_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP1L_ENABLE_DONE_STS1              0x0001  /* HP1L_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP1L_ENABLE_DONE_STS1_MASK         0x0001  /* HP1L_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP1L_ENABLE_DONE_STS1_SHIFT             0  /* HP1L_ENABLE_DONE_STS1 */
+#define CLEARWATER_HP1L_ENABLE_DONE_STS1_WIDTH             1  /* HP1L_ENABLE_DONE_STS1 */
 
 /*
  * R6285 (0x188D) - IRQ1 Raw Status 14
  */
-#define WM8285_SPKOUTR_DISABLE_DONE_STS1          0x0080  /* SPKOUTR_DISABLE_DONE_STS1 */
-#define WM8285_SPKOUTR_DISABLE_DONE_STS1_MASK     0x0080  /* SPKOUTR_DISABLE_DONE_STS1 */
-#define WM8285_SPKOUTR_DISABLE_DONE_STS1_SHIFT         7  /* SPKOUTR_DISABLE_DONE_STS1 */
-#define WM8285_SPKOUTR_DISABLE_DONE_STS1_WIDTH         1  /* SPKOUTR_DISABLE_DONE_STS1 */
-#define WM8285_SPKOUTL_DISABLE_DONE_STS1          0x0040  /* SPKOUTL_DISABLE_DONE_STS1 */
-#define WM8285_SPKOUTL_DISABLE_DONE_STS1_MASK     0x0040  /* SPKOUTL_DISABLE_DONE_STS1 */
-#define WM8285_SPKOUTL_DISABLE_DONE_STS1_SHIFT         6  /* SPKOUTL_DISABLE_DONE_STS1 */
-#define WM8285_SPKOUTL_DISABLE_DONE_STS1_WIDTH         1  /* SPKOUTL_DISABLE_DONE_STS1 */
-#define WM8285_HP3R_DISABLE_DONE_STS1             0x0020  /* HP3R_DISABLE_DONE_STS1 */
-#define WM8285_HP3R_DISABLE_DONE_STS1_MASK        0x0020  /* HP3R_DISABLE_DONE_STS1 */
-#define WM8285_HP3R_DISABLE_DONE_STS1_SHIFT            5  /* HP3R_DISABLE_DONE_STS1 */
-#define WM8285_HP3R_DISABLE_DONE_STS1_WIDTH            1  /* HP3R_DISABLE_DONE_STS1 */
-#define WM8285_HP3L_DISABLE_DONE_STS1             0x0010  /* HP3L_DISABLE_DONE_STS1 */
-#define WM8285_HP3L_DISABLE_DONE_STS1_MASK        0x0010  /* HP3L_DISABLE_DONE_STS1 */
-#define WM8285_HP3L_DISABLE_DONE_STS1_SHIFT            4  /* HP3L_DISABLE_DONE_STS1 */
-#define WM8285_HP3L_DISABLE_DONE_STS1_WIDTH            1  /* HP3L_DISABLE_DONE_STS1 */
-#define WM8285_HP2R_DISABLE_DONE_STS1             0x0008  /* HP2R_DISABLE_DONE_STS1 */
-#define WM8285_HP2R_DISABLE_DONE_STS1_MASK        0x0008  /* HP2R_DISABLE_DONE_STS1 */
-#define WM8285_HP2R_DISABLE_DONE_STS1_SHIFT            3  /* HP2R_DISABLE_DONE_STS1 */
-#define WM8285_HP2R_DISABLE_DONE_STS1_WIDTH            1  /* HP2R_DISABLE_DONE_STS1 */
-#define WM8285_HP2L_DISABLE_DONE_STS1             0x0004  /* HP2L_DISABLE_DONE_STS1 */
-#define WM8285_HP2L_DISABLE_DONE_STS1_MASK        0x0004  /* HP2L_DISABLE_DONE_STS1 */
-#define WM8285_HP2L_DISABLE_DONE_STS1_SHIFT            2  /* HP2L_DISABLE_DONE_STS1 */
-#define WM8285_HP2L_DISABLE_DONE_STS1_WIDTH            1  /* HP2L_DISABLE_DONE_STS1 */
-#define WM8285_HP1R_DISABLE_DONE_STS1             0x0002  /* HP1R_DISABLE_DONE_STS1 */
-#define WM8285_HP1R_DISABLE_DONE_STS1_MASK        0x0002  /* HP1R_DISABLE_DONE_STS1 */
-#define WM8285_HP1R_DISABLE_DONE_STS1_SHIFT            1  /* HP1R_DISABLE_DONE_STS1 */
-#define WM8285_HP1R_DISABLE_DONE_STS1_WIDTH            1  /* HP1R_DISABLE_DONE_STS1 */
-#define WM8285_HP1L_DISABLE_DONE_STS1             0x0001  /* HP1L_DISABLE_DONE_STS1 */
-#define WM8285_HP1L_DISABLE_DONE_STS1_MASK        0x0001  /* HP1L_DISABLE_DONE_STS1 */
-#define WM8285_HP1L_DISABLE_DONE_STS1_SHIFT            0  /* HP1L_DISABLE_DONE_STS1 */
-#define WM8285_HP1L_DISABLE_DONE_STS1_WIDTH            1  /* HP1L_DISABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_STS1          0x0080  /* SPKOUTR_DISABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_STS1_MASK     0x0080  /* SPKOUTR_DISABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_STS1_SHIFT         7  /* SPKOUTR_DISABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_STS1_WIDTH         1  /* SPKOUTR_DISABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_STS1          0x0040  /* SPKOUTL_DISABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_STS1_MASK     0x0040  /* SPKOUTL_DISABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_STS1_SHIFT         6  /* SPKOUTL_DISABLE_DONE_STS1 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_STS1_WIDTH         1  /* SPKOUTL_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP3R_DISABLE_DONE_STS1             0x0020  /* HP3R_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP3R_DISABLE_DONE_STS1_MASK        0x0020  /* HP3R_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP3R_DISABLE_DONE_STS1_SHIFT            5  /* HP3R_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP3R_DISABLE_DONE_STS1_WIDTH            1  /* HP3R_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP3L_DISABLE_DONE_STS1             0x0010  /* HP3L_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP3L_DISABLE_DONE_STS1_MASK        0x0010  /* HP3L_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP3L_DISABLE_DONE_STS1_SHIFT            4  /* HP3L_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP3L_DISABLE_DONE_STS1_WIDTH            1  /* HP3L_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP2R_DISABLE_DONE_STS1             0x0008  /* HP2R_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP2R_DISABLE_DONE_STS1_MASK        0x0008  /* HP2R_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP2R_DISABLE_DONE_STS1_SHIFT            3  /* HP2R_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP2R_DISABLE_DONE_STS1_WIDTH            1  /* HP2R_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP2L_DISABLE_DONE_STS1             0x0004  /* HP2L_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP2L_DISABLE_DONE_STS1_MASK        0x0004  /* HP2L_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP2L_DISABLE_DONE_STS1_SHIFT            2  /* HP2L_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP2L_DISABLE_DONE_STS1_WIDTH            1  /* HP2L_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP1R_DISABLE_DONE_STS1             0x0002  /* HP1R_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP1R_DISABLE_DONE_STS1_MASK        0x0002  /* HP1R_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP1R_DISABLE_DONE_STS1_SHIFT            1  /* HP1R_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP1R_DISABLE_DONE_STS1_WIDTH            1  /* HP1R_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP1L_DISABLE_DONE_STS1             0x0001  /* HP1L_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP1L_DISABLE_DONE_STS1_MASK        0x0001  /* HP1L_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP1L_DISABLE_DONE_STS1_SHIFT            0  /* HP1L_DISABLE_DONE_STS1 */
+#define CLEARWATER_HP1L_DISABLE_DONE_STS1_WIDTH            1  /* HP1L_DISABLE_DONE_STS1 */
 
 /*
  * R6286 (0x188E) - IRQ1 Raw Status 15
  */
-#define WM8285_SPK_OVERHEAT_WARN_STS1             0x0004  /* SPK_OVERHEAT_WARN_STS1 */
-#define WM8285_SPK_OVERHEAT_WARN_STS1_MASK        0x0004  /* SPK_OVERHEAT_WARN_STS1 */
-#define WM8285_SPK_OVERHEAT_WARN_STS1_SHIFT            2  /* SPK_OVERHEAT_WARN_STS1 */
-#define WM8285_SPK_OVERHEAT_WARN_STS1_WIDTH            1  /* SPK_OVERHEAT_WARN_STS1 */
-#define WM8285_SPK_OVERHEAT_STS1                  0x0002  /* SPK_OVERHEAT_STS1 */
-#define WM8285_SPK_OVERHEAT_STS1_MASK             0x0002  /* SPK_OVERHEAT_STS1 */
-#define WM8285_SPK_OVERHEAT_STS1_SHIFT                 1  /* SPK_OVERHEAT_STS1 */
-#define WM8285_SPK_OVERHEAT_STS1_WIDTH                 1  /* SPK_OVERHEAT_STS1 */
-#define WM8285_SPK_SHUTDOWN_STS1                  0x0001  /* SPK_SHUTDOWN_STS1 */
-#define WM8285_SPK_SHUTDOWN_STS1_MASK             0x0001  /* SPK_SHUTDOWN_STS1 */
-#define WM8285_SPK_SHUTDOWN_STS1_SHIFT                 0  /* SPK_SHUTDOWN_STS1 */
-#define WM8285_SPK_SHUTDOWN_STS1_WIDTH                 1  /* SPK_SHUTDOWN_STS1 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_STS1             0x0004  /* SPK_OVERHEAT_WARN_STS1 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_STS1_MASK        0x0004  /* SPK_OVERHEAT_WARN_STS1 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_STS1_SHIFT            2  /* SPK_OVERHEAT_WARN_STS1 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_STS1_WIDTH            1  /* SPK_OVERHEAT_WARN_STS1 */
+#define CLEARWATER_SPK_OVERHEAT_STS1                  0x0002  /* SPK_OVERHEAT_STS1 */
+#define CLEARWATER_SPK_OVERHEAT_STS1_MASK             0x0002  /* SPK_OVERHEAT_STS1 */
+#define CLEARWATER_SPK_OVERHEAT_STS1_SHIFT                 1  /* SPK_OVERHEAT_STS1 */
+#define CLEARWATER_SPK_OVERHEAT_STS1_WIDTH                 1  /* SPK_OVERHEAT_STS1 */
+#define CLEARWATER_SPK_SHUTDOWN_STS1                  0x0001  /* SPK_SHUTDOWN_STS1 */
+#define CLEARWATER_SPK_SHUTDOWN_STS1_MASK             0x0001  /* SPK_SHUTDOWN_STS1 */
+#define CLEARWATER_SPK_SHUTDOWN_STS1_SHIFT                 0  /* SPK_SHUTDOWN_STS1 */
+#define CLEARWATER_SPK_SHUTDOWN_STS1_WIDTH                 1  /* SPK_SHUTDOWN_STS1 */
 
 /*
  * R6475 (0x194B) - IRQ2 Mask 12
  */
-#define WM8285_IM_SPKOUTR_SC_EINT2                 0x0080  /* IM_SPKOUTR_SC_EINT2 */
-#define WM8285_IM_SPKOUTR_SC_EINT2_MASK            0x0080  /* IM_SPKOUTR_SC_EINT2 */
-#define WM8285_IM_SPKOUTR_SC_EINT2_SHIFT                7  /* IM_SPKOUTR_SC_EINT2 */
-#define WM8285_IM_SPKOUTR_SC_EINT2_WIDTH                1  /* IM_SPKOUTR_SC_EINT2 */
-#define WM8285_IM_SPKOUTL_SC_EINT2                 0x0040  /* IM_SPKOUTL_SC_EINT2 */
-#define WM8285_IM_SPKOUTL_SC_EINT2_MASK            0x0040  /* IM_SPKOUTL_SC_EINT2 */
-#define WM8285_IM_SPKOUTL_SC_EINT2_SHIFT                6  /* IM_SPKOUTL_SC_EINT2 */
-#define WM8285_IM_SPKOUTL_SC_EINT2_WIDTH                1  /* IM_SPKOUTL_SC_EINT2 */
-#define WM8285_IM_HP3R_SC_EINT2                    0x0020  /* IM_HP3R_SC_EINT2 */
-#define WM8285_IM_HP3R_SC_EINT2_MASK               0x0020  /* IM_HP3R_SC_EINT2 */
-#define WM8285_IM_HP3R_SC_EINT2_SHIFT                   5  /* IM_HP3R_SC_EINT2 */
-#define WM8285_IM_HP3R_SC_EINT2_WIDTH                   1  /* IM_HP3R_SC_EINT2 */
-#define WM8285_IM_HP3L_SC_EINT2                    0x0010  /* IM_HP3L_SC_EINT2 */
-#define WM8285_IM_HP3L_SC_EINT2_MASK               0x0010  /* IM_HP3L_SC_EINT2 */
-#define WM8285_IM_HP3L_SC_EINT2_SHIFT                   4  /* IM_HP3L_SC_EINT2 */
-#define WM8285_IM_HP3L_SC_EINT2_WIDTH                   1  /* IM_HP3L_SC_EINT2 */
-#define WM8285_IM_HP2R_SC_EINT2                    0x0008  /* IM_HP2R_SC_EINT2 */
-#define WM8285_IM_HP2R_SC_EINT2_MASK               0x0008  /* IM_HP2R_SC_EINT2 */
-#define WM8285_IM_HP2R_SC_EINT2_SHIFT                   3  /* IM_HP2R_SC_EINT2 */
-#define WM8285_IM_HP2R_SC_EINT2_WIDTH                   1  /* IM_HP2R_SC_EINT2 */
-#define WM8285_IM_HP2L_SC_EINT2                    0x0004  /* IM_HP2L_SC_EINT2 */
-#define WM8285_IM_HP2L_SC_EINT2_MASK               0x0004  /* IM_HP2L_SC_EINT2 */
-#define WM8285_IM_HP2L_SC_EINT2_SHIFT                   2  /* IM_HP2L_SC_EINT2 */
-#define WM8285_IM_HP2L_SC_EINT2_WIDTH                   1  /* IM_HP2L_SC_EINT2 */
-#define WM8285_IM_HP1R_SC_EINT2                    0x0002  /* IM_HP1R_SC_EINT2 */
-#define WM8285_IM_HP1R_SC_EINT2_MASK               0x0002  /* IM_HP1R_SC_EINT2 */
-#define WM8285_IM_HP1R_SC_EINT2_SHIFT                   1  /* IM_HP1R_SC_EINT2 */
-#define WM8285_IM_HP1R_SC_EINT2_WIDTH                   1  /* IM_HP1R_SC_EINT2 */
-#define WM8285_IM_HP1L_SC_EINT2                    0x0001  /* IM_HP1L_SC_EINT2 */
-#define WM8285_IM_HP1L_SC_EINT2_MASK               0x0001  /* IM_HP1L_SC_EINT2 */
-#define WM8285_IM_HP1L_SC_EINT2_SHIFT                   0  /* IM_HP1L_SC_EINT2 */
-#define WM8285_IM_HP1L_SC_EINT2_WIDTH                   1  /* IM_HP1L_SC_EINT2 */
+#define CLEARWATER_IM_SPKOUTR_SC_EINT2                 0x0080  /* IM_SPKOUTR_SC_EINT2 */
+#define CLEARWATER_IM_SPKOUTR_SC_EINT2_MASK            0x0080  /* IM_SPKOUTR_SC_EINT2 */
+#define CLEARWATER_IM_SPKOUTR_SC_EINT2_SHIFT                7  /* IM_SPKOUTR_SC_EINT2 */
+#define CLEARWATER_IM_SPKOUTR_SC_EINT2_WIDTH                1  /* IM_SPKOUTR_SC_EINT2 */
+#define CLEARWATER_IM_SPKOUTL_SC_EINT2                 0x0040  /* IM_SPKOUTL_SC_EINT2 */
+#define CLEARWATER_IM_SPKOUTL_SC_EINT2_MASK            0x0040  /* IM_SPKOUTL_SC_EINT2 */
+#define CLEARWATER_IM_SPKOUTL_SC_EINT2_SHIFT                6  /* IM_SPKOUTL_SC_EINT2 */
+#define CLEARWATER_IM_SPKOUTL_SC_EINT2_WIDTH                1  /* IM_SPKOUTL_SC_EINT2 */
+#define CLEARWATER_IM_HP3R_SC_EINT2                    0x0020  /* IM_HP3R_SC_EINT2 */
+#define CLEARWATER_IM_HP3R_SC_EINT2_MASK               0x0020  /* IM_HP3R_SC_EINT2 */
+#define CLEARWATER_IM_HP3R_SC_EINT2_SHIFT                   5  /* IM_HP3R_SC_EINT2 */
+#define CLEARWATER_IM_HP3R_SC_EINT2_WIDTH                   1  /* IM_HP3R_SC_EINT2 */
+#define CLEARWATER_IM_HP3L_SC_EINT2                    0x0010  /* IM_HP3L_SC_EINT2 */
+#define CLEARWATER_IM_HP3L_SC_EINT2_MASK               0x0010  /* IM_HP3L_SC_EINT2 */
+#define CLEARWATER_IM_HP3L_SC_EINT2_SHIFT                   4  /* IM_HP3L_SC_EINT2 */
+#define CLEARWATER_IM_HP3L_SC_EINT2_WIDTH                   1  /* IM_HP3L_SC_EINT2 */
+#define CLEARWATER_IM_HP2R_SC_EINT2                    0x0008  /* IM_HP2R_SC_EINT2 */
+#define CLEARWATER_IM_HP2R_SC_EINT2_MASK               0x0008  /* IM_HP2R_SC_EINT2 */
+#define CLEARWATER_IM_HP2R_SC_EINT2_SHIFT                   3  /* IM_HP2R_SC_EINT2 */
+#define CLEARWATER_IM_HP2R_SC_EINT2_WIDTH                   1  /* IM_HP2R_SC_EINT2 */
+#define CLEARWATER_IM_HP2L_SC_EINT2                    0x0004  /* IM_HP2L_SC_EINT2 */
+#define CLEARWATER_IM_HP2L_SC_EINT2_MASK               0x0004  /* IM_HP2L_SC_EINT2 */
+#define CLEARWATER_IM_HP2L_SC_EINT2_SHIFT                   2  /* IM_HP2L_SC_EINT2 */
+#define CLEARWATER_IM_HP2L_SC_EINT2_WIDTH                   1  /* IM_HP2L_SC_EINT2 */
+#define CLEARWATER_IM_HP1R_SC_EINT2                    0x0002  /* IM_HP1R_SC_EINT2 */
+#define CLEARWATER_IM_HP1R_SC_EINT2_MASK               0x0002  /* IM_HP1R_SC_EINT2 */
+#define CLEARWATER_IM_HP1R_SC_EINT2_SHIFT                   1  /* IM_HP1R_SC_EINT2 */
+#define CLEARWATER_IM_HP1R_SC_EINT2_WIDTH                   1  /* IM_HP1R_SC_EINT2 */
+#define CLEARWATER_IM_HP1L_SC_EINT2                    0x0001  /* IM_HP1L_SC_EINT2 */
+#define CLEARWATER_IM_HP1L_SC_EINT2_MASK               0x0001  /* IM_HP1L_SC_EINT2 */
+#define CLEARWATER_IM_HP1L_SC_EINT2_SHIFT                   0  /* IM_HP1L_SC_EINT2 */
+#define CLEARWATER_IM_HP1L_SC_EINT2_WIDTH                   1  /* IM_HP1L_SC_EINT2 */
 
 /*
  * R6476 (0x194C) - IRQ2 Mask 13
  */
-#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT2        0x0080  /* IM_SPKOUTR_ENABLE_DONE_EINT2 */
-#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT2_MASK   0x0080  /* IM_SPKOUTR_ENABLE_DONE_EINT2 */
-#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT2_SHIFT       7  /* IM_SPKOUTR_ENABLE_DONE_EINT2 */
-#define WM8285_IM_SPKOUTR_ENABLE_DONE_EINT2_WIDTH       1  /* IM_SPKOUTR_ENABLE_DONE_EINT2 */
-#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT2        0x0040  /* IM_SPKOUTL_ENABLE_DONE_EINT2 */
-#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT2_MASK   0x0040  /* IM_SPKOUTL_ENABLE_DONE_EINT2 */
-#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT2_SHIFT       6  /* IM_SPKOUTL_ENABLE_DONE_EINT2 */
-#define WM8285_IM_SPKOUTL_ENABLE_DONE_EINT2_WIDTH       1  /* IM_SPKOUTL_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP3R_ENABLE_DONE_EINT2           0x0020  /* IM_HP3R_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP3R_ENABLE_DONE_EINT2_MASK      0x0020  /* IM_HP3R_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP3R_ENABLE_DONE_EINT2_SHIFT          5  /* IM_HP3R_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP3R_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP3R_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP3L_ENABLE_DONE_EINT2           0x0010  /* IM_HP3L_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP3L_ENABLE_DONE_EINT2_MASK      0x0010  /* IM_HP3L_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP3L_ENABLE_DONE_EINT2_SHIFT          4  /* IM_HP3L_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP3L_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP3L_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP2R_ENABLE_DONE_EINT2           0x0008  /* IM_HP2R_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP2R_ENABLE_DONE_EINT2_MASK      0x0008  /* IM_HP2R_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP2R_ENABLE_DONE_EINT2_SHIFT          3  /* IM_HP2R_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP2R_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP2R_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP2L_ENABLE_DONE_EINT2           0x0004  /* IM_HP2L_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP2L_ENABLE_DONE_EINT2_MASK      0x0004  /* IM_HP2L_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP2L_ENABLE_DONE_EINT2_SHIFT          2  /* IM_HP2L_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP2L_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP2L_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP1R_ENABLE_DONE_EINT2           0x0002  /* IM_HP1R_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP1R_ENABLE_DONE_EINT2_MASK      0x0002  /* IM_HP1R_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP1R_ENABLE_DONE_EINT2_SHIFT          1  /* IM_HP1R_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP1R_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP1R_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP1L_ENABLE_DONE_EINT2           0x0001  /* IM_HP1L_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP1L_ENABLE_DONE_EINT2_MASK      0x0001  /* IM_HP1L_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP1L_ENABLE_DONE_EINT2_SHIFT          0  /* IM_HP1L_ENABLE_DONE_EINT2 */
-#define WM8285_IM_HP1L_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP1L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTR_ENABLE_DONE_EINT2        0x0080  /* IM_SPKOUTR_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTR_ENABLE_DONE_EINT2_MASK   0x0080  /* IM_SPKOUTR_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTR_ENABLE_DONE_EINT2_SHIFT       7  /* IM_SPKOUTR_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTR_ENABLE_DONE_EINT2_WIDTH       1  /* IM_SPKOUTR_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTL_ENABLE_DONE_EINT2        0x0040  /* IM_SPKOUTL_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTL_ENABLE_DONE_EINT2_MASK   0x0040  /* IM_SPKOUTL_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTL_ENABLE_DONE_EINT2_SHIFT       6  /* IM_SPKOUTL_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTL_ENABLE_DONE_EINT2_WIDTH       1  /* IM_SPKOUTL_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3R_ENABLE_DONE_EINT2           0x0020  /* IM_HP3R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3R_ENABLE_DONE_EINT2_MASK      0x0020  /* IM_HP3R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3R_ENABLE_DONE_EINT2_SHIFT          5  /* IM_HP3R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3R_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP3R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3L_ENABLE_DONE_EINT2           0x0010  /* IM_HP3L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3L_ENABLE_DONE_EINT2_MASK      0x0010  /* IM_HP3L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3L_ENABLE_DONE_EINT2_SHIFT          4  /* IM_HP3L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3L_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP3L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2R_ENABLE_DONE_EINT2           0x0008  /* IM_HP2R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2R_ENABLE_DONE_EINT2_MASK      0x0008  /* IM_HP2R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2R_ENABLE_DONE_EINT2_SHIFT          3  /* IM_HP2R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2R_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP2R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2L_ENABLE_DONE_EINT2           0x0004  /* IM_HP2L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2L_ENABLE_DONE_EINT2_MASK      0x0004  /* IM_HP2L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2L_ENABLE_DONE_EINT2_SHIFT          2  /* IM_HP2L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2L_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP2L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1R_ENABLE_DONE_EINT2           0x0002  /* IM_HP1R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1R_ENABLE_DONE_EINT2_MASK      0x0002  /* IM_HP1R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1R_ENABLE_DONE_EINT2_SHIFT          1  /* IM_HP1R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1R_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP1R_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1L_ENABLE_DONE_EINT2           0x0001  /* IM_HP1L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1L_ENABLE_DONE_EINT2_MASK      0x0001  /* IM_HP1L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1L_ENABLE_DONE_EINT2_SHIFT          0  /* IM_HP1L_ENABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1L_ENABLE_DONE_EINT2_WIDTH          1  /* IM_HP1L_ENABLE_DONE_EINT2 */
 
 /*
  * R6477 (0x194D) - IRQ2 Mask 14
  */
-#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT2       0x0080  /* IM_SPKOUTR_DISABLE_DONE_EINT2 */
-#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT2_MASK  0x0080  /* IM_SPKOUTR_DISABLE_DONE_EINT2 */
-#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT2_SHIFT      7  /* IM_SPKOUTR_DISABLE_DONE_EINT2 */
-#define WM8285_IM_SPKOUTR_DISABLE_DONE_EINT2_WIDTH      1  /* IM_SPKOUTR_DISABLE_DONE_EINT2 */
-#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT2       0x0040  /* IM_SPKOUTL_DISABLE_DONE_EINT2 */
-#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT2_MASK  0x0040  /* IM_SPKOUTL_DISABLE_DONE_EINT2 */
-#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT2_SHIFT      6  /* IM_SPKOUTL_DISABLE_DONE_EINT2 */
-#define WM8285_IM_SPKOUTL_DISABLE_DONE_EINT2_WIDTH      1  /* IM_SPKOUTL_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP3R_DISABLE_DONE_EINT2          0x0020  /* IM_HP3R_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP3R_DISABLE_DONE_EINT2_MASK     0x0020  /* IM_HP3R_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP3R_DISABLE_DONE_EINT2_SHIFT         5  /* IM_HP3R_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP3R_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP3R_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP3L_DISABLE_DONE_EINT2          0x0010  /* IM_HP3L_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP3L_DISABLE_DONE_EINT2_MASK     0x0010  /* IM_HP3L_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP3L_DISABLE_DONE_EINT2_SHIFT         4  /* IM_HP3L_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP3L_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP3L_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP2R_DISABLE_DONE_EINT2          0x0008  /* IM_HP2R_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP2R_DISABLE_DONE_EINT2_MASK     0x0008  /* IM_HP2R_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP2R_DISABLE_DONE_EINT2_SHIFT         3  /* IM_HP2R_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP2R_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP2R_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP2L_DISABLE_DONE_EINT2          0x0004  /* IM_HP2L_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP2L_DISABLE_DONE_EINT2_MASK     0x0004  /* IM_HP2L_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP2L_DISABLE_DONE_EINT2_SHIFT         2  /* IM_HP2L_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP2L_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP2L_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP1R_DISABLE_DONE_EINT2          0x0002  /* IM_HP1R_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP1R_DISABLE_DONE_EINT2_MASK     0x0002  /* IM_HP1R_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP1R_DISABLE_DONE_EINT2_SHIFT         1  /* IM_HP1R_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP1R_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP1R_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP1L_DISABLE_DONE_EINT2          0x0001  /* IM_HP1L_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP1L_DISABLE_DONE_EINT2_MASK     0x0001  /* IM_HP1L_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP1L_DISABLE_DONE_EINT2_SHIFT         0  /* IM_HP1L_DISABLE_DONE_EINT2 */
-#define WM8285_IM_HP1L_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP1L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTR_DISABLE_DONE_EINT2       0x0080  /* IM_SPKOUTR_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTR_DISABLE_DONE_EINT2_MASK  0x0080  /* IM_SPKOUTR_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTR_DISABLE_DONE_EINT2_SHIFT      7  /* IM_SPKOUTR_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTR_DISABLE_DONE_EINT2_WIDTH      1  /* IM_SPKOUTR_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTL_DISABLE_DONE_EINT2       0x0040  /* IM_SPKOUTL_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTL_DISABLE_DONE_EINT2_MASK  0x0040  /* IM_SPKOUTL_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTL_DISABLE_DONE_EINT2_SHIFT      6  /* IM_SPKOUTL_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_SPKOUTL_DISABLE_DONE_EINT2_WIDTH      1  /* IM_SPKOUTL_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3R_DISABLE_DONE_EINT2          0x0020  /* IM_HP3R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3R_DISABLE_DONE_EINT2_MASK     0x0020  /* IM_HP3R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3R_DISABLE_DONE_EINT2_SHIFT         5  /* IM_HP3R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3R_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP3R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3L_DISABLE_DONE_EINT2          0x0010  /* IM_HP3L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3L_DISABLE_DONE_EINT2_MASK     0x0010  /* IM_HP3L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3L_DISABLE_DONE_EINT2_SHIFT         4  /* IM_HP3L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP3L_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP3L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2R_DISABLE_DONE_EINT2          0x0008  /* IM_HP2R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2R_DISABLE_DONE_EINT2_MASK     0x0008  /* IM_HP2R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2R_DISABLE_DONE_EINT2_SHIFT         3  /* IM_HP2R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2R_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP2R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2L_DISABLE_DONE_EINT2          0x0004  /* IM_HP2L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2L_DISABLE_DONE_EINT2_MASK     0x0004  /* IM_HP2L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2L_DISABLE_DONE_EINT2_SHIFT         2  /* IM_HP2L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP2L_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP2L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1R_DISABLE_DONE_EINT2          0x0002  /* IM_HP1R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1R_DISABLE_DONE_EINT2_MASK     0x0002  /* IM_HP1R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1R_DISABLE_DONE_EINT2_SHIFT         1  /* IM_HP1R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1R_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP1R_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1L_DISABLE_DONE_EINT2          0x0001  /* IM_HP1L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1L_DISABLE_DONE_EINT2_MASK     0x0001  /* IM_HP1L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1L_DISABLE_DONE_EINT2_SHIFT         0  /* IM_HP1L_DISABLE_DONE_EINT2 */
+#define CLEARWATER_IM_HP1L_DISABLE_DONE_EINT2_WIDTH         1  /* IM_HP1L_DISABLE_DONE_EINT2 */
 
 /*
  * R6478 (0x194E) - IRQ2 Mask 15
  */
-#define WM8285_IM_SPK_OVERHEAT_WARN_EINT2          0x0004  /* IM_SPK_OVERHEAT_WARN_EINT2 */
-#define WM8285_IM_SPK_OVERHEAT_WARN_EINT2_MASK     0x0004  /* IM_SPK_OVERHEAT_WARN_EINT2 */
-#define WM8285_IM_SPK_OVERHEAT_WARN_EINT2_SHIFT         2  /* IM_SPK_OVERHEAT_WARN_EINT2 */
-#define WM8285_IM_SPK_OVERHEAT_WARN_EINT2_WIDTH         1  /* IM_SPK_OVERHEAT_WARN_EINT2 */
-#define WM8285_IM_SPK_OVERHEAT_EINT2               0x0002  /* IM_SPK_OVERHEAT_EINT2 */
-#define WM8285_IM_SPK_OVERHEAT_EINT2_MASK          0x0002  /* IM_SPK_OVERHEAT_EINT2 */
-#define WM8285_IM_SPK_OVERHEAT_EINT2_SHIFT              1  /* IM_SPK_OVERHEAT_EINT2 */
-#define WM8285_IM_SPK_OVERHEAT_EINT2_WIDTH              1  /* IM_SPK_OVERHEAT_EINT2 */
-#define WM8285_IM_SPK_SHUTDOWN_EINT2               0x0001  /* IM_SPK_SHUTDOWN_EINT2 */
-#define WM8285_IM_SPK_SHUTDOWN_EINT2_MASK          0x0001  /* IM_SPK_SHUTDOWN_EINT2 */
-#define WM8285_IM_SPK_SHUTDOWN_EINT2_SHIFT              0  /* IM_SPK_SHUTDOWN_EINT2 */
-#define WM8285_IM_SPK_SHUTDOWN_EINT2_WIDTH              1  /* IM_SPK_SHUTDOWN_EINT2 */
+#define CLEARWATER_IM_SPK_OVERHEAT_WARN_EINT2          0x0004  /* IM_SPK_OVERHEAT_WARN_EINT2 */
+#define CLEARWATER_IM_SPK_OVERHEAT_WARN_EINT2_MASK     0x0004  /* IM_SPK_OVERHEAT_WARN_EINT2 */
+#define CLEARWATER_IM_SPK_OVERHEAT_WARN_EINT2_SHIFT         2  /* IM_SPK_OVERHEAT_WARN_EINT2 */
+#define CLEARWATER_IM_SPK_OVERHEAT_WARN_EINT2_WIDTH         1  /* IM_SPK_OVERHEAT_WARN_EINT2 */
+#define CLEARWATER_IM_SPK_OVERHEAT_EINT2               0x0002  /* IM_SPK_OVERHEAT_EINT2 */
+#define CLEARWATER_IM_SPK_OVERHEAT_EINT2_MASK          0x0002  /* IM_SPK_OVERHEAT_EINT2 */
+#define CLEARWATER_IM_SPK_OVERHEAT_EINT2_SHIFT              1  /* IM_SPK_OVERHEAT_EINT2 */
+#define CLEARWATER_IM_SPK_OVERHEAT_EINT2_WIDTH              1  /* IM_SPK_OVERHEAT_EINT2 */
+#define CLEARWATER_IM_SPK_SHUTDOWN_EINT2               0x0001  /* IM_SPK_SHUTDOWN_EINT2 */
+#define CLEARWATER_IM_SPK_SHUTDOWN_EINT2_MASK          0x0001  /* IM_SPK_SHUTDOWN_EINT2 */
+#define CLEARWATER_IM_SPK_SHUTDOWN_EINT2_SHIFT              0  /* IM_SPK_SHUTDOWN_EINT2 */
+#define CLEARWATER_IM_SPK_SHUTDOWN_EINT2_WIDTH              1  /* IM_SPK_SHUTDOWN_EINT2 */
 
 /*
  * R6528 (0x1980) - IRQ2 Raw Status 1
  */
-#define WM8285_DSP_SHARED_WR_COLL_STS2            0x8000  /* DSP_SHARED_WR_COLL_STS2 */
-#define WM8285_DSP_SHARED_WR_COLL_STS2_MASK       0x8000  /* DSP_SHARED_WR_COLL_STS2 */
-#define WM8285_DSP_SHARED_WR_COLL_STS2_SHIFT          15  /* DSP_SHARED_WR_COLL_STS2 */
-#define WM8285_DSP_SHARED_WR_COLL_STS2_WIDTH           1  /* DSP_SHARED_WR_COLL_STS2 */
-#define WM8285_CTRLIF_ERR_STS2                    0x1000  /* CTRLIF_ERR_STS2 */
-#define WM8285_CTRLIF_ERR_STS2_MASK               0x1000  /* CTRLIF_ERR_STS2 */
-#define WM8285_CTRLIF_ERR_STS2_SHIFT                  12  /* CTRLIF_ERR_STS2 */
-#define WM8285_CTRLIF_ERR_STS2_WIDTH                   1  /* CTRLIF_ERR_STS2 */
-#define WM8285_IRQ_NO_CLOCK_STS2                  0x0200  /* IRQ_NO_CLOCK_STS2 */
-#define WM8285_IRQ_NO_CLOCK_STS2_MASK             0x0200  /* IRQ_NO_CLOCK_STS2 */
-#define WM8285_IRQ_NO_CLOCK_STS2_SHIFT                 9  /* IRQ_NO_CLOCK_STS2 */
-#define WM8285_IRQ_NO_CLOCK_STS2_WIDTH                 1  /* IRQ_NO_CLOCK_STS2 */
-#define WM8285_CLOCK_DETECT_STS2                  0x0100  /* CLOCK_DETECT_STS2 */
-#define WM8285_CLOCK_DETECT_STS2_MASK             0x0100  /* CLOCK_DETECT_STS2 */
-#define WM8285_CLOCK_DETECT_STS2_SHIFT                 8  /* CLOCK_DETECT_STS2 */
-#define WM8285_CLOCK_DETECT_STS2_WIDTH                 1  /* CLOCK_DETECT_STS2 */
-#define WM8285_BOOT_DONE_STS2                     0x0080  /* BOOT_DONE_STS2 */
-#define WM8285_BOOT_DONE_STS2_MASK                0x0080  /* BOOT_DONE_STS2 */
-#define WM8285_BOOT_DONE_STS2_SHIFT                    7  /* BOOT_DONE_STS2 */
-#define WM8285_BOOT_DONE_STS2_WIDTH                    1  /* BOOT_DONE_STS2 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_STS2            0x8000  /* DSP_SHARED_WR_COLL_STS2 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_STS2_MASK       0x8000  /* DSP_SHARED_WR_COLL_STS2 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_STS2_SHIFT          15  /* DSP_SHARED_WR_COLL_STS2 */
+#define CLEARWATER_DSP_SHARED_WR_COLL_STS2_WIDTH           1  /* DSP_SHARED_WR_COLL_STS2 */
+#define CLEARWATER_CTRLIF_ERR_STS2                    0x1000  /* CTRLIF_ERR_STS2 */
+#define CLEARWATER_CTRLIF_ERR_STS2_MASK               0x1000  /* CTRLIF_ERR_STS2 */
+#define CLEARWATER_CTRLIF_ERR_STS2_SHIFT                  12  /* CTRLIF_ERR_STS2 */
+#define CLEARWATER_CTRLIF_ERR_STS2_WIDTH                   1  /* CTRLIF_ERR_STS2 */
+#define CLEARWATER_IRQ_NO_CLOCK_STS2                  0x0200  /* IRQ_NO_CLOCK_STS2 */
+#define CLEARWATER_IRQ_NO_CLOCK_STS2_MASK             0x0200  /* IRQ_NO_CLOCK_STS2 */
+#define CLEARWATER_IRQ_NO_CLOCK_STS2_SHIFT                 9  /* IRQ_NO_CLOCK_STS2 */
+#define CLEARWATER_IRQ_NO_CLOCK_STS2_WIDTH                 1  /* IRQ_NO_CLOCK_STS2 */
+#define CLEARWATER_CLOCK_DETECT_STS2                  0x0100  /* CLOCK_DETECT_STS2 */
+#define CLEARWATER_CLOCK_DETECT_STS2_MASK             0x0100  /* CLOCK_DETECT_STS2 */
+#define CLEARWATER_CLOCK_DETECT_STS2_SHIFT                 8  /* CLOCK_DETECT_STS2 */
+#define CLEARWATER_CLOCK_DETECT_STS2_WIDTH                 1  /* CLOCK_DETECT_STS2 */
+#define CLEARWATER_BOOT_DONE_STS2                     0x0080  /* BOOT_DONE_STS2 */
+#define CLEARWATER_BOOT_DONE_STS2_MASK                0x0080  /* BOOT_DONE_STS2 */
+#define CLEARWATER_BOOT_DONE_STS2_SHIFT                    7  /* BOOT_DONE_STS2 */
+#define CLEARWATER_BOOT_DONE_STS2_WIDTH                    1  /* BOOT_DONE_STS2 */
 
 /*
  * R6529 (0x1981) - IRQ2 Raw Status 2
  */
-#define WM8285_FLL3_LOCK_STS2                     0x0400  /* FLL3_LOCK_STS2 */
-#define WM8285_FLL3_LOCK_STS2_MASK                0x0400  /* FLL3_LOCK_STS2 */
-#define WM8285_FLL3_LOCK_STS2_SHIFT                   10  /* FLL3_LOCK_STS2 */
-#define WM8285_FLL3_LOCK_STS2_WIDTH                    1  /* FLL3_LOCK_STS2 */
-#define WM8285_FLL2_LOCK_STS2                     0x0200  /* FLL2_LOCK_STS2 */
-#define WM8285_FLL2_LOCK_STS2_MASK                0x0200  /* FLL2_LOCK_STS2 */
-#define WM8285_FLL2_LOCK_STS2_SHIFT                    9  /* FLL2_LOCK_STS2 */
-#define WM8285_FLL2_LOCK_STS2_WIDTH                    1  /* FLL2_LOCK_STS2 */
-#define WM8285_FLL1_LOCK_STS2                     0x0100  /* FLL1_LOCK_STS2 */
-#define WM8285_FLL1_LOCK_STS2_MASK                0x0100  /* FLL1_LOCK_STS2 */
-#define WM8285_FLL1_LOCK_STS2_SHIFT                    8  /* FLL1_LOCK_STS2 */
-#define WM8285_FLL1_LOCK_STS2_WIDTH                    1  /* FLL1_LOCK_STS2 */
+#define CLEARWATER_FLL3_LOCK_STS2                     0x0400  /* FLL3_LOCK_STS2 */
+#define CLEARWATER_FLL3_LOCK_STS2_MASK                0x0400  /* FLL3_LOCK_STS2 */
+#define CLEARWATER_FLL3_LOCK_STS2_SHIFT                   10  /* FLL3_LOCK_STS2 */
+#define CLEARWATER_FLL3_LOCK_STS2_WIDTH                    1  /* FLL3_LOCK_STS2 */
+#define CLEARWATER_FLL2_LOCK_STS2                     0x0200  /* FLL2_LOCK_STS2 */
+#define CLEARWATER_FLL2_LOCK_STS2_MASK                0x0200  /* FLL2_LOCK_STS2 */
+#define CLEARWATER_FLL2_LOCK_STS2_SHIFT                    9  /* FLL2_LOCK_STS2 */
+#define CLEARWATER_FLL2_LOCK_STS2_WIDTH                    1  /* FLL2_LOCK_STS2 */
+#define CLEARWATER_FLL1_LOCK_STS2                     0x0100  /* FLL1_LOCK_STS2 */
+#define CLEARWATER_FLL1_LOCK_STS2_MASK                0x0100  /* FLL1_LOCK_STS2 */
+#define CLEARWATER_FLL1_LOCK_STS2_SHIFT                    8  /* FLL1_LOCK_STS2 */
+#define CLEARWATER_FLL1_LOCK_STS2_WIDTH                    1  /* FLL1_LOCK_STS2 */
 
 /*
  * R6533 (0x1985) - IRQ2 Raw Status 6
  */
-#define WM8285_MICDET_STS2                        0x0100  /* MICDET_STS2 */
-#define WM8285_MICDET_STS2_MASK                   0x0100  /* MICDET_STS2 */
-#define WM8285_MICDET_STS2_SHIFT                       8  /* MICDET_STS2 */
-#define WM8285_MICDET_STS2_WIDTH                       1  /* MICDET_STS2 */
-#define WM8285_HPDET_STS2                         0x0001  /* HPDET_STS2 */
-#define WM8285_HPDET_STS2_MASK                    0x0001  /* HPDET_STS2 */
-#define WM8285_HPDET_STS2_SHIFT                        0  /* HPDET_STS2 */
-#define WM8285_HPDET_STS2_WIDTH                        1  /* HPDET_STS2 */
+#define CLEARWATER_MICDET_STS2                        0x0100  /* MICDET_STS2 */
+#define CLEARWATER_MICDET_STS2_MASK                   0x0100  /* MICDET_STS2 */
+#define CLEARWATER_MICDET_STS2_SHIFT                       8  /* MICDET_STS2 */
+#define CLEARWATER_MICDET_STS2_WIDTH                       1  /* MICDET_STS2 */
+#define CLEARWATER_HPDET_STS2                         0x0001  /* HPDET_STS2 */
+#define CLEARWATER_HPDET_STS2_MASK                    0x0001  /* HPDET_STS2 */
+#define CLEARWATER_HPDET_STS2_SHIFT                        0  /* HPDET_STS2 */
+#define CLEARWATER_HPDET_STS2_WIDTH                        1  /* HPDET_STS2 */
 
 /*
  * R6534 (0x1986) - IRQ2 Raw Status 7
  */
-#define WM8285_MICD_CLAMP_FALL_STS2               0x0020  /* MICD_CLAMP_FALL_STS2 */
-#define WM8285_MICD_CLAMP_FALL_STS2_MASK          0x0020  /* MICD_CLAMP_FALL_STS2 */
-#define WM8285_MICD_CLAMP_FALL_STS2_SHIFT              5  /* MICD_CLAMP_FALL_STS2 */
-#define WM8285_MICD_CLAMP_FALL_STS2_WIDTH              1  /* MICD_CLAMP_FALL_STS2 */
-#define WM8285_MICD_CLAMP_RISE_STS2               0x0010  /* MICD_CLAMP_RISE_STS2 */
-#define WM8285_MICD_CLAMP_RISE_STS2_MASK          0x0010  /* MICD_CLAMP_RISE_STS2 */
-#define WM8285_MICD_CLAMP_RISE_STS2_SHIFT              4  /* MICD_CLAMP_RISE_STS2 */
-#define WM8285_MICD_CLAMP_RISE_STS2_WIDTH              1  /* MICD_CLAMP_RISE_STS2 */
-#define WM8285_JD2_FALL_STS2                      0x0008  /* JD2_FALL_STS2 */
-#define WM8285_JD2_FALL_STS2_MASK                 0x0008  /* JD2_FALL_STS2 */
-#define WM8285_JD2_FALL_STS2_SHIFT                     3  /* JD2_FALL_STS2 */
-#define WM8285_JD2_FALL_STS2_WIDTH                     1  /* JD2_FALL_STS2 */
-#define WM8285_JD2_RISE_STS2                      0x0004  /* JD2_RISE_STS2 */
-#define WM8285_JD2_RISE_STS2_MASK                 0x0004  /* JD2_RISE_STS2 */
-#define WM8285_JD2_RISE_STS2_SHIFT                     2  /* JD2_RISE_STS2 */
-#define WM8285_JD2_RISE_STS2_WIDTH                     1  /* JD2_RISE_STS2 */
-#define WM8285_JD1_FALL_STS2                      0x0002  /* JD1_FALL_STS2 */
-#define WM8285_JD1_FALL_STS2_MASK                 0x0002  /* JD1_FALL_STS2 */
-#define WM8285_JD1_FALL_STS2_SHIFT                     1  /* JD1_FALL_STS2 */
-#define WM8285_JD1_FALL_STS2_WIDTH                     1  /* JD1_FALL_STS2 */
-#define WM8285_JD1_RISE_STS2                      0x0001  /* JD1_RISE_STS2 */
-#define WM8285_JD1_RISE_STS2_MASK                 0x0001  /* JD1_RISE_STS2 */
-#define WM8285_JD1_RISE_STS2_SHIFT                     0  /* JD1_RISE_STS2 */
-#define WM8285_JD1_RISE_STS2_WIDTH                     1  /* JD1_RISE_STS2 */
+#define CLEARWATER_MICD_CLAMP_FALL_STS2               0x0020  /* MICD_CLAMP_FALL_STS2 */
+#define CLEARWATER_MICD_CLAMP_FALL_STS2_MASK          0x0020  /* MICD_CLAMP_FALL_STS2 */
+#define CLEARWATER_MICD_CLAMP_FALL_STS2_SHIFT              5  /* MICD_CLAMP_FALL_STS2 */
+#define CLEARWATER_MICD_CLAMP_FALL_STS2_WIDTH              1  /* MICD_CLAMP_FALL_STS2 */
+#define CLEARWATER_MICD_CLAMP_RISE_STS2               0x0010  /* MICD_CLAMP_RISE_STS2 */
+#define CLEARWATER_MICD_CLAMP_RISE_STS2_MASK          0x0010  /* MICD_CLAMP_RISE_STS2 */
+#define CLEARWATER_MICD_CLAMP_RISE_STS2_SHIFT              4  /* MICD_CLAMP_RISE_STS2 */
+#define CLEARWATER_MICD_CLAMP_RISE_STS2_WIDTH              1  /* MICD_CLAMP_RISE_STS2 */
+#define CLEARWATER_JD2_FALL_STS2                      0x0008  /* JD2_FALL_STS2 */
+#define CLEARWATER_JD2_FALL_STS2_MASK                 0x0008  /* JD2_FALL_STS2 */
+#define CLEARWATER_JD2_FALL_STS2_SHIFT                     3  /* JD2_FALL_STS2 */
+#define CLEARWATER_JD2_FALL_STS2_WIDTH                     1  /* JD2_FALL_STS2 */
+#define CLEARWATER_JD2_RISE_STS2                      0x0004  /* JD2_RISE_STS2 */
+#define CLEARWATER_JD2_RISE_STS2_MASK                 0x0004  /* JD2_RISE_STS2 */
+#define CLEARWATER_JD2_RISE_STS2_SHIFT                     2  /* JD2_RISE_STS2 */
+#define CLEARWATER_JD2_RISE_STS2_WIDTH                     1  /* JD2_RISE_STS2 */
+#define CLEARWATER_JD1_FALL_STS2                      0x0002  /* JD1_FALL_STS2 */
+#define CLEARWATER_JD1_FALL_STS2_MASK                 0x0002  /* JD1_FALL_STS2 */
+#define CLEARWATER_JD1_FALL_STS2_SHIFT                     1  /* JD1_FALL_STS2 */
+#define CLEARWATER_JD1_FALL_STS2_WIDTH                     1  /* JD1_FALL_STS2 */
+#define CLEARWATER_JD1_RISE_STS2                      0x0001  /* JD1_RISE_STS2 */
+#define CLEARWATER_JD1_RISE_STS2_MASK                 0x0001  /* JD1_RISE_STS2 */
+#define CLEARWATER_JD1_RISE_STS2_SHIFT                     0  /* JD1_RISE_STS2 */
+#define CLEARWATER_JD1_RISE_STS2_WIDTH                     1  /* JD1_RISE_STS2 */
 
 /*
  * R6536 (0x1988) - IRQ2 Raw Status 9
  */
-#define WM8285_ASRC2_IN2_LOCK_STS2                0x0800  /* ASRC2_IN2_LOCK_STS2 */
-#define WM8285_ASRC2_IN2_LOCK_STS2_MASK           0x0800  /* ASRC2_IN2_LOCK_STS2 */
-#define WM8285_ASRC2_IN2_LOCK_STS2_SHIFT              11  /* ASRC2_IN2_LOCK_STS2 */
-#define WM8285_ASRC2_IN2_LOCK_STS2_WIDTH               1  /* ASRC2_IN2_LOCK_STS2 */
-#define WM8285_ASRC2_IN1_LOCK_STS2                0x0400  /* ASRC2_IN1_LOCK_STS2 */
-#define WM8285_ASRC2_IN1_LOCK_STS2_MASK           0x0400  /* ASRC2_IN1_LOCK_STS2 */
-#define WM8285_ASRC2_IN1_LOCK_STS2_SHIFT              10  /* ASRC2_IN1_LOCK_STS2 */
-#define WM8285_ASRC2_IN1_LOCK_STS2_WIDTH               1  /* ASRC2_IN1_LOCK_STS2 */
-#define WM8285_ASRC1_IN2_LOCK_STS2                0x0200  /* ASRC1_IN2_LOCK_STS2 */
-#define WM8285_ASRC1_IN2_LOCK_STS2_MASK           0x0200  /* ASRC1_IN2_LOCK_STS2 */
-#define WM8285_ASRC1_IN2_LOCK_STS2_SHIFT               9  /* ASRC1_IN2_LOCK_STS2 */
-#define WM8285_ASRC1_IN2_LOCK_STS2_WIDTH               1  /* ASRC1_IN2_LOCK_STS2 */
-#define WM8285_ASRC1_IN1_LOCK_STS2                0x0100  /* ASRC1_IN1_LOCK_STS2 */
-#define WM8285_ASRC1_IN1_LOCK_STS2_MASK           0x0100  /* ASRC1_IN1_LOCK_STS2 */
-#define WM8285_ASRC1_IN1_LOCK_STS2_SHIFT               8  /* ASRC1_IN1_LOCK_STS2 */
-#define WM8285_ASRC1_IN1_LOCK_STS2_WIDTH               1  /* ASRC1_IN1_LOCK_STS2 */
-#define WM8285_DRC2_SIG_DET_STS2                  0x0002  /* DRC2_SIG_DET_STS2 */
-#define WM8285_DRC2_SIG_DET_STS2_MASK             0x0002  /* DRC2_SIG_DET_STS2 */
-#define WM8285_DRC2_SIG_DET_STS2_SHIFT                 1  /* DRC2_SIG_DET_STS2 */
-#define WM8285_DRC2_SIG_DET_STS2_WIDTH                 1  /* DRC2_SIG_DET_STS2 */
-#define WM8285_DRC1_SIG_DET_STS2                  0x0001  /* DRC1_SIG_DET_STS2 */
-#define WM8285_DRC1_SIG_DET_STS2_MASK             0x0001  /* DRC1_SIG_DET_STS2 */
-#define WM8285_DRC1_SIG_DET_STS2_SHIFT                 0  /* DRC1_SIG_DET_STS2 */
-#define WM8285_DRC1_SIG_DET_STS2_WIDTH                 1  /* DRC1_SIG_DET_STS2 */
+#define CLEARWATER_ASRC2_IN2_LOCK_STS2                0x0800  /* ASRC2_IN2_LOCK_STS2 */
+#define CLEARWATER_ASRC2_IN2_LOCK_STS2_MASK           0x0800  /* ASRC2_IN2_LOCK_STS2 */
+#define CLEARWATER_ASRC2_IN2_LOCK_STS2_SHIFT              11  /* ASRC2_IN2_LOCK_STS2 */
+#define CLEARWATER_ASRC2_IN2_LOCK_STS2_WIDTH               1  /* ASRC2_IN2_LOCK_STS2 */
+#define CLEARWATER_ASRC2_IN1_LOCK_STS2                0x0400  /* ASRC2_IN1_LOCK_STS2 */
+#define CLEARWATER_ASRC2_IN1_LOCK_STS2_MASK           0x0400  /* ASRC2_IN1_LOCK_STS2 */
+#define CLEARWATER_ASRC2_IN1_LOCK_STS2_SHIFT              10  /* ASRC2_IN1_LOCK_STS2 */
+#define CLEARWATER_ASRC2_IN1_LOCK_STS2_WIDTH               1  /* ASRC2_IN1_LOCK_STS2 */
+#define CLEARWATER_ASRC1_IN2_LOCK_STS2                0x0200  /* ASRC1_IN2_LOCK_STS2 */
+#define CLEARWATER_ASRC1_IN2_LOCK_STS2_MASK           0x0200  /* ASRC1_IN2_LOCK_STS2 */
+#define CLEARWATER_ASRC1_IN2_LOCK_STS2_SHIFT               9  /* ASRC1_IN2_LOCK_STS2 */
+#define CLEARWATER_ASRC1_IN2_LOCK_STS2_WIDTH               1  /* ASRC1_IN2_LOCK_STS2 */
+#define CLEARWATER_ASRC1_IN1_LOCK_STS2                0x0100  /* ASRC1_IN1_LOCK_STS2 */
+#define CLEARWATER_ASRC1_IN1_LOCK_STS2_MASK           0x0100  /* ASRC1_IN1_LOCK_STS2 */
+#define CLEARWATER_ASRC1_IN1_LOCK_STS2_SHIFT               8  /* ASRC1_IN1_LOCK_STS2 */
+#define CLEARWATER_ASRC1_IN1_LOCK_STS2_WIDTH               1  /* ASRC1_IN1_LOCK_STS2 */
+#define CLEARWATER_DRC2_SIG_DET_STS2                  0x0002  /* DRC2_SIG_DET_STS2 */
+#define CLEARWATER_DRC2_SIG_DET_STS2_MASK             0x0002  /* DRC2_SIG_DET_STS2 */
+#define CLEARWATER_DRC2_SIG_DET_STS2_SHIFT                 1  /* DRC2_SIG_DET_STS2 */
+#define CLEARWATER_DRC2_SIG_DET_STS2_WIDTH                 1  /* DRC2_SIG_DET_STS2 */
+#define CLEARWATER_DRC1_SIG_DET_STS2                  0x0001  /* DRC1_SIG_DET_STS2 */
+#define CLEARWATER_DRC1_SIG_DET_STS2_MASK             0x0001  /* DRC1_SIG_DET_STS2 */
+#define CLEARWATER_DRC1_SIG_DET_STS2_SHIFT                 0  /* DRC1_SIG_DET_STS2 */
+#define CLEARWATER_DRC1_SIG_DET_STS2_WIDTH                 1  /* DRC1_SIG_DET_STS2 */
 
 /*
  * R6538 (0x198A) - IRQ2 Raw Status 11
  */
-#define WM8285_DSP_IRQ26_STS2                     0x8000  /* DSP_IRQ26_STS2 */
-#define WM8285_DSP_IRQ26_STS2_MASK                0x8000  /* DSP_IRQ26_STS2 */
-#define WM8285_DSP_IRQ26_STS2_SHIFT                   15  /* DSP_IRQ26_STS2 */
-#define WM8285_DSP_IRQ26_STS2_WIDTH                    1  /* DSP_IRQ26_STS2 */
-#define WM8285_DSP_IRQ25_STS2                     0x4000  /* DSP_IRQ25_STS2 */
-#define WM8285_DSP_IRQ25_STS2_MASK                0x4000  /* DSP_IRQ25_STS2 */
-#define WM8285_DSP_IRQ25_STS2_SHIFT                   14  /* DSP_IRQ25_STS2 */
-#define WM8285_DSP_IRQ25_STS2_WIDTH                    1  /* DSP_IRQ25_STS2 */
-#define WM8285_DSP_IRQ24_STS2                     0x2000  /* DSP_IRQ24_STS2 */
-#define WM8285_DSP_IRQ24_STS2_MASK                0x2000  /* DSP_IRQ24_STS2 */
-#define WM8285_DSP_IRQ24_STS2_SHIFT                   13  /* DSP_IRQ24_STS2 */
-#define WM8285_DSP_IRQ24_STS2_WIDTH                    1  /* DSP_IRQ24_STS2 */
-#define WM8285_DSP_IRQ23_STS2                     0x1000  /* DSP_IRQ23_STS2 */
-#define WM8285_DSP_IRQ23_STS2_MASK                0x1000  /* DSP_IRQ23_STS2 */
-#define WM8285_DSP_IRQ23_STS2_SHIFT                   12  /* DSP_IRQ23_STS2 */
-#define WM8285_DSP_IRQ23_STS2_WIDTH                    1  /* DSP_IRQ23_STS2 */
-#define WM8285_DSP_IRQ22_STS2                     0x0800  /* DSP_IRQ22_STS2 */
-#define WM8285_DSP_IRQ22_STS2_MASK                0x0800  /* DSP_IRQ22_STS2 */
-#define WM8285_DSP_IRQ22_STS2_SHIFT                   11  /* DSP_IRQ22_STS2 */
-#define WM8285_DSP_IRQ22_STS2_WIDTH                    1  /* DSP_IRQ22_STS2 */
-#define WM8285_DSP_IRQ21_STS2                     0x0400  /* DSP_IRQ21_STS2 */
-#define WM8285_DSP_IRQ21_STS2_MASK                0x0400  /* DSP_IRQ21_STS2 */
-#define WM8285_DSP_IRQ21_STS2_SHIFT                   10  /* DSP_IRQ21_STS2 */
-#define WM8285_DSP_IRQ21_STS2_WIDTH                    1  /* DSP_IRQ21_STS2 */
-#define WM8285_DSP_IRQ20_STS2                     0x0200  /* DSP_IRQ20_STS2 */
-#define WM8285_DSP_IRQ20_STS2_MASK                0x0200  /* DSP_IRQ20_STS2 */
-#define WM8285_DSP_IRQ20_STS2_SHIFT                    9  /* DSP_IRQ20_STS2 */
-#define WM8285_DSP_IRQ20_STS2_WIDTH                    1  /* DSP_IRQ20_STS2 */
-#define WM8285_DSP_IRQ9_STS2                      0x0100  /* DSP_IRQ9_STS2 */
-#define WM8285_DSP_IRQ9_STS2_MASK                 0x0100  /* DSP_IRQ9_STS2 */
-#define WM8285_DSP_IRQ9_STS2_SHIFT                     8  /* DSP_IRQ9_STS2 */
-#define WM8285_DSP_IRQ9_STS2_WIDTH                     1  /* DSP_IRQ9_STS2 */
-#define WM8285_DSP_IRQ8_STS2                      0x0080  /* DSP_IRQ8_STS2 */
-#define WM8285_DSP_IRQ8_STS2_MASK                 0x0080  /* DSP_IRQ8_STS2 */
-#define WM8285_DSP_IRQ8_STS2_SHIFT                     7  /* DSP_IRQ8_STS2 */
-#define WM8285_DSP_IRQ8_STS2_WIDTH                     1  /* DSP_IRQ8_STS2 */
-#define WM8285_DSP_IRQ7_STS2                      0x0040  /* DSP_IRQ7_STS2 */
-#define WM8285_DSP_IRQ7_STS2_MASK                 0x0040  /* DSP_IRQ7_STS2 */
-#define WM8285_DSP_IRQ7_STS2_SHIFT                     6  /* DSP_IRQ7_STS2 */
-#define WM8285_DSP_IRQ7_STS2_WIDTH                     1  /* DSP_IRQ7_STS2 */
-#define WM8285_DSP_IRQ6_STS2                      0x0020  /* DSP_IRQ6_STS2 */
-#define WM8285_DSP_IRQ6_STS2_MASK                 0x0020  /* DSP_IRQ6_STS2 */
-#define WM8285_DSP_IRQ6_STS2_SHIFT                     5  /* DSP_IRQ6_STS2 */
-#define WM8285_DSP_IRQ6_STS2_WIDTH                     1  /* DSP_IRQ6_STS2 */
-#define WM8285_DSP_IRQ5_STS2                      0x0010  /* DSP_IRQ5_STS2 */
-#define WM8285_DSP_IRQ5_STS2_MASK                 0x0010  /* DSP_IRQ5_STS2 */
-#define WM8285_DSP_IRQ5_STS2_SHIFT                     4  /* DSP_IRQ5_STS2 */
-#define WM8285_DSP_IRQ5_STS2_WIDTH                     1  /* DSP_IRQ5_STS2 */
-#define WM8285_DSP_IRQ4_STS2                      0x0008  /* DSP_IRQ4_STS2 */
-#define WM8285_DSP_IRQ4_STS2_MASK                 0x0008  /* DSP_IRQ4_STS2 */
-#define WM8285_DSP_IRQ4_STS2_SHIFT                     3  /* DSP_IRQ4_STS2 */
-#define WM8285_DSP_IRQ4_STS2_WIDTH                     1  /* DSP_IRQ4_STS2 */
-#define WM8285_DSP_IRQ3_STS2                      0x0004  /* DSP_IRQ3_STS2 */
-#define WM8285_DSP_IRQ3_STS2_MASK                 0x0004  /* DSP_IRQ3_STS2 */
-#define WM8285_DSP_IRQ3_STS2_SHIFT                     2  /* DSP_IRQ3_STS2 */
-#define WM8285_DSP_IRQ3_STS2_WIDTH                     1  /* DSP_IRQ3_STS2 */
-#define WM8285_DSP_IRQ2_STS2                      0x0002  /* DSP_IRQ2_STS2 */
-#define WM8285_DSP_IRQ2_STS2_MASK                 0x0002  /* DSP_IRQ2_STS2 */
-#define WM8285_DSP_IRQ2_STS2_SHIFT                     1  /* DSP_IRQ2_STS2 */
-#define WM8285_DSP_IRQ2_STS2_WIDTH                     1  /* DSP_IRQ2_STS2 */
-#define WM8285_DSP_IRQ1_STS2                      0x0001  /* DSP_IRQ1_STS2 */
-#define WM8285_DSP_IRQ1_STS2_MASK                 0x0001  /* DSP_IRQ1_STS2 */
-#define WM8285_DSP_IRQ1_STS2_SHIFT                     0  /* DSP_IRQ1_STS2 */
-#define WM8285_DSP_IRQ1_STS2_WIDTH                     1  /* DSP_IRQ1_STS2 */
+#define CLEARWATER_DSP_IRQ26_STS2                     0x8000  /* DSP_IRQ26_STS2 */
+#define CLEARWATER_DSP_IRQ26_STS2_MASK                0x8000  /* DSP_IRQ26_STS2 */
+#define CLEARWATER_DSP_IRQ26_STS2_SHIFT                   15  /* DSP_IRQ26_STS2 */
+#define CLEARWATER_DSP_IRQ26_STS2_WIDTH                    1  /* DSP_IRQ26_STS2 */
+#define CLEARWATER_DSP_IRQ25_STS2                     0x4000  /* DSP_IRQ25_STS2 */
+#define CLEARWATER_DSP_IRQ25_STS2_MASK                0x4000  /* DSP_IRQ25_STS2 */
+#define CLEARWATER_DSP_IRQ25_STS2_SHIFT                   14  /* DSP_IRQ25_STS2 */
+#define CLEARWATER_DSP_IRQ25_STS2_WIDTH                    1  /* DSP_IRQ25_STS2 */
+#define CLEARWATER_DSP_IRQ24_STS2                     0x2000  /* DSP_IRQ24_STS2 */
+#define CLEARWATER_DSP_IRQ24_STS2_MASK                0x2000  /* DSP_IRQ24_STS2 */
+#define CLEARWATER_DSP_IRQ24_STS2_SHIFT                   13  /* DSP_IRQ24_STS2 */
+#define CLEARWATER_DSP_IRQ24_STS2_WIDTH                    1  /* DSP_IRQ24_STS2 */
+#define CLEARWATER_DSP_IRQ23_STS2                     0x1000  /* DSP_IRQ23_STS2 */
+#define CLEARWATER_DSP_IRQ23_STS2_MASK                0x1000  /* DSP_IRQ23_STS2 */
+#define CLEARWATER_DSP_IRQ23_STS2_SHIFT                   12  /* DSP_IRQ23_STS2 */
+#define CLEARWATER_DSP_IRQ23_STS2_WIDTH                    1  /* DSP_IRQ23_STS2 */
+#define CLEARWATER_DSP_IRQ22_STS2                     0x0800  /* DSP_IRQ22_STS2 */
+#define CLEARWATER_DSP_IRQ22_STS2_MASK                0x0800  /* DSP_IRQ22_STS2 */
+#define CLEARWATER_DSP_IRQ22_STS2_SHIFT                   11  /* DSP_IRQ22_STS2 */
+#define CLEARWATER_DSP_IRQ22_STS2_WIDTH                    1  /* DSP_IRQ22_STS2 */
+#define CLEARWATER_DSP_IRQ21_STS2                     0x0400  /* DSP_IRQ21_STS2 */
+#define CLEARWATER_DSP_IRQ21_STS2_MASK                0x0400  /* DSP_IRQ21_STS2 */
+#define CLEARWATER_DSP_IRQ21_STS2_SHIFT                   10  /* DSP_IRQ21_STS2 */
+#define CLEARWATER_DSP_IRQ21_STS2_WIDTH                    1  /* DSP_IRQ21_STS2 */
+#define CLEARWATER_DSP_IRQ20_STS2                     0x0200  /* DSP_IRQ20_STS2 */
+#define CLEARWATER_DSP_IRQ20_STS2_MASK                0x0200  /* DSP_IRQ20_STS2 */
+#define CLEARWATER_DSP_IRQ20_STS2_SHIFT                    9  /* DSP_IRQ20_STS2 */
+#define CLEARWATER_DSP_IRQ20_STS2_WIDTH                    1  /* DSP_IRQ20_STS2 */
+#define CLEARWATER_DSP_IRQ9_STS2                      0x0100  /* DSP_IRQ9_STS2 */
+#define CLEARWATER_DSP_IRQ9_STS2_MASK                 0x0100  /* DSP_IRQ9_STS2 */
+#define CLEARWATER_DSP_IRQ9_STS2_SHIFT                     8  /* DSP_IRQ9_STS2 */
+#define CLEARWATER_DSP_IRQ9_STS2_WIDTH                     1  /* DSP_IRQ9_STS2 */
+#define CLEARWATER_DSP_IRQ8_STS2                      0x0080  /* DSP_IRQ8_STS2 */
+#define CLEARWATER_DSP_IRQ8_STS2_MASK                 0x0080  /* DSP_IRQ8_STS2 */
+#define CLEARWATER_DSP_IRQ8_STS2_SHIFT                     7  /* DSP_IRQ8_STS2 */
+#define CLEARWATER_DSP_IRQ8_STS2_WIDTH                     1  /* DSP_IRQ8_STS2 */
+#define CLEARWATER_DSP_IRQ7_STS2                      0x0040  /* DSP_IRQ7_STS2 */
+#define CLEARWATER_DSP_IRQ7_STS2_MASK                 0x0040  /* DSP_IRQ7_STS2 */
+#define CLEARWATER_DSP_IRQ7_STS2_SHIFT                     6  /* DSP_IRQ7_STS2 */
+#define CLEARWATER_DSP_IRQ7_STS2_WIDTH                     1  /* DSP_IRQ7_STS2 */
+#define CLEARWATER_DSP_IRQ6_STS2                      0x0020  /* DSP_IRQ6_STS2 */
+#define CLEARWATER_DSP_IRQ6_STS2_MASK                 0x0020  /* DSP_IRQ6_STS2 */
+#define CLEARWATER_DSP_IRQ6_STS2_SHIFT                     5  /* DSP_IRQ6_STS2 */
+#define CLEARWATER_DSP_IRQ6_STS2_WIDTH                     1  /* DSP_IRQ6_STS2 */
+#define CLEARWATER_DSP_IRQ5_STS2                      0x0010  /* DSP_IRQ5_STS2 */
+#define CLEARWATER_DSP_IRQ5_STS2_MASK                 0x0010  /* DSP_IRQ5_STS2 */
+#define CLEARWATER_DSP_IRQ5_STS2_SHIFT                     4  /* DSP_IRQ5_STS2 */
+#define CLEARWATER_DSP_IRQ5_STS2_WIDTH                     1  /* DSP_IRQ5_STS2 */
+#define CLEARWATER_DSP_IRQ4_STS2                      0x0008  /* DSP_IRQ4_STS2 */
+#define CLEARWATER_DSP_IRQ4_STS2_MASK                 0x0008  /* DSP_IRQ4_STS2 */
+#define CLEARWATER_DSP_IRQ4_STS2_SHIFT                     3  /* DSP_IRQ4_STS2 */
+#define CLEARWATER_DSP_IRQ4_STS2_WIDTH                     1  /* DSP_IRQ4_STS2 */
+#define CLEARWATER_DSP_IRQ3_STS2                      0x0004  /* DSP_IRQ3_STS2 */
+#define CLEARWATER_DSP_IRQ3_STS2_MASK                 0x0004  /* DSP_IRQ3_STS2 */
+#define CLEARWATER_DSP_IRQ3_STS2_SHIFT                     2  /* DSP_IRQ3_STS2 */
+#define CLEARWATER_DSP_IRQ3_STS2_WIDTH                     1  /* DSP_IRQ3_STS2 */
+#define CLEARWATER_DSP_IRQ2_STS2                      0x0002  /* DSP_IRQ2_STS2 */
+#define CLEARWATER_DSP_IRQ2_STS2_MASK                 0x0002  /* DSP_IRQ2_STS2 */
+#define CLEARWATER_DSP_IRQ2_STS2_SHIFT                     1  /* DSP_IRQ2_STS2 */
+#define CLEARWATER_DSP_IRQ2_STS2_WIDTH                     1  /* DSP_IRQ2_STS2 */
+#define CLEARWATER_DSP_IRQ1_STS2                      0x0001  /* DSP_IRQ1_STS2 */
+#define CLEARWATER_DSP_IRQ1_STS2_MASK                 0x0001  /* DSP_IRQ1_STS2 */
+#define CLEARWATER_DSP_IRQ1_STS2_SHIFT                     0  /* DSP_IRQ1_STS2 */
+#define CLEARWATER_DSP_IRQ1_STS2_WIDTH                     1  /* DSP_IRQ1_STS2 */
 
 
 /*
  * R6539 (0x198B) - IRQ2 Raw Status 12
  */
-#define WM8285_SPKOUTR_SC_STS2                    0x0080  /* SPKOUTR_SC_STS2 */
-#define WM8285_SPKOUTR_SC_STS2_MASK               0x0080  /* SPKOUTR_SC_STS2 */
-#define WM8285_SPKOUTR_SC_STS2_SHIFT                   7  /* SPKOUTR_SC_STS2 */
-#define WM8285_SPKOUTR_SC_STS2_WIDTH                   1  /* SPKOUTR_SC_STS2 */
-#define WM8285_SPKOUTL_SC_STS2                    0x0040  /* SPKOUTL_SC_STS2 */
-#define WM8285_SPKOUTL_SC_STS2_MASK               0x0040  /* SPKOUTL_SC_STS2 */
-#define WM8285_SPKOUTL_SC_STS2_SHIFT                   6  /* SPKOUTL_SC_STS2 */
-#define WM8285_SPKOUTL_SC_STS2_WIDTH                   1  /* SPKOUTL_SC_STS2 */
-#define WM8285_HP3R_SC_STS2                       0x0020  /* HP3R_SC_STS2 */
-#define WM8285_HP3R_SC_STS2_MASK                  0x0020  /* HP3R_SC_STS2 */
-#define WM8285_HP3R_SC_STS2_SHIFT                      5  /* HP3R_SC_STS2 */
-#define WM8285_HP3R_SC_STS2_WIDTH                      1  /* HP3R_SC_STS2 */
-#define WM8285_HP3L_SC_STS2                       0x0010  /* HP3L_SC_STS2 */
-#define WM8285_HP3L_SC_STS2_MASK                  0x0010  /* HP3L_SC_STS2 */
-#define WM8285_HP3L_SC_STS2_SHIFT                      4  /* HP3L_SC_STS2 */
-#define WM8285_HP3L_SC_STS2_WIDTH                      1  /* HP3L_SC_STS2 */
-#define WM8285_HP2R_SC_STS2                       0x0008  /* HP2R_SC_STS2 */
-#define WM8285_HP2R_SC_STS2_MASK                  0x0008  /* HP2R_SC_STS2 */
-#define WM8285_HP2R_SC_STS2_SHIFT                      3  /* HP2R_SC_STS2 */
-#define WM8285_HP2R_SC_STS2_WIDTH                      1  /* HP2R_SC_STS2 */
-#define WM8285_HP2L_SC_STS2                       0x0004  /* HP2L_SC_STS2 */
-#define WM8285_HP2L_SC_STS2_MASK                  0x0004  /* HP2L_SC_STS2 */
-#define WM8285_HP2L_SC_STS2_SHIFT                      2  /* HP2L_SC_STS2 */
-#define WM8285_HP2L_SC_STS2_WIDTH                      1  /* HP2L_SC_STS2 */
-#define WM8285_HP1R_SC_STS2                       0x0002  /* HP1R_SC_STS2 */
-#define WM8285_HP1R_SC_STS2_MASK                  0x0002  /* HP1R_SC_STS2 */
-#define WM8285_HP1R_SC_STS2_SHIFT                      1  /* HP1R_SC_STS2 */
-#define WM8285_HP1R_SC_STS2_WIDTH                      1  /* HP1R_SC_STS2 */
-#define WM8285_HP1L_SC_STS2                       0x0001  /* HP1L_SC_STS2 */
-#define WM8285_HP1L_SC_STS2_MASK                  0x0001  /* HP1L_SC_STS2 */
-#define WM8285_HP1L_SC_STS2_SHIFT                      0  /* HP1L_SC_STS2 */
-#define WM8285_HP1L_SC_STS2_WIDTH                      1  /* HP1L_SC_STS2 */
+#define CLEARWATER_SPKOUTR_SC_STS2                    0x0080  /* SPKOUTR_SC_STS2 */
+#define CLEARWATER_SPKOUTR_SC_STS2_MASK               0x0080  /* SPKOUTR_SC_STS2 */
+#define CLEARWATER_SPKOUTR_SC_STS2_SHIFT                   7  /* SPKOUTR_SC_STS2 */
+#define CLEARWATER_SPKOUTR_SC_STS2_WIDTH                   1  /* SPKOUTR_SC_STS2 */
+#define CLEARWATER_SPKOUTL_SC_STS2                    0x0040  /* SPKOUTL_SC_STS2 */
+#define CLEARWATER_SPKOUTL_SC_STS2_MASK               0x0040  /* SPKOUTL_SC_STS2 */
+#define CLEARWATER_SPKOUTL_SC_STS2_SHIFT                   6  /* SPKOUTL_SC_STS2 */
+#define CLEARWATER_SPKOUTL_SC_STS2_WIDTH                   1  /* SPKOUTL_SC_STS2 */
+#define CLEARWATER_HP3R_SC_STS2                       0x0020  /* HP3R_SC_STS2 */
+#define CLEARWATER_HP3R_SC_STS2_MASK                  0x0020  /* HP3R_SC_STS2 */
+#define CLEARWATER_HP3R_SC_STS2_SHIFT                      5  /* HP3R_SC_STS2 */
+#define CLEARWATER_HP3R_SC_STS2_WIDTH                      1  /* HP3R_SC_STS2 */
+#define CLEARWATER_HP3L_SC_STS2                       0x0010  /* HP3L_SC_STS2 */
+#define CLEARWATER_HP3L_SC_STS2_MASK                  0x0010  /* HP3L_SC_STS2 */
+#define CLEARWATER_HP3L_SC_STS2_SHIFT                      4  /* HP3L_SC_STS2 */
+#define CLEARWATER_HP3L_SC_STS2_WIDTH                      1  /* HP3L_SC_STS2 */
+#define CLEARWATER_HP2R_SC_STS2                       0x0008  /* HP2R_SC_STS2 */
+#define CLEARWATER_HP2R_SC_STS2_MASK                  0x0008  /* HP2R_SC_STS2 */
+#define CLEARWATER_HP2R_SC_STS2_SHIFT                      3  /* HP2R_SC_STS2 */
+#define CLEARWATER_HP2R_SC_STS2_WIDTH                      1  /* HP2R_SC_STS2 */
+#define CLEARWATER_HP2L_SC_STS2                       0x0004  /* HP2L_SC_STS2 */
+#define CLEARWATER_HP2L_SC_STS2_MASK                  0x0004  /* HP2L_SC_STS2 */
+#define CLEARWATER_HP2L_SC_STS2_SHIFT                      2  /* HP2L_SC_STS2 */
+#define CLEARWATER_HP2L_SC_STS2_WIDTH                      1  /* HP2L_SC_STS2 */
+#define CLEARWATER_HP1R_SC_STS2                       0x0002  /* HP1R_SC_STS2 */
+#define CLEARWATER_HP1R_SC_STS2_MASK                  0x0002  /* HP1R_SC_STS2 */
+#define CLEARWATER_HP1R_SC_STS2_SHIFT                      1  /* HP1R_SC_STS2 */
+#define CLEARWATER_HP1R_SC_STS2_WIDTH                      1  /* HP1R_SC_STS2 */
+#define CLEARWATER_HP1L_SC_STS2                       0x0001  /* HP1L_SC_STS2 */
+#define CLEARWATER_HP1L_SC_STS2_MASK                  0x0001  /* HP1L_SC_STS2 */
+#define CLEARWATER_HP1L_SC_STS2_SHIFT                      0  /* HP1L_SC_STS2 */
+#define CLEARWATER_HP1L_SC_STS2_WIDTH                      1  /* HP1L_SC_STS2 */
 
 /*
  * R6540 (0x198C) - IRQ2 Raw Status 13
  */
-#define WM8285_SPKOUTR_ENABLE_DONE_STS2           0x0080  /* SPKOUTR_ENABLE_DONE_STS2 */
-#define WM8285_SPKOUTR_ENABLE_DONE_STS2_MASK      0x0080  /* SPKOUTR_ENABLE_DONE_STS2 */
-#define WM8285_SPKOUTR_ENABLE_DONE_STS2_SHIFT          7  /* SPKOUTR_ENABLE_DONE_STS2 */
-#define WM8285_SPKOUTR_ENABLE_DONE_STS2_WIDTH          1  /* SPKOUTR_ENABLE_DONE_STS2 */
-#define WM8285_SPKOUTL_ENABLE_DONE_STS2           0x0040  /* SPKOUTL_ENABLE_DONE_STS2 */
-#define WM8285_SPKOUTL_ENABLE_DONE_STS2_MASK      0x0040  /* SPKOUTL_ENABLE_DONE_STS2 */
-#define WM8285_SPKOUTL_ENABLE_DONE_STS2_SHIFT          6  /* SPKOUTL_ENABLE_DONE_STS2 */
-#define WM8285_SPKOUTL_ENABLE_DONE_STS2_WIDTH          1  /* SPKOUTL_ENABLE_DONE_STS2 */
-#define WM8285_HP3R_ENABLE_DONE_STS2              0x0020  /* HP3R_ENABLE_DONE_STS2 */
-#define WM8285_HP3R_ENABLE_DONE_STS2_MASK         0x0020  /* HP3R_ENABLE_DONE_STS2 */
-#define WM8285_HP3R_ENABLE_DONE_STS2_SHIFT             5  /* HP3R_ENABLE_DONE_STS2 */
-#define WM8285_HP3R_ENABLE_DONE_STS2_WIDTH             1  /* HP3R_ENABLE_DONE_STS2 */
-#define WM8285_HP3L_ENABLE_DONE_STS2              0x0010  /* HP3L_ENABLE_DONE_STS2 */
-#define WM8285_HP3L_ENABLE_DONE_STS2_MASK         0x0010  /* HP3L_ENABLE_DONE_STS2 */
-#define WM8285_HP3L_ENABLE_DONE_STS2_SHIFT             4  /* HP3L_ENABLE_DONE_STS2 */
-#define WM8285_HP3L_ENABLE_DONE_STS2_WIDTH             1  /* HP3L_ENABLE_DONE_STS2 */
-#define WM8285_HP2R_ENABLE_DONE_STS2              0x0008  /* HP2R_ENABLE_DONE_STS2 */
-#define WM8285_HP2R_ENABLE_DONE_STS2_MASK         0x0008  /* HP2R_ENABLE_DONE_STS2 */
-#define WM8285_HP2R_ENABLE_DONE_STS2_SHIFT             3  /* HP2R_ENABLE_DONE_STS2 */
-#define WM8285_HP2R_ENABLE_DONE_STS2_WIDTH             1  /* HP2R_ENABLE_DONE_STS2 */
-#define WM8285_HP2L_ENABLE_DONE_STS2              0x0004  /* HP2L_ENABLE_DONE_STS2 */
-#define WM8285_HP2L_ENABLE_DONE_STS2_MASK         0x0004  /* HP2L_ENABLE_DONE_STS2 */
-#define WM8285_HP2L_ENABLE_DONE_STS2_SHIFT             2  /* HP2L_ENABLE_DONE_STS2 */
-#define WM8285_HP2L_ENABLE_DONE_STS2_WIDTH             1  /* HP2L_ENABLE_DONE_STS2 */
-#define WM8285_HP1R_ENABLE_DONE_STS2              0x0002  /* HP1R_ENABLE_DONE_STS2 */
-#define WM8285_HP1R_ENABLE_DONE_STS2_MASK         0x0002  /* HP1R_ENABLE_DONE_STS2 */
-#define WM8285_HP1R_ENABLE_DONE_STS2_SHIFT             1  /* HP1R_ENABLE_DONE_STS2 */
-#define WM8285_HP1R_ENABLE_DONE_STS2_WIDTH             1  /* HP1R_ENABLE_DONE_STS2 */
-#define WM8285_HP1L_ENABLE_DONE_STS2              0x0001  /* HP1L_ENABLE_DONE_STS2 */
-#define WM8285_HP1L_ENABLE_DONE_STS2_MASK         0x0001  /* HP1L_ENABLE_DONE_STS2 */
-#define WM8285_HP1L_ENABLE_DONE_STS2_SHIFT             0  /* HP1L_ENABLE_DONE_STS2 */
-#define WM8285_HP1L_ENABLE_DONE_STS2_WIDTH             1  /* HP1L_ENABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_STS2           0x0080  /* SPKOUTR_ENABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_STS2_MASK      0x0080  /* SPKOUTR_ENABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_STS2_SHIFT          7  /* SPKOUTR_ENABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTR_ENABLE_DONE_STS2_WIDTH          1  /* SPKOUTR_ENABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_STS2           0x0040  /* SPKOUTL_ENABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_STS2_MASK      0x0040  /* SPKOUTL_ENABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_STS2_SHIFT          6  /* SPKOUTL_ENABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTL_ENABLE_DONE_STS2_WIDTH          1  /* SPKOUTL_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP3R_ENABLE_DONE_STS2              0x0020  /* HP3R_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP3R_ENABLE_DONE_STS2_MASK         0x0020  /* HP3R_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP3R_ENABLE_DONE_STS2_SHIFT             5  /* HP3R_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP3R_ENABLE_DONE_STS2_WIDTH             1  /* HP3R_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP3L_ENABLE_DONE_STS2              0x0010  /* HP3L_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP3L_ENABLE_DONE_STS2_MASK         0x0010  /* HP3L_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP3L_ENABLE_DONE_STS2_SHIFT             4  /* HP3L_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP3L_ENABLE_DONE_STS2_WIDTH             1  /* HP3L_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP2R_ENABLE_DONE_STS2              0x0008  /* HP2R_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP2R_ENABLE_DONE_STS2_MASK         0x0008  /* HP2R_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP2R_ENABLE_DONE_STS2_SHIFT             3  /* HP2R_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP2R_ENABLE_DONE_STS2_WIDTH             1  /* HP2R_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP2L_ENABLE_DONE_STS2              0x0004  /* HP2L_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP2L_ENABLE_DONE_STS2_MASK         0x0004  /* HP2L_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP2L_ENABLE_DONE_STS2_SHIFT             2  /* HP2L_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP2L_ENABLE_DONE_STS2_WIDTH             1  /* HP2L_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP1R_ENABLE_DONE_STS2              0x0002  /* HP1R_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP1R_ENABLE_DONE_STS2_MASK         0x0002  /* HP1R_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP1R_ENABLE_DONE_STS2_SHIFT             1  /* HP1R_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP1R_ENABLE_DONE_STS2_WIDTH             1  /* HP1R_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP1L_ENABLE_DONE_STS2              0x0001  /* HP1L_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP1L_ENABLE_DONE_STS2_MASK         0x0001  /* HP1L_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP1L_ENABLE_DONE_STS2_SHIFT             0  /* HP1L_ENABLE_DONE_STS2 */
+#define CLEARWATER_HP1L_ENABLE_DONE_STS2_WIDTH             1  /* HP1L_ENABLE_DONE_STS2 */
 
 /*
  * R6541 (0x198D) - IRQ2 Raw Status 14
  */
-#define WM8285_SPKOUTR_DISABLE_DONE_STS2          0x0080  /* SPKOUTR_DISABLE_DONE_STS2 */
-#define WM8285_SPKOUTR_DISABLE_DONE_STS2_MASK     0x0080  /* SPKOUTR_DISABLE_DONE_STS2 */
-#define WM8285_SPKOUTR_DISABLE_DONE_STS2_SHIFT         7  /* SPKOUTR_DISABLE_DONE_STS2 */
-#define WM8285_SPKOUTR_DISABLE_DONE_STS2_WIDTH         1  /* SPKOUTR_DISABLE_DONE_STS2 */
-#define WM8285_SPKOUTL_DISABLE_DONE_STS2          0x0040  /* SPKOUTL_DISABLE_DONE_STS2 */
-#define WM8285_SPKOUTL_DISABLE_DONE_STS2_MASK     0x0040  /* SPKOUTL_DISABLE_DONE_STS2 */
-#define WM8285_SPKOUTL_DISABLE_DONE_STS2_SHIFT         6  /* SPKOUTL_DISABLE_DONE_STS2 */
-#define WM8285_SPKOUTL_DISABLE_DONE_STS2_WIDTH         1  /* SPKOUTL_DISABLE_DONE_STS2 */
-#define WM8285_HP3R_DISABLE_DONE_STS2             0x0020  /* HP3R_DISABLE_DONE_STS2 */
-#define WM8285_HP3R_DISABLE_DONE_STS2_MASK        0x0020  /* HP3R_DISABLE_DONE_STS2 */
-#define WM8285_HP3R_DISABLE_DONE_STS2_SHIFT            5  /* HP3R_DISABLE_DONE_STS2 */
-#define WM8285_HP3R_DISABLE_DONE_STS2_WIDTH            1  /* HP3R_DISABLE_DONE_STS2 */
-#define WM8285_HP3L_DISABLE_DONE_STS2             0x0010  /* HP3L_DISABLE_DONE_STS2 */
-#define WM8285_HP3L_DISABLE_DONE_STS2_MASK        0x0010  /* HP3L_DISABLE_DONE_STS2 */
-#define WM8285_HP3L_DISABLE_DONE_STS2_SHIFT            4  /* HP3L_DISABLE_DONE_STS2 */
-#define WM8285_HP3L_DISABLE_DONE_STS2_WIDTH            1  /* HP3L_DISABLE_DONE_STS2 */
-#define WM8285_HP2R_DISABLE_DONE_STS2             0x0008  /* HP2R_DISABLE_DONE_STS2 */
-#define WM8285_HP2R_DISABLE_DONE_STS2_MASK        0x0008  /* HP2R_DISABLE_DONE_STS2 */
-#define WM8285_HP2R_DISABLE_DONE_STS2_SHIFT            3  /* HP2R_DISABLE_DONE_STS2 */
-#define WM8285_HP2R_DISABLE_DONE_STS2_WIDTH            1  /* HP2R_DISABLE_DONE_STS2 */
-#define WM8285_HP2L_DISABLE_DONE_STS2             0x0004  /* HP2L_DISABLE_DONE_STS2 */
-#define WM8285_HP2L_DISABLE_DONE_STS2_MASK        0x0004  /* HP2L_DISABLE_DONE_STS2 */
-#define WM8285_HP2L_DISABLE_DONE_STS2_SHIFT            2  /* HP2L_DISABLE_DONE_STS2 */
-#define WM8285_HP2L_DISABLE_DONE_STS2_WIDTH            1  /* HP2L_DISABLE_DONE_STS2 */
-#define WM8285_HP1R_DISABLE_DONE_STS2             0x0002  /* HP1R_DISABLE_DONE_STS2 */
-#define WM8285_HP1R_DISABLE_DONE_STS2_MASK        0x0002  /* HP1R_DISABLE_DONE_STS2 */
-#define WM8285_HP1R_DISABLE_DONE_STS2_SHIFT            1  /* HP1R_DISABLE_DONE_STS2 */
-#define WM8285_HP1R_DISABLE_DONE_STS2_WIDTH            1  /* HP1R_DISABLE_DONE_STS2 */
-#define WM8285_HP1L_DISABLE_DONE_STS2             0x0001  /* HP1L_DISABLE_DONE_STS2 */
-#define WM8285_HP1L_DISABLE_DONE_STS2_MASK        0x0001  /* HP1L_DISABLE_DONE_STS2 */
-#define WM8285_HP1L_DISABLE_DONE_STS2_SHIFT            0  /* HP1L_DISABLE_DONE_STS2 */
-#define WM8285_HP1L_DISABLE_DONE_STS2_WIDTH            1  /* HP1L_DISABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_STS2          0x0080  /* SPKOUTR_DISABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_STS2_MASK     0x0080  /* SPKOUTR_DISABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_STS2_SHIFT         7  /* SPKOUTR_DISABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTR_DISABLE_DONE_STS2_WIDTH         1  /* SPKOUTR_DISABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_STS2          0x0040  /* SPKOUTL_DISABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_STS2_MASK     0x0040  /* SPKOUTL_DISABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_STS2_SHIFT         6  /* SPKOUTL_DISABLE_DONE_STS2 */
+#define CLEARWATER_SPKOUTL_DISABLE_DONE_STS2_WIDTH         1  /* SPKOUTL_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP3R_DISABLE_DONE_STS2             0x0020  /* HP3R_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP3R_DISABLE_DONE_STS2_MASK        0x0020  /* HP3R_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP3R_DISABLE_DONE_STS2_SHIFT            5  /* HP3R_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP3R_DISABLE_DONE_STS2_WIDTH            1  /* HP3R_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP3L_DISABLE_DONE_STS2             0x0010  /* HP3L_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP3L_DISABLE_DONE_STS2_MASK        0x0010  /* HP3L_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP3L_DISABLE_DONE_STS2_SHIFT            4  /* HP3L_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP3L_DISABLE_DONE_STS2_WIDTH            1  /* HP3L_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP2R_DISABLE_DONE_STS2             0x0008  /* HP2R_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP2R_DISABLE_DONE_STS2_MASK        0x0008  /* HP2R_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP2R_DISABLE_DONE_STS2_SHIFT            3  /* HP2R_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP2R_DISABLE_DONE_STS2_WIDTH            1  /* HP2R_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP2L_DISABLE_DONE_STS2             0x0004  /* HP2L_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP2L_DISABLE_DONE_STS2_MASK        0x0004  /* HP2L_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP2L_DISABLE_DONE_STS2_SHIFT            2  /* HP2L_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP2L_DISABLE_DONE_STS2_WIDTH            1  /* HP2L_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP1R_DISABLE_DONE_STS2             0x0002  /* HP1R_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP1R_DISABLE_DONE_STS2_MASK        0x0002  /* HP1R_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP1R_DISABLE_DONE_STS2_SHIFT            1  /* HP1R_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP1R_DISABLE_DONE_STS2_WIDTH            1  /* HP1R_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP1L_DISABLE_DONE_STS2             0x0001  /* HP1L_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP1L_DISABLE_DONE_STS2_MASK        0x0001  /* HP1L_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP1L_DISABLE_DONE_STS2_SHIFT            0  /* HP1L_DISABLE_DONE_STS2 */
+#define CLEARWATER_HP1L_DISABLE_DONE_STS2_WIDTH            1  /* HP1L_DISABLE_DONE_STS2 */
 
 /*
  * R6542 (0x198E) - IRQ2 Raw Status 15
  */
-#define WM8285_SPK_OVERHEAT_WARN_STS2             0x0004  /* SPK_OVERHEAT_WARN_STS2 */
-#define WM8285_SPK_OVERHEAT_WARN_STS2_MASK        0x0004  /* SPK_OVERHEAT_WARN_STS2 */
-#define WM8285_SPK_OVERHEAT_WARN_STS2_SHIFT            2  /* SPK_OVERHEAT_WARN_STS2 */
-#define WM8285_SPK_OVERHEAT_WARN_STS2_WIDTH            1  /* SPK_OVERHEAT_WARN_STS2 */
-#define WM8285_SPK_OVERHEAT_STS2                  0x0002  /* SPK_OVERHEAT_STS2 */
-#define WM8285_SPK_OVERHEAT_STS2_MASK             0x0002  /* SPK_OVERHEAT_STS2 */
-#define WM8285_SPK_OVERHEAT_STS2_SHIFT                 1  /* SPK_OVERHEAT_STS2 */
-#define WM8285_SPK_OVERHEAT_STS2_WIDTH                 1  /* SPK_OVERHEAT_STS2 */
-#define WM8285_SPK_SHUTDOWN_STS2                  0x0001  /* SPK_SHUTDOWN_STS2 */
-#define WM8285_SPK_SHUTDOWN_STS2_MASK             0x0001  /* SPK_SHUTDOWN_STS2 */
-#define WM8285_SPK_SHUTDOWN_STS2_SHIFT                 0  /* SPK_SHUTDOWN_STS2 */
-#define WM8285_SPK_SHUTDOWN_STS2_WIDTH                 1  /* SPK_SHUTDOWN_STS2 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_STS2             0x0004  /* SPK_OVERHEAT_WARN_STS2 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_STS2_MASK        0x0004  /* SPK_OVERHEAT_WARN_STS2 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_STS2_SHIFT            2  /* SPK_OVERHEAT_WARN_STS2 */
+#define CLEARWATER_SPK_OVERHEAT_WARN_STS2_WIDTH            1  /* SPK_OVERHEAT_WARN_STS2 */
+#define CLEARWATER_SPK_OVERHEAT_STS2                  0x0002  /* SPK_OVERHEAT_STS2 */
+#define CLEARWATER_SPK_OVERHEAT_STS2_MASK             0x0002  /* SPK_OVERHEAT_STS2 */
+#define CLEARWATER_SPK_OVERHEAT_STS2_SHIFT                 1  /* SPK_OVERHEAT_STS2 */
+#define CLEARWATER_SPK_OVERHEAT_STS2_WIDTH                 1  /* SPK_OVERHEAT_STS2 */
+#define CLEARWATER_SPK_SHUTDOWN_STS2                  0x0001  /* SPK_SHUTDOWN_STS2 */
+#define CLEARWATER_SPK_SHUTDOWN_STS2_MASK             0x0001  /* SPK_SHUTDOWN_STS2 */
+#define CLEARWATER_SPK_SHUTDOWN_STS2_SHIFT                 0  /* SPK_SHUTDOWN_STS2 */
+#define CLEARWATER_SPK_SHUTDOWN_STS2_WIDTH                 1  /* SPK_SHUTDOWN_STS2 */
 
 /*
  * R6662 (0x1A06) - Interrupt Debounce 7
  */
-#define WM8285_MICD_CLAMP_DB                       0x0010  /* MICD_CLAMP_DB */
-#define WM8285_MICD_CLAMP_DB_MASK                  0x0010  /* MICD_CLAMP_DB */
-#define WM8285_MICD_CLAMP_DB_SHIFT                      4  /* MICD_CLAMP_DB */
-#define WM8285_MICD_CLAMP_DB_WIDTH                      1  /* MICD_CLAMP_DB */
-#define WM8285_JD2_DB                              0x0004  /* JD2_DB */
-#define WM8285_JD2_DB_MASK                         0x0004  /* JD2_DB */
-#define WM8285_JD2_DB_SHIFT                             2  /* JD2_DB */
-#define WM8285_JD2_DB_WIDTH                             1  /* JD2_DB */
-#define WM8285_JD1_DB                              0x0001  /* JD1_DB */
-#define WM8285_JD1_DB_MASK                         0x0001  /* JD1_DB */
-#define WM8285_JD1_DB_SHIFT                             0  /* JD1_DB */
-#define WM8285_JD1_DB_WIDTH                             1  /* JD1_DB */
+#define CLEARWATER_MICD_CLAMP_DB                       0x0010  /* MICD_CLAMP_DB */
+#define CLEARWATER_MICD_CLAMP_DB_MASK                  0x0010  /* MICD_CLAMP_DB */
+#define CLEARWATER_MICD_CLAMP_DB_SHIFT                      4  /* MICD_CLAMP_DB */
+#define CLEARWATER_MICD_CLAMP_DB_WIDTH                      1  /* MICD_CLAMP_DB */
+#define CLEARWATER_JD2_DB                              0x0004  /* JD2_DB */
+#define CLEARWATER_JD2_DB_MASK                         0x0004  /* JD2_DB */
+#define CLEARWATER_JD2_DB_SHIFT                             2  /* JD2_DB */
+#define CLEARWATER_JD2_DB_WIDTH                             1  /* JD2_DB */
+#define CLEARWATER_JD1_DB                              0x0001  /* JD1_DB */
+#define CLEARWATER_JD1_DB_MASK                         0x0001  /* JD1_DB */
+#define CLEARWATER_JD1_DB_SHIFT                             0  /* JD1_DB */
+#define CLEARWATER_JD1_DB_WIDTH                             1  /* JD1_DB */
 
 /*
  * R6670 (0x1A0E) - Interrupt Debounce 15
  */
-#define WM8285_SPK_OVERHEAT_WARN_DB                0x0004  /* SPK_OVERHEAT_WARN_DB */
-#define WM8285_SPK_OVERHEAT_WARN_DB_MASK           0x0004  /* SPK_OVERHEAT_WARN_DB */
-#define WM8285_SPK_OVERHEAT_WARN_DB_SHIFT               2  /* SPK_OVERHEAT_WARN_DB */
-#define WM8285_SPK_OVERHEAT_WARN_DB_WIDTH               1  /* SPK_OVERHEAT_WARN_DB */
-#define WM8285_SPK_OVERHEAT_DB                     0x0002  /* SPK_OVERHEAT_DB */
-#define WM8285_SPK_OVERHEAT_DB_MASK                0x0002  /* SPK_OVERHEAT_DB */
-#define WM8285_SPK_OVERHEAT_DB_SHIFT                    1  /* SPK_OVERHEAT_DB */
-#define WM8285_SPK_OVERHEAT_DB_WIDTH                    1  /* SPK_OVERHEAT_DB */
+#define CLEARWATER_SPK_OVERHEAT_WARN_DB                0x0004  /* SPK_OVERHEAT_WARN_DB */
+#define CLEARWATER_SPK_OVERHEAT_WARN_DB_MASK           0x0004  /* SPK_OVERHEAT_WARN_DB */
+#define CLEARWATER_SPK_OVERHEAT_WARN_DB_SHIFT               2  /* SPK_OVERHEAT_WARN_DB */
+#define CLEARWATER_SPK_OVERHEAT_WARN_DB_WIDTH               1  /* SPK_OVERHEAT_WARN_DB */
+#define CLEARWATER_SPK_OVERHEAT_DB                     0x0002  /* SPK_OVERHEAT_DB */
+#define CLEARWATER_SPK_OVERHEAT_DB_MASK                0x0002  /* SPK_OVERHEAT_DB */
+#define CLEARWATER_SPK_OVERHEAT_DB_SHIFT                    1  /* SPK_OVERHEAT_DB */
+#define CLEARWATER_SPK_OVERHEAT_DB_WIDTH                    1  /* SPK_OVERHEAT_DB */
 
 /*
  * R6848 (0x1AC0) - GPIO Debounce Config
  */
-#define WM8285_GP_DBTIME_MASK                      0x000F  /* GP_DBTIME - [3:0] */
-#define WM8285_GP_DBTIME_SHIFT                          0  /* GP_DBTIME - [3:0] */
-#define WM8285_GP_DBTIME_WIDTH                          4  /* GP_DBTIME - [3:0] */
+#define CLEARWATER_GP_DBTIME_MASK                      0x000F  /* GP_DBTIME - [3:0] */
+#define CLEARWATER_GP_DBTIME_SHIFT                          0  /* GP_DBTIME - [3:0] */
+#define CLEARWATER_GP_DBTIME_WIDTH                          4  /* GP_DBTIME - [3:0] */
 
 #endif

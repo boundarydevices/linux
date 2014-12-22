@@ -59,11 +59,11 @@ static int arizona_i2c_probe(struct i2c_client *i2c,
 		regmap_config = &wm8998_i2c_regmap;
 		break;
 #endif
-#ifdef CONFIG_MFD_WM8285
+#ifdef CONFIG_MFD_CLEARWATER
 	case WM8285:
 	case WM1840:
-		regmap_config = &wm8285_16bit_i2c_regmap;
-		regmap_32bit_config = &wm8285_32bit_i2c_regmap;
+		regmap_config = &clearwater_16bit_i2c_regmap;
+		regmap_32bit_config = &clearwater_32bit_i2c_regmap;
 		break;
 #endif
 	default:

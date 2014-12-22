@@ -49,11 +49,11 @@ static int arizona_spi_probe(struct spi_device *spi)
 		regmap_config = &florida_spi_regmap;
 		break;
 #endif
-#ifdef CONFIG_MFD_WM8285
+#ifdef CONFIG_MFD_CLEARWATER
 	case WM8285:
 	case WM1840:
-		regmap_config = &wm8285_16bit_spi_regmap;
-		regmap_32bit_config = &wm8285_32bit_spi_regmap;
+		regmap_config = &clearwater_16bit_spi_regmap;
+		regmap_32bit_config = &clearwater_32bit_spi_regmap;
 		break;
 #endif
 #ifdef CONFIG_MFD_CS47L24
