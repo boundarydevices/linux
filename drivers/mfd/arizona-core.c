@@ -1382,7 +1382,7 @@ int arizona_dev_init(struct arizona *arizona)
 	const char *type_name = "Unknown";
 	unsigned int reg, val, mask;
 	int (*apply_patch)(struct arizona *) = NULL;
-	int ret, i;
+	int ret, i, max_inputs;
 	char revision_char;
 
 	dev_set_drvdata(arizona->dev, arizona);
@@ -1825,7 +1825,25 @@ int arizona_dev_init(struct arizona *arizona)
 				   ARIZONA_MICB1_RATE, val);
 	}
 
-	for (i = 0; i < ARIZONA_MAX_INPUT; i++) {
+	switch (arizona->type) {
+	case WM5102:
+	case WM5110:
+	case WM8997:
+	case WM8280:
+	case WM8998:
+	case WM1814:
+	case WM1831:
+	case CS47L24:
+		/* These arizona chips have only 4 inputs*/
+		max_inputs = ARIZONA_MAX_INPUT - 2;
+		break;
+	default:
+		/*DMIC Ref for IN4-6 is fixed for WM8285/1840*/
+		max_inputs = ARIZONA_MAX_INPUT - 3;
+		break;
+	}
+
+	for (i = 0; i < max_inputs; i++) {
 		/* Default for both is 0 so noop with defaults */
 		val = arizona->pdata.dmic_ref[i]
 			<< ARIZONA_IN1_DMIC_SUP_SHIFT;
@@ -1833,8 +1851,20 @@ int arizona_dev_init(struct arizona *arizona)
 			<< (ARIZONA_IN1_MODE_SHIFT - 1);
 
 		switch (arizona->type) {
-		case WM8998:
-		case WM1814:
+		case WM5102:
+		case WM5110:
+		case WM8997:
+		case WM8280:
+		case WM1831:
+		case CS47L24:
+			val |= (arizona->pdata.inmode[i] & 1)
+				<< ARIZONA_IN1_SINGLE_ENDED_SHIFT;
+
+			mask = ARIZONA_IN1_DMIC_SUP_MASK |
+					ARIZONA_IN1_MODE_MASK |
+					ARIZONA_IN1_SINGLE_ENDED_MASK;
+			break;
+		default:
 			regmap_update_bits(arizona->regmap,
 				   ARIZONA_ADC_DIGITAL_VOLUME_1L + (i * 8),
 				   ARIZONA_IN1L_SRC_SE_MASK,
@@ -1849,14 +1879,6 @@ int arizona_dev_init(struct arizona *arizona)
 
 			mask = ARIZONA_IN1_DMIC_SUP_MASK |
 					ARIZONA_IN1_MODE_MASK;
-			break;
-		default:
-			val |= (arizona->pdata.inmode[i] & 1)
-				<< ARIZONA_IN1_SINGLE_ENDED_SHIFT;
-
-			mask = ARIZONA_IN1_DMIC_SUP_MASK |
-					ARIZONA_IN1_MODE_MASK |
-					ARIZONA_IN1_SINGLE_ENDED_MASK;
 			break;
 		}
 
