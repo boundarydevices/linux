@@ -371,6 +371,13 @@ SOC_SINGLE_TLV("IN6L Digital Volume", ARIZONA_ADC_DIGITAL_VOLUME_6L,
 SOC_SINGLE_TLV("IN6R Digital Volume", ARIZONA_ADC_DIGITAL_VOLUME_6R,
 	       ARIZONA_IN6R_DIG_VOL_SHIFT, 0xbf, 0, digital_tlv),
 
+SOC_ENUM_EXT("IN1 Mode", arizona_ip_mode[0],
+		snd_soc_get_enum_double, arizona_ip_mode_put),
+SOC_ENUM_EXT("IN2 Mode", arizona_ip_mode[1],
+		snd_soc_get_enum_double, arizona_ip_mode_put),
+SOC_ENUM_EXT("IN3 Mode", arizona_ip_mode[2],
+		snd_soc_get_enum_double, arizona_ip_mode_put),
+
 SOC_ENUM("Input Ramp Up", arizona_in_vi_ramp),
 SOC_ENUM("Input Ramp Down", arizona_in_vd_ramp),
 
