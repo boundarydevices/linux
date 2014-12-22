@@ -287,6 +287,10 @@ extern const struct soc_enum arizona_anc_input_src[];
 extern const struct soc_enum clearwater_anc_input_src[];
 extern const struct soc_enum arizona_output_anc_src[];
 extern const struct soc_enum clearwater_output_anc_src_defs[];
+extern const struct soc_enum arizona_ip_mode[];
+
+extern int arizona_ip_mode_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
 
 extern int arizona_put_anc_input(struct snd_kcontrol *kcontrol,
 			  struct snd_ctl_elem_value *ucontrol);

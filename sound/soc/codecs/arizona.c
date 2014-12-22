@@ -1360,6 +1360,57 @@ const struct soc_enum clearwater_output_anc_src_defs[] = {
 };
 EXPORT_SYMBOL_GPL(clearwater_output_anc_src_defs);
 
+const char *arizona_ip_mode_text[2] = {
+	"Analog", "Digital",
+};
+
+const struct soc_enum arizona_ip_mode[] = {
+	SOC_ENUM_SINGLE(ARIZONA_IN1L_CONTROL, ARIZONA_IN1_MODE_SHIFT,
+		ARRAY_SIZE(arizona_ip_mode_text), arizona_ip_mode_text),
+	SOC_ENUM_SINGLE(ARIZONA_IN2L_CONTROL, ARIZONA_IN2_MODE_SHIFT,
+		ARRAY_SIZE(arizona_ip_mode_text), arizona_ip_mode_text),
+	SOC_ENUM_SINGLE(ARIZONA_IN3L_CONTROL, ARIZONA_IN3_MODE_SHIFT,
+		ARRAY_SIZE(arizona_ip_mode_text), arizona_ip_mode_text),
+};
+EXPORT_SYMBOL_GPL(arizona_ip_mode);
+
+int arizona_ip_mode_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	unsigned int reg, ret = 0;
+
+	mutex_lock_nested(&codec->card->dapm_mutex, SND_SOC_DAPM_CLASS_RUNTIME);
+
+	/* Cannot change input mode on an active input*/
+	reg = snd_soc_read(codec, ARIZONA_INPUT_ENABLES);
+
+	switch (e->reg) {
+	case ARIZONA_IN1L_CONTROL:
+		if (reg & (ARIZONA_IN1L_ENA_MASK |ARIZONA_IN1R_ENA_MASK))
+			return -EBUSY;
+		break;
+	case ARIZONA_IN2L_CONTROL:
+		if (reg & (ARIZONA_IN2L_ENA_MASK |ARIZONA_IN2R_ENA_MASK))
+			return -EBUSY;
+		break;
+	case ARIZONA_IN3L_CONTROL:
+		if (reg & (ARIZONA_IN3L_ENA_MASK |ARIZONA_IN3R_ENA_MASK))
+			return -EBUSY;
+		break;
+	default:
+		return -EINVAL;
+		break;
+	}
+
+	ret = snd_soc_put_enum_double(kcontrol, ucontrol);
+	mutex_unlock(&codec->card->dapm_mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(arizona_ip_mode_put);
+
 static void arizona_in_set_vu(struct snd_soc_codec *codec, int ena)
 {
 	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);
