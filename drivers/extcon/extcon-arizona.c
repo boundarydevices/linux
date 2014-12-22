@@ -1103,7 +1103,7 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 		break;
 	default:
 		if (arizona->pdata.jd_gpio5) {
-			mask = WM8285_MICD_CLAMP_RISE_STS1;
+			mask = CLEARWATER_MICD_CLAMP_RISE_STS1;
 			present = 0;
 		} else {
 			mask = ARIZONA_JD1_STS;
@@ -1113,7 +1113,7 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 				present = ARIZONA_JD1_STS;
 		}
 
-		reg = WM8285_IRQ1_RAW_STATUS_7;
+		reg = CLEARWATER_IRQ1_RAW_STATUS_7;
 		break;
 	}
 
@@ -1155,8 +1155,8 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 		mask = ARIZONA_MICD_CLAMP_DB | ARIZONA_JD1_DB;
 		break;
 	default:
-		reg = WM8285_INTERRUPT_DEBOUNCE_7;
-		mask = WM8285_MICD_CLAMP_DB | WM8285_JD1_DB;
+		reg = CLEARWATER_INTERRUPT_DEBOUNCE_7;
+		mask = CLEARWATER_MICD_CLAMP_DB | CLEARWATER_JD1_DB;
 		break;
 	}
 
@@ -1356,15 +1356,15 @@ static void arizona_extcon_set_micd_clamp_mode(struct arizona *arizona)
 		clamp_db_val = ARIZONA_MICD_CLAMP_DB;
 		break;
 	default:
-		clamp_ctrl_reg = WM8285_MICD_CLAMP_CONTROL;
+		clamp_ctrl_reg = CLEARWATER_MICD_CLAMP_CONTROL;
 		clamp_ctrl_mask = ARIZONA_MICD_CLAMP_MODE_MASK;
 
-		clamp_db_reg = WM8285_INTERRUPT_DEBOUNCE_7;
-		clamp_db_mask = WM8285_MICD_CLAMP_DB;
-		clamp_db_val = WM8285_MICD_CLAMP_DB;
+		clamp_db_reg = CLEARWATER_INTERRUPT_DEBOUNCE_7;
+		clamp_db_mask = CLEARWATER_MICD_CLAMP_DB;
+		clamp_db_val = CLEARWATER_MICD_CLAMP_DB;
 
 		regmap_update_bits(arizona->regmap,
-				   WM8285_MICD_CLAMP_CONTROL,
+				   CLEARWATER_MICD_CLAMP_CONTROL,
 				   0x10, 0);
 		break;
 	}
@@ -1546,7 +1546,7 @@ static int arizona_extcon_probe(struct platform_device *pdev)
 		reg = ARIZONA_GP_SWITCH_1;
 		break;
 	default:
-		reg = WM8285_GP_SWITCH_1;
+		reg = CLEARWATER_GP_SWITCH_1;
 		break;
 	}
 
@@ -1793,7 +1793,7 @@ static int arizona_extcon_remove(struct platform_device *pdev)
 				   ARIZONA_MICD_CLAMP_MODE_MASK, 0);
 		break;
 	default:
-		regmap_update_bits(arizona->regmap, WM8285_MICD_CLAMP_CONTROL,
+		regmap_update_bits(arizona->regmap, CLEARWATER_MICD_CLAMP_CONTROL,
 				   ARIZONA_MICD_CLAMP_MODE_MASK, 0);
 		break;
 	}
