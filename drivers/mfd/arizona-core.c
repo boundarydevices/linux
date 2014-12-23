@@ -714,6 +714,15 @@ static int arizona_runtime_resume(struct device *dev)
 		goto err;
 	}
 
+#ifdef CONFIG_MFD_CLEARWATER
+	if (arizona->type == WM8285 || arizona->type == WM1840) {
+		ret = clearwater_patch_32(arizona);
+		if (ret != 0) {
+			dev_err(arizona->dev, "Failed to apply 32 bit register patch\n");
+			goto err;
+		}
+	}
+#endif
 	ret = arizona_restore_dvfs(arizona);
 	if (ret < 0)
 		goto err;
@@ -1532,6 +1541,15 @@ int arizona_dev_init(struct arizona *arizona)
 			dev_err(dev, "Failed to sync device: %d\n", ret);
 			goto err_reset;
 		}
+#ifdef CONFIG_MFD_CLEARWATER
+		if (arizona->type == WM8285 || arizona->type == WM1840) {
+			ret = clearwater_patch_32(arizona);
+			if (ret != 0) {
+				dev_err(arizona->dev, "Failed to apply 32 bit register patch\n");
+				goto err_reset;
+			}
+		}
+#endif
 	}
 
 	/* Ensure device startup is complete */
