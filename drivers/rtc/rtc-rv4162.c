@@ -118,11 +118,12 @@ static int rv4162_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct rtc_device *rtc;
-	unsigned char addr = RV4162_REG_FLAGS;
+	unsigned char addr = 0;
+	unsigned char registers[16];
 	unsigned char flags;
 	struct i2c_msg msgs[] = {
 		{client->addr, 0, 1, &addr},
-		{client->addr, I2C_M_RD, 1, &flags},
+		{client->addr, I2C_M_RD, sizeof(registers), registers},
 	};
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
@@ -132,7 +133,7 @@ static int rv4162_probe(struct i2c_client *client,
 		dev_err(&client->dev, "%s: read error\n", __func__);
 		return -EIO;
 	}
-
+	flags = registers[RV4162_REG_FLAGS];
 	dev_info(&client->dev, "%s: chip found: flags 0x%02x\n", __func__, flags);
 	
 	rtc = rtc_device_register(rv4162_driver.driver.name, &client->dev,
