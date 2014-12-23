@@ -50,10 +50,13 @@ static const struct reg_default clearwater_reva_patch[] = {
 int clearwater_patch(struct arizona *arizona)
 {
 	switch (arizona->rev) {
-	default:
+	case 0:
+	case 1:
 		return regmap_register_patch(arizona->regmap,
 					     clearwater_reva_patch,
 					     ARRAY_SIZE(clearwater_reva_patch));
+	default:
+		break;
 	}
 
 	return 0;
