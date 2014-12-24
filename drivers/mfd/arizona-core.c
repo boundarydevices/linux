@@ -963,6 +963,48 @@ static int arizona_of_get_max_channels(struct arizona *arizona,
 	return 0;
 }
 
+static int arizona_of_get_inmode(struct arizona *arizona,
+					const char *prop)
+{
+	struct arizona_pdata *pdata = &arizona->pdata;
+	struct device_node *np = arizona->dev->of_node;
+	struct property *tempprop;
+	const __be32 *cur;
+	u32 val;
+	int i;
+
+	i = 0;
+	of_property_for_each_u32(np, prop, tempprop, cur, val) {
+		if (i == ARRAY_SIZE(pdata->inmode))
+			break;
+
+		pdata->inmode[i++] = val;
+	}
+
+	return 0;
+}
+
+static int arizona_of_get_dmicref(struct arizona *arizona,
+					const char *prop)
+{
+	struct arizona_pdata *pdata = &arizona->pdata;
+	struct device_node *np = arizona->dev->of_node;
+	struct property *tempprop;
+	const __be32 *cur;
+	u32 val;
+	int i;
+
+	i = 0;
+	of_property_for_each_u32(np, prop, tempprop, cur, val) {
+		if (i == ARRAY_SIZE(pdata->dmic_ref))
+			break;
+
+		pdata->dmic_ref[i++] = val;
+	}
+
+	return 0;
+}
+
 static int arizona_of_get_gpio_defaults(struct arizona *arizona,
 					const char *prop)
 {
@@ -1155,11 +1197,9 @@ static int arizona_of_get_core_pdata(struct arizona *arizona)
 
 	arizona_of_get_max_channels(arizona, "wlf,max-channels-clocked");
 
-	arizona_of_read_u32_array(arizona, "wlf,dmic-ref", false,
-				  pdata->dmic_ref, ARRAY_SIZE(pdata->dmic_ref));
+	arizona_of_get_dmicref(arizona, "wlf,dmic-ref");
 
-	arizona_of_read_u32_array(arizona, "wlf,inmode", false,
-				  pdata->inmode, ARRAY_SIZE(pdata->inmode));
+	arizona_of_get_inmode(arizona, "wlf,inmode");
 
 	arizona_of_read_u32_array(arizona, "wlf,out-mono", false,
 				  out_mono, ARRAY_SIZE(out_mono));
