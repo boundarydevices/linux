@@ -1388,25 +1388,32 @@ int arizona_ip_mode_put(struct snd_kcontrol *kcontrol,
 
 	switch (e->reg) {
 	case ARIZONA_IN1L_CONTROL:
-		if (reg & (ARIZONA_IN1L_ENA_MASK |ARIZONA_IN1R_ENA_MASK))
-			return -EBUSY;
+		if (reg & (ARIZONA_IN1L_ENA_MASK |ARIZONA_IN1R_ENA_MASK)) {
+			ret = -EBUSY;
+			goto exit;
+		}
 		break;
 	case ARIZONA_IN2L_CONTROL:
-		if (reg & (ARIZONA_IN2L_ENA_MASK |ARIZONA_IN2R_ENA_MASK))
-			return -EBUSY;
+		if (reg & (ARIZONA_IN2L_ENA_MASK |ARIZONA_IN2R_ENA_MASK)) {
+			ret = -EBUSY;
+			goto exit;
+		}
 		break;
 	case ARIZONA_IN3L_CONTROL:
-		if (reg & (ARIZONA_IN3L_ENA_MASK |ARIZONA_IN3R_ENA_MASK))
-			return -EBUSY;
+		if (reg & (ARIZONA_IN3L_ENA_MASK |ARIZONA_IN3R_ENA_MASK)) {
+			ret = -EBUSY;
+			goto exit;
+		}
 		break;
 	default:
-		return -EINVAL;
+		ret = -EINVAL;
+		goto exit;
 		break;
 	}
 
 	ret = snd_soc_put_enum_double(kcontrol, ucontrol);
+exit:
 	mutex_unlock(&codec->card->dapm_mutex);
-
 	return ret;
 }
 EXPORT_SYMBOL_GPL(arizona_ip_mode_put);
