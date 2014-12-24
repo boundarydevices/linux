@@ -216,6 +216,7 @@ struct pltfm_imx_data {
 		WAIT_FOR_INT,        /* sent CMD12, waiting for response INT */
 	} multiblock_status;
 	u32 is_ddr;
+	unsigned max_clock;
 };
 
 static const struct platform_device_id imx_esdhc_devtype[] = {
@@ -685,7 +686,8 @@ static inline void esdhc_pltfm_set_clock(struct sdhci_host *host,
 		}
 		return;
 	}
-
+	if (clock > imx_data->max_clock)
+		clock = imx_data->max_clock;
 	if (esdhc_is_usdhc(imx_data) && !imx_data->is_ddr)
 		pre_div = 1;
 
@@ -1049,6 +1051,7 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	of_property_read_u32(np, "fsl,tuning-step", &boarddata->tuning_step);
 	of_property_read_u32(np, "fsl,tuning-start-tap",
 			     &boarddata->tuning_start_tap);
+	of_property_read_u32(np, "max-clock", &boarddata->max_clock);
 
 	if (of_find_property(np, "no-1-8-v", NULL))
 		boarddata->support_vsel = false;
@@ -1287,6 +1290,12 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 	if (imx_data->socdata->flags & ESDHC_FLAG_HS400)
 		host->quirks2 |= SDHCI_QUIRK2_CAPS_BIT63_FOR_HS400;
 
+	imx_data->max_clock = ~0;
+	if (imx_data->boarddata.max_clock) {
+		imx_data->max_clock = imx_data->boarddata.max_clock;
+		dev_info(mmc_dev(host->mmc),
+			"clock limited to %d\n", imx_data->max_clock);
+	}
 	if (imx_data->boarddata.vqmmc_18v)
 		host->quirks2 |= SDHCI_QUIRK2_VQMMC_1_8_V;
 
