@@ -47,6 +47,7 @@ struct esdhc_platform_data {
 	bool support_vsel;
 	bool vqmmc_18v;
 	unsigned int delay_line;
+	unsigned max_clock;
 	unsigned int tuning_step;	/* The delay cell steps in tuning procedure */
 };
 #endif /* __ASM_ARCH_IMX_ESDHC_H */
