@@ -235,6 +235,7 @@ struct esdhc_platform_data {
 	unsigned int tuning_start_tap;	/* The start delay cell point in tuning procedure */
 	unsigned int strobe_dll_delay_target;	/* The delay cell for strobe pad (read clock) */
 	bool sdio_async_interrupt_enabled;
+	unsigned max_clock;
 };
 
 struct esdhc_soc_data {
@@ -359,6 +360,7 @@ struct pltfm_imx_data {
 	u32 is_ddr;
 	u32 disable_caps1;
 	struct pm_qos_request pm_qos_req;
+	unsigned max_clock;
 };
 
 static const struct of_device_id imx_esdhc_dt_ids[] = {
@@ -955,6 +957,8 @@ static inline void esdhc_pltfm_set_clock(struct sdhci_host *host,
 		return;
 	}
 
+	if (clock > imx_data->max_clock)
+		clock = imx_data->max_clock;
 	/* For i.MX53 eSDHCv3, SYSCTL.SDCLKFS may not be set to 0. */
 	if (is_imx53_esdhc(imx_data)) {
 		/*
@@ -1604,6 +1608,7 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	of_property_read_u32(np, "fsl,tuning-step", &boarddata->tuning_step);
 	of_property_read_u32(np, "fsl,tuning-start-tap",
 			     &boarddata->tuning_start_tap);
+	of_property_read_u32(np, "max-clock", &boarddata->max_clock);
 	if (of_find_property(np, "no-mmc-hs400", NULL))
 		imx_data->disable_caps1 |= SDHCI_SUPPORT_HS400;
 
@@ -1726,6 +1731,12 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 	err = sdhci_esdhc_imx_probe_dt(pdev, host, imx_data);
 	if (err)
 		goto disable_ahb_clk;
+	imx_data->max_clock = ~0;
+	if (imx_data->boarddata.max_clock) {
+		imx_data->max_clock = imx_data->boarddata.max_clock;
+		dev_info(mmc_dev(host->mmc),
+			"clock limited to %d\n", imx_data->max_clock);
+	}
 	if (imx_data->boarddata.vqmmc_18v)
 		host->quirks2 |= SDHCI_QUIRK2_VQMMC_1_8_V;
 
