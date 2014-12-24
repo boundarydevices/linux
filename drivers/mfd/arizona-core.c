@@ -1852,22 +1852,18 @@ int arizona_dev_init(struct arizona *arizona)
 	case WM1814:
 	case WM1831:
 	case CS47L24:
-		/* These arizona chips have only 4 inputs*/
-		max_inputs = ARIZONA_MAX_INPUT - 2;
+		/* These arizona chips have only 4 inputs and
+		settings for INxL and INxR are same*/
+		max_inputs = ARIZONA_MAX_INPUT / 2 - 2;
 		break;
 	default:
-		/*DMIC Ref for IN4-6 is fixed for WM8285/1840*/
-		max_inputs = ARIZONA_MAX_INPUT - 3;
+		/*DMIC Ref for IN4-6 is fixed for WM8285/1840 and
+		settings for INxL and INxR are different*/
+		max_inputs = ARIZONA_MAX_INPUT / 2 - 3;
 		break;
 	}
 
 	for (i = 0; i < max_inputs; i++) {
-		/* Default for both is 0 so noop with defaults */
-		val = arizona->pdata.dmic_ref[i]
-			<< ARIZONA_IN1_DMIC_SUP_SHIFT;
-		val |= (arizona->pdata.inmode[i] & 2)
-			<< (ARIZONA_IN1_MODE_SHIFT - 1);
-
 		switch (arizona->type) {
 		case WM5102:
 		case WM5110:
@@ -1875,28 +1871,52 @@ int arizona_dev_init(struct arizona *arizona)
 		case WM8280:
 		case WM1831:
 		case CS47L24:
+			val = arizona->pdata.dmic_ref[i]
+				<< ARIZONA_IN1_DMIC_SUP_SHIFT;
+			val |= (arizona->pdata.inmode[i] & 2)
+				<< (ARIZONA_IN1_MODE_SHIFT - 1);
 			val |= (arizona->pdata.inmode[i] & 1)
 				<< ARIZONA_IN1_SINGLE_ENDED_SHIFT;
-
 			mask = ARIZONA_IN1_DMIC_SUP_MASK |
 					ARIZONA_IN1_MODE_MASK |
 					ARIZONA_IN1_SINGLE_ENDED_MASK;
 			break;
-		default:
+		case WM8998:
+		case WM1814:
+			val = arizona->pdata.dmic_ref[i]
+				<< ARIZONA_IN1_DMIC_SUP_SHIFT;
+			val |= (arizona->pdata.inmode[i] & 2)
+				<< (ARIZONA_IN1_MODE_SHIFT - 1);
+			mask = ARIZONA_IN1_DMIC_SUP_MASK |
+					ARIZONA_IN1_MODE_MASK;
 			regmap_update_bits(arizona->regmap,
 				   ARIZONA_ADC_DIGITAL_VOLUME_1L + (i * 8),
 				   ARIZONA_IN1L_SRC_SE_MASK,
 				   (arizona->pdata.inmode[i] & 1)
 					<< ARIZONA_IN1L_SRC_SE_SHIFT);
-
 			regmap_update_bits(arizona->regmap,
 				   ARIZONA_ADC_DIGITAL_VOLUME_1R + (i * 8),
 				   ARIZONA_IN1R_SRC_SE_MASK,
 				   (arizona->pdata.inmode[i] & 1)
 					<< ARIZONA_IN1R_SRC_SE_SHIFT);
-
+			break;
+		default:
+			val = arizona->pdata.dmic_ref[2*i]
+				<< ARIZONA_IN1_DMIC_SUP_SHIFT;
+			val |= (arizona->pdata.inmode[2*i] & 2)
+				<< (ARIZONA_IN1_MODE_SHIFT - 1);
 			mask = ARIZONA_IN1_DMIC_SUP_MASK |
 					ARIZONA_IN1_MODE_MASK;
+			regmap_update_bits(arizona->regmap,
+				   ARIZONA_ADC_DIGITAL_VOLUME_1L + (i * 8),
+				   ARIZONA_IN1L_SRC_SE_MASK,
+				   (arizona->pdata.inmode[2*i] & 1)
+					<< ARIZONA_IN1L_SRC_SE_SHIFT);
+			regmap_update_bits(arizona->regmap,
+				   ARIZONA_ADC_DIGITAL_VOLUME_1R + (i * 8),
+				   ARIZONA_IN1R_SRC_SE_MASK,
+				   (arizona->pdata.inmode[(2*i) + 1] & 1)
+					<< ARIZONA_IN1R_SRC_SE_SHIFT);
 			break;
 		}
 
