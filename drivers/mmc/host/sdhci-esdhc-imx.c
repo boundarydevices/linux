@@ -269,6 +269,7 @@ struct pltfm_imx_data {
 	} multiblock_status;
 	u32 is_ddr;
 	struct pm_qos_request pm_qos_req;
+	unsigned max_clock;
 };
 
 static const struct platform_device_id imx_esdhc_devtype[] = {
@@ -776,6 +777,8 @@ static inline void esdhc_pltfm_set_clock(struct sdhci_host *host,
 		return;
 	}
 
+	if (clock > imx_data->max_clock)
+		clock = imx_data->max_clock;
 	/* For i.MX53 eSDHCv3, SYSCTL.SDCLKFS may not be set to 0. */
 	if (is_imx53_esdhc(imx_data)) {
 		/*
@@ -1316,6 +1319,7 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 			     &boarddata->tuning_start_tap);
 	of_property_read_u32(np, "fsl,strobe-dll-delay-target",
 			     &boarddata->strobe_dll_delay_target);
+	of_property_read_u32(np, "max-clock", &boarddata->max_clock);
 
 	if (of_find_property(np, "no-1-8-v", NULL))
 		host->quirks2 |= SDHCI_QUIRK2_NO_1_8_V;
@@ -1550,6 +1554,13 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		err = sdhci_esdhc_imx_probe_nondt(pdev, host, imx_data);
 	if (err)
 		goto disable_ahb_clk;
+
+	imx_data->max_clock = ~0;
+	if (imx_data->boarddata.max_clock) {
+		imx_data->max_clock = imx_data->boarddata.max_clock;
+		dev_info(mmc_dev(host->mmc),
+			"clock limited to %d\n", imx_data->max_clock);
+	}
 	if (imx_data->boarddata.vqmmc_18v)
 		host->quirks2 |= SDHCI_QUIRK2_VQMMC_1_8_V;
 
