@@ -31,11 +31,30 @@
 #define REG_AKM_SENSITIVITY      0x10
 #define REG_AKM8963_CNTL1        0x0A
 
+/* AK09911 register definition */
+#define REG_AK09911_DMP_READ    0x3
+#define REG_AK09911_STATUS1     0x10
+#define REG_AK09911_CNTL2       0x31
+#define REG_AK09911_SENSITIVITY 0x60
+#define REG_AK09911_MEASURE_DATA     0x11
+
+/* AK09912 register definition */
+#define REG_AK09912_DMP_READ    0x3
+#define REG_AK09912_STATUS1     0x10
+#define REG_AK09912_CNTL1       0x30
+#define REG_AK09912_CNTL2       0x31
+#define REG_AK09912_SENSITIVITY 0x60
+#define REG_AK09912_MEASURE_DATA     0x11
+
 #define DATA_AKM_ID              0x48
 #define DATA_AKM_MODE_PD	 0x00
 #define DATA_AKM_MODE_SM	 0x01
 #define DATA_AKM_MODE_ST	 0x08
+#define DATA_AK09911_MODE_ST     0x10
+#define DATA_AK09912_MODE_ST     0x10
 #define DATA_AKM_MODE_FR	 0x0F
+#define DATA_AK09911_MODE_FR     0x1F
+#define DATA_AK09912_MODE_FR     0x1F
 #define DATA_AKM_SELF_TEST       0x40
 #define DATA_AKM_DRDY            0x01
 #define DATA_AKM8963_BIT         0x10
@@ -45,13 +64,20 @@
 #define DATA_AKM8972_SCALE       (19661 * (1L << 15))
 #define DATA_AKM8963_SCALE0      (19661 * (1L << 15))
 #define DATA_AKM8963_SCALE1      (4915 * (1L << 15))
+#define DATA_AK09911_SCALE       (19661 * (1L << 15))
+#define DATA_AK09912_SCALE       (4915 * (1L << 15))
 #define DATA_MLX_SCALE           (4915 * (1L << 15))
 #define DATA_MLX_SCALE_EMPIRICAL (26214 * (1L << 15))
 
 #define DATA_AKM8963_SCALE_SHIFT      4
-#define DATA_AKM_BYTES_DMP  10
-#define DATA_AKM_BYTES      8
+#define DATA_AKM_99_BYTES_DMP  10
+#define DATA_AKM_89_BYTES_DMP  9
 #define DATA_AKM_MIN_READ_TIME            (9 * NSEC_PER_MSEC)
+
+/* AK09912C NSF */
+/* 0:disable, 1:Low, 2:Middle, 3:High */
+#define DATA_AK9912_NSF  1
+#define DATA_AK9912_NSF_SHIFT 5
 
 #define DEF_ST_COMPASS_WAIT_MIN     (10 * 1000)
 #define DEF_ST_COMPASS_WAIT_MAX     (15 * 1000)
@@ -81,6 +107,9 @@ static const short AKM8972_ST_Upper[3] = {50, 50, -100};
 static const short AKM8963_ST_Lower[3] = {-200, -200, -3200};
 static const short AKM8963_ST_Upper[3] = {200, 200, -800};
 
+static const short AK09912_ST_Lower[3] = {-200, -200, -1600};
+static const short AK09912_ST_Upper[3] = {200, 200, -400};
+
 /*
  *  inv_setup_compass_akm() - Configure akm series compass.
  */
@@ -88,28 +117,52 @@ static int inv_setup_compass_akm(struct inv_mpu_state *st)
 {
 	int result;
 	u8 data[4];
+	u8 sens, mode, cmd;
 
 	/* set to bypass mode */
 	result = inv_i2c_single_write(st, REG_INT_PIN_CFG,
 				st->plat_data.int_config | BIT_BYPASS_EN);
 	if (result)
 		return result;
-	/*read secondary i2c ID register */
+	/* read secondary i2c ID register */
 	result = inv_secondary_read(REG_AKM_ID, 1, data);
 	if (result)
 		return result;
 	if (data[0] != DATA_AKM_ID)
 		return -ENXIO;
-	/*set AKM to Fuse ROM access mode */
-	result = inv_secondary_write(REG_AKM_MODE, DATA_AKM_MODE_FR);
+	/* set AKM to Fuse ROM access mode */
+	if (COMPASS_ID_AK09911 == st->plat_data.sec_slave_id) {
+		mode = REG_AK09911_CNTL2;
+		sens = REG_AK09911_SENSITIVITY;
+		cmd = DATA_AK09911_MODE_FR;
+	} else if (COMPASS_ID_AK09912 == st->plat_data.sec_slave_id) {
+		mode = REG_AK09912_CNTL2;
+		sens = REG_AK09912_SENSITIVITY;
+		cmd = DATA_AK09912_MODE_FR;
+	} else {
+		mode = REG_AKM_MODE;
+		sens = REG_AKM_SENSITIVITY;
+		cmd = DATA_AKM_MODE_FR;
+	}
+
+	result = inv_secondary_write(mode, cmd);
 	if (result)
 		return result;
-	result = inv_secondary_read(REG_AKM_SENSITIVITY, THREE_AXIS,
-					st->chip_info.compass_sens);
+	msleep(1);
+	result = inv_secondary_read(sens, THREE_AXIS,
+						st->chip_info.compass_sens);
 	if (result)
 		return result;
-	/*revert to power down mode */
-	result = inv_secondary_write(REG_AKM_MODE, DATA_AKM_MODE_PD);
+
+	if (COMPASS_ID_AK09912 == st->plat_data.sec_slave_id) {
+		result = inv_secondary_write(REG_AK09912_CNTL1,
+				DATA_AK9912_NSF << DATA_AK9912_NSF_SHIFT);
+		if (result)
+			return result;
+	}
+
+	/* revert to power down mode */
+	result = inv_secondary_write(mode, DATA_AKM_MODE_PD);
 	if (result)
 		return result;
 	pr_debug("%s senx=%d, seny=%d, senz=%d\n",
@@ -117,26 +170,26 @@ static int inv_setup_compass_akm(struct inv_mpu_state *st)
 		 st->chip_info.compass_sens[0],
 		 st->chip_info.compass_sens[1],
 		 st->chip_info.compass_sens[2]);
-	/*restore to non-bypass mode */
+	/* restore to non-bypass mode */
 	result = inv_i2c_single_write(st, REG_INT_PIN_CFG,
 			st->plat_data.int_config);
 	if (result)
 		return result;
 
-	/*setup master mode and master clock and ES bit*/
+	/* setup master mode and master clock and ES bit */
 	result = inv_i2c_single_write(st, REG_I2C_MST_CTRL, BIT_WAIT_FOR_ES);
 	if (result)
 		return result;
-	/*slave 1 is used for AKM mode change only*/
+	/* slave 1 is used for AKM mode change only */
 	result = inv_i2c_single_write(st, REG_I2C_SLV1_ADDR,
 		st->plat_data.secondary_i2c_addr);
 	if (result)
 		return result;
-	/* AKM mode register address is 0x0A */
-	result = inv_i2c_single_write(st, REG_I2C_SLV1_REG, REG_AKM_MODE);
+	/* AKM mode register address */
+	result = inv_i2c_single_write(st, REG_I2C_SLV1_REG, mode);
 	if (result)
 		return result;
-	/* output data for slave 1 is fixed, single measure mode*/
+	/* output data for slave 1 is fixed, single measure mode */
 	st->slave_compass->scale = 1;
 	if (COMPASS_ID_AK8975 == st->plat_data.sec_slave_id) {
 		st->slave_compass->st_upper = AKM8975_ST_Upper;
@@ -151,7 +204,18 @@ static int inv_setup_compass_akm(struct inv_mpu_state *st)
 		st->slave_compass->st_lower = AKM8963_ST_Lower;
 		data[0] = DATA_AKM_MODE_SM |
 			(st->slave_compass->scale << DATA_AKM8963_SCALE_SHIFT);
+	}  else if (COMPASS_ID_AK09911 == st->plat_data.sec_slave_id) {
+		st->slave_compass->st_upper = AKM8963_ST_Upper;
+		st->slave_compass->st_lower = AKM8963_ST_Lower;
+		data[0] = DATA_AKM_MODE_SM;
+	} else if (COMPASS_ID_AK09912 == st->plat_data.sec_slave_id) {
+		st->slave_compass->st_upper = AK09912_ST_Upper;
+		st->slave_compass->st_lower = AK09912_ST_Lower;
+		data[0] = DATA_AKM_MODE_SM;
+	} else {
+		return -EINVAL;
 	}
+
 	result = inv_i2c_single_write(st, INV_MPU_REG_I2C_SLV1_DO, data[0]);
 
 	return result;
@@ -159,28 +223,39 @@ static int inv_setup_compass_akm(struct inv_mpu_state *st)
 
 static int inv_akm_read_data(struct inv_mpu_state *st, short *o)
 {
-	int result;
+	int result, shift;
 	int i;
-	u8 d[DATA_AKM_BYTES];
+	u8 d[DATA_AKM_99_BYTES_DMP - 1];
 	u8 *sens;
 
 	sens = st->chip_info.compass_sens;
+	result = 0;
 	if (st->chip_config.dmp_on) {
 		for (i = 0; i < 6; i++)
 			d[1 + i] = st->fifo_data[i];
 	} else {
 		result = inv_i2c_read(st, REG_EXT_SENS_DATA_00,
-						DATA_AKM_BYTES, d);
-		if ((DATA_AKM_DRDY != d[0]) || result)
-			for (i = 0; i < 6; i++)
-				d[1 + i] = 0;
+					DATA_AKM_99_BYTES_DMP - 1, d);
+		if ((COMPASS_ID_AK09911 == st->plat_data.sec_slave_id) ||
+			(COMPASS_ID_AK09912 == st->plat_data.sec_slave_id)) {
+			if (((DATA_AKM_DRDY != (d[0] & 0x7f)) && (!d[7])) ||
+					result)
+				result = -EINVAL;
+		} else {
+			if (((DATA_AKM_DRDY != d[0]) && (!d[7])) || result)
+				result = -EINVAL;
+		}
 	}
+	if (COMPASS_ID_AK09911 == st->plat_data.sec_slave_id)
+		shift = 7;
+	else
+		shift = 8;
 	for (i = 0; i < 3; i++) {
-		o[i] = (short)((d[i * 2 + 2] << 8) | d[i * 2 + 1]);
-		o[i] = (short)(((int)o[i] * (sens[i] + 128)) >> 8);
+		o[i] = (short)((d[i * 2 + 1] << 8) | d[i * 2 + 2]);
+		o[i] = (short)(((int)o[i] * (sens[i] + 128)) >> shift);
 	}
 
-	return 0;
+	return result;
 }
 
 static int inv_mlx_read_data(struct inv_mpu_state *st, short *o)
@@ -211,10 +286,11 @@ static int inv_mlx_read_data(struct inv_mpu_state *st, short *o)
 static int inv_check_akm_self_test(struct inv_mpu_state *st)
 {
 	int result;
-	u8 data[6];
+	u8 data[6], mode;
 	u8 counter, cntl;
 	short x, y, z;
 	u8 *sens;
+	int shift;
 	sens = st->chip_info.compass_sens;
 
 	/* set to bypass mode */
@@ -225,23 +301,45 @@ static int inv_check_akm_self_test(struct inv_mpu_state *st)
 				st->plat_data.int_config);
 		return result;
 	}
+	if (COMPASS_ID_AK09911 == st->plat_data.sec_slave_id)
+		mode = REG_AK09911_CNTL2;
+	else if (COMPASS_ID_AK09912 == st->plat_data.sec_slave_id)
+		mode = REG_AK09912_CNTL2;
+	else
+		mode = REG_AKM_MODE;
 	/* set to power down mode */
-	result = inv_secondary_write(REG_AKM_MODE, DATA_AKM_MODE_PD);
+	result = inv_secondary_write(mode, DATA_AKM_MODE_PD);
 	if (result)
 		goto AKM_fail;
 
 	/* write 1 to ASTC register */
-	result = inv_secondary_write(REG_AKM_ST_CTRL, DATA_AKM_SELF_TEST);
-	if (result)
-		goto AKM_fail;
+	if ((COMPASS_ID_AK09911 != st->plat_data.sec_slave_id) &&
+		(COMPASS_ID_AK09912 != st->plat_data.sec_slave_id)) {
+		result = inv_secondary_write(REG_AKM_ST_CTRL,
+				DATA_AKM_SELF_TEST);
+		if (result)
+			goto AKM_fail;
+	}
 	/* set self test mode */
-	result = inv_secondary_write(REG_AKM_MODE, DATA_AKM_MODE_ST);
+	if (COMPASS_ID_AK09911 == st->plat_data.sec_slave_id)
+		result = inv_secondary_write(mode, DATA_AK09911_MODE_ST);
+	else if (COMPASS_ID_AK09912 == st->plat_data.sec_slave_id)
+		result = inv_secondary_write(mode, DATA_AK09912_MODE_ST);
+	else
+		result = inv_secondary_write(mode, DATA_AKM_MODE_ST);
 	if (result)
 		goto AKM_fail;
 	counter = DEF_ST_COMPASS_TRY_TIMES;
 	while (counter > 0) {
 		usleep_range(DEF_ST_COMPASS_WAIT_MIN, DEF_ST_COMPASS_WAIT_MAX);
-		result = inv_secondary_read(REG_AKM_STATUS, 1, data);
+		if (COMPASS_ID_AK09911 == st->plat_data.sec_slave_id)
+			result = inv_secondary_read(REG_AK09911_STATUS1, 1,
+					data);
+		else if (COMPASS_ID_AK09912 == st->plat_data.sec_slave_id)
+			result = inv_secondary_read(REG_AK09912_STATUS1, 1,
+					data);
+		else
+			result = inv_secondary_read(REG_AKM_STATUS, 1, data);
 		if (result)
 			goto AKM_fail;
 		if ((data[0] & DATA_AKM_DRDY) == 0)
@@ -253,17 +351,29 @@ static int inv_check_akm_self_test(struct inv_mpu_state *st)
 		result = -EINVAL;
 		goto AKM_fail;
 	}
-	result = inv_secondary_read(REG_AKM_MEASURE_DATA,
-					BYTES_PER_SENSOR, data);
+	if (COMPASS_ID_AK09911 == st->plat_data.sec_slave_id) {
+		result = inv_secondary_read(REG_AK09911_MEASURE_DATA,
+				BYTES_PER_SENSOR, data);
+	} else if (COMPASS_ID_AK09912 == st->plat_data.sec_slave_id) {
+		result = inv_secondary_read(REG_AK09912_MEASURE_DATA,
+				BYTES_PER_SENSOR, data);
+	} else {
+		result = inv_secondary_read(REG_AKM_MEASURE_DATA,
+				BYTES_PER_SENSOR, data);
+	}
 	if (result)
 		goto AKM_fail;
 
 	x = le16_to_cpup((__le16 *)(&data[0]));
 	y = le16_to_cpup((__le16 *)(&data[2]));
 	z = le16_to_cpup((__le16 *)(&data[4]));
-	x = ((x * (sens[0] + 128)) >> 8);
-	y = ((y * (sens[1] + 128)) >> 8);
-	z = ((z * (sens[2] + 128)) >> 8);
+	if (COMPASS_ID_AK09911 == st->plat_data.sec_slave_id)
+		shift = 7;
+	else
+		shift = 8;
+	x = ((x * (sens[0] + 128)) >> shift);
+	y = ((y * (sens[1] + 128)) >> shift);
+	z = ((z * (sens[2] + 128)) >> shift);
 	if (COMPASS_ID_AK8963 == st->plat_data.sec_slave_id) {
 		result = inv_secondary_read(REG_AKM8963_CNTL1, 1, &cntl);
 		if (result)
@@ -274,6 +384,17 @@ static int inv_check_akm_self_test(struct inv_mpu_state *st)
 			z <<= DEF_ST_COMPASS_8963_SHIFT;
 		}
 	}
+
+	pr_debug("lowerx=%d, upperx=%d, x=%d\n",
+			st->slave_compass->st_lower[X],
+			st->slave_compass->st_upper[X], x);
+	pr_debug("lowery=%d, uppery=%d, y=%d\n",
+			st->slave_compass->st_lower[Y],
+			st->slave_compass->st_upper[Y], y);
+	pr_debug("lowerz=%d, upperz=%d, z=%d\n",
+			st->slave_compass->st_lower[Z],
+			st->slave_compass->st_upper[Z], z);
+
 	result = -EINVAL;
 	if (x > st->slave_compass->st_upper[X] ||
 					x < st->slave_compass->st_lower[X])
@@ -287,9 +408,12 @@ static int inv_check_akm_self_test(struct inv_mpu_state *st)
 	result = 0;
 AKM_fail:
 	/*write 0 to ASTC register */
-	result |= inv_secondary_write(REG_AKM_ST_CTRL, 0);
+	if ((COMPASS_ID_AK09911 != st->plat_data.sec_slave_id) &&
+			(COMPASS_ID_AK09912 != st->plat_data.sec_slave_id)) {
+		result |= inv_secondary_write(REG_AKM_ST_CTRL, 0);
+	}
 	/*set to power down mode */
-	result |= inv_secondary_write(REG_AKM_MODE, DATA_AKM_MODE_PD);
+	result |= inv_secondary_write(mode, DATA_AKM_MODE_PD);
 	/*restore to non-bypass mode */
 	result |= inv_i2c_single_write(st, REG_INT_PIN_CFG,
 			st->plat_data.int_config);
@@ -332,6 +456,10 @@ static int inv_read_akm_scale(struct inv_mpu_state *st, int *scale)
 			*scale = DATA_AKM8963_SCALE1;
 		else
 			*scale = DATA_AKM8963_SCALE0;
+	else if (COMPASS_ID_AK09911 == st->plat_data.sec_slave_id)
+		*scale = DATA_AK09911_SCALE;
+	else if (COMPASS_ID_AK09912 == st->plat_data.sec_slave_id)
+		*scale = DATA_AK09912_SCALE;
 	else
 		return -EINVAL;
 
@@ -365,20 +493,41 @@ static int inv_resume_akm(struct inv_mpu_state *st)
 	if (result)
 		return result;
 	/* AKM status register address is 1 */
-	if (st->chip_config.dmp_on) {
-		reg_addr = REG_AKM_INFO;
-		bytes = DATA_AKM_BYTES_DMP;
+	if (COMPASS_ID_AK09911 == st->plat_data.sec_slave_id) {
+		if (st->chip_config.dmp_on) {
+			reg_addr = REG_AK09911_DMP_READ;
+			bytes = DATA_AKM_99_BYTES_DMP;
+		} else {
+			reg_addr = REG_AK09911_STATUS1;
+			bytes = DATA_AKM_99_BYTES_DMP - 1;
+		}
+	} else if (COMPASS_ID_AK09912 == st->plat_data.sec_slave_id) {
+		if (st->chip_config.dmp_on) {
+			reg_addr = REG_AK09912_DMP_READ;
+			bytes = DATA_AKM_99_BYTES_DMP;
+		} else {
+			reg_addr = REG_AK09912_STATUS1;
+			bytes = DATA_AKM_99_BYTES_DMP - 1;
+		}
 	} else {
-		reg_addr = REG_AKM_STATUS;
-		bytes = DATA_AKM_BYTES;
+		if (st->chip_config.dmp_on) {
+			reg_addr = REG_AKM_INFO;
+			bytes = DATA_AKM_89_BYTES_DMP;
+		} else {
+			reg_addr = REG_AKM_STATUS;
+			bytes = DATA_AKM_89_BYTES_DMP - 1;
+		}
 	}
 	result = inv_i2c_single_write(st, REG_I2C_SLV0_REG, reg_addr);
 	if (result)
 		return result;
 
-	/* slave 0 is enabled, read 10 or 8 bytes from here */
+	/* slave 0 is enabled, read 10 or 8 bytes from here, swap bytes */
 	result = inv_i2c_single_write(st, REG_I2C_SLV0_CTRL,
-						INV_MPU_BIT_SLV_EN | bytes);
+						INV_MPU_BIT_GRP |
+						INV_MPU_BIT_BYTE_SW |
+						INV_MPU_BIT_SLV_EN |
+						bytes);
 	if (result)
 		return result;
 	/* slave 1 is enabled, write byte length is 1 */
@@ -790,6 +939,8 @@ int inv_mpu_setup_compass_slave(struct inv_mpu_state *st)
 	case COMPASS_ID_AK8975:
 	case COMPASS_ID_AK8972:
 	case COMPASS_ID_AK8963:
+	case COMPASS_ID_AK09911:
+	case COMPASS_ID_AK09912:
 		st->slave_compass = &slave_akm;
 		break;
 	case COMPASS_ID_MLX90399:
