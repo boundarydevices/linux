@@ -173,6 +173,7 @@ struct pltfm_imx_data {
 	} multiblock_status;
 	u32 uhs_mode;
 	u32 is_ddr;
+	unsigned max_clock;
 };
 
 static struct platform_device_id imx_esdhc_devtype[] = {
@@ -610,7 +611,8 @@ static inline void esdhc_pltfm_set_clock(struct sdhci_host *host,
 		}
 		goto out;
 	}
-
+	if (clock > imx_data->max_clock)
+		clock = imx_data->max_clock;
 	if (esdhc_is_usdhc(imx_data) && !imx_data->is_ddr)
 		pre_div = 1;
 
@@ -977,6 +979,7 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 		boarddata->wp_type = ESDHC_WP_GPIO;
 
 	of_property_read_u32(np, "bus-width", &boarddata->max_bus_width);
+	of_property_read_u32(np, "max-clock", &boarddata->max_clock);
 
 	if (of_find_property(np, "no-1-8-v", NULL))
 		boarddata->support_vsel = false;
@@ -1115,6 +1118,13 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		}
 		imx_data->boarddata = *((struct esdhc_platform_data *)
 					host->mmc->parent->platform_data);
+	}
+
+	imx_data->max_clock = ~0;
+	if (boarddata->max_clock) {
+		imx_data->max_clock = boarddata->max_clock;
+		dev_info(mmc_dev(host->mmc),
+			"clock limited to %d\n", imx_data->max_clock);
 	}
 
 	/* write_protect */
