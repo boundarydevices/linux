@@ -409,7 +409,10 @@ static int arizona_micd_read(struct arizona_extcon_info *info)
 	unsigned int val = 0;
 	int ret, i;
 
-	if (info->detecting && arizona->pdata.micd_software_compare) {
+	regmap_read(arizona->regmap, ARIZONA_ACCESSORY_DETECT_MODE_1, &val);
+	val &= ARIZONA_ACCDET_MODE_MASK;
+
+	if ((info->detecting) && (val == ARIZONA_ACCDET_MODE_ADC)) {
 		bool micd_ena;
 		unsigned int micd_ena_bit;
 
