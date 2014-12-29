@@ -590,11 +590,12 @@ static int fsl_sai_trigger(struct snd_pcm_substream *substream, int cmd,
 {
 	struct fsl_sai *sai = snd_soc_dai_get_drvdata(cpu_dai);
 	unsigned int ofs = sai->soc_data->reg_offset;
-
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+	u8 channels = substream->runtime->channels;
 	int adir = tx ? RX : TX;
 	int dir = tx ? TX : RX;
 	u32 xcsr;
+	int i;
 
 	/*
 	 * Asynchronous mode: Clear SYNC for both Tx and Rx.
@@ -614,9 +615,14 @@ static int fsl_sai_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+
+		for (i = 0; tx && i < channels; i++)
+			regmap_write(sai->regmap, FSL_SAI_TDR0, 0x0);
+		if (tx)
+			udelay(10);
+
 		regmap_update_bits(sai->regmap, FSL_SAI_xCSR(tx, ofs),
 				   FSL_SAI_CSR_FRDE, FSL_SAI_CSR_FRDE);
-
 		regmap_update_bits(sai->regmap, FSL_SAI_xCSR(tx, ofs),
 				   FSL_SAI_CSR_TERE, FSL_SAI_CSR_TERE);
 		/*
