@@ -2095,3 +2095,19 @@
 		};
 	};
 };
+
+&caam_sm  {
+	status = "disabled";
+};
+
+&irq_sec_vio  {
+	status = "disabled";
+};
+
+&caam_snvs  {
+	status = "disabled";
+};
+
+&crypto {
+	status = "disabled";
+};
