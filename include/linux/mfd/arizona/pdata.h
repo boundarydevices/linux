@@ -148,6 +148,13 @@ struct arizona_pdata {
 	/** set to true if jackdet contact opens on insert */
 	bool jd_invert;
 
+	/**
+	* Set to true to support antenna cable. antenna cable is a 4 pole
+	* cable with open circuit impedance and the usual 3 pole (headphone)
+	* or 4 pole (headset) cables can be plugged into the antenna cable
+	*/
+	bool antenna_supported;
+
 	/** If non-zero don't run headphone detection, report this value */
 	int fixed_hpdet_imp;
 

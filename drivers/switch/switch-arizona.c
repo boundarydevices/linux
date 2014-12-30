@@ -153,6 +153,7 @@ enum headset_state {
 	BIT_NO_HEADSET = 0,
 	BIT_HEADSET = (1 << 0),
 	BIT_HEADSET_NO_MIC = (1 << 1),
+	BIT_ANTENNA = (1 << 2),
 };
 
 static ssize_t arizona_extcon_show(struct device *dev,
@@ -1109,7 +1110,10 @@ static int arizona_hpdet_moisture_reading(struct arizona_extcon_info *info,
 	if (val < 0) {
 		return val;
 	} else if (val < arizona->pdata.hpdet_moisture_imp) {
-		arizona_jds_set_state(info, &arizona_micd_microphone);
+		if (arizona->pdata.antenna_supported)
+			arizona_jds_set_state(info, &arizona_antenna_mic_det);
+		else
+			arizona_jds_set_state(info, &arizona_micd_microphone);
 	} else {
 		dev_warn(arizona->dev,
 			 "Jack detection due to moisture, ignoring\n");
@@ -1323,6 +1327,123 @@ int arizona_micd_button_reading(struct arizona_extcon_info *info,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(arizona_micd_button_reading);
+
+static const struct arizona_jd_state arizona_antenna_mic_det;
+static const struct arizona_jd_state arizona_antenna_oc_det;
+static const struct arizona_jd_state arizona_antenna_hp_det;
+static const struct arizona_jd_state arizona_antenna_button_det;
+static const struct arizona_jd_state arizona_antenna_hp_oc_det;
+static const struct arizona_jd_state arizona_antenna_hpr_det;
+static const struct arizona_jd_state arizona_antenna_hpr_oc_det;
+
+
+static int arizona_antenna_mic_reading(struct arizona_extcon_info *info, int val)
+{
+	int ret;
+
+	if (val < 0)
+		return val;
+
+	if (!(val & ARIZONA_MICD_STS)) {
+		arizona_extcon_report(info, BIT_ANTENNA);
+		arizona_jds_set_state(info, &arizona_antenna_oc_det);
+	} else {
+		info->mic = val & ARIZONA_MICD_LVL_8 ? true : false;
+
+		if (arizona->pdata.hpdet_channel)
+			ret = arizona_jds_set_state(info, &arizona_antenna_hpr_det);
+		else
+			ret = arizona_jds_set_state(info, &arizona_antenna_hp_det);
+
+		if (ret < 0) {
+			if (info->mic)
+				arizona_extcon_report(info, BIT_HEADSET);
+			else
+				arizona_extcon_report(info, BIT_HEADSET_NO_MIC);
+		}
+	}
+
+	return 0;
+}
+
+static int arizona_antenna_oc_reading(struct arizona_extcon_info *info, int val)
+{
+	int ret;
+
+	if (val < 0)
+		return val;
+
+	if (!(val & ARIZONA_MICD_STS))
+		return 0;
+
+	info->mic = val & ARIZONA_MICD_LVL_8 ? true : false;
+
+	if (arizona->pdata.hpdet_channel)
+		ret = arizona_jds_set_state(info, &arizona_antenna_hpr_oc_det);
+	else
+		ret = arizona_jds_set_state(info, &arizona_antenna_hp_oc_det);
+
+	if (ret < 0) {
+		if (info->mic)
+			arizona_extcon_report(info, BIT_HEADSET);
+		else
+			arizona_extcon_report(info, BIT_HEADSET_NO_MIC);
+	}
+
+	return 0;
+}
+
+static int arizona_antenna_hp_oc_reading(struct arizona_extcon_info *info, int val)
+{
+	if (val < 0)
+		return val;
+
+	arizona_set_headphone_imp(info, val);
+
+	if (info->mic)
+		arizona_extcon_report(info, BIT_HEADSET);
+	else
+		arizona_extcon_report(info, BIT_HEADSET_NO_MIC);
+
+	arizona_jds_set_state(info, &arizona_antenna_button_det);
+
+	return 0;
+}
+
+static int arizona_antenna_hp_reading(struct arizona_extcon_info *info, int val)
+{
+	if (val < 0)
+		return val;
+
+	arizona_set_headphone_imp(info, val);
+
+	if (info->mic) {
+		arizona_extcon_report(info, BIT_HEADSET);
+		arizona_jds_set_state(info, &arizona_antenna_button_det);
+	} else {
+		arizona_extcon_report(info, BIT_HEADSET_NO_MIC);
+		arizona_jds_set_state(info, NULL);
+	}
+
+	return 0;
+}
+
+static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
+				int val)
+{
+	if (val < 0)
+		return val;
+
+	/* Detected open circuit*/
+	if (!(val & ARIZONA_MICD_STS))
+		return arizona_antenna_mic_reading(info, val);
+	/* previously headset detected so check for button presses*/
+	else if (info->mic)
+		return arizona_micd_button_reading(info, val);
+
+	return 0;
+}
+
 
 int arizona_micd_mic_start(struct arizona_extcon_info *info)
 {
@@ -1779,6 +1900,57 @@ static const struct arizona_jd_state arizona_hpdet_acc_id = {
 	.stop = arizona_hpdet_acc_id_stop,
 };
 
+/* States for Antenna Detect */
+
+static const struct arizona_jd_state arizona_antenna_mic_det = {
+	.mode = ARIZONA_ACCDET_MODE_ADC,
+	.start = arizona_micd_mic_start,
+	.reading = arizona_antenna_mic_reading,
+	.stop = arizona_micd_mic_stop,
+};
+
+static const struct arizona_jd_state arizona_antenna_oc_det = {
+	.mode = ARIZONA_ACCDET_MODE_MIC,
+	.start = arizona_micd_mic_start,
+	.reading = arizona_antenna_oc_reading,
+	.stop = arizona_micd_mic_stop,
+};
+
+static const struct arizona_jd_state arizona_antenna_hp_det = {
+	.mode = ARIZONA_ACCDET_MODE_HPL,
+	.start = arizona_hpdet_start,
+	.reading = arizona_antenna_hp_reading,
+	.stop = arizona_hpdet_stop,
+};
+
+static const struct arizona_jd_state arizona_antenna_hpr_det = {
+	.mode = ARIZONA_ACCDET_MODE_HPR,
+	.start = arizona_hpdet_start,
+	.reading = arizona_antenna_hp_reading,
+	.stop = arizona_hpdet_stop,
+};
+
+static const struct arizona_jd_state arizona_antenna_button_det = {
+	.mode = ARIZONA_ACCDET_MODE_MIC,
+	.start = arizona_micd_start,
+	.reading = arizona_antenna_button_reading,
+	.stop = arizona_micd_stop,
+};
+
+static const struct arizona_jd_state arizona_antenna_hp_oc_det = {
+	.mode = ARIZONA_ACCDET_MODE_HPL,
+	.start = arizona_hpdet_start,
+	.reading = arizona_antenna_hp_oc_reading,
+	.stop = arizona_hpdet_stop,
+};
+
+static const struct arizona_jd_state arizona_antenna_hpr_oc_det = {
+	.mode = ARIZONA_ACCDET_MODE_HPR,
+	.start = arizona_hpdet_start,
+	.reading = arizona_antenna_hp_oc_reading,
+	.stop = arizona_hpdet_stop,
+};
+
 static void arizona_hpdet_work(struct work_struct *work)
 {
 	struct arizona_extcon_info *info = container_of(work,
@@ -1902,6 +2074,9 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 			else if (arizona->pdata.hpdet_moisture_imp)
 				arizona_jds_set_state(info,
 						      &arizona_hpdet_moisture);
+			else if (arizona->pdata.antenna_supported)
+				arizona_jds_set_state(info,
+						      &arizona_antenna_mic_det);
 			else
 				arizona_jds_set_state(info,
 						      &arizona_micd_microphone);
@@ -2053,6 +2228,9 @@ static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 
 	pdata->jd_invert = of_property_read_bool(arizona->dev->of_node,
 						 "wlf,jd-invert");
+
+	pdata->antenna_supported = of_property_read_bool(arizona->dev->of_node,
+						 "wlf,antenna-supported");
 
 	arizona_of_read_u32(arizona, "wlf,gpsw", false, &pdata->gpsw);
 
