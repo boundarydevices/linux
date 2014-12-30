@@ -134,7 +134,7 @@ static ssize_t show_d1(struct device *dev,
 	if (0 <= ret) {
 		return sprintf(buf, "0x%04x\n",ret);
 	} else {
-		dev_err(&client->dev, "error reading d0\n");
+		dev_err(&client->dev, "error reading d1\n");
 		return ret;
 	}
 }
