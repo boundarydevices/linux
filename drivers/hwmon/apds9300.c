@@ -24,6 +24,9 @@
 #include <linux/err.h>
 #include <linux/i2c.h>
 #include <linux/hwmon-sysfs.h>
+#include <linux/input-polldev.h>
+#include <linux/input.h>
+#include <linux/slab.h>
 
 #define REG_CONTROL		0x00
 #define REG_TIMING		0x01
@@ -41,6 +44,15 @@
 
 #define APDS_COMMAND	0x80
 #define APDS_WORD	0x20
+
+#define POLL_INTERVAL_MAX       500
+#define POLL_INTERVAL_MIN       1
+#define POLL_INTERVAL           100
+
+struct apds9300_data {
+	struct i2c_client *client;
+	struct input_polled_dev *poll_dev;
+};
 
 static ssize_t show_reg(struct device *dev, struct device_attribute *devattr,
 			   char *buf, int regnum)
@@ -178,9 +190,7 @@ static unsigned long apds9300_calculate_lux(u16 ch0, u16 ch1)
 	return lux / 100000;
 }
 
-static ssize_t show_lux(struct device *dev,
-                        struct device_attribute *devattr,
-                        char *buf)
+static long read_lux(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	int ret = i2c_smbus_read_word_data(client, REG_DATA0LOW|APDS_COMMAND|APDS_WORD);
@@ -189,7 +199,7 @@ static ssize_t show_lux(struct device *dev,
                 ret = i2c_smbus_read_word_data(client, REG_DATA1LOW|APDS_COMMAND|APDS_WORD);
 		if (0 <= ret) {
 			u16 ch1 = (u16)ret;
-			return sprintf(buf, "0x%08lx\n",apds9300_calculate_lux(ch0,ch1));
+			return apds9300_calculate_lux(ch0,ch1);
 		} else {
 			dev_err(&client->dev, "error reading d0\n");
 			return ret;
@@ -198,6 +208,17 @@ static ssize_t show_lux(struct device *dev,
 		dev_err(&client->dev, "error reading d0\n");
 		return ret;
 	}
+}
+
+static ssize_t show_lux(struct device *dev,
+                        struct device_attribute *devattr,
+                        char *buf)
+{
+	long lux = read_lux(dev);
+	if (0 <= lux)
+		return sprintf(buf, "0x%08lx\n",lux);
+	else
+		return lux;
 }
 
 static SENSOR_DEVICE_ATTR_2(lux,S_IRUGO,show_lux,0,2,3);
@@ -221,11 +242,52 @@ static struct sensor_device_attribute_2 * const attrs[] = {
 	&sensor_dev_attr_lux,
 };
 
+static void dev_poll(struct input_polled_dev *dev)
+{
+	struct apds9300_data *data = (struct apds9300_data *)dev->private;
+	struct input_polled_dev *poll_dev = data->poll_dev;
+	long lux = read_lux(&data->client->dev);
+	if (0 <= lux) {
+		input_report_abs(poll_dev->input, ABS_MISC, lux);
+		input_sync(poll_dev->input);
+	}
+}
+
 static int apds9300_probe(struct i2c_client *client,
 			  const struct i2c_device_id *id)
 {
 	int i;
 	int err;
+	struct input_dev *idev;
+	struct apds9300_data *data;
+
+	data = kzalloc(sizeof(struct apds9300_data), GFP_KERNEL);
+	if (!data)
+		return -ENOMEM;
+
+	/*input poll device register */
+	data->poll_dev = input_allocate_polled_device();
+	if (!data->poll_dev) {
+		dev_err(&client->dev, "alloc poll device failed!\n");
+		err = -ENOMEM;
+		goto error_alloc_poll_dev;
+	}
+	data->poll_dev->poll = dev_poll;
+	data->poll_dev->poll_interval = POLL_INTERVAL;
+	data->poll_dev->poll_interval_max = POLL_INTERVAL_MAX;
+	data->poll_dev->poll_interval_min = POLL_INTERVAL_MIN;
+	data->poll_dev->private = data;
+
+	idev = data->poll_dev->input;
+	idev->name = "APDS9300 light sensor";
+	idev->id.bustype = BUS_I2C;
+
+	__set_bit(EV_ABS, idev->evbit);
+	input_set_abs_params(idev, ABS_MISC, 0, 4095, 0, 0);
+	err = input_register_polled_device(data->poll_dev);
+	if (err)
+		goto error_free_polldev;
+
 	for (i=0; i < ARRAY_SIZE(attrs); i++) {
 		err = device_create_file(&client->dev, &attrs[i]->dev_attr);
 		if (err)
@@ -233,6 +295,8 @@ static int apds9300_probe(struct i2c_client *client,
 	}
 
 	if (i == ARRAY_SIZE(attrs)) {
+		data->client = client;
+		i2c_set_clientdata(client, data);
 		return 0;
 	} else {
 		dev_err(&client->dev, "%s: Error creating attribute %d\n",
@@ -241,13 +305,24 @@ static int apds9300_probe(struct i2c_client *client,
 			device_remove_file(&client->dev, &attrs[i]->dev_attr);
 			i--;
 		}
-		return err;
 	}
+
+	input_unregister_polled_device(data->poll_dev);
+error_free_polldev:
+	input_free_polled_device(data->poll_dev);
+error_alloc_poll_dev:
+	kfree(data);
+	return err;
 }
 
 static int apds9300_remove(struct i2c_client *client)
 {
 	int i;
+	struct apds9300_data *data = i2c_get_clientdata(client);
+	if (data) {
+		input_unregister_polled_device(data->poll_dev);
+		input_free_polled_device(data->poll_dev);
+	}
 	for (i=0; i < ARRAY_SIZE(attrs); i++)
 		device_remove_file(&client->dev, &attrs[i]->dev_attr);
 
