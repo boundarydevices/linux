@@ -142,6 +142,66 @@ static ssize_t show_d1(struct device *dev,
 static SENSOR_DEVICE_ATTR_2(d0,S_IRUGO,show_d0,0,2,3);
 static SENSOR_DEVICE_ATTR_2(d1,S_IRUGO,show_d1,0,2,3);
 
+/* Calculated values 1000 * (CH1/CH0)^1.4 for CH1/CH0 from 0 to 0.52 */
+static const u16 apds9300_lux_ratio[] = {
+	0, 2, 4, 7, 11, 15, 19, 24, 29, 34, 40, 45, 51, 57, 64, 70, 77, 84, 91,
+	98, 105, 112, 120, 128, 136, 144, 152, 160, 168, 177, 185, 194, 203,
+	212, 221, 230, 239, 249, 258, 268, 277, 287, 297, 307, 317, 327, 337,
+	347, 358, 368, 379, 390, 400,
+};
+
+#define DIV_ROUND_UP_ULL(ll,d) \
+	({ unsigned long long _tmp = (ll)+(d)-1; do_div(_tmp, d); _tmp; })
+
+static unsigned long apds9300_calculate_lux(u16 ch0, u16 ch1)
+{
+	unsigned long lux, tmp;
+
+	/* avoid division by zero */
+	if (ch0 == 0)
+		return 0;
+
+	tmp = DIV_ROUND_UP(ch1 * 100, ch0);
+	if (tmp <= 52) {
+		lux = 3150 * ch0 - (unsigned long)DIV_ROUND_UP_ULL(ch0
+				* apds9300_lux_ratio[tmp] * 5930ull, 1000);
+	} else if (tmp <= 65) {
+		lux = 2290 * ch0 - 2910 * ch1;
+	} else if (tmp <= 80) {
+		lux = 1570 * ch0 - 1800 * ch1;
+	} else if (tmp <= 130) {
+		lux = 338 * ch0 - 260 * ch1;
+	} else {
+		lux = 0;
+	}
+
+	return lux / 100000;
+}
+
+static ssize_t show_lux(struct device *dev,
+                        struct device_attribute *devattr,
+                        char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	int ret = i2c_smbus_read_word_data(client, REG_DATA0LOW|APDS_COMMAND|APDS_WORD);
+	if (0 <= ret) {
+		u16 ch0 = (u16)ret;
+                ret = i2c_smbus_read_word_data(client, REG_DATA1LOW|APDS_COMMAND|APDS_WORD);
+		if (0 <= ret) {
+			u16 ch1 = (u16)ret;
+			return sprintf(buf, "0x%08lx\n",apds9300_calculate_lux(ch0,ch1));
+		} else {
+			dev_err(&client->dev, "error reading d0\n");
+			return ret;
+		}
+	} else {
+		dev_err(&client->dev, "error reading d0\n");
+		return ret;
+	}
+}
+
+static SENSOR_DEVICE_ATTR_2(lux,S_IRUGO,show_lux,0,2,3);
+
 static struct sensor_device_attribute_2 * const attrs[] = {
 	&sensor_dev_attr_control,
 	&sensor_dev_attr_timing,
@@ -158,6 +218,7 @@ static struct sensor_device_attribute_2 * const attrs[] = {
 	&sensor_dev_attr_d1high,
 	&sensor_dev_attr_d0,
 	&sensor_dev_attr_d1,
+	&sensor_dev_attr_lux,
 };
 
 static int apds9300_probe(struct i2c_client *client,
