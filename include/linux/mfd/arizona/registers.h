@@ -141,6 +141,7 @@
 #define ARIZONA_FLL3_SPREAD_SPECTRUM             0x1C9
 #define ARIZONA_FLL3_GPIO_CLOCK                  0x1CA
 #define ARIZONA_MIC_CHARGE_PUMP_1                0x200
+#define CLEARWATER_CP_MODE                              0x20B
 #define ARIZONA_LDO1_CONTROL_1                   0x210
 #define ARIZONA_LDO1_CONTROL_2                   0x212
 #define ARIZONA_LDO2_CONTROL_1                   0x213

@@ -298,6 +298,59 @@ static DECLARE_TLV_DB_SCALE(ng_tlv, -10200, 600, 0);
 	{ name " ANC Source", "RXANCL", "RXANCL" }, \
 	{ name " ANC Source", "RXANCR", "RXANCR" }
 
+int clearwater_cp_mode_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);
+	struct arizona *arizona = priv->arizona;
+	unsigned int val;
+
+	regmap_read(arizona->regmap, CLEARWATER_CP_MODE, &val);
+	if (val == 0x400)
+		ucontrol->value.enumerated.item[0] = 0;
+	else
+		ucontrol->value.enumerated.item[0] = 1;
+
+	return 0;
+}
+
+int clearwater_cp_mode_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);
+	struct arizona *arizona = priv->arizona;
+	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	unsigned int val = ucontrol->value.enumerated.item[0];
+
+	if (val > e->max - 1)
+		return -EINVAL;
+
+	mutex_lock(&codec->mutex);
+	if (val ==0) { /* Default */
+		regmap_write(arizona->regmap, 0x80, 0x1);
+		regmap_write(arizona->regmap, CLEARWATER_CP_MODE, 0x400);
+		regmap_write(arizona->regmap, 0x80, 0x0);
+	} else {/* Inverting */
+		regmap_write(arizona->regmap, 0x80, 0x1);
+		regmap_write(arizona->regmap, CLEARWATER_CP_MODE, 0x407);
+		regmap_write(arizona->regmap, 0x80, 0x0);
+	}
+	mutex_unlock(&codec->mutex);
+
+	return 0;
+}
+
+const char *clearwater_cp_mode_text[2] = {
+	"Default", "Inverting",
+};
+
+const struct soc_enum clearwater_cp_mode[] = {
+	SOC_ENUM_SINGLE(0, 0, ARRAY_SIZE(clearwater_cp_mode_text),
+		clearwater_cp_mode_text),
+};
+
 static const struct snd_kcontrol_new clearwater_snd_controls[] = {
 SOC_VALUE_ENUM("IN1 OSR", clearwater_in_dmic_osr[0]),
 SOC_VALUE_ENUM("IN2 OSR", clearwater_in_dmic_osr[1]),
@@ -377,6 +430,8 @@ SOC_ENUM_EXT("IN2 Mode", arizona_ip_mode[1],
 		snd_soc_get_enum_double, arizona_ip_mode_put),
 SOC_ENUM_EXT("IN3 Mode", arizona_ip_mode[2],
 		snd_soc_get_enum_double, arizona_ip_mode_put),
+SOC_ENUM_EXT("CP Mode", clearwater_cp_mode[0],
+			clearwater_cp_mode_get, clearwater_cp_mode_put),
 
 SOC_ENUM("Input Ramp Up", arizona_in_vi_ramp),
 SOC_ENUM("Input Ramp Down", arizona_in_vd_ramp),

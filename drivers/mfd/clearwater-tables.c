@@ -1970,6 +1970,7 @@ static bool clearwater_16bit_readable_register(struct device *dev, unsigned int 
 	case ARIZONA_FLL3_SPREAD_SPECTRUM:
 	case ARIZONA_FLL3_GPIO_CLOCK:
 	case ARIZONA_MIC_CHARGE_PUMP_1:
+	case CLEARWATER_CP_MODE:
 	case ARIZONA_LDO1_CONTROL_1:
 	case ARIZONA_LDO2_CONTROL_1:
 	case ARIZONA_MIC_BIAS_CTRL_1:
