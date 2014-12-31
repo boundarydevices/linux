@@ -169,6 +169,13 @@ EXPORT_SYMBOL_GPL(arizona_extcon_report);
 
 static const struct arizona_jd_state arizona_hpdet_moisture;
 static const struct arizona_jd_state arizona_hpdet_acc_id;
+static const struct arizona_jd_state arizona_antenna_mic_det;
+static const struct arizona_jd_state arizona_antenna_oc_det;
+static const struct arizona_jd_state arizona_antenna_hp_det;
+static const struct arizona_jd_state arizona_antenna_button_det;
+static const struct arizona_jd_state arizona_antenna_hp_oc_det;
+static const struct arizona_jd_state arizona_antenna_hpr_det;
+static const struct arizona_jd_state arizona_antenna_hpr_oc_det;
 
 static int arizona_jds_get_mode(struct arizona_extcon_info *info)
 {
@@ -1328,17 +1335,9 @@ int arizona_micd_button_reading(struct arizona_extcon_info *info,
 }
 EXPORT_SYMBOL_GPL(arizona_micd_button_reading);
 
-static const struct arizona_jd_state arizona_antenna_mic_det;
-static const struct arizona_jd_state arizona_antenna_oc_det;
-static const struct arizona_jd_state arizona_antenna_hp_det;
-static const struct arizona_jd_state arizona_antenna_button_det;
-static const struct arizona_jd_state arizona_antenna_hp_oc_det;
-static const struct arizona_jd_state arizona_antenna_hpr_det;
-static const struct arizona_jd_state arizona_antenna_hpr_oc_det;
-
-
 static int arizona_antenna_mic_reading(struct arizona_extcon_info *info, int val)
 {
+	struct arizona *arizona = info->arizona;
 	int ret;
 
 	if (val < 0)
@@ -1368,6 +1367,7 @@ static int arizona_antenna_mic_reading(struct arizona_extcon_info *info, int val
 
 static int arizona_antenna_oc_reading(struct arizona_extcon_info *info, int val)
 {
+	struct arizona *arizona = info->arizona;
 	int ret;
 
 	if (val < 0)
