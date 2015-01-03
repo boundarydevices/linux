@@ -27,6 +27,7 @@
 #include <linux/delay.h>
 #include <linux/wait.h>
 #include <linux/gpio.h>
+#include <linux/of_gpio.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/sched.h>
@@ -722,8 +723,60 @@ static int kim_probe(struct platform_device *pdev)
 	struct ti_st_plat_data	*pdata = pdev->dev.platform_data;
 	int err;
 
+	if (!pdata) {
+		dev_info(&pdev->dev, "no platform data: try device tree");
+		if (pdev->dev.of_node) {
+			u32 baud_rate;
+			const char *devname=0;
+			err = of_property_read_string
+				(pdev->dev.of_node,
+				 "dev_name",
+				 &devname);
+			if (err) {
+				dev_err(&pdev->dev, "missing dev_name");
+				return -EINVAL;
+			}
+			pdata = kzalloc(sizeof(*pdata), GFP_ATOMIC);
+			if (!pdata)
+				return -ENOMEM;
+			strncpy(pdata->dev_name, devname, sizeof(pdata->dev_name)-1);
+			pdata->dev_name[sizeof(pdata->dev_name)-1] = 0;
+			pdata->nshutdown_gpio = of_get_named_gpio
+				(pdev->dev.of_node,
+				 "nshutdown_gpio", 0);
+			if (0 > pdata->nshutdown_gpio) {
+				pr_err("missing nshutdown_gpio");
+				kfree(pdata);
+				return -EINVAL;
+			}
+			pr_err("nshutdown_gpio == %lu\n", pdata->nshutdown_gpio);
+                        pdata->flow_cntrl = 1;
+                        if (of_property_read_u8
+				(pdev->dev.of_node,
+				 "flow_cntrl",
+				 &pdata->flow_cntrl)) {
+				pr_err("flow_cntrl not specified: default true");
+				pdata->flow_cntrl = 1;
+			}
+                        if (of_property_read_u32
+				(pdev->dev.of_node,
+				 "baud_rate",
+				 &baud_rate)) {
+				pr_err("baud_rate not specified: default 3000000");
+				pdata->baud_rate = 3000000;
+			}
+			else
+                                pdata->baud_rate = baud_rate;
+			pdata->flow_cntrl = 1;
+                        pdev->dev.platform_data = pdata;
+		} else {
+			pr_err("no platform data, no device tree data");
+			return -EINVAL;
+		}
+	}
 	if ((pdev->id != -1) && (pdev->id < MAX_ST_DEVICES)) {
 		/* multiple devices could exist */
+		pr_err("dev_id == %d\n", pdev->id);
 		st_kim_devices[pdev->id] = pdev;
 	} else {
 		/* platform's sure about existence of 1 device */
@@ -849,6 +902,15 @@ static int kim_resume(struct platform_device *pdev)
 	return -EOPNOTSUPP;
 }
 
+#ifdef CONFIG_OF
+static const struct of_device_id st_kim_ids[] = {
+	{
+		.compatible = "ti,kim",
+	}
+};
+MODULE_DEVICE_TABLE(of, st_kim_ids);
+#endif
+
 /**********************************************************************/
 /* entry point for ST KIM module, called in from ST Core */
 static struct platform_driver kim_platform_driver = {
@@ -858,6 +920,9 @@ static struct platform_driver kim_platform_driver = {
 	.resume = kim_resume,
 	.driver = {
 		.name = "kim",
+#ifdef CONFIG_OF
+		.of_match_table	= of_match_ptr(st_kim_ids),
+#endif
 	},
 };
 
