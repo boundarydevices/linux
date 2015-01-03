@@ -250,11 +250,20 @@
 		};
 	};
 
-	wlan_bt_rfkill {
+	bt_rfkill {
 		compatible = "net,rfkill-gpio";
-		name = "wlan_bt_rfkill";
+		name = "bt_rfkill";
 		type = <2>;     /* bluetooth */
 		gpios = <&gpio6 16 0>;
+	};
+
+	kim {
+		compatible = "ti,kim";
+		status = "okay";
+		nshutdown_gpio = <&gpio6 16 0>;
+		flow_cntrl = <1>;
+		dev_name = "/dev/ttymxc2";
+		baud_rate = <3000000>;
 	};
 };
 
