@@ -104,6 +104,11 @@ config PHANTOM
 	  If you choose to build module, its name will be phantom. If unsure,
 	  say N here.
 
+config LS_BRAILLE
+	tristate "LS Braille Display support"
+	help
+	  Say Y here if you want to build a driver for LS Braille device.
+
 config TIFM_CORE
 	tristate "TI Flash Media interface support"
 	depends on PCI
