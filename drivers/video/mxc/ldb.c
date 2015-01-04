@@ -433,6 +433,12 @@ static int ldb_setup(struct mxc_dispdrv_handle *mddh,
 			ldb->div_7_clk[chno];
 	clk_set_parent(ldb->div_sel_clk[chno], ldb_di_parent);
 	ldb_di_sel_parent = clk_get_parent(ldb_di_parent);
+
+	{
+		long lrate = clk_get_rate(ldb->div_sel_clk[chno]);
+		if (chan.vm.pixelclock > lrate)
+			chan.vm.pixelclock = lrate;
+	}
 	clk_set_rate(ldb->div_sel_clk[chno], chan.vm.pixelclock);
 
 	/*
