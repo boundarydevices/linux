@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 ARM Limited
  * Copyright (C) 2000 Deep Blue Solutions Ltd
- * Copyright (C) 2006-2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2006-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  * Copyright 2008 Juergen Beisert, kernel@pengutronix.de
  * Copyright 2009 Ilya Yanok, Emcraft Systems Ltd, yanok@emcraft.com
  *
@@ -90,7 +90,7 @@ static void arch_reset_special_mode(char mode, const char *cmd)
 #ifdef CONFIG_MXC_REBOOT_ANDROID_CMD
 	if (cmd && strcmp(cmd, "recovery") == 0)
 		do_switch_recovery();
-	else if (cmd && strcmp(cmd, "fastboot") == 0)
+	else if (cmd && strcmp(cmd, "bootloader") == 0)
 		do_switch_fastboot();
 #endif
 }
