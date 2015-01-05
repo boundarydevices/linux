@@ -46,6 +46,10 @@ static const struct reg_default clearwater_reva_16_patch[] = {
 	{ 0x80,  0x0000 },
 };
 
+static const struct reg_default clearwater_revb_16_patch[] = {
+	{ 0x27E, 0x0001 },
+};
+
 /* this patch is required for EDRE on RevA*/
 static const struct reg_default clearwater_reva_32_patch[] = {
 	{  0x3000, 0xC2253632},
@@ -319,7 +323,16 @@ int clearwater_patch(struct arizona *arizona)
 			dev_err(arizona->dev, "Error in applying Clearwater Rev A 32 bit patch\n");
 			return ret;
 		}
+		break;
 	default:
+		ret = regmap_register_patch(arizona->regmap,
+					     clearwater_revb_16_patch,
+					     ARRAY_SIZE(clearwater_revb_16_patch));
+		if (ret < 0) {
+			dev_err(arizona->dev,
+				"Error in applying Clearwater Rev B 16 bit patch\n");
+			return ret;
+		}
 		break;
 	}
 
