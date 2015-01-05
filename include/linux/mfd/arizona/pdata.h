@@ -199,6 +199,9 @@ struct arizona_pdata {
 	/** Extra software debounces during button detection */
 	int micd_manual_debounce;
 
+	/** Software debounces during 3/4 pole plugin into antenna cable */
+	int antenna_manual_debounce;
+
 	/** GPIO for mic detection polarity */
 	int micd_pol_gpio;
 
