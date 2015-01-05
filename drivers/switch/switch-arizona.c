@@ -166,6 +166,7 @@ DEVICE_ATTR(hp_impedance, S_IRUGO, arizona_extcon_show, NULL);
 
 inline void arizona_extcon_report(struct arizona_extcon_info *info, int state)
 {
+	dev_dbg(info->arizona->dev, "Switch Report: %d\n", state);
 	switch_set_state(&info->edev, state);
 }
 EXPORT_SYMBOL_GPL(arizona_extcon_report);
@@ -1343,6 +1344,8 @@ static int arizona_antenna_mic_reading(struct arizona_extcon_info *info, int val
 	struct arizona *arizona = info->arizona;
 	int ret;
 
+	dev_dbg(arizona->dev, "Antenna Detection: Mic Reading: 0x%x\n", val);
+
 	if (val < 0)
 		return val;
 
@@ -1379,6 +1382,8 @@ static int arizona_antenna_oc_reading(struct arizona_extcon_info *info, int val)
 	struct arizona *arizona = info->arizona;
 	int debounce_lim = arizona->pdata.antenna_manual_debounce;
 	int ret;
+
+	dev_dbg(arizona->dev, "Antenna Detection: Antenna Reading: 0x%x\n", val);
 
 	if (val < 0)
 		return val;
@@ -1431,6 +1436,8 @@ static int arizona_antenna_oc_reading(struct arizona_extcon_info *info, int val)
 
 static int arizona_antenna_hp_oc_reading(struct arizona_extcon_info *info, int val)
 {
+	dev_dbg(info->arizona->dev, "Antenna Detection: HP-Antenna Reading: 0x%x\n", val);
+
 	if (val < 0)
 		return val;
 
@@ -1448,6 +1455,8 @@ static int arizona_antenna_hp_oc_reading(struct arizona_extcon_info *info, int v
 
 static int arizona_antenna_hp_reading(struct arizona_extcon_info *info, int val)
 {
+	dev_dbg(info->arizona->dev, "Antenna Detection: HP Reading: 0x%x\n", val);
+
 	if (val < 0)
 		return val;
 
@@ -1467,6 +1476,8 @@ static int arizona_antenna_hp_reading(struct arizona_extcon_info *info, int val)
 static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 				int val)
 {
+	dev_dbg(info->arizona->dev, "Antenna Detection: Button Reading: 0x%x\n", val);
+
 	if (val < 0)
 		return val;
 
