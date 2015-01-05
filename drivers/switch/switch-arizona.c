@@ -1347,6 +1347,9 @@ static int arizona_antenna_mic_reading(struct arizona_extcon_info *info, int val
 		return val;
 
 	if (!(val & ARIZONA_MICD_STS)) {
+		info->micd_res_old = 0;
+		info->micd_debounce = 0;
+		info->micd_count = 0;
 		info->antenna_res_old = 0;
 		info->antenna_debounce = 0;
 		info->antenna_count = 0;
