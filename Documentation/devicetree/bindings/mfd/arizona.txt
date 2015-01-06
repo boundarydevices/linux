@@ -1,0 +1,195 @@
+Wolfson Arizona class audio SoCs
+
+These devices are audio SoCs with extensive digital capabilites and a range
+of analogue I/O.
+
+Required properties:
+
+  - compatible : One of the following chip-specific strings:
+        "wlf,wm5102"
+        "wlf,wm5110"
+        "wlf,wm8280"
+        "wlf,wm8281"
+        "wlf,wm8997"
+        "wlf,WM8998"
+        "wlf,wm1814"
+        "wlf,wm8285"
+        "wlf,wm1840"
+        "wlf,wm1831"
+        "cirrus,cs47l24"
+
+  - reg : I2C slave address when connected using I2C, chip select number when
+    using SPI.
+
+  - interrupts : The interrupt line the /IRQ signal for the device is
+    connected to.
+  - interrupt-controller : Arizona class devices contain interrupt controllers
+    and may provide interrupt services to other devices.
+  - interrupt-parent : The parent interrupt controller.
+  - #interrupt-cells: the number of cells to describe an IRQ, this should be 2.
+    The first cell is the IRQ number.
+    The second cell is the flags, encoded as the trigger masks from
+    Documentation/devicetree/bindings/interrupts.txt
+
+  - gpio-controller : Indicates this device is a GPIO controller.
+  - #gpio-cells : Must be 2. The first cell is the pin number and the
+    second cell is used to specify optional parameters (currently unused).
+
+  - AVDD-supply, DBVDD1-supply, DBVDD2-supply, DBVDD3-supply (wm5102, wm5110),
+    DBVDD4-supply (wm8285), CPVDD-supply, SPKVDDL-supply (wm5102, wm5110),
+    SPKVDDR-supply (wm5102, wm5110), SPKVDD-supply (wm8997, cs47l24) : Power
+    supplies for the device, as covered in
+    Documentation/devicetree/bindings/regulator/regulator.txt
+
+Optional properties:
+
+  - wlf,reset : GPIO specifier for the GPIO controlling /RESET
+  - wlf,ldoena : GPIO specifier for the GPIO controlling LDOENA
+
+  - wlf,micd-software-compare : Use a software comparison to determine mic
+    presence
+  - wlf,micd-detect-debounce : Additional software microphone detection
+    debounce specified in milliseconds
+  - wlf,micd-pol-gpio : GPIO specifier for the GPIO controlling the headset
+    polarity if one exists
+  - wlf,micd-bias-start-time : Time allowed for MICBIAS to startup prior to
+    performing microphone detection, specified as per the MICD_BIAS_STARTTIME
+    bits in the register MIC_DETECT_1
+  - wlf,micd-rate : Delay between successive microphone detection measurements,
+    specified as per the MICD_RATE bits in the register MIC_DETECT_1
+  - wlf,micd-dbtime : Microphone detection hardware debounce level, specified
+    as per the MICD_DBTIME bits in the register MIC_DETECT_1
+  - wlf,micd-timeout : Timeout for microphone detection, specified in
+    milliseconds
+  - wlf,micd-force-micbias : Force MICBIAS continuously on during microphone
+    detection
+  - wlf,micd-ranges : Microphone detection level and key configuration, this
+    field can be of variable length but should always be a multiple of 2 cells
+    long, each two cell group represents one button configuration
+    The first cell is the maximum impedance for this button in ohms
+    The second cell the key that should be reported to the input layer
+  - wlf,micd-configs : Headset polarity configurations, the field can be of
+    variable length but should always be a multiple of 3 cells long, each two
+    cell group represents one polarity configration
+    The first cell is the accessory detection source as per the ACCDET_SRC bits
+    in the ACCESSORY_DETECT_MODE_1 register
+    The second cell represents the MICBIAS to be used as per the MICD_BIAS_SRC
+    bits in the MIC_DETECT_1 register
+    The third cell represents the value of the micd-pol-gpio pin, a non-zero
+    value indicates this should be on
+  - wlf,init-mic-delay : Adds a delay in milliseconds between jack detection
+    and beginning ramp of MICBIAS.
+  - wlf,micd-clamp-mode: Specifies the logic of the micdetect clamp block
+
+  - wlf,micbias1 : Configuration for the micbias regulator, should include 5
+    cells.
+    The first cell is the output voltage in millivolts
+    The second cell a non-zero value indicates an external capacitor is fitted
+    The third cell a non-zero value indicates the micbias should be actively
+    discharged
+    The four cell a non-zero value indicates that the micbias should be
+    brought up slowly to reduce pops
+    The fifth cell a non-zero value indicates the micbias should be bypassed
+    and simply output MICVDD
+  - wlf,micbias2 : See wlf,micbias1
+  - wlf,micbias3 : See wlf,micbias1
+  - wlf,micbias4 : See wlf,micbias1
+
+  - wlf,gpio-defaults : A list of GPIO configuration register values. If
+    absent, no configuration of these registers is performed. If any
+    entry has a value that is out of range for a 16 bit register then
+    the chip default will be used.
+
+  - wlf,max-channels-clocked : The maximum number of channels to be clocked on
+    each AIF, useful for I2S systems with multiple data lines being mastered.
+    Specify one cell for each AIF, specify zero for AIFs that should be handled
+    normally.
+
+  - wlf,dmic-ref : DMIC reference for each input, must contain four cells if
+    specified. 0 indicates MICVDD and is the default, 1,2,3 indicate the
+    respective MICBIAS.
+
+  - wlf,inmode : Input mode for each input, must contain four cells if
+    specified. 0 indicates Differential, 1 indicates Single Ended and 2
+    indicates a digital microphone.
+
+  - wlf,out-mono : Mono bit for each output, must contain six cells if
+    specified. A non-zero value indicates the corresponding output is mono.
+
+  - wlf,use-jd-gpio : Use GPIO input for jack detection.
+  - wlf,usr-jd-gpio-nopull : Internal pull on GPIO is disabled when used for
+    jack detection.
+
+  - wlf,gpsw : Settings for the general purpose switch, set as per the
+    SW1_MODE bits in the GP Switch 1 register
+
+    wlf,wm5102t-output-pwr : Output power setting (WM5102T only)
+
+  - wlf,fixed-hpdet-imp : Do not perform any headphone detection, just use
+    the fixed value specified here as the headphone impedance.
+
+  - wlf,hpdet-short-circuit-imp : Specifies the maximum impedance in ohms
+    that will be considered as a short circuit
+
+  - DCVDD-supply, MICVDD-supply : Power supplies, only need to be specified if
+    they are being externally supplied. As covered in
+    Documentation/devicetree/bindings/regulator/regulator.txt
+
+Optional subnodes:
+  - ldo1 : Initial data for the LDO1 regulator, as covered in
+    Documentation/devicetree/bindings/regulator/regulator.txt
+  - micvdd : Initial data for the MICVDD regulator, as covered in
+    Documentation/devicetree/bindings/regulator/regulator.txt
+
+Example:
+
+codec: wm5102@1a {
+	compatible = "wlf,wm5102";
+	reg = <0x1a>;
+	interrupts = <347>;
+	interrupt-controller;
+	#interrupt-cells = <2>;
+        interrupt-parent = <&gic>;
+
+	gpio-controller;
+	#gpio-cells = <2>;
+
+	wlf,micd-detect-debounce = <10>;
+	wlf,micd-bias-start-time = <0x1>;
+	wlf,micd-rate = <0x1>;
+	wlf,micd-dbtime = <0x1>;
+	wlf,micd-timeout = <10>;
+	wlf,micd-force-micbias;
+	wlf,micd-ranges = <
+		11 0x100
+		28 0x101
+		54 0x102
+		100 0x103
+		186 0x104
+		430 0x105
+	>;
+	wlf,micd-configs = <
+		0x1 1 0
+		0x0 2 1
+	>;
+	wlf,fixed-hpdet-imp = <8>;
+
+	wlf,micbias2 = <2600 0 1 1 0>;
+	wlf,init-mic-delay = <10>;
+	wlf,micd-clamp-mode = <0xb>;
+
+	wlf,dmic-ref = <0 0 1 0>;
+	wlf,inmode = <0 0 2 0>;
+
+	wlf,gpsw = <0x3>;
+
+	wlf,gpio-defaults = <
+		0x00000000 /* AIF1TXLRCLK */
+		0xffffffff
+		0xffffffff
+		0xffffffff
+		0xffffffff
+	>;
+
+	wlf,max-channels-clocked = <2 0 0>;
+};

@@ -1,5 +1,5 @@
 /*
- * wm5110.h  --  WM5110 ALSA SoC Audio driver
+ * wm8997.h  --  WM8997 ALSA SoC Audio driver
  *
  * Copyright 2012 Wolfson Microelectronics plc
  *
@@ -10,14 +10,14 @@
  * published by the Free Software Foundation.
  */
 
-#ifndef _WM5110_H
-#define _WM5110_H
+#ifndef _WM8997_H
+#define _WM8997_H
 
 #include "arizona.h"
 
-#define WM5110_FLL1        1
-#define WM5110_FLL2        2
-#define WM5110_FLL1_REFCLK 3
-#define WM5110_FLL2_REFCLK 4
+#define WM8997_FLL1        1
+#define WM8997_FLL2        2
+#define WM8997_FLL1_REFCLK 3
+#define WM8997_FLL2_REFCLK 4
 
 #endif
