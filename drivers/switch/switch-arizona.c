@@ -858,6 +858,26 @@ static const struct reg_default wm1814_normal_impedance_patch[] = {
 	{ 0x470, 0x0801 },
 };
 
+static const struct reg_default clearwater_low_impedance_patch[] = {
+	{ 0x465, 0x4C6D },
+	{ 0x467, 0x3950 },
+	{ 0x469, 0x2D86 },
+	{ 0x46B, 0x1E6D },
+	{ 0x46D, 0x199A },
+	{ 0x46F, 0x1456 },
+	{ 0x483, 0x0826 },
+};
+
+static const struct reg_default clearwater_normal_impedance_patch[] = {
+	{ 0x465, 0x8A43 },
+	{ 0x467, 0x7259 },
+	{ 0x469, 0x65EA },
+	{ 0x46B, 0x50F4 },
+	{ 0x46D, 0x41CD },
+	{ 0x46F, 0x199A },
+	{ 0x483, 0x0023 },
+};
+
 int arizona_wm5110_tune_headphone(struct arizona_extcon_info *info,
 				  int reading)
 {
@@ -949,6 +969,47 @@ int arizona_wm1814_tune_headphone(struct arizona_extcon_info *info,
 	return 0;
 }
 
+int arizona_clearwater_tune_headphone(struct arizona_extcon_info *info,
+				  int reading)
+{
+	struct arizona *arizona = info->arizona;
+	const struct reg_default *patch;
+	int i, ret, size;
+
+	if (reading <= arizona->pdata.hpdet_short_circuit_imp) {
+		/* Headphones are always off here so just mark them */
+		dev_warn(arizona->dev, "Possible HP short, disabling\n");
+		return 0;
+	} else if (reading <= HP_LOW_IMPEDANCE_LIMIT) {
+		if (info->hp_imp_level == HP_LOW_IMPEDANCE)
+			return 0;
+
+		info->hp_imp_level = HP_LOW_IMPEDANCE;
+
+		patch = clearwater_low_impedance_patch;
+		size = ARRAY_SIZE(clearwater_low_impedance_patch);
+	} else {
+		if (info->hp_imp_level == HP_NORMAL_IMPEDANCE)
+			return 0;
+
+		info->hp_imp_level = HP_NORMAL_IMPEDANCE;
+
+		patch = clearwater_normal_impedance_patch;
+		size = ARRAY_SIZE(clearwater_normal_impedance_patch);
+	}
+
+	for (i = 0; i < size; ++i) {
+		ret = regmap_write(arizona->regmap,
+				   patch[i].reg, patch[i].def);
+		if (ret != 0)
+			dev_warn(arizona->dev,
+				 "Failed to write headphone patch: %x <= %x\n",
+				 patch[i].reg, patch[i].def);
+	}
+
+	return 0;
+}
+
 void arizona_set_headphone_imp(struct arizona_extcon_info *info, int imp)
 {
 	struct arizona *arizona = info->arizona;
@@ -964,6 +1025,10 @@ void arizona_set_headphone_imp(struct arizona_extcon_info *info, int imp)
 		break;
 	case WM1814:
 		arizona_wm1814_tune_headphone(info, arizona->hp_impedance);
+		break;
+	case WM8285:
+	case WM1840:
+		arizona_clearwater_tune_headphone(info, arizona->hp_impedance);
 		break;
 	default:
 		break;
