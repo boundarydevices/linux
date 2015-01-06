@@ -183,8 +183,6 @@ static int arizona_ldo1_of_get_pdata(struct arizona *arizona,
 	struct device_node *init_node, *dcvdd_node;
 	struct regulator_init_data *init_data;
 
-	pdata->ldoena = arizona_of_get_named_gpio(arizona, "wlf,ldoena", true);
-
 	init_node = of_get_child_by_name(arizona->dev->of_node, "ldo1");
 	dcvdd_node = of_parse_phandle(arizona->dev->of_node, "DCVDD-supply", 0);
 
@@ -205,6 +203,9 @@ static int arizona_ldo1_of_get_pdata(struct arizona *arizona,
 	} else if (dcvdd_node) {
 		arizona->external_dcvdd = true;
 	}
+
+	if (!(arizona->external_dcvdd))
+		pdata->ldoena = arizona_of_get_named_gpio(arizona, "wlf,ldoena", true);
 
 	of_node_put(dcvdd_node);
 
