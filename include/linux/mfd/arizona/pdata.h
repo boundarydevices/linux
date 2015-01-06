@@ -202,6 +202,9 @@ struct arizona_pdata {
 	/** Software debounces during 3/4 pole plugin into antenna cable */
 	int antenna_manual_debounce;
 
+	/** Software debounces during 3/4 pole plugout from antenna cable */
+	int antenna_manual_db_plugout;
+
 	/** GPIO for mic detection polarity */
 	int micd_pol_gpio;
 

@@ -99,6 +99,10 @@ struct arizona_extcon_info {
 	int antenna_res_old;
 	int antenna_debounce;
 	int antenna_count;
+	int antenna_db_plugout;
+	int antenna_cnt_plugout;
+	int antenna_res_old_plugout;
+	bool antenna_skip_btn_db;
 
 	struct delayed_work hpdet_work;
 	struct delayed_work micd_detect_work;
@@ -1282,7 +1286,8 @@ int arizona_micd_button_reading(struct arizona_extcon_info *info,
 	if (val < 0)
 		return val;
 
-	if (debounce_lim) {
+	if ((debounce_lim) &&
+		( !(info->antenna_skip_btn_db))) {
 		if (info->micd_debounce != val)
 			info->micd_count = 0;
 
@@ -1350,9 +1355,9 @@ static int arizona_antenna_mic_reading(struct arizona_extcon_info *info, int val
 		return val;
 
 	if (!(val & ARIZONA_MICD_STS)) {
-		info->micd_res_old = 0;
-		info->micd_debounce = 0;
-		info->micd_count = 0;
+		info->antenna_db_plugout = 0;
+		info->antenna_cnt_plugout = 0;
+		info->antenna_res_old_plugout = 0;
 		info->antenna_res_old = 0;
 		info->antenna_debounce = 0;
 		info->antenna_count = 0;
@@ -1476,19 +1481,51 @@ static int arizona_antenna_hp_reading(struct arizona_extcon_info *info, int val)
 static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 				int val)
 {
+	int debounce_lim = info->arizona->pdata.antenna_manual_db_plugout;
+	int ret = 0;
 	dev_dbg(info->arizona->dev, "Antenna Detection: Button Reading: 0x%x\n", val);
 
 	if (val < 0)
 		return val;
 
-	/* Detected open circuit*/
-	if (!(val & ARIZONA_MICD_STS))
-		return arizona_antenna_mic_reading(info, val);
-	/* previously headset detected so check for button presses*/
-	else if (info->mic)
-		return arizona_micd_button_reading(info, val);
+	if (debounce_lim) {
+		if (info->antenna_db_plugout != val)
+			info->antenna_cnt_plugout = 0;
 
-	return 0;
+		info->antenna_db_plugout = val;
+		info->antenna_cnt_plugout++;
+
+		if (info->antenna_cnt_plugout == debounce_lim) {
+			info->antenna_cnt_plugout = 0;
+			if (val == info->antenna_res_old_plugout)
+				return 0;
+
+			info->antenna_res_old_plugout = val;
+		} else {
+			dev_dbg(info->arizona->dev, "Antenna software plugout db: %d,%x\n",
+				info->antenna_cnt_plugout, val);
+			regmap_update_bits(info->arizona->regmap,
+					   ARIZONA_MIC_DETECT_1,
+					   ARIZONA_MICD_ENA, 0);
+			regmap_update_bits(info->arizona->regmap,
+					   ARIZONA_MIC_DETECT_1,
+					   ARIZONA_MICD_ENA, ARIZONA_MICD_ENA);
+			return -EAGAIN;
+		}
+	}
+
+	if (!(val & ARIZONA_MICD_STS)) { /* Detected open circuit*/
+		info->antenna_skip_btn_db = false;
+		ret = arizona_antenna_mic_reading(info, val);
+	} else if (info->mic) { /* previous hs det so check for button */
+		/* skip furthur debounce for button as we have
+		already debounced in this function*/
+		if (debounce_lim)
+			info->antenna_skip_btn_db = true;
+		ret = arizona_micd_button_reading(info, val);
+	}
+
+	return ret;
 }
 
 
@@ -2149,6 +2186,10 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 		info->antenna_res_old = 0;
 		info->antenna_debounce = 0;
 		info->antenna_count = 0;
+		info->antenna_db_plugout = 0;
+		info->antenna_cnt_plugout = 0;
+		info->antenna_res_old_plugout = 0;
+		info->antenna_skip_btn_db = false;
 		arizona->hp_impedance = 0;
 		arizona_jds_set_state(info, NULL);
 
@@ -2241,6 +2282,9 @@ static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 
 	arizona_of_read_u32(arizona, "wlf,antenna-manual-debounce", false,
 			    &pdata->antenna_manual_debounce);
+
+	arizona_of_read_u32(arizona, "wlf,antenna-manual-db-plugout", false,
+			    &pdata->antenna_manual_db_plugout);
 
 	pdata->micd_pol_gpio = arizona_of_get_named_gpio(arizona,
 							 "wlf,micd-pol-gpio",
