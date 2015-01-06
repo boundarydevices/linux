@@ -1592,7 +1592,8 @@ int arizona_micd_mic_reading(struct arizona_extcon_info *info, int val)
 	 * plain headphones.  If both polarities report a low
 	 * impedence then give up and report headphones.
 	 */
-	if (val & MICD_LVL_1_TO_7) {
+	if ((val & MICD_LVL_1_TO_7) &&
+		(info->micd_num_modes > 1)) {
 		if (info->jack_flips >= info->micd_num_modes * 10) {
 			dev_dbg(arizona->dev, "Detected HP/line\n");
 			goto done;
