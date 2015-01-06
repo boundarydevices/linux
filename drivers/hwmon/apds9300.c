@@ -52,6 +52,7 @@
 struct apds9300_data {
 	struct i2c_client *client;
 	struct input_polled_dev *poll_dev;
+	u8 iterations;
 };
 
 static ssize_t show_reg(struct device *dev, struct device_attribute *devattr,
@@ -248,9 +249,12 @@ static void dev_poll(struct input_polled_dev *dev)
 	struct input_polled_dev *poll_dev = data->poll_dev;
 	long lux = read_lux(&data->client->dev);
 	if (0 <= lux) {
+		if (0 == data->iterations++)
+			input_report_abs(poll_dev->input, ABS_MISC, lux+1);
 		input_report_abs(poll_dev->input, ABS_MISC, lux);
 		input_sync(poll_dev->input);
-	}
+	} else
+		dev_err(&dev->input->dev, "poll error %ld\n", lux);
 }
 
 static int apds9300_probe(struct i2c_client *client,
@@ -283,6 +287,8 @@ static int apds9300_probe(struct i2c_client *client,
 	idev->id.bustype = BUS_I2C;
 
 	__set_bit(EV_ABS, idev->evbit);
+	__set_bit(ABS_MISC, idev->absbit);
+
 	input_set_abs_params(idev, ABS_MISC, 0, 4095, 0, 0);
 	err = input_register_polled_device(data->poll_dev);
 	if (err)
