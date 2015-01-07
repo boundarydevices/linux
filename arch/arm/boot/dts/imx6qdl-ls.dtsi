@@ -41,6 +41,9 @@
 		compatible = "i2c-mux-gpio";
 	};
 
+	kpp_gpio: kpp_gpio {
+	};
+
 	memory {
 		reg = <0x10000000 0x80000000>;
 	};
@@ -165,6 +168,10 @@
 			MX6QDL_PAD_GPIO_8__XTALOSC_REF_CLK_32K	0x000b0		/* slow clock */
 #define GP_ACCEL_IRQ			<&gpio5 30 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_CSI0_DAT12__GPIO5_IO30	0x1b0b0
+#define GP_DISP_LED_RED			<&gpio5 9 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_DISP0_DAT15__GPIO5_IO09	0x1b0b0
+#define GP_DISP_LED_GREEN		<&gpio5 10 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_DISP0_DAT16__GPIO5_IO10	0x1b0b0
 		>;
 	};
 
@@ -261,10 +268,8 @@
 			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x1b0b0
 #define GP_DISP_KEY_CTRL		<&gpio3 14 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x1b0b0
-#define GP_DISP_LED_RED			<&gpio5 9 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_DISP0_DAT15__GPIO5_IO09	0x1b0b0
-#define GP_DISP_LED_GREEN		<&gpio5 10 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_DISP0_DAT16__GPIO5_IO10	0x1b0b0
+#define GP_KEYPAD_LOCK			<&gpio5 0 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_WAIT__GPIO5_IO00		0x1b0b0
 		>;
 	};
 
@@ -371,6 +376,35 @@
 		>;
 	};
 
+	pinctrl_keypad_gpio: keypad_gpiogrp {
+		fsl,pins = <
+#define GP_KPP_C0			<&gpio2 28 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_EB0__GPIO2_IO28		0x0b0b0
+#define GP_KPP_C1			<&gpio2 29 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_EB1__GPIO2_IO29		0x0b0b0
+#define GP_KPP_C2			<&gpio3 0 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA0__GPIO3_IO00		0x0b0b0
+#define GP_KPP_C3			<&gpio3 1 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA1__GPIO3_IO01		0x0b0b0
+#define GP_KPP_C4			<&gpio2 25 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_OE__GPIO2_IO25		0x0b0b0
+#define GP_KPP_C5			<&gpio2 27 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_LBA__GPIO2_IO27		0x0b0b0
+#define GP_KPP_R0			<&gpio3 2 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA2__GPIO3_IO02		0x1b0b0
+#define GP_KPP_R1			<&gpio3 3 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA3__GPIO3_IO03		0x1b0b0
+#define GP_KPP_R2			<&gpio3 4 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA4__GPIO3_IO04		0x1b0b0
+#define GP_KPP_R3			<&gpio3 5 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA5__GPIO3_IO05		0x1b0b0
+#define GP_KPP_R4			<&gpio2 23 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_CS0__GPIO2_IO23		0x1b0b0
+#define GP_KPP_R5			<&gpio2 26 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x1b0b0
+		>;
+	};
+
 	/* ends with B(active low) */
 	pinctrl_max77818: max77818grp {
 		fsl,pins = <
@@ -389,37 +423,6 @@
 			MX6QDL_PAD_EIM_D20__GPIO3_IO20		0x0b0b0
 #define GP_ON_OFF_IRQ			<&gpio5 11 IRQ_TYPE_LEVEL_HIGH>
 			MX6QDL_PAD_DISP0_DAT17__GPIO5_IO11	0x1b0b0
-		>;
-	};
-
-	pinctrl_pmic: pmicgrp {
-		fsl,pins = <
-#define GP_PMIC_C0_OUT			<&gpio2 28 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_EB0__GPIO2_IO28		0x030b0
-#define GP_PMIC_C1_OUT			<&gpio2 29 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_EB1__GPIO2_IO29		0x030b0
-#define GP_PMIC_C2_OUT			<&gpio3 0 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA0__GPIO3_IO00		0x030b0
-#define GP_PMIC_C3_OUT			<&gpio3 1 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA1__GPIO3_IO01		0x030b0
-#define GP_PMIC_C4_OUT			<&gpio2 25 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_OE__GPIO2_IO25		0x030b0
-#define GP_PMIC_C5_OUT			<&gpio2 27 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_LBA__GPIO2_IO27		0x030b0
-#define GP_PMIC_R0_IN			<&gpio3 2 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA2__GPIO3_IO02		0x1b0b0
-#define GP_PMIC_R1_IN			<&gpio3 3 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA3__GPIO3_IO03		0x1b0b0
-#define GP_PMIC_R2_IN			<&gpio3 4 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA4__GPIO3_IO04		0x1b0b0
-#define GP_PMIC_R3_IN			<&gpio3 5 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA5__GPIO3_IO05		0x1b0b0
-#define GP_PMIC_R4_IN			<&gpio2 23 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_CS0__GPIO2_IO23		0x1b0b0
-#define GP_PMIC_R5_IN			<&gpio2 26 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x1b0b0
-#define GP_PMIC_KEYPAD_LOCK		<&gpio5 0 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_WAIT__GPIO5_IO00		0x1b0b0
 		>;
 	};
 
@@ -714,103 +717,63 @@
 
 &gpio_keys {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_power>, <&pinctrl_gpio_keys>, <&pinctrl_pmic>;
+	pinctrl-0 = <&pinctrl_power>, <&pinctrl_gpio_keys>;
 	power {
 		label = "Power Button";
 		gpios = GP_ON_OFF_IRQ;
-		linux,code = <KEY_POWER>;
+		linux,code = <KEY_POWER>;	/* 116(0x74) */
 		gpio-key,wakeup;
 	};
 
 	1 {
-		label = "GP_DISP_KEY_1";
+		label = "KEY_1";
 		gpios = GP_DISP_KEY_1;
-		linux,code = <KEY_HOME>;
+		linux,code = <KEY_1>;		/* 2 */
 	};
 	2 {
-		label = "GP_DISP_KEY_2";
+		label = "KEY_2";
 		gpios = GP_DISP_KEY_2;
-		linux,code = <KEY_BACK>;
+		linux,code = <KEY_2>;		/* 3 */
 	};
 	3 {
-		label = "GP_DISP_KEY_3";
+		label = "KEY_3";
 		gpios = GP_DISP_KEY_3;
-		linux,code = <KEY_VOLUMEUP>;
+		linux,code = <KEY_3>;		/* 4 */
 	};
 	4 {
-		label = "GP_DISP_KEY_4";
+		label = "KEY_4";
 		gpios = GP_DISP_KEY_4;
-		linux,code = <KEY_VOLUMEDOWN>;
+		linux,code = <KEY_4>;		/* 5 */
 	};
 	5 {
-		label = "GP_DISP_KEY_5";
+		label = "KEY_5";
 		gpios = GP_DISP_KEY_5;
-		linux,code = <KEY_VOLUMEDOWN>;
+		linux,code = <KEY_5>;		/* 6 */
 	};
 	6 {
-		label = "GP_DISP_KEY_6";
+		label = "KEY_6";
 		gpios = GP_DISP_KEY_6;
-		linux,code = <KEY_VOLUMEDOWN>;
+		linux,code = <KEY_6>;		/* 7 */
 	};
 	7 {
-		label = "GP_DISP_KEY_SHIFT";
+		label = "KEY_LEFTSHIFT";
 		gpios = GP_DISP_KEY_SHIFT;
-		linux,code = <KEY_VOLUMEDOWN>;
+		linux,code = <KEY_LEFTSHIFT>;	/* 42(0x2a) */
 	};
 	8 {
-		label = "GP_DISP_KEY_SPACE";
+		label = "KEY_SPACE";
 		gpios = GP_DISP_KEY_SPACE;
-		linux,code = <KEY_VOLUMEDOWN>;
+		linux,code = <KEY_SPACE>;	/* 57(0x39) */
 	};
 	9 {
 		label = "GP_DISP_KEY_CTRL";
 		gpios = GP_DISP_KEY_CTRL;
-		linux,code = <KEY_VOLUMEDOWN>;
+		linux,code = <KEY_RIGHTCTRL>;	/* 97(0x61) */
 	};
-	10 {
-		label = "GP_DISP_LED_RED";
-		gpios = GP_DISP_LED_RED;
-		linux,code = <KEY_VOLUMEDOWN>;
-	};
-	11 {
-		label = "GP_DISP_LED_GREEN";
-		gpios = GP_DISP_LED_GREEN;
-		linux,code = <KEY_VOLUMEDOWN>;
-	};
-	pm0 {
-		label = "GP_PMIC_R0_IN";
-		gpios = GP_PMIC_R0_IN;
-		linux,code = <KEY_VOLUMEDOWN>;
-	};
-	pm1 {
-		label = "GP_PMIC_R1_IN";
-		gpios = GP_PMIC_R1_IN;
-		linux,code = <KEY_VOLUMEDOWN>;
-	};
-	pm2 {
-		label = "GP_PMIC_R2_IN";
-		gpios = GP_PMIC_R2_IN;
-		linux,code = <KEY_VOLUMEDOWN>;
-	};
-	pm3 {
-		label = "GP_PMIC_R3_IN";
-		gpios = GP_PMIC_R3_IN;
-		linux,code = <KEY_VOLUMEDOWN>;
-	};
-	pm4 {
-		label = "GP_PMIC_R4_IN";
-		gpios = GP_PMIC_R4_IN;
-		linux,code = <KEY_VOLUMEDOWN>;
-	};
-	pm5 {
-		label = "GP_PMIC_R5_IN";
-		gpios = GP_PMIC_R5_IN;
-		linux,code = <KEY_VOLUMEDOWN>;
-	};
-	pm6 {
-		label = "GP_PMIC_KEYPAD_LOCK";
-		gpios = GP_PMIC_KEYPAD_LOCK;
-		linux,code = <KEY_VOLUMEDOWN>;
+	12 {
+		label = "GP_KEYPAD_LOCK";
+		gpios = GP_KEYPAD_LOCK;
+		linux,code = <KEY_SCREENLOCK>;	/* 152(0x98) */
 	};
 };
 
@@ -969,24 +932,77 @@
 	pinctrl-0 = <&pinctrl_keypad>;
 	pinctrl-1 = <&pinctrl_keypad_sleep>;
 	linux,keymap = <
-		0x00000002      /* leftmost key, KEY_1 */
-		0x01000003
-		0x02000004
-		0x00010005
-		0x01010006
-		0x02010007
-		0x00020008
-		0x01020009
-		0x0202000a
-		0x0003000b
-		0x0103000c
-		0x0203000d
-		0x0004000e
-		0x0104000f
-		0x02040010
-		0x00050011
-		0x01050012
-		0x02050013      /* rightmost key, KEY_R */
+		0x0000003b	/* leftmost key, KEY_F1(59)(0x3b) */
+		0x0100003c	/* KEY_F2(60)(0x3c) */
+		0x0200003d	/* KEY_F3(61)(0x3d) */
+		0x0001003e	/* KEY_F4(62)(0x3e) */
+		0x0101003f	/* KEY_F5(63)(0x3f) */
+		0x02010040	/* KEY_F6(64)(0x40) */
+		0x00020041	/* KEY_F7(65)(0x41) */
+		0x01020042	/* KEY_F8(66)(0x42) */
+		0x02020043	/* KEY_F9(67)(0x43) */
+		0x00030044	/* KEY_F10(68)(0x44) */
+		0x01030057	/* KEY_F11(87)(0x57) */
+		0x02030058	/* KEY_F12(88)(0x58) */
+		0x000400b7	/* KEY_F13(183)(0xb7) */
+		0x010400b8	/* KEY_F14(184)(0xb8) */
+		0x020400b9	/* KEY_F15(185)(0xb9) */
+		0x000500ba	/* KEY_F16(186)(0xba) */
+		0x010500bb	/* KEY_F17(187)(0xbb) */
+		0x020500bc	/* rightmost key, KEY_F18(188)(0xbc) */
+         >;
+        status = "okay";
+};
+
+&kpp_gpio {
+	compatible = "gpio-matrix-keypad";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_keypad_gpio>;
+	col-gpios = GP_KPP_C0, GP_KPP_C1, GP_KPP_C2, GP_KPP_C3, GP_KPP_C4, GP_KPP_C5;	/* output */
+	row-gpios = GP_KPP_R0, GP_KPP_R1, GP_KPP_R2, GP_KPP_R3, GP_KPP_R4, GP_KPP_R5;	/* input */
+	linux,no-autorepeat;
+	linux,wakeup;
+	gpio-activelow;
+	debounce-delay-ms = <1>;
+	col-scan-delay-us = <0>;
+
+	linux,keymap = <
+		0x00000001
+		0x0100009e	/* KEY_BACK(158)(0x9e) */
+		0x020000a9	/* KEY_PHONE(169)(0xa9) */
+		0x03000066	/* KEY_HOME(102)(0x66) */
+		0x04000005
+		0x05000006
+		0x00010069	/* KEY_LEFT(105)(0x69) */
+		0x0101006a	/* KEY_RIGHT(106)(0x6a) */
+		0x02010009
+		0x0301000c	/* KEY_MINUS(12)(0x0c) */
+		0x0401000b
+		0x0501000c
+		0x00020067	/* KEY_UP(103)(0x67) */
+		0x01020161	/* KEY_SELECT(353)(0x161) */
+		0x0202006c	/* KEY_DOWN(108)(0x6c) */
+		0x03020010
+		0x04020011
+		0x05020012
+		0x000300d9	/* KEY_SEARCH(217)(0xd9) */
+		0x01030014
+		0x0203008b	/* KEY_MENU(139)(0x8b) */
+		0x03030016
+		0x04030017
+		0x05030018
+		0x00040019
+		0x01040038	/* KEY_LEFTALT(56)(0x38), Joystick left */
+		0x020400b1	/* KEY_SCROLLUP(177)(0xb1), Joystick up */
+		0x0304001c	/* KEY_ENTER(28)(0x1c), Joystick press */
+		0x04040064	/* KEY_RIGHTALT(100)(0x64), Joystick right */
+		0x050400f1	/* KEY_VIDEO_NEXT(241)(0xf1), advance, blue bottom right */
+		0x00050072	/* KEY_VOLUMEDOWN(114)(0x72), blue right side lower */
+		0x010500a7	/* KEY_RECORD(167)(0xa7), blue rightside */
+		0x020500d4	/* KEY_CAMERA(212)(0xd4), blue rightside */
+		0x03050073	/* KEY_VOLUMEUP(115)(0x73), blue rightside upper */
+		0x04050023
+		0x05050024
          >;
         status = "okay";
 };
