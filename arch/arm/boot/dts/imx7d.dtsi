@@ -869,7 +869,6 @@
 				clock-names = "ipg", "ahb";
 				#dma-cells = <3>;
 				fsl,sdma-ram-script-name = "imx/sdma/sdma-imx7d.bin";
-				status = "disabled";
 			};
 
 			fec1: ethernet@30be0000 {
