@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,6 +48,20 @@
 #define PFUZE200_VGEN4		10
 #define PFUZE200_VGEN5		11
 #define PFUZE200_VGEN6		12
+
+#define PFUZE3000_SW1A		0
+#define PFUZE3000_SW1B		1
+#define PFUZE3000_SW2		2
+#define PFUZE3000_SW3		3
+#define PFUZE3000_SWBST		4
+#define PFUZE3000_VSNVS		5
+#define PFUZE3000_VREFDDR	6
+#define PFUZE3000_VLDO1		7
+#define PFUZE3000_VLDO2		8
+#define PFUZE3000_VCCSD		9
+#define PFUZE3000_V33		10
+#define PFUZE3000_VLDO3		11
+#define PFUZE3000_VLDO4		12
 
 struct regulator_init_data;
 
