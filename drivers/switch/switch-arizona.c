@@ -1547,8 +1547,9 @@ static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 				int val)
 {
 	int debounce_lim = info->arizona->pdata.antenna_manual_db_plugout;
-	int ret = 0;
+	int i, ret = 0;
 	bool mic;
+
 	dev_dbg(info->arizona->dev, "Antenna Detection: Button Reading: 0x%x\n", val);
 
 	if (val < 0)
@@ -1581,6 +1582,17 @@ static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 	}
 
 	if (!(val & ARIZONA_MICD_STS)) { /* Detected open circuit*/
+		/** Due to slow plugout of 4 pole headset from the antenna cable
+		*  the gnd/hpl/hpr of 4 pole can come in contact with mic pin of
+		* antenna hence measuring a low impedance on the mic pin and
+		* reporting a button presse event. So here we send a button
+		* release event to negate all such false button presses
+		*/
+		for (i = 0; i < info->num_micd_ranges; i++)
+			input_report_key(info->input,
+					 info->micd_ranges[i].key, 0);
+		input_sync(info->input);
+
 		info->antenna_skip_btn_db = false;
 		ret = arizona_antenna_mic_reading(info, val);
 	} else {
