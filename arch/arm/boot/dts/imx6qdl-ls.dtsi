@@ -166,8 +166,6 @@
 	pinctrl_hog_1: hoggrp {
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_8__XTALOSC_REF_CLK_32K	0x000b0		/* slow clock */
-#define GP_ACCEL_IRQ			<&gpio5 30 IRQ_TYPE_LEVEL_LOW>
-			MX6QDL_PAD_CSI0_DAT12__GPIO5_IO30	0x1b0b0
 #define GP_DISP_LED_RED			<&gpio5 9 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_DISP0_DAT15__GPIO5_IO09	0x1b0b0
 #define GP_DISP_LED_GREEN		<&gpio5 10 GPIO_ACTIVE_HIGH>
@@ -414,6 +412,13 @@
 			MX6QDL_PAD_DISP0_DAT12__GPIO5_IO06	0x1b0b0
 #define GP_MAX77818_WCINOKB		<&gpio5 7 GPIO_ACTIVE_LOW>	/* A5 */
 			MX6QDL_PAD_DISP0_DAT13__GPIO5_IO07	0x1b0b0
+		>;
+	};
+
+	pinctrl_mpu9250: mpu9250grp {
+		fsl,pins = <
+#define GP_ACCEL_IRQ			<&gpio5 30 IRQ_TYPE_LEVEL_LOW>
+			MX6QDL_PAD_CSI0_DAT12__GPIO5_IO30	0x1b0b0
 		>;
 	};
 
@@ -869,7 +874,7 @@
 };
 
 &i2c2b {
-	ov5640_mipi: ov5640_mipi@3e {
+	ov5640_mipi: ov5640_mipi@3c {
 		compatible = "ovti,ov5640_mipi";
 		reg = <0x3c>;
 		pinctrl-names = "default";
@@ -885,6 +890,13 @@
 		csi_id = <0>;
 		mclk = <22000000>;
 		mclk_source = <0>;
+	};
+};
+
+&i2c2c {
+	lm3555@30 {
+		compatible = "ti,lm3555";
+		reg = <0x30>;
 	};
 };
 
@@ -922,6 +934,49 @@
 		reg = <2>;
 		#address-cells = <1>;
 		#size-cells = <0>;
+	};
+};
+
+&i2c3a {
+	mpu9250@68 {
+		compatible = "invn,mpu9250";
+		reg = <0x68>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_mpu9250>;
+		inven,vdd_ana-supply = <&reg_3p3v>;
+		inven,vcc_i2c-supply = <&reg_3p3v>;
+		axis_map_x = <1>;
+		negate_x = <0>;
+		axis_map_y = <0>;
+		negate_y = <0>;
+		axis_map_z = <2>;
+		negate_z = <1>;
+		inven,aux_type = "none";
+		inven,secondary_type = "compass";
+		inven,secondary_name = "ak8963";
+		inven,secondary_reg = <0x0c>;
+		inven,secondary_axis_map_x = <1>;
+		inven,secondary_negate_x = <0>;
+		inven,secondary_axis_map_y = <0>;
+		inven,secondary_negate_y = <0>;
+		inven,secondary_axis_map_z = <2>;
+		inven,secondary_negate_z = <1>;
+		interrupts-extended = GP_ACCEL_IRQ;
+	};
+};
+
+&i2c3b {
+	max77818_charger@36 {
+		compatible = "mxim,max77818fg";
+		reg = <0x36>;
+	};
+	max77818_charger@66 {
+		compatible = "mxim,max77818ldo";
+		reg = <0x66>;
+	};
+	max77818_charger@69 {
+		compatible = "mxim,max77818ch";
+		reg = <0x69>;
 	};
 };
 
