@@ -250,24 +250,24 @@
 
 	pinctrl_gpio_keys: gpio_keysgrp {
 		fsl,pins = <
-#define GP_DISP_KEY_1			<&gpio3 6 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA6__GPIO3_IO06		0x1b0b0
-#define GP_DISP_KEY_2			<&gpio3 7 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA7__GPIO3_IO07		0x1b0b0
-#define GP_DISP_KEY_3			<&gpio3 8 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA8__GPIO3_IO08		0x1b0b0
-#define GP_DISP_KEY_4			<&gpio3 9 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA9__GPIO3_IO09		0x1b0b0
-#define GP_DISP_KEY_5			<&gpio3 10 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0x1b0b0
-#define GP_DISP_KEY_6			<&gpio3 11 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA11__GPIO3_IO11		0x1b0b0
-#define GP_DISP_KEY_SHIFT		<&gpio3 12 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA12__GPIO3_IO12		0x1b0b0
-#define GP_DISP_KEY_SPACE		<&gpio3 13 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x1b0b0
-#define GP_DISP_KEY_CTRL		<&gpio3 14 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x1b0b0
+#define GP_KEY_1			<&gpio3 6 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA6__GPIO3_IO06		0x130b0
+#define GP_KEY_2			<&gpio3 7 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA7__GPIO3_IO07		0x130b0
+#define GP_KEY_3			<&gpio3 8 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA8__GPIO3_IO08		0x130b0
+#define GP_KEY_4			<&gpio3 9 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA9__GPIO3_IO09		0x130b0
+#define GP_KEY_5			<&gpio3 10 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0x130b0
+#define GP_KEY_6			<&gpio3 11 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA11__GPIO3_IO11		0x130b0
+#define GP_KEY_SHIFT		<&gpio3 12 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA12__GPIO3_IO12		0x130b0
+#define GP_KEY_SPACE		<&gpio3 13 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x130b0
+#define GP_KEY_CTRL		<&gpio3 14 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x130b0
 #define GP_KEYPAD_LOCK			<&gpio5 0 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_WAIT__GPIO5_IO00		0x1b0b0
 		>;
@@ -727,51 +727,51 @@
 
 	1 {
 		label = "KEY_1";
-		gpios = GP_DISP_KEY_1;
+		gpios = GP_KEY_1;
 		linux,code = <KEY_1>;		/* 2 */
 	};
 	2 {
 		label = "KEY_2";
-		gpios = GP_DISP_KEY_2;
+		gpios = GP_KEY_2;
 		linux,code = <KEY_2>;		/* 3 */
 	};
 	3 {
 		label = "KEY_3";
-		gpios = GP_DISP_KEY_3;
+		gpios = GP_KEY_3;
 		linux,code = <KEY_3>;		/* 4 */
 	};
 	4 {
 		label = "KEY_4";
-		gpios = GP_DISP_KEY_4;
+		gpios = GP_KEY_4;
 		linux,code = <KEY_4>;		/* 5 */
 	};
 	5 {
 		label = "KEY_5";
-		gpios = GP_DISP_KEY_5;
+		gpios = GP_KEY_5;
 		linux,code = <KEY_5>;		/* 6 */
 	};
 	6 {
 		label = "KEY_6";
-		gpios = GP_DISP_KEY_6;
+		gpios = GP_KEY_6;
 		linux,code = <KEY_6>;		/* 7 */
 	};
 	7 {
 		label = "KEY_LEFTSHIFT";
-		gpios = GP_DISP_KEY_SHIFT;
+		gpios = GP_KEY_SHIFT;
 		linux,code = <KEY_LEFTSHIFT>;	/* 42(0x2a) */
 	};
 	8 {
 		label = "KEY_SPACE";
-		gpios = GP_DISP_KEY_SPACE;
+		gpios = GP_KEY_SPACE;
 		linux,code = <KEY_SPACE>;	/* 57(0x39) */
 	};
 	9 {
-		label = "GP_DISP_KEY_CTRL";
-		gpios = GP_DISP_KEY_CTRL;
+		label = "KEY_CTRL";
+		gpios = GP_KEY_CTRL;
 		linux,code = <KEY_RIGHTCTRL>;	/* 97(0x61) */
 	};
 	12 {
-		label = "GP_KEYPAD_LOCK";
+		label = "KEYPAD_LOCK";
 		gpios = GP_KEYPAD_LOCK;
 		linux,code = <KEY_SCREENLOCK>;	/* 152(0x98) */
 	};
