@@ -118,7 +118,6 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nitrogen6x.dtb \
 	imx6dl-nitrogen6_max.dtb \
-	imx6dl-nitrogen6_mtp.dtb \
 	imx6dl-nitrogen6_vm.dtb \
 	imx6dl-per.dtb \
 	imx6dl-sabreauto.dtb \
@@ -141,7 +140,6 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-nitrogen6x-cwc.dtb \
 	imx6q-nitrogen6_max.dtb \
 	imx6q-nitrogen6_max-nolcd.dtb \
-	imx6q-nitrogen6_mtp.dtb \
 	imx6q-per.dtb \
 	imx6q-sabreauto.dtb \
 	imx6q-sabreauto-ecspi.dtb \
