@@ -61,10 +61,6 @@
 		};
 	};
 
-	gpio_keys: gpio-keys {
-		compatible = "gpio-keys";
-	};
-
 	sound_sgtl5000: sound_sgtl5000 {
 		compatible = "fsl,imx6dl-nitrogen6_vm-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";
@@ -220,13 +216,6 @@
 			MX6QDL_PAD_ENET_RXD0__GPIO1_IO27	0x0f0b0
 #define GP_ENET_PHY_INT			<&gpio1 28 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28	0x1b0b0
-		>;
-	};
-
-	pinctrl_gpio_keys: gpio_keysgrp {
-		fsl,pins = <
-#define GP_BACK				<&gpio1 3 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x1b0b0		/* TP71 - Red LED */
 		>;
 	};
 
@@ -511,17 +500,6 @@
 	phy_int {
 		reg = <0x6>;
 		interrupts-extended = GP_ENET_PHY_INT;
-	};
-};
-
-&gpio_keys {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_gpio_keys>;
-
-	back {
-		label = "Back";
-		gpios = GP_BACK;
-		linux,code = <158>; /* KEY_BACK */
 	};
 };
 
