@@ -220,6 +220,7 @@ int usb_wwan_write(struct tty_struct *tty, struct usb_serial_port *port,
 	int i;
 	int left, todo;
 	struct urb *this_urb = NULL;	/* spurious */
+	struct usb_host_endpoint *ep = NULL;
 	int err;
 	unsigned long flags;
 
@@ -255,6 +256,17 @@ int usb_wwan_write(struct tty_struct *tty, struct usb_serial_port *port,
 		/* send the data */
 		memcpy(this_urb->transfer_buffer, buf, todo);
 		this_urb->transfer_buffer_length = todo;
+
+		if ((HUAWEI_VENDOR_ID == port->serial->dev->descriptor.idVendor) &&
+		    (HW_BCDUSB != port->serial->dev->descriptor.bcdUSB)) {
+			ep = usb_pipe_endpoint(this_urb->dev, this_urb->pipe);
+			if (ep &&
+			    (0 != this_urb->transfer_buffer_length) &&
+			    (0 == this_urb->transfer_buffer_length %
+				ep->desc.wMaxPacketSize)) {
+				this_urb->transfer_flags |= URB_ZERO_PACKET;
+			}
+		}
 
 		spin_lock_irqsave(&intfdata->susp_lock, flags);
 		if (intfdata->suspended) {
