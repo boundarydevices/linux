@@ -31,6 +31,9 @@ extern int usb_wwan_resume(struct usb_serial *serial);
 #define IN_BUFLEN 4096
 #define OUT_BUFLEN 4096
 
+#define HUAWEI_VENDOR_ID	0x12D1
+#define HW_BCDUSB		0x0110
+
 struct usb_wwan_intf_private {
 	spinlock_t susp_lock;
 	unsigned int suspended:1;
