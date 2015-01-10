@@ -336,15 +336,13 @@
 		partition@0 {
 			label = "U-Boot";
 			reg = <0x0 0xC0000>;
-			read-only;
 		};
 		partition@C0000 {
 			label = "env";
 			reg = <0xC0000 0x2000>;
-			read-only;
 		};
 		partition@C2000 {
-			label = "Kernel";
+			label = "splash";
 			reg = <0xC2000 0x13e000>;
 		};
 	};
