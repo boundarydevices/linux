@@ -267,6 +267,7 @@ static void arizona_extcon_hp_clamp(struct arizona_extcon_info *info,
 	struct arizona *arizona = info->arizona;
 	unsigned int mask, val = 0;
 	unsigned int cap_sel = 0;
+	unsigned int edre_reg = 0, edre_val = 0;
 	int ret;
 
 	switch (arizona->type) {
@@ -297,6 +298,19 @@ static void arizona_extcon_hp_clamp(struct arizona_extcon_info *info,
 				"Failed to set TST_CAP_SEL: %d\n",
 				 ret);
 		break;
+	case WM8285:
+	case WM1840:
+		edre_reg = CLEARWATER_EDRE_MANUAL;
+		mask = ARIZONA_HP1L_SHRTO | ARIZONA_HP1L_FLWR |
+			   ARIZONA_HP1L_SHRTI;
+		if (clamp) {
+			val = ARIZONA_HP1L_SHRTO;
+			edre_val = 0x3;
+		} else {
+			val = ARIZONA_HP1L_FLWR | ARIZONA_HP1L_SHRTI;
+			edre_val = 0;
+		}
+		break;
 	default:
 		mask = 0;
 		break;
@@ -316,6 +330,14 @@ static void arizona_extcon_hp_clamp(struct arizona_extcon_info *info,
 			dev_warn(arizona->dev,
 				"Failed to disable headphone outputs: %d\n",
 				 ret);
+	}
+
+	if (edre_reg) {
+			ret = regmap_write(arizona->regmap, edre_reg, edre_val);
+			if (ret != 0)
+				dev_warn(arizona->dev,
+					"Failed to set EDRE Manual: %d\n",
+					 ret);
 	}
 
 	if (mask) {

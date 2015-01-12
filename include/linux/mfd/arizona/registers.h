@@ -278,7 +278,8 @@
 #define ARIZONA_DRE_CONTROL_1                    0x441
 #define ARIZONA_DRE_CONTROL_2                    0x442
 #define ARIZONA_DRE_CONTROL_3                    0x443
-#define CLEARWATER_EDRE_ENABLE                       0x448
+#define CLEARWATER_EDRE_ENABLE                   0x448
+#define CLEARWATER_EDRE_MANUAL                   0x44A
 #define ARIZONA_DAC_AEC_CONTROL_1                0x450
 #define ARIZONA_DAC_AEC_CONTROL_2                0x451
 #define ARIZONA_NOISE_GATE_CONTROL               0x458
