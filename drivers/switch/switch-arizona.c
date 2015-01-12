@@ -1513,10 +1513,12 @@ static int arizona_antenna_hp_oc_reading(struct arizona_extcon_info *info, int v
 
 	arizona_set_headphone_imp(info, val);
 
-	if (info->mic)
+	if (info->mic) {
+		info->antenna_skip_btn_db = true;
 		arizona_extcon_report(info, BIT_HEADSET);
-	else
+	} else {
 		arizona_extcon_report(info, BIT_HEADSET_NO_MIC);
+	}
 
 	arizona_jds_set_state(info, &arizona_antenna_button_det);
 
@@ -1534,6 +1536,7 @@ static int arizona_antenna_hp_reading(struct arizona_extcon_info *info, int val)
 
 	if (info->mic) {
 		arizona_extcon_report(info, BIT_HEADSET);
+		info->antenna_skip_btn_db = false;
 		arizona_jds_set_state(info, &arizona_antenna_button_det);
 	} else {
 		arizona_extcon_report(info, BIT_HEADSET_NO_MIC);
@@ -1555,7 +1558,11 @@ static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 	if (val < 0)
 		return val;
 
-	if (debounce_lim) {
+	if (debounce_lim && info->antenna_skip_btn_db) {
+		/** If plugout debounce is set and we are skipping the debounce for
+		* button then do a common debounce below to handle both slow
+		* plugouts and buttons
+		*/
 		if (info->antenna_db_plugout != val)
 			info->antenna_cnt_plugout = 0;
 
@@ -1600,16 +1607,12 @@ static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 		mic = val & ARIZONA_MICD_LVL_8 ? true : false;
 		if (mic && mic != info->mic) {
 			info->mic = mic;
+			info->antenna_skip_btn_db = true;
 			arizona_extcon_report(info, BIT_HEADSET);
 		}
 
-		if (info->mic) {/* previous hs det so check for button */
-			/* skip furthur debounce for button as we have
-			already debounced in this function*/
-			if (debounce_lim)
-				info->antenna_skip_btn_db = true;
+		if (info->mic)/* previous hs det so check for button */
 			ret = arizona_micd_button_reading(info, val);
-		}
 	}
 
 	return ret;
