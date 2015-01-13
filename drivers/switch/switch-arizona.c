@@ -103,6 +103,7 @@ struct arizona_extcon_info {
 	int antenna_cnt_plugout;
 	int antenna_res_old_plugout;
 	bool antenna_skip_btn_db;
+	int moisture_count;
 
 	struct delayed_work hpdet_work;
 	struct delayed_work micd_detect_work;
@@ -1208,6 +1209,7 @@ static int arizona_hpdet_moisture_reading(struct arizona_extcon_info *info,
 					  int val)
 {
 	struct arizona *arizona = info->arizona;
+	int debounce_lim = info->arizona->pdata.hpdet_moisture_debounce;
 
 	if (val < 0) {
 		return val;
@@ -1217,6 +1219,18 @@ static int arizona_hpdet_moisture_reading(struct arizona_extcon_info *info,
 		else
 			arizona_jds_set_state(info, &arizona_micd_microphone);
 	} else {
+		if (debounce_lim) {
+			if (++info->moisture_count < debounce_lim) {
+				dev_dbg(info->arizona->dev,
+					"Moisture software debounce: %d, %x\n",
+					info->moisture_count, val);
+				arizona_hpdet_restart(info);
+				return -EAGAIN;
+			}
+
+			info->moisture_count = 0;
+		}
+
 		dev_warn(arizona->dev,
 			 "Jack detection due to moisture, ignoring\n");
 		arizona_jds_set_state(info, NULL);
@@ -2303,6 +2317,7 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 		info->antenna_cnt_plugout = 0;
 		info->antenna_res_old_plugout = 0;
 		info->antenna_skip_btn_db = false;
+		info->moisture_count = 0;
 		arizona->hp_impedance = 0;
 		arizona_jds_set_state(info, NULL);
 
@@ -2452,6 +2467,9 @@ static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 
 	arizona_of_read_u32(arizona, "wlf,hpdet-moisture-imp", false,
 			    &pdata->hpdet_moisture_imp);
+
+	arizona_of_read_u32(arizona, "wlf,hpdet-moisture-debounce", false,
+			    &pdata->hpdet_moisture_debounce);
 
 	arizona_of_read_u32(arizona, "wlf,hpdet-short-circuit-imp", false,
 			    &pdata->hpdet_short_circuit_imp);

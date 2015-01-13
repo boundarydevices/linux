@@ -184,6 +184,9 @@ struct arizona_pdata {
 	 */
 	int hpdet_moisture_imp;
 
+	/** Software debounces for moisture detect */
+	int hpdet_moisture_debounce;
+
 	/**
 	 * Channel to use for headphone detection, valid values are 0 for
 	 * left and 1 for right
