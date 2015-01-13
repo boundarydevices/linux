@@ -39,6 +39,7 @@ enum _CHIP_TYPE {
 	RTL8812,
 	RTL8821, //RTL8811
 	RTL8723B,
+	RTL8814A,
 	MAX_CHIP_TYPE
 };
 
@@ -92,9 +93,7 @@ typedef enum _HW_VARIABLES{
 	HW_VAR_FWLPS_RF_ON,
 	HW_VAR_H2C_FW_P2P_PS_OFFLOAD,
 	HW_VAR_TDLS_WRCR,
-	HW_VAR_TDLS_INIT_CH_SEN,
 	HW_VAR_TDLS_RS_RCR,
-	HW_VAR_TDLS_DONE_CH_SEN,
 	HW_VAR_INITIAL_GAIN,
 	HW_VAR_TRIGGER_GPIO_0,
 	HW_VAR_BT_SET_COEXIST,
@@ -120,6 +119,9 @@ typedef enum _HW_VARIABLES{
 #endif
 #ifdef CONFIG_AP_WOWLAN
 	HW_VAR_AP_WOWLAN,
+#endif
+#ifdef CONFIG_GPIO_WAKEUP
+	HW_SET_GPIO_WL_CTRL,
 #endif
 	HW_VAR_SYS_CLKR,
 	HW_VAR_NAV_UPPER,
@@ -184,6 +186,8 @@ typedef enum _HAL_DEF_VARIABLE{
 	HAL_DEF_MACID_SLEEP, // Support for MACID sleep
 	HAL_DEF_DBG_RX_INFO_DUMP,
 	HAL_DEF_DBG_DIS_PWT, //disable Tx power training or not.
+	HAL_DEF_EFUSE_USAGE,	/* Get current EFUSE utilization. 2008.12.19. Added by Roger. */
+	HAL_DEF_EFUSE_BYTES,
 }HAL_DEF_VARIABLE;
 
 typedef enum _HAL_ODM_VARIABLE{
@@ -323,6 +327,15 @@ struct hal_ops {
 	s32 (*c2h_handler)(_adapter *padapter, u8 *c2h_evt);
 	c2h_id_filter c2h_id_filter_ccx;
 	s32 (*fill_h2c_cmd)(PADAPTER, u8 ElementID, u32 CmdLen, u8 *pCmdBuffer);
+	void (*fill_fake_txdesc)(PADAPTER, u8 *pDesc, u32 BufferLen,
+			u8 IsPsPoll, u8 IsBTQosNull, u8 bDataFrame);
+#ifdef CONFIG_WOWLAN
+	void (*hal_set_wowlan_fw)(_adapter *adapter, u8 sleep);
+#endif //CONFIG_WOWLAN
+	u8 (*hal_get_tx_buff_rsvd_page_num)(_adapter *adapter, bool wowlan);
+#ifdef CONFIG_GPIO_API
+	void (*update_hisr_hsisr_ind)(PADAPTER padapter, u32 flag);
+#endif
 };
 
 typedef	enum _RT_EEPROM_TYPE{
@@ -372,10 +385,21 @@ typedef enum _HARDWARE_TYPE{
 	HARDWARE_TYPE_RTL8723BE,
 	HARDWARE_TYPE_RTL8723BU,
 	HARDWARE_TYPE_RTL8723BS,
-	HARDWARE_TYPE_RTL8813AE,
-	HARDWARE_TYPE_RTL8813AU,
-	HARDWARE_TYPE_RTL8813AS,
-
+	HARDWARE_TYPE_RTL8814AE,
+	HARDWARE_TYPE_RTL8814AU,
+	HARDWARE_TYPE_RTL8814AS,
+	HARDWARE_TYPE_RTL8821BE,
+	HARDWARE_TYPE_RTL8821BU,
+	HARDWARE_TYPE_RTL8821BS,
+	HARDWARE_TYPE_RTL8822BE,
+	HARDWARE_TYPE_RTL8822BU,
+	HARDWARE_TYPE_RTL8822BS,
+	HARDWARE_TYPE_RTL8703BE,
+	HARDWARE_TYPE_RTL8703BU,
+	HARDWARE_TYPE_RTL8703BS,
+	HARDWARE_TYPE_RTL8188FE,
+	HARDWARE_TYPE_RTL8188FU,
+	HARDWARE_TYPE_RTL8188FS,
 	HARDWARE_TYPE_MAX,
 }HARDWARE_TYPE;
 
@@ -462,13 +486,46 @@ typedef enum _HARDWARE_TYPE{
 #define IS_HARDWARE_TYPE_8723B(_Adapter) \
 	(IS_HARDWARE_TYPE_8723BE(_Adapter) || IS_HARDWARE_TYPE_8723BU(_Adapter) ||IS_HARDWARE_TYPE_8723BS(_Adapter))
 
-//RTL8813A Series
-#define IS_HARDWARE_TYPE_8813AE(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8813AE)
-#define IS_HARDWARE_TYPE_8813AU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8813AU)
-#define IS_HARDWARE_TYPE_8813AS(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8813AS)
+/* RTL8814A Series */
+#define IS_HARDWARE_TYPE_8814AE(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8814AE)
+#define IS_HARDWARE_TYPE_8814AU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8814AU)
+#define IS_HARDWARE_TYPE_8814AS(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8814AS)
 
-#define IS_HARDWARE_TYPE_8813A(_Adapter)		\
-(IS_HARDWARE_TYPE_8813AE(_Adapter) || IS_HARDWARE_TYPE_8813AU(_Adapter) ||IS_HARDWARE_TYPE_8813AS(_Adapter))
+#define IS_HARDWARE_TYPE_8814A(_Adapter)		\
+(IS_HARDWARE_TYPE_8814AE(_Adapter) || IS_HARDWARE_TYPE_8814AU(_Adapter) || IS_HARDWARE_TYPE_8814AS(_Adapter))
+
+#define IS_HARDWARE_TYPE_JAGUAR2(_Adapter)		\
+(IS_HARDWARE_TYPE_8814A(_Adapter) || IS_HARDWARE_TYPE_8821B(_Adapter) || IS_HARDWARE_TYPE_8822B(_Adapter))
+
+#define IS_HARDWARE_TYPE_JAGUAR_AND_JAGUAR2(_Adapter)		\
+(IS_HARDWARE_TYPE_JAGUAR(_Adapter) || IS_HARDWARE_TYPE_JAGUAR2(_Adapter))
+
+/* RTL8703B Series */
+#define IS_HARDWARE_TYPE_8703BE(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8703BE)
+#define IS_HARDWARE_TYPE_8703BS(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8703BS)
+#define IS_HARDWARE_TYPE_8703BU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8703BU)
+#define	IS_HARDWARE_TYPE_8703B(_Adapter)			\
+(IS_HARDWARE_TYPE_8703BE(_Adapter) || IS_HARDWARE_TYPE_8703BU(_Adapter) || IS_HARDWARE_TYPE_8703BS(_Adapter))
+
+/* RTL8188F Series */
+#define IS_HARDWARE_TYPE_8188FE(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8188FE)
+#define IS_HARDWARE_TYPE_8188FS(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8188FS)
+#define IS_HARDWARE_TYPE_8188FU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8188FU)
+#define	IS_HARDWARE_TYPE_8188F(_Adapter)			\
+(IS_HARDWARE_TYPE_8188FE(_Adapter) || IS_HARDWARE_TYPE_8188FU(_Adapter) || IS_HARDWARE_TYPE_8188FS(_Adapter))
+
+#define IS_HARDWARE_TYPE_8821BE(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8821BE)
+#define IS_HARDWARE_TYPE_8821BU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8821BU)
+#define IS_HARDWARE_TYPE_8821BS(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8821BS)
+
+#define IS_HARDWARE_TYPE_8821B(_Adapter)		\
+(IS_HARDWARE_TYPE_8821BE(_Adapter) || IS_HARDWARE_TYPE_8821BU(_Adapter) || IS_HARDWARE_TYPE_8821BS(_Adapter))
+
+#define IS_HARDWARE_TYPE_8822BE(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8822BE)
+#define IS_HARDWARE_TYPE_8822BU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8822BU)
+#define IS_HARDWARE_TYPE_8822BS(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8822BS)
+#define IS_HARDWARE_TYPE_8822B(_Adapter)		\
+(IS_HARDWARE_TYPE_8822BE(_Adapter) || IS_HARDWARE_TYPE_8822BU(_Adapter) || IS_HARDWARE_TYPE_8822BS(_Adapter))
 
 
 typedef struct eeprom_priv EEPROM_EFUSE_PRIV, *PEEPROM_EFUSE_PRIV;
@@ -633,10 +690,12 @@ c2h_id_filter rtw_hal_c2h_id_filter_ccx(_adapter *adapter);
 
 s32 rtw_hal_is_disable_sw_channel_plan(PADAPTER padapter);
 
-s32 rtw_hal_macid_sleep(PADAPTER padapter, u32 macid);
-s32 rtw_hal_macid_wakeup(PADAPTER padapter, u32 macid);
+s32 rtw_hal_macid_sleep(PADAPTER padapter, u8 macid);
+s32 rtw_hal_macid_wakeup(PADAPTER padapter, u8 macid);
 
 s32 rtw_hal_fill_h2c_cmd(PADAPTER, u8 ElementID, u32 CmdLen, u8 *pCmdBuffer);
-
+#ifdef CONFIG_GPIO_API
+void rtw_hal_update_hisr_hsisr_ind(_adapter *padapter, u32 flag);
+#endif
 #endif //__HAL_INTF_H__
 

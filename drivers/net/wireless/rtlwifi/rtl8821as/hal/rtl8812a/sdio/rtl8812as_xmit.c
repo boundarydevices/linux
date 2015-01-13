@@ -161,7 +161,8 @@ static void _fillDefaultTxdesc(struct xmit_frame *pxmitframe, PTXDESC_8821A ptxd
 				ptxdesc->userate = 1;
 				ptxdesc->data_short = (padapter->fix_rate & BIT(7))?1:0;
 				ptxdesc->datarate = padapter->fix_rate & 0x7F;
-				ptxdesc->disdatafb = 1;
+				if (!padapter->data_fb)
+					ptxdesc->disdatafb = 1;
 			}
 
 			if (pattrib->ldpc)
@@ -185,6 +186,18 @@ static void _fillDefaultTxdesc(struct xmit_frame *pxmitframe, PTXDESC_8821A ptxd
 		}
 
 		ptxdesc->usb_txagg_num = pxmitframe->agg_num;
+
+#ifdef CONFIG_TDLS
+#ifdef CONFIG_XMIT_ACK
+		/* CCX-TXRPT ack for xmit mgmt frames. */
+		if (pxmitframe->ack_report) {
+			#ifdef DBG_CCX
+			DBG_8192C("%s set spe_rpt\n", __func__);
+			#endif
+			ptxdesc->spe_rpt = 1;
+		}
+#endif /* CONFIG_XMIT_ACK */
+#endif
 	}
 	else if (pxmitframe->frame_tag == MGNT_FRAMETAG)
 	{
@@ -1130,10 +1143,6 @@ thread_return XmitThread8821AS(thread_context context)
 }
 #endif // !CONFIG_SDIO_TX_TASKLET
 
-#ifdef CONFIG_IOL_IOREG_CFG_DBG
-#include <rtw_iol.h>
-#endif
-
 s32 MgntXmit8821AS(PADAPTER padapter, struct xmit_frame *pmgntframe)
 {
 	s32 ret = _SUCCESS;
@@ -1168,10 +1177,6 @@ s32 MgntXmit8821AS(PADAPTER padapter, struct xmit_frame *pmgntframe)
 	{
 		// dump beacon directly
 		u32 addr;
-
-#ifdef CONFIG_IOL_IOREG_CFG_DBG
-		rtw_IOL_cmd_buf_dump(padapter, pxmitbuf->len, pxmitbuf->pdata);
-#endif
 
 		addr = ffaddr2deviceId(pdvobjpriv, pxmitbuf->ff_hwaddr);
 		ret = rtw_write_port(padapter, addr, pxmitbuf->len, (u8*)pxmitbuf);

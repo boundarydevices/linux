@@ -217,7 +217,8 @@ void handle_txrpt_ccx_8723a(_adapter *adapter, void *buf);
 #endif //CONFIG_XMIT_ACK
 
 void rtl8723a_update_txdesc(struct xmit_frame *pxmitframe, u8 *pmem);
-void rtl8723a_fill_fake_txdesc(PADAPTER padapter, u8 *pDesc, u32 BufferLen, u8 IsPsPoll, u8 IsBTQosNull);
+void rtl8723a_fill_fake_txdesc(PADAPTER padapter, u8 *pDesc, u32 BufferLen,
+		u8 IsPsPoll, u8 IsBTQosNull, u8 IsDataFrame);
 
 #if defined(CONFIG_SDIO_HCI) || defined(CONFIG_GSPI_HCI)
 s32 rtl8723as_init_xmit_priv(PADAPTER padapter);

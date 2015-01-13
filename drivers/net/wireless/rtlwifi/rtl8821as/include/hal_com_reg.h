@@ -43,6 +43,7 @@
 #define REG_SYS_FUNC_EN				0x0002
 #define REG_APS_FSMCO					0x0004
 #define REG_SYS_CLKR					0x0008
+#define REG_SYS_CLK_CTRL				REG_SYS_CLKR
 #define REG_9346CR						0x000A
 #define REG_SYS_EEPROM_CTRL			0x000A
 #define REG_EE_VPD						0x000C
@@ -233,7 +234,7 @@
 #define REG_BEQ_INFO	0x0408
 #define REG_BKQ_INFO	0x040C
 
-/* 88E, 8723A, 8812A, 92E, 8723B */
+/* 88E, 8723A, 8812A, 8821A, 92E, 8723B */
 #define REG_Q0_INFO	0x400
 #define REG_Q1_INFO	0x404
 #define REG_Q2_INFO	0x408
@@ -267,7 +268,7 @@
 #define REG_FAST_EDCA_CTRL				0x0460
 #define REG_RD_RESP_PKT_TH				0x0463
 
-/* 8723A, 8812A, 92E, 8723B */
+/* 8723A, 8812A, 8821A, 92E, 8723B */
 #define REG_Q4_INFO	0x468
 #define REG_Q5_INFO	0x46C
 #define REG_Q6_INFO	0x470
@@ -275,6 +276,10 @@
 
 #define REG_INIRTS_RATE_SEL				0x0480
 #define REG_INIDATA_RATE_SEL			0x0484
+
+/* 8723B, 92E, 8812A, 8821A*/
+#define REG_MACID_SLEEP_3				0x0484
+#define REG_MACID_SLEEP_1				0x0488
 
 #define REG_POWER_STAGE1				0x04B4
 #define REG_POWER_STAGE2				0x04B8
@@ -288,8 +293,19 @@
 #define REG_RTS_MAX_AGGR_NUM			0x04CB
 #define REG_BAR_MODE_CTRL				0x04CC
 #define REG_RA_TRY_RATE_AGG_LMT		0x04CF
-#define REG_EARLY_MODE_CONTROL		0x04D0
-#define REG_MACID_SLEEP				0x04D4
+
+/* 8723A */
+#define REG_MACID_DROP	0x04D0
+
+/* 88E */
+#define REG_EARLY_MODE_CONTROL	0x04D0
+
+/* 8723B, 92E, 8812A, 8821A */
+#define REG_MACID_SLEEP_2	0x04D0
+
+/* 8723A, 8723B, 92E, 8812A, 8821A */
+#define REG_MACID_SLEEP	0x04D4
+
 #define REG_NQOS_SEQ					0x04DC
 #define REG_QOS_SEQ					0x04DE
 #define REG_NEED_CPU_HANDLE			0x04E0
@@ -1196,6 +1212,7 @@ Current IOREG MAP
 #define RFINI_RDY				BIT(5)
 #define WINTINI_RDY				BIT(6)
 #define RAM_DL_SEL				BIT(7)
+#define CPU_DL_READY			BIT(15) /* add flag  by gw for fw download ready 20130826 */
 #define ROM_DLEN				BIT(19)
 #define CPRST					BIT(23)
 

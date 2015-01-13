@@ -55,25 +55,6 @@
 
 #endif
 
-struct phy_stat
-{
-	unsigned int phydw0;
-
-	unsigned int phydw1;
-
-	unsigned int phydw2;
-
-	unsigned int phydw3;
-
-	unsigned int phydw4;
-
-	unsigned int phydw5;
-
-	unsigned int phydw6;
-
-	unsigned int phydw7;
-};
-
 // Rx smooth factor
 #define	Rx_Smooth_Factor (20)
 
@@ -98,8 +79,7 @@ int	rtl8192de_init_recv_priv(_adapter * padapter);
 void rtl8192de_free_recv_priv(_adapter * padapter);
 #endif
 
-void rtl8192d_translate_rx_signal_stuff(union recv_frame *precvframe, struct phy_stat *pphy_status);
 void rtl8192d_query_rx_desc_status(union recv_frame *precvframe, struct recv_stat *pdesc);
 
-#endif
+#endif /* _RTL8192D_RECV_H_ */
 

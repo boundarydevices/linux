@@ -412,6 +412,7 @@ _func_enter_;
 			preorder_ctrl->wend_b= 0xffff;       
 			//preorder_ctrl->wsize_b = (NR_RECVBUFF-2);
 			preorder_ctrl->wsize_b = 64;//64;
+			preorder_ctrl->ampdu_size = RX_AMPDU_SIZE_INVALID;
 
 			_rtw_init_queue(&preorder_ctrl->pending_recvframe_queue);
 
@@ -456,12 +457,18 @@ u32	rtw_free_stainfo(_adapter *padapter , struct sta_info *psta)
 	struct	xmit_priv	*pxmitpriv= &padapter->xmitpriv;
 	struct	sta_priv *pstapriv = &padapter->stapriv;
 	struct hw_xmit *phwxmit;
-
+	int pending_qcnt[4];
 
 _func_enter_;	
 	
 	if (psta == NULL)
 		goto exit;
+
+	_enter_critical_bh(&(pstapriv->sta_hash_lock), &irqL0);
+	rtw_list_delete(&psta->hash_list);
+	RT_TRACE(_module_rtl871x_sta_mgt_c_,_drv_err_,("\n free number_%d stainfo  with hwaddr = 0x%.2x 0x%.2x 0x%.2x 0x%.2x 0x%.2x 0x%.2x  \n",pstapriv->asoc_sta_count , psta->hwaddr[0], psta->hwaddr[1], psta->hwaddr[2],psta->hwaddr[3],psta->hwaddr[4],psta->hwaddr[5]));
+	pstapriv->asoc_sta_count --;
+	_exit_critical_bh(&(pstapriv->sta_hash_lock), &irqL0);
 
 
 	_enter_critical_bh(&psta->lock, &irqL0);
@@ -488,6 +495,7 @@ _func_enter_;
 	rtw_list_delete(&(pstaxmitpriv->vo_q.tx_pending));
 	phwxmit = pxmitpriv->hwxmits;
 	phwxmit->accnt -= pstaxmitpriv->vo_q.qcnt;
+	pending_qcnt[0] = pstaxmitpriv->vo_q.qcnt;
 	pstaxmitpriv->vo_q.qcnt = 0;
 	//_exit_critical_bh(&(pxmitpriv->vo_pending.lock), &irqL0);
 
@@ -497,6 +505,7 @@ _func_enter_;
 	rtw_list_delete(&(pstaxmitpriv->vi_q.tx_pending));
 	phwxmit = pxmitpriv->hwxmits+1;
 	phwxmit->accnt -= pstaxmitpriv->vi_q.qcnt;
+	pending_qcnt[1] = pstaxmitpriv->vi_q.qcnt;
 	pstaxmitpriv->vi_q.qcnt = 0;
 	//_exit_critical_bh(&(pxmitpriv->vi_pending.lock), &irqL0);
 
@@ -506,6 +515,7 @@ _func_enter_;
 	rtw_list_delete(&(pstaxmitpriv->be_q.tx_pending));
 	phwxmit = pxmitpriv->hwxmits+2;
 	phwxmit->accnt -= pstaxmitpriv->be_q.qcnt;
+	pending_qcnt[2] = pstaxmitpriv->be_q.qcnt;
 	pstaxmitpriv->be_q.qcnt = 0;
 	//_exit_critical_bh(&(pxmitpriv->be_pending.lock), &irqL0);
 	
@@ -515,14 +525,13 @@ _func_enter_;
 	rtw_list_delete(&(pstaxmitpriv->bk_q.tx_pending));
 	phwxmit = pxmitpriv->hwxmits+3;
 	phwxmit->accnt -= pstaxmitpriv->bk_q.qcnt;
+	pending_qcnt[3] = pstaxmitpriv->bk_q.qcnt;
 	pstaxmitpriv->bk_q.qcnt = 0;
 	//_exit_critical_bh(&(pxmitpriv->bk_pending.lock), &irqL0);
-	
+
+	rtw_os_wake_queue_at_free_stainfo(padapter, pending_qcnt);
+
 	_exit_critical_bh(&pxmitpriv->lock, &irqL0);
-	
-	rtw_list_delete(&psta->hash_list);
-	RT_TRACE(_module_rtl871x_sta_mgt_c_,_drv_err_,("\n free number_%d stainfo  with hwaddr = 0x%.2x 0x%.2x 0x%.2x 0x%.2x 0x%.2x 0x%.2x  \n",pstapriv->asoc_sta_count , psta->hwaddr[0], psta->hwaddr[1], psta->hwaddr[2],psta->hwaddr[3],psta->hwaddr[4],psta->hwaddr[5]));
-	pstapriv->asoc_sta_count --;
 	
 	
 	// re-init sta_info; 20061114 // will be init in alloc_stainfo
@@ -532,6 +541,7 @@ _func_enter_;
 	_cancel_timer_ex(&psta->addba_retry_timer);
 
 #ifdef CONFIG_TDLS
+	psta->tdls_sta_state = TDLS_STATE_NONE;
 	rtw_free_tdls_timer(psta);
 #endif //CONFIG_TDLS
 
@@ -631,7 +641,9 @@ _func_enter_;
 	 _rtw_spinlock_free(&psta->lock);
 
 	//_enter_critical_bh(&(pfree_sta_queue->lock), &irqL0);
+	_enter_critical_bh(&(pstapriv->sta_hash_lock), &irqL0);	
 	rtw_list_insert_tail(&psta->list, get_list_head(pfree_sta_queue));
+	_exit_critical_bh(&(pstapriv->sta_hash_lock), &irqL0);
 	//_exit_critical_bh(&(pfree_sta_queue->lock), &irqL0);
 
 exit:
@@ -651,6 +663,9 @@ void rtw_free_all_stainfo(_adapter *padapter)
 	struct sta_info *psta = NULL;
 	struct	sta_priv *pstapriv = &padapter->stapriv;
 	struct sta_info* pbcmc_stainfo =rtw_get_bcmc_stainfo( padapter);
+	u8 free_sta_num = 0;
+	char free_sta_list[NUM_STA];
+	int stainfo_offset;
 	
 _func_enter_;	
 
@@ -670,13 +685,27 @@ _func_enter_;
 
 			plist = get_next(plist);
 
-			if(pbcmc_stainfo!=psta)					
-				rtw_free_stainfo(padapter , psta);
+			if(pbcmc_stainfo!=psta)
+			{
+				rtw_list_delete(&psta->hash_list);
+				//rtw_free_stainfo(padapter , psta);
+				stainfo_offset = rtw_stainfo_offset(pstapriv, psta);
+				if (stainfo_offset_valid(stainfo_offset)) {
+					free_sta_list[free_sta_num++] = stainfo_offset;
+				}
+			}	
 			
 		}
 	}
 	
 	_exit_critical_bh(&pstapriv->sta_hash_lock, &irqL);
+
+
+	for (index = 0; index < free_sta_num; index++) 
+	{
+		psta = rtw_get_stainfo_by_offset(pstapriv, free_sta_list[index]);
+		rtw_free_stainfo(padapter , psta);
+	}
 	
 exit:	
 	
@@ -761,9 +790,6 @@ _func_enter_;
 		RT_TRACE(_module_rtl871x_sta_mgt_c_,_drv_err_,("rtw_alloc_stainfo fail"));
 		goto exit;
 	}
-
-	// default broadcast & multicast use macid 1
-	psta->mac_id = 1;
 
 	ptxservq= &(psta->sta_xmitpriv.be_q);
 

@@ -17,7 +17,16 @@
 
 #define	BTC_RSSI_COEX_THRESH_TOL_8723B_1ANT		2
 
-#define  BT_8723B_1ANT_WIFI_NOISY_THRESH								30   //max: 255
+#define  BT_8723B_1ANT_WIFI_NOISY_THRESH							30   //max: 255
+
+//for Antenna detection
+#define	BT_8723B_1ANT_ANTDET_PSDTHRES_BACKGROUND					50
+#define	BT_8723B_1ANT_ANTDET_PSDTHRES_2ANT_BADISOLATION				70
+#define	BT_8723B_1ANT_ANTDET_PSDTHRES_2ANT_GOODISOLATION			55
+#define	BT_8723B_1ANT_ANTDET_PSDTHRES_1ANT							35
+#define	BT_8723B_1ANT_ANTDET_RETRY_INTERVAL							10	//retry timer if ant det is fail, unit: second
+#define	BT_8723B_1ANT_ANTDET_ENABLE									0
+#define	BT_8723B_1ANT_ANTDET_COEXMECHANISMSWITCH_ENABLE				0
 
 typedef enum _BT_INFO_SRC_8723B_1ANT{
 	BT_INFO_SRC_8723B_1ANT_WIFI_FW			= 0x0,
@@ -125,6 +134,8 @@ typedef struct _COEX_STA_8723B_1ANT{
 	BOOLEAN					bA2dpExist;
 	BOOLEAN					bHidExist;
 	BOOLEAN					bPanExist;
+	BOOLEAN					bBtHiPriLinkExist;
+	u1Byte					nNumOfProfile;
 
 	BOOLEAN					bUnderLps;
 	BOOLEAN					bUnderIps;
@@ -140,6 +151,7 @@ typedef struct _COEX_STA_8723B_1ANT{
 	BOOLEAN					bC2hBtInfoReqSent;
 	u1Byte					btInfoC2h[BT_INFO_SRC_8723B_1ANT_MAX][10];
 	u4Byte					btInfoC2hCnt[BT_INFO_SRC_8723B_1ANT_MAX];
+	BOOLEAN					bBtWhckTest;
 	BOOLEAN					bC2hBtInquiryPage;
 	BOOLEAN					bC2hBtPage;				//Add for win8.1 page out issue
 	BOOLEAN					bWiFiIsHighPriTask;		//Add for win8.1 page out issue
@@ -160,10 +172,53 @@ typedef struct _COEX_STA_8723B_1ANT{
 
 	BOOLEAN					bCCKLock;
 	BOOLEAN					bPreCCKLock;
+	BOOLEAN					bCCKEverLock;
 	u1Byte					nCoexTableType;
 
 	BOOLEAN					bForceLpsOn;
+	u4Byte					wrongProfileNotification;
 }COEX_STA_8723B_1ANT, *PCOEX_STA_8723B_1ANT;
+
+#define  BT_8723B_1ANT_ANTDET_PSD_POINTS			256	//MAX:1024
+#define  BT_8723B_1ANT_ANTDET_PSD_AVGNUM			1	//MAX:3
+#define	BT_8723B_1ANT_ANTDET_BUF_LEN				16
+
+typedef struct _PSDSCAN_STA_8723B_1ANT{
+
+u4Byte		 	nAntDet_BTLEChannel;  //BT LE Channel ex:2412
+u4Byte			nAntDet_BTTxTime;
+u4Byte			nAntDet_PrePSDScanPeakVal;
+BOOLEAN			nAntDet_IsAntDetAvailable;
+u4Byte			nAntDet_PSDScanPeakVal;
+BOOLEAN			nAntDet_IsBTReplyAvailable;
+u4Byte			nAntDet_PSDScanPeakFreq;
+
+u1Byte			nAntDet_Result;
+u1Byte			nAntDet_PeakVal[BT_8723B_1ANT_ANTDET_BUF_LEN];
+u1Byte			nAntDet_PeakFreq[BT_8723B_1ANT_ANTDET_BUF_LEN];
+u4Byte			bAntDet_TryCount;
+u4Byte			bAntDet_FailCount;
+u4Byte			nAntDet_IntevalCount;
+u4Byte			nAntDet_ThresOffset;
+
+u4Byte			nRealCentFreq;
+s4Byte			nRealOffset;
+u4Byte			nRealSpan;
+	
+u4Byte			nPSDBandWidth;  //unit: Hz
+u4Byte			nPSDPoint;		//128/256/512/1024
+u4Byte			nPSDReport[1024];  //unit:dB (20logx), 0~255
+u4Byte			nPSDReport_MaxHold[1024];  //unit:dB (20logx), 0~255
+u4Byte			nPSDStartPoint;
+u4Byte			nPSDStopPoint;
+u4Byte			nPSDMaxValuePoint;
+u4Byte			nPSDMaxValue;
+u4Byte			nPSDStartBase;
+u4Byte			nPSDAvgNum;	// 1/8/16/32
+u4Byte			nPSDGenCount;
+BOOLEAN			bIsPSDRunning;
+BOOLEAN			bIsPSDShowMaxOnly;
+} PSDSCAN_STA_8723B_1ANT, *PPSDSCAN_STA_8723B_1ANT;
 
 //===========================================
 // The following is interface which will notify coex module.
@@ -246,5 +301,34 @@ EXhalbtc8723b1ant_Periodical(
 VOID
 EXhalbtc8723b1ant_DisplayCoexInfo(
 	IN	PBTC_COEXIST		pBtCoexist
+	);
+VOID
+EXhalbtc8723b1ant_AntennaDetection(
+	IN	PBTC_COEXIST			pBtCoexist,
+	IN	u4Byte					centFreq,
+	IN	u4Byte					offset,
+	IN	u4Byte					span,
+	IN	u4Byte					seconds
+	);
+VOID
+EXhalbtc8723b1ant_AntennaIsolation(
+	IN	PBTC_COEXIST			pBtCoexist,
+	IN	u4Byte					centFreq,
+	IN	u4Byte					offset,
+	IN	u4Byte					span,
+	IN	u4Byte					seconds
+	);
+
+VOID
+EXhalbtc8723b1ant_PSDScan(
+	IN	PBTC_COEXIST			pBtCoexist,
+	IN	u4Byte					centFreq,
+	IN	u4Byte					offset,
+	IN	u4Byte					span,
+	IN	u4Byte					seconds
+	);
+VOID
+EXhalbtc8723b1ant_DisplayAntDetection(
+	IN	PBTC_COEXIST			pBtCoexist
 	);
 

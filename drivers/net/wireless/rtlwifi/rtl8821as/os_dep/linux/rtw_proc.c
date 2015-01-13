@@ -19,6 +19,7 @@
  ******************************************************************************/
 
 #include <drv_types.h>
+#include <hal_data.h>
 #include "rtw_proc.h"
 
 #ifdef CONFIG_PROC_DEBUG
@@ -69,9 +70,9 @@ inline struct proc_dir_entry *rtw_proc_create_entry(const char *name, struct pro
 	struct proc_dir_entry *entry;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26))
-	entry = proc_create_data(name,  S_IFREG|S_IRUGO, parent, fops, data);
+	entry = proc_create_data(name,  S_IFREG|S_IRUGO|S_IWUGO, parent, fops, data);
 #else
-	entry = create_proc_entry(name, S_IFREG|S_IRUGO, parent);
+	entry = create_proc_entry(name, S_IFREG|S_IRUGO|S_IWUGO, parent);
 	if (entry) {
 		entry->data = data;
 		entry->proc_fops = fops;
@@ -391,24 +392,6 @@ static ssize_t proc_set_linked_info_dump(struct file *file, const char __user *b
 	return count;
 }
 
-int proc_get_rx_info(struct seq_file *m, void *v)
-{
-	struct net_device *dev = m->private;
-	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
-	struct dvobj_priv *psdpriv = padapter->dvobj;
-	struct debug_priv *pdbgpriv = &psdpriv->drv_dbg;
-
-	//Counts of packets whose seq_num is less than preorder_ctrl->indicate_seq, Ex delay, retransmission, redundant packets and so on
-	DBG_871X_SEL_NL(m,"Counts of Packets Whose Seq_Num Less Than Reorder Control Seq_Num: %llu\n",(unsigned long long)pdbgpriv->dbg_rx_ampdu_drop_count);
-	//How many times the Rx Reorder Timer is triggered.
-	DBG_871X_SEL_NL(m,"Rx Reorder Time-out Trigger Counts: %llu\n",(unsigned long long)pdbgpriv->dbg_rx_ampdu_forced_indicate_count);
-	//Total counts of packets loss
-	DBG_871X_SEL_NL(m,"Rx Packet Loss Counts: %llu\n",(unsigned long long)pdbgpriv->dbg_rx_ampdu_loss_count);
-	DBG_871X_SEL_NL(m,"Duplicate Management Frame Drop Count: %llu\n",(unsigned long long)pdbgpriv->dbg_rx_dup_mgt_frame_drop_count);
-	DBG_871X_SEL_NL(m,"AMPDU BA window shift Count: %llu\n",(unsigned long long)pdbgpriv->dbg_rx_ampdu_window_shift_cnt);
-	return 0;
-}	
-
 static int proc_get_mac_qinfo(struct seq_file *m, void *v)
 {
 	struct net_device *dev = m->private;
@@ -417,26 +400,6 @@ static int proc_get_mac_qinfo(struct seq_file *m, void *v)
 	rtw_hal_get_hwreg(adapter, HW_VAR_DUMP_MAC_QUEUE_INFO, (u8 *)m);
 
 	return 0;
-}
-
-ssize_t proc_reset_rx_info(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
-{
-	struct net_device *dev = data;
-	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
-	struct dvobj_priv *psdpriv = padapter->dvobj;
-	struct debug_priv *pdbgpriv = &psdpriv->drv_dbg;
-	char cmd[32];
-	if (buffer && !copy_from_user(cmd, buffer, sizeof(cmd))) {
-		if('0' == cmd[0]){
-			pdbgpriv->dbg_rx_ampdu_drop_count = 0;
-			pdbgpriv->dbg_rx_ampdu_forced_indicate_count = 0;
-			pdbgpriv->dbg_rx_ampdu_loss_count = 0;
-			pdbgpriv->dbg_rx_dup_mgt_frame_drop_count = 0;
-			pdbgpriv->dbg_rx_ampdu_window_shift_cnt = 0;
-		}
-	}
-
-	return count;
 }
 
 int proc_get_wifi_spec(struct seq_file *m, void *v)
@@ -492,6 +455,84 @@ static ssize_t proc_set_chan_plan(struct file *file, const char __user *buffer, 
 	return count;
 
 }
+
+static int proc_get_udpport(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	struct recv_priv *precvpriv = &(padapter->recvpriv);
+
+	DBG_871X_SEL_NL(m,"%d\n",precvpriv->sink_udpport);	
+	return 0;
+}
+static ssize_t proc_set_udpport(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	struct recv_priv *precvpriv = &(padapter->recvpriv);
+	int sink_udpport = 0;	
+	char tmp[32];
+	
+	
+	if (!padapter)
+		return -EFAULT;
+
+	if (count < 1)
+	{
+		DBG_871X("argument size is less than 1\n");
+		return -EFAULT;
+	}	
+
+	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+
+		int num = sscanf(tmp, "%d", &sink_udpport);
+
+		if (num !=  1) {
+			DBG_871X("invalid input parameter number!\n");
+			return count;
+		}
+
+	}
+	precvpriv->sink_udpport = sink_udpport;
+	
+	return count;
+
+}
+
+static int proc_get_macid_info(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
+	struct macid_ctl_t *macid_ctl = dvobj_to_macidctl(dvobj);
+	u8 i;
+
+	DBG_871X_SEL_NL(m, "max_num:%u\n", macid_ctl->num);
+	DBG_871X_SEL_NL(m, "\n");
+
+	DBG_871X_SEL_NL(m, "used:\n");
+	dump_macid_map(m, &macid_ctl->used, macid_ctl->num);
+	DBG_871X_SEL_NL(m, "\n");
+
+	DBG_871X_SEL_NL(m, "%-3s %-3s %-4s %-4s"
+		"\n"
+		, "id", "bmc", "if_g", "ch_g"
+	);
+
+	for (i=0;i<macid_ctl->num;i++) {
+		if (rtw_macid_is_used(macid_ctl, i))
+			DBG_871X_SEL_NL(m, "%3u %3u %4d %4d"
+				"\n"
+				, i
+				, rtw_macid_is_bmc(macid_ctl, i)
+				, rtw_macid_get_if_g(macid_ctl, i)
+				, rtw_macid_get_ch_g(macid_ctl, i)
+			);
+	}
+
+	return 0;
+}
+
 static int proc_get_cam(struct seq_file *m, void *v)
 {
 	struct net_device *dev = m->private;
@@ -523,6 +564,11 @@ static ssize_t proc_set_cam(struct file *file, const char __user *buffer, size_t
 
 		if (num < 2)
 			return count;
+
+		if (id >= CAM_ENTRY_NUM_SW_LIMIT) {
+			DBG_871X_LEVEL(_drv_err_, FUNC_ADPT_FMT" invalid id:%u\n", FUNC_ADPT_ARG(adapter), id);
+			return count;
+		}
 
 		if (strcmp("c", cmd) == 0) {
 			_clear_cam_entry(adapter, id);
@@ -619,14 +665,14 @@ const struct rtw_proc_hdl adapter_proc_hdls [] = {
 	{"survey_info", proc_get_survey_info, NULL},
 	{"ap_info", proc_get_ap_info, NULL},
 	{"adapter_state", proc_get_adapter_state, NULL},
-	{"trx_info", proc_get_trx_info, NULL},
+	{"trx_info", proc_get_trx_info, proc_reset_trx_info},
 	{"rate_ctl", proc_get_rate_ctl, proc_set_rate_ctl},
 	{"dis_pwt_ctl", proc_get_dis_pwt, proc_set_dis_pwt},
 	{"mac_qinfo", proc_get_mac_qinfo, NULL},
+	{"macid_info", proc_get_macid_info, NULL},
 	{"cam", proc_get_cam, proc_set_cam},
 	{"cam_cache", proc_get_cam_cache, NULL},
 	{"suspend_info", proc_get_suspend_resume_info, NULL},
-	{"rx_info", proc_get_rx_info, proc_reset_rx_info},
 	{"wifi_spec",proc_get_wifi_spec,NULL},
 #ifdef CONFIG_LAYER2_ROAMING
 	{"roam_flags", proc_get_roam_flags, proc_set_roam_flags},
@@ -639,6 +685,7 @@ const struct rtw_proc_hdl adapter_proc_hdls [] = {
 #endif /* CONFIG_SDIO_HCI */
 
 	{"fwdl_test_case", proc_get_dummy, proc_set_fwdl_test_case},
+	{"del_rx_ampdu_test_case", proc_get_dummy, proc_set_del_rx_ampdu_test_case},
 	{"wait_hiq_empty", proc_get_dummy, proc_set_wait_hiq_empty},
 
 	{"mac_reg_dump", proc_get_mac_reg_dump, NULL},
@@ -688,9 +735,9 @@ const struct rtw_proc_hdl adapter_proc_hdls [] = {
 	{"linked_info_dump",proc_get_linked_info_dump,proc_set_linked_info_dump},
 
 #ifdef CONFIG_GPIO_API
-	{"get_gpio",proc_get_gpio,proc_set_gpio},
-	{"set_gpio_output_value",proc_get_dummy,proc_set_gpio_output_value},
-	{"config_gpio",proc_get_dummy,proc_set_config_gpio},
+	{"gpio_info",proc_get_gpio,proc_set_gpio},
+	{"gpio_set_output_value",proc_get_dummy,proc_set_gpio_output_value},
+	{"gpio_set_direction",proc_get_dummy,proc_set_config_gpio},
 #endif
 
 #ifdef CONFIG_DBG_COUNTER
@@ -703,8 +750,22 @@ const struct rtw_proc_hdl adapter_proc_hdls [] = {
 	{"rx_ring", proc_get_rx_ring, NULL},
 	{"tx_ring", proc_get_tx_ring, NULL},
 #endif
+#ifdef CONFIG_P2P_WOWLAN
+	{"p2p_wowlan_info", proc_get_p2p_wowlan_info, NULL},
+#endif
 	{"chan_plan",proc_get_chan_plan,proc_set_chan_plan},
 	{"new_bcn_max", proc_get_new_bcn_max, proc_set_new_bcn_max},
+	{"sink_udpport",proc_get_udpport,proc_set_udpport},
+#ifdef DBG_RX_COUNTER_DUMP
+	{"dump_rx_cnt_mode",proc_get_rx_cnt_dump,proc_set_rx_cnt_dump},
+#endif	
+#ifdef CONFIG_POWER_SAVING
+	{"ps_info",proc_get_ps_info, NULL},
+#endif
+#ifdef CONFIG_TDLS
+	{"tdls_info", proc_get_tdls_info, NULL},
+#endif
+	{"monitor", proc_get_monitor, proc_set_monitor},
 };
 
 const int adapter_proc_hdls_num = sizeof(adapter_proc_hdls) / sizeof(struct rtw_proc_hdl);
@@ -858,24 +919,94 @@ ssize_t proc_set_odm_adaptivity(struct file *file, const char __user *buffer, si
 	u32 TH_L2H_ini;
 	s8 TH_EDCCA_HL_diff;
 	u32 IGI_Base;
-	int ForceEDCCA;
-	u8 AdapEn_RSSI;
-	u8 IGI_LowerBound;
+	u32 FABound;
 
 	if (count < 1)
 		return -EFAULT;
 
 	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {
 
-		int num = sscanf(tmp, "%x %hhd %x %d %hhu %hhu",
-			&TH_L2H_ini, &TH_EDCCA_HL_diff, &IGI_Base, &ForceEDCCA, &AdapEn_RSSI, &IGI_LowerBound);
+		int num = sscanf(tmp, "%x %hhd %x %u",
+			&TH_L2H_ini, &TH_EDCCA_HL_diff, &IGI_Base, &FABound);
 
-		if (num != 6)
+		if (num != 4)
 			return count;
 
-		rtw_odm_adaptivity_parm_set(padapter, (s8)TH_L2H_ini, TH_EDCCA_HL_diff, (s8)IGI_Base, (bool)ForceEDCCA, AdapEn_RSSI, IGI_LowerBound);
+		rtw_odm_adaptivity_parm_set(padapter, (s8)TH_L2H_ini, TH_EDCCA_HL_diff, (s8)IGI_Base, FABound);
 	}
 	
+	return count;
+}
+
+static char *phydm_msg = NULL;
+#define PHYDM_MSG_LEN	80*24
+
+int proc_get_phydm_cmd(struct seq_file *m, void *v)
+{
+	struct net_device *netdev;
+	PADAPTER padapter;
+	PHAL_DATA_TYPE pHalData;
+	PDM_ODM_T phydm;
+
+
+	netdev = m->private;
+	padapter = (PADAPTER)rtw_netdev_priv(netdev);
+	pHalData = GET_HAL_DATA(padapter);
+	phydm = &pHalData->odmpriv;
+
+	if (NULL == phydm_msg) {
+		phydm_msg = rtw_zmalloc(PHYDM_MSG_LEN);
+		if (NULL == phydm_msg)
+			return -ENOMEM;
+
+		phydm_cmd(phydm, NULL, 0, 0, phydm_msg, PHYDM_MSG_LEN);
+	}
+
+	DBG_871X_SEL(m, "%s\n", phydm_msg);
+
+	rtw_mfree(phydm_msg, PHYDM_MSG_LEN);
+	phydm_msg = NULL;
+
+	return 0;
+}
+
+ssize_t proc_set_phydm_cmd(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *netdev;
+	PADAPTER padapter;
+	PHAL_DATA_TYPE pHalData;
+	PDM_ODM_T phydm;
+	char tmp[64] = {0};
+
+
+	netdev = (struct net_device*)data;
+	padapter = (PADAPTER)rtw_netdev_priv(netdev);
+	pHalData = GET_HAL_DATA(padapter);
+	phydm = &pHalData->odmpriv;
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp))
+		return -EFAULT;
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+		if (NULL == phydm_msg) {
+			phydm_msg = rtw_zmalloc(PHYDM_MSG_LEN);
+			if (NULL == phydm_msg)
+				return -ENOMEM;
+		} else {
+			_rtw_memset(phydm_msg, 0, PHYDM_MSG_LEN);
+		}
+
+		phydm_cmd(phydm, tmp, count, 1, phydm_msg, PHYDM_MSG_LEN);
+
+		if (strlen(phydm_msg) == 0) {
+			rtw_mfree(phydm_msg, PHYDM_MSG_LEN);
+			phydm_msg = NULL;
+		}
+	}
+
 	return count;
 }
 
@@ -888,6 +1019,7 @@ const struct rtw_proc_hdl odm_proc_hdls [] = {
 	{"dbg_level", proc_get_odm_dbg_level, proc_set_odm_dbg_level},
 	{"ability", proc_get_odm_ability, proc_set_odm_ability},
 	{"adaptivity", proc_get_odm_adaptivity, proc_set_odm_adaptivity},
+	{"cmd", proc_get_phydm_cmd, proc_set_phydm_cmd},
 };
 
 const int odm_proc_hdls_num = sizeof(odm_proc_hdls) / sizeof(struct rtw_proc_hdl);
@@ -976,6 +1108,11 @@ void rtw_odm_proc_deinit(_adapter	*adapter)
 	remove_proc_entry("odm", adapter->dir_dev);
 
 	adapter->dir_odm = NULL;
+
+	if (phydm_msg) {
+		rtw_mfree(phydm_msg, PHYDM_MSG_LEN);
+		phydm_msg = NULL;
+	}
 }
 
 struct proc_dir_entry *rtw_adapter_proc_init(struct net_device *dev)

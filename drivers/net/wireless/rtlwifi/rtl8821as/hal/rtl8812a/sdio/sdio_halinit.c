@@ -100,6 +100,23 @@ static s32 PowerOnCheck(PADAPTER padapter)
 		DBG_871X("%s: fail at cmd52, cmd53 check\n", __FUNCTION__);
 	}
 
+	if (ret == _FAIL) {
+		DBG_871X_LEVEL(_drv_err_, "Dump MAC Page0 register:\n");
+		/* Dump Page0 for check cystal*/
+		for (index = 0 ; index < 0xff ; index++) {
+			if(index%16==0)
+				printk("0x%02x ",index);
+
+			printk("%02x ", rtw_read8(padapter, index)); 
+
+			if(index%16==15)
+				printk("\n");
+			else if(index%8==7)
+				printk("\t");
+		}
+		printk("\n");
+	}
+
 	return ret;
 }
 #endif /* CONFIG_POWER_ON_CHECK */

@@ -1102,7 +1102,7 @@ mptbt_BtSetGeneral(
 				rtw_msleep_os(50);
 				PlatformEFIOWrite1Byte(Adapter, 0xCC, 0x29);
 				for(i=0; i<12; i++)
-				rtw_msleep_os(100);
+					rtw_msleep_os(100);
 //#if (DEV_BUS_TYPE == RT_PCI_INTERFACE)
 //				BTFwPatch8723A(Adapter);
 //#endif

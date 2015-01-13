@@ -1826,7 +1826,7 @@ void sd_int_hdl(PADAPTER padapter)
 	else
 	{
 		if (0)
-		DBG_8192C("%s: HISR(0x%08x) and HIMR(0x%08x) not match!\n",
+			DBG_8192C("%s: HISR(0x%08x) and HIMR(0x%08x) not match!\n",
 				__FUNCTION__, pHalData->sdio_hisr, pHalData->sdio_himr);
 	}
 }

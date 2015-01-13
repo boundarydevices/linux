@@ -146,16 +146,16 @@ typedef struct _ADAPTER _adapter, ADAPTER,*PADAPTER;
 #include <rtw_iol.h>
 #endif // CONFIG_IOL
 
-#ifdef CONFIG_IOCTL_CFG80211
-#include "ioctl_cfg80211.h"
-#endif //CONFIG_IOCTL_CFG80211
-
 #include <ip.h>
 #include <if_ether.h>
 #include <ethernet.h>
 #include <circ_buf.h>
 
 #include <rtw_android.h>
+
+#ifdef CONFIG_BT_COEXIST
+#include <rtw_btcoex.h>
+#endif // CONFIG_BT_COEXIST
 
 #define SPEC_DEV_ID_NONE BIT(0)
 #define SPEC_DEV_ID_DISABLE_HT BIT(1)
@@ -267,6 +267,8 @@ struct registry_priv
 
 	u8	antdiv_cfg;
 	u8	antdiv_type;
+	
+	u8	switch_usb3;
 
 	u8	usbss_enable;//0:disable,1:enable
 	u8	hwpdn_mode;//0:disable,1:enable,2:decide by EFUSE config
@@ -316,7 +318,8 @@ struct registry_priv
 	u8	bEn_RFE;
 	u8	RFE_Type;
 	u8  check_fw_ps;
-
+	u8	RegRfKFreeEnable;
+	
 #ifdef CONFIG_LOAD_PHY_PARA_FROM_FILE
 	u8	load_phy_file;
 	u8	RegDecryptCustomFile;
@@ -330,7 +333,10 @@ struct registry_priv
 	u8 hiq_filter;
 	u8 adaptivity_en;
 	u8 adaptivity_mode;
-	u8 nhm_en;
+	u8 adaptivity_dml;
+	u8 adaptivity_dc_backoff;
+	u8 boffefusemask;
+	BOOLEAN bFileMaskEfuse;
 };
 
 
@@ -547,6 +553,7 @@ struct debug_priv {
 	u64 dbg_rx_ampdu_loss_count;
 	u64 dbg_rx_dup_mgt_frame_drop_count;
 	u64 dbg_rx_ampdu_window_shift_cnt;
+	u64 dbg_rx_conflic_mac_addr_cnt;
 };
 
 struct rtw_traffic_statistics {
@@ -583,6 +590,28 @@ struct cam_entry_cache {
 	((u8*)(x))[6],((u8*)(x))[7],((u8*)(x))[8],((u8*)(x))[9],((u8*)(x))[10],((u8*)(x))[11], \
 	((u8*)(x))[12],((u8*)(x))[13],((u8*)(x))[14],((u8*)(x))[15]
 
+struct macid_bmp {
+	u32 m0;
+#if (MACID_NUM_SW_LIMIT > 32)
+	u32 m1;
+#endif
+#if (MACID_NUM_SW_LIMIT > 64)
+	u32 m2;
+#endif
+#if (MACID_NUM_SW_LIMIT > 96)
+	u32 m3;
+#endif
+};
+
+struct macid_ctl_t {
+	_lock lock;
+	u8 num;
+	struct macid_bmp used;
+	struct macid_bmp bmc;
+	struct macid_bmp if_g[IFACE_ID_MAX];
+	struct macid_bmp ch_g[2]; /* 2 ch concurrency */
+};
+
 struct dvobj_priv
 {
 	/*-------- below is common data --------*/	
@@ -592,11 +621,6 @@ struct dvobj_priv
 	s32	processing_dev_remove;
 
 	struct debug_priv drv_dbg;
-
-	//for local/global synchronization
-	//
-	_lock	lock;
-	int macid[NUM_STA];
 
 	_mutex hw_init_mutex;
 	_mutex h2c_fwcmd_mutex;
@@ -613,6 +637,8 @@ struct dvobj_priv
 	//padapters[IFACE_ID1] == if2
 	_adapter *padapters[IFACE_ID_MAX];
 	u8 iface_nums; // total number of ifaces used runtime
+
+	struct macid_ctl_t macid_ctl;
 
 	struct cam_ctl_t cam_ctl;
 	struct cam_entry_cache cam_cache[TOTAL_CAM_ENTRY];
@@ -742,6 +768,8 @@ struct dvobj_priv
 
 #define dvobj_to_pwrctl(dvobj) (&(dvobj->pwrctl_priv))
 #define pwrctl_to_dvobj(pwrctl) container_of(pwrctl, struct dvobj_priv, pwrctl_priv)
+#define dvobj_to_macidctl(dvobj) (&(dvobj->macid_ctl))
+#define dvobj_to_regsty(dvobj) (&(dvobj->if1->registrypriv))
 
 #ifdef PLATFORM_LINUX
 static struct device *dvobj_to_dev(struct dvobj_priv *dvobj)
@@ -874,6 +902,12 @@ struct _ADAPTER{
 	struct wifi_display_info wfd_info;
 #endif //CONFIG_WFD
 
+#ifdef CONFIG_BT_COEXIST_SOCKET_TRX
+	struct bt_coex_info coex_info;
+#endif //CONFIG_BT_COEXIST_SOCKET_TRX
+	
+	ERROR_CODE		LastError; /* <20130613, Kordan> Only the functions associated with MP records the error code by now. */
+	
 	PVOID			HalData;
 	u32 hal_data_sz;
 	struct hal_ops	HalFunc;
@@ -892,6 +926,11 @@ struct _ADAPTER{
 	u8	bHaltInProgress;
 #ifdef CONFIG_GPIO_API	
 	u8	pre_gpio_pin;
+	struct gpio_int_priv {
+		u8 interrupt_mode;
+		u8 interrupt_enable_mask;
+		void (*callback[8])(u8 level);
+	}gpiointpriv;
 #endif	
 	_thread_hdl_ cmdThread;
 	_thread_hdl_ evtThread;
@@ -953,6 +992,7 @@ struct _ADAPTER{
 	int bup;
 	_lock glock;
 #endif //PLATFORM_FREEBSD
+	u8 mac_addr[ETH_ALEN];
 	int net_closed;
 	
 	u8 netif_up;
@@ -1028,13 +1068,21 @@ struct _ADAPTER{
 
 	//for debug purpose
 	u8 fix_rate;
+	u8 data_fb; /* data rate fallback, valid only when fix_rate is not 0xff */
 	u8 driver_vcs_en; //Enable=1, Disable=0 driver control vrtl_carrier_sense for tx
 	u8 driver_vcs_type;//force 0:disable VCS, 1:RTS-CTS, 2:CTS-to-self when vcs_en=1.
 	u8 driver_ampdu_spacing;//driver control AMPDU Density for peer sta's rx
 	u8 driver_rx_ampdu_factor;//0xff: disable drv ctrl, 0:8k, 1:16k, 2:32k, 3:64k;
-	u8 fix_ba_rxbuf_bz; /* 0~127, TODO:consider each sta and each TID */
 	u8 driver_rx_ampdu_spacing;  //driver control Rx AMPDU Density 
+	u8 fix_rx_ampdu_accept;
+	u8 fix_rx_ampdu_size; /* 0~127, TODO:consider each sta and each TID */
 	unsigned char     in_cta_test;
+#ifdef DBG_RX_COUNTER_DUMP		
+	u8 dump_rx_cnt_mode;/*BIT0:drv,BIT1:mac,BIT2:phy*/
+	u32 drv_rx_cnt_ok;
+	u32 drv_rx_cnt_crcerror;
+	u32 drv_rx_cnt_drop;
+#endif
 
 #ifdef CONFIG_DBG_COUNTER	
 	struct rx_logs rx_logs;
@@ -1046,6 +1094,7 @@ struct _ADAPTER{
 #define adapter_to_dvobj(adapter) (adapter->dvobj)
 #define adapter_to_pwrctl(adapter) (dvobj_to_pwrctl(adapter->dvobj))
 #define adapter_wdev_data(adapter) (&((adapter)->wdev_data))
+#define adapter_mac_addr(adapter) (adapter->mac_addr)
 
 //
 // Function disabled.
@@ -1102,11 +1151,6 @@ int rtw_suspend_wow(_adapter *padapter);
 int rtw_resume_process_wow(_adapter *padapter);
 #endif
 
-__inline static u8 *myid(struct eeprom_priv *peepriv)
-{
-	return (peepriv->mac_addr);
-}
-
 // HCI Related header file
 #ifdef CONFIG_USB_HCI
 #include <usb_osintf.h>
@@ -1131,10 +1175,6 @@ __inline static u8 *myid(struct eeprom_priv *peepriv)
 #include <pci_ops.h>
 #include <pci_hal.h>
 #endif
-
-#ifdef CONFIG_BT_COEXIST
-#include <rtw_btcoex.h>
-#endif // CONFIG_BT_COEXIST
 
 #endif //__DRV_TYPES_H__
 

@@ -46,7 +46,7 @@
 // Driver(software) Config
 // ==============================
 #define CONFIG_EMBEDDED_FWIMG
-#define CONFIG_SDIO_TX_TASKLET
+//#define CONFIG_SDIO_TX_TASKLET
 //#define CONFIG_SDIO_REDUCE_TX_POLLING
 #define CONFIG_RECV_REORDERING_CTRL
 #define CONFIG_SKB_COPY	//for amsdu
@@ -62,9 +62,6 @@
 #define RTW_NOTCH_FILTER 0 /* 0:Disable, 1:Enable, */
 #define CONFIG_DEAUTH_BEFORE_CONNECT
 
-// Firmware Initialization Offload
-//#define CONFIG_IOL
-
 //#define SUPPORT_HW_RFOFF_DETECTED
 //#define CONFIG_SW_LED
 
@@ -78,9 +75,9 @@
 #define CONFIG_IOCTL_CFG80211
 #define CONFIG_NEW_SIGNAL_STAT_PROCESS
 #define CONFIG_80211D
+#define CONFIG_DFS
 #define CONFIG_AP_MODE
 #define CONFIG_P2P
-//#define CONFIG_TDLS
 #define CONFIG_CONCURRENT_MODE
 
 #define CONFIG_LAYER2_ROAMING
@@ -102,13 +99,13 @@
  * Debug Related Config
  *
  ***********************************************************/
-//#define CONFIG_DEBUG /* DBG_871X, etc... */
+#define CONFIG_DEBUG /* DBG_871X, etc... */
 //#define CONFIG_DEBUG_RTL871X /* RT_TRACE, RT_PRINT_DATA, _func_enter_, _func_exit_ */
-//#define CONFIG_PROC_DEBUG
-//#define DBG_CONFIG_ERROR_DETECT
+#define CONFIG_PROC_DEBUG
+#define DBG_CONFIG_ERROR_DETECT
 //#define DBG_CONFIG_ERROR_RESET
 
-//#define DBG 1
+#define DBG 1
 
 //#define DBG_IO
 //#define DBG_DELAY_OS
@@ -171,16 +168,6 @@
 	#define CONFIG_ACTIVE_KEEP_ALIVE_CHECK
 #endif
 
-#ifdef CONFIG_IOL
-	#define CONFIG_IOL_NEW_GENERATION
-	#define CONFIG_IOL_READ_EFUSE_MAP
-	//#define DBG_IOL_READ_EFUSE_MAP
-	#define CONFIG_IOL_LLT
-	#define CONFIG_IOL_EFUSE_PATCH
-	#define CONFIG_IOL_IOREG_CFG
-	//#define CONFIG_IOL_IOREG_CFG_DBG
-#endif
-
 // ==============================
 // Support functions dependent
 // ==============================
@@ -190,6 +177,7 @@
 	#define CONFIG_CFG80211_FORCE_COMPATIBLE_2_6_37_UNDER
 //	#define CONFIG_DEBUG_CFG80211
 	#define CONFIG_SET_SCAN_DENY_TIMER
+	#define CONFIG_IEEE80211_BAND_5GHZ
 #endif
 
 #ifdef CONFIG_CONCURRENT_MODE
@@ -218,16 +206,13 @@
 	#endif
 
 //	#define CONFIG_FIND_BEST_CHANNEL
-//	#define CONFIG_NO_WIRELESS_HANDLERS
 #endif
 
 #ifdef CONFIG_P2P
 	// The CONFIG_WFD is for supporting the Wi-Fi display
 	#define CONFIG_WFD
 
-	#ifndef CONFIG_WIFI_TEST
-		#define CONFIG_P2P_REMOVE_GROUP_INFO
-	#endif
+	#define CONFIG_P2P_REMOVE_GROUP_INFO
 
 //	#define CONFIG_DBG_P2P
 
@@ -240,11 +225,13 @@
 
 //	Added by Kurt 20110511
 #ifdef CONFIG_TDLS
+	#define CONFIG_TDLS_DRIVER_SETUP
 //	#ifndef CONFIG_WFD
 //		#define CONFIG_WFD
 //	#endif
 //	#define CONFIG_TDLS_AUTOSETUP
-//	#define CONFIG_TDLS_AUTOCHECKALIVE
+	#define CONFIG_TDLS_AUTOCHECKALIVE
+	#define CONFIG_TDLS_CH_SW		/* Enable "CONFIG_TDLS_CH_SW" by default, however limit it to only work in wifi logo test mode but not in normal mode currently */
 #endif
 
 #ifdef CONFIG_BT_COEXIST
@@ -326,6 +313,7 @@
 #define RTL8723B_SUPPORT				0
 #define RTL8192E_SUPPORT				0
 #define RTL8814A_SUPPORT				0
+#define 	RTL8195A_SUPPORT				0
 
 #define RATE_ADAPTIVE_SUPPORT 			0
 #define POWER_TRAINING_ACTIVE			0

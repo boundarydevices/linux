@@ -71,9 +71,9 @@ void free_mlme_ap_info(_adapter *padapter)
 
 	//free bc/mc sta_info
 	psta = rtw_get_bcmc_stainfo(padapter);	
-	_enter_critical_bh(&(pstapriv->sta_hash_lock), &irqL);		
+	//_enter_critical_bh(&(pstapriv->sta_hash_lock), &irqL);		
 	rtw_free_stainfo(padapter, psta);
-	_exit_critical_bh(&(pstapriv->sta_hash_lock), &irqL);
+	//_exit_critical_bh(&(pstapriv->sta_hash_lock), &irqL);
 	
 
 	_rtw_spinlock_free(&pmlmepriv->bcn_update_lock);
@@ -405,9 +405,9 @@ void	expire_timeout_chk(_adapter *padapter)
 				
 				_exit_critical_bh(&pstapriv->auth_list_lock, &irqL);
 				
-				_enter_critical_bh(&(pstapriv->sta_hash_lock), &irqL);	
+				//_enter_critical_bh(&(pstapriv->sta_hash_lock), &irqL);	
 				rtw_free_stainfo(padapter, psta);
-				_exit_critical_bh(&(pstapriv->sta_hash_lock), &irqL);	
+				//_exit_critical_bh(&(pstapriv->sta_hash_lock), &irqL);	
 				
 				_enter_critical_bh(&pstapriv->auth_list_lock, &irqL);
 			}	
@@ -534,8 +534,8 @@ void	expire_timeout_chk(_adapter *padapter)
 						//add_ba_hdl(padapter, (u8*)paddbareq_parm);
 
 						DBG_871X("issue addba_req to check if sta alive, keep_alive_trycnt=%d\n", psta->keep_alive_trycnt);
-						
-						issue_action_BA(padapter, psta->hwaddr, RTW_WLAN_ACTION_ADDBA_REQ, (u16)priority);		
+
+						issue_addba_req(padapter, psta->hwaddr, (u8)priority);
 		
 						_set_timer(&psta->addba_retry_timer, ADDBA_TO);
 						
@@ -877,8 +877,6 @@ void update_bmc_sta(_adapter *padapter)
 	if(psta)
 	{
 		psta->aid = 0;//default set to 0
-		//psta->mac_id = psta->aid+4;	
-		psta->mac_id = psta->aid + 1;//mac_id=1 for bc/mc stainfo
 
 		pmlmeinfo->FW_sta_info[psta->mac_id].psta = psta;
 
@@ -1497,7 +1495,7 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 
 	pbss_network->Rssi = 0;
 
-	_rtw_memcpy(pbss_network->MacAddress, myid(&(padapter->eeprompriv)), ETH_ALEN);
+	_rtw_memcpy(pbss_network->MacAddress, adapter_mac_addr(padapter), ETH_ALEN);
 	
 	//beacon interval
 	p = rtw_get_beacon_interval_from_ie(ie);//ie + 8;	// 8: TimeStamp, 2: Beacon Interval 2:Capability
@@ -1800,8 +1798,13 @@ int rtw_check_beacon_data(_adapter *padapter, u8 *pbuf,  int len)
 					set_mcs_rate_by_mask(HT_CAP_ELE_RX_MCS_MAP(pht_cap), MCS_RATE_1R);
 					break;
 				case RF_2T2R:
-				default:
 					set_mcs_rate_by_mask(HT_CAP_ELE_RX_MCS_MAP(pht_cap), MCS_RATE_2R);
+					break;
+				case RF_3T3R:
+					set_mcs_rate_by_mask(HT_CAP_ELE_RX_MCS_MAP(pht_cap), MCS_RATE_3R);
+					break;
+				default:
+					DBG_871X("[warning] rf_type %d is not expected\n", rf_type);
 			}
 			for (i = 0; i < 10; i++)
 				*(HT_CAP_ELE_RX_MCS_MAP(pht_cap)+i) &= padapter->mlmeextpriv.default_supported_mcs_set[i];
@@ -2956,9 +2959,9 @@ u8 ap_free_sta(_adapter *padapter, struct sta_info *psta, bool active, u16 reaso
 
 	beacon_updated = bss_cap_update_on_sta_leave(padapter, psta);
 
-	_enter_critical_bh(&(pstapriv->sta_hash_lock), &irqL);					
+	//_enter_critical_bh(&(pstapriv->sta_hash_lock), &irqL);					
 	rtw_free_stainfo(padapter, psta);
-	_exit_critical_bh(&(pstapriv->sta_hash_lock), &irqL);
+	//_exit_critical_bh(&(pstapriv->sta_hash_lock), &irqL);
 	
 
 	return beacon_updated;
@@ -3013,12 +3016,10 @@ int rtw_sta_flush(_adapter *padapter)
 	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
 	u8 bc_addr[ETH_ALEN] = {0xff,0xff,0xff,0xff,0xff,0xff};
 
-	DBG_871X(FUNC_NDEV_FMT"\n", FUNC_NDEV_ARG(padapter->pnetdev));
-
 	if((pmlmeinfo->state&0x03) != WIFI_FW_AP_STATE)
 		return ret;
 
-
+	DBG_871X(FUNC_NDEV_FMT"\n", FUNC_NDEV_ARG(padapter->pnetdev));
 	_enter_critical_bh(&pstapriv->asoc_list_lock, &irqL);
 	phead = &pstapriv->asoc_list;
 	plist = get_next(phead);
@@ -3176,7 +3177,7 @@ void rtw_ap_restore_network(_adapter *padapter)
 			if(	(padapter->securitypriv.dot11PrivacyAlgrthm == _TKIP_) ||
 				(padapter->securitypriv.dot11PrivacyAlgrthm == _AES_))
 			{
-				rtw_setstakey_cmd(padapter, psta, _TRUE,_FALSE);
+				rtw_setstakey_cmd(padapter, psta, UNICAST_KEY,_FALSE);
 			}			
 		}
 	}
@@ -3189,6 +3190,7 @@ void start_ap_mode(_adapter *padapter)
 	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 	struct sta_priv *pstapriv = &padapter->stapriv;
 	struct mlme_ext_priv *pmlmeext = &padapter->mlmeextpriv;
+	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
 	struct wlan_acl_pool *pacl_list = &pstapriv->acl_list;
 	
 	pmlmepriv->update_bcn = _FALSE;
@@ -3206,10 +3208,12 @@ void start_ap_mode(_adapter *padapter)
 #ifdef CONFIG_80211N_HT
 	pmlmepriv->num_sta_no_ht = 0;
 #endif //CONFIG_80211N_HT
+	pmlmeinfo->HT_info_enable =0;
+	pmlmeinfo->HT_caps_enable=0;
+	pmlmeinfo->HT_enable=0;
+	
 	pmlmepriv->num_sta_ht_20mhz = 0;
-
 	pmlmepriv->olbc = _FALSE;
-
 	pmlmepriv->olbc_ht = _FALSE;
 	
 #ifdef CONFIG_80211N_HT
@@ -3219,13 +3223,14 @@ void start_ap_mode(_adapter *padapter)
 	for(i=0; i<NUM_STA; i++)
 		pstapriv->sta_aid[i] = NULL;
 
+/* to avoid memory leak issue, don't set to NULL directly
 	pmlmepriv->wps_beacon_ie = NULL;	
 	pmlmepriv->wps_probe_resp_ie = NULL;
 	pmlmepriv->wps_assoc_resp_ie = NULL;
 	
 	pmlmepriv->p2p_beacon_ie = NULL;
 	pmlmepriv->p2p_probe_resp_ie = NULL;
-
+*/
 	
 	//for ACL 
 	_rtw_init_listhead(&(pacl_list->acl_node_q.queue));
@@ -3253,6 +3258,7 @@ void stop_ap_mode(_adapter *padapter)
 
 	pmlmepriv->update_bcn = _FALSE;
 	pmlmeext->bstart_bss = _FALSE;
+	padapter->netif_up = _FALSE;
 	//_rtw_spinlock_free(&pmlmepriv->bcn_update_lock);
 	
 	//reset and init security priv , this can refine with rtw_reset_securitypriv
@@ -3288,9 +3294,9 @@ void stop_ap_mode(_adapter *padapter)
 	rtw_free_all_stainfo(padapter);
 	
 	psta = rtw_get_bcmc_stainfo(padapter);
-	_enter_critical_bh(&(pstapriv->sta_hash_lock), &irqL);		
+	//_enter_critical_bh(&(pstapriv->sta_hash_lock), &irqL);		
 	rtw_free_stainfo(padapter, psta);
-	_exit_critical_bh(&(pstapriv->sta_hash_lock), &irqL);
+	//_exit_critical_bh(&(pstapriv->sta_hash_lock), &irqL);
 	
 	rtw_init_bcmc_stainfo(padapter);	
 

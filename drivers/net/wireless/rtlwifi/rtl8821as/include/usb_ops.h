@@ -90,6 +90,11 @@ void rtl8812au_set_hw_type(_adapter *padapter);
 void rtl8812au_set_intf_ops(struct _io_ops *pops);
 #endif
 
+#ifdef CONFIG_RTL8814A
+void rtl8814au_set_hw_type(_adapter *padapter);
+void rtl8814au_set_intf_ops(struct _io_ops	*pops);
+#endif /* CONFIG_RTL8814 */
+
 #ifdef CONFIG_RTL8192E
 void rtl8192eu_set_hw_type(_adapter *padapter);
 void rtl8192eu_set_intf_ops(struct _io_ops *pops);

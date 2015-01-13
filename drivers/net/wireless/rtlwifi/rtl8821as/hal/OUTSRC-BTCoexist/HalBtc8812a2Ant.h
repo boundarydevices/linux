@@ -125,6 +125,7 @@ typedef struct _COEX_STA_8812A_2ANT{
 	BOOLEAN					bA2dpExist;
 	BOOLEAN					bHidExist;
 	BOOLEAN					bPanExist;
+	BOOLEAN					bAclBusy;
 
 	BOOLEAN					bUnderLps;
 	BOOLEAN					bUnderIps;

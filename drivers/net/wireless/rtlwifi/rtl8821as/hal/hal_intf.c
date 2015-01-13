@@ -43,9 +43,20 @@ void rtw_hal_read_chip_version(_adapter *padapter)
 
 void rtw_hal_def_value_init(_adapter *padapter)
 {
-	if (is_primary_adapter(padapter))
+	if (is_primary_adapter(padapter)) {
 		if(padapter->HalFunc.init_default_value)
 			padapter->HalFunc.init_default_value(padapter);
+
+		rtw_init_hal_com_default_value(padapter);
+
+		{
+			struct dvobj_priv *dvobj = adapter_to_dvobj(padapter);
+			HAL_DATA_TYPE *hal_data = GET_HAL_DATA(padapter);
+
+			/* hal_data..macid_num is ready here */
+			dvobj->macid_ctl.num = rtw_min(hal_data->macid_num, MACID_NUM_SW_LIMIT);
+		}
+	}
 }
 void	rtw_hal_free_data(_adapter *padapter)
 {
@@ -165,8 +176,6 @@ uint	 rtw_hal_init(_adapter *padapter)
 
 	if(status == _SUCCESS){
 
-		rtw_hal_init_opmode(padapter);
-
 		for (i = 0; i<dvobj->iface_nums; i++)
 			dvobj->padapters[i]->hw_init_completed = _TRUE;
 			
@@ -181,6 +190,8 @@ uint	 rtw_hal_init(_adapter *padapter)
 		rtw_led_control(padapter, LED_CTL_POWER_ON);
 
 		init_hw_mlme_ext(padapter);
+
+                rtw_hal_init_opmode(padapter);
 		
 #ifdef CONFIG_RF_GAIN_OFFSET
 		rtw_bb_rf_gain_offset(padapter);
@@ -748,32 +759,46 @@ s32 rtw_hal_is_disable_sw_channel_plan(PADAPTER padapter)
 	return GET_HAL_DATA(padapter)->bDisableSWChannelPlan;
 }
 
-s32 rtw_hal_macid_sleep(PADAPTER padapter, u32 macid)
+s32 rtw_hal_macid_sleep(PADAPTER padapter, u8 macid)
 {
+	struct dvobj_priv *dvobj = adapter_to_dvobj(padapter);
+	struct macid_ctl_t *macid_ctl = dvobj_to_macidctl(dvobj);
 	u8 support;
-
 
 	support = _FALSE;
 	rtw_hal_get_def_var(padapter, HAL_DEF_MACID_SLEEP, &support);
 	if (_FALSE == support)
 		return _FAIL;
 
-	rtw_hal_set_hwreg(padapter, HW_VAR_MACID_SLEEP, (u8*)&macid);
+	if (macid >= macid_ctl->num) {
+		DBG_871X_LEVEL(_drv_err_, FUNC_ADPT_FMT": Invalid macid(%u)\n",
+			FUNC_ADPT_ARG(padapter), macid);
+		return _FAIL;
+	}
+
+	rtw_hal_set_hwreg(padapter, HW_VAR_MACID_SLEEP, &macid);
 
 	return _SUCCESS;
 }
 
-s32 rtw_hal_macid_wakeup(PADAPTER padapter, u32 macid)
+s32 rtw_hal_macid_wakeup(PADAPTER padapter, u8 macid)
 {
+	struct dvobj_priv *dvobj = adapter_to_dvobj(padapter);
+	struct macid_ctl_t *macid_ctl = dvobj_to_macidctl(dvobj);
 	u8 support;
-
 
 	support = _FALSE;
 	rtw_hal_get_def_var(padapter, HAL_DEF_MACID_SLEEP, &support);
 	if (_FALSE == support)
 		return _FAIL;
 
-	rtw_hal_set_hwreg(padapter, HW_VAR_MACID_WAKEUP, (u8*)&macid);
+	if (macid >= macid_ctl->num) {
+		DBG_871X_LEVEL(_drv_err_, FUNC_ADPT_FMT": Invalid macid(%u)\n",
+			FUNC_ADPT_ARG(padapter), macid);
+		return _FAIL;
+	}
+
+	rtw_hal_set_hwreg(padapter, HW_VAR_MACID_WAKEUP, &macid);
 
 	return _SUCCESS;
 }
@@ -792,4 +817,10 @@ s32 rtw_hal_fill_h2c_cmd(PADAPTER padapter, u8 ElementID, u32 CmdLen, u8 *pCmdBu
 
 	return ret;
 }
-
+#ifdef CONFIG_GPIO_API
+void rtw_hal_update_hisr_hsisr_ind(_adapter *padapter, u32 flag)
+{
+	if (padapter->HalFunc.update_hisr_hsisr_ind)
+		padapter->HalFunc.update_hisr_hsisr_ind(padapter, flag);
+}
+#endif
