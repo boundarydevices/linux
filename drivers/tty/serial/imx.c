@@ -1364,8 +1364,9 @@ static void imx_shutdown(struct uart_port *port)
 
 static void imx_flush_buffer(struct uart_port *port)
 {
-	int i, temp;
+	int temp;
 	struct imx_port *sport = (struct imx_port *)port;
+	int i = 100, ubir, ubmr, uts;
 
 	if (sport->dma_is_enabled) {
 		sport->tx_bytes = 0;
@@ -1377,17 +1378,16 @@ static void imx_flush_buffer(struct uart_port *port)
 	/* For console port, it is not necessary flush buffer and reset FIFO */
 	if (uart_console(port))
 		return;
-
 	/*
-	 * UCR2_SRST will reset the transmit and receive state machines,
-	 * all FIFOs and register UBIR, UBMR,
-	 * and UTS[6-3], so save the required registers
+	 * According to the Reference Manual description of the UART SRST bit:
+	 * "Reset the transmit and receive state machines,
+	 * all FIFOs and register USR1, USR2, UBIR, UBMR, UBRC, URXD, UTXD
+	 * and UTS[6-3]". As we don't need to restore the old values from
+	 * USR1, USR2, UBRC, URXD, UTXD, only save/restore the other three registers
 	 */
-	sport->saved_reg[0] = readl(sport->port.membase + UBIR);
-	sport->saved_reg[1] = readl(sport->port.membase + UBMR);
-	sport->saved_reg[2] = readl(sport->port.membase + IMX21_UTS);
-
-	i = 100;
+	ubir = readl(sport->port.membase + UBIR);
+	ubmr = readl(sport->port.membase + UBMR);
+	uts = readl(sport->port.membase + IMX21_UTS);
 
 	temp = readl(sport->port.membase + UCR2);
 	temp &= ~UCR2_SRST;
@@ -1397,9 +1397,9 @@ static void imx_flush_buffer(struct uart_port *port)
 		udelay(1);
 
 	/* Restore the registers */
-	writel(sport->saved_reg[0], sport->port.membase + UBIR);
-	writel(sport->saved_reg[1], sport->port.membase + UBMR);
-	writel(sport->saved_reg[2], sport->port.membase + IMX21_UTS);
+	writel(ubir, sport->port.membase + UBIR);
+	writel(ubmr, sport->port.membase + UBMR);
+	writel(uts, sport->port.membase + IMX21_UTS);
 }
 
 static void
