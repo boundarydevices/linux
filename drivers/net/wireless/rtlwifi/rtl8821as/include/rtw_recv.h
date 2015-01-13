@@ -96,6 +96,7 @@ struct recv_reorder_ctrl
 	u16 indicate_seq;//=wstart_b, init_value=0xffff
 	u16 wend_b;
 	u8 wsize_b;
+	u8 ampdu_size;
 	_queue pending_recvframe_queue;
 	_timer reordering_ctrl_timer;
 };
@@ -254,8 +255,12 @@ struct rx_pkt_attrib	{
 	u8 	key_index;
 
 	u8	data_rate;
+	u8	bw;
+	u8	stbc;
+	u8	ldpc;
 	u8 	sgi;
 	u8 	pkt_rpt_type;
+	u32 tsfl;
 	u32	MacIDValidEntry[2];	// 64 bits present 64 entry.
 
 /*
@@ -265,7 +270,7 @@ struct rx_pkt_attrib	{
 	u32	RxPWDBAll;	
 	s32	RecvSignalPower;
 */
-	struct phy_info phy_info;	
+	struct phy_info phy_info;
 };
 
 
@@ -384,7 +389,7 @@ struct recv_priv
 	//u8 *pallocated_urb_buf;
 	_sema allrxreturnevt;
 	uint	ff_hwaddr;
-	u8	rx_pending_cnt;
+	ATOMIC_T	rx_pending_cnt;
 
 #ifdef CONFIG_USB_INTERRUPT_IN_PIPE
 #ifdef PLATFORM_LINUX
@@ -455,7 +460,7 @@ struct recv_priv
 	struct smooth_rssi_data signal_qual_data;
 	struct smooth_rssi_data signal_strength_data;
 #endif //CONFIG_NEW_SIGNAL_STAT_PROCESS
-
+	u16 sink_udpport,pre_rtp_rxseq,cur_rtp_rxseq;
 };
 
 #ifdef CONFIG_NEW_SIGNAL_STAT_PROCESS
@@ -521,11 +526,9 @@ struct recv_buf
 
 #ifdef PLATFORM_LINUX
 	_pkt	*pskb;
-	u8	reuse;
 #endif
 #ifdef PLATFORM_FREEBSD //skb solution
 	struct sk_buff *pskb;
-	u8	reuse;
 #endif //PLATFORM_FREEBSD //skb solution
 };
 
@@ -627,6 +630,8 @@ sint rtw_enqueue_recvbuf(struct recv_buf *precvbuf, _queue *queue);
 struct recv_buf *rtw_dequeue_recvbuf (_queue *queue);
 
 void rtw_reordering_ctrl_timeout_handler(void *pcontext);
+
+void rx_query_phy_status(union recv_frame *rframe, u8 *phy_stat);
 
 __inline static u8 *get_rxmem(union recv_frame *precvframe)
 {

@@ -42,6 +42,7 @@ typedef enum _RTL8192E_H2C_CMD
 	H2C_8192E_SAP_PS = 0x26,
 	H2C_8192E_RA_MASK = 0x40,
 	H2C_8192E_RSSI_REPORT = 0x42,
+	H2C_8192E_RA_PARA_ADJUST = 0x46,
 
 	H2C_8192E_WO_WLAN = 0x80,
 	H2C_8192E_REMOTE_WAKE_CTRL = 0x81,
@@ -65,7 +66,10 @@ typedef enum _RTL8192E_C2H_EVT
 	C2H_8192E_FW_SWCHNL = 0x10,
 	C2H_8192E_BT_MP = 11,
 	C2H_8192E_RA_RPT=12,	
-	
+#ifdef CONFIG_FW_C2H_DEBUG
+	C2H_8192E_FW_DEBUG = 0xff,
+#endif
+/*CONFIG_FW_C2H_DEBUG*/
 	MAX_8192E_C2HEVENT	
 }RTL8192E_C2H_EVT;
 
@@ -139,6 +143,7 @@ u8 rtl8192e_set_rssi_cmd(PADAPTER padapter, u8 *param);
 void rtl8192e_set_raid_cmd(PADAPTER padapter, u32 bitmap, u8* arg);
 void rtl8192e_Add_RateATid(PADAPTER padapter, u32 bitmap, u8 *arg, u8 rssi_level);
 s32 FillH2CCmd_8192E(PADAPTER padapter, u8 ElementID, u32 CmdLen, u8 *pCmdBuffer);
+u8 GetTxBufferRsvdPageNum8192E(_adapter *padapter, bool wowlan);
 //u8 rtl8192c_set_FwSelectSuspend_cmd(PADAPTER padapter, u8 bfwpoll, u16 period);
 s32 c2h_handler_8192e(PADAPTER padapter, u8 *buf);
 #ifdef CONFIG_BT_COEXIST
@@ -153,7 +158,6 @@ void CheckFwRsvdPageContent(PADAPTER padapter);
 void rtl8192e_set_FwMediaStatus_cmd(PADAPTER padapter, u16 mstatus_rpt );
 
 #ifdef CONFIG_TSF_RESET_OFFLOAD
-//u8 rtl8188e_reset_tsf(_adapter *padapter, u8 reset_port);
 int reset_tsf(PADAPTER Adapter, u8 reset_port );
 #endif	// CONFIG_TSF_RESET_OFFLOAD
 
@@ -215,4 +219,4 @@ C2HPacketHandler_8192E(
 	IN	u1Byte			Length
 );
 
-#endif//__RTL8188E_CMD_H__
+#endif//__RTL8192E_CMD_H__

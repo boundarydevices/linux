@@ -22,7 +22,7 @@
 
 #if 1//def  CONFIG_SINGLE_IMG
 
-#include "../hal/OUTSRC/odm_precomp.h"
+#include "../hal/OUTSRC/phydm_precomp.h"
 #ifdef CONFIG_BT_COEXIST
 #include <hal_btcoex.h>
 #endif
@@ -278,6 +278,7 @@ typedef struct hal_com_data
 	u16	FirmwareVersionRev;
 	u16	FirmwareSubVersion;
 	u16	FirmwareSignature;
+	u8		RegFWOffload;
 
 	//current WIFI_PHY values
 	WIRELESS_MODE		CurrentWirelessMode;
@@ -289,6 +290,8 @@ typedef struct hal_com_data
 	u8	nCur40MhzPrimeSC;// Control channel sub-carrier
 	u8	nCur80MhzPrimeSC;   //used for primary 40MHz of 80MHz mode
 
+	BOOLEAN bSwChnlAndSetBWInProgress;
+	
 	u16	CustomerID;
 	u16	BasicRateSet;
 	u16 ForcedDataRate;// Force Data Rate. 0: Auto, 0x02: 1M ~ 0x6C: 54M.
@@ -505,6 +508,7 @@ typedef struct hal_com_data
 
 	// 2010/12/10 MH Add for USB aggreation mode dynamic shceme.
 	BOOLEAN		UsbRxHighSpeedMode;
+	BOOLEAN		UsbTxVeryHighSpeedMode;
 
 	// 2010/11/22 MH Add for slim combo debug mode selective.
 	// This is used for fix the drawback of CU TSMC-A/UMC-A cut. HW auto suspend ability. Close BT clock.
@@ -703,7 +707,12 @@ typedef struct hal_com_data
 #ifdef CONFIG_BACKGROUND_NOISE_MONITOR
 	s16 noise[ODM_MAX_CHANNEL_NUM];
 #endif
-	
+
+	u8 macid_num;
+	u8 cam_entry_num;
+
+	u8	RfKFreeEnable;
+
 } HAL_DATA_COMMON, *PHAL_DATA_COMMON;
 
 

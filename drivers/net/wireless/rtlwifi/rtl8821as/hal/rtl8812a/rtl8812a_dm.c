@@ -503,7 +503,7 @@ void rtl8812_init_dm_priv(IN PADAPTER Adapter)
 
 	Init_ODM_ComInfo_8812(Adapter);
 	ODM_InitAllTimers(podmpriv );	
-	ODM_InitDebugSetting(podmpriv);
+	PHYDM_InitDebugSetting(podmpriv);
 
 	pHalData->TxPwrInPercentage = TX_PWR_PERCENTAGE_3;
 

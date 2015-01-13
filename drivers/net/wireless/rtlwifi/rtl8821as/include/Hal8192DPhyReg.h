@@ -506,6 +506,7 @@
 #define		RF_TXRF_A2					0x41
 #define		RF_TXPA_G4					0x46
 #define		RF_TXPA_A4					0x4B
+#define		RF_0x52						0x52
 
 //
 //Bit Mask

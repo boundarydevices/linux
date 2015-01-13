@@ -36,6 +36,7 @@ typedef enum tag_HAL_IC_Type_Definition
 	CHIP_8821	=	7,
 	CHIP_8723B 	=	8,
 	CHIP_8192E 	=	9,
+	CHIP_8814A	=	10,
 }HAL_IC_TYPE_E;
 
 //HAL_CHIP_TYPE_E
@@ -142,6 +143,7 @@ typedef	struct tag_HAL_VERSION
 #define IS_1T1R(version)					((GET_CVID_RF_TYPE(version) == RF_TYPE_1T1R)? TRUE : FALSE )
 #define IS_1T2R(version)					((GET_CVID_RF_TYPE(version) == RF_TYPE_1T2R)? TRUE : FALSE)
 #define IS_2T2R(version)					((GET_CVID_RF_TYPE(version) == RF_TYPE_2T2R)? TRUE : FALSE)
+#define IS_3T3R(version)					((GET_CVID_RF_TYPE(version) == RF_TYPE_3T3R)? TRUE : FALSE)
 
 
 //----------------------------------------------------------------------------

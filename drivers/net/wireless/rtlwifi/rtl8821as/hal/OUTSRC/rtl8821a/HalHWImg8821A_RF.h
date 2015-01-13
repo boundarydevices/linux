@@ -18,6 +18,7 @@
 * 
 ******************************************************************************/
 
+/*Image2HeaderVersion: 2.3*/
 #if (RTL8821A_SUPPORT == 1)
 #ifndef __INC_MP_RF_HW_IMG_8821A_H
 #define __INC_MP_RF_HW_IMG_8821A_H
@@ -28,7 +29,7 @@
 ******************************************************************************/
 
 void
-ODM_ReadAndConfig_MP_8821A_RadioA( // TC: Test Chip, MP: MP Chip
+ODM_ReadAndConfig_MP_8821A_RadioA(/* TC: Test Chip, MP: MP Chip*/
 	IN   PDM_ODM_T  pDM_Odm
 );
 u4Byte ODM_GetVersion_MP_8821A_RadioA(void);
@@ -38,7 +39,7 @@ u4Byte ODM_GetVersion_MP_8821A_RadioA(void);
 ******************************************************************************/
 
 void
-ODM_ReadAndConfig_MP_8821A_TxPowerTrack_AP( // TC: Test Chip, MP: MP Chip
+ODM_ReadAndConfig_MP_8821A_TxPowerTrack_AP(/* TC: Test Chip, MP: MP Chip*/
 	IN   PDM_ODM_T  pDM_Odm
 );
 u4Byte ODM_GetVersion_MP_8821A_TxPowerTrack_AP(void);
@@ -48,17 +49,27 @@ u4Byte ODM_GetVersion_MP_8821A_TxPowerTrack_AP(void);
 ******************************************************************************/
 
 void
-ODM_ReadAndConfig_MP_8821A_TxPowerTrack_PCIE( // TC: Test Chip, MP: MP Chip
+ODM_ReadAndConfig_MP_8821A_TxPowerTrack_PCIE(/* TC: Test Chip, MP: MP Chip*/
 	IN   PDM_ODM_T  pDM_Odm
 );
 u4Byte ODM_GetVersion_MP_8821A_TxPowerTrack_PCIE(void);
+
+/******************************************************************************
+*                           TxPowerTrack_SDIO.TXT
+******************************************************************************/
+
+void
+ODM_ReadAndConfig_MP_8821A_TxPowerTrack_SDIO(/* TC: Test Chip, MP: MP Chip*/
+	IN   PDM_ODM_T  pDM_Odm
+);
+u4Byte ODM_GetVersion_MP_8821A_TxPowerTrack_SDIO(void);
 
 /******************************************************************************
 *                           TxPowerTrack_USB.TXT
 ******************************************************************************/
 
 void
-ODM_ReadAndConfig_MP_8821A_TxPowerTrack_USB( // TC: Test Chip, MP: MP Chip
+ODM_ReadAndConfig_MP_8821A_TxPowerTrack_USB(/* TC: Test Chip, MP: MP Chip*/
 	IN   PDM_ODM_T  pDM_Odm
 );
 u4Byte ODM_GetVersion_MP_8821A_TxPowerTrack_USB(void);
@@ -68,7 +79,7 @@ u4Byte ODM_GetVersion_MP_8821A_TxPowerTrack_USB(void);
 ******************************************************************************/
 
 void
-ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_FEM( // TC: Test Chip, MP: MP Chip
+ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_FEM(/* TC: Test Chip, MP: MP Chip*/
 	IN   PDM_ODM_T  pDM_Odm
 );
 u4Byte ODM_GetVersion_MP_8821A_TXPWR_LMT_8811AU_FEM(void);
@@ -78,7 +89,7 @@ u4Byte ODM_GetVersion_MP_8821A_TXPWR_LMT_8811AU_FEM(void);
 ******************************************************************************/
 
 void
-ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_IPA( // TC: Test Chip, MP: MP Chip
+ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_IPA(/* TC: Test Chip, MP: MP Chip*/
 	IN   PDM_ODM_T  pDM_Odm
 );
 u4Byte ODM_GetVersion_MP_8821A_TXPWR_LMT_8811AU_IPA(void);
@@ -88,7 +99,7 @@ u4Byte ODM_GetVersion_MP_8821A_TXPWR_LMT_8811AU_IPA(void);
 ******************************************************************************/
 
 void
-ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A( // TC: Test Chip, MP: MP Chip
+ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A(/* TC: Test Chip, MP: MP Chip*/
 	IN   PDM_ODM_T  pDM_Odm
 );
 u4Byte ODM_GetVersion_MP_8821A_TXPWR_LMT_8821A(void);
@@ -98,7 +109,7 @@ u4Byte ODM_GetVersion_MP_8821A_TXPWR_LMT_8821A(void);
 ******************************************************************************/
 
 void
-ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm( // TC: Test Chip, MP: MP Chip
+ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm(/* TC: Test Chip, MP: MP Chip*/
 	IN   PDM_ODM_T  pDM_Odm
 );
 u4Byte ODM_GetVersion_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm(void);
@@ -108,7 +119,7 @@ u4Byte ODM_GetVersion_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm(void);
 ******************************************************************************/
 
 void
-ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_5mm( // TC: Test Chip, MP: MP Chip
+ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_5mm(/* TC: Test Chip, MP: MP Chip*/
 	IN   PDM_ODM_T  pDM_Odm
 );
 u4Byte ODM_GetVersion_MP_8821A_TXPWR_LMT_8821A_SAR_5mm(void);
@@ -118,11 +129,11 @@ u4Byte ODM_GetVersion_MP_8821A_TXPWR_LMT_8821A_SAR_5mm(void);
 ******************************************************************************/
 
 void
-ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_8mm( // TC: Test Chip, MP: MP Chip
+ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_8mm(/* TC: Test Chip, MP: MP Chip*/
 	IN   PDM_ODM_T  pDM_Odm
 );
 u4Byte ODM_GetVersion_MP_8821A_TXPWR_LMT_8821A_SAR_8mm(void);
 
 #endif
-#endif // end of HWIMG_SUPPORT
+#endif /* end of HWIMG_SUPPORT*/
 

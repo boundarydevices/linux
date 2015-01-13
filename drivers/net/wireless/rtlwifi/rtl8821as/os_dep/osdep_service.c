@@ -782,7 +782,7 @@ inline void dbg_rtw_usb_buffer_free(struct usb_device *dev, size_t size, void *a
 
 #endif /* defined(DBG_MEM_ALLOC) */
 
-void* rtw_malloc2d(int h, int w, int size)
+void* rtw_malloc2d(int h, int w, size_t size)
 {
 	int j;
 
@@ -804,7 +804,7 @@ void rtw_mfree2d(void *pbuf, int h, int w, int size)
 	rtw_mfree((u8 *)pbuf, h*sizeof(void*) + w*h*size);
 }
 
-void _rtw_memcpy(void* dst, void* src, u32 sz)
+void _rtw_memcpy(void *dst, const void *src, u32 sz)
 {
 
 #if defined (PLATFORM_LINUX)|| defined (PLATFORM_FREEBSD)
@@ -1404,7 +1404,12 @@ void rtw_msleep_os(int ms)
 {
 
 #ifdef PLATFORM_LINUX
-
+	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36))
+	if (ms < 20) {
+		unsigned long us = ms * 1000UL;
+		usleep_range(us, us + 1000UL);
+	} else
+	#endif
   	msleep((unsigned int)ms);
 
 #endif	
@@ -1423,16 +1428,19 @@ void rtw_msleep_os(int ms)
 }
 void rtw_usleep_os(int us)
 {
-
 #ifdef PLATFORM_LINUX
-  	
-      // msleep((unsigned int)us);
-      if ( 1 < (us/1000) )
-                msleep(1);
+
+	// msleep((unsigned int)us);
+	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36))
+	usleep_range(us, us + 1);	
+	#else
+	if ( 1 < (us/1000) )
+      		msleep(1);
       else
 		msleep( (us/1000) + 1);
+	#endif
+#endif
 
-#endif	
 #ifdef PLATFORM_FREEBSD
 	//Delay for delay microseconds 
 	DELAY(us);
@@ -1543,7 +1551,7 @@ void rtw_udelay_os(int us)
 }
 #endif
 
-void rtw_yield_os()
+void rtw_yield_os(void)
 {
 #ifdef PLATFORM_LINUX
 	yield();
@@ -1590,7 +1598,7 @@ static android_suspend_lock_t rtw_resume_scan_lock ={
 };
 #endif
 
-inline void rtw_suspend_lock_init()
+inline void rtw_suspend_lock_init(void)
 {
 	#ifdef CONFIG_WAKELOCK
 	wake_lock_init(&rtw_suspend_lock, WAKE_LOCK_SUSPEND, RTW_SUSPEND_LOCK_NAME);
@@ -1609,7 +1617,7 @@ inline void rtw_suspend_lock_init()
 	#endif
 }
 
-inline void rtw_suspend_lock_uninit()
+inline void rtw_suspend_lock_uninit(void)
 {
 	#ifdef CONFIG_WAKELOCK
 	wake_lock_destroy(&rtw_suspend_lock);
@@ -2182,7 +2190,7 @@ int rtw_change_ifname(_adapter *padapter, const char *ifname)
 
 	rtw_init_netdev_name(pnetdev, ifname);
 
-	_rtw_memcpy(pnetdev->dev_addr, padapter->eeprompriv.mac_addr, ETH_ALEN);
+	_rtw_memcpy(pnetdev->dev_addr, adapter_mac_addr(padapter), ETH_ALEN);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26))
 	if(!rtnl_is_locked())

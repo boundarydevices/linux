@@ -21,13 +21,7 @@
 #define __RTL8192C_HAL_H__
 
 //#include "hal_com.h"
-
-#if 1
 #include "hal_data.h"
-#else
-#include "../hal/OUTSRC/odm_precomp.h"
-#endif
-
 
 #include "drv_types.h"
 #include "rtl8192c_spec.h"
@@ -404,6 +398,7 @@ HAL_VERSION rtl8192c_ReadChipVersion(IN PADAPTER Adapter);
 void rtl8192c_ReadBluetoothCoexistInfo(PADAPTER Adapter, u8 *PROMContent, BOOLEAN AutoloadFail);
 
 VOID rtl8192c_EfuseParseIDCode(PADAPTER pAdapter, u8 *hwinfo);
+void rtl8192c_init_default_value(_adapter *adapter);
 void rtl8192c_set_hal_ops(struct hal_ops *pHalFunc);
 
 s32 c2h_id_filter_ccx_8192c(u8 *buf);

@@ -110,6 +110,8 @@ void Init_ODM_ComInfo(_adapter *adapter)
 	else if (pHalData->rf_type == RF_1T2R){
 		ODM_CmnInfoUpdate(pDM_Odm, ODM_CMNINFO_RF_TYPE, ODM_1T2R);
 	}
+	else if (pHalData->rf_type == RF_3T3R)
+		ODM_CmnInfoUpdate(pDM_Odm, ODM_CMNINFO_RF_TYPE, ODM_3T3R);
 
 {
 	//1 ======= BoardType: ODM_CMNINFO_BOARD_TYPE =======

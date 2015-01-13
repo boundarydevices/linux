@@ -21,11 +21,7 @@
 #define __RTL8188E_HAL_H__
 
 //#include "hal_com.h"
-#if 1
 #include "hal_data.h"
-#else
-#include "../hal/OUTSRC/odm_precomp.h"
-#endif
 
 //include HAL Related header after HAL Related compiling flags 
 #include "rtl8188e_spec.h"
@@ -163,8 +159,14 @@ typedef struct _RT_8188E_FIRMWARE_HDR
 #define WOWLAN_PAGE_NUM_88E	0x00
 #endif
 
-#define TX_TOTAL_PAGE_NUMBER_88E(_Adapter)	( (IS_VENDOR_8188E_I_CUT_SERIES(_Adapter)?0x100:0xB0) - BCNQ_PAGE_NUM_88E - WOWLAN_PAGE_NUM_88E)
-#define TX_PAGE_BOUNDARY_88E(_Adapter)		(TX_TOTAL_PAGE_NUMBER_88E(_Adapter) + 1)
+/* Note: 
+Tx FIFO Size : previous CUT:22K /I_CUT after:32KB
+Tx page Size : 128B
+Total page numbers : 176(0xB0) / 256(0x100)
+*/
+#define TOTAL_PAGE_NUMBER_88E(_Adapter)	((IS_VENDOR_8188E_I_CUT_SERIES(_Adapter)?0x100:0xB0) - 1)/* must reserved 1 page for dma issue */
+#define TX_TOTAL_PAGE_NUMBER_88E(_Adapter)	(TOTAL_PAGE_NUMBER_88E(_Adapter) - BCNQ_PAGE_NUM_88E - WOWLAN_PAGE_NUM_88E)
+#define TX_PAGE_BOUNDARY_88E(_Adapter)		(TX_TOTAL_PAGE_NUMBER_88E(_Adapter) + 1) /* beacon header start address */
 
 #define WMM_NORMAL_TX_TOTAL_PAGE_NUMBER_88E(_Adapter)	TX_TOTAL_PAGE_NUMBER_88E(_Adapter)
 #define WMM_NORMAL_TX_PAGE_BOUNDARY_88E(_Adapter)		(WMM_NORMAL_TX_TOTAL_PAGE_NUMBER_88E(_Adapter) + 1)
@@ -282,6 +284,8 @@ void Hal_InitChannelPlan(PADAPTER padapter);
 #ifdef CONFIG_RF_GAIN_OFFSET
 void Hal_ReadRFGainOffset(PADAPTER pAdapter,u8* hwinfo,BOOLEAN AutoLoadFail);
 #endif //CONFIG_RF_GAIN_OFFSET
+
+void rtl8188e_init_default_value(_adapter *adapter);
 
 void rtl8188e_set_hal_ops(struct hal_ops *pHalFunc);
 

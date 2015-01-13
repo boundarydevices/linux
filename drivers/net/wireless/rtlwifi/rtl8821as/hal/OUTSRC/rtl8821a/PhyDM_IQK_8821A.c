@@ -19,7 +19,7 @@
  ******************************************************************************/
 
 #include "Mp_Precomp.h"
-#include "../odm_precomp.h"
+#include "../phydm_precomp.h"
 
 
 
@@ -734,7 +734,7 @@ phy_IQCalibrate_By_FW_8821A(
 	pDM_Odm->RFCalibrateInfo.IQK_StartTime = 0;
 	pDM_Odm->RFCalibrateInfo.IQK_StartTime = ODM_GetCurrentTime( pDM_Odm);
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("== StartTime: %lld\n", pDM_Odm->RFCalibrateInfo.IQK_StartTime));
-	ODM_FillH2CCmd(pDM_Odm, 0x45, 3, IQKcmd);
+	ODM_FillH2CCmd(pDM_Odm, ODM_H2C_IQ_CALIBRATION, 3, IQKcmd);
 	
 
 }
@@ -811,7 +811,7 @@ PHY_IQCalibrate_8821A(
 		#endif	
 		
 	}
-
+	pDM_Odm->IQKFWOffload = 0;
 	
 	//3 == FW IQK ==
 	if(pDM_Odm->IQKFWOffload)
@@ -827,21 +827,21 @@ PHY_IQCalibrate_8821A(
 					ODM_RT_TRACE(pDM_Odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("== FW IQK IN PROGRESS == #%d\n", counter));
 					ODM_delay_ms(50);
 				if ( ! pDM_Odm->RFCalibrateInfo.bIQKInProgress)
-				{
+					{
 						ODM_RT_TRACE(pDM_Odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("== FW IQK RETURN FROM WAITING ==\n"));
-					break;
-				}
+						break;
+					}
 			}
 			#elif (DM_ODM_SUPPORT_TYPE == ODM_CE)
 				rtl8812_iqk_wait(pAdapter, 500);
 			#endif
 			if (pDM_Odm->RFCalibrateInfo.bIQKInProgress)
-			{
-				ODM_RT_TRACE(pDM_Odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("== FW IQK TIMEOUT (Still in progress after 500ms) ==\n"));
-				ODM_AcquireSpinLock( pDM_Odm, RT_IQK_SPINLOCK);
-				pDM_Odm->RFCalibrateInfo.bIQKInProgress = FALSE;
-				ODM_ReleaseSpinLock( pDM_Odm, RT_IQK_SPINLOCK);
-			}
+				{
+					ODM_RT_TRACE(pDM_Odm, ODM_COMP_CALIBRATION, ODM_DBG_LOUD, ("== FW IQK TIMEOUT (Still in progress after 500ms) ==\n"));
+					ODM_AcquireSpinLock( pDM_Odm, RT_IQK_SPINLOCK);
+					pDM_Odm->RFCalibrateInfo.bIQKInProgress = FALSE;
+					ODM_ReleaseSpinLock( pDM_Odm, RT_IQK_SPINLOCK);
+				}
 			}
 			else
 			{

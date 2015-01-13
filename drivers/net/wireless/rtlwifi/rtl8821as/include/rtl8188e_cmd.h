@@ -146,6 +146,7 @@ u8 rtl8188e_set_raid_cmd(_adapter*padapter, u32 bitmap, u8* arg);
 void rtl8188e_Add_RateATid(PADAPTER padapter, u32 bitmap, u8* arg, u8 rssi_level);
 s32 FillH2CCmd_88E(PADAPTER padapter, u8 ElementID, u32 CmdLen, u8 *pCmdBuffer);
 //u8 rtl8192c_set_FwSelectSuspend_cmd(PADAPTER padapter, u8 bfwpoll, u16 period);
+u8 GetTxBufferRsvdPageNum8188E(_adapter *padapter, bool wowlan);
 
 
 #ifdef CONFIG_P2P

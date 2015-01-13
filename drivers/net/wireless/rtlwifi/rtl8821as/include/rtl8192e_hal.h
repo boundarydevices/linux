@@ -22,11 +22,7 @@
 
 //#include "hal_com.h"
 
-#if 1
 #include "hal_data.h"
-#else
-#include "../hal/OUTSRC/odm_precomp.h"
-#endif
 
 //include HAL Related header after HAL Related compiling flags 
 #include "rtl8192e_spec.h"
@@ -132,12 +128,17 @@ typedef struct _RT_FIRMWARE_8192E {
 
 #define DRIVER_EARLY_INT_TIME_8192E		0x05
 #define BCN_DMA_ATIME_INT_TIME_8192E		0x02
-
-#define MAX_RX_DMA_BUFFER_SIZE_8192E		0x3d00 //0x3E80   //0x3FFF	// RX 16K reserved for WOW ?
-
+#define RX_DMA_SIZE_8192E					0x4000	/* 16K*/
+#ifdef CONFIG_FW_C2H_DEBUG 
+	#define RX_DMA_RESERVED_SIZE_8192E	0x100	/* 256B, reserved for c2h debug message*/
+#else
+	#define RX_DMA_RESERVED_SIZE_8192E	0x40	/* 64B, reserved for c2h event(16bytes) or ccx(8 Bytes )*/
+#endif
+#define MAX_RX_DMA_BUFFER_SIZE_8192E		(RX_DMA_SIZE_8192E-RX_DMA_RESERVED_SIZE_8192E)	/*RX 16K*/
 
 //For General Reserved Page Number(Beacon Queue is reserved page)
-//Beacon:2, PS-Poll:1, Null Data:1,Qos Null Data:1,BT Qos Null Data:1
+//if (CONFIG_2BCN_EN) Beacon:4, PS-Poll:1, Null Data:1,Prob Rsp:1,Qos Null Data:1
+//Beacon:2, PS-Poll:1, Null Data:1,Prob Rsp:1,Qos Null Data:1
 #define RSVD_PAGE_NUM_8192E		0x08
 //For WoWLan , more reserved page
 //ARP Rsp:1, RWC:1, GTK Info:1,GTK RSP:2,GTK EXT MEM:2, PNO: 6
@@ -157,6 +158,9 @@ typedef struct _RT_FIRMWARE_8192E {
 
 #define	TX_PAGE_BOUNDARY_8192E	TX_TOTAL_PAGE_NUMBER_8192E
 
+
+#define PAGE_SIZE_TX_92E	PAGE_SIZE_256
+#define RSVD_PKT_LEN_92E	(TOTAL_RSVD_PAGE_NUMBER_8192E *PAGE_SIZE_TX_92E)
 
 #define TX_PAGE_LOAD_FW_BOUNDARY_8192E		0x47 //0xA5
 #define TX_PAGE_BOUNDARY_WOWLAN_8192E		0xE0
@@ -218,7 +222,7 @@ typedef struct _RT_FIRMWARE_8192E {
 #define		EFUSE_BT_MAX_SECTION_8192E				128		// 1024/8
 
 #define		EFUSE_PROTECT_BYTES_BANK_8192E			16
-#define 	EFUSE_MAX_BANK_8192E					3
+#define 		EFUSE_MAX_BANK_8192E					3
 //===========================================================
 
 #define INCLUDE_MULTI_FUNC_BT(_Adapter)	(GET_HAL_DATA(_Adapter)->MultiFunc & RT_MULTI_FUNC_BT)
@@ -259,6 +263,8 @@ void Hal_DetectWoWMode(PADAPTER pAdapter);
 
 /***********************************************************/
 // RTL8192E-MAC Setting
+VOID _InitQueueReservedPage_8192E(IN  PADAPTER Adapter);
+VOID _InitQueuePriority_8192E(IN	PADAPTER Adapter);
 VOID _InitTxBufferBoundary_8192E(IN PADAPTER Adapter,IN u8 txpktbuf_bndy);
 VOID _InitPageBoundary_8192E(IN PADAPTER Adapter);
 //VOID _InitTransferPageSize_8192E(IN PADAPTER Adapter);
@@ -269,14 +275,15 @@ void _InitID_8192E(IN  PADAPTER Adapter);
 VOID _InitNetworkType_8192E(IN  PADAPTER Adapter);
 VOID _InitWMACSetting_8192E(IN PADAPTER Adapter);
 VOID _InitAdaptiveCtrl_8192E(IN  PADAPTER Adapter);
+VOID _InitRateFallback_8192E(IN  PADAPTER Adapter);
 VOID _InitEDCA_8192E( IN  PADAPTER Adapter);
 VOID _InitRetryFunction_8192E(	IN  PADAPTER Adapter);
+VOID _BBTurnOnBlock_8192E(IN	PADAPTER Adapter);
 VOID _InitBeaconParameters_8192E(IN  PADAPTER Adapter);
 VOID _InitBeaconMaxError_8192E(
 	IN  PADAPTER	Adapter,
 	IN	BOOLEAN		InfraMode
 	);
-void _BBTurnOnBlock_8192E(PADAPTER padapter);
 void SetBeaconRelatedRegisters8192E(PADAPTER padapter);
 VOID hal_ReadRFType_8192E(PADAPTER	Adapter);
 // RTL8192E-MAC Setting
@@ -310,6 +317,11 @@ BOOLEAN	InterruptRecognized8192EE(PADAPTER Adapter);
 u16	get_txdesc_buf_addr(u16 ff_hwaddr);
 #endif
 
+#ifdef CONFIG_SDIO_HCI
+#ifdef CONFIG_SDIO_TX_ENABLE_AVAL_INT
+void _init_available_page_threshold(PADAPTER padapter, u8 numHQ, u8 numNQ, u8 numLQ, u8 numPubQ);
+#endif
+#endif
 
 #ifdef CONFIG_BT_COEXIST
 void rtl8192e_combo_card_WifiOnlyHwInit(PADAPTER Adapter);
