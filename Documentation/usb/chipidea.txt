@@ -77,6 +77,17 @@ compliant(with otg descriptor comply with USB OTG and EH 2.0 as a peripheral):
 - ether
 - serial
 
+1.5 Runtime enable and disable full HNP
+---------------------------------------
+One more input file is created:
+/sys/bus/platform/devices/ci_hdrc.0/inputs/hnp_enable
+
+Defaultly USB OTG full HNP(do role switch by SW protocol, no need exchange OTG
+plug) is not enabled, user can enable or disable it after disconnect from other
+end device by:
+	echo 1 or 0 > /sys/bus/platform/devices/ci_hdrc.0/inputs/hnp_enable
+If this input is 0, only OTG role switch by ID pin detection can be supported.
+
 2. How to enable USB as system wakeup source
 -----------------------------------
 Below is the example for how to enable USB as system wakeup source
