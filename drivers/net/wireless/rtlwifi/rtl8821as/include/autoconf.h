@@ -46,7 +46,7 @@
 // Driver(software) Config
 // ==============================
 #define CONFIG_EMBEDDED_FWIMG
-//#define CONFIG_SDIO_TX_TASKLET
+#define CONFIG_SDIO_TX_TASKLET
 //#define CONFIG_SDIO_REDUCE_TX_POLLING
 #define CONFIG_RECV_REORDERING_CTRL
 #define CONFIG_SKB_COPY	//for amsdu
@@ -99,13 +99,13 @@
  * Debug Related Config
  *
  ***********************************************************/
-#define CONFIG_DEBUG /* DBG_871X, etc... */
+/*#define CONFIG_DEBUG */ /* DBG_871X, etc... */
 //#define CONFIG_DEBUG_RTL871X /* RT_TRACE, RT_PRINT_DATA, _func_enter_, _func_exit_ */
-#define CONFIG_PROC_DEBUG
-#define DBG_CONFIG_ERROR_DETECT
-//#define DBG_CONFIG_ERROR_RESET
+/* #define CONFIG_PROC_DEBUG */
+/* #define DBG_CONFIG_ERROR_DETECT */
+/* #define DBG_CONFIG_ERROR_RESET */
 
-#define DBG 1
+#define DBG 0
 
 //#define DBG_IO
 //#define DBG_DELAY_OS
