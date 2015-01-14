@@ -33,7 +33,7 @@ extern const struct regmap_config clearwater_32bit_i2c_regmap;
 
 extern const struct regmap_config wm8997_i2c_regmap;
 
-extern const struct regmap_config wm8998_i2c_regmap;
+extern const struct regmap_config vegas_i2c_regmap;
 
 extern const struct regmap_config cs47l24_spi_regmap;
 
@@ -53,8 +53,8 @@ extern const struct regmap_irq_chip clearwater_irq;
 extern const struct regmap_irq_chip wm8997_aod;
 extern const struct regmap_irq_chip wm8997_irq;
 
-extern struct regmap_irq_chip wm8998_aod;
-extern struct regmap_irq_chip wm8998_irq;
+extern struct regmap_irq_chip vegas_aod;
+extern struct regmap_irq_chip vegas_irq;
 
 extern const struct regmap_irq_chip cs47l24_irq;
 

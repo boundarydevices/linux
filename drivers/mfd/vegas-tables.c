@@ -1,7 +1,7 @@
 /*
- * wm8998-tables.c  --  data tables for wm8998-class codecs
+ * vegas-tables.c  --  data tables for vegas-class codecs
  *
- * Copyright 2014 Wolfson Microelectronics plc
+ * Copyright 2014-2015 Cirrus Logic
  *
  * Author: Richard Fitzgerald <rf@opensource.wolfsonmicro.com>
  *
@@ -18,10 +18,10 @@
 
 #include "arizona.h"
 
-#define WM8998_NUM_AOD_ISR 2
-#define WM8998_NUM_ISR 5
+#define VEGAS_NUM_AOD_ISR 2
+#define VEGAS_NUM_ISR 5
 
-static const struct reg_default wm8998_rev_a_patch[] = {
+static const struct reg_default vegas_rev_a_patch[] = {
 	{ 0x0212, 0x0000 },
 	{ 0x0211, 0x0014 },
 	{ 0x04E4, 0x0E0D },
@@ -42,15 +42,15 @@ static const struct reg_default wm8998_rev_a_patch[] = {
 };
 
 /* We use a function so we can use ARRAY_SIZE() */
-int wm8998_patch(struct arizona *arizona)
+int vegas_patch(struct arizona *arizona)
 {
 	return regmap_register_patch(arizona->regmap,
-				     wm8998_rev_a_patch,
-				     ARRAY_SIZE(wm8998_rev_a_patch));
+				     vegas_rev_a_patch,
+				     ARRAY_SIZE(vegas_rev_a_patch));
 }
-EXPORT_SYMBOL_GPL(wm8998_patch);
+EXPORT_SYMBOL_GPL(vegas_patch);
 
-static const struct regmap_irq wm8998_aod_irqs[ARIZONA_NUM_IRQ] = {
+static const struct regmap_irq vegas_aod_irqs[ARIZONA_NUM_IRQ] = {
 	[ARIZONA_IRQ_MICD_CLAMP_FALL] = {
 		.mask = ARIZONA_MICD_CLAMP_FALL_EINT1
 	},
@@ -63,18 +63,18 @@ static const struct regmap_irq wm8998_aod_irqs[ARIZONA_NUM_IRQ] = {
 	[ARIZONA_IRQ_JD_RISE] = { .mask = ARIZONA_JD1_RISE_EINT1 },
 };
 
-struct regmap_irq_chip wm8998_aod = {
-	.name = "wm8998 AOD",
+struct regmap_irq_chip vegas_aod = {
+	.name = "vegas AOD",
 	.status_base = ARIZONA_AOD_IRQ1,
 	.mask_base = ARIZONA_AOD_IRQ_MASK_IRQ1,
 	.ack_base = ARIZONA_AOD_IRQ1,
 	.num_regs = 1,
-	.irqs = wm8998_aod_irqs,
-	.num_irqs = ARRAY_SIZE(wm8998_aod_irqs),
+	.irqs = vegas_aod_irqs,
+	.num_irqs = ARRAY_SIZE(vegas_aod_irqs),
 };
-EXPORT_SYMBOL_GPL(wm8998_aod);
+EXPORT_SYMBOL_GPL(vegas_aod);
 
-static const struct regmap_irq wm8998_irqs[ARIZONA_NUM_IRQ] = {
+static const struct regmap_irq vegas_irqs[ARIZONA_NUM_IRQ] = {
 	[ARIZONA_IRQ_GP4] = { .reg_offset = 0, .mask = ARIZONA_GP4_EINT1 },
 	[ARIZONA_IRQ_GP3] = { .reg_offset = 0, .mask = ARIZONA_GP3_EINT1 },
 	[ARIZONA_IRQ_GP2] = { .reg_offset = 0, .mask = ARIZONA_GP2_EINT1 },
@@ -165,18 +165,18 @@ static const struct regmap_irq wm8998_irqs[ARIZONA_NUM_IRQ] = {
 	},
 };
 
-struct regmap_irq_chip wm8998_irq = {
-	.name = "wm8998 IRQ",
+struct regmap_irq_chip vegas_irq = {
+	.name = "vegas IRQ",
 	.status_base = ARIZONA_INTERRUPT_STATUS_1,
 	.mask_base = ARIZONA_INTERRUPT_STATUS_1_MASK,
 	.ack_base = ARIZONA_INTERRUPT_STATUS_1,
 	.num_regs = 5,
-	.irqs = wm8998_irqs,
-	.num_irqs = ARRAY_SIZE(wm8998_irqs),
+	.irqs = vegas_irqs,
+	.num_irqs = ARRAY_SIZE(vegas_irqs),
 };
-EXPORT_SYMBOL_GPL(wm8998_irq);
+EXPORT_SYMBOL_GPL(vegas_irq);
 
-static const struct reg_default wm8998_reg_default[] = {
+static const struct reg_default vegas_reg_default[] = {
 	{ 0x00000009, 0x0001 },    /* R9     - Ctrl IF I2C1 CFG 1 */
 	{ 0x0000000B, 0x001A },    /* R11    - Ctrl IF I2C1 CFG 2 */
 	{ 0x00000020, 0x0000 },    /* R32    - Tone Generator 1 */
@@ -826,7 +826,7 @@ static const struct reg_default wm8998_reg_default[] = {
 	{ 0x00001705, 0x0000 },    /* R5893  - DAC_COMP_2 */
 };
 
-static bool wm8998_readable_register(struct device *dev, unsigned int reg)
+static bool vegas_readable_register(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
 	case ARIZONA_SOFTWARE_RESET:
@@ -1519,7 +1519,7 @@ static bool wm8998_readable_register(struct device *dev, unsigned int reg)
 	}
 }
 
-static bool wm8998_volatile_register(struct device *dev, unsigned int reg)
+static bool vegas_volatile_register(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
 	case ARIZONA_SOFTWARE_RESET:
@@ -1571,18 +1571,18 @@ static bool wm8998_volatile_register(struct device *dev, unsigned int reg)
 	}
 }
 
-#define WM8998_MAX_REGISTER 0x31ff
+#define VEGAS_MAX_REGISTER 0x31ff
 
-const struct regmap_config wm8998_i2c_regmap = {
+const struct regmap_config vegas_i2c_regmap = {
 	.reg_bits = 32,
 	.val_bits = 16,
 
-	.max_register = WM8998_MAX_REGISTER,
-	.readable_reg = wm8998_readable_register,
-	.volatile_reg = wm8998_volatile_register,
+	.max_register = VEGAS_MAX_REGISTER,
+	.readable_reg = vegas_readable_register,
+	.volatile_reg = vegas_volatile_register,
 
 	.cache_type = REGCACHE_RBTREE,
-	.reg_defaults = wm8998_reg_default,
-	.num_reg_defaults = ARRAY_SIZE(wm8998_reg_default),
+	.reg_defaults = vegas_reg_default,
+	.num_reg_defaults = ARRAY_SIZE(vegas_reg_default),
 };
-EXPORT_SYMBOL_GPL(wm8998_i2c_regmap);
+EXPORT_SYMBOL_GPL(vegas_i2c_regmap);
