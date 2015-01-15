@@ -423,7 +423,7 @@ struct ad799x_platform_data {
 };
 
 static struct ad799x_platform_data ad799x_pdata = {
-	.vref_mv = 2500,
+	.vref_mv = 3000,
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
