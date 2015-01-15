@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  *
  * Author: Jun Li
  */
@@ -68,6 +68,7 @@ int ci_otg_fsm_work(struct ci_hdrc *ci);
 irqreturn_t ci_otg_fsm_irq(struct ci_hdrc *ci);
 void ci_hdrc_otg_fsm_start(struct ci_hdrc *ci);
 void ci_hdrc_otg_fsm_remove(struct ci_hdrc *ci);
+void ci_hdrc_otg_fsm_restart(struct ci_hdrc *ci);
 
 #else
 
@@ -92,6 +93,11 @@ static inline void ci_hdrc_otg_fsm_start(struct ci_hdrc *ci)
 }
 
 static inline void ci_hdrc_otg_fsm_remove(struct ci_hdrc *ci)
+{
+
+}
+
+static inline void ci_hdrc_otg_fsm_restart(struct ci_hdrc *ci)
 {
 
 }
