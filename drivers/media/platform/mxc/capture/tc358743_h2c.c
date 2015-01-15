@@ -2853,7 +2853,7 @@ static void report_netlink(struct tc_data *td)
 		td->det_work_timeout, tc358743_audio_list[td->audio]);
 }
 
-static void det_worker(struct work_struct *work)
+static void tc_det_worker(struct work_struct *work)
 {
 	struct tc_data *td = container_of(work, struct tc_data, det_work.work);
 	struct sensor_data *sensor = &td->sensor;
@@ -3263,7 +3263,7 @@ static int tc358743_probe(struct i2c_client *client,
 #endif
 
 #if 1
-	INIT_DELAYED_WORK(&td->det_work, det_worker);
+	INIT_DELAYED_WORK(&td->det_work, tc_det_worker);
 	if (sensor->i2c_client->irq) {
 		retval = request_irq(sensor->i2c_client->irq, tc358743_detect_handler,
 				IRQF_SHARED | IRQF_TRIGGER_FALLING,
