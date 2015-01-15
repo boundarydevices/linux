@@ -517,6 +517,7 @@ static const struct reg_default clearwater_reg_default[] = {
 	{ 0x000001C9, 0x0000 }, /* R457  - FLL3 Spread Spectrum */
 	{ 0x000001CA, 0x000C }, /* R458  - FLL3 GPIO Clock */
 	{ 0x00000200, 0x0006 }, /* R512 (0x200) - Mic Charge Pump 1 */
+	{ 0x0000020B, 0x0400 },
 	{ 0x00000210, 0x0184 }, /* R528 (0x210) - LDO1 Control 1 */
 	{ 0x00000213, 0x03e4 }, /* R531 (0x213) - LDO2 Control 1 */
 	{ 0x00000218, 0x00e6 }, /* R536 (0x218) - Mic Bias Ctrl 1 */
