@@ -2604,13 +2604,8 @@ const struct arizona_jd_state arizona_micd_manual = {
 	.timeout = arizona_micd_manual_timeout,
 };
 
-static ssize_t arizona_extcon_mic_show(struct device *dev,
-				   struct device_attribute *attr,
-				   char *buf)
+int arizona_extcon_take_manual_mic_reading(struct arizona_extcon_info *info)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct arizona_extcon_info *info = platform_get_drvdata(pdev);
-
 	mutex_lock(&info->lock);
 	info->old_state = info->state;
 	arizona_jds_set_state(info, &arizona_micd_manual);
@@ -2618,7 +2613,19 @@ static ssize_t arizona_extcon_mic_show(struct device *dev,
 
 	wait_for_completion(&info->manual_mic_completion);
 
-	return scnprintf(buf, PAGE_SIZE, "%d\n", info->mic_impedance);
+	return info->mic_impedance;
+}
+EXPORT_SYMBOL_GPL(arizona_extcon_take_manual_mic_reading);
+
+static ssize_t arizona_extcon_mic_show(struct device *dev,
+				   struct device_attribute *attr,
+				   char *buf)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct arizona_extcon_info *info = platform_get_drvdata(pdev);
+	int mic_impedance = arizona_extcon_take_manual_mic_reading(info);
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n", mic_impedance);
 }
 
 static int arizona_hp_trim_signify(int raw, int value_mask)

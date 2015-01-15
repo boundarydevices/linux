@@ -79,4 +79,6 @@ extern void arizona_micd_mic_timeout(struct arizona_extcon_info *info);
 
 extern void arizona_extcon_report(struct arizona_extcon_info *info, int state);
 
+extern int arizona_extcon_take_manual_mic_reading(struct arizona_extcon_info *info);
+
 #endif
