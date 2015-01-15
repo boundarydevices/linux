@@ -321,15 +321,15 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
 	},
+	{
+		I2C_BOARD_INFO("rv4162", 0x68),
+	},
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("ft5x06-ts", 0x38),
 		.irq = gpio_to_irq(CAP_TCH_INT),
-	},
-	{
-		I2C_BOARD_INFO("rv4162", 0x68),
 	},
 };
 
