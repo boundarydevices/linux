@@ -276,15 +276,15 @@ void get_std(struct adv7180_priv *adv)
 		adv->idx = idx;
 		adv->sen.pix.width = video_fmts[idx].active_width;
 		adv->sen.pix.height = video_fmts[idx].active_height;
-		adv->sen.pix.swidth = video_fmts[idx].raw_width - 1;
-		adv->sen.pix.sheight = video_fmts[idx].raw_height;
-		adv->sen.pix.top = video_fmts[idx].skip_lines;
+		adv->sen.spix.swidth = video_fmts[idx].raw_width - 1;
+		adv->sen.spix.sheight = video_fmts[idx].raw_height;
+		adv->sen.spix.top = video_fmts[idx].skip_lines;
 		if (adv->cea861) {
-			adv->sen.pix.left = 0;
+			adv->sen.spix.left = 0;
 		} else {
-			adv->sen.pix.swidth = video_fmts[idx].active_width;
-//			adv->sen.pix.sheight = video_fmts[idx].active_height;
-			adv->sen.pix.left = video_fmts[idx].lines_per_field;
+			adv->sen.spix.swidth = video_fmts[idx].active_width;
+//			adv->sen.spix.sheight = video_fmts[idx].active_height;
+			adv->sen.spix.left = video_fmts[idx].lines_per_field;
 		}
 	}
 	mutex_unlock(&mutex);
@@ -1264,15 +1264,15 @@ static int adv7180_probe(struct i2c_client *client,
 	adv->idx = idx;
 	adv->sen.pix.width = video_fmts[idx].active_width;
 	adv->sen.pix.height = video_fmts[idx].active_height;
-	adv->sen.pix.swidth = video_fmts[idx].raw_width - 1;
-	adv->sen.pix.sheight = video_fmts[idx].raw_height;
-	adv->sen.pix.top = video_fmts[idx].skip_lines;
+	adv->sen.spix.swidth = video_fmts[idx].raw_width - 1;
+	adv->sen.spix.sheight = video_fmts[idx].raw_height;
+	adv->sen.spix.top = video_fmts[idx].skip_lines;
 	if (adv->cea861) {
-		adv->sen.pix.left = 0;
+		adv->sen.spix.left = 0;
 	} else {
-		adv->sen.pix.swidth = video_fmts[idx].active_width;
-//		adv->sen.pix.sheight = video_fmts[idx].active_height;
-		adv->sen.pix.left = video_fmts[idx].lines_per_field;
+		adv->sen.spix.swidth = video_fmts[idx].active_width;
+//		adv->sen.spix.sheight = video_fmts[idx].active_height;
+		adv->sen.spix.left = video_fmts[idx].lines_per_field;
 	}
 	adv->sen.pix.pixelformat = V4L2_PIX_FMT_UYVY;  /* YUV422 */
 	adv->sen.pix.priv = 1;  /* 1 is used to indicate TV in */

@@ -312,8 +312,8 @@ static int get_std(struct v4l2_int_device *s, v4l2_std_id * id)
 	}
 
 	if (gs->cea861) {
-		sensor->pix.swidth = words_per_line_value - 1;
-		sensor->pix.sheight = lines_per_frame_value;
+		sensor->spix.swidth = words_per_line_value - 1;
+		sensor->spix.sheight = lines_per_frame_value;
 	}
 	if (interlaced_flag && lines_per_frame_value == 525) {
 		pr_debug("--> V4L2_STD_525_60\n");
@@ -330,8 +330,8 @@ static int get_std(struct v4l2_int_device *s, v4l2_std_id * id)
 	} else if (!interlaced_flag && 749 <= lines_per_frame_value
 		   && lines_per_frame_value <= 750) {
 		if (gs->cea861) {
-			sensor->pix.left = 220;
-			sensor->pix.top = 25;
+			sensor->spix.left = 220;
+			sensor->spix.top = 25;
 		}
 		sensor->pix.width = 1280;
 		sensor->pix.height = 720;

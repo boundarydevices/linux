@@ -1359,7 +1359,6 @@ void setup_ifparm(cam_data *cam, int init_defrect)
 				IPU_CSI_CLK_MODE_GATED_CLK;
 	}
 
-
 	csi_param.pixclk_pol = ifparm.u.bt656.latch_clk_inv;
 
 	csi_param.data_width =
@@ -1420,11 +1419,14 @@ void setup_ifparm(cam_data *cam, int init_defrect)
 	sheight = cam->crop_current.height;
 	sleft = 0;
 	stop = 0;
-	if (cam_fmt.fmt.pix.swidth) {
-		swidth = cam_fmt.fmt.pix.swidth;
-		sheight = cam_fmt.fmt.pix.sheight;
-		sleft =  cam_fmt.fmt.pix.left;
-		stop =  cam_fmt.fmt.pix.top;
+	cam_fmt.type = V4L2_BUF_TYPE_SENSOR;
+	cam_fmt.fmt.spix.swidth = 0;
+	vidioc_int_g_fmt_cap(cam->sensor, &cam_fmt);
+	if (cam_fmt.fmt.spix.swidth) {
+		swidth = cam_fmt.fmt.spix.swidth;
+		sheight = cam_fmt.fmt.spix.sheight;
+		sleft =  cam_fmt.fmt.spix.left;
+		stop =  cam_fmt.fmt.spix.top;
 	}
 	/* This essentially loses the data at the left and bottom of the image
 	 * giving a digital zoom image, if crop_current is less than the full
@@ -1434,11 +1436,9 @@ void setup_ifparm(cam_data *cam, int init_defrect)
 			cam->crop_current.width, cam->crop_current.height,
 			sleft + cam->crop_current.left, stop + cam->crop_current.top,
 			cam->csi);
-
 	ipu_csi_init_interface(cam->ipu, cam->crop_bounds.width,
 			       cam->crop_bounds.height,
-			       cam_fmt.fmt.pix.pixelformat, csi_param);
-
+			       csi_param.data_fmt, csi_param);
 }
 
 /*!
