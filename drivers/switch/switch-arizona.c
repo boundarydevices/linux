@@ -2857,6 +2857,7 @@ static int arizona_extcon_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&info->micd_clear_work, arizona_micd_input_clear);
 	INIT_DELAYED_WORK(&info->state_timeout_work, arizona_jds_timeout_work);
 	platform_set_drvdata(pdev, info);
+	arizona->extcon_info = info;
 
 	switch (arizona->type) {
 	case WM5102:

@@ -3734,6 +3734,15 @@ struct regmap *arizona_get_regmap_dsp(struct snd_soc_codec *codec)
 }
 EXPORT_SYMBOL_GPL(arizona_get_regmap_dsp);
 
+struct arizona_extcon_info *
+arizona_get_extcon_info(struct snd_soc_codec *codec)
+{
+	struct arizona *arizona = dev_get_drvdata(codec->dev->parent);
+
+	return arizona->extcon_info;
+}
+EXPORT_SYMBOL_GPL(arizona_get_extcon_info);
+
 int arizona_enable_force_bypass(struct snd_soc_codec *codec)
 {
 	struct arizona *arizona = dev_get_drvdata(codec->dev->parent);

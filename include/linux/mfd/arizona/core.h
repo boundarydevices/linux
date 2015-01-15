@@ -116,6 +116,7 @@ enum arizona_type {
 
 #define ARIZONA_HP_SHORT_IMPEDANCE        4
 struct snd_soc_dapm_context;
+struct arizona_extcon_info;
 
 struct arizona {
 	struct regmap *regmap;
@@ -145,6 +146,7 @@ struct arizona {
 	unsigned int hp_ena;
 
 	unsigned int hp_impedance;
+	struct arizona_extcon_info *extcon_info;
 
 	struct mutex clk_lock;
 	int clk32k_ref;
