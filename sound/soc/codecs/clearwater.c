@@ -327,7 +327,7 @@ int clearwater_cp_mode_put(struct snd_kcontrol *kcontrol,
 	if (val > e->max - 1)
 		return -EINVAL;
 
-	mutex_lock(&codec->mutex);
+	mutex_lock(&arizona->reg_setting_lock);
 	if (val ==0) { /* Default */
 		regmap_write(arizona->regmap, 0x80, 0x1);
 		regmap_write(arizona->regmap, CLEARWATER_CP_MODE, 0x400);
@@ -337,7 +337,7 @@ int clearwater_cp_mode_put(struct snd_kcontrol *kcontrol,
 		regmap_write(arizona->regmap, CLEARWATER_CP_MODE, 0x407);
 		regmap_write(arizona->regmap, 0x80, 0x0);
 	}
-	mutex_unlock(&codec->mutex);
+	mutex_unlock(&arizona->reg_setting_lock);
 
 	return 0;
 }
