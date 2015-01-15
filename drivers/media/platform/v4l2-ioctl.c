@@ -158,6 +158,7 @@ EXPORT_SYMBOL(v4l2_field_names);
 
 const char *v4l2_type_names[] = {
 	[V4L2_BUF_TYPE_VIDEO_CAPTURE]      = "vid-cap",
+	[V4L2_BUF_TYPE_SENSOR]		   = "vid-sensor",
 	[V4L2_BUF_TYPE_VIDEO_OVERLAY]      = "vid-overlay",
 	[V4L2_BUF_TYPE_VIDEO_OUTPUT]       = "vid-out",
 	[V4L2_BUF_TYPE_VBI_CAPTURE]        = "vbi-cap",
@@ -427,6 +428,7 @@ static int check_fmt(const struct v4l2_ioctl_ops *ops, enum v4l2_buf_type type)
 
 	switch (type) {
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+	case V4L2_BUF_TYPE_SENSOR:
 		if (ops->vidioc_g_fmt_vid_cap ||
 				ops->vidioc_g_fmt_vid_cap_mplane)
 			return 0;
@@ -652,6 +654,7 @@ static long __video_do_ioctl(struct file *file,
 
 		switch (f->type) {
 		case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+		case V4L2_BUF_TYPE_SENSOR:
 			if (ops->vidioc_enum_fmt_vid_cap)
 				ret = ops->vidioc_enum_fmt_vid_cap(file, fh, f);
 			break;
@@ -702,6 +705,7 @@ static long __video_do_ioctl(struct file *file,
 
 		switch (f->type) {
 		case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+		case V4L2_BUF_TYPE_SENSOR:
 			if (ops->vidioc_g_fmt_vid_cap) {
 				ret = ops->vidioc_g_fmt_vid_cap(file, fh, f);
 			} else if (ops->vidioc_g_fmt_vid_cap_mplane) {
@@ -827,6 +831,7 @@ static long __video_do_ioctl(struct file *file,
 
 		switch (f->type) {
 		case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+		case V4L2_BUF_TYPE_SENSOR:
 			CLEAR_AFTER_FIELD(f, fmt.pix);
 			v4l_print_pix_fmt(vfd, &f->fmt.pix);
 			if (ops->vidioc_s_fmt_vid_cap) {
@@ -962,6 +967,7 @@ static long __video_do_ioctl(struct file *file,
 						v4l2_type_names));
 		switch (f->type) {
 		case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+		case V4L2_BUF_TYPE_SENSOR:
 			CLEAR_AFTER_FIELD(f, fmt.pix);
 			if (ops->vidioc_try_fmt_vid_cap) {
 				ret = ops->vidioc_try_fmt_vid_cap(file, fh, f);
