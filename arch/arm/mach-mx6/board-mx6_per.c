@@ -573,19 +573,25 @@ static struct i2c_board_info i2c2_board_info[] __initdata = {
 #endif
 };
 
+//#define OLD_REV 1
 /*
  **********************************************************************
  */
 /* i2c0 bus has a switch */
 static const unsigned i2c0_gpiomux_gpios[] = {
-	GP_TC3587_I2C_EN,	/* i2c3 */
-	GP_KL04_I2c_EN,		/* i2c4 */
-	GP_ANX7814_I2C_EN,	/* i2c5 convert to mini hdmi */
-	GP_AX7738_I2C_EN,	/* i2c6 expand from mini hdmi to TC3587 input */
+	GP_KL04_I2c_EN,		/* i2c3 */
+	GP_ANX7814_I2C_EN,	/* i2c4 convert to mini hdmi */
+	GP_AX7738_I2C_EN,	/* i2c5 expand from mini hdmi to TC3587 input */
+#ifndef OLD_REV
+	GP_TC3587_I2C_EN,	/* i2c6 */
+#endif
 };
 
 static const unsigned i2c0_gpiomux_values[] = {
-	1, 2, 4, 8,
+	1, 2, 4,
+#ifndef OLD_REV
+	8,
+#endif
 };
 
 static struct gpio_i2cmux_platform_data i2c0_i2cmux_data = {
@@ -606,7 +612,7 @@ static struct platform_device i2c0_i2cmux = {
         },
 };
 
-static struct i2c_board_info i2c3_board_info[] __initdata = {
+static struct i2c_board_info i2c6_board_info[] __initdata = {
 #ifdef TC358743_MIPI_CAMERA
 	{
 		I2C_BOARD_INFO("tc358743_mipi", 0x0f),
@@ -618,16 +624,26 @@ static struct i2c_board_info i2c3_board_info[] __initdata = {
 
 /* i2c1 bus has a switch */
 static const unsigned i2c1_gpiomux_gpios[] = {
+#ifdef OLD_REV
+	GP_TC3587_I2C_EN,	/* i2c6 */
+#endif
 	GP_ANX7814_DDC_I2C_EN,	/* i2c7 */
 };
 
 static const unsigned i2c1_gpiomux_values[] = {
-	1,
+	1, 2, 4,
+#ifdef OLD_REV
+	8
+#endif
 };
 
 static struct gpio_i2cmux_platform_data i2c1_i2cmux_data = {
 	.parent		= 1,
+#ifdef OLD_REV
+	.base_nr	= 6, /* optional */
+#else
 	.base_nr	= 7, /* optional */
+#endif
 	.values		= i2c1_gpiomux_values,
 	.n_values	= ARRAY_SIZE(i2c1_gpiomux_values),
 	.gpios		= i2c1_gpiomux_gpios,
@@ -1178,8 +1194,8 @@ static void __init board_init(void)
 
 	mxc_register_device(&i2c0_i2cmux, &i2c0_i2cmux_data);
 	mxc_register_device(&i2c1_i2cmux, &i2c1_i2cmux_data);
-	i2c_register_board_info(3, i2c3_board_info,
-			ARRAY_SIZE(i2c3_board_info));
+	i2c_register_board_info(6, i2c6_board_info,
+			ARRAY_SIZE(i2c6_board_info));
 	i2c_register_board_info(7, i2c7_board_info,
 			ARRAY_SIZE(i2c7_board_info));
 	/* SPI */
