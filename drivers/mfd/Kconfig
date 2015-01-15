@@ -1069,11 +1069,11 @@ config MFD_CLEARWATER
 	  Support for Wolfson Microelectronics ClearWater class low power audio SoC
 	  such as the WM8285
 
-config MFD_CS47L24
-	bool "Cirrus Logic CS47L24"
+config MFD_LARGO
+	bool "Cirrus Logic Largo"
 	depends on MFD_ARIZONA
 	help
-	  Support for Cirrus Logic CS47L24 low power audio SoC
+	  Support for Cirrus Logic Largo low power audio SoC
 
 config MFD_WM8400
 	bool "Wolfson Microelectronics WM8400"

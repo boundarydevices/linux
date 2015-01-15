@@ -238,11 +238,11 @@ int arizona_irq_init(struct arizona *arizona)
 		irq_ctrl_reg = CLEARWATER_IRQ1_CTRL;
 		break;
 #endif
-#ifdef CONFIG_MFD_CS47L24
+#ifdef CONFIG_MFD_LARGO
 	case WM1831:
 	case CS47L24:
 		aod = NULL;
-		irq = &cs47l24_irq;
+		irq = &largo_irq;
 
 		ctrlif_error = false;
 		break;

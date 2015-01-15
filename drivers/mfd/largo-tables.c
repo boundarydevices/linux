@@ -1,5 +1,5 @@
 /*
- * cs47l24-tables.c  --  data tables for CS47L24 codec
+ * largo-tables.c  --  data tables for Largo codec
  *
  * Copyright 2014 CirrusLogic, Inc.
  *
@@ -18,9 +18,9 @@
 
 #include "arizona.h"
 
-#define CS47L24_NUM_ISR 5
+#define LARGO_NUM_ISR 5
 
-static const struct reg_default cs47l24_reva_patch[] = {
+static const struct reg_default largo_reva_patch[] = {
 	{ 0x80,  0x3 },
 	{ 0x27C, 0x0010 },
 	{ 0x221, 0x0070 },
@@ -28,15 +28,15 @@ static const struct reg_default cs47l24_reva_patch[] = {
 };
 
 /* We use a function so we can use ARRAY_SIZE() */
-int cs47l24_patch(struct arizona *arizona)
+int largo_patch(struct arizona *arizona)
 {
 	return regmap_register_patch(arizona->regmap,
-				     cs47l24_reva_patch,
-				     ARRAY_SIZE(cs47l24_reva_patch));
+				     largo_reva_patch,
+				     ARRAY_SIZE(largo_reva_patch));
 }
-EXPORT_SYMBOL_GPL(cs47l24_patch);
+EXPORT_SYMBOL_GPL(largo_patch);
 
-static const struct regmap_irq cs47l24_irqs[ARIZONA_NUM_IRQ] = {
+static const struct regmap_irq largo_irqs[ARIZONA_NUM_IRQ] = {
 	[ARIZONA_IRQ_GP2] = { .reg_offset = 0, .mask = ARIZONA_GP2_EINT1 },
 	[ARIZONA_IRQ_GP1] = { .reg_offset = 0, .mask = ARIZONA_GP1_EINT1 },
 
@@ -178,18 +178,18 @@ static const struct regmap_irq cs47l24_irqs[ARIZONA_NUM_IRQ] = {
 	},
 };
 
-const struct regmap_irq_chip cs47l24_irq = {
-	.name = "cs47l24 IRQ",
+const struct regmap_irq_chip largo_irq = {
+	.name = "largo IRQ",
 	.status_base = ARIZONA_INTERRUPT_STATUS_1,
 	.mask_base = ARIZONA_INTERRUPT_STATUS_1_MASK,
 	.ack_base = ARIZONA_INTERRUPT_STATUS_1,
 	.num_regs = 6,
-	.irqs = cs47l24_irqs,
-	.num_irqs = ARRAY_SIZE(cs47l24_irqs),
+	.irqs = largo_irqs,
+	.num_irqs = ARRAY_SIZE(largo_irqs),
 };
-EXPORT_SYMBOL_GPL(cs47l24_irq);
+EXPORT_SYMBOL_GPL(largo_irq);
 
-static const struct reg_default cs47l24_reg_default[] = {
+static const struct reg_default largo_reg_default[] = {
 	{ 0x00000008, 0x0019 },    /* R8     - Ctrl IF SPI CFG 1 */
 	{ 0x00000020, 0x0000 },    /* R32    - Tone Generator 1 */
 	{ 0x00000021, 0x1000 },    /* R33    - Tone Generator 2 */
@@ -790,7 +790,7 @@ static const struct reg_default cs47l24_reg_default[] = {
 	{ 0x00001300, 0x0010 },    /* R4864  - DSP3 Control 1 */
 };
 
-static bool cs47l24_is_adsp_memory(struct device *dev, unsigned int reg)
+static bool largo_is_adsp_memory(struct device *dev, unsigned int reg)
 {
 	if ((reg >= 0x200000 && reg < 0x206000) ||
 	    (reg >= 0x280000 && reg < 0x282000) ||
@@ -805,7 +805,7 @@ static bool cs47l24_is_adsp_memory(struct device *dev, unsigned int reg)
 		return false;
 }
 
-static bool cs47l24_readable_register(struct device *dev, unsigned int reg)
+static bool largo_readable_register(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
 	case ARIZONA_SOFTWARE_RESET:
@@ -1512,11 +1512,11 @@ static bool cs47l24_readable_register(struct device *dev, unsigned int reg)
 	case ARIZONA_DSP3_SCRATCH_3:
 		return true;
 	default:
-		return cs47l24_is_adsp_memory(dev, reg);
+		return largo_is_adsp_memory(dev, reg);
 	}
 }
 
-static bool cs47l24_volatile_register(struct device *dev, unsigned int reg)
+static bool largo_volatile_register(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
 	case ARIZONA_SOFTWARE_RESET:
@@ -1624,24 +1624,24 @@ static bool cs47l24_volatile_register(struct device *dev, unsigned int reg)
 	case ARIZONA_DSP3_CLOCKING_1:
 		return true;
 	default:
-		return cs47l24_is_adsp_memory(dev, reg);
+		return largo_is_adsp_memory(dev, reg);
 	}
 }
 
-#define CS47L24_MAX_REGISTER 0x3b3fff
+#define LARGO_MAX_REGISTER 0x3b3fff
 
-const struct regmap_config cs47l24_spi_regmap = {
+const struct regmap_config largo_spi_regmap = {
 	.reg_bits = 32,
 	.pad_bits = 16,
 	.val_bits = 16,
 
-	.max_register = CS47L24_MAX_REGISTER,
-	.readable_reg = cs47l24_readable_register,
-	.volatile_reg = cs47l24_volatile_register,
+	.max_register = LARGO_MAX_REGISTER,
+	.readable_reg = largo_readable_register,
+	.volatile_reg = largo_volatile_register,
 
 	.cache_type = REGCACHE_RBTREE,
-	.reg_defaults = cs47l24_reg_default,
-	.num_reg_defaults = ARRAY_SIZE(cs47l24_reg_default),
+	.reg_defaults = largo_reg_default,
+	.num_reg_defaults = ARRAY_SIZE(largo_reg_default),
 };
-EXPORT_SYMBOL_GPL(cs47l24_spi_regmap);
+EXPORT_SYMBOL_GPL(largo_spi_regmap);
 

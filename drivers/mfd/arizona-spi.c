@@ -56,10 +56,10 @@ static int arizona_spi_probe(struct spi_device *spi)
 		regmap_32bit_config = &clearwater_32bit_spi_regmap;
 		break;
 #endif
-#ifdef CONFIG_MFD_CS47L24
+#ifdef CONFIG_MFD_LARGO
 	case WM1831:
 	case CS47L24:
-		regmap_config = &cs47l24_spi_regmap;
+		regmap_config = &largo_spi_regmap;
 		break;
 #endif
 	default:

@@ -193,7 +193,7 @@ int florida_patch(struct arizona *arizona);
 int wm8997_patch(struct arizona *arizona);
 int vegas_patch(struct arizona *arizona);
 int clearwater_patch(struct arizona *arizona);
-int cs47l24_patch(struct arizona *arizona);
+int largo_patch(struct arizona *arizona);
 
 extern int arizona_of_get_named_gpio(struct arizona *arizona, const char *prop,
 				     bool mandatory);

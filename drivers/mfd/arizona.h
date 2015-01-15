@@ -35,7 +35,7 @@ extern const struct regmap_config wm8997_i2c_regmap;
 
 extern const struct regmap_config vegas_i2c_regmap;
 
-extern const struct regmap_config cs47l24_spi_regmap;
+extern const struct regmap_config largo_spi_regmap;
 
 extern const struct dev_pm_ops arizona_pm_ops;
 
@@ -56,7 +56,7 @@ extern const struct regmap_irq_chip wm8997_irq;
 extern struct regmap_irq_chip vegas_aod;
 extern struct regmap_irq_chip vegas_irq;
 
-extern const struct regmap_irq_chip cs47l24_irq;
+extern const struct regmap_irq_chip largo_irq;
 
 int arizona_dev_init(struct arizona *arizona);
 int arizona_dev_exit(struct arizona *arizona);
