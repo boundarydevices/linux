@@ -1315,18 +1315,7 @@ void setup_ifparm(cam_data *cam, int init_defrect)
 	vidioc_int_g_ifparm(cam->sensor, &ifparm);
 
 	memset(&cam_fmt, 0, sizeof(cam_fmt));
-	csi_param.data_width = 0;
-	csi_param.clk_mode = 0;
-	csi_param.ext_vsync = 0;
-	csi_param.Vsync_pol = 0;
-	csi_param.Hsync_pol = 0;
-	csi_param.pixclk_pol = 0;
-	csi_param.data_pol = 0;
-	csi_param.sens_clksrc = 0;
-	csi_param.pack_tight = 0;
-	csi_param.force_eof = 0;
-	csi_param.data_en_pol = 0;
-	csi_param.data_fmt = 0;
+	memset(&csi_param, 0, sizeof(csi_param));
 	csi_param.csi = cam->csi;
 	csi_param.mclk = ifparm.u.bt656.clock_curr;
 
