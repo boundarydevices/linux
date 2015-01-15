@@ -1,5 +1,5 @@
 /*
- * cs47l24.h  --  ALSA SoC Audio driver for CS47L24
+ * largo.h  --  ALSA SoC Audio driver for Largo
  *
  * Copyright 2014 Cirrus Logic
  *
@@ -10,14 +10,14 @@
  * published by the Free Software Foundation.
  */
 
-#ifndef _CS47L24_H
-#define _CS47L24_H
+#ifndef _LARGO_H
+#define _LARGO_H
 
 #include "arizona.h"
 
-#define CS47L24_FLL1        1
-#define CS47L24_FLL2        2
-#define CS47L24_FLL1_REFCLK 3
-#define CS47L24_FLL2_REFCLK 4
+#define LARGO_FLL1        1
+#define LARGO_FLL2        2
+#define LARGO_FLL1_REFCLK 3
+#define LARGO_FLL2_REFCLK 4
 
 #endif

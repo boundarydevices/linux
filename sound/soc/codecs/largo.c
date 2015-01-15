@@ -1,5 +1,5 @@
 /*
- * cs47l24.c  --  ALSA SoC Audio driver for CS47L24 codec
+ * largo.c  --  ALSA SoC Audio driver for Largo codec
  *
  * Copyright 2014 CirrusLogic, Inc.
  *
@@ -31,12 +31,12 @@
 
 #include "arizona.h"
 #include "wm_adsp.h"
-#include "cs47l24.h"
+#include "largo.h"
 
-#define CS47L24_DEFAULT_FRAGMENTS       1
-#define CS47L24_DEFAULT_FRAGMENT_SIZE   4096
+#define LARGO_DEFAULT_FRAGMENTS       1
+#define LARGO_DEFAULT_FRAGMENT_SIZE   4096
 
-struct cs47l24_compr {
+struct largo_compr {
 	struct mutex lock;
 
 	struct snd_compr_stream *stream;
@@ -45,53 +45,60 @@ struct cs47l24_compr {
 	size_t total_copied;
 	bool allocated;
 	bool trig;
+	bool forced;
 };
 
-struct cs47l24_priv {
+struct largo_priv {
 	struct arizona_priv core;
 	struct arizona_fll fll[2];
-	struct cs47l24_compr compr_info;
+	struct largo_compr compr_info;
 
 	struct mutex fw_lock;
 };
 
-static const struct wm_adsp_region cs47l24_dsp2_regions[] = {
+static const struct wm_adsp_region largo_dsp2_regions[] = {
 	{ .type = WMFW_ADSP2_PM, .base = 0x200000 },
 	{ .type = WMFW_ADSP2_ZM, .base = 0x280000 },
 	{ .type = WMFW_ADSP2_XM, .base = 0x290000 },
 	{ .type = WMFW_ADSP2_YM, .base = 0x2a8000 },
 };
 
-static const struct wm_adsp_region cs47l24_dsp3_regions[] = {
+static const struct wm_adsp_region largo_dsp3_regions[] = {
 	{ .type = WMFW_ADSP2_PM, .base = 0x300000 },
 	{ .type = WMFW_ADSP2_ZM, .base = 0x380000 },
 	{ .type = WMFW_ADSP2_XM, .base = 0x390000 },
 	{ .type = WMFW_ADSP2_YM, .base = 0x3a8000 },
 };
 
-static const struct wm_adsp_region *cs47l24_dsp_regions[] = {
-	cs47l24_dsp2_regions,
-	cs47l24_dsp3_regions,
+static const struct wm_adsp_region *largo_dsp_regions[] = {
+	largo_dsp2_regions,
+	largo_dsp3_regions,
 };
 
-static int cs47l24_adsp_power_ev(struct snd_soc_dapm_widget *w,
-				 struct snd_kcontrol *kcontrol, int event)
+static int largo_virt_dsp_power_ev(struct snd_soc_dapm_widget *w,
+				    struct snd_kcontrol *kcontrol, int event)
 {
-	struct cs47l24_priv *cs47l24 = snd_soc_codec_get_drvdata(w->codec);
+	struct largo_priv *largo = snd_soc_codec_get_drvdata(w->codec);
+
+	mutex_lock(&largo->compr_info.lock);
+
+	if (!largo->compr_info.stream)
+		largo->compr_info.trig = false;
 
 	switch (event) {
-	case SND_SOC_DAPM_PRE_PMU:
-		if (w->shift == 2) {
-			mutex_lock(&cs47l24->compr_info.lock);
-			cs47l24->compr_info.trig = false;
-			mutex_unlock(&cs47l24->compr_info.lock);
-		}
+	case SND_SOC_DAPM_POST_PMU:
+		largo->compr_info.forced = true;
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		largo->compr_info.forced = false;
 		break;
 	default:
 		break;
 	}
 
-	return arizona_adsp_power_ev(w, kcontrol, event);
+	mutex_unlock(&largo->compr_info.lock);
+
+	return 0;
 }
 
 static DECLARE_TLV_DB_SCALE(eq_tlv, -1200, 100, 0);
@@ -99,12 +106,12 @@ static DECLARE_TLV_DB_SCALE(digital_tlv, -6400, 50, 0);
 static DECLARE_TLV_DB_SCALE(noise_tlv, 0, 600, 0);
 static DECLARE_TLV_DB_SCALE(ng_tlv, -10200, 600, 0);
 
-#define CS47L24_NG_SRC(name, base) \
+#define LARGO_NG_SRC(name, base) \
 	SOC_SINGLE(name " NG HPOUT1L Switch",  base,  0, 1, 0), \
 	SOC_SINGLE(name " NG HPOUT1R Switch",  base,  1, 1, 0), \
 	SOC_SINGLE(name " NG SPKOUT Switch",  base,  6, 1, 0)
 
-static const struct snd_kcontrol_new cs47l24_snd_controls[] = {
+static const struct snd_kcontrol_new largo_snd_controls[] = {
 SOC_ENUM("IN1 OSR", arizona_in_dmic_osr[0]),
 SOC_ENUM("IN2 OSR", arizona_in_dmic_osr[1]),
 
@@ -236,9 +243,9 @@ SOC_ENUM("Noise Gate Hold", arizona_ng_hold),
 SOC_VALUE_ENUM("Output Rate 1", arizona_output_rate),
 SOC_VALUE_ENUM("In Rate", arizona_input_rate),
 
-CS47L24_NG_SRC("HPOUT1L", ARIZONA_NOISE_GATE_SELECT_1L),
-CS47L24_NG_SRC("HPOUT1R", ARIZONA_NOISE_GATE_SELECT_1R),
-CS47L24_NG_SRC("SPKOUT", ARIZONA_NOISE_GATE_SELECT_4L),
+LARGO_NG_SRC("HPOUT1L", ARIZONA_NOISE_GATE_SELECT_1L),
+LARGO_NG_SRC("HPOUT1R", ARIZONA_NOISE_GATE_SELECT_1R),
+LARGO_NG_SRC("SPKOUT", ARIZONA_NOISE_GATE_SELECT_4L),
 
 ARIZONA_MIXER_CONTROLS("AIF1TX1", ARIZONA_AIF1TX1MIX_INPUT_1_SOURCE),
 ARIZONA_MIXER_CONTROLS("AIF1TX2", ARIZONA_AIF1TX2MIX_INPUT_1_SOURCE),
@@ -342,52 +349,52 @@ ARIZONA_MUX_ENUMS(ISRC3DEC2, ARIZONA_ISRC3DEC2MIX_INPUT_1_SOURCE);
 ARIZONA_MUX_ENUMS(ISRC3DEC3, ARIZONA_ISRC3DEC3MIX_INPUT_1_SOURCE);
 ARIZONA_MUX_ENUMS(ISRC3DEC4, ARIZONA_ISRC3DEC4MIX_INPUT_1_SOURCE);
 
-static const char * const cs47l24_dsp_output_texts[] = {
+static const char * const largo_dsp_output_texts[] = {
 	"None",
 	"DSP3",
 };
 
-static const struct soc_enum cs47l24_dsp_output_enum =
-	SOC_ENUM_SINGLE(0, 0, ARRAY_SIZE(cs47l24_dsp_output_texts),
-			cs47l24_dsp_output_texts);
+static const struct soc_enum largo_dsp_output_enum =
+	SOC_ENUM_SINGLE(0, 0, ARRAY_SIZE(largo_dsp_output_texts),
+			largo_dsp_output_texts);
 
-static const struct snd_kcontrol_new cs47l24_dsp_output_mux[] = {
-	SOC_DAPM_ENUM_VIRT("DSP Virtual Output Mux", cs47l24_dsp_output_enum),
+static const struct snd_kcontrol_new largo_dsp_output_mux[] = {
+	SOC_DAPM_ENUM_VIRT("DSP Virtual Output Mux", largo_dsp_output_enum),
 };
 
-static const char * const cs47l24_memory_mux_texts[] = {
+static const char * const largo_memory_mux_texts[] = {
 	"None",
 	"Shared Memory",
 };
 
-static const struct soc_enum cs47l24_memory_enum =
-	SOC_ENUM_SINGLE(0, 0, ARRAY_SIZE(cs47l24_memory_mux_texts),
-			cs47l24_memory_mux_texts);
+static const struct soc_enum largo_memory_enum =
+	SOC_ENUM_SINGLE(0, 0, ARRAY_SIZE(largo_memory_mux_texts),
+			largo_memory_mux_texts);
 
-static const struct snd_kcontrol_new cs47l24_memory_mux[] = {
-	SOC_DAPM_ENUM_VIRT("DSP2 Virtual Input", cs47l24_memory_enum),
-	SOC_DAPM_ENUM_VIRT("DSP3 Virtual Input", cs47l24_memory_enum),
+static const struct snd_kcontrol_new largo_memory_mux[] = {
+	SOC_DAPM_ENUM_VIRT("DSP2 Virtual Input", largo_memory_enum),
+	SOC_DAPM_ENUM_VIRT("DSP3 Virtual Input", largo_memory_enum),
 };
 
-static const char * const cs47l24_aec_loopback_texts[] = {
+static const char * const largo_aec_loopback_texts[] = {
 	"HPOUT1L", "HPOUT1R", "SPKOUT",
 };
 
-static const unsigned int cs47l24_aec_loopback_values[] = {
+static const unsigned int largo_aec_loopback_values[] = {
 	0, 1, 6,
 };
 
-static const struct soc_enum cs47l24_aec_loopback =
+static const struct soc_enum largo_aec_loopback =
 	SOC_VALUE_ENUM_SINGLE(ARIZONA_DAC_AEC_CONTROL_1,
 			      ARIZONA_AEC_LOOPBACK_SRC_SHIFT, 0xf,
-			      ARRAY_SIZE(cs47l24_aec_loopback_texts),
-			      cs47l24_aec_loopback_texts,
-			      cs47l24_aec_loopback_values);
+			      ARRAY_SIZE(largo_aec_loopback_texts),
+			      largo_aec_loopback_texts,
+			      largo_aec_loopback_values);
 
-static const struct snd_kcontrol_new cs47l24_aec_loopback_mux =
-	SOC_DAPM_VALUE_ENUM("AEC Loopback", cs47l24_aec_loopback);
+static const struct snd_kcontrol_new largo_aec_loopback_mux =
+	SOC_DAPM_VALUE_ENUM("AEC Loopback", largo_aec_loopback);
 
-static const struct snd_soc_dapm_widget cs47l24_dapm_widgets[] = {
+static const struct snd_soc_dapm_widget largo_dapm_widgets[] = {
 SND_SOC_DAPM_SUPPLY("SYSCLK", ARIZONA_SYSTEM_CLOCK_1,
 		    ARIZONA_SYSCLK_ENA_SHIFT, 0, NULL, 0),
 SND_SOC_DAPM_SUPPLY("ASYNCCLK", ARIZONA_ASYNC_CLOCK_1,
@@ -480,8 +487,8 @@ SND_SOC_DAPM_PGA("ASRC2L", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC2L_ENA_SHIFT, 0,
 SND_SOC_DAPM_PGA("ASRC2R", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC2R_ENA_SHIFT, 0,
 		 NULL, 0),
 
-WM_ADSP2("DSP2", 1, cs47l24_adsp_power_ev),
-WM_ADSP2("DSP3", 2, cs47l24_adsp_power_ev),
+WM_ADSP2("DSP2", 1, arizona_adsp_power_ev),
+WM_ADSP2("DSP3", 2, arizona_adsp_power_ev),
 
 SND_SOC_DAPM_PGA("ISRC1INT1", ARIZONA_ISRC_1_CTRL_3,
 		 ARIZONA_ISRC1_INT0_ENA_SHIFT, 0, NULL, 0),
@@ -539,7 +546,7 @@ SND_SOC_DAPM_PGA("ISRC3DEC4", ARIZONA_ISRC_3_CTRL_3,
 
 SND_SOC_DAPM_VALUE_MUX("AEC Loopback", ARIZONA_DAC_AEC_CONTROL_1,
 		       ARIZONA_AEC_LOOPBACK_ENA_SHIFT, 0,
-		       &cs47l24_aec_loopback_mux),
+		       &largo_aec_loopback_mux),
 
 SND_SOC_DAPM_AIF_OUT("AIF1TX1", NULL, 0,
 		     ARIZONA_AIF1_TX_ENABLES, ARIZONA_AIF1TX1_ENA_SHIFT, 0),
@@ -668,12 +675,13 @@ ARIZONA_DSP_WIDGETS(DSP2, "DSP2"),
 ARIZONA_DSP_WIDGETS(DSP3, "DSP3"),
 
 SND_SOC_DAPM_VIRT_MUX("DSP2 Virtual Input", SND_SOC_NOPM, 0, 0,
-		      &cs47l24_memory_mux[0]),
+		      &largo_memory_mux[0]),
 SND_SOC_DAPM_VIRT_MUX("DSP3 Virtual Input", SND_SOC_NOPM, 0, 0,
-		      &cs47l24_memory_mux[1]),
+		      &largo_memory_mux[1]),
 
-SND_SOC_DAPM_VIRT_MUX("DSP Virtual Output Mux", SND_SOC_NOPM, 0, 0,
-		      &cs47l24_dsp_output_mux[0]),
+SND_SOC_DAPM_VIRT_MUX_E("DSP Virtual Output Mux", SND_SOC_NOPM, 0, 0,
+		      &largo_dsp_output_mux[0], largo_virt_dsp_power_ev,
+		      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
 
 ARIZONA_MUX_WIDGETS(ISRC1DEC1, "ISRC1DEC1"),
 ARIZONA_MUX_WIDGETS(ISRC1DEC2, "ISRC1DEC2"),
@@ -790,7 +798,7 @@ SND_SOC_DAPM_OUTPUT("MICSUPP"),
 	{ name, "DSP3.5", "DSP3" }, \
 	{ name, "DSP3.6", "DSP3" }
 
-static const struct snd_soc_dapm_route cs47l24_dapm_routes[] = {
+static const struct snd_soc_dapm_route largo_dapm_routes[] = {
 	{ "OUT1L", NULL, "CPVDD" },
 	{ "OUT1R", NULL, "CPVDD" },
 
@@ -977,172 +985,172 @@ static const struct snd_soc_dapm_route cs47l24_dapm_routes[] = {
 	{ "DRC2 Signal Activity", NULL, "DRC2R" },
 };
 
-static int cs47l24_set_fll(struct snd_soc_codec *codec, int fll_id, int source,
+static int largo_set_fll(struct snd_soc_codec *codec, int fll_id, int source,
 			  unsigned int Fref, unsigned int Fout)
 {
-	struct cs47l24_priv *cs47l24 = snd_soc_codec_get_drvdata(codec);
+	struct largo_priv *largo = snd_soc_codec_get_drvdata(codec);
 
 	switch (fll_id) {
-	case CS47L24_FLL1:
-		return arizona_set_fll(&cs47l24->fll[0], source, Fref, Fout);
-	case CS47L24_FLL2:
-		return arizona_set_fll(&cs47l24->fll[1], source, Fref, Fout);
-	case CS47L24_FLL1_REFCLK:
-		return arizona_set_fll_refclk(&cs47l24->fll[0], source, Fref,
+	case LARGO_FLL1:
+		return arizona_set_fll(&largo->fll[0], source, Fref, Fout);
+	case LARGO_FLL2:
+		return arizona_set_fll(&largo->fll[1], source, Fref, Fout);
+	case LARGO_FLL1_REFCLK:
+		return arizona_set_fll_refclk(&largo->fll[0], source, Fref,
 					      Fout);
-	case CS47L24_FLL2_REFCLK:
-		return arizona_set_fll_refclk(&cs47l24->fll[1], source, Fref,
+	case LARGO_FLL2_REFCLK:
+		return arizona_set_fll_refclk(&largo->fll[1], source, Fref,
 					      Fout);
 	default:
 		return -EINVAL;
 	}
 }
 
-#define CS47L24_RATES SNDRV_PCM_RATE_8000_192000
+#define LARGO_RATES SNDRV_PCM_RATE_8000_192000
 
-#define CS47L24_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE |\
+#define LARGO_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE |\
 			SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE)
 
-static struct snd_soc_dai_driver cs47l24_dai[] = {
+static struct snd_soc_dai_driver largo_dai[] = {
 	{
-		.name = "cs47l24-aif1",
+		.name = "largo-aif1",
 		.id = 1,
 		.base = ARIZONA_AIF1_BCLK_CTRL,
 		.playback = {
 			.stream_name = "AIF1 Playback",
 			.channels_min = 1,
 			.channels_max = 8,
-			.rates = CS47L24_RATES,
-			.formats = CS47L24_FORMATS,
+			.rates = LARGO_RATES,
+			.formats = LARGO_FORMATS,
 		},
 		.capture = {
 			 .stream_name = "AIF1 Capture",
 			 .channels_min = 1,
 			 .channels_max = 8,
-			 .rates = CS47L24_RATES,
-			 .formats = CS47L24_FORMATS,
+			 .rates = LARGO_RATES,
+			 .formats = LARGO_FORMATS,
 		 },
 		.ops = &arizona_dai_ops,
 		.symmetric_rates = 1,
 	},
 	{
-		.name = "cs47l24-aif2",
+		.name = "largo-aif2",
 		.id = 2,
 		.base = ARIZONA_AIF2_BCLK_CTRL,
 		.playback = {
 			.stream_name = "AIF2 Playback",
 			.channels_min = 1,
 			.channels_max = 6,
-			.rates = CS47L24_RATES,
-			.formats = CS47L24_FORMATS,
+			.rates = LARGO_RATES,
+			.formats = LARGO_FORMATS,
 		},
 		.capture = {
 			 .stream_name = "AIF2 Capture",
 			 .channels_min = 1,
 			 .channels_max = 6,
-			 .rates = CS47L24_RATES,
-			 .formats = CS47L24_FORMATS,
+			 .rates = LARGO_RATES,
+			 .formats = LARGO_FORMATS,
 		 },
 		.ops = &arizona_dai_ops,
 		.symmetric_rates = 1,
 	},
 	{
-		.name = "cs47l24-aif3",
+		.name = "largo-aif3",
 		.id = 3,
 		.base = ARIZONA_AIF3_BCLK_CTRL,
 		.playback = {
 			.stream_name = "AIF3 Playback",
 			.channels_min = 1,
 			.channels_max = 2,
-			.rates = CS47L24_RATES,
-			.formats = CS47L24_FORMATS,
+			.rates = LARGO_RATES,
+			.formats = LARGO_FORMATS,
 		},
 		.capture = {
 			 .stream_name = "AIF3 Capture",
 			 .channels_min = 1,
 			 .channels_max = 2,
-			 .rates = CS47L24_RATES,
-			 .formats = CS47L24_FORMATS,
+			 .rates = LARGO_RATES,
+			 .formats = LARGO_FORMATS,
 		 },
 		.ops = &arizona_dai_ops,
 		.symmetric_rates = 1,
 	},
 	{
-		.name = "cs47l24-cpu-voicectrl",
+		.name = "largo-cpu-voicectrl",
 		.capture = {
 			.stream_name = "Voice Control CPU",
 			.channels_min = 1,
 			.channels_max = 2,
-			.rates = CS47L24_RATES,
-			.formats = CS47L24_FORMATS,
+			.rates = LARGO_RATES,
+			.formats = LARGO_FORMATS,
 		},
 		.compress_dai = 1,
 	},
 	{
-		.name = "cs47l24-dsp-voicectrl",
+		.name = "largo-dsp-voicectrl",
 		.capture = {
 			.stream_name = "Voice Control DSP",
 			.channels_min = 1,
 			.channels_max = 2,
-			.rates = CS47L24_RATES,
-			.formats = CS47L24_FORMATS,
+			.rates = LARGO_RATES,
+			.formats = LARGO_FORMATS,
 		},
 	},
 };
 
 static irqreturn_t adsp2_irq(int irq, void *data)
 {
-	struct cs47l24_priv *cs47l24 = data;
+	struct largo_priv *largo = data;
 	int ret, avail;
 
-	mutex_lock(&cs47l24->compr_info.lock);
+	mutex_lock(&largo->compr_info.lock);
 
-	if (!cs47l24->compr_info.trig &&
-	    cs47l24->core.adsp[2].fw_features.ez2control_trigger &&
-	    cs47l24->core.adsp[2].running) {
-		if (cs47l24->core.arizona->pdata.ez2ctrl_trigger)
-			cs47l24->core.arizona->pdata.ez2ctrl_trigger();
-		cs47l24->compr_info.trig = true;
+	if (!largo->compr_info.trig &&
+	    largo->core.adsp[2].fw_features.ez2control_trigger &&
+	    largo->core.adsp[2].running) {
+		if (largo->core.arizona->pdata.ez2ctrl_trigger)
+			largo->core.arizona->pdata.ez2ctrl_trigger();
+		largo->compr_info.trig = true;
 	}
 
-	if (!cs47l24->compr_info.allocated)
+	if (!largo->compr_info.allocated)
 		goto out;
 
-	ret = wm_adsp_stream_handle_irq(cs47l24->compr_info.adsp);
+	ret = wm_adsp_stream_handle_irq(largo->compr_info.adsp);
 	if (ret < 0) {
-		dev_err(cs47l24->core.arizona->dev,
+		dev_err(largo->core.arizona->dev,
 			"Failed to capture DSP data: %d\n",
 			ret);
 		goto out;
 	}
 
-	cs47l24->compr_info.total_copied += ret;
+	largo->compr_info.total_copied += ret;
 
-	avail = wm_adsp_stream_avail(cs47l24->compr_info.adsp);
-	if (avail > CS47L24_DEFAULT_FRAGMENT_SIZE)
-		snd_compr_fragment_elapsed(cs47l24->compr_info.stream);
+	avail = wm_adsp_stream_avail(largo->compr_info.adsp);
+	if (avail > LARGO_DEFAULT_FRAGMENT_SIZE)
+		snd_compr_fragment_elapsed(largo->compr_info.stream);
 
 out:
-	mutex_unlock(&cs47l24->compr_info.lock);
+	mutex_unlock(&largo->compr_info.lock);
 
 	return IRQ_HANDLED;
 }
 
-static int cs47l24_open(struct snd_compr_stream *stream)
+static int largo_open(struct snd_compr_stream *stream)
 {
 	struct snd_soc_pcm_runtime *rtd = stream->private_data;
-	struct cs47l24_priv *cs47l24 = snd_soc_codec_get_drvdata(rtd->codec);
-	struct arizona *arizona = cs47l24->core.arizona;
+	struct largo_priv *largo = snd_soc_codec_get_drvdata(rtd->codec);
+	struct arizona *arizona = largo->core.arizona;
 	int n_adsp, ret = 0;
 
-	mutex_lock(&cs47l24->compr_info.lock);
+	mutex_lock(&largo->compr_info.lock);
 
-	if (cs47l24->compr_info.stream) {
+	if (largo->compr_info.stream) {
 		ret = -EBUSY;
 		goto out;
 	}
 
-	if (strcmp(rtd->codec_dai->name, "cs47l24-dsp-voicectrl") == 0) {
+	if (strcmp(rtd->codec_dai->name, "largo-dsp-voicectrl") == 0) {
 		n_adsp = 2;
 	} else {
 		dev_err(arizona->dev,
@@ -1152,46 +1160,48 @@ static int cs47l24_open(struct snd_compr_stream *stream)
 		goto out;
 	}
 
-	if (!wm_adsp_compress_supported(&cs47l24->core.adsp[n_adsp], stream)) {
+	if (!wm_adsp_compress_supported(&largo->core.adsp[n_adsp], stream)) {
 		dev_err(arizona->dev,
 			"No suitable firmware for compressed stream\n");
 		ret = -EINVAL;
 		goto out;
 	}
 
-	cs47l24->compr_info.adsp = &cs47l24->core.adsp[n_adsp];
-	cs47l24->compr_info.stream = stream;
+	largo->compr_info.adsp = &largo->core.adsp[n_adsp];
+	largo->compr_info.stream = stream;
 out:
-	mutex_unlock(&cs47l24->compr_info.lock);
+	mutex_unlock(&largo->compr_info.lock);
 
 	return ret;
 }
 
-static int cs47l24_free(struct snd_compr_stream *stream)
+static int largo_free(struct snd_compr_stream *stream)
 {
 	struct snd_soc_pcm_runtime *rtd = stream->private_data;
-	struct cs47l24_priv *cs47l24 = snd_soc_codec_get_drvdata(rtd->codec);
+	struct largo_priv *largo = snd_soc_codec_get_drvdata(rtd->codec);
 
-	mutex_lock(&cs47l24->compr_info.lock);
+	mutex_lock(&largo->compr_info.lock);
 
-	cs47l24->compr_info.allocated = false;
-	cs47l24->compr_info.stream = NULL;
-	cs47l24->compr_info.total_copied = 0;
+	largo->compr_info.allocated = false;
+	largo->compr_info.stream = NULL;
+	largo->compr_info.total_copied = 0;
+	if (!largo->compr_info.forced)
+		largo->compr_info.trig = false;
 
-	wm_adsp_stream_free(cs47l24->compr_info.adsp);
+	wm_adsp_stream_free(largo->compr_info.adsp);
 
-	mutex_unlock(&cs47l24->compr_info.lock);
+	mutex_unlock(&largo->compr_info.lock);
 
 	return 0;
 }
 
-static int cs47l24_set_params(struct snd_compr_stream *stream,
+static int largo_set_params(struct snd_compr_stream *stream,
 			     struct snd_compr_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = stream->private_data;
-	struct cs47l24_priv *cs47l24 = snd_soc_codec_get_drvdata(rtd->codec);
-	struct arizona *arizona = cs47l24->core.arizona;
-	struct cs47l24_compr *compr = &cs47l24->compr_info;
+	struct largo_priv *largo = snd_soc_codec_get_drvdata(rtd->codec);
+	struct arizona *arizona = largo->core.arizona;
+	struct largo_compr *compr = &largo->compr_info;
 	int ret = 0;
 
 	mutex_lock(&compr->lock);
@@ -1216,30 +1226,30 @@ out:
 	return ret;
 }
 
-static int cs47l24_get_params(struct snd_compr_stream *stream,
+static int largo_get_params(struct snd_compr_stream *stream,
 			     struct snd_codec *params)
 {
 	return 0;
 }
 
-static int cs47l24_trigger(struct snd_compr_stream *stream, int cmd)
+static int largo_trigger(struct snd_compr_stream *stream, int cmd)
 {
 	struct snd_soc_pcm_runtime *rtd = stream->private_data;
-	struct cs47l24_priv *cs47l24 = snd_soc_codec_get_drvdata(rtd->codec);
+	struct largo_priv *largo = snd_soc_codec_get_drvdata(rtd->codec);
 	int ret = 0;
 	bool pending = false;
 
-	mutex_lock(&cs47l24->compr_info.lock);
+	mutex_lock(&largo->compr_info.lock);
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
-		ret = wm_adsp_stream_start(cs47l24->compr_info.adsp);
+		ret = wm_adsp_stream_start(largo->compr_info.adsp);
 
 		/**
 		 * If the stream has already triggered before the stream
 		 * opened better process any outstanding data
 		 */
-		if (cs47l24->compr_info.trig)
+		if (largo->compr_info.trig)
 			pending = true;
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -1249,79 +1259,79 @@ static int cs47l24_trigger(struct snd_compr_stream *stream, int cmd)
 		break;
 	}
 
-	mutex_unlock(&cs47l24->compr_info.lock);
+	mutex_unlock(&largo->compr_info.lock);
 
 	if (pending)
-		adsp2_irq(0, cs47l24);
+		adsp2_irq(0, largo);
 
 	return ret;
 }
 
-static int cs47l24_pointer(struct snd_compr_stream *stream,
+static int largo_pointer(struct snd_compr_stream *stream,
 			  struct snd_compr_tstamp *tstamp)
 {
 	struct snd_soc_pcm_runtime *rtd = stream->private_data;
-	struct cs47l24_priv *cs47l24 = snd_soc_codec_get_drvdata(rtd->codec);
+	struct largo_priv *largo = snd_soc_codec_get_drvdata(rtd->codec);
 
-	mutex_lock(&cs47l24->compr_info.lock);
+	mutex_lock(&largo->compr_info.lock);
 	tstamp->byte_offset = 0;
-	tstamp->copied_total = cs47l24->compr_info.total_copied;
-	mutex_unlock(&cs47l24->compr_info.lock);
+	tstamp->copied_total = largo->compr_info.total_copied;
+	mutex_unlock(&largo->compr_info.lock);
 
 	return 0;
 }
 
-static int cs47l24_copy(struct snd_compr_stream *stream, char __user *buf,
+static int largo_copy(struct snd_compr_stream *stream, char __user *buf,
 		       size_t count)
 {
 	struct snd_soc_pcm_runtime *rtd = stream->private_data;
-	struct cs47l24_priv *cs47l24 = snd_soc_codec_get_drvdata(rtd->codec);
+	struct largo_priv *largo = snd_soc_codec_get_drvdata(rtd->codec);
 	int ret;
 
-	mutex_lock(&cs47l24->compr_info.lock);
+	mutex_lock(&largo->compr_info.lock);
 
 	if (stream->direction == SND_COMPRESS_PLAYBACK)
 		ret = -EINVAL;
 	else
-		ret = wm_adsp_stream_read(cs47l24->compr_info.adsp, buf, count);
+		ret = wm_adsp_stream_read(largo->compr_info.adsp, buf, count);
 
-	mutex_unlock(&cs47l24->compr_info.lock);
+	mutex_unlock(&largo->compr_info.lock);
 
 	return ret;
 }
 
-static int cs47l24_get_caps(struct snd_compr_stream *stream,
+static int largo_get_caps(struct snd_compr_stream *stream,
 			   struct snd_compr_caps *caps)
 {
 	struct snd_soc_pcm_runtime *rtd = stream->private_data;
-	struct cs47l24_priv *cs47l24 = snd_soc_codec_get_drvdata(rtd->codec);
+	struct largo_priv *largo = snd_soc_codec_get_drvdata(rtd->codec);
 
-	mutex_lock(&cs47l24->compr_info.lock);
+	mutex_lock(&largo->compr_info.lock);
 
 	memset(caps, 0, sizeof(*caps));
 
 	caps->direction = stream->direction;
-	caps->min_fragment_size = CS47L24_DEFAULT_FRAGMENT_SIZE;
-	caps->max_fragment_size = CS47L24_DEFAULT_FRAGMENT_SIZE;
-	caps->min_fragments = CS47L24_DEFAULT_FRAGMENTS;
-	caps->max_fragments = CS47L24_DEFAULT_FRAGMENTS;
+	caps->min_fragment_size = LARGO_DEFAULT_FRAGMENT_SIZE;
+	caps->max_fragment_size = LARGO_DEFAULT_FRAGMENT_SIZE;
+	caps->min_fragments = LARGO_DEFAULT_FRAGMENTS;
+	caps->max_fragments = LARGO_DEFAULT_FRAGMENTS;
 
-	wm_adsp_get_caps(cs47l24->compr_info.adsp, stream, caps);
+	wm_adsp_get_caps(largo->compr_info.adsp, stream, caps);
 
-	mutex_unlock(&cs47l24->compr_info.lock);
+	mutex_unlock(&largo->compr_info.lock);
 
 	return 0;
 }
 
-static int cs47l24_get_codec_caps(struct snd_compr_stream *stream,
+static int largo_get_codec_caps(struct snd_compr_stream *stream,
 				 struct snd_compr_codec_caps *codec)
 {
 	return 0;
 }
 
-static int cs47l24_codec_probe(struct snd_soc_codec *codec)
+static int largo_codec_probe(struct snd_soc_codec *codec)
 {
-	struct cs47l24_priv *priv = snd_soc_codec_get_drvdata(codec);
+	struct largo_priv *priv = snd_soc_codec_get_drvdata(codec);
 	struct arizona *arizona = priv->core.arizona;
 	int ret;
 
@@ -1377,9 +1387,9 @@ static int cs47l24_codec_probe(struct snd_soc_codec *codec)
 	return 0;
 }
 
-static int cs47l24_codec_remove(struct snd_soc_codec *codec)
+static int largo_codec_remove(struct snd_soc_codec *codec)
 {
-	struct cs47l24_priv *priv = snd_soc_codec_get_drvdata(codec);
+	struct largo_priv *priv = snd_soc_codec_get_drvdata(codec);
 	struct arizona *arizona = priv->core.arizona;
 
 	irq_set_irq_wake(arizona->irq, 0);
@@ -1393,119 +1403,119 @@ static int cs47l24_codec_remove(struct snd_soc_codec *codec)
 	return 0;
 }
 
-#define CS47L24_DIG_VU 0x0200
+#define LARGO_DIG_VU 0x0200
 
-static unsigned int cs47l24_digital_vu[] = {
+static unsigned int largo_digital_vu[] = {
 	ARIZONA_DAC_DIGITAL_VOLUME_1L,
 	ARIZONA_DAC_DIGITAL_VOLUME_1R,
 	ARIZONA_DAC_DIGITAL_VOLUME_4L,
 };
 
-static struct snd_soc_codec_driver soc_codec_dev_cs47l24 = {
-	.probe = cs47l24_codec_probe,
-	.remove = cs47l24_codec_remove,
+static struct snd_soc_codec_driver soc_codec_dev_largo = {
+	.probe = largo_codec_probe,
+	.remove = largo_codec_remove,
 
 	.idle_bias_off = true,
 
 	.set_sysclk = arizona_set_sysclk,
-	.set_pll = cs47l24_set_fll,
+	.set_pll = largo_set_fll,
 
-	.controls = cs47l24_snd_controls,
-	.num_controls = ARRAY_SIZE(cs47l24_snd_controls),
-	.dapm_widgets = cs47l24_dapm_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(cs47l24_dapm_widgets),
-	.dapm_routes = cs47l24_dapm_routes,
-	.num_dapm_routes = ARRAY_SIZE(cs47l24_dapm_routes),
+	.controls = largo_snd_controls,
+	.num_controls = ARRAY_SIZE(largo_snd_controls),
+	.dapm_widgets = largo_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(largo_dapm_widgets),
+	.dapm_routes = largo_dapm_routes,
+	.num_dapm_routes = ARRAY_SIZE(largo_dapm_routes),
 };
 
-static struct snd_compr_ops cs47l24_compr_ops = {
-	.open = cs47l24_open,
-	.free = cs47l24_free,
-	.set_params = cs47l24_set_params,
-	.get_params = cs47l24_get_params,
-	.trigger = cs47l24_trigger,
-	.pointer = cs47l24_pointer,
-	.copy = cs47l24_copy,
-	.get_caps = cs47l24_get_caps,
-	.get_codec_caps = cs47l24_get_codec_caps,
+static struct snd_compr_ops largo_compr_ops = {
+	.open = largo_open,
+	.free = largo_free,
+	.set_params = largo_set_params,
+	.get_params = largo_get_params,
+	.trigger = largo_trigger,
+	.pointer = largo_pointer,
+	.copy = largo_copy,
+	.get_caps = largo_get_caps,
+	.get_codec_caps = largo_get_codec_caps,
 };
 
-static struct snd_soc_platform_driver cs47l24_compr_platform = {
-	.compr_ops = &cs47l24_compr_ops,
+static struct snd_soc_platform_driver largo_compr_platform = {
+	.compr_ops = &largo_compr_ops,
 };
 
-static int cs47l24_probe(struct platform_device *pdev)
+static int largo_probe(struct platform_device *pdev)
 {
 	struct arizona *arizona = dev_get_drvdata(pdev->dev.parent);
-	struct cs47l24_priv *cs47l24;
+	struct largo_priv *largo;
 	int i, ret;
 
-	BUILD_BUG_ON(ARRAY_SIZE(cs47l24_dai) > ARIZONA_MAX_DAI);
+	BUILD_BUG_ON(ARRAY_SIZE(largo_dai) > ARIZONA_MAX_DAI);
 
-	cs47l24 = devm_kzalloc(&pdev->dev, sizeof(struct cs47l24_priv),
+	largo = devm_kzalloc(&pdev->dev, sizeof(struct largo_priv),
 			      GFP_KERNEL);
-	if (cs47l24 == NULL)
+	if (largo == NULL)
 		return -ENOMEM;
-	platform_set_drvdata(pdev, cs47l24);
+	platform_set_drvdata(pdev, largo);
 
 	/* Set of_node to parent from the SPI device to allow DAPM to
 	 * locate regulator supplies */
 	pdev->dev.of_node = arizona->dev->of_node;
 
-	mutex_init(&cs47l24->compr_info.lock);
-	mutex_init(&cs47l24->fw_lock);
+	mutex_init(&largo->compr_info.lock);
+	mutex_init(&largo->fw_lock);
 
-	cs47l24->core.arizona = arizona;
-	cs47l24->core.num_inputs = 4;
+	largo->core.arizona = arizona;
+	largo->core.num_inputs = 4;
 
 	for (i = 1; i <= 2; i++) {
-		cs47l24->core.adsp[i].part = "cs47l24";
-		cs47l24->core.adsp[i].num = i + 1;
-		cs47l24->core.adsp[i].type = WMFW_ADSP2;
-		cs47l24->core.adsp[i].dev = arizona->dev;
-		cs47l24->core.adsp[i].regmap = arizona->regmap;
+		largo->core.adsp[i].part = "largo";
+		largo->core.adsp[i].num = i + 1;
+		largo->core.adsp[i].type = WMFW_ADSP2;
+		largo->core.adsp[i].dev = arizona->dev;
+		largo->core.adsp[i].regmap = arizona->regmap;
 
-		cs47l24->core.adsp[i].base = ARIZONA_DSP1_CONTROL_1
+		largo->core.adsp[i].base = ARIZONA_DSP1_CONTROL_1
 					    + (0x100 * i);
-		cs47l24->core.adsp[i].mem = cs47l24_dsp_regions[i - 1];
-		cs47l24->core.adsp[i].num_mems
-			= ARRAY_SIZE(cs47l24_dsp2_regions);
+		largo->core.adsp[i].mem = largo_dsp_regions[i - 1];
+		largo->core.adsp[i].num_mems
+			= ARRAY_SIZE(largo_dsp2_regions);
 
 		if (arizona->pdata.num_fw_defs[i]) {
-			cs47l24->core.adsp[i].firmwares
+			largo->core.adsp[i].firmwares
 				= arizona->pdata.fw_defs[i];
 
-			cs47l24->core.adsp[i].num_firmwares
+			largo->core.adsp[i].num_firmwares
 				= arizona->pdata.num_fw_defs[i];
 		}
 
-		ret = wm_adsp2_init(&cs47l24->core.adsp[i], &cs47l24->fw_lock);
+		ret = wm_adsp2_init(&largo->core.adsp[i], &largo->fw_lock);
 		if (ret != 0)
 			goto error;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(cs47l24->fll); i++)
-		cs47l24->fll[i].vco_mult = 3;
+	for (i = 0; i < ARRAY_SIZE(largo->fll); i++)
+		largo->fll[i].vco_mult = 3;
 
 	arizona_init_fll(arizona, 1, ARIZONA_FLL1_CONTROL_1 - 1,
 			 ARIZONA_IRQ_FLL1_LOCK, ARIZONA_IRQ_FLL1_CLOCK_OK,
-			 &cs47l24->fll[0]);
+			 &largo->fll[0]);
 	arizona_init_fll(arizona, 2, ARIZONA_FLL2_CONTROL_1 - 1,
 			 ARIZONA_IRQ_FLL2_LOCK, ARIZONA_IRQ_FLL2_CLOCK_OK,
-			 &cs47l24->fll[1]);
+			 &largo->fll[1]);
 
-	for (i = 0; i < ARRAY_SIZE(cs47l24_dai); i++)
-		arizona_init_dai(&cs47l24->core, i);
+	for (i = 0; i < ARRAY_SIZE(largo_dai); i++)
+		arizona_init_dai(&largo->core, i);
 
 	/* Latch volume update bits */
-	for (i = 0; i < ARRAY_SIZE(cs47l24_digital_vu); i++)
-		regmap_update_bits(arizona->regmap, cs47l24_digital_vu[i],
-				   CS47L24_DIG_VU, CS47L24_DIG_VU);
+	for (i = 0; i < ARRAY_SIZE(largo_digital_vu); i++)
+		regmap_update_bits(arizona->regmap, largo_digital_vu[i],
+				   LARGO_DIG_VU, LARGO_DIG_VU);
 
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_idle(&pdev->dev);
 
-	ret = snd_soc_register_platform(&pdev->dev, &cs47l24_compr_platform);
+	ret = snd_soc_register_platform(&pdev->dev, &largo_compr_platform);
 	if (ret < 0) {
 		dev_err(&pdev->dev,
 			"Failed to register platform: %d\n",
@@ -1513,8 +1523,8 @@ static int cs47l24_probe(struct platform_device *pdev)
 		goto error;
 	}
 
-	ret = snd_soc_register_codec(&pdev->dev, &soc_codec_dev_cs47l24,
-				      cs47l24_dai, ARRAY_SIZE(cs47l24_dai));
+	ret = snd_soc_register_codec(&pdev->dev, &soc_codec_dev_largo,
+				      largo_dai, ARRAY_SIZE(largo_dai));
 	if (ret < 0) {
 		dev_err(&pdev->dev,
 			"Failed to register codec: %d\n",
@@ -1526,37 +1536,37 @@ static int cs47l24_probe(struct platform_device *pdev)
 	return ret;
 
 error:
-	mutex_destroy(&cs47l24->compr_info.lock);
-	mutex_destroy(&cs47l24->fw_lock);
+	mutex_destroy(&largo->compr_info.lock);
+	mutex_destroy(&largo->fw_lock);
 
 	return ret;
 }
 
-static int cs47l24_remove(struct platform_device *pdev)
+static int largo_remove(struct platform_device *pdev)
 {
-	struct cs47l24_priv *cs47l24 = platform_get_drvdata(pdev);
+	struct largo_priv *largo = platform_get_drvdata(pdev);
 
 	snd_soc_unregister_codec(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 
-	mutex_destroy(&cs47l24->compr_info.lock);
-	mutex_destroy(&cs47l24->fw_lock);
+	mutex_destroy(&largo->compr_info.lock);
+	mutex_destroy(&largo->fw_lock);
 
 	return 0;
 }
 
-static struct platform_driver cs47l24_codec_driver = {
+static struct platform_driver largo_codec_driver = {
 	.driver = {
-		.name = "cs47l24-codec",
+		.name = "largo-codec",
 		.owner = THIS_MODULE,
 	},
-	.probe = cs47l24_probe,
-	.remove = cs47l24_remove,
+	.probe = largo_probe,
+	.remove = largo_remove,
 };
 
-module_platform_driver(cs47l24_codec_driver);
+module_platform_driver(largo_codec_driver);
 
-MODULE_DESCRIPTION("ASoC CS47L24 driver");
+MODULE_DESCRIPTION("ASoC Largo driver");
 MODULE_AUTHOR("Richard Fitzgerald <rf@opensource.wolfsonmicro.com>");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS("platform:cs47l24-codec");
+MODULE_ALIAS("platform:largo-codec");
