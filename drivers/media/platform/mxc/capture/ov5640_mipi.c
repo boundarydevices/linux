@@ -3215,14 +3215,14 @@ static int ioctl_dev_exit(struct v4l2_int_device *s)
  * enumeration.
  */
 static struct v4l2_int_ioctl_desc ov5640_ioctl_desc[] = {
-	{vidioc_int_dev_init_num, (v4l2_int_ioctl_func*) ioctl_dev_init},
+	{vidioc_int_dev_init_num, (v4l2_int_ioctl_func *) ioctl_dev_init},
 	{vidioc_int_dev_exit_num, ioctl_dev_exit},
-	{vidioc_int_s_power_num, (v4l2_int_ioctl_func*) ioctl_s_power},
-	{vidioc_int_g_ifparm_num, (v4l2_int_ioctl_func*) ioctl_g_ifparm},
+	{vidioc_int_s_power_num, (v4l2_int_ioctl_func *) ioctl_s_power},
+	{vidioc_int_g_ifparm_num, (v4l2_int_ioctl_func *) ioctl_g_ifparm},
 /*	{vidioc_int_g_needs_reset_num,
 				(v4l2_int_ioctl_func *)ioctl_g_needs_reset}, */
 /*	{vidioc_int_reset_num, (v4l2_int_ioctl_func *)ioctl_reset}, */
-	{vidioc_int_init_num, (v4l2_int_ioctl_func*) ioctl_init},
+	{vidioc_int_init_num, (v4l2_int_ioctl_func *) ioctl_init},
 	{vidioc_int_enum_fmt_cap_num,
 				(v4l2_int_ioctl_func *) ioctl_enum_fmt_cap},
 /*	{vidioc_int_try_fmt_cap_num,
