@@ -33,6 +33,13 @@
 		compatible = "gpio-keys";
 	};
 
+	gpio_poweroff {
+		compatible = "gpio-poweroff";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_power>;
+		gpios = <&gpio3 20 GPIO_ACTIVE_LOW>;
+	};
+
 	i2c2mux: i2cmux@2 {
 		compatible = "i2c-mux-gpio";
 	};
@@ -268,6 +275,8 @@
 			MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x130b0
 #define GP_KEYPAD_LOCK			<&gpio5 0 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_WAIT__GPIO5_IO00		0x1b0b0
+#define GP_ON_OFF_IRQ			<&gpio5 11 IRQ_TYPE_LEVEL_HIGH>
+			MX6QDL_PAD_DISP0_DAT17__GPIO5_IO11	0x1b0b0
 		>;
 	};
 
@@ -426,8 +435,6 @@
 		fsl,pins = <
 #define GP_MAIN_ON_OFF			<&gpio3 20 GPIO_ACTIVE_HIGH>	/* input to or gate */
 			MX6QDL_PAD_EIM_D20__GPIO3_IO20		0x0b0b0
-#define GP_ON_OFF_IRQ			<&gpio5 11 IRQ_TYPE_LEVEL_HIGH>
-			MX6QDL_PAD_DISP0_DAT17__GPIO5_IO11	0x1b0b0
 		>;
 	};
 
@@ -722,7 +729,7 @@
 
 &gpio_keys {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_power>, <&pinctrl_gpio_keys>;
+	pinctrl-0 = <&pinctrl_gpio_keys>;
 	power {
 		label = "Power Button";
 		gpios = GP_ON_OFF_IRQ;
