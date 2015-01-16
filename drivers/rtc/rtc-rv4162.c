@@ -134,7 +134,17 @@ static int rv4162_probe(struct i2c_client *client,
 	}
 
 	dev_info(&client->dev, "%s: chip found: flags 0x%02x\n", __func__, flags);
-	
+	if (flags) {
+		u8 buf[2];
+		struct i2c_msg clearmsg = {
+			client->addr, 0, sizeof(buf), buf,
+		};
+		buf[0] = RV4162_REG_FLAGS;
+		buf[1] = 0;
+		if (1 != i2c_transfer(client->adapter, &clearmsg, 1))
+			dev_err(&client->dev, "%s: error clearing flags\n",
+				__func__);
+	}
 	rtc = rtc_device_register(rv4162_driver.driver.name, &client->dev,
 				  &rv4162_rtc_ops, THIS_MODULE);
 
