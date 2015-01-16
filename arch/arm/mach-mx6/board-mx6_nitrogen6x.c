@@ -933,7 +933,7 @@ static struct mxt_platform_data mxt_data = {
 static struct ili210x_platform_data ili_pdata = {
 	.irq_flags = IRQF_TRIGGER_FALLING,
 	.poll_period = 20,
-	.gp = MX6_SABRELITE_CAP_TCH_INT1
+	.gp = GP_CAP_TCH_INT1
 };
 #endif
 
@@ -958,7 +958,7 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	|| defined(CONFIG_TOUCHSCREEN_ILI210X_MODULE)
 	{
 		I2C_BOARD_INFO("ili210x", 0x41),
-		.irq = gpio_to_irq(MX6_SABRELITE_CAP_TCH_INT1),
+		.irq = gpio_to_irq(GP_CAP_TCH_INT1),
 		.platform_data = &ili_pdata
 	},
 #endif
