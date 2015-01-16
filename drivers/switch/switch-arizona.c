@@ -1462,6 +1462,7 @@ static int arizona_antenna_mic_reading(struct arizona_extcon_info *info, int val
 		info->antenna_res_old = 0;
 		info->antenna_debounce = 0;
 		info->antenna_count = 0;
+		info->mic = false;
 		arizona_extcon_report(info, BIT_ANTENNA);
 		arizona_jds_set_state(info, &arizona_antenna_oc_det);
 	} else {
@@ -1479,6 +1480,9 @@ static int arizona_antenna_mic_reading(struct arizona_extcon_info *info, int val
 				arizona_extcon_report(info, BIT_HEADSET_NO_MIC);
 		}
 	}
+
+	if (arizona->pdata.micd_cb)
+		arizona->pdata.micd_cb(info->mic);
 
 	return 0;
 }
@@ -1537,6 +1541,9 @@ static int arizona_antenna_oc_reading(struct arizona_extcon_info *info, int val)
 			arizona_extcon_report(info, BIT_HEADSET_NO_MIC);
 	}
 
+	if (arizona->pdata.micd_cb)
+		arizona->pdata.micd_cb(info->mic);
+
 	return 0;
 }
 
@@ -1585,11 +1592,12 @@ static int arizona_antenna_hp_reading(struct arizona_extcon_info *info, int val)
 static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 				int val)
 {
-	int debounce_lim = info->arizona->pdata.antenna_manual_db_plugout;
+	struct arizona *arizona = info->arizona;
+	int debounce_lim = arizona->pdata.antenna_manual_db_plugout;
 	int i, ret = 0;
 	bool mic;
 
-	dev_dbg(info->arizona->dev, "Antenna Detection: Button Reading: 0x%x\n", val);
+	dev_dbg(arizona->dev, "Antenna Detection: Button Reading: 0x%x\n", val);
 
 	if (val < 0)
 		return val;
@@ -1612,12 +1620,12 @@ static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 
 			info->antenna_res_old_plugout = val;
 		} else {
-			dev_dbg(info->arizona->dev, "Antenna software plugout db: %d,%x\n",
+			dev_dbg(arizona->dev, "Antenna software plugout db: %d,%x\n",
 				info->antenna_cnt_plugout, val);
-			regmap_update_bits(info->arizona->regmap,
+			regmap_update_bits(arizona->regmap,
 					   ARIZONA_MIC_DETECT_1,
 					   ARIZONA_MICD_ENA, 0);
-			regmap_update_bits(info->arizona->regmap,
+			regmap_update_bits(arizona->regmap,
 					   ARIZONA_MIC_DETECT_1,
 					   ARIZONA_MICD_ENA, ARIZONA_MICD_ENA);
 			return -EAGAIN;
@@ -1644,6 +1652,8 @@ static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 		if (mic && mic != info->mic) {
 			info->mic = mic;
 			info->antenna_skip_btn_db = true;
+			if (arizona->pdata.micd_cb)
+				arizona->pdata.micd_cb(info->mic);
 			arizona_extcon_report(info, BIT_HEADSET);
 		}
 
