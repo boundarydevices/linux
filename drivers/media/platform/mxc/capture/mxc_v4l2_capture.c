@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2014 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -2926,9 +2926,8 @@ static int mxc_v4l2_suspend(struct platform_device *pdev, pm_message_t state)
 
 	pr_debug("%s\n", __func__);
 
-	if (cam == NULL) {
+	if (cam == NULL)
 		return -1;
-	}
 
 	down(&cam->busy_lock);
 
@@ -2936,9 +2935,8 @@ static int mxc_v4l2_suspend(struct platform_device *pdev, pm_message_t state)
 
 	if (cam->overlay_on == true)
 		stop_preview(cam);
-	if ((cam->capture_on == true) && cam->enc_disable) {
+	if ((cam->capture_on == true) && cam->enc_disable)
 		cam->enc_disable(cam);
-	}
 
 	if (cam->sensor && cam->open_count) {
 		if (cam->mclk_on[cam->mclk_source]) {
@@ -2970,9 +2968,8 @@ static int mxc_v4l2_resume(struct platform_device *pdev)
 
 	pr_debug("%s\n", __func__);
 
-	if (cam == NULL) {
+	if (cam == NULL)
 		return -1;
-	}
 
 	down(&cam->busy_lock);
 
