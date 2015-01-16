@@ -1816,7 +1816,7 @@ static int ov5640_probe(struct i2c_client *client,
 	ov5640_data.mclk = plat_data->mclk;
 	ov5640_data.mclk_source = plat_data->mclk_source;
 	ov5640_data.csi = plat_data->csi;
-	ov5640_data.ipu = plat_data->ipu;
+	ov5640_data.ipu_id = plat_data->ipu;
 	ov5640_data.io_init = plat_data->io_init;
 
 	ov5640_data.i2c_client = client;

@@ -236,7 +236,7 @@ void get_std(struct adv7180_priv *adv)
 	while (1) {
 		/* Read the AD_RESULT to get the detect output video standard */
 		tmp = adv7180_read(adv, ADV7180_STATUS_1);
-		pr_info("%s: status_1=%x\n", __func__, tmp);
+//		pr_info("%s: status_1=%x\n", __func__, tmp);
 //		if ((tmp & 5) == 5)
 //			break;
 		if ((tmp & 0x75) == 5)
@@ -1245,7 +1245,7 @@ static int adv7180_probe(struct i2c_client *client,
 	adv->cvbs = tvin_plat->cvbs;
 	adv->reset = tvin_plat->reset;
 	adv->pwdn = tvin_plat->pwdn;
-	adv->sen.ipu = tvin_plat->ipu;
+	adv->sen.ipu_id = tvin_plat->ipu;
 	adv->sen.csi = tvin_plat->csi;
 	adv->cea861 = tvin_plat->cea861;
 	pr_info("%s: cea861=%d\n", __func__, adv->cea861);
