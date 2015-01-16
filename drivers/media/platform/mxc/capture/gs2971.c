@@ -1160,7 +1160,7 @@ static int gs2971_probe(struct spi_device *spi)
 	sensor->mclk = gs2971_plat->mclk;	/* 27 MHz */
 	sensor->mclk_source = gs2971_plat->mclk_source;
 	sensor->csi = gs2971_plat->csi;
-	sensor->ipu = gs2971_plat->ipu;
+	sensor->ipu_id = gs2971_plat->ipu;
 	sensor->io_init = gs2971_plat->io_init;
 	gs->cea861 = gs2971_plat->cea861;
 	pr_info("%s:cea861=%d\n", __func__, gs->cea861);
