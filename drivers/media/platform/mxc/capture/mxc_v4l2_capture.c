@@ -2682,7 +2682,7 @@ next:
  *
  * @return status  0 Success
  */
-static void init_camera_struct(cam_data *cam, struct platform_device *pdev)
+static int init_camera_struct(cam_data *cam, struct platform_device *pdev)
 {
 	struct fsl_mxc_capture_platform_data *pdata = pdev->dev.platform_data;
 
@@ -2702,7 +2702,7 @@ static void init_camera_struct(cam_data *cam, struct platform_device *pdev)
 
 	cam->video_dev = video_device_alloc();
 	if (cam->video_dev == NULL)
-		return;
+		return -ENODEV;
 
 	*(cam->video_dev) = mxc_v4l_template;
 
@@ -2772,6 +2772,8 @@ static void init_camera_struct(cam_data *cam, struct platform_device *pdev)
 	sprintf(cam->self->name, "mxc_v4l2_cap%d", pdev->id);
 	cam->self->type = v4l2_int_type_master;
 	cam->self->u.master = &mxc_v4l2_master;
+
+	return 0;
 }
 
 static ssize_t show_streaming(struct device *dev,
