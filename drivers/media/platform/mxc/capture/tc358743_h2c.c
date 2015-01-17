@@ -22,6 +22,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#define DEBUG 1
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/slab.h>
@@ -81,6 +82,7 @@ enum tc358743_mode {
 	tc358743_mode_INIT5, /*only for sensor init*/
 	tc358743_mode_INIT6, /*only for sensor init*/
 	tc358743_mode_720P_1280_720,
+	tc358743_mode_1024x768,
 	tc358743_mode_MAX ,
 };
 
@@ -99,6 +101,7 @@ struct reg_value {
 };
 
 struct tc358743_mode_info {
+	const char *name;
 	enum tc358743_mode mode;
 	u32 width;
 	u32 height;
@@ -132,7 +135,7 @@ struct tc_data {
 #endif
 	u32 lock;
 	u32 bounce;
-	u32 hdmi_mode;
+	enum tc358743_mode mode;
 	u32 fps;
 	u32 audio;
 	int pwn_gpio;
@@ -325,6 +328,85 @@ static const struct reg_value tc358743_setting_YUV422_2lane_30fps_720P_1280_720_
 // Output Control
   {0x0004, 0x00000cf7, 0x00000000, 2, 0},
   };
+
+static const struct reg_value tc358743_setting_YUV422_4lane_1024x768_60fps_125MHz[] = {
+  {0x0006, 0x00000000, 0x00000000, 2, 0},
+  {0x0014, 0x0000ffff, 0x00000000, 2, 0},
+  {0x0016, 0x000005ff, 0x00000000, 2, 0},
+// Program CSI Tx PLL
+  {0x0020, 0x0000405c, 0x00000000, 2, 0},	/* Input divide 5(4+1), Feedback divide 92(0x5c+1)*/
+  {0x0022, 0x00000613, 0x00000000, 2, 0},
+// CSI Tx PHY  (32-bit Registers)
+  {0x0140, 0x00000000, 0x00000000, 4, 0},
+  {0x0144, 0x00000000, 0x00000000, 4, 0},
+  {0x0148, 0x00000000, 0x00000000, 4, 0},
+  {0x014c, 0x00000000, 0x00000000, 4, 0},
+  {0x0150, 0x00000000, 0x00000000, 4, 0},
+// CSI Tx PPI  (32-bit Registers)
+  {0x0210, 0x00000d00, 0x00000000, 4, 0},
+  {0x0214, 0x00000001, 0x00000000, 4, 0},
+  {0x0218, 0x00000701, 0x00000000, 4, 0},
+  {0x021c, 0x00000000, 0x00000000, 4, 0},
+  {0x0220, 0x00000001, 0x00000000, 4, 0},
+  {0x0224, 0x00004000, 0x00000000, 4, 0},
+  {0x0228, 0x00000005, 0x00000000, 4, 0},
+  {0x022c, 0x00000000, 0x00000000, 4, 0},
+  {0x0234, 0x0000001f, 0x00000000, 4, 0},
+  {0x0238, 0x00000001, 0x00000000, 4, 0},
+  {0x0204, 0x00000001, 0x00000000, 4, 0},
+  {0x0518, 0x00000001, 0x00000000, 4, 0},
+  {0x0500, 0xa300be86, 0x00000000, 4, 0},
+// HDMI Interrupt Mask
+  {0x8502, 0x00000001, 0x00000000, 1, 0},
+  {0x8512, 0x000000fe, 0x00000000, 1, 0},
+  {0x8514, 0x00000000, 0x00000000, 1, 0},
+  {0x8515, 0x00000000, 0x00000000, 1, 0},
+  {0x8516, 0x00000000, 0x00000000, 1, 0},
+// HDMI Audio
+  {0x8531, 0x00000001, 0x00000000, 1, 0},
+  {0x8630, 0x00041eb0, 0x00000000, 1, 0},
+  {0x8670, 0x00000001, 0x00000000, 1, 0},
+// HDMI PHY
+  {0x8532, 0x00000080, 0x00000000, 1, 0},
+  {0x8536, 0x00000040, 0x00000000, 1, 0},
+  {0x853f, 0x0000000a, 0x00000000, 1, 0},
+// HDMI System
+  {0x8545, 0x00000031, 0x00000000, 1, 0},
+  {0x8546, 0x0000002d, 0x00000000, 1, 0},
+// HDCP Setting
+  {0x85d1, 0x00000001, 0x00000000, 1, 0},
+  {0x8560, 0x00000024, 0x00000000, 1, 0},
+  {0x8563, 0x00000011, 0x00000000, 1, 0},
+  {0x8564, 0x0000000f, 0x00000000, 1, 0},
+// RGB --> YUV Conversion
+//  {0x8574, 0x00000000, 0x00000000, 1, 0},
+  {0x8573, 0x00000081, 0x00000000, 1, 0},
+  {0x8571, 0x00000002, 0x00000000, 1, 0},
+// HDMI Audio In Setting
+  {0x8600, 0x00000000, 0x00000000, 1, 0},
+  {0x8602, 0x000000f3, 0x00000000, 1, 0},
+  {0x8603, 0x00000002, 0x00000000, 1, 0},
+  {0x8604, 0x0000000c, 0x00000000, 1, 0},
+  {0x8606, 0x00000005, 0x00000000, 1, 0},
+  {0x8607, 0x00000000, 0x00000000, 1, 0},
+  {0x8620, 0x00000022, 0x00000000, 1, 0},
+  {0x8640, 0x00000001, 0x00000000, 1, 0},
+  {0x8641, 0x00000065, 0x00000000, 1, 0},
+  {0x8642, 0x00000007, 0x00000000, 1, 0},
+  {0x8652, 0x00000002, 0x00000000, 1, 0},
+  {0x8665, 0x00000010, 0x00000000, 1, 0},
+// InfoFrame Extraction
+  {0x8709, 0x000000ff, 0x00000000, 1, 0},
+  {0x870b, 0x0000002c, 0x00000000, 1, 0},
+  {0x870c, 0x00000053, 0x00000000, 1, 0},
+  {0x870d, 0x00000001, 0x00000000, 1, 0},
+  {0x870e, 0x00000030, 0x00000000, 1, 0},
+  {0x9007, 0x00000010, 0x00000000, 1, 0},
+  {0x854a, 0x00000001, 0x00000000, 1, 0},
+// Output Control
+  {0x0004, 0x00000cf7, 0x00000000, 2, 0},
+
+};
 
 static const struct reg_value tc358743_setting_YUV422_4lane_720P_60fps_1280_720_133Mhz[] = {
   {0x0006, 0x00000000, 0x00000000, 2, 0},
@@ -1167,151 +1249,176 @@ static const struct v4l2_fmtdesc tc358743_formats[] = {
 
 
 static const struct tc358743_mode_info tc358743_mode_info_data[2][tc358743_mode_MAX] = {
-	[0][tc358743_mode_720P_60_1280_720] =
-		{tc358743_mode_720P_60_1280_720,  1280, 720, 12, 0, 4, 133,
-		tc358743_setting_YUV422_4lane_720P_60fps_1280_720_133Mhz,
-		ARRAY_SIZE(tc358743_setting_YUV422_4lane_720P_60fps_1280_720_133Mhz),
-		MIPI_DT_YUV422
-		},
-	[0][tc358743_mode_1080P_1920_1080] =
-		{tc358743_mode_1080P_1920_1080,  1920, 1080, 15, 0x0b, 4, 300,
-		tc358743_setting_YUV422_4lane_1080P_60fps_1920_1080_300MHz,
-		ARRAY_SIZE(tc358743_setting_YUV422_4lane_1080P_60fps_1920_1080_300MHz),
-		MIPI_DT_YUV422
-		},
-	[0][tc358743_mode_INIT1] =
-		{tc358743_mode_INIT1,  1280, 720, 12, 0, 2, 125,
-		tc358743_setting_YUV422_2lane_color_bar_1280_720_125MHz,
-		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_1280_720_125MHz),
-		MIPI_DT_YUV422
-		},
-	[0][tc358743_mode_INIT2] =
-		{tc358743_mode_INIT2,  1280, 720, 12, 0, 4, 125,
-		tc358743_setting_YUV422_4lane_color_bar_1280_720_125MHz,
-		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1280_720_125MHz),
-		MIPI_DT_YUV422
-		},
-	[0][tc358743_mode_INIT] =
-		{tc358743_mode_INIT,  640, 480, 6, 1, 2, 108,
+/* Color bar test settings */
+	[1][tc358743_mode_INIT] =
+		{"cb640x480-108MHz@30", tc358743_mode_INIT,  640, 480,
+		6, 1, 2, 108,
 		tc358743_setting_YUV422_2lane_color_bar_640_480_108MHz_cont,
 		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_640_480_108MHz_cont),
 		MIPI_DT_YUV422
 		},
-	[0][tc358743_mode_INIT4] =
-		{tc358743_mode_INIT4,  640, 480, 6, 1, 2, 174,
-		tc358743_setting_YUV422_2lane_color_bar_640_480_174MHz,
-		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_640_480_174MHz),
-		MIPI_DT_YUV422
-		},
-	[0][tc358743_mode_INIT3] =
-		{tc358743_mode_INIT3,  1024, 720, 6, 1, 4, 300,
-		tc358743_setting_YUV422_4lane_color_bar_1024_720_200MHz,
-		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1024_720_200MHz),
-		MIPI_DT_YUV422
-		},
-	[0][tc358743_mode_720P_1280_720] =
-		{tc358743_mode_720P_1280_720,  1280, 720, 12, (0x3e)<<8|(0x3c), 2, 125,
-		tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz,
-		ARRAY_SIZE(tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz),
-		MIPI_DT_YUV422,
-		},
-	[0][tc358743_mode_480P_720_480] =
-		{tc358743_mode_480P_720_480,  720, 480, 6, (0x02)<<8|(0x00), 2, 125,
-		tc358743_setting_YUV422_2lane_60fps_720_480_125Mhz,
-		ARRAY_SIZE(tc358743_setting_YUV422_2lane_60fps_720_480_125Mhz),
-		MIPI_DT_YUV422,
-		},
-	[0][tc358743_mode_480P_640_480] =
-		{tc358743_mode_480P_640_480,  640, 480, 6, (0x02)<<8|(0x00), 2, 125,
-		tc358743_setting_YUV422_2lane_60fps_640_480_125Mhz,
-		ARRAY_SIZE(tc358743_setting_YUV422_2lane_60fps_640_480_125Mhz),
-		MIPI_DT_YUV422,
-		},
-	[0][tc358743_mode_INIT5] =
-		{tc358743_mode_INIT5,  1280, 720, 12, 0, 4, 300,
-		tc358743_setting_YUV422_4lane_color_bar_1280_720_300MHz,
-		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1280_720_300MHz),
-		MIPI_DT_YUV422
-		},
-	[0][tc358743_mode_INIT6] =
-		{tc358743_mode_INIT6,  1920, 1023, 15, 0, 4, 300,
-		tc358743_setting_YUV422_4lane_color_bar_1920_1023_300MHz,
-		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1920_1023_300MHz),
-		MIPI_DT_YUV422
-		},
-	[1][tc358743_mode_720P_60_1280_720] =
-		{tc358743_mode_720P_60_1280_720,  1280, 720, 12, 0, 4, 133,
-		tc358743_setting_YUV422_4lane_720P_60fps_1280_720_133Mhz,
-		ARRAY_SIZE(tc358743_setting_YUV422_4lane_720P_60fps_1280_720_133Mhz),
-		MIPI_DT_YUV422
-		},
-	[1][tc358743_mode_1080P_1920_1080] =
-		{tc358743_mode_1080P_1920_1080,  1920, 1080, 15, 0xa, 4, 300,
-		tc358743_setting_YUV422_4lane_1080P_30fps_1920_1080_300MHz,
-		ARRAY_SIZE(tc358743_setting_YUV422_4lane_1080P_30fps_1920_1080_300MHz),
-		MIPI_DT_YUV422
-		},
-	[1][tc358743_mode_INIT1] =
-		{tc358743_mode_INIT1,  1280, 720, 12, 0, 2, 125,
-		tc358743_setting_YUV422_2lane_color_bar_1280_720_125MHz,
-		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_1280_720_125MHz),
-		MIPI_DT_YUV422
-		},
-	[1][tc358743_mode_INIT2] =
-		{tc358743_mode_INIT2,  1280, 720, 12, 0, 4, 125,
-		tc358743_setting_YUV422_4lane_color_bar_1280_720_125MHz,
-		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1280_720_125MHz),
-		MIPI_DT_YUV422
-		},
-
-	[1][tc358743_mode_INIT] =
-		{tc358743_mode_INIT,  640, 480, 6, 1, 2, 108,
+	[0][tc358743_mode_INIT] =
+		{"cb640x480-108MHz@60", tc358743_mode_INIT,  640, 480,
+		6, 1, 2, 108,
 		tc358743_setting_YUV422_2lane_color_bar_640_480_108MHz_cont,
 		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_640_480_108MHz_cont),
 		MIPI_DT_YUV422
 		},
 	[1][tc358743_mode_INIT4] =
-		{tc358743_mode_INIT4,  640, 480, 6, 1, 2, 174,
+		{"cb640x480-174Mhz@30", tc358743_mode_INIT4,  640, 480,
+		6, 1, 2, 174,
+		tc358743_setting_YUV422_2lane_color_bar_640_480_174MHz,
+		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_640_480_174MHz),
+		MIPI_DT_YUV422
+		},
+	[0][tc358743_mode_INIT4] =
+		{"cb640x480-174MHz@60", tc358743_mode_INIT4,  640, 480,
+		6, 1, 2, 174,
 		tc358743_setting_YUV422_2lane_color_bar_640_480_174MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_640_480_174MHz),
 		MIPI_DT_YUV422
 		},
 	[1][tc358743_mode_INIT3] =
-		{tc358743_mode_INIT3,  1024, 720, 6, 1, 4, 300,
+		{"cb1024x720-4lane@30", tc358743_mode_INIT3,  1024, 720,
+		6, 1, 4, 300,
 		tc358743_setting_YUV422_4lane_color_bar_1024_720_200MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1024_720_200MHz),
 		MIPI_DT_YUV422
 		},
-	[1][tc358743_mode_720P_1280_720] =
-		{tc358743_mode_720P_1280_720,  1280, 720, 12, (0x3e)<<8|(0x3c), 2, 125,
-		tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz,
-		ARRAY_SIZE(tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz),
-		MIPI_DT_YUV422,
+	[0][tc358743_mode_INIT3] =
+		{"cb1024x720-4lane@60", tc358743_mode_INIT3,  1024, 720,
+		6, 1, 4, 300,
+		tc358743_setting_YUV422_4lane_color_bar_1024_720_200MHz,
+		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1024_720_200MHz),
+		MIPI_DT_YUV422
 		},
-	[1][tc358743_mode_480P_720_480] =
-		{tc358743_mode_480P_720_480,  720, 480, 6, (0x02)<<8|(0x00), 2, 125,
-		tc358743_setting_YUV422_2lane_60fps_720_480_125Mhz,
-		ARRAY_SIZE(tc358743_setting_YUV422_2lane_60fps_720_480_125Mhz),
-		MIPI_DT_YUV422,
+	[1][tc358743_mode_INIT1] =
+		{"cb1280x720-2lane@30", tc358743_mode_INIT1,  1280, 720,
+		12, 0, 2, 125,
+		tc358743_setting_YUV422_2lane_color_bar_1280_720_125MHz,
+		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_1280_720_125MHz),
+		MIPI_DT_YUV422
 		},
-	[0][tc358743_mode_480P_640_480] =
-		{tc358743_mode_480P_640_480,  640, 480, 1, (0x02)<<8|(0x00), 2, 125,
-		tc358743_setting_YUV422_2lane_60fps_640_480_125Mhz,
-		ARRAY_SIZE(tc358743_setting_YUV422_2lane_60fps_640_480_125Mhz),
-		MIPI_DT_YUV422,
+	[0][tc358743_mode_INIT1] =
+		{"cb1280x720-2lane@60", tc358743_mode_INIT1,  1280, 720,
+		12, 0, 2, 125,
+		tc358743_setting_YUV422_2lane_color_bar_1280_720_125MHz,
+		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_1280_720_125MHz),
+		MIPI_DT_YUV422
+		},
+	[1][tc358743_mode_INIT2] =
+		{"cb1280x720-4lane-125MHz@30", tc358743_mode_INIT2,  1280, 720,
+		12, 0, 4, 125,
+		tc358743_setting_YUV422_4lane_color_bar_1280_720_125MHz,
+		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1280_720_125MHz),
+		MIPI_DT_YUV422
+		},
+	[0][tc358743_mode_INIT2] =
+		{"cb1280x720-4lane-125MHz@60", tc358743_mode_INIT2,  1280, 720,
+		12, 0, 4, 125,
+		tc358743_setting_YUV422_4lane_color_bar_1280_720_125MHz,
+		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1280_720_125MHz),
+		MIPI_DT_YUV422
 		},
 	[1][tc358743_mode_INIT5] =
-		{tc358743_mode_INIT5,  1280, 720, 12, 0, 4, 300,
+		{"cb1280x720-4lane-300MHz@30", tc358743_mode_INIT5,  1280, 720,
+		12, 0, 4, 300,
+		tc358743_setting_YUV422_4lane_color_bar_1280_720_300MHz,
+		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1280_720_300MHz),
+		MIPI_DT_YUV422
+		},
+	[0][tc358743_mode_INIT5] =
+		{"cb1280x720-4lane-300MHz@60", tc358743_mode_INIT5,  1280, 720,
+		12, 0, 4, 300,
 		tc358743_setting_YUV422_4lane_color_bar_1280_720_300MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1280_720_300MHz),
 		MIPI_DT_YUV422
 		},
 	[1][tc358743_mode_INIT6] =
-		{tc358743_mode_INIT6,  1920, 1023, 15, 0, 4, 300,
+		{"cb1920x1023@30", tc358743_mode_INIT6,  1920, 1023,
+		15, 0, 4, 300,
 		tc358743_setting_YUV422_4lane_color_bar_1920_1023_300MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1920_1023_300MHz),
 		MIPI_DT_YUV422
-		},		
+		},
+	[0][tc358743_mode_INIT6] =
+		{"cb1920x1023@60", tc358743_mode_INIT6,  1920, 1023,
+		15, 0, 4, 300,
+		tc358743_setting_YUV422_4lane_color_bar_1920_1023_300MHz,
+		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1920_1023_300MHz),
+		MIPI_DT_YUV422
+		},
+/* Input settings */
+	[tc358743_60_fps][tc358743_mode_480P_640_480] =
+		{"640x480@60", tc358743_mode_480P_640_480, 640, 480,
+		1, (0x02)<<8|(0x00), 2, 125,
+		tc358743_setting_YUV422_2lane_60fps_640_480_125Mhz,
+		ARRAY_SIZE(tc358743_setting_YUV422_2lane_60fps_640_480_125Mhz),
+		MIPI_DT_YUV422,
+		},
+	[1][tc358743_mode_480P_720_480] =
+		{"720x480@30", tc358743_mode_480P_720_480,  720, 480,
+		6, (0x02)<<8|(0x00), 2, 125,
+		tc358743_setting_YUV422_2lane_60fps_720_480_125Mhz,
+		ARRAY_SIZE(tc358743_setting_YUV422_2lane_60fps_720_480_125Mhz),
+		MIPI_DT_YUV422,
+		},
+	[tc358743_60_fps][tc358743_mode_480P_720_480] =
+		{"720x480@60", tc358743_mode_480P_720_480,  720, 480,
+		6, (0x02)<<8|(0x00), 2, 125,
+		tc358743_setting_YUV422_2lane_60fps_720_480_125Mhz,
+		ARRAY_SIZE(tc358743_setting_YUV422_2lane_60fps_720_480_125Mhz),
+		MIPI_DT_YUV422,
+		},
+	[tc358743_60_fps][tc358743_mode_1024x768] =
+		{"1024x768@60", tc358743_mode_1024x768,  1024, 768,
+		16, 60, 4, 125,
+		tc358743_setting_YUV422_4lane_1024x768_60fps_125MHz,
+		ARRAY_SIZE(tc358743_setting_YUV422_4lane_1024x768_60fps_125MHz),
+		MIPI_DT_YUV422
+		},
+	[1][tc358743_mode_720P_1280_720] =
+		{"1280x720-2lane@30", tc358743_mode_720P_1280_720,  1280, 720,
+		12, (0x3e)<<8|(0x3c), 2, 125,
+		tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz,
+		ARRAY_SIZE(tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz),
+		MIPI_DT_YUV422,
+		},
+	[0][tc358743_mode_720P_1280_720] =
+		{"1280x720-2lane@60", tc358743_mode_720P_1280_720,  1280, 720,
+		12, (0x3e)<<8|(0x3c), 2, 125,
+		tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz,
+		ARRAY_SIZE(tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz),
+		MIPI_DT_YUV422,
+		},
+	[1][tc358743_mode_720P_60_1280_720] =
+		{"1280x720-4lane-133Mhz@30", tc358743_mode_720P_60_1280_720,  1280, 720,
+		12, 0, 4, 133,
+		tc358743_setting_YUV422_4lane_720P_60fps_1280_720_133Mhz,
+		ARRAY_SIZE(tc358743_setting_YUV422_4lane_720P_60fps_1280_720_133Mhz),
+		MIPI_DT_YUV422
+		},
+	[tc358743_60_fps][tc358743_mode_720P_60_1280_720] =
+		{"1280x720-4lane@60", tc358743_mode_720P_60_1280_720,  1280, 720,
+		12, 0, 4, 133,
+		tc358743_setting_YUV422_4lane_720P_60fps_1280_720_133Mhz,
+		ARRAY_SIZE(tc358743_setting_YUV422_4lane_720P_60fps_1280_720_133Mhz),
+		MIPI_DT_YUV422
+		},
+	[1][tc358743_mode_1080P_1920_1080] =
+		{"1920x1080@30", tc358743_mode_1080P_1920_1080,  1920, 1080,
+		15, 0xa, 4, 300,
+		tc358743_setting_YUV422_4lane_1080P_30fps_1920_1080_300MHz,
+		ARRAY_SIZE(tc358743_setting_YUV422_4lane_1080P_30fps_1920_1080_300MHz),
+		MIPI_DT_YUV422
+		},
+	[tc358743_60_fps][tc358743_mode_1080P_1920_1080] =
+		{"1920x1080@60", tc358743_mode_1080P_1920_1080,  1920, 1080,
+		15, 0x0b, 4, 300,
+		tc358743_setting_YUV422_4lane_1080P_60fps_1920_1080_300MHz,
+		ARRAY_SIZE(tc358743_setting_YUV422_4lane_1080P_60fps_1920_1080_300MHz),
+		MIPI_DT_YUV422
+		},
 };
 
 static int tc358743_probe(struct i2c_client *adapter,
@@ -1425,6 +1532,45 @@ static s32 tc358743_read_reg_val(struct sensor_data *sensor, u16 reg)
 	u32 val = 0;
 	tc358743_read_reg(sensor, reg, &val);
 	return val;
+}
+
+static s32 tc358743_read_reg_val16(struct sensor_data *sensor, u16 reg)
+{
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msgs[3];
+	u8 txbuf[4];
+	u8 rxbuf1[4];
+	u8 rxbuf2[4];
+	int ret;
+	int size = get_reg_size(reg, 0);
+
+	if (size != 1)
+		return -EINVAL;
+
+	txbuf[0] = reg >> 8;
+	txbuf[1] = reg & 0xff;
+	msgs[0].addr = client->addr;
+	msgs[0].flags = 0;
+	msgs[0].len = 2;
+	msgs[0].buf = txbuf;
+
+	msgs[1].addr = client->addr;
+	msgs[1].flags = I2C_M_RD;
+	msgs[1].len = size;
+	msgs[1].buf = rxbuf1;
+
+	msgs[2].addr = client->addr;
+	msgs[2].flags = I2C_M_RD;
+	msgs[2].len = size;
+	msgs[2].buf = rxbuf2;
+
+	ret = i2c_transfer(client->adapter, msgs, 3);
+	if (ret < 0) {
+		pr_err("%s:reg=%x ret=%d\n", __func__, reg, ret);
+		return ret;
+	}
+//	pr_debug("%s:reg=%x,val=%x\n", __func__, reg, ((char *)rxbuf)[0]);
+	return rxbuf1[0] | (rxbuf2[0] << 8);
 }
 
 static s32 tc358743_write_reg(struct sensor_data *sensor, u16 reg, u32 val, int len)
@@ -1669,7 +1815,7 @@ int set_frame_rate_mode(struct tc_data *td,
 		}
 	}
 	tc358743_enable_edid(sensor);
-	if (!td->hdmi_mode)	// is this during reset
+	if (!td->mode)	// is this during reset
 		if ((retval = tc358743_write_edid(sensor, cHDMIEDID, ARRAY_SIZE(cHDMIEDID))))
 			pr_err("%s: Fail to write EDID to tc35874!\n", __func__);
 
@@ -1895,7 +2041,7 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 	int ret;
 
 	mutex_lock(&td->access_lock);
-	if (on && !td->hdmi_mode) {
+	if (on && !td->mode) {
 		ret = tc358743_reset(td);
 	} else {
 		ret = power_control(td, on);
@@ -2786,7 +2932,7 @@ struct tc_mode_list {
 	enum tc358743_mode mode;
 };
 
-static const struct tc_mode_list tc358743_mode_list[16] =
+static const struct tc_mode_list tc358743_mode_list[] =
 {
 	{"None", 0},					/* 0 */
 	{"VGA", tc358743_mode_480P_640_480},		/* 1 */
@@ -2805,7 +2951,6 @@ static const struct tc_mode_list tc358743_mode_list[16] =
 	{"1080i", 0},					/* 14 */
 	{"1080p", tc358743_mode_1080P_1920_1080},	/* 15 */
 };
-
 
 static char tc358743_fps_list[tc358743_max_fps+1] =
 {
@@ -2842,14 +2987,14 @@ static void report_netlink(struct tc_data *td)
 	envp[0] = &str_on[0];
 	envp[1] = NULL;
 	sprintf(envp[0], "HDMI RX: %d (%s) %d %d",
-			td->hdmi_mode & 0xf,
-			tc358743_mode_list[td->hdmi_mode & 0xf].name,
+			td->mode,
+			tc358743_mode_info_data[td->fps][td->mode].name,
 			tc358743_fps_list[td->fps], tc358743_audio_list[td->audio]);
 	kobject_uevent_env(&(sensor->i2c_client->dev.kobj), KOBJ_CHANGE, envp);
 	td->det_work_timeout = DET_WORK_TIMEOUT_DEFAULT;
 	pr_debug("%s: HDMI RX (%d) mode: %s fps: %d (%d, %d) audio: %d\n",
-		__func__, td->hdmi_mode,
-		tc358743_mode_list[td->hdmi_mode & 0xf].name, td->fps, td->bounce,
+		__func__, td->mode,
+		tc358743_mode_info_data[td->fps][td->mode].name, td->fps, td->bounce,
 		td->det_work_timeout, tc358743_audio_list[td->audio]);
 }
 
@@ -2858,7 +3003,9 @@ static void tc_det_worker(struct work_struct *work)
 	struct tc_data *td = container_of(work, struct tc_data, det_work.work);
 	struct sensor_data *sensor = &td->sensor;
 	int ret;
-	u32 u32val;
+	u32 u32val, u852f;
+	enum tc358743_mode mode = tc358743_mode_INIT;
+
 
 	if (!td->det_work_enable)
 		return;
@@ -2875,29 +3022,43 @@ static void tc_det_worker(struct work_struct *work)
 			report_netlink(td);
 		}
 	}
-	u32val = 0;
-	ret = tc358743_read_reg(sensor, 0x852f, &u32val);
+	u852f = 0;
+	ret = tc358743_read_reg(sensor, 0x852f, &u852f);
 	if (ret < 0) {
 		pr_err("%s: Error reading lock\n", __func__);
 		td->det_work_timeout = DET_WORK_TIMEOUT_DEFERRED;
 		goto out;
 	}
 //	pr_info("%s: 852f=%x\n", __func__, u32val);
-	if (u32val & TC3587430_HDMI_DETECT) {
-		pr_info("%s: hdmi detect %x\n", __func__, u32val);
-		td->lock = u32val & TC3587430_HDMI_DETECT;
+	if (u852f & TC3587430_HDMI_DETECT) {
+		pr_info("%s: hdmi detect %x\n", __func__, u852f);
+		td->lock = u852f & TC3587430_HDMI_DETECT;
 		u32val = 0;
 		ret = tc358743_read_reg(sensor, 0x8521, &u32val);
 		if (ret < 0) {
 			pr_err("%s: Error reading mode\n", __func__);
 		}
 		pr_info("%s: detect 8521=%x\n", __func__, u32val);
-	} else {
-		if (td->lock) {		// check if it is realy un-plug
-			td->lock = 0;
-			u32val = 0x0;
-			td->hdmi_mode = 0xF0;	// fake mode to detect un-plug if mode was not detected before.
+		u32val &= 0x0f;
+		td->fps = tc358743_60_fps;
+		if (!u32val) {
+			int hsize, vsize;
+
+			hsize = tc358743_read_reg_val16(sensor, 0x8582);
+			vsize = tc358743_read_reg_val16(sensor, 0x8588);
+			pr_info("%s: detect hsize=%d, vsize=%d\n", __func__, hsize, vsize);
+			if ((hsize == 1024) && (vsize == 768))
+				mode = tc358743_mode_1024x768;
+		} else {
+			mode = tc358743_mode_list[u32val].mode;
+			if (td->mode != mode)
+				pr_debug("%s: %s detected\n", __func__, tc358743_mode_list[u32val].name);
+			if (u852f >= 0xe)
+				td->fps = ((u852f & 0x0f) > 0xa)? tc358743_60_fps: tc358743_30_fps;
 		}
+	} else {
+		if (td->lock)
+			td->lock = 0;
 		u32val = 0;
 		ret = tc358743_read_reg(sensor, 0x8521, &u32val);
 		if (ret < 0) {
@@ -2905,40 +3066,35 @@ static void tc_det_worker(struct work_struct *work)
 		}
 //		pr_info("%s: 8521=%x\n", __func__, u32val);
 	}
-	if ((unsigned char)td->hdmi_mode != (unsigned char)u32val) {
+	if (td->mode != mode) {
 		td->det_work_timeout = DET_WORK_TIMEOUT_DEFAULT;
 		td->bounce = MAX_BOUNCE;
 		pr_debug("%s: HDMI RX (%d != %d) mode: %s fps: %d (%d, %d)\n",
-				__func__, (unsigned char)td->hdmi_mode,
-				(unsigned char)u32val,
-				tc358743_mode_list[td->hdmi_mode & 0xf].name,
+				__func__, td->mode, mode,
+				tc358743_mode_info_data[td->fps][td->mode].name,
 				td->fps, td->bounce, td->det_work_timeout);
-		td->hdmi_mode = u32val;
-		sensor->streamcap.capturemode = tc358743_mode_list[td->hdmi_mode & 0xf].mode;
+		td->mode = mode;
+		sensor->streamcap.capturemode = mode;
+		sensor->spix.swidth = tc358743_mode_info_data[td->fps][mode].width;
+		sensor->spix.sheight = tc358743_mode_info_data[td->fps][mode].height;
 		td->det_changed = 1;
 	} else if (td->bounce) {
 		td->bounce--;
 		td->det_work_timeout = DET_WORK_TIMEOUT_DEFAULT;
 
 		if (!td->bounce) {
-			if (td->hdmi_mode >= 0xe) {
-				u32val = 0;
-				ret = tc358743_read_reg(sensor, 0x852f, &u32val);
-				if (ret >= 0)
-					td->fps = ((((unsigned char)u32val) & 0x0f) > 0xa)? tc358743_60_fps: tc358743_30_fps;
-			}
 			u32val = 0;
 			ret = tc358743_read_reg(sensor, 0x8621, &u32val);
 			if (ret >= 0) {
 				td->audio = ((unsigned char)u32val) & 0x0f;
 				report_netlink(td);
 			}
-			if (td->hdmi_mode) {
+			if (td->mode) {
 				td->det_work_timeout = DET_WORK_TIMEOUT_DEFERRED;
 				goto out2;
 			}
 		}
-	} else if (td->hdmi_mode && !td->bounce) {
+	} else if (td->mode && !td->bounce) {
 		goto out2;
 	}
 out:
@@ -3059,7 +3215,7 @@ static ssize_t tc358743_show_hdmirx(struct device *dev,
 	struct tc_data *td = g_td;
 	int len = 0;
 
-	len += sprintf(buf+len, "%d\n", td->hdmi_mode);
+	len += sprintf(buf+len, "%d\n", td->mode);
 	return len;
 }
 
