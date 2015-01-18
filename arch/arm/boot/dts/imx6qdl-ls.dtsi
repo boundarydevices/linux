@@ -21,6 +21,32 @@
 		compatible = "ls-braille";
 	};
 
+	camera_flash {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_camera_flash>;
+		camera-strobe {
+#ifdef CONFIG_NEW_REV
+#define GP_CAM_STROBE		<&gpio3 28 GPIO_ACTIVE_HIGH>
+#else
+#define GP_CAM_STROBE		<&gpio3 18 GPIO_ACTIVE_HIGH>
+#endif
+			gpios = GP_CAM_STROBE;
+			retain-state-suspended;
+			default-state = "off";
+		};
+		camera-flash-en {
+#ifdef CONFIG_NEW_REV
+#define GP_CAM_FLASHEN		<&gpio3 30 GPIO_ACTIVE_HIGH>
+#else
+#define GP_CAM_FLASHEN		<&gpio3 19 GPIO_ACTIVE_HIGH>
+#endif
+			gpios = GP_CAM_FLASHEN;
+			retain-state-suspended;
+			default-state = "off";
+		};
+	};
+
 	clocks {
 		clk24m: clk24m {
 			compatible = "fixed-clock";
@@ -246,6 +272,18 @@
 		>;
 	};
 
+	pinctrl_camera_flash: camera_flashgrp {
+		fsl,pins = <
+#ifdef CONFIG_NEW_REV
+			MX6QDL_PAD_EIM_D28__GPIO3_IO28		0x030b0
+			MX6QDL_PAD_EIM_D30__GPIO3_IO30		0x030b0
+#else
+			MX6QDL_PAD_EIM_D18__GPIO3_IO18		0x030b0
+			MX6QDL_PAD_EIM_D19__GPIO3_IO19		0x030b0
+#endif
+		>;
+	};
+
 	pinctrl_ecspi1: ecspi1grp {
 		fsl,pins = <
 #ifdef CONFIG_NEW_REV
@@ -467,17 +505,6 @@
 
 	pinctrl_ov5640_mipi: ov5640_mipigrp {
 		fsl,pins = <
-#ifdef CONFIG_NEW_REV
-#define GP_CAM_STROBE			<&gpio3 28 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_D28__GPIO3_IO28		0x030b0
-#define GP_CAM_TORCH			<&gpio3 30 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_D30__GPIO3_IO30		0x030b0
-#else
-#define GP_CAM_STROBE		<&gpio3 18 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_D18__GPIO3_IO18		0x030b0
-#define GP_CAM_TORCH		<&gpio3 19 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_D19__GPIO3_IO19		0x030b0
-#endif
 #define GP_OV5640_MIPI_RESET		<&gpio1 30 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_ENET_TXD0__GPIO1_IO30	0x000b0
 #define GP_OV5640_MIPI_POWER_DOWN	<&gpio1 29 GPIO_ACTIVE_LOW>
