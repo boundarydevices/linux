@@ -585,6 +585,12 @@ static const struct reg_default wm5102t_sysclk_pwr[] = {
 	{ 0x3129, 0x0A03 },
 };
 
+static const struct reg_default microphone_patch[] = {
+	{ 0x200, 0x0007 },	/* enable charge pump 2 (bit 0) */
+	{ 0x218, 0x000f },	/* enable external (analog) microphone */
+	{ 0x21a, 0x000f },	/* enable internal (digital) microphone */
+};
+
 static int wm5102_sysclk_ev(struct snd_soc_dapm_widget *w,
 			    struct snd_kcontrol *kcontrol, int event)
 {
@@ -617,6 +623,8 @@ static int wm5102_sysclk_ev(struct snd_soc_dapm_widget *w,
 				regmap_write(regmap,
 					     wm5102t_sysclk_pwr[i].reg,
 					     wm5102t_sysclk_pwr[i].def);
+		regmap_multi_reg_write(regmap, microphone_patch,
+				       ARRAY_SIZE(microphone_patch));
 		break;
 
 	default:
