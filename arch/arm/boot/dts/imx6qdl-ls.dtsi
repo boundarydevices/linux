@@ -51,6 +51,37 @@
 	kpp_gpio: kpp_gpio {
 	};
 
+	gsmcontrols {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gsm>;
+
+		gsm-sim-reset {
+#define GP_GSM_SIM_RESET		<&gpio5 19 GPIO_ACTIVE_LOW>
+			gpios = GP_GSM_SIM_RESET;
+			retain-state-suspended;
+			default-state = "off";
+		};
+		gsm-power-en {
+#define GP_GSM_PWR_EN			<&gpio6 2 GPIO_ACTIVE_HIGH>
+			gpios = GP_GSM_PWR_EN;
+			retain-state-suspended;
+			default-state = "on";
+		};
+		gsm-gsm-reset {
+#define GP_GSM_RESET			<&gpio6 3 GPIO_ACTIVE_HIGH>
+			gpios = GP_GSM_RESET;
+			retain-state-suspended;
+			default-state = "on";
+		};
+		gsm-on-off {
+#define GP_GSM_ON_OFF			<&gpio6 4 GPIO_ACTIVE_HIGH>
+			gpios = GP_GSM_ON_OFF;
+			retain-state-suspended;
+			default-state = "on";
+		};
+	};
+
 	memory {
 		reg = <0x10000000 0x80000000>;
 	};
@@ -282,18 +313,14 @@
 
 	pinctrl_gsm: gsmgrp {
 		fsl,pins = <
-#define GP_GSM_SIM_RESET		<&gpio5, 19 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_CSI0_MCLK__GPIO5_IO19		0x0b0b0
-#define GP_GSM_HOST_WAKE_WWAN		<&gpio5, 20 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_CSI0_DATA_EN__GPIO5_IO20		0x0b0b0
-#define GP_GSM_PWR_EN			<&gpio6, 2 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_CSI0_DAT16__GPIO6_IO02		0x0b0b0
-#define GP_GSM_RESET			<&gpio6, 3 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_CSI0_DAT17__GPIO6_IO03		0x0b0b0
-#define GP_GSM_ON_OFF			<&gpio6, 4 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_CSI0_DAT18__GPIO6_IO04		0x0b0b0
-#define GP_GSM_HOST_WAKE		<&gpio6, 5 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_CSI0_DAT19__GPIO6_IO05		0x0b0b0
+			MX6QDL_PAD_CSI0_MCLK__GPIO5_IO19		0x1b0b0
+#define GP_GSM_HOST_WAKE_WWAN		<&gpio5 20 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DATA_EN__GPIO5_IO20		0x1b0b0
+			MX6QDL_PAD_CSI0_DAT16__GPIO6_IO02		0x1b0b0
+			MX6QDL_PAD_CSI0_DAT17__GPIO6_IO03		0x1b0b0
+			MX6QDL_PAD_CSI0_DAT18__GPIO6_IO04		0x1b0b0
+#define GP_GSM_HOST_WAKE		<&gpio6 5 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT19__GPIO6_IO05		0x1b0b0
 //			MX6QDL_PAD_GPIO_8__XTALOSC_REF_CLK_32K	0x000b0		/* slow clock */
 		>;
 	};
