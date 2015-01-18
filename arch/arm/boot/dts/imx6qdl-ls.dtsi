@@ -40,17 +40,6 @@
 		gpios = <&gpio3 20 GPIO_ACTIVE_LOW>;
 	};
 
-	i2c2mux: i2cmux@2 {
-		compatible = "i2c-mux-gpio";
-	};
-
-	i2c3mux: i2cmux@3 {
-		compatible = "i2c-mux-gpio";
-	};
-
-	kpp_gpio: kpp_gpio {
-	};
-
 	gsmcontrols {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
@@ -80,6 +69,17 @@
 			retain-state-suspended;
 			default-state = "on";
 		};
+	};
+
+	i2c2mux: i2cmux@2 {
+		compatible = "i2c-mux-gpio";
+	};
+
+	i2c3mux: i2cmux@3 {
+		compatible = "i2c-mux-gpio";
+	};
+
+	kpp_gpio: kpp_gpio {
 	};
 
 	memory {
