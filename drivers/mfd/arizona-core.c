@@ -1952,7 +1952,7 @@ int arizona_dev_init(struct arizona *arizona)
 					<< ARIZONA_IN1R_SRC_SE_SHIFT);
 			break;
 		default:
-			val = arizona->pdata.dmic_ref[2*i]
+			val = arizona->pdata.dmic_ref[i]
 				<< ARIZONA_IN1_DMIC_SUP_SHIFT;
 			val |= (arizona->pdata.inmode[2*i] & 2)
 				<< (ARIZONA_IN1_MODE_SHIFT - 1);
