@@ -346,8 +346,9 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
 		dev_dbg(dai->dev, "ratio %d for freq %dHz based on clock %ldHz\n",
 				ratio, freq, clk_rate);
 
-		ratio /= 2;
-		if (ratio == 0 && ratio > 256)
+		if (ratio % 2 == 0 && ratio >= 2 && ratio <= 512)
+			ratio /= 2;
+		else
 			continue;
 
 		if (ret < savesub) {
@@ -355,11 +356,14 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
 			sai->mclk_id = id;
 			savesub = ret;
 		}
+
+		if (ret == 0)
+			break;
 	}
 
 	if (savediv == 0) {
 		dev_err(dai->dev, "failed to derive required %cx rate: %d\n",
-				tx ? 'T' : 'R', ret);
+				tx ? 'T' : 'R', freq);
 		return -EINVAL;
 	}
 
