@@ -266,6 +266,7 @@ static int arizona_ldo1_probe(struct platform_device *pdev)
 	}
 
 	config.ena_gpio = arizona->pdata.ldoena;
+	config.ena_gpio_flags = GPIOF_OUT_INIT_LOW;
 
 	if (arizona->pdata.ldo1)
 		config.init_data = arizona->pdata.ldo1;
