@@ -737,8 +737,8 @@ static int wm_coeff_put(struct snd_kcontrol *kcontrol,
 	mutex_lock(&ctl->lock);
 	memcpy(ctl->cache, p, ctl->len);
 
+	ctl->set = 1;
 	if (!ctl->enabled) {
-		ctl->set = 1;
 		mutex_unlock(&ctl->lock);
 		return 0;
 	}
