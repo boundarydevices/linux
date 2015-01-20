@@ -48,6 +48,7 @@
 #include <linux/gpio.h>
 #include <linux/ion.h>
 #include <linux/etherdevice.h>
+#include <linux/platform_data/spi-imx.h>
 #include <linux/regulator/anatop-regulator.h>
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/machine.h>
