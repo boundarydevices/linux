@@ -726,14 +726,14 @@
 
 &reg_usbh1_vbus {
 	gpio = GP_USB_H1_PWR;
-	enable-active-high;
+	enable-active-low;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbh1_vbus>;
 };
 
 &reg_usbotg_vbus {
 	gpio = GP_USB_OTG_PWR;
-	enable-active-high;
+	enable-active-low;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg_vbus>;
 };
