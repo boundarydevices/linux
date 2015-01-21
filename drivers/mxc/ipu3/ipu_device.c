@@ -3402,6 +3402,7 @@ int ipu_queue_task(struct ipu_task *task)
 	u32 tmp_task_no;
 	DECLARE_PERF_VAR;
 
+	pr_debug("%s: %dx%d to %dx%d\n", __func__, task->input.width, task->input.height, task->output.width, task->output.height);
 	tsk = create_task_entry(task);
 	if (IS_ERR(tsk))
 		return PTR_ERR(tsk);
@@ -3522,6 +3523,7 @@ static long mxc_ipu_ioctl(struct file *file,
 					(&task, (struct ipu_task *) arg,
 					 sizeof(struct ipu_task)))
 				return -EFAULT;
+			pr_debug("%s: %dx%d to %dx%d\n", __func__, task.input.width, task.input.height, task.output.width, task.output.height);
 			ret = ipu_queue_task(&task);
 			break;
 		}
