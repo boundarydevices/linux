@@ -270,6 +270,7 @@ void _ipu_ic_init_prpvf(struct ipu_soc *ipu, ipu_channel_params_t *params, bool 
 	/* Setup color space conversion */
 	in_fmt = format_to_colorspace(params->mem_prp_vf_mem.in_pixel_fmt);
 	out_fmt = format_to_colorspace(params->mem_prp_vf_mem.out_pixel_fmt);
+	pr_debug("%s: IN fmt:%x, Out fmt:%x\n", __func__, params->mem_prp_vf_mem.in_pixel_fmt, params->mem_prp_vf_mem.out_pixel_fmt);
 	if (in_fmt == RGB) {
 		if ((out_fmt == YCbCr) || (out_fmt == YUV)) {
 			/* Enable RGB->YCBCR CSC1 */
@@ -339,6 +340,10 @@ void _ipu_ic_init_prpvf(struct ipu_soc *ipu, ipu_channel_params_t *params, bool 
 		ic_conf |= IC_CONF_RWS_EN;
 
 	ipu_ic_write(ipu, ic_conf, IC_CONF);
+#ifdef DEBUG
+	pr_debug("%s\n", __func__);
+	ic_dump_register(ipu);
+#endif
 }
 
 void _ipu_ic_uninit_prpvf(struct ipu_soc *ipu)
@@ -381,7 +386,7 @@ void _ipu_ic_init_prpenc(struct ipu_soc *ipu, ipu_channel_params_t *params, bool
 		reg = (params->mem_prp_enc_mem.outv_resize_ratio) << 16;
 
 	/* Setup horizontal resizing */
-	/* Upadeted for IC split case */
+	/* Updated for IC split case */
 	if (!(params->mem_prp_enc_mem.outh_resize_ratio) ||
 		(params->mem_prp_enc_mem.outh_resize_ratio >=
 						IC_RSZ_MAX_RESIZE_RATIO)) {
@@ -399,6 +404,7 @@ void _ipu_ic_init_prpenc(struct ipu_soc *ipu, ipu_channel_params_t *params, bool
 	/* Setup color space conversion */
 	in_fmt = format_to_colorspace(params->mem_prp_enc_mem.in_pixel_fmt);
 	out_fmt = format_to_colorspace(params->mem_prp_enc_mem.out_pixel_fmt);
+	pr_debug("%s:IN fmt: %x, OUT fmt:%x\n", __func__, params->mem_prp_enc_mem.in_pixel_fmt, params->mem_prp_enc_mem.out_pixel_fmt);
 	if (in_fmt == RGB) {
 		if ((out_fmt == YCbCr) || (out_fmt == YUV)) {
 			/* Enable RGB->YCBCR CSC1 */
@@ -422,6 +428,10 @@ void _ipu_ic_init_prpenc(struct ipu_soc *ipu, ipu_channel_params_t *params, bool
 		ic_conf |= IC_CONF_RWS_EN;
 
 	ipu_ic_write(ipu, ic_conf, IC_CONF);
+#ifdef DEBUG
+	pr_debug("%s\n", __func__);
+	ic_dump_register(ipu);
+#endif
 }
 
 void _ipu_ic_uninit_prpenc(struct ipu_soc *ipu)
@@ -549,6 +559,10 @@ void _ipu_ic_init_pp(struct ipu_soc *ipu, ipu_channel_params_t *params)
 	}
 
 	ipu_ic_write(ipu, ic_conf, IC_CONF);
+#ifdef DEBUG
+	pr_debug("%s\n", __func__);
+	ic_dump_register(ipu);
+#endif
 }
 
 void _ipu_ic_uninit_pp(struct ipu_soc *ipu)
