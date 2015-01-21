@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -146,6 +146,7 @@ typedef enum _gceFEATURE
     gcvFEATURE_TEX_COMPRRESSION_SUPERTILED,
     gcvFEATURE_FAST_MSAA,
     gcvFEATURE_BUG_FIXED_INDEXED_TRIANGLE_STRIP,
+    gcvFEATURE_INDEX_FETCH_FIX,
     gcvFEATURE_TEXTURE_TILE_STATUS_READ,
     gcvFEATURE_DEPTH_BIAS_FIX,
     gcvFEATURE_RECT_PRIMITIVE,
@@ -225,6 +226,7 @@ typedef enum _gceFEATURE
 
     gcvFEATURE_HALTI3,
     gcvFEATURE_EEZ,
+    gcvFEATURE_INTEGER_SIGNEXT_FIX,
     gcvFEATURE_INTEGER_PIPE_FIX,
     gcvFEATURE_PSOUTPUT_MAPPING,
     gcvFEATURE_8K_RT_FIX,
@@ -268,6 +270,10 @@ typedef enum _gceFEATURE
 
     gcvFEATURE_FE_START_VERTEX_SUPPORT,
     gcvFEATURE_RS_DEPTHSTENCIL_NATIVE_SUPPORT,
+
+    gcvFEATURE_HALTI4,
+    gcvFEATURE_MSAA_FRAGMENT_OPERATION,
+    gcvFEATURE_ZERO_ATTRIB_SUPPORT,
 
     /* Insert features above this comment only. */
     gcvFEATURE_COUNT                /* Not a feature. */
@@ -323,7 +329,6 @@ typedef enum _gceFRAMEINFO_OP
     gcvFRAMEINFO_OP_DEC       = 1,
     gcvFRAMEINFO_OP_ZERO      = 2,
     gcvFRAMEINFO_OP_GET       = 3,
-
 
     gcvFRAMEINFO_OP_COUNT,
 }
@@ -1544,6 +1549,23 @@ typedef enum _gceHAL_ARG_VERSION
 }
 gceHAL_ARG_VERSION;
 
+
+typedef enum _gceCMDBUF_TYPE
+{
+    /* Contiguous command buffer. */
+    gcvCMDBUF_CONTIGUOUS,
+    /* Virtual command buffer. */
+    gcvCMDBUF_VIRTUAL,
+    /* Command buffer allocated from reserved memory. */
+    gcvCMDBUF_RESERVED,
+}
+gceCMDBUF_SOURCE;
+
+typedef enum _gceECO_FALG
+{
+    gcvECO_FLAG_MSAA_COHERENCEY = 1 << 0,
+}
+gceECO_FLAG;
 
 /*
 * Bit of a requirment is 1 means requirement is a must, 0 means requirement can

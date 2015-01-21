@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -778,6 +778,36 @@ gceSTATUS gckVGKERNEL_Dispatch(
             }
         }
         break;
+    case gcvHAL_READ_REGISTER:
+#if gcdREGISTER_ACCESS_FROM_USER
+        /* Read a register. */
+        gcmkONERROR(gckOS_ReadRegisterEx(
+            Kernel->os,
+            Kernel->core,
+            Interface->u.ReadRegisterData.address,
+            &Interface->u.ReadRegisterData.data));
+#else
+        /* No access from user land to read registers. */
+        Interface->u.ReadRegisterData.data = 0;
+        status = gcvSTATUS_NOT_SUPPORTED;
+#endif
+        break;
+
+    case gcvHAL_WRITE_REGISTER:
+#if gcdREGISTER_ACCESS_FROM_USER
+        /* Write a register. */
+        gcmkONERROR(
+            gckOS_WriteRegisterEx(Kernel->os,
+                                  Kernel->core,
+                                  Interface->u.WriteRegisterData.address,
+                                  Interface->u.WriteRegisterData.data));
+#else
+        /* No access from user land to write registers. */
+        status = gcvSTATUS_NOT_SUPPORTED;
+#endif
+        break;
+
+
     default:
         /* Invalid command. */
         status = gcvSTATUS_INVALID_ARGUMENT;

@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -178,6 +178,10 @@ static int force_contiguous_lowmem_shrink(IN gckKERNEL Kernel)
 	return ret;
 }
 
+extern gckKERNEL
+_GetValidKernel(
+  gckGALDEVICE Device
+  );
 
 gceSTATUS
 _ShrinkMemory(
@@ -192,7 +196,7 @@ _ShrinkMemory(
 
     galDevice = platform_get_drvdata(pdev);
 
-    kernel = galDevice->kernels[gcvCORE_MAJOR];
+    kernel = _GetValidKernel(galDevice);
 
     if (kernel != gcvNULL)
     {

@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -50,7 +50,7 @@ gpu3d_allocate_secure_mem(
     TEEC_Context *context = &teecContext;
     TEEC_SharedMemory *shm = NULL;
     void *handle = NULL;
-    unsigned int phyAddr = 0xFFFFFFFF;
+    gctPHYS_ADDR_T phyAddr;
     gceSTATUS status;
     gctSIZE_T bytes = size;
 
@@ -95,7 +95,7 @@ gpu3d_allocate_secure_mem(
     shm->flags = TEEC_MEM_INPUT;
 
     /* Use TEE Client API to register the underlying memory buffer. */
-    shm->phyAddr = (void *)phyAddr;
+    shm->phyAddr = (void *)(gctUINT32)phyAddr;
 
     result = TEEC_RegisterSharedMemory(
             context,
@@ -156,6 +156,10 @@ static TEEC_Result gpu3d_session_callback(
             TEEC_SharedMemory *shm = NULL;
 
             shm = gpu3d_allocate_secure_mem(channel->os, size);
+            if (shm == NULL)
+            {
+                return TEEC_ERROR_OUT_OF_MEMORY;
+            }
 
             /* use the value to save the pointer in client side */
             operation->params[0].value.a = (uint32_t)shm;

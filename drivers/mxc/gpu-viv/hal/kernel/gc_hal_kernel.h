@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -26,6 +26,8 @@
 #include "gc_hal_kernel_hardware.h"
 #include "gc_hal_driver.h"
 
+#include "gc_hal_kernel_mutex.h"
+
 #if gcdENABLE_VG
 #include "gc_hal_kernel_vg.h"
 #endif
@@ -37,7 +39,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /*******************************************************************************
 ***** New MMU Defination *******************************************************/
@@ -83,9 +84,21 @@ extern "C" {
 /*******************************************************************************
 ***** Stuck Dump Level ********************************************************/
 
-#define gcdSTUCK_DUMP_MINIMAL       1
-#define gcdSTUCK_DUMP_MIDDLE        2
-#define gcdSTUCK_DUMP_MAXIMAL       3
+/* Dump nonthing when stuck happens. */
+#define gcvSTUCK_DUMP_NONE          0
+
+/* Dump GPU state and memory near stuck point. */
+#define gcvSTUCK_DUMP_NEARBY_MEMORY 1
+
+/* Beside gcvSTUCK_DUMP_NEARBY_MEMORY, dump context buffer and user command buffer. */
+#define gcvSTUCK_DUMP_USER_COMMAND  2
+
+/* Beside gcvSTUCK_DUMP_USER_COMMAND, commit will be stall
+** to make sure command causing stuck isn't missed. */
+#define gcvSTUCK_DUMP_STALL_COMMAND 3
+
+/* Beside gcvSTUCK_DUMP_USER_COMMAND, dump kernel command buffer. */
+#define gcvSTUCK_DUMP_ALL_COMMAND   4
 
 /*******************************************************************************
 ***** Process Secure Cache ****************************************************/
@@ -643,7 +656,7 @@ struct _gckCOMMAND
     }
     queues[gcdCOMMAND_QUEUES];
 
-    gctPHYS_ADDR                physical;
+    gctUINT32                   physical;
     gctPOINTER                  logical;
     gctUINT32                   address;
     gctUINT32                   offset;
@@ -659,7 +672,7 @@ struct _gckCOMMAND
     gckCONTEXT                  currContext;
 
     /* Pointer to last WAIT command. */
-    gctPHYS_ADDR                waitPhysical;
+    gctUINT32                   waitPhysical;
     gctPOINTER                  waitLogical;
     gctUINT32                   waitSize;
 
@@ -829,7 +842,7 @@ gceSTATUS
 gckEVENT_Stop(
     IN gckEVENT Event,
     IN gctUINT32 ProcessID,
-    IN gctPHYS_ADDR Handle,
+    IN gctUINT32 Handle,
     IN gctPOINTER Logical,
     IN gctSIGNAL Signal,
     IN OUT gctUINT32 * waitSize
@@ -916,7 +929,7 @@ typedef union _gcuVIDMEM_NODE
 
 #if gcdENABLE_VG
         /* Physical address of this node, only meaningful when it is contiguous. */
-        gctUINT32               physicalAddress;
+        gctUINT64               physicalAddress;
 
         /* Kernel logical of this node. */
         gctPOINTER              kernelVirtual;
@@ -1233,6 +1246,7 @@ gckKERNEL_GetGPUAddress(
     IN gckKERNEL Kernel,
     IN gctPOINTER Logical,
     IN gctBOOL InUserSpace,
+    IN gckVIRTUAL_COMMAND_BUFFER_PTR Buffer,
     OUT gctUINT32 * Address
     );
 
@@ -1414,7 +1428,9 @@ void
 gckLINKQUEUE_Enqueue(
     IN gckLINKQUEUE LinkQueue,
     IN gctUINT32 start,
-    IN gctUINT32 end
+    IN gctUINT32 end,
+    IN gctUINT32 LinkLow,
+    IN gctUINT32 LinkHigh
     );
 
 void

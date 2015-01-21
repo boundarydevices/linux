@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *
 *****************************************************************************/
+
 
 #ifndef __gc_hal_options_h_
 #define __gc_hal_options_h_
@@ -849,7 +850,7 @@
         is be used to debug.
 */
 #ifndef gcdLINK_QUEUE_SIZE
-#   define gcdLINK_QUEUE_SIZE                   5
+#   define gcdLINK_QUEUE_SIZE                   64
 #endif
 
 /*  gcdALPHA_KILL_IN_SHADER
@@ -932,16 +933,15 @@
 /*
     gcdENABLE_RENDER_INTO_WINDOW
 
-        Enable Render-Into-Window (ie, No-Resolve) feature on android.
+        Enable Render-Into-Window (ie, No-Resolve or direct rendering) feature.
         NOTE that even if enabled, it still depends on hardware feature and
-        android application behavior. When hardware feature or application
+        application behavior. When hardware feature or application
         behavior can not support render into window mode, it will fail back
         to normal mode.
-        When Render-Into-Window is finally used, window back buffer of android
-        applications will be allocated matching render target tiling format.
+        On android, if Render-Into-Window is finally used, window back buffer
+        of applications will be allocated matching render target tiling format.
         Otherwise buffer tiling is decided by the above option
         'gcdGPU_LINEAR_BUFFER_ENABLED'.
-        Android only for now.
 */
 #ifndef gcdENABLE_RENDER_INTO_WINDOW
 #   define gcdENABLE_RENDER_INTO_WINDOW         1
@@ -1106,13 +1106,9 @@
 
 #ifndef gcdMOVG
 #   define gcdMOVG                              0
-#if gcdMOVG
-#       define GC355_PROFILER                   1
-#   endif
-#       define gcdENABLE_TS_DOUBLE_BUFFER       1
+#   define gcdENABLE_TS_DOUBLE_BUFFER           1
 #else
 #if gcdMOVG
-#       define GC355_PROFILER                   1
 #       define gcdENABLE_TS_DOUBLE_BUFFER       0
 #else
 #       define gcdENABLE_TS_DOUBLE_BUFFER       1
@@ -1229,7 +1225,7 @@
         Enable third party operation like tpc or not.
 */
 #ifndef gcdENABLE_THIRD_PARTY_OPERATION
-#   define gcdENABLE_THIRD_PARTY_OPERATION      1
+#   define gcdENABLE_THIRD_PARTY_OPERATION      0
 #endif
 
 
@@ -1246,6 +1242,17 @@
 
 #ifndef gcdENABLE_VG
 #   define gcdENABLE_VG                         0
+#endif
+
+
+#if gcdENABLE_VG
+#ifdef LINUX
+#       define GC355_PROFILER                   0
+#	else
+#   	define GC355_PROFILER                   0
+#   endif
+#else
+# 	define GC355_PROFILER                       0
 #endif
 
 #ifndef gcdGC355_MEM_PRINT
@@ -1266,6 +1273,17 @@
 */
 #ifndef gcdRECORD_COMMAND
 #   define gcdRECORD_COMMAND                    0
+#endif
+
+/*
+    gcdALLOC_CMD_FROM_RESERVE
+
+    Provide a way by which location of command buffer can be
+    specified. This is a DEBUG option to limit command buffer
+    to some memory range.
+*/
+#ifndef gcdALLOC_CMD_FROM_RESERVE
+#   define gcdALLOC_CMD_FROM_RESERVE            0
 #endif
 
 #endif /* __gc_hal_options_h_ */

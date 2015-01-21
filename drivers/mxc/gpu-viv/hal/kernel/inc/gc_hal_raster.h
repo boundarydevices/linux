@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -1029,6 +1029,12 @@ gco2D_UnSet2DEngine(
 gceSTATUS
 gco2D_Get2DEngine(
     OUT gco2D * Engine
+    );
+
+gceSTATUS
+gco2D_Commit(
+    IN gco2D Engine,
+    IN gctBOOL Stall
     );
 
 #ifdef __cplusplus

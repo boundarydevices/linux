@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -138,7 +138,7 @@ module_param(recovery, uint, 0644);
 MODULE_PARM_DESC(recovery, "Recover GPU from stuck (1: Enable, 0: Disable)");
 
 /* Middle needs about 40KB buffer, Maximal may need more than 200KB buffer. */
-static uint stuckDump = 1;
+static uint stuckDump = 0;
 module_param(stuckDump, uint, 0644);
 MODULE_PARM_DESC(stuckDump, "Level of stuck dump content (1: Minimal, 2: Middle, 3: Maximal)");
 
@@ -151,6 +151,10 @@ module_param(mmu, int, 0644);
 static int gpu3DMinClock = 1;
 
 static int contiguousRequested = 0;
+
+
+static gctBOOL registerMemMapped = gcvFALSE;
+static gctPOINTER registerMemAddress = gcvNULL;
 
 static int drv_open(
     struct inode* inode,
@@ -199,9 +203,11 @@ _UpdateModuleParam(
     irqLine2D         = Param->irqLine2D      ;
     registerMemBase2D = Param->registerMemBase2D;
     registerMemSize2D = Param->registerMemSize2D;
+#if gcdENABLE_VG
     irqLineVG         = Param->irqLineVG;
     registerMemBaseVG = Param->registerMemBaseVG;
     registerMemSizeVG = Param->registerMemSizeVG;
+#endif
     contiguousSize    = Param->contiguousSize;
     contiguousBase    = Param->contiguousBase;
     bankSize          = Param->bankSize;
@@ -218,6 +224,8 @@ _UpdateModuleParam(
     showArgs          = Param->showArgs;
     contiguousRequested = Param->contiguousRequested;
     gpu3DMinClock     = Param->gpu3DMinClock;
+    registerMemMapped    = Param->registerMemMapped;
+    registerMemAddress    = Param->registerMemAddress;
 }
 
 void
@@ -815,6 +823,8 @@ static int drv_init(void)
         .contiguousRequested = contiguousRequested,
         .platform           = &platform,
         .mmu                = mmu,
+        .registerMemMapped = registerMemMapped,
+        .registerMemAddress = registerMemAddress,
     };
 
     gcmkHEADER();
@@ -904,7 +914,7 @@ static int drv_init(void)
     }
 
     /* Create the device class. */
-    device_class = class_create(THIS_MODULE, "graphics_class");
+    device_class = class_create(THIS_MODULE, CLASS_NAME);
 
     if (IS_ERR(device_class))
     {
@@ -1029,6 +1039,7 @@ static int __devinit gpu_probe(struct platform_device *pdev)
         .stuckDump          = stuckDump,
         .showArgs           = showArgs,
         .gpu3DMinClock      = gpu3DMinClock,
+        .registerMemMapped    = registerMemMapped,
     };
 
     gcmkHEADER();
@@ -1249,6 +1260,7 @@ static struct platform_driver gpu_driver = {
     .resume     = gpu_resume,
 
     .driver     = {
+        .owner = THIS_MODULE,
         .name   = DEVICE_NAME,
 #if defined(CONFIG_PM) && LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30)
         .pm     = &gpu_pm_ops,

@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -223,6 +223,7 @@ _FlushPipe(
                 ?   ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ? 3:3) - (0 ? 3:3) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 3:3) - (0 ? 3:3) + 1))))))) << (0 ? 3:3))) | (((gctUINT32) (0x1 & ((gctUINT32) ((((1 ? 3:3) - (0 ? 3:3) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 3:3) - (0 ? 3:3) + 1))))))) << (0 ? 3:3)))
                 :   ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ? 0:0) - (0 ? 0:0) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 0:0) - (0 ? 0:0) + 1))))))) << (0 ? 0:0))) | (((gctUINT32) (0x1 & ((gctUINT32) ((((1 ? 0:0) - (0 ? 0:0) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 0:0) - (0 ? 0:0) + 1))))))) << (0 ? 0:0)))
                   | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ? 1:1) - (0 ? 1:1) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 1:1) - (0 ? 1:1) + 1))))))) << (0 ? 1:1))) | (((gctUINT32) (0x1 & ((gctUINT32) ((((1 ? 1:1) - (0 ? 1:1) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 1:1) - (0 ? 1:1) + 1))))))) << (0 ? 1:1)))
+                  | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ? 4:4) - (0 ? 4:4) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 4:4) - (0 ? 4:4) + 1))))))) << (0 ? 4:4))) | (((gctUINT32) (0x1 & ((gctUINT32) ((((1 ? 4:4) - (0 ? 4:4) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 4:4) - (0 ? 4:4) + 1))))))) << (0 ? 4:4)))
                   | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ? 2:2) - (0 ? 2:2) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 2:2) - (0 ? 2:2) + 1))))))) << (0 ? 2:2))) | (((gctUINT32) (0x1 & ((gctUINT32) ((((1 ? 2:2) - (0 ? 2:2) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 2:2) - (0 ? 2:2) + 1))))))) << (0 ? 2:2)))
                   | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ? 5:5) - (0 ? 5:5) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 5:5) - (0 ? 5:5) + 1))))))) << (0 ? 5:5))) | (((gctUINT32) (0x1 & ((gctUINT32) ((((1 ? 5:5) - (0 ? 5:5) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 5:5) - (0 ? 5:5) + 1))))))) << (0 ? 5:5)));
 
@@ -620,7 +621,7 @@ _InitializeContextBuffer(
     halti3 = (((((gctUINT32) (Context->hardware->identity.chipMinorFeatures5)) >> (0 ? 9:9)) & ((gctUINT32) ((((1 ? 9:9) - (0 ? 9:9) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 9:9) - (0 ? 9:9) + 1)))))) );
 
     /* Query how many uniforms can support for non-unified uniform mode. */
-    {if (Context->hardware->identity.numConstants > 256){    unifiedUniform = gcvTRUE;    vsConstBase  = 0xC000;    psConstBase  = 0xC000;    constMax     = Context->hardware->identity.numConstants;    vertexUniforms   = 256;    fragmentUniforms   = constMax - vertexUniforms;}else if (Context->hardware->identity.numConstants == 256){    if (Context->hardware->identity.chipModel == gcv2000 && Context->hardware->identity.chipRevision == 0x5118)    {        unifiedUniform = gcvFALSE;        vsConstBase  = 0x1400;        psConstBase  = 0x1C00;        vertexUniforms   = 256;        fragmentUniforms   = 64;        constMax     = 320;    }    else    {        unifiedUniform = gcvFALSE;        vsConstBase  = 0x1400;        psConstBase  = 0x1C00;        vertexUniforms   = 256;        fragmentUniforms   = 256;        constMax     = 512;    }}else{    unifiedUniform = gcvFALSE;    vsConstBase  = 0x1400;    psConstBase  = 0x1C00;    vertexUniforms   = 168;    fragmentUniforms   = 64;    constMax     = 232;}};
+    {if (Context->hardware->identity.numConstants > 256){    unifiedUniform = gcvTRUE;    vsConstBase  = 0xC000;    psConstBase  = 0xC000;    vertexUniforms   = gcmMIN(512, Context->hardware->identity.numConstants - 64);    fragmentUniforms   = gcmMIN(512, Context->hardware->identity.numConstants - 64);    constMax     = Context->hardware->identity.numConstants;}else if (Context->hardware->identity.numConstants == 256){    if (Context->hardware->identity.chipModel == gcv2000 && Context->hardware->identity.chipRevision == 0x5118)    {        unifiedUniform = gcvFALSE;        vsConstBase  = 0x1400;        psConstBase  = 0x1C00;        vertexUniforms   = 256;        fragmentUniforms   = 64;        constMax     = 320;    }    else    {        unifiedUniform = gcvFALSE;        vsConstBase  = 0x1400;        psConstBase  = 0x1C00;        vertexUniforms   = 256;        fragmentUniforms   = 256;        constMax     = 512;    }}else{    unifiedUniform = gcvFALSE;    vsConstBase  = 0x1400;    psConstBase  = 0x1C00;    vertexUniforms   = 168;    fragmentUniforms   = 64;    constMax     = 232;}};
 
 #if !gcdENABLE_UNIFIED_CONSTANT
     if (Context->hardware->identity.numConstants > 256)
@@ -764,7 +765,7 @@ _InitializeContextBuffer(
     index += _State(Context, index, 0x00E10 >> 2, 0x00000000, 4, gcvFALSE, gcvFALSE);
     index += _State(Context, index, 0x00E04 >> 2, 0x00000000, 1, gcvFALSE, gcvFALSE);
     index += _State(Context, index, 0x00E40 >> 2, 0x00000000, 16, gcvFALSE, gcvFALSE);
-    index += _State(Context, index, 0x00E08 >> 2, 0x00000031, 1, gcvFALSE, gcvFALSE);
+    index += _State(Context, index, 0x00E08 >> 2, 0x17000031, 1, gcvFALSE, gcvFALSE);
     index += _State(Context, index, 0x00E24 >> 2, 0x00000000, 1, gcvFALSE, gcvFALSE);
     index += _State(Context, index, 0x00E20 >> 2, 0x00000000, 1, gcvFALSE, gcvFALSE);
 
@@ -779,6 +780,13 @@ _InitializeContextBuffer(
     index += _State(Context, index, 0x0100C >> 2, 0x00000000, 1, gcvFALSE, gcvFALSE);
     index += _State(Context, index, 0x01010 >> 2, 0x00000000, 1, gcvFALSE, gcvFALSE);
     index += _State(Context, index, 0x01030 >> 2, 0x00000000, 1, gcvFALSE, gcvFALSE);
+
+    if (halti2)
+    {
+        index += _State(Context, index, 0x0102C >> 2, 0x00000000, 1, gcvFALSE, gcvFALSE);
+        index += _State(Context, index, 0x01034 >> 2, 0x00000000, 1, gcvFALSE, gcvFALSE);
+        index += _State(Context, index, 0x01038 >> 2, 0x00000000, 1, gcvFALSE, gcvFALSE);
+    }
 
     index += _CLOSE_RANGE();
 
@@ -1587,6 +1595,7 @@ gckCONTEXT_Construct(
                 context->hardware->kernel,
                 pointer,
                 gcvFALSE,
+                buffer->physical,
                 &address
                 ));
         }
@@ -1646,7 +1655,7 @@ gckCONTEXT_Construct(
 
             /* Query LINK size. */
             gcmkONERROR(gckHARDWARE_Link(
-                Hardware, gcvNULL, 0, 0, &linkBytes
+                Hardware, gcvNULL, 0, 0, &linkBytes, gcvNULL, gcvNULL
                 ));
 
             /* Generate a LINK. */
@@ -1655,7 +1664,9 @@ gckCONTEXT_Construct(
                 xdLink,
                 xdEntryAddress,
                 xdEntrySize,
-                &linkBytes
+                &linkBytes,
+                gcvNULL,
+                gcvNULL
                 ));
         }
     }

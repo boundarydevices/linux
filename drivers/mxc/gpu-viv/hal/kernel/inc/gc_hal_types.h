@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -227,6 +227,8 @@ typedef const void *            gctCONST_POINTER;
 typedef char                    gctCHAR;
 typedef char *                  gctSTRING;
 typedef const char *            gctCONST_STRING;
+
+typedef gctUINT64               gctPHYS_ADDR_T;
 
 typedef struct _gcsCOUNT_STRING
 {
@@ -884,6 +886,8 @@ struct _gckLINKDATA
     gctUINT32                   start;
     gctUINT32                   end;
     gctUINT32                   pid;
+    gctUINT32                   linkLow;
+    gctUINT32                   linkHigh;
 };
 
 typedef struct _gckLINKQUEUE * gckLINKQUEUE;

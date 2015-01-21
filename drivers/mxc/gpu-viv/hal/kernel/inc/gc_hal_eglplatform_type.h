@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -233,6 +233,28 @@ typedef struct _halEvent
 }
 halEvent;
 
+/* Tiling layouts. */
+typedef enum _halTiling
+{
+    HAL_INVALIDTILED = 0x0,         /* Invalid tiling */
+    /* Tiling basic modes enum'ed in power of 2. */
+    HAL_LINEAR       = 0x1,         /* No    tiling. */
+    HAL_TILED        = 0x2,         /* 4x4   tiling. */
+    HAL_SUPERTILED   = 0x4,         /* 64x64 tiling. */
+    HAL_MINORTILED   = 0x8,         /* 2x2   tiling. */
+
+    /* Tiling special layouts. */
+    HAL_TILING_SPLIT_BUFFER = 0x100,
+
+    /* Tiling combination layouts. */
+    HAL_MULTI_TILED      = HAL_TILED
+                         | HAL_TILING_SPLIT_BUFFER,
+
+    HAL_MULTI_SUPERTILED = HAL_SUPERTILED
+                         | HAL_TILING_SPLIT_BUFFER,
+}
+halTiling;
+
 /* VFK_DISPLAY_INFO structure defining information returned by
    vdkGetDisplayInfoEx. */
 typedef struct _halDISPLAY_INFO
@@ -245,6 +267,9 @@ typedef struct _halDISPLAY_INFO
     ** for the specified display.*/
     int                         stride;
 
+    /* The tiling layout of the display. */
+    int                         tiling;
+
     /* The color depth of the display in bits per pixel. */
     int                         bitsPerPixel;
 
@@ -256,13 +281,12 @@ typedef struct _halDISPLAY_INFO
     ** if the address is not known for the specified display. */
     unsigned long               physical;
 
-    int                wrapFB;   /* true if compositor, false otherwise. */
+    /* True if requires buffer wrapping. */
+    int                         wrapFB;
 
-#ifndef __QNXNTO__
-    /* 355_FB_MULTI_BUFFER */
-    int                      multiBuffer;
-    int                      backBufferY;
-#endif
+    /* FB_MULTI_BUFFER */
+    int                         multiBuffer;
+    int                         backBufferY;
 
     /* The color info of the display. */
     unsigned int                alphaLength;

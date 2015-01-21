@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -80,20 +80,16 @@ gcePROGRAM_STAGE_BIT;
 
 gceSTATUS
 gcoHAL_QueryShaderCaps(
-    IN gcoHAL Hal,
-    OUT gctUINT * VertexUniforms,
-    OUT gctUINT * FragmentUniforms,
-    OUT gctUINT * Varyings
+    IN  gcoHAL    Hal,
+    OUT gctUINT * UnifiedUniforms,
+    OUT gctUINT * VertUniforms,
+    OUT gctUINT * FragUniforms,
+    OUT gctUINT * Varyings,
+    OUT gctUINT * ShaderCoreCount,
+    OUT gctUINT * ThreadCount,
+    OUT gctUINT * VertInstructionCount,
+    OUT gctUINT * FragInstructionCount
     );
-
-gceSTATUS
-gcoHAL_QueryShaderCapsEx(
-                         IN gcoHAL Hal,
-                         OUT gctUINT * ShaderCoreCount,
-                         OUT gctUINT * ThreadCount,
-                         OUT gctUINT * VertexInstructionCount,
-                         OUT gctUINT * FragmentInstructionCount
-                         );
 
 gceSTATUS
 gcoHAL_QuerySamplerBase(
@@ -106,10 +102,10 @@ gcoHAL_QuerySamplerBase(
 
 gceSTATUS
 gcoHAL_QueryUniformBase(
-					    IN  gcoHAL Hal,
-					    OUT gctUINT32 * VertexBase,
-					    OUT gctUINT32 * FragmentBase
-					    );
+                        IN  gcoHAL Hal,
+                         OUT gctUINT32 * VertexBase,
+                         OUT gctUINT32 * FragmentBase
+                        );
 
 gceSTATUS
 gcoHAL_QueryTextureCaps(
@@ -446,6 +442,12 @@ gcoSURF_IsFormatRenderableAsRT(
     );
 
 gceSTATUS
+gcoSURF_SetSharedLock(
+    IN gcoSURF Surface,
+    IN gctPOINTER sharedLock
+    );
+
+gceSTATUS
 gcoSURF_GetFence(
     IN gcoSURF Surface
     );
@@ -517,6 +519,11 @@ gcoSURF_3DBlitCopy(
 /******************************************************************************\
 ******************************** gcoINDEX Object *******************************
 \******************************************************************************/
+gceSTATUS
+gcoINDEX_SetSharedLock(
+    IN gcoINDEX Index,
+    IN gctPOINTER sharedLock
+    );
 
 /* Construct a new gcoINDEX object. */
 gceSTATUS
@@ -1231,6 +1238,9 @@ gco3D_DrawInstancedPrimitives(
     IN gctSIZE_T StartIndex,
     IN gctSIZE_T PrimitiveCount,
     IN gctSIZE_T VertexCount,
+    IN gctBOOL SpilitDraw,
+    IN gctSIZE_T SpilitCount,
+    IN gcePRIMITIVE SpilitType,
     IN gctSIZE_T InstanceCount
     );
 
@@ -1260,7 +1270,10 @@ gco3D_DrawIndexedPrimitives(
     IN gcePRIMITIVE Type,
     IN gctSIZE_T BaseVertex,
     IN gctSIZE_T StartIndex,
-    IN gctSIZE_T PrimitiveCount
+    IN gctSIZE_T PrimitiveCount,
+    IN gctBOOL SpilitDraw,
+    IN gctSIZE_T SpilitCount,
+    IN gcePRIMITIVE SpilitType
     );
 
 /* Draw a number of indexed primitives using offsets. */
@@ -2005,6 +2018,12 @@ typedef enum _gceATTRIB_SCHEME
 } gceATTRIB_SCHEME;
 
 gceSTATUS
+gcoSTREAM_SetSharedLock(
+    IN gcoSTREAM Stream,
+    IN gctPOINTER sharedLock
+    );
+
+gceSTATUS
 gcoSTREAM_Construct(
     IN gcoHAL Hal,
     OUT gcoSTREAM * Stream
@@ -2278,13 +2297,16 @@ gcoVERTEXARRAY_Bind_Ex(
     IN gctUINT32 EnableBits,
     IN gcsVERTEXARRAY_PTR VertexArray,
     IN gctUINT First,
-    IN gctSIZE_T Count,
+    IN gctSIZE_T * Count,
     IN gctBOOL DrawArraysInstanced,
     IN gctSIZE_T InstanceCount,
     IN gceINDEX_TYPE IndexType,
     IN gcoINDEX IndexObject,
     IN gctPOINTER IndexMemory,
     IN OUT gcePRIMITIVE * PrimitiveType,
+    IN OUT gctBOOL * SpilitDraw,
+    IN OUT gctSIZE_T * SpilitCount,
+    IN OUT gcePRIMITIVE * SpilitPrimitiveType,
 #if gcdUSE_WCLIP_PATCH
     IN OUT gctUINT * PrimitiveCount,
     IN OUT gctFLOAT * wLimitRms,
@@ -2300,13 +2322,17 @@ gcoVERTEXARRAY_Bind_Ex2(
     IN gctUINT32 EnableBits,
     IN gcsATTRIBUTE_PTR VertexArray,
     IN gctSIZE_T First,
-    IN gctSIZE_T Count,
+    IN gctSIZE_T * Count,
     IN gctBOOL DrawArraysInstanced,
     IN gctSIZE_T InstanceCount,
     IN gceINDEX_TYPE IndexType,
     IN gcoBUFOBJ IndexObject,
     IN gctPOINTER IndexMemory,
+    IN gctBOOL PrimtiveRestart,
     IN OUT gcePRIMITIVE * PrimitiveType,
+    IN OUT gctBOOL * SpilitDraw,
+    IN OUT gctSIZE_T * SpilitCount,
+    IN OUT gcePRIMITIVE * SpilitPrimitiveType,
 #if gcdUSE_WCLIP_PATCH
     IN OUT gctSIZE_T * PrimitiveCount,
     IN OUT gctFLOAT * wLimitRms,
@@ -2323,11 +2349,14 @@ gcoVERTEXARRAY_Bind(
     IN gctUINT32 EnableBits,
     IN gcsVERTEXARRAY_PTR VertexArray,
     IN gctUINT First,
-    IN gctSIZE_T Count,
+    IN gctSIZE_T * Count,
     IN gceINDEX_TYPE IndexType,
     IN gcoINDEX IndexObject,
     IN gctPOINTER IndexMemory,
     IN OUT gcePRIMITIVE * PrimitiveType,
+    IN OUT gctBOOL * SpilitDraw,
+    IN OUT gctSIZE_T * SpilitCount,
+    IN OUT gcePRIMITIVE * SpilitPrimitiveType,
 #if gcdUSE_WCLIP_PATCH
     IN OUT gctUINT * PrimitiveCount,
     IN OUT gctFLOAT * wLimitRms,
@@ -2449,6 +2478,10 @@ typedef enum _gceBUFOBJ_USAGE
     gcvBUFOBJ_USAGE_DYNAMIC_READ,
     gcvBUFOBJ_USAGE_DYNAMIC_COPY,
 
+    /* special patch for optimaize performance,
+    ** no fence and duplicate stream to ensure data correct
+    */
+    gcvBUFOBJ_USAGE_DISABLE_FENCE_DYNAMIC_STREAM = 256
 } gceBUFOBJ_USAGE;
 
 /* Construct a new gcoBUFOBJ object. */
