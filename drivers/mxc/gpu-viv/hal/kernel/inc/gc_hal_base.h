@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *
 *****************************************************************************/
+
 
 #ifndef __gc_hal_base_h_
 #define __gc_hal_base_h_
@@ -66,10 +67,36 @@ typedef struct _gcsCONTEXT_MAP *        gcsCONTEXT_MAP_PTR;
 typedef void *                          gcoVG;
 #endif
 
+#if GC355_PROFILER
+typedef struct _gcsPROFILERFUNCData * gcsPROFILERFUNCData_PTR;
+typedef struct _gcsPROFILERFUNCNODE * gcsPROFILERFUNCNODE_PTR;
+#endif
+
 #if gcdSYNC
 typedef struct _gcoFENCE *              gcoFENCE;
 typedef struct _gcsSYNC_CONTEXT *       gcsSYNC_CONTEXT_PTR;
 #endif
+
+/******************************************************************************\
+********************* Share obj lock/unlock macros. ****************************
+\******************************************************************************/
+#define gcmLOCK_SHARE_OBJ(Obj) \
+{ \
+    if(Obj->sharedLock != gcvNULL)\
+    {\
+        (gcoOS_AcquireMutex( \
+                     gcvNULL, Obj->sharedLock, gcvINFINITE));\
+    }\
+}
+
+
+#define gcmUNLOCK_SHARE_OBJ(Obj)\
+{\
+    if(Obj->sharedLock != gcvNULL)\
+    {\
+        (gcoOS_ReleaseMutex(gcvNULL, Obj->sharedLock));\
+    }\
+}
 
 #if defined(ANDROID)
 typedef struct _gcoOS_SymbolsList gcoOS_SymbolsList;
@@ -171,6 +198,8 @@ typedef enum _gcePATCH_ID
     gcvPATCH_SUMSUNG_BENCH,
     gcvPATCH_ROCKSTAR_MAXPAYNE,
     gcvPATCH_TITANPACKING,
+    gcvPATCH_OES20SFT,
+    gcvPATCH_OES30SFT,
     gcvPATCH_BASEMARKOSIICN,
     gcvPATCH_FRUITNINJA,
 #if defined(ANDROID)
@@ -504,6 +533,31 @@ typedef struct _gcsCONTAINER
     gcsCONTAINER_RECORD             allocList;
 }
 gcsCONTAINER;
+
+#if GC355_PROFILER
+/*------------------------GC355_PROFILER function node structure--------------*/
+typedef struct _gcsPROFILERFUNCData
+{
+    gctSTRING funcName;
+    gctSTRING Tag;
+    gctUINT   TreeDepth;
+    gctUINT   saveLayerTreeDepth;
+    gctUINT   varTreeDepth;
+    gctUINT64 elapsedTime;
+    gctUINT64 cpuTime;
+    gctUINT64 gpuTime;
+}gcsPROFILERFUNCData;
+
+
+typedef struct _gcsPROFILERFUNCNODE
+{
+    gcsPROFILERFUNCData_PTR data;
+    gcsPROFILERFUNCNODE_PTR pre;
+    gcsPROFILERFUNCNODE_PTR next;
+}gcsPROFILERFUNCNODE;
+/*----------------------------------------------------------------------------*/
+#endif
+
 
 gceSTATUS
 gcsCONTAINER_Construct(
@@ -1029,6 +1083,35 @@ gcoHAL_ConfigPowerManagement(
     IN gctBOOL Enable
     );
 
+gceSTATUS
+gcoHAL_AllocateVideoMemory(
+    IN gctUINT Alignment,
+    IN gceSURF_TYPE Type,
+    IN gctUINT32 Flag,
+    IN gcePOOL Pool,
+    IN OUT gctSIZE_T * Bytes,
+    OUT gctUINT32_PTR Node
+    );
+
+gceSTATUS
+gcoHAL_LockVideoMemory(
+    IN gctUINT32 Node,
+    IN gctBOOL Cacheable,
+    OUT gctUINT32 * Physical,
+    OUT gctPOINTER * Logical
+    );
+
+gceSTATUS
+gcoHAL_UnlockVideoMemory(
+    IN gctUINT32 Node,
+    IN gceSURF_TYPE Type
+    );
+
+gceSTATUS
+    gcoHAL_ReleaseVideoMemory(
+    IN gctUINT32 Node
+    );
+
 #if gcdENABLE_3D || gcdENABLE_VG
 /* Query the target capabilities. */
 gceSTATUS
@@ -1307,6 +1390,15 @@ gceSTATUS
 gcoOS_CloseFD(
     IN gcoOS Os,
     IN gctINT FD
+    );
+
+/* Scan a file. */
+gceSTATUS
+gcoOS_FscanfI(
+    IN gcoOS Os,
+    IN gctFILE File,
+    IN gctCONST_STRING Format,
+    OUT gctUINT *result
     );
 
 /* Dup file descriptor to another. */
@@ -3757,9 +3849,9 @@ gcoOS_Print(
 #   define gcmkPRINT_VERSION()      _gcmPRINT_VERSION(gcmk)
 #   define _gcmPRINT_VERSION(prefix) \
         prefix##TRACE(gcvLEVEL_ERROR, \
-                      "Vivante HAL version %d.%d.%d build %d  %s  %s", \
-                      gcvVERSION_MAJOR, gcvVERSION_MINOR, gcvVERSION_PATCH, \
-                      gcvVERSION_BUILD, gcvVERSION_DATE, gcvVERSION_TIME )
+                      "Vivante HAL version %d.%d.%d build %d", \
+                      gcvVERSION_MAJOR, gcvVERSION_MINOR, \
+                      gcvVERSION_PATCH, gcvVERSION_BUILD)
 #else
 #   define gcmPRINT_VERSION()       do { gcmSTACK_DUMP(); } while (gcvFALSE)
 #   define gcmkPRINT_VERSION()      do { } while (gcvFALSE)
@@ -4531,6 +4623,34 @@ gckOS_DebugStatus2Name(
             gcmASSERT(tmp <= gcvMAXUINT32); \
             } \
         (x) = tmp; \
+    } \
+    while (gcvFALSE)
+
+/*******************************************************************************
+**
+**  gcmkSAFECASTPHYSADDRT
+**
+**      Check whether value of a gctPHYS_ADDR_T variable beyond the capability
+**      of 32bits GPU hardware.
+**
+**  ASSUMPTIONS:
+**
+**
+**
+**  ARGUMENTS:
+**
+**      x   A gctUINT32 variable
+**      y   A gctSIZE_T variable
+*/
+#define gcmkSAFECASTPHYSADDRT(x, y) \
+    do \
+    { \
+    gctUINT32 tmp = (gctUINT32)(y); \
+    if (gcmSIZEOF(gctPHYS_ADDR_T) > gcmSIZEOF(gctUINT32)) \
+    { \
+    gcmkASSERT(tmp <= gcvMAXUINT32); \
+    } \
+    (x) = tmp; \
     } \
     while (gcvFALSE)
 
@@ -5476,9 +5596,9 @@ struct _gcoOS_SymbolsList
         UnifiedConst = gcvTRUE; \
         VsConstBase  = gcregSHUniformsRegAddrs; \
         PsConstBase  = gcregSHUniformsRegAddrs; \
+        VsConstMax   = gcmMIN(512, NumConstants - 64); \
+        PsConstMax   = gcmMIN(512, NumConstants - 64); \
         ConstMax     = NumConstants; \
-        VsConstMax   = 256; \
-        PsConstMax   = ConstMax - VsConstMax; \
     } \
     else if (NumConstants == 256) \
     { \

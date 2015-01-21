@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -260,10 +260,7 @@ _DumpState(
     /* Dump GPU Debug registers. */
     gcmkVERIFY_OK(gckHARDWARE_DumpGPUState(Kernel->hardware));
 
-    if (Kernel->virtualCommandBuffer)
-    {
-        gcmkVERIFY_OK(gckCOMMAND_DumpExecutingBuffer(Kernel->command));
-    }
+    gcmkVERIFY_OK(gckCOMMAND_DumpExecutingBuffer(Kernel->command));
 
     /* Dump Pending event. */
     gcmkVERIFY_OK(gckEVENT_Dump(Kernel->eventObj));
@@ -1509,7 +1506,7 @@ gckKERNEL_Dispatch(
     gcskSECURE_CACHE_PTR cache;
     gctPOINTER logical;
 #endif
-    gctUINT32 paddr = gcvINVALID_ADDRESS;
+    gctUINT64 paddr = gcvINVALID_ADDRESS;
 #if !USE_NEW_LINUX_SIGNAL
     gctSIGNAL   signal;
 #endif
@@ -2330,8 +2327,8 @@ gckKERNEL_Dispatch(
             )
             {
                 /* If memory is contiguous, get physical address. */
-                gcmkONERROR(gckOS_GetPhysicalAddress(
-                    Kernel->os, logical, (gctUINT32*)&paddr));
+                gcmkONERROR(gckOS_UserLogicalToPhysical(
+                    Kernel->os, logical, &paddr));
             }
         }
 
@@ -2422,9 +2419,9 @@ gckKERNEL_Dispatch(
         Interface->u.Version.build = gcvVERSION_BUILD;
 #if gcmIS_DEBUG(gcdDEBUG_TRACE)
         gcmkTRACE_ZONE(gcvLEVEL_INFO, gcvZONE_KERNEL,
-                       "KERNEL version %d.%d.%d build %u %s %s",
-                       gcvVERSION_MAJOR, gcvVERSION_MINOR, gcvVERSION_PATCH,
-                       gcvVERSION_BUILD, gcvVERSION_DATE, gcvVERSION_TIME);
+                       "KERNEL version %d.%d.%d build %u",
+                       gcvVERSION_MAJOR, gcvVERSION_MINOR,
+                       gcvVERSION_PATCH, gcvVERSION_BUILD);
 #endif
         break;
 
@@ -3475,7 +3472,7 @@ gckKERNEL_Recovery(
     gcmkONERROR(gckKERNEL_FlushTranslationCache(Kernel, cache, gcvNULL, 0));
 #endif
 
-    if (Kernel->stuckDump == gcdSTUCK_DUMP_MINIMAL)
+    if (Kernel->stuckDump == gcvSTUCK_DUMP_NONE)
     {
         gcmkPRINT("[galcore]: GPU[%d] hang, automatic recovery.", Kernel->core);
     }
@@ -3993,54 +3990,31 @@ gckKERNEL_GetGPUAddress(
     IN gckKERNEL Kernel,
     IN gctPOINTER Logical,
     IN gctBOOL InUserSpace,
+    IN gckVIRTUAL_COMMAND_BUFFER_PTR Buffer,
     OUT gctUINT32 * Address
     )
 {
-    gceSTATUS status;
-    gckVIRTUAL_COMMAND_BUFFER_PTR buffer;
+    gckVIRTUAL_COMMAND_BUFFER_PTR buffer = Buffer;
     gctPOINTER start;
-    gctUINT32 pid;
 
     gcmkHEADER_ARG("Logical = %x InUserSpace=%d.", Logical, InUserSpace);
 
-    gcmkVERIFY_OK(gckOS_GetProcessID(&pid));
-
-    status = gcvSTATUS_INVALID_ADDRESS;
-
-    gcmkVERIFY_OK(gckOS_AcquireMutex(Kernel->os, Kernel->virtualBufferLock, gcvINFINITE));
-
-    /* Walk all command buffer. */
-    for (buffer = Kernel->virtualBufferHead; buffer != gcvNULL; buffer = buffer->next)
+    if (InUserSpace)
     {
-        if (InUserSpace)
-        {
-            start = buffer->userLogical;
-        }
-        else
-        {
-            start = buffer->kernelLogical;
-        }
-
-        if (start == gcvNULL)
-        {
-            continue;
-        }
-
-        if (Logical >= start
-        && (Logical < (gctPOINTER)((gctUINT8_PTR)start + buffer->pageCount * 4096))
-        && pid == buffer->pid
-        )
-        {
-            * Address = buffer->gpuAddress + (gctUINT32)((gctUINT8_PTR)Logical - (gctUINT8_PTR)start);
-            status = gcvSTATUS_OK;
-            break;
-        }
+        start = buffer->userLogical;
+    }
+    else
+    {
+        start = buffer->kernelLogical;
     }
 
-    gcmkVERIFY_OK(gckOS_ReleaseMutex(Kernel->os, Kernel->virtualBufferLock));
+    gcmkASSERT(Logical >= start
+           && (Logical < (gctPOINTER)((gctUINT8_PTR)start + buffer->pageCount * 4096)));
+
+    * Address = buffer->gpuAddress + (gctUINT32)((gctUINT8_PTR)Logical - (gctUINT8_PTR)start);
 
     gcmkFOOTER_NO();
-    return status;
+    return gcvSTATUS_OK;
 }
 
 gceSTATUS
@@ -4091,7 +4065,9 @@ void
 gckLINKQUEUE_Enqueue(
     IN gckLINKQUEUE LinkQueue,
     IN gctUINT32 start,
-    IN gctUINT32 end
+    IN gctUINT32 end,
+    IN gctUINT32 LinkLow,
+    IN gctUINT32 LinkHigh
     )
 {
     if (LinkQueue->count == gcdLINK_QUEUE_SIZE)
@@ -4105,6 +4081,9 @@ gckLINKQUEUE_Enqueue(
 
     LinkQueue->data[LinkQueue->rear].start = start;
     LinkQueue->data[LinkQueue->rear].end = end;
+    LinkQueue->data[LinkQueue->rear].linkLow = LinkLow;
+    LinkQueue->data[LinkQueue->rear].linkHigh = LinkHigh;
+
 
     gcmkVERIFY_OK(
         gckOS_GetProcessID(&LinkQueue->data[LinkQueue->rear].pid));
@@ -4545,7 +4524,7 @@ gckKERNEL_SetRecovery(
     if (Recovery == gcvFALSE)
     {
         /* Dump stuck information if Recovery is disabled. */
-        Kernel->stuckDump = gcmMAX(StuckDump, gcdSTUCK_DUMP_MIDDLE);
+        Kernel->stuckDump = gcmMAX(StuckDump, gcvSTUCK_DUMP_USER_COMMAND);
     }
 
     return gcvSTATUS_OK;

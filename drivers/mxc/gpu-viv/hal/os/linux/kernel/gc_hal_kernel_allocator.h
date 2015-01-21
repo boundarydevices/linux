@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -232,7 +232,7 @@ typedef struct _gcsALLOCATOR_OPERATIONS
         IN PLINUX_MDL Mdl,
         IN gctPOINTER Logical,
         IN gctUINT32 ProcessID,
-        OUT gctUINT32_PTR Physical
+        OUT gctPHYS_ADDR_T * Physical
         );
 
     /**************************************************************************
@@ -299,7 +299,7 @@ typedef struct _gcsALLOCATOR_OPERATIONS
         IN gckALLOCATOR Allocator,
         IN PLINUX_MDL Mdl,
         IN gctUINT32 Offset,
-        OUT gctUINT32_PTR Physical
+        OUT gctPHYS_ADDR_T * Physical
         );
 }
 gcsALLOCATOR_OPERATIONS;

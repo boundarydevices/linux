@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -131,6 +131,8 @@ typedef struct _gcsDEVICE_CONSTRUCT_ARGS
     gctBOOL             contiguousRequested;
     gcsPLATFORM*        platform;
     gctBOOL             mmu;
+    gctBOOL             registerMemMapped;
+    gctPOINTER             registerMemAddress;
 }
 gcsDEVICE_CONSTRUCT_ARGS;
 
@@ -211,5 +213,31 @@ gceSTATUS gckGALDEVICE_Construct(
 gceSTATUS gckGALDEVICE_Destroy(
     IN gckGALDEVICE Device
     );
+
+static gcmINLINE gckKERNEL
+_GetValidKernel(
+    gckGALDEVICE Device
+    )
+{
+    if (Device->kernels[gcvCORE_MAJOR])
+    {
+        return Device->kernels[gcvCORE_MAJOR];
+    }
+    else
+    if (Device->kernels[gcvCORE_2D])
+    {
+        return Device->kernels[gcvCORE_2D];
+    }
+    else
+    if (Device->kernels[gcvCORE_VG])
+    {
+        return Device->kernels[gcvCORE_VG];
+    }
+    else
+    {
+        gcmkASSERT(gcvFALSE);
+        return gcvNULL;
+    }
+}
 
 #endif /* __gc_hal_kernel_device_h_ */

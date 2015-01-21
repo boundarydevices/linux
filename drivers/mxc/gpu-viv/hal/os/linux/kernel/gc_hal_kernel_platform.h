@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -59,6 +59,8 @@ typedef struct _gcsMODULE_PARAMETERS
     gctUINT stuckDump;
     gctUINT showArgs;
     gctUINT gpu3DMinClock;
+    gctBOOL registerMemMapped;
+    gctPOINTER registerMemAddress;
 }
 gcsMODULE_PARAMETERS;
 
@@ -215,8 +217,8 @@ typedef struct _gcsPLATFORM_OPERATIONS
     gceSTATUS
     (*getGPUPhysical)(
         IN gckPLATFORM Platform,
-        IN gctUINT32 CPUPhysical,
-        OUT gctUINT32_PTR GPUPhysical
+        IN gctPHYS_ADDR_T CPUPhysical,
+        OUT gctPHYS_ADDR_T * GPUPhysical
         );
 
     /*******************************************************************************

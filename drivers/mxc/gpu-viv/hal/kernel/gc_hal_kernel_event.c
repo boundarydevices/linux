@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -1494,12 +1494,15 @@ gckEVENT_Signal(
     /* Mark the event as a signal. */
     iface.command            = gcvHAL_SIGNAL;
     iface.u.Signal.signal    = gcmPTR_TO_UINT64(Signal);
+    iface.u.Signal.auxSignal = 0;
+    iface.u.Signal.process   = 0;
+
 #ifdef __QNXNTO__
     iface.u.Signal.coid      = 0;
     iface.u.Signal.rcvid     = 0;
+
+    gcmkONERROR(gckOS_SignalPending(Event->os, Signal));
 #endif
-    iface.u.Signal.auxSignal = 0;
-    iface.u.Signal.process   = 0;
 
     /* Append it to the queue. */
     gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE, gcvTRUE));
@@ -2171,7 +2174,7 @@ gckEVENT_Interrupt(
         Data &= ~0x20000000;
 
 #if gcdMULTI_GPU
-        if (Event->kernel->core == gcvCORE_MAJOR)
+        if (CoreId == gcvCORE_3D_0_ID)
 #endif
         {
             /* Get first entry information. */
@@ -2188,6 +2191,20 @@ gckEVENT_Interrupt(
                     &idle));
             }
             while (idle != 0x7FFFFFFF);
+
+#if gcdMULTI_GPU
+            /* Make sure FE of another GPU is idle. */
+            do
+            {
+                gcmkVERIFY_OK(gckOS_ReadRegisterByCoreId(
+                    Event->os,
+                    Event->kernel->core,
+                    gcvCORE_3D_1_ID,
+                    0x4,
+                    &idle));
+            }
+            while (idle != 0x7FFFFFFF);
+#endif
 
             /* Start Command Parser. */
             gcmkVERIFY_OK(gckHARDWARE_Execute(
@@ -2246,6 +2263,9 @@ gckEVENT_Interrupt(
 #endif
 
 #if gcdINTERRUPT_STATISTIC
+#if gcdMULTI_GPU
+    if (CoreId == gcvCORE_3D_0_ID)
+#endif
     {
         gctINT j = 0;
         gctINT32 oldValue;
@@ -2448,16 +2468,16 @@ gckEVENT_Notify(
 
         if (pending & 0x80000000)
         {
-            gctUINT32 AQAxiStatus = 0;
-            gckOS_ReadRegisterEx(Event->os, Event->kernel->hardware->core, 0xC, &AQAxiStatus);
-
-            gcmkPRINT("GPU[%d]: AXI BUS ERROR, AQAxiStatus=0x%x\n", Event->kernel->hardware->core, AQAxiStatus);
+            gcmkPRINT("[galcore]: AXI BUS ERROR");
+            gckHARDWARE_DumpGPUState(Event->kernel->hardware);
             pending &= 0x7FFFFFFF;
         }
 
         if (pending & 0x40000000)
         {
             gckHARDWARE_DumpMMUException(Event->kernel->hardware);
+
+            gckHARDWARE_DumpGPUState(Event->kernel->hardware);
 
             pending &= 0xBFFFFFFF;
         }
@@ -2882,9 +2902,8 @@ gckEVENT_Notify(
                 {
                     /* Kernel signal. */
                     gcmkERR_BREAK(
-                        gckOS_Signal(Event->os,
-                                     signal,
-                                     gcvTRUE));
+                        gckOS_SignalPulse(Event->os,
+                                          signal));
                 }
                 else
                 {
@@ -3231,7 +3250,7 @@ gceSTATUS
 gckEVENT_Stop(
     IN gckEVENT Event,
     IN gctUINT32 ProcessID,
-    IN gctPHYS_ADDR Handle,
+    IN gctUINT32 Handle,
     IN gctPOINTER Logical,
     IN gctSIGNAL Signal,
     IN OUT gctUINT32 * waitSize

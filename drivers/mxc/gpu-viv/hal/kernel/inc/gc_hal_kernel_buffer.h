@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -120,7 +120,7 @@ struct _gcoCMDBUF
     gcsOBJECT                   object;
 
     /* Commit count. */
-    gctUINT                     count;
+    gctUINT64                   commitCount;
 
     /* Command buffer entry and exit pipes. */
     gcePIPE_SELECT              entryPipe;

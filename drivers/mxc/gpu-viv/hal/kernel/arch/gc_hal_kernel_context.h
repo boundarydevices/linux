@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -96,6 +96,8 @@ struct  _gcsRECORD_ARRAY_MAP
 
 };
 
+#define USE_SW_RESET 1
+
 /* gckCONTEXT structure that hold the current context. */
 struct _gckCONTEXT
 {
@@ -164,6 +166,8 @@ struct _gckCONTEXT
 #if VIVANTE_PROFILER_CONTEXT
     gcsPROFILER_COUNTERS        latestProfiler;
     gcsPROFILER_COUNTERS        histroyProfiler;
+
+    /* SH */
     gctUINT32                   prevVSInstCount;
     gctUINT32                   prevVSBranchInstCount;
     gctUINT32                   prevVSTexInstCount;
@@ -172,6 +176,23 @@ struct _gckCONTEXT
     gctUINT32                   prevPSBranchInstCount;
     gctUINT32                   prevPSTexInstCount;
     gctUINT32                   prevPSPixelCount;
+
+#if USE_SW_RESET
+    /* RA */
+    gctUINT32                   prevRaValidPixelCount;
+    gctUINT32                   prevRaTotalQuadCount;
+    gctUINT32                   prevRaValidQuadCountAfterEarlyZ;
+    gctUINT32                   prevRaTotalPrimitiveCount;
+    gctUINT32                   prevRaPipeCacheMissCounter;
+    gctUINT32                   prevRaPrefetchCacheMissCounter;
+
+    /* PE */
+    gctUINT32                   prevPePixelCountKilledByColorPipe;
+    gctUINT32                   prevPePixelCountKilledByDepthPipe;
+    gctUINT32                   prevPePixelCountDrawnByColorPipe;
+    gctUINT32                   prevPePixelCountDrawnByDepthPipe;
+#endif
+
 #endif
 };
 

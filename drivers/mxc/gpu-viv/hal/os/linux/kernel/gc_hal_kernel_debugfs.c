@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -826,10 +826,6 @@ _ShowCounters(
     _PrintCounter(file, &database->mapMemory, "mapMemory");
 }
 
-gckKERNEL
-_GetValidKernel(
-    gckGALDEVICE Device
-);
 static int vidmem_show(struct seq_file *file, void *unused)
 {
     gceSTATUS status;
@@ -837,10 +833,6 @@ static int vidmem_show(struct seq_file *file, void *unused)
     gckGALDEVICE device = file->private;
 
     gckKERNEL kernel = _GetValidKernel(device);
-    if(kernel == gcvNULL)
-    {
-        return 0;
-    }
 
     /* Find the database. */
     gcmkONERROR(
