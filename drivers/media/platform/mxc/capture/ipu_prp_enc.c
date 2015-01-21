@@ -90,6 +90,10 @@ static int prp_enc_setup(cam_data *cam)
 		enc.csi_prp_enc_mem.out_width = cam->v2f.fmt.pix.height;
 		enc.csi_prp_enc_mem.out_height = cam->v2f.fmt.pix.width;
 	}
+	pr_info("%s:in:%dx%d out:%dx%d format=%x\n", __func__,
+			enc.csi_prp_enc_mem.in_width, enc.csi_prp_enc_mem.in_height,
+			enc.csi_prp_enc_mem.out_width, enc.csi_prp_enc_mem.out_height,
+			cam->v2f.fmt.pix.pixelformat);
 
 	if (cam->v2f.fmt.pix.pixelformat == V4L2_PIX_FMT_YUV420) {
 		enc.csi_prp_enc_mem.out_pixel_fmt = IPU_PIX_FMT_YUV420P;
