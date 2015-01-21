@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -146,6 +146,10 @@ gckKERNEL_SecurityExecute(
     )
 {
     gceSTATUS status;
+#if defined(LINUX)
+    gctPHYS_ADDR_T physical;
+    gctUINT32 address;
+#endif
     gcsTA_INTERFACE iface;
 
     gcmkHEADER();
@@ -156,8 +160,10 @@ gckKERNEL_SecurityExecute(
     iface.u.Execute.command_buffer_length = Bytes;
 
 #if defined(LINUX)
-    gcmkONERROR(gckOS_GetPhysicalAddress(Kernel->os, Buffer,
-            (gctUINT32 *)&iface.u.Execute.command_buffer));
+    gcmkONERROR(gckOS_GetPhysicalAddress(Kernel->os, Buffer, &physical));
+    gcmkSAFECASTPHYSADDRT(address, physical);
+
+    iface.u.Execute.command_buffer = (gctUINT32 *)address;
 #endif
 
     gcmkONERROR(gckKERNEL_SecurityCallService(Kernel->securityChannel, &iface));
@@ -185,14 +191,19 @@ gckKERNEL_SecurityMapMemory(
 {
     gceSTATUS status;
     gcsTA_INTERFACE iface;
+#if defined(LINUX)
+    gctPHYS_ADDR_T physical;
+    gctUINT32 address;
+#endif
 
     gcmkHEADER();
 
     iface.command = KERNEL_MAP_MEMORY;
 
 #if defined(LINUX)
-    gcmkONERROR(gckOS_GetPhysicalAddress(Kernel->os, PhysicalArray,
-            (gctUINT32 *)&iface.u.MapMemory.physicals));
+    gcmkONERROR(gckOS_GetPhysicalAddress(Kernel->os, PhysicalArray, &physical));
+    gcmkSAFECASTPHYSADDRT(address, physical);
+    iface.u.MapMemory.physicals = (gctUINT32 *)address;
 #endif
 
     iface.u.MapMemory.pageCount = PageCount;

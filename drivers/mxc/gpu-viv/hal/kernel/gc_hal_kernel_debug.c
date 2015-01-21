@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -1285,7 +1285,7 @@ _AppendPrefix(
     item->prefixData = prefixData;
 
     /* Copy argument value. */
-    memcpy(prefixData, Data, gcdPREFIX_SIZE);
+    gcmkMEMCPY(prefixData, Data, gcdPREFIX_SIZE);
 
 #if gcdALIGNBYSIZE
     /* Compute the actual node size. */
@@ -1347,7 +1347,7 @@ _AppendString(
     /* Copy argument value. */
     if (ArgumentSize != 0)
     {
-        memcpy(messageData, Data, ArgumentSize);
+        gcmkMEMCPY(messageData, Data, ArgumentSize);
     }
 
 #if gcdALIGNBYSIZE
@@ -1422,12 +1422,12 @@ _AppendCopy(
     item->messageDataSize = ArgumentSize;
 
     /* Copy the message. */
-    memcpy((gctPOINTER) message, Message, messageLength);
+    gcmkMEMCPY((gctPOINTER) message, Message, messageLength);
 
     /* Copy argument value. */
     if (ArgumentSize != 0)
     {
-        memcpy(messageData, Data, ArgumentSize);
+        gcmkMEMCPY(messageData, Data, ArgumentSize);
     }
 
 #if gcdALIGNBYSIZE
@@ -1505,13 +1505,13 @@ _AppendBuffer(
 #endif
 
     /* Copy prefix data. */
-    memcpy(prefixData, PrefixData, gcdPREFIX_SIZE);
+    gcmkMEMCPY(prefixData, PrefixData, gcdPREFIX_SIZE);
 
     /* Compute the data pointer. */
     data = prefixData + gcdPREFIX_SIZE;
 
     /* Copy argument value. */
-    memcpy(data, Data, DataSize);
+    gcmkMEMCPY(data, Data, DataSize);
 
 #if gcdALIGNBYSIZE
     /* Compute the actual node size. */
@@ -1548,7 +1548,7 @@ _AppendBuffer(
     item->address  = Address;
 
     /* Copy argument value. */
-    memcpy(item + 1, Data, DataSize);
+    gcmkMEMCPY(item + 1, Data, DataSize);
 #endif
 }
 #endif
@@ -1940,6 +1940,7 @@ gckOS_DumpBuffer(
     IN gctBOOL CopyMessage
     )
 {
+    gctPHYS_ADDR_T physical;
     gctUINT32 address                   = 0;
     gcsBUFFERED_OUTPUT_PTR outputBuffer = gcvNULL;
     static gctBOOL userLocked;
@@ -1984,7 +1985,8 @@ gckOS_DumpBuffer(
         /* Get the physical address of the buffer. */
         if (Type != gceDUMP_BUFFER_FROM_USER)
         {
-            gcmkVERIFY_OK(gckOS_GetPhysicalAddress(Os, Buffer, &address));
+            gcmkVERIFY_OK(gckOS_GetPhysicalAddress(Os, Buffer, &physical));
+            gcmkSAFECASTPHYSADDRT(address, physical);
         }
         else
         {
