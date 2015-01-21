@@ -333,12 +333,13 @@ void _ipu_ic_init_prpvf(struct ipu_soc *ipu, ipu_channel_params_t *params, bool 
 	} else {
 		ic_conf &= ~IC_CONF_PRPVF_CMB;
 	}
-
+//commenting out block makes input=0 work for gstreamer
+#if 1
 	if (src_is_csi)
 		ic_conf &= ~IC_CONF_RWS_EN;
 	else
 		ic_conf |= IC_CONF_RWS_EN;
-
+#endif
 	ipu_ic_write(ipu, ic_conf, IC_CONF);
 #ifdef DEBUG
 	pr_debug("%s\n", __func__);
