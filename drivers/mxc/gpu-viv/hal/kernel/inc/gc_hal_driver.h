@@ -1,6 +1,6 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    Copyright (C) 2005 - 2015 by Vivante Corp.
 *
 *    This program is free software; you can redistribute it and/or modify
 *    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *
 *****************************************************************************/
+
 
 #ifndef __gc_hal_driver_h_
 #define __gc_hal_driver_h_
@@ -284,6 +285,9 @@ typedef struct _gcsHAL_QUERY_CHIP_IDENTITY
 
     /* Product ID */
     gctUINT32                   productID;
+
+    /* Special ECO bits */
+    gceECO_FLAG                 ecoFlags;
 }
 gcsHAL_QUERY_CHIP_IDENTITY;
 
