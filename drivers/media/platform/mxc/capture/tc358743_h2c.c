@@ -69,21 +69,24 @@
 #define TC_VOLTAGE_DIGITAL_GPO		1500000
 #define TC_VOLTAGE_ANALOG               2800000
 
+#define MAX_COLORBAR	tc358743_mode_INIT6
+#define IS_COLORBAR(a) (a <= MAX_COLORBAR)
+
 enum tc358743_mode {
-	tc358743_mode_INIT, /*only for sensor init*/
-	tc358743_mode_INIT1, /*only for sensor init*/
+	tc358743_mode_INIT,
+	tc358743_mode_INIT1,
+	tc358743_mode_INIT2,
+	tc358743_mode_INIT3,
+	tc358743_mode_INIT4,
+	tc358743_mode_INIT5,
+	tc358743_mode_INIT6,
 	tc358743_mode_480P_720_480,
 	tc358743_mode_720P_60_1280_720,
 	tc358743_mode_480P_640_480,
 	tc358743_mode_1080P_1920_1080,
-	tc358743_mode_INIT2, /*only for sensor init*/
-	tc358743_mode_INIT3, /*only for sensor init*/
-	tc358743_mode_INIT4, /*only for sensor init*/
-	tc358743_mode_INIT5, /*only for sensor init*/
-	tc358743_mode_INIT6, /*only for sensor init*/
 	tc358743_mode_720P_1280_720,
 	tc358743_mode_1024x768,
-	tc358743_mode_MAX ,
+	tc358743_mode_MAX,
 };
 
 enum tc358743_frame_rate {
@@ -141,6 +144,7 @@ struct tc_data {
 	int pwn_gpio;
 	int rst_gpio;
 	u16 hpd_active;
+	int edid_initialized;
 };
 
 static struct tc_data *g_td;
@@ -230,22 +234,100 @@ static void det_work_enable(struct tc_data *td, int enable)
 
 static const u8 cHDMIEDID[256] = {
 	/* FIXME! This is the edid that my ASUS HDMI monitor returns */
-	0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x04, 0x69, 0xf3, 0x24, 0xd6, 0x12, 0x00, 0x00,
-	0x16, 0x16, 0x01, 0x03, 0x80, 0x34, 0x1d, 0x78, 0x2a, 0xc7, 0x20, 0xa4, 0x55, 0x49, 0x99, 0x27,
-	0x13, 0x50, 0x54, 0xbf, 0xef, 0x00, 0x71, 0x4f, 0x81, 0x40, 0x81, 0x80, 0x95, 0x00, 0xb3, 0x00,
-	0xd1, 0xc0, 0x01, 0x01, 0x01, 0x01, 0x02, 0x3a, 0x80, 0x18, 0x71, 0x38, 0x2d, 0x40, 0x58, 0x2c,
-	0x45, 0x00, 0x09, 0x25, 0x21, 0x00, 0x00, 0x1e, 0x00, 0x00, 0x00, 0xff, 0x00, 0x43, 0x36, 0x4c,
-	0x4d, 0x54, 0x46, 0x30, 0x30, 0x34, 0x38, 0x32, 0x32, 0x0a, 0x00, 0x00, 0x00, 0xfd, 0x00, 0x37,
-	0x4b, 0x1e, 0x55, 0x10, 0x00, 0x0a, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00, 0x00, 0x00, 0xfc,
-	0x00, 0x41, 0x53, 0x55, 0x53, 0x20, 0x56, 0x48, 0x32, 0x34, 0x32, 0x48, 0x0a, 0x20, 0x01, 0x78,
-	0x02, 0x03, 0x22, 0x71, 0x4f, 0x01, 0x02, 0x03, 0x11, 0x12, 0x13, 0x04, 0x14, 0x05, 0x0e, 0x0f,
-	0x1d, 0x1e, 0x1f, 0x10, 0x23, 0x09, 0x07, 0x01, 0x83, 0x01, 0x00, 0x00, 0x65, 0x03, 0x0c, 0x00,
-	0x10, 0x00, 0x8c, 0x0a, 0xd0, 0x8a, 0x20, 0xe0, 0x2d, 0x10, 0x10, 0x3e, 0x96, 0x00, 0x09, 0x25,
-	0x21, 0x00, 0x00, 0x18, 0x01, 0x1d, 0x00, 0x72, 0x51, 0xd0, 0x1e, 0x20, 0x6e, 0x28, 0x55, 0x00,
-	0x09, 0x25, 0x21, 0x00, 0x00, 0x1e, 0x01, 0x1d, 0x00, 0xbc, 0x52, 0xd0, 0x1e, 0x20, 0xb8, 0x28,
-	0x55, 0x40, 0x09, 0x25, 0x21, 0x00, 0x00, 0x1e, 0x8c, 0x0a, 0xd0, 0x90, 0x20, 0x40, 0x31, 0x20,
-	0x0c, 0x40, 0x55, 0x00, 0x09, 0x25, 0x21, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x73,
+	0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00,		//0 - header[8] - fixed pattern
+	0x04, 0x69,						//8 - manufacturer_name[2]
+	0xf3, 0x24,						//10 - product_code[2]
+	0xd6, 0x12, 0x00, 0x00,					//12 - serial_number[4]
+	0x16,							//16 - week
+	0x16,							//17 - year 22+1990=2012
+	0x01,							//18 - version
+	0x03,							//19 - revision
+	0x80,							//20 - video_input_definition(digital input)
+	0x34,							//21 - max_size_horizontal 52cm
+	0x1d,							//22 - max_size_vertical 29cm
+	0x78,							//23 - gamma
+	0x3a,							//24 - feature_support (RGB 4:4:4 + YCrCb 4:4:4 + YCrCb 4:2:2)
+	0xc7, 0x20, 0xa4, 0x55, 0x49, 0x99, 0x27, 0x13, 0x50, 0x54,	//25 - color_characteristics[10]
+	0xbf, 0xef, 0x00,					//35 - established_timings[3]
+	0x71, 0x4f, 0x81, 0x40, 0x81, 0x80, 0x95, 0x00, 0xb3, 0x00, 0xd1, 0xc0, 0x01, 0x01, 0x01, 0x01,	//38 - standard_timings[8]
+/* 1080P */
+	0x02, 0x3a,						//54(0) - descriptor[0], 0x3a02 = 148.50 MHz
+	0x80,							//56(2) h - active 0x780 (1920)
+	0x18,							//57(3) h - blank 0x118 (280)
+	0x71,							//58(4)
+	0x38,							//59(5) v - active 0x438 (1080)
+	0x2d,							//60(6) v - blank 0x02d(45)
+	0x40,							//61(7)
+	0x58,							//62(8) - h sync offset(0x58)
+	0x2c,							//63(9) - h sync width(0x2c)
+	0x45,							//64(10) - v sync offset(0x4), v sync width(0x5)
+	0x00,							//65(11)
+	0x09,							//66(12) - h display size (0x209) 521 mm
+	0x25,							//67(13) - v display size (0x125) 293 mm
+	0x21,							//68(14)
+	0x00,							//69(15) - h border pixels
+	0x00,							//70(16) - v border pixels
+	0x1e,							//71(17) - no stereo, digital separate, hsync+, vsync+
+	0x00, 0x00, 0x00, 0xff, 0x00,							//72 - descriptor[1]
+	0x43, 0x36, 0x4c, 0x4d, 0x54, 0x46, 0x30, 0x30, 0x34, 0x38, 0x32, 0x32,	0x0a,	//"C6LMTF004822\n"
+	0x00, 0x00, 0x00, 0xfd, 0x00,							//90 - descriptor[2]
+	0x37, 0x4b, 0x1e, 0x55, 0x10, 0x00, 0x0a, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+	0x00, 0x00, 0x00, 0xfc, 0x00, 							//108 - descriptor[3]
+	0x41, 0x53, 0x55, 0x53, 0x20, 0x56, 0x48, 0x32, 0x34, 0x32, 0x48, 0x0a, 0x20, 	//"ASUS VH242H\n "
+	0x01,							//126 - extension_flag
+	0x68,							//127 - checksum
+
+	0x02,							//0 - cea-861 extension
+	0x03,							//1 - rev 3
+	0x22,							//2 - detailed timings at offset 34
+	0x71,							//3 - # of detailed timing descriptor
+	0x4f, 0x01, 0x02, 0x03, 0x11, 0x12,			//4
+	0x13, 0x04, 0x14, 0x05, 0x0e, 0x0f,			//10
+	0x1d, 0x1e, 0x1f, 0x10, 0x23, 0x09,			//16
+	0x07, 0x01, 0x83, 0x01, 0x00, 0x00,			//22
+	0x65, 0x03, 0x0c, 0x00, 0x10, 0x00,			//28
+/* 720x480@59.94  27000000/858/525 = 59.94 Hz */
+	0x8c, 0x0a,				//34 - descriptor[0] - 0x0a8c - 27 Mhz
+	0xd0,					//h - active 0x2d0 (720)
+	0x8a,					//h - blank 0x8a(138)
+	0x20,
+	0xe0,					//v - active 0x1e0 (480)
+	0x2d,					//v - blank 0x2d (45)
+	0x10,
+	0x10, 0x3e, 0x96, 0x00, 0x09, 0x25, 0x21, 0x00, 0x00, 0x18,
+/* 1280x720@60  74250000/1650/750 = 60 Hz*/
+	0x01, 0x1d,				//52 - 0x1d01 74.25MHz
+	0x00,					//h - active (0x500)1280
+	0x72,					//h - blank (0x172)370
+	0x51,
+	0xd0,					//v active 0x2d0(720)
+	0x1e,					//v blank 0x1e(30)
+	0x20,
+	0x6e, 0x28, 0x55, 0x00, 0x09, 0x25, 0x21, 0x00, 0x00, 0x1e,
+/* 1280x720@50  74250000/1980/750 = 50 Hz  */
+	0x01, 0x1d,				//70 - 0x1d01 74.25MHz
+	0x00,					//h - active (0x500)1280
+	0xbc,					//h - blank (0x2bc)700
+	0x52,
+	0xd0,					//v active 0x2d0 (720)
+	0x1e,					//v blank 0x1e(30)
+	0x20,
+	0xb8, 0x28, 0x55, 0x40, 0x09, 0x25, 0x21, 0x00, 0x00, 0x1e,
+/* 720x576@50 27000000/864/625 = 50 Hz */
+	0x8c, 0x0a,				//88 0x0a8c - 27 Mhz
+	0xd0,					//h - active 0x2d0(720)
+	0x90,					//h - blank 0x90(144)
+	0x20,
+	0x40,					//v active 0x240(576)
+	0x31,					//v blanking 0x31(49)
+	0x20,
+	0x0c, 0x40, 0x55, 0x00, 0x09, 0x25, 0x21, 0x00, 0x00, 0x18,
+/* done */
+	0x00, 0x00, 0x00, 0x00, 0x00,				//106
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00,						//124
+	0x00,							//126 - extension_flag
+	0x73,							//127 - checksum
 };
 
 static const struct reg_value tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz[] = {
@@ -1536,6 +1618,7 @@ static s32 tc358743_read_reg_val(struct sensor_data *sensor, u16 reg)
 
 static s32 tc358743_read_reg_val16(struct sensor_data *sensor, u16 reg)
 {
+#if 0
 	struct i2c_client *client = sensor->i2c_client;
 	struct i2c_msg msgs[3];
 	u8 txbuf[4];
@@ -1571,6 +1654,14 @@ static s32 tc358743_read_reg_val16(struct sensor_data *sensor, u16 reg)
 	}
 //	pr_debug("%s:reg=%x,val=%x\n", __func__, reg, ((char *)rxbuf)[0]);
 	return rxbuf1[0] | (rxbuf2[0] << 8);
+#else
+	u32 val1 = 0;
+	u32 val2 = 0;
+	tc358743_read_reg(sensor, reg, &val1);
+	tc358743_read_reg(sensor, reg+1, &val2);
+	return val1 | (val2 << 8);
+
+#endif
 }
 
 static s32 tc358743_write_reg(struct sensor_data *sensor, u16 reg, u32 val, int len)
@@ -1639,6 +1730,7 @@ static int tc358743_write_edid(struct sensor_data *sensor, const u8 *edid, int l
 	int i = 0, off = 0;
 	u8 au8Buf[16+2] = {0};
 	int size = 0;
+	int checksum = 0;
 	u16 reg;
 
 	reg = 0x8C00;
@@ -1652,7 +1744,18 @@ static int tc358743_write_edid(struct sensor_data *sensor, const u8 *edid, int l
 		if (size > len)
 			size = len;
 		while (i < size + 2) {
-			au8Buf[i++] = edid[off++];
+			u8 byte = edid[off++];
+			if ((off & 0x7f) == 0) {
+				checksum &= 0xff;
+				if (checksum != byte) {
+					pr_info("%schecksum=%x, byte=%x\n", __func__, checksum, byte);
+					byte = checksum;
+					checksum = 0;
+				}
+			} else {
+				checksum -= byte;
+			}
+			au8Buf[i++] = byte;
 		}
 
 		if (i2c_master_send(sensor->i2c_client, au8Buf, i) < 0) {
@@ -1815,9 +1918,13 @@ int set_frame_rate_mode(struct tc_data *td,
 		}
 	}
 	tc358743_enable_edid(sensor);
-	if (!td->mode)	// is this during reset
-		if ((retval = tc358743_write_edid(sensor, cHDMIEDID, ARRAY_SIZE(cHDMIEDID))))
-			pr_err("%s: Fail to write EDID to tc35874!\n", __func__);
+	if (!td->edid_initialized) {
+		retval = tc358743_write_edid(sensor, cHDMIEDID, ARRAY_SIZE(cHDMIEDID));
+		if (retval)
+			pr_err("%s: Fail to write EDID(%d) to tc35874!\n", __func__, retval);
+		else
+			td->edid_initialized = 1;
+	}
 
 	return retval;
 }
@@ -2112,6 +2219,7 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	struct v4l2_fract *timeperframe = &a->parm.capture.timeperframe;
 	u32 tgt_fps;	/* target frames per secound */
 	enum tc358743_frame_rate frame_rate = tc358743_60_fps, frame_rate_now = tc358743_60_fps;
+	enum tc358743_mode mode;
 	int ret = 0;
 
 	pr_debug("%s\n", __func__);
@@ -2169,12 +2277,19 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 		else if (tgt_fps == 30)
 			frame_rate_now = tc358743_30_fps;
 
-		if (frame_rate_now != frame_rate ||
-		   sensor->streamcap.capturemode != (u32)a->parm.capture.capturemode ||
-		   sensor->streamcap.extendedmode != (u32)a->parm.capture.extendedmode) {
-			enum tc358743_mode mode;
-
+		mode = td->mode;
+		if (IS_COLORBAR(mode)) {
 			mode = (u32)a->parm.capture.capturemode;
+		} else {
+			a->parm.capture.capturemode = mode;
+			frame_rate = td->fps;
+			timeperframe->denominator = (frame_rate == tc358743_60_fps) ? 60 : 30;
+			timeperframe->numerator = 1;
+		}
+
+		if (frame_rate_now != frame_rate ||
+		   sensor->streamcap.capturemode != mode ||
+		   sensor->streamcap.extendedmode != (u32)a->parm.capture.extendedmode) {
 
 			if (mode != tc358743_mode_INIT) {
 				sensor->streamcap.capturemode = mode;
@@ -2328,20 +2443,24 @@ static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 				 struct v4l2_frmsizeenum *fsize)
 {
 	struct tc_data *td = s->priv;
-	struct sensor_data *sensor = &td->sensor;
-	int index = fsize->index;
+	enum tc358743_mode query_mode= fsize->index;
+	enum tc358743_mode mode = td->mode;
 
-	if (!index)
-		index = sensor->streamcap.capturemode;
-	pr_debug("%s, INDEX: %d\n", __func__, index);
-	if (index >= tc358743_mode_MAX)
-		return -EINVAL;
+	if (IS_COLORBAR(mode)) {
+		if (query_mode > MAX_COLORBAR)
+			return -EINVAL;
+		mode = query_mode;
+	} else {
+		if (query_mode)
+			return -EINVAL;
+	}
+	pr_debug("%s, mode: %d\n", __func__, mode);
 
-	fsize->pixel_format = get_pixelformat(0, index);
+	fsize->pixel_format = get_pixelformat(0, mode);
 	fsize->discrete.width =
-			    tc358743_mode_info_data[0][index].width;
+			    tc358743_mode_info_data[0][mode].width;
 	fsize->discrete.height =
-			    tc358743_mode_info_data[0][index].height;
+			    tc358743_mode_info_data[0][mode].height;
 	pr_debug("%s %d:%d format: %x\n", __func__, fsize->discrete.width, fsize->discrete.height, fsize->pixel_format);
 	return 0;
 }
@@ -2491,10 +2610,12 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 		break;
 
 	case V4L2_BUF_TYPE_PRIVATE:
+		pr_debug("%s: private\n", __func__);
 		break;
 
 	default:
 		f->fmt.pix = sensor->pix;
+		pr_debug("%s: type=%d, %dx%d\n", __func__, f->type, sensor->pix.width, sensor->pix.height);
 		break;
 	}
 	return 0;
@@ -3071,7 +3192,7 @@ static void tc_det_worker(struct work_struct *work)
 		td->bounce = MAX_BOUNCE;
 		pr_debug("%s: HDMI RX (%d != %d) mode: %s fps: %d (%d, %d)\n",
 				__func__, td->mode, mode,
-				tc358743_mode_info_data[td->fps][td->mode].name,
+				tc358743_mode_info_data[td->fps][mode].name,
 				td->fps, td->bounce, td->det_work_timeout);
 		td->mode = mode;
 		sensor->streamcap.capturemode = mode;
