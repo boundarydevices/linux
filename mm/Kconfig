@@ -595,3 +595,6 @@ config MAX_STACK_SIZE_MB
 	  changed to a smaller value in which case that is used.
 
 	  A sane initial value is 80 MB.
+
+config GENERIC_EARLY_IOREMAP
+	bool

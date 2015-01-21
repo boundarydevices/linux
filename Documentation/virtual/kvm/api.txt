@@ -148,9 +148,9 @@ of banks, as set via the KVM_X86_SETUP_MCE ioctl.
 
 4.4 KVM_CHECK_EXTENSION
 
-Capability: basic
+Capability: basic, KVM_CAP_CHECK_EXTENSION_VM for vm ioctl
 Architectures: all
-Type: system ioctl
+Type: system ioctl, vm ioctl
 Parameters: extension identifier (KVM_CAP_*)
 Returns: 0 if unsupported; 1 (or some other positive integer) if supported
 
@@ -160,6 +160,9 @@ receives an integer that describes the extension availability.
 Generally 0 means no and 1 means yes, but some extensions may report
 additional information in the integer return value.
 
+Based on their initialization different VMs may have different capabilities.
+It is thus encouraged to use the vm ioctl to query for capabilities (available
+with KVM_CAP_CHECK_EXTENSION_VM on the vm fd)
 
 4.5 KVM_GET_VCPU_MMAP_SIZE
 
@@ -969,18 +972,20 @@ uniprocessor guests).
 
 Possible values are:
 
- - KVM_MP_STATE_RUNNABLE:        the vcpu is currently running
+ - KVM_MP_STATE_RUNNABLE:        the vcpu is currently running [x86, ia64]
  - KVM_MP_STATE_UNINITIALIZED:   the vcpu is an application processor (AP)
-                                 which has not yet received an INIT signal
+                                 which has not yet received an INIT signal [x86,
+                                 ia64]
  - KVM_MP_STATE_INIT_RECEIVED:   the vcpu has received an INIT signal, and is
-                                 now ready for a SIPI
+                                 now ready for a SIPI [x86, ia64]
  - KVM_MP_STATE_HALTED:          the vcpu has executed a HLT instruction and
-                                 is waiting for an interrupt
+                                 is waiting for an interrupt [x86, ia64]
  - KVM_MP_STATE_SIPI_RECEIVED:   the vcpu has just received a SIPI (vector
-                                 accessible via KVM_GET_VCPU_EVENTS)
+                                 accessible via KVM_GET_VCPU_EVENTS) [x86, ia64]
 
-This ioctl is only useful after KVM_CREATE_IRQCHIP.  Without an in-kernel
-irqchip, the multiprocessing state must be maintained by userspace.
+On x86 and ia64, this ioctl is only useful after KVM_CREATE_IRQCHIP. Without an
+in-kernel irqchip, the multiprocessing state must be maintained by userspace on
+these architectures.
 
 
 4.39 KVM_SET_MP_STATE
@@ -994,8 +999,9 @@ Returns: 0 on success; -1 on error
 Sets the vcpu's current "multiprocessing state"; see KVM_GET_MP_STATE for
 arguments.
 
-This ioctl is only useful after KVM_CREATE_IRQCHIP.  Without an in-kernel
-irqchip, the multiprocessing state must be maintained by userspace.
+On x86 and ia64, this ioctl is only useful after KVM_CREATE_IRQCHIP. Without an
+in-kernel irqchip, the multiprocessing state must be maintained by userspace on
+these architectures.
 
 
 4.40 KVM_SET_IDENTITY_MAP_ADDR
@@ -2704,6 +2710,21 @@ delivered interrupt vector using this exit.
 It gets triggered whenever both KVM_CAP_PPC_EPR are enabled and an
 external interrupt has just been delivered into the guest. User space
 should put the acknowledged interrupt vector into the 'epr' field.
+
+		/* KVM_EXIT_SYSTEM_EVENT */
+		struct {
+#define KVM_SYSTEM_EVENT_SHUTDOWN       1
+#define KVM_SYSTEM_EVENT_RESET          2
+			__u32 type;
+			__u64 flags;
+		} system_event;
+
+If exit_reason is KVM_EXIT_SYSTEM_EVENT then the vcpu has triggered
+a system-level event using some architecture specific mechanism (hypercall
+or some special instruction). In case of ARM/ARM64, this is triggered using
+HVC instruction based PSCI call from the vcpu. The 'type' field describes
+the system-level event type. The 'flags' field describes architecture
+specific flags for the system-level event.
 
 		/* Fix the size of the union. */
 		char padding[256];

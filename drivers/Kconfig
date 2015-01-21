@@ -100,6 +100,8 @@ source "drivers/mxc/Kconfig"
 
 source "drivers/leds/Kconfig"
 
+source "drivers/switch/Kconfig"
+
 source "drivers/accessibility/Kconfig"
 
 source "drivers/infiniband/Kconfig"
@@ -171,5 +173,7 @@ source "drivers/fmc/Kconfig"
 source "drivers/phy/Kconfig"
 
 source "drivers/powercap/Kconfig"
+
+source "drivers/gator/Kconfig"
 
 endmenu
