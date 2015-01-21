@@ -1241,8 +1241,13 @@ static void adv7180_hard_reset(struct adv7180_priv *adv)
 		"In adv7180:adv7180_hard_reset\n");
 
 	if (adv->cvbs) {
+#if 1
 		/* Set CVBS input on AIN1 */
 		adv7180_write_reg(adv, ADV7180_INPUT_CTL, 0x00);
+#else
+		/* Set CVBS input on AIN2 */
+		adv7180_write_reg(adv, ADV7180_INPUT_CTL, 0x03);
+#endif
 	} else {
 		/*
 		 * Set YPbPr input on AIN1,4,5 and normal
