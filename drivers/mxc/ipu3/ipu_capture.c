@@ -822,8 +822,8 @@ int _ipu_csi_init(struct ipu_soc *ipu, ipu_channel_t channel, uint32_t csi)
 	}
 	csi_sens_conf |= csi_dest << CSI_SENS_CONF_DATA_DEST_SHIFT;
 
-	dev_dbg(ipu->dev, "%s:CSI_SENS_CONF: ipu=%p,csi=%x,data=%x\n", __func__,
-			ipu, csi, csi_sens_conf);
+	dev_dbg(ipu->dev, "%s:CSI_SENS_CONF: ipu=%p,csi=%x,data=%x, channel=%x\n", __func__,
+			ipu, csi, csi_sens_conf, channel);
 	ipu_csi_write(ipu, csi, ctrl, CSI_CPD_CTRL);
 	ipu_csi_write(ipu, csi, csi_sens_conf, CSI_SENS_CONF);
 err:
