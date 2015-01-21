@@ -816,7 +816,7 @@ static int mxc_v4l2_s_fmt(cam_data *cam, struct v4l2_format *f)
 	int bytesperline = 0;
 	int *width, *height;
 
-	pr_debug("%s\n", __func__);
+	pr_debug("%s: %dx%d, type=%d\n", __func__, f->fmt.pix.width, f->fmt.pix.height, f->type);
 
 	switch (f->type) {
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
@@ -846,8 +846,8 @@ static int mxc_v4l2_s_fmt(cam_data *cam, struct v4l2_format *f)
 		}
 
 		/* stride line limitation */
-		*width -= *width % 8;
-		*height -= *height % 8;
+		*width &= ~7;
+		*height &= ~7;
 
 		if (*width == 0 || *height == 0) {
 			pr_err("ERROR: v4l2 capture: width or height"
@@ -1683,6 +1683,29 @@ void power_off_camera(cam_data *cam)
 	schedule_delayed_work(&cam->power_down_work, (HZ * 2));
 }
 
+int mxc_cam_select_input(cam_data *cam, int index)
+{
+	int retval = -EINVAL;
+
+	if (strcmp(mxc_capture_inputs[index].name, "CSI MEM") == 0) {
+#if defined(CONFIG_MXC_IPU_CSI_ENC) || defined(CONFIG_MXC_IPU_CSI_ENC_MODULE)
+		retval = csi_enc_select(cam);
+#endif
+	} else if (strcmp(mxc_capture_inputs[index].name, "CSI IC MEM") == 0) {
+#if defined(CONFIG_MXC_IPU_PRP_ENC) || defined(CONFIG_MXC_IPU_PRP_ENC_MODULE)
+		retval = prp_enc_select(cam);
+#endif
+	}
+	if (retval) {
+		pr_err("%s:error(%d) setting input %d\n", __func__, retval, index);
+		return retval;
+	}
+	mxc_capture_inputs[index].status &= ~V4L2_IN_ST_NO_POWER;
+	cam->current_input = index;
+	pr_info("%s: input(%d) %s\n", __func__, index, mxc_capture_inputs[index].name);
+	return 0;
+}
+
 unsigned long csi_in_use;
 
 /*!
@@ -1769,18 +1792,9 @@ static int mxc_v4l_open(struct file *file)
 		wait_event_interruptible(cam->power_queue,
 					 cam->low_power == false);
 
-		if (strcmp(mxc_capture_inputs[cam->current_input].name,
-			   "CSI MEM") == 0) {
-#if defined(CONFIG_MXC_IPU_CSI_ENC) || defined(CONFIG_MXC_IPU_CSI_ENC_MODULE)
-			err = csi_enc_select(cam);
-#endif
-		} else if (strcmp(mxc_capture_inputs[cam->current_input].name,
-				  "CSI IC MEM") == 0) {
-#if defined(CONFIG_MXC_IPU_PRP_ENC) || defined(CONFIG_MXC_IPU_PRP_ENC_MODULE)
-			err = prp_enc_select(cam);
-#endif
-		}
-
+		err = mxc_cam_select_input(cam, cam->current_input);
+		if (err)
+			err = mxc_cam_select_input(cam, cam->current_input ^ 1);
 		cam->enc_counter = 0;
 		INIT_LIST_HEAD(&cam->ready_q);
 		INIT_LIST_HEAD(&cam->working_q);
@@ -2117,7 +2131,7 @@ static long mxc_v4l_do_ioctl(struct file *file,
 	case VIDIOC_QBUF: {
 		struct v4l2_buffer *buf = arg;
 		int index = buf->index;
-		pr_debug("   case VIDIOC_QBUF\n");
+		pr_debug("   case VIDIOC_QBUF, length=%d\n", buf->length);
 
 		spin_lock_irqsave(&cam->queue_int_lock, lock_flags);
 		if ((cam->frame[index].buffer.flags & 0x7) ==
@@ -2421,14 +2435,14 @@ static long mxc_v4l_do_ioctl(struct file *file,
 	}
 
 	case VIDIOC_S_INPUT: {
-		int *index = arg;
-		pr_debug("   case VIDIOC_S_INPUT\n");
-		if (*index >= MXC_V4L2_CAPTURE_NUM_INPUTS) {
+		int index = *(int *)arg;
+		pr_debug("   case VIDIOC_S_INPUT(%d)\n", index);
+		if (index >= MXC_V4L2_CAPTURE_NUM_INPUTS) {
 			retval = -EINVAL;
 			break;
 		}
 
-		if (*index == cam->current_input)
+		if (index == cam->current_input)
 			break;
 
 		if ((mxc_capture_inputs[cam->current_input].status &
@@ -2440,23 +2454,7 @@ static long mxc_v4l_do_ioctl(struct file *file,
 							V4L2_IN_ST_NO_POWER;
 		}
 
-		if (strcmp(mxc_capture_inputs[*index].name, "CSI MEM") == 0) {
-#if defined(CONFIG_MXC_IPU_CSI_ENC) || defined(CONFIG_MXC_IPU_CSI_ENC_MODULE)
-			retval = csi_enc_select(cam);
-			if (retval)
-				break;
-#endif
-		} else if (strcmp(mxc_capture_inputs[*index].name,
-				  "CSI IC MEM") == 0) {
-#if defined(CONFIG_MXC_IPU_PRP_ENC) || defined(CONFIG_MXC_IPU_PRP_ENC_MODULE)
-			retval = prp_enc_select(cam);
-			if (retval)
-				break;
-#endif
-		}
-
-		mxc_capture_inputs[*index].status &= ~V4L2_IN_ST_NO_POWER;
-		cam->current_input = *index;
+		retval = mxc_cam_select_input(cam, index);
 		break;
 	}
 	case VIDIOC_ENUM_FMT: {
