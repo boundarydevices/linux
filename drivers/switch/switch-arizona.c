@@ -1583,11 +1583,11 @@ static int arizona_antenna_hp_reading(struct arizona_extcon_info *info, int val)
 	if (info->mic) {
 		arizona_extcon_report(info, BIT_HEADSET);
 		info->antenna_skip_btn_db = false;
-		arizona_jds_set_state(info, &arizona_antenna_button_det);
 	} else {
 		arizona_extcon_report(info, BIT_HEADSET_NO_MIC);
-		arizona_jds_set_state(info, NULL);
 	}
+
+	arizona_jds_set_state(info, &arizona_antenna_button_det);
 
 	return 0;
 }
