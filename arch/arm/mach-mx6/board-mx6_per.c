@@ -612,6 +612,48 @@ static struct platform_device i2c0_i2cmux = {
         },
 };
 
+struct anx7816_platform_data {
+	int gpio_p_dwn;
+	int gpio_reset;
+	int gpio_cbl_det;	/* irq */
+	int gpio_v10_ctrl;
+	int gpio_v33_ctrl;
+	int external_ldo_control;
+	int (*avdd_power)(unsigned int onoff);
+	int (*dvdd_power)(unsigned int onoff);
+	struct regulator *avdd_10;
+	struct regulator *dvdd_10;
+	spinlock_t lock;
+};
+
+static int anx7814_avdd_power(unsigned int onoff)
+{
+	return 0;
+}
+
+static int anx7814_dvdd_power(unsigned int onoff)
+{
+	return 0;
+}
+
+static struct anx7816_platform_data anx7814_pdata = {
+	.gpio_p_dwn = GP_ANX7814_P_DWN,
+	.gpio_reset = GP_ANX7814_RESET,
+	.gpio_cbl_det = GP_ANX7814_CBL_DET,
+	.gpio_v10_ctrl = -1,
+	.gpio_v33_ctrl = -1,
+	.external_ldo_control = 0,
+	.avdd_power = anx7814_avdd_power,
+	.dvdd_power = anx7814_dvdd_power,
+};
+
+static struct i2c_board_info i2c4_board_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("anx7816", 0x38),	/* 0x38,0x39,0x3d,0x3f,0x40*/
+		.platform_data = (void *)&anx7814_pdata,
+	},
+};
+
 static struct i2c_board_info i2c6_board_info[] __initdata = {
 #ifdef TC358743_MIPI_CAMERA
 	{
@@ -1194,6 +1236,8 @@ static void __init board_init(void)
 
 	mxc_register_device(&i2c0_i2cmux, &i2c0_i2cmux_data);
 	mxc_register_device(&i2c1_i2cmux, &i2c1_i2cmux_data);
+	i2c_register_board_info(4, i2c4_board_info,
+			ARRAY_SIZE(i2c4_board_info));
 	i2c_register_board_info(6, i2c6_board_info,
 			ARRAY_SIZE(i2c6_board_info));
 	i2c_register_board_info(7, i2c7_board_info,
