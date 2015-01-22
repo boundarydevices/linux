@@ -144,9 +144,20 @@ int wm_adsp1_init(struct wm_adsp *adsp);
 int wm_adsp2_init(struct wm_adsp *adsp, struct mutex *fw_lock);
 int wm_adsp1_event(struct snd_soc_dapm_widget *w,
 		   struct snd_kcontrol *kcontrol, int event);
+
+#if defined(CONFIG_SND_SOC_WM_ADSP)
 int wm_adsp2_early_event(struct snd_soc_dapm_widget *w,
 			 struct snd_kcontrol *kcontrol, int event,
 			 unsigned int freq);
+#else
+static inline int wm_adsp2_early_event(struct snd_soc_dapm_widget *w,
+				       struct snd_kcontrol *kcontrol, int event,
+				       unsigned int freq)
+{
+	return 0;
+}
+#endif
+
 int wm_adsp2_event(struct snd_soc_dapm_widget *w,
 		   struct snd_kcontrol *kcontrol, int event);
 
