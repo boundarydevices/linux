@@ -195,7 +195,7 @@ static int novatek_ts_probe(struct i2c_client *client,
 	struct novatek_platform_data *pdata;
 
 	pdata = client->dev.platform_data;
-	reset_gpio = pdata->reset_gpio;
+	reset_gpio = pdata ? pdata->reset_gpio : -1;
 
 	if (reset_gpio > 0)
 		novatek_gpio_reset_chip(client, reset_gpio);
