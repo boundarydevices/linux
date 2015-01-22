@@ -673,9 +673,9 @@ static const unsigned i2c1_gpiomux_gpios[] = {
 };
 
 static const unsigned i2c1_gpiomux_values[] = {
-	1, 2, 4,
+	1,
 #ifdef OLD_REV
-	8
+	2
 #endif
 };
 
