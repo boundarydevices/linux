@@ -991,6 +991,13 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
                .irq = gpio_to_irq(GP_CAP_TCH_INT1),
        },
 #endif
+#if defined(CONFIG_TOUCHSCREEN_NOVATEK) \
+       || defined(CONFIG_TOUCHSCREEN_NOVATEK_MODULE)
+       {
+               I2C_BOARD_INFO("novatek-ts", 0x01),
+               .irq = gpio_to_irq(GP_CAP_TCH_INT1),
+       },
+#endif
 };
 
 static void usbotg_vbus(bool on)
