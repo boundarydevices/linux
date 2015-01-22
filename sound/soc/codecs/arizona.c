@@ -1735,6 +1735,7 @@ static int florida_hp_post_disable(struct snd_soc_dapm_widget *w)
 static int arizona_set_dre(struct arizona *arizona, unsigned int shift,
 			   bool enable)
 {
+	unsigned int pga = ARIZONA_OUTPUT_PATH_CONFIG_1L + shift * 4;
 	unsigned int mask = 1 << shift;
 	unsigned int val = 0;
 	const struct reg_default *wseq;
@@ -1766,6 +1767,12 @@ static int arizona_set_dre(struct arizona *arizona, unsigned int shift,
 					 mask, 0, &change);
 		if (!change)
 			return 0;
+
+		/* Force reset of PGA Vol */
+		regmap_update_bits(arizona->regmap, pga,
+				   ARIZONA_OUT1L_PGA_VOL_MASK, 0x7F);
+		regmap_update_bits(arizona->regmap, pga,
+				   ARIZONA_OUT1L_PGA_VOL_MASK, 0x80);
 
 		switch (shift) {
 		case ARIZONA_DRE1L_ENA_SHIFT:
