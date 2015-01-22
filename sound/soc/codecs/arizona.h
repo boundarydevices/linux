@@ -373,6 +373,9 @@ extern int arizona_set_ez2ctrl_cb(struct snd_soc_codec *codec,
 extern int arizona_set_custom_jd(struct snd_soc_codec *codec,
 				 const struct arizona_jd_state *custom_jd);
 
+extern int arizona_put_dre(struct snd_kcontrol *kcontrol,
+			   struct snd_ctl_elem_value *ucontrol);
+
 extern struct regmap *arizona_get_regmap_dsp(struct snd_soc_codec *codec);
 
 extern int arizona_enable_force_bypass(struct snd_soc_codec *codec);
