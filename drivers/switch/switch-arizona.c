@@ -70,6 +70,9 @@
 
 #define HP_LOW_IMPEDANCE_LIMIT 13
 
+#define ANTENNA_3_POLE_INSERTED 0x2
+#define ANTENNA_4_POLE_INSERTED 0x4
+
 struct arizona_hpdet_d_trims {
 	int off;
 	int grad_x2;
@@ -103,6 +106,7 @@ struct arizona_extcon_info {
 	int antenna_cnt_plugout;
 	int antenna_res_old_plugout;
 	bool antenna_skip_btn_db;
+	int antenna_state;
 	int moisture_count;
 
 	struct delayed_work hpdet_work;
@@ -1547,6 +1551,9 @@ static int arizona_antenna_oc_reading(struct arizona_extcon_info *info, int val)
 	if (arizona->pdata.micd_cb)
 		arizona->pdata.micd_cb(info->mic);
 
+	// remember antenna state
+	info->antenna_state = info->mic ? ANTENNA_4_POLE_INSERTED : ANTENNA_3_POLE_INSERTED;
+
 	return 0;
 }
 
@@ -1650,14 +1657,19 @@ static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 		info->antenna_skip_btn_db = false;
 		ret = arizona_antenna_mic_reading(info, val);
 	} else {
-
 		mic = val & ARIZONA_MICD_LVL_8 ? true : false;
 		if (mic && mic != info->mic) {
-			info->mic = mic;
-			info->antenna_skip_btn_db = true;
-			if (arizona->pdata.micd_cb)
-				arizona->pdata.micd_cb(info->mic);
-			arizona_extcon_report(info, BIT_HEADSET);
+			// if 3 pole jack was inserted, this could be false event on removal
+			// or 4 pole jack was inserted half way through and then pushed,
+			// check jack again and notify proper state.
+			if(info->antenna_state & ANTENNA_3_POLE_INSERTED) {
+				arizona_jds_set_state(info, &arizona_antenna_mic_det);
+				return -EAGAIN;
+			} else {
+				info->mic = mic;
+				info->antenna_skip_btn_db = true;
+				arizona_extcon_report(info, BIT_HEADSET);
+			}
 		}
 
 		if (info->mic)/* previous hs det so check for button */
