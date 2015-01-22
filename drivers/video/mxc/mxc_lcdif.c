@@ -61,6 +61,15 @@ static struct fb_videomode lcdif_modedb[] = {
 	.vmode = FB_VMODE_NONINTERLACED,
 	.flag = 0,},
 	{
+	/* 800x480 @ 60 Hz , pixel clk @ 33MHz */
+	"palmtek", 60, 800, 480, 30303,
+	.left_margin = 24, .right_margin = 46,
+	.upper_margin = 13, .lower_margin = 10,
+	.hsync_len = 22, .vsync_len = 10,
+	.sync = FB_SYNC_CLK_LAT_FALL,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0
+	},{
 	/* 480x800 @ 57 Hz , pixel clk @ 27MHz */
 	"LB043", 57, 480, 800, 25000,
 	.left_margin = 40, .right_margin = 60,
