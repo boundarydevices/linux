@@ -464,6 +464,7 @@ static const struct reg_default clearwater_reg_default[] = {
 	{ 0x00000095, 0x0000 }, /* R149 (0x95) - Haptics phase 2 duration */
 	{ 0x00000096, 0x0000 }, /* R150 (0x96) - Haptics phase 3 intensity */
 	{ 0x00000097, 0x0000 }, /* R151 (0x97) - Haptics phase 3 duration */
+	{ 0x000000A0, 0x0000 }, /* R160 (0xA0) - Clearwater Comfort Noise Generator */
 	{ 0x00000100, 0x0002 }, /* R256 (0x100) - Clock 32k 1 */
 	{ 0x00000101, 0x0404 }, /* R257 (0x101) - System Clock 1 */
 	{ 0x00000102, 0x0011 }, /* R258 (0x102) - Sample rate 1 */
@@ -1917,7 +1918,6 @@ static bool clearwater_16bit_readable_register(struct device *dev, unsigned int 
 	case ARIZONA_ALWAYS_ON_TRIGGERS_SEQUENCE_SELECT_4:
 	case ARIZONA_ALWAYS_ON_TRIGGERS_SEQUENCE_SELECT_5:
 	case ARIZONA_ALWAYS_ON_TRIGGERS_SEQUENCE_SELECT_6:
-	case ARIZONA_COMFORT_NOISE_GENERATOR:
 	case ARIZONA_HAPTICS_CONTROL_1:
 	case ARIZONA_HAPTICS_CONTROL_2:
 	case ARIZONA_HAPTICS_PHASE_1_INTENSITY:
@@ -1927,6 +1927,7 @@ static bool clearwater_16bit_readable_register(struct device *dev, unsigned int 
 	case ARIZONA_HAPTICS_PHASE_3_INTENSITY:
 	case ARIZONA_HAPTICS_PHASE_3_DURATION:
 	case ARIZONA_HAPTICS_STATUS:
+	case CLEARWATER_COMFORT_NOISE_GENERATOR:
 	case ARIZONA_CLOCK_32K_1:
 	case ARIZONA_SYSTEM_CLOCK_1:
 	case ARIZONA_SAMPLE_RATE_1:

@@ -63,6 +63,7 @@
 #define ARIZONA_HAPTICS_PHASE_3_INTENSITY        0x96
 #define ARIZONA_HAPTICS_PHASE_3_DURATION         0x97
 #define ARIZONA_HAPTICS_STATUS                   0x98
+#define CLEARWATER_COMFORT_NOISE_GENERATOR       0xA0
 #define ARIZONA_CLOCK_32K_1                      0x100
 #define ARIZONA_SYSTEM_CLOCK_1                   0x101
 #define ARIZONA_SAMPLE_RATE_1                    0x102
@@ -2687,6 +2688,17 @@
 #define ARIZONA_ONESHOT_STS_MASK                 0x0001  /* ONESHOT_STS */
 #define ARIZONA_ONESHOT_STS_SHIFT                     0  /* ONESHOT_STS */
 #define ARIZONA_ONESHOT_STS_WIDTH                     1  /* ONESHOT_STS */
+
+/*
+ * R160 (0xA0) - Clearwater Comfort Noise Generator
+ */
+#define CLEARWATER_NOISE_GEN_ENA                 0x0020  /* NOISE_GEN_ENA */
+#define CLEARWATER_NOISE_GEN_ENA_MASK            0x0020  /* NOISE_GEN_ENA */
+#define CLEARWATER_NOISE_GEN_ENA_SHIFT                5  /* NOISE_GEN_ENA */
+#define CLEARWATER_NOISE_GEN_ENA_WIDTH                1  /* NOISE_GEN_ENA */
+#define CLEARWATER_NOISE_GEN_GAIN_MASK           0x001F  /* NOISE_GEN_GAIN - [4:0] */
+#define CLEARWATER_NOISE_GEN_GAIN_SHIFT               0  /* NOISE_GEN_GAIN - [4:0] */
+#define CLEARWATER_NOISE_GEN_GAIN_WIDTH               5  /* NOISE_GEN_GAIN - [4:0] */
 
 /*
  * R256 (0x100) - Clock 32k 1
