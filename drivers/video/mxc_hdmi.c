@@ -2078,8 +2078,8 @@ exit1:
 	hdmi_phy_mask0 = hdmi_readb(HDMI_PHY_MASK0);
 	hdmi_phy_mask0 &= ~HDMI_DVI_STAT;
 	/* if cable attached, mask all but the highest set status bit */
-	if (cable_attached) {
-		stat0 &= -stat0;
+	if (stat0) {
+		stat0 = 1 << __fls(stat0);
 		hdmi_phy_mask0 |= stat0 ^ HDMI_DVI_STAT;
 	}
 	hdmi_writeb(hdmi_phy_mask0, HDMI_PHY_MASK0);
