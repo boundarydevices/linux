@@ -1897,8 +1897,10 @@ int ci_usb_charger_connect(struct ci_hdrc *ci, int is_active)
 {
 	int ret = 0;
 
+	if (is_active)
+		pm_runtime_get_sync(ci->dev);
+
 	if (ci->platdata->notify_event) {
-		pm_runtime_get_sync(&ci->gadget.dev);
 		if (is_active)
 			hw_write(ci, OP_USBCMD, USBCMD_RS, 0);
 
@@ -1913,8 +1915,11 @@ int ci_usb_charger_connect(struct ci_hdrc *ci, int is_active)
 			/* Pull down dp */
 			hw_write(ci, OP_USBCMD, USBCMD_RS, 0);
 		}
-		pm_runtime_put_sync(&ci->gadget.dev);
 	}
+
+	if (!is_active)
+		pm_runtime_put_sync(ci->dev);
+
 	return ret;
 }
 
