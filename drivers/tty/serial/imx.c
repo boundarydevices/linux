@@ -1140,7 +1140,11 @@ static int imx_startup(struct uart_port *port)
 	writel(USR1_RTSD, sport->port.membase + USR1);
 
 	temp = readl(sport->port.membase + UCR1);
-	temp |= UCR1_RRDYEN | UCR1_RTSDEN | UCR1_UARTEN;
+	temp |= UCR1_RRDYEN | UCR1_UARTEN;
+	if (sport->have_rtscts)
+		temp |= UCR1_RTSDEN;
+	else
+		temp &= ~(UCR1_RTSDEN);
 	if (sport->enable_dma) {
 		temp |= UCR1_RDMAEN | UCR1_TDMAEN;
 		/* ICD,await 4 idle frames also enable AGING Timer */
