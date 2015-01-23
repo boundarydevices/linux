@@ -599,6 +599,29 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 }
 EXPORT_SYMBOL(mxc_edid_parse_ext_blk);
 
+unsigned char *override_edid;
+
+void mxc_set_edid_address(unsigned char *edid)
+{
+	pr_debug("%s: edid=%p\n", __func__, edid);
+	override_edid = edid;
+}
+EXPORT_SYMBOL(mxc_set_edid_address);
+
+static int mxc_edid_override(struct i2c_adapter *adp,
+		unsigned short addr, unsigned char *edid)
+{
+	int extblknum = 0;
+	unsigned char *slim_edid = override_edid;
+	memcpy(edid, slim_edid, EDID_LENGTH);
+
+	pr_debug("%s: for slim\n", __func__);
+	extblknum = edid[0x7E];
+	if (extblknum)
+		memcpy(edid + EDID_LENGTH, slim_edid + EDID_LENGTH, EDID_LENGTH);
+	return extblknum;
+}
+
 static int mxc_edid_readblk(struct i2c_adapter *adp,
 		unsigned short addr, unsigned char *edid)
 {
@@ -617,6 +640,9 @@ static int mxc_edid_readblk(struct i2c_adapter *adp,
 		.buf	= edid,
 		},
 	};
+
+	if (override_edid)
+		return mxc_edid_override(adp, addr, edid);
 
 	ret = i2c_transfer(adp, msg, ARRAY_SIZE(msg));
 	if (ret != ARRAY_SIZE(msg)) {
