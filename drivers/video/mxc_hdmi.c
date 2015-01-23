@@ -2001,6 +2001,8 @@ static void mxc_hdmi_cable_disconnected(struct mxc_hdmi *hdmi)
 	hdmi->cable_plugin = false;
 }
 
+u32 prev_cable_attached = -1;
+
 static void hotplug_worker(struct work_struct *work)
 {
 	struct delayed_work *delay_work = to_delayed_work(work);
@@ -2009,22 +2011,32 @@ static void hotplug_worker(struct work_struct *work)
 	u32 hdmi_phy_stat0, hdmi_phy_pol0, hdmi_phy_mask0;
 	unsigned long flags;
 	char event_string[32];
-	int isalive = 0;
+	int cable_attached;
+	int stat0;
 	char *envp[] = { event_string, NULL };
 
 
 	hdmi_phy_stat0 = hdmi_readb(HDMI_PHY_STAT0);
 	hdmi_phy_pol0 = hdmi_readb(HDMI_PHY_POL0);
-
-	dev_dbg(&hdmi->pdev->dev, "hdmi_phy_stat0=0x%x, hdmi_phy_pol0=0x%x\n",
-			hdmi_phy_stat0, hdmi_phy_pol0);
-
 	/* Make HPD intr active low to capture unplug event or
 	 * active high to capture plugin event */
 	hdmi_writeb((HDMI_DVI_STAT & ~hdmi_phy_stat0), HDMI_PHY_POL0);
 
+	stat0 = hdmi_phy_stat0 & HDMI_DVI_STAT;
+	cable_attached = stat0 ? 1 : 0;
+	if (prev_cable_attached == cable_attached) {
+		dev_dbg(&hdmi->pdev->dev, "hdmi_phy_stat0=0x%x, cable_attached=0x%x, unchanged\n",
+				hdmi_phy_stat0, cable_attached);
+		goto exit1;
+	}
+	prev_cable_attached = cable_attached;
+
+	dev_dbg(&hdmi->pdev->dev, "hdmi_phy_stat0=0x%x, hdmi_phy_pol0=0x%x\n",
+			hdmi_phy_stat0, hdmi_phy_pol0);
+
+
 	/* check cable status */
-	if (hdmi_phy_stat0 & HDMI_DVI_STAT) {
+	if (cable_attached) {
 		/* Plugin event */
 		dev_dbg(&hdmi->pdev->dev, "EVENT=plugin\n");
 		mxc_hdmi_cable_connected(hdmi);
@@ -2035,10 +2047,6 @@ static void hotplug_worker(struct work_struct *work)
 		mxc_hdmi_cec_handle(0x80);
 #endif
 		hdmi_set_cable_state(1);
-
-		if (keepalive)
-                        hdmi_writeb(HDMI_DVI_STAT, HDMI_PHY_POL0);
-		isalive=1;
 	} else if (!keepalive) {
 		/* Plugout event */
 		dev_dbg(&hdmi->pdev->dev, "EVENT=plugout\n");
@@ -2054,22 +2062,26 @@ static void hotplug_worker(struct work_struct *work)
 
 	}
 
+exit1:
 	/* Lock here to ensure full powerdown sequence
 	 * completed before next interrupt processed */
 	spin_lock_irqsave(&hdmi->irq_lock, flags);
 
-	if (!(keepalive || isalive)) {
-		/* Re-enable HPD interrupts */
-		hdmi_phy_mask0 = hdmi_readb(HDMI_PHY_MASK0);
-		hdmi_phy_mask0 &= ~HDMI_DVI_STAT;
-		hdmi_writeb(hdmi_phy_mask0, HDMI_PHY_MASK0);
-
-		/* Unmute interrupts */
-		hdmi_writeb(~HDMI_DVI_IH_STAT, HDMI_IH_MUTE_PHY_STAT0);
-
-		if (hdmi_readb(HDMI_IH_FC_STAT2) & HDMI_IH_FC_STAT2_OVERFLOW_MASK)
-			mxc_hdmi_clear_overflow();
+	/* Re-enable HPD interrupts */
+	hdmi_phy_mask0 = hdmi_readb(HDMI_PHY_MASK0);
+	hdmi_phy_mask0 &= ~HDMI_DVI_STAT;
+	/* if cable attached, mask all but the highest set status bit */
+	if (stat0) {
+		stat0 = 1 << __fls(stat0);
+		hdmi_phy_mask0 |= stat0 ^ HDMI_DVI_STAT;
 	}
+	hdmi_writeb(hdmi_phy_mask0, HDMI_PHY_MASK0);
+
+	/* Unmute interrupts */
+	hdmi_writeb(~HDMI_DVI_IH_STAT, HDMI_IH_MUTE_PHY_STAT0);
+
+	if (hdmi_readb(HDMI_IH_FC_STAT2) & HDMI_IH_FC_STAT2_OVERFLOW_MASK)
+		mxc_hdmi_clear_overflow();
 
 	spin_unlock_irqrestore(&hdmi->irq_lock, flags);
 }
