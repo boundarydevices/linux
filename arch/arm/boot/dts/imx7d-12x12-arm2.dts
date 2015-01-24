@@ -41,6 +41,22 @@
 	};
 };
 
+&ecspi3 {
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = <&gpio6 22 0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi3_1 &pinctrl_ecspi3_cs_1>;
+	status = "okay";
+
+	flash: m25p80@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "st,m25p32";
+		spi-max-frequency = <20000000>;
+		reg = <0>;
+	};
+};
+
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1>;
@@ -152,6 +168,21 @@
 };
 
 &iomuxc {
+	ecspi3 {
+		pinctrl_ecspi3_cs_1: ecspi3_cs_grp-1 {
+			fsl,pins = <
+				MX7D_PAD_SAI2_TX_DATA__GPIO6_IO22	0x2
+			>;
+		};
+
+		pinctrl_ecspi3_1: ecspi3grp-1 {
+			fsl,pins = <
+				MX7D_PAD_SAI2_TX_SYNC__ECSPI3_MISO	0x2
+				MX7D_PAD_SAI2_TX_BCLK__ECSPI3_MOSI	0x2
+				MX7D_PAD_SAI2_RX_DATA__ECSPI3_SCLK	0x2
+			>;
+		};
+	};
 
 	enet1 {
 		pinctrl_enet1: enet1grp {
