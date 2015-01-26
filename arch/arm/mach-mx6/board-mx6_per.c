@@ -540,7 +540,9 @@ static void tc358743_mipi_camera_io_init(void)
 {
 	pr_info("%s\n", __func__);
 	gpio_set_value(GP_TC3587_RESET, 0);
+	gpio_set_value(GP_ANX7738_RESET, 0);
 	msleep(1);
+	gpio_set_value(GP_ANX7738_RESET, 1);
 	gpio_set_value(GP_TC3587_RESET, 1);	/* release reset */
 	msleep(200);
 }
@@ -1098,6 +1100,7 @@ static struct gpio initial_gpios[] __initdata = {
 	{.label = "tc3587_reset",	.gpio = GP_TC3587_RESET,	.flags = 0},
 	{.label = "tc3587_video_detect", .gpio = GP_TC3587_VIDEO_DETECT,	.flags = GPIOF_DIR_IN},
 	{.label = "tc3587_hpd_in",	.gpio = GP_TC3587_HPD_IN,	.flags = GPIOF_DIR_IN},
+	{.label = "anx7738_reset",	.gpio = GP_ANX7738_RESET,	.flags = 0},
 	{.label = "gs-reset",		.gpio = GP_GS2971_RESET,	.flags = 0},
 	{.label = "gs-standby",		.gpio = GP_GS2971_STANDBY,	.flags = GPIOF_OUT_INIT_HIGH},
 	{.label = "gs-smpte",		.gpio = GP_GS2971_SMPTE_BYPASS,	.flags = GPIOF_DIR_IN},
