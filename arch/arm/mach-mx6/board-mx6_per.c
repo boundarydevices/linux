@@ -741,15 +741,18 @@ static struct ipuv3_fb_platform_data fb_data[] = {
 	.mode_str = "1280x720M@60",
 	.default_bpp = 32,
 	.int_clk = false,
+#ifdef CONFIG_FB_MXC_LDB
 	}, {
 	.disp_dev = "ldb",
 	.interface_pix_fmt = IPU_PIX_FMT_RGB666,
 	.mode_str = "1280x720M@60",
 	.default_bpp = 16,
 	.int_clk = false,
+#endif
 	},
 };
 
+#ifdef CONFIG_FB_MXC_LDB
 static struct fsl_mxc_ldb_platform_data ldb_data = {
 	.ipu_id = 1,
 	.disp_id = 0,
@@ -758,6 +761,7 @@ static struct fsl_mxc_ldb_platform_data ldb_data = {
 	.sec_ipu_id = 1,
 	.sec_disp_id = 1,
 };
+#endif
 
 static void hdmi_init(int ipu_id, int disp_id)
 {
@@ -1188,10 +1192,12 @@ static void __init board_init(void)
 	imx6q_add_imx_uart(3, NULL);
 	imx6q_add_imx_uart(4, NULL);
 
+#ifdef CONFIG_FB_MXC_LDB
 	if (!cpu_is_mx6q()) {
 		ldb_data.ipu_id = 0;
 		ldb_data.sec_ipu_id = 0;
 	}
+#endif
 	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
 
 	imx6q_add_ipuv3(0, &ipu_data[0]);
@@ -1204,7 +1210,9 @@ static void __init board_init(void)
 		imx6q_add_ipuv3fb(i, &fb_data[i]);
 
 	imx6q_add_vdoa();
+#ifdef CONFIG_FB_MXC_LDB
 	imx6q_add_ldb(&ldb_data);
+#endif
 	voutdev = imx6q_add_v4l2_output(0);
 	if (vout_mem.res_msize && voutdev) {
 		dma_declare_coherent_memory(&voutdev->dev,
