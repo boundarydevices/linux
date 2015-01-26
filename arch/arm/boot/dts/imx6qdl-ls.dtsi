@@ -123,6 +123,15 @@
 		status = "disabled";
 	};
 
+	pwmleds {
+		compatible = "pwm-leds";
+		piezo {
+			label = "buzzer";
+			pwms = <&pwm1 0 7812500>;
+			max-brightness = <256>;
+		};
+	};
+
 	regulators {
 		compatible = "simple-bus";
 
