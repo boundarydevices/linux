@@ -45,7 +45,6 @@ struct cs47l24_compr {
 	size_t total_copied;
 	bool allocated;
 	bool trig;
-	bool forced;
 };
 
 struct cs47l24_priv {
@@ -75,30 +74,22 @@ static const struct wm_adsp_region *cs47l24_dsp_regions[] = {
 	cs47l24_dsp3_regions,
 };
 
-static int cs47l24_virt_dsp_power_ev(struct snd_soc_dapm_widget *w,
-				    struct snd_kcontrol *kcontrol, int event)
+static int cs47l24_adsp_power_ev(struct snd_soc_dapm_widget *w,
+				 struct snd_kcontrol *kcontrol, int event)
 {
 	struct cs47l24_priv *cs47l24 = snd_soc_codec_get_drvdata(w->codec);
 
-	mutex_lock(&cs47l24->compr_info.lock);
-
-	if (!cs47l24->compr_info.stream)
-		cs47l24->compr_info.trig = false;
-
 	switch (event) {
-	case SND_SOC_DAPM_POST_PMU:
-		cs47l24->compr_info.forced = true;
-		break;
-	case SND_SOC_DAPM_PRE_PMD:
-		cs47l24->compr_info.forced = false;
+	case SND_SOC_DAPM_PRE_PMU:
+		mutex_lock(&cs47l24->compr_info.lock);
+		cs47l24->compr_info.trig = false;
+		mutex_unlock(&cs47l24->compr_info.lock);
 		break;
 	default:
 		break;
 	}
 
-	mutex_unlock(&cs47l24->compr_info.lock);
-
-	return 0;
+	return arizona_adsp_power_ev(w, kcontrol, event);
 }
 
 static DECLARE_TLV_DB_SCALE(eq_tlv, -1200, 100, 0);
@@ -486,8 +477,8 @@ SND_SOC_DAPM_PGA("ASRC2L", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC2L_ENA_SHIFT, 0,
 SND_SOC_DAPM_PGA("ASRC2R", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC2R_ENA_SHIFT, 0,
 		 NULL, 0),
 
-WM_ADSP2("DSP2", 1, arizona_adsp_power_ev),
-WM_ADSP2("DSP3", 2, arizona_adsp_power_ev),
+WM_ADSP2("DSP2", 1, cs47l24_adsp_power_ev),
+WM_ADSP2("DSP3", 2, cs47l24_adsp_power_ev),
 
 SND_SOC_DAPM_PGA("ISRC1INT1", ARIZONA_ISRC_1_CTRL_3,
 		 ARIZONA_ISRC1_INT0_ENA_SHIFT, 0, NULL, 0),
@@ -678,9 +669,8 @@ SND_SOC_DAPM_VIRT_MUX("DSP2 Virtual Input", SND_SOC_NOPM, 0, 0,
 SND_SOC_DAPM_VIRT_MUX("DSP3 Virtual Input", SND_SOC_NOPM, 0, 0,
 		      &cs47l24_memory_mux[1]),
 
-SND_SOC_DAPM_VIRT_MUX_E("DSP Virtual Output Mux", SND_SOC_NOPM, 0, 0,
-		      &cs47l24_dsp_output_mux[0], cs47l24_virt_dsp_power_ev,
-		      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+SND_SOC_DAPM_VIRT_MUX("DSP Virtual Output Mux", SND_SOC_NOPM, 0, 0,
+		      &cs47l24_dsp_output_mux[0]),
 
 ARIZONA_MUX_WIDGETS(ISRC1DEC1, "ISRC1DEC1"),
 ARIZONA_MUX_WIDGETS(ISRC1DEC2, "ISRC1DEC2"),
@@ -1184,8 +1174,6 @@ static int cs47l24_free(struct snd_compr_stream *stream)
 	cs47l24->compr_info.allocated = false;
 	cs47l24->compr_info.stream = NULL;
 	cs47l24->compr_info.total_copied = 0;
-	if (!cs47l24->compr_info.forced)
-		cs47l24->compr_info.trig = false;
 
 	wm_adsp_stream_free(cs47l24->compr_info.adsp);
 

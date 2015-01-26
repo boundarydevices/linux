@@ -59,7 +59,6 @@ struct clearwater_compr {
 	size_t total_copied;
 	bool allocated;
 	bool trig;
-	bool forced;
 };
 
 struct clearwater_priv {
@@ -166,32 +165,6 @@ static const struct snd_kcontrol_new clearwater_in2mux[2] = {
 	SOC_DAPM_ENUM("IN2R Mux", clearwater_in2muxr_enum),
 };
 
-static int clearwater_virt_dsp_power_ev(struct snd_soc_dapm_widget *w,
-				    struct snd_kcontrol *kcontrol, int event)
-{
-	struct clearwater_priv *clearwater = snd_soc_codec_get_drvdata(w->codec);
-
-	mutex_lock(&clearwater->compr_info.lock);
-
-	if (!clearwater->compr_info.stream)
-		clearwater->compr_info.trig = false;
-
-	switch (event) {
-	case SND_SOC_DAPM_POST_PMU:
-		clearwater->compr_info.forced = true;
-		break;
-	case SND_SOC_DAPM_PRE_PMD:
-		clearwater->compr_info.forced = false;
-		break;
-	default:
-		break;
-	}
-
-	mutex_unlock(&clearwater->compr_info.lock);
-
-	return 0;
-}
-
 static int clearwater_frf_bytes_put(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
@@ -225,11 +198,12 @@ out:
 }
 
 static int clearwater_adsp_power_ev(struct snd_soc_dapm_widget *w,
-				      struct snd_kcontrol *kcontrol,
-			      int event)
+				    struct snd_kcontrol *kcontrol,
+				    int event)
 {
 	struct snd_soc_codec *codec = w->codec;
-	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);
+	struct clearwater_priv *clearwater = snd_soc_codec_get_drvdata(codec);
+	struct arizona_priv *priv = &clearwater->core;
 	struct arizona *arizona = priv->arizona;
 	unsigned int freq;
 	int ret;
@@ -242,6 +216,16 @@ static int clearwater_adsp_power_ev(struct snd_soc_dapm_widget *w,
 
 	freq &= CLEARWATER_DSP_CLK_FREQ_LEGACY_MASK;
 	freq >>= CLEARWATER_DSP_CLK_FREQ_LEGACY_SHIFT;
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		mutex_lock(&clearwater->compr_info.lock);
+		clearwater->compr_info.trig = false;
+		mutex_unlock(&clearwater->compr_info.lock);
+		break;
+	default:
+		break;
+	}
 
 	return wm_adsp2_early_event(w, kcontrol, event, freq);
 }
@@ -1489,9 +1473,8 @@ SND_SOC_DAPM_VIRT_MUX("DSP2 Virtual Input", SND_SOC_NOPM, 0, 0,
 SND_SOC_DAPM_VIRT_MUX("DSP3 Virtual Input", SND_SOC_NOPM, 0, 0,
 		      &clearwater_memory_mux[1]),
 
-SND_SOC_DAPM_VIRT_MUX_E("DSP Virtual Output Mux", SND_SOC_NOPM, 0, 0,
-		      &clearwater_dsp_output_mux[0], clearwater_virt_dsp_power_ev,
-		      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+SND_SOC_DAPM_VIRT_MUX("DSP Virtual Output Mux", SND_SOC_NOPM, 0, 0,
+		      &clearwater_dsp_output_mux[0]),
 
 ARIZONA_MUX_WIDGETS(ISRC1DEC1, "ISRC1DEC1"),
 ARIZONA_MUX_WIDGETS(ISRC1DEC2, "ISRC1DEC2"),
@@ -2370,8 +2353,6 @@ static int clearwater_free(struct snd_compr_stream *stream)
 	clearwater->compr_info.allocated = false;
 	clearwater->compr_info.stream = NULL;
 	clearwater->compr_info.total_copied = 0;
-	if (!clearwater->compr_info.forced)
-		clearwater->compr_info.trig = false;
 
 	wm_adsp_stream_free(clearwater->compr_info.adsp);
 

@@ -47,7 +47,6 @@ struct florida_compr {
 	size_t total_copied;
 	bool allocated;
 	bool trig;
-	bool forced;
 };
 
 struct florida_priv {
@@ -221,30 +220,23 @@ static int florida_sysclk_ev(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
-static int florida_virt_dsp_power_ev(struct snd_soc_dapm_widget *w,
-				    struct snd_kcontrol *kcontrol, int event)
+static int florida_adsp_power_ev(struct snd_soc_dapm_widget *w,
+				 struct snd_kcontrol *kcontrol,
+				 int event)
 {
 	struct florida_priv *florida = snd_soc_codec_get_drvdata(w->codec);
 
-	mutex_lock(&florida->compr_info.lock);
-
-	if (!florida->compr_info.stream)
-		florida->compr_info.trig = false;
-
 	switch (event) {
-	case SND_SOC_DAPM_POST_PMU:
-		florida->compr_info.forced = true;
-		break;
-	case SND_SOC_DAPM_PRE_PMD:
-		florida->compr_info.forced = false;
+	case SND_SOC_DAPM_PRE_PMU:
+		mutex_lock(&florida->compr_info.lock);
+		florida->compr_info.trig = false;
+		mutex_unlock(&florida->compr_info.lock);
 		break;
 	default:
 		break;
 	}
 
-	mutex_unlock(&florida->compr_info.lock);
-
-	return 0;
+	return arizona_adsp_power_ev(w, kcontrol, event);
 }
 
 static DECLARE_TLV_DB_SCALE(ana_tlv, 0, 100, 0);
@@ -897,10 +889,10 @@ SND_SOC_DAPM_PGA("ASRC2L", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC2L_ENA_SHIFT, 0,
 SND_SOC_DAPM_PGA("ASRC2R", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC2R_ENA_SHIFT, 0,
 		 NULL, 0),
 
-WM_ADSP2("DSP1", 0, arizona_adsp_power_ev),
-WM_ADSP2("DSP2", 1, arizona_adsp_power_ev),
-WM_ADSP2("DSP3", 2, arizona_adsp_power_ev),
-WM_ADSP2("DSP4", 3, arizona_adsp_power_ev),
+WM_ADSP2("DSP1", 0, florida_adsp_power_ev),
+WM_ADSP2("DSP2", 1, florida_adsp_power_ev),
+WM_ADSP2("DSP3", 2, florida_adsp_power_ev),
+WM_ADSP2("DSP4", 3, florida_adsp_power_ev),
 
 SND_SOC_DAPM_PGA("ISRC1INT1", ARIZONA_ISRC_1_CTRL_3,
 		 ARIZONA_ISRC1_INT0_ENA_SHIFT, 0, NULL, 0),
@@ -1225,9 +1217,8 @@ SND_SOC_DAPM_VIRT_MUX("DSP2 Virtual Input", SND_SOC_NOPM, 0, 0,
 SND_SOC_DAPM_VIRT_MUX("DSP3 Virtual Input", SND_SOC_NOPM, 0, 0,
 		      &florida_memory_mux[1]),
 
-SND_SOC_DAPM_VIRT_MUX_E("DSP Virtual Output Mux", SND_SOC_NOPM, 0, 0,
-		      &florida_dsp_output_mux[0], florida_virt_dsp_power_ev,
-		      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+SND_SOC_DAPM_VIRT_MUX("DSP Virtual Output Mux", SND_SOC_NOPM, 0, 0,
+		      &florida_dsp_output_mux[0]),
 
 ARIZONA_MUX_WIDGETS(ISRC1DEC1, "ISRC1DEC1"),
 ARIZONA_MUX_WIDGETS(ISRC1DEC2, "ISRC1DEC2"),
@@ -1976,8 +1967,6 @@ static int florida_free(struct snd_compr_stream *stream)
 	florida->compr_info.allocated = false;
 	florida->compr_info.stream = NULL;
 	florida->compr_info.total_copied = 0;
-	if (!florida->compr_info.forced)
-		florida->compr_info.trig = false;
 
 	wm_adsp_stream_free(florida->compr_info.adsp);
 
