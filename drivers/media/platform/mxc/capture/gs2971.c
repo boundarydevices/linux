@@ -29,6 +29,7 @@
  *
  * @ingroup Camera
  */
+
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/types.h>
@@ -846,6 +847,10 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 		f->fmt.pix = sensor->pix;
 		break;
 
+	case V4L2_BUF_TYPE_SENSOR:
+		f->fmt.spix = sensor->spix;
+		break;
+
 	case V4L2_BUF_TYPE_PRIVATE:
 		get_std(s, &std);
 //              f->fmt.pix.pixelformat = (u32)std;
@@ -1001,15 +1006,18 @@ static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 {
 	struct gs2971_priv *gs = s->priv;
 	struct sensor_data *sensor = &gs->sensor;
+	enum gs2971_mode mode = gs->mode;
 
 	pr_debug("-> In function %s\n", __func__);
 
-	if (fsize->index > gs2971_mode_MAX || gs->mode > gs2971_mode_MAX)
+	if (fsize->index >= 1)
 		return -EINVAL;
+	if (mode > gs2971_mode_MAX)
+		mode = gs2971_mode_720p;
 
 	fsize->pixel_format = sensor->pix.pixelformat;
-	fsize->discrete.width = gs2971_res[gs->mode].width;
-	fsize->discrete.height = gs2971_res[gs->mode].height;
+	fsize->discrete.width = gs2971_res[mode].width;
+	fsize->discrete.height = gs2971_res[mode].height;
 	return 0;
 }
 

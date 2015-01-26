@@ -291,7 +291,7 @@ struct gs2971_spidata {
 struct gs2971_priv {
 	struct sensor_data sensor;
 	v4l2_std_id std;
-	int mode;
+	enum gs2971_mode mode;
 	int framerate;
 	struct v4l2_format fmt;
 	int cea861;	/* use hysnc/vsync/de not h:v:f eav mode */
