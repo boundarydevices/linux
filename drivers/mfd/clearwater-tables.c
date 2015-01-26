@@ -46,7 +46,7 @@ static const struct reg_default clearwater_reva_16_patch[] = {
 	{ 0x80,  0x0000 },
 };
 
-static const struct reg_default clearwater_revb_16_patch[] = {
+static const struct reg_default clearwater_revc_16_patch[] = {
 	{ 0x27E, 0x0001 },
 };
 
@@ -307,33 +307,42 @@ EXPORT_SYMBOL_GPL(clearwater_patch_32);
 int clearwater_patch(struct arizona *arizona)
 {
 	int ret = 0;
+	const struct reg_default *patch16 = NULL;
+	const struct reg_default *patch32 = NULL;
+	unsigned int num16, num32;
 
 	switch (arizona->rev) {
 	case 0:
 	case 1:
-		ret = regmap_register_patch(arizona->regmap,
-					     clearwater_reva_16_patch,
-					     ARRAY_SIZE(clearwater_reva_16_patch));
-		if (ret < 0) {
-			dev_err(arizona->dev, "Error in applying Clearwater Rev A 16 bit patch\n");
-			return ret;
-		}
-		ret = clearwater_patch_32(arizona);
-		if (ret < 0) {
-			dev_err(arizona->dev, "Error in applying Clearwater Rev A 32 bit patch\n");
-			return ret;
-		}
+		patch16 = clearwater_reva_16_patch;
+		num16 = ARRAY_SIZE(clearwater_reva_16_patch);
+
+		patch32 = clearwater_reva_32_patch;
+		num32 = ARRAY_SIZE(clearwater_reva_32_patch);
 		break;
 	default:
-		ret = regmap_register_patch(arizona->regmap,
-					     clearwater_revb_16_patch,
-					     ARRAY_SIZE(clearwater_revb_16_patch));
+		patch16 = clearwater_revc_16_patch;
+		num16 = ARRAY_SIZE(clearwater_revc_16_patch);
+		break;
+	}
+
+	if (patch16) {
+		ret = regmap_register_patch(arizona->regmap, patch16, num16);
 		if (ret < 0) {
 			dev_err(arizona->dev,
-				"Error in applying Clearwater Rev B 16 bit patch\n");
+				"Error in applying 16-bit patch: %d\n", ret);
 			return ret;
 		}
-		break;
+	}
+
+	if (patch32) {
+		ret = regmap_register_patch(arizona->regmap_32bit,
+					    patch32, num32);
+		if (ret < 0) {
+			dev_err(arizona->dev,
+				"Error in applying 32-bit patch: %d\n", ret);
+			return ret;
+		}
 	}
 
 	return 0;
