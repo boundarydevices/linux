@@ -289,20 +289,6 @@ static const struct reg_default clearwater_reva_32_patch[] = {
 	{  0x31DC, 0x222AFB02},
 };
 
-int clearwater_patch_32(struct arizona *arizona)
-{
-	switch (arizona->rev) {
-	case 0:
-	case 1:
-		return regmap_multi_reg_write_bypassed(arizona->regmap_32bit,
-						 clearwater_reva_32_patch,
-						 ARRAY_SIZE(clearwater_reva_32_patch));
-	default:
-		return 0;
-	}
-}
-EXPORT_SYMBOL_GPL(clearwater_patch_32);
-
 /* We use a function so we can use ARRAY_SIZE() */
 int clearwater_patch(struct arizona *arizona)
 {
