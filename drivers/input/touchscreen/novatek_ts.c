@@ -49,6 +49,9 @@ struct novatek_ts_data {
 	uint8_t max_touch_num;
 };
 
+static int screenres[2] = {NOVATEK_MAX_X, NOVATEK_MAX_Y};
+module_param_array(screenres, int, NULL, S_IRUGO | S_IWUSR);
+
 static struct i2c_client *this_client;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -66,8 +69,8 @@ enum {
 
 static int novatek_init_panel(struct novatek_ts_data *ts)
 {
-	ts->abs_x_max = NOVATEK_MAX_X;
-	ts->abs_y_max = NOVATEK_MAX_Y;
+	ts->abs_x_max = screenres[0];
+	ts->abs_y_max = screenres[1];
 	ts->max_touch_num = MAX_SUPPORT_POINTS;
 
 	return 0;
