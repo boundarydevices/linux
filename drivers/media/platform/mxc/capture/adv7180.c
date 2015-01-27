@@ -912,7 +912,7 @@ const unsigned char sensor_init_data[] = {
 	0x04, 0x44,
 	0x05, 0x00,
 	0x06, 0x02,
-	0x07, 0x7e,
+	0x07, 0x7F,
 	0x08, 0x80,
 	ADV7180_BRIGHTNESS, 0x00,
 	0x0B, 0x00,
@@ -1165,7 +1165,7 @@ static void adv7180_hard_reset(struct adv7180_priv *adv)
 
 	if (adv->cvbs) {
 		/* Set CVBS input on AIN1 */
-		adv7180_write_reg(adv, ADV7180_INPUT_CTL, 0x50);
+		adv7180_write_reg(adv, ADV7180_INPUT_CTL, 0x00);
 	} else {
 		/*
 		 * Set YPbPr input on AIN1,4,5 and normal
