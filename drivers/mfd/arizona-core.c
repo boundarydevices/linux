@@ -736,8 +736,18 @@ static int arizona_runtime_resume(struct device *dev)
 
 	ret = regcache_sync(arizona->regmap);
 	if (ret != 0) {
-		dev_err(arizona->dev, "Failed to restore register cache\n");
+		dev_err(arizona->dev,
+			"Failed to restore 16-bit register cache\n");
 		goto err;
+	}
+
+	if (arizona->regmap_32bit) {
+		ret = regcache_sync(arizona->regmap_32bit);
+		if (ret != 0) {
+			dev_err(arizona->dev,
+				"Failed to restore 32-bit register cache\n");
+			goto err;
+		}
 	}
 
 	ret = arizona_restore_dvfs(arizona);
@@ -817,6 +827,8 @@ static int arizona_runtime_suspend(struct device *dev)
 
 	regcache_cache_only(arizona->regmap, true);
 	regcache_mark_dirty(arizona->regmap);
+	if (arizona->regmap_32bit)
+		regcache_mark_dirty(arizona->regmap_32bit);
 	regulator_disable(arizona->dcvdd);
 
 	return 0;

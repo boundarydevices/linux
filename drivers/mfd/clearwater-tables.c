@@ -3353,7 +3353,7 @@ const struct regmap_config clearwater_32bit_spi_regmap = {
 	.readable_reg = clearwater_32bit_readable_register,
 	.volatile_reg = clearwater_32bit_volatile_register,
 
-	.cache_type = REGCACHE_NONE,
+	.cache_type = REGCACHE_RBTREE,
 };
 EXPORT_SYMBOL_GPL(clearwater_32bit_spi_regmap);
 
@@ -3367,6 +3367,6 @@ const struct regmap_config clearwater_32bit_i2c_regmap = {
 	.readable_reg = clearwater_32bit_readable_register,
 	.volatile_reg = clearwater_32bit_volatile_register,
 
-	.cache_type = REGCACHE_NONE,
+	.cache_type = REGCACHE_RBTREE,
 };
 EXPORT_SYMBOL_GPL(clearwater_32bit_i2c_regmap);
