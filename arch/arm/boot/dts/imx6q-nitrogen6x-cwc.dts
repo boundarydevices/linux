@@ -77,10 +77,6 @@
 	status = "disabled";
 };
 
-&tc358743_mipi {
-	status = "disabled";
-};
-
 &v4l2_cap_0 {
 	ipu_id = <0>;
 	csi_id = <0>;
@@ -88,7 +84,7 @@
 	status = "okay" ;
 };
 
-/* ov5640_mipi, tc358743_mipi */
+/* ov5640_mipi */
 &v4l2_cap_1 {
 	status = "disabled" ;
 };
