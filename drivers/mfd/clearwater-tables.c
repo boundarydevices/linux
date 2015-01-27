@@ -289,6 +289,27 @@ static const struct reg_default clearwater_reva_32_patch[] = {
 	{  0x31DC, 0x222AFB02},
 };
 
+static const struct reg_default clearwater_revc_32_patch[] = {
+	{ 0x3380, 0xE4103066 },
+	{ 0x3382, 0xE4103070 },
+	{ 0x3384, 0xE4103078 },
+	{ 0x3386, 0xE4103080 },
+	{ 0x3388, 0xE410F080 },
+	{ 0x338A, 0xE4143066 },
+	{ 0x338C, 0xE4143070 },
+	{ 0x338E, 0xE4143078 },
+	{ 0x3390, 0xE4143080 },
+	{ 0x3392, 0xE414F080 },
+	{ 0x3394, 0xE4103078 },
+	{ 0x3396, 0xE4103070 },
+	{ 0x3398, 0xE4103066 },
+	{ 0x339A, 0xE410F056 },
+	{ 0x339C, 0xE4143078 },
+	{ 0x339E, 0xE4143070 },
+	{ 0x33A0, 0xE4143066 },
+	{ 0x33A2, 0xE414F056 },
+};
+
 /* We use a function so we can use ARRAY_SIZE() */
 int clearwater_patch(struct arizona *arizona)
 {
@@ -309,6 +330,9 @@ int clearwater_patch(struct arizona *arizona)
 	default:
 		patch16 = clearwater_revc_16_patch;
 		num16 = ARRAY_SIZE(clearwater_revc_16_patch);
+
+		patch32 = clearwater_revc_32_patch;
+		num32 = ARRAY_SIZE(clearwater_revc_32_patch);
 		break;
 	}
 
