@@ -2006,6 +2006,8 @@ static bool clearwater_16bit_readable_register(struct device *dev, unsigned int 
 	case ARIZONA_HP_CTRL_2R:
 	case ARIZONA_HP_CTRL_3L:
 	case ARIZONA_HP_CTRL_3R:
+	case ARIZONA_DCS_HP1L_CONTROL:
+	case ARIZONA_DCS_HP1R_CONTROL:
 	case ARIZONA_ACCESSORY_DETECT_MODE_1:
 	case ARIZONA_HEADPHONE_DETECT_1:
 	case ARIZONA_HEADPHONE_DETECT_2:
@@ -3216,6 +3218,8 @@ static bool clearwater_16bit_volatile_register(struct device *dev, unsigned int 
 	case ARIZONA_SAMPLE_RATE_2_STATUS:
 	case ARIZONA_SAMPLE_RATE_3_STATUS:
 	case ARIZONA_ASYNC_SAMPLE_RATE_1_STATUS:
+	case ARIZONA_DCS_HP1L_CONTROL:
+	case ARIZONA_DCS_HP1R_CONTROL:
 	case ARIZONA_MIC_DETECT_3:
 	case ARIZONA_MIC_DETECT_4:
 	case ARIZONA_HEADPHONE_DETECT_2:

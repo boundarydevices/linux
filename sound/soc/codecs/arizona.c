@@ -1883,6 +1883,7 @@ int arizona_hp_ev(struct snd_soc_dapm_widget *w,
 	struct arizona_priv *priv = snd_soc_codec_get_drvdata(w->codec);
 	unsigned int mask = 1 << w->shift;
 	unsigned int val;
+	int ret;
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
@@ -1911,12 +1912,31 @@ int arizona_hp_ev(struct snd_soc_dapm_widget *w,
 		switch (priv->arizona->type) {
 		case WM5110:
 			florida_hp_post_disable(w);
+			ret = arizona_out_ev(w, kcontrol, event);
+			break;
+		case WM8285:
+		case WM1840:
+			ret = arizona_out_ev(w, kcontrol, event);
+			switch (w->shift) {
+			case ARIZONA_OUT1L_ENA_SHIFT:
+				snd_soc_write(w->codec,
+					      ARIZONA_DCS_HP1L_CONTROL,
+					      0x2006);
+				break;
+			case ARIZONA_OUT1R_ENA_SHIFT:
+				snd_soc_write(w->codec,
+					      ARIZONA_DCS_HP1R_CONTROL,
+					      0x2006);
+				break;
+			default:
+				break;
+			}
 			break;
 		default:
 			break;
 		}
 
-		return arizona_out_ev(w, kcontrol, event);
+		return ret;
 	default:
 		return -EINVAL;
 	}

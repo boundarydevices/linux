@@ -155,6 +155,8 @@
 #define ARIZONA_HP_CTRL_2R                       0x228
 #define ARIZONA_HP_CTRL_3L                       0x229
 #define ARIZONA_HP_CTRL_3R                       0x22A
+#define ARIZONA_DCS_HP1L_CONTROL                 0x232
+#define ARIZONA_DCS_HP1R_CONTROL                 0x238
 #define ARIZONA_ACCESSORY_DETECT_MODE_1          0x293
 #define ARIZONA_HEADPHONE_DETECT_1               0x29B
 #define ARIZONA_HEADPHONE_DETECT_2               0x29C
