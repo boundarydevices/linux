@@ -1732,7 +1732,7 @@ static int florida_hp_post_disable(struct snd_soc_dapm_widget *w)
 	return 0;
 }
 
-static int arizona_set_dre(struct arizona *arizona, unsigned int shift,
+static int florida_set_dre(struct arizona *arizona, unsigned int shift,
 			   bool enable)
 {
 	unsigned int pga = ARIZONA_OUTPUT_PATH_CONFIG_1L + shift * 4;
@@ -1801,7 +1801,7 @@ static int arizona_set_dre(struct arizona *arizona, unsigned int shift,
 	return 0;
 }
 
-int arizona_put_dre(struct snd_kcontrol *kcontrol,
+int florida_put_dre(struct snd_kcontrol *kcontrol,
 		    struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
@@ -1813,14 +1813,31 @@ int arizona_put_dre(struct snd_kcontrol *kcontrol,
 
 	mutex_lock(&arizona->dapm->card->dapm_mutex);
 
-	arizona_set_dre(arizona, lshift, !!ucontrol->value.integer.value[0]);
-	arizona_set_dre(arizona, rshift, !!ucontrol->value.integer.value[1]);
+	florida_set_dre(arizona, lshift, !!ucontrol->value.integer.value[0]);
+	florida_set_dre(arizona, rshift, !!ucontrol->value.integer.value[1]);
 
 	mutex_unlock(&arizona->dapm->card->dapm_mutex);
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(arizona_put_dre);
+EXPORT_SYMBOL_GPL(florida_put_dre);
+
+int clearwater_put_dre(struct snd_kcontrol *kcontrol,
+		    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct arizona *arizona = dev_get_drvdata(codec->dev->parent);
+	int ret;
+
+	mutex_lock(&arizona->dapm->card->dapm_mutex);
+
+	ret = snd_soc_put_volsw(kcontrol, ucontrol);
+
+	mutex_unlock(&arizona->dapm->card->dapm_mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(clearwater_put_dre);
 
 static int clearwater_hp_pre_enable(struct snd_soc_dapm_widget *w)
 {
