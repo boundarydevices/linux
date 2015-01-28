@@ -20,18 +20,23 @@
 #include <linux/err.h>
 #include "clk.h"
 #include "common.h"
+#include "hardware.h"
 
 #define PLL_NUM_OFFSET		0x10
 #define PLL_DENOM_OFFSET	0x20
 
 #define BM_PLL_POWER		(0x1 << 12)
 #define BM_PLL_LOCK		(0x1 << 31)
+#define BM_PLL_ENABLE		(0x1 << 13)
+#define BM_PLL_BYPASS		(0x1 << 16)
+#define ENET_PLL_POWER		(0x1 << 5)
 
 /**
  * struct clk_pllv3 - IMX PLL clock version 3
  * @clk_hw:	 clock source
  * @base:	 base address of PLL registers
  * @powerup_set: set POWER bit to power up the PLL
+ * @powerdown:   pll powerdown offset bit
  * @div_mask:	 mask of divider bits
  *
  * IMX PLL clock version 3, found on i.MX6 series.  Divider for pllv3
@@ -41,6 +46,7 @@ struct clk_pllv3 {
 	struct clk_hw	hw;
 	void __iomem	*base;
 	bool		powerup_set;
+	u32		powerdown;
 	u32		div_mask;
 };
 
@@ -49,7 +55,7 @@ struct clk_pllv3 {
 static int clk_pllv3_wait_lock(struct clk_pllv3 *pll)
 {
 	unsigned long timeout = jiffies + msecs_to_jiffies(10);
-	u32 val = readl_relaxed(pll->base) & BM_PLL_POWER;
+	u32 val = readl_relaxed(pll->base) & pll->powerdown;
 
 	/* No need to wait for lock when pll is not powered up */
 	if ((pll->powerup_set && !val) || (!pll->powerup_set && val))
@@ -75,9 +81,9 @@ static int clk_pllv3_do_hardware(struct clk_hw *hw, bool enable)
 	val = readl_relaxed(pll->base);
 	if (enable) {
 		if (pll->powerup_set)
-			val |= BM_PLL_POWER;
+			val |= pll->powerdown;
 		else
-			val &= ~BM_PLL_POWER;
+			val &= ~pll->powerdown;
 		writel_relaxed(val, pll->base);
 
 		ret = clk_pllv3_wait_lock(pll);
@@ -85,9 +91,9 @@ static int clk_pllv3_do_hardware(struct clk_hw *hw, bool enable)
 			return ret;
 	} else {
 		if (pll->powerup_set)
-			val &= ~BM_PLL_POWER;
+			val &= ~pll->powerdown;
 		else
-			val |= BM_PLL_POWER;
+			val |= pll->powerdown;
 		writel_relaxed(val, pll->base);
 	}
 
@@ -310,7 +316,7 @@ static const struct clk_ops clk_pllv3_av_ops = {
 static unsigned long clk_pllv3_enet_recalc_rate(struct clk_hw *hw,
 						unsigned long parent_rate)
 {
-	return 500000000;
+	return 1000000000;
 }
 
 static const struct clk_ops clk_pllv3_enet_ops = {
@@ -346,11 +352,19 @@ struct clk *imx_clk_pllv3(enum imx_pllv3_type type, const char *name,
 	case IMX_PLLV3_ENET:
 		ops = &clk_pllv3_enet_ops;
 		break;
+	case IMX_PLLV3_SYSV2:
+		ops = &clk_pllv3_ops;
+		break;
 	default:
 		ops = &clk_pllv3_ops;
 	}
 	pll->base = base;
 	pll->div_mask = div_mask;
+
+	if (cpu_is_imx7d() && strcmp(name, "pll_enet_main") == 0)
+		pll->powerdown = ENET_PLL_POWER;
+	else
+		pll->powerdown = BM_PLL_POWER;
 
 	init.name = name;
 	init.ops = ops;
