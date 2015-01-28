@@ -73,6 +73,7 @@ int mx31_clocks_init_dt(void);
 struct platform_device *mxc_register_gpio(char *name, int id,
 	resource_size_t iobase, resource_size_t iosize, int irq, int irq_high);
 void mxc_set_cpu_type(unsigned int type);
+void mxc_set_arch_type(unsigned int type);
 void mxc_restart(enum reboot_mode, const char *);
 void mxc_arch_reset_init(void __iomem *);
 void mxc_arch_reset_init_dt(void);
@@ -95,6 +96,7 @@ void mcc_receive_from_mu_buffer(unsigned int index, unsigned int *data);
 void mcc_send_via_mu_buffer(unsigned int index, unsigned int data);
 unsigned int imx_gpc_is_m4_sleeping(void);
 bool imx_mu_is_m4_in_low_freq(void);
+void imx_gpcv2_set_core_pdn_by_wfi(u32 cpu, bool enable);
 
 enum mxc_cpu_pwr_mode {
 	WAIT_CLOCKED,		/* wfi only */
@@ -140,11 +142,15 @@ static inline void imx_scu_map_io(void) {}
 static inline void imx_smp_prepare(void) {}
 #endif
 extern void imx6_pm_map_io(void);
+extern void imx7_pm_map_io(void);
 
 void imx_src_init(void);
 void imx_gpc_init(void);
+void imx_gpcv2_init(void);
 void imx_gpc_pre_suspend(bool arm_power_off);
+void imx_gpcv2_pre_suspend(bool arm_power_off);
 void imx_gpc_post_resume(void);
+void imx_gpcv2_post_resume(void);
 void imx_gpc_mask_all(void);
 void imx_gpc_restore_all(void);
 void imx_gpc_irq_mask(struct irq_data *d);
@@ -166,17 +172,23 @@ int imx_cpu_kill(unsigned int cpu);
 
 #ifdef CONFIG_SUSPEND
 void v7_cpu_resume(void);
+void ca7_cpu_resume(void);
 void imx6_suspend(void __iomem *ocram_vbase);
+void imx7_suspend(void __iomem *ocram_vbase);
 #else
 static inline void v7_cpu_resume(void) {}
+static inline void ca7_cpu_resume(void) {}
 static inline void imx6_suspend(void __iomem *ocram_vbase) {}
+static inline void imx7_suspend(void __iomem *ocram_vbase) {}
 #endif
 
 void imx6q_pm_init(void);
+void imx7d_pm_init(void);
 void imx6dl_pm_init(void);
 void imx6sl_pm_init(void);
 void imx6sx_pm_init(void);
 void imx6q_pm_set_ccm_base(void __iomem *base);
+void imx7_pm_init(void);
 
 #ifdef CONFIG_PM
 void imx5_pm_init(void);

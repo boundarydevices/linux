@@ -843,6 +843,20 @@ config SOC_IMX6SX
 	help
 	  This enables support for Freescale i.MX6 SoloX processor.
 
+config SOC_IMX7
+	bool
+	select CPU_V7
+	select ARM_GIC
+	select HAVE_SMP
+
+config SOC_IMX7D
+	bool "i.MX7 Dual support"
+	select SOC_IMX7
+	select PINCTRL_IMX7D
+
+	help
+	  This enables support for Freescale i.MX7 Dual processor.
+
 config SOC_VF610
 	bool "Vybrid Family VF610 support"
 	select CPU_V7
