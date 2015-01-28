@@ -25,6 +25,7 @@
 #define SNVS_LPSRTCLR		0x20
 #define SNVS_LPTAR		0x24
 #define SNVS_LPPGDR		0x30
+#define SNVS_LPGPR		0x34
 
 #define SNVS_LPCR_SRTC_ENV	(1 << 0)
 #define SNVS_LPCR_LPTA_EN	(1 << 1)
@@ -219,6 +220,39 @@ static const struct rtc_class_ops snvs_rtc_ops = {
 	.alarm_irq_enable = snvs_rtc_alarm_irq_enable,
 };
 
+
+static ssize_t snvs_sysfs_show_usr(struct device *dev,
+		       struct device_attribute *attr, char *buf)
+{
+	struct snvs_rtc_data *data = dev_get_drvdata(dev);
+	u32 lpgpr;
+
+	lpgpr = readl(data->ioaddr + SNVS_LPGPR);
+	return sprintf(buf, "0x%08x\n", lpgpr);
+}
+
+static ssize_t snvs_sysfs_store_usr(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	struct snvs_rtc_data *data = dev_get_drvdata(dev);
+	u32 usr = 0;
+
+	if (buf[0] == '0' && (buf[1] == 'x' || buf[1] == 'X')) {
+		if (sscanf(buf, "%x", &usr) != 1)
+			return -EINVAL;
+	} else {
+		if (sscanf(buf, "%d", &usr) != 1)
+			return -EINVAL;
+	}
+
+	writel(usr, data->ioaddr + SNVS_LPGPR);
+	return count;
+}
+
+static DEVICE_ATTR(usr, S_IRUGO | S_IWUSR, snvs_sysfs_show_usr,
+		snvs_sysfs_store_usr);
+
 static irqreturn_t snvs_rtc_irq_handler(int irq, void *dev_id)
 {
 	struct device *dev = dev_id;
@@ -310,11 +344,17 @@ static int snvs_rtc_probe(struct platform_device *pdev)
 	if (!pm_power_off)
 		pm_power_off = snvs_poweroff;
 
+	ret = device_create_file(&pdev->dev, &dev_attr_usr);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed create usr file: %d\n", ret);
+		return ret;
+	}
 	return 0;
 }
 
 static int snvs_rtc_remove(struct platform_device *pdev)
 {
+	device_remove_file(&pdev->dev, &dev_attr_usr);
 	return 0;
 }
 
