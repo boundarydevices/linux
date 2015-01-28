@@ -305,7 +305,7 @@ void __init mxc_timer_init(void __iomem *base, int irq)
 	 * imx6dl, others from per clk.
 	 */
 	if ((cpu_is_imx6q() && imx_get_soc_revision() > IMX_CHIP_REVISION_1_0)
-		|| cpu_is_imx6dl() || cpu_is_imx6sx())
+		|| cpu_is_imx6dl() || cpu_is_imx6sx() || cpu_is_imx7d())
 		timer_clk = clk_get_sys("imx-gpt.0", "gpt_3m");
 	else
 		timer_clk = clk_get_sys("imx-gpt.0", "per");
@@ -333,10 +333,11 @@ void __init mxc_timer_init(void __iomem *base, int irq)
 	if (timer_is_v2()) {
 		if ((cpu_is_imx6q() && imx_get_soc_revision() >
 			IMX_CHIP_REVISION_1_0) || cpu_is_imx6dl() ||
-			cpu_is_imx6sx()) {
+			cpu_is_imx6sx() || cpu_is_imx7d()) {
 			tctl_val = V2_TCTL_CLK_OSC_DIV8 | V2_TCTL_FRR |
 				V2_TCTL_WAITEN | MXC_TCTL_TEN;
-			if (cpu_is_imx6dl() || cpu_is_imx6sx()) {
+			if (cpu_is_imx6dl() || cpu_is_imx6sx() ||
+				cpu_is_imx7d()) {
 				/* 24 / 8 = 3 MHz */
 				tprer_val = 7 << V2_TPRER_PRE24M;
 				__raw_writel(tprer_val, timer_base + MXC_TPRER);
