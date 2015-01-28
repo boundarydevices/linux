@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2014 Freescale Semiconductor, Inc.
+ * Copyright 2011-2015 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -17,6 +17,7 @@
 #include <asm/smp_scu.h>
 
 #include "common.h"
+#include "hardware.h"
 
 extern void __iomem *imx_scu_base;
 
@@ -40,7 +41,8 @@ static inline void cpu_enter_lowpower(void)
 	  : "r" (0), "Ir" (CR_C), "Ir" (0x40)
 	  : "cc");
 
-	scu_power_mode(imx_scu_base, SCU_PM_DORMANT);
+	if (!arm_is_ca7())
+		scu_power_mode(imx_scu_base, SCU_PM_DORMANT);
 }
 
 /*
@@ -57,6 +59,8 @@ void imx_cpu_die(unsigned int cpu)
 	 * the register being cleared to kill the cpu.
 	 */
 	imx_set_cpu_arg(cpu, ~0);
+	if (cpu_is_imx7d())
+		imx_gpcv2_set_core_pdn_by_wfi(cpu, true);
 	for (;;)
 		cpu_do_idle();
 }
