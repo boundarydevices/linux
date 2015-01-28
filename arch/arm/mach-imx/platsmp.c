@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2014 Freescale Semiconductor, Inc.
+ * Copyright 2011-2015 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -66,8 +66,27 @@ static int __cpuinit imx_boot_secondary(unsigned int cpu, struct task_struct *id
  */
 static void __init imx_smp_init_cpus(void)
 {
-	int i, ncores = scu_get_core_count(imx_scu_base);
+	int i, ncores;
 	u32 me = smp_processor_id();
+	unsigned long arch_type;
+
+	asm volatile(
+		".align 4\n"
+		"mrc p15, 0, %0, c0, c0, 0\n"
+		: "=r" (arch_type)
+	);
+	/* MIDR[15:4] defines ARCH type */
+	mxc_set_arch_type((arch_type >> 4) & 0xfff);
+
+	if (arm_is_ca7()) {
+		unsigned long val;
+
+		/* CA7 core number, [25:24] of CP15 L2CTLR */
+		asm("mrc p15, 1, %0, c9, c0, 2" : "=r" (val));
+		ncores = ((val >> 24) & 0x3) + 1;
+	} else {
+		ncores = scu_get_core_count(imx_scu_base);
+	}
 
 	if (setup_max_cpus < ncores)
 		ncores = (setup_max_cpus) ? setup_max_cpus : 1;
@@ -75,10 +94,13 @@ static void __init imx_smp_init_cpus(void)
 	for (i = ncores; i < NR_CPUS; i++)
 		set_cpu_possible(i, false);
 
-	/* Set the SCU CPU Power status for each inactive core. */
-	for (i = 0; i < NR_CPUS;  i++) {
-		if (i != me)
-			__raw_writeb(SCU_PM_POWEROFF, imx_scu_base + 0x08 + i);
+	if (!arm_is_ca7()) {
+		/* Set the SCU CPU Power status for each inactive core. */
+		for (i = 0; i < NR_CPUS;  i++) {
+			if (i != me)
+				__raw_writeb(SCU_PM_POWEROFF,
+					imx_scu_base + 0x08 + i);
+		}
 	}
 }
 
@@ -91,6 +113,9 @@ void imx_smp_prepare(void)
 
 static void __init imx_smp_prepare_cpus(unsigned int max_cpus)
 {
+	if (arm_is_ca7())
+		return;
+
 	imx_smp_prepare();
 
 	/*
