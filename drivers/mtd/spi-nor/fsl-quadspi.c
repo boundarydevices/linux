@@ -199,6 +199,7 @@
 enum fsl_qspi_devtype {
 	FSL_QUADSPI_VYBRID,
 	FSL_QUADSPI_IMX6SX,
+	FSL_QUADSPI_IMX7D,
 };
 
 struct fsl_qspi_devtype_data {
@@ -218,6 +219,13 @@ static struct fsl_qspi_devtype_data vybrid_data = {
 static struct fsl_qspi_devtype_data imx6sx_data = {
 	.devtype = FSL_QUADSPI_IMX6SX,
 	.rxfifo = 128,
+	.txfifo = 512,
+	.ahb_buf_size = 1024
+};
+
+static struct fsl_qspi_devtype_data imx7d_data = {
+	.devtype = FSL_QUADSPI_IMX7D,
+	.rxfifo = 512,
 	.txfifo = 512,
 	.ahb_buf_size = 1024
 };
@@ -252,6 +260,11 @@ static inline int is_vybrid_qspi(struct fsl_qspi *q)
 static inline int is_imx6sx_qspi(struct fsl_qspi *q)
 {
 	return q->devtype_data->devtype == FSL_QUADSPI_IMX6SX;
+}
+
+static inline int is_imx7d_qspi(struct fsl_qspi *q)
+{
+	return q->devtype_data->devtype == FSL_QUADSPI_IMX7D;
 }
 
 /*
@@ -571,6 +584,11 @@ static int fsl_qspi_nor_write(struct fsl_qspi *q, struct spi_nor *nor,
 		txbuf++;
 	}
 
+	for (; i < 4; i++)
+		/* fill the TXFIFO upto 16 bytes for i.MX7d */
+		if (is_imx7d_qspi(q))
+			writel(tmp, q->iobase + QUADSPI_TBDR);
+
 	/* Trigger it */
 	ret = fsl_qspi_runcmd(q, opcode, to, count);
 
@@ -648,7 +666,7 @@ static void fsl_qspi_init_abh_read(struct fsl_qspi *q)
 
 		/* Enable the module again (enable the DDR too) */
 		reg |= QUADSPI_MCR_DDR_EN_MASK;
-		if (is_imx6sx_qspi(q))
+		if (is_imx6sx_qspi(q) || is_imx7d_qspi(q))
 			reg |= MX6SX_QUADSPI_MCR_TX_DDR_DELAY_EN_MASK;
 
 		writel(reg, q->iobase + QUADSPI_MCR);
@@ -670,9 +688,10 @@ static int fsl_qspi_clk_prep_enable(struct fsl_qspi *q)
 		return ret;
 	}
 
-	pm_qos_add_request(&q->pm_qos_req,
-			PM_QOS_CPU_DMA_LATENCY,
-			0);
+	if (is_imx6sx_qspi(q))
+		pm_qos_add_request(&q->pm_qos_req,
+				PM_QOS_CPU_DMA_LATENCY,
+				0);
 
 	return 0;
 }
@@ -680,7 +699,8 @@ static int fsl_qspi_clk_prep_enable(struct fsl_qspi *q)
 /* This function was used to disable and unprepare QSPI clock */
 static int fsl_qspi_clk_disable_unprep(struct fsl_qspi *q)
 {
-	pm_qos_remove_request(&q->pm_qos_req);
+	if (is_imx6sx_qspi(q))
+		pm_qos_remove_request(&q->pm_qos_req);
 	clk_disable_unprepare(q->clk);
 	clk_disable_unprepare(q->clk_en);
 	return 0;
@@ -740,7 +760,7 @@ static int fsl_qspi_nor_setup_last(struct fsl_qspi *q)
 	unsigned long rate = q->clk_rate;
 	int ret;
 
-	if (is_imx6sx_qspi(q))
+	if (is_imx6sx_qspi(q) || is_imx7d_qspi(q))
 		rate *= 4;
 
 	/* disable and unprepare clock first */
@@ -767,6 +787,7 @@ static int fsl_qspi_nor_setup_last(struct fsl_qspi *q)
 static struct of_device_id fsl_qspi_dt_ids[] = {
 	{ .compatible = "fsl,vf610-qspi", .data = (void *)&vybrid_data, },
 	{ .compatible = "fsl,imx6sx-qspi", .data = (void *)&imx6sx_data, },
+	{ .compatible = "fsl,imx7d-qspi", .data = (void *)&imx7d_data, },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, fsl_qspi_dt_ids);
@@ -946,6 +967,9 @@ static int fsl_qspi_probe(struct platform_device *pdev)
 	if (!q)
 		return -ENOMEM;
 
+	q->dev = dev;
+	q->devtype_data = (struct fsl_qspi_devtype_data *)of_id->data;
+
 	q->nor_num = of_get_child_count(dev->of_node);
 	if (!q->nor_num || q->nor_num > FSL_QSPI_MAX_CHIP)
 		return -ENODEV;
@@ -1001,8 +1025,6 @@ static int fsl_qspi_probe(struct platform_device *pdev)
 		goto irq_failed;
 	}
 
-	q->dev = dev;
-	q->devtype_data = (struct fsl_qspi_devtype_data *)of_id->data;
 	platform_set_drvdata(pdev, q);
 
 	ret = fsl_qspi_nor_setup(q);
