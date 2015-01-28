@@ -95,7 +95,7 @@ obj-$(CONFIG_MACH_VPR200) += mach-vpr200.o
 obj-$(CONFIG_MACH_IMX35_DT) += imx35-dt.o
 
 obj-$(CONFIG_HAVE_IMX_ANATOP) += anatop.o
-obj-$(CONFIG_HAVE_IMX_GPC) += gpc.o
+obj-$(CONFIG_HAVE_IMX_GPC) += gpc.o gpcv2.o
 obj-$(CONFIG_HAVE_IMX_MMDC) += mmdc.o
 obj-$(CONFIG_HAVE_IMX_SRC) += src.o
 obj-$(CONFIG_HAVE_IMX_MCC) += mcc_api.o mcc_common.o mcc_linux.o mcc_imx6sx.o
@@ -105,12 +105,16 @@ obj-$(CONFIG_HOTPLUG_CPU) += hotplug.o
 obj-$(CONFIG_SOC_IMX6Q) += clk-imx6q.o mach-imx6q.o
 obj-$(CONFIG_SOC_IMX6SL) += clk-imx6sl.o mach-imx6sl.o
 obj-$(CONFIG_SOC_IMX6SX) += clk-imx6sx.o mach-imx6sx.o mu.o
+obj-$(CONFIG_SOC_IMX7D) += clk-imx7d.o mach-imx7d.o
 
 ifeq ($(CONFIG_SUSPEND),y)
 AFLAGS_suspend-imx6.o :=-Wa,-march=armv7-a
+AFLAGS_suspend-imx7.o :=-Wa,-march=armv7-a
 obj-$(CONFIG_SOC_IMX6) += suspend-imx6.o
+obj-$(CONFIG_SOC_IMX7) += suspend-imx7.o
 endif
 obj-$(CONFIG_SOC_IMX6) += pm-imx6.o
+obj-$(CONFIG_SOC_IMX7) += pm-imx7.o
 
 ifeq ($(CONFIG_ARM_IMX6Q_CPUFREQ),y)
 obj-y += busfreq-imx6.o
