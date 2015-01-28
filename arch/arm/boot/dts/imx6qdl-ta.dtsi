@@ -488,30 +488,13 @@
 };
 
 &ldb {
+	ipu_id = <0>;
+	disp_id = <1>;
+	ext_ref = <1>;
+	mode = "sin0";
+	sec_ipu_id = <1>;
+	sec_disp_id = <1>;
 	status = "okay";
-
-	lvds-channel@0 {
-		fsl,data-mapping = "spwg";
-		fsl,data-width = <18>;
-		primary;
-		status = "okay";
-		crtc = "ipu1-di0";
-
-		display-timings {
-			native-mode = <&timing0>;
-			timing0: hsd100pxn1 {
-				clock-frequency = <75000000>;
-				hactive = <1280>;
-				vactive = <800>;
-				hback-porch = <40>;
-				hfront-porch = <40>;
-				vback-porch = <3>;
-				vfront-porch = <80>;
-				hsync-len = <10>;
-				vsync-len = <10>;
-			};
-		};
-	};
 };
 
 &reg_usbh1_vbus {
