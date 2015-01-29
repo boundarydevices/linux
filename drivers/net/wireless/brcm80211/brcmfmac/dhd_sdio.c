@@ -540,6 +540,8 @@ enum brcmf_sdio_frmtype {
 #define BCM4330_NVRAM_NAME		"brcm/brcmfmac4330-sdio.txt"
 #define BCM4334_FIRMWARE_NAME		"brcm/brcmfmac4334-sdio.bin"
 #define BCM4334_NVRAM_NAME		"brcm/brcmfmac4334-sdio.txt"
+#define BCM43340_FIRMWARE_NAME		"brcm/brcmfmac43340-sdio.bin"
+#define BCM43340_NVRAM_NAME		"brcm/brcmfmac43340-sdio.txt"
 #define BCM4335_FIRMWARE_NAME		"brcm/brcmfmac4335-sdio.bin"
 #define BCM4335_NVRAM_NAME		"brcm/brcmfmac4335-sdio.txt"
 
@@ -555,6 +557,8 @@ MODULE_FIRMWARE(BCM4330_FIRMWARE_NAME);
 MODULE_FIRMWARE(BCM4330_NVRAM_NAME);
 MODULE_FIRMWARE(BCM4334_FIRMWARE_NAME);
 MODULE_FIRMWARE(BCM4334_NVRAM_NAME);
+MODULE_FIRMWARE(BCM43340_FIRMWARE_NAME);
+MODULE_FIRMWARE(BCM43340_NVRAM_NAME);
 MODULE_FIRMWARE(BCM4335_FIRMWARE_NAME);
 MODULE_FIRMWARE(BCM4335_NVRAM_NAME);
 
@@ -580,6 +584,7 @@ static const struct brcmf_firmware_names brcmf_fwname_data[] = {
 	{ BCM4329_CHIP_ID, 0xFFFFFFFF, BRCMF_FIRMWARE_NVRAM(BCM4329) },
 	{ BCM4330_CHIP_ID, 0xFFFFFFFF, BRCMF_FIRMWARE_NVRAM(BCM4330) },
 	{ BCM4334_CHIP_ID, 0xFFFFFFFF, BRCMF_FIRMWARE_NVRAM(BCM4334) },
+	{ BCM43340_CHIP_ID, 0xFFFFFFFF, BRCMF_FIRMWARE_NVRAM(BCM43340) },
 	{ BCM4335_CHIP_ID, 0xFFFFFFFF, BRCMF_FIRMWARE_NVRAM(BCM4335) }
 };
 
@@ -3615,6 +3620,8 @@ static bool brcmf_sdbrcm_chipmatch(u16 chipid)
 	if (chipid == BCM4330_CHIP_ID)
 		return true;
 	if (chipid == BCM4334_CHIP_ID)
+		return true;
+	if (chipid == BCM43340_CHIP_ID)
 		return true;
 	if (chipid == BCM4335_CHIP_ID)
 		return true;
