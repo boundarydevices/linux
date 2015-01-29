@@ -1227,9 +1227,7 @@ static int arizona_hpdet_moisture_reading(struct arizona_extcon_info *info,
 	if (val < 0) {
 		return val;
 	} else if (val < arizona->pdata.hpdet_moisture_imp) {
-		if (arizona->pdata.antenna_supported)
-			arizona_jds_set_state(info, &arizona_antenna_mic_det);
-		else if (arizona->pdata.micd_software_compare)
+		if (arizona->pdata.micd_software_compare)
 			arizona_jds_set_state(info, &arizona_micd_adc_mic);
 		else
 			arizona_jds_set_state(info, &arizona_micd_microphone);
@@ -1455,6 +1453,37 @@ int arizona_micd_button_reading(struct arizona_extcon_info *info,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(arizona_micd_button_reading);
+
+static int arizona_antenna_moisture_reading(struct arizona_extcon_info *info,
+					    int val)
+{
+	struct arizona *arizona = info->arizona;
+	int debounce_lim = info->arizona->pdata.hpdet_moisture_debounce;
+
+	if (val < 0) {
+		return val;
+	} else if (val < arizona->pdata.hpdet_moisture_imp) {
+		arizona_jds_set_state(info, &arizona_antenna_mic_det);
+	} else {
+		if (debounce_lim) {
+			if (++info->moisture_count < debounce_lim) {
+				dev_dbg(info->arizona->dev,
+					"Moisture software debounce: %d, %x\n",
+					info->moisture_count, val);
+				arizona_hpdet_restart(info);
+				return -EAGAIN;
+			}
+
+			info->moisture_count = 0;
+		}
+
+		dev_warn(arizona->dev,
+			 "Jack detection due to moisture, ignoring\n");
+		arizona_jds_set_state(info, NULL);
+	}
+
+	return 0;
+}
 
 static int arizona_antenna_mic_reading(struct arizona_extcon_info *info, int val)
 {
@@ -2172,6 +2201,14 @@ EXPORT_SYMBOL_GPL(arizona_hpdet_acc_id);
 
 /* States for Antenna Detect */
 
+const struct arizona_jd_state arizona_antenna_moisture = {
+	.mode = ARIZONA_ACCDET_MODE_HPL,
+	.start = arizona_hpdet_moisture_start,
+	.reading = arizona_antenna_moisture_reading,
+	.stop = arizona_hpdet_moisture_stop,
+};
+EXPORT_SYMBOL_GPL(arizona_antenna_moisture);
+
 const struct arizona_jd_state arizona_antenna_mic_det = {
 	.mode = ARIZONA_ACCDET_MODE_ADC,
 	.start = arizona_micd_mic_start,
@@ -2348,12 +2385,12 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 			if (arizona->pdata.custom_jd)
 				arizona_jds_set_state(info,
 						      arizona->pdata.custom_jd);
+			else if (arizona->pdata.antenna_supported)
+				arizona_jds_set_state(info,
+						      &arizona_antenna_moisture);
 			else if (arizona->pdata.hpdet_moisture_imp)
 				arizona_jds_set_state(info,
 						      &arizona_hpdet_moisture);
-			else if (arizona->pdata.antenna_supported)
-				arizona_jds_set_state(info,
-						      &arizona_antenna_mic_det);
 			else if (arizona->pdata.micd_software_compare)
 				arizona_jds_set_state(info,
 						      &arizona_micd_adc_mic);
