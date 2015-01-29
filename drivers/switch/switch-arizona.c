@@ -1999,6 +1999,68 @@ static void arizona_hpdet_acc_id_stop(struct arizona_extcon_info *info)
 	arizona_hpdet_stop(info);
 }
 
+static int arizona_jack_present(struct arizona_extcon_info *info,
+				unsigned int *jack_val)
+{
+	struct arizona *arizona = info->arizona;
+	unsigned int reg, val = 0;
+	unsigned int mask, present;
+	int ret;
+
+	switch (arizona->type) {
+	case WM5102:
+	case WM5110:
+	case WM8997:
+	case WM8998:
+	case WM1814:
+	case WM8280:
+		if (arizona->pdata.jd_gpio5) {
+			mask = ARIZONA_MICD_CLAMP_STS;
+			present = 0;
+		} else {
+			mask = ARIZONA_JD1_STS;
+			if (arizona->pdata.jd_invert)
+				present = 0;
+			else
+				present = ARIZONA_JD1_STS;
+		}
+
+		reg = ARIZONA_AOD_IRQ_RAW_STATUS;
+		break;
+	default:
+		if (arizona->pdata.jd_gpio5) {
+			mask = CLEARWATER_MICD_CLAMP_RISE_STS1;
+			present = 0;
+		} else {
+			mask = ARIZONA_JD1_STS;
+			if (arizona->pdata.jd_invert)
+				present = 0;
+			else
+				present = ARIZONA_JD1_STS;
+		}
+
+		reg = CLEARWATER_IRQ1_RAW_STATUS_7;
+		break;
+	}
+
+	ret = regmap_read(arizona->regmap, reg, &val);
+	if (ret != 0) {
+		dev_err(arizona->dev, "Failed to read jackdet status: %d\n",
+			ret);
+		return ret;
+	}
+
+	val &= mask;
+
+	if (jack_val)
+		*jack_val = val;
+
+	if (val == present)
+		return 1;
+	else
+		return 0;
+}
+
 static irqreturn_t arizona_hpdet_handler(int irq, void *data)
 {
 	struct arizona_extcon_info *info = data;
@@ -2282,7 +2344,7 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 	struct arizona *arizona = info->arizona;
 	unsigned int reg, val, present, mask;
 	bool cancelled_hp, cancelled_state;
-	int ret, i;
+	int i;
 
 	cancelled_hp = cancel_delayed_work_sync(&info->hpdet_work);
 	cancelled_state = arizona_jds_cancel_timeout(info);
@@ -2291,52 +2353,14 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 
 	mutex_lock(&info->lock);
 
-	switch (arizona->type) {
-	case WM5102:
-	case WM5110:
-	case WM8997:
-	case WM8998:
-	case WM1814:
-	case WM8280:
-		if (arizona->pdata.jd_gpio5) {
-			mask = ARIZONA_MICD_CLAMP_STS;
-			present = 0;
-		} else {
-			mask = ARIZONA_JD1_STS;
-			if (arizona->pdata.jd_invert)
-				present = 0;
-			else
-				present = ARIZONA_JD1_STS;
-		}
-
-		reg = ARIZONA_AOD_IRQ_RAW_STATUS;
-		break;
-	default:
-		if (arizona->pdata.jd_gpio5) {
-			mask = CLEARWATER_MICD_CLAMP_RISE_STS1;
-			present = 0;
-		} else {
-			mask = ARIZONA_JD1_STS;
-			if (arizona->pdata.jd_invert)
-				present = 0;
-			else
-				present = ARIZONA_JD1_STS;
-		}
-
-		reg = CLEARWATER_IRQ1_RAW_STATUS_7;
-		break;
-	}
-
-	ret = regmap_read(arizona->regmap, reg, &val);
-	if (ret != 0) {
-		dev_err(arizona->dev, "Failed to read jackdet status: %d\n",
-			ret);
+	val = 0;
+	present = arizona_jack_present(info, &val);
+	if (present < 0) {
 		mutex_unlock(&info->lock);
 		pm_runtime_put_autosuspend(info->dev);
 		return IRQ_NONE;
 	}
 
-	val &= mask;
 	if (val == info->last_jackdet) {
 		dev_dbg(arizona->dev, "Suppressing duplicate JACKDET\n");
 		if (cancelled_hp)
@@ -2368,7 +2392,7 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 		break;
 	}
 
-	if (info->last_jackdet == present) {
+	if (present) {
 		dev_dbg(arizona->dev, "Detected jack\n");
 
 		if (arizona->pdata.jd_wake_time)
