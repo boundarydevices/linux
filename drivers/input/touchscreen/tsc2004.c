@@ -57,8 +57,7 @@ static void translate(u16 *px, u16 *py)
 	}
 }
 
-#define TS_POLL_DELAY			1 /* ms delay between samples */
-#define TS_POLL_PERIOD			1 /* ms delay between samples */
+#define TS_PENUP_TIMEOUT_MS	40
 
 /* Control byte 0 */
 #define TSC2004_CMD0(addr, pnd, rw) ((addr<<3)|(pnd<<1)|rw)
@@ -172,13 +171,13 @@ struct tsc2004 {
 	bool			pendown;
 	int			irq;
 
-	int			(*get_pendown_state)(void);
-	void			(*clear_penirq)(void);
 	int			reset_gpio;
 	int			reset_active_low;
+	int			irq_gpio;
+	int			use_count;
 };
 
-static inline int tsc2004_read_xyz_data(struct tsc2004 *tsc, u8 cmd)
+static int tsc2004_read_word_data(struct tsc2004 *tsc, u8 cmd)
 {
 	s32 data;
 	u16 val;
@@ -191,12 +190,21 @@ static inline int tsc2004_read_xyz_data(struct tsc2004 *tsc, u8 cmd)
 
 	/*
 	 * We need to swap byte order for little-endian cpus.
+	 */
+	val = be16_to_cpu(data);
+	dev_dbg(&tsc->client->dev, "cmd: 0x%x, val: 0x%x\n", cmd, val);
+	return val;
+}
+
+static inline int tsc2004_read_xyz_data(struct tsc2004 *tsc, u8 cmd)
+{
+	int val = tsc2004_read_word_data(tsc, cmd);
+
+	/*
 	 * 12 bit precision, high 4 bits should be zero
 	 */
-	val = be16_to_cpu(data) & 0xfff;
-
-	dev_dbg(&tsc->client->dev, "data: 0x%x, val: 0x%x\n", data, val);
-
+	if (val >= 0)
+		val &= 0xfff;
 	return val;
 }
 
@@ -305,25 +313,41 @@ static u32 tsc2004_calculate_pressure(struct tsc2004 *tsc, struct ts_event *tc)
 		rt /= tc->z1;
 		rt = (rt + 2047) >> 12;
 	}
-
 	return rt;
-}
-
-static void tsc2004_send_up_event(struct tsc2004 *tsc)
-{
-	struct input_dev *input = tsc->input;
-
-	dev_dbg(&tsc->client->dev, "UP\n");
-
-	input_report_key(input, BTN_TOUCH, 0);
-	input_report_abs(input, ABS_PRESSURE, 0);
-	input_sync(input);
 }
 
 static void tsc2004_work(struct work_struct *work)
 {
-	struct tsc2004 *ts =
-		container_of(to_delayed_work(work), struct tsc2004, work);
+	int cmd;
+	int val;
+	struct tsc2004 *ts = container_of(to_delayed_work(work),
+				struct tsc2004, work);
+
+	if (!ts->pendown)
+		return;
+
+	cmd = TSC2004_CMD0(CFR0_REG, PND0_FALSE, READ_REG);
+	val = tsc2004_read_word_data(ts, cmd);
+
+	if (val & 0x8000) {
+		schedule_delayed_work(&ts->work, msecs_to_jiffies(TS_PENUP_TIMEOUT_MS));
+	} else {
+		struct input_dev *input = ts->input;
+
+		if (ts->pendown) {
+			dev_dbg(&ts->client->dev, "UP\n");
+			input_report_key(input, BTN_TOUCH, 0);
+			input_report_abs(input, ABS_PRESSURE, 0);
+			input_sync(input);
+			ts->pendown = false;
+		}
+	}
+}
+
+
+static irqreturn_t tsc2004_irq(int irq, void *handle)
+{
+	struct tsc2004 *ts = handle;
 	struct ts_event tc;
 	u32 rt;
 
@@ -334,36 +358,17 @@ static void tsc2004_work(struct work_struct *work)
 	 * lifting the pen and in some cases may not even settle at the
 	 * expected value.
 	 *
-	 * The only safe way to check for the pen up condition is in the
-	 * work function by reading the pen signal state (it's a GPIO
-	 * and IRQ). Unfortunately such callback is not always available,
-	 * in that case we have rely on the pressure anyway.
 	 */
-	if (ts->get_pendown_state) {
-		if (unlikely(!ts->get_pendown_state())) {
-			tsc2004_send_up_event(ts);
-			ts->pendown = false;
-			goto out;
-		}
+	if (ts->irq_gpio >= 0)
+		if (gpio_get_value(ts->irq_gpio))
+			return IRQ_NONE;
 
-		dev_dbg(&ts->client->dev, "pen is still down\n");
-	}
-
+	cancel_delayed_work_sync(&ts->work);
 	tsc2004_read_values(ts, &tc);
 
 	rt = tsc2004_calculate_pressure(ts, &tc);
-	if (rt > MAX_12BIT) {
-		/*
-		 * Sample found inconsistent by debouncing or pressure is
-		 * beyond the maximum. Don't report it to user space,
-		 * repeat at least once more the measurement.
-		 */
-		dev_dbg(&ts->client->dev, "ignored pressure %d\n", rt);
-		goto out;
 
-	}
-
-	if (rt) {
+	if ((rt > 0) && (rt <= MAX_12BIT)) {
 		struct input_dev *input = ts->input;
 
 		translate(&tc.x, &tc.y);
@@ -383,52 +388,9 @@ static void tsc2004_work(struct work_struct *work)
 
 		dev_dbg(&ts->client->dev, "point(%4d,%4d), pressure (%4u)\n",
 			tc.x, tc.y, rt);
-
-	} else if (!ts->get_pendown_state && ts->pendown) {
-		/*
-		 * We don't have callback to check pendown state, so we
-		 * have to assume that since pressure reported is 0 the
-		 * pen was lifted up.
-		 */
-		tsc2004_send_up_event(ts);
-		ts->pendown = false;
 	}
-
- out:
-	if (ts->pendown)
-		schedule_delayed_work(&ts->work,
-				      msecs_to_jiffies(TS_POLL_PERIOD));
-	else
-		enable_irq(ts->irq);
-}
-
-static irqreturn_t tsc2004_irq(int irq, void *handle)
-{
-	struct tsc2004 *ts = handle;
-
-	if (!ts->get_pendown_state || likely(ts->get_pendown_state())) {
-		disable_irq_nosync(ts->irq);
-		schedule_delayed_work(&ts->work,
-				      msecs_to_jiffies(TS_POLL_DELAY));
-	}
-
-	if (ts->clear_penirq)
-		ts->clear_penirq();
-
+	schedule_delayed_work(&ts->work, msecs_to_jiffies(TS_PENUP_TIMEOUT_MS));
 	return IRQ_HANDLED;
-}
-
-static void tsc2004_free_irq(struct tsc2004 *ts)
-{
-	free_irq(ts->irq, ts);
-	if (cancel_delayed_work_sync(&ts->work)) {
-		/*
-		 * Work was pending, therefore we need to enable
-		 * IRQ here to balance the disable_irq() done in the
-		 * interrupt handler.
-		 */
-		enable_irq(ts->irq);
-	}
 }
 
 static int setup_reset_gpio(struct i2c_client *client, struct tsc2004 *ts)
@@ -454,6 +416,62 @@ static int setup_reset_gpio(struct i2c_client *client, struct tsc2004 *ts)
 	return err;
 }
 
+static int setup_irq_gpio(struct i2c_client *client, struct tsc2004 *ts)
+{
+	int err = 0;
+	int gpio;
+	struct device_node *np = client->dev.of_node;
+
+	ts->irq_gpio = -1;
+	gpio = of_get_named_gpio(np, "interrupts-extended", 0);
+	pr_info("%s:%d\n", __func__, gpio);
+	if (!gpio_is_valid(gpio))
+		return 0;
+
+	err = devm_gpio_request_one(&client->dev, gpio, GPIOF_DIR_IN,
+			"tsc2004_irq");
+	if (err) {
+		dev_err(&client->dev, "can't request irq gpio %d", gpio);
+		return err;
+	}
+	ts->irq_gpio = gpio;
+	return err;
+}
+
+static int ts2004_open(struct input_dev *idev)
+{
+	struct tsc2004 *ts = input_get_drvdata(idev);
+	int ret;
+
+	if (!ts)
+		return -EIO;
+
+	if (ts->use_count++)
+		return 0;
+
+	ret = request_threaded_irq(ts->irq, NULL, tsc2004_irq,
+			IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+			ts->client->dev.driver->name, ts);
+	if (ret < 0) {
+		dev_err(&ts->client->dev, "irq %d busy(%d)?\n", ts->irq, ret);
+		ts->use_count--;
+		return ret;
+	}
+	return 0;
+}
+
+static void ts2004_close(struct input_dev *idev)
+{
+	struct tsc2004 *ts = input_get_drvdata(idev);
+
+	if (ts) {
+		if (--ts->use_count == 0) {
+			free_irq(ts->irq, ts);
+			cancel_delayed_work_sync(&ts->work);
+		}
+	}
+}
+
 static int tsc2004_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
 {
@@ -466,6 +484,7 @@ static int tsc2004_probe(struct i2c_client *client,
 		return -EIO;
 
 	ts = kzalloc(sizeof(struct tsc2004), GFP_KERNEL);
+
 	input_dev = input_allocate_device();
 	if (!ts || !input_dev) {
 		err = -ENOMEM;
@@ -476,9 +495,12 @@ static int tsc2004_probe(struct i2c_client *client,
 	ts->irq = client->irq;
 	ts->input = input_dev;
 	INIT_DELAYED_WORK(&ts->work, tsc2004_work);
+	input_dev->open = ts2004_open;
+	input_dev->close = ts2004_close;
 
 	ts->x_plate_ohms      = 500;
 	setup_reset_gpio(client, ts);
+	setup_irq_gpio(client, ts);
 
 	snprintf(ts->phys, sizeof(ts->phys),
 		 "%s/input0", dev_name(&client->dev));
@@ -494,29 +516,20 @@ static int tsc2004_probe(struct i2c_client *client,
 	input_set_abs_params(input_dev, ABS_Y, 0, MAX_12BIT, 0, 0);
 	input_set_abs_params(input_dev, ABS_PRESSURE, 0, MAX_12BIT, 0, 0);
 
-	err = request_irq(ts->irq, tsc2004_irq, IRQF_TRIGGER_FALLING,
-			client->dev.driver->name, ts);
-	if (err < 0) {
-		dev_err(&client->dev, "irq %d busy(%d)?\n", ts->irq,err);
-		goto err_free_mem;
-	}
-
 	/* Prepare for touch readings */
 	err = tsc2004_prepare_for_reading(ts);
 	if (err < 0)
-		goto err_free_irq;
+		goto err_free_mem;
 
+	input_set_drvdata(input_dev, ts);
 	err = input_register_device(input_dev);
 	if (err)
-		goto err_free_irq;
+		goto err_free_mem;
 
 	i2c_set_clientdata(client, ts);
 
 	return 0;
 
- err_free_irq:
-	tsc2004_free_irq(ts);
- 
  err_free_mem:
 	input_free_device(input_dev);
 	kfree(ts);
@@ -527,13 +540,10 @@ static int tsc2004_remove(struct i2c_client *client)
 {
 	struct tsc2004	*ts = i2c_get_clientdata(client);
 
-	tsc2004_free_irq(ts);
-
 	input_unregister_device(ts->input);
 	if (gpio_is_valid(ts->reset_gpio))
 		gpio_set_value(ts->reset_gpio, ts->reset_active_low ? 0 : 1);
 	kfree(ts);
-
 	return 0;
 }
 
