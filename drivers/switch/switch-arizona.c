@@ -188,17 +188,6 @@ inline void arizona_extcon_report(struct arizona_extcon_info *info, int state)
 }
 EXPORT_SYMBOL_GPL(arizona_extcon_report);
 
-static const struct arizona_jd_state arizona_micd_adc_mic;
-static const struct arizona_jd_state arizona_hpdet_moisture;
-static const struct arizona_jd_state arizona_hpdet_acc_id;
-static const struct arizona_jd_state arizona_antenna_mic_det;
-static const struct arizona_jd_state arizona_antenna_oc_det;
-static const struct arizona_jd_state arizona_antenna_hp_det;
-static const struct arizona_jd_state arizona_antenna_button_det;
-static const struct arizona_jd_state arizona_antenna_hp_oc_det;
-static const struct arizona_jd_state arizona_antenna_hpr_det;
-static const struct arizona_jd_state arizona_antenna_hpr_oc_det;
-
 static int arizona_jds_get_mode(struct arizona_extcon_info *info)
 {
 	int mode = ARIZONA_ACCDET_MODE_INVALID;
@@ -2117,12 +2106,13 @@ static irqreturn_t arizona_micdet(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static const struct arizona_jd_state arizona_hpdet_moisture = {
+const struct arizona_jd_state arizona_hpdet_moisture = {
 	.mode = ARIZONA_ACCDET_MODE_HPL,
 	.start = arizona_hpdet_moisture_start,
 	.reading = arizona_hpdet_moisture_reading,
 	.stop = arizona_hpdet_moisture_stop,
 };
+EXPORT_SYMBOL_GPL(arizona_hpdet_moisture);
 
 const struct arizona_jd_state arizona_hpdet_left = {
 	.mode = ARIZONA_ACCDET_MODE_HPL,
@@ -2148,7 +2138,7 @@ const struct arizona_jd_state arizona_micd_button = {
 };
 EXPORT_SYMBOL_GPL(arizona_micd_button);
 
-static const struct arizona_jd_state arizona_micd_adc_mic = {
+const struct arizona_jd_state arizona_micd_adc_mic = {
 	.mode = ARIZONA_ACCDET_MODE_ADC,
 	.start = arizona_micd_mic_start,
 	.restart = arizona_micd_adc_restart,
@@ -2158,6 +2148,7 @@ static const struct arizona_jd_state arizona_micd_adc_mic = {
 	.timeout_ms = arizona_micd_mic_timeout_ms,
 	.timeout = arizona_micd_mic_timeout,
 };
+EXPORT_SYMBOL_GPL(arizona_micd_adc_mic);
 
 const struct arizona_jd_state arizona_micd_microphone = {
 	.mode = ARIZONA_ACCDET_MODE_MIC,
@@ -2170,64 +2161,72 @@ const struct arizona_jd_state arizona_micd_microphone = {
 };
 EXPORT_SYMBOL_GPL(arizona_micd_microphone);
 
-static const struct arizona_jd_state arizona_hpdet_acc_id = {
+const struct arizona_jd_state arizona_hpdet_acc_id = {
 	.mode = ARIZONA_ACCDET_MODE_HPL,
 	.start = arizona_hpdet_acc_id_start,
 	.restart = arizona_hpdet_restart,
 	.reading = arizona_hpdet_acc_id_reading,
 	.stop = arizona_hpdet_acc_id_stop,
 };
+EXPORT_SYMBOL_GPL(arizona_hpdet_acc_id);
 
 /* States for Antenna Detect */
 
-static const struct arizona_jd_state arizona_antenna_mic_det = {
+const struct arizona_jd_state arizona_antenna_mic_det = {
 	.mode = ARIZONA_ACCDET_MODE_ADC,
 	.start = arizona_micd_mic_start,
 	.reading = arizona_antenna_mic_reading,
 	.stop = arizona_micd_mic_stop,
 };
+EXPORT_SYMBOL_GPL(arizona_antenna_mic_det);
 
-static const struct arizona_jd_state arizona_antenna_oc_det = {
+const struct arizona_jd_state arizona_antenna_oc_det = {
 	.mode = ARIZONA_ACCDET_MODE_MIC,
 	.start = arizona_micd_mic_start,
 	.reading = arizona_antenna_oc_reading,
 	.stop = arizona_micd_mic_stop,
 };
+EXPORT_SYMBOL_GPL(arizona_antenna_oc_det);
 
-static const struct arizona_jd_state arizona_antenna_hp_det = {
+const struct arizona_jd_state arizona_antenna_hp_det = {
 	.mode = ARIZONA_ACCDET_MODE_HPL,
 	.start = arizona_hpdet_start,
 	.reading = arizona_antenna_hp_reading,
 	.stop = arizona_hpdet_stop,
 };
+EXPORT_SYMBOL_GPL(arizona_antenna_hp_det);
 
-static const struct arizona_jd_state arizona_antenna_hpr_det = {
+const struct arizona_jd_state arizona_antenna_hpr_det = {
 	.mode = ARIZONA_ACCDET_MODE_HPR,
 	.start = arizona_hpdet_start,
 	.reading = arizona_antenna_hp_reading,
 	.stop = arizona_hpdet_stop,
 };
+EXPORT_SYMBOL_GPL(arizona_antenna_hpr_det);
 
-static const struct arizona_jd_state arizona_antenna_button_det = {
+const struct arizona_jd_state arizona_antenna_button_det = {
 	.mode = ARIZONA_ACCDET_MODE_MIC,
 	.start = arizona_micd_start,
 	.reading = arizona_antenna_button_reading,
 	.stop = arizona_micd_stop,
 };
+EXPORT_SYMBOL_GPL(arizona_antenna_button_det);
 
-static const struct arizona_jd_state arizona_antenna_hp_oc_det = {
+const struct arizona_jd_state arizona_antenna_hp_oc_det = {
 	.mode = ARIZONA_ACCDET_MODE_HPL,
 	.start = arizona_hpdet_start,
 	.reading = arizona_antenna_hp_oc_reading,
 	.stop = arizona_hpdet_stop,
 };
+EXPORT_SYMBOL_GPL(arizona_antenna_hp_oc_det);
 
-static const struct arizona_jd_state arizona_antenna_hpr_oc_det = {
+const struct arizona_jd_state arizona_antenna_hpr_oc_det = {
 	.mode = ARIZONA_ACCDET_MODE_HPR,
 	.start = arizona_hpdet_start,
 	.reading = arizona_antenna_hp_oc_reading,
 	.stop = arizona_hpdet_stop,
 };
+EXPORT_SYMBOL_GPL(arizona_antenna_hpr_oc_det);
 
 static void arizona_hpdet_work(struct work_struct *work)
 {
