@@ -373,7 +373,7 @@ int arizona_init_gpio(struct snd_soc_codec *codec)
 }
 EXPORT_SYMBOL_GPL(arizona_init_gpio);
 
-const char *arizona_mixer_texts[ARIZONA_NUM_MIXER_INPUTS] = {
+const char * const arizona_mixer_texts[ARIZONA_NUM_MIXER_INPUTS] = {
 	"None",
 	"Tone Generator 1",
 	"Tone Generator 2",
@@ -649,7 +649,7 @@ unsigned int arizona_mixer_values[ARIZONA_NUM_MIXER_INPUTS] = {
 };
 EXPORT_SYMBOL_GPL(arizona_mixer_values);
 
-const char *arizona_v2_mixer_texts[ARIZONA_V2_NUM_MIXER_INPUTS] = {
+const char * const arizona_v2_mixer_texts[ARIZONA_V2_NUM_MIXER_INPUTS] = {
 	"None",
 	"Tone Generator 1",
 	"Tone Generator 2",
@@ -936,7 +936,7 @@ EXPORT_SYMBOL_GPL(arizona_v2_mixer_values);
 const DECLARE_TLV_DB_SCALE(arizona_mixer_tlv, -3200, 100, 0);
 EXPORT_SYMBOL_GPL(arizona_mixer_tlv);
 
-const char *arizona_sample_rate_text[ARIZONA_SAMPLE_RATE_ENUM_SIZE] = {
+const char * const arizona_sample_rate_text[ARIZONA_SAMPLE_RATE_ENUM_SIZE] = {
 	"12kHz", "24kHz", "48kHz", "96kHz", "192kHz",
 	"11.025kHz", "22.05kHz", "44.1kHz", "88.2kHz", "176.4kHz",
 	"4kHz", "8kHz", "16kHz", "32kHz",
@@ -969,7 +969,7 @@ const struct soc_enum arizona_sample_rate[] = {
 };
 EXPORT_SYMBOL_GPL(arizona_sample_rate);
 
-const char *arizona_rate_text[ARIZONA_RATE_ENUM_SIZE] = {
+const char * const arizona_rate_text[ARIZONA_RATE_ENUM_SIZE] = {
 	"SYNCCLK rate 1", "SYNCCLK rate 2", "SYNCCLK rate 3",
 	"ASYNCCLK rate", "ASYNCCLK rate 2",
 };
@@ -1099,7 +1099,7 @@ const struct soc_enum clearwater_asrc2_rate[] = {
 };
 EXPORT_SYMBOL_GPL(clearwater_asrc2_rate);
 
-static const char *arizona_vol_ramp_text[] = {
+static const char * const arizona_vol_ramp_text[] = {
 	"0ms/6dB", "0.5ms/6dB", "1ms/6dB", "2ms/6dB", "4ms/6dB", "8ms/6dB",
 	"15ms/6dB", "30ms/6dB",
 };
@@ -1128,7 +1128,7 @@ const SOC_ENUM_SINGLE_DECL(arizona_out_vi_ramp,
 			   arizona_vol_ramp_text);
 EXPORT_SYMBOL_GPL(arizona_out_vi_ramp);
 
-static const char *arizona_lhpf_mode_text[] = {
+static const char * const arizona_lhpf_mode_text[] = {
 	"Low-pass", "High-pass"
 };
 
@@ -1156,7 +1156,7 @@ const SOC_ENUM_SINGLE_DECL(arizona_lhpf4_mode,
 			   arizona_lhpf_mode_text);
 EXPORT_SYMBOL_GPL(arizona_lhpf4_mode);
 
-static const char *arizona_ng_hold_text[] = {
+static const char * const arizona_ng_hold_text[] = {
 	"30ms", "120ms", "250ms", "500ms",
 };
 
@@ -1226,7 +1226,7 @@ const struct soc_enum clearwater_in_dmic_osr[] = {
 };
 EXPORT_SYMBOL_GPL(clearwater_in_dmic_osr);
 
-static const char *arizona_anc_input_src_text[ARIZONA_ANC_INPUT_ENUM_SIZE] = {
+static const char * const arizona_anc_input_src_text[ARIZONA_ANC_INPUT_ENUM_SIZE] = {
 	"None", "IN1L", "IN1R", "IN1L + IN1R", "IN2L", "IN2R", "IN2L + IN2R",
 	"IN3L", "IN3R", "IN3L + IN3R", "IN4L", "IN4R", "IN4L + IN4R", "IN5L",
 	"IN5R", "IN5L + IN5R", "IN6L", "IN6R", "IN6L + IN6R",
@@ -1304,7 +1304,7 @@ const struct soc_enum clearwater_anc_input_src[] = {
 };
 EXPORT_SYMBOL_GPL(clearwater_anc_input_src);
 
-static const char *arizona_output_anc_src_text[] = {
+static const char * const arizona_output_anc_src_text[] = {
 	"None", "RXANCL", "RXANCR",
 };
 
@@ -1368,7 +1368,7 @@ const struct soc_enum clearwater_output_anc_src_defs[] = {
 };
 EXPORT_SYMBOL_GPL(clearwater_output_anc_src_defs);
 
-const char *arizona_ip_mode_text[2] = {
+static const char * const arizona_ip_mode_text[2] = {
 	"Analog", "Digital",
 };
 
@@ -2822,7 +2822,7 @@ restore_aif:
 	return ret;
 }
 
-static const char *arizona_dai_clk_str(int clk_id)
+static const char * const arizona_dai_clk_str(int clk_id)
 {
 	switch (clk_id) {
 	case ARIZONA_CLK_SYSCLK:
