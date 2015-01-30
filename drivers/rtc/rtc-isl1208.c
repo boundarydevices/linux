@@ -350,7 +350,7 @@ isl1208_i2c_read_alarm(struct i2c_client *client, struct rtc_wkalrm *alarm)
 	tm->tm_mday = bcd2bin(regs[ISL1208_REG_DTA - ISL1208_REG_SCA] & 0x3f);
 	tm->tm_mon =
 		bcd2bin(regs[ISL1208_REG_MOA - ISL1208_REG_SCA] & 0x1f) - 1;
-	tm->tm_wday = bcd2bin(regs[ISL1208_REG_DWA - ISL1208_REG_SCA] & 0x03);
+	tm->tm_wday = bcd2bin(regs[ISL1208_REG_DWA - ISL1208_REG_SCA] & 0x07);
 
 	/* The alarm doesn't store the year so get it from the rtc section */
 	yr = i2c_smbus_read_byte_data(client, ISL1208_REG_YR);
