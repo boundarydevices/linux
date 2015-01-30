@@ -165,12 +165,12 @@ enum headset_state {
 static ssize_t arizona_extcon_show(struct device *dev,
 				   struct device_attribute *attr,
 				   char *buf);
-DEVICE_ATTR(hp_impedance, S_IRUGO, arizona_extcon_show, NULL);
+static DEVICE_ATTR(hp_impedance, S_IRUGO, arizona_extcon_show, NULL);
 
 static ssize_t arizona_extcon_mic_show(struct device *dev,
 				       struct device_attribute *attr,
 				       char *buf);
-DEVICE_ATTR(mic_impedance, S_IRUGO, arizona_extcon_mic_show, NULL);
+static DEVICE_ATTR(mic_impedance, S_IRUGO, arizona_extcon_mic_show, NULL);
 
 inline void arizona_extcon_report(struct arizona_extcon_info *info, int state)
 {
@@ -896,8 +896,8 @@ static const struct reg_default clearwater_normal_impedance_patch[] = {
 	{ 0x483, 0x0023 },
 };
 
-int arizona_wm5110_tune_headphone(struct arizona_extcon_info *info,
-				  int reading)
+static int arizona_wm5110_tune_headphone(struct arizona_extcon_info *info,
+					 int reading)
 {
 	struct arizona *arizona = info->arizona;
 	const struct reg_default *patch;
@@ -946,8 +946,8 @@ int arizona_wm5110_tune_headphone(struct arizona_extcon_info *info,
 	return 0;
 }
 
-int arizona_wm1814_tune_headphone(struct arizona_extcon_info *info,
-				  int reading)
+static int arizona_wm1814_tune_headphone(struct arizona_extcon_info *info,
+					 int reading)
 {
 	struct arizona *arizona = info->arizona;
 	const struct reg_default *patch;
@@ -987,8 +987,8 @@ int arizona_wm1814_tune_headphone(struct arizona_extcon_info *info,
 	return 0;
 }
 
-int arizona_clearwater_tune_headphone(struct arizona_extcon_info *info,
-				  int reading)
+static int arizona_clearwater_tune_headphone(struct arizona_extcon_info *info,
+					     int reading)
 {
 	struct arizona *arizona = info->arizona;
 	const struct reg_default *patch;
@@ -2582,7 +2582,7 @@ static int arizona_micd_manual_reading(struct arizona_extcon_info *info, int val
 	return val;
 }
 
-const struct arizona_jd_state arizona_micd_manual = {
+static const struct arizona_jd_state arizona_micd_manual = {
 	.mode = ARIZONA_ACCDET_MODE_ADC,
 	.start = arizona_micd_mic_start,
 	.reading = arizona_micd_manual_reading,
