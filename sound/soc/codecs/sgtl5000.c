@@ -1494,6 +1494,8 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 	if (ret)
 		return ret;
 
+	udelay(1,2); /* Data sheet says minimum 1uS delay after SYS_MCLK */
+
 	/* read chip information */
 	ret = sgtl5000_read16(client, SGTL5000_CHIP_ID, &reg);
 	if (ret < 0) {
