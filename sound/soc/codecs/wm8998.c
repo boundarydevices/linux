@@ -925,9 +925,9 @@ static const struct snd_soc_dapm_route wm8998_dapm_routes[] = {
 	{ "IN2 Mux", "A", "IN2A" },
 	{ "IN2 Mux", "B", "IN2B" },
 
-	{ "IN1L PGA", NULL, "IN1MUXL Input" },
-	{ "IN1R PGA", NULL, "IN1MUXR Input" },
-	{ "IN2 PGA",  NULL, "IN2MUX Input" },
+	{ "IN1L PGA", NULL, "IN1L Mux" },
+	{ "IN1R PGA", NULL, "IN1R Mux" },
+	{ "IN2 PGA",  NULL, "IN2 Mux" },
 
 	ARIZONA_MIXER_ROUTES("OUT1L", "HPOUTL"),
 	ARIZONA_MIXER_ROUTES("OUT1R", "HPOUTR"),
@@ -1180,8 +1180,7 @@ static int wm8998_in1mux_ev(struct snd_soc_dapm_widget *w,
 			 */
 			if (left_mux != right_mux) {
 				dev_err(arizona->dev,
-					"IN1=DMIC and 'IN1MUXL Input'"
-					" != 'IN1MUXR Input'");
+					"IN1=DMIC and IN1L Mux != IN1R Mux");
 				return -EINVAL;
 			}
 
