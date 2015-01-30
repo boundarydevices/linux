@@ -76,6 +76,10 @@
 		compatible = "gpio-keys";
 	};
 
+	poweroff: poweroff {
+		compatible = "gpio-poweroff";
+	};
+
 	sound_sgtl5000: sound_sgtl5000grp {
 		compatible = "fsl,imx6q-insp-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";
@@ -131,7 +135,7 @@
 
 	backlight_lcd: backlight_lcdgrp {
 		compatible = "pwm-backlight";
-		pwms = <&pwm3 0 5000000>;
+		pwms = <&pwm3 0 500000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
 		default-brightness-level = <7>;
 	};
@@ -179,8 +183,8 @@
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 	/* Main power on, Low shuts down system */
-#define GP_MAIN_POWER_EN		<&gpio3 5 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA5__GPIO3_IO05		0x0b0b0
+#define GP_MAIN_POWER_EN		<&gpio3 5 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_DA5__GPIO3_IO05		0x030b0
 		>;
 	};
 
@@ -705,6 +709,10 @@
 		mclk_source = <0>;
 		cvbs = <1>;
         };
+};
+
+&poweroff {
+	gpios = GP_MAIN_POWER_EN;
 };
 
 &pwm1 {
