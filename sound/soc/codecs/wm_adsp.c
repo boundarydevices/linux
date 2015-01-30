@@ -2046,7 +2046,7 @@ int wm_adsp1_event(struct snd_soc_dapm_widget *w,
 	struct wm_adsp *dsp = &dsps[w->shift];
 	struct wm_coeff_ctl *ctl;
 	int ret;
-	int val;
+	unsigned int val;
 
 	dsp->card = codec->card;
 
