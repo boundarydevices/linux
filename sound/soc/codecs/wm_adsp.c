@@ -319,7 +319,7 @@ struct wm_adsp_host_buffer {
 #define ALG_XM_FIELD(field) \
 	(offsetof(struct wm_adsp_alg_xm_struct, field) / sizeof(__be32))
 
-struct wm_adsp_buffer_region_def ez2control_regions[] = {
+static struct wm_adsp_buffer_region_def ez2control_regions[] = {
 	{
 		.mem_type = WMFW_ADSP2_XM,
 		.base_offset = HOST_BUFFER_FIELD(X_buf_base),
@@ -351,7 +351,7 @@ static struct wm_adsp_fw_caps ez2control_caps[] = {
 	},
 };
 
-struct wm_adsp_buffer_region_def trace_regions[] = {
+static struct wm_adsp_buffer_region_def trace_regions[] = {
 	{
 		.mem_type = WMFW_ADSP2_XM,
 		.base_offset = HOST_BUFFER_FIELD(X_buf_base),
@@ -2229,7 +2229,7 @@ err:
 			   ADSP2_SYS_ENA | ADSP2_CORE_ENA | ADSP2_START, 0);
 }
 
-void wm_adsp2_set_dspclk(struct wm_adsp *dsp, unsigned int freq)
+static void wm_adsp2_set_dspclk(struct wm_adsp *dsp, unsigned int freq)
 {
 	int ret;
 	int mask;
