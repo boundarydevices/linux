@@ -326,9 +326,12 @@ isl1208_i2c_read_time(struct i2c_client *client, struct rtc_time *tm)
 static int
 isl1208_i2c_read_alarm(struct i2c_client *client, struct rtc_wkalrm *alarm)
 {
+	unsigned long rtc_secs, alarm_secs;
+	struct rtc_time rtc_tm;
+	int err;
 	struct rtc_time *const tm = &alarm->time;
 	u8 regs[ISL1208_ALARM_SECTION_LEN] = { 0, };
-	int icr, yr, sr = isl1208_i2c_get_sr(client);
+	int icr, sr = isl1208_i2c_get_sr(client);
 
 	if (sr < 0) {
 		dev_err(&client->dev, "%s: reading SR failed\n", __func__);
@@ -352,14 +355,6 @@ isl1208_i2c_read_alarm(struct i2c_client *client, struct rtc_wkalrm *alarm)
 		bcd2bin(regs[ISL1208_REG_MOA - ISL1208_REG_SCA] & 0x1f) - 1;
 	tm->tm_wday = bcd2bin(regs[ISL1208_REG_DWA - ISL1208_REG_SCA] & 0x07);
 
-	/* The alarm doesn't store the year so get it from the rtc section */
-	yr = i2c_smbus_read_byte_data(client, ISL1208_REG_YR);
-	if (yr < 0) {
-		dev_err(&client->dev, "%s: reading RTC YR failed\n", __func__);
-		return yr;
-	}
-	tm->tm_year = bcd2bin(yr) + 100;
-
 	icr = i2c_smbus_read_byte_data(client, ISL1208_REG_INT);
 	if (icr < 0) {
 		dev_err(&client->dev, "%s: reading INT failed\n", __func__);
@@ -367,6 +362,28 @@ isl1208_i2c_read_alarm(struct i2c_client *client, struct rtc_wkalrm *alarm)
 	}
 	alarm->enabled = !!(icr & ISL1208_REG_INT_ALME);
 
+	rtc_secs = 0;
+	alarm_secs = 0;
+	rtc_tm.tm_year = 100;
+	err = isl1208_i2c_read_time(client, &rtc_tm);
+	/* The alarm doesn't store the year so get it from the rtc section */
+	tm->tm_year = rtc_tm.tm_year;
+
+	if (!err)
+		rtc_tm_to_time(&rtc_tm, &rtc_secs);
+
+	rtc_tm_to_time(tm, &alarm_secs);
+	if (alarm->enabled) {
+		if (alarm_secs < rtc_secs) {
+			/* enabled alarm needs to move to future date */
+			tm->tm_year++;
+		}
+	} else {
+		if (alarm_secs > rtc_secs) {
+			/* disabled alarm needs to move to past date */
+			tm->tm_year--;
+		}
+	}
 	return 0;
 }
 
