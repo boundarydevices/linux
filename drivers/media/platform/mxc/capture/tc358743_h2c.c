@@ -3251,29 +3251,35 @@ static ssize_t tc358743_show_regdump(struct device *dev,
 	struct sensor_data *sensor = &td->sensor;
 	int i, len = 0;
 	int retval;
+	int size;
 
 	if (!td)
 		return len;
 	mutex_lock(&td->access_lock);
-	for (i=0; i<DUMP_LENGTH; ) {
+
+	for (i=0; i<DUMP_LENGTH; i+=size) {
 		u32 u32val = 0;
 		int reg = regoffs+i;
-		int size = get_reg_size(reg, 0);
 
+		size = get_reg_size(reg, 0);
+		if (!(i & 0xf))
+			len += sprintf(buf+len, "\n%04X:", reg);
+		if (size == 0) {
+			len += sprintf(buf+len, " xx");
+			size = 1;
+			continue;
+		}
 		retval = tc358743_read_reg(sensor, reg, &u32val);
 		if (retval < 0) {
 			u32val = 0xff;
 			retval = 1;
 		}
-		if (!(i & 0xf))
-			len += sprintf(buf+len, "\n%04X:", reg);
 		if (size == 1)
 			len += sprintf(buf+len, " %02X", u32val&0xff);
 		else if (size == 2)
 			len += sprintf(buf+len, " %04X", u32val&0xffff);
 		else
 			len += sprintf(buf+len, " %08X", u32val);
-		i += size;
 	}
 	mutex_unlock(&td->access_lock);
 	len += sprintf(buf+len, "\n");
