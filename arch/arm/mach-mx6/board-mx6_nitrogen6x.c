@@ -644,7 +644,7 @@ static struct platform_device tc_audio_device = {
 
 static struct mxc_audio_platform_data tc_audio_data = {
 	.ssi_num = 2,
-	.src_port = 3,
+	.src_port = 7,		/* audmux map: 1->ssi1, 2->ssi2, 7->ssi3 */
 	.ext_port = 5,
 	.hp_gpio = -1,
 };
@@ -1496,10 +1496,10 @@ static struct platform_device sgtl5000_vddd_reg_devices = {
 
 static int imx6_init_audio(void)
 {
+#ifdef CONFIG_SND_SOC_SGTL5000
 	mxc_register_device(&audio_device,
 			    &audio_data);
 	imx6q_add_imx_ssi(1, &ssi_pdata);
-#ifdef CONFIG_SND_SOC_SGTL5000
 	platform_device_register(&sgtl5000_vdda_reg_devices);
 	platform_device_register(&sgtl5000_vddio_reg_devices);
 	platform_device_register(&sgtl5000_vddd_reg_devices);
@@ -1711,7 +1711,8 @@ static void __init board_init(void)
 		imx6q_add_ipuv3fb(i, &fb_data[i]);
 
 	imx6q_add_vdoa();
-#if ! defined(CONFIG_MXC_VIDEO_GS2971) && ! defined(CONFIG_MXC_VIDEO_GS2971_MODULE) /* We need the pads for GS2971 */
+#if !defined(CONFIG_MXC_VIDEO_GS2971) && !defined(CONFIG_MXC_VIDEO_GS2971_MODULE) && !defined(CONFIG_TC358743_AUDIO)
+	/* We need the pads for GS2971/TC358743 audio */
 	imx6q_add_lcdif(&lcdif_data);
 #endif
 	imx6q_add_ldb(&ldb_data);
