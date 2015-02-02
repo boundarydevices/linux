@@ -81,9 +81,11 @@ static int cs47l24_adsp_power_ev(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		mutex_lock(&cs47l24->compr_info.lock);
-		cs47l24->compr_info.trig = false;
-		mutex_unlock(&cs47l24->compr_info.lock);
+		if (w->shift == 2) {
+			mutex_lock(&cs47l24->compr_info.lock);
+			cs47l24->compr_info.trig = false;
+			mutex_unlock(&cs47l24->compr_info.lock);
+		}
 		break;
 	default:
 		break;

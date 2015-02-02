@@ -228,9 +228,11 @@ static int florida_adsp_power_ev(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		mutex_lock(&florida->compr_info.lock);
-		florida->compr_info.trig = false;
-		mutex_unlock(&florida->compr_info.lock);
+		if (w->shift == 2) {
+			mutex_lock(&florida->compr_info.lock);
+			florida->compr_info.trig = false;
+			mutex_unlock(&florida->compr_info.lock);
+		}
 		break;
 	default:
 		break;

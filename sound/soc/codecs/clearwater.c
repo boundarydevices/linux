@@ -219,9 +219,11 @@ static int clearwater_adsp_power_ev(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		mutex_lock(&clearwater->compr_info.lock);
-		clearwater->compr_info.trig = false;
-		mutex_unlock(&clearwater->compr_info.lock);
+		if (w->shift == 5) {
+			mutex_lock(&clearwater->compr_info.lock);
+			clearwater->compr_info.trig = false;
+			mutex_unlock(&clearwater->compr_info.lock);
+		}
 		break;
 	default:
 		break;
