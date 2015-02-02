@@ -67,10 +67,8 @@ extern const struct arizona_jd_state arizona_antenna_moisture;
 extern const struct arizona_jd_state arizona_antenna_mic_det;
 extern const struct arizona_jd_state arizona_antenna_oc_det;
 extern const struct arizona_jd_state arizona_antenna_hp_det;
-extern const struct arizona_jd_state arizona_antenna_button_det;
-extern const struct arizona_jd_state arizona_antenna_hp_oc_det;
 extern const struct arizona_jd_state arizona_antenna_hpr_det;
-extern const struct arizona_jd_state arizona_antenna_hpr_oc_det;
+extern const struct arizona_jd_state arizona_antenna_button_det;
 
 extern int arizona_hpdet_start(struct arizona_extcon_info *info);
 extern void arizona_hpdet_restart(struct arizona_extcon_info *info);

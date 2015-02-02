@@ -1567,27 +1567,6 @@ static int arizona_antenna_oc_reading(struct arizona_extcon_info *info, int val)
 	return 0;
 }
 
-static int arizona_antenna_hp_oc_reading(struct arizona_extcon_info *info, int val)
-{
-	dev_dbg(info->arizona->dev, "Antenna Detection: HP-Antenna Reading: 0x%x\n", val);
-
-	if (val < 0)
-		return val;
-
-	arizona_set_headphone_imp(info, val);
-
-	if (info->mic) {
-		info->antenna_skip_btn_db = true;
-		arizona_extcon_report(info, BIT_HEADSET);
-	} else {
-		arizona_extcon_report(info, BIT_HEADSET_NO_MIC);
-	}
-
-	arizona_jds_set_state(info, &arizona_antenna_button_det);
-
-	return 0;
-}
-
 static int arizona_antenna_hp_reading(struct arizona_extcon_info *info, int val)
 {
 	dev_dbg(info->arizona->dev, "Antenna Detection: HP Reading: 0x%x\n", val);
@@ -2279,22 +2258,6 @@ const struct arizona_jd_state arizona_antenna_button_det = {
 	.stop = arizona_micd_stop,
 };
 EXPORT_SYMBOL_GPL(arizona_antenna_button_det);
-
-const struct arizona_jd_state arizona_antenna_hp_oc_det = {
-	.mode = ARIZONA_ACCDET_MODE_HPL,
-	.start = arizona_hpdet_start,
-	.reading = arizona_antenna_hp_oc_reading,
-	.stop = arizona_hpdet_stop,
-};
-EXPORT_SYMBOL_GPL(arizona_antenna_hp_oc_det);
-
-const struct arizona_jd_state arizona_antenna_hpr_oc_det = {
-	.mode = ARIZONA_ACCDET_MODE_HPR,
-	.start = arizona_hpdet_start,
-	.reading = arizona_antenna_hp_oc_reading,
-	.stop = arizona_hpdet_stop,
-};
-EXPORT_SYMBOL_GPL(arizona_antenna_hpr_oc_det);
 
 static void arizona_hpdet_work(struct work_struct *work)
 {
