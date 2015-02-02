@@ -95,9 +95,6 @@ struct arizona_extcon_info {
 	int micd_res_old;
 	int micd_debounce;
 	int micd_count;
-	int antenna_res_old;
-	int antenna_debounce;
-	int antenna_count;
 	int antenna_db_plugout;
 	int antenna_cnt_plugout;
 	int antenna_res_old_plugout;
@@ -1520,9 +1517,6 @@ static int arizona_antenna_mic_reading(struct arizona_extcon_info *info, int val
 		info->antenna_db_plugout = 0;
 		info->antenna_cnt_plugout = 0;
 		info->antenna_res_old_plugout = 0;
-		info->antenna_res_old = 0;
-		info->antenna_debounce = 0;
-		info->antenna_count = 0;
 		info->mic = false;
 		/* Use a sufficiently large number to indicate open circuit */
 		if (arizona->pdata.hpdet_cb)
@@ -1554,59 +1548,21 @@ static int arizona_antenna_mic_reading(struct arizona_extcon_info *info, int val
 static int arizona_antenna_oc_reading(struct arizona_extcon_info *info, int val)
 {
 	struct arizona *arizona = info->arizona;
-	int debounce_lim = arizona->pdata.antenna_manual_debounce;
 	int ret;
 
-	dev_dbg(arizona->dev, "Antenna Detection: Antenna Reading: 0x%x\n", val);
+	dev_dbg(arizona->dev, "%s: Reading: %d Ohms\n", __func__, val);
 
 	if (val < 0)
 		return val;
 
+	ret = arizona_micd_button_debounce(info, val);
+	if (ret < 0)
+		return ret;
+
 	if (val > MICROPHONE_MAX_OHM)
 		return 0;
 
-	if (debounce_lim) {
-		if (info->antenna_debounce != val)
-			info->antenna_count = 0;
-
-		info->antenna_debounce = val;
-		info->antenna_count++;
-
-		if (info->antenna_count == debounce_lim) {
-			info->antenna_count = 0;
-			if (val == info->antenna_res_old)
-				return 0;
-
-			info->antenna_res_old = val;
-		} else {
-			dev_dbg(arizona->dev, "Antenna software debounce: %d,%x\n",
-				info->antenna_count, val);
-			regmap_update_bits(arizona->regmap,
-					   ARIZONA_MIC_DETECT_1,
-					   ARIZONA_MICD_ENA, 0);
-			regmap_update_bits(arizona->regmap,
-					   ARIZONA_MIC_DETECT_1,
-					   ARIZONA_MICD_ENA, ARIZONA_MICD_ENA);
-			return -EAGAIN;
-		}
-	}
-
-	info->mic = (val >= MICROPHONE_MIN_OHM);
-
-	if (arizona->pdata.hpdet_channel)
-		ret = arizona_jds_set_state(info, &arizona_antenna_hpr_oc_det);
-	else
-		ret = arizona_jds_set_state(info, &arizona_antenna_hp_oc_det);
-
-	if (ret < 0) {
-		if (info->mic)
-			arizona_extcon_report(info, BIT_HEADSET);
-		else
-			arizona_extcon_report(info, BIT_HEADSET_NO_MIC);
-	}
-
-	if (arizona->pdata.micd_cb)
-		arizona->pdata.micd_cb(info->mic);
+	arizona_jds_set_state(info, &arizona_antenna_mic_det);
 
 	return 0;
 }
@@ -2453,9 +2409,6 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 		info->micd_res_old = 0;
 		info->micd_debounce = 0;
 		info->micd_count = 0;
-		info->antenna_res_old = 0;
-		info->antenna_debounce = 0;
-		info->antenna_count = 0;
 		info->antenna_db_plugout = 0;
 		info->antenna_cnt_plugout = 0;
 		info->antenna_res_old_plugout = 0;
