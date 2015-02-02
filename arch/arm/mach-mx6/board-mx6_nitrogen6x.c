@@ -1274,6 +1274,14 @@ static struct fsl_mxc_capture_platform_data capture_data[] = {
 #endif
 };
 
+struct imx_vout_mem {
+	resource_size_t res_mbase;
+	resource_size_t res_msize;
+};
+
+static struct imx_vout_mem vout_mem __initdata = {
+	.res_msize = 0,
+};
 
 static void suspend_enter(void)
 {
@@ -1560,6 +1568,41 @@ static struct mxc_dvfs_platform_data dvfscore_data = {
 static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 				   char **cmdline, struct meminfo *mi)
 {
+	char *str;
+	struct tag *t;
+	int i = 0;
+	struct ipuv3_fb_platform_data *pdata_fb = fb_data;
+
+	for_each_tag(t, tags) {
+		if (t->hdr.tag == ATAG_CMDLINE) {
+			str = t->u.cmdline.cmdline;
+			str = strstr(str, "fbmem=");
+			if (str != NULL) {
+				str += 6;
+				pdata_fb[i++].res_size[0] = memparse(str, &str);
+				while (*str == ',' &&
+					i < ARRAY_SIZE(fb_data)) {
+					str++;
+					pdata_fb[i++].res_size[0] = memparse(str, &str);
+				}
+			}
+			/* GPU reserved memory */
+			str = t->u.cmdline.cmdline;
+			str = strstr(str, "gpumem=");
+			if (str != NULL) {
+				str += 7;
+				imx6_gpu_pdata.reserved_mem_size = memparse(str, &str);
+			}
+			/* VPU reserved memory */
+			str = t->u.cmdline.cmdline;
+			str = strstr(str, "vpumem=");
+			if (str != NULL) {
+				str += 7;
+				vout_mem.res_msize = memparse(str, &str);
+			}
+			break;
+		}
+	}
 }
 
 static struct mipi_csi2_platform_data mipi_csi2_pdata = {
@@ -1636,6 +1679,7 @@ static void __init board_init(void)
 	int rate;
 	int isn6 ;
 	unsigned mask;
+	struct platform_device *voutdev;
 #ifdef ONE_WIRE
 	int one_wire_gp;
 #endif
@@ -1716,7 +1760,15 @@ static void __init board_init(void)
 	imx6q_add_lcdif(&lcdif_data);
 #endif
 	imx6q_add_ldb(&ldb_data);
-	imx6q_add_v4l2_output(0);
+	voutdev = imx6q_add_v4l2_output(0);
+	if (vout_mem.res_msize && voutdev) {
+		dma_declare_coherent_memory(&voutdev->dev,
+					     vout_mem.res_mbase,
+					     vout_mem.res_mbase,
+					     vout_mem.res_msize,
+					     (DMA_MEMORY_MAP |
+					      DMA_MEMORY_EXCLUSIVE));
+	}
 	imx6q_add_bt656(&bt656_data);
 
 	mask = 0;
@@ -1897,9 +1949,9 @@ static struct sys_timer timer __initdata = {
 
 static void __init reserve(void)
 {
-#if defined(CONFIG_MXC_GPU_VIV) || defined(CONFIG_MXC_GPU_VIV_MODULE)
 	phys_addr_t phys;
-
+	int i;
+#if defined(CONFIG_MXC_GPU_VIV) || defined(CONFIG_MXC_GPU_VIV_MODULE)
 	if (imx6_gpu_pdata.reserved_mem_size) {
 		phys = memblock_alloc_base(imx6_gpu_pdata.reserved_mem_size,
 					   SZ_4K, SZ_1G);
@@ -1907,10 +1959,25 @@ static void __init reserve(void)
 		imx6_gpu_pdata.reserved_mem_base = phys;
 	}
 #endif
+
+	for (i = 0; i < ARRAY_SIZE(fb_data); i++)
+		if (fb_data[i].res_size[0]) {
+			/* reserve for background buffer */
+			phys = memblock_alloc(fb_data[i].res_size[0],
+						SZ_4K);
+			memblock_remove(phys, fb_data[i].res_size[0]);
+			fb_data[i].res_base[0] = phys;
+		}
+	if (vout_mem.res_msize) {
+		phys = memblock_alloc_base(vout_mem.res_msize,
+					   SZ_4K, SZ_1G);
+		memblock_remove(phys, vout_mem.res_msize);
+		vout_mem.res_mbase = phys;
+	}
 }
 
 /*
- * initialize __mach_desc_MX6Q_SABRELITE data structure.
+ * initialize data structure.
  */
 MACHINE_START(MX6_NITROGEN6X, "Boundary Devices Nitrogen6X/SABRE Lite Board")
 	/* Maintainer: Boundary Devices */
