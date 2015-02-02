@@ -1498,31 +1498,37 @@ static int arizona_antenna_moisture_reading(struct arizona_extcon_info *info,
 	return 0;
 }
 
-static int arizona_antenna_mic_reading(struct arizona_extcon_info *info, int val)
+static int arizona_antenna_mic_reading(struct arizona_extcon_info *info,
+				       int val)
 {
 	struct arizona *arizona = info->arizona;
 	int ret;
 
-	dev_dbg(arizona->dev, "Antenna Detection: Mic Reading: 0x%x\n", val);
+	dev_dbg(arizona->dev, "%s: Reading: %d\n", __func__, val);
 
 	if (val < 0)
 		return val;
 
+	ret = arizona_micd_button_debounce(info, val);
+	if (ret < 0)
+		return ret;
+
 	if (val > MICROPHONE_MAX_OHM) {
 		info->mic = false;
-		/* Use a sufficiently large number to indicate open circuit */
-		if (arizona->pdata.hpdet_cb)
-			arizona->pdata.hpdet_cb(ARIZONA_HP_Z_OPEN);
+
+		arizona_set_headphone_imp(info, ARIZONA_HP_Z_OPEN);
+
 		arizona_extcon_report(info, BIT_ANTENNA);
 		arizona_jds_set_state(info, &arizona_antenna_oc_det);
 	} else {
 		info->mic = (val >= MICROPHONE_MIN_OHM);
 
 		if (arizona->pdata.hpdet_channel)
-			ret = arizona_jds_set_state(info, &arizona_antenna_hpr_det);
+			ret = arizona_jds_set_state(info,
+						    &arizona_antenna_hpr_det);
 		else
-			ret = arizona_jds_set_state(info, &arizona_antenna_hp_det);
-
+			ret = arizona_jds_set_state(info,
+						    &arizona_antenna_hp_det);
 		if (ret < 0) {
 			if (info->mic)
 				arizona_extcon_report(info, BIT_HEADSET);
