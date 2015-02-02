@@ -125,6 +125,9 @@ struct arizona_extcon_info {
 
 	int mic_impedance;
 	struct completion manual_mic_completion;
+
+	int button_impedance;
+	int button_check;
 };
 
 static const struct arizona_micd_config micd_default_modes[] = {
@@ -1513,6 +1516,8 @@ static int arizona_antenna_mic_reading(struct arizona_extcon_info *info,
 	if (ret < 0)
 		return ret;
 
+	info->button_impedance = 0;
+
 	if (val > MICROPHONE_MAX_OHM) {
 		info->mic = false;
 
@@ -1614,7 +1619,7 @@ static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 					  int val)
 {
 	struct arizona *arizona = info->arizona;
-	int ret = 0;
+	int ret;
 
 	dev_dbg(arizona->dev, "%s: Reading: %d Ohms\n", __func__, val);
 
@@ -1628,6 +1633,9 @@ static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 	if (val > MICROPHONE_MAX_OHM) {
 		int i;
 
+		info->button_impedance = 0;
+		info->button_check = false;
+
 		/* Clear any currently pressed buttons */
 		for (i = 0; i < info->num_micd_ranges; i++)
 			input_report_key(info->input,
@@ -1637,10 +1645,27 @@ static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 		arizona_extcon_report(info, BIT_ANTENNA);
 		arizona_jds_set_state(info, &arizona_antenna_mic_det);
 	} else {
-		ret = arizona_micd_button_reading(info, val);
+		switch (info->button_check) {
+		case 0:
+			info->button_impedance = val;
+			info->button_check = 2;
+			return -EAGAIN;
+
+		case 1:
+			info->button_check = 0;
+			arizona_micd_button_process(info,
+						    info->button_impedance);
+			if (info->button_impedance != val)
+				return -EAGAIN;
+			break;
+
+		default:
+			info->button_check--;
+			return -EAGAIN;
+		}
 	}
 
-	return ret;
+	return 0;
 }
 
 int arizona_micd_mic_start(struct arizona_extcon_info *info)
@@ -2233,6 +2258,7 @@ EXPORT_SYMBOL_GPL(arizona_antenna_hpr_det);
 const struct arizona_jd_state arizona_antenna_button_det = {
 	.mode = ARIZONA_ACCDET_MODE_MIC,
 	.start = arizona_micd_start,
+	.restart = arizona_micd_restart,
 	.reading = arizona_antenna_button_reading,
 	.stop = arizona_micd_stop,
 };
