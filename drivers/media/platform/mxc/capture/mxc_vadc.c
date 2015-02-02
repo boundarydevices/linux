@@ -397,6 +397,15 @@ static void vadc_power_up(struct vadc_data *vadc)
 	reg32setbit(gpc_regbase + GPC_CNTR, 18);
 }
 
+static void vadc_power_down(struct vadc_data *vadc)
+{
+     /* Power down vadc analog */
+     reg32setbit(gpc_regbase + GPC_CNTR, 17);
+
+     /* Power down vadc ext power */
+     reg32clrbit(gpc_regbase + GPC_CNTR, 18);
+}
+
 static void vadc_init(struct vadc_data *vadc)
 {
 	pr_debug("%s\n", __func__);
@@ -436,6 +445,9 @@ static void vadc_get_std(struct vadc_data *vadc, v4l2_std_id *std)
 	pr_debug("In vadc_get_std\n");
 
 	/* Read PAL mode detected result */
+	pr_debug("wait vadc auto detect video mode....");
+	msleep(500);
+
 	tmp = reg32_read(VDEC_VIDMOD);
 	tmp &= (VDEC_VIDMOD_PAL_MASK | VDEC_VIDMOD_M625_MASK);
 
@@ -454,6 +466,8 @@ static void vadc_get_std(struct vadc_data *vadc, v4l2_std_id *std)
 		vadc->sen.pix.width = video_fmts[video_idx].active_width;
 		vadc->sen.pix.height = video_fmts[video_idx].active_height;
 	}
+
+	pr_debug("Mode %s\n", video_fmts[video_idx].name);
 }
 
 /* --------------- IOCTL functions from v4l2_int_ioctl_desc --------------- */
@@ -972,6 +986,7 @@ static int vadc_remove(struct platform_device *pdev)
 	clk_disable_unprepare(vadc->sen.sensor_clk);
 	clk_disable_unprepare(vadc->vadc_clk);
 
+	vadc_power_down(vadc);
 	return true;
 }
 

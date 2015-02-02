@@ -115,6 +115,17 @@ out:
 		return IRQ_HANDLED;
 }
 
+static int fsl_sai_set_dai_tdm_slot(struct snd_soc_dai *cpu_dai, u32 tx_mask,
+				u32 rx_mask, int slots, int slot_width)
+{
+	struct fsl_sai *sai = snd_soc_dai_get_drvdata(cpu_dai);
+
+	sai->slots = slots;
+	sai->slot_width = slot_width;
+
+	return 0;
+}
+
 static int fsl_sai_set_dai_sysclk_tr(struct snd_soc_dai *cpu_dai,
 		int clk_id, unsigned int freq, int fsl_dir)
 {
@@ -338,10 +349,17 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
 		return -EINVAL;
 	}
 
-	regmap_update_bits(sai->regmap, FSL_SAI_xCR2(tx), FSL_SAI_CR2_MSEL_MASK,
-			   FSL_SAI_CR2_MSEL(sai->mclk_id));
-	regmap_update_bits(sai->regmap, FSL_SAI_xCR2(tx),
-			   FSL_SAI_CR2_DIV_MASK, savediv - 1);
+	if ((tx && sai->synchronous[TX]) || (!tx && !sai->synchronous[RX])) {
+		regmap_update_bits(sai->regmap, FSL_SAI_RCR2, FSL_SAI_CR2_MSEL_MASK,
+				FSL_SAI_CR2_MSEL(sai->mclk_id));
+		regmap_update_bits(sai->regmap, FSL_SAI_RCR2,
+				FSL_SAI_CR2_DIV_MASK, savediv - 1);
+	} else {
+		regmap_update_bits(sai->regmap, FSL_SAI_TCR2, FSL_SAI_CR2_MSEL_MASK,
+				FSL_SAI_CR2_MSEL(sai->mclk_id));
+		regmap_update_bits(sai->regmap, FSL_SAI_TCR2,
+				FSL_SAI_CR2_DIV_MASK, savediv - 1);
+	}
 
 	dev_dbg(dai->dev, "best fit: clock id=%d, div=%d, deviation =%d\n",
 			sai->mclk_id, savediv, savesub);
@@ -361,7 +379,7 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
 	int ret;
 
 	if (!sai->is_slave_mode) {
-		ret = fsl_sai_set_bclk(cpu_dai, tx, 2 * word_width * params_rate(params));
+		ret = fsl_sai_set_bclk(cpu_dai, tx, sai->slots * word_width * params_rate(params));
 		if (ret)
 			return ret;
 
@@ -387,7 +405,7 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
 	else
 		val_cr5 |= FSL_SAI_CR5_FBT(word_width - 1);
 
-	val_cr4 |= FSL_SAI_CR4_FRSZ(channels);
+	val_cr4 |= FSL_SAI_CR4_FRSZ(sai->slots);
 
 	regmap_update_bits(sai->regmap, FSL_SAI_xCR4(tx),
 			   FSL_SAI_CR4_SYWD_MASK | FSL_SAI_CR4_FRSZ_MASK,
@@ -530,6 +548,7 @@ static void fsl_sai_shutdown(struct snd_pcm_substream *substream,
 static const struct snd_soc_dai_ops fsl_sai_pcm_dai_ops = {
 	.set_sysclk	= fsl_sai_set_dai_sysclk,
 	.set_fmt	= fsl_sai_set_dai_fmt,
+	.set_tdm_slot	= fsl_sai_set_dai_tdm_slot,
 	.hw_params	= fsl_sai_hw_params,
 	.hw_free	= fsl_sai_hw_free,
 	.trigger	= fsl_sai_trigger,
@@ -714,6 +733,8 @@ static int fsl_sai_probe(struct platform_device *pdev)
 			sai->mclk_clk[i] = NULL;
 		}
 	}
+
+	sai->slots = 2;
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
