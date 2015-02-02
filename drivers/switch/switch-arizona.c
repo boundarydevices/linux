@@ -95,10 +95,6 @@ struct arizona_extcon_info {
 	int micd_res_old;
 	int micd_debounce;
 	int micd_count;
-	int antenna_db_plugout;
-	int antenna_cnt_plugout;
-	int antenna_res_old_plugout;
-	bool antenna_skip_btn_db;
 	int moisture_count;
 
 	struct delayed_work hpdet_work;
@@ -1394,8 +1390,7 @@ static int arizona_micd_button_debounce(struct arizona_extcon_info *info,
 	struct arizona *arizona = info->arizona;
 	int debounce_lim = arizona->pdata.micd_manual_debounce;
 
-	if ((debounce_lim) &&
-		( !(info->antenna_skip_btn_db))) {
+	if (debounce_lim) {
 		if (info->micd_debounce != val)
 			info->micd_count = 0;
 
@@ -1514,9 +1509,6 @@ static int arizona_antenna_mic_reading(struct arizona_extcon_info *info, int val
 		return val;
 
 	if (val > MICROPHONE_MAX_OHM) {
-		info->antenna_db_plugout = 0;
-		info->antenna_cnt_plugout = 0;
-		info->antenna_res_old_plugout = 0;
 		info->mic = false;
 		/* Use a sufficiently large number to indicate open circuit */
 		if (arizona->pdata.hpdet_cb)
@@ -1613,80 +1605,37 @@ static int arizona_antenna_remove_reading(struct arizona_extcon_info *info,
 }
 
 static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
-				int val)
+					  int val)
 {
 	struct arizona *arizona = info->arizona;
-	int debounce_lim = arizona->pdata.antenna_manual_db_plugout;
-	int i, ret = 0;
-	bool mic;
+	int ret = 0;
 
-	dev_dbg(arizona->dev, "Antenna Detection: Button Reading: 0x%x\n", val);
+	dev_dbg(arizona->dev, "%s: Reading: %d Ohms\n", __func__, val);
 
 	if (val < 0)
 		return val;
 
-	if (debounce_lim && info->antenna_skip_btn_db) {
-		/** If plugout debounce is set and we are skipping the debounce for
-		* button then do a common debounce below to handle both slow
-		* plugouts and buttons
-		*/
-		if (info->antenna_db_plugout != val)
-			info->antenna_cnt_plugout = 0;
+	ret = arizona_micd_button_debounce(info, val);
+	if (ret < 0)
+		return ret;
 
-		info->antenna_db_plugout = val;
-		info->antenna_cnt_plugout++;
+	if (val > MICROPHONE_MAX_OHM) {
+		int i;
 
-		if (info->antenna_cnt_plugout == debounce_lim) {
-			info->antenna_cnt_plugout = 0;
-			if (val == info->antenna_res_old_plugout)
-				return 0;
-
-			info->antenna_res_old_plugout = val;
-		} else {
-			dev_dbg(arizona->dev, "Antenna software plugout db: %d,%x\n",
-				info->antenna_cnt_plugout, val);
-			regmap_update_bits(arizona->regmap,
-					   ARIZONA_MIC_DETECT_1,
-					   ARIZONA_MICD_ENA, 0);
-			regmap_update_bits(arizona->regmap,
-					   ARIZONA_MIC_DETECT_1,
-					   ARIZONA_MICD_ENA, ARIZONA_MICD_ENA);
-			return -EAGAIN;
-		}
-	}
-
-	if (val > MICROPHONE_MAX_OHM) { /* Detected open circuit*/
-		/** Due to slow plugout of 4 pole headset from the antenna cable
-		*  the gnd/hpl/hpr of 4 pole can come in contact with mic pin of
-		* antenna hence measuring a low impedance on the mic pin and
-		* reporting a button presse event. So here we send a button
-		* release event to negate all such false button presses
-		*/
+		/* Clear any currently pressed buttons */
 		for (i = 0; i < info->num_micd_ranges; i++)
 			input_report_key(info->input,
 					 info->micd_ranges[i].key, 0);
 		input_sync(info->input);
 
-		info->antenna_skip_btn_db = false;
-		ret = arizona_antenna_mic_reading(info, val);
+		arizona_extcon_report(info, BIT_ANTENNA);
+		arizona_jds_set_state(info, &arizona_antenna_mic_det);
 	} else {
-		mic = (val >= MICROPHONE_MIN_OHM);
-
-		if (mic && mic != info->mic) {
-			info->mic = mic;
-			info->antenna_skip_btn_db = true;
-			if (arizona->pdata.micd_cb)
-				arizona->pdata.micd_cb(info->mic);
-			arizona_extcon_report(info, BIT_HEADSET);
-		}
-
-		if (info->mic)/* previous hs det so check for button */
-			ret = arizona_micd_button_reading(info, val);
+		ret = arizona_micd_button_reading(info, val);
 	}
 
 	return ret;
 }
-
 
 int arizona_micd_mic_start(struct arizona_extcon_info *info)
 {
@@ -2404,10 +2353,6 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 		info->micd_res_old = 0;
 		info->micd_debounce = 0;
 		info->micd_count = 0;
-		info->antenna_db_plugout = 0;
-		info->antenna_cnt_plugout = 0;
-		info->antenna_res_old_plugout = 0;
-		info->antenna_skip_btn_db = false;
 		info->moisture_count = 0;
 		arizona->hp_impedance = 0;
 		arizona_jds_set_state(info, NULL);
