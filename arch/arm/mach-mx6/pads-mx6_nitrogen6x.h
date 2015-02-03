@@ -310,6 +310,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	0
 };
 
+#if !defined(CONFIG_MXC_VIDEO_GS2971) && !defined(CONFIG_MXC_VIDEO_GS2971_MODULE) && !defined(CONFIG_TC358743_AUDIO)
 static iomux_v3_cfg_t MX6NAME(lcd_pads_enable)[] = {
 	MX6PAD(DI0_DISP_CLK__IPU1_DI0_DISP_CLK),
 	MX6PAD(DI0_PIN15__IPU1_DI0_PIN15),		/* DE */
@@ -341,6 +342,7 @@ static iomux_v3_cfg_t MX6NAME(lcd_pads_enable)[] = {
 	MX6PAD(DISP0_DAT23__IPU1_DISP0_DAT_23),
 	0
 };
+#endif
 
 static iomux_v3_cfg_t MX6NAME(lcd_pads_disable)[] = {
 	MX6PAD(DI0_DISP_CLK__GPIO_4_16),

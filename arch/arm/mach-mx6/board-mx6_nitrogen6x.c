@@ -1194,16 +1194,17 @@ static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
 	.disp_id = 1,
 };
 
-static void lcd_enable_pins(void)
-{
-	pr_info("%s\n", __func__);
-	IOMUX_SETUP(lcd_pads_enable);
-}
-
 static void lcd_disable_pins(void)
 {
 	pr_info("%s\n", __func__);
 	IOMUX_SETUP(lcd_pads_disable);
+}
+
+#if !defined(CONFIG_MXC_VIDEO_GS2971) && !defined(CONFIG_MXC_VIDEO_GS2971_MODULE) && !defined(CONFIG_TC358743_AUDIO)
+static void lcd_enable_pins(void)
+{
+	pr_info("%s\n", __func__);
+	IOMUX_SETUP(lcd_pads_enable);
 }
 
 static struct fsl_mxc_lcd_platform_data lcdif_data = {
@@ -1213,6 +1214,7 @@ static struct fsl_mxc_lcd_platform_data lcdif_data = {
 	.enable_pins = lcd_enable_pins,
 	.disable_pins = lcd_disable_pins,
 };
+#endif
 
 static struct fsl_mxc_ldb_platform_data ldb_data = {
 	.ipu_id = 1,
