@@ -46,6 +46,9 @@
 unsigned long imx7_iram_tlb_base_addr;
 unsigned long imx7_iram_tlb_phys_addr;
 
+static unsigned int *ocram_saved_in_ddr;
+static void __iomem *ocram_base;
+static unsigned int ocram_size;
 static void __iomem *ccm_base;
 static void __iomem *suspend_ocram_base;
 static void (*imx7_suspend_in_ocram_fn)(void __iomem *ocram_vbase);
@@ -170,10 +173,12 @@ static int imx7_pm_enter(suspend_state_t state)
 	case PM_SUSPEND_MEM:
 		imx_anatop_pre_suspend();
 		imx_gpcv2_pre_suspend(true);
+		memcpy(ocram_saved_in_ddr, ocram_base, ocram_size);
 
 		/* Zzz ... */
 		cpu_suspend(0, imx7_suspend_finish);
 
+		memcpy(ocram_base, ocram_saved_in_ddr, ocram_size);
 		imx_anatop_post_resume();
 		imx_gpcv2_post_resume();
 		break;
@@ -411,5 +416,16 @@ static void __init imx7_pm_common_init(const struct imx7_pm_socdata
 
 void __init imx7d_pm_init(void)
 {
+	struct device_node *np;
+	struct resource res;
+
 	imx7_pm_common_init(&imx7d_pm_data);
+
+	np = of_find_compatible_node(NULL, NULL, "mmio-sram");
+	ocram_base = of_iomap(np, 0);
+	WARN_ON(!ocram_base);
+	WARN_ON(of_address_to_resource(np, 0, &res));
+	ocram_size = resource_size(&res);
+	ocram_saved_in_ddr = kzalloc(ocram_size, GFP_KERNEL);
+	WARN_ON(!ocram_saved_in_ddr);
 }
