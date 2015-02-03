@@ -45,6 +45,38 @@ static int wm8998_in2mux_ev(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol,
 				int event);
 
+static int wm8998_asrc_ev(struct snd_soc_dapm_widget *w,
+			  struct snd_kcontrol *kcontrol,
+			  int event)
+{
+	unsigned int val;
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		val = snd_soc_read(w->codec, ARIZONA_ASRC_RATE1);
+		val &= ARIZONA_ASRC_RATE1_MASK;
+		val >>= ARIZONA_ASRC_RATE1_SHIFT;
+
+		val = snd_soc_read(w->codec, ARIZONA_SAMPLE_RATE_1 + val);
+		if (val >= 0x11)
+			dev_warn(w->codec->dev, "Unsupported ASRC rate1\n");
+
+		val = snd_soc_read(w->codec, ARIZONA_ASRC_RATE2);
+		val &= ARIZONA_ASRC_RATE2_MASK;
+		val >>= ARIZONA_ASRC_RATE2_SHIFT;
+		val -= 0x8;
+
+		val = snd_soc_read(w->codec, ARIZONA_ASYNC_SAMPLE_RATE_1 + val);
+		if (val >= 0x11)
+			dev_warn(w->codec->dev, "Unsupported ASRC rate2\n");
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static const char * const wm8998_inmux_texts[] = {
 	"A",
 	"B",
@@ -508,14 +540,14 @@ SND_SOC_DAPM_PGA("PWM1 Driver", ARIZONA_PWM_DRIVE_1, ARIZONA_PWM1_ENA_SHIFT,
 SND_SOC_DAPM_PGA("PWM2 Driver", ARIZONA_PWM_DRIVE_1, ARIZONA_PWM2_ENA_SHIFT,
 		 0, NULL, 0),
 
-SND_SOC_DAPM_PGA("ASRC1L", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC1L_ENA_SHIFT, 0,
-		 NULL, 0),
-SND_SOC_DAPM_PGA("ASRC1R", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC1R_ENA_SHIFT, 0,
-		 NULL, 0),
-SND_SOC_DAPM_PGA("ASRC2L", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC2L_ENA_SHIFT, 0,
-		 NULL, 0),
-SND_SOC_DAPM_PGA("ASRC2R", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC2R_ENA_SHIFT, 0,
-		 NULL, 0),
+SND_SOC_DAPM_PGA_E("ASRC1L", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC1L_ENA_SHIFT, 0,
+		   NULL, 0, wm8998_asrc_ev, SND_SOC_DAPM_PRE_PMU),
+SND_SOC_DAPM_PGA_E("ASRC1R", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC1R_ENA_SHIFT, 0,
+		   NULL, 0, wm8998_asrc_ev, SND_SOC_DAPM_PRE_PMU),
+SND_SOC_DAPM_PGA_E("ASRC2L", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC2L_ENA_SHIFT, 0,
+		   NULL, 0, wm8998_asrc_ev, SND_SOC_DAPM_PRE_PMU),
+SND_SOC_DAPM_PGA_E("ASRC2R", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC2R_ENA_SHIFT, 0,
+		   NULL, 0, wm8998_asrc_ev, SND_SOC_DAPM_PRE_PMU),
 
 SND_SOC_DAPM_PGA("ISRC1INT1", ARIZONA_ISRC_1_CTRL_3,
 		 ARIZONA_ISRC1_INT0_ENA_SHIFT, 0, NULL, 0),
