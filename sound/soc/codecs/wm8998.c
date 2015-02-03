@@ -194,6 +194,7 @@ SOC_ENUM("LHPF4 Mode", arizona_lhpf4_mode),
 
 ARIZONA_SAMPLE_RATE_CONTROL_DVFS("Sample Rate 2", 2),
 ARIZONA_SAMPLE_RATE_CONTROL_DVFS("Sample Rate 3", 3),
+ARIZONA_SAMPLE_RATE_CONTROL_DVFS("ASYNC Sample Rate 2", 4),
 
 SOC_VALUE_ENUM("ISRC1 FSL", arizona_isrc_fsl[0]),
 SOC_VALUE_ENUM("ISRC2 FSL", arizona_isrc_fsl[1]),

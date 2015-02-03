@@ -2609,6 +2609,10 @@ int arizona_put_sample_rate_enum(struct snd_kcontrol *kcontrol,
 		flag = ARIZONA_DVFS_SR3_RQ;
 		break;
 
+	case ARIZONA_ASYNC_SAMPLE_RATE_2:
+		flag = ARIZONA_DVFS_ASR2_RQ;
+		break;
+
 	default:
 		return ret;
 	}
