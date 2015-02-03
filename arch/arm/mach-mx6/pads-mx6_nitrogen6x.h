@@ -280,7 +280,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	0
 };
 
-#if !defined(CONFIG_MXC_VIDEO_GS2971) && !defined(CONFIG_MXC_VIDEO_GS2971_MODULE) /* We need the pads for GS2971 */
+#if !defined(CONFIG_MXC_VIDEO_GS2971) && !defined(CONFIG_MXC_VIDEO_GS2971_MODULE) && !defined(CONFIG_TC358743_AUDIO)
 static iomux_v3_cfg_t MX6NAME(lcd_pads_enable)[] = {
 	NEW_PAD_CTRL(MX6PAD(DI0_DISP_CLK__IPU1_DI0_DISP_CLK),PAD_CTL_DSE_120ohm),
 	NEW_PAD_CTRL(MX6PAD(DI0_PIN15__IPU1_DI0_PIN15),PAD_CTL_DSE_120ohm),		/* DE */

@@ -1213,7 +1213,7 @@ static void lcd_disable_pins(void)
 	IOMUX_SETUP(lcd_pads_disable);
 }
 
-#if !defined(CONFIG_MXC_VIDEO_GS2971) && !defined(CONFIG_MXC_VIDEO_GS2971_MODULE) /* We need the pads for GS2971 */
+#if !defined(CONFIG_MXC_VIDEO_GS2971) && !defined(CONFIG_MXC_VIDEO_GS2971_MODULE) && !defined(CONFIG_TC358743_AUDIO)
 static void lcd_enable_pins(void)
 {
 	pr_info("%s\n", __func__);
