@@ -1063,6 +1063,14 @@ const struct soc_enum arizona_asrc_rate1 =
 			      arizona_rate_text, arizona_rate_val);
 EXPORT_SYMBOL_GPL(arizona_asrc_rate1);
 
+const struct soc_enum arizona_asrc_rate2 =
+	SOC_VALUE_ENUM_SINGLE(ARIZONA_ASRC_RATE2,
+			      ARIZONA_ASRC_RATE2_SHIFT, 0xf,
+			      ARIZONA_ASYNC_RATE_ENUM_SIZE,
+			      arizona_rate_text + ARIZONA_SYNC_RATE_ENUM_SIZE,
+			      arizona_rate_val + ARIZONA_SYNC_RATE_ENUM_SIZE);
+EXPORT_SYMBOL_GPL(arizona_asrc_rate2);
+
 const struct soc_enum clearwater_asrc1_rate[] = {
 	SOC_VALUE_ENUM_SINGLE(CLEARWATER_ASRC1_RATE1,
 			      CLEARWATER_ASRC1_RATE1_SHIFT, 0xf,

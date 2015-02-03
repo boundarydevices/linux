@@ -200,6 +200,7 @@ SOC_VALUE_ENUM("ISRC2 FSL", arizona_isrc_fsl[1]),
 SOC_VALUE_ENUM("ISRC1 FSH", arizona_isrc_fsh[0]),
 SOC_VALUE_ENUM("ISRC2 FSH", arizona_isrc_fsh[1]),
 SOC_VALUE_ENUM("ASRC RATE 1", arizona_asrc_rate1),
+SOC_VALUE_ENUM("ASRC RATE 2", arizona_asrc_rate2),
 
 SOC_SINGLE_TLV("Noise Generator Volume", ARIZONA_COMFORT_NOISE_GENERATOR,
 	       ARIZONA_NOISE_GEN_GAIN_SHIFT, 0x16, 0, noise_tlv),

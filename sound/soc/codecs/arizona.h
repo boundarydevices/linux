@@ -260,6 +260,7 @@ extern const struct soc_enum arizona_sample_rate[];
 extern const struct soc_enum arizona_isrc_fsl[];
 extern const struct soc_enum arizona_isrc_fsh[];
 extern const struct soc_enum arizona_asrc_rate1;
+extern const struct soc_enum arizona_asrc_rate2;
 extern const struct soc_enum clearwater_asrc1_rate[];
 extern const struct soc_enum clearwater_asrc2_rate[];
 extern const struct soc_enum arizona_input_rate;
