@@ -160,7 +160,6 @@ enum headset_state {
 	BIT_NO_HEADSET = 0,
 	BIT_HEADSET = (1 << 0),
 	BIT_HEADSET_NO_MIC = (1 << 1),
-	BIT_ANTENNA = (1 << 2),
 };
 
 static ssize_t arizona_extcon_show(struct device *dev,
@@ -1523,7 +1522,7 @@ static int arizona_antenna_mic_reading(struct arizona_extcon_info *info,
 
 		arizona_set_headphone_imp(info, ARIZONA_HP_Z_OPEN);
 
-		arizona_extcon_report(info, BIT_ANTENNA);
+		arizona_extcon_report(info, BIT_NO_HEADSET);
 		arizona_jds_set_state(info, &arizona_antenna_oc_det);
 	} else {
 		info->mic = (val >= MICROPHONE_MIN_OHM);
@@ -1642,7 +1641,7 @@ static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 					 info->micd_ranges[i].key, 0);
 		input_sync(info->input);
 
-		arizona_extcon_report(info, BIT_ANTENNA);
+		arizona_extcon_report(info, BIT_NO_HEADSET);
 		arizona_jds_set_state(info, &arizona_antenna_mic_det);
 	} else {
 		switch (info->button_check) {
