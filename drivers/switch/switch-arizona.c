@@ -1385,6 +1385,16 @@ void arizona_micd_stop(struct arizona_extcon_info *info)
 }
 EXPORT_SYMBOL_GPL(arizona_micd_stop);
 
+static void arizona_micd_restart(struct arizona_extcon_info *info)
+{
+	struct arizona *arizona = info->arizona;
+
+	regmap_update_bits(arizona->regmap, ARIZONA_MIC_DETECT_1,
+			   ARIZONA_MICD_ENA, 0);
+	regmap_update_bits(arizona->regmap, ARIZONA_MIC_DETECT_1,
+			   ARIZONA_MICD_ENA, ARIZONA_MICD_ENA);
+}
+
 static int arizona_micd_button_debounce(struct arizona_extcon_info *info,
 					int val)
 {
@@ -1408,12 +1418,7 @@ static int arizona_micd_button_debounce(struct arizona_extcon_info *info,
 		} else {
 			dev_dbg(arizona->dev, "Software debounce: %d,%x\n",
 				info->micd_count, val);
-			regmap_update_bits(arizona->regmap,
-					   ARIZONA_MIC_DETECT_1,
-					   ARIZONA_MICD_ENA, 0);
-			regmap_update_bits(arizona->regmap,
-					   ARIZONA_MIC_DETECT_1,
-					   ARIZONA_MICD_ENA, ARIZONA_MICD_ENA);
+			arizona_micd_restart(info);
 			return -EAGAIN;
 		}
 	}
