@@ -1777,14 +1777,6 @@ void arizona_micd_mic_stop(struct arizona_extcon_info *info)
 }
 EXPORT_SYMBOL_GPL(arizona_micd_mic_stop);
 
-static void arizona_micd_adc_restart(struct arizona_extcon_info *info)
-{
-	struct arizona *arizona = info->arizona;
-
-	regmap_update_bits(arizona->regmap, ARIZONA_MIC_DETECT_1,
-			   ARIZONA_MICD_ENA, ARIZONA_MICD_ENA);
-}
-
 int arizona_micd_mic_reading(struct arizona_extcon_info *info, int val)
 {
 	struct arizona *arizona = info->arizona;
@@ -2266,7 +2258,7 @@ EXPORT_SYMBOL_GPL(arizona_micd_button);
 const struct arizona_jd_state arizona_micd_adc_mic = {
 	.mode = ARIZONA_ACCDET_MODE_ADC,
 	.start = arizona_micd_mic_start,
-	.restart = arizona_micd_adc_restart,
+	.restart = arizona_micd_restart,
 	.reading = arizona_micd_mic_reading,
 	.stop = arizona_micd_mic_stop,
 
