@@ -43,6 +43,7 @@ struct tp_event {
 struct novatek_ts_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
+	struct delayed_work	work;
 	u8 fingers[MAX_SUPPORT_POINTS];
 	uint16_t abs_x_max;
 	uint16_t abs_y_max;
@@ -99,9 +100,8 @@ static int novatek_ts_chipid(struct i2c_client *client)
 	return i2c_smbus_read_byte_data(ts->client, 0);
 }
 
-static irqreturn_t novatek_ts_threaded_irq_handler(int irq, void *dev_id)
+static void process_touch(struct novatek_ts_data *ts)
 {
-	struct novatek_ts_data *ts = dev_id;
 	struct i2c_client *client = ts->client;
 	struct input_dev *input_dev = ts->input_dev;
 	u8 buffer[MAX_SUPPORT_POINTS * FINGER_EVENT_LEN];
@@ -109,17 +109,22 @@ static irqreturn_t novatek_ts_threaded_irq_handler(int irq, void *dev_id)
 	bool down;
 	int ret;
 	int i;
+	int touch = 0;
 
 	memset(buffer, 0, ARRAY_SIZE(buffer));
 	ret = i2c_smbus_read_i2c_block_data(client, 0,
 					ARRAY_SIZE(buffer), buffer);
+	if (ret < 0) {
+		dev_err(&client->dev, "%s: %d\n", __func__, ret);
+		touch = 1;
+		goto exit;
+	}
 
 	dev_vdbg(&client->dev, "------------------------\n");
 	for (i = 0; i < ARRAY_SIZE(buffer); i++)
 		dev_vdbg(&client->dev, "reg:%d val:0x%X\n", i, buffer[i]);
 
 	for (i = 0; i < MAX_SUPPORT_POINTS; i++) {
-		memset(&event, 0, sizeof(event));
 		parser_finger_events(&buffer[i * FINGER_EVENT_LEN], &event);
 
 		/* workaround FW sometime report touch up is not
@@ -151,6 +156,7 @@ static irqreturn_t novatek_ts_threaded_irq_handler(int irq, void *dev_id)
 		input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, down);
 
 		if (down) {
+			touch = 1;
 			input_report_abs(input_dev, ABS_MT_POSITION_X, event.x);
 			input_report_abs(input_dev, ABS_MT_POSITION_Y, event.y);
 			input_report_abs(input_dev, ABS_MT_PRESSURE,
@@ -160,7 +166,25 @@ static irqreturn_t novatek_ts_threaded_irq_handler(int irq, void *dev_id)
 		input_mt_report_pointer_emulation(input_dev, true);
 		input_sync(input_dev);
 	}
+exit:
+	if (touch)
+		schedule_delayed_work(&ts->work, msecs_to_jiffies(40));
+}
 
+static void novatek_work(struct work_struct *work)
+{
+	struct novatek_ts_data *ts = container_of(to_delayed_work(work),
+			struct novatek_ts_data, work);
+
+	process_touch(ts);
+}
+
+static irqreturn_t novatek_ts_threaded_irq_handler(int irq, void *dev_id)
+{
+	struct novatek_ts_data *ts = dev_id;
+
+	cancel_delayed_work_sync(&ts->work);
+	process_touch(ts);
 	return IRQ_HANDLED;
 }
 
@@ -221,6 +245,7 @@ static int novatek_ts_probe(struct i2c_client *client,
 	ret = novatek_init_panel(ts);
 	ts->client = this_client = client;
 	i2c_set_clientdata(client, ts);
+	INIT_DELAYED_WORK(&ts->work, novatek_work);
 
 	chipid = novatek_ts_chipid(ts->client);
 	if (chipid < 0) {
@@ -284,6 +309,7 @@ err_input_register_device_failed:
 	input_free_device(ts->input_dev);
 err_input_dev_alloc_failed:
 	free_irq(client->irq, ts);
+	cancel_delayed_work_sync(&ts->work);
 err_irq_request_failed:
 err_init_panel_fail:
 	kfree(ts);
@@ -302,6 +328,7 @@ static int novatek_ts_remove(struct i2c_client *client)
 	i2c_set_clientdata(client, NULL);
 	input_unregister_device(ts->input_dev);
 	free_irq(client->irq, ts);
+	cancel_delayed_work_sync(&ts->work);
 	kfree(ts);
 
 	return 0;
