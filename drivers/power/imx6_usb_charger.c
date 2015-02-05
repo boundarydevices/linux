@@ -107,7 +107,7 @@ static int imx6_usb_charger_detect(struct usb_charger *charger)
 				usleep_range(5000, 10000);
 		} else {
 			data_pin_contact_count = 0;
-			msleep(20);
+			usleep_range(5000, 6000);
 		}
 	}
 
