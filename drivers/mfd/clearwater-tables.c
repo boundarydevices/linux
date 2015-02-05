@@ -3228,6 +3228,7 @@ static bool clearwater_16bit_volatile_register(struct device *dev, unsigned int 
 	case ARIZONA_SAMPLE_RATE_2_STATUS:
 	case ARIZONA_SAMPLE_RATE_3_STATUS:
 	case ARIZONA_ASYNC_SAMPLE_RATE_1_STATUS:
+	case ARIZONA_ASYNC_SAMPLE_RATE_2_STATUS:
 	case ARIZONA_DCS_HP1L_CONTROL:
 	case ARIZONA_DCS_HP1R_CONTROL:
 	case ARIZONA_MIC_DETECT_3:
