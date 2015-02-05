@@ -316,7 +316,10 @@ static const struct clk_ops clk_pllv3_av_ops = {
 static unsigned long clk_pllv3_enet_recalc_rate(struct clk_hw *hw,
 						unsigned long parent_rate)
 {
-	return 1000000000;
+	if (cpu_is_imx7d())
+		return 1000000000;
+	else
+		return 500000000;
 }
 
 static const struct clk_ops clk_pllv3_enet_ops = {
