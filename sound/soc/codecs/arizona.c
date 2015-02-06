@@ -1847,150 +1847,6 @@ int clearwater_put_dre(struct snd_kcontrol *kcontrol,
 }
 EXPORT_SYMBOL_GPL(clearwater_put_dre);
 
-static int clearwater_hp_pre_enable(struct snd_soc_dapm_widget *w)
-{
-	unsigned int val = snd_soc_read(w->codec, ARIZONA_DRE_ENABLE);
-
-	switch (w->shift) {
-	case ARIZONA_OUT1L_ENA_SHIFT:
-		if (!(val & ARIZONA_DRE1L_ENA_MASK))
-			snd_soc_update_bits(w->codec,
-					    ARIZONA_OUTPUT_PATH_CONFIG_1L,
-					    ARIZONA_OUT1L_PGA_VOL_MASK,
-					    0x56);
-		break;
-
-	case ARIZONA_OUT1R_ENA_SHIFT:
-		if (!(val & ARIZONA_DRE1R_ENA_MASK))
-			snd_soc_update_bits(w->codec,
-					    ARIZONA_OUTPUT_PATH_CONFIG_1R,
-					    ARIZONA_OUT1R_PGA_VOL_MASK,
-					    0x56);
-		break;
-
-	default:
-		break;
-	}
-
-	return 0;
-}
-
-static int clearwater_hp_post_enable(struct snd_soc_dapm_widget *w)
-{
-	unsigned int val = snd_soc_read(w->codec, ARIZONA_DRE_ENABLE);
-
-	switch (w->shift) {
-	case ARIZONA_OUT1L_ENA_SHIFT:
-		if (!(val & ARIZONA_DRE1L_ENA_MASK)) {
-			snd_soc_write(w->codec,
-				      ARIZONA_WRITE_SEQUENCER_CTRL_0,
-				      ARIZONA_WSEQ_ENA | ARIZONA_WSEQ_START |
-				      0x1c0);
-			msleep(10);
-			snd_soc_update_bits(w->codec,
-					    ARIZONA_OUTPUT_PATH_CONFIG_1L,
-					    ARIZONA_OUT1L_PGA_VOL_MASK,
-					    0x80);
-		}
-		break;
-
-	case ARIZONA_OUT1R_ENA_SHIFT:
-		if (!(val & ARIZONA_DRE1R_ENA_MASK)) {
-			snd_soc_write(w->codec,
-				      ARIZONA_WRITE_SEQUENCER_CTRL_0,
-				      ARIZONA_WSEQ_ENA | ARIZONA_WSEQ_START |
-				      0x1c5);
-			msleep(10);
-			snd_soc_update_bits(w->codec,
-					    ARIZONA_OUTPUT_PATH_CONFIG_1R,
-					    ARIZONA_OUT1R_PGA_VOL_MASK,
-					    0x80);
-		}
-		break;
-
-	default:
-		break;
-	}
-
-	return 0;
-}
-
-static int clearwater_hp_pre_disable(struct snd_soc_dapm_widget *w)
-{
-	unsigned int val = snd_soc_read(w->codec, ARIZONA_DRE_ENABLE);
-
-	switch (w->shift) {
-	case ARIZONA_OUT1L_ENA_SHIFT:
-		if (!(val & ARIZONA_DRE1L_ENA_MASK)) {
-			snd_soc_write(w->codec,
-				      ARIZONA_WRITE_SEQUENCER_CTRL_0,
-				      ARIZONA_WSEQ_ENA | ARIZONA_WSEQ_START |
-				      0x1ca);
-			msleep(10);
-			snd_soc_update_bits(w->codec,
-					    ARIZONA_OUTPUT_PATH_CONFIG_1L,
-					    ARIZONA_OUT1L_PGA_VOL_MASK,
-					    0x56);
-		}
-		break;
-
-	case ARIZONA_OUT1R_ENA_SHIFT:
-		if (!(val & ARIZONA_DRE1R_ENA_MASK)) {
-			snd_soc_write(w->codec,
-				      ARIZONA_WRITE_SEQUENCER_CTRL_0,
-				      ARIZONA_WSEQ_ENA | ARIZONA_WSEQ_START |
-				      0x1ce);
-			msleep(10);
-			snd_soc_update_bits(w->codec,
-					    ARIZONA_OUTPUT_PATH_CONFIG_1R,
-					    ARIZONA_OUT1R_PGA_VOL_MASK,
-					    0x56);
-		}
-		break;
-
-	default:
-		break;
-	}
-
-	return 0;
-}
-
-static int clearwater_hp_post_disable(struct snd_soc_dapm_widget *w)
-{
-	unsigned int val = snd_soc_read(w->codec, ARIZONA_DRE_ENABLE);
-
-	switch (w->shift) {
-	case ARIZONA_OUT1L_ENA_SHIFT:
-		if (!(val & ARIZONA_DRE1L_ENA_MASK)) {
-			snd_soc_write(w->codec,
-				      ARIZONA_DCS_HP1L_CONTROL,
-				      0x2006);
-			snd_soc_update_bits(w->codec,
-					    ARIZONA_OUTPUT_PATH_CONFIG_1L,
-					    ARIZONA_OUT1L_PGA_VOL_MASK,
-					    0x80);
-		}
-		break;
-
-	case ARIZONA_OUT1R_ENA_SHIFT:
-		if (!(val & ARIZONA_DRE1R_ENA_MASK)) {
-			snd_soc_write(w->codec,
-				      ARIZONA_DCS_HP1R_CONTROL,
-				      0x2006);
-			snd_soc_update_bits(w->codec,
-					    ARIZONA_OUTPUT_PATH_CONFIG_1R,
-					    ARIZONA_OUT1R_PGA_VOL_MASK,
-					    0x80);
-		}
-		break;
-
-	default:
-		break;
-	}
-
-	return 0;
-}
-
 int arizona_out_ev(struct snd_soc_dapm_widget *w,
 		   struct snd_kcontrol *kcontrol,
 		   int event)
@@ -2007,10 +1863,6 @@ int arizona_out_ev(struct snd_soc_dapm_widget *w,
 			switch (priv->arizona->type) {
 			case WM5110:
 				florida_hp_post_enable(w);
-				break;
-			case WM8285:
-			case WM1840:
-				clearwater_hp_post_enable(w);
 				break;
 			default:
 				break;
@@ -2064,10 +1916,6 @@ int arizona_hp_ev(struct snd_soc_dapm_widget *w,
 		case WM5110:
 			florida_hp_pre_enable(w);
 			break;
-		case WM8285:
-		case WM1840:
-			clearwater_hp_pre_enable(w);
-			break;
 		default:
 			break;
 		}
@@ -2080,10 +1928,6 @@ int arizona_hp_ev(struct snd_soc_dapm_widget *w,
 		switch (priv->arizona->type) {
 		case WM5110:
 			florida_hp_pre_disable(w);
-			break;
-		case WM8285:
-		case WM1840:
-			clearwater_hp_pre_disable(w);
 			break;
 		default:
 			break;
@@ -2098,9 +1942,20 @@ int arizona_hp_ev(struct snd_soc_dapm_widget *w,
 		case WM8285:
 		case WM1840:
 			ret = arizona_out_ev(w, kcontrol, event);
-
-			clearwater_hp_post_disable(w);
-
+			switch (w->shift) {
+			case ARIZONA_OUT1L_ENA_SHIFT:
+				snd_soc_write(w->codec,
+					      ARIZONA_DCS_HP1L_CONTROL,
+					      0x2006);
+				break;
+			case ARIZONA_OUT1R_ENA_SHIFT:
+				snd_soc_write(w->codec,
+					      ARIZONA_DCS_HP1R_CONTROL,
+					      0x2006);
+				break;
+			default:
+				break;
+			}
 			break;
 		default:
 			ret = 0;
