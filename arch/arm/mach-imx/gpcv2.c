@@ -33,6 +33,8 @@
 #define GPC_IMR1_CORE0		0x30
 #define GPC_IMR1_CORE1		0x40
 #define GPC_SLOT0_CFG		0xb0
+#define GPC_CPU_PGC_SW_PUP_REQ	0xf0
+#define GPC_CPU_PGC_SW_PDN_REQ	0xfc
 #define GPC_GTOR		0x124
 #define GPC_PGC_C0		0x800
 #define GPC_PGC_C1		0x840
@@ -61,6 +63,8 @@
 #define BM_LPCR_A7_AD_EN_C1_PDN			0x8
 #define BM_LPCR_A7_AD_EN_C0_PDN			0x2
 
+#define BM_CPU_PGC_SW_PDN_PUP_REQ_CORE1_A7	0x2
+
 enum imx_gpc_slot {
 	CORE0_A7,
 	CORE1_A7,
@@ -78,16 +82,6 @@ static void __iomem *gpc_base;
 static u32 gpcv2_wake_irqs[IMR_NUM];
 static u32 gpcv2_saved_imrs[IMR_NUM];
 static DEFINE_SPINLOCK(gpcv2_lock);
-
-void imx_gpcv2_set_core_pdn_by_wfi(u32 cpu, bool enable)
-{
-	u32 val = readl_relaxed(gpc_base + GPC_LPCR_A7_AD);
-
-	val &= ~(1 << (cpu * 2));
-	if (enable)
-		val |= 1 << (cpu * 2);
-	writel_relaxed(val, gpc_base + GPC_LPCR_A7_AD);
-}
 
 void imx_gpcv2_set_slot_ack(u32 index, enum imx_gpc_slot m_core,
 				bool mode, bool ack)
@@ -152,6 +146,28 @@ void imx_gpcv2_set_plat_power_gate_by_lpm(void)
 	val |= BM_LPCR_A7_AD_EN_PLAT_PDN;
 
 	writel_relaxed(val, gpc_base + GPC_LPCR_A7_AD);
+}
+
+void imx_gpcv2_set_m_core_pgc(bool enable, u32 offset)
+{
+	writel_relaxed(enable, gpc_base + offset);
+}
+
+void imx_gpcv2_set_core1_pdn_pup_by_software(bool pdn)
+{
+	u32 val = readl_relaxed(gpc_base + (pdn ?
+		GPC_CPU_PGC_SW_PDN_REQ : GPC_CPU_PGC_SW_PUP_REQ));
+
+	imx_gpcv2_set_m_core_pgc(true, GPC_PGC_C1);
+	val |= BM_CPU_PGC_SW_PDN_PUP_REQ_CORE1_A7;
+	writel_relaxed(val, gpc_base + (pdn ?
+		GPC_CPU_PGC_SW_PDN_REQ : GPC_CPU_PGC_SW_PUP_REQ));
+
+	while ((readl_relaxed(gpc_base + (pdn ?
+		GPC_CPU_PGC_SW_PDN_REQ : GPC_CPU_PGC_SW_PUP_REQ)) &
+		BM_CPU_PGC_SW_PDN_PUP_REQ_CORE1_A7) != 0)
+		;
+	imx_gpcv2_set_m_core_pgc(false, GPC_PGC_C1);
 }
 
 void imx_gpcv2_set_cpu_power_gate_by_lpm(u32 cpu)
