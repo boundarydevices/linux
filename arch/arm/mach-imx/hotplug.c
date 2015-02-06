@@ -59,8 +59,6 @@ void imx_cpu_die(unsigned int cpu)
 	 * the register being cleared to kill the cpu.
 	 */
 	imx_set_cpu_arg(cpu, ~0);
-	if (cpu_is_imx7d())
-		imx_gpcv2_set_core_pdn_by_wfi(cpu, true);
 	for (;;)
 		cpu_do_idle();
 }
@@ -74,5 +72,8 @@ int imx_cpu_kill(unsigned int cpu)
 			return 0;
 	imx_enable_cpu(cpu, false);
 	imx_set_cpu_arg(cpu, 0);
+	if (cpu_is_imx7d())
+		imx_gpcv2_set_core1_pdn_pup_by_software(true);
+
 	return 1;
 }

@@ -105,11 +105,11 @@ void imx_enable_cpu(int cpu, bool enable)
 	spin_lock(&src_lock);
 	if (cpu_is_imx7d()) {
 		/* enable core */
+		imx_gpcv2_set_core1_pdn_pup_by_software(false);
 		mask = 1 << (BP_SRC_A7RCR1_A7_CORE1_ENABLE + cpu - 1);
 		val = readl_relaxed(src_base + SRC_A7RCR1);
 		val = enable ? val | mask : val & ~mask;
 		writel_relaxed(val, src_base + SRC_A7RCR1);
-		imx_gpcv2_set_core_pdn_by_wfi(cpu, false);
 	} else {
 		mask = 1 << (BP_SRC_SCR_CORE1_ENABLE + cpu - 1);
 		val = readl_relaxed(src_base + SRC_SCR);
