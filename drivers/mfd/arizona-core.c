@@ -26,6 +26,9 @@
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/machine.h>
 #include <linux/slab.h>
+#include <sound/core.h>
+#include <sound/asound.h>
+#include <sound/soc.h>
 
 #include <linux/mfd/arizona/core.h>
 #include <linux/mfd/arizona/registers.h>
@@ -877,15 +880,51 @@ static int arizona_resume_noirq(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_SND_SOC_ARIZONA_DEFERRED_RESUME
+static void arizona_resume_deferred(struct work_struct *work)
+{
+	struct arizona *arizona =
+			container_of(work, struct arizona, deferred_resume_work);
+	int level = -1;
+
+	if (arizona->dapm)
+		level = snd_power_get_state(arizona->dapm->card->snd_card);
+
+	if ((arizona->dapm) && (level != SNDRV_CTL_POWER_D0)) {
+		if (!schedule_work(&arizona->deferred_resume_work))
+			dev_err(arizona->dev, "Resume work item may be lost\n");
+	} else {
+		dev_dbg(arizona->dev, "Deferred resume, reenabling IRQ\n");
+		if (arizona->irq_sem) {
+			enable_irq(arizona->irq);
+			arizona->irq_sem = 0;
+		}
+	}
+}
+#endif
+
 static int arizona_resume(struct device *dev)
 {
 	struct arizona *arizona = dev_get_drvdata(dev);
+#ifdef CONFIG_SND_SOC_ARIZONA_DEFERRED_RESUME
+	int level = -1;
 
-	dev_dbg(arizona->dev, "Late resume, reenabling IRQ\n");
-	if (arizona->irq_sem) {
-		enable_irq(arizona->irq);
-		arizona->irq_sem = 0;
+	if (arizona->dapm)
+		level = snd_power_get_state(arizona->dapm->card->snd_card);
+
+	if ((arizona->dapm) && (level != SNDRV_CTL_POWER_D0)) {
+		if (!schedule_work(&arizona->deferred_resume_work))
+			dev_err(dev, "Resume work item may be lost\n");
+	} else {
+#endif
+		dev_dbg(arizona->dev, "Late resume, reenabling IRQ\n");
+		if (arizona->irq_sem) {
+			enable_irq(arizona->irq);
+			arizona->irq_sem = 0;
+		}
+#ifdef CONFIG_SND_SOC_ARIZONA_DEFERRED_RESUME
 	}
+#endif
 
 	return 0;
 }
@@ -1497,6 +1536,11 @@ int arizona_dev_init(struct arizona *arizona)
 			arizona->type);
 		return -EINVAL;
 	}
+
+#if defined(CONFIG_PM_SLEEP) && defined(CONFIG_SND_SOC_ARIZONA_DEFERRED_RESUME)
+		/* deferred resume work */
+		INIT_WORK(&arizona->deferred_resume_work, arizona_resume_deferred);
+#endif
 
 	/* Mark DCVDD as external, LDO1 driver will clear if internal */
 	arizona->external_dcvdd = true;

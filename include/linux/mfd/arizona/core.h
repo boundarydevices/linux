@@ -166,6 +166,9 @@ struct arizona {
 	uint8_t out_comp_enabled;
 
 	bool bypass_cache;
+#if defined(CONFIG_PM_SLEEP) && defined(CONFIG_SND_SOC_ARIZONA_DEFERRED_RESUME)
+	struct work_struct deferred_resume_work;
+#endif
 };
 
 #define ARIZONA_DVFS_SR1_RQ          0x00000001
