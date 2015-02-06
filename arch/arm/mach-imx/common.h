@@ -96,7 +96,7 @@ void mcc_receive_from_mu_buffer(unsigned int index, unsigned int *data);
 void mcc_send_via_mu_buffer(unsigned int index, unsigned int data);
 unsigned int imx_gpc_is_m4_sleeping(void);
 bool imx_mu_is_m4_in_low_freq(void);
-void imx_gpcv2_set_core_pdn_by_wfi(u32 cpu, bool enable);
+void imx_gpcv2_set_core1_pdn_pup_by_software(bool pdn);
 
 enum mxc_cpu_pwr_mode {
 	WAIT_CLOCKED,		/* wfi only */
