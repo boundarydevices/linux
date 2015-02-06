@@ -157,6 +157,7 @@
 #define ARIZONA_HP_CTRL_3R                       0x22A
 #define ARIZONA_DCS_HP1L_CONTROL                 0x232
 #define ARIZONA_DCS_HP1R_CONTROL                 0x238
+#define CLEARWATER_EDRE_HP_STEREO_CONTROL        0x27E
 #define ARIZONA_ACCESSORY_DETECT_MODE_1          0x293
 #define ARIZONA_HEADPHONE_DETECT_1               0x29B
 #define ARIZONA_HEADPHONE_DETECT_2               0x29C
@@ -3601,6 +3602,22 @@
 #define ARIZONA_HP1R_SHRTO_MASK                  0x0001  /* HP1R_SHRTO */
 #define ARIZONA_HP1R_SHRTO_SHIFT                      0  /* HP1R_SHRTO */
 #define ARIZONA_HP1R_SHRTO_WIDTH                      1  /* HP1R_SHRTO */
+
+/*
+ * R638 (0x27E) - Clearwater EDRE HP stereo control
+ */
+#define ARIZONA_HP3_EDRE_STEREO                  0x0004  /* HP3_EDRE_STEREO */
+#define ARIZONA_HP3_EDRE_STEREO_MASK             0x0004  /* HP3_EDRE_STEREO */
+#define ARIZONA_HP3_EDRE_STEREO_SHIFT                 2  /* HP3_EDRE_STEREO */
+#define ARIZONA_HP3_EDRE_STEREO_WIDTH                 1  /* HP3_EDRE_STEREO */
+#define ARIZONA_HP2_EDRE_STEREO                  0x0002  /* HP2_EDRE_STEREO */
+#define ARIZONA_HP2_EDRE_STEREO_MASK             0x0002  /* HP2_EDRE_STEREO */
+#define ARIZONA_HP2_EDRE_STEREO_SHIFT                 1  /* HP2_EDRE_STEREO */
+#define ARIZONA_HP2_EDRE_STEREO_WIDTH                 1  /* HP2_EDRE_STEREO */
+#define ARIZONA_HP1_EDRE_STEREO                  0x0001  /* HP1_EDRE_STEREO */
+#define ARIZONA_HP1_EDRE_STEREO_MASK             0x0001  /* HP1_EDRE_STEREO */
+#define ARIZONA_HP1_EDRE_STEREO_SHIFT                 0  /* HP1_EDRE_STEREO */
+#define ARIZONA_HP1_EDRE_STEREO_WIDTH                 1  /* HP1_EDRE_STEREO */
 
 /*
  * R659 (0x293) - Accessory Detect Mode 1
