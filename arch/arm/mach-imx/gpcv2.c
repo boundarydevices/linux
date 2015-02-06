@@ -129,6 +129,7 @@ void imx_gpcv2_set_lpm_mode(u32 cpu, enum mxc_cpu_pwr_mode mode)
 		val1 &= ~BM_LPCR_A7_BSC_CPU_CLK_ON_LPM;
 		val2 |= BM_SLPCR_EN_DSM;
 		val2 |= BM_SLPCR_SBYOS;
+		val2 |= BM_SLPCR_VSTBY;
 		val2 |= BM_SLPCR_BYPASS_PMIC_READY;
 		break;
 	default:
@@ -200,7 +201,6 @@ void imx_gpcv2_pre_suspend(bool arm_power_off)
 		imx_gpcv2_set_slot_ack(0, CORE0_A7, false, false);
 		/* enable scu power down in slot1, ack for last one */
 		imx_gpcv2_set_slot_ack(1, SCU_A7, false, true);
-
 
 		/* enable scu power up in slot5 */
 		imx_gpcv2_set_slot_ack(5, SCU_A7, true, false);
