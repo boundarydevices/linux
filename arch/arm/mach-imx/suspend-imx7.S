@@ -255,7 +255,7 @@ ENTRY(imx7_suspend)
 	nop
 	nop
 
-	ddrc_enter_self_refresh
+	ddrc_exit_self_refresh
 	restore_ttbr1
 
 	pop	{r4-r12}
