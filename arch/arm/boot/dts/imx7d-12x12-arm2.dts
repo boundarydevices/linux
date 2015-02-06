@@ -107,6 +107,16 @@
 	status = "okay";
 };
 
+&uart3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart3_1>;
+	fsl,uart-has-rtscts;
+	status = "okay";
+	/* for DTE mode, add below change */
+	/* fsl,dte-mode;*/
+	/* pinctrl-0 = <&pinctrl_uart3dte_1>; */
+};
+
 &usdhc1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc1_1>;
@@ -267,6 +277,26 @@
 			>;
 		};
 
+	};
+
+	uart3 {
+		pinctrl_uart3_1: uart3grp-1 {
+			fsl,pins = <
+				MX7D_PAD_UART3_TX_DATA__UART3_DCE_TX    0x79
+				MX7D_PAD_UART3_RX_DATA__UART3_DCE_RX    0x79
+				MX7D_PAD_UART3_CTS_B__UART3_DCE_CTS     0x79
+				MX7D_PAD_UART3_RTS_B__UART3_DCE_RTS     0x79
+			>;
+		};
+
+		pinctrl_uart3dte_1: uart3dtegrp-1 {
+			fsl,pins = <
+				MX7D_PAD_UART3_TX_DATA__UART3_DTE_RX    0x79
+				MX7D_PAD_UART3_RX_DATA__UART3_DTE_TX    0x79
+				MX7D_PAD_UART3_RTS_B__UART3_DTE_CTS     0x79
+				MX7D_PAD_UART3_CTS_B__UART3_DTE_RTS     0x79
+			>;
+		};
 	};
 
 	usdhc1 {
