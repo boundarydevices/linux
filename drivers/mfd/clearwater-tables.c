@@ -41,13 +41,13 @@ static const struct reg_default clearwater_reva_16_patch[] = {
 	{ 0x293, 0x0080 },
 	{ 0x17D, 0x0303 },
 	{ 0x19D, 0x0303 },
-	{ 0x27E, 0x0001 },
+	{ 0x27E, 0x0000 },
 	{ 0x80,  0x0000 },
 	{ 0x80,  0x0000 },
 };
 
 static const struct reg_default clearwater_revc_16_patch[] = {
-	{ 0x27E, 0x0001 },
+	{ 0x27E, 0x0000 },
 };
 
 /* this patch is required for EDRE on RevA*/
@@ -549,7 +549,7 @@ static const struct reg_default clearwater_reg_default[] = {
 	{ 0x00000228, 0x1406 },
 	{ 0x00000229, 0x1406 },
 	{ 0x0000022a, 0x1406 },
-	{ 0x0000027e, 0x0001 }, /* R638 (0x27E) - Clearwater EDRE HP stereo control */
+	{ 0x0000027e, 0x0000 }, /* R638 (0x27E) - Clearwater EDRE HP stereo control */
 	{ 0x00000293, 0x0000 }, /* R659 (0x293) - Accessory Detect Mode 1 */
 	{ 0x0000029b, 0x0000 }, /* R667 (0x29B) - Headphone Detect 1 */
 	{ 0x0000029f, 0x0000 },
