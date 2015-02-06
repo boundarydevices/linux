@@ -1740,6 +1740,52 @@ static int florida_hp_post_disable(struct snd_soc_dapm_widget *w)
 	return 0;
 }
 
+static void clearwater_hp_post_enable(struct snd_soc_dapm_widget *w)
+{
+	unsigned int val;
+
+	switch (w->shift) {
+	case ARIZONA_OUT1L_ENA_SHIFT:
+	case ARIZONA_OUT1R_ENA_SHIFT:
+		val = snd_soc_read(w->codec, ARIZONA_OUTPUT_ENABLES_1);
+		val &= (ARIZONA_OUT1L_ENA | ARIZONA_OUT1R_ENA);
+
+		if (val == (ARIZONA_OUT1L_ENA | ARIZONA_OUT1R_ENA))
+			snd_soc_update_bits(w->codec,
+				    CLEARWATER_EDRE_HP_STEREO_CONTROL,
+				    ARIZONA_HP1_EDRE_STEREO_MASK,
+				    ARIZONA_HP1_EDRE_STEREO);
+		break;
+
+	default:
+		break;
+	}
+}
+
+static void clearwater_hp_post_disable(struct snd_soc_dapm_widget *w)
+{
+	switch (w->shift) {
+	case ARIZONA_OUT1L_ENA_SHIFT:
+		snd_soc_write(w->codec,
+			      ARIZONA_DCS_HP1L_CONTROL,
+			      0x2006);
+		break;
+	case ARIZONA_OUT1R_ENA_SHIFT:
+		snd_soc_write(w->codec,
+			      ARIZONA_DCS_HP1R_CONTROL,
+			      0x2006);
+		break;
+	default:
+		return;
+	}
+
+	/* Only get to here for OUT1L and OUT1R */
+	snd_soc_update_bits(w->codec,
+			    CLEARWATER_EDRE_HP_STEREO_CONTROL,
+			    ARIZONA_HP1_EDRE_STEREO_MASK,
+			    0);
+}
+
 static int florida_set_dre(struct arizona *arizona, unsigned int shift,
 			   bool enable)
 {
@@ -1864,6 +1910,10 @@ int arizona_out_ev(struct snd_soc_dapm_widget *w,
 			case WM5110:
 				florida_hp_post_enable(w);
 				break;
+			case WM8285:
+			case WM1840:
+				clearwater_hp_post_enable(w);
+				break;
 			default:
 				break;
 			}
@@ -1942,20 +1992,7 @@ int arizona_hp_ev(struct snd_soc_dapm_widget *w,
 		case WM8285:
 		case WM1840:
 			ret = arizona_out_ev(w, kcontrol, event);
-			switch (w->shift) {
-			case ARIZONA_OUT1L_ENA_SHIFT:
-				snd_soc_write(w->codec,
-					      ARIZONA_DCS_HP1L_CONTROL,
-					      0x2006);
-				break;
-			case ARIZONA_OUT1R_ENA_SHIFT:
-				snd_soc_write(w->codec,
-					      ARIZONA_DCS_HP1R_CONTROL,
-					      0x2006);
-				break;
-			default:
-				break;
-			}
+			clearwater_hp_post_disable(w);
 			break;
 		default:
 			ret = 0;
