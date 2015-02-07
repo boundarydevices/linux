@@ -1372,7 +1372,7 @@ static void imx_flush_buffer(struct uart_port *port)
 
 	/*
 	 * UCR2_SRST will reset the transmit and receive state machines,
-	 * all FIFOs and register UBIR, UBMR, UBRC,
+	 * all FIFOs and register UBIR, UBMR,
 	 * and UTS[6-3], so save the required registers
 	 */
 	sport->saved_reg[0] = readl(sport->port.membase + UBIR);
