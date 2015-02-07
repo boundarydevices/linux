@@ -1376,12 +1376,11 @@ static void imx_flush_buffer(struct uart_port *port)
 
 	/*
 	 * UCR2_SRST will reset the transmit and receive state machines,
-	 * all FIFOs and register UBIR, UBMR, UBRC,
+	 * all FIFOs and register UBIR, UBMR,
 	 * and UTS[6-3], so save the required registers
 	 */
 	sport->saved_reg[0] = readl(sport->port.membase + UBIR);
 	sport->saved_reg[1] = readl(sport->port.membase + UBMR);
-	sport->saved_reg[2] = readl(sport->port.membase + UBRC);
 	sport->saved_reg[3] = readl(sport->port.membase + IMX21_UTS);
 
 	i = 100;
@@ -1396,7 +1395,6 @@ static void imx_flush_buffer(struct uart_port *port)
 	/* Restore the registers */
 	writel(sport->saved_reg[0], sport->port.membase + UBIR);
 	writel(sport->saved_reg[1], sport->port.membase + UBMR);
-	writel(sport->saved_reg[2], sport->port.membase + UBRC);
 	writel(sport->saved_reg[3], sport->port.membase + IMX21_UTS);
 }
 
@@ -1943,7 +1941,6 @@ static int serial_imx_suspend(struct platform_device *dev, pm_message_t state)
 	sport->saved_reg[6] = readl(sport->port.membase + UTIM);
 	sport->saved_reg[7] = readl(sport->port.membase + UBIR);
 	sport->saved_reg[8] = readl(sport->port.membase + UBMR);
-	sport->saved_reg[9] = readl(sport->port.membase + UBRC);
 	sport->saved_reg[10] = readl(sport->port.membase + IMX21_UTS);
 
 	return 0;
@@ -1959,7 +1956,6 @@ static int serial_imx_resume(struct platform_device *dev)
 	writel(sport->saved_reg[6], sport->port.membase + UTIM);
 	writel(sport->saved_reg[7], sport->port.membase + UBIR);
 	writel(sport->saved_reg[8], sport->port.membase + UBMR);
-	writel(sport->saved_reg[9], sport->port.membase + UBRC);
 	writel(sport->saved_reg[10], sport->port.membase + IMX21_UTS);
 	writel(sport->saved_reg[0], sport->port.membase + UCR1);
 	writel(sport->saved_reg[1] | 0x1, sport->port.membase + UCR2);
