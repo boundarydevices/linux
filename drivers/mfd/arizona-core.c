@@ -880,7 +880,7 @@ static int arizona_resume_noirq(struct device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_SND_SOC_ARIZONA_DEFERRED_RESUME
+#ifdef CONFIG_MFD_ARIZONA_DEFERRED_RESUME
 static void arizona_resume_deferred(struct work_struct *work)
 {
 	struct arizona *arizona =
@@ -906,7 +906,7 @@ static void arizona_resume_deferred(struct work_struct *work)
 static int arizona_resume(struct device *dev)
 {
 	struct arizona *arizona = dev_get_drvdata(dev);
-#ifdef CONFIG_SND_SOC_ARIZONA_DEFERRED_RESUME
+#ifdef CONFIG_MFD_ARIZONA_DEFERRED_RESUME
 	int level = -1;
 
 	if (arizona->dapm)
@@ -922,7 +922,7 @@ static int arizona_resume(struct device *dev)
 			enable_irq(arizona->irq);
 			arizona->irq_sem = 0;
 		}
-#ifdef CONFIG_SND_SOC_ARIZONA_DEFERRED_RESUME
+#ifdef CONFIG_MFD_ARIZONA_DEFERRED_RESUME
 	}
 #endif
 
@@ -1537,7 +1537,7 @@ int arizona_dev_init(struct arizona *arizona)
 		return -EINVAL;
 	}
 
-#if defined(CONFIG_PM_SLEEP) && defined(CONFIG_SND_SOC_ARIZONA_DEFERRED_RESUME)
+#if defined(CONFIG_PM_SLEEP) && defined(CONFIG_MFD_ARIZONA_DEFERRED_RESUME)
 		/* deferred resume work */
 		INIT_WORK(&arizona->deferred_resume_work, arizona_resume_deferred);
 #endif

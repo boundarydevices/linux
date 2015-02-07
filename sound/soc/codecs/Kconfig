@@ -158,9 +158,6 @@ config SND_SOC_ARIZONA
 	default m if SND_SOC_WM8998=m
 	default m if SND_SOC_CS47L24=m
 
-config SND_SOC_ARIZONA_DEFERRED_RESUME
-	tristate
-
 config SND_SOC_WM_HUBS
 	tristate
 	default y if SND_SOC_WM8993=y || SND_SOC_WM8994=y

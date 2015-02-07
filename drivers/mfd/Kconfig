@@ -1011,6 +1011,12 @@ config MFD_ARIZONA
 	select MFD_CORE
 	bool
 
+config MFD_ARIZONA_DEFERRED_RESUME
+	bool "Arizona Deferred Resume"
+	depends on MFD_ARIZONA
+	help
+	  Support for Arizona deferred resume
+
 config MFD_ARIZONA_I2C
 	tristate "Wolfson Microelectronics Arizona platform with I2C"
 	select MFD_ARIZONA
