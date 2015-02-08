@@ -45,6 +45,7 @@
 #define  ESDHC_MIX_CTRL_EXE_TUNE	(1 << 22)
 #define  ESDHC_MIX_CTRL_SMPCLK_SEL	(1 << 23)
 #define  ESDHC_MIX_CTRL_FBCLK_SEL	(1 << 25)
+#define  ESDHC_MIX_CTRL_HS400_EN	(1 << 26)
 /* Bits 3 and 6 are not SDHCI standard definitions */
 #define  ESDHC_MIX_CTRL_SDHCI_MASK	0xb7
 /* Tuning bits */
@@ -60,6 +61,15 @@
 #define  ESDHC_TUNE_CTRL_STEP		1
 #define  ESDHC_TUNE_CTRL_MIN		0
 #define  ESDHC_TUNE_CTRL_MAX		((1 << 7) - 1)
+
+/* strobe dll register */
+#define ESDHC_STROBE_DLL_CTRL	0x70
+#define ESDHC_STROBE_DLL_CTRL_ENABLE	(1 << 0)
+#define ESDHC_STROBE_DLL_CTRL_SLV_DLY_TARGET_SHIFT	3
+
+#define ESDHC_STROBE_DLL_STATUS	0x74
+#define ESDHC_STROBE_DLL_STS_REF_LOCK	(1 << 1)
+#define ESDHC_STROBE_DLL_STS_SLV_LOCK	(1 << 0)
 
 #define ESDHC_TUNING_CTRL		0xcc
 #define ESDHC_STD_TUNING_EN		(1 << 24)
@@ -119,6 +129,8 @@
 #define ESDHC_FLAG_ERR004536		BIT(7)
 /* need request bus freq during low power */
 #define ESDHC_FLAG_BUSFREQ		BIT(8)
+/* the IP supports eMMC HS400 */
+#define ESDHC_FLAG_SUP_HS400	BIT(9)
 
 struct esdhc_soc_data {
 	u32 flags;
@@ -153,6 +165,11 @@ static struct esdhc_soc_data usdhc_imx6sl_data = {
 static struct esdhc_soc_data usdhc_imx6sx_data = {
 	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
 			| ESDHC_FLAG_HAVE_CAP1,
+};
+
+static struct esdhc_soc_data usdhc_imx7d_data = {
+	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
+			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_SUP_HS400,
 };
 
 struct pltfm_imx_data {
@@ -199,6 +216,7 @@ static const struct of_device_id imx_esdhc_dt_ids[] = {
 	{ .compatible = "fsl,imx6sx-usdhc", .data = &usdhc_imx6sx_data, },
 	{ .compatible = "fsl,imx6sl-usdhc", .data = &usdhc_imx6sl_data, },
 	{ .compatible = "fsl,imx6q-usdhc", .data = &usdhc_imx6q_data, },
+	{ .compatible = "fsl,imx7d-usdhc", .data = &usdhc_imx7d_data, },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, imx_esdhc_dt_ids);
@@ -274,6 +292,14 @@ static u32 esdhc_readl_le(struct sdhci_host *host, int reg)
 				val = SDHCI_SUPPORT_DDR50 | SDHCI_SUPPORT_SDR104
 					| SDHCI_SUPPORT_SDR50
 					| SDHCI_USE_SDR50_TUNING;
+
+			/*
+		     * imx7d does not have a support hs400 register,
+		     * use bit 31 of SDHCI_CAPABILITIES register to
+		     * fake.
+		     */
+			if (imx_data->socdata->flags & ESDHC_FLAG_SUP_HS400)
+				val |= SDHCI_SUPPORT_HS400;
 		}
 	}
 
@@ -843,6 +869,7 @@ static int esdhc_change_pinstate(struct sdhci_host *host,
 		break;
 	case MMC_TIMING_UHS_SDR104:
 	case MMC_TIMING_MMC_HS200:
+	case MMC_TIMING_MMC_HS400:
 		pinctrl = imx_data->pins_200mhz;
 		break;
 	default:
@@ -888,6 +915,13 @@ static int esdhc_set_uhs_signaling(struct sdhci_host *host, unsigned int uhs)
 				v <<= 1;
 			writel(v, host->ioaddr + ESDHC_DLL_CTRL);
 		}
+		break;
+	case MMC_TIMING_MMC_HS400:
+		imx_data->uhs_mode = SDHCI_CTRL_HS400;
+		writel(readl(host->ioaddr + ESDHC_MIX_CTRL) |
+				ESDHC_MIX_CTRL_DDREN | ESDHC_MIX_CTRL_HS400_EN,
+				host->ioaddr + ESDHC_MIX_CTRL);
+		imx_data->is_ddr = 1;
 		break;
 	}
 
@@ -1078,6 +1112,9 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 
 	if (imx_data->socdata->flags & ESDHC_FLAG_ERR004536)
 		host->quirks |= SDHCI_QUIRK_BROKEN_ADMA;
+
+	if (imx_data->socdata->flags & ESDHC_FLAG_SUP_HS400)
+		host->quirks2 |= SDHCI_QUIRK2_CAPS_BIT63_FOR_HS400;
 
 	boarddata = &imx_data->boarddata;
 	if (sdhci_esdhc_imx_probe_dt(pdev, boarddata) < 0) {
