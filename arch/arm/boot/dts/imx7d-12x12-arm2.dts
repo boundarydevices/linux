@@ -53,10 +53,38 @@
 			gpio = <&gpio5 11 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
 		};
+
+		reg_coedc_5v: coedc_5v {
+			compatible = "regulator-fixed";
+			regulator-name = "CODEC_5V";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio1 13 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
+
+		reg_aud_1v8: aud_1v8 {
+			compatible = "regulator-fixed";
+			regulator-name = "AUD_1V8";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			gpio = <&gpio1 13 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
 	};
 
 	memory {
 		reg = <0x80000000 0x80000000>;
+	};
+
+	sound {
+		compatible = "fsl,imx7d-12x12-arm2-wm8958",
+			   "fsl,imx-audio-wm8958";
+		model = "wm8958-audio";
+		cpu-dai = <&sai1>;
+		audio-codec = <&codec>;
+		codec-master;
+		hp-det-gpios = <&gpio1 12 1>;
 	};
 };
 
@@ -130,7 +158,7 @@
 				MX7D_PAD_SD2_CD_B__GPIO5_IO9      0x17059
 				MX7D_PAD_SD2_WP__GPIO5_IO10       0x17059
 				MX7D_PAD_SD2_RESET_B__GPIO5_IO11  0x17059
-				MX7D_PAD_GPIO1_IO12__SD2_VSELECT  0x17059
+				MX7D_PAD_GPIO1_IO12__GPIO1_IO12   0x17059
 			>;
 		};
 	};
@@ -661,5 +689,23 @@
 				regulator-name = "V3P3";
 			};
 		};
+	};
+
+	codec: wm8958@1a {
+		compatible = "wlf,wm8958";
+		reg = <0x1a>;
+		clocks = <&clks IMX7D_SAI1_ROOT_CLK>,
+		         <&clks IMX7D_CLK_DUMMY>;
+		clock-names = "mclk1", "mclk2";
+
+		DBVDD1-supply = <&reg_aud_1v8>;
+		DBVDD2-supply = <&reg_aud_1v8>;
+		DBVDD3-supply = <&reg_aud_1v8>;
+		AVDD2-supply = <&reg_aud_1v8>;
+		CPVDD-supply = <&reg_aud_1v8>;
+		SPKVDD1-supply = <&reg_coedc_5v>;
+		SPKVDD2-supply = <&reg_coedc_5v>;
+		wlf,ldo1ena;
+		wlf,ldo2ena;
 	};
 };
