@@ -447,6 +447,45 @@
 		};
 	};
 
+	sai1 {
+		pinctrl_sai1: sai1grp {
+			fsl,pins = <
+				MX7D_PAD_SAI1_MCLK__SAI1_MCLK           0x1f
+				MX7D_PAD_SAI1_TX_BCLK__SAI1_TX_BCLK     0x1f
+				MX7D_PAD_SAI1_TX_SYNC__SAI1_TX_SYNC     0x1f
+				MX7D_PAD_SAI1_RX_SYNC__SAI1_RX_SYNC     0x1f
+				MX7D_PAD_SAI1_RX_DATA__SAI1_RX_DATA0    0x1f
+				MX7D_PAD_SAI1_TX_DATA__SAI1_TX_DATA0    0x1f
+			>;
+		};
+	};
+
+	sai2 {
+		pinctrl_sai2: sai2grp {
+			fsl,pins = <
+				MX7D_PAD_SAI2_TX_BCLK__SAI2_TX_BCLK     0x1f
+				MX7D_PAD_SAI2_TX_SYNC__SAI2_TX_SYNC     0x1f
+				MX7D_PAD_SAI2_RX_DATA__SAI2_RX_DATA0    0x1f
+				MX7D_PAD_SAI2_TX_DATA__SAI2_TX_DATA0    0x1f
+			>;
+		};
+	};
+};
+
+&sai1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai1>;
+	status = "okay";
+};
+
+&sai2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai2>;
+	status = "disabled";
+};
+
+&sdma {
+	status = "okay";
 };
 
 &i2c1 {
