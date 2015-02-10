@@ -126,7 +126,13 @@ struct arizona_pdata {
 	/* Base GPIO */
 	int gpio_base;
 
-	/** Pin state for GPIO pins */
+	/** Pin state for GPIO pins
+	 * Defines default pin function and state for each GPIO
+	 *
+	 * 0 = leave at chip default
+	 * values 0x1..0xffff = set to this value
+	 * >0xffff = set to 0
+	 */
 	unsigned int gpio_defaults[CLEARWATER_MAX_GPIO_REGS];
 
 	/**
