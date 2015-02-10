@@ -1542,7 +1542,7 @@ static int arizona_antenna_mic_reading(struct arizona_extcon_info *info,
 	}
 
 	if (arizona->pdata.micd_cb)
-		arizona->pdata.micd_cb(info->mic);
+		arizona->pdata.micd_cb(true);
 
 	return 0;
 }
