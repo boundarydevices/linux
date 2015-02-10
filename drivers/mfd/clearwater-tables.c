@@ -553,7 +553,6 @@ static const struct reg_default clearwater_reg_default[] = {
 	{ 0x0000027e, 0x0000 }, /* R638 (0x27E) - Clearwater EDRE HP stereo control */
 	{ 0x00000293, 0x0000 }, /* R659 (0x293) - Accessory Detect Mode 1 */
 	{ 0x0000029b, 0x0000 }, /* R667 (0x29B) - Headphone Detect 1 */
-	{ 0x0000029f, 0x0000 },
 	{ 0x000002a3, 0x1102 }, /* R675 (0x2A3) - Mic Detect 1 */
 	{ 0x000002a4, 0x009f }, /* R676 (0x2A4) - Mic Detect 2 */
 	{ 0x000002a6, 0x3737 },
@@ -2024,6 +2023,8 @@ static bool clearwater_16bit_readable_register(struct device *dev, unsigned int 
 	case ARIZONA_ACCESSORY_DETECT_MODE_1:
 	case ARIZONA_HEADPHONE_DETECT_1:
 	case ARIZONA_HEADPHONE_DETECT_2:
+	case ARIZONA_HEADPHONE_DETECT_3:
+	case ARIZONA_HP_DACVAL:
 	case CLEARWATER_MICD_CLAMP_CONTROL:
 	case ARIZONA_MIC_DETECT_1:
 	case ARIZONA_MIC_DETECT_2:
@@ -3237,6 +3238,8 @@ static bool clearwater_16bit_volatile_register(struct device *dev, unsigned int 
 	case ARIZONA_MIC_DETECT_3:
 	case ARIZONA_MIC_DETECT_4:
 	case ARIZONA_HEADPHONE_DETECT_2:
+	case ARIZONA_HEADPHONE_DETECT_3:
+	case ARIZONA_HP_DACVAL:
 	case ARIZONA_INPUT_ENABLES_STATUS:
 	case ARIZONA_OUTPUT_STATUS_1:
 	case ARIZONA_RAW_OUTPUT_STATUS_1:
@@ -3309,6 +3312,7 @@ static bool clearwater_32bit_readable_register(struct device *dev, unsigned int 
 {
 	switch (reg) {
 	case ARIZONA_WSEQ_SEQUENCE_1 ... ARIZONA_WSEQ_SEQUENCE_508:
+	case CLEARWATER_OTP_HPDET_CALIB_1 ... CLEARWATER_OTP_HPDET_CALIB_2:
 	case CLEARWATER_DSP1_CONFIG ... CLEARWATER_DSP1_SCRATCH_3:
 	case CLEARWATER_DSP2_CONFIG ... CLEARWATER_DSP2_SCRATCH_3:
 	case CLEARWATER_DSP3_CONFIG ... CLEARWATER_DSP3_SCRATCH_3:
@@ -3326,6 +3330,7 @@ static bool clearwater_32bit_volatile_register(struct device *dev, unsigned int 
 {
 	switch (reg) {
 	case ARIZONA_WSEQ_SEQUENCE_1 ... ARIZONA_WSEQ_SEQUENCE_508:
+	case CLEARWATER_OTP_HPDET_CALIB_1 ... CLEARWATER_OTP_HPDET_CALIB_2:
 	case CLEARWATER_DSP1_CONFIG ... CLEARWATER_DSP1_SCRATCH_3:
 	case CLEARWATER_DSP2_CONFIG ... CLEARWATER_DSP2_SCRATCH_3:
 	case CLEARWATER_DSP3_CONFIG ... CLEARWATER_DSP3_SCRATCH_3:

@@ -2199,6 +2199,8 @@
 #define ARIZONA_WSEQ_SEQUENCE_506                 0x33F2
 #define ARIZONA_WSEQ_SEQUENCE_507                 0x33F4
 #define ARIZONA_WSEQ_SEQUENCE_508                 0x33F6
+#define CLEARWATER_OTP_HPDET_CALIB_1              0x33F8
+#define CLEARWATER_OTP_HPDET_CALIB_2              0x33FA
 #define CLEARWATER_DSP1_CONFIG                       0x0FFE00
 #define CLEARWATER_DSP1_STATUS_1                     0x0FFE04
 #define CLEARWATER_DSP1_STATUS_2                     0x0FFE05
@@ -3638,6 +3640,10 @@
 #define ARIZONA_ACCDET_SRC_MASK                  0x2000  /* ACCDET_SRC */
 #define ARIZONA_ACCDET_SRC_SHIFT                     13  /* ACCDET_SRC */
 #define ARIZONA_ACCDET_SRC_WIDTH                      1  /* ACCDET_SRC */
+#define ARIZONA_ACCDET_POLARITY_INV_ENA          0x0080  /* ACCDET_POLARITY_INV_ENA */
+#define ARIZONA_ACCDET_POLARITY_INV_ENA_MASK     0x0080  /* ACCDET_POLARITY_INV_ENA */
+#define ARIZONA_ACCDET_POLARITY_INV_ENA_SHIFT         7  /* ACCDET_POLARITY_INV_ENA */
+#define ARIZONA_ACCDET_POLARITY_INV_ENA_WIDTH         1  /* ACCDET_POLARITY_INV_ENA */
 #define ARIZONA_ACCDET_MODE_MASK                 0x0007  /* ACCDET_MODE - [2:0] */
 #define ARIZONA_ACCDET_MODE_SHIFT                     0  /* ACCDET_MODE - [2:0] */
 #define ARIZONA_ACCDET_MODE_WIDTH                     3  /* ACCDET_MODE - [2:0] */
@@ -3699,6 +3705,13 @@
 #define ARIZONA_HP_DACVAL_MASK                   0x03FF  /* HP_DACVAL [9:0] */
 #define ARIZONA_HP_DACVAL_SHIFT                       0  /* HP_DACVAL [9:0] */
 #define ARIZONA_HP_DACVAL_WIDTH                      10  /* HP_DACVAL [9:0] */
+
+/*
+ * R669 (0x29F) - Headphone Detect 5
+ */
+#define ARIZONA_HP_DACVAL_DOWN_MASK              0x03FF  /* HP_DACVAL_DOWN [9:0] */
+#define ARIZONA_HP_DACVAL_DOWN_SHIFT                  0  /* HP_DACVAL_DOWN [9:0] */
+#define ARIZONA_HP_DACVAL_DOWN_WIDTH                 10  /* HP_DACVAL_DOWN [9:0] */
 
 /*
  * R674 (0x2A2) - MICD clamp control
@@ -12233,5 +12246,37 @@
 #define CLEARWATER_GP_DBTIME_MASK                      0x000F  /* GP_DBTIME - [3:0] */
 #define CLEARWATER_GP_DBTIME_SHIFT                          0  /* GP_DBTIME - [3:0] */
 #define CLEARWATER_GP_DBTIME_WIDTH                          4  /* GP_DBTIME - [3:0] */
+
+/*
+ * R13304 (0x33F8) - OTP HPDET Calibration 1
+ */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_11           0xFF000000  /* HP_OFFSET_11 - [31:24] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_11_MASK      0xFF000000  /* HP_OFFSET_11 - [31:24] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_11_SHIFT             24  /* HP_OFFSET_11 - [31:24] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_11_WIDTH              8  /* HP_OFFSET_11 - [31:24] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_10           0x00FF0000  /* HP_OFFSET_10 - [23:16] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_10_MASK      0x00FF0000  /* HP_OFFSET_10 - [23:16] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_10_SHIFT             16  /* HP_OFFSET_10 - [23:16] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_10_WIDTH              8  /* HP_OFFSET_10 - [23:16] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_01           0x0000FF00  /* HP_OFFSET_01 - [15:8] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_01_MASK      0x0000FF00  /* HP_OFFSET_01 - [15:8] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_01_SHIFT              8  /* HP_OFFSET_01 - [15:8] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_01_WIDTH              8  /* HP_OFFSET_01 - [15:8] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_00           0x000000FF  /* HP_OFFSET_10 - [7:0] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_00_MASK      0x000000FF  /* HP_OFFSET_10 - [7:0] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_00_SHIFT              0  /* HP_OFFSET_10 - [7:0] */
+#define CLEARWATER_OTP_HPDET_CALIB_OFFSET_00_WIDTH              8  /* HP_OFFSET_10 - [7:0] */
+
+/*
+ * R13306 (0x33FA) - OTP HPDET Calibration 2
+ */
+#define CLEARWATER_OTP_HPDET_GRADIENT_1X           0xFF00  /* HP_GRADIENT_1X - [15:8] */
+#define CLEARWATER_OTP_HPDET_GRADIENT_1X_MASK      0xFF00  /* HP_GRADIENT_1X - [15:8] */
+#define CLEARWATER_OTP_HPDET_GRADIENT_1X_SHIFT         16  /* HP_GRADIENT_1X - [15:8] */
+#define CLEARWATER_OTP_HPDET_GRADIENT_1X_WIDTH          8  /* HP_GRADIENT_1X - [15:8] */
+#define CLEARWATER_OTP_HPDET_GRADIENT_0X           0x00FF  /* HP_GRADIENT_0X - [7:0] */
+#define CLEARWATER_OTP_HPDET_GRADIENT_0X_MASK      0x00FF  /* HP_GRADIENT_0X - [7:0] */
+#define CLEARWATER_OTP_HPDET_GRADIENT_0X_SHIFT          0  /* HP_GRADIENT_0X - [7:0] */
+#define CLEARWATER_OTP_HPDET_GRADIENT_0X_WIDTH          8  /* HP_GRADIENT_0X - [7:0] */
 
 #endif
