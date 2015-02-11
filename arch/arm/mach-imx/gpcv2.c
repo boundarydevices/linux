@@ -35,7 +35,9 @@
 #define GPC_SLOT0_CFG		0xb0
 #define GPC_PGC_CPU_MAPPING	0xec
 #define GPC_CPU_PGC_SW_PUP_REQ	0xf0
+#define GPC_PU_PGC_SW_PUP_REQ	0xf8
 #define GPC_CPU_PGC_SW_PDN_REQ	0xfc
+#define GPC_PU_PGC_SW_PDN_REQ	0x104
 #define GPC_GTOR		0x124
 #define GPC_PGC_C0		0x800
 #define GPC_PGC_C1		0x840
@@ -99,6 +101,7 @@ static u32 gpcv2_wake_irqs[IMR_NUM];
 static u32 gpcv2_saved_imrs[IMR_NUM];
 static u32 gpcv2_mf_irqs[IMR_NUM];
 static DEFINE_SPINLOCK(gpcv2_lock);
+static struct notifier_block nb_pcie;
 
 void imx_gpcv2_set_slot_ack(u32 index, enum imx_gpc_slot m_core,
 				bool mode, bool ack)
@@ -441,6 +444,37 @@ void imx_gpcv2_restore_all(void)
 		writel_relaxed(gpcv2_saved_imrs[i], reg_imr1 + i * 4);
 }
 
+static int imx_pcie_regulator_notify(struct notifier_block *nb,
+					unsigned long event,
+					void *ignored)
+{
+	u32 val = 0;
+
+	switch (event) {
+	case REGULATOR_EVENT_PRE_ENABLE:
+		val = readl_relaxed(gpc_base + GPC_PGC_CPU_MAPPING);
+		writel_relaxed(val | BIT(3), gpc_base + GPC_PGC_CPU_MAPPING);
+
+		val = readl_relaxed(gpc_base + GPC_PU_PGC_SW_PUP_REQ);
+		writel_relaxed(val | BIT(1), gpc_base + GPC_PU_PGC_SW_PUP_REQ);
+		break;
+	case REGULATOR_EVENT_PRE_DISABLE:
+		val = readl_relaxed(gpc_base + GPC_PU_PGC_SW_PDN_REQ);
+		writel_relaxed(val | BIT(1), gpc_base + GPC_PU_PGC_SW_PDN_REQ);
+
+		val = readl_relaxed(gpc_base + GPC_PGC_PCIE_PHY);
+		writel_relaxed(val | BIT(0), gpc_base + GPC_PGC_PCIE_PHY);
+
+		val = readl_relaxed(gpc_base + GPC_PGC_CPU_MAPPING);
+		writel_relaxed(val & ~BIT(3), gpc_base + GPC_PGC_CPU_MAPPING);
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
 void __init imx_gpcv2_init(void)
 {
 	struct device_node *np;
@@ -487,3 +521,47 @@ void __init imx_gpcv2_init(void)
 	gic_arch_extn.irq_unmask = imx_gpcv2_irq_unmask;
 	gic_arch_extn.irq_set_wake = imx_gpcv2_irq_set_wake;
 }
+
+static int imx_gpcv2_probe(struct platform_device *pdev)
+{
+	int ret;
+	struct regulator *pcie_reg;
+
+	if (cpu_is_imx7d()) {
+		pcie_reg = devm_regulator_get(&pdev->dev, "pcie-phy");
+		if (IS_ERR(pcie_reg)) {
+			ret = PTR_ERR(pcie_reg);
+			dev_info(&pdev->dev, "pcie regulator not ready.\n");
+			return ret;
+		}
+		nb_pcie.notifier_call = &imx_pcie_regulator_notify;
+
+		ret = regulator_register_notifier(pcie_reg, &nb_pcie);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"pcie regulator notifier request failed\n");
+			return ret;
+		}
+	}
+	return 0;
+}
+
+static struct of_device_id imx_gpcv2_dt_ids[] = {
+	{ .compatible = "fsl,imx7d-gpc" },
+	{ }
+};
+
+static struct platform_driver imx_gpcv2_driver = {
+	.driver = {
+		.name = "imx-gpcv2",
+		.owner = THIS_MODULE,
+		.of_match_table = imx_gpcv2_dt_ids,
+	},
+	.probe = imx_gpcv2_probe,
+};
+
+static int __init imx_pgcv2_init(void)
+{
+	return platform_driver_register(&imx_gpcv2_driver);
+}
+subsys_initcall(imx_pgcv2_init);
