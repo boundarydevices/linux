@@ -42,10 +42,63 @@
  */
 
 /dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
 #include "imx6dl.dtsi"
 #include "imx6qdl-nitrogen6x.dtsi"
 
 / {
 	model = "Boundary Devices i.MX6 DualLite Nitrogen6x Board";
 	compatible = "boundary,imx6dl-nitrogen6x", "fsl,imx6dl";
+};
+
+&adv7180 {
+	ipu_id = <0>;
+	csi_id = <1>;
+};
+
+&hdmi_core {
+	ipu_id = <0>;
+};
+
+&ov5640 {
+	ipu_id = <0>;
+};
+
+&pinctrl_i2c3_adv7180 {
+	fsl,pins = <
+		MX6QDL_PAD_EIM_A17__IPU1_CSI1_DATA12	0xb0b1
+		MX6QDL_PAD_EIM_A18__IPU1_CSI1_DATA13	0xb0b1
+		MX6QDL_PAD_EIM_A19__IPU1_CSI1_DATA14	0xb0b1
+		MX6QDL_PAD_EIM_A20__IPU1_CSI1_DATA15	0xb0b1
+		MX6QDL_PAD_EIM_A21__IPU1_CSI1_DATA16	0xb0b1
+		MX6QDL_PAD_EIM_A22__IPU1_CSI1_DATA17	0xb0b1
+		MX6QDL_PAD_EIM_A23__IPU1_CSI1_DATA18	0xb0b1
+		MX6QDL_PAD_EIM_EB2__IPU1_CSI1_DATA19	0xb0b1
+		MX6QDL_PAD_EIM_A16__IPU1_CSI1_PIXCLK	0xb0b1
+       >;
+};
+
+&pinctrl_i2c3_adv7180_cea861 {
+	fsl,pins = <
+		MX6QDL_PAD_EIM_DA11__IPU1_CSI1_HSYNC	0xb0b1
+		MX6QDL_PAD_EIM_DA12__IPU1_CSI1_VSYNC	0xb0b1
+	>;
+};
+
+&pinctrl_i2c3_ov5640 { /* parallel camera */
+	fsl,pins = <
+		MX6QDL_PAD_EIM_A17__IPU1_CSI1_DATA12	0xb0b1
+		MX6QDL_PAD_EIM_A18__IPU1_CSI1_DATA13	0xb0b1
+		MX6QDL_PAD_EIM_A19__IPU1_CSI1_DATA14	0xb0b1
+		MX6QDL_PAD_EIM_A20__IPU1_CSI1_DATA15	0xb0b1
+		MX6QDL_PAD_EIM_A21__IPU1_CSI1_DATA16	0xb0b1
+		MX6QDL_PAD_EIM_A22__IPU1_CSI1_DATA17	0xb0b1
+		MX6QDL_PAD_EIM_A23__IPU1_CSI1_DATA18	0xb0b1
+		MX6QDL_PAD_EIM_EB2__IPU1_CSI1_DATA19	0xb0b1
+		MX6QDL_PAD_EIM_DA10__IPU1_CSI1_DATA_EN	0xb0b1
+		MX6QDL_PAD_EIM_A16__IPU1_CSI1_PIXCLK	0xb0b1
+		MX6QDL_PAD_EIM_DA11__IPU1_CSI1_HSYNC	0xb0b1
+		MX6QDL_PAD_EIM_DA12__IPU1_CSI1_VSYNC	0xb0b1
+	>;
 };
