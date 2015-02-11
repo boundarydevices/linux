@@ -152,6 +152,30 @@
 	/* pinctrl-0 = <&pinctrl_uart3dte_1>; */
 };
 
+&iomuxc_lpsr {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hog_2>;
+
+	hog {
+		pinctrl_hog_2: hoggrp-2 {
+			fsl,pins = <
+				MX7D_PAD_GPIO1_IO07__GPIO1_IO7	0x80000000
+			>;
+		};
+	};
+};
+
+&iomuxc_lpsr {
+	pwm1 {
+		pinctrl_pwm1: pwm1grp {
+			fsl,pins = <
+				MX7D_PAD_GPIO1_IO01__PWM1_OUT	0x110b0
+			>;
+		};
+	};
+};
+
+
 &usdhc1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc1_1>;
