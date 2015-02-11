@@ -1,0 +1,10 @@
+#!/bin/sh
+# -*- indent-tabs-mode: t; tab-width: 2 -*-
+
+set -e
+
+# don't run flash-kernel
+export FLASH_KERNEL_SKIP=1
+
+# create initrd.img
+update-initramfs -c -k@KERNEL_REL@
