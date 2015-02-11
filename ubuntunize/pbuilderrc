@@ -1,0 +1,7 @@
+# pbuilder config file
+# -*- indent-tabs-mode: t; tab-width: 3 -*-
+
+ARCH="armhf"
+APTCACHE=""
+APTCACHEHARDLINK=no
+COMPRESSPROG="pigz"
