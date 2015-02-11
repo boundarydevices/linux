@@ -223,11 +223,6 @@
 				#interrupt-cells = <2>;
 			};
 
-			gpr_lpsr: iomuxc-gpr-lpsr@30270000 {
-				compatible = "fsl,imx7d-iomuxc-lpsr-gpr";
-				reg = <0x30270000 0x10000>;
-			};
-
 			wdog1: wdog@30280000 {
 				compatible = "fsl,imx7d-wdt", "fsl,imx21-wdt";
 				reg = <0x30280000 0x10000>;
@@ -258,6 +253,11 @@
 				interrupts = <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX7D_WDOG4_ROOT_CLK>;
 				status = "disabled";
+			};
+
+			iomuxc_lpsr: iomuxc-lpsr@302c0000 {
+				compatible = "fsl,imx7d-iomuxc-lpsr";
+				reg = <0x302c0000 0x10000>;
 			};
 
 			gpt1: gpt@302d0000 {
