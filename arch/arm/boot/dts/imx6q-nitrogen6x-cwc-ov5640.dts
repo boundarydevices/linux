@@ -1,0 +1,104 @@
+/*
+ * Copyright 2013 Boundary Devices
+ * Copyright 2012 Freescale Semiconductor, Inc.
+ * Copyright 2011 Linaro Ltd.
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "imx6q.dtsi"
+#include "imx6qdl-nitrogen6x.dtsi"
+
+/ {
+	model = "Boundary Devices i.MX6 Quad Nitrogen6x Board - CWC ov5640 config";
+	compatible = "fsl,imx6q-nitrogen6x", "fsl,imx6q";
+
+	/delete-node/ v4l2_cap_1;
+	/delete-node/ v4l2_cap_2;
+	/delete-node/ v4l2_cap_3;
+};
+
+&can1 {
+	status = "disabled" ;
+};
+
+&hdmi_core {
+	status = "disabled";
+};
+
+&i2c2 {
+	/delete-node/ ov5642@3d;
+	/delete-node/ ov5640_mipi@3e;
+
+	ov5640@3c {
+		compatible = "ovti,ov5640";
+		reg = <0x3c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_ov5642>;
+		clocks = <&clks IMX6QDL_CLK_CKO2>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&reg_1p8v>;
+		AVDD-supply = <&reg_2p5v>;
+		DVDD-supply = <&reg_1p8v>;
+		pwn-gpios = <&gpio1 6 GPIO_ACTIVE_LOW>;
+		rst-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;
+		ipu_id = <0>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+	};
+};
+
+&i2c3 {
+	inter-byte-delay = <170>;
+	stop-delay = <30>;
+
+	/delete-node/ ov5640@3c;
+	/delete-node/ tsc2004@48;
+	/delete-node/ egalax_ts@04;
+	/delete-node/ ft5x06_ts@38;
+	/delete-node/ ili210x@41;
+
+	ar1020_i2c@4d {
+		compatible = "ar1020_i2c";
+		reg = <0x4d>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_tsc2004>;
+		interrupts-extended = <&gpio4 20 IRQ_TYPE_LEVEL_LOW>;
+		status = "okay";
+	};
+
+	hookswitch@20 {
+		compatible = "cwc_hookswitch";
+		reg = <0x20>;
+		status = "okay";
+	};
+};
+
+&iomuxc {
+	/delete-node/ pinctrl_ov5640;
+	/delete-node/ pinctrl_ov5640_gpios;
+};
+
+&fb_lvds {
+	status = "okay";
+};
+
+&sata {
+	status = "okay";
+};
+
+&v4l2_cap_0 {
+	ipu_id = <0>;
+	csi_id = <0>;
+	mipi_camera = <0>;
+	status = "okay" ;
+};
