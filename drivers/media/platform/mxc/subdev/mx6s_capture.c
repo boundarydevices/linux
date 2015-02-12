@@ -1544,7 +1544,7 @@ static int mx6sx_register_subdevs(struct mx6s_csi_dev *csi_dev)
 		port = of_get_next_child(node, NULL);
 		if (!port)
 			continue;
-		rem = v4l2_of_get_remote_port_parent(port);
+		rem = of_graph_get_remote_port_parent(port);
 		of_node_put(port);
 		if (rem == NULL) {
 			v4l2_info(&csi_dev->v4l2_dev,
