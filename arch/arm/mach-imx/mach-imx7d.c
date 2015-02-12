@@ -10,6 +10,7 @@
 #include <linux/mfd/syscon/imx7-iomuxc-gpr.h>
 #include <linux/of_platform.h>
 #include <linux/phy.h>
+#include <linux/pm_opp.h>
 #include <linux/regmap.h>
 
 #include <asm/mach/arch.h>
@@ -176,6 +177,9 @@ static void __init imx7d_init_irq(void)
 
 static void __init imx7d_init_late(void)
 {
+	if (IS_ENABLED(CONFIG_ARM_IMX7D_CPUFREQ)) {
+		platform_device_register_simple("imx7d-cpufreq", -1, NULL, 0);
+	}
 	imx7d_cpuidle_init();
 }
 
