@@ -1,7 +1,7 @@
 /*
- * wm8998.h -- ALSA SoC Audio driver for WM8998 codecs
+ * vegas.h -- ALSA SoC Audio driver for Vegas codecs
  *
- * Copyright 2012-2014 Wolfson Microelectronics plc
+ * Copyright 2014-2015 Cirrus Logic
  *
  * Author: Richard Fitzgerald <rf@opensource.wolfsonmicro.com>
  *
@@ -10,14 +10,14 @@
  * published by the Free Software Foundation.
  */
 
-#ifndef _WM8998_H
-#define _WM8998_H
+#ifndef _VEGAS_H
+#define _VEGAS_H
 
 #include "arizona.h"
 
-#define WM8998_FLL1        1
-#define WM8998_FLL2        2
-#define WM8998_FLL1_REFCLK 3
-#define WM8998_FLL2_REFCLK 4
+#define VEGAS_FLL1        1
+#define VEGAS_FLL2        2
+#define VEGAS_FLL1_REFCLK 3
+#define VEGAS_FLL2_REFCLK 4
 
 #endif

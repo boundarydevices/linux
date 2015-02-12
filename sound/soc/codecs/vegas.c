@@ -1,7 +1,7 @@
 /*
- * wm8998.c -- ALSA SoC Audio driver for WM8998 codecs
+ * vegas.c -- ALSA SoC Audio driver for Vegas codecs
  *
- * Copyright 2014 Wolfson Microelectronics plc
+ * Copyright 2014-2015 Cirrus Logic
  *
  * Author: Richard Fitzgerald <rf@opensource.wolfsonmicro.com>
  *
@@ -30,22 +30,22 @@
 #include <linux/mfd/arizona/registers.h>
 
 #include "arizona.h"
-#include "wm8998.h"
+#include "vegas.h"
 
-struct wm8998_priv {
+struct vegas_priv {
 	struct arizona_priv core;
 	struct arizona_fll fll[2];
 };
 
-static int wm8998_in1mux_ev(struct snd_soc_dapm_widget *w,
+static int vegas_in1mux_ev(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol,
 				int event);
 
-static int wm8998_in2mux_ev(struct snd_soc_dapm_widget *w,
+static int vegas_in2mux_ev(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol,
 				int event);
 
-static int wm8998_asrc_ev(struct snd_soc_dapm_widget *w,
+static int vegas_asrc_ev(struct snd_soc_dapm_widget *w,
 			  struct snd_kcontrol *kcontrol,
 			  int event)
 {
@@ -77,40 +77,40 @@ static int wm8998_asrc_ev(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
-static const char * const wm8998_inmux_texts[] = {
+static const char * const vegas_inmux_texts[] = {
 	"A",
 	"B",
 };
 
-static const SOC_ENUM_SINGLE_DECL(wm8998_in1muxl_enum,
+static const SOC_ENUM_SINGLE_DECL(vegas_in1muxl_enum,
 				  ARIZONA_ADC_DIGITAL_VOLUME_1L,
 				  ARIZONA_IN1L_SRC_SHIFT,
-				  wm8998_inmux_texts);
+				  vegas_inmux_texts);
 
-static const SOC_ENUM_SINGLE_DECL(wm8998_in1muxr_enum,
+static const SOC_ENUM_SINGLE_DECL(vegas_in1muxr_enum,
 				  ARIZONA_ADC_DIGITAL_VOLUME_1R,
 				  ARIZONA_IN1R_SRC_SHIFT,
-				  wm8998_inmux_texts);
+				  vegas_inmux_texts);
 
-static const SOC_ENUM_SINGLE_DECL(wm8998_in2mux_enum,
+static const SOC_ENUM_SINGLE_DECL(vegas_in2mux_enum,
 				  ARIZONA_ADC_DIGITAL_VOLUME_2L,
 				  ARIZONA_IN2L_SRC_SHIFT,
-				  wm8998_inmux_texts);
+				  vegas_inmux_texts);
 
-static const struct snd_kcontrol_new wm8998_in1mux[2] = {
-	SOC_DAPM_ENUM("IN1L Mux", wm8998_in1muxl_enum),
-	SOC_DAPM_ENUM("IN1R Mux", wm8998_in1muxr_enum),
+static const struct snd_kcontrol_new vegas_in1mux[2] = {
+	SOC_DAPM_ENUM("IN1L Mux", vegas_in1muxl_enum),
+	SOC_DAPM_ENUM("IN1R Mux", vegas_in1muxr_enum),
 };
 
-static const struct snd_kcontrol_new wm8998_in2mux =
-	SOC_DAPM_ENUM("IN2 Mux", wm8998_in2mux_enum);
+static const struct snd_kcontrol_new vegas_in2mux =
+	SOC_DAPM_ENUM("IN2 Mux", vegas_in2mux_enum);
 
 static DECLARE_TLV_DB_SCALE(ana_tlv, 0, 100, 0);
 static DECLARE_TLV_DB_SCALE(eq_tlv, -1200, 100, 0);
 static DECLARE_TLV_DB_SCALE(digital_tlv, -6400, 50, 0);
 static DECLARE_TLV_DB_SCALE(ng_tlv, -10200, 600, 0);
 
-#define WM8998_NG_SRC(name, base) \
+#define VEGAS_NG_SRC(name, base) \
 	SOC_SINGLE(name " NG HPOUTL Switch",  base,  0, 1, 0), \
 	SOC_SINGLE(name " NG HPOUTR Switch",  base,  1, 1, 0), \
 	SOC_SINGLE(name " NG LINEOUTL Switch",  base,  2, 1, 0), \
@@ -119,7 +119,7 @@ static DECLARE_TLV_DB_SCALE(ng_tlv, -10200, 600, 0);
 	SOC_SINGLE(name " NG SPKOUTL Switch",  base,  6, 1, 0), \
 	SOC_SINGLE(name " NG SPKOUTR Switch",  base,  7, 1, 0)
 
-static const struct snd_kcontrol_new wm8998_snd_controls[] = {
+static const struct snd_kcontrol_new vegas_snd_controls[] = {
 SOC_ENUM("IN1 OSR", arizona_in_dmic_osr[0]),
 SOC_ENUM("IN2 OSR", arizona_in_dmic_osr[1]),
 
@@ -303,15 +303,15 @@ SOC_SINGLE_TLV("Noise Gate Threshold Volume", ARIZONA_NOISE_GATE_CONTROL,
 	       ARIZONA_NGATE_THR_SHIFT, 7, 1, ng_tlv),
 SOC_ENUM("Noise Gate Hold", arizona_ng_hold),
 
-WM8998_NG_SRC("HPOUTL", ARIZONA_NOISE_GATE_SELECT_1L),
-WM8998_NG_SRC("HPOUTR", ARIZONA_NOISE_GATE_SELECT_1R),
-WM8998_NG_SRC("LINEOUTL", ARIZONA_NOISE_GATE_SELECT_2L),
-WM8998_NG_SRC("LINEOUTR", ARIZONA_NOISE_GATE_SELECT_2R),
-WM8998_NG_SRC("EPOUT",  ARIZONA_NOISE_GATE_SELECT_3L),
-WM8998_NG_SRC("SPKOUTL", ARIZONA_NOISE_GATE_SELECT_4L),
-WM8998_NG_SRC("SPKOUTR", ARIZONA_NOISE_GATE_SELECT_4R),
-WM8998_NG_SRC("SPKDATL", ARIZONA_NOISE_GATE_SELECT_5L),
-WM8998_NG_SRC("SPKDATR", ARIZONA_NOISE_GATE_SELECT_5R),
+VEGAS_NG_SRC("HPOUTL", ARIZONA_NOISE_GATE_SELECT_1L),
+VEGAS_NG_SRC("HPOUTR", ARIZONA_NOISE_GATE_SELECT_1R),
+VEGAS_NG_SRC("LINEOUTL", ARIZONA_NOISE_GATE_SELECT_2L),
+VEGAS_NG_SRC("LINEOUTR", ARIZONA_NOISE_GATE_SELECT_2R),
+VEGAS_NG_SRC("EPOUT",  ARIZONA_NOISE_GATE_SELECT_3L),
+VEGAS_NG_SRC("SPKOUTL", ARIZONA_NOISE_GATE_SELECT_4L),
+VEGAS_NG_SRC("SPKOUTR", ARIZONA_NOISE_GATE_SELECT_4R),
+VEGAS_NG_SRC("SPKDATL", ARIZONA_NOISE_GATE_SELECT_5L),
+VEGAS_NG_SRC("SPKDATR", ARIZONA_NOISE_GATE_SELECT_5R),
 
 ARIZONA_MIXER_CONTROLS("AIF1TX1", ARIZONA_AIF1TX1MIX_INPUT_1_SOURCE),
 ARIZONA_MIXER_CONTROLS("AIF1TX2", ARIZONA_AIF1TX2MIX_INPUT_1_SOURCE),
@@ -421,33 +421,33 @@ ARIZONA_MUX_ENUMS(ISRC2INT2, ARIZONA_ISRC2INT2MIX_INPUT_1_SOURCE);
 ARIZONA_MUX_ENUMS(ISRC2DEC1, ARIZONA_ISRC2DEC1MIX_INPUT_1_SOURCE);
 ARIZONA_MUX_ENUMS(ISRC2DEC2, ARIZONA_ISRC2DEC2MIX_INPUT_1_SOURCE);
 
-static const char *wm8998_aec_loopback_texts[] = {
+static const char *vegas_aec_loopback_texts[] = {
 	"HPOUTL", "HPOUTR", "LINEOUTL", "LINEOUTR", "EPOUT",
 	"SPKOUTL", "SPKOUTR", "SPKDATL", "SPKDATR",
 };
 
-static const unsigned int wm8998_aec_loopback_values[] = {
+static const unsigned int vegas_aec_loopback_values[] = {
 	0, 1, 2, 3, 4, 6, 7, 8, 9,
 };
 
-static const SOC_VALUE_ENUM_SINGLE_DECL(wm8998_aec1_loopback,
+static const SOC_VALUE_ENUM_SINGLE_DECL(vegas_aec1_loopback,
 					ARIZONA_DAC_AEC_CONTROL_1,
 					ARIZONA_AEC_LOOPBACK_SRC_SHIFT, 0xf,
-					wm8998_aec_loopback_texts,
-					wm8998_aec_loopback_values);
+					vegas_aec_loopback_texts,
+					vegas_aec_loopback_values);
 
-static const SOC_VALUE_ENUM_SINGLE_DECL(wm8998_aec2_loopback,
+static const SOC_VALUE_ENUM_SINGLE_DECL(vegas_aec2_loopback,
 					ARIZONA_DAC_AEC_CONTROL_2,
 					ARIZONA_AEC_LOOPBACK_SRC_SHIFT, 0xf,
-					wm8998_aec_loopback_texts,
-					wm8998_aec_loopback_values);
+					vegas_aec_loopback_texts,
+					vegas_aec_loopback_values);
 
-static const struct snd_kcontrol_new wm8998_aec_loopback_mux[] = {
-	SOC_DAPM_VALUE_ENUM("AEC1 Loopback", wm8998_aec1_loopback),
-	SOC_DAPM_VALUE_ENUM("AEC2 Loopback", wm8998_aec2_loopback),
+static const struct snd_kcontrol_new vegas_aec_loopback_mux[] = {
+	SOC_DAPM_VALUE_ENUM("AEC1 Loopback", vegas_aec1_loopback),
+	SOC_DAPM_VALUE_ENUM("AEC2 Loopback", vegas_aec2_loopback),
 };
 
-static const struct snd_soc_dapm_widget wm8998_dapm_widgets[] = {
+static const struct snd_soc_dapm_widget vegas_dapm_widgets[] = {
 SND_SOC_DAPM_SUPPLY("SYSCLK", ARIZONA_SYSTEM_CLOCK_1,
 		    ARIZONA_SYSCLK_ENA_SHIFT, 0, NULL, 0),
 SND_SOC_DAPM_SUPPLY("ASYNCCLK", ARIZONA_ASYNC_CLOCK_1,
@@ -474,12 +474,12 @@ SND_SOC_DAPM_INPUT("IN1BR"),
 SND_SOC_DAPM_INPUT("IN2A"),
 SND_SOC_DAPM_INPUT("IN2B"),
 
-SND_SOC_DAPM_MUX_E("IN1L Mux", SND_SOC_NOPM, 0, 0, &wm8998_in1mux[0],
-			wm8998_in1mux_ev, SND_SOC_DAPM_PRE_PMU),
-SND_SOC_DAPM_MUX_E("IN1R Mux", SND_SOC_NOPM, 0, 0, &wm8998_in1mux[1],
-			wm8998_in1mux_ev, SND_SOC_DAPM_PRE_PMU),
-SND_SOC_DAPM_MUX_E("IN2 Mux", SND_SOC_NOPM, 0, 0, &wm8998_in2mux,
-			wm8998_in2mux_ev, SND_SOC_DAPM_PRE_PMU),
+SND_SOC_DAPM_MUX_E("IN1L Mux", SND_SOC_NOPM, 0, 0, &vegas_in1mux[0],
+			vegas_in1mux_ev, SND_SOC_DAPM_PRE_PMU),
+SND_SOC_DAPM_MUX_E("IN1R Mux", SND_SOC_NOPM, 0, 0, &vegas_in1mux[1],
+			vegas_in1mux_ev, SND_SOC_DAPM_PRE_PMU),
+SND_SOC_DAPM_MUX_E("IN2 Mux", SND_SOC_NOPM, 0, 0, &vegas_in2mux,
+			vegas_in2mux_ev, SND_SOC_DAPM_PRE_PMU),
 
 SND_SOC_DAPM_OUTPUT("DRC1 Signal Activity"),
 
@@ -533,13 +533,13 @@ SND_SOC_DAPM_PGA("PWM2 Driver", ARIZONA_PWM_DRIVE_1, ARIZONA_PWM2_ENA_SHIFT,
 		 0, NULL, 0),
 
 SND_SOC_DAPM_PGA_E("ASRC1L", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC1L_ENA_SHIFT, 0,
-		   NULL, 0, wm8998_asrc_ev, SND_SOC_DAPM_PRE_PMU),
+		   NULL, 0, vegas_asrc_ev, SND_SOC_DAPM_PRE_PMU),
 SND_SOC_DAPM_PGA_E("ASRC1R", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC1R_ENA_SHIFT, 0,
-		   NULL, 0, wm8998_asrc_ev, SND_SOC_DAPM_PRE_PMU),
+		   NULL, 0, vegas_asrc_ev, SND_SOC_DAPM_PRE_PMU),
 SND_SOC_DAPM_PGA_E("ASRC2L", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC2L_ENA_SHIFT, 0,
-		   NULL, 0, wm8998_asrc_ev, SND_SOC_DAPM_PRE_PMU),
+		   NULL, 0, vegas_asrc_ev, SND_SOC_DAPM_PRE_PMU),
 SND_SOC_DAPM_PGA_E("ASRC2R", ARIZONA_ASRC_ENABLE, ARIZONA_ASRC2R_ENA_SHIFT, 0,
-		   NULL, 0, wm8998_asrc_ev, SND_SOC_DAPM_PRE_PMU),
+		   NULL, 0, vegas_asrc_ev, SND_SOC_DAPM_PRE_PMU),
 
 SND_SOC_DAPM_PGA("ISRC1INT1", ARIZONA_ISRC_1_CTRL_3,
 		 ARIZONA_ISRC1_INT0_ENA_SHIFT, 0, NULL, 0),
@@ -571,11 +571,11 @@ SND_SOC_DAPM_PGA("ISRC2DEC2", ARIZONA_ISRC_2_CTRL_3,
 
 SND_SOC_DAPM_VALUE_MUX("AEC1 Loopback", ARIZONA_DAC_AEC_CONTROL_1,
 		       ARIZONA_AEC_LOOPBACK_ENA_SHIFT, 0,
-		       &wm8998_aec_loopback_mux[0]),
+		       &vegas_aec_loopback_mux[0]),
 
 SND_SOC_DAPM_VALUE_MUX("AEC2 Loopback", ARIZONA_DAC_AEC_CONTROL_2,
 		       ARIZONA_AEC_LOOPBACK_ENA_SHIFT, 0,
-		       &wm8998_aec_loopback_mux[1]),
+		       &vegas_aec_loopback_mux[1]),
 
 SND_SOC_DAPM_AIF_OUT("AIF1TX1", NULL, 0,
 		     ARIZONA_AIF1_TX_ENABLES, ARIZONA_AIF1TX1_ENA_SHIFT, 0),
@@ -844,7 +844,7 @@ SND_SOC_DAPM_OUTPUT("MICSUPP"),
 	{ name, "ISRC2INT1", "ISRC2INT1" }, \
 	{ name, "ISRC2INT2", "ISRC2INT2" }
 
-static const struct snd_soc_dapm_route wm8998_dapm_routes[] = {
+static const struct snd_soc_dapm_route vegas_dapm_routes[] = {
 	{ "AIF2 Capture", NULL, "DBVDD2" },
 	{ "AIF2 Playback", NULL, "DBVDD2" },
 
@@ -1069,116 +1069,116 @@ static const struct snd_soc_dapm_route wm8998_dapm_routes[] = {
 	{ "DRC1 Signal Activity", NULL, "DRC1R" },
 };
 
-#define WM8998_RATES SNDRV_PCM_RATE_8000_192000
+#define VEGAS_RATES SNDRV_PCM_RATE_8000_192000
 
-#define WM8998_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE |\
+#define VEGAS_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE |\
 			SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE)
 
-static struct snd_soc_dai_driver wm8998_dai[] = {
+static struct snd_soc_dai_driver vegas_dai[] = {
 	{
-		.name = "wm8998-aif1",
+		.name = "vegas-aif1",
 		.id = 1,
 		.base = ARIZONA_AIF1_BCLK_CTRL,
 		.playback = {
 			.stream_name = "AIF1 Playback",
 			.channels_min = 1,
 			.channels_max = 6,
-			.rates = WM8998_RATES,
-			.formats = WM8998_FORMATS,
+			.rates = VEGAS_RATES,
+			.formats = VEGAS_FORMATS,
 		},
 		.capture = {
 			 .stream_name = "AIF1 Capture",
 			 .channels_min = 1,
 			 .channels_max = 6,
-			 .rates = WM8998_RATES,
-			 .formats = WM8998_FORMATS,
+			 .rates = VEGAS_RATES,
+			 .formats = VEGAS_FORMATS,
 		 },
 		.ops = &arizona_dai_ops,
 		.symmetric_rates = 1,
 	},
 	{
-		.name = "wm8998-aif2",
+		.name = "vegas-aif2",
 		.id = 2,
 		.base = ARIZONA_AIF2_BCLK_CTRL,
 		.playback = {
 			.stream_name = "AIF2 Playback",
 			.channels_min = 1,
 			.channels_max = 6,
-			.rates = WM8998_RATES,
-			.formats = WM8998_FORMATS,
+			.rates = VEGAS_RATES,
+			.formats = VEGAS_FORMATS,
 		},
 		.capture = {
 			 .stream_name = "AIF2 Capture",
 			 .channels_min = 1,
 			 .channels_max = 6,
-			 .rates = WM8998_RATES,
-			 .formats = WM8998_FORMATS,
+			 .rates = VEGAS_RATES,
+			 .formats = VEGAS_FORMATS,
 		 },
 		.ops = &arizona_dai_ops,
 		.symmetric_rates = 1,
 	},
 	{
-		.name = "wm8998-aif3",
+		.name = "vegas-aif3",
 		.id = 3,
 		.base = ARIZONA_AIF3_BCLK_CTRL,
 		.playback = {
 			.stream_name = "AIF3 Playback",
 			.channels_min = 1,
 			.channels_max = 2,
-			.rates = WM8998_RATES,
-			.formats = WM8998_FORMATS,
+			.rates = VEGAS_RATES,
+			.formats = VEGAS_FORMATS,
 		},
 		.capture = {
 			 .stream_name = "AIF3 Capture",
 			 .channels_min = 1,
 			 .channels_max = 2,
-			 .rates = WM8998_RATES,
-			 .formats = WM8998_FORMATS,
+			 .rates = VEGAS_RATES,
+			 .formats = VEGAS_FORMATS,
 		 },
 		.ops = &arizona_dai_ops,
 		.symmetric_rates = 1,
 	},
 	{
-		.name = "wm8998-slim1",
+		.name = "vegas-slim1",
 		.id = 4,
 		.playback = {
 			.stream_name = "Slim1 Playback",
 			.channels_min = 1,
 			.channels_max = 2,
-			.rates = WM8998_RATES,
-			.formats = WM8998_FORMATS,
+			.rates = VEGAS_RATES,
+			.formats = VEGAS_FORMATS,
 		},
 		.capture = {
 			 .stream_name = "Slim1 Capture",
 			 .channels_min = 1,
 			 .channels_max = 4,
-			 .rates = WM8998_RATES,
-			 .formats = WM8998_FORMATS,
+			 .rates = VEGAS_RATES,
+			 .formats = VEGAS_FORMATS,
 		 },
 		.ops = &arizona_simple_dai_ops,
 	},
 	{
-		.name = "wm8998-slim2",
+		.name = "vegas-slim2",
 		.id = 5,
 		.playback = {
 			.stream_name = "Slim2 Playback",
 			.channels_min = 1,
 			.channels_max = 2,
-			.rates = WM8998_RATES,
-			.formats = WM8998_FORMATS,
+			.rates = VEGAS_RATES,
+			.formats = VEGAS_FORMATS,
 		},
 		.capture = {
 			 .stream_name = "Slim2 Capture",
 			 .channels_min = 1,
 			 .channels_max = 2,
-			 .rates = WM8998_RATES,
-			 .formats = WM8998_FORMATS,
+			 .rates = VEGAS_RATES,
+			 .formats = VEGAS_FORMATS,
 		 },
 		.ops = &arizona_simple_dai_ops,
 	},
 };
 
-static int wm8998_in1mux_ev(struct snd_soc_dapm_widget *w,
+static int vegas_in1mux_ev(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol,
 				int event)
 {
@@ -1228,7 +1228,7 @@ static int wm8998_in1mux_ev(struct snd_soc_dapm_widget *w,
 	}
 }
 
-static int wm8998_in2mux_ev(struct snd_soc_dapm_widget *w,
+static int vegas_in2mux_ev(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol,
 				int event)
 {
@@ -1260,30 +1260,30 @@ static int wm8998_in2mux_ev(struct snd_soc_dapm_widget *w,
 	}
 }
 
-static int wm8998_set_fll(struct snd_soc_codec *codec, int fll_id, int source,
+static int vegas_set_fll(struct snd_soc_codec *codec, int fll_id, int source,
 			  unsigned int Fref, unsigned int Fout)
 {
-	struct wm8998_priv *wm8998 = snd_soc_codec_get_drvdata(codec);
+	struct vegas_priv *vegas = snd_soc_codec_get_drvdata(codec);
 
 	switch (fll_id) {
-	case WM8998_FLL1:
-		return arizona_set_fll(&wm8998->fll[0], source, Fref, Fout);
-	case WM8998_FLL2:
-		return arizona_set_fll(&wm8998->fll[1], source, Fref, Fout);
-	case WM8998_FLL1_REFCLK:
-		return arizona_set_fll_refclk(&wm8998->fll[0], source, Fref,
+	case VEGAS_FLL1:
+		return arizona_set_fll(&vegas->fll[0], source, Fref, Fout);
+	case VEGAS_FLL2:
+		return arizona_set_fll(&vegas->fll[1], source, Fref, Fout);
+	case VEGAS_FLL1_REFCLK:
+		return arizona_set_fll_refclk(&vegas->fll[0], source, Fref,
 					      Fout);
-	case WM8998_FLL2_REFCLK:
-		return arizona_set_fll_refclk(&wm8998->fll[1], source, Fref,
+	case VEGAS_FLL2_REFCLK:
+		return arizona_set_fll_refclk(&vegas->fll[1], source, Fref,
 					      Fout);
 	default:
 		return -EINVAL;
 	}
 }
 
-static int wm8998_codec_probe(struct snd_soc_codec *codec)
+static int vegas_codec_probe(struct snd_soc_codec *codec)
 {
-	struct wm8998_priv *priv = snd_soc_codec_get_drvdata(codec);
+	struct vegas_priv *priv = snd_soc_codec_get_drvdata(codec);
 	int ret;
 
 	codec->control_data = priv->core.arizona->regmap;
@@ -1315,18 +1315,18 @@ static int wm8998_codec_probe(struct snd_soc_codec *codec)
 	return 0;
 }
 
-static int wm8998_codec_remove(struct snd_soc_codec *codec)
+static int vegas_codec_remove(struct snd_soc_codec *codec)
 {
-	struct wm8998_priv *priv = snd_soc_codec_get_drvdata(codec);
+	struct vegas_priv *priv = snd_soc_codec_get_drvdata(codec);
 
 	priv->core.arizona->dapm = NULL;
 
 	return 0;
 }
 
-#define WM8998_DIG_VU 0x0200
+#define VEGAS_DIG_VU 0x0200
 
-static unsigned int wm8998_digital_vu[] = {
+static unsigned int vegas_digital_vu[] = {
 	ARIZONA_DAC_DIGITAL_VOLUME_1L,
 	ARIZONA_DAC_DIGITAL_VOLUME_1R,
 	ARIZONA_DAC_DIGITAL_VOLUME_2L,
@@ -1338,68 +1338,68 @@ static unsigned int wm8998_digital_vu[] = {
 	ARIZONA_DAC_DIGITAL_VOLUME_5R,
 };
 
-static struct snd_soc_codec_driver soc_codec_dev_wm8998 = {
-	.probe = wm8998_codec_probe,
-	.remove = wm8998_codec_remove,
+static struct snd_soc_codec_driver soc_codec_dev_vegas = {
+	.probe = vegas_codec_probe,
+	.remove = vegas_codec_remove,
 
 	.idle_bias_off = true,
 
 	.set_sysclk = arizona_set_sysclk,
-	.set_pll = wm8998_set_fll,
+	.set_pll = vegas_set_fll,
 
-	.controls = wm8998_snd_controls,
-	.num_controls = ARRAY_SIZE(wm8998_snd_controls),
-	.dapm_widgets = wm8998_dapm_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(wm8998_dapm_widgets),
-	.dapm_routes = wm8998_dapm_routes,
-	.num_dapm_routes = ARRAY_SIZE(wm8998_dapm_routes),
+	.controls = vegas_snd_controls,
+	.num_controls = ARRAY_SIZE(vegas_snd_controls),
+	.dapm_widgets = vegas_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(vegas_dapm_widgets),
+	.dapm_routes = vegas_dapm_routes,
+	.num_dapm_routes = ARRAY_SIZE(vegas_dapm_routes),
 };
 
-static int wm8998_probe(struct platform_device *pdev)
+static int vegas_probe(struct platform_device *pdev)
 {
 	struct arizona *arizona = dev_get_drvdata(pdev->dev.parent);
-	struct wm8998_priv *wm8998;
+	struct vegas_priv *vegas;
 	int i;
 
-	wm8998 = devm_kzalloc(&pdev->dev, sizeof(struct wm8998_priv),
+	vegas = devm_kzalloc(&pdev->dev, sizeof(struct vegas_priv),
 			      GFP_KERNEL);
-	if (!wm8998)
+	if (!vegas)
 		return -ENOMEM;
-	platform_set_drvdata(pdev, wm8998);
+	platform_set_drvdata(pdev, vegas);
 
 	/* Set of_node to parent from the SPI device to allow DAPM to
 	 * locate regulator supplies */
 	pdev->dev.of_node = arizona->dev->of_node;
 
-	wm8998->core.arizona = arizona;
-	wm8998->core.num_inputs = 3;	/* IN1L, IN1R, IN2 */
+	vegas->core.arizona = arizona;
+	vegas->core.num_inputs = 3;	/* IN1L, IN1R, IN2 */
 
-	for (i = 0; i < ARRAY_SIZE(wm8998->fll); i++)
-		wm8998->fll[i].vco_mult = 1;
+	for (i = 0; i < ARRAY_SIZE(vegas->fll); i++)
+		vegas->fll[i].vco_mult = 1;
 
 	arizona_init_fll(arizona, 1, ARIZONA_FLL1_CONTROL_1 - 1,
 			 ARIZONA_IRQ_FLL1_LOCK, ARIZONA_IRQ_FLL1_CLOCK_OK,
-			 &wm8998->fll[0]);
+			 &vegas->fll[0]);
 	arizona_init_fll(arizona, 2, ARIZONA_FLL2_CONTROL_1 - 1,
 			 ARIZONA_IRQ_FLL2_LOCK, ARIZONA_IRQ_FLL2_CLOCK_OK,
-			 &wm8998->fll[1]);
+			 &vegas->fll[1]);
 
-	for (i = 0; i < ARRAY_SIZE(wm8998_dai); i++)
-		arizona_init_dai(&wm8998->core, i);
+	for (i = 0; i < ARRAY_SIZE(vegas_dai); i++)
+		arizona_init_dai(&vegas->core, i);
 
 	/* Latch volume update bits */
-	for (i = 0; i < ARRAY_SIZE(wm8998_digital_vu); i++)
-		regmap_update_bits(arizona->regmap, wm8998_digital_vu[i],
-				   WM8998_DIG_VU, WM8998_DIG_VU);
+	for (i = 0; i < ARRAY_SIZE(vegas_digital_vu); i++)
+		regmap_update_bits(arizona->regmap, vegas_digital_vu[i],
+				   VEGAS_DIG_VU, VEGAS_DIG_VU);
 
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_idle(&pdev->dev);
 
-	return snd_soc_register_codec(&pdev->dev, &soc_codec_dev_wm8998,
-				      wm8998_dai, ARRAY_SIZE(wm8998_dai));
+	return snd_soc_register_codec(&pdev->dev, &soc_codec_dev_vegas,
+				      vegas_dai, ARRAY_SIZE(vegas_dai));
 }
 
-static int wm8998_remove(struct platform_device *pdev)
+static int vegas_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
@@ -1407,18 +1407,18 @@ static int wm8998_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver wm8998_codec_driver = {
+static struct platform_driver vegas_codec_driver = {
 	.driver = {
-		.name = "wm8998-codec",
+		.name = "vegas-codec",
 		.owner = THIS_MODULE,
 	},
-	.probe = wm8998_probe,
-	.remove = wm8998_remove,
+	.probe = vegas_probe,
+	.remove = vegas_remove,
 };
 
-module_platform_driver(wm8998_codec_driver);
+module_platform_driver(vegas_codec_driver);
 
-MODULE_DESCRIPTION("ASoC WM8998 driver");
+MODULE_DESCRIPTION("ASoC Vegas driver");
 MODULE_AUTHOR("Richard Fitzgerald <rf@opensource.wolfsonmicro.com>");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS("platform:wm8998-codec");
+MODULE_ALIAS("platform:vegas-codec");
