@@ -146,16 +146,6 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 
 	data->clk_frequency = clk_get_rate(data->mclk);
 
-	data->sr_stream[tx] = params_rate(params);
-
-	/*
-	 * If the sample rate of second stream is equal to the first stream,
-	 * just keep the setting and return.
-	 */
-	if (data->sr_stream[!tx] &&
-			data->sr_stream[tx] == data->sr_stream[!tx])
-		return 0;
-
 	if (!data->is_codec_master) {
 		ret = snd_soc_dai_set_sysclk(cpu_dai, 0, 0, SND_SOC_CLOCK_OUT);
 		if (ret) {
@@ -170,6 +160,8 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 			return ret;
 		}
 	} else {
+		data->sr_stream[tx] = params_rate(params);
+
 		/*
 		 * Set pll helper function will not set FLL when FLL source,
 		 * FLL in and out frequency is not been changed. So for first
@@ -214,16 +206,25 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_card *card = rtd->card;
 	struct imx_wm8958_data *data = snd_soc_card_get_drvdata(card);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
 
-	/*
-	 * Disable FLL1 after all stream finished.
-	 */
-	if (data->sr_stream[!tx] == 0 && data->sr_stream[tx])
+	if (data->is_codec_master &&
+			data->sr_stream[!tx] == 0 && data->sr_stream[tx]) {
+		/*
+		 * We should connect AIF1CLK source to FLL after enable FLL, and
+		 * disconnet AIF1CLK source to FLL before disable FLL, otherwise
+		 * FLL worked abnormal.
+		 */
+		snd_soc_dai_set_sysclk(codec_dai, WM8994_FLL_SRC_MCLK1,
+				data->clk_frequency, SND_SOC_CLOCK_OUT);
+
+		/* Disable FLL1 after all stream finished. */
 		snd_soc_update_bits(codec, WM8994_FLL1_CONTROL_1, 1, 0);
+	}
 
 	data->sr_stream[tx] = 0;
 
@@ -383,7 +384,6 @@ static int imx_wm8958_probe(struct platform_device *pdev)
 	data->dai.stream_name = "HiFi";
 	data->dai.codec_dai_name = "wm8994-aif1";
 	data->dai.codec_name = "wm8994-codec";
-	data->dai.ignore_pmdown_time = 1;
 	data->dai.cpu_dai_name = dev_name(&cpu_pdev->dev);
 	data->dai.platform_of_node = cpu_np;
 	data->dai.ops = &imx_hifi_ops;
