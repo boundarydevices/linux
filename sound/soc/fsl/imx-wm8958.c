@@ -162,14 +162,6 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	} else {
 		data->sr_stream[tx] = params_rate(params);
 
-		/*
-		 * Set pll helper function will not set FLL when FLL source,
-		 * FLL in and out frequency is not been changed. So for first
-		 * stream, we should enable FLL.
-		 */
-		if (data->sr_stream[!tx] == 0)
-			snd_soc_update_bits(codec, WM8994_FLL1_CONTROL_1, 1, 1);
-
 		pll_out = data->sr_stream[tx] * 256;
 
 		ret = snd_soc_dai_set_pll(codec_dai, WM8994_FLL1,
@@ -207,7 +199,6 @@ static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_card *card = rtd->card;
 	struct imx_wm8958_data *data = snd_soc_card_get_drvdata(card);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
@@ -223,7 +214,7 @@ static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 				data->clk_frequency, SND_SOC_CLOCK_OUT);
 
 		/* Disable FLL1 after all stream finished. */
-		snd_soc_update_bits(codec, WM8994_FLL1_CONTROL_1, 1, 0);
+		snd_soc_dai_set_pll(codec_dai, WM8994_FLL1, 0, 0, 0);
 	}
 
 	data->sr_stream[tx] = 0;
