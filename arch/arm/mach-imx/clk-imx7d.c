@@ -895,6 +895,9 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	clks[IMX7D_USB1_MAIN_480M_CLK] = imx_clk_fixed_factor("pll_usb1_main_clk", "osc", 20, 1);
 	clks[IMX7D_USB_MAIN_480M_CLK] = imx_clk_fixed_factor("pll_usb_main_clk", "osc", 20, 1);
 
+	/* set parent of EPDC pixel clock */
+	imx_clk_set_parent(clks[IMX7D_EPDC_PIXEL_ROOT_SRC], clks[IMX7D_PLL_SYS_MAIN_CLK]);
+
 	for (i = 0; i < IMX7D_END_CLK; i++)
 		clk_prepare_enable(clks[i]);
 
