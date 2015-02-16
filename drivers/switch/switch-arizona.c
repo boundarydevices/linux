@@ -577,15 +577,6 @@ static const struct {
 	{ 1000, 10000, 100684000, -949400, 7300, 63200000, 347600, 250000},
 };
 
-#ifdef ARIZONA_HPDET_USE_DEFAULT_TRIMS
-static struct arizona_hpdet_d_trims arizona_hpdet_d_trims_default[] = {
-	{ -1, 5},
-	{ 0,  5 },
-	{ -2, 12 },
-	{ -3, 12 },
-};
-#endif
-
 static int arizona_hpdet_d_calibrate(const struct arizona_extcon_info *info,
 					int dacval, int range)
 {
@@ -2642,10 +2633,6 @@ static int arizona_hpdet_d_read_calibration(struct arizona_extcon_info *info)
 	int grad_range1_0, grad_range3_2;
 	unsigned int v1, v2;
 	int ret = -EIO;
-
-#ifdef ARIZONA_HPDET_USE_DEFAULT_TRIMS
-	info->hpdet_d_trims = arizona_hpdet_d_trims_default;
-#endif
 
 	ret = regmap_read(arizona->regmap, 0x0087, &v1);
 	if (ret >= 0) {
