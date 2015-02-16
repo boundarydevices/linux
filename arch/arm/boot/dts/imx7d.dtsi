@@ -273,9 +273,10 @@
 		};
 	};
 
-	etm@0,3007d000 {
+	etm@1,3007d000 {
 		compatible = "arm,coresight-etm3x", "arm,primecell";
 		reg = <0x3007d000 0x1000>;
+		arm,primecell-periphid =  <0xbb956>;
 
 		cpu = <&cpu1>;
 		clocks = <&clks IMX7D_ENET_AXI_ROOT_CLK>;
