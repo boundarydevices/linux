@@ -544,12 +544,6 @@ static const struct reg_default clearwater_reg_default[] = {
 	{ 0x00000219, 0x00e6 }, /* R537 (0x219) - Mic Bias Ctrl 2 */
 	{ 0x0000021a, 0x00e6 }, /* R538 (0x21A) - Mic Bias Ctrl 3 */
 	{ 0x0000021B, 0x00e6 }, /* R539  - Mic Bias Ctrl 4 */
-	{ 0x00000225, 0x1406 },
-	{ 0x00000226, 0x1406 },
-	{ 0x00000227, 0x1406 },
-	{ 0x00000228, 0x1406 },
-	{ 0x00000229, 0x1406 },
-	{ 0x0000022a, 0x1406 },
 	{ 0x0000027e, 0x0000 }, /* R638 (0x27E) - Clearwater EDRE HP stereo control */
 	{ 0x00000293, 0x0000 }, /* R659 (0x293) - Accessory Detect Mode 1 */
 	{ 0x0000029b, 0x0000 }, /* R667 (0x29B) - Headphone Detect 1 */
@@ -3233,6 +3227,12 @@ static bool clearwater_16bit_volatile_register(struct device *dev, unsigned int 
 	case ARIZONA_SAMPLE_RATE_3_STATUS:
 	case ARIZONA_ASYNC_SAMPLE_RATE_1_STATUS:
 	case ARIZONA_ASYNC_SAMPLE_RATE_2_STATUS:
+	case ARIZONA_HP_CTRL_1L:
+	case ARIZONA_HP_CTRL_1R:
+	case ARIZONA_HP_CTRL_2L:
+	case ARIZONA_HP_CTRL_2R:
+	case ARIZONA_HP_CTRL_3L:
+	case ARIZONA_HP_CTRL_3R:
 	case ARIZONA_DCS_HP1L_CONTROL:
 	case ARIZONA_DCS_HP1R_CONTROL:
 	case ARIZONA_MIC_DETECT_3:
