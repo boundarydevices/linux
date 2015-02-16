@@ -196,8 +196,7 @@ struct coresight_platform_data *of_get_coresight_platform_data(
 		if (cell) {
 			hwid = of_read_number(cell, of_n_addr_cells(dn));
 			index = get_logical_index(hwid);
-			if (index != -EINVAL)
-				pdata->cpu = index;
+			pdata->cpu = index;
 		}
 	}
 
