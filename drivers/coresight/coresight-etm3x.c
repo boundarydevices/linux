@@ -1829,6 +1829,10 @@ static int etm_probe(struct amba_device *adev, const struct amba_id *id)
 		return ret;
 
 	drvdata->cpu = pdata ? pdata->cpu : 0;
+	if (drvdata->cpu < 0) {
+		ret = -EINVAL;
+		goto err_arch_supported;
+	}
 
 	get_online_cpus();
 	etmdrvdata[drvdata->cpu] = drvdata;
