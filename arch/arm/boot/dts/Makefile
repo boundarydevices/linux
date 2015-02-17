@@ -392,6 +392,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-neol.dtb \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nit6xlite-access.dtb \
+	imx6dl-nitrogen6_max.dtb \
 	imx6dl-nitrogen6x.dtb \
 	imx6dl-phytec-pbab01.dtb \
 	imx6dl-rex-basic.dtb \
@@ -490,6 +491,10 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-neol-test.dtb \
 	imx6q-nitrogen6x.dtb \
 	imx6q-nitrogen6_max.dtb \
+	imx6q-nitrogen6_max-apex.dtb \
+	imx6q-nitrogen6_max-clearview.dtb \
+	imx6q-nitrogen6_max-lantech.dtb \
+	imx6q-nitrogen6_max-st7789.dtb \
 	imx6q-nitrogen6_som2.dtb \
 	imx6q-novena.dtb \
 	imx6q-phytec-pbab01.dtb \
