@@ -48,12 +48,79 @@
 / {
 	model = "Boundary Devices i.MX6 Quad Plus Nitrogen6_MAX Board";
 	compatible = "boundary,imx6qp-nitrogen6_max", "fsl,imx6qp";
+
+	memory: memory {
+		reg = <0x10000000 0xeffffc00>;
+	};
 };
 
-&pcie {
-	status = "disabled";
+&fb_lvds {
+	prefetch;
+};
+
+&fb_lvds2 {
+	prefetch;
+};
+
+&fb_lcd {
+	prefetch;
+};
+
+&fb_hdmi {
+	prefetch;
+};
+
+&ov5640 {
+	ipu_id = <1>;
+};
+
+&pinctrl_i2c3_ov5640 { /* parallel camera */
+	fsl,pins = <
+		MX6QDL_PAD_EIM_A17__IPU2_CSI1_DATA12	0xb0b1
+		MX6QDL_PAD_EIM_A18__IPU2_CSI1_DATA13	0xb0b1
+		MX6QDL_PAD_EIM_A19__IPU2_CSI1_DATA14	0xb0b1
+		MX6QDL_PAD_EIM_A20__IPU2_CSI1_DATA15	0xb0b1
+		MX6QDL_PAD_EIM_A21__IPU2_CSI1_DATA16	0xb0b1
+		MX6QDL_PAD_EIM_A22__IPU2_CSI1_DATA17	0xb0b1
+		MX6QDL_PAD_EIM_A23__IPU2_CSI1_DATA18	0xb0b1
+		MX6QDL_PAD_EIM_EB2__IPU2_CSI1_DATA19	0xb0b1
+		MX6QDL_PAD_EIM_DA10__IPU2_CSI1_DATA_EN	0xb0b1
+		MX6QDL_PAD_EIM_A16__IPU2_CSI1_PIXCLK	0xb0b1
+		MX6QDL_PAD_EIM_DA11__IPU2_CSI1_HSYNC	0xb0b1
+		MX6QDL_PAD_EIM_DA12__IPU2_CSI1_VSYNC	0xb0b1
+	>;
 };
 
 &sata {
+	status = "okay";
+};
+
+&v4l2_cap_2 {
+	ipu_id = <1>;
+};
+
+&pre1 {
+	status = "okay";
+};
+
+&pre2 {
+	status = "okay";
+};
+
+&pre3 {
+	status = "okay";
+};
+
+&pre4 {
+	status = "okay";
+};
+
+&prg1 {
+	memory-region = <&memory>;
+	status = "okay";
+};
+
+&prg2 {
+	memory-region = <&memory>;
 	status = "okay";
 };
