@@ -156,6 +156,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6dl-cubox-i.dtb \
 	imx6dl-hummingboard.dtb \
 	imx6dl-nitrogen6x.dtb \
+	imx6dl-nit6xlite.dtb \
 	imx6dl-sabreauto.dtb \
 	imx6dl-sabreauto-flexcan1.dtb \
 	imx6dl-sabreauto-ecspi.dtb \
