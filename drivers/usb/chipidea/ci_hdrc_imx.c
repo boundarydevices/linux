@@ -218,7 +218,7 @@ static int setup_reset_gpios(struct platform_device *pdev, struct ci_hdrc_imx_da
 	for (i = 0 ; i < ARRAY_SIZE(data->reset_gpios); i++) {
 		data->reset_gpios[i].gpio = -1;
 		gpio = of_get_named_gpio_flags(np, "reset-gpios", i, &flags);
-		pr_info("%s:%d\n", __func__, gpio);
+		pr_info("%s:%d, flags %d\n", __func__, gpio, flags & OF_GPIO_ACTIVE_LOW);
 		if (!gpio_is_valid(gpio))
 			break;
 
