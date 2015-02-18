@@ -264,7 +264,7 @@ static int setup_reset_gpios(struct platform_device *pdev, struct ci_hdrc_imx_da
 	for (i = 0 ; i < ARRAY_SIZE(data->reset_gpios); i++) {
 		data->reset_gpios[i].gpio = -1;
 		gpio = of_get_named_gpio_flags(np, "reset-gpios", i, &flags);
-		pr_info("%s:%d\n", __func__, gpio);
+		pr_info("%s:%d, flags %d\n", __func__, gpio, flags & OF_GPIO_ACTIVE_LOW);
 		if (!gpio_is_valid(gpio))
 			break;
 
@@ -359,7 +359,7 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 	for (i = 0 ; i < ARRAY_SIZE(data->reset_gpios); i++) {
 		if (!gpio_is_valid(data->reset_gpios[i].gpio))
 			break;
-		gpio_set_value(data->reset_gpios[i].gpio, data->reset_gpios[i].active_low ? 0 : 1);
+		gpio_set_value(data->reset_gpios[i].gpio, data->reset_gpios[i].active_low ? 1 : 0);
 	}
 
 	data->phy = devm_usb_get_phy_by_phandle(&pdev->dev, "fsl,usbphy", 0);
