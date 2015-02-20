@@ -186,4 +186,6 @@ source "drivers/thunderbolt/Kconfig"
 
 source "drivers/android/Kconfig"
 
+source "drivers/battery/Kconfig"
+
 endmenu
