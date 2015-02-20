@@ -82,5 +82,4 @@ int android_wake_lock_active(struct wake_lock *lock);
 long android_has_wake_lock(int type);
 #endif
 
-
 #endif
