@@ -1,0 +1,99 @@
+menuconfig BATTERY_SAMSUNG
+	bool "samsung battery driver"
+	help
+	 Say Y to include support for samsung battery driver
+	 This battery driver integrated all battery-related functions
+	 To see battery-related functions,
+	 refer to sec_charging_common.h
+
+if BATTERY_SAMSUNG
+
+config BATTERY_SAMSUNG_DATA_FILE
+	depends on BATTERY_SAMSUNG
+	string "samsung battery data file"
+	default ""
+	help
+	 Path to the battery data file.
+
+config BATTERY_SAMSUNG_DATA
+	bool
+	default BATTERY_SAMSUNG_DATA_FILE != ""
+
+config CHARGING_VZWCONCEPT
+	bool "VZW concept about the charging"
+	depends on BATTERY_SAMSUNG
+	default n
+	help
+	 Say Y to include support for the VZW concepts.
+
+config BATTERY_SWELLING
+	bool "prevent battery swelling"
+	depends on BATTERY_SAMSUNG
+	help
+	  Say Y to include support for prevent battery swelling
+
+# Fuel Gauge
+
+config FUELGAUGE_MAX77823
+	tristate "MAX77823 fuel gauge driver"
+	default n
+	depends on BATTERY_SAMSUNG
+	help
+	 Say Y to include support
+	 for MAXIM MAX77823 or MAX77818 fuel gauge driver.
+	 This fuel-gauge can be used in voltage-tracking mode
+	 or coulomb-counting mode.
+
+config FUELGAUGE_MAX77823_VOLTAGE_TRACKING
+	bool "use MAX77823 fuel gauge only as voltage tracking"
+	default n
+	depends on FUELGAUGE_MAX77823
+	help
+	 Say Y to use MAX17050 fuel gauge
+	 only as voltage tracking.
+	 This mode is for target that consumes low current
+	 like smart-phone.
+
+config FUELGAUGE_MAX77823_COULOMB_COUNTING
+	bool "use MAX77823 fuel gauge as coulomb counting (including voltage tracking)"
+	default n
+	depends on FUELGAUGE_MAX77823
+	help
+	 Say Y to use MAX77823 fuel gauge
+	 as coulomb counting (including voltage tracking).
+	 This mode is for target that consumes high current
+	 like tablet.
+
+# Charger
+
+config CHARGER_MAX77823
+	tristate "MAX77823 battery charger support"
+	depends on BATTERY_SAMSUNG
+	help
+	 Say Y here to enable support for the MAX77823 charger
+
+config SAMSUNG_BATTERY_ENG_TEST
+	bool "enable ENG mode for battery test"
+	depends on BATTERY_SAMSUNG
+	default n
+	help
+	  Say Y to include support for battery test
+	  enable this feature only ENG mode
+	  this featuren must disabled user binary
+	  stability test etc..
+
+config SAMSUNG_BATTERY_FACTORY
+	bool "enable for factory test"
+	depends on BATTERY_SAMSUNG
+	default n
+	help
+	  Say Y to include support for factory test
+	  enable this feature only factory mode
+	  this featuren must disabled user binary
+	  stability test etc..
+
+config SEC_BOARD_MXC
+	tristate "enable for imx6"
+	default y if ARCH_MXC
+
+endif #BATTERY_SAMSUNG
