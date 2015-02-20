@@ -108,7 +108,6 @@ static const struct snd_kcontrol_new wm8998_in2mux =
 static DECLARE_TLV_DB_SCALE(ana_tlv, 0, 100, 0);
 static DECLARE_TLV_DB_SCALE(eq_tlv, -1200, 100, 0);
 static DECLARE_TLV_DB_SCALE(digital_tlv, -6400, 50, 0);
-static DECLARE_TLV_DB_SCALE(noise_tlv, 0, 600, 0);
 static DECLARE_TLV_DB_SCALE(ng_tlv, -10200, 600, 0);
 
 #define WM8998_NG_SRC(name, base) \
@@ -234,9 +233,6 @@ SOC_VALUE_ENUM("ISRC1 FSH", arizona_isrc_fsh[0]),
 SOC_VALUE_ENUM("ISRC2 FSH", arizona_isrc_fsh[1]),
 SOC_VALUE_ENUM("ASRC RATE 1", arizona_asrc_rate1),
 SOC_VALUE_ENUM("ASRC RATE 2", arizona_asrc_rate2),
-
-SOC_SINGLE_TLV("Noise Generator Volume", ARIZONA_COMFORT_NOISE_GENERATOR,
-	       ARIZONA_NOISE_GEN_GAIN_SHIFT, 0x16, 0, noise_tlv),
 
 ARIZONA_MIXER_CONTROLS("HPOUTL", ARIZONA_OUT1LMIX_INPUT_1_SOURCE),
 ARIZONA_MIXER_CONTROLS("HPOUTR", ARIZONA_OUT1RMIX_INPUT_1_SOURCE),
@@ -469,7 +465,6 @@ SND_SOC_DAPM_REGULATOR_SUPPLY("SPKVDDL", 0, 0),
 SND_SOC_DAPM_REGULATOR_SUPPLY("SPKVDDR", 0, 0),
 
 SND_SOC_DAPM_SIGGEN("TONE"),
-SND_SOC_DAPM_SIGGEN("NOISE"),
 SND_SOC_DAPM_SIGGEN("HAPTICS"),
 
 SND_SOC_DAPM_INPUT("IN1AL"),
@@ -507,9 +502,6 @@ SND_SOC_DAPM_SUPPLY("MICBIAS2", ARIZONA_MIC_BIAS_CTRL_2,
 		    ARIZONA_MICB1_ENA_SHIFT, 0, NULL, 0),
 SND_SOC_DAPM_SUPPLY("MICBIAS3", ARIZONA_MIC_BIAS_CTRL_3,
 		    ARIZONA_MICB1_ENA_SHIFT, 0, NULL, 0),
-
-SND_SOC_DAPM_PGA("Noise Generator", ARIZONA_COMFORT_NOISE_GENERATOR,
-		 ARIZONA_NOISE_GEN_ENA_SHIFT, 0, NULL, 0),
 
 SND_SOC_DAPM_PGA("Tone Generator 1", ARIZONA_TONE_GENERATOR_1,
 		 ARIZONA_TONE1_ENA_SHIFT, 0, NULL, 0),
@@ -799,7 +791,6 @@ SND_SOC_DAPM_OUTPUT("MICSUPP"),
 };
 
 #define ARIZONA_MIXER_INPUT_ROUTES(name)	\
-	{ name, "Noise Generator", "Noise Generator" }, \
 	{ name, "Tone Generator 1", "Tone Generator 1" }, \
 	{ name, "Tone Generator 2", "Tone Generator 2" }, \
 	{ name, "Haptics", "HAPTICS" }, \
@@ -887,7 +878,6 @@ static const struct snd_soc_dapm_route wm8998_dapm_routes[] = {
 	{ "MICBIAS2", NULL, "MICVDD" },
 	{ "MICBIAS3", NULL, "MICVDD" },
 
-	{ "Noise Generator", NULL, "NOISE" },
 	{ "Tone Generator 1", NULL, "TONE" },
 	{ "Tone Generator 2", NULL, "TONE" },
 
