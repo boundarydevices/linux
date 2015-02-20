@@ -159,3 +159,5 @@ obj-$(CONFIG_FMC)		+= fmc/
 obj-$(CONFIG_POWERCAP)		+= powercap/
 
 obj-$(CONFIG_CORESIGHT)		+= coresight/
+
+obj-$(CONFIG_BATTERY_SAMSUNG)   += battery/
