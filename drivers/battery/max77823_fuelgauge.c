@@ -2549,3 +2549,4 @@ module_exit(max77823_fuelgauge_exit);
 MODULE_DESCRIPTION("Samsung MAX778023 Fuel Gauge Driver");
 MODULE_AUTHOR("Samsung Electronics");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("platform:max77823-fuelgauge");
