@@ -1583,3 +1583,4 @@ module_exit(max77823_charger_exit);
 MODULE_DESCRIPTION("Samsung MAX77823 Charger Driver");
 MODULE_AUTHOR("Samsung Electronics");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("platform:max77823-charger");
