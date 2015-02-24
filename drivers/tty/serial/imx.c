@@ -226,7 +226,6 @@ struct imx_port {
 	struct uart_port	port;
 	struct timer_list	timer;
 	unsigned int		old_status;
-	int			txirq, rxirq, rtsirq;
 	unsigned int		have_rtscts:1;
 	unsigned int		dte_mode:1;
 	unsigned int		use_irda:1;
@@ -2039,6 +2038,7 @@ static int serial_imx_probe(struct platform_device *pdev)
 	void __iomem *base;
 	int ret = 0;
 	struct resource *res;
+	int txirq, rxirq, rtsirq;
 
 	sport = devm_kzalloc(&pdev->dev, sizeof(*sport), GFP_KERNEL);
 	if (!sport)
@@ -2055,15 +2055,16 @@ static int serial_imx_probe(struct platform_device *pdev)
 	if (IS_ERR(base))
 		return PTR_ERR(base);
 
+	rxirq = platform_get_irq(pdev, 0);
+	txirq = platform_get_irq(pdev, 1);
+	rtsirq = platform_get_irq(pdev, 2);
+
 	sport->port.dev = &pdev->dev;
 	sport->port.mapbase = res->start;
 	sport->port.membase = base;
 	sport->port.type = PORT_IMX,
 	sport->port.iotype = UPIO_MEM;
-	sport->port.irq = platform_get_irq(pdev, 0);
-	sport->rxirq = platform_get_irq(pdev, 0);
-	sport->txirq = platform_get_irq(pdev, 1);
-	sport->rtsirq = platform_get_irq(pdev, 2);
+	sport->port.irq = rxirq;
 	sport->port.fifosize = 32;
 	sport->port.ops = &imx_pops;
 	sport->port.flags = UPF_BOOT_AUTOCONF;
@@ -2099,27 +2100,27 @@ static int serial_imx_probe(struct platform_device *pdev)
 	 * Allocate the IRQ(s) i.MX1 has three interrupts whereas later
 	 * chips only have one interrupt.
 	 */
-	if (sport->txirq > 0) {
-		ret = devm_request_irq(&pdev->dev, sport->rxirq, imx_rxint, 0,
+	if (txirq > 0) {
+		ret = devm_request_irq(&pdev->dev, rxirq, imx_rxint, 0,
 				       dev_name(&pdev->dev), sport);
 		if (ret)
 			return ret;
 
-		ret = devm_request_irq(&pdev->dev, sport->txirq, imx_txint, 0,
+		ret = devm_request_irq(&pdev->dev, txirq, imx_txint, 0,
 				       dev_name(&pdev->dev), sport);
 		if (ret)
 			return ret;
 
 		/* do not use RTS IRQ on IrDA */
 		if (!USE_IRDA(sport)) {
-			ret = devm_request_irq(&pdev->dev, sport->rtsirq,
+			ret = devm_request_irq(&pdev->dev, rtsirq,
 					       imx_rtsint, 0,
 					       dev_name(&pdev->dev), sport);
 			if (ret)
 				return ret;
 		}
 	} else {
-		ret = devm_request_irq(&pdev->dev, sport->port.irq, imx_int, 0,
+		ret = devm_request_irq(&pdev->dev, rxirq, imx_int, 0,
 				       dev_name(&pdev->dev), sport);
 		if (ret)
 			return ret;
