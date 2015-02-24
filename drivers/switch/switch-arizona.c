@@ -1864,7 +1864,10 @@ static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 		switch (info->button_check) {
 		case 0:
 			info->button_impedance = val;
-			info->button_check = 2;
+			if (arizona->pdata.antenna_manual_db_plugout)
+				info->button_check = arizona->pdata.antenna_manual_db_plugout;
+			else
+				info->button_check = 2;
 			return -EAGAIN;
 
 		case 1:
