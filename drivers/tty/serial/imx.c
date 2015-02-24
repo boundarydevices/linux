@@ -185,7 +185,7 @@
 #define IMX_RXBD_NUM 20
 #define IMX_MODULE_MAX_CLK_RATE	80000000
 
-/* i.mx21 type uart runs on all i.mx except i.mx1 */
+/* i.MX21 type uart runs on all i.mx except i.MX1 and i.MX6q */
 enum imx_uart_type {
 	IMX1_UART,
 	IMX21_UART,
