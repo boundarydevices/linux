@@ -125,11 +125,11 @@
 &iomuxc_imx6q_ta {
 	pinctrl_hog_1: hoggrp {
 		fsl,pins = <
-#define GP_EXCH_OFF			<&gpio3 11 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA11__GPIO3_IO11		0x1b0b0
+#define GP_EXCH_OFF			<&gpio3 11 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_DA11__GPIO3_IO11		0x130b0
 	/* Heater */
-#define GP_HEATER_OFF			<&gpio3 4 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA4__GPIO3_IO04		0x1b0b0
+#define GP_HEATER_OFF			<&gpio3 4 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_DA4__GPIO3_IO04		0x130b0
 	/* LEDS */
 #define GP_LED_RED			<&gpio3 13 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x030b0
