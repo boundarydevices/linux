@@ -86,6 +86,7 @@ struct adv7180_priv {
 	int cvbs;
 	int cea861;
 	struct pinctrl *pinctrl;
+	unsigned last_reg;
 #define GPIO_STANDBY		0	/* 1 - powerdown */
 #define GPIO_RESET		1	/* 0 - reset */
 #define GPIO_CNT		2
@@ -1260,6 +1261,45 @@ static void adv7180_hard_reset(struct adv7180_priv *adv)
 	}
 }
 
+
+static ssize_t show_reg(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+	struct adv7180_priv *adv = adv7180_int_device.priv;
+	s32 rval = adv7180_read(adv, adv->last_reg);
+
+	if (rval < 0)
+		return rval;
+	return sprintf(buf, "0x%02x", rval);
+}
+
+static ssize_t store_reg(struct device *dev, struct device_attribute *attr,
+	 const char *buf, size_t count)
+{
+	struct adv7180_priv *adv = adv7180_int_device.priv;
+	unsigned reg, value;
+	int numscanned = sscanf(buf,"%x %x\n", &reg, &value);
+
+	if (reg > 0xff) {
+		dev_err(dev,"%s: invalid register: use form 0xREG [0xVAL]\n",
+			__func__);
+		return count;
+	}
+	if (numscanned == 2) {
+		int rval = adv7180_write_reg(adv, reg, value);
+		if (rval)
+			dev_err(dev, "%s: error %d setting reg 0x%04x to 0x%02x\n",
+				__func__, rval, reg, value);
+	} else if (numscanned == 1) {
+		adv->last_reg = reg;
+	} else {
+		dev_err(dev,"%s: invalid register: use form 0xREG [0xVAL]\n",
+			__func__);
+	}
+	return count;
+}
+static DEVICE_ATTR(adv7180_reg, S_IRUGO|S_IWUSR|S_IWGRP, show_reg, store_reg);
+
 /*! ADV7180 I2C attach function.
  *
  *  @param *adapter	struct i2c_adapter *.
@@ -1432,6 +1472,10 @@ static int adv7180_probe(struct i2c_client *client,
 	if (!IS_ERR(adv->sen.sensor_clk))
 		clk_disable_unprepare(adv->sen.sensor_clk);
 
+	if (device_create_file(dev, &dev_attr_adv7180_reg))
+		dev_err(dev, "Error on creating sysfs file for adv7180_reg\n");
+	else
+		dev_err(dev, "created sysfs entry for reading regs\n");
 	return ret;
 
 exit1:
@@ -1456,6 +1500,7 @@ static int adv7180_detach(struct i2c_client *client)
 		"%s:Removing %s video decoder @ 0x%02X from adapter %s\n",
 		__func__, IF_NAME, client->addr << 1, client->adapter->name);
 
+	device_remove_file(&client->dev, &dev_attr_adv7180_reg);
 	/* Power down via i2c */
 	adv7180_write_reg(adv, ADV7180_PWR_MNG, 0x24);
 
