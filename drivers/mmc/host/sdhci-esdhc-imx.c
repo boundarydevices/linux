@@ -76,6 +76,7 @@
 #define ESDHC_STD_TUNING_EN		(1 << 24)
 /* NOTE: the minimum valid tuning start tap for mx6sl is 1 */
 #define ESDHC_TUNING_START_TAP		0x1
+#define ESDHC_TUNING_STEP_SHIFT 16
 
 #define ESDHC_TUNING_BLOCK_PATTERN_LEN	64
 
@@ -479,6 +480,7 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
 		} else if (imx_data->socdata->flags & ESDHC_FLAG_STD_TUNING) {
 			u32 v = readl(host->ioaddr + SDHCI_ACMD12_ERR);
 			u32 m = readl(host->ioaddr + ESDHC_MIX_CTRL);
+			u32 tmp;
 			if (val & SDHCI_CTRL_TUNED_CLK) {
 				v |= ESDHC_MIX_CTRL_SMPCLK_SEL;
 			} else {
@@ -489,10 +491,11 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
 			if (val & SDHCI_CTRL_EXEC_TUNING) {
 				v |= ESDHC_MIX_CTRL_EXE_TUNE;
 				m |= ESDHC_MIX_CTRL_FBCLK_SEL;
-				writel(readl(host->ioaddr + ESDHC_TUNING_CTRL) |
-					ESDHC_STD_TUNING_EN |
-					ESDHC_TUNING_START_TAP,
-					host->ioaddr + ESDHC_TUNING_CTRL);
+				tmp = readl(host->ioaddr + ESDHC_TUNING_CTRL);
+				tmp |= ESDHC_STD_TUNING_EN | ESDHC_TUNING_START_TAP;
+				if (imx_data->boarddata.tuning_step)
+					tmp |= imx_data->boarddata.tuning_step << ESDHC_TUNING_STEP_SHIFT;
+				writel(tmp, host->ioaddr + ESDHC_TUNING_CTRL);
 			} else {
 				v &= ~ESDHC_MIX_CTRL_EXE_TUNE;
 			}
@@ -1010,6 +1013,8 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	of_property_read_u32(np, "bus-width", &boarddata->max_bus_width);
 
 	of_property_read_u32(np, "max-frequency", &boarddata->f_max);
+
+	of_property_read_u32(np, "tuning-step", &boarddata->tuning_step);
 
 	if (of_find_property(np, "no-1-8-v", NULL))
 		boarddata->support_vsel = false;
