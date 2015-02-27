@@ -25,6 +25,7 @@
 #include <linux/usb/hcd.h>
 #include <linux/usb/chipidea.h>
 #include <linux/regulator/consumer.h>
+#include <linux/imx_gpc.h>
 
 #include "../host/ehci.h"
 
@@ -43,16 +44,29 @@ struct ehci_ci_priv {
 	struct regulator *reg_vbus;
 };
 
+/* This function is used to override WKCN, WKDN, and WKOC */
+static void ci_ehci_override_wakeup_flag(struct ehci_hcd *ehci,
+		u32 __iomem *reg, u32 flags, bool set)
+{
+	u32 val = ehci_readl(ehci, reg);
+
+	if (set)
+		val |= flags;
+	else
+		val &= ~flags;
+
+	ehci_writel(ehci, val, reg);
+}
+
 static int ehci_ci_portpower(struct usb_hcd *hcd, int portnum, bool enable)
 {
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 	struct ehci_ci_priv *priv = (struct ehci_ci_priv *)ehci->priv;
 	struct device *dev = hcd->self.controller;
-	struct ci_hdrc *ci = dev_get_drvdata(dev);
 	int ret = 0;
 	int port = HCS_N_PORTS(ehci->hcs_params);
 
-	if (priv->reg_vbus && !ci_otg_is_fsm_mode(ci)) {
+	if (priv->reg_vbus) {
 		if (port > 1) {
 			dev_warn(dev,
 				"Not support multi-port regulator control\n");
@@ -122,6 +136,8 @@ static int ci_imx_ehci_hub_control(
 	u32		temp;
 	unsigned long	flags;
 	int		retval = 0;
+	struct device *dev = hcd->self.controller;
+	struct ci_hdrc *ci = dev_get_drvdata(dev);
 
 	status_reg = &ehci->regs->port_status[(wIndex & 0xff) - 1];
 
@@ -145,6 +161,14 @@ static int ci_imx_ehci_hub_control(
 		if (ehci_handshake(ehci, status_reg, PORT_SUSPEND,
 						PORT_SUSPEND, 5000))
 			ehci_err(ehci, "timeout waiting for SUSPEND\n");
+
+		if (ci->platdata->flags & CI_HDRC_IMX_IS_HSIC) {
+			if (ci->platdata->notify_event)
+				ci->platdata->notify_event
+					(ci, CI_HDRC_IMX_HSIC_SUSPEND_EVENT);
+			ci_ehci_override_wakeup_flag(ehci, status_reg,
+				PORT_WKDISC_E | PORT_WKCONN_E, false);
+		}
 
 		spin_unlock_irqrestore(&ehci->lock, flags);
 		if (ehci_port_speed(ehci, temp) ==
@@ -228,18 +252,30 @@ static int host_start(struct ci_hdrc *ci)
 	priv = (struct ehci_ci_priv *)ehci->priv;
 	priv->reg_vbus = NULL;
 
-	if (ci->platdata->reg_vbus)
-		priv->reg_vbus = ci->platdata->reg_vbus;
+	if (ci->platdata->reg_vbus && !ci_otg_is_fsm_mode(ci)) {
+		if (ci->platdata->flags & CI_HDRC_IMX_VBUS_EARLY_ON) {
+			ret = regulator_enable(ci->platdata->reg_vbus);
+			if (ret) {
+				dev_err(ci->dev,
+				"Failed to enable vbus regulator, ret=%d\n",
+									ret);
+				goto put_hcd;
+			}
+		} else {
+			priv->reg_vbus = ci->platdata->reg_vbus;
+		}
+	}
 
 	ret = usb_add_hcd(hcd, 0, 0);
 	if (ret) {
-		goto put_hcd;
+		goto disable_reg;
 	} else {
 		struct usb_otg *otg = &ci->otg;
 
 		ci->hcd = hcd;
 
 		if (ci_otg_is_fsm_mode(ci)) {
+			hcd->self.otg_fsm = &ci->fsm;
 			otg->host = &hcd->self;
 			hcd->self.otg_port = 1;
 		}
@@ -248,8 +284,22 @@ static int host_start(struct ci_hdrc *ci)
 	if (ci->platdata->flags & CI_HDRC_DISABLE_STREAMING)
 		hw_write(ci, OP_USBMODE, USBMODE_CI_SDIS, USBMODE_CI_SDIS);
 
+	if (ci->platdata->notify_event &&
+		(ci->platdata->flags & CI_HDRC_IMX_IS_HSIC))
+		ci->platdata->notify_event
+			(ci, CI_HDRC_IMX_HSIC_ACTIVE_EVENT);
+
+	if (ci->platdata->flags & CI_HDRC_DISABLE_HOST_STREAMING)
+		hw_write(ci, OP_USBMODE, USBMODE_CI_SDIS, USBMODE_CI_SDIS);
+
+	ci_hdrc_ahb_config(ci);
+
 	return ret;
 
+disable_reg:
+	if (ci->platdata->reg_vbus && !ci_otg_is_fsm_mode(ci) &&
+			(ci->platdata->flags & CI_HDRC_IMX_VBUS_EARLY_ON))
+		regulator_disable(ci->platdata->reg_vbus);
 put_hcd:
 	usb_put_hcd(hcd);
 
@@ -263,6 +313,9 @@ static void host_stop(struct ci_hdrc *ci)
 	if (hcd) {
 		usb_remove_hcd(hcd);
 		usb_put_hcd(hcd);
+		if (ci->platdata->reg_vbus && !ci_otg_is_fsm_mode(ci) &&
+			(ci->platdata->flags & CI_HDRC_IMX_VBUS_EARLY_ON))
+				regulator_disable(ci->platdata->reg_vbus);
 	}
 	ci->hcd = NULL;
 }
@@ -333,6 +386,8 @@ static void ci_hdrc_host_restore_from_power_lost(struct ci_hdrc *ci)
 	if (ci->pm_portsc & PORTSC_HSP)
 		usb_phy_notify_connect(ci->usb_phy, USB_SPEED_HIGH);
 
+	ci_hdrc_ahb_config(ci);
+
 	tmp = ehci_readl(ehci, &ehci->regs->command);
 	tmp |= CMD_RUN;
 	ehci_writel(ehci, tmp, &ehci->regs->command);
@@ -341,11 +396,16 @@ static void ci_hdrc_host_restore_from_power_lost(struct ci_hdrc *ci)
 
 static void ci_hdrc_host_suspend(struct ci_hdrc *ci)
 {
+	if (ci_hdrc_host_has_device(ci))
+		imx_gpc_mf_request_on(ci->irq, 1);
+
 	ci_hdrc_host_save_for_power_lost(ci);
 }
 
 static void ci_hdrc_host_resume(struct ci_hdrc *ci, bool power_lost)
 {
+	imx_gpc_mf_request_on(ci->irq, 0);
+
 	if (power_lost)
 		ci_hdrc_host_restore_from_power_lost(ci);
 }
@@ -361,6 +421,8 @@ static int ci_ehci_bus_suspend(struct usb_hcd *hcd)
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 	int port;
 	u32 tmp;
+	struct device *dev = hcd->self.controller;
+	struct ci_hdrc *ci = dev_get_drvdata(dev);
 
 	int ret = orig_bus_suspend(hcd);
 
@@ -390,6 +452,18 @@ static int ci_ehci_bus_suspend(struct usb_hcd *hcd)
 			 * It needs a short delay between set RS bit and PHCD.
 			 */
 			usleep_range(150, 200);
+
+			/*
+			 * If a transaction is in progress, there may be a delay in
+			 * suspending the port. Poll until the port is suspended.
+			 */
+			if (ehci_handshake(ehci, reg, PORT_SUSPEND,
+							PORT_SUSPEND, 5000))
+				ehci_err(ehci, "timeout waiting for SUSPEND\n");
+
+			if (ci->platdata->flags & CI_HDRC_IMX_IS_HSIC)
+				ci_ehci_override_wakeup_flag(ehci, reg,
+					PORT_WKDISC_E | PORT_WKCONN_E, false);
 
 			if (hcd->usb_phy && test_bit(port, &ehci->bus_suspended)
 				&& (ehci_port_speed(ehci, portsc) ==

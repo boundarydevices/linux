@@ -84,6 +84,7 @@ static const u8 ci_regs_nolpm[] = {
 	[OP_USBINTR]		= 0x08U,
 	[OP_DEVICEADDR]		= 0x14U,
 	[OP_ENDPTLISTADDR]	= 0x18U,
+	[OP_BURSTSIZE]		= 0x20U,
 	[OP_PORTSC]		= 0x44U,
 	[OP_DEVLC]		= 0x84U,
 	[OP_OTGSC]		= 0x64U,
@@ -106,6 +107,7 @@ static const u8 ci_regs_lpm[] = {
 	[OP_USBINTR]		= 0x08U,
 	[OP_DEVICEADDR]		= 0x14U,
 	[OP_ENDPTLISTADDR]	= 0x18U,
+	[OP_BURSTSIZE]		= 0x20U,
 	[OP_PORTSC]		= 0x44U,
 	[OP_DEVLC]		= 0x84U,
 	[OP_OTGSC]		= 0xC4U,
@@ -424,6 +426,32 @@ int hw_controller_reset(struct ci_hdrc *ci)
 }
 
 /**
+ * ci_hrdc_ahb_config: override default AHB configuration
+ * @ci: the controller
+ */
+void ci_hdrc_ahb_config(struct ci_hdrc *ci)
+{
+	u32 value;
+	u8 ahb_burst;
+
+	/* AHB configuration */
+	if (ci->platdata->flags & CI_HDRC_OVERRIDE_AHB_BURST) {
+		value = ioread32(ci->hw_bank.abs + ID_SBUSCFG);
+		value &= ~SBUSCFG_AHBBRST;
+		value |= ci->platdata->ahbburst_config & SBUSCFG_AHBBRST;
+		iowrite32(value, ci->hw_bank.abs + ID_SBUSCFG);
+	}
+
+	ahb_burst = ioread32(ci->hw_bank.abs + ID_SBUSCFG) & SBUSCFG_AHBBRST;
+
+	/* Change RX/TX burst size */
+	if (ahb_burst == 0 &&
+			ci->platdata->flags & CI_HDRC_OVERRIDE_BURST_LENGTH)
+		hw_write(ci, OP_BURSTSIZE, BURST_BITS,
+				ci->platdata->burst_length & BURST_BITS);
+}
+
+/**
  * hw_device_reset: resets chip (execute without interruption)
  * @ci: the controller
  *
@@ -447,7 +475,7 @@ int hw_device_reset(struct ci_hdrc *ci)
 		ci->platdata->notify_event(ci,
 			CI_HDRC_CONTROLLER_RESET_EVENT);
 
-	if (ci->platdata->flags & CI_HDRC_DISABLE_STREAMING)
+	if (ci->platdata->flags & CI_HDRC_DISABLE_DEVICE_STREAMING)
 		hw_write(ci, OP_USBMODE, USBMODE_CI_SDIS, USBMODE_CI_SDIS);
 
 	if (ci->platdata->flags & CI_HDRC_FORCE_FULLSPEED) {
@@ -462,6 +490,13 @@ int hw_device_reset(struct ci_hdrc *ci)
 	hw_write(ci, OP_USBMODE, USBMODE_CM, USBMODE_CM_DC);
 	/* HW >= 2.3 */
 	hw_write(ci, OP_USBMODE, USBMODE_SLOM, USBMODE_SLOM);
+
+	ci_hdrc_ahb_config(ci);
+	/*
+	 * Set interrupt interval for device mode as 0 (immediately),
+	 * ehci core will set it to 1 (1 Micro-frame) by default for host mode.
+	 */
+	hw_write(ci, OP_USBCMD, 0xff0000, 0);
 
 	if (hw_read(ci, OP_USBMODE, USBMODE_CM) != USBMODE_CM_DC) {
 		pr_err("cannot enter in %s device mode", ci_role(ci)->name);
@@ -543,7 +578,7 @@ static irqreturn_t ci_irq(int irq, void *data)
 	 * and disconnection events.
 	 */
 	if (ci->is_otg && (otgsc & OTGSC_BSVIE) && (otgsc & OTGSC_BSVIS)) {
-		ci->b_sess_valid_event = true;
+		ci->vbus_glitch_check_event = true;
 		/* Clear BSV irq */
 		hw_write_otgsc(ci, OTGSC_BSVIS, OTGSC_BSVIS);
 		ci_otg_queue_work(ci);
@@ -651,6 +686,33 @@ void ci_hdrc_remove_device(struct platform_device *pdev)
 	ida_simple_remove(&ci_ida, id);
 }
 EXPORT_SYMBOL_GPL(ci_hdrc_remove_device);
+
+/**
+ * ci_hdrc_query_available_role: get runtime available operation mode
+ *
+ * The glue layer can get current operation mode (host/peripheral/otg)
+ * This function should be called after ci core device has created.
+ *
+ * @pdev: the platform device of ci core.
+ *
+ * Return USB_DR_MODE_XXX.
+ */
+enum usb_dr_mode ci_hdrc_query_available_role(struct platform_device *pdev)
+{
+	struct ci_hdrc *ci = platform_get_drvdata(pdev);
+
+	if (!ci)
+		return USB_DR_MODE_UNKNOWN;
+	if (ci->roles[CI_ROLE_HOST] && ci->roles[CI_ROLE_GADGET])
+		return USB_DR_MODE_OTG;
+	else if (ci->roles[CI_ROLE_HOST])
+		return USB_DR_MODE_HOST;
+	else if (ci->roles[CI_ROLE_GADGET])
+		return USB_DR_MODE_PERIPHERAL;
+	else
+		return USB_DR_MODE_UNKNOWN;
+}
+EXPORT_SYMBOL_GPL(ci_hdrc_query_available_role);
 
 static inline void ci_role_destroy(struct ci_hdrc *ci)
 {

@@ -56,6 +56,9 @@ config MXC_USE_EPIT
 config ARCH_HAS_RNGA
 	bool
 
+config HAVE_IMX_RNG
+       bool
+
 config HAVE_IMX_ANATOP
 	bool
 
@@ -807,8 +810,6 @@ config SOC_IMX6
 	select HAVE_IMX_SRC
 	select HAVE_SMP
 	select MFD_SYSCON
-	select PL310_ERRATA_588369 if CACHE_PL310
-	select PL310_ERRATA_727915 if CACHE_PL310
 	select PL310_ERRATA_769419 if CACHE_PL310
 
 config SOC_IMX6Q
@@ -827,6 +828,7 @@ config SOC_IMX6Q
 
 config SOC_IMX6SL
 	bool "i.MX6 SoloLite support"
+	select HAVE_IMX_RNG
 	select PINCTRL_IMX6SL
 	select SOC_IMX6
 
@@ -843,6 +845,20 @@ config SOC_IMX6SX
 	help
 	  This enables support for Freescale i.MX6 SoloX processor.
 
+config SOC_IMX7
+	bool
+	select CPU_V7
+	select ARM_GIC
+	select HAVE_SMP
+
+config SOC_IMX7D
+	bool "i.MX7 Dual support"
+	select SOC_IMX7
+	select PINCTRL_IMX7D
+
+	help
+	  This enables support for Freescale i.MX7 Dual processor.
+
 config SOC_VF610
 	bool "Vybrid Family VF610 support"
 	select CPU_V7
@@ -850,8 +866,6 @@ config SOC_VF610
 	select CLKSRC_OF
 	select PINCTRL_VF610
 	select VF_PIT_TIMER
-	select PL310_ERRATA_588369 if CACHE_PL310
-	select PL310_ERRATA_727915 if CACHE_PL310
 	select PL310_ERRATA_769419 if CACHE_PL310
 
 	help

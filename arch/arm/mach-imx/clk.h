@@ -7,7 +7,6 @@
 extern spinlock_t imx_ccm_lock;
 
 extern void imx_cscmr1_fixup(u32 *val);
-extern void imx_enable_pll_arm(bool);
 extern struct imx_sema4_mutex *amp_power_mutex;
 extern struct imx_shared_mem *shared_mem;
 
@@ -23,6 +22,7 @@ enum imx_pllv3_type {
 	IMX_PLLV3_USB,
 	IMX_PLLV3_AV,
 	IMX_PLLV3_ENET,
+	IMX_PLLV3_SYSV2,
 };
 
 #define MAX_SHARED_CLK_NUMBER		100
@@ -151,6 +151,13 @@ static inline struct clk *imx_clk_gate(const char *name, const char *parent,
 {
 	return clk_register_gate(NULL, name, parent, CLK_SET_RATE_PARENT, reg,
 			shift, 0, &imx_ccm_lock);
+}
+
+static inline struct clk *imx_clk_gate_flags(const char *name, const char *parent,
+		void __iomem *reg, u8 shift)
+{
+	return clk_register_gate(NULL, name, parent, CLK_SET_RATE_PARENT,
+		reg, shift, CLK_GATE_SET_TO_DISABLE, &imx_ccm_lock);
 }
 
 static inline struct clk *imx_clk_mux_bus(const char *name, void __iomem *reg,

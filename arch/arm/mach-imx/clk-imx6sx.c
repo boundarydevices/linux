@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -239,7 +239,7 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	imx_clk_set_parent(clks[IMX6SX_PLL6_BYPASS], clks[IMX6SX_CLK_PLL6]);
 	imx_clk_set_parent(clks[IMX6SX_PLL7_BYPASS], clks[IMX6SX_CLK_PLL7]);
 
-	clks[IMX6SX_CLK_PLL1_SYS]      = imx_clk_gate("pll1_sys",      "pll1_bypass", base + 0x00, 13);
+	clks[IMX6SX_CLK_PLL1_SYS]      = imx_clk_fixed_factor("pll1_sys",      "pll1_bypass", 1, 1);
 	clks[IMX6SX_CLK_PLL2_BUS]      = imx_clk_gate("pll2_bus",      "pll2_bypass", base + 0x30, 13);
 	clks[IMX6SX_CLK_PLL3_USB_OTG]  = imx_clk_gate("pll3_usb_otg",  "pll3_bypass", base + 0x10, 13);
 	clks[IMX6SX_CLK_PLL4_AUDIO]    = imx_clk_gate("pll4_audio",    "pll4_bypass", base + 0x70, 13);
@@ -508,6 +508,7 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SX_CLK_SPBA]         = imx_clk_gate2("spba",          "ipg",               base + 0x7c, 12);
 	clks[IMX6SX_CLK_AUDIO]        = imx_clk_gate2_shared("audio",  "audio_podf",        base + 0x7c, 14, &share_count_audio);
 	clks[IMX6SX_CLK_SPDIF]        = imx_clk_gate2_shared("spdif",  "spdif_podf",        base + 0x7c, 14, &share_count_audio);
+	clks[IMX6SX_CLK_SPDIF_GCLK]   = imx_clk_gate2_shared("spdif_gclk",    "ipg",        base + 0x7c, 14, &share_count_audio);
 	clks[IMX6SX_CLK_SSI1_IPG]     = imx_clk_gate2_shared("ssi1_ipg",      "ipg",        base + 0x7c, 18, &share_count_ssi1);
 	clks[IMX6SX_CLK_SSI2_IPG]     = imx_clk_gate2_shared("ssi2_ipg",      "ipg",        base + 0x7c, 20, &share_count_ssi2);
 	clks[IMX6SX_CLK_SSI3_IPG]     = imx_clk_gate2_shared("ssi3_ipg",      "ipg",        base + 0x7c, 22, &share_count_ssi3);
@@ -567,9 +568,10 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	 * different gate, need explicitely gate the QSPI2 & GPMI_IO
 	 * during the clock init phase according to the SOC design.
 	 */
-	writel_relaxed(readl_relaxed(base + 0x78) & ~(3 << CCM_CCGR_OFFSET(5)), base + 0x78);
-	writel_relaxed(readl_relaxed(base + 0x78) & ~(3 << CCM_CCGR_OFFSET(14)), base + 0x78);
-
+	if (!imx_src_is_m4_enabled()) {
+		writel_relaxed(readl_relaxed(base + 0x78) & ~(3 << CCM_CCGR_OFFSET(5)), base + 0x78);
+		writel_relaxed(readl_relaxed(base + 0x78) & ~(3 << CCM_CCGR_OFFSET(14)), base + 0x78);
+	}
 	clk_data.clks = clks;
 	clk_data.clk_num = ARRAY_SIZE(clks);
 	of_clk_add_provider(np, of_clk_src_onecell_get, &clk_data);
@@ -638,9 +640,6 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	/* Set parent clock for vadc */
 	imx_clk_set_parent(clks[IMX6SX_CLK_VID_SEL], clks[IMX6SX_CLK_PLL3_USB_OTG]);
 
-	/* default parent of can_sel clock is invalid, manually set it here */
-	imx_clk_set_parent(clks[IMX6SX_CLK_CAN_SEL], clks[IMX6SX_CLK_PLL3_60M]);
-
 	/* Update gpu clock from default 528M to 720M */
 	imx_clk_set_parent(clks[IMX6SX_CLK_GPU_CORE_SEL], clks[IMX6SX_CLK_PLL3_PFD0]);
 	imx_clk_set_parent(clks[IMX6SX_CLK_GPU_AXI_SEL], clks[IMX6SX_CLK_PLL3_PFD0]);
@@ -655,6 +654,9 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	imx_clk_set_parent(clks[IMX6SX_CLK_QSPI1_SEL], clks[IMX6SX_CLK_PLL2_BUS]);
 	imx_clk_set_parent(clks[IMX6SX_CLK_QSPI2_SEL], clks[IMX6SX_CLK_PLL2_BUS]);
 
+	if (!imx_src_is_m4_enabled())
+		/* default parent of can_sel clock is invalid, manually set it here */
+		imx_clk_set_parent(clks[IMX6SX_CLK_CAN_SEL], clks[IMX6SX_CLK_PLL3_60M]);
 	/*
 	 * Enable clocks only after both parent and rate are all initialized
 	 * as needed

@@ -2293,7 +2293,7 @@ static int mxcfb_get_of_property(struct platform_device *pdev,
 {
 	struct device_node *np = pdev->dev.of_node;
 	const char *disp_dev;
-	const char *mode_str;
+	const char *mode_str = NULL;
 	const char *pixfmt;
 	int err;
 	int len;

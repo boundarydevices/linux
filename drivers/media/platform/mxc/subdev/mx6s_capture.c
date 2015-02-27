@@ -1063,6 +1063,8 @@ static int mx6s_csi_open(struct file *file)
 
 	pm_runtime_get_sync(csi_dev->dev);
 
+	request_bus_freq(BUS_FREQ_HIGH);
+
 	mx6s_csi_init(csi_dev);
 
 	mutex_unlock(&csi_dev->lock);
@@ -1089,6 +1091,8 @@ static int mx6s_csi_close(struct file *file)
 	mutex_unlock(&csi_dev->lock);
 
 	file->private_data = NULL;
+
+	release_bus_freq(BUS_FREQ_HIGH);
 
 	pm_runtime_put_sync_suspend(csi_dev->dev);
 	return 0;
@@ -1206,10 +1210,19 @@ static int mx6s_vidioc_querybuf(struct file *file, void *priv,
 			       struct v4l2_buffer *p)
 {
 	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
+	int ret;
 
 	WARN_ON(priv != file->private_data);
 
-	return vb2_querybuf(&csi_dev->vb2_vidq, p);
+	ret = vb2_querybuf(&csi_dev->vb2_vidq, p);
+
+	if (!ret) {
+		/* return physical address */
+		struct vb2_buffer *vb = csi_dev->vb2_vidq.bufs[p->index];
+		if (p->flags & V4L2_BUF_FLAG_MAPPED)
+			p->m.offset = vb2_dma_contig_plane_dma_addr(vb, 0);
+	}
+	return ret;
 }
 
 static int mx6s_vidioc_qbuf(struct file *file, void *priv,
@@ -1531,7 +1544,7 @@ static int mx6sx_register_subdevs(struct mx6s_csi_dev *csi_dev)
 		port = of_get_next_child(node, NULL);
 		if (!port)
 			continue;
-		rem = v4l2_of_get_remote_port_parent(port);
+		rem = of_graph_get_remote_port_parent(port);
 		of_node_put(port);
 		if (rem == NULL) {
 			v4l2_info(&csi_dev->v4l2_dev,
@@ -1701,22 +1714,14 @@ static int mx6s_csi_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_RUNTIME
 static int mx6s_csi_runtime_suspend(struct device *dev)
 {
-	int ret = 0;
-
-	release_bus_freq(BUS_FREQ_HIGH);
 	dev_dbg(dev, "csi v4l2 busfreq high release.\n");
-
-	return ret;
+	return 0;
 }
 
 static int mx6s_csi_runtime_resume(struct device *dev)
 {
-	int ret = 0;
-
-	request_bus_freq(BUS_FREQ_HIGH);
 	dev_dbg(dev, "csi v4l2 busfreq high request.\n");
-
-	return ret;
+	return 0;
 }
 #else
 #define	mx6s_csi_runtime_suspend	NULL

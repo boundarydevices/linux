@@ -23,10 +23,12 @@
 #include <linux/of_device.h>
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
+#include <linux/regulator/consumer.h>
 
 #define DRIVER_NAME "mxs_phy"
 
 #define HW_USBPHY_PWD				0x00
+#define HW_USBPHY_TX				0x10
 #define HW_USBPHY_CTRL				0x30
 #define HW_USBPHY_CTRL_SET			0x34
 #define HW_USBPHY_CTRL_CLR			0x38
@@ -37,6 +39,8 @@
 #define HW_USBPHY_IP				0x90
 #define HW_USBPHY_IP_SET			0x94
 #define HW_USBPHY_IP_CLR			0x98
+
+#define HW_USBPHY_TX_D_CAL_MASK			0xf
 
 #define BM_USBPHY_CTRL_SFTRST			BIT(31)
 #define BM_USBPHY_CTRL_CLKGATE			BIT(30)
@@ -115,6 +119,16 @@
  */
 #define MXS_PHY_NEED_IP_FIX			BIT(3)
 
+/*
+ * At some versions, the PHY2's clock is controlled by hardware directly,
+ * eg, according to PHY's suspend status. In these PHYs, we only need to
+ * open the clock at the initialization and close it at its shutdown routine.
+ * It will be benefit for remote wakeup case which needs to send resume
+ * signal as soon as possible, and in this case, the resume signal can be sent
+ * out without software interfere.
+ */
+#define MXS_PHY_HARDWARE_CONTROL_PHY2_CLK	BIT(4)
+
 struct mxs_phy_data {
 	unsigned int flags;
 };
@@ -126,12 +140,14 @@ static const struct mxs_phy_data imx23_phy_data = {
 static const struct mxs_phy_data imx6q_phy_data = {
 	.flags = MXS_PHY_SENDING_SOF_TOO_FAST |
 		MXS_PHY_DISCONNECT_LINE_WITHOUT_VBUS |
-		MXS_PHY_NEED_IP_FIX,
+		MXS_PHY_NEED_IP_FIX |
+		MXS_PHY_HARDWARE_CONTROL_PHY2_CLK,
 };
 
 static const struct mxs_phy_data imx6sl_phy_data = {
 	.flags = MXS_PHY_DISCONNECT_LINE_WITHOUT_VBUS |
-		MXS_PHY_NEED_IP_FIX,
+		MXS_PHY_NEED_IP_FIX |
+		MXS_PHY_HARDWARE_CONTROL_PHY2_CLK,
 };
 
 static const struct mxs_phy_data vf610_phy_data = {
@@ -140,7 +156,8 @@ static const struct mxs_phy_data vf610_phy_data = {
 };
 
 static const struct mxs_phy_data imx6sx_phy_data = {
-	.flags = MXS_PHY_DISCONNECT_LINE_WITHOUT_VBUS,
+	.flags = MXS_PHY_DISCONNECT_LINE_WITHOUT_VBUS |
+		MXS_PHY_HARDWARE_CONTROL_PHY2_CLK,
 };
 
 static const struct of_device_id mxs_phy_dt_ids[] = {
@@ -159,6 +176,9 @@ struct mxs_phy {
 	const struct mxs_phy_data *data;
 	struct regmap *regmap_anatop;
 	int port_id;
+	struct regulator *phy_3p0;
+	bool hardware_control_phy2_clk;
+	u32 tx_d_cal;
 };
 
 static inline bool is_imx6q_phy(struct mxs_phy *mxs_phy)
@@ -184,10 +204,21 @@ static int mxs_phy_hw_init(struct mxs_phy *mxs_phy)
 {
 	int ret;
 	void __iomem *base = mxs_phy->phy.io_priv;
+	u32 val;
 
 	ret = stmp_reset_block(base + HW_USBPHY_CTRL);
 	if (ret)
 		return ret;
+
+	if (mxs_phy->phy_3p0) {
+		ret = regulator_enable(mxs_phy->phy_3p0);
+		if (ret) {
+			dev_err(mxs_phy->phy.dev,
+				"Failed to enable 3p0 regulator, ret=%d\n",
+				ret);
+			return ret;
+		}
+	}
 
 	/* Power up the PHY */
 	writel(0, base + HW_USBPHY_PWD);
@@ -208,6 +239,13 @@ static int mxs_phy_hw_init(struct mxs_phy *mxs_phy)
 
 	if (mxs_phy->data->flags & MXS_PHY_NEED_IP_FIX)
 		writel(BM_USBPHY_IP_FIX, base + HW_USBPHY_IP_SET);
+
+	/* Change D_CAL if necessary */
+	if (mxs_phy->tx_d_cal) {
+		val = readl(base + HW_USBPHY_TX);
+		val &= ~HW_USBPHY_TX_D_CAL_MASK;
+		writel(val | mxs_phy->tx_d_cal, base + HW_USBPHY_TX);
+	}
 
 	return 0;
 }
@@ -328,6 +366,9 @@ static void mxs_phy_shutdown(struct usb_phy *phy)
 	writel(BM_USBPHY_CTRL_CLKGATE,
 	       phy->io_priv + HW_USBPHY_CTRL_SET);
 
+	if (mxs_phy->phy_3p0)
+		regulator_disable(mxs_phy->phy_3p0);
+
 	clk_disable_unprepare(mxs_phy->clk);
 }
 
@@ -383,12 +424,17 @@ static int mxs_phy_suspend(struct usb_phy *x, int suspend)
 		}
 		writel(BM_USBPHY_CTRL_CLKGATE,
 		       x->io_priv + HW_USBPHY_CTRL_SET);
-		clk_disable_unprepare(mxs_phy->clk);
+		if (!(mxs_phy->port_id == 1 &&
+				mxs_phy->hardware_control_phy2_clk))
+			clk_disable_unprepare(mxs_phy->clk);
 	} else {
 		mxs_phy_clock_switch_delay();
-		ret = clk_prepare_enable(mxs_phy->clk);
-		if (ret)
-			return ret;
+		if (!(mxs_phy->port_id == 1 &&
+				mxs_phy->hardware_control_phy2_clk)) {
+			ret = clk_prepare_enable(mxs_phy->clk);
+			if (ret)
+				return ret;
+		}
 		writel(BM_USBPHY_CTRL_CLKGATE,
 		       x->io_priv + HW_USBPHY_CTRL_CLR);
 		writel(0, x->io_priv + HW_USBPHY_PWD);
@@ -544,6 +590,33 @@ static int mxs_phy_probe(struct platform_device *pdev)
 	if (mxs_phy->data->flags & MXS_PHY_SENDING_SOF_TOO_FAST) {
 		mxs_phy->phy.notify_suspend = mxs_phy_on_suspend;
 		mxs_phy->phy.notify_resume = mxs_phy_on_resume;
+	}
+
+	mxs_phy->phy_3p0 = devm_regulator_get(&pdev->dev, "phy-3p0");
+	if (PTR_ERR(mxs_phy->phy_3p0) == -EPROBE_DEFER) {
+		return -EPROBE_DEFER;
+	} else if (PTR_ERR(mxs_phy->phy_3p0) == -ENODEV) {
+		/* not exist */
+		mxs_phy->phy_3p0 = NULL;
+	} else if (IS_ERR(mxs_phy->phy_3p0)) {
+		dev_err(&pdev->dev, "Getting regulator error: %ld\n",
+			PTR_ERR(mxs_phy->phy_3p0));
+		return PTR_ERR(mxs_phy->phy_3p0);
+	}
+	if (mxs_phy->phy_3p0)
+		regulator_set_voltage(mxs_phy->phy_3p0, 3200000, 3200000);
+
+	if (mxs_phy->data->flags & MXS_PHY_HARDWARE_CONTROL_PHY2_CLK)
+		mxs_phy->hardware_control_phy2_clk = true;
+
+	if (of_find_property(np, "tx-d-cal", NULL)) {
+		ret = of_property_read_u32(np, "tx-d-cal",
+			&mxs_phy->tx_d_cal);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"failed to get tx-d-cal value\n");
+			return ret;
+		}
 	}
 
 	platform_set_drvdata(pdev, mxs_phy);

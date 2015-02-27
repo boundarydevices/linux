@@ -35,7 +35,6 @@
 #define BM_PLL_ARM_DIV_SELECT	(0x7f << 0)
 #define BM_PLL_ARM_POWERDOWN	(1 << 12)
 #define BM_PLL_ARM_ENABLE	(1 << 13)
-#define BM_PLL_ARM_BYPASS	(1 << 16)
 #define BM_PLL_ARM_LOCK		(1 << 31)
 #define PLL_ARM_DIV_792M	66
 
@@ -104,6 +103,7 @@ static struct clk_div_table video_div_table[] = {
 static unsigned int share_count_ssi1;
 static unsigned int share_count_ssi2;
 static unsigned int share_count_ssi3;
+static unsigned int share_count_spdif;
 
 static struct clk *clks[IMX6SL_CLK_END];
 static struct clk_onecell_data clk_data;
@@ -150,33 +150,11 @@ static int imx6sl_get_arm_divider_for_wait(void)
 	}
 }
 
-void imx6sl_enable_pll_arm(bool enable)
-{
-	static u32 saved_pll_arm;
-	u32 val;
-
-	if (enable) {
-		saved_pll_arm = val = readl_relaxed(anatop_base + PLL_ARM);
-		val |= BM_PLL_ARM_ENABLE;
-		val |= BM_PLL_ARM_BYPASS;
-		writel_relaxed(val, anatop_base + PLL_ARM);
-	} else {
-		 writel_relaxed(saved_pll_arm, anatop_base + PLL_ARM);
-	}
-}
-
 void imx6sl_set_wait_clk(bool enter)
 {
 	static unsigned long saved_arm_div;
 	u32 val;
 	int arm_div_for_wait = imx6sl_get_arm_divider_for_wait();
-
-	/*
-	 * According to hardware design, arm podf change need
-	 * PLL1 clock enabled.
-	 */
-	if (arm_div_for_wait == ARM_WAIT_DIV_396M)
-		imx6sl_enable_pll_arm(true);
 
 	if (enter) {
 		/*
@@ -204,9 +182,6 @@ void imx6sl_set_wait_clk(bool enter)
 	}
 	while (__raw_readl(ccm_base + CDHIPR) & BM_CDHIPR_ARM_PODF_BUSY)
 		;
-
-	if (arm_div_for_wait == ARM_WAIT_DIV_396M)
-		imx6sl_enable_pll_arm(false);
 }
 
 static int __init setup_uart_clk(char *uart_rate)
@@ -267,7 +242,7 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 	imx_clk_set_parent(clks[IMX6SL_PLL6_BYPASS], clks[IMX6SL_CLK_PLL6]);
 	imx_clk_set_parent(clks[IMX6SL_PLL7_BYPASS], clks[IMX6SL_CLK_PLL7]);
 
-	clks[IMX6SL_CLK_PLL1_SYS]      = imx_clk_gate("pll1_sys",      "pll1_bypass", base + 0x00, 13);
+	clks[IMX6SL_CLK_PLL1_SYS]      = imx_clk_fixed_factor("pll1_sys",      "pll1_bypass", 1, 1);
 	clks[IMX6SL_CLK_PLL2_BUS]      = imx_clk_gate("pll2_bus",      "pll2_bypass", base + 0x30, 13);
 	clks[IMX6SL_CLK_PLL3_USB_OTG]  = imx_clk_gate("pll3_usb_otg",  "pll3_bypass", base + 0x10, 13);
 	clks[IMX6SL_CLK_PLL4_AUDIO]    = imx_clk_gate("pll4_audio",    "pll4_bypass", base + 0x70, 13);
@@ -425,7 +400,8 @@ static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SL_CLK_PWM4]         = imx_clk_gate2("pwm4",         "perclk",            base + 0x78, 22);
 	clks[IMX6SL_CLK_SDMA]         = imx_clk_gate2("sdma",         "ipg",               base + 0x7c, 6);
 	clks[IMX6SL_CLK_SPBA]         = imx_clk_gate2("spba",         "ipg",               base + 0x7c, 12);
-	clks[IMX6SL_CLK_SPDIF]        = imx_clk_gate2("spdif",        "spdif0_podf",       base + 0x7c, 14);
+	clks[IMX6SL_CLK_SPDIF]        = imx_clk_gate2_shared("spdif",     "spdif0_podf",   base + 0x7c, 14, &share_count_spdif);
+	clks[IMX6SL_CLK_SPDIF_GCLK]   = imx_clk_gate2_shared("spdif_gclk",  "ipg",         base + 0x7c, 14, &share_count_spdif);
 	clks[IMX6SL_CLK_SSI1_IPG]     = imx_clk_gate2_shared("ssi1_ipg",     "ipg",        base + 0x7c, 18, &share_count_ssi1);
 	clks[IMX6SL_CLK_SSI2_IPG]     = imx_clk_gate2_shared("ssi2_ipg",     "ipg",        base + 0x7c, 20, &share_count_ssi2);
 	clks[IMX6SL_CLK_SSI3_IPG]     = imx_clk_gate2_shared("ssi3_ipg",     "ipg",        base + 0x7c, 22, &share_count_ssi3);

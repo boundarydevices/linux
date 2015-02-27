@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2014 Freescale Semiconductor, Inc.
+ * Copyright 2011-2015 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -17,6 +17,7 @@
 #include <asm/smp_scu.h>
 
 #include "common.h"
+#include "hardware.h"
 
 extern void __iomem *imx_scu_base;
 
@@ -40,7 +41,8 @@ static inline void cpu_enter_lowpower(void)
 	  : "r" (0), "Ir" (CR_C), "Ir" (0x40)
 	  : "cc");
 
-	scu_power_mode(imx_scu_base, SCU_PM_DORMANT);
+	if (!arm_is_ca7())
+		scu_power_mode(imx_scu_base, SCU_PM_DORMANT);
 }
 
 /*
@@ -70,5 +72,8 @@ int imx_cpu_kill(unsigned int cpu)
 			return 0;
 	imx_enable_cpu(cpu, false);
 	imx_set_cpu_arg(cpu, 0);
+	if (cpu_is_imx7d())
+		imx_gpcv2_set_core1_pdn_pup_by_software(true);
+
 	return 1;
 }

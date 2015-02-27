@@ -125,14 +125,6 @@ audio_mode:
 	str	r6, [r10, #0x14]
 
 	ccm_do_wait
-	/*
-	 * Bypass PLL1. the PLL1 output is disabled,
-	 * need to enable its output.
-	 */
-	ldr	r10, [r0, #PM_INFO_ANATOP_V_OFFSET]
-	ldr	r6, =(1 << 16)
-	orr	r6, r6, #0x2000
-	str	r6, [r10, #0x04]
 
 	/*
 	 * ARM is sourced from pll2_pfd2_400M here.
@@ -204,13 +196,6 @@ audio_ccm_restore:
 	ldr	r6, [r10, #0xc]
 	orr	r6, r6, #0x4
 	str	r6, [r10, #0xc]
-
-	ldr	r10, [r0, #PM_INFO_ANATOP_V_OFFSET]
-
-	ldr	r6, =(1 << 16)
-	str	r6, [r10, #0x08]
-	ldr	r6, =(1 << 13)
-	str	r6, [r10, #0x8]
 
 	/* restore mmdc podf */
 	ldr	r10, [r0, #PM_INFO_CCM_V_OFFSET]
@@ -292,6 +277,13 @@ check_done:
 	orr	r6, r6, #0xc000
 	str	r6, [r10, #0x150]
 
+	/*
+	 * if the usb VBUS wakeup is enabled, skip
+	 * disable main 2p5.
+	 */
+	cmp	r2, #0x1
+	beq	anatop_enter_done
+
 	/* Enable the week 2p5 */
 	ldr	r6, [r10, #0x130]
 	orr	r6, r6, #0x40000
@@ -350,6 +342,8 @@ anatop_enter_done:
 	cmp	r4, #0x0
 	beq	skip_anatop_restore
 
+	cmp	r2, #0x1
+	beq	ldo2p5_not_disabled
 	/*
 	 * Regular bandgap will not be disabled
 	 * in LDO-enabled mode as it is required
@@ -407,6 +401,7 @@ skip_bandgap_restore:
 	bic	r6, r6, #0x40000
 	str	r6, [r10, #0x130]
 
+ldo2p5_not_disabled:
 	/*
 	 * Set the OSC bias current to max
 	 * value for normal operation.
@@ -618,6 +613,7 @@ poll_dvfs_set:
  * imx6sl_low_power_wfi code
  * r0: wfi code base address
  * r1: audio_bus_freq mode stat
+ * r2: vbus_ldo status
  * r4: used for store the PLLs state
  * r11: used for saving the ARM_PODF origin value
  * r12: used for saving AHB_PODF origin value

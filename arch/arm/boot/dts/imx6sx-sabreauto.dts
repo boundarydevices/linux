@@ -528,8 +528,6 @@
 	pinctrl-0 = <&pinctrl_enet1_1>;
 	phy-mode = "rgmii";
 	phy-handle = <&ethphy1>;
-	fsl,num_tx_queues=<3>;
-	fsl,num_rx_queues=<3>;
 	pinctrl-assert-gpios = <&max7322 0 GPIO_ACTIVE_HIGH>;
 	fsl,magic-packet;
 	status = "okay";
@@ -555,8 +553,6 @@
 	pinctrl-0 = <&pinctrl_enet2_1>;
 	phy-mode = "rgmii";
 	phy-handle = <&ethphy0>;
-	fsl,num_tx_queues=<3>;
-	fsl,num_rx_queues=<3>;
 	fsl,magic-packet;
 	status = "okay";
 };
@@ -565,7 +561,8 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan1_1>;
 	trx-en-gpio = <&max7310_b 5 GPIO_ACTIVE_HIGH>;
-	trx-stby-gpio = <&max7310_b 3 GPIO_ACTIVE_HIGH>;
+	trx-stby-gpio = <&max7310_b 4 GPIO_ACTIVE_HIGH>;
+	trx-wakeup-gpio = <&max7310_b 7 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 
@@ -573,7 +570,8 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan2_1>;
 	trx-en-gpio = <&max7310_b 5 GPIO_ACTIVE_HIGH>;
-	trx-stby-gpio = <&max7310_b 3 GPIO_ACTIVE_HIGH>;
+	trx-stby-gpio = <&max7310_b 4 GPIO_ACTIVE_HIGH>;
+	trx-wakeup-gpio = <&max7310_b 7 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 

@@ -244,8 +244,10 @@ struct imx_port {
 	struct imx_dma_rxbuf	rx_buf;
 	unsigned int		tx_bytes;
 	unsigned int		dma_tx_nents;
+	struct delayed_work	tsk_dma_tx;
+	struct work_struct	tsk_dma_rx;
 	wait_queue_head_t	dma_wait;
-	unsigned int            saved_reg[11];
+	unsigned int            saved_reg[10];
 #define DMA_TX_IS_WORKING 1
 	unsigned long		flags;
 };
@@ -505,8 +507,6 @@ static inline void imx_transmit_buffer(struct imx_port *sport)
 		imx_stop_tx(&sport->port);
 }
 
-static void imx_dma_tx(struct imx_port *sport);
-
 static void dma_tx_callback(void *data)
 {
 	struct imx_port *sport = data;
@@ -522,6 +522,7 @@ static void dma_tx_callback(void *data)
 	spin_lock_irqsave(&sport->port.lock, flags);
 	xmit->tail = (xmit->tail + sport->tx_bytes) & (UART_XMIT_SIZE - 1);
 	sport->port.icount.tx += sport->tx_bytes;
+	spin_unlock_irqrestore(&sport->port.lock, flags);
 
 	dev_dbg(sport->port.dev, "we finish the TX DMA.\n");
 
@@ -529,29 +530,31 @@ static void dma_tx_callback(void *data)
 	smp_mb__after_clear_bit();
 	uart_write_wakeup(&sport->port);
 
+	schedule_delayed_work(&sport->tsk_dma_tx, msecs_to_jiffies(1));
+
 	if (waitqueue_active(&sport->dma_wait)) {
 		wake_up(&sport->dma_wait);
 		dev_dbg(sport->port.dev, "exit in %s.\n", __func__);
 		return;
 	}
-
-	if (!uart_circ_empty(xmit) && !uart_tx_stopped(&sport->port))
-		imx_dma_tx(sport);
-	spin_unlock_irqrestore(&sport->port.lock, flags);
 }
 
-static void imx_dma_tx(struct imx_port *sport)
+static void dma_tx_work(struct work_struct *w)
 {
+	struct delayed_work *delay_work = to_delayed_work(w);
+	struct imx_port *sport = container_of(delay_work, struct imx_port, tsk_dma_tx);
 	struct circ_buf *xmit = &sport->port.state->xmit;
 	struct scatterlist *sgl = sport->tx_sgl;
 	struct dma_async_tx_descriptor *desc;
 	struct dma_chan	*chan = sport->dma_chan_tx;
 	struct device *dev = sport->port.dev;
+	unsigned long flags;
 	int ret;
 
 	if (test_and_set_bit(DMA_TX_IS_WORKING, &sport->flags))
 		return;
 
+	spin_lock_irqsave(&sport->port.lock, flags);
 	sport->tx_bytes = uart_circ_chars_pending(xmit);
 
 	if (sport->tx_bytes > 0) {
@@ -565,6 +568,7 @@ static void imx_dma_tx(struct imx_port *sport)
 			sport->dma_tx_nents = 1;
 			sg_init_one(sgl, xmit->buf + xmit->tail, sport->tx_bytes);
 		}
+		spin_unlock_irqrestore(&sport->port.lock, flags);
 
 		ret = dma_map_sg(dev, sgl, sport->dma_tx_nents, DMA_TO_DEVICE);
 		if (ret == 0) {
@@ -588,6 +592,7 @@ static void imx_dma_tx(struct imx_port *sport)
 		dma_async_issue_pending(chan);
 		return;
 	}
+	spin_unlock_irqrestore(&sport->port.lock, flags);
 err_out:
 	clear_bit(DMA_TX_IS_WORKING, &sport->flags);
 	smp_mb__after_clear_bit();
@@ -635,7 +640,7 @@ static void imx_start_tx(struct uart_port *port)
 	}
 
 	if (sport->dma_is_enabled) {
-		imx_dma_tx(sport);
+		schedule_delayed_work(&sport->tsk_dma_tx, 0);
 		return;
 	}
 
@@ -909,8 +914,9 @@ static void dma_rx_push_data(struct imx_port *sport, struct tty_struct *tty,
 	}
 }
 
-static void dma_rx_work(struct imx_port *sport)
+static void dma_rx_work(struct work_struct *w)
 {
+	struct imx_port *sport = container_of(w, struct imx_port, tsk_dma_rx);
 	struct tty_struct *tty = sport->port.state->port.tty;
 	unsigned int cur_idx = sport->rx_buf.cur_idx;
 
@@ -971,7 +977,7 @@ static void dma_rx_callback(void *data)
 		dev_err(sport->port.dev, "overwrite!\n");
 
 	if (count)
-		dma_rx_work(sport);
+		schedule_work(&sport->tsk_dma_rx);
 }
 
 static int start_rx_dma(struct imx_port *sport)
@@ -1209,6 +1215,11 @@ static int imx_startup(struct uart_port *port)
 	if (is_imx6q_uart(sport) && !uart_console(port)
 		&& !sport->dma_is_inited)
 		imx_uart_dma_init(sport);
+
+	if (sport->dma_is_inited) {
+		INIT_DELAYED_WORK(&sport->tsk_dma_tx, dma_tx_work);
+		INIT_WORK(&sport->tsk_dma_rx, dma_rx_work);
+	}
 
 	spin_lock_irqsave(&sport->port.lock, flags);
 	/*
@@ -1950,8 +1961,7 @@ static int serial_imx_suspend(struct platform_device *dev, pm_message_t state)
 	sport->saved_reg[6] = readl(sport->port.membase + UTIM);
 	sport->saved_reg[7] = readl(sport->port.membase + UBIR);
 	sport->saved_reg[8] = readl(sport->port.membase + UBMR);
-	sport->saved_reg[9] = readl(sport->port.membase + UBRC);
-	sport->saved_reg[10] = readl(sport->port.membase + IMX21_UTS);
+	sport->saved_reg[9] = readl(sport->port.membase + IMX21_UTS);
 
 	return 0;
 }
@@ -1966,8 +1976,7 @@ static int serial_imx_resume(struct platform_device *dev)
 	writel(sport->saved_reg[6], sport->port.membase + UTIM);
 	writel(sport->saved_reg[7], sport->port.membase + UBIR);
 	writel(sport->saved_reg[8], sport->port.membase + UBMR);
-	writel(sport->saved_reg[9], sport->port.membase + UBRC);
-	writel(sport->saved_reg[10], sport->port.membase + IMX21_UTS);
+	writel(sport->saved_reg[9], sport->port.membase + IMX21_UTS);
 	writel(sport->saved_reg[0], sport->port.membase + UCR1);
 	writel(sport->saved_reg[1] | 0x1, sport->port.membase + UCR2);
 	writel(sport->saved_reg[2], sport->port.membase + UCR3);

@@ -125,7 +125,8 @@ static int __init imx6q_flexcan_fixup_auto(void)
 
 	flexcan_en_gpio = of_get_named_gpio(np, "trx-en-gpio", 0);
 	flexcan_stby_gpio = of_get_named_gpio(np, "trx-stby-gpio", 0);
-	if (!gpio_request_one(flexcan_en_gpio, GPIOF_DIR_OUT, "flexcan-trx-en") &&
+	if (gpio_is_valid(flexcan_en_gpio) && gpio_is_valid(flexcan_stby_gpio) &&
+		!gpio_request_one(flexcan_en_gpio, GPIOF_DIR_OUT, "flexcan-trx-en") &&
 		!gpio_request_one(flexcan_stby_gpio, GPIOF_DIR_OUT, "flexcan-trx-stby")) {
 		/* flexcan 0 & 1 are using the same GPIOs for transceiver */
 		flexcan_pdata[0].transceiver_switch = imx6q_flexcan0_switch_auto;
@@ -582,7 +583,9 @@ static void __init imx6q_init_late(void)
 	 * WAIT mode is broken on TO 1.0 and 1.1, so there is no point
 	 * to run cpuidle on them.
 	 */
-	if (imx_get_soc_revision() > IMX_CHIP_REVISION_1_1)
+	if ((cpu_is_imx6q() && imx_get_soc_revision() > IMX_CHIP_REVISION_1_1)
+		|| (cpu_is_imx6dl() && imx_get_soc_revision() >
+		IMX_CHIP_REVISION_1_0))
 		imx6q_cpuidle_init();
 
 	if (IS_ENABLED(CONFIG_ARM_IMX6Q_CPUFREQ)) {

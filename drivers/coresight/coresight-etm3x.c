@@ -573,7 +573,8 @@ static ssize_t mode_store(struct device *dev,
 	if (drvdata->mode & ETM_MODE_STALL) {
 		if (!(drvdata->etmccr & ETMCCR_FIFOFULL)) {
 			dev_warn(drvdata->dev, "stall mode not supported\n");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto err_unlock;
 		}
 		drvdata->ctrl |= ETMCR_STALL_MODE;
 	 } else
@@ -582,7 +583,8 @@ static ssize_t mode_store(struct device *dev,
 	if (drvdata->mode & ETM_MODE_TIMESTAMP) {
 		if (!(drvdata->etmccer & ETMCCER_TIMESTAMP)) {
 			dev_warn(drvdata->dev, "timestamp not supported\n");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto err_unlock;
 		}
 		drvdata->ctrl |= ETMCR_TIMESTAMP_EN;
 	} else
@@ -595,6 +597,10 @@ static ssize_t mode_store(struct device *dev,
 	spin_unlock(&drvdata->spinlock);
 
 	return size;
+
+err_unlock:
+	spin_unlock(&drvdata->spinlock);
+	return ret;
 }
 static DEVICE_ATTR_RW(mode);
 
@@ -1743,7 +1749,11 @@ static void etm_init_arch_data(void *info)
 
 static void etm_init_default_data(struct etm_drvdata *drvdata)
 {
-	static int etm3x_traceid;
+	/*
+	 * A trace ID of value 0 is invalid, so let's start at some
+	 * random value that fits in 7 bits and will be just as good.
+	 */
+	static int etm3x_traceid = 0x10;
 
 	u32 flags = (1 << 0 | /* instruction execute*/
 		     3 << 3 | /* ARM instruction */
@@ -1819,6 +1829,10 @@ static int etm_probe(struct amba_device *adev, const struct amba_id *id)
 		return ret;
 
 	drvdata->cpu = pdata ? pdata->cpu : 0;
+	if (drvdata->cpu < 0) {
+		ret = -EINVAL;
+		goto err_arch_supported;
+	}
 
 	get_online_cpus();
 	etmdrvdata[drvdata->cpu] = drvdata;

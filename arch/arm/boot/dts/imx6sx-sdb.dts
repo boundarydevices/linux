@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -187,6 +187,14 @@
 		spdif-controller = <&spdif>;
 		spdif-out;
 	};
+
+	sii902x_reset: sii902x-reset {
+		compatible = "gpio-reset";
+		reset-gpios = <&gpio3 27 1>;
+		reset-delay-us = <100000>;
+		#reset-cells = <0>;
+		status = "disabled";
+	};
 };
 
 &adc1 {
@@ -348,8 +356,6 @@
 	pinctrl-0 = <&pinctrl_enet1>;
 	pinctrl-assert-gpios = <&gpio4 16 GPIO_ACTIVE_HIGH>, <&gpio2 6 GPIO_ACTIVE_LOW>;
 	phy-mode = "rgmii";
-	fsl,num_tx_queues=<3>;
-	fsl,num_rx_queues=<3>;
 	status = "okay";
 };
 
@@ -357,24 +363,22 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet2>;
 	phy-mode = "rgmii";
-	fsl,num_tx_queues=<3>;
-	fsl,num_rx_queues=<3>;
 	status = "okay";
 };
 
 &flexcan1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan1>;
-	trx-en-gpio = <&gpio4 25 GPIO_ACTIVE_HIGH>;
-	trx-stby-gpio = <&gpio4 27 GPIO_ACTIVE_HIGH>;
+	trx-en-gpio = <&gpio4 25 GPIO_ACTIVE_LOW>;
+	trx-stby-gpio = <&gpio4 27 GPIO_ACTIVE_LOW>;
 	status = "okay";
 };
 
 &flexcan2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan2>;
-	trx-en-gpio = <&gpio4 25 GPIO_ACTIVE_HIGH>;
-	trx-stby-gpio = <&gpio4 27 GPIO_ACTIVE_HIGH>;
+	trx-en-gpio = <&gpio4 25 GPIO_ACTIVE_LOW>;
+	trx-stby-gpio = <&gpio4 27 GPIO_ACTIVE_LOW>;
 	status = "okay";
 };
 
@@ -460,6 +464,14 @@
 	vbus-supply = <&reg_usb_otg2_vbus>;
 	dr_mode = "host";
 	status = "okay";
+};
+
+&usbphy1 {
+	tx-d-cal = <0x5>;
+};
+
+&usbphy2 {
+	tx-d-cal = <0x5>;
 };
 
 &usdhc2 {
@@ -608,6 +620,17 @@
 			};
 		};
 	};
+
+	sii902x@39 {
+		compatible = "SiI,sii902x";
+		interrupt-parent = <&gpio4>;
+		interrupts = <21 2>;
+		mode_str ="1280x720M@60";
+		bits-per-pixel = <32>;
+		resets = <&sii902x_reset>;
+		reg = <0x39>;
+		status = "disabled";
+	};
 };
 
 &i2c2 {
@@ -696,7 +719,7 @@
 
 &iomuxc {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hog>;
+	pinctrl-0 = <&pinctrl_hog &pinctrl_can_gpios>;
 
 	imx6x-sdb {
 		pinctrl_hog: hoggrp {
@@ -705,6 +728,7 @@
 				MX6SX_PAD_SD1_DATA3__GPIO6_IO_5 0xb000
 				MX6SX_PAD_CSI_DATA03__GPIO1_IO_17 0x17059
 				MX6SX_PAD_GPIO1_IO13__WDOG1_WDOG_ANY 0x30b0
+				MX6SX_PAD_QSPI1A_SCLK__GPIO4_IO_21  0x17059
 			>;
 		};
 
@@ -800,15 +824,15 @@
 
 		pinctrl_flexcan1: flexcan1grp {
 			fsl,pins = <
-				MX6SX_PAD_QSPI1B_DQS__CAN1_TX		0x1b0b0
-				MX6SX_PAD_QSPI1A_SS1_B__CAN1_RX		0x1b0b0
+				MX6SX_PAD_QSPI1B_DQS__CAN1_TX		0x1b020
+				MX6SX_PAD_QSPI1A_SS1_B__CAN1_RX		0x1b020
 			>;
 		};
 
 		pinctrl_flexcan2: flexcan2grp {
 			fsl,pins = <
-				MX6SX_PAD_QSPI1B_SS1_B__CAN2_RX		0x1b0b0
-				MX6SX_PAD_QSPI1A_DQS__CAN2_TX		0x1b0b0
+				MX6SX_PAD_QSPI1B_SS1_B__CAN2_RX		0x1b020
+				MX6SX_PAD_QSPI1A_DQS__CAN2_TX		0x1b020
 			>;
 		};
 
@@ -816,6 +840,13 @@
 			fsl,pins = <
 				MX6SX_PAD_CSI_DATA04__GPIO1_IO_18 0x17059
 				MX6SX_PAD_CSI_DATA05__GPIO1_IO_19 0x17059
+			>;
+		};
+
+		pinctrl_can_gpios: can-gpios {
+			fsl,pins = <
+				MX6SX_PAD_QSPI1B_DATA1__GPIO4_IO_25 0x17059
+				MX6SX_PAD_QSPI1B_DATA3__GPIO4_IO_27 0x17059
 			>;
 		};
 
@@ -1005,16 +1036,16 @@
 
 		pinctrl_usdhc3: usdhc3grp {
 			fsl,pins = <
-				MX6SX_PAD_SD3_CMD__USDHC3_CMD		0x17059
-				MX6SX_PAD_SD3_CLK__USDHC3_CLK		0x10059
-				MX6SX_PAD_SD3_DATA0__USDHC3_DATA0	0x17059
-				MX6SX_PAD_SD3_DATA1__USDHC3_DATA1	0x17059
-				MX6SX_PAD_SD3_DATA2__USDHC3_DATA2	0x17059
-				MX6SX_PAD_SD3_DATA3__USDHC3_DATA3	0x17059
-				MX6SX_PAD_SD3_DATA4__USDHC3_DATA4	0x17059
-				MX6SX_PAD_SD3_DATA5__USDHC3_DATA5	0x17059
-				MX6SX_PAD_SD3_DATA6__USDHC3_DATA6	0x17059
-				MX6SX_PAD_SD3_DATA7__USDHC3_DATA7	0x17059
+				MX6SX_PAD_SD3_CMD__USDHC3_CMD		0x17069
+				MX6SX_PAD_SD3_CLK__USDHC3_CLK		0x10071
+				MX6SX_PAD_SD3_DATA0__USDHC3_DATA0	0x17069
+				MX6SX_PAD_SD3_DATA1__USDHC3_DATA1	0x17069
+				MX6SX_PAD_SD3_DATA2__USDHC3_DATA2	0x17069
+				MX6SX_PAD_SD3_DATA3__USDHC3_DATA3	0x17069
+				MX6SX_PAD_SD3_DATA4__USDHC3_DATA4	0x17069
+				MX6SX_PAD_SD3_DATA5__USDHC3_DATA5	0x17069
+				MX6SX_PAD_SD3_DATA6__USDHC3_DATA6	0x17069
+				MX6SX_PAD_SD3_DATA7__USDHC3_DATA7	0x17069
 				MX6SX_PAD_KEY_COL0__GPIO2_IO_10		0x17059 /* CD */
 				MX6SX_PAD_KEY_ROW0__GPIO2_IO_15		0x17059 /* WP */
 			>;

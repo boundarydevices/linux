@@ -51,6 +51,7 @@ enum ci_hw_regs {
 	OP_DEVICEADDR,
 	OP_ENDPTLISTADDR,
 	OP_PORTSC,
+	OP_BURSTSIZE,
 	OP_DEVLC,
 	OP_OTGSC,
 	OP_USBMODE,
@@ -167,6 +168,7 @@ struct hw_bank {
  * @is_otg: if the device is otg-capable
  * @fsm: otg finite state machine
  * @fsm_timer: pointer to timer list of otg fsm
+ * @hnp_polling_work: work for hnp polling
  * @work: work for role changing
  * @wq: workqueue thread
  * @qh_pool: allocation pool for queue heads
@@ -192,6 +194,7 @@ struct hw_bank {
  * @debugfs: root dentry for this controller in debugfs
  * @id_event: indicates there is an id event, and handled at ci_otg_work
  * @b_sess_valid_event: indicates there is a vbus event, and handled
+ * @vbus_glitch_check_event: check if vbus change is a glitch
  * at ci_otg_work
  * @imx28_write_fix: Freescale imx28 needs swp instruction for writing
  * @supports_runtime_pm: if runtime pm is supported
@@ -210,6 +213,8 @@ struct ci_hdrc {
 	struct usb_otg			otg;
 	struct otg_fsm			fsm;
 	struct ci_otg_fsm_timer_list	*fsm_timer;
+	struct timer_list		hnp_polling_timer;
+	struct work_struct		hnp_polling_work;
 	struct work_struct		work;
 	struct workqueue_struct		*wq;
 
@@ -239,6 +244,7 @@ struct ci_hdrc {
 	struct dentry			*debugfs;
 	bool				id_event;
 	bool				b_sess_valid_event;
+	bool				vbus_glitch_check_event;
 	bool				imx28_write_fix;
 	bool				supports_runtime_pm;
 	bool				in_lpm;
@@ -437,4 +443,6 @@ int hw_wait_reg(struct ci_hdrc *ci, enum ci_hw_regs reg, u32 mask,
 				u32 value, unsigned int timeout_ms);
 
 int hw_controller_reset(struct ci_hdrc *ci);
+void ci_hdrc_ahb_config(struct ci_hdrc *ci);
+
 #endif	/* __DRIVERS_USB_CHIPIDEA_CI_H */

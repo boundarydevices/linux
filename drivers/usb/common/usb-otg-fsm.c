@@ -1,7 +1,7 @@
 /*
  * OTG Finite State Machine from OTG spec
  *
- * Copyright (C) 2007,2008 Freescale Semiconductor, Inc.
+ * Copyright (C) 2007-2015 Freescale Semiconductor, Inc.
  *
  * Author:	Li Yang <LeoLi@freescale.com>
  *		Jerry Huang <Chang-Ming.Huang@freescale.com>
@@ -78,6 +78,8 @@ static void otg_leave_state(struct otg_fsm *fsm, enum usb_otg_state old_state)
 		fsm->b_srp_done = 0;
 		break;
 	case OTG_STATE_B_PERIPHERAL:
+		if (fsm->otg->gadget)
+			fsm->otg->gadget->host_request_flag = 0;
 		break;
 	case OTG_STATE_B_WAIT_ACON:
 		otg_del_timer(fsm, B_ASE0_BRST);
@@ -107,6 +109,8 @@ static void otg_leave_state(struct otg_fsm *fsm, enum usb_otg_state old_state)
 	case OTG_STATE_A_PERIPHERAL:
 		otg_del_timer(fsm, A_BIDL_ADIS);
 		fsm->a_bidl_adis_tmout = 0;
+		if (fsm->otg->gadget)
+			fsm->otg->gadget->host_request_flag = 0;
 		break;
 	case OTG_STATE_A_WAIT_VFALL:
 		otg_del_timer(fsm, A_WAIT_VFALL);
@@ -150,9 +154,9 @@ static int otg_set_state(struct otg_fsm *fsm, enum usb_otg_state new_state)
 		break;
 	case OTG_STATE_B_PERIPHERAL:
 		otg_chrg_vbus(fsm, 0);
-		otg_loc_conn(fsm, 1);
 		otg_loc_sof(fsm, 0);
 		otg_set_protocol(fsm, PROTO_GADGET);
+		otg_loc_conn(fsm, 1);
 		break;
 	case OTG_STATE_B_WAIT_ACON:
 		otg_chrg_vbus(fsm, 0);
@@ -169,6 +173,7 @@ static int otg_set_state(struct otg_fsm *fsm, enum usb_otg_state new_state)
 		otg_set_protocol(fsm, PROTO_HOST);
 		usb_bus_start_enum(fsm->otg->host,
 				fsm->otg->host->otg_port);
+		otg_add_timer(fsm, HNP_POLLING);
 		break;
 	case OTG_STATE_A_IDLE:
 		otg_drv_vbus(fsm, 0);
@@ -203,6 +208,7 @@ static int otg_set_state(struct otg_fsm *fsm, enum usb_otg_state new_state)
 		 */
 		if (!fsm->a_bus_req || fsm->a_suspend_req_inf)
 			otg_add_timer(fsm, A_WAIT_ENUM);
+		otg_add_timer(fsm, HNP_POLLING);
 		break;
 	case OTG_STATE_A_SUSPEND:
 		otg_drv_vbus(fsm, 1);
@@ -213,10 +219,10 @@ static int otg_set_state(struct otg_fsm *fsm, enum usb_otg_state new_state)
 
 		break;
 	case OTG_STATE_A_PERIPHERAL:
-		otg_loc_conn(fsm, 1);
 		otg_loc_sof(fsm, 0);
 		otg_set_protocol(fsm, PROTO_GADGET);
 		otg_drv_vbus(fsm, 1);
+		otg_loc_conn(fsm, 1);
 		otg_add_timer(fsm, A_BIDL_ADIS);
 		break;
 	case OTG_STATE_A_WAIT_VFALL:
@@ -365,3 +371,88 @@ int otg_statemachine(struct otg_fsm *fsm)
 	return state_changed;
 }
 EXPORT_SYMBOL_GPL(otg_statemachine);
+
+static int otg_handle_role_switch(struct otg_fsm *fsm, struct usb_device *udev)
+{
+	int err;
+	enum usb_otg_state state = fsm->otg->state;
+
+	if (state == OTG_STATE_A_HOST) {
+		/* Set b_hnp_enable */
+		if (!fsm->a_set_b_hnp_en) {
+			err = usb_control_msg(udev,
+				usb_sndctrlpipe(udev, 0),
+				USB_REQ_SET_FEATURE, 0,
+				USB_DEVICE_B_HNP_ENABLE,
+				0, NULL, 0,
+				USB_CTRL_SET_TIMEOUT);
+			if (err < 0) {
+				/* Continue polling */
+				otg_add_timer(fsm, HNP_POLLING);
+				return 0;
+			} else {
+				fsm->a_set_b_hnp_en = 1;
+			}
+		}
+		fsm->a_bus_req = 0;
+		return HOST_REQUEST_FLAG;
+	} else if (state == OTG_STATE_B_HOST) {
+		fsm->b_bus_req = 0;
+		return HOST_REQUEST_FLAG;
+	}
+
+	return -EINVAL;
+}
+
+/*
+ * Called by host to poll peripheral if it wants to be host
+ * Return value:
+ * - host request flag(1) if the device wants to be host,
+ * - host request flag(0) if the device keeps peripheral role,
+ * - otherwise, error code.
+ */
+int otg_hnp_polling(struct otg_fsm *fsm)
+{
+	struct usb_device *udev;
+	u8 host_req_flag;
+	int retval;
+	enum usb_otg_state state = fsm->otg->state;
+
+	if (state != OTG_STATE_A_HOST && state != OTG_STATE_B_HOST)
+		return -EINVAL;
+
+	udev = usb_hub_find_child(fsm->otg->host->root_hub, 1);
+	if (!udev) {
+		dev_err(fsm->otg->host->controller,
+			"no usb dev connected, can't start HNP polling\n");
+		return -ENODEV;
+	}
+
+	/* Get host request flag from connected USB device */
+	retval = usb_control_msg(udev,
+				usb_rcvctrlpipe(udev, 0),
+				USB_REQ_GET_STATUS,
+				USB_DIR_IN | USB_RECIP_DEVICE,
+				0,
+				OTG_STS_SELECTOR,
+				&host_req_flag,
+				1,
+				USB_CTRL_GET_TIMEOUT);
+	if (retval == 1) {
+		if (host_req_flag == HOST_REQUEST_FLAG) {
+			retval = otg_handle_role_switch(fsm, udev);
+		} else if (host_req_flag == 0) {
+			/* Continue polling */
+			otg_add_timer(fsm, HNP_POLLING);
+			retval = 0;
+		} else {
+			dev_err(&udev->dev, "host request flag is invalid\n");
+			retval = -EINVAL;
+		}
+	} else {
+		dev_err(&udev->dev, "Get one byte OTG status failed\n");
+		retval = -EIO;
+	}
+	return retval;
+}
+EXPORT_SYMBOL_GPL(otg_hnp_polling);

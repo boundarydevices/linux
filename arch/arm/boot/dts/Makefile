@@ -205,10 +205,12 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6sx-sabreauto-m4.dtb \
 	imx6sx-sdb-lcdif1.dtb \
 	vf610-cosmic.dtb \
-	imx6sx-sdb-canfd.dtb \
 	imx6sx-sdb-emmc.dtb \
 	imx6sx-sdb-m4.dtb \
-	vf610-twr.dtb
+	vf610-twr.dtb \
+	imx7d-12x12-arm2.dtb \
+	imx7d-12x12-arm2-enet.dtb \
+	imx7d-19x19-arm2.dtb
 dtb-$(CONFIG_ARCH_MXS) += imx23-evk.dtb \
 	imx23-olinuxino.dtb \
 	imx23-stmp378x_devb.dtb \

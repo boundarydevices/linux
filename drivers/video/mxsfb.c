@@ -116,6 +116,16 @@
 #define CTRL1_UNDERFLOW_IRQ				(1 << 10)
 #define CTRL1_CUR_FRAME_DONE_IRQ		(1 << 9)
 #define CTRL1_VSYNC_EDGE_IRQ			(1 << 8)
+#define CTRL1_IRQ_ENABLE_MASK			(CTRL1_OVERFLOW_IRQ_EN | \
+						 CTRL1_UNDERFLOW_IRQ_EN | \
+						 CTRL1_CUR_FRAME_DONE_IRQ_EN | \
+						 CTRL1_VSYNC_EDGE_IRQ_EN)
+#define CTRL1_IRQ_ENABLE_SHIFT			12
+#define CTRL1_IRQ_STATUS_MASK			(CTRL1_OVERFLOW_IRQ | \
+						 CTRL1_UNDERFLOW_IRQ | \
+						 CTRL1_CUR_FRAME_DONE_IRQ | \
+						 CTRL1_VSYNC_EDGE_IRQ)
+#define CTRL1_IRQ_STATUS_SHIFT			8
 
 #define CTRL2_OUTSTANDING_REQS__REQ_16		(3 << 21)
 
@@ -370,10 +380,14 @@ static inline unsigned chan_to_field(unsigned chan, struct fb_bitfield *bf)
 static irqreturn_t mxsfb_irq_handler(int irq, void *dev_id)
 {
 	struct mxsfb_info *host = dev_id;
-	u32 status_lcd = readl(host->base + LCDC_CTRL1);
+	u32 ctrl1, enable, status, acked_status;
 
-	if ((status_lcd & CTRL1_VSYNC_EDGE_IRQ) &&
-		host->wait4vsync) {
+	ctrl1 = readl(host->base + LCDC_CTRL1);
+	enable = (ctrl1 & CTRL1_IRQ_ENABLE_MASK) >> CTRL1_IRQ_ENABLE_SHIFT;
+	status = (ctrl1 & CTRL1_IRQ_STATUS_MASK) >> CTRL1_IRQ_STATUS_SHIFT;
+	acked_status = (enable & status) << CTRL1_IRQ_STATUS_SHIFT;
+
+	if ((acked_status & CTRL1_VSYNC_EDGE_IRQ) && host->wait4vsync) {
 		writel(CTRL1_VSYNC_EDGE_IRQ_EN,
 			     host->base + LCDC_CTRL1 + REG_CLR);
 		host->wait4vsync = 0;
@@ -381,21 +395,18 @@ static irqreturn_t mxsfb_irq_handler(int irq, void *dev_id)
 		complete(&host->vsync_complete);
 	}
 
-	if (status_lcd & CTRL1_CUR_FRAME_DONE_IRQ) {
+	if (acked_status & CTRL1_CUR_FRAME_DONE_IRQ) {
 		writel(CTRL1_CUR_FRAME_DONE_IRQ_EN,
 			     host->base + LCDC_CTRL1 + REG_CLR);
 		up(&host->flip_sem);
 	}
 
-	if (status_lcd & CTRL1_UNDERFLOW_IRQ) {
-		writel(CTRL1_UNDERFLOW_IRQ,
-			     host->base + LCDC_CTRL1 + REG_CLR);
-	}
+	if (acked_status & CTRL1_UNDERFLOW_IRQ)
+		writel(CTRL1_UNDERFLOW_IRQ, host->base + LCDC_CTRL1 + REG_CLR);
 
-	if (status_lcd & CTRL1_OVERFLOW_IRQ) {
-		writel(CTRL1_OVERFLOW_IRQ,
-			     host->base + LCDC_CTRL1 + REG_CLR);
-	}
+	if (acked_status & CTRL1_OVERFLOW_IRQ)
+		writel(CTRL1_OVERFLOW_IRQ, host->base + LCDC_CTRL1 + REG_CLR);
+
 	return IRQ_HANDLED;
 }
 
@@ -519,6 +530,9 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 
 	/* Clean soft reset and clock gate bit if it was enabled  */
 	writel(CTRL_SFTRST | CTRL_CLKGATE, host->base + LCDC_CTRL + REG_CLR);
+
+	/* reconfigure the lcdif after */
+	mxsfb_set_par(&host->fb_info);
 
 	writel(CTRL2_OUTSTANDING_REQS__REQ_16,
 		host->base + LCDC_V4_CTRL2 + REG_SET);

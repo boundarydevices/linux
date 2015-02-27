@@ -25,6 +25,7 @@
 #include <linux/pci.h>
 #include <linux/pci_regs.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/busfreq-imx6.h>
 #include <linux/regulator/consumer.h>
@@ -45,9 +46,11 @@ static u32 ddr_test_region = 0, test_region_size = SZ_2M;
 
 struct imx6_pcie {
 	int			reset_gpio;
+	int			power_on_gpio;
 	struct clk		*pcie_bus;
 	struct clk		*pcie_phy;
 	struct clk		*pcie_inbound_axi;
+	struct clk		*ref_100m;
 	struct clk		*pcie;
 	struct pcie_port	pp;
 	struct regmap		*iomuxc_gpr;
@@ -292,6 +295,9 @@ static int imx6_pcie_deassert_core_reset(struct pcie_port *pp)
 	struct imx6_pcie *imx6_pcie = to_imx6_pcie(pp);
 	int ret;
 
+	if (gpio_is_valid(imx6_pcie->power_on_gpio))
+		gpio_set_value(imx6_pcie->power_on_gpio, 1);
+
 	request_bus_freq(BUS_FREQ_HIGH);
 	ret = clk_prepare_enable(imx6_pcie->pcie_phy);
 	if (ret) {
@@ -327,6 +333,13 @@ static int imx6_pcie_deassert_core_reset(struct pcie_port *pp)
 		/* power up core phy and enable ref clock */
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
 				IMX6Q_GPR1_PCIE_TEST_PD, 0);
+
+		/* sata_ref is not used by pcie on imx6sx */
+		ret = clk_prepare_enable(imx6_pcie->ref_100m);
+		if (ret) {
+			dev_err(pp->dev, "unable to enable ref_100m\n");
+			goto err_inbound_axi;
+		}
 		/*
 		 * the async reset input need ref clock to sync internally,
 		 * when the ref clock comes after reset, internal synced
@@ -344,9 +357,9 @@ static int imx6_pcie_deassert_core_reset(struct pcie_port *pp)
 
 	/* Some boards don't have PCIe reset GPIO. */
 	if (gpio_is_valid(imx6_pcie->reset_gpio)) {
-		gpio_set_value(imx6_pcie->reset_gpio, 0);
+		gpio_set_value_cansleep(imx6_pcie->reset_gpio, 0);
 		mdelay(100);
-		gpio_set_value(imx6_pcie->reset_gpio, 1);
+		gpio_set_value_cansleep(imx6_pcie->reset_gpio, 1);
 	}
 
 	/*
@@ -517,14 +530,13 @@ out:
 			clk_disable_unprepare(imx6_pcie->pcie_inbound_axi);
 			release_bus_freq(BUS_FREQ_HIGH);
 
-			/* Put PCIe PHY to be isolation */
-			regmap_update_bits(imx6_pcie->iomuxc_gpr,
-					IOMUXC_GPR0, BIT(6), 1 << 6);
-
 			/*
 			 * Power down PCIe PHY.
 			 */
 			regulator_disable(imx6_pcie->pcie_phy_regulator);
+		} else {
+			clk_disable_unprepare(imx6_pcie->ref_100m);
+			release_bus_freq(BUS_FREQ_HIGH);
 		}
 	} else {
 		tmp = readl(pp->dbi_base + 0x80);
@@ -537,6 +549,9 @@ out:
 static int imx6_pcie_host_init(struct pcie_port *pp)
 {
 	int ret;
+
+	/* enable disp_mix power domain */
+	pm_runtime_get_sync(pp->dev);
 
 	imx6_pcie_assert_core_reset(pp);
 
@@ -870,6 +885,13 @@ static int pci_imx_suspend_noirq(struct device *dev)
 			dw_pcie_msi_cfg_store(pp);
 
 		if (IS_ENABLED(CONFIG_PCI_IMX6SX_EXTREMELY_PWR_SAVE)) {
+			/* PM_TURN_OFF */
+			regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
+					IMX6SX_GPR12_PCIE_PM_TURN_OFF,
+					IMX6SX_GPR12_PCIE_PM_TURN_OFF);
+			udelay(10);
+			regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
+					IMX6SX_GPR12_PCIE_PM_TURN_OFF, 0);
 			/* Disable clks and power down PCIe PHY */
 			clk_disable_unprepare(imx6_pcie->pcie);
 			if (!IS_ENABLED(CONFIG_EP_MODE_IN_EP_RC_SYS)
@@ -878,10 +900,6 @@ static int pci_imx_suspend_noirq(struct device *dev)
 			clk_disable_unprepare(imx6_pcie->pcie_phy);
 			clk_disable_unprepare(imx6_pcie->pcie_inbound_axi);
 			release_bus_freq(BUS_FREQ_HIGH);
-
-			/* Put PCIe PHY to be isolation */
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR0,
-					BIT(6), 1 << 6);
 
 			/*
 			 * Power down PCIe PHY.
@@ -901,6 +919,16 @@ static int pci_imx_suspend_noirq(struct device *dev)
 			clk_disable_unprepare(imx6_pcie->pcie_inbound_axi);
 			release_bus_freq(BUS_FREQ_HIGH);
 		}
+	} else {
+		/*
+		 * L2 can exit by 'reset' or Inband beacon (from remote EP)
+		 * toggling phy_powerdown has same effect as 'inband beacon'
+		 * So, toggle bit18 of GPR1, used as a workaround of errata
+		 * "PCIe PCIe does not support L2 Power Down"
+		 */
+		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
+				IMX6Q_GPR1_PCIE_TEST_PD,
+				IMX6Q_GPR1_PCIE_TEST_PD);
 	}
 
 	return 0;
@@ -932,9 +960,10 @@ static int pci_imx_resume_noirq(struct device *dev)
 			if (IS_ENABLED(CONFIG_PCI_MSI))
 				dw_pcie_msi_cfg_restore(pp);
 
-			ret = imx6_pcie_start_link(pp);
-			if (ret < 0)
-				return ret;
+			/* Start LTSSM. */
+			regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
+					IMX6Q_GPR12_PCIE_CTL_2,
+					IMX6Q_GPR12_PCIE_CTL_2);
 		} else {
 			request_bus_freq(BUS_FREQ_HIGH);
 			clk_prepare_enable(imx6_pcie->pcie_inbound_axi);
@@ -956,6 +985,15 @@ static int pci_imx_resume_noirq(struct device *dev)
 			if (IS_ENABLED(CONFIG_PCI_MSI))
 				dw_pcie_msi_cfg_restore(pp);
 		}
+	} else {
+		/*
+		 * L2 can exit by 'reset' or Inband beacon (from remote EP)
+		 * toggling phy_powerdown has same effect as 'inband beacon'
+		 * So, toggle bit18 of GPR1, used as a workaround of errata
+		 * "PCIe PCIe does not support L2 Power Down"
+		 */
+		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
+				IMX6Q_GPR1_PCIE_TEST_PD, 0);
 	}
 
 	return 0;
@@ -1013,6 +1051,18 @@ static int __init imx6_pcie_probe(struct platform_device *pdev)
 		}
 	}
 
+	imx6_pcie->power_on_gpio = of_get_named_gpio(np, "power-on-gpio", 0);
+	if (gpio_is_valid(imx6_pcie->power_on_gpio)) {
+		ret = devm_gpio_request_one(&pdev->dev,
+					imx6_pcie->power_on_gpio,
+					GPIOF_OUT_INIT_LOW,
+					"PCIe power enable");
+		if (ret) {
+			dev_err(&pdev->dev, "unable to get power-on gpio\n");
+			return ret;
+		}
+	}
+
 	/* Fetch clocks */
 	imx6_pcie->pcie_phy = devm_clk_get(&pdev->dev, "pcie_phy");
 	if (IS_ERR(imx6_pcie->pcie_phy)) {
@@ -1051,6 +1101,14 @@ static int __init imx6_pcie_probe(struct platform_device *pdev)
 			 syscon_regmap_lookup_by_compatible
 			 ("fsl,imx6sx-iomuxc-gpr");
 	} else {
+		/* sata_ref is not used by pcie on imx6sx */
+		imx6_pcie->ref_100m = devm_clk_get(&pdev->dev, "ref_100m");
+		if (IS_ERR(imx6_pcie->ref_100m)) {
+			dev_err(&pdev->dev,
+				"ref_100m clock source missing or invalid\n");
+			return PTR_ERR(imx6_pcie->ref_100m);
+		}
+
 		imx6_pcie->iomuxc_gpr =
 			syscon_regmap_lookup_by_compatible
 			("fsl,imx6q-iomuxc-gpr");

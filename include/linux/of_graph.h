@@ -41,6 +41,7 @@ static inline int of_graph_parse_endpoint(const struct device_node *node,
 {
 	return -ENOSYS;
 }
+
 static inline struct device_node *of_graph_get_next_endpoint(
 					const struct device_node *parent,
 					struct device_node *previous)

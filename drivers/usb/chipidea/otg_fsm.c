@@ -84,6 +84,11 @@ set_a_bus_req(struct device *dev, struct device_attribute *attr,
 			return count;
 		}
 		ci->fsm.a_bus_req = 1;
+		if (ci->fsm.otg->state == OTG_STATE_A_PERIPHERAL) {
+			ci->gadget.host_request_flag = 1;
+			mutex_unlock(&ci->fsm.lock);
+			return count;
+		}
 	}
 
 	ci_otg_queue_work(ci);
@@ -162,8 +167,14 @@ set_b_bus_req(struct device *dev, struct device_attribute *attr,
 	mutex_lock(&ci->fsm.lock);
 	if (buf[0] == '0')
 		ci->fsm.b_bus_req = 0;
-	else if (buf[0] == '1')
+	else if (buf[0] == '1') {
 		ci->fsm.b_bus_req = 1;
+		if (ci->fsm.otg->state == OTG_STATE_B_PERIPHERAL) {
+			ci->gadget.host_request_flag = 1;
+			mutex_unlock(&ci->fsm.lock);
+			return count;
+		}
+	}
 
 	ci_otg_queue_work(ci);
 	mutex_unlock(&ci->fsm.lock);
@@ -322,17 +333,6 @@ static void a_wait_vfall_tmout_func(void *ptr, unsigned long indicator)
 	ci_otg_queue_work(ci);
 }
 
-static void b_ase0_brst_tmout_func(void *ptr, unsigned long indicator)
-{
-	struct ci_hdrc *ci = (struct ci_hdrc *)ptr;
-
-	set_tmout(ci, indicator);
-	if (!hw_read_otgsc(ci, OTGSC_BSV))
-		ci->fsm.b_sess_vld = 0;
-
-	ci_otg_queue_work(ci);
-}
-
 static void b_ssend_srp_tmout_func(void *ptr, unsigned long indicator)
 {
 	struct ci_hdrc *ci = (struct ci_hdrc *)ptr;
@@ -342,18 +342,6 @@ static void b_ssend_srp_tmout_func(void *ptr, unsigned long indicator)
 	/* only vbus fall below B_sess_vld in b_idle state */
 	if (ci->fsm.otg->state == OTG_STATE_B_IDLE)
 		ci_otg_queue_work(ci);
-}
-
-static void b_sess_vld_tmout_func(void *ptr, unsigned long indicator)
-{
-	struct ci_hdrc *ci = (struct ci_hdrc *)ptr;
-
-	/* Check if A detached */
-	if (!(hw_read_otgsc(ci, OTGSC_BSV))) {
-		ci->fsm.b_sess_vld = 0;
-		ci_otg_add_timer(ci, B_SSEND_SRP);
-		ci_otg_queue_work(ci);
-	}
 }
 
 static void b_data_pulse_end(void *ptr, unsigned long indicator)
@@ -381,6 +369,24 @@ static void a_wait_dp_end_tmout_func(void *ptr, unsigned long indicator)
 	ci->fsm.a_bus_drop = 0;
 	ci->fsm.a_srp_det = 1;
 	ci_otg_queue_work(ci);
+}
+
+static void hnp_polling_timer_work(unsigned long arg)
+{
+	struct ci_hdrc *ci = (struct ci_hdrc *)arg;
+
+	schedule_work(&ci->hnp_polling_work);
+}
+
+static void ci_hnp_polling_work(struct work_struct *work)
+{
+	struct ci_hdrc *ci = container_of(work, struct ci_hdrc,
+						hnp_polling_work);
+
+	pm_runtime_get_sync(ci->dev);
+	if (otg_hnp_polling(&ci->fsm) == HOST_REQUEST_FLAG)
+		ci_otg_queue_work(ci);
+	pm_runtime_put_sync(ci->dev);
 }
 
 /* Initialize timers */
@@ -420,7 +426,7 @@ static int ci_otg_init_timers(struct ci_hdrc *ci)
 		return -ENOMEM;
 
 	ci->fsm_timer->timer_list[B_ASE0_BRST] =
-		otg_timer_initializer(ci, &b_ase0_brst_tmout_func, TB_ASE0_BRST,
+		otg_timer_initializer(ci, &set_tmout_and_fsm, TB_ASE0_BRST,
 					(unsigned long)&fsm->b_ase0_brst_tmout);
 	if (ci->fsm_timer->timer_list[B_ASE0_BRST] == NULL)
 		return -ENOMEM;
@@ -448,17 +454,20 @@ static int ci_otg_init_timers(struct ci_hdrc *ci)
 	if (ci->fsm_timer->timer_list[B_DATA_PLS] == NULL)
 		return -ENOMEM;
 
-	ci->fsm_timer->timer_list[B_SESS_VLD] =	otg_timer_initializer(ci,
-					&b_sess_vld_tmout_func, TB_SESS_VLD, 0);
-	if (ci->fsm_timer->timer_list[B_SESS_VLD] == NULL)
-		return -ENOMEM;
-
 	ci->fsm_timer->timer_list[A_DP_END] = otg_timer_initializer(ci,
 				&a_wait_dp_end_tmout_func, TA_DP_END, 0);
 	if (ci->fsm_timer->timer_list[A_DP_END] == NULL)
 		return -ENOMEM;
 
+	setup_timer(&ci->hnp_polling_timer, hnp_polling_timer_work,
+							(unsigned long)ci);
 	return 0;
+}
+
+static void ci_otg_add_hnp_polling_timer(struct ci_hdrc *ci)
+{
+	mod_timer(&ci->hnp_polling_timer,
+			jiffies + msecs_to_jiffies(T_HOST_REQ_POLL));
 }
 
 /* -------------------------------------------------------------*/
@@ -468,8 +477,12 @@ static void ci_otg_fsm_add_timer(struct otg_fsm *fsm, enum otg_fsm_timer t)
 {
 	struct ci_hdrc	*ci = container_of(fsm, struct ci_hdrc, fsm);
 
-	if (t < NUM_OTG_FSM_TIMERS)
-		ci_otg_add_timer(ci, t);
+	if (t < NUM_OTG_FSM_TIMERS) {
+		if (t == HNP_POLLING)
+			ci_otg_add_hnp_polling_timer(ci);
+		else
+			ci_otg_add_timer(ci, t);
+	}
 	return;
 }
 
@@ -658,6 +671,10 @@ int ci_otg_fsm_work(struct ci_hdrc *ci)
 				 */
 				ci_otg_queue_work(ci);
 			}
+		} else if (ci->fsm.otg->state == OTG_STATE_A_HOST) {
+			pm_runtime_mark_last_busy(ci->dev);
+			pm_runtime_put_autosuspend(ci->dev);
+			return 0;
 		}
 	}
 	pm_runtime_put_sync(ci->dev);
@@ -705,7 +722,6 @@ static void ci_otg_fsm_event(struct ci_hdrc *ci)
 			fsm->a_conn = 0;
 			fsm->b_bus_req = 0;
 			ci_otg_queue_work(ci);
-			ci_otg_add_timer(ci, B_SESS_VLD);
 		}
 		break;
 	case OTG_STATE_A_PERIPHERAL:
@@ -791,16 +807,15 @@ irqreturn_t ci_otg_fsm_irq(struct ci_hdrc *ci)
 			}
 		} else if (otg_int_src & OTGSC_BSVIS) {
 			hw_write_otgsc(ci, OTGSC_BSVIS, OTGSC_BSVIS);
-			ci->b_sess_valid_event = true;
-			if (otgsc & OTGSC_BSV) {
-				fsm->b_sess_vld = 1;
-				ci_otg_del_timer(ci, B_SSEND_SRP);
-				ci_otg_del_timer(ci, B_SRP_FAIL);
-				fsm->b_ssend_srp = 0;
-			} else {
+			if (!(otgsc & OTGSC_BSV) && fsm->b_sess_vld) {
+				ci->b_sess_valid_event = true;
 				fsm->b_sess_vld = 0;
 				if (fsm->id)
 					ci_otg_add_timer(ci, B_SSEND_SRP);
+				if (fsm->b_bus_req)
+					fsm->b_bus_req = 0;
+			} else {
+				ci->vbus_glitch_check_event = true;
 			}
 		} else if (otg_int_src & OTGSC_AVVIS) {
 			hw_write_otgsc(ci, OTGSC_AVVIS, OTGSC_AVVIS);
@@ -862,6 +877,8 @@ int ci_hdrc_otg_fsm_init(struct ci_hdrc *ci)
 		return retval;
 	}
 
+	INIT_WORK(&ci->hnp_polling_work, ci_hnp_polling_work);
+
 	/* Enable A vbus valid irq */
 	hw_write_otgsc(ci, OTGSC_AVVIE, OTGSC_AVVIE);
 
@@ -880,6 +897,7 @@ int ci_hdrc_otg_fsm_init(struct ci_hdrc *ci)
 void ci_hdrc_otg_fsm_remove(struct ci_hdrc *ci)
 {
 	sysfs_remove_group(&ci->dev->kobj, &inputs_attr_group);
+	del_timer_sync(&ci->hnp_polling_timer);
 }
 
 /* Restart OTG fsm if resume from power lost */
