@@ -17,6 +17,8 @@ Optional properties:
   to select a proper data sampling window in case the clock quality is not good
   due to signal path is too long on the board. Please refer to eSDHC/uSDHC
   chapter, DLL (Delay Line) section in RM for details.
+- tuning-step : The delay cell steps in tuning procedure.
+  Some boards need to set the tuning-step to make sure it can pass tuning procedure.
 
 Examples:
 
@@ -26,6 +28,7 @@ esdhc@70004000 {
 	interrupts = <1>;
 	fsl,cd-controller;
 	fsl,wp-controller;
+	tuning-step = <2>;
 };
 
 esdhc@70008000 {

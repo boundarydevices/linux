@@ -257,6 +257,7 @@
 	wp-gpios = <&gpio5 10 0>;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
+	tuning-step = <2>;
 	vmmc-supply = <&reg_sd2_vmmc>;
 	status = "okay";
 };
@@ -267,6 +268,7 @@
 	pinctrl-1 = <&pinctrl_usdhc3_1_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc3_1_200mhz>;
 	bus-width = <8>;
+	tuning-step = <2>;
 	non-removable;
 	keep-power-in-suspend;
 	status = "okay";
