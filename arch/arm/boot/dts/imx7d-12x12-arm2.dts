@@ -35,6 +35,8 @@
 
 	regulators {
 		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
 
 		reg_sd1_vmmc: sd1_vmmc{
 			compatible = "regulator-fixed";
@@ -69,6 +71,26 @@
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
 			gpio = <&gpio1 13 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
+
+		reg_usb_otg1_vbus: regulator@0 {
+			compatible = "regulator-fixed";
+			reg = <0>;
+			regulator-name = "usb_otg1_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio1 5 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
+
+		reg_usb_otg2_vbus: regulator@1 {
+			compatible = "regulator-fixed";
+			reg = <1>;
+			regulator-name = "usb_otg2_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio1 7 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
 		};
 	};
@@ -187,7 +209,8 @@
 	hog {
 		pinctrl_hog_2: hoggrp-2 {
 			fsl,pins = <
-				MX7D_PAD_GPIO1_IO07__GPIO1_IO7	0x80000000
+				MX7D_PAD_GPIO1_IO07__GPIO1_IO7	0x14
+				MX7D_PAD_GPIO1_IO05__GPIO5_IO5	0x14
 			>;
 		};
 	};
@@ -203,6 +226,15 @@
 	};
 };
 
+&usbotg1 {
+	vbus-supply = <&reg_usb_otg1_vbus>;
+	status = "okay";
+};
+
+&usbotg2 {
+	vbus-supply = <&reg_usb_otg2_vbus>;
+	status = "okay";
+};
 
 &usdhc1 {
 	pinctrl-names = "default";
