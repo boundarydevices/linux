@@ -131,9 +131,7 @@
 #define GP_HEATER_OFF			<&gpio3 4 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_DA4__GPIO3_IO04		0x130b0
 	/* LEDS */
-#define GP_LED_RED			<&gpio3 13 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x030b0
-#define GP_LED_YELLOW			<&gpio3 0 GPIO_ACTIVE_HIGH>
+#define GP_LED_RED			<&gpio3 0 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_DA0__GPIO3_IO00		0x030b0
 	/* dry contact relays */
 #define GP_RELAY_EVENT			<&gpio3 7 GPIO_ACTIVE_HIGH>
@@ -209,6 +207,8 @@
 			MX6QDL_PAD_EIM_DA5__GPIO3_IO05		0x1b0b0
 #define GP_EXCH_FAULT_IRQ		<&gpio3 10 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0x1b0b0
+#define GP_CAN_CONNECT			<&gpio3 13 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x130b0
 		>;
 	};
 
@@ -431,7 +431,13 @@
 	exch_fault_irq {
 		label = "exch_fault_irq";
 		gpios = GP_EXCH_FAULT_IRQ;
-		linux,code = <KEY_VOLUMEDOWN>;
+		linux,code = <KEY_MINUS>;
+	};
+
+	can_connected {
+		label = "can_connect";
+		gpios = GP_CAN_CONNECT;
+		linux,code = <KEY_EQUAL>;
 	};
 };
 
