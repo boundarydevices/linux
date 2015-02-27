@@ -65,6 +65,7 @@
 /* strobe dll register */
 #define ESDHC_STROBE_DLL_CTRL	0x70
 #define ESDHC_STROBE_DLL_CTRL_ENABLE	(1 << 0)
+#define ESDHC_STROBE_DLL_CTRL_RESET		(1 << 1)
 #define ESDHC_STROBE_DLL_CTRL_SLV_DLY_TARGET_SHIFT	3
 
 #define ESDHC_STROBE_DLL_STATUS	0x74
@@ -880,6 +881,28 @@ static int esdhc_change_pinstate(struct sdhci_host *host,
 	return pinctrl_select_state(imx_data->pinctrl, pinctrl);
 }
 
+static void esdhc_set_strobe_dll(struct sdhci_host *host)
+{
+	u32 v;
+
+	/* force a reset on strobe dll */
+	writel(ESDHC_STROBE_DLL_CTRL_RESET, host->ioaddr + ESDHC_STROBE_DLL_CTRL);
+	/*
+	 * enable strobe dll ctrl and adjust the delay target
+	 * for the uSDHC loopback read clock
+	 */
+	v = ESDHC_STROBE_DLL_CTRL_ENABLE |
+		(1 << ESDHC_STROBE_DLL_CTRL_SLV_DLY_TARGET_SHIFT);
+	writel(v, host->ioaddr + ESDHC_STROBE_DLL_CTRL);
+	/* wait 1us to make sure strobe dll status register stable */
+	udelay(1);
+	v = readl(host->ioaddr + ESDHC_STROBE_DLL_STATUS);
+	if (!(v & ESDHC_STROBE_DLL_STS_REF_LOCK))
+		dev_warn(mmc_dev(host->mmc), "warning! HS400 strobe DLL status REF not lock!\n");
+	if (!(v & ESDHC_STROBE_DLL_STS_SLV_LOCK))
+		dev_warn(mmc_dev(host->mmc), "warning! HS400 strobe DLL status SLV not lock!\n");
+}
+
 static int esdhc_set_uhs_signaling(struct sdhci_host *host, unsigned int uhs)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
@@ -922,6 +945,7 @@ static int esdhc_set_uhs_signaling(struct sdhci_host *host, unsigned int uhs)
 				ESDHC_MIX_CTRL_DDREN | ESDHC_MIX_CTRL_HS400_EN,
 				host->ioaddr + ESDHC_MIX_CTRL);
 		imx_data->is_ddr = 1;
+		esdhc_set_strobe_dll(host);
 		break;
 	}
 
