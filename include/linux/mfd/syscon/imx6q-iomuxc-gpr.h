@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2012-2015 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -244,6 +244,18 @@
 
 #define IMX6Q_GPR5_L2_CLK_STOP			BIT(8)
 #define IMX6Q_GPR5_ENET_TX_CLK_SEL		BIT(9)
+#define IMX6Q_GPR5_PRE_PRG_SEL0_MASK		(0x3 << 12)
+#define IMX6Q_GPR5_PRE_PRG_SEL0_SHIFT		12
+#define IMX6Q_GPR5_PRE_PRG_SEL0_PRE1_PRG0_CHAN1	(0x0 << 12)
+#define IMX6Q_GPR5_PRE_PRG_SEL0_PRE1_PRG0_CHAN2	(0x1 << 12)
+#define IMX6Q_GPR5_PRE_PRG_SEL0_PRE1_PRG1_CHAN1	(0x2 << 12)
+#define IMX6Q_GPR5_PRE_PRG_SEL0_PRE1_PRG1_CHAN2	(0x3 << 12)
+#define IMX6Q_GPR5_PRE_PRG_SEL1_MASK		(0x3 << 14)
+#define IMX6Q_GPR5_PRE_PRG_SEL1_SHIFT		14
+#define IMX6Q_GPR5_PRE_PRG_SEL1_PRE2_PRG0_CHAN1	(0x0 << 14)
+#define IMX6Q_GPR5_PRE_PRG_SEL1_PRE2_PRG0_CHAN2	(0x1 << 14)
+#define IMX6Q_GPR5_PRE_PRG_SEL1_PRE2_PRG1_CHAN1	(0x2 << 14)
+#define IMX6Q_GPR5_PRE_PRG_SEL1_PRE2_PRG1_CHAN2	(0x3 << 14)
 
 #define IMX6Q_GPR8_TX_SWING_LOW			(0x7f << 25)
 #define IMX6Q_GPR8_TX_SWING_FULL		(0x7f << 18)
