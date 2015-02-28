@@ -871,6 +871,9 @@ config SOC_VF610
 	help
 	  This enable support for Freescale Vybrid VF610 processor.
 
+config MXC_REBOOT_ANDROID_CMD
+    bool "Android reboot setting"
+
 endif
 
 source "arch/arm/mach-imx/devices/Kconfig"
