@@ -82,7 +82,7 @@ static void __init imx_smp_init_cpus(void)
 		unsigned long val;
 
 		/* CA7 core number, [25:24] of CP15 L2CTLR */
-		asm("mrc p15, 1, %0, c9, c0, 2" : "=r" (val));
+		asm volatile("mrc p15, 1, %0, c9, c0, 2" : "=r" (val));
 		ncores = ((val >> 24) & 0x3) + 1;
 	} else {
 		ncores = scu_get_core_count(imx_scu_base);
