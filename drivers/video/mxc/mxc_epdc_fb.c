@@ -90,7 +90,7 @@
 #define MERGE_BLOCK	2
 
 static unsigned long default_bpp = 16;
-DEFINE_MUTEX(hard_lock);
+static DEFINE_MUTEX(hard_lock);
 
 struct update_marker_data {
 	struct list_head full_list;
