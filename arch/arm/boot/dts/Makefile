@@ -210,7 +210,8 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	vf610-twr.dtb \
 	imx7d-12x12-arm2.dtb \
 	imx7d-12x12-arm2-enet.dtb \
-	imx7d-19x19-arm2.dtb
+	imx7d-19x19-arm2.dtb \
+	imx7d-evk.dtb
 dtb-$(CONFIG_ARCH_MXS) += imx23-evk.dtb \
 	imx23-olinuxino.dtb \
 	imx23-stmp378x_devb.dtb \
