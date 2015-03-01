@@ -290,7 +290,7 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 		.flags		= CI_HDRC_REQUIRE_TRANSCEIVER,
 		.notify_event = ci_hdrc_imx_notify_event,
 	};
-	int i, ret;
+	int ret;
 	const struct of_device_id *of_id =
 			of_match_device(ci_hdrc_imx_dt_ids, &pdev->dev);
 	const struct ci_hdrc_imx_platform_flag *imx_platform_flag = of_id->data;
@@ -354,12 +354,6 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Failed to prepare or enable clock, err=%d\n", ret);
 		return ret;
-	}
-
-	for (i = 0 ; i < ARRAY_SIZE(data->reset_gpios); i++) {
-		if (!gpio_is_valid(data->reset_gpios[i].gpio))
-			break;
-		gpio_set_value(data->reset_gpios[i].gpio, data->reset_gpios[i].active_low ? 1 : 0);
 	}
 
 	data->phy = devm_usb_get_phy_by_phandle(&pdev->dev, "fsl,usbphy", 0);
