@@ -55,6 +55,7 @@ static void clk_pfd_do_shared_clks(struct clk_hw *hw, bool enable)
 {
 	struct clk_pfd *pfd = to_clk_pfd(hw);
 
+#ifdef CONFIG_SOC_IMX6SX
 	if (imx_src_is_m4_enabled()) {
 		if (!amp_power_mutex || !shared_mem) {
 			if (enable)
@@ -77,7 +78,9 @@ static void clk_pfd_do_shared_clks(struct clk_hw *hw, bool enable)
 		clk_pfd_do_hardware(pfd, enable);
 
 		imx_sema4_mutex_unlock(amp_power_mutex);
-	} else {
+	} else
+#endif
+	{
 		clk_pfd_do_hardware(pfd, enable);
 	}
 }
