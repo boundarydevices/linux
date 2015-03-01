@@ -782,6 +782,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-usd.dtb \
 	imx6q-usd_mr2.dtb \
 	imx6q-utc.dtb \
+	imx6q-vp.dtb \
 
 dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6qp-mtp.dtb \
