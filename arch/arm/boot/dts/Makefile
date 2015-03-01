@@ -442,6 +442,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-lshore-r1.dtb \
 	imx6dl-mamoj.dtb \
 	imx6dl-mcs.dtb \
+	imx6dl-mtp.dtb \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nitrogen6x.dtb \
 	imx6dl-phytec-mira-rdk-nand.dtb \
@@ -546,6 +547,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-marsboard.dtb \
 	imx6q-mccmon6.dtb \
 	imx6q-mcs.dtb \
+	imx6q-mtp.dtb \
 	imx6q-nitrogen6x.dtb \
 	imx6q-nitrogen6_max.dtb \
 	imx6q-nitrogen6_som2.dtb \
@@ -588,6 +590,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-wandboard-revb1.dtb \
 	imx6q-wandboard-revd1.dtb \
 	imx6q-zii-rdu2.dtb \
+	imx6qp-mtp.dtb \
 	imx6qp-nitrogen6_max.dtb \
 	imx6qp-nitrogen6_som2.dtb \
 	imx6qp-phytec-mira-rdk-nand.dtb \
