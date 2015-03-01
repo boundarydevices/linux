@@ -660,6 +660,7 @@ static int imx6q_pm_enter(suspend_state_t state)
 	unsigned int console_saved_reg[11] = {0};
 	static unsigned int ccm_ccgr4, ccm_ccgr6;
 
+#ifdef CONFIG_SOC_IMX6SX
 	if (imx_src_is_m4_enabled()) {
 		if (imx_gpc_is_m4_sleeping() && imx_mu_is_m4_in_low_freq()) {
 			imx_gpc_hold_m4_in_sleep();
@@ -677,6 +678,7 @@ static int imx6q_pm_enter(suspend_state_t state)
 			return 0;
 		}
 	}
+#endif
 
 	if (!iram_tlb_base_addr) {
 		pr_warn("No IRAM/OCRAM memory allocated for suspend/resume \
@@ -763,10 +765,12 @@ static int imx6q_pm_enter(suspend_state_t state)
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_SOC_IMX6SX
 	if (imx_src_is_m4_enabled()) {
 		imx_mu_enable_m4_irqs_in_gic(false);
 		imx_gpc_release_m4_in_sleep();
 	}
+#endif
 
 	return 0;
 }
