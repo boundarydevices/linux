@@ -305,9 +305,11 @@ static int adv739x_disp_init(struct mxc_dispdrv_handle *disp,
 
 	adv739x->inited = true;
 
-	setting->dev_id = adv739x->ipu_id;
-	setting->disp_id = adv739x->disp_id;
 	pr_info("%s:ipu=%d di=%d\n", __func__, adv739x->ipu_id, adv739x->disp_id);
+	ret = ipu_di_to_crtc(dev, adv739x->ipu_id,
+			adv739x->disp_id, &setting->crtc);
+	if (ret < 0)
+		return ret;
 
 	ret = fb_find_mode(&setting->fbi->var, setting->fbi, setting->dft_mode_str,
 				modedb, modedb_sz, NULL, setting->default_bpp);
