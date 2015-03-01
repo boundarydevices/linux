@@ -744,6 +744,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-nitrogen6_vm-magstripe.dtb \
 	imx6dl-nitrogen6_vm-pt.dtb \
 	imx6dl-per.dtb \
+	imx6dl-sp.dtb \
 
 dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-acl.dtb \
