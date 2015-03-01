@@ -529,6 +529,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-sbc6x.dtb \
 	imx6q-ses.dtb \
 	imx6q-snap.dtb \
+	imx6q-ta.dtb \
 	imx6q-tbs2910.dtb \
 	imx6q-ts4900.dtb \
 	imx6q-tx6q-1010.dtb \
