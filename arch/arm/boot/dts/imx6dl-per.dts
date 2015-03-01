@@ -1,0 +1,61 @@
+/*
+ * Copyright 2013 Boundary Devices
+ * Copyright 2012 Freescale Semiconductor, Inc.
+ * Copyright 2011 Linaro Ltd.
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "imx6dl.dtsi"
+#include "imx6qdl-per.dtsi"
+
+/ {
+	model = "Freescale i.MX6 DualLite Per Board";
+	compatible = "fsl,imx6dl-per", "fsl,imx6dl";
+};
+
+&gs2971 {
+	ipu = <0>;
+};
+
+&pinctrl_gs2971 { /* parallel camera */
+	fsl,pins = <
+		MX6QDL_PAD_EIM_DA9__IPU1_CSI1_DATA00	0xb0b1
+		MX6QDL_PAD_EIM_DA8__IPU1_CSI1_DATA01	0xb0b1
+		MX6QDL_PAD_EIM_DA7__IPU1_CSI1_DATA02	0xb0b1
+		MX6QDL_PAD_EIM_DA6__IPU1_CSI1_DATA03	0xb0b1
+		MX6QDL_PAD_EIM_DA5__IPU1_CSI1_DATA04	0xb0b1
+		MX6QDL_PAD_EIM_DA4__IPU1_CSI1_DATA05	0xb0b1
+		MX6QDL_PAD_EIM_DA3__IPU1_CSI1_DATA06	0xb0b1
+		MX6QDL_PAD_EIM_DA2__IPU1_CSI1_DATA07	0xb0b1
+		MX6QDL_PAD_EIM_DA1__IPU1_CSI1_DATA08	0xb0b1
+		MX6QDL_PAD_EIM_DA0__IPU1_CSI1_DATA09	0xb0b1
+		MX6QDL_PAD_EIM_EB1__IPU1_CSI1_DATA10	0xb0b1
+		MX6QDL_PAD_EIM_EB0__IPU1_CSI1_DATA11	0xb0b1
+		MX6QDL_PAD_EIM_A17__IPU1_CSI1_DATA12	0xb0b1
+		MX6QDL_PAD_EIM_A18__IPU1_CSI1_DATA13	0xb0b1
+		MX6QDL_PAD_EIM_A19__IPU1_CSI1_DATA14	0xb0b1
+		MX6QDL_PAD_EIM_A20__IPU1_CSI1_DATA15	0xb0b1
+		MX6QDL_PAD_EIM_A21__IPU1_CSI1_DATA16	0xb0b1
+		MX6QDL_PAD_EIM_A22__IPU1_CSI1_DATA17	0xb0b1
+		MX6QDL_PAD_EIM_A23__IPU1_CSI1_DATA18	0xb0b1
+		MX6QDL_PAD_EIM_EB2__IPU1_CSI1_DATA19	0xb0b1
+		MX6QDL_PAD_EIM_A16__IPU1_CSI1_PIXCLK	0xb0b1
+		MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0xb0b1	/* DATA_EN not used */
+	>;
+};
+
+&pinctrl_gs2971_cea861 { /* parallel camera */
+	fsl,pins = <
+		MX6QDL_PAD_EIM_DA11__IPU1_CSI1_HSYNC	0xb0b1
+		MX6QDL_PAD_EIM_DA12__IPU1_CSI1_VSYNC	0xb0b1
+	>;
+};
