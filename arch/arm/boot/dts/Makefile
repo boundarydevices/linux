@@ -475,6 +475,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-nitrogen6_vm-magstripe.dtb \
 	imx6dl-nitrogen6_vm-pt.dtb \
 	imx6dl-nitrogen6x.dtb \
+	imx6dl-per.dtb \
 	imx6dl-phytec-mira-rdk-nand.dtb \
 	imx6dl-phytec-pbab01.dtb \
 	imx6dl-pico-dwarf.dtb \
@@ -610,6 +611,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-nitrogen6_som2-ta.dtb \
 	imx6q-novena.dtb \
 	imx6q-nw2.dtb \
+	imx6q-per.dtb \
 	imx6q-phytec-mira-rdk-emmc.dtb \
 	imx6q-phytec-mira-rdk-nand.dtb \
 	imx6q-phytec-pbab01.dtb \
