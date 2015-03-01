@@ -424,6 +424,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-hp.dtb \
 	imx6q-hummingboard.dtb \
 	imx6q-icore-rqs.dtb \
+	imx6q-insp.dtb \
 	imx6q-marsboard.dtb \
 	imx6q-nitrogen6x.dtb \
 	imx6q-nitrogen6_max.dtb \
