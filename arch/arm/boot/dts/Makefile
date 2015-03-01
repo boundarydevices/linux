@@ -544,6 +544,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-usd_mr2.dtb \
 	imx6q-utc.dtb \
 	imx6q-utilite-pro.dtb \
+	imx6q-vp.dtb \
 	imx6q-wandboard.dtb \
 	imx6q-wandboard-revb1.dtb \
 	imx6q-zii-rdu2.dtb \
