@@ -129,6 +129,10 @@
 	};
 };
 
+&cpu0 {
+	arm-supply = <&sw1a_reg>;
+};
+
 &ecspi3 {
 	fsl,spi-num-chipselects = <1>;
 	cs-gpios = <&gpio6 22 0>;
