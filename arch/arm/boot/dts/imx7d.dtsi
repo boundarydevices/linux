@@ -627,8 +627,8 @@
 				compatible = "fsl,imx7d-pwm", "fsl,imx27-pwm";
 				reg = <0x30660000 0x10000>;
 				interrupts = <GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>,
-					<&clks IMX7D_CLK_DUMMY>;
+				clocks = <&clks IMX7D_PWM1_ROOT_CLK>,
+					<&clks IMX7D_PWM1_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				#pwm-cells = <2>;
 				status = "disabled";
@@ -638,8 +638,8 @@
 				compatible = "fsl,imx7d-pwm", "fsl,imx27-pwm";
 				reg = <0x30670000 0x10000>;
 				interrupts = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>,
-					<&clks IMX7D_CLK_DUMMY>;
+				clocks = <&clks IMX7D_PWM2_ROOT_CLK>,
+					<&clks IMX7D_PWM2_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				#pwm-cells = <2>;
 				status = "disabled";
@@ -649,8 +649,8 @@
 				compatible = "fsl,imx7d-pwm", "fsl,imx27-pwm";
 				reg = <0x30680000 0x10000>;
 				interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>,
-					<&clks IMX7D_CLK_DUMMY>;
+				clocks = <&clks IMX7D_PWM3_ROOT_CLK>,
+					<&clks IMX7D_PWM3_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				#pwm-cells = <2>;
 				status = "disabled";
@@ -660,8 +660,8 @@
 				compatible = "fsl,imx7d-pwm", "fsl,imx27-pwm";
 				reg = <0x30690000 0x10000>;
 				interrupts = <GIC_SPI 84 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>,
-					<&clks IMX7D_CLK_DUMMY>;
+				clocks = <&clks IMX7D_PWM4_ROOT_CLK>,
+					<&clks IMX7D_PWM4_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				#pwm-cells = <2>;
 				status = "disabled";
