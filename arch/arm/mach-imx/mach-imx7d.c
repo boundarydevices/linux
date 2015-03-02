@@ -42,12 +42,27 @@ static int ar8031_phy_fixup(struct phy_device *dev)
 	return 0;
 }
 
+static int bcm54220_phy_fixup(struct phy_device *dev)
+{
+	/* enable RXC skew select RGMII copper mode */
+	phy_write(dev, 0x1e, 0x21);
+	phy_write(dev, 0x1f, 0x7ea8);
+	phy_write(dev, 0x1e, 0x2f);
+	phy_write(dev, 0x1f, 0x71b7);
+
+	return 0;
+}
+
 #define PHY_ID_AR8031   0x004dd074
+#define PHY_ID_BCM54220	0x600d8589
 static void __init imx7d_enet_phy_init(void)
 {
-	if (IS_BUILTIN(CONFIG_PHYLIB))
+	if (IS_BUILTIN(CONFIG_PHYLIB)) {
 		phy_register_fixup_for_uid(PHY_ID_AR8031, 0xffffffff,
 					   ar8031_phy_fixup);
+		phy_register_fixup_for_uid(PHY_ID_BCM54220, 0xffffffff,
+					   bcm54220_phy_fixup);
+	}
 }
 
 static void __init imx7d_enet_clk_sel(void)
