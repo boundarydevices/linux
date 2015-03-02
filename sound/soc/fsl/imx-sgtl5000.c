@@ -206,8 +206,10 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	data->dai.init = &imx_sgtl5000_dai_init;
 	data->dai.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 			    SND_SOC_DAIFMT_CBM_CFM;
-	init_gpio_data(&pdev->dev, codec_np, &data->mute_hp, "mute-gpios");
-	init_gpio_data(&pdev->dev, codec_np, &data->mute_lo, "line-out-mute-gpios");
+	init_gpio_data(&pdev->dev, pdev->dev.of_node,
+			&data->mute_hp, "mute-gpios");
+	init_gpio_data(&pdev->dev, pdev->dev.of_node,
+			&data->mute_lo, "line-out-mute-gpios");
 
 	data->card.dev = &pdev->dev;
 	ret = snd_soc_of_parse_card_name(&data->card, "model");
