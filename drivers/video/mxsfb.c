@@ -505,9 +505,7 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 	clk_enable_axi(host);
 	clk_enable_disp_axi(host);
 
-	clk_set_rate(host->clk_pix, PICOS2KHZ(fb_info->var.pixclock) * 1000U);
-	ret =
-	    clk_set_rate(host->clk_pix,
+	ret = clk_set_rate(host->clk_pix,
 			 PICOS2KHZ(fb_info->var.pixclock) * 1000U);
 	if (ret) {
 		dev_err(&host->pdev->dev,
