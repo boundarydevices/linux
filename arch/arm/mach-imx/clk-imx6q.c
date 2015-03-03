@@ -534,6 +534,12 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	clk[IMX6QDL_CLK_EIM_SLOW]     = imx_clk_gate2("eim_slow",      "emi_slow_podf",     base + 0x80, 10);
 	clk[IMX6QDL_CLK_VDO_AXI]      = imx_clk_gate2("vdo_axi",       "vdo_axi_sel",       base + 0x80, 12);
 	clk[IMX6QDL_CLK_VPU_AXI]      = imx_clk_gate2("vpu_axi",       "vpu_axi_podf",      base + 0x80, 14);
+	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) {
+		clk[IMX6QDL_CLK_PRE0] = imx_clk_gate2("pre0",          "gpu3d_axi",         base + 0x80, 16);
+		clk[IMX6QDL_CLK_PRE1] = imx_clk_gate2("pre1",          "gpu3d_axi",         base + 0x80, 18);
+		clk[IMX6QDL_CLK_PRE2] = imx_clk_gate2("pre2",          "gpu3d_axi",         base + 0x80, 20);
+		clk[IMX6QDL_CLK_PRE3] = imx_clk_gate2("pre3",          "gpu3d_axi",         base + 0x80, 22);
+	}
 	clk[IMX6QDL_CLK_CKO1]         = imx_clk_gate("cko1",           "cko1_podf",         base + 0x60, 7);
 	clk[IMX6QDL_CLK_CKO2]         = imx_clk_gate("cko2",           "cko2_podf",         base + 0x60, 24);
 
