@@ -2483,6 +2483,50 @@ static void arizona_micd_set_level(struct arizona *arizona, int index,
 	regmap_update_bits(arizona->regmap, reg, mask, level);
 }
 
+static int arizona_add_micd_levels(struct arizona_extcon_info *info)
+{
+	struct arizona *arizona = info->arizona;
+	int i, j;
+	int ret =0;
+
+	/* Disable all buttons by default */
+	regmap_update_bits(arizona->regmap, ARIZONA_MIC_DETECT_2,
+			   ARIZONA_MICD_LVL_SEL_MASK, 0x81);
+
+	/* Set up all the buttons the user specified */
+	for (i = 0; i < info->num_micd_ranges; i++) {
+		for (j = 0; j < ARIZONA_NUM_MICD_BUTTON_LEVELS; j++)
+			if (arizona_micd_levels[j] >= info->micd_ranges[i].max)
+				break;
+
+		if (j == ARIZONA_NUM_MICD_BUTTON_LEVELS) {
+			dev_err(arizona->dev, "Unsupported MICD level %d\n",
+				info->micd_ranges[i].max);
+			ret = -EINVAL;
+			goto err_input;
+		}
+
+		dev_dbg(arizona->dev, "%d ohms for MICD threshold %d\n",
+			arizona_micd_levels[j], i);
+
+		arizona_micd_set_level(arizona, i, j);
+		if (info->micd_ranges[i].key > 0)
+			input_set_capability(info->input, EV_KEY,
+						 info->micd_ranges[i].key);
+
+		/* Enable reporting of that range */
+		regmap_update_bits(arizona->regmap, ARIZONA_MIC_DETECT_2,
+				   1 << i, 1 << i);
+	}
+
+	/* Set all the remaining keys to a maximum */
+	for (; i < ARIZONA_MAX_MICD_RANGE; i++)
+		arizona_micd_set_level(arizona, i, 0x3f);
+
+err_input:
+	return ret;
+}
+
 #ifdef CONFIG_OF
 static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 {
@@ -2913,7 +2957,7 @@ static int arizona_extcon_probe(struct platform_device *pdev)
 	struct arizona_extcon_info *info;
 	unsigned int reg;
 	int jack_irq_fall, jack_irq_rise;
-	int ret, mode, i, j;
+	int ret, mode, i;
 	int debounce_reg, debounce_val, analog_val;
 
 	if (!arizona->dapm || !arizona->dapm->card)
@@ -3117,38 +3161,9 @@ static int arizona_extcon_probe(struct platform_device *pdev)
 		}
 	}
 
-	/* Disable all buttons by default */
-	regmap_update_bits(arizona->regmap, ARIZONA_MIC_DETECT_2,
-			   ARIZONA_MICD_LVL_SEL_MASK, 0x81);
-
-	/* Set up all the buttons the user specified */
-	for (i = 0; i < info->num_micd_ranges; i++) {
-		for (j = 0; j < ARIZONA_NUM_MICD_BUTTON_LEVELS; j++)
-			if (arizona_micd_levels[j] >= info->micd_ranges[i].max)
-				break;
-
-		if (j == ARIZONA_NUM_MICD_BUTTON_LEVELS) {
-			dev_err(arizona->dev, "Unsupported MICD level %d\n",
-				info->micd_ranges[i].max);
-			ret = -EINVAL;
-			goto err_input;
-		}
-
-		dev_dbg(arizona->dev, "%d ohms for MICD threshold %d\n",
-			arizona_micd_levels[j], i);
-
-		arizona_micd_set_level(arizona, i, j);
-		input_set_capability(info->input, EV_KEY,
-				     info->micd_ranges[i].key);
-
-		/* Enable reporting of that range */
-		regmap_update_bits(arizona->regmap, ARIZONA_MIC_DETECT_2,
-				   1 << i, 1 << i);
-	}
-
-	/* Set all the remaining keys to a maximum */
-	for (; i < ARIZONA_MAX_MICD_RANGE; i++)
-		arizona_micd_set_level(arizona, i, 0x3f);
+	ret = arizona_add_micd_levels(info);
+	if (ret < 0)
+		goto err_input;
 
 	/*
 	 * If we have a clamp use it, activating in conjunction with
