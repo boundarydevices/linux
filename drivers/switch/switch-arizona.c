@@ -99,7 +99,7 @@ struct arizona_extcon_info {
 	const struct arizona_micd_config *micd_modes;
 	int micd_num_modes;
 
-	const struct arizona_micd_range *micd_ranges;
+	struct arizona_micd_range *micd_ranges;
 	int num_micd_ranges;
 
 	bool micd_reva;
@@ -149,13 +149,15 @@ static const struct arizona_micd_config micd_default_modes[] = {
 	{ 0,                  2, 1 },
 };
 
-static const struct arizona_micd_range micd_default_ranges[] = {
+static struct arizona_micd_range micd_default_ranges[] = {
 	{ .max =  11, .key = BTN_0 },
 	{ .max =  28, .key = BTN_1 },
 	{ .max =  54, .key = BTN_2 },
 	{ .max = 100, .key = BTN_3 },
 	{ .max = 186, .key = BTN_4 },
 	{ .max = 430, .key = BTN_5 },
+	{ .max = -1, .key = -1 },
+	{ .max = -1, .key = -1 },
 };
 
 /* The number of levels in arizona_micd_levels valid for button thresholds */
@@ -1633,6 +1635,131 @@ static int arizona_antenna_remove_reading(struct arizona_extcon_info *info,
 	return 0;
 }
 
+static int arizona_add_micd_levels(struct arizona_extcon_info *info);
+
+static int arizona_antenna_add_micd_level(struct arizona_extcon_info *info, int imp)
+{
+	struct arizona *arizona = info->arizona;
+	int i, j, micd_lvl;
+	int ret =0;
+
+
+	/* check if impedance level is supported */
+	for (micd_lvl = 0; micd_lvl < ARIZONA_NUM_MICD_BUTTON_LEVELS; micd_lvl++) {
+		if (arizona_micd_levels[micd_lvl] >= imp)
+			break;
+	}
+
+	if (micd_lvl == ARIZONA_NUM_MICD_BUTTON_LEVELS) {
+		dev_info(arizona->dev, "Unsupported MICD level %d\n",
+			imp);
+		ret = -EINVAL;
+		goto err_input;
+	}
+
+	/* find index to insert an impedance level */
+	for (i = 0; i < info->num_micd_ranges; i++) {
+		if (info->micd_ranges[i].max >= imp)
+			break;
+	}
+
+	if (info->micd_ranges[i].max == imp) {
+		dev_info(arizona->dev, "MICD level already used %d\n",
+			imp);
+		ret = -EINVAL;
+		goto err_input;
+	}
+
+	/* insert an impedance level */
+	for (j =( info->num_micd_ranges - 1); j >= i; j--) {
+		info->micd_ranges[j+2].max = info->micd_ranges[j].max;
+		info->micd_ranges[j+2].key = info->micd_ranges[j].key;
+	}
+	info->micd_ranges[i].max = arizona_micd_levels[micd_lvl-2];
+	info->micd_ranges[i].key = info->micd_ranges[i+2].key;
+	info->micd_ranges[i+1].max =imp;
+	info->micd_ranges[i+1].key = -1;
+	info->num_micd_ranges += 2;
+	ret = arizona_add_micd_levels(info);
+
+err_input:
+	return ret;
+}
+
+static int arizona_antenna_remove_micd_level(struct arizona_extcon_info *info, int imp)
+{
+	struct arizona *arizona = info->arizona;
+	int i, j;
+	int ret =0;
+
+	/* find index to remove */
+	for (i = 0; i < info->num_micd_ranges; i++) {
+		if (info->micd_ranges[i].max == imp &&
+			info->micd_ranges[i].key == -1)
+			break;
+	}
+
+	if (i == info->num_micd_ranges) {
+		dev_info(arizona->dev, "MICD level %d doesn't exist\n",
+			imp);
+		ret = -EINVAL;
+		goto err_input;
+	}
+
+	/* remove the impedance level */
+	info->num_micd_ranges -= 2;;
+	for (j = i-1; j < info->num_micd_ranges; j++) {
+		info->micd_ranges[j].max = info->micd_ranges[j+2].max;
+		info->micd_ranges[j].key = info->micd_ranges[j+2].key;
+	}
+	ret = arizona_add_micd_levels(info);
+
+err_input:
+	return ret;
+}
+
+static int arizona_antenna_button_start(struct arizona_extcon_info *info)
+{
+	struct arizona *arizona = info->arizona;
+	int i;
+
+	for (i = 0; i < info->num_micd_ranges; i++) {
+		if (info->micd_ranges[i].key == -1) {
+			break;
+		}
+	}
+
+	if ((i != info->num_micd_ranges) &&
+		(info->micd_ranges[i].max != arizona->hp_impedance)) {
+		arizona_antenna_remove_micd_level(info, info->micd_ranges[i].max);
+	}
+	arizona_antenna_add_micd_level(info, arizona->hp_impedance);
+
+	for (i = 0; i < info->num_micd_ranges; i++)
+		dev_dbg(arizona->dev, "%s: micd_lvl=%d: key=%d\n", __func__ ,
+			info->micd_ranges[i].max, info->micd_ranges[i].key);
+
+	return arizona_micd_start(info);
+}
+
+static bool arizona_antenna_is_valid_button(struct arizona_extcon_info *info, int imp)
+{
+	int i;
+	int key = -1;
+	bool is_valid_button = true;
+
+	if (imp < MICROPHONE_MIN_OHM) {
+		for (i = 0; i < info->num_micd_ranges; i++) {
+			if (imp <= info->micd_ranges[i].max) {
+				key = info->micd_ranges[i].key;
+				break;
+			}
+		}
+		is_valid_button = key > 0 ? true : false;
+	}
+
+	return is_valid_button;
+}
 static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 					  int val)
 {
@@ -1647,6 +1774,9 @@ static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 	ret = arizona_micd_button_debounce(info, val);
 	if (ret < 0)
 		return ret;
+
+	if (!arizona_antenna_is_valid_button(info, val))
+		return val;
 
 	if (val > MICROPHONE_MAX_OHM) {
 		int i;
@@ -2275,7 +2405,7 @@ EXPORT_SYMBOL_GPL(arizona_antenna_hpr_det);
 
 const struct arizona_jd_state arizona_antenna_button_det = {
 	.mode = ARIZONA_ACCDET_MODE_MIC,
-	.start = arizona_micd_start,
+	.start = arizona_antenna_button_start,
 	.restart = arizona_micd_restart,
 	.reading = arizona_antenna_button_reading,
 	.stop = arizona_micd_stop,
@@ -3136,12 +3266,18 @@ static int arizona_extcon_probe(struct platform_device *pdev)
 	BUILD_BUG_ON(ARRAY_SIZE(arizona_micd_levels) <
 		     ARIZONA_NUM_MICD_BUTTON_LEVELS);
 
+	info->micd_ranges = micd_default_ranges;
+	info->num_micd_ranges = ARRAY_SIZE(micd_default_ranges) - 2;
+
 	if (arizona->pdata.num_micd_ranges) {
-		info->micd_ranges = pdata->micd_ranges;
+		memcpy(info->micd_ranges, pdata->micd_ranges,
+			sizeof(struct arizona_micd_range) * pdata->num_micd_ranges);
 		info->num_micd_ranges = pdata->num_micd_ranges;
-	} else {
-		info->micd_ranges = micd_default_ranges;
-		info->num_micd_ranges = ARRAY_SIZE(micd_default_ranges);
+
+		for (i = info->num_micd_ranges; i < ARRAY_SIZE(micd_default_ranges); i++) {
+			info->micd_ranges[i].max = -1;
+			info->micd_ranges[i].key = -1;
+		}
 	}
 
 	if (arizona->pdata.num_micd_ranges > ARIZONA_MAX_MICD_RANGE) {
