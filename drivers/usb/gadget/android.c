@@ -213,19 +213,50 @@ struct functionfs_config {
 	struct ffs_data *data;
 };
 
+static int functionfs_ready_callback(struct ffs_data *ffs);
+static void functionfs_closed_callback(struct ffs_data *ffs);
+static void *functionfs_acquire_dev_callback(const char *dev_name);
+static void functionfs_release_dev_callback(struct ffs_data *ffs_data);
+static struct usb_function_instance *fi_ffs;
 static int ffs_function_init(struct android_usb_function *f,
 			     struct usb_composite_dev *cdev)
 {
+	struct f_fs_opts *opts;
+	int ret = 0;
+
 	f->config = kzalloc(sizeof(struct functionfs_config), GFP_KERNEL);
 	if (!f->config)
 		return -ENOMEM;
 
-	return functionfs_init();
+	fi_ffs = usb_get_function_instance("ffs");
+	if (IS_ERR(fi_ffs)) {
+			ret = PTR_ERR(fi_ffs);
+			goto no_dev;
+	}
+	opts = to_f_fs_opts(fi_ffs);
+	ret = ffs_name_dev(opts->dev, "adb");
+	if (ret)
+		goto no_dev;
+	opts->dev->ffs_ready_callback = functionfs_ready_callback;
+	opts->dev->ffs_closed_callback = functionfs_closed_callback;
+	opts->dev->ffs_acquire_dev_callback = functionfs_acquire_dev_callback;
+	opts->dev->ffs_release_dev_callback = functionfs_release_dev_callback;
+	opts->no_configfs = true;
+	return 0;
+
+no_dev:
+	usb_put_function_instance(fi_ffs);
+	kfree(fi_ffs);
+	return ret;
+
+
 }
 
 static void ffs_function_cleanup(struct android_usb_function *f)
 {
 	functionfs_cleanup();
+	usb_put_function_instance(fi_ffs);
+	kfree(fi_ffs);
 	kfree(f->config);
 }
 
@@ -233,9 +264,7 @@ static void ffs_function_enable(struct android_usb_function *f)
 {
 	struct android_dev *dev = _android_dev;
 	struct functionfs_config *config = f->config;
-
 	config->enabled = true;
-
 	/* Disable the gadget until the function is ready */
 	if (!config->opened)
 		android_disable(dev);
@@ -253,12 +282,58 @@ static void ffs_function_disable(struct android_usb_function *f)
 		android_enable(dev);
 }
 
+static int ffs_bind_config(struct usb_composite_dev *cdev,
+				  struct usb_configuration *c,
+				  struct ffs_data *ffs)
+{
+	struct ffs_function *func;
+	int ret;
+
+	ENTER();
+
+	func = kzalloc(sizeof *func, GFP_KERNEL);
+	if (unlikely(!func))
+		return -ENOMEM;
+
+
+	func->function.name    = "ffs";
+	func->function.strings = ffs->stringtabs;
+
+	func->function.bind    = ffs_func_bind;
+	func->function.unbind  = old_ffs_func_unbind;
+	func->function.set_alt = ffs_func_set_alt;
+	func->function.disable = ffs_func_disable;
+	func->function.setup   = ffs_func_setup;
+	func->function.suspend = ffs_func_suspend;
+	func->function.resume  = ffs_func_resume;
+
+	func->function.fi = fi_ffs;
+	func->conf   = c;
+	func->gadget = cdev->gadget;
+	func->ffs = ffs;
+	ffs_data_get(ffs);
+
+	ret = usb_add_function(c, &func->function);
+	if (unlikely(ret))
+		ffs_func_free(func);
+
+	return ret;
+}
+
+
 static int ffs_function_bind_config(struct android_usb_function *f,
 				    struct usb_configuration *c)
 {
 	struct functionfs_config *config = f->config;
-	return functionfs_bind_config(c->cdev, c, config->data);
+	return ffs_bind_config(c->cdev, c, config->data);
 }
+
+static int ffs_function_unbind_config(struct android_usb_function *f,
+				    struct usb_configuration *c)
+{
+	return 0;
+}
+
 
 static ssize_t
 ffs_aliases_show(struct device *pdev, struct device_attribute *attr, char *buf)
@@ -309,6 +384,7 @@ static struct android_usb_function ffs_function = {
 	.disable	= ffs_function_disable,
 	.cleanup	= ffs_function_cleanup,
 	.bind_config	= ffs_function_bind_config,
+	.unbind_config	= ffs_function_unbind_config,
 	.attributes	= ffs_function_attributes,
 };
 
@@ -319,10 +395,6 @@ static int functionfs_ready_callback(struct ffs_data *ffs)
 	int ret = 0;
 
 	mutex_lock(&dev->mutex);
-
-	ret = functionfs_bind(ffs, dev->cdev);
-	if (ret)
-		goto err;
 
 	config->data = ffs;
 	config->opened = true;
@@ -339,6 +411,7 @@ static void functionfs_closed_callback(struct ffs_data *ffs)
 {
 	struct android_dev *dev = _android_dev;
 	struct functionfs_config *config = ffs_function.config;
+	struct f_fs_opts *ffs_opts;
 
 	mutex_lock(&dev->mutex);
 
@@ -348,7 +421,10 @@ static void functionfs_closed_callback(struct ffs_data *ffs)
 	config->opened = false;
 	config->data = NULL;
 
-	functionfs_unbind(ffs);
+	ffs_opts =
+		container_of(fi_ffs, struct f_fs_opts, func_inst);
+	if (!--ffs_opts->refcnt)
+		functionfs_unbind(ffs);
 
 	mutex_unlock(&dev->mutex);
 }
