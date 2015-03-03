@@ -134,6 +134,8 @@ static unsigned int share_count_ssi1;
 static unsigned int share_count_ssi2;
 static unsigned int share_count_ssi3;
 static unsigned int share_count_spdif;
+static unsigned int share_count_prg0;
+static unsigned int share_count_prg1;
 
 static void __init imx6q_clocks_init(struct device_node *ccm_node)
 {
@@ -539,6 +541,10 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 		clk[IMX6QDL_CLK_PRE1] = imx_clk_gate2("pre1",          "gpu3d_axi",         base + 0x80, 18);
 		clk[IMX6QDL_CLK_PRE2] = imx_clk_gate2("pre2",          "gpu3d_axi",         base + 0x80, 20);
 		clk[IMX6QDL_CLK_PRE3] = imx_clk_gate2("pre3",          "gpu3d_axi",         base + 0x80, 22);
+		clk[IMX6QDL_CLK_PRG0_AXI] = imx_clk_gate2_shared("prg0_axi", "ipu1_podf",   base + 0x80, 24, &share_count_prg0);
+		clk[IMX6QDL_CLK_PRG1_AXI] = imx_clk_gate2_shared("prg1_axi", "ipu2_podf",   base + 0x80, 26, &share_count_prg1);
+		clk[IMX6QDL_CLK_PRG0_APB] = imx_clk_gate2_shared("prg0_apb", "ipg",         base + 0x80, 24, &share_count_prg0);
+		clk[IMX6QDL_CLK_PRG1_APB] = imx_clk_gate2_shared("prg1_apb", "ipg",         base + 0x80, 26, &share_count_prg1);
 	}
 	clk[IMX6QDL_CLK_CKO1]         = imx_clk_gate("cko1",           "cko1_podf",         base + 0x60, 7);
 	clk[IMX6QDL_CLK_CKO2]         = imx_clk_gate("cko2",           "cko2_podf",         base + 0x60, 24);
