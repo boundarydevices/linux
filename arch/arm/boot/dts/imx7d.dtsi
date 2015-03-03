@@ -873,7 +873,7 @@
 				reg = <0x30a00000 0x10000>;
 				interrupts = <GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX7D_CLK_DUMMY>,
-					<&clks IMX7D_CLK_DUMMY>;
+					<&clks IMX7D_CAN1_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				stop-mode = <&gpr 0x10 1 0x10 17>;
 				status = "disabled";
@@ -884,7 +884,7 @@
 				reg = <0x30a10000 0x10000>;
 				interrupts = <GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX7D_CLK_DUMMY>,
-					<&clks IMX7D_CLK_DUMMY>;
+					<&clks IMX7D_CAN2_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				stop-mode = <&gpr 0x10 2 0x10 18>;
 				status = "disabled";
