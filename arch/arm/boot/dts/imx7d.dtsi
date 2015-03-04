@@ -34,6 +34,7 @@
 		serial3 = &uart4;
 		serial4 = &uart5;
 		serial5 = &uart6;
+		serial6 = &uart7;
 		spi0 = &ecspi1;
 		spi1 = &ecspi2;
 		spi2 = &ecspi3;
@@ -791,7 +792,7 @@
 					     "fsl,imx6q-uart", "fsl,imx21-uart";
 				reg = <0x30860000 0x10000>;
 				interrupts = <GIC_SPI 26 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>,
+				clocks = <&clks IMX7D_UART1_ROOT_CLK>,
 					<&clks IMX7D_UART1_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				dmas = <&sdma 22 4 0>, <&sdma 23 4 0>;
@@ -804,7 +805,7 @@
 					     "fsl,imx6q-uart", "fsl,imx21-uart";
 				reg = <0x30870000 0x10000>;
 				interrupts = <GIC_SPI 27 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>,
+				clocks = <&clks IMX7D_UART2_ROOT_CLK>,
 					<&clks IMX7D_UART2_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				dmas = <&sdma 24 4 0>, <&sdma 25 4 0>;
@@ -817,7 +818,7 @@
 					     "fsl,imx6q-uart", "fsl,imx21-uart";
 				reg = <0x30880000 0x10000>;
 				interrupts = <GIC_SPI 28 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>,
+				clocks = <&clks IMX7D_UART3_ROOT_CLK>,
 					<&clks IMX7D_UART3_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				dmas = <&sdma 26 4 0>, <&sdma 27 4 0>;
@@ -931,7 +932,7 @@
 					     "fsl,imx6q-uart", "fsl,imx21-uart";
 				reg = <0x30a60000 0x10000>;
 				interrupts = <GIC_SPI 29 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>,
+				clocks = <&clks IMX7D_UART4_ROOT_CLK>,
 					<&clks IMX7D_UART4_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				dmas = <&sdma 28 4 0>, <&sdma 29 4 0>;
@@ -944,7 +945,7 @@
 					     "fsl,imx6q-uart", "fsl,imx21-uart";
 				reg = <0x30a70000 0x10000>;
 				interrupts = <GIC_SPI 30 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>,
+				clocks = <&clks IMX7D_UART5_ROOT_CLK>,
 					<&clks IMX7D_UART5_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				dmas = <&sdma 30 4 0>, <&sdma 31 4 0>;
@@ -957,7 +958,7 @@
 					     "fsl,imx6q-uart", "fsl,imx21-uart";
 				reg = <0x30a80000 0x10000>;
 				interrupts = <GIC_SPI 16 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>,
+				clocks = <&clks IMX7D_UART6_ROOT_CLK>,
 					<&clks IMX7D_UART6_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				dmas = <&sdma 32 4 0>, <&sdma 33 4 0>;
@@ -970,7 +971,7 @@
 					     "fsl,imx6q-uart", "fsl,imx21-uart";
 				reg = <0x30a90000 0x10000>;
 				interrupts = <GIC_SPI 126 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>,
+				clocks = <&clks IMX7D_UART7_ROOT_CLK>,
 					<&clks IMX7D_UART7_ROOT_CLK>;
 				clock-names = "ipg", "per";
 				dmas = <&sdma 34 4 0>, <&sdma 35 4 0>;
