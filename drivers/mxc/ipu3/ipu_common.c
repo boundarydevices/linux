@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -463,6 +463,10 @@ static int ipu_probe(struct platform_device *pdev)
 		dev_err(ipu->dev, "ipu clk enable failed\n");
 		return ret;
 	}
+
+	ipu->prg_clk = devm_clk_get(ipu->dev, "prg");
+	if (IS_ERR(ipu->prg_clk))
+		ipu->prg_clk = NULL;
 
 	ipu->online = true;
 
@@ -1366,9 +1370,11 @@ int32_t ipu_init_channel_buffer(struct ipu_soc *ipu, ipu_channel_t channel,
 				break;
 			case 27:
 				value = 0x3 << 18;
+				_ipu_ch_param_set_axi_id(ipu, dma_chan, 2);
 				break;
 			case 28:
 				value = 0x3 << 20;
+				_ipu_ch_param_set_axi_id(ipu, dma_chan, 3);
 				break;
 			case 45:
 				reg = IDMAC_CH_LOCK_EN_2;
@@ -1604,6 +1610,19 @@ int32_t ipu_update_channel_offset(struct ipu_soc *ipu,
 }
 EXPORT_SYMBOL(ipu_update_channel_offset);
 
+int32_t ipu_get_channel_offset(uint32_t pixel_fmt,
+			       uint16_t width, uint16_t height,
+			       uint32_t stride,
+			       uint32_t u, uint32_t v,
+			       uint32_t vertical_offset, uint32_t horizontal_offset,
+			       uint32_t *u_offset, uint32_t *v_offset)
+{
+	return __ipu_ch_offset_calc(pixel_fmt, width, height, stride,
+				    u, v, 0,
+				    vertical_offset, horizontal_offset,
+				    u_offset, v_offset);
+}
+EXPORT_SYMBOL(ipu_get_channel_offset);
 
 /*!
  * This function is called to set a channel's buffer as ready.
@@ -2181,6 +2200,9 @@ int32_t ipu_enable_channel(struct ipu_soc *ipu, ipu_channel_t channel)
 
 	ipu->channel_enable_mask |= 1L << IPU_CHAN_ID(channel);
 
+	if (ipu->prg_clk)
+		clk_prepare_enable(ipu->prg_clk);
+
 	mutex_unlock(&ipu->mutex_lock);
 
 	return 0;
@@ -2465,6 +2487,9 @@ int32_t ipu_disable_channel(struct ipu_soc *ipu, ipu_channel_t channel, bool wai
 	spin_unlock_irqrestore(&ipu->rdy_reg_spin_lock, lock_flags);
 
 	ipu->channel_enable_mask &= ~(1L << IPU_CHAN_ID(channel));
+
+	if (ipu->prg_clk)
+		clk_disable_unprepare(ipu->prg_clk);
 
 	mutex_unlock(&ipu->mutex_lock);
 
@@ -2973,12 +2998,22 @@ uint32_t bytes_per_pixel(uint32_t fmt)
 	case IPU_PIX_FMT_YVU420P:
 	case IPU_PIX_FMT_YUV422P:
 	case IPU_PIX_FMT_YUV444P:
+	case IPU_PIX_FMT_NV12:
+	case PRE_PIX_FMT_NV21:
+	case IPU_PIX_FMT_NV16:
+	case PRE_PIX_FMT_NV61:
 		return 1;
 		break;
 	case IPU_PIX_FMT_GENERIC_16:	/* generic data */
 	case IPU_PIX_FMT_RGB565:
+	case IPU_PIX_FMT_BGRA4444:
+	case IPU_PIX_FMT_BGRA5551:
 	case IPU_PIX_FMT_YUYV:
 	case IPU_PIX_FMT_UYVY:
+	case IPU_PIX_FMT_GPU16_SB_ST:
+	case IPU_PIX_FMT_GPU16_SB_SRT:
+	case IPU_PIX_FMT_GPU16_ST:
+	case IPU_PIX_FMT_GPU16_SRT:
 		return 2;
 		break;
 	case IPU_PIX_FMT_BGR24:
@@ -2992,6 +3027,11 @@ uint32_t bytes_per_pixel(uint32_t fmt)
 	case IPU_PIX_FMT_RGB32:
 	case IPU_PIX_FMT_RGBA32:
 	case IPU_PIX_FMT_ABGR32:
+	case IPU_PIX_FMT_GPU32_SB_ST:
+	case IPU_PIX_FMT_GPU32_SB_SRT:
+	case IPU_PIX_FMT_GPU32_ST:
+	case IPU_PIX_FMT_GPU32_SRT:
+	case IPU_PIX_FMT_AYUV:
 		return 4;
 		break;
 	default:
@@ -3007,6 +3047,8 @@ ipu_color_space_t format_to_colorspace(uint32_t fmt)
 	switch (fmt) {
 	case IPU_PIX_FMT_RGB666:
 	case IPU_PIX_FMT_RGB565:
+	case IPU_PIX_FMT_BGRA4444:
+	case IPU_PIX_FMT_BGRA5551:
 	case IPU_PIX_FMT_BGR24:
 	case IPU_PIX_FMT_RGB24:
 	case IPU_PIX_FMT_GBR24:
@@ -3017,6 +3059,14 @@ ipu_color_space_t format_to_colorspace(uint32_t fmt)
 	case IPU_PIX_FMT_ABGR32:
 	case IPU_PIX_FMT_LVDS666:
 	case IPU_PIX_FMT_LVDS888:
+	case IPU_PIX_FMT_GPU32_SB_ST:
+	case IPU_PIX_FMT_GPU32_SB_SRT:
+	case IPU_PIX_FMT_GPU32_ST:
+	case IPU_PIX_FMT_GPU32_SRT:
+	case IPU_PIX_FMT_GPU16_SB_ST:
+	case IPU_PIX_FMT_GPU16_SB_SRT:
+	case IPU_PIX_FMT_GPU16_ST:
+	case IPU_PIX_FMT_GPU16_SRT:
 		return RGB;
 		break;
 
@@ -3026,6 +3076,7 @@ ipu_color_space_t format_to_colorspace(uint32_t fmt)
 	}
 	return RGB;
 }
+EXPORT_SYMBOL(format_to_colorspace);
 
 bool ipu_pixel_format_has_alpha(uint32_t fmt)
 {
@@ -3047,6 +3098,89 @@ bool ipu_ch_param_bad_alpha_pos(uint32_t pixel_fmt)
 	return _ipu_ch_param_bad_alpha_pos(pixel_fmt);
 }
 EXPORT_SYMBOL(ipu_ch_param_bad_alpha_pos);
+
+bool ipu_pixel_format_is_gpu_tile(uint32_t fmt)
+{
+	switch (fmt) {
+	case IPU_PIX_FMT_GPU32_SB_ST:
+	case IPU_PIX_FMT_GPU32_SB_SRT:
+	case IPU_PIX_FMT_GPU32_ST:
+	case IPU_PIX_FMT_GPU32_SRT:
+	case IPU_PIX_FMT_GPU16_SB_ST:
+	case IPU_PIX_FMT_GPU16_SB_SRT:
+	case IPU_PIX_FMT_GPU16_ST:
+	case IPU_PIX_FMT_GPU16_SRT:
+		return true;
+	default:
+		return false;
+	}
+}
+EXPORT_SYMBOL(ipu_pixel_format_is_gpu_tile);
+
+bool ipu_pixel_format_is_split_gpu_tile(uint32_t fmt)
+{
+	switch (fmt) {
+	case IPU_PIX_FMT_GPU32_SB_ST:
+	case IPU_PIX_FMT_GPU32_SB_SRT:
+	case IPU_PIX_FMT_GPU16_SB_ST:
+	case IPU_PIX_FMT_GPU16_SB_SRT:
+		return true;
+	default:
+		return false;
+	}
+}
+EXPORT_SYMBOL(ipu_pixel_format_is_split_gpu_tile);
+
+bool ipu_pixel_format_is_pre_yuv(uint32_t fmt)
+{
+	switch (fmt) {
+	case PRE_PIX_FMT_NV21:
+	case PRE_PIX_FMT_NV61:
+		return true;
+	default:
+		return false;
+	}
+}
+EXPORT_SYMBOL(ipu_pixel_format_is_pre_yuv);
+
+bool ipu_pixel_format_is_multiplanar_yuv(uint32_t fmt)
+{
+	switch (fmt) {
+	case IPU_PIX_FMT_YVU410P:
+	case IPU_PIX_FMT_YUV420P:
+	case IPU_PIX_FMT_YUV420P2:
+	case IPU_PIX_FMT_YVU420P:
+	case IPU_PIX_FMT_YUV422P:
+	case IPU_PIX_FMT_YVU422P:
+	case IPU_PIX_FMT_YUV444P:
+	case IPU_PIX_FMT_NV12:
+	case PRE_PIX_FMT_NV21:
+	case IPU_PIX_FMT_NV16:
+	case PRE_PIX_FMT_NV61:
+		return true;
+	default:
+		return false;
+	}
+}
+EXPORT_SYMBOL(ipu_pixel_format_is_multiplanar_yuv);
+
+int ipu_ch_param_get_axi_id(struct ipu_soc *ipu, ipu_channel_t channel, ipu_buffer_t type)
+{
+	uint32_t dma_chan = channel_2_dma(channel, type);
+	int axi_id;
+
+	if (!idma_is_valid(dma_chan))
+		return -EINVAL;
+
+	_ipu_get(ipu);
+	mutex_lock(&ipu->mutex_lock);
+	axi_id = _ipu_ch_param_get_axi_id(ipu, dma_chan);
+	mutex_unlock(&ipu->mutex_lock);
+	_ipu_put(ipu);
+
+	return axi_id;
+}
+EXPORT_SYMBOL(ipu_ch_param_get_axi_id);
 
 #ifdef CONFIG_PM
 static int ipu_suspend(struct device *dev)

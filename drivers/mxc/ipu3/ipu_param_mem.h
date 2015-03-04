@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -304,6 +304,20 @@ static inline void _ipu_ch_param_init(struct ipu_soc *ipu, int ch,
 
 		_ipu_ch_params_set_packing(&params, 5, 0, 6, 5, 5, 11, 8, 16);
 		break;
+	case IPU_PIX_FMT_BGRA4444:
+		ipu_ch_param_set_field(&params, 0, 107, 3, 3);	/* bits/pixel */
+		ipu_ch_param_set_field(&params, 1, 85, 4, 7);	/* pix format */
+		ipu_ch_param_set_field(&params, 1, 78, 7, 31);	/* burst size */
+
+		_ipu_ch_params_set_packing(&params, 4, 4, 4, 8, 4, 12, 4, 0);
+		break;
+	case IPU_PIX_FMT_BGRA5551:
+		ipu_ch_param_set_field(&params, 0, 107, 3, 3);	/* bits/pixel */
+		ipu_ch_param_set_field(&params, 1, 85, 4, 7);	/* pix format */
+		ipu_ch_param_set_field(&params, 1, 78, 7, 31);	/* burst size */
+
+		_ipu_ch_params_set_packing(&params, 5, 1, 5, 6, 5, 11, 1, 0);
+		break;
 	case IPU_PIX_FMT_BGR24:
 		ipu_ch_param_set_field(&params, 0, 107, 3, 1);	/* bits/pixel */
 		ipu_ch_param_set_field(&params, 1, 85, 4, 7);	/* pix format */
@@ -325,6 +339,13 @@ static inline void _ipu_ch_param_init(struct ipu_soc *ipu, int ch,
 		ipu_ch_param_set_field(&params, 1, 78, 7, 19);	/* burst size */
 
 		_ipu_ch_params_set_packing(&params, 8, 8, 8, 0, 8, 16, 8, 24);
+		break;
+	case IPU_PIX_FMT_AYUV:
+		ipu_ch_param_set_field(&params, 0, 107, 3, 0);	/* bits/pixel */
+		ipu_ch_param_set_field(&params, 1, 85, 4, 7);	/* pix format */
+		ipu_ch_param_set_field(&params, 1, 78, 7, 15);	/* burst size */
+
+		_ipu_ch_params_set_packing(&params, 8, 8, 8, 16, 8, 24, 8, 0);
 		break;
 	case IPU_PIX_FMT_BGRA32:
 	case IPU_PIX_FMT_BGR32:
@@ -431,6 +452,12 @@ static inline void _ipu_ch_param_init(struct ipu_soc *ipu, int ch,
 		uv_stride = stride;
 		u_offset = (u == 0) ? stride * height : u;
 		v_offset = (v == 0) ? u_offset * 2 : v;
+		break;
+	case IPU_PIX_FMT_NV16:
+		ipu_ch_param_set_field(&params, 1, 85, 4, 1);	/* pix format */
+		ipu_ch_param_set_field(&params, 1, 78, 7, 31);	/* burst size */
+		uv_stride = stride;
+		u_offset = (u == 0) ? stride * height : u;
 		break;
 	case IPU_PIX_FMT_NV12:
 		/* BPP & pixel format */
@@ -679,28 +706,25 @@ static inline void _ipu_ch_param_set_axi_id(struct ipu_soc *ipu, uint32_t ch, ui
 	ipu_ch_param_mod_field_io(ipu_ch_param_addr(ipu, sub_ch), 1, 93, 2, id);
 };
 
-/* IDMAC U/V offset changing support */
-/* U and V input is not affected, */
-/* the update is done by new calculation according to */
-/* vertical_offset and horizontal_offset */
-static inline void _ipu_ch_offset_update(struct ipu_soc *ipu,
-					int ch,
-					uint32_t pixel_fmt,
-					uint32_t width,
-					uint32_t height,
-					uint32_t stride,
-					uint32_t u,
-					uint32_t v,
-					uint32_t uv_stride,
-					uint32_t vertical_offset,
-					uint32_t horizontal_offset)
+static inline int _ipu_ch_param_get_axi_id(struct ipu_soc *ipu, uint32_t ch)
 {
-	uint32_t u_offset = 0;
-	uint32_t v_offset = 0;
-	uint32_t old_offset = 0;
+	return ipu_ch_param_read_field_io(ipu_ch_param_addr(ipu, ch), 1, 93, 2);
+}
+
+static inline int __ipu_ch_offset_calc(uint32_t pixel_fmt,
+				       uint32_t width,
+				       uint32_t height,
+				       uint32_t stride,
+				       uint32_t u,
+				       uint32_t v,
+				       uint32_t uv_stride,
+				       uint32_t vertical_offset,
+				       uint32_t horizontal_offset,
+				       uint32_t *u_offset,
+				       uint32_t *v_offset)
+{
 	uint32_t u_fix = 0;
 	uint32_t v_fix = 0;
-	int32_t sub_ch = 0;
 
 	switch (pixel_fmt) {
 	case IPU_PIX_FMT_GENERIC:
@@ -717,126 +741,166 @@ static inline void _ipu_ch_offset_update(struct ipu_soc *ipu,
 	case IPU_PIX_FMT_ABGR32:
 	case IPU_PIX_FMT_UYVY:
 	case IPU_PIX_FMT_YUYV:
+	case IPU_PIX_FMT_GPU32_SB_ST:
+	case IPU_PIX_FMT_GPU32_SB_SRT:
+	case IPU_PIX_FMT_GPU32_ST:
+	case IPU_PIX_FMT_GPU32_SRT:
+	case IPU_PIX_FMT_GPU16_SB_ST:
+	case IPU_PIX_FMT_GPU16_SB_SRT:
+	case IPU_PIX_FMT_GPU16_ST:
+	case IPU_PIX_FMT_GPU16_SRT:
+		*u_offset = 0;
+		*v_offset = 0;
 		break;
-
 	case IPU_PIX_FMT_YUV420P2:
 	case IPU_PIX_FMT_YUV420P:
 		if (uv_stride < stride / 2)
 			uv_stride = stride / 2;
 
-		u_offset = stride * (height - vertical_offset - 1) +
+		*u_offset = stride * (height - vertical_offset - 1) +
 					(stride - horizontal_offset) +
 					(uv_stride * vertical_offset / 2) +
 					horizontal_offset / 2;
-		v_offset = u_offset + (uv_stride * height / 2);
+		*v_offset = *u_offset + (uv_stride * height / 2);
 		u_fix = u ? (u + (uv_stride * vertical_offset / 2) +
 					(horizontal_offset / 2) -
 					(stride * vertical_offset) - (horizontal_offset)) :
-					u_offset;
+					*u_offset;
 		v_fix = v ? (v + (uv_stride * vertical_offset / 2) +
 					(horizontal_offset / 2) -
 					(stride * vertical_offset) - (horizontal_offset)) :
-					v_offset;
-
+					*v_offset;
 		break;
 	case IPU_PIX_FMT_YVU420P:
 		if (uv_stride < stride / 2)
 			uv_stride = stride / 2;
 
-		v_offset = stride * (height - vertical_offset - 1) +
+		*v_offset = stride * (height - vertical_offset - 1) +
 					(stride - horizontal_offset) +
 					(uv_stride * vertical_offset / 2) +
 					horizontal_offset / 2;
-		u_offset = v_offset + (uv_stride * height / 2);
+		*u_offset = *v_offset + (uv_stride * height / 2);
 		u_fix = u ? (u + (uv_stride * vertical_offset / 2) +
 					(horizontal_offset / 2) -
 					(stride * vertical_offset) - (horizontal_offset)) :
-					u_offset;
+					*u_offset;
 		v_fix = v ? (v + (uv_stride * vertical_offset / 2) +
 					(horizontal_offset / 2) -
 					(stride * vertical_offset) - (horizontal_offset)) :
-					v_offset;
-
+					*v_offset;
 		break;
 	case IPU_PIX_FMT_YVU422P:
 		if (uv_stride < stride / 2)
 			uv_stride = stride / 2;
 
-		v_offset = stride * (height - vertical_offset - 1) +
+		*v_offset = stride * (height - vertical_offset - 1) +
 					(stride - horizontal_offset) +
 					(uv_stride * vertical_offset) +
 					horizontal_offset / 2;
-		u_offset = v_offset + uv_stride * height;
+		*u_offset = *v_offset + uv_stride * height;
 		u_fix = u ? (u + (uv_stride * vertical_offset) +
 					horizontal_offset / 2 -
 					(stride * vertical_offset) - (horizontal_offset)) :
-					u_offset;
+					*u_offset;
 		v_fix = v ? (v + (uv_stride * vertical_offset) +
 					horizontal_offset / 2 -
 					(stride * vertical_offset) - (horizontal_offset)) :
-					v_offset;
+					*v_offset;
 		break;
 	case IPU_PIX_FMT_YUV422P:
 		if (uv_stride < stride / 2)
 			uv_stride = stride / 2;
 
-		u_offset = stride * (height - vertical_offset - 1) +
+		*u_offset = stride * (height - vertical_offset - 1) +
 					(stride - horizontal_offset) +
 					(uv_stride * vertical_offset) +
 					horizontal_offset / 2;
-		v_offset = u_offset + uv_stride * height;
+		*v_offset = *u_offset + uv_stride * height;
 		u_fix = u ? (u + (uv_stride * vertical_offset) +
 					horizontal_offset / 2 -
 					(stride * vertical_offset) - (horizontal_offset)) :
-					u_offset;
+					*u_offset;
 		v_fix = v ? (v + (uv_stride * vertical_offset) +
 					horizontal_offset / 2 -
 					(stride * vertical_offset) - (horizontal_offset)) :
-					v_offset;
+					*v_offset;
 		break;
-
 	case IPU_PIX_FMT_YUV444P:
 		uv_stride = stride;
-		u_offset = stride * (height - vertical_offset - 1) +
+		*u_offset = stride * (height - vertical_offset - 1) +
 					(stride - horizontal_offset) +
 					(uv_stride * vertical_offset) +
 					horizontal_offset;
-		v_offset = u_offset + uv_stride * height;
+		*v_offset = *u_offset + uv_stride * height;
 		u_fix = u ? (u + (uv_stride * vertical_offset) +
 					horizontal_offset -
 					(stride * vertical_offset) -
 					(horizontal_offset)) :
-					u_offset;
+					*u_offset;
 		v_fix = v ? (v + (uv_stride * vertical_offset) +
 					horizontal_offset -
 					(stride * vertical_offset) -
 					(horizontal_offset)) :
-					v_offset;
+					*v_offset;
 		break;
 	case IPU_PIX_FMT_NV12:
+	case IPU_PIX_FMT_NV16:
+	case PRE_PIX_FMT_NV21:
+	case PRE_PIX_FMT_NV61:
 		uv_stride = stride;
-		u_offset = stride * (height - vertical_offset - 1) +
+		*u_offset = stride * (height - vertical_offset - 1) +
 					(stride - horizontal_offset) +
 					(uv_stride * vertical_offset / 2) +
 					horizontal_offset;
+		*v_offset = 0;
 		u_fix = u ? (u + (uv_stride * vertical_offset / 2) +
 					horizontal_offset -
 					(stride * vertical_offset) - (horizontal_offset)) :
-					u_offset;
-
+					*u_offset;
 		break;
 	default:
-		dev_err(ipu->dev, "mxc ipu: unimplemented pixel format\n");
-		break;
+		return -EINVAL;
 	}
 
+	if (u_fix > *u_offset)
+		*u_offset = u_fix;
 
+	if (v_fix > *v_offset)
+		*v_offset = v_fix;
 
-	if (u_fix > u_offset)
-		u_offset = u_fix;
+	return 0;
+}
 
-	if (v_fix > v_offset)
-		v_offset = v_fix;
+/* IDMAC U/V offset changing support */
+/* U and V input is not affected, */
+/* the update is done by new calculation according to */
+/* vertical_offset and horizontal_offset */
+static inline void _ipu_ch_offset_update(struct ipu_soc *ipu,
+					 int ch,
+					 uint32_t pixel_fmt,
+					 uint32_t width,
+					 uint32_t height,
+					 uint32_t stride,
+					 uint32_t u,
+					 uint32_t v,
+					 uint32_t uv_stride,
+					 uint32_t vertical_offset,
+					 uint32_t horizontal_offset)
+{
+	uint32_t u_offset = 0;
+	uint32_t v_offset = 0;
+	uint32_t old_offset = 0;
+	int32_t sub_ch = 0;
+	int ret;
+
+	ret = __ipu_ch_offset_calc(pixel_fmt, width, height, stride,
+				   u, v, uv_stride,
+				   vertical_offset, horizontal_offset,
+				   &u_offset, &v_offset);
+	if (ret) {
+		dev_err(ipu->dev, "mxc ipu: unimplemented pixel format\n");
+		return;
+	}
 
 	/* UBO and VBO are 22-bit and 8-byte aligned */
 	if (u_offset/8 > 0x3fffff)
