@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -73,6 +73,7 @@ struct ipu_soc {
 	struct clk *pixel_clk[2];
 	struct clk *pixel_clk_sel[2];
 	struct clk *csi_clk[2];
+	struct clk *prg_clk;
 
 	/*irq*/
 	int irq_sync;

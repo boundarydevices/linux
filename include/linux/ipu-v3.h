@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2010 Sascha Hauer <s.hauer@pengutronix.de>
- * Copyright (C) 2011-2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2011-2015 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -617,6 +617,13 @@ int32_t ipu_update_channel_offset(struct ipu_soc *ipu, ipu_channel_t channel, ip
 				uint32_t u, uint32_t v,
 				uint32_t vertical_offset, uint32_t horizontal_offset);
 
+int32_t ipu_get_channel_offset(uint32_t pixel_fmt,
+			       uint16_t width, uint16_t height,
+			       uint32_t stride,
+			       uint32_t u, uint32_t v,
+			       uint32_t vertical_offset, uint32_t horizontal_offset,
+			       uint32_t *u_offset, uint32_t *v_offset);
+
 int32_t ipu_select_buffer(struct ipu_soc *ipu, ipu_channel_t channel,
 			  ipu_buffer_t type, uint32_t bufNum);
 int32_t ipu_select_multi_vdi_buffer(struct ipu_soc *ipu, uint32_t bufNum);
@@ -729,6 +736,12 @@ void ipu_csi_set_window_pos(struct ipu_soc *ipu, uint32_t left, uint32_t top, ui
 uint32_t bytes_per_pixel(uint32_t fmt);
 
 bool ipu_ch_param_bad_alpha_pos(uint32_t fmt);
+int ipu_ch_param_get_axi_id(struct ipu_soc *ipu, ipu_channel_t channel, ipu_buffer_t type);
+ipu_color_space_t format_to_colorspace(uint32_t fmt);
+bool ipu_pixel_format_is_gpu_tile(uint32_t fmt);
+bool ipu_pixel_format_is_split_gpu_tile(uint32_t fmt);
+bool ipu_pixel_format_is_pre_yuv(uint32_t fmt);
+bool ipu_pixel_format_is_multiplanar_yuv(uint32_t fmt);
 
 struct ipuv3_fb_platform_data {
 	char				disp_dev[32];
@@ -747,6 +760,12 @@ struct ipuv3_fb_platform_data {
 	 * channel in bootloader.
 	 */
 	bool                            late_init;
+
+	/* Enable prefetch engine or not? */
+	bool				prefetch;
+
+	/* Enable the PRE resolve engine or not? */
+	bool				resolve;
 };
 
 #endif /* __LINUX_IPU_V3_H_ */
