@@ -45,6 +45,7 @@
 #define  ESDHC_MIX_CTRL_EXE_TUNE	(1 << 22)
 #define  ESDHC_MIX_CTRL_SMPCLK_SEL	(1 << 23)
 #define  ESDHC_MIX_CTRL_FBCLK_SEL	(1 << 25)
+#define  ESDHC_MIX_CTRL_HS400_EN	(1 << 26)
 /* Bits 3 and 6 are not SDHCI standard definitions */
 #define  ESDHC_MIX_CTRL_SDHCI_MASK	0xb7
 /* Tuning bits */
@@ -61,10 +62,21 @@
 #define  ESDHC_TUNE_CTRL_MIN		0
 #define  ESDHC_TUNE_CTRL_MAX		((1 << 7) - 1)
 
+/* strobe dll register */
+#define ESDHC_STROBE_DLL_CTRL	0x70
+#define ESDHC_STROBE_DLL_CTRL_ENABLE	(1 << 0)
+#define ESDHC_STROBE_DLL_CTRL_RESET		(1 << 1)
+#define ESDHC_STROBE_DLL_CTRL_SLV_DLY_TARGET_SHIFT	3
+
+#define ESDHC_STROBE_DLL_STATUS	0x74
+#define ESDHC_STROBE_DLL_STS_REF_LOCK	(1 << 1)
+#define ESDHC_STROBE_DLL_STS_SLV_LOCK	(1 << 0)
+
 #define ESDHC_TUNING_CTRL		0xcc
 #define ESDHC_STD_TUNING_EN		(1 << 24)
 /* NOTE: the minimum valid tuning start tap for mx6sl is 1 */
 #define ESDHC_TUNING_START_TAP		0x1
+#define ESDHC_TUNING_STEP_SHIFT 16
 
 #define ESDHC_TUNING_BLOCK_PATTERN_LEN	64
 
@@ -119,6 +131,8 @@
 #define ESDHC_FLAG_ERR004536		BIT(7)
 /* need request bus freq during low power */
 #define ESDHC_FLAG_BUSFREQ		BIT(8)
+/* the IP supports eMMC HS400 */
+#define ESDHC_FLAG_SUP_HS400	BIT(9)
 
 struct esdhc_soc_data {
 	u32 flags;
@@ -153,6 +167,11 @@ static struct esdhc_soc_data usdhc_imx6sl_data = {
 static struct esdhc_soc_data usdhc_imx6sx_data = {
 	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
 			| ESDHC_FLAG_HAVE_CAP1,
+};
+
+static struct esdhc_soc_data usdhc_imx7d_data = {
+	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
+			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_SUP_HS400,
 };
 
 struct pltfm_imx_data {
@@ -199,6 +218,7 @@ static const struct of_device_id imx_esdhc_dt_ids[] = {
 	{ .compatible = "fsl,imx6sx-usdhc", .data = &usdhc_imx6sx_data, },
 	{ .compatible = "fsl,imx6sl-usdhc", .data = &usdhc_imx6sl_data, },
 	{ .compatible = "fsl,imx6q-usdhc", .data = &usdhc_imx6q_data, },
+	{ .compatible = "fsl,imx7d-usdhc", .data = &usdhc_imx7d_data, },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, imx_esdhc_dt_ids);
@@ -274,6 +294,14 @@ static u32 esdhc_readl_le(struct sdhci_host *host, int reg)
 				val = SDHCI_SUPPORT_DDR50 | SDHCI_SUPPORT_SDR104
 					| SDHCI_SUPPORT_SDR50
 					| SDHCI_USE_SDR50_TUNING;
+
+			/*
+		     * imx7d does not have a support hs400 register,
+		     * use bit 31 of SDHCI_CAPABILITIES register to
+		     * fake.
+		     */
+			if (imx_data->socdata->flags & ESDHC_FLAG_SUP_HS400)
+				val |= SDHCI_SUPPORT_HS400;
 		}
 	}
 
@@ -452,6 +480,7 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
 		} else if (imx_data->socdata->flags & ESDHC_FLAG_STD_TUNING) {
 			u32 v = readl(host->ioaddr + SDHCI_ACMD12_ERR);
 			u32 m = readl(host->ioaddr + ESDHC_MIX_CTRL);
+			u32 tmp;
 			if (val & SDHCI_CTRL_TUNED_CLK) {
 				v |= ESDHC_MIX_CTRL_SMPCLK_SEL;
 			} else {
@@ -462,10 +491,11 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
 			if (val & SDHCI_CTRL_EXEC_TUNING) {
 				v |= ESDHC_MIX_CTRL_EXE_TUNE;
 				m |= ESDHC_MIX_CTRL_FBCLK_SEL;
-				writel(readl(host->ioaddr + ESDHC_TUNING_CTRL) |
-					ESDHC_STD_TUNING_EN |
-					ESDHC_TUNING_START_TAP,
-					host->ioaddr + ESDHC_TUNING_CTRL);
+				tmp = readl(host->ioaddr + ESDHC_TUNING_CTRL);
+				tmp |= ESDHC_STD_TUNING_EN | ESDHC_TUNING_START_TAP;
+				if (imx_data->boarddata.tuning_step)
+					tmp |= imx_data->boarddata.tuning_step << ESDHC_TUNING_STEP_SHIFT;
+				writel(tmp, host->ioaddr + ESDHC_TUNING_CTRL);
 			} else {
 				v &= ~ESDHC_MIX_CTRL_EXE_TUNE;
 			}
@@ -843,6 +873,7 @@ static int esdhc_change_pinstate(struct sdhci_host *host,
 		break;
 	case MMC_TIMING_UHS_SDR104:
 	case MMC_TIMING_MMC_HS200:
+	case MMC_TIMING_MMC_HS400:
 		pinctrl = imx_data->pins_200mhz;
 		break;
 	default:
@@ -851,6 +882,28 @@ static int esdhc_change_pinstate(struct sdhci_host *host,
 	}
 
 	return pinctrl_select_state(imx_data->pinctrl, pinctrl);
+}
+
+static void esdhc_set_strobe_dll(struct sdhci_host *host)
+{
+	u32 v;
+
+	/* force a reset on strobe dll */
+	writel(ESDHC_STROBE_DLL_CTRL_RESET, host->ioaddr + ESDHC_STROBE_DLL_CTRL);
+	/*
+	 * enable strobe dll ctrl and adjust the delay target
+	 * for the uSDHC loopback read clock
+	 */
+	v = ESDHC_STROBE_DLL_CTRL_ENABLE |
+		(1 << ESDHC_STROBE_DLL_CTRL_SLV_DLY_TARGET_SHIFT);
+	writel(v, host->ioaddr + ESDHC_STROBE_DLL_CTRL);
+	/* wait 1us to make sure strobe dll status register stable */
+	udelay(1);
+	v = readl(host->ioaddr + ESDHC_STROBE_DLL_STATUS);
+	if (!(v & ESDHC_STROBE_DLL_STS_REF_LOCK))
+		dev_warn(mmc_dev(host->mmc), "warning! HS400 strobe DLL status REF not lock!\n");
+	if (!(v & ESDHC_STROBE_DLL_STS_SLV_LOCK))
+		dev_warn(mmc_dev(host->mmc), "warning! HS400 strobe DLL status SLV not lock!\n");
 }
 
 static int esdhc_set_uhs_signaling(struct sdhci_host *host, unsigned int uhs)
@@ -888,6 +941,14 @@ static int esdhc_set_uhs_signaling(struct sdhci_host *host, unsigned int uhs)
 				v <<= 1;
 			writel(v, host->ioaddr + ESDHC_DLL_CTRL);
 		}
+		break;
+	case MMC_TIMING_MMC_HS400:
+		imx_data->uhs_mode = SDHCI_CTRL_HS400;
+		writel(readl(host->ioaddr + ESDHC_MIX_CTRL) |
+				ESDHC_MIX_CTRL_DDREN | ESDHC_MIX_CTRL_HS400_EN,
+				host->ioaddr + ESDHC_MIX_CTRL);
+		imx_data->is_ddr = 1;
+		esdhc_set_strobe_dll(host);
 		break;
 	}
 
@@ -952,6 +1013,8 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	of_property_read_u32(np, "bus-width", &boarddata->max_bus_width);
 
 	of_property_read_u32(np, "max-frequency", &boarddata->f_max);
+
+	of_property_read_u32(np, "tuning-step", &boarddata->tuning_step);
 
 	if (of_find_property(np, "no-1-8-v", NULL))
 		boarddata->support_vsel = false;
@@ -1078,6 +1141,9 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 
 	if (imx_data->socdata->flags & ESDHC_FLAG_ERR004536)
 		host->quirks |= SDHCI_QUIRK_BROKEN_ADMA;
+
+	if (imx_data->socdata->flags & ESDHC_FLAG_SUP_HS400)
+		host->quirks2 |= SDHCI_QUIRK2_CAPS_BIT63_FOR_HS400;
 
 	boarddata = &imx_data->boarddata;
 	if (sdhci_esdhc_imx_probe_dt(pdev, boarddata) < 0) {

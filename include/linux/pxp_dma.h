@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2010-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ struct pxp_tx_desc {
 		struct pxp_layer_param s0_param;
 		struct pxp_layer_param out_param;
 		struct pxp_layer_param ol_param;
+		struct pxp_layer_param processing_param;
 	} layer_param;
 	struct pxp_proc_data proc_data;
 
@@ -45,11 +46,12 @@ struct pxp_channel {
 	void *client;		/* Only one client per channel */
 	unsigned int n_tx_desc;
 	struct pxp_tx_desc *desc;	/* allocated tx-descriptors */
+	struct list_head active_list;	/* active tx-descriptors */
+	struct list_head free_list;	/* free tx-descriptors */
 	struct list_head queue;	/* queued tx-descriptors */
 	struct list_head list;	/* track queued channel number */
-	spinlock_t lock;	/* protects sg[0,1], queue,
-				 * status, cookie, free_list
-				 */
+	spinlock_t lock;	/* protects sg[0,1], queue */
+	struct mutex chan_mutex;	/* protects status, cookie, free_list */
 	int active_buffer;
 	unsigned int eof_irq;
 	char eof_name[16];	/* EOF IRQ name for request_irq()  */
@@ -68,5 +70,13 @@ void unregister_pxp_device(void);
 int register_pxp_device(void) { return 0; }
 void unregister_pxp_device(void) {}
 #endif
+void pxp_fill(
+        u32 bpp,
+        u32 value,
+        u32 width,
+        u32 height,
+        u32 output_buffer,
+        u32 output_pitch);
 
+void m4_process(void);
 #endif
