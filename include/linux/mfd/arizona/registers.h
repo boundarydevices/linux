@@ -3651,6 +3651,14 @@
 /*
  * R667 (0x29B) - Headphone Detect 1
  */
+#define VEGAS_HP_FAST_MODE                       0x8000  /* HP_FAST_MODE [15] */
+#define VEGAS_HP_FAST_MODE_MASK                  0x8000  /* HP_FAST_MODE [15] */
+#define VEGAS_HP_FAST_MODE_SHIFT                     15  /* HP_FAST_MODE [15] */
+#define VEGAS_HP_FAST_MODE_WIDTH                      1  /* HP_FAST_MODE [15] */
+#define ARIZONA_HP_FAST_MODE                     0x0800  /* HP_FAST_MODE [11] */
+#define ARIZONA_HP_FAST_MODE_MASK                0x0800  /* HP_FAST_MODE [11] */
+#define ARIZONA_HP_FAST_MODE_SHIFT                   11  /* HP_FAST_MODE [11] */
+#define ARIZONA_HP_FAST_MODE_WIDTH                    1  /* HP_FAST_MODE [11] */
 #define ARIZONA_HP_IMPEDANCE_RANGE_MASK          0x0600  /* HP_IMPEDANCE_RANGE - [10:9] */
 #define ARIZONA_HP_IMPEDANCE_RANGE_SHIFT              9  /* HP_IMPEDANCE_RANGE - [10:9] */
 #define ARIZONA_HP_IMPEDANCE_RANGE_WIDTH              2  /* HP_IMPEDANCE_RANGE - [10:9] */
