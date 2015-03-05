@@ -13,6 +13,7 @@
 #include <linux/mfd/max77823.h>
 #include <linux/mfd/max77823-private.h>
 #include <linux/debugfs.h>
+#include <linux/regulator/consumer.h>
 #include <linux/seq_file.h>
 //#include <linux/usb_notify.h>
 #include <linux/battery/charger/max77823_charger.h>
@@ -32,6 +33,7 @@
 
 static enum power_supply_property max77823_charger_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
+	POWER_SUPPLY_PROP_CHARGING_ENABLED,
 	POWER_SUPPLY_PROP_CHARGE_TYPE,
 	POWER_SUPPLY_PROP_HEALTH,
 	POWER_SUPPLY_PROP_ONLINE,
@@ -708,6 +710,11 @@ static int max77823_chg_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_HEALTH:
 		val->intval = max77823_get_charging_health(charger);
 		break;
+	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
+		val->intval = 0;
+		if (max77823_read_reg(charger->i2c, MAX77823_CHG_CNFG_12, &reg_data) == 0)
+			val->intval = (reg_data >> 5) & 1;
+		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 	case POWER_SUPPLY_PROP_CURRENT_AVG:
 		val->intval = max77823_get_input_current(charger);
@@ -721,6 +728,32 @@ static int max77823_chg_get_property(struct power_supply *psy,
 		break;
 	default:
 		return -EINVAL;
+	}
+	return 0;
+}
+
+static int max77823_chg_property_is_writeable(struct power_supply *psy,
+                                                enum power_supply_property psp)
+{
+        switch (psp) {
+        case POWER_SUPPLY_PROP_CHARGING_ENABLED:
+        case POWER_SUPPLY_PROP_CURRENT_MAX:
+        case POWER_SUPPLY_PROP_CURRENT_NOW:
+                return 1;
+        default:
+                break;
+        }
+
+        return 0;
+}
+
+static int max77823_otg_regulator_nb(struct notifier_block *nb, unsigned long event, void *data)
+{
+	struct max77823_charger_data *charger = container_of(nb, struct max77823_charger_data, otg_regulator_nb);
+
+	if (event & (REGULATOR_EVENT_DISABLE | REGULATOR_EVENT_ENABLE | REGULATOR_EVENT_PRE_ENABLE)) {
+		max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_12,
+			(event & REGULATOR_EVENT_DISABLE) ? 0x20 : 0, 0x20);
 	}
 	return 0;
 }
@@ -758,6 +791,12 @@ static int max77823_chg_set_property(struct power_supply *psy,
 		charger->cable_type = val->intval;
 		max77823_charger_function_control(charger);
 		break;
+
+	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
+		max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_12,
+			val->intval ? 0x20 : 0, 0x20);
+		break;
+
 	/* val->intval : input charging current */
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		charger->charging_current_max = val->intval;
@@ -769,8 +808,7 @@ static int max77823_chg_set_property(struct power_supply *psy,
 	/* val->intval : charging current */
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		charger->charging_current = val->intval;
-		max77823_set_charge_current(charger,
-					    charger->charging_current);
+		max77823_set_charge_current(charger, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
 		charger->siop_level = val->intval;
@@ -827,6 +865,19 @@ static int max77823_otg_get_property(struct power_supply *psy,
 				enum power_supply_property psp,
 				union power_supply_propval *val)
 {
+	struct max77823_charger_data *charger =
+		container_of(psy, struct max77823_charger_data, psy_otg);
+	u8 data;
+
+	val->intval = 0;
+	switch (psp) {
+	case POWER_SUPPLY_PROP_ONLINE:
+		max77823_read_reg(charger->i2c, MAX77823_CHG_CNFG_00, &data);
+		val->intval = (0xc400 >> (data & 0x0f)) & 1;
+		break;
+	default:
+		return -EINVAL;
+	}
 	return 0;
 }
 
@@ -1292,9 +1343,8 @@ static int sec_charger_read_u32_index_dt(const struct device_node *np,
 	return 0;
 }
 
-static int max77823_charger_parse_dt(struct max77823_charger_data *charger)
+static int max77823_charger_parse_dt(struct max77823_charger_data *charger, struct device_node *np)
 {
-	struct device_node *np = of_find_node_by_name(NULL, "charger");
 	sec_battery_platform_data_t *pdata = charger->pdata;
 	int ret = 0;
 
@@ -1344,6 +1394,7 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	struct max77823_charger_data *charger;
 	int ret = 0;
 	u8 reg_data;
+	struct regulator *reg_otg;
 
 	pr_info("%s: Max77823 Charger Driver Loading\n", __func__);
 
@@ -1363,10 +1414,9 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	charger->pdata = pdata->charger_data;
 	charger->aicl_on = false;
 	charger->siop_level = 100;
-	charger->max77823_pdata = pdata;
 
 #if defined(CONFIG_OF)
-	ret = max77823_charger_parse_dt(charger);
+	ret = max77823_charger_parse_dt(charger, pdev->dev.of_node);
 	if (ret < 0) {
 		pr_err("%s not found charger dt! ret[%d]\n",
 		       __func__, ret);
@@ -1375,18 +1425,40 @@ static int max77823_charger_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, charger);
 
+	reg_otg = devm_regulator_get(&pdev->dev, "usbotg");
+	if (PTR_ERR(reg_otg) == -EPROBE_DEFER) {
+		dev_err(&pdev->dev, "usbotg not ready, retry\n");
+		ret = PTR_ERR(reg_otg);
+		goto err_free;
+	}
+	if (!IS_ERR(reg_otg)) {
+		charger->otg_regulator_nb.notifier_call =
+				max77823_otg_regulator_nb;
+		ret = regulator_register_notifier(reg_otg,
+				&charger->otg_regulator_nb);
+		if (ret != 0) {
+			dev_err(&pdev->dev,
+				"Failed to register regulator notifier: %d\n",
+				ret);
+		} else {
+			dev_err(&pdev->dev, "usbotg notifier success\n");
+		}
+	}
+
 	charger->psy_chg.name		= "max77823-charger";
 	charger->psy_chg.type		= POWER_SUPPLY_TYPE_UNKNOWN;
 	charger->psy_chg.get_property	= max77823_chg_get_property;
 	charger->psy_chg.set_property	= max77823_chg_set_property;
 	charger->psy_chg.properties	= max77823_charger_props;
 	charger->psy_chg.num_properties	= ARRAY_SIZE(max77823_charger_props);
+	charger->psy_chg.property_is_writeable  = max77823_chg_property_is_writeable;
+
 	charger->psy_otg.name		= "otg";
 	charger->psy_otg.type		= POWER_SUPPLY_TYPE_OTG;
 	charger->psy_otg.get_property	= max77823_otg_get_property;
 	charger->psy_otg.set_property	= max77823_otg_set_property;
-	charger->psy_chg.properties		= max77823_otg_props;
-	charger->psy_chg.num_properties	= ARRAY_SIZE(max77823_otg_props);
+	charger->psy_otg.properties		= max77823_otg_props;
+	charger->psy_otg.num_properties	= ARRAY_SIZE(max77823_otg_props);
 
 	max77823_charger_initialize(charger);
 
