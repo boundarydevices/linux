@@ -196,6 +196,10 @@ struct arizona_pdata {
 	/** Software debounces during 3/4 pole plugout from antenna cable */
 	int antenna_manual_db_plugout;
 
+	/** range around hp impedance to be rejected to prevent false button events */
+	int antenna_hp_imp_range_lo;
+	int antenna_hp_imp_range_hi;
+
 	/** GPIO for mic detection polarity */
 	int micd_pol_gpio;
 

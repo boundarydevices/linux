@@ -1637,12 +1637,31 @@ static int arizona_antenna_remove_reading(struct arizona_extcon_info *info,
 
 static int arizona_add_micd_levels(struct arizona_extcon_info *info);
 
+static int arizona_antenna_get_micd_level(int imp, int range)
+{
+	int micd_lvl;
+	int impd_lvl;
+
+	impd_lvl = imp + range;
+
+	/* check if impedance level is supported */
+	for (micd_lvl = 0; micd_lvl < ARIZONA_NUM_MICD_BUTTON_LEVELS; micd_lvl++) {
+		if (arizona_micd_levels[micd_lvl] >= impd_lvl)
+			break;
+	}
+
+	if (micd_lvl == ARIZONA_NUM_MICD_BUTTON_LEVELS)
+		return -EINVAL;
+
+	return micd_lvl;
+}
+
 static int arizona_antenna_add_micd_level(struct arizona_extcon_info *info, int imp)
 {
 	struct arizona *arizona = info->arizona;
+	struct arizona_pdata *pdata = &arizona->pdata;
 	int i, j, micd_lvl;
-	int ret =0;
-
+	int hp_imp_range_lo = -1, hp_imp_range_hi = -1, ret = 0;
 
 	/* check if impedance level is supported */
 	for (micd_lvl = 0; micd_lvl < ARIZONA_NUM_MICD_BUTTON_LEVELS; micd_lvl++) {
@@ -1657,17 +1676,41 @@ static int arizona_antenna_add_micd_level(struct arizona_extcon_info *info, int 
 		goto err_input;
 	}
 
+	if (pdata->antenna_hp_imp_range_hi ||
+		pdata->antenna_hp_imp_range_lo) {
+		hp_imp_range_hi = arizona_antenna_get_micd_level(imp,
+							pdata->antenna_hp_imp_range_hi);
+		hp_imp_range_lo = arizona_antenna_get_micd_level(imp,
+							-(pdata->antenna_hp_imp_range_lo));
+	}
+
+	if (hp_imp_range_lo < 0 || hp_imp_range_hi < 0) {
+		hp_imp_range_hi = arizona_antenna_get_micd_level(imp, 0);
+		hp_imp_range_lo = hp_imp_range_hi - 2;
+	}
+
 	/* find index to insert an impedance level */
 	for (i = 0; i < info->num_micd_ranges; i++) {
-		if (info->micd_ranges[i].max >= imp)
+		if (info->micd_ranges[i].max >= arizona_micd_levels[hp_imp_range_hi])
 			break;
 	}
 
-	if (info->micd_ranges[i].max == imp) {
+	if (info->micd_ranges[i].max == arizona_micd_levels[hp_imp_range_hi]) {
 		dev_info(arizona->dev, "MICD level already used %d\n",
 			imp);
 		ret = -EINVAL;
 		goto err_input;
+	}
+
+	if (hp_imp_range_lo == hp_imp_range_hi) {
+		if (info->micd_ranges[i-1].max < arizona_micd_levels[hp_imp_range_hi - 1])
+			hp_imp_range_lo = hp_imp_range_hi - 1;
+		else {
+			dev_info(arizona->dev, "MICD level range cannot be added %d\n",
+				hp_imp_range_lo);
+			ret = -EINVAL;
+			goto err_input;
+		}
 	}
 
 	/* insert an impedance level */
@@ -1675,9 +1718,9 @@ static int arizona_antenna_add_micd_level(struct arizona_extcon_info *info, int 
 		info->micd_ranges[j+2].max = info->micd_ranges[j].max;
 		info->micd_ranges[j+2].key = info->micd_ranges[j].key;
 	}
-	info->micd_ranges[i].max = arizona_micd_levels[micd_lvl-2];
+	info->micd_ranges[i].max = arizona_micd_levels[hp_imp_range_lo];
 	info->micd_ranges[i].key = info->micd_ranges[i+2].key;
-	info->micd_ranges[i+1].max =imp;
+	info->micd_ranges[i+1].max =arizona_micd_levels[hp_imp_range_hi];
 	info->micd_ranges[i+1].key = -1;
 	info->num_micd_ranges += 2;
 	ret = arizona_add_micd_levels(info);
@@ -1721,7 +1764,22 @@ err_input:
 static int arizona_antenna_button_start(struct arizona_extcon_info *info)
 {
 	struct arizona *arizona = info->arizona;
-	int i;
+	struct arizona_pdata *pdata = &arizona->pdata;
+	int i, micd_lvl;
+	int hp_imp_range_hi = -1;
+
+	/* check if impedance level is supported */
+	micd_lvl = arizona_antenna_get_micd_level(arizona->hp_impedance, 0);
+
+	if (micd_lvl < 0)
+		goto micd_start;
+
+	if (pdata->antenna_hp_imp_range_hi)
+		hp_imp_range_hi = arizona_antenna_get_micd_level(arizona->hp_impedance,
+							pdata->antenna_hp_imp_range_hi);
+
+	if (hp_imp_range_hi < 0)
+		hp_imp_range_hi = micd_lvl;
 
 	for (i = 0; i < info->num_micd_ranges; i++) {
 		if (info->micd_ranges[i].key == -1) {
@@ -1730,7 +1788,7 @@ static int arizona_antenna_button_start(struct arizona_extcon_info *info)
 	}
 
 	if ((i != info->num_micd_ranges) &&
-		(info->micd_ranges[i].max != arizona->hp_impedance)) {
+		(info->micd_ranges[i].max != arizona_micd_levels[hp_imp_range_hi])) {
 		arizona_antenna_remove_micd_level(info, info->micd_ranges[i].max);
 	}
 	arizona_antenna_add_micd_level(info, arizona->hp_impedance);
@@ -1739,6 +1797,7 @@ static int arizona_antenna_button_start(struct arizona_extcon_info *info)
 		dev_dbg(arizona->dev, "%s: micd_lvl=%d: key=%d\n", __func__ ,
 			info->micd_ranges[i].max, info->micd_ranges[i].key);
 
+micd_start:
 	return arizona_micd_start(info);
 }
 
@@ -2673,6 +2732,12 @@ static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 
 	arizona_of_read_u32(arizona, "wlf,antenna-manual-db-plugout", false,
 			    &pdata->antenna_manual_db_plugout);
+
+	arizona_of_read_u32(arizona, "wlf,antenna-hp-imp-range-lo", false,
+			    &pdata->antenna_hp_imp_range_lo);
+
+	arizona_of_read_u32(arizona, "wlf,antenna-hp-imp-range-hi", false,
+			    &pdata->antenna_hp_imp_range_hi);
 
 	pdata->micd_pol_gpio = arizona_of_get_named_gpio(arizona,
 							 "wlf,micd-pol-gpio",
