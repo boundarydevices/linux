@@ -328,7 +328,7 @@ static int clearwater_cp_mode_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static const char *clearwater_cp_mode_text[2] = {
+static const char * const clearwater_cp_mode_text[2] = {
 	"Default", "Inverting",
 };
 
