@@ -898,8 +898,10 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	/* set parent of EPDC pixel clock */
 	imx_clk_set_parent(clks[IMX7D_EPDC_PIXEL_ROOT_SRC], clks[IMX7D_PLL_SYS_MAIN_CLK]);
 
-	for (i = 0; i < IMX7D_END_CLK; i++)
-		clk_prepare_enable(clks[i]);
+	for (i = 0; i < IMX7D_END_CLK; i++) {
+		if (likely(i != IMX7D_LCDIF_PIXEL_ROOT_CLK))
+			clk_prepare_enable(clks[i]);
+	}
 
 	mxc_timer_init_dt(of_find_compatible_node(NULL, NULL, "fsl,imx7d-gpt"));
 }
