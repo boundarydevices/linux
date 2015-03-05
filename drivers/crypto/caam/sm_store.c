@@ -994,10 +994,19 @@ int caam_sm_startup(struct platform_device *pdev)
 	struct platform_device *sm_pdev;
 	struct sm_page_descriptor *lpagedesc;
 	u32 page, pgstat, lpagect, detectedpage, smvid;
-
+	int i = 0;
 	struct device_node *np;
 	ctrldev = &pdev->dev;
 	ctrlpriv = dev_get_drvdata(ctrldev);
+
+	while (!ctrlpriv) {
+		if (i >= 1000) {
+			pr_err("%s: no private data\n", __func__);
+			return -EINVAL;
+		}
+		i++;
+		msleep(1);
+	}
 
 	/*
 	 * If ctrlpriv is NULL, it's probably because the caam driver wasn't
