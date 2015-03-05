@@ -202,6 +202,7 @@ struct mxsfb_info {
 	struct clk *clk_pix;
 	struct clk *clk_axi;
 	struct clk *clk_disp_axi;
+	bool clk_pix_enabled;
 	bool clk_axi_enabled;
 	bool clk_disp_axi_enabled;
 	void __iomem *base;	/* registers */
@@ -250,6 +251,24 @@ static const struct mxsfb_devdata mxsfb_devdata[] = {
 static int mxsfb_map_videomem(struct fb_info *info);
 static int mxsfb_unmap_videomem(struct fb_info *info);
 static int mxsfb_set_par(struct fb_info *fb_info);
+
+/* enable lcdif pix clock */
+static inline void clk_enable_pix(struct mxsfb_info *host)
+{
+	if (!host->clk_pix_enabled && (host->clk_pix != NULL)) {
+		clk_prepare_enable(host->clk_pix);
+		host->clk_pix_enabled = true;
+	}
+}
+
+/* disable lcdif pix clock */
+static inline void clk_disable_pix(struct mxsfb_info *host)
+{
+	if (host->clk_pix_enabled && (host->clk_pix != NULL)) {
+		clk_disable_unprepare(host->clk_pix);
+		host->clk_pix_enabled = false;
+	}
+}
 
 /* enable lcdif axi clock */
 static inline void clk_enable_axi(struct mxsfb_info *host)
@@ -505,6 +524,10 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 	clk_enable_axi(host);
 	clk_enable_disp_axi(host);
 
+	/* the pixel clock should be disabled before
+	 * trying to set its clock rate successfully.
+	 */
+	clk_disable_pix(host);
 	ret = clk_set_rate(host->clk_pix,
 			 PICOS2KHZ(fb_info->var.pixclock) * 1000U);
 	if (ret) {
@@ -520,7 +543,7 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 		}
 		return;
 	}
-	clk_prepare_enable(host->clk_pix);
+	clk_enable_pix(host);
 
 	/* Clean soft reset and clock gate bit if it was enabled  */
 	writel(CTRL_SFTRST | CTRL_CLKGATE, host->base + LCDC_CTRL + REG_CLR);
@@ -587,8 +610,6 @@ static void mxsfb_disable_controller(struct fb_info *fb_info)
 
 	reg = readl(host->base + LCDC_VDCTRL4);
 	writel(reg & ~VDCTRL4_SYNC_SIGNALS_ON, host->base + LCDC_VDCTRL4);
-
-	clk_disable_unprepare(host->clk_pix);
 
 	pm_runtime_put_sync_suspend(&host->pdev->dev);
 
@@ -840,6 +861,7 @@ static int mxsfb_blank(int blank, struct fb_info *fb_info)
 
 		clk_disable_disp_axi(host);
 		clk_disable_axi(host);
+		clk_disable_pix(host);
 		break;
 
 	case FB_BLANK_UNBLANK:
@@ -950,6 +972,13 @@ static int mxsfb_restore_mode(struct mxsfb_info *host)
 	clk_enable_axi(host);
 	clk_enable_disp_axi(host);
 
+	/* Enable pixel clock earlier since in 7D
+	 * the lcdif registers should be accessed
+	 * when the pixel clock is enabled, otherwise
+	 * the bus will be hang.
+	 */
+	clk_enable_pix(host);
+
 	/* Only restore the mode when the controller is running */
 	ctrl = readl(host->base + LCDC_CTRL);
 	if (!(ctrl & CTRL_RUN))
@@ -1025,7 +1054,6 @@ static int mxsfb_restore_mode(struct mxsfb_info *host)
 	line_count = fb_info->fix.smem_len / fb_info->fix.line_length;
 	fb_info->fix.ypanstep = 1;
 
-	clk_prepare_enable(host->clk_pix);
 	host->enabled = 1;
 
 	return 0;
