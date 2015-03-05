@@ -108,6 +108,7 @@ struct notifier_block;
 #define REGULATOR_EVENT_DISABLE 		0x80
 #define REGULATOR_EVENT_PRE_DISABLE		0x100
 #define REGULATOR_EVENT_ENABLE			0x200
+#define REGULATOR_EVENT_PRE_ENABLE		0x400
 
 struct regulator;
 
