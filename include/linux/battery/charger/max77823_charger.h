@@ -142,8 +142,6 @@ struct max77823_charger_data {
 	struct i2c_client       *pmic_i2c;
 	struct mutex            charger_mutex;
 
-	struct max77823_platform_data *max77823_pdata;
-
 	struct power_supply	psy_chg;
 	struct power_supply	psy_otg;
 
@@ -178,6 +176,8 @@ struct max77823_charger_data {
 	int		siop_level;
 	int uvlo_attach_flag;
 	int uvlo_attach_cable_type;
+	struct notifier_block otg_regulator_nb;
+
 
 	int		irq_bypass;
 	int		irq_batp;
