@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  */
 
-#include "imx7d-evk.dts"
+#include "imx7d-sdb.dts"
 
 &epdc {
         status = "disabled";
