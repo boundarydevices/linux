@@ -69,7 +69,7 @@
 
 #define HP_LOW_IMPEDANCE_LIMIT 13
 
-static struct arizona_hpdet_calibration_data {
+struct arizona_hpdet_calibration_data {
 	int	min;
 	int	max;
 	s64	C0;		/* value * 1000000 */
