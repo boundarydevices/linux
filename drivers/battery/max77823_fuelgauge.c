@@ -2308,9 +2308,10 @@ static const struct file_operations max77823_fuelgauge_debugfs_fops = {
 };
 
 #ifdef CONFIG_OF
-static int max77823_fuelgauge_parse_dt(struct max77823_fuelgauge_data *fuelgauge)
+static int max77823_fuelgauge_parse_dt(
+		struct max77823_fuelgauge_data *fuelgauge,
+		struct device_node *np)
 {
-	struct device_node *np = of_find_node_by_name(NULL, "max77823-fuelgauge");
 	sec_battery_platform_data_t *pdata = fuelgauge->pdata;
 	int ret;
 
@@ -2387,7 +2388,7 @@ static int max77823_fuelgauge_probe(struct platform_device *pdev)
 	fuelgauge->max77823_pdata = pdata;
 
 #if defined(CONFIG_OF)
-	ret = max77823_fuelgauge_parse_dt(fuelgauge);
+	ret = max77823_fuelgauge_parse_dt(fuelgauge, pdev->dev.of_node);
 	if (ret < 0) {
 		pr_err("%s not found charger dt! ret[%d]\n",
 		       __func__, ret);
