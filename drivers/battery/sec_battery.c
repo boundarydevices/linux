@@ -4179,7 +4179,7 @@ static int sec_bat_parse_dt(struct device *dev,
 	if (ret)
 		pr_info("%s: charging_reset_time is Empty\n", __func__);
 
-	np = of_find_node_by_name(NULL, "charger");
+	np = of_find_node_by_name(dev->parent->of_node, "charger");
 
 	if (!np) {
 		pr_info("%s : np NULL\n", __func__);
