@@ -363,31 +363,15 @@ static const char *pll_audio_bypass_sel[] = { "pll_audio_main", "pll_audio_main_
 static const char *pll_video_bypass_sel[] = { "pll_video_main", "pll_video_main_src", };
 
 static int const clks_init_on[] __initconst = {
-	IMX7D_ARM_A7_ROOT_CLK, IMX7D_ARM_M4_ROOT_CLK, IMX7D_ARM_M0_ROOT_CLK,
-	IMX7D_MAIN_AXI_ROOT_CLK, IMX7D_DISP_AXI_ROOT_CLK, IMX7D_ENET_AXI_ROOT_CLK,
-	IMX7D_DRAM_PHYM_ROOT_CLK, IMX7D_DRAM_ROOT_CLK, IMX7D_PCIE_CTRL_ROOT_CLK,
-	IMX7D_PCIE_PHY_ROOT_CLK, IMX7D_EPDC_PIXEL_ROOT_CLK,
-	IMX7D_LCDIF_PIXEL_ROOT_CLK, IMX7D_MIPI_DSI_ROOT_CLK,
-	IMX7D_MIPI_CSI_ROOT_CLK, IMX7D_MIPI_DPHY_ROOT_CLK, IMX7D_SAI1_ROOT_CLK,
-	IMX7D_SAI2_ROOT_CLK, IMX7D_SAI3_ROOT_CLK, IMX7D_SPDIF_ROOT_CLK,
-	IMX7D_ENET1_REF_ROOT_CLK, IMX7D_ENET1_TIME_ROOT_CLK,
-	IMX7D_ENET2_REF_ROOT_CLK, IMX7D_ENET2_TIME_ROOT_CLK,
-	IMX7D_ENET_PHY_REF_ROOT_CLK, IMX7D_EIM_ROOT_CLK, IMX7D_NAND_ROOT_CLK,
-	IMX7D_QSPI_ROOT_CLK, IMX7D_USDHC1_ROOT_CLK, IMX7D_USDHC2_ROOT_CLK,
-	IMX7D_USDHC3_ROOT_CLK, IMX7D_CAN1_ROOT_CLK, IMX7D_CAN2_ROOT_CLK,
-	IMX7D_I2C1_ROOT_CLK, IMX7D_I2C2_ROOT_CLK, IMX7D_I2C3_ROOT_CLK,
-	IMX7D_I2C4_ROOT_CLK, IMX7D_UART1_ROOT_CLK, IMX7D_UART2_ROOT_CLK,
-	IMX7D_UART3_ROOT_CLK, IMX7D_UART4_ROOT_CLK, IMX7D_UART5_ROOT_CLK,
-	IMX7D_UART6_ROOT_CLK, IMX7D_UART7_ROOT_CLK, IMX7D_ECSPI1_ROOT_CLK,
-	IMX7D_ECSPI2_ROOT_CLK, IMX7D_ECSPI3_ROOT_CLK, IMX7D_ECSPI4_ROOT_CLK,
-	IMX7D_PWM1_ROOT_CLK, IMX7D_PWM2_ROOT_CLK, IMX7D_PWM3_ROOT_CLK,
-	IMX7D_PWM4_ROOT_CLK, IMX7D_FLEXTIMER1_ROOT_CLK, IMX7D_FLEXTIMER2_ROOT_CLK,
-	IMX7D_SIM1_ROOT_CLK, IMX7D_SIM2_ROOT_CLK, IMX7D_GPT1_ROOT_CLK,
-	IMX7D_GPT2_ROOT_CLK, IMX7D_GPT3_ROOT_CLK, IMX7D_GPT4_ROOT_CLK,
-	IMX7D_TRACE_ROOT_CLK, IMX7D_CSI_MCLK_ROOT_CLK,
-	IMX7D_AUDIO_MCLK_ROOT_CLK, IMX7D_WRCLK_ROOT_CLK, IMX7D_CLKO1_ROOT_CLK,
-	IMX7D_CLKO2_ROOT_CLK,
-};
+	IMX7D_ARM_A7_ROOT_CLK, IMX7D_MAIN_AXI_ROOT_CLK, IMX7D_PLL_ARM_MAIN_CLK,
+	IMX7D_PLL_SYS_MAIN_480M_CLK, IMX7D_PLL_SYS_MAIN_240M_CLK, IMX7D_PLL_SYS_MAIN_120M_CLK,
+	IMX7D_PLL_SYS_PFD0_196M_CLK, IMX7D_PLL_SYS_PFD1_166M_CLK, IMX7D_PLL_SYS_PFD3_CLK,
+	IMX7D_PLL_SYS_PFD4_CLK, IMX7D_PLL_SYS_PFD5_CLK, IMX7D_PLL_SYS_PFD6_CLK,
+	IMX7D_PLL_SYS_PFD7_CLK,	IMX7D_PLL_ENET_MAIN_125M_CLK, IMX7D_PLL_ENET_MAIN_100M_CLK,
+	IMX7D_ENET_AXI_ROOT_CLK, IMX7D_DRAM_PHYM_ROOT_CLK, IMX7D_DRAM_ROOT_CLK,
+	IMX7D_DRAM_PHYM_ALT_ROOT_CLK, IMX7D_DRAM_ALT_ROOT_CLK, IMX7D_AHB_CHANNEL_ROOT_CLK,
+	IMX7D_NAND_USDHC_BUS_ROOT_CLK,
+	};
 
 static struct clk_onecell_data clk_data;
 
@@ -847,8 +831,6 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	clks[IMX7D_CSI_MCLK_ROOT_CLK] = imx_clk_gate2("csi_mclk_root_clk", "csi_mclk_post_div", base + 0x4490, 0);
 	clks[IMX7D_AUDIO_MCLK_ROOT_CLK] = imx_clk_gate2("audio_mclk_root_clk", "audio_mclk_post_div", base + 0x4790, 0);
 	clks[IMX7D_WRCLK_ROOT_CLK] = imx_clk_gate2("wrclk_root_clk", "wrclk_post_div", base + 0x47a0, 0);
-	clks[IMX7D_CLKO1_ROOT_CLK] = imx_clk_gate2("clko1_root_clk", "clko1_post_div", base + 0x47b0, 0);
-	clks[IMX7D_CLKO2_ROOT_CLK] = imx_clk_gate2("clko2_root_clk", "clko2_post_div", base + 0x47c0, 0);
 	clks[IMX7D_USB_CTRL_CLK] = imx_clk_gate2("usb_ctrl_clk", "ahb_root_clk", base + 0x4680, 0);
 	clks[IMX7D_USB_PHY1_CLK] = imx_clk_gate2("usb_phy1_clk", "pll_usb1_main_clk", base + 0x46a0, 0);
 	clks[IMX7D_USB_PHY2_CLK] = imx_clk_gate2("usb_phy2_clk", "pll_usb_main_clk", base + 0x46b0, 0);
@@ -904,10 +886,8 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	/* set lcdif pixel root clock source to get the required 33Mhz clock */
 	imx_clk_set_parent(clks[IMX7D_LCDIF_PIXEL_ROOT_SRC], clks[IMX7D_PLL_SYS_PFD5_CLK]);
 
-	for (i = 0; i < IMX7D_END_CLK; i++) {
-		if (likely(i != IMX7D_LCDIF_PIXEL_ROOT_CLK))
-			clk_prepare_enable(clks[i]);
-	}
+	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
+		clk_prepare_enable(clks[clks_init_on[i]]);
 
 	mxc_timer_init_dt(of_find_compatible_node(NULL, NULL, "fsl,imx7d-gpt"));
 }
