@@ -842,7 +842,7 @@ static int flexcan_chip_start(struct net_device *dev)
 {
 	struct flexcan_priv *priv = netdev_priv(dev);
 	struct flexcan_regs __iomem *regs = priv->base;
-	int err;
+	int err, i;
 	u32 reg_mcr, reg_ctrl;
 
 	/* enable module */
@@ -910,8 +910,9 @@ static int flexcan_chip_start(struct net_device *dev)
 	flexcan_write(reg_ctrl, &regs->ctrl);
 
 	/* Abort any pending TX, mark Mailbox as INACTIVE */
-	flexcan_write(FLEXCAN_MB_CNT_CODE(0x4),
-		      &regs->cantxfg[FLEXCAN_TX_BUF_ID].can_ctrl);
+	for (i = FLEXCAN_RESERVED_BUF_ID; i <= FLEXCAN_TX_BUF_ID; i++)
+		flexcan_write(FLEXCAN_MB_CNT_CODE(0x4),
+			      &regs->cantxfg[i].can_ctrl);
 
 	/* acceptance mask/acceptance code (accept everything) */
 	flexcan_write(0x0, &regs->rxgmask);
