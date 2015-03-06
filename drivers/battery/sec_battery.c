@@ -29,6 +29,8 @@
 struct clk * xo_chr = NULL;
 #endif
 
+#define MV_TO_UV(mv) (mv * 1000)
+
 static struct device_attribute sec_battery_attrs[] = {
 	SEC_BATTERY_ATTR(batt_reset_soc),
 	SEC_BATTERY_ATTR(batt_read_raw_soc),
@@ -809,10 +811,10 @@ static bool sec_bat_voltage_check(struct sec_battery_info *battery)
 			if (battery->capacity <
 				battery->pdata->full_condition_soc &&
 					battery->voltage_now <
-					(battery->pdata->recharge_condition_vcell - 50)) {
+					(battery->pdata->recharge_condition_vcell - MV_TO_UV(50))) {
 				battery->status = POWER_SUPPLY_STATUS_CHARGING;
-				battery->voltage_now = 1080;
-				battery->voltage_avg = 1080;
+				battery->voltage_now = MV_TO_UV(1080);
+				battery->voltage_avg = MV_TO_UV(1080);
 				power_supply_changed(&battery->psy_bat);
 				dev_info(battery->dev,
 					"%s: battery status full -> charging\n", __func__);
@@ -1036,11 +1038,11 @@ static void sec_bat_swelling_check(struct sec_battery_info *battery, int tempera
 				val.intval = 4400;
 				psy_do_property(battery->pdata->charger_name, set,
 						POWER_SUPPLY_PROP_VOLTAGE_MAX, val);
-			} else if (battery->voltage_now < BATT_SWELLING_RECHG_VOLTAGE) {
+			} else if (battery->voltage_now < MV_TO_UV(BATT_SWELLING_RECHG_VOLTAGE)) {
 				pr_info("%s: swelling mode recharging start. Vbatt(%d)\n",
 					__func__, battery->voltage_now);
 				/* change 4.4V float voltage */
-				val.intval = 4250;
+				val.intval = MV_TO_UV(4250);
 				psy_do_property(battery->pdata->charger_name, set,
 						POWER_SUPPLY_PROP_VOLTAGE_MAX, val);
 				sec_bat_set_charge(battery, true);
@@ -2838,14 +2840,14 @@ ssize_t sec_bat_store_attrs(
 			sec_bat_check_jig_status()) {
 #if defined(CONFIG_QPNP_BMS)
 			extern void bms_quickstart(void);
-			battery->voltage_now = 1234;
-			battery->voltage_avg = 1234;
+			battery->voltage_now = MV_TO_UV(1234);
+			battery->voltage_avg = MV_TO_UV(1234);
 			power_supply_changed(&battery->psy_bat);
 			bms_quickstart();
 #else
 			union power_supply_propval value;
-			battery->voltage_now = 1234;
-			battery->voltage_avg = 1234;
+			battery->voltage_now = MV_TO_UV(1234);
+			battery->voltage_avg = MV_TO_UV(1234);
 			power_supply_changed(&battery->psy_bat);
 
 			value.intval =
@@ -3319,10 +3321,10 @@ static int sec_bat_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		/* If JIG is attached, the voltage is set as 1079 */
 		pr_info("%s : set to the battery history : (%d)\n",__func__, val->intval);
-		if(val->intval == 1079)
+		if(val->intval == MV_TO_UV(1079))
 		{
-			battery->voltage_now = 1079;
-			battery->voltage_avg = 1079;
+			battery->voltage_now = MV_TO_UV(1079);
+			battery->voltage_avg = MV_TO_UV(1079);
 			power_supply_changed(&battery->psy_bat);
 		}
 		break;
@@ -3456,7 +3458,7 @@ static int sec_bat_get_property(struct power_supply *psy,
 			"%s: voltage now(%d)\n", __func__, battery->voltage_now);
 #endif
 		/* voltage value should be in uV */
-		val->intval = battery->voltage_now * 1000;
+		val->intval = battery->voltage_now;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_AVG:
 #ifdef CONFIG_SEC_FACTORY
@@ -3468,7 +3470,7 @@ static int sec_bat_get_property(struct power_supply *psy,
 			"%s: voltage avg(%d)\n", __func__, battery->voltage_avg);
 #endif
 		/* voltage value should be in uV */
-		val->intval = battery->voltage_avg * 1000;
+		val->intval = battery->voltage_avg;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		val->intval = battery->current_now;
