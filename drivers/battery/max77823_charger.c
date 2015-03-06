@@ -754,6 +754,9 @@ static int max77823_otg_regulator_nb(struct notifier_block *nb, unsigned long ev
 	if (event & (REGULATOR_EVENT_DISABLE | REGULATOR_EVENT_ENABLE | REGULATOR_EVENT_PRE_ENABLE)) {
 		max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_12,
 			(event & REGULATOR_EVENT_DISABLE) ? 0x20 : 0, 0x20);
+		if (event & REGULATOR_EVENT_DISABLE)
+			max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_00,
+				CHG_CNFG_00_CHG_MASK, CHG_CNFG_00_CHG_MASK);
 	}
 	return 0;
 }
