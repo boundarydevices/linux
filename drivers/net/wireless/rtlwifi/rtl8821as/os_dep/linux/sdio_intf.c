@@ -20,6 +20,7 @@
 #define _HCI_INTF_C_
 
 #include <drv_types.h>
+#include <hal_data.h>
 #include <platform_ops.h>
 
 #ifndef CONFIG_SDIO_HCI
@@ -45,9 +46,6 @@ static struct mmc_host *mmc_host = NULL;
 
 static const struct sdio_device_id sdio_ids[] =
 {
-#ifdef CONFIG_RTL8723A
-	{ SDIO_DEVICE(0x024c, 0x8723),.driver_data = RTL8723A},
-#endif //CONFIG_RTL8723A
 #ifdef CONFIG_RTL8723B
 	{ SDIO_DEVICE(0x024c, 0xB723),.driver_data = RTL8723B},
 #endif
@@ -361,13 +359,6 @@ static void rtw_decide_chip_type_by_device_id(PADAPTER padapter, const struct sd
 {
 	padapter->chip_type = pdid->driver_data;
 
-#if defined(CONFIG_RTL8723A)
-	if( padapter->chip_type == RTL8723A){
-		padapter->HardwareType = HARDWARE_TYPE_RTL8723AS;
-		DBG_871X("CHIP TYPE: RTL8723A\n");
-	}
-#endif
-
 #if defined(CONFIG_RTL8188E)
 	if(padapter->chip_type == RTL8188E){
 		padapter->HardwareType = HARDWARE_TYPE_RTL8188ES;
@@ -397,16 +388,12 @@ static void rtw_decide_chip_type_by_device_id(PADAPTER padapter, const struct sd
 
 }
 
-void rtw_set_hal_ops(PADAPTER padapter)
+u8 rtw_set_hal_ops(PADAPTER padapter)
 {
 	//alloc memory for HAL DATA
-	rtw_hal_data_init(padapter);
-	
-#if defined(CONFIG_RTL8723A)
-	if( padapter->chip_type == RTL8723A){
-		rtl8723as_set_hal_ops(padapter);
-	}
-#endif
+	if(rtw_hal_data_init(padapter) == _FAIL)
+		return _FAIL;
+
 #if defined(CONFIG_RTL8188E)
 	if(padapter->chip_type == RTL8188E){
 		rtl8188es_set_hal_ops(padapter);
@@ -428,7 +415,10 @@ void rtw_set_hal_ops(PADAPTER padapter)
 		rtl8192es_set_hal_ops(padapter);
 	}
 #endif
+	if( rtw_hal_ops_check(padapter) == _FAIL)
+		return _FAIL;
 
+	return _SUCCESS;
 }
 
 static void sd_intf_start(PADAPTER padapter)
@@ -461,12 +451,14 @@ PADAPTER g_test_adapter = NULL;
 _adapter *rtw_sdio_if1_init(struct dvobj_priv *dvobj, const struct sdio_device_id  *pdid)
 {
 	int status = _FAIL;
-	struct net_device *pnetdev;
 	PADAPTER padapter = NULL;
-	
-	if ((padapter = (_adapter *)rtw_zvmalloc(sizeof(*padapter))) == NULL) {
+
+	padapter = (_adapter *)rtw_zvmalloc(sizeof(*padapter));
+	if (padapter == NULL)
 		goto exit;
-	}
+
+	if (loadparam(padapter) != _SUCCESS)
+		goto free_adapter;
 
 #ifdef RTW_SUPPORT_PLATFORM_SHUTDOWN
 	g_test_adapter = padapter;
@@ -479,7 +471,7 @@ _adapter *rtw_sdio_if1_init(struct dvobj_priv *dvobj, const struct sdio_device_i
 	dvobj->padapters[dvobj->iface_nums++] = padapter;
 	padapter->iface_id = IFACE_ID0;
 
-#if defined(CONFIG_CONCURRENT_MODE) || defined(CONFIG_DUALMAC_CONCURRENT)
+#if defined(CONFIG_CONCURRENT_MODE)
 	//set adapter_type/iface type for primary padapter
 	padapter->isprimary = _TRUE;
 	padapter->adapter_type = PRIMARY_ADAPTER;	
@@ -492,25 +484,12 @@ _adapter *rtw_sdio_if1_init(struct dvobj_priv *dvobj, const struct sdio_device_i
 
 	padapter->interface_type = RTW_SDIO;
 	rtw_decide_chip_type_by_device_id(padapter, pdid);
-	
-	//3 1. init network device data
-	pnetdev = rtw_init_netdev(padapter);
-	if (!pnetdev)
-		goto free_adapter;
-	
-	SET_NETDEV_DEV(pnetdev, dvobj_to_dev(dvobj));
-
-	padapter = rtw_netdev_priv(pnetdev);
-
-#ifdef CONFIG_IOCTL_CFG80211
-	rtw_wdev_alloc(padapter, dvobj_to_dev(dvobj));
-#endif
 
 	//3 3. init driver special setting, interface, OS and hardware relative
 
 	//4 3.1 set hardware operation functions
-	rtw_set_hal_ops(padapter);
-
+	if (rtw_set_hal_ops(padapter)== _FAIL)
+		goto free_hal_data;
 
 	//3 5. initialize Chip version
 	padapter->intf_start = &sd_intf_start;
@@ -548,7 +527,7 @@ _adapter *rtw_sdio_if1_init(struct dvobj_priv *dvobj, const struct sdio_device_i
 
 	//3 8. get WLan MAC address
 	// set mac addr
-	rtw_macaddr_cfg(adapter_mac_addr(padapter), padapter->eeprompriv.mac_addr);
+	rtw_macaddr_cfg(adapter_mac_addr(padapter),  get_hal_mac_addr(padapter));
 	rtw_init_wifidirect_addrs(padapter, adapter_mac_addr(padapter), adapter_mac_addr(padapter));
 
 	rtw_hal_disable_interrupt(padapter);
@@ -566,20 +545,9 @@ free_hal_data:
 	if (status != _SUCCESS && padapter->HalData)
 		rtw_hal_free_data(padapter);
 
-free_wdev:
-	if(status != _SUCCESS) {
-		#ifdef CONFIG_IOCTL_CFG80211
-		rtw_wdev_unregister(padapter->rtw_wdev);
-		rtw_wdev_free(padapter->rtw_wdev);
-		#endif
-	}
-
 free_adapter:
-	if (status != _SUCCESS) {
-		if (pnetdev)
-			rtw_free_netdev(pnetdev);
-		else
-			rtw_vmfree((u8*)padapter, sizeof(*padapter));
+	if (status != _SUCCESS && padapter) {
+		rtw_vmfree((u8 *)padapter, sizeof(*padapter));
 		padapter = NULL;
 	}
 exit:
@@ -588,7 +556,6 @@ exit:
 
 static void rtw_sdio_if1_deinit(_adapter *if1)
 {
-	struct net_device *pnetdev = if1->pnetdev;
 	struct mlme_priv *pmlmepriv= &if1->mlmepriv;
 
 	if(check_fwstate(pmlmepriv, _FW_LINKED))
@@ -619,19 +586,13 @@ static void rtw_sdio_if1_deinit(_adapter *if1)
 
 	rtw_dev_unload(if1);
 	DBG_871X("+r871xu_dev_remove, hw_init_completed=%d\n", if1->hw_init_completed);
-	
-	rtw_handle_dualmac(if1, 0);
-
-#ifdef CONFIG_IOCTL_CFG80211
-	if (if1->rtw_wdev) {
-		rtw_wdev_free(if1->rtw_wdev);
-	}
-#endif
 
 	rtw_free_drv_sw(if1);
 
-	if(pnetdev)
-		rtw_free_netdev(pnetdev);
+	/* TODO: use rtw_os_ndevs_deinit instead at the first stage of driver's dev deinit function */
+	rtw_os_ndev_free(if1);
+
+	rtw_vmfree((u8 *)if1, sizeof(_adapter));
 
 #ifdef CONFIG_PLATFORM_RTD2880B
 	DBG_871X("wlan link down\n");
@@ -716,7 +677,7 @@ static int rtw_drv_init(
 #endif
 
 	//dev_alloc_name && register_netdev
-	if (rtw_drv_register_netdev(if1) != _SUCCESS)
+	if (rtw_os_ndevs_init(dvobj) != _SUCCESS)
 		goto free_if2;
 
 #ifdef CONFIG_HOSTAPD_MLME
@@ -729,7 +690,7 @@ static int rtw_drv_init(
 #endif
 
 	if (sdio_alloc_irq(dvobj) != _SUCCESS)
-		goto unregister_ndevs;
+		goto os_ndevs_deinit;
 
 #ifdef	CONFIG_GPIO_WAKEUP
 #ifdef CONFIG_PLATFORM_ARM_SUN6I
@@ -754,9 +715,9 @@ static int rtw_drv_init(
 
 	status = _SUCCESS;
 
-unregister_ndevs:
+os_ndevs_deinit:
 	if (status != _SUCCESS)
-		rtw_unregister_netdevs(dvobj);
+		rtw_os_ndevs_deinit(dvobj);
 free_if2:
 	if(status != _SUCCESS && if2) {
 		#ifdef CONFIG_CONCURRENT_MODE
@@ -787,7 +748,8 @@ _func_enter_;
 
 	dvobj->processing_dev_remove = _TRUE;
 
-	rtw_unregister_netdevs(dvobj);
+	/* TODO: use rtw_os_ndevs_deinit instead at the first stage of driver's dev deinit function */
+	rtw_os_ndevs_unregister(dvobj);
 
 	if (padapter->bSurpriseRemoved == _FALSE) {
 		int err;

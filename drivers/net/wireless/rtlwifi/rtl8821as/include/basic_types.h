@@ -334,14 +334,14 @@
 	)
 
 #define SET_BITS_TO_LE_1BYTE_8BIT(__pStart, __BitOffset, __BitLen, __Value) \
-{ \
+do { \
 	*((u8 *)(__pStart)) = \
 		EF1Byte( \
 			LE_BITS_CLEARED_TO_1BYTE_8BIT(__pStart, __BitOffset, __BitLen) \
 			| \
 			((u8)__Value) \
 		); \
-}
+} while (0)
 
 // Get the N-bytes aligment offset from the current length
 #define N_BYTE_ALIGMENT(__Value, __Aligment) ((__Aligment == 1) ? (__Value) : (((__Value + __Aligment - 1) / __Aligment) * __Aligment))

@@ -1350,9 +1350,6 @@ _func_enter_;
 #ifdef CONFIG_CONCURRENT_MODE	
 	rtw_os_xmit_schedule(adapter->pbuddy_adapter);
 #endif
-#ifdef CONFIG_DUALMAC_CONCURRENT
-	dc_resume_xmit(adapter);
-#endif
 
 #ifdef CONFIG_DRVEXT_MODULE_WSC
 	drvext_surveydone_callback(&adapter->drvextpriv);
@@ -1719,17 +1716,17 @@ inline void rtw_indicate_scan_done( _adapter *padapter, bool aborted)
 #endif // CONFIG_IPS
 }
 
-void rtw_scan_abort(_adapter *adapter)
+u32 rtw_scan_abort_timeout(_adapter *adapter, u32 timeout_ms)
 {
-	u32 cnt=0;
 	u32 start;
-	struct mlme_priv	*pmlmepriv = &(adapter->mlmepriv);
-	struct mlme_ext_priv	*pmlmeext = &(adapter->mlmeextpriv);
+	u32 pass_ms;
+	struct mlme_priv *pmlmepriv = &(adapter->mlmepriv);
+	struct mlme_ext_priv *pmlmeext = &(adapter->mlmeextpriv);
 
 	start = rtw_get_current_time();
 	pmlmeext->scan_abort = _TRUE;
 	while (check_fwstate(pmlmepriv, _FW_UNDER_SURVEY)
-		&& rtw_get_passing_time_ms(start) <= 200) {
+		&& rtw_get_passing_time_ms(start) <= timeout_ms) {
 
 		if (adapter->bDriverStopped || adapter->bSurpriseRemoved)
 			break;
@@ -1749,6 +1746,23 @@ void rtw_scan_abort(_adapter *adapter)
 		rtw_indicate_scan_done(adapter, _TRUE);
 	}
 	pmlmeext->scan_abort = _FALSE;
+	pass_ms = rtw_get_passing_time_ms(start);
+
+	return pass_ms;
+}
+
+void rtw_scan_abort_no_wait(_adapter *adapter)
+{
+	struct mlme_priv *pmlmepriv = &(adapter->mlmepriv);
+	struct mlme_ext_priv *pmlmeext = &(adapter->mlmeextpriv);
+
+	if (check_fwstate(pmlmepriv, _FW_UNDER_SURVEY))
+		pmlmeext->scan_abort = _TRUE;
+}
+
+void rtw_scan_abort(_adapter *adapter)
+{
+	rtw_scan_abort_timeout(adapter, 200);
 }
 
 static struct sta_info *rtw_joinbss_update_stainfo(_adapter *padapter, struct wlan_network *pnetwork)
@@ -2179,10 +2193,6 @@ _func_enter_;
 #ifdef CONFIG_CONCURRENT_MODE	
 	rtw_os_xmit_schedule(adapter->pbuddy_adapter);
 #endif	
-
-#ifdef CONFIG_DUALMAC_CONCURRENT
-	dc_resume_xmit(adapter);
-#endif
 
 _func_exit_;
 }
@@ -2830,7 +2840,7 @@ void rtw_dynamic_check_timer_handlder(_adapter *adapter)
 		DBG_871X("IsBtDisabled=%d, IsBtControlLps=%d\n", rtw_btcoex_IsBtDisabled(adapter), rtw_btcoex_IsBtControlLps(adapter));
 #endif
 
-#ifdef CONFIG_LPS_LCLK_WD_TIMER
+#ifdef CONFIG_LPS_LCLK_WD_TIMER /* to avoid leaving lps 32k frequently*/
 	if ((adapter_to_pwrctl(adapter)->bFwCurrentInPSMode ==_TRUE )
 #ifdef CONFIG_BT_COEXIST
 		&& (rtw_btcoex_IsBtControlLps(adapter) == _FALSE)
@@ -3824,7 +3834,7 @@ void	rtw_ht_use_default_setting(_adapter *padapter)
 			SET_FLAG(phtpriv->ldpc_cap, LDPC_HT_ENABLE_TX);
 	}
 	if (phtpriv->ldpc_cap)
-		DBG_871X("[HT] Support LDPC = 0x%02X\n", phtpriv->ldpc_cap);
+		DBG_871X("[HT] HAL Support LDPC = 0x%02X\n", phtpriv->ldpc_cap);
 
 	// STBC
 	rtw_hal_get_def_var(padapter, HAL_DEF_TX_STBC, (u8 *)&bHwSTBCSupport);
@@ -3841,7 +3851,7 @@ void	rtw_ht_use_default_setting(_adapter *padapter)
 			SET_FLAG(phtpriv->stbc_cap, STBC_HT_ENABLE_RX);
 	}
 	if (phtpriv->stbc_cap)
-		DBG_871X("[HT] Support STBC = 0x%02X\n", phtpriv->stbc_cap);
+		DBG_871X("[HT] HAL Support STBC = 0x%02X\n", phtpriv->stbc_cap);
 
 	// Beamforming setting
 	rtw_hal_get_def_var(padapter, HAL_DEF_EXPLICIT_BEAMFORMER, (u8 *)&bHwSupportBeamformer);
@@ -3850,15 +3860,14 @@ void	rtw_ht_use_default_setting(_adapter *padapter)
 	if(TEST_FLAG(pregistrypriv->beamform_cap, BIT4) && bHwSupportBeamformer)
 	{
 		SET_FLAG(phtpriv->beamform_cap, BEAMFORMING_HT_BEAMFORMER_ENABLE);
-		DBG_871X("[HT] Support Beamformer\n");
+		DBG_871X("[HT] HAL Support Beamformer\n");
 	}
 	if(TEST_FLAG(pregistrypriv->beamform_cap, BIT5) && bHwSupportBeamformee)
 	{
 		SET_FLAG(phtpriv->beamform_cap, BEAMFORMING_HT_BEAMFORMEE_ENABLE);
-		DBG_871X("[HT] Support Beamformee\n");
+		DBG_871X("[HT] HAL Support Beamformee\n");
 	}
 }
-
 void rtw_build_wmm_ie_ht(_adapter *padapter, u8 *out_ie, uint *pout_len)
 {
 	unsigned char WMM_IE[] = {0x00, 0x50, 0xf2, 0x02, 0x00, 0x01, 0x00};
@@ -3944,8 +3953,10 @@ unsigned int rtw_restructure_ht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, ui
 			ht_capie.cap_info |= IEEE80211_HT_CAP_SGI_40;
 	}
 
-	if (TEST_FLAG(phtpriv->stbc_cap, STBC_HT_ENABLE_TX))
+	if (TEST_FLAG(phtpriv->stbc_cap, STBC_HT_ENABLE_TX)) {
 		ht_capie.cap_info |= IEEE80211_HT_CAP_TX_STBC;
+		DBG_871X("[HT] Declare supporting TX STBC\n");
+	}
 
 	/* todo: disable SM power save mode */
 	ht_capie.cap_info |= IEEE80211_HT_CAP_SM_PS;
@@ -3962,7 +3973,6 @@ unsigned int rtw_restructure_ht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, ui
 			((channel > 14) && (pregistrypriv->rx_stbc == 0x2)) ||		/* enable for 5GHz */
 			(pregistrypriv->wifi_spec == 1)) {
 			stbc_rx_enable = 1;
-			DBG_871X("declare supporting RX STBC\n");
 		}
 	}
 
@@ -3976,16 +3986,20 @@ unsigned int rtw_restructure_ht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, ui
 	{
 	case RF_1T1R:
 		
-		if (stbc_rx_enable)
+		if (stbc_rx_enable) {
 			ht_capie.cap_info |= IEEE80211_HT_CAP_RX_STBC_1R;//RX STBC One spatial stream
+			DBG_871X("[HT] Declare supporting RX STBC_1R\n");
+		}
 
 	                set_mcs_rate_by_mask(ht_capie.supp_mcs_set, MCS_RATE_1R);			
 			break;
 
 	case RF_2T2R:
 	case RF_1T2R:
-		if (stbc_rx_enable)
+		if (stbc_rx_enable) {
 			ht_capie.cap_info |= IEEE80211_HT_CAP_RX_STBC_2R;//RX STBC two spatial stream
+			DBG_871X("[HT] Declare supporting RX STBC_2R\n");
+		}
 
 		#ifdef CONFIG_DISABLE_MCS13TO15
 		if(((cbw40_enable == 1) && (operation_bw == CHANNEL_WIDTH_40)) && (pregistrypriv->wifi_spec!=1))

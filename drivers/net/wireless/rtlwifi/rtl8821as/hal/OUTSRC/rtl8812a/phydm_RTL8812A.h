@@ -21,6 +21,15 @@
 #ifndef	__ODM_RTL8812A_H__
 #define __ODM_RTL8812A_H__
 #if(defined(CONFIG_PATH_DIVERSITY))
+
+VOID
+ODM_PathStatistics_8812A(
+	IN		PDM_ODM_T		pDM_Odm,
+	IN		u4Byte			MacId,
+	IN		u4Byte			RSSI_A,
+	IN		u4Byte			RSSI_B
+);
+
 VOID
 ODM_PathDiversityInit_8812A(	IN	PDM_ODM_T 	pDM_Odm);
 

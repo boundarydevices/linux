@@ -26,26 +26,33 @@
 
 s32 Hal_SetPowerTracking(PADAPTER padapter, u8 enable)
 {
-	BOOLEAN 				bResult = TRUE;
-	PMPT_CONTEXT			pMptCtx = &(padapter->mppriv.MptCtx);
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter);
-	
-	pHalData->TxPowerTrackControl = (u1Byte)enable;
-	if(pHalData->TxPowerTrackControl > 1)
-		pHalData->TxPowerTrackControl = 0;
-	return bResult;
+	PDM_ODM_T		pDM_Odm = &(pHalData->odmpriv);
 
+
+	if (!netif_running(padapter->pnetdev)) {
+		RT_TRACE(_module_mp_, _drv_warning_, ("SetPowerTracking! Fail: interface not opened!\n"));
+		return _FAIL;
+	}
+
+	if (check_fwstate(&padapter->mlmepriv, WIFI_MP_STATE) == _FALSE) {
+		RT_TRACE(_module_mp_, _drv_warning_, ("SetPowerTracking! Fail: not in MP mode!\n"));
+		return _FAIL;
+	}
+
+	if (enable)	
+		pDM_Odm->RFCalibrateInfo.TxPowerTrackControl = _TRUE;	
+	else
+		pDM_Odm->RFCalibrateInfo.TxPowerTrackControl= _FALSE;
 
 	return _SUCCESS;
 }
 
+
 void Hal_GetPowerTracking(PADAPTER padapter, u8 *enable)
 {
-	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter);
-	
-	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter); 
 	PDM_ODM_T		pDM_Odm = &(pHalData->odmpriv);
-
 
 	*enable = pDM_Odm->RFCalibrateInfo.TxPowerTrackControl;
 }
@@ -53,9 +60,7 @@ void Hal_GetPowerTracking(PADAPTER padapter, u8 *enable)
 static void Hal_disable_dm(PADAPTER padapter)
 {
 	u8 v8;
-	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter);
-
-	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter); 
 	PDM_ODM_T		pDM_Odm = &(pHalData->odmpriv);
 
 
@@ -65,15 +70,12 @@ static void Hal_disable_dm(PADAPTER padapter)
 	v8 &= ~EN_BCN_FUNCTION;
 	rtw_write8(padapter, REG_BCN_CTRL, v8);
 
-	//3 2. disable driver dynamic mechanism
-	// disable Dynamic Initial Gain
-	// disable High Power
-	// disable Power Tracking
+	//3 2. disable driver dynamic mechanism	
 	Switch_DM_Func(padapter, DYNAMIC_FUNC_DISABLE, _FALSE);
 
 	// enable APK, LCK and IQK but disable power tracking
 	pDM_Odm->RFCalibrateInfo.TxPowerTrackControl = _FALSE;
-	Switch_DM_Func(padapter, DYNAMIC_FUNC_DISABLE, _TRUE);
+	Switch_DM_Func(padapter, ODM_RF_CALIBRATION, _TRUE);
 }
 
 /*-----------------------------------------------------------------------------
@@ -203,10 +205,11 @@ void Hal_MPT_CCKTxPowerAdjustbyIndex(PADAPTER pAdapter, BOOLEAN beven)
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(pAdapter);
 	PMPT_CONTEXT	pMptCtx = &pAdapter->mppriv.MptCtx;
 
-	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
 	PDM_ODM_T		pDM_Odm = &(pHalData->odmpriv);
 
-
+#if 1
+	return;
+#else
 	if (!IS_92C_SERIAL(pHalData->VersionID))
 		return;
 #if 0
@@ -304,6 +307,7 @@ void Hal_MPT_CCKTxPowerAdjustbyIndex(PADAPTER pAdapter, BOOLEAN beven)
 
 	PlatformAtomicExchange(&Adapter->IntrCCKRefCount, FALSE);
 #endif
+#endif
 }
 /*---------------------------hal\rtl8192c\MPT_HelperFunc.c---------------------------*/
 
@@ -325,7 +329,6 @@ void Hal_SetChannel(PADAPTER pAdapter)
 
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(pAdapter);
 	struct mp_priv	*pmp = &pAdapter->mppriv;
-	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
 	PDM_ODM_T		pDM_Odm = &(pHalData->odmpriv);
 	
 	u8		channel = pmp->channel;
@@ -795,7 +798,6 @@ void Hal_SetSingleToneTx(PADAPTER pAdapter, u8 bStart)
 {
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(pAdapter);
 	PMPT_CONTEXT	pMptCtx = &pAdapter->mppriv.MptCtx;
-	BOOLEAN		is92C = IS_92C_SERIAL(pHalData->VersionID);
 
 	u8 rfPath;
 	u32              reg58 = 0x0;
@@ -885,13 +887,7 @@ void Hal_SetSingleToneTx(PADAPTER pAdapter, u8 bStart)
 		write_bbreg(pAdapter, rFPGA0_RFMOD, bCCKEn, 0x1);
 		write_bbreg(pAdapter, rFPGA0_RFMOD, bOFDMEn, 0x1);
 		}
-		if (is92C) {
-			_write_rfreg(pAdapter, RF_PATH_A, 0x21, BIT19, 0x00);
-			rtw_usleep_os(100);
-			write_rfreg(pAdapter, RF_PATH_A, 0x00, 0x32d75); // PAD all on.
-			write_rfreg(pAdapter, RF_PATH_B, 0x00, 0x32d75); // PAD all on.
-			rtw_usleep_os(100);
-		} else {
+		{
 			write_rfreg(pAdapter, rfPath, 0x21, 0x54000);
 			rtw_usleep_os(100);
 			write_rfreg(pAdapter, rfPath, 0x00, 0x30000); // PAD all on.

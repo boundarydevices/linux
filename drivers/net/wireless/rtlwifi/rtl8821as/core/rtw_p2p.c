@@ -3422,7 +3422,7 @@ void pre_tx_invitereq_handler( _adapter*	padapter )
 _func_enter_;
 
 	set_channel_bwmode(padapter, pwdinfo->invitereq_info.peer_ch, HAL_PRIME_CHNL_OFFSET_DONT_CARE, CHANNEL_WIDTH_20);
-	padapter->HalFunc.SetHwRegHandler(padapter, HW_VAR_MLME_SITESURVEY, (u8 *)(&val8));	
+	rtw_hal_set_hwreg(padapter, HW_VAR_MLME_SITESURVEY, (u8 *)(&val8));	
 	issue_probereq_p2p(padapter, NULL);
 	_set_timer( &pwdinfo->pre_tx_scan_timer, P2P_TX_PRESCAN_TIMEOUT );
 	
@@ -3532,7 +3532,7 @@ _func_enter_;
 					if(!check_buddy_mlmeinfo_state(padapter, WIFI_FW_AP_STATE) &&!(pmlmeinfo->state&0x03) == WIFI_FW_AP_STATE)
 					{						
 						val8 = 0;
-						padapter->HalFunc.SetHwRegHandler(padapter, HW_VAR_MLME_SITESURVEY, (u8 *)(&val8));
+						rtw_hal_set_hwreg(padapter, HW_VAR_MLME_SITESURVEY, (u8 *)(&val8));
 					}
 					rtw_p2p_set_state(pwdinfo, P2P_STATE_IDLE);
 					issue_nulldata(pbuddy_adapter, NULL, 0, 3, 500);

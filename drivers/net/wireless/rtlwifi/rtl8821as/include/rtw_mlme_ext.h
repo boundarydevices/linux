@@ -56,35 +56,6 @@
 
 #define DYNAMIC_FUNC_DISABLE		(0x0)
 
-// ====== ODM_ABILITY_E ========
-// BB ODM section BIT 0-15
-#define DYNAMIC_BB_DIG				BIT0 //ODM_BB_DIG
-#define DYNAMIC_BB_RA_MASK			BIT1 //ODM_BB_RA_MASK
-#define DYNAMIC_BB_DYNAMIC_TXPWR	BIT2 //ODM_BB_DYNAMIC_TXPWR
-#define DYNAMIC_BB_BB_FA_CNT		BIT3 //ODM_BB_FA_CNT
-#define DYNAMIC_BB_RSSI_MONITOR		BIT4 //ODM_BB_RSSI_MONITOR
-#define DYNAMIC_BB_CCK_PD			BIT5 //ODM_BB_CCK_PD
-#define DYNAMIC_BB_ANT_DIV			BIT6 //ODM_BB_ANT_DIV
-#define DYNAMIC_BB_PWR_SAVE			BIT7 //ODM_BB_PWR_SAVE
-#define DYNAMIC_BB_PWR_TRAIN		BIT8 //ODM_BB_PWR_TRAIN
-#define DYNAMIC_BB_RATE_ADAPTIVE	BIT9 //ODM_BB_RATE_ADAPTIVE
-#define DYNAMIC_BB_PATH_DIV			BIT10//ODM_BB_PATH_DIV
-#define DYNAMIC_BB_PSD				BIT11//ODM_BB_PSD
-#define DYNAMIC_BB_RXHP				BIT12//ODM_BB_RXHP
-#define DYNAMIC_BB_ADAPTIVITY		BIT13//ODM_BB_ADAPTIVITY
-#define DYNAMIC_BB_DYNAMIC_ATC		BIT14//ODM_BB_DYNAMIC_ATC
-
-// MAC DM section BIT 16-23
-#define DYNAMIC_MAC_EDCA_TURBO		BIT16//ODM_MAC_EDCA_TURBO
-#define DYNAMIC_MAC_EARLY_MODE		BIT17//ODM_MAC_EARLY_MODE
-
-// RF ODM section BIT 24-31
-#define DYNAMIC_RF_TX_PWR_TRACK		BIT24//ODM_RF_TX_PWR_TRACK
-#define DYNAMIC_RF_RX_GAIN_TRACK	BIT25//ODM_RF_RX_GAIN_TRACK
-#define DYNAMIC_RF_CALIBRATION		BIT26//ODM_RF_CALIBRATION
-
-#define DYNAMIC_ALL_FUNC_ENABLE		0xFFFFFFF
-
 #define _HW_STATE_NOLINK_		0x00
 #define _HW_STATE_ADHOC_		0x01
 #define _HW_STATE_STATION_ 	0x02
@@ -495,6 +466,8 @@ typedef struct _RT_CHANNEL_INFO
 #endif
 }RT_CHANNEL_INFO, *PRT_CHANNEL_INFO;
 
+void dump_ch_plan_test(void *sel);
+
 int rtw_ch_set_search_ch(RT_CHANNEL_INFO *ch_set, const u32 ch);
 bool rtw_mlme_band_check(_adapter *adapter, const u32 ch);
 
@@ -714,7 +687,6 @@ void update_beacon_info(_adapter *padapter, u8 *pframe, uint len, struct sta_inf
 #ifdef CONFIG_DFS
 void process_csa_ie(_adapter *padapter, u8 *pframe, uint len);
 #endif //CONFIG_DFS
-void update_IOT_info(_adapter *padapter);
 void update_capinfo(PADAPTER Adapter, u16 updateCap);
 void update_wireless_mode(_adapter * padapter);
 void update_tx_basic_rate(_adapter *padapter, u8 modulation);
@@ -914,21 +886,6 @@ extern u8 traffic_status_watchdog(_adapter *padapter, u8 from_timer);
  sint check_buddy_mlmeinfo_state(_adapter *padapter, u32 state);
 void concurrent_chk_joinbss_done(_adapter *padapter, int join_res);
 #endif //CONFIG_CONCURRENT_MODE
-
-#ifdef CONFIG_DUALMAC_CONCURRENT
-void	dc_SelectChannel(_adapter *padapter, unsigned char channel);
-void	dc_SetBWMode(_adapter *padapter, unsigned short bwmode, unsigned char channel_offset);
-void	dc_set_channel_bwmode_disconnect(_adapter *padapter);
-u8	dc_handle_join_request(_adapter *padapter, u8 *ch, u8 *bw, u8 *offset);
-void	dc_handle_join_done(_adapter *padapter, u8 join_res);
-sint	dc_check_fwstate(_adapter *padapter, sint fw_state);
-u8	dc_handle_site_survey(_adapter *padapter);
-void	dc_report_survey_event(_adapter *padapter, union recv_frame *precv_frame);
-void	dc_set_channel_bwmode_survey_done(_adapter *padapter);
-void	dc_set_ap_channel_bandwidth(_adapter *padapter, u8 channel, u8 channel_offset, u8 bwmode);
-void	dc_resume_xmit(_adapter *padapter);
-u8	dc_check_xmit(_adapter *padapter);
-#endif
 
 int rtw_chk_start_clnt_join(_adapter *padapter, u8 *ch, u8 *bw, u8 *offset);
 int rtw_get_ch_setting_union(_adapter *adapter, u8 *ch, u8 *bw, u8 *offset);
@@ -1146,7 +1103,7 @@ static struct fwevent wlanevents[] =
 
 };
 
-#endif//_RTL8192C_CMD_C_
+#endif//_RTW_MLME_EXT_C_
 
 #endif
 

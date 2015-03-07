@@ -145,7 +145,7 @@ void	beamforming_dym_ndpa_rate(PADAPTER adapter)
 	u16	NDPARate = MGN_6M;
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(adapter);
 	
-	if(pHalData->dmpriv.MinUndecoratedPWDBForDM > 30) // link RSSI > 30%
+	if(pHalData->MinUndecoratedPWDBForDM > 30) // link RSSI > 30%
 		NDPARate = MGN_24M;
 	else
 		NDPARate = MGN_6M;

@@ -33,9 +33,9 @@ const char *const GLBtInfoSrc8812a2Ant[]={
 	"BT Info[bt auto report]",
 };
 
-u4Byte	GLCoexVerDate8812a2Ant=20131017;
-u4Byte	GLCoexVer8812a2Ant=0x36;
-
+u4Byte	GLCoexVerDate8812a2Ant=20150127;
+u4Byte	GLCoexVer8812a2Ant=0x37;
+//improve 8761ATV D-cut BT off/on fail issue
 //============================================================
 // local function proto type if needed
 //============================================================
@@ -260,6 +260,15 @@ halbtc8812a2ant_MonitorBtEnableDisable(
 	{
 		bBtActive = FALSE;
 	}
+
+	if((pCoexSta->prebtInfoC2hCnt_BT_RSP == pCoexSta->btInfoC2hCnt[1]) &&
+		(pCoexSta->prebtInfoC2hCnt_BT_SEND == pCoexSta->btInfoC2hCnt[2]))
+	{
+		bBtActive = FALSE;
+	}
+	pCoexSta->prebtInfoC2hCnt_BT_RSP = pCoexSta->btInfoC2hCnt[1];
+	pCoexSta->prebtInfoC2hCnt_BT_SEND = pCoexSta->btInfoC2hCnt[2];
+	
 	if(bBtActive)
 	{
 		btDisableCnt = 0;
@@ -287,9 +296,13 @@ halbtc8812a2ant_MonitorBtEnableDisable(
 		bPreBtDisabled = bBtDisabled;
 		if(!bBtDisabled)
 		{
+			// enable PTA
+			pBtCoexist->fBtcWrite1Byte(pBtCoexist, 0x40, 0x20);
 		}
 		else
 		{
+			// disable PTA
+			pBtCoexist->fBtcWrite1Byte(pBtCoexist, 0x40, 0x00);
 		}
 	}
 }
@@ -4346,10 +4359,10 @@ EXhalbtc8812a2ant_DisplayCoexInfo(
 	CL_PRINTF(cliBuf);	
 	
 	psTdmaCase = pCoexDm->curPsTdma;
-	CL_SPRINTF(cliBuf, BT_TMP_BUF_SIZE, "\r\n %-35s = %02x %02x %02x %02x %02x %02x case-%d (auto:%d/%d)", "PS TDMA", \
+	CL_SPRINTF(cliBuf, BT_TMP_BUF_SIZE, "\r\n %-35s = %02x %02x %02x %02x %02x case-%d (auto:%d/%d)", "PS TDMA", \
 		pCoexDm->psTdmaPara[0], pCoexDm->psTdmaPara[1],
 		pCoexDm->psTdmaPara[2], pCoexDm->psTdmaPara[3],
-		pCoexDm->psTdmaPara[4], pCoexDm->psTdmaPara[5], psTdmaCase, pCoexDm->bAutoTdmaAdjust, pCoexDm->bAutoTdmaAdjustLowRssi);
+		pCoexDm->psTdmaPara[4], psTdmaCase, pCoexDm->bAutoTdmaAdjust, pCoexDm->bAutoTdmaAdjustLowRssi);
 	CL_PRINTF(cliBuf);
 
 	CL_SPRINTF(cliBuf, BT_TMP_BUF_SIZE, "\r\n %-35s = %d/ %d ", "DecBtPwr/ IgnWlanAct", \

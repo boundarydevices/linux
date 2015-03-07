@@ -337,7 +337,6 @@ phy_BB8812_Config_ParaFile(
 	IN	PADAPTER	Adapter
 	)
 {
-	EEPROM_EFUSE_PRIV	*pEEPROM = GET_EEPROM_EFUSE_PRIV(Adapter);
 	HAL_DATA_TYPE		*pHalData = GET_HAL_DATA(Adapter);
 	int			rtStatus = _SUCCESS;
 
@@ -1013,14 +1012,14 @@ u32 PHY_GetTxBBSwing_8812A(
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(GetDefaultAdapter(Adapter));
 	PDM_ODM_T		pDM_Odm = &pHalData->odmpriv;
 	PODM_RF_CAL_T  	pRFCalibrateInfo = &(pDM_Odm->RFCalibrateInfo);
-	EEPROM_EFUSE_PRIV	*pEEPROM = GET_EEPROM_EFUSE_PRIV(Adapter);
+
 	s8	bbSwing_2G = -1 * GetRegTxBBSwing_2G(Adapter);
 	s8	bbSwing_5G = -1 * GetRegTxBBSwing_5G(Adapter);
 	u32	out = 0x200;
 	const s8	AUTO = -1;
 	
 
-	if (pEEPROM->bautoload_fail_flag) 
+	if (pHalData->bautoload_fail_flag) 
 	{
 		if ( Band == BAND_ON_2_4G ) {
 			pRFCalibrateInfo->BBSwingDiff2G = bbSwing_2G;
@@ -1274,7 +1273,7 @@ void phy_SetBBSwingByBand_8812A(
 			{
 				BBDiffBetweenBand = (pRFCalibrateInfo->BBSwingDiff2G - pRFCalibrateInfo->BBSwingDiff5G);
 				BBDiffBetweenBand = (Band == BAND_ON_2_4G) ? BBDiffBetweenBand : (-1 * BBDiffBetweenBand);
-				pDM_Odm->DefaultOfdmIndex += BBDiffBetweenBand*2;
+				pRFCalibrateInfo->DefaultOfdmIndex += BBDiffBetweenBand*2;
 			}
 
 			ODM_ClearTxPowerTrackingState(pDM_Odm);

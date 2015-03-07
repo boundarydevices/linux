@@ -20,7 +20,8 @@
  
 #ifndef	__PHYDMPATHDIV_H__
 #define    __PHYDMPATHDIV_H__
-#define PATHDIV_VERSION	"2.0" //2014.11.04
+/*#define PATHDIV_VERSION "2.0" //2014.11.04*/
+#define PATHDIV_VERSION	"3.0" /*2015.01.13 Dino*/
 
 #if(defined(CONFIG_PATH_DIVERSITY))
 #define USE_PATH_A_AS_DEFAULT_ANT   //for 8814 dynamic TX path selection
@@ -51,10 +52,10 @@
 #define		PHYDM_BD	 (BIT1 | BIT3)  // 4
 #define		PHYDM_CD	 (BIT2 | BIT3)  // 5
 
-#define		PHYDM_ABC	 (BIT0 | BIT1 | BIT2) // 0
-#define		PHYDM_ABD	 (BIT0 | BIT1 | BIT4) // 1
-#define		PHYDM_ACD	 (BIT0 | BIT3 | BIT4) // 2
-#define		PHYDM_BCD	 (BIT2 | BIT3 | BIT4) // 3
+#define		PHYDM_ABC	 (BIT0 | BIT1 | BIT2) /* 0*/
+#define		PHYDM_ABD	 (BIT0 | BIT1 | BIT3) /* 1*/
+#define		PHYDM_ACD	 (BIT0 | BIT2 | BIT3) /* 2*/
+#define		PHYDM_BCD	 (BIT1 | BIT2 | BIT3) /* 3*/
 
 #define		PHYDM_ABCD	 (BIT0 | BIT1 | BIT2 | BIT3)
 
@@ -118,7 +119,7 @@ typedef struct _ODM_PATH_DIVERSITY_
 	u1Byte	pre_tx_path;
 	u1Byte	use_path_a_as_default_ant;
 	BOOLEAN is_pathA_exist;
-	
+
   #endif
 }PATHDIV_T, *pPATHDIV_T;
 
@@ -145,7 +146,10 @@ odm_PathDiversity(
 VOID
 odm_pathdiv_debug(
 	IN		PVOID		pDM_VOID,
-	IN		u4Byte		*const dm_value
+	IN		u4Byte		*const dm_value,
+	IN		u4Byte		*_used,
+	OUT		char		*output,
+	IN		u4Byte		*_out_len
 	);
 
 
@@ -163,7 +167,7 @@ odm_pathdiv_debug(
 #define dm_PathDiv_RSSI_Check	ODM_PathDivChkPerPktRssi
 #define PathDivCheckBeforeLink8192C	ODM_PathDiversityBeforeLink92C
 
-	
+
 
 
 typedef struct _PathDiv_Parameter_define_

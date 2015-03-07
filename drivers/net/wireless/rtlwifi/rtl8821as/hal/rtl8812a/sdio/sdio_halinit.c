@@ -428,11 +428,7 @@ static void _InitTxBufferBoundary(PADAPTER padapter)
 
 static void _InitRxBufferBoundary(PADAPTER padapter)
 {
-	u16 rxff_bndy;
-
-
-	rxff_bndy = MAX_RX_DMA_BUFFER_SIZE_8821-1;
-	rtw_write16(padapter, REG_TRXFF_BNDY + 2, rxff_bndy);
+	rtw_write16(padapter, REG_TRXFF_BNDY + 2, RX_DMA_BOUNDARY_8821);
 }
 
 static void _InitPageBoundary(PADAPTER padapter)
@@ -709,8 +705,6 @@ void _InitTRxAggregationSetting(PADAPTER padapter)
 	_InitRxAggr(padapter);
 	_EnableRxAggr(padapter);
 
-	// 201/12/10 MH Add for USB agg mode dynamic switch.
-	pHalData->UsbRxHighSpeedMode = _FALSE;
 }
 
 static void _InitBeaconParameters(PADAPTER padapter)
@@ -868,13 +862,13 @@ static u32 _HalInit(PADAPTER padapter)
 	{
 //		_ps_open_RF(padapter);
 
-		if (pHalData->odmpriv.RFCalibrateInfo.bIQKInitialized){
+		if (pHalData->bIQKInitialized){
 			//PHY_IQCalibrate_8812A(Adapter,_TRUE);
 		}
 		else
 		{
 			//PHY_IQCalibrate_8812A(Adapter,_FALSE);
-			pHalData->odmpriv.RFCalibrateInfo.bIQKInitialized = _TRUE;
+			pHalData->bIQKInitialized = _TRUE;
 		}
 
 		//ODM_TXPowerTrackingCheck(&pHalData->odmpriv );
@@ -1230,46 +1224,44 @@ static void _InterfaceConfigure(PADAPTER padapter)
 }
 
 static void
-_EfuseParseMACAddr(PADAPTER padapter, PEEPROM_EFUSE_PRIV pEEPROM)
+_EfuseParseMACAddr(PADAPTER padapter, u8 *hwinfo)
 {
 	u16 i, usValue;
-	u8 *hwinfo;
+	PHAL_DATA_TYPE pHalData = GET_HAL_DATA(padapter);
+
 #ifdef CONFIG_RTL8821A
 	u8 sMacAddr[6] = {0x00, 0xE0, 0x4C, 0x88, 0x21, 0x00};
 #else // CONFIG_RTL8812A
 	u8 sMacAddr[6] = {0x00, 0xE0, 0x4C, 0x88, 0x12, 0x00};
 #endif // CONFIG_RTL8812A
 
+	if(!hwinfo)
+		return;
 
-	pEEPROM = GET_EEPROM_EFUSE_PRIV(padapter);
-	hwinfo = pEEPROM->efuse_eeprom_data;
-
-	if (pEEPROM->bautoload_fail_flag)
+	if (pHalData->bautoload_fail_flag)
 	{
 //		sMacAddr[5] = (u1Byte)GetRandomNumber(1, 254);
 		for (i=0; i<6; i++)
-			pEEPROM->mac_addr[i] = sMacAddr[i];
+			pHalData->EEPROMMACAddr[i] = sMacAddr[i];
 	}
 	else
 	{
-		_rtw_memcpy(pEEPROM->mac_addr, &hwinfo[EEPROM_MAC_ADDR_8821AS], ETH_ALEN);
+		_rtw_memcpy(pHalData->EEPROMMACAddr, &hwinfo[EEPROM_MAC_ADDR_8821AS], ETH_ALEN);
 	}
 
 	DBG_8192C("%s: Permanent Address=" MAC_FMT "\n",
-		  __FUNCTION__, MAC_ARG(pEEPROM->mac_addr));
+		  __FUNCTION__, MAC_ARG(pHalData->EEPROMMACAddr));
 }
 
 static void _ParsePROMContent(PADAPTER padapter)
-{
-	PEEPROM_EFUSE_PRIV pEEPROM = GET_EEPROM_EFUSE_PRIV(padapter);
+{	
 	u8 *hwinfo;
 	u8 balfail;
-
+	PHAL_DATA_TYPE pHalData = GET_HAL_DATA(padapter);
 
 	DBG_8192C("+%s\n", __FUNCTION__);
 
-	pEEPROM = GET_EEPROM_EFUSE_PRIV(padapter);
-	hwinfo = pEEPROM->efuse_eeprom_data;
+	hwinfo = pHalData->efuse_eeprom_data;
 
 	//
 	// Read eeprom/efuse content
@@ -1281,7 +1273,7 @@ static void _ParsePROMContent(PADAPTER padapter)
 	//
 	Hal_EfuseParseIDCode8812A(padapter, hwinfo);
 
-	balfail = pEEPROM->bautoload_fail_flag;
+	balfail = pHalData->bautoload_fail_flag;
 	Hal_ReadPROMVersion8812A(padapter, hwinfo, balfail);
 	Hal_ReadTxPowerInfo8812A(padapter, hwinfo, balfail);
 	Hal_ReadBoardType8812A(padapter, hwinfo, balfail);
@@ -1304,7 +1296,7 @@ static void _ParsePROMContent(PADAPTER padapter)
 	//
 	// Parse the eeprom/efuse interface content
 	//
-	_EfuseParseMACAddr(padapter, pEEPROM);
+	_EfuseParseMACAddr(padapter, hwinfo);
 
 	//
 	// The following part initialize some vars by PG info.

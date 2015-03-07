@@ -22,7 +22,7 @@
 #ifndef	__ODM_DBG_H__
 #define __ODM_DBG_H__
 
-
+#define DEBUG_VERSION	"1.0"  /*2015.01.13 Dino*/
 //-----------------------------------------------------------------------------
 //	Define the debug levels
 //
@@ -89,9 +89,11 @@
 #define ODM_COMP_ACS					BIT16
 #define PHYDM_COMP_ADAPTIVITY			BIT17
 #define PHYDM_COMP_RA_DBG				BIT18
+#define PHYDM_COMP_TXBF				BIT19
 //MAC Functions
 #define ODM_COMP_EDCA_TURBO			BIT20
 #define ODM_COMP_EARLY_MODE			BIT21
+#define ODM_FW_DEBUG_TRACE			BIT22
 //RF Functions
 #define ODM_COMP_TX_PWR_TRACK		BIT24
 #define ODM_COMP_RX_GAIN_TRACK		BIT25
@@ -185,6 +187,10 @@
 VOID 
 PHYDM_InitDebugSetting(IN		PDM_ODM_T		pDM_Odm);
 
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+VOID phydm_BB_RxHang_Info(IN PDM_ODM_T pDM_Odm);
+#endif
+
 #define	BB_TMP_BUF_SIZE		100
 VOID phydm_BB_Debug_Info(IN PDM_ODM_T pDM_Odm);
 VOID phydm_BasicDbgMessage(	IN		PVOID			pDM_VOID);
@@ -274,6 +280,28 @@ void phydm_sbd_workitem_callback(
     IN PVOID            pContext
 	);
 #endif
+
+VOID
+phydm_fw_trace_en_h2c(
+	IN	PVOID	pDM_VOID,
+	IN	BOOLEAN		enable,
+	IN	u4Byte		monitor_mode,
+	IN	u4Byte		macid
+);
+
+VOID
+phydm_fw_trace_handler(
+	IN		PVOID	pDM_VOID,
+	IN		pu1Byte	CmdBuf,
+	IN		u1Byte	CmdLen
+);
+
+VOID
+phydm_fw_trace_handler_8051(
+	IN	PVOID	pDM_VOID,
+	IN	pu1Byte	CmdBuf,
+	IN	u1Byte	CmdLen
+);
 
 #endif	// __ODM_DBG_H__
 

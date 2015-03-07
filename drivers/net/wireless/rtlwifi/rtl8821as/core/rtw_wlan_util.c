@@ -102,6 +102,83 @@ int cckratesonly_included(unsigned char *rate, int ratelen)
 	return _TRUE;
 }
 
+s8 rtw_get_tx_nss(_adapter *adapter, struct sta_info *psta)
+{
+	u8 rf_type = RF_1T1R, custom_rf_type, vht_mcs[2];
+	s8 nss = 1;
+
+	custom_rf_type = adapter->registrypriv.rf_config;
+	rtw_hal_get_hwreg(adapter, HW_VAR_RF_TYPE, (u8 *)(&rf_type));
+	
+	if (!psta)
+		return nss;
+	
+	/* rf_config is dependent on efuse or sw config */
+	if (custom_rf_type != RF_MAX_TYPE)
+		rf_type = custom_rf_type;
+	
+#ifdef CONFIG_80211AC_VHT
+	if (psta->vhtpriv.vht_option) {
+		u8 vht_mcs[2];
+		struct mlme_priv	*pmlmepriv = &(adapter->mlmepriv);
+		struct vht_priv	*pvhtpriv_ap = &pmlmepriv->vhtpriv;
+		
+		_rtw_memcpy(vht_mcs, psta->vhtpriv.vht_mcs_map, 2);
+		/* doesn't support 5~8 SS so far */
+		vht_mcs[1] = 0xff;
+		switch (rf_type) {
+		case RF_1T1R:
+		case RF_1T2R:
+			vht_mcs[0] |= 0xfc;
+			break;
+		case RF_2T2R:
+		case RF_2T4R:
+		case RF_2T2R_GREEN:
+		case RF_2T3R:
+			vht_mcs[0] |= 0xf0;
+			break;
+		case RF_3T3R:
+		case RF_3T4R:
+			vht_mcs[0] |= 0xc0;
+			break;
+		default:
+			DBG_871X("%s,%d, unknown rf type\n", __func__, __LINE__);
+			break;
+		}
+		nss = rtw_vht_mcsmap_to_nss(vht_mcs);
+	} else
+#endif /* CONFIG_80211AC_VHT */
+	if (psta->htpriv.ht_option) {
+		u8 supp_mcs_set[4];
+
+		_rtw_memcpy(supp_mcs_set, psta->htpriv.ht_cap.supp_mcs_set, 4);
+		
+		switch (rf_type) {
+		case RF_1T1R:
+		case RF_1T2R:
+			supp_mcs_set[1] = supp_mcs_set[2] = supp_mcs_set[3] = 0;
+			break;
+		case RF_2T2R:
+		case RF_2T4R:
+		case RF_2T2R_GREEN:
+		case RF_2T3R:
+			supp_mcs_set[2] = supp_mcs_set[3] = 0;
+			break;
+		case RF_3T3R:
+		case RF_3T4R:
+			supp_mcs_set[3] = 0;
+			break;
+		default:
+			DBG_871X("%s,%d, unknown rf type\n", __func__, __LINE__);
+			break;
+		}
+		nss = rtw_ht_mcsset_to_nss(supp_mcs_set);
+	}
+	
+	DBG_871X("%s: %d SS, rf_type=%d\n", __func__, nss, rf_type);
+	return nss;
+}
+
 u8 networktype_to_raid(_adapter *adapter,struct sta_info *psta)
 {
 	unsigned char raid;
@@ -141,25 +218,9 @@ u8 networktype_to_raid_ex(_adapter *adapter, struct sta_info *psta)
 {
 	struct mlme_ext_priv	*pmlmeext = &adapter->mlmeextpriv;
 	u8 raid = RATEID_IDX_BGN_40M_1SS, cur_rf_type, rf_type, custom_rf_type;
+	s8 tx_nss;
 
-	cur_rf_type = rf_type = RF_1T1R;
-	custom_rf_type = adapter->registrypriv.rf_config;
-	rtw_hal_get_hwreg(adapter, HW_VAR_RF_TYPE, (u8 *)(&cur_rf_type));
-
-	if(cur_rf_type == RF_1T1R) {
-		rf_type = RF_1T1R;
-	}
-	else if(cur_rf_type == RF_3T3R)
-		rf_type = RF_3T3R;
-	else if(IsSupportedVHT(psta->wireless_mode)) {
-		if(psta->ra_mask & 0xffc00000)
-			rf_type = RF_2T2R;
-	}
-	else if(IsSupportedHT(psta->wireless_mode)) {
-		if(psta->ra_mask & 0xfff00000)
-			rf_type = RF_2T2R;
-	}
-
+	tx_nss = rtw_get_tx_nss(adapter, psta);
 
 	switch(psta->wireless_mode)
 	{
@@ -177,70 +238,70 @@ u8 networktype_to_raid_ex(_adapter *adapter, struct sta_info *psta)
 		case WIRELESS_11_5N:
 		case WIRELESS_11A_5N:
 		case WIRELESS_11G_24N:
-			if (rf_type == RF_1T1R || custom_rf_type == RF_1T2R)
+			if (tx_nss == 1)
 				raid = RATEID_IDX_GN_N1SS;
-			else if (rf_type == RF_2T2R || custom_rf_type == RF_2T4R)
+			else if (tx_nss == 2)
 				raid = RATEID_IDX_GN_N2SS;
-			else if (rf_type == RF_3T3R)
+			else if (tx_nss == 3)
 				raid = RATEID_IDX_BGN_3SS;
 			else
-				DBG_871X("RF type error!(rf_type=%d)\n", rf_type);
+				DBG_871X("tx_nss error!(tx_nss=%d)\n", tx_nss);
 			break;
 		case WIRELESS_11B_24N:
 		case WIRELESS_11BG_24N:
 			if (psta->bw_mode == CHANNEL_WIDTH_20) {
-				if (rf_type == RF_1T1R || custom_rf_type == RF_1T2R)
+				if (tx_nss == 1)
 					raid = RATEID_IDX_BGN_20M_1SS_BN;
-				else if (rf_type == RF_2T2R || custom_rf_type == RF_2T4R)
+				else if (tx_nss == 2)
 					raid = RATEID_IDX_BGN_20M_2SS_BN;
-				else if(rf_type == RF_3T3R)
+				else if (tx_nss == 3)
 					raid = RATEID_IDX_BGN_3SS;
 				else
-				DBG_871X("RF type error!(rf_type=%d)\n", rf_type);
+				DBG_871X("tx_nss error!(tx_nss=%d)\n", tx_nss);
 			} else {
-				if (rf_type == RF_1T1R || custom_rf_type == RF_1T2R)
+				if (tx_nss == 1)
 					raid = RATEID_IDX_BGN_40M_1SS;
-				else if (rf_type == RF_2T2R || custom_rf_type == RF_2T4R)
+				else if (tx_nss == 2)
 					raid = RATEID_IDX_BGN_40M_2SS;
-				else if(rf_type == RF_3T3R)
+				else if (tx_nss == 3)
 					raid = RATEID_IDX_BGN_3SS;
 				else
-				DBG_871X("RF type error!(rf_type=%d)\n", rf_type);
+				DBG_871X("tx_nss error!(tx_nss=%d)\n", tx_nss);
 			}
 			break;
 #ifdef CONFIG_80211AC_VHT
 		case WIRELESS_11_5AC:
-			if (rf_type == RF_1T1R || custom_rf_type == RF_1T2R)
+			if (tx_nss == 1)
 				raid = RATEID_IDX_VHT_1SS;
-			else if (rf_type == RF_2T2R || custom_rf_type == RF_2T4R)
+			else if (tx_nss == 2)
 				raid = RATEID_IDX_VHT_2SS;
-			else if (rf_type == RF_3T3R)
+			else if (tx_nss == 3)
 				raid = RATEID_IDX_VHT_3SS;
 			else
-				DBG_871X("RF type error!(rf_type=%d)\n", rf_type);
+				DBG_871X("tx_nss error!(tx_nss=%d)\n", tx_nss);
 			break;
 		case WIRELESS_11_24AC:
 			if (psta->bw_mode >= CHANNEL_WIDTH_80)
 			{
-				if (rf_type == RF_1T1R || custom_rf_type == RF_1T2R)
+				if (tx_nss == 1)
 					raid = RATEID_IDX_VHT_1SS;
-				else if (rf_type == RF_2T2R || custom_rf_type == RF_2T4R)
+				else if (tx_nss == 2)
 					raid = RATEID_IDX_VHT_2SS;
-				else if (rf_type == RF_3T3R)
+				else if (tx_nss == 3)
 					raid = RATEID_IDX_VHT_3SS;
 				else
-					DBG_871X("RF type error!(rf_type=%d)\n", rf_type);
+					DBG_871X("tx_nss error!(tx_nss=%d)\n", tx_nss);
 			}
 			else
 			{
-				if (rf_type == RF_1T1R || custom_rf_type == RF_1T2R)
+				if (tx_nss == 1)
 					raid = RATEID_IDX_MIX1;
-				else if (rf_type == RF_2T2R || custom_rf_type == RF_2T4R)
+				else if (tx_nss == 2)
 					raid = RATEID_IDX_MIX2;
-				else if (rf_type == RF_3T3R)
+				else if (tx_nss == 3)
 					raid = RATEID_IDX_VHT_3SS;
 				else
-					DBG_871X("RF type error!(rf_type=%d)\n", rf_type);
+					DBG_871X("tx_nss error!(tx_nss=%d)\n", tx_nss);
 			}
 			break;
 #endif
@@ -250,8 +311,7 @@ u8 networktype_to_raid_ex(_adapter *adapter, struct sta_info *psta)
 
 	}
 	
-	/*DBG_871X("psta->wireless_mode=%x,  cur_rf_type=%d , rf_type=%d , raid=%d \n"
-	, psta->wireless_mode, cur_rf_type, rf_type, raid);*/
+	/* DBG_871X("psta->wireless_mode=%x,  tx_nss=%d\n", psta->wireless_mode, tx_nss); */
 	
 	return raid;
 	
@@ -696,12 +756,6 @@ void SelectChannel(_adapter *padapter, unsigned char channel)
 {
 	struct mlme_ext_priv *pmlmeext = &padapter->mlmeextpriv;	
 
-#ifdef CONFIG_DUALMAC_CONCURRENT
-	//saved channel info
-	rtw_set_oper_ch(padapter, channel);
-	dc_SelectChannel(padapter, channel);
-#else //CONFIG_DUALMAC_CONCURRENT
-
 	_enter_critical_mutex(&(adapter_to_dvobj(padapter)->setch_mutex), NULL);
 	
 	//saved channel info
@@ -711,19 +765,11 @@ void SelectChannel(_adapter *padapter, unsigned char channel)
 	
 	_exit_critical_mutex(&(adapter_to_dvobj(padapter)->setch_mutex), NULL);
 		
-#endif // CONFIG_DUALMAC_CONCURRENT
 }
 
 void SetBWMode(_adapter *padapter, unsigned short bwmode, unsigned char channel_offset)
 {
 	struct mlme_ext_priv *pmlmeext = &padapter->mlmeextpriv;
-
-#ifdef CONFIG_DUALMAC_CONCURRENT
-	//saved bw info
-	rtw_set_oper_bw(padapter, bwmode);
-	rtw_set_oper_choffset(padapter, channel_offset);
-	dc_SetBWMode(padapter, bwmode, channel_offset);
-#else //CONFIG_DUALMAC_CONCURRENT
 
 	_enter_critical_mutex(&(adapter_to_dvobj(padapter)->setbw_mutex), NULL);
 
@@ -734,8 +780,6 @@ void SetBWMode(_adapter *padapter, unsigned short bwmode, unsigned char channel_
 	rtw_hal_set_bwmode(padapter, (CHANNEL_WIDTH)bwmode, channel_offset);
 
 	_exit_critical_mutex(&(adapter_to_dvobj(padapter)->setbw_mutex), NULL);
-
-#endif // CONFIG_DUALMAC_CONCURRENT
 }
 
 void set_channel_bwmode(_adapter *padapter, unsigned char channel, unsigned char channel_offset, unsigned short bwmode)
@@ -759,19 +803,10 @@ void set_channel_bwmode(_adapter *padapter, unsigned char channel, unsigned char
 		else
 			chnl_offset80 = HAL_PRIME_CHNL_OFFSET_DONT_CARE;
 	}
-
-	//set Channel
-#ifdef CONFIG_DUALMAC_CONCURRENT
-	//saved channel/bw info
-	rtw_set_oper_ch(padapter, channel);
-	rtw_set_oper_bw(padapter, bwmode);
-	rtw_set_oper_choffset(padapter, channel_offset);
-	SelectChannel(padapter, channel);
-	SetBWMode(padapter, bwmode, channel_offset);
-#else //CONFIG_DUALMAC_CONCURRENT
-	
 	_enter_critical_mutex(&(adapter_to_dvobj(padapter)->setch_mutex), NULL);
 
+
+	//set Channel
 	//saved channel/bw info
 	rtw_set_oper_ch(padapter, channel);
 	rtw_set_oper_bw(padapter, bwmode);
@@ -780,8 +815,6 @@ void set_channel_bwmode(_adapter *padapter, unsigned char channel, unsigned char
 	rtw_hal_set_chnl_bw(padapter, center_ch, bwmode, channel_offset, chnl_offset80); // set center channel
 
 	_exit_critical_mutex(&(adapter_to_dvobj(padapter)->setch_mutex), NULL);
-
-#endif // CONFIG_DUALMAC_CONCURRENT
 }
 
 int get_bsstype(unsigned short capability)
@@ -3002,38 +3035,6 @@ unsigned char check_assoc_AP(u8 *pframe, uint len)
 	return HT_IOT_PEER_UNKNOWN;
 }
 
-void update_IOT_info(_adapter *padapter)
-{
-	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
-	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
-	
-	switch (pmlmeinfo->assoc_AP_vendor)
-	{
-		case HT_IOT_PEER_MARVELL:
-			pmlmeinfo->turboMode_cts2self = 1;
-			pmlmeinfo->turboMode_rtsen = 0;
-			break;
-		
-		case HT_IOT_PEER_RALINK:
-			pmlmeinfo->turboMode_cts2self = 0;
-			pmlmeinfo->turboMode_rtsen = 1;
-			//disable high power			
-			Switch_DM_Func(padapter, (~DYNAMIC_BB_DYNAMIC_TXPWR), _FALSE);
-			break;
-		case HT_IOT_PEER_REALTEK:
-			//rtw_write16(padapter, 0x4cc, 0xffff);
-			//rtw_write16(padapter, 0x546, 0x01c0);
-			//disable high power			
-			Switch_DM_Func(padapter, (~DYNAMIC_BB_DYNAMIC_TXPWR), _FALSE);
-			break;
-		default:
-			pmlmeinfo->turboMode_cts2self = 0;
-			pmlmeinfo->turboMode_rtsen = 1;
-			break;	
-	}
-	
-}
-
 void update_capinfo(PADAPTER Adapter, u16 updateCap)
 {
 	struct mlme_ext_priv	*pmlmeext = &Adapter->mlmeextpriv;
@@ -3160,22 +3161,14 @@ void update_wireless_mode(_adapter *padapter)
 	SIFS_Timer = 0x0a0a0808; //0x0808 -> for CCK, 0x0a0a -> for OFDM
                              //change this value if having IOT issues.
 		
-	padapter->HalFunc.SetHwRegHandler( padapter, HW_VAR_RESP_SIFS,  (u8 *)&SIFS_Timer);
+	rtw_hal_set_hwreg( padapter, HW_VAR_RESP_SIFS,  (u8 *)&SIFS_Timer);
 
-	padapter->HalFunc.SetHwRegHandler( padapter, HW_VAR_WIRELESS_MODE,  (u8 *)&(pmlmeext->cur_wireless_mode));
+	rtw_hal_set_hwreg( padapter, HW_VAR_WIRELESS_MODE,  (u8 *)&(pmlmeext->cur_wireless_mode));
 
-#ifdef CONFIG_P2P
-	//	Added by Thomas 20130822
-	//	In P2P enable, do not set tx rate.
-	//	workaround for Actiontec GO case. 
-	//	The Actiontec will use 1M to tx the beacon in 1.1.0 firmware.
-	if(!rtw_p2p_chk_state(pwdinfo, P2P_STATE_NONE))
-		return;
-#endif //CONFIG_P2P
-
-	if (pmlmeext->cur_wireless_mode & WIRELESS_11B)
+	if ((pmlmeext->cur_wireless_mode & WIRELESS_11B)
+		&& rtw_p2p_chk_state(pwdinfo, P2P_STATE_NONE))
 		update_mgnt_tx_rate(padapter, IEEE80211_CCK_RATE_1MB);
-	 else
+	else
 		update_mgnt_tx_rate(padapter, IEEE80211_OFDM_RATE_6MB);
 }
 
@@ -3791,59 +3784,6 @@ unsigned int setup_beacon_frame(_adapter *padapter, unsigned char *beacon_frame)
 	return (len + TXDESC_SIZE);
 }
 #endif
-
-static _adapter *pbuddy_padapter = NULL;
-
-int rtw_handle_dualmac(_adapter *adapter, bool init)
-{
-	int status = _SUCCESS;
-	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
-
-	if(adapter->chip_type != RTL8192D)	
-		goto exit;
-		
-	if (init) {
-		#if 0
-		/* For SMSP on 92DU-VC, driver do not probe another Interface. */
-		if(dvobj->NumInterfaces == 2 && dvobj->InterfaceNumber != 0 &&
-			adapter->registrypriv.mac_phy_mode == 1) {
-			DBG_871X("%s(): Do not init another USB Interface because SMSP\n",__FUNCTION__);
-			status = _FAIL;
-			goto exit;
-		}
-		#endif
-		
-		if (pbuddy_padapter == NULL) {
-			pbuddy_padapter = adapter;
-			DBG_871X("%s(): pbuddy_padapter == NULL, Set pbuddy_padapter\n",__FUNCTION__);
-		} else {
-			adapter->pbuddy_adapter = pbuddy_padapter;
-			pbuddy_padapter->pbuddy_adapter = adapter;
-			// clear global value
-			pbuddy_padapter = NULL;
-			DBG_871X("%s(): pbuddy_padapter exist, Exchange Information\n",__FUNCTION__);
-		}
-#ifdef CONFIG_DUALMAC_CONCURRENT
-		if (dvobj->InterfaceNumber == 0) {
-			//set adapter_type/iface type
-			adapter->isprimary = _TRUE;
-			adapter->adapter_type = PRIMARY_ADAPTER;
-			adapter->iface_type = IFACE_PORT0;
-			DBG_871X("%s(): PRIMARY_ADAPTER\n",__FUNCTION__);
-		} else {
-			//set adapter_type/iface type
-			adapter->isprimary = _FALSE;
-			adapter->adapter_type = SECONDARY_ADAPTER;
-			adapter->iface_type = IFACE_PORT1;
-			DBG_871X("%s(): SECONDARY_ADAPTER\n",__FUNCTION__);
-		}
-#endif
-	}else {
-		pbuddy_padapter = NULL;
-	}
-exit:
-	return status;
-}
 
 _adapter *dvobj_get_port0_adapter(struct dvobj_priv *dvobj)
 {

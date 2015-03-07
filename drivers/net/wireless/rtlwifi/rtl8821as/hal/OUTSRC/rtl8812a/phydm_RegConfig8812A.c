@@ -117,13 +117,12 @@ odm_ConfigBB_PHY_REG_PG_8812A(
     IN 	u4Byte 		Data
     )
 {    
-	if (Addr == 0xfe || Addr == 0xffe) {
+	if (Addr == 0xfe || Addr == 0xffe)
 		#ifdef CONFIG_LONG_DELAY_ISSUE
 		ODM_sleep_ms(50);
 		#else		
 		ODM_delay_ms(50);
-		#endif
-	}
+		#endif	
 	else 
 	{
 #if	!(DM_ODM_SUPPORT_TYPE&ODM_AP)
@@ -141,34 +140,29 @@ odm_ConfigBB_PHY_8812A(
     IN 	u4Byte 		Data
     )
 {    
-	if (Addr == 0xfe) {
+	if (Addr == 0xfe)
 		#ifdef CONFIG_LONG_DELAY_ISSUE
 		ODM_sleep_ms(50);
 		#else		
 		ODM_delay_ms(50);
 		#endif
-	}
-	else if (Addr == 0xfd) {
+	else if (Addr == 0xfd)
 		ODM_delay_ms(5);
-	}
-	else if (Addr == 0xfc) {
+	else if (Addr == 0xfc)
 		ODM_delay_ms(1);
-	}
-	else if (Addr == 0xfb) {
+	else if (Addr == 0xfb)
 		ODM_delay_us(50);
-	}
-	else if (Addr == 0xfa) {
+	else if (Addr == 0xfa)
 		ODM_delay_us(5);
-	}
-	else if (Addr == 0xf9) {
-		ODM_delay_us(1);
-	}
+	else if (Addr == 0xf9)
+		ODM_delay_us(1);	
 	else 
 	{
 		ODM_SetBBReg(pDM_Odm, Addr, Bitmask, Data);
 		// Add 1us delay between BB/RF register setting.
 		ODM_delay_us(1);
 	}
+
 
 	ODM_RT_TRACE(pDM_Odm,ODM_COMP_INIT, ODM_DBG_TRACE, ("===> ODM_ConfigBBWithHeaderFile: [PHY_REG] %08X %08X\n", Addr, Data));
 }

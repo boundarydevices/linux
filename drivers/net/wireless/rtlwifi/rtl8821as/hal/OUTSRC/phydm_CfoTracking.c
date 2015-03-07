@@ -26,7 +26,7 @@ odm_SetCrystalCap(
 	IN		u1Byte					CrystalCap
 )
 {
-#if 0
+#if (DM_ODM_SUPPORT_TYPE & (ODM_WIN|ODM_CE))
 	PDM_ODM_T					pDM_Odm = (PDM_ODM_T)pDM_VOID;
 	PCFO_TRACKING				pCfoTrack = (PCFO_TRACKING)PhyDM_Get_Structure( pDM_Odm, PHYDM_CFOTRACK);
 	BOOLEAN 					bEEPROMCheck;
@@ -156,22 +156,22 @@ ODM_CfoTrackingReset(
 
 	pCfoTrack->DefXCap = odm_GetDefaultCrytaltalCap(pDM_Odm);
 	pCfoTrack->bAdjust = TRUE;
-	
-#if(DM_ODM_SUPPORT_TYPE & (ODM_WIN|ODM_CE))
-	odm_SetCrystalCap(pDM_Odm, pCfoTrack->DefXCap);
-	odm_SetATCStatus(pDM_Odm, TRUE);
-#else
+
 	if(pCfoTrack->CrystalCap > pCfoTrack->DefXCap)
 	{
-		for(CrystalCap = pCfoTrack->CrystalCap; CrystalCap >= pCfoTrack->DefXCap; CrystalCap--)
-			odm_SetCrystalCap(pDM_Odm, CrystalCap);
-	}
-	else
+		odm_SetCrystalCap(pDM_Odm, pCfoTrack->CrystalCap - 1);
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_CFO_TRACKING, ODM_DBG_LOUD,
+			("ODM_CfoTrackingReset(): approch default value (0x%x)\n", pCfoTrack->CrystalCap));
+	} else if (pCfoTrack->CrystalCap < pCfoTrack->DefXCap)
 	{
-		for(CrystalCap = pCfoTrack->CrystalCap; CrystalCap <= pCfoTrack->DefXCap; CrystalCap++)
-			odm_SetCrystalCap(pDM_Odm, CrystalCap);
+		odm_SetCrystalCap(pDM_Odm, pCfoTrack->CrystalCap + 1);
+		ODM_RT_TRACE(pDM_Odm, ODM_COMP_CFO_TRACKING, ODM_DBG_LOUD,
+			("ODM_CfoTrackingReset(): approch default value (0x%x)\n", pCfoTrack->CrystalCap));
 	}
-#endif
+
+	#if (DM_ODM_SUPPORT_TYPE & (ODM_WIN|ODM_CE))
+	odm_SetATCStatus(pDM_Odm, TRUE);
+	#endif
 }
 
 VOID
@@ -181,7 +181,7 @@ ODM_CfoTrackingInit(
 {
 	PDM_ODM_T					pDM_Odm = (PDM_ODM_T)pDM_VOID;
 	PCFO_TRACKING				pCfoTrack = (PCFO_TRACKING)PhyDM_Get_Structure( pDM_Odm, PHYDM_CFOTRACK);
-      
+
 	pCfoTrack->DefXCap = pCfoTrack->CrystalCap = odm_GetDefaultCrytaltalCap(pDM_Odm);
 	pCfoTrack->bATCStatus = odm_GetATCStatus(pDM_Odm);
 	pCfoTrack->bAdjust = TRUE;
@@ -239,7 +239,6 @@ ODM_CfoTracking(
 		ODM_RT_TRACE(pDM_Odm, ODM_COMP_CFO_TRACKING, ODM_DBG_LOUD, ("ODM_CfoTracking(): CFO_kHz_A = %dkHz, CFO_kHz_B = %dkHz, CFO_ave = %dkHz\n", 
 						CFO_kHz_A, CFO_kHz_B, CFO_ave));
 
-#if 0
 		//4 1.3 Avoid abnormal large CFO
 		CFO_ave_diff = (pCfoTrack->CFO_ave_pre >= CFO_ave)?(pCfoTrack->CFO_ave_pre - CFO_ave):(CFO_ave - pCfoTrack->CFO_ave_pre);
 		if(CFO_ave_diff > 20 && pCfoTrack->largeCFOHit == 0 && !pCfoTrack->bAdjust)
@@ -272,7 +271,7 @@ ODM_CfoTracking(
 			odm_SetCrystalCap(pDM_Odm, pCfoTrack->DefXCap);
 			ODM_RT_TRACE(pDM_Odm, ODM_COMP_CFO_TRACKING, ODM_DBG_LOUD, ("ODM_CfoTracking(): Disable CFO tracking for BT!!\n"));
 		}
-
+/*
 		//4 1.6 Big jump 
 		if(pCfoTrack->bAdjust)
 		{
@@ -283,6 +282,7 @@ ODM_CfoTracking(
 
 			ODM_RT_TRACE(pDM_Odm, ODM_COMP_CFO_TRACKING, ODM_DBG_LOUD, ("ODM_CfoTracking(): Crystal cap offset = %d\n", Adjust_Xtal));
 		}
+*/
 #endif
 		
 		//4 1.7 Adjust Crystal Cap.
@@ -300,7 +300,6 @@ ODM_CfoTracking(
 
 			odm_SetCrystalCap(pDM_Odm, (u1Byte)CrystalCap);
 		}
-#endif
 		ODM_RT_TRACE(pDM_Odm, ODM_COMP_CFO_TRACKING, ODM_DBG_LOUD, ("ODM_CfoTracking(): Crystal cap = 0x%x, Default Crystal cap = 0x%x\n", 
 			pCfoTrack->CrystalCap, pCfoTrack->DefXCap));
 

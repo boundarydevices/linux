@@ -19,6 +19,7 @@
  ******************************************************************************/
 #ifndef __RTL8814A_CMD_H__
 #define __RTL8814A_CMD_H__
+#include "hal_com_h2c.h"
 
 //_RSVDPAGE_LOC_CMD0
 #define SET_8814A_H2CCMD_RSVDPAGE_LOC_PROBE_RSP(__pH2CCmd, __Value)		SET_BITS_TO_LE_1BYTE(__pH2CCmd, 0, 8, __Value)
@@ -128,7 +129,7 @@ typedef enum _RTL8814A_C2H_EVT
 
 s32 FillH2CCmd_8814(PADAPTER padapter, u8 ElementID, u32 CmdLen, u8 *pCmdBuffer);
 void rtl8814_set_raid_cmd(PADAPTER padapter, u64 bitmap, u8* arg);
-void rtl8814_Add_RateATid(PADAPTER padapter, u32 bitmap, u8* arg, u8 rssi_level);
+void rtl8814_Add_RateATid(PADAPTER padapter, u64 rate_bitmap, u8 *arg, u8 rssi_level);
 void rtl8814_set_wowlan_cmd(_adapter* padapter, u8 enable);
 void rtl8814_set_FwJoinBssReport_cmd(PADAPTER padapter, u8 mstatus);
 void rtl8814_set_FwMediaStatus_cmd(PADAPTER padapter, u16 mstatus_rpt );

@@ -229,7 +229,8 @@ int rtw_dev_get_feature_set(struct net_device *dev)
 
 	feature_set |= WIFI_FEATURE_INFRA;
 
-	if(IS_92D(*hal_ver) || IS_8812_SERIES(*hal_ver) || IS_8821_SERIES(*hal_ver))
+	if (IS_8814A_SERIES(*hal_ver) || IS_8812_SERIES(*hal_ver) ||
+			IS_8821_SERIES(*hal_ver))
 		feature_set |= WIFI_FEATURE_INFRA_5G;
 
 	feature_set |= WIFI_FEATURE_P2P;

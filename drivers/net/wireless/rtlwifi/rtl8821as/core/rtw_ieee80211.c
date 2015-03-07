@@ -2221,6 +2221,24 @@ void rtw_get_bcn_info(struct wlan_network *pnetwork)
 	}
 }
 
+u8	rtw_ht_mcsset_to_nss(u8 *supp_mcs_set)
+{
+	u8 nss = 1;
+	
+	if (supp_mcs_set[3])
+		nss = 4;
+	else if (supp_mcs_set[2])
+		nss = 3;
+	else if (supp_mcs_set[1])
+		nss = 2;
+	else if (supp_mcs_set[0])
+		nss = 1;
+	else
+		DBG_871X("%s,%d, warning! supp_mcs_set is zero\n", __func__, __LINE__);
+	/* DBG_871X("%s HT: %dSS\n", __FUNCTION__, nss); */
+	return nss;
+}
+
 //show MCS rate, unit: 100Kbps
 u16 rtw_mcs_rate(u8 rf_type, u8 bw_40MHz, u8 short_GI, unsigned char * MCS_rate)
 {

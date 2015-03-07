@@ -23,19 +23,7 @@
 int usb_init_recv_priv(_adapter *padapter, u16 ini_in_buf_sz);
 void usb_free_recv_priv (_adapter *padapter, u16 ini_in_buf_sz);
 
-void rtw_set_hal_ops(_adapter *padapter);
-
-#ifdef CONFIG_RTL8192C
-void rtl8192cu_set_hal_ops(_adapter * padapter);
-#endif
-
-#ifdef CONFIG_RTL8192D
-void rtl8192du_set_hal_ops(_adapter * padapter);
-#endif
-
-#ifdef CONFIG_RTL8723A
-void rtl8723au_set_hal_ops(_adapter * padapter);
-#endif
+u8 rtw_set_hal_ops(_adapter *padapter);
 
 #ifdef CONFIG_RTL8188E
 void rtl8188eu_set_hal_ops(_adapter * padapter);

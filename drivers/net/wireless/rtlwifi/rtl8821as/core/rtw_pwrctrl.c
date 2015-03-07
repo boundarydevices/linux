@@ -532,9 +532,7 @@ _func_enter_;
 	{
 		if ( (pwrpriv->rpwm == pslv)
 #ifdef CONFIG_LPS_LCLK
-#ifndef CONFIG_RTL8723A
 			|| ((pwrpriv->rpwm >= PS_STATE_S2)&&(pslv >= PS_STATE_S2))
-#endif
 #endif
 			)
 		{
@@ -614,11 +612,7 @@ _func_enter_;
 			rtw_hal_get_hwreg(padapter, HW_VAR_CPWM, &cpwm_now);
 			if ((cpwm_orig ^ cpwm_now) & 0x80)
 			{
-#ifdef CONFIG_RTL8723A
-				pwrpriv->cpwm = PS_STATE(cpwm_now);
-#else // !CONFIG_RTL8723A
 				pwrpriv->cpwm = PS_STATE_S4;
-#endif // !CONFIG_RTL8723A
 				pwrpriv->cpwm_tog = cpwm_now & PS_TOGGLE;
 #ifdef DBG_CHECK_FW_PS_STATE
 				DBG_871X("%s: polling cpwm OK! poll_cnt=%d, cpwm_orig=%02x, cpwm_now=%02x , 0x100=0x%x\n"
@@ -726,7 +720,6 @@ u8 PS_RDY_CHECK(_adapter * padapter)
 #if defined(CONFIG_FWLPS_IN_IPS)
 void rtw_set_fw_in_ips_mode(PADAPTER padapter, u8 enable)
 {
-	struct hal_ops *pHalFunc = &padapter->HalFunc;
 	struct pwrctrl_priv *pwrpriv = adapter_to_pwrctl(padapter);
 	int cnt=0;
 	u32 start_time;
@@ -736,11 +729,6 @@ void rtw_set_fw_in_ips_mode(PADAPTER padapter, u8 enable)
 
 	if (padapter->netif_up == _FALSE) {
 		DBG_871X("%s: ERROR, netif is down\n", __func__);
-		return;
-	}
-
-	if (pHalFunc->fill_h2c_cmd == NULL) {
-		DBG_871X("%s: Please hook fill_h2c_cmd first!\n", __func__);
 		return;
 	}
 
@@ -762,7 +750,7 @@ void rtw_set_fw_in_ips_mode(PADAPTER padapter, u8 enable)
 		parm[2] = 0x0;
 #endif//CONFIG_PNO_SUPPORT
 
-		pHalFunc->fill_h2c_cmd(padapter, //H2C_FWLPS_IN_IPS_,
+		rtw_hal_fill_h2c_cmd(padapter, //H2C_FWLPS_IN_IPS_,
 					H2C_INACTIVE_PS_,
 					H2C_INACTIVE_PS_LEN, parm);
 		//poll 0x1cc to make sure H2C command already finished by FW; MAC_0x1cc=0 means H2C done by FW.
@@ -837,7 +825,7 @@ void rtw_set_fw_in_ips_mode(PADAPTER padapter, u8 enable)
 		parm[0] = 0x0;
 		parm[1] = 0x0;
 		parm[2] = 0x0;
-		pHalFunc->fill_h2c_cmd(padapter, H2C_INACTIVE_PS_,
+		rtw_hal_fill_h2c_cmd(padapter, H2C_INACTIVE_PS_,
 					H2C_INACTIVE_PS_LEN, parm);
 #ifdef CONFIG_BT_COEXIST
 		rtw_btcoex_IpsNotify(padapter, IPS_NONE);
@@ -1049,19 +1037,6 @@ _func_enter_;
 				if (val8 & BIT(4))
 					pslv = PS_STATE_S2;
 
-#ifdef CONFIG_RTL8723A
-				val8 = rtw_btcoex_RpwmVal(padapter);
-				switch (val8)
-				{
-					case 0x4:
-						pslv = PS_STATE_S3;
-						break;
-
-					case 0xC:
-						pslv = PS_STATE_S4;
-						break;
-				}
-#endif // CONFIG_RTL8723A
 			}
 #endif // CONFIG_BT_COEXIST
 
@@ -1288,11 +1263,7 @@ _func_enter_;
 			rtw_hal_get_hwreg(Adapter, HW_VAR_CPWM, &cpwm_now);
 			if ((cpwm_orig ^ cpwm_now) & 0x80)
 			{
-#ifdef CONFIG_RTL8723A
-				pwrpriv->cpwm = PS_STATE(cpwm_now);
-#else // !CONFIG_RTL8723A
 				pwrpriv->cpwm = PS_STATE_S4;
-#endif // !CONFIG_RTL8723A
 				pwrpriv->cpwm_tog = cpwm_now & PS_TOGGLE;
 #ifdef DBG_CHECK_FW_PS_STATE
 				DBG_871X("%s: polling cpwm OK! cpwm_orig=%02x, cpwm_now=%02x, 0x100=0x%x \n"
@@ -1677,24 +1648,6 @@ _func_enter_;
 	pwrctrl = adapter_to_pwrctl(padapter);
 	pslv = PS_STATE_S2;
 
-#if defined(CONFIG_RTL8723A) && defined(CONFIG_BT_COEXIST)
-	if (rtw_btcoex_IsBtControlLps(padapter) == _TRUE)
-	{
-		u8 btcoex_rpwm;
-		btcoex_rpwm = rtw_btcoex_RpwmVal(padapter);
-		switch (btcoex_rpwm)
-		{
-			case 0x4:
-				pslv = PS_STATE_S3;
-				break;
-
-			case 0xC:
-				pslv = PS_STATE_S4;
-				break;
-		}
-	}
-#endif // CONFIG_RTL8723A & CONFIG_BT_COEXIST
-
 	_enter_pwrlock(&pwrctrl->lock);
 
 	register_task_alive(pwrctrl, task);
@@ -1759,19 +1712,6 @@ _func_enter_;
 		if (val8 & BIT(4))
 			pslv = PS_STATE_S2;
 
-#ifdef CONFIG_RTL8723A
-		val8 = rtw_btcoex_RpwmVal(padapter);
-		switch (val8)
-		{
-			case 0x4:
-				pslv = PS_STATE_S3;
-				break;
-
-			case 0xC:
-				pslv = PS_STATE_S4;
-				break;
-		}
-#endif // CONFIG_RTL8723A
 	}
 #endif // CONFIG_BT_COEXIST
 
@@ -1822,24 +1762,6 @@ _func_enter_;
 	res = _SUCCESS;
 	pwrctrl = adapter_to_pwrctl(padapter);
 	pslv = PS_STATE_S2;
-
-#if defined(CONFIG_RTL8723A) && defined(CONFIG_BT_COEXIST)
-	if (rtw_btcoex_IsBtControlLps(padapter) == _TRUE)
-	{
-		u8 btcoex_rpwm;
-		btcoex_rpwm = rtw_btcoex_RpwmVal(padapter);
-		switch (btcoex_rpwm)
-		{
-			case 0x4:
-				pslv = PS_STATE_S3;
-				break;
-
-			case 0xC:
-				pslv = PS_STATE_S4;
-				break;
-		}
-	}
-#endif // CONFIG_RTL8723A & CONFIG_BT_COEXIST
 
 	_enter_pwrlock(&pwrctrl->lock);
 
@@ -1899,24 +1821,6 @@ _func_enter_;
 	res = _SUCCESS;
 	pwrctrl = adapter_to_pwrctl(padapter);
 	pslv = PS_STATE_S2;
-
-#if defined(CONFIG_RTL8723A) && defined(CONFIG_BT_COEXIST)
-	if (rtw_btcoex_IsBtControlLps(padapter) == _TRUE)
-	{
-		u8 btcoex_rpwm;
-		btcoex_rpwm = rtw_btcoex_RpwmVal(padapter);
-		switch (btcoex_rpwm)
-		{
-			case 0x4:
-				pslv = PS_STATE_S3;
-				break;
-
-			case 0xC:
-				pslv = PS_STATE_S4;
-				break;
-		}
-	}
-#endif // CONFIG_RTL8723A & CONFIG_BT_COEXIST
 
 	_enter_pwrlock(&pwrctrl->lock);
 
@@ -2041,19 +1945,6 @@ _func_enter_;
 		if (val8 & BIT(4))
 			pslv = PS_STATE_S2;
 
-#ifdef CONFIG_RTL8723A
-		val8 = rtw_btcoex_RpwmVal(padapter);
-		switch (val8)
-		{
-			case 0x4:
-				pslv = PS_STATE_S3;
-				break;
-
-			case 0xC:
-				pslv = PS_STATE_S4;
-				break;
-		}
-#endif // CONFIG_RTL8723A
 	}
 #endif // CONFIG_BT_COEXIST
 
@@ -2121,19 +2012,6 @@ _func_enter_;
 		if (val8 & BIT(4))
 			pslv = PS_STATE_S2;
 
-#ifdef CONFIG_RTL8723A
-		val8 = rtw_btcoex_RpwmVal(padapter);
-		switch (val8)
-		{
-			case 0x4:
-				pslv = PS_STATE_S3;
-				break;
-
-			case 0xC:
-				pslv = PS_STATE_S4;
-				break;
-		}
-#endif // CONFIG_RTL8723A
 	}
 #endif // CONFIG_BT_COEXIST
 

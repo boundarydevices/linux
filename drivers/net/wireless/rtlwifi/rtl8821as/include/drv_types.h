@@ -288,10 +288,6 @@ struct registry_priv
 	u8 fw_iol; //enable iol without other concern
 #endif
 
-#ifdef CONFIG_DUALMAC_CONCURRENT
-	u8	dmsp;//0:disable,1:enable
-#endif
-
 #ifdef CONFIG_80211D
 	u8 enable80211d;
 #endif
@@ -371,9 +367,11 @@ struct registry_priv
 
 #ifdef CONFIG_CONCURRENT_MODE
 #define is_primary_adapter(adapter) (adapter->adapter_type == PRIMARY_ADAPTER)
+#define is_vir_adapter(adapter) (adapter->adapter_type == MAX_ADAPTER)
 #define get_iface_type(adapter) (adapter->iface_type)
 #else
 #define is_primary_adapter(adapter) (1)
+#define is_vir_adapter(adapter) (0)
 #define get_iface_type(adapter) (IFACE_PORT0)
 #endif
 #define GET_PRIMARY_ADAPTER(padapter) (((_adapter *)padapter)->dvobj->if1)
@@ -661,6 +659,10 @@ struct dvobj_priv
 
 	struct rtw_traffic_statistics	traffic_stat;
 
+#if defined(CONFIG_IOCTL_CFG80211) && defined(RTW_SINGLE_WIPHY)
+	struct wiphy *wiphy;
+#endif
+
 /*-------- below is for SDIO INTERFACE --------*/
 
 #ifdef INTF_DATA
@@ -744,6 +746,7 @@ struct dvobj_priv
 	//PciBridge
 	struct pci_priv	pcipriv;
 
+	unsigned int irq; /* get from pci_dev.irq, store to net_device.irq */
 	u16	irqline;
 	u8	irq_enabled;
 	RT_ISR_CONTENT	isr_content;
@@ -770,6 +773,9 @@ struct dvobj_priv
 #define pwrctl_to_dvobj(pwrctl) container_of(pwrctl, struct dvobj_priv, pwrctl_priv)
 #define dvobj_to_macidctl(dvobj) (&(dvobj->macid_ctl))
 #define dvobj_to_regsty(dvobj) (&(dvobj->if1->registrypriv))
+#if defined(CONFIG_IOCTL_CFG80211) && defined(RTW_SINGLE_WIPHY)
+#define dvobj_to_wiphy(dvobj) ((dvobj)->wiphy)
+#endif
 
 #ifdef PLATFORM_LINUX
 static struct device *dvobj_to_dev(struct dvobj_priv *dvobj)
@@ -862,8 +868,8 @@ struct _ADAPTER{
 	struct	sta_priv	stapriv;
 	struct	security_priv	securitypriv;
 	_lock   security_key_mutex; // add for CONFIG_IEEE80211W, none 11w also can use
-	struct	registry_priv	registrypriv;
-	struct 	eeprom_priv eeprompriv;
+	struct	registry_priv	registrypriv;	
+
 	struct	led_priv	ledpriv;
 
 #ifdef CONFIG_MP_INCLUDED
@@ -983,9 +989,14 @@ struct _ADAPTER{
 #ifdef CONFIG_IOCTL_CFG80211
 	struct wireless_dev *rtw_wdev;
 	struct rtw_wdev_priv wdev_data;
-#endif //CONFIG_IOCTL_CFG80211
 
-#endif //end of PLATFORM_LINUX
+	#if !defined(RTW_SINGLE_WIPHY)
+	struct wiphy *wiphy;
+	#endif
+
+#endif /* CONFIG_IOCTL_CFG80211 */
+
+#endif /* PLATFORM_LINUX */
 
 #ifdef PLATFORM_FREEBSD
 	_nic_hdl pifp;
@@ -1021,7 +1032,7 @@ struct _ADAPTER{
 	//for PRIMARY_ADAPTER(IFACE_ID0) can directly refer to if1 in struct dvobj_priv
 	_adapter *pbuddy_adapter;
 
-#if defined(CONFIG_CONCURRENT_MODE) || defined(CONFIG_DUALMAC_CONCURRENT)
+#if defined(CONFIG_CONCURRENT_MODE)
 	u8 isprimary; //is primary adapter or not
 	//notes:
 	// if isprimary is true, the adapter_type value is 0, iface_id is IFACE_ID0 for PRIMARY_ADAPTER
@@ -1029,16 +1040,12 @@ struct _ADAPTER{
 	// refer to iface_id if iface_nums>2 and isprimary is false and the adapter_type value is 0xff.
 	u8 adapter_type;//used only in  two inteface case(PRIMARY_ADAPTER and SECONDARY_ADAPTER) .
 	u8 iface_type; //interface port type, it depends on HW port
-#endif //CONFIG_CONCURRENT_MODE || CONFIG_DUALMAC_CONCURRENT
+#endif //CONFIG_CONCURRENT_MODE 
 
 	//extend to support multi interface
        //IFACE_ID0 is equals to PRIMARY_ADAPTER
        //IFACE_ID1 is equals to SECONDARY_ADAPTER
 	u8 iface_id;
-
-#ifdef CONFIG_DUALMAC_CONCURRENT
-	u8 DualMacConcurrent; // 1: DMSP 0:DMDP
-#endif
 
 #ifdef CONFIG_BR_EXT
 	_lock					br_ext_lock;
@@ -1094,6 +1101,12 @@ struct _ADAPTER{
 #define adapter_to_dvobj(adapter) (adapter->dvobj)
 #define adapter_to_pwrctl(adapter) (dvobj_to_pwrctl(adapter->dvobj))
 #define adapter_wdev_data(adapter) (&((adapter)->wdev_data))
+#if defined(RTW_SINGLE_WIPHY)
+#define adapter_to_wiphy(adapter) dvobj_to_wiphy(adapter_to_dvobj(adapter))
+#else
+#define adapter_to_wiphy(adapter) ((adapter)->wiphy)
+#endif
+
 #define adapter_mac_addr(adapter) (adapter->mac_addr)
 
 //
@@ -1134,8 +1147,6 @@ __inline static void RTW_ENABLE_FUNC(_adapter*padapter, int func_bit)
 			((padapter)->bDriverStopped || \
 			 (padapter)->bSurpriseRemoved || \
 			 RTW_IS_FUNC_DISABLED((padapter), DF_TX_BIT))
-
-int rtw_handle_dualmac(_adapter *adapter, bool init);
 
 #ifdef CONFIG_PNO_SUPPORT
 int rtw_parse_ssid_list_tlv(char** list_str, pno_ssid_t* ssid, int max, int *bytes_left);

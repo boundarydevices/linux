@@ -11,10 +11,11 @@
 #define		BTC_RF_B					0x1
 #define		BTC_RF_C					0x2
 #define		BTC_RF_D					0x3
-
+#if 0
 #define		BTC_SMSP				SINGLEMAC_SINGLEPHY
 #define		BTC_DMDP				DUALMAC_DUALPHY
 #define		BTC_DMSP				DUALMAC_SINGLEPHY
+#endif
 #define		BTC_MP_UNKNOWN		0xff
 
 #define		BT_COEX_ANT_TYPE_PG			0
@@ -94,6 +95,7 @@ typedef struct _BTC_BOARD_INFO{
 	u1Byte				singleAntPath;	// current used for 8723b only, 1=>s0,  0=>s1
 	u1Byte				bTfbgaPackage;    //for Antenna detect threshold 
 	u1Byte				btdmAntDetFinish;
+	u1Byte				antType;
 } BTC_BOARD_INFO, *PBTC_BOARD_INFO;
 
 typedef enum _BTC_DBG_OPCODE{

@@ -28,7 +28,7 @@
 #define	ODM_CE		 	0x04	//BIT2
 #define	ODM_WIN		 	0x08	//BIT3
 
-#define	DM_ODM_SUPPORT_TYPE			ODM_CE
+#define	DM_ODM_SUPPORT_TYPE	ODM_CE
 
 // Deifne HW endian support
 #define	ODM_ENDIAN_BIG	0
@@ -110,6 +110,7 @@ typedef enum _RT_SPINLOCK_TYPE{
 	RT_CHNLLIST_SPINLOCK = 40,	
 	RT_INDIC_SPINLOCK = 41,	//protect indication	
 	RT_RFD_SPINLOCK = 42,
+	RT_SYNC_IO_CNT_SPINLOCK = 43,
 	RT_LAST_SPINLOCK,
 }RT_SPINLOCK_TYPE;
 
@@ -120,12 +121,15 @@ typedef enum _RT_SPINLOCK_TYPE{
 	#define	STA_INFO_T			RT_WLAN_STA
 	#define	PSTA_INFO_T			PRT_WLAN_STA
 
-//    typedef unsigned long		u4Byte,*pu4Byte;
-#define CONFIG_HW_ANTENNA_DIVERSITY 
-#define CONFIG_SW_ANTENNA_DIVERSITY 
-//#define CONFIG_PATH_DIVERSITY
-#define CONFIG_ANT_DETECTION
-#define CONFIG_RA_DBG_CMD
+	#define CONFIG_HW_ANTENNA_DIVERSITY 
+	#define CONFIG_SW_ANTENNA_DIVERSITY 
+	/*#define CONFIG_PATH_DIVERSITY*/
+	/*#define CONFIG_RA_DYNAMIC_RTY_LIMIT*/
+	#define CONFIG_ANT_DETECTION
+	#define CONFIG_RA_DBG_CMD
+
+	#define	__func__		__FUNCTION__
+	#define	PHYDM_TESTCHIP_SUPPORT	TESTCHIP_SUPPORT
 
 #elif (DM_ODM_SUPPORT_TYPE == ODM_AP)
 
@@ -135,6 +139,9 @@ typedef enum _RT_SPINLOCK_TYPE{
 	
 	//2 [ Configure RA Debug H2C CMD ]
 	#define CONFIG_RA_DBG_CMD
+	
+	/*#define CONFIG_PATH_DIVERSITY*/
+	/*#define CONFIG_RA_DYNAMIC_RTY_LIMIT*/
 	
 	//2 [ Configure Antenna Diversity ]
 #if defined(CONFIG_RTL_8881A_ANT_SWITCH) || defined(CONFIG_SLOT_0_ANT_SWITCH) || defined(CONFIG_SLOT_1_ANT_SWITCH)
@@ -202,13 +209,20 @@ typedef enum _RT_SPINLOCK_TYPE{
 
 	#define _TRUE				1
 	#define _FALSE				0
+
+	#if (defined(TESTCHIP_SUPPORT))
+		#define	PHYDM_TESTCHIP_SUPPORT 1
+	#else
+		#define	PHYDM_TESTCHIP_SUPPORT 0
+	#endif
 	
 #elif (DM_ODM_SUPPORT_TYPE == ODM_CE)
 	#include <drv_types.h>
 
-	//#define CONFIG_RA_DBG_CMD
-	//#define CONFIG_ANT_DETECTION
-	//#define CONFIG_PATH_DIVERSITY
+	/*#define CONFIG_RA_DBG_CMD*/
+	/*#define CONFIG_ANT_DETECTION*/
+	/*#define CONFIG_PATH_DIVERSITY*/
+	/*#define CONFIG_RA_DYNAMIC_RTY_LIMIT*/
 
 #if 0
 	typedef u8					u1Byte, *pu1Byte;
@@ -279,9 +293,16 @@ typedef enum _RT_SPINLOCK_TYPE{
 
 	//define useless flag to avoid compile warning
 	#define	USE_WORKITEM 0
-	#define 	FOR_BRAZIL_PRETEST 0
-	#define   FPGA_TWO_MAC_VERIFICATION	0
+	#define	FOR_BRAZIL_PRETEST 0
+	/*#define	BT_30_SUPPORT			0*/
+	#define	FPGA_TWO_MAC_VERIFICATION	0
 	#define	RTL8881A_SUPPORT	0
+
+	#if (defined(TESTCHIP_SUPPORT))
+		#define	PHYDM_TESTCHIP_SUPPORT 1
+	#else
+		#define	PHYDM_TESTCHIP_SUPPORT 0
+	#endif
 #endif
 
 #define READ_NEXT_PAIR(v1, v2, i) do { if (i+2 >= ArrayLen) break; i += 2; v1 = Array[i]; v2 = Array[i+1]; } while(0)

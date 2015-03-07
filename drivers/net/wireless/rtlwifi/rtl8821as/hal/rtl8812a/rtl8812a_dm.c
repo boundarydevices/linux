@@ -97,14 +97,14 @@ static void dm_CheckPbcGPIO(_adapter *padapter)
 	if (IS_HARDWARE_TYPE_8812(padapter))
 	{
 		tmp1byte = rtw_read8(padapter, GPIO_IO_SEL);
-		tmp1byte |= (HAL_8192C_HW_GPIO_WPS_BIT);
+		tmp1byte |= (HAL_8812A_HW_GPIO_WPS_BIT);
 		rtw_write8(padapter, GPIO_IO_SEL, tmp1byte);	//enable GPIO[2] as output mode
 
-		tmp1byte &= ~(HAL_8192C_HW_GPIO_WPS_BIT);
+		tmp1byte &= ~(HAL_8812A_HW_GPIO_WPS_BIT);
 		rtw_write8(padapter,  GPIO_IN, tmp1byte);		//reset the floating voltage level
 
 		tmp1byte = rtw_read8(padapter, GPIO_IO_SEL);
-		tmp1byte &= ~(HAL_8192C_HW_GPIO_WPS_BIT);
+		tmp1byte &= ~(HAL_8812A_HW_GPIO_WPS_BIT);
 		rtw_write8(padapter, GPIO_IO_SEL, tmp1byte);	//enable GPIO[2] as input mode
 
 		tmp1byte =rtw_read8(padapter, GPIO_IN);
@@ -112,10 +112,9 @@ static void dm_CheckPbcGPIO(_adapter *padapter)
 		if (tmp1byte == 0xff)
 			return ;
 
-		if (tmp1byte&HAL_8192C_HW_GPIO_WPS_BIT)
-		{
+		if (tmp1byte&HAL_8812A_HW_GPIO_WPS_BIT)
 			bPbcPressed = _TRUE;
-		}
+
 	}
 	else if (IS_HARDWARE_TYPE_8821(padapter))
 	{
@@ -263,10 +262,9 @@ dm_InitGPIOSetting(
 //============================================================
 static void Init_ODM_ComInfo_8812(PADAPTER	Adapter)
 {
-	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(Adapter);
-	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
+	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(Adapter);	
 	PDM_ODM_T		pDM_Odm = &(pHalData->odmpriv);
-
+	u32 SupportAbility = 0;
 	u8	cut_ver,fab_ver;
 
 	Init_ODM_ComInfo(Adapter);
@@ -298,25 +296,25 @@ static void Init_ODM_ComInfo_8812(PADAPTER	Adapter)
 	ODM_CmnInfoInit(pDM_Odm, ODM_CMNINFO_IQKFWOFFLOAD, pHalData->RegIQKFWOffload);
 
 	#ifdef CONFIG_DISABLE_ODM
-	pdmpriv->InitODMFlag = 0;
+	SupportAbility = 0;
 	#else
-	pdmpriv->InitODMFlag =	ODM_RF_CALIBRATION		|
-							ODM_RF_TX_PWR_TRACK	//|
-							;	
-	//if(pHalData->AntDivCfg)
-	//	pdmpriv->InitODMFlag |= ODM_BB_ANT_DIV;
+	SupportAbility =	ODM_RF_CALIBRATION	|
+					ODM_RF_TX_PWR_TRACK
+					;	
+	/*if(pHalData->AntDivCfg)
+		SupportAbility |= ODM_BB_ANT_DIV; */
 	#endif	
 
-	ODM_CmnInfoUpdate(pDM_Odm,ODM_CMNINFO_ABILITY,pdmpriv->InitODMFlag);
+	ODM_CmnInfoUpdate(pDM_Odm,ODM_CMNINFO_ABILITY,SupportAbility);
 	
 }
 static void Update_ODM_ComInfo_8812(PADAPTER	Adapter)
 {
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(Adapter);
 	PDM_ODM_T		pDM_Odm = &(pHalData->odmpriv);
-	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
+	u32 SupportAbility = 0;
 
-	pdmpriv->InitODMFlag = 0
+	SupportAbility = 0
 		| ODM_BB_DIG
 		| ODM_BB_RA_MASK
 		| ODM_BB_FA_CNT
@@ -329,14 +327,14 @@ static void Update_ODM_ComInfo_8812(PADAPTER	Adapter)
 		;
 
 	if (rtw_odm_adaptivity_needed(Adapter) == _TRUE)
-		pdmpriv->InitODMFlag |= ODM_BB_ADAPTIVITY;
+		SupportAbility |= ODM_BB_ADAPTIVITY;
 
 	if(pHalData->AntDivCfg)
-		pdmpriv->InitODMFlag |= ODM_BB_ANT_DIV;
+		SupportAbility |= ODM_BB_ANT_DIV;
 
 #if (MP_DRIVER==1)
 	if (Adapter->registrypriv.mp_mode == 1) {
-		pdmpriv->InitODMFlag = 0
+		SupportAbility = 0
 			| ODM_RF_CALIBRATION
 			| ODM_RF_TX_PWR_TRACK
 			;
@@ -344,10 +342,10 @@ static void Update_ODM_ComInfo_8812(PADAPTER	Adapter)
 #endif//(MP_DRIVER==1)
 
 #ifdef CONFIG_DISABLE_ODM
-	pdmpriv->InitODMFlag = 0;
+	SupportAbility = 0;
 #endif//CONFIG_DISABLE_ODM
 
-	ODM_CmnInfoUpdate(pDM_Odm,ODM_CMNINFO_ABILITY,pdmpriv->InitODMFlag);
+	ODM_CmnInfoUpdate(pDM_Odm,ODM_CMNINFO_ABILITY,SupportAbility);
 
 	ODM_CmnInfoInit(pDM_Odm, ODM_CMNINFO_RF_ANTENNA_TYPE, pHalData->TRxAntDivType);
 }
@@ -358,7 +356,6 @@ rtl8812_InitHalDm(
 	)
 {
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(Adapter);
-	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
 	PDM_ODM_T		pDM_Odm = &(pHalData->odmpriv);
 	u8	i;
 
@@ -366,9 +363,8 @@ rtl8812_InitHalDm(
 	dm_InitGPIOSetting(Adapter);
 #endif
 
-	pdmpriv->DM_Type = DM_Type_ByDriver;
-	pdmpriv->DMFlag = DYNAMIC_FUNC_DISABLE;
-	
+	pHalData->DM_Type = DM_Type_ByDriver;
+
 	Update_ODM_ComInfo_8812(Adapter);
 	ODM_DMInit(pDM_Odm);
 
@@ -386,7 +382,6 @@ rtl8812_HalDmWatchDog(
 	BOOLEAN		bFwPSAwake = _TRUE;
 	u8 hw_init_completed = _FALSE;
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(Adapter);
-	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
 	PDM_ODM_T		pDM_Odm = &(pHalData->odmpriv);
 #ifdef CONFIG_CONCURRENT_MODE
 	PADAPTER pbuddy_adapter = Adapter->pbuddy_adapter;
@@ -485,11 +480,8 @@ skip_dm:
 void rtl8812_init_dm_priv(IN PADAPTER Adapter)
 {
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(Adapter);
-	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
 	PDM_ODM_T 		podmpriv = &pHalData->odmpriv;
-
 	
-	_rtw_memset(pdmpriv, 0, sizeof(struct dm_priv));
 	//_rtw_spinlock_init(&(pHalData->odm_stainfo_lock));
 
 #ifdef CONFIG_BT_COEXIST
@@ -512,7 +504,6 @@ void rtl8812_init_dm_priv(IN PADAPTER Adapter)
 void rtl8812_deinit_dm_priv(IN PADAPTER Adapter)
 {
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(Adapter);
-	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
 	PDM_ODM_T 		podmpriv = &pHalData->odmpriv;
 	//_rtw_spinlock_free(&pHalData->odm_stainfo_lock);
 	ODM_CancelAllTimers(podmpriv);	

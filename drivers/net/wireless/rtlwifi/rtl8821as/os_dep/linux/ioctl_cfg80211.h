@@ -111,10 +111,32 @@ struct rtw_wdev_priv
 #define wiphy_to_adapter(x) (*((_adapter**)wiphy_priv(x)))
 
 #define wdev_to_ndev(w) ((w)->netdev)
+#define wdev_to_wiphy(w) ((w)->wiphy)
+#define ndev_to_wdev(n) ((n)->ieee80211_ptr)
 
-int rtw_wdev_alloc(_adapter *padapter, struct device *dev);
+#define WIPHY_FMT "%s"
+#define WIPHY_ARG(wiphy) wiphy_name(wiphy)
+#define FUNC_WIPHY_FMT "%s("WIPHY_FMT")"
+#define FUNC_WIPHY_ARG(wiphy) __func__, WIPHY_ARG(wiphy)
+
+struct wiphy *rtw_wiphy_alloc(_adapter *padapter, struct device *dev);
+void rtw_wiphy_free(struct wiphy *wiphy);
+int rtw_wiphy_register(struct wiphy *wiphy);
+void rtw_wiphy_unregister(struct wiphy *wiphy);
+
+int rtw_wdev_alloc(_adapter *padapter, struct wiphy *wiphy);
 void rtw_wdev_free(struct wireless_dev *wdev);
 void rtw_wdev_unregister(struct wireless_dev *wdev);
+
+int rtw_cfg80211_ndev_res_alloc(_adapter *adapter);
+void rtw_cfg80211_ndev_res_free(_adapter *adapter);
+int rtw_cfg80211_ndev_res_register(_adapter *adapter);
+void rtw_cfg80211_ndev_res_unregister(_adapter *adapter);
+
+int rtw_cfg80211_dev_res_alloc(struct dvobj_priv *dvobj);
+void rtw_cfg80211_dev_res_free(struct dvobj_priv *dvobj);
+int rtw_cfg80211_dev_res_register(struct dvobj_priv *dvobj);
+void rtw_cfg80211_dev_res_unregister(struct dvobj_priv *dvobj);
 
 void rtw_cfg80211_init_wiphy(_adapter *padapter);
 

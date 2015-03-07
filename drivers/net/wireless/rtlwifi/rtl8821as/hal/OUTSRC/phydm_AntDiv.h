@@ -21,13 +21,15 @@
 #ifndef	__PHYDMANTDIV_H__
 #define    __PHYDMANTDIV_H__
 
-#define ANTDIV_VERSION	"2.0"  //2014.11.04
+/*#define ANTDIV_VERSION	"2.0"  //2014.11.04*/
+/*#define ANTDIV_VERSION	"2.1"  //2015.01.13  Dino*/
+#define ANTDIV_VERSION	"2.2"  /*2015.01.16  Dino*/
 
 //1 ============================================================
 //1  Definition 
 //1 ============================================================
 
-
+#define	ANTDIV_INIT		0xff
 #define	MAIN_ANT	1		//Ant A or Ant Main
 #define	AUX_ANT		2		//AntB or Ant Aux
 #define	MAX_ANT		3		// 3 for AP using

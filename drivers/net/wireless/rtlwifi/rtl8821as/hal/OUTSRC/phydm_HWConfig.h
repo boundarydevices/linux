@@ -24,7 +24,7 @@
 
 
 /*--------------------------Define -------------------------------------------*/ 
-//#define READ_NEXT_PAIR(v1, v2, i) do { i += 2; v1 = Array[i]; v2 = Array[i+1]; } while(0)
+
 #define AGC_DIFF_CONFIG_MP(ic, band) (ODM_ReadAndConfig_MP_##ic##_AGC_TAB_DIFF(pDM_Odm, Array_MP_##ic##_AGC_TAB_DIFF_##band, \
                                                                               sizeof(Array_MP_##ic##_AGC_TAB_DIFF_##band)/sizeof(u4Byte)))
 #define AGC_DIFF_CONFIG_TC(ic, band) (ODM_ReadAndConfig_TC_##ic##_AGC_TAB_DIFF(pDM_Odm, Array_TC_##ic##_AGC_TAB_DIFF_##band, \
@@ -42,16 +42,16 @@
 // structure and define
 //============================================================
 
-typedef struct _Phy_Rx_AGC_Info
+__PACK typedef struct _Phy_Rx_AGC_Info
 {
 	#if (ODM_ENDIAN_TYPE == ODM_ENDIAN_LITTLE)	
 		u1Byte	gain:7,trsw:1;			
 	#else			
 		u1Byte	trsw:1,gain:7;
 	#endif
-} PHY_RX_AGC_INFO_T,*pPHY_RX_AGC_INFO_T;
+} __WLAN_ATTRIB_PACK__ PHY_RX_AGC_INFO_T, *pPHY_RX_AGC_INFO_T;
 
-typedef struct _Phy_Status_Rpt_8192cd {
+__PACK typedef struct _Phy_Status_Rpt_8192cd {
 	PHY_RX_AGC_INFO_T path_agc[2];
 	u1Byte	ch_corr[2];
 	u1Byte	cck_sig_qual_ofdm_pwdb_all;
@@ -87,7 +87,7 @@ typedef struct _Phy_Status_Rpt_8192cd {
 	u1Byte	sgi_en: 1;
 	u1Byte	antsel_rx_keep_2: 1;/*ex_intf_flg:1;*/
 #endif
-} PHY_STATUS_RPT_8192CD_T, *PPHY_STATUS_RPT_8192CD_T;
+} __WLAN_ATTRIB_PACK__ PHY_STATUS_RPT_8192CD_T, *PPHY_STATUS_RPT_8192CD_T;
 
 
 typedef struct _Phy_Status_Rpt_8812 {
@@ -177,7 +177,6 @@ typedef struct _Phy_Status_Rpt_8812 {
 #endif
 } PHY_STATUS_RPT_8812_T, *PPHY_STATUS_RPT_8812_T;
 
-
 VOID
 odm_Init_RSSIForDM(
 	IN OUT	PDM_ODM_T	pDM_Odm
@@ -200,7 +199,6 @@ ODM_MacStatusQuery(
 	IN		BOOLEAN						bPacketToSelf,
 	IN		BOOLEAN						bPacketBeacon
 	);
-#if (DM_ODM_SUPPORT_TYPE & (ODM_WIN|ODM_CE|ODM_AP))
 
 HAL_STATUS
 ODM_ConfigRFWithTxPwrTrackHeaderFile(
@@ -244,7 +242,6 @@ odm_SignalScaleMapping(
 	IN	s4Byte CurrSig 
 	);
 
-#endif
 
 #endif
 

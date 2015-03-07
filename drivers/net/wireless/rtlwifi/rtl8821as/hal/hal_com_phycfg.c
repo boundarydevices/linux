@@ -920,7 +920,7 @@ PHY_InitTxPowerByRate(
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(pAdapter);
 	u8	band = 0, rfPath = 0, TxNum = 0, rate = 0, i = 0, j = 0;
 
-	if ( IS_HARDWARE_TYPE_8188E( pAdapter ) || IS_HARDWARE_TYPE_8723A( pAdapter ) )
+	if ( IS_HARDWARE_TYPE_8188E( pAdapter ) )
 	{
 		for ( i = 0; i < MAX_PG_GROUP; ++i )
 			for ( j = 0; j < 16; ++j )
@@ -1509,13 +1509,13 @@ PHY_GetTxPowerTrackingOffset(
 	
 	if ((Rate == MGN_1M) ||(Rate == MGN_2M)||(Rate == MGN_5_5M)||(Rate == MGN_11M))
 	{ 
-		offset = pDM_Odm->Remnant_CCKSwingIdx;
-		//DBG_871X("+Remnant_CCKSwingIdx = 0x%x\n", RFPath, Rate, pDM_Odm->Remnant_CCKSwingIdx);
+		offset = pDM_Odm->RFCalibrateInfo.Remnant_CCKSwingIdx;
+		/*DBG_871X("+Remnant_CCKSwingIdx = 0x%x\n", RFPath, Rate, pRFCalibrateInfo->Remnant_CCKSwingIdx);*/
 	}
 	else
 	{
-		offset = pDM_Odm->Remnant_OFDMSwingIdx[RFPath]; 
-		//DBG_871X("+Remanant_OFDMSwingIdx[RFPath %u][Rate 0x%x] = 0x%x\n", RFPath, Rate, pDM_Odm->Remnant_OFDMSwingIdx[RFPath]);		
+		offset = pDM_Odm->RFCalibrateInfo.Remnant_OFDMSwingIdx[RFPath]; 
+		/*DBG_871X("+Remanant_OFDMSwingIdx[RFPath %u][Rate 0x%x] = 0x%x\n", RFPath, Rate, pRFCalibrateInfo->Remnant_OFDMSwingIdx[RFPath]);	*/	
 		
 	}
 

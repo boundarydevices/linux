@@ -147,7 +147,7 @@ typedef struct txdescriptor_8814
 // Dword 3
 #define SET_TX_DESC_WHEADER_LEN_8814A(__pTxDesc, __Value) SET_BITS_TO_LE_4BYTE(__pTxDesc+12, 0, 5, __Value)
 #define SET_TX_DESC_EARLY_RATE_8814A(__pTxDesc, __Value) SET_BITS_TO_LE_4BYTE(__pTxDesc+12, 5, 1, __Value)
-#define SET_TX_DESC_HWSEQ_SEL_8814A(__pTxDesc, __Value) SET_BITS_TO_LE_4BYTE(__pTxDesc+12, 6, 2, __Value)
+#define SET_TX_DESC_HW_SSN_SEL_8814A(__pTxDesc, __Value) SET_BITS_TO_LE_4BYTE(__pTxDesc+12, 6, 2, __Value)
 #define SET_TX_DESC_USE_RATE_8814A(__pTxDesc, __Value) SET_BITS_TO_LE_4BYTE(__pTxDesc+12, 8, 1, __Value)
 #define SET_TX_DESC_DISABLE_RTS_FB_8814A(__pTxDesc, __Value) SET_BITS_TO_LE_4BYTE(__pTxDesc+12, 9, 1, __Value)
 #define SET_TX_DESC_DISABLE_FB_8814A(__pTxDesc, __Value) SET_BITS_TO_LE_4BYTE(__pTxDesc+12, 10, 1, __Value)

@@ -26,6 +26,7 @@
 #include <rtw_wifi_regd.h>
 
 #define RTW_MAX_MGMT_TX_CNT (8)
+#define RTW_MAX_MGMT_TX_MS_GAS (500)
 
 #define RTW_SCAN_IE_LEN_MAX      2304
 #define RTW_MAX_REMAIN_ON_CHANNEL_DURATION 5000 //ms
@@ -336,26 +337,6 @@ rtw_cfg80211_default_mgmt_stypes[NUM_NL80211_IFTYPES] = {
 };
 #endif
 
-static int rtw_ieee80211_channel_to_frequency(int chan, int band)
-{
-	/* see 802.11 17.3.8.3.2 and Annex J
-	* there are overlapping channel numbers in 5GHz and 2GHz bands */
-           
-	if (band == IEEE80211_BAND_5GHZ) {
-       	if (chan >= 182 && chan <= 196)
-			return 4000 + chan * 5;
-             else
-                    return 5000 + chan * 5;
-       } else { /* IEEE80211_BAND_2GHZ */
-		if (chan == 14)
-			return 2484;
-             else if (chan < 14)
-			return 2407 + chan * 5;
-             else
-			return 0; /* not supported */
-	}
-}
-
 static u64 rtw_get_systime_us(void)
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,39))
@@ -467,11 +448,7 @@ struct cfg80211_bss *rtw_cfg80211_inform_bss(_adapter *padapter, struct wlan_net
 
 					DBG_871X("%s, got sr, but ssid mismatch, to remove this bss\n", __func__);
 
-					if (pselect_network->Configuration.DSConfig <= RTW_CH_MAX_2G_CHANNEL)
-						freq = rtw_ieee80211_channel_to_frequency(pselect_network->Configuration.DSConfig, IEEE80211_BAND_2GHZ);
-					else
-						freq = rtw_ieee80211_channel_to_frequency(pselect_network->Configuration.DSConfig, IEEE80211_BAND_5GHZ);
-
+					freq = rtw_ch2freq(pselect_network->Configuration.DSConfig);
 					notify_channel = ieee80211_get_channel(wiphy, freq);
 					pselect_bss = cfg80211_get_bss(wiphy, NULL/*notify_channel*/,
 								pselect_network->MacAddress, pselect_network->Ssid.Ssid,
@@ -501,11 +478,7 @@ struct cfg80211_bss *rtw_cfg80211_inform_bss(_adapter *padapter, struct wlan_net
 	
 
 	channel = pnetwork->network.Configuration.DSConfig;
-	if (channel <= RTW_CH_MAX_2G_CHANNEL)
-		freq = rtw_ieee80211_channel_to_frequency(channel, IEEE80211_BAND_2GHZ);
-	else
-		freq = rtw_ieee80211_channel_to_frequency(channel, IEEE80211_BAND_5GHZ);
-	
+	freq = rtw_ch2freq(channel);
 	notify_channel = ieee80211_get_channel(wiphy, freq);
 
 	if (0)
@@ -646,11 +619,7 @@ int rtw_cfg80211_check_bss(_adapter *padapter)
 	if (!(pnetwork) || !(padapter->rtw_wdev))
 		return _FALSE;
 
-	if (pnetwork->Configuration.DSConfig <= RTW_CH_MAX_2G_CHANNEL)
-		freq = rtw_ieee80211_channel_to_frequency(pnetwork->Configuration.DSConfig, IEEE80211_BAND_2GHZ);
-	else
-		freq = rtw_ieee80211_channel_to_frequency(pnetwork->Configuration.DSConfig, IEEE80211_BAND_5GHZ);
-
+	freq = rtw_ch2freq(pnetwork->Configuration.DSConfig);
 	notify_channel = ieee80211_get_channel(padapter->rtw_wdev->wiphy, freq);
 	bss = cfg80211_get_bss(padapter->rtw_wdev->wiphy, notify_channel,
 			pnetwork->MacAddress, pnetwork->Ssid.Ssid,
@@ -681,11 +650,8 @@ void rtw_cfg80211_ibss_indicate_connect(_adapter *padapter)
 	DBG_871X(FUNC_ADPT_FMT"\n", FUNC_ADPT_ARG(padapter));
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0))	
-	if (cur_network->network.Configuration.DSConfig <= RTW_CH_MAX_2G_CHANNEL)
-		freq = rtw_ieee80211_channel_to_frequency(cur_network->network.Configuration.DSConfig, IEEE80211_BAND_2GHZ);
-	else
-		freq = rtw_ieee80211_channel_to_frequency(cur_network->network.Configuration.DSConfig, IEEE80211_BAND_5GHZ);
-	
+	freq = rtw_ch2freq(cur_network->network.Configuration.DSConfig);
+
 	if (0)
 		DBG_871X("chan: %d, freq: %d\n", cur_network->network.Configuration.DSConfig, freq);
 #endif
@@ -821,11 +787,7 @@ check_bss:
 		u32 freq;
 		u16 channel = cur_network->network.Configuration.DSConfig;
 
-		if (channel <= RTW_CH_MAX_2G_CHANNEL)
-			freq = rtw_ieee80211_channel_to_frequency(channel, IEEE80211_BAND_2GHZ);
-		else
-			freq = rtw_ieee80211_channel_to_frequency(channel, IEEE80211_BAND_5GHZ);
-
+		freq = rtw_ch2freq(channel);
 		notify_channel = ieee80211_get_channel(wiphy, freq);
 		#endif
 
@@ -3598,10 +3560,7 @@ void rtw_cfg80211_indicate_sta_assoc(_adapter *padapter, u8 *pmgmt_frame, uint f
 	}
 #else /* defined(RTW_USE_CFG80211_STA_EVENT) */
 	channel = pmlmeext->cur_channel;
-	if (channel <= RTW_CH_MAX_2G_CHANNEL)
-		freq = rtw_ieee80211_channel_to_frequency(channel, IEEE80211_BAND_2GHZ);
-	else
-		freq = rtw_ieee80211_channel_to_frequency(channel, IEEE80211_BAND_5GHZ);
+	freq = rtw_ch2freq(channel);
 
 	#ifdef COMPAT_KERNEL_RELEASE
 	rtw_cfg80211_rx_mgmt(padapter, freq, 0, pmgmt_frame, frame_len, GFP_ATOMIC);
@@ -3643,10 +3602,7 @@ void rtw_cfg80211_indicate_sta_disassoc(_adapter *padapter, unsigned char *da, u
 	cfg80211_del_sta(ndev, da, GFP_ATOMIC);
 #else /* defined(RTW_USE_CFG80211_STA_EVENT) */
 	channel = pmlmeext->cur_channel;
-	if (channel <= RTW_CH_MAX_2G_CHANNEL)
-		freq = rtw_ieee80211_channel_to_frequency(channel, IEEE80211_BAND_2GHZ);
-	else
-		freq = rtw_ieee80211_channel_to_frequency(channel, IEEE80211_BAND_5GHZ);
+	freq = rtw_ch2freq(channel);
 
 	pmgmt_frame = mgmt_buf;	
 	pwlanhdr = (struct rtw_ieee80211_hdr *)pmgmt_frame;
@@ -3895,7 +3851,7 @@ static int rtw_cfg80211_add_monitor_if(_adapter *padapter, char *name, struct ne
 	struct rtw_netdev_priv_indicator *pnpi;
 	struct rtw_wdev_priv *pwdev_priv = adapter_wdev_data(padapter);
 		
-	if (!name ) {
+	if (!name) {
 		DBG_871X(FUNC_ADPT_FMT" without specific name\n", FUNC_ADPT_ARG(padapter));
 		ret = -EINVAL;
 		goto out;
@@ -3988,8 +3944,8 @@ static int
 	struct net_device* ndev = NULL;
 	_adapter *padapter = wiphy_to_adapter(wiphy);
 
-	DBG_871X(FUNC_ADPT_FMT " wiphy:%s, name:%s, type:%d\n",
-		FUNC_ADPT_ARG(padapter), wiphy_name(wiphy), name, type);
+	DBG_871X("%s wiphy:%s, name:%s, type:%d\n",
+		__func__, wiphy_name(wiphy), name, type);
 
 	switch (type) {
 	case NL80211_IFTYPE_ADHOC:
@@ -4021,7 +3977,7 @@ static int
 		break;
 	}
 
-	DBG_871X(FUNC_ADPT_FMT" ndev:%p, ret:%d\n", FUNC_ADPT_ARG(padapter), ndev, ret);
+	DBG_871X("%s ndev:%p, ret:%d\n", __func__, ndev, ret);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
 	return ndev ? ndev->ieee80211_ptr : ERR_PTR(ret);
@@ -4556,10 +4512,7 @@ void rtw_cfg80211_rx_action_p2p(_adapter *padapter, u8 *pmgmt_frame, uint frame_
 	DBG_871X("RTW_Rx:category(%u), action(%u)\n", category, action);
 
 indicate:
-	if (channel <= RTW_CH_MAX_2G_CHANNEL)
-		freq = rtw_ieee80211_channel_to_frequency(channel, IEEE80211_BAND_2GHZ);
-	else
-		freq = rtw_ieee80211_channel_to_frequency(channel, IEEE80211_BAND_5GHZ);
+	freq = rtw_ch2freq(channel);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)) || defined(COMPAT_KERNEL_RELEASE)
 	rtw_cfg80211_rx_mgmt(padapter, freq, 0, pmgmt_frame, frame_len, GFP_ATOMIC);
@@ -4596,10 +4549,7 @@ void rtw_cfg80211_rx_p2p_action_public(_adapter *padapter, u8 *pmgmt_frame, uint
 	DBG_871X("RTW_Rx:category(%u), action(%u)\n", category, action);
 
 indicate:
-	if (channel <= RTW_CH_MAX_2G_CHANNEL)
-		freq = rtw_ieee80211_channel_to_frequency(channel, IEEE80211_BAND_2GHZ);
-	else
-		freq = rtw_ieee80211_channel_to_frequency(channel, IEEE80211_BAND_5GHZ);
+	freq = rtw_ch2freq(channel);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)) || defined(COMPAT_KERNEL_RELEASE)
 	rtw_cfg80211_rx_mgmt(padapter, freq, 0, pmgmt_frame, frame_len, GFP_ATOMIC);
@@ -4620,16 +4570,16 @@ void rtw_cfg80211_rx_action(_adapter *adapter, u8 *frame, uint frame_len, const 
 
 	rtw_action_frame_parse(frame, frame_len, &category, &action);
 
-	DBG_8192C("RTW_Rx:cur_ch=%d\n", channel);
-	if (msg)
-		DBG_871X("RTW_Rx:%s\n", msg);
-	else
-		DBG_871X("RTW_Rx:category(%u), action(%u)\n", category, action);
+	if (action == ACT_PUBLIC_GAS_INITIAL_REQ) {
+		rtw_set_scan_deny(adapter, 200);
+		rtw_scan_abort_no_wait(adapter);
+		#ifdef CONFIG_CONCURRENT_MODE
+		if (rtw_buddy_adapter_up(adapter))
+			rtw_scan_abort_no_wait(adapter->pbuddy_adapter);
+		#endif
+	}
 
-	if (channel <= RTW_CH_MAX_2G_CHANNEL)
-		freq = rtw_ieee80211_channel_to_frequency(channel, IEEE80211_BAND_2GHZ);
-	else
-		freq = rtw_ieee80211_channel_to_frequency(channel, IEEE80211_BAND_5GHZ);
+	freq = rtw_ch2freq(channel);
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)) || defined(COMPAT_KERNEL_RELEASE)
 	rtw_cfg80211_rx_mgmt(adapter, freq, 0, frame, frame_len, GFP_ATOMIC);
@@ -4637,6 +4587,11 @@ void rtw_cfg80211_rx_action(_adapter *adapter, u8 *frame, uint frame_len, const 
 	cfg80211_rx_action(adapter->pnetdev, freq, frame, frame_len, GFP_ATOMIC);
 #endif
 
+	DBG_8192C("RTW_Rx:cur_ch=%d\n", channel);
+	if (msg)
+		DBG_871X("RTW_Rx:%s\n", msg);
+	else
+		DBG_871X("RTW_Rx:category(%u), action(%u)\n", category, action);
 }
 
 #ifdef CONFIG_P2P
@@ -5423,10 +5378,27 @@ dump:
 		goto cancel_ps_deny;
 	}
 
-	do {
+	while (1) {
+		u32 sleep_ms = 0;
+		u32 retry_guarantee_ms = 0;
+
 		dump_cnt++;
 		tx_ret = _cfg80211_rtw_mgmt_tx(padapter, tx_ch, buf, len);
-	} while (dump_cnt < dump_limit && tx_ret != _SUCCESS);
+
+		switch (action) {
+		case ACT_PUBLIC_GAS_INITIAL_REQ:
+		case ACT_PUBLIC_GAS_INITIAL_RSP:
+			sleep_ms = 50;
+			retry_guarantee_ms = RTW_MAX_MGMT_TX_MS_GAS;
+		}
+
+		if (tx_ret == _SUCCESS
+			|| (dump_cnt >= dump_limit && rtw_get_passing_time_ms(start) >= retry_guarantee_ms))
+				break;
+
+		if (sleep_ms > 0)
+			rtw_msleep_os(sleep_ms);
+	}
 
 	if (tx_ret != _SUCCESS || dump_cnt > 1) {
 		DBG_871X(FUNC_ADPT_FMT" %s (%d/%d) in %d ms\n", FUNC_ADPT_ARG(padapter),
@@ -6147,31 +6119,35 @@ void rtw_cfg80211_init_wiphy(_adapter *padapter)
 
 }
 
-/*
 struct ieee80211_iface_limit rtw_limits[] = {
-	{ .max = 1, .types = BIT(NL80211_IFTYPE_STATION)
-					| BIT(NL80211_IFTYPE_ADHOC)
-#ifdef CONFIG_AP_MODE
-					| BIT(NL80211_IFTYPE_AP)
-#endif
-#if defined(CONFIG_P2P) && ((LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)) || defined(COMPAT_KERNEL_RELEASE))
-					| BIT(NL80211_IFTYPE_P2P_CLIENT)
-					| BIT(NL80211_IFTYPE_P2P_GO)
-#endif
+	{	.max = 2,
+		.types = BIT(NL80211_IFTYPE_STATION)
+			#if defined(CONFIG_P2P) && ((LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) || defined(COMPAT_KERNEL_RELEASE))
+			| BIT(NL80211_IFTYPE_P2P_CLIENT)
+			#endif
 	},
-	{.max = 1, .types = BIT(NL80211_IFTYPE_MONITOR)},
+	#ifdef CONFIG_AP_MODE
+	{	.max = 1,
+		.types = BIT(NL80211_IFTYPE_AP)
+			#if defined(CONFIG_P2P) && ((LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) || defined(COMPAT_KERNEL_RELEASE))
+			| BIT(NL80211_IFTYPE_P2P_GO)
+			#endif
+	},
+	#endif
 };
 
-struct ieee80211_iface_combination rtw_combinations = {
-	.limits = rtw_limits,
-	.n_limits = ARRAY_SIZE(rtw_limits),
-	.max_interfaces = 2,
-	.num_different_channels = 1,
+struct ieee80211_iface_combination rtw_combinations[] = {
+	{	.limits = rtw_limits,
+		.n_limits = ARRAY_SIZE(rtw_limits),
+		.max_interfaces = 2,
+		.num_different_channels = 1,
+	},
 };
-*/
 
-static void rtw_cfg80211_preinit_wiphy(_adapter *padapter, struct wiphy *wiphy)
+static void rtw_cfg80211_preinit_wiphy(_adapter *adapter, struct wiphy *wiphy)
 {
+	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
+	struct registry_priv *regsty = dvobj_to_regsty(dvobj);
 
 	wiphy->signal_type = CFG80211_SIGNAL_TYPE_MBM;
 
@@ -6209,10 +6185,10 @@ static void rtw_cfg80211_preinit_wiphy(_adapter *padapter, struct wiphy *wiphy)
 	#endif
 #endif
 
-	/*
-	wiphy->iface_combinations = &rtw_combinations;
-	wiphy->n_iface_combinations = 1;
-	*/
+	#if defined(RTW_SINGLE_WIPHY)
+	wiphy->iface_combinations = rtw_combinations;
+	wiphy->n_iface_combinations = ARRAY_SIZE(rtw_combinations);
+	#endif
 
 	wiphy->cipher_suites = rtw_cipher_suites;
 	wiphy->n_cipher_suites = ARRAY_SIZE(rtw_cipher_suites);
@@ -6256,17 +6232,13 @@ static void rtw_cfg80211_preinit_wiphy(_adapter *padapter, struct wiphy *wiphy)
 #endif //CONFIG_TDLS_DRIVER_SETUP
 #endif /* CONFIG_TDLS */
 
-	if(padapter->registrypriv.power_mgnt != PS_MODE_ACTIVE)
+	if (regsty->power_mgnt != PS_MODE_ACTIVE)
 		wiphy->flags |= WIPHY_FLAG_PS_ON_BY_DEFAULT;
-	else 
+	else
 		wiphy->flags &= ~WIPHY_FLAG_PS_ON_BY_DEFAULT;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0))
 	//wiphy->flags |= WIPHY_FLAG_SUPPORTS_FW_ROAM;
-#endif
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)) || defined(RTW_VENDOR_EXT_SUPPORT)
-	rtw_cfgvendor_attach(wiphy);
 #endif
 }
 
@@ -6342,39 +6314,84 @@ static struct cfg80211_ops rtw_cfg80211_ops = {
 #endif /* CONFIG_PNO_SUPPORT */
 };
 
-int rtw_wdev_alloc(_adapter *padapter, struct device *dev)
+struct wiphy *rtw_wiphy_alloc(_adapter *padapter, struct device *dev)
 {
-	int ret = 0;
 	struct wiphy *wiphy;
-	struct wireless_dev *wdev;
-	struct rtw_wdev_priv *pwdev_priv;
-	struct net_device *pnetdev = padapter->pnetdev;
-	
-	DBG_8192C("%s(padapter=%p)\n", __func__, padapter);
+	struct rtw_wiphy_data *wiphy_data;
 
 	/* wiphy */
 	wiphy = wiphy_new(&rtw_cfg80211_ops, sizeof(_adapter*));
 	if (!wiphy) {
 		DBG_8192C("Couldn't allocate wiphy device\n");
-		ret = -ENOMEM;
 		goto exit;
 	}
 	set_wiphy_dev(wiphy, dev);
 	*((_adapter**)wiphy_priv(wiphy)) = padapter;
+
 	rtw_cfg80211_preinit_wiphy(padapter, wiphy);
 
-	ret = wiphy_register(wiphy);
-	if (ret < 0) {
-		DBG_8192C("Couldn't register wiphy device\n");
-		goto free_wiphy;
+	DBG_871X(FUNC_WIPHY_FMT"\n", FUNC_WIPHY_ARG(wiphy));
+
+exit:
+	return wiphy;
+}
+
+void rtw_wiphy_free(struct wiphy *wiphy)
+{
+	if (!wiphy)
+		return;
+
+	DBG_871X(FUNC_WIPHY_FMT"\n", FUNC_WIPHY_ARG(wiphy));
+
+	if (wiphy->bands[IEEE80211_BAND_2GHZ]) {
+		rtw_spt_band_free(wiphy->bands[IEEE80211_BAND_2GHZ]);
+		wiphy->bands[IEEE80211_BAND_2GHZ] = NULL;
 	}
+	if (wiphy->bands[IEEE80211_BAND_5GHZ]) {
+		rtw_spt_band_free(wiphy->bands[IEEE80211_BAND_5GHZ]);
+		wiphy->bands[IEEE80211_BAND_5GHZ] = NULL;
+	}
+
+	wiphy_free(wiphy);
+}
+
+int rtw_wiphy_register(struct wiphy *wiphy)
+{
+	DBG_871X(FUNC_WIPHY_FMT"\n", FUNC_WIPHY_ARG(wiphy));
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)) || defined(RTW_VENDOR_EXT_SUPPORT)
+	rtw_cfgvendor_attach(wiphy);
+#endif
+
+	return wiphy_register(wiphy);
+}
+
+void rtw_wiphy_unregister(struct wiphy *wiphy)
+{
+	DBG_871X(FUNC_WIPHY_FMT"\n", FUNC_WIPHY_ARG(wiphy));
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)) || defined(RTW_VENDOR_EXT_SUPPORT)
+	rtw_cfgvendor_detach(wiphy);
+#endif
+
+	return wiphy_unregister(wiphy);
+}
+
+int rtw_wdev_alloc(_adapter *padapter, struct wiphy *wiphy)
+{
+	int ret = 0;
+	struct net_device *pnetdev = padapter->pnetdev;
+	struct wireless_dev *wdev;
+	struct rtw_wdev_priv *pwdev_priv;
+	
+	DBG_8192C("%s(padapter=%p)\n", __func__, padapter);
 
 	/*  wdev */
 	wdev = (struct wireless_dev *)rtw_zmalloc(sizeof(struct wireless_dev));
 	if (!wdev) {
 		DBG_8192C("Couldn't allocate wireless device\n");
 		ret = -ENOMEM;
-		goto unregister_wiphy;
+		goto exit;
 	}
 	wdev->wiphy = wiphy;
 	wdev->netdev = pnetdev;
@@ -6412,16 +6429,8 @@ int rtw_wdev_alloc(_adapter *padapter, struct device *dev)
 	ATOMIC_SET(&pwdev_priv->ro_ch_to, 1);	
 #endif
 
-	return ret;
-
-	rtw_mfree((u8*)wdev, sizeof(struct wireless_dev));
-unregister_wiphy:
-	wiphy_unregister(wiphy);
- free_wiphy:
- 	wiphy_free(wiphy);
 exit:
 	return ret;
-	
 }
 
 void rtw_wdev_free(struct wireless_dev *wdev)
@@ -6430,11 +6439,6 @@ void rtw_wdev_free(struct wireless_dev *wdev)
 
 	if (!wdev)
 		return;
-
-	rtw_spt_band_free(wdev->wiphy->bands[IEEE80211_BAND_2GHZ]);
-	rtw_spt_band_free(wdev->wiphy->bands[IEEE80211_BAND_5GHZ]);
-	
-	wiphy_free(wdev->wiphy);
 
 	rtw_mfree((u8*)wdev, sizeof(struct wireless_dev));
 }
@@ -6462,13 +6466,121 @@ void rtw_wdev_unregister(struct wireless_dev *wdev)
 		DBG_8192C("%s, unregister monitor interface\n", __func__);
 		unregister_netdev(pwdev_priv->pmon_ndev);
 	}
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)) || defined(RTW_VENDOR_EXT_SUPPORT)
-	rtw_cfgvendor_detach(wdev->wiphy);
-#endif
-
-	wiphy_unregister(wdev->wiphy);
 }
 
-#endif //CONFIG_IOCTL_CFG80211
+int rtw_cfg80211_ndev_res_alloc(_adapter *adapter)
+{
+	int ret = _FAIL;
+
+#if !defined(RTW_SINGLE_WIPHY)
+	struct wiphy *wiphy;
+	struct device *dev = dvobj_to_dev(adapter_to_dvobj(adapter));
+
+	wiphy = rtw_wiphy_alloc(adapter, dev);
+	if (wiphy == NULL)
+		goto exit;
+
+	adapter->wiphy = wiphy;
+#endif
+
+	if (rtw_wdev_alloc(adapter, adapter_to_wiphy(adapter)) == 0)
+		ret = _SUCCESS;
+
+#if !defined(RTW_SINGLE_WIPHY)
+	if (ret != _SUCCESS) {
+		rtw_wiphy_free(wiphy);
+		adapter->wiphy = NULL;
+	}
+#endif
+
+exit:
+	return ret;
+}
+
+void rtw_cfg80211_ndev_res_free(_adapter *adapter)
+{
+	rtw_wdev_free(adapter->rtw_wdev);
+#if !defined(RTW_SINGLE_WIPHY)
+	rtw_wiphy_free(adapter_to_wiphy(adapter));
+	adapter->wiphy = NULL;
+#endif
+}
+
+int rtw_cfg80211_ndev_res_register(_adapter *adapter)
+{
+	int ret = _FAIL;
+
+#if !defined(RTW_SINGLE_WIPHY)
+	if (rtw_wiphy_register(adapter_to_wiphy(adapter)) < 0) {
+		DBG_871X("%s rtw_wiphy_register fail for if%d\n", __func__, (adapter->iface_id+1));
+		goto exit;
+	}
+#endif
+
+	ret = _SUCCESS;
+
+exit:
+	return ret;
+}
+
+void rtw_cfg80211_ndev_res_unregister(_adapter *adapter)
+{
+	rtw_wdev_unregister(adapter->rtw_wdev);
+#if !defined(RTW_SINGLE_WIPHY)
+	rtw_wiphy_unregister(adapter_to_wiphy(adapter));
+#endif
+}
+
+int rtw_cfg80211_dev_res_alloc(struct dvobj_priv *dvobj)
+{
+	int ret = _FAIL;
+
+#if defined(RTW_SINGLE_WIPHY)
+	struct wiphy *wiphy;
+	struct device *dev = dvobj_to_dev(dvobj);
+
+	wiphy = rtw_wiphy_alloc(dvobj->if1, dev);
+	if (wiphy == NULL)
+		goto exit;
+
+	dvobj->wiphy = wiphy;
+#endif
+
+	ret = _SUCCESS;
+
+exit:
+	return ret;
+}
+
+void rtw_cfg80211_dev_res_free(struct dvobj_priv *dvobj)
+{
+#if defined(RTW_SINGLE_WIPHY)
+	rtw_wiphy_free(dvobj_to_wiphy(dvobj));
+	dvobj->wiphy = NULL;
+#endif
+}
+
+int rtw_cfg80211_dev_res_register(struct dvobj_priv *dvobj)
+{
+	int ret = _FAIL;
+
+#if defined(RTW_SINGLE_WIPHY)
+	if (rtw_wiphy_register(dvobj_to_wiphy(dvobj)) != 0)
+		goto exit;
+#endif
+
+	ret = _SUCCESS;
+
+exit:
+	return ret;
+}
+
+void rtw_cfg80211_dev_res_unregister(struct dvobj_priv *dvobj)
+{
+#if defined(RTW_SINGLE_WIPHY)
+	rtw_wiphy_unregister(dvobj_to_wiphy(dvobj));
+#endif
+}
+
+#endif /* CONFIG_IOCTL_CFG80211 */
 

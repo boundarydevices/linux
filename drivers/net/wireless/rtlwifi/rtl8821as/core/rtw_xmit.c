@@ -740,6 +740,13 @@ static s32 update_attrib_sec_info(_adapter *padapter, struct pkt_attrib *pattrib
 			pattrib->encrypt=_NO_PRIVACY_;
 		
 	}
+
+#ifdef CONFIG_TDLS
+	if (pattrib->direct_link == _TRUE) {
+		if (pattrib->encrypt > 0)
+			pattrib->encrypt = _AES_;
+	}
+#endif 
 	
 	switch (pattrib->encrypt)
 	{
@@ -829,19 +836,6 @@ static s32 update_attrib_sec_info(_adapter *padapter, struct pkt_attrib *pattrib
 		pattrib->bswenc = _FALSE;
 #endif
 
-#ifdef CONFIG_TDLS
-	if(pattrib->direct_link == _TRUE)
-	{
-		pattrib->mac_id = pattrib->ptdls_sta->mac_id;
-		if(pattrib->encrypt>0)
-		{
-			pattrib->encrypt= _AES_;
-			pattrib->iv_len=8;
-			pattrib->icv_len=8;
-			pattrib->bswenc = _FALSE;
-		}
-	}
-#endif //CONFIG_TDLS
 exit:
 
 	return res;

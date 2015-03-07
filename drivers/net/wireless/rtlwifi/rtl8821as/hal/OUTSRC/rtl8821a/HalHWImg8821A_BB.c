@@ -18,7 +18,7 @@
 * 
 ******************************************************************************/
 
-/*Image2HeaderVersion: 2.3*/
+/*Image2HeaderVersion: 2.7*/
 #include "Mp_Precomp.h"
 #include "../phydm_precomp.h"
 
@@ -416,7 +416,7 @@ ODM_ReadAndConfig_MP_8821A_AGC_TAB(
 u4Byte
 ODM_GetVersion_MP_8821A_AGC_TAB(void)
 {
-	   return 48;
+	   return 49;
 }
 
 /******************************************************************************
@@ -651,7 +651,7 @@ ODM_ReadAndConfig_MP_8821A_PHY_REG(
 u4Byte
 ODM_GetVersion_MP_8821A_PHY_REG(void)
 {
-	   return 48;
+	   return 49;
 }
 
 /******************************************************************************

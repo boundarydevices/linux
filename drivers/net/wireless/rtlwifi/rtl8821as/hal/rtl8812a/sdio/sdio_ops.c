@@ -1425,6 +1425,10 @@ static struct recv_buf* sd_recv_rxfifo(PADAPTER padapter, u32 size)
 
 
 	readsize = size;
+	if (readsize > MAX_RECVBUF_SZ) {
+		DBG_871X(FUNC_ADPT_FMT" %u\n", FUNC_ADPT_ARG(padapter), readsize);
+		rtw_warn_on(readsize > MAX_RECVBUF_SZ);
+	}
 
 	//3 1. alloc recvbuf
 	precvpriv = &padapter->recvpriv;

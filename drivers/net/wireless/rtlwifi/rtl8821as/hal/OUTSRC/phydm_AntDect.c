@@ -1203,7 +1203,7 @@ odm_SwAntDetectInit(
 #if(defined(CONFIG_ANT_DETECTION))
 	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
 	pSWAT_T		pDM_SWAT_Table = &pDM_Odm->DM_SWAT_Table;
-	
+
 	//pDM_SWAT_Table->SWAS_NoLink_BK_Reg92c = ODM_Read4Byte(pDM_Odm, rDPDT_control);
 	//pDM_SWAT_Table->PreAntenna = MAIN_ANT;
 	//pDM_SWAT_Table->CurAntenna = MAIN_ANT;
