@@ -21,71 +21,42 @@
 
 #include <drv_types.h>
 
-
-struct ch_freq {
-	u32 channel;
-	u32 frequency;
-};
-
-struct ch_freq ch_freq_map[] = {
-	{1, 2412},{2, 2417},{3, 2422},{4, 2427},{5, 2432},
-	{6, 2437},{7, 2442},{8, 2447},{9, 2452},{10, 2457},
-	{11, 2462},{12, 2467},{13, 2472},{14, 2484},
-	/*  UNII */
-	{36, 5180},{40, 5200},{44, 5220},{48, 5240},{52, 5260},
-	{56, 5280},{60, 5300},{64, 5320},{149, 5745},{153, 5765},
-	{157, 5785},{161, 5805},{165, 5825},{167, 5835},{169, 5845},
-	{171, 5855},{173, 5865},
-	/* HiperLAN2 */
-	{100, 5500},{104, 5520},{108, 5540},{112, 5560},{116, 5580},
-	{120, 5600},{124, 5620},{128, 5640},{132, 5660},{136, 5680},
-	{140, 5700},
-	/* Japan MMAC */
-	{34, 5170},{38, 5190},{42, 5210},{46, 5230},
-	/*  Japan */
-	{184, 4920},{188, 4940},{192, 4960},{196, 4980},
-	{208, 5040},/* Japan, means J08 */
-	{212, 5060},/* Japan, means J12 */
-	{216, 5080},/* Japan, means J16 */
-};
-
-int ch_freq_map_num = (sizeof(ch_freq_map) / sizeof(struct ch_freq));
-
-u32 rtw_ch2freq(u32 channel)
+int rtw_ch2freq(int chan)
 {
-	u8	i;
-	u32	freq = 0;
+	/* see 802.11 17.3.8.3.2 and Annex J
+	* there are overlapping channel numbers in 5GHz and 2GHz bands */
 
-	for (i = 0; i < ch_freq_map_num; i++)
-	{
-		if (channel == ch_freq_map[i].channel)
-		{
-			freq = ch_freq_map[i].frequency;
-				break;
-		}
+	/*
+	* RTK: don't consider the overlapping channel numbers: 5G channel <= 14,
+	* because we don't support it. simply judge from channel number
+	*/
+
+	if (chan >= 1 && chan <= 14) {
+		if (chan == 14)
+			return 2484;
+		else if (chan < 14)
+			return 2407 + chan * 5;
+	} else if (chan >= 36 && chan <= 177) {
+		return 5000 + chan * 5;
 	}
-	if (i == ch_freq_map_num)
-		freq = 2412;
 
-	return freq;
+	return 0; /* not supported */
 }
 
-u32 rtw_freq2ch(u32 freq)
+int rtw_freq2ch(int freq)
 {
-	u8	i;
-	u32	ch = 0;
-
-	for (i = 0; i < ch_freq_map_num; i++)
-	{
-		if (freq == ch_freq_map[i].frequency)
-		{
-			ch = ch_freq_map[i].channel;
-				break;
-		}
-	}
-	if (i == ch_freq_map_num)
-		ch = 1;
-
-	return ch;
+	/* see 802.11 17.3.8.3.2 and Annex J */
+	if (freq == 2484)
+		return 14;
+	else if (freq < 2484)
+		return (freq - 2407) / 5;
+	else if (freq >= 4910 && freq <= 4980)
+		return (freq - 4000) / 5;
+	else if (freq <= 45000) /* DMG band lower limit */
+		return (freq - 5000) / 5;
+	else if (freq >= 58320 && freq <= 64800)
+		return (freq - 56160) / 2160;
+	else
+		return 0;
 }
 

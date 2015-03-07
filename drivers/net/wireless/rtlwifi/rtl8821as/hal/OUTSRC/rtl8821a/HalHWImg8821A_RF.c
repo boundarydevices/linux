@@ -18,7 +18,7 @@
 * 
 ******************************************************************************/
 
-/*Image2HeaderVersion: 2.3*/
+/*Image2HeaderVersion: 2.7*/
 #include "Mp_Precomp.h"
 #include "../phydm_precomp.h"
 
@@ -798,16 +798,16 @@ u4Byte Array_MP_8821A_RadioA[] = {
 		0x0EF, 0x00000000,
 		0x0EF, 0x00000100,
 		0x034, 0x0000ADF3,
-		0x034, 0x00009DEF,
-		0x034, 0x00008DEC,
-		0x034, 0x00007DE9,
-		0x034, 0x00006CED,
-		0x034, 0x00005CE9,
-		0x034, 0x000044E9,
-		0x034, 0x000034E6,
-		0x034, 0x0000246A,
-		0x034, 0x00001467,
-		0x034, 0x00000068,
+		0x034, 0x00009DF0,
+		0x034, 0x00008D70,
+		0x034, 0x00007D6D,
+		0x034, 0x00006CEE,
+		0x034, 0x00005CCC,
+		0x034, 0x000044EC,
+		0x034, 0x000034AC,
+		0x034, 0x0000246D,
+		0x034, 0x0000106F,
+		0x034, 0x0000006C,
 		0x0EF, 0x00000000,
 		0x0ED, 0x00000010,
 		0x044, 0x0000ADF2,
@@ -933,14 +933,14 @@ ODM_ReadAndConfig_MP_8821A_RadioA(
 u4Byte
 ODM_GetVersion_MP_8821A_RadioA(void)
 {
-	   return 48;
+	   return 49;
 }
 
 /******************************************************************************
 *                           TxPowerTrack_AP.TXT
 ******************************************************************************/
 
-#if (DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+#if (DM_ODM_SUPPORT_TYPE & (ODM_AP))
 u1Byte gDeltaSwingTableIdx_MP_5GB_N_TxPowerTrack_AP_8821A[][DELTA_SWINGIDX_SIZE] = {
 	{0, 1, 1, 2, 2, 3, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 11, 12, 12, 13, 13, 14, 14, 14, 14, 14, 14, 14},
 	{0, 1, 2, 3, 3, 4, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 14, 14, 14, 14, 14},
@@ -976,7 +976,7 @@ ODM_ReadAndConfig_MP_8821A_TxPowerTrack_AP(
  	IN   PDM_ODM_T  pDM_Odm
  	)
 {
-#if (DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
+#if (DM_ODM_SUPPORT_TYPE & (ODM_AP))
 	PODM_RF_CAL_T  pRFCalibrateInfo = &(pDM_Odm->RFCalibrateInfo);
 
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_MP_8821A\n"));
@@ -1761,8 +1761,8 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8811AU_FEM[] = {
 
 void
 ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_FEM(
- 	IN   PDM_ODM_T  pDM_Odm
- 	)
+	IN   PDM_ODM_T  pDM_Odm
+)
 {
 	u4Byte     i           = 0;
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8811AU_FEM)/sizeof(pu1Byte);
@@ -1779,7 +1779,7 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_FEM(
 		pu1Byte chnl = Array[i+5];
 		pu1Byte val = Array[i+6];
 	
-	 	 odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
+		odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
 	}
 
 }
@@ -2357,8 +2357,8 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8811AU_IPA[] = {
 
 void
 ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_IPA(
- 	IN   PDM_ODM_T  pDM_Odm
- 	)
+	IN   PDM_ODM_T  pDM_Odm
+)
 {
 	u4Byte     i           = 0;
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8811AU_IPA)/sizeof(pu1Byte);
@@ -2375,7 +2375,7 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_IPA(
 		pu1Byte chnl = Array[i+5];
 		pu1Byte val = Array[i+6];
 	
-	 	 odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
+		odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
 	}
 
 }
@@ -2953,8 +2953,8 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8821A[] = {
 
 void
 ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A(
- 	IN   PDM_ODM_T  pDM_Odm
- 	)
+	IN   PDM_ODM_T  pDM_Odm
+)
 {
 	u4Byte     i           = 0;
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8821A)/sizeof(pu1Byte);
@@ -2971,7 +2971,7 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A(
 		pu1Byte chnl = Array[i+5];
 		pu1Byte val = Array[i+6];
 	
-	 	 odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
+		odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
 	}
 
 }
@@ -3549,8 +3549,8 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm[] = {
 
 void
 ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm(
- 	IN   PDM_ODM_T  pDM_Odm
- 	)
+	IN   PDM_ODM_T  pDM_Odm
+)
 {
 	u4Byte     i           = 0;
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm)/sizeof(pu1Byte);
@@ -3567,7 +3567,7 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm(
 		pu1Byte chnl = Array[i+5];
 		pu1Byte val = Array[i+6];
 	
-	 	 odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
+		odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
 	}
 
 }
@@ -4145,8 +4145,8 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8821A_SAR_5mm[] = {
 
 void
 ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_5mm(
- 	IN   PDM_ODM_T  pDM_Odm
- 	)
+	IN   PDM_ODM_T  pDM_Odm
+)
 {
 	u4Byte     i           = 0;
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8821A_SAR_5mm)/sizeof(pu1Byte);
@@ -4163,7 +4163,7 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_5mm(
 		pu1Byte chnl = Array[i+5];
 		pu1Byte val = Array[i+6];
 	
-	 	 odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
+		odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
 	}
 
 }
@@ -4741,8 +4741,8 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8821A_SAR_8mm[] = {
 
 void
 ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_8mm(
- 	IN   PDM_ODM_T  pDM_Odm
- 	)
+	IN   PDM_ODM_T  pDM_Odm
+)
 {
 	u4Byte     i           = 0;
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8821A_SAR_8mm)/sizeof(pu1Byte);
@@ -4759,7 +4759,7 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_8mm(
 		pu1Byte chnl = Array[i+5];
 		pu1Byte val = Array[i+6];
 	
-	 	 odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
+		odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
 	}
 
 }

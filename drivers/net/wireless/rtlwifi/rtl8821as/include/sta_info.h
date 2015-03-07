@@ -51,6 +51,7 @@ typedef struct _RSSI_STA{
 	s32	UndecoratedSmoothedPWDB;
 	s32	UndecoratedSmoothedCCK;
 	s32	UndecoratedSmoothedOFDM;
+	u32	OFDM_pkt;
 	u64	PacketMap;
 	u8	ValidBit;
 }RSSI_STA, *PRSSI_STA;

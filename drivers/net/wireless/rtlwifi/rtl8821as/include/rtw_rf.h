@@ -155,7 +155,6 @@ typedef enum _PROTECTION_MODE{
 	PROTECTION_MODE_FORCE_DISABLE = 2,
 }PROTECTION_MODE, *PPROTECTION_MODE;
 
-/* 2007/11/15 MH Define different RF type. */
 typedef	enum _RT_RF_TYPE_DEFINITION
 {
 	RF_1T2R = 0,
@@ -163,15 +162,16 @@ typedef	enum _RT_RF_TYPE_DEFINITION
 	RF_2T2R = 2,
 	RF_1T1R = 3,
 	RF_2T2R_GREEN = 4,
-	RF_3T3R = 5,
-	RF_4T4R = 6,
+	RF_2T3R = 5,	
+	RF_3T3R = 6,
+	RF_3T4R	= 7,
+	RF_4T4R	= 8,
+
 	RF_MAX_TYPE = 0xF, /* u1Byte */
 }RT_RF_TYPE_DEF_E;
 
-
-u32 rtw_ch2freq(u32 ch);
-u32 rtw_freq2ch(u32 freq);
-
+int rtw_ch2freq(int chan);
+int rtw_freq2ch(int freq);
 
 #endif //_RTL8711_RF_H_
 

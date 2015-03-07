@@ -43,7 +43,7 @@
 
 //number of entry
 #if(DM_ODM_SUPPORT_TYPE & (ODM_CE))
-	#define ASSOCIATE_ENTRY_NUM					MACID_NUM_SW_LIMIT  /* Max size of AsocEntry[].*/
+	#define	ASSOCIATE_ENTRY_NUM					MACID_NUM_SW_LIMIT  /* Max size of AsocEntry[].*/
 	#define	ODM_ASSOCIATE_ENTRY_NUM				ASSOCIATE_ENTRY_NUM
 #elif(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
 	#define ASSOCIATE_ENTRY_NUM					NUM_STAT
@@ -52,6 +52,78 @@
 	#define ODM_ASSOCIATE_ENTRY_NUM				(ASSOCIATE_ENTRY_NUM*3)+1// Default port only one // 0 is for STA 1-n is for AP clients.
 #endif
 
+/* -----MGN rate--------------------------------- */
+
+#define	ODM_MGN_1M			0x02
+#define	ODM_MGN_2M			0x04
+#define	ODM_MGN_5_5M			0x0b
+#define	ODM_MGN_11M			0x16
+
+#define	ODM_MGN_6M			0x0c
+#define	ODM_MGN_9M			0x12
+#define	ODM_MGN_12M			0x18
+#define	ODM_MGN_18M			0x24
+#define	ODM_MGN_24M			0x30
+#define	ODM_MGN_36M			0x48
+#define	ODM_MGN_48M			0x60
+#define	ODM_MGN_54M			0x6c
+
+/*TxHT = 1*/
+#define	ODM_MGN_MCS0			0x80
+#define	ODM_MGN_MCS1			0x81
+#define	ODM_MGN_MCS2			0x82
+#define	ODM_MGN_MCS3			0x83
+#define	ODM_MGN_MCS4			0x84
+#define	ODM_MGN_MCS5			0x85
+#define	ODM_MGN_MCS6			0x86
+#define	ODM_MGN_MCS7			0x87
+#define	ODM_MGN_MCS8			0x88
+#define	ODM_MGN_MCS9			0x89
+#define	ODM_MGN_MCS10		0x8a
+#define	ODM_MGN_MCS11		0x8b
+#define	ODM_MGN_MCS12		0x8c
+#define	ODM_MGN_MCS13		0x8d
+#define	ODM_MGN_MCS14		0x8e
+#define	ODM_MGN_MCS15		0x8f
+#define	ODM_MGN_VHT1SS_MCS0	0x90
+#define	ODM_MGN_VHT1SS_MCS1	0x91
+#define	ODM_MGN_VHT1SS_MCS2	0x92
+#define	ODM_MGN_VHT1SS_MCS3	0x93
+#define	ODM_MGN_VHT1SS_MCS4	0x94
+#define	ODM_MGN_VHT1SS_MCS5	0x95
+#define	ODM_MGN_VHT1SS_MCS6	0x96
+#define	ODM_MGN_VHT1SS_MCS7	0x97
+#define	ODM_MGN_VHT1SS_MCS8	0x98
+#define	ODM_MGN_VHT1SS_MCS9	0x99
+#define	ODM_MGN_VHT2SS_MCS0	0x9a
+#define	ODM_MGN_VHT2SS_MCS1	0x9b
+#define	ODM_MGN_VHT2SS_MCS2	0x9c
+#define	ODM_MGN_VHT2SS_MCS3	0x9d
+#define	ODM_MGN_VHT2SS_MCS4	0x9e
+#define	ODM_MGN_VHT2SS_MCS5	0x9f
+#define	ODM_MGN_VHT2SS_MCS6	0xa0
+#define	ODM_MGN_VHT2SS_MCS7	0xa1
+#define	ODM_MGN_VHT2SS_MCS8	0xa2
+#define	ODM_MGN_VHT2SS_MCS9	0xa3
+
+#define	ODM_MGN_MCS0_SG		0xc0
+#define	ODM_MGN_MCS1_SG		0xc1
+#define	ODM_MGN_MCS2_SG		0xc2
+#define	ODM_MGN_MCS3_SG		0xc3
+#define	ODM_MGN_MCS4_SG		0xc4
+#define	ODM_MGN_MCS5_SG		0xc5
+#define	ODM_MGN_MCS6_SG		0xc6
+#define	ODM_MGN_MCS7_SG		0xc7
+#define	ODM_MGN_MCS8_SG		0xc8
+#define	ODM_MGN_MCS9_SG		0xc9
+#define	ODM_MGN_MCS10_SG		0xca
+#define	ODM_MGN_MCS11_SG		0xcb
+#define	ODM_MGN_MCS12_SG		0xcc
+#define	ODM_MGN_MCS13_SG		0xcd
+#define	ODM_MGN_MCS14_SG		0xce
+#define	ODM_MGN_MCS15_SG		0xcf
+
+/* -----DESC rate--------------------------------- */
 
 #define ODM_RATEMCS15_SG		0x1c
 #define ODM_RATEMCS32			0x20
@@ -146,20 +218,20 @@
 #define ODM_RATEVHTSS4MCS9		0x53
 
 #if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
-	#define ODM_NUM_RATE_IDX ODM_RATEVHTSS4MCS9
+	#define ODM_NUM_RATE_IDX (ODM_RATEVHTSS4MCS9+1)
 #else
 	#if (RTL8192E_SUPPORT == 1)
-		#define ODM_NUM_RATE_IDX ODM_RATEMCS15
+		#define ODM_NUM_RATE_IDX (ODM_RATEMCS15+1)
 	#elif (RTL8723B_SUPPORT == 1)|| (RTL8188E_SUPPORT == 1) 
-		#define ODM_NUM_RATE_IDX ODM_RATEMCS7
+		#define ODM_NUM_RATE_IDX (ODM_RATEMCS7+1)
 	#elif (RTL8821A_SUPPORT == 1) || (RTL8881A_SUPPORT == 1) 
-		#define ODM_NUM_RATE_IDX ODM_RATEVHTSS1MCS9
+		#define ODM_NUM_RATE_IDX (ODM_RATEVHTSS1MCS9+1)
 	#elif (RTL8812A_SUPPORT == 1)
-		#define ODM_NUM_RATE_IDX ODM_RATEVHTSS2MCS9
+		#define ODM_NUM_RATE_IDX (ODM_RATEVHTSS2MCS9+1)
 	#elif(RTL8814A_SUPPORT == 1)
-		#define ODM_NUM_RATE_IDX ODM_RATEVHTSS3MCS9
+		#define ODM_NUM_RATE_IDX (ODM_RATEVHTSS3MCS9+1)
 	#else
-		#define ODM_NUM_RATE_IDX ODM_RATEVHTSS4MCS9
+		#define ODM_NUM_RATE_IDX (ODM_RATEVHTSS4MCS9+1)
 	#endif
 #endif
 
@@ -207,6 +279,7 @@ typedef enum tag_ODM_Support_IC_Type_Definition
 
 #define ODM_IC_11N_SERIES		(ODM_RTL8192S|ODM_RTL8192C|ODM_RTL8192D|ODM_RTL8723A|ODM_RTL8188E|ODM_RTL8192E|ODM_RTL8723B|ODM_RTL8703B|ODM_RTL8188F)
 #define ODM_IC_11AC_SERIES		(ODM_RTL8812|ODM_RTL8821|ODM_RTL8814A|ODM_RTL8881A|ODM_RTL8821B|ODM_RTL8822B)
+#define ODM_IC_TXBF_SUPPORT		(ODM_RTL8192E|ODM_RTL8812|ODM_RTL8821|ODM_RTL8814A|ODM_RTL8881A|ODM_RTL8822B)
 
 #if (DM_ODM_SUPPORT_TYPE == ODM_AP)
 
@@ -284,17 +357,24 @@ typedef enum tag_ODM_RF_Path_Bit_Definition
 	ODM_RF_RX_D	=	BIT7,
 }ODM_RF_PATH_E;
 
+typedef enum tag_PHYDM_RF_TX_NUM {
+	ODM_1T	=	1,
+	ODM_2T	=	2,
+	ODM_3T	=	3,
+	ODM_4T	=	4,
+} ODM_RF_TX_NUM_E;
 
-typedef enum tag_ODM_RF_Type_Definition
-{
-	ODM_1T1R 	=	0,
-	ODM_1T2R 	=	1,
-	ODM_2T2R	=	2,
-	ODM_2T3R	=	3,
-	ODM_2T4R	=	4,
-	ODM_3T3R	=	5,
-	ODM_3T4R	=	6,
-	ODM_4T4R	=	7,
+typedef enum tag_ODM_RF_Type_Definition {
+	ODM_1T1R,
+	ODM_1T2R,
+	ODM_2T2R,
+	ODM_2T2R_GREEN,
+	ODM_2T3R,
+	ODM_2T4R,
+	ODM_3T3R,
+	ODM_3T4R,
+	ODM_4T4R,
+	ODM_XTXR
 }ODM_RF_TYPE_E;
 
 
@@ -329,7 +409,7 @@ typedef enum tag_Operation_Mode_Definition
 }ODM_OPERATION_MODE_E;
 
 // ODM_CMNINFO_WM_MODE
-#if (DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_CE))
+#if (DM_ODM_SUPPORT_TYPE & (ODM_CE))
 typedef enum tag_Wireless_Mode_Definition
 {
 	ODM_WM_UNKNOW	= 0x0,
@@ -344,17 +424,18 @@ typedef enum tag_Wireless_Mode_Definition
 #else
 typedef enum tag_Wireless_Mode_Definition
 {
-        ODM_WM_UNKNOWN 	= 0x00,
-        ODM_WM_A 			= BIT0,
-        ODM_WM_B 			= BIT1,
-        ODM_WM_G 			= BIT2,
-        ODM_WM_AUTO 		= BIT3,
-        ODM_WM_N24G 		= BIT4,
-        ODM_WM_N5G 		= BIT5,
-        ODM_WM_AC_5G 		= BIT6,
-        ODM_WM_AC_24G  	= BIT7,
-        ODM_WM_AC_ONLY  	= BIT8,
-        ODM_WM_MAX  		= BIT9
+	ODM_WM_UNKNOWN	= 0x00,/*0x0*/
+	ODM_WM_A			= BIT0, /* 0x1*/
+	ODM_WM_B			= BIT1, /* 0x2*/
+	ODM_WM_G			= BIT2,/* 0x4*/
+	ODM_WM_AUTO		= BIT3,/* 0x8*/
+	ODM_WM_N24G		= BIT4,/* 0x10*/
+	ODM_WM_N5G		= BIT5,/* 0x20*/
+	ODM_WM_AC_5G		= BIT6,/* 0x40*/
+	ODM_WM_AC_24G	= BIT7,/* 0x80*/
+	ODM_WM_AC_ONLY	= BIT8,/* 0x100*/
+	ODM_WM_MAX		= BIT11/* 0x800*/
+
 }ODM_WIRELESS_MODE_E;
 #endif
 

@@ -32,8 +32,8 @@ const char *const GLBtInfoSrc8821a2Ant[]={
 	"BT Info[bt auto report]",
 };
 
-u4Byte	GLCoexVerDate8821a2Ant=20140903;
-u4Byte	GLCoexVer8821a2Ant=0x50;
+u4Byte	GLCoexVerDate8821a2Ant=20150128;
+u4Byte	GLCoexVer8821a2Ant=0x51;
 
 //============================================================
 // local function proto type if needed
@@ -3294,7 +3294,7 @@ halbtc8821a2ant_ActionPanEdr(
 	if( (btRssiState == BTC_RSSI_STATE_HIGH) ||
 		(btRssiState == BTC_RSSI_STATE_STAY_HIGH) )
 	{
-		halbtc8821a2ant_PsTdma(pBtCoexist, NORMAL_EXEC, TRUE, 1);	
+		halbtc8821a2ant_PsTdma(pBtCoexist, NORMAL_EXEC, TRUE, 3);	//1->3 for TENCENT spp profile delay time
 	}
 	else
 	{

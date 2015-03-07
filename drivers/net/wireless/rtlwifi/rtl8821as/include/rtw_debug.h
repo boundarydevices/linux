@@ -346,6 +346,9 @@ void rtw_sink_rtp_seq_dbg( _adapter *adapter,_pkt *pkt);
 struct sta_info;
 void sta_rx_reorder_ctl_dump(void *sel, struct sta_info *sta);
 
+struct dvobj_priv;
+void dump_adapters_status(void *sel, struct dvobj_priv *dvobj);
+
 #ifdef CONFIG_PROC_DEBUG
 ssize_t proc_set_write_reg(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
 int proc_get_read_reg(struct seq_file *m, void *v);
@@ -365,8 +368,8 @@ int proc_get_qos_option(struct seq_file *m, void *v);
 int proc_get_ht_option(struct seq_file *m, void *v);
 int proc_get_rf_info(struct seq_file *m, void *v);
 int proc_get_survey_info(struct seq_file *m, void *v);
+ssize_t proc_set_survey_info(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
 int proc_get_ap_info(struct seq_file *m, void *v);
-int proc_get_adapter_state(struct seq_file *m, void *v);
 ssize_t proc_reset_trx_info(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
 int proc_get_trx_info(struct seq_file *m, void *v);
 int proc_get_rate_ctl(struct seq_file *m, void *v);

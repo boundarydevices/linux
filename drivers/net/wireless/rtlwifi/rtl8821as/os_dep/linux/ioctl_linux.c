@@ -27,11 +27,6 @@
 #include "../../hal/OUTSRC/phydm_precomp.h"
 //#endif
 
-#if defined(CONFIG_RTL8723A)
-#include "rtl8723a_hal.h"
-#include <rtw_bt_mp.h>
-#endif
-
 #if defined(CONFIG_RTL8723B)
 #include <rtw_bt_mp.h>
 #endif
@@ -2453,15 +2448,6 @@ static int rtw_wx_set_wap(struct net_device *dev,
 	}
 #endif
 
-#ifdef CONFIG_DUALMAC_CONCURRENT
-	if (dc_check_fwstate(padapter, _FW_UNDER_SURVEY|_FW_UNDER_LINKING)== _TRUE)
-	{
-		DBG_871X("set bssid, but buddy_intf is under scanning or linking\n");
-		ret = -EINVAL;
-		goto exit;
-	}
-#endif
-
 	rtw_ps_deny(padapter, PS_DENY_JOIN);
 	if(_FAIL == rtw_pwr_wakeup(padapter))
 	{
@@ -2732,14 +2718,6 @@ _func_enter_;
 	}
 #endif
 
-#ifdef CONFIG_DUALMAC_CONCURRENT
-	if (dc_check_fwstate(padapter, _FW_UNDER_SURVEY|_FW_UNDER_LINKING)== _TRUE)
-	{
-		indicate_wx_scan_complete_event(padapter);
-		goto exit;
-	}
-#endif
-
 #ifdef CONFIG_P2P
 	if ( pwdinfo->p2p_state != P2P_STATE_NONE )
 	{
@@ -2926,11 +2904,7 @@ static int rtw_wx_get_scan(struct net_device *dev, struct iw_request_info *a,
 #ifdef CONFIG_P2P
 	if(!rtw_p2p_chk_state(pwdinfo, P2P_STATE_NONE))
 	{
-		//	P2P is enabled
-		if ( padapter->chip_type == RTL8192D )
-			wait_for_surveydone = 300;	//	Because the 8192du supports more channels.
-		else
-			wait_for_surveydone = 200;
+		wait_for_surveydone = 200;
 	}
 	else
 	{
@@ -2960,16 +2934,6 @@ static int rtw_wx_get_scan(struct net_device *dev, struct iw_request_info *a,
 		|_FW_UNDER_LINKING
 		#endif
 	;
-
-#ifdef CONFIG_DUALMAC_CONCURRENT
-	while(dc_check_fwstate(padapter, wait_status)== _TRUE)
-	{
-		rtw_msleep_os(30);
-		cnt++;
-		if(cnt > wait_for_surveydone )
-			break;
-	}
-#endif // CONFIG_DUALMAC_CONCURRENT
 
  	while(check_fwstate(pmlmepriv, wait_status) == _TRUE)
 	{	
@@ -3053,7 +3017,10 @@ static int rtw_wx_set_essid(struct net_device *dev,
 	#ifdef DBG_IOCTL
 	DBG_871X("DBG_IOCTL %s:%d\n",__FUNCTION__, __LINE__);
 	#endif
-	
+	#ifdef CONFIG_WEXT_DONT_JOIN_BYSSID
+	DBG_871X("%s: CONFIG_WEXT_DONT_JOIN_BYSSID be defined!! only allow bssid joining\n", __func__);
+	return -EPERM;
+	#endif
 /*
 #ifdef CONFIG_CONCURRENT_MODE
 	if(padapter->iface_type > PRIMARY_IFACE)
@@ -3071,15 +3038,6 @@ static int rtw_wx_set_essid(struct net_device *dev,
 		
 		ret = -EINVAL;
 		
-		goto exit;
-	}
-#endif
-
-#ifdef CONFIG_DUALMAC_CONCURRENT
-	if (dc_check_fwstate(padapter, _FW_UNDER_SURVEY|_FW_UNDER_LINKING)== _TRUE)
-	{
-		DBG_871X("set bssid, but buddy_intf is under scanning or linking\n");
-		ret = -EINVAL;
 		goto exit;
 	}
 #endif
@@ -7591,13 +7549,7 @@ static int rtw_dbg_port(struct net_device *dev,
 					}					
 					break;
 				case 0x06:
-					{
-						u32	ODMFlag = 0;
-						rtw_hal_get_hwreg(padapter, HW_VAR_DM_FLAG, (u8*)(&ODMFlag));
-						DBG_871X("(B)DMFlag=0x%x, arg=0x%x\n", ODMFlag, arg);
-						ODMFlag = (u32)(0x0f&arg);
-						DBG_871X("(A)DMFlag=0x%x\n", ODMFlag);
-						rtw_hal_set_hwreg(padapter, HW_VAR_DM_FLAG, (u8 *)(&ODMFlag));
+					{						
 					}
 					break;
 				case 0x07:
@@ -8049,31 +8001,9 @@ static int rtw_dbg_port(struct net_device *dev,
 					}
 					break;		
 
-				case 0xee://turn on/off dynamic funcs
+				case 0xee:
 					{
-						u32 odm_flag = 0;
-
-						if(0xf==extra_arg){
-							rtw_hal_get_def_var(padapter, HAL_DEF_DBG_DM_FUNC,&odm_flag);							
-							DBG_871X(" === DMFlag(0x%08x) === \n",odm_flag);
-							DBG_871X("extra_arg = 0  - disable all dynamic func \n");
-							DBG_871X("extra_arg = 1  - disable DIG- BIT(0)\n");
-							DBG_871X("extra_arg = 2  - disable High power - BIT(1)\n");
-							DBG_871X("extra_arg = 3  - disable tx power tracking - BIT(2)\n");
-							DBG_871X("extra_arg = 4  - disable BT coexistence - BIT(3)\n");
-							DBG_871X("extra_arg = 5  - disable antenna diversity - BIT(4)\n");
-							DBG_871X("extra_arg = 6  - enable all dynamic func \n");							
-						}
-						else{
-							/*	extra_arg = 0  - disable all dynamic func
-								extra_arg = 1  - disable DIG
-								extra_arg = 2  - disable tx power tracking
-								extra_arg = 3  - turn on all dynamic func
-							*/			
-							rtw_hal_set_def_var(padapter, HAL_DEF_DBG_DM_FUNC, &(extra_arg));
-							rtw_hal_get_def_var(padapter, HAL_DEF_DBG_DM_FUNC,&odm_flag);							
-							DBG_871X(" === DMFlag(0x%08x) === \n",odm_flag);
-						}
+						DBG_871X(" === please control /proc  to trun on/off PHYDM func === \n");
 					}
 					break;
 
@@ -9677,8 +9607,7 @@ static int rtw_ap_wowlan_ctrl(struct net_device *dev,
 		rtw_hal_disable_interrupt(padapter); // It need wait for leaving 32K.
 
 		// 2.1 clean interupt
-		if (padapter->HalFunc.clear_interrupt)
-			padapter->HalFunc.clear_interrupt(padapter);
+		rtw_hal_clear_interrupt(padapter);
 
 		poidparam.subcode = WOWLAN_AP_ENABLE;
 
@@ -9691,8 +9620,7 @@ static int rtw_ap_wowlan_ctrl(struct net_device *dev,
 
 		rtw_hal_disable_interrupt(padapter);
 
-		if (padapter->HalFunc.clear_interrupt)
-			padapter->HalFunc.clear_interrupt(padapter);
+		rtw_hal_clear_interrupt(padapter);
 
 		poidparam.subcode = WOWLAN_AP_ENABLE;
 
@@ -9761,12 +9689,12 @@ static int rtw_mp_efuse_get(struct net_device *dev,
 			union iwreq_data *wdata, char *extra)
 {
 	PADAPTER padapter = rtw_netdev_priv(dev);
-	EEPROM_EFUSE_PRIV *pEEPROM = GET_EEPROM_EFUSE_PRIV(padapter);
-	PHAL_DATA_TYPE pHalData = GET_HAL_DATA(padapter);
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter);
+	
 	PEFUSE_HAL pEfuseHal;
 	struct iw_point *wrqu;
 	
-	u8	*PROMContent = pEEPROM->efuse_eeprom_data;
+	u8	*PROMContent = pHalData->efuse_eeprom_data;
 	u8 ips_mode = IPS_NUM; // init invalid value
 	u8 lps_mode = PS_MODE_NUM; // init invalid value
 	struct pwrctrl_priv *pwrctrlpriv ;
@@ -9829,7 +9757,7 @@ static int rtw_mp_efuse_get(struct net_device *dev,
 	#endif
 	
 	if(strcmp(tmp[0], "status") == 0){
-		sprintf(extra, "Load File efuse=%s,Load File MAC=%s",(pEEPROM->bloadfile_fail_flag? "FAIL" : "OK"),(pEEPROM->bloadmac_fail_flag? "FAIL" : "OK"));
+		sprintf(extra, "Load File efuse=%s,Load File MAC=%s",(pHalData->bloadfile_fail_flag? "FAIL" : "OK"),(pHalData->bloadmac_fail_flag? "FAIL" : "OK"));
 
 		  goto exit;
 	}
@@ -9860,7 +9788,7 @@ static int rtw_mp_efuse_get(struct net_device *dev,
 	else if (strcmp(tmp[0], "realmap") == 0)
 	{
 		mapLen = EFUSE_MAP_SIZE;
-		if (rtw_efuse_map_read(padapter, EFUSE_WIFI , mapLen, pEfuseHal->fakeEfuseInitMap) == _FAIL)
+		if (rtw_efuse_mask_map_read(padapter, EFUSE_WIFI , mapLen, pEfuseHal->fakeEfuseInitMap) == _FAIL)
 		{
 			DBG_871X("%s: read realmap Fail!!\n", __FUNCTION__);
 			err = -EFAULT;
@@ -9918,9 +9846,9 @@ static int rtw_mp_efuse_get(struct net_device *dev,
 			goto exit;
 		}
 
-		if (rtw_efuse_map_read(padapter, addr, cnts, data) == _FAIL)
+		if (rtw_efuse_mask_map_read(padapter, addr, cnts, data) == _FAIL)
 		{
-			DBG_871X("%s: rtw_efuse_map_read error!\n", __FUNCTION__);
+			DBG_871X("%s: rtw_efuse_mask_map_read error!\n", __func__);
 			err = -EFAULT;
 			goto exit;
 		}
@@ -10001,34 +9929,7 @@ static int rtw_mp_efuse_get(struct net_device *dev,
 		//		DBG_871X("}\n");
 	}
 	else if (strcmp(tmp[0], "mac") == 0)
-	{
-		#ifdef CONFIG_RTL8192C
-		addr = EEPROM_MAC_ADDR_92C;
-		#endif // CONFIG_RTL8192C
-		#ifdef CONFIG_RTL8192D
-			#ifdef CONFIG_USB_HCI
-			if (pHalData->interfaceIndex == 0)
-				addr = EEPROM_MAC_ADDR_MAC0_92DU;
-			else
-				addr = EEPROM_MAC_ADDR_MAC1_92DU;
-			#else
-			if (pHalData->interfaceIndex == 0)
-				addr = EEPROM_MAC_ADDR_MAC0_92DE;
-			else
-				addr = EEPROM_MAC_ADDR_MAC1_92DE;
-			#endif
-		#endif // CONFIG_RTL8192D
-		#ifdef CONFIG_RTL8723A
-			#ifdef CONFIG_SDIO_HCI
-			addr = EEPROM_MAC_ADDR_8723AS;
-			#endif
-			#ifdef CONFIG_GSPI_HCI
-			addr = EEPROM_MAC_ADDR_8723AS;
-			#endif
-			#ifdef CONFIG_USB_HCI
-			addr = EEPROM_MAC_ADDR_8723AU;
-			#endif
-		#endif // CONFIG_RTL8723A
+	{		
 		#ifdef CONFIG_RTL8188E
 			#ifdef CONFIG_USB_HCI
 			addr = EEPROM_MAC_ADDR_88EU;
@@ -10072,9 +9973,9 @@ static int rtw_mp_efuse_get(struct net_device *dev,
 			goto exit;
 		}
 
-		if (rtw_efuse_map_read(padapter, addr, cnts, data) == _FAIL)
+		if (rtw_efuse_mask_map_read(padapter, addr, cnts, data) == _FAIL)
 		{
-			DBG_871X("%s: rtw_efuse_map_read error!\n", __FUNCTION__);
+			DBG_871X("%s: rtw_efuse_mask_map_read error!\n", __func__);
 			err = -EFAULT;
 			goto exit;
 		}
@@ -10095,21 +9996,6 @@ static int rtw_mp_efuse_get(struct net_device *dev,
 	}
 	else if (strcmp(tmp[0], "vidpid") == 0)
 	{
-		#ifdef CONFIG_RTL8192C
-		addr = EEPROM_VID_92C;
-		#endif // CONFIG_RTL8192C
-		#ifdef CONFIG_RTL8192D
-			#ifdef CONFIG_USB_HCI
-			addr = EEPROM_VID_92DU;
-			#else
-			addr = EEPROM_VID_92DE;
-			#endif
-		#endif // CONFIG_RTL8192D
-		#ifdef CONFIG_RTL8723A
-			#ifdef CONFIG_USB_HCI
-			addr = EEPROM_VID_8723AU;
-			#endif
-		#endif // CONFIG_RTL8723A
 		#ifdef CONFIG_RTL8188E
 			#ifdef CONFIG_USB_HCI
 			addr = EEPROM_VID_88EU;
@@ -10139,7 +10025,7 @@ static int rtw_mp_efuse_get(struct net_device *dev,
 			err = -EFAULT;
 			goto exit;
 		}
-		if (rtw_efuse_map_read(padapter, addr, cnts, data) == _FAIL)
+		if (rtw_efuse_mask_map_read(padapter, addr, cnts, data) == _FAIL)
 		{
 			DBG_871X("%s: rtw_efuse_access error!!\n", __FUNCTION__);
 			err = -EFAULT;
@@ -10580,8 +10466,8 @@ static int rtw_mp_efuse_set(struct net_device *dev,
 			goto exit;
 		}
 		*extra = 0;
-		DBG_871X("%s: after rtw_efuse_map_write to _rtw_memcmp \n", __FUNCTION__);
-		if ( (rtw_efuse_map_read(padapter, addr, cnts, ShadowMapWiFi) == _SUCCESS ) )
+		DBG_871X("%s: after rtw_efuse_map_write to _rtw_memcmp\n", __func__);
+		if (rtw_efuse_mask_map_read(padapter, addr, cnts, ShadowMapWiFi) == _SUCCESS)
 		{
 			if (_rtw_memcmp((void*)ShadowMapWiFi ,(void*)setdata,cnts))
 			{ 
@@ -10648,33 +10534,7 @@ static int rtw_mp_efuse_set(struct net_device *dev,
 		}
 
 		//mac,00e04c871200
-		#ifdef CONFIG_RTL8192C
-		addr = EEPROM_MAC_ADDR_92C;
-		#endif
-		#ifdef CONFIG_RTL8192D
-			#ifdef CONFIG_USB_HCI
-			if (pHalData->interfaceIndex == 0)
-				addr = EEPROM_MAC_ADDR_MAC0_92DU;
-			else
-				addr = EEPROM_MAC_ADDR_MAC1_92DU;
-			#else
-			if (pHalData->interfaceIndex == 0)
-				addr = EEPROM_MAC_ADDR_MAC0_92DE;
-			else
-				addr = EEPROM_MAC_ADDR_MAC1_92DE;
-			#endif
-		#endif
-		#ifdef CONFIG_RTL8723A
-		#ifdef CONFIG_SDIO_HCI
-		addr = EEPROM_MAC_ADDR_8723AS;
-		#endif
-		#ifdef CONFIG_GSPI_HCI
-		addr = EEPROM_MAC_ADDR_8723AS;
-		#endif
-		#ifdef CONFIG_USB_HCI
-		addr = EEPROM_MAC_ADDR_8723AU;
-		#endif
-		#endif // CONFIG_RTL8723A
+		
 		#ifdef CONFIG_RTL8188E
 			#ifdef CONFIG_USB_HCI
 			addr = EEPROM_MAC_ADDR_88EU;
@@ -10779,22 +10639,7 @@ static int rtw_mp_efuse_set(struct net_device *dev,
 			goto exit;
 		}
 
-		// pidvid,da0b7881
-		#ifdef CONFIG_RTL8192C
-		addr = EEPROM_VID_92C;
-		#endif // CONFIG_RTL8192C
-		#ifdef CONFIG_RTL8192D
-			#ifdef CONFIG_USB_HCI
-			addr = EEPROM_VID_92DU;
-			#else
-			addr = EEPROM_VID_92DE;
-			#endif
-		#endif // CONFIG_RTL8192D
-		#ifdef CONFIG_RTL8723A
-			#ifdef CONFIG_USB_HCI
-			addr = EEPROM_VID_8723AU;
-			#endif
-		#endif // CONFIG_RTL8723A
+		// pidvid,da0b7881		
 		#ifdef CONFIG_RTL8188E
 			#ifdef CONFIG_USB_HCI
 			addr = EEPROM_VID_88EU;
@@ -10856,10 +10701,10 @@ static int rtw_mp_efuse_set(struct net_device *dev,
 	}
         else if (strcmp(tmp[0], "wldumpfake") == 0)
 	{
-		if (rtw_efuse_map_read(padapter, 0, EFUSE_MAP_SIZE,  pEfuseHal->fakeEfuseModifiedMap) == _SUCCESS) {
-			DBG_871X("%s: WiFi hw efuse dump to Fake map success \n", __FUNCTION__); 
+		if (rtw_efuse_mask_map_read(padapter, 0, EFUSE_MAP_SIZE, pEfuseHal->fakeEfuseModifiedMap) == _SUCCESS) {
+			DBG_871X("%s: WiFi hw efuse dump to Fake map success\n", __func__);
 		} else {
-			DBG_871X("%s: WiFi hw efuse dump to Fake map Fail \n", __FUNCTION__);
+			DBG_871X("%s: WiFi hw efuse dump to Fake map Fail\n", __func__);
 			err = -EFAULT;
 		}
 	}
@@ -11104,8 +10949,8 @@ static int rtw_mp_efuse_set(struct net_device *dev,
 			goto exit;
 		}
 		*extra = 0;
-		DBG_871X("%s: after rtw_BT_efuse_map_write to _rtw_memcmp \n", __FUNCTION__);
-		if ( (rtw_efuse_map_read(padapter, 0x00, EFUSE_MAP_SIZE, ShadowMapWiFi) == _SUCCESS ) )
+		DBG_871X("%s: after rtw_BT_efuse_map_write to _rtw_memcmp\n", __func__);
+		if (rtw_efuse_mask_map_read(padapter, 0x00, EFUSE_MAP_SIZE, ShadowMapWiFi) == _SUCCESS)
 		{
 			if (_rtw_memcmp((void*)ShadowMapWiFi ,(void*)setdata,cnts))
 			{
@@ -11155,6 +11000,8 @@ static int rtw_mp_efuse_set(struct net_device *dev,
 		{
 			pEfuseHal->fakeEfuseModifiedMap[addr+jj] = key_2char2num(tmp[2][kk], tmp[2][kk+1]);
 		}
+		_rtw_memset(extra, '\0', strlen(extra));
+		sprintf(extra, "wlwfake OK\n");
 	}
 
 exit:
@@ -11225,7 +11072,8 @@ static int rtw_mp_write_reg(struct net_device *dev,
 	if (addr > 0x3FFF) return -EINVAL;
 
 	pch = pnext + 1;
-	if ((pch - extra) >= wrqu->length) return -EINVAL;
+	if ((pch - input) >= wrqu->length)
+		return -EINVAL;
 	data = simple_strtoul(pch, &ptmp, 16);
 
 	ret = 0;
@@ -11525,18 +11373,13 @@ static int rtw_mp_start(struct net_device *dev,
 	u8 val8;
 	PADAPTER padapter = rtw_netdev_priv(dev);
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter);
-	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
 	struct hal_ops *pHalFunc = &padapter->HalFunc;
 
 	rtw_pm_set_ips(padapter,IPS_NONE);
 	LeaveAllPowerSaveMode(padapter);
 
 	if(padapter->registrypriv.mp_mode ==0)
-	{
-
-#ifdef CONFIG_BT_COEXIST
-		pdmpriv->DMFlag &= ~DYNAMIC_FUNC_BT;
-#endif		
+	{		
 		pHalFunc->hal_deinit(padapter);
 		padapter->registrypriv.mp_mode =1;
 		pHalFunc->hal_init(padapter);
@@ -12060,8 +11903,7 @@ static int rtw_mp_disable_bt_coexist(struct net_device *dev,
 			union iwreq_data *wrqu, char *extra)
 {
 	PADAPTER padapter = (PADAPTER)rtw_netdev_priv(dev);
-	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter);
-	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter);	
 	struct hal_ops *pHalFunc = &padapter->HalFunc;
 	
 	u8 input[wrqu->data.length];
@@ -12079,8 +11921,7 @@ static int rtw_mp_disable_bt_coexist(struct net_device *dev,
 		DBG_871X("Set OID_RT_SET_DISABLE_BT_COEXIST: disable BT_COEXIST\n");
 #ifdef CONFIG_BT_COEXIST
 		rtw_btcoex_HaltNotify(padapter);
-		rtw_btcoex_SetManualControl(padapter, _TRUE);
-		pdmpriv->DMFlag &= ~DYNAMIC_FUNC_BT;
+		rtw_btcoex_SetManualControl(padapter, _TRUE);		
 		// Force to switch Antenna to WiFi
 		rtw_write16(padapter, 0x870, 0x300);
 		rtw_write16(padapter, 0x860, 0x110); 
@@ -12090,8 +11931,7 @@ static int rtw_mp_disable_bt_coexist(struct net_device *dev,
 	{
 		RT_TRACE(_module_mp_, _drv_info_,
 			("Set OID_RT_SET_DISABLE_BT_COEXIST: enable BT_COEXIST\n"));
-#ifdef CONFIG_BT_COEXIST		
-		pdmpriv->DMFlag |= DYNAMIC_FUNC_BT;
+#ifdef CONFIG_BT_COEXIST			
 		rtw_btcoex_SetManualControl(padapter, _FALSE);
 #endif
 	}
@@ -12284,11 +12124,9 @@ static int rtw_mp_pwrtrk(struct net_device *dev,
 		if (strncmp(input, "stop", 4) == 0)
 		{	
 			enable = 0;
-			sprintf(extra, "mp tx power tracking stop");
-			pHalData->TxPowerTrackControl = _FALSE;
+			sprintf(extra, "mp tx power tracking stop");		
 		}
-		else if (sscanf(input, "ther=%d", &thermal)) {
-			pHalData->TxPowerTrackControl = _TRUE;
+		else if (sscanf(input, "ther=%d", &thermal)) {		
 			ret = Hal_SetThermalMeter(padapter, (u8)thermal);
 			if (ret == _FAIL) return -EPERM;
 				sprintf(extra, "mp tx power tracking start,target value=%d ok ",thermal);
@@ -12327,17 +12165,8 @@ static int rtw_mp_thermal(struct net_device *dev,
 			struct iw_point *wrqu, char *extra)
 {
 	u8 val;
-	int bwrite=1;
+	int bwrite=1;	
 	
-	#ifdef CONFIG_RTL8192C
-			u16 addr=EEPROM_THERMAL_METER_92C;
-	#endif
-	#ifdef CONFIG_RTL8192D
-			u16 addr=EEPROM_THERMAL_METER_92D;
-	#endif
-	#ifdef CONFIG_RTL8723A
-			u16 addr=EEPROM_THERMAL_METER_8723A;
-	#endif
 	#ifdef CONFIG_RTL8188E
 			u16 addr=EEPROM_THERMAL_METER_88E;
 	#endif
@@ -12503,7 +12332,7 @@ static int rtw_mp_QueryDrv(struct net_device *dev,
 	char	input[wrqu->data.length];
 	int	qAutoLoad = 1;
 
-	EEPROM_EFUSE_PRIV *pEEPROM = GET_EEPROM_EFUSE_PRIV(padapter);
+	PHAL_DATA_TYPE pHalData = GET_HAL_DATA(padapter);
 	
 	if (copy_from_user(input, wrqu->data.pointer, wrqu->data.length))
 			return -EFAULT;
@@ -12515,7 +12344,7 @@ static int rtw_mp_QueryDrv(struct net_device *dev,
 	{
 		DBG_871X("%s:qAutoLoad\n", __func__);
 		
-		if(pEEPROM->bautoload_fail_flag)
+		if(pHalData->bautoload_fail_flag)
 			sprintf(extra, "fail");
 		else
 	        sprintf(extra, "ok");      
@@ -12711,7 +12540,7 @@ static int rtw_efuse_file_map(struct net_device *dev,
 }
 
 
-#if (defined(CONFIG_RTL8723A) || defined(CONFIG_RTL8723B))
+#if defined(CONFIG_RTL8723B)
 /* update Tx AGC offset */
 static int rtw_mp_SetBT(struct net_device *dev,
 			struct iw_request_info *info,
@@ -12853,11 +12682,9 @@ static int rtw_mp_SetBT(struct net_device *dev,
 		DBG_871X("%s: pull up BT reset pin when bt start mp test\n", __FUNCTION__);
 		rtw_wifi_gpio_wlan_ctrl(WLAN_BT_PWDN_ON);
 #endif
-		DBG_871X(" rtl8723a_FirmwareDownload!\n");
+		DBG_871X(" FirmwareDownload!\n");
 
-#ifdef CONFIG_RTL8723A
-		status = rtl8723a_FirmwareDownload(padapter);
-#elif defined(CONFIG_RTL8723B)
+#if defined(CONFIG_RTL8723B)
 		status = rtl8723b_FirmwareDownload(padapter, _FALSE);
 #endif
 		DBG_871X("Wait for FirmwareDownloadBT fw boot!\n");
@@ -13060,11 +12887,7 @@ todo:
 			if ((pMptCtx->mptOutBuf[i]==0x00) && (pMptCtx->mptOutBuf[i+1]==0x00))
 				goto exit;
 
-#ifdef CONFIG_RTL8723A
-			sprintf(extra, "%s %d ", extra, (pMptCtx->mptOutBuf[i]& 0x3f));
-#else
 			sprintf(extra, "%s %d ", extra, (pMptCtx->mptOutBuf[i]& 0x1f));
-#endif
 		}
 	}
 	else
@@ -13082,7 +12905,7 @@ exit:
 	return status;
 }
 
-#endif //#ifdef CONFIG_RTL8723A
+#endif //#ifdef CONFIG_RTL8723B
 
 static int rtw_mp_set(struct net_device *dev,
 			struct iw_request_info *info,
@@ -13312,14 +13135,14 @@ static int rtw_mp_get(struct net_device *dev,
 			rtw_mp_mon(dev,info,wdata,extra);
  			break;
  	case  EFUSE_MASK:
-			DBG_871X("mp_get MP_MON \n");
+			DBG_871X("mp_get EFUSE_MASK\n");
 			rtw_efuse_mask_file(dev,info,wdata,extra);
  			break;
  	 case  EFUSE_FILE:
-			DBG_871X("mp_get MP_MON \n");
+			DBG_871X("mp_get EFUSE_FILE\n");
 			rtw_efuse_file_map(dev,info,wdata,extra);
  			break;		
-#if defined(CONFIG_RTL8723A) || defined(CONFIG_RTL8723B)
+#if defined(CONFIG_RTL8723B)
 	case MP_SetBT:		
 			DBG_871X("set MP_SetBT \n");
 			rtw_mp_SetBT(dev,info,wdata,extra);
@@ -14231,12 +14054,6 @@ static int rtw_widi_set_probe_request(struct net_device *dev,
 
 #ifdef CONFIG_MAC_LOOPBACK_DRIVER
 
-#ifdef CONFIG_RTL8723A
-extern void rtl8723a_cal_txdesc_chksum(struct tx_desc *ptxdesc);
-#define cal_txdesc_chksum rtl8723a_cal_txdesc_chksum
-extern void rtl8723a_fill_default_txdesc(struct xmit_frame *pxmitframe, u8 *pbuf);
-#define fill_default_txdesc rtl8723a_fill_default_txdesc
-#endif
 #if defined(CONFIG_RTL8188E)
 #include <rtl8188e_hal.h>
 extern void rtl8188e_cal_txdesc_chksum(struct tx_desc *ptxdesc);
@@ -14740,11 +14557,9 @@ static void loopbackTest(PADAPTER padapter, u32 cnt, u32 size, u8* pmsg)
 		return;
 	}
 
-	// disable dynamic algorithm
-	{
-	u32 DMFlag = DYNAMIC_FUNC_DISABLE;
-	rtw_hal_get_hwreg(padapter, HW_VAR_DM_FLAG, (u8*)&DMFlag);
-	}
+	// disable dynamic algorithm	
+	Save_DM_Func_Flag(padapter);
+	Switch_DM_Func(padapter, DYNAMIC_FUNC_DISABLE, _FALSE);
 
 	// create pseudo ad-hoc connection
 	err = initpseudoadhoc(padapter);
@@ -14852,34 +14667,6 @@ static int rtw_test(
 	}
 #endif
 
-#if 0
-//#ifdef CONFIG_RTL8723A
-	if (strcmp(pch, "poweron") == 0)
-	{
-		s32 ret;
-
-		ret = _InitPowerOn(padapter);
-		DBG_871X("%s: power on %s\n", __func__, (_FAIL==ret) ? "FAIL!":"OK.");
-		sprintf(extra, "Power ON %s", (_FAIL==ret) ? "FAIL!":"OK.");
-		wrqu->data.length = strlen(extra) + 1;
-
-		rtw_mfree(pbuf, len);
-		return 0;
-	}
-
-	if (strcmp(pch, "dlfw") == 0)
-	{
-		s32 ret;
-
-		ret = rtl8723a_FirmwareDownload(padapter);
-		DBG_871X("%s: download FW %s\n", __func__, (_FAIL==ret) ? "FAIL!":"OK.");
-		sprintf(extra, "download FW %s", (_FAIL==ret) ? "FAIL!":"OK.");
-		wrqu->data.length = strlen(extra) + 1;
-
-		rtw_mfree(pbuf, len);
-		return 0;
-	}
-#endif
 
 #ifdef CONFIG_BT_COEXIST
 	if (strcmp(pch, "bton") == 0)
@@ -15148,7 +14935,7 @@ static const struct iw_priv_args rtw_private_args[] = {
 		{ MP_MON, IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "mp_mon" },
 		{ EFUSE_MASK, IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "efuse_mask" },
 		{ EFUSE_FILE, IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "efuse_file" },
-#if defined(CONFIG_RTL8723A) || defined(CONFIG_RTL8723B)
+#if defined(CONFIG_RTL8723B)
 		{ MP_SetBT, IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "mp_setbt" },
         { MP_DISABLE_BT_COEXIST, IW_PRIV_TYPE_CHAR | 1024, 0, "mp_disa_btcoex"},
 #endif

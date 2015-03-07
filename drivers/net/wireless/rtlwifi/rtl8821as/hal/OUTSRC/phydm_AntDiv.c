@@ -877,7 +877,7 @@ odm_TRX_HWAntDiv_Init_88E(
 		ODM_SetBBReg(pDM_Odm, ODM_REG_RX_DEFUALT_A_11N , BIT13|BIT12|BIT11, 2);	//Reg858[13:11]=3'b010
 	}
 	else //MPchip
-		ODM_SetBBReg(pDM_Odm, ODM_REG_ANT_MAPPING1_11N , bMaskDWord, 0x0001);	//Reg914=3'b010, Reg915=3'b001
+		ODM_SetBBReg(pDM_Odm, ODM_REG_ANT_MAPPING1_11N , bMaskDWord, 0x0201);	/*Reg914=3'b010, Reg915=3'b001*/
 }
 
 
@@ -3172,6 +3172,8 @@ ODM_AntDivInit(
 	odm_AntDiv_on_off(pDM_Odm, ANTDIV_OFF);
 
 	pDM_Odm->AntType = ODM_AUTO_ANT;
+
+	pDM_FatTable->RxIdleAnt = ANTDIV_INIT;
 	ODM_UpdateRxIdleAnt(pDM_Odm, MAIN_ANT);
 		
 	//2 [---Set TX Antenna---]
@@ -3355,9 +3357,9 @@ ODM_AntDiv(
 	if(pAdapter->MgntInfo.AntennaTest)
 		return;
 	
-	{
+        {
 	#if (BEAMFORMING_SUPPORT == 1)			
-		BEAMFORMING_CAP		BeamformCap = (pDM_Odm->BeamformingInfo.BeamformCap);
+	        BEAMFORMING_CAP		BeamformCap = (pDM_Odm->BeamformingInfo.BeamformCap);
 
 		if( BeamformCap & BEAMFORMEE_CAP ) //  BFmee On  &&   Div On ->  Div Off
 		{	
@@ -3373,7 +3375,7 @@ ODM_AntDiv(
 		{
 			if((pDM_FatTable->fix_ant_bfee == 1)  &&  pDM_Odm->bLinked) 
 			{
-				ODM_RT_TRACE(pDM_Odm, ODM_COMP_ANT_DIV,ODM_DBG_LOUD,("[ AntDiv : ON ]   BFmee ==0 \n"));
+				ODM_RT_TRACE(pDM_Odm, ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("[ AntDiv : ON ]   BFmee ==0\n"));
 				if((pDM_Odm->AntDivType!=S0S1_SW_ANTDIV) )
 					odm_AntDiv_on_off(pDM_Odm, ANTDIV_ON);
 
@@ -3699,43 +3701,33 @@ ODM_SetTxAntByTxInfo(
 	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
 	pFAT_T	pDM_FatTable = &pDM_Odm->DM_FatTable;
 
-	if(!(pDM_Odm->SupportAbility & ODM_BB_ANT_DIV))
+	if (!(pDM_Odm->SupportAbility & ODM_BB_ANT_DIV))
 		return;
 
-	if(pDM_Odm->AntDivType==CGCS_RX_HW_ANTDIV)
+	if (pDM_Odm->AntDivType == CGCS_RX_HW_ANTDIV)
 		return;
 
 
-	if(pDM_Odm->SupportICType == ODM_RTL8723B)
-	{
+	if (pDM_Odm->SupportICType == ODM_RTL8723B) {
 #if (RTL8723B_SUPPORT == 1)
 		SET_TX_DESC_ANTSEL_A_8723B(pDesc, pDM_FatTable->antsel_a[macId]);
-		//ODM_RT_TRACE(pDM_Odm,ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("[8723B] SetTxAntByTxInfo_WIN: MacID=%d, antsel_tr_mux=3'b%d%d%d\n", 
-			//macId, pDM_FatTable->antsel_c[macId], pDM_FatTable->antsel_b[macId], pDM_FatTable->antsel_a[macId]));
+		/*ODM_RT_TRACE(pDM_Odm,ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("[8723B] SetTxAntByTxInfo_WIN: MacID=%d, antsel_tr_mux=3'b%d%d%d\n", 
+			macId, pDM_FatTable->antsel_c[macId], pDM_FatTable->antsel_b[macId], pDM_FatTable->antsel_a[macId]));*/
 #endif
-	}
-	else if(pDM_Odm->SupportICType == ODM_RTL8821)
-	{
+	} else if (pDM_Odm->SupportICType == ODM_RTL8821) {
 #if (RTL8821A_SUPPORT == 1)
 		SET_TX_DESC_ANTSEL_A_8812(pDesc, pDM_FatTable->antsel_a[macId]);
-		//ODM_RT_TRACE(pDM_Odm,ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("[8821A] SetTxAntByTxInfo_WIN: MacID=%d, antsel_tr_mux=3'b%d%d%d\n", 
-			//macId, pDM_FatTable->antsel_c[macId], pDM_FatTable->antsel_b[macId], pDM_FatTable->antsel_a[macId]));
+		/*ODM_RT_TRACE(pDM_Odm,ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("[8821A] SetTxAntByTxInfo_WIN: MacID=%d, antsel_tr_mux=3'b%d%d%d\n", 
+			macId, pDM_FatTable->antsel_c[macId], pDM_FatTable->antsel_b[macId], pDM_FatTable->antsel_a[macId]));*/
 #endif
-	}
-	else if(pDM_Odm->SupportICType == ODM_RTL8188E)
-	{
+	} else if (pDM_Odm->SupportICType == ODM_RTL8188E) {
 #if (RTL8188E_SUPPORT == 1)
 		SET_TX_DESC_ANTSEL_A_88E(pDesc, pDM_FatTable->antsel_a[macId]);
 		SET_TX_DESC_ANTSEL_B_88E(pDesc, pDM_FatTable->antsel_b[macId]);
 		SET_TX_DESC_ANTSEL_C_88E(pDesc, pDM_FatTable->antsel_c[macId]);
-		//ODM_RT_TRACE(pDM_Odm,ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("[8188E] SetTxAntByTxInfo_WIN: MacID=%d, antsel_tr_mux=3'b%d%d%d\n", 
-			//macId, pDM_FatTable->antsel_c[macId], pDM_FatTable->antsel_b[macId], pDM_FatTable->antsel_a[macId]));
+		/*ODM_RT_TRACE(pDM_Odm,ODM_COMP_ANT_DIV, ODM_DBG_LOUD, ("[8188E] SetTxAntByTxInfo_WIN: MacID=%d, antsel_tr_mux=3'b%d%d%d\n", 
+			macId, pDM_FatTable->antsel_c[macId], pDM_FatTable->antsel_b[macId], pDM_FatTable->antsel_a[macId]));*/
 #endif
-	}
-	else if(pDM_Odm->SupportICType == ODM_RTL8192E)
-	{
-
-	
 	}
 }
 #elif(DM_ODM_SUPPORT_TYPE == ODM_AP)
@@ -3743,46 +3735,39 @@ ODM_SetTxAntByTxInfo(
 VOID
 ODM_SetTxAntByTxInfo(
 	struct	rtl8192cd_priv		*priv,
-	struct 	tx_desc			*pdesc,
+	struct	tx_desc	*pdesc,
 	unsigned short			aid	
 )
 {
 	pFAT_T		pDM_FatTable = &priv->pshare->_dmODM.DM_FatTable;
-	u4Byte		SupportICType=priv->pshare->_dmODM.SupportICType;
+	u4Byte		SupportICType = priv->pshare->_dmODM.SupportICType;
 
-	if(SupportICType == ODM_RTL8881A)
-	{
-		//panic_printk("[%s] [%d]   ******ODM_SetTxAntByTxInfo_8881E******   \n",__FUNCTION__,__LINE__);	
-		pdesc->Dword6 &= set_desc(~ (BIT(18)|BIT(17)|BIT(16)));	
+	if (SupportICType == ODM_RTL8881A) {
+		/*panic_printk("[%s] [%d]   ******ODM_SetTxAntByTxInfo_8881E******\n",__FUNCTION__,__LINE__);	*/
+		pdesc->Dword6 &= set_desc(~(BIT(18)|BIT(17)|BIT(16)));	
 		pdesc->Dword6 |= set_desc(pDM_FatTable->antsel_a[aid]<<16);
-	}
-	else if(SupportICType == ODM_RTL8192E)
-	{
-		//panic_printk("[%s] [%d]   ******ODM_SetTxAntByTxInfo_8192E******   \n",__FUNCTION__,__LINE__);	
-		pdesc->Dword6 &= set_desc(~ (BIT(18)|BIT(17)|BIT(16)));	
+	} else if (SupportICType == ODM_RTL8192E) {
+		/*panic_printk("[%s] [%d]   ******ODM_SetTxAntByTxInfo_8192E******\n",__FUNCTION__,__LINE__);	*/
+		pdesc->Dword6 &= set_desc(~(BIT(18)|BIT(17)|BIT(16)));	
 		pdesc->Dword6 |= set_desc(pDM_FatTable->antsel_a[aid]<<16);
-	}
-	else if(SupportICType == ODM_RTL8188E)
-	{
-		//panic_printk("[%s] [%d]   ******ODM_SetTxAntByTxInfo_8188E******   \n",__FUNCTION__,__LINE__);
-		pdesc->Dword2 &= set_desc(~ BIT(24));
-		pdesc->Dword2 &= set_desc(~ BIT(25));
-		pdesc->Dword7 &= set_desc(~ BIT(29));
+	} else if (SupportICType == ODM_RTL8188E) {
+		/*panic_printk("[%s] [%d]   ******ODM_SetTxAntByTxInfo_8188E******\n",__FUNCTION__,__LINE__);*/
+		pdesc->Dword2 &= set_desc(~BIT(24));
+		pdesc->Dword2 &= set_desc(~BIT(25));
+		pdesc->Dword7 &= set_desc(~BIT(29));
 
 		pdesc->Dword2 |= set_desc(pDM_FatTable->antsel_a[aid]<<24);
 		pdesc->Dword2 |= set_desc(pDM_FatTable->antsel_b[aid]<<25);
 		pdesc->Dword7 |= set_desc(pDM_FatTable->antsel_c[aid]<<29);
 			
 		
-	}
-	else if(SupportICType == ODM_RTL8812)
-	{
-		//3 [path-A]
-		//panic_printk("[%s] [%d]   ******ODM_SetTxAntByTxInfo_8881E******   \n",__FUNCTION__,__LINE__);
+	} else if (SupportICType == ODM_RTL8812) {
+		/*[path-A]*/
+		/*panic_printk("[%s] [%d]   ******ODM_SetTxAntByTxInfo_8881E******\n",__FUNCTION__,__LINE__);*/
 			
-		pdesc->Dword6 &= set_desc(~ BIT(16));
-		pdesc->Dword6 &= set_desc(~ BIT(17));
-		pdesc->Dword6 &= set_desc(~ BIT(18));
+		pdesc->Dword6 &= set_desc(~BIT(16));
+		pdesc->Dword6 &= set_desc(~BIT(17));
+		pdesc->Dword6 &= set_desc(~BIT(18));
 
 		pdesc->Dword6 |= set_desc(pDM_FatTable->antsel_a[aid]<<16);
 		pdesc->Dword6 |= set_desc(pDM_FatTable->antsel_b[aid]<<17);

@@ -514,7 +514,7 @@ ODM_ReadAndConfig_MP_8812A_AGC_TAB(
 u4Byte
 ODM_GetVersion_MP_8812A_AGC_TAB(void)
 {
-	   return 49;
+	   return 51;
 }
 
 /******************************************************************************
@@ -653,7 +653,7 @@ ODM_ReadAndConfig_MP_8812A_AGC_TAB_DIFF(
 u4Byte
 ODM_GetVersion_MP_8812A_AGC_TAB_DIFF(void)
 {
-	   return 49;
+	   return 51;
 }
 
 /******************************************************************************
@@ -961,7 +961,7 @@ ODM_ReadAndConfig_MP_8812A_PHY_REG(
 u4Byte
 ODM_GetVersion_MP_8812A_PHY_REG(void)
 {
-	   return 49;
+	   return 51;
 }
 
 /******************************************************************************
@@ -1042,7 +1042,7 @@ ODM_ReadAndConfig_MP_8812A_PHY_REG_MP(
 u4Byte
 ODM_GetVersion_MP_8812A_PHY_REG_MP(void)
 {
-	   return 49;
+	   return 51;
 }
 
 /******************************************************************************

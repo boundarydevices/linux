@@ -31,8 +31,23 @@
 
 #ifdef CONFIG_NEW_SIGNAL_STAT_PROCESS
 void rtw_signal_stat_timer_hdl(RTW_TIMER_HDL_ARGS);
-#endif //CONFIG_NEW_SIGNAL_STAT_PROCESS
 
+enum {
+	SIGNAL_STAT_CALC_PROFILE_0 = 0,
+	SIGNAL_STAT_CALC_PROFILE_1,
+	SIGNAL_STAT_CALC_PROFILE_MAX
+};
+
+u8 signal_stat_calc_profile[SIGNAL_STAT_CALC_PROFILE_MAX][2] = {
+	{4, 1},	/* Profile 0 => pre_stat : curr_stat = 4 : 1 */
+	{3, 7}	/* Profile 1 => pre_stat : curr_stat = 3 : 7 */
+};
+
+#ifndef RTW_SIGNAL_STATE_CALC_PROFILE	
+#define RTW_SIGNAL_STATE_CALC_PROFILE SIGNAL_STAT_CALC_PROFILE_0
+#endif
+
+#endif //CONFIG_NEW_SIGNAL_STAT_PROCESS
 
 void _rtw_init_sta_recv_priv(struct sta_recv_priv *psta_recvpriv)
 {
@@ -2678,6 +2693,7 @@ static void recvframe_expand_pkt(
 	_pkt *ppkt;
 	u8 shift_sz;
 	u32 alloc_sz;
+	u8 *ptr;
 
 
 	pfhdr = &prframe->u.hdr;
@@ -2707,7 +2723,9 @@ static void recvframe_expand_pkt(
 	skb_reserve(ppkt, shift_sz);
 
 	// copy data to new pkt
-	_rtw_memcpy(skb_put(ppkt, pfhdr->len), pfhdr->rx_data, pfhdr->len);
+	ptr = skb_put(ppkt, pfhdr->len);
+	if (ptr)
+		_rtw_memcpy(ptr, pfhdr->rx_data, pfhdr->len);
 
 	rtw_skb_free(pfhdr->pkt);
 
@@ -4008,8 +4026,9 @@ static sint fill_radiotap_hdr(_adapter *padapter, union recv_frame *precvframe, 
 	if (pattrib->mfrag)
 		hdr_buf[rt_len] |= IEEE80211_RADIOTAP_F_FRAG;
 
-	if (0)
+#ifndef CONFIG_RX_PACKET_APPEND_FCS
 		hdr_buf[rt_len] |= IEEE80211_RADIOTAP_F_FCS;
+#endif
 
 	if (0)
 		hdr_buf[rt_len] |= IEEE80211_RADIOTAP_F_DATAPAD;
@@ -4584,7 +4603,7 @@ void rtw_signal_stat_timer_hdl(RTW_TIMER_HDL_ARGS){
 	u8 avg_signal_qual = 0;
 	u32 num_signal_strength = 0;
 	u32 num_signal_qual = 0;
-	u8 _alpha = 5; // this value is based on converging_constant = 5000 and sampling_interval = 1000
+	u8 ratio_pre_stat = 0, ratio_curr_stat = 0, ratio_total = 0, ratio_profile = SIGNAL_STAT_CALC_PROFILE_0;
 
 	if(adapter->recvpriv.is_signal_dbg) {
 		//update the user specific value, signal_strength_dbg, to signal_strength, rssi
@@ -4625,21 +4644,28 @@ void rtw_signal_stat_timer_hdl(RTW_TIMER_HDL_ARGS){
 			goto set_timer;
 		#endif
 
+		if (RTW_SIGNAL_STATE_CALC_PROFILE < SIGNAL_STAT_CALC_PROFILE_MAX)
+			ratio_profile = RTW_SIGNAL_STATE_CALC_PROFILE;
+
+		ratio_pre_stat = signal_stat_calc_profile[ratio_profile][0];
+		ratio_curr_stat = signal_stat_calc_profile[ratio_profile][1];
+		ratio_total = ratio_pre_stat + ratio_curr_stat;
+
 		//update value of signal_strength, rssi, signal_qual
-		tmp_s = (avg_signal_strength+(_alpha-1)*recvpriv->signal_strength);
-		if(tmp_s %_alpha)
-			tmp_s = tmp_s/_alpha + 1;
+		tmp_s = (ratio_curr_stat * avg_signal_strength + ratio_pre_stat * recvpriv->signal_strength);
+		if (tmp_s % ratio_total)
+			tmp_s = tmp_s / ratio_total + 1;
 		else
-			tmp_s = tmp_s/_alpha;
-		if(tmp_s>100)
+			tmp_s = tmp_s / ratio_total;
+		if (tmp_s > 100)
 			tmp_s = 100;
 
-		tmp_q = (avg_signal_qual+(_alpha-1)*recvpriv->signal_qual);
-		if(tmp_q %_alpha)
-			tmp_q = tmp_q/_alpha + 1;
+		tmp_q = (ratio_curr_stat * avg_signal_qual + ratio_pre_stat * recvpriv->signal_qual);
+		if (tmp_q % ratio_total)
+			tmp_q = tmp_q / ratio_total + 1;
 		else
-			tmp_q = tmp_q/_alpha;
-		if(tmp_q>100)
+			tmp_q = tmp_q / ratio_total;
+		if (tmp_q > 100)
 			tmp_q = 100;
 
 		recvpriv->signal_strength = tmp_s;
@@ -4862,8 +4888,7 @@ void rx_query_phy_status(
 	//_exit_critical_bh(&pHalData->odm_stainfo_lock, &irqL);
 
 #ifdef CONFIG_SW_ANTENNA_DIVERSITY
-	if (GET_HAL_DATA(padapter)->odmpriv.RSSI_test == _FALSE
-		&& (IS_81XXC(pHalData->VersionID)|| IS_92D(pHalData->VersionID)))
+	if (GET_HAL_DATA(padapter)->odmpriv.RSSI_test == _FALSE)
 #endif
 	{
 		precvframe->u.hdr.psta = NULL;

@@ -98,15 +98,13 @@ static void _fillDefaultTxdesc(struct xmit_frame *pxmitframe, PTXDESC_8821A ptxd
 	PADAPTER padapter;
 	PHAL_DATA_TYPE pHalData;
 	struct mlme_ext_priv *pmlmeext;
-	struct mlme_ext_info *pmlmeinfo;
-//	struct dm_priv *pdmpriv;
+	struct mlme_ext_info *pmlmeinfo; 
 	struct pkt_attrib *pattrib;
 	s32 bmcst;
 
 
 	padapter = pxmitframe->padapter;
 	pHalData = GET_HAL_DATA(padapter);
-//	pdmpriv = &pHalData->dmpriv;
 	pmlmeext = &padapter->mlmeextpriv;
 	pmlmeinfo = &(pmlmeext->mlmext_info);
 
@@ -151,10 +149,10 @@ static void _fillDefaultTxdesc(struct xmit_frame *pxmitframe, PTXDESC_8821A ptxd
 			if (pHalData->fw_ractrl == _FALSE) {
 				ptxdesc->userate = 1;
 
-				if (pHalData->dmpriv.INIDATA_RATE[pattrib->mac_id] & BIT(7))
+				if (pHalData->INIDATA_RATE[pattrib->mac_id] & BIT(7))
 					ptxdesc->data_short = 1;
 
-				ptxdesc->datarate = pHalData->dmpriv.INIDATA_RATE[pattrib->mac_id] & 0x7F;
+				ptxdesc->datarate = pHalData->INIDATA_RATE[pattrib->mac_id] & 0x7F;
 			}
 
 			if (padapter->fix_rate != 0xFF) {

@@ -41,10 +41,10 @@ const char *odm_comp_str[] = {
 	/* BIT16 */"ODM_COMP_ACS",
 	/* BIT17 */"PHYDM_COMP_ADAPTIVITY",
 	/* BIT18 */"PHYDM_COMP_RA_DBG",
-	/* BIT19 */NULL,
+	/* BIT19 */"PHYDM_COMP_TXBF",
 	/* BIT20 */"ODM_COMP_EDCA_TURBO",
 	/* BIT21 */"ODM_COMP_EARLY_MODE",
-	/* BIT22 */NULL,
+	/* BIT22 */"ODM_FW_DEBUG_TRACE",
 	/* BIT23 */NULL,
 	/* BIT24 */"ODM_COMP_TX_PWR_TRACK",
 	/* BIT25 */"ODM_COMP_RX_GAIN_TRACK",
@@ -76,7 +76,7 @@ const char *odm_ability_str[] = {
 	/* BIT14 */"ODM_BB_CFO_TRACKING",
 	/* BIT15 */"ODM_BB_NHM_CNT",
 	/* BIT16 */"ODM_BB_PRIMARY_CCA",
-	/* BIT17 */NULL,
+	/* BIT17 */"ODM_BB_TXBF",
 	/* BIT18 */NULL,
 	/* BIT19 */NULL,
 	/* BIT20 */"ODM_MAC_EDCA_TURBO",
@@ -266,34 +266,35 @@ void rtw_odm_adaptivity_parm_msg(void *sel, _adapter *adapter)
 	rtw_odm_adaptivity_dml_msg(sel, adapter);
 	rtw_odm_adaptivity_dc_backoff_msg(sel, adapter);
 
-	DBG_871X_SEL_NL(sel, "%10s %16s %8s %7s\n"
-		, "TH_L2H_ini", "TH_EDCCA_HL_diff", "IGI_Base", "FABound");
-	DBG_871X_SEL_NL(sel, "0x%-8x %-16d 0x%-6x %-7d\n"
+	DBG_871X_SEL_NL(sel, "%10s %16s %16s %22s\n"
+		, "TH_L2H_ini", "TH_EDCCA_HL_diff", "TH_L2H_ini_mode2", "TH_EDCCA_HL_diff_mode2");
+	DBG_871X_SEL_NL(sel, "0x%-8x %-16d 0x%-14x %-22d\n"
 		, (u8)odm->TH_L2H_ini
 		, odm->TH_EDCCA_HL_diff
-		, odm->IGI_Base
-		, odm->FABound
+		, (u8)odm->TH_L2H_ini_mode2
+		, odm->TH_EDCCA_HL_diff_mode2
 	);
 
-	DBG_871X_SEL_NL(sel, "%15s %9s\n", "AdapEnableState","Adap_Flag");
-	DBG_871X_SEL_NL(sel, "%-15x %-9x \n"
+	DBG_871X_SEL_NL(sel, "%15s %9s %-12s\n", "AdapEnableState", "Adap_Flag", "EDCCA_enable");
+	DBG_871X_SEL_NL(sel, "%-15x %-9x %-12x\n"
 		, odm->Adaptivity_enable
 		, odm->adaptivity_flag
+		, odm->EDCCA_enable
 	);
 	
 	
 }
 
-void rtw_odm_adaptivity_parm_set(_adapter *adapter, s8 TH_L2H_ini, s8 TH_EDCCA_HL_diff,
-	s8 IGI_Base, u32 FABound)
+void rtw_odm_adaptivity_parm_set(_adapter *adapter, s8 TH_L2H_ini, s8 TH_EDCCA_HL_diff, s8 TH_L2H_ini_mode2, s8 TH_EDCCA_HL_diff_mode2, u8 EDCCA_enable)
 {
 	HAL_DATA_TYPE *pHalData = GET_HAL_DATA(adapter);
 	DM_ODM_T *odm = &pHalData->odmpriv;
 
 	odm->TH_L2H_ini = TH_L2H_ini;
 	odm->TH_EDCCA_HL_diff = TH_EDCCA_HL_diff;
-	odm->IGI_Base = IGI_Base;
-	odm->FABound = FABound;
+	odm->TH_L2H_ini_mode2 = TH_L2H_ini_mode2;
+	odm->TH_EDCCA_HL_diff_mode2 = TH_EDCCA_HL_diff_mode2;
+	odm->EDCCA_enable = EDCCA_enable;
 }
 
 void rtw_odm_get_perpkt_rssi(void *sel, _adapter *adapter)
@@ -309,13 +310,12 @@ void rtw_odm_get_perpkt_rssi(void *sel, _adapter *adapter)
 void rtw_odm_acquirespinlock(_adapter *adapter,	RT_SPINLOCK_TYPE type)
 {
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(adapter);
-	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
 	_irqL irqL;
 
 	switch(type)
 	{
 		case RT_IQK_SPINLOCK:
-			_enter_critical_bh(&pdmpriv->IQKSpinLock, &irqL);
+			_enter_critical_bh(&pHalData->IQKSpinLock, &irqL);
 		default:
 			break;
 	}
@@ -324,13 +324,12 @@ void rtw_odm_acquirespinlock(_adapter *adapter,	RT_SPINLOCK_TYPE type)
 void rtw_odm_releasespinlock(_adapter *adapter,	RT_SPINLOCK_TYPE type)
 {
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(adapter);
-	struct dm_priv	*pdmpriv = &pHalData->dmpriv;
 	_irqL irqL;
 
 	switch(type)
 	{
 		case RT_IQK_SPINLOCK:
-			_exit_critical_bh(&pdmpriv->IQKSpinLock, &irqL);
+			_exit_critical_bh(&pHalData->IQKSpinLock, &irqL);
 		default:
 			break;
 	}

@@ -595,7 +595,7 @@ ODM_ReadAndConfig_MP_8812A_RadioA(
 u4Byte
 ODM_GetVersion_MP_8812A_RadioA(void)
 {
-	   return 49;
+	   return 51;
 }
 
 /******************************************************************************
@@ -1077,7 +1077,7 @@ ODM_ReadAndConfig_MP_8812A_RadioB(
 u4Byte
 ODM_GetVersion_MP_8812A_RadioB(void)
 {
-	   return 49;
+	   return 51;
 }
 
 /******************************************************************************

@@ -238,10 +238,8 @@ void rtw_dump_phy_rxcnts_preprocess(_adapter* padapter,u8 rx_cnt_mode);
 void rtw_dump_rx_counters(_adapter* padapter);
 #endif
 
-u8 rtw_hal_data_init(_adapter *padapter);
-void rtw_hal_data_deinit(_adapter *padapter);
-
 void dump_chip_info(HAL_VERSION	ChipVersion);
+void rtw_hal_config_rftype(PADAPTER  padapter);
 
 u8	//return the final channel plan decision
 hal_com_config_channel_plan(
@@ -399,6 +397,7 @@ struct noise_info
 void rtw_get_noise(_adapter* padapter);
 
 void rtw_hal_set_fw_rsvd_page(_adapter* adapter, bool finished);
+void rtw_hal_set_AP_fw_rsvd_page(_adapter *padapter , bool finished);
 
 #ifdef CONFIG_GPIO_API
 u8 rtw_hal_get_gpio(_adapter* adapter, u8 gpio_num);
@@ -419,9 +418,7 @@ void Debug_FwC2H(PADAPTER padapter, u8 *pdata, u8 len);
 #endif
 /*CONFIG_FW_C2H_DEBUG*/
 
+void update_IOT_info(_adapter *padapter);
 
 #endif //__HAL_COMMON_H__
-
-
-
 

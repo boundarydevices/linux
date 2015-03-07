@@ -21,7 +21,8 @@
 #ifndef	__PHYDMEDCATURBOCHECK_H__
 #define    __PHYDMEDCATURBOCHECK_H__
 
-#define EDCATURBO_VERSION	"2.0"
+/*#define EDCATURBO_VERSION	"2.1"*/
+#define EDCATURBO_VERSION	"2.2"	/*2015.01.13*/
 
 typedef struct _EDCA_TURBO_
 {

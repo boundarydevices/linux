@@ -21,7 +21,7 @@
 #ifndef	__PHYDMDIG_H__
 #define    __PHYDMDIG_H__
 
-#define DIG_VERSION	"1.3"
+#define DIG_VERSION	"1.6"	/*2015.02.09*/
 
 typedef struct _Dynamic_Initial_Gain_Threshold_
 {
@@ -74,7 +74,7 @@ typedef struct _Dynamic_Initial_Gain_Threshold_
 	u4Byte		AntDiv_RSSI_max;
 	u4Byte		RSSI_max;
 
-	u1Byte		*pbP2pLinkInProgress;
+	u1Byte		*bP2PInProcess;
 
 #if(DM_ODM_SUPPORT_TYPE & (ODM_AP|ODM_ADSL))
 	BOOLEAN		bTpTarget;

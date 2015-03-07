@@ -51,12 +51,18 @@ enum h2c_cmd{
 	H2C_FWLPS_IN_IPS_ = 0x28,
 	
 	//Dynamic Mechanism Class: 010
-	H2C_MACID_CFG = 0x40,	
+	H2C_MACID_CFG = 0x40,
 	H2C_TXBF = 0x41,	
 	H2C_RSSI_SETTING = 0x42,	
 	H2C_AP_REQ_TXRPT = 0x43,	
 	H2C_INIT_RATE_COLLECT = 0x44,	
-	H2C_RA_MASK_3SS = 0x46,
+	H2C_IQ_CALIBRATION	= 0x45,
+
+	H2C_RA_MASK_3SS = 0x46,/* for 8814A */
+	H2C_RA_PARA_ADJUST = 0x47,/* CONFIG_RA_DBG_CMD */
+	H2C_DYNAMIC_TX_PATH = 0x48,/* for 8814A */
+
+	H2C_FW_TRACE_EN = 0x49,
 	
 	//BT Class: 011
 	H2C_B_TYPE_TDMA = 0x60,
@@ -114,7 +120,7 @@ enum h2c_cmd{
 #define H2C_P2PRSVDPAGE_LOC_LEN	5
 #define H2C_P2P_OFFLOAD_LEN	3
 
-#ifdef CONFIG_WOWLAN	
+#if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)	
 #define eqMacAddr(a,b)						( ((a)[0]==(b)[0] && (a)[1]==(b)[1] && (a)[2]==(b)[2] && (a)[3]==(b)[3] && (a)[4]==(b)[4] && (a)[5]==(b)[5]) ? 1:0 )
 #define cpMacAddr(des,src)					((des)[0]=(src)[0],(des)[1]=(src)[1],(des)[2]=(src)[2],(des)[3]=(src)[3],(des)[4]=(src)[4],(des)[5]=(src)[5])
 #define cpIpAddr(des,src)					((des)[0]=(src)[0],(des)[1]=(src)[1],(des)[2]=(src)[2],(des)[3]=(src)[3])

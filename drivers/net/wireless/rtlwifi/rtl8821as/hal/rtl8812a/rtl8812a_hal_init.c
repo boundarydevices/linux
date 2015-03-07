@@ -131,7 +131,7 @@ BOOLEAN HalDetectPwrDownMode8812(PADAPTER Adapter)
 	HAL_DATA_TYPE *pHalData = GET_HAL_DATA(Adapter);
 	struct pwrctrl_priv *pwrctrlpriv = adapter_to_pwrctl(Adapter);
 
-	EFUSE_ShadowRead(Adapter, 1, EEPROM_RF_OPT3_92C, (u32 *)&tmpvalue);
+	EFUSE_ShadowRead(Adapter, 1, EEPROM_RF_FEATURE_OPTION_8812, (u32 *)&tmpvalue);
 
 	// 2010/08/25 MH INF priority > PDN Efuse value.
 	if(tmpvalue & BIT(4) && pwrctrlpriv->reg_pdnmode)
@@ -372,7 +372,6 @@ _WriteFW_8812(
 	)
 {
 	// Since we need dynamic decide method of dwonload fw, so we call this function to get chip version.
-	// We can remove _ReadChipVersion from ReadpadapterInfo8192C later.
 	int	ret = _SUCCESS;
 	u32	pageNums,remainSize ;
 	u32	page, offset;
@@ -544,7 +543,7 @@ FirmwareDownload8812(
 	u8	write_fw = 0;
 	u32 fwdl_start_time;
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(Adapter);	
-	
+	struct pwrctrl_priv *pwrpriv = adapter_to_pwrctl(Adapter);
 	u8				*pFwImageFileName;
 	u8				*pucMappedFile = NULL;
 	PRT_FIRMWARE_8812	pFirmware = NULL;
@@ -584,10 +583,15 @@ FirmwareDownload8812(
 			#endif //CONFIG_FILE_FWIMG
 			break;
 		case FW_SOURCE_HEADER_FILE:
-			#ifdef CONFIG_WOWLAN
+			#if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
 			if (bUsedWoWLANFw) {
-				ODM_ConfigFWWithHeaderFile(&pHalData->odmpriv, CONFIG_FW_WoWLAN, (u8 *)&(pFirmware->szFwBuffer), &(pFirmware->ulFwLength));
-				DBG_871X("%s fw:%s, size: %d\n", __FUNCTION__, "WoWLAN", pFirmware->ulFwLength);
+				if (!pwrpriv->wowlan_ap_mode) {
+					ODM_ConfigFWWithHeaderFile(&pHalData->odmpriv, CONFIG_FW_WoWLAN, (u8 *)&(pFirmware->szFwBuffer), &(pFirmware->ulFwLength));
+					DBG_871X("%s fw:%s, size: %d\n", __func__, "WoWLAN", pFirmware->ulFwLength);
+				} else {
+					ODM_ConfigFWWithHeaderFile(&pHalData->odmpriv, CONFIG_FW_AP_WoWLAN, (u8 *)&pFirmware->szFwBuffer, &pFirmware->ulFwLength);
+					DBG_871X("%s fw: %s, size: %d\n", __func__, "AP_WoWLAN", pFirmware->ulFwLength);
+				}
 			} else
 			#endif /* CONFIG_WOWLAN */
 			#ifdef CONFIG_BT_COEXIST
@@ -658,11 +662,6 @@ FirmwareDownload8812(
 	rtStatus = _FWFreeToGo8812(Adapter, 10, 200);
 	if (_SUCCESS != rtStatus)
 		goto fwdl_stat;
-
-	if(IS_HARDWARE_TYPE_8821(Adapter))
-	{
-		//to do download BT
-	}
 
 fwdl_stat:
 	DBG_871X("FWDL %s. write_fw:%u, %dms\n"
@@ -1115,92 +1114,7 @@ int ReservedPage_Compare(PADAPTER Adapter,PRT_MP_FIRMWARE pFirmware,u32 BTPatchS
 }
 
 
-#ifdef CONFIG_RTL8821A
-s32 FirmwareDownloadBT(PADAPTER padapter, PRT_MP_FIRMWARE pFirmware)
-{
-	s32 rtStatus;
-	u8 *pBTFirmwareBuf;
-	u32 BTFirmwareLen;
-	u8 download_time;
-	s8 i;
-
-
-	rtStatus = _SUCCESS;
-	pBTFirmwareBuf = NULL;
-	BTFirmwareLen = 0;
-
-	//
-	// Patch BT Fw. Download BT RAM code to Tx packet buffer.
-	//
-	if (padapter->bBTFWReady) {
-		DBG_8192C("%s: BT Firmware is ready!!\n", __FUNCTION__);
-		return _FAIL;
-	}
-
-#ifdef CONFIG_FILE_FWIMG
-	if (rtw_is_file_readable(rtw_fw_mp_bt_file_path) == _TRUE)
-	{
-		DBG_8192C("%s: accquire MP BT FW from file:%s\n", __FUNCTION__, rtw_fw_mp_bt_file_path);
-
-		rtStatus = rtw_retrive_from_file(rtw_fw_mp_bt_file_path, FwBuffer, 0x8000);
-		BTFirmwareLen = rtStatus>=0?rtStatus:0;
-		pBTFirmwareBuf = FwBuffer;
-	}
-	else
-#endif // CONFIG_FILE_FWIMG
-	{
-#ifdef CONFIG_EMBEDDED_FWIMG
-		DBG_8192C("%s: Download MP BT FW from header\n", __FUNCTION__);
-
-		pBTFirmwareBuf = (u8*)Rtl8821A_BT_MP_Patch_FW;
-		BTFirmwareLen = Rtl8812BFwBTImgArrayLength;
-		pFirmware->szFwBuffer = pBTFirmwareBuf;
-		pFirmware->ulFwLength = BTFirmwareLen;
-#endif // CONFIG_EMBEDDED_FWIMG
-	}
-
-	DBG_8192C("%s: MP BT Firmware size=%d\n", __FUNCTION__, BTFirmwareLen);
-
-	// for h2c cam here should be set to  true
-	padapter->bFWReady = _TRUE;
-
-	download_time = (BTFirmwareLen + 4095) / 4096;
-	DBG_8192C("%s: download_time is %d\n", __FUNCTION__, download_time);
-
-	// Download BT patch Fw.
-	for (i = (download_time-1); i >= 0; i--)
-	{
-		if (i == (download_time - 1))
-		{
-			rtStatus = _WriteBTFWtoTxPktBuf8812(padapter, pBTFirmwareBuf+(4096*i), (BTFirmwareLen-(4096*i)), 1);
-			DBG_8192C("%s: start %d, len %d, time 1\n", __FUNCTION__, 4096*i, BTFirmwareLen-(4096*i));
-		}
-		else
-		{
-			rtStatus = _WriteBTFWtoTxPktBuf8812(padapter, pBTFirmwareBuf+(4096*i), 4096, (download_time-i));
-			DBG_8192C("%s: start %d, len 4096, time %d\n", __FUNCTION__, 4096*i, download_time-i);
-		}
-
-		if (rtStatus != _SUCCESS)
-		{
-			DBG_8192C("%s: BT Firmware download to Tx packet buffer fail!\n", __FUNCTION__);
-			padapter->bBTFWReady = _FALSE;
-			return rtStatus;
-		}
-	}
-
-	ReservedPage_Compare(padapter,pFirmware,BTFirmwareLen);
-
-	padapter->bBTFWReady = _TRUE;
-	SetFwBTFwPatchCmd_8821(padapter, (u16)BTFirmwareLen);
-	rtStatus = _CheckWLANFwPatchBTFwReady_8821A(padapter);
-
-	DBG_8192C("<===%s: return %s!\n", __FUNCTION__, rtStatus==_SUCCESS?"SUCCESS":"FAIL");
-	return rtStatus;
-}
-#endif
-
-#ifdef CONFIG_WOWLAN
+#if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
 //===========================================
 //
 // Description: Prepare some information to Fw for WoWLAN.
@@ -1234,14 +1148,7 @@ SetFwRelatedForWoWLAN8812(
 	//
 	InitializeFirmwareVars8812(padapter);
 }
-#endif //CONFIG_WOWLAN
-
-static void rtl8812_free_hal_data(PADAPTER padapter)
-{
-_func_enter_;
-	
-_func_exit_;
-}
+#endif /*defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)*/
 
 //===========================================================
 //				Efuse related code
@@ -1642,7 +1549,7 @@ Hal_EfuseParseIDCode8812A(
 	IN	u8			*hwinfo
 	)
 {
-	EEPROM_EFUSE_PRIV *pEEPROM = GET_EEPROM_EFUSE_PRIV(padapter);
+	PHAL_DATA_TYPE pHalData = GET_HAL_DATA(padapter);
 	u16			EEPROMId;
 
 
@@ -1651,11 +1558,11 @@ Hal_EfuseParseIDCode8812A(
 	if (EEPROMId != RTL_EEPROM_ID)
 	{
 		DBG_8192C("EEPROM ID(%#x) is invalid!!\n", EEPROMId);
-		pEEPROM->bautoload_fail_flag = _TRUE;
+		pHalData->bautoload_fail_flag = _TRUE;
 	}
 	else
 	{
-		pEEPROM->bautoload_fail_flag = _FALSE;
+		pHalData->bautoload_fail_flag = _FALSE;
 	}
 
 	DBG_8192C("EEPROM ID=0x%04x\n", EEPROMId);
@@ -1786,19 +1693,14 @@ Hal_ReadTxPowerInfo8812A(
 		if(PROMContent[EEPROM_RF_BOARD_OPTION_8812] == 0xFF)
 			pHalData->EEPROMRegulatory = (EEPROM_DEFAULT_BOARD_OPTION&0x7);	//bit0~2
 		else
-			pHalData->EEPROMRegulatory = (PROMContent[EEPROM_RF_BOARD_OPTION_8812]&0x7);	//bit0~2	
-		
+			pHalData->EEPROMRegulatory = (PROMContent[EEPROM_RF_BOARD_OPTION_8812]&0x7);	//bit0~2
 
-		// 2012/09/26 MH Add for TX power calibrate rate.
-		pHalData->TxPwrCalibrateRate = PROMContent[EEPROM_TX_PWR_CALIBRATE_RATE_8812];
 	}
 	else
 	{
 		pHalData->EEPROMRegulatory = 0;
-		// 2012/09/26 MH Add for TX power calibrate rate.
-		pHalData->TxPwrCalibrateRate = EEPROM_DEFAULT_TX_CALIBRATE_RATE;
 	}
-	DBG_871X("EEPROMRegulatory = 0x%x TxPwrCalibrateRate=0x%x\n", pHalData->EEPROMRegulatory, pHalData->TxPwrCalibrateRate);
+	DBG_871X("EEPROMRegulatory = 0x%x \n", pHalData->EEPROMRegulatory);
 
 }
 
@@ -1846,7 +1748,7 @@ Hal_ReadThermalMeter_8812A(
 
 	if(pHalData->EEPROMThermalMeter == 0xff || AutoloadFail)
 	{
-		pHalData->bAPKThermalMeterIgnore = _TRUE;
+		pHalData->odmpriv.RFCalibrateInfo.bAPKThermalMeterIgnore = _TRUE;
 		pHalData->EEPROMThermalMeter = 0xFF;		
 	}
 
@@ -2294,47 +2196,45 @@ hal_ReadUsbType_8812AU(
 		PHAL_DATA_TYPE pHalData = GET_HAL_DATA(Adapter);
 		u8	reg_tmp, i, j, antenna = 0, wmode = 0;
 		// Read anenna type from EFUSE 1019/1018
-		for (i = 0; i < 2; i++)
-		{
-			// Check efuse address 1019
-			// Check efuse address 1018
+		for (i = 0; i < 2; i++) {
+			/* 
+			  Check efuse address 1019
+			  Check efuse address 1018 
+			*/
 			efuse_OneByteRead(Adapter, 1019-i, &reg_tmp, _FALSE);
-
-			for (j = 0; j < 2; j++)
-			{
-				// CHeck bit 7-5
-				// Check bit 3-1
-				antenna = ((reg_tmp&0xee) >> (5-(j*4)));
-				if (antenna == 0)
-					continue;
-				else
-				{					
-					break;
-				}	
+			/*
+			  CHeck bit 7-5
+			  Check bit 3-1
+			*/
+			if (((reg_tmp>>5) & 0x7) != 0) {
+				antenna = ((reg_tmp>>5) & 0x7);
+				break;
+			} else if ((reg_tmp>>1 & 0x07) != 0) {
+				antenna = ((reg_tmp>>1) & 0x07);
+				break;
 			}
+				
+
 		}
 
 		// Read anenna type from EFUSE 1021/1020
-		for (i = 0; i < 2; i++)
-		{
-			// Check efuse address 1019
-			// Check efuse address 1018
+		for (i = 0; i < 2; i++) {
+			/* 
+			  Check efuse address 1021
+			  Check efuse address 1020 
+			*/
 			efuse_OneByteRead(Adapter, 1021-i, &reg_tmp, _FALSE);
 
-			for (j = 0; j < 2; j++)
-			{
-				// CHeck bit 3-2
-				// Check bit 1-0
-				wmode = ((reg_tmp&0x0f) >> (2-(j*2)));
-				if (wmode)
-					continue;
-				else
-				{					
-					break;
-				}	
+			/* CHeck bit 3-2 */
+			if (((reg_tmp>>2) & 0x3) != 0) {
+				wmode = ((reg_tmp>>2) & 0x3);
+				break;
 			}
+				
+
 		}
 
+		DBG_871X("%s: antenna=%d, wmode=%d\n", __func__, antenna, wmode);
 		// Antenna == 1 WMODE = 3 RTL8812AU-VL 11AC + USB2.0 Mode
 		if (antenna == 1)
 		{
@@ -2360,7 +2260,7 @@ hal_ReadUsbType_8812AU(
 					// Driver will not support USB automatic switch
 					//UsbModeSwitch_SetUsbModeMechOn(Adapter, FALSE);
 					//pHalData->EFUSEHidden = EFUSE_HIDDEN_812AU_VS;
-					DBG_871X("%s(): EFUSE_HIDDEN_812AU_VS\n",__FUNCTION__);
+					DBG_871X("%s(): EFUSE_HIDDEN_8812AU_VS\n", __func__);
 				}
 			}
 			else if (wmode == 2)
@@ -2368,7 +2268,9 @@ hal_ReadUsbType_8812AU(
 				// Antenna == 2 WMODE = 2 RTL8812AU-VN 11N only + USB2.0 Mode
 				//UsbModeSwitch_SetUsbModeMechOn(Adapter, FALSE);
 				//pHalData->EFUSEHidden = EFUSE_HIDDEN_812AU_VN;
-				DBG_871X("%s(): EFUSE_HIDDEN_812AU_VN\n",__FUNCTION__);
+				DBG_871X("%s(): EFUSE_HIDDEN_8812AU_VN\n", __func__);
+				Adapter->registrypriv.vht_enable = 0;
+				
 			}
 		}	
 	}
@@ -3620,8 +3522,7 @@ static s32 _halReadPGDataFromFile(PADAPTER padapter, u8 *pbuf)
 	mm_segment_t fs;
 	u8 temp[3];
 	loff_t pos = 0;
-	EEPROM_EFUSE_PRIV *pEEPROM = GET_EEPROM_EFUSE_PRIV(padapter);
-
+	PHAL_DATA_TYPE pHalData = GET_HAL_DATA(padapter);
 
 	temp[2] = 0; // add end of string '\0'
 
@@ -3629,7 +3530,7 @@ static s32 _halReadPGDataFromFile(PADAPTER padapter, u8 *pbuf)
 	fp = filp_open(EFUSE_MAP_PATH, O_RDONLY,  0);
 	if (IS_ERR(fp)) {
 		DBG_8192C("%s: Error, Read Efuse configure file FAIL!\n", __FUNCTION__);
-		pEEPROM->bloadfile_fail_flag = _TRUE;
+		pHalData->bloadfile_fail_flag = _TRUE;
 		return _FAIL;
 	}
 
@@ -3657,7 +3558,7 @@ static s32 _halReadPGDataFromFile(PADAPTER padapter, u8 *pbuf)
 	DBG_8192C("\n");
 #endif
 
-	pEEPROM->bloadfile_fail_flag = _FALSE;
+	pHalData->bloadfile_fail_flag = _FALSE;
 	return _SUCCESS;
 }
 
@@ -3839,41 +3740,35 @@ GetEEPROMSize8812A(
 
 void CheckAutoloadState8812A(PADAPTER padapter)
 {
-	PEEPROM_EFUSE_PRIV pEEPROM;
 	u8 val8;
-
-
-	pEEPROM = GET_EEPROM_EFUSE_PRIV(padapter);
+	PHAL_DATA_TYPE pHalData = GET_HAL_DATA(padapter);
 
 	/* check system boot selection */
 	val8 = rtw_read8(padapter, REG_9346CR);
-	pEEPROM->EepromOrEfuse = (val8 & BOOT_FROM_EEPROM) ? _TRUE : _FALSE;
-	pEEPROM->bautoload_fail_flag = (val8 & EEPROM_EN) ? _FALSE : _TRUE;
+	pHalData->EepromOrEfuse = (val8 & BOOT_FROM_EEPROM) ? _TRUE : _FALSE;
+	pHalData->bautoload_fail_flag = (val8 & EEPROM_EN) ? _FALSE : _TRUE;
 
 	DBG_8192C("%s: 9346CR(%#x)=0x%02x, Boot from %s, Autoload %s!\n",
 			__FUNCTION__, REG_9346CR, val8,
-			(pEEPROM->EepromOrEfuse ? "EEPROM" : "EFUSE"),
-			(pEEPROM->bautoload_fail_flag ? "Fail" : "OK"));
+			(pHalData->EepromOrEfuse ? "EEPROM" : "EFUSE"),
+			(pHalData->bautoload_fail_flag ? "Fail" : "OK"));
 }
 
 void InitPGData8812A(PADAPTER padapter)
-{
-	PEEPROM_EFUSE_PRIV pEEPROM;
+{	
 	u32 i;
 	u16 val16;
-
-
-	pEEPROM = GET_EEPROM_EFUSE_PRIV(padapter);
+	PHAL_DATA_TYPE pHalData = GET_HAL_DATA(padapter);
 	
 #ifdef CONFIG_EFUSE_CONFIG_FILE
 	{
 		s32 tmp;
 		u32 addr;
 
-		tmp = _halReadPGDataFromFile(padapter, pEEPROM->efuse_eeprom_data);
-		pEEPROM->bloadfile_fail_flag = ((tmp==_FAIL) ? _TRUE : _FALSE);
-		tmp = _halReadMACAddrFromFile(padapter, pEEPROM->mac_addr);
-		pEEPROM->bloadmac_fail_flag = ((tmp==_FAIL) ? _TRUE : _FALSE);
+		tmp = _halReadPGDataFromFile(padapter, pHalData->efuse_eeprom_data);
+		pHalData->bloadfile_fail_flag = ((tmp==_FAIL) ? _TRUE : _FALSE);
+		tmp = _halReadMACAddrFromFile(padapter, pHalData->mac_addr);
+		pHalData->bloadmac_fail_flag = ((tmp==_FAIL) ? _TRUE : _FALSE);
 
 #ifdef CONFIG_SDIO_HCI
 		addr = EEPROM_MAC_ADDR_8821AS;
@@ -3888,11 +3783,11 @@ void InitPGData8812A(PADAPTER padapter)
 		else
 			addr = EEPROM_MAC_ADDR_8821AE;
 #endif // CONFIG_PCI_HCI
-		_rtw_memcpy(&pEEPROM->efuse_eeprom_data[addr], pEEPROM->mac_addr, ETH_ALEN);
+		_rtw_memcpy(&pHalData->efuse_eeprom_data[addr], pHalData->EEPROMMACAddr, ETH_ALEN);
 	}
 #else // !CONFIG_EFUSE_CONFIG_FILE
 
-	if (_FALSE == pEEPROM->bautoload_fail_flag)
+	if (_FALSE == pHalData->bautoload_fail_flag)
 	{
 		// autoload OK.
 		if (is_boot_from_eeprom(padapter))
@@ -3919,38 +3814,32 @@ void InitPGData8812A(PADAPTER padapter)
 #endif // !CONFIG_EFUSE_CONFIG_FILE
 }
 
-void
-ReadChipVersion8812A(
-	IN	PADAPTER	Adapter
-	)
+static void read_chip_version_8812a(PADAPTER Adapter)
 {
 	u32	value32;
-	HAL_VERSION		ChipVersion;
 	PHAL_DATA_TYPE	pHalData;
-
-
 	pHalData = GET_HAL_DATA(Adapter);
 
 	value32 = rtw_read32(Adapter, REG_SYS_CFG);
 	DBG_8192C("%s SYS_CFG(0x%X)=0x%08x \n", __FUNCTION__, REG_SYS_CFG, value32);
 
 	if(IS_HARDWARE_TYPE_8812(Adapter))
-		ChipVersion.ICType = CHIP_8812;
+		pHalData->VersionID.ICType = CHIP_8812;
 	else
-		ChipVersion.ICType = CHIP_8821;
+		pHalData->VersionID.ICType = CHIP_8821;
 
-	ChipVersion.ChipType = ((value32 & RTL_ID) ? TEST_CHIP : NORMAL_CHIP);
+	pHalData->VersionID.ChipType = ((value32 & RTL_ID) ? TEST_CHIP : NORMAL_CHIP);
 
 	if (IS_HARDWARE_TYPE_8812(Adapter))
-		ChipVersion.RFType = RF_TYPE_2T2R; /* RF_2T2R; */
+		pHalData->VersionID.RFType = RF_TYPE_2T2R; /* RF_2T2R; */
 	else
-		ChipVersion.RFType = RF_TYPE_1T1R; /* RF_1T1R; */
+		pHalData->VersionID.RFType = RF_TYPE_1T1R; /* RF_1T1R; */
 
 	if(Adapter->registrypriv.special_rf_path == 1)
-		ChipVersion.RFType = RF_TYPE_1T1R;	//RF_1T1R;
+		pHalData->VersionID.RFType = RF_TYPE_1T1R;	//RF_1T1R;
 
 	if (IS_HARDWARE_TYPE_8812(Adapter))
-		ChipVersion.VendorType = ((value32 & VENDOR_ID) ? CHIP_VENDOR_UMC : CHIP_VENDOR_TSMC);
+		pHalData->VersionID.VendorType = ((value32 & VENDOR_ID) ? CHIP_VENDOR_UMC : CHIP_VENDOR_TSMC);
 	else
 	{
 		u32 vendor;
@@ -3968,14 +3857,14 @@ ReadChipVersion8812A(
 				vendor = CHIP_VENDOR_UMC;
 				break;
 		}
-		ChipVersion.VendorType = vendor;
+		pHalData->VersionID.VendorType = vendor;
 	}
-	ChipVersion.CUTVersion = (value32 & CHIP_VER_RTL_MASK)>>CHIP_VER_RTL_SHIFT; // IC version (CUT)
+	pHalData->VersionID.CUTVersion = (value32 & CHIP_VER_RTL_MASK)>>CHIP_VER_RTL_SHIFT; // IC version (CUT)
 	if(IS_HARDWARE_TYPE_8812(Adapter))
-		ChipVersion.CUTVersion += 1;
+		pHalData->VersionID.CUTVersion += 1;
 
 	//value32 = rtw_read32(Adapter, REG_GPIO_OUTSTS);
-	ChipVersion.ROMVer = 0;	// ROM code version.
+	pHalData->VersionID.ROMVer = 0;	// ROM code version.
 
 	// For multi-function consideration. Added by Roger, 2010.10.06.
 	pHalData->MultiFunc = RT_MULTI_FUNC_NONE;
@@ -3984,26 +3873,11 @@ ReadChipVersion8812A(
 	pHalData->MultiFunc |= ((value32 & BT_FUNC_EN) ? RT_MULTI_FUNC_BT : 0);
 	pHalData->PolarityCtl = ((value32 & WL_HWPDN_SL) ? RT_POLARITY_HIGH_ACT : RT_POLARITY_LOW_ACT);
 
+	rtw_hal_config_rftype(Adapter);	
 #if 1	
-	dump_chip_info(ChipVersion);
+	dump_chip_info(pHalData->VersionID);
 #endif
 
-	_rtw_memcpy(&pHalData->VersionID, &ChipVersion, sizeof(HAL_VERSION));
-
-	if (IS_1T2R(ChipVersion)){
-		pHalData->rf_type = RF_1T2R;
-		pHalData->NumTotalRFPath = 2;
-	}
-	else if (IS_2T2R(ChipVersion)){
-		pHalData->rf_type = RF_2T2R;
-		pHalData->NumTotalRFPath = 2;
-	}
-	else{
-		pHalData->rf_type = RF_1T1R;
-		pHalData->NumTotalRFPath = 1;
-	}
-	
-	DBG_8192C("RF_Type is %x!!\n", pHalData->rf_type);
 }
 
 VOID
@@ -4095,13 +3969,10 @@ void InitDefaultValue8821A(PADAPTER padapter)
 {
 	PHAL_DATA_TYPE pHalData;
 	struct pwrctrl_priv *pwrctrlpriv;
-	struct dm_priv *pdmpriv;
 	u8 i;
-
 
 	pHalData = GET_HAL_DATA(padapter);
 	pwrctrlpriv = adapter_to_pwrctl(padapter);
-	pdmpriv = &pHalData->dmpriv;
 
 	// init default value
 	pHalData->fw_ractrl = _FALSE;		
@@ -4122,7 +3993,7 @@ void InitDefaultValue8821A(PADAPTER padapter)
 
 	// init dm default value
 	pHalData->bChnlBWInitialized = _FALSE;
-	pHalData->odmpriv.RFCalibrateInfo.bIQKInitialized = _FALSE;
+	pHalData->bIQKInitialized = _FALSE;
 	pHalData->odmpriv.RFCalibrateInfo.TM_Trigger = 0;//for IQK
 	pHalData->pwrGroupCnt = 0;
 	pHalData->PGMaxGroup = MAX_PG_GROUP;
@@ -4806,7 +4677,7 @@ static void hw_var_set_monitor(PADAPTER Adapter, u8 variable, u8 *val)
 		/* Receive all type */
 		rcr_bits = RCR_AAP | RCR_APM | RCR_AM | RCR_AB | RCR_APWRMGT | RCR_ADF | RCR_ACF | RCR_AMF | RCR_APP_PHYST_RXFF;
 
-		/* BUG ?? miss 4 byte */
+		/* Append FCS */
 		rcr_bits |= RCR_APPFCS;
 
 		#if 0
@@ -5417,7 +5288,6 @@ static void hw_var_set_mlme_join(PADAPTER Adapter, u8 variable, u8* val)
 	u8	type = *((u8 *)val);
 	HAL_DATA_TYPE *pHalData = GET_HAL_DATA(Adapter);
 	struct mlme_priv	*pmlmepriv = &Adapter->mlmepriv;
-	EEPROM_EFUSE_PRIV	*pEEPROM = GET_EEPROM_EFUSE_PRIV(Adapter);
 
 	if(type == 0) // prepare to join
 	{		
@@ -5442,7 +5312,7 @@ static void hw_var_set_mlme_join(PADAPTER Adapter, u8 variable, u8* val)
 
 		if(check_fwstate(pmlmepriv, WIFI_STATION_STATE) == _TRUE)
 		{
-			RetryLimit = (pEEPROM->CustomerID == RT_CID_CCX) ? 7 : 48;
+			RetryLimit = (pHalData->CustomerID == RT_CID_CCX) ? 7 : 48;
 		}
 		else // Ad-hoc Mode
 		{
@@ -5500,8 +5370,7 @@ static void hw_var_set_mlme_join(PADAPTER Adapter, u8 variable, u8* val)
 
 void SetHwReg8812A(PADAPTER padapter, u8 variable, u8 *pval)
 {
-	PHAL_DATA_TYPE pHalData;
-	struct dm_priv *pdmpriv;
+	PHAL_DATA_TYPE pHalData; 
 	PDM_ODM_T podmpriv;
 	u8 val8;
 	u16 val16;
@@ -5509,8 +5378,7 @@ void SetHwReg8812A(PADAPTER padapter, u8 variable, u8 *pval)
 
 _func_enter_;
 
-	pHalData = GET_HAL_DATA(padapter);
-	pdmpriv = &pHalData->dmpriv;
+	pHalData = GET_HAL_DATA(padapter); 
 	podmpriv = &pHalData->odmpriv;
 
 	switch (variable)
@@ -5680,8 +5548,7 @@ _func_enter_;
 				u8 RetryLimit = 0x30;
 				u8 type = *(u8*)pval;
 				struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
-				EEPROM_EFUSE_PRIV *pEEPROM = GET_EEPROM_EFUSE_PRIV(padapter);
-
+			
 				if (type == 0) // prepare to join
 				{
 					//enable to rx data frame.Accept all data frame
@@ -5697,7 +5564,7 @@ _func_enter_;
 
 					if (check_fwstate(pmlmepriv, WIFI_STATION_STATE) == _TRUE)
 					{
-						RetryLimit = (pEEPROM->CustomerID == RT_CID_CCX) ? 7 : 48;
+						RetryLimit = (pHalData->CustomerID == RT_CID_CCX) ? 7 : 48;
 					}
 					else // Ad-hoc Mode
 					{
@@ -5939,7 +5806,7 @@ _func_enter_;
 
 				// Forece leave RF low power mode for 1T1R to prevent conficting setting in Fw power
 				// saving sequence. 2010.06.07. Added by tynli. Suggested by SD3 yschang.
-				if ((psmode != PS_MODE_ACTIVE) && (!IS_92C_SERIAL(pHalData->VersionID)))
+				if (psmode != PS_MODE_ACTIVE)
 				{
 					ODM_RF_Saving(podmpriv, _TRUE);
 				}
@@ -6796,8 +6663,6 @@ void rtl8812a_combo_card_WifiOnlyHwInit(PADAPTER pdapter)
 
 void rtl8812_set_hal_ops(struct hal_ops *pHalFunc)
 {
-	pHalFunc->free_hal_data = &rtl8812_free_hal_data;
-
 	pHalFunc->dm_init = &rtl8812_init_dm_priv;
 	pHalFunc->dm_deinit = &rtl8812_deinit_dm_priv;
 
@@ -6805,7 +6670,7 @@ void rtl8812_set_hal_ops(struct hal_ops *pHalFunc)
 
 	pHalFunc->UpdateRAMaskHandler = &UpdateHalRAMask8812A;
 
-	pHalFunc->read_chip_version = &ReadChipVersion8812A;
+	pHalFunc->read_chip_version = read_chip_version_8812a;
 
 	pHalFunc->set_bwmode_handler = &PHY_SetBWMode8812;
 	pHalFunc->set_channel_handler = &PHY_SwChnl8812;
@@ -6862,8 +6727,12 @@ void rtl8812_set_hal_ops(struct hal_ops *pHalFunc)
 
 	pHalFunc->fill_h2c_cmd = &FillH2CCmd_8812;
 	pHalFunc->fill_fake_txdesc = &rtl8812a_fill_fake_txdesc;
-#ifdef CONFIG_WOWLAN
+#if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
 	pHalFunc->hal_set_wowlan_fw = &SetFwRelatedForWoWLAN8812;
+#endif
+#ifdef CONFIG_AP_WOWLAN
+	pHalFunc->hal_set_ap_wowlan_cmd = &rtl8812a_set_ap_wowlan_cmd;
+	pHalFunc->hal_set_ap_ps_wowlan_cmd = &rtl8812a_set_ap_ps_wowlan_cmd;
 #endif
 	pHalFunc->hal_get_tx_buff_rsvd_page_num = &GetTxBufferRsvdPageNum8812;
 }

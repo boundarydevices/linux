@@ -586,7 +586,11 @@ u8 *rtw_tdls_set_wmm_params(_adapter *padapter, u8 *pframe, struct pkt_attrib *p
 
 	if (&pmlmeinfo->WMM_param) {
 		_rtw_memcpy(wmm_param_ele, WMM_PARA_OUI, 6);
-		_rtw_memcpy(wmm_param_ele + 6, (u8 *)&pmlmeinfo->WMM_param, sizeof(pmlmeinfo->WMM_param));
+		if (_rtw_memcmp(&pmlmeinfo->WMM_param, &wmm_param_ele[6], 18) == _TRUE)
+			/* Use default WMM Param */
+			_rtw_memcpy(wmm_param_ele + 6, (u8 *)&TDLS_WMM_PARAM_IE, sizeof(TDLS_WMM_PARAM_IE));
+		else	
+			_rtw_memcpy(wmm_param_ele + 6, (u8 *)&pmlmeinfo->WMM_param, sizeof(pmlmeinfo->WMM_param));
 		return rtw_set_ie(pframe, _VENDOR_SPECIFIC_IE_,  24, wmm_param_ele, &(pattrib->pktlen));		
 	}
 	else
@@ -1292,7 +1296,7 @@ int On_TDLS_Dis_Rsp(_adapter *padapter, union recv_frame *precv_frame)
 			}
 		}
 
-		padapter->HalFunc.GetHalDefVarHandler(padapter, HAL_DEF_UNDERCORATEDSMOOTHEDPWDB, &UndecoratedSmoothedPWDB);
+		rtw_hal_get_def_var(padapter, HAL_DEF_UNDERCORATEDSMOOTHEDPWDB, &UndecoratedSmoothedPWDB);
 
 		if (pattrib->phy_info.RxPWDBAll + TDLS_SIGNAL_THRESH >= UndecoratedSmoothedPWDB) {
 			DBG_871X("pattrib->RxPWDBAll=%d, pdmpriv->UndecoratedSmoothedPWDB=%d\n", pattrib->phy_info.RxPWDBAll, UndecoratedSmoothedPWDB);
@@ -1514,6 +1518,7 @@ exit:
 
 int On_TDLS_Setup_Rsp(_adapter *padapter, union recv_frame *precv_frame)
 {
+	struct registry_priv	*pregistrypriv = &padapter->registrypriv;
 	struct tdls_info *ptdlsinfo = &padapter->tdlsinfo;
 	struct sta_info *ptdls_sta= NULL;
    	struct sta_priv *pstapriv = &padapter->stapriv;
@@ -1596,6 +1601,11 @@ int On_TDLS_Setup_Rsp(_adapter *padapter, union recv_frame *precv_frame)
 		case _EXT_CAP_IE_:
 			break;
 		case _VENDOR_SPECIFIC_IE_:
+			if (_rtw_memcmp((u8 *)pIE + 2, WMM_INFO_OUI, 6) == _TRUE) {	
+				/* WMM Info ID and OUI */
+				if ((pregistrypriv->wmm_enable == _TRUE) || (padapter->mlmepriv.htpriv.ht_option == _TRUE))
+					ptdls_sta->qos_option = _TRUE;
+			}
 			break;
 		case _FTIE_:
 			pftie=(u8*)pIE;
@@ -1743,7 +1753,11 @@ int On_TDLS_Setup_Cfm(_adapter *padapter, union recv_frame *precv_frame)
 				prsnie=(u8*)pIE;
 				break;
 			case _VENDOR_SPECIFIC_IE_:
-				break;
+				if (_rtw_memcmp((u8 *)pIE + 2, WMM_PARA_OUI, 6) == _TRUE) {	
+					/* WMM Parameter ID and OUI */
+					ptdls_sta->qos_option = _TRUE;
+				}
+				break;				
  			case _FTIE_:
 				pftie=(u8*)pIE;
 				break;
@@ -2248,6 +2262,7 @@ void wfd_ie_tdls(_adapter * padapter, u8 *pframe, u32 *pktlen )
 
 void rtw_build_tdls_setup_req_ies(_adapter * padapter, struct xmit_frame * pxmitframe, u8 *pframe, struct tdls_txmgmt *ptxmgmt)
 {
+	struct registry_priv	*pregistrypriv = &padapter->registrypriv;
 	struct pkt_attrib	*pattrib = &pxmitframe->attrib;
 	struct sta_info *ptdls_sta=rtw_get_stainfo( (&padapter->stapriv) , pattrib->dst);
 
@@ -2279,7 +2294,6 @@ void rtw_build_tdls_setup_req_ies(_adapter * padapter, struct xmit_frame * pxmit
 		pframe = rtw_tdls_set_rsnie(ptxmgmt, pframe, pattrib,  _TRUE, ptdls_sta);
 
 	pframe = rtw_tdls_set_ext_cap(pframe, pattrib);
-	pframe = rtw_tdls_set_qos_cap(pframe, pattrib);
 
 	if (pattrib->encrypt) {
 		pframe = rtw_tdls_set_ftie(ptxmgmt
@@ -2292,10 +2306,15 @@ void rtw_build_tdls_setup_req_ies(_adapter * padapter, struct xmit_frame * pxmit
 	}
 
 	/* Sup_reg_classes(optional) */
-	pframe = rtw_tdls_set_ht_cap(padapter, pframe_head, pattrib);
+	if (pregistrypriv->ht_enable == _TRUE)
+		pframe = rtw_tdls_set_ht_cap(padapter, pframe_head, pattrib);
+
 	pframe = rtw_tdls_set_bss_coexist(padapter, pframe, pattrib);
 
 	pframe = rtw_tdls_set_linkid(pframe, pattrib, _TRUE);
+
+	if ((pregistrypriv->wmm_enable == _TRUE) || (padapter->mlmepriv.htpriv.ht_option == _TRUE))
+		pframe = rtw_tdls_set_qos_cap(pframe, pattrib);
 
 #ifdef CONFIG_WFD
 	wfd_ie_tdls( padapter, pframe, &(pattrib->pktlen) );
@@ -2305,6 +2324,7 @@ void rtw_build_tdls_setup_req_ies(_adapter * padapter, struct xmit_frame * pxmit
 
 void rtw_build_tdls_setup_rsp_ies(_adapter * padapter, struct xmit_frame * pxmitframe, u8 *pframe, struct tdls_txmgmt *ptxmgmt)
 {
+	struct registry_priv	*pregistrypriv = &padapter->registrypriv;
 	struct pkt_attrib	*pattrib = &pxmitframe->attrib;
 	struct sta_info *ptdls_sta;
 	u8 k; /* for random ANonce */
@@ -2348,7 +2368,6 @@ void rtw_build_tdls_setup_rsp_ies(_adapter * padapter, struct xmit_frame * pxmit
 	}
 
 	pframe = rtw_tdls_set_ext_cap(pframe, pattrib);
-	pframe = rtw_tdls_set_qos_cap(pframe, pattrib);
 
 	if (pattrib->encrypt) {
 		if (rtw_tdls_is_driver_setup(padapter) == _TRUE)
@@ -2367,7 +2386,9 @@ void rtw_build_tdls_setup_rsp_ies(_adapter * padapter, struct xmit_frame * pxmit
 	}
 
 	/* Sup_reg_classes(optional) */
-	pframe = rtw_tdls_set_ht_cap(padapter, pframe_head, pattrib);
+	if (pregistrypriv->ht_enable == _TRUE)
+		pframe = rtw_tdls_set_ht_cap(padapter, pframe_head, pattrib);
+	
 	pframe = rtw_tdls_set_bss_coexist(padapter, pframe, pattrib);
 
 	plinkid_ie = pframe;
@@ -2376,6 +2397,9 @@ void rtw_build_tdls_setup_rsp_ies(_adapter * padapter, struct xmit_frame * pxmit
 	/* Fill FTIE mic */
 	if (pattrib->encrypt && rtw_tdls_is_driver_setup(padapter) == _TRUE)
 		wpa_tdls_ftie_mic(ptdls_sta->tpk.kck, 2, plinkid_ie, prsnie, ptimeout_ie, pftie, pftie_mic);
+
+	if ((pregistrypriv->wmm_enable == _TRUE) || (padapter->mlmepriv.htpriv.ht_option == _TRUE))
+		pframe = rtw_tdls_set_qos_cap(pframe, pattrib);
 
 #ifdef CONFIG_WFD
 	wfd_ie_tdls( padapter, pframe, &(pattrib->pktlen) );
@@ -2436,7 +2460,8 @@ void rtw_build_tdls_setup_cfm_ies(_adapter * padapter, struct xmit_frame * pxmit
 	if (pattrib->encrypt && (rtw_tdls_is_driver_setup(padapter) == _TRUE))
 		wpa_tdls_ftie_mic(ptdls_sta->tpk.kck, 3, plinkid_ie, prsnie, ptimeout_ie, pftie, pftie_mic);
 
-	pframe = rtw_tdls_set_wmm_params(padapter, pframe, pattrib);
+	if (ptdls_sta->qos_option == _TRUE)
+		pframe = rtw_tdls_set_wmm_params(padapter, pframe, pattrib);
 }
 
 void rtw_build_tdls_teardown_ies(_adapter * padapter, struct xmit_frame * pxmitframe, u8 *pframe, struct tdls_txmgmt *ptxmgmt)
@@ -2484,6 +2509,7 @@ void rtw_build_tdls_dis_req_ies(_adapter * padapter, struct xmit_frame * pxmitfr
 
 void rtw_build_tdls_dis_rsp_ies(_adapter * padapter, struct xmit_frame * pxmitframe, u8 *pframe, struct tdls_txmgmt *ptxmgmt, u8 privacy)
 {
+	struct registry_priv	*pregistrypriv = &padapter->registrypriv;
 	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
 	struct pkt_attrib	*pattrib = &pxmitframe->attrib;
 	u8 *pframe_head, pktlen_index;
@@ -2510,7 +2536,9 @@ void rtw_build_tdls_dis_rsp_ies(_adapter * padapter, struct xmit_frame * pxmitfr
 		pframe = rtw_tdls_set_timeout_interval(ptxmgmt, pframe, pattrib,  _TRUE, NULL);
 	}
 
-	pframe = rtw_tdls_set_ht_cap(padapter, pframe_head - pktlen_index, pattrib);
+	if (pregistrypriv->ht_enable == _TRUE)
+		pframe = rtw_tdls_set_ht_cap(padapter, pframe_head - pktlen_index, pattrib);
+	
 	pframe = rtw_tdls_set_bss_coexist(padapter, pframe, pattrib);
 	pframe = rtw_tdls_set_linkid(pframe, pattrib, _FALSE);
 
@@ -2680,7 +2708,7 @@ void _tdls_tpk_timer_hdl(void *FunctionContext)
 	ptdls_sta->TPK_count++;
 	/* TPK_timer expired in a second */
 	/* Retry timer should set at least 301 sec. */
-	if (ptdls_sta->TPK_count==TPK_RESEND_COUNT) {
+	if (ptdls_sta->TPK_count >= ptdls_sta->TDLS_PeerKey_Lifetime) {
 		DBG_871X("[TDLS] %s, Re-Setup TDLS link with "MAC_FMT" since TPK lifetime expires!\n", __FUNCTION__, MAC_ARG(ptdls_sta->hwaddr));
 		ptdls_sta->TPK_count=0;
 		_rtw_memcpy(txmgmt.peer, ptdls_sta->hwaddr, ETH_ALEN);

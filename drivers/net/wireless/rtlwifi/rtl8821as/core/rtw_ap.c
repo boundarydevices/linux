@@ -673,7 +673,7 @@ void add_RATid(_adapter *padapter, struct sta_info *psta, u8 rssi_level)
 	int i;
 	u8 rf_type;
 	unsigned char sta_band = 0, shortGIrate = _FALSE;
-	unsigned int tx_ra_bitmap=0;
+	u64 tx_ra_bitmap = 0;
 	struct ht_priv	*psta_ht = NULL;
 	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 	WLAN_BSSID_EX *pcur_network = (WLAN_BSSID_EX *)&pmlmepriv->cur_network.network;
@@ -841,7 +841,7 @@ void add_RATid(_adapter *padapter, struct sta_info *psta, u8 rssi_level)
 	psta->wireless_mode = sta_band;
 	psta->raid = rtw_hal_networktype_to_raid(padapter, psta);
 	
-	if (psta->aid < NUM_STA) 
+	if (psta->aid < NUM_STA)
 	{
 		u8	arg[4] = {0};
 
@@ -850,9 +850,9 @@ void add_RATid(_adapter *padapter, struct sta_info *psta, u8 rssi_level)
 		arg[2] = shortGIrate;
 		arg[3] = psta->init_rate;
 
-		DBG_871X("%s=> mac_id:%d , raid:%d , shortGIrate=%d, bitmap=0x%x\n", 
-			__FUNCTION__ , psta->mac_id, psta->raid ,shortGIrate, tx_ra_bitmap);
-
+		DBG_871X("%s=> mac_id:%d , raid:%d , shortGIrate=%d, tx_ra_bitmap:0x%016llx, networkType:0x%02x\n", 
+			__FUNCTION__, psta->mac_id, psta->raid, shortGIrate, tx_ra_bitmap, psta->wireless_mode);
+			
 		rtw_hal_add_ra_tid(padapter, tx_ra_bitmap, arg, rssi_level);
 	}
 	else 
@@ -867,7 +867,7 @@ void update_bmc_sta(_adapter *padapter)
 	_irqL	irqL;
 	unsigned char	network_type;
 	int supportRateNum = 0;
-	unsigned int tx_ra_bitmap=0;
+	u64 tx_ra_bitmap = 0;
 	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
 	struct mlme_ext_priv	*pmlmeext = &(padapter->mlmeextpriv);
 	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);	
@@ -923,7 +923,7 @@ void update_bmc_sta(_adapter *padapter)
 			arg[2] = 0;
 			arg[3] = psta->init_rate;
 
-			DBG_871X("%s=> mac_id:%d , raid:%d , bitmap=0x%x\n", 
+			DBG_871X("%s=> mac_id:%d , raid:%d , bitmap=0x%016llx\n", 
 				__FUNCTION__ , psta->mac_id, psta->raid , tx_ra_bitmap);
 
 			rtw_hal_add_ra_tid(padapter, tx_ra_bitmap, arg, 0);
@@ -1310,6 +1310,7 @@ void start_bss_network(_adapter *padapter, u8 *pbuf)
 
 	rtw_hal_set_hwreg(padapter, HW_VAR_DO_IQK, NULL);
 
+#if 0
 	if(pmlmepriv->cur_network.join_res != _TRUE) //setting only at  first time
 	{
 		//u32 initialgain;
@@ -1322,11 +1323,12 @@ void start_bss_network(_adapter *padapter, u8 *pbuf)
 		//Switch_DM_Func(padapter, DYNAMIC_FUNC_DISABLE, _FALSE);
 		
 		//turn on all dynamic functions	
-		Switch_DM_Func(padapter, DYNAMIC_ALL_FUNC_ENABLE, _TRUE);
+		/* Switch_DM_Func(padapter, DYNAMIC_ALL_FUNC_ENABLE, _TRUE);*/
 
 		//rtw_hal_set_hwreg(padapter, HW_VAR_INITIAL_GAIN, (u8 *)(&initialgain));
 	
 	}
+#endif
 #ifdef CONFIG_80211N_HT
 	//set channel, bwmode	
 	p = rtw_get_ie((pnetwork->IEs + sizeof(NDIS_802_11_FIXED_IEs)), _HT_ADD_INFO_IE_, &ie_len, (pnetwork->IELength - sizeof(NDIS_802_11_FIXED_IEs)));
@@ -1380,9 +1382,6 @@ void start_bss_network(_adapter *padapter, u8 *pbuf)
 	}
 #endif
 
-#ifdef CONFIG_DUALMAC_CONCURRENT
-	dc_set_ap_channel_bandwidth(padapter, cur_channel, cur_ch_offset, cur_bwmode);
-#else //!CONFIG_DUALMAC_CONCURRENT	
 #ifdef CONFIG_CONCURRENT_MODE
 	//TODO: need to judge the phy parameters on concurrent mode for single phy
 	concurrent_set_ap_chbw(padapter, cur_channel, cur_ch_offset, cur_bwmode);
@@ -1393,7 +1392,6 @@ void start_bss_network(_adapter *padapter, u8 *pbuf)
 	pmlmeext->cur_bwmode = cur_bwmode;
 	pmlmeext->cur_ch_offset = cur_ch_offset;
 #endif //!CONFIG_CONCURRENT_MODE
-#endif //!CONFIG_DUALMAC_CONCURRENT
 
 	pmlmeext->cur_wireless_mode = pmlmepriv->cur_network.network_type;
 

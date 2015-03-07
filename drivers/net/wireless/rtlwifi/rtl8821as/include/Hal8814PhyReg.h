@@ -30,10 +30,11 @@
 //
 
 
-// BB Register Definition
+/* BB Register Definition */
 
 #define rCCAonSec_Jaguar		0x838
 #define rPwed_TH_Jaguar			0x830
+#define rL1_Weight_Jaguar		0x840
 
 // BW and sideband setting
 #define rBWIndication_Jaguar		0x834
@@ -114,6 +115,17 @@
 #define rCCK_TxFilter3_Jaguar		0xa28
 #define bCCK_TxFilter3_C6_Jaguar		0x000000ff
 #define bCCK_TxFilter3_C7_Jaguar		0x0000ff00
+/* NBI & CSI Mask setting */
+#define	rCSI_Mask_Setting1_Jaguar	0x874
+#define	rCSI_Fix_Mask0_Jaguar		0x880
+#define	rCSI_Fix_Mask1_Jaguar		0x884
+#define	rCSI_Fix_Mask2_Jaguar		0x888
+#define	rCSI_Fix_Mask3_Jaguar		0x88c
+#define	rCSI_Fix_Mask4_Jaguar		0x890
+#define	rCSI_Fix_Mask5_Jaguar		0x894
+#define	rCSI_Fix_Mask6_Jaguar		0x898
+#define	rCSI_Fix_Mask7_Jaguar		0x89c
+#define	rNBI_Setting_Jaguar			0x87c
 
 
 // YN: mask the following register definition temporarily

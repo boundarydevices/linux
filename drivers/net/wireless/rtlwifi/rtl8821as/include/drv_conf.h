@@ -111,6 +111,7 @@
 #define MACID_NUM_SW_LIMIT 32
 #define CAM_ENTRY_NUM_SW_LIMIT 32
 
+/*#define CONFIG_WEXT_DONT_JOIN_BYSSID	*/
 //#include <rtl871x_byteorder.h>
 
 #endif // __DRV_CONF_H__

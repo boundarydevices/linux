@@ -30,10 +30,7 @@ enum RTL871X_HCI_TYPE {
 
 enum _CHIP_TYPE {
 
-	NULL_CHIP_TYPE,	
-	RTL8188C_8192C,
-	RTL8192D,
-	RTL8723A,
+	NULL_CHIP_TYPE,
 	RTL8188E,
 	RTL8192E,
 	RTL8812,
@@ -69,10 +66,12 @@ typedef enum _HW_VARIABLES{
 	HW_VAR_SEC_DK_CFG,
 	HW_VAR_BCN_VALID,
 	HW_VAR_RF_TYPE,
-	HW_VAR_DM_FLAG,
+	/* PHYDM odm->SupportAbility */ 
+	HW_VAR_DM_FLAG, 
 	HW_VAR_DM_FUNC_OP,
 	HW_VAR_DM_FUNC_SET,
 	HW_VAR_DM_FUNC_CLR,
+	/* PHYDM odm->SupportAbility */
 	HW_VAR_CAM_EMPTY_ENTRY,
 	HW_VAR_CAM_INVALID_ALL,
 	HW_VAR_CAM_WRITE,
@@ -160,7 +159,6 @@ typedef enum _HAL_DEF_VARIABLE{
 	HAL_DEF_MAX_RECVBUF_SZ,
 	HAL_DEF_RX_PACKET_OFFSET,
 	HAL_DEF_DBG_DUMP_RXPKT,//for dbg
-	HAL_DEF_DBG_DM_FUNC,//for dbg
 	HAL_DEF_RA_DECISION_RATE,
 	HAL_DEF_RA_SGI,
 	HAL_DEF_PT_PWR_STATUS,
@@ -206,41 +204,58 @@ typedef enum _HAL_INTF_PS_FUNC{
 typedef s32 (*c2h_id_filter)(u8 *c2h_evt);
 
 struct hal_ops {
+	/*** initialize section ***/
+	void	(*read_chip_version)(_adapter *padapter);
+	void	(*init_default_value)(_adapter *padapter);
+	void	(*intf_chip_configure)(_adapter *padapter);
+	void	(*read_adapter_info)(_adapter *padapter);
 	u32	(*hal_power_on)(_adapter *padapter);
-	void	(*hal_power_off)(_adapter *padapter);
+	void	(*hal_power_off)(_adapter *padapter);	
 	u32	(*hal_init)(_adapter *padapter);
 	u32	(*hal_deinit)(_adapter *padapter);
-
-	void	(*free_hal_data)(_adapter *padapter);
-
-	u32	(*inirp_init)(_adapter *padapter);
-	u32	(*inirp_deinit)(_adapter *padapter);
-	void	(*irp_reset)(_adapter *padapter);
-
-	s32	(*init_xmit_priv)(_adapter *padapter);
-	void	(*free_xmit_priv)(_adapter *padapter);
-
-	s32	(*init_recv_priv)(_adapter *padapter);
-	void	(*free_recv_priv)(_adapter *padapter);
-
-	void	(*InitSwLeds)(_adapter *padapter);
-	void	(*DeInitSwLeds)(_adapter *padapter);
-
 	void	(*dm_init)(_adapter *padapter);
 	void	(*dm_deinit)(_adapter *padapter);
-	void	(*read_chip_version)(_adapter *padapter);
+	
+	/*** xmit section ***/
+	s32	(*init_xmit_priv)(_adapter *padapter);
+	void	(*free_xmit_priv)(_adapter *padapter);
+	s32	(*hal_xmit)(_adapter *padapter, struct xmit_frame *pxmitframe);
+	/*
+	 * mgnt_xmit should be implemented to run in interrupt context
+	 */
+	s32 (*mgnt_xmit)(_adapter *padapter, struct xmit_frame *pmgntframe);
+	s32	(*hal_xmitframe_enqueue)(_adapter *padapter, struct xmit_frame *pxmitframe);
+#ifdef CONFIG_XMIT_THREAD_MODE
+	s32 (*xmit_thread_handler)(_adapter *padapter);
+#endif
+	void	(*run_thread)(_adapter *padapter);
+	void	(*cancel_thread)(_adapter *padapter);
 
-	void	(*init_default_value)(_adapter *padapter);
-
-	void	(*intf_chip_configure)(_adapter *padapter);
-
-	void	(*read_adapter_info)(_adapter *padapter);
-
+	/*** recv section ***/
+	s32	(*init_recv_priv)(_adapter *padapter);
+	void	(*free_recv_priv)(_adapter *padapter);	
+#if defined(CONFIG_USB_HCI)||defined(CONFIG_PCI_HCI)
+	u32	(*inirp_init)(_adapter *padapter);
+	u32	(*inirp_deinit)(_adapter *padapter);
+#endif
+	/*** interrupt hdl section ***/
 	void	(*enable_interrupt)(_adapter *padapter);
 	void	(*disable_interrupt)(_adapter *padapter);
-	u8		(*check_ips_status)(_adapter *padapter);
-	s32		(*interrupt_handler)(_adapter *padapter);
-	void    (*clear_interrupt)(_adapter *padapter);
+	u8	(*check_ips_status)(_adapter *padapter);
+#if defined(CONFIG_PCI_HCI)
+	s32	(*interrupt_handler)(_adapter *padapter);
+#endif
+
+#if defined(CONFIG_PCI_HCI)
+	void	(*irp_reset)(_adapter *padapter);
+#endif
+		
+	/*** DM section ***/
+	
+	void	(*InitSwLeds)(_adapter *padapter);
+	void	(*DeInitSwLeds)(_adapter *padapter);
+		
+
 	void	(*set_bwmode_handler)(_adapter *padapter, CHANNEL_WIDTH Bandwidth, u8 Offset);
 	void	(*set_channel_handler)(_adapter *padapter, u8 channel);
 	void	(*set_chnl_bw_handler)(_adapter *padapter, u8 channel, CHANNEL_WIDTH Bandwidth, u8 Offset40, u8 Offset80);
@@ -249,14 +264,15 @@ struct hal_ops {
 	void	(*get_tx_power_level_handler)(_adapter *padapter, s32 *powerlevel);
 
 	void	(*hal_dm_watchdog)(_adapter *padapter);
+#ifdef CONFIG_LPS_LCLK_WD_TIMER
 	void	(*hal_dm_watchdog_in_lps)(_adapter *padapter);
-	
+#endif
 
 	void	(*SetHwRegHandler)(_adapter *padapter, u8	variable,u8* val);
 	void	(*GetHwRegHandler)(_adapter *padapter, u8	variable,u8* val);
 
 #ifdef CONFIG_C2H_PACKET_EN
-		void	(*SetHwRegHandlerWithBuf)(_adapter *padapter, u8 variable, u8* pbuf, int len);
+	void	(*SetHwRegHandlerWithBuf)(_adapter *padapter, u8 variable, u8 * pbuf, int len);
 #endif
 
 	u8	(*GetHalDefVarHandler)(_adapter *padapter, HAL_DEF_VARIABLE eVariable, PVOID pValue);
@@ -268,10 +284,8 @@ struct hal_ops {
 	void	(*UpdateRAMaskHandler)(_adapter *padapter, u32 mac_id, u8 rssi_level);
 	void	(*SetBeaconRelatedRegistersHandler)(_adapter *padapter);
 
-	void	(*Add_RateATid)(_adapter *padapter, u32 bitmap, u8* arg, u8 rssi_level);
+	void	(*Add_RateATid)(_adapter *padapter, u64 bitmap, u8 *arg, u8 rssi_level);
 
-	void	(*run_thread)(_adapter *padapter);
-	void	(*cancel_thread)(_adapter *padapter);
 
 #ifdef CONFIG_ANTENNA_DIVERSITY
 	u8	(*AntDivBeforeLinkHandler)(_adapter *padapter);
@@ -279,12 +293,6 @@ struct hal_ops {
 #endif
 	u8	(*interface_ps_func)(_adapter *padapter,HAL_INTF_PS_FUNC efunc_id, u8* val);
 
-	s32	(*hal_xmit)(_adapter *padapter, struct xmit_frame *pxmitframe);
-	/*
-	 * mgnt_xmit should be implemented to run in interrupt context
-	 */
-	s32 (*mgnt_xmit)(_adapter *padapter, struct xmit_frame *pmgntframe);
-	s32	(*hal_xmitframe_enqueue)(_adapter *padapter, struct xmit_frame *pxmitframe);
 
 	u32	(*read_bbreg)(_adapter *padapter, u32 RegAddr, u32 BitMask);
 	void	(*write_bbreg)(_adapter *padapter, u32 RegAddr, u32 BitMask, u32 Data);
@@ -319,9 +327,6 @@ struct hal_ops {
 	int (*IOL_exec_cmds_sync)(_adapter *padapter, struct xmit_frame *xmit_frame, u32 max_wating_ms, u32 bndy_cnt);
 #endif
 
-#ifdef CONFIG_XMIT_THREAD_MODE
-	s32 (*xmit_thread_handler)(_adapter *padapter);
-#endif
 	void (*hal_notch_filter)(_adapter * adapter, bool enable);
 	void (*hal_reset_security_engine)(_adapter * adapter);
 	s32 (*c2h_handler)(_adapter *padapter, u8 *c2h_evt);
@@ -329,9 +334,16 @@ struct hal_ops {
 	s32 (*fill_h2c_cmd)(PADAPTER, u8 ElementID, u32 CmdLen, u8 *pCmdBuffer);
 	void (*fill_fake_txdesc)(PADAPTER, u8 *pDesc, u32 BufferLen,
 			u8 IsPsPoll, u8 IsBTQosNull, u8 bDataFrame);
-#ifdef CONFIG_WOWLAN
+	
+#if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
 	void (*hal_set_wowlan_fw)(_adapter *adapter, u8 sleep);
-#endif //CONFIG_WOWLAN
+	void (*clear_interrupt)(_adapter *padapter);
+#endif	
+
+#ifdef CONFIG_AP_WOWLAN
+	void (*hal_set_ap_wowlan_cmd)(_adapter *padapter, u8 enable);
+	void (*hal_set_ap_ps_wowlan_cmd)(_adapter *padapter , u8 enable);
+#endif
 	u8 (*hal_get_tx_buff_rsvd_page_num)(_adapter *adapter, bool wowlan);
 #ifdef CONFIG_GPIO_API
 	void (*update_hisr_hsisr_ind)(PADAPTER padapter, u32 flag);
@@ -353,22 +365,6 @@ typedef	enum _RT_EEPROM_TYPE{
 #define RF_CHANGE_BY_SW 	BIT31
 
 typedef enum _HARDWARE_TYPE{
-	HARDWARE_TYPE_RTL8180,
-	HARDWARE_TYPE_RTL8185,
-	HARDWARE_TYPE_RTL8187,
-	HARDWARE_TYPE_RTL8188,
-	HARDWARE_TYPE_RTL8190P,
-	HARDWARE_TYPE_RTL8192E,
-	HARDWARE_TYPE_RTL819xU,
-	HARDWARE_TYPE_RTL8192SE,
-	HARDWARE_TYPE_RTL8192SU,
-	HARDWARE_TYPE_RTL8192CE,
-	HARDWARE_TYPE_RTL8192CU,
-	HARDWARE_TYPE_RTL8192DE,
-	HARDWARE_TYPE_RTL8192DU,
-	HARDWARE_TYPE_RTL8723AE,
-	HARDWARE_TYPE_RTL8723AU,
-	HARDWARE_TYPE_RTL8723AS,
 	HARDWARE_TYPE_RTL8188EE,
 	HARDWARE_TYPE_RTL8188EU,
 	HARDWARE_TYPE_RTL8188ES,
@@ -404,6 +400,7 @@ typedef enum _HARDWARE_TYPE{
 }HARDWARE_TYPE;
 
 #define IS_NEW_GENERATION_IC(_Adapter)	(((PADAPTER)_Adapter)->HardwareType >=HARDWARE_TYPE_RTL8192EE)
+#if 0
 //
 // RTL8192C Series
 //
@@ -431,6 +428,7 @@ typedef enum _HARDWARE_TYPE{
 #define IS_HARDWARE_TYPE_8723AS(_Adapter)	(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8723AS)
 #define	IS_HARDWARE_TYPE_8723A(_Adapter)	\
 (IS_HARDWARE_TYPE_8723AE(_Adapter) || IS_HARDWARE_TYPE_8723AU(_Adapter) || IS_HARDWARE_TYPE_8723AS(_Adapter))
+#endif
 
 //
 // RTL8188E Series
@@ -440,17 +438,6 @@ typedef enum _HARDWARE_TYPE{
 #define IS_HARDWARE_TYPE_8188ES(_Adapter)	(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8188ES)
 #define	IS_HARDWARE_TYPE_8188E(_Adapter)	\
 (IS_HARDWARE_TYPE_8188EE(_Adapter) || IS_HARDWARE_TYPE_8188EU(_Adapter) || IS_HARDWARE_TYPE_8188ES(_Adapter))
-
-
-#define	IS_HARDWARE_TYPE_8188E_before(_Adapter)			\
-(IS_HARDWARE_TYPE_8192C(_Adapter) ||IS_HARDWARE_TYPE_8192D(_Adapter) ||IS_HARDWARE_TYPE_8723A(_Adapter))
-
-
-#define IS_HARDWARE_TYPE_OLDER_THAN_8812A(_Adapter)	\
-(IS_HARDWARE_TYPE_8192D(_Adapter) || IS_HARDWARE_TYPE_8192C(_Adapter) ||\
- IS_HARDWARE_TYPE_8723AE(_Adapter) || IS_HARDWARE_TYPE_8723AU(_Adapter) || IS_HARDWARE_TYPE_8723AS(_Adapter) ||\
- IS_HARDWARE_TYPE_8188EE(_Adapter) || IS_HARDWARE_TYPE_8188EU(_Adapter) || IS_HARDWARE_TYPE_8188ES(_Adapter)\
-)
 
 // RTL8812 Series
 #define IS_HARDWARE_TYPE_8812E(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8812E)
@@ -528,9 +515,6 @@ typedef enum _HARDWARE_TYPE{
 (IS_HARDWARE_TYPE_8822BE(_Adapter) || IS_HARDWARE_TYPE_8822BU(_Adapter) || IS_HARDWARE_TYPE_8822BS(_Adapter))
 
 
-typedef struct eeprom_priv EEPROM_EFUSE_PRIV, *PEEPROM_EFUSE_PRIV;
-#define GET_EEPROM_EFUSE_PRIV(adapter) (&adapter->eeprompriv)
-#define is_boot_from_eeprom(adapter) (adapter->eeprompriv.EepromOrEfuse)
 
 typedef enum _wowlan_subcode{
 	WOWLAN_PATTERN_MATCH	= 1,
@@ -568,6 +552,9 @@ struct wowlan_ioctl_param{
 #define	RX_PNOWakeUp			0x55
 #define	AP_WakeUp			0x66
 
+u8 rtw_hal_data_init(_adapter *padapter);
+void rtw_hal_data_deinit(_adapter *padapter);
+
 void rtw_hal_def_value_init(_adapter *padapter);
 
 void	rtw_hal_free_data(_adapter *padapter);
@@ -579,6 +566,7 @@ void rtw_hal_sw_led_deinit(_adapter *padapter);
 
 u32 rtw_hal_power_on(_adapter *padapter);
 void rtw_hal_power_off(_adapter *padapter);
+
 uint rtw_hal_init(_adapter *padapter);
 uint rtw_hal_deinit(_adapter *padapter);
 void rtw_hal_stop(_adapter *padapter);
@@ -598,16 +586,20 @@ u8 rtw_hal_get_def_var(_adapter *padapter, HAL_DEF_VARIABLE eVariable, PVOID pVa
 
 void rtw_hal_set_odm_var(_adapter *padapter, HAL_ODM_VARIABLE eVariable, PVOID pValue1,BOOLEAN bSet);
 void	rtw_hal_get_odm_var(_adapter *padapter, HAL_ODM_VARIABLE eVariable, PVOID pValue1,PVOID pValue2);
-	
+
 void rtw_hal_enable_interrupt(_adapter *padapter);
 void rtw_hal_disable_interrupt(_adapter *padapter);
 
 u8 rtw_hal_check_ips_status(_adapter *padapter);
 
+#if defined(CONFIG_USB_HCI)||defined(CONFIG_PCI_HCI)
 u32	rtw_hal_inirp_init(_adapter *padapter);
 u32	rtw_hal_inirp_deinit(_adapter *padapter);
+#endif
 
+#if defined(CONFIG_PCI_HCI)
 void	rtw_hal_irp_reset(_adapter *padapter);
+#endif
 
 u8	rtw_hal_intf_ps_func(_adapter *padapter,HAL_INTF_PS_FUNC efunc_id, u8* val);
 
@@ -622,7 +614,7 @@ s32	rtw_hal_init_recv_priv(_adapter *padapter);
 void	rtw_hal_free_recv_priv(_adapter *padapter);
 
 void rtw_hal_update_ra_mask(struct sta_info *psta, u8 rssi_level);
-void	rtw_hal_add_ra_tid(_adapter *padapter, u32 bitmap, u8* arg, u8 rssi_level);
+void	rtw_hal_add_ra_tid(_adapter *padapter, u64 bitmap, u8 *arg, u8 rssi_level);
 
 void	rtw_hal_start_thread(_adapter *padapter);
 void	rtw_hal_stop_thread(_adapter *padapter);
@@ -693,9 +685,20 @@ s32 rtw_hal_is_disable_sw_channel_plan(PADAPTER padapter);
 s32 rtw_hal_macid_sleep(PADAPTER padapter, u8 macid);
 s32 rtw_hal_macid_wakeup(PADAPTER padapter, u8 macid);
 
-s32 rtw_hal_fill_h2c_cmd(PADAPTER, u8 ElementID, u32 CmdLen, u8 *pCmdBuffer);
+s32 rtw_hal_fill_h2c_cmd(PADAPTER padapter, u8 ElementID, u32 CmdLen, u8 *pCmdBuffer);
+void rtw_hal_fill_fake_txdesc(_adapter *padapter, u8 *pDesc, u32 BufferLen,
+		u8 IsPsPoll, u8 IsBTQosNull, u8 bDataFrame);
+u8 rtw_hal_get_txbuff_rsvd_page_num(_adapter *adapter, bool wowlan);
+
 #ifdef CONFIG_GPIO_API
 void rtw_hal_update_hisr_hsisr_ind(_adapter *padapter, u32 flag);
 #endif
+
+#if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
+void rtw_hal_clear_interrupt(_adapter *padapter);
+void rtw_hal_set_wowlan_fw(_adapter *padapter, u8 sleep);
+#endif
+u8 rtw_hal_ops_check(_adapter *padapter);
+
 #endif //__HAL_INTF_H__
 

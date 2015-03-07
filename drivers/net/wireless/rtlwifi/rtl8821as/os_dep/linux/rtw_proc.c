@@ -131,6 +131,11 @@ static int proc_get_mstat(struct seq_file *m, void *v)
 }
 #endif /* DBG_MEM_ALLOC */
 
+static int proc_get_ch_plan_test(struct seq_file *m, void *v)
+{
+	dump_ch_plan_test(m);
+	return 0;
+}
 
 /*
 * rtw_drv_proc:
@@ -142,6 +147,7 @@ const struct rtw_proc_hdl drv_proc_hdls [] = {
 #ifdef DBG_MEM_ALLOC
 	{"mstat", proc_get_mstat, NULL},
 #endif /* DBG_MEM_ALLOC */
+	{"ch_plan_test", proc_get_ch_plan_test, NULL},
 };
 
 const int drv_proc_hdls_num = sizeof(drv_proc_hdls) / sizeof(struct rtw_proc_hdl);
@@ -263,6 +269,15 @@ static int proc_get_rf_reg_dump(struct seq_file *m, void *v)
 	return 0;
 }
 
+static int proc_get_dump_adapters_status(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+
+	dump_adapters_status(m, adapter_to_dvobj(adapter));
+
+	return 0;
+}
 
 //gpio setting
 #ifdef CONFIG_GPIO_API
@@ -656,15 +671,15 @@ ssize_t proc_set_btinfo_evt(struct file *file, const char __user *buffer, size_t
 const struct rtw_proc_hdl adapter_proc_hdls [] = {
 	{"write_reg", proc_get_dummy, proc_set_write_reg},
 	{"read_reg", proc_get_read_reg, proc_set_read_reg},
+	{"adapters_status", proc_get_dump_adapters_status, NULL},
 	{"fwstate", proc_get_fwstate, NULL},
 	{"sec_info", proc_get_sec_info, NULL},
 	{"mlmext_state", proc_get_mlmext_state, NULL},
 	{"qos_option", proc_get_qos_option, NULL},
 	{"ht_option", proc_get_ht_option, NULL},
 	{"rf_info", proc_get_rf_info, NULL},
-	{"survey_info", proc_get_survey_info, NULL},
+	{"survey_info", proc_get_survey_info, proc_set_survey_info},
 	{"ap_info", proc_get_ap_info, NULL},
-	{"adapter_state", proc_get_adapter_state, NULL},
 	{"trx_info", proc_get_trx_info, proc_reset_trx_info},
 	{"rate_ctl", proc_get_rate_ctl, proc_set_rate_ctl},
 	{"dis_pwt_ctl", proc_get_dis_pwt, proc_set_dis_pwt},
@@ -917,22 +932,22 @@ ssize_t proc_set_odm_adaptivity(struct file *file, const char __user *buffer, si
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	char tmp[32];
 	u32 TH_L2H_ini;
+	u32 TH_L2H_ini_mode2;
 	s8 TH_EDCCA_HL_diff;
-	u32 IGI_Base;
-	u32 FABound;
+	s8 TH_EDCCA_HL_diff_mode2;
+	u8 EDCCA_enable;
 
 	if (count < 1)
 		return -EFAULT;
 
 	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {
 
-		int num = sscanf(tmp, "%x %hhd %x %u",
-			&TH_L2H_ini, &TH_EDCCA_HL_diff, &IGI_Base, &FABound);
+		int num = sscanf(tmp, "%x %hhd %x %hhd %s",	&TH_L2H_ini, &TH_EDCCA_HL_diff, &TH_L2H_ini_mode2, &TH_EDCCA_HL_diff_mode2, &EDCCA_enable);
 
-		if (num != 4)
+		if (num != 5)
 			return count;
 
-		rtw_odm_adaptivity_parm_set(padapter, (s8)TH_L2H_ini, TH_EDCCA_HL_diff, (s8)IGI_Base, FABound);
+		rtw_odm_adaptivity_parm_set(padapter, (s8)TH_L2H_ini, TH_EDCCA_HL_diff, (s8)TH_L2H_ini_mode2, TH_EDCCA_HL_diff_mode2, EDCCA_enable);
 	}
 	
 	return count;

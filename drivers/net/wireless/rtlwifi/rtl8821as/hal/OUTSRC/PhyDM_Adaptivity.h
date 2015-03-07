@@ -1,3 +1,4 @@
+
 /******************************************************************************
  *
  * Copyright(c) 2007 - 2011 Realtek Corporation. All rights reserved.
@@ -21,7 +22,7 @@
 #ifndef	__PHYDMADAPTIVITY_H__
 #define    __PHYDMADAPTIVITY_H__
 
-#define ADAPTIVITY_VERSION	"8.3"
+#define ADAPTIVITY_VERSION	"8.6"
 
 #if (DM_ODM_SUPPORT_TYPE & (ODM_WIN))
 typedef enum _tag_PhyDM_REGULATION_Type {
@@ -49,6 +50,19 @@ typedef enum tag_PhyDM_MACEDCCA_Type
 	PhyDM_DONT_IGNORE_EDCCA	= 1
 }PhyDM_MACEDCCA_Type;
 
+typedef struct _ADAPTIVITY_STATISTICS {
+	s1Byte			TH_L2H_ini_backup;
+	s1Byte			TH_EDCCA_HL_diff_backup;
+	s1Byte			IGI_Base;
+	u1Byte			IGI_target;
+	u1Byte			NHMWait;
+	s1Byte			H2L_lb;
+	s1Byte			L2H_lb;
+	BOOLEAN			bFirstLink;
+	BOOLEAN			bCheck;
+	BOOLEAN			DynamicLinkAdaptivity;
+	u1Byte			APNumTH;
+} ADAPTIVITY_STATISTICS, *PADAPTIVITY_STATISTICS;
 
 VOID
 Phydm_CheckAdaptivity(

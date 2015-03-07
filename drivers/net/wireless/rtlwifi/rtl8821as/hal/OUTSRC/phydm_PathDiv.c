@@ -247,13 +247,13 @@ phydm_find_default_path(
 
 
 	pDM_PathDiv->path_a_sum_all = 0;
-	pDM_PathDiv->path_a_cnt_all = 0;
+ 	pDM_PathDiv->path_a_cnt_all = 0;
 	pDM_PathDiv->path_b_sum_all = 0;
-	pDM_PathDiv->path_b_cnt_all = 0;
+ 	pDM_PathDiv->path_b_cnt_all = 0;
 	pDM_PathDiv->path_c_sum_all = 0;
-	pDM_PathDiv->path_c_cnt_all = 0;
+ 	pDM_PathDiv->path_c_cnt_all = 0;
 	pDM_PathDiv->path_d_sum_all = 0;
-	pDM_PathDiv->path_d_cnt_all = 0;
+ 	pDM_PathDiv->path_d_cnt_all = 0;
 
 	if(pDM_PathDiv->use_path_a_as_default_ant == 1)
 	{
@@ -394,7 +394,7 @@ phydm_candidate_dtp_update(
 VOID
 phydm_dynamic_tx_path(
 	IN	PVOID	pDM_VOID
-	)
+)
 {
 	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
 	pPATHDIV_T		pDM_PathDiv = &pDM_Odm->DM_PathDiv;	
@@ -534,11 +534,20 @@ phydm_dynamic_tx_path_init(
 	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
 	pPATHDIV_T		pDM_PathDiv  = &(pDM_Odm->DM_PathDiv);
 	PADAPTER		pAdapter = pDM_Odm->Adapter;
+	#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
 	USB_MODE_MECH	*pUsbModeMech = &pAdapter->UsbModeMechanism;
-
+	#endif
 	u1Byte 			search_space_2[NUM_CHOOSE2_FROM4]= {PHYDM_AB, PHYDM_AC, PHYDM_AD, PHYDM_BC, PHYDM_BD, PHYDM_CD };
 	u1Byte 			search_space_3[NUM_CHOOSE3_FROM4]= {PHYDM_BCD, PHYDM_ACD,  PHYDM_ABD, PHYDM_ABC};
-	
+
+	#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+		pDM_PathDiv->is_u3_mode = (pUsbModeMech->CurUsbMode==USB_MODE_U3)? 1 : 0 ;
+	#else
+		pDM_PathDiv->is_u3_mode = 1;
+	#endif
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_PATH_DIV, ODM_DBG_LOUD, ("Dynamic TX Path Init 8814\n"));
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_PATH_DIV, ODM_DBG_LOUD, ("is_u3_mode = (( %d ))\n", pDM_PathDiv->is_u3_mode));
+
 	memcpy(&(pDM_PathDiv->search_space_2[0]), &(search_space_2[0]), NUM_CHOOSE2_FROM4);
 	memcpy(&(pDM_PathDiv->search_space_3[0]), &(search_space_3[0]), NUM_CHOOSE3_FROM4);
 
@@ -546,18 +555,18 @@ phydm_dynamic_tx_path_init(
 	pDM_PathDiv->dtp_state = PHYDM_DTP_INIT;	
 	pDM_Odm->path_select = PHYDM_AUTO_PATH;
 	pDM_PathDiv->path_div_type = PHYDM_4R_PATH_DIV;
-	pDM_PathDiv->is_u3_mode = (pUsbModeMech->CurUsbMode==USB_MODE_U3)? 1 : 0 ;
+
 	
 	if(pDM_PathDiv->is_u3_mode )
 	{
 		pDM_PathDiv->num_tx_path=3;
-		phydm_dtp_fix_tx_path(pDM_Odm, PHYDM_ABC);// 3TX // Set Init TX Path
+		phydm_dtp_fix_tx_path(pDM_Odm, PHYDM_BCD);/* 3TX  Set Init TX Path*/
 		
 	}
 	else
 	{
 		pDM_PathDiv->num_tx_path=2;
-		phydm_dtp_fix_tx_path(pDM_Odm, PHYDM_AB);	// 2TX // Set Init TX Path
+		phydm_dtp_fix_tx_path(pDM_Odm, PHYDM_BC);/* 2TX // Set Init TX Path*/
 	}
 	
 }
@@ -617,17 +626,34 @@ phydm_process_rssi_for_path_div(
 VOID
 odm_pathdiv_debug(
 	IN		PVOID		pDM_VOID,
-	IN		u4Byte		*const dm_value
+	IN		u4Byte		*const dm_value,
+	IN		u4Byte		*_used,
+	OUT		char			*output,
+	IN		u4Byte		*_out_len
 	)
 {
 	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
 	pPATHDIV_T			pDM_PathDiv  = &(pDM_Odm->DM_PathDiv);
+	u4Byte used = *_used;
+	u4Byte out_len = *_out_len;
+	
 	pDM_Odm->path_select = (dm_value[0] & 0xf);
-		
+	PHYDM_SNPRINTF((output+used, out_len-used,"Path_select = (( 0x%x ))\n",pDM_Odm->path_select ));
+	
 	//2 [Fix Path]
 	if (pDM_Odm->path_select != PHYDM_AUTO_PATH)
 	{
+		PHYDM_SNPRINTF((output+used, out_len-used,"Trun on path  [%s%s%s%s]\n",
+			((pDM_Odm->path_select) & 0x1)?"A":"",
+			((pDM_Odm->path_select) & 0x2)?"B":"",
+			((pDM_Odm->path_select) & 0x4)?"C":"",
+			((pDM_Odm->path_select) & 0x8)?"D":"" ));
+		
 		phydm_dtp_fix_tx_path( pDM_Odm, pDM_Odm->path_select );
+	}
+	else
+	{
+		PHYDM_SNPRINTF((output+used, out_len-used,"%s\n","Auto Path"));
 	}
 }
 
@@ -645,10 +671,13 @@ phydm_c2h_dtp_handler(
 	pPATHDIV_T		pDM_PathDiv  = &(pDM_Odm->DM_PathDiv);
 
 	u1Byte  macid = CmdBuf[0]; 
-	u1Byte  nsc_1 = CmdBuf[1];
-	u1Byte  nsc_2 = CmdBuf[2];
-	u1Byte  nsc_3 = CmdBuf[3];
+	u1Byte  target = CmdBuf[1];	
+	u1Byte  nsc_1 = CmdBuf[2];
+	u1Byte  nsc_2 = CmdBuf[3];
+	u1Byte  nsc_3 = CmdBuf[4];
 
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_PATH_DIV,ODM_DBG_LOUD,("Target_candidate = (( %d ))\n", target));
+	/*
 	if( (nsc_1 >= nsc_2) &&  (nsc_1 >= nsc_3))
 	{
 		phydm_dtp_fix_tx_path(pDM_Odm, pDM_PathDiv->ant_candidate_1);
@@ -661,6 +690,7 @@ phydm_c2h_dtp_handler(
 	{
 		phydm_dtp_fix_tx_path(pDM_Odm, pDM_PathDiv->ant_candidate_3);	
 	}
+	*/
 #endif	
 }
 
@@ -679,7 +709,7 @@ odm_PathDiversity(
 
 	#if RTL8812A_SUPPORT
 
-		if(pDM_Odm->SupportICType & ODM_RTL8812)
+	if(pDM_Odm->SupportICType & ODM_RTL8812)
 			ODM_PathDiversity_8812A(pDM_Odm);
 		else
 	#endif
@@ -689,7 +719,7 @@ odm_PathDiversity(
 			phydm_dynamic_tx_path(pDM_Odm);
 		else
 	#endif
-			{}
+    		{}
 #endif
 }
 
@@ -701,6 +731,8 @@ odm_PathDiversityInit(
 #if(defined(CONFIG_PATH_DIVERSITY))
 	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
 
+	/*pDM_Odm->SupportAbility |= ODM_BB_PATH_DIV;*/
+	
 	if(pDM_Odm->mp_mode == TRUE)
 		return;
 
@@ -710,12 +742,12 @@ odm_PathDiversityInit(
 		return;
 	}
 
-	#if RTL8812A_SUPPORT
+#if RTL8812A_SUPPORT
 		if(pDM_Odm->SupportICType & ODM_RTL8812)
 			ODM_PathDiversityInit_8812A(pDM_Odm);
 		else
 	#endif
-	
+
 	#if RTL8814A_SUPPORT
 		if(pDM_Odm->SupportICType & ODM_RTL8814A)
 			phydm_dynamic_tx_path_init(pDM_Odm);
@@ -731,7 +763,7 @@ odm_PathDiversityInit(
 //
 // 2011/12/02 MH Copy from MP oursrc for temporarily test.
 //
-
+#if RTL8192C_SUPPORT
 BOOLEAN
 odm_IsConnected_92C(
 	IN	PADAPTER	Adapter
@@ -2233,7 +2265,52 @@ odm_SwAntDivConstructScanChnl(
 	}
 
 }
+#else
 
+VOID
+odm_PathDivChkAntSwitchCallback(
+	PRT_TIMER		pTimer
+)
+{
+}
+
+VOID
+odm_PathDivChkAntSwitchWorkitemCallback(
+    IN PVOID            pContext
+    )
+{
+}
+
+VOID
+odm_CCKTXPathDiversityCallback(
+	PRT_TIMER		pTimer
+)
+{
+}
+
+VOID
+odm_CCKTXPathDiversityWorkItemCallback(
+    IN PVOID            pContext
+    )
+{
+}
+u1Byte
+odm_SwAntDivSelectScanChnl(
+	IN	PADAPTER	Adapter
+	)
+{
+	return	0;
+}
+VOID
+odm_SwAntDivConstructScanChnl(
+	IN	PADAPTER	Adapter,
+	IN	u1Byte		ScanChnl
+	)
+{
+}
+
+
+#endif
 
 #endif	// #if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
 

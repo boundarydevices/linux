@@ -88,7 +88,7 @@ u8	rtw_vht_mcsmap_to_nss(u8 *pvht_mcs_map)
 		}
 	}
 	
-	DBG_871X("%s : %dSS\n", __FUNCTION__, nss);
+	/* DBG_871X("%s : %dSS\n", __FUNCTION__, nss); */
 	return nss;
 }
 
@@ -265,7 +265,7 @@ u64	rtw_vht_rate_to_bitmap(u8 *pVHTRate)
 			break;
 		}
 	}
-	DBG_871X("RateBitmap=%016llx , pVHTRate[0]=%02x\n", RateBitmap, pVHTRate[0]);
+	DBG_871X("RateBitmap=%016llx , pVHTRate[0]=%02x, pVHTRate[1]=%02x\n", RateBitmap, pVHTRate[0], pVHTRate[1]);
 	return RateBitmap;
 }
 
@@ -492,10 +492,12 @@ u32	rtw_build_vht_operation_ie(_adapter *padapter, u8 *pbuf, u8 channel)
 	struct mlme_priv		*pmlmepriv = &padapter->mlmepriv;
 	struct vht_priv		*pvhtpriv = &pmlmepriv->vhtpriv;
 	//struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
-	u8	ChnlWidth, center_freq, bw_mode;
+	u8	ChnlWidth, center_freq, bw_mode, rf_type = 0;
 	u32	len = 0;
 	u8	operation[5];
-
+	
+	rtw_hal_get_hwreg(padapter, HW_VAR_RF_TYPE, (u8 *)(&rf_type));
+	
 	_rtw_memset(operation, 0, 5);
 
 	bw_mode = pregistrypriv->bw_mode >> 4;
@@ -516,8 +518,35 @@ u32	rtw_build_vht_operation_ie(_adapter *padapter, u8 *pbuf, u8 channel)
 	//center frequency
 	SET_VHT_OPERATION_ELE_CHL_CENTER_FREQ1(operation, center_freq);//Todo: need to set correct center channel
 	SET_VHT_OPERATION_ELE_CHL_CENTER_FREQ2(operation,0);
-	operation[3] = 0xff;
+	
+	if (padapter->registrypriv.rf_config != RF_MAX_TYPE)
+		rf_type = padapter->registrypriv.rf_config;
+	
+	switch (rf_type) {
+	case RF_1T1R:
+	operation[3] = 0xfe;
 	operation[4] = 0xff;
+	break;
+	case RF_1T2R:
+	case RF_2T2R:
+	case RF_2T2R_GREEN:
+	operation[3] = 0xfa;
+	operation[4] = 0xff;
+	break;
+	case RF_2T3R:
+	case RF_2T4R:
+	case RF_3T3R:
+	case RF_3T4R:
+	operation[3] = 0xea;
+	operation[4] = 0xff;
+	break;
+	case RF_4T4R:
+	operation[3] = 0xaa;
+	operation[4] = 0xff;
+	break;
+	default:
+	DBG_871X("%s, %d, unknown rf type\n", __func__, __LINE__);
+	}
 
 	rtw_set_ie(pbuf, EID_VHTOperation, 5, operation, &len);
 

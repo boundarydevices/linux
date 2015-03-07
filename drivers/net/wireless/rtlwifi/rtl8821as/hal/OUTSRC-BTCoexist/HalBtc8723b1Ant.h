@@ -17,7 +17,7 @@
 
 #define	BTC_RSSI_COEX_THRESH_TOL_8723B_1ANT		2
 
-#define  BT_8723B_1ANT_WIFI_NOISY_THRESH							30   //max: 255
+#define  BT_8723B_1ANT_WIFI_NOISY_THRESH								50 //30   //max: 255								
 
 //for Antenna detection
 #define	BT_8723B_1ANT_ANTDET_PSDTHRES_BACKGROUND					50
@@ -153,7 +153,7 @@ typedef struct _COEX_STA_8723B_1ANT{
 	u4Byte					btInfoC2hCnt[BT_INFO_SRC_8723B_1ANT_MAX];
 	BOOLEAN					bBtWhckTest;
 	BOOLEAN					bC2hBtInquiryPage;
-	BOOLEAN					bC2hBtPage;				//Add for win8.1 page out issue
+	BOOLEAN					bC2hBtRemoteNameReq;				
 	BOOLEAN					bWiFiIsHighPriTask;		//Add for win8.1 page out issue
 	u1Byte					btRetryCnt;
 	u1Byte					btInfoExt;
@@ -177,6 +177,9 @@ typedef struct _COEX_STA_8723B_1ANT{
 
 	BOOLEAN					bForceLpsOn;
 	u4Byte					wrongProfileNotification;
+
+	u1Byte					nA2DPBitPool;
+	u1Byte					nCutVersion;
 }COEX_STA_8723B_1ANT, *PCOEX_STA_8723B_1ANT;
 
 #define  BT_8723B_1ANT_ANTDET_PSD_POINTS			256	//MAX:1024

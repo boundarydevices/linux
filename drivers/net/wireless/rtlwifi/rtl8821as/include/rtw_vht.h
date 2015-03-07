@@ -115,7 +115,6 @@ struct vht_priv
 };
 
 u8	rtw_get_vht_highest_rate(u8 *pvht_mcs_map);
-void	rtw_get_vht_nss(u8 *pvht_mcs_map);
 u16	rtw_vht_mcs_to_data_rate(u8 bw, u8 short_GI, u8 vht_mcs_rate);
 u64	rtw_vht_rate_to_bitmap(u8 *pVHTRate);
 void	rtw_vht_use_default_setting(_adapter *padapter);
@@ -129,6 +128,7 @@ void	VHT_operation_handler(_adapter *padapter, PNDIS_802_11_VARIABLE_IEs pIE);
 void	rtw_process_vht_op_mode_notify(_adapter *padapter, u8 *pframe, PVOID sta);
 u32	rtw_restructure_vht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, uint in_len, uint *pout_len);
 void	VHTOnAssocRsp(_adapter *padapter);
+u8	rtw_vht_mcsmap_to_nss(u8 *pvht_mcs_map);
 
 #endif	//_RTW_VHT_H_
 

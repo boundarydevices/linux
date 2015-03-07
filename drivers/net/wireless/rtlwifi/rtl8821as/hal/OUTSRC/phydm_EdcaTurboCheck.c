@@ -78,7 +78,7 @@ odm_EdcaTurboCheck(
 	//
 	PDM_ODM_T		pDM_Odm = (PDM_ODM_T)pDM_VOID;
 	ODM_RT_TRACE(pDM_Odm,ODM_COMP_EDCA_TURBO,ODM_DBG_LOUD,("odm_EdcaTurboCheck========================>\n"));
-	
+
 	if(!(pDM_Odm->SupportAbility& ODM_MAC_EDCA_TURBO ))
 		return;
 
@@ -193,19 +193,15 @@ odm_EdcaTurboCheckCE(
 
 		//if ((pDM_Odm->DM_EDCA_Table.prv_traffic_idx != trafficIndex) || (!pDM_Odm->DM_EDCA_Table.bCurrentTurboEDCA))
 		{
-			if(ICType==ODM_RTL8192D)
-			{      
+			if (ICType == ODM_RTL8192D) {
 				// Single PHY
-				if(pDM_Odm->RFType==ODM_2T2R)
-				{
+				if (pDM_Odm->RFType == ODM_2T2R) {
 					EDCA_BE_UL = 0x60a42b;    //0x5ea42b;
 					EDCA_BE_DL = 0x60a42b;    //0x5ea42b;
-				}
-				else
-				{
+			} else {
 					EDCA_BE_UL = 0x6ea42b;
 					EDCA_BE_DL = 0x6ea42b;
-				}
+			}
 			}
 			else
 			{
@@ -213,9 +209,7 @@ odm_EdcaTurboCheckCE(
 					if((ICType==ODM_RTL8192C)&&(pDM_Odm->RFType==ODM_2T2R)) {
 						EDCA_BE_UL = 0x60a42b;
 						EDCA_BE_DL = 0x60a42b;
-					}
-					else
-					{
+					} else {
 						EDCA_BE_UL = 0x6ea42b;
 						EDCA_BE_DL = 0x6ea42b;
 					}
@@ -415,8 +409,8 @@ odm_EdcaTurboCheckMP(
 						ODM_Write4Byte(pDM_Odm,ODM_EDCA_BE_PARAM,EDCA_BE);
 					else //Uplink
 					{
-						//DbgPrint("pDM_Odm->RFCalibrateInfo.ThermalValue = 0x%X\n", pDM_Odm->RFCalibrateInfo.ThermalValue);
-						//if(pDM_Odm->RFCalibrateInfo.ThermalValue < pHalData->EEPROMThermalMeter)
+						/*DbgPrint("pRFCalibrateInfo->ThermalValue = 0x%X\n", pRFCalibrateInfo->ThermalValue);*/
+						/*if(pRFCalibrateInfo->ThermalValue < pHalData->EEPROMThermalMeter)*/
 						if((pDM_Odm->RFCalibrateInfo.ThermalValue < 0x2c) || (*pDM_Odm->pBandType == BAND_ON_2_4G))
 							ODM_Write4Byte(pDM_Odm,ODM_EDCA_BE_PARAM,EDCA_BE);
 						else
@@ -490,8 +484,8 @@ odm_EdcaTurboCheckMP(
 						ODM_Write4Byte(pDM_Odm,ODM_EDCA_BE_PARAM,EDCA_BE);
 					else //Uplink
 					{
-						//DbgPrint("pDM_Odm->RFCalibrateInfo.ThermalValue = 0x%X\n", pDM_Odm->RFCalibrateInfo.ThermalValue);
-						//if(pDM_Odm->RFCalibrateInfo.ThermalValue < pHalData->EEPROMThermalMeter)
+						/*DbgPrint("pRFCalibrateInfo->ThermalValue = 0x%X\n", pRFCalibrateInfo->ThermalValue);*/
+						/*if(pRFCalibrateInfo->ThermalValue < pHalData->EEPROMThermalMeter)*/
 						if((pDM_Odm->RFCalibrateInfo.ThermalValue < 0x2c) || (*pDM_Odm->pBandType == BAND_ON_2_4G))
 							ODM_Write4Byte(pDM_Odm,ODM_EDCA_BE_PARAM,EDCA_BE);
 						else
@@ -644,7 +638,7 @@ ODM_EdcaParaSelByIot(
 	u4Byte                         ICType=pDM_Odm->SupportICType;
 	u1Byte                         WirelessMode=0xFF;                   //invalid value
 	u4Byte				RFType=pDM_Odm->RFType;
-	  u4Byte                         IOTPeerSubType=0;
+	u4Byte                         IOTPeerSubType = 0;
 
 	PMGNT_INFO			pMgntInfo = &Adapter->MgntInfo;
 	u1Byte 				TwoPortStatus = (u1Byte)TWO_PORT_STATUS__WITHOUT_ANY_ASSOCIATE;
@@ -739,14 +733,14 @@ ODM_EdcaParaSelByIot(
 			(*EDCA_BE_DL) = edca_setting_DL[IOTPeer];
 			(*EDCA_BE_UL) = edca_setting_UL[IOTPeer];
 		}
-		else if(IOTPeer == HT_IOT_PEER_ATHEROS)
+		else if(IOTPeer == HT_IOT_PEER_ATHEROS && IOTPeerSubType != HT_IOT_PEER_TPLINK_AC1750)
 		{
 			// Set DL EDCA for Atheros peer to 0x3ea42b. Suggested by SD3 Wilson for ASUS TP issue. 
 			if(WirelessMode==ODM_WM_G)
 				(*EDCA_BE_DL) = edca_setting_DL_GMode[IOTPeer];
 			else
-			(*EDCA_BE_DL) = edca_setting_DL[IOTPeer];
-			
+				(*EDCA_BE_DL) = edca_setting_DL[IOTPeer];
+
 			if(ICType == ODM_RTL8821)
 				 (*EDCA_BE_DL) = 0x5ea630;
 			
@@ -766,8 +760,18 @@ ODM_EdcaParaSelByIot(
 		(*EDCA_BE_UL) = 0x5ea42b;
 		(*EDCA_BE_DL) = 0x5ea42b;
 
-		ODM_RT_TRACE(pDM_Odm,ODM_COMP_EDCA_TURBO,ODM_DBG_LOUD,("8812A: EDCA_BE_UL=0x%lx EDCA_BE_DL =0x%lx",(*EDCA_BE_UL),(*EDCA_BE_DL)));
+		ODM_RT_TRACE(pDM_Odm,ODM_COMP_EDCA_TURBO,ODM_DBG_LOUD,("8812A: EDCA_BE_UL=0x%lx EDCA_BE_DL =0x%lx\n",(*EDCA_BE_UL),(*EDCA_BE_DL)));
 	}
+
+	if((ICType==ODM_RTL8814A) && (IOTPeer == HT_IOT_PEER_REALTEK))           /*8814AU and 8814AR*/
+	{
+		(*EDCA_BE_UL) = 0x5ea42b;
+		(*EDCA_BE_DL) = 0xa42b;
+
+		ODM_RT_TRACE(pDM_Odm,ODM_COMP_EDCA_TURBO,ODM_DBG_LOUD,("8814A: EDCA_BE_UL=0x%lx EDCA_BE_DL =0x%lx\n",(*EDCA_BE_UL),(*EDCA_BE_DL)));
+	}
+
+	
 
 	// Revised for Atheros DIR-655 IOT issue to improve down link TP, added by Roger, 2013.03.22.
 	if((ICType == ODM_RTL8723A) && (IOTPeerSubType== HT_IOT_PEER_ATHEROS_DIR655) && 
@@ -776,7 +780,7 @@ ODM_EdcaParaSelByIot(
 		(*EDCA_BE_DL) = 0xa92b;
 	}
 
-	ODM_RT_TRACE(pDM_Odm,ODM_COMP_EDCA_TURBO,ODM_DBG_LOUD,("Special: EDCA_BE_UL=0x%lx EDCA_BE_DL =0x%lx",(*EDCA_BE_UL),(*EDCA_BE_DL)));
+	ODM_RT_TRACE(pDM_Odm,ODM_COMP_EDCA_TURBO,ODM_DBG_LOUD,("Special: EDCA_BE_UL=0x%lx EDCA_BE_DL =0x%lx, IOTPeer = %d\n",(*EDCA_BE_UL),(*EDCA_BE_DL), IOTPeer));
 
 }
 

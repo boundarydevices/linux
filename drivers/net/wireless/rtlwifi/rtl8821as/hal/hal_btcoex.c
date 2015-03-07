@@ -413,7 +413,7 @@ u8 halbtcoutsrc_IsWifiBusy(PADAPTER padapter)
 			return _TRUE;
 	}
 
-#if defined(CONFIG_CONCURRENT_MODE) || defined(CONFIG_DUALMAC_CONCURRENT)
+#if defined(CONFIG_CONCURRENT_MODE)
 	pmlmepriv = &padapter->pbuddy_adapter->mlmepriv;
 
 	if (check_fwstate(pmlmepriv, WIFI_ASOC_STATE) == _TRUE)
@@ -551,10 +551,9 @@ s32 halbtcoutsrc_GetWifiRssi(PADAPTER padapter)
 	PHAL_DATA_TYPE pHalData;
 	s32 UndecoratedSmoothedPWDB = 0;
 
-
 	pHalData = GET_HAL_DATA(padapter);
 
-	UndecoratedSmoothedPWDB = pHalData->dmpriv.EntryMinUndecoratedSmoothedPWDB;
+	UndecoratedSmoothedPWDB = pHalData->EntryMinUndecoratedSmoothedPWDB;
 
 	return UndecoratedSmoothedPWDB;
 }
@@ -777,7 +776,7 @@ u8 halbtcoutsrc_Get(void *pBtcContext, u8 getType, void *pOutBuf)
 			break;
 
 		case BTC_GET_U1_MAC_PHY_MODE:
-			*pU1Tmp = BTC_SMSP;
+//			*pU1Tmp = BTC_SMSP;
 //			*pU1Tmp = BTC_DMSP;
 //			*pU1Tmp = BTC_DMDP;
 //			*pU1Tmp = BTC_MP_UNKNOWN;
@@ -791,18 +790,23 @@ u8 halbtcoutsrc_Get(void *pBtcContext, u8 getType, void *pOutBuf)
 			{
 				case 0:
 					*pU1Tmp = (u1Byte)BTC_ANT_TYPE_0;
+					pBtCoexist->boardInfo.antType = (u1Byte)BTC_ANT_TYPE_0;
 					break;
 				case 1:
 					*pU1Tmp = (u1Byte)BTC_ANT_TYPE_1;
+					pBtCoexist->boardInfo.antType = (u1Byte)BTC_ANT_TYPE_1;
 					break;
 				case 2:
 					*pU1Tmp = (u1Byte)BTC_ANT_TYPE_2;
+					pBtCoexist->boardInfo.antType = (u1Byte)BTC_ANT_TYPE_2;
 					break;
 				case 3:
 					*pU1Tmp = (u1Byte)BTC_ANT_TYPE_3;
+					pBtCoexist->boardInfo.antType = (u1Byte)BTC_ANT_TYPE_3;
 					break;
 				case 4:
 					*pU1Tmp = (u1Byte)BTC_ANT_TYPE_4;
+					pBtCoexist->boardInfo.antType = (u1Byte)BTC_ANT_TYPE_4;
 					break;
 			}
 			break;
@@ -953,21 +957,20 @@ u8 halbtcoutsrc_Set(void *pBtcContext, u8 setType, void *pInBuf)
 
 		case BTC_SET_ACT_SEND_MIMO_PS:
 			{
-                                u8 newMimoPsMode = 3;
-                                struct mlme_ext_priv	*pmlmeext = &(padapter->mlmeextpriv);
-	                        struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
+				u8 newMimoPsMode = 3;
+				struct mlme_ext_priv *pmlmeext = &(padapter->mlmeextpriv);
+				struct mlme_ext_info *pmlmeinfo = &(pmlmeext->mlmext_info);
 
-                                // *pU1Tmp = 0 use SM_PS static type 
-                                // *pU1Tmp = 1 disable SM_PS
-                                if(*pU1Tmp==0)
-                        		newMimoPsMode = WLAN_HT_CAP_SM_PS_STATIC;
-                        	else if(*pU1Tmp==1)
-                        		newMimoPsMode = WLAN_HT_CAP_SM_PS_DISABLED;
-                                                  
-				if (check_fwstate(&padapter->mlmepriv, WIFI_ASOC_STATE) == _TRUE)
-				{
-					//issue_action_SM_PS(padapter, get_my_bssid(&(pmlmeinfo->network)), newMimoPsMode);
-                                        issue_action_SM_PS_wait_ack(padapter, get_my_bssid(&(pmlmeinfo->network)), newMimoPsMode, 3, 1);
+				/* *pU1Tmp = 0 use SM_PS static type */
+				/* *pU1Tmp = 1 disable SM_PS */
+				if (*pU1Tmp == 0)
+					newMimoPsMode = WLAN_HT_CAP_SM_PS_STATIC;
+				else if (*pU1Tmp == 1)
+					newMimoPsMode = WLAN_HT_CAP_SM_PS_DISABLED;
+												  
+				if (check_fwstate(&padapter->mlmepriv , WIFI_ASOC_STATE) == _TRUE) {
+					/* issue_action_SM_PS(padapter, get_my_bssid(&(pmlmeinfo->network)), newMimoPsMode); */
+					issue_action_SM_PS_wait_ack(padapter , get_my_bssid(&(pmlmeinfo->network)) , newMimoPsMode, 3 , 1);
 				}
 			}
 			break;
@@ -1679,21 +1682,6 @@ void EXhalbtcoutsrc_InitHwConfig(PBTC_COEXIST pBtCoexist, u8 bWifiOnly)
 		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
 			EXhalbtc8723b1ant_InitHwConfig(pBtCoexist, bWifiOnly);
 	}
-	else if (IS_HARDWARE_TYPE_8723A(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8723a2ant_InitHwConfig(pBtCoexist, bWifiOnly);
-	}
-	else if (IS_HARDWARE_TYPE_8192C(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8188c2ant_InitHwConfig(pBtCoexist, bWifiOnly);
-	}
-	else if (IS_HARDWARE_TYPE_8192D(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8192d2ant_InitHwConfig(pBtCoexist, bWifiOnly);
-	}
 	else if (IS_HARDWARE_TYPE_8192E(pBtCoexist->Adapter))
 	{
 		if (pBtCoexist->boardInfo.btdmAntNum == 2)
@@ -1732,21 +1720,6 @@ void EXhalbtcoutsrc_InitCoexDm(PBTC_COEXIST pBtCoexist)
 			EXhalbtc8723b2ant_InitCoexDm(pBtCoexist);
 		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
 			EXhalbtc8723b1ant_InitCoexDm(pBtCoexist);
-	}
-	else if (IS_HARDWARE_TYPE_8723A(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8723a2ant_InitCoexDm(pBtCoexist);
-	}
-	else if (IS_HARDWARE_TYPE_8192C(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8188c2ant_InitCoexDm(pBtCoexist);
-	}
-	else if (IS_HARDWARE_TYPE_8192D(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8192d2ant_InitCoexDm(pBtCoexist);
 	}
 	else if (IS_HARDWARE_TYPE_8192E(pBtCoexist->Adapter))
 	{
@@ -1807,21 +1780,6 @@ void EXhalbtcoutsrc_IpsNotify(PBTC_COEXIST pBtCoexist, u8 type)
 		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
 			EXhalbtc8723b1ant_IpsNotify(pBtCoexist, ipsType);
 	}
-	else if (IS_HARDWARE_TYPE_8723A(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8723a2ant_IpsNotify(pBtCoexist, ipsType);
-	}
-	else if (IS_HARDWARE_TYPE_8192C(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8188c2ant_IpsNotify(pBtCoexist, ipsType);
-	}
-	else if (IS_HARDWARE_TYPE_8192D(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8192d2ant_IpsNotify(pBtCoexist, ipsType);
-	}
 	else if (IS_HARDWARE_TYPE_8192E(pBtCoexist->Adapter))
 	{
 		if (pBtCoexist->boardInfo.btdmAntNum == 2)
@@ -1879,21 +1837,6 @@ void EXhalbtcoutsrc_LpsNotify(PBTC_COEXIST pBtCoexist, u8 type)
 		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
 			EXhalbtc8723b1ant_LpsNotify(pBtCoexist, lpsType);
 	}
-	else if (IS_HARDWARE_TYPE_8723A(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8723a2ant_LpsNotify(pBtCoexist, lpsType);
-	}
-	else if (IS_HARDWARE_TYPE_8192C(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8188c2ant_LpsNotify(pBtCoexist, lpsType);
-	}
-	else if (IS_HARDWARE_TYPE_8192D(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8192d2ant_LpsNotify(pBtCoexist, lpsType);
-	}
 	else if (IS_HARDWARE_TYPE_8192E(pBtCoexist->Adapter))
 	{
 		if (pBtCoexist->boardInfo.btdmAntNum == 2)
@@ -1950,21 +1893,6 @@ void EXhalbtcoutsrc_ScanNotify(PBTC_COEXIST pBtCoexist, u8 type)
 		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
 			EXhalbtc8723b1ant_ScanNotify(pBtCoexist, scanType);
 	}
-	else if (IS_HARDWARE_TYPE_8723A(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8723a2ant_ScanNotify(pBtCoexist, scanType);
-	}
-	else if (IS_HARDWARE_TYPE_8192C(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8188c2ant_ScanNotify(pBtCoexist, scanType);
-	}
-	else if (IS_HARDWARE_TYPE_8192D(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8192d2ant_ScanNotify(pBtCoexist, scanType);
-	}
 	else if (IS_HARDWARE_TYPE_8192E(pBtCoexist->Adapter))
 	{
 		if (pBtCoexist->boardInfo.btdmAntNum == 2)
@@ -2016,21 +1944,6 @@ void EXhalbtcoutsrc_ConnectNotify(PBTC_COEXIST pBtCoexist, u8 action)
 			EXhalbtc8723b2ant_ConnectNotify(pBtCoexist, assoType);
 		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
 			EXhalbtc8723b1ant_ConnectNotify(pBtCoexist, assoType);
-	}
-	else if (IS_HARDWARE_TYPE_8723A(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8723a2ant_ConnectNotify(pBtCoexist, assoType);
-	}
-	else if (IS_HARDWARE_TYPE_8192C(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8188c2ant_ConnectNotify(pBtCoexist, assoType);
-	}
-	else if (IS_HARDWARE_TYPE_8192D(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8192d2ant_ConnectNotify(pBtCoexist, assoType);
 	}
 	else if (IS_HARDWARE_TYPE_8192E(pBtCoexist->Adapter))
 	{
@@ -2084,21 +1997,6 @@ void EXhalbtcoutsrc_MediaStatusNotify(PBTC_COEXIST pBtCoexist, RT_MEDIA_STATUS m
 			EXhalbtc8723b2ant_MediaStatusNotify(pBtCoexist, mStatus);
 		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
 			EXhalbtc8723b1ant_MediaStatusNotify(pBtCoexist, mStatus);
-	}
-	else if (IS_HARDWARE_TYPE_8723A(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8723a2ant_MediaStatusNotify(pBtCoexist, mStatus);
-	}
-	else if (IS_HARDWARE_TYPE_8192C(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8188c2ant_MediaStatusNotify(pBtCoexist, mStatus);
-	}
-	else if (IS_HARDWARE_TYPE_8192D(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8192d2ant_MediaStatusNotify(pBtCoexist, mStatus);
 	}
 	else if (IS_HARDWARE_TYPE_8192E(pBtCoexist->Adapter))
 	{
@@ -2159,21 +2057,6 @@ void EXhalbtcoutsrc_SpecialPacketNotify(PBTC_COEXIST pBtCoexist, u8 pktType)
 		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
 			EXhalbtc8723b1ant_SpecialPacketNotify(pBtCoexist, packetType);
 	}
-	else if (IS_HARDWARE_TYPE_8723A(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8723a2ant_SpecialPacketNotify(pBtCoexist, packetType);
-	}
-	else if (IS_HARDWARE_TYPE_8192C(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8188c2ant_SpecialPacketNotify(pBtCoexist, packetType);
-	}
-	else if (IS_HARDWARE_TYPE_8192D(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8192d2ant_SpecialPacketNotify(pBtCoexist, packetType);
-	}
 	else if (IS_HARDWARE_TYPE_8192E(pBtCoexist->Adapter))
 	{
 		if (pBtCoexist->boardInfo.btdmAntNum == 2)
@@ -2217,21 +2100,6 @@ void EXhalbtcoutsrc_BtInfoNotify(PBTC_COEXIST pBtCoexist, u8 *tmpBuf, u8 length)
 			EXhalbtc8723b2ant_BtInfoNotify(pBtCoexist, tmpBuf, length);
 		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
 			EXhalbtc8723b1ant_BtInfoNotify(pBtCoexist, tmpBuf, length);
-	}
-	else if (IS_HARDWARE_TYPE_8723A(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8723a2ant_BtInfoNotify(pBtCoexist, tmpBuf, length);
-	}
-	else if (IS_HARDWARE_TYPE_8192C(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8188c2ant_BtInfoNotify(pBtCoexist, tmpBuf, length);
-	}
-	else if (IS_HARDWARE_TYPE_8192D(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8192d2ant_BtInfoNotify(pBtCoexist, tmpBuf, length);
 	}
 	else if (IS_HARDWARE_TYPE_8192E(pBtCoexist->Adapter))
 	{
@@ -2306,11 +2174,6 @@ void EXhalbtcoutsrc_StackOperationNotify(PBTC_COEXIST pBtCoexist, u8 type)
 		stackOpType = BTC_STACK_OP_NONE;
 	}
 
-	if (IS_HARDWARE_TYPE_8723A(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8723a2ant_StackOperationNotify(pBtCoexist, stackOpType);
-	}
 #endif
 }
 
@@ -2334,23 +2197,6 @@ void EXhalbtcoutsrc_HaltNotify(PBTC_COEXIST pBtCoexist)
 			EXhalbtc8723b2ant_HaltNotify(pBtCoexist);
 		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
 			EXhalbtc8723b1ant_HaltNotify(pBtCoexist);
-	}
-	else if (IS_HARDWARE_TYPE_8723A(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8723a2ant_HaltNotify(pBtCoexist);
-		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
-			EXhalbtc8723a1ant_HaltNotify(pBtCoexist);
-	}
-	else if (IS_HARDWARE_TYPE_8192C(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8188c2ant_HaltNotify(pBtCoexist);
-	}
-	else if (IS_HARDWARE_TYPE_8192D(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8192d2ant_HaltNotify(pBtCoexist);
 	}
 	else if (IS_HARDWARE_TYPE_8192E(pBtCoexist->Adapter))
 	{
@@ -2477,26 +2323,6 @@ void EXhalbtcoutsrc_Periodical(PBTC_COEXIST pBtCoexist)
 			EXhalbtc8723b2ant_Periodical(pBtCoexist);
 		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
 			EXhalbtc8723b1ant_Periodical(pBtCoexist);
-	}
-	else if (IS_HARDWARE_TYPE_8723A(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8723a2ant_Periodical(pBtCoexist);
-		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
-		{
-			if (!halbtcoutsrc_UnderIps(pBtCoexist))
-				EXhalbtc8723a1ant_Periodical(pBtCoexist);
-		}
-	}
-	else if (IS_HARDWARE_TYPE_8192C(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8188c2ant_Periodical(pBtCoexist);
-	}
-	else if (IS_HARDWARE_TYPE_8192D(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8192d2ant_Periodical(pBtCoexist);
 	}
 	else if (IS_HARDWARE_TYPE_8192E(pBtCoexist->Adapter))
 	{
@@ -2757,23 +2583,6 @@ void EXhalbtcoutsrc_DisplayBtCoexInfo(PBTC_COEXIST pBtCoexist)
 		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
 			EXhalbtc8723b1ant_DisplayCoexInfo(pBtCoexist);
 	}
-	else if (IS_HARDWARE_TYPE_8723A(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8723a2ant_DisplayCoexInfo(pBtCoexist);
-		else if (pBtCoexist->boardInfo.btdmAntNum == 1)
-			EXhalbtc8723a1ant_DisplayCoexInfo(pBtCoexist);
-	}
-	else if (IS_HARDWARE_TYPE_8192C(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8188c2ant_DisplayCoexInfo(pBtCoexist);
-	}
-	else if (IS_HARDWARE_TYPE_8192D(pBtCoexist->Adapter))
-	{
-		if (pBtCoexist->boardInfo.btdmAntNum == 2)
-			EXhalbtc8192d2ant_DisplayCoexInfo(pBtCoexist);
-	}
 	else if (IS_HARDWARE_TYPE_8192E(pBtCoexist->Adapter))
 	{
 		if (pBtCoexist->boardInfo.btdmAntNum == 2)
@@ -2977,15 +2786,6 @@ void hal_btcoex_InitHwConfig(PADAPTER padapter, u8 bWifiOnly)
 	if (!hal_btcoex_IsBtExist(padapter))
 		return;
 
-	if (IS_HARDWARE_TYPE_8192C(padapter))
-	{
-		halbt_InitHwConfig92C(padapter);
-	}
-	else if(IS_HARDWARE_TYPE_8192D(padapter))
-	{
-		halbt_InitHwConfig92D(padapter);
-	}
-
 	EXhalbtcoutsrc_InitHwConfig(&GLBtCoexist, bWifiOnly);
 	EXhalbtcoutsrc_InitCoexDm(&GLBtCoexist);
 }
@@ -3130,15 +2930,16 @@ u8 hal_btcoex_LpsVal(PADAPTER padapter)
 u32 hal_btcoex_GetRaMask(PADAPTER padapter)
 {
 	if (!hal_btcoex_IsBtExist(padapter))
-                return 0;
+		return 0;
 
 	if (GLBtCoexist.btInfo.bBtDisabled)
-                return 0;
+		return 0;
 
-        // Modify by YiWei , suggest by Cosa and Jenyu
-        // Remove the limit antenna number , because 2 antenna case (ex: 8192eu)also want to get BT coex report rate mask.
-	//if (GLBtCoexist.boardInfo.btdmAntNum != 1)
-        //        return 0;
+		/* Modify by YiWei , suggest by Cosa and Jenyu
+		 * Remove the limit antenna number , because 2 antenna case (ex: 8192eu)also want to get BT coex report rate mask.
+		 */
+	/*if (GLBtCoexist.boardInfo.btdmAntNum != 1)
+		return 0;*/
 
 	return GLBtCoexist.btInfo.raMask;
 }
@@ -3338,26 +3139,45 @@ void hal_btcoex_StackUpdateProfileInfo(void)
 }
 
 /*
- * Description:
+ *	Description:
  *	Setting BT coex antenna isolation type .
- *                         coex mechanisn/ spital stream/ best throughput
- *      anttype = 0  ,  PSTDMA  / 2SS / 0.5T , bad isolation, 	WiFi/BT ANT Distance<15cm, 		(<20dB) for 2,3 antenna
- *      anttype = 1  ,  PSTDMA  / 1SS / 0.5T , normal isolaiton,	50cm>WiFi/BT ANT Distance>15cm,	(>20dB) for 2 antenna
- *      anttype = 2  ,  TDMA      / 2SS / T     , normal isolaiton,50cm>WiFi/BT ANT Distance>15cm,	(>20dB) for 3 antenna
- *      anttype = 3  ,  no TDMA / 1SS / 0.5T , good isolation,	WiFi/BT ANT Distance >50cm,		(>40dB) for 2 antenna
- *      anttype = 4  ,  no TDMA / 2SS / T      , good isolation,	WiFi/BT ANT Distance >50cm,		(>40dB) for 3 antenna
- *    wifi only throughput ~ T
- *    wifi/BT share one antenna with SPDT
+ *	coex mechanisn/ spital stream/ best throughput
+ *	anttype = 0	,	PSTDMA	/	2SS	/	0.5T	,	bad isolation , WiFi/BT ANT Distance<15cm , (<20dB) for 2,3 antenna
+ *	anttype = 1	,	PSTDMA	/	1SS	/	0.5T	,	normal isolaiton , 50cm>WiFi/BT ANT Distance>15cm , (>20dB) for 2 antenna
+ *	anttype = 2	,	TDMA	/	2SS	/	T ,		normal isolaiton , 50cm>WiFi/BT ANT Distance>15cm , (>20dB) for 3 antenna
+ *	anttype = 3	,	no TDMA	/	1SS	/	0.5T	,	good isolation , WiFi/BT ANT Distance >50cm , (>40dB) for 2 antenna
+ *	anttype = 4	,	no TDMA	/	2SS	/	T ,		good isolation , WiFi/BT ANT Distance >50cm , (>40dB) for 3 antenna
+ *	wifi only throughput ~ T
+ *	wifi/BT share one antenna with SPDT
  */
 void hal_btcoex_SetAntIsolationType(PADAPTER padapter, u8 anttype)
 {
-        PHAL_DATA_TYPE	pHalData;
+		PHAL_DATA_TYPE pHalData;
+		PBTC_COEXIST	pBtCoexist = &GLBtCoexist;
 
-        //DBG_871X("####%s , anttype = %d  , %d \n", __FUNCTION__,anttype,__LINE__);
-        pHalData = GET_HAL_DATA(padapter);
+		/*DBG_871X("####%s , anttype = %d  , %d\n" , __func__ , anttype , __LINE__); */
+		pHalData = GET_HAL_DATA(padapter);
 
 
-        pHalData->bt_coexist.btAntisolation= anttype;
+		pHalData->bt_coexist.btAntisolation = anttype;
+
+		switch (pHalData->bt_coexist.btAntisolation) {
+		case 0:
+				pBtCoexist->boardInfo.antType = (u1Byte)BTC_ANT_TYPE_0;
+				break;
+		case 1:
+				pBtCoexist->boardInfo.antType = (u1Byte)BTC_ANT_TYPE_1;
+				break;
+		case 2:
+				pBtCoexist->boardInfo.antType = (u1Byte)BTC_ANT_TYPE_2;
+				break;
+		case 3:
+				pBtCoexist->boardInfo.antType = (u1Byte)BTC_ANT_TYPE_3;
+				break;
+		case 4:
+				pBtCoexist->boardInfo.antType = (u1Byte)BTC_ANT_TYPE_4;
+				break;
+		}
 
 }
 
@@ -3368,108 +3188,89 @@ hal_btcoex_ParseAntIsolationConfigFile(
   char*			buffer
 )
 {
-        HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
-        u32	i = 0 , j=0;
-        char	*szLine, *ptmp;
-        int	rtStatus = _SUCCESS;
-        char param_value_string[10];
-        u8 param_value;
-        u8 anttype = 4;
-        
-        u8 ant_num=3, ant_distance=50;
-        
-        typedef struct ant_isolation
-        {
-            char *param_name; // antenna isolation config parameter name 
-            u8 *value; // antenna isolation config parameter value
-        }ANT_ISOLATION;
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
+	u32	i = 0 , j = 0;
+	char	*szLine , *ptmp;
+	int rtStatus = _SUCCESS;
+	char param_value_string[10];
+	u8 param_value;
+	u8 anttype = 4;
+	
+	u8 ant_num = 3 , ant_distance = 50 , rfe_type = 1; 
+	
+	typedef struct ant_isolation {
+		char *param_name;  /* antenna isolation config parameter name */ 
+		u8 *value; /* antenna isolation config parameter value */
+	} ANT_ISOLATION;
 
-        ANT_ISOLATION ant_isolation_param[]= {
-                                                                                    {"ANT_NUMBER",&ant_num},
-                                                                                    {"ANT_DISTANCE",&ant_distance},
-                                                                                    {NULL,0}
-                                                                           };
+	ANT_ISOLATION ant_isolation_param[] = {
+												{"ANT_NUMBER" , &ant_num},
+												{"ANT_DISTANCE" , &ant_distance},
+												{"RFE_TYPE" , &rfe_type},												
+												{NULL , 0}
+										};
 
 
-        
-	//DBG_871X("===>Hal_ParseAntIsolationConfigFile()\n" );
-                    
+	
+	/* DBG_871X("===>Hal_ParseAntIsolationConfigFile()\n" ); */
+			
 	ptmp = buffer;
-	for (szLine = GetLineFromBuffer(ptmp); szLine != NULL; szLine = GetLineFromBuffer(ptmp))
-	{
-		// skip comment 
-		if ( IsCommentString( szLine ) ) {
-			continue;
-		}         
+	for (szLine = GetLineFromBuffer(ptmp) ; szLine != NULL; szLine = GetLineFromBuffer(ptmp)) {
+		/* skip comment */ 
+		if (IsCommentString(szLine))
+			continue;	 
 
-                //DBG_871X("%s : szLine = %s , strlen(szLine) = %d  \n", __FUNCTION__,szLine,strlen(szLine));
-                for ( j=0 ;ant_isolation_param[j].param_name != NULL ; j++ )
-                {
-                        if ( strstr(szLine,ant_isolation_param[j].param_name)!= NULL )
-                        {
-                                i=0;
-                                while ( i < strlen(szLine) )
-                                {
-                                        if (szLine[i] != '"')
-                                                ++i;
-                                        else
-                                        {
-                                                // skip only has one "
-                                                if( strpbrk(szLine, "\"") == strrchr(szLine, '"'))
-                                                {
-                                                        DBG_871X("Fail to parse parameters , format error!\n");
-                                                        break;
-                                                }
-                                                _rtw_memset( ( PVOID ) param_value_string, 0, 10 );
-                                                if ( ! ParseQualifiedString( szLine, &i, param_value_string, '"' , '"' ) ) {
-                                                        DBG_871X("Fail to parse parameters \n");
-                                                        return _FAIL;
-                                                }
-                                                else
-                                                {
-                                                        GetU1ByteIntegerFromStringInDecimal( param_value_string, ant_isolation_param[j].value );                                              
-                                                 }
-                                                break;
-                                        }
-                                }
-                        }
-                }
-        } 
+		/* DBG_871X("%s : szLine = %s , strlen(szLine) = %d\n" , __func__ , szLine , strlen(szLine));*/
+		for (j = 0 ; ant_isolation_param[j].param_name != NULL ; j++) {
+			if (strstr(szLine , ant_isolation_param[j].param_name) != NULL) {
+				i = 0;
+				while (i < strlen(szLine)) {
+					if (szLine[i] != '"')
+						++i;
+					else {
+						/* skip only has one " */
+						if (strpbrk(szLine , "\"") == strrchr(szLine , '"')) {
+							DBG_871X("Fail to parse parameters , format error!\n");
+							break;
+						}
+						_rtw_memset((PVOID)param_value_string , 0 , 10);
+						if (!ParseQualifiedString(szLine , &i , param_value_string , '"' , '"')) {
+							DBG_871X("Fail to parse parameters\n");
+							return _FAIL;
+						} else if (!GetU1ByteIntegerFromStringInDecimal(param_value_string , ant_isolation_param[j].value)) 
+							DBG_871X("Fail to GetU1ByteIntegerFromStringInDecimal\n");
 
-        // YiWei 20140716 , for BT coex antenna isolation control
-        if ( ant_num==3 && ant_distance>=50)
-        {
-                pHalData->EEPROMBluetoothCoexist = 0;
-                anttype = 4;
-        }
-        else if ( ant_num==2 && ant_distance>=50 ) 
-        {
-                anttype = 3;
-        }
-        else if ( ant_num==3 &&  ant_distance>=15 &&  ant_distance<50  ) 
-        {
-                anttype = 2;
-        }
-        else if ( ant_num==2 && ant_distance>=15 &&  ant_distance<50 ) 
-        {
-                anttype = 1;
-        }
-        else if ( (ant_num==2 && ant_distance<15) ||  (ant_num==3 && ant_distance<15)) 
-        {
-                anttype = 0;
-        } 
-        else
-        {
-                pHalData->EEPROMBluetoothCoexist = 1;
-                anttype = 1;             
-        }
+						break;
+					}
+				}
+			}
+		}
+	} 
 
-        hal_btcoex_SetAntIsolationType(Adapter, anttype); 
-                                                
-        DBG_871X("%s : ant_num = %d   \n", __FUNCTION__,ant_num);
-        DBG_871X("%s : ant_distance = %d  \n", __FUNCTION__,ant_distance);
-        //DBG_871X("<===Hal_ParseAntIsolationConfigFile()\n");
-        return rtStatus;    
+	/* YiWei 20140716 , for BT coex antenna isolation control */
+	/* rfe_type = 0 was SPDT , rfe_type = 1 was coupler */
+	if (ant_num == 3 && ant_distance >= 50) 
+		anttype = 3;
+	else if (ant_num == 2 && ant_distance >= 50 && rfe_type == 1)
+		anttype = 2;
+	else if (ant_num == 3 && ant_distance >= 15 && ant_distance < 50)
+		anttype = 2;
+	else if (ant_num == 2 && ant_distance >= 15 && ant_distance < 50 && rfe_type == 1)
+		anttype = 2;
+	else if ((ant_num == 2 && ant_distance < 15 && rfe_type == 1) || (ant_num == 3 && ant_distance < 15))
+		anttype = 1;
+	else if (ant_num == 2 && rfe_type == 0)
+		anttype = 0;
+	else 
+		anttype = 0;
+
+	hal_btcoex_SetAntIsolationType(Adapter, anttype); 
+						
+	DBG_871X("%s : ant_num = %d\n" , __func__ , ant_num);
+	DBG_871X("%s : ant_distance = %d\n" , __func__ , ant_distance);
+	DBG_871X("%s : rfe_type = %d\n" , __func__ , rfe_type);
+	/* DBG_871X("<===Hal_ParseAntIsolationConfigFile()\n"); */
+	return rtStatus;	
 }
 
 
@@ -3479,14 +3280,10 @@ hal_btcoex_AntIsolationConfig_ParaFile(
 	IN	char*	 	pFileName
 )
 {
-	HAL_DATA_TYPE		*pHalData = GET_HAL_DATA(Adapter);
-	int	rlen = 0, rtStatus = _FAIL;
-	//char	file_path[1024];
+	HAL_DATA_TYPE *pHalData = GET_HAL_DATA(Adapter);
+	int	rlen = 0 , rtStatus = _FAIL;
 
-	//if(!(Adapter->registrypriv.load_phy_file & LOAD_RF_TXPWR_LMT_PARA_FILE))
-	//	return rtStatus;
-
-	_rtw_memset(pHalData->para_file_buf, 0, MAX_PARA_FILE_BUF_LEN);
+	_rtw_memset(pHalData->para_file_buf , 0 , MAX_PARA_FILE_BUF_LEN);
 
 
 	rtw_merge_string(file_path, PATH_LENGTH_MAX, rtw_phy_file_path, pFileName);
@@ -3501,14 +3298,11 @@ hal_btcoex_AntIsolationConfig_ParaFile(
 	}
 
 
-	if(rtStatus == _SUCCESS)
-	{
-		//DBG_871X("%s(): read %s ok\n", __FUNCTION__, pFileName);
-		rtStatus = hal_btcoex_ParseAntIsolationConfigFile( Adapter, pHalData->para_file_buf );
-	}
-	else
-	{
-		DBG_871X("%s(): No File %s, Load from *** Array!\n", __FUNCTION__, pFileName);
+	if (rtStatus == _SUCCESS) {
+		/*DBG_871X("%s(): read %s ok\n", __func__ , pFileName);*/
+		rtStatus = hal_btcoex_ParseAntIsolationConfigFile(Adapter , pHalData->para_file_buf);
+	} else {
+		DBG_871X("%s(): No File %s, Load from *** Array!\n" , __func__ , pFileName);
 	}
 
 	return rtStatus;
