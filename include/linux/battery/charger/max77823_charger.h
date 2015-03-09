@@ -136,6 +136,13 @@
 #define MAX77823_BAT_DTLS                       0x70
 #define MAX77823_BAT_DTLS_SHIFT                 4
 
+enum ps_id {
+	PS_BATT,
+	PS_PS,
+	PS_WIRELESS,
+	PS_MAX	/* last */
+};
+
 struct max77823_charger_data {
 	struct device           *dev;
 	struct i2c_client       *i2c;
@@ -144,6 +151,7 @@ struct max77823_charger_data {
 
 	struct power_supply	psy_chg;
 	struct power_supply	psy_otg;
+	struct power_supply	*psy_ref[PS_MAX];
 
 	struct workqueue_struct *wqueue;
 	struct work_struct	chgin_work;
