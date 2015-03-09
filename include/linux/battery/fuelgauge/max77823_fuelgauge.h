@@ -174,6 +174,11 @@ struct max77823_fuelgauge_info {
 
 #define POWER_OFF_VOLTAGE_LOW_MARGIN	3400
 
+enum ps_id {
+	PS_BATT,
+	PS_MAX	/* last */
+};
+
 struct max77823_fuelgauge_data {
 	struct device           *dev;
 	struct i2c_client       *i2c;
@@ -185,6 +190,7 @@ struct max77823_fuelgauge_data {
 	sec_battery_platform_data_t *pdata;
 	struct max77823_fuelgauge_battery_data_t *battery_data;
 	struct power_supply		psy_fg;
+	struct power_supply	*psy_ref[PS_MAX];
 	struct delayed_work isr_work;
 
 	int cable_type;
