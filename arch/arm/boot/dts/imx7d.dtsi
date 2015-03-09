@@ -1017,6 +1017,7 @@
 				fsl,usbphy = <&usbphy_nop3>;
 				fsl,usbmisc = <&usbmisc3 0>;
 				phy_type = "hsic";
+				dr_mode = "host";
 				status = "disabled";
 			};
 
