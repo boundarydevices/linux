@@ -65,6 +65,15 @@
 		compatible = "gpio-keys";
 	};
 
+	magstripe: mag-stripe {
+		compatible = "boundary,magdecode";
+		data_pin = <&gpio4 6 GPIO_ACTIVE_HIGH>;
+		clock_pin = <&gpio4 7 GPIO_ACTIVE_LOW>;
+                rear_pin = <&gpio4 8 GPIO_ACTIVE_LOW>;
+                front_pin = <&gpio4 9 GPIO_ACTIVE_LOW>;
+		status = "okay";
+	};
+
 	sound_sgtl5000: sound_sgtl5000 {
 		compatible = "fsl,imx6dl-nitrogen6_vm-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";

@@ -15,7 +15,7 @@
 
 #include <dt-bindings/interrupt-controller/irq.h>
 #include "imx6dl.dtsi"
-#include "imx6qdl-nitrogen6_vm-magstripe.dtsi"
+#include "imx6qdl-nitrogen6_vm.dtsi"
 
 / {
 	model = "Freescale i.MX6 Solo Nitrogen6_vm Board";
@@ -31,5 +31,9 @@
 };
 
 &mxcfb3 {
+	status = "okay";
+};
+
+&magstripe {
 	status = "okay";
 };
