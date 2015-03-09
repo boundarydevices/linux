@@ -5026,6 +5026,30 @@
 #define ARIZONA_DRE1L_ENA_WIDTH                       1  /* DRE1L_ENA */
 
 /*
+ * R1088 (0x440) - DRE Enable (Vegas)
+ */
+#define VEGAS_DRE3L_ENA                          0x0020  /* DRE3L_ENA */
+#define VEGAS_DRE3L_ENA_MASK                     0x0020  /* DRE3L_ENA */
+#define VEGAS_DRE3L_ENA_SHIFT                         5  /* DRE3L_ENA */
+#define VEGAS_DRE3L_ENA_WIDTH                         1  /* DRE3L_ENA */
+#define VEGAS_DRE2L_ENA                          0x0008  /* DRE2L_ENA */
+#define VEGAS_DRE2L_ENA_MASK                     0x0008  /* DRE2L_ENA */
+#define VEGAS_DRE2L_ENA_SHIFT                         3  /* DRE2L_ENA */
+#define VEGAS_DRE2L_ENA_WIDTH                         1  /* DRE2L_ENA */
+#define VEGAS_DRE2R_ENA                          0x0004  /* DRE2R_ENA */
+#define VEGAS_DRE2R_ENA_MASK                     0x0004  /* DRE2R_ENA */
+#define VEGAS_DRE2R_ENA_SHIFT                         2  /* DRE2R_ENA */
+#define VEGAS_DRE2R_ENA_WIDTH                         1  /* DRE2R_ENA */
+#define VEGAS_DRE1L_ENA                          0x0002  /* DRE1L_ENA */
+#define VEGAS_DRE1L_ENA_MASK                     0x0002  /* DRE1L_ENA */
+#define VEGAS_DRE1L_ENA_SHIFT                         1  /* DRE1L_ENA */
+#define VEGAS_DRE1L_ENA_WIDTH                         1  /* DRE1L_ENA */
+#define VEGAS_DRE1R_ENA                          0x0001  /* DRE1R_ENA */
+#define VEGAS_DRE1R_ENA_MASK                     0x0001  /* DRE1R_ENA */
+#define VEGAS_DRE1R_ENA_SHIFT                         0  /* DRE1R_ENA */
+#define VEGAS_DRE1R_ENA_WIDTH                         1  /* DRE1R_ENA */
+
+/*
  * R1089 (0x441) - DRE Control 1
  */
 #define ARIZONA_DRE_ENV_TC_FAST_MASK             0x0F00  /* DRE_ENV_TC_FAST - [11:8] */
