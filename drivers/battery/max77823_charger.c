@@ -46,6 +46,69 @@ static enum power_supply_property max77823_otg_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
 };
 
+static const char* const psy_names[] = {
+[PS_BATT] = "battery",
+[PS_PS] = "ps",
+[PS_WIRELESS] = "wireless",
+};
+
+static int psy_get_prop(struct max77823_charger_data *charger, enum ps_id id, enum power_supply_property property, union power_supply_propval *value)
+{
+	struct power_supply *psy = charger->psy_ref[id];
+	int ret = -EINVAL;
+
+	value->intval = 0;
+	if (!psy) {
+		unsigned long timeout = jiffies + msecs_to_jiffies(500);
+		do {
+			psy = power_supply_get_by_name(psy_names[id]);
+			if (psy) {
+				charger->psy_ref[id] = psy;
+				break;
+			}
+			if (time_after(jiffies, timeout)) {
+				pr_err("%s: charger Failed %s\n",  __func__, psy_names[id]);
+				return -ENODEV;
+			}
+			msleep(1);
+		} while (1);
+	}
+	if (psy->get_property) {
+		ret = psy->get_property(psy, property, value);
+		if (ret < 0)
+			pr_err("%s: charger Fail to get %s(%d=>%d)\n", __func__, psy_names[id], property, ret);
+	}
+	return ret;
+}
+
+static int psy_set_prop(struct max77823_charger_data *charger, enum ps_id id, enum power_supply_property property, union power_supply_propval *value)
+{
+	struct power_supply *psy = charger->psy_ref[id];
+	int ret = -EINVAL;
+
+	if (!psy) {
+		unsigned long timeout = jiffies + msecs_to_jiffies(500);
+		do {
+			psy = power_supply_get_by_name(psy_names[id]);
+			if (psy) {
+				charger->psy_ref[id] = psy;
+				break;
+			}
+			if (time_after(jiffies, timeout)) {
+				pr_err("%s: charger Failed %s\n",  __func__, psy_names[id]);
+				return -ENODEV;
+			}
+			msleep(1);
+		} while (1);
+	}
+	if (psy->set_property) {
+		ret = psy->set_property(psy, property, value);
+		if (ret < 0)
+			pr_err("%s: charger Fail to set %s(%d=>%d)\n", __func__, psy_names[id], property, ret);
+	}
+	return ret;
+}
+
 static void max77823_charger_initialize(struct max77823_charger_data *charger);
 static int max77823_get_vbus_state(struct max77823_charger_data *charger);
 static int max77823_get_charger_state(struct max77823_charger_data *charger);
@@ -225,8 +288,7 @@ static int max77823_get_charging_health(struct max77823_charger_data *charger)
 
 	if (state == POWER_SUPPLY_HEALTH_GOOD) {
 		union power_supply_propval value;
-		psy_do_property("battery", get,
-				POWER_SUPPLY_PROP_HEALTH, value);
+		psy_get_prop(charger, PS_BATT, POWER_SUPPLY_PROP_HEALTH, &value);
 		/* VBUS OVP state return battery OVP state */
 		vbus_state = max77823_get_vbus_state(charger);
 		/* read CHG_DTLS and detecting battery terminal error */
@@ -779,8 +841,8 @@ static int max77823_chg_set_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 		if (val->intval == POWER_SUPPLY_TYPE_POWER_SHARING) {
-			psy_do_property("ps", get,
-				POWER_SUPPLY_PROP_STATUS, value);
+			psy_get_prop(charger, PS_PS, POWER_SUPPLY_PROP_STATUS,
+					&value);
 			if (value.intval) {
 				max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_00,
 					CHG_CNFG_00_OTG_CTRL, CHG_CNFG_00_OTG_CTRL);
@@ -999,8 +1061,7 @@ static void max77823_chg_isr_work(struct work_struct *work)
 
 		case POWER_SUPPLY_STATUS_FULL:
 			pr_info("%s: Interrupted by Full\n", __func__);
-			psy_do_property("battery", set,
-				POWER_SUPPLY_PROP_STATUS, val);
+			psy_set_prop(charger, PS_BATT, POWER_SUPPLY_PROP_STATUS, &val);
 			break;
 
 		case POWER_SUPPLY_STATUS_CHARGING:
@@ -1030,8 +1091,7 @@ static void max77823_chg_isr_work(struct work_struct *work)
 		case POWER_SUPPLY_HEALTH_OVERVOLTAGE:
 		case POWER_SUPPLY_HEALTH_UNDERVOLTAGE:
 			pr_info("%s: Interrupted by OVP/UVLO\n", __func__);
-			psy_do_property("battery", set,
-				POWER_SUPPLY_PROP_HEALTH, val);
+			psy_set_prop(charger, PS_BATT, POWER_SUPPLY_PROP_HEALTH, &val);
 			break;
 
 		case POWER_SUPPLY_HEALTH_UNSPEC_FAILURE:
@@ -1097,8 +1157,8 @@ static void wpc_detect_work(struct work_struct *work)
 
 	if ((charger->wc_w_state == 0) && (wc_w_state == 1)) {
 		value.intval = 1;
-		psy_do_property("wireless", set,
-				POWER_SUPPLY_PROP_ONLINE, value);
+		psy_set_prop(charger, PS_WIRELESS, POWER_SUPPLY_PROP_ONLINE,
+				&value);
 		value.intval = POWER_SUPPLY_TYPE_WIRELESS;
 		pr_info("%s: wpc activated, set V_INT as PN\n",
 				__func__);
@@ -1126,8 +1186,8 @@ static void wpc_detect_work(struct work_struct *work)
 			return;
 		} else {
 			value.intval = 0;
-			psy_do_property("wireless", set,
-					POWER_SUPPLY_PROP_ONLINE, value);
+			psy_set_prop(charger, PS_WIRELESS,
+					POWER_SUPPLY_PROP_ONLINE, &value);
 			pr_info("%s: wpc deactivated, set V_INT as PD\n",
 					__func__);
 		}
@@ -1224,8 +1284,7 @@ static void max77823_chgin_isr_work(struct work_struct *work)
 		MAX77823_CHG_INT_MASK, reg_data);
 
 	while (1) {
-		psy_do_property("battery", get,
-				POWER_SUPPLY_PROP_HEALTH, value);
+		psy_get_prop(charger, PS_BATT, POWER_SUPPLY_PROP_HEALTH, &value);
 		battery_health = value.intval;
 
 		max77823_read_reg(charger->i2c,
@@ -1254,8 +1313,7 @@ static void max77823_chgin_isr_work(struct work_struct *work)
 					pr_info("%s: charger is over voltage\n",
 							__func__);
 					value.intval = POWER_SUPPLY_HEALTH_OVERVOLTAGE;
-					psy_do_property("battery", set,
-						POWER_SUPPLY_PROP_HEALTH, value);
+					psy_set_prop(charger, PS_BATT, POWER_SUPPLY_PROP_HEALTH, &value);
 				} else if (((chgin_dtls == 0x0) || (chgin_dtls == 0x01)) &&(chg_dtls & 0x08) && \
 						(chg_cnfg_00 & MAX77823_MODE_BUCK) && \
 						(chg_cnfg_00 & MAX77823_MODE_CHGR) && \
@@ -1264,24 +1322,21 @@ static void max77823_chgin_isr_work(struct work_struct *work)
 					pr_info("%s, vbus_state : 0x%d, chg_state : 0x%d\n", __func__, chgin_dtls, chg_dtls);
 					pr_info("%s: vBus is undervoltage\n", __func__);
 					value.intval = POWER_SUPPLY_HEALTH_UNDERVOLTAGE;
-					psy_do_property("battery", set,
-							POWER_SUPPLY_PROP_HEALTH, value);
+					psy_set_prop(charger, PS_BATT, POWER_SUPPLY_PROP_HEALTH, &value);
 				} else if ((battery_health == \
 							POWER_SUPPLY_HEALTH_OVERVOLTAGE) &&
 						(chgin_dtls != 0x02)) {
 					pr_info("%s: vbus_state : 0x%d, chg_state : 0x%d\n", __func__, chgin_dtls, chg_dtls);
 					pr_info("%s: overvoltage->normal\n", __func__);
 					value.intval = POWER_SUPPLY_HEALTH_GOOD;
-					psy_do_property("battery", set,
-							POWER_SUPPLY_PROP_HEALTH, value);
+					psy_set_prop(charger, PS_BATT, POWER_SUPPLY_PROP_HEALTH, &value);
 				} else if ((battery_health == \
 							POWER_SUPPLY_HEALTH_UNDERVOLTAGE) &&
 						!((chgin_dtls == 0x0) || (chgin_dtls == 0x01))){
 					pr_info("%s: vbus_state : 0x%d, chg_state : 0x%d\n", __func__, chgin_dtls, chg_dtls);
 					pr_info("%s: undervoltage->normal\n", __func__);
 					value.intval = POWER_SUPPLY_HEALTH_GOOD;
-					psy_do_property("battery", set,
-							POWER_SUPPLY_PROP_HEALTH, value);
+					psy_set_prop(charger, PS_BATT, POWER_SUPPLY_PROP_HEALTH, &value);
 					max77823_set_input_current(charger,
 							charger->charging_current_max);
 				}
@@ -1563,11 +1618,14 @@ static int max77823_charger_remove(struct platform_device *pdev)
 {
 	struct max77823_charger_data *charger =
 		platform_get_drvdata(pdev);
+//	int i;
 
 	destroy_workqueue(charger->wqueue);
 	free_irq(charger->wc_w_irq, NULL);
 	free_irq(charger->pdata->chg_irq, NULL);
 	power_supply_unregister(&charger->psy_chg);
+//	for (i = 0; i < ARRAY_SIZE(charger->psy_ref); i++)
+//		power_supply_put(charger->psy_ref[i]);
 	kfree(charger);
 
 	return 0;
