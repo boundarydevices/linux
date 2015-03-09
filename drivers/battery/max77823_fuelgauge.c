@@ -34,6 +34,67 @@ static enum power_supply_property max77823_fuelgauge_props[] = {
 	POWER_SUPPLY_PROP_TEMP_AMBIENT,
 };
 
+static const char* const psy_names[] = {
+[PS_BATT] = "battery",
+};
+
+static int psy_get_prop(struct max77823_fuelgauge_data *fuelgauge, enum ps_id id, enum power_supply_property property, union power_supply_propval *value)
+{
+	struct power_supply *psy = fuelgauge->psy_ref[id];
+	int ret = -EINVAL;
+
+	value->intval = 0;
+	if (!psy) {
+		unsigned long timeout = jiffies + msecs_to_jiffies(500);
+		do {
+			psy = power_supply_get_by_name(psy_names[id]);
+			if (psy) {
+				fuelgauge->psy_ref[id] = psy;
+				break;
+			}
+			if (time_after(jiffies, timeout)) {
+				pr_err("%s: fuel Failed %s\n",  __func__, psy_names[id]);
+				return -ENODEV;
+			}
+			msleep(1);
+		} while (1);
+	}
+	if (psy->get_property) {
+		ret = psy->get_property(psy, property, value);
+		if (ret < 0)
+			pr_err("%s: fuel Fail to get %s(%d=>%d)\n", __func__, psy_names[id], property, ret);
+	}
+	return ret;
+}
+
+static int psy_set_prop(struct max77823_fuelgauge_data *fuelgauge, enum ps_id id, enum power_supply_property property, union power_supply_propval *value)
+{
+	struct power_supply *psy = fuelgauge->psy_ref[id];
+	int ret = -EINVAL;
+
+	if (!psy) {
+		unsigned long timeout = jiffies + msecs_to_jiffies(500);
+		do {
+			psy = power_supply_get_by_name(psy_names[id]);
+			if (psy) {
+				fuelgauge->psy_ref[id] = psy;
+				break;
+			}
+			if (time_after(jiffies, timeout)) {
+				pr_err("%s: fuel Failed %s\n",  __func__, psy_names[id]);
+				return -ENODEV;
+			}
+			msleep(1);
+		} while (1);
+	}
+	if (psy->set_property) {
+		ret = psy->set_property(psy, property, value);
+		if (ret < 0)
+			pr_err("%s: fuel Fail to set %s(%d=>%d)\n", __func__, psy_names[id], property, ret);
+	}
+	return ret;
+}
+
 static int max77823_get_v(struct max77823_fuelgauge_data *fuelgauge, int reg)
 {
 	u32 v = 0;
@@ -1261,8 +1322,7 @@ static int get_fuelgauge_soc(struct max77823_fuelgauge_data *fuelgauge)
 	avg_current = get_fuelgauge_value(fuelgauge, FG_CURRENT_AVG);
 	fg_vfsoc = get_fuelgauge_value(fuelgauge, FG_VF_SOC);
 
-	psy_do_property("battery", get,
-		POWER_SUPPLY_PROP_STATUS, value);
+	psy_get_prop(fuelgauge, PS_BATT, POWER_SUPPLY_PROP_STATUS, &value);
 
 	/* Algorithm for reducing time to fully charged (from MAXIM) */
 	if (value.intval != POWER_SUPPLY_STATUS_DISCHARGING &&
@@ -1322,8 +1382,7 @@ static void full_comp_work_handler(struct work_struct *work)
 	union power_supply_propval value;
 
 	avg_current = get_fuelgauge_value(fuelgauge, FG_CURRENT_AVG);
-	psy_do_property("battery", get,
-		POWER_SUPPLY_PROP_STATUS, value);
+	psy_get_prop(fuelgauge, PS_BATT, POWER_SUPPLY_PROP_STATUS, &value);
 
 	if (avg_current >= 25) {
 		cancel_delayed_work(&fuelgauge->info.full_comp_work);
@@ -1433,8 +1492,7 @@ bool max77823_fg_fuelalert_process(void *irq_data, bool is_fuel_alerted)
 	int current_soc =
 		get_fuelgauge_value(fuelgauge, FG_LEVEL);
 
-	psy_do_property("battery", get,
-		POWER_SUPPLY_PROP_STATUS, value);
+	psy_get_prop(fuelgauge, PS_BATT, POWER_SUPPLY_PROP_STATUS, &value);
 	if (value.intval == POWER_SUPPLY_STATUS_CHARGING)
 		return true;
 
@@ -1462,8 +1520,8 @@ bool max77823_fg_fuelalert_process(void *irq_data, bool is_fuel_alerted)
 		pr_err("Set battery level as 0, power off.\n");
 		fuelgauge->info.soc = 0;
 		value.intval = 0;
-		psy_do_property("battery", set,
-			POWER_SUPPLY_PROP_CAPACITY, value);
+		psy_set_prop(fuelgauge, PS_BATT, POWER_SUPPLY_PROP_CAPACITY,
+				&value);
 	}
 
 	return true;
@@ -1473,8 +1531,7 @@ bool max77823_fg_full_charged(struct max77823_fuelgauge_data *fuelgauge)
 {
 	union power_supply_propval value;
 
-	psy_do_property("battery", get,
-		POWER_SUPPLY_PROP_STATUS, value);
+	psy_get_prop(fuelgauge, PS_BATT, POWER_SUPPLY_PROP_STATUS, &value);
 
 	/* full charge compensation algorithm by MAXIM */
 	fg_fullcharged_compensation(fuelgauge,
