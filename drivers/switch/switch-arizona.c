@@ -142,6 +142,7 @@ struct arizona_extcon_info {
 
 	int button_impedance;
 	int button_check;
+	bool wait_for_mic;
 };
 
 static const struct arizona_micd_config micd_default_modes[] = {
@@ -1768,6 +1769,8 @@ static int arizona_antenna_button_start(struct arizona_extcon_info *info)
 	int i, micd_lvl;
 	int hp_imp_range_hi = -1;
 
+	info->wait_for_mic = false;
+
 	/* check if impedance level is supported */
 	micd_lvl = arizona_antenna_get_micd_level(arizona->hp_impedance, 0);
 
@@ -1815,6 +1818,12 @@ static bool arizona_antenna_is_valid_button(struct arizona_extcon_info *info, in
 			}
 		}
 		is_valid_button = key > 0 ? true : false;
+		if (!is_valid_button)
+			info->wait_for_mic = true;
+		if (info->wait_for_mic)
+			is_valid_button = false;
+	} else {
+		info->wait_for_mic = false;
 	}
 
 	return is_valid_button;
