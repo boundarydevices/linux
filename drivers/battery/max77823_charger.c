@@ -287,8 +287,6 @@ static int max77823_get_charging_health(struct max77823_charger_data *charger)
 	}
 
 	if (state == POWER_SUPPLY_HEALTH_GOOD) {
-		union power_supply_propval value;
-		psy_get_prop(charger, PS_BATT, POWER_SUPPLY_PROP_HEALTH, &value);
 		/* VBUS OVP state return battery OVP state */
 		vbus_state = max77823_get_vbus_state(charger);
 		/* read CHG_DTLS and detecting battery terminal error */
