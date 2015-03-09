@@ -1403,8 +1403,7 @@ static void imx_flush_buffer(struct uart_port *port)
 	 */
 	sport->saved_reg[0] = readl(sport->port.membase + UBIR);
 	sport->saved_reg[1] = readl(sport->port.membase + UBMR);
-	sport->saved_reg[2] = readl(sport->port.membase + UBRC);
-	sport->saved_reg[3] = readl(sport->port.membase + IMX21_UTS);
+	sport->saved_reg[2] = readl(sport->port.membase + IMX21_UTS);
 
 	i = 100;
 
@@ -1418,8 +1417,7 @@ static void imx_flush_buffer(struct uart_port *port)
 	/* Restore the registers */
 	writel(sport->saved_reg[0], sport->port.membase + UBIR);
 	writel(sport->saved_reg[1], sport->port.membase + UBMR);
-	writel(sport->saved_reg[2], sport->port.membase + UBRC);
-	writel(sport->saved_reg[3], sport->port.membase + IMX21_UTS);
+	writel(sport->saved_reg[2], sport->port.membase + IMX21_UTS);
 }
 
 static void
