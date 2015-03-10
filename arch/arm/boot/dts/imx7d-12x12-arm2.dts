@@ -717,7 +717,7 @@
 &sai1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
-	status = "okay";
+	status = "disabled";
 };
 
 &sai2 {
