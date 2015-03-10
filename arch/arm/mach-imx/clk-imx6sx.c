@@ -141,7 +141,6 @@ static u32 share_count_ssi2;
 static u32 share_count_ssi3;
 static u32 share_count_sai1;
 static u32 share_count_sai2;
-static bool uart_from_osc;
 
 /*
  * As IMX6SX_CLK_M4_PRE_SEL is NOT a glitchless MUX, so when
@@ -174,13 +173,6 @@ void imx6sx_set_m4_highfreq(bool high_freq)
 
 	imx_gpc_release_m4_in_sleep();
 }
-
-static int __init setup_uart_clk(char *uart_rate)
-{
-	uart_from_osc = true;
-	return 1;
-}
-__setup("uart_from_osc", setup_uart_clk);
 
 static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 {
