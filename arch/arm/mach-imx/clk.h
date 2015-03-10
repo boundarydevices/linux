@@ -9,6 +9,7 @@ extern spinlock_t imx_ccm_lock;
 extern void imx_cscmr1_fixup(u32 *val);
 extern struct imx_sema4_mutex *amp_power_mutex;
 extern struct imx_shared_mem *shared_mem;
+extern bool uart_from_osc;
 
 struct clk *imx_clk_pllv1(const char *name, const char *parent,
 		void __iomem *base);
