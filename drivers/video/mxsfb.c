@@ -662,6 +662,7 @@ static int mxsfb_set_par(struct fb_info *fb_info)
 
 	clk_enable_axi(host);
 	clk_enable_disp_axi(host);
+	clk_enable_pix(host);
 
 	dev_dbg(&host->pdev->dev, "%s\n", __func__);
 	/*
@@ -944,6 +945,7 @@ static int mxsfb_pan_display(struct fb_var_screeninfo *var,
 
 	clk_enable_axi(host);
 	clk_enable_disp_axi(host);
+	clk_enable_pix(host);
 
 	offset = fb_info->fix.line_length * var->yoffset;
 
