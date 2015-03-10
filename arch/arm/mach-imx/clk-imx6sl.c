@@ -38,7 +38,6 @@
 #define BM_PLL_ARM_LOCK		(1 << 31)
 #define PLL_ARM_DIV_792M	66
 
-static bool uart_from_osc;
 static const char *step_sels[]		= { "osc", "pll2_pfd2", };
 static const char *pll1_sw_sels[]	= { "pll1_sys", "step", };
 static const char *ocram_alt_sels[]	= { "pll2_pfd2", "pll3_pfd1", };
@@ -183,13 +182,6 @@ void imx6sl_set_wait_clk(bool enter)
 	while (__raw_readl(ccm_base + CDHIPR) & BM_CDHIPR_ARM_PODF_BUSY)
 		;
 }
-
-static int __init setup_uart_clk(char *uart_rate)
-{
-	uart_from_osc = true;
-	return 1;
-}
-__setup("uart_at_4M", setup_uart_clk);
 
 static void __init imx6sl_clocks_init(struct device_node *ccm_node)
 {
