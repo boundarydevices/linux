@@ -40,3 +40,9 @@ config ION_POOL_CACHE_POLICY
 	help
 	  Choose this option if need to explicity set cache policy of the
 	  pages in the page pool.
+
+config ION_MXC
+	tristate "Ion for imx platform"
+	depends on ARCH_MXC && ION
+	help
+	  Choose this option if you wish to use ion on imx platform.
