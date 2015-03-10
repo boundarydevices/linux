@@ -1605,12 +1605,12 @@ config SENSORS_MAG3110
 config MXC_MMA8451
 	tristate "MMA8451 device driver"
 	depends on I2C
-	default y
+	default n
 
 config MXC_MMA8x5x
 	tristate "MMA8x5x device driver"
 	depends on I2C && SYSFS
-	default n
+	default y
 	help
 	  This configure is used by android sensor driver.
 endif # HWMON
