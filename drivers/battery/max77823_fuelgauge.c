@@ -53,7 +53,7 @@ static int psy_get_prop(struct max77823_fuelgauge_data *fuelgauge, enum ps_id id
 				break;
 			}
 			if (time_after(jiffies, timeout)) {
-				pr_err("%s: fuel Failed %s\n",  __func__, psy_names[id]);
+				pr_err("%s: fuel Failed %s(%d)\n",  __func__, psy_names[id], property);
 				return -ENODEV;
 			}
 			msleep(1);
@@ -122,6 +122,46 @@ static int max77823_get_vcell(struct max77823_fuelgauge_data *fuelgauge)
 static int max77823_get_avgvcell(struct max77823_fuelgauge_data *fuelgauge)
 {
 	return max77823_get_v(fuelgauge, MAX77823_REG_AVGVCELL);
+}
+
+static int max77823_get_status(struct max77823_fuelgauge_data *fuelgauge)
+{
+	int ret;
+
+	ret = max77823_read_word(fuelgauge->i2c, MAX77823_REG_STATUS);
+	if (ret < 0)
+		return ret;
+
+	pr_debug("%s: reg 0x%x=(0x%x)\n", __func__, MAX77823_REG_STATUS, ret);
+	if (ret & (1 << 3)) {
+		/* battery is absent */
+		return POWER_SUPPLY_STATUS_NOT_CHARGING;
+	}
+	ret = max77823_read_word(fuelgauge->i2c, MAX77823_REG_STATUS2);
+	if (ret < 0)
+		return ret;
+	pr_debug("%s: reg 0x%x=(0x%x)\n", __func__, MAX77823_REG_STATUS, ret);
+	if (ret & (1 << 5)) {
+		return POWER_SUPPLY_STATUS_FULL;
+	}
+	ret = max77823_read_word(fuelgauge->i2c, MAX77823_REG_MAXMIN);
+	if (ret < 0)
+		return ret;
+	pr_info("%s: reg 0x%x=(0x%x)\n", __func__, MAX77823_REG_MAXMIN, ret);
+	max77823_write_word(fuelgauge->i2c, MAX77823_REG_MAXMIN, 0x807f);
+	if (ret == 0x807f)
+		ret = fuelgauge->prev_status;
+	else
+		fuelgauge->prev_status = ret;
+	ret <<= 16;	/* sign extend */
+	ret >>= 16;
+	if (ret > 0)
+		return POWER_SUPPLY_STATUS_CHARGING;
+	ret <<= 24;	/* sign extend */
+	ret >>= 24;
+	if (ret < 0)
+		return POWER_SUPPLY_STATUS_DISCHARGING;
+	return POWER_SUPPLY_STATUS_NOT_CHARGING;
 }
 
 #ifdef CONFIG_FUELGAUGE_MAX77823_VOLTAGE_TRACKING
@@ -1322,7 +1362,7 @@ static int get_fuelgauge_soc(struct max77823_fuelgauge_data *fuelgauge)
 	avg_current = get_fuelgauge_value(fuelgauge, FG_CURRENT_AVG);
 	fg_vfsoc = get_fuelgauge_value(fuelgauge, FG_VF_SOC);
 
-	psy_get_prop(fuelgauge, PS_BATT, POWER_SUPPLY_PROP_STATUS, &value);
+	value.intval = max77823_get_status(fuelgauge);
 
 	/* Algorithm for reducing time to fully charged (from MAXIM) */
 	if (value.intval != POWER_SUPPLY_STATUS_DISCHARGING &&
@@ -1642,10 +1682,24 @@ static int max77823_fg_get_property(struct power_supply *psy,
 			     enum power_supply_property psp,
 			     union power_supply_propval *val)
 {
+	int ret;
 	struct max77823_fuelgauge_data *fuelgauge =
 		container_of(psy, struct max77823_fuelgauge_data, psy_fg);
 
 	switch (psp) {
+	case POWER_SUPPLY_PROP_STATUS:
+		val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
+		ret = max77823_get_status(fuelgauge);
+		if (ret >= 0)
+			val->intval = ret;
+		break;
+	case POWER_SUPPLY_PROP_CHARGE_FULL:
+		val->intval = 0;
+		ret = max77823_read_word(fuelgauge->i2c, FULLCAP_REG);
+		if (ret < 0)
+			return ret;
+		val->intval = ret * 1000 / 2;
+		break;
 		/* Cell voltage (VCELL, mV) */
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		val->intval = max77823_get_vcell(fuelgauge);
@@ -1787,10 +1841,24 @@ static int max77823_fg_get_property(struct power_supply *psy,
 			     enum power_supply_property psp,
 			     union power_supply_propval *val)
 {
+	int ret;
 	struct max77823_fuelgauge_data *fuelgauge =
 		container_of(psy, struct max77823_fuelgauge_data, psy_fg);
 
 	switch (psp) {
+	case POWER_SUPPLY_PROP_STATUS:
+		val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
+		ret = max77823_get_status(fuelgauge);
+		if (ret >= 0)
+			val->intval = ret;
+		break;
+	case POWER_SUPPLY_PROP_CHARGE_FULL:
+		val->intval = 0;
+		ret = max77823_read_word(fuelgauge->i2c, FULLCAP_REG);
+		if (ret < 0)
+			return ret;
+		val->intval = ret * 1000 / 2;
+		break;
 		/* Cell voltage (VCELL, mV) */
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		val->intval = get_fuelgauge_value(fuelgauge, FG_VOLTAGE);
