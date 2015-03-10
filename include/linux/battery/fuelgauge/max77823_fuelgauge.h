@@ -42,7 +42,9 @@
 #define CURRENT_REG			0x0A
 #define AVG_CURRENT_REG			0x0B
 #define REMCAP_MIX_REG			0x0F
+#define FULLCAP_REG			0x10
 #define CYCLES_REG			0x17
+#define MAX77823_REG_MAXMIN		0x1C
 #define REMCAP_AV_REG			0x1F
 #define MAX77823_REG_AVGVCELL		0x19
 #define MAX77823_REG_CONFIG		0x1D
@@ -53,6 +55,7 @@
 #define MAX77823_REG_CGAIN		0x2E
 #define FULLCAPREP_REG			0x35
 #define MAX77823_REG_RCOMP		0x38
+#define MAX77823_REG_STATUS2		0xB0
 #define MAX77823_REG_VFOCV		0xFB
 #define MAX77823_REG_SOC_VF		0xFF
 
@@ -63,7 +66,6 @@
 
 #define SOCMIX_REG			0x0D
 #define SOCAV_REG			0x0E
-#define FULLCAP_REG			0x10
 #define TIME_TO_EMPTY_REG		0x11
 #define RFAST_REG			0x15
 #define AVR_TEMPERATURE_REG		0x16
@@ -195,6 +197,7 @@ struct max77823_fuelgauge_data {
 
 	int cable_type;
 	bool is_charging;
+	int prev_status;
 
 	/* HW-dedicated fuel guage info structure
 	 * used in individual fuel gauge file only
