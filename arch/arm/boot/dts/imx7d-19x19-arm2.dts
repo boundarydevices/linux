@@ -511,7 +511,7 @@
 &sai2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai2>;
-	status = "okay";
+	status = "disabled";
 };
 
 &epxp {
