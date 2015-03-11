@@ -911,7 +911,7 @@ static bool sec_bat_get_temperature_by_adc(
 temp_by_adc_goto:
 	value->intval = temp;
 
-	dev_info(battery->dev,
+	dev_dbg(battery->dev,
 		"%s: Temp(%d), Temp-ADC(%d)\n",
 		__func__, temp, temp_adc);
 
@@ -3239,6 +3239,24 @@ create_attrs_succeed:
 	return rc;
 }
 
+static int sec_bat_property_is_writeable(struct power_supply *psy,
+		enum power_supply_property psp)
+{
+	switch (psp) {
+	case POWER_SUPPLY_PROP_STATUS:
+	case POWER_SUPPLY_PROP_HEALTH:
+	case POWER_SUPPLY_PROP_ONLINE:
+	case POWER_SUPPLY_PROP_CAPACITY:
+	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
+	case POWER_SUPPLY_PROP_CHARGE_TYPE:
+	case POWER_SUPPLY_PROP_PRESENT:
+		return 1;
+	default:
+		break;
+	}
+	return 0;
+}
+
 static int sec_bat_set_property(struct power_supply *psy,
 				enum power_supply_property psp,
 				const union power_supply_propval *val)
@@ -4381,6 +4399,8 @@ static int sec_battery_probe(struct platform_device *pdev)
 	battery->psy_bat.num_properties = ARRAY_SIZE(sec_battery_props),
 	battery->psy_bat.get_property = sec_bat_get_property,
 	battery->psy_bat.set_property = sec_bat_set_property,
+	battery->psy_bat.property_is_writeable  = sec_bat_property_is_writeable;
+
 #if defined(CONFIG_QPNP_BMS)
 	battery->psy_bat.supplied_to = pm_batt_supplied_to;
 	battery->psy_bat.num_supplicants =
@@ -4551,9 +4571,11 @@ static int sec_battery_probe(struct platform_device *pdev)
 					extcon_cable_name[i],
 					&battery->extcon_cable_list[i].batt_nb);
 
-		if (ret)
+		if (ret) {
 			pr_err("%s: fail to register extcon notifier(%s, %d)\n",
 				__func__, extcon_cable_name[i], ret);
+			continue;
+		}
 		if (extcon_get_cable_state_(battery->extcon_cable_list[i].extcon_nb.edev, i)) {
 			battery->wire_status = sec_bat_cable_check(battery, i);
 			pr_info("%s: %s(wire_status = %d) attached from extcon\n", __func__,
