@@ -78,7 +78,28 @@
 #define EXTCON_JIG		61
 #define EXTCON_MECHANICAL	62
 
-#define EXTCON_NUM		63
+/* Samsung connector */
+#define EXTCON_HV_PREPARE	63
+#define EXTCON_HV_TA		64	/* High Voltage Charger(9V) */
+#define EXTCON_HV_TA_ERR	65	/* Out of range HV Charger(5~9V) */
+#define EXTCON_DESKDOCK		66
+#define EXTCON_DESKDOCK_VB	67
+#define EXTCON_AUDIODOCK	68
+#define EXTCON_SMARTDOCK	69
+#define EXTCON_SMARTDOCK_TA	70
+#define EXTCON_SMARTDOCK_USB	71
+#define EXTCON_MULTIMEDIADOCK	72
+#define EXTCON_JIG_UARTOFF	73
+#define EXTCON_JIG_UARTOFF_VB	74
+#define EXTCON_JIG_UARTON	75
+#define EXTCON_JIG_USBOFF	76
+#define EXTCON_JIG_USBON	77
+#define EXTCON_INCOMPATIBLE	78
+#define EXTCON_CHARGING_CABLE	79
+#define EXTCON_HMT		80
+#define EXTCON_HV_TA_1A		81	/* UNDEFINE but charging */
+
+#define EXTCON_NUM		82
 
 /*
  * Define the property of supported external connectors.
