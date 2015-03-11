@@ -62,6 +62,28 @@ const char extcon_cable_name[][CABLE_NAME_MAX + 1] = {
 	[EXTCON_VIDEO_IN]	= "Video-in",
 	[EXTCON_VIDEO_OUT]	= "Video-out",
 	[EXTCON_MECHANICAL]	= "Mechanical",
+	[EXTCON_HV_PREPARE]	= "High Voltage Prepare",
+	[EXTCON_HV_TA]		= "High Voltage TA",
+	[EXTCON_HV_TA_ERR]	= "Error HV TA",
+	[EXTCON_DESKDOCK]	= "Desk-dock",
+	[EXTCON_DESKDOCK_VB]	= "Desk-dock-VB",
+	[EXTCON_AUDIODOCK]	= "Audio-dock",
+	[EXTCON_SMARTDOCK]	= "Smart-dock",
+	[EXTCON_SMARTDOCK_TA]	= "Smart-dock-TA",
+	[EXTCON_SMARTDOCK_USB]	= "Smart-dock-USB",
+	[EXTCON_MULTIMEDIADOCK]	= "Multimedia-dock",
+	[EXTCON_JIG_UARTOFF]	= "JIG-UART-OFF",
+	[EXTCON_JIG_UARTOFF_VB]	= "JIG-UART-OFF-VB",
+	[EXTCON_JIG_UARTON]	= "JIG-UART-ON",
+	[EXTCON_JIG_USBOFF]	= "JIG-USB-OFF",
+	[EXTCON_JIG_USBON]	= "JIG-USB-ON",
+	[EXTCON_INCOMPATIBLE]	= "Incompatible-TA",
+	[EXTCON_CHARGING_CABLE]	= "Charging-Cable",
+#if defined(CONFIG_MUIC_SUPPORT_HMT_DETECTION)
+	[EXTCON_HMT]		= "HMT",
+#endif
+	[EXTCON_HV_TA_1A]	= "High Voltage 1A Type Cable",
+	[EXTCON_NONE]		= "None",
 };
 
 static struct class *extcon_class;
