@@ -632,8 +632,9 @@ static int mx6s_videobuf_prepare(struct vb2_buffer *vb)
 	 * This can be useful if you want to see if we actually fill
 	 * the buffer with something
 	 */
-	memset((void *)vb2_plane_vaddr(vb, 0),
-	       0xaa, vb2_get_plane_payload(vb, 0));
+	if (vb2_plane_vaddr(vb, 0))
+		memset((void *)vb2_plane_vaddr(vb, 0),
+		       0xaa, vb2_get_plane_payload(vb, 0));
 #endif
 
 	vb2_set_plane_payload(vb, 0, csi_dev->pix.sizeimage);
