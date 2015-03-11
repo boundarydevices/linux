@@ -728,12 +728,13 @@ static int arizona_runtime_resume(struct device *dev)
 		regmap_write(arizona->regmap, 0x80, 0x3);
 		ret = regcache_sync_region(arizona->regmap, CLEARWATER_CP_MODE,
 					   CLEARWATER_CP_MODE);
+		regmap_write(arizona->regmap, 0x80, 0x0);
+		mutex_unlock(&arizona->reg_setting_lock);
+
 		if (ret != 0) {
 			dev_err(arizona->dev, "Failed to restore keyed cache\n");
 			goto err;
 		}
-		regmap_write(arizona->regmap, 0x80, 0x0);
-		mutex_unlock(&arizona->reg_setting_lock);
 		break;
 	}
 
