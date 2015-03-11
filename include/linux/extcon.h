@@ -28,7 +28,8 @@
 #include <linux/sysfs.h>
 
 #define SUPPORTED_CABLE_MAX	32
-#define CABLE_NAME_MAX		30
+#define CABLE_NAME_MAX          SUPPORTED_CABLE_MAX
+#define EXTCON_DEV_NAME		"extcon-muic"
 
 /*
  * The standard cable name is to help support general notifier
@@ -69,6 +70,30 @@ enum extcon_cable_name {
 	EXTCON_VIDEO_IN,
 	EXTCON_VIDEO_OUT,
 	EXTCON_MECHANICAL,
+	EXTCON_HV_PREPARE,
+	EXTCON_HV_TA,			/* High Voltage Charger(9V) */
+	EXTCON_HV_TA_ERR,		/* Out of range HV Charger(5~9V) */
+	EXTCON_DESKDOCK,
+	EXTCON_DESKDOCK_VB,
+	EXTCON_AUDIODOCK,
+	EXTCON_SMARTDOCK,
+	EXTCON_SMARTDOCK_TA,
+	EXTCON_SMARTDOCK_USB,
+	EXTCON_MULTIMEDIADOCK,
+	EXTCON_JIG_UARTOFF,
+	EXTCON_JIG_UARTOFF_VB,
+	EXTCON_JIG_UARTON,
+	EXTCON_JIG_USBOFF,
+	EXTCON_JIG_USBON,
+	EXTCON_INCOMPATIBLE,
+	EXTCON_CHARGING_CABLE,
+#if defined(CONFIG_MUIC_SUPPORT_HMT_DETECTION)
+	EXTCON_HMT,
+#endif
+	EXTCON_HV_TA_1A,		/* UNDEFINE but charging */
+
+	EXTCON_NONE,
+
 };
 extern const char extcon_cable_name[][CABLE_NAME_MAX + 1];
 
