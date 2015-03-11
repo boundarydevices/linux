@@ -36,7 +36,8 @@
 #include <linux/sysfs.h>
 
 #define SUPPORTED_CABLE_MAX	32
-#define CABLE_NAME_MAX		30
+
+#define EMISC(_id, _name) [_id] = {.type = EXTCON_TYPE_MISC, .id = _id, .name = _name }
 
 struct __extcon_info {
 	unsigned int type;
@@ -189,7 +190,25 @@ struct __extcon_info {
 		.id = EXTCON_MECHANICAL,
 		.name = "MECHANICAL",
 	},
-
+	EMISC(EXTCON_HV_PREPARE, "High Voltage Prepare"),
+	EMISC(EXTCON_HV_TA,"High Voltage TA"),
+	EMISC(EXTCON_HV_TA_ERR, "Error HV TA"),
+	EMISC(EXTCON_DESKDOCK, "Desk-dock"),
+	EMISC(EXTCON_DESKDOCK_VB, "Desk-dock-VB"),
+	EMISC(EXTCON_AUDIODOCK, "Audio-dock"),
+	EMISC(EXTCON_SMARTDOCK, "Smart-dock"),
+	EMISC(EXTCON_SMARTDOCK_TA, "Smart-dock-TA"),
+	EMISC(EXTCON_SMARTDOCK_USB, "Smart-dock-USB"),
+	EMISC(EXTCON_MULTIMEDIADOCK, "Multimedia-dock"),
+	EMISC(EXTCON_JIG_UARTOFF, "JIG-UART-OFF"),
+	EMISC(EXTCON_JIG_UARTOFF_VB, "JIG-UART-OFF-VB"),
+	EMISC(EXTCON_JIG_UARTON, "JIG-UART-ON"),
+	EMISC(EXTCON_JIG_USBOFF, "JIG-USB-OFF"),
+	EMISC(EXTCON_JIG_USBON, "JIG-USB-ON"),
+	EMISC(EXTCON_INCOMPATIBLE, "Incompatible-TA"),
+	EMISC(EXTCON_CHARGING_CABLE, "Charging-Cable"),
+	EMISC(EXTCON_HMT, "HMT"),
+	EMISC(EXTCON_HV_TA_1A, "High Voltage 1A Type Cable"),
 	{ /* sentinel */ }
 };
 
