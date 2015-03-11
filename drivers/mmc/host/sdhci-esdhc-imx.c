@@ -948,7 +948,8 @@ static int esdhc_set_uhs_signaling(struct sdhci_host *host, unsigned int uhs)
 				ESDHC_MIX_CTRL_DDREN | ESDHC_MIX_CTRL_HS400_EN,
 				host->ioaddr + ESDHC_MIX_CTRL);
 		imx_data->is_ddr = 1;
-		esdhc_set_strobe_dll(host);
+		if (host->clock == 200000000)
+			esdhc_set_strobe_dll(host);
 		break;
 	}
 
