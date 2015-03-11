@@ -33,6 +33,7 @@
 
 static enum power_supply_property max77823_charger_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
+	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_CHARGING_ENABLED,
 	POWER_SUPPLY_PROP_CHARGE_TYPE,
 	POWER_SUPPLY_PROP_HEALTH,
@@ -238,6 +239,18 @@ static int max77823_get_charger_state(struct max77823_charger_data *charger)
 	}
 
 	return (int)status;
+}
+
+static int max77823_get_charger_present(struct max77823_charger_data *charger)
+{
+	u8 reg_data;
+	int ret;
+
+	ret = max77823_read_reg(charger->i2c, MAX77823_CHG_INT_OK, &reg_data);
+	if (ret < 0)
+		return 1;
+	pr_debug("%s:(0x%02x)\n", __func__, reg_data);
+	return (reg_data >> MAX77823_DETBAT_SHIFT) & 1;
 }
 
 static int max77823_get_charging_health(struct max77823_charger_data *charger)
@@ -755,6 +768,9 @@ static int max77823_chg_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = max77823_get_charger_state(charger);
+		break;
+	case POWER_SUPPLY_PROP_PRESENT:
+		val->intval = max77823_get_charger_present(charger);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		if (!charger->is_charging)
