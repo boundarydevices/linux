@@ -23,6 +23,7 @@ extern void board_fuelgauge_init(void *data);
 
 static enum power_supply_property max77823_fuelgauge_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
+	POWER_SUPPLY_PROP_ONLINE,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_VOLTAGE_AVG,
 	POWER_SUPPLY_PROP_CURRENT_NOW,
@@ -1677,6 +1678,20 @@ static int max77823_fg_calculate_dynamic_scale(
 	return fuelgauge->capacity_max;
 }
 
+static int max77823_fg_property_is_writeable(struct power_supply *psy,
+                                                enum power_supply_property psp)
+{
+        switch (psp) {
+	case POWER_SUPPLY_PROP_ONLINE:
+                return 1;
+        default:
+                break;
+        }
+
+        return 0;
+}
+
+
 #ifdef CONFIG_FUELGAUGE_MAX77823_VOLTAGE_TRACKING
 static int max77823_fg_get_property(struct power_supply *psy,
 			     enum power_supply_property psp,
@@ -1699,6 +1714,10 @@ static int max77823_fg_get_property(struct power_supply *psy,
 		if (ret < 0)
 			return ret;
 		val->intval = ret * 1000 / 2;
+		break;
+	case POWER_SUPPLY_PROP_ONLINE:
+		val->intval = fuelgauge->cable_type;
+		pr_info("%s:is_charging=%d cable_type=%d\n", __func__, fuelgauge->is_charging, fuelgauge->cable_type);
 		break;
 		/* Cell voltage (VCELL, mV) */
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
@@ -1858,6 +1877,10 @@ static int max77823_fg_get_property(struct power_supply *psy,
 		if (ret < 0)
 			return ret;
 		val->intval = ret * 1000 / 2;
+		break;
+	case POWER_SUPPLY_PROP_ONLINE:
+		val->intval = fuelgauge->cable_type;
+		pr_info("%s:is_charging=%d cable_type=%d\n", __func__, fuelgauge->is_charging, fuelgauge->cable_type);
 		break;
 		/* Cell voltage (VCELL, mV) */
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
@@ -2227,6 +2250,7 @@ static int max77823_fuelgauge_probe(struct platform_device *pdev)
 	fuelgauge->psy_fg.properties	= max77823_fuelgauge_props;
 	fuelgauge->psy_fg.num_properties =
 		ARRAY_SIZE(max77823_fuelgauge_props);
+	fuelgauge->psy_fg.property_is_writeable  = max77823_fg_property_is_writeable;
 	fuelgauge->capacity_max = fuelgauge->pdata->capacity_max;
 #ifdef CONFIG_FUELGAUGE_MAX77823_VOLTAGE_TRACKING
 	raw_soc_val.intval = max77823_get_soc(fuelgauge) / 10;
