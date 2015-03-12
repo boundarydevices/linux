@@ -18,6 +18,8 @@
 #define MX7D_CCM_SIZE                   0x10000
 #define MX7D_IOMUXC_BASE_ADDR           0x30330000
 #define MX7D_IOMUXC_SIZE                0x10000
+#define MX7D_IOMUXC_GPR_BASE_ADDR       0x30340000
+#define MX7D_IOMUXC_GPR_SIZE            0x10000
 #define MX7D_ANATOP_BASE_ADDR           0x30360000
 #define MX7D_ANATOP_SIZE                0x10000
 #define MX7D_GPC_BASE_ADDR              0x303a0000
@@ -26,6 +28,8 @@
 #define MX7D_SRC_SIZE                   0x10000
 #define MX7D_DDRC_BASE_ADDR             0x307a0000
 #define MX7D_DDRC_SIZE                  0x10000
+#define MX7D_DDRC_PHY_BASE_ADDR         0x30790000
+#define MX7D_DDRC_PHY_SIZE              0x10000
 #define MX7D_AIPS1_BASE_ADDR            0x30000000
 #define MX7D_AIPS1_SIZE                 0x400000
 #define MX7D_AIPS2_BASE_ADDR            0x30400000
