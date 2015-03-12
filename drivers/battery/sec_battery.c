@@ -975,7 +975,7 @@ static bool sec_bat_temperature(
 			battery->pdata->temp_low_threshold_normal;
 	}
 
-	dev_info(battery->dev,
+	dev_dbg(battery->dev,
 		"%s: HLT(%d) HLR(%d) HT(%d), HR(%d), LT(%d), LR(%d)\n",
 		__func__, battery->temp_highlimit_threshold,
 		battery->temp_highlimit_recovery,
@@ -1474,7 +1474,7 @@ static bool sec_bat_time_management(
 
 	battery->charging_passed_time = charging_time;
 
-	dev_info(battery->dev,
+	dev_dbg(battery->dev,
 		"%s: Charging Time : %ld secs\n", __func__,
 		battery->charging_passed_time);
 
@@ -1783,7 +1783,7 @@ static bool sec_bat_fullcharged_check(
 	if (sec_bat_check_fullcharged(battery))
 		sec_bat_do_fullcharged(battery);
 
-	dev_info(battery->dev,
+	dev_dbg(battery->dev,
 		"%s: Charging Mode : %s\n", __func__,
 		battery->is_recharging ?
 		sec_bat_charging_mode_str[SEC_BATTERY_CHARGING_RECHARGING] :
@@ -1900,7 +1900,7 @@ static void sec_bat_get_battery_info(
 	battery->capacity = value.intval;
 #endif
 
-	dev_info(battery->dev,
+	dev_dbg(battery->dev,
 		"%s:Vnow(%dmV),Inow(%dmA),Imax(%dmA),SOC(%d%%),Tbat(%d),is_hc_usb(%d)\n",
 		__func__,
 		battery->voltage_now, battery->current_now,
@@ -2212,7 +2212,7 @@ static void sec_bat_monitor_work(
 #endif
 
 continue_monitor:
-	dev_info(battery->dev,
+	dev_dbg(battery->dev,
 		"%s: Status(%s), Mode(%s), Health(%s), Cable(%d), Vendor(%s), level(%d%%)\n",
 		__func__,
 		sec_bat_status_str[battery->status],
@@ -2220,7 +2220,7 @@ continue_monitor:
 		sec_bat_health_str[battery->health],
 		battery->cable_type, battery->pdata->vendor, battery->siop_level);
 
-	dev_info(battery->dev,
+	dev_dbg(battery->dev,
 			"%s: stability_test(%d), eng_not_full_status(%d) slate_mode(%d)\n",
 			__func__, battery->stability_test, battery->eng_not_full_status,
 			battery->slate_mode);
