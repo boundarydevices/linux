@@ -284,6 +284,8 @@ static void arizona_extcon_hp_clamp(struct arizona_extcon_info *info,
 	switch (arizona->type) {
 	case WM5102:
 	case WM8997:
+	case WM8998:
+	case WM1814:
 		mask = ARIZONA_RMV_SHRT_HP1L;
 		if (clamp)
 			val = ARIZONA_RMV_SHRT_HP1L;
