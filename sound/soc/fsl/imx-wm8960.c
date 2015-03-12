@@ -187,6 +187,10 @@ static struct snd_soc_ops imx_hifi_ops = {
 	.hw_free = imx_hifi_hw_free,
 };
 
+static const struct snd_soc_dapm_route imx_wm8960_dapm_route[] = {
+	{ "LINPUT1", NULL, "MICB" },
+};
+
 static int imx_wm8960_probe(struct platform_device *pdev)
 {
 	struct device_node *cpu_np, *codec_np;
@@ -260,6 +264,8 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 		goto fail;
 	data->card.num_links = 1;
 	data->card.dai_link = &data->dai;
+	data->card.dapm_routes = imx_wm8960_dapm_route;
+	data->card.num_dapm_routes = ARRAY_SIZE(imx_wm8960_dapm_route);
 
 	platform_set_drvdata(pdev, &data->card);
 	snd_soc_card_set_drvdata(&data->card, data);
