@@ -41,40 +41,49 @@
  * structure contains necessary pm info for low level
  * suspend related code.
  */
-#define PM_INFO_PBASE_OFFSET			0x0
-#define PM_INFO_RESUME_ADDR_OFFSET		0x4
-#define PM_INFO_DDR_TYPE_OFFSET			0x8
-#define PM_INFO_PM_INFO_SIZE_OFFSET		0xC
-#define PM_INFO_MX7_DDRC_P_OFFSET		0x10
-#define PM_INFO_MX7_DDRC_V_OFFSET		0x14
-#define PM_INFO_MX7_SRC_P_OFFSET		0x18
-#define PM_INFO_MX7_SRC_V_OFFSET		0x1C
-#define PM_INFO_MX7_IOMUXC_P_OFFSET		0x20
-#define PM_INFO_MX7_IOMUXC_V_OFFSET		0x24
-#define PM_INFO_MX7_CCM_P_OFFSET		0x28
-#define PM_INFO_MX7_CCM_V_OFFSET		0x2C
-#define PM_INFO_MX7_GPC_P_OFFSET		0x30
-#define PM_INFO_MX7_GPC_V_OFFSET		0x34
-#define PM_INFO_MX7_L2_P_OFFSET		0x38
-#define PM_INFO_MX7_L2_V_OFFSET		0x3C
-#define PM_INFO_MX7_ANATOP_P_OFFSET		0x40
-#define PM_INFO_MX7_ANATOP_V_OFFSET		0x44
-#define PM_INFO_MX7_TTBR1_V_OFFSET		0x48
-#define PM_INFO_DDRC_IO_NUM_OFFSET		0x4c
-#define PM_INFO_DDRC_IO_VAL_OFFSET		0x50
-/* below offsets depends on MX6_MAX_DDRC_IO_NUM(33) definition */
-#define PM_INFO_DDRC_NUM_OFFSET			0x158
-#define PM_INFO_DDRC_VAL_OFFSET			0x15c
+#define PM_INFO_M4_RESERVE0_OFFSET		0x0
+#define PM_INFO_M4_RESERVE1_OFFSET		0x4
+#define PM_INFO_M4_RESERVE2_OFFSET		0x8
+#define PM_INFO_PBASE_OFFSET			0xc
+#define PM_INFO_RESUME_ADDR_OFFSET		0x10
+#define PM_INFO_DDR_TYPE_OFFSET			0x14
+#define PM_INFO_PM_INFO_SIZE_OFFSET		0x18
+#define PM_INFO_MX7_DDRC_P_OFFSET		0x1c
+#define PM_INFO_MX7_DDRC_V_OFFSET		0x20
+#define PM_INFO_MX7_DDRC_PHY_P_OFFSET		0x24
+#define PM_INFO_MX7_DDRC_PHY_V_OFFSET		0x28
+#define PM_INFO_MX7_SRC_P_OFFSET		0x2c
+#define PM_INFO_MX7_SRC_V_OFFSET		0x30
+#define PM_INFO_MX7_IOMUXC_GPR_P_OFFSET		0x34
+#define PM_INFO_MX7_IOMUXC_GPR_V_OFFSET		0x38
+#define PM_INFO_MX7_CCM_P_OFFSET		0x3c
+#define PM_INFO_MX7_CCM_V_OFFSET		0x40
+#define PM_INFO_MX7_GPC_P_OFFSET		0x44
+#define PM_INFO_MX7_GPC_V_OFFSET		0x48
+#define PM_INFO_MX7_L2_P_OFFSET			0x4c
+#define PM_INFO_MX7_L2_V_OFFSET			0x50
+#define PM_INFO_MX7_ANATOP_P_OFFSET		0x54
+#define PM_INFO_MX7_ANATOP_V_OFFSET		0x58
+#define PM_INFO_MX7_TTBR1_V_OFFSET		0x5c
+#define PM_INFO_DDRC_REG_NUM_OFFSET		0x60
+#define PM_INFO_DDRC_REG_OFFSET			0x64
+#define PM_INFO_DDRC_VALUE_OFFSET		0x68
+#define PM_INFO_DDRC_PHY_REG_NUM_OFFSET		0x164
+#define PM_INFO_DDRC_PHY_REG_OFFSET		0x168
+#define PM_INFO_DDRC_PHY_VALUE_OFFSET		0x16c
 
 #define MX7_SRC_GPR1	0x74
 #define MX7_SRC_GPR2	0x78
 #define MX7_ANATOP_CORE	0x140
+#define ANADIG_SNVS_MISC_CTRL	0x380
 #define DDRC_STAT	0x4
 #define DDRC_PWRCTL	0x30
 #define DDRC_PSTAT	0x3fc
-
-#define MX7_MAX_DDRC_IO_NUM             33
-#define MX7_MAX_DDRC_NUM                34
+#define DDRC_PCTRL_0	0x490
+#define DDR_DFIMISC	0x1b0
+#define DDR_SWCTL	0x320
+#define DDR_SWSTAT	0x324
+#define DDRPHY_LP_CON0	0x18
 
 	.align 3
 
@@ -217,6 +226,196 @@
 
 	.endm
 
+	.macro wait_delay
+5:
+	subs	r6, r6, #0x1
+	bne	5b
+
+	.endm
+
+	.macro ddr_enter_retention
+
+	/* let DDR out of self-refresh */
+	ldr	r7, =0x0
+	str	r7, [r11, #DDRC_PCTRL_0]
+
+	/* wait rw port_busy clear */
+	ldr	r6, =(0x1 << 16)
+	orr	r6, r6, #0x1
+6:
+	ldr	r7, [r11, #DDRC_PSTAT]
+	ands	r7, r7, r6
+	bne	6b
+
+	ldr	r11, [r0, #PM_INFO_MX7_DDRC_V_OFFSET]
+	/* enter self-refresh bit 5 */
+	ldr	r7, =(0x1 << 5)
+	str	r7, [r11, #DDRC_PWRCTL]
+
+	/* wait until self-refresh mode entered */
+7:
+	ldr	r7, [r11, #DDRC_STAT]
+	and	r7, r7, #0x3
+	cmp	r7, #0x3
+	bne	7b
+8:
+	ldr	r7, [r11, #DDRC_STAT]
+	ands	r7, r7, #0x20
+	beq	8b
+
+	/* disable dram clk */
+	ldr	r7, =(0x1 << 5)
+	orr	r7, r7, #(1 << 3)
+	str	r7, [r11, #DDRC_PWRCTL]
+
+	/* reset ddr_phy  */
+
+	ldr	r11, [r0, #PM_INFO_MX7_SRC_V_OFFSET]
+	ldr	r6, =0x1000
+	ldr	r7, [r11, r6]
+	orr	r7, r7, #0x1
+	str	r7, [r11, r6]
+	ldr	r11, [r0, #PM_INFO_MX7_ANATOP_V_OFFSET]
+	ldr	r7, =0x0
+	str	r7, [r11, #ANADIG_SNVS_MISC_CTRL]
+	/* turn off ddr power */
+	ldr	r7, =(0x1 << 29)
+	str	r7, [r11, #ANADIG_SNVS_MISC_CTRL]
+
+	.endm
+
+	.macro ddr_exit_retention
+
+	cmp	r5, #0x0
+	ldreq	r1, [r0, #PM_INFO_MX7_ANATOP_V_OFFSET]
+	ldrne	r1, [r0, #PM_INFO_MX7_ANATOP_P_OFFSET]
+	ldreq	r2, [r0, #PM_INFO_MX7_SRC_V_OFFSET]
+	ldrne	r2, [r0, #PM_INFO_MX7_SRC_P_OFFSET]
+	ldreq	r3, [r0, #PM_INFO_MX7_DDRC_V_OFFSET]
+	ldrne	r3, [r0, #PM_INFO_MX7_DDRC_P_OFFSET]
+	ldreq	r4, [r0, #PM_INFO_MX7_DDRC_PHY_V_OFFSET]
+	ldrne	r4, [r0, #PM_INFO_MX7_DDRC_PHY_P_OFFSET]
+	ldreq	r10, [r0, #PM_INFO_MX7_CCM_V_OFFSET]
+	ldrne	r10, [r0, #PM_INFO_MX7_CCM_P_OFFSET]
+	ldreq	r11, [r0, #PM_INFO_MX7_IOMUXC_GPR_V_OFFSET]
+	ldrne	r11, [r0, #PM_INFO_MX7_IOMUXC_GPR_P_OFFSET]
+
+	/* turn on ddr power */
+	ldr	r7, =(0x1 << 29)
+	str	r7, [r1, #ANADIG_SNVS_MISC_CTRL]
+
+	ldr	r6, =50
+	wait_delay
+
+	ldr	r7, =0x0
+	str	r7, [r1, #ANADIG_SNVS_MISC_CTRL]
+
+	/* clear ddr_phy reset */
+	ldr	r6, =0x1000
+	ldr	r7, [r2, r6]
+	orr	r7, r7, #0x3
+	str	r7, [r2, r6]
+	ldr	r7, [r2, r6]
+	bic	r7, r7, #0x1
+	str	r7, [r2, r6]
+
+	ldr	r6, [r0, #PM_INFO_DDRC_REG_NUM_OFFSET]
+	ldr	r7, =PM_INFO_DDRC_REG_OFFSET
+	add	r7, r7, r0
+9:
+	ldr	r8, [r7], #0x4
+	ldr	r9, [r7], #0x4
+	str	r9, [r3, r8]
+	subs	r6, r6, #0x1
+	bne	9b
+	ldr	r7, =0x20
+	str	r7, [r3, #DDRC_PWRCTL]
+	ldr	r7, =0x0
+	str	r7, [r3, #DDR_DFIMISC]
+
+	/* do PHY, clear ddr_phy reset */
+	ldr	r6, =0x1000
+	ldr	r7, [r2, r6]
+	bic	r7, r7, #0x2
+	str	r7, [r2, r6]
+
+	ldr	r7, =(0x1 << 30)
+	str	r7, [r1, #ANADIG_SNVS_MISC_CTRL]
+
+	/* need to delay ~5mS */
+	ldr	r6, =0x100000
+	wait_delay
+
+	ldr	r6, [r0, #PM_INFO_DDRC_PHY_REG_NUM_OFFSET]
+	ldr	r7, =PM_INFO_DDRC_PHY_REG_OFFSET
+	add	r7, r7, r0
+
+10:
+	ldr	r8, [r7], #0x4
+	ldr	r9, [r7], #0x4
+	str	r9, [r4, r8]
+	subs	r6, r6, #0x1
+	bne	10b
+
+	ldr	r7, =0x0
+	add	r9, r10, #0x4000
+	str	r7, [r9, #0x130]
+
+	ldr	r7, =0x170
+	orr	r7, r7, #0x8
+	str	r7, [r11, #0x20]
+
+	ldr	r7, =0x2
+	add	r9, r10, #0x4000
+	str	r7, [r9, #0x130]
+
+	ldr	r7, =0xf
+	str	r7, [r4, #DDRPHY_LP_CON0]
+
+	/* wait until self-refresh mode entered */
+11:
+	ldr	r7, [r3, #DDRC_STAT]
+	and	r7, r7, #0x3
+	cmp	r7, #0x3
+	bne	11b
+	ldr	r7, =0x0
+	str	r7, [r3, #DDR_SWCTL]
+	ldr	r7, =0x1
+	str	r7, [r3, #DDR_DFIMISC]
+	ldr	r7, =0x1
+	str	r7, [r3, #DDR_SWCTL]
+12:
+	ldr	r7, [r3, #DDR_SWSTAT]
+	and	r7, r7, #0x1
+	cmp	r7, #0x1
+	bne	12b
+13:
+	ldr	r7, [r3, #DDRC_STAT]
+	and	r7, r7, #0x20
+	cmp	r7, #0x20
+	bne	13b
+
+	/* let DDR out of self-refresh */
+	ldr	r7, =0x0
+	str	r7, [r3, #DDRC_PWRCTL]
+14:
+	ldr	r7, [r3, #DDRC_STAT]
+	and	r7, r7, #0x30
+	cmp	r7, #0x0
+	bne	14b
+
+15:
+	ldr	r7, [r3, #DDRC_STAT]
+	and	r7, r7, #0x3
+	cmp	r7, #0x1
+	bne	15b
+
+	/* enable port */
+	ldr	r7, =0x1
+	str	r7, [r3, #DDRC_PCTRL_0]
+
+	.endm
+
 ENTRY(imx7_suspend)
 	push	{r4-r12}
 	/*
@@ -246,7 +445,16 @@ ENTRY(imx7_suspend)
 	store_ttbr1
 
 	ldr	r11, [r0, #PM_INFO_MX7_DDRC_V_OFFSET]
+	ldr	r10, [r0, #PM_INFO_MX7_GPC_V_OFFSET]
+	ldr	r5, [r10, #0xa00]
+	cmp	r5, #0
+	beq	ddr_only_self_refresh
+
+	ddr_enter_retention
+	b	ddr_retention_enter_out
+ddr_only_self_refresh:
 	ddrc_enter_self_refresh
+ddr_retention_enter_out:
 
 	/* Zzz, enter stop mode */
 	wfi
@@ -255,7 +463,9 @@ ENTRY(imx7_suspend)
 	nop
 	nop
 
-	ddrc_exit_self_refresh
+	mov	r5, #0x0
+	ddr_exit_retention
+
 	restore_ttbr1
 
 	pop	{r4-r12}
@@ -281,9 +491,17 @@ resume:
 	str	r7, [r11, #MX7_SRC_GPR2]
 
 	ldr	r11, [r0, #PM_INFO_MX7_DDRC_P_OFFSET]
-	ddrc_exit_self_refresh
+	ldr	r10, [r0, #PM_INFO_MX7_GPC_P_OFFSET]
+	ldr	r5, [r10, #0xa00]
+	cmp	r5, #0
+	beq	ddr_only_self_refresh_out
 
-	restore_ttbr1
+	mov	r5, #0x1
+	ddr_exit_retention
+	b	ddr_retention_exit_out
+ddr_only_self_refresh_out:
+	ddrc_exit_self_refresh
+ddr_retention_exit_out:
 
 	mov	pc, lr
 ENDPROC(imx7_suspend)
