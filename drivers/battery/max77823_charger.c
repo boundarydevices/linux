@@ -840,13 +840,26 @@ static int max77823_otg_regulator_nb(struct notifier_block *nb, unsigned long ev
 	return 0;
 }
 
+static void max77823_set_online(struct max77823_charger_data *charger, int type)
+{
+	union power_supply_propval value;
+
+	if (type == POWER_SUPPLY_TYPE_POWER_SHARING) {
+		psy_get_prop(charger, PS_PS, POWER_SUPPLY_PROP_STATUS, &value);
+		max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_00,
+				(value.intval) ? CHG_CNFG_00_OTG_CTRL : 0, CHG_CNFG_00_OTG_CTRL);
+		return;
+	}
+	charger->cable_type = type;
+	max77823_charger_function_control(charger);
+}
+
 static int max77823_chg_set_property(struct power_supply *psy,
 			  enum power_supply_property psp,
 			  const union power_supply_propval *val)
 {
 	struct max77823_charger_data *charger =
 		container_of(psy, struct max77823_charger_data, psy_chg);
-	union power_supply_propval value;
 	int set_charging_current_max;
 	const int usb_charging_current = get_charging_info(charger, POWER_SUPPLY_TYPE_USB)->fast_charging_current;
 
@@ -856,21 +869,7 @@ static int max77823_chg_set_property(struct power_supply *psy,
 		charger->status = val->intval;
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
-		if (val->intval == POWER_SUPPLY_TYPE_POWER_SHARING) {
-			psy_get_prop(charger, PS_PS, POWER_SUPPLY_PROP_STATUS,
-					&value);
-			if (value.intval) {
-				max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_00,
-					CHG_CNFG_00_OTG_CTRL, CHG_CNFG_00_OTG_CTRL);
-			} else {
-				max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_00,
-					0, CHG_CNFG_00_OTG_CTRL);
-			}
-			break;
-		}
-
-		charger->cable_type = val->intval;
-		max77823_charger_function_control(charger);
+		max77823_set_online(charger, val->intval);
 		break;
 
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
@@ -1390,6 +1389,7 @@ static void max77823_chgin_init_work(struct work_struct *work)
 						struct max77823_charger_data,
 						chgin_init_work.work);
 	int ret;
+	union power_supply_propval value;
 
 	pr_info("%s \n", __func__);
 	queue_work(charger->wqueue, &charger->chgin_work);
@@ -1399,6 +1399,9 @@ static void max77823_chgin_init_work(struct work_struct *work)
 		pr_err("%s: fail to request chgin IRQ: %d: %d\n",
 				__func__, charger->irq_chgin, ret);
 	}
+	value.intval = POWER_SUPPLY_TYPE_HV_MAINS;
+	psy_set_prop(charger, PS_BATT, POWER_SUPPLY_PROP_ONLINE, &value);
+	max77823_set_online(charger, value.intval);
 }
 
 #ifdef CONFIG_OF
