@@ -395,6 +395,7 @@ struct sec_battery_platform_data {
 	 */
 	sec_bat_adc_region_t *cable_adc_value;
 	/* charging current for type (0: not use) */
+	int charging_current_entries;
 	sec_charging_current_t *charging_current;
 #ifdef CONFIG_OF
 	char *chip_vendor;
