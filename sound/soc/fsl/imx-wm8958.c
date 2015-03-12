@@ -116,6 +116,7 @@ static const struct snd_soc_dapm_route imx_wm8958_dapm_route[] = {
 	{"Ext Spk", NULL, "SPKOUTLN"},
 	{"Ext Spk", NULL, "SPKOUTRP"},
 	{"Ext Spk", NULL, "SPKOUTRN"},
+	{"IN1LN", NULL, "MICBIAS2"},
 };
 
 static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
