@@ -104,7 +104,7 @@
 		reg = <0x30086000 0x1000>;
 
 		coresight-default-sink;
-		clocks = <&clks IMX7D_ENET_AXI_ROOT_CLK>;
+		clocks = <&clks IMX7D_MAIN_AXI_ROOT_CLK>;
 		clock-names = "apb_pclk";
 
 		port{
@@ -119,7 +119,7 @@
 		compatible = "arm,coresight-tpiu", "arm,primecell";
 		reg = <0x30087000 0x1000>;
 
-		clocks = <&clks IMX7D_ENET_AXI_ROOT_CLK>;
+		clocks = <&clks IMX7D_MAIN_AXI_ROOT_CLK>;
 		clock-names = "apb_pclk";
 		port {
 			tpiu_in_port: endpoint@0 {
@@ -168,7 +168,7 @@
 	etf@0,30084000 {
 		compatible = "arm,coresight-tmc", "arm,primecell";
 		reg = <0x30084000 0x1000>;
-		clocks = <&clks IMX7D_ENET_AXI_ROOT_CLK>;
+		clocks = <&clks IMX7D_MAIN_AXI_ROOT_CLK>;
 		clock-names = "apb_pclk";
 
 		ports{
@@ -194,7 +194,7 @@
 	funnel@1,30083000 {
 		compatible = "arm,coresight-funnel", "arm,primecell";
 		reg = <0x30083000 0x1000>;
-		clocks = <&clks IMX7D_ENET_AXI_ROOT_CLK>;
+		clocks = <&clks IMX7D_MAIN_AXI_ROOT_CLK>;
 		clock-names = "apb_pclk";
 		ports {
 			#address-cells = <1>;
@@ -225,7 +225,7 @@
 	funnel@0,30041000 {
 		compatible = "arm,coresight-funnel", "arm,primecell";
 		reg = <0x30041000 0x1000>;
-		clocks = <&clks IMX7D_ENET_AXI_ROOT_CLK>;
+		clocks = <&clks IMX7D_MAIN_AXI_ROOT_CLK>;
 		clock-names = "apb_pclk";
 
 		ports {
@@ -265,7 +265,7 @@
 		reg = <0x3007c000 0x1000>;
 
 		cpu = <&cpu0>;
-		clocks = <&clks IMX7D_ENET_AXI_ROOT_CLK>;
+		clocks = <&clks IMX7D_MAIN_AXI_ROOT_CLK>;
 		clock-names = "apb_pclk";
 		port {
 			etm0_out_port: endpoint {
@@ -280,7 +280,7 @@
 		arm,primecell-periphid =  <0xbb956>;
 
 		cpu = <&cpu1>;
-		clocks = <&clks IMX7D_ENET_AXI_ROOT_CLK>;
+		clocks = <&clks IMX7D_MAIN_AXI_ROOT_CLK>;
 		clock-names = "apb_pclk";
 		port {
 			etm1_out_port: endpoint {
