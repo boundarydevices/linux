@@ -179,6 +179,16 @@ static int sec_bat_is_lpm_check(char *str)
 }
 __setup("androidboot.mode=", sec_bat_is_lpm_check);
 
+static struct sec_charging_current *get_charging_info(struct sec_battery_info *battery, int index)
+{
+	struct sec_battery_platform_data *pdata = battery->pdata;
+	if (index >= pdata->charging_current_entries) {
+		pr_err("%s: invalid index %d\n", __func__, index);
+		index = POWER_SUPPLY_TYPE_UNKNOWN;	/* 0 */
+	}
+	return &pdata->charging_current[index];
+}
+
 static bool sec_bat_is_lpm(struct sec_battery_info *battery)
 {
 	if (battery->pdata->is_lpm) {
@@ -235,7 +245,7 @@ static int sec_bat_set_charge(
 
 #if defined(CONFIG_TMM_CHG_CTRL)
 	if((tuner_running_status==TUNER_IS_ON) &&
-		(battery->pdata->charging_current[val.intval].input_current_limit
+		(get_charging_info(battery, val.intval)->input_current_limit
 		> TMM_CHG_CTRL_INPUT_LIMIT_CURRENT_VALUE)) {
 			union power_supply_propval value;
 
@@ -1226,8 +1236,7 @@ static void sec_bat_chg_temperature_check(
 		} else if ((battery->chg_limit) &&
 			(battery->chg_temp < battery->pdata->chg_high_temp_recovery)) {
 			battery->chg_limit = false;
-			value.intval = battery->pdata->charging_current
-			[battery->cable_type].input_current_limit;
+			value.intval = get_charging_info(battery, battery->cable_type)->input_current_limit;
 			psy_do_property(battery->pdata->charger_name, set,
 				POWER_SUPPLY_PROP_CURRENT_MAX, value);
 
@@ -1559,7 +1568,7 @@ static bool sec_bat_check_fullcharged(
 	int full_check_type;
 	bool ret;
 	int err;
-
+	struct sec_charging_current *ci;
 	ret = false;
 
 	if (!sec_bat_check_fullcharged_condition(battery))
@@ -1570,6 +1579,7 @@ static bool sec_bat_check_fullcharged(
 	else
 		full_check_type = battery->pdata->full_check_type_2nd;
 
+	ci = get_charging_info(battery, battery->cable_type);
 	switch (full_check_type) {
 	case SEC_BATTERY_FULLCHARGED_ADC:
 		current_adc =
@@ -1587,10 +1597,8 @@ static bool sec_bat_check_fullcharged(
 		if (battery->current_adc <
 			(battery->charging_mode ==
 			SEC_BATTERY_CHARGING_1ST ?
-			battery->pdata->charging_current[
-			battery->cable_type].full_check_current_1st :
-			battery->pdata->charging_current[
-			battery->cable_type].full_check_current_2nd)) {
+			ci->full_check_current_1st :
+			ci->full_check_current_2nd)) {
 			battery->full_check_cnt++;
 			dev_dbg(battery->dev,
 				"%s: Full Check ADC (%d)\n",
@@ -1604,15 +1612,12 @@ static bool sec_bat_check_fullcharged(
 
 #if defined(CONFIG_MACH_VIENNAEUR) || defined(CONFIG_MACH_VIENNAVZW) || defined(CONFIG_MACH_V2LTEEUR)
 		if ((battery->current_now > 0 && battery->current_now <
-			battery->pdata->charging_current[
-			battery->cable_type].full_check_current_1st) &&
+			ci->full_check_current_1st) &&
 			(battery->current_avg > 0 && battery->current_avg <
 			(battery->charging_mode ==
 			SEC_BATTERY_CHARGING_1ST ?
-			battery->pdata->charging_current[
-			battery->cable_type].full_check_current_1st + 50 :
-			battery->pdata->charging_current[
-			battery->cable_type].full_check_current_2nd))) {
+			ci->full_check_current_1st + 50 :
+			ci->full_check_current_2nd))) {
 				battery->full_check_cnt++;
 				dev_dbg(battery->dev,
 				"%s: Full Check Current (%d)\n",
@@ -1623,15 +1628,12 @@ static bool sec_bat_check_fullcharged(
 		break;
 #else
 		if ((battery->current_now > 0 && battery->current_now <
-			battery->pdata->charging_current[
-			battery->cable_type].full_check_current_1st) &&
+			ci->full_check_current_1st) &&
 			(battery->current_avg > 0 && battery->current_avg <
 			(battery->charging_mode ==
 			SEC_BATTERY_CHARGING_1ST ?
-			battery->pdata->charging_current[
-			battery->cable_type].full_check_current_1st :
-			battery->pdata->charging_current[
-			battery->cable_type].full_check_current_2nd))) {
+			ci->full_check_current_1st :
+			ci->full_check_current_2nd))) {
 				battery->full_check_cnt++;
 				dev_dbg(battery->dev,
 				"%s: Full Check Current (%d)\n",
@@ -1650,10 +1652,8 @@ static bool sec_bat_check_fullcharged(
 			battery->charging_passed_time) >
 			(battery->charging_mode ==
 			SEC_BATTERY_CHARGING_1ST ?
-			battery->pdata->charging_current[
-			battery->cable_type].full_check_current_1st :
-			battery->pdata->charging_current[
-			battery->cable_type].full_check_current_2nd)) {
+			ci->full_check_current_1st :
+			ci->full_check_current_2nd)) {
 			battery->full_check_cnt++;
 			dev_dbg(battery->dev,
 				"%s: Full Check Time (%d)\n",
@@ -1667,10 +1667,8 @@ static bool sec_bat_check_fullcharged(
 		if (battery->capacity <=
 			(battery->charging_mode ==
 			SEC_BATTERY_CHARGING_1ST ?
-			battery->pdata->charging_current[
-			battery->cable_type].full_check_current_1st :
-			battery->pdata->charging_current[
-			battery->cable_type].full_check_current_2nd)) {
+			ci->full_check_current_1st :
+			ci->full_check_current_2nd)) {
 			battery->full_check_cnt++;
 			dev_dbg(battery->dev,
 				"%s: Full Check SOC (%d)\n",
@@ -2303,10 +2301,8 @@ static void sec_bat_cable_work(struct work_struct *work)
 		msleep(50);
 	}
 
-	wl_cur = battery->pdata->charging_current[
-		POWER_SUPPLY_TYPE_WIRELESS].input_current_limit;
-	wr_cur = battery->pdata->charging_current[
-		battery->wire_status].input_current_limit;
+	wl_cur = get_charging_info(battery, POWER_SUPPLY_TYPE_WIRELESS)->input_current_limit;
+	wr_cur = get_charging_info(battery, battery->wire_status)->input_current_limit;
 	if (battery->wc_status && battery->wc_enable &&
 			(wl_cur > wr_cur))
 		current_cable_type = POWER_SUPPLY_TYPE_WIRELESS;
@@ -2325,7 +2321,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 	sec_bat_check_cable_result_callback(battery->dev, battery->cable_type);
 
 #ifdef CONFIG_SAMSUNG_BATTERY_DISALLOW_DEEP_SLEEP
-	if (battery->pdata->charging_current[battery->cable_type].fast_charging_current != 0) {
+	if (get_charging_info(battery, battery->cable_type)->fast_charging_current != 0) {
 		pr_info("QMCK: block xo shutdown\n");
 		if (!xo_chr)
 			xo_chr = clk_get_sys("charger", "xo_chr"); // Disable xo shutdown
@@ -3168,10 +3164,8 @@ ssize_t sec_bat_store_attrs(
 				union power_supply_propval value;
 				dev_err(battery->dev,
 					"%s: BATT_TEST_CHARGE_CURRENT(%d)\n", __func__, x);
-				battery->pdata->charging_current[
-					POWER_SUPPLY_TYPE_USB].input_current_limit = x;
-				battery->pdata->charging_current[
-					POWER_SUPPLY_TYPE_USB].fast_charging_current = x;
+				get_charging_info(battery, POWER_SUPPLY_TYPE_USB)->input_current_limit = x;
+				get_charging_info(battery, POWER_SUPPLY_TYPE_USB)->fast_charging_current = x;
 				if (x > 500) {
 					battery->eng_not_full_status = true;
 					battery->pdata->temp_check_type =
@@ -4206,28 +4200,32 @@ static int sec_bat_parse_dt(struct device *dev,
 		return 1;
 	}
 
-	p = of_get_property(np, "battery,input_current_limit", &len);
+	if (!pdata->charging_current) {
+		p = of_get_property(np, "battery,input_current_limit", &len);
 
-	len = len / sizeof(u32);
+		len = len / sizeof(u32);
 
-	pdata->charging_current = kzalloc(sizeof(sec_charging_current_t) * len,
+		pdata->charging_current = kzalloc(sizeof(sec_charging_current_t) * len,
 					  GFP_KERNEL);
 
-	for(i = 0; i < len; i++) {
-		ret = sec_bat_read_u32_index_dt(np,
-				 "battery,input_current_limit", i,
-				 &pdata->charging_current[i].input_current_limit);
-		ret = sec_bat_read_u32_index_dt(np,
-				 "battery,fast_charging_current", i,
-				 &pdata->charging_current[i].fast_charging_current);
-		ret = sec_bat_read_u32_index_dt(np,
-				 "battery,full_check_current_1st", i,
-				 &pdata->charging_current[i].full_check_current_1st);
-		ret = sec_bat_read_u32_index_dt(np,
-				 "battery,full_check_current_2nd", i,
-				 &pdata->charging_current[i].full_check_current_2nd);
-	}
+		pdata->charging_current_entries = len;
+		for(i = 0; i < len; i++) {
+			struct sec_charging_current *scc = &pdata->charging_current[i];
 
+			ret = sec_bat_read_u32_index_dt(np,
+				 "battery,input_current_limit", i,
+				 &scc->input_current_limit);
+			ret = sec_bat_read_u32_index_dt(np,
+				 "battery,fast_charging_current", i,
+				 &scc->fast_charging_current);
+			ret = sec_bat_read_u32_index_dt(np,
+				 "battery,full_check_current_1st", i,
+				 &scc->full_check_current_1st);
+			ret = sec_bat_read_u32_index_dt(np,
+				 "battery,full_check_current_2nd", i,
+				 &scc->full_check_current_2nd);
+		}
+	}
 	pr_info("%s: vendor : %s, technology : %d, cable_check_type : %d\n"
 		"cable_source_type : %d, event_waiting_time : %d\n"
 		"polling_type : %d, initial_count : %d, check_count : %d\n"
