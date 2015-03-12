@@ -361,9 +361,9 @@ static int max77823_get_charging_health(struct max77823_charger_data *charger)
 				} else
 					state = POWER_SUPPLY_HEALTH_GOOD;
 			}
-		} else if (((vbus_state == 0x0) || (vbus_state == 0x01)) &&(chg_dtls & 0x08) && \
-				(chg_cnfg_00 & MAX77823_MODE_BUCK) && \
-				(chg_cnfg_00 & MAX77823_MODE_CHGR) && \
+		} else if (((vbus_state == 0x0) || (vbus_state == 0x01)) &&(chg_dtls & 0x08) &&
+//				(chg_cnfg_00 & MAX77823_MODE_BUCK) &&
+//				(chg_cnfg_00 & MAX77823_MODE_CHGR) &&
 				(charger->cable_type != POWER_SUPPLY_TYPE_WIRELESS)) {
 			pr_info("%s: vbus is under\n", __func__);
 			state = POWER_SUPPLY_HEALTH_UNDERVOLTAGE;
