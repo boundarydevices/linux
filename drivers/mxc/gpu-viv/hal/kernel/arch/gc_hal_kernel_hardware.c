@@ -1614,7 +1614,9 @@ gckHARDWARE_InitializeHardware(
     }
 
     if (_IsHardwareMatch(Hardware, gcv2000, 0x5108)
+     || _IsHardwareMatch(Hardware, gcv2000, 0xffff5450)
      || _IsHardwareMatch(Hardware, gcv320, 0x5007)
+     || _IsHardwareMatch(Hardware, gcv320, 0x5303)
      || _IsHardwareMatch(Hardware, gcv880, 0x5106)
      || _IsHardwareMatch(Hardware, gcv400, 0x4645)
     )
