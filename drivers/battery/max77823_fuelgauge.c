@@ -148,7 +148,7 @@ static int max77823_get_status(struct max77823_fuelgauge_data *fuelgauge)
 	ret = max77823_read_word(fuelgauge->i2c, MAX77823_REG_MAXMIN);
 	if (ret < 0)
 		return ret;
-	pr_info("%s: reg 0x%x=(0x%x)\n", __func__, MAX77823_REG_MAXMIN, ret);
+	pr_debug("%s: reg 0x%x=(0x%x)\n", __func__, MAX77823_REG_MAXMIN, ret);
 	max77823_write_word(fuelgauge->i2c, MAX77823_REG_MAXMIN, 0x807f);
 	if (ret == 0x807f)
 		ret = fuelgauge->prev_status;
@@ -346,6 +346,7 @@ bool max77823_fg_full_charged(struct max77823_fuelgauge_data *fuelgauge)
 
 static void fg_test_print(struct max77823_fuelgauge_data *fuelgauge)
 {
+#ifdef DEBUG
 	u32 average_vcell;
 	u32 temp;
 	u32 temp2;
@@ -387,11 +388,12 @@ static void fg_test_print(struct max77823_fuelgauge_data *fuelgauge)
 	reg_data = max77823_read_word(fuelgauge->i2c, MAX77823_REG_CONFIG);
 	pr_info("%s: CONFIG(0x%02x), data(0x%04x)\n", __func__,
 		MAX77823_REG_CONFIG, reg_data);
-
+#endif
 }
 
 static void fg_periodic_read(struct max77823_fuelgauge_data *fuelgauge)
 {
+#ifdef DEBUG
 	u8 reg;
 	int i;
 	int data[0x10];
@@ -420,6 +422,7 @@ static void fg_periodic_read(struct max77823_fuelgauge_data *fuelgauge)
 	pr_info("%s", str);
 
 	kfree(str);
+#endif
 }
 
 #ifdef CONFIG_FUELGAUGE_MAX77823_COULOMB_COUNTING
@@ -588,12 +591,14 @@ static int fg_read_current(struct max77823_fuelgauge_data *fuelgauge, int unit)
 	avg_current = (temp * 15625) / 100000;
 
 	if (!(fuelgauge->info.pr_cnt++ % PRINT_COUNT)) {
+#ifdef DEBUG
 		fg_test_print(fuelgauge);
 		pr_debug("%s: CURRENT(%dmA), AVG_CURRENT(%dmA)\n", __func__,
 				i_current, avg_current);
-		fuelgauge->info.pr_cnt = 1;
 		/* Read max77823's all registers every 5 minute. */
 		fg_periodic_read(fuelgauge);
+#endif
+		fuelgauge->info.pr_cnt = 1;
 	}
 
 	return i_current;
@@ -977,7 +982,7 @@ void fg_fullcharged_compensation(struct max77823_fuelgauge_data *fuelgauge,
 		fuelgauge->info.previous_fullcap =
 			max77823_read_word(fuelgauge->i2c, FULLCAPREP_REG);
 
-	pr_info("%s: (A) FullCap = 0x%04x, RemCap = 0x%04x\n", __func__,
+	pr_debug("%s: (A) FullCap = 0x%04x, RemCap = 0x%04x\n", __func__,
 		max77823_read_word(fuelgauge->i2c, FULLCAPREP_REG),
 		max77823_read_word(fuelgauge->i2c, REMCAP_REP_REG));
 
@@ -1000,7 +1005,7 @@ void fg_check_vf_fullcap_range(struct max77823_fuelgauge_data *fuelgauge)
 	/* compare with initial capacity */
 	if (new_vffullcap >
 		(fuelgauge->battery_data->Capacity * 110 / 100)) {
-		pr_info("%s: [Case 1] capacity = 0x%04x, NewVfFullCap = 0x%04x\n",
+		pr_debug("%s: [Case 1] capacity = 0x%04x, NewVfFullCap = 0x%04x\n",
 			__func__, fuelgauge->battery_data->Capacity,
 			new_vffullcap);
 
@@ -1012,7 +1017,7 @@ void fg_check_vf_fullcap_range(struct max77823_fuelgauge_data *fuelgauge)
 		max77823_write_word(fuelgauge->i2c, DPACC_REG, (u16)0x3200);
 	} else if (new_vffullcap <
 		(fuelgauge->battery_data->Capacity * 50 / 100)) {
-		pr_info("%s: [Case 5] capacity = 0x%04x, NewVfFullCap = 0x%04x\n",
+		pr_debug("%s: [Case 5] capacity = 0x%04x, NewVfFullCap = 0x%04x\n",
 			__func__, fuelgauge->battery_data->Capacity,
 			new_vffullcap);
 
@@ -1027,7 +1032,7 @@ void fg_check_vf_fullcap_range(struct max77823_fuelgauge_data *fuelgauge)
 	/* compare with previous capacity */
 		if (new_vffullcap >
 			(fuelgauge->info.previous_vffullcap * 110 / 100)) {
-			pr_info("%s: [Case 2] previous_vffullcap = 0x%04x, NewVfFullCap = 0x%04x\n",
+			pr_debug("%s: [Case 2] previous_vffullcap = 0x%04x, NewVfFullCap = 0x%04x\n",
 				__func__, fuelgauge->info.previous_vffullcap,
 				new_vffullcap);
 
@@ -1041,7 +1046,7 @@ void fg_check_vf_fullcap_range(struct max77823_fuelgauge_data *fuelgauge)
 					    (u16)0x3200);
 		} else if (new_vffullcap <
 			(fuelgauge->info.previous_vffullcap * 90 / 100)) {
-			pr_info("%s: [Case 3] previous_vffullcap = 0x%04x, NewVfFullCap = 0x%04x\n",
+			pr_debug("%s: [Case 3] previous_vffullcap = 0x%04x, NewVfFullCap = 0x%04x\n",
 				__func__, fuelgauge->info.previous_vffullcap,
 				new_vffullcap);
 
@@ -1053,7 +1058,7 @@ void fg_check_vf_fullcap_range(struct max77823_fuelgauge_data *fuelgauge)
 			max77823_write_word(fuelgauge->i2c, DPACC_REG,
 					    (u16)0x3200);
 		} else {
-			pr_info("%s: [Case 4] previous_vffullcap = 0x%04x, NewVfFullCap = 0x%04x\n",
+			pr_debug("%s: [Case 4] previous_vffullcap = 0x%04x, NewVfFullCap = 0x%04x\n",
 				__func__, fuelgauge->info.previous_vffullcap,
 				new_vffullcap);
 			is_vffullcap_changed = false;
@@ -1068,7 +1073,7 @@ void fg_check_vf_fullcap_range(struct max77823_fuelgauge_data *fuelgauge)
 		max77823_read_word(fuelgauge->i2c, FULLCAP_NOM_REG);
 
 	if (is_vffullcap_changed)
-		pr_info("%s : VfFullCap(0x%04x), dQacc(0x%04x), dPacc(0x%04x)\n",
+		pr_debug("%s : VfFullCap(0x%04x), dQacc(0x%04x), dPacc(0x%04x)\n",
 			__func__,
 			max77823_read_word(fuelgauge->i2c, FULLCAP_NOM_REG),
 			max77823_read_word(fuelgauge->i2c, DQACC_REG),
@@ -1329,7 +1334,7 @@ static int get_fuelgauge_soc(struct max77823_fuelgauge_data *fuelgauge)
 		(ts.tv_sec - fuelgauge->info.fullcap_check_interval);
 	if (fullcap_check_interval >
 		VFFULLCAP_CHECK_INTERVAL) {
-		pr_info("%s: check fullcap range (interval:%d)\n",
+		pr_debug("%s: check fullcap range (interval:%d)\n",
 			__func__, fullcap_check_interval);
 		fg_check_vf_fullcap_range(fuelgauge);
 		fuelgauge->info.fullcap_check_interval = ts.tv_sec;
@@ -1621,7 +1626,7 @@ static void max77823_fg_get_atomic_capacity(
 	/* keep SOC stable in abnormal status */
 	if (fuelgauge->pdata->capacity_calculation_type &
 		SEC_FUELGAUGE_CAPACITY_TYPE_SKIP_ABNORMAL) {
-		pr_info("%s:is_charging=%d cable_type=%d\n", __func__, fuelgauge->is_charging, fuelgauge->cable_type);
+		pr_debug("%s:is_charging=%d cable_type=%d\n", __func__, fuelgauge->is_charging, fuelgauge->cable_type);
 		if (!fuelgauge->is_charging &&
 			fuelgauge->capacity_old < val->intval) {
 			pr_err("%s: capacity (old %d : new %d)\n",
@@ -2126,17 +2131,28 @@ static irqreturn_t max77823_fg_irq_thread(int irq, void *irq_data)
 static int max77823_fuelgauge_debugfs_show(struct seq_file *s, void *data)
 {
 	struct max77823_fuelgauge_data *fuelgauge = s->private;
-	u8 reg;
-	int ret;
+	int reg = 0;
+	u16 d[16];
 
 	seq_printf(s, "MAX77823 FUELGAUGE IC :\n");
 	seq_printf(s, "===================\n");
-	for (reg = 0xB0; reg <= 0xC3; reg++) {
-		ret = max77823_read_word(fuelgauge->i2c, reg);
-		seq_printf(s, "0x%02x:\t0x%04x\n", reg, ret);
-	}
+	while (reg < 0x100) {
+		int i;
+		int base = reg;
+		for (i = 0; i < 0x10; i++)
+			d[i] = max77823_read_word(fuelgauge->i2c, reg++);
 
-	seq_printf(s, "\n");
+		seq_printf(s, "%02x: %04x %04x %04x %04x %04x %04x %04x %04x  "
+				    "%04x %04x %04x %04x %04x %04x %04x %04x\n",
+			base, d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7],
+			d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]);
+		if (reg == 0x50)
+			reg = 0xb0;
+		else if (reg == 0xc0)
+			reg = 0xd0;
+		else if (reg == 0xe0)
+			reg = 0xf0;
+	}
 	return 0;
 }
 
