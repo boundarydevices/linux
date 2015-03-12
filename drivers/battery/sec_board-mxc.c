@@ -308,7 +308,7 @@ bool sec_bat_check_callback(struct sec_battery_info *battery)
 	struct power_supply *psy;
 	union power_supply_propval value;
 
-	pr_info("%s:  battery->pdata->bat_irq_gpio(%d)\n",
+	pr_debug("%s:  battery->pdata->bat_irq_gpio(%d)\n",
 			__func__, battery->pdata->bat_irq_gpio);
 	psy = get_power_supply_by_name(battery->pdata->charger_name);
 	if (!psy) {
