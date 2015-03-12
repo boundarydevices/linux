@@ -189,7 +189,7 @@ static int max77823_get_vbus_state(struct max77823_charger_data *charger)
 
 	switch (reg_data) {
 	case 0x00:
-		pr_info("%s: VBUS is invalid. CHGIN < CHGIN_UVLO\n",
+		pr_debug("%s: VBUS is invalid. CHGIN < CHGIN_UVLO\n",
 			__func__);
 		break;
 	case 0x01:
@@ -201,7 +201,7 @@ static int max77823_get_vbus_state(struct max77823_charger_data *charger)
 			__func__);
 		break;
 	case 0x03:
-		pr_info("%s: VBUS is valid. CHGIN < CHGIN_OVLO", __func__);
+		pr_debug("%s: VBUS is valid. CHGIN < CHGIN_OVLO", __func__);
 		break;
 	default:
 		break;
@@ -275,7 +275,7 @@ static int max77823_get_charging_health(struct max77823_charger_data *charger)
 			  MAX77823_CHG_DETAILS_01, &reg_data);
 	reg_data = ((reg_data & MAX77823_BAT_DTLS) >> MAX77823_BAT_DTLS_SHIFT);
 
-	pr_info("%s: reg_data(0x%x)\n", __func__, reg_data);
+	pr_debug("%s: reg_data(0x%x)\n", __func__, reg_data);
 	switch (reg_data) {
 	case 0x00:
 		pr_info("%s: No battery and the charger is suspended\n",
@@ -343,7 +343,7 @@ static int max77823_get_charging_health(struct max77823_charger_data *charger)
 				__func__, chg_cnfg_09, chg_cnfg_12);
 		}
 
-		pr_info("%s: vbus_state : 0x%x, chg_dtls : 0x%x chg_cnfg_00=0x%x\n",
+		pr_debug("%s: vbus_state : 0x%x, chg_dtls : 0x%x chg_cnfg_00=0x%x\n",
 				__func__, vbus_state, chg_dtls, chg_cnfg_00);
 		/*  OVP is higher priority */
 		if (vbus_state == 0x02) { /*  CHGIN_OVLO */
