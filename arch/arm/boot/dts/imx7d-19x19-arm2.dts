@@ -123,16 +123,6 @@
 	memory {
 		reg = <0x80000000 0x80000000>;
 	};
-
-	sound {
-		compatible = "fsl,imx7d-19x19-arm2-wm8958",
-			   "fsl,imx-audio-wm8958";
-		model = "wm8958-audio";
-		cpu-dai = <&sai2>;
-		audio-codec = <&codec>;
-		codec-master;
-		hp-det-gpios = <&gpio1 13 1>;
-	};
 };
 
 &fec1 {
