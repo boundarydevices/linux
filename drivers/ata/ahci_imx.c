@@ -697,14 +697,28 @@ static int imx_sata_enable(struct ahci_host_priv *hpriv)
 				   IMX6Q_GPR13_SATA_MPLL_CLK_EN);
 
 		usleep_range(100, 200);
+	}
 
+
+	if (imxpriv->type == AHCI_IMX6Q) {
 		ret = imx_sata_phy_reset(hpriv);
-		if (ret) {
-			dev_err(dev, "failed to reset phy: %d\n", ret);
-			goto disable_clk;
-		}
 	} else if (imxpriv->type == AHCI_IMX8QM) {
 		ret = imx8_sata_enable(hpriv);
+	} else if (imxpriv->type == AHCI_IMX6QP) {
+		/* 6qp adds the sata reset mechanism, use it for 6qp sata */
+		regmap_update_bits(imxpriv->gpr, IOMUXC_GPR5,
+				   BIT(10), 0);
+
+		regmap_update_bits(imxpriv->gpr, IOMUXC_GPR5,
+				   BIT(11), 0);
+		udelay(50);
+		regmap_update_bits(imxpriv->gpr, IOMUXC_GPR5,
+				   BIT(11), BIT(11));
+	}
+
+	if (ret) {
+		dev_err(dev, "failed to reset phy: %d\n", ret);
+		goto disable_clk;
 	}
 
 	usleep_range(1000, 2000);
@@ -735,13 +749,11 @@ static void imx_sata_disable(struct ahci_host_priv *hpriv)
 				   IMX6Q_GPR13_SATA_MPLL_CLK_EN,
 				   !IMX6Q_GPR13_SATA_MPLL_CLK_EN);
 		break;
-
 	case AHCI_IMX6Q:
 		regmap_update_bits(imxpriv->gpr, IOMUXC_GPR13,
 				   IMX6Q_GPR13_SATA_MPLL_CLK_EN,
 				   !IMX6Q_GPR13_SATA_MPLL_CLK_EN);
 		break;
-
 	case AHCI_IMX8QM:
 		clk_disable_unprepare(imxpriv->epcs_rx_clk);
 		clk_disable_unprepare(imxpriv->epcs_tx_clk);
@@ -799,7 +811,7 @@ static int ahci_imx_softreset(struct ata_link *link, unsigned int *class,
 
 	if (imxpriv->type == AHCI_IMX53)
 		ret = ahci_pmp_retry_srst_ops.softreset(link, class, deadline);
-	else
+	else if (imxpriv->type == AHCI_IMX6Q || imxpriv->type == AHCI_IMX6QP)
 		ret = ahci_ops.softreset(link, class, deadline);
 
 	return ret;
