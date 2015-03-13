@@ -206,7 +206,7 @@ static int imx2_wdt_close(struct inode *inode, struct file *file)
 	if (test_bit(IMX2_WDT_EXPECT_CLOSE, &imx2_wdt.status) && !nowayout)
 		imx2_wdt_stop();
 	else {
-		dev_crit(imx2_wdt_miscdev.parent,
+		dev_dbg(imx2_wdt_miscdev.parent,
 			"Unexpected close: Expect reboot!\n");
 		imx2_wdt_ping();
 	}
