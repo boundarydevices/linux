@@ -127,16 +127,6 @@
 	memory {
 		reg = <0x80000000 0x80000000>;
 	};
-
-	sound {
-		compatible = "fsl,imx7d-12x12-arm2-wm8958",
-			   "fsl,imx-audio-wm8958";
-		model = "wm8958-audio";
-		cpu-dai = <&sai1>;
-		audio-codec = <&codec>;
-		codec-master;
-		hp-det-gpios = <&gpio1 12 1>;
-	};
 };
 
 &ecspi3 {
