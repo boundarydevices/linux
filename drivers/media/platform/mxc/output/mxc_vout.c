@@ -233,6 +233,9 @@ static struct mxc_vout_fb g_fb_setting[MAX_FB_NUM];
 static int config_disp_output(struct mxc_vout_output *vout);
 static void release_disp_output(struct mxc_vout_output *vout);
 
+static DEFINE_MUTEX(gfb_mutex);
+static DEFINE_MUTEX(gfbi_mutex);
+
 static unsigned int get_frame_size(struct mxc_vout_output *vout)
 {
 	unsigned int size;
@@ -313,6 +316,7 @@ static void update_display_setting(void)
 	struct fb_info *fbi;
 	struct v4l2_rect bg_crop_bounds[2];
 
+	mutex_lock(&gfb_mutex);
 	for (i = 0; i < num_registered_fb; i++) {
 		fbi = registered_fb[i];
 
@@ -347,6 +351,7 @@ static void update_display_setting(void)
 			g_fb_setting[i].crop_bounds =
 				bg_crop_bounds[g_fb_setting[i].ipu_id];
 	}
+	mutex_unlock(&gfb_mutex);
 }
 
 /* called after g_fb_setting filled by update_display_setting */
@@ -355,6 +360,10 @@ static int update_setting_from_fbi(struct mxc_vout_output *vout,
 {
 	int i;
 	bool found = false;
+
+	mutex_lock(&gfbi_mutex);
+
+	update_display_setting();
 
 	for (i = 0; i < MAX_FB_NUM; i++) {
 		if (g_fb_setting[i].name) {
@@ -373,6 +382,7 @@ static int update_setting_from_fbi(struct mxc_vout_output *vout,
 
 	if (!found) {
 		v4l2_err(vout->vfd->v4l2_dev, "can not find output\n");
+		mutex_unlock(&gfbi_mutex);
 		return -EINVAL;
 	}
 	strlcpy(vout->vfd->name, fbi->fix.id, sizeof(vout->vfd->name));
@@ -397,6 +407,7 @@ static int update_setting_from_fbi(struct mxc_vout_output *vout,
 	else
 		vout->task.output.format = IPU_PIX_FMT_RGB565;
 
+	mutex_unlock(&gfbi_mutex);
 	return 0;
 }
 
@@ -940,6 +951,7 @@ static int mxc_vout_release(struct file *file)
 	if (!vout)
 		return 0;
 
+	mutex_lock(&vout->task_lock);
 	if (--vout->open_cnt == 0) {
 		q = &vout->vbq;
 		if (q->streaming)
@@ -952,6 +964,7 @@ static int mxc_vout_release(struct file *file)
 		ret = videobuf_mmap_free(q);
 	}
 
+	mutex_unlock(&vout->task_lock);
 	return ret;
 }
 
@@ -965,11 +978,11 @@ static int mxc_vout_open(struct file *file)
 	if (vout == NULL)
 		return -ENODEV;
 
+	mutex_lock(&vout->task_lock);
 	if (vout->open_cnt++ == 0) {
 		vout->ctrl_rotate = 0;
 		vout->ctrl_vflip = 0;
 		vout->ctrl_hflip = 0;
-		update_display_setting();
 		ret = update_setting_from_fbi(vout, vout->fbi);
 		if (ret < 0)
 			goto err;
@@ -999,6 +1012,7 @@ static int mxc_vout_open(struct file *file)
 	file->private_data = vout;
 
 err:
+	mutex_unlock(&vout->task_lock);
 	return ret;
 }
 
