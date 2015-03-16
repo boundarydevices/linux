@@ -1678,6 +1678,14 @@ static int arizona_antenna_add_micd_level(struct arizona_extcon_info *info, int 
 	int i, j, micd_lvl;
 	int hp_imp_range_lo = -1, hp_imp_range_hi = -1, ret = 0;
 
+	/* check if additional impedance levels can be added */
+	if (info->num_micd_ranges + 2 > ARIZONA_MAX_MICD_RANGE) {
+		dev_info(arizona->dev, "Cannot increase MICD ranges to: %d\n",
+			info->num_micd_ranges + 2);
+		ret = -EINVAL;
+		goto err_input;
+	}
+
 	/* check if impedance level is supported */
 	for (micd_lvl = 0; micd_lvl < ARIZONA_NUM_MICD_BUTTON_LEVELS; micd_lvl++) {
 		if (arizona_micd_levels[micd_lvl] >= imp)
@@ -1718,7 +1726,10 @@ static int arizona_antenna_add_micd_level(struct arizona_extcon_info *info, int 
 	}
 
 	if (hp_imp_range_lo == hp_imp_range_hi) {
-		if (info->micd_ranges[i-1].max < arizona_micd_levels[hp_imp_range_hi - 1])
+		if (i == 0)
+			hp_imp_range_lo = hp_imp_range_hi - 1;
+		else if (info->micd_ranges[i-1].max <
+			arizona_micd_levels[hp_imp_range_hi - 1])
 			hp_imp_range_lo = hp_imp_range_hi - 1;
 		else {
 			dev_info(arizona->dev, "MICD level range cannot be added %d\n",
@@ -1734,7 +1745,10 @@ static int arizona_antenna_add_micd_level(struct arizona_extcon_info *info, int 
 		info->micd_ranges[j+2].key = info->micd_ranges[j].key;
 	}
 	info->micd_ranges[i].max = arizona_micd_levels[hp_imp_range_lo];
-	info->micd_ranges[i].key = info->micd_ranges[i+2].key;
+	if (i == info->num_micd_ranges)
+		info->micd_ranges[i].key = info->micd_ranges[i-1].key;
+	else
+		info->micd_ranges[i].key = info->micd_ranges[i+2].key;
 	info->micd_ranges[i+1].max =arizona_micd_levels[hp_imp_range_hi];
 	info->micd_ranges[i+1].key = -1;
 	info->num_micd_ranges += 2;
