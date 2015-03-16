@@ -29,6 +29,17 @@
 #include <linux/mutex.h>
 #include <linux/pm_qos.h>
 
+/* Controller needs driver to fill txfifo, TKT253890 */
+#define QUADSPI_QUIRK_TKT253890		(1 << 0)
+/* Controller needs driver to swap endian */
+#define QUADSPI_QUIRK_SWAP_ENDIAN	(1 << 1)
+/* Controller needs DDR delay */
+#define QUADSPI_QUIRK_DDR_DELAY		(1 << 2)
+/* Controller cannot wake up wait mode, TKT245618 */
+#define QUADSPI_QUIRK_TKT245618		(1 << 3)
+/* Controller needs 4x internal clock */
+#define QUADSPI_QUIRK_4X_INT_CLK	(1 << 4)
+
 /* The registers */
 #define QUADSPI_MCR			0x00
 #define MX6SX_QUADSPI_MCR_TX_DDR_DELAY_EN_SHIFT	29
@@ -207,27 +218,35 @@ struct fsl_qspi_devtype_data {
 	int rxfifo;
 	int txfifo;
 	int ahb_buf_size;
+	int driver_data;
 };
 
 static struct fsl_qspi_devtype_data vybrid_data = {
 	.devtype = FSL_QUADSPI_VYBRID,
 	.rxfifo = 128,
 	.txfifo = 64,
-	.ahb_buf_size = 1024
+	.ahb_buf_size = 1024,
+	.driver_data = QUADSPI_QUIRK_SWAP_ENDIAN
 };
 
 static struct fsl_qspi_devtype_data imx6sx_data = {
 	.devtype = FSL_QUADSPI_IMX6SX,
 	.rxfifo = 128,
 	.txfifo = 512,
-	.ahb_buf_size = 1024
+	.ahb_buf_size = 1024,
+	.driver_data = QUADSPI_QUIRK_TKT245618
+		| QUADSPI_QUIRK_DDR_DELAY
+		| QUADSPI_QUIRK_4X_INT_CLK
 };
 
 static struct fsl_qspi_devtype_data imx7d_data = {
 	.devtype = FSL_QUADSPI_IMX7D,
 	.rxfifo = 512,
 	.txfifo = 512,
-	.ahb_buf_size = 1024
+	.ahb_buf_size = 1024,
+	.driver_data = QUADSPI_QUIRK_TKT253890
+		| QUADSPI_QUIRK_DDR_DELAY
+		| QUADSPI_QUIRK_4X_INT_CLK
 };
 
 #define FSL_QSPI_MAX_CHIP	4
@@ -252,19 +271,29 @@ struct fsl_qspi {
 	struct pm_qos_request	pm_qos_req;
 };
 
-static inline int is_vybrid_qspi(struct fsl_qspi *q)
+static inline int needs_swap_endian(struct fsl_qspi *q)
 {
-	return q->devtype_data->devtype == FSL_QUADSPI_VYBRID;
+	return q->devtype_data->driver_data & QUADSPI_QUIRK_SWAP_ENDIAN;
 }
 
-static inline int is_imx6sx_qspi(struct fsl_qspi *q)
+static inline int needs_wakeup_wait_mode(struct fsl_qspi *q)
 {
-	return q->devtype_data->devtype == FSL_QUADSPI_IMX6SX;
+	return q->devtype_data->driver_data & QUADSPI_QUIRK_TKT245618;
 }
 
-static inline int is_imx7d_qspi(struct fsl_qspi *q)
+static inline int needs_fill_txfifo(struct fsl_qspi *q)
 {
-	return q->devtype_data->devtype == FSL_QUADSPI_IMX7D;
+	return q->devtype_data->driver_data & QUADSPI_QUIRK_TKT253890;
+}
+
+static inline int needs_ddr_delay(struct fsl_qspi *q)
+{
+	return q->devtype_data->driver_data & QUADSPI_QUIRK_DDR_DELAY;
+}
+
+static inline int needs_4x_clock(struct fsl_qspi *q)
+{
+	return q->devtype_data->driver_data & QUADSPI_QUIRK_4X_INT_CLK;
 }
 
 /*
@@ -273,7 +302,7 @@ static inline int is_imx7d_qspi(struct fsl_qspi *q)
  */
 static inline u32 fsl_qspi_endian_xchg(struct fsl_qspi *q, u32 a)
 {
-	return is_vybrid_qspi(q) ? __swab32(a) : a;
+	return needs_swap_endian(q) ? __swab32(a) : a;
 }
 
 static inline void fsl_qspi_unlock_lut(struct fsl_qspi *q)
@@ -586,7 +615,7 @@ static int fsl_qspi_nor_write(struct fsl_qspi *q, struct spi_nor *nor,
 
 	for (; i < 4; i++)
 		/* fill the TXFIFO upto 16 bytes for i.MX7d */
-		if (is_imx7d_qspi(q))
+		if (needs_fill_txfifo(q))
 			writel(tmp, q->iobase + QUADSPI_TBDR);
 
 	/* Trigger it */
@@ -666,7 +695,7 @@ static void fsl_qspi_init_abh_read(struct fsl_qspi *q)
 
 		/* Enable the module again (enable the DDR too) */
 		reg |= QUADSPI_MCR_DDR_EN_MASK;
-		if (is_imx6sx_qspi(q) || is_imx7d_qspi(q))
+		if (needs_ddr_delay(q))
 			reg |= MX6SX_QUADSPI_MCR_TX_DDR_DELAY_EN_MASK;
 
 		writel(reg, q->iobase + QUADSPI_MCR);
@@ -688,7 +717,7 @@ static int fsl_qspi_clk_prep_enable(struct fsl_qspi *q)
 		return ret;
 	}
 
-	if (is_imx6sx_qspi(q))
+	if (needs_wakeup_wait_mode(q))
 		pm_qos_add_request(&q->pm_qos_req,
 				PM_QOS_CPU_DMA_LATENCY,
 				0);
@@ -699,7 +728,7 @@ static int fsl_qspi_clk_prep_enable(struct fsl_qspi *q)
 /* This function was used to disable and unprepare QSPI clock */
 static int fsl_qspi_clk_disable_unprep(struct fsl_qspi *q)
 {
-	if (is_imx6sx_qspi(q))
+	if (needs_wakeup_wait_mode(q))
 		pm_qos_remove_request(&q->pm_qos_req);
 	clk_disable_unprepare(q->clk);
 	clk_disable_unprepare(q->clk_en);
@@ -760,7 +789,7 @@ static int fsl_qspi_nor_setup_last(struct fsl_qspi *q)
 	unsigned long rate = q->clk_rate;
 	int ret;
 
-	if (is_imx6sx_qspi(q) || is_imx7d_qspi(q))
+	if (needs_4x_clock(q))
 		rate *= 4;
 
 	/* disable and unprepare clock first */
