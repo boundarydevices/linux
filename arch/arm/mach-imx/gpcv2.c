@@ -121,10 +121,39 @@ void imx_gpcv2_set_slot_ack(u32 index, enum imx_gpc_slot m_core,
 	}
 }
 
+void imx_gpcv2_irq_unmask(struct irq_data *d)
+{
+	void __iomem *reg;
+	u32 val;
+
+	/* Sanity check for SPI irq */
+	if (d->irq < 32)
+		return;
+	reg = gpc_base + GPC_IMR1_CORE0 + (d->irq / 32 - 1) * 4;
+	val = readl_relaxed(reg);
+	val &= ~(1 << d->irq % 32);
+	writel_relaxed(val, reg);
+}
+
+void imx_gpcv2_irq_mask(struct irq_data *d)
+{
+	void __iomem *reg;
+	u32 val;
+
+	/* Sanity check for SPI irq */
+	if (d->irq < 32)
+		return;
+	reg = gpc_base + GPC_IMR1_CORE0 + (d->irq / 32 - 1) * 4;
+	val = readl_relaxed(reg);
+	val |= 1 << (d->irq % 32);
+	writel_relaxed(val, reg);
+}
+
 void imx_gpcv2_set_lpm_mode(u32 cpu, enum mxc_cpu_pwr_mode mode)
 {
 	unsigned long flags;
 	u32 val1, val2;
+	struct irq_desc *iomuxc_irq_desc;
 
 	spin_lock_irqsave(&gpcv2_lock, flags);
 
@@ -159,8 +188,23 @@ void imx_gpcv2_set_lpm_mode(u32 cpu, enum mxc_cpu_pwr_mode mode)
 		return;
 	}
 
+	/*
+	 * GPC: When improper low-power sequence is used,
+	 * the SoC enters low power mode before the ARM core executes WFI.
+	 *
+	 * Software workaround:
+	 * 1) Software should trigger IRQ #32 (IOMUX) to be always pending
+	 *    by setting IOMUX_GPR1_IRQ.
+	 * 2) Software should then unmask IRQ #32 in GPC before setting GPC
+	 *    Low-Power mode.
+	 * 3) Software should mask IRQ #32 right after GPC Low-Power mode
+	 *    is set.
+	 */
+	iomuxc_irq_desc = irq_to_desc(32);
+	imx_gpcv2_irq_unmask(&iomuxc_irq_desc->irq_data);
 	writel_relaxed(val1, gpc_base + GPC_LPCR_A7_BSC);
 	writel_relaxed(val2, gpc_base + GPC_SLPCR);
+	imx_gpcv2_irq_mask(&iomuxc_irq_desc->irq_data);
 	spin_unlock_irqrestore(&gpcv2_lock, flags);
 }
 
@@ -395,36 +439,6 @@ void imx_gpcv2_restore_all(void)
 
 	for (i = 0; i < IMR_NUM; i++)
 		writel_relaxed(gpcv2_saved_imrs[i], reg_imr1 + i * 4);
-}
-
-void imx_gpcv2_irq_unmask(struct irq_data *d)
-{
-	void __iomem *reg;
-	u32 val;
-
-	/* Sanity check for SPI irq */
-	if (d->irq < 32)
-		return;
-
-	reg = gpc_base + GPC_IMR1_CORE0 + (d->irq / 32 - 1) * 4;
-	val = readl_relaxed(reg);
-	val &= ~(1 << d->irq % 32);
-	writel_relaxed(val, reg);
-}
-
-void imx_gpcv2_irq_mask(struct irq_data *d)
-{
-	void __iomem *reg;
-	u32 val;
-
-	/* Sanity check for SPI irq */
-	if (d->irq < 32)
-		return;
-
-	reg = gpc_base + GPC_IMR1_CORE0 + (d->irq / 32 - 1) * 4;
-	val = readl_relaxed(reg);
-	val |= 1 << (d->irq % 32);
-	writel_relaxed(val, reg);
 }
 
 void __init imx_gpcv2_init(void)
