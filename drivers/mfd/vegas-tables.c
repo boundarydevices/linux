@@ -325,6 +325,7 @@ static const struct reg_default vegas_reg_default[] = {
 	{ 0x00000434, 0x0000 },    /* R1076  - Output Path Config 5R */
 	{ 0x00000435, 0x0180 },    /* R1077  - DAC Digital Volume 5R */
 	{ 0x00000437, 0x0200 },    /* R1079  - Noise Gate Select 5R */
+	{ 0x00000440, 0x8FFF },    /* R1088  - DRE Enable */
 	{ 0x00000441, 0xC759 },    /* R1089  - DRE Control 1 */
 	{ 0x00000442, 0x2A08 },    /* R1089  - DRE Control 2 */
 	{ 0x00000443, 0x5CFA },    /* R1089  - DRE Control 3 */
@@ -990,6 +991,7 @@ static bool vegas_readable_register(struct device *dev, unsigned int reg)
 	case ARIZONA_OUTPUT_PATH_CONFIG_5R:
 	case ARIZONA_DAC_DIGITAL_VOLUME_5R:
 	case ARIZONA_NOISE_GATE_SELECT_5R:
+	case ARIZONA_DRE_ENABLE:
 	case ARIZONA_DRE_CONTROL_1:
 	case ARIZONA_DRE_CONTROL_2:
 	case ARIZONA_DRE_CONTROL_3:
