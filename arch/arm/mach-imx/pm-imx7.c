@@ -21,6 +21,7 @@
 #include <linux/suspend.h>
 #include <linux/genalloc.h>
 #include <linux/mfd/syscon.h>
+#include <linux/mfd/syscon/imx7-iomuxc-gpr.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_fdt.h>
@@ -507,6 +508,7 @@ put_node:
 static void __init imx7_pm_common_init(const struct imx7_pm_socdata
 					*socdata)
 {
+	struct regmap *gpr;
 	int ret;
 
 	if (IS_ENABLED(CONFIG_SUSPEND)) {
@@ -515,6 +517,16 @@ static void __init imx7_pm_common_init(const struct imx7_pm_socdata
 			pr_warn("%s: No DDR LPM support with suspend %d!\n",
 				__func__, ret);
 	}
+
+	/*
+	 * Force IOMUXC irq pending, so that the interrupt to GPC can be
+	 * used to deassert dsm_request signal when the signal gets
+	 * asserted unexpectedly.
+	 */
+	gpr = syscon_regmap_lookup_by_compatible("fsl,imx7d-iomuxc-gpr");
+	if (!IS_ERR(gpr))
+		regmap_update_bits(gpr, IOMUXC_GPR1, IMX7D_GPR1_IRQ_MASK,
+				   IMX7D_GPR1_IRQ_MASK);
 }
 
 void __init imx7d_pm_init(void)
