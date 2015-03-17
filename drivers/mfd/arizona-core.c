@@ -839,6 +839,12 @@ err:
 	arizona_restore_dvfs(arizona);
 	return ret;
 }
+#else
+static inline int arizona_dcvdd_notify(struct notifier_block *nb,
+				       unsigned long action, void *data)
+{
+	return 0;
+}
 #endif
 
 #ifdef CONFIG_PM_SLEEP
