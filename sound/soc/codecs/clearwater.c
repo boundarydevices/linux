@@ -197,6 +197,13 @@ out:
 	return ret;
 }
 
+static int clearwater_adsp_rate_put_cb(struct wm_adsp *adsp,
+				       unsigned int mask,
+				       unsigned int val)
+{
+	return regmap_update_bits(adsp->regmap, adsp->base, mask, val);
+}
+
 static int clearwater_adsp_power_ev(struct snd_soc_dapm_widget *w,
 				    struct snd_kcontrol *kcontrol,
 				    int event)
@@ -2673,6 +2680,9 @@ static int clearwater_probe(struct platform_device *pdev)
 			clearwater->core.adsp[i].num_firmwares
 				= arizona->pdata.num_fw_defs[i];
 		}
+
+		clearwater->core.adsp[i].rate_put_cb =
+					clearwater_adsp_rate_put_cb;
 
 		ret = wm_adsp2_init(&clearwater->core.adsp[i], &clearwater->fw_lock);
 		if (ret != 0)

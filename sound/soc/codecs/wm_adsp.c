@@ -526,10 +526,8 @@ static int wm_adsp2v2_rate_put(struct snd_kcontrol *kcontrol,
 		adsp->rate_cache = val;
 
 		if (adsp->running) {
-			ret = regmap_update_bits(adsp->regmap,
-						 adsp->base,
-						 ADSP2V2_RATE_MASK,
-						 val << ADSP2V2_RATE_SHIFT);
+			ret = adsp->rate_put_cb(adsp, ADSP2V2_RATE_MASK,
+						val << ADSP2V2_RATE_SHIFT);
 		}
 	}
 
@@ -2252,7 +2250,7 @@ static void wm_adsp2_set_dspclk(struct wm_adsp *dsp, unsigned int freq)
 		freq <<= ADSP2V2_CLK_SEL_SHIFT;
 		freq |= dsp->rate_cache << ADSP2V2_RATE_SHIFT;
 
-		ret = regmap_update_bits(dsp->regmap, dsp->base, mask, freq);
+		ret = dsp->rate_put_cb(dsp, mask, freq);
 		if (ret != 0) {
 			adsp_err(dsp, "Failed to set DSP_CLK rate: %d\n", ret);
 			mutex_unlock(&dsp->rate_lock);

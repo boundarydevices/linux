@@ -88,6 +88,8 @@ struct wm_adsp {
 
 	unsigned int rate_cache;
 	struct mutex rate_lock;
+	int (*rate_put_cb) (struct wm_adsp *adsp, unsigned int mask,
+			    unsigned int val);
 
 	struct list_head alg_regions;
 
