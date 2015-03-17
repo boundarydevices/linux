@@ -2406,6 +2406,14 @@ const struct arizona_jd_state arizona_hpdet_moisture = {
 };
 EXPORT_SYMBOL_GPL(arizona_hpdet_moisture);
 
+const struct arizona_jd_state arizona_hpdet_moisture_r = {
+	.mode = ARIZONA_ACCDET_MODE_HPR,
+	.start = arizona_hpdet_moisture_start,
+	.reading = arizona_hpdet_moisture_reading,
+	.stop = arizona_hpdet_moisture_stop,
+};
+EXPORT_SYMBOL_GPL(arizona_hpdet_moisture_r);
+
 const struct arizona_jd_state arizona_hpdet_left = {
 	.mode = ARIZONA_ACCDET_MODE_HPL,
 	.start = arizona_hpdet_start,
@@ -2471,6 +2479,14 @@ const struct arizona_jd_state arizona_antenna_moisture = {
 	.stop = arizona_hpdet_moisture_stop,
 };
 EXPORT_SYMBOL_GPL(arizona_antenna_moisture);
+
+const struct arizona_jd_state arizona_antenna_moisture_r = {
+	.mode = ARIZONA_ACCDET_MODE_HPR,
+	.start = arizona_hpdet_moisture_start,
+	.reading = arizona_antenna_moisture_reading,
+	.stop = arizona_hpdet_moisture_stop,
+};
+EXPORT_SYMBOL_GPL(arizona_antenna_moisture_r);
 
 const struct arizona_jd_state arizona_antenna_mic_det = {
 	.mode = ARIZONA_ACCDET_MODE_ADC,
@@ -2603,13 +2619,21 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 			if (arizona->pdata.custom_jd)
 				arizona_jds_set_state(info,
 						      arizona->pdata.custom_jd);
-			else if (arizona->pdata.antenna_supported)
-				arizona_jds_set_state(info,
-						      &arizona_antenna_moisture);
-			else if (arizona->pdata.hpdet_moisture_imp)
-				arizona_jds_set_state(info,
-						      &arizona_hpdet_moisture);
-			else if (arizona->pdata.micd_software_compare)
+			else if (arizona->pdata.antenna_supported) {
+				if (arizona->pdata.moisture_det_channel)
+					arizona_jds_set_state(info,
+						&arizona_antenna_moisture_r);
+				else
+					arizona_jds_set_state(info,
+						&arizona_antenna_moisture);
+			} else if (arizona->pdata.hpdet_moisture_imp) {
+				if (arizona->pdata.moisture_det_channel)
+					arizona_jds_set_state(info,
+						&arizona_hpdet_moisture_r);
+				else
+					arizona_jds_set_state(info,
+						&arizona_hpdet_moisture);
+			} else if (arizona->pdata.micd_software_compare)
 				arizona_jds_set_state(info,
 						      &arizona_micd_adc_mic);
 			else
@@ -2843,6 +2867,9 @@ static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 
 	arizona_of_read_u32(arizona, "wlf,hpdet-channel", false,
 			    &pdata->hpdet_channel);
+
+	arizona_of_read_u32(arizona, "wlf,moisture-det-channel", false,
+			    &pdata->moisture_det_channel);
 
 	arizona_of_read_u32(arizona, "wlf,jd-wake-time", false,
 			    &pdata->jd_wake_time);

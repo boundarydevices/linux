@@ -57,6 +57,7 @@ extern void arizona_set_headphone_imp(struct arizona_extcon_info *info,
 				      int imp);
 
 extern const struct arizona_jd_state arizona_hpdet_moisture;
+extern const struct arizona_jd_state arizona_hpdet_moisture_r;
 extern const struct arizona_jd_state arizona_hpdet_left;
 extern const struct arizona_jd_state arizona_hpdet_right;
 extern const struct arizona_jd_state arizona_micd_button;
@@ -64,6 +65,7 @@ extern const struct arizona_jd_state arizona_micd_microphone;
 extern const struct arizona_jd_state arizona_micd_adc_mic;
 extern const struct arizona_jd_state arizona_hpdet_acc_id;
 extern const struct arizona_jd_state arizona_antenna_moisture;
+extern const struct arizona_jd_state arizona_antenna_moisture_r;
 extern const struct arizona_jd_state arizona_antenna_mic_det;
 extern const struct arizona_jd_state arizona_antenna_oc_det;
 extern const struct arizona_jd_state arizona_antenna_hp_det;

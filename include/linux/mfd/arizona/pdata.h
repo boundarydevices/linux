@@ -166,10 +166,16 @@ struct arizona_pdata {
 	 */
 	int hpdet_short_circuit_imp;
 
-	/** Use HPDETL to check for moisture, this value specifies the
-	 * threshold impedance in ohms above which it will be considered
-	 * a false detection
+	/**
+	 * Channel to use for moisture detection, valid values are 0 for
+	 * left and 1 for right
 	 */
+	unsigned int moisture_det_channel;
+
+	/**
+	* This value specifies the  threshold impedance in ohms above
+	* which it will be considered a false detection
+	*/
 	int hpdet_moisture_imp;
 
 	/** Software debounces for moisture detect */
