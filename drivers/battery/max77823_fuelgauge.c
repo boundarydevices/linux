@@ -1504,10 +1504,8 @@ bool max77823_fg_init(struct max77823_fuelgauge_data *fuelgauge)
 	INIT_DELAYED_WORK(&fuelgauge->info.full_comp_work,
 		full_comp_work_handler);
 
-	/* NOT using FG for temperature */
-	if (fuelgauge->pdata->thermal_source != SEC_BATTERY_THERMAL_SOURCE_FG) {
-		max77823_write_word(fuelgauge->i2c, MAX77823_REG_CONFIG, 0x2100);
-	}
+	max77823_write_word(fuelgauge->i2c, MAX77823_REG_CONFIG,
+		(fuelgauge->pdata->thermal_source != SEC_BATTERY_THERMAL_SOURCE_FG) ? 0x2154 : 0x2254);
 
 	return true;
 }
