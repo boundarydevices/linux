@@ -3161,6 +3161,11 @@ static void tc_det_worker(struct work_struct *work)
 			pr_info("%s: detect hsize=%d, vsize=%d\n", __func__, hsize, vsize);
 			if ((hsize == 1024) && (vsize == 768))
 				mode = tc358743_mode_1024x768;
+			else if (hsize == 1280)
+				mode = tc358743_mode_720P_60_1280_720;
+			else if (hsize == 1920)
+				mode = tc358743_mode_1080P_1920_1080;
+			td->fps = tc358743_60_fps;
 		} else {
 			mode = tc358743_mode_list[u32val].mode;
 			if (td->mode != mode)
