@@ -1948,6 +1948,7 @@ static int max77823_fg_get_property(struct power_supply *psy,
 							  FG_AVCAP);
 			break;
 		case SEC_BATTEY_CAPACITY_CURRENT:
+		default:
 			val->intval = get_fuelgauge_value(fuelgauge,
 							  FG_REPCAP);
 			break;
