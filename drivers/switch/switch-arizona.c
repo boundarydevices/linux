@@ -191,7 +191,7 @@ static DEVICE_ATTR(mic_impedance, S_IRUGO, arizona_extcon_mic_show, NULL);
 
 inline void arizona_extcon_report(struct arizona_extcon_info *info, int state)
 {
-	dev_dbg(info->arizona->dev, "Switch Report: %d\n", state);
+	dev_info(info->arizona->dev, "Switch Report: %d\n", state);
 	switch_set_state(&info->edev, state);
 }
 EXPORT_SYMBOL_GPL(arizona_extcon_report);
@@ -1461,7 +1461,6 @@ static int arizona_micd_button_process(struct arizona_extcon_info *info,
 	int i, key;
 
 	if (val < MICROPHONE_MIN_OHM) {
-		dev_dbg(arizona->dev, "Mic button detected\n");
 
 		for (i = 0; i < info->num_micd_ranges; i++)
 			input_report_key(info->input,
@@ -1472,6 +1471,7 @@ static int arizona_micd_button_process(struct arizona_extcon_info *info,
 				key = info->micd_ranges[i].key;
 				input_report_key(info->input, key, 1);
 				input_sync(info->input);
+				dev_info(arizona->dev, "Mic button detected (%d)\n", key);
 				break;
 			}
 		}
@@ -1480,7 +1480,7 @@ static int arizona_micd_button_process(struct arizona_extcon_info *info,
 			dev_warn(arizona->dev,
 				 "Button level %u out of range\n", val);
 	} else {
-		dev_dbg(arizona->dev, "Mic button released\n");
+		dev_info(arizona->dev, "Mic button released\n");
 		for (i = 0; i < info->num_micd_ranges; i++)
 			input_report_key(info->input,
 					 info->micd_ranges[i].key, 0);
