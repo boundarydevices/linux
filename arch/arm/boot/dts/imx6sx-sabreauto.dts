@@ -789,7 +789,7 @@
 	status = "okay";
 
 	display1: display {
-		bits-per-pixel = <16>;
+		bits-per-pixel = <32>;
 		bus-width = <18>;
 	};
 };
