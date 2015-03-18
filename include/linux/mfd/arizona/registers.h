@@ -3679,6 +3679,9 @@
 #define CLEARWATER_HP_RATE_MASK                      0x0006  /* HP_RATE - [2:1] */
 #define CLEARWATER_HP_RATE_SHIFT                          1  /* HP_RATE - [2:1] */
 #define CLEARWATER_HP_RATE_WIDTH                          2  /* HP_RATE - [2:1] */
+#define VEGAS_HP_RATE_MASK                       0x0006  /* HP_RATE - [2:1] */
+#define VEGAS_HP_RATE_SHIFT                           1  /* HP_RATE - [2:1] */
+#define VEGAS_HP_RATE_WIDTH                           2  /* HP_RATE - [2:1] */
 #define ARIZONA_HP_RATE                          0x0002  /* HP_RATE */
 #define ARIZONA_HP_RATE_MASK                     0x0002  /* HP_RATE */
 #define ARIZONA_HP_RATE_SHIFT                         1  /* HP_RATE */
