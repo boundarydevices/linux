@@ -81,6 +81,205 @@
 #define arizona_aif_dbg(_dai, fmt, ...) \
 	dev_dbg(_dai->dev, "AIF%d: " fmt, _dai->id, ##__VA_ARGS__)
 
+static const int arizona_aif1_inputs[32] = {
+	ARIZONA_AIF1TX1MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF1TX1MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF1TX1MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF1TX1MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF1TX2MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF1TX2MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF1TX2MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF1TX2MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF1TX3MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF1TX3MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF1TX3MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF1TX3MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF1TX4MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF1TX4MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF1TX4MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF1TX4MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF1TX5MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF1TX5MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF1TX5MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF1TX5MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF1TX6MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF1TX6MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF1TX6MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF1TX6MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF1TX7MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF1TX7MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF1TX7MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF1TX7MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF1TX8MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF1TX8MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF1TX8MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF1TX8MIX_INPUT_4_SOURCE,
+};
+
+static const int arizona_aif2_inputs[32] = {
+	ARIZONA_AIF2TX1MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF2TX1MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF2TX1MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF2TX1MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF2TX2MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF2TX2MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF2TX2MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF2TX2MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF2TX3MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF2TX3MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF2TX3MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF2TX3MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF2TX4MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF2TX4MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF2TX4MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF2TX4MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF2TX5MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF2TX5MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF2TX5MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF2TX5MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF2TX6MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF2TX6MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF2TX6MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF2TX6MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF2TX7MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF2TX7MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF2TX7MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF2TX7MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF2TX8MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF2TX8MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF2TX8MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF2TX8MIX_INPUT_4_SOURCE,
+};
+
+static const int arizona_aif3_inputs[8] = {
+	ARIZONA_AIF3TX1MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF3TX1MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF3TX1MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF3TX1MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF3TX2MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF3TX2MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF3TX2MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF3TX2MIX_INPUT_4_SOURCE,
+};
+
+static const int arizona_aif4_inputs[8] = {
+	ARIZONA_AIF4TX1MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF4TX1MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF4TX1MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF4TX1MIX_INPUT_4_SOURCE,
+	ARIZONA_AIF4TX2MIX_INPUT_1_SOURCE,
+	ARIZONA_AIF4TX2MIX_INPUT_2_SOURCE,
+	ARIZONA_AIF4TX2MIX_INPUT_3_SOURCE,
+	ARIZONA_AIF4TX2MIX_INPUT_4_SOURCE,
+};
+
+static int arizona_aif_sources_cache[ARRAY_SIZE(arizona_aif1_inputs)];
+
+static int arizona_get_sources(struct arizona *arizona,
+			       struct snd_soc_dai *dai,
+			       const int **source, int *lim)
+{
+	int ret = 0;
+
+	*lim = dai->driver->playback.channels_max * 4;
+
+	switch (dai->driver->base) {
+	case ARIZONA_AIF1_BCLK_CTRL:
+		*source = arizona_aif1_inputs;
+		break;
+	case ARIZONA_AIF2_BCLK_CTRL:
+		*source = arizona_aif2_inputs;
+		break;
+	case ARIZONA_AIF3_BCLK_CTRL:
+		*source = arizona_aif3_inputs;
+		break;
+	case ARIZONA_AIF4_BCLK_CTRL:
+		*source = arizona_aif4_inputs;
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
+}
+
+int arizona_cache_and_clear_sources(struct arizona *arizona,
+				    const int *sources,
+				    int *cache,
+				    int lim)
+{
+	int ret = 0;
+	int i;
+
+	for (i = 0; i < lim; i++)
+		cache[i] = 0;
+
+	for (i = 0; i < lim; i++) {
+		ret = regmap_read(arizona->regmap,
+				  sources[i],
+				  &cache[i]);
+
+		dev_dbg(arizona->dev,
+			"%s addr: 0x%04x value: 0x%04x\n",
+			__func__, sources[i], cache[i]);
+
+		if (ret != 0) {
+			dev_err(arizona->dev,
+				"%s Failed to cache AIF:0x%04x inputs: %d\n",
+				__func__, sources[i], ret);
+			break;
+		}
+
+		ret = regmap_write(arizona->regmap,
+				   sources[i],
+				   0);
+
+		if (ret != 0) {
+			dev_err(arizona->dev,
+				"%s Failed to clear AIF:0x%04x inputs: %d\n",
+				__func__, sources[i], ret);
+			break;
+		}
+
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(arizona_cache_and_clear_sources);
+
+int arizona_restore_sources(struct arizona *arizona,
+			    const int *sources,
+			    int *cache,
+			    int lim)
+{
+	int ret = 0;
+	int i;
+
+	for (i = 0; i < lim; i++) {
+
+		dev_dbg(arizona->dev,
+			"%s addr: 0x%04x value: 0x%04x\n",
+			__func__, sources[i], cache[i]);
+
+		ret = regmap_write(arizona->regmap,
+				   sources[i],
+				   cache[i]);
+
+		if (ret != 0) {
+			dev_err(arizona->dev,
+				"%s Failed to restore AIF:0x%04x inputs: %d\n",
+				__func__, sources[i], ret);
+			break;
+		}
+
+	}
+
+	return ret;
+
+}
+EXPORT_SYMBOL_GPL(arizona_restore_sources);
+
 static int arizona_spk_ev(struct snd_soc_dapm_widget *w,
 			  struct snd_kcontrol *kcontrol,
 			  int event)
@@ -2654,7 +2853,11 @@ static int arizona_hw_params_rate(struct snd_pcm_substream *substream,
 	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);
 	struct arizona_dai_priv *dai_priv = &priv->dai[dai->id - 1];
 	int base = dai->driver->base;
-	int i, sr_val, ret;
+	int ret = 0, err;
+	int i, sr_val, lim;
+	const int *sources;
+	unsigned int cur, tar;
+	bool change_rate = true;
 
 	/*
 	 * We will need to be more flexible than this in future,
@@ -2690,6 +2893,63 @@ static int arizona_hw_params_rate(struct snd_pcm_substream *substream,
 
 	default:
 		break;
+	}
+
+	switch (dai_priv->clk) {
+	case ARIZONA_CLK_SYSCLK:
+		tar = 0 << ARIZONA_AIF1_RATE_SHIFT;
+		break;
+	case ARIZONA_CLK_SYSCLK_2:
+		tar = 1 << ARIZONA_AIF1_RATE_SHIFT;
+		break;
+	case ARIZONA_CLK_SYSCLK_3:
+		tar = 2 << ARIZONA_AIF1_RATE_SHIFT;
+		break;
+	case ARIZONA_CLK_ASYNCCLK:
+		tar = 8 << ARIZONA_AIF1_RATE_SHIFT;
+		break;
+	case ARIZONA_CLK_ASYNCCLK_2:
+		tar = 9 << ARIZONA_AIF1_RATE_SHIFT;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	ret = regmap_read(priv->arizona->regmap,
+			  base + ARIZONA_AIF_RATE_CTRL, &cur);
+	if (ret != 0) {
+		arizona_aif_err(dai, "Failed to check rate: %d\n", ret);
+		return ret;
+	}
+
+	if ((cur & ARIZONA_AIF1_RATE_MASK) == (tar & ARIZONA_AIF1_RATE_MASK))
+		change_rate = false;
+
+	if (change_rate) {
+		ret = arizona_get_sources(priv->arizona,
+					  dai,
+					  &sources,
+					  &lim);
+		if (ret != 0) {
+			arizona_aif_err(dai,
+					"Failed to get aif sources %d\n",
+					ret);
+			return ret;
+		}
+
+		mutex_lock(&priv->arizona->rate_lock);
+
+		ret = arizona_cache_and_clear_sources(priv->arizona, sources,
+						      arizona_aif_sources_cache,
+						      lim);
+		if (ret != 0) {
+			arizona_aif_err(dai,
+				"Failed to cache and clear aif sources: %d\n",
+				ret);
+			goto out;
+		}
+
+		udelay(300);
 	}
 
 	switch (dai_priv->clk) {
@@ -2741,10 +3001,25 @@ static int arizona_hw_params_rate(struct snd_pcm_substream *substream,
 		break;
 	default:
 		arizona_aif_err(dai, "Invalid clock %d\n", dai_priv->clk);
-		return -EINVAL;
+		ret = -EINVAL;
 	}
 
-	return 0;
+	if (change_rate)
+		udelay(300);
+
+out:
+	if (change_rate) {
+		err = arizona_restore_sources(priv->arizona, sources,
+					      arizona_aif_sources_cache, lim);
+		if (err != 0) {
+			arizona_aif_err(dai,
+					"Failed to restore sources: %d\n",
+					err);
+		}
+
+		mutex_unlock(&priv->arizona->rate_lock);
+	}
+	return ret;
 }
 
 static bool arizona_aif_cfg_changed(struct snd_soc_codec *codec,

@@ -330,6 +330,16 @@ extern int arizona_eq_coeff_put(struct snd_kcontrol *kcontrol,
 extern int arizona_set_sysclk(struct snd_soc_codec *codec, int clk_id,
 			      int source, unsigned int freq, int dir);
 
+extern int arizona_cache_and_clear_sources(struct arizona *arizona,
+					   const int *sources,
+					   int *cache,
+					   int lim);
+
+extern int arizona_restore_sources(struct arizona *arizona,
+				   const int *sources,
+				   int *cache,
+				   int lim);
+
 extern const struct snd_soc_dai_ops arizona_dai_ops;
 extern const struct snd_soc_dai_ops arizona_simple_dai_ops;
 
