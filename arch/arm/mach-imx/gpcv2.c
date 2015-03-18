@@ -156,7 +156,6 @@ void imx_gpcv2_set_lpm_mode(u32 cpu, enum mxc_cpu_pwr_mode mode)
 {
 	unsigned long flags;
 	u32 val1, val2;
-	struct irq_desc *iomuxc_irq_desc;
 
 	spin_lock_irqsave(&gpcv2_lock, flags);
 
@@ -164,7 +163,8 @@ void imx_gpcv2_set_lpm_mode(u32 cpu, enum mxc_cpu_pwr_mode mode)
 	val2 = readl_relaxed(gpc_base + GPC_SLPCR);
 
 	/* core 0/1's LPM settings must be same */
-	val1 &= ~(BM_LPCR_A7_BSC_LPM0 | BM_LPCR_A7_BSC_LPM1);
+	val1 &= ~(BM_LPCR_A7_BSC_LPM0 | BM_LPCR_A7_BSC_LPM1 |
+		BM_LPCR_A7_BSC_IRQ_SRC_A7_WAKEUP);
 
 	val1 |= BM_LPCR_A7_BSC_CPU_CLK_ON_LPM;
 
@@ -173,14 +173,17 @@ void imx_gpcv2_set_lpm_mode(u32 cpu, enum mxc_cpu_pwr_mode mode)
 
 	switch (mode) {
 	case WAIT_CLOCKED:
+		val1 |= 0x3 << BP_LPCR_A7_BSC_IRQ_SRC;
 		break;
 	case WAIT_UNCLOCKED:
 		val1 |= A7_LPM_WAIT << BP_LPCR_A7_BSC_LPM0;
 		val1 &= ~BM_LPCR_A7_BSC_CPU_CLK_ON_LPM;
+		val1 |= 0x2 << BP_LPCR_A7_BSC_IRQ_SRC;
 		break;
 	case STOP_POWER_OFF:
 		val1 |= A7_LPM_STOP << BP_LPCR_A7_BSC_LPM0;
 		val1 &= ~BM_LPCR_A7_BSC_CPU_CLK_ON_LPM;
+		val1 |= 0x2 << BP_LPCR_A7_BSC_IRQ_SRC;
 		val2 |= BM_SLPCR_EN_DSM;
 		val2 |= BM_SLPCR_RBC_EN;
 		val2 |= BM_SLPCR_SBYOS;
@@ -191,23 +194,9 @@ void imx_gpcv2_set_lpm_mode(u32 cpu, enum mxc_cpu_pwr_mode mode)
 		return;
 	}
 
-	/*
-	 * GPC: When improper low-power sequence is used,
-	 * the SoC enters low power mode before the ARM core executes WFI.
-	 *
-	 * Software workaround:
-	 * 1) Software should trigger IRQ #32 (IOMUX) to be always pending
-	 *    by setting IOMUX_GPR1_IRQ.
-	 * 2) Software should then unmask IRQ #32 in GPC before setting GPC
-	 *    Low-Power mode.
-	 * 3) Software should mask IRQ #32 right after GPC Low-Power mode
-	 *    is set.
-	 */
-	iomuxc_irq_desc = irq_to_desc(32);
-	imx_gpcv2_irq_unmask(&iomuxc_irq_desc->irq_data);
 	writel_relaxed(val1, gpc_base + GPC_LPCR_A7_BSC);
 	writel_relaxed(val2, gpc_base + GPC_SLPCR);
-	imx_gpcv2_irq_mask(&iomuxc_irq_desc->irq_data);
+
 	spin_unlock_irqrestore(&gpcv2_lock, flags);
 }
 
@@ -506,15 +495,13 @@ void __init imx_gpcv2_init(void)
 	}
 
 	/* only external IRQs to wake up LPM and core 0/1 */
-	writel_relaxed(0x2 << BP_LPCR_A7_BSC_IRQ_SRC,
+	writel_relaxed(BM_LPCR_A7_BSC_IRQ_SRC_A7_WAKEUP,
 		gpc_base + GPC_LPCR_A7_BSC);
 	/* mask m4 dsm trigger */
 	writel_relaxed(readl_relaxed(gpc_base + GPC_LPCR_M4) |
 		BM_LPCR_M4_MASK_DSM_TRIGGER, gpc_base + GPC_LPCR_M4);
 	/* set mega/fast mix in A7 domain */
 	writel_relaxed(0x1, gpc_base + GPC_PGC_CPU_MAPPING);
-	/* init A7 basic setting register */
-	writel_relaxed(0x0, gpc_base + GPC_LPCR_A7_BSC);
 
 	/* Register GPC as the secondary interrupt controller behind GIC */
 	gic_arch_extn.irq_mask = imx_gpcv2_irq_mask;
