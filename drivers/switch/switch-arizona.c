@@ -1799,6 +1799,8 @@ static int arizona_antenna_button_start(struct arizona_extcon_info *info)
 	int i, micd_lvl;
 	int hp_imp_range_hi = -1;
 
+	info->button_impedance = 0;
+	info->button_check = 0;
 	info->wait_for_mic = false;
 
 	/* check if impedance level is supported */
@@ -1880,7 +1882,7 @@ static int arizona_antenna_button_reading(struct arizona_extcon_info *info,
 		int i;
 
 		info->button_impedance = 0;
-		info->button_check = false;
+		info->button_check = 0;
 
 		/* Clear any currently pressed buttons */
 		for (i = 0; i < info->num_micd_ranges; i++)
