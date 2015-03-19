@@ -4869,6 +4869,7 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 	struct device_node *node;
 	phandle phandle;
 	u32 out_val[3];
+	int enable_gpio;
 
 	if (!np)
 		return -EINVAL;
@@ -4904,6 +4905,29 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 
 		regmap_update_bits(fb_data->gpr, fb_data->req_gpr,
 			1 << fb_data->req_bit, 0);
+	}
+
+	if (of_find_property(np, "en-gpios", NULL)) {
+		enable_gpio = of_get_named_gpio(np, "en-gpios", 0);
+		if (enable_gpio == -EPROBE_DEFER) {
+			dev_info(&pdev->dev, "GPIO requested is not"
+				"here yet, deferring the probe\n");
+			return -EPROBE_DEFER;
+		}
+		if (!gpio_is_valid(enable_gpio)) {
+			dev_warn(&pdev->dev, "No dt property: en-gpios\n");
+		} else {
+
+			ret = devm_gpio_request_one(&pdev->dev,
+						    enable_gpio,
+						    GPIOF_OUT_INIT_LOW,
+						    "en_pins");
+			if (ret) {
+				dev_err(&pdev->dev, "failed to request gpio"
+					" %d: %d\n", enable_gpio, ret);
+				return -EINVAL;
+			}
+		}
 	}
 
 	/* Get platform data and check validity */
