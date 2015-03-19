@@ -2789,38 +2789,38 @@ static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 {
 	struct arizona_pdata *pdata = &arizona->pdata;
 
-	arizona_of_read_u32(arizona, "wlf,micd-detect-debounce", false,
+	arizona_of_read_s32(arizona, "wlf,micd-detect-debounce", false,
 			    &pdata->micd_detect_debounce);
 
-	arizona_of_read_u32(arizona, "wlf,micd-manual-debounce", false,
+	arizona_of_read_s32(arizona, "wlf,micd-manual-debounce", false,
 			    &pdata->micd_manual_debounce);
 
-	arizona_of_read_u32(arizona, "wlf,antenna-manual-debounce", false,
+	arizona_of_read_s32(arizona, "wlf,antenna-manual-debounce", false,
 			    &pdata->antenna_manual_debounce);
 
-	arizona_of_read_u32(arizona, "wlf,antenna-manual-db-plugout", false,
+	arizona_of_read_s32(arizona, "wlf,antenna-manual-db-plugout", false,
 			    &pdata->antenna_manual_db_plugout);
 
-	arizona_of_read_u32(arizona, "wlf,antenna-hp-imp-range-lo", false,
+	arizona_of_read_s32(arizona, "wlf,antenna-hp-imp-range-lo", false,
 			    &pdata->antenna_hp_imp_range_lo);
 
-	arizona_of_read_u32(arizona, "wlf,antenna-hp-imp-range-hi", false,
+	arizona_of_read_s32(arizona, "wlf,antenna-hp-imp-range-hi", false,
 			    &pdata->antenna_hp_imp_range_hi);
 
 	pdata->micd_pol_gpio = arizona_of_get_named_gpio(arizona,
 							 "wlf,micd-pol-gpio",
 							 false);
 
-	arizona_of_read_u32(arizona, "wlf,micd-bias-start-time", false,
+	arizona_of_read_s32(arizona, "wlf,micd-bias-start-time", false,
 			    &pdata->micd_bias_start_time);
 
-	arizona_of_read_u32(arizona, "wlf,micd-rate", false,
+	arizona_of_read_s32(arizona, "wlf,micd-rate", false,
 			    &pdata->micd_rate);
 
-	arizona_of_read_u32(arizona, "wlf,micd-dbtime", false,
+	arizona_of_read_s32(arizona, "wlf,micd-dbtime", false,
 			    &pdata->micd_dbtime);
 
-	arizona_of_read_u32(arizona, "wlf,micd-timeout", false,
+	arizona_of_read_s32(arizona, "wlf,micd-timeout", false,
 			    &pdata->micd_timeout);
 
 	pdata->micd_force_micbias =
@@ -2852,28 +2852,28 @@ static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 
 	arizona_of_read_u32(arizona, "wlf,gpsw", false, &pdata->gpsw);
 
-	arizona_of_read_u32(arizona, "wlf,init-mic-delay", false,
+	arizona_of_read_s32(arizona, "wlf,init-mic-delay", false,
 			    &pdata->init_mic_delay);
 
-	arizona_of_read_u32(arizona, "wlf,fixed-hpdet-imp", false,
+	arizona_of_read_s32(arizona, "wlf,fixed-hpdet-imp", false,
 			    &pdata->fixed_hpdet_imp);
 
-	arizona_of_read_u32(arizona, "wlf,hpdet-moisture-imp", false,
+	arizona_of_read_s32(arizona, "wlf,hpdet-moisture-imp", false,
 			    &pdata->hpdet_moisture_imp);
 
-	arizona_of_read_u32(arizona, "wlf,hpdet-moisture-debounce", false,
+	arizona_of_read_s32(arizona, "wlf,hpdet-moisture-debounce", false,
 			    &pdata->hpdet_moisture_debounce);
 
-	arizona_of_read_u32(arizona, "wlf,hpdet-short-circuit-imp", false,
+	arizona_of_read_s32(arizona, "wlf,hpdet-short-circuit-imp", false,
 			    &pdata->hpdet_short_circuit_imp);
 
-	arizona_of_read_u32(arizona, "wlf,hpdet-channel", false,
+	arizona_of_read_s32(arizona, "wlf,hpdet-channel", false,
 			    &pdata->hpdet_channel);
 
 	arizona_of_read_u32(arizona, "wlf,moisture-det-channel", false,
 			    &pdata->moisture_det_channel);
 
-	arizona_of_read_u32(arizona, "wlf,jd-wake-time", false,
+	arizona_of_read_s32(arizona, "wlf,jd-wake-time", false,
 			    &pdata->jd_wake_time);
 
 	arizona_of_read_u32(arizona, "wlf,micd-clamp-mode", false,
