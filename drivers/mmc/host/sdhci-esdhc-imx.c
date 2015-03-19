@@ -1122,7 +1122,7 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 	 * to something insane.  Change it back here.
 	 */
 	if (esdhc_is_usdhc(imx_data)) {
-		writel(0x08100810, host->ioaddr + ESDHC_WTMK_LVL);
+		writel(0x10401040, host->ioaddr + ESDHC_WTMK_LVL);
 		host->quirks2 |= SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
 					SDHCI_QUIRK2_NOSTD_TIMEOUT_COUNTER;
 		host->mmc->caps |= MMC_CAP_1_8V_DDR;
