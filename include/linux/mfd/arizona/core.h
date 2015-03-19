@@ -206,4 +206,9 @@ extern void arizona_florida_mute_analog(struct arizona* arizona,
 					unsigned int mute);
 extern void arizona_florida_clear_input(struct arizona *arizona);
 
+static inline int arizona_of_read_s32(struct arizona *arizona, const char *prop,
+				      bool mandatory, s32 *data)
+{
+	return arizona_of_read_u32(arizona, prop, mandatory, (u32 *)data);
+}
 #endif

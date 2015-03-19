@@ -238,7 +238,7 @@ struct arizona_pdata {
 	int num_micd_ranges;
 
 	/** Mic detect clamp function */
-	int micd_clamp_mode;
+	unsigned int micd_clamp_mode;
 
 	/** Headset polarity configurations */
 	struct arizona_micd_config *micd_configs;
@@ -272,7 +272,7 @@ struct arizona_pdata {
 	int irq_gpio;
 
 	/** General purpose switch control */
-	int gpsw;
+	unsigned int gpsw;
 
 	/** Callback which is called when the trigger phrase is detected */
 	void (*ez2ctrl_trigger)(void);

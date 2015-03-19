@@ -1267,23 +1267,23 @@ static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 {
 	struct arizona_pdata *pdata = &arizona->pdata;
 
-	arizona_of_read_u32(arizona, "wlf,micd-detect-debounce", false,
+	arizona_of_read_s32(arizona, "wlf,micd-detect-debounce", false,
 			    &pdata->micd_detect_debounce);
 
 	pdata->micd_pol_gpio = arizona_of_get_named_gpio(arizona,
 							 "wlf,micd-pol-gpio",
 							 false);
 
-	arizona_of_read_u32(arizona, "wlf,micd-bias-start-time", false,
+	arizona_of_read_s32(arizona, "wlf,micd-bias-start-time", false,
 			    &pdata->micd_bias_start_time);
 
-	arizona_of_read_u32(arizona, "wlf,micd-rate", false,
+	arizona_of_read_s32(arizona, "wlf,micd-rate", false,
 			    &pdata->micd_rate);
 
-	arizona_of_read_u32(arizona, "wlf,micd-dbtime", false,
+	arizona_of_read_s32(arizona, "wlf,micd-dbtime", false,
 			    &pdata->micd_dbtime);
 
-	arizona_of_read_u32(arizona, "wlf,micd-timeout", false,
+	arizona_of_read_s32(arizona, "wlf,micd-timeout", false,
 			    &pdata->micd_timeout);
 
 	pdata->micd_force_micbias =
@@ -1309,7 +1309,7 @@ static int arizona_extcon_of_get_pdata(struct arizona *arizona)
 
 	arizona_of_read_u32(arizona, "wlf,gpsw", false, &pdata->gpsw);
 
-	arizona_of_read_u32(arizona, "wlf,init-mic-delay", false,
+	arizona_of_read_s32(arizona, "wlf,init-mic-delay", false,
 			    &pdata->init_mic_delay);
 
 	arizona_of_read_u32(arizona, "wlf,micd-clamp-mode", false,
