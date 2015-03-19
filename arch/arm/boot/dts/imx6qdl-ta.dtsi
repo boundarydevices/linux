@@ -181,6 +181,7 @@
 			MX6QDL_PAD_ENET_RXD0__GPIO1_IO27	0x0f0b0
 #define GP_ENET_PHY_INT			<&gpio1 28 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28	0x1b0b0
+			MX6QDL_PAD_GPIO_6__ENET_IRQ		0x000b1
 		>;
 	};
 
@@ -372,6 +373,8 @@
 #if 0
 	phy-reset-gpios = GP_ENET_PHY_RESET;
 #endif
+	interrupts-extended = <&gpio1 6 IRQ_TYPE_LEVEL_HIGH>,
+			      <&intc 0 119 IRQ_TYPE_LEVEL_HIGH>;
 	status = "okay";
 
 	#address-cells = <0>;
