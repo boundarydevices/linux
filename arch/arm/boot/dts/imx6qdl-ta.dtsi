@@ -210,6 +210,8 @@
 			MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0x1b0b0
 #define GP_CAN_CONNECT			<&gpio3 13 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x130b0
+#define GP_UART1_DTR			<&gpio3 24 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_D24__GPIO3_IO24		0x1b0b1
 		>;
 	};
 
@@ -253,7 +255,6 @@
 		fsl,pins = <
 			MX6QDL_PAD_SD3_DAT7__UART1_TX_DATA	0x1b0b1
 			MX6QDL_PAD_SD3_DAT6__UART1_RX_DATA	0x1b0b1
-			MX6QDL_PAD_EIM_D24__UART1_DTR_B		0x1b0b1
 		>;
 	};
 
@@ -441,6 +442,12 @@
 		label = "can_connect";
 		gpios = GP_CAN_CONNECT;
 		linux,code = <KEY_EQUAL>;
+	};
+
+	uart1_dtr {
+		label = "uart1_dtr";
+		gpios = GP_UART1_DTR;
+		linux,code = <KEY_1>;
 	};
 };
 
