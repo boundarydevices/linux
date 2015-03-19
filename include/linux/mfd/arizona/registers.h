@@ -5032,6 +5032,10 @@
 #define VEGAS_DRE3L_ENA_MASK                     0x0020  /* DRE3L_ENA */
 #define VEGAS_DRE3L_ENA_SHIFT                         5  /* DRE3L_ENA */
 #define VEGAS_DRE3L_ENA_WIDTH                         1  /* DRE3L_ENA */
+#define VEGAS_DRE3R_ENA                          0x0010  /* DRE3R_ENA */
+#define VEGAS_DRE3R_ENA_MASK                     0x0010  /* DRE3R_ENA */
+#define VEGAS_DRE3R_ENA_SHIFT                         4  /* DRE3R_ENA */
+#define VEGAS_DRE3R_ENA_WIDTH                         1  /* DRE3R_ENA */
 #define VEGAS_DRE2L_ENA                          0x0008  /* DRE2L_ENA */
 #define VEGAS_DRE2L_ENA_MASK                     0x0008  /* DRE2L_ENA */
 #define VEGAS_DRE2L_ENA_SHIFT                         3  /* DRE2L_ENA */
