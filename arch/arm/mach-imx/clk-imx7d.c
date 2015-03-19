@@ -897,6 +897,9 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	/* set lcdif pixel root clock source to get the required 33Mhz clock */
 	imx_clk_set_parent(clks[IMX7D_LCDIF_PIXEL_ROOT_SRC], clks[IMX7D_PLL_SYS_PFD5_CLK]);
 
+	/* set usdhc3 root clock to 400MHz, to support HS400 mode */
+	imx_clk_set_rate(clks[IMX7D_USDHC3_ROOT_CLK], 400000000);
+
 	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 		clk_prepare_enable(clks[clks_init_on[i]]);
 
