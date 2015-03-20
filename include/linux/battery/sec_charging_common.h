@@ -529,6 +529,8 @@ struct sec_battery_platform_data {
 	int capacity_min;
 	int rcomp0;
 	int rcomp_charging;
+	int empty_detect_voltage;
+	int empty_recovery_voltage;
 
 	/* charger */
 	char *charger_name;
