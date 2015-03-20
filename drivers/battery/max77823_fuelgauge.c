@@ -1480,6 +1480,7 @@ bool max77823_fg_init(struct max77823_fuelgauge_data *fuelgauge)
 	ktime_t	current_time;
 	struct timespec ts;
 	int ret;
+	int vempty;
 
 #if defined(ANDROID_ALARM_ACTIVATED)
 	current_time = alarm_get_elapsed_realtime();
@@ -1535,6 +1536,10 @@ bool max77823_fg_init(struct max77823_fuelgauge_data *fuelgauge)
 
 	/* Power on reset initialization needed */
 	fg_reset_capacity_by_jig_connection(fuelgauge);
+	vempty = fuelgauge->pdata->empty_detect_voltage / 10;
+	vempty <<= 7;
+	vempty |= (fuelgauge->pdata->empty_recovery_voltage / 40) & 0x7f;
+	max77823_write_word(fuelgauge->i2c, MAX77823_V_EMPTY, vempty);
 
 	/* Clear POR condition */
 	max77823_write_word(fuelgauge->i2c, MAX77823_REG_STATUS, ret & ~2);
@@ -2211,6 +2216,8 @@ const struct dt_data dt_fields[] = {
 	{"fuelgauge,capacity_min", BOFFSET(capacity_min) },
 	{"fuelgauge,capacity_calculation_type", BOFFSET(capacity_calculation_type) },
 	{"fuelgauge,fuel_alert_soc", BOFFSET(fuel_alert_soc) },
+	{"empty_detect_voltage", BOFFSET(empty_detect_voltage) },
+	{"empty_recovery_voltage", BOFFSET(empty_recovery_voltage) },
 	{NULL, 0}
 };
 static int max77823_fuelgauge_parse_dt(
@@ -2235,6 +2242,7 @@ static int max77823_fuelgauge_parse_dt(
 					dtd->field, ret);
 		else
 			pr_info("%s: %s=%d\n", __func__, dtd->field, *p);
+		dtd++;
 	}
 	pdata->repeated_fuelalert = of_property_read_bool(np,
 			"fuelgauge,repeated_fuelalert");
