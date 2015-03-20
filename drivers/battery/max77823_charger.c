@@ -1504,8 +1504,8 @@ static int max77823_charger_probe(struct platform_device *pdev)
 #if defined(CONFIG_OF)
 	ret = max77823_charger_parse_dt(charger, pdev->dev.of_node);
 	if (ret < 0) {
-		pr_err("%s not found charger dt! ret[%d]\n",
-		       __func__, ret);
+		pr_err("%s:dt error! ret[%d]\n", __func__, ret);
+		goto err_free;
 	}
 #endif
 
