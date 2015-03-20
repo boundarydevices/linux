@@ -97,6 +97,7 @@ obj-$(CONFIG_MACH_IMX35_DT) += imx35-dt.o
 obj-$(CONFIG_HAVE_IMX_ANATOP) += anatop.o
 obj-$(CONFIG_HAVE_IMX_GPC) += gpc.o gpcv2.o
 obj-$(CONFIG_HAVE_IMX_MMDC) += mmdc.o
+obj-$(CONFIG_HAVE_IMX_DDRC) += ddrc.o
 obj-$(CONFIG_HAVE_IMX_SRC) += src.o
 obj-$(CONFIG_HAVE_IMX_MCC) += mcc_api.o mcc_common.o mcc_linux.o mcc_imx6sx.o
 AFLAGS_headsmp.o :=-Wa,-march=armv7-a
