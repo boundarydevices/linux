@@ -169,6 +169,8 @@ struct arizona {
 #if defined(CONFIG_PM_SLEEP) && defined(CONFIG_MFD_ARIZONA_DEFERRED_RESUME)
 	struct work_struct deferred_resume_work;
 #endif
+
+	struct mutex rate_lock;
 };
 
 #define ARIZONA_DVFS_SR1_RQ          0x00000001
