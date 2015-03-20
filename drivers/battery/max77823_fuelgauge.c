@@ -29,7 +29,12 @@ static enum power_supply_property max77823_fuelgauge_props[] = {
 	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_CURRENT_AVG,
 	POWER_SUPPLY_PROP_CHARGE_FULL,
+	POWER_SUPPLY_PROP_ENERGY_FULL_DESIGN,
+	POWER_SUPPLY_PROP_ENERGY_EMPTY_DESIGN,
+	POWER_SUPPLY_PROP_ENERGY_FULL,
+	POWER_SUPPLY_PROP_ENERGY_EMPTY,
 	POWER_SUPPLY_PROP_ENERGY_NOW,
+	POWER_SUPPLY_PROP_ENERGY_AVG,
 	POWER_SUPPLY_PROP_CAPACITY,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_TEMP_AMBIENT,
@@ -141,7 +146,7 @@ static int max77823_get_status(struct max77823_fuelgauge_data *fuelgauge)
 	ret = max77823_read_word(fuelgauge->i2c, MAX77823_REG_STATUS2);
 	if (ret < 0)
 		return ret;
-	pr_debug("%s: reg 0x%x=(0x%x)\n", __func__, MAX77823_REG_STATUS, ret);
+	pr_debug("%s: reg 0x%x=(0x%x)\n", __func__, MAX77823_REG_STATUS2, ret);
 	if (ret & (1 << 5)) {
 		return POWER_SUPPLY_STATUS_FULL;
 	}
@@ -556,6 +561,22 @@ static int fg_read_repcap(struct max77823_fuelgauge_data *fuelgauge)
 	if (ret < 0)
 		pr_err("%s: Failed to read REMCAP_REP_REG\n", __func__);
 	return ret;
+}
+
+static int fg_read_power(struct max77823_fuelgauge_data *fuelgauge, int reg)
+{
+
+	int ret;
+
+	ret = max77823_read_word(fuelgauge->i2c, reg);
+	if (ret < 0)
+		pr_err("%s: Failed to read 0x%x(%d)\n", __func__, reg, ret);
+	/*
+	 * convert from uVh to uWh, with a 10 mOhm sense resistor
+	 *  uVh/(.010 Ohms) =  uVh * 100/Ohms =  100uAh
+	 *  uAh * V = uWh
+	 */
+	return ret * 370 ;	/* 3.7 Volts nominal */
 }
 #endif
 
@@ -1458,6 +1479,7 @@ bool max77823_fg_init(struct max77823_fuelgauge_data *fuelgauge)
 {
 	ktime_t	current_time;
 	struct timespec ts;
+	int ret;
 
 #if defined(ANDROID_ALARM_ACTIVATED)
 	current_time = alarm_get_elapsed_realtime();
@@ -1507,6 +1529,15 @@ bool max77823_fg_init(struct max77823_fuelgauge_data *fuelgauge)
 	max77823_write_word(fuelgauge->i2c, MAX77823_REG_CONFIG,
 		(fuelgauge->pdata->thermal_source != SEC_BATTERY_THERMAL_SOURCE_FG) ? 0x2154 : 0x2254);
 
+	ret = max77823_read_word(fuelgauge->i2c, MAX77823_REG_STATUS);
+	if ((ret < 0) || !(ret & 2))
+		return true;
+
+	/* Power on reset initialization needed */
+	fg_reset_capacity_by_jig_connection(fuelgauge);
+
+	/* Clear POR condition */
+	max77823_write_word(fuelgauge->i2c, MAX77823_REG_STATUS, ret & ~2);
 	return true;
 }
 
@@ -1932,28 +1963,27 @@ static int max77823_fg_get_property(struct power_supply *psy,
 			break;
 		}
 		break;
-		/* Full Capacity */
-	case POWER_SUPPLY_PROP_ENERGY_NOW:
-		switch (val->intval) {
-		case SEC_BATTEY_CAPACITY_DESIGNED:
-			val->intval = get_fuelgauge_value(fuelgauge,
-							  FG_FULLCAP);
-			break;
-		case SEC_BATTEY_CAPACITY_ABSOLUTE:
-			val->intval = get_fuelgauge_value(fuelgauge,
-							  FG_MIXCAP);
-			break;
-		case SEC_BATTEY_CAPACITY_TEMPERARY:
-			val->intval = get_fuelgauge_value(fuelgauge,
-							  FG_AVCAP);
-			break;
-		case SEC_BATTEY_CAPACITY_CURRENT:
-		default:
-			val->intval = get_fuelgauge_value(fuelgauge,
-							  FG_REPCAP);
-			break;
-		}
+
+	case POWER_SUPPLY_PROP_ENERGY_FULL_DESIGN:
+		val->intval = fg_read_power(fuelgauge, DESIGNCAP_REG);
 		break;
+	case POWER_SUPPLY_PROP_ENERGY_FULL:
+		val->intval = fg_read_power(fuelgauge, FULLCAPREP_REG);
+		break;
+	case POWER_SUPPLY_PROP_ENERGY_EMPTY_DESIGN:
+		val->intval = fg_read_power(fuelgauge, REMCAP_MIX_REG);	/* nothing to do with empty, stole for sec_battery */
+		break;
+	case POWER_SUPPLY_PROP_ENERGY_EMPTY:
+		val->intval = 0;
+		break;
+
+	case POWER_SUPPLY_PROP_ENERGY_NOW:
+		val->intval = fg_read_power(fuelgauge, REMCAP_REP_REG);
+		break;
+	case POWER_SUPPLY_PROP_ENERGY_AVG:
+		val->intval = fg_read_power(fuelgauge, REMCAP_AV_REG);
+		break;
+
 		/* SOC (%) */
 	case POWER_SUPPLY_PROP_CAPACITY:
 		if (val->intval == SEC_FUELGAUGE_CAPACITY_TYPE_RAW) {
@@ -2250,8 +2280,8 @@ static int max77823_fuelgauge_probe(struct platform_device *pdev)
 #if defined(CONFIG_OF)
 	ret = max77823_fuelgauge_parse_dt(fuelgauge, pdev->dev.of_node);
 	if (ret < 0) {
-		pr_err("%s not found charger dt! ret[%d]\n",
-		       __func__, ret);
+		pr_err("%s:dt error! ret[%d]\n", __func__, ret);
+		goto err_free;
 	}
 #endif
 	board_fuelgauge_init((void *)fuelgauge);
