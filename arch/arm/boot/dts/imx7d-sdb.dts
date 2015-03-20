@@ -90,6 +90,7 @@
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1>;
+	pinctrl-assert-gpios = <&gpio_spi 5 GPIO_ACTIVE_HIGH>;
 	phy-mode = "rgmii";
 	phy-handle = <&ethphy0>;
 	fsl,magic-packet;
