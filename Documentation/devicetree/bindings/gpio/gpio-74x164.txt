@@ -9,6 +9,7 @@ Required properties:
       0 = active high
       1 = active low
 - registers-number: Number of daisy-chained shift registers
+- registers-default: Default value of daisy-chained shift registers
 
 Example:
 
@@ -18,5 +19,6 @@ gpio5: gpio5@0 {
 	gpio-controller;
 	#gpio-cells = <2>;
 	registers-number = <4>;
+	registers-default = /bits/ 8 <0x01 0x02 0x03 0x04>;
 	spi-max-frequency = <100000>;
 };
