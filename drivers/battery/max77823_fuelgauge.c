@@ -2198,53 +2198,49 @@ static const struct file_operations max77823_fuelgauge_debugfs_fops = {
 };
 
 #ifdef CONFIG_OF
+
+struct dt_data {
+	const char* const field;
+	int	offset;
+};
+
+#define BOFFSET(field) offsetof(struct sec_battery_platform_data, field)
+const struct dt_data dt_fields[] = {
+	{"fuelgauge,capacity_max", BOFFSET(capacity_max) },
+	{"fuelgauge,capacity_max_margin", BOFFSET(capacity_max_margin) },
+	{"fuelgauge,capacity_min", BOFFSET(capacity_min) },
+	{"fuelgauge,capacity_calculation_type", BOFFSET(capacity_calculation_type) },
+	{"fuelgauge,fuel_alert_soc", BOFFSET(fuel_alert_soc) },
+	{NULL, 0}
+};
 static int max77823_fuelgauge_parse_dt(
 		struct max77823_fuelgauge_data *fuelgauge,
 		struct device_node *np)
 {
 	sec_battery_platform_data_t *pdata = fuelgauge->pdata;
 	int ret;
+	const struct dt_data *dtd = dt_fields;
 
 	/* reset, irq gpio info */
 	if (np == NULL) {
 		pr_err("%s np NULL\n", __func__);
 		return -1;
-	} else {
-		ret = of_property_read_u32(np, "fuelgauge,capacity_max",
-				&pdata->capacity_max);
-		if (ret < 0)
-			pr_err("%s error reading capacity_max %d\n", __func__, ret);
-
-		ret = of_property_read_u32(np, "fuelgauge,capacity_max_margin",
-				&pdata->capacity_max_margin);
-		if (ret < 0)
-			pr_err("%s error reading capacity_max_margin %d\n", __func__, ret);
-
-		ret = of_property_read_u32(np, "fuelgauge,capacity_min",
-				&pdata->capacity_min);
-		if (ret < 0)
-			pr_err("%s error reading capacity_min %d\n", __func__, ret);
-
-		ret = of_property_read_u32(np, "fuelgauge,capacity_calculation_type",
-				&pdata->capacity_calculation_type);
-		if (ret < 0)
-			pr_err("%s error reading capacity_calculation_type %d\n",
-					__func__, ret);
-		ret = of_property_read_u32(np, "fuelgauge,fuel_alert_soc",
-				&pdata->fuel_alert_soc);
-		if (ret < 0)
-			pr_err("%s error reading pdata->fuel_alert_soc %d\n",
-					__func__, ret);
-		pdata->repeated_fuelalert = of_property_read_bool(np,
-				"fuelgauge,repeated_fuelalert");
-		pr_info("%s: fg_irq: %d, capacity_max: %d, "
-				"cpacity_max_margin: %d, capacity_min: %d, "
-				"calculation_type: 0x%x, fuel_alert_soc: %d, "
-				"repeated_fuelalert: %d\n", __func__, pdata->fg_irq,
-				pdata->capacity_max, pdata->capacity_max_margin,
-				pdata->capacity_min, pdata->capacity_calculation_type,
-				pdata->fuel_alert_soc, pdata->repeated_fuelalert);
 	}
+
+	while (dtd->field) {
+		u32 *p = (u32 *)(((void *)pdata) + dtd->offset);
+		ret = of_property_read_u32(np, dtd->field, p);
+		if (ret < 0)
+			pr_err("%s: error reading %s(%d)\n", __func__,
+					dtd->field, ret);
+		else
+			pr_info("%s: %s=%d\n", __func__, dtd->field, *p);
+	}
+	pdata->repeated_fuelalert = of_property_read_bool(np,
+			"fuelgauge,repeated_fuelalert");
+	pr_info("%s: fg_irq: %d, repeated_fuelalert: %d\n",
+			__func__, pdata->fg_irq,
+			pdata->repeated_fuelalert);
 
 	return 0;
 }
