@@ -69,6 +69,9 @@ config HAVE_IMX_GPC
 config HAVE_IMX_MMDC
 	bool
 
+config HAVE_IMX_DDRC
+	bool
+
 config HAVE_IMX_SRC
 	def_bool y if SMP
 
@@ -852,6 +855,7 @@ config SOC_IMX7
 	select CPU_V7
 	select ARM_GIC
 	select HAVE_SMP
+	select HAVE_IMX_DDRC
 
 config SOC_IMX7D
 	bool "i.MX7 Dual support"
