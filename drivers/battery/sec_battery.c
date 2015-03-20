@@ -115,6 +115,12 @@ static enum power_supply_property sec_battery_props[] = {
 	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_CURRENT_AVG,
 	POWER_SUPPLY_PROP_CHARGE_NOW,
+	POWER_SUPPLY_PROP_ENERGY_FULL_DESIGN,
+	POWER_SUPPLY_PROP_ENERGY_EMPTY_DESIGN,
+	POWER_SUPPLY_PROP_ENERGY_FULL,
+	POWER_SUPPLY_PROP_ENERGY_EMPTY,
+	POWER_SUPPLY_PROP_ENERGY_NOW,
+	POWER_SUPPLY_PROP_ENERGY_AVG,
 	POWER_SUPPLY_PROP_CAPACITY,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_TEMP_AMBIENT,
@@ -2619,39 +2625,30 @@ ssize_t sec_bat_show_attrs(struct device *dev,
 		break;
 	case FG_CAPACITY:
 	{
-		union power_supply_propval value;
-
-		value.intval =
-			SEC_BATTEY_CAPACITY_DESIGNED;
 		psy_do_property(battery->pdata->fuelgauge_name, get,
-			POWER_SUPPLY_PROP_ENERGY_NOW, value);
+			POWER_SUPPLY_PROP_ENERGY_FULL, value);
 
 		i += scnprintf(buf + i, PAGE_SIZE - i, "0x%04x ",
-			value.intval);
+			value.intval/370);
 
-		value.intval =
-			SEC_BATTEY_CAPACITY_ABSOLUTE;
+		 /* not empty, returns REMCAP_MIX_REG*/
 		psy_do_property(battery->pdata->fuelgauge_name, get,
-			POWER_SUPPLY_PROP_ENERGY_NOW, value);
+			POWER_SUPPLY_PROP_ENERGY_EMPTY_DESIGN, value);
 
 		i += scnprintf(buf + i, PAGE_SIZE - i, "0x%04x ",
-			value.intval);
+			value.intval/370);
 
-		value.intval =
-			SEC_BATTEY_CAPACITY_TEMPERARY;
 		psy_do_property(battery->pdata->fuelgauge_name, get,
-			POWER_SUPPLY_PROP_ENERGY_NOW, value);
+			POWER_SUPPLY_PROP_ENERGY_AVG, value);
 
 		i += scnprintf(buf + i, PAGE_SIZE - i, "0x%04x ",
-			value.intval);
+			value.intval/370);
 
-		value.intval =
-			SEC_BATTEY_CAPACITY_CURRENT;
 		psy_do_property(battery->pdata->fuelgauge_name, get,
 			POWER_SUPPLY_PROP_ENERGY_NOW, value);
 
 		i += scnprintf(buf + i, PAGE_SIZE - i, "0x%04x\n",
-			value.intval);
+			value.intval/370);
 	}
 		break;
 	case AUTH:
@@ -3494,6 +3491,17 @@ static int sec_bat_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_NOW:
 		val->intval = battery->charging_mode;
 		break;
+	case POWER_SUPPLY_PROP_ENERGY_FULL_DESIGN:
+	case POWER_SUPPLY_PROP_ENERGY_FULL:
+	case POWER_SUPPLY_PROP_ENERGY_EMPTY_DESIGN:
+	case POWER_SUPPLY_PROP_ENERGY_EMPTY:
+	case POWER_SUPPLY_PROP_ENERGY_NOW:
+	case POWER_SUPPLY_PROP_ENERGY_AVG:
+		psy_do_property(battery->pdata->fuelgauge_name, get,
+				psp, value);
+		val->intval = value.intval;
+		break;
+
 	case POWER_SUPPLY_PROP_CAPACITY:
 #if defined(CONFIG_MACH_VIENNAEUR) || defined(CONFIG_MACH_VIENNAVZW) || defined(CONFIG_MACH_V2LTEEUR) || \
 	defined(CONFIG_SEC_TRLTE_PROJECT) || defined(CONFIG_SEC_TBLTE_PROJECT)
@@ -4275,9 +4283,11 @@ static int sec_battery_probe(struct platform_device *pdev)
 		}
 
 		battery->pdata = pdata;
-		if (sec_bat_parse_dt(&pdev->dev, battery))
-			dev_err(&pdev->dev,
-				"%s: Failed to parse battery pdata from DT\n", __func__);
+		ret = sec_bat_parse_dt(&pdev->dev, battery);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "%s:dt error %d\n", __func__, ret);
+			goto err_bat_free;
+		}
 	} else {
 		pdata = dev_get_platdata(&pdev->dev);
 		battery->pdata = pdata;
