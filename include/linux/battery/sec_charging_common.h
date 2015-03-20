@@ -50,17 +50,6 @@ enum sec_battery_current_mode {
 	SEC_BATTEY_CURRENT_MA,
 };
 
-enum sec_battery_capacity_mode {
-	/* designed capacity */
-	SEC_BATTEY_CAPACITY_DESIGNED = 0,
-	/* absolute capacity by fuel gauge */
-	SEC_BATTEY_CAPACITY_ABSOLUTE,
-	/* temperary capacity in the time */
-	SEC_BATTEY_CAPACITY_TEMPERARY,
-	/* current capacity now */
-	SEC_BATTEY_CAPACITY_CURRENT,
-};
-
 /* ADC type */
 enum sec_battery_adc_type {
 	/* NOT using this ADC channel */
