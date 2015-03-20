@@ -54,8 +54,8 @@ static struct max17048_fuelgauge_battery_data_t max17048_battery_data[] = {
 static struct max77823_fuelgauge_battery_data_t max77823_battery_data[] = {
 	/* SDI battery data (High voltage 4.4V) */
 	{
-		.Capacity = 0x187E, /* TR/TB : 3220mAh */
-		.low_battery_comp_voltage = 3500000,
+		.Capacity = 26000, /* 2600 mAh * 10 mOhms = 26000 uVh */
+		.low_battery_comp_voltage = 2900000,
 		.low_battery_table = {
 			/* range, slope, offset */
 			{-5000000,	0,	0},	/* dummy for top limit */
