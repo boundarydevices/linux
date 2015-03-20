@@ -833,6 +833,8 @@
 	fuelgauge,capacity_min = <0>;
 	fuelgauge,capacity_calculation_type = <0x17>;
 	fuelgauge,fuel_alert_soc = <1>;
+	empty_detect_voltage = <2900>;
+	empty_recovery_voltage = <3100>;
 	/* fuelgauge,repeated_fuelalert; */
 };
 
