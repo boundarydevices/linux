@@ -580,7 +580,7 @@ static int fg_read_power(struct max77823_fuelgauge_data *fuelgauge, int reg)
 }
 #endif
 
-static int fg_read_current(struct max77823_fuelgauge_data *fuelgauge, int unit)
+static int fg_read_current(struct max77823_fuelgauge_data *fuelgauge)
 {
 	u32 temp;
 	s32 i_current;
@@ -597,7 +597,7 @@ static int fg_read_current(struct max77823_fuelgauge_data *fuelgauge, int unit)
 
 	/* 1.5625uV / 0.01Ohm(Rsense) = 156.25uA */
 	i_current = temp * 15625;
-	i_current /= (unit == SEC_BATTEY_CURRENT_UA) ? 100 : 100000;
+	i_current /= 100;
 
 	ret = max77823_read_word(fuelgauge->i2c, AVG_CURRENT_REG);
 	if (ret < 0) {
@@ -625,7 +625,7 @@ static int fg_read_current(struct max77823_fuelgauge_data *fuelgauge, int unit)
 	return i_current;
 }
 
-static int fg_read_avg_current(struct max77823_fuelgauge_data *fuelgauge, int unit)
+static int fg_read_avg_current(struct max77823_fuelgauge_data *fuelgauge)
 {
 	u32 temp;
 	s32 avg_current;
@@ -642,7 +642,7 @@ static int fg_read_avg_current(struct max77823_fuelgauge_data *fuelgauge, int un
 	temp >>= 15;
 	/* 1.5625uV/0.01Ohm(Rsense) = 156.25uA */
 	avg_current = temp * 15625;
-	avg_current /= (unit == SEC_BATTEY_CURRENT_UA) ? 100 : 100000;
+	avg_current /= 100;
 	return avg_current;
 }
 
@@ -658,8 +658,8 @@ int fg_reset_soc(struct max77823_fuelgauge_data *fuelgauge)
 		__func__, max77823_get_vcell(fuelgauge), max77823_get_vfocv(fuelgauge),
 		fg_read_vfsoc(fuelgauge), fg_read_soc(fuelgauge));
 	pr_info("%s: Before quick-start - current(%d), avg current(%d)\n",
-		__func__, fg_read_current(fuelgauge, SEC_BATTEY_CURRENT_MA),
-		fg_read_avg_current(fuelgauge, SEC_BATTEY_CURRENT_MA));
+		__func__, fg_read_current(fuelgauge),
+		fg_read_avg_current(fuelgauge));
 
 	if (fuelgauge->pdata->check_jig_status ||
 	    !fuelgauge->pdata->check_jig_status()) {
@@ -691,8 +691,8 @@ int fg_reset_soc(struct max77823_fuelgauge_data *fuelgauge)
 		__func__, max77823_get_vcell(fuelgauge), max77823_get_vfocv(fuelgauge),
 		fg_read_vfsoc(fuelgauge), fg_read_soc(fuelgauge));
 	pr_info("%s: After quick-start - current(%d), avg current(%d)\n",
-		__func__, fg_read_current(fuelgauge, SEC_BATTEY_CURRENT_MA),
-		fg_read_avg_current(fuelgauge, SEC_BATTEY_CURRENT_MA));
+		__func__, fg_read_current(fuelgauge),
+		fg_read_avg_current(fuelgauge));
 
 	max77823_write_word(fuelgauge->i2c, CYCLES_REG, 0x00a0);
 
@@ -804,11 +804,11 @@ int get_fuelgauge_value(struct max77823_fuelgauge_data *fuelgauge, int data)
 		break;
 
 	case FG_CURRENT:
-		ret = fg_read_current(fuelgauge, SEC_BATTEY_CURRENT_MA);
+		ret = fg_read_current(fuelgauge)/1000;
 		break;
 
 	case FG_CURRENT_AVG:
-		ret = fg_read_avg_current(fuelgauge, SEC_BATTEY_CURRENT_MA);
+		ret = fg_read_avg_current(fuelgauge)/1000;
 		break;
 
 	case FG_CHECK_STATUS:
@@ -1228,8 +1228,7 @@ int low_batt_compensation(struct max77823_fuelgauge_data *fuelgauge,
 
 	/* Not charging, Under low battery comp voltage */
 	if (fg_vcell <= fuelgauge->battery_data->low_battery_comp_voltage) {
-		fg_avg_current = fg_read_avg_current(fuelgauge,
-			SEC_BATTEY_CURRENT_MA);
+		fg_avg_current = fg_read_avg_current(fuelgauge) / 1000;
 		fg_min_current = min(fg_avg_current, fg_current);
 
 		table_size =
@@ -1939,34 +1938,11 @@ static int max77823_fg_get_property(struct power_supply *psy,
 		break;
 		/* Current */
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
-		switch (val->intval) {
-		case SEC_BATTEY_CURRENT_UA:
-			val->intval =
-				fg_read_current(fuelgauge,
-						SEC_BATTEY_CURRENT_UA);
-			break;
-		case SEC_BATTEY_CURRENT_MA:
-		default:
-			val->intval = get_fuelgauge_value(fuelgauge,
-							  FG_CURRENT);
-			break;
-		}
+		val->intval = fg_read_current(fuelgauge);
 		break;
 		/* Average Current */
 	case POWER_SUPPLY_PROP_CURRENT_AVG:
-		switch (val->intval) {
-		case SEC_BATTEY_CURRENT_UA:
-			val->intval =
-				fg_read_avg_current(fuelgauge,
-						    SEC_BATTEY_CURRENT_UA);
-			break;
-		case SEC_BATTEY_CURRENT_MA:
-		default:
-			val->intval =
-				get_fuelgauge_value(fuelgauge,
-						    FG_CURRENT_AVG);
-			break;
-		}
+		val->intval = fg_read_avg_current(fuelgauge);
 		break;
 
 	case POWER_SUPPLY_PROP_ENERGY_FULL_DESIGN:
