@@ -43,13 +43,6 @@ enum sec_battery_voltage_mode {
 	SEC_BATTEY_VOLTAGE_OCV,
 };
 
-enum sec_battery_current_mode {
-	/* uA */
-	SEC_BATTEY_CURRENT_UA = 0,
-	/* mA */
-	SEC_BATTEY_CURRENT_MA,
-};
-
 /* ADC type */
 enum sec_battery_adc_type {
 	/* NOT using this ADC channel */
