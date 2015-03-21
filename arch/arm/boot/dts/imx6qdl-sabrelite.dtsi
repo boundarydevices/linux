@@ -570,7 +570,6 @@
 		primary;
 
 		display-timings {
-			native-mode = <&lg1280x800>;
 			lg1280x800: lp101wx1 {
 				clock-frequency = <72000000>;
 				hactive = <1280>;
