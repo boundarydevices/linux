@@ -1817,19 +1817,17 @@ static void sec_bat_get_battery_info(
 		POWER_SUPPLY_PROP_VOLTAGE_AVG, value);
 	battery->voltage_ocv = value.intval;
 
-	value.intval = SEC_BATTEY_CURRENT_MA;
 	psy_do_property(battery->pdata->fuelgauge_name, get,
 		POWER_SUPPLY_PROP_CURRENT_NOW, value);
 #if defined(CONFIG_QPNP_BMS)
 	battery->current_now = value.intval / 1000;
 	battery->current_avg = value.intval / 1000;
 #else
-	battery->current_now = value.intval;
+	battery->current_now = value.intval / 1000;
 
-	value.intval = SEC_BATTEY_CURRENT_MA;
 	psy_do_property(battery->pdata->fuelgauge_name, get,
 		POWER_SUPPLY_PROP_CURRENT_AVG, value);
-	battery->current_avg = value.intval;
+	battery->current_avg = value.intval / 1000;
 #endif
 	/* input current limit in charger */
 	psy_do_property(battery->pdata->charger_name, get,
@@ -2512,7 +2510,6 @@ ssize_t sec_bat_show_attrs(struct device *dev,
 		{
 			union power_supply_propval value;
 
-			value.intval = SEC_BATTEY_CURRENT_UA;
 			psy_do_property(battery->pdata->fuelgauge_name, get,
 				POWER_SUPPLY_PROP_CURRENT_NOW, value);
 
@@ -2524,7 +2521,6 @@ ssize_t sec_bat_show_attrs(struct device *dev,
 		{
 			union power_supply_propval value;
 
-			value.intval = SEC_BATTEY_CURRENT_UA;
 			psy_do_property(battery->pdata->fuelgauge_name, get,
 				POWER_SUPPLY_PROP_CURRENT_AVG, value);
 
