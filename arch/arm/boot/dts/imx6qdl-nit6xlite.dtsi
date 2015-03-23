@@ -353,7 +353,7 @@
 	pinctrl_rtc: rtcgrp {
 		fsl,pins = <
 #define GP_RTC_IRQ			<&gpio2 26 IRQ_TYPE_LEVEL_LOW>
-			MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x100b0
+			MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x1b0b0
 		>;
 	};
 
@@ -536,7 +536,7 @@
 
 &hdmi_core {
 	ipu_id = <0>;
-	disp_id = <0>;
+	disp_id = <1>;
 	status = "okay";
 };
 
