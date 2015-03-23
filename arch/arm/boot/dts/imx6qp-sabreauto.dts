@@ -9,6 +9,10 @@
 #include "imx6q-sabreauto.dts"
 #include "imx6qp.dtsi"
 
+&sata {
+	status = "okay";
+};
+
 &fec {
 	pinctrl-assert-gpios = <&max7322 0 GPIO_ACTIVE_HIGH>;
 };
