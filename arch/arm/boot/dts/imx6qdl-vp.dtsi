@@ -167,9 +167,9 @@
 &iomuxc_imx6q_vp {
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
-	/* Main power on, Low shuts down system */
-#define GP_MAIN_POWER_EN		<&gpio1 19 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_SD1_DAT2__GPIO1_IO19		0x0b0b0
+	/* Main power on, high shuts down system */
+#define GP_MAIN_POWER_EN		<&gpio1 19 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_SD1_DAT2__GPIO1_IO19		0x030b0
 #define GP_LED_BLUE			<&gpio2 24 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_CS1__GPIO2_IO24		0x0b0b0
 		>;
