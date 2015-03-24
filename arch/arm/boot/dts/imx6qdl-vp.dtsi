@@ -377,7 +377,7 @@
 		/* GPS */
 		fsl,pins = <
 #define GP_GPS_RESET			<&gpio6 0 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_CSI0_DAT14__GPIO6_IO00	0x0b0b0
+			MX6QDL_PAD_CSI0_DAT14__GPIO6_IO00	0x0b8b0
 		>;
 	};
 
