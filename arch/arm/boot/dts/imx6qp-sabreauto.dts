@@ -9,6 +9,11 @@
 #include "imx6q-sabreauto.dts"
 #include "imx6qp.dtsi"
 
+&pcie {
+	reset-gpio =  <&gpio1 14 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
 &pre1 {
 	status = "okay";
 };
@@ -32,7 +37,6 @@
 
 &prg2 {
 	memory-region = <&memory>;
-	status = "okay";
 };
 
 &sata {
