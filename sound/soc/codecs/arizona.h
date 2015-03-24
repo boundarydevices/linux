@@ -340,6 +340,8 @@ extern int arizona_restore_sources(struct arizona *arizona,
 				   int *cache,
 				   int lim);
 
+extern void clearwater_spin_sysclk(struct arizona *arizona);
+
 extern const struct snd_soc_dai_ops arizona_dai_ops;
 extern const struct snd_soc_dai_ops arizona_simple_dai_ops;
 
