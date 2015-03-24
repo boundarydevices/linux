@@ -9,3 +9,15 @@
 #include "imx6q-sabreauto.dts"
 #include "imx6qp.dtsi"
 
+&fec {
+	pinctrl-assert-gpios = <&max7322 0 GPIO_ACTIVE_HIGH>;
+};
+
+&i2c2 {
+	max7322: gpio@68 {
+		compatible = "maxim,max7322";
+		reg = <0x68>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+};
