@@ -206,6 +206,15 @@ config VF610_ADC
 	  This driver can also be built as a module. If so, the module will be
 	  called vf610_adc.
 
+config AD2802A
+	tristate "2802A ADC driver"
+	depends on OF
+	help
+	  Say yes here to build support for 2802A ADC.
+
+	  This driver can also be built as a module. If so, the module will be
+	  called ad2802a.
+
 config VIPERBOARD_ADC
 	tristate "Viperboard ADC support"
 	depends on MFD_VIPERBOARD && USB
