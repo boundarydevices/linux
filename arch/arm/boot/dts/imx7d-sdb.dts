@@ -396,6 +396,7 @@
 				MX7D_PAD_EPDC_SDCE3__GPIO2_IO23	  0x80000000  /* wakeup */
 				MX7D_PAD_EPDC_PWR_COM__GPIO2_IO30  0x80000000  /* v3p3 */
 				MX7D_PAD_EPDC_SDCE2__GPIO2_IO22  0x80000000  /* pwr int */
+				MX7D_PAD_ECSPI2_SS0__GPIO4_IO23	 0x80000000  /* bt reg on */
 			>;
 		};
 
@@ -549,6 +550,24 @@
 			>;
 		};
 
+		pinctrl_uart5: uart5grp {
+			fsl,pins = <
+				MX7D_PAD_SAI1_TX_BCLK__UART5_DCE_TX 0x79
+				MX7D_PAD_SAI1_RX_DATA__UART5_DCE_RX 0x79
+				MX7D_PAD_SAI1_TX_SYNC__UART5_DCE_CTS 0x79
+				MX7D_PAD_SAI1_TX_DATA__UART5_DCE_RTS 0x79
+			>;
+		};
+
+		pinctrl_uart6: uart6grp {
+			fsl,pins = <
+				MX7D_PAD_ECSPI1_MOSI__UART6_DCE_TX 0x79
+				MX7D_PAD_ECSPI1_SCLK__UART6_DCE_RX 0x79
+				MX7D_PAD_ECSPI1_SS0__UART6_DCE_CTS 0x79
+				MX7D_PAD_ECSPI1_MISO__UART6_DCE_RTS 0x79
+			>;
+		};
+
 		pinctrl_usdhc1: usdhc1grp {
 			fsl,pins = <
 				MX7D_PAD_SD1_CMD__SD1_CMD	0x59
@@ -678,6 +697,20 @@
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
+	status = "okay";
+};
+
+&uart5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart5>;
+	fsl,uart-has-rtscts;
+	status = "okay";
+};
+
+&uart6 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart6>;
+	fsl,uart-has-rtscts;
 	status = "okay";
 };
 
