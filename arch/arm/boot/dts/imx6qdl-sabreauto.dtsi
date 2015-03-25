@@ -80,14 +80,14 @@
 		volume-up {
 			label = "Volume Up";
 			gpios = <&gpio2 15 1>;
-			gpio-key,wakeup;
+			gpio-key;
 			linux,code = <KEY_VOLUMEUP>;
 		};
 
 		volume-down {
 			label = "Volume Down";
 			gpios = <&gpio5 14 1>;
-			gpio-key,wakeup;
+			gpio-key;
 			linux,code = <KEY_VOLUMEDOWN>;
 		};
 	};
