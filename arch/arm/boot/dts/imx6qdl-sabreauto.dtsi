@@ -101,14 +101,12 @@
 			label = "Volume Up";
 			gpios = <&gpio2 15 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_VOLUMEUP>;
-			wakeup-source;
 		};
 
 		volume-down {
 			label = "Volume Down";
 			gpios = <&gpio5 14 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_VOLUMEDOWN>;
-			wakeup-source;
 		};
 	};
 
