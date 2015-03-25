@@ -269,15 +269,19 @@
 	str	r7, [r11, #DDRC_PWRCTL]
 
 	/* reset ddr_phy  */
+	ldr	r11, [r0, #PM_INFO_MX7_ANATOP_V_OFFSET]
+	ldr	r7, =0x0
+	str	r7, [r11, #ANADIG_SNVS_MISC_CTRL]
+
+	/* delay 7 us */
+	ldr	r6, =6000
+	wait_delay
 
 	ldr	r11, [r0, #PM_INFO_MX7_SRC_V_OFFSET]
 	ldr	r6, =0x1000
 	ldr	r7, [r11, r6]
 	orr	r7, r7, #0x1
 	str	r7, [r11, r6]
-	ldr	r11, [r0, #PM_INFO_MX7_ANATOP_V_OFFSET]
-	ldr	r7, =0x0
-	str	r7, [r11, #ANADIG_SNVS_MISC_CTRL]
 	/* turn off ddr power */
 	ldr	r7, =(0x1 << 29)
 	str	r7, [r11, #ANADIG_SNVS_MISC_CTRL]
