@@ -147,8 +147,54 @@ static const u32 imx7d_ddrc_phy_lpddr3_setting[][2] __initconst = {
 	{ 0xc0, 0x0e487306 },
 };
 
+static const u32 imx7d_ddrc_ddr3_setting[][2] __initconst = {
+	{ 0x0, READ_DATA_FROM_HARDWARE },
+	{ 0x1a0, READ_DATA_FROM_HARDWARE },
+	{ 0x1a4, READ_DATA_FROM_HARDWARE },
+	{ 0x1a8, READ_DATA_FROM_HARDWARE },
+	{ 0x64, READ_DATA_FROM_HARDWARE },
+	{ 0x490, 0x00000001 },
+	{ 0xd0, 0xc0020001 },
+	{ 0xd4, READ_DATA_FROM_HARDWARE },
+	{ 0xdc, READ_DATA_FROM_HARDWARE },
+	{ 0xe0, READ_DATA_FROM_HARDWARE },
+	{ 0xe4, READ_DATA_FROM_HARDWARE },
+	{ 0xf4, READ_DATA_FROM_HARDWARE },
+	{ 0x100, READ_DATA_FROM_HARDWARE },
+	{ 0x104, READ_DATA_FROM_HARDWARE },
+	{ 0x108, READ_DATA_FROM_HARDWARE },
+	{ 0x10c, READ_DATA_FROM_HARDWARE },
+	{ 0x110, READ_DATA_FROM_HARDWARE },
+	{ 0x114, READ_DATA_FROM_HARDWARE },
+	{ 0x120, 0x03030803 },
+	{ 0x180, READ_DATA_FROM_HARDWARE },
+	{ 0x190, READ_DATA_FROM_HARDWARE },
+	{ 0x194, READ_DATA_FROM_HARDWARE },
+	{ 0x200, READ_DATA_FROM_HARDWARE },
+	{ 0x204, READ_DATA_FROM_HARDWARE },
+	{ 0x214, READ_DATA_FROM_HARDWARE },
+	{ 0x218, READ_DATA_FROM_HARDWARE },
+	{ 0x240, 0x06000601 },
+	{ 0x244, READ_DATA_FROM_HARDWARE },
+};
 
-static const struct imx7_pm_socdata imx7d_pm_data __initconst = {
+static const u32 imx7d_ddrc_phy_ddr3_setting[][2] __initconst = {
+	{ 0x0, READ_DATA_FROM_HARDWARE },
+	{ 0x4, READ_DATA_FROM_HARDWARE },
+	{ 0x10, READ_DATA_FROM_HARDWARE },
+	{ 0x9c, READ_DATA_FROM_HARDWARE },
+	{ 0x20, READ_DATA_FROM_HARDWARE },
+	{ 0x30, READ_DATA_FROM_HARDWARE },
+	{ 0x50, 0x01000010 },
+	{ 0x50, 0x00000010 },
+	{ 0xc0, 0x0e407304 },
+	{ 0xc0, 0x0e447304 },
+	{ 0xc0, 0x0e447306 },
+	{ 0xc0, 0x0e447304 },
+	{ 0xc0, 0x0e407306 },
+};
+
+static const struct imx7_pm_socdata imx7d_pm_data_lpddr3 __initconst = {
 	.ddrc_compat = "fsl,imx7d-ddrc",
 	.src_compat = "fsl,imx7d-src",
 	.iomuxc_compat = "fsl,imx7d-iomuxc",
@@ -157,6 +203,17 @@ static const struct imx7_pm_socdata imx7d_pm_data __initconst = {
 	.ddrc_offset = imx7d_ddrc_lpddr3_setting,
 	.ddrc_phy_num = ARRAY_SIZE(imx7d_ddrc_phy_lpddr3_setting),
 	.ddrc_phy_offset = imx7d_ddrc_phy_lpddr3_setting,
+};
+
+static const struct imx7_pm_socdata imx7d_pm_data_ddr3 __initconst = {
+	.ddrc_compat = "fsl,imx7d-ddrc",
+	.src_compat = "fsl,imx7d-src",
+	.iomuxc_compat = "fsl,imx7d-iomuxc",
+	.gpc_compat = "fsl,imx7d-gpc",
+	.ddrc_num = ARRAY_SIZE(imx7d_ddrc_ddr3_setting),
+	.ddrc_offset = imx7d_ddrc_ddr3_setting,
+	.ddrc_phy_num = ARRAY_SIZE(imx7d_ddrc_phy_ddr3_setting),
+	.ddrc_phy_offset = imx7d_ddrc_phy_ddr3_setting,
 };
 
 /*
@@ -534,7 +591,10 @@ void __init imx7d_pm_init(void)
 	struct device_node *np;
 	struct resource res;
 
-	imx7_pm_common_init(&imx7d_pm_data);
+	if (imx_ddrc_get_ddr_type() == IMX_DDR_TYPE_LPDDR3)
+		imx7_pm_common_init(&imx7d_pm_data_lpddr3);
+	else if (imx_ddrc_get_ddr_type() == IMX_DDR_TYPE_DDR3)
+		imx7_pm_common_init(&imx7d_pm_data_ddr3);
 
 	np = of_find_compatible_node(NULL, NULL, "mmio-sram");
 	ocram_base = of_iomap(np, 0);
