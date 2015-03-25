@@ -89,7 +89,8 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(EIM_D28__I2C1_SDA),	/* GPIO3[28] */
 
 	/* RTC Interrupt */
-	MX6PAD(NANDF_CLE__GPIO_6_7),
+	NEW_PAD_CTRL(MX6PAD(NANDF_CLE__GPIO_6_7),
+		     WEAK_PULLUP),
 
 	/* I2C2 */
 	MX6PAD(KEY_COL3__I2C2_SCL),	/* GPIO4[12] */
