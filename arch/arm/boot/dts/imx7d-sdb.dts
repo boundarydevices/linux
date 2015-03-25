@@ -313,6 +313,12 @@
 				MX7D_PAD_UART3_CTS_B__GPIO4_IO7	0x14
 			>;
 		};
+		pinctrl_gpio_keys: gpio_keysgrp {
+			fsl,pins = <
+				MX7D_PAD_SD2_RESET_B__GPIO5_IO11	0x59
+				MX7D_PAD_SD2_WP__GPIO5_IO10  		0x59
+                        >;
+                };
 
 		pinctrl_enet1: enet1grp {
 			fsl,pins = <
