@@ -291,7 +291,7 @@ static int imx_pcie_regulator_notify(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
-int imx_gpc_mf_request_on(unsigned int irq, unsigned int on)
+int imx_gpc_mf_power_on(unsigned int irq, unsigned int on)
 {
 	unsigned int idx = irq / 32 - 1;
 	unsigned long flags;
@@ -304,6 +304,16 @@ int imx_gpc_mf_request_on(unsigned int irq, unsigned int on)
 	spin_unlock_irqrestore(&gpc_lock, flags);
 
 	return 0;
+}
+
+int imx_gpc_mf_request_on(unsigned int irq, unsigned int on)
+{
+	if (cpu_is_imx6sx())
+		return imx_gpc_mf_power_on(irq, on);
+	else if (cpu_is_imx7d())
+		return imx_gpcv2_mf_power_on(irq, on);
+	else
+		return 0;
 }
 EXPORT_SYMBOL_GPL(imx_gpc_mf_request_on);
 

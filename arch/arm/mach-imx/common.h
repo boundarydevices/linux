@@ -98,6 +98,8 @@ unsigned int imx_gpc_is_m4_sleeping(void);
 bool imx_mu_is_m4_in_low_freq(void);
 void imx_gpcv2_set_core1_pdn_pup_by_software(bool pdn);
 unsigned int imx_gpcv2_is_mf_mix_off(void);
+int imx_gpc_mf_power_on(unsigned int irq, unsigned int on);
+int imx_gpcv2_mf_power_on(unsigned int irq, unsigned int on);
 
 enum mxc_cpu_pwr_mode {
 	WAIT_CLOCKED,		/* wfi only */
