@@ -25,3 +25,7 @@
 		#gpio-cells = <2>;
 	};
 };
+
+&vgen3_reg {
+	regulator-always-on;
+};
