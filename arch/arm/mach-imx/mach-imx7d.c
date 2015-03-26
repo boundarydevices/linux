@@ -14,6 +14,8 @@
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
 #include <linux/mfd/syscon/imx7-iomuxc-gpr.h>
+#include <linux/memblock.h>
+#include <asm/setup.h>
 
 #include "common.h"
 
@@ -120,11 +122,50 @@ static void __init imx7d_map_io(void)
 	imx7_pm_map_io();
 }
 
+extern unsigned long int ramoops_phys_addr;
+extern unsigned long int ramoops_mem_size;
+static void imx7d_reserve(void)
+{
+	phys_addr_t phys;
+	phys_addr_t max_phys;
+	struct meminfo *mi;
+	struct membank *bank;
+
+#ifdef CONFIG_PSTORE_RAM
+	mi = &meminfo;
+	if (!mi) {
+		pr_err("no memory reserve for ramoops.\n");
+		return;
+	}
+	/* use memmory bank 0 for ram console store */
+	bank = &mi->bank[0];
+	if (!bank) {
+		pr_err("no memory reserve for ramoops.\n");
+		return;
+	}
+	max_phys = bank->start + bank->size;
+	/* reserve 256M for uboot avoid ram console data is cleaned by uboot */
+	phys = memblock_alloc_base(SZ_1M, SZ_4K, max_phys - SZ_256M);
+	if (phys) {
+		memblock_remove(phys, SZ_1M);
+		memblock_reserve(phys, SZ_1M);
+		ramoops_phys_addr = phys;
+		ramoops_mem_size = SZ_1M;
+	} else {
+		ramoops_phys_addr = 0;
+		ramoops_mem_size = 0;
+		pr_err("no memory reserve for ramoops.\n");
+	}
+#endif
+	return;
+}
+
 DT_MACHINE_START(IMX7D, "Freescale i.MX7 Dual (Device Tree)")
 	.map_io		= imx7d_map_io,
 	.smp            = smp_ops(imx_smp_ops),
 	.init_irq	= imx7d_init_irq,
 	.init_machine	= imx7d_init_machine,
 	.dt_compat	= imx7d_dt_compat,
+	.reserve     = imx7d_reserve,
 	.restart	= mxc_restart,
 MACHINE_END
