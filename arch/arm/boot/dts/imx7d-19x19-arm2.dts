@@ -92,6 +92,13 @@
 			enable-active-high;
 		};
 
+		reg_vref_1v8: regulator@2 {
+			compatible = "regulator-fixed";
+			regulator-name = "vref-1v8";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+		};
+
 		reg_coedc_5v: coedc_5v {
 			compatible = "regulator-fixed";
 			regulator-name = "CODEC_5V";
@@ -123,6 +130,16 @@
 	memory {
 		reg = <0x80000000 0x80000000>;
 	};
+};
+
+&adc1 {
+	vref-supply = <&reg_vref_1v8>;
+	status = "okay";
+};
+
+&adc2 {
+	vref-supply = <&reg_vref_1v8>;
+	status = "okay";
 };
 
 &cpu0 {
