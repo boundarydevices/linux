@@ -19,7 +19,7 @@
 		mxcfb3 = &mxcfb4;
 	};
 
-	memory {
+	memory: memory {
 		reg = <0x10000000 0x80000000>;
 	};
 
