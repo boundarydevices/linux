@@ -35,7 +35,7 @@
 				compatible = "fsl,imx6q-pre";
 				reg = <0x021c8000 0x1000>;
 				clocks = <&clks IMX6QDL_CLK_PRE0>;
-				interrupts = <0 90 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts = <0 90 IRQ_TYPE_EDGE_RISING>;
 				ocram = <&ocram_2>;
 				status = "disabled";
 			};
@@ -44,7 +44,7 @@
 				compatible = "fsl,imx6q-pre";
 				reg = <0x021c9000 0x1000>;
 				clocks = <&clks IMX6QDL_CLK_PRE1>;
-				interrupts = <0 97 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts = <0 97 IRQ_TYPE_EDGE_RISING>;
 				ocram = <&ocram_2>;
 				status = "disabled";
 			};
@@ -53,7 +53,7 @@
 				compatible = "fsl,imx6q-pre";
 				reg = <0x021ca000 0x1000>;
 				clocks = <&clks IMX6QDL_CLK_PRE2>;
-				interrupts = <0 98 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts = <0 98 IRQ_TYPE_EDGE_RISING>;
 				ocram = <&ocram_3>;
 				status = "disabled";
 			};
@@ -62,7 +62,7 @@
 				compatible = "fsl,imx6q-pre";
 				reg = <0x021cb000 0x1000>;
 				clocks = <&clks IMX6QDL_CLK_PRE3>;
-				interrupts = <0 99 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts = <0 99 IRQ_TYPE_EDGE_RISING>;
 				ocram = <&ocram_3>;
 				status = "disabled";
 			};
