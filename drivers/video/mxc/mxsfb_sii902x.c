@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2010-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -59,7 +59,6 @@ struct sii902x_data {
 	struct mxc_edid_cfg edid_cfg;
 	u8 cable_plugin;
 	u8 edid[SII_EDID_LEN];
-	bool waiting_for_fb;
 	bool dft_mode_set;
 	const char *mode_str;
 	int bits_per_pixel;
@@ -240,7 +239,6 @@ static void sii902x_cable_connected(void)
 				mode = &sii902x.fbi->monspecs.modedb[i];
 
 				if (!(mode->vmode & FB_VMODE_INTERLACED)) {
-
 					dev_dbg(&sii902x.client->dev, "Added mode %d:", i);
 					dev_dbg(&sii902x.client->dev,
 						"xres = %d, yres = %d, freq = %d, vmode = %d, flag = %d\n",
@@ -297,22 +295,22 @@ static void det_worker(struct work_struct *work)
 	dev_dbg(&sii902x.client->dev, "%s\n", __func__);
 
 	dat = i2c_smbus_read_byte_data(sii902x.client, 0x3D);
-	if (dat & 0x1) {
-		/* cable connection changes */
-		if (dat & 0x4) {
-			sii902x.cable_plugin = 1;
-			dev_dbg(&sii902x.client->dev, "EVENT=plugin\n");
-			sprintf(event_string, "EVENT=plugin");
-			sii902x_cable_connected();
-		} else {
-			sii902x.cable_plugin = 0;
-			dev_dbg(&sii902x.client->dev, "EVENT=plugout\n");
-			sprintf(event_string, "EVENT=plugout");
-			/* Power off sii902x */
-			sii902x_poweroff();
-		}
-		kobject_uevent_env(&sii902x.client->dev.kobj, KOBJ_CHANGE, envp);
+
+	/* cable connection state */
+	if (dat & 0x4) {
+		sii902x.cable_plugin = 1;
+		dev_dbg(&sii902x.client->dev, "EVENT=plugin\n");
+		sprintf(event_string, "EVENT=plugin");
+		sii902x_cable_connected();
+	} else {
+		sii902x.cable_plugin = 0;
+		dev_dbg(&sii902x.client->dev, "EVENT=plugout\n");
+		sprintf(event_string, "EVENT=plugout");
+		/* Power off sii902x */
+		sii902x_poweroff();
 	}
+	kobject_uevent_env(&sii902x.client->dev.kobj, KOBJ_CHANGE, envp);
+
 	i2c_smbus_write_byte_data(sii902x.client, 0x3D, dat);
 
 	dev_dbg(&sii902x.client->dev, "exit %s\n", __func__);
@@ -322,9 +320,7 @@ static void det_worker(struct work_struct *work)
 static irqreturn_t sii902x_detect_handler(int irq, void *data)
 {
 	if (sii902x.fbi)
-		schedule_delayed_work(&(sii902x.det_work), msecs_to_jiffies(20));
-	else
-		sii902x.waiting_for_fb = true;
+		schedule_delayed_work(&(sii902x.det_work), msecs_to_jiffies(50));
 
 	return IRQ_HANDLED;
 }
@@ -338,12 +334,13 @@ static int sii902x_fb_event(struct notifier_block *nb, unsigned long val, void *
 
 	switch (val) {
 	case FB_EVENT_FB_REGISTERED:
-		if (sii902x.fbi == NULL) {
+		if (sii902x.fbi == NULL)
 			sii902x.fbi = fbi;
-			if (sii902x.waiting_for_fb)
-				det_worker(NULL);
-		}
+		/* Manually trigger a plugin/plugout interrupter to check cable state */
+		schedule_delayed_work(&(sii902x.det_work), msecs_to_jiffies(50));
+
 		fb_show_logo(fbi, 0);
+
 		break;
 	case FB_EVENT_MODE_CHANGE:
 		sii902x_setup(fbi);
@@ -402,10 +399,8 @@ static int sii902x_probe(struct i2c_client *client,
 
 	/* Reset sii902x */
 	ret = device_reset(&sii902x.client->dev);
-	if (ret) {
-		dev_err(&sii902x.client->dev, "failed to reset: %d\n", ret);
-		return -ENODEV;
-	}
+	if (ret)
+		dev_warn(&sii902x.client->dev, "No reset pin found\n");
 
 	/* Set 902x in hardware TPI mode on and jump out of D3 state */
 	if (i2c_smbus_write_byte_data(sii902x.client, 0xc7, 0x00) < 0) {
