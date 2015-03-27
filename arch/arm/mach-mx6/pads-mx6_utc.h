@@ -256,7 +256,7 @@ static iomux_v3_cfg_t MX6NAME(utc_pads)[] = {
 
 	/* USDHC2, (WiFi) wl1271 */
 	SD_PINS(2, USDHC_PAD_CTRL_22KPU_40OHM_50MHZ),
-        MX6PAD(SD1_CLK__OSC32K_32K_OUT), /* wl1271 clock */
+	MX6PAD(SD1_CLK__OSC32K_32K_OUT), /* wl1271 clock */
 
 	/* USDHC3 */
 	SD_PINS(3, USDHC_PAD_CTRL_47KPU_80OHM_50MHZ),
@@ -303,8 +303,7 @@ static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING8(4, 50, USDHC_PAD_CTRL_50MHZ);
 static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING8(4, 100, USDHC_PAD_CTRL_100MHZ);
 static iomux_v3_cfg_t MX6_USDHC_PAD_SETTING8(4, 200, USDHC_PAD_CTRL_200MHZ);
 
-static iomux_v3_cfg_t * MX6NAME(sd_pads)[] =
-{
+static iomux_v3_cfg_t *MX6NAME(sd_pads)[] = {
 	MX6NAME(sd2_50mhz),
 	MX6NAME(sd2_100mhz),
 	MX6NAME(sd2_200mhz),
