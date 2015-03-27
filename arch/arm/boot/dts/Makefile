@@ -535,6 +535,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6qp-nitrogen6_som2.dtb \
 	imx6qp-phytec-mira-rdk-nand.dtb \
 	imx6qp-sabreauto.dtb \
+	imx6qp-sabreauto-ecspi.dtb \
 	imx6qp-sabreauto-gpmi-weim.dtb \
 	imx6qp-sabresd.dtb \
 	imx6qp-tx6qp-8037.dtb \
