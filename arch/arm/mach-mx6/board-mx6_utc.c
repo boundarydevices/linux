@@ -46,7 +46,6 @@
 #include <linux/pwm_backlight.h>
 #include <linux/fec.h>
 #include <linux/memblock.h>
-#include <linux/micrel_phy.h>
 #include <linux/gpio.h>
 #include <linux/etherdevice.h>
 #include <linux/regulator/anatop-regulator.h>
@@ -121,16 +120,16 @@ extern void (*put_cpu_regulator)(void);
 static int mxc_iomux_v3_setup_pads(iomux_v3_cfg_t *mx6q_pad_list,
 		iomux_v3_cfg_t *mx6dl_solo_pad_list)
 {
-        iomux_v3_cfg_t *p = cpu_is_mx6q() ? mx6q_pad_list : mx6dl_solo_pad_list;
-        int ret;
+	iomux_v3_cfg_t *p = cpu_is_mx6q() ? mx6q_pad_list : mx6dl_solo_pad_list;
+	int ret;
 
-        while (*p) {
-                ret = mxc_iomux_v3_setup_pad(*p);
-                if (ret)
-                        return ret;
-                p++;
-        }
-        return 0;
+	while (*p) {
+		ret = mxc_iomux_v3_setup_pad(*p);
+		if (ret)
+			return ret;
+		p++;
+	}
+	return 0;
 }
 
 static struct gpio n6w_wl1271_gpios[] __initdata = {
@@ -177,7 +176,7 @@ static void sdio_set_power(int on)
 {
 	pr_debug("%s:%s: set power(%d)\n",
 		 __FILE__, __func__, on);
-	gpio_set_value(GP_WL1271_WL_EN,on);
+	gpio_set_value(GP_WL1271_WL_EN, on);
 }
 
 #ifdef CONFIG_WL12XX_PLATFORM_DATA
@@ -380,7 +379,7 @@ static void camera_reset(int power_gp, int poweroff_level, int reset_gp)
 /*
  * (ov5640 Mipi) - J16
  * NANDF_WP_B	GPIO[6]:9	power down, SOM - NC
- * EIM_BCLK 	GPIO[6]:31	reset
+ * EIM_BCLK	GPIO[6]:31	reset
  * SD1_DAT1	GPIO[1]:16	24 Mhz XCLK/XVCLK (pwm3)
  */
 static struct pwm_device	*mipi_pwm;
@@ -518,7 +517,7 @@ static int init_sata(struct device *dev, void __iomem *addr)
 	}
 
 	/* Set PHY Paremeters, two steps to configure the GPR13,
-	 * one write for rest of parameters, mask of first write is 0x07FFFFFD,
+	 * one write for rest of parameters, mask of first write is 0x07FFFFFF,
 	 * and the other one write for setting the mpll_clk_off_b
 	 *.rx_eq_val_0(iomuxc_gpr13[26:24]),
 	 *.los_lvl(iomuxc_gpr13[23:19]),
@@ -536,7 +535,7 @@ static int init_sata(struct device *dev, void __iomem *addr)
 
 	/* enable SATA_PHY PLL */
 	tmpdata = readl(IOMUXC_GPR13);
-	writel(((tmpdata & ~0x2) | 0x2), IOMUXC_GPR13);
+	writel((tmpdata | 0x2), IOMUXC_GPR13);
 
 	/* Get the AHB clock rate, and configure the TIMER1MS reg later */
 	clk = clk_get(NULL, "ahb");
