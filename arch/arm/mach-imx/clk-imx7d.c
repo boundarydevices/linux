@@ -369,7 +369,7 @@ static int const clks_init_on[] __initconst = {
 	IMX7D_PLL_SYS_PFD4_CLK, IMX7D_PLL_SYS_PFD5_CLK, IMX7D_PLL_SYS_PFD6_CLK,
 	IMX7D_PLL_SYS_PFD7_CLK, IMX7D_DRAM_PHYM_ROOT_CLK, IMX7D_DRAM_ROOT_CLK,
 	IMX7D_DRAM_PHYM_ALT_ROOT_CLK, IMX7D_DRAM_ALT_ROOT_CLK,
-	IMX7D_AHB_CHANNEL_ROOT_CLK, IMX7D_NAND_USDHC_BUS_ROOT_CLK,
+	IMX7D_AHB_CHANNEL_ROOT_CLK, IMX7D_NAND_USDHC_BUS_ROOT_CLK, IMX7D_PLL_VIDEO_MAIN_CLK,
 	};
 
 static struct clk_onecell_data clk_data;
@@ -404,6 +404,8 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	clks[IMX7D_PLL_ENET_MAIN] = imx_clk_pllv3(IMX_PLLV3_ENET, "pll_enet_main", "pll_enet_main_src", base + 0xe0, 0x0);
 	clks[IMX7D_PLL_AUDIO_MAIN] = imx_clk_pllv3(IMX_PLLV3_AV, "pll_audio_main", "pll_audio_main_src", base + 0xf0, 0x7f);
 	clks[IMX7D_PLL_VIDEO_MAIN] = imx_clk_pllv3(IMX_PLLV3_AV, "pll_video_main", "pll_video_main_src", base + 0x130, 0x7f);
+
+	clks[IMX7D_LCDIF_PIXEL_ROOT_SRC] = imx_clk_mux_flags("lcdif_pixel_src", base + 0xa300, 24, 3, lcdif_pixel_sel, ARRAY_SIZE(lcdif_pixel_sel), CLK_SET_RATE_PARENT);
 
 	clks[IMX7D_PLL_ARM_MAIN_BYPASS]  = imx_clk_mux_flags("pll_arm_main_bypass", base + 0x60, 16, 1, pll_arm_bypass_sel, ARRAY_SIZE(pll_arm_bypass_sel), CLK_SET_RATE_PARENT);
 	clks[IMX7D_PLL_DRAM_MAIN_BYPASS] = imx_clk_mux_flags("pll_dram_main_bypass", base + 0x70, 16, 1, pll_dram_bypass_sel, ARRAY_SIZE(pll_dram_bypass_sel), CLK_SET_RATE_PARENT);
@@ -493,7 +495,6 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	clks[IMX7D_PCIE_CTRL_ROOT_SRC] = imx_clk_mux("pcie_ctrl_src", base + 0xa180, 24, 3, pcie_ctrl_sel, ARRAY_SIZE(pcie_ctrl_sel));
 	clks[IMX7D_PCIE_PHY_ROOT_SRC] = imx_clk_mux("pcie_phy_src", base + 0xa200, 24, 3, pcie_phy_sel, ARRAY_SIZE(pcie_phy_sel));
 	clks[IMX7D_EPDC_PIXEL_ROOT_SRC] = imx_clk_mux("epdc_pixel_src", base + 0xa280, 24, 3, epdc_pixel_sel, ARRAY_SIZE(epdc_pixel_sel));
-	clks[IMX7D_LCDIF_PIXEL_ROOT_SRC] = imx_clk_mux("lcdif_pixel_src", base + 0xa300, 24, 3, lcdif_pixel_sel, ARRAY_SIZE(lcdif_pixel_sel));
 	clks[IMX7D_MIPI_DSI_ROOT_SRC] = imx_clk_mux("mipi_dsi_src", base + 0xa380, 24, 3,  mipi_dsi_sel, ARRAY_SIZE(mipi_dsi_sel));
 	clks[IMX7D_MIPI_CSI_ROOT_SRC] = imx_clk_mux("mipi_csi_src", base + 0xa400, 24, 3, mipi_csi_sel, ARRAY_SIZE(mipi_csi_sel));
 	clks[IMX7D_MIPI_DPHY_ROOT_SRC] = imx_clk_mux("mipi_dphy_src", base + 0xa480, 24, 3, mipi_dphy_sel, ARRAY_SIZE(mipi_dphy_sel));
@@ -895,7 +896,7 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	imx_clk_set_parent(clks[IMX7D_EPDC_PIXEL_ROOT_SRC], clks[IMX7D_PLL_SYS_MAIN_CLK]);
 
 	/* set lcdif pixel root clock source to get the required 33Mhz clock */
-	imx_clk_set_parent(clks[IMX7D_LCDIF_PIXEL_ROOT_SRC], clks[IMX7D_PLL_SYS_PFD5_CLK]);
+	imx_clk_set_parent(clks[IMX7D_LCDIF_PIXEL_ROOT_SRC], clks[IMX7D_PLL_VIDEO_MAIN_CLK]);
 
 	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 		clk_prepare_enable(clks[clks_init_on[i]]);
