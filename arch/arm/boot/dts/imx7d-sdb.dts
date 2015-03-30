@@ -432,6 +432,7 @@
 				MX7D_PAD_EPDC_PWR_COM__GPIO2_IO30  0x80000000  /* v3p3 */
 				MX7D_PAD_EPDC_SDCE2__GPIO2_IO22  0x80000000  /* pwr int */
 				MX7D_PAD_ECSPI2_SS0__GPIO4_IO23	 0x80000000  /* bt reg on */
+				MX7D_PAD_EPDC_DATA13__GPIO2_IO13 0x59
 			>;
 		};
 
@@ -703,7 +704,6 @@
 			fsl,pins = <
 				MX7D_PAD_GPIO1_IO05__GPIO5_IO5	0x14
 				MX7D_PAD_GPIO1_IO07__GPIO1_IO7	0x59  /* CAN_STBY */
-				MX7D_PAD_EPDC_DATA13__GPIO2_IO13 0x59
 			>;
 		};
 		pinctrl_pwm1: pwm1grp {
