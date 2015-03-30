@@ -1391,43 +1391,8 @@ static int ov5640_s_power(struct v4l2_subdev *sd, int on)
 	else
 		clk_disable(ov5640_data.sensor_clk);
 
-	if (on && !sensor->on) {
-		if (io_regulator)
-			if (regulator_enable(io_regulator) != 0)
-				return -EIO;
-		if (core_regulator)
-			if (regulator_enable(core_regulator) != 0)
-				return -EIO;
-		if (analog_regulator)
-			if (regulator_enable(analog_regulator) != 0)
-				return -EIO;
-		/* Make sure power on */
-		ov5640_power_down(0);
-	} else if (!on && sensor->on) {
-		if (analog_regulator)
-			regulator_disable(analog_regulator);
-		if (core_regulator)
-			regulator_disable(core_regulator);
-		if (io_regulator)
-			regulator_disable(io_regulator);
-
-		ov5640_power_down(1);
-	}
-
 	sensor->on = on;
 
-	return 0;
-}
-
-static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
-{
-	if (enable) {
-		clk_enable(ov5640_data.sensor_clk);
-		ov5640_power_down(0);
-	} else {
-		ov5640_power_down(1);
-		clk_disable(ov5640_data.sensor_clk);
-	}
 	return 0;
 }
 
@@ -1493,10 +1458,6 @@ static int ov5640_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 	enum ov5640_frame_rate frame_rate;
 	int ret = 0;
 
-	/* Make sure power on */
-	clk_enable(ov5640_data.sensor_clk);
-	ov5640_power_down(0);
-
 	switch (a->type) {
 	/* This is the only case currently handled. */
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
@@ -1561,8 +1522,6 @@ static int ov5640_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 	}
 
 error:
-	ov5640_power_down(1);
-	clk_disable(ov5640_data.sensor_clk);
 	return ret;
 }
 
@@ -1731,7 +1690,6 @@ static int init_device(void)
 }
 
 static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
-	.s_stream = ov5640_s_stream,
 	.g_parm = ov5640_g_parm,
 	.s_parm = ov5640_s_parm,
 
@@ -1868,8 +1826,6 @@ static int ov5640_probe(struct i2c_client *client,
 		return retval;
 	}
 
-	ov5640_power_down(1);
-
 	clk_disable(ov5640_data.sensor_clk);
 
 	v4l2_i2c_subdev_init(&ov5640_data.subdev, client, &ov5640_subdev_ops);
@@ -1896,6 +1852,8 @@ static int ov5640_remove(struct i2c_client *client)
 	v4l2_async_unregister_subdev(sd);
 
 	clk_unprepare(ov5640_data.sensor_clk);
+
+	ov5640_power_down(1);
 
 	if (analog_regulator)
 		regulator_disable(analog_regulator);
