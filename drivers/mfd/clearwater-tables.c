@@ -48,6 +48,7 @@ static const struct reg_default clearwater_reva_16_patch[] = {
 
 static const struct reg_default clearwater_revc_16_patch[] = {
 	{ 0x27E, 0x0000 },
+	{ 0x2C2, 0x5 },
 };
 
 /* this patch is required for EDRE on RevA*/
@@ -1881,6 +1882,7 @@ static bool clearwater_is_adsp_memory(struct device *dev, unsigned int reg)
 static bool clearwater_16bit_readable_register(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
+	case 0x2C2:
 	case ARIZONA_SOFTWARE_RESET:
 	case ARIZONA_DEVICE_REVISION:
 	case ARIZONA_CTRL_IF_SPI_CFG_1:
@@ -3219,6 +3221,7 @@ static bool clearwater_16bit_readable_register(struct device *dev, unsigned int 
 static bool clearwater_16bit_volatile_register(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
+	case 0x2C2:
 	case ARIZONA_SOFTWARE_RESET:
 	case ARIZONA_DEVICE_REVISION:
 	case ARIZONA_HAPTICS_STATUS:
