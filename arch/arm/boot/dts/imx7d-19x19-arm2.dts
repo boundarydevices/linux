@@ -146,6 +146,16 @@
 	arm-supply = <&sw1a_reg>;
 };
 
+&csi1 {
+	status = "okay";
+
+	port {
+		csi1_ep: endpoint {
+			remote-endpoint = <&ov5640_ep>;
+		};
+	};
+};
+
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1>;
@@ -271,6 +281,27 @@
 };
 
 &iomuxc {
+	csi1 {
+		pinctrl_csi: csigrp-1 {
+			fsl,pins = <
+				MX7D_PAD_LCD_DATA04__CSI_VSYNC 0x1b0b0
+				MX7D_PAD_LCD_DATA05__CSI_HSYNC 0x1b0b0
+				MX7D_PAD_LCD_DATA06__CSI_PIXCLK 0x1b0b0
+				MX7D_PAD_LCD_DATA07__CSI_MCLK 0x1b0b0
+				MX7D_PAD_LCD_DATA08__CSI_DATA9 0x1b0b0
+				MX7D_PAD_LCD_DATA09__CSI_DATA8 0x1b0b0
+				MX7D_PAD_LCD_DATA10__CSI_DATA7 0x1b0b0
+				MX7D_PAD_LCD_DATA11__CSI_DATA6 0x1b0b0
+				MX7D_PAD_LCD_DATA12__CSI_DATA5 0x1b0b0
+				MX7D_PAD_LCD_DATA13__CSI_DATA4 0x1b0b0
+				MX7D_PAD_LCD_DATA14__CSI_DATA3 0x1b0b0
+				MX7D_PAD_LCD_DATA15__CSI_DATA2 0x1b0b0
+				MX7D_PAD_LCD_DATA02__GPIO3_IO7 0x1b0b0
+				MX7D_PAD_LCD_DATA03__GPIO3_IO8 0x1b0b0
+			>;
+		};
+	};
+
 	enet1 {
 		pinctrl_enet1: enet1grp {
 			fsl,pins = <
@@ -624,6 +655,35 @@
 		};
 	};
 };
+
+&i2c2 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c2_1>;
+	status = "okay";
+
+	ov5640: ov5640@3c {
+		compatible = "ovti,ov5640";
+		reg = <0x3c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_csi>;
+		clocks = <&clks IMX7D_CSI_MCLK_ROOT_CLK>;
+		clock-names = "csi_mclk";
+		pwn-gpios = <&gpio3 8 1>;
+		rst-gpios = <&gpio3 7 0>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+		status = "disabled";
+		port {
+			ov5640_ep: endpoint {
+				remote-endpoint = <&csi1_ep>;
+			};
+		};
+	};
+
+};
+
 
 &sdma {
 	status = "okay";
