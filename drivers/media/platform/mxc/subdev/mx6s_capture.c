@@ -1041,6 +1041,7 @@ static irqreturn_t mx6s_csi_irq_handler(int irq, void *data)
 static int mx6s_csi_open(struct file *file)
 {
 	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
+	struct v4l2_subdev *sd = csi_dev->sd;
 	struct vb2_queue *q = &csi_dev->vb2_vidq;
 	int ret = 0;
 
@@ -1070,6 +1071,7 @@ static int mx6s_csi_open(struct file *file)
 
 	request_bus_freq(BUS_FREQ_HIGH);
 
+	v4l2_subdev_call(sd, core, s_power, 1);
 	mx6s_csi_init(csi_dev);
 
 	mutex_unlock(&csi_dev->lock);
@@ -1085,12 +1087,14 @@ unlock:
 static int mx6s_csi_close(struct file *file)
 {
 	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
+	struct v4l2_subdev *sd = csi_dev->sd;
 
 	mutex_lock(&csi_dev->lock);
 
 	vb2_queue_release(&csi_dev->vb2_vidq);
 
 	mx6s_csi_deinit(csi_dev);
+	v4l2_subdev_call(sd, core, s_power, 0);
 
 	vb2_dma_contig_cleanup_ctx(csi_dev->alloc_ctx);
 	mutex_unlock(&csi_dev->lock);
