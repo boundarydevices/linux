@@ -1985,6 +1985,9 @@ static int serial_imx_resume(struct platform_device *dev)
 	val = readl(sport->port.membase + UCR3);
 	val &= ~(UCR3_AWAKEN | UCR3_AIRINTEN);
 	writel(val, sport->port.membase + UCR3);
+	val = readl(sport->port.membase + USR1);
+	if (val & USR1_AWAKE)
+		writel(USR1_AWAKE, sport->port.membase + USR1);
 
 	uart_resume_port(&imx_reg, &sport->port);
 
