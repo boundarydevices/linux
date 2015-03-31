@@ -93,7 +93,7 @@ static struct fb_videomode lcdif_modedb[] = {
 	 .vmode = FB_VMODE_NONINTERLACED,
 	 .flag = 0,},
 	/* 320x240 @ 60 Hz, 31.5 kHz hsync, 4:3 aspect ratio */
-	{ "qvga60", 60, 320, 240, 79440,
+	{ "qvga60", 60, 320, 240, 1000000000 / 400 * 1000 / 262 / 60,
 	  .left_margin = 16, .right_margin = 16,
 	  .upper_margin = 16, .lower_margin = 5,
 	  .hsync_len = 48, .vsync_len = 1,
