@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  */
 
 /*
@@ -11,13 +11,14 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
-#include <linux/platform_device.h>
+#include <linux/clk.h>
+#include <linux/err.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
-#include <linux/err.h>
 #include <linux/mcc_config_linux.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/platform_device.h>
 #include <linux/wait.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
@@ -326,6 +327,7 @@ static irqreturn_t imx_sema4_isr(int irq, void *dev_id)
 
 static const struct of_device_id imx_sema4_dt_ids[] = {
 	{ .compatible = "fsl,imx6sx-sema4", },
+	{ .compatible = "fsl,imx7d-sema4", },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, imx_sema4_dt_ids);
@@ -334,6 +336,7 @@ static int imx_sema4_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	int ret;
+	struct device_node *np = pdev->dev.of_node;
 
 	imx6_sema4 = devm_kzalloc(&pdev->dev, sizeof(*imx6_sema4), GFP_KERNEL);
 	if (!imx6_sema4)
@@ -369,6 +372,23 @@ static int imx_sema4_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to request imx sema4 irq\n");
 		ret = -ENODEV;
 		goto err;
+	}
+
+	ret = of_device_is_compatible(np, "fsl,imx7d-sema4");
+	if (ret) {
+		imx6_sema4->clk = devm_clk_get(&pdev->dev, "sema4");
+		if (IS_ERR(imx6_sema4->clk)) {
+			dev_err(&pdev->dev,
+				"sema4 clock source missing or invalid\n");
+			return PTR_ERR(imx6_sema4->clk);
+		} else {
+			ret = clk_prepare_enable(imx6_sema4->clk);
+			if (ret) {
+				dev_err(&pdev->dev,
+					"unable to enable sema4 clock\n");
+				return ret;
+			}
+		}
 	}
 
 	platform_set_drvdata(pdev, imx6_sema4);
