@@ -1035,10 +1035,31 @@
 			};
 
 			mu: mu@30aa0000 {
-				compatible = "fsl,imx7d-mu", "fsl,imx6sx-mu", "syscon";
+				compatible = "fsl,imx7d-mu", "fsl,imx6sx-mu";
 				reg = <0x30aa0000 0x10000>;
 				interrupts = <GIC_SPI 88 IRQ_TYPE_LEVEL_HIGH>;
-				status = "disabled";
+				clocks = <&clks IMX7D_MU_ROOT_CLK>;
+				clock-names = "mu";
+				status = "okay";
+			};
+
+			sema4: sema4@30ac0000 {
+				compatible = "fsl,imx7d-sema4";
+				reg = <0x30ac0000 0x10000>;
+				interrupts = <GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX7D_SEMA4_HS_ROOT_CLK>;
+				clock-names = "sema4";
+				status = "okay";
+			};
+
+			mcctest: mcctest{
+				compatible = "fsl,imx6sx-mcc-test";
+				status = "okay";
+			};
+
+			mcctty: mcctty{
+				compatible = "fsl,imx6sx-mcc-tty";
+				status = "okay";
 			};
 
 			usbotg1: usb@30b10000 {
