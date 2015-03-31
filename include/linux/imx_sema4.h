@@ -50,6 +50,7 @@ struct imx_sema4_mutex_device {
 	void __iomem		*ioaddr;	/* Mapped address */
 	spinlock_t		lock;		/* Mutex */
 	int			irq;
+	struct clk		*clk;
 
 	unsigned short		alloced;
 	struct imx_sema4_mutex	*mutex_ptr[16];
