@@ -22,12 +22,12 @@
 /* Define the kinds of cache macros */
 #define MCC_DCACHE_ENABLE(n)
 #define MCC_DCACHE_DISABLE()
-#define MCC_DCACHE_FLUSH()
-#define MCC_DCACHE_FLUSH_LINE(p)
-#define MCC_DCACHE_FLUSH_MLINES(p, m)
-#define MCC_DCACHE_INVALIDATE()
-#define MCC_DCACHE_INVALIDATE_LINE(p)
-#define MCC_DCACHE_INVALIDATE_MLINES(p, m)
+#define MCC_DCACHE_FLUSH() dsb()
+#define MCC_DCACHE_FLUSH_LINE(p) dsb()
+#define MCC_DCACHE_FLUSH_MLINES(p, m) dsb()
+#define MCC_DCACHE_INVALIDATE() dsb()
+#define MCC_DCACHE_INVALIDATE_LINE(p) dsb()
+#define MCC_DCACHE_INVALIDATE_MLINES(p, m) dsb()
 
 #define MCC_LINUX_NODE_NUMBER                (0)
 
