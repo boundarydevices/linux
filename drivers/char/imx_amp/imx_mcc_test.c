@@ -194,8 +194,8 @@ static ssize_t imx_mcc_pingpong_en(struct device *dev,
 				pr_err("A9 Main task receive error: %d\n", ret);
 				break;
 			} else {
-				pr_info("%08x Main task received a msg"
-					" from [%d, %d, %d] endpoint\n", i,
+				pr_info("Main task received a msg"
+					" from [%d, %d, %d] endpoint\n",
 					mcc_endpoint_m4_pingpong.core,
 					mcc_endpoint_m4_pingpong.node,
 					mcc_endpoint_m4_pingpong.port);
