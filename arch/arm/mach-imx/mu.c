@@ -10,6 +10,7 @@
  */
 
 #include <linux/busfreq-imx6.h>
+#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
@@ -44,6 +45,7 @@
 #define MU_LPM_M4_WAKEUP_ENABLE_SHIFT	0x0
 
 static void __iomem *mu_base;
+static u32 mu_int_en;
 static u32 m4_message;
 static struct delayed_work mu_work;
 static u32 m4_wake_irqs[4];
@@ -183,23 +185,23 @@ int mcc_triger_cpu_to_cpu_interrupt(void)
 
 	val = readl_relaxed(mu_base + MU_ACR);
 
-	if ((val & BIT(19)) != 0) {
-		do {
-			val = readl_relaxed(mu_base + MU_ACR);
-			msleep(1);
-		} while (((val & BIT(19)) > 0) && (i++ < 100));
-	}
-
 	if ((val & BIT(19)) == 0) {
 		/* Enable the bit19(GIR3) of MU_ACR */
 		val = readl_relaxed(mu_base + MU_ACR);
 		val |= BIT(19);
 		writel_relaxed(val, mu_base + MU_ACR);
-		return 0;
-	} else {
-		pr_info("mcc int still be triggered after %d ms polling!\n", i);
-		return -EIO;
+
+		/* wait for the EP bit of the SR is cleared */
+		do {
+			val = readl_relaxed(mu_base + MU_ASR);
+			udelay(10);
+		} while (((val & BIT(4)) > 0) && (i++ < 100));
+
+		if (i >= 100)
+			pr_info("The Processor A event is still pending.\n");
 	}
+
+	return 0;
 }
 
 /*!
@@ -212,8 +214,8 @@ int imx_mcc_bsp_int_disable(void)
 	u32 val;
 
 	/* Disablethe bit31(GIE3) and bit19(GIR3) of MU_ACR */
-	val = readl_relaxed(mu_base + MU_ACR);
-	val &= ~(BIT(31) | BIT(27));
+	mu_int_en = val = readl_relaxed(mu_base + MU_ACR);
+	val &= ~mu_int_en;
 	writel_relaxed(val, mu_base + MU_ACR);
 
 	/* flush */
@@ -232,7 +234,7 @@ int imx_mcc_bsp_int_enable(void)
 
 	/* Enable bit31(GIE3) and bit19(GIR3) of MU_ACR */
 	val = readl_relaxed(mu_base + MU_ACR);
-	val |= (BIT(31) | BIT(27));
+	val |= mu_int_en;
 	writel_relaxed(val, mu_base + MU_ACR);
 
 	/* flush */
@@ -423,6 +425,7 @@ static int imx_mu_probe(struct platform_device *pdev)
 	int ret;
 	u32 irq;
 	struct device_node *np;
+	struct clk *clk;
 
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6sx-mu");
 	mu_base = of_iomap(np, 0);
@@ -437,17 +440,40 @@ static int imx_mu_probe(struct platform_device *pdev)
 			__func__, irq, ret);
 		return ret;
 	}
-	INIT_DELAYED_WORK(&mu_work, mu_work_handler);
 
-	/* enable the bit27(RIE3) of MU_ACR */
-	writel_relaxed(readl_relaxed(mu_base + MU_ACR) | BIT(27),
-		mu_base + MU_ACR);
-	/* enable the bit31(GIE3) of MU_ACR, used for MCC */
-	writel_relaxed(readl_relaxed(mu_base + MU_ACR) | BIT(31),
-		mu_base + MU_ACR);
+	ret = of_device_is_compatible(np, "fsl,imx7d-mu");
+	if (ret) {
+		clk = devm_clk_get(&pdev->dev, "mu");
+		if (IS_ERR(clk)) {
+			dev_err(&pdev->dev,
+				"mu clock source missing or invalid\n");
+			return PTR_ERR(clk);
+		} else {
+			ret = clk_prepare_enable(clk);
+			if (ret) {
+				dev_err(&pdev->dev,
+					"unable to enable mu clock\n");
+				return ret;
+			}
+		}
 
-	/* MU always as a wakeup source for low power mode */
-	imx_gpc_add_m4_wake_up_irq(irq, true);
+		/* Up to now, mu only used for mcc on imx7d */
+		/* enable the bit31(GIE3) of MU_ACR, used for MCC */
+		writel_relaxed(readl_relaxed(mu_base + MU_ACR) | BIT(31),
+			mu_base + MU_ACR);
+	} else {
+		INIT_DELAYED_WORK(&mu_work, mu_work_handler);
+
+		/* enable the bit27(RIE3) of MU_ACR */
+		writel_relaxed(readl_relaxed(mu_base + MU_ACR) | BIT(27),
+			mu_base + MU_ACR);
+		/* enable the bit31(GIE3) of MU_ACR, used for MCC */
+		writel_relaxed(readl_relaxed(mu_base + MU_ACR) | BIT(31),
+			mu_base + MU_ACR);
+
+		/* MU always as a wakeup source for low power mode */
+		imx_gpc_add_m4_wake_up_irq(irq, true);
+	}
 
 	pr_info("MU is ready for cross core communication!\n");
 
@@ -456,6 +482,7 @@ static int imx_mu_probe(struct platform_device *pdev)
 
 static const struct of_device_id imx_mu_ids[] = {
 	{ .compatible = "fsl,imx6sx-mu" },
+	{ .compatible = "fsl,imx7d-mu" },
 	{ }
 };
 
