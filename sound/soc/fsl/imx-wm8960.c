@@ -35,7 +35,7 @@ struct imx_wm8960_data {
 	struct clk *codec_clk;
 	unsigned int clk_frequency;
 	bool is_codec_master;
-	bool stream[2];
+	bool is_stream_in_use[2];
 };
 
 struct imx_priv {
@@ -76,9 +76,9 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	if (params_channels(params) == 1)
 		bclk *= 2;
 
-	data->stream[tx] = true;
+	data->is_stream_in_use[tx] = true;
 
-	if (data->stream[tx] && data->stream[!tx])
+	if (data->is_stream_in_use[!tx])
 		return 0;
 
 	/* set cpu DAI configuration */
@@ -190,10 +190,10 @@ static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
 
-	data->stream[tx] = false;
+	data->is_stream_in_use[tx] = false;
 
 	/* Power down PLL to save power*/
-	if (data->is_codec_master && !data->stream[tx] && !data->stream[!tx])
+	if (data->is_codec_master && !data->is_stream_in_use[!tx])
 		snd_soc_dai_set_pll(codec_dai, 0, 0, 0, 0);
 
 	return 0;
