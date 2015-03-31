@@ -797,7 +797,7 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	clks[IMX7D_ENET2_TIME_ROOT_CLK] = imx_clk_gate2("enet2_time_root_clk", "enet2_time_post_div", base + 0x4510, 0);
 	clks[IMX7D_ENET_PHY_REF_ROOT_CLK] = imx_clk_gate2("enet_phy_ref_root_clk", "enet_phy_ref_post_div", base + 0x4520, 0);
 	clks[IMX7D_EIM_ROOT_CLK] = imx_clk_gate2("eim_root_clk", "eim_post_div", base + 0x4160, 0);
-	clks[IMX7D_NAND_ROOT_CLK] = imx_clk_gate2("nand_root_clk", "nand_post_div", base + 0x4140, 0);
+	clks[IMX7D_NAND_ROOT_CLK] = imx_clk_gate("nand_root_clk", "nand_post_div", base + 0x4140, 0);
 	clks[IMX7D_QSPI_ROOT_CLK] = imx_clk_gate2("qspi_root_clk", "qspi_post_div", base + 0x4150, 0);
 	clks[IMX7D_USDHC1_ROOT_CLK] = imx_clk_gate2("usdhc1_root_clk", "usdhc1_post_div", base + 0x46c0, 0);
 	clks[IMX7D_USDHC2_ROOT_CLK] = imx_clk_gate2("usdhc2_root_clk", "usdhc2_post_div", base + 0x46d0, 0);
