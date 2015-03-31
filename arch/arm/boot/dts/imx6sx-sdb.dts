@@ -196,6 +196,12 @@
 		status = "disabled";
 	};
 
+    bt_rfkill {
+        compatible = "fsl,mxc_bt_rfkill";
+        bt-power-gpios = <&gpio4 10 0>;
+        status = "okay";
+    };
+
 	ramoops_device {
 		compatible = "fsl,mxc_ramoops";
 		record_size = <524288>; /*512K*/
@@ -220,12 +226,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_audmux>;
 	status = "okay";
-};
-
-bt_rfkill {
-    compatible = "fsl,mxc_bt_rfkill";
-    bt-power-gpios = <&gpio4 10 0>;
-    status = "okay";
 };
 
 &csi1 {
