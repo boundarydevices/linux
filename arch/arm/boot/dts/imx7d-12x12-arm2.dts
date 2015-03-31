@@ -132,6 +132,7 @@
 	};
 
 	memory {
+		linux,usable-memory = <0x80000000 0x3ff00000>;
 		reg = <0x80000000 0x80000000>;
 	};
 };
