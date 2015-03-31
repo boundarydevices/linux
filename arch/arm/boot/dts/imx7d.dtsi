@@ -604,7 +604,7 @@
 				compatible = "fsl,imx7d-gpc";
 				reg = <0x303a0000 0x10000>;
 				interrupts = <GIC_SPI 87 IRQ_TYPE_LEVEL_HIGH>;
-				fsl,mf-mix-wakeup-irq = <0x4000000 0x0 0x0 0x0>;
+				fsl,mf-mix-wakeup-irq = <0x4000000 0xc00 0x0 0x0>;
 				#power-domain-cells = <1>;
 				pcie-phy-supply = <&reg_1p0d>;
 			};
