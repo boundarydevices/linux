@@ -36,6 +36,11 @@
  * clocks through this child mux.
  */
 #define CLK_IS_BASIC_MUX	BIT(9)
+/*
+ * parent clock must be on across any operation including
+ * clock gate/ungate, rate change and re-parent
+ */
+#define CLK_SET_PARENT_ON	BIT(10)
 
 struct clk_hw;
 
