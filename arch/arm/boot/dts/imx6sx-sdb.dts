@@ -222,6 +222,12 @@
 	status = "okay";
 };
 
+bt_rfkill {
+    compatible = "fsl,mxc_bt_rfkill";
+    bt-power-gpios = <&gpio4 10 0>;
+    status = "okay";
+};
+
 &csi1 {
 	status = "okay";
 
