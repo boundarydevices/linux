@@ -29,9 +29,6 @@
 #include <linux/bitops.h>
 #include <linux/input/mt.h>
 #include <linux/of_gpio.h>
-#ifdef CONFIG_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-#endif
 /*
  * Mouse Mode: some panel may configure the controller to mouse mode,
  * which can only report one point at a given time.
@@ -72,9 +69,6 @@ struct finger_info {
 struct egalax_ts {
 	struct i2c_client		*client;
 	struct input_dev		*input_dev;
-#ifdef CONFIG_EARLYSUSPEND
-	struct early_suspend		es_handler;
-#endif
 	u32				finger_mask;
 	int				touch_no_wake;
 	struct finger_info		fingers[MAX_SUPPORT_POINTS];
@@ -221,11 +215,6 @@ static int egalax_firmware_version(struct i2c_client *client)
 	return 0;
 }
 
-#ifdef CONFIG_EARLYSUSPEND
-static void egalax_early_suspend(struct early_suspend *h);
-static void egalax_later_resume(struct early_suspend *h);
-#endif
-
 static int egalax_ts_probe(struct i2c_client *client,
 				       const struct i2c_device_id *id)
 {
@@ -297,17 +286,6 @@ static int egalax_ts_probe(struct i2c_client *client,
 		goto err_free_irq;
 
 	i2c_set_clientdata(client, ts);
-#ifdef CONFIG_EARLYSUSPEND
-	/* Not register earlysuspend if not way to wake device. */
-	if (ts->touch_no_wake == false) {
-		/* register this client's earlysuspend */
-		ts->es_handler.level = EARLY_SUSPEND_LEVEL_DISABLE_FB;
-		ts->es_handler.suspend = egalax_early_suspend;
-		ts->es_handler.resume = egalax_later_resume;
-		ts->es_handler.data = (void *)client;
-		register_early_suspend(&ts->es_handler);
-	}
-#endif
 	return 0;
 
 err_free_irq:
@@ -323,9 +301,6 @@ err_free_ts:
 static int egalax_ts_remove(struct i2c_client *client)
 {
 	struct egalax_ts *ts = i2c_get_clientdata(client);
-#ifdef CONFIG_EARLYSUSPEND
-	unregister_early_suspend(&ts->es_handler);
-#endif
 	free_irq(client->irq, ts);
 	input_free_device(ts->input_dev);
 	input_unregister_device(ts->input_dev);
@@ -370,9 +345,9 @@ static int egalax_ts_resume(struct device *dev)
 		return 0;
 	return egalax_wake_up_device(client);
 }
+static SIMPLE_DEV_PM_OPS(egalax_ts_pm_ops, egalax_ts_suspend, egalax_ts_resume);
 #endif
 
-static SIMPLE_DEV_PM_OPS(egalax_ts_pm_ops, egalax_ts_suspend, egalax_ts_resume);
 
 static struct of_device_id egalax_ts_dt_ids[] = {
 	{ .compatible = "eeti,egalax_ts" },
@@ -383,7 +358,7 @@ static struct i2c_driver egalax_ts_driver = {
 	.driver = {
 		.name	= "egalax_ts",
 		.owner	= THIS_MODULE,
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_PM_SLEEP
 		.pm	= &egalax_ts_pm_ops,
 #endif
 		.of_match_table	= of_match_ptr(egalax_ts_dt_ids),
@@ -393,24 +368,6 @@ static struct i2c_driver egalax_ts_driver = {
 	.remove		= egalax_ts_remove,
 };
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void egalax_early_suspend(struct early_suspend *h)
-{
-	u8 suspend_cmd[MAX_I2C_DATA_LEN] = {0x3, 0x6, 0xa, 0x3, 0x36,
-					    0x3f, 0x2, 0, 0, 0};
-
-	if (h->data == NULL)
-		return;
-	i2c_master_send((struct i2c_client *)h->data,
-				suspend_cmd, MAX_I2C_DATA_LEN);
-}
-
-static void egalax_later_resume(struct early_suspend *h)
-{
-	if (h->data)
-		egalax_wake_up_device((struct i2c_client *)h->data);
-}
-#endif
 module_i2c_driver(egalax_ts_driver);
 
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
