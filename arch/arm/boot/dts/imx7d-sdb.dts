@@ -364,7 +364,7 @@
 		};
 	};
 
-	sii902x@39 {
+	sii902x: sii902x@39 {
 		compatible = "SiI,sii902x";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sii902x>;
