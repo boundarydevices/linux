@@ -366,7 +366,7 @@
 		mode_str ="1280x720M@60";
 		bits-per-pixel = <16>;
 		reg = <0x39>;
-		status = "okay";
+		status = "disabled";
 	};
 };
 
