@@ -220,7 +220,8 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx7d-sdb.dtb \
 	imx7d-sdb-enet.dtb \
 	imx7d-sdb-gpmi-weim.dtb \
-	imx7d-sdb-epdc.dtb
+	imx7d-sdb-epdc.dtb \
+	imx7d-sdb-hdmi.dtb
 dtb-$(CONFIG_ARCH_MXS) += imx23-evk.dtb \
 	imx23-olinuxino.dtb \
 	imx23-stmp378x_devb.dtb \
