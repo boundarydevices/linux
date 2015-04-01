@@ -28,5 +28,6 @@ obj-$(CONFIG_USB_USS720)		+= uss720.o
 obj-$(CONFIG_USB_SEVSEG)		+= usbsevseg.o
 obj-$(CONFIG_USB_YUREX)			+= yurex.o
 obj-$(CONFIG_USB_HSIC_USB3503)		+= usb3503.o
+obj-$(CONFIG_USB_CC_TUSB320)		+= tusb320.o
 
 obj-$(CONFIG_USB_SISUSBVGA)		+= sisusbvga/
