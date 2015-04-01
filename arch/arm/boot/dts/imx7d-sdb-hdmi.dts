@@ -8,9 +8,7 @@
 
 #include "imx7d-sdb.dts"
 
-&i2c3 {
-	sii902x@39 {
-		status = "okay";
-	};
+&sii902x {
+	status = "okay";
 };
 
