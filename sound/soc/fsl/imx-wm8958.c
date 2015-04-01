@@ -193,6 +193,12 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	 * LRCLK from DACLRCK1.
 	 */
 	snd_soc_update_bits(codec, WM8994_GPIO_1, 0x1f, 0x2);
+
+	/*
+	 * Clear ADC_OSR128 bit to support slower SYSCLK, and support ADC sample
+	 * rate 8K, 11.025K and 12K.
+	 */
+	snd_soc_update_bits(codec, WM8994_OVERSAMPLING, 1<<1, 0);
 	return 0;
 }
 
