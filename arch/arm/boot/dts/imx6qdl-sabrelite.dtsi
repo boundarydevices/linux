@@ -439,7 +439,7 @@
 	sound {
 		compatible = "fsl,imx6q-sabrelite-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";
-		model = "imx6q-sabrelite-sgtl5000";
+		model = "sgtl5000-audio";
 		cpu-dai = <&ssi1>;
 		audio-codec = <&sgtl5000>;
 		audio-routing =
