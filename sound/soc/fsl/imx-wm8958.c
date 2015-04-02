@@ -163,7 +163,10 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	} else {
 		data->sr_stream[tx] = params_rate(params);
 
-		pll_out = data->sr_stream[tx] * 256;
+		if (params_width(params) == 24)
+			pll_out = data->sr_stream[tx] * 384;
+		else
+			pll_out = data->sr_stream[tx] * 256;
 
 		ret = snd_soc_dai_set_pll(codec_dai, WM8994_FLL1,
 					  WM8994_FLL_SRC_MCLK1,
