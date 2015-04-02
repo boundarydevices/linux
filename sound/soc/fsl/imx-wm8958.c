@@ -228,14 +228,25 @@ static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 
 	return 0;
 }
+
 static u32 imx_wm8958_adc_rates[] = {
 	8000, 11025, 12000, 16000, 22050,
 	24000, 32000, 44100, 48000
 };
 
+static u32 imx_wm8958_dac_rates[] = {
+	8000, 11025, 12000, 16000, 22050,
+	24000, 32000, 44100, 48000, 88200, 96000
+};
+
 static struct snd_pcm_hw_constraint_list imx_wm8958_adc_rate_constraints = {
 	.count = ARRAY_SIZE(imx_wm8958_adc_rates),
 	.list = imx_wm8958_adc_rates,
+};
+
+static struct snd_pcm_hw_constraint_list imx_wm8958_dac_rate_constraints = {
+	.count = ARRAY_SIZE(imx_wm8958_dac_rates),
+	.list = imx_wm8958_dac_rates,
 };
 
 static int imx_hifi_startup(struct snd_pcm_substream *substream)
@@ -256,6 +267,9 @@ static int imx_hifi_startup(struct snd_pcm_substream *substream)
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
 		ret = snd_pcm_hw_constraint_list(substream->runtime, 0,
 			SNDRV_PCM_HW_PARAM_RATE, &imx_wm8958_adc_rate_constraints);
+	else if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		ret = snd_pcm_hw_constraint_list(substream->runtime, 0,
+			SNDRV_PCM_HW_PARAM_RATE, &imx_wm8958_dac_rate_constraints);
 	return ret;
 }
 
