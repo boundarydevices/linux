@@ -219,9 +219,10 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx7d-19x19-arm2-csi.dtb \
 	imx7d-sdb.dtb \
 	imx7d-sdb-enet.dtb \
-	imx7d-sdb-gpmi-weim.dtb \
 	imx7d-sdb-epdc.dtb \
-	imx7d-sdb-hdmi.dtb
+	imx7d-sdb-gpmi-weim.dtb \
+	imx7d-sdb-hdmi.dtb \
+	imx7d-sdb-qspi.dtb
 dtb-$(CONFIG_ARCH_MXS) += imx23-evk.dtb \
 	imx23-olinuxino.dtb \
 	imx23-stmp378x_devb.dtb \
