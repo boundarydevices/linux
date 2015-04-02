@@ -106,6 +106,12 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL4, 3<<2, 2<<2);
 	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL1, 1, 1);
 
+	/*
+	 * As the hardware only connect the input for left channel, we need
+	 * to route it for right channel.
+	 */
+	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL1, 3<<2, 1<<2);
+
 	if (!data->is_codec_master) {
 		ret = snd_soc_dai_set_sysclk(cpu_dai, 0, 0, SND_SOC_CLOCK_OUT);
 		if (ret) {
