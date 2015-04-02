@@ -457,13 +457,14 @@ static int ldb_setup(struct mxc_dispdrv_handle *mddh,
 		clk_set_parent(other_ldb_di_sel, ldb_di_sel_parent);
 
 	if (!(chan.fbi->var.sync & FB_SYNC_VERT_HIGH_ACT)) {
-		if (ldb->spl_mode && bus_mux.reg == INVALID_BUS_REG)
-			/* no pre-muxing, such as mx53 */
-			ldb->ctrl |= (id == 0 ? LDB_DI0_VS_POL_ACT_LOW :
-					LDB_DI1_VS_POL_ACT_LOW);
-		else
-			ldb->ctrl |= (chno == 0 ? LDB_DI0_VS_POL_ACT_LOW :
-					LDB_DI1_VS_POL_ACT_LOW);
+		int sel = (ldb->spl_mode && bus_mux.reg == INVALID_BUS_REG) ?
+				id : chno;
+		int mask = (sel == 0) ? LDB_DI0_VS_POL_ACT_LOW :
+				LDB_DI1_VS_POL_ACT_LOW;
+
+		if (ldb->spl_mode)
+			mask = LDB_DI0_VS_POL_ACT_LOW | LDB_DI1_VS_POL_ACT_LOW;
+		ldb->ctrl |= mask;
 	}
 
 	if (bus_mux.reg != INVALID_BUS_REG)
