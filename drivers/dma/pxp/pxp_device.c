@@ -320,32 +320,40 @@ static int pxp_ioc_config_chan(struct pxp_file *priv, unsigned long arg)
 	struct scatterlist sg[3];
 	struct pxp_tx_desc *desc;
 	struct dma_async_tx_descriptor *txd;
-	struct pxp_config_data pxp_conf;
+	struct pxp_config_data *pxp_conf;
 	dma_cookie_t cookie;
 	int handle, chan_id;
 	struct dma_chan *chan;
 	struct pxp_chan_obj *obj;
 	int i = 0, j = 0, k = 0, m = 0, length, ret, sg_len;
 
-	ret = copy_from_user(&pxp_conf,
+	pxp_conf = kzalloc(sizeof(*pxp_conf), GFP_KERNEL);
+	if (!pxp_conf)
+		return -ENOMEM;
+
+	ret = copy_from_user(pxp_conf,
 			     (struct pxp_config_data *)arg,
 			     sizeof(struct pxp_config_data));
-	if (ret)
+	if (ret) {
+		kfree(pxp_conf);
 		return -EFAULT;
+	}
 
-	handle = pxp_conf.handle;
+	handle = pxp_conf->handle;
 	obj = pxp_channel_object_lookup(priv, handle);
-	if (!obj)
+	if (!obj) {
+		kfree(pxp_conf);
 		return -EINVAL;
+	}
 	chan = obj->chan;
 	chan_id = chan->chan_id;
 
 	sg_len = 3;
-	if (pxp_conf.proc_data.engine_enable & PXP_ENABLE_WFE_A)
+	if (pxp_conf->proc_data.engine_enable & PXP_ENABLE_WFE_A)
 		sg_len += 4;
-	if (pxp_conf.proc_data.engine_enable & PXP_ENABLE_WFE_B)
+	if (pxp_conf->proc_data.engine_enable & PXP_ENABLE_WFE_B)
 		sg_len += 4;
-	if (pxp_conf.proc_data.engine_enable & PXP_ENABLE_DITHER)
+	if (pxp_conf->proc_data.engine_enable & PXP_ENABLE_DITHER)
 		sg_len += 4;
 
 	sg_init_table(sg, sg_len);
@@ -357,6 +365,7 @@ static int pxp_ioc_config_chan(struct pxp_file *priv, unsigned long arg)
 						 NULL);
 	if (!txd) {
 		pr_err("Error preparing a DMA transaction descriptor.\n");
+		kfree(pxp_conf);
 		return -EIO;
 	}
 
@@ -369,43 +378,43 @@ static int pxp_ioc_config_chan(struct pxp_file *priv, unsigned long arg)
 	for (i = 0; i < length; i++) {
 		if (i == 0) {	/* S0 */
 			memcpy(&desc->proc_data,
-			       &pxp_conf.proc_data,
+			       &pxp_conf->proc_data,
 			       sizeof(struct pxp_proc_data));
 			memcpy(&desc->layer_param.s0_param,
-			       &pxp_conf.s0_param,
+			       &pxp_conf->s0_param,
 			       sizeof(struct pxp_layer_param));
 			desc = desc->next;
 		} else if (i == 1) {	/* Output */
 			memcpy(&desc->layer_param.out_param,
-			       &pxp_conf.out_param,
+			       &pxp_conf->out_param,
 			       sizeof(struct pxp_layer_param));
 			desc = desc->next;
 		} else if (i == 2) {
 			/* OverLay */
 			memcpy(&desc->layer_param.ol_param,
-			       &pxp_conf.ol_param,
+			       &pxp_conf->ol_param,
 			       sizeof(struct pxp_layer_param));
 			desc = desc->next;
-		} else if ((pxp_conf.proc_data.engine_enable & PXP_ENABLE_WFE_A) && (j < 4)) {
+		} else if ((pxp_conf->proc_data.engine_enable & PXP_ENABLE_WFE_A) && (j < 4)) {
 			for (j = 0; j < 4; j++) {
 				if (j == 0) {
 					memcpy(&desc->layer_param.processing_param,
-					       &pxp_conf.wfe_a_fetch_param[0],
+					       &pxp_conf->wfe_a_fetch_param[0],
 					       sizeof(struct pxp_layer_param));
 					desc->layer_param.processing_param.flag = PXP_BUF_FLAG_WFE_A_FETCH0;
 				} else if (j == 1) {
 					memcpy(&desc->layer_param.processing_param,
-					       &pxp_conf.wfe_a_fetch_param[1],
+					       &pxp_conf->wfe_a_fetch_param[1],
 					       sizeof(struct pxp_layer_param));
 					desc->layer_param.processing_param.flag = PXP_BUF_FLAG_WFE_A_FETCH1;
 				} else if (j == 2) {
 					memcpy(&desc->layer_param.processing_param,
-					       &pxp_conf.wfe_a_store_param[0],
+					       &pxp_conf->wfe_a_store_param[0],
 					       sizeof(struct pxp_layer_param));
 					desc->layer_param.processing_param.flag = PXP_BUF_FLAG_WFE_A_STORE0;
 				} else if (j == 3) {
 					memcpy(&desc->layer_param.processing_param,
-					       &pxp_conf.wfe_a_store_param[1],
+					       &pxp_conf->wfe_a_store_param[1],
 					       sizeof(struct pxp_layer_param));
 					desc->layer_param.processing_param.flag = PXP_BUF_FLAG_WFE_A_STORE1;
 				}
@@ -415,26 +424,26 @@ static int pxp_ioc_config_chan(struct pxp_file *priv, unsigned long arg)
 
 			i += 4;
 
-		} else if ((pxp_conf.proc_data.engine_enable & PXP_ENABLE_WFE_B) && (m < 4)) {
+		} else if ((pxp_conf->proc_data.engine_enable & PXP_ENABLE_WFE_B) && (m < 4)) {
 			for (m = 0; m < 4; m++) {
 				if (m == 0) {
 					memcpy(&desc->layer_param.processing_param,
-					       &pxp_conf.wfe_b_fetch_param[0],
+					       &pxp_conf->wfe_b_fetch_param[0],
 					       sizeof(struct pxp_layer_param));
 					desc->layer_param.processing_param.flag = PXP_BUF_FLAG_WFE_B_FETCH0;
 				} else if (m == 1) {
 					memcpy(&desc->layer_param.processing_param,
-					       &pxp_conf.wfe_b_fetch_param[1],
+					       &pxp_conf->wfe_b_fetch_param[1],
 					       sizeof(struct pxp_layer_param));
 					desc->layer_param.processing_param.flag = PXP_BUF_FLAG_WFE_B_FETCH1;
 				} else if (m == 2) {
 					memcpy(&desc->layer_param.processing_param,
-					       &pxp_conf.wfe_b_store_param[0],
+					       &pxp_conf->wfe_b_store_param[0],
 					       sizeof(struct pxp_layer_param));
 					desc->layer_param.processing_param.flag = PXP_BUF_FLAG_WFE_B_STORE0;
 				} else if (m == 3) {
 					memcpy(&desc->layer_param.processing_param,
-					       &pxp_conf.wfe_b_store_param[1],
+					       &pxp_conf->wfe_b_store_param[1],
 					       sizeof(struct pxp_layer_param));
 					desc->layer_param.processing_param.flag = PXP_BUF_FLAG_WFE_B_STORE1;
 				}
@@ -444,26 +453,26 @@ static int pxp_ioc_config_chan(struct pxp_file *priv, unsigned long arg)
 
 			i += 4;
 
-		} else if ((pxp_conf.proc_data.engine_enable & PXP_ENABLE_DITHER) && (k < 4)) {
+		} else if ((pxp_conf->proc_data.engine_enable & PXP_ENABLE_DITHER) && (k < 4)) {
 			for (k = 0; k < 4; k++) {
 				if (k == 0) {
 					memcpy(&desc->layer_param.processing_param,
-					       &pxp_conf.dither_fetch_param[0],
+					       &pxp_conf->dither_fetch_param[0],
 					       sizeof(struct pxp_layer_param));
 					desc->layer_param.processing_param.flag = PXP_BUF_FLAG_DITHER_FETCH0;
 				} else if (k == 1) {
 					memcpy(&desc->layer_param.processing_param,
-					       &pxp_conf.dither_fetch_param[1],
+					       &pxp_conf->dither_fetch_param[1],
 					       sizeof(struct pxp_layer_param));
 					desc->layer_param.processing_param.flag = PXP_BUF_FLAG_DITHER_FETCH1;
 				} else if (k == 2) {
 					memcpy(&desc->layer_param.processing_param,
-					       &pxp_conf.dither_store_param[0],
+					       &pxp_conf->dither_store_param[0],
 					       sizeof(struct pxp_layer_param));
 					desc->layer_param.processing_param.flag = PXP_BUF_FLAG_DITHER_STORE0;
 				} else if (k == 3) {
 					memcpy(&desc->layer_param.processing_param,
-					       &pxp_conf.dither_store_param[1],
+					       &pxp_conf->dither_store_param[1],
 					       sizeof(struct pxp_layer_param));
 					desc->layer_param.processing_param.flag = PXP_BUF_FLAG_DITHER_STORE1;
 				}
@@ -478,10 +487,13 @@ static int pxp_ioc_config_chan(struct pxp_file *priv, unsigned long arg)
 	cookie = txd->tx_submit(txd);
 	if (cookie < 0) {
 		pr_err("Error tx_submit\n");
+		kfree(pxp_conf);
 		return -EIO;
 	}
 
 	atomic_inc(&irq_info[chan_id].irq_pending);
+
+	kfree(pxp_conf);
 
 	return 0;
 }
