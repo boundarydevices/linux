@@ -215,6 +215,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx7d-12x12-arm2-enet.dtb \
 	imx7d-12x12-arm2-flexcan.dtb \
 	imx7d-12x12-arm2-qspi.dtb \
+	imx7d-12x12-arm2-m4.dtb \
 	imx7d-19x19-arm2.dtb \
 	imx7d-19x19-arm2-csi.dtb \
 	imx7d-sdb.dtb \
@@ -222,7 +223,8 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx7d-sdb-epdc.dtb \
 	imx7d-sdb-gpmi-weim.dtb \
 	imx7d-sdb-hdmi.dtb \
-	imx7d-sdb-qspi.dtb
+	imx7d-sdb-qspi.dtb \
+	imx7d-sdb-m4.dtb
 dtb-$(CONFIG_ARCH_MXS) += imx23-evk.dtb \
 	imx23-olinuxino.dtb \
 	imx23-stmp378x_devb.dtb \
