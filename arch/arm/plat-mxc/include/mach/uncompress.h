@@ -146,6 +146,9 @@ static __inline__ void __arch_decomp_setup(unsigned long arch_id)
 		uart_base = MX6Q_UART1_BASE_ADDR;
 		break;
 	case MACH_TYPE_MX6Q_SABREAUTO:
+#if defined(CONFIG_MACH_MX6_S)
+		case MACH_TYPE_MX6_S:
+#endif
 		uart_base = MX6Q_UART4_BASE_ADDR;
 		break;
 	default:
