@@ -37,6 +37,7 @@
 
 &prg2 {
 	memory-region = <&memory>;
+	status = "okay";
 };
 
 &sata {
