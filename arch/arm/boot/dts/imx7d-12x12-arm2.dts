@@ -607,6 +607,14 @@
 		};
 	};
 
+	touch {
+		pinctrl_tsc2007: tsc2007grp {
+			fsl,pins = <
+				MX7D_PAD_GPIO1_IO08__GPIO1_IO8	0x80000000
+			>;
+		};
+	};
+
 	uart1 {
 		pinctrl_uart1_1: uart1grp-1 {
 			fsl,pins = <
@@ -881,6 +889,17 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c3_1>;
 	status = "okay";
+
+	tsc2007@48 {
+		compatible = "ti,tsc2007";
+		reg = <0x48>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_tsc2007>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <8 0>;
+		pendown-gpio = <&gpio1 8 1>;
+		ti,x-plate-ohms = <660>;
+	};
 
 	max7322: gpio@68 {
 		compatible = "maxim,max7322";
