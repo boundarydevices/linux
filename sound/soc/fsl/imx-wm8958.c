@@ -427,6 +427,7 @@ static int imx_wm8958_probe(struct platform_device *pdev)
 	data->dai.cpu_dai_name = dev_name(&cpu_pdev->dev);
 	data->dai.platform_of_node = cpu_np;
 	data->dai.ops = &imx_hifi_ops;
+	data->dai.ignore_pmdown_time = 1;
 	data->dai.dai_fmt |= SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF;
 
 	data->card.dev = &pdev->dev;
