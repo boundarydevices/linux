@@ -151,6 +151,12 @@ _IdentifyHardware(
                                  0x00024,
                                  &Identity->chipRevision));
 
+        if ((Identity->chipModel == gcv2000) && (Identity->chipRevision & 0xffff0000) == 0xffff0000)
+        {
+            Identity->chipModel = gcv3000;
+            Identity->chipRevision &= 0xffff;
+        }
+
         if ((Identity->chipModel    == gcv300)
         &&  (Identity->chipRevision == 0x2201)
         )
@@ -1325,6 +1331,8 @@ gckHARDWARE_InitializeHardware(
                                      0x00024,
                                      &chipRev));
 
+    chipRev &= 0xffff;
+
     if (chipRev != Hardware->identity.chipRevision)
     {
         /* Chip is not there! */
@@ -1617,7 +1625,7 @@ gckHARDWARE_InitializeHardware(
     }
 
     if (_IsHardwareMatch(Hardware, gcv2000, 0x5108)
-     || _IsHardwareMatch(Hardware, gcv2000, 0xffff5450)
+     || _IsHardwareMatch(Hardware, gcv3000, 0x5450)
      || _IsHardwareMatch(Hardware, gcv320, 0x5007)
      || _IsHardwareMatch(Hardware, gcv320, 0x5303)
      || _IsHardwareMatch(Hardware, gcv880, 0x5106)
