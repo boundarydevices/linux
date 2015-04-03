@@ -736,7 +736,6 @@
 };
 
 &ldb {
-	ext_ref = <1>;
 	split-mode = <1>;
 	status = "okay";
 
