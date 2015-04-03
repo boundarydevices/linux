@@ -443,7 +443,6 @@
 				reg = <0x30280000 0x10000>;
 				interrupts = <GIC_SPI 78 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX7D_WDOG1_ROOT_CLK>;
-				status = "disabled";
 			};
 
 			wdog2: wdog@30290000 {
