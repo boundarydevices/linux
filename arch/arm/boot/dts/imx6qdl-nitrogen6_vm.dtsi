@@ -610,7 +610,6 @@
 };
 
 &ldb {
-	ext_ref = <1>;
 	status = "okay";
 
 	lvds-channel@0 {
