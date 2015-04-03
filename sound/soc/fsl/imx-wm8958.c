@@ -130,8 +130,21 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	struct device *dev = card->dev;
 	struct imx_wm8958_data *data = snd_soc_card_get_drvdata(card);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+	unsigned int sample_rate = params_rate(params);
 	unsigned int pll_out;
 	int ret;
+
+	if (tx && params_width(params) == 24) {
+		if (sample_rate == 88200 || sample_rate == 96000) {
+			dev_err(dev, "Can't support sample rate %dHZ\n", sample_rate);
+			return -EINVAL;
+		}
+	} else if (!tx && params_width(params) == 24) {
+		if (sample_rate == 44100 || sample_rate == 48000) {
+			dev_err(dev, "Can't support sample rate %dHZ\n", sample_rate);
+			return -EINVAL;
+		}
+	}
 
 	ret = snd_soc_dai_set_fmt(codec_dai, data->dai.dai_fmt);
 	if (ret) {
@@ -161,7 +174,7 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 			return ret;
 		}
 	} else {
-		data->sr_stream[tx] = params_rate(params);
+		data->sr_stream[tx] = sample_rate;
 
 		if (params_width(params) == 24)
 			pll_out = data->sr_stream[tx] * 384;
