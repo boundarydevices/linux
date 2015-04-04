@@ -3,3 +3,4 @@
 #
 
 obj-$(CONFIG_SENSORS_HMC5843)	+= hmc5843.o
+obj-y += inv_compass/
