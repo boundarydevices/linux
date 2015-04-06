@@ -244,7 +244,7 @@
 
 	bt_rfkill {
 		compatible = "net,rfkill-gpio";
-		name = "wlan_bt_rfkill";
+		name = "bt_rfkill";
 		type = <2>;     /* bluetooth */
 		gpios = <&gpio6 16 0>;
 	};
