@@ -242,7 +242,7 @@
 		};
 	};
 
-	wlan_bt_rfkill {
+	bt_rfkill {
 		compatible = "net,rfkill-gpio";
 		name = "wlan_bt_rfkill";
 		type = <2>;     /* bluetooth */
