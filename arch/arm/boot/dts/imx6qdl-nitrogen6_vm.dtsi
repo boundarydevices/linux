@@ -257,8 +257,12 @@
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_5__I2C3_SCL		0x4001b8b1
 			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
-			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x1b0b0		/* J40 pin 4 - I2C3, and ar1021  irq */
 #define GP_TOUCH_IRQ	<&gpio1 2 IRQ_TYPE_LEVEL_HIGH>
+			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x1b0b0		/* J40 pin 4 - I2C3, and ar1021  irq */
+#define PCAP_TOUCH_IRQ	<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
+			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		/* J40 pin 4 - I2C3 and J57 pin 4 */
+#define PCAP_RESETN	<&gpio1 21 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_SD1_DAT3__GPIO1_IO21		0x1b0b0		/* J40 pin 3 */
 		>;
 	};
 
@@ -607,6 +611,13 @@
 		reg = <0x4d>;
 		interrupts-extended = GP_TOUCH_IRQ;
 		wakeup-gpios = GP_TOUCH_IRQ;
+	};
+
+	ft5x06_ts@38 {
+		compatible = "ft5x06-ts,ft5x06-ts";
+		reg = <0x38>;
+		interrupts-extended = PCAP_TOUCH_IRQ;
+		wakeup-gpios = PCAP_TOUCH_IRQ;
 	};
 };
 
