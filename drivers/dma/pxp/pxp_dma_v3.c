@@ -560,7 +560,8 @@ static void pxp_set_outbuf(struct pxps *pxp)
 		 out_params->pixel_fmt == PXP_PIX_FMT_RGB32) {
 		__raw_writel(out_params->stride << 2,
 				pxp->base + HW_PXP_OUT_PITCH);
-	} else if (out_params->pixel_fmt == PXP_PIX_FMT_RGB565) {
+	} else if ((out_params->pixel_fmt == PXP_PIX_FMT_RGB565) ||
+		   (out_params->pixel_fmt == PXP_PIX_FMT_RGB555)) {
 		__raw_writel(out_params->stride << 1,
 				pxp->base + HW_PXP_OUT_PITCH);
 	} else if (out_params->pixel_fmt == PXP_PIX_FMT_UYVY ||
@@ -647,11 +648,12 @@ static void pxp_set_oln(int layer_no, struct pxps *pxp)
 				pxp->base + HW_PXP_OUT_AS_LRC);
 	}
 
-	if ((olparams_data->pixel_fmt == PXP_PIX_FMT_BGRA32) |
+	if ((olparams_data->pixel_fmt == PXP_PIX_FMT_BGRA32) ||
 		 (olparams_data->pixel_fmt == PXP_PIX_FMT_RGB32)) {
 		__raw_writel(pitch << 2,
 				pxp->base + HW_PXP_AS_PITCH);
-	} else if (olparams_data->pixel_fmt == PXP_PIX_FMT_RGB565) {
+	} else if ((olparams_data->pixel_fmt == PXP_PIX_FMT_RGB565) ||
+		   (olparams_data->pixel_fmt == PXP_PIX_FMT_RGB555)) {
 		__raw_writel(pitch << 1,
 				pxp->base + HW_PXP_AS_PITCH);
 	} else {
@@ -681,7 +683,11 @@ static void pxp_set_olparam(int layer_no, struct pxps *pxp)
 	} else if (olparams_data->pixel_fmt == PXP_PIX_FMT_RGB565) {
 		olparam |=
 		    BF_PXP_AS_CTRL_FORMAT(BV_PXP_AS_CTRL_FORMAT__RGB565);
+	} else if (olparams_data->pixel_fmt == PXP_PIX_FMT_RGB555) {
+		olparam |=
+		    BF_PXP_AS_CTRL_FORMAT(BV_PXP_AS_CTRL_FORMAT__RGB555);
 	}
+
 	if (olparams_data->global_alpha_enable) {
 		if (olparams_data->global_override) {
 			olparam |=
@@ -1087,7 +1093,8 @@ static void pxp_set_s0buf(struct pxps *pxp)
 
 	Y = s0_params->paddr;
 
-	if (s0_params->pixel_fmt == PXP_PIX_FMT_RGB565)
+	if ((s0_params->pixel_fmt == PXP_PIX_FMT_RGB565) ||
+		(s0_params->pixel_fmt == PXP_PIX_FMT_RGB555))
 		bpp = 2;
 	else if (s0_params->pixel_fmt == PXP_PIX_FMT_RGB32)
 		bpp = 4;
@@ -1159,7 +1166,8 @@ static void pxp_set_s0buf(struct pxps *pxp)
 		 s0_params->pixel_fmt == PXP_PIX_FMT_YVYU)
 		__raw_writel(pitch << 1,
 				pxp->base + HW_PXP_PS_PITCH);
-	else if (s0_params->pixel_fmt == PXP_PIX_FMT_RGB565)
+	else if ((s0_params->pixel_fmt == PXP_PIX_FMT_RGB565) ||
+		 (s0_params->pixel_fmt == PXP_PIX_FMT_RGB555))
 		__raw_writel(pitch << 1,
 				pxp->base + HW_PXP_PS_PITCH);
 	else
