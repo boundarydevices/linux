@@ -33,3 +33,7 @@
 &lvds_display {
 	status = "okay";
 };
+
+&pxp {
+	status = "okay";
+};
