@@ -2180,6 +2180,64 @@ int clearwater_put_dre(struct snd_kcontrol *kcontrol,
 }
 EXPORT_SYMBOL_GPL(clearwater_put_dre);
 
+int arizona_put_out4_edre(struct snd_kcontrol *kcontrol,
+			  struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);
+	const struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int mask_l, mask_r, old_val, out_ena;
+	unsigned int val_l = 0, val_r = 0;
+	int ret = 0;
+
+	switch (priv->arizona->type) {
+	case WM1814:
+	case WM8998:
+		mask_l = CLEARWATER_EDRE_OUT4L_THR1_ENA |
+			 CLEARWATER_EDRE_OUT4L_THR2_ENA;
+		mask_r = CLEARWATER_EDRE_OUT4R_THR1_ENA |
+			 CLEARWATER_EDRE_OUT4R_THR2_ENA;
+		break;
+	default:
+		return 0;
+	}
+
+	if (ucontrol->value.integer.value[0])
+		val_l = mask_l;
+
+	if (ucontrol->value.integer.value[1])
+		val_r = mask_r;
+
+	mutex_lock_nested(&codec->card->dapm_mutex, SND_SOC_DAPM_CLASS_RUNTIME);
+
+	/* Check what will change so we know which output enables to test */
+	old_val = snd_soc_read(codec, CLEARWATER_EDRE_ENABLE);
+	if ((old_val & mask_l) == val_l)
+		mask_l = 0;
+
+	if ((old_val & mask_r) == val_r)
+		mask_r = 0;
+
+	if ((mask_l | mask_r) == 0)
+		goto out;
+
+	out_ena = snd_soc_read(codec, ARIZONA_OUTPUT_ENABLES_1);
+	if ((mask_l && (out_ena & ARIZONA_OUT4L_ENA_MASK)) ||
+	    (mask_r && (out_ena & ARIZONA_OUT4R_ENA_MASK))) {
+		dev_warn(codec->dev, "Cannot change OUT4 eDRE with output on\n");
+		ret = -EBUSY;
+		goto out;
+	}
+
+	snd_soc_update_bits(codec, CLEARWATER_EDRE_ENABLE,
+			    mask_l | mask_r, val_l | val_r);
+out:
+	mutex_unlock(&codec->card->dapm_mutex);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(arizona_put_out4_edre);
+
 int arizona_out_ev(struct snd_soc_dapm_widget *w,
 		   struct snd_kcontrol *kcontrol,
 		   int event)
