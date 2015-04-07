@@ -33,3 +33,7 @@
 &lcd_display {
 	status = "okay";
 };
+
+&pxp {
+	status = "okay";
+};
