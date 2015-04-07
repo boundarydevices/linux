@@ -33,3 +33,7 @@
 &mxcfb3 {
 	status = "okay";
 };
+
+&pxp {
+	status = "okay";
+};
