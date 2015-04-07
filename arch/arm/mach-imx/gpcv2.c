@@ -512,7 +512,7 @@ void __init imx_gpcv2_init(void)
 	}
 
 	/* only external IRQs to wake up LPM and core 0/1 */
-	writel_relaxed(BM_LPCR_A7_BSC_IRQ_SRC_A7_WAKEUP,
+	writel_relaxed(0x3 << BP_LPCR_A7_BSC_IRQ_SRC,
 		gpc_base + GPC_LPCR_A7_BSC);
 	/* mask m4 dsm trigger */
 	writel_relaxed(readl_relaxed(gpc_base + GPC_LPCR_M4) |
