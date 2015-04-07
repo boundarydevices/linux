@@ -121,14 +121,6 @@ struct pxps {
 #define PXP_MIN_PIX	8
 static void __iomem *pxp_reg_base;
 
-static uint32_t pxp_s0_formats[] = {
-	PXP_PIX_FMT_RGB32,
-	PXP_PIX_FMT_RGB565,
-	PXP_PIX_FMT_RGB555,
-	PXP_PIX_FMT_YUV420P,
-	PXP_PIX_FMT_YUV422P,
-};
-
 static __attribute__((aligned (1024*4))) unsigned int active_matrix_data_8x8[64]={
    0x06050100, 0x04030207, 0x06050100, 0x04030207,
    0x00040302, 0x07060501, 0x00040302, 0x07060501,
@@ -421,6 +413,9 @@ static void pxp_set_ctrl(struct pxps *pxp)
 	case PXP_PIX_FMT_GY04:
 		fmt_ctrl = BV_PXP_PS_CTRL_FORMAT__Y4;
 		break;
+	case PXP_PIX_FMT_VUY444:
+		fmt_ctrl = BV_PXP_PS_CTRL_FORMAT__YUV1P444;
+		break;
 	case PXP_PIX_FMT_YUV422P:
 		fmt_ctrl = BV_PXP_PS_CTRL_FORMAT__YUV422;
 		break;
@@ -545,12 +540,18 @@ static void pxp_set_outbuf(struct pxps *pxp)
 {
 	struct pxp_config_data *pxp_conf = &pxp->pxp_conf_state;
 	struct pxp_layer_param *out_params = &pxp_conf->out_param;
+	struct pxp_proc_data *proc_data = &pxp_conf->proc_data;
 
 	__raw_writel(out_params->paddr, pxp->base + HW_PXP_OUT_BUF);
 
-	__raw_writel(BF_PXP_OUT_LRC_X(out_params->width - 1) |
-		     BF_PXP_OUT_LRC_Y(out_params->height - 1),
-		     pxp->base + HW_PXP_OUT_LRC);
+	if (proc_data->rotate == 90 || proc_data->rotate == 270)
+		__raw_writel(BF_PXP_OUT_LRC_X(out_params->height - 1) |
+				BF_PXP_OUT_LRC_Y(out_params->width - 1),
+				pxp->base + HW_PXP_OUT_LRC);
+	else
+		__raw_writel(BF_PXP_OUT_LRC_X(out_params->width - 1) |
+				BF_PXP_OUT_LRC_Y(out_params->height - 1),
+				pxp->base + HW_PXP_OUT_LRC);
 
 	if (out_params->pixel_fmt == PXP_PIX_FMT_RGB24) {
 		__raw_writel(out_params->stride * 3,
@@ -641,22 +642,9 @@ static void pxp_set_oln(int layer_no, struct pxps *pxp)
 		__raw_writel(0x0, pxp->base + HW_PXP_OUT_AS_LRC);
 	} else {
 		__raw_writel(0x0, pxp->base + HW_PXP_OUT_AS_ULC);
-		if (pxp_conf->proc_data.rotate == 90 ||
-		    pxp_conf->proc_data.rotate == 270) {
-			if (pxp_conf->proc_data.rot_pos == 1) {
-				__raw_writel(BF_PXP_OUT_AS_LRC_X(olparams_data->height - 1) |
-					BF_PXP_OUT_AS_LRC_Y(olparams_data->width - 1),
-					pxp->base + HW_PXP_OUT_AS_LRC);
-			} else {
-				__raw_writel(BF_PXP_OUT_AS_LRC_X(olparams_data->width - 1) |
-					BF_PXP_OUT_AS_LRC_Y(olparams_data->height - 1),
-					pxp->base + HW_PXP_OUT_AS_LRC);
-			}
-		} else {
-			__raw_writel(BF_PXP_OUT_AS_LRC_X(olparams_data->width - 1) |
+		__raw_writel(BF_PXP_OUT_AS_LRC_X(olparams_data->width - 1) |
 				BF_PXP_OUT_AS_LRC_Y(olparams_data->height - 1),
 				pxp->base + HW_PXP_OUT_AS_LRC);
-		}
 	}
 
 	if ((olparams_data->pixel_fmt == PXP_PIX_FMT_BGRA32) |
@@ -717,7 +705,8 @@ static void pxp_set_s0param(struct pxps *pxp)
 {
 	struct pxp_config_data *pxp_conf = &pxp->pxp_conf_state;
 	struct pxp_proc_data *proc_data = &pxp_conf->proc_data;
-	u32 s0param;
+	struct pxp_layer_param *out_params = &pxp_conf->out_param;
+	u32 s0param_ulc, s0param_lrc;
 
 	/* contains the coordinate for the PS in the OUTPUT buffer. */
 	if ((pxp_conf->s0_param).width == 0 &&
@@ -725,14 +714,48 @@ static void pxp_set_s0param(struct pxps *pxp)
 		__raw_writel(0xffffffff, pxp->base + HW_PXP_OUT_PS_ULC);
 		__raw_writel(0x0, pxp->base + HW_PXP_OUT_PS_LRC);
 	} else {
-		s0param = BF_PXP_OUT_PS_ULC_X(proc_data->drect.left);
-		s0param |= BF_PXP_OUT_PS_ULC_Y(proc_data->drect.top);
-		__raw_writel(s0param, pxp->base + HW_PXP_OUT_PS_ULC);
-		s0param = BF_PXP_OUT_PS_LRC_X(proc_data->drect.left +
-				proc_data->drect.width - 1);
-		s0param |= BF_PXP_OUT_PS_LRC_Y(proc_data->drect.top +
-				proc_data->drect.height - 1);
-		__raw_writel(s0param, pxp->base + HW_PXP_OUT_PS_LRC);
+		switch (proc_data->rotate) {
+		case 0:
+			s0param_ulc = BF_PXP_OUT_PS_ULC_X(proc_data->drect.left);
+			s0param_ulc |= BF_PXP_OUT_PS_ULC_Y(proc_data->drect.top);
+			s0param_lrc = BF_PXP_OUT_PS_LRC_X(((s0param_ulc & BM_PXP_OUT_PS_ULC_X) >> 16) + proc_data->drect.width - 1);
+			s0param_lrc |= BF_PXP_OUT_PS_LRC_Y((s0param_ulc & BM_PXP_OUT_PS_ULC_Y) + proc_data->drect.height - 1);
+			break;
+		case 90:
+			s0param_ulc = BF_PXP_OUT_PS_ULC_Y(out_params->width - (proc_data->drect.left + proc_data->drect.width));
+			s0param_ulc |= BF_PXP_OUT_PS_ULC_X(proc_data->drect.top);
+			s0param_lrc = BF_PXP_OUT_PS_LRC_X(((s0param_ulc & BM_PXP_OUT_PS_ULC_X) >> 16) + proc_data->drect.height - 1);
+			s0param_lrc |= BF_PXP_OUT_PS_LRC_Y((s0param_ulc & BM_PXP_OUT_PS_ULC_Y) + proc_data->drect.width - 1);
+			break;
+		case 180:
+			s0param_ulc = BF_PXP_OUT_PS_ULC_X(out_params->width - (proc_data->drect.left + proc_data->drect.width));
+			s0param_ulc |= BF_PXP_OUT_PS_ULC_Y(out_params->height - (proc_data->drect.top + proc_data->drect.height));
+			s0param_lrc = BF_PXP_OUT_PS_LRC_X(((s0param_ulc & BM_PXP_OUT_PS_ULC_X) >> 16) + proc_data->drect.width - 1);
+			s0param_lrc |= BF_PXP_OUT_PS_LRC_Y((s0param_ulc & BM_PXP_OUT_PS_ULC_Y) + proc_data->drect.height - 1);
+			break;
+		case 270:
+			s0param_ulc = BF_PXP_OUT_PS_ULC_X(out_params->height - (proc_data->drect.top + proc_data->drect.height));
+			s0param_ulc |= BF_PXP_OUT_PS_ULC_Y(proc_data->drect.left);
+			s0param_lrc = BF_PXP_OUT_PS_LRC_X(((s0param_ulc & BM_PXP_OUT_PS_ULC_X) >> 16) + proc_data->drect.height - 1);
+			s0param_lrc |= BF_PXP_OUT_PS_LRC_Y((s0param_ulc & BM_PXP_OUT_PS_ULC_Y) + proc_data->drect.width - 1);
+			break;
+		default:
+			return;
+		}
+		__raw_writel(s0param_ulc, pxp->base + HW_PXP_OUT_PS_ULC);
+		__raw_writel(s0param_lrc, pxp->base + HW_PXP_OUT_PS_LRC);
+	}
+
+	/* Since user apps always pass the rotated drect
+	 * to this driver, we need to first swap the width
+	 * and height which is used to calculate the scale
+	 * factors later.
+	 */
+	if (proc_data->rotate == 90 || proc_data->rotate == 270) {
+		int temp;
+		temp = proc_data->drect.width;
+		proc_data->drect.width = proc_data->drect.height;
+		proc_data->drect.height = temp;
 	}
 }
 
@@ -751,20 +774,13 @@ static int pxp_set_scaling(struct pxps *pxp)
 	u32 xscale, yscale, s0scale;
 	u32 decx, decy, xdec = 0, ydec = 0;
 	struct pxp_proc_data *proc_data = &pxp->pxp_conf_state.proc_data;
-
-	if (((proc_data->srect.width == proc_data->drect.width) &&
-	    (proc_data->srect.height == proc_data->drect.height)) ||
-	    ((proc_data->srect.width == 0) && (proc_data->srect.height == 0))) {
-		proc_data->scaling = 0;
-		__raw_writel(0x10001000, pxp->base + HW_PXP_PS_SCALE);
-		__raw_writel(0, pxp->base + HW_PXP_PS_CTRL);
-		goto out;
-	}
+	struct pxp_config_data *pxp_conf = &pxp->pxp_conf_state;
+	struct pxp_layer_param *s0_params = &pxp_conf->s0_param;
 
 	proc_data->scaling = 1;
 	decx = proc_data->srect.width / proc_data->drect.width;
 	decy = proc_data->srect.height / proc_data->drect.height;
-	if (decx > 0) {
+	if (decx > 1) {
 		if (decx >= 2 && decx < 4) {
 			decx = 2;
 			xdec = 1;
@@ -777,10 +793,29 @@ static int pxp_set_scaling(struct pxps *pxp)
 		}
 		xscale = proc_data->srect.width * 0x1000 /
 			 (proc_data->drect.width * decx);
-	} else
-		xscale = proc_data->srect.width * 0x1000 /
-			 proc_data->drect.width;
-	if (decy > 0) {
+	} else {
+		if (!is_yuv(s0_params->pixel_fmt) ||
+		    (s0_params->pixel_fmt == PXP_PIX_FMT_GREY) ||
+		    (s0_params->pixel_fmt == PXP_PIX_FMT_GY04) ||
+		    (s0_params->pixel_fmt == PXP_PIX_FMT_VUY444)) {
+			if ((proc_data->srect.width > 1) &&
+			    (proc_data->drect.width > 1))
+				xscale = (proc_data->srect.width - 1) * 0x1000 /
+					 (proc_data->drect.width - 1);
+			else
+				xscale = proc_data->srect.width * 0x1000 /
+					 proc_data->drect.width;
+		} else {
+			if ((proc_data->srect.width > 2) &&
+			    (proc_data->drect.width > 1))
+				xscale = (proc_data->srect.width - 2) * 0x1000 /
+					 (proc_data->drect.width - 1);
+			else
+				xscale = proc_data->srect.width * 0x1000 /
+					 proc_data->drect.width;
+		}
+	}
+	if (decy > 1) {
 		if (decy >= 2 && decy < 4) {
 			decy = 2;
 			ydec = 1;
@@ -793,9 +828,15 @@ static int pxp_set_scaling(struct pxps *pxp)
 		}
 		yscale = proc_data->srect.height * 0x1000 /
 			 (proc_data->drect.height * decy);
-	} else
-		yscale = proc_data->srect.height * 0x1000 /
-			 proc_data->drect.height;
+	} else {
+		if ((proc_data->srect.height > 1) &&
+		    (proc_data->drect.height > 1))
+			yscale = (proc_data->srect.height - 1) * 0x1000 /
+				 (proc_data->drect.height - 1);
+		else
+			yscale = proc_data->srect.height * 0x1000 /
+				 proc_data->drect.height;
+	}
 
 	__raw_writel((xdec << 10) | (ydec << 8), pxp->base + HW_PXP_PS_CTRL);
 
@@ -807,7 +848,6 @@ static int pxp_set_scaling(struct pxps *pxp)
 		BF_PXP_PS_SCALE_XSCALE(xscale);
 	__raw_writel(s0scale, pxp->base + HW_PXP_PS_SCALE);
 
-out:
 	pxp_set_ctrl(pxp);
 
 	return ret;
@@ -1071,8 +1111,13 @@ static void pxp_set_s0buf(struct pxps *pxp)
 		U1 = U + offset;
 		V = U + ((s0_params->width * s0_params->height) >> s);
 		V1 = V + offset;
-		__raw_writel(U1, pxp->base + HW_PXP_PS_UBUF);
-		__raw_writel(V1, pxp->base + HW_PXP_PS_VBUF);
+		if (s0_params->pixel_fmt == PXP_PIX_FMT_YVU420P) {
+			__raw_writel(V1, pxp->base + HW_PXP_PS_UBUF);
+			__raw_writel(U1, pxp->base + HW_PXP_PS_VBUF);
+		} else {
+			__raw_writel(U1, pxp->base + HW_PXP_PS_UBUF);
+			__raw_writel(V1, pxp->base + HW_PXP_PS_VBUF);
+		}
 	} else if ((s0_params->pixel_fmt == PXP_PIX_FMT_NV12) ||
 		 (s0_params->pixel_fmt == PXP_PIX_FMT_NV21) ||
 		 (s0_params->pixel_fmt == PXP_PIX_FMT_NV16) ||
@@ -1104,7 +1149,8 @@ static void pxp_set_s0buf(struct pxps *pxp)
 	else if (s0_params->pixel_fmt == PXP_PIX_FMT_GY04)
 		__raw_writel(pitch >> 1,
 				pxp->base + HW_PXP_PS_PITCH);
-	else if (s0_params->pixel_fmt == PXP_PIX_FMT_RGB32)
+	else if (s0_params->pixel_fmt == PXP_PIX_FMT_RGB32 ||
+			 s0_params->pixel_fmt == PXP_PIX_FMT_VUY444)
 		__raw_writel(pitch << 2,
 				pxp->base + HW_PXP_PS_PITCH);
 	else if (s0_params->pixel_fmt == PXP_PIX_FMT_UYVY ||
@@ -4120,73 +4166,6 @@ static void pxp_start2(struct pxps *pxp)
 	dump_pxp_reg2(pxp);
 }
 
-static int pxp_hw_init(struct pxps *pxp)
-{
-	struct pxp_config_data *pxp_conf = &pxp->pxp_conf_state;
-	struct pxp_proc_data *proc_data = &pxp_conf->proc_data;
-
-	/* Pull PxP out of reset */
-	//	__raw_writel(0, pxp->base + HW_PXP_CTRL);
-	pxp_soft_reset(pxp);
-
-	/* Config defaults */
-
-	/* Initialize non-channel-specific PxP parameters */
-	proc_data->drect.left = proc_data->srect.left = 0;
-	proc_data->drect.top = proc_data->srect.top = 0;
-	proc_data->drect.width = proc_data->srect.width = 0;
-	proc_data->drect.height = proc_data->srect.height = 0;
-	proc_data->scaling = 0;
-	proc_data->hflip = 0;
-	proc_data->vflip = 0;
-	proc_data->rotate = 0;
-	proc_data->bgcolor = 0;
-
-	/* Initialize S0 channel parameters */
-	pxp_conf->s0_param.pixel_fmt = pxp_s0_formats[0];
-	pxp_conf->s0_param.width = 0;
-	pxp_conf->s0_param.height = 0;
-	pxp_conf->s0_param.color_key = -1;
-	pxp_conf->s0_param.color_key_enable = false;
-
-	/* Initialize OL channel parameters */
-	pxp_conf->ol_param[0].combine_enable = false;
-	pxp_conf->ol_param[0].width = 0;
-	pxp_conf->ol_param[0].height = 0;
-	pxp_conf->ol_param[0].pixel_fmt = PXP_PIX_FMT_RGB565;
-	pxp_conf->ol_param[0].color_key_enable = false;
-	pxp_conf->ol_param[0].color_key = -1;
-	pxp_conf->ol_param[0].global_alpha_enable = false;
-	pxp_conf->ol_param[0].global_alpha = 0;
-	pxp_conf->ol_param[0].local_alpha_enable = false;
-
-	/* Initialize Output channel parameters */
-	pxp_conf->out_param.width = 0;
-	pxp_conf->out_param.height = 0;
-	pxp_conf->out_param.pixel_fmt = PXP_PIX_FMT_RGB565;
-
-	proc_data->overlay_state = 0;
-
-	/* Write default h/w config */
-	pxp_set_ctrl(pxp);
-	pxp_set_s0param(pxp);
-	pxp_set_s0crop(pxp);
-	/*
-	 * simply program the ULC to a higher value than the LRC
-	 * to avoid any AS pixels to show up in the output buffer.
-	 */
-	__raw_writel(0xFFFFFFFF, pxp->base + HW_PXP_OUT_AS_ULC);
-	pxp_set_olparam(0, pxp);
-	pxp_set_olcolorkey(0, pxp);
-
-	pxp_set_s0colorkey(pxp);
-	pxp_set_csc(pxp);
-	pxp_set_bg(pxp);
-	pxp_set_lut(pxp);
-
-	return 0;
-}
-
 static int pxp_dma_init(struct pxps *pxp)
 {
 	struct pxp_dma *pxp_dma = &pxp->pxp_dma;
@@ -4331,14 +4310,6 @@ static int pxp_probe(struct platform_device *pdev)
 	pxp->pdev = pdev;
 
 	pxp->clk = devm_clk_get(&pdev->dev, "pxp-axi");
-	clk_prepare_enable(pxp->clk);
-
-	err = pxp_hw_init(pxp);
-	clk_disable_unprepare(pxp->clk);
-	if (err) {
-		dev_err(&pdev->dev, "failed to initialize hardware\n");
-		goto exit;
-	}
 
 	err = devm_request_irq(&pdev->dev, pxp->irq, pxp_irq, 0,
 				"pxp-dmaengine", pxp);
@@ -4365,7 +4336,9 @@ static int pxp_probe(struct platform_device *pdev)
 	}
 
 	device_create_file(&pdev->dev, &dev_attr_block_size);
+	pxp_clk_enable(pxp);
 	dump_pxp_reg(pxp);
+	pxp_clk_disable(pxp);
 
 	INIT_WORK(&pxp->work, clkoff_callback);
 	init_timer(&pxp->clk_timer);
