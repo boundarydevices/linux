@@ -54,3 +54,7 @@
 		MX6QDL_PAD_EIM_DA12__IPU1_CSI1_VSYNC	0xb0b1
 	>;
 };
+
+&pxp {
+	status = "okay";
+};
