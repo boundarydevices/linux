@@ -329,6 +329,12 @@
 	status = "okay";
 };
 
+&sim1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sim1_1>;
+	status = "disabled";
+};
+
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1_1>;
@@ -584,6 +590,19 @@
 			fsl,pins = <
 				MX7D_PAD_SAI1_RX_SYNC__MQS_RIGHT     0x4000007f
 				MX7D_PAD_SAI1_RX_BCLK__MQS_LEFT      0x4000007f
+			>;
+		};
+	};
+
+	sim1 {
+		pinctrl_sim1_1: sim1grp-1 {
+			fsl,pins = <
+				MX7D_PAD_SAI1_TX_SYNC__SIM1_PORT1_RST_B		0x77
+				MX7D_PAD_SAI1_RX_SYNC__SIM1_PORT1_PD		0x77
+				MX7D_PAD_SAI1_TX_DATA__SIM1_PORT1_SVEN		0x77
+				MX7D_PAD_SAI1_TX_BCLK__SIM1_PORT1_CLK		0x73
+				MX7D_PAD_SAI1_RX_DATA__SIM1_PORT1_TRXD		0x73
+
 			>;
 		};
 	};
