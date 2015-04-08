@@ -1169,6 +1169,8 @@
 				compatible = "fsl,imx7d-sim";
 				reg = <0x30b90000 0x10000>;
 				interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX7D_SIM1_ROOT_CLK>;
+				clock-names = "sim";
 				status = "disabled";
 			};
 
