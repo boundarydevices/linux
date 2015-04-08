@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -558,7 +558,9 @@ int _ipu_dp_init(struct ipu_soc *ipu,
 		dev_dbg(ipu->dev, "_ipu_dp_init color key change to yuv fmt 0x%x!\n", color_key);
 	}
 
-	__ipu_dp_csc_setup(ipu, dp, dp_csc_array[ipu->bg_csc_type][ipu->fg_csc_type], true);
+	__ipu_dp_csc_setup(ipu, dp,
+			   dp_csc_array[ipu->bg_csc_type][ipu->fg_csc_type],
+			   false);
 
 	return 0;
 }
