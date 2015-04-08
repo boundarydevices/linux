@@ -87,6 +87,33 @@
 
 	.align 3
 
+	.macro	disable_l1_dcache
+
+	/*
+	 * Flush all data from the L1 data cache before disabling
+	 * SCTLR.C bit.
+	 */
+	push	{r0 - r10, lr}
+	ldr	r7, =v7_flush_dcache_all
+	mov	lr, pc
+	mov	pc, r7
+	pop	{r0 - r10, lr}
+
+	/* disable d-cache */
+	mrc	p15, 0, r7, c1, c0, 0
+	bic	r7, r7, #(1 << 2)
+	mcr	p15, 0, r7, c1, c0, 0
+	dsb
+	isb
+
+	push	{r0 - r10, lr}
+	ldr	r7, =v7_flush_dcache_all
+	mov	lr, pc
+	mov	pc, r7
+	pop	{r0 - r10, lr}
+
+	.endm
+
 	.macro store_ttbr1
 
 	/* Store TTBR1 to pm_info->ttbr1 */
@@ -120,14 +147,6 @@
 	/* flush the TLB */
 	ldr	r6, =0x0
 	mcr	p15, 0, r6, c8, c3, 0
-
-	/* Disable L1 data cache. */
-	mrc	p15, 0, r6, c1, c0, 0
-	bic	r6, r6, #0x4
-	mcr	p15, 0, r6, c1, c0, 0
-
-	dsb
-	isb
 
 	.endm
 
@@ -445,6 +464,8 @@ ENTRY(imx7_suspend)
 	/* store physical resume addr and pm_info address. */
 	str	r9, [r11, #MX7_SRC_GPR1]
 	str	r1, [r11, #MX7_SRC_GPR2]
+
+	disable_l1_dcache
 
 	store_ttbr1
 
