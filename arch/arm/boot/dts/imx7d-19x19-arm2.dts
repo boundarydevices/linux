@@ -217,6 +217,8 @@
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1_1>;
+	assigned-clocks = <&clks IMX7D_UART1_ROOT_SRC>;
+	assigned-clock-parents = <&clks IMX7D_PLL_SYS_MAIN_240M_CLK>;
 	status = "okay";
 };
 
@@ -224,6 +226,8 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3_1>;
 	fsl,uart-has-rtscts;
+	assigned-clocks = <&clks IMX7D_UART3_ROOT_SRC>;
+	assigned-clock-parents = <&clks IMX7D_PLL_SYS_MAIN_240M_CLK>;
 	status = "okay";
 	/* for DTE mode, add below change */
 	/* fsl,dte-mode;*/
