@@ -7,6 +7,7 @@
  *
  */
 
+#include <linux/busfreq-imx6.h>
 #include <linux/clk.h>
 #include <linux/clkdev.h>
 #include <linux/err.h>
@@ -113,7 +114,6 @@ static const u32 clks_init_on[] __initconst = {
 	IMX6SL_CLK_IPG, IMX6SL_CLK_ARM, IMX6SL_CLK_MMDC_ROOT,
 };
 
-extern int low_bus_freq_mode;
 /*
  * ERR005311 CCM: After exit from WAIT mode, unwanted interrupt(s) taken
  *           during WAIT mode entry process could cause cache memory
@@ -154,6 +154,7 @@ void imx6sl_set_wait_clk(bool enter)
 	static unsigned long saved_arm_div;
 	u32 val;
 	int arm_div_for_wait = imx6sl_get_arm_divider_for_wait();
+	int mode = get_bus_freq_mode();
 
 	if (enter) {
 		/*
@@ -162,7 +163,7 @@ void imx6sl_set_wait_clk(bool enter)
 		 * from the 24MHz OSC, as there is no way to get
 		 * 28.8MHz, when ARM is sourced from PLl1.
 		 */
-		if (low_bus_freq_mode) {
+		if (mode == BUS_FREQ_LOW) {
 			val = readl_relaxed(ccm_base + CCSR);
 			val |= BM_CCSR_PLL1_SW_CLK_SEL;
 			writel_relaxed(val, ccm_base + CCSR);
@@ -171,7 +172,7 @@ void imx6sl_set_wait_clk(bool enter)
 			writel_relaxed(arm_div_for_wait, ccm_base + CACRR);
 		}
 	} else {
-		if (low_bus_freq_mode) {
+		if (mode == BUS_FREQ_LOW) {
 			val = readl_relaxed(ccm_base + CCSR);
 			val &= ~BM_CCSR_PLL1_SW_CLK_SEL;
 			writel_relaxed(val, ccm_base + CCSR);

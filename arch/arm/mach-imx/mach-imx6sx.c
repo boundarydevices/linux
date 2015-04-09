@@ -327,7 +327,9 @@ static void __init imx6sx_map_io(void)
 {
 	debug_ll_io_init();
 	imx6_pm_map_io();
+#ifdef CONFIG_CPU_FREQ
 	imx6_busfreq_map_io();
+#endif
 }
 
 DT_MACHINE_START(IMX6SX, "Freescale i.MX6 SoloX (Device Tree)")
