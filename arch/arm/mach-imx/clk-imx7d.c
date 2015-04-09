@@ -905,14 +905,6 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	/* set uart module clock's parent clock source that must be great then 80Mhz */
 	if (uart_from_osc)
 		imx_clk_set_parent(clks[IMX7D_UART1_ROOT_SRC], clks[IMX7D_OSC_24M_CLK]);
-	else
-		imx_clk_set_parent(clks[IMX7D_UART1_ROOT_SRC], clks[IMX7D_PLL_SYS_MAIN_240M_CLK]);
-	imx_clk_set_parent(clks[IMX7D_UART2_ROOT_SRC], clks[IMX7D_PLL_SYS_MAIN_240M_CLK]);
-	imx_clk_set_parent(clks[IMX7D_UART3_ROOT_SRC], clks[IMX7D_PLL_SYS_MAIN_240M_CLK]);
-	imx_clk_set_parent(clks[IMX7D_UART4_ROOT_SRC], clks[IMX7D_PLL_SYS_MAIN_240M_CLK]);
-	imx_clk_set_parent(clks[IMX7D_UART5_ROOT_SRC], clks[IMX7D_PLL_SYS_MAIN_240M_CLK]);
-	imx_clk_set_parent(clks[IMX7D_UART6_ROOT_SRC], clks[IMX7D_PLL_SYS_MAIN_240M_CLK]);
-	imx_clk_set_parent(clks[IMX7D_UART7_ROOT_SRC], clks[IMX7D_PLL_SYS_MAIN_240M_CLK]);
 
 	/* set pcie root's parent clk source */
 	imx_clk_set_parent(clks[IMX7D_PCIE_CTRL_ROOT_SRC], clks[IMX7D_PLL_ENET_MAIN_250M_CLK]);
