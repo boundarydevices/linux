@@ -134,6 +134,14 @@
 /* the IP supports eMMC HS400 */
 #define ESDHC_FLAG_SUP_HS400	BIT(9)
 
+static struct mmc_host *wifi_mmc_host;
+void wifi_card_detect(void)
+{
+	WARN_ON(!wifi_mmc_host);
+	mmc_detect_change(wifi_mmc_host, 0);
+}
+EXPORT_SYMBOL(wifi_card_detect);
+
 struct esdhc_soc_data {
 	u32 flags;
 };
@@ -1035,6 +1043,11 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 
 	if (of_find_property(np, "enable-sdio-wakeup", NULL))
 		host->mmc->pm_caps |= MMC_PM_WAKE_SDIO_IRQ;
+
+	if (of_get_property(np, "wifi-host", NULL)) {
+		wifi_mmc_host = host->mmc;
+		dev_info(mmc_dev(host->mmc), "assigned as wifi host\n");
+	}
 
 	return 0;
 }
