@@ -1150,8 +1150,11 @@ void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel)
 	 * usecount is 1) after clearing DC/DP/DI bits in IPU_CONF
 	 * register to prevent LVDS display channel starvation.
 	 */
-	if (_ipu_is_primary_disp_chan(in_dma))
+	if (_ipu_is_primary_disp_chan(in_dma) &&
+	    ipu->pixel_clk_en[ipu->dc_di_assignment[dc_chan]]) {
 		clk_disable_unprepare(ipu->pixel_clk[ipu->dc_di_assignment[dc_chan]]);
+		ipu->pixel_clk_en[ipu->dc_di_assignment[dc_chan]] = false;
+	}
 
 	mutex_unlock(&ipu->mutex_lock);
 
