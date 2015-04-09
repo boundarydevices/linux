@@ -2709,7 +2709,7 @@ static int inv_mpu_probe(struct i2c_client *client,
 #ifdef CONFIG_INV_KERNEL_3_10
 	indio_dev = iio_device_alloc(sizeof(*st));
 #else
-	indio_dev = iio_allocate_device(sizeof(*st));
+	indio_dev = iio_device_alloc(sizeof(*st));
 #endif
 	if (indio_dev == NULL) {
 		pr_err("memory allocation failed\n");
@@ -2827,7 +2827,7 @@ out_free:
 #ifdef CONFIG_INV_KERNEL_3_10
 	iio_device_free(indio_dev);
 #else
-	iio_free_device(indio_dev);
+	iio_device_free(indio_dev);
 #endif
 out_no_free:
 	dev_err(&client->adapter->dev, "%s failed %d\n", __func__, result);
@@ -2876,7 +2876,7 @@ static int inv_mpu_remove(struct i2c_client *client)
 #ifdef CONFIG_INV_KERNEL_3_10
 	iio_device_free(indio_dev);
 #else
-	iio_free_device(indio_dev);
+	iio_device_free(indio_dev);
 #endif
 	dev_info(&client->adapter->dev, "inv-mpu-iio module removed.\n");
 

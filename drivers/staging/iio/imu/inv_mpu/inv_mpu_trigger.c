@@ -54,7 +54,7 @@ int inv_mpu_probe_trigger(struct iio_dev *indio_dev)
 #ifdef CONFIG_INV_KERNEL_3_10
 	st->trig = iio_trigger_alloc("%s-dev%d",
 #else
-	st->trig = iio_allocate_trigger("%s-dev%d",
+	st->trig = iio_trigger_alloc("%s-dev%d",
 #endif
 					indio_dev->name,
 					indio_dev->id);
@@ -71,7 +71,7 @@ int inv_mpu_probe_trigger(struct iio_dev *indio_dev)
 #ifdef CONFIG_INV_KERNEL_3_10
 		iio_trigger_free(st->trig);
 #else
-		iio_free_trigger(st->trig);
+		iio_trigger_free(st->trig);
 #endif
 		return -EPERM;
 	}
@@ -88,7 +88,7 @@ void inv_mpu_remove_trigger(struct iio_dev *indio_dev)
 #ifdef CONFIG_INV_KERNEL_3_10
 	iio_trigger_free(st->trig);
 #else
-	iio_free_trigger(st->trig);
+	iio_trigger_free(st->trig);
 #endif
 }
 
