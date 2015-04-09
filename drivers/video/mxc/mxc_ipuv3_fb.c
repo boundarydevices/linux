@@ -1315,7 +1315,8 @@ static int mxcfb_set_par(struct fb_info *fbi)
 
 	retval = _setup_disp_channel2(fbi);
 	if (retval) {
-		ipu_uninit_channel(mxc_fbi->ipu, mxc_fbi->ipu_ch);
+		if (!on_the_fly)
+			ipu_uninit_channel(mxc_fbi->ipu, mxc_fbi->ipu_ch);
 		return retval;
 	}
 
