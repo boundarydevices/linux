@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -24,6 +24,7 @@
 #include <asm/mach/map.h>
 #include <asm/mach-types.h>
 #include <asm/tlb.h>
+#include <linux/busfreq-imx6.h>
 #include <linux/clk.h>
 #include <linux/clockchips.h>
 #include <linux/cpumask.h>
@@ -244,13 +245,14 @@ int update_ddr_freq_imx6sx(int ddr_rate)
 	int i;
 	bool dll_off = false;
 	unsigned long ttbr1;
+	int mode = get_bus_freq_mode();
 
 	if (ddr_rate == curr_ddr_rate)
 		return 0;
 
 	printk(KERN_DEBUG "\nBus freq set to %d start...\n", ddr_rate);
 
-	if (low_bus_freq_mode || audio_bus_freq_mode)
+	if ((mode == BUS_FREQ_LOW) || (mode == BUS_FREQ_AUDIO))
 		dll_off = true;
 
 	imx6sx_busfreq_info->dll_off = dll_off;
@@ -294,6 +296,7 @@ int update_ddr_freq_imx6q(int ddr_rate)
 	unsigned int reg;
 	int cpu = 0;
 #endif
+	int mode = get_bus_freq_mode();
 
 	if (!can_change_ddr_freq())
 		return -1;
@@ -303,7 +306,7 @@ int update_ddr_freq_imx6q(int ddr_rate)
 
 	printk(KERN_DEBUG "\nBus freq set to %d start...\n", ddr_rate);
 
-	if (low_bus_freq_mode || audio_bus_freq_mode)
+	if ((mode == BUS_FREQ_LOW) || (mode == BUS_FREQ_AUDIO))
 		dll_off = true;
 
 	iram_ddr_settings[0][0] = ddr_settings_size;

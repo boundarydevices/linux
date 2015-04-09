@@ -58,18 +58,19 @@
 #define	MMDC_MDMISC_DDR_TYPE_DDR3	0
 #define	MMDC_MDMISC_DDR_TYPE_LPDDR2	1
 
-static int ddr_type;
-int high_bus_freq_mode;
-int med_bus_freq_mode;
-int audio_bus_freq_mode;
-int low_bus_freq_mode;
-int ultra_low_bus_freq_mode;
+
 unsigned int ddr_med_rate;
 unsigned int ddr_normal_rate;
 unsigned long ddr_freq_change_total_size;
 unsigned long ddr_freq_change_iram_base;
 unsigned long ddr_freq_change_iram_phys;
 
+static int ddr_type;
+static int low_bus_freq_mode;
+static int audio_bus_freq_mode;
+static int ultra_low_bus_freq_mode;
+static int high_bus_freq_mode;
+static int med_bus_freq_mode;
 static int bus_freq_scaling_initialized;
 static struct device *busfreq_dev;
 static int busfreq_suspended;
@@ -77,6 +78,7 @@ static u32 org_arm_rate;
 static int bus_freq_scaling_is_active;
 static int high_bus_count, med_bus_count, audio_bus_count, low_bus_count;
 static unsigned int ddr_low_rate;
+static int cur_bus_freq_mode;
 
 extern unsigned long iram_tlb_phys_addr;
 extern int unsigned long iram_tlb_base_addr;
@@ -198,6 +200,7 @@ static void enter_lpm_imx6sx(void)
 		}
 		audio_bus_freq_mode = 1;
 		low_bus_freq_mode = 0;
+		cur_bus_freq_mode = BUS_FREQ_AUDIO;
 	} else {
 		if (ddr_type == MMDC_MDMISC_DDR_TYPE_DDR3)
 			update_ddr_freq_imx6sx(LPAPM_CLK);
@@ -210,6 +213,7 @@ static void enter_lpm_imx6sx(void)
 			clk_disable_unprepare(pll2_400);
 		low_bus_freq_mode = 1;
 		audio_bus_freq_mode = 0;
+		cur_bus_freq_mode = BUS_FREQ_LOW;
 	}
 }
 
@@ -306,6 +310,7 @@ static void enter_lpm_imx6sl(void)
 		low_bus_freq_mode = 0;
 		ultra_low_bus_freq_mode = 0;
 		audio_bus_freq_mode = 1;
+		cur_bus_freq_mode = BUS_FREQ_AUDIO;
 	} else {
 		u32 arm_div, pll1_rate;
 		org_arm_rate = clk_get_rate(cpu_clk);
@@ -319,6 +324,7 @@ static void enter_lpm_imx6sl(void)
 			ultra_low_bus_freq_mode = 1;
 			low_bus_freq_mode = 0;
 			audio_bus_freq_mode = 0;
+			cur_bus_freq_mode = BUS_FREQ_ULTRA_LOW;
 		} else {
 			if (!ultra_low_bus_freq_mode && !low_bus_freq_mode) {
 				/*
@@ -376,14 +382,15 @@ static void enter_lpm_imx6sl(void)
 				imx_clk_set_parent(pll2_bypass, pll2_bypass_src);
 				imx_clk_set_parent(periph2_clk2_sel, pll2_bus);
 				imx_clk_set_parent(periph2_clk, periph2_clk2);
-
 			}
 			if (low_bus_count == 0) {
 				ultra_low_bus_freq_mode = 1;
 				low_bus_freq_mode = 0;
+				cur_bus_freq_mode = BUS_FREQ_ULTRA_LOW;
 			} else {
 				ultra_low_bus_freq_mode = 0;
 				low_bus_freq_mode = 1;
+				cur_bus_freq_mode = BUS_FREQ_LOW;
 			}
 			audio_bus_freq_mode = 0;
 		}
@@ -454,6 +461,7 @@ static void reduce_bus_freq(void)
 			imx_clk_set_parent(periph_clk, periph_pre_clk);
 			audio_bus_freq_mode = 1;
 			low_bus_freq_mode = 0;
+			cur_bus_freq_mode = BUS_FREQ_AUDIO;
 		} else {
 			update_ddr_freq_imx6q(LPAPM_CLK);
 			/* Make sure periph clk's parent also got updated */
@@ -464,6 +472,7 @@ static void reduce_bus_freq(void)
 				clk_disable_unprepare(pll2_400);
 			low_bus_freq_mode = 1;
 			audio_bus_freq_mode = 0;
+			cur_bus_freq_mode = BUS_FREQ_LOW;
 		}
 	}
 	clk_disable_unprepare(pll3);
@@ -587,6 +596,7 @@ static int set_high_bus_freq(int high_bus_freq)
 	med_bus_freq_mode = 0;
 	low_bus_freq_mode = 0;
 	audio_bus_freq_mode = 0;
+	cur_bus_freq_mode = BUS_FREQ_HIGH;
 
 	clk_disable_unprepare(pll3);
 	if (high_bus_freq_mode)
@@ -604,6 +614,13 @@ static int set_high_bus_freq(int high_bus_freq)
 void request_bus_freq(enum bus_freq_mode mode)
 {
 	mutex_lock(&bus_freq_mutex);
+
+	if (mode == BUS_FREQ_ULTRA_LOW) {
+		dev_dbg(busfreq_dev, "This mode is automatically entered, cannot \
+			be requested.\n");
+		mutex_unlock(&bus_freq_mutex);
+		return;
+	}
 
 	if (mode == BUS_FREQ_HIGH)
 		high_bus_count++;
@@ -655,6 +672,13 @@ EXPORT_SYMBOL(request_bus_freq);
 void release_bus_freq(enum bus_freq_mode mode)
 {
 	mutex_lock(&bus_freq_mutex);
+
+	if (mode == BUS_FREQ_ULTRA_LOW) {
+		dev_dbg(busfreq_dev, "This mode is automatically entered, cannot \
+			be released.\n");
+		mutex_unlock(&bus_freq_mutex);
+		return;
+	}
 
 	if (mode == BUS_FREQ_HIGH) {
 		if (high_bus_count == 0) {
@@ -729,6 +753,12 @@ void release_bus_freq(enum bus_freq_mode mode)
 	return;
 }
 EXPORT_SYMBOL(release_bus_freq);
+
+int get_bus_freq_mode(void)
+{
+	return cur_bus_freq_mode;
+}
+EXPORT_SYMBOL(get_bus_freq_mode);
 
 static struct map_desc ddr_iram_io_desc __initdata = {
 	/* .virtual and .pfn are run-time assigned */
@@ -1124,6 +1154,7 @@ static int busfreq_probe(struct platform_device *pdev)
 	low_bus_freq_mode = 0;
 	audio_bus_freq_mode = 0;
 	ultra_low_bus_freq_mode = 0;
+	cur_bus_freq_mode = BUS_FREQ_HIGH;
 
 	bus_freq_scaling_is_active = 1;
 	bus_freq_scaling_initialized = 1;

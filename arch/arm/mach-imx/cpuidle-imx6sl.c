@@ -6,6 +6,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/busfreq-imx6.h>
 #include <linux/cpuidle.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -24,10 +25,11 @@
 
 static void __iomem *wfi_iram_base;
 extern unsigned long iram_tlb_base_addr;
-extern int ultra_low_bus_freq_mode;
-extern int audio_bus_freq_mode;
+
+#ifdef CONFIG_CPU_FREQ
 extern unsigned long mx6sl_lpm_wfi_start asm("mx6sl_lpm_wfi_start");
 extern unsigned long mx6sl_lpm_wfi_end asm("mx6sl_lpm_wfi_end");
+#endif
 
 struct imx6_cpuidle_pm_info {
 	u32 pm_info_size; /* Size of pm_info */
@@ -64,9 +66,11 @@ static void (*imx6sl_wfi_in_iram_fn)(void __iomem *iram_vbase,
 static int imx6sl_enter_wait(struct cpuidle_device *dev,
 			    struct cpuidle_driver *drv, int index)
 {
+	int mode = get_bus_freq_mode();
+
 	imx6q_set_lpm(WAIT_UNCLOCKED);
-	if (audio_bus_freq_mode || ultra_low_bus_freq_mode) {
-		imx6sl_wfi_in_iram_fn(wfi_iram_base, audio_bus_freq_mode,
+	if ((mode == BUS_FREQ_AUDIO) || (mode == BUS_FREQ_ULTRA_LOW)) {
+		imx6sl_wfi_in_iram_fn(wfi_iram_base, (mode == BUS_FREQ_AUDIO) ? 1 : 0 ,
 			regulator_is_enabled(vbus_ldo));
 	} else {
 		/*
@@ -105,6 +109,7 @@ static struct cpuidle_driver imx6sl_cpuidle_driver = {
 
 int __init imx6sl_cpuidle_init(void)
 {
+#ifdef CONFIG_CPU_FREQ
 	struct imx6_cpuidle_pm_info *pm_info;
 	int i;
 	const u32 *mmdc_offset_array;
@@ -139,7 +144,7 @@ int __init imx6sl_cpuidle_init(void)
 
 	imx6sl_wfi_in_iram_fn = (void *)fncpy(wfi_iram_base + sizeof(*pm_info),
 		&imx6sl_low_power_wfi, wfi_code_size);
-
+#endif
 	return cpuidle_register(&imx6sl_cpuidle_driver, NULL);
 }
 
