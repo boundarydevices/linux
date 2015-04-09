@@ -70,7 +70,7 @@ void inv_read_ak89xx_fifo(struct iio_dev *indio_dev)
 						INV_AK89XX_SCAN_MAGN_X);
 		if (ring->scan_timestamp)
 			tmp_buf[(d_ind + 7)/8] = st->timestamp;
-		ring->access->store_to(indio_dev->buffer, tmp, st->timestamp);
+		ring->access->store_to(indio_dev->buffer, tmp);
 	}
 }
 
