@@ -907,7 +907,6 @@
 	enable-sdio-wakeup;
 	keep-power-in-suspend;
 	tuning-step = <2>;
-	non-removable;
 	wifi-host;
 	status = "okay";
 };
