@@ -71,6 +71,7 @@ struct ipu_soc {
 	struct clk *di_clk[2];
 	struct clk *di_clk_sel[2];
 	struct clk *pixel_clk[2];
+	bool pixel_clk_en[2];
 	struct clk *pixel_clk_sel[2];
 	struct clk *csi_clk[2];
 	struct clk *prg_clk;
