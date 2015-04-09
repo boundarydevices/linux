@@ -739,6 +739,7 @@ void _ipu_dp_dc_enable(struct ipu_soc *ipu, ipu_channel_t channel)
 	ipu_dc_write(ipu, reg, DC_WR_CH_CONF(dc_chan));
 
 	clk_prepare_enable(ipu->pixel_clk[di]);
+	ipu->pixel_clk_en[ipu->dc_di_assignment[dc_chan]] = true;
 }
 
 static irqreturn_t dc_irq_handler(int irq, void *dev_id)
