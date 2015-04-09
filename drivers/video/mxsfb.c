@@ -206,6 +206,7 @@ struct mxsfb_info {
 	bool clk_axi_enabled;
 	bool clk_disp_axi_enabled;
 	void __iomem *base;	/* registers */
+	u32 sync;		/* record display timing polarities */
 	unsigned allocated_size;
 	int enabled;
 	unsigned ld_intf_width;
@@ -716,13 +717,14 @@ static int mxsfb_set_par(struct fb_info *fb_info)
 		VDCTRL0_VSYNC_PERIOD_UNIT |
 		VDCTRL0_VSYNC_PULSE_WIDTH_UNIT |
 		VDCTRL0_SET_VSYNC_PULSE_WIDTH(fb_info->var.vsync_len);
-	if (fb_info->var.sync & FB_SYNC_HOR_HIGH_ACT)
+	/* use the saved sync to avoid wrong sync information */
+	if (host->sync & FB_SYNC_HOR_HIGH_ACT)
 		vdctrl0 |= VDCTRL0_HSYNC_ACT_HIGH;
-	if (fb_info->var.sync & FB_SYNC_VERT_HIGH_ACT)
+	if (host->sync & FB_SYNC_VERT_HIGH_ACT)
 		vdctrl0 |= VDCTRL0_VSYNC_ACT_HIGH;
-	if (!(fb_info->var.sync & FB_SYNC_OE_LOW_ACT))
+	if (!(host->sync & FB_SYNC_OE_LOW_ACT))
 		vdctrl0 |= VDCTRL0_ENABLE_ACT_HIGH;
-	if (fb_info->var.sync & FB_SYNC_CLK_LAT_FALL)
+	if (host->sync & FB_SYNC_CLK_LAT_FALL)
 		vdctrl0 |= VDCTRL0_DOTCLK_ACT_FALLING;
 
 	writel(vdctrl0, host->base + LCDC_VDCTRL0);
@@ -1189,6 +1191,8 @@ static int mxsfb_init_fbinfo(struct mxsfb_info *host)
 	modelist = list_first_entry(&fb_info->modelist,
 			struct fb_modelist, list);
 	fb_videomode_to_var(var, &modelist->mode);
+	/* save the sync value getting from dtb */
+	host->sync = fb_info->var.sync;
 
 	var->nonstd = 0;
 	var->activate = FB_ACTIVATE_NOW;
