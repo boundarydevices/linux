@@ -40,6 +40,7 @@
 #define GPC_PU_PGC_SW_PDN_REQ	0x104
 #define GPC_GTOR		0x124
 #define GPC_PGC_C0		0x800
+#define GPC_PGC_SCU_TIMING	0x890
 #define GPC_PGC_C1		0x840
 #define GPC_PGC_SCU		0x880
 #define GPC_PGC_FM		0xa00
@@ -62,6 +63,7 @@
 #define BM_SLPCR_SBYOS				0x2
 #define BM_SLPCR_BYPASS_PMIC_READY		0x1
 
+#define BM_LPCR_A7_AD_L2PGE			0x10000
 #define BM_LPCR_A7_AD_EN_C1_PUP			0x800
 #define BM_LPCR_A7_AD_EN_C1_IRQ_PUP		0x400
 #define BM_LPCR_A7_AD_EN_C0_PUP			0x200
@@ -205,9 +207,9 @@ void imx_gpcv2_set_plat_power_gate_by_lpm(bool pdn)
 {
 	u32 val = readl_relaxed(gpc_base + GPC_LPCR_A7_AD);
 
-	val &= ~BM_LPCR_A7_AD_EN_PLAT_PDN;
+	val &= ~(BM_LPCR_A7_AD_EN_PLAT_PDN | BM_LPCR_A7_AD_L2PGE);
 	if (pdn)
-		val |= BM_LPCR_A7_AD_EN_PLAT_PDN;
+		val |= BM_LPCR_A7_AD_EN_PLAT_PDN | BM_LPCR_A7_AD_L2PGE;
 
 	writel_relaxed(val, gpc_base + GPC_LPCR_A7_AD);
 }
@@ -519,6 +521,9 @@ void __init imx_gpcv2_init(void)
 		BM_LPCR_M4_MASK_DSM_TRIGGER, gpc_base + GPC_LPCR_M4);
 	/* set mega/fast mix in A7 domain */
 	writel_relaxed(0x1, gpc_base + GPC_PGC_CPU_MAPPING);
+	/* set SCU timing */
+	writel_relaxed((0x59 << 10) | 0x5B | (0x51 << 20),
+		gpc_base + GPC_PGC_SCU_TIMING);
 
 	/* Register GPC as the secondary interrupt controller behind GIC */
 	gic_arch_extn.irq_mask = imx_gpcv2_irq_mask;
