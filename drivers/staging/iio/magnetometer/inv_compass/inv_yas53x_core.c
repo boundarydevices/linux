@@ -826,7 +826,7 @@ static int inv_yas53x_probe(struct i2c_client *client,
 		result = -ENODEV;
 		goto out_no_free;
 	}
-	indio_dev = iio_allocate_device(sizeof(*st));
+	indio_dev = iio_device_alloc(sizeof(*st));
 	if (indio_dev == NULL) {
 		result =  -ENOMEM;
 		goto out_no_free;
@@ -893,7 +893,7 @@ out_remove_ring:
 out_unreg_ring:
 	inv_yas53x_unconfigure_ring(indio_dev);
 out_free:
-	iio_free_device(indio_dev);
+	iio_device_free(indio_dev);
 out_no_free:
 	dev_err(&client->adapter->dev, "%s failed %d\n", __func__, result);
 	return -EIO;
@@ -911,7 +911,7 @@ static int inv_yas53x_remove(struct i2c_client *client)
 	inv_yas53x_remove_trigger(indio_dev);
 	iio_buffer_unregister(indio_dev);
 	inv_yas53x_unconfigure_ring(indio_dev);
-	iio_free_device(indio_dev);
+	iio_device_free(indio_dev);
 
 	dev_info(&client->adapter->dev, "inv_yas53x_iio module removed.\n");
 	return 0;
