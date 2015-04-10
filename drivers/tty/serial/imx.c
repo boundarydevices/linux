@@ -930,7 +930,7 @@ static void imx_break_ctl(struct uart_port *port, int break_state)
 #define RXTL 1 /* For console port */
 #define RXTL_UART 16 /* For uart */
 
-static int imx_setup_ufcr(struct imx_port *sport, unsigned int mode)
+static void imx_setup_ufcr(struct imx_port *sport, unsigned int mode)
 {
 	unsigned int val;
 	unsigned int rx_fifo_trig;
@@ -944,7 +944,6 @@ static int imx_setup_ufcr(struct imx_port *sport, unsigned int mode)
 	val = readl(sport->port.membase + UFCR) & (UFCR_RFDIV | UFCR_DCEDTE);
 	val |= TXTL << UFCR_TXTL_SHF | rx_fifo_trig;
 	writel(val, sport->port.membase + UFCR);
-	return 0;
 }
 
 #define RX_BUF_SIZE	(PAGE_SIZE)
