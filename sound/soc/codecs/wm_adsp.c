@@ -2678,15 +2678,11 @@ EXPORT_SYMBOL_GPL(wm_adsp_stream_alloc);
 
 int wm_adsp_stream_free(struct wm_adsp *adsp)
 {
-	if (adsp->host_regions) {
-		kfree(adsp->host_regions);
-		adsp->host_regions = NULL;
-	}
+	kfree(adsp->host_regions);
+	adsp->host_regions = NULL;
 
-	if (adsp->raw_capt_buf) {
-		kfree(adsp->raw_capt_buf);
-		adsp->raw_capt_buf = NULL;
-	}
+	kfree(adsp->raw_capt_buf);
+	adsp->raw_capt_buf = NULL;
 
 	if (adsp->capt_buf.buf) {
 		vfree(adsp->capt_buf.buf);
