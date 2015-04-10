@@ -262,6 +262,13 @@
 		};
 	};
 
+	bt_rfkill {
+		compatible = "net,rfkill-gpio";
+		name = "bt_rfkill";
+		type = <2>;     /* bluetooth */
+		gpios = <&gpio6 16 0>;
+	};
+
 	btwilink {
 		compatible = "btwilink";
 	};
