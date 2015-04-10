@@ -284,6 +284,14 @@
 		};
 	};
 
+	pcie {
+		pinctrl_pcie: pciegrp {
+			fsl,pins = <
+				MX7D_PAD_SAI2_RX_DATA__GPIO6_IO21	0x2
+			>;
+		};
+
+	};
 };
 
 &lcdif {
@@ -320,7 +328,9 @@
 
 &pcie {
 	pinctrl-names = "default";
-	status = "okay";
+	pinctrl-0 = <&pinctrl_pcie>;
+	reset-gpio = <&gpio6 21 0>;
+	status = "disabled";
 };
 
 &pwm1 {
