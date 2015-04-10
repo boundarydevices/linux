@@ -234,7 +234,7 @@ static int max77823_set_temperature(struct max77823_fuelgauge_data *fuelgauge,
 	pr_debug("%s: temperature to (%d)\n", __func__, temperature);
 	return temperature;
 }
-/* return units of mC */
+/* return units of 1/10 C */
 static int max77823_get_temperature(struct max77823_fuelgauge_data *fuelgauge)
 {
 	int ret;
@@ -246,7 +246,7 @@ static int max77823_get_temperature(struct max77823_fuelgauge_data *fuelgauge)
 	/* data[] store 2's compliment format number */
 	ret <<= 16;
 	ret >>= 16;	/* extent sign bit */
-	ret = (ret * 1000) >> 8;
+	ret = (ret * 10) >> 8;
 	pr_debug("%s: temperature (%d)\n", __func__, ret);
 	return ret;
 }
