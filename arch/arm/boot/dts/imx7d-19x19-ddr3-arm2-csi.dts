@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  */
 
-#include "imx7d-19x19-arm2.dts"
+#include "imx7d-19x19-ddr3-arm2.dts"
 
 &i2c2 {
 	ov5640: ov5640@3c {
