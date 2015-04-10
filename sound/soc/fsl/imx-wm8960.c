@@ -23,6 +23,7 @@
 #include <sound/soc-dapm.h>
 #include <linux/pinctrl/consumer.h>
 #include "../codecs/wm8960.h"
+#include "fsl_sai.h"
 
 #define DAI_NAME_SIZE	32
 #define DEFAULT_MCLK_FREQ (12000000)
@@ -36,6 +37,7 @@ struct imx_wm8960_data {
 	unsigned int clk_frequency;
 	bool is_codec_master;
 	bool is_stream_in_use[2];
+	bool is_stream_opened[2];
 };
 
 struct imx_priv {
@@ -199,9 +201,44 @@ static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 	return 0;
 }
 
+static int imx_hifi_startup(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct snd_soc_card *card = codec_dai->codec->card;
+	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
+	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+	struct fsl_sai *sai = dev_get_drvdata(cpu_dai->dev);
+	int ret = 0;
+
+	data->is_stream_opened[tx] = true;
+	if (data->is_stream_opened[tx] != sai->is_stream_opened[tx] ||
+	    data->is_stream_opened[!tx] != sai->is_stream_opened[!tx]) {
+		data->is_stream_opened[tx] = false;
+		return -EBUSY;
+	}
+
+	return ret;
+}
+
+
+static void imx_hifi_shutdown(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_card *card = codec_dai->codec->card;
+	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
+	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+
+	data->is_stream_opened[tx] = false;
+}
+
 static struct snd_soc_ops imx_hifi_ops = {
 	.hw_params = imx_hifi_hw_params,
 	.hw_free = imx_hifi_hw_free,
+	.startup   = imx_hifi_startup,
+	.shutdown  = imx_hifi_shutdown,
 };
 
 static const struct snd_soc_dapm_route imx_wm8960_dapm_route[] = {
