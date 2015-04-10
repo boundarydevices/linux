@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2014 Freescale Semiconductor, Inc.
+ * Copyright 2012-2015 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -139,6 +139,7 @@ struct fsl_sai {
 	bool is_dsp_mode;
 	bool sai_on_imx;
 	bool synchronous[2];
+	bool is_stream_opened[2];
 
 	unsigned int mclk_id;
 	unsigned int mclk_streams;
