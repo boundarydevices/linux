@@ -6,12 +6,20 @@
  * published by the Free Software Foundation.
  */
 
-#include "imx7d-12x12-arm2.dts"
+#include "imx7d-12x12-lpddr3-arm2.dts"
 
-&epdc {
-        status = "disabled";
+&sai1 {
+	status = "disabled";
 };
 
-&fec2 {
+&fec1 {
+	status = "disabled";
+};
+
+&flexcan1 {
+	status = "okay";
+};
+
+&flexcan2 {
 	status = "okay";
 };

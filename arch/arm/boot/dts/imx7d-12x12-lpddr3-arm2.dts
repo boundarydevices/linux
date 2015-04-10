@@ -13,7 +13,7 @@
 
 / {
 	model = "Freescale i.MX7 LPDDR3 12x12 ARM2 Board";
-	compatible = "fsl,imx7d-12x12-arm2", "fsl,imx7d";
+	compatible = "fsl,imx7d-12x12-lpddr3-arm2", "fsl,imx7d";
 
 	backlight {
 		compatible = "pwm-backlight";
