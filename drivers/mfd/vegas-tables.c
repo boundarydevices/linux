@@ -39,6 +39,7 @@ static const struct reg_default vegas_rev_a_patch[] = {
 	{ 0x0420, 0x2080 },
 	{ 0x04B8, 0x1120 },
 	{ 0x047E, 0x080E },
+	{ 0x0448, 0x03EF },
 };
 
 /* We use a function so we can use ARRAY_SIZE() */
@@ -329,6 +330,7 @@ static const struct reg_default vegas_reg_default[] = {
 	{ 0x00000441, 0xC759 },    /* R1089  - DRE Control 1 */
 	{ 0x00000442, 0x2A08 },    /* R1089  - DRE Control 2 */
 	{ 0x00000443, 0x5CFA },    /* R1089  - DRE Control 3 */
+	{ 0x00000448, 0x03EF },    /* R1096  - EDRE Enable */
 	{ 0x00000450, 0x0000 },    /* R1104  - DAC AEC Control 1 */
 	{ 0x00000451, 0x0000 },    /* R1105  - DAC AEC Control 2 */
 	{ 0x00000458, 0x0000 },    /* R1112  - Noise Gate Control */
@@ -995,6 +997,7 @@ static bool vegas_readable_register(struct device *dev, unsigned int reg)
 	case ARIZONA_DRE_CONTROL_1:
 	case ARIZONA_DRE_CONTROL_2:
 	case ARIZONA_DRE_CONTROL_3:
+	case CLEARWATER_EDRE_ENABLE:
 	case ARIZONA_DAC_AEC_CONTROL_1:
 	case ARIZONA_DAC_AEC_CONTROL_2:
 	case ARIZONA_NOISE_GATE_CONTROL:
