@@ -119,18 +119,18 @@ static sec_bat_adc_table_data_t chg_temp_table[] = {
 	{0, 0},
 };
 
-#define TEMP_HIGH_THRESHOLD_EVENT	600
-#define TEMP_HIGH_RECOVERY_EVENT		460
-#define TEMP_LOW_THRESHOLD_EVENT		-50
-#define TEMP_LOW_RECOVERY_EVENT		0
+#define TEMP_HIGH_THRESHOLD_EVENT	600	/* All temps in 1/10 C */
+#define TEMP_HIGH_RECOVERY_EVENT	460
+#define TEMP_LOW_THRESHOLD_EVENT	-50
+#define TEMP_LOW_RECOVERY_EVENT		  0
 #define TEMP_HIGH_THRESHOLD_NORMAL	600
 #define TEMP_HIGH_RECOVERY_NORMAL	460
 #define TEMP_LOW_THRESHOLD_NORMAL	-50
-#define TEMP_LOW_RECOVERY_NORMAL	0
+#define TEMP_LOW_RECOVERY_NORMAL	  0
 #define TEMP_HIGH_THRESHOLD_LPM		600
 #define TEMP_HIGH_RECOVERY_LPM		460
 #define TEMP_LOW_THRESHOLD_LPM		-50
-#define TEMP_LOW_RECOVERY_LPM		0
+#define TEMP_LOW_RECOVERY_LPM		  0
 #endif
 
 static void sec_bat_adc_ap_init(struct platform_device *pdev,
