@@ -1,5 +1,5 @@
 
-#include "imx7d-12x12-arm2.dts"
+#include "imx7d-12x12-lpddr3-arm2.dts"
 
 / {
 	memory {

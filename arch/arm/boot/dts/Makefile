@@ -211,13 +211,13 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6sx-sdb-emmc.dtb \
 	imx6sx-sdb-m4.dtb \
 	vf610-twr.dtb \
-	imx7d-12x12-arm2.dtb \
-	imx7d-12x12-arm2-enet.dtb \
-	imx7d-12x12-arm2-flexcan.dtb \
-	imx7d-12x12-arm2-qspi.dtb \
-	imx7d-12x12-arm2-m4.dtb \
-	imx7d-19x19-arm2.dtb \
-	imx7d-19x19-arm2-csi.dtb \
+	imx7d-12x12-lpddr3-arm2.dtb \
+	imx7d-12x12-lpddr3-arm2-enet.dtb \
+	imx7d-12x12-lpddr3-arm2-flexcan.dtb \
+	imx7d-12x12-lpddr3-arm2-qspi.dtb \
+	imx7d-12x12-lpddr3-arm2-m4.dtb \
+	imx7d-19x19-ddr3-arm2.dtb \
+	imx7d-19x19-ddr3-arm2-csi.dtb \
 	imx7d-sdb.dtb \
 	imx7d-sdb-enet.dtb \
 	imx7d-sdb-epdc.dtb \

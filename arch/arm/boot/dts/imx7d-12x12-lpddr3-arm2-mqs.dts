@@ -6,11 +6,11 @@
  * published by the Free Software Foundation.
  */
 
-#include "imx7d-12x12-arm2.dts"
+#include "imx7d-12x12-lpddr3-arm2.dts"
 
 / {
 	sound-mqs {
-		compatible = "fsl,imx7d-12x12-arm2-mqs",
+		compatible = "fsl,imx7d-12x12-lpddr3-arm2-mqs",
 				"fsl,imx-audio-mqs";
 		model = "mqs-audio";
 		cpu-dai = <&sai1>;
