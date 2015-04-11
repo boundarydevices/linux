@@ -502,19 +502,7 @@ static int fg_read_vfsoc(struct max77823_fuelgauge_data *fuelgauge)
 	return fg_read_percent(fuelgauge, MAX77823_REG_SOC_VF);
 }
 
-/* soc should be 0.1% unit */
-static int fg_read_soc(struct max77823_fuelgauge_data *fuelgauge)
-{
-	return fg_read_percent(fuelgauge, SOCREP_REG);
-}
-
 #ifdef CONFIG_FUELGAUGE_MAX77823_COULOMB_COUNTING
-/* soc should be 0.01% unit */
-static int fg_read_rawsoc(struct max77823_fuelgauge_data *fuelgauge)
-{
-	return fg_read_percent(fuelgauge, SOCREP_REG);
-}
-
 static int fg_read_power(struct max77823_fuelgauge_data *fuelgauge, int reg)
 {
 
@@ -608,7 +596,7 @@ int fg_reset_soc(struct max77823_fuelgauge_data *fuelgauge)
 
 	pr_info("%s: Before quick-start - VCELL(%d), VFOCV(%d), VfSOC(%d), RepSOC(%d)\n",
 		__func__, max77823_get_vcell(fuelgauge), max77823_get_vfocv(fuelgauge),
-		fg_read_vfsoc(fuelgauge), fg_read_soc(fuelgauge));
+		fg_read_vfsoc(fuelgauge), fg_read_percent(fuelgauge, SOCREP_REG));
 	pr_info("%s: Before quick-start - current(%d), avg current(%d)\n",
 		__func__, fg_read_current(fuelgauge),
 		fg_read_avg_current(fuelgauge));
@@ -641,7 +629,7 @@ int fg_reset_soc(struct max77823_fuelgauge_data *fuelgauge)
 
 	pr_info("%s: After quick-start - VCELL(%d), VFOCV(%d), VfSOC(%d), RepSOC(%d)\n",
 		__func__, max77823_get_vcell(fuelgauge), max77823_get_vfocv(fuelgauge),
-		fg_read_vfsoc(fuelgauge), fg_read_soc(fuelgauge));
+		fg_read_vfsoc(fuelgauge), fg_read_percent(fuelgauge, SOCREP_REG));
 	pr_info("%s: After quick-start - current(%d), avg current(%d)\n",
 		__func__, fg_read_current(fuelgauge),
 		fg_read_avg_current(fuelgauge));
@@ -662,12 +650,12 @@ int fg_reset_soc(struct max77823_fuelgauge_data *fuelgauge)
 				    (u16)(fullcap * 9 / 1000));
 		msleep(200);
 		pr_info("%s: new soc=%d, vfocv=%d\n", __func__,
-			fg_read_soc(fuelgauge), vfocv);
+			fg_read_percent(fuelgauge, SOCREP_REG), vfocv);
 	}
 
 	pr_info("%s: Additional step - VfOCV(%d), VfSOC(%d), RepSOC(%d)\n",
 		__func__, max77823_get_vfocv(fuelgauge),
-		fg_read_vfsoc(fuelgauge), fg_read_soc(fuelgauge));
+		fg_read_vfsoc(fuelgauge), fg_read_percent(fuelgauge, SOCREP_REG));
 
 	return 0;
 }
@@ -695,7 +683,7 @@ int fg_adjust_capacity(struct max77823_fuelgauge_data *fuelgauge)
 	msleep(200);
 
 	pr_info("%s: After adjust - RepSOC(%d)\n", __func__,
-		fg_read_soc(fuelgauge));
+		fg_read_percent(fuelgauge, SOCREP_REG));
 
 	return 0;
 }
@@ -1045,7 +1033,7 @@ void prevent_early_poweroff(struct max77823_fuelgauge_data *fuelgauge,
 	int soc = 0;
 	int read_val;
 
-	soc = fg_read_soc(fuelgauge);
+	soc = fg_read_percent(fuelgauge, SOCREP_REG);
 
 	/* No need to write REMCAP_REP in below normal cases */
 	if (soc > POWER_OFF_SOC_HIGH_MARGIN || vcell > fuelgauge->battery_data->low_battery_comp_voltage)
@@ -1059,7 +1047,7 @@ void prevent_early_poweroff(struct max77823_fuelgauge_data *fuelgauge,
 		max77823_write_word(fuelgauge->i2c, REMCAP_REP_REG,
 		(u16)(read_val * 13 / 1000));
 		msleep(200);
-		*fg_soc = fg_read_soc(fuelgauge);
+		*fg_soc = fg_read_percent(fuelgauge, SOCREP_REG);
 		pr_info("%s: new soc=%d, vcell=%d\n", __func__, *fg_soc, vcell);
 	}
 }
@@ -1147,7 +1135,7 @@ int low_batt_compensation(struct max77823_fuelgauge_data *fuelgauge,
 			 * to prevent from powering-off suddenly
 			 */
 			pr_info("%s: SOC is set to %d by low compensation!!\n",
-				__func__, fg_read_soc(fuelgauge));
+				__func__, fg_read_percent(fuelgauge, SOCREP_REG));
 		}
 	}
 
@@ -1180,7 +1168,7 @@ static bool fuelgauge_recovery_handler(struct max77823_fuelgauge_data *fuelgauge
 	if (fuelgauge->info.soc >= LOW_BATTERY_SOC_REDUCE_UNIT) {
 		pr_err("%s: Reduce the Reported SOC by 1%%\n",
 			__func__);
-		current_soc = fg_read_soc(fuelgauge) / 10;
+		current_soc = fg_read_percent(fuelgauge, SOCREP_REG) / 10;
 
 		if (current_soc) {
 			pr_info("%s: Returning to Normal discharge path\n",
@@ -1244,7 +1232,7 @@ static int get_fuelgauge_soc(struct max77823_fuelgauge_data *fuelgauge)
 		fuelgauge->info.fullcap_check_interval = ts.tv_sec;
 	}
 
-	fg_soc = fg_read_soc(fuelgauge);
+	fg_soc = fg_read_percent(fuelgauge, SOCREP_REG);
 	if (fg_soc < 0) {
 		pr_info("Can't read soc!!!");
 		fg_soc = fuelgauge->info.soc;
@@ -1290,7 +1278,7 @@ static int get_fuelgauge_soc(struct max77823_fuelgauge_data *fuelgauge)
 			pr_info("%s: force fully charged SOC !! (%d)",
 				__func__, fuelgauge->info.full_check_flag);
 			fg_set_full_charged(fuelgauge);
-			fg_soc = fg_read_soc(fuelgauge);
+			fg_soc = fg_read_percent(fuelgauge, SOCREP_REG);
 		} else if (fuelgauge->info.full_check_flag < 2)
 			pr_info("%s: full_check_flag (%d)",
 				__func__, fuelgauge->info.full_check_flag);
@@ -1452,7 +1440,7 @@ bool max77823_fg_fuelalert_process(void *irq_data, bool is_fuel_alerted)
 		(struct max77823_fuelgauge_data *)irq_data;
 	union power_supply_propval value;
 	int overcurrent_limit_in_soc;
-	int current_soc = fg_read_soc(fuelgauge);
+	int current_soc = fg_read_percent(fuelgauge, SOCREP_REG);
 
 	psy_get_prop(fuelgauge, PS_BATT, POWER_SUPPLY_PROP_STATUS, &value);
 	if (value.intval == POWER_SUPPLY_STATUS_CHARGING)
@@ -1563,7 +1551,7 @@ static int max77823_fg_calculate_dynamic_scale(
 #ifdef CONFIG_FUELGAUGE_MAX77823_VOLTAGE_TRACKING
 	raw_soc_val.intval = max77823_get_soc(fuelgauge) / 10;
 #else
-	raw_soc_val.intval = fg_read_rawsoc(fuelgauge) / 10;
+	raw_soc_val.intval = fg_read_percent(fuelgauge, SOCREP_REG) / 10;
 #endif
 
 	if (raw_soc_val.intval <
@@ -1850,7 +1838,7 @@ static int max77823_fg_get_property(struct power_supply *psy,
 		/* SOC (%) */
 	case POWER_SUPPLY_PROP_CAPACITY:
 		if (val->intval == SEC_FUELGAUGE_CAPACITY_TYPE_RAW) {
-			val->intval = fg_read_rawsoc(fuelgauge);
+			val->intval = fg_read_percent(fuelgauge, SOCREP_REG);
 		} else {
 			val->intval = get_fuelgauge_soc(fuelgauge);
 
@@ -2160,7 +2148,7 @@ static int max77823_fuelgauge_probe(struct platform_device *pdev)
 #ifdef CONFIG_FUELGAUGE_MAX77823_VOLTAGE_TRACKING
 	raw_soc_val.intval = max77823_get_soc(fuelgauge) / 10;
 #else
-	raw_soc_val.intval = fg_read_rawsoc(fuelgauge) / 10;
+	raw_soc_val.intval = fg_read_percent(fuelgauge, SOCREP_REG) / 10;
 #endif
 
 	if(raw_soc_val.intval > fuelgauge->pdata->capacity_max)
