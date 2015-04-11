@@ -502,14 +502,6 @@ static int fg_read_vfsoc(struct max77823_fuelgauge_data *fuelgauge)
 	return fg_read_percent(fuelgauge, MAX77823_REG_SOC_VF);
 }
 
-#ifdef CONFIG_FUELGAUGE_MAX77823_COULOMB_COUNTING
-/* soc should be 0.1% unit */
-static int fg_read_avsoc(struct max77823_fuelgauge_data *fuelgauge)
-{
-	return fg_read_percent(fuelgauge, SOCAV_REG);
-}
-#endif
-
 /* soc should be 0.1% unit */
 static int fg_read_soc(struct max77823_fuelgauge_data *fuelgauge)
 {
@@ -1198,7 +1190,7 @@ static bool fuelgauge_recovery_handler(struct max77823_fuelgauge_data *fuelgauge
 			fuelgauge->info.is_low_batt_alarm = false;
 		} else {
 			temperature = fg_read_temp(fuelgauge);
-			avsoc = fg_read_avsoc(fuelgauge);
+			avsoc = fg_read_percent(fuelgauge, SOCAV_REG);
 
 			if ((fuelgauge->info.soc > avsoc) ||
 				(temperature < 0)) {
