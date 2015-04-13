@@ -22,7 +22,7 @@
 #include <linux/of_irq.h>
 #include <linux/regmap.h>
 #include <linux/pm_runtime.h>
-#include <linux/busfreq-imx6.h>
+#include <linux/busfreq-imx.h>
 
 #include <sound/asoundef.h>
 #include <sound/dmaengine_pcm.h>

@@ -39,7 +39,7 @@
  * the required value in the imx_fb_videomode structure.
  */
 
-#include <linux/busfreq-imx6.h>
+#include <linux/busfreq-imx.h>
 #include <linux/console.h>
 #include <linux/module.h>
 #include <linux/kernel.h>

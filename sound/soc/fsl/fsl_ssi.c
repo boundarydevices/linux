@@ -44,7 +44,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/pm_runtime.h>
-#include <linux/busfreq-imx6.h>
+#include <linux/busfreq-imx.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>

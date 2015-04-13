@@ -23,7 +23,7 @@
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
 #include <linux/power/imx6_usb_charger.h>
-#include <linux/busfreq-imx6.h>
+#include <linux/busfreq-imx.h>
 #include <linux/regulator/consumer.h>
 
 #include "ci.h"

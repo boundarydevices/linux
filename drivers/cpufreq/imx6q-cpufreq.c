@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  */
 
-#include <linux/busfreq-imx6.h>
+#include <linux/busfreq-imx.h>
 #include <linux/clk.h>
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
