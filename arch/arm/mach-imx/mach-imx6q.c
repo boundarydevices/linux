@@ -602,7 +602,7 @@ static void __init imx6q_map_io(void)
 	imx_scu_map_io();
 	imx6_pm_map_io();
 #ifdef CONFIG_CPU_FREQ
-	imx6_busfreq_map_io();
+	imx_busfreq_map_io();
 #endif
 }
 
