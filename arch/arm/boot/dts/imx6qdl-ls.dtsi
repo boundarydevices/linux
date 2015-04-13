@@ -691,7 +691,7 @@
 
 	pinctrl_wm5102: wm5102grp {
 		fsl,pins = <
-			MX6QDL_PAD_EIM_A17__GPIO2_IO21		0x1b0b0	/* MIC detect */
+			MX6QDL_PAD_EIM_A17__GPIO2_IO21		0x1b0b0	/* headphone detect */
 #define GP_WM5102_IRQ	<&gpio2 20 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_EIM_A18__GPIO2_IO20		0x1b0b0	/* Irq */
 #define GP_WM5102_RESET	<&gpio6 8 GPIO_ACTIVE_LOW>
