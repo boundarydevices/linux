@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  */
 
-#include <linux/busfreq-imx6.h>
+#include <linux/busfreq-imx.h>
 #include <linux/cpuidle.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>

@@ -7,7 +7,7 @@
  *
  */
 
-#include <linux/busfreq-imx6.h>
+#include <linux/busfreq-imx.h>
 #include <linux/clk.h>
 #include <linux/clkdev.h>
 #include <linux/err.h>

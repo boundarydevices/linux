@@ -24,7 +24,7 @@
 #include <asm/mach/map.h>
 #include <asm/mach-types.h>
 #include <asm/tlb.h>
-#include <linux/busfreq-imx6.h>
+#include <linux/busfreq-imx.h>
 #include <linux/clk.h>
 #include <linux/cpumask.h>
 #include <linux/delay.h>
