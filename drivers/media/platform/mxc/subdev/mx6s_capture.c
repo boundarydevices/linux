@@ -19,7 +19,7 @@
  * @ingroup CSI
  */
 #include <asm/dma.h>
-#include <linux/busfreq-imx6.h>
+#include <linux/busfreq-imx.h>
 #include <linux/clk.h>
 #include <linux/dma-mapping.h>
 #include <linux/delay.h>

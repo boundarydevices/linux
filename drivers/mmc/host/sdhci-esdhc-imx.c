@@ -11,7 +11,7 @@
  * the Free Software Foundation; either version 2 of the License.
  */
 
-#include <linux/busfreq-imx6.h>
+#include <linux/busfreq-imx.h>
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <linux/err.h>
