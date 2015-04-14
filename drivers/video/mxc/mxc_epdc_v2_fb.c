@@ -5014,7 +5014,6 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 				fb_data->max_pix_size : pix_size_rot;
 
 	buf_size = fb_data->max_pix_size * fb_data->default_bpp/8;
-//return 0;
 
 	/* Compute the number of screens needed based on X memory requested */
 	if (x_mem_size > 0) {
@@ -5366,7 +5365,6 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 #ifdef CONFIG_FB_MXC_EINK_AUTO_UPDATE_MODE
 	fb_deferred_io_init(info);
 #endif
-//return 0;
 
 	/* get pmic regulators */
 	fb_data->display_regulator = devm_regulator_get(&pdev->dev, "DISPLAY");
@@ -5505,7 +5503,6 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 	fb_data->updates_active = false;
 	fb_data->pwrdown_delay = 0;
 
-//return 0;
 	/* Register FB */
 	ret = register_framebuffer(info);
 	if (ret) {
