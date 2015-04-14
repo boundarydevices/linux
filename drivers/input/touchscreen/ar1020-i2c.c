@@ -320,6 +320,7 @@ static irqreturn_t touch_irq_handler_func(int irq, void *dev_id)
 	translate(&x, &y);
 	input_report_abs(priv->input, ABS_X, x);
 	input_report_abs(priv->input, ABS_Y, y);
+	input_report_abs(priv->input, ABS_PRESSURE, button);
 	input_report_key(priv->input, BTN_TOUCH, button);
 	input_sync(priv->input);
 	return IRQ_HANDLED;
@@ -407,6 +408,9 @@ static int ar1020_i2c_probe(struct i2c_client *client,
 	input_dev->close = ar1020_i2c_close;
 
 	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
+	__set_bit(ABS_X, input_dev->absbit);
+	__set_bit(ABS_Y, input_dev->absbit);
+	__set_bit(ABS_PRESSURE, input_dev->absbit);
 	input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
 
 	if ((0 != calibration[CALIBRATION_XRES])
