@@ -2937,39 +2937,26 @@ static void pxp_wfe_b_configure(struct pxps *pxp)
 		pxp->base + HW_PXP_WFE_B_CTRL);
 }
 
-// wfe b processing
-// use wfe b to process an update
-// call this function only after pxp_wfe_a_processing
-// x,y,width,height:
-//         coordinate and size of the update region
-// twb:
-//         temp working buffer, 16bpp
-//         only used when reagl_en is 1
-// wb:
-//         working buffer, 16bpp
-// lut:
-//         lut buffer, 8bpp
-// lut_update:
-//         0 - wfe_b is used for reagl/reagl-d operation
-//         1 - wfe_b is used for lut update operation
-// reagl_d_en:
-//         0 - use reagl waveform algorithm
-//         1 - use reagl/-d waveform algorithm
+/* wfe b processing
+ * use wfe b to process an update
+ * call this function only after pxp_wfe_a_processing
+ * x,y,width,height:
+ *         coordinate and size of the update region
+ * twb:
+ *         temp working buffer, 16bpp
+ *         only used when reagl_en is 1
+ * wb:
+ *         working buffer, 16bpp
+ * lut:
+ *         lut buffer, 8bpp
+ * lut_update:
+ *         0 - wfe_b is used for reagl/reagl-d operation
+ *         1 - wfe_b is used for lut update operation
+ * reagl_d_en:
+ *         0 - use reagl waveform algorithm
+ *         1 - use reagl/-d waveform algorithm
+ */
 static void pxp_wfe_b_process(struct pxps *pxp)
-/*
-         u32 x,
-         u32 y,
-         u32 width,
-         u32 height,
-         u32 twb,
-         u32 twb_pitch,
-         u32 wb,
-         u32 wb_pitch,
-         u32 lut,
-         u32 lut_pitch,
-         u32 lut_update,
-         u32 reagl_d_en
-*/
 {
 	struct pxp_config_data *config_data = &pxp->pxp_conf_state;
 	struct pxp_proc_data *proc_data = &config_data->proc_data;
@@ -3575,13 +3562,11 @@ static void dither_prefetch_config(struct pxps *pxp)
 			BF_PXP_DITHER_FETCH_CTRL_CH1_BLOCK_16(0)|
 			BF_PXP_DITHER_FETCH_CTRL_CH1_HANDSHAKE_EN(0) |
 			BF_PXP_DITHER_FETCH_CTRL_CH1_BYPASS_PIXEL_EN(0) |
-			// BF_PXP_DITHER_FETCH_CTRL_CH1_HIGH_BYTE(0) |
 			BF_PXP_DITHER_FETCH_CTRL_CH1_HFLIP(0) |
 			BF_PXP_DITHER_FETCH_CTRL_CH1_VFLIP(0) |
 			BF_PXP_DITHER_FETCH_CTRL_CH1_ROTATION_ANGLE(0) |
 			BF_PXP_DITHER_FETCH_CTRL_CH1_RD_NUM_BYTES(2) |
 			BF_PXP_DITHER_FETCH_CTRL_CH1_HANDSHAKE_SCAN_LINE_NUM(0),
-			// BF_PXP_DITHER_FETCH_CTRL_CH1_ARBIT_EN(0)
 			pxp->base + HW_PXP_DITHER_FETCH_CTRL_CH1);
 
 	__raw_writel(
@@ -3711,7 +3696,6 @@ static void dither_store_config(struct pxps *pxp)
 			BF_PXP_DITHER_STORE_CTRL_CH1_STORE_MEMORY_EN(1)|
 			BF_PXP_DITHER_STORE_CTRL_CH1_PACK_IN_SEL(0)|
 			BF_PXP_DITHER_STORE_CTRL_CH1_WR_NUM_BYTES(32),
-			//              ARBIT_EN(0)
 			pxp->base + HW_PXP_DITHER_STORE_CTRL_CH1);
 
 	__raw_writel(
@@ -3832,7 +3816,7 @@ static void pxp_dithering_process(struct pxps *pxp)
 
 	__raw_writel(
 			BF_PXP_INIT_MEM_CTRL_ADDR(0) |
-			BF_PXP_INIT_MEM_CTRL_SELECT(0) |//select the lut memory for access
+			BF_PXP_INIT_MEM_CTRL_SELECT(0) |/*select the lut memory for access */
 			BF_PXP_INIT_MEM_CTRL_START(1),
 			pxp->base + HW_PXP_INIT_MEM_CTRL);
 
@@ -3847,7 +3831,7 @@ static void pxp_dithering_process(struct pxps *pxp)
 
 	__raw_writel(
 			BF_PXP_INIT_MEM_CTRL_ADDR(0) |
-			BF_PXP_INIT_MEM_CTRL_SELECT(0) |//select the lut memory for access
+			BF_PXP_INIT_MEM_CTRL_SELECT(0) |/*select the lut memory for access*/
 			BF_PXP_INIT_MEM_CTRL_START(0),
 			pxp->base + HW_PXP_INIT_MEM_CTRL);
 
@@ -4467,7 +4451,6 @@ static struct platform_driver pxp_driver = {
 	.remove = pxp_remove,
 };
 
-//module_platform_driver(pxp_driver);
 static int __init pxp_init(void)
 {
         return platform_driver_register(&pxp_driver);
