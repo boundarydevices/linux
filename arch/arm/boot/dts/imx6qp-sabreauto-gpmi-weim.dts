@@ -19,6 +19,7 @@
 };
 
 &gpmi {
+	compatible = "fsl,imx6qp-gpmi-nand";
 	status = "okay";
 };
 
