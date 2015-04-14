@@ -135,7 +135,8 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	int ret;
 
 	if (tx && params_width(params) == 24) {
-		if (sample_rate == 88200 || sample_rate == 96000) {
+		if (sample_rate == 88200 || sample_rate == 96000 ||
+		    sample_rate == 48000 || sample_rate == 44100) {
 			dev_err(dev, "Can't support sample rate %dHZ\n", sample_rate);
 			return -EINVAL;
 		}
