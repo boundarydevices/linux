@@ -160,9 +160,9 @@
 		status = "okay";
 	};
 
-	wlan_bt_rfkill: wlan_bt_rfkill {
+	bt_rfkill: bt_rfkill {
 		compatible = "net,rfkill-gpio";
-		name = "wlan_bt_rfkill";
+		name = "bt_rfkill";
 		type = <2>;     /* bluetooth */
 	};
 };
@@ -450,7 +450,7 @@
 		>;
 	};
 
-	pinctrl_wlan_bt_rfkill: wlan_bt_rfkillgrp {
+	pinctrl_bt_rfkill: bt_rfkillgrp {
 		fsl,pins = <
 #define GP_BRM_BT_RESET		<&gpio6 8 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x0b0b0		/* BT reset(Broadcom) */
@@ -794,8 +794,8 @@
 	status = "okay";
 };
 
-&wlan_bt_rfkill {
+&bt_rfkill {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_wlan_bt_rfkill>;
+	pinctrl-0 = <&pinctrl_bt_rfkill>;
 	gpios = GP_BRM_BT_EN, GP_BRM_BT_RESET;
 };
