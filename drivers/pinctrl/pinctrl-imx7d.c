@@ -361,6 +361,7 @@ static struct imx_pinctrl_soc_info imx7d_pinctrl_info = {
 static struct imx_pinctrl_soc_info imx7d_lpsr_pinctrl_info = {
 	.pins = imx7d_lpsr_pinctrl_pads,
 	.npins = ARRAY_SIZE(imx7d_lpsr_pinctrl_pads),
+	.flags = SHARE_INPUT_SELECT_REG,
 };
 
 static struct of_device_id imx7d_pinctrl_of_match[] = {
