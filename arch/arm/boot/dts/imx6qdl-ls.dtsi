@@ -172,6 +172,18 @@
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 		};
+
+		wlan_en_reg: fixed-regulator {
+			compatible = "regulator-fixed";
+			regulator-name = "wlan-en";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+
+			gpio = <&gpio6 15 GPIO_ACTIVE_HIGH>;
+			startup-delay-us = <70000>;
+			enable-active-high;
+			debug;
+		};
 	};
 
 	sound-gsm {
@@ -219,11 +231,36 @@
 
 	wlan: wlan {
 		compatible = "ti,wilink6";
+		interrupts-extended = <&gpio6 11 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&refclock>;
+		clock-names = "refclock";
+
+		refclock: refclock {
+			compatible = "ti,wilink-clock";
+			#clock-cells = <0>;
+			clock-frequency = <38400000>;
+		};
 	};
 
-	wlan_bt_rfkill: wlan_bt_rfkill {
+	bt_rfkill {
 		compatible = "net,rfkill-gpio";
-		name = "wlan_bt_rfkill";
+		name = "bt_rfkill";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_wlan_bt_rfkill>;
+		type = <2>;     /* bluetooth */
+		gpios = <&gpio6 16 GPIO_ACTIVE_HIGH>;
+	};
+
+	btwilink {
+		compatible = "btwilink";
+	};
+
+	kim {
+		compatible = "kim";
+		nshutdown_gpio = <&gpio6 16 0>;
+		dev_name = "/dev/ttymxc2";
+		flow_cntrl = <1>;
+		baud_rate = <115200>;
 	};
 };
 
@@ -613,9 +650,7 @@
 			MX6QDL_PAD_SD2_DAT1__SD2_DATA1		0x17031
 			MX6QDL_PAD_SD2_DAT2__SD2_DATA2		0x17031
 			MX6QDL_PAD_SD2_DAT3__SD2_DATA3		0x17031
-#define GP_WL12XX_WL_IRQ		<&gpio6 11 IRQ_TYPE_LEVEL_HIGH>
 			MX6QDL_PAD_NANDF_CS0__GPIO6_IO11	0x130b0
-#define GP_WL12XX_WL_ENABLE		<&gpio6 15 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x000b0
 //			MX6QDL_PAD_GPIO_8__XTALOSC_REF_CLK_32K	0x000b0		/* slow clock */
 		>;
@@ -684,7 +719,6 @@
 
 	pinctrl_wlan_bt_rfkill: wlan_bt_rfkillgrp {
 		fsl,pins = <
-#define GP_WL12XX_BT_ENABLE		<&gpio6 16 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x000b0
 		>;
 	};
@@ -1220,9 +1254,8 @@
 	pinctrl-0 = <&pinctrl_usdhc2_50mhz>;
 	bus-width = <4>;
 	non-removable;
-	vmmc-supply = <&reg_3p3v>;
+	vmmc-supply = <&wlan_en_reg>;
 	vqmmc-1-8-v;
-	power-gpio = GP_WL12XX_WL_ENABLE;
 	ocr-limit = <0x80>;     /* 1.65v - 1.95v */
 	power-off-card;
 	keep-power-in-suspend;
@@ -1258,21 +1291,3 @@
 	status = "okay";
 };
 
-&wlan {
-	interrupts-extended = GP_WL12XX_WL_IRQ;
-	clocks = <&refclock>;
-	clock-names = "refclock";
-
-	refclock: refclock {
-		compatible = "ti,wilink-clock";
-		#clock-cells = <0>;
-		clock-frequency = <38400000>;
-	};
-};
-
-&wlan_bt_rfkill {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_wlan_bt_rfkill>;
-	type = <2>;     /* bluetooth */
-	gpios = GP_WL12XX_BT_ENABLE;
-};
