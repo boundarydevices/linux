@@ -364,6 +364,7 @@ static bool is_yuv(u32 pix_fmt)
 	    (pix_fmt == PXP_PIX_FMT_Y41P) |
 	    (pix_fmt == PXP_PIX_FMT_VUY444) |
 	    (pix_fmt == PXP_PIX_FMT_NV12) |
+	    (pix_fmt == PXP_PIX_FMT_NV21) |
 	    (pix_fmt == PXP_PIX_FMT_NV16) |
 	    (pix_fmt == PXP_PIX_FMT_NV61) |
 	    (pix_fmt == PXP_PIX_FMT_GREY) |
