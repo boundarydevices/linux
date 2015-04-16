@@ -561,4 +561,4 @@ module_platform_driver(ad2802_driver);
 
 MODULE_AUTHOR("Haibo Chen <b51421@freescale.com>");
 MODULE_DESCRIPTION("Freeacale ad2802 ADC driver");
-MODULE_LICENSE("GPL V2");
+MODULE_LICENSE("GPL v2");
