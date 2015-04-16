@@ -894,9 +894,9 @@
 	pinctrl-0 = <&pinctrl_i2c3_1>;
 	status = "okay";
 
-	tsc2007@48 {
+	tsc2007@49 {
 		compatible = "ti,tsc2007";
-		reg = <0x48>;
+		reg = <0x49>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_tsc2007>;
 		interrupt-parent = <&gpio1>;
