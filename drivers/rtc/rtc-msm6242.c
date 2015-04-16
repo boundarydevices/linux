@@ -7,6 +7,8 @@
  *  Copyright (C) 1993 Hamish Macdonald
  */
 
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
