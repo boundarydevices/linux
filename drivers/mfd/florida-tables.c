@@ -1660,6 +1660,7 @@ static const struct reg_default florida_reg_default[] = {
 	{ 0x00000F01, 0x0000 },    /* R3841  - ANC_SRC */
 	{ 0x00000F08, 0x001c },    /* R3848  - ANC Coefficient */
 	{ 0x00000F09, 0x0000 },    /* R3849  - ANC Coefficient */
+	{ 0x00000F0A, 0x0000 },    /* R3850  - ANC Coefficient */
 	{ 0x00000F0B, 0x0000 },    /* R3851  - ANC Coefficient */
 	{ 0x00000F0C, 0x0000 },    /* R3852  - ANC Coefficient */
 	{ 0x00000F0D, 0x0000 },    /* R3853  - ANC Coefficient */
