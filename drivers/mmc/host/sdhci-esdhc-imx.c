@@ -33,6 +33,7 @@
 #include "sdhci-esdhc.h"
 
 #define	ESDHC_CTRL_D3CD			0x08
+#define ESDHC_BURST_LEN_EN_INCR		(1 << 27)
 /* VENDOR SPEC register */
 #define ESDHC_VENDOR_SPEC		0xc0
 #define  ESDHC_VENDOR_SPEC_SDIO_QUIRK	(1 << 1)
@@ -1144,6 +1145,17 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 			writel(0x10401040, host->ioaddr + ESDHC_WTMK_LVL);
 		else
 			writel(0x08100810, host->ioaddr + ESDHC_WTMK_LVL);
+
+		/*
+		 * ROM code will change the burst_length_enable setting to
+		 * zero if this usdhc is choosed to boot system. Change it
+		 * back here, otherwise it will impact the performance a
+		 * lot if the burst length is 16.
+		 */
+		writel(readl(host->ioaddr + SDHCI_HOST_CONTROL)
+			| ESDHC_BURST_LEN_EN_INCR,
+			host->ioaddr + SDHCI_HOST_CONTROL);
+
 		host->quirks2 |= SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
 					SDHCI_QUIRK2_NOSTD_TIMEOUT_COUNTER;
 		host->mmc->caps |= MMC_CAP_1_8V_DDR;
