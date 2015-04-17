@@ -16,6 +16,7 @@
 #include <linux/of_gpio.h>
 #include <linux/slab.h>
 #include <linux/module.h>
+#include <linux/pm_runtime.h>
 
 #define GEN_74X164_NUMBER_GPIOS	8
 
@@ -73,9 +74,11 @@ static int gen_74x164_get_value(struct gpio_chip *gc, unsigned offset)
 	u8 pin = offset % 8;
 	int ret;
 
+	pm_runtime_get_sync(gc->dev);
 	mutex_lock(&chip->lock);
 	ret = (chip->buffer[bank] >> pin) & 0x1;
 	mutex_unlock(&chip->lock);
+	pm_runtime_put(gc->dev);
 
 	return ret;
 }
@@ -87,6 +90,7 @@ static void gen_74x164_set_value(struct gpio_chip *gc,
 	u8 bank = offset / 8;
 	u8 pin = offset % 8;
 
+	pm_runtime_get_sync(gc->dev);
 	mutex_lock(&chip->lock);
 	if (val)
 		chip->buffer[bank] |= (1 << pin);
@@ -95,6 +99,7 @@ static void gen_74x164_set_value(struct gpio_chip *gc,
 
 	__gen_74x164_write_config(chip);
 	mutex_unlock(&chip->lock);
+	pm_runtime_put(gc->dev);
 }
 
 static int gen_74x164_direction_output(struct gpio_chip *gc,
@@ -109,6 +114,7 @@ static int gen_74x164_probe(struct spi_device *spi)
 	struct gen_74x164_chip *chip;
 	int ret;
 
+	pm_runtime_enable(&spi->dev);
 	/*
 	 * bits_per_word cannot be configured in platform data
 	 */
@@ -172,6 +178,7 @@ static int gen_74x164_remove(struct spi_device *spi)
 	struct gen_74x164_chip *chip = spi_get_drvdata(spi);
 	int ret;
 
+	pm_runtime_disable(&spi->dev);
 	ret = gpiochip_remove(&chip->gpio_chip);
 	if (!ret)
 		mutex_destroy(&chip->lock);
