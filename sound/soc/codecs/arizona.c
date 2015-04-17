@@ -2185,8 +2185,6 @@ int arizona_put_out4_edre(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
 	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);
-	const struct soc_mixer_control *mc =
-		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int mask_l, mask_r, old_val, out_ena;
 	unsigned int val_l = 0, val_r = 0;
 	int ret = 0;
