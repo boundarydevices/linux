@@ -577,6 +577,7 @@ static void __init imx7_pm_common_init(const struct imx7_pm_socdata
 					*socdata)
 {
 	int ret;
+	struct regmap *gpr;
 
 	if (IS_ENABLED(CONFIG_SUSPEND)) {
 		ret = imx7_suspend_init(socdata);
@@ -584,6 +585,16 @@ static void __init imx7_pm_common_init(const struct imx7_pm_socdata
 			pr_warn("%s: No DDR LPM support with suspend %d!\n",
 				__func__, ret);
 	}
+
+	/*
+	 * Force IOMUXC irq pending, so that the interrupt to GPC can be
+	 * used to deassert dsm_request signal when the signal gets
+	 * asserted unexpectedly.
+	 */
+	gpr = syscon_regmap_lookup_by_compatible("fsl,imx7d-iomuxc-gpr");
+	if (!IS_ERR(gpr))
+		regmap_update_bits(gpr, IOMUXC_GPR1, IMX7D_GPR1_IRQ_MASK,
+			IMX7D_GPR1_IRQ_MASK);
 }
 
 void __init imx7d_pm_init(void)
