@@ -51,6 +51,7 @@ struct ipu_prg_data {
 	struct device *dev;
 	struct prg_chan chan[PRG_CHAN_NUM];
 	struct regmap *regmap;
+	struct regmap_field *pre_prg_sel[2];
 	spinlock_t lock;
 };
 
@@ -84,50 +85,66 @@ static struct ipu_prg_data *get_prg(unsigned int ipu_id)
 	return NULL;
 }
 
-static int alloc_prg_chan(struct ipu_prg_data *prg, unsigned int pre_num)
+static int assign_prg_chan(struct ipu_prg_data *prg, unsigned int pre_num,
+			   ipu_channel_t ipu_ch)
 {
-	u32 mask, shift;
-	int i;
+	int prg_ch;
 
 	if (!prg)
 		return -EINVAL;
 
-	if ((prg->id == 0 && pre_num == 0) ||
-	    (prg->id == 1 && pre_num == 3)) {
-		mutex_lock(&prg->chan[0].mutex);
-		if (!prg->chan[0].in_use) {
-			prg->chan[0].in_use = true;
-			prg->chan[0].pre_num = pre_num;
-			mutex_unlock(&prg->chan[0].mutex);
-			return 0;
-		}
-		mutex_unlock(&prg->chan[0].mutex);
-		return -EBUSY;
+	switch (ipu_ch) {
+	case MEM_BG_SYNC:
+		prg_ch = 0;
+		break;
+	case MEM_FG_SYNC:
+		prg_ch = 1;
+		break;
+	case MEM_DC_SYNC:
+		prg_ch = 2;
+		break;
+	default:
+		dev_err(prg->dev, "wrong ipu channel type\n");
+		return -EINVAL;
 	}
 
-	for (i = 1; i < PRG_CHAN_NUM; i++) {
-		mutex_lock(&prg->chan[i].mutex);
-		if (!prg->chan[i].in_use) {
-			prg->chan[i].in_use = true;
-			prg->chan[i].pre_num = pre_num;
+	mutex_lock(&prg->chan[prg_ch].mutex);
+	if (!prg->chan[prg_ch].in_use) {
+		prg->chan[prg_ch].in_use = true;
+		prg->chan[prg_ch].pre_num = pre_num;
 
-			if (pre_num == 1) {
-				mask = IMX6Q_GPR5_PRE_PRG_SEL0_MASK;
-				shift = IMX6Q_GPR5_PRE_PRG_SEL0_SHIFT;
-			} else {
-				mask = IMX6Q_GPR5_PRE_PRG_SEL1_MASK;
-				shift = IMX6Q_GPR5_PRE_PRG_SEL1_SHIFT;
-			}
+		if (prg_ch != 0) {
+			unsigned int pmux, psel;	/* primary */
+			unsigned int smux, ssel;	/* secondary */
+			struct regmap_field *pfield, *sfield;
+
+			psel = pre_num - 1;
+			ssel = psel ? 0 : 1;
+
+			pfield = prg->pre_prg_sel[psel];
+			sfield = prg->pre_prg_sel[ssel];
+			pmux = (prg_ch - 1) + (prg->id << 1);
 
 			mutex_lock(&prg_lock);
-			regmap_update_bits(prg->regmap, IOMUXC_GPR5, mask,
-				((i - 1) + (prg->id << 1)) << shift);
+			regmap_field_write(pfield, pmux);
+
+			/*
+			 * PRE1 and PRE2 cannot bind with a same channel of
+			 * one PRG even if one of the two PREs is disabled.
+			 */
+			regmap_field_read(sfield, &smux);
+			if (smux == pmux) {
+				smux = pmux ^ 0x1;
+				regmap_field_write(sfield, smux);
+			}
 			mutex_unlock(&prg_lock);
-			mutex_unlock(&prg->chan[i].mutex);
-			return i;
 		}
-		mutex_unlock(&prg->chan[i].mutex);
+		mutex_unlock(&prg->chan[prg_ch].mutex);
+		dev_dbg(prg->dev, "bind prg%u ch%d with pre%u\n",
+				prg->id, prg_ch, pre_num);
+		return prg_ch;
 	}
+	mutex_unlock(&prg->chan[prg_ch].mutex);
 	return -EBUSY;
 }
 
@@ -163,7 +180,7 @@ int ipu_prg_config(struct ipu_prg_config *config)
 	if (config->height & ~IPU_PR_CH_HEIGHT_MASK)
 		return -EINVAL;
 
-	prg_ch = alloc_prg_chan(prg, config->pre_num);
+	prg_ch = assign_prg_chan(prg, config->pre_num, config->ipu_ch);
 	if (prg_ch < 0)
 		return prg_ch;
 
@@ -378,6 +395,12 @@ static int ipu_prg_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node, *memory;
 	struct ipu_prg_data *prg;
 	struct resource *res;
+	struct reg_field reg_field0 = REG_FIELD(IOMUXC_GPR5,
+						IMX6Q_GPR5_PRE_PRG_SEL0_LSB,
+						IMX6Q_GPR5_PRE_PRG_SEL0_MSB);
+	struct reg_field reg_field1 = REG_FIELD(IOMUXC_GPR5,
+						IMX6Q_GPR5_PRE_PRG_SEL1_LSB,
+						IMX6Q_GPR5_PRE_PRG_SEL1_MSB);
 	int id, i;
 
 	prg = devm_kzalloc(&pdev->dev, sizeof(*prg), GFP_KERNEL);
@@ -412,6 +435,16 @@ static int ipu_prg_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to get regmap\n");
 		return PTR_ERR(prg->regmap);
 	}
+
+	prg->pre_prg_sel[0] = devm_regmap_field_alloc(&pdev->dev, prg->regmap,
+							reg_field0);
+	if (IS_ERR(prg->pre_prg_sel[0]))
+		return PTR_ERR(prg->pre_prg_sel[0]);
+
+	prg->pre_prg_sel[1] = devm_regmap_field_alloc(&pdev->dev, prg->regmap,
+							reg_field1);
+	if (IS_ERR(prg->pre_prg_sel[1]))
+		return PTR_ERR(prg->pre_prg_sel[1]);
 
 	memory = of_parse_phandle(np, "memory-region", 0);
 	if (!memory)
