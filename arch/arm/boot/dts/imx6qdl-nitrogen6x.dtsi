@@ -72,7 +72,7 @@
 			gpio = <&gpio3 22 0>;
 			enable-active-high;
 		};
-		wlan_en_reg: fixed-regulator {
+		wlan_en_reg: wlan_en {
 			compatible = "regulator-fixed";
 			regulator-name = "wlan-en";
 			regulator-min-microvolt = <1800000>;
@@ -81,7 +81,6 @@
 			gpio = <&gpio6 15 0>;
 			startup-delay-us = <70000>;
 			enable-active-high;
-			debug;
 		};
 	};
 
