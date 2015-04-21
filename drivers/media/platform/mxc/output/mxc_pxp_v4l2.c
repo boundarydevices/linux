@@ -1045,16 +1045,17 @@ static int pxp_s_crop(struct file *file, void *fh,
 	w = max(w, PXP_MIN_PIX);
 	h = min(h, fbh);
 	h = max(h, PXP_MIN_PIX);
-	if ((l + w) > fbw)
-		l = 0;
-	if ((t + h) > fbh)
-		t = 0;
 
 	/* Round up values to PxP pixel block */
 	l = roundup(l, PXP_MIN_PIX);
 	t = roundup(t, PXP_MIN_PIX);
 	w = roundup(w, PXP_MIN_PIX);
 	h = roundup(h, PXP_MIN_PIX);
+
+	if ((l + w) > fbw)
+		l = 0;
+	if ((t + h) > fbh)
+		t = 0;
 
 	pxp->pxp_conf.proc_data.drect.left = l;
 	pxp->pxp_conf.proc_data.drect.top = t;
