@@ -899,8 +899,6 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	imx_clk_set_parent(clks[IMX7D_ENET_AXI_ROOT_SRC], clks[IMX7D_PLL_ENET_MAIN_250M_CLK]);
 	imx_clk_set_rate(clks[IMX7D_ENET_AXI_ROOT_CLK], 267000000);
 	imx_clk_set_parent(clks[IMX7D_ENET_PHY_REF_ROOT_SRC], clks[IMX7D_PLL_ENET_MAIN_25M_CLK]);
-	imx_clk_set_parent(clks[IMX7D_ENET1_TIME_ROOT_SRC], clks[IMX7D_PLL_ENET_MAIN_100M_CLK]);
-	imx_clk_set_parent(clks[IMX7D_ENET2_TIME_ROOT_SRC], clks[IMX7D_PLL_ENET_MAIN_100M_CLK]);
 
 	/* set uart module clock's parent clock source that must be great then 80Mhz */
 	if (uart_from_osc)
