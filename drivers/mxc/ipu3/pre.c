@@ -188,12 +188,13 @@ static int ipu_pre_set_ctrl(unsigned int id,
 			    unsigned int prefetch_mode)
 {
 	struct ipu_pre_data *pre = get_pre(id);
+	unsigned long lock_flags;
 	int ret = 0;
 
 	if (!pre)
 		return -EINVAL;
 
-	spin_lock(&pre->lock);
+	spin_lock_irqsave(&pre->lock, lock_flags);
 	pre_write(pre, BF_PRE_CTRL_TPR_RESET_SEL(1), HW_PRE_CTRL_SET);
 
 	if (repeat)
@@ -290,7 +291,7 @@ static int ipu_pre_set_ctrl(unsigned int id,
 		pre_write(pre, BM_PRE_CTRL_SDW_UPDATE, HW_PRE_CTRL_CLR);
 
 err:
-	spin_unlock(&pre->lock);
+	spin_unlock_irqrestore(&pre->lock, lock_flags);
 
 	return ret;
 }
@@ -309,14 +310,15 @@ static int ipu_pre_buf_set(unsigned int id, unsigned long cur_buf,
 			   unsigned long next_buf)
 {
 	struct ipu_pre_data *pre = get_pre(id);
+	unsigned long lock_flags;
 
 	if (!pre)
 		return -EINVAL;
 
-	spin_lock(&pre->lock);
+	spin_lock_irqsave(&pre->lock, lock_flags);
 	pre_write(pre, cur_buf, HW_PRE_CUR_BUF);
 	pre_write(pre, next_buf, HW_PRE_NEXT_BUF);
-	spin_unlock(&pre->lock);
+	spin_unlock_irqrestore(&pre->lock, lock_flags);
 
 	return 0;
 }
@@ -326,15 +328,16 @@ static int ipu_pre_plane_buf_off_set(unsigned int id,
 				     unsigned long trd_buf_off)
 {
 	struct ipu_pre_data *pre = get_pre(id);
+	unsigned long lock_flags;
 
 	if (!pre || sec_buf_off & BM_PRE_U_BUF_OFFSET_RSVD0 ||
 	    trd_buf_off & BM_PRE_V_BUF_OFFSET_RSVD0)
 		return -EINVAL;
 
-	spin_lock(&pre->lock);
+	spin_lock_irqsave(&pre->lock, lock_flags);
 	pre_write(pre, sec_buf_off, HW_PRE_U_BUF_OFFSET);
 	pre_write(pre, trd_buf_off, HW_PRE_V_BUF_OFFSET);
-	spin_unlock(&pre->lock);
+	spin_unlock_irqrestore(&pre->lock, lock_flags);
 
 	return 0;
 }
@@ -342,6 +345,7 @@ static int ipu_pre_plane_buf_off_set(unsigned int id,
 static int ipu_pre_tpr_set(unsigned int id, unsigned int tile_fmt)
 {
 	struct ipu_pre_data *pre = get_pre(id);
+	unsigned long lock_flags;
 	unsigned int tpr_ctrl, fmt;
 
 	if (!pre)
@@ -380,12 +384,12 @@ static int ipu_pre_tpr_set(unsigned int id, unsigned int tile_fmt)
 		return -EINVAL;
 	}
 
-	spin_lock(&pre->lock);
+	spin_lock_irqsave(&pre->lock, lock_flags);
 	tpr_ctrl = pre_read(pre, HW_PRE_TPR_CTRL);
 	tpr_ctrl &= ~BM_PRE_TPR_CTRL_TILE_FORMAT;
 	tpr_ctrl |= fmt;
 	pre_write(pre, tpr_ctrl, HW_PRE_TPR_CTRL);
-	spin_unlock(&pre->lock);
+	spin_unlock_irqrestore(&pre->lock, lock_flags);
 
 	return 0;
 }
@@ -393,14 +397,15 @@ static int ipu_pre_tpr_set(unsigned int id, unsigned int tile_fmt)
 static int ipu_pre_set_shift(int id, unsigned int offset, unsigned int width)
 {
 	struct ipu_pre_data *pre = get_pre(id);
+	unsigned long lock_flags;
 
 	if (!pre)
 		return -EINVAL;
 
-	spin_lock(&pre->lock);
+	spin_lock_irqsave(&pre->lock, lock_flags);
 	pre_write(pre, offset, HW_PRE_PREFETCH_ENGINE_SHIFT_OFFSET);
 	pre_write(pre, width,  HW_PRE_PREFETCH_ENGINE_SHIFT_WIDTH);
-	spin_unlock(&pre->lock);
+	spin_unlock_irqrestore(&pre->lock, lock_flags);
 
 	return 0;
 }
@@ -422,11 +427,12 @@ static int ipu_pre_prefetch(unsigned int id,
 	unsigned int prefetch_ctrl = 0;
 	unsigned int input_y_pitch = 0, input_uv_pitch = 0;
 	struct ipu_pre_data *pre = get_pre(id);
+	unsigned long lock_flags;
 
 	if (!pre)
 		return -EINVAL;
 
-	spin_lock(&pre->lock);
+	spin_lock_irqsave(&pre->lock, lock_flags);
 	prefetch_ctrl |= BF_PRE_PREFETCH_ENGINE_CTRL_PREFETCH_EN(1);
 	switch (read_burst) {
 	case 0x0:
@@ -445,8 +451,8 @@ static int ipu_pre_prefetch(unsigned int id,
 		prefetch_ctrl |= BF_PRE_PREFETCH_ENGINE_CTRL_RD_NUM_BYTES(0x4);
 		break;
 	default:
+		spin_unlock_irqrestore(&pre->lock, lock_flags);
 		dev_err(pre->dev, "invalid read burst for prefetch engine\n");
-		spin_unlock(&pre->lock);
 		return -EINVAL;
 	}
 
@@ -464,8 +470,8 @@ static int ipu_pre_prefetch(unsigned int id,
 		prefetch_ctrl |= BF_PRE_PREFETCH_ENGINE_CTRL_INPUT_ACTIVE_BPP(0x3);
 		break;
 	default:
+		spin_unlock_irqrestore(&pre->lock, lock_flags);
 		dev_err(pre->dev, "invalid input bpp for prefetch engine\n");
-		spin_unlock(&pre->lock);
 		return -EINVAL;
 	}
 
@@ -513,8 +519,8 @@ static int ipu_pre_prefetch(unsigned int id,
 		input_uv_pitch = input_width;
 		break;
 	default:
+		spin_unlock_irqrestore(&pre->lock, lock_flags);
 		dev_err(pre->dev, "invalid input pixel format for prefetch engine\n");
-		spin_unlock(&pre->lock);
 		return -EINVAL;
 	}
 
@@ -538,7 +544,7 @@ static int ipu_pre_prefetch(unsigned int id,
 	pre_write(pre, BF_PRE_PREFETCH_ENGINE_INTERLACE_OFFSET_INTERLACE_OFFSET(interlace_offset), HW_PRE_PREFETCH_ENGINE_INTERLACE_OFFSET);
 
 	pre_write(pre, prefetch_ctrl, HW_PRE_PREFETCH_ENGINE_CTRL);
-	spin_unlock(&pre->lock);
+	spin_unlock_irqrestore(&pre->lock, lock_flags);
 
 	return 0;
 }
@@ -557,11 +563,12 @@ static int ipu_pre_store(unsigned int id,
 {
 	struct ipu_pre_data *pre = get_pre(id);
 	unsigned int store_ctrl = 0;
+	unsigned long lock_flags;
 
 	if (!pre)
 		return -EINVAL;
 
-	spin_lock(&pre->lock);
+	spin_lock_irqsave(&pre->lock, lock_flags);
 	store_ctrl |= BF_PRE_STORE_ENGINE_CTRL_STORE_EN(store_en ? 1 : 0);
 
 	if (store_en) {
@@ -582,8 +589,8 @@ static int ipu_pre_store(unsigned int id,
 			store_ctrl |= BF_PRE_STORE_ENGINE_CTRL_WR_NUM_BYTES(0x4);
 			break;
 		default:
+			spin_unlock_irqrestore(&pre->lock, lock_flags);
 			dev_err(pre->dev, "invalid write burst value for store engine\n");
-			spin_unlock(&pre->lock);
 			return -EINVAL;
 		}
 
@@ -601,8 +608,8 @@ static int ipu_pre_store(unsigned int id,
 			store_ctrl |= BF_PRE_STORE_ENGINE_CTRL_OUTPUT_ACTIVE_BPP(0x3);
 			break;
 		default:
+			spin_unlock_irqrestore(&pre->lock, lock_flags);
 			dev_err(pre->dev, "invalid ouput bpp for store engine\n");
-			spin_unlock(&pre->lock);
 			return -EINVAL;
 		}
 
@@ -618,7 +625,7 @@ static int ipu_pre_store(unsigned int id,
 	}
 
 	pre_write(pre, store_ctrl, HW_PRE_STORE_ENGINE_CTRL);
-	spin_unlock(&pre->lock);
+	spin_unlock_irqrestore(&pre->lock, lock_flags);
 
 	return 0;
 }
@@ -667,14 +674,15 @@ static irqreturn_t ipu_pre_irq_handle(int irq, void *dev_id)
 static void ipu_pre_out_of_reset(unsigned int id)
 {
 	struct ipu_pre_data *pre = get_pre(id);
+	unsigned long lock_flags;
 
 	if (!pre)
 		return;
 
-	spin_lock(&pre->lock);
+	spin_lock_irqsave(&pre->lock, lock_flags);
 	pre_write(pre, BF_PRE_CTRL_SFTRST(1) | BF_PRE_CTRL_CLKGATE(1),
 		  HW_PRE_CTRL_CLR);
-	spin_unlock(&pre->lock);
+	spin_unlock_irqrestore(&pre->lock, lock_flags);
 }
 
 int ipu_pre_config(int id, struct ipu_pre_context *config)
@@ -750,6 +758,7 @@ int ipu_pre_enable(int id)
 {
 	int ret = 0;
 	struct ipu_pre_data *pre = get_pre(id);
+	unsigned long lock_flags;
 
 	if (!pre)
 		return -EINVAL;
@@ -760,9 +769,9 @@ int ipu_pre_enable(int id)
 	clk_prepare_enable(pre->clk);
 
 	/* start the pre engine */
-	spin_lock(&pre->lock);
+	spin_lock_irqsave(&pre->lock, lock_flags);
 	pre_write(pre, BF_PRE_CTRL_ENABLE(1), HW_PRE_CTRL_SET);
-	spin_unlock(&pre->lock);
+	spin_unlock_irqrestore(&pre->lock, lock_flags);
 
 	pre->enabled = true;
 
@@ -774,6 +783,7 @@ int ipu_pre_sdw_update(int id)
 {
 	int ret = 0;
 	struct ipu_pre_data *pre = get_pre(id);
+	unsigned long lock_flags;
 
 	if (!pre)
 		return -EINVAL;
@@ -782,9 +792,9 @@ int ipu_pre_sdw_update(int id)
 		clk_prepare_enable(pre->clk);
 
 	/* start the pre engine */
-	spin_lock(&pre->lock);
+	spin_lock_irqsave(&pre->lock, lock_flags);
 	pre_write(pre, BF_PRE_CTRL_SDW_UPDATE(1), HW_PRE_CTRL_SET);
-	spin_unlock(&pre->lock);
+	spin_unlock_irqrestore(&pre->lock, lock_flags);
 
 	if (!pre->enabled)
 		clk_disable_unprepare(pre->clk);
@@ -796,6 +806,7 @@ EXPORT_SYMBOL(ipu_pre_sdw_update);
 void ipu_pre_disable(int id)
 {
 	struct ipu_pre_data *pre = get_pre(id);
+	unsigned long lock_flags;
 
 	if (!pre)
 		return;
@@ -804,11 +815,11 @@ void ipu_pre_disable(int id)
 		return;
 
 	/* stop the pre engine */
-	spin_lock(&pre->lock);
+	spin_lock_irqsave(&pre->lock, lock_flags);
 	pre_write(pre, BF_PRE_CTRL_ENABLE(1), HW_PRE_CTRL_CLR);
 	pre_write(pre, BF_PRE_CTRL_SDW_UPDATE(1), HW_PRE_CTRL_SET);
 	pre_write(pre, BF_PRE_CTRL_SFTRST(1), HW_PRE_CTRL_SET);
-	spin_unlock(&pre->lock);
+	spin_unlock_irqrestore(&pre->lock, lock_flags);
 
 	clk_disable_unprepare(pre->clk);
 
@@ -823,11 +834,12 @@ int ipu_pre_set_fb_buffer(int id, unsigned long fb_paddr,
 			  unsigned int trd_buf_off)
 {
 	struct ipu_pre_data *pre = get_pre(id);
+	unsigned long lock_flags;
 
 	if (!pre)
 		return -EINVAL;
 
-	spin_lock(&pre->lock);
+	spin_lock_irqsave(&pre->lock, lock_flags);
 	pre_write(pre, fb_paddr, HW_PRE_NEXT_BUF);
 	pre_write(pre, sec_buf_off, HW_PRE_U_BUF_OFFSET);
 	pre_write(pre, trd_buf_off, HW_PRE_V_BUF_OFFSET);
@@ -835,7 +847,7 @@ int ipu_pre_set_fb_buffer(int id, unsigned long fb_paddr,
 		       BF_PRE_PREFETCH_ENGINE_OUTPUT_SIZE_ULC_OUTPUT_SIZE_ULC_Y(y_crop),
 		  HW_PRE_PREFETCH_ENGINE_OUTPUT_SIZE_ULC);
 	pre_write(pre, BF_PRE_CTRL_SDW_UPDATE(1), HW_PRE_CTRL_SET);
-	spin_unlock(&pre->lock);
+	spin_unlock_irqrestore(&pre->lock, lock_flags);
 
 	return 0;
 }
