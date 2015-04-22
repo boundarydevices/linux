@@ -94,7 +94,6 @@ struct ipu_soc {
 	void __iomem *csi_reg[2];
 	void __iomem *cpmem_base;
 	void __iomem *tpmem_base;
-	void __iomem *disp_base[2];
 	void __iomem *vdi_reg;
 
 	struct device *dev;
