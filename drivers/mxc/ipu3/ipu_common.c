@@ -44,7 +44,6 @@
 #include "ipu_regs.h"
 
 static struct ipu_soc ipu_array[MXC_IPU_MAX_NUM];
-int g_ipu_hw_rev;
 
 /* Static functions */
 static irqreturn_t ipu_sync_irq_handler(int irq, void *desc);
@@ -92,13 +91,13 @@ static inline int _ipu_is_smfc_chan(uint32_t dma_chan)
 	return ((dma_chan >= 0) && (dma_chan <= 3));
 }
 
-static inline int _ipu_is_trb_chan(uint32_t dma_chan)
+static inline int _ipu_is_trb_chan(struct ipu_soc *ipu, uint32_t dma_chan)
 {
 	return (((dma_chan == 8) || (dma_chan == 9) ||
 		 (dma_chan == 10) || (dma_chan == 13) ||
 		 (dma_chan == 21) || (dma_chan == 23) ||
 		 (dma_chan == 27) || (dma_chan == 28)) &&
-		(g_ipu_hw_rev >= IPU_V3DEX));
+		(ipu->devtype >= IPUv3EX));
 }
 
 /*
@@ -126,12 +125,15 @@ static inline int _ipu_is_sync_irq(uint32_t irq)
 
 #define idma_is_valid(ch)	(ch != NO_DMA)
 #define idma_mask(ch)		(idma_is_valid(ch) ? (1UL << (ch & 0x1F)) : 0)
-#define idma_is_set(ipu, reg, dma)	(ipu_idmac_read(ipu, reg(dma)) & idma_mask(dma))
 #define tri_cur_buf_mask(ch)	(idma_mask(ch*2) * 3)
 #define tri_cur_buf_shift(ch)	(ffs(idma_mask(ch*2)) - 1)
 
-static int ipu_clk_setup_enable(struct ipu_soc *ipu,
-			struct ipu_pltfm_data *pdata)
+static inline bool idma_is_set(struct ipu_soc *ipu, uint32_t reg, uint32_t dma)
+{
+	return !!(ipu_idmac_read(ipu, reg) & idma_mask(dma));
+}
+
+static int ipu_clk_setup_enable(struct ipu_soc *ipu)
 {
 	char pixel_clk_0[] = "ipu1_pclk_0";
 	char pixel_clk_1[] = "ipu1_pclk_1";
@@ -145,22 +147,22 @@ static int ipu_clk_setup_enable(struct ipu_soc *ipu,
 	int ret;
 	int i;
 
-	pixel_clk_0[3] += pdata->id;
-	pixel_clk_1[3] += pdata->id;
-	pixel_clk_0_sel[3] += pdata->id;
-	pixel_clk_1_sel[3] += pdata->id;
-	pixel_clk_0_div[3] += pdata->id;
-	pixel_clk_1_div[3] += pdata->id;
+	pixel_clk_0[3] += ipu->id;
+	pixel_clk_1[3] += ipu->id;
+	pixel_clk_0_sel[3] += ipu->id;
+	pixel_clk_1_sel[3] += ipu->id;
+	pixel_clk_0_div[3] += ipu->id;
+	pixel_clk_1_div[3] += ipu->id;
 	for (i = 0; i < ARRAY_SIZE(ipu_pixel_clk_sel); i++) {
 		pclk_sel = ipu_pixel_clk_sel[i];
-		pclk_sel[3] += pdata->id;
+		pclk_sel[3] += ipu->id;
 	}
 	dev_dbg(ipu->dev, "ipu_clk = %lu\n", clk_get_rate(ipu->ipu_clk));
 
 	clk = clk_register_mux_pix_clk(ipu->dev, pixel_clk_0_sel,
 			(const char **)ipu_pixel_clk_sel,
 			ARRAY_SIZE(ipu_pixel_clk_sel),
-			0, pdata->id, 0, 0);
+			0, ipu->id, 0, 0);
 	if (IS_ERR(clk)) {
 		dev_err(ipu->dev, "clk_register mux di0 failed");
 		return PTR_ERR(clk);
@@ -169,7 +171,7 @@ static int ipu_clk_setup_enable(struct ipu_soc *ipu,
 	clk = clk_register_mux_pix_clk(ipu->dev, pixel_clk_1_sel,
 			(const char **)ipu_pixel_clk_sel,
 			ARRAY_SIZE(ipu_pixel_clk_sel),
-			0, pdata->id, 1, 0);
+			0, ipu->id, 1, 0);
 	if (IS_ERR(clk)) {
 		dev_err(ipu->dev, "clk_register mux di1 failed");
 		return PTR_ERR(clk);
@@ -177,13 +179,13 @@ static int ipu_clk_setup_enable(struct ipu_soc *ipu,
 	ipu->pixel_clk_sel[1] = clk;
 
 	clk = clk_register_div_pix_clk(ipu->dev, pixel_clk_0_div,
-				pixel_clk_0_sel, 0, pdata->id, 0, 0);
+				pixel_clk_0_sel, 0, ipu->id, 0, 0);
 	if (IS_ERR(clk)) {
 		dev_err(ipu->dev, "clk register di0 div failed");
 		return PTR_ERR(clk);
 	}
 	clk = clk_register_div_pix_clk(ipu->dev, pixel_clk_1_div,
-			pixel_clk_1_sel, CLK_SET_RATE_PARENT, pdata->id, 1, 0);
+			pixel_clk_1_sel, CLK_SET_RATE_PARENT, ipu->id, 1, 0);
 	if (IS_ERR(clk)) {
 		dev_err(ipu->dev, "clk register di1 div failed");
 		return PTR_ERR(clk);
@@ -191,14 +193,14 @@ static int ipu_clk_setup_enable(struct ipu_soc *ipu,
 
 	ipu->pixel_clk[0] = clk_register_gate_pix_clk(ipu->dev, pixel_clk_0,
 				pixel_clk_0_div, CLK_SET_RATE_PARENT,
-				pdata->id, 0, 0);
+				ipu->id, 0, 0);
 	if (IS_ERR(ipu->pixel_clk[0])) {
 		dev_err(ipu->dev, "clk register di0 gate failed");
 		return PTR_ERR(ipu->pixel_clk[0]);
 	}
 	ipu->pixel_clk[1] = clk_register_gate_pix_clk(ipu->dev, pixel_clk_1,
 				pixel_clk_1_div, CLK_SET_RATE_PARENT,
-				pdata->id, 1, 0);
+				ipu->id, 1, 0);
 	if (IS_ERR(ipu->pixel_clk[1])) {
 		dev_err(ipu->dev, "clk register di1 gate failed");
 		return PTR_ERR(ipu->pixel_clk[1]);
@@ -287,18 +289,111 @@ void ipu_disable_hsp_clk(struct ipu_soc *ipu)
 }
 EXPORT_SYMBOL(ipu_disable_hsp_clk);
 
-static struct platform_device_id imx_ipu_type[] = {
-	{
-		.name = "ipu-imx6q",
-		.driver_data = IPU_V3H,
-	}, {
-		/* sentinel */
-	}
+struct ipu_devtype {
+	const char *name;
+	unsigned long cm_ofs;
+	unsigned long idmac_ofs;
+	unsigned long ic_ofs;
+	unsigned long csi0_ofs;
+	unsigned long csi1_ofs;
+	unsigned long di0_ofs;
+	unsigned long di1_ofs;
+	unsigned long smfc_ofs;
+	unsigned long dc_ofs;
+	unsigned long dmfc_ofs;
+	unsigned long vdi_ofs;
+	unsigned long cpmem_ofs;
+	unsigned long srm_ofs;
+	unsigned long tpm_ofs;
+	unsigned long dc_tmpl_ofs;
+	enum ipuv3_type type;
 };
-MODULE_DEVICE_TABLE(platform, imx_ipu_type);
+
+static struct ipu_devtype ipu_devtype_imx51 = {
+	.name =		"IPUv3EX",
+	.cm_ofs =	0x1E000000,
+	.idmac_ofs =	0x1E008000,
+	.ic_ofs =	0x1E020000,
+	.csi0_ofs =	0x1E030000,
+	.csi1_ofs =	0x1E038000,
+	.di0_ofs =	0x1E040000,
+	.di1_ofs =	0x1E048000,
+	.smfc_ofs =	0x1E050000,
+	.dc_ofs =	0x1E058000,
+	.dmfc_ofs =	0x1E060000,
+	.vdi_ofs =	0x1E068000,
+	.cpmem_ofs =	0x1F000000,
+	.srm_ofs =	0x1F040000,
+	.tpm_ofs =	0x1F060000,
+	.dc_tmpl_ofs =	0x1F080000,
+	.type =		IPUv3EX,
+};
+
+static struct ipu_devtype ipu_devtype_imx53 = {
+	.name =		"IPUv3M",
+	.cm_ofs =	0x06000000,
+	.idmac_ofs =	0x06008000,
+	.ic_ofs =	0x06020000,
+	.csi0_ofs =	0x06030000,
+	.csi1_ofs =	0x06038000,
+	.di0_ofs =	0x06040000,
+	.di1_ofs =	0x06048000,
+	.smfc_ofs =	0x06050000,
+	.dc_ofs =	0x06058000,
+	.dmfc_ofs =	0x06060000,
+	.vdi_ofs =	0x06068000,
+	.cpmem_ofs =	0x07000000,
+	.srm_ofs =	0x07040000,
+	.tpm_ofs =	0x07060000,
+	.dc_tmpl_ofs =	0x07080000,
+	.type =		IPUv3M,
+};
+
+static struct ipu_devtype ipu_devtype_imx6q = {
+	.name = "IPUv3H",
+	.cm_ofs =	0x00200000,
+	.idmac_ofs =	0x00208000,
+	.ic_ofs =	0x00220000,
+	.csi0_ofs =	0x00230000,
+	.csi1_ofs =	0x00238000,
+	.di0_ofs =	0x00240000,
+	.di1_ofs =	0x00248000,
+	.smfc_ofs =	0x00250000,
+	.dc_ofs =	0x00258000,
+	.dmfc_ofs =	0x00260000,
+	.vdi_ofs =	0x00268000,
+	.cpmem_ofs =	0x00300000,
+	.srm_ofs =	0x00340000,
+	.tpm_ofs =	0x00360000,
+	.dc_tmpl_ofs =	0x00380000,
+	.type = IPUv3H,
+};
+
+static struct ipu_devtype ipu_devtype_imx6qp = {
+	.name = "IPUv3H",
+	.cm_ofs =	0x00200000,
+	.idmac_ofs =	0x00208000,
+	.ic_ofs =	0x00220000,
+	.csi0_ofs =	0x00230000,
+	.csi1_ofs =	0x00238000,
+	.di0_ofs =	0x00240000,
+	.di1_ofs =	0x00248000,
+	.smfc_ofs =	0x00250000,
+	.dc_ofs =	0x00258000,
+	.dmfc_ofs =	0x00260000,
+	.vdi_ofs =	0x00268000,
+	.cpmem_ofs =	0x00300000,
+	.srm_ofs =	0x00340000,
+	.tpm_ofs =	0x00360000,
+	.dc_tmpl_ofs =	0x00380000,
+	.type = IPUv3H,
+};
 
 static const struct of_device_id imx_ipuv3_dt_ids[] = {
-	{ .compatible = "fsl,imx6q-ipu", .data = &imx_ipu_type[IMX6Q_IPU], },
+	{ .compatible = "fsl,imx51-ipu", .data = &ipu_devtype_imx51, },
+	{ .compatible = "fsl,imx53-ipu", .data = &ipu_devtype_imx53, },
+	{ .compatible = "fsl,imx6q-ipu", .data = &ipu_devtype_imx6q, },
+	{ .compatible = "fsl,imx6qp-ipu", .data = &ipu_devtype_imx6qp, },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, imx_ipuv3_dt_ids);
@@ -319,16 +414,11 @@ static int ipu_probe(struct platform_device *pdev)
 	unsigned long ipu_base;
 	const struct of_device_id *of_id =
 			of_match_device(imx_ipuv3_dt_ids, &pdev->dev);
-	struct ipu_pltfm_data *pltfm_data;
-	int ret = 0;
+	const struct ipu_devtype *devtype = of_id->data;
+	int ret = 0, id;
 	u32 bypass_reset;
 
 	dev_dbg(&pdev->dev, "<%s>\n", __func__);
-
-	pltfm_data = devm_kzalloc(&pdev->dev, sizeof(struct ipu_pltfm_data),
-				GFP_KERNEL);
-	if (!pltfm_data)
-		return -ENOMEM;
 
 	ret = of_property_read_u32(pdev->dev.of_node,
 					"bypass_reset", &bypass_reset);
@@ -336,27 +426,24 @@ static int ipu_probe(struct platform_device *pdev)
 		dev_dbg(&pdev->dev, "can not get bypass_reset\n");
 		return ret;
 	}
-	pltfm_data->bypass_reset = (bool)bypass_reset;
 
-	pltfm_data->id = of_alias_get_id(pdev->dev.of_node, "ipu");
-	if (pltfm_data->id < 0) {
+	id = of_alias_get_id(pdev->dev.of_node, "ipu");
+	if (id < 0) {
 		dev_dbg(&pdev->dev, "can not get alias id\n");
-		return pltfm_data->id;
+		return id;
 	}
 
-	if (of_id)
-		pdev->id_entry = of_id->data;
-	pltfm_data->devtype = pdev->id_entry->driver_data;
-	g_ipu_hw_rev = pltfm_data->devtype;
-
-	ipu = &ipu_array[pltfm_data->id];
+	ipu = &ipu_array[id];
 	memset(ipu, 0, sizeof(struct ipu_soc));
+	ipu->bypass_reset = (bool)bypass_reset;
 	ipu->dev = &pdev->dev;
-	ipu->pdata = pltfm_data;
-	dev_dbg(ipu->dev, "IPU rev:%d\n", g_ipu_hw_rev);
+	ipu->id = id;
+	ipu->devtype = devtype->type;
 	spin_lock_init(&ipu->int_reg_spin_lock);
 	spin_lock_init(&ipu->rdy_reg_spin_lock);
 	mutex_init(&ipu->mutex_lock);
+
+	dev_dbg(&pdev->dev, "revision is %s\n", devtype->name);
 
 	ipu->irq_sync = platform_get_irq(pdev, 0);
 	ipu->irq_err = platform_get_irq(pdev, 1);
@@ -385,45 +472,38 @@ static int ipu_probe(struct platform_device *pdev)
 	}
 
 	ipu_base = res->start;
-	/* base fixup */
-	if (g_ipu_hw_rev == IPU_V3H)	/* IPUv3H */
-		ipu_base += IPUV3H_REG_BASE;
-	else if (g_ipu_hw_rev == IPU_V3M)	/* IPUv3M */
-		ipu_base += IPUV3M_REG_BASE;
-	else			/* IPUv3D, v3E, v3EX */
-		ipu_base += IPUV3DEX_REG_BASE;
 
 	ipu->cm_reg = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_CM_REG_BASE, PAGE_SIZE);
+				ipu_base + devtype->cm_ofs, PAGE_SIZE);
 	ipu->ic_reg = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_IC_REG_BASE, PAGE_SIZE);
+				ipu_base + devtype->ic_ofs, PAGE_SIZE);
 	ipu->idmac_reg = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_IDMAC_REG_BASE, PAGE_SIZE);
+				ipu_base + devtype->idmac_ofs, PAGE_SIZE);
 	/* DP Registers are accessed thru the SRM */
 	ipu->dp_reg = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_SRM_REG_BASE, PAGE_SIZE);
+				ipu_base + devtype->srm_ofs, PAGE_SIZE);
 	ipu->dc_reg = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_DC_REG_BASE, PAGE_SIZE);
+				ipu_base + devtype->dc_ofs, PAGE_SIZE);
 	ipu->dmfc_reg = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_DMFC_REG_BASE, PAGE_SIZE);
+				ipu_base + devtype->dmfc_ofs, PAGE_SIZE);
 	ipu->di_reg[0] = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_DI0_REG_BASE, PAGE_SIZE);
+				ipu_base + devtype->di0_ofs, PAGE_SIZE);
 	ipu->di_reg[1] = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_DI1_REG_BASE, PAGE_SIZE);
+				ipu_base + devtype->di1_ofs, PAGE_SIZE);
 	ipu->smfc_reg = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_SMFC_REG_BASE, PAGE_SIZE);
+				ipu_base + devtype->smfc_ofs, PAGE_SIZE);
 	ipu->csi_reg[0] = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_CSI0_REG_BASE, PAGE_SIZE);
+				ipu_base + devtype->csi0_ofs, PAGE_SIZE);
 	ipu->csi_reg[1] = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_CSI1_REG_BASE, PAGE_SIZE);
+				ipu_base + devtype->csi1_ofs, PAGE_SIZE);
 	ipu->cpmem_base = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_CPMEM_REG_BASE, SZ_128K);
+				ipu_base + devtype->cpmem_ofs, SZ_128K);
 	ipu->tpmem_base = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_TPM_REG_BASE, SZ_64K);
+				ipu_base + devtype->tpm_ofs, SZ_64K);
 	ipu->dc_tmpl_reg = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_DC_TMPL_REG_BASE, SZ_128K);
+				ipu_base + devtype->dc_tmpl_ofs, SZ_128K);
 	ipu->vdi_reg = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_VDI_REG_BASE, PAGE_SIZE);
+				ipu_base + devtype->vdi_ofs, PAGE_SIZE);
 	if (!ipu->cm_reg || !ipu->ic_reg || !ipu->idmac_reg ||
 		!ipu->dp_reg || !ipu->dc_reg || !ipu->dmfc_reg ||
 		!ipu->di_reg[0] || !ipu->di_reg[1] || !ipu->smfc_reg ||
@@ -468,7 +548,7 @@ static int ipu_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, ipu);
 
-	if (!pltfm_data->bypass_reset) {
+	if (!bypass_reset) {
 		ret = device_reset(&pdev->dev);
 		if (ret) {
 			dev_err(&pdev->dev, "failed to reset: %d\n", ret);
@@ -485,7 +565,7 @@ static int ipu_probe(struct platform_device *pdev)
 	}
 
 	/* setup ipu clk tree after ipu reset  */
-	ret = ipu_clk_setup_enable(ipu, pltfm_data);
+	ret = ipu_clk_setup_enable(ipu);
 	if (ret < 0) {
 		dev_err(ipu->dev, "ipu clk setup failed\n");
 		ipu->online = false;
@@ -501,10 +581,10 @@ static int ipu_probe(struct platform_device *pdev)
 	ipu_cm_write(ipu, 0xFFFFFFFF, IPU_INT_CTRL(9));
 	ipu_cm_write(ipu, 0xFFFFFFFF, IPU_INT_CTRL(10));
 
-	if (!pltfm_data->bypass_reset)
+	if (!bypass_reset)
 		clk_disable(ipu->ipu_clk);
 
-	register_ipu_device(ipu, ipu->pdata->id);
+	register_ipu_device(ipu, id);
 
 	pm_runtime_enable(&pdev->dev);
 
@@ -515,7 +595,7 @@ int ipu_remove(struct platform_device *pdev)
 {
 	struct ipu_soc *ipu = platform_get_drvdata(pdev);
 
-	unregister_ipu_device(ipu, ipu->pdata->id);
+	unregister_ipu_device(ipu, ipu->id);
 
 	clk_put(ipu->ipu_clk);
 
@@ -535,18 +615,19 @@ void ipu_dump_registers(struct ipu_soc *ipu)
 	dev_dbg(ipu->dev, "IDMAC_CHA_PRI2 = \t0x%08X\n",
 	       ipu_idmac_read(ipu, IDMAC_CHA_PRI(32)));
 	dev_dbg(ipu->dev, "IDMAC_BAND_EN1 = \t0x%08X\n",
-	       ipu_idmac_read(ipu, IDMAC_BAND_EN(0)));
+	       ipu_idmac_read(ipu, IDMAC_BAND_EN(ipu->devtype, 0)));
 	dev_dbg(ipu->dev, "IDMAC_BAND_EN2 = \t0x%08X\n",
-	       ipu_idmac_read(ipu, IDMAC_BAND_EN(32)));
+	       ipu_idmac_read(ipu, IDMAC_BAND_EN(ipu->devtype, 32)));
 	dev_dbg(ipu->dev, "IPU_CHA_DB_MODE_SEL0 = \t0x%08X\n",
 	       ipu_cm_read(ipu, IPU_CHA_DB_MODE_SEL(0)));
 	dev_dbg(ipu->dev, "IPU_CHA_DB_MODE_SEL1 = \t0x%08X\n",
 	       ipu_cm_read(ipu, IPU_CHA_DB_MODE_SEL(32)));
-	if (g_ipu_hw_rev >= IPU_V3DEX) {
+	if (ipu->devtype >= IPUv3EX) {
 		dev_dbg(ipu->dev, "IPU_CHA_TRB_MODE_SEL0 = \t0x%08X\n",
-		       ipu_cm_read(ipu, IPU_CHA_TRB_MODE_SEL(0)));
+		       ipu_cm_read(ipu, IPU_CHA_TRB_MODE_SEL(ipu->devtype, 0)));
 		dev_dbg(ipu->dev, "IPU_CHA_TRB_MODE_SEL1 = \t0x%08X\n",
-		       ipu_cm_read(ipu, IPU_CHA_TRB_MODE_SEL(32)));
+		       ipu_cm_read(ipu,
+				IPU_CHA_TRB_MODE_SEL(ipu->devtype, 32)));
 	}
 	dev_dbg(ipu->dev, "DMFC_WR_CHAN = \t0x%08X\n",
 	       ipu_dmfc_read(ipu, DMFC_WR_CHAN));
@@ -960,8 +1041,8 @@ void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel)
 	in_dma = channel_2_dma(channel, IPU_VIDEO_IN_BUFFER);
 	out_dma = channel_2_dma(channel, IPU_OUTPUT_BUFFER);
 
-	if (idma_is_set(ipu, IDMAC_CHA_EN, in_dma) ||
-	    idma_is_set(ipu, IDMAC_CHA_EN, out_dma)) {
+	if (idma_is_set(ipu, IDMAC_CHA_EN(in_dma), in_dma) ||
+	    idma_is_set(ipu, IDMAC_CHA_EN(out_dma), out_dma)) {
 		dev_err(ipu->dev,
 			"Channel %d is not disabled, disable first\n",
 			IPU_CHAN_ID(channel));
@@ -978,10 +1059,12 @@ void ipu_uninit_channel(struct ipu_soc *ipu, ipu_channel_t channel)
 	ipu_cm_write(ipu, reg & ~idma_mask(out_dma), IPU_CHA_DB_MODE_SEL(out_dma));
 
 	/* Reset the triple buffer */
-	reg = ipu_cm_read(ipu, IPU_CHA_TRB_MODE_SEL(in_dma));
-	ipu_cm_write(ipu, reg & ~idma_mask(in_dma), IPU_CHA_TRB_MODE_SEL(in_dma));
-	reg = ipu_cm_read(ipu, IPU_CHA_TRB_MODE_SEL(out_dma));
-	ipu_cm_write(ipu, reg & ~idma_mask(out_dma), IPU_CHA_TRB_MODE_SEL(out_dma));
+	reg = ipu_cm_read(ipu, IPU_CHA_TRB_MODE_SEL(ipu->devtype, in_dma));
+	ipu_cm_write(ipu, reg & ~idma_mask(in_dma),
+				IPU_CHA_TRB_MODE_SEL(ipu->devtype, in_dma));
+	reg = ipu_cm_read(ipu, IPU_CHA_TRB_MODE_SEL(ipu->devtype, out_dma));
+	ipu_cm_write(ipu, reg & ~idma_mask(out_dma),
+				IPU_CHA_TRB_MODE_SEL(ipu->devtype, out_dma));
 
 	if (_ipu_is_ic_chan(in_dma) || _ipu_is_dp_graphic_chan(in_dma)) {
 		ipu->sec_chan_en[IPU_CHAN_ID(channel)] = false;
@@ -1257,7 +1340,7 @@ int32_t ipu_init_channel_buffer(struct ipu_soc *ipu, ipu_channel_t channel,
 	}
 
 	/* IPUv3EX and IPUv3M support triple buffer */
-	if ((!_ipu_is_trb_chan(dma_chan)) && phyaddr_2) {
+	if ((!_ipu_is_trb_chan(ipu, dma_chan)) && phyaddr_2) {
 		dev_err(ipu->dev, "Chan%d doesn't support triple buffer "
 				   "mode\n", dma_chan);
 		return -EINVAL;
@@ -1334,10 +1417,10 @@ int32_t ipu_init_channel_buffer(struct ipu_soc *ipu, ipu_channel_t channel,
 	}
 
 	/* AXI-id */
-	if (idma_is_set(ipu, IDMAC_CHA_PRI, dma_chan)) {
-		unsigned reg = IDMAC_CH_LOCK_EN_1;
+	if (idma_is_set(ipu, IDMAC_CHA_PRI(dma_chan), dma_chan)) {
+		unsigned reg = IDMAC_CH_LOCK_EN_1(ipu->devtype);
 		uint32_t value = 0;
-		if (ipu->pdata->devtype == IPU_V3H) {
+		if (ipu->devtype == IPUv3H) {
 			_ipu_ch_param_set_axi_id(ipu, dma_chan, 0);
 			switch (dma_chan) {
 			case 5:
@@ -1376,27 +1459,27 @@ int32_t ipu_init_channel_buffer(struct ipu_soc *ipu, ipu_channel_t channel,
 				_ipu_ch_param_set_axi_id(ipu, dma_chan, 3);
 				break;
 			case 45:
-				reg = IDMAC_CH_LOCK_EN_2;
+				reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
 				value = 0x3 << 0;
 				break;
 			case 46:
-				reg = IDMAC_CH_LOCK_EN_2;
+				reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
 				value = 0x3 << 2;
 				break;
 			case 47:
-				reg = IDMAC_CH_LOCK_EN_2;
+				reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
 				value = 0x3 << 4;
 				break;
 			case 48:
-				reg = IDMAC_CH_LOCK_EN_2;
+				reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
 				value = 0x3 << 6;
 				break;
 			case 49:
-				reg = IDMAC_CH_LOCK_EN_2;
+				reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
 				value = 0x3 << 8;
 				break;
 			case 50:
-				reg = IDMAC_CH_LOCK_EN_2;
+				reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
 				value = 0x3 << 10;
 				break;
 			default:
@@ -1407,34 +1490,41 @@ int32_t ipu_init_channel_buffer(struct ipu_soc *ipu, ipu_channel_t channel,
 		} else
 			_ipu_ch_param_set_axi_id(ipu, dma_chan, 1);
 	} else {
-		if (ipu->pdata->devtype == IPU_V3H)
+		if (ipu->devtype == IPUv3H)
 			_ipu_ch_param_set_axi_id(ipu, dma_chan, 1);
 	}
 
 	_ipu_ch_param_dump(ipu, dma_chan);
 
-	if (phyaddr_2 && g_ipu_hw_rev >= IPU_V3DEX) {
+	if (phyaddr_2 && ipu->devtype >= IPUv3EX) {
 		reg = ipu_cm_read(ipu, IPU_CHA_DB_MODE_SEL(dma_chan));
 		reg &= ~idma_mask(dma_chan);
 		ipu_cm_write(ipu, reg, IPU_CHA_DB_MODE_SEL(dma_chan));
 
-		reg = ipu_cm_read(ipu, IPU_CHA_TRB_MODE_SEL(dma_chan));
+		reg = ipu_cm_read(ipu,
+				IPU_CHA_TRB_MODE_SEL(ipu->devtype, dma_chan));
 		reg |= idma_mask(dma_chan);
-		ipu_cm_write(ipu, reg, IPU_CHA_TRB_MODE_SEL(dma_chan));
+		ipu_cm_write(ipu, reg,
+				IPU_CHA_TRB_MODE_SEL(ipu->devtype, dma_chan));
 
 		/* Set IDMAC third buffer's cpmem number */
 		/* See __ipu_ch_get_third_buf_cpmem_num() for mapping */
-		ipu_idmac_write(ipu, 0x00444047L, IDMAC_SUB_ADDR_4);
-		ipu_idmac_write(ipu, 0x46004241L, IDMAC_SUB_ADDR_3);
-		ipu_idmac_write(ipu, 0x00000045L, IDMAC_SUB_ADDR_1);
+		ipu_idmac_write(ipu, 0x00444047L,
+				IDMAC_SUB_ADDR_4(ipu->devtype));
+		ipu_idmac_write(ipu, 0x46004241L,
+				IDMAC_SUB_ADDR_3(ipu->devtype));
+		ipu_idmac_write(ipu, 0x00000045L,
+				IDMAC_SUB_ADDR_1(ipu->devtype));
 
 		/* Reset to buffer 0 */
 		ipu_cm_write(ipu, tri_cur_buf_mask(dma_chan),
-				IPU_CHA_TRIPLE_CUR_BUF(dma_chan));
+				IPU_CHA_TRIPLE_CUR_BUF(ipu->devtype, dma_chan));
 	} else {
-		reg = ipu_cm_read(ipu, IPU_CHA_TRB_MODE_SEL(dma_chan));
+		reg = ipu_cm_read(ipu,
+				IPU_CHA_TRB_MODE_SEL(ipu->devtype, dma_chan));
 		reg &= ~idma_mask(dma_chan);
-		ipu_cm_write(ipu, reg, IPU_CHA_TRB_MODE_SEL(dma_chan));
+		ipu_cm_write(ipu, reg,
+				IPU_CHA_TRB_MODE_SEL(ipu->devtype, dma_chan));
 
 		reg = ipu_cm_read(ipu, IPU_CHA_DB_MODE_SEL(dma_chan));
 		if (phyaddr_1)
@@ -1445,7 +1535,7 @@ int32_t ipu_init_channel_buffer(struct ipu_soc *ipu, ipu_channel_t channel,
 
 		/* Reset to buffer 0 */
 		ipu_cm_write(ipu, idma_mask(dma_chan),
-				IPU_CHA_CUR_BUF(dma_chan));
+				IPU_CHA_CUR_BUF(ipu->devtype, dma_chan));
 
 	}
 
@@ -1485,11 +1575,14 @@ int32_t ipu_update_channel_buffer(struct ipu_soc *ipu, ipu_channel_t channel,
 
 	spin_lock_irqsave(&ipu->rdy_reg_spin_lock, lock_flags);
 	if (bufNum == 0)
-		reg = ipu_cm_read(ipu, IPU_CHA_BUF0_RDY(dma_chan));
+		reg = ipu_cm_read(ipu,
+				IPU_CHA_BUF0_RDY(ipu->devtype, dma_chan));
 	else if (bufNum == 1)
-		reg = ipu_cm_read(ipu, IPU_CHA_BUF1_RDY(dma_chan));
+		reg = ipu_cm_read(ipu,
+				IPU_CHA_BUF1_RDY(ipu->devtype, dma_chan));
 	else
-		reg = ipu_cm_read(ipu, IPU_CHA_BUF2_RDY(dma_chan));
+		reg = ipu_cm_read(ipu,
+				IPU_CHA_BUF2_RDY(ipu->devtype, dma_chan));
 
 	if ((reg & idma_mask(dma_chan)) == 0)
 		_ipu_ch_param_set_buffer(ipu, dma_chan, bufNum, phyaddr);
@@ -1529,9 +1622,9 @@ int32_t ipu_set_channel_bandmode(struct ipu_soc *ipu, ipu_channel_t channel,
 
 	mutex_lock(&ipu->mutex_lock);
 
-	reg = ipu_idmac_read(ipu, IDMAC_BAND_EN(dma_chan));
+	reg = ipu_idmac_read(ipu, IDMAC_BAND_EN(ipu->devtype, dma_chan));
 	reg |= 1 << (dma_chan % 32);
-	ipu_idmac_write(ipu, reg, IDMAC_BAND_EN(dma_chan));
+	ipu_idmac_write(ipu, reg, IDMAC_BAND_EN(ipu->devtype, dma_chan));
 
 	_ipu_ch_param_set_bandmode(ipu, dma_chan, band_height);
 	dev_dbg(ipu->dev, "dma_chan:%d, band_height:%d.\n\n",
@@ -1594,11 +1687,14 @@ int32_t ipu_update_channel_offset(struct ipu_soc *ipu,
 		return -EINVAL;
 
 	spin_lock_irqsave(&ipu->rdy_reg_spin_lock, lock_flags);
-	if ((ipu_cm_read(ipu, IPU_CHA_BUF0_RDY(dma_chan)) & idma_mask(dma_chan)) ||
-	    (ipu_cm_read(ipu, IPU_CHA_BUF1_RDY(dma_chan)) & idma_mask(dma_chan)) ||
-	    ((ipu_cm_read(ipu, IPU_CHA_BUF2_RDY(dma_chan)) & idma_mask(dma_chan)) &&
-	     (ipu_cm_read(ipu, IPU_CHA_TRB_MODE_SEL(dma_chan)) & idma_mask(dma_chan)) &&
-	     _ipu_is_trb_chan(dma_chan)))
+	if ((ipu_cm_read(ipu, IPU_CHA_BUF0_RDY(ipu->devtype, dma_chan)) &
+	     idma_mask(dma_chan)) ||
+	    (ipu_cm_read(ipu, IPU_CHA_BUF1_RDY(ipu->devtype, dma_chan)) &
+	     idma_mask(dma_chan)) ||
+	    ((ipu_cm_read(ipu, IPU_CHA_BUF2_RDY(ipu->devtype, dma_chan)) &
+	     idma_mask(dma_chan)) &&
+	     (ipu_cm_read(ipu, IPU_CHA_TRB_MODE_SEL(ipu->devtype, dma_chan)) &
+	      idma_mask(dma_chan)) && _ipu_is_trb_chan(ipu, dma_chan)))
 		ret = -EACCES;
 	else
 		_ipu_ch_offset_update(ipu, dma_chan, pixel_fmt, width, height, stride,
@@ -1649,13 +1745,13 @@ int32_t ipu_select_buffer(struct ipu_soc *ipu, ipu_channel_t channel,
 	/* Mark buffer to be ready. */
 	if (bufNum == 0)
 		ipu_cm_write(ipu, idma_mask(dma_chan),
-			     IPU_CHA_BUF0_RDY(dma_chan));
+			     IPU_CHA_BUF0_RDY(ipu->devtype, dma_chan));
 	else if (bufNum == 1)
 		ipu_cm_write(ipu, idma_mask(dma_chan),
-			     IPU_CHA_BUF1_RDY(dma_chan));
+			     IPU_CHA_BUF1_RDY(ipu->devtype, dma_chan));
 	else
 		ipu_cm_write(ipu, idma_mask(dma_chan),
-			     IPU_CHA_BUF2_RDY(dma_chan));
+			     IPU_CHA_BUF2_RDY(ipu->devtype, dma_chan));
 	spin_unlock_irqrestore(&ipu->rdy_reg_spin_lock, lock_flags);
 
 	return 0;
@@ -1684,9 +1780,11 @@ int32_t ipu_select_multi_vdi_buffer(struct ipu_soc *ipu, uint32_t bufNum)
 	spin_lock_irqsave(&ipu->rdy_reg_spin_lock, lock_flags);
 	/* Mark buffers to be ready. */
 	if (bufNum == 0)
-		ipu_cm_write(ipu, mask_bit, IPU_CHA_BUF0_RDY(dma_chan));
+		ipu_cm_write(ipu, mask_bit,
+				IPU_CHA_BUF0_RDY(ipu->devtype, dma_chan));
 	else
-		ipu_cm_write(ipu, mask_bit, IPU_CHA_BUF1_RDY(dma_chan));
+		ipu_cm_write(ipu, mask_bit,
+				IPU_CHA_BUF1_RDY(ipu->devtype, dma_chan));
 	spin_unlock_irqrestore(&ipu->rdy_reg_spin_lock, lock_flags);
 
 	return 0;
@@ -2232,11 +2330,14 @@ int32_t ipu_check_buffer_ready(struct ipu_soc *ipu, ipu_channel_t channel, ipu_b
 
 	spin_lock_irqsave(&ipu->rdy_reg_spin_lock, lock_flags);
 	if (bufNum == 0)
-		reg = ipu_cm_read(ipu, IPU_CHA_BUF0_RDY(dma_chan));
+		reg = ipu_cm_read(ipu,
+				IPU_CHA_BUF0_RDY(ipu->devtype, dma_chan));
 	else if (bufNum == 1)
-		reg = ipu_cm_read(ipu, IPU_CHA_BUF1_RDY(dma_chan));
+		reg = ipu_cm_read(ipu,
+				IPU_CHA_BUF1_RDY(ipu->devtype, dma_chan));
 	else
-		reg = ipu_cm_read(ipu, IPU_CHA_BUF2_RDY(dma_chan));
+		reg = ipu_cm_read(ipu,
+				IPU_CHA_BUF2_RDY(ipu->devtype, dma_chan));
 	spin_unlock_irqrestore(&ipu->rdy_reg_spin_lock, lock_flags);
 
 	if (reg & idma_mask(dma_chan))
@@ -2269,13 +2370,13 @@ void _ipu_clear_buffer_ready(struct ipu_soc *ipu, ipu_channel_t channel, ipu_buf
 	ipu_cm_write(ipu, 0xF0300000, IPU_GPR); /* write one to clear */
 	if (bufNum == 0)
 		ipu_cm_write(ipu, idma_mask(dma_ch),
-				IPU_CHA_BUF0_RDY(dma_ch));
+				IPU_CHA_BUF0_RDY(ipu->devtype, dma_ch));
 	else if (bufNum == 1)
 		ipu_cm_write(ipu, idma_mask(dma_ch),
-				IPU_CHA_BUF1_RDY(dma_ch));
+				IPU_CHA_BUF1_RDY(ipu->devtype, dma_ch));
 	else
 		ipu_cm_write(ipu, idma_mask(dma_ch),
-				IPU_CHA_BUF2_RDY(dma_ch));
+				IPU_CHA_BUF2_RDY(ipu->devtype, dma_ch));
 	ipu_cm_write(ipu, 0x0, IPU_GPR); /* write one to set */
 }
 
@@ -2326,9 +2427,9 @@ int32_t ipu_disable_channel(struct ipu_soc *ipu, ipu_channel_t channel, bool wai
 	in_dma = channel_2_dma(channel, IPU_VIDEO_IN_BUFFER);
 
 	if ((idma_is_valid(in_dma) &&
-		!idma_is_set(ipu, IDMAC_CHA_EN, in_dma))
+		!idma_is_set(ipu, IDMAC_CHA_EN(in_dma), in_dma))
 		&& (idma_is_valid(out_dma) &&
-		!idma_is_set(ipu, IDMAC_CHA_EN, out_dma))) {
+		!idma_is_set(ipu, IDMAC_CHA_EN(out_dma), out_dma))) {
 		mutex_unlock(&ipu->mutex_lock);
 		return -EINVAL;
 	}
@@ -2357,9 +2458,12 @@ int32_t ipu_disable_channel(struct ipu_soc *ipu, ipu_channel_t channel, bool wai
 			int timeout = 50;
 
 			ipu_cm_write(ipu, IPUIRQ_2_MASK(IPU_IRQ_BG_SYNC_EOF),
-					IPUIRQ_2_STATREG(IPU_IRQ_BG_SYNC_EOF));
-			while ((ipu_cm_read(ipu, IPUIRQ_2_STATREG(IPU_IRQ_BG_SYNC_EOF)) &
-						IPUIRQ_2_MASK(IPU_IRQ_BG_SYNC_EOF)) == 0) {
+					IPUIRQ_2_STATREG(ipu->devtype,
+							IPU_IRQ_BG_SYNC_EOF));
+			while ((ipu_cm_read(ipu,
+				IPUIRQ_2_STATREG(ipu->devtype,
+				IPU_IRQ_BG_SYNC_EOF)) &
+				IPUIRQ_2_MASK(IPU_IRQ_BG_SYNC_EOF)) == 0) {
 				msleep(10);
 				timeout -= 10;
 				if (timeout <= 0) {
@@ -2370,24 +2474,32 @@ int32_t ipu_disable_channel(struct ipu_soc *ipu, ipu_channel_t channel, bool wai
 		}
 	} else if (wait_for_stop && !_ipu_is_smfc_chan(out_dma) &&
 		   channel != CSI_PRP_VF_MEM && channel != CSI_PRP_ENC_MEM) {
-		while (idma_is_set(ipu, IDMAC_CHA_BUSY, in_dma) ||
-		       idma_is_set(ipu, IDMAC_CHA_BUSY, out_dma) ||
+		while (idma_is_set(ipu, IDMAC_CHA_BUSY(ipu->devtype, in_dma),
+					in_dma) ||
+		       idma_is_set(ipu, IDMAC_CHA_BUSY(ipu->devtype, out_dma),
+					out_dma) ||
 			(ipu->sec_chan_en[IPU_CHAN_ID(channel)] &&
-			idma_is_set(ipu, IDMAC_CHA_BUSY, sec_dma)) ||
+			idma_is_set(ipu, IDMAC_CHA_BUSY(ipu->devtype, sec_dma),
+					sec_dma)) ||
 			(ipu->thrd_chan_en[IPU_CHAN_ID(channel)] &&
-			idma_is_set(ipu, IDMAC_CHA_BUSY, thrd_dma))) {
+			idma_is_set(ipu, IDMAC_CHA_BUSY(ipu->devtype, thrd_dma),
+					thrd_dma))) {
 			uint32_t irq = 0xffffffff;
 			int timeout = 50000;
 
-			if (idma_is_set(ipu, IDMAC_CHA_BUSY, out_dma))
+			if (idma_is_set(ipu, IDMAC_CHA_BUSY(ipu->devtype,
+					out_dma), out_dma))
 				irq = out_dma;
 			if (ipu->sec_chan_en[IPU_CHAN_ID(channel)] &&
-				idma_is_set(ipu, IDMAC_CHA_BUSY, sec_dma))
+				idma_is_set(ipu, IDMAC_CHA_BUSY(ipu->devtype,
+						sec_dma), sec_dma))
 				irq = sec_dma;
 			if (ipu->thrd_chan_en[IPU_CHAN_ID(channel)] &&
-				idma_is_set(ipu, IDMAC_CHA_BUSY, thrd_dma))
+				idma_is_set(ipu, IDMAC_CHA_BUSY(ipu->devtype,
+						thrd_dma), thrd_dma))
 				irq = thrd_dma;
-			if (idma_is_set(ipu, IDMAC_CHA_BUSY, in_dma))
+			if (idma_is_set(ipu, IDMAC_CHA_BUSY(ipu->devtype,
+						in_dma), in_dma))
 				irq = in_dma;
 
 			if (irq == 0xffffffff) {
@@ -2396,13 +2508,15 @@ int32_t ipu_disable_channel(struct ipu_soc *ipu, ipu_channel_t channel, bool wai
 			}
 
 			ipu_cm_write(ipu, IPUIRQ_2_MASK(irq),
-					IPUIRQ_2_STATREG(irq));
+					IPUIRQ_2_STATREG(ipu->devtype, irq));
 
 			dev_dbg(ipu->dev, "warning: channel %d busy, need wait\n", irq);
 
-			while (((ipu_cm_read(ipu, IPUIRQ_2_STATREG(irq))
+			while (((ipu_cm_read(ipu,
+					IPUIRQ_2_STATREG(ipu->devtype, irq))
 				& IPUIRQ_2_MASK(irq)) == 0) &&
-				(idma_is_set(ipu, IDMAC_CHA_BUSY, irq))) {
+				(idma_is_set(ipu, IDMAC_CHA_BUSY(ipu->devtype,
+							irq), irq))) {
 				udelay(10);
 				timeout -= 10;
 				if (timeout <= 0) {
@@ -2432,21 +2546,24 @@ int32_t ipu_disable_channel(struct ipu_soc *ipu, ipu_channel_t channel, bool wai
 	if (idma_is_valid(in_dma)) {
 		reg = ipu_idmac_read(ipu, IDMAC_CHA_EN(in_dma));
 		ipu_idmac_write(ipu, reg & ~idma_mask(in_dma), IDMAC_CHA_EN(in_dma));
-		ipu_cm_write(ipu, idma_mask(in_dma), IPU_CHA_CUR_BUF(in_dma));
+		ipu_cm_write(ipu, idma_mask(in_dma),
+				IPU_CHA_CUR_BUF(ipu->devtype, in_dma));
 		ipu_cm_write(ipu, tri_cur_buf_mask(in_dma),
-					IPU_CHA_TRIPLE_CUR_BUF(in_dma));
+				IPU_CHA_TRIPLE_CUR_BUF(ipu->devtype, in_dma));
 	}
 	if (idma_is_valid(out_dma)) {
 		reg = ipu_idmac_read(ipu, IDMAC_CHA_EN(out_dma));
 		ipu_idmac_write(ipu, reg & ~idma_mask(out_dma), IDMAC_CHA_EN(out_dma));
-		ipu_cm_write(ipu, idma_mask(out_dma), IPU_CHA_CUR_BUF(out_dma));
+		ipu_cm_write(ipu, idma_mask(out_dma),
+				IPU_CHA_CUR_BUF(ipu->devtype, out_dma));
 		ipu_cm_write(ipu, tri_cur_buf_mask(out_dma),
-					IPU_CHA_TRIPLE_CUR_BUF(out_dma));
+				IPU_CHA_TRIPLE_CUR_BUF(ipu->devtype, out_dma));
 	}
 	if (ipu->sec_chan_en[IPU_CHAN_ID(channel)] && idma_is_valid(sec_dma)) {
 		reg = ipu_idmac_read(ipu, IDMAC_CHA_EN(sec_dma));
 		ipu_idmac_write(ipu, reg & ~idma_mask(sec_dma), IDMAC_CHA_EN(sec_dma));
-		ipu_cm_write(ipu, idma_mask(sec_dma), IPU_CHA_CUR_BUF(sec_dma));
+		ipu_cm_write(ipu, idma_mask(sec_dma),
+				IPU_CHA_CUR_BUF(ipu->devtype, sec_dma));
 	}
 	if (ipu->thrd_chan_en[IPU_CHAN_ID(channel)] && idma_is_valid(thrd_dma)) {
 		reg = ipu_idmac_read(ipu, IDMAC_CHA_EN(thrd_dma));
@@ -2458,7 +2575,8 @@ int32_t ipu_disable_channel(struct ipu_soc *ipu, ipu_channel_t channel, bool wai
 			reg = ipu_idmac_read(ipu, IDMAC_SEP_ALPHA);
 			ipu_idmac_write(ipu, reg & ~idma_mask(sec_dma), IDMAC_SEP_ALPHA);
 		}
-		ipu_cm_write(ipu, idma_mask(thrd_dma), IPU_CHA_CUR_BUF(thrd_dma));
+		ipu_cm_write(ipu, idma_mask(thrd_dma),
+				IPU_CHA_CUR_BUF(ipu->devtype, thrd_dma));
 	}
 
 	if (channel == MEM_FG_SYNC)
@@ -2576,10 +2694,12 @@ static irqreturn_t ipu_sync_irq_handler(int irq, void *desc)
 	spin_lock(&ipu->int_reg_spin_lock);
 
 	for (i = 0; int_reg[i] != 0; i++) {
-		int_stat = ipu_cm_read(ipu, IPU_INT_STAT(int_reg[i]));
+		int_stat = ipu_cm_read(ipu,
+				IPU_INT_STAT(ipu->devtype, int_reg[i]));
 		int_ctrl = ipu_cm_read(ipu, IPU_INT_CTRL(int_reg[i]));
 		int_stat &= int_ctrl;
-		ipu_cm_write(ipu, int_stat, IPU_INT_STAT(int_reg[i]));
+		ipu_cm_write(ipu, int_stat,
+				IPU_INT_STAT(ipu->devtype, int_reg[i]));
 		while ((line = ffs(int_stat)) != 0) {
 			bit = --line;
 			int_stat &= ~(1UL << line);
@@ -2611,10 +2731,12 @@ static irqreturn_t ipu_err_irq_handler(int irq, void *desc)
 	spin_lock(&ipu->int_reg_spin_lock);
 
 	for (i = 0; err_reg[i] != 0; i++) {
-		int_stat = ipu_cm_read(ipu, IPU_INT_STAT(err_reg[i]));
+		int_stat = ipu_cm_read(ipu,
+				IPU_INT_STAT(ipu->devtype, err_reg[i]));
 		int_stat &= ipu_cm_read(ipu, IPU_INT_CTRL(err_reg[i]));
 		if (int_stat) {
-			ipu_cm_write(ipu, int_stat, IPU_INT_STAT(err_reg[i]));
+			ipu_cm_write(ipu, int_stat,
+				IPU_INT_STAT(ipu->devtype, err_reg[i]));
 			dev_warn(ipu->dev,
 				"IPU Warning - IPU_INT_STAT_%d = 0x%08X\n",
 				err_reg[i], int_stat);
@@ -2717,7 +2839,8 @@ void ipu_clear_irq(struct ipu_soc *ipu, uint32_t irq)
 
 	spin_lock_irqsave(&ipu->int_reg_spin_lock, lock_flags);
 
-	ipu_cm_write(ipu, IPUIRQ_2_MASK(irq), IPUIRQ_2_STATREG(irq));
+	ipu_cm_write(ipu, IPUIRQ_2_MASK(irq),
+			IPUIRQ_2_STATREG(ipu->devtype, irq));
 
 	spin_unlock_irqrestore(&ipu->int_reg_spin_lock, lock_flags);
 
@@ -2743,7 +2866,7 @@ bool ipu_get_irq_status(struct ipu_soc *ipu, uint32_t irq)
 	_ipu_get(ipu);
 
 	spin_lock_irqsave(&ipu->int_reg_spin_lock, lock_flags);
-	reg = ipu_cm_read(ipu, IPUIRQ_2_STATREG(irq));
+	reg = ipu_cm_read(ipu, IPUIRQ_2_STATREG(ipu->devtype, irq));
 	spin_unlock_irqrestore(&ipu->int_reg_spin_lock, lock_flags);
 
 	_ipu_put(ipu);
@@ -2814,7 +2937,8 @@ int ipu_request_irq(struct ipu_soc *ipu, uint32_t irq,
 	ipu->irq_list[irq].name = devname;
 
 	/* clear irq stat for previous use */
-	ipu_cm_write(ipu, IPUIRQ_2_MASK(irq), IPUIRQ_2_STATREG(irq));
+	ipu_cm_write(ipu, IPUIRQ_2_MASK(irq),
+			IPUIRQ_2_STATREG(ipu->devtype, irq));
 	/* enable the interrupt */
 	reg = ipu_cm_read(ipu, IPUIRQ_2_CTRLREG(irq));
 	reg |= IPUIRQ_2_MASK(irq);
@@ -2870,13 +2994,14 @@ uint32_t ipu_get_cur_buffer_idx(struct ipu_soc *ipu, ipu_channel_t channel, ipu_
 	if (!idma_is_valid(dma_chan))
 		return -EINVAL;
 
-	reg = ipu_cm_read(ipu, IPU_CHA_TRB_MODE_SEL(dma_chan));
-	if ((reg & idma_mask(dma_chan)) && _ipu_is_trb_chan(dma_chan)) {
-		reg = ipu_cm_read(ipu, IPU_CHA_TRIPLE_CUR_BUF(dma_chan));
+	reg = ipu_cm_read(ipu, IPU_CHA_TRB_MODE_SEL(ipu->devtype, dma_chan));
+	if ((reg & idma_mask(dma_chan)) && _ipu_is_trb_chan(ipu, dma_chan)) {
+		reg = ipu_cm_read(ipu,
+				IPU_CHA_TRIPLE_CUR_BUF(ipu->devtype, dma_chan));
 		return (reg & tri_cur_buf_mask(dma_chan)) >>
 				tri_cur_buf_shift(dma_chan);
 	} else {
-		reg = ipu_cm_read(ipu, IPU_CHA_CUR_BUF(dma_chan));
+		reg = ipu_cm_read(ipu, IPU_CHA_CUR_BUF(ipu->devtype, dma_chan));
 		if (reg & idma_mask(dma_chan))
 			return 1;
 		else
@@ -2888,7 +3013,8 @@ EXPORT_SYMBOL(ipu_get_cur_buffer_idx);
 uint32_t _ipu_channel_status(struct ipu_soc *ipu, ipu_channel_t channel)
 {
 	uint32_t stat = 0;
-	uint32_t task_stat_reg = ipu_cm_read(ipu, IPU_PROC_TASK_STAT);
+	uint32_t task_stat_reg = ipu_cm_read(ipu,
+					IPU_PROC_TASK_STAT(ipu->devtype));
 
 	switch (channel) {
 	case MEM_PRP_VF_MEM:
@@ -2970,9 +3096,10 @@ int32_t ipu_swap_channel(struct ipu_soc *ipu, ipu_channel_t from_ch, ipu_channel
 	/* disable source channel */
 	reg = ipu_idmac_read(ipu, IDMAC_CHA_EN(from_dma));
 	ipu_idmac_write(ipu, reg & ~idma_mask(from_dma), IDMAC_CHA_EN(from_dma));
-	ipu_cm_write(ipu, idma_mask(from_dma), IPU_CHA_CUR_BUF(from_dma));
+	ipu_cm_write(ipu, idma_mask(from_dma),
+				IPU_CHA_CUR_BUF(ipu->devtype, from_dma));
 	ipu_cm_write(ipu, tri_cur_buf_mask(from_dma),
-				IPU_CHA_TRIPLE_CUR_BUF(from_dma));
+				IPU_CHA_TRIPLE_CUR_BUF(ipu->devtype, from_dma));
 
 	ipu->channel_enable_mask &= ~(1L << IPU_CHAN_ID(from_ch));
 
@@ -3184,29 +3311,12 @@ EXPORT_SYMBOL(ipu_ch_param_get_axi_id);
 #ifdef CONFIG_PM
 static int ipu_suspend(struct device *dev)
 {
-	struct ipu_soc *ipu = dev_get_drvdata(dev);
-
-	/* All IDMAC channel and IPU clock should be disabled.*/
-	if (ipu->pdata->pg)
-		ipu->pdata->pg(1);
-
 	dev_dbg(dev, "ipu suspend.\n");
 	return 0;
 }
 
 static int ipu_resume(struct device *dev)
 {
-	struct ipu_soc *ipu = dev_get_drvdata(dev);
-
-	if (ipu->pdata->pg) {
-		ipu->pdata->pg(0);
-
-		_ipu_get(ipu);
-		_ipu_dmfc_init(ipu, dmfc_type_setup, 1);
-		/* Set sync refresh channels as high priority */
-		ipu_idmac_write(ipu, 0x18800001L, IDMAC_CHA_PRI(0));
-		_ipu_put(ipu);
-	}
 	dev_dbg(dev, "ipu resume.\n");
 	return 0;
 }
@@ -3245,7 +3355,6 @@ static struct platform_driver mxcipu_driver = {
 		#endif
 	},
 	.probe		= ipu_probe,
-	.id_table	= imx_ipu_type,
 	.remove		= ipu_remove,
 };
 
