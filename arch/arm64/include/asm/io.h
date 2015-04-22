@@ -147,6 +147,8 @@ extern void __memset_io(volatile void __iomem *, int, size_t);
 	ioremap_prot((addr), (size), PROT_NORMAL_NC)
 #define ioremap_np(addr, size)	\
 	ioremap_prot((addr), (size), PROT_DEVICE_nGnRnE)
+#define ioremap_cache_ns(addr, size)  \
+	ioremap_prot((addr), (size), PROT_NORMAL_NS)
 
 /*
  * io{read,write}{16,32,64}be() macros
