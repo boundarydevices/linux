@@ -28,6 +28,15 @@ extern int dmfc_type_setup;
 #define IDMA_CHAN_INVALID	0xFF
 #define HIGH_RESOLUTION_WIDTH	1024
 
+enum ipuv3_type {
+	IPUv3D,		/* i.MX37 */
+	IPUv3EX,	/* i.MX51 */
+	IPUv3M,		/* i.MX53 */
+	IPUv3H,		/* i.MX6Q/SDL */
+};
+
+#define IPU_MAX_VDI_IN_WIDTH(type)	({ (type) >= IPUv3M ? 968 : 720; })
+
 struct ipu_irq_node {
 	irqreturn_t(*handler) (int, void *);	/*!< the ISR */
 	const char *name;	/*!< device associated with the interrupt */
@@ -44,27 +53,10 @@ enum csc_type_t {
 	CSC_NUM
 };
 
-enum imx_ipu_type {
-	IMX6Q_IPU,
-};
-
-struct ipu_pltfm_data {
-	u32 id;
-	u32 devtype;
-	int (*init) (int);
-	void (*pg) (int);
-
-	/*
-	 * Bypass reset to avoid display channel being
-	 * stopped by probe since it may starts to work
-	 * in bootloader.
-	 */
-	bool bypass_reset;
-};
-
 struct ipu_soc {
+	unsigned int id;
+	unsigned int devtype;
 	bool online;
-	struct ipu_pltfm_data *pdata;
 
 	/*clk*/
 	struct clk *ipu_clk;
@@ -143,6 +135,13 @@ struct ipu_soc {
 
 	int	vdoa_en;
 	struct task_struct *thread[2];
+
+	/*
+	 * Bypass reset to avoid display channel being
+	 * stopped by probe since it may starts to work
+	 * in bootloader.
+	 */
+	bool bypass_reset;
 
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2005-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -506,9 +506,21 @@ static int soc_max_in_width(u32 is_vdoa)
 	return is_vdoa ? 8192 : 4096;
 }
 
-static int soc_max_vdi_in_width(void)
+static int soc_max_vdi_in_width(struct ipu_soc *ipu)
 {
-	return IPU_MAX_VDI_IN_WIDTH;
+	int i;
+
+	if (!ipu) {
+		for (i = 0; i < max_ipu_no; i++) {
+			ipu = ipu_get_soc(i);
+			if (!IS_ERR_OR_NULL(ipu))
+				break;
+		}
+
+		if (i == max_ipu_no)
+			return 720;
+	}
+	return IPU_MAX_VDI_IN_WIDTH(ipu->devtype);
 }
 static int soc_max_in_height(void)
 {
@@ -852,7 +864,7 @@ static int update_split_setting(struct ipu_task_entry *t, bool vdi_split)
 		right_stripe.output_column = ow / 2;
 
 		if (vdi_split)
-			max_width = soc_max_vdi_in_width();
+			max_width = soc_max_vdi_in_width(t->ipu);
 		else
 			max_width = soc_max_out_width();
 		ret = ipu_calc_stripes_sizes(iw,
@@ -1148,7 +1160,8 @@ static int check_task(struct ipu_task_entry *t)
 		if (t->output.crop.h > soc_max_out_height())
 			t->set.split_mode |= UD_SPLIT;
 		if (!t->set.split_mode && (t->set.mode & VDI_MODE) &&
-				(t->input.crop.w > soc_max_vdi_in_width())) {
+				(t->input.crop.w >
+				 soc_max_vdi_in_width(t->ipu))) {
 			t->set.split_mode |= RL_SPLIT;
 			vdi_split = true;
 		}
@@ -3035,7 +3048,8 @@ static void get_res_do_task(struct ipu_task_entry *t)
 			do_task_vdoa_only(t);
 		else if ((IPU_PIX_FMT_TILED_NV12F == t->input.format) &&
 				(t->set.mode & VDOA_BAND_MODE) &&
-				(t->input.crop.w > soc_max_vdi_in_width()))
+				(t->input.crop.w >
+				 soc_max_vdi_in_width(t->ipu)))
 			do_task_vdoa_vdi(t);
 		else
 			do_task(t);

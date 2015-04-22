@@ -805,9 +805,12 @@ void _ipu_dp_dc_disable(struct ipu_soc *ipu, ipu_channel_t channel, bool swap)
 
 		if (ipu_is_channel_busy(ipu, MEM_BG_SYNC)) {
 			ipu_cm_write(ipu, IPUIRQ_2_MASK(IPU_IRQ_DP_SF_END),
-					IPUIRQ_2_STATREG(IPU_IRQ_DP_SF_END));
-			while ((ipu_cm_read(ipu, IPUIRQ_2_STATREG(IPU_IRQ_DP_SF_END)) &
-						IPUIRQ_2_MASK(IPU_IRQ_DP_SF_END)) == 0) {
+				IPUIRQ_2_STATREG(ipu->devtype,
+							IPU_IRQ_DP_SF_END));
+			while ((ipu_cm_read(ipu,
+				IPUIRQ_2_STATREG(ipu->devtype,
+							IPU_IRQ_DP_SF_END)) &
+				IPUIRQ_2_MASK(IPU_IRQ_DP_SF_END)) == 0) {
 				msleep(2);
 				timeout -= 2;
 				if (timeout <= 0)
@@ -1167,7 +1170,7 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 	ipu_di_write(ipu, disp, di_gen, DI_GENERAL);
 
 	if (sig.interlaced) {
-		if (g_ipu_hw_rev >= IPU_V3DEX) {
+		if (ipu->devtype >= IPUv3EX) {
 			/* Setup internal HSYNC waveform */
 			_ipu_di_sync_config(ipu,
 					disp, 		/* display */
