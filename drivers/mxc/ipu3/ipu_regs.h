@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2005-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -37,21 +37,14 @@ extern int g_ipu_hw_rev;
 #define IPU_MAX_VDI_IN_WIDTH	({g_ipu_hw_rev >= 3 ? \
 				   (968) : \
 				   (720); })
-#define IPU_DISP0_BASE		0x00000000
 #define IPU_MCU_T_DEFAULT	8
-#define IPU_DISP1_BASE		({g_ipu_hw_rev < 4 ? \
-				(IPU_MCU_T_DEFAULT << 25) : \
-				(0x00000000); })
 #define IPUV3DEX_REG_BASE	0x1E000000
 #define IPUV3M_REG_BASE		0x06000000
 #define IPUV3H_REG_BASE		0x00200000
 
 #define IPU_CM_REG_BASE		0x00000000
 #define IPU_IDMAC_REG_BASE	0x00008000
-#define IPU_ISP_REG_BASE	0x00010000
-#define IPU_DP_REG_BASE		0x00018000
 #define IPU_IC_REG_BASE		0x00020000
-#define IPU_IRT_REG_BASE	0x00028000
 #define IPU_CSI0_REG_BASE	0x00030000
 #define IPU_CSI1_REG_BASE	0x00038000
 #define IPU_DI0_REG_BASE	0x00040000
@@ -63,7 +56,6 @@ extern int g_ipu_hw_rev;
 #define IPU_CPMEM_REG_BASE 	({g_ipu_hw_rev >= 4 ? \
 				   (0x00100000) : \
 				   (0x01000000); })
-#define IPU_LUT_REG_BASE	0x01020000
 #define IPU_SRM_REG_BASE 	({g_ipu_hw_rev >= 4 ? \
 				   (0x00140000) : \
 				   (0x01040000); })
@@ -73,7 +65,6 @@ extern int g_ipu_hw_rev;
 #define IPU_DC_TMPL_REG_BASE 	({g_ipu_hw_rev >= 4 ? \
 				   (0x00180000) : \
 				   (0x01080000); })
-#define IPU_ISP_TBPR_REG_BASE	0x010C0000
 
 /* Register addresses */
 /* IPU Common registers */

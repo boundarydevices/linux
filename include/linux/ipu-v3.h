@@ -706,7 +706,6 @@ int32_t ipu_disp_set_gamma_correction(struct ipu_soc *ipu, ipu_channel_t channel
 
 int ipu_init_async_panel(struct ipu_soc *ipu, int disp, int type, uint32_t cycle_time,
 			 uint32_t pixel_fmt, ipu_adc_sig_cfg_t sig);
-void ipu_disp_direct_write(struct ipu_soc *ipu, ipu_channel_t channel, u32 value, u32 offset);
 void ipu_reset_disp_panel(struct ipu_soc *ipu);
 
 /* CMOS Sensor Interface API */
