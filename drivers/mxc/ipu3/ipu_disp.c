@@ -1932,15 +1932,6 @@ int32_t ipu_disp_get_window_pos(struct ipu_soc *ipu, ipu_channel_t channel,
 }
 EXPORT_SYMBOL(ipu_disp_get_window_pos);
 
-void ipu_disp_direct_write(struct ipu_soc *ipu, ipu_channel_t channel, u32 value, u32 offset)
-{
-	if (channel == DIRECT_ASYNC0)
-		writel(value, ipu->disp_base[0] + offset);
-	else if (channel == DIRECT_ASYNC1)
-		writel(value, ipu->disp_base[1] + offset);
-}
-EXPORT_SYMBOL(ipu_disp_direct_write);
-
 void ipu_reset_disp_panel(struct ipu_soc *ipu)
 {
 	uint32_t tmp;

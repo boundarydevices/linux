@@ -424,14 +424,11 @@ static int ipu_probe(struct platform_device *pdev)
 				ipu_base + IPU_DC_TMPL_REG_BASE, SZ_128K);
 	ipu->vdi_reg = devm_ioremap(&pdev->dev,
 				ipu_base + IPU_VDI_REG_BASE, PAGE_SIZE);
-	ipu->disp_base[1] = devm_ioremap(&pdev->dev,
-				ipu_base + IPU_DISP1_BASE, SZ_4K);
 	if (!ipu->cm_reg || !ipu->ic_reg || !ipu->idmac_reg ||
 		!ipu->dp_reg || !ipu->dc_reg || !ipu->dmfc_reg ||
 		!ipu->di_reg[0] || !ipu->di_reg[1] || !ipu->smfc_reg ||
 		!ipu->csi_reg[0] || !ipu->csi_reg[1] || !ipu->cpmem_base ||
-		!ipu->tpmem_base || !ipu->dc_tmpl_reg || !ipu->disp_base[1]
-		|| !ipu->vdi_reg)
+		!ipu->tpmem_base || !ipu->dc_tmpl_reg || !ipu->vdi_reg)
 		return -ENOMEM;
 
 	dev_dbg(ipu->dev, "IPU CM Regs = %p\n", ipu->cm_reg);
@@ -448,7 +445,6 @@ static int ipu_probe(struct platform_device *pdev)
 	dev_dbg(ipu->dev, "IPU CPMem = %p\n", ipu->cpmem_base);
 	dev_dbg(ipu->dev, "IPU TPMem = %p\n", ipu->tpmem_base);
 	dev_dbg(ipu->dev, "IPU DC Template Mem = %p\n", ipu->dc_tmpl_reg);
-	dev_dbg(ipu->dev, "IPU Display Region 1 Mem = %p\n", ipu->disp_base[1]);
 	dev_dbg(ipu->dev, "IPU VDI Regs = %p\n", ipu->vdi_reg);
 
 	ipu->ipu_clk = devm_clk_get(ipu->dev, "bus");
