@@ -33,7 +33,7 @@
 static u32 fsl_sai_rates[] = {
 	8000, 11025, 12000, 16000, 22050,
 	24000, 32000, 44100, 48000, 64000,
-	88200, 96000,
+	88200, 96000, 176400, 192000
 };
 
 static struct snd_pcm_hw_constraint_list fsl_sai_rate_constraints = {
@@ -621,7 +621,7 @@ static struct snd_soc_dai_driver fsl_sai_dai = {
 		.channels_min = 1,
 		.channels_max = 2,
 		.rate_min = 8000,
-		.rate_max = 96000,
+		.rate_max = 192000,
 		.rates = SNDRV_PCM_RATE_KNOT,
 		.formats = FSL_SAI_FORMATS,
 	},
@@ -630,7 +630,7 @@ static struct snd_soc_dai_driver fsl_sai_dai = {
 		.channels_min = 1,
 		.channels_max = 2,
 		.rate_min = 8000,
-		.rate_max = 96000,
+		.rate_max = 192000,
 		.rates = SNDRV_PCM_RATE_KNOT,
 		.formats = FSL_SAI_FORMATS,
 	},
