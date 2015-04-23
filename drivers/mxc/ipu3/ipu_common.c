@@ -309,91 +309,129 @@ struct ipu_devtype {
 	enum ipuv3_type type;
 };
 
-static struct ipu_devtype ipu_devtype_imx51 = {
-	.name =		"IPUv3EX",
-	.cm_ofs =	0x1E000000,
-	.idmac_ofs =	0x1E008000,
-	.ic_ofs =	0x1E020000,
-	.csi0_ofs =	0x1E030000,
-	.csi1_ofs =	0x1E038000,
-	.di0_ofs =	0x1E040000,
-	.di1_ofs =	0x1E048000,
-	.smfc_ofs =	0x1E050000,
-	.dc_ofs =	0x1E058000,
-	.dmfc_ofs =	0x1E060000,
-	.vdi_ofs =	0x1E068000,
-	.cpmem_ofs =	0x1F000000,
-	.srm_ofs =	0x1F040000,
-	.tpm_ofs =	0x1F060000,
-	.dc_tmpl_ofs =	0x1F080000,
-	.type =		IPUv3EX,
+struct ipu_platform_type {
+	struct ipu_devtype devtype;
+	unsigned int ch0_axi;
+	unsigned int ch23_axi;
+	unsigned int ch27_axi;
+	unsigned int ch28_axi;
+	unsigned int normal_axi;
 };
 
-static struct ipu_devtype ipu_devtype_imx53 = {
-	.name =		"IPUv3M",
-	.cm_ofs =	0x06000000,
-	.idmac_ofs =	0x06008000,
-	.ic_ofs =	0x06020000,
-	.csi0_ofs =	0x06030000,
-	.csi1_ofs =	0x06038000,
-	.di0_ofs =	0x06040000,
-	.di1_ofs =	0x06048000,
-	.smfc_ofs =	0x06050000,
-	.dc_ofs =	0x06058000,
-	.dmfc_ofs =	0x06060000,
-	.vdi_ofs =	0x06068000,
-	.cpmem_ofs =	0x07000000,
-	.srm_ofs =	0x07040000,
-	.tpm_ofs =	0x07060000,
-	.dc_tmpl_ofs =	0x07080000,
-	.type =		IPUv3M,
+static struct ipu_platform_type ipu_type_imx51 = {
+	.devtype = {
+		.name =		"IPUv3EX",
+		.cm_ofs =	0x1E000000,
+		.idmac_ofs =	0x1E008000,
+		.ic_ofs =	0x1E020000,
+		.csi0_ofs =	0x1E030000,
+		.csi1_ofs =	0x1E038000,
+		.di0_ofs =	0x1E040000,
+		.di1_ofs =	0x1E048000,
+		.smfc_ofs =	0x1E050000,
+		.dc_ofs =	0x1E058000,
+		.dmfc_ofs =	0x1E060000,
+		.vdi_ofs =	0x1E068000,
+		.cpmem_ofs =	0x1F000000,
+		.srm_ofs =	0x1F040000,
+		.tpm_ofs =	0x1F060000,
+		.dc_tmpl_ofs =	0x1F080000,
+		.type =		IPUv3EX,
+	},
+	.ch0_axi = 1,
+	.ch23_axi = 1,
+	.ch23_axi = 1,
+	.ch27_axi = 1,
+	.ch28_axi = 1,
+	.normal_axi = 0,
 };
 
-static struct ipu_devtype ipu_devtype_imx6q = {
-	.name = "IPUv3H",
-	.cm_ofs =	0x00200000,
-	.idmac_ofs =	0x00208000,
-	.ic_ofs =	0x00220000,
-	.csi0_ofs =	0x00230000,
-	.csi1_ofs =	0x00238000,
-	.di0_ofs =	0x00240000,
-	.di1_ofs =	0x00248000,
-	.smfc_ofs =	0x00250000,
-	.dc_ofs =	0x00258000,
-	.dmfc_ofs =	0x00260000,
-	.vdi_ofs =	0x00268000,
-	.cpmem_ofs =	0x00300000,
-	.srm_ofs =	0x00340000,
-	.tpm_ofs =	0x00360000,
-	.dc_tmpl_ofs =	0x00380000,
-	.type = IPUv3H,
+static struct ipu_platform_type ipu_type_imx53 = {
+	.devtype = {
+		.name =		"IPUv3M",
+		.cm_ofs =	0x06000000,
+		.idmac_ofs =	0x06008000,
+		.ic_ofs =	0x06020000,
+		.csi0_ofs =	0x06030000,
+		.csi1_ofs =	0x06038000,
+		.di0_ofs =	0x06040000,
+		.di1_ofs =	0x06048000,
+		.smfc_ofs =	0x06050000,
+		.dc_ofs =	0x06058000,
+		.dmfc_ofs =	0x06060000,
+		.vdi_ofs =	0x06068000,
+		.cpmem_ofs =	0x07000000,
+		.srm_ofs =	0x07040000,
+		.tpm_ofs =	0x07060000,
+		.dc_tmpl_ofs =	0x07080000,
+		.type =		IPUv3M,
+	},
+	.ch0_axi = 1,
+	.ch23_axi = 1,
+	.ch27_axi = 1,
+	.ch28_axi = 1,
+	.normal_axi = 0,
 };
 
-static struct ipu_devtype ipu_devtype_imx6qp = {
-	.name = "IPUv3H",
-	.cm_ofs =	0x00200000,
-	.idmac_ofs =	0x00208000,
-	.ic_ofs =	0x00220000,
-	.csi0_ofs =	0x00230000,
-	.csi1_ofs =	0x00238000,
-	.di0_ofs =	0x00240000,
-	.di1_ofs =	0x00248000,
-	.smfc_ofs =	0x00250000,
-	.dc_ofs =	0x00258000,
-	.dmfc_ofs =	0x00260000,
-	.vdi_ofs =	0x00268000,
-	.cpmem_ofs =	0x00300000,
-	.srm_ofs =	0x00340000,
-	.tpm_ofs =	0x00360000,
-	.dc_tmpl_ofs =	0x00380000,
-	.type = IPUv3H,
+static struct ipu_platform_type ipu_type_imx6q = {
+	.devtype = {
+		.name = "IPUv3H",
+		.cm_ofs =	0x00200000,
+		.idmac_ofs =	0x00208000,
+		.ic_ofs =	0x00220000,
+		.csi0_ofs =	0x00230000,
+		.csi1_ofs =	0x00238000,
+		.di0_ofs =	0x00240000,
+		.di1_ofs =	0x00248000,
+		.smfc_ofs =	0x00250000,
+		.dc_ofs =	0x00258000,
+		.dmfc_ofs =	0x00260000,
+		.vdi_ofs =	0x00268000,
+		.cpmem_ofs =	0x00300000,
+		.srm_ofs =	0x00340000,
+		.tpm_ofs =	0x00360000,
+		.dc_tmpl_ofs =	0x00380000,
+		.type = IPUv3H,
+	},
+	.ch0_axi = 0,
+	.ch23_axi = 0,
+	.ch27_axi = 0,
+	.ch28_axi = 0,
+	.normal_axi = 1,
 };
+
+static struct ipu_platform_type ipu_type_imx6qp = {
+	.devtype = {
+		.name = "IPUv3H",
+		.cm_ofs =	0x00200000,
+		.idmac_ofs =	0x00208000,
+		.ic_ofs =	0x00220000,
+		.csi0_ofs =	0x00230000,
+		.csi1_ofs =	0x00238000,
+		.di0_ofs =	0x00240000,
+		.di1_ofs =	0x00248000,
+		.smfc_ofs =	0x00250000,
+		.dc_ofs =	0x00258000,
+		.dmfc_ofs =	0x00260000,
+		.vdi_ofs =	0x00268000,
+		.cpmem_ofs =	0x00300000,
+		.srm_ofs =	0x00340000,
+		.tpm_ofs =	0x00360000,
+		.dc_tmpl_ofs =	0x00380000,
+		.type = IPUv3H,
+	},
+	.ch0_axi = 0,
+	.ch23_axi = 0,
+	.ch27_axi = 2,
+	.ch28_axi = 3,
+	.normal_axi = 1,
+ };
 
 static const struct of_device_id imx_ipuv3_dt_ids[] = {
-	{ .compatible = "fsl,imx51-ipu", .data = &ipu_devtype_imx51, },
-	{ .compatible = "fsl,imx53-ipu", .data = &ipu_devtype_imx53, },
-	{ .compatible = "fsl,imx6q-ipu", .data = &ipu_devtype_imx6q, },
-	{ .compatible = "fsl,imx6qp-ipu", .data = &ipu_devtype_imx6qp, },
+	{ .compatible = "fsl,imx51-ipu", .data = &ipu_type_imx51, },
+	{ .compatible = "fsl,imx53-ipu", .data = &ipu_type_imx53, },
+	{ .compatible = "fsl,imx6q-ipu", .data = &ipu_type_imx6q, },
+	{ .compatible = "fsl,imx6qp-ipu", .data = &ipu_type_imx6qp, },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, imx_ipuv3_dt_ids);
@@ -414,7 +452,8 @@ static int ipu_probe(struct platform_device *pdev)
 	unsigned long ipu_base;
 	const struct of_device_id *of_id =
 			of_match_device(imx_ipuv3_dt_ids, &pdev->dev);
-	const struct ipu_devtype *devtype = of_id->data;
+	const struct ipu_platform_type *iputype = of_id->data;
+	const struct ipu_devtype *devtype = &iputype->devtype;
 	int ret = 0, id;
 	u32 bypass_reset;
 
@@ -439,6 +478,11 @@ static int ipu_probe(struct platform_device *pdev)
 	ipu->dev = &pdev->dev;
 	ipu->id = id;
 	ipu->devtype = devtype->type;
+	ipu->ch0_axi = iputype->ch0_axi;
+	ipu->ch23_axi = iputype->ch23_axi;
+	ipu->ch27_axi = iputype->ch27_axi;
+	ipu->ch28_axi = iputype->ch28_axi;
+	ipu->normal_axi = iputype->normal_axi;
 	spin_lock_init(&ipu->int_reg_spin_lock);
 	spin_lock_init(&ipu->rdy_reg_spin_lock);
 	mutex_init(&ipu->mutex_lock);
@@ -1416,82 +1460,92 @@ int32_t ipu_init_channel_buffer(struct ipu_soc *ipu, ipu_channel_t channel,
 		_ipu_smfc_set_burst_size(ipu, channel, burst_size-1);
 	}
 
-	/* AXI-id */
-	if (idma_is_set(ipu, IDMAC_CHA_PRI(dma_chan), dma_chan)) {
-		unsigned reg = IDMAC_CH_LOCK_EN_1(ipu->devtype);
+	switch (dma_chan) {
+	case 0:
+		_ipu_ch_param_set_axi_id(ipu, dma_chan, ipu->ch0_axi);
+		break;
+	case 23:
+		_ipu_ch_param_set_axi_id(ipu, dma_chan, ipu->ch23_axi);
+		break;
+	case 27:
+		_ipu_ch_param_set_axi_id(ipu, dma_chan, ipu->ch27_axi);
+		break;
+	case 28:
+		_ipu_ch_param_set_axi_id(ipu, dma_chan, ipu->ch28_axi);
+		break;
+	default:
+		_ipu_ch_param_set_axi_id(ipu, dma_chan, ipu->normal_axi);
+		break;
+	}
+
+	if (idma_is_set(ipu, IDMAC_CHA_PRI(dma_chan), dma_chan) &&
+	    ipu->devtype == IPUv3H) {
+		uint32_t reg = IDMAC_CH_LOCK_EN_1(ipu->devtype);
 		uint32_t value = 0;
-		if (ipu->devtype == IPUv3H) {
-			_ipu_ch_param_set_axi_id(ipu, dma_chan, 0);
-			switch (dma_chan) {
-			case 5:
-				value = 0x3;
-				break;
-			case 11:
-				value = 0x3 << 2;
-				break;
-			case 12:
-				value = 0x3 << 4;
-				break;
-			case 14:
-				value = 0x3 << 6;
-				break;
-			case 15:
-				value = 0x3 << 8;
-				break;
-			case 20:
-				value = 0x3 << 10;
-				break;
-			case 21:
-				value = 0x3 << 12;
-				break;
-			case 22:
-				value = 0x3 << 14;
-				break;
-			case 23:
-				value = 0x3 << 16;
-				break;
-			case 27:
-				value = 0x3 << 18;
-				_ipu_ch_param_set_axi_id(ipu, dma_chan, 2);
-				break;
-			case 28:
-				value = 0x3 << 20;
-				_ipu_ch_param_set_axi_id(ipu, dma_chan, 3);
-				break;
-			case 45:
-				reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
-				value = 0x3 << 0;
-				break;
-			case 46:
-				reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
-				value = 0x3 << 2;
-				break;
-			case 47:
-				reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
-				value = 0x3 << 4;
-				break;
-			case 48:
-				reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
-				value = 0x3 << 6;
-				break;
-			case 49:
-				reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
-				value = 0x3 << 8;
-				break;
-			case 50:
-				reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
-				value = 0x3 << 10;
-				break;
-			default:
-				break;
-			}
-			value |= ipu_idmac_read(ipu, reg);
-			ipu_idmac_write(ipu, value, reg);
-		} else
-			_ipu_ch_param_set_axi_id(ipu, dma_chan, 1);
-	} else {
-		if (ipu->devtype == IPUv3H)
-			_ipu_ch_param_set_axi_id(ipu, dma_chan, 1);
+
+		switch (dma_chan) {
+		case 5:
+			value = 0x3;
+			break;
+		case 11:
+			value = 0x3 << 2;
+			break;
+		case 12:
+			value = 0x3 << 4;
+			break;
+		case 14:
+			value = 0x3 << 6;
+			break;
+		case 15:
+			value = 0x3 << 8;
+			break;
+		case 20:
+			value = 0x3 << 10;
+			break;
+		case 21:
+			value = 0x3 << 12;
+			break;
+		case 22:
+			value = 0x3 << 14;
+			break;
+		case 23:
+			value = 0x3 << 16;
+			break;
+		case 27:
+			value = 0x3 << 18;
+			break;
+		case 28:
+			value = 0x3 << 20;
+			break;
+		case 45:
+			reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
+			value = 0x3 << 0;
+			break;
+		case 46:
+			reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
+			value = 0x3 << 2;
+			break;
+		case 47:
+			reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
+			value = 0x3 << 4;
+			break;
+		case 48:
+			reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
+			value = 0x3 << 6;
+			break;
+		case 49:
+			reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
+			value = 0x3 << 8;
+			break;
+		case 50:
+			reg = IDMAC_CH_LOCK_EN_2(ipu->devtype);
+			value = 0x3 << 10;
+			break;
+		default:
+			break;
+		}
+		value |= ipu_idmac_read(ipu, reg);
+		ipu_idmac_write(ipu, value, reg);
 	}
 
 	_ipu_ch_param_dump(ipu, dma_chan);
