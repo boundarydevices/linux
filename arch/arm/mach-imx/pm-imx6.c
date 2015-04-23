@@ -356,6 +356,12 @@ static const u32 imx6sx_mmdc_offset[] __initconst = {
 	0x020, 0x818, 0x01c,
 };
 
+static const u32 imx6ul_mmdc_io_offset[] __initconst = {
+};
+
+static const u32 imx6ul_mmdc_offset[] __initconst = {
+};
+
 static const struct imx6_pm_socdata imx6q_pm_data __initconst = {
 	.mmdc_compat = "fsl,imx6q-mmdc",
 	.src_compat = "fsl,imx6q-src",
@@ -398,6 +404,17 @@ static const struct imx6_pm_socdata imx6sx_pm_data __initconst = {
 	.mmdc_io_offset = imx6sx_mmdc_io_offset,
 	.mmdc_num = ARRAY_SIZE(imx6sx_mmdc_offset),
 	.mmdc_offset = imx6sx_mmdc_offset,
+};
+
+static const struct imx6_pm_socdata imx6ul_pm_data __initconst = {
+	.mmdc_compat = "fsl,imx6ul-mmdc",
+	.src_compat = "fsl,imx6ul-src",
+	.iomuxc_compat = "fsl,imx6ul-iomuxc",
+	.gpc_compat = "fsl,imx6ul-gpc",
+	.mmdc_io_num = ARRAY_SIZE(imx6ul_mmdc_io_offset),
+	.mmdc_io_offset = imx6ul_mmdc_io_offset,
+	.mmdc_num = ARRAY_SIZE(imx6ul_mmdc_offset),
+	.mmdc_offset = imx6ul_mmdc_offset,
 };
 
 /*
@@ -532,7 +549,7 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 		val &= ~BM_CLPCR_SBYOS;
 		if (cpu_is_imx6sl())
 			val |= BM_CLPCR_BYPASS_PMIC_READY;
-		if (cpu_is_imx6sl() || cpu_is_imx6sx())
+		if (cpu_is_imx6sl() || cpu_is_imx6sx() || cpu_is_imx6ul())
 			val |= BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
 		else
 			val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
@@ -545,7 +562,9 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 	case STOP_POWER_OFF:
 		val |= 0x2 << BP_CLPCR_LPM;
 		val |= 0x3 << BP_CLPCR_STBY_COUNT;
-		val |= BM_CLPCR_VSTBY;
+		/* i.MX6UL has an design issue, can NOT assert VSTBY */
+		if (!cpu_is_imx6ul())
+			val |= BM_CLPCR_VSTBY;
 		val |= BM_CLPCR_SBYOS;
 		if (cpu_is_imx6sl())
 			val |= BM_CLPCR_BYPASS_PMIC_READY;
@@ -1122,4 +1141,9 @@ void __init imx6sx_pm_init(void)
 			qspi_base = of_iomap(np, 0);
 		WARN_ON(!qspi_base);
 	}
+}
+
+void __init imx6ul_pm_init(void)
+{
+	imx6_pm_common_init(&imx6ul_pm_data);
 }
