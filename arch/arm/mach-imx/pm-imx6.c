@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2014 Freescale Semiconductor, Inc.
+ * Copyright 2011-2015 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -357,9 +357,20 @@ static const u32 imx6sx_mmdc_offset[] __initconst = {
 };
 
 static const u32 imx6ul_mmdc_io_offset[] __initconst = {
+	0x244, 0x248, 0x24c, 0x250, /* DQM0, DQM1, RAS, CAS */
+	0x27c, 0x498, 0x4a4, 0x490, /* SDCLK0, GPR_B0DS-B1DS, GPR_ADDS */
+	0x280, 0x284, 0x260, 0x264, /* SDQS0~1, SODT0, SODT1 */
+	0x494, 0x4b0,	            /* MODE_CTL, MODE, */
 };
 
 static const u32 imx6ul_mmdc_offset[] __initconst = {
+	0x01c, 0x800, 0x80c, 0x83c,
+	0x848, 0x850, 0x81c, 0x820,
+	0x82c, 0x830, 0x8c0, 0x8b8,
+	0x004, 0x008, 0x00c, 0x010,
+	0x014, 0x018, 0x01c, 0x02c,
+	0x030, 0x040, 0x000, 0x01c,
+	0x020, 0x818, 0x01c,
 };
 
 static const struct imx6_pm_socdata imx6q_pm_data __initconst = {
@@ -568,7 +579,7 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 		val |= BM_CLPCR_SBYOS;
 		if (cpu_is_imx6sl())
 			val |= BM_CLPCR_BYPASS_PMIC_READY;
-		if (cpu_is_imx6sl() || cpu_is_imx6sx())
+		if (cpu_is_imx6sl() || cpu_is_imx6sx() || cpu_is_imx6ul())
 			val |= BM_CLPCR_BYP_MMDC_CH0_LPM_HS;
 		else
 			val |= BM_CLPCR_BYP_MMDC_CH1_LPM_HS;
@@ -1027,7 +1038,7 @@ static int __init imx6q_suspend_init(const struct imx6_pm_socdata *socdata)
 	}
 
 	/* need to overwrite the value for some mmdc registers */
-	if (cpu_is_imx6sx()) {
+	if (cpu_is_imx6sx() || cpu_is_imx6ul()) {
 		pm_info->mmdc_val[20][1] = (pm_info->mmdc_val[20][1]
 			& 0xffff0000) | 0x0202;
 		pm_info->mmdc_val[23][1] = 0x8033;
