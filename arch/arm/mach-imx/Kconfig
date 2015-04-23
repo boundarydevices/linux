@@ -850,6 +850,18 @@ config SOC_IMX6SX
 	help
 	  This enables support for Freescale i.MX6 SoloX processor.
 
+config SOC_IMX6UL
+	bool "i.MX6 UltraLite support"
+	select PINCTRL_IMX6UL
+	select HAVE_IMX_AMP
+	select HAVE_IMX_MCC
+	select MIGHT_HAVE_PCI
+	select PCI_DOMAINS if PCI
+	select SOC_IMX6
+
+	help
+	  This enables support for Freescale i.MX6 UltraLite processor.
+
 config SOC_IMX7
 	bool
 	select CPU_V7

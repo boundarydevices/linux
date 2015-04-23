@@ -465,4 +465,11 @@
 #define IMX6SX_GPR12_PCIE_TEST_PD		BIT(30)
 #define IMX6SX_GPR12_RX_EQ_MASK			(0x7 << 0)
 #define IMX6SX_GPR12_RX_EQ_2			(0x2 << 0)
+
+/* For imx6ul iomux gpr register field define */
+#define IMX6UL_GPR1_ENET1_CLK_DIR		(0x1 << 17)
+#define IMX6UL_GPR1_ENET2_CLK_DIR		(0x1 << 18)
+#define IMX6UL_GPR1_ENET1_CLK_OUTPUT		(0x1 << 17)
+#define IMX6UL_GPR1_ENET2_CLK_OUTPUT		(0x1 << 18)
+
 #endif /* __LINUX_IMX6Q_IOMUXC_GPR_H */
