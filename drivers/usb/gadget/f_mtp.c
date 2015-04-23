@@ -2,6 +2,7 @@
  * Gadget Function Driver for MTP
  *
  * Copyright (C) 2010 Google, Inc.
+ * Copyright (C) 2015 Freescale Semiconductor, Inc.
  * Author: Mike Lockwood <lockwood@android.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -68,6 +69,7 @@
 #define MTP_RESPONSE_DEVICE_BUSY    0x2019
 
 static const char mtp_shortname[] = "mtp_usb";
+bool isPtp;
 
 struct mtp_dev {
 	struct usb_function function;
@@ -745,6 +747,7 @@ static void receive_file_work(struct work_struct *data)
 	int64_t count;
 	int ret, cur_buf = 0;
 	int r = 0;
+	int len = 0;
 
 	/* read our parameters */
 	smp_rmb();
@@ -760,8 +763,16 @@ static void receive_file_work(struct work_struct *data)
 			read_req = dev->rx_req[cur_buf];
 			cur_buf = (cur_buf + 1) % RX_REQ_MAX;
 
-			read_req->length = (count > MTP_BULK_BUFFER_SIZE
-					? MTP_BULK_BUFFER_SIZE : count);
+			if (isPtp) {
+			    len = (count > dev->ep_out->maxpacket ?
+				    dev->ep_out->maxpacket : count);
+			    if (len > MTP_BULK_BUFFER_SIZE)
+				len = MTP_BULK_BUFFER_SIZE;
+			    read_req->length = len;
+			} else {
+			    read_req->length = (count > MTP_BULK_BUFFER_SIZE
+				    ? MTP_BULK_BUFFER_SIZE : count);
+			}
 			dev->rx_done = 0;
 			ret = usb_ep_queue(dev->ep_out, read_req, GFP_KERNEL);
 			if (ret < 0) {
@@ -789,7 +800,7 @@ static void receive_file_work(struct work_struct *data)
 			ret = wait_event_interruptible(dev->read_wq,
 				dev->rx_done || dev->state != STATE_BUSY);
 			if (dev->state == STATE_CANCELED) {
-				r = -ECANCELED;
+			    r = -ECANCELED;
 				if (!dev->rx_done)
 					usb_ep_dequeue(dev->ep_out, read_req);
 				break;
@@ -1211,6 +1222,7 @@ static int mtp_bind_config(struct usb_configuration *c, bool ptp_config)
 		mtp_string_defs[INTERFACE_STRING_INDEX].id = ret;
 		mtp_interface_desc.iInterface = ret;
 	}
+	isPtp = ptp_config;
 
 	dev->cdev = c->cdev;
 	dev->function.name = "mtp";
