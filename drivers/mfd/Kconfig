@@ -819,9 +819,6 @@ config MFD_TPS65217
 	  charger, wled and other features that are often used in portable
 	  devices.
 
-	  This driver can also be built as a module.  If so, the module
-	  will be called tps65217.
-
 config MFD_TPS6586X
 	bool "TI TPS6586x Power Management chips"
 	depends on I2C=y && GENERIC_HARDIRQS
@@ -1047,6 +1044,12 @@ config MFD_ARIZONA
 	select MFD_CORE
 	bool
 
+config MFD_ARIZONA_DEFERRED_RESUME
+	bool "Arizona Deferred Resume"
+	depends on MFD_ARIZONA
+	help
+	  Support for Arizona deferred resume
+
 config MFD_ARIZONA_I2C
 	tristate "Wolfson Microelectronics Arizona platform with I2C"
 	select MFD_ARIZONA
@@ -1073,11 +1076,37 @@ config MFD_WM5102
 	help
 	  Support for Wolfson Microelectronics WM5102 low power audio SoC
 
-config MFD_WM5110
-	bool "Wolfson Microelectronics WM5110"
+config MFD_FLORIDA
+	bool "Wolfson Microelectronics Florida class codecs"
 	depends on MFD_ARIZONA
 	help
-	  Support for Wolfson Microelectronics WM5110 low power audio SoC
+	  Support for Wolfson Microelectronics Florida class low power audio SoC
+	  such as the WM8280
+
+config MFD_VEGAS
+	bool "Support Wolfson Microelectronics Vegas"
+	depends on MFD_ARIZONA
+	help
+	  Support for Wolfson Microelectronics Vegas low power audio SoC
+
+config MFD_WM8997
+	bool "Wolfson Microelectronics WM8997"
+	depends on MFD_ARIZONA
+	help
+	  Support for Wolfson Microelectronics WM8997 low power audio SoC
+
+config MFD_CLEARWATER
+	bool "Wolfson Microelectronics ClearWater class codecs"
+	depends on MFD_ARIZONA
+	help
+	  Support for Wolfson Microelectronics ClearWater class low power audio SoC
+	  such as the WM8285
+
+config MFD_LARGO
+	bool "Cirrus Logic Largo"
+	depends on MFD_ARIZONA
+	help
+	  Support for Cirrus Logic Largo low power audio SoC
 
 config MFD_WM8400
 	bool "Wolfson Microelectronics WM8400"

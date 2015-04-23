@@ -1,0 +1,206 @@
+This document lists the features of the Wolfson 'Arizona' class audio hubs
+supported by the kernel drivers.
+Note that some features are covered by other classes of driver (extcon,
+regulator, etc.) and this list below shows the full set of features related
+to sound:
+
+'-' means not relevant for that audio hub model
+
+                                                                WM8280
+Feature                                    WM8997 WM8998 WM5102 WM8281 CS47L24
+------------------------------------------------------------------------------
+24-bit samples                                Y      Y      Y      Y      Y
+192kHz sample rate                            Y      Y      Y      Y      Y
+Routing controlled via ALSA controls          Y      Y      Y      Y      Y
+Volume control on all mixer inputs            Y      Y      Y      Y      Y
+Volume control on all outputs                 Y      Y      Y      Y      Y
+Mute control on all outputs                   Y      Y      Y      Y      Y
+Output DRE control                            -      Y      Y      Y      -
+Output OSR control                            Y      -      Y      Y      Y
+Input ramp control                            Y      Y      Y      Y      Y
+Output ramp control                           Y      Y      Y      Y      Y
+Route any audio input to any mixer input      Y      Y      Y      Y      Y
+Route internal signals to mixer inputs        Y      Y      Y      Y      Y
+Route audio path through ISRC                 Y      Y      Y      Y      Y
+Route audio path through ASRC                 -      Y      Y      Y      Y
+Route audio path through EQs                  Y      Y      Y      Y      Y
+Route audio path through LHPFs                Y      Y      Y      Y      Y
+Route audio path through DRCs                 Y      Y      Y      Y      Y
+Route audio path through ADSP cores           -      -      Y      Y      Y
+Set EQ coefficient through ALSA controls      Y      Y      Y      Y      Y
+Set LHPF coeffs through ALSA controls         Y      Y      Y      Y      Y
+Set DRC coefficient through ALSA controls     Y      Y      Y      Y      Y
+Set Noise Gates through ALSA controls         Y      Y      Y      Y      Y
+Config inputs analogue/digital mode [note 1]  Y      Y      Y      Y      -
+Input HPF control                             -      Y      -      Y      Y
+Input mux controls [note 8]                   -      Y      -      -      -
+Config analogue inputs as single-ended
+          or differential [note 1]            Y      Y      Y      Y      -
+Host I2S routing to any AIF                   Y      Y      Y      Y      Y
+I2S TDM (multi-channel) [note 2]              Y      Y      Y      Y      Y
+Configure TDM active slots [note 2]           Y      Y      Y      Y      Y
+Configure TDM slot size [note 2]              Y      Y      Y      Y      Y
+AEC loopback control                          Y      Y      Y      Y      Y
+ANC block control                             -      -      -      Y      -
+Select firmware by ALSA control [note 6]      -      -      Y      Y      Y
+Load ADSP firmware via DAPM power-up          -      -      Y      Y      Y
+Load tuning data (.bin) with firmware         -      -      Y      Y      Y
+Expose firmware controls via ALSA             -      -      Y      Y      Y
+Set sample-rate domain frequencies [note 4]   Y      Y      Y      Y      Y
+Auto sample-rate                              N      N      N      N      N
+Speaker short-circuit protection              -      N      N      N      N
+Use write sequencer                           N      N      N      N      N
+Codec control over SPI                        -      -      Y      Y      Y
+Codec control over I2C                        Y      Y      Y      Y      -
+DAPM-based power up/down                      Y      Y      Y      Y      Y
+Jack insert detection                         Y      Y      Y      Y      -
+Headset mic detection                         Y      Y      Y      Y      -
+Headset button detection                      Y      Y      Y      Y      -
+Headphone speaker impedance detection         Y      Y      Y      Y      -
+Codec internal LDOVDD regulator control       Y      Y      Y      Y      -
+Support for external DCVDD regulator          Y      Y      Y      Y      Y
+Build as loadable module                      Y      Y      Y      Y      Y
+Configure via pdata                           Y      Y      Y      Y      Y
+Configure via device tree [note 7]            Y      Y      Y      Y      Y
+Configure SYSCLK rate [note 5]                Y      Y      Y      Y      Y
+Configure ASYNCCLK rate [note 5]              Y      Y      Y      Y      Y
+Configure analogue mic bias [note 1]          Y      Y      Y      Y      -
+Configure mapping of headset button
+    resistance to key event [note 1]          Y      Y      Y      Y      -
+Configure available firmwares [note 3]        -      -      Y      Y      Y
+Support Ez2Control                            -      -      N      Y      Y
+Support trace firmware                        -      -      -      Y      N
+
+Notes:
+1. Integration-time configuration. Not possible to change at runtime
+2. TDM is only possible if host I2S controller and I2S driver support TDM
+    The set_tdm_slot() function is implemented to enable configuration of the
+    slot size and which slots the codec will use. Codec channels are mapped in
+    ascending order to the active slots - for example if the active TX slots in
+    the I2S frame are 0, 1, and 7 then they will be mapped
+    0->AIFTX1 1->AIFTX2 7->AIFTX3
+3. Default firmware list can be overidden by device tree
+4. Limited control of domain 2/3 frequency
+5. Configured in ASoC machine driver
+6. Firmware can be set by host but cannot be changed while ADSP is powered-up,
+        it must be removed from an active path to power-down and the new
+        firmware will be loaded when it is next powered-up as part of an
+        active path
+7. Configuration from device tree is work-in-progress so there may be some
+        pdata settings that have not yet been migrated to device tree
+8. See below for a description of the input mux routing on WM8998. The input
+        mux should be set _before_ connecting it into an audio path. If one
+        input is configured as digital, that setting will be applied only when
+        the input is powered up as part of an active audio route - the
+        digital/analogue setting of the input path cannot be changed while the
+        input is part of an active audio route.
+
+
+INPUT MUXES ON WM8998
+=====================
+The WM8998 has two physical input paths, IN1 and IN2, and both paths have an
+input mux to select between two possible external input sources for that
+path.
+
+  - The IN1 path can be selected between IN1A or IN1B pins. The left and right
+    channels have separate mux controls
+
+  - The IN2 path can be selected between IN2A or IN2B and is mono
+
+A diagram of the route through the input muxes is:
+
+Input pin      ALSA control      Internal signal path
+-------------------------------------------------------
+
+               +-----------+
+IN1AL ---> "A" |           |
+               | "IN1LMUX" | --> IN1L
+IN1BL ---> "B" |           |
+               +-----------+
+
+               +-----------+
+IN1AR ---> "A" |           |
+               | "IN1RMUX" | --> IN1R
+IN1BR ---> "B" |           |
+               +-----------+
+
+               +-----------+
+IN2A  ---> "A" |           |
+               | "IN2MUX"  | --> IN2L
+IN2B  ---> "B" |           |
+               +-----------+
+
+IN1A and IN2A can be set as digital. IN1B and IN2B are analogue only.
+
+It is important to note that although the left and right paths of IN1 have
+separate mux controls, these are only separate for analogue paths. The setting
+of digital/analogue applies jointly to both channels of IN1. Because of this,
+if IN1A is digital _both_ the left and right mux must be set to "A" before
+connecting the input to any internal codec blocks. When IN1 is part of an
+active path the whole of IN1 will be set to digital or analogue depending on
+mux setting and this cannot be changed while IN1 is part of an active path.
+
+To change from a digital IN1A to an analogue IN1B follow this sequence:
+
+1) Disconnect IN1 from the input of any codec blocks
+2) Change the IN1MUXL and IN1MUXR to "B"
+3) Connect IN1 as an input to codec blocks
+
+The input mode pdata for WM8998 is defined as:
+
+ pdata      affects  legal values            behaviour
+ inmode[0]  IN1      ARIZONA_INMODE_DIFF (0) IN1A and IN1B analogue differential
+                     ARIZONA_INMODE_SE   (1) IN1A and IN1B analogue single-ended
+                     ARIZONA_INMODE_DMIC (2) IN1A digital, IN1B analogue differential
+                     ARIZONA_INMODE_DMIC |
+                       ARIZONA_INMODE_SE (3) IN1A digital, IN1B analogue single-ended
+
+ inmode[1]  IN2      ARIZONA_INMODE_DIFF (0) IN2A and IN2B analogue differential
+                     ARIZONA_INMODE_SE   (1) IN2A and IN2B analogue single-ended
+                     ARIZONA_INMODE_DMIC (2) IN2A digital, IN2B analogue differential
+                     ARIZONA_INMODE_DMIC |
+                       ARIZONA_INMODE_SE (3) IN2A digital, IN2B analogue single-ended
+
+How firmwares are loaded
+========================
+The driver exposes an ALSA control to set the firmware for each ADSP on the
+codec. These are named:
+
+    DSP1 Firmware
+    DSP2 Firmware
+    ... etc.
+
+The control is an enumeration of the available firmwares by function. It does
+not directly set the actual filename of the firmware to be loaded. The mapping
+between control values and actual firmware filename can be found in the file
+sound/soc/codecs/wm_adsp.c
+
+Setting this control tells the driver what firmware to load WHEN THE ADSP IS
+NEXT POWERED UP. Setting the control does not force the firmware to be loaded
+immediately, nor does it reboot the ADSP if it is currently running a different
+firmware.
+
+To load a firmware, or to reboot the ADSP with different firmware you must:
+    - Disconnect the ADSP from any active audio path so that it will be powered-down
+    - Set the firmware control to the firmware you want to load
+    - Connect the ADSP to an active audio path so it will be powered-up
+
+Firmware files can have an associated file called a "bin file". This has the
+same name as the firmware file, but with the extension .bin, and goes in the
+same directory as the firmware file. The bin file contains settings to be
+patched in the ADSP memory after the firmware has been loaded. When the driver
+loads a firmware it will look for a bin file and if found will apply the patches
+from that bin file.
+
+The purpose of the bin file is to allow tuning data to be applied to the firmware
+without the need to rebuild the firmware to include this data. For example,
+some audio algorithms must be tuned to the acoustic properties of the enclosure
+the microphones or speakers are in - it would be impractical to build a new
+firmware for each device with its unique parameters; instead the device is tuned
+and the tuning data is put into the bin file.
+
+The bin file is not intended for setting parameters that are runtime-modifiable,
+such as volume controls, since the bin file is a one-shot set of parameters
+that are patched when the firmware is loaded. Runtime modifiable controls should
+be exposed by the firmware as such and the driver will create ALSA controls for
+them.
