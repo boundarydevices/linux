@@ -307,6 +307,7 @@ struct ipu_devtype {
 	unsigned long tpm_ofs;
 	unsigned long dc_tmpl_ofs;
 	enum ipuv3_type type;
+	bool idmac_used_bufs_present;
 };
 
 struct ipu_platform_type {
@@ -316,6 +317,10 @@ struct ipu_platform_type {
 	unsigned int ch27_axi;
 	unsigned int ch28_axi;
 	unsigned int normal_axi;
+	bool idmac_used_bufs_en_r;
+	bool idmac_used_bufs_en_w;
+	unsigned int idmac_used_bufs_max_r;
+	unsigned int idmac_used_bufs_max_w;
 };
 
 static struct ipu_platform_type ipu_type_imx51 = {
@@ -337,6 +342,7 @@ static struct ipu_platform_type ipu_type_imx51 = {
 		.tpm_ofs =	0x1F060000,
 		.dc_tmpl_ofs =	0x1F080000,
 		.type =		IPUv3EX,
+		.idmac_used_bufs_present = false,
 	},
 	.ch0_axi = 1,
 	.ch23_axi = 1,
@@ -365,12 +371,15 @@ static struct ipu_platform_type ipu_type_imx53 = {
 		.tpm_ofs =	0x07060000,
 		.dc_tmpl_ofs =	0x07080000,
 		.type =		IPUv3M,
+		.idmac_used_bufs_present = true,
 	},
 	.ch0_axi = 1,
 	.ch23_axi = 1,
 	.ch27_axi = 1,
 	.ch28_axi = 1,
 	.normal_axi = 0,
+	.idmac_used_bufs_en_r = false,
+	.idmac_used_bufs_en_w = false,
 };
 
 static struct ipu_platform_type ipu_type_imx6q = {
@@ -391,13 +400,16 @@ static struct ipu_platform_type ipu_type_imx6q = {
 		.srm_ofs =	0x00340000,
 		.tpm_ofs =	0x00360000,
 		.dc_tmpl_ofs =	0x00380000,
-		.type = IPUv3H,
+		.type =		IPUv3H,
+		.idmac_used_bufs_present = true,
 	},
 	.ch0_axi = 0,
 	.ch23_axi = 0,
 	.ch27_axi = 0,
 	.ch28_axi = 0,
 	.normal_axi = 1,
+	.idmac_used_bufs_en_r = false,
+	.idmac_used_bufs_en_w = false,
 };
 
 static struct ipu_platform_type ipu_type_imx6qp = {
@@ -418,13 +430,18 @@ static struct ipu_platform_type ipu_type_imx6qp = {
 		.srm_ofs =	0x00340000,
 		.tpm_ofs =	0x00360000,
 		.dc_tmpl_ofs =	0x00380000,
-		.type = IPUv3H,
+		.type =		IPUv3H,
+		.idmac_used_bufs_present = true,
 	},
 	.ch0_axi = 0,
 	.ch23_axi = 0,
 	.ch27_axi = 2,
 	.ch28_axi = 3,
 	.normal_axi = 1,
+	.idmac_used_bufs_en_r = true,
+	.idmac_used_bufs_en_w = true,
+	.idmac_used_bufs_max_r = 0x3,
+	.idmac_used_bufs_max_w = 0x3,
  };
 
 static const struct of_device_id imx_ipuv3_dt_ids[] = {
@@ -455,7 +472,7 @@ static int ipu_probe(struct platform_device *pdev)
 	const struct ipu_platform_type *iputype = of_id->data;
 	const struct ipu_devtype *devtype = &iputype->devtype;
 	int ret = 0, id;
-	u32 bypass_reset;
+	u32 bypass_reset, reg;
 
 	dev_dbg(&pdev->dev, "<%s>\n", __func__);
 
@@ -614,6 +631,26 @@ static int ipu_probe(struct platform_device *pdev)
 		dev_err(ipu->dev, "ipu clk setup failed\n");
 		ipu->online = false;
 		return ret;
+	}
+
+	if (devtype->idmac_used_bufs_present) {
+		reg = ipu_idmac_read(ipu, IDMAC_CONF);
+		if (iputype->idmac_used_bufs_en_r)
+			reg |= IDMAC_CONF_USED_BUFS_EN_R;
+		else
+			reg &= ~IDMAC_CONF_USED_BUFS_EN_R;
+		if (iputype->idmac_used_bufs_en_w)
+			reg |= IDMAC_CONF_USED_BUFS_EN_W;
+		else
+			reg &= ~IDMAC_CONF_USED_BUFS_EN_W;
+
+		reg &= ~IDMAC_CONF_USED_BUFS_MAX_R_MASK;
+		reg |= (iputype->idmac_used_bufs_max_r <<
+			IDMAC_CONF_USED_BUFS_MAX_R_OFFSET);
+		reg &= ~IDMAC_CONF_USED_BUFS_MAX_W_MASK;
+		reg |= (iputype->idmac_used_bufs_max_w <<
+			IDMAC_CONF_USED_BUFS_MAX_W_OFFSET);
+		ipu_idmac_write(ipu, reg, IDMAC_CONF);
 	}
 
 	/* Set sync refresh channels and CSI->mem channel as high priority */
