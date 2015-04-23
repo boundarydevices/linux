@@ -3309,18 +3309,6 @@ int ipu_ch_param_get_axi_id(struct ipu_soc *ipu, ipu_channel_t channel, ipu_buff
 EXPORT_SYMBOL(ipu_ch_param_get_axi_id);
 
 #ifdef CONFIG_PM
-static int ipu_suspend(struct device *dev)
-{
-	dev_dbg(dev, "ipu suspend.\n");
-	return 0;
-}
-
-static int ipu_resume(struct device *dev)
-{
-	dev_dbg(dev, "ipu resume.\n");
-	return 0;
-}
-
 int ipu_runtime_suspend(struct device *dev)
 {
 	release_bus_freq(BUS_FREQ_HIGH);
@@ -3339,7 +3327,6 @@ int ipu_runtime_resume(struct device *dev)
 
 static const struct dev_pm_ops ipu_pm_ops = {
 	SET_RUNTIME_PM_OPS(ipu_runtime_suspend, ipu_runtime_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(ipu_suspend, ipu_resume)
 };
 #endif
 
