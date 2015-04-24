@@ -447,11 +447,14 @@
 	};
 	rv4162@68 {
 		compatible = "mcrystal,rv4162";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_rv4162>;
 		reg = <0x68>;
-		interrupt-parent = <&gpio4>;
-		interrupts = <6 IRQ_TYPE_LEVEL_LOW>;
+#define GP_RTC_RV4162_IRQ		<&gpio4 6 IRQ_TYPE_LEVEL_LOW>
+		interrupts-extended = GP_RTC_RV4162_IRQ;
 	};
 };
+
 
 &i2c2 {
 	clock-frequency = <100000>;
@@ -623,7 +626,6 @@
 				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x000b0		/* wl12xx_wl_en */
 				MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x000b0		/* wl12xx_bt_en */
 				MX6QDL_PAD_SD1_CLK__OSC32K_32K_OUT	0x000b0		/* TiWi slow clock */
-				MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x1b0b0		/* rv4162 rtc interrupt */
 			>;
 		};
 
@@ -635,6 +637,13 @@
 			fsl,pins = <
 				MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x0b0b0		/* Power */
 				MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x030b0		/* Reset */
+			>;
+		};
+
+		pinctrl_rv4162: rv4162grp {
+			fsl,pins = <
+#define GP_RTC_RV4162_IRQ		<&gpio4 6 IRQ_TYPE_LEVEL_LOW>
+				MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x1b0b0
 			>;
 		};
 
