@@ -32,6 +32,7 @@
 #include <linux/sched.h>
 #include <linux/sysfs.h>
 #include <linux/tty.h>
+#include <linux/of_gpio.h>
 
 #include <linux/skbuff.h>
 #include <linux/ti_wilink_st.h>
@@ -759,8 +760,7 @@ static struct ti_st_plat_data *get_platform_data(struct device *dev)
 	dt_property = of_get_property(np, "dev_name", &len);
 	if (dt_property)
 		memcpy(&dt_pdata->dev_name, dt_property, len);
-	of_property_read_u32(np, "nshutdown_gpio",
-			     &dt_pdata->nshutdown_gpio);
+	dt_pdata->nshutdown_gpio = of_get_named_gpio(np, "nshutdown_gpio", 0);
 	of_property_read_u32(np, "flow_cntrl", &dt_pdata->flow_cntrl);
 	of_property_read_u32(np, "baud_rate", &dt_pdata->baud_rate);
 
