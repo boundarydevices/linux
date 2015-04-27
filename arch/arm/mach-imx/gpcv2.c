@@ -171,26 +171,6 @@ void imx_gpcv2_set_lpm_mode(u32 cpu, enum mxc_cpu_pwr_mode mode)
 
 	val2 &= ~(BM_SLPCR_EN_DSM | BM_SLPCR_VSTBY | BM_SLPCR_RBC_EN |
 		BM_SLPCR_SBYOS | BM_SLPCR_BYPASS_PMIC_READY);
-
-	switch (mode) {
-	case WAIT_CLOCKED:
-		break;
-	case WAIT_UNCLOCKED:
-		val1 |= A7_LPM_WAIT << BP_LPCR_A7_BSC_LPM0;
-		val1 &= ~BM_LPCR_A7_BSC_CPU_CLK_ON_LPM;
-		break;
-	case STOP_POWER_OFF:
-		val1 |= A7_LPM_STOP << BP_LPCR_A7_BSC_LPM0;
-		val1 &= ~BM_LPCR_A7_BSC_CPU_CLK_ON_LPM;
-		val2 |= BM_SLPCR_EN_DSM;
-		val2 |= BM_SLPCR_RBC_EN;
-		val2 |= BM_SLPCR_SBYOS;
-		val2 |= BM_SLPCR_VSTBY;
-		val2 |= BM_SLPCR_BYPASS_PMIC_READY;
-		break;
-	default:
-		return;
-	}
 	/*
 	 * GPC: When improper low-power sequence is used,
 	 * the SoC enters low power mode before the ARM core executes WFI.
@@ -204,10 +184,31 @@ void imx_gpcv2_set_lpm_mode(u32 cpu, enum mxc_cpu_pwr_mode mode)
 	 *    is set.
 	 */
 	iomuxc_irq_desc = irq_to_desc(32);
-	imx_gpcv2_irq_unmask(&iomuxc_irq_desc->irq_data);
+
+	switch (mode) {
+	case WAIT_CLOCKED:
+		imx_gpcv2_irq_unmask(&iomuxc_irq_desc->irq_data);
+		break;
+	case WAIT_UNCLOCKED:
+		val1 |= A7_LPM_WAIT << BP_LPCR_A7_BSC_LPM0;
+		val1 &= ~BM_LPCR_A7_BSC_CPU_CLK_ON_LPM;
+		imx_gpcv2_irq_mask(&iomuxc_irq_desc->irq_data);
+		break;
+	case STOP_POWER_OFF:
+		val1 |= A7_LPM_STOP << BP_LPCR_A7_BSC_LPM0;
+		val1 &= ~BM_LPCR_A7_BSC_CPU_CLK_ON_LPM;
+		val2 |= BM_SLPCR_EN_DSM;
+		val2 |= BM_SLPCR_RBC_EN;
+		val2 |= BM_SLPCR_SBYOS;
+		val2 |= BM_SLPCR_VSTBY;
+		val2 |= BM_SLPCR_BYPASS_PMIC_READY;
+		imx_gpcv2_irq_mask(&iomuxc_irq_desc->irq_data);
+		break;
+	default:
+		return;
+	}
 	writel_relaxed(val1, gpc_base + GPC_LPCR_A7_BSC);
 	writel_relaxed(val2, gpc_base + GPC_SLPCR);
-	imx_gpcv2_irq_mask(&iomuxc_irq_desc->irq_data);
 
 	spin_unlock_irqrestore(&gpcv2_lock, flags);
 }
@@ -506,6 +507,12 @@ void __init imx_gpcv2_init(void)
 		writel_relaxed(~0, gpc_base + GPC_IMR1_CORE0 + i * 4);
 		writel_relaxed(~0, gpc_base + GPC_IMR1_CORE1 + i * 4);
 	}
+	/*
+	 * Due to hardware design requirement, need to make sure GPR
+	 * interrupt(#32) is unmasked during RUN mode to avoid entering
+	 * DSM by mistake.
+	 */
+	writel_relaxed(~0x1, gpc_base + GPC_IMR1_CORE0);
 
 	/* Read supported wakeup source in M/F domain */
 	if (cpu_is_imx7d()) {
