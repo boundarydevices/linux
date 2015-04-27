@@ -31,8 +31,8 @@ static void __init imx6ul_enet_clk_init(void)
 
 	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6ul-iomuxc-gpr");
 	if (!IS_ERR(gpr))
-		regmap_update_bits(gpr, IOMUXC_GPR1, IMX6UL_GPR1_ENET1_CLK_DIR,
-				   IMX6UL_GPR1_ENET1_CLK_OUTPUT);
+		regmap_update_bits(gpr, IOMUXC_GPR1, IMX6UL_GPR1_ENET_CLK_DIR,
+				   IMX6UL_GPR1_ENET_CLK_OUTPUT);
 	else
 		pr_err("failed to find fsl,imx6ul-iomux-gpr regmap\n");
 
@@ -40,11 +40,13 @@ static void __init imx6ul_enet_clk_init(void)
 
 static int ksz8081_phy_fixup(struct phy_device *dev)
 {
-	int value;
-	phy_write(dev, 0x1f, 0x8190);
-	value = phy_read(dev, 0x16);
-	value &= ~0x20;
-	phy_write(dev, 0x16, value);
+	if (dev && dev->interface == PHY_INTERFACE_MODE_MII) {
+		phy_write(dev, 0x1f, 0x8110);
+		phy_write(dev, 0x16, 0x201);
+	} else if (dev && dev->interface == PHY_INTERFACE_MODE_RMII) {
+		phy_write(dev, 0x1f, 0x8190);
+		phy_write(dev, 0x16, 0x202);
+	}
 
 	return 0;
 }
