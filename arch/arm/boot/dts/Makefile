@@ -208,6 +208,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6sx-sabreauto-m4.dtb \
 	imx6sx-sdb-lcdif1.dtb \
 	imx6ul-ddr3-arm2.dtb \
+	imx6ul-evk.dtb \
 	vf610-cosmic.dtb \
 	imx6sx-sdb-emmc.dtb \
 	imx6sx-sdb-m4.dtb \
