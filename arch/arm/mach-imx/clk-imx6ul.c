@@ -65,6 +65,12 @@ static const char *sim_sels[] = { "sim_podf", "ipp_di0", "ipp_di1", "ldb_di0", "
 static struct clk *clks[IMX6UL_CLK_END];
 static struct clk_onecell_data clk_data;
 
+static int const clks_init_on[] __initconst = {
+	IMX6UL_CLK_AIPSTZ1, IMX6UL_CLK_AIPSTZ2, IMX6UL_CLK_AIPSTZ3,
+	IMX6UL_CLK_AXI, IMX6UL_CLK_ARM, IMX6UL_CLK_ROM,
+	IMX6UL_CLK_MMDC_P0_FAST, IMX6UL_CLK_MMDC_P0_IPG,
+};
+
 static struct clk_div_table clk_enet_ref_table[] = {
 	{ .val = 0, .div = 20, },
 	{ .val = 1, .div = 10, },
@@ -400,8 +406,8 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	imx_clk_set_rate(clks[IMX6UL_CLK_ENET2_REF], 50000000);
 
 	/* keep all the clks on just for bringup */
-	for (i = 0; i < ARRAY_SIZE(clks); i++)
-		imx_clk_prepare_enable(clks[i]);
+	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
+		imx_clk_prepare_enable(clks[clks_init_on[i]]);
 
 	/* Set initial power mode */
 	imx6q_set_lpm(WAIT_CLOCKED);
