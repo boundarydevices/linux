@@ -478,6 +478,18 @@ static int ipu_pre_prefetch(unsigned int id,
 	switch (input_pixel_fmt) {
 	case 0x1: /* tile */
 	case 0x0: /* generic data */
+	case IPU_PIX_FMT_RGB666:
+	case IPU_PIX_FMT_RGB565:
+	case IPU_PIX_FMT_BGRA4444:
+	case IPU_PIX_FMT_BGRA5551:
+	case IPU_PIX_FMT_BGR24:
+	case IPU_PIX_FMT_RGB24:
+	case IPU_PIX_FMT_GBR24:
+	case IPU_PIX_FMT_BGR32:
+	case IPU_PIX_FMT_BGRA32:
+	case IPU_PIX_FMT_RGB32:
+	case IPU_PIX_FMT_RGBA32:
+	case IPU_PIX_FMT_ABGR32:
 	case IPU_PIX_FMT_YUYV:
 	case IPU_PIX_FMT_UYVY:
 	case IPU_PIX_FMT_YUV444:
