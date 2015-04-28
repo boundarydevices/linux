@@ -1924,9 +1924,12 @@ void ci_hdrc_gadget_destroy(struct ci_hdrc *ci)
 
 static int udc_id_switch_for_device(struct ci_hdrc *ci)
 {
-	if (ci->is_otg)
+	if (ci->is_otg) {
 		hw_write_otgsc(ci, OTGSC_BSVIS | OTGSC_BSVIE,
 					OTGSC_BSVIS | OTGSC_BSVIE);
+		ci->vbus_glitch_check_event = true;
+		ci_otg_queue_work(ci);
+	}
 
 	return 0;
 }
@@ -1956,9 +1959,12 @@ static void udc_resume_from_power_lost(struct ci_hdrc *ci)
 	if (!ci_otg_is_fsm_mode(ci) && ci->vbus_active)
 		usb_gadget_vbus_disconnect(&ci->gadget);
 
-	if (ci->is_otg)
+	if (ci->is_otg) {
 		hw_write_otgsc(ci, OTGSC_BSVIS | OTGSC_BSVIE,
 					OTGSC_BSVIS | OTGSC_BSVIE);
+		ci->vbus_glitch_check_event = true;
+		ci_otg_queue_work(ci);
+	}
 }
 
 static void udc_suspend(struct ci_hdrc *ci)

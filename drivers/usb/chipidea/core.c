@@ -47,6 +47,7 @@
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
+#include <linux/extcon.h>
 #include <linux/platform_device.h>
 #include <linux/module.h>
 #include <linux/idr.h>
@@ -697,6 +698,13 @@ static enum ci_role ci_get_role(struct ci_hdrc *ci)
 	}
 }
 
+static const char *extcon_cables[] = {
+	"USB-HOST",
+	"USB-GADGET",
+	"USB",
+	NULL,
+};
+
 static void ci_start_new_role(struct ci_hdrc *ci)
 {
 	enum ci_role role = ci_get_role(ci);
@@ -793,6 +801,16 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	}
 
 	ci_get_otg_capable(ci);
+	if (ci->is_otg) {
+		ci->extcon.name = dev_name(dev);
+		ci->extcon.supported_cable = extcon_cables;
+		ret = extcon_dev_register(&ci->extcon, &pdev->dev);
+		if (ret) {
+			dev_err(&pdev->dev, "could not register extcon device: %d\n",
+				ret);
+			return ret;
+		}
+	}
 
 	dr_mode = ci->platdata->dr_mode;
 
@@ -826,6 +844,10 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	}
 
 	ci->role = ci_get_role(ci);
+	if (ci->is_otg) {
+		extcon_set_cable_state_(&ci->extcon, ci->role, 1);
+		extcon_set_cable_state_(&ci->extcon, ci->role ^ 1, 0);
+	}
 	/* Notify vbus connected event if it is existed */
 	if (ci->role == CI_ROLE_GADGET)
 		ci_handle_vbus_connected(ci);
@@ -866,6 +888,8 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 
 	free_irq(ci->irq, ci);
 stop:
+	if (ci->is_otg)
+		extcon_dev_unregister(&ci->extcon);
 	ci_role_destroy(ci);
 deinit_phy:
 	usb_phy_shutdown(ci->transceiver);
@@ -885,6 +909,8 @@ static int ci_hdrc_remove(struct platform_device *pdev)
 	del_timer_sync(&ci->timer);
 	dbg_remove_files(ci);
 	free_irq(ci->irq, ci);
+	if (ci->is_otg)
+		extcon_dev_unregister(&ci->extcon);
 	ci_role_destroy(ci);
 	ci_hdrc_enter_lpm(ci, true);
 	usb_phy_shutdown(ci->transceiver);
