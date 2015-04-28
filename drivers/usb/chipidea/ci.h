@@ -13,6 +13,7 @@
 #ifndef __DRIVERS_USB_CHIPIDEA_CI_H
 #define __DRIVERS_USB_CHIPIDEA_CI_H
 
+#include <linux/extcon.h>
 #include <linux/list.h>
 #include <linux/irqreturn.h>
 #include <linux/usb.h>
@@ -270,6 +271,7 @@ struct ci_hdrc {
 	u32				pm_usbmode;
 	struct work_struct		power_lost_work;
 	struct mutex			mutex;
+	struct extcon_dev		extcon;
 };
 
 static inline struct ci_role_driver *ci_role(struct ci_hdrc *ci)
