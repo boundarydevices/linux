@@ -94,6 +94,13 @@
 	fsl,ldo-bypass = <1>; /* use ldo-bypass, u-boot will check it and configure */
 };
 
+&i2c1 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c1>;
+	status = "okay";
+};
+
 &pxp {
 	status = "okay";
 };
@@ -276,6 +283,13 @@
 			fsl,pins = <
 				MX6UL_PAD_GPIO1_IO08__SPDIF_OUT       0x1b0b0
 				MX6UL_PAD_GPIO1_IO09__SPDIF_IN        0x1b0b0
+			>;
+		};
+
+		pinctrl_i2c1: i2c1grp {
+			fsl,pin = <
+				MX6UL_PAD_GPIO1_IO03__I2C1_SDA	0x4001b8b1
+				MX6UL_PAD_GPIO1_IO02__I2C1_SCL	0x4001b8b1
 			>;
 		};
 
