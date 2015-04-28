@@ -144,13 +144,16 @@
 					compatible = "fsl,imx6ul-spdif", "fsl,imx35-spdif";
 					reg = <0x02004000 0x4000>;
 					interrupts = <GIC_SPI 52 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&clks IMX6UL_CLK_DUMMY>,
-						 <&clks IMX6UL_CLK_DUMMY>,
-						 <&clks IMX6UL_CLK_DUMMY>,
+					dmas = <&sdma 41 18 0>,
+					       <&sdma 42 18 0>;
+					dma-names = "rx", "tx";
+					clocks = <&clks IMX6UL_CLK_SPDIF_GCLK>,
+						 <&clks IMX6UL_CLK_OSC>,
+						 <&clks IMX6UL_CLK_SPDIF>,
 						 <&clks IMX6UL_CLK_DUMMY>, <&clks IMX6UL_CLK_DUMMY>, <&clks IMX6UL_CLK_DUMMY>,
-						 <&clks IMX6UL_CLK_DUMMY>,
+						 <&clks IMX6UL_CLK_IPG>,
 						 <&clks IMX6UL_CLK_DUMMY>, <&clks IMX6UL_CLK_DUMMY>,
-						 <&clks IMX6UL_CLK_DUMMY>;
+						 <&clks IMX6UL_CLK_SPBA>;
 					clock-names = "core", "rxtx0",
 						      "rxtx1", "rxtx2",
 						      "rxtx3", "rxtx4",
@@ -586,8 +589,8 @@
 				compatible = "fsl,imx6ul-sdma", "fsl,imx35-sdma";
 				reg = <0x020ec000 0x4000>;
 				interrupts = <GIC_SPI 2 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX6UL_CLK_DUMMY>,
-					 <&clks IMX6UL_CLK_DUMMY>;
+				clocks = <&clks IMX6UL_CLK_SDMA>,
+					 <&clks IMX6UL_CLK_SDMA>;
 				clock-names = "ipg", "ahb";
 				#dma-cells = <3>;
 				fsl,sdma-ram-script-name = "imx/sdma/sdma-imx6q.bin";
