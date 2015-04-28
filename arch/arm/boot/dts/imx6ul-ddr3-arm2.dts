@@ -108,6 +108,13 @@
 			>;
 		};
 
+		pinctrl_mqs: mqsgrp {
+			fsl,pins = <
+				MX6UL_PAD_JTAG_TDI__MQS_LEFT         0x4000007f
+				MX6UL_PAD_JTAG_TDO__MQS_RIGHT        0x4000007f
+			>;
+		};
+
 		pinctrl_spdif: spdifgrp {
 			fsl,pins = <
 				MX6UL_PAD_GPIO1_IO08__SPDIF_OUT       0x1b0b0

@@ -210,6 +210,12 @@
 					status = "disabled";
 				};
 
+				mqs: mqs {
+					compatible = "fsl,imx6sx-mqs";
+					gpr = <&gpr>;
+					status = "disabled";
+				};
+
 				uart7: serial@02018000 {
 					compatible = "fsl,imx6ul-uart",
 						     "fsl,imx6q-uart", "fsl,imx21-uart";
@@ -247,10 +253,12 @@
 					compatible = "fsl,imx6ul-sai";
 					reg = <0x02028000 0x4000>;
 					interrupts = <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&clks IMX6UL_CLK_DUMMY>,
-						 <&clks IMX6UL_CLK_DUMMY>,
+					clocks = <&clks IMX6UL_CLK_SAI1_IPG>,
+						 <&clks IMX6UL_CLK_SAI1>,
 						 <&clks 0>, <&clks 0>;
 					clock-names = "bus", "mclk1", "mclk2", "mclk3";
+					dma-names = "rx", "tx";
+					dmas = <&sdma 35 25 0>, <&sdma 36 25 0>;
 					status = "disabled";
 				};
 
