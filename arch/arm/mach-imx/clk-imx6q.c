@@ -144,7 +144,7 @@ static unsigned int share_count_prg1;
 
 static void __init imx6q_mmdc_ch1_mask_handshake(void __iomem *ccm_base)
 {
-	unsigned int reg;
+	u32 reg;
 
 	reg = readl_relaxed(ccm_base + CCM_CCDR);
 	reg |= CCDR_MMDC_CH1_MASK;
