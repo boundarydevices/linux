@@ -2074,9 +2074,12 @@ static int udc_id_switch_for_device(struct ci_hdrc *ci)
 	 * (in otg fsm mode, means A_IDLE->B_DILE) due to ID change.
 	 */
 	if (!ci_otg_is_fsm_mode(ci) ||
-			ci->fsm.otg->state == OTG_STATE_A_IDLE)
+			ci->fsm.otg->state == OTG_STATE_A_IDLE) {
 		hw_write_otgsc(ci, OTGSC_BSVIS | OTGSC_BSVIE,
 					OTGSC_BSVIS | OTGSC_BSVIE);
+		ci->vbus_glitch_check_event = true;
+		ci_otg_queue_work(ci);
+	}
 
 	return 0;
 }
@@ -2110,9 +2113,12 @@ static void udc_suspend_for_power_lost(struct ci_hdrc *ci)
 /* Power lost with device mode */
 static void udc_resume_from_power_lost(struct ci_hdrc *ci)
 {
-	if (ci->is_otg)
+	if (ci->is_otg) {
 		hw_write_otgsc(ci, OTGSC_BSVIS | OTGSC_BSVIE,
 					OTGSC_BSVIS | OTGSC_BSVIE);
+		ci->vbus_glitch_check_event = true;
+		ci_otg_queue_work(ci);
+	}
 }
 
 static void udc_suspend(struct ci_hdrc *ci)
