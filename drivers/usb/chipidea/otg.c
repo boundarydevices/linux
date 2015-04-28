@@ -12,6 +12,8 @@
  * are also included.
  */
 
+#include <linux/extcon.h>
+#include <linux/extcon-provider.h>
 #include <linux/usb/otg.h>
 #include <linux/usb/gadget.h>
 #include <linux/usb/chipidea.h>
@@ -130,13 +132,18 @@ enum ci_role ci_otg_role(struct ci_hdrc *ci)
 
 void ci_handle_vbus_change(struct ci_hdrc *ci)
 {
+	int bsv;
+
 	if (!ci->is_otg)
 		return;
 
-	if (hw_read_otgsc(ci, OTGSC_BSV) && !ci->vbus_active)
+	bsv = hw_read_otgsc(ci, OTGSC_BSV) ? 1 : 0;
+	if (bsv && !ci->vbus_active)
 		usb_gadget_vbus_connect(&ci->gadget);
-	else if (!hw_read_otgsc(ci, OTGSC_BSV) && ci->vbus_active)
+	else if (!bsv && ci->vbus_active)
 		usb_gadget_vbus_disconnect(&ci->gadget);
+
+	extcon_set_state(ci->extcon, 2, bsv);
 }
 
 /**
@@ -172,6 +179,10 @@ void ci_handle_id_switch(struct ci_hdrc *ci)
 	mutex_lock(&ci->mutex);
 	role = ci_otg_role(ci);
 	if (role != ci->role) {
+		if (ci->is_otg) {
+			dev_info(ci->dev, "role %d to %d\n", ci->role, role);
+			extcon_set_state(ci->extcon, role, 1);
+		}
 		dev_dbg(ci->dev, "switching from %s to %s\n",
 			ci_role(ci)->name, ci->roles[role]->name);
 
@@ -199,6 +210,17 @@ void ci_handle_id_switch(struct ci_hdrc *ci)
 		/* vbus change may have already occurred */
 		if (role == CI_ROLE_GADGET)
 			ci_handle_vbus_change(ci);
+
+		if (ci->is_otg) {
+			role = ci->role;
+			if (role < CI_ROLE_END) {
+				extcon_set_state(ci->extcon, role, 1);
+			} else {
+				role = 0;
+				extcon_set_state(ci->extcon, role, 0);
+			}
+			extcon_set_state(ci->extcon, role ^ 1, 0);
+		}
 	}
 	mutex_unlock(&ci->mutex);
 }
