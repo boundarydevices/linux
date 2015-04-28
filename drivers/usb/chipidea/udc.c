@@ -2167,10 +2167,12 @@ static int udc_id_switch_for_device(struct ci_hdrc *ci)
 		pinctrl_select_state(ci->platdata->pctl,
 				     ci->platdata->pins_device);
 
-	if (ci->is_otg)
+	if (ci->is_otg) {
 		/* Clear and enable BSV irq */
 		hw_write_otgsc(ci, OTGSC_BSVIS | OTGSC_BSVIE,
 					OTGSC_BSVIS | OTGSC_BSVIE);
+		ci_otg_queue_work(ci);
+	}
 
 	return 0;
 }
@@ -2205,9 +2207,11 @@ static void udc_suspend_for_power_lost(struct ci_hdrc *ci)
 /* Power lost with device mode */
 static void udc_resume_from_power_lost(struct ci_hdrc *ci)
 {
-	if (ci->is_otg)
+	if (ci->is_otg) {
 		hw_write_otgsc(ci, OTGSC_BSVIS | OTGSC_BSVIE,
 					OTGSC_BSVIS | OTGSC_BSVIE);
+		ci_otg_queue_work(ci);
+	}
 }
 
 static void udc_suspend(struct ci_hdrc *ci)

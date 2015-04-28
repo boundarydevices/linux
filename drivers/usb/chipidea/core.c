@@ -18,6 +18,7 @@
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
 #include <linux/extcon.h>
+#include <linux/extcon-provider.h>
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
 #include <linux/module.h>
@@ -960,6 +961,13 @@ static void ci_get_otg_capable(struct ci_hdrc *ci)
 	}
 }
 
+static const unsigned int extcon_cables[] = {
+	EXTCON_USB_HOST,
+	EXTCON_CHG_USB_SDP,
+	EXTCON_USB,
+	EXTCON_NONE,
+};
+
 static ssize_t role_show(struct device *dev, struct device_attribute *attr,
 			  char *buf)
 {
@@ -1166,6 +1174,23 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	}
 
 	ci_get_otg_capable(ci);
+	if (ci->is_otg) {
+		struct extcon_dev *extcon = ci->extcon;
+		if (!extcon) {
+			extcon = devm_extcon_dev_allocate(dev,
+					extcon_cables);
+			ci->extcon = extcon;
+		}
+		if (extcon) {
+			ret = extcon_dev_register(extcon);
+			if (ret) {
+				dev_err(&pdev->dev,
+					"could not register extcon device: %d\n",
+						ret);
+				return ret;
+			}
+		}
+	}
 
 	dr_mode = ci->platdata->dr_mode;
 	/* initialize role(s) before the interrupt is requested */
@@ -1214,6 +1239,10 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	}
 
 	ci->role = ci_get_role(ci);
+	if (ci->is_otg) {
+		extcon_set_state(ci->extcon, ci->role, 1);
+		extcon_set_state(ci->extcon, ci->role ^ 1, 0);
+	}
 	if (!ci_otg_is_fsm_mode(ci)) {
 		/* only update vbus status for peripheral */
 		if (ci->role == CI_ROLE_GADGET) {
@@ -1267,6 +1296,8 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 remove_debug:
 	dbg_remove_files(ci);
 stop:
+	if (ci->is_otg)
+		extcon_dev_unregister(ci->extcon);
 	if (ci->role_switch)
 		usb_role_switch_unregister(ci->role_switch);
 deinit_otg:
@@ -1300,6 +1331,8 @@ static int ci_hdrc_remove(struct platform_device *pdev)
 	flush_workqueue(ci->power_lost_wq);
 	destroy_workqueue(ci->power_lost_wq);
 	dbg_remove_files(ci);
+	if (ci->is_otg)
+		extcon_dev_unregister(ci->extcon);
 	ci_role_destroy(ci);
 	ci_hdrc_enter_lpm(ci, true);
 	ci_usb_phy_exit(ci);
