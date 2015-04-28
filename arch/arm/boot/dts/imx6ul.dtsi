@@ -280,29 +280,24 @@
 					compatible = "fsl,imx53-asrc";
 					reg = <0x02034000 0x4000>;
 					interrupts = <GIC_SPI 50 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&clks IMX6UL_CLK_DUMMY>,
-						<&clks IMX6UL_CLK_DUMMY>, <&clks 0>,
+					clocks = <&clks IMX6UL_CLK_ASRC_IPG>,
+						<&clks IMX6UL_CLK_ASRC_MEM>, <&clks 0>,
 						<&clks 0>, <&clks 0>, <&clks 0>, <&clks 0>,
 						<&clks 0>, <&clks 0>, <&clks 0>, <&clks 0>,
 						<&clks 0>, <&clks 0>, <&clks 0>, <&clks 0>,
-						<&clks IMX6UL_CLK_DUMMY>, <&clks 0>, <&clks 0>,
-						<&clks IMX6UL_CLK_DUMMY>;
+						<&clks IMX6UL_CLK_SPDIF>, <&clks 0>, <&clks 0>,
+						<&clks IMX6UL_CLK_SPBA>;
 					clock-names = "mem", "ipg", "asrck_0",
 						"asrck_1", "asrck_2", "asrck_3", "asrck_4",
 						"asrck_5", "asrck_6", "asrck_7", "asrck_8",
 						"asrck_9", "asrck_a", "asrck_b", "asrck_c",
 						"asrck_d", "asrck_e", "asrck_f", "dma";
+					dmas = <&sdma 17 23 1>, <&sdma 18 23 1>, <&sdma 19 23 1>,
+						<&sdma 20 23 1>, <&sdma 21 23 1>, <&sdma 22 23 1>;
+					dma-names = "rxa", "rxb", "rxc",
+						    "txa", "txb", "txc";
 					fsl,asrc-rate  = <48000>;
 					fsl,asrc-width = <16>;
-					status = "okay";
-				};
-
-				asrc_p2p: asrc_p2p {
-					compatible = "fsl,imx6q-asrc-p2p";
-					fsl,p2p-rate  = <48000>;
-					fsl,p2p-width = <16>;
-					fsl,asrc-dma-rx-events = <17 18 19>;
-					fsl,asrc-dma-tx-events = <20 21 22>;
 					status = "okay";
 				};
 			};
