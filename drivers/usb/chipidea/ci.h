@@ -13,6 +13,7 @@
 #ifndef __DRIVERS_USB_CHIPIDEA_CI_H
 #define __DRIVERS_USB_CHIPIDEA_CI_H
 
+#include <linux/extcon.h>
 #include <linux/list.h>
 #include <linux/irqreturn.h>
 #include <linux/usb.h>
@@ -151,6 +152,7 @@ struct ci_hdrc {
 	bool				is_otg;
 	struct task_struct		*otg_task;
 	wait_queue_head_t		otg_wait;
+	int				wq_ready;
 
 	struct dma_pool			*qh_pool;
 	struct dma_pool			*td_pool;
@@ -178,12 +180,14 @@ struct ci_hdrc {
 	struct dentry			*debugfs;
 	bool				id_event;
 	bool				b_sess_valid_event;
+	bool				vbus_glitch_check_event;
 	/* imx28 needs swp instruction for writing */
 	bool				imx28_write_fix;
 	bool				supports_runtime_pm;
 	bool				in_lpm;
 	bool				wakeup_int;
 	struct timer_list		timer;
+	struct extcon_dev		extcon;
 };
 
 static inline struct ci_role_driver *ci_role(struct ci_hdrc *ci)

@@ -51,6 +51,7 @@
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
+#include <linux/extcon.h>
 #include <linux/platform_device.h>
 #include <linux/module.h>
 #include <linux/idr.h>
@@ -370,31 +371,35 @@ static irqreturn_t ci_irq(int irq, void *data)
 		return IRQ_HANDLED;
 	}
 
-	if (ci->is_otg)
+	if (ci->is_otg) {
+		int do_queue = 0;
+
 		otgsc = hw_read(ci, OP_OTGSC, ~0);
 
-	/*
-	 * Handle id change interrupt, it indicates device/host function
-	 * switch.
-	 */
-	if (ci->is_otg && (otgsc & OTGSC_IDIE) && (otgsc & OTGSC_IDIS)) {
-		ci->id_event = true;
-		ci_clear_otg_interrupt(ci, OTGSC_IDIS);
-		disable_irq_nosync(ci->irq);
-		wake_up(&ci->otg_wait);
-		return IRQ_HANDLED;
-	}
+		/*
+		 * Handle id change interrupt, it indicates device/host function
+		 * switch.
+		 */
+		if ((otgsc & OTGSC_IDIE) && (otgsc & OTGSC_IDIS)) {
+			ci->id_event = true;
+			do_queue = 1;
+		}
 
-	/*
-	 * Handle vbus change interrupt, it indicates device connection
-	 * and disconnection events.
-	 */
-	if (ci->is_otg && (otgsc & OTGSC_BSVIE) && (otgsc & OTGSC_BSVIS)) {
-		ci->b_sess_valid_event = true;
-		ci_clear_otg_interrupt(ci, OTGSC_BSVIS);
-		disable_irq_nosync(ci->irq);
-		wake_up(&ci->otg_wait);
-		return IRQ_HANDLED;
+		/*
+		 * Handle vbus change interrupt, it indicates device connection
+		 * and disconnection events.
+		 */
+		if ((otgsc & OTGSC_BSVIE) && (otgsc & OTGSC_BSVIS)) {
+			ci->vbus_glitch_check_event = true;
+			do_queue = 1;
+		}
+		if (do_queue) {
+			hw_write_otgsc(ci, OTGSC_INT_STATUS_BITS,
+				otgsc & (OTGSC_IDIS | OTGSC_BSVIS));
+			if (ci->wq_ready)
+				wake_up(&ci->otg_wait);
+			return IRQ_HANDLED;
+		}
 	}
 
 	/* Handle device/host interrupt */
@@ -542,6 +547,13 @@ static void ci_get_otg_capable(struct ci_hdrc *ci)
 	}
 }
 
+static const char *extcon_cables[] = {
+	"USB-HOST",
+	"USB-GADGET",
+	"USB",
+	NULL,
+};
+
 static int ci_usb_phy_init(struct ci_hdrc *ci)
 {
 	int ret;
@@ -626,6 +638,16 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	}
 
 	ci_get_otg_capable(ci);
+	if (ci->is_otg) {
+		ci->extcon.name = dev_name(dev);
+		ci->extcon.supported_cable = extcon_cables;
+		ret = extcon_dev_register(&ci->extcon, &pdev->dev);
+		if (ret) {
+			dev_err(&pdev->dev, "could not register extcon device: %d\n",
+				ret);
+			return ret;
+		}
+	}
 
 	hw_phymode_configure(ci);
 
@@ -690,6 +712,10 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 			: CI_ROLE_GADGET;
 	}
 
+	if (ci->is_otg) {
+		extcon_set_cable_state_(&ci->extcon, ci->role, 1);
+		extcon_set_cable_state_(&ci->extcon, ci->role ^ 1, 0);
+	}
 	/* Notify vbus connected event if it is existed */
 	if (ci->role == CI_ROLE_GADGET)
 		ci_handle_vbus_connected(ci);
@@ -716,11 +742,16 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	setup_timer(&ci->timer, delay_runtime_pm_put_timer,
 			(unsigned long)ci);
 	ret = dbg_create_files(ci);
+	ci->wq_ready = 1;
+	if (ci->is_otg)
+		wake_up(&ci->otg_wait);
 	if (!ret)
 		return 0;
 
 	free_irq(ci->irq, ci);
 stop:
+	if (ci->is_otg)
+		extcon_dev_unregister(&ci->extcon);
 	ci_role_destroy(ci);
 destroy_phy:
 	ci_usb_phy_destroy(ci);
@@ -739,6 +770,8 @@ static int ci_hdrc_remove(struct platform_device *pdev)
 	}
 	dbg_remove_files(ci);
 	free_irq(ci->irq, ci);
+	if (ci->is_otg)
+		extcon_dev_unregister(&ci->extcon);
 	ci_role_destroy(ci);
 	ci_hdrc_enter_lpm(ci, true);
 	ci_usb_phy_destroy(ci);
