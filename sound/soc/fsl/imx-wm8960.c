@@ -44,12 +44,165 @@ struct imx_wm8960_data {
 };
 
 struct imx_priv {
+	int hp_set_gpio;
+	int hp_active_low;
+	struct snd_kcontrol *headset_kctl;
 	struct snd_soc_codec *codec;
 	struct platform_device *pdev;
 	struct snd_card *snd_card;
 };
 
 static struct imx_priv card_priv;
+
+static struct snd_soc_jack imx_hp_set;
+static struct snd_soc_jack_pin imx_hp_set_pins[] = {
+	{
+		.pin = "Headset Jack",
+		.mask = SND_JACK_HEADSET,
+	},
+};
+static struct snd_soc_jack_gpio imx_hp_set_gpio = {
+	.name = "headset detect",
+	.report = SND_JACK_HEADSET,
+	.debounce_time = 250,
+	.invert = 1,
+};
+
+static int hp_set_status_check(void)
+{
+	struct imx_priv *priv = &card_priv;
+	struct platform_device *pdev = priv->pdev;
+	char *envp[3], *buf;
+	int hp_status, ret;
+
+	if (!gpio_is_valid(priv->hp_set_gpio))
+		return 0;
+
+	hp_status = gpio_get_value(priv->hp_set_gpio) ? 1 : 0;
+	buf = kmalloc(32, GFP_ATOMIC);
+	if (!buf) {
+		dev_err(&pdev->dev, "%s kmalloc failed\n", __func__);
+		return -ENOMEM;
+	}
+
+	if (hp_status != priv->hp_active_low) {
+		snprintf(buf, 32, "STATE=%d", 2);
+		snd_soc_dapm_disable_pin(&priv->codec->dapm, "Ext Spk");
+		snd_soc_dapm_disable_pin(&priv->codec->dapm, "Main MIC");
+		ret = imx_hp_set_gpio.report;
+		snd_kctl_jack_report(priv->snd_card, priv->headset_kctl, 1);
+	} else {
+		snprintf(buf, 32, "STATE=%d", 0);
+		snd_soc_dapm_enable_pin(&priv->codec->dapm, "Ext Spk");
+		snd_soc_dapm_enable_pin(&priv->codec->dapm, "Main MIC");
+		ret = 0;
+		snd_kctl_jack_report(priv->snd_card, priv->headset_kctl, 0);
+	}
+
+	envp[0] = "NAME=headset";
+	envp[1] = buf;
+	envp[2] = NULL;
+	kobject_uevent_env(&pdev->dev.kobj, KOBJ_CHANGE, envp);
+	kfree(buf);
+
+	return ret;
+}
+
+static const struct snd_soc_dapm_widget imx_wm8960_dapm_widgets[] = {
+	SND_SOC_DAPM_HP("Headset Jack", NULL),
+	SND_SOC_DAPM_SPK("Ext Spk", NULL),
+	SND_SOC_DAPM_MIC("Hp MIC", NULL),
+	SND_SOC_DAPM_MIC("Main MIC", NULL),
+};
+
+static const struct snd_soc_dapm_route imx_wm8960_dapm_route[] = {
+	{"Headset Jack", NULL, "HP_L"},
+	{"Headset Jack", NULL, "HP_R"},
+	{"Ext Spk", NULL, "SPK_LP"},
+	{"Ext Spk", NULL, "SPK_LN"},
+	{"Ext Spk", NULL, "SPK_RP"},
+	{"Ext Spk", NULL, "SPK_RN"},
+	{"LINPUT2", NULL, "Hp MIC"},
+	{"LINPUT3", NULL, "Hp MIC"},
+	{"RINPUT1", NULL, "Main MIC"},
+	{"RINPUT2", NULL, "Main MIC"},
+	{"Hp MIC", NULL, "MICB"},
+	{"Main MIC", NULL, "MICB"},
+};
+
+static int imx_wm8960_gpio_init(struct snd_soc_card *card)
+{
+	struct snd_soc_dai *codec_dai = card->rtd[0].codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct imx_priv *priv = &card_priv;
+	int ret;
+	priv->codec = codec;
+
+	if (gpio_is_valid(priv->hp_set_gpio)) {
+		imx_hp_set_gpio.gpio = priv->hp_set_gpio;
+		imx_hp_set_gpio.jack_status_check = hp_set_status_check;
+
+		ret = snd_soc_jack_new(codec, "Headpset Jack",
+				SND_JACK_HEADSET, &imx_hp_set);
+		if (ret)
+			return ret;
+		ret = snd_soc_jack_add_pins(&imx_hp_set,
+			ARRAY_SIZE(imx_hp_set_pins), imx_hp_set_pins);
+		if (ret)
+			return ret;
+		ret = snd_soc_jack_add_gpios(&imx_hp_set, 1,
+						&imx_hp_set_gpio);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+static ssize_t show_headphone(struct device_driver *dev, char *buf)
+{
+	struct imx_priv *priv = &card_priv;
+	int hp_status;
+
+	if (!gpio_is_valid(priv->hp_set_gpio)) {
+		strcpy(buf, "no detect gpio connected\n");
+		return strlen(buf);
+	}
+
+	/* Check if headphone is plugged in */
+	hp_status = gpio_get_value(priv->hp_set_gpio) ? 1 : 0;
+
+	if (hp_status != priv->hp_active_low)
+		strcpy(buf, "Headphone\n");
+	else
+		strcpy(buf, "Speaker\n");
+
+	return strlen(buf);
+}
+
+static ssize_t show_micphone(struct device_driver *dev, char *buf)
+{
+	struct imx_priv *priv = &card_priv;
+	int hp_status;
+
+	if (!gpio_is_valid(priv->hp_set_gpio)) {
+		strcpy(buf, "no detect gpio connected\n");
+		return strlen(buf);
+	}
+
+	/* Check if headphone is plugged in */
+	hp_status = gpio_get_value(priv->hp_set_gpio) ? 1 : 0;
+
+	if (hp_status != priv->hp_active_low)
+		strcpy(buf, "Hp MIC\n");
+	else
+		strcpy(buf, "Main MIC\n");
+
+	return strlen(buf);
+}
+static DRIVER_ATTR(headphone, S_IRUGO | S_IWUSR, show_headphone, NULL);
+static DRIVER_ATTR(micphone, S_IRUGO | S_IWUSR, show_micphone, NULL);
+
 
 /* -1 for reserved value */
 static const int sysclk_divs[] = { 1, -1, 2, -1 };
@@ -110,7 +263,7 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	 * clock for ADCs and DACs
 	 **/
 	snd_soc_update_bits(codec_dai->codec, WM8960_IFACE2, 1<<6, 1<<6);
-	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL4, 7<<4, 1<<4);
+	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL4, 7<<4, 3<<4);
 
 	/* Enable headphone jack detect */
 	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL2, 1<<6, 1<<6);
@@ -234,7 +387,6 @@ static int imx_hifi_startup(struct snd_pcm_substream *substream)
 	return ret;
 }
 
-
 static void imx_hifi_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -251,10 +403,6 @@ static struct snd_soc_ops imx_hifi_ops = {
 	.hw_free = imx_hifi_hw_free,
 	.startup   = imx_hifi_startup,
 	.shutdown  = imx_hifi_shutdown,
-};
-
-static const struct snd_soc_dapm_route imx_wm8960_dapm_route[] = {
-	{ "LINPUT1", NULL, "MICB" },
 };
 
 static int imx_wm8960_probe(struct platform_device *pdev)
@@ -342,6 +490,8 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 		goto fail;
 	data->card.num_links = 1;
 	data->card.dai_link = &data->dai;
+	data->card.dapm_widgets = imx_wm8960_dapm_widgets;
+        data->card.num_dapm_widgets = ARRAY_SIZE(imx_wm8960_dapm_widgets);
 	data->card.dapm_routes = imx_wm8960_dapm_route;
 	data->card.num_dapm_routes = ARRAY_SIZE(imx_wm8960_dapm_route);
 
@@ -354,6 +504,31 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 	}
 
 	priv->snd_card = data->card.snd_card;
+
+	priv->hp_set_gpio = of_get_named_gpio_flags(pdev->dev.of_node, "hp-det-gpios", 0,
+			(enum of_gpio_flags *)&priv->hp_active_low);
+	if (IS_ERR(ERR_PTR(priv->hp_set_gpio)))
+		goto fail;
+
+	priv->headset_kctl = snd_kctl_jack_new("Headset", 0, NULL);
+	ret = snd_ctl_add(data->card.snd_card, priv->headset_kctl);
+	if (ret)
+		goto fail;
+
+	ret = imx_wm8960_gpio_init(&data->card);
+
+	if (gpio_is_valid(priv->hp_set_gpio)) {
+		ret = driver_create_file(pdev->dev.driver, &driver_attr_headphone);
+		if (ret) {
+			dev_err(&pdev->dev, "create hp attr failed (%d)\n", ret);
+			goto fail;
+		}
+		ret = driver_create_file(pdev->dev.driver, &driver_attr_micphone);
+		if (ret) {
+			dev_err(&pdev->dev, "create mic attr failed (%d)\n", ret);
+			goto fail;
+		}
+	}
 fail:
 	if (cpu_np)
 		of_node_put(cpu_np);
