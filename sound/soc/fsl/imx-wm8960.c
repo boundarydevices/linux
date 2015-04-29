@@ -90,12 +90,26 @@ static int hp_set_status_check(void)
 		snd_soc_dapm_disable_pin(&priv->codec->dapm, "Ext Spk");
 		snd_soc_dapm_disable_pin(&priv->codec->dapm, "Main MIC");
 		ret = imx_hp_set_gpio.report;
+
+		/*
+		 *  As the hp MIC only connect the input for left channel, we
+		 *  need to route it for right channel.
+		 */
+		snd_soc_update_bits(priv->codec, WM8960_ADDCTL1, 3<<2, 1<<2);
+
 		snd_kctl_jack_report(priv->snd_card, priv->headset_kctl, 1);
 	} else {
 		snprintf(buf, 32, "STATE=%d", 0);
 		snd_soc_dapm_enable_pin(&priv->codec->dapm, "Ext Spk");
 		snd_soc_dapm_enable_pin(&priv->codec->dapm, "Main MIC");
 		ret = 0;
+
+		/*
+		 *  As the Main MIC only connect the input for right channel,
+		 *  we need to route it for left channel.
+		 */
+		snd_soc_update_bits(priv->codec, WM8960_ADDCTL1, 3<<2, 2<<2);
+
 		snd_kctl_jack_report(priv->snd_card, priv->headset_kctl, 0);
 	}
 
@@ -203,6 +217,36 @@ static ssize_t show_micphone(struct device_driver *dev, char *buf)
 static DRIVER_ATTR(headphone, S_IRUGO | S_IWUSR, show_headphone, NULL);
 static DRIVER_ATTR(micphone, S_IRUGO | S_IWUSR, show_micphone, NULL);
 
+static void wm8960_init(struct snd_soc_dai *codec_dai)
+{
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec_dai->card;
+	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
+
+	/*
+	 * codec ADCLRC pin configured as GPIO, DACLRC pin is used as a frame
+	 * clock for ADCs and DACs
+	 */
+	snd_soc_update_bits(codec, WM8960_IFACE2, 1<<6, 1<<6);
+
+	/*
+	 * GPIO1 used as headphone detect output
+	 */
+	snd_soc_update_bits(codec, WM8960_ADDCTL4, 7<<4, 3<<4);
+
+	/*
+	 * Enable headphone jack detect
+	 */
+	snd_soc_update_bits(codec, WM8960_ADDCTL2, 1<<6, 1<<6);
+	snd_soc_update_bits(codec, WM8960_ADDCTL2, 1<<5, data->hp_det[1]<<5);
+	snd_soc_update_bits(codec, WM8960_ADDCTL4, 3<<2, data->hp_det[0]<<2);
+	snd_soc_update_bits(codec, WM8960_ADDCTL1, 1, 1);
+
+	/*
+	 * route left channel to right channel in default.
+	 */
+	snd_soc_update_bits(codec, WM8960_ADDCTL1, 3<<2, 1<<2);
+}
 
 /* -1 for reserved value */
 static const int sysclk_divs[] = { 1, -1, 2, -1 };
@@ -251,31 +295,6 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 		dev_err(dev, "failed to set codec dai fmt: %d\n", ret);
 		return ret;
 	}
-
-	/*
-	 * set SAI2_MCLK_DIR to enable codec MCLK
-	 */
-	if (data->gpr)
-		regmap_update_bits(data->gpr, 4, 1<<20, 1<<20);
-
-	/**
-	 * codec ADCLRC pin configured as GPIO, DACLRC pin is used as a frame
-	 * clock for ADCs and DACs
-	 **/
-	snd_soc_update_bits(codec_dai->codec, WM8960_IFACE2, 1<<6, 1<<6);
-	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL4, 7<<4, 3<<4);
-
-	/* Enable headphone jack detect */
-	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL2, 1<<6, 1<<6);
-	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL2, 1<<5, data->hp_det[1]<<5);
-	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL4, 3<<2, data->hp_det[0]<<2);
-	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL1, 1, 1);
-
-	/*
-	 * As the hardware only connect the input for left channel, we need
-	 * to route it for right channel.
-	 */
-	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL1, 3<<2, 1<<2);
 
 	if (!data->is_codec_master) {
 		ret = snd_soc_dai_set_sysclk(cpu_dai, 0, 0, SND_SOC_CLOCK_OUT);
@@ -405,6 +424,21 @@ static struct snd_soc_ops imx_hifi_ops = {
 	.shutdown  = imx_hifi_shutdown,
 };
 
+static int imx_wm8960_late_probe(struct snd_soc_card *card)
+{
+	struct snd_soc_dai *codec_dai = card->rtd[0].codec_dai;
+	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
+
+	/*
+	 * set SAI2_MCLK_DIR to enable codec MCLK
+	 */
+	if (data->gpr)
+		regmap_update_bits(data->gpr, 4, 1<<20, 1<<20);
+
+	wm8960_init(codec_dai);
+	return 0;
+}
+
 static int imx_wm8960_probe(struct platform_device *pdev)
 {
 	struct device_node *cpu_np, *codec_np, *gpr_np;
@@ -494,6 +528,7 @@ static int imx_wm8960_probe(struct platform_device *pdev)
         data->card.num_dapm_widgets = ARRAY_SIZE(imx_wm8960_dapm_widgets);
 	data->card.dapm_routes = imx_wm8960_dapm_route;
 	data->card.num_dapm_routes = ARRAY_SIZE(imx_wm8960_dapm_route);
+	data->card.late_probe = imx_wm8960_late_probe;
 
 	platform_set_drvdata(pdev, &data->card);
 	snd_soc_card_set_drvdata(&data->card, data);
