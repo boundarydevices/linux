@@ -156,10 +156,9 @@ static int uart_port_startup(struct tty_struct *tty, struct uart_state *state,
 
 	retval = uport->ops->startup(uport);
 	if (retval == 0) {
-		if (uart_console(uport) && uport->cons->cflag) {
+		if (uart_console(uport) && uport->cons->cflag)
 			tty->termios.c_cflag = uport->cons->cflag;
-			uport->cons->cflag = 0;
-		}
+
 		/*
 		 * Initialise the hardware port settings.
 		 */
