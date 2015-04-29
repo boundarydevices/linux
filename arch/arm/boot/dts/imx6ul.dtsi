@@ -268,10 +268,12 @@
 					compatible = "fsl,imx6ul-sai";
 					reg = <0x0202c000 0x4000>;
 					interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&clks IMX6UL_CLK_DUMMY>,
-						 <&clks IMX6UL_CLK_DUMMY>,
+					clocks = <&clks IMX6UL_CLK_SAI2_IPG>,
+						 <&clks IMX6UL_CLK_SAI2>,
 						 <&clks 0>, <&clks 0>;
 					clock-names = "bus", "mclk1", "mclk2", "mclk3";
+					dma-names = "rx", "tx";
+					dmas = <&sdma 37 25 0>, <&sdma 38 25 0>;
 					status = "disabled";
 				};
 
