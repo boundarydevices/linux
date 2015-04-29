@@ -95,6 +95,8 @@
 		cpu-dai = <&sai1>;
 		audio-codec = <&codec>;
 		codec-master;
+		/* JD2: hp detect high for headphone*/
+		hp-det = <2 0>;
 	};
 
 	sound-hdmi {
