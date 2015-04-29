@@ -30,6 +30,12 @@
 		default-brightness-level = <6>;
 		status = "okay";
 	};
+
+	pxp_v4l2 {
+		compatible = "fsl,imx6ul-pxp-v4l2", "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
+		status = "okay";
+	};
+
 };
 
 &fec1 {
