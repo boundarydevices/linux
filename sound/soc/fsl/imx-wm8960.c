@@ -22,6 +22,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc-dapm.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/mfd/syscon.h>
 #include "../codecs/wm8960.h"
 #include "fsl_sai.h"
 
@@ -38,6 +39,8 @@ struct imx_wm8960_data {
 	bool is_codec_master;
 	bool is_stream_in_use[2];
 	bool is_stream_opened[2];
+	struct regmap *gpr;
+	unsigned int hp_det[2];
 };
 
 struct imx_priv {
@@ -96,6 +99,12 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
+	/*
+	 * set SAI2_MCLK_DIR to enable codec MCLK
+	 */
+	if (data->gpr)
+		regmap_update_bits(data->gpr, 4, 1<<20, 1<<20);
+
 	/**
 	 * codec ADCLRC pin configured as GPIO, DACLRC pin is used as a frame
 	 * clock for ADCs and DACs
@@ -105,7 +114,8 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 
 	/* Enable headphone jack detect */
 	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL2, 1<<6, 1<<6);
-	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL4, 3<<2, 2<<2);
+	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL2, 1<<5, data->hp_det[1]<<5);
+	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL4, 3<<2, data->hp_det[0]<<2);
 	snd_soc_update_bits(codec_dai->codec, WM8960_ADDCTL1, 1, 1);
 
 	/*
@@ -249,7 +259,7 @@ static const struct snd_soc_dapm_route imx_wm8960_dapm_route[] = {
 
 static int imx_wm8960_probe(struct platform_device *pdev)
 {
-	struct device_node *cpu_np, *codec_np;
+	struct device_node *cpu_np, *codec_np, *gpr_np;
 	struct platform_device *cpu_pdev;
 	struct imx_priv *priv = &card_priv;
 	struct i2c_client *codec_dev;
@@ -304,6 +314,18 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to get codec clk: %d\n", ret);
 		goto fail;
 	}
+
+	gpr_np = of_parse_phandle(pdev->dev.of_node, "gpr", 0);
+        if (gpr_np) {
+		data->gpr = syscon_node_to_regmap(gpr_np);
+		if (IS_ERR(data->gpr)) {
+			ret = PTR_ERR(data->gpr);
+			dev_err(&pdev->dev, "failed to get gpr regmap\n");
+			goto fail;
+		}
+	}
+
+	of_property_read_u32_array(pdev->dev.of_node, "hp-det", data->hp_det, 2);
 
 	data->dai.name = "HiFi";
 	data->dai.stream_name = "HiFi";
