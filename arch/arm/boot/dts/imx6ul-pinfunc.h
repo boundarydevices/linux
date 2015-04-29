@@ -15,6 +15,7 @@
  * <mux_reg conf_reg input_reg mux_mode input_val>
  */
 
+#define	MX6UL_PAD_SNVS_TAMPER4__GPIO5_IO04				0x002C 0x02B8 0x0000 5 0
 #define	MX6UL_PAD_SNVS_TAMPER9__GPIO5_IO09				0x0040 0x02CC 0x0000 5 0
 #define	MX6UL_PAD_JTAG_MOD__SJC_MOD                              	0x0044 0x02D0 0x0000 0 0
 #define	MX6UL_PAD_JTAG_MOD__GPT2_CLK                             	0x0044 0x02D0 0x05A0 1 0
