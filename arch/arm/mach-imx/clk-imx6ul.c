@@ -45,6 +45,7 @@ static const char *usdhc_sels[] = { "pll2_pfd2_396m", "pll2_pfd0_352m", };
 static const char *bch_sels[] = { "pll2_pfd2_396m", "pll2_pfd0_352m", };
 static const char *gpmi_sels[] = { "pll2_pfd2_396m", "pll2_pfd0_352m", };
 static const char *eim_slow_sels[] =  { "axi", "pll3_usb_otg", "pll2_pfd2_396m", "pll3_pfd0_720m", };
+static const char *audio_sels[] = { "pll4_audio_div", "pll3_pfd2_508m", "pll5_video_div", "pll3_usb_otg", };
 static const char *spdif_sels[] = { "pll4_audio_div", "pll3_pfd2_508m", "pll5_video_div", "pll3_usb_otg", };
 static const char *sai_sels[] = { "pll3_pfd2_508m", "pll5_video_div", "pll4_audio_div", };
 static const char *lcdif_pre_sels[] = { "pll2_bus", "pll3_pfd3_454m", "pll5_video_div", "pll2_pfd0_352m", "pll2_pfd1_594m", "pll3_pfd1_540m", };
@@ -238,6 +239,7 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	clks[IMX6UL_CLK_ENFC_SEL]	  = imx_clk_mux("enfc_sel",	base + 0x2c, 15, 3, enfc_sels, ARRAY_SIZE(enfc_sels));
 	clks[IMX6UL_CLK_LDB_DI1_SEL]	  = imx_clk_mux("ldb_di1_sel",	base + 0x2c, 12, 3, ldb_di1_sels, ARRAY_SIZE(ldb_di1_sels));
 	clks[IMX6UL_CLK_LDB_DI0_SEL]	  = imx_clk_mux("ldb_di0_sel",	base + 0x2c, 9,  3, ldb_di0_sels, ARRAY_SIZE(ldb_di0_sels));
+	clks[IMX6UL_CLK_AUDIO_SEL]        = imx_clk_mux("audio_sel",    base + 0x30, 7,  2, audio_sels, ARRAY_SIZE(audio_sels));
 	clks[IMX6UL_CLK_SPDIF_SEL]	  = imx_clk_mux("spdif_sel",	base + 0x30, 20, 2, spdif_sels, ARRAY_SIZE(spdif_sels));
 	clks[IMX6UL_CLK_SIM_PRE_SEL] 	  = imx_clk_mux("sim_pre_sel",	base + 0x34, 15, 3, sim_pre_sels, ARRAY_SIZE(sim_pre_sels));
 	clks[IMX6UL_CLK_SIM_SEL]	  = imx_clk_mux("sim_sel", 	base + 0x34, 9, 3, sim_sels, ARRAY_SIZE(sim_sels));
@@ -277,6 +279,8 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	clks[IMX6UL_CLK_ENFC_PODF]	= imx_clk_divider("enfc_podf",	   "enfc_pred",		base + 0x2c, 21, 6);
 	clks[IMX6UL_CLK_SAI2_PRED]	= imx_clk_divider("sai2_pred",	   "sai2_sel",		base + 0x2c, 6,	 3);
 	clks[IMX6UL_CLK_SAI2_PODF]	= imx_clk_divider("sai2_podf",	   "sai2_pred",		base + 0x2c, 0,  6);
+	clks[IMX6UL_CLK_AUDIO_PRED]     = imx_clk_divider("audio_pred",    "audio_sel",         base + 0x30, 12, 3);
+	clks[IMX6UL_CLK_AUDIO_PODF]     = imx_clk_divider("audio_podf",    "audio_pred",        base + 0x30, 9,  3);
 	clks[IMX6UL_CLK_SPDIF_PRED]	= imx_clk_divider("spdif_pred",	   "spdif_sel",		base + 0x30, 25, 3);
 	clks[IMX6UL_CLK_SPDIF_PODF]	= imx_clk_divider("spdif_podf",	   "spdif_pred",	base + 0x30, 22, 3);
 	clks[IMX6UL_CLK_SIM_PODF]	= imx_clk_divider("sim_podf",	   "sim_pre_sel",	base + 0x34, 12, 3);
@@ -363,6 +367,7 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	clks[IMX6UL_CLK_SDMA]		= imx_clk_gate2("sdma",		"ahb",		base + 0x7c,	6);
 	clks[IMX6UL_CLK_WDOG2]		= imx_clk_gate2("wdog2",	"ipg",		base + 0x7c,	10);
 	clks[IMX6UL_CLK_SPBA]		= imx_clk_gate2("spba",		"ipg",		base + 0x7c,	12);
+	clks[IMX6UL_CLK_AUDIO]          = imx_clk_gate2_shared("audio",         "audio_podf",   base + 0x7c,    14, &share_count_audio);
 	clks[IMX6UL_CLK_SPDIF]		= imx_clk_gate2_shared("spdif",		"spdif_podf",	base + 0x7c,	14, &share_count_audio);
 	clks[IMX6UL_CLK_SPDIF_GCLK]	= imx_clk_gate2_shared("spdif_gclk",	"ipg",		base + 0x7c,	14, &share_count_audio);
 	clks[IMX6UL_CLK_SAI3]		= imx_clk_gate2_shared("sai3",		"sai3_podf",	base + 0x7c,	22, &share_count_sai3);
@@ -372,9 +377,9 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	clks[IMX6UL_CLK_UART7_IPG]	= imx_clk_gate2("uart7_ipg",	"ipg",		base + 0x7c,	26);
 	clks[IMX6UL_CLK_UART7_SERIAL]	= imx_clk_gate2("uart7_serial",	"uart_podf",	base + 0x7c,	26);
 	clks[IMX6UL_CLK_SAI1]		= imx_clk_gate2_shared("sai1",		"sai1_podf",	base + 0x7c,	28, &share_count_sai1);
-	clks[IMX6UL_CLK_SAI1_IPG]	= imx_clk_gate2_shared("sai1-ipg",	"ipg",		base + 0x7c,	28, &share_count_sai1);
+	clks[IMX6UL_CLK_SAI1_IPG]	= imx_clk_gate2_shared("sai1_ipg",	"ipg",		base + 0x7c,	28, &share_count_sai1);
 	clks[IMX6UL_CLK_SAI2]		= imx_clk_gate2_shared("sai2",		"sai2_podf",	base + 0x7c,	30, &share_count_sai2);
-	clks[IMX6UL_CLK_SAI2_IPG]	= imx_clk_gate2_shared("sai2_ipg",	"ipg",		base + 0x7c,	30, &share_count_sai1);
+	clks[IMX6UL_CLK_SAI2_IPG]	= imx_clk_gate2_shared("sai2_ipg",	"ipg",		base + 0x7c,	30, &share_count_sai2);
 
 	/* CCGR6 */
 	clks[IMX6UL_CLK_USBOH3]		= imx_clk_gate2("usboh3",	"ipg",		 base + 0x80,	0);
