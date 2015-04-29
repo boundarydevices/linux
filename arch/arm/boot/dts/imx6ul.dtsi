@@ -842,7 +842,6 @@
 				clocks = <&clks IMX6UL_CLK_PXP>,
 					 <&clks IMX6UL_CLK_DUMMY>;
 				clock-names = "pxp-axi", "disp-axi";
-				power-domains = <&gpc 2>;
 				status = "disabled";
 			};
 
