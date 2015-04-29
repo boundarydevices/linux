@@ -50,8 +50,16 @@
 			gpio = <&gpio4 10 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
 		};
-	};
 
+		reg_can2_3v3: regulator@0 {
+			compatible = "regulator-fixed";
+			reg = <0>;
+			regulator-name = "can2-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio1 15 GPIO_ACTIVE_LOW>;
+		};
+	};
 };
 
 &fec1 {
@@ -83,6 +91,13 @@
 			reg = <2>;
 		};
 	};
+};
+
+&flexcan2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan2>;
+	xceiver-supply = <&reg_can2_3v3>;
+	status = "okay";
 };
 
 &gpc {
@@ -206,6 +221,14 @@
 				MX6UL_PAD_UART3_CTS_B__ENET2_RX_CLK	0x4001b0a8
 				MX6UL_PAD_UART5_RX_DATA__ENET2_COL	0x1b0b0
 				MX6UL_PAD_UART5_TX_DATA__ENET2_CRS	0x1b0b0
+			>;
+		};
+
+		pinctrl_flexcan2: flexcan2grp{
+			fsl,pins = <
+				MX6UL_PAD_UART2_RTS_B__FLEXCAN2_RX	0x1b020
+				MX6UL_PAD_UART2_CTS_B__FLEXCAN2_TX	0x1b020
+				MX6UL_PAD_JTAG_TRST_B__GPIO1_IO15	0x17059	/* STBY */
 			>;
 		};
 
