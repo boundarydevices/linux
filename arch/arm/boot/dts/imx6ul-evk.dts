@@ -50,6 +50,7 @@
 		 * hp-det-polarity = 1: hp detect high for speaker
 		 */
 		hp-det = <3 0>;
+		hp-det-gpios = <&gpio5 4 0>;
 
 		assigned-clocks = <&clks IMX6UL_CLK_AUDIO_SEL>,
 				 <&clks IMX6UL_CLK_AUDIO>;
