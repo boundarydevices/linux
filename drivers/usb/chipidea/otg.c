@@ -294,10 +294,8 @@ static void ci_handle_vbus_glitch(struct ci_hdrc *ci)
 			valid_vbus_change = true;
 	}
 
-	if (valid_vbus_change) {
+	if (valid_vbus_change)
 		ci->b_sess_valid_event = true;
-		ci_otg_queue_work(ci);
-	}
 }
 
 /**
@@ -308,13 +306,12 @@ static void ci_otg_work(struct work_struct *work)
 {
 	struct ci_hdrc *ci = container_of(work, struct ci_hdrc, work);
 
+	disable_irq(ci->irq);
 	if (ci->vbus_glitch_check_event) {
 		ci->vbus_glitch_check_event = false;
 		pm_runtime_get_sync(ci->dev);
 		ci_handle_vbus_glitch(ci);
 		pm_runtime_put_sync(ci->dev);
-		enable_irq(ci->irq);
-		return;
 	}
 
 	if (ci_otg_is_fsm_mode(ci) && !ci_otg_fsm_work(ci)) {
@@ -326,13 +323,12 @@ static void ci_otg_work(struct work_struct *work)
 	if (ci->id_event) {
 		ci->id_event = false;
 		ci_handle_id_switch(ci);
-	} else if (ci->b_sess_valid_event) {
+	}
+	if (ci->b_sess_valid_event) {
 		ci->b_sess_valid_event = false;
 		ci_handle_vbus_change(ci);
-	} else
-		dev_err(ci->dev, "unexpected event occurs at %s\n", __func__);
+	}
 	pm_runtime_put_sync(ci->dev);
-
 	enable_irq(ci->irq);
 }
 
