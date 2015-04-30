@@ -22,6 +22,11 @@
 	memory {
 		reg = <0x80000000 0x40000000>;
 	};
+
+	pxp_v4l2 {
+		compatible = "fsl,imx6ul-pxp-v4l2", "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
+		status = "okay";
+	};
 };
 
 &fec1 {
@@ -62,6 +67,10 @@
 	fsl,cpu_pdnscr_iso = <0x1>;
 	fsl,wdog-reset = <1>; /* watchdog select of reset source */
 	fsl,ldo-bypass = <1>; /* use ldo-bypass, u-boot will check it and configure */
+};
+
+&pxp {
+	status = "okay";
 };
 
 &uart1 {
