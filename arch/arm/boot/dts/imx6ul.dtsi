@@ -39,6 +39,8 @@
 		spi1 = &ecspi2;
 		spi2 = &ecspi3;
 		spi3 = &ecspi4;
+		usbphy0 = &usbphy1;
+		usbphy1 = &usbphy2;
 	};
 
 	cpus {
@@ -512,6 +514,38 @@
 				interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>,
 					     <GIC_SPI 54 IRQ_TYPE_LEVEL_HIGH>,
 					     <GIC_SPI 127 IRQ_TYPE_LEVEL_HIGH>;
+
+				reg_3p0: regulator-3p0@120 {
+					compatible = "fsl,anatop-regulator";
+					regulator-name = "vdd3p0";
+					regulator-min-microvolt = <2625000>;
+					regulator-max-microvolt = <3400000>;
+					anatop-reg-offset = <0x120>;
+					anatop-vol-bit-shift = <8>;
+					anatop-vol-bit-width = <5>;
+					anatop-min-bit-val = <0>;
+					anatop-min-voltage = <2625000>;
+					anatop-max-voltage = <3400000>;
+					anatop-enable-bit = <0>;
+				};
+			};
+
+			usbphy1: usbphy@020c9000 {
+				compatible = "fsl,imx6ul-usbphy", "fsl,imx23-usbphy";
+				reg = <0x020c9000 0x1000>;
+				interrupts = <GIC_SPI 44 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX6UL_CLK_USBPHY1>;
+				phy-3p0-supply = <&reg_3p0>;
+				fsl,anatop = <&anatop>;
+			};
+
+			usbphy2: usbphy@020ca000 {
+				compatible = "fsl,imx6ul-usbphy", "fsl,imx23-usbphy";
+				reg = <0x020ca000 0x1000>;
+				interrupts = <GIC_SPI 45 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX6UL_CLK_USBPHY2>;
+				phy-3p0-supply = <&reg_3p0>;
+				fsl,anatop = <&anatop>;
 			};
 
 			tempmon: tempmon {
@@ -674,6 +708,33 @@
 					interrupts = <0 106 0x4>;
 					status = "disabled";
 				};
+			};
+
+			usbotg1: usb@02184000 {
+				compatible = "fsl,imx6ul-usb", "fsl,imx27-usb";
+				reg = <0x02184000 0x200>;
+				interrupts = <GIC_SPI 43 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX6UL_CLK_USBOH3>;
+				fsl,usbphy = <&usbphy1>;
+				fsl,usbmisc = <&usbmisc 0>;
+				fsl,anatop = <&anatop>;
+				status = "disabled";
+			};
+
+			usbotg2: usb@02184200 {
+				compatible = "fsl,imx6ul-usb", "fsl,imx27-usb";
+				reg = <0x02184200 0x200>;
+				interrupts = <GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX6UL_CLK_USBOH3>;
+				fsl,usbphy = <&usbphy2>;
+				fsl,usbmisc = <&usbmisc 1>;
+				status = "disabled";
+			};
+
+			usbmisc: usbmisc@02184800 {
+				#index-cells = <1>;
+				compatible = "fsl,imx6ul-usbmisc", "fsl,imx6q-usbmisc";
+				reg = <0x02184800 0x200>;
 			};
 
 			fec1: ethernet@02188000 {
