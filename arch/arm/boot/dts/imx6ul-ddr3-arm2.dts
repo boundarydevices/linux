@@ -72,8 +72,12 @@
 
 &uart2 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart2>;
+	pinctrl-0 = <&pinctrl_uart2
+		     &pinctrl_bt>;
 	fsl,uart-has-rtscts;
+	/* for DTE mode, add below change */
+	/* fsl,dte-mode; */
+	/* pinctrl-0 = <&pinctrl_uart2dte>; */
 	status = "okay";
 };
 
@@ -101,6 +105,14 @@
 
 &iomuxc {
 	imx6ul-ddr3-arm2 {
+		pinctrl_bt: btgrp {
+			fsl,pins = <
+				MX6UL_PAD_SNVS_TAMPER6__GPIO5_IO06	0x80000000
+				MX6UL_PAD_SNVS_TAMPER9__GPIO5_IO09	0x80000000
+				MX6UL_PAD_SNVS_TAMPER5__GPIO5_IO05	0x80000000
+			>;
+		};
+
 		pinctrl_enet1: enet1grp {
 			fsl,pins = <
 				MX6UL_PAD_ENET1_RX_EN__ENET1_RX_EN	0x1b0b0
@@ -163,6 +175,15 @@
 				MX6UL_PAD_UART2_RX_DATA__UART2_DCE_RX 0x1b0b1
 				MX6UL_PAD_UART2_CTS_B__UART2_DCE_CTS  0x1b0b1
 				MX6UL_PAD_UART2_RTS_B__UART2_DCE_RTS  0x1b0b1
+			>;
+		};
+
+		pinctrl_uart2dte: uart2dtegrp {
+			fsl,pins = <
+				MX6UL_PAD_UART2_TX_DATA__UART2_DTE_RX 0x1b0b1
+				MX6UL_PAD_UART2_RX_DATA__UART2_DTE_TX 0x1b0b1
+				MX6UL_PAD_UART2_CTS_B__UART2_DTE_RTS  0x1b0b1
+				MX6UL_PAD_UART2_RTS_B__UART2_DTE_CTS  0x1b0b1
 			>;
 		};
 
