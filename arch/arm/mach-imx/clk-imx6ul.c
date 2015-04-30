@@ -409,6 +409,11 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 		imx_clk_prepare_enable(clks[clks_init_on[i]]);
 
+	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
+		imx_clk_prepare_enable(clks[IMX6UL_CLK_USBPHY1_GATE]);
+		imx_clk_prepare_enable(clks[IMX6UL_CLK_USBPHY2_GATE]);
+	}
+
 	/* Set initial power mode */
 	imx6q_set_lpm(WAIT_CLOCKED);
 
