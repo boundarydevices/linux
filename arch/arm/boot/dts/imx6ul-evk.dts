@@ -57,6 +57,30 @@
 		assigned-clock-parents = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
 		assigned-clock-rates = <0>, <12288000>;
 	};
+
+	spi4 {
+		compatible = "spi-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_spi4>;
+		pinctrl-assert-gpios = <&gpio5 8 GPIO_ACTIVE_LOW>;
+		status = "okay";
+		gpio-sck = <&gpio5 11 0>;
+		gpio-mosi = <&gpio5 10 0>;
+		cs-gpios = <&gpio5 7 0>;
+		num-chipselects = <1>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		gpio_spi: gpio_spi@0 {
+			compatible = "fairchild,74hc595";
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0>;
+			registers-number = <1>;
+			registers-default = /bits/ 8 <0xb7>;
+			spi-max-frequency = <100000>;
+		};
+	};
 };
 
 &clks {
@@ -368,6 +392,15 @@
 				MX6UL_PAD_JTAG_TCK__SAI2_RX_DATA	0x130b0
 				MX6UL_PAD_JTAG_TMS__SAI2_MCLK		0x130b0
 				MX6UL_PAD_SNVS_TAMPER4__GPIO5_IO04	0x17059
+			>;
+		};
+
+		pinctrl_spi4: spi4grp {
+			fsl,pins = <
+				MX6UL_PAD_BOOT_MODE0__GPIO5_IO10	0x70a1
+				MX6UL_PAD_BOOT_MODE1__GPIO5_IO11	0x70a1
+				MX6UL_PAD_SNVS_TAMPER7__GPIO5_IO07	0x70a1
+				MX6UL_PAD_SNVS_TAMPER8__GPIO5_IO08	0x80000000
 			>;
 		};
 	};
