@@ -189,6 +189,16 @@
 	status = "okay";
 };
 
+&uart2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart2>;
+	fsl,uart-has-rtscts;
+	/* for DTE mode, add below change */
+	/* fsl,dte-mode; */
+	/* pinctrl-0 = <&pinctrl_uart2dte>; */
+	status = "okay";
+};
+
 &usbotg1 {
 	dr_mode = "peripheral";
 	status = "okay";
@@ -334,6 +344,24 @@
 			fsl,pins = <
 				MX6UL_PAD_UART1_TX_DATA__UART1_DCE_TX 0x1b0b1
 				MX6UL_PAD_UART1_RX_DATA__UART1_DCE_RX 0x1b0b1
+			>;
+		};
+
+		pinctrl_uart2: uart2grp {
+			fsl,pins = <
+				MX6UL_PAD_UART2_TX_DATA__UART2_DCE_TX 0x1b0b1
+				MX6UL_PAD_UART2_RX_DATA__UART2_DCE_RX 0x1b0b1
+				MX6UL_PAD_UART2_CTS_B__UART2_DCE_CTS  0x1b0b1
+				MX6UL_PAD_UART2_RTS_B__UART2_DCE_RTS  0x1b0b1
+			>;
+		};
+
+		pinctrl_uart2dte: uart2dtegrp {
+			fsl,pins = <
+				MX6UL_PAD_UART2_TX_DATA__UART2_DTE_RX 0x1b0b1
+				MX6UL_PAD_UART2_RX_DATA__UART2_DTE_TX 0x1b0b1
+				MX6UL_PAD_UART2_CTS_B__UART2_DTE_RTS  0x1b0b1
+				MX6UL_PAD_UART2_RTS_B__UART2_DTE_CTS  0x1b0b1
 			>;
 		};
 
