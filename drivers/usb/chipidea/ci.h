@@ -230,6 +230,7 @@ struct ci_hdrc {
 	struct usb_role_switch		*role_switch;
 	struct work_struct		work;
 	struct workqueue_struct		*wq;
+	int				wq_ready;
 
 	struct dma_pool			*qh_pool;
 	struct dma_pool			*td_pool;
