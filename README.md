@@ -14,7 +14,7 @@ Android
 -----------
 Latest Jellybean sources are in branch [boundary-jb4.3\_1.0.0-ga][latest-jellybean]
 
-Latest KitKat sources are in branch [boundary-kk4.4.2\_1.0.0-ga][latest-kitkat]
+Latest KitKat sources are in branch [boundary-imx-kk4.4.3\_2.0.0-ga][latest-kitkat]
 
 Non-Android
 ------------------
