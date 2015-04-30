@@ -231,6 +231,7 @@ struct ci_hdrc {
 	enum otg_fsm_timer		next_otg_timer;
 	struct work_struct		work;
 	struct workqueue_struct		*wq;
+	int				wq_ready;
 
 	struct dma_pool			*qh_pool;
 	struct dma_pool			*td_pool;
