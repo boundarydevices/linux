@@ -232,6 +232,7 @@ static void ci_otg_work(struct work_struct *work)
 {
 	struct ci_hdrc *ci = container_of(work, struct ci_hdrc, work);
 
+	disable_irq(ci->irq);
 	if (ci_otg_is_fsm_mode(ci) && !ci_otg_fsm_work(ci)) {
 		enable_irq(ci->irq);
 		return;
