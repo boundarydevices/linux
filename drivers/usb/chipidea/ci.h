@@ -224,6 +224,7 @@ struct ci_hdrc {
 	struct work_struct		hnp_polling_work;
 	struct work_struct		work;
 	struct workqueue_struct		*wq;
+	int				wq_ready;
 
 	struct dma_pool			*qh_pool;
 	struct dma_pool			*td_pool;
