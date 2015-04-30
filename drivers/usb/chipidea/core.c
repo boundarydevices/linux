@@ -594,36 +594,43 @@ static irqreturn_t ci_irq(int irq, void *data)
 	}
 
 	if (ci->is_otg) {
+		int do_queue = 0;
+
 		otgsc = hw_read_otgsc(ci, ~0);
 		if (ci_otg_is_fsm_mode(ci)) {
 			ret = ci_otg_fsm_irq(ci);
 			if (ret == IRQ_HANDLED)
 				return ret;
 		}
-	}
 
-	/*
-	 * Handle id change interrupt, it indicates device/host function
-	 * switch.
-	 */
-	if (ci->is_otg && (otgsc & OTGSC_IDIE) && (otgsc & OTGSC_IDIS)) {
-		ci->id_event = true;
-		/* Clear ID change irq status */
-		hw_write_otgsc(ci, OTGSC_IDIS, OTGSC_IDIS);
-		ci_otg_queue_work(ci);
-		return IRQ_HANDLED;
-	}
+		/*
+		 * Handle id change interrupt, it indicates device/host function
+		 * switch.
+		 */
+		if (!(otgsc & OTGSC_IDIE)) {
+			otgsc &= ~OTGSC_IDIS;
+		} else if (otgsc & OTGSC_IDIS) {
+			ci->id_event = true;
+			do_queue = 1;
+		}
 
-	/*
-	 * Handle vbus change interrupt, it indicates device connection
-	 * and disconnection events.
-	 */
-	if (ci->is_otg && (otgsc & OTGSC_BSVIE) && (otgsc & OTGSC_BSVIS)) {
-		ci->b_sess_valid_event = true;
-		/* Clear BSV irq */
-		hw_write_otgsc(ci, OTGSC_BSVIS, OTGSC_BSVIS);
-		ci_otg_queue_work(ci);
-		return IRQ_HANDLED;
+		/*
+		 * Handle vbus change interrupt, it indicates device connection
+		 * and disconnection events.
+		 */
+		if (!(otgsc & OTGSC_BSVIE)) {
+			otgsc &= ~OTGSC_BSVIS;
+		} else if (otgsc & OTGSC_BSVIS) {
+			ci->b_sess_valid_event = true;
+			do_queue = 1;
+		}
+
+		if (do_queue) {
+			hw_write_otgsc(ci, OTGSC_INT_STATUS_BITS,
+				otgsc & (OTGSC_IDIS | OTGSC_BSVIS));
+			ci_otg_queue_work(ci);
+			return IRQ_HANDLED;
+		}
 	}
 
 	/* Handle device/host interrupt */
@@ -1339,6 +1346,11 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 
 	device_set_wakeup_capable(&pdev->dev, true);
 	dbg_create_files(ci);
+
+	ci->wq_ready = 1;
+	if (ci->is_otg)
+		ci_otg_queue_work(ci);
+
 	/* Init workqueue for controller power lost handling */
 	ci->power_lost_wq = create_freezable_workqueue("ci_power_lost");
 	if (!ci->power_lost_wq) {
