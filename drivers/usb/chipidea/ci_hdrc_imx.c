@@ -78,6 +78,16 @@ static const struct ci_hdrc_imx_platform_flag imx6sx_usb_data = {
 	.burst_length = 0x1010,
 };
 
+static const struct ci_hdrc_imx_platform_flag imx6ul_usb_data = {
+	.flags = CI_HDRC_SUPPORTS_RUNTIME_PM |
+		CI_HDRC_IMX_EHCI_QUIRK |
+		CI_HDRC_OVERRIDE_AHB_BURST |
+		CI_HDRC_OVERRIDE_BURST_LENGTH |
+		CI_HDRC_IMX_VBUS_EARLY_ON,
+	.ahbburst_config = 0,
+	.burst_length = 0x1010,
+};
+
 static const struct ci_hdrc_imx_platform_flag imx7d_usb_data = {
 	.flags = CI_HDRC_SUPPORTS_RUNTIME_PM |
 		CI_HDRC_OVERRIDE_AHB_BURST |
@@ -92,6 +102,7 @@ static const struct of_device_id ci_hdrc_imx_dt_ids[] = {
 	{ .compatible = "fsl,imx6q-usb", .data = &imx6q_usb_data},
 	{ .compatible = "fsl,imx6sl-usb", .data = &imx6sl_usb_data},
 	{ .compatible = "fsl,imx6sx-usb", .data = &imx6sx_usb_data},
+	{ .compatible = "fsl,imx6ul-usb", .data = &imx6ul_usb_data},
 	{ .compatible = "fsl,imx7d-usb", .data = &imx7d_usb_data},
 	{ /* sentinel */ }
 };
