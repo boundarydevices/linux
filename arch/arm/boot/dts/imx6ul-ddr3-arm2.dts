@@ -148,6 +148,12 @@
 			>;
 		};
 
+		pinctrl_pwm1: pmw1grp {
+			fsl,pins = <
+				MX6UL_PAD_ENET1_RX_DATA0__PWM1_OUT 0x110b0
+			>;
+		};
+
 		pinctrl_mqs: mqsgrp {
 			fsl,pins = <
 				MX6UL_PAD_JTAG_TDI__MQS_LEFT         0x4000007f
