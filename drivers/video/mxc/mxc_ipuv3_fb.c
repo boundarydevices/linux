@@ -567,6 +567,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 				dev_err(fbi->device,
 					"failed to alloc PRE\n");
 				mxc_fbi->prefetch = mxc_fbi->cur_prefetch;
+				mxc_fbi->resolve = false;
 				return mxc_fbi->pre_num;
 			}
 		}
