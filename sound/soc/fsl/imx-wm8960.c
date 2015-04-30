@@ -156,7 +156,7 @@ static int imx_wm8960_gpio_init(struct snd_soc_card *card)
 		imx_hp_set_gpio.gpio = priv->hp_set_gpio;
 		imx_hp_set_gpio.jack_status_check = hp_set_status_check;
 
-		ret = snd_soc_jack_new(codec, "Headpset Jack",
+		ret = snd_soc_jack_new(codec, "Headset Jack",
 				SND_JACK_HEADSET, &imx_hp_set);
 		if (ret)
 			return ret;
@@ -297,6 +297,12 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	if (!data->is_codec_master) {
+		ret = snd_soc_dai_set_tdm_slot(cpu_dai, 0, 0, 2, params_width(params));
+		if (ret) {
+			dev_err(dev, "failed to set cpu dai tdm slot: %d\n", ret);
+			return ret;
+		}
+
 		ret = snd_soc_dai_set_sysclk(cpu_dai, 0, 0, SND_SOC_CLOCK_OUT);
 		if (ret) {
 			dev_err(dev, "failed to set cpu sysclk: %d\n", ret);
@@ -317,7 +323,7 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 		if (ret < 0)
 			dev_dbg(dev, "fail to set codec clock frequency.\n");
 		else
-			data->clk_frequency = DEFAULT_MCLK_FREQ;
+			data->clk_frequency = clk_get_rate(data->codec_clk);
 	}
 
 	/* Use MCLK to provide sysclk directly*/
@@ -385,6 +391,20 @@ static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 	return 0;
 }
 
+static u32 imx_wm8960_rates[] = {
+	8000, 16000, 32000, 48000, 64000, 96000
+};
+static struct snd_pcm_hw_constraint_list imx_wm8960_rate_constraints = {
+	.count = ARRAY_SIZE(imx_wm8960_rates),
+	.list = imx_wm8960_rates,
+};
+
+static u32 imx_wm8960_formats[] = {16, 32};
+static struct snd_pcm_hw_constraint_list imx_wm8960_format_constraints = {
+	.count = ARRAY_SIZE(imx_wm8960_formats),
+	.list = imx_wm8960_formats,
+};
+
 static int imx_hifi_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -401,6 +421,18 @@ static int imx_hifi_startup(struct snd_pcm_substream *substream)
 	    data->is_stream_opened[!tx] != sai->is_stream_opened[!tx]) {
 		data->is_stream_opened[tx] = false;
 		return -EBUSY;
+	}
+
+	if (!data->is_codec_master) {
+		ret = snd_pcm_hw_constraint_list(substream->runtime, 0,
+				SNDRV_PCM_HW_PARAM_RATE, &imx_wm8960_rate_constraints);
+		if (ret)
+			return ret;
+
+		ret = snd_pcm_hw_constraint_list(substream->runtime, 0,
+				SNDRV_PCM_HW_PARAM_SAMPLE_BITS, &imx_wm8960_format_constraints);
+		if (ret)
+			return ret;
 	}
 
 	return ret;
