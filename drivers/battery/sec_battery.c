@@ -3775,7 +3775,11 @@ static irqreturn_t sec_ta_irq_thread(int irq, void *irq_data)
 	return IRQ_HANDLED;
 }
 
-#if defined(CONFIG_EXTCON)
+#ifdef CONFIG_EXTCON
+//#define USE_EXTCON
+#endif
+
+#ifdef USE_EXTCON
 static int sec_bat_cable_check(struct sec_battery_info *battery,
 				enum extcon_cable_name attached_dev)
 {
@@ -3914,7 +3918,7 @@ static int batt_handle_notification(struct notifier_block *nb,
 
 	return 0;
 }
-#endif /* CONFIG_EXTCON */
+#endif /* USE_EXTCON */
 
 #ifdef CONFIG_OF
 static int sec_bat_read_u32_index_dt(const struct device_node *np,
@@ -4253,7 +4257,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 	sec_battery_platform_data_t *pdata = NULL;
 	struct sec_battery_info *battery;
 	int ret = 0;
-#if !defined(CONFIG_OF) || defined(CONFIG_EXTCON)
+#if !defined(CONFIG_OF) || defined(USE_EXTCON)
 	int i;
 #endif
 
@@ -4566,7 +4570,7 @@ static int sec_battery_probe(struct platform_device *pdev)
 		goto err_req_ta_irq;
 	}
 
-#if defined(CONFIG_EXTCON)
+#if defined(USE_EXTCON)
 	for (i=0; i < EXTCON_NONE; i++) {
 		battery->extcon_cable_list[i].batt_nb.notifier_call = batt_handle_notification;
 		battery->extcon_cable_list[i].cable_index = i;
