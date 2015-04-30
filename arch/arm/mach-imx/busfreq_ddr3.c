@@ -24,7 +24,7 @@
 #include <asm/mach/map.h>
 #include <asm/mach-types.h>
 #include <asm/tlb.h>
-#include <linux/busfreq-imx6.h>
+#include <linux/busfreq-imx.h>
 #include <linux/clk.h>
 #include <linux/clockchips.h>
 #include <linux/cpumask.h>
@@ -43,7 +43,7 @@
 #include <linux/smp.h>
 
 #include "hardware.h"
-
+#include "common.h"
 
 /*
  * This structure is for passing necessary data for low level ocram
@@ -83,6 +83,11 @@ extern void imx6sx_ddr3_freq_change(struct imx6_busfreq_info *busfreq_info);
 void (*mx6_change_ddr_freq)(u32 freq, void *ddr_settings,
 	bool dll_mode, void *iomux_offsets) = NULL;
 
+#define SMP_WFE_CODE_SIZE	0x400
+void (*imx7d_change_ddr_freq)(u32 freq) = NULL;
+extern void imx7d_ddr3_freq_change(u32 freq);
+extern void imx_lpddr3_freq_change(u32 freq);
+
 extern unsigned int ddr_med_rate;
 extern unsigned int ddr_normal_rate;
 extern int low_bus_freq_mode;
@@ -103,12 +108,14 @@ extern unsigned long imx6sx_ddr3_freq_change_start asm("imx6sx_ddr3_freq_change_
 extern unsigned long imx6sx_ddr3_freq_change_end asm("imx6sx_ddr3_freq_change_end");
 #ifdef CONFIG_SMP
 static unsigned long wfe_freq_change_iram_base;
-u32 *wait_for_ddr_freq_update;
+volatile u32 *wait_for_ddr_freq_update;
 static unsigned int online_cpus;
 static u32 *irqs_used;
 
 void (*wfe_change_ddr_freq)(u32 cpuid, u32 *ddr_freq_change_done);
+void (*imx7_wfe_change_ddr_freq)(u32 cpuid, u32 ocram_base);
 extern void wfe_ddr3_freq_change(u32 cpuid, u32 *ddr_freq_change_done);
+extern void imx7_smp_wfe(u32 cpuid, u32 ocram_base);
 extern unsigned long wfe_ddr3_freq_change_start asm("wfe_ddr3_freq_change_start");
 extern unsigned long wfe_ddr3_freq_change_end asm("wfe_ddr3_freq_change_end");
 extern void __iomem *imx_scu_base;
@@ -220,7 +227,7 @@ int can_change_ddr_freq(void)
  * the rest of the cores have to remain in WFE
  * state until the frequency is changed.
  */
-irqreturn_t wait_in_wfe_irq(int irq, void *dev_id)
+static irqreturn_t wait_in_wfe_irq(int irq, void *dev_id)
 {
 	u32 me;
 
@@ -229,7 +236,12 @@ irqreturn_t wait_in_wfe_irq(int irq, void *dev_id)
 		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER,
 				   &me);
 #endif
-	wfe_change_ddr_freq(0xff << (me * 8), (u32 *)&iram_iomux_settings[0][1]);
+	if (cpu_is_imx7d())
+		imx7_wfe_change_ddr_freq(0x8 * me,
+			(u32)ddr_freq_change_iram_base);
+	else
+		wfe_change_ddr_freq(0xff << (me * 8),
+			(u32 *)&iram_iomux_settings[0][1]);
 
 #ifdef CONFIG_LOCAL_TIMERS
 		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT,
@@ -286,7 +298,7 @@ int update_ddr_freq_imx6sx(int ddr_rate)
 }
 
 /* change the DDR frequency. */
-int update_ddr_freq_imx6q(int ddr_rate)
+int update_ddr_freq_imx_smp(int ddr_rate)
 {
 	int i, j;
 	bool dll_off = false;
@@ -306,31 +318,33 @@ int update_ddr_freq_imx6q(int ddr_rate)
 
 	printk(KERN_DEBUG "\nBus freq set to %d start...\n", ddr_rate);
 
-	if ((mode == BUS_FREQ_LOW) || (mode == BUS_FREQ_AUDIO))
-		dll_off = true;
+	if (cpu_is_imx6()) {
+		if ((mode == BUS_FREQ_LOW) || (mode == BUS_FREQ_AUDIO))
+			dll_off = true;
 
-	iram_ddr_settings[0][0] = ddr_settings_size;
-	iram_iomux_settings[0][0] = iomux_settings_size;
-	if (ddr_rate == ddr_med_rate && cpu_is_imx6q()) {
-		for (i = 0; i < ARRAY_SIZE(ddr3_dll_mx6q); i++) {
-			iram_ddr_settings[i + 1][0] =
-					normal_mmdc_settings[i][0];
-			iram_ddr_settings[i + 1][1] =
-					normal_mmdc_settings[i][1];
-		}
-		for (j = 0, i = ARRAY_SIZE(ddr3_dll_mx6q);
-			i < iram_ddr_settings[0][0]; j++, i++) {
-			iram_ddr_settings[i + 1][0] =
-					ddr3_400[j][0];
-			iram_ddr_settings[i + 1][1] =
-					ddr3_400[j][1];
-		}
-	} else if (ddr_rate == ddr_normal_rate) {
-		for (i = 0; i < iram_ddr_settings[0][0]; i++) {
-			iram_ddr_settings[i + 1][0] =
-					normal_mmdc_settings[i][0];
-			iram_ddr_settings[i + 1][1] =
-					normal_mmdc_settings[i][1];
+		iram_ddr_settings[0][0] = ddr_settings_size;
+		iram_iomux_settings[0][0] = iomux_settings_size;
+		if (ddr_rate == ddr_med_rate && cpu_is_imx6q()) {
+			for (i = 0; i < ARRAY_SIZE(ddr3_dll_mx6q); i++) {
+				iram_ddr_settings[i + 1][0] =
+						normal_mmdc_settings[i][0];
+				iram_ddr_settings[i + 1][1] =
+						normal_mmdc_settings[i][1];
+			}
+			for (j = 0, i = ARRAY_SIZE(ddr3_dll_mx6q);
+				i < iram_ddr_settings[0][0]; j++, i++) {
+				iram_ddr_settings[i + 1][0] =
+						ddr3_400[j][0];
+				iram_ddr_settings[i + 1][1] =
+						ddr3_400[j][1];
+			}
+		} else if (ddr_rate == ddr_normal_rate) {
+			for (i = 0; i < iram_ddr_settings[0][0]; i++) {
+				iram_ddr_settings[i + 1][0] =
+						normal_mmdc_settings[i][0];
+				iram_ddr_settings[i + 1][1] =
+						normal_mmdc_settings[i][1];
+			}
 		}
 	}
 
@@ -343,8 +357,12 @@ int update_ddr_freq_imx6q(int ddr_rate)
 	/* Make sure all the online cores are active */
 	while (1) {
 		bool not_exited_busfreq = false;
+		u32 reg;
 		for_each_online_cpu(cpu) {
-			u32 reg = __raw_readl(imx_scu_base + 0x08);
+			if (cpu_is_imx6())
+				reg = __raw_readl(imx_scu_base + 0x08);
+			else
+				reg = *(wait_for_ddr_freq_update + 1);
 			if (reg & (0x02 << (cpu * 8)))
 				not_exited_busfreq = true;
 		}
@@ -355,8 +373,10 @@ int update_ddr_freq_imx6q(int ddr_rate)
 	wmb();
 	*wait_for_ddr_freq_update = 1;
 	dsb();
-
-	online_cpus = readl_relaxed(imx_scu_base + 0x08);
+	if (cpu_is_imx6())
+		online_cpus = readl_relaxed(imx_scu_base + 0x08);
+	else
+		online_cpus = *(wait_for_ddr_freq_update + 1);
 	for_each_online_cpu(cpu) {
 		*((char *)(&online_cpus) + (u8)cpu) = 0x02;
 		if (cpu != me) {
@@ -368,7 +388,11 @@ int update_ddr_freq_imx6q(int ddr_rate)
 	}
 	/* Wait for the other active CPUs to idle */
 	while (1) {
-		u32 reg = readl_relaxed(imx_scu_base + 0x08);
+		u32 reg;
+		if (cpu_is_imx6())
+			reg = readl_relaxed(imx_scu_base + 0x08);
+		else
+			reg = *(wait_for_ddr_freq_update + 1);
 		reg |= (0x02 << (me * 8));
 		if (reg == online_cpus)
 			break;
@@ -377,12 +401,18 @@ int update_ddr_freq_imx6q(int ddr_rate)
 
 	/* Ensure iram_tlb_phys_addr is flushed to DDR. */
 	__cpuc_flush_dcache_area(&iram_tlb_phys_addr, sizeof(iram_tlb_phys_addr));
-	outer_clean_range(virt_to_phys(&iram_tlb_phys_addr), virt_to_phys(&iram_tlb_phys_addr + 1));
+	if (cpu_is_imx6())
+		outer_clean_range(virt_to_phys(&iram_tlb_phys_addr),
+			virt_to_phys(&iram_tlb_phys_addr + 1));
 
 	ttbr1 = save_ttbr1();
 	/* Now we can change the DDR frequency. */
-	mx6_change_ddr_freq(ddr_rate, iram_ddr_settings,
-		dll_off, iram_iomux_settings);
+	if (cpu_is_imx6())
+		mx6_change_ddr_freq(ddr_rate, iram_ddr_settings,
+			dll_off, iram_iomux_settings);
+	else
+		imx7d_change_ddr_freq(ddr_rate);
+
 	restore_ttbr1(ttbr1);
 	curr_ddr_rate = ddr_rate;
 
@@ -646,6 +676,73 @@ int init_mmdc_ddr3_settings_imx6q(struct platform_device *busfreq_pdev)
 			iram_iomux_settings[i+1][1] = iomux_offsets_mx6dl[i][1];
 		}
 	}
+
+	curr_ddr_rate = ddr_normal_rate;
+
+	return 0;
+}
+
+int init_ddrc_ddr_settings(struct platform_device *busfreq_pdev)
+{
+	int ddr_type = imx_ddrc_get_ddr_type();
+#ifdef CONFIG_SMP
+	struct device_node *node;
+	u32 cpu;
+	struct device *dev = &busfreq_pdev->dev;
+	int err;
+	node = of_find_compatible_node(NULL, NULL, "arm,cortex-a7-gic");
+	if (!node) {
+		printk(KERN_ERR "failed to find imx7d-a7-gic device tree data!\n");
+		return -EINVAL;
+	}
+	gic_dist_base = of_iomap(node, 0);
+	WARN(!gic_dist_base, "unable to map gic dist registers\n");
+
+	irqs_used = devm_kzalloc(dev, sizeof(u32) * num_present_cpus(),
+					GFP_KERNEL);
+	for_each_online_cpu(cpu) {
+		int irq;
+
+		/*
+		 * set up a reserved interrupt to get all
+		 * the active cores into a WFE state
+		 * before changing the DDR frequency.
+		 */
+		irq = platform_get_irq(busfreq_pdev, cpu);
+		err = request_irq(irq, wait_in_wfe_irq,
+			IRQF_PERCPU, "ddrc", NULL);
+		if (err) {
+			dev_err(dev,
+				"Busfreq:request_irq failed %d, err = %d\n",
+				irq, err);
+			return err;
+		}
+		err = irq_set_affinity(irq, cpumask_of(cpu));
+		if (err) {
+			dev_err(dev,
+				"Busfreq: Cannot set irq affinity irq=%d,\n",
+				irq);
+			return err;
+		}
+		irqs_used[cpu] = irq;
+	}
+	/* Store the variable used to communicate between cores */
+	wait_for_ddr_freq_update = (u32 *)ddr_freq_change_iram_base;
+	imx7_wfe_change_ddr_freq = (void *)fncpy(
+		(void *)ddr_freq_change_iram_base + 0x8,
+		&imx7_smp_wfe, SMP_WFE_CODE_SIZE - 0x8);
+#endif
+	if (ddr_type == IMX_DDR_TYPE_DDR3)
+		imx7d_change_ddr_freq = (void *)fncpy(
+			(void *)ddr_freq_change_iram_base + SMP_WFE_CODE_SIZE,
+			&imx7d_ddr3_freq_change,
+			MX7_BUSFREQ_OCRAM_SIZE - SMP_WFE_CODE_SIZE);
+	else if (ddr_type == IMX_DDR_TYPE_LPDDR3)
+		imx7d_change_ddr_freq = (void *)fncpy(
+				(void *)ddr_freq_change_iram_base +
+				SMP_WFE_CODE_SIZE,
+				&imx_lpddr3_freq_change,
+				MX7_BUSFREQ_OCRAM_SIZE - SMP_WFE_CODE_SIZE);
 
 	curr_ddr_rate = ddr_normal_rate;
 

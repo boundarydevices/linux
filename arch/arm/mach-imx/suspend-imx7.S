@@ -129,7 +129,7 @@
 	ldr	r6, =0x0
 	mcr	p15, 0, r6, c7, c1, 6
 
-	ldr	r6, =imx7_iram_tlb_phys_addr
+	ldr	r6, =iram_tlb_phys_addr
 	ldr	r6, [r6]
 	dsb
 	isb
@@ -302,6 +302,7 @@
 	orr	r7, r7, #0x1
 	str	r7, [r11, r6]
 	/* turn off ddr power */
+	ldr	r11, [r0, #PM_INFO_MX7_ANATOP_V_OFFSET]
 	ldr	r7, =(0x1 << 29)
 	str	r7, [r11, #ANADIG_SNVS_MISC_CTRL]
 

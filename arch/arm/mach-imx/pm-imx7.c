@@ -57,8 +57,8 @@
 #define UART_UBRC	0xac
 #define UART_UTS	0xb4
 
-unsigned long imx7_iram_tlb_base_addr;
-unsigned long imx7_iram_tlb_phys_addr;
+extern unsigned long iram_tlb_base_addr;
+extern unsigned long iram_tlb_phys_addr;
 
 static unsigned int *ocram_saved_in_ddr;
 static void __iomem *ocram_base;
@@ -311,7 +311,7 @@ static int imx7_pm_enter(suspend_state_t state)
 {
 	unsigned int console_saved_reg[10] = {0};
 
-	if (!imx7_iram_tlb_base_addr) {
+	if (!iram_tlb_base_addr) {
 		pr_warn("No IRAM/OCRAM memory allocated for suspend/resume \
 			 code. Please ensure device tree has an entry for \
 			 fsl,lpm-sram.\n");
@@ -387,8 +387,8 @@ static int __init imx7_dt_find_lpsram(unsigned long node, const char *uname,
 		/* We need to create a 1M page table entry. */
 		iram_tlb_io_desc.virtual = IMX_IO_P2V(lpram_addr & 0xFFF00000);
 		iram_tlb_io_desc.pfn = __phys_to_pfn(lpram_addr & 0xFFF00000);
-		imx7_iram_tlb_phys_addr = lpram_addr;
-		imx7_iram_tlb_base_addr = IMX_IO_P2V(lpram_addr);
+		iram_tlb_phys_addr = lpram_addr;
+		iram_tlb_base_addr = IMX_IO_P2V(lpram_addr);
 		iotable_init(&iram_tlb_io_desc, 1);
 	}
 
@@ -407,13 +407,13 @@ void __init imx7_pm_map_io(void)
 	WARN_ON(of_scan_flat_dt(imx7_dt_find_lpsram, NULL));
 
 	/* Return if no IRAM space is allocated for suspend/resume code. */
-	if (!imx7_iram_tlb_base_addr) {
+	if (!iram_tlb_base_addr) {
 		pr_warn("No valid ocram avaiable for suspend/resume!\n");
 		return;
 	}
 
 	/* Set all entries to 0. */
-	memset((void *)imx7_iram_tlb_base_addr, 0, MX7_IRAM_TLB_SIZE);
+	memset((void *)iram_tlb_base_addr, 0, MX7_IRAM_TLB_SIZE);
 
 	/*
 	 * Make sure the IRAM virtual address has a mapping in the IRAM
@@ -423,9 +423,9 @@ void __init imx7_pm_map_io(void)
 	 * address in the page table as only these bits are required
 	 * for 1M mapping.
 	 */
-	j = ((imx7_iram_tlb_base_addr >> 20) << 2) / 4;
-	*((unsigned long *)imx7_iram_tlb_base_addr + j) =
-		(imx7_iram_tlb_phys_addr & 0xFFF00000) | TT_ATTRIB_NON_CACHEABLE_1M;
+	j = ((iram_tlb_base_addr >> 20) << 2) / 4;
+	*((unsigned long *)iram_tlb_base_addr + j) =
+		(iram_tlb_phys_addr & 0xFFF00000) | TT_ATTRIB_NON_CACHEABLE_1M;
 
 	/*
 	 * Make sure the AIPS1 virtual address has a mapping in the
@@ -433,7 +433,7 @@ void __init imx7_pm_map_io(void)
 	 */
 	for (i = 0; i < 4; i++) {
 		j = ((IMX_IO_P2V(MX7D_AIPS1_BASE_ADDR + i * 0x100000) >> 20) << 2) / 4;
-		*((unsigned long *)imx7_iram_tlb_base_addr + j) =
+		*((unsigned long *)iram_tlb_base_addr + j) =
 			((MX7D_AIPS1_BASE_ADDR + i * 0x100000) & 0xFFF00000) |
 			TT_ATTRIB_NON_CACHEABLE_1M;
 	}
@@ -444,7 +444,7 @@ void __init imx7_pm_map_io(void)
 	 */
 	for (i = 0; i < 4; i++) {
 		j = ((IMX_IO_P2V(MX7D_AIPS2_BASE_ADDR + i * 0x100000) >> 20) << 2) / 4;
-		*((unsigned long *)imx7_iram_tlb_base_addr + j) =
+		*((unsigned long *)iram_tlb_base_addr + j) =
 			((MX7D_AIPS2_BASE_ADDR + i * 0x100000) & 0xFFF00000) |
 			TT_ATTRIB_NON_CACHEABLE_1M;
 	}
@@ -455,7 +455,7 @@ void __init imx7_pm_map_io(void)
 	 */
 	for (i = 0; i < 4; i++) {
 		j = ((IMX_IO_P2V(MX7D_AIPS3_BASE_ADDR + i * 0x100000) >> 20) << 2) / 4;
-		*((unsigned long *)imx7_iram_tlb_base_addr + j) =
+		*((unsigned long *)iram_tlb_base_addr + j) =
 			((MX7D_AIPS3_BASE_ADDR + i * 0x100000) & 0xFFF00000) |
 			TT_ATTRIB_NON_CACHEABLE_1M;
 	}
@@ -483,7 +483,7 @@ static int __init imx7_suspend_init(const struct imx7_pm_socdata *socdata)
 	 * pm_info.
 	 *
 	 */
-	iram_paddr = imx7_iram_tlb_phys_addr + MX7_SUSPEND_IRAM_ADDR_OFFSET;
+	iram_paddr = iram_tlb_phys_addr + MX7_SUSPEND_IRAM_ADDR_OFFSET;
 
 	/* Make sure iram_paddr is 8 byte aligned. */
 	if ((uintptr_t)(iram_paddr) & (FNCPY_ALIGN - 1))
@@ -607,7 +607,7 @@ void __init imx7d_pm_init(void)
 	else if (imx_ddrc_get_ddr_type() == IMX_DDR_TYPE_DDR3)
 		imx7_pm_common_init(&imx7d_pm_data_ddr3);
 
-	np = of_find_compatible_node(NULL, NULL, "mmio-sram");
+	np = of_find_compatible_node(NULL, NULL, "fsl,mega-fast-sram");
 	ocram_base = of_iomap(np, 0);
 	WARN_ON(!ocram_base);
 	WARN_ON(of_address_to_resource(np, 0, &res));
