@@ -31,7 +31,7 @@ These branches are based on Freescale releases of the same name (minus the 'boun
 [nitrogen6x-som]:http://boundarydevices.com/products/nitrogen6x-som "Nitrogen6X SOM product page"
 [nitrogen6-lite]:http://boundarydevices.com/products/nitrogen6_lite "Nitrogen6_Lite product page"
 [latest-jellybean]:http://github.com/boundarydevices/linux-imx6/tree/boundary-jb4.3_1.0.0-ga "Boundary Jellybean kernel tree"
-[latest-kitkat]:http://github.com/boundarydevices/linux-imx6/tree/boundary-kk4.4.2_1.0.0-ga "Boundary KitKat kernel tree"
+[latest-kitkat]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-kk4.4.3_2.0.0-ga "Boundary KitKat kernel tree"
 [latest-3.0.35]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.0.35_4.1.0 "Boundary 3.0.35 4.1.0 kernel tree"
 [latest-3.10.17]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.10.17_1.0.2_ga "Boundary 3.10.17 kernel tree"
 
