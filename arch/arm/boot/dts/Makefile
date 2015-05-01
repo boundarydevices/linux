@@ -121,6 +121,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6dl-nitrogen6_mtp.dtb \
 	imx6dl-nitrogen6_vm.dtb \
 	imx6dl-nitrogen6_vm-magstripe.dtb \
+	imx6dl-nitrogen6_vm-pt.dtb \
 	imx6dl-per.dtb \
 	imx6dl-sabreauto.dtb \
 	imx6dl-sabreauto-ecspi.dtb \
