@@ -639,6 +639,16 @@ config MSM_SMD_PKT
 	  Enables userspace clients to read and write to some packet SMD
 	  ports via device interface for MSM chipset.
 
+config SAS
+	tristate "Slot Accounting Service driver"
+	default n
+	help
+	   This driver enables support for a 9-bit serial driver that
+	   uses MARK/SPACE parity to frame messages for the Slot Accounting
+	   System (SAS) protocol.
+
+	   If compiled as a module, it will be named sas.ko
+
 config TILE_SROM
 	bool "Character-device access via hypervisor to the Tilera SPI ROM"
 	depends on TILE
