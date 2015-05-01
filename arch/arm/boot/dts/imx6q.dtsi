@@ -82,7 +82,7 @@
 
 	soc {
 		busfreq {
-			compatible = "fsl,imx6_busfreq";
+			compatible = "fsl,imx_busfreq";
 			clocks = <&clks 171>, <&clks 6>, <&clks 11>, <&clks 104>, <&clks 172>, <&clks 58>,
 				<&clks 18>, <&clks 60>, <&clks 20>, <&clks 3>;
 			clock-names = "pll2_bus", "pll2_pfd2_396m", "pll2_198m", "arm", "pll3_usb_otg", "periph",

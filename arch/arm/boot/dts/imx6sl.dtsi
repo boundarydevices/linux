@@ -110,7 +110,7 @@
 		ranges;
 
 		busfreq { /* BUSFREQ */
-			compatible = "fsl,imx6_busfreq";
+			compatible = "fsl,imx_busfreq";
 			clocks = <&clks IMX6SL_CLK_PLL2_BUS>, <&clks IMX6SL_CLK_PLL2_PFD2>,
 					<&clks IMX6SL_CLK_PLL2_198M>, <&clks IMX6SL_CLK_ARM>,
 					<&clks IMX6SL_CLK_PLL3_USB_OTG>, <&clks IMX6SL_CLK_PERIPH>,
