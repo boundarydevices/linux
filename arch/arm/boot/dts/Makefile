@@ -273,6 +273,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nitrogen6_vm.dtb \
 	imx6dl-nitrogen6_vm-magstripe.dtb \
+	imx6dl-nitrogen6_vm-pt.dtb \
 	imx6dl-nitrogen6x.dtb \
 	imx6dl-per.dtb \
 	imx6dl-phytec-pbab01.dtb \
