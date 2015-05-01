@@ -744,7 +744,7 @@ static struct spi_imx_devtype_data imx6ul_ecspi_devtype_data = {
 	.devtype = IMX6UL_ECSPI,
 };
 
-static struct platform_device_id spi_imx_devtype[] = {
+static const struct platform_device_id spi_imx_devtype[] = {
 	{
 		.name = "imx1-cspi",
 		.driver_data = (kernel_ulong_t) &imx1_cspi_devtype_data,
