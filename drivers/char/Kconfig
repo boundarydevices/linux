@@ -618,6 +618,16 @@ config DEVPORT
 
 source "drivers/s390/char/Kconfig"
 
+config SAS
+	tristate "Slot Accounting Service driver"
+	default n
+	help
+	   This driver enables support for a 9-bit serial driver that
+	   uses MARK/SPACE parity to frame messages for the Slot Accounting
+	   System (SAS) protocol.
+
+	   If compiled as a module, it will be named sas.ko
+
 config TILE_SROM
 	bool "Character-device access via hypervisor to the Tilera SPI ROM"
 	depends on TILE
