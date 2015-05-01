@@ -1,0 +1,47 @@
+/*
+ * Copyright 2013 Boundary Devices
+ * Copyright 2012 Freescale Semiconductor, Inc.
+ * Copyright 2011 Linaro Ltd.
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "imx6dl.dtsi"
+#include "imx6qdl-nitrogen6_vm.dtsi"
+
+/ {
+	model = "Freescale i.MX6 Solo Nitrogen6_vm Board";
+	compatible = "fsl,imx6dl-nitrogen6_vm", "fsl,imx6dl", "fsl,imx6q";
+	sas: sas@021ec000 {
+		compatible = "boundary,sas";
+		reg = <0x021ec000 0x4000>;
+		interrupt-parent = <&gpc>;
+		interrupts = <0 28 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clks IMX6QDL_CLK_UART_IPG>,
+			 <&clks IMX6QDL_CLK_UART_SERIAL>;
+		clock-names = "ipg", "per";
+		status = "okay";
+		baud = <19200>;
+		interbyte_delay = <5>;
+		rxbufsize = <4096>;
+		txbufsize = <4096>;
+		maxtxmsg = <512>;
+		flush_on_mark = <0>;
+	};
+};
+
+&magstripe {
+	status = "okay";
+};
+
+&uart3 {
+	status = "disabled";
+};
