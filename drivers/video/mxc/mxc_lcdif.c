@@ -53,7 +53,7 @@ static struct fb_videomode lcdif_modedb[] = {
 	 "okaya_480x272", 60, 480, 272, 97786,
 	 .left_margin = 2, .right_margin = 1,
 	 .upper_margin = 3, .lower_margin = 2,
-	 .hsync_len = 41, .vsync_len = 10,
+	 .hsync_len = 41, .vsync_len = 9,
 	 .sync = FB_SYNC_CLK_LAT_FALL,
 	 .vmode = FB_VMODE_NONINTERLACED,
 	 .flag = 0,},
