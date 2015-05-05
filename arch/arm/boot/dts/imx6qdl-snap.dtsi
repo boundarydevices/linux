@@ -487,7 +487,6 @@
 	non-removable;
 	vqmmc-1-8-v;
 	vmmc-supply = <&reg_1p8v>;
-	ocr-limit = <0x80>;     /* 1.65v - 1.95v */
 	keep-power-in-suspend;
 	status = "okay";
 };
