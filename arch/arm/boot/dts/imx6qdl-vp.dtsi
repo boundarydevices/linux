@@ -934,7 +934,7 @@
 	vqmmc-1-8-v;
 	power-gpio = GP_BRM_WL_EN;
 	ocr-limit = <0x180>;     /* 1.65v - 2.1v */
-	power-off-card;
+	cap-power-off-card;
 	keep-power-in-suspend;
 	status = "okay";
 };
