@@ -264,7 +264,8 @@ static int rv4162_i2c_set_alarm(struct i2c_client *client,
 	return 0;
 }
 
-static int rv4162_rtc_toggle_alarm(struct i2c_client *client, int enable)
+static int rv4162_i2c_alarm_irq_enable(struct i2c_client *client,
+		unsigned int enable)
 {
 	int month = i2c_smbus_read_byte_data(client, 0x0a);
 
@@ -313,7 +314,7 @@ static irqreturn_t rv4162_rtc_interrupt(int irq, void *data)
 		rtc_update_irq(rtc, 1, RTC_IRQF | RTC_AF);
 
 		/* Disable the alarm */
-		err = rv4162_rtc_toggle_alarm(client, 0);
+		err = rv4162_i2c_alarm_irq_enable(client, 0);
 		if (!err)
 			handled = 1;
 	}
@@ -340,6 +341,10 @@ static int rv4162_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 	return rv4162_i2c_set_alarm(to_i2c_client(dev), alarm);
 }
 
+static int rv4162_rtc_alarm_irq_enable(struct device *dev, unsigned int enable)
+{
+	return rv4162_i2c_alarm_irq_enable(to_i2c_client(dev), enable);
+}
 
 static const struct rtc_class_ops rv4162_rtc_ops = {
 	.proc = rv4162_rtc_proc,
@@ -347,6 +352,7 @@ static const struct rtc_class_ops rv4162_rtc_ops = {
 	.set_time = rv4162_rtc_set_time,
 	.read_alarm = rv4162_rtc_read_alarm,
 	.set_alarm = rv4162_rtc_set_alarm,
+	.alarm_irq_enable = rv4162_rtc_alarm_irq_enable,
 };
 
 static int rv4162_remove(struct i2c_client *client)
@@ -394,7 +400,7 @@ static int rv4162_probe(struct i2c_client *client,
 	if (client->irq > 0) {
 		int rc = request_threaded_irq(client->irq, NULL,
 					  rv4162_rtc_interrupt,
-					  IRQF_SHARED | IRQF_ONESHOT,
+					  IRQF_SHARED | IRQF_ONESHOT | IRQF_TRIGGER_LOW,
 					  rv4162_driver.driver.name, client);
 		if (!rc) {
 			device_init_wakeup(&client->dev, 1);
