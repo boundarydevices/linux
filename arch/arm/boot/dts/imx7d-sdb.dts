@@ -97,6 +97,9 @@
 		codec-master;
 		/* JD2: hp detect high for headphone*/
 		hp-det = <2 0>;
+		audio-routing =
+			"LINPUT1", "Main MIC",
+			"Main MIC", "MICB";
 	};
 
 	sound-hdmi {
