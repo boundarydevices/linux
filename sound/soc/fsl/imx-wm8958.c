@@ -23,6 +23,7 @@
 #include <sound/soc-dapm.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/mfd/wm8994/registers.h>
+#include <linux/mfd/syscon.h>
 #include "../fsl/fsl_sai.h"
 #include "../codecs/wm8994.h"
 
@@ -37,6 +38,7 @@ struct imx_wm8958_data {
 	unsigned int clk_frequency;
 	bool is_codec_master;
 	int sr_stream[2];
+	struct regmap *gpr;
 };
 
 struct imx_priv {
@@ -395,7 +397,7 @@ static int imx_wm8958_set_bias_level_post(struct snd_soc_card *card,
 
 static int imx_wm8958_probe(struct platform_device *pdev)
 {
-	struct device_node *cpu_np, *codec_np;
+	struct device_node *cpu_np, *codec_np, *gpr_np;
 	struct device_node *np = pdev->dev.of_node;
 	struct platform_device *cpu_pdev;
 	struct imx_priv *priv = &card_priv;
@@ -437,6 +439,18 @@ static int imx_wm8958_probe(struct platform_device *pdev)
 	if (!data) {
 		ret = -ENOMEM;
 		goto fail;
+	}
+
+	gpr_np = of_parse_phandle(pdev->dev.of_node, "gpr", 0);
+	if (gpr_np) {
+		data->gpr = syscon_node_to_regmap(gpr_np);
+		if (IS_ERR(data->gpr)) {
+			ret = PTR_ERR(data->gpr);
+			dev_err(&pdev->dev, "failed to get gpr regmap\n");
+			goto fail;
+		}
+		if (data->gpr)
+			regmap_update_bits(data->gpr, 4, 1<<20, 1<<20);
 	}
 
 	if (of_property_read_bool(np, "codec-master")) {
