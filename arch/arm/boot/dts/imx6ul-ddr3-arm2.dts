@@ -157,6 +157,13 @@
 			>;
 		};
 
+		pinctrl_i2c4: i2c4grp {
+			fsl,pins = <
+				MX6UL_PAD_UART2_TX_DATA__I2C4_SCL	0x4001b8b0
+				MX6UL_PAD_UART2_RX_DATA__I2C4_SDA	0x4001b8b0
+			>;
+		};
+
 		pinctrl_lcdif_dat: lcdifdatgrp {
 			fsl,pins = <
 				MX6UL_PAD_LCD_DATA00__LCDIF_DATA00  0x79
@@ -206,6 +213,17 @@
 			fsl,pins = <
 				MX6UL_PAD_JTAG_TDI__MQS_LEFT         0x4000007f
 				MX6UL_PAD_JTAG_TDO__MQS_RIGHT        0x4000007f
+			>;
+		};
+
+		pinctrl_sai2: sai2grp {
+			fsl,pins = <
+				MX6UL_PAD_SD1_DATA0__SAI2_TX_SYNC     0x1b0b0
+				MX6UL_PAD_SD1_DATA1__SAI2_TX_BCLK     0x1b0b0
+				MX6UL_PAD_SD1_DATA2__SAI2_RX_DATA     0x1b0b0
+				MX6UL_PAD_SD1_DATA3__SAI2_TX_DATA     0x1b0b0
+				MX6UL_PAD_SD1_CLK__SAI2_MCLK          0x1b0b0
+				MX6UL_PAD_SNVS_TAMPER0__GPIO5_IO00   0x17059
 			>;
 		};
 

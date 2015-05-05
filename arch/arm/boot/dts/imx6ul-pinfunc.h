@@ -816,7 +816,7 @@
 #define	MX6UL_PAD_SD1_DATA1__USB_OTG2_PWR                        	0x01C8 0x0454 0x0000 8 0
 #define	MX6UL_PAD_SD1_DATA2__USDHC1_DATA2                        	0x01CC 0x0458 0x0000 0 0
 #define	MX6UL_PAD_SD1_DATA2__GPT2_CAPTURE1                       	0x01CC 0x0458 0x0598 1 1
-#define	MX6UL_PAD_SD1_DATA2__SAI2_RX_DATA                        	0x01CC 0x0458 0x0000 2 0
+#define	MX6UL_PAD_SD1_DATA2__SAI2_RX_DATA                        	0x01CC 0x0458 0x05F4 2 1
 #define	MX6UL_PAD_SD1_DATA2__FLEXCAN2_TX                         	0x01CC 0x0458 0x0000 3 0
 #define	MX6UL_PAD_SD1_DATA2__EIM_ADDR23                          	0x01CC 0x0458 0x0000 4 0
 #define	MX6UL_PAD_SD1_DATA2__GPIO2_IO20                          	0x01CC 0x0458 0x0000 5 0
