@@ -851,4 +851,14 @@ config INPUT_SC27XX_VIBRA
 	  To compile this driver as a module, choose M here. The module will
 	  be called sc27xx_vibra.
 
+config INPUT_MPL3115
+	tristate "MPL3115 pressure temperature sensor"
+	depends on I2C && SYSFS
+	help
+	  If you say yes here you get support for the Freescale MPL3115
+	  pressure temperature sensor.
+
+	  This driver can also be built as a module.  If so, the module
+	  will be called mpl3115
+
 endif
