@@ -131,25 +131,6 @@ static const struct snd_soc_dapm_widget imx_wm8960_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Main MIC", NULL),
 };
 
-static const struct snd_soc_dapm_route imx_wm8960_dapm_route[] = {
-	{"Headset Jack", NULL, "HP_L"},
-	{"Headset Jack", NULL, "HP_R"},
-	{"Ext Spk", NULL, "SPK_LP"},
-	{"Ext Spk", NULL, "SPK_LN"},
-	{"Ext Spk", NULL, "SPK_RP"},
-	{"Ext Spk", NULL, "SPK_RN"},
-	{"LINPUT2", NULL, "Hp MIC"},
-	{"LINPUT3", NULL, "Hp MIC"},
-	{"RINPUT1", NULL, "Main MIC"},
-	{"RINPUT2", NULL, "Main MIC"},
-	{"Hp MIC", NULL, "MICB"},
-	{"Main MIC", NULL, "MICB"},
-	{"CPU-Playback",  NULL, "ASRC-Playback"},
-	{"Playback",  NULL, "CPU-Playback"},/* dai route for be and fe */
-	{"ASRC-Capture",  NULL, "CPU-Capture"},
-	{"CPU-Capture",  NULL, "Capture"}, /* dai route for be and fe */
-};
-
 static int imx_wm8960_gpio_init(struct snd_soc_card *card)
 {
 	struct snd_soc_dai *codec_dai = card->rtd[0].codec_dai;
@@ -656,8 +637,11 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 		goto fail;
 	data->card.dapm_widgets = imx_wm8960_dapm_widgets;
 	data->card.num_dapm_widgets = ARRAY_SIZE(imx_wm8960_dapm_widgets);
-	data->card.dapm_routes = imx_wm8960_dapm_route;
-	data->card.num_dapm_routes = ARRAY_SIZE(imx_wm8960_dapm_route);
+
+	ret = snd_soc_of_parse_audio_routing(&data->card, "audio-routing");
+	if (ret)
+		goto fail;
+
 	data->card.late_probe = imx_wm8960_late_probe;
 
 	platform_set_drvdata(pdev, &data->card);
