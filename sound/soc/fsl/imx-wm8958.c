@@ -353,7 +353,7 @@ static int imx_wm8958_set_bias_level(struct snd_soc_card *card,
 
 	switch (level) {
 	case SND_SOC_BIAS_STANDBY:
-		if (dapm->bias_level == SND_SOC_BIAS_OFF) {
+		if (card->dapm.bias_level == SND_SOC_BIAS_OFF) {
 			if (!IS_ERR(data->mclk)) {
 				ret = clk_prepare_enable(data->mclk);
 				if (ret) {
@@ -382,7 +382,7 @@ static int imx_wm8958_set_bias_level_post(struct snd_soc_card *card,
 
 	switch (level) {
 	case SND_SOC_BIAS_OFF:
-		if (dapm->bias_level == SND_SOC_BIAS_STANDBY)
+		if (card->dapm.bias_level == SND_SOC_BIAS_STANDBY)
 			if (!IS_ERR(data->mclk))
 				clk_disable_unprepare(data->mclk);
 		break;
@@ -390,7 +390,7 @@ static int imx_wm8958_set_bias_level_post(struct snd_soc_card *card,
 		break;
 	}
 
-	dapm->bias_level = level;
+	card->dapm.bias_level = level;
 
 	return 0;
 }
