@@ -128,7 +128,7 @@
 			#gpio-cells = <2>;
 			reg = <0>;
 			registers-number = <1>;
-			registers-default = /bits/ 8 <0x44>; /* Enable PERI_3V3 and HDMI_RST*/
+			registers-default = /bits/ 8 <0x54>; /* Enable PERI_3V3, SENSOR_RST_B and HDMI_RST*/
 			spi-max-frequency = <100000>;
 		};
 	};
@@ -320,6 +320,21 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
+
+	fxas2100x@20 {
+		compatible = "fsl,fxas2100x";
+		reg = <0x20>;
+	};
+
+	fxos8700@1e {
+		compatible = "fsl,fxos8700";
+		reg = <0x1e>;
+	};
+
+	mpl3115@60 {
+		compatible = "fsl,mpl3115";
+		reg = <0x60>;
+	};
 };
 
 &i2c3 {
