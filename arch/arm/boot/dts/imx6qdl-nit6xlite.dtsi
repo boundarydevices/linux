@@ -781,7 +781,6 @@
 	vmmc-supply = <&reg_3p3v>;
 	vqmmc-supply = <&reg_brm_wifi>;
 	vqmmc-1-8-v;
-	ocr-limit = <0x180>;     /* 1.65v - 2.1v */
 	cap-power-off-card;
 	keep-power-in-suspend;
 	status = "okay";
