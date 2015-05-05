@@ -30,7 +30,6 @@
 #define DEFAULT_MCLK_FREQ (12000000)
 
 struct imx_wm8960_data {
-	struct snd_soc_dai_link dai;
 	struct snd_soc_card card;
 	char codec_dai_name[DAI_NAME_SIZE];
 	char platform_name[DAI_NAME_SIZE];
@@ -41,6 +40,8 @@ struct imx_wm8960_data {
 	bool is_stream_opened[2];
 	struct regmap *gpr;
 	unsigned int hp_det[2];
+	u32 asrc_rate;
+	u32 asrc_format;
 };
 
 struct imx_priv {
@@ -49,6 +50,7 @@ struct imx_priv {
 	struct snd_kcontrol *headset_kctl;
 	struct snd_soc_codec *codec;
 	struct platform_device *pdev;
+	struct platform_device *asrc_pdev;
 	struct snd_card *snd_card;
 };
 
@@ -142,6 +144,10 @@ static const struct snd_soc_dapm_route imx_wm8960_dapm_route[] = {
 	{"RINPUT2", NULL, "Main MIC"},
 	{"Hp MIC", NULL, "MICB"},
 	{"Main MIC", NULL, "MICB"},
+	{"CPU-Playback",  NULL, "ASRC-Playback"},
+	{"Playback",  NULL, "CPU-Playback"},/* dai route for be and fe */
+	{"ASRC-Capture",  NULL, "CPU-Capture"},
+	{"CPU-Capture",  NULL, "Capture"}, /* dai route for be and fe */
 };
 
 static int imx_wm8960_gpio_init(struct snd_soc_card *card)
@@ -274,6 +280,7 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	unsigned int sysclk, pll_out;
 	int i, j, k, ret = 0;
 	int bclk = snd_soc_params_to_bclk(params);
+	unsigned int fmt;
 
 	if (params_channels(params) == 1)
 		bclk *= 2;
@@ -283,14 +290,21 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	if (data->is_stream_in_use[!tx])
 		return 0;
 
+	if (data->is_codec_master)
+		fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
+			SND_SOC_DAIFMT_CBM_CFM;
+	else
+		fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
+			SND_SOC_DAIFMT_CBS_CFS;
+
 	/* set cpu DAI configuration */
-	ret = snd_soc_dai_set_fmt(cpu_dai, data->dai.dai_fmt);
+	ret = snd_soc_dai_set_fmt(cpu_dai, fmt);
 	if (ret) {
 		dev_err(dev, "failed to set cpu dai fmt: %d\n", ret);
 		return ret;
 	}
 	/* set codec DAI configuration */
-	ret = snd_soc_dai_set_fmt(codec_dai, data->dai.dai_fmt);
+	ret = snd_soc_dai_set_fmt(codec_dai, fmt);
 	if (ret) {
 		dev_err(dev, "failed to set codec dai fmt: %d\n", ret);
 		return ret;
@@ -471,6 +485,59 @@ static int imx_wm8960_late_probe(struct snd_soc_card *card)
 	return 0;
 }
 
+static int be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
+			struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_card *card = rtd->card;
+	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
+	struct imx_priv *priv = &card_priv;
+	struct snd_interval *rate;
+	struct snd_mask *mask;
+
+	if (!priv->asrc_pdev)
+		return -EINVAL;
+
+	rate = hw_param_interval(params, SNDRV_PCM_HW_PARAM_RATE);
+	rate->max = rate->min = data->asrc_rate;
+
+	mask = hw_param_mask(params, SNDRV_PCM_HW_PARAM_FORMAT);
+	snd_mask_none(mask);
+	snd_mask_set(mask, data->asrc_format);
+
+	return 0;
+}
+
+static struct snd_soc_dai_link imx_wm8960_dai[] = {
+	{
+		.name = "HiFi",
+		.stream_name = "HiFi",
+		.codec_dai_name = "wm8960-hifi",
+		.ops = &imx_hifi_ops,
+	},
+	{
+		.name = "HiFi-ASRC-FE",
+		.stream_name = "HiFi-ASRC-FE",
+		.codec_name = "snd-soc-dummy",
+		.codec_dai_name = "snd-soc-dummy-dai",
+		.dynamic = 1,
+		.ignore_pmdown_time = 1,
+		.dpcm_playback = 1,
+		.dpcm_capture = 1,
+	},
+	{
+		.name = "HiFi-ASRC-BE",
+		.stream_name = "HiFi-ASRC-BE",
+		.codec_dai_name = "wm8960-hifi",
+		.platform_name = "snd-soc-dummy",
+		.no_pcm = 1,
+		.ignore_pmdown_time = 1,
+		.dpcm_playback = 1,
+		.dpcm_capture = 1,
+		.ops = &imx_hifi_ops,
+		.be_hw_params_fixup = be_hw_params_fixup,
+	},
+};
+
 static int imx_wm8960_probe(struct platform_device *pdev)
 {
 	struct device_node *cpu_np, *codec_np, *gpr_np;
@@ -478,6 +545,9 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 	struct imx_priv *priv = &card_priv;
 	struct i2c_client *codec_dev;
 	struct imx_wm8960_data *data;
+	struct platform_device *asrc_pdev = NULL;
+	struct device_node *asrc_np;
+	u32 width;
 	int ret;
 
 	priv->pdev = pdev;
@@ -516,11 +586,8 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	if (of_property_read_bool(pdev->dev.of_node, "codec-master")) {
-		data->dai.dai_fmt = SND_SOC_DAIFMT_CBM_CFM;
+	if (of_property_read_bool(pdev->dev.of_node, "codec-master"))
 		data->is_codec_master = true;
-	} else
-		data->dai.dai_fmt = SND_SOC_DAIFMT_CBS_CFS;
 
 	data->codec_clk = devm_clk_get(&codec_dev->dev, "mclk");
 	if (IS_ERR(data->codec_clk)) {
@@ -541,23 +608,54 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 
 	of_property_read_u32_array(pdev->dev.of_node, "hp-det", data->hp_det, 2);
 
-	data->dai.name = "HiFi";
-	data->dai.stream_name = "HiFi";
-	data->dai.codec_dai_name = "wm8960-hifi";
-	data->dai.codec_of_node = codec_np;
-	data->dai.cpu_dai_name = dev_name(&cpu_pdev->dev);
-	data->dai.platform_of_node = cpu_np;
-	data->dai.ops = &imx_hifi_ops;
-	data->dai.dai_fmt |= SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF;
+	asrc_np = of_parse_phandle(pdev->dev.of_node, "asrc-controller", 0);
+	if (asrc_np) {
+		asrc_pdev = of_find_device_by_node(asrc_np);
+		priv->asrc_pdev = asrc_pdev;
+	}
+
+	data->card.dai_link = imx_wm8960_dai;
+
+	imx_wm8960_dai[0].codec_of_node	= codec_np;
+	imx_wm8960_dai[0].cpu_dai_name = dev_name(&cpu_pdev->dev);
+	imx_wm8960_dai[0].platform_of_node = cpu_np;
+
+	if (!asrc_pdev) {
+		data->card.num_links = 1;
+	} else {
+		imx_wm8960_dai[1].cpu_of_node = asrc_np;
+		imx_wm8960_dai[1].platform_of_node = asrc_np;
+		imx_wm8960_dai[2].codec_of_node	= codec_np;
+		imx_wm8960_dai[2].cpu_dai_name = dev_name(&cpu_pdev->dev);
+		data->card.num_links = 3;
+
+		ret = of_property_read_u32(asrc_np, "fsl,asrc-rate",
+				&data->asrc_rate);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to get output rate\n");
+			ret = -EINVAL;
+			goto fail;
+		}
+
+		ret = of_property_read_u32(asrc_np, "fsl,asrc-width", &width);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to get output rate\n");
+			ret = -EINVAL;
+			goto fail;
+		}
+
+		if (width == 24)
+			data->asrc_format = SNDRV_PCM_FORMAT_S24_LE;
+		else
+			data->asrc_format = SNDRV_PCM_FORMAT_S16_LE;
+	}
 
 	data->card.dev = &pdev->dev;
 	ret = snd_soc_of_parse_card_name(&data->card, "model");
 	if (ret)
 		goto fail;
-	data->card.num_links = 1;
-	data->card.dai_link = &data->dai;
 	data->card.dapm_widgets = imx_wm8960_dapm_widgets;
-        data->card.num_dapm_widgets = ARRAY_SIZE(imx_wm8960_dapm_widgets);
+	data->card.num_dapm_widgets = ARRAY_SIZE(imx_wm8960_dapm_widgets);
 	data->card.dapm_routes = imx_wm8960_dapm_route;
 	data->card.num_dapm_routes = ARRAY_SIZE(imx_wm8960_dapm_route);
 	data->card.late_probe = imx_wm8960_late_probe;
