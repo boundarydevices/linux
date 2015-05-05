@@ -42,6 +42,7 @@
 		model = "wm8960-audio";
 		cpu-dai = <&sai2>;
 		audio-codec = <&codec>;
+		asrc-controller = <&asrc>;
 		codec-master;
 		gpr = <&gpr>;
 		/*
