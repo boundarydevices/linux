@@ -488,14 +488,14 @@
 				compatible = "fsl,imx6ul-wdt", "fsl,imx21-wdt";
 				reg = <0x020bc000 0x4000>;
 				interrupts = <GIC_SPI 80 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX6UL_CLK_DUMMY>;
+				clocks = <&clks IMX6UL_CLK_WDOG1>;
 			};
 
 			wdog2: wdog@020c0000 {
 				compatible = "fsl,imx6ul-wdt", "fsl,imx21-wdt";
 				reg = <0x020c0000 0x4000>;
 				interrupts = <GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX6UL_CLK_DUMMY>;
+				clocks = <&clks IMX6UL_CLK_WDOG2>;
 				status = "disabled";
 			};
 
