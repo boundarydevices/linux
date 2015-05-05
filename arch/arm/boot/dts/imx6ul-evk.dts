@@ -52,11 +52,6 @@
 		 */
 		hp-det = <3 0>;
 		hp-det-gpios = <&gpio5 4 0>;
-
-		assigned-clocks = <&clks IMX6UL_CLK_AUDIO_SEL>,
-				 <&clks IMX6UL_CLK_AUDIO>;
-		assigned-clock-parents = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
-		assigned-clock-rates = <0>, <12288000>;
 	};
 
 	spi4 {
@@ -244,7 +239,7 @@
 	codec: wm8960@1a {
 		compatible = "wlf,wm8960";
 		reg = <0x1a>;
-		clocks = <&clks IMX6UL_CLK_AUDIO>;
+		clocks = <&clks IMX6UL_CLK_SAI2>;
 		clock-names = "mclk";
 		wlf,shared-lrclk;
 	};
