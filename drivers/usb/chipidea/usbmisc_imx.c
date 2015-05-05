@@ -90,6 +90,14 @@
 #define ANADIG_ANA_MISC0_SET		0x154
 #define ANADIG_ANA_MISC0_CLK_DELAY(x)	((x >> 26) & 0x7)
 
+#define MX7D_USBNC_USB_CTRL2		0x4
+#define MX7D_USB_VBUS_WAKEUP_SOURCE_MASK	0x3
+#define MX7D_USB_VBUS_WAKEUP_SOURCE(v)		(v << 0)
+#define MX7D_USB_VBUS_WAKEUP_SOURCE_VBUS	MX7D_USB_VBUS_WAKEUP_SOURCE(0)
+#define MX7D_USB_VBUS_WAKEUP_SOURCE_AVALID	MX7D_USB_VBUS_WAKEUP_SOURCE(1)
+#define MX7D_USB_VBUS_WAKEUP_SOURCE_BVALID	MX7D_USB_VBUS_WAKEUP_SOURCE(2)
+#define MX7D_USB_VBUS_WAKEUP_SOURCE_SESS_END	MX7D_USB_VBUS_WAKEUP_SOURCE(3)
+
 struct usbmisc_ops {
 	/* It's called once when probe a usb device */
 	int (*init)(struct imx_usbmisc_data *data);
@@ -496,6 +504,10 @@ static int usbmisc_imx7d_init(struct imx_usbmisc_data *data)
 	reg = readl(usbmisc->base);
 	writel(reg | MX6_BM_UNBURST_SETTING, usbmisc->base);
 
+	reg = readl(usbmisc->base + MX7D_USBNC_USB_CTRL2);
+	reg &= ~MX7D_USB_VBUS_WAKEUP_SOURCE_MASK;
+	writel(reg | MX7D_USB_VBUS_WAKEUP_SOURCE_BVALID,
+		 usbmisc->base + MX7D_USBNC_USB_CTRL2);
 	spin_unlock_irqrestore(&usbmisc->lock, flags);
 
 	usbmisc_imx7d_set_wakeup(data, false);
