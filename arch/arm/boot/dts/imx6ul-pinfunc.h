@@ -891,7 +891,7 @@
 #define	MX6UL_PAD_CSI_DATA02__EIM_AD02                           	0x01EC 0x0478 0x0000 4 0
 #define	MX6UL_PAD_CSI_DATA02__GPIO4_IO23                         	0x01EC 0x0478 0x0000 5 0
 #define	MX6UL_PAD_CSI_DATA02__SAI1_RX_SYNC                       	0x01EC 0x0478 0x0000 6 0
-#define	MX6UL_PAD_CSI_DATA02__UART5_DCE_RTS                      	0x01EC 0x0478 0x0640 8 3
+#define	MX6UL_PAD_CSI_DATA02__UART5_DCE_RTS                      	0x01EC 0x0478 0x0640 8 5
 #define	MX6UL_PAD_CSI_DATA02__UART5_DTE_CTS                      	0x01EC 0x0478 0x0000 8 0
 #define	MX6UL_PAD_CSI_DATA03__CSI_DATA05                         	0x01F0 0x047C 0x0000 0 0
 #define	MX6UL_PAD_CSI_DATA03__USDHC2_DATA3                       	0x01F0 0x047C 0x0688 1 0
