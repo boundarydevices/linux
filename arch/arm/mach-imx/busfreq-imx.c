@@ -158,6 +158,7 @@ static bool check_m4_sleep(void)
 static void enter_lpm_imx7d(void)
 {
 	if (audio_bus_count) {
+		clk_prepare_enable(pfd0_392m);
 		update_ddr_freq_imx_smp(HIGH_AUDIO_CLK);
 
 		clk_set_parent(dram_alt_sel, pfd0_392m);
@@ -167,6 +168,7 @@ static void enter_lpm_imx7d(void)
 			clk_set_parent(ahb_sel_clk, osc_clk);
 			clk_set_rate(ahb_clk, LPAPM_CLK);
 		}
+		clk_disable_unprepare(pfd0_392m);
 		audio_bus_freq_mode = 1;
 		low_bus_freq_mode = 0;
 		cur_bus_freq_mode = BUS_FREQ_AUDIO;

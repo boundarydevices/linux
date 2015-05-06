@@ -100,6 +100,8 @@ void imx_gpcv2_set_core1_pdn_pup_by_software(bool pdn);
 unsigned int imx_gpcv2_is_mf_mix_off(void);
 int imx_gpc_mf_power_on(unsigned int irq, unsigned int on);
 int imx_gpcv2_mf_power_on(unsigned int irq, unsigned int on);
+void imx_gpcv2_set_lpm_mode(enum mxc_cpu_pwr_mode mode);
+void imx_gpcv2_set_cpu_power_gate_in_idle(bool pdn);
 
 enum mxc_cpu_pwr_mode {
 	WAIT_CLOCKED,		/* wfi only */
@@ -170,6 +172,8 @@ int imx_ddrc_get_ddr_type(void);
 void imx_busfreq_map_io(void);
 void imx6sx_low_power_idle(void);
 void imx6q_enable_rbc(bool enable);
+void imx7d_low_power_idle(void);
+int imx7d_idle_secondary_finish(unsigned long val);
 
 void imx_cpu_die(unsigned int cpu);
 int imx_cpu_kill(unsigned int cpu);
