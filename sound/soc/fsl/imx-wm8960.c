@@ -226,7 +226,7 @@ static void wm8960_init(struct snd_soc_dai *codec_dai)
 	snd_soc_update_bits(codec, WM8960_ADDCTL2, 1<<6, 1<<6);
 	snd_soc_update_bits(codec, WM8960_ADDCTL2, 1<<5, data->hp_det[1]<<5);
 	snd_soc_update_bits(codec, WM8960_ADDCTL4, 3<<2, data->hp_det[0]<<2);
-	snd_soc_update_bits(codec, WM8960_ADDCTL1, 1, 1);
+	snd_soc_update_bits(codec, WM8960_ADDCTL1, 3, 3);
 
 	/*
 	 * route left channel to right channel in default.
@@ -422,6 +422,12 @@ static int imx_hifi_startup(struct snd_pcm_substream *substream)
 			return ret;
 	}
 
+	ret = clk_prepare_enable(data->codec_clk);
+	if (ret) {
+		dev_err(card->dev, "Failed to enable MCLK: %d\n", ret);
+		return ret;
+	}
+
 	return ret;
 }
 
@@ -432,6 +438,8 @@ static void imx_hifi_shutdown(struct snd_pcm_substream *substream)
 	struct snd_soc_card *card = codec_dai->codec->card;
 	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+
+	clk_disable_unprepare(data->codec_clk);
 
 	data->is_stream_opened[tx] = false;
 }
