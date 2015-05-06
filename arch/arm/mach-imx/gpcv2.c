@@ -28,6 +28,7 @@
 #define GPC_LPCR_A7_AD		0x4
 #define GPC_LPCR_M4		0x8
 #define GPC_SLPCR		0x14
+#define GPC_MLPCR		0x20
 #define GPC_PGC_ACK_SEL_A7	0x24
 #define GPC_MISC		0x2c
 #define GPC_IMR1_CORE0		0x30
@@ -62,7 +63,7 @@
 #define BM_SLPCR_VSTBY				0x4
 #define BM_SLPCR_SBYOS				0x2
 #define BM_SLPCR_BYPASS_PMIC_READY		0x1
-
+#define BM_SLPCR_EN_A7_FASTWUP_WAIT_MODE	0x10000
 #define BM_LPCR_A7_AD_L2PGE			0x10000
 #define BM_LPCR_A7_AD_EN_C1_PUP			0x800
 #define BM_LPCR_A7_AD_EN_C1_IRQ_PUP		0x400
@@ -78,6 +79,7 @@
 
 #define BM_GPC_PGC_ACK_SEL_A7_DUMMY_PUP_ACK	0x80000000
 #define BM_GPC_PGC_ACK_SEL_A7_DUMMY_PDN_ACK	0x8000
+#define BM_GPC_MLPCR_MEMLP_CTL_DIS		0x1
 
 #define BP_LPCR_A7_BSC_IRQ_SRC			28
 
@@ -166,7 +168,7 @@ void imx_gpcv2_set_lpm_mode(enum mxc_cpu_pwr_mode mode)
 	val1 = readl_relaxed(gpc_base + GPC_LPCR_A7_BSC);
 	val2 = readl_relaxed(gpc_base + GPC_SLPCR);
 
-	/* core 0/1's LPM settings must be same */
+	/* all cores' LPM settings must be same */
 	val1 &= ~(BM_LPCR_A7_BSC_LPM0 | BM_LPCR_A7_BSC_LPM1);
 
 	val1 |= BM_LPCR_A7_BSC_CPU_CLK_ON_LPM;
@@ -293,9 +295,11 @@ void imx_gpcv2_set_cpu_power_gate_by_wfi(u32 cpu, bool pdn)
 void imx_gpcv2_set_cpu_power_gate_by_lpm(u32 cpu, bool pdn)
 {
 	unsigned long flags;
-	u32 val = readl_relaxed(gpc_base + GPC_LPCR_A7_AD);
+	u32 val;
 
 	spin_lock_irqsave(&gpcv2_lock, flags);
+
+	val = readl_relaxed(gpc_base + GPC_LPCR_A7_AD);
 	if (cpu == 0) {
 		if (pdn)
 			val |= BM_LPCR_A7_AD_EN_C0_PDN |
@@ -314,6 +318,42 @@ void imx_gpcv2_set_cpu_power_gate_by_lpm(u32 cpu, bool pdn)
 	}
 
 	writel_relaxed(val, gpc_base + GPC_LPCR_A7_AD);
+	spin_unlock_irqrestore(&gpcv2_lock, flags);
+}
+
+void imx_gpcv2_set_cpu_power_gate_in_idle(bool pdn)
+{
+	unsigned long flags;
+	u32 cpu;
+
+	for_each_possible_cpu(cpu)
+		imx_gpcv2_set_cpu_power_gate_by_lpm(cpu, pdn);
+
+	spin_lock_irqsave(&gpcv2_lock, flags);
+
+	imx_gpcv2_set_m_core_pgc(pdn, GPC_PGC_C0);
+	imx_gpcv2_set_m_core_pgc(pdn, GPC_PGC_C1);
+	imx_gpcv2_set_m_core_pgc(pdn, GPC_PGC_SCU);
+	imx_gpcv2_set_plat_power_gate_by_lpm(pdn);
+
+	if (pdn) {
+		imx_gpcv2_set_slot_ack(0, CORE0_A7, false, false);
+		imx_gpcv2_set_slot_ack(1, CORE1_A7, false, false);
+		imx_gpcv2_set_slot_ack(2, SCU_A7, false, true);
+		imx_gpcv2_set_slot_ack(6, SCU_A7, true, false);
+		imx_gpcv2_set_slot_ack(7, CORE0_A7, true, false);
+		imx_gpcv2_set_slot_ack(8, CORE1_A7, true, true);
+	} else {
+		writel_relaxed(0x0, gpc_base + GPC_SLOT0_CFG + 0 * 0x4);
+		writel_relaxed(0x0, gpc_base + GPC_SLOT0_CFG + 1 * 0x4);
+		writel_relaxed(0x0, gpc_base + GPC_SLOT0_CFG + 2 * 0x4);
+		writel_relaxed(0x0, gpc_base + GPC_SLOT0_CFG + 6 * 0x4);
+		writel_relaxed(0x0, gpc_base + GPC_SLOT0_CFG + 7 * 0x4);
+		writel_relaxed(0x0, gpc_base + GPC_SLOT0_CFG + 8 * 0x4);
+		writel_relaxed(BM_GPC_PGC_ACK_SEL_A7_DUMMY_PUP_ACK |
+			BM_GPC_PGC_ACK_SEL_A7_DUMMY_PDN_ACK,
+			gpc_base + GPC_PGC_ACK_SEL_A7);
+	}
 	spin_unlock_irqrestore(&gpcv2_lock, flags);
 }
 
@@ -549,6 +589,20 @@ void __init imx_gpcv2_init(void)
 	/* set SCU timing */
 	writel_relaxed((0x59 << 10) | 0x5B | (0x51 << 20),
 		gpc_base + GPC_PGC_SCU_TIMING);
+	writel_relaxed(BM_GPC_PGC_ACK_SEL_A7_DUMMY_PUP_ACK |
+		BM_GPC_PGC_ACK_SEL_A7_DUMMY_PDN_ACK,
+		gpc_base + GPC_PGC_ACK_SEL_A7);
+
+	val = readl_relaxed(gpc_base + GPC_SLPCR);
+	val &= ~(BM_SLPCR_EN_DSM | BM_SLPCR_VSTBY | BM_SLPCR_RBC_EN |
+		BM_SLPCR_SBYOS | BM_SLPCR_BYPASS_PMIC_READY);
+	val |= BM_SLPCR_EN_A7_FASTWUP_WAIT_MODE;
+	writel_relaxed(val, gpc_base + GPC_SLPCR);
+
+	/* disable memory low power mode */
+	val = readl_relaxed(gpc_base + GPC_MLPCR);
+	val |= BM_GPC_MLPCR_MEMLP_CTL_DIS;
+	writel_relaxed(val, gpc_base + GPC_MLPCR);
 
 	/* Register GPC as the secondary interrupt controller behind GIC */
 	gic_arch_extn.irq_mask = imx_gpcv2_irq_mask;
