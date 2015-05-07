@@ -48,7 +48,6 @@ struct rfkill_gpio_data {
 static int rfkill_gpio_set_power(void *data, bool blocked)
 {
 	struct rfkill_gpio_data *rfkill = data;
-	int i;
 
 	if (blocked) {
 		gpiod_set_value(rfkill->shutdown_gpio, 0);
@@ -176,7 +175,6 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "can't set up gpio\n");
 			return ret;
 		}
-		rfkill->gpiolist[gpio_cnt++] = pdata->shutdown_gpio;
 	}
 
 	rfkill->rfkill_dev = rfkill_alloc(rfkill->name, &pdev->dev,
@@ -200,7 +198,6 @@ static int rfkill_gpio_remove(struct platform_device *pdev)
 {
 	struct rfkill_gpio_data *rfkill = platform_get_drvdata(pdev);
 	struct rfkill_gpio_platform_data *pdata = pdev->dev.platform_data;
-	int i;
 
 	if (pdata && pdata->gpio_runtime_close)
 		pdata->gpio_runtime_close(pdev);
