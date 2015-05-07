@@ -27,7 +27,6 @@
 #include "fsl_sai.h"
 
 #define DAI_NAME_SIZE	32
-#define DEFAULT_MCLK_FREQ (12000000)
 
 struct imx_wm8960_data {
 	struct snd_soc_card card;
@@ -313,13 +312,6 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	data->clk_frequency = clk_get_rate(data->codec_clk);
-	if (data->clk_frequency != DEFAULT_MCLK_FREQ) {
-		ret = clk_set_rate(data->codec_clk, DEFAULT_MCLK_FREQ);
-		if (ret < 0)
-			dev_dbg(dev, "fail to set codec clock frequency.\n");
-		else
-			data->clk_frequency = clk_get_rate(data->codec_clk);
-	}
 
 	/* Use MCLK to provide sysclk directly*/
 	sysclk = data->clk_frequency;
