@@ -54,8 +54,6 @@
 //#define	SET_CHANNEL_CMD	0xF3000000
 //#define	UPDATE_RA_CMD	0xFD0000A2
 
-#define DYNAMIC_FUNC_DISABLE		(0x0)
-
 #define _HW_STATE_NOLINK_		0x00
 #define _HW_STATE_ADHOC_		0x01
 #define _HW_STATE_STATION_ 	0x02
@@ -464,8 +462,43 @@ typedef struct _RT_CHANNEL_INFO
 #ifdef CONFIG_FIND_BEST_CHANNEL
 	u32				rx_count;
 #endif
+#ifdef CONFIG_DFS_MASTER
+	u32 non_ocp_end_time;
+#endif
 }RT_CHANNEL_INFO, *PRT_CHANNEL_INFO;
 
+#define DFS_MASTER_TIMER_MS 100
+#define CAC_TIME_MS (60*1000)
+#define CAC_TIME_CE_MS (10*60*1000)
+#define NON_OCP_TIME_MS (30*60*1000)
+
+#ifdef CONFIG_DFS_MASTER
+struct rf_ctl_t;
+#define CH_IS_NON_OCP(rt_ch_info) ((rt_ch_info)->non_ocp_end_time > rtw_get_current_time())
+void rtw_rfctl_reset_cac(struct rf_ctl_t *rfctl);
+bool rtw_is_cac_reset_needed(_adapter *adapter);
+bool _rtw_rfctl_overlap_radar_detect_ch(struct rf_ctl_t *rfctl, u8 ch, u8 bw, u8 offset);
+bool rtw_rfctl_overlap_radar_detect_ch(struct rf_ctl_t *rfctl);
+bool rtw_rfctl_is_tx_blocked_by_cac(struct rf_ctl_t *rfctl);
+bool rtw_chset_is_ch_non_ocp(RT_CHANNEL_INFO *ch_set, u8 ch, u8 bw, u8 offset);
+void rtw_chset_update_non_ocp(RT_CHANNEL_INFO *ch_set, u8 ch, u8 bw, u8 offset);
+void rtw_chset_update_non_ocp_ms(RT_CHANNEL_INFO *ch_set, u8 ch, u8 bw, u8 offset, int ms);
+#else
+#define CH_IS_NON_OCP(rt_ch_info) 0
+#define rtw_chset_is_ch_non_ocp(ch_set, ch, bw, offset) _FALSE
+#define rtw_rfctl_is_tx_blocked_by_cac(rfctl) _FALSE
+#endif
+
+enum {
+	RTW_CHF_2G = BIT0,
+	RTW_CHF_5G = BIT1,
+	RTW_CHF_DFS = BIT2,
+	RTW_CHF_LONG_CAC = BIT3,
+	RTW_CHF_NON_DFS = BIT4,
+	RTW_CHF_NON_LONG_CAC = BIT5,
+};
+bool rtw_choose_available_chbw(_adapter *adapter, u8 req_bw, u8 *dec_ch, u8 *dec_bw, u8 *dec_offset, u8 d_flags);
+void dump_chset(void *sel, RT_CHANNEL_INFO *ch_set);
 void dump_ch_plan_test(void *sel);
 
 int rtw_ch_set_search_ch(RT_CHANNEL_INFO *ch_set, const u32 ch);
@@ -598,11 +631,7 @@ void get_rate_set(_adapter *padapter, unsigned char *pbssrate, int *bssrate_len)
 void set_mcs_rate_by_mask(u8 *mcs_set, u32 mask);
 void UpdateBrateTbl(_adapter *padapter,u8 *mBratesOS);
 void UpdateBrateTblForSoftAP(u8 *bssrateset, u32 bssratelen);
-void change_band_update_ie(_adapter *padapter, WLAN_BSSID_EX *pnetwork);
-
-void Save_DM_Func_Flag(_adapter *padapter);
-void Restore_DM_Func_Flag(_adapter *padapter);
-void Switch_DM_Func(_adapter *padapter, u32 mode, u8 enable);
+void change_band_update_ie(_adapter *padapter, WLAN_BSSID_EX *pnetwork, u8 ch);
 
 //void Set_NETYPE1_MSR(_adapter *padapter, u8 type);
 //void Set_NETYPE0_MSR(_adapter *padapter, u8 type);
@@ -710,10 +739,17 @@ unsigned int is_ap_in_wep(_adapter *padapter);
 unsigned int should_forbid_n_rate(_adapter * padapter);
 
 s16 rtw_get_camid(_adapter *adapter, struct sta_info* sta, s16 kid);
-s16 rtw_camid_search(_adapter *adapter, u8 *addr, s16 kid);
-s16 rtw_camid_alloc(_adapter *adapter, struct sta_info *sta, u8 kid);
+bool _rtw_camctl_chk_cap(_adapter *adapter, u8 cap);
+void _rtw_camctl_set_flags(_adapter *adapter, u32 flags);
+void rtw_camctl_set_flags(_adapter *adapter, u32 flags);
+void _rtw_camctl_clr_flags(_adapter *adapter, u32 flags);
+void rtw_camctl_clr_flags(_adapter *adapter, u32 flags);
+bool _rtw_camctl_chk_flags(_adapter *adapter, u32 flags);
+bool _rtw_camid_is_gk(_adapter *adapter, u8 cam_id);
+bool rtw_camid_is_gk(_adapter *adapter, u8 cam_id);
+s16 rtw_camid_search(_adapter *adapter, u8 *addr, s16 kid, s8 gk);
+s16 rtw_camid_alloc(_adapter *adapter, struct sta_info *sta, u8 kid, bool *used);
 void rtw_camid_free(_adapter *adapter, u8 cam_id);
-bool rtw_camid_is_gk(_adapter *padapter, u8 entry);
 bool read_phy_cam_is_gtk(_adapter *padapter, u8 entry);
 
 struct macid_bmp;
@@ -733,7 +769,7 @@ void rtw_macid_ctl_deinit(struct macid_ctl_t *macid_ctl);
 void report_join_res(_adapter *padapter, int res);
 void report_survey_event(_adapter *padapter, union recv_frame *precv_frame);
 void report_surveydone_event(_adapter *padapter);
-void report_del_sta_event(_adapter *padapter, unsigned char* MacAddr, unsigned short reason);
+void report_del_sta_event(_adapter *padapter, unsigned char *MacAddr, unsigned short reason, bool enqueue);
 void report_add_sta_event(_adapter *padapter, unsigned char* MacAddr, int cam_idx);
 bool rtw_port_switch_chk(_adapter *adapter);
 void report_wmm_edca_update(_adapter *padapter);
@@ -883,12 +919,19 @@ extern u8 traffic_status_watchdog(_adapter *padapter, u8 from_timer);
 
 
 #ifdef CONFIG_CONCURRENT_MODE
- sint check_buddy_mlmeinfo_state(_adapter *padapter, u32 state);
-void concurrent_chk_joinbss_done(_adapter *padapter, int join_res);
-#endif //CONFIG_CONCURRENT_MODE
+sint check_buddy_mlmeinfo_state(_adapter *padapter, u32 state);
+#endif
+
+void rtw_join_done_chk_ch(_adapter *padapter, int join_res);
 
 int rtw_chk_start_clnt_join(_adapter *padapter, u8 *ch, u8 *bw, u8 *offset);
 int rtw_get_ch_setting_union(_adapter *adapter, u8 *ch, u8 *bw, u8 *offset);
+int rtw_get_ch_setting_union_no_self(_adapter *adapter, u8 *ch, u8 *bw, u8 *offset);
+
+void rtw_dev_iface_status(_adapter *adapter, u8 *sta_num, u8 *ld_sta_num, u8 *lg_sta_num
+	, u8 *ap_num, u8 *ld_ap_num);
+void rtw_dev_iface_status_no_self(_adapter *adapter, u8 *sta_num, u8 *ld_sta_num, u8 *lg_sta_num
+	, u8 *ap_num, u8 *ld_ap_num);
 
 struct cmd_hdl {
 	uint	parmsize;

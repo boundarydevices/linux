@@ -162,5 +162,5 @@ _C2HContentParsing8814(
 	IN	u8 			*tmpBuf
 );
 
-#endif//__RTL8812A_CMD_H__
+#endif/* __RTL8814A_CMD_H__ */
 

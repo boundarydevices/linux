@@ -45,8 +45,12 @@
 			#define NR_RECVBUFF (8)
 		#endif	
 	#endif //CONFIG_SINGLE_RECV_BUF
+	#ifdef CONFIG_PREALLOC_RX_SKB_BUFFER
+		#define NR_PREALLOC_RECV_SKB (rtw_rtkm_get_nr_recv_skb()>>1)
+	#else /*!CONFIG_PREALLOC_RX_SKB_BUFFER */
+		#define NR_PREALLOC_RECV_SKB 8
+	#endif /* CONFIG_PREALLOC_RX_SKB_BUFFER */
 
-	#define NR_PREALLOC_RECV_SKB (8)	
 #endif
 
 #define NR_RECVFRAME 256
@@ -59,7 +63,7 @@
 #define MAX_RXFRAME_CNT	512
 #define MAX_RX_NUMBLKS		(32)
 #define RECVFRAME_HDR_ALIGN 128
-
+#define MAX_CONTINUAL_NORXPACKET_COUNT 1    /*  In MAX_CONTINUAL_NORXPACKET_COUNT*2 sec  , no rx traffict would issue DELBA*/
 
 #define PHY_RSSI_SLID_WIN_MAX				100
 #define PHY_LINKQUALITY_SLID_WIN_MAX		20
@@ -175,26 +179,32 @@ typedef struct _ODM_Phy_Status_Info_
 
 struct phy_info
 {		
-	u8		RxPWDBAll;
-
-	u8		SignalQuality;	 // in 0-100 index. 
-	s8		RxMIMOSignalQuality[4];	//per-path's EVM
-	u8		RxMIMOEVMdbm[4]; 		//per-path's EVM dbm
-
-	u8		RxMIMOSignalStrength[4];// in 0~100 index
-
-	u16		Cfo_short[4]; 			// per-path's Cfo_short
-	u16		Cfo_tail[4];			// per-path's Cfo_tail
-
-	s8		RxPower; // in dBm Translate from PWdB
-	s8		RecvSignalPower;// Real power in dBm for this packet, no beautification and aggregation. Keep this raw info to be used for the other procedures.
-	u8		BTRxRSSIPercentage;	
-	u8		SignalStrength; // in 0-100 index.
-
-	s8		RxPwr[4];				//per-path's pwdb
-	u8		RxSNR[4];				//per-path's SNR	
-	u8		BandWidth;
-	u8		btCoexPwrAdjust;
+	u8			RxPWDBAll;
+	u8			SignalQuality;				/* in 0-100 index. */
+	s8			RxMIMOSignalQuality[4];		/* per-path's EVM */
+	u8			RxMIMOEVMdbm[4];			/* per-path's EVM dbm */
+	u8			RxMIMOSignalStrength[4];	/* in 0~100 index */
+	s16			Cfo_short[4];				/* per-path's Cfo_short */
+	s16			Cfo_tail[4];					/* per-path's Cfo_tail */
+	s8			RxPower;					/* in dBm Translate from PWdB */
+	s8			RecvSignalPower;			/* Real power in dBm for this packet, no beautification and aggregation. Keep this raw info to be used for the other procedures. */
+	u8			BTRxRSSIPercentage;	
+	u8			SignalStrength;				/* in 0-100 index. */
+	s8			RxPwr[4];					/* per-path's pwdb */
+	s8			RxSNR[4];
+#if (RTL8822B_SUPPORT == 1)
+	u8			RxCount:2;
+	u8			BandWidth:2;
+	u8			rxsc:4;
+#else
+	u8			BandWidth;
+#endif
+	u8			btCoexPwrAdjust;
+#if (RTL8822B_SUPPORT == 1)
+	u8			channel;						/* channel number---*/
+	BOOLEAN		bMuPacket;					/* is MU packet or not---*/
+	BOOLEAN		bBeamformed;
+#endif
 };
 
 #ifdef DBG_RX_SIGNAL_DISPLAY_RAW_DATA
@@ -204,8 +214,8 @@ struct rx_raw_rssi
 	u8 pwdball;
 	s8 pwr_all;
 	
-	u8 mimo_singal_strength[4];// in 0~100 index
-	u8 mimo_singal_quality[4];
+	u8 mimo_signal_strength[4];/* in 0~100 index */
+	u8 mimo_signal_quality[4];
 	
 	s8 ofdm_pwr[4];
 	u8 ofdm_snr[4];
@@ -283,7 +293,7 @@ struct rx_pkt_attrib	{
 
 #define RECVBUFF_ALIGN_SZ 8
 
-#if defined (CONFIG_RTL8192E)
+#if defined(CONFIG_RTL8192E) || defined(CONFIG_RTL8814A)
 	#ifdef CONFIG_PCI_HCI
 		#define RXDESC_SIZE 16
 		#define RX_WIFI_INFO_SIZE	24
@@ -301,7 +311,7 @@ struct recv_stat
 
 	unsigned int rxdw1;
 
-#if !(defined(CONFIG_RTL8192E) && defined(CONFIG_PCI_HCI)) //exclude 8192ee
+#if !((defined(CONFIG_RTL8192E) || defined(CONFIG_RTL8814A)) && defined(CONFIG_PCI_HCI))  /* exclude 8192ee, 8814ae */
 	unsigned int rxdw2;
 
 	unsigned int rxdw3;
@@ -632,6 +642,8 @@ struct recv_buf *rtw_dequeue_recvbuf (_queue *queue);
 void rtw_reordering_ctrl_timeout_handler(void *pcontext);
 
 void rx_query_phy_status(union recv_frame *rframe, u8 *phy_stat);
+int rtw_inc_and_chk_continual_no_rx_packet(struct sta_info *sta, int tid_index);
+void rtw_reset_continual_no_rx_packet(struct sta_info *sta, int tid_index);
 
 __inline static u8 *get_rxmem(union recv_frame *precvframe)
 {
@@ -720,6 +732,8 @@ __inline static u8 *recvframe_put(union recv_frame *precvframe, sint sz)
 	//used for append sz bytes from ptr to rx_tail, update rx_tail and return the updated rx_tail to the caller
 	//after putting, rx_tail must be still larger than rx_end.
  	unsigned char * prev_rx_tail;
+
+	/* DBG_871X("recvframe_put: len=%d\n", sz); */
 
 	if(precvframe==NULL)
 		return NULL;

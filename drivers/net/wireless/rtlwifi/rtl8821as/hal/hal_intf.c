@@ -51,6 +51,8 @@ void rtw_hal_def_value_init(_adapter *padapter)
 
 			/* hal_data..macid_num is ready here */
 			dvobj->macid_ctl.num = rtw_min(hal_data->macid_num, MACID_NUM_SW_LIMIT);
+
+			dvobj->cam_ctl.sec_cap = hal_data->sec_cap;
 		}
 	}
 }
@@ -154,19 +156,16 @@ uint	 rtw_hal_init(_adapter *padapter)
 {
 	uint	status = _SUCCESS;
 	struct dvobj_priv *dvobj = adapter_to_dvobj(padapter);
+	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(padapter);
 	int i;
 
 	status = padapter->HalFunc.hal_init(padapter);
-
-	if(status == _SUCCESS){
-
-		for (i = 0; i<dvobj->iface_nums; i++)
-			dvobj->padapters[i]->hw_init_completed = _TRUE;
+	
+	if (status == _SUCCESS) {
+		pHalData->hw_init_completed = _TRUE;
 			
 		if (padapter->registrypriv.notch_filter == 1)
 			rtw_hal_notch_filter(padapter, 1);
-
-		rtw_hal_reset_security_engine(padapter);
 
 		for (i = 0; i<dvobj->iface_nums; i++)
 			rtw_sec_restore_wep_key(dvobj->padapters[i]);
@@ -181,10 +180,8 @@ uint	 rtw_hal_init(_adapter *padapter)
 		rtw_bb_rf_gain_offset(padapter);
 #endif //CONFIG_RF_GAIN_OFFSET
 
-	}
-	else{
-		for (i = 0; i<dvobj->iface_nums; i++)
-			dvobj->padapters[i]->hw_init_completed = _FALSE;
+	} else {
+		pHalData->hw_init_completed = _FALSE;
 		DBG_871X("rtw_hal_init: hal__init fail\n");
 	}
 
@@ -198,6 +195,7 @@ uint rtw_hal_deinit(_adapter *padapter)
 {
 	uint	status = _SUCCESS;
 	struct dvobj_priv *dvobj = adapter_to_dvobj(padapter);
+	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(padapter);
 	int i;
 _func_enter_;
 
@@ -205,10 +203,7 @@ _func_enter_;
 
 	if(status == _SUCCESS){
 		rtw_led_control(padapter, LED_CTL_POWER_OFF);
-		for (i = 0; i<dvobj->iface_nums; i++) {
-			padapter = dvobj->padapters[i];
-			padapter->hw_init_completed = _FALSE;
-		}
+		pHalData->hw_init_completed = _FALSE;
 	}
 	else
 	{
@@ -473,6 +468,13 @@ s32	rtw_hal_interrupt_handler(_adapter *padapter)
 	return ret;
 }
 #endif
+#if defined(CONFIG_USB_HCI) && defined(CONFIG_SUPPORT_USB_INT)
+void	rtw_hal_interrupt_handler(_adapter *padapter, u16 pkt_len, u8 *pbuf)
+{
+	padapter->HalFunc.interrupt_handler(padapter, pkt_len, pbuf);
+}
+#endif
+
 void	rtw_hal_set_bwmode(_adapter *padapter, CHANNEL_WIDTH Bandwidth, u8 Offset)
 {
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(padapter);
@@ -635,12 +637,6 @@ void rtw_hal_notch_filter(_adapter *adapter, bool enable)
 {
 	if(adapter->HalFunc.hal_notch_filter)
 		adapter->HalFunc.hal_notch_filter(adapter,enable);		
-}
-
-void rtw_hal_reset_security_engine(_adapter * adapter)
-{
-	if(adapter->HalFunc.hal_reset_security_engine)
-		adapter->HalFunc.hal_reset_security_engine(adapter);
 }
 
 bool rtw_hal_c2h_valid(_adapter *adapter, u8 *buf)
@@ -872,12 +868,14 @@ u8 rtw_hal_ops_check(_adapter *padapter)
 	if (NULL == padapter->HalFunc.irp_reset) {
 		rtw_hal_error_msg("irp_reset");
 		ret = _FAIL;
-	}	
+	}
+	#endif/*#if defined(CONFIG_PCI_HCI)*/
+	#if (defined(CONFIG_PCI_HCI)) || (defined(CONFIG_USB_HCI) && defined(CONFIG_SUPPORT_USB_INT))
 	if (NULL == padapter->HalFunc.interrupt_handler) {
 		rtw_hal_error_msg("interrupt_handler");
 		ret = _FAIL;
 	}
-	#endif //#if defined(CONFIG_PCI_HCI)	
+	#endif /*#if (defined(CONFIG_PCI_HCI)) || (defined(CONFIG_USB_HCI) && defined(CONFIG_SUPPORT_USB_INT))*/
 
 	#if defined(CONFIG_PCI_HCI) || defined (CONFIG_SDIO_HCI) || defined (CONFIG_GSPI_HCI)	
 	if (NULL == padapter->HalFunc.enable_interrupt) {

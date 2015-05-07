@@ -377,13 +377,7 @@ static u8 rtw_sdio_wait_enough_TxOQT_space(PADAPTER padapter, u8 agg_num)
 
 	while (pHalData->SdioTxOQTFreeSpace < agg_num) 
 	{
-		if ((padapter->bSurpriseRemoved == _TRUE) 
-			|| (padapter->bDriverStopped == _TRUE)
-#ifdef CONFIG_CONCURRENT_MODE
-			||((padapter->pbuddy_adapter) 
-		&& ((padapter->pbuddy_adapter->bSurpriseRemoved) ||(padapter->pbuddy_adapter->bDriverStopped)))
-#endif		
-		){
+		if (RTW_CANNOT_RUN(padapter)) {
 			DBG_871X("%s: bSurpriseRemoved or bDriverStopped (wait TxOQT)\n", __func__);
 			return _FALSE;
 		}
@@ -501,30 +495,11 @@ query_free_page:
 #endif //CONFIG_SDIO_TX_ENABLE_AVAL_INT
 	}
 
-	if ((padapter->bSurpriseRemoved == _TRUE)
-		|| (padapter->bDriverStopped == _TRUE)
-#ifdef CONFIG_CONCURRENT_MODE
-		|| ((padapter->pbuddy_adapter)
-			&& ((padapter->pbuddy_adapter->bSurpriseRemoved)
-				|| (padapter->pbuddy_adapter->bDriverStopped)))
-#endif
-		)
-	{
-		DBG_8192C("%s: Removed=%d Stopped=%d, goto free xmitbuf!\n",
-			__FUNCTION__, padapter->bSurpriseRemoved, padapter->bDriverStopped);
-#ifdef CONFIG_CONCURRENT_MODE
-		if (padapter->pbuddy_adapter)
-		{
-			PADAPTER pbuddy = padapter->pbuddy_adapter;
-			DBG_8192C("%s: buddy_adapter Removed=%d Stopped=%d, goto free xmitbuf!\n",
-				__FUNCTION__, pbuddy->bSurpriseRemoved, pbuddy->bDriverStopped);
-		}
-		else
-		{
-			DBG_8192C("%s: buddy_adapter not exist!!\n", __FUNCTION__);
-		}
-#endif
-
+	if (RTW_CANNOT_RUN(padapter)) {
+		DBG_8192C("%s: Removed=%s Stopped=%s, goto free xmitbuf!\n"
+			, __func__
+			, rtw_is_surprise_removed(padapter)?"True":"False"
+			, rtw_is_drv_stopped(padapter)?"True":"False");
 		goto free_xmitbuf;
 	}
 
@@ -573,11 +548,11 @@ s32 XmitBufHandler8821AS(PADAPTER padapter)
 		return _FAIL;
 	}
 
-	if ((padapter->bSurpriseRemoved == _TRUE) ||
-		(padapter->bDriverStopped == _TRUE))
-	{
-		DBG_8192C("%s: bDriverStopped(%d) bSurpriseRemoved(%d)\n",
-				  __FUNCTION__, padapter->bDriverStopped, padapter->bSurpriseRemoved);
+	if (RTW_CANNOT_RUN(padapter)) {
+		DBG_8192C("%s: bDriverStopped(%s) bSurpriseRemoved(%s)\n"
+				, __func__
+				, rtw_is_drv_stopped(padapter)?"True":"False"
+				, rtw_is_surprise_removed(padapter)?"True":"False");
 		return _FAIL;
 	}
 
@@ -816,8 +791,10 @@ void XmitTasklet8821AS(void *priv)
 	{
 		if (RTW_CANNOT_TX(padapter))
 		{
-			DBG_8192C("%s: bDriverStopped(%d) bSurpriseRemoved(%d) bWritePortCancel\n",
-				__FUNCTION__, padapter->bDriverStopped, padapter->bSurpriseRemoved);
+			DBG_8192C("%s: bDriverStopped(%s) bSurpriseRemoved(%s) bWritePortCancel\n"
+				, __func__
+				, rtw_is_drv_stopped(padapter)?"True":"False"
+				, rtw_is_surprise_removed(padapter)?"True":"False");
 			break;
 		}
 
@@ -837,7 +814,7 @@ void XmitTasklet8821AS(void *priv)
  */
 static s32 _sendXmitFrames(PADAPTER padapter, struct xmit_priv *pxmitpriv)
 {
-	u32 err, agg_num=0;
+	s32 err, agg_num = 0;
 	u8 pkt_index=0;
 	struct hw_xmit *hwxmits, *phwxmit;
 	u8 idx, hwentry;
@@ -851,6 +828,7 @@ static s32 _sendXmitFrames(PADAPTER padapter, struct xmit_priv *pxmitpriv)
 	s32 ret;
 	int inx[4];
 	u8 pre_qsel=0xFF,next_qsel=0xFF;
+	u8 single_sta_in_queue = _FALSE;
 
 	err = 0;
 	hwxmits = pxmitpriv->hwxmits;
@@ -883,6 +861,8 @@ static s32 _sendXmitFrames(PADAPTER padapter, struct xmit_priv *pxmitpriv)
 
 		sta_phead = get_list_head(phwxmit->sta_queue);
 		sta_plist = get_next(sta_phead);
+
+		single_sta_in_queue = rtw_end_of_queue_search(sta_phead, get_next(sta_plist));
 
 		while (rtw_end_of_queue_search(sta_phead, sta_plist) == _FALSE)
 		{
@@ -931,7 +911,14 @@ static s32 _sendXmitFrames(PADAPTER padapter, struct xmit_priv *pxmitpriv)
 //						DBG_8192C("%s: enqueue xmitbuf, len=%d agg=%d pg=%d\n",
 //							__FUNCTION__, pxmitbuf->len, pxmitbuf->agg_num, pxmitbuf->pg_num);
 						enqueue_pending_xmitbuf(pxmitpriv, pxmitbuf);
+
 //						rtw_yield_os();
+						if (single_sta_in_queue == _FALSE) {
+							/* break the loop in case there is more than one sta in this ac queue */
+							pxmitbuf = NULL;
+							err = -3;
+							break;
+						}
 					}
 
 					pxmitbuf = rtw_alloc_xmitbuf(pxmitpriv);
@@ -1015,6 +1002,10 @@ static s32 _sendXmitFrames(PADAPTER padapter, struct xmit_priv *pxmitpriv)
 
 			if (_rtw_queue_empty(pframe_queue) == _TRUE) {
 				rtw_list_delete(&ptxservq->tx_pending);
+			} else if (err == -3) {
+				/* Re-arrange the order of stations in this ac queue to balance the service for these stations */
+				rtw_list_delete(&ptxservq->tx_pending);
+				rtw_list_insert_tail(&ptxservq->tx_pending, get_list_head(phwxmit->sta_queue));
 			}
 		}
 
@@ -1078,11 +1069,11 @@ wait:
 	}
 
 next:
-	if ((padapter->bSurpriseRemoved == _TRUE) ||
-		(padapter->bDriverStopped == _TRUE))
-	{
-		DBG_8192C("%s: bDriverStopped(%d) bSurpriseRemoved(%d)\n",
-				  __FUNCTION__, padapter->bDriverStopped, padapter->bSurpriseRemoved);
+	if (RTW_CANNOT_RUN(padapter)) {
+		DBG_8192C("%s: bDriverStopped(%s) bSurpriseRemoved(%s)\n"
+				, __func__
+				, rtw_is_drv_stopped(padapter)?"True":"False"
+				, rtw_is_surprise_removed(padapter)?"True":"False");
 		return _FAIL;
 	}
 

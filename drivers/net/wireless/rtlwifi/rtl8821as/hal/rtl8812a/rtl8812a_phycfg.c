@@ -551,7 +551,7 @@ PHY_RFConfig8812(
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
 	int		rtStatus = _SUCCESS;
 
-	if (Adapter->bSurpriseRemoved)
+	if (RTW_CANNOT_RUN(Adapter))
 		return _FAIL;
 
 	switch(pHalData->rf_chip)
@@ -1894,10 +1894,9 @@ phy_SwChnlAndSetBwMode8812(
 			pHalData->CurrentChannelBW);
 	}
 
-	if((Adapter->bDriverStopped) || (Adapter->bSurpriseRemoved))
-	{
+	if (RTW_CANNOT_RUN(Adapter))
 		return;
-	}
+
 
 	if(pHalData->bSwChnl)
 	{
@@ -2037,10 +2036,8 @@ PHY_HandleSwChnlAndSetBW8812(
 	}
 
 	//Switch workitem or set timer to do switch channel or setbandwidth operation
-	if((!pDefAdapter->bDriverStopped) && (!pDefAdapter->bSurpriseRemoved))
-	{
+	if (!RTW_CANNOT_RUN(Adapter))
 		phy_SwChnlAndSetBwMode8812(Adapter);
-	}
 	else
 	{
 		if(pHalData->bSwChnl)

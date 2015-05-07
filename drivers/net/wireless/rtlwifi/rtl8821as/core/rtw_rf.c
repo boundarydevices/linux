@@ -60,3 +60,78 @@ int rtw_freq2ch(int freq)
 		return 0;
 }
 
+bool rtw_chbw_to_freq_range(u8 ch, u8 bw, u8 offset, u32 *hi, u32 *lo)
+{
+	u8 c_ch;
+	u32 freq;
+	u32 hi_ret = 0, lo_ret = 0;
+	int i;
+	bool valid = _FALSE;
+
+	if (hi)
+		*hi = 0;
+	if (lo)
+		*lo = 0;
+
+	c_ch = rtw_get_center_ch(ch, bw, offset);
+	freq = rtw_ch2freq(c_ch);
+
+	if (!freq) {
+		rtw_warn_on(1);
+		goto exit;
+	}
+
+	if (bw == CHANNEL_WIDTH_80) {
+		hi_ret = freq + 40;
+		lo_ret = freq - 40;
+	} else if (bw == CHANNEL_WIDTH_40) {
+		hi_ret = freq + 20;
+		lo_ret = freq - 20;
+	} else if (bw == CHANNEL_WIDTH_20) {
+		hi_ret = freq + 10;
+		lo_ret = freq - 10;
+	} else {
+		rtw_warn_on(1);
+	}
+
+	if (hi)
+		*hi = hi_ret;
+	if (lo)
+		*lo = lo_ret;
+
+	valid = _TRUE;
+
+exit:
+	return valid;
+}
+
+bool rtw_is_dfs_range(u32 hi, u32 lo)
+{
+	return rtw_is_range_overlap(hi, lo, 5720 + 10, 5260 - 10)?_TRUE:_FALSE;
+}
+
+bool rtw_is_dfs_ch(u8 ch, u8 bw, u8 offset)
+{
+	u32 hi, lo;
+
+	if (rtw_chbw_to_freq_range(ch, bw, offset, &hi, &lo) == _FALSE)
+		return _FALSE;
+
+	return rtw_is_dfs_range(hi, lo)?_TRUE:_FALSE;
+}
+
+bool rtw_is_long_cac_range(u32 hi, u32 lo)
+{
+	return rtw_is_range_overlap(hi, lo, 5660 + 10, 5600 - 10)?_TRUE:_FALSE;
+}
+
+bool rtw_is_long_cac_ch(u8 ch, u8 bw, u8 offset)
+{
+	u32 hi, lo;
+
+	if (rtw_chbw_to_freq_range(ch, bw, offset, &hi, &lo) == _FALSE)
+		return _FALSE;
+
+	return rtw_is_long_cac_range(hi, lo)?_TRUE:_FALSE;
+}
+

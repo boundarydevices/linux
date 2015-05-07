@@ -148,11 +148,10 @@ BOOLEAN HalDetectPwrDownMode8812(PADAPTER Adapter)
 	return pHalData->pwrdown;
 }	// HalDetectPwrDownMode
 
-#ifdef CONFIG_WOWLAN
+#if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
 void Hal_DetectWoWMode(PADAPTER pAdapter)
 {
 	adapter_to_pwrctl(pAdapter)->bSupportRemoteWakeup = _TRUE;
-	DBG_871X("%s\n", __func__);
 }
 #endif
 
@@ -464,7 +463,7 @@ static s32 polling_fwdl_chksum(_adapter *adapter, u32 min_cnt, u32 timeout_ms)
 	do {
 		cnt++;
 		value32 = rtw_read32(adapter, REG_MCUFWDL);
-		if (value32 & FWDL_ChkSum_rpt || adapter->bSurpriseRemoved || adapter->bDriverStopped)
+		if (value32 & FWDL_ChkSum_rpt || RTW_CANNOT_RUN(adapter))
 			break;
 		rtw_yield_os();
 	} while (rtw_get_passing_time_ms(start) < timeout_ms || cnt < min_cnt);
@@ -503,7 +502,7 @@ static s32 _FWFreeToGo8812(_adapter *adapter, u32 min_cnt, u32 timeout_ms)
 	do {
 		cnt++;
 		value32 = rtw_read32(adapter, REG_MCUFWDL);
-		if (value32 & WINTINI_RDY || adapter->bSurpriseRemoved || adapter->bDriverStopped)
+		if (value32 & WINTINI_RDY || RTW_CANNOT_RUN(adapter))
 			break;
 		rtw_yield_os();
 	} while (rtw_get_passing_time_ms(start) < timeout_ms || cnt < min_cnt);
@@ -577,7 +576,7 @@ FirmwareDownload8812(
 	{
 		case FW_SOURCE_IMG_FILE:
 			#ifdef CONFIG_FILE_FWIMG
-			rtStatus = rtw_retrive_from_file(rtw_fw_file_path, FwBuffer8812, FW_SIZE_8812);
+			rtStatus = rtw_retrieve_from_file(rtw_fw_file_path, FwBuffer8812, FW_SIZE_8812);
 			pFirmware->ulFwLength = rtStatus>=0?rtStatus:0;
 			pFirmware->szFwBuffer = FwBuffer8812;
 			#endif //CONFIG_FILE_FWIMG
@@ -641,7 +640,7 @@ FirmwareDownload8812(
 
 	_FWDownloadEnable_8812(Adapter, _TRUE);
 	fwdl_start_time = rtw_get_current_time();
-	while(!Adapter->bDriverStopped && !Adapter->bSurpriseRemoved
+	while (!RTW_CANNOT_RUN(Adapter)
 			&& (write_fw++ < 3 || rtw_get_passing_time_ms(fwdl_start_time) < 500))
 	{
 		/* reset FWDL chksum */
@@ -1527,9 +1526,9 @@ Hal_EfuseParseBTCoexistInfo8812A(
 		if ( !hal_btcoex_AntIsolationConfig_ParaFile (Adapter , RTL8812_WIFI_ANT_ISOLATION)) {
 #endif
 		
-			DBG_871X("%s : %s file read fail \n", __func__, RTL8812_WIFI_ANT_ISOLATION);
+			DBG_871X("%s : %s file read fail\n", __func__, RTL8812_WIFI_ANT_ISOLATION);
 			pHalData->EEPROMBluetoothCoexist = _TRUE;
-			hal_btcoex_SetAntIsolationType(Adapter, 1);
+			hal_btcoex_SetAntIsolationType(Adapter, 0);
 			
 #ifdef CONFIG_LOAD_PHY_PARA_FROM_FILE
 		}
@@ -3672,36 +3671,6 @@ void ReadRFType8812A(PADAPTER padapter)
 	//	pHalData->BandSet = BAND_ON_2_4G;
 }
 
-void rtl8812_GetHalODMVar(	
-	PADAPTER				Adapter,
-	HAL_ODM_VARIABLE		eVariable,
-	PVOID					pValue1,
-	PVOID					pValue2)
-{
-	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
-	PDM_ODM_T podmpriv = &pHalData->odmpriv;
-	switch(eVariable){
-		default:
-			GetHalODMVar(Adapter,eVariable,pValue1,pValue2);
-			break;
-	}
-}
-
-void rtl8812_SetHalODMVar(
-	PADAPTER				Adapter,
-	HAL_ODM_VARIABLE		eVariable,
-	PVOID					pValue1,
-	BOOLEAN					bSet)
-{
-	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
-	PDM_ODM_T podmpriv = &pHalData->odmpriv;
-	//_irqL irqL;
-	switch(eVariable){
-		default:
-			SetHalODMVar(Adapter,eVariable,pValue1,bSet);
-			break;
-	}
-}	
 
 void rtl8812_start_thread(PADAPTER padapter)
 {
@@ -5411,7 +5380,7 @@ _func_enter_;
 		{
 			struct mlme_ext_info *mlmext_info = &padapter->mlmeextpriv.mlmext_info;
 			u16 input_b = 0, masked = 0, ioted = 0, BrateCfg = 0;
-			u16 rrsr_2g_force_mask = (RRSR_11M|RRSR_5_5M|RRSR_1M);
+			u16 rrsr_2g_force_mask = RRSR_CCK_RATES;
 			u16 rrsr_2g_allow_mask = (RRSR_24M|RRSR_12M|RRSR_6M|RRSR_CCK_RATES);
 			u16 rrsr_5g_force_mask = (RRSR_6M);
 			u16 rrsr_5g_allow_mask = (RRSR_OFDM_RATES);
@@ -5922,7 +5891,10 @@ _func_enter_;
 				}
 			}
 			break;
-
+		case HW_VAR_RESTORE_HW_SEQ:
+			/* restore Sequence No. */
+			rtw_write8(padapter, 0x4dc, padapter->xmitpriv.nqos_ssn);
+			break;
 		case HW_VAR_CHECK_TXBUF:
 			{
 				u8 retry_limit;
@@ -5938,7 +5910,7 @@ _func_enter_;
 				rtw_write16(padapter, REG_RL, val16);
 
 				while (rtw_get_passing_time_ms(start) < 2000
-					&& !padapter->bDriverStopped && !padapter->bSurpriseRemoved
+					&& !RTW_CANNOT_RUN(padapter)
 				) {
 					reg_200 = rtw_read32(padapter, 0x200);
 					reg_204 = rtw_read32(padapter, 0x204);
@@ -5959,8 +5931,9 @@ _func_enter_;
 
 				pass_ms = rtw_get_passing_time_ms(start);
 
-				if (padapter->bDriverStopped || padapter->bSurpriseRemoved) {
-				} else if (pass_ms >= 2000 || (reg_200 & 0x00ffffff) != (reg_204 & 0x00ffffff)) {
+				if (RTW_CANNOT_RUN(padapter))
+					;
+				else if (pass_ms >= 2000 || (reg_200 & 0x00ffffff) != (reg_204 & 0x00ffffff)) {
 					DBG_871X_LEVEL(_drv_always_, "%s:(HW_VAR_CHECK_TXBUF)NOT empty(%d) in %d ms\n", __FUNCTION__, i, pass_ms);
 					DBG_871X_LEVEL(_drv_always_, "%s:(HW_VAR_CHECK_TXBUF)0x200=0x%08x, 0x204=0x%08x (0x%08x, 0x%08x)\n",
 						__FUNCTION__, reg_200, reg_204, init_reg_200, init_reg_204);
@@ -6572,7 +6545,21 @@ u8 GetHalDefVar8812A(PADAPTER padapter, HAL_DEF_VARIABLE variable, void *pval)
 		case HAL_DEF_MACID_SLEEP:
 			*(u8*)pval = _TRUE; // support macid sleep
 			break;
-
+		case HAL_DEF_RX_DMA_SZ_WOW:
+			if (IS_HARDWARE_TYPE_8821(padapter))
+				*(u32 *)pval = MAX_RX_DMA_BUFFER_SIZE_8821 - RESV_FMWF;
+			else
+				*(u32 *)pval = MAX_RX_DMA_BUFFER_SIZE_8812 - RESV_FMWF;
+			break;
+		case HAL_DEF_RX_DMA_SZ:
+			if (IS_HARDWARE_TYPE_8821(padapter))
+				*(u32 *)pval = RX_DMA_BOUNDARY_8821 + 1;
+			else 
+				*(u32 *)pval = RX_DMA_BOUNDARY_8812 + 1;
+			break;
+		case HAL_DEF_RX_PAGE_SIZE:
+			*((u32 *)pval) = 8;
+			break;
 		default:
 			bResult = GetHalDefVar(padapter, variable, pval);
 			break;
@@ -6716,8 +6703,8 @@ void rtl8812_set_hal_ops(struct hal_ops *pHalFunc)
 	pHalFunc->sreset_inprogress= &sreset_inprogress;
 #endif //DBG_CONFIG_ERROR_DETECT
 
-	pHalFunc->GetHalODMVarHandler = &rtl8812_GetHalODMVar;
-	pHalFunc->SetHalODMVarHandler = &rtl8812_SetHalODMVar;
+	pHalFunc->GetHalODMVarHandler = GetHalODMVar;
+	pHalFunc->SetHalODMVarHandler = SetHalODMVar;
 	pHalFunc->hal_notch_filter = &hal_notch_filter_8812;
 
 	pHalFunc->SetBeaconRelatedRegistersHandler = &SetBeaconRelatedRegisters8812A;
@@ -6729,10 +6716,6 @@ void rtl8812_set_hal_ops(struct hal_ops *pHalFunc)
 	pHalFunc->fill_fake_txdesc = &rtl8812a_fill_fake_txdesc;
 #if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
 	pHalFunc->hal_set_wowlan_fw = &SetFwRelatedForWoWLAN8812;
-#endif
-#ifdef CONFIG_AP_WOWLAN
-	pHalFunc->hal_set_ap_wowlan_cmd = &rtl8812a_set_ap_wowlan_cmd;
-	pHalFunc->hal_set_ap_ps_wowlan_cmd = &rtl8812a_set_ap_ps_wowlan_cmd;
 #endif
 	pHalFunc->hal_get_tx_buff_rsvd_page_num = &GetTxBufferRsvdPageNum8812;
 }

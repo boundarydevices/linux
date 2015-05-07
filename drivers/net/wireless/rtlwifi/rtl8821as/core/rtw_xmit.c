@@ -830,6 +830,10 @@ static s32 update_attrib_sec_info(_adapter *padapter, struct pkt_attrib *pattrib
 		pattrib->bswenc = _TRUE;//force using sw enc.
 	}
 #endif
+#ifdef DYNAMIC_CAMID_ALLOC
+	if (pattrib->encrypt && bmcast && _rtw_camctl_chk_flags(padapter, SEC_STATUS_STA_PK_GK_CONFLICT_DIS_BMC_SEARCH))
+		pattrib->bswenc = _TRUE;
+#endif
 
 #ifdef CONFIG_WAPI_SUPPORT
 	if(pattrib->encrypt == _SMS4_)
@@ -3940,9 +3944,11 @@ inline bool xmitframe_hiq_filter(struct xmit_frame *xmitframe)
 	_adapter *adapter = xmitframe->padapter;
 	struct registry_priv *registry = &adapter->registrypriv;
 
-if (adapter->interface_type != RTW_PCIE) {
+if (rtw_get_intf_type(adapter) != RTW_PCIE) {
 
-	if (registry->hiq_filter == RTW_HIQ_FILTER_ALLOW_SPECIAL) {
+	if (adapter->registrypriv.wifi_spec == 1) {
+		allow = _TRUE;
+	} else if (registry->hiq_filter == RTW_HIQ_FILTER_ALLOW_SPECIAL) {
 	
 		struct pkt_attrib *attrib = &xmitframe->attrib;
 
@@ -4065,14 +4071,21 @@ sint xmitframe_enqueue_for_sleeping_sta(_adapter *padapter, struct xmit_frame *p
 			pstapriv->sta_dz_bitmap |= BIT(0);
 
 			//DBG_871X("enqueue, sq_len=%d, tim=%x\n", psta->sleepq_len, pstapriv->tim_bitmap);
-
-			if (update_tim == _TRUE) {
-				if (is_broadcast_mac_addr(pattrib->ra))
-					_update_beacon(padapter, _TIM_IE_, NULL, _TRUE, "buffer BC");
-				else
-					_update_beacon(padapter, _TIM_IE_, NULL, _TRUE, "buffer MC");
+			if (padapter->registrypriv.wifi_spec == 1) {
+				/*
+				*if (update_tim == _TRUE)
+				*	rtw_chk_hi_queue_cmd(padapter);
+				*/
 			} else {
-				chk_bmc_sleepq_cmd(padapter);
+
+				if (update_tim == _TRUE) {
+					if (is_broadcast_mac_addr(pattrib->ra))
+						_update_beacon(padapter, _TIM_IE_, NULL, _TRUE, "buffer BC");
+					else
+						_update_beacon(padapter, _TIM_IE_, NULL, _TRUE, "buffer MC");
+				} else {
+					chk_bmc_sleepq_cmd(padapter);
+				}
 			}
 
 			//_exit_critical_bh(&psta->sleep_q.lock, &irqL);				
@@ -4816,11 +4829,11 @@ int rtw_ack_tx_polling(struct xmit_priv *pxmitpriv, u32 timeout_ms)
 		if (pack_tx_ops->status != RTW_SCTX_SUBMITTED)
 			break;
 
-		if (adapter->bDriverStopped) {
+		if (rtw_is_drv_stopped(adapter)) {
 			pack_tx_ops->status = RTW_SCTX_DONE_DRV_STOP;
 			break;
 		}
-		if (adapter->bSurpriseRemoved) {
+		if (rtw_is_surprise_removed(adapter)) {
 			pack_tx_ops->status = RTW_SCTX_DONE_DEV_REMOVE;
 			break;
 		}

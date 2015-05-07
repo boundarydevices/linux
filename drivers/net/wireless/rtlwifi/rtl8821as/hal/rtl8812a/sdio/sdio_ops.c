@@ -735,7 +735,7 @@ static u32 sdio_write_port(struct intf_hdl *pintfhdl, u32 addr, u32 cnt, u8 *mem
 	psdio = &adapter_to_dvobj(padapter)->intf_data;
 	pintfhdl=&padapter->iopriv.intf;
 
-	if (padapter->hw_init_completed == _FALSE) {
+	if (!rtw_is_hw_init_completed(padapter)) {
 		DBG_871X("%s [addr=0x%x cnt=%d] padapter->hw_init_completed == _FALSE\n",__func__,addr,cnt);
 		return _FAIL;
 	}
@@ -1297,11 +1297,6 @@ void EnableInterrupt8821AS(PADAPTER padapter)
 	PHAL_DATA_TYPE pHalData;
 	u32 himr;
 
-#ifdef CONFIG_CONCURRENT_MODE
-	if ((padapter->isprimary == _FALSE) && padapter->pbuddy_adapter){
-		padapter = padapter->pbuddy_adapter;
-	}
-#endif
 	pHalData = GET_HAL_DATA(padapter);
 	himr = cpu_to_le32(pHalData->sdio_himr);
 	sdio_local_write(padapter, SDIO_REG_HIMR, 4, (u8*)&himr);
@@ -1329,11 +1324,6 @@ void DisableInterrupt8821AS(PADAPTER padapter)
 {
 	u32 himr;
 
-#ifdef CONFIG_CONCURRENT_MODE
-	if ((padapter->isprimary == _FALSE) && padapter->pbuddy_adapter){
-		padapter = padapter->pbuddy_adapter;
-	}
-#endif
 	himr = cpu_to_le32(SDIO_HIMR_DISABLED);
 	sdio_local_write(padapter, SDIO_REG_HIMR, 4, (u8*)&himr);
 
@@ -1352,12 +1342,6 @@ void DisableInterrupt8821AS(PADAPTER padapter)
 void UpdateInterruptMask8821AS(PADAPTER padapter, u32 AddMSR, u32 RemoveMSR)
 {
 	PHAL_DATA_TYPE pHalData;
-
-#ifdef CONFIG_CONCURRENT_MODE
-	if ((padapter->isprimary == _FALSE) && padapter->pbuddy_adapter){
-		padapter = padapter->pbuddy_adapter;
-	}
-#endif
 	pHalData = GET_HAL_DATA(padapter);
 
 	if (AddMSR)
@@ -1802,8 +1786,7 @@ void sd_int_hdl(PADAPTER padapter)
 	PHAL_DATA_TYPE	pHalData;
 
 
-	if ((padapter->bDriverStopped == _TRUE) ||
-	    (padapter->bSurpriseRemoved == _TRUE))
+	if (RTW_CANNOT_RUN(padapter))
 		return;
 
 	pHalData = GET_HAL_DATA(padapter);
@@ -1882,7 +1865,7 @@ u8 HalQueryTxOQTBufferStatus8821ASdio(PADAPTER padapter)
 }
 
 
-#ifdef CONFIG_WOWLAN
+#if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN) 
 u8 RecvOnePkt(PADAPTER padapter, u32 size)
 {
 	struct recv_buf *precvbuf;

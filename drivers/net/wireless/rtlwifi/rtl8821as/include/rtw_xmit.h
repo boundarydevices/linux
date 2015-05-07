@@ -84,7 +84,11 @@
 #define NR_XMIT_EXTBUFF	(32)
 #endif
 
+#ifdef CONFIG_RTL8812A
+#define MAX_CMDBUF_SZ	(512*12)
+#else
 #define MAX_CMDBUF_SZ	(5120)	//(4096)
+#endif
 
 #define MAX_NUMBLKS		(1)
 
@@ -151,22 +155,29 @@ do{\
 
 // For Buffer Descriptor ring architecture
 #ifdef BUF_DESC_ARCH	
-#if defined (CONFIG_RTL8192E)
-#define TX_BUFFER_SEG_NUM 	1 // 0:2 seg, 1: 4 seg, 2: 8 seg.  	
+#if defined(CONFIG_RTL8192E)
+#define TX_BUFFER_SEG_NUM	1 /* 0:2 seg, 1: 4 seg, 2: 8 seg. */
+#elif defined(CONFIG_RTL8814A)
+#define TX_BUFFER_SEG_NUM	1 /* 0:2 seg, 1: 4 seg, 2: 8 seg. */
 #endif
 #endif
 
-#if defined(CONFIG_RTL8812A) || defined(CONFIG_RTL8821A)|| defined(CONFIG_RTL8723B) || defined(CONFIG_RTL8814A)
+#if defined(CONFIG_RTL8812A) || defined(CONFIG_RTL8821A) || defined(CONFIG_RTL8723B) || defined(CONFIG_RTL8703B) || defined(CONFIG_RTL8188F)
 #define TXDESC_SIZE 40
-//8192EE_TODO
-#elif defined (CONFIG_RTL8192E) // this section is defined for buffer descriptor ring architecture
+#elif defined(CONFIG_RTL8192E) /* this section is defined for buffer descriptor ring architecture */
 	#ifdef CONFIG_PCI_HCI
 		#define TXDESC_SIZE ((TX_BUFFER_SEG_NUM ==0)?16: ((TX_BUFFER_SEG_NUM ==1)? 32:64) )
 		#define TX_WIFI_INFO_SIZE 40  
-	#else  //8192E USB or SDIO
+	#else	/* USB or SDIO */
 		#define TXDESC_SIZE 40
 	#endif
-//8192EE_TODO
+#elif defined(CONFIG_RTL8814A) /* this section is defined for buffer descriptor ring architecture */
+	#ifdef CONFIG_PCI_HCI
+		#define TXDESC_SIZE 40
+		#define TX_WIFI_INFO_SIZE 40  
+	#else	/* USB or SDIO */
+		#define TXDESC_SIZE 40
+	#endif
 #else
 #define TXDESC_SIZE 32
 #endif
@@ -190,7 +201,7 @@ do{\
 #endif
 
 #ifdef CONFIG_PCI_HCI
-#if defined(CONFIG_RTL8192E) // this section is defined for buffer descriptor ring architecture
+#if defined(CONFIG_RTL8192E) || defined(CONFIG_RTL8814A) /* this section is defined for buffer descriptor ring architecture */
 #define TXDESC_OFFSET TX_WIFI_INFO_SIZE
 #else
 #define TXDESC_OFFSET 0
@@ -207,11 +218,11 @@ enum TXDESC_SC{
 
 #ifdef CONFIG_PCI_HCI
 #define TXDESC_64_BYTES
-#elif defined(CONFIG_RTL8812A) || defined(CONFIG_RTL8821A) || defined(CONFIG_RTL8723B)
+#elif defined(CONFIG_RTL8812A) || defined(CONFIG_RTL8821A) || defined(CONFIG_RTL8723B) || defined(CONFIG_RTL8188F)
 #define TXDESC_40_BYTES
 #endif
 
-#if defined(CONFIG_RTL8192E) && defined(CONFIG_PCI_HCI) //8192ee
+#if (defined(CONFIG_RTL8192E) || defined(CONFIG_RTL8814A)) && defined(CONFIG_PCI_HCI) /* 8192ee or 8814ae */
 //8192EE_TODO
 struct tx_desc
 {

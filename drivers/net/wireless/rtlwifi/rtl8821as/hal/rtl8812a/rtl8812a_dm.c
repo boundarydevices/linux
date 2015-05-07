@@ -380,7 +380,6 @@ rtl8812_HalDmWatchDog(
 {
 	BOOLEAN		bFwCurrentInPSMode = _FALSE;
 	BOOLEAN		bFwPSAwake = _TRUE;
-	u8 hw_init_completed = _FALSE;
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(Adapter);
 	PDM_ODM_T		pDM_Odm = &(pHalData->odmpriv);
 #ifdef CONFIG_CONCURRENT_MODE
@@ -389,9 +388,7 @@ rtl8812_HalDmWatchDog(
 
 	_func_enter_;
 
-	hw_init_completed = Adapter->hw_init_completed;
-
-	if (hw_init_completed == _FALSE)
+	if (!rtw_is_hw_init_completed(Adapter))
 		goto skip_dm;
 
 #ifdef CONFIG_LPS
@@ -406,9 +403,8 @@ rtl8812_HalDmWatchDog(
 		bFwPSAwake = _FALSE;
 #endif //CONFIG_P2P_PS
 
-	if( (hw_init_completed == _TRUE)
-		&& ((!bFwCurrentInPSMode) && bFwPSAwake))
-	{
+	if ((rtw_is_hw_init_completed(Adapter))
+		&& ((!bFwCurrentInPSMode) && bFwPSAwake)) {
 		//
 		// Calculate Tx/Rx statistics.
 		//
@@ -431,7 +427,7 @@ rtl8812_HalDmWatchDog(
 	}
 
 	//ODM
-	if (hw_init_completed == _TRUE)
+	if (rtw_is_hw_init_completed(Adapter))
 	{
 		u8	bLinked=_FALSE;
 		u8	bsta_state=_FALSE;

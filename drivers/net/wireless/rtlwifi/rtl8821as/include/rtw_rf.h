@@ -172,6 +172,12 @@ typedef	enum _RT_RF_TYPE_DEFINITION
 
 int rtw_ch2freq(int chan);
 int rtw_freq2ch(int freq);
+bool rtw_chbw_to_freq_range(u8 ch, u8 bw, u8 offset, u32 *hi, u32 *lo);
+
+bool rtw_is_dfs_range(u32 hi, u32 lo);
+bool rtw_is_dfs_ch(u8 ch, u8 bw, u8 offset);
+bool rtw_is_long_cac_range(u32 hi, u32 lo);
+bool rtw_is_long_cac_ch(u8 ch, u8 bw, u8 offset);
 
 #endif //_RTL8711_RF_H_
 

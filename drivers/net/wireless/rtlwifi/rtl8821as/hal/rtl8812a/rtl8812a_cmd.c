@@ -96,7 +96,7 @@ _func_enter_;
 	if (CmdLen > RTL8812_MAX_CMD_LEN) {
 		goto exit;
 	}
-	if (padapter->bSurpriseRemoved == _TRUE)
+	if (rtw_is_surprise_removed(padapter))
 		goto exit;
 
 	//pay attention to if  race condition happened in  H2C cmd setting.
@@ -2374,13 +2374,12 @@ _func_enter_;
 				// check rsvd page download OK.
 				rtw_hal_get_hwreg(padapter, HW_VAR_BCN_VALID, (u8*)(&bcn_valid));
 				poll++;
-			} while(!bcn_valid && (poll%10)!=0 && !padapter->bSurpriseRemoved && !padapter->bDriverStopped);
+			} while (!bcn_valid && (poll%10) != 0 && !RTW_CANNOT_RUN(padapter));
 			
-		}while(!bcn_valid && DLBcnCount<=100 && !padapter->bSurpriseRemoved && !padapter->bDriverStopped);
+		} while (!bcn_valid && DLBcnCount <= 100 && !RTW_CANNOT_RUN(padapter));
 
-		if(padapter->bSurpriseRemoved || padapter->bDriverStopped)
-		{
-		}
+		if (RTW_CANNOT_RUN(padapter))
+			;
 		else if(!bcn_valid)
 			DBG_871X(ADPT_FMT": 1 DL RSVD page failed! DLBcnCount:%u, poll:%u\n",
 				ADPT_ARG(padapter) ,DLBcnCount, poll);
@@ -2679,17 +2678,7 @@ _func_enter_;
 		DLBcnCount = 0;
 		poll = 0;
 		do {
-#ifdef CONFIG_AP_WOWLAN
-			if (pwrpriv->wowlan_ap_mode)
-				rtw_hal_set_AP_fw_rsvd_page(padapter , _FALSE);
-			else
 				rtw_hal_set_fw_rsvd_page(padapter , _FALSE);
-				/*SetFwRsvdPagePkt(padapter, _FALSE);*/
-#else
-			/* download rsvd page.*/
-			rtw_hal_set_fw_rsvd_page(padapter , _FALSE);
-			/*SetFwRsvdPagePkt(padapter, _FALSE);*/
-#endif
 			DLBcnCount++;
 			do {
 				rtw_yield_os();
@@ -2697,13 +2686,16 @@ _func_enter_;
 				/* check rsvd page download OK.*/
 				rtw_hal_get_hwreg(padapter , HW_VAR_BCN_VALID , (u8 *)(&bcn_valid));
 				poll++;
-			} while (!bcn_valid && (poll%10) != 0 && !padapter->bSurpriseRemoved && !padapter->bDriverStopped);
+			} while (!bcn_valid && (poll%10) != 0 && !RTW_CANNOT_RUN(padapter));
 			
-		} while (!bcn_valid && DLBcnCount <= 100 && !padapter->bSurpriseRemoved && !padapter->bDriverStopped);
+		} while (!bcn_valid && DLBcnCount <= 100 && !RTW_CANNOT_RUN(padapter));
 		
 		/*RT_ASSERT(bcn_valid, ("HalDownloadRSVDPage88ES(): 1 Download RSVD page failed!\n"));*/
-		if (padapter->bSurpriseRemoved || padapter->bDriverStopped) 
-			DBG_871X("%s bSurpriseRemoved:%d, bDriverStopped:%d\n" , __func__ , padapter->bSurpriseRemoved , padapter->bDriverStopped);
+		if (RTW_CANNOT_RUN(padapter))
+			DBG_871X("%s bSurpriseRemoved:%s, bDriverStopped:%s\n"
+			, __func__
+			, rtw_is_surprise_removed(padapter)?"True":"False"
+			, rtw_is_drv_stopped(padapter)?"True":"False");
 		else if (!bcn_valid)
 			DBG_871X(ADPT_FMT": 1 DL RSVD page failed! DLBcnCount:%u, poll:%u\n",
 				ADPT_ARG(padapter) , DLBcnCount , poll);
@@ -2737,12 +2729,15 @@ _func_enter_;
 						/* check rsvd page download OK.*/
 						rtw_hal_get_hwreg(padapter , HW_VAR_BCN_VALID , (u8 *)(&bcn_valid));
 						poll++;
-					} while (!bcn_valid && (poll%10) != 0 && !padapter->bSurpriseRemoved && !padapter->bDriverStopped);
-				} while (!bcn_valid && DLBcnCount <= 100 && !padapter->bSurpriseRemoved && !padapter->bDriverStopped);
+					} while (!bcn_valid && (poll%10) != 0 && !RTW_CANNOT_RUN(padapter));
+				} while (!bcn_valid && DLBcnCount <= 100 && !RTW_CANNOT_RUN(padapter));
 				
 				/*RT_ASSERT(bcn_valid, ("HalDownloadRSVDPage(): 2 Download RSVD page failed!\n"));*/
-				if (padapter->bSurpriseRemoved || padapter->bDriverStopped)
-					DBG_871X("%s bSurpriseRemoved:%d, bDriverStopped:%d\n" , __func__ , padapter->bSurpriseRemoved , padapter->bDriverStopped);
+				if (RTW_CANNOT_RUN(padapter))
+					DBG_871X("%s bSurpriseRemoved:%s, bDriverStopped:%s\n"
+					, __func__
+					, rtw_is_surprise_removed(padapter)?"True":"False"
+					, rtw_is_drv_stopped(padapter)?"True":"False");
 				else if (!bcn_valid)
 					DBG_871X("%s: 2 Download RSVD page failed! DLBcnCount:%u, poll:%u\n" , __func__ , DLBcnCount , poll);
 				else
@@ -2916,7 +2911,7 @@ _C2HContentParsing8812(
 			break;
 
 		case C2H_8812_RA_RPT:
-			phydm_c2h_ra_report_handler(Adapter, tmpBuf, c2hCmdLen);
+			phydm_c2h_ra_report_handler(pDM_Odm, tmpBuf, c2hCmdLen);
 			break;
 			
 		case C2H_8812_RA_PARA_RPT:
@@ -3262,13 +3257,12 @@ _func_enter_;
 				// check rsvd page download OK.
 				rtw_hal_get_hwreg(padapter, HW_VAR_BCN_VALID, (u8*)(&bcn_valid));
 				poll++;
-			} while(!bcn_valid && (poll%10)!=0 && !padapter->bSurpriseRemoved && !padapter->bDriverStopped);
+			} while (!bcn_valid && (poll%10) != 0 && !RTW_CANNOT_RUN(padapter));
 			
-		}while(!bcn_valid && DLBcnCount<=100 && !padapter->bSurpriseRemoved && !padapter->bDriverStopped);
+		} while (!bcn_valid && DLBcnCount <= 100 && !RTW_CANNOT_RUN(padapter));
 
-		if(padapter->bSurpriseRemoved || padapter->bDriverStopped)
-		{
-		}
+		if (RTW_CANNOT_RUN(padapter))
+			;
 		else if(!bcn_valid)
 			DBG_871X(ADPT_FMT": 1 DL RSVD page failed! DLBcnCount:%u, poll:%u\n",
 				ADPT_ARG(padapter) ,DLBcnCount, poll);

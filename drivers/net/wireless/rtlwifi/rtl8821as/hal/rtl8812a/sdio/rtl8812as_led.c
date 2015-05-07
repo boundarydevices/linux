@@ -41,10 +41,8 @@
  */
 static void SwLedOn8812AS(PADAPTER padapter, PLED_SDIO pLed)
 {
-	if ((padapter->bSurpriseRemoved == _TRUE) || (padapter->bDriverStopped == _TRUE))
-	{
+	if (RTW_CANNOT_RUN(padapter))
 		return;
-	}
 
 	pLed->bLedOn = _TRUE;
 }
@@ -55,10 +53,8 @@ static void SwLedOn8812AS(PADAPTER padapter, PLED_SDIO pLed)
  */
 static void SwLedOff8821AS(PADAPTER padapter, PLED_SDIO pLed)
 {
-	if (padapter->bSurpriseRemoved == _TRUE)
-	{
+	if (RTW_CANNOT_RUN(padapter))
 		goto exit;
-	}
 
 exit:
 	pLed->bLedOn = _FALSE;

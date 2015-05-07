@@ -107,7 +107,12 @@ static ssize_t proc_set_log_level(struct file *file, const char __user *buffer, 
 	if (count < 1)
 		return -EINVAL;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%d ", &log_level);
 
@@ -237,6 +242,16 @@ static int proc_get_sd_f0_reg_dump(struct seq_file *m, void *v)
 
 	return 0;
 }
+
+static int proc_get_sdio_local_reg_dump(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+
+	sdio_local_reg_dump(m, adapter);
+
+	return 0;
+}
 #endif /* CONFIG_SDIO_HCI */
 
 static int proc_get_mac_reg_dump(struct seq_file *m, void *v)
@@ -290,8 +305,13 @@ static ssize_t proc_set_config_gpio(struct file *file, const char __user *buffer
 	
 	if (count < 2)
 		return -EFAULT;
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) 
-	{
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 		num	=sscanf(tmp, "%d %d",&gpio_pin,&gpio_mode);
 		DBG_871X("num=%d gpio_pin=%d mode=%d\n",num,gpio_pin,gpio_mode);
       		padapter->pre_gpio_pin=gpio_pin;
@@ -311,8 +331,13 @@ static ssize_t proc_set_gpio_output_value(struct file *file, const char __user *
 	
 	if (count < 2)
 		return -EFAULT;
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) 
-	{
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 		num	=sscanf(tmp, "%d %d",&gpio_pin,&pin_mode);
 		DBG_871X("num=%d gpio_pin=%d pin_high=%d\n",num,gpio_pin,pin_mode);
 		padapter->pre_gpio_pin=gpio_pin;
@@ -345,8 +370,13 @@ static ssize_t proc_set_gpio(struct file *file, const char __user *buffer, size_
 	
 	if (count < 1)
 		return -EFAULT;
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) 
-	{
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 		num	=sscanf(tmp, "%d",&gpio_pin);
 		DBG_871X("num=%d gpio_pin=%d\n",num,gpio_pin);
 		padapter->pre_gpio_pin=gpio_pin;
@@ -379,11 +409,16 @@ static ssize_t proc_set_linked_info_dump(struct file *file, const char __user *b
 	if (count < 1)
 		return -EFAULT;
 
-	pre_mode=padapter->bLinkInfoDump;
-	DBG_871X("pre_mode=%d \n",pre_mode);
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) 
-	{
+	pre_mode=padapter->bLinkInfoDump;
+	DBG_871X("pre_mode=%d\n", pre_mode);
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
 		num	=sscanf(tmp, "%d ", &mode);
 		DBG_871X("num=%d mode=%d\n",num,mode);
 
@@ -430,11 +465,15 @@ int proc_get_wifi_spec(struct seq_file *m, void *v)
 static int proc_get_chan_plan(struct seq_file *m, void *v)
 {
 	struct net_device *dev = m->private;
-	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct mlme_priv *mlme = &adapter->mlmepriv;
+	struct mlme_ext_priv *mlmeext = &adapter->mlmeextpriv;
 
-	DBG_871X_SEL_NL(m,"Channel plan=0x%02x\n",padapter->mlmepriv.ChannelPlan);	
+	dump_chset(m, mlmeext->channel_set);
+	DBG_871X_SEL_NL(m, "Channel plan=0x%02x\n", mlme->ChannelPlan);
 	return 0;
 }
+
 static ssize_t proc_set_chan_plan(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
 {
 	struct net_device *dev = data;
@@ -453,7 +492,12 @@ static ssize_t proc_set_chan_plan(struct file *file, const char __user *buffer, 
 		return -EFAULT;
 	}	
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%hhx", &chan_plan);
 
@@ -470,6 +514,75 @@ static ssize_t proc_set_chan_plan(struct file *file, const char __user *buffer, 
 	return count;
 
 }
+
+#ifdef CONFIG_DFS_MASTER
+ssize_t proc_set_update_non_ocp(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct mlme_priv *mlme = &adapter->mlmepriv;
+	struct mlme_ext_priv *mlmeext = &adapter->mlmeextpriv;
+	char tmp[32];
+	u8 ch, bw = CHANNEL_WIDTH_20, offset = HAL_PRIME_CHNL_OFFSET_DONT_CARE;
+	int ms = -1;
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		int num = sscanf(tmp, "%hhu %hhu %hhu %d", &ch, &bw, &offset, &ms);
+
+		if (num < 1 || (bw != CHANNEL_WIDTH_20 && num < 3))
+			goto exit;
+
+		if (bw == CHANNEL_WIDTH_20)
+			rtw_chset_update_non_ocp_ms(mlmeext->channel_set
+				, ch, bw, HAL_PRIME_CHNL_OFFSET_DONT_CARE, ms);
+		else
+			rtw_chset_update_non_ocp_ms(mlmeext->channel_set
+				, ch, bw, offset, ms);
+	}
+
+exit:
+	return count;
+}
+
+ssize_t proc_set_radar_detect(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
+	char tmp[32];
+	u8 fake_radar_detect_cnt = 0;
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		int num = sscanf(tmp, "%hhu", &fake_radar_detect_cnt);
+
+		if (num < 1)
+			goto exit;
+
+		rfctl->dbg_dfs_master_fake_radar_detect_cnt = fake_radar_detect_cnt;
+	}
+
+exit:
+	return count;
+}
+#endif /* CONFIG_DFS_MASTER */
 
 static int proc_get_udpport(struct seq_file *m, void *v)
 {
@@ -498,7 +611,12 @@ static ssize_t proc_set_udpport(struct file *file, const char __user *buffer, si
 		return -EFAULT;
 	}	
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%d", &sink_udpport);
 
@@ -570,7 +688,12 @@ static ssize_t proc_set_cam(struct file *file, const char __user *buffer, size_t
 	if (!adapter)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		/* c <id>: clear specific cam entry */
 		/* wfc <id>: write specific cam entry from cam cache */
@@ -596,6 +719,38 @@ static ssize_t proc_set_cam(struct file *file, const char __user *buffer, size_t
 	return count;
 }
 
+static ssize_t proc_set_change_bss_chbw(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct mlme_priv *mlme = &(adapter->mlmepriv);
+	struct mlme_ext_priv *mlmeext = &(adapter->mlmeextpriv);
+	char tmp[32];
+	u8 ch, bw = CHANNEL_WIDTH_20, offset = HAL_PRIME_CHNL_OFFSET_DONT_CARE;
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		int num = sscanf(tmp, "%hhu %hhu %hhu", &ch, &bw, &offset);
+
+		if (num < 1 || (bw != CHANNEL_WIDTH_20 && num < 3))
+			goto exit;
+
+		if (check_fwstate(mlme, WIFI_AP_STATE) && check_fwstate(mlme, WIFI_ASOC_STATE))
+			rtw_change_bss_chbw_cmd(adapter, RTW_CMDF_WAIT_ACK, ch, bw, offset);
+	}
+
+exit:
+	return count;
+}
+
 static int proc_get_cam_cache(struct seq_file *m, void *v)
 {
 	struct net_device *dev = m->private;
@@ -603,29 +758,35 @@ static int proc_get_cam_cache(struct seq_file *m, void *v)
 	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
 	u8 i;
 
+	DBG_871X_SEL_NL(m, "cam_ctl.sec_cap:0x%02x\n", dvobj->cam_ctl.sec_cap);
+	DBG_871X_SEL_NL(m, "cam_ctl.flags:0x%08x\n", dvobj->cam_ctl.flags);
 	DBG_871X_SEL_NL(m, "cam bitmap:0x%016llx\n", dvobj->cam_ctl.bitmap);
+	DBG_871X_SEL_NL(m, "reg_scr:0x%04x\n", rtw_read16(adapter, 0x680));
+	DBG_871X_SEL_NL(m, "\n");
 
-	DBG_871X_SEL_NL(m, "%-2s %-6s %-17s %-32s %-3s %-7s"
-		//" %-2s %-2s %-4s %-5s"
+	DBG_871X_SEL_NL(m, "%-2s %-6s %-17s %-32s %-3s %-7s %-2s %-2s"
+		/*" %-4s %-5s"*/
 		"\n"
-		, "id", "ctrl", "addr", "key", "kid", "type"
-		//, "MK", "GK", "MFB", "valid"
+		, "id", "ctrl", "addr", "key", "kid", "type", "MK", "GK"
+		/*, "MFB", "valid"*/
 	);
 
 	for (i=0;i<32;i++) {
 		if (dvobj->cam_cache[i].ctrl != 0)
-			DBG_871X_SEL_NL(m, "%2u 0x%04x "MAC_FMT" "KEY_FMT" %3u %-7s"
-				//" %2u %2u 0x%02x %5u"
+			DBG_871X_SEL_NL(m, "%2u 0x%04x "MAC_FMT" "KEY_FMT" %3u %-7s %2u %2u"
+				/*" 0x%02x %5u"*/
 				"\n", i
 				, dvobj->cam_cache[i].ctrl
 				, MAC_ARG(dvobj->cam_cache[i].mac)
 				, KEY_ARG(dvobj->cam_cache[i].key)
 				, (dvobj->cam_cache[i].ctrl)&0x03
 				, security_type_str(((dvobj->cam_cache[i].ctrl)>>2)&0x07)
-				//, ((dvobj->cam_cache[i].ctrl)>>5)&0x01
-				//, ((dvobj->cam_cache[i].ctrl)>>6)&0x01
-				//, ((dvobj->cam_cache[i].ctrl)>>8)&0x7f
-				//, ((dvobj->cam_cache[i].ctrl)>>15)&0x01
+				, ((dvobj->cam_cache[i].ctrl)>>5)&0x01
+				, ((dvobj->cam_cache[i].ctrl)>>6)&0x01
+				/*
+				, ((dvobj->cam_cache[i].ctrl)>>8)&0x7f
+				, ((dvobj->cam_cache[i].ctrl)>>15)&0x01
+				*/
 			);
 	}
 
@@ -643,7 +804,12 @@ ssize_t proc_set_btinfo_evt(struct file *file, const char __user *buffer, size_t
 	if (count < 6)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 		int num = 0;
 
 		_rtw_memset(btinfo, 0, 8);
@@ -660,6 +826,50 @@ ssize_t proc_set_btinfo_evt(struct file *file, const char __user *buffer, size_t
 		rtw_btinfo_cmd(padapter, btinfo, btinfo[1]+2);
 	}
 	
+	return count;
+}
+#endif
+#ifdef CONFIG_AUTO_CHNL_SEL_NHM
+static int proc_get_best_chan(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	u8 best_24g_ch = 0, best_5g_ch = 0;
+
+	rtw_hal_get_odm_var(adapter, HAL_ODM_AUTO_CHNL_SEL, &(best_24g_ch), &(best_5g_ch));
+
+	DBG_871X_SEL_NL(m, "Best 2.4G CH:%u\n", best_24g_ch);
+	DBG_871X_SEL_NL(m, "Best 5G CH:%u\n", best_5g_ch);
+	return 0;
+}
+
+static ssize_t  proc_set_acs(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	char tmp[32];
+	u8 acs_satae = 0;
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		int num = sscanf(tmp, "%hhu", &acs_satae);
+		
+		if (num < 1)
+			return -EINVAL;
+
+		if (1 == acs_satae)
+			rtw_acs_start(padapter, _TRUE);
+		else
+			rtw_acs_start(padapter, _FALSE);
+
+	}
 	return count;
 }
 #endif
@@ -697,6 +907,7 @@ const struct rtw_proc_hdl adapter_proc_hdls [] = {
 
 #ifdef CONFIG_SDIO_HCI
 	{"sd_f0_reg_dump", proc_get_sd_f0_reg_dump, NULL},
+	{"sdio_local_reg_dump", proc_get_sdio_local_reg_dump, NULL},
 #endif /* CONFIG_SDIO_HCI */
 
 	{"fwdl_test_case", proc_get_dummy, proc_set_fwdl_test_case},
@@ -734,6 +945,7 @@ const struct rtw_proc_hdl adapter_proc_hdls [] = {
 #endif /* CONFIG_80211N_HT */
 
 	{"en_fwps", proc_get_en_fwps, proc_set_en_fwps},
+	{"mac_rptbuf", proc_get_mac_rptbuf, NULL},
 
 	//{"path_rssi", proc_get_two_path_rssi, NULL},
 //	{"rssi_disp",proc_get_rssi_disp, proc_set_rssi_disp},
@@ -769,11 +981,17 @@ const struct rtw_proc_hdl adapter_proc_hdls [] = {
 	{"p2p_wowlan_info", proc_get_p2p_wowlan_info, NULL},
 #endif
 	{"chan_plan",proc_get_chan_plan,proc_set_chan_plan},
+#ifdef CONFIG_DFS_MASTER
+	{"dfs_master_test_case", proc_get_dfs_master_test_case, proc_set_dfs_master_test_case},
+	{"update_non_ocp", proc_get_dummy, proc_set_update_non_ocp},
+	{"radar_detect", proc_get_dummy, proc_set_radar_detect},
+#endif
 	{"new_bcn_max", proc_get_new_bcn_max, proc_set_new_bcn_max},
 	{"sink_udpport",proc_get_udpport,proc_set_udpport},
 #ifdef DBG_RX_COUNTER_DUMP
 	{"dump_rx_cnt_mode",proc_get_rx_cnt_dump,proc_set_rx_cnt_dump},
 #endif	
+	{"change_bss_chbw", NULL, proc_set_change_bss_chbw},
 #ifdef CONFIG_POWER_SAVING
 	{"ps_info",proc_get_ps_info, NULL},
 #endif
@@ -781,6 +999,13 @@ const struct rtw_proc_hdl adapter_proc_hdls [] = {
 	{"tdls_info", proc_get_tdls_info, NULL},
 #endif
 	{"monitor", proc_get_monitor, proc_set_monitor},
+
+#ifdef CONFIG_AUTO_CHNL_SEL_NHM
+	{"acs", proc_get_best_chan, proc_set_acs},
+#endif
+#ifdef CONFIG_PREALLOC_RX_SKB_BUFFER
+	{"rtkm_info", proc_get_rtkm_info, NULL}
+#endif
 };
 
 const int adapter_proc_hdls_num = sizeof(adapter_proc_hdls) / sizeof(struct rtw_proc_hdl);
@@ -835,7 +1060,12 @@ ssize_t proc_set_odm_dbg_comp(struct file *file, const char __user *buffer, size
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%llx", &dbg_comp);
 
@@ -869,7 +1099,12 @@ ssize_t proc_set_odm_dbg_level(struct file *file, const char __user *buffer, siz
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%u", &dbg_level);
 
@@ -903,7 +1138,12 @@ ssize_t proc_set_odm_ability(struct file *file, const char __user *buffer, size_
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%x", &ability);
 
@@ -940,9 +1180,14 @@ ssize_t proc_set_odm_adaptivity(struct file *file, const char __user *buffer, si
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
 
-		int num = sscanf(tmp, "%x %hhd %x %hhd %s",	&TH_L2H_ini, &TH_EDCCA_HL_diff, &TH_L2H_ini_mode2, &TH_EDCCA_HL_diff_mode2, &EDCCA_enable);
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		int num = sscanf(tmp, "%x %hhd %x %hhd %hhu", &TH_L2H_ini, &TH_EDCCA_HL_diff, &TH_L2H_ini_mode2, &TH_EDCCA_HL_diff_mode2, &EDCCA_enable);
 
 		if (num != 5)
 			return count;

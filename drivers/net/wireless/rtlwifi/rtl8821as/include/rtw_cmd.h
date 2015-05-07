@@ -233,6 +233,7 @@ enum rtw_drvextra_cmd_id
 	BEAMFORMING_WK_CID,
 	LPS_CHANGE_DTIM_CID,
 	BTINFO_WK_CID,
+	DFS_MASTER_WK_CID,
 	MAX_WK_CID
 };
 
@@ -316,7 +317,12 @@ Notes: To create a BSS
 Command Mode
 */
 struct createbss_parm {
-	WLAN_BSSID_EX network;
+	bool adhoc;
+
+	/* used by AP mode now */
+	s16 req_ch;
+	u8 req_bw;
+	u8 req_offset;
 };
 
 /*
@@ -1008,9 +1014,11 @@ Result:
 extern u8 rtw_setassocsta_cmd(_adapter  *padapter, u8 *mac_addr);
 extern u8 rtw_setstandby_cmd(_adapter *padapter, uint action);
 u8 rtw_sitesurvey_cmd(_adapter  *padapter, NDIS_802_11_SSID *ssid, int ssid_num, struct rtw_ieee80211_channel *ch, int ch_num);
-extern u8 rtw_createbss_cmd(_adapter  *padapter);
-extern u8 rtw_createbss_cmd_ex(_adapter  *padapter, unsigned char *pbss, unsigned int sz);
-u8 rtw_startbss_cmd(_adapter  *padapter, int flags);
+
+u8 rtw_create_ibss_cmd(_adapter *adapter, int flags);
+u8 rtw_startbss_cmd(_adapter *adapter, int flags);
+u8 rtw_change_bss_chbw_cmd(_adapter *adapter, int flags, u8 req_ch, u8 req_bw, u8 req_offset);
+
 extern u8 rtw_setphy_cmd(_adapter  *padapter, u8 modem, u8 ch);
 
 struct sta_info;
@@ -1058,7 +1066,21 @@ extern u8 rtw_ps_cmd(_adapter*padapter);
 
 #ifdef CONFIG_AP_MODE
 u8 rtw_chk_hi_queue_cmd(_adapter*padapter);
-#endif
+#ifdef CONFIG_DFS_MASTER
+u8 rtw_dfs_master_cmd(_adapter *adapter, bool enqueue);
+void rtw_dfs_master_timer_hdl(RTW_TIMER_HDL_ARGS);
+void rtw_dfs_master_enable(_adapter *adapter, u8 ch, u8 bw, u8 offset);
+void rtw_dfs_master_disable(_adapter *adapter, bool ld_sta_in_dfs);
+enum {
+	MLME_STA_CONNECTING,
+	MLME_STA_CONNECTED,
+	MLME_STA_DISCONNECTED,
+	MLME_AP_STARTED,
+	MLME_AP_STOPPED,
+};
+void rtw_dfs_master_status_apply(_adapter *adapter, u8 self_action);
+#endif /* CONFIG_DFS_MASTER */
+#endif /* CONFIG_AP_MODE */
 
 #ifdef CONFIG_BT_COEXIST
 u8 rtw_btinfo_cmd(PADAPTER padapter, u8 *pbuf, u16 length);
@@ -1082,8 +1104,8 @@ u8 rtw_drvextra_cmd_hdl(_adapter *padapter, unsigned char *pbuf);
 
 extern void rtw_survey_cmd_callback(_adapter  *padapter, struct cmd_obj *pcmd);
 extern void rtw_disassoc_cmd_callback(_adapter  *padapter, struct cmd_obj *pcmd);
-extern void rtw_joinbss_cmd_callback(_adapter  *padapter, struct cmd_obj *pcmd);	
-extern void rtw_createbss_cmd_callback(_adapter  *padapter, struct cmd_obj *pcmd);
+extern void rtw_joinbss_cmd_callback(_adapter  *padapter, struct cmd_obj *pcmd);
+void rtw_create_ibss_post_hdl(_adapter *padapter, int status);
 extern void rtw_getbbrfreg_cmdrsp_callback(_adapter  *padapter, struct cmd_obj *pcmd);
 extern void rtw_readtssi_cmdrsp_callback(_adapter*	padapter,  struct cmd_obj *pcmd);
 
@@ -1202,7 +1224,7 @@ struct _cmd_callback 	rtw_cmd_callback[] =
  	{GEN_CMD_CODE(_setMBIDCFG), NULL},
 	{GEN_CMD_CODE(_JoinBss), &rtw_joinbss_cmd_callback},  /*14*/
 	{GEN_CMD_CODE(_DisConnect), &rtw_disassoc_cmd_callback}, /*15*/
-	{GEN_CMD_CODE(_CreateBss), &rtw_createbss_cmd_callback},
+	{GEN_CMD_CODE(_CreateBss), NULL},
 	{GEN_CMD_CODE(_SetOpMode), NULL},
 	{GEN_CMD_CODE(_SiteSurvey), &rtw_survey_cmd_callback}, /*18*/
 	{GEN_CMD_CODE(_SetAuth), NULL},

@@ -495,6 +495,28 @@ _func_exit_;
 
 }
 
+bool rtw_regsty_adjust_chbw(struct registry_priv *regsty, u8 req_ch, u8 *req_bw, u8 *req_offset)
+{
+	u8 regsty_allowed_bw;
+
+	if (req_ch <= 14)
+		regsty_allowed_bw = regsty->bw_mode & 0x0F;
+	else
+		regsty_allowed_bw = regsty->bw_mode >> 4;
+
+	if (regsty_allowed_bw == 2 && *req_bw > CHANNEL_WIDTH_80)
+		*req_bw = CHANNEL_WIDTH_80;
+	else if (regsty_allowed_bw == 1 && *req_bw > CHANNEL_WIDTH_40)
+		*req_bw = CHANNEL_WIDTH_40;
+	else if (regsty_allowed_bw == 0 && *req_bw > CHANNEL_WIDTH_20) {
+		*req_bw = CHANNEL_WIDTH_20;
+		*req_offset = HAL_PRIME_CHNL_OFFSET_DONT_CARE;
+	} else
+		return _FALSE;
+
+	return _TRUE;
+}
+
 unsigned char *rtw_get_wpa_ie(unsigned char *pie, int *wpa_ie_len, int limit)
 {
 	int len;
@@ -1367,7 +1389,7 @@ int rtw_get_mac_addr_intel(unsigned char *buf)
 
 	DBG_871X("%s Enter\n", __FUNCTION__);
 
-	ret = rtw_retrive_from_file(fname, c_mac, MAC_ADDRESS_LEN);
+	ret = rtw_retrieve_from_file(fname, c_mac, MAC_ADDRESS_LEN);
 	if(ret < MAC_ADDRESS_LEN)
 	{
 		return -1;
@@ -1560,6 +1582,182 @@ void dump_wps_ie(void *sel, u8 *ie, u32 ie_len)
 		DBG_871X_SEL_NL(sel, "%s ID:0x%04x, LEN:%u\n", __FUNCTION__, id, len);
 
 		pos+=(4+len);
+	}
+}
+
+/**
+ * rtw_ies_get_chbw - get operation ch, bw, offset from IEs of BSS.
+ * @ies: pointer of the first tlv IE
+ * @ies_len: length of @ies
+ * @ch: pointer of ch, used as output
+ * @bw: pointer of bw, used as output
+ * @offset: pointer of offset, used as output
+ */
+void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset)
+{
+	u8 *p;
+	int	ie_len;
+
+	*ch = 0;
+	*bw = CHANNEL_WIDTH_20;
+	*offset = HAL_PRIME_CHNL_OFFSET_DONT_CARE;
+
+	p = rtw_get_ie(ies, _DSSET_IE_, &ie_len, ies_len);
+	if (p && ie_len > 0)
+		*ch = *(p + 2);
+
+#ifdef CONFIG_80211N_HT
+{
+	u8 *ht_cap_ie, *ht_op_ie;
+	int ht_cap_ielen, ht_op_ielen;
+
+	ht_cap_ie = rtw_get_ie(ies, EID_HTCapability, &ht_cap_ielen, ies_len);
+	if (ht_cap_ie && ht_cap_ielen) {
+		if (GET_HT_CAP_ELE_CHL_WIDTH(ht_cap_ie + 2))
+			*bw = CHANNEL_WIDTH_40;
+	}
+
+	ht_op_ie = rtw_get_ie(ies, EID_HTInfo, &ht_op_ielen, ies_len);
+	if (ht_op_ie && ht_op_ielen) {
+		if (*ch == 0) {
+			*ch = GET_HT_OP_ELE_PRI_CHL(ht_op_ie + 2);
+		} else if (*ch != 0 && *ch != GET_HT_OP_ELE_PRI_CHL(ht_op_ie + 2)) {
+			DBG_871X("%s ch inconsistent, DSSS:%u, HT primary:%u\n"
+				, __func__, *ch, GET_HT_OP_ELE_PRI_CHL(ht_op_ie + 2));
+		}
+
+		if (!GET_HT_OP_ELE_STA_CHL_WIDTH(ht_op_ie + 2))
+			*bw = CHANNEL_WIDTH_20;
+
+		if (*bw == CHANNEL_WIDTH_40) {
+			switch (GET_HT_OP_ELE_2ND_CHL_OFFSET(ht_op_ie + 2)) {
+			case SCA:
+				*offset = HAL_PRIME_CHNL_OFFSET_LOWER;
+				break;
+			case SCB:
+				*offset = HAL_PRIME_CHNL_OFFSET_UPPER;
+				break;
+			}
+		}
+	}
+}
+#endif /* CONFIG_80211N_HT */
+#ifdef CONFIG_80211AC_VHT
+{
+	u8 *vht_op_ie;
+	int vht_op_ielen;
+
+	vht_op_ie = rtw_get_ie(ies, EID_VHTOperation, &vht_op_ielen, ies_len);
+	if (vht_op_ie && vht_op_ielen) {
+		if (GET_VHT_OPERATION_ELE_CHL_WIDTH(vht_op_ie + 2) >= 1)
+			*bw = CHANNEL_WIDTH_80;
+	}
+}
+#endif
+}
+
+void rtw_bss_get_chbw(WLAN_BSSID_EX *bss, u8 *ch, u8 *bw, u8 *offset)
+{
+	rtw_ies_get_chbw(bss->IEs + sizeof(NDIS_802_11_FIXED_IEs)
+		, bss->IELength - sizeof(NDIS_802_11_FIXED_IEs)
+		, ch, bw, offset);
+
+	if (*ch == 0) {
+		*ch = bss->Configuration.DSConfig;
+	} else if (*ch != bss->Configuration.DSConfig) {
+		DBG_871X("inconsistent ch - ies:%u bss->Configuration.DSConfig:%u\n"
+			, *ch, bss->Configuration.DSConfig);
+		*ch = bss->Configuration.DSConfig;
+		rtw_warn_on(1);
+	}
+}
+
+/**
+ * rtw_is_chbw_grouped - test if the two ch settings can be grouped together
+ * @ch_a: ch of set a
+ * @bw_a: bw of set a
+ * @offset_a: offset of set a
+ * @ch_b: ch of set b
+ * @bw_b: bw of set b
+ * @offset_b: offset of set b
+ */
+bool rtw_is_chbw_grouped(u8 ch_a, u8 bw_a, u8 offset_a
+	, u8 ch_b, u8 bw_b, u8 offset_b)
+{
+	bool is_grouped = _FALSE;
+
+	if (ch_a != ch_b) {
+		/* ch is different */
+		goto exit;
+	} else if ((bw_a == CHANNEL_WIDTH_40 || bw_a == CHANNEL_WIDTH_80)
+			&& (bw_b == CHANNEL_WIDTH_40 || bw_b == CHANNEL_WIDTH_80)
+	) {
+		if (offset_a != offset_b)
+			goto exit;
+	}
+
+	is_grouped = _TRUE;
+
+exit:
+	return is_grouped;
+}
+
+/**
+ * rtw_sync_chbw - obey g_ch, adjust g_bw, g_offset, bw, offset
+ * @req_ch: pointer of the request ch, may be modified further
+ * @req_bw: pointer of the request bw, may be modified further
+ * @req_offset: pointer of the request offset, may be modified further
+ * @g_ch: pointer of the ongoing group ch
+ * @g_bw: pointer of the ongoing group bw, may be modified further
+ * @g_offset: pointer of the ongoing group offset, may be modified further
+ */
+void rtw_sync_chbw(u8 *req_ch, u8 *req_bw, u8 *req_offset
+	, u8 *g_ch, u8 *g_bw, u8 *g_offset)
+{
+
+	*req_ch = *g_ch;
+
+	if (*req_bw == CHANNEL_WIDTH_80 && *g_ch <= 14) {
+		/*2.4G ch, downgrade to 40Mhz */
+		*req_bw = CHANNEL_WIDTH_40;
+	}
+
+	switch (*req_bw) {
+	case CHANNEL_WIDTH_80:
+		if (*g_bw == CHANNEL_WIDTH_40 || *g_bw == CHANNEL_WIDTH_80)
+			*req_offset = *g_offset;
+		else if (*g_bw == CHANNEL_WIDTH_20)
+			*req_offset = rtw_get_offset_by_ch(*req_ch);
+
+		if (*req_offset == HAL_PRIME_CHNL_OFFSET_DONT_CARE) {
+			DBG_871X_LEVEL(_drv_err_, "%s req 80MHz BW without offset, down to 20MHz\n", __func__);
+			rtw_warn_on(1);
+			*req_bw = CHANNEL_WIDTH_20;
+		}
+		break;
+	case CHANNEL_WIDTH_40:
+		if (*g_bw == CHANNEL_WIDTH_40 || *g_bw == CHANNEL_WIDTH_80)
+			*req_offset = *g_offset;
+		else if (*g_bw == CHANNEL_WIDTH_20)
+			*req_offset = rtw_get_offset_by_ch(*req_ch);
+
+		if (*req_offset == HAL_PRIME_CHNL_OFFSET_DONT_CARE) {
+			DBG_871X_LEVEL(_drv_err_, "%s req 40MHz BW without offset, down to 20MHz\n", __func__);
+			rtw_warn_on(1);
+			*req_bw = CHANNEL_WIDTH_20;
+		}
+		break;
+	case CHANNEL_WIDTH_20:
+		*req_offset = HAL_PRIME_CHNL_OFFSET_DONT_CARE;
+		break;
+	default:
+		DBG_871X_LEVEL(_drv_err_, "%s req unsupported BW:%u\n", __func__, *req_bw);
+		rtw_warn_on(1);
+	}
+
+	if (*req_bw > *g_bw) {
+		*g_bw = *req_bw;
+		*g_offset = *req_offset;
 	}
 }
 

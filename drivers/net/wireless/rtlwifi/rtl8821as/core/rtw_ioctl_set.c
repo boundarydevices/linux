@@ -20,6 +20,7 @@
 #define _RTW_IOCTL_SET_C_
 
 #include <drv_types.h>
+#include <hal_data.h>
 
 
 extern void indicate_wx_scan_complete_event(_adapter *padapter);
@@ -159,9 +160,8 @@ _func_enter_;
 
 				rtw_generate_random_ibss(pibss);
 					
-				if(rtw_createbss_cmd(padapter)!=_SUCCESS)
-				{
-					RT_TRACE(_module_rtl871x_ioctl_set_c_,_drv_err_,("***Error=>do_goin: rtw_createbss_cmd status FAIL*** \n "));						
+				if (rtw_create_ibss_cmd(padapter, 0) != _SUCCESS) {
+					RT_TRACE(_module_rtl871x_ioctl_set_c_, _drv_err_, ("***Error=>do_goin: rtw_create_ibss_cmd status FAIL***\n"));						
 					ret =  _FALSE;
 					goto exit;
 				}
@@ -415,7 +415,7 @@ _func_enter_;
 	DBG_871X_LEVEL(_drv_always_, "set ssid [%s] fw_state=0x%08x\n",
 		       	ssid->Ssid, get_fwstate(pmlmepriv));
 
-	if(padapter->hw_init_completed==_FALSE){
+	if (!rtw_is_hw_init_completed(padapter)) {
 		RT_TRACE(_module_rtl871x_ioctl_set_c_, _drv_err_,
 			 ("set_ssid: hw_init_completed==_FALSE=>exit!!!\n"));
 		status = _FAIL;
@@ -549,7 +549,7 @@ _func_enter_;
 		goto exit;
 	}
 
-	if(padapter->hw_init_completed==_FALSE){
+	if (!rtw_is_hw_init_completed(padapter)) {
 		RT_TRACE(_module_rtl871x_ioctl_set_c_, _drv_err_,
 			 ("set_ssid: hw_init_completed==_FALSE=>exit!!!\n"));
 		status = _FAIL;
@@ -735,7 +735,7 @@ _func_enter_;
 		res=_FALSE;
 		goto exit;
 	}
-	if (padapter->hw_init_completed==_FALSE){
+	if (!rtw_is_hw_init_completed(padapter)) {
 		res = _FALSE;
 		RT_TRACE(_module_rtl871x_ioctl_set_c_,_drv_err_,("\n===rtw_set_802_11_bssid_list_scan:hw_init_completed==_FALSE===\n"));
 		goto exit;

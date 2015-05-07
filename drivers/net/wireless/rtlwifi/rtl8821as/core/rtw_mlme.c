@@ -19,8 +19,7 @@
  ******************************************************************************/
 #define _RTW_MLME_C_
 
-#include <drv_types.h>
-
+#include <hal_data.h>
 
 extern void indicate_wx_scan_complete_event(_adapter *padapter);
 extern u8 rtw_do_join(_adapter * padapter);
@@ -427,9 +426,11 @@ sint rtw_if_up(_adapter *padapter)	{
 	sint res;
 _func_enter_;		
 
-	if( padapter->bDriverStopped || padapter->bSurpriseRemoved ||
-		(check_fwstate(&padapter->mlmepriv, _FW_LINKED)== _FALSE)){		
-		RT_TRACE(_module_rtl871x_mlme_c_, _drv_info_, ("rtw_if_up:bDriverStopped(%d) OR bSurpriseRemoved(%d)", padapter->bDriverStopped, padapter->bSurpriseRemoved));	
+	if (RTW_CANNOT_RUN(padapter) ||
+		(check_fwstate(&padapter->mlmepriv, _FW_LINKED) == _FALSE)) {
+		RT_TRACE(_module_rtl871x_mlme_c_, _drv_info_, ("rtw_if_up:bDriverStopped(%s) OR bSurpriseRemoved(%s)"
+			, rtw_is_drv_stopped(padapter)?"True":"False"
+			, rtw_is_surprise_removed(padapter)?"True":"False"));
 		res=_FALSE;
 	}
 	else
@@ -1199,8 +1200,6 @@ _func_exit_;
 	return;	
 }
 
-
-
 void rtw_surveydone_event_callback(_adapter	*adapter, u8 *pbuf)
 {
 	_irqL  irqL;
@@ -1270,10 +1269,8 @@ _func_enter_;
 	
 					pmlmepriv->fw_state = WIFI_ADHOC_MASTER_STATE;
 			
-					if(rtw_createbss_cmd(adapter)!=_SUCCESS)
-					{
-	                     		RT_TRACE(_module_rtl871x_mlme_c_,_drv_err_,("Error=>rtw_createbss_cmd status FAIL\n"));						
-					}	
+					if (rtw_create_ibss_cmd(adapter, 0) != _SUCCESS)
+						RT_TRACE(_module_rtl871x_mlme_c_, _drv_err_, ("Error=>rtw_create_ibss_cmd status FAIL\n"));
 
 			     		pmlmepriv->to_join = _FALSE;
 		   		}
@@ -1470,8 +1467,7 @@ _func_enter_;
 	RT_TRACE(_module_rtl871x_mlme_c_, _drv_info_, ("tgt_network->network.MacAddress="MAC_FMT" ssid=%s\n",
 		MAC_ARG(tgt_network->network.MacAddress), tgt_network->network.Ssid.Ssid));
 
-	if(check_fwstate( pmlmepriv, WIFI_STATION_STATE|WIFI_AP_STATE))
-	{
+	if (check_fwstate(pmlmepriv, WIFI_STATION_STATE)) {
 		struct sta_info* psta;
 		
 		psta = rtw_get_stainfo(&adapter->stapriv, tgt_network->network.MacAddress);
@@ -1494,8 +1490,7 @@ _func_enter_;
 		
 	}
 
-	if(check_fwstate( pmlmepriv, WIFI_ADHOC_STATE|WIFI_ADHOC_MASTER_STATE|WIFI_AP_STATE))
-	{
+	if (check_fwstate(pmlmepriv, WIFI_ADHOC_STATE|WIFI_ADHOC_MASTER_STATE)) {
 		struct sta_info* psta;
 	
 		rtw_free_all_stainfo(adapter);
@@ -1511,7 +1506,7 @@ _func_enter_;
 	if(lock_scanned_queue)
 		_enter_critical_bh(&(pmlmepriv->scanned_queue.lock), &irqL);
 	
-	pwlan = rtw_find_network(&pmlmepriv->scanned_queue, tgt_network->network.MacAddress);
+	pwlan = _rtw_find_same_network(&pmlmepriv->scanned_queue, tgt_network);
 	if(pwlan)		
 	{
 		pwlan->fixed = _FALSE;
@@ -1535,7 +1530,8 @@ _func_enter_;
 	if((check_fwstate(pmlmepriv, WIFI_ADHOC_MASTER_STATE) && (adapter->stapriv.asoc_sta_count== 1))
 		/*||check_fwstate(pmlmepriv, WIFI_STATION_STATE)*/)
 	{
-		rtw_free_network_nolock(adapter, pwlan); 
+		if (pwlan)
+			rtw_free_network_nolock(adapter, pwlan);
 	}
 
 	if(lock_scanned_queue)
@@ -1716,7 +1712,7 @@ inline void rtw_indicate_scan_done( _adapter *padapter, bool aborted)
 #endif // CONFIG_IPS
 }
 
-u32 rtw_scan_abort_timeout(_adapter *adapter, u32 timeout_ms)
+static u32 _rtw_wait_scan_done(_adapter *adapter, u8 abort, u32 timeout_ms)
 {
 	u32 start;
 	u32 pass_ms;
@@ -1724,31 +1720,57 @@ u32 rtw_scan_abort_timeout(_adapter *adapter, u32 timeout_ms)
 	struct mlme_ext_priv *pmlmeext = &(adapter->mlmeextpriv);
 
 	start = rtw_get_current_time();
-	pmlmeext->scan_abort = _TRUE;
+	
+	pmlmeext->scan_abort = abort;
+	
 	while (check_fwstate(pmlmepriv, _FW_UNDER_SURVEY)
 		&& rtw_get_passing_time_ms(start) <= timeout_ms) {
 
-		if (adapter->bDriverStopped || adapter->bSurpriseRemoved)
+		if (RTW_CANNOT_RUN(adapter))
 			break;
 
 		DBG_871X(FUNC_NDEV_FMT"fw_state=_FW_UNDER_SURVEY!\n", FUNC_NDEV_ARG(adapter->pnetdev));
 		rtw_msleep_os(20);
 	}
 
-	if (check_fwstate(pmlmepriv, _FW_UNDER_SURVEY)) {
-		if (!adapter->bDriverStopped && !adapter->bSurpriseRemoved)
-			DBG_871X(FUNC_NDEV_FMT"waiting for scan_abort time out!\n", FUNC_NDEV_ARG(adapter->pnetdev));
-		#ifdef CONFIG_PLATFORM_MSTAR
-		//_clr_fwstate_(pmlmepriv, _FW_UNDER_SURVEY);
-		set_survey_timer(pmlmeext, 0);
-		mlme_set_scan_to_timer(pmlmepriv, 50);
-		#endif
-		rtw_indicate_scan_done(adapter, _TRUE);
+	if (_TRUE == abort) {
+		if (check_fwstate(pmlmepriv, _FW_UNDER_SURVEY)) {
+			if (!RTW_CANNOT_RUN(adapter))
+				DBG_871X(FUNC_NDEV_FMT"waiting for scan_abort time out!\n", FUNC_NDEV_ARG(adapter->pnetdev));
+			#ifdef CONFIG_PLATFORM_MSTAR
+			/*_clr_fwstate_(pmlmepriv, _FW_UNDER_SURVEY);*/
+			set_survey_timer(pmlmeext, 0);
+			mlme_set_scan_to_timer(pmlmepriv, 50);
+			#endif
+			rtw_indicate_scan_done(adapter, _TRUE);
+		}
 	}
+	
 	pmlmeext->scan_abort = _FALSE;
 	pass_ms = rtw_get_passing_time_ms(start);
 
 	return pass_ms;
+
+}
+
+void rtw_scan_wait_completed(_adapter *adapter)
+{
+	u32 scan_to = SCANNING_TIMEOUT;
+
+#ifdef CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
+	if (IsSupported5G(adapter->registrypriv.wireless_mode) 
+		&& IsSupported24G(adapter->registrypriv.wireless_mode)) /*dual band*/
+		scan_to = CONC_SCANNING_TIMEOUT_DUAL_BAND;
+	else /*single band*/
+		scan_to = CONC_SCANNING_TIMEOUT_SINGLE_BAND;
+#endif /*CONFIG_STA_MODE_SCAN_UNDER_AP_MODE*/
+
+	_rtw_wait_scan_done(adapter, _FALSE, scan_to);
+}
+
+u32 rtw_scan_abort_timeout(_adapter *adapter, u32 timeout_ms)
+{
+	return _rtw_wait_scan_done(adapter, _TRUE, timeout_ms);
 }
 
 void rtw_scan_abort_no_wait(_adapter *adapter)
@@ -2553,14 +2575,9 @@ _func_enter_;
 				_clr_fwstate_(pmlmepriv, WIFI_ADHOC_STATE);
 			}
 
-			if(rtw_createbss_cmd(adapter)!=_SUCCESS)
-			{
+			if (rtw_create_ibss_cmd(adapter, 0) != _SUCCESS)
+				RT_TRACE(_module_rtl871x_ioctl_set_c_, _drv_err_, ("***Error=>stadel_event_callback: rtw_create_ibss_cmd status FAIL***\n"));
 
-				RT_TRACE(_module_rtl871x_ioctl_set_c_,_drv_err_,("***Error=>stadel_event_callback: rtw_createbss_cmd status FAIL*** \n "));										
-
-			}
-
-			
 		}
 		
 	}
@@ -2612,7 +2629,7 @@ void _rtw_join_timeout_handler (_adapter *adapter)
 	struct	mlme_priv *pmlmepriv = &adapter->mlmepriv;
 
 #if 0
-	if (adapter->bDriverStopped == _TRUE){
+	if (rtw_is_drv_stopped(adapter)) {
 		_rtw_up_sema(&pmlmepriv->assoc_terminate);
 		return;
 	}
@@ -2623,7 +2640,7 @@ _func_enter_;
 
 	DBG_871X("%s, fw_state=%x\n", __FUNCTION__, get_fwstate(pmlmepriv));
 	
-	if(adapter->bDriverStopped ||adapter->bSurpriseRemoved)
+	if (RTW_CANNOT_RUN(adapter))
 		return;
 
 	
@@ -2755,6 +2772,40 @@ exit:
 	return;
 }
 
+void rtw_drv_scan_by_self(_adapter *padapter)
+{
+	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
+
+	if (!padapter->registrypriv.wifi_spec) {
+		if (check_fwstate(pmlmepriv, (_FW_UNDER_SURVEY | _FW_UNDER_LINKING)) == _TRUE) {
+			DBG_871X(FUNC_ADPT_FMT" _FW_UNDER_SURVEY|_FW_UNDER_LINKING\n", FUNC_ADPT_ARG(padapter));
+			goto exit;
+		}
+			
+		if (pmlmepriv->LinkDetectInfo.bBusyTraffic == _TRUE) {
+			DBG_871X(FUNC_ADPT_FMT" exit BusyTraffic\n", FUNC_ADPT_ARG(padapter));
+			goto exit;
+		}
+	}
+
+#ifdef CONFIG_CONCURRENT_MODE
+	if (rtw_buddy_adapter_up(padapter)) {
+		if ((check_buddy_fwstate(padapter, (_FW_UNDER_SURVEY | _FW_UNDER_LINKING)) == _TRUE) ||
+			(padapter->pbuddy_adapter->mlmepriv.LinkDetectInfo.bBusyTraffic == _TRUE)) {		
+				DBG_871X(FUNC_ADPT_FMT", but buddy_intf is under scanning or linking or BusyTraffic\n", FUNC_ADPT_ARG(padapter));
+				goto exit;
+		}
+	}
+#endif
+
+	DBG_871X(FUNC_ADPT_FMT"\n", FUNC_ADPT_ARG(padapter));
+
+	rtw_set_802_11_bssid_list_scan(padapter, NULL, 0);
+
+exit:
+	return;	
+}
+
 static void rtw_auto_scan_handler(_adapter *padapter)
 {
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
@@ -2762,42 +2813,9 @@ static void rtw_auto_scan_handler(_adapter *padapter)
 	rtw_mlme_reset_auto_scan_int(padapter);
 
 	if (pmlmepriv->auto_scan_int_ms != 0
-		&& rtw_get_passing_time_ms(pmlmepriv->scan_start_time) > pmlmepriv->auto_scan_int_ms) {
-
-		if (!padapter->registrypriv.wifi_spec) {
-			if (check_fwstate(pmlmepriv, _FW_UNDER_SURVEY|_FW_UNDER_LINKING) == _TRUE) 
-			{
-				DBG_871X(FUNC_ADPT_FMT" _FW_UNDER_SURVEY|_FW_UNDER_LINKING\n", FUNC_ADPT_ARG(padapter));
-				goto exit;
-			}
-			
-			if(pmlmepriv->LinkDetectInfo.bBusyTraffic == _TRUE)
-			{
-				DBG_871X(FUNC_ADPT_FMT" exit BusyTraffic\n", FUNC_ADPT_ARG(padapter));
-				goto exit;
-			}
-		}
-
-#ifdef CONFIG_CONCURRENT_MODE
-		if (rtw_buddy_adapter_up(padapter))
-		{
-			if ((check_buddy_fwstate(padapter, _FW_UNDER_SURVEY|_FW_UNDER_LINKING) == _TRUE) ||
-				(padapter->pbuddy_adapter->mlmepriv.LinkDetectInfo.bBusyTraffic == _TRUE))
-			{		
-				DBG_871X(FUNC_ADPT_FMT", but buddy_intf is under scanning or linking or BusyTraffic\n"
-					, FUNC_ADPT_ARG(padapter));
-				goto exit;
-			}
-		}
-#endif
-
-		DBG_871X(FUNC_ADPT_FMT"\n", FUNC_ADPT_ARG(padapter));
-
-		rtw_set_802_11_bssid_list_scan(padapter, NULL, 0);
-	}
-
-exit:
-	return;
+		&& rtw_get_passing_time_ms(pmlmepriv->scan_start_time) > pmlmepriv->auto_scan_int_ms) 
+		rtw_drv_scan_by_self(padapter);
+	
 }
 
 void rtw_dynamic_check_timer_handlder(_adapter *adapter)
@@ -2813,10 +2831,10 @@ void rtw_dynamic_check_timer_handlder(_adapter *adapter)
 	if(!adapter)
 		return;	
 
-	if(adapter->hw_init_completed == _FALSE)
+	if (!rtw_is_hw_init_completed(adapter))
 		return;
 
-	if ((adapter->bDriverStopped == _TRUE)||(adapter->bSurpriseRemoved== _TRUE))
+	if (RTW_CANNOT_RUN(adapter))
 		return;
 
 	
@@ -2836,8 +2854,10 @@ void rtw_dynamic_check_timer_handlder(_adapter *adapter)
 	}	
 
 #ifdef CONFIG_BT_COEXIST
-	if(is_primary_adapter(adapter))
-		DBG_871X("IsBtDisabled=%d, IsBtControlLps=%d\n", rtw_btcoex_IsBtDisabled(adapter), rtw_btcoex_IsBtControlLps(adapter));
+	if (is_primary_adapter(adapter)) {
+		if (GET_HAL_DATA(adapter)->EEPROMBluetoothCoexist == 1)
+			DBG_871X("IsBtDisabled=%d, IsBtControlLps=%d\n" , rtw_btcoex_IsBtDisabled(adapter) , rtw_btcoex_IsBtControlLps(adapter));
+	}
 #endif
 
 #ifdef CONFIG_LPS_LCLK_WD_TIMER /* to avoid leaving lps 32k frequently*/
@@ -3953,11 +3973,6 @@ unsigned int rtw_restructure_ht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, ui
 			ht_capie.cap_info |= IEEE80211_HT_CAP_SGI_40;
 	}
 
-	if (TEST_FLAG(phtpriv->stbc_cap, STBC_HT_ENABLE_TX)) {
-		ht_capie.cap_info |= IEEE80211_HT_CAP_TX_STBC;
-		DBG_871X("[HT] Declare supporting TX STBC\n");
-	}
-
 	/* todo: disable SM power save mode */
 	ht_capie.cap_info |= IEEE80211_HT_CAP_SM_PS;
 
@@ -3967,9 +3982,16 @@ unsigned int rtw_restructure_ht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, ui
 		DBG_871X("[HT] Declare supporting RX LDPC\n");
 	}
 
+	/* TX STBC */
+	if (TEST_FLAG(phtpriv->stbc_cap, STBC_HT_ENABLE_TX)) {
+		ht_capie.cap_info |= IEEE80211_HT_CAP_TX_STBC;
+		DBG_871X("[HT] Declare supporting TX STBC\n");
+	}
+
+	/* RX STBC */
 	if (TEST_FLAG(phtpriv->stbc_cap, STBC_HT_ENABLE_RX)) {
 		if((pregistrypriv->rx_stbc == 0x3) ||							/* enable for 2.4/5 GHz */
-			((channel <= 14) && (pregistrypriv->rx_stbc == 0x1)) ||	/* enable for 2.4GHz */
+			((channel <= 14) && (pregistrypriv->rx_stbc == 0x1)) ||		/* enable for 2.4GHz */
 			((channel > 14) && (pregistrypriv->rx_stbc == 0x2)) ||		/* enable for 5GHz */
 			(pregistrypriv->wifi_spec == 1)) {
 			stbc_rx_enable = 1;
@@ -4395,7 +4417,7 @@ void rtw_append_exented_cap(_adapter *padapter, u8 *out_ie, uint *pout_len)
 #ifdef CONFIG_80211AC_VHT
 	struct vht_priv	*pvhtpriv = &pmlmepriv->vhtpriv;
 #endif //CONFIG_80211AC_VHT
-	u8	cap_content[8] = {0};
+	u8	cap_content[8] = { 0 };
 	u8	*pframe;
 	u8   null_content[8] = {0};
 
@@ -4511,18 +4533,12 @@ sint rtw_buddy_adapter_up(_adapter *padapter)
 
 
 	if(padapter->pbuddy_adapter == NULL)
-	{
 		res = _FALSE;
-	}
-	else if( (padapter->pbuddy_adapter->bDriverStopped) || (padapter->pbuddy_adapter->bSurpriseRemoved) ||
-		(padapter->pbuddy_adapter->bup == _FALSE) || (padapter->pbuddy_adapter->hw_init_completed == _FALSE))
-	{		
+	else if (RTW_CANNOT_RUN(padapter) ||
+		(padapter->pbuddy_adapter->bup == _FALSE) || (!rtw_is_hw_init_completed(padapter)))
 		res = _FALSE;
-	}
 	else
-	{
 		res = _TRUE;
-	}	
 
 	return res;	
 

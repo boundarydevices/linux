@@ -330,6 +330,7 @@ void dump_log_level(void *sel);
 
 #ifdef CONFIG_SDIO_HCI
 void sd_f0_reg_dump(void *sel, _adapter *adapter);
+void sdio_local_reg_dump(void *sel, _adapter *adapter);
 #endif /* CONFIG_SDIO_HCI */
 
 void mac_reg_dump(void *sel, _adapter *adapter);
@@ -386,6 +387,10 @@ int proc_get_suspend_resume_info(struct seq_file *m, void *v);
 
 ssize_t proc_set_fwdl_test_case(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
 ssize_t proc_set_del_rx_ampdu_test_case(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
+#ifdef CONFIG_DFS_MASTER
+int proc_get_dfs_master_test_case(struct seq_file *m, void *v);
+ssize_t proc_set_dfs_master_test_case(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
+#endif /* CONFIG_DFS_MASTER */
 ssize_t proc_set_wait_hiq_empty(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
 
 #ifdef CONFIG_AP_MODE
@@ -414,6 +419,8 @@ ssize_t proc_set_bw_mode(struct file *file, const char __user *buffer, size_t co
 
 int proc_get_ampdu_enable(struct seq_file *m, void *v);
 ssize_t proc_set_ampdu_enable(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
+
+int proc_get_mac_rptbuf(struct seq_file *m, void *v);
 
 int proc_get_rx_ampdu(struct seq_file *m, void *v);
 ssize_t proc_set_rx_ampdu(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
@@ -486,6 +493,11 @@ int proc_get_tdls_info(struct seq_file *m, void *v);
 
 int proc_get_monitor(struct seq_file *m, void *v);
 ssize_t proc_set_monitor(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
+
+
+#ifdef CONFIG_PREALLOC_RX_SKB_BUFFER
+int proc_get_rtkm_info(struct seq_file *m, void *v);
+#endif /* CONFIG_PREALLOC_RX_SKB_BUFFER */
 
 #endif /* CONFIG_PROC_DEBUG */
 

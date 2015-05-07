@@ -20,6 +20,7 @@
 #define _RTW_DEBUG_C_
 
 #include <drv_types.h>
+#include <hal_data.h>
 
 u32 GlobalDebugLevel = _drv_err_;
 
@@ -91,6 +92,19 @@ void sd_f0_reg_dump(void *sel, _adapter *adapter)
 			DBG_871X_SEL(sel, "\n");
 		else if(i%8==7)
 			DBG_871X_SEL(sel, "\t");
+	}
+}
+
+void sdio_local_reg_dump(void *sel, _adapter *adapter)
+{
+	int i, j = 1;
+
+	for (i = 0x0; i < 0x100; i += 4) {
+		if (j % 4 == 1)
+			DBG_871X_SEL_NL(sel, "0x%02x", i);
+		DBG_871X_SEL(sel, " 0x%08x ", rtw_read32(adapter, (0x1025 << 16) | i));
+		if ((j++) % 4 == 0)
+			DBG_871X_SEL(sel, "\n");
 	}
 }
 #endif /* CONFIG_SDIO_HCI */
@@ -242,6 +256,7 @@ void sta_rx_reorder_ctl_dump(void *sel, struct sta_info *sta)
 
 void dump_adapters_status(void *sel, struct dvobj_priv *dvobj)
 {
+	struct rf_ctl_t *rfctl = dvobj_to_rfctl(dvobj);
 	int i;
 	_adapter *iface;
 	u8 u_ch, u_bw, u_offset;
@@ -261,8 +276,8 @@ void dump_adapters_status(void *sel, struct dvobj_priv *dvobj)
 				, iface->mlmeextpriv.cur_bwmode
 				, iface->mlmeextpriv.cur_ch_offset
 				, ADPT_MLME_S_ARG(iface)
-				, iface->bSurpriseRemoved?" SR":""
-				, iface->bDriverStopped?" DS":""
+				, rtw_is_surprise_removed(iface)?" SR":""
+				, rtw_is_drv_stopped(iface)?" DS":""
 			);
 		}
 	}
@@ -281,6 +296,22 @@ void dump_adapters_status(void *sel, struct dvobj_priv *dvobj)
 		, dvobj->oper_bwmode
 		, dvobj->oper_ch_offset
 	);
+
+	#ifdef CONFIG_DFS_MASTER
+	if (rfctl->radar_detect_ch != 0) {
+		DBG_871X_SEL_NL(sel, "%16s %3u,%u,%u"
+			, "radar_detect:"
+			, rfctl->radar_detect_ch
+			, rfctl->radar_detect_bw
+			, rfctl->radar_detect_offset
+		);
+
+		if (IS_UNDER_CAC(rfctl))
+			DBG_871X_SEL(sel, ", cac:%d\n", rtw_systime_to_ms(rfctl->cac_end_time - rtw_get_current_time()));
+		else
+			DBG_871X_SEL(sel, "\n");
+	}
+	#endif
 }
 
 #ifdef CONFIG_PROC_DEBUG
@@ -297,7 +328,12 @@ ssize_t proc_set_write_reg(struct file *file, const char __user *buffer, size_t 
 		return -EFAULT;
 	}	
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%x %x %x", &addr, &val, &len);
 
@@ -372,7 +408,12 @@ ssize_t proc_set_read_reg(struct file *file, const char __user *buffer, size_t c
 		return -EFAULT;
 	}	
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%x %x", &addr, &len);
 
@@ -467,7 +508,12 @@ ssize_t proc_set_roam_flags(struct file *file, const char __user *buffer, size_t
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%hhx", &flags);
 
@@ -509,7 +555,12 @@ ssize_t proc_set_roam_param(struct file *file, const char __user *buffer, size_t
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%hhu %u %u", &rssi_diff_th, &scanr_exp_ms, &scan_int_ms);
 
@@ -536,7 +587,12 @@ ssize_t proc_set_roam_tgt_addr(struct file *file, const char __user *buffer, siz
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", addr, addr+1, addr+2, addr+3, addr+4, addr+5);
 		if (num == 6)
@@ -693,8 +749,8 @@ ssize_t proc_set_survey_info(struct file *file, const char __user *buffer, size_
 	if (_FAIL == rtw_pwr_wakeup(padapter))
 		goto exit;
 
-	if (padapter->bDriverStopped) {
-		DBG_871X("scan abort!! bDriverStopped=%d\n", padapter->bDriverStopped);
+	if (rtw_is_drv_stopped(padapter)) {
+		DBG_871X("scan abort!! bDriverStopped=_TRUE\n");
 		goto exit;
 	}
 	
@@ -703,7 +759,7 @@ ssize_t proc_set_survey_info(struct file *file, const char __user *buffer, size_
 		goto exit;
 	}
 	
-	if (padapter->hw_init_completed == _FALSE) {
+	if (!rtw_is_hw_init_completed(padapter)) {
 		DBG_871X("scan abort!! hw_init_completed=FALSE\n");
 		goto exit;
 	}
@@ -792,8 +848,14 @@ ssize_t proc_reset_trx_info(struct file *file, const char __user *buffer, size_t
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct dvobj_priv *psdpriv = padapter->dvobj;
 	struct debug_priv *pdbgpriv = &psdpriv->drv_dbg;
-	char cmd[32];
-	if (buffer && !copy_from_user(cmd, buffer, sizeof(cmd))) {
+	char cmd[32] = {'0'};
+
+	if (count > sizeof(cmd)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(cmd, buffer, count)) {
 		if('0' == cmd[0]){
 			pdbgpriv->dbg_rx_ampdu_drop_count = 0;
 			pdbgpriv->dbg_rx_ampdu_forced_indicate_count = 0;
@@ -869,10 +931,16 @@ ssize_t proc_set_dis_pwt(struct file *file, const char __user *buffer, size_t co
 	
 	if (count < 1)
 		return -EFAULT;
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%hhx", &dis_pwt);
-		DBG_871X("Set Tx Power training mode:%s \n",(dis_pwt==_TRUE)?"Disable":"Enable");
+		DBG_871X("Set Tx Power training mode:%s\n", (dis_pwt == _TRUE)?"Disable":"Enable");
 		
 		if (num >= 1)
 			rtw_hal_set_def_var(padapter, HAL_DEF_DBG_DIS_PWT, &(dis_pwt));
@@ -917,7 +985,12 @@ ssize_t proc_set_rate_ctl(struct file *file, const char __user *buffer, size_t c
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%hhx %hhu", &fix_rate, &data_fb);
 
@@ -954,7 +1027,12 @@ ssize_t proc_set_rx_cnt_dump(struct file *file, const char __user *buffer, size_
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%hhx", &dump_rx_cnt_mode);
 
@@ -971,13 +1049,18 @@ ssize_t proc_set_fwdl_test_case(struct file *file, const char __user *buffer, si
 	struct net_device *dev = data;
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	char tmp[32];
+	int num;
 
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
-		int num = sscanf(tmp, "%hhu %hhu", &fwdl_test_chksum_fail, &fwdl_test_wintint_rdy_fail);
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
 	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count))
+		num = sscanf(tmp, "%hhu %hhu", &fwdl_test_chksum_fail, &fwdl_test_wintint_rdy_fail);
 
 	return count;
 }
@@ -992,24 +1075,80 @@ ssize_t proc_set_del_rx_ampdu_test_case(struct file *file, const char __user *bu
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp)))
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count))
 		num = sscanf(tmp, "%hhu", &del_rx_ampdu_test_no_tx_fail);
 
 	return count;
 }
+
+#ifdef CONFIG_DFS_MASTER
+int proc_get_dfs_master_test_case(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
+
+	DBG_871X_SEL_NL(m, "%-24s %-19s\n", "radar_detect_trigger_non", "choose_dfs_ch_first");
+	DBG_871X_SEL_NL(m, "%24hhu %19hhu\n"
+		, rfctl->dbg_dfs_master_radar_detect_trigger_non
+		, rfctl->dbg_dfs_master_choose_dfs_ch_first
+	);
+
+	return 0;
+}
+
+ssize_t proc_set_dfs_master_test_case(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct rf_ctl_t *rfctl = adapter_to_rfctl(adapter);
+	char tmp[32];
+	u8 radar_detect_trigger_non;
+	u8 choose_dfs_ch_first;
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+		int num = sscanf(tmp, "%hhu %hhu", &radar_detect_trigger_non, &choose_dfs_ch_first);
+
+		if (num >= 1)
+			rfctl->dbg_dfs_master_radar_detect_trigger_non = radar_detect_trigger_non;
+		if (num >= 2)
+			rfctl->dbg_dfs_master_choose_dfs_ch_first = choose_dfs_ch_first;
+	}
+
+	return count;
+}
+#endif /* CONFIG_DFS_MASTER */
 
 ssize_t proc_set_wait_hiq_empty(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
 {
 	struct net_device *dev = data;
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	char tmp[32];
+	int num;
 
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {
-		int num = sscanf(tmp, "%u", &g_wait_hiq_empty_ms);
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
 	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count))
+		num = sscanf(tmp, "%u", &g_wait_hiq_empty_ms);
 
 	return count;
 }
@@ -1359,7 +1498,12 @@ ssize_t proc_set_rx_signal(struct file *file, const char __user *buffer, size_t 
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%u %u", &is_signal_dbg, &signal_strength);
 
@@ -1408,7 +1552,12 @@ ssize_t proc_set_ht_enable(struct file *file, const char __user *buffer, size_t 
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%d ", &mode);
 
@@ -1446,7 +1595,12 @@ ssize_t proc_set_bw_mode(struct file *file, const char __user *buffer, size_t co
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%d ", &mode);
 
@@ -1486,7 +1640,12 @@ ssize_t proc_set_ampdu_enable(struct file *file, const char __user *buffer, size
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%d ", &mode);
 
@@ -1501,6 +1660,36 @@ ssize_t proc_set_ampdu_enable(struct file *file, const char __user *buffer, size
 	return count;
 	
 }
+
+int proc_get_mac_rptbuf(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	u16 i;
+	u16 mac_id;
+	u32 shcut_addr = 0;
+	u32 read_addr = 0;
+#ifdef CONFIG_RTL8814A
+	DBG_871X_SEL_NL(m, "TX ShortCut:\n");
+	for (mac_id = 0; mac_id < 64; mac_id++) {
+		rtw_write16(padapter, 0x140, 0x662 | ((mac_id & BIT5)>>5));
+		shcut_addr = 0x8000;
+		shcut_addr = shcut_addr | ((mac_id&0x1f) << 7);
+		DBG_871X_SEL_NL(m, "mac_id=%d, 0x140=%x =>\n", mac_id, 0x662 | ((mac_id & BIT5)>>5));
+		for (i = 0; i < 30; i++) {
+			read_addr = 0;
+			read_addr = shcut_addr | (i<<2);
+			DBG_871X_SEL_NL(m, "i=%02d: MAC_%04x= %08x ", i, read_addr, rtw_read32(padapter, read_addr));
+			if (!((i+1) % 4))
+				DBG_871X_SEL_NL(m, "\n");
+			if (i == 29)
+				DBG_871X_SEL_NL(m, "\n");
+		}
+	}
+#endif /* CONFIG_RTL8814A */
+	return 0;
+}
+
 
 int proc_get_rx_ampdu(struct seq_file *m, void *v)
 {
@@ -1542,7 +1731,12 @@ ssize_t proc_set_rx_ampdu(struct file *file, const char __user *buffer, size_t c
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%hhu %hhu", &accept, &size);
 
@@ -1582,8 +1776,12 @@ ssize_t proc_set_rx_ampdu_factor(struct file *file, const char __user *buffer
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp)))
-	{
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%d ", &factor);
 
@@ -1625,8 +1823,12 @@ ssize_t proc_set_rx_ampdu_density(struct file *file, const char __user *buffer, 
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp)))
-	{
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%d ", &density);
 
@@ -1668,8 +1870,12 @@ ssize_t proc_set_tx_ampdu_density(struct file *file, const char __user *buffer, 
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp)))
-	{
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%d ", &density);
 
@@ -1716,7 +1922,12 @@ ssize_t proc_set_en_fwps(struct file *file, const char __user *buffer, size_t co
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%d ", &mode);
 
@@ -1768,7 +1979,12 @@ ssize_t proc_set_rx_stbc(struct file *file, const char __user *buffer, size_t co
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%d ", &mode);
 
@@ -1804,7 +2020,12 @@ ssize_t proc_set_rx_stbc(struct file *file, const char __user *buffer, size_t co
 		return -EFAULT;
 	}	
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%x", &enable);
 
@@ -1905,8 +2126,30 @@ int proc_get_all_sta_info(struct seq_file *m, void *v)
 
 	return 0;
 }
-	
+
 #endif		
+
+#ifdef CONFIG_PREALLOC_RX_SKB_BUFFER
+int proc_get_rtkm_info(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	struct recv_priv	*precvpriv = &padapter->recvpriv;
+	struct recv_buf *precvbuf;
+	
+	precvbuf = (struct recv_buf *)precvpriv->precv_buf;
+
+	DBG_871X_SEL_NL(m, "============[RTKM Info]============\n");
+	DBG_871X_SEL_NL(m, "MAX_RTKM_NR_PREALLOC_RECV_SKB: %d\n", rtw_rtkm_get_nr_recv_skb());
+	DBG_871X_SEL_NL(m, "MAX_RTKM_RECVBUF_SZ: %d\n", rtw_rtkm_get_buff_size());
+
+	DBG_871X_SEL_NL(m, "============[Driver Info]============\n");
+	DBG_871X_SEL_NL(m, "NR_PREALLOC_RECV_SKB: %d\n", NR_PREALLOC_RECV_SKB);
+	DBG_871X_SEL_NL(m, "MAX_RECVBUF_SZ: %d\n", precvbuf->alloc_sz);
+
+	return 0;
+}
+#endif /* CONFIG_PREALLOC_RX_SKB_BUFFER */
 
 #ifdef DBG_MEMORY_LEAK
 #include <asm/atomic.h>
@@ -1988,8 +2231,12 @@ ssize_t proc_set_best_channel(struct file *file, const char __user *buffer, size
 	if(count < 1)
 		return -EFAULT;
 
-	if(buffer && !copy_from_user(tmp, buffer, sizeof(tmp)))
-	{
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 		int i;
 		for(i = 0; pmlmeext->channel_set[i].ChannelNum != 0; i++)
 		{
@@ -2126,7 +2373,12 @@ ssize_t proc_set_sreset(struct file *file, const char __user *buffer, size_t cou
 	if (count < 1)
 		return -EFAULT;
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 
 		int num = sscanf(tmp, "%d", &trigger_point);
 
@@ -2279,7 +2531,12 @@ ssize_t proc_set_new_bcn_max(struct file *file, const char __user *buffer, size_
 	if(count < 1)
 		return -EFAULT;
 
-	if(buffer && !copy_from_user(tmp, buffer, sizeof(tmp)))
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count))
 		sscanf(tmp, "%d ", &new_bcn_max);
 
 	return count;
@@ -2802,7 +3059,12 @@ ssize_t proc_set_monitor(struct file *file, const char __user *buffer, size_t co
 		return -EFAULT;
 	}
 
-	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
 		int num = sscanf(tmp, "%hhu %hhu %hhu", &target_chan, &target_offset, &target_bw);
 
 		if (num != 3) {

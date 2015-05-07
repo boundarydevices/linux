@@ -428,7 +428,10 @@ static void _InitTxBufferBoundary(PADAPTER padapter)
 
 static void _InitRxBufferBoundary(PADAPTER padapter)
 {
-	rtw_write16(padapter, REG_TRXFF_BNDY + 2, RX_DMA_BOUNDARY_8821);
+	if (IS_HARDWARE_TYPE_8812(padapter))
+		rtw_write16(padapter, REG_TRXFF_BNDY + 2, RX_DMA_BOUNDARY_8812);
+	else
+		rtw_write16(padapter, REG_TRXFF_BNDY + 2, RX_DMA_BOUNDARY_8821);
 }
 
 static void _InitPageBoundary(PADAPTER padapter)
@@ -1175,7 +1178,7 @@ static u32 _HalDeinit(PADAPTER padapter)
 		MPT_DeInitAdapter(padapter);
 #endif
 
-	if (padapter->hw_init_completed == _TRUE)
+	if (rtw_is_hw_init_completed(padapter))
 		hal_poweroff_8812as(padapter);
 
 	return _SUCCESS;

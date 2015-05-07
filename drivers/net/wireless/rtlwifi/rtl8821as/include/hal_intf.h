@@ -37,6 +37,8 @@ enum _CHIP_TYPE {
 	RTL8821, //RTL8811
 	RTL8723B,
 	RTL8814A,
+	RTL8703B,
+	RTL8188F,
 	MAX_CHIP_TYPE
 };
 
@@ -66,11 +68,6 @@ typedef enum _HW_VARIABLES{
 	HW_VAR_SEC_DK_CFG,
 	HW_VAR_BCN_VALID,
 	HW_VAR_RF_TYPE,
-	/* PHYDM odm->SupportAbility */ 
-	HW_VAR_DM_FLAG, 
-	HW_VAR_DM_FUNC_OP,
-	HW_VAR_DM_FUNC_SET,
-	HW_VAR_DM_FUNC_CLR,
 	/* PHYDM odm->SupportAbility */
 	HW_VAR_CAM_EMPTY_ENTRY,
 	HW_VAR_CAM_INVALID_ALL,
@@ -93,7 +90,6 @@ typedef enum _HW_VARIABLES{
 	HW_VAR_H2C_FW_P2P_PS_OFFLOAD,
 	HW_VAR_TDLS_WRCR,
 	HW_VAR_TDLS_RS_RCR,
-	HW_VAR_INITIAL_GAIN,
 	HW_VAR_TRIGGER_GPIO_0,
 	HW_VAR_BT_SET_COEXIST,
 	HW_VAR_BT_ISSUE_DELBA,	
@@ -106,18 +102,17 @@ typedef enum _HW_VARIABLES{
 	HW_VAR_EFUSE_BT_USAGE,
 	HW_VAR_EFUSE_BT_BYTES,
 	HW_VAR_FIFO_CLEARN_UP,
+	HW_VAR_RESTORE_HW_SEQ,
 	HW_VAR_CHECK_TXBUF,
 	HW_VAR_PCIE_STOP_TX_DMA,
 	HW_VAR_APFM_ON_MAC, //Auto FSM to Turn On, include clock, isolation, power control for MAC only
+	HW_VAR_HCI_SUS_STATE,
 	// The valid upper nav range for the HW updating, if the true value is larger than the upper range, the HW won't update it.
 	// Unit in microsecond. 0 means disable this function.
-#ifdef CONFIG_WOWLAN
+#if defined(CONFIG_WOWLAN) || defined(CONFIG_AP_WOWLAN)
 	HW_VAR_WOWLAN,
 	HW_VAR_WAKEUP_REASON,
 	HW_VAR_RPWM_TOG,
-#endif
-#ifdef CONFIG_AP_WOWLAN
-	HW_VAR_AP_WOWLAN,
 #endif
 #ifdef CONFIG_GPIO_WAKEUP
 	HW_SET_GPIO_WL_CTRL,
@@ -158,6 +153,9 @@ typedef enum _HAL_DEF_VARIABLE{
 	HAL_DEF_DRVINFO_SZ,
 	HAL_DEF_MAX_RECVBUF_SZ,
 	HAL_DEF_RX_PACKET_OFFSET,
+	HAL_DEF_RX_DMA_SZ_WOW,
+	HAL_DEF_RX_DMA_SZ,
+	HAL_DEF_RX_PAGE_SIZE,
 	HAL_DEF_DBG_DUMP_RXPKT,//for dbg
 	HAL_DEF_RA_DECISION_RATE,
 	HAL_DEF_RA_SGI,
@@ -171,9 +169,7 @@ typedef enum _HAL_DEF_VARIABLE{
 	HW_VAR_MAX_RX_AMPDU_FACTOR,
 	HW_DEF_RA_INFO_DUMP,
 	HAL_DEF_DBG_DUMP_TXPKT,
-	HW_DEF_FA_CNT_DUMP,
-	HW_DEF_ODM_DBG_FLAG,
-	HW_DEF_ODM_DBG_LEVEL,
+
 	HAL_DEF_TX_PAGE_SIZE,
 	HAL_DEF_TX_PAGE_BOUNDARY,
 	HAL_DEF_TX_PAGE_BOUNDARY_WOWLAN,
@@ -182,7 +178,6 @@ typedef enum _HAL_DEF_VARIABLE{
 	HAL_DEF_PCI_AMD_L1_SUPPORT,
 	HAL_DEF_PCI_ASPM_OSC, // Support for ASPM OSC, added by Roger, 2013.03.27.
 	HAL_DEF_MACID_SLEEP, // Support for MACID sleep
-	HAL_DEF_DBG_RX_INFO_DUMP,
 	HAL_DEF_DBG_DIS_PWT, //disable Tx power training or not.
 	HAL_DEF_EFUSE_USAGE,	/* Get current EFUSE utilization. 2008.12.19. Added by Roger. */
 	HAL_DEF_EFUSE_BYTES,
@@ -194,6 +189,15 @@ typedef enum _HAL_ODM_VARIABLE{
 	HAL_ODM_WIFI_DISPLAY_STATE,
 	HAL_ODM_NOISE_MONITOR,
 	HAL_ODM_REGULATION,
+	HAL_ODM_INITIAL_GAIN,
+	HAL_ODM_FA_CNT_DUMP,
+	HAL_ODM_DBG_FLAG,
+	HAL_ODM_DBG_LEVEL,
+	HAL_ODM_RX_INFO_DUMP,
+
+#ifdef CONFIG_AUTO_CHNL_SEL_NHM
+	HAL_ODM_AUTO_CHNL_SEL,
+#endif
 }HAL_ODM_VARIABLE;
 
 typedef enum _HAL_INTF_PS_FUNC{
@@ -244,6 +248,10 @@ struct hal_ops {
 	u8	(*check_ips_status)(_adapter *padapter);
 #if defined(CONFIG_PCI_HCI)
 	s32	(*interrupt_handler)(_adapter *padapter);
+#endif
+
+#if defined(CONFIG_USB_HCI) && defined(CONFIG_SUPPORT_USB_INT)
+	void	(*interrupt_handler)(_adapter *padapter, u16 pkt_len, u8 *pbuf);
 #endif
 
 #if defined(CONFIG_PCI_HCI)
@@ -328,7 +336,6 @@ struct hal_ops {
 #endif
 
 	void (*hal_notch_filter)(_adapter * adapter, bool enable);
-	void (*hal_reset_security_engine)(_adapter * adapter);
 	s32 (*c2h_handler)(_adapter *padapter, u8 *c2h_evt);
 	c2h_id_filter c2h_id_filter_ccx;
 	s32 (*fill_h2c_cmd)(PADAPTER, u8 ElementID, u32 CmdLen, u8 *pCmdBuffer);
@@ -339,11 +346,6 @@ struct hal_ops {
 	void (*hal_set_wowlan_fw)(_adapter *adapter, u8 sleep);
 	void (*clear_interrupt)(_adapter *padapter);
 #endif	
-
-#ifdef CONFIG_AP_WOWLAN
-	void (*hal_set_ap_wowlan_cmd)(_adapter *padapter, u8 enable);
-	void (*hal_set_ap_ps_wowlan_cmd)(_adapter *padapter , u8 enable);
-#endif
 	u8 (*hal_get_tx_buff_rsvd_page_num)(_adapter *adapter, bool wowlan);
 #ifdef CONFIG_GPIO_API
 	void (*update_hisr_hsisr_ind)(PADAPTER padapter, u32 flag);
@@ -399,58 +401,28 @@ typedef enum _HARDWARE_TYPE{
 	HARDWARE_TYPE_MAX,
 }HARDWARE_TYPE;
 
-#define IS_NEW_GENERATION_IC(_Adapter)	(((PADAPTER)_Adapter)->HardwareType >=HARDWARE_TYPE_RTL8192EE)
-#if 0
-//
-// RTL8192C Series
-//
-#define IS_HARDWARE_TYPE_8192CE(_Adapter)	(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8192CE)
-#define IS_HARDWARE_TYPE_8192CU(_Adapter)	(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8192CU)
-#define	IS_HARDWARE_TYPE_8192C(_Adapter)			\
-(IS_HARDWARE_TYPE_8192CE(_Adapter) || IS_HARDWARE_TYPE_8192CU(_Adapter))
-
-//
-// RTL8192D Series
-//
-#define IS_HARDWARE_TYPE_8192DE(_Adapter)	(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8192DE)
-#define IS_HARDWARE_TYPE_8192DU(_Adapter)	(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8192DU)
-#define	IS_HARDWARE_TYPE_8192D(_Adapter)			\
-(IS_HARDWARE_TYPE_8192DE(_Adapter) || IS_HARDWARE_TYPE_8192DU(_Adapter))
-
-#define IS_HARDWARE_TYPE_OLDER_THAN_8723A(_Adapter)	\
-(IS_HARDWARE_TYPE_8192D(_Adapter) || IS_HARDWARE_TYPE_8192C(_Adapter))
-
-//
-// RTL8723A Series
-//
-#define IS_HARDWARE_TYPE_8723AE(_Adapter)	(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8723AE)
-#define IS_HARDWARE_TYPE_8723AU(_Adapter)	(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8723AU)
-#define IS_HARDWARE_TYPE_8723AS(_Adapter)	(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8723AS)
-#define	IS_HARDWARE_TYPE_8723A(_Adapter)	\
-(IS_HARDWARE_TYPE_8723AE(_Adapter) || IS_HARDWARE_TYPE_8723AU(_Adapter) || IS_HARDWARE_TYPE_8723AS(_Adapter))
-#endif
-
+#define IS_NEW_GENERATION_IC(_Adapter)	(rtw_get_hw_type(_Adapter) >= HARDWARE_TYPE_RTL8192EE)
 //
 // RTL8188E Series
 //
-#define IS_HARDWARE_TYPE_8188EE(_Adapter)	(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8188EE)
-#define IS_HARDWARE_TYPE_8188EU(_Adapter)	(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8188EU)
-#define IS_HARDWARE_TYPE_8188ES(_Adapter)	(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8188ES)
+#define IS_HARDWARE_TYPE_8188EE(_Adapter)	(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8188EE)
+#define IS_HARDWARE_TYPE_8188EU(_Adapter)	(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8188EU)
+#define IS_HARDWARE_TYPE_8188ES(_Adapter)	(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8188ES)
 #define	IS_HARDWARE_TYPE_8188E(_Adapter)	\
 (IS_HARDWARE_TYPE_8188EE(_Adapter) || IS_HARDWARE_TYPE_8188EU(_Adapter) || IS_HARDWARE_TYPE_8188ES(_Adapter))
 
 // RTL8812 Series
-#define IS_HARDWARE_TYPE_8812E(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8812E)
-#define IS_HARDWARE_TYPE_8812AU(_Adapter)	(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8812AU)
+#define IS_HARDWARE_TYPE_8812E(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8812E)
+#define IS_HARDWARE_TYPE_8812AU(_Adapter)	(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8812AU)
 #define IS_HARDWARE_TYPE_8812(_Adapter)			\
 (IS_HARDWARE_TYPE_8812E(_Adapter) || IS_HARDWARE_TYPE_8812AU(_Adapter))
 
 // RTL8821 Series
-#define IS_HARDWARE_TYPE_8821E(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8821E)
-#define IS_HARDWARE_TYPE_8811AU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8811AU)
-#define IS_HARDWARE_TYPE_8821U(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8821U ||\
-	              								 ((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8811AU)
-#define IS_HARDWARE_TYPE_8821S(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8821S)
+#define IS_HARDWARE_TYPE_8821E(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8821E)
+#define IS_HARDWARE_TYPE_8811AU(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8811AU)
+#define IS_HARDWARE_TYPE_8821U(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8821U ||	\
+													rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8811AU)
+#define IS_HARDWARE_TYPE_8821S(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8821S)
 #define IS_HARDWARE_TYPE_8821(_Adapter)			\
 (IS_HARDWARE_TYPE_8821E(_Adapter) || IS_HARDWARE_TYPE_8821U(_Adapter)|| IS_HARDWARE_TYPE_8821S(_Adapter))
 
@@ -458,25 +430,24 @@ typedef enum _HARDWARE_TYPE{
 (IS_HARDWARE_TYPE_8812(_Adapter) || IS_HARDWARE_TYPE_8821(_Adapter))
 
 //RTL8192E Series
-#define IS_HARDWARE_TYPE_8192EE(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8192EE)
-#define IS_HARDWARE_TYPE_8192EU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8192EU)
-#define IS_HARDWARE_TYPE_8192ES(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8192ES)
+#define IS_HARDWARE_TYPE_8192EE(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8192EE)
+#define IS_HARDWARE_TYPE_8192EU(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8192EU)
+#define IS_HARDWARE_TYPE_8192ES(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8192ES)
 
 #define IS_HARDWARE_TYPE_8192E(_Adapter)		\
 (IS_HARDWARE_TYPE_8192EE(_Adapter) || IS_HARDWARE_TYPE_8192EU(_Adapter) ||IS_HARDWARE_TYPE_8192ES(_Adapter))
 
-#define IS_HARDWARE_TYPE_8723BE(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8723BE)
-#define IS_HARDWARE_TYPE_8723BU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8723BU)
-#define IS_HARDWARE_TYPE_8723BS(_Adapter)		(((PADAPTER)_Adapter)->HardwareType==HARDWARE_TYPE_RTL8723BS)
-
+#define IS_HARDWARE_TYPE_8723BE(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8723BE)
+#define IS_HARDWARE_TYPE_8723BU(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8723BU)
+#define IS_HARDWARE_TYPE_8723BS(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8723BS)
 
 #define IS_HARDWARE_TYPE_8723B(_Adapter) \
 	(IS_HARDWARE_TYPE_8723BE(_Adapter) || IS_HARDWARE_TYPE_8723BU(_Adapter) ||IS_HARDWARE_TYPE_8723BS(_Adapter))
 
 /* RTL8814A Series */
-#define IS_HARDWARE_TYPE_8814AE(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8814AE)
-#define IS_HARDWARE_TYPE_8814AU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8814AU)
-#define IS_HARDWARE_TYPE_8814AS(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8814AS)
+#define IS_HARDWARE_TYPE_8814AE(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8814AE)
+#define IS_HARDWARE_TYPE_8814AU(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8814AU)
+#define IS_HARDWARE_TYPE_8814AS(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8814AS)
 
 #define IS_HARDWARE_TYPE_8814A(_Adapter)		\
 (IS_HARDWARE_TYPE_8814AE(_Adapter) || IS_HARDWARE_TYPE_8814AU(_Adapter) || IS_HARDWARE_TYPE_8814AS(_Adapter))
@@ -488,56 +459,46 @@ typedef enum _HARDWARE_TYPE{
 (IS_HARDWARE_TYPE_JAGUAR(_Adapter) || IS_HARDWARE_TYPE_JAGUAR2(_Adapter))
 
 /* RTL8703B Series */
-#define IS_HARDWARE_TYPE_8703BE(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8703BE)
-#define IS_HARDWARE_TYPE_8703BS(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8703BS)
-#define IS_HARDWARE_TYPE_8703BU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8703BU)
+#define IS_HARDWARE_TYPE_8703BE(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8703BE)
+#define IS_HARDWARE_TYPE_8703BS(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8703BS)
+#define IS_HARDWARE_TYPE_8703BU(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8703BU)
 #define	IS_HARDWARE_TYPE_8703B(_Adapter)			\
 (IS_HARDWARE_TYPE_8703BE(_Adapter) || IS_HARDWARE_TYPE_8703BU(_Adapter) || IS_HARDWARE_TYPE_8703BS(_Adapter))
 
 /* RTL8188F Series */
-#define IS_HARDWARE_TYPE_8188FE(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8188FE)
-#define IS_HARDWARE_TYPE_8188FS(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8188FS)
-#define IS_HARDWARE_TYPE_8188FU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8188FU)
+#define IS_HARDWARE_TYPE_8188FE(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8188FE)
+#define IS_HARDWARE_TYPE_8188FS(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8188FS)
+#define IS_HARDWARE_TYPE_8188FU(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8188FU)
 #define	IS_HARDWARE_TYPE_8188F(_Adapter)			\
 (IS_HARDWARE_TYPE_8188FE(_Adapter) || IS_HARDWARE_TYPE_8188FU(_Adapter) || IS_HARDWARE_TYPE_8188FS(_Adapter))
 
-#define IS_HARDWARE_TYPE_8821BE(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8821BE)
-#define IS_HARDWARE_TYPE_8821BU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8821BU)
-#define IS_HARDWARE_TYPE_8821BS(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8821BS)
+#define IS_HARDWARE_TYPE_8821BE(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8821BE)
+#define IS_HARDWARE_TYPE_8821BU(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8821BU)
+#define IS_HARDWARE_TYPE_8821BS(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8821BS)
 
 #define IS_HARDWARE_TYPE_8821B(_Adapter)		\
 (IS_HARDWARE_TYPE_8821BE(_Adapter) || IS_HARDWARE_TYPE_8821BU(_Adapter) || IS_HARDWARE_TYPE_8821BS(_Adapter))
 
-#define IS_HARDWARE_TYPE_8822BE(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8822BE)
-#define IS_HARDWARE_TYPE_8822BU(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8822BU)
-#define IS_HARDWARE_TYPE_8822BS(_Adapter)		(((PADAPTER)_Adapter)->HardwareType == HARDWARE_TYPE_RTL8822BS)
+#define IS_HARDWARE_TYPE_8822BE(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8822BE)
+#define IS_HARDWARE_TYPE_8822BU(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8822BU)
+#define IS_HARDWARE_TYPE_8822BS(_Adapter)		(rtw_get_hw_type(_Adapter) == HARDWARE_TYPE_RTL8822BS)
 #define IS_HARDWARE_TYPE_8822B(_Adapter)		\
 (IS_HARDWARE_TYPE_8822BE(_Adapter) || IS_HARDWARE_TYPE_8822BU(_Adapter) || IS_HARDWARE_TYPE_8822BS(_Adapter))
 
 
 
-typedef enum _wowlan_subcode{
-	WOWLAN_PATTERN_MATCH	= 1,
-	WOWLAN_MAGIC_PACKET		= 2,
-	WOWLAN_UNICAST			= 3,
-	WOWLAN_SET_PATTERN		= 4,
-	WOWLAN_DUMP_REG			= 5,
-	WOWLAN_ENABLE			= 6,
-	WOWLAN_DISABLE			= 7,
-	WOWLAN_STATUS			= 8,
-	WOWLAN_DEBUG_RELOAD_FW	= 9,
-	WOWLAN_DEBUG_1			=10,
-	WOWLAN_DEBUG_2			=11,
-	WOWLAN_AP_ENABLE		=12,
-	WOWLAN_AP_DISABLE		=13
-}wowlan_subcode;
+typedef enum _wowlan_subcode {
+	WOWLAN_ENABLE			= 0,
+	WOWLAN_DISABLE			= 1,
+	WOWLAN_AP_ENABLE		= 2,
+	WOWLAN_AP_DISABLE		= 3,
+	WOWLAN_PATTERN_CLEAN		= 4
+} wowlan_subcode;
 
 struct wowlan_ioctl_param{
 	unsigned int subcode;
 	unsigned int subcode_value;
 	unsigned int wakeup_reason;
-	unsigned int len;
-	unsigned char pattern[0];
 };
 
 #define Rx_Pairwisekey			0x01
@@ -634,7 +595,12 @@ void	rtw_hal_write_rfreg(_adapter *padapter, u32 eRFPath, u32 RegAddr, u32 BitMa
 #define PHY_SetMacReg	PHY_SetBBReg
 #define PHY_QueryMacReg PHY_QueryBBReg
 
+#if defined(CONFIG_PCI_HCI)
 s32	rtw_hal_interrupt_handler(_adapter *padapter);
+#endif
+#if  defined(CONFIG_USB_HCI) && defined(CONFIG_SUPPORT_USB_INT)
+void	rtw_hal_interrupt_handler(_adapter *padapter, u16 pkt_len, u8 *pbuf);
+#endif
 
 void	rtw_hal_set_bwmode(_adapter *padapter, CHANNEL_WIDTH Bandwidth, u8 Offset);
 void	rtw_hal_set_chan(_adapter *padapter, u8 channel);
@@ -673,7 +639,6 @@ s32 rtw_hal_xmit_thread_handler(_adapter *padapter);
 #endif
 
 void rtw_hal_notch_filter(_adapter * adapter, bool enable);
-void rtw_hal_reset_security_engine(_adapter * adapter);
 
 bool rtw_hal_c2h_valid(_adapter *adapter, u8 *buf);
 s32 rtw_hal_c2h_evt_read(_adapter *adapter, u8 *buf);

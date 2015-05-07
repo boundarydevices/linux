@@ -1465,6 +1465,13 @@ enum rtw_ieee80211_back_parties {
 	RTW_WLAN_BACK_TIMER = 2,
 };
 
+/*20/40 BSS Coexistence element */
+#define RTW_WLAN_20_40_BSS_COEX_INFO_REQ            BIT(0)
+#define RTW_WLAN_20_40_BSS_COEX_40MHZ_INTOL         BIT(1)
+#define RTW_WLAN_20_40_BSS_COEX_20MHZ_WIDTH_REQ     BIT(2)
+#define RTW_WLAN_20_40_BSS_COEX_OBSS_EXEMPT_REQ     BIT(3)
+#define RTW_WLAN_20_40_BSS_COEX_OBSS_EXEMPT_GRNT    BIT(4)
+
 /* VHT features action code */
 enum rtw_ieee80211_vht_actioncode{
 	RTW_WLAN_ACTION_VHT_COMPRESSED_BEAMFORMING = 0,
@@ -1683,6 +1690,15 @@ void dump_ht_cap_ie_content(void *sel, u8 *buf, u32 buf_len);
 
 void dump_wps_ie(void *sel, u8 *ie, u32 ie_len);
 
+void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset);
+
+void rtw_bss_get_chbw(WLAN_BSSID_EX *bss, u8 *ch, u8 *bw, u8 *offset);
+
+bool rtw_is_chbw_grouped(u8 ch_a, u8 bw_a, u8 offset_a
+	, u8 ch_b, u8 bw_b, u8 offset_b);
+void rtw_sync_chbw(u8 *req_ch, u8 *req_bw, u8 *req_offset
+	, u8 *g_ch, u8 *g_bw, u8 *g_offset);
+
 #ifdef CONFIG_P2P
 u32 rtw_get_p2p_merged_ies_len(u8 *in_ie, u32 in_len);
 int rtw_p2p_merge_ies(u8 *in_ie, u32 in_len, u8 *merge_ie);
@@ -1706,7 +1722,7 @@ uint	rtw_get_rateset_len(u8	*rateset);
 
 struct registry_priv;
 int rtw_generate_ie(struct registry_priv *pregistrypriv);
-
+bool rtw_regsty_adjust_chbw(struct registry_priv *regsty, u8 req_ch, u8 *req_bw, u8 *req_offset);
 
 int rtw_get_bit_value_from_ieee_value(u8 val);
 
@@ -1726,6 +1742,12 @@ u8	rtw_ht_mcsset_to_nss(u8 *supp_mcs_set);
 
 int rtw_action_frame_parse(const u8 *frame, u32 frame_len, u8* category, u8 *action);
 const char *action_public_str(u8 action);
+
+u8 key_2char2num(u8 hch, u8 lch);
+u8 str_2char2num(u8 hch, u8 lch);
+void macstr2num(u8 *dst, u8 *src);
+u8 convert_ip_addr(u8 hch, u8 mch, u8 lch);
+int wifirate2_ratetbl_inx(unsigned char rate);
 
 #endif /* IEEE80211_H */
 

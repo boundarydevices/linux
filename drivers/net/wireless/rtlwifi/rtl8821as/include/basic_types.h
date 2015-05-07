@@ -307,12 +307,14 @@
 	)
 
 #define SET_BITS_TO_LE_1BYTE(__pStart, __BitOffset, __BitLen, __Value) \
+do { \
 	*((u8 *)(__pStart)) = \
 		EF1Byte( \
 			LE_BITS_CLEARED_TO_1BYTE(__pStart, __BitOffset, __BitLen) \
 			| \
 			( (((u8)__Value) & BIT_LEN_MASK_8(__BitLen)) << (__BitOffset) ) \
-		);
+		); \
+} while (0)
 
 
 #define LE_BITS_CLEARED_TO_2BYTE_16BIT(__pStart, __BitOffset, __BitLen) \

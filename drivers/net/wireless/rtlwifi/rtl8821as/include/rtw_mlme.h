@@ -51,7 +51,7 @@
 #define WIFI_ADHOC_MASTER_STATE			0x00000040
 #define WIFI_UNDER_LINKING				0x00000080
 #define WIFI_UNDER_WPS					0x00000100
-#define WIFI_UNDER_CAC					0x00000200
+/*#define WIFI_UNDEFINED_STATE			0x00000200*/
 #define WIFI_STA_ALIVE_CHK_STATE		0x00000400
 #define WIFI_SITE_MONITOR				0x00000800 /* under site surveying */
 #define WIFI_WDS						0x00001000
@@ -567,7 +567,11 @@ struct mlme_priv {
 
 #ifdef CONFIG_DFS
 	u8	handle_dfs;
-#endif //CONFIG_DFS
+#endif
+#ifdef CONFIG_DFS_MASTER
+	/* TODO: move to rfctl */
+	_timer dfs_master_timer;
+#endif
 
 	RT_LINK_DETECT_T	LinkDetectInfo;
 	_timer	dynamic_chk_timer; //dynamic/periodic check timer
@@ -579,6 +583,9 @@ struct mlme_priv {
 	u8 *wps_probe_req_ie;
 	u32 wps_probe_req_ie_len;
 
+	u8 ext_capab_ie_data[8];/*currently for ap mode only*/
+	u8 ext_capab_ie_len; 
+	
 #if defined (CONFIG_AP_MODE) && defined (CONFIG_NATIVEAP_MLME)
 	/* Number of associated Non-ERP stations (i.e., stations using 802.11b
 	 * in 802.11g BSS) */
@@ -590,7 +597,7 @@ struct mlme_priv {
 	/* Number of associated stations that do not support Short Preamble */
 	int num_sta_no_short_preamble;
 
-	int olbc; /* Overlapping Legacy BSS Condition */
+	int olbc; /* Overlapping Legacy BSS Condition (Legacy b/g)*/
 
 	/* Number of HT associated stations that do not support greenfield */
 	int num_sta_ht_no_gf;
@@ -601,11 +608,17 @@ struct mlme_priv {
 	/* Number of HT associated stations 20 MHz */
 	int num_sta_ht_20mhz;
 
+	/* number of associated stations 40MHz intolerant */
+	int num_sta_40mhz_intolerant;
+	
 	/* Overlapping BSS information */
 	int olbc_ht;
 	
 #ifdef CONFIG_80211N_HT
+	int ht_20mhz_width_req; 
+	int ht_intolerant_ch_reported;		
 	u16 ht_op_mode;
+	u8 sw_to_20mhz; /*switch to 20Mhz BW*/
 #endif /* CONFIG_80211N_HT */	
 
 	u8 *assoc_req;
@@ -650,7 +663,9 @@ struct mlme_priv {
 	_lock	bcn_update_lock;
 	u8		update_bcn;
 	
-	
+	u8 ori_ch;
+	u8 ori_bw;
+	u8 ori_offset;
 #endif //#if defined (CONFIG_AP_MODE) && defined (CONFIG_NATIVEAP_MLME)
 
 #if defined(CONFIG_WFD) && defined(CONFIG_IOCTL_CFG80211)
@@ -719,7 +734,7 @@ struct mlme_priv {
 #define rtw_mlme_set_auto_scan_int(adapter, ms) \
 	do { \
 		adapter->mlmepriv.auto_scan_int_ms = ms; \
-	while (0)
+	} while (0)
 
 void rtw_mlme_reset_auto_scan_int(_adapter *adapter);
 
@@ -819,16 +834,6 @@ __inline static void clr_fwstate(struct mlme_priv *pmlmepriv, sint state)
 	_irqL irqL;
 
 	_enter_critical_bh(&pmlmepriv->lock, &irqL);
-	if (check_fwstate(pmlmepriv, state) == _TRUE)
-		pmlmepriv->fw_state ^= state;
-	_exit_critical_bh(&pmlmepriv->lock, &irqL);
-}
-
-__inline static void clr_fwstate_ex(struct mlme_priv *pmlmepriv, sint state)
-{
-	_irqL irqL;
-
-	_enter_critical_bh(&pmlmepriv->lock, &irqL);
 	_clr_fwstate_(pmlmepriv, state);
 	_exit_critical_bh(&pmlmepriv->lock, &irqL);
 }
@@ -880,6 +885,8 @@ extern void rtw_indicate_disconnect(_adapter* adapter);
 extern void rtw_indicate_connect(_adapter* adapter);
 void rtw_indicate_scan_done( _adapter *padapter, bool aborted);
 
+void rtw_drv_scan_by_self(_adapter *padapter);
+void rtw_scan_wait_completed(_adapter *adapter);
 u32 rtw_scan_abort_timeout(_adapter *adapter, u32 timeout_ms);
 void rtw_scan_abort_no_wait(_adapter *adapter);
 void rtw_scan_abort(_adapter *adapter);

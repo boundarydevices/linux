@@ -50,6 +50,7 @@ jackson@realtek.com.tw
 #define _RTW_IO_C_
 
 #include <drv_types.h>
+#include <hal_data.h>
 
 #if defined (PLATFORM_LINUX) && defined (PLATFORM_WINDOWS)
 #error "Shall be Linux or Windows, but not both!\n"
@@ -197,6 +198,111 @@ u8 _rtw_sd_f0_read8(_adapter *adapter, u32 addr)
 	_func_exit_;
 	return r_val;
 }
+
+#ifdef CONFIG_SDIO_INDIRECT_ACCESS
+u8 _rtw_sd_iread8(_adapter *adapter, u32 addr)
+{
+	u8 r_val = 0x00;
+	struct io_priv *pio_priv = &adapter->iopriv;
+	struct intf_hdl *pintfhdl = &(pio_priv->intf);
+	u8 (*_sd_iread8)(struct intf_hdl *pintfhdl, u32 addr);
+
+	_sd_iread8 = pintfhdl->io_ops._sd_iread8;
+
+	if (_sd_iread8)
+		r_val = _sd_iread8(pintfhdl, addr);
+	else
+		DBG_871X_LEVEL(_drv_err_, FUNC_ADPT_FMT" _sd_iread8 callback is NULL\n", FUNC_ADPT_ARG(adapter));
+
+	return r_val;
+}
+
+u16 _rtw_sd_iread16(_adapter *adapter, u32 addr)
+{
+	u16 r_val = 0x00;
+	struct io_priv *pio_priv = &adapter->iopriv;
+	struct intf_hdl *pintfhdl = &(pio_priv->intf);
+	u16 (*_sd_iread16)(struct intf_hdl *pintfhdl, u32 addr);
+
+	_sd_iread16 = pintfhdl->io_ops._sd_iread16;
+
+	if (_sd_iread16)
+		r_val = _sd_iread16(pintfhdl, addr);
+	else
+		DBG_871X_LEVEL(_drv_err_, FUNC_ADPT_FMT" _sd_iread16 callback is NULL\n", FUNC_ADPT_ARG(adapter));
+
+	return r_val;
+}
+
+u32 _rtw_sd_iread32(_adapter *adapter, u32 addr)
+{
+	u32 r_val = 0x00;
+	struct io_priv *pio_priv = &adapter->iopriv;
+	struct intf_hdl *pintfhdl = &(pio_priv->intf);
+	u32 (*_sd_iread32)(struct intf_hdl *pintfhdl, u32 addr);
+
+	_sd_iread32 = pintfhdl->io_ops._sd_iread32;
+
+	if (_sd_iread32)
+		r_val = _sd_iread32(pintfhdl, addr);
+	else
+		DBG_871X_LEVEL(_drv_err_, FUNC_ADPT_FMT" _sd_iread32 callback is NULL\n", FUNC_ADPT_ARG(adapter));
+
+	return r_val;
+}
+
+int _rtw_sd_iwrite8(_adapter *adapter, u32 addr, u8 val)
+{
+	struct io_priv *pio_priv = &adapter->iopriv;
+	struct intf_hdl *pintfhdl = &(pio_priv->intf);
+	int (*_sd_iwrite8)(struct intf_hdl *pintfhdl, u32 addr, u8 val);
+	int ret = -1;
+
+	_sd_iwrite8 = pintfhdl->io_ops._sd_iwrite8;
+
+	if (_sd_iwrite8)
+		ret = _sd_iwrite8(pintfhdl, addr, val);
+	else
+		DBG_871X_LEVEL(_drv_err_, FUNC_ADPT_FMT" _sd_iwrite8 callback is NULL\n", FUNC_ADPT_ARG(adapter));
+
+	return RTW_STATUS_CODE(ret);
+}
+
+int _rtw_sd_iwrite16(_adapter *adapter, u32 addr, u16 val)
+{
+	struct io_priv *pio_priv = &adapter->iopriv;
+	struct intf_hdl *pintfhdl = &(pio_priv->intf);
+	int (*_sd_iwrite16)(struct intf_hdl *pintfhdl, u32 addr, u16 val);
+	int ret = -1;
+
+	_sd_iwrite16 = pintfhdl->io_ops._sd_iwrite16;
+
+	if (_sd_iwrite16)
+		ret = _sd_iwrite16(pintfhdl, addr, val);
+	else
+		DBG_871X_LEVEL(_drv_err_, FUNC_ADPT_FMT" _sd_iwrite16 callback is NULL\n", FUNC_ADPT_ARG(adapter));
+
+	return RTW_STATUS_CODE(ret);
+}
+int _rtw_sd_iwrite32(_adapter *adapter, u32 addr, u32 val)
+{
+	struct io_priv *pio_priv = &adapter->iopriv;
+	struct intf_hdl *pintfhdl = &(pio_priv->intf);
+	int (*_sd_iwrite32)(struct intf_hdl *pintfhdl, u32 addr, u32 val);
+	int ret = -1;
+
+	_sd_iwrite32 = pintfhdl->io_ops._sd_iwrite32;
+
+	if (_sd_iwrite32)
+		ret = _sd_iwrite32(pintfhdl, addr, val);
+	else
+		DBG_871X_LEVEL(_drv_err_, FUNC_ADPT_FMT" _sd_iwrite32 callback is NULL\n", FUNC_ADPT_ARG(adapter));
+
+	return RTW_STATUS_CODE(ret);
+}
+
+#endif /* CONFIG_SDIO_INDIRECT_ACCESS */
+
 #endif /* CONFIG_SDIO_HCI */
 
 int _rtw_write8_async(_adapter *adapter, u32 addr, u8 val)
@@ -254,10 +360,11 @@ void _rtw_read_mem(_adapter *adapter, u32 addr, u32 cnt, u8 *pmem)
 
 	_func_enter_;
 
-	if( (adapter->bDriverStopped ==_TRUE) || (adapter->bSurpriseRemoved == _TRUE))
-	{
-	     RT_TRACE(_module_rtl871x_io_c_, _drv_info_, ("rtw_read_mem:bDriverStopped(%d) OR bSurpriseRemoved(%d)", adapter->bDriverStopped, adapter->bSurpriseRemoved));	    
-	     return;
+	if (RTW_CANNOT_RUN(adapter)) {
+		RT_TRACE(_module_rtl871x_io_c_, _drv_info_, ("rtw_read_mem:bDriverStopped(%s) OR bSurpriseRemoved(%s)"
+			, rtw_is_drv_stopped(adapter)?"True":"False"
+			, rtw_is_surprise_removed(adapter)?"True":"False"));
+		return;
 	}
 
 	_read_mem = pintfhdl->io_ops._read_mem;
@@ -294,9 +401,10 @@ void _rtw_read_port(_adapter *adapter, u32 addr, u32 cnt, u8 *pmem)
 
 	_func_enter_;
 
-	if( (adapter->bDriverStopped ==_TRUE) || (adapter->bSurpriseRemoved == _TRUE))
-	{
-	     RT_TRACE(_module_rtl871x_io_c_, _drv_info_, ("rtw_read_port:bDriverStopped(%d) OR bSurpriseRemoved(%d)", adapter->bDriverStopped, adapter->bSurpriseRemoved));	    
+	if (RTW_CANNOT_RUN(adapter)) {
+		RT_TRACE(_module_rtl871x_io_c_, _drv_info_, ("rtw_read_port:bDriverStopped(%s) OR bSurpriseRemoved(%s)"
+			, rtw_is_drv_stopped(adapter)?"True":"False"
+			, rtw_is_surprise_removed(adapter)?"True":"False"));	    
 	     return;
 	}
 
@@ -508,6 +616,77 @@ int dbg_rtw_writeN(_adapter *adapter, u32 addr ,u32 length , u8 *data, const cha
 
 	return _rtw_writeN(adapter, addr, length, data);
 }
+
+#ifdef CONFIG_SDIO_HCI
+u8 dbg_rtw_sd_f0_read8(_adapter *adapter, u32 addr, const char *caller, const int line)
+{
+	u8 val = _rtw_sd_f0_read8(adapter, addr);
+
+	#if 0
+	if (match_read_sniff_ranges(addr, 1))
+		DBG_871X("DBG_IO %s:%d rtw_sd_f0_read8(0x%04x) return 0x%02x\n", caller, line, addr, val);
+	#endif
+
+	return val;
+}
+
+#ifdef CONFIG_SDIO_INDIRECT_ACCESS
+u8 dbg_rtw_sd_iread8(_adapter *adapter, u32 addr, const char *caller, const int line)
+{
+	u8 val = rtw_sd_iread8(adapter, addr);
+
+	if (match_read_sniff_ranges(addr, 1))
+		DBG_871X("DBG_IO %s:%d rtw_sd_iread8(0x%04x) return 0x%02x\n", caller, line, addr, val);
+
+	return val;
+}
+
+u16 dbg_rtw_sd_iread16(_adapter *adapter, u32 addr, const char *caller, const int line)
+{
+	u16 val = _rtw_sd_iread16(adapter, addr);
+	
+	if (match_read_sniff_ranges(addr, 2))
+		DBG_871X("DBG_IO %s:%d rtw_sd_iread16(0x%04x) return 0x%04x\n", caller, line, addr, val);
+
+	return val;
+}
+
+u32 dbg_rtw_sd_iread32(_adapter *adapter, u32 addr, const char *caller, const int line)
+{
+	u32 val = _rtw_sd_iread32(adapter, addr);
+	
+	if (match_read_sniff_ranges(addr, 4))
+		DBG_871X("DBG_IO %s:%d rtw_sd_iread32(0x%04x) return 0x%08x\n", caller, line, addr, val);
+
+	return val;
+}
+
+int dbg_rtw_sd_iwrite8(_adapter *adapter, u32 addr, u8 val, const char *caller, const int line)
+{
+	if (match_write_sniff_ranges(addr, 1))
+		DBG_871X("DBG_IO %s:%d rtw_sd_iwrite8(0x%04x, 0x%02x)\n", caller, line, addr, val);
+	
+	return _rtw_sd_iwrite8(adapter, addr, val);
+}
+int dbg_rtw_sd_iwrite16(_adapter *adapter, u32 addr, u16 val, const char *caller, const int line)
+{
+	if (match_write_sniff_ranges(addr, 2))
+		DBG_871X("DBG_IO %s:%d rtw_sd_iwrite16(0x%04x, 0x%04x)\n", caller, line, addr, val);
+	
+	return _rtw_sd_iwrite16(adapter, addr, val);
+}
+int dbg_rtw_sd_iwrite32(_adapter *adapter, u32 addr, u32 val, const char *caller, const int line)
+{
+	if (match_write_sniff_ranges(addr, 4))
+		DBG_871X("DBG_IO %s:%d rtw_sd_iwrite32(0x%04x, 0x%08x)\n", caller, line, addr, val);
+	
+	return _rtw_sd_iwrite32(adapter, addr, val);
+}
+
+#endif /* CONFIG_SDIO_INDIRECT_ACCESS */
+
+#endif /* CONFIG_SDIO_HCI */
+
 #endif
 
 

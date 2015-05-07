@@ -219,7 +219,7 @@ void sreset_restore_network_station(_adapter *padapter)
 	set_channel_bwmode(padapter, pmlmeext->cur_channel, pmlmeext->cur_ch_offset, pmlmeext->cur_bwmode);
 
 	//disable dynamic functions, such as high power, DIG
-	//Switch_DM_Func(padapter, DYNAMIC_FUNC_DISABLE, _FALSE);
+	/*rtw_phydm_func_disable_all(padapter);*/
 	
 	rtw_hal_set_hwreg(padapter, HW_VAR_BSSID, pmlmeinfo->network.MacAddress);
 
@@ -232,7 +232,7 @@ void sreset_restore_network_station(_adapter *padapter)
 
 	mlmeext_joinbss_event_callback(padapter, 1);
 	//restore Sequence No.
-	rtw_write8(padapter,0x4dc,padapter->xmitpriv.nqos_ssn);
+	rtw_hal_set_hwreg(padapter, HW_VAR_RESTORE_HW_SEQ, 0);
 
 	sreset_restore_security_station(padapter);
 }

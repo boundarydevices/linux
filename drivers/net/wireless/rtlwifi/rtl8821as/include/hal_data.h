@@ -22,7 +22,7 @@
 
 #if 1//def  CONFIG_SINGLE_IMG
 
-#include "../hal/OUTSRC/phydm_precomp.h"
+#include "../hal/phydm/phydm_precomp.h"
 #ifdef CONFIG_BT_COEXIST
 #include <hal_btcoex.h>
 #endif
@@ -130,9 +130,40 @@ typedef enum _USB_RX_AGG_MODE{
 
 #endif
 
+/* For store initial value of BB register */
+typedef struct _BB_INIT_REGISTER {
+	u16	offset;
+	u32	value;
+
+} BB_INIT_REGISTER, *PBB_INIT_REGISTER;
+
 #define PAGE_SIZE_128	128
 #define PAGE_SIZE_256	256
 #define PAGE_SIZE_512	512
+
+#define HCI_SUS_ENTER		0
+#define HCI_SUS_LEAVING		1
+#define HCI_SUS_LEAVE		2
+#define HCI_SUS_ENTERING	3
+#define HCI_SUS_ERR			4
+
+#ifdef CONFIG_AUTO_CHNL_SEL_NHM
+typedef enum _ACS_OP {
+	ACS_INIT,		/*ACS - Variable init*/
+	ACS_RESET,		/*ACS - NHM Counter reset*/
+	ACS_SELECT,		/*ACS - NHM Counter Statistics */
+} ACS_OP;
+
+typedef enum _ACS_STATE {
+	ACS_DISABLE,
+	ACS_ENABLE,
+} ACS_STATE;
+
+struct auto_chan_sel {
+	ATOMIC_T state;
+	u8	ch; /* previous channel*/
+};
+#endif /*CONFIG_AUTO_CHNL_SEL_NHM*/
 
 typedef struct hal_com_data
 {
@@ -140,7 +171,7 @@ typedef struct hal_com_data
 	RT_MULTI_FUNC		MultiFunc; // For multi-function consideration.
 	RT_POLARITY_CTL		PolarityCtl; // For Wifi PDn Polarity control.
 	RT_REGULATOR_MODE	RegulatorMode; // switching regulator or LDO
-	
+	u8	hw_init_completed;
 	/****** FW related ******/
 	u16	FirmwareVersion;
 	u16	FirmwareVersionRev;
@@ -167,7 +198,9 @@ typedef struct hal_com_data
 	BOOLEAN			bSwChnl;
 	BOOLEAN			bSetChnlBW;
 	BOOLEAN			bChnlBWInitialized;
-
+#ifdef CONFIG_AUTO_CHNL_SEL_NHM
+	struct auto_chan_sel acs;
+#endif
 	/****** rf_ctrl *****/
 	u8	rf_chip;
 	u8	rf_type;
@@ -220,7 +253,7 @@ typedef struct hal_com_data
 	u8	EEPROMRFGainVal;
 #endif /*CONFIG_RF_GAIN_OFFSET*/
 
-#ifdef CONFIG_RTL8723B
+#if defined(CONFIG_RTL8723B) || defined(CONFIG_RTL8703B)
 	u8	adjuseVoltageVal;
 #endif
 	u8	EfuseUsedPercentage;
@@ -383,6 +416,7 @@ typedef struct hal_com_data
 #endif
 	/* Auto FSM to Turn On, include clock, isolation, power control for MAC only */
 	u8	bMacPwrCtrlOn;
+	u8 hci_sus_state;
 	
 	u8	RegIQKFWOffload;
 	struct submit_ctx 	iqk_sctx;
@@ -491,7 +525,7 @@ typedef struct hal_com_data
 	BT_COEXIST		bt_coexist;
 #endif // CONFIG_BT_COEXIST
 
-#if defined(CONFIG_RTL8723B)
+#if defined(CONFIG_RTL8723B) || defined(CONFIG_RTL8703B) || defined(CONFIG_RTL8188F)
 	#ifndef CONFIG_PCI_HCI	// mutual exclusive with PCI -- so they're SDIO and GSPI 
 	// Interrupt relatd register information.
 	u32			SysIntrStatus;
@@ -527,7 +561,10 @@ typedef struct hal_com_data
 
 	u8 	macid_num;
 	u8 	cam_entry_num;
+	u8 sec_cap;
 	u8	RfKFreeEnable;
+	BOOLEAN				bCCKinCH14;
+	BB_INIT_REGISTER	BBRegForRecover[6];
 
 } HAL_DATA_COMMON, *PHAL_DATA_COMMON;
 
@@ -535,6 +572,7 @@ typedef struct hal_com_data
 
 typedef struct hal_com_data HAL_DATA_TYPE, *PHAL_DATA_TYPE;
 #define GET_HAL_DATA(__pAdapter)			((HAL_DATA_TYPE *)((__pAdapter)->HalData))
+
 #define GET_HAL_RFPATH_NUM(__pAdapter)		(((HAL_DATA_TYPE *)((__pAdapter)->HalData))->NumTotalRFPath )
 #define RT_GetInterfaceSelection(_Adapter) 		(GET_HAL_DATA(_Adapter)->InterfaceSel)
 #define GET_RF_TYPE(__pAdapter)				(GET_HAL_DATA(__pAdapter)->rf_type)
@@ -545,9 +583,16 @@ typedef struct hal_com_data HAL_DATA_TYPE, *PHAL_DATA_TYPE;
 
 #define get_hal_mac_addr(adapter) 				(GET_HAL_DATA(adapter)->EEPROMMACAddr)
 #define is_boot_from_eeprom(adapter) 			(GET_HAL_DATA(adapter)->EepromOrEfuse)
-
+#define rtw_get_hw_init_completed(adapter)		(GET_HAL_DATA(adapter)->hw_init_completed)
+#define rtw_is_hw_init_completed(adapter)		(GET_HAL_DATA(adapter)->hw_init_completed == _TRUE)
 #endif
 
+#ifdef CONFIG_AUTO_CHNL_SEL_NHM
+#define GET_ACS_STATE(padapter)					(ATOMIC_READ(&GET_HAL_DATA(padapter)->acs.state))
+#define SET_ACS_STATE(padapter, set_state)			(ATOMIC_SET(&GET_HAL_DATA(padapter)->acs.state, set_state))
+#define rtw_get_acs_channel(padapter)				(GET_HAL_DATA(padapter)->acs.ch)
+#define rtw_set_acs_channel(padapter, survey_ch)	(GET_HAL_DATA(padapter)->acs.ch = survey_ch)
+#endif /*CONFIG_AUTO_CHNL_SEL_NHM*/
 
 #endif //__HAL_DATA_H__
 

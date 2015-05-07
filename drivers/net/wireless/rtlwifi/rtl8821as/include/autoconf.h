@@ -46,7 +46,7 @@
 // Driver(software) Config
 // ==============================
 #define CONFIG_EMBEDDED_FWIMG
-#define CONFIG_SDIO_TX_TASKLET
+//#define CONFIG_SDIO_TX_TASKLET
 //#define CONFIG_SDIO_REDUCE_TX_POLLING
 #define CONFIG_RECV_REORDERING_CTRL
 #define CONFIG_SKB_COPY	//for amsdu
@@ -99,13 +99,13 @@
  * Debug Related Config
  *
  ***********************************************************/
-/*#define CONFIG_DEBUG */ /* DBG_871X, etc... */
+#define CONFIG_DEBUG /* DBG_871X, etc... */
 //#define CONFIG_DEBUG_RTL871X /* RT_TRACE, RT_PRINT_DATA, _func_enter_, _func_exit_ */
-/* #define CONFIG_PROC_DEBUG */
-/* #define DBG_CONFIG_ERROR_DETECT */
-/* #define DBG_CONFIG_ERROR_RESET */
+#define CONFIG_PROC_DEBUG
+#define DBG_CONFIG_ERROR_DETECT
+//#define DBG_CONFIG_ERROR_RESET
 
-#define DBG 0
+#define DBG 1
 
 //#define DBG_IO
 //#define DBG_DELAY_OS
@@ -255,8 +255,18 @@
 	#undef SUPPORT_HW_RFOFF_DETECTED
 #endif
 
-#define CONFIG_TX_MCAST2UNI	1	// Support IP multicast->unicast
+#define CONFIG_TX_MCAST2UNI		/*Support IP multicast->unicast*/
 
+#ifdef CONFIG_WOWLAN
+	/*#define CONFIG_GTK_OL*/
+	#define CONFIG_ARP_KEEP_ALIVE
+#endif /* CONFIG_WOWLAN */
+
+#ifdef CONFIG_GPIO_WAKEUP
+	#ifndef WAKEUP_GPIO_IDX
+		#define WAKEUP_GPIO_IDX	1	/* WIFI Chip Side */
+	#endif /* !WAKEUP_GPIO_IDX */
+#endif /* CONFIG_GPIO_WAKEUP */
 
 #ifdef CONFIG_MP_INCLUDED
 	#define MP_DRIVER		1
@@ -277,46 +287,6 @@
 #endif
 
 
-/***********************************************************
- *
- * Outsource Related Config
- *
- ***********************************************************/
-#define TESTCHIP_SUPPORT				0
-
-#define RTL8192CE_SUPPORT 				0
-#define RTL8192CU_SUPPORT 				0
-#define RTL8192C_SUPPORT 				(RTL8192CE_SUPPORT|RTL8192CU_SUPPORT)
-
-#define RTL8192DE_SUPPORT 				0
-#define RTL8192DU_SUPPORT 				0
-#define RTL8192D_SUPPORT 				(RTL8192DE_SUPPORT|RTL8192DU_SUPPORT)
-
-#define RTL8723_FPGA_VERIFICATION		0
-#define RTL8723AU_SUPPORT				0
-#define RTL8723AS_SUPPORT				0
-#define RTL8723AE_SUPPORT				0
-#define RTL8723A_SUPPORT				(RTL8723AU_SUPPORT|RTL8723AS_SUPPORT|RTL8723AE_SUPPORT)
-
-
-#define RTL8188E_SUPPORT				0
-#ifdef CONFIG_RTL8812A
-#define RTL8812A_SUPPORT				1
-#else
-#define RTL8812A_SUPPORT				0
-#endif
-#ifdef CONFIG_RTL8821A
-#define RTL8821A_SUPPORT				1
-#else
-#define RTL8821A_SUPPORT				0
-#endif
-#define RTL8723B_SUPPORT				0
-#define RTL8192E_SUPPORT				0
-#define RTL8814A_SUPPORT				0
-#define 	RTL8195A_SUPPORT				0
-
-#define RATE_ADAPTIVE_SUPPORT 			0
-#define POWER_TRAINING_ACTIVE			0
 
 #ifdef CONFIG_TX_EARLY_MODE
 	#define	RTL8188E_EARLY_MODE_PKT_NUM_10	0

@@ -578,7 +578,7 @@ _func_enter_;
 				
 				if((prxattrib->bdecrypted ==_TRUE)&& (brpt_micerror == _TRUE))
 				{
-					rtw_handle_tkip_mic_err(adapter,(u8)IS_MCAST(prxattrib->ra));
+					rtw_handle_tkip_mic_err(adapter, stainfo, (u8)IS_MCAST(prxattrib->ra));			
 					RT_TRACE(_module_rtl871x_recv_c_,_drv_err_,(" mic error :prxattrib->bdecrypted=%d ",prxattrib->bdecrypted));
 					DBG_871X(" mic error :prxattrib->bdecrypted=%d\n",prxattrib->bdecrypted);
 				}
@@ -1104,6 +1104,8 @@ void count_rx_stats(_adapter *padapter, union recv_frame *prframe, struct sta_in
 	struct stainfo_stats	*pstats = NULL;
 	struct rx_pkt_attrib	*pattrib = & prframe->u.hdr.attrib;
 	struct recv_priv		*precvpriv = &padapter->recvpriv;
+	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
+	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
 
 	sz = get_recvframe_len(prframe);
 	precvpriv->rx_bytes += sz;
@@ -1125,6 +1127,9 @@ void count_rx_stats(_adapter *padapter, union recv_frame *prframe, struct sta_in
 
 		pstats->rx_data_pkts++;
 		pstats->rx_bytes += sz;
+		
+		/*record rx packets for every tid*/	
+		pstats->rx_data_qos_pkts[pattrib->priority]++;
 
 #ifdef CONFIG_TDLS
 		if(psta->tdls_sta_state & TDLS_LINKED_STATE)
@@ -2318,7 +2323,7 @@ _func_enter_;
 			if(validate_80211w_mgmt(adapter, precv_frame) == _FAIL)
 			{
 				retval = _FAIL;
-				DBG_COUNTER(padapter->rx_logs.core_rx_pre_mgmt_err_80211w);
+				DBG_COUNTER(adapter->rx_logs.core_rx_pre_mgmt_err_80211w);
 				break;
 			}
 #endif //CONFIG_IEEE80211W
@@ -3313,13 +3318,9 @@ int recv_indicatepkts_in_order(_adapter *padapter, struct recv_reorder_ctrl *pre
 			{
 				//DBG_871X("recv_indicatepkts_in_order, amsdu!=1, indicate_seq=%d, seq_num=%d\n", preorder_ctrl->indicate_seq, pattrib->seq_num);
 
-				if ((padapter->bDriverStopped == _FALSE) &&
-				    (padapter->bSurpriseRemoved == _FALSE))
-				{
-					
-					rtw_recv_indicatepkt(padapter, prframe);//indicate this recv_frame
-										
-				}
+				if (!RTW_CANNOT_RUN(padapter))
+					rtw_recv_indicatepkt(padapter, prframe);/*indicate this recv_frame*/
+
 			}
 			else if(pattrib->amsdu==1)
 			{
@@ -3403,9 +3404,7 @@ int recv_indicatepkt_reorder(_adapter *padapter, union recv_frame *prframe)
 		//	|| (pattrib->eth_type==0x0806) || (pattrib->ack_policy!=0))
 		if (pattrib->qos!=1)
 		{
-			if ((padapter->bDriverStopped == _FALSE) &&
-			    (padapter->bSurpriseRemoved == _FALSE))
-			{
+			if (!RTW_CANNOT_RUN(padapter)) {
 				RT_TRACE(_module_rtl871x_recv_c_, _drv_notice_, ("@@@@  recv_indicatepkt_reorder -recv_func recv_indicatepkt\n" ));
 
 				rtw_recv_indicatepkt(padapter, prframe);
@@ -3567,10 +3566,8 @@ void rtw_reordering_ctrl_timeout_handler(void *pcontext)
 	_queue *ppending_recvframe_queue = &preorder_ctrl->pending_recvframe_queue;
 
 
-	if(padapter->bDriverStopped ||padapter->bSurpriseRemoved)
-	{
+	if (RTW_CANNOT_RUN(padapter))
 		return;
-	}
 
 	//DBG_871X("+rtw_reordering_ctrl_timeout_handler()=>\n");
 
@@ -3619,9 +3616,7 @@ int process_recv_indicatepkts(_adapter *padapter, union recv_frame *prframe)
 			DBG_871X("DBG_RX_DROP_FRAME %s recv_indicatepkt_reorder error!\n", __FUNCTION__);
 			#endif
 		
-			if ((padapter->bDriverStopped == _FALSE) &&
-			    (padapter->bSurpriseRemoved == _FALSE))
-			{
+			if (!RTW_CANNOT_RUN(padapter))	{
 				retval = _FAIL;
 				return retval;
 			}
@@ -3640,19 +3635,18 @@ int process_recv_indicatepkts(_adapter *padapter, union recv_frame *prframe)
 			return retval;
 		}
 
-		if ((padapter->bDriverStopped ==_FALSE)&&( padapter->bSurpriseRemoved==_FALSE))
-		{
+		if (!RTW_CANNOT_RUN(padapter)) {
 			//indicate this recv_frame
 			RT_TRACE(_module_rtl871x_recv_c_, _drv_notice_, ("@@@@ process_recv_indicatepkts- recv_func recv_indicatepkt\n" ));
 			rtw_recv_indicatepkt(padapter, prframe);
-
-
 		}
 		else
 		{
 			RT_TRACE(_module_rtl871x_recv_c_, _drv_notice_, ("@@@@ process_recv_indicatepkts- recv_func free_indicatepkt\n" ));
 
-			RT_TRACE(_module_rtl871x_recv_c_, _drv_notice_, ("recv_func:bDriverStopped(%d) OR bSurpriseRemoved(%d)", padapter->bDriverStopped, padapter->bSurpriseRemoved));
+			RT_TRACE(_module_rtl871x_recv_c_, _drv_notice_, ("recv_func:bDriverStopped(%s) OR bSurpriseRemoved(%s)"
+				, rtw_is_drv_stopped(padapter)?"True":"False"
+				, rtw_is_surprise_removed(padapter)?"True":"False"));
 			retval = _FAIL;
 			return retval;
 		}
@@ -3883,8 +3877,7 @@ int mp_recv_frame(_adapter *padapter, union recv_frame *rframe)
 					ret = _FAIL;
 					goto exit;
 				}
-				if ((padapter->bDriverStopped == _FALSE) && (padapter->bSurpriseRemoved == _FALSE))
-				{
+				if (!RTW_CANNOT_RUN(padapter)) {
 					RT_TRACE(_module_rtl871x_recv_c_, _drv_alert_, ("@@@@ recv_func: recv_func rtw_recv_indicatepkt\n" ));
 							//indicate this recv_frame
 					ret = rtw_recv_indicatepkt(padapter, rframe);
@@ -3902,10 +3895,13 @@ int mp_recv_frame(_adapter *padapter, union recv_frame *rframe)
 				else
 				{
 					RT_TRACE(_module_rtl871x_recv_c_, _drv_alert_, ("@@@@  recv_func: rtw_free_recvframe\n" ));
-					RT_TRACE(_module_rtl871x_recv_c_, _drv_debug_, ("recv_func:bDriverStopped(%d) OR bSurpriseRemoved(%d)", padapter->bDriverStopped, padapter->bSurpriseRemoved));
+					RT_TRACE(_module_rtl871x_recv_c_, _drv_debug_, ("recv_func:bDriverStopped(%s) OR bSurpriseRemoved(%s)"
+						, rtw_is_drv_stopped(padapter)?"True":"False"
+						, rtw_is_surprise_removed(padapter)?"True":"False"));
 					#ifdef DBG_RX_DROP_FRAME
-						DBG_871X("DBG_RX_DROP_FRAME %s ecv_func:bDriverStopped(%d) OR bSurpriseRemoved(%d)\n", __FUNCTION__,
-									padapter->bDriverStopped, padapter->bSurpriseRemoved);
+						DBG_871X("DBG_RX_DROP_FRAME %s ecv_func:bDriverStopped(%s) OR bSurpriseRemoved(%s)\n", __func__,
+									rtw_is_drv_stopped(padapter)?"True":"False",
+									rtw_is_surprise_removed(padapter)?"True":"False");
 					#endif
 					ret = _FAIL;
 					rtw_free_recvframe(rframe, pfree_recv_queue);//free this recv_frame
@@ -4260,7 +4256,7 @@ int recv_frame_monitor(_adapter *padapter, union recv_frame *rframe)
 	rframe->u.hdr.rx_tail = skb_tail_pointer(pskb);
 	rframe->u.hdr.rx_end = skb_end_pointer(pskb);
 
-	if ((padapter->bDriverStopped == _FALSE) && (padapter->bSurpriseRemoved == _FALSE)) {
+	if (!RTW_CANNOT_RUN(padapter)) {
 		/* indicate this recv_frame */
 		ret = rtw_recv_monitor(padapter, rframe);
 		if (ret != _SUCCESS) {
@@ -4427,8 +4423,7 @@ int recv_func_posthandle(_adapter *padapter, union recv_frame *prframe)
 			goto _recv_data_drop;
 		}
 
-		if ((padapter->bDriverStopped == _FALSE) && (padapter->bSurpriseRemoved == _FALSE))
-		{
+		if (!RTW_CANNOT_RUN(padapter)) {
 			RT_TRACE(_module_rtl871x_recv_c_, _drv_alert_, ("@@@@ recv_func: recv_func rtw_recv_indicatepkt\n" ));
 			//indicate this recv_frame
 			ret = rtw_recv_indicatepkt(padapter, prframe);
@@ -4445,8 +4440,9 @@ int recv_func_posthandle(_adapter *padapter, union recv_frame *prframe)
 			RT_TRACE(_module_rtl871x_recv_c_, _drv_alert_, ("@@@@  recv_func: rtw_free_recvframe\n" ));
 			RT_TRACE(_module_rtl871x_recv_c_, _drv_debug_, ("recv_func:bDriverStopped(%d) OR bSurpriseRemoved(%d)", padapter->bDriverStopped, padapter->bSurpriseRemoved));
 			#ifdef DBG_RX_DROP_FRAME
-			DBG_871X("DBG_RX_DROP_FRAME %s ecv_func:bDriverStopped(%d) OR bSurpriseRemoved(%d)\n", __FUNCTION__,
-				padapter->bDriverStopped, padapter->bSurpriseRemoved);
+			DBG_871X("DBG_RX_DROP_FRAME %s ecv_func:bDriverStopped(%s) OR bSurpriseRemoved(%s)\n", __func__
+				, rtw_is_drv_stopped(padapter)?"True":"False"
+				, rtw_is_surprise_removed(padapter)?"True":"False");
 			#endif
 			ret = _FAIL;
 			rtw_free_recvframe(orig_prframe, pfree_recv_queue); //free this recv_frame
@@ -4867,6 +4863,22 @@ void rx_query_phy_status(
 	if (_rtw_memcmp(adapter_mac_addr(padapter), sa, ETH_ALEN) == _TRUE) {
 		static u32 start_time = 0;
 
+#if 0 /*For debug */
+		if (IsFrameTypeCtrl(wlanhdr)) {
+				DBG_871X("-->Control frame: Y\n");
+				DBG_871X("-->pkt_len: %d\n", pattrib->pkt_len);
+				DBG_871X("-->Sub Type = 0x%X\n", GetFrameSubType(wlanhdr));
+		}
+
+		/* Dump first 40 bytes of header */
+		int i = 0;
+
+		for (i = 0; i < 40; i++)
+			DBG_871X("%d: %X\n", i, *((u8 *)wlanhdr + i));
+
+		DBG_871X("\n");
+#endif
+
 		if ((start_time == 0) || (rtw_get_passing_time_ms(start_time) > 5000)) {
 			DBG_871X_LEVEL(_drv_always_, "Warning!!! %s: Confilc mac addr!!\n", __func__);
 			start_time = rtw_get_current_time();
@@ -4908,4 +4920,27 @@ void rx_query_phy_status(
 		}
 	}
 }
+/*
+* Increase and check if the continual_no_rx_packet of this @param pmlmepriv is larger than MAX_CONTINUAL_NORXPACKET_COUNT
+* @return _TRUE:
+* @return _FALSE:
+*/
+int rtw_inc_and_chk_continual_no_rx_packet(struct sta_info *sta, int tid_index)
+{
+	
+	int ret = _FALSE;
+	int value = ATOMIC_INC_RETURN(&sta->continual_no_rx_packet[tid_index]);
 
+	if (value >= MAX_CONTINUAL_NORXPACKET_COUNT) 
+		ret = _TRUE;
+	
+	return ret;
+}
+
+/*
+* Set the continual_no_rx_packet of this @param pmlmepriv to 0
+*/
+void rtw_reset_continual_no_rx_packet(struct sta_info *sta, int tid_index)
+{	
+	ATOMIC_SET(&sta->continual_no_rx_packet[tid_index], 0);	
+}

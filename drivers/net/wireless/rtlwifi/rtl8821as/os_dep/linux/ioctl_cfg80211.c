@@ -854,7 +854,7 @@ void rtw_cfg80211_indicate_disconnect(_adapter *padapter)
 	}
 #endif //CONFIG_P2P
 
-	if (!padapter->mlmepriv.not_indic_disco) {
+	if (!padapter->mlmepriv.not_indic_disco || padapter->ndev_unregistering) {
 		#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0) || defined(COMPAT_KERNEL_RELEASE)			
 		DBG_8192C("pwdev->sme_state(b)=%d\n", pwdev->sme_state);
 
@@ -4283,7 +4283,7 @@ static int	cfg80211_rtw_del_station(struct wiphy *wiphy, struct net_device *ndev
 
 		flush_all_cam_entry(padapter);	//clear CAM
 
-		ret = rtw_sta_flush(padapter);
+		ret = rtw_sta_flush(padapter, _TRUE);
 		
 		return ret;
 	}	
@@ -4326,9 +4326,9 @@ static int	cfg80211_rtw_del_station(struct wiphy *wiphy, struct net_device *ndev
 
 				//_exit_critical_bh(&pstapriv->asoc_list_lock, &irqL);
 				if (check_fwstate(pmlmepriv, (WIFI_AP_STATE)) == _TRUE)
-					updated = ap_free_sta(padapter, psta, _TRUE, WLAN_REASON_PREV_AUTH_NOT_VALID);
+					updated = ap_free_sta(padapter, psta, _TRUE, WLAN_REASON_PREV_AUTH_NOT_VALID, _TRUE);
 				else
-					updated = ap_free_sta(padapter, psta, _TRUE, WLAN_REASON_DEAUTH_LEAVING);
+					updated = ap_free_sta(padapter, psta, _TRUE, WLAN_REASON_DEAUTH_LEAVING, _TRUE);
 				//_enter_critical_bh(&pstapriv->asoc_list_lock, &irqL);
 
 				psta = NULL;
@@ -4342,7 +4342,7 @@ static int	cfg80211_rtw_del_station(struct wiphy *wiphy, struct net_device *ndev
 
 	_exit_critical_bh(&pstapriv->asoc_list_lock, &irqL);
 
-	associated_clients_update(padapter, updated);
+	associated_clients_update(padapter, updated, STA_INFO_UPDATE_ALL);
 
 	DBG_871X("-"FUNC_NDEV_FMT"\n", FUNC_NDEV_ARG(ndev));
 	
@@ -4916,9 +4916,9 @@ static s32 cfg80211_rtw_remain_on_channel(struct wiphy *wiphy,
 		rtw_p2p_enable(padapter, P2P_ROLE_DEVICE);
 		adapter_wdev_data(padapter)->p2p_enabled = _TRUE;
 		padapter->wdinfo.listen_channel = remain_ch;
-	}
-	else
-	{
+	} else if (rtw_p2p_chk_state(pwdinfo , P2P_STATE_LISTEN)) {
+		padapter->wdinfo.listen_channel = remain_ch;
+	} else {
 		rtw_p2p_set_pre_state(pwdinfo, rtw_p2p_state(pwdinfo));
 #ifdef CONFIG_DEBUG_CFG80211		
 		DBG_8192C("%s, role=%d, p2p_state=%d\n", __func__, rtw_p2p_role(pwdinfo), rtw_p2p_state(pwdinfo));
@@ -6030,17 +6030,66 @@ int rtw_cfg80211_set_mgnt_wpsp2pie(struct net_device *net, char *buf, int len,
 	
 }
 
-static void rtw_cfg80211_init_ht_capab(struct ieee80211_sta_ht_cap *ht_cap, enum ieee80211_band band, u8 rf_type)
+static void rtw_cfg80211_init_ht_capab_ex(_adapter *padapter, struct ieee80211_sta_ht_cap *ht_cap, enum ieee80211_band band, u8 rf_type)
 {
+	struct registry_priv *pregistrypriv = &padapter->registrypriv;
+	struct mlme_priv	*pmlmepriv = &padapter->mlmepriv;
+	struct ht_priv		*phtpriv = &pmlmepriv->htpriv;
+	u8 stbc_rx_enable = _FALSE;
 
-#define MAX_BIT_RATE_40MHZ_MCS15 	300	/* Mbps */
-#define MAX_BIT_RATE_40MHZ_MCS7 	150	/* Mbps */
+	rtw_ht_use_default_setting(padapter);
+
+	/* RX LDPC */
+	if (TEST_FLAG(phtpriv->ldpc_cap, LDPC_HT_ENABLE_RX))
+		ht_cap->cap |= IEEE80211_HT_CAP_LDPC_CODING;
+
+	/* TX STBC */
+	if (TEST_FLAG(phtpriv->stbc_cap, STBC_HT_ENABLE_TX))
+		ht_cap->cap |= IEEE80211_HT_CAP_TX_STBC;
+
+	/* RX STBC */
+	if (TEST_FLAG(phtpriv->stbc_cap, STBC_HT_ENABLE_RX)) {
+		/*rtw_rx_stbc 0: disable, bit(0):enable 2.4g, bit(1):enable 5g*/
+		if (IEEE80211_BAND_2GHZ == band)
+			stbc_rx_enable = (pregistrypriv->rx_stbc & BIT(0))?_TRUE:_FALSE;
+		if (IEEE80211_BAND_5GHZ == band)
+			stbc_rx_enable = (pregistrypriv->rx_stbc & BIT(1))?_TRUE:_FALSE;
+
+		if (stbc_rx_enable) {
+			switch (rf_type) {
+			case RF_1T1R:
+				ht_cap->cap |= IEEE80211_HT_CAP_RX_STBC_1R;/*RX STBC One spatial stream*/
+				break;
+
+			case RF_2T2R:
+			case RF_1T2R:
+				ht_cap->cap |= IEEE80211_HT_CAP_RX_STBC_2R;/*RX STBC two spatial stream*/
+				break;
+			case RF_3T3R:
+			case RF_3T4R:
+			case RF_4T4R:
+				ht_cap->cap |= IEEE80211_HT_CAP_RX_STBC_3R;/*RX STBC three spatial stream*/
+				break;
+			default:
+				DBG_871X("[warning] rf_type %d is not expected\n", rf_type);
+				break;
+			}
+		}
+	}
+}
+
+static void rtw_cfg80211_init_ht_capab(_adapter *padapter, struct ieee80211_sta_ht_cap *ht_cap, enum ieee80211_band band, u8 rf_type)
+{
+#define MAX_BIT_RATE_40MHZ_MCS23	450	/* Mbps */
+#define MAX_BIT_RATE_40MHZ_MCS15	300	/* Mbps */
+#define MAX_BIT_RATE_40MHZ_MCS7	150	/* Mbps */
 
 	ht_cap->ht_supported = _TRUE;
 
 	ht_cap->cap = IEEE80211_HT_CAP_SUP_WIDTH_20_40 |
 	    				IEEE80211_HT_CAP_SGI_40 | IEEE80211_HT_CAP_SGI_20 |
 	    				IEEE80211_HT_CAP_DSSSCCK40 | IEEE80211_HT_CAP_MAX_AMSDU;
+	rtw_cfg80211_init_ht_capab_ex(padapter, ht_cap, band, rf_type);
 
 	/*
 	 *Maximum length of AMPDU that the STA can receive.
@@ -6063,24 +6112,23 @@ static void rtw_cfg80211_init_ht_capab(struct ieee80211_sta_ht_cap *ht_cap, enum
 	 *if BW_40 rx_mask[4]=0x01;
 	 *highest supported RX rate
 	 */
-	if(rf_type == RF_1T1R)
-	{
+	if (rf_type == RF_1T1R) {
 		ht_cap->mcs.rx_mask[0] = 0xFF;
-		ht_cap->mcs.rx_mask[1] = 0x00;
-		ht_cap->mcs.rx_mask[4] = 0x01;
 
 		ht_cap->mcs.rx_highest = MAX_BIT_RATE_40MHZ_MCS7;
-	}
-	else if((rf_type == RF_1T2R) || (rf_type==RF_2T2R))
-	{
+	} else if ((rf_type == RF_1T2R) || (rf_type == RF_2T2R) || (rf_type == RF_2T2R_GREEN)) {
 		ht_cap->mcs.rx_mask[0] = 0xFF;
 		ht_cap->mcs.rx_mask[1] = 0xFF;
-		ht_cap->mcs.rx_mask[4] = 0x01;
 
 		ht_cap->mcs.rx_highest = MAX_BIT_RATE_40MHZ_MCS15;
-	}
-	else
-	{
+	} else if ((rf_type == RF_2T3R) || (rf_type == RF_3T3R)) {
+		ht_cap->mcs.rx_mask[0] = 0xFF;
+		ht_cap->mcs.rx_mask[1] = 0xFF;
+		ht_cap->mcs.rx_mask[2] = 0xFF;
+
+		ht_cap->mcs.rx_highest = MAX_BIT_RATE_40MHZ_MCS23;
+	} else {
+		rtw_warn_on(1);
 		DBG_8192C("%s, error rf_type=%d\n", __func__, rf_type);
 	}	
 	
@@ -6097,20 +6145,18 @@ void rtw_cfg80211_init_wiphy(_adapter *padapter)
 
 	DBG_8192C("%s:rf_type=%d\n", __func__, rf_type);
 
-	if (padapter->registrypriv.wireless_mode & WIRELESS_11G)
-	{
+	if (IsSupported24G(padapter->registrypriv.wireless_mode)) {	
 		bands = wiphy->bands[IEEE80211_BAND_2GHZ];
 		if(bands)
-			rtw_cfg80211_init_ht_capab(&bands->ht_cap, IEEE80211_BAND_2GHZ, rf_type);
+			rtw_cfg80211_init_ht_capab(padapter, &bands->ht_cap, IEEE80211_BAND_2GHZ, rf_type);
 	}
-
-	if (padapter->registrypriv.wireless_mode & WIRELESS_11A)
-	{
+#ifdef CONFIG_IEEE80211_BAND_5GHZ
+	if (IsSupported5G(padapter->registrypriv.wireless_mode)) {	
 		bands = wiphy->bands[IEEE80211_BAND_5GHZ];
 		if(bands)
-			rtw_cfg80211_init_ht_capab(&bands->ht_cap, IEEE80211_BAND_5GHZ, rf_type);
+			rtw_cfg80211_init_ht_capab(padapter, &bands->ht_cap, IEEE80211_BAND_5GHZ, rf_type);
 	}
-
+#endif
 	/* init regulary domain */
 	rtw_regd_init(padapter);
 
@@ -6119,6 +6165,7 @@ void rtw_cfg80211_init_wiphy(_adapter *padapter)
 
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0))
 struct ieee80211_iface_limit rtw_limits[] = {
 	{	.max = 2,
 		.types = BIT(NL80211_IFTYPE_STATION)
@@ -6143,6 +6190,7 @@ struct ieee80211_iface_combination rtw_combinations[] = {
 		.num_different_channels = 1,
 	},
 };
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0)) */
 
 static void rtw_cfg80211_preinit_wiphy(_adapter *adapter, struct wiphy *wiphy)
 {
@@ -6185,7 +6233,7 @@ static void rtw_cfg80211_preinit_wiphy(_adapter *adapter, struct wiphy *wiphy)
 	#endif
 #endif
 
-	#if defined(RTW_SINGLE_WIPHY)
+	#if defined(RTW_SINGLE_WIPHY) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0))
 	wiphy->iface_combinations = rtw_combinations;
 	wiphy->n_iface_combinations = ARRAY_SIZE(rtw_combinations);
 	#endif
@@ -6193,13 +6241,14 @@ static void rtw_cfg80211_preinit_wiphy(_adapter *adapter, struct wiphy *wiphy)
 	wiphy->cipher_suites = rtw_cipher_suites;
 	wiphy->n_cipher_suites = ARRAY_SIZE(rtw_cipher_suites);
 
-	/* if (padapter->registrypriv.wireless_mode & WIRELESS_11G) */
+	if (IsSupported24G(adapter->registrypriv.wireless_mode))
 		wiphy->bands[IEEE80211_BAND_2GHZ] = rtw_spt_band_alloc(IEEE80211_BAND_2GHZ);
+
 #ifdef CONFIG_IEEE80211_BAND_5GHZ
-	/* if (padapter->registrypriv.wireless_mode & WIRELESS_11A) */
+	if (IsSupported5G(adapter->registrypriv.wireless_mode))
 		wiphy->bands[IEEE80211_BAND_5GHZ] = rtw_spt_band_alloc(IEEE80211_BAND_5GHZ);
 #endif
-	
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38) && LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0))
 	wiphy->flags |= WIPHY_FLAG_SUPPORTS_SEPARATE_DEFAULT_KEYS;
 #endif
@@ -6539,7 +6588,7 @@ int rtw_cfg80211_dev_res_alloc(struct dvobj_priv *dvobj)
 	struct wiphy *wiphy;
 	struct device *dev = dvobj_to_dev(dvobj);
 
-	wiphy = rtw_wiphy_alloc(dvobj->if1, dev);
+	wiphy = rtw_wiphy_alloc(dvobj->padapters[IFACE_ID0], dev);
 	if (wiphy == NULL)
 		goto exit;
 

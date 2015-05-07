@@ -38,10 +38,11 @@ int rtw_fw_ps_state(PADAPTER padapter)
 	
 	_enter_pwrlock(&pwrpriv->check_32k_lock);
 	
-	if ((padapter->bSurpriseRemoved == _TRUE))
-	{
-		DBG_871X("%s: bSurpriseRemoved=%d , hw_init_completed=%d, bDriverStopped=%d \n", __FUNCTION__, padapter->bSurpriseRemoved,
-		padapter->hw_init_completed,padapter->bDriverStopped);
+	if (RTW_CANNOT_RUN(padapter)) {
+		DBG_871X("%s: bSurpriseRemoved=%s , hw_init_completed=%d, bDriverStopped=%s\n", __func__
+			, rtw_is_surprise_removed(padapter)?"True":"False"
+			, rtw_get_hw_init_completed(padapter)
+			, rtw_is_drv_stopped(padapter)?"True":"False");
 		goto exit_fw_ps_state;
 	}
 	rtw_hal_set_hwreg(padapter, HW_VAR_SET_REQ_FW_PS, (u8 *)&dont_care);
@@ -354,7 +355,6 @@ void rtw_ps_processor(_adapter*padapter)
 				{	
 					pwrpriv->change_rfpwrstate = rf_off;														
 					pwrpriv->brfoffbyhw = _TRUE;
-					padapter->bCardDisableWOHSM = _TRUE;
 					rtw_hw_suspend(padapter );	
 				}
 				else
@@ -396,12 +396,10 @@ void rtw_ps_processor(_adapter*padapter)
 				DBG_871X("<==%s .pwrpriv->bInternalAutoSuspend)(%x)\n",__FUNCTION__,pwrpriv->bInternalAutoSuspend);
 			} else {
 				pwrpriv->change_rfpwrstate = rf_off;
-				padapter->bCardDisableWOHSM = _TRUE;
 				DBG_871X("<==%s .pwrpriv->bInternalAutoSuspend)(%x) call autosuspend_enter\n",__FUNCTION__,pwrpriv->bInternalAutoSuspend);
 				autosuspend_enter(padapter);
 			}		
 			#else
-			padapter->bCardDisableWOHSM = _TRUE;
 			autosuspend_enter(padapter);
 			#endif	//if defined (CONFIG_BT_COEXIST)&& defined (CONFIG_AUTOSUSPEND)
 		}		
@@ -542,20 +540,21 @@ _func_enter_;
 		}
 	}
 
-	if ((padapter->bSurpriseRemoved == _TRUE) ||
-		(padapter->hw_init_completed == _FALSE))
+	if (rtw_is_surprise_removed(padapter) ||
+		(!rtw_is_hw_init_completed(padapter)))
 	{
 		RT_TRACE(_module_rtl871x_pwrctrl_c_, _drv_err_,
-				 ("%s: SurpriseRemoved(%d) hw_init_completed(%d)\n",
-				  __FUNCTION__, padapter->bSurpriseRemoved, padapter->hw_init_completed));
+				("%s: SurpriseRemoved(%s) hw_init_completed(%s)\n"
+				, __func__
+				, rtw_is_surprise_removed(padapter)?"True":"False"
+				, rtw_is_hw_init_completed(padapter)?"True":"False"));
 
 		pwrpriv->cpwm = PS_STATE_S4;
 
 		return;
 	}
 
-	if (padapter->bDriverStopped == _TRUE)
-	{
+	if (rtw_is_drv_stopped(padapter)) {
 		RT_TRACE(_module_rtl871x_pwrctrl_c_, _drv_err_,
 				 ("%s: change power state(0x%02X) when DriverStopped\n", __FUNCTION__, pslv));
 
@@ -1071,8 +1070,7 @@ s32 LPS_RF_ON_check(PADAPTER padapter, u32 delay_ms)
 		if (_TRUE == bAwake)
 			break;
 
-		if (_TRUE == padapter->bSurpriseRemoved)
-		{
+		if (rtw_is_surprise_removed(padapter)) {
 			err = -2;
 			DBG_871X("%s: device surprise removed!!\n", __FUNCTION__);
 			break;
@@ -1224,10 +1222,8 @@ _func_enter_;
 
 	DBG_871X("%s.....\n",__FUNCTION__);
 
-	if (_TRUE == Adapter->bSurpriseRemoved)
-	{
-		DBG_871X(FUNC_ADPT_FMT ": bSurpriseRemoved=%d Skip!\n",
-			FUNC_ADPT_ARG(Adapter), Adapter->bSurpriseRemoved);
+	if (rtw_is_surprise_removed(Adapter)) {
+		DBG_871X(FUNC_ADPT_FMT ": bSurpriseRemoved=_TRUE Skip!\n", FUNC_ADPT_ARG(Adapter));
 		return;
 	}
 
@@ -1357,10 +1353,8 @@ _func_enter_;
 		return;
 	}
 
-	if (_TRUE == Adapter->bSurpriseRemoved)
-	{
-		DBG_871X(FUNC_ADPT_FMT ": bSurpriseRemoved=%d Skip!\n",
-			FUNC_ADPT_ARG(Adapter), Adapter->bSurpriseRemoved);
+	if (rtw_is_surprise_removed(Adapter)) {
+		DBG_871X(FUNC_ADPT_FMT ": bSurpriseRemoved=_TRUE Skip!\n", FUNC_ADPT_ARG(Adapter));
 		return;
 	}
 
@@ -1439,10 +1433,10 @@ _func_enter_;
 	{
 		_enter_pwrlock(&pwrpriv->lock);
 
-		if ((padapter->bSurpriseRemoved == _TRUE)
-			|| (padapter->hw_init_completed == _FALSE)
+		if (rtw_is_surprise_removed(padapter)
+			|| (!rtw_is_hw_init_completed(padapter))
 #ifdef CONFIG_USB_HCI
-			|| (padapter->bDriverStopped== _TRUE)
+			|| rtw_is_drv_stopped(padapter)
 #endif
 			|| (pwrpriv->pwr_mode == PS_MODE_ACTIVE)
 			)
@@ -1527,7 +1521,7 @@ static void cpwm_event_callback(struct work_struct *work)
 {
 	struct pwrctrl_priv *pwrpriv = container_of(work, struct pwrctrl_priv, cpwm_event);
 	struct dvobj_priv *dvobj = pwrctl_to_dvobj(pwrpriv);
-	_adapter *adapter = dvobj->if1;
+	_adapter *adapter = dvobj->padapters[IFACE_ID0];
 	struct reportpwrstate_parm report;
 
 	//DBG_871X("%s\n",__FUNCTION__);
@@ -1546,7 +1540,7 @@ static void rpwmtimeout_workitem_callback(struct work_struct *work)
 
 	pwrpriv = container_of(work, struct pwrctrl_priv, rpwmtimeoutwi);
 	dvobj = pwrctl_to_dvobj(pwrpriv);
-	padapter = dvobj->if1;
+	padapter = dvobj->padapters[IFACE_ID0];
 //	DBG_871X("+%s: rpwm=0x%02X cpwm=0x%02X\n", __func__, pwrpriv->rpwm, pwrpriv->cpwm);
 
 	_enter_pwrlock(&pwrpriv->lock);
@@ -2103,6 +2097,7 @@ static void resume_workitem_callback(struct work_struct *work);
 void rtw_init_pwrctrl_priv(PADAPTER padapter)
 {
 	struct pwrctrl_priv *pwrctrlpriv = adapter_to_pwrctl(padapter);
+	int i = 0;
 
 #if defined(CONFIG_CONCURRENT_MODE)
 	if (padapter->adapter_type != PRIMARY_ADAPTER)
@@ -2188,7 +2183,15 @@ _func_enter_;
 	#endif //CONFIG_HAS_EARLYSUSPEND || CONFIG_ANDROID_POWER
 
 #ifdef CONFIG_WOWLAN
+	pwrctrlpriv->wowlan_pattern_idx = 0;
 	pwrctrlpriv->wowlan_from_cmd = _FALSE;
+	for (i = 0 ; i < MAX_WKFM_NUM; i++) {
+		_rtw_memset(pwrctrlpriv->patterns[i].content, '\0',
+				sizeof(pwrctrlpriv->patterns[i].content));
+		_rtw_memset(pwrctrlpriv->patterns[i].mask, '\0',
+				sizeof(pwrctrlpriv->patterns[i].mask));
+		pwrctrlpriv->patterns[i].len = 0;
+	}
 #endif
 #ifdef CONFIG_PNO_SUPPORT
 	pwrctrlpriv->pno_inited = _FALSE;
@@ -2224,6 +2227,7 @@ _func_enter_;
 	}
 	#endif
 
+#ifdef CONFIG_WOWLAN
 #ifdef CONFIG_PNO_SUPPORT
 	if (pwrctrlpriv->pnlo_info != NULL)
 		printk("****** pnlo_info memory leak********\n");
@@ -2234,6 +2238,7 @@ _func_enter_;
 	if (pwrctrlpriv->pno_ssid_list != NULL)
 		printk("****** pno_ssid_list memory leak********\n");
 #endif
+#endif /* CONFIG_WOWLAN */
 
 	#if defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_ANDROID_POWER)
 	rtw_unregister_early_suspend(pwrctrlpriv);
@@ -2252,7 +2257,7 @@ static void resume_workitem_callback(struct work_struct *work)
 {
 	struct pwrctrl_priv *pwrpriv = container_of(work, struct pwrctrl_priv, resume_work);
 	struct dvobj_priv *dvobj = pwrctl_to_dvobj(pwrpriv);
-	_adapter *adapter = dvobj->if1;
+	_adapter *adapter = dvobj->padapters[IFACE_ID0];
 
 	DBG_871X("%s\n",__FUNCTION__);
 
@@ -2307,7 +2312,7 @@ static void rtw_late_resume(struct early_suspend *h)
 {
 	struct pwrctrl_priv *pwrpriv = container_of(h, struct pwrctrl_priv, early_suspend);
 	struct dvobj_priv *dvobj = pwrctl_to_dvobj(pwrpriv);
-	_adapter *adapter = dvobj->if1;
+	_adapter *adapter = dvobj->padapters[IFACE_ID0];
 
 	DBG_871X("%s\n",__FUNCTION__);
 
@@ -2360,7 +2365,7 @@ static void rtw_late_resume(android_early_suspend_t *h)
 {
 	struct pwrctrl_priv *pwrpriv = container_of(h, struct pwrctrl_priv, early_suspend);
 	struct dvobj_priv *dvobj = pwrctl_to_dvobj(pwrpriv);
-	_adapter *adapter = dvobj->if1;
+	_adapter *adapter = dvobj->padapters[IFACE_ID0];
 
 	DBG_871X("%s\n",__FUNCTION__);
 	if(pwrpriv->do_late_resume) {
@@ -2549,15 +2554,15 @@ int _rtw_pwr_wakeup(_adapter *padapter, u32 ips_deffer_ms, const char *caller)
 	}
 
 	//TODO: the following checking need to be merged...
-	if(padapter->bDriverStopped
+	if (rtw_is_drv_stopped(padapter)
 		|| !padapter->bup
-		|| !padapter->hw_init_completed
-	){
-		DBG_8192C("%s: bDriverStopped=%d, bup=%d, hw_init_completed=%u\n"
+		|| !rtw_is_hw_init_completed(padapter)
+	) {
+		DBG_8192C("%s: bDriverStopped=%s, bup=%d, hw_init_completed=%u\n"
 			, caller
-		   	, padapter->bDriverStopped
-		   	, padapter->bup
-		   	, padapter->hw_init_completed);
+			, rtw_is_drv_stopped(padapter)?"True":"False"
+			, padapter->bup
+			, rtw_get_hw_init_completed(padapter));
 		ret= _FALSE;
 		goto exit;
 	}
@@ -2610,7 +2615,7 @@ int rtw_pm_set_ips(_adapter *padapter, u8 mode)
 	else if(mode ==IPS_NONE){
 		rtw_ips_mode_req(pwrctrlpriv, mode);
 		DBG_871X("%s %s\n", __FUNCTION__, "IPS_NONE");
-		if((padapter->bSurpriseRemoved ==0)&&(_FAIL == rtw_pwr_wakeup(padapter)) )
+		if (!rtw_is_surprise_removed(padapter) && (_FAIL == rtw_pwr_wakeup(padapter)))
 			return -EFAULT;
 	}
 	else {

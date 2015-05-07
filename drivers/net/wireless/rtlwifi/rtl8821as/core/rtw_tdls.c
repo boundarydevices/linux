@@ -222,7 +222,7 @@ int issue_nulldata_to_TDLS_peer_STA(_adapter *padapter, unsigned char *da, unsig
 
 		i++;
 
-		if (padapter->bDriverStopped || padapter->bSurpriseRemoved)
+		if (RTW_CANNOT_RUN(padapter))
 			break;
 
 		if (i < try_cnt && wait_ms > 0 && ret == _FAIL)

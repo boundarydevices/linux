@@ -158,6 +158,10 @@
 #define REG_HMEBOX_2					0x01D8
 #define REG_HMEBOX_3					0x01DC
 #define REG_LLT_INIT					0x01E0
+#define REG_HMEBOX_EXT_0				0x01F0
+#define REG_HMEBOX_EXT_1				0x01F4
+#define REG_HMEBOX_EXT_2				0x01F8
+#define REG_HMEBOX_EXT_3				0x01FC
 
 
 //-----------------------------------------------------
@@ -1547,6 +1551,7 @@ Current IOREG MAP
 #define SCR_TXBCUSEDK			BIT(6)			// Force Tx Broadcast packets Use Default Key
 #define SCR_RXBCUSEDK			BIT(7)			// Force Rx Broadcast packets Use Default Key
 #define SCR_CHK_KEYID			BIT(8)
+#define SCR_CHK_BMC				BIT(9)			/* add option to support a2+keyid+bcm */
 
 //-----------------------------------------------------
 //
@@ -1753,7 +1758,9 @@ Current IOREG MAP
 #define LAST_ENTRY_OF_TX_PKT_BUFFER_8812			255
 #define LAST_ENTRY_OF_TX_PKT_BUFFER_8723B		255
 #define LAST_ENTRY_OF_TX_PKT_BUFFER_8192C		255
+#define LAST_ENTRY_OF_TX_PKT_BUFFER_8703B		255
 #define LAST_ENTRY_OF_TX_PKT_BUFFER_DUAL_MAC	127
+#define LAST_ENTRY_OF_TX_PKT_BUFFER_8188F		255
 
 #define POLLING_LLT_THRESHOLD				20
 #if defined(CONFIG_RTL8723B) && defined(CONFIG_PCI_HCI)

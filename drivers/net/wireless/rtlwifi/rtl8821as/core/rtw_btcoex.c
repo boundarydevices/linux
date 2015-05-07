@@ -219,10 +219,9 @@ void rtw_btcoex_HaltNotify(PADAPTER padapter)
 		return;
 	}
 
-	if (_TRUE == padapter->bSurpriseRemoved)
-	{
-		DBG_871X(FUNC_ADPT_FMT ": bSurpriseRemoved=%d Skip!\n",
-			FUNC_ADPT_ARG(padapter), padapter->bSurpriseRemoved);
+	if (rtw_is_surprise_removed(padapter)) {
+		DBG_871X(FUNC_ADPT_FMT ": bSurpriseRemoved=%s Skip!\n",
+			FUNC_ADPT_ARG(padapter), rtw_is_surprise_removed(padapter)?"True":"False");
 
 		return;
 	}
@@ -401,6 +400,11 @@ void rtw_btcoex_SetHciVersion(PADAPTER  padapter, u16 hciVersion)
 void rtw_btcoex_StackUpdateProfileInfo(void) 
 {
 	hal_btcoex_StackUpdateProfileInfo();
+}
+
+void rtw_btcoex_BTOffOnNotify(PADAPTER padapter, u8 bBTON)
+{
+	hal_btcoex_BTOffOnNotify(padapter, bBTON);
 }
 
 // ==================================================
@@ -1244,7 +1248,6 @@ void rtw_btcoex_recvmsgbysocket(void *data)
 	u8 recv_data[255];
 	u8 tx_msg[255] = leave_ack;
 	u32 len = 0;
-	
 	u16 recv_length = 0;
 	u16 parse_res = 0;
 #if 0
@@ -1320,12 +1323,14 @@ void rtw_btcoex_recvmsgbysocket(void *data)
 			/* attend ack */
 			pcoex_info->BT_attend = _TRUE;
 			DBG_871X("RX_ATTEND_ACK!,sock_open:%d, BT_attend:%d\n", pcoex_info->sock_open, pcoex_info->BT_attend);
+			rtw_btcoex_BTOffOnNotify(pbtcoexadapter, pcoex_info->BT_attend);
 			break;
 
 		case RX_ATTEND_REQ:
 			pcoex_info->BT_attend = _TRUE;
 			DBG_871X("RX_BT_ATTEND_REQ!,sock_open:%d, BT_attend:%d\n", pcoex_info->sock_open, pcoex_info->BT_attend);
 			rtw_btcoex_sendmsgbysocket(pbtcoexadapter, attend_ack, sizeof(attend_ack), _FALSE);
+			rtw_btcoex_BTOffOnNotify(pbtcoexadapter, pcoex_info->BT_attend);
 			break;
 
 		case RX_INVITE_REQ:
@@ -1333,25 +1338,29 @@ void rtw_btcoex_recvmsgbysocket(void *data)
 			pcoex_info->BT_attend = _TRUE;
 			DBG_871X("RX_INVITE_REQ!,sock_open:%d, BT_attend:%d\n", pcoex_info->sock_open, pcoex_info->BT_attend);
 			rtw_btcoex_sendmsgbysocket(pbtcoexadapter, invite_rsp, sizeof(invite_rsp), _FALSE);
+			rtw_btcoex_BTOffOnNotify(pbtcoexadapter, pcoex_info->BT_attend);
 			break;
 
 		case RX_INVITE_RSP:
 			 /*invite rsp*/
 			pcoex_info->BT_attend = _TRUE;
 			DBG_871X("RX_INVITE_RSP!,sock_open:%d, BT_attend:%d\n", pcoex_info->sock_open, pcoex_info->BT_attend);
+			rtw_btcoex_BTOffOnNotify(pbtcoexadapter, pcoex_info->BT_attend);
 			break;
 
 		case RX_LEAVE_ACK:
 			/* mean BT know wifi  will leave */
 			pcoex_info->BT_attend = _FALSE;
-			DBG_871X("RX_LEAVE_ACK!,sock_open:%d, BT_attend:%d\n", pcoex_info->sock_open, pcoex_info->BT_attend);	
+			DBG_871X("RX_LEAVE_ACK!,sock_open:%d, BT_attend:%d\n", pcoex_info->sock_open, pcoex_info->BT_attend);
+			rtw_btcoex_BTOffOnNotify(pbtcoexadapter, pcoex_info->BT_attend);
 			break;
 
 		case RX_BT_LEAVE:
 			/* BT leave */
 			rtw_btcoex_sendmsgbysocket(pbtcoexadapter, leave_ack, sizeof(leave_ack), _FALSE); /* no ack */
 			pcoex_info->BT_attend = _FALSE;
-			DBG_871X("RX_BT_LEAVE!sock_open:%d, BT_attend:%d\n", pcoex_info->sock_open, pcoex_info->BT_attend);		
+			DBG_871X("RX_BT_LEAVE!sock_open:%d, BT_attend:%d\n", pcoex_info->sock_open, pcoex_info->BT_attend);	
+			rtw_btcoex_BTOffOnNotify(pbtcoexadapter, pcoex_info->BT_attend);
 			break;
 
 		default:
@@ -1504,6 +1513,9 @@ void rtw_btcoex_init_socket(_adapter *padapter)
 		INIT_DELAYED_WORK(&pcoex_info->recvmsg_work,
 			  (void *)rtw_btcoex_recvmsgbysocket);
 		pbtcoexadapter = padapter;
+		/* We expect BT is off if BT don't send ack to wifi */
+		DBG_871X("We expect BT is off if BT send ack to wifi\n");
+		rtw_btcoex_BTOffOnNotify(pbtcoexadapter, _FALSE);
 		if (rtw_btcoex_create_kernel_socket(padapter) == _SUCCESS) {
 			pcoex_info->is_exist = _TRUE;
 		} else {

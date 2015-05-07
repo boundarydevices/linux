@@ -1125,19 +1125,9 @@ static void shutdown_card(void)
 	// lock register page0 0x0~0xB read/write
 	rtw_write8(g_test_adapter, 0x1C, 0x0E);
 
-	g_test_adapter->bSurpriseRemoved = _TRUE;
-	DBG_871X(FUNC_ADPT_FMT ": bSurpriseRemoved=%d\n",
-		FUNC_ADPT_ARG(g_test_adapter), g_test_adapter->bSurpriseRemoved);
-#ifdef CONFIG_CONCURRENT_MODE
-	if (g_test_adapter->pbuddy_adapter)
-	{
-		PADAPTER pbuddy;
-		pbuddy = g_test_adapter->pbuddy_adapter;
-		pbuddy->bSurpriseRemoved = _TRUE;
-		DBG_871X(FUNC_ADPT_FMT ": buddy(" ADPT_FMT ") bSurpriseRemoved=%d\n",
-			FUNC_ADPT_ARG(g_test_adapter), ADPT_ARG(pbuddy), pbuddy->bSurpriseRemoved);
-	}
-#endif // CONFIG_CONCURRENT_MODE
+	rtw_set_surprise_removed(g_test_adapter);
+	DBG_871X(FUNC_ADPT_FMT ": bSurpriseRemoved=%s\n",
+		FUNC_ADPT_ARG(g_test_adapter), rtw_is_surprise_removed(g_test_adapter)?"True":"False");
 }
 #endif // RTW_SUPPORT_PLATFORM_SHUTDOWN
 

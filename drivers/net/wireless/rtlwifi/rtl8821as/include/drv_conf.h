@@ -20,6 +20,7 @@
 #ifndef __DRV_CONF_H__
 #define __DRV_CONF_H__
 #include "autoconf.h"
+#include "hal_ic_cfg.h"
 
 #if defined (PLATFORM_LINUX) && defined (PLATFORM_WINDOWS)
 
@@ -75,6 +76,11 @@
 	#define CONFIG_USB_VENDOR_REQ_MUTEX
 #endif
 
+#if !defined(CONFIG_AP_MODE) && defined(CONFIG_DFS_MASTER)
+	#warning "undef CONFIG_DFS_MASTER because CONFIG_AP_MODE is not defined"
+	#undef CONFIG_DFS_MASTER
+#endif
+
 #define DYNAMIC_CAMID_ALLOC
 
 #define RTW_SCAN_SPARSE_MIRACAST 1
@@ -108,11 +114,22 @@
 	#define CONFIG_RTW_AMPLIFIER_TYPE_5G 0
 #endif
 
+#ifndef CONFIG_RTW_RFE_TYPE
+	#define CONFIG_RTW_RFE_TYPE 64
+#endif
+
+#ifndef CONFIG_RTW_GLNA_TYPE
+	#define CONFIG_RTW_GLNA_TYPE 0
+#endif
+
 #define MACID_NUM_SW_LIMIT 32
 #define CAM_ENTRY_NUM_SW_LIMIT 32
 
 /*#define CONFIG_WEXT_DONT_JOIN_BYSSID	*/
 //#include <rtl871x_byteorder.h>
+
+
+/*#define CONFIG_DOSCAN_IN_BUSYTRAFFIC	*/
 
 #endif // __DRV_CONF_H__
 

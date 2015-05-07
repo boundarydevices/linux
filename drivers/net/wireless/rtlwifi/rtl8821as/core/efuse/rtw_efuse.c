@@ -815,7 +815,7 @@ u8 rtw_efuse_file_read(PADAPTER padapter,u8 *filepatch,u8 *buf,u32 len)
 
 	_rtw_memset(ptmpbuf,'\0',2048);
 	
-	rtStatus = rtw_retrive_from_file(filepatch, ptmpbuf, 2048);
+	rtStatus = rtw_retrieve_from_file(filepatch, ptmpbuf, 2048);
 
 	if( rtStatus > 100 )
 	{
@@ -885,7 +885,11 @@ efuse_IsMasked(
 #if defined(CONFIG_RTL8814A)
 	if (IS_HARDWARE_TYPE_8814A(pAdapter))
 		return (IS_MASKED(8814A, _MUSB, Offset)) ? TRUE : FALSE;
-#endif	
+#endif
+#if defined(CONFIG_RTL8188F)
+	if (IS_HARDWARE_TYPE_8188F(pAdapter))
+		return (IS_MASKED(8188F, _MUSB, Offset)) ? TRUE : FALSE;
+#endif
 #elif DEV_BUS_TYPE == RT_PCI_INTERFACE
 #if defined(CONFIG_RTL8188E)
 	if (IS_HARDWARE_TYPE_8188E(pAdapter))  
@@ -918,7 +922,11 @@ efuse_IsMasked(
 #ifdef CONFIG_RTL8188E_SDIO
 	if (IS_HARDWARE_TYPE_8188E(pAdapter))  
 		return (IS_MASKED(8188E,_MSDIO,Offset)) ? TRUE : FALSE;
-#endif		
+#endif
+#ifdef CONFIG_RTL8188F_SDIO
+	if (IS_HARDWARE_TYPE_8188F(pAdapter))  
+		return (IS_MASKED(8188F, _MSDIO, Offset)) ? TRUE : FALSE;
+#endif
 #endif
 
 	return FALSE;	
@@ -1509,7 +1517,7 @@ int retriveAdaptorInfoFile(char *path, u8* efuse_data)
 	
 	if(path && efuse_data) {
 
-		ret = rtw_retrive_from_file(path, efuse_data, EEPROM_MAX_SIZE);
+		ret = rtw_retrieve_from_file(path, efuse_data, EEPROM_MAX_SIZE);
 		
 		if(ret == EEPROM_MAX_SIZE)
 			ret = _SUCCESS;

@@ -71,6 +71,7 @@ _func_enter_;
 	psta->no_ht_gf_set = 0;
 	psta->no_ht_set = 0;
 	psta->ht_20mhz_set = 0;
+	psta->ht_40mhz_intolerant = 0;
 #endif	
 
 #ifdef CONFIG_TX_MCAST2UNI
