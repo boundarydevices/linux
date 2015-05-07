@@ -155,7 +155,7 @@ void imx_gpcv2_irq_mask(struct irq_data *d)
 	writel_relaxed(val, reg);
 }
 
-void imx_gpcv2_set_lpm_mode(u32 cpu, enum mxc_cpu_pwr_mode mode)
+void imx_gpcv2_set_lpm_mode(enum mxc_cpu_pwr_mode mode)
 {
 	unsigned long flags;
 	u32 val1, val2;
@@ -194,6 +194,14 @@ void imx_gpcv2_set_lpm_mode(u32 cpu, enum mxc_cpu_pwr_mode mode)
 	case WAIT_UNCLOCKED:
 		val1 |= A7_LPM_WAIT << BP_LPCR_A7_BSC_LPM0;
 		val1 &= ~BM_LPCR_A7_BSC_CPU_CLK_ON_LPM;
+		imx_gpcv2_irq_mask(&iomuxc_irq_desc->irq_data);
+		break;
+	case STOP_POWER_ON:
+		val1 |= A7_LPM_STOP << BP_LPCR_A7_BSC_LPM0;
+		val1 &= ~BM_LPCR_A7_BSC_CPU_CLK_ON_LPM;
+		val2 |= BM_SLPCR_EN_DSM;
+		val2 |= BM_SLPCR_RBC_EN;
+		val2 |= BM_SLPCR_BYPASS_PMIC_READY;
 		imx_gpcv2_irq_mask(&iomuxc_irq_desc->irq_data);
 		break;
 	case STOP_POWER_OFF:
@@ -357,12 +365,10 @@ int imx_gpcv2_mf_power_on(unsigned int irq, unsigned int on)
 void imx_gpcv2_pre_suspend(bool arm_power_off)
 {
 	void __iomem *reg_imr1 = gpc_base + GPC_IMR1_CORE0;
-	int i, cpu = 0;
+	int i;
 
 	if (arm_power_off) {
-		/* all CPU's lpm need to be set */
-		for_each_possible_cpu(cpu)
-			imx_gpcv2_set_lpm_mode(cpu, STOP_POWER_OFF);
+		imx_gpcv2_set_lpm_mode(STOP_POWER_OFF);
 		/* enable core0 power down/up with low power mode */
 		imx_gpcv2_set_cpu_power_gate_by_lpm(0, true);
 		/* enable plat power down with low power mode */
@@ -393,6 +399,8 @@ void imx_gpcv2_pre_suspend(bool arm_power_off)
 		/* enable core0, scu */
 		imx_gpcv2_set_m_core_pgc(true, GPC_PGC_C0);
 		imx_gpcv2_set_m_core_pgc(true, GPC_PGC_SCU);
+	} else {
+		imx_gpcv2_set_lpm_mode(STOP_POWER_ON);
 	}
 
 	for (i = 0; i < IMR_NUM; i++) {
@@ -404,14 +412,12 @@ void imx_gpcv2_pre_suspend(bool arm_power_off)
 void imx_gpcv2_post_resume(void)
 {
 	void __iomem *reg_imr1 = gpc_base + GPC_IMR1_CORE0;
-	int i, cpu = 0;
+	int i;
 
 	for (i = 0; i < IMR_NUM; i++)
 		writel_relaxed(gpcv2_saved_imrs[i], reg_imr1 + i * 4);
 
-	/* all cpu's lpm need to be set */
-	for_each_possible_cpu(cpu)
-		imx_gpcv2_set_lpm_mode(cpu, WAIT_CLOCKED);
+	imx_gpcv2_set_lpm_mode(WAIT_CLOCKED);
 	imx_gpcv2_set_cpu_power_gate_by_lpm(0, false);
 	imx_gpcv2_set_plat_power_gate_by_lpm(false);
 
