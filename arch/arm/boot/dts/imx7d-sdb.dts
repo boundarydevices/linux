@@ -100,6 +100,11 @@
 		audio-routing =
 			"LINPUT1", "Main MIC",
 			"Main MIC", "MICB";
+		assigned-clocks = <&clks IMX7D_AUDIO_MCLK_ROOT_SRC>,
+				  <&clks IMX7D_AUDIO_MCLK_ROOT_CLK>;
+		assigned-clock-parents = <&clks IMX7D_PLL_AUDIO_POST_DIV>;
+		assigned-clock-rates = <0>, <12288000>;
+
 	};
 
 	sound-hdmi {
