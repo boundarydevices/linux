@@ -2661,7 +2661,7 @@ static void __exit imx_uart_exit(void)
 	uart_unregister_driver(&imx_uart_uart_driver);
 }
 
-module_init(imx_uart_init);
+subsys_initcall(imx_uart_init);
 module_exit(imx_uart_exit);
 
 MODULE_AUTHOR("Sascha Hauer");
