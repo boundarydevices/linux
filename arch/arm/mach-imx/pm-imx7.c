@@ -320,10 +320,14 @@ static int imx7_pm_enter(suspend_state_t state)
 
 	switch (state) {
 	case PM_SUSPEND_STANDBY:
+		imx_anatop_pre_suspend();
+		imx_gpcv2_pre_suspend(false);
 
 		/* Zzz ... */
 		cpu_do_idle();
 
+		imx_anatop_post_resume();
+		imx_gpcv2_post_resume();
 		break;
 	case PM_SUSPEND_MEM:
 		imx_anatop_pre_suspend();
