@@ -62,6 +62,22 @@
 	};
 };
 
+&ecspi1 {
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = <&gpio4 26 0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi1_1 &pinctrl_ecspi1_cs_1>;
+	status = "okay";
+
+	flash: m25p80@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "st,m25p32";
+		spi-max-frequency = <20000000>;
+		reg = <0>;
+	};
+};
+
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1>;
@@ -186,6 +202,20 @@
 				MX6UL_PAD_SNVS_TAMPER6__GPIO5_IO06	0x80000000
 				MX6UL_PAD_SNVS_TAMPER9__GPIO5_IO09	0x80000000
 				MX6UL_PAD_SNVS_TAMPER5__GPIO5_IO05	0x80000000
+			>;
+		};
+
+		pinctrl_ecspi1_cs_1: ecspi1_cs_grp-1 {
+			fsl,pins = <
+				MX6UL_PAD_CSI_DATA05__GPIO4_IO26  0x10b0
+			>;
+		};
+
+		pinctrl_ecspi1_1: ecspi1grp-1 {
+			fsl,pins = <
+				MX6UL_PAD_CSI_DATA06__ECSPI1_MOSI 0x10b0
+				MX6UL_PAD_CSI_DATA07__ECSPI1_MISO 0x10b0
+				MX6UL_PAD_CSI_DATA04__ECSPI1_SCLK 0x10b0
 			>;
 		};
 
