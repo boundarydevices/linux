@@ -1846,8 +1846,6 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 		dev_err(ipu->dev, "clk_get di1 failed");
 		return PTR_ERR(ldb_di1_clk);
 	}
-	clk_put(di_parent);
-	clk_put(dipp);
 	clk_put(ldb_di0_clk);
 	clk_put(ldb_di1_clk);
 	if (ldb_di0_clk == di_parent ||
