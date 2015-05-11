@@ -346,7 +346,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
-
     fxos8700@0e {
         compatible = "fsl,fxos8700";
         reg = <0x1e>;
