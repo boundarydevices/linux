@@ -128,6 +128,7 @@ static void __init imx7d_map_io(void)
 {
 	debug_ll_io_init();
 	imx7_pm_map_io();
+	imx_busfreq_map_io();
 }
 
 extern unsigned long int ramoops_phys_addr;

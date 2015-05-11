@@ -13,7 +13,38 @@
 
 #define FSL_SAI_FORMATS (SNDRV_PCM_FMTBIT_S16_LE |\
 			 SNDRV_PCM_FMTBIT_S20_3LE |\
-			 SNDRV_PCM_FMTBIT_S24_LE)
+			 SNDRV_PCM_FMTBIT_S24_LE |\
+			 SNDRV_PCM_FMTBIT_S32_LE)
+
+/* SAI Register Map Register */
+#define FSL_SAI_TCSR	0x00 /* SAI Transmit Control */
+#define FSL_SAI_TCR1	0x04 /* SAI Transmit Configuration 1 */
+#define FSL_SAI_TCR2	0x08 /* SAI Transmit Configuration 2 */
+#define FSL_SAI_TCR3	0x0c /* SAI Transmit Configuration 3 */
+#define FSL_SAI_TCR4	0x10 /* SAI Transmit Configuration 4 */
+#define FSL_SAI_TCR5	0x14 /* SAI Transmit Configuration 5 */
+#define FSL_SAI_TDR	0x20 /* SAI Transmit Data */
+#define FSL_SAI_TFR	0x40 /* SAI Transmit FIFO */
+#define FSL_SAI_TMR	0x60 /* SAI Transmit Mask */
+#define FSL_SAI_RCSR	0x80 /* SAI Receive Control */
+#define FSL_SAI_RCR1	0x84 /* SAI Receive Configuration 1 */
+#define FSL_SAI_RCR2	0x88 /* SAI Receive Configuration 2 */
+#define FSL_SAI_RCR3	0x8c /* SAI Receive Configuration 3 */
+#define FSL_SAI_RCR4	0x90 /* SAI Receive Configuration 4 */
+#define FSL_SAI_RCR5	0x94 /* SAI Receive Configuration 5 */
+#define FSL_SAI_RDR	0xa0 /* SAI Receive Data */
+#define FSL_SAI_RFR	0xc0 /* SAI Receive FIFO */
+#define FSL_SAI_RMR	0xe0 /* SAI Receive Mask */
+
+#define FSL_SAI_xCSR(tx)	(tx ? FSL_SAI_TCSR : FSL_SAI_RCSR)
+#define FSL_SAI_xCR1(tx)	(tx ? FSL_SAI_TCR1 : FSL_SAI_RCR1)
+#define FSL_SAI_xCR2(tx)	(tx ? FSL_SAI_TCR2 : FSL_SAI_RCR2)
+#define FSL_SAI_xCR3(tx)	(tx ? FSL_SAI_TCR3 : FSL_SAI_RCR3)
+#define FSL_SAI_xCR4(tx)	(tx ? FSL_SAI_TCR4 : FSL_SAI_RCR4)
+#define FSL_SAI_xCR5(tx)	(tx ? FSL_SAI_TCR5 : FSL_SAI_RCR5)
+#define FSL_SAI_xDR(tx)		(tx ? FSL_SAI_TDR : FSL_SAI_RDR)
+#define FSL_SAI_xFR(tx)		(tx ? FSL_SAI_TFR : FSL_SAI_RFR)
+#define FSL_SAI_xMR(tx)		(tx ? FSL_SAI_TMR : FSL_SAI_RMR)
 
 /* SAI Register Map Register */
 #define FSL_SAI_TCSR	0x00 /* SAI Transmit Control */

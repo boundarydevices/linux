@@ -241,6 +241,7 @@
 				MX7D_PAD_ECSPI2_MOSI__GPIO4_IO21  0x80000000  /* pwrctrl1 */
 				MX7D_PAD_ECSPI2_MISO__GPIO4_IO22  0x80000000  /* pwrctrl2 */
 				MX7D_PAD_ECSPI1_MOSI__GPIO4_IO17  0x80000000
+				MX7D_PAD_ENET1_CRS__GPIO7_IO14    0x80000000  /* BT REG on */
 				MX7D_PAD_SD1_RESET_B__GPIO5_IO2   0x59
 				MX7D_PAD_SD1_CD_B__GPIO5_IO0      0x59
 				MX7D_PAD_SD1_WP__GPIO5_IO1        0x59
@@ -292,6 +293,14 @@
 		};
 	};
 
+	pcie {
+		pinctrl_pcie: pciegrp {
+			fsl,pins = <
+				MX7D_PAD_SAI2_RX_DATA__GPIO6_IO21	0x2
+			>;
+		};
+
+	};
 };
 
 &lcdif {
@@ -328,13 +337,21 @@
 
 &pcie {
 	pinctrl-names = "default";
-	status = "okay";
+	pinctrl-0 = <&pinctrl_pcie>;
+	reset-gpio = <&gpio6 21 0>;
+	status = "disabled";
 };
 
 &pwm1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm1>;
 	status = "okay";
+};
+
+&sim1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sim1_1>;
+	status = "disabled";
 };
 
 &uart1 {
@@ -365,7 +382,7 @@
 		pinctrl_hog_2: hoggrp-2 {
 			fsl,pins = <
 				MX7D_PAD_GPIO1_IO07__GPIO1_IO7	0x14
-				MX7D_PAD_GPIO1_IO05__GPIO5_IO5	0x14
+				MX7D_PAD_GPIO1_IO05__GPIO1_IO5	0x14
 			>;
 		};
 	};
@@ -596,6 +613,19 @@
 			fsl,pins = <
 				MX7D_PAD_SAI1_RX_SYNC__MQS_RIGHT     0x4000007f
 				MX7D_PAD_SAI1_RX_BCLK__MQS_LEFT      0x4000007f
+			>;
+		};
+	};
+
+	sim1 {
+		pinctrl_sim1_1: sim1grp-1 {
+			fsl,pins = <
+				MX7D_PAD_SAI1_TX_SYNC__SIM1_PORT1_RST_B		0x77
+				MX7D_PAD_SAI1_RX_SYNC__SIM1_PORT1_PD		0x77
+				MX7D_PAD_SAI1_TX_DATA__SIM1_PORT1_SVEN		0x77
+				MX7D_PAD_SAI1_TX_BCLK__SIM1_PORT1_CLK		0x73
+				MX7D_PAD_SAI1_RX_DATA__SIM1_PORT1_TRXD		0x73
+
 			>;
 		};
 	};

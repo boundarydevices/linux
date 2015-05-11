@@ -165,6 +165,10 @@ static void sii902x_setup(struct fb_info *fbi)
 	i2c_smbus_write_byte_data(sii902x.client, 0x09, 0x00);
 	/* set output format to RGB */
 	i2c_smbus_write_byte_data(sii902x.client, 0x0A, 0x00);
+}
+
+static void sii902x_audio_setup(void)
+{
 	/* audio setup */
 	i2c_smbus_write_byte_data(sii902x.client, 0x25, 0x00);
 	i2c_smbus_write_byte_data(sii902x.client, 0x26, 0x40);
@@ -434,6 +438,9 @@ static int sii902x_probe(struct i2c_client *client,
 			"Sii902x: cound not find device\n");
 		return -ENODEV;
 	}
+
+	/* enable hmdi audio */
+	sii902x_audio_setup();
 
 	/* try to read edid */
 	ret = sii902x_read_edid(&edid_fbi);

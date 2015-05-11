@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -82,6 +82,45 @@
 #define MX6_MAX_MMDC_NUM                34
 
 	.align 3
+
+	/* Check if the cpu is cortex-a7 */
+	.macro is_cortex_a7
+
+	/* Read the primary cpu number is MPIDR */
+	mrc	p15, 0, r5, c0, c0, 0
+	ldr	r6, =0xfff0
+	and	r5, r5, r6
+	ldr	r6, =0xc070
+	cmp	r5, r6
+
+	.endm
+
+	.macro	disable_l1_cache
+
+	/*
+	 * Flush all data from the L1 data cache before disabling
+	 * SCTLR.C bit.
+	 */
+	push	{r0 - r10, lr}
+	ldr	r7, =v7_flush_dcache_all
+	mov	lr, pc
+	mov	pc, r7
+	pop	{r0 - r10, lr}
+
+	/* disable d-cache */
+	mrc	p15, 0, r7, c1, c0, 0
+	bic	r7, r7, #(1 << 2)
+	mcr	p15, 0, r7, c1, c0, 0
+	dsb
+	isb
+
+	push	{r0 -r10, lr}
+	ldr	r7, = v7_flush_dcache_all
+	mov 	lr, pc
+	mov 	pc , r7
+	pop	{r0 -r10, lr}
+
+	.endm
 
 	.macro  sync_l2_cache
 
@@ -303,6 +342,9 @@
 	dsb
 	isb
 
+	is_cortex_a7
+	beq	14f
+
 #ifdef CONFIG_CACHE_L2X0
 	ldr	r8, [r0, #PM_INFO_MX6Q_L2_V_OFFSET]
 	mov	r6, #0x0
@@ -311,10 +353,13 @@
 	dsb
 	isb
 #endif
-
+14:
 	.endm
 
 	.macro restore_ttbr1
+
+	is_cortex_a7
+	beq	15f
 
 #ifdef CONFIG_CACHE_L2X0
 	/* Enable L2. */
@@ -323,6 +368,7 @@
 	str	r7, [r8, #0x100]
 #endif
 
+15:
 	/* Enable L1 data cache. */
 	mrc	p15, 0, r6, c1, c0, 0
 	orr	r6, r6, #0x4
@@ -394,9 +440,21 @@ ENTRY(imx6_suspend)
 	str	r9, [r11, #MX6Q_SRC_GPR1]
 	str	r1, [r11, #MX6Q_SRC_GPR2]
 
+	/*
+	 * Check if the cpu is Cortex-A7, for Cortex-A7
+	 * the cache implementation is not the same as
+	 * Cortex-A9, so the cache maintenance operation
+	 * is different.
+	 */
+	is_cortex_a7
+	beq	a7_dache_flush
+
 	/* need to sync L2 cache before DSM. */
 	sync_l2_cache
-
+	b	ttbr_store
+a7_dache_flush:
+	disable_l1_cache
+ttbr_store:
 	store_ttbr1
 
 	ldr	r11, [r0, #PM_INFO_MX6Q_MMDC_V_OFFSET]
@@ -656,6 +714,9 @@ l2x0_saved_regs_offset:
 
 ENTRY(v7_cpu_resume)
 	bl	v7_invalidate_l1
+	is_cortex_a7
+	beq	done
 	pl310_resume
+done:
 	b	cpu_resume
 ENDPROC(v7_cpu_resume)

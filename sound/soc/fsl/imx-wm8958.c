@@ -23,6 +23,7 @@
 #include <sound/soc-dapm.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/mfd/wm8994/registers.h>
+#include <linux/mfd/syscon.h>
 #include "../fsl/fsl_sai.h"
 #include "../codecs/wm8994.h"
 
@@ -37,6 +38,7 @@ struct imx_wm8958_data {
 	unsigned int clk_frequency;
 	bool is_codec_master;
 	int sr_stream[2];
+	struct regmap *gpr;
 };
 
 struct imx_priv {
@@ -268,43 +270,22 @@ static struct snd_pcm_hw_constraint_list imx_wm8958_dac_rate_constraints = {
 
 static int imx_hifi_startup(struct snd_pcm_substream *substream)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_card *card = rtd->card;
-	struct imx_wm8958_data *data = snd_soc_card_get_drvdata(card);
+	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
 	int ret = 0;
 
-	if (!IS_ERR(data->mclk)) {
-		ret = clk_prepare_enable(data->mclk);
-		if (ret) {
-			dev_err(card->dev, "Failed to enable MCLK: %d\n", ret);
-			return ret;
-		}
-	}
-
-	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+	if (!tx)
 		ret = snd_pcm_hw_constraint_list(substream->runtime, 0,
 			SNDRV_PCM_HW_PARAM_RATE, &imx_wm8958_adc_rate_constraints);
-	else if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+	else
 		ret = snd_pcm_hw_constraint_list(substream->runtime, 0,
 			SNDRV_PCM_HW_PARAM_RATE, &imx_wm8958_dac_rate_constraints);
 	return ret;
-}
-
-static void imx_hifi_shutdown(struct snd_pcm_substream *substream)
-{
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_card *card = rtd->card;
-	struct imx_wm8958_data *data = snd_soc_card_get_drvdata(card);
-
-	if (!IS_ERR(data->mclk))
-		clk_disable_unprepare(data->mclk);
 }
 
 static struct snd_soc_ops imx_hifi_ops = {
 	.hw_params = imx_hifi_hw_params,
 	.hw_free   = imx_hifi_hw_free,
 	.startup   = imx_hifi_startup,
-	.shutdown  = imx_hifi_shutdown,
 };
 
 static int imx_wm8958_gpio_init(struct snd_soc_card *card)
@@ -359,9 +340,64 @@ static ssize_t show_headphone(struct device_driver *dev, char *buf)
 
 static DRIVER_ATTR(headphone, S_IRUGO | S_IWUSR, show_headphone, NULL);
 
+static int imx_wm8958_set_bias_level(struct snd_soc_card *card,
+					struct snd_soc_dapm_context *dapm,
+					enum snd_soc_bias_level level)
+{
+	struct snd_soc_dai *codec_dai = card->rtd[0].codec_dai;
+	struct imx_wm8958_data *data = snd_soc_card_get_drvdata(card);
+	int ret;
+
+	if (dapm->dev != codec_dai->dev)
+		return 0;
+
+	switch (level) {
+	case SND_SOC_BIAS_STANDBY:
+		if (card->dapm.bias_level == SND_SOC_BIAS_OFF) {
+			if (!IS_ERR(data->mclk)) {
+				ret = clk_prepare_enable(data->mclk);
+				if (ret) {
+					dev_err(card->dev, "Failed to enable MCLK: %d\n", ret);
+					return ret;
+				}
+			}
+		}
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+static int imx_wm8958_set_bias_level_post(struct snd_soc_card *card,
+				     struct snd_soc_dapm_context *dapm,
+				     enum snd_soc_bias_level level)
+{
+	struct snd_soc_dai *codec_dai = card->rtd[0].codec_dai;
+	struct imx_wm8958_data *data = snd_soc_card_get_drvdata(card);
+
+	if (dapm->dev != codec_dai->dev)
+		return 0;
+
+	switch (level) {
+	case SND_SOC_BIAS_OFF:
+		if (card->dapm.bias_level == SND_SOC_BIAS_STANDBY)
+			if (!IS_ERR(data->mclk))
+				clk_disable_unprepare(data->mclk);
+		break;
+	default:
+		break;
+	}
+
+	card->dapm.bias_level = level;
+
+	return 0;
+}
+
 static int imx_wm8958_probe(struct platform_device *pdev)
 {
-	struct device_node *cpu_np, *codec_np;
+	struct device_node *cpu_np, *codec_np, *gpr_np;
 	struct device_node *np = pdev->dev.of_node;
 	struct platform_device *cpu_pdev;
 	struct imx_priv *priv = &card_priv;
@@ -405,6 +441,18 @@ static int imx_wm8958_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+	gpr_np = of_parse_phandle(pdev->dev.of_node, "gpr", 0);
+	if (gpr_np) {
+		data->gpr = syscon_node_to_regmap(gpr_np);
+		if (IS_ERR(data->gpr)) {
+			ret = PTR_ERR(data->gpr);
+			dev_err(&pdev->dev, "failed to get gpr regmap\n");
+			goto fail;
+		}
+		if (data->gpr)
+			regmap_update_bits(data->gpr, 4, 1<<20, 1<<20);
+	}
+
 	if (of_property_read_bool(np, "codec-master")) {
 		data->dai.dai_fmt = SND_SOC_DAIFMT_CBM_CFM;
 		data->is_codec_master = true;
@@ -428,8 +476,9 @@ static int imx_wm8958_probe(struct platform_device *pdev)
 	data->dai.cpu_dai_name = dev_name(&cpu_pdev->dev);
 	data->dai.platform_of_node = cpu_np;
 	data->dai.ops = &imx_hifi_ops;
-	data->dai.ignore_pmdown_time = 1;
 	data->dai.dai_fmt |= SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF;
+	data->card.set_bias_level = imx_wm8958_set_bias_level;
+	data->card.set_bias_level_post = imx_wm8958_set_bias_level_post;
 
 	data->card.dev = &pdev->dev;
 	ret = snd_soc_of_parse_card_name(&data->card, "model");

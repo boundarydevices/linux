@@ -106,6 +106,7 @@ obj-$(CONFIG_HOTPLUG_CPU) += hotplug.o
 obj-$(CONFIG_SOC_IMX6Q) += clk-imx6q.o mach-imx6q.o
 obj-$(CONFIG_SOC_IMX6SL) += clk-imx6sl.o mach-imx6sl.o
 obj-$(CONFIG_SOC_IMX6SX) += clk-imx6sx.o mach-imx6sx.o mu.o
+obj-$(CONFIG_SOC_IMX6UL) += clk-imx6ul.o mach-imx6ul.o
 obj-$(CONFIG_SOC_IMX7D) += clk-imx7d.o mach-imx7d.o
 
 ifeq ($(CONFIG_SUSPEND),y)
@@ -118,16 +119,21 @@ obj-$(CONFIG_SOC_IMX6) += pm-imx6.o
 obj-$(CONFIG_SOC_IMX7) += pm-imx7.o
 
 ifeq ($(CONFIG_ARM_IMX6Q_CPUFREQ),y)
-obj-y += busfreq-imx6.o
+obj-y += busfreq-imx.o
 AFLAGS_ddr3_freq_imx6.o :=-Wa,-march=armv7-a
 obj-$(CONFIG_SOC_IMX6Q) += ddr3_freq_imx6.o busfreq_ddr3.o
 AFLAGS_lpddr2_freq_imx6.o :=-Wa,-march=armv7-a
+AFLAGS_lpddr3_freq_imx.o :=-Wa,-march=armv7-a
 AFLAGS_imx6sl_lpm_wfi.o :=-Wa,-march=armv7-a
 obj-$(CONFIG_SOC_IMX6SL) += busfreq_lpddr2.o lpddr2_freq_imx6.o imx6sl_lpm_wfi.o
 AFLAGS_lpddr2_freq_imx6sx.o :=-Wa,-march=armv7-a
 AFLAGS_ddr3_freq_imx6sx.o :=-Wa,-march=armv7-a
 AFLAGS_imx6sx_low_power_idle.o :=-Wa,-march=armv7-a
 obj-$(CONFIG_SOC_IMX6SX) += ddr3_freq_imx6sx.o lpddr2_freq_imx6sx.o imx6sx_low_power_idle.o
+AFLAGS_ddr3_freq_imx7d.o :=-Wa,-march=armv7-a
+AFLAGS_smp_wfe.o :=-Wa,-march=armv7-a
+obj-y += smp_wfe.o
+obj-$(CONFIG_SOC_IMX7D) += lpddr3_freq_imx.o ddr3_freq_imx7d.o
 endif
 
 
@@ -142,6 +148,6 @@ obj-$(CONFIG_SOC_IMX53) += mach-imx53.o
 
 obj-$(CONFIG_SOC_VF610) += clk-vf610.o mach-vf610.o
 obj-$(CONFIG_MACH_IMX_BLUETOOTH_RFKILL) += mx6_bt_rfkill.o
-
 obj-$(CONFIG_MX6_RAMOOPS) += mx6_ramoops.o
+
 obj-y += devices/

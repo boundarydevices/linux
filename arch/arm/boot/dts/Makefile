@@ -174,7 +174,8 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-sabreauto-gpmi-weim.dtb \
 	imx6qp-sabreauto.dtb \
 	imx6qp-sabreauto-ecspi.dtb \
-	imx6qp-sabreauto-gpmi-weim.dtb\
+	imx6qp-sabreauto-flexcan1.dtb \
+	imx6qp-sabreauto-gpmi-weim.dtb \
 	imx6q-sabrelite.dtb \
 	imx6q-sabresd.dtb \
 	imx6q-sabresd-ldo.dtb \
@@ -207,6 +208,13 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6sx-sabreauto.dtb \
 	imx6sx-sabreauto-m4.dtb \
 	imx6sx-sdb-lcdif1.dtb \
+	imx6ul-ddr3-arm2.dtb \
+	imx6ul-ddr3-arm2-flexcan2.dtb \
+	imx6ul-ddr3-arm2-lcdif.dtb \
+	imx6ul-ddr3-arm2-mqs.dtb \
+	imx6ul-ddr3-arm2-spdif.dtb \
+	imx6ul-ddr3-arm2-wm8958.dtb \
+	imx6ul-evk.dtb \
 	vf610-cosmic.dtb \
 	imx6sx-sdb-emmc.dtb \
 	imx6sx-sdb-m4.dtb \
@@ -216,6 +224,8 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx7d-12x12-lpddr3-arm2-flexcan.dtb \
 	imx7d-12x12-lpddr3-arm2-qspi.dtb \
 	imx7d-12x12-lpddr3-arm2-m4.dtb \
+	imx7d-12x12-lpddr3-arm2-pcie.dtb \
+	imx7d-19x19-lpddr3-arm2.dtb \
 	imx7d-19x19-ddr3-arm2.dtb \
 	imx7d-19x19-ddr3-arm2-csi.dtb \
 	imx7d-sdb.dtb \

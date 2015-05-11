@@ -40,6 +40,7 @@
 #define GPC_PU_PGC_SW_PDN_REQ	0x104
 #define GPC_GTOR		0x124
 #define GPC_PGC_C0		0x800
+#define GPC_PGC_SCU_TIMING	0x890
 #define GPC_PGC_C1		0x840
 #define GPC_PGC_SCU		0x880
 #define GPC_PGC_FM		0xa00
@@ -62,6 +63,7 @@
 #define BM_SLPCR_SBYOS				0x2
 #define BM_SLPCR_BYPASS_PMIC_READY		0x1
 
+#define BM_LPCR_A7_AD_L2PGE			0x10000
 #define BM_LPCR_A7_AD_EN_C1_PUP			0x800
 #define BM_LPCR_A7_AD_EN_C1_IRQ_PUP		0x400
 #define BM_LPCR_A7_AD_EN_C0_PUP			0x200
@@ -153,7 +155,7 @@ void imx_gpcv2_irq_mask(struct irq_data *d)
 	writel_relaxed(val, reg);
 }
 
-void imx_gpcv2_set_lpm_mode(u32 cpu, enum mxc_cpu_pwr_mode mode)
+void imx_gpcv2_set_lpm_mode(enum mxc_cpu_pwr_mode mode)
 {
 	unsigned long flags;
 	u32 val1, val2;
@@ -194,6 +196,14 @@ void imx_gpcv2_set_lpm_mode(u32 cpu, enum mxc_cpu_pwr_mode mode)
 		val1 &= ~BM_LPCR_A7_BSC_CPU_CLK_ON_LPM;
 		imx_gpcv2_irq_mask(&iomuxc_irq_desc->irq_data);
 		break;
+	case STOP_POWER_ON:
+		val1 |= A7_LPM_STOP << BP_LPCR_A7_BSC_LPM0;
+		val1 &= ~BM_LPCR_A7_BSC_CPU_CLK_ON_LPM;
+		val2 |= BM_SLPCR_EN_DSM;
+		val2 |= BM_SLPCR_RBC_EN;
+		val2 |= BM_SLPCR_BYPASS_PMIC_READY;
+		imx_gpcv2_irq_mask(&iomuxc_irq_desc->irq_data);
+		break;
 	case STOP_POWER_OFF:
 		val1 |= A7_LPM_STOP << BP_LPCR_A7_BSC_LPM0;
 		val1 &= ~BM_LPCR_A7_BSC_CPU_CLK_ON_LPM;
@@ -217,9 +227,9 @@ void imx_gpcv2_set_plat_power_gate_by_lpm(bool pdn)
 {
 	u32 val = readl_relaxed(gpc_base + GPC_LPCR_A7_AD);
 
-	val &= ~BM_LPCR_A7_AD_EN_PLAT_PDN;
+	val &= ~(BM_LPCR_A7_AD_EN_PLAT_PDN | BM_LPCR_A7_AD_L2PGE);
 	if (pdn)
-		val |= BM_LPCR_A7_AD_EN_PLAT_PDN;
+		val |= BM_LPCR_A7_AD_EN_PLAT_PDN | BM_LPCR_A7_AD_L2PGE;
 
 	writel_relaxed(val, gpc_base + GPC_LPCR_A7_AD);
 }
@@ -355,12 +365,10 @@ int imx_gpcv2_mf_power_on(unsigned int irq, unsigned int on)
 void imx_gpcv2_pre_suspend(bool arm_power_off)
 {
 	void __iomem *reg_imr1 = gpc_base + GPC_IMR1_CORE0;
-	int i, cpu = 0;
+	int i;
 
 	if (arm_power_off) {
-		/* all CPU's lpm need to be set */
-		for_each_possible_cpu(cpu)
-			imx_gpcv2_set_lpm_mode(cpu, STOP_POWER_OFF);
+		imx_gpcv2_set_lpm_mode(STOP_POWER_OFF);
 		/* enable core0 power down/up with low power mode */
 		imx_gpcv2_set_cpu_power_gate_by_lpm(0, true);
 		/* enable plat power down with low power mode */
@@ -391,6 +399,8 @@ void imx_gpcv2_pre_suspend(bool arm_power_off)
 		/* enable core0, scu */
 		imx_gpcv2_set_m_core_pgc(true, GPC_PGC_C0);
 		imx_gpcv2_set_m_core_pgc(true, GPC_PGC_SCU);
+	} else {
+		imx_gpcv2_set_lpm_mode(STOP_POWER_ON);
 	}
 
 	for (i = 0; i < IMR_NUM; i++) {
@@ -402,14 +412,12 @@ void imx_gpcv2_pre_suspend(bool arm_power_off)
 void imx_gpcv2_post_resume(void)
 {
 	void __iomem *reg_imr1 = gpc_base + GPC_IMR1_CORE0;
-	int i, cpu = 0;
+	int i;
 
 	for (i = 0; i < IMR_NUM; i++)
 		writel_relaxed(gpcv2_saved_imrs[i], reg_imr1 + i * 4);
 
-	/* all cpu's lpm need to be set */
-	for_each_possible_cpu(cpu)
-		imx_gpcv2_set_lpm_mode(cpu, WAIT_CLOCKED);
+	imx_gpcv2_set_lpm_mode(WAIT_CLOCKED);
 	imx_gpcv2_set_cpu_power_gate_by_lpm(0, false);
 	imx_gpcv2_set_plat_power_gate_by_lpm(false);
 
@@ -538,6 +546,9 @@ void __init imx_gpcv2_init(void)
 		BM_LPCR_M4_MASK_DSM_TRIGGER, gpc_base + GPC_LPCR_M4);
 	/* set mega/fast mix in A7 domain */
 	writel_relaxed(0x1, gpc_base + GPC_PGC_CPU_MAPPING);
+	/* set SCU timing */
+	writel_relaxed((0x59 << 10) | 0x5B | (0x51 << 20),
+		gpc_base + GPC_PGC_SCU_TIMING);
 
 	/* Register GPC as the secondary interrupt controller behind GIC */
 	gic_arch_extn.irq_mask = imx_gpcv2_irq_mask;

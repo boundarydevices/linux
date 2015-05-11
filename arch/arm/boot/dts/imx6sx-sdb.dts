@@ -43,7 +43,6 @@
 		fb-names = "mxs-lcdif0";
 	};
 
-
 	backlight2 {
 		compatible = "pwm-backlight";
 		pwms = <&pwm4 0 5000000>;

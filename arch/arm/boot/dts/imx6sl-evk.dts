@@ -117,6 +117,15 @@
 		default-brightness-level = <255>;
 	};
 
+	ramoops_device {
+		compatible = "fsl,mxc_ramoops";
+		record_size = <524288>; /*512K*/
+		console_size= <262144>; /*256K*/
+		ftrace_size= <262144>;  /*256K*/
+		dump_oops = <1>;
+		status = "okay";
+	};
+
 	pxp_v4l2_out {
 		compatible = "fsl,imx6sl-pxp-v4l2";
 		status = "okay";
@@ -155,15 +164,6 @@
 		reset-delay-us = <100000>;
 		#reset-cells = <0>;
 	};
-
-	ramoops_device {
-		compatible = "fsl,mxc_ramoops";
-		record_size = <524288>; /*512K*/
-		console_size= <262144>; /*256K*/
-		ftrace_size= <262144>;  /*256K*/
-		dump_oops = <1>;
-		status = "okay";
-	};
 };
 
 &audmux {
@@ -191,6 +191,11 @@
 			remote-endpoint = <&ov5640_ep>;
 		};
 	};
+};
+
+&cpu0 {
+	arm-supply = <&sw1a_reg>;
+	soc-supply = <&sw1c_reg>;
 };
 
 &cpu0 {
@@ -864,7 +869,6 @@
 			MATRIX_KEY(0x1, 0x0, KEY_LEFT)
 			MATRIX_KEY(0x0, 0x1, KEY_VOLUMEDOWN)
 			MATRIX_KEY(0x0, 0x0, KEY_VOLUMEUP)
-
 	>;
 	status = "okay";
 };

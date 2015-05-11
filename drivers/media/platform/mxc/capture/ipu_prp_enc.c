@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -314,15 +314,17 @@ static int prp_enc_setup(cam_data *cam)
 /*!
  * function to update physical buffer address for encorder IDMA channel
  *
+ * @param private     pointer to cam_data structure
  * @param eba         physical buffer address for encorder IDMA channel
- * @param buffer_num  int buffer 0 or buffer 1
  *
  * @return  status
  */
-static int prp_enc_eba_update(struct ipu_soc *ipu, dma_addr_t eba,
-			      int *buffer_num)
+static int prp_enc_eba_update(void *private, dma_addr_t eba)
 {
 	int err = 0;
+	cam_data *cam = (cam_data *) private;
+	struct ipu_soc *ipu = cam->ipu;
+	int *buffer_num = &cam->ping_pong_csi;
 
 	pr_debug("eba %x\n", eba);
 	if (grotation >= IPU_ROTATE_90_RIGHT) {

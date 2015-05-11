@@ -58,6 +58,7 @@ static void imx_imx_snvs_check_for_events(unsigned long data)
 		pdata->keystate = state;
 		input_event(input, EV_KEY, pdata->keycode, state);
 		input_sync(input);
+		pm_relax(pdata->input->dev.parent);
 	}
 
 	/* repeat check if pressed long */
@@ -74,6 +75,7 @@ static irqreturn_t imx_snvs_pwrkey_interrupt(int irq, void *dev_id)
 	void __iomem *ioaddr = pdata->ioaddr;
 	u32 lp_status;
 
+	pm_wakeup_event(pdata->input->dev.parent, 0);
 	lp_status = readl_relaxed(ioaddr + SNVS_LPSR_REG);
 	if (lp_status & SNVS_LPSR_SPO)
 		mod_timer(&pdata->check_timer, jiffies + msecs_to_jiffies(2));
@@ -135,7 +137,7 @@ static int imx_snvs_pwrkey_probe(struct platform_device *pdev)
 	if (pdata->irq >= 0) {
 		ret = devm_request_irq(&pdev->dev, pdata->irq,
 					imx_snvs_pwrkey_interrupt,
-					IRQF_TRIGGER_HIGH, pdev->name, pdev);
+					IRQF_TRIGGER_HIGH | IRQF_NO_SUSPEND, pdev->name, pdev);
 		if (ret) {
 			dev_err(&pdev->dev, "interrupt not available.\n");
 			return ret;

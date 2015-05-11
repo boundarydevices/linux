@@ -2516,6 +2516,10 @@ if ARCH_MXC
 source "drivers/video/mxc/Kconfig"
 endif
 
+if ARCH_MXC
+source "drivers/video/mxc/Kconfig"
+endif
+
 if VT
 	source "drivers/video/console/Kconfig"
 endif

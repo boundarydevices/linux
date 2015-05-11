@@ -167,7 +167,7 @@ void imx6sl_set_wait_clk(bool enter);
 void imx6_enet_mac_init(const char *compatible);
 int imx_mmdc_get_ddr_type(void);
 int imx_ddrc_get_ddr_type(void);
-void imx6_busfreq_map_io(void);
+void imx_busfreq_map_io(void);
 void imx6sx_low_power_idle(void);
 void imx6q_enable_rbc(bool enable);
 
@@ -191,6 +191,7 @@ void imx7d_pm_init(void);
 void imx6dl_pm_init(void);
 void imx6sl_pm_init(void);
 void imx6sx_pm_init(void);
+void imx6ul_pm_init(void);
 void imx6q_pm_set_ccm_base(void __iomem *base);
 void imx7_pm_init(void);
 

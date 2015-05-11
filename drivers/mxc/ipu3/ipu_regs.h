@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2005-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -21,59 +21,9 @@
 #ifndef __IPU_REGS_INCLUDED__
 #define __IPU_REGS_INCLUDED__
 
-enum imx_ipu_rev {
-	IPU_V3DEX = 2,
-	IPU_V3M,
-	IPU_V3H,
-};
+#include "ipu_prv.h"
 
-/*
- * hw_rev 2: IPUV3DEX
- * hw_rev 3: IPUV3M
- * hw_rev 4: IPUV3H
- */
-extern int g_ipu_hw_rev;
-
-#define IPU_MAX_VDI_IN_WIDTH	({g_ipu_hw_rev >= 3 ? \
-				   (968) : \
-				   (720); })
-#define IPU_DISP0_BASE		0x00000000
 #define IPU_MCU_T_DEFAULT	8
-#define IPU_DISP1_BASE		({g_ipu_hw_rev < 4 ? \
-				(IPU_MCU_T_DEFAULT << 25) : \
-				(0x00000000); })
-#define IPUV3DEX_REG_BASE	0x1E000000
-#define IPUV3M_REG_BASE		0x06000000
-#define IPUV3H_REG_BASE		0x00200000
-
-#define IPU_CM_REG_BASE		0x00000000
-#define IPU_IDMAC_REG_BASE	0x00008000
-#define IPU_ISP_REG_BASE	0x00010000
-#define IPU_DP_REG_BASE		0x00018000
-#define IPU_IC_REG_BASE		0x00020000
-#define IPU_IRT_REG_BASE	0x00028000
-#define IPU_CSI0_REG_BASE	0x00030000
-#define IPU_CSI1_REG_BASE	0x00038000
-#define IPU_DI0_REG_BASE	0x00040000
-#define IPU_DI1_REG_BASE	0x00048000
-#define IPU_SMFC_REG_BASE	0x00050000
-#define IPU_DC_REG_BASE		0x00058000
-#define IPU_DMFC_REG_BASE	0x00060000
-#define IPU_VDI_REG_BASE	0x00068000
-#define IPU_CPMEM_REG_BASE 	({g_ipu_hw_rev >= 4 ? \
-				   (0x00100000) : \
-				   (0x01000000); })
-#define IPU_LUT_REG_BASE	0x01020000
-#define IPU_SRM_REG_BASE 	({g_ipu_hw_rev >= 4 ? \
-				   (0x00140000) : \
-				   (0x01040000); })
-#define IPU_TPM_REG_BASE 	({g_ipu_hw_rev >= 4 ? \
-				   (0x00160000) : \
-				   (0x01060000); })
-#define IPU_DC_TMPL_REG_BASE 	({g_ipu_hw_rev >= 4 ? \
-				   (0x00180000) : \
-				   (0x01080000); })
-#define IPU_ISP_TBPR_REG_BASE	0x010C0000
 
 /* Register addresses */
 /* IPU Common registers */
@@ -106,53 +56,54 @@ extern int g_ipu_hw_rev;
  * IPU_CHA_BUF2_RDY to readonly
  * IPU_ALT_CUR_BUF0 for IPUv3D.
  */
-#define IPU_CHA_TRB_MODE_SEL(ch) IPU_CM_REG({g_ipu_hw_rev >= 2 ? \
+#define IPU_CHA_TRB_MODE_SEL(type, ch) IPU_CM_REG({(type) >= IPUv3EX ? \
 					    (0x0178 + 4 * ((ch) / 32)) : \
 					    (0x012C); })
-#define IPU_CHA_TRIPLE_CUR_BUF(ch) IPU_CM_REG({g_ipu_hw_rev >= 2 ? \
+#define IPU_CHA_TRIPLE_CUR_BUF(type, ch) IPU_CM_REG({(type) >= IPUv3EX ? \
 					      (0x0258 + \
 					       4 * (((ch) * 2) / 32)) : \
 					      (0x012C); })
-#define IPU_CHA_BUF2_RDY(ch)	IPU_CM_REG({g_ipu_hw_rev >= 2 ? \
+#define IPU_CHA_BUF2_RDY(type, ch)	IPU_CM_REG({(type) >= IPUv3EX ? \
 					    (0x0288 + 4 * ((ch) / 32)) : \
 					    (0x012C); })
-#define IPU_CHA_CUR_BUF(ch)	IPU_CM_REG({g_ipu_hw_rev >= 2 ? \
+#define IPU_CHA_CUR_BUF(type, ch)	IPU_CM_REG({(type) >= IPUv3EX ? \
 					    (0x023C + 4 * ((ch) / 32)) : \
 					    (0x0124 + 4 * ((ch) / 32)); })
-#define IPU_ALT_CUR_BUF0	IPU_CM_REG({g_ipu_hw_rev >= 2 ? \
+#define IPU_ALT_CUR_BUF0(type)	IPU_CM_REG({(type) >= IPUv3EX ? \
 					    (0x0244) : \
 					    (0x012C); })
-#define IPU_ALT_CUR_BUF1	IPU_CM_REG({g_ipu_hw_rev >= 2 ? \
+#define IPU_ALT_CUR_BUF1(type)	IPU_CM_REG({(type) >= IPUv3EX ? \
 					    (0x0248) : \
 					    (0x0130); })
-#define IPU_SRM_STAT		IPU_CM_REG({g_ipu_hw_rev >= 2 ? \
+#define IPU_SRM_STAT(type)	IPU_CM_REG({(type) >= IPUv3EX ? \
 					    (0x024C) : \
 					    (0x0134); })
-#define IPU_PROC_TASK_STAT	IPU_CM_REG({g_ipu_hw_rev >= 2 ? \
+#define IPU_PROC_TASK_STAT(type)	IPU_CM_REG({(type) >= IPUv3EX ? \
 					    (0x0250) : \
 					    (0x0138); })
-#define IPU_DISP_TASK_STAT	IPU_CM_REG({g_ipu_hw_rev >= 2 ? \
+#define IPU_DISP_TASK_STAT(type)	IPU_CM_REG({(type) >= IPUv3EX ? \
 					    (0x0254) : \
 					    (0x013C); })
-#define IPU_CHA_BUF0_RDY(ch)	IPU_CM_REG({g_ipu_hw_rev >= 2 ? \
+#define IPU_CHA_BUF0_RDY(type, ch)	IPU_CM_REG({(type) >= IPUv3EX ? \
 					    (0x0268 + 4 * ((ch) / 32)) : \
 					    (0x0140 + 4 * ((ch) / 32)); })
-#define IPU_CHA_BUF1_RDY(ch)	IPU_CM_REG({g_ipu_hw_rev >= 2 ? \
+#define IPU_CHA_BUF1_RDY(type, ch)	IPU_CM_REG({(type) >= IPUv3EX ? \
 					    (0x0270 + 4 * ((ch) / 32)) : \
 					    (0x0148 + 4 * ((ch) / 32)); })
-#define IPU_ALT_CHA_BUF0_RDY(ch) IPU_CM_REG({g_ipu_hw_rev >= 2 ? \
+#define IPU_ALT_CHA_BUF0_RDY(type, ch) IPU_CM_REG({(type) >= IPUv3EX ? \
 					     (0x0278 + 4 * ((ch) / 32)) : \
 					     (0x0158 + 4 * ((ch) / 32)); })
-#define IPU_ALT_CHA_BUF1_RDY(ch) IPU_CM_REG({g_ipu_hw_rev >= 2 ? \
+#define IPU_ALT_CHA_BUF1_RDY(type, ch) IPU_CM_REG({(type) >= IPUv3EX ? \
 					     (0x0280 + 4 * ((ch) / 32)) : \
 					     (0x0160 + 4 * ((ch) / 32)); })
 
 #define IPU_INT_CTRL(n)		IPU_CM_REG(0x003C + 4 * ((n) - 1))
-#define IPU_INT_STAT(n)		IPU_CM_REG({g_ipu_hw_rev >= 2 ? \
+#define IPU_INT_STAT(type, n)		IPU_CM_REG({(type) >= IPUv3EX ? \
 					    (0x0200 + 4 * ((n) - 1)) : \
 					    (0x00E8 + 4 * ((n) - 1)); })
 
-#define IPUIRQ_2_STATREG(irq)	IPU_CM_REG(IPU_INT_STAT(1) + 4 * ((irq) / 32))
+#define IPUIRQ_2_STATREG(type, irq)	IPU_CM_REG(IPU_INT_STAT((type), 1) + 4 \
+							* ((irq) / 32))
 #define IPUIRQ_2_CTRLREG(irq)	IPU_CM_REG(IPU_INT_CTRL(1) + 4 * ((irq) / 32))
 #define IPUIRQ_2_MASK(irq)	(1UL << ((irq) & 0x1F))
 
@@ -217,34 +168,34 @@ extern int g_ipu_hw_rev;
 #define IDMAC_ALT_SEP_ALPHA	IPU_IDMAC_REG(0x0010)
 #define IDMAC_CHA_PRI(ch)	IPU_IDMAC_REG(0x0014 + 4 * ((ch) / 32))
 #define IDMAC_WM_EN(ch)		IPU_IDMAC_REG(0x001C + 4 * ((ch) / 32))
-#define IDMAC_CH_LOCK_EN_1	IPU_IDMAC_REG({g_ipu_hw_rev >= 2 ? \
+#define IDMAC_CH_LOCK_EN_1(type)	IPU_IDMAC_REG({(type) >= IPUv3EX ? \
 					       (0x0024) : 0; })
-#define IDMAC_CH_LOCK_EN_2	IPU_IDMAC_REG({g_ipu_hw_rev >= 2 ? \
+#define IDMAC_CH_LOCK_EN_2(type)	IPU_IDMAC_REG({(type) >= IPUv3EX ? \
 					       (0x0028) : \
 					       (0x0024); })
-#define IDMAC_SUB_ADDR_0	IPU_IDMAC_REG({g_ipu_hw_rev >= 2 ? \
+#define IDMAC_SUB_ADDR_0(type)	IPU_IDMAC_REG({(type) >= IPUv3EX ? \
 					       (0x002C) : \
 					       (0x0028); })
-#define IDMAC_SUB_ADDR_1	IPU_IDMAC_REG({g_ipu_hw_rev >= 2 ? \
+#define IDMAC_SUB_ADDR_1(type)	IPU_IDMAC_REG({(type) >= IPUv3EX ? \
 					       (0x0030) : \
 					       (0x002C); })
-#define IDMAC_SUB_ADDR_2	IPU_IDMAC_REG({g_ipu_hw_rev >= 2 ? \
+#define IDMAC_SUB_ADDR_2(type)	IPU_IDMAC_REG({(type) >= IPUv3EX ? \
 					       (0x0034) : \
 					       (0x0030); })
 /*
  * IPUv3D doesn't support IDMAC_SUB_ADDR_3 and IDMAC_SUB_ADDR_4,
  * so point them to readonly IDMAC_CHA_BUSY1 for IPUv3D.
  */
-#define IDMAC_SUB_ADDR_3	IPU_IDMAC_REG({g_ipu_hw_rev >= 2 ? \
+#define IDMAC_SUB_ADDR_3(type)	IPU_IDMAC_REG({(type) >= IPUv3EX ? \
 					       (0x0038) : \
 					       (0x0040); })
-#define IDMAC_SUB_ADDR_4	IPU_IDMAC_REG({g_ipu_hw_rev >= 2 ? \
+#define IDMAC_SUB_ADDR_4(type)	IPU_IDMAC_REG({(type) >= IPUv3EX ? \
 					       (0x003C) : \
 					       (0x0040); })
-#define IDMAC_BAND_EN(ch)	IPU_IDMAC_REG({g_ipu_hw_rev >= 2 ? \
+#define IDMAC_BAND_EN(type, ch)	IPU_IDMAC_REG({(type) >= IPUv3EX ? \
 					       (0x0040 + 4 * ((ch) / 32)) : \
 					       (0x0034 + 4 * ((ch) / 32)); })
-#define IDMAC_CHA_BUSY(ch)	IPU_IDMAC_REG({g_ipu_hw_rev >= 2 ? \
+#define IDMAC_CHA_BUSY(type, ch)	IPU_IDMAC_REG({(type) >= IPUv3EX ? \
 					       (0x0100 + 4 * ((ch) / 32)) : \
 					       (0x0040 + 4 * ((ch) / 32)); })
 
@@ -469,6 +420,14 @@ enum {
 	TASK_STAT_IDLE = 0,
 	TASK_STAT_ACTIVE = 1,
 	TASK_STAT_WAIT4READY = 2,
+
+	/* IDMAC register bits */
+	IDMAC_CONF_USED_BUFS_EN_R = 0x02000000,
+	IDMAC_CONF_USED_BUFS_MAX_R_MASK = 0x01E00000,
+	IDMAC_CONF_USED_BUFS_MAX_R_OFFSET = 21,
+	IDMAC_CONF_USED_BUFS_EN_W = 0x00100000,
+	IDMAC_CONF_USED_BUFS_MAX_W_MASK = 0x000E0000,
+	IDMAC_CONF_USED_BUFS_MAX_W_OFFSET = 17,
 
 	/* Image Converter Register bits */
 	IC_CONF_PRPENC_EN = 0x00000001,
