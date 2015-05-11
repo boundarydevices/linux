@@ -31,10 +31,11 @@ static const char *pll4_bypass_sels[] = { "pll4", "pll4_bypass_src", };
 static const char *pll5_bypass_sels[] = { "pll5", "pll5_bypass_src", };
 static const char *pll6_bypass_sels[] = { "pll6", "pll6_bypass_src", };
 static const char *pll7_bypass_sels[] = { "pll7", "pll7_bypass_src", };
-static const char *step_sels[] = { "osc", "pll2_pfd2_396m", };
+static const char *ca7_secondary_sels[] = { "pll2_pfd2_396m", "pll2_bus", };
+static const char *step_sels[] = { "osc", "ca7_secondary_sel", };
 static const char *pll1_sw_sels[] = { "pll1_sys", "step", };
 static const char *axi_alt_sels[] = { "pll2_pfd2_396m", "pll3_pfd1_540m", };
-static const char *axi_sels[] = {" periph", "axi_alt_sel", };
+static const char *axi_sels[] = {"periph", "axi_alt_sel", };
 static const char *periph_pre_sels[] = { "pll2_bus", "pll2_pfd2_396m", "pll2_pfd0_352m", "pll2_198m", };
 static const char *periph2_pre_sels[] = { "pll2_bus", "pll2_pfd2_396m", "pll2_pfd0_352m", "pll4_audio_div", };
 static const char *periph_clk2_sels[] = { "pll3_usb_otg", "osc", "osc", };
@@ -214,6 +215,7 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	WARN_ON(!base);
 	imx6q_pm_set_ccm_base(base);
 
+	clks[IMX6UL_CA7_SECONDARY_SEL]	  = imx_clk_mux("ca7_secondary_sel", base + 0xc, 3, 1, ca7_secondary_sels, ARRAY_SIZE(ca7_secondary_sels));
 	clks[IMX6UL_CLK_STEP] 	 	  = imx_clk_mux("step", base + 0x0c, 8, 1, step_sels, ARRAY_SIZE(step_sels));
 	clks[IMX6UL_CLK_PLL1_SW] 	  = imx_clk_mux_glitchless("pll1_sw",   base + 0x0c, 2,  1, pll1_sw_sels, ARRAY_SIZE(pll1_sw_sels));
 	clks[IMX6UL_CLK_AXI_ALT_SEL]	  = imx_clk_mux("axi_alt_sel",		base + 0x14, 7,  1, axi_alt_sels, ARRAY_SIZE(axi_alt_sels));
