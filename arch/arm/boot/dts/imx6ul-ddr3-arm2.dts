@@ -78,6 +78,12 @@
 	};
 };
 
+&cpu0 {
+	arm-supply = <&sw1a_reg>;
+	soc-supply = <&sw1a_reg>;
+	fsl,arm-soc-shared = <1>;
+};
+
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1>;
