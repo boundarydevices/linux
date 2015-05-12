@@ -52,6 +52,31 @@
 			device_type = "cpu";
 			reg = <0>;
 			clock-latency = <61036>; /* two CLK32 periods */
+			operating-points = <
+				/* kHz	uV */
+				528000	1250000
+				396000	1150000
+				198000	1150000
+			>;
+			fsl,soc-operating-points = <
+				/* KHz	uV */
+				528000	1250000
+				396000	1150000
+				198000	1150000
+			>;
+			clocks = <&clks IMX6UL_CLK_ARM>,
+				 <&clks IMX6UL_CLK_PLL2_BUS>,
+				 <&clks IMX6UL_CLK_PLL2_PFD2>,
+				 <&clks IMX6UL_CA7_SECONDARY_SEL>,
+				 <&clks IMX6UL_CLK_STEP>,
+				 <&clks IMX6UL_CLK_PLL1_SW>,
+				 <&clks IMX6UL_CLK_PLL1_SYS>,
+				 <&clks IMX6UL_PLL1_BYPASS>,
+				 <&clks IMX6UL_CLK_PLL1>,
+				 <&clks IMX6UL_PLL1_BYPASS_SRC>,
+				 <&clks IMX6UL_CLK_OSC>;
+			clock-names = "arm", "pll2_bus",  "pll2_pfd2_396m", "secondary_sel", "step",
+				      "pll1_sw", "pll1_sys", "pll1_bypass", "pll1", "pll1_bypass_src", "osc";
 		};
 	};
 
@@ -537,6 +562,40 @@
 					anatop-min-voltage = <2625000>;
 					anatop-max-voltage = <3400000>;
 					anatop-enable-bit = <0>;
+				};
+
+				reg_arm: regulator-vddcore@140 {
+					compatible = "fsl,anatop-regulator";
+					regulator-name = "cpu";
+					regulator-min-microvolt = <725000>;
+					regulator-max-microvolt = <1450000>;
+					regulator-always-on;
+					anatop-reg-offset = <0x140>;
+					anatop-vol-bit-shift = <0>;
+					anatop-vol-bit-width = <5>;
+					anatop-delay-reg-offset = <0x170>;
+					anatop-delay-bit-shift = <24>;
+					anatop-delay-bit-width = <2>;
+					anatop-min-bit-val = <1>;
+					anatop-min-voltage = <725000>;
+					anatop-max-voltage = <1450000>;
+				};
+
+				reg_soc: regulator-vddsoc@140 {
+					compatible = "fsl,anatop-regulator";
+					regulator-name = "vddsoc";
+					regulator-min-microvolt = <725000>;
+					regulator-max-microvolt = <1450000>;
+					regulator-always-on;
+					anatop-reg-offset = <0x140>;
+					anatop-vol-bit-shift = <18>;
+					anatop-vol-bit-width = <5>;
+					anatop-delay-reg-offset = <0x170>;
+					anatop-delay-bit-shift = <28>;
+					anatop-delay-bit-width = <2>;
+					anatop-min-bit-val = <1>;
+					anatop-min-voltage = <725000>;
+					anatop-max-voltage = <1450000>;
 				};
 			};
 
