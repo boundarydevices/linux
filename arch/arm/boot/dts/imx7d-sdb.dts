@@ -495,7 +495,6 @@
 			fsl,pins = <
 				MX7D_PAD_UART3_CTS_B__GPIO4_IO7	0x14
 				MX7D_PAD_ECSPI2_SS0__GPIO4_IO23	 0x80000000  /* bt reg on */
-				MX7D_PAD_GPIO1_IO00__WDOD1_WDOG_B 0x74
 			>;
 		};
 
@@ -849,6 +848,7 @@
 			fsl,pins = <
 				MX7D_PAD_GPIO1_IO05__GPIO1_IO5	0x14
 				MX7D_PAD_GPIO1_IO07__GPIO1_IO7	0x59  /* CAN_STBY */
+				MX7D_PAD_GPIO1_IO00__WDOD1_WDOG_B 0x74
 			>;
 		};
 		pinctrl_pwm1: pwm1grp {
