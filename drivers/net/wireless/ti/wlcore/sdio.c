@@ -397,6 +397,10 @@ static int wl1271_suspend(struct device *dev)
 	mmc_pm_flag_t sdio_flags;
 	int ret = 0;
 
+	/* In case the driver hasn't been probed or if unregistered */
+	if (!wl)
+		return ret;
+
 	dev_dbg(dev, "wl1271 suspend. wow_enabled: %d\n",
 		wl->wow_enabled);
 
