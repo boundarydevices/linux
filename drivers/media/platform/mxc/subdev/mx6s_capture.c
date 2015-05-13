@@ -691,19 +691,56 @@ static void mx6s_csi_deinit(struct mx6s_csi_dev *csi_dev)
 	csi_clk_disable(csi_dev);
 }
 
-static void mx6s_csi_enable(struct mx6s_csi_dev *csi_dev)
+static int mx6s_csi_enable(struct mx6s_csi_dev *csi_dev)
 {
 	struct v4l2_pix_format *pix = &csi_dev->pix;
+	unsigned long flags;
+	unsigned long val;
+	int timeout, timeout2;
 
 	csisw_reset(csi_dev);
 
 	if (pix->field == V4L2_FIELD_INTERLACED)
 		csi_tvdec_enable(csi_dev, true);
 
-	csi_dmareq_rff_enable(csi_dev);
-	csi_enable_int(csi_dev, 1);
-	csi_enable(csi_dev, 1);
+	local_irq_save(flags);
+	for (timeout = 1000000; timeout > 0; timeout--) {
+		if (csi_read(csi_dev, CSI_CSISR) & BIT_SOF_INT) {
+			val = csi_read(csi_dev, CSI_CSICR3);
+			csi_write(csi_dev, val | BIT_DMA_REFLASH_RFF,
+					CSI_CSICR3);
+			/* Wait DMA reflash done */
+			for (timeout2 = 1000000; timeout2 > 0; timeout2--) {
+				if (csi_read(csi_dev, CSI_CSICR3) &
+					BIT_DMA_REFLASH_RFF)
+					cpu_relax();
+				else
+					break;
+			}
+			if (timeout2 <= 0) {
+				pr_err("timeout when wait for reflash done.\n");
+				local_irq_restore(flags);
+				return -ETIME;
+			}
+			/* For imx6sl csi, DMA FIFO will auto start when sensor ready to work,
+			 * so DMA should enable right after FIFO reset, otherwise dma will lost data
+			 * and image will split.
+			 */
+			csi_dmareq_rff_enable(csi_dev);
+			csi_enable_int(csi_dev, 1);
+			csi_enable(csi_dev, 1);
+			break;
+		} else
+			cpu_relax();
+	}
+	if (timeout <= 0) {
+		pr_err("timeout when wait for SOF\n");
+		local_irq_restore(flags);
+		return -ETIME;
+	}
+	local_irq_restore(flags);
 
+	return 0;
 }
 
 static void mx6s_csi_disable(struct mx6s_csi_dev *csi_dev)
@@ -817,9 +854,7 @@ static int mx6s_start_streaming(struct vb2_queue *vq, unsigned int count)
 
 	spin_unlock_irqrestore(&csi_dev->slock, flags);
 
-	mx6s_csi_enable(csi_dev);
-
-	return 0;
+	return mx6s_csi_enable(csi_dev);
 }
 
 static int mx6s_stop_streaming(struct vb2_queue *vq)
