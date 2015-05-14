@@ -704,7 +704,7 @@ static int mx6s_csi_enable(struct mx6s_csi_dev *csi_dev)
 		csi_tvdec_enable(csi_dev, true);
 
 	local_irq_save(flags);
-	for (timeout = 1000000; timeout > 0; timeout--) {
+	for (timeout = 10000000; timeout > 0; timeout--) {
 		if (csi_read(csi_dev, CSI_CSISR) & BIT_SOF_INT) {
 			val = csi_read(csi_dev, CSI_CSICR3);
 			csi_write(csi_dev, val | BIT_DMA_REFLASH_RFF,
