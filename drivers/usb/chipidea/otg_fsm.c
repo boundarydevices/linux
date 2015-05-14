@@ -379,7 +379,10 @@ static int a_bidl_adis_tmout(struct ci_hdrc *ci)
 static int b_se0_srp_tmout(struct ci_hdrc *ci)
 {
 	ci->fsm.b_se0_srp = 1;
-	return 0;
+	if (ci->fsm.power_up)
+		return 1;
+	else
+		return 0;
 }
 
 static int b_srp_fail_tmout(struct ci_hdrc *ci)
@@ -718,14 +721,6 @@ int ci_otg_fsm_work(struct ci_hdrc *ci)
 				ci->id_event = false;
 		} else if (ci->fsm.otg->state == OTG_STATE_B_IDLE) {
 			ci->fsm.b_sess_vld = hw_read_otgsc(ci, OTGSC_BSV);
-			if (ci->fsm.b_sess_vld) {
-				ci->fsm.power_up = 0;
-				/*
-				 * Further transite to b_periphearl state
-				 * when register gadget driver with vbus on
-				 */
-				ci_otg_queue_work(ci);
-			}
 		} else if (ci->fsm.otg->state == OTG_STATE_A_HOST) {
 			pm_runtime_mark_last_busy(ci->dev);
 			pm_runtime_put_autosuspend(ci->dev);

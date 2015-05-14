@@ -1600,9 +1600,14 @@ static int ci_udc_pullup(struct usb_gadget *_gadget, int is_on)
 	if (!ci->vbus_active)
 		return -EOPNOTSUPP;
 
-	if (is_on)
+	if (is_on) {
+		if (ci->fsm.power_up) {
+			ci->fsm.power_up = 0;
+			ci_otg_queue_work(ci);
+			return 0;
+		}
 		hw_write(ci, OP_USBCMD, USBCMD_RS, USBCMD_RS);
-	else
+	} else
 		hw_write(ci, OP_USBCMD, USBCMD_RS, 0);
 
 	return 0;
