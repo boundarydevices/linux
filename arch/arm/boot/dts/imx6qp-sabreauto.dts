@@ -81,6 +81,15 @@
 	};
 };
 
+&usdhc3 {
+	/* imx6qp-sabreauto board has no CD pin issue, so enable vmmc-supply */
+	vmmc-supply = <&reg_sd3_vmmc>;
+};
+
 &vgen3_reg {
 	regulator-always-on;
+};
+
+&reg_sd3_vmmc {
+	status = "okay";
 };
