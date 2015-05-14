@@ -129,6 +129,7 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 
 	/* gpio5 */
 	NEW_PAD_CTRL(MX6PAD(CSI0_DAT9__GPIO_5_27), WEAK_PULLUP), /* Sim Card Detect */
+	NEW_PAD_CTRL(MX6PAD(EIM_D21__GPIO_3_21), WEAK_PULLUP),	 /* Sim Card Select */
 
 	/* gpio6 */
 	NEW_PAD_CTRL(MX6PAD(EIM_A23__GPIO_6_6), WEAK_PULLDN),	/* Led 5 */
