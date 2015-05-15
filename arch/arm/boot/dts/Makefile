@@ -823,6 +823,7 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 	imx6sx-udoo-neo-full.dtb
 
 dtb-$(CONFIG_SOC_IMX6SX) += \
+	imx6sx-nitrogen6sx-m4.dtb \
 	imx6sx-nitrogen6_scm.dtb \
 
 dtb-$(CONFIG_SOC_IMX6UL) += \
