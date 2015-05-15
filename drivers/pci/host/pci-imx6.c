@@ -58,7 +58,6 @@ struct imx6_pcie {
 	struct regmap		*iomuxc_gpr;
 	struct regmap		*reg_src;
 	struct regulator	*pcie_phy_regulator;
-	void __iomem		*mem_base;
 };
 
 /* PCIe Root Complex registers (memory-mapped) */
@@ -829,7 +828,9 @@ static void imx_pcie_regions_setup(struct device *dev)
 	struct imx6_pcie *imx6_pcie = dev_get_drvdata(dev);
 	struct pcie_port *pp = &imx6_pcie->pp;
 
-	if (is_imx6sx_pcie(imx6_pcie) && ddr_test_region == 0)
+	if (is_imx7d_pcie(imx6_pcie) && ddr_test_region == 0)
+		ddr_test_region = 0xb0000000;
+	else if (is_imx6sx_pcie(imx6_pcie) && ddr_test_region == 0)
 		ddr_test_region = 0xb0000000;
 	else if (ddr_test_region == 0)
 		ddr_test_region = 0x40000000;
@@ -839,9 +840,9 @@ static void imx_pcie_regions_setup(struct device *dev)
 	 * in imx6 pcie ep/rc validation system
 	 */
 	writel(2, pp->dbi_base + 0x900);
-	writel(pp->mem_base, pp->dbi_base + 0x90c);
+	writel((u32)pp->mem_base, pp->dbi_base + 0x90c);
 	writel(0, pp->dbi_base + 0x910);
-	writel(pp->mem_base + test_region_size, pp->dbi_base + 0x914);
+	writel((u32)pp->mem_base + test_region_size, pp->dbi_base + 0x914);
 
 	writel(ddr_test_region, pp->dbi_base + 0x918);
 	writel(0, pp->dbi_base + 0x91c);
@@ -1366,7 +1367,7 @@ static int __init imx6_pcie_probe(struct platform_device *pdev)
 		int i;
 		void *test_reg1, *test_reg2;
 		void __iomem *pcie_arb_base_addr;
-		struct timeval tv1, tv2, tv3;
+		struct timeval tv1s, tv1e, tv2s, tv2e;
 		u32 tv_count1, tv_count2;
 		struct device_node *np = pp->dev->of_node;
 		struct of_pci_range range;
@@ -1389,6 +1390,10 @@ static int __init imx6_pcie_probe(struct platform_device *pdev)
 		}
 
 		pp->mem_base = pp->mem.start;
+
+		/* enable disp_mix power domain */
+		if (is_imx7d_pcie(imx6_pcie))
+			pm_runtime_get_sync(pp->dev);
 
 		imx6_pcie_assert_core_reset(pp);
 		ret = imx6_pcie_init_phy(pp);
@@ -1447,8 +1452,18 @@ static int __init imx6_pcie_probe(struct platform_device *pdev)
 			goto err;
 		}
 
-		pcie_arb_base_addr = ioremap_cache(pp->mem_base,
-				test_region_size);
+		/*
+		 * FIXME when the ddr_test_region is mapped as cache-able,
+		 * system hang when read the ddr memory content back from rc
+		 * reserved ddr memory after write the ddr_test_region
+		 * content to rc.
+		 */
+		if (is_imx7d_pcie(imx6_pcie))
+			pcie_arb_base_addr = ioremap_nocache(pp->mem_base,
+					test_region_size);
+		else
+			pcie_arb_base_addr = ioremap_cache(pp->mem_base,
+					test_region_size);
 
 		if (!pcie_arb_base_addr) {
 			pr_err("error with ioremap in ep selftest\n");
@@ -1463,27 +1478,28 @@ static int __init imx6_pcie_probe(struct platform_device *pdev)
 
 		/* PCIe EP start the data transfer after link up */
 		pr_info("pcie ep: Starting data transfer...\n");
-		do_gettimeofday(&tv1);
+		do_gettimeofday(&tv1s);
 
-		memcpy((unsigned long *)pcie_arb_base_addr,
-				(unsigned long *)test_reg1,
+		memcpy((unsigned int *)pcie_arb_base_addr,
+				(unsigned int *)test_reg1,
 				test_region_size);
 
-		do_gettimeofday(&tv2);
+		do_gettimeofday(&tv1e);
 
-		memcpy((unsigned long *)test_reg2,
-				(unsigned long *)pcie_arb_base_addr,
+		do_gettimeofday(&tv2s);
+
+		memcpy((unsigned int *)test_reg2,
+				(unsigned int *)pcie_arb_base_addr,
 				test_region_size);
 
-		do_gettimeofday(&tv3);
-
+		do_gettimeofday(&tv2e);
 		if (memcmp(test_reg2, test_reg1, test_region_size) == 0) {
-			tv_count1 = (tv2.tv_sec - tv1.tv_sec)
+			tv_count1 = (tv1e.tv_sec - tv1s.tv_sec)
 				* USEC_PER_SEC
-				+ tv2.tv_usec - tv1.tv_usec;
-			tv_count2 = (tv3.tv_sec - tv2.tv_sec)
+				+ tv1e.tv_usec - tv1s.tv_usec;
+			tv_count2 = (tv2e.tv_sec - tv2s.tv_sec)
 				* USEC_PER_SEC
-				+ tv3.tv_usec - tv2.tv_usec;
+				+ tv2e.tv_usec - tv2s.tv_usec;
 
 			pr_info("pcie ep: Data transfer is successful."
 					" tv_count1 %dus,"
