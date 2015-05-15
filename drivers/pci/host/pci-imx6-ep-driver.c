@@ -1,7 +1,7 @@
 /*
  * PCIe endpoint skeleton driver for IMX6 SOCs
  *
- * Copyright (C) 2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@
 #include <linux/delay.h>
 #include <linux/sched.h>
 #include <linux/interrupt.h>
+#include <linux/of.h>
 
 #define DRV_DESCRIPTION	"i.MX PCIE endpoint device driver"
 #define DRV_VERSION	"version 0.1"
@@ -50,6 +51,7 @@ static int imx_pcie_ep_probe(struct pci_dev *pdev,
 {
 	int ret = 0;
 	unsigned int msi_addr = 0;
+	struct device_node *np;
 	struct device *dev = &pdev->dev;
 	struct imx_pcie_ep_priv *priv;
 
@@ -85,16 +87,18 @@ static int imx_pcie_ep_probe(struct pci_dev *pdev,
 		return ret;
 	}
 
+	np = of_find_compatible_node(NULL, NULL, "snps,dw-pcie");
+
 	/*
-	 * Force to use 0x01FF8000 on iMX6q SD board and 0x08FF8000
-	 * on iMX6sx SDB board as the MSI address, to do the MSI demo
+	 * Force to use the hardcode MSI address to do the MSI demo
 	 */
-	if (*(unsigned int *)priv->hw_base > 0x4FFFFFFF)
-		/* iMX6sx SDB board, DDR layout [0x8000_0000 ~ 0xBFFF_FFFF] */
+	if (of_device_is_compatible(np, "fsl,imx7d-pcie"))
+		msi_addr = 0x4FFC0000;
+	else if (of_device_is_compatible(np, "fsl,imx6sx-pcie"))
 		msi_addr = 0x08FF8000;
 	else
-		/* iMX6q SD board, DDR layout [0x1000_0000 ~ 0x4FFF_FFFF] */
 		msi_addr = 0x01FF8000;
+
 	pr_info("pci_msi_addr = 0x%08x\n", msi_addr);
 	pci_bus_write_config_dword(pdev->bus, 0, 0x54, msi_addr);
 	pci_bus_write_config_dword(pdev->bus->parent, 0, 0x820, msi_addr);
