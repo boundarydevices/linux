@@ -160,6 +160,25 @@
 	status = "okay";
 };
 
+&weim {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_weim_nor_1 &pinctrl_weim_cs0_1>;
+	#address-cells = <2>;
+	#size-cells = <1>;
+	ranges = <0 0 0x28000000 0x08000000>;
+	status = "okay";
+
+	nor@0,0 {
+		compatible = "cfi-flash";
+		reg = <0 0 0x08000000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		bank-width = <2>;
+		fsl,weim-cs-timing = <0x00610081 0x00000001 0x1c022000
+				0x0000c000 0x1404a38e 0x00000000>;
+	};
+};
+
 &iomuxc {
 
 	gpio_keys {
@@ -251,6 +270,68 @@
 				MX7D_PAD_SD1_DATA1__SD1_DATA1   0x5b
 				MX7D_PAD_SD1_DATA2__SD1_DATA2   0x5b
 				MX7D_PAD_SD1_DATA3__SD1_DATA3   0x5b
+			>;
+		};
+	};
+
+	weim {
+		pinctrl_weim_cs0_1: weim_cs0grp-1 {
+			fsl,pins = <
+				MX7D_PAD_EPDC_DATA10__EIM_CS0_B      0x71
+			>;
+		};
+
+		pinctrl_weim_nor_1: weim_norgrp-1 {
+			fsl,pins = <
+				MX7D_PAD_EPDC_DATA08__EIM_OE         0x71
+				MX7D_PAD_EPDC_DATA09__EIM_RW         0x71
+				MX7D_PAD_EPDC_DATA11__EIM_BCLK       0x71
+				MX7D_PAD_EPDC_DATA12__EIM_LBA_B      0x71
+				MX7D_PAD_EPDC_DATA13__EIM_WAIT       0x75
+				/* data */
+				MX7D_PAD_LCD_DATA00__EIM_DATA0       0x7d
+				MX7D_PAD_LCD_DATA01__EIM_DATA1       0x7d
+				MX7D_PAD_LCD_DATA02__EIM_DATA2       0x7d
+				MX7D_PAD_LCD_DATA03__EIM_DATA3       0x7d
+				MX7D_PAD_LCD_DATA04__EIM_DATA4       0x7d
+				MX7D_PAD_LCD_DATA05__EIM_DATA5       0x7d
+				MX7D_PAD_LCD_DATA06__EIM_DATA6       0x7d
+				MX7D_PAD_LCD_DATA07__EIM_DATA7       0x7d
+				MX7D_PAD_LCD_DATA08__EIM_DATA8       0x7d
+				MX7D_PAD_LCD_DATA09__EIM_DATA9       0x7d
+				MX7D_PAD_LCD_DATA10__EIM_DATA10      0x7d
+				MX7D_PAD_LCD_DATA11__EIM_DATA11      0x7d
+				MX7D_PAD_LCD_DATA12__EIM_DATA12      0x7d
+				MX7D_PAD_LCD_DATA13__EIM_DATA13      0x7d
+				MX7D_PAD_LCD_DATA14__EIM_DATA14      0x7d
+				MX7D_PAD_LCD_DATA15__EIM_DATA15      0x7d
+				/* address */
+				MX7D_PAD_EPDC_DATA00__EIM_AD0        0x71
+				MX7D_PAD_EPDC_DATA01__EIM_AD1        0x71
+				MX7D_PAD_EPDC_DATA02__EIM_AD2        0x71
+				MX7D_PAD_EPDC_DATA03__EIM_AD3        0x71
+				MX7D_PAD_EPDC_DATA04__EIM_AD4        0x71
+				MX7D_PAD_EPDC_DATA05__EIM_AD5        0x71
+				MX7D_PAD_EPDC_DATA06__EIM_AD6        0x71
+				MX7D_PAD_EPDC_DATA07__EIM_AD7        0x71
+				MX7D_PAD_EPDC_BDR1__EIM_AD8          0x71
+				MX7D_PAD_EPDC_PWR_COM__EIM_AD9       0x71
+				MX7D_PAD_EPDC_SDCLK__EIM_AD10        0x71
+				MX7D_PAD_EPDC_SDLE__EIM_AD11         0x71
+				MX7D_PAD_EPDC_SDOE__EIM_AD12         0x71
+				MX7D_PAD_EPDC_SDSHR__EIM_AD13        0x71
+				MX7D_PAD_EPDC_SDCE0__EIM_AD14        0x71
+				MX7D_PAD_EPDC_SDCE1__EIM_AD15        0x71
+				MX7D_PAD_EPDC_SDCE2__EIM_ADDR16      0x71
+				MX7D_PAD_EPDC_SDCE3__EIM_ADDR17      0x71
+				MX7D_PAD_EPDC_GDCLK__EIM_ADDR18      0x71
+				MX7D_PAD_EPDC_GDOE__EIM_ADDR19       0x71
+				MX7D_PAD_EPDC_GDRL__EIM_ADDR20       0x71
+				MX7D_PAD_EPDC_GDSP__EIM_ADDR21       0x71
+				MX7D_PAD_EPDC_BDR0__EIM_ADDR22       0x71
+				MX7D_PAD_LCD_DATA20__EIM_ADDR23      0x71
+				MX7D_PAD_LCD_DATA21__EIM_ADDR24      0x71
+				MX7D_PAD_LCD_DATA22__EIM_ADDR25      0x71
 			>;
 		};
 	};
