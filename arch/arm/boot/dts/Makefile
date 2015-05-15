@@ -335,6 +335,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-aristainetos2_7.dtb \
 	imx6dl-ash.dtb \
 	imx6dl-ash2.dtb \
+	imx6dl-bt.dtb \
 	imx6dl-cubox-i.dtb \
 	imx6dl-dfi-fs700-m60.dtb \
 	imx6dl-gw51xx.dtb \
@@ -394,6 +395,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-b650v3.dtb \
 	imx6q-b850v3.dtb \
 	imx6q-pop-arm2.dtb \
+	imx6q-bt.dtb \
 	imx6q-cm-fx6.dtb \
 	imx6q-cubox-i.dtb \
 	imx6q-dfi-fs700-m60.dtb \
