@@ -519,9 +519,10 @@ dtb-$(CONFIG_SOC_IMX6SL) += \
 	imx6sl-evk-optee.dtb \
 	imx6sl-warp.dtb
 dtb-$(CONFIG_SOC_IMX6SX) += \
-	imx6sx-nitrogen6sx.dtb \
 	imx6sx-14x14-arm2.dtb \
 	imx6sx-nitrogen6_scm.dtb \
+	imx6sx-nitrogen6sx.dtb \
+	imx6sx-nitrogen6sx-m4.dtb \
 	imx6sx-sabreauto.dtb \
 	imx6sx-sabreauto-m4.dtb \
 	imx6sx-sabreauto-optee.dtb \
