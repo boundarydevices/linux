@@ -1203,6 +1203,8 @@ static int pci_imx_resume_noirq(struct device *dev)
 		ret = imx6_pcie_wait_for_link(pp);
 		if (ret < 0)
 			pr_info("pcie link is down after resume back.\n");
+		/* Delay for a while, give ep some times to resume from D3 */
+		udelay(200);
 	} else {
 		/*
 		 * L2 can exit by 'reset' or Inband beacon (from remote EP)
