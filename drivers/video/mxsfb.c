@@ -1236,10 +1236,12 @@ static int mxsfb_init_fbinfo(struct mxsfb_info *host)
 	else
 		sprintf(fb_info->fix.id, "mxs-lcdif%d", host->id);
 
-	/* first video mode in the modelist as default video mode  */
-	modelist = list_first_entry(&fb_info->modelist,
-			struct fb_modelist, list);
-	fb_videomode_to_var(var, &modelist->mode);
+	if (!list_empty(&fb_info->modelist)) {
+		/* first video mode in the modelist as default video mode  */
+		modelist = list_first_entry(&fb_info->modelist,
+					    struct fb_modelist, list);
+		fb_videomode_to_var(var, &modelist->mode);
+	}
 	/* save the sync value getting from dtb */
 	host->sync = fb_info->var.sync;
 
@@ -1276,6 +1278,8 @@ static void mxsfb_dispdrv_init(struct platform_device *pdev,
 	memcpy(disp_dev, host->disp_dev, strlen(host->disp_dev));
 	disp_dev[strlen(host->disp_dev)] = '\0';
 
+	if (!disp_dev[0])
+		return;
 	host->dispdrv = mxc_dispdrv_gethandle(disp_dev, &setting);
 	if (IS_ERR(host->dispdrv)) {
 		host->dispdrv = NULL;
