@@ -3281,6 +3281,8 @@ restart:
 
 			if (sysctl_ip_dynaddr && sk->sk_state == TCP_SYN_SENT)
 				continue;
+			if (sk->sk_state == TCP_TIME_WAIT)
+				continue;
 			if (sock_flag(sk, SOCK_DEAD))
 				continue;
 
