@@ -92,6 +92,7 @@ struct mxc_vout_output {
 	struct video_device *vfd;
 	struct mutex mutex;
 	struct mutex task_lock;
+	struct mutex accs_lock;
 	enum v4l2_buf_type type;
 
 	struct videobuf_queue vbq;
@@ -951,7 +952,7 @@ static int mxc_vout_release(struct file *file)
 	if (!vout)
 		return 0;
 
-	mutex_lock(&vout->task_lock);
+	mutex_lock(&vout->accs_lock);
 	if (--vout->open_cnt == 0) {
 		q = &vout->vbq;
 		if (q->streaming)
@@ -964,7 +965,7 @@ static int mxc_vout_release(struct file *file)
 		ret = videobuf_mmap_free(q);
 	}
 
-	mutex_unlock(&vout->task_lock);
+	mutex_unlock(&vout->accs_lock);
 	return ret;
 }
 
@@ -978,7 +979,7 @@ static int mxc_vout_open(struct file *file)
 	if (vout == NULL)
 		return -ENODEV;
 
-	mutex_lock(&vout->task_lock);
+	mutex_lock(&vout->accs_lock);
 	if (vout->open_cnt++ == 0) {
 		vout->ctrl_rotate = 0;
 		vout->ctrl_vflip = 0;
@@ -1012,7 +1013,7 @@ static int mxc_vout_open(struct file *file)
 	file->private_data = vout;
 
 err:
-	mutex_unlock(&vout->task_lock);
+	mutex_unlock(&vout->accs_lock);
 	return ret;
 }
 
@@ -2183,6 +2184,7 @@ static int mxc_vout_setup_output(struct mxc_vout_dev *dev)
 
 		mutex_init(&vout->mutex);
 		mutex_init(&vout->task_lock);
+		mutex_init(&vout->accs_lock);
 
 		strlcpy(vout->vfd->name, fbi->fix.id, sizeof(vout->vfd->name));
 
