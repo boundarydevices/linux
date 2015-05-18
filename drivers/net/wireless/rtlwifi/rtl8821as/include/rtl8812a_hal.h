@@ -157,7 +157,7 @@ typedef struct _RT_FIRMWARE_8812 {
 
 //for 8812
 // TX 128K, RX 16K, Page size 512B for TX, 128B for RX
-#define MAX_RX_DMA_BUFFER_SIZE_8812	0x4000   /* 0x4000  // RX 16K */
+#define MAX_RX_DMA_BUFFER_SIZE_8812	0x3E80 /* RX 16K */
 
 #ifdef CONFIG_WOWLAN
 #define RESV_FMWF	WKFMCAM_SIZE*MAX_WKFM_NUM /* 16 entries, for each is 24 bytes*/
@@ -206,7 +206,7 @@ typedef struct _RT_FIRMWARE_8812 {
 #define PAGE_SIZE_TX_8821A					256
 #define PAGE_SIZE_RX_8821A					128
 
-#define MAX_RX_DMA_BUFFER_SIZE_8821			0x4000	/* RX 16K */
+#define MAX_RX_DMA_BUFFER_SIZE_8821			0x3E80 /* RX 16K */
 
 #ifdef CONFIG_FW_C2H_DEBUG 
 #define RX_DMA_RESERVED_SIZE_8821	0x100	// 256B, reserved for c2h debug message

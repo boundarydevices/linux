@@ -644,6 +644,226 @@ int proc_get_rf_info(struct seq_file *m, void *v)
 	return 0;
 }
 
+int proc_get_scan_param(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct mlme_ext_priv *mlmeext = &adapter->mlmeextpriv;
+	struct ss_res *ss = &mlmeext->sitesurvey_res;
+
+#define SCAN_PARAM_TITLE_FMT "%10s"
+#define SCAN_PARAM_VALUE_FMT "%-10u"
+#define SCAN_PARAM_TITLE_ARG , "scan_ch_ms"
+#define SCAN_PARAM_VALUE_ARG , ss->scan_ch_ms
+#ifdef CONFIG_80211N_HT
+	#define SCAN_PARAM_TITLE_FMT_HT " %15s %13s"
+	#define SCAN_PARAM_VALUE_FMT_HT " %-15u %-13u"
+	#define SCAN_PARAM_TITLE_ARG_HT , "rx_ampdu_accept", "rx_ampdu_size"
+	#define SCAN_PARAM_VALUE_ARG_HT , ss->rx_ampdu_accept, ss->rx_ampdu_size
+#else
+	#define SCAN_PARAM_TITLE_FMT_HT ""
+	#define SCAN_PARAM_VALUE_FMT_HT ""
+	#define SCAN_PARAM_TITLE_ARG_HT
+	#define SCAN_PARAM_VALUE_ARG_HT
+#endif
+#ifdef CONFIG_SCAN_BACKOP
+	#define SCAN_PARAM_TITLE_FMT_BACKOP " %9s %12s"
+	#define SCAN_PARAM_VALUE_FMT_BACKOP " %-9u %-12u"
+	#define SCAN_PARAM_TITLE_ARG_BACKOP , "backop_ms", "scan_cnt_max"
+	#define SCAN_PARAM_VALUE_ARG_BACKOP , ss->backop_ms, ss->scan_cnt_max
+#else
+	#define SCAN_PARAM_TITLE_FMT_BACKOP ""
+	#define SCAN_PARAM_VALUE_FMT_BACKOP ""
+	#define SCAN_PARAM_TITLE_ARG_BACKOP
+	#define SCAN_PARAM_VALUE_ARG_BACKOP
+#endif
+
+	DBG_871X_SEL_NL(m,
+		SCAN_PARAM_TITLE_FMT
+		SCAN_PARAM_TITLE_FMT_HT
+		SCAN_PARAM_TITLE_FMT_BACKOP
+		"\n"
+		SCAN_PARAM_TITLE_ARG
+		SCAN_PARAM_TITLE_ARG_HT
+		SCAN_PARAM_TITLE_ARG_BACKOP
+	);
+
+	DBG_871X_SEL_NL(m,
+		SCAN_PARAM_VALUE_FMT
+		SCAN_PARAM_VALUE_FMT_HT
+		SCAN_PARAM_VALUE_FMT_BACKOP
+		"\n"
+		SCAN_PARAM_VALUE_ARG
+		SCAN_PARAM_VALUE_ARG_HT
+		SCAN_PARAM_VALUE_ARG_BACKOP
+	);
+
+	return 0;
+}
+
+ssize_t proc_set_scan_param(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct mlme_ext_priv *mlmeext = &adapter->mlmeextpriv;
+	struct ss_res *ss = &mlmeext->sitesurvey_res;
+
+	char tmp[32] = {0};
+
+u16 scan_ch_ms;
+#define SCAN_PARAM_INPUT_FMT "%hu"
+#define SCAN_PARAM_INPUT_ARG , &scan_ch_ms
+#ifdef CONFIG_80211N_HT
+	u8 rx_ampdu_accept;
+	u8 rx_ampdu_size;
+	#define SCAN_PARAM_INPUT_FMT_HT " %hhu %hhu"
+	#define SCAN_PARAM_INPUT_ARG_HT , &rx_ampdu_accept, &rx_ampdu_size
+#else
+	#define SCAN_PARAM_INPUT_FMT_HT ""
+	#define SCAN_PARAM_INPUT_ARG_HT
+#endif
+#ifdef CONFIG_SCAN_BACKOP
+	u16 backop_ms;
+	u8 scan_cnt_max;
+	#define SCAN_PARAM_INPUT_FMT_BACKOP " %hu %hhu"
+	#define SCAN_PARAM_INPUT_ARG_BACKOP , &backop_ms, &scan_cnt_max
+#else
+	#define SCAN_PARAM_INPUT_FMT_BACKOP ""
+	#define SCAN_PARAM_INPUT_ARG_BACKOP
+#endif
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		int num = sscanf(tmp,
+			SCAN_PARAM_INPUT_FMT
+			SCAN_PARAM_INPUT_FMT_HT
+			SCAN_PARAM_INPUT_FMT_BACKOP
+			SCAN_PARAM_INPUT_ARG
+			SCAN_PARAM_INPUT_ARG_HT
+			SCAN_PARAM_INPUT_ARG_BACKOP
+		);
+
+		if (num-- > 0)
+			ss->scan_ch_ms = scan_ch_ms;
+		#ifdef CONFIG_80211N_HT
+		if (num-- > 0)
+			ss->rx_ampdu_accept = rx_ampdu_accept;
+		if (num-- > 0)
+			ss->rx_ampdu_size = rx_ampdu_size;
+		#endif
+		#ifdef CONFIG_SCAN_BACKOP
+		if (num-- > 0)
+			ss->backop_ms = backop_ms;
+		if (num-- > 0)
+			ss->scan_cnt_max = scan_cnt_max;
+		#endif
+	}
+	
+	return count;	
+}
+
+int proc_get_scan_abort(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	u32 pass_ms;
+
+	pass_ms = rtw_scan_abort_timeout(adapter, 10000);
+
+	DBG_871X_SEL_NL(m, "%u\n", pass_ms);
+
+	return 0;
+}
+
+#ifdef CONFIG_SCAN_BACKOP
+int proc_get_backop_flags_sta(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct mlme_ext_priv *mlmeext = &adapter->mlmeextpriv;
+
+	DBG_871X_SEL_NL(m, "0x%02x\n", mlmeext_scan_backop_flags_sta(mlmeext));
+
+	return 0;
+}
+
+ssize_t proc_set_backop_flags_sta(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct mlme_ext_priv *mlmeext = &adapter->mlmeextpriv;
+
+	char tmp[32];
+	u8 flags;
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		int num = sscanf(tmp, "%hhx", &flags);
+
+		if (num == 1)
+			mlmeext_assign_scan_backop_flags_sta(mlmeext, flags);
+	}
+	
+	return count;
+}
+
+int proc_get_backop_flags_ap(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct mlme_ext_priv *mlmeext = &adapter->mlmeextpriv;
+
+	DBG_871X_SEL_NL(m, "0x%02x\n", mlmeext_scan_backop_flags_ap(mlmeext));
+
+	return 0;
+}
+
+ssize_t proc_set_backop_flags_ap(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct mlme_ext_priv *mlmeext = &adapter->mlmeextpriv;
+
+	char tmp[32];
+	u8 flags;
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		int num = sscanf(tmp, "%hhx", &flags);
+
+		if (num == 1)
+			mlmeext_assign_scan_backop_flags_ap(mlmeext, flags);
+	}
+	
+	return count;
+}
+
+#endif /* CONFIG_SCAN_BACKOP */
+
 int proc_get_survey_info(struct seq_file *m, void *v)
 {
 	_irqL irqL;
@@ -2477,6 +2697,54 @@ int proc_get_tx_ring(struct seq_file *m, void *v)
 	return 0;
 }
 #endif
+
+#ifdef CONFIG_GPIO_WAKEUP
+int proc_get_wowlan_gpio_info(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	struct pwrctrl_priv *pwrpriv = adapter_to_pwrctl(padapter);
+	u8 val = pwrpriv->is_high_active;
+
+	DBG_871X_SEL_NL(m, "wakeup_gpio_idx: %d\n", WAKEUP_GPIO_IDX);
+	DBG_871X_SEL_NL(m, "high_active: %d\n", val);
+
+	return 0;
+}
+
+ssize_t proc_set_wowlan_gpio_info(struct file *file, const char __user *buffer,
+		size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	struct pwrctrl_priv *pwrpriv = adapter_to_pwrctl(padapter);
+	char tmp[32] = {0};
+	int num = 0;
+	u32 is_high_active = 0;
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		num = sscanf(tmp, "%u", &is_high_active);
+
+		is_high_active = is_high_active == 0 ? 0 : 1;
+
+		pwrpriv->is_high_active = is_high_active;
+
+		DBG_871X("set %s %d\n", "gpio_high_active",
+				pwrpriv->is_high_active);
+	}
+	
+	return count;
+}
+#endif /* CONFIG_GPIO_WAKEUP */
 
 #ifdef CONFIG_P2P_WOWLAN
 int proc_get_p2p_wowlan_info(struct seq_file *m, void *v)

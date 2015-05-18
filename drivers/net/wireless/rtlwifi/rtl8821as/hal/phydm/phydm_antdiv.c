@@ -2626,16 +2626,33 @@ ODM_SW_AntDiv_WorkitemCallback(
 #elif (DM_ODM_SUPPORT_TYPE == ODM_CE)
 
 VOID
+ODM_SW_AntDiv_WorkitemCallback(
+	IN PVOID	pContext
+)
+{
+	PADAPTER
+	pAdapter = (PADAPTER)pContext;
+	HAL_DATA_TYPE
+	*pHalData = GET_HAL_DATA(pAdapter);
+
+	/*DbgPrint("SW_antdiv_Workitem_Callback");*/
+	odm_S0S1_SwAntDiv(&pHalData->odmpriv, SWAW_STEP_DETERMINE);
+}
+
+VOID
 ODM_SW_AntDiv_Callback(void *FunctionContext)
 {
 	PDM_ODM_T	pDM_Odm= (PDM_ODM_T)FunctionContext;
 	PADAPTER	padapter = pDM_Odm->Adapter;
 	if(padapter->net_closed == _TRUE)
-	    return;
+		return;
+	
+	#if 0 /* Can't do I/O in timer callback*/
 	odm_S0S1_SwAntDiv(pDM_Odm, SWAW_STEP_DETERMINE);
+	#else
+	rtw_run_in_thread_cmd(padapter, ODM_SW_AntDiv_WorkitemCallback, padapter);
+	#endif
 }
-
-
 #endif
 
 #if (DM_ODM_SUPPORT_TYPE & (ODM_WIN|ODM_CE))

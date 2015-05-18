@@ -415,8 +415,6 @@ static s32 _dequeue_writeport(PADAPTER padapter)
 	struct xmit_priv *pxmitpriv;
 	struct dvobj_priv *pdvobjpriv;
 	struct xmit_buf *pxmitbuf;
-	PADAPTER pri_padapter;
-	s32 ret = _FALSE;
 	u8	PageIdx = 0;
 	u32	deviceId;
 #ifdef CONFIG_SDIO_TX_ENABLE_AVAL_INT
@@ -429,19 +427,8 @@ static s32 _dequeue_writeport(PADAPTER padapter)
 	pmlmepriv = &padapter->mlmepriv;
 	pxmitpriv = &padapter->xmitpriv;
 	pdvobjpriv = adapter_to_dvobj(padapter);
-	pri_padapter = padapter;
 
-#ifdef CONFIG_CONCURRENT_MODE
-	if (padapter->adapter_type > 0)
-		pri_padapter = padapter->pbuddy_adapter;
-
-	if (rtw_buddy_adapter_up(padapter))
-		ret = check_buddy_fwstate(padapter, _FW_UNDER_SURVEY);
-#endif
-
-	ret = ret || check_fwstate(pmlmepriv, _FW_UNDER_SURVEY);
-
-	if (_TRUE == ret)
+	if (rtw_xmit_ac_blocked(padapter) == _TRUE)
 		pxmitbuf = dequeue_pending_xmitbuf_under_survey(pxmitpriv);
 	else
 		pxmitbuf = dequeue_pending_xmitbuf(pxmitpriv);
@@ -467,9 +454,8 @@ static s32 _dequeue_writeport(PADAPTER padapter)
 	}
 
 query_free_page:
-	// check if hardware tx fifo page is enough
-	if( _FALSE == rtw_hal_sdio_query_tx_freepage(pri_padapter, PageIdx, pxmitbuf->pg_num))
-	{
+	/* check if hardware tx fifo page is enough */
+	if (_FALSE == rtw_hal_sdio_query_tx_freepage(padapter, PageIdx, pxmitbuf->pg_num)) {
 #ifdef CONFIG_SDIO_TX_ENABLE_AVAL_INT
 		if (!bUpdatePageNum) {
 			// Total number of page is NOT available, so update current FIFO status
@@ -511,7 +497,7 @@ query_free_page:
 
 	rtw_write_port(padapter, deviceId, pxmitbuf->len, (u8 *)pxmitbuf);
 
-	rtw_hal_sdio_update_tx_freepage(pri_padapter, PageIdx, pxmitbuf->pg_num);
+	rtw_hal_sdio_update_tx_freepage(padapter, PageIdx, pxmitbuf->pg_num);
 
 free_xmitbuf:
 	//rtw_free_xmitframe(pxmitpriv, pframe);

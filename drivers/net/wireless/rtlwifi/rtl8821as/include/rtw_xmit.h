@@ -454,6 +454,8 @@ enum {
 	XMITBUF_CMD = 2,
 };
 
+bool rtw_xmit_ac_blocked(_adapter *adapter);
+
 struct  submit_ctx{
 	u32 submit_time; /* */
 	u32 timeout_ms; /* <0: not synchronous, 0: wait forever, >0: up to ms waiting */

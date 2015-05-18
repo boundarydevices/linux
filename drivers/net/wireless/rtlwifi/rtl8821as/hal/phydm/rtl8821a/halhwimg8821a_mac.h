@@ -18,7 +18,7 @@
 * 
 ******************************************************************************/
 
-/*Image2HeaderVersion: 2.7*/
+/*Image2HeaderVersion: 2.12*/
 #if (RTL8821A_SUPPORT == 1)
 #ifndef __INC_MP_MAC_HW_IMG_8821A_H
 #define __INC_MP_MAC_HW_IMG_8821A_H

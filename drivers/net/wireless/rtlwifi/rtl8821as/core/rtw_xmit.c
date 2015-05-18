@@ -4733,6 +4733,39 @@ thread_return rtw_xmit_thread(thread_context context)
 }
 #endif
 
+bool rtw_xmit_ac_blocked(_adapter *adapter)
+{
+	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
+	_adapter *iface;
+	struct mlme_ext_priv *mlmeext;
+	struct mlme_ext_info *mlmeextinfo;
+	bool blocked = _FALSE;
+	int i;
+
+	for (i = 0; i < dvobj->iface_nums; i++) {
+		iface = dvobj->padapters[i];
+		mlmeext = &iface->mlmeextpriv;
+
+		/* check scan state */
+		if (mlmeext_scan_state(mlmeext) != SCAN_DISABLE
+			&& mlmeext_scan_state(mlmeext) != SCAN_BACK_OP
+		) {
+			blocked = _TRUE;
+			goto exit;
+		}
+
+		if (mlmeext_scan_state(mlmeext) == SCAN_BACK_OP
+			&& !mlmeext_chk_scan_backop_flags(mlmeext, SS_BACKOP_TX_RESUME)
+		) {
+			blocked = _TRUE;
+			goto exit;
+		}
+	}
+
+exit:
+	return blocked;
+}
+
 void rtw_sctx_init(struct submit_ctx *sctx, int timeout_ms)
 {
 	sctx->timeout_ms = timeout_ms;

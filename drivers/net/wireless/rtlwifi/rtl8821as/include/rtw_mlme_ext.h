@@ -293,17 +293,6 @@ typedef enum _HT_IOT_PEER
 	HT_IOT_PEER_MAX 				= 18
 }HT_IOT_PEER_E, *PHTIOT_PEER_E;
 
-
-enum SCAN_STATE
-{
-	SCAN_DISABLE = 0,
-	SCAN_START = 1,
-	SCAN_TXNULL = 2,
-	SCAN_PROCESS = 3,
-	SCAN_COMPLETE = 4,
-	SCAN_STATE_MAX,
-};
-
 struct mlme_handler {
 	unsigned int   num;
 	char* str;
@@ -316,12 +305,62 @@ struct action_handler {
 	unsigned int (*func)(_adapter *padapter, union recv_frame *precv_frame);
 };
 
-struct	ss_res	
+enum SCAN_STATE
 {
-	int	state;
+	SCAN_DISABLE = 0,
+	SCAN_START = 1,
+	SCAN_PS_ANNC_WAIT = 2,
+	SCAN_ENTER = 3,
+	SCAN_PROCESS = 4,
+
+	/* backop */
+	SCAN_BACKING_OP = 5,
+	SCAN_BACK_OP = 6,
+	SCAN_LEAVING_OP = 7,
+	SCAN_LEAVE_OP = 8,
+
+	/* SW antenna diversity (before linked) */
+	SCAN_SW_ANTDIV_BL = 9,
+
+	/* legacy p2p */
+	SCAN_TO_P2P_LISTEN = 10, 
+	SCAN_P2P_LISTEN = 11,
+
+	SCAN_COMPLETE = 12,
+	SCAN_STATE_MAX,
+};
+
+const char *scan_state_str(u8 state);
+
+enum ss_backop_flag {
+	SS_BACKOP_EN = BIT0, /* backop when linked */
+	SS_BACKOP_EN_NL = BIT1, /* backop even when no linked */
+
+	SS_BACKOP_PS_ANNC = BIT4,
+	SS_BACKOP_TX_RESUME = BIT5,
+};
+
+struct ss_res {
+	u8 state;
+	u8 next_state; /* will set to state on next cmd hdl */
 	int	bss_cnt;
 	int	channel_idx;
 	int	scan_mode;
+	u16 scan_ch_ms;
+	u8 rx_ampdu_accept;
+	u8 rx_ampdu_size;
+#ifdef CONFIG_SCAN_BACKOP
+	u8 backop_flags_sta; /* policy for station mode*/
+	u8 backop_flags_ap; /* policy for ap mode */
+	u8 backop_flags; /* per backop runtime decision */
+	u8 scan_cnt;
+	u8 scan_cnt_max;
+	u32 backop_time; /* the start time of backop */
+	u16 backop_ms;
+#endif
+#if defined(CONFIG_ANTENNA_DIVERSITY) || defined(DBG_SCAN_SW_ANTDIV_BL)
+	u8 is_sw_antdiv_bl_scan;
+#endif
 	u8 ssid_num;
 	u8 ch_num;
 	NDIS_802_11_SSID ssid[RTW_SSID_SCAN_AMOUNT];
@@ -377,10 +416,10 @@ struct FW_Sta_Info
  * it should switch back to AP's operating channel periodically.
  * Parameters info:
  * When the driver scanned RTW_SCAN_NUM_OF_CH channels, it would switch back to AP's operating channel for
- * RTW_STAY_AP_CH_MILLISECOND * SURVEY_TO milliseconds.
+ * RTW_BACK_OP_CH_MS milliseconds.
  * Example:
  * For chip supports 2.4G + 5GHz and AP mode is operating in channel 1, 
- * RTW_SCAN_NUM_OF_CH is 8, RTW_STAY_AP_CH_MILLISECOND is 3 and SURVEY_TO is 100.
+ * RTW_SCAN_NUM_OF_CH is 8, RTW_BACK_OP_CH_MS is 300
  * When it's STA mode gets set_scan command, 
  * it would 
  * 1. Doing the scan on channel 1.2.3.4.5.6.7.8 
@@ -389,15 +428,13 @@ struct FW_Sta_Info
  * 4. Back to channel 1 for 300 milliseconds
  * 5. ... and so on, till survey done.
  */
-#if defined(CONFIG_ATMEL_RC_PATCH) 
-#define RTW_SCAN_NUM_OF_CH			2
-#define RTW_STAY_AP_CH_MILLISECOND		2	// this value is a multiplier,for example, when this value is 3, 
-							// it would stay AP's op ch for  3 * SURVEY_TO millisecond.
-#elif defined(CONFIG_STA_MODE_SCAN_UNDER_AP_MODE)
-#define RTW_SCAN_NUM_OF_CH			3
-#define RTW_STAY_AP_CH_MILLISECOND		4	// this value is a multiplier,for example, when this value is 3, 
-							// it would stay AP's op ch for  3 * SURVEY_TO millisecond.
-#endif 
+#if defined(CONFIG_ATMEL_RC_PATCH)
+#define RTW_SCAN_NUM_OF_CH 2
+#define RTW_BACK_OP_CH_MS 200
+#else
+#define RTW_SCAN_NUM_OF_CH 3
+#define RTW_BACK_OP_CH_MS 400
+#endif
 
 struct mlme_ext_info
 {
@@ -444,11 +481,6 @@ struct mlme_ext_info
 	struct HT_info_element		HT_info;
 	WLAN_BSSID_EX			network;//join network or bss_network, if in ap mode, it is the same to cur_network.network
 	struct FW_Sta_Info		FW_sta_info[NUM_STA];
-
-#if defined(CONFIG_STA_MODE_SCAN_UNDER_AP_MODE) || defined(CONFIG_ATMEL_RC_PATCH)
-	u8 scan_cnt;
-	u8 backop_cnt;
-#endif //CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
 };
 
 // The channel information about this channel including joining, scanning, and power constraints.
@@ -573,7 +605,6 @@ struct mlme_ext_priv
 	_timer		sa_query_timer;
 #endif //CONFIG_IEEE80211W
 	//_timer		ADDBA_timer;
-	u16			chan_scan_time;
 	u32 last_scan_time;
 	u8	scan_abort;
 	u8	tx_rate; // TXRATE when USERATE is set.
@@ -611,6 +642,58 @@ struct mlme_ext_priv
 };
 
 #define mlmeext_msr(mlmeext) ((mlmeext)->mlmext_info.state & 0x03)
+#define mlmeext_scan_state(mlmeext) ((mlmeext)->sitesurvey_res.state)
+#define mlmeext_scan_state_str(mlmeext) scan_state_str((mlmeext)->sitesurvey_res.state)
+#define mlmeext_chk_scan_state(mlmeext, _state) ((mlmeext)->sitesurvey_res.state == (_state))
+#define mlmeext_set_scan_state(mlmeext, _state) \
+	do { \
+		((mlmeext)->sitesurvey_res.state = (_state)); \
+		((mlmeext)->sitesurvey_res.next_state = (_state)); \
+		/* DBG_871X("set_scan_state:%s\n", scan_state_str(_state)); */ \
+	} while (0)
+
+#define mlmeext_scan_next_state(mlmeext) ((mlmeext)->sitesurvey_res.next_state)
+#define mlmeext_set_scan_next_state(mlmeext, _state) \
+	do { \
+		((mlmeext)->sitesurvey_res.next_state = (_state)); \
+		/* DBG_871X("set_scan_next_state:%s\n", scan_state_str(_state)); */ \
+	} while (0)
+
+#ifdef CONFIG_SCAN_BACKOP
+#define mlmeext_scan_backop_flags(mlmeext) ((mlmeext)->sitesurvey_res.backop_flags)
+#define mlmeext_chk_scan_backop_flags(mlmeext, flags) ((mlmeext)->sitesurvey_res.backop_flags & (flags))
+#define mlmeext_assign_scan_backop_flags(mlmeext, flags) \
+		do { \
+			((mlmeext)->sitesurvey_res.backop_flags = (flags)); \
+			DBG_871X("assign_scan_backop_flags:0x%02x\n", (mlmeext)->sitesurvey_res.backop_flags); \
+		} while (0)
+
+#define mlmeext_scan_backop_flags_sta(mlmeext) ((mlmeext)->sitesurvey_res.backop_flags_sta)
+#define mlmeext_chk_scan_backop_flags_sta(mlmeext, flags) ((mlmeext)->sitesurvey_res.backop_flags_sta & (flags))
+#define mlmeext_assign_scan_backop_flags_sta(mlmeext, flags) \
+	do { \
+		((mlmeext)->sitesurvey_res.backop_flags_sta = (flags)); \
+	} while (0)
+
+#define mlmeext_scan_backop_flags_ap(mlmeext) ((mlmeext)->sitesurvey_res.backop_flags_ap)
+#define mlmeext_chk_scan_backop_flags_ap(mlmeext, flags) ((mlmeext)->sitesurvey_res.backop_flags_ap & (flags))
+#define mlmeext_assign_scan_backop_flags_ap(mlmeext, flags) \
+	do { \
+		((mlmeext)->sitesurvey_res.backop_flags_ap = (flags)); \
+	} while (0)
+#else
+#define mlmeext_scan_backop_flags(mlmeext) (0)
+#define mlmeext_chk_scan_backop_flags(mlmeext, flags) (0)
+#define mlmeext_assign_scan_backop_flags(mlmeext, flags) do {} while (0)
+
+#define mlmeext_scan_backop_flags_sta(mlmeext) (0)
+#define mlmeext_chk_scan_backop_flags_sta(mlmeext, flags) (0)
+#define mlmeext_assign_scan_backop_flags_sta(mlmeext, flags) do {} while (0)
+
+#define mlmeext_scan_backop_flags_ap(mlmeext) (0)
+#define mlmeext_chk_scan_backop_flags_ap(mlmeext, flags) (0)
+#define mlmeext_assign_scan_backop_flags_ap(mlmeext, flags) do {} while (0)
+#endif
 
 void init_mlme_default_rate_set(_adapter* padapter);
 int init_mlme_ext_priv(_adapter* padapter);
@@ -680,7 +763,7 @@ void flush_all_cam_entry(_adapter *padapter);
 
 BOOLEAN IsLegal5GChannel(PADAPTER Adapter, u8 channel);
 
-void site_survey(_adapter *padapter);
+void site_survey(_adapter *padapter, u8 survey_channel, RT_SCAN_TYPE ScanType);
 u8 collect_bss_info(_adapter *padapter, union recv_frame *precv_frame, WLAN_BSSID_EX *bssid);
 void update_network(WLAN_BSSID_EX *dst, WLAN_BSSID_EX *src, _adapter * padapter, bool update_ie);
 
@@ -852,6 +935,7 @@ unsigned int OnAction_dls(_adapter *padapter, union recv_frame *precv_frame);
 enum rx_ampdu_reason {
 	RX_AMPDU_DRV_FIXED = 1,
 	RX_AMPDU_BTCOEX = 2, /* not used, because BTCOEX has its own variable management */
+	RX_AMPDU_DRV_SCAN = 3,
 };
 u8 rtw_rx_ampdu_size(_adapter *adapter);
 bool rtw_rx_ampdu_is_accept(_adapter *adapter);

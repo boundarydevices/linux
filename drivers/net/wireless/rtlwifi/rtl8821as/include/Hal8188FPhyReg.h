@@ -450,6 +450,8 @@
 #define 	RF_TXPA_G4					0x46	
 #define 	RF_TXPA_A4					0x4B	
 #define 	RF_0x52 					0x52
+#define		RF_RXG_MIX_SWBW				0x87
+#define		RF_DBG_LP_RX2				0xDF
 #define 	RF_WE_LUT					0xEF	
 #define 	RF_S0S1 					0xB0
 
@@ -1112,6 +1114,7 @@
 #define rDPDT_control				0x92c
 #define rfe_ctrl_anta_src				0x930
 #define rS0S1_PathSwitch   			0x948
+#define	BBrx_DFIR						0x954
 #define AGC_table_select				0xb2c
 
 //

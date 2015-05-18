@@ -1605,13 +1605,14 @@ static u8 rtw_hal_set_wowlan_ctrl_cmd(_adapter *adapter, u8 enable, u8 change_un
 	u8 discont_wake = 1, gpionum = 0, gpio_dur = 0;
 	u8 hw_unicast = 0, gpio_pulse_cnt = 0, gpio_pulse_en = 0;
 	u8 sdio_wakeup_enable = 1;
-	u8 gpio_high_active = 0; //0: low active, 1: high active
+	u8 gpio_high_active = 0;
 	u8 pattern_en = 0;
 	u8 magic_pkt = 0;
 	u8 gpio_unit = 0; /*0: 64ns, 1: 8ms*/
 	u8 ret = _FAIL;
 
 #ifdef CONFIG_GPIO_WAKEUP
+	gpio_high_active = ppwrpriv->is_high_active;
 	gpionum = WAKEUP_GPIO_IDX;
 	sdio_wakeup_enable = 0;
 #endif //CONFIG_GPIO_WAKEUP
@@ -1871,10 +1872,11 @@ static u8 rtw_hal_set_ap_wowlan_ctrl_cmd(_adapter *adapter, u8 enable)
 	u8 gpionum = 0, gpio_dur = 0;
 	u8 gpio_pulse = enable;
 	u8 sdio_wakeup_enable = 1;
-	u8 gpio_high_active = 0; /* 0: low active, 1: high active */
+	u8 gpio_high_active = 0;
 	u8 ret = _FAIL;
 
 #ifdef CONFIG_GPIO_WAKEUP
+	gpio_high_active = ppwrpriv->is_high_active;
 	gpionum = WAKEUP_GPIO_IDX;
 	sdio_wakeup_enable = 0;
 #endif /*CONFIG_GPIO_WAKEUP*/

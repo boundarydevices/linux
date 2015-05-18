@@ -18,25 +18,27 @@
 * 
 ******************************************************************************/
 
-/*Image2HeaderVersion: 2.7*/
+/*Image2HeaderVersion: 2.12*/
 #include "mp_precomp.h"
 #include "../phydm_precomp.h"
 
 #if (RTL8821A_SUPPORT == 1)
 static BOOLEAN
 CheckPositive(
-    IN  PDM_ODM_T     pDM_Odm,
-    IN  const u4Byte  Condition1,
-    IN  const u4Byte  Condition2
-    )
+	IN  PDM_ODM_T     pDM_Odm,
+	IN  const u4Byte  Condition1,
+	IN  const u4Byte  Condition2,
+	IN	const u4Byte  Condition3,
+	IN	const u4Byte  Condition4
+)
 {
-    u1Byte    _BoardType = ((pDM_Odm->BoardType & BIT4) >> 4) << 0 | // _GLNA
-                           ((pDM_Odm->BoardType & BIT3) >> 3) << 1 | // _GPA 
-                           ((pDM_Odm->BoardType & BIT7) >> 7) << 2 | // _ALNA
-                           ((pDM_Odm->BoardType & BIT6) >> 6) << 3 | // _APA 
-                           ((pDM_Odm->BoardType & BIT2) >> 2) << 4;  // _BT  
+	u1Byte    _BoardType = ((pDM_Odm->BoardType & BIT4) >> 4) << 0 | /* _GLNA*/
+				((pDM_Odm->BoardType & BIT3) >> 3) << 1 | /* _GPA*/ 
+				((pDM_Odm->BoardType & BIT7) >> 7) << 2 | /* _ALNA*/
+				((pDM_Odm->BoardType & BIT6) >> 6) << 3 | /* _APA */
+				((pDM_Odm->BoardType & BIT2) >> 2) << 4;  /* _BT*/  
 
-	u4Byte 	  cond1   = Condition1, cond2 = Condition2;
+	u4Byte	cond1   = Condition1, cond2 = Condition2, cond3 = Condition3, cond4 = Condition4;
 	u4Byte    driver1 = pDM_Odm->CutVersion       << 24 | 
 				(pDM_Odm->SupportInterface & 0xF0) << 16 | 
 				pDM_Odm->SupportPlatform  << 16 | 
@@ -44,20 +46,27 @@ CheckPositive(
 				(pDM_Odm->SupportInterface & 0x0F) << 8  |
 				_BoardType;
 
-	u4Byte    driver2 = pDM_Odm->TypeGLNA <<  0 |  
-		                pDM_Odm->TypeGPA  <<  8 | 
-		                pDM_Odm->TypeALNA << 16 | 
-		                pDM_Odm->TypeAPA  << 24; 
+	u4Byte    driver2 = (pDM_Odm->TypeGLNA & 0xFF) <<  0 |  
+				(pDM_Odm->TypeGPA & 0xFF)  <<  8 | 
+				(pDM_Odm->TypeALNA & 0xFF) << 16 | 
+				(pDM_Odm->TypeAPA & 0xFF)  << 24; 
 
-    ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_TRACE, 
-                ("===> [8812A] CheckPositive (cond1, cond2) = (0x%X 0x%X)\n", cond1, cond2));
-    ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_TRACE, 
-                ("===> [8812A] CheckPositive (driver1, driver2) = (0x%X 0x%X)\n", driver1, driver2));
+u4Byte    driver3 = 0;
 
-    ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_TRACE, 
-                ("	(Platform, Interface) = (0x%X, 0x%X)\n", pDM_Odm->SupportPlatform, pDM_Odm->SupportInterface));
-    ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_TRACE, 
-                ("	(Board, Package) = (0x%X, 0x%X)\n", pDM_Odm->BoardType, pDM_Odm->PackageType));
+	u4Byte    driver4 = (pDM_Odm->TypeGLNA & 0xFF00) >>  8 |
+				(pDM_Odm->TypeGPA & 0xFF00) |
+				(pDM_Odm->TypeALNA & 0xFF00) << 8 |
+				(pDM_Odm->TypeAPA & 0xFF00)  << 16;
+
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_TRACE, 
+	("===> CheckPositive (cond1, cond2, cond3, cond4) = (0x%X 0x%X 0x%X 0x%X)\n", cond1, cond2, cond3, cond4));
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_TRACE, 
+	("===> CheckPositive (driver1, driver2, driver3, driver4) = (0x%X 0x%X 0x%X 0x%X)\n", driver1, driver2, driver3, driver4));
+
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_TRACE, 
+	("	(Platform, Interface) = (0x%X, 0x%X)\n", pDM_Odm->SupportPlatform, pDM_Odm->SupportInterface));
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_TRACE, 
+	("	(Board, Package) = (0x%X, 0x%X)\n", pDM_Odm->BoardType, pDM_Odm->PackageType));
 
 
 	/*============== Value Defined Check ===============*/
@@ -78,32 +87,32 @@ CheckPositive(
 		u4Byte bitMask = 0;
 
 		if ((cond1 & 0x0F) == 0) /* BoardType is DONTCARE*/
-            return TRUE;
+			return TRUE;
 
 		if ((cond1 & BIT0) != 0) /*GLNA*/
-            bitMask |= 0x000000FF;
+			bitMask |= 0x000000FF;
 		if ((cond1 & BIT1) != 0) /*GPA*/
-            bitMask |= 0x0000FF00;
+			bitMask |= 0x0000FF00;
 		if ((cond1 & BIT2) != 0) /*ALNA*/
-            bitMask |= 0x00FF0000;
+			bitMask |= 0x00FF0000;
 		if ((cond1 & BIT3) != 0) /*APA*/
-            bitMask |= 0xFF000000;
+			bitMask |= 0xFF000000;
 
-		if ((cond2 & bitMask) == (driver2 & bitMask)) /* BoardType of each RF path is matched*/
-            return TRUE;
+		if (((cond2 & bitMask) == (driver2 & bitMask)) && ((cond4 & bitMask) == (driver4 & bitMask)))  /* BoardType of each RF path is matched*/
+			return TRUE;
 		else
-            return FALSE;
-		} else
-        return FALSE;
+			return FALSE;
+	} else
+		return FALSE;
 }
 static BOOLEAN
 CheckNegative(
-    IN  PDM_ODM_T     pDM_Odm,
-    IN  const u4Byte  Condition1,
-    IN  const u4Byte  Condition2
-    )
+	IN  PDM_ODM_T     pDM_Odm,
+	IN  const u4Byte  Condition1,
+	IN  const u4Byte  Condition2
+)
 {
-    return TRUE;
+	return TRUE;
 }
 
 /******************************************************************************
@@ -883,20 +892,22 @@ u4Byte Array_MP_8821A_RadioA[] = {
 
 void
 ODM_ReadAndConfig_MP_8821A_RadioA(
- 	IN   PDM_ODM_T  pDM_Odm
- 	)
+	IN   PDM_ODM_T  pDM_Odm
+)
 {
-    u4Byte     i         = 0;
-    u1Byte     cCond;
-    BOOLEAN bMatched = TRUE, bSkipped = FALSE;
-    u4Byte     ArrayLen    = sizeof(Array_MP_8821A_RadioA)/sizeof(u4Byte);
-    pu4Byte    Array       = Array_MP_8821A_RadioA;
+	u4Byte     i         = 0;
+	u1Byte     cCond;
+	BOOLEAN bMatched = TRUE, bSkipped = FALSE;
+	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_RadioA)/sizeof(u4Byte);
+	pu4Byte    Array       = Array_MP_8821A_RadioA;
 	
-    ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8821A_RadioA\n"));
+	u4Byte	v1 = 0, v2 = 0, pre_v1 = 0, pre_v2 = 0;
+
+	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8821A_RadioA\n"));
 
 	while ((i + 1) < ArrayLen) {
-		u4Byte v1 = Array[i];
-		u4Byte v2 = Array[i+1];
+		v1 = Array[i];
+		v2 = Array[i + 1];
 
 		if (v1 & (BIT31 | BIT30)) {/*positive & negative condition*/
 			if (v1 & BIT31) {/* positive condition*/
@@ -910,30 +921,31 @@ ODM_ReadAndConfig_MP_8821A_RadioA(
 					if (bSkipped)
 						bMatched = FALSE;
 					else {
-						if (CheckPositive(pDM_Odm, v1, v2)) {
-							bMatched = TRUE;
-							bSkipped = TRUE;
-						} else {
-							bMatched = FALSE;
-							bSkipped = FALSE;
-						}
+						pre_v1 = v1;
+						pre_v2 = v2;
 					}
 				}
 			} else if (v1 & BIT30) { /*negative condition*/
-			/*do nothing*/
+				if (CheckPositive(pDM_Odm, pre_v1, pre_v2, v1, v2)) {
+					bMatched = TRUE;
+					bSkipped = TRUE;
+				} else {
+					bMatched = FALSE;
+					bSkipped = FALSE;
+				}
 			}
 		} else {
 			if (bMatched)
 				odm_ConfigRF_RadioA_8821A(pDM_Odm, v1, v2);
 		}
-	i = i + 2;
+		i = i + 2;
 	}
 }
 
 u4Byte
 ODM_GetVersion_MP_8821A_RadioA(void)
 {
-	   return 49;
+	   return 52;
 }
 
 /******************************************************************************
@@ -973,8 +985,8 @@ u1Byte gDeltaSwingTableIdx_MP_2GCCKA_P_TxPowerTrack_AP_8821A[] = {0, 0, 1, 1, 2,
 
 void
 ODM_ReadAndConfig_MP_8821A_TxPowerTrack_AP(
- 	IN   PDM_ODM_T  pDM_Odm
- 	)
+	IN   PDM_ODM_T  pDM_Odm
+)
 {
 #if (DM_ODM_SUPPORT_TYPE & (ODM_AP))
 	PODM_RF_CAL_T  pRFCalibrateInfo = &(pDM_Odm->RFCalibrateInfo);
@@ -1036,8 +1048,8 @@ u1Byte gDeltaSwingTableIdx_MP_2GCCKA_P_TxPowerTrack_PCIE_8821A[] = {0, 0, 1, 1, 
 
 void
 ODM_ReadAndConfig_MP_8821A_TxPowerTrack_PCIE(
- 	IN   PDM_ODM_T  pDM_Odm
- 	)
+	IN   PDM_ODM_T  pDM_Odm
+)
 {
 #if DEV_BUS_TYPE == RT_PCI_INTERFACE
 	PODM_RF_CAL_T  pRFCalibrateInfo = &(pDM_Odm->RFCalibrateInfo);
@@ -1099,8 +1111,8 @@ u1Byte gDeltaSwingTableIdx_MP_2GCCKA_P_TxPowerTrack_SDIO_8821A[] = {0, 0, 1, 1, 
 
 void
 ODM_ReadAndConfig_MP_8821A_TxPowerTrack_SDIO(
- 	IN   PDM_ODM_T  pDM_Odm
- 	)
+	IN   PDM_ODM_T  pDM_Odm
+)
 {
 #if DEV_BUS_TYPE == RT_SDIO_INTERFACE
 	PODM_RF_CAL_T  pRFCalibrateInfo = &(pDM_Odm->RFCalibrateInfo);
@@ -1162,8 +1174,8 @@ u1Byte gDeltaSwingTableIdx_MP_2GCCKA_P_TxPowerTrack_USB_8821A[] = {0, 0, 1, 1, 2
 
 void
 ODM_ReadAndConfig_MP_8821A_TxPowerTrack_USB(
- 	IN   PDM_ODM_T  pDM_Odm
- 	)
+	IN   PDM_ODM_T  pDM_Odm
+)
 {
 #if DEV_BUS_TYPE == RT_USB_INTERFACE
 	PODM_RF_CAL_T  pRFCalibrateInfo = &(pDM_Odm->RFCalibrateInfo);
@@ -1192,45 +1204,45 @@ ODM_ReadAndConfig_MP_8821A_TxPowerTrack_USB(
 *                           TXPWR_LMT_8811AU_FEM.TXT
 ******************************************************************************/
 
-pu1Byte Array_MP_8821A_TXPWR_LMT_8811AU_FEM[] = { 
+const char *Array_MP_8821A_TXPWR_LMT_8811AU_FEM[] = { 
 	"FCC", "2.4G", "20M", "CCK", "1T", "01", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "01", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "01", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "01", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "02", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "02", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "02", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "02", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "03", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "03", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "03", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "03", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "04", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "04", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "04", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "04", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "05", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "05", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "05", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "05", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "06", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "06", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "06", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "06", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "07", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "07", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "07", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "07", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "08", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "08", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "08", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "08", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "09", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "09", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "09", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "09", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "10", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "10", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "10", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "10", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "11", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "11", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "11", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "CCK", "1T", "12", "63", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "12", "32", 
+	"FCC", "2.4G", "20M", "CCK", "1T", "12", "28", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "12", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "CCK", "1T", "13", "63", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "13", "32", 
+	"FCC", "2.4G", "20M", "CCK", "1T", "13", "26", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "13", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "14", "63", 
 	"ETSI", "2.4G", "20M", "CCK", "1T", "14", "63", 
@@ -1268,10 +1280,10 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8811AU_FEM[] = {
 	"FCC", "2.4G", "20M", "OFDM", "1T", "11", "32", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "11", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "OFDM", "1T", "12", "63", 
+	"FCC", "2.4G", "20M", "OFDM", "1T", "12", "26", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "12", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "63", 
+	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "24", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "13", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "OFDM", "1T", "14", "63", 
@@ -1310,10 +1322,10 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8811AU_FEM[] = {
 	"FCC", "2.4G", "20M", "HT", "1T", "11", "32", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "11", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "HT", "1T", "12", "63", 
+	"FCC", "2.4G", "20M", "HT", "1T", "12", "26", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "12", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "HT", "1T", "13", "63", 
+	"FCC", "2.4G", "20M", "HT", "1T", "13", "24", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "13", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "HT", "1T", "14", "63", 
@@ -1385,21 +1397,21 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8811AU_FEM[] = {
 	"FCC", "2.4G", "40M", "HT", "1T", "08", "34", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "08", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "08", "32",
-	"FCC", "2.4G", "40M", "HT", "1T", "09", "34", 
+	"FCC", "2.4G", "40M", "HT", "1T", "09", "32", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "09", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "09", "32",
-	"FCC", "2.4G", "40M", "HT", "1T", "10", "34", 
+	"FCC", "2.4G", "40M", "HT", "1T", "10", "24", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "10", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "10", "32",
-	"FCC", "2.4G", "40M", "HT", "1T", "11", "32", 
+	"FCC", "2.4G", "40M", "HT", "1T", "11", "22", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "11", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "11", "32",
 	"FCC", "2.4G", "40M", "HT", "1T", "12", "63", 
-	"ETSI", "2.4G", "40M", "HT", "1T", "12", "32", 
-	"MKK", "2.4G", "40M", "HT", "1T", "12", "32",
+	"ETSI", "2.4G", "40M", "HT", "1T", "12", "63", 
+	"MKK", "2.4G", "40M", "HT", "1T", "12", "63",
 	"FCC", "2.4G", "40M", "HT", "1T", "13", "63", 
-	"ETSI", "2.4G", "40M", "HT", "1T", "13", "32", 
-	"MKK", "2.4G", "40M", "HT", "1T", "13", "32",
+	"ETSI", "2.4G", "40M", "HT", "1T", "13", "63", 
+	"MKK", "2.4G", "40M", "HT", "1T", "13", "63",
 	"FCC", "2.4G", "40M", "HT", "1T", "14", "63", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "14", "63", 
 	"MKK", "2.4G", "40M", "HT", "1T", "14", "63",
@@ -1766,7 +1778,7 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_FEM(
 {
 	u4Byte     i           = 0;
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8811AU_FEM)/sizeof(pu1Byte);
-	pu1Byte    *Array      = Array_MP_8821A_TXPWR_LMT_8811AU_FEM;
+	pu1Byte    *Array      = (pu1Byte *)Array_MP_8821A_TXPWR_LMT_8811AU_FEM;
 
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_FEM\n"));
 
@@ -1788,45 +1800,45 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_FEM(
 *                           TXPWR_LMT_8811AU_IPA.TXT
 ******************************************************************************/
 
-pu1Byte Array_MP_8821A_TXPWR_LMT_8811AU_IPA[] = { 
+const char *Array_MP_8821A_TXPWR_LMT_8811AU_IPA[] = { 
 	"FCC", "2.4G", "20M", "CCK", "1T", "01", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "01", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "01", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "01", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "02", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "02", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "02", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "02", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "03", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "03", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "03", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "03", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "04", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "04", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "04", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "04", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "05", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "05", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "05", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "05", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "06", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "06", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "06", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "06", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "07", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "07", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "07", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "07", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "08", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "08", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "08", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "08", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "09", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "09", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "09", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "09", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "10", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "10", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "10", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "10", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "11", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "11", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "11", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "CCK", "1T", "12", "63", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "12", "32", 
+	"FCC", "2.4G", "20M", "CCK", "1T", "12", "28", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "12", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "CCK", "1T", "13", "63", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "13", "32", 
+	"FCC", "2.4G", "20M", "CCK", "1T", "13", "26", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "13", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "14", "63", 
 	"ETSI", "2.4G", "20M", "CCK", "1T", "14", "63", 
@@ -1864,10 +1876,10 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8811AU_IPA[] = {
 	"FCC", "2.4G", "20M", "OFDM", "1T", "11", "32", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "11", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "OFDM", "1T", "12", "63", 
+	"FCC", "2.4G", "20M", "OFDM", "1T", "12", "26", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "12", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "63", 
+	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "24", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "13", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "OFDM", "1T", "14", "63", 
@@ -1906,10 +1918,10 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8811AU_IPA[] = {
 	"FCC", "2.4G", "20M", "HT", "1T", "11", "32", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "11", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "HT", "1T", "12", "63", 
+	"FCC", "2.4G", "20M", "HT", "1T", "12", "26", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "12", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "HT", "1T", "13", "63", 
+	"FCC", "2.4G", "20M", "HT", "1T", "13", "24", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "13", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "HT", "1T", "14", "63", 
@@ -1981,21 +1993,21 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8811AU_IPA[] = {
 	"FCC", "2.4G", "40M", "HT", "1T", "08", "34", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "08", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "08", "32",
-	"FCC", "2.4G", "40M", "HT", "1T", "09", "34", 
+	"FCC", "2.4G", "40M", "HT", "1T", "09", "32", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "09", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "09", "32",
-	"FCC", "2.4G", "40M", "HT", "1T", "10", "34", 
+	"FCC", "2.4G", "40M", "HT", "1T", "10", "24", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "10", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "10", "32",
-	"FCC", "2.4G", "40M", "HT", "1T", "11", "32", 
+	"FCC", "2.4G", "40M", "HT", "1T", "11", "22", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "11", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "11", "32",
 	"FCC", "2.4G", "40M", "HT", "1T", "12", "63", 
-	"ETSI", "2.4G", "40M", "HT", "1T", "12", "32", 
-	"MKK", "2.4G", "40M", "HT", "1T", "12", "32",
+	"ETSI", "2.4G", "40M", "HT", "1T", "12", "63", 
+	"MKK", "2.4G", "40M", "HT", "1T", "12", "63",
 	"FCC", "2.4G", "40M", "HT", "1T", "13", "63", 
-	"ETSI", "2.4G", "40M", "HT", "1T", "13", "32", 
-	"MKK", "2.4G", "40M", "HT", "1T", "13", "32",
+	"ETSI", "2.4G", "40M", "HT", "1T", "13", "63", 
+	"MKK", "2.4G", "40M", "HT", "1T", "13", "63",
 	"FCC", "2.4G", "40M", "HT", "1T", "14", "63", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "14", "63", 
 	"MKK", "2.4G", "40M", "HT", "1T", "14", "63",
@@ -2362,7 +2374,7 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_IPA(
 {
 	u4Byte     i           = 0;
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8811AU_IPA)/sizeof(pu1Byte);
-	pu1Byte    *Array      = Array_MP_8821A_TXPWR_LMT_8811AU_IPA;
+	pu1Byte    *Array      = (pu1Byte *)Array_MP_8821A_TXPWR_LMT_8811AU_IPA;
 
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_IPA\n"));
 
@@ -2384,45 +2396,45 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_IPA(
 *                           TXPWR_LMT_8821A.TXT
 ******************************************************************************/
 
-pu1Byte Array_MP_8821A_TXPWR_LMT_8821A[] = { 
+const char *Array_MP_8821A_TXPWR_LMT_8821A[] = { 
 	"FCC", "2.4G", "20M", "CCK", "1T", "01", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "01", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "01", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "01", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "02", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "02", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "02", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "02", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "03", "36", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "03", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "03", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "03", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "04", "36", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "04", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "04", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "04", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "05", "36", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "05", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "05", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "05", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "06", "36", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "06", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "06", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "06", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "07", "36", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "07", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "07", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "07", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "08", "36", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "08", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "08", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "08", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "09", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "09", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "09", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "09", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "10", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "10", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "10", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "10", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "11", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "11", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "11", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "CCK", "1T", "12", "63", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "12", "32", 
+	"FCC", "2.4G", "20M", "CCK", "1T", "12", "28", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "12", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "CCK", "1T", "13", "63", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "13", "32", 
+	"FCC", "2.4G", "20M", "CCK", "1T", "13", "26", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "13", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "14", "63", 
 	"ETSI", "2.4G", "20M", "CCK", "1T", "14", "63", 
@@ -2460,10 +2472,10 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8821A[] = {
 	"FCC", "2.4G", "20M", "OFDM", "1T", "11", "30", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "11", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "OFDM", "1T", "12", "63", 
+	"FCC", "2.4G", "20M", "OFDM", "1T", "12", "26", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "12", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "63", 
+	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "24", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "13", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "OFDM", "1T", "14", "63", 
@@ -2502,10 +2514,10 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8821A[] = {
 	"FCC", "2.4G", "20M", "HT", "1T", "11", "26", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "11", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "HT", "1T", "12", "63", 
+	"FCC", "2.4G", "20M", "HT", "1T", "12", "26", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "12", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "HT", "1T", "13", "63", 
+	"FCC", "2.4G", "20M", "HT", "1T", "13", "24", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "13", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "HT", "1T", "14", "63", 
@@ -2580,18 +2592,18 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8821A[] = {
 	"FCC", "2.4G", "40M", "HT", "1T", "09", "26", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "09", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "09", "32",
-	"FCC", "2.4G", "40M", "HT", "1T", "10", "26", 
+	"FCC", "2.4G", "40M", "HT", "1T", "10", "24", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "10", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "10", "32",
-	"FCC", "2.4G", "40M", "HT", "1T", "11", "26", 
+	"FCC", "2.4G", "40M", "HT", "1T", "11", "22", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "11", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "11", "32",
 	"FCC", "2.4G", "40M", "HT", "1T", "12", "63", 
-	"ETSI", "2.4G", "40M", "HT", "1T", "12", "32", 
-	"MKK", "2.4G", "40M", "HT", "1T", "12", "32",
+	"ETSI", "2.4G", "40M", "HT", "1T", "12", "63", 
+	"MKK", "2.4G", "40M", "HT", "1T", "12", "63",
 	"FCC", "2.4G", "40M", "HT", "1T", "13", "63", 
-	"ETSI", "2.4G", "40M", "HT", "1T", "13", "32", 
-	"MKK", "2.4G", "40M", "HT", "1T", "13", "32",
+	"ETSI", "2.4G", "40M", "HT", "1T", "13", "63", 
+	"MKK", "2.4G", "40M", "HT", "1T", "13", "63",
 	"FCC", "2.4G", "40M", "HT", "1T", "14", "63", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "14", "63", 
 	"MKK", "2.4G", "40M", "HT", "1T", "14", "63",
@@ -2958,7 +2970,7 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A(
 {
 	u4Byte     i           = 0;
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8821A)/sizeof(pu1Byte);
-	pu1Byte    *Array      = Array_MP_8821A_TXPWR_LMT_8821A;
+	pu1Byte    *Array      = (pu1Byte *)Array_MP_8821A_TXPWR_LMT_8821A;
 
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A\n"));
 
@@ -2980,45 +2992,45 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A(
 *                           TXPWR_LMT_8821A_SAR_13dBm.TXT
 ******************************************************************************/
 
-const char *Array_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm[] = {
+const char *Array_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm[] = { 
 	"FCC", "2.4G", "20M", "CCK", "1T", "01", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "01", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "01", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "01", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "02", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "02", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "02", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "02", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "03", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "03", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "03", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "03", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "04", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "04", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "04", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "04", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "05", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "05", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "05", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "05", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "06", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "06", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "06", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "06", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "07", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "07", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "07", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "07", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "08", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "08", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "08", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "08", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "09", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "09", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "09", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "09", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "10", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "10", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "10", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "10", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "11", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "11", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "11", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "CCK", "1T", "12", "63", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "12", "32", 
+	"FCC", "2.4G", "20M", "CCK", "1T", "12", "28", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "12", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "CCK", "1T", "13", "63", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "13", "32", 
+	"FCC", "2.4G", "20M", "CCK", "1T", "13", "26", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "13", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "14", "63", 
 	"ETSI", "2.4G", "20M", "CCK", "1T", "14", "63", 
@@ -3056,10 +3068,10 @@ const char *Array_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm[] = {
 	"FCC", "2.4G", "20M", "OFDM", "1T", "11", "30", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "11", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "OFDM", "1T", "12", "63", 
+	"FCC", "2.4G", "20M", "OFDM", "1T", "12", "26", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "12", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "63", 
+	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "24", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "13", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "OFDM", "1T", "14", "63", 
@@ -3098,10 +3110,10 @@ const char *Array_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm[] = {
 	"FCC", "2.4G", "20M", "HT", "1T", "11", "26", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "11", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "HT", "1T", "12", "63", 
+	"FCC", "2.4G", "20M", "HT", "1T", "12", "26", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "12", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "HT", "1T", "13", "63", 
+	"FCC", "2.4G", "20M", "HT", "1T", "13", "24", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "13", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "HT", "1T", "14", "63", 
@@ -3176,18 +3188,18 @@ const char *Array_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm[] = {
 	"FCC", "2.4G", "40M", "HT", "1T", "09", "26", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "09", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "09", "32",
-	"FCC", "2.4G", "40M", "HT", "1T", "10", "26", 
+	"FCC", "2.4G", "40M", "HT", "1T", "10", "24", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "10", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "10", "32",
-	"FCC", "2.4G", "40M", "HT", "1T", "11", "26", 
+	"FCC", "2.4G", "40M", "HT", "1T", "11", "22", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "11", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "11", "32",
 	"FCC", "2.4G", "40M", "HT", "1T", "12", "63", 
-	"ETSI", "2.4G", "40M", "HT", "1T", "12", "32", 
-	"MKK", "2.4G", "40M", "HT", "1T", "12", "32",
+	"ETSI", "2.4G", "40M", "HT", "1T", "12", "63", 
+	"MKK", "2.4G", "40M", "HT", "1T", "12", "63",
 	"FCC", "2.4G", "40M", "HT", "1T", "13", "63", 
-	"ETSI", "2.4G", "40M", "HT", "1T", "13", "32", 
-	"MKK", "2.4G", "40M", "HT", "1T", "13", "32",
+	"ETSI", "2.4G", "40M", "HT", "1T", "13", "63", 
+	"MKK", "2.4G", "40M", "HT", "1T", "13", "63",
 	"FCC", "2.4G", "40M", "HT", "1T", "14", "63", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "14", "63", 
 	"MKK", "2.4G", "40M", "HT", "1T", "14", "63",
@@ -3576,45 +3588,45 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm(
 *                           TXPWR_LMT_8821A_SAR_5mm.TXT
 ******************************************************************************/
 
-pu1Byte Array_MP_8821A_TXPWR_LMT_8821A_SAR_5mm[] = { 
+const char *Array_MP_8821A_TXPWR_LMT_8821A_SAR_5mm[] = { 
 	"FCC", "2.4G", "20M", "CCK", "1T", "01", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "01", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "01", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "01", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "02", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "02", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "02", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "02", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "03", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "03", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "03", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "03", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "04", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "04", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "04", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "04", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "05", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "05", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "05", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "05", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "06", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "06", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "06", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "06", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "07", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "07", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "07", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "07", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "08", "34", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "08", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "08", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "08", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "09", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "09", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "09", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "09", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "10", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "10", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "10", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "10", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "11", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "11", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "11", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "CCK", "1T", "12", "63", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "12", "32", 
+	"FCC", "2.4G", "20M", "CCK", "1T", "12", "28", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "12", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "CCK", "1T", "13", "63", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "13", "32", 
+	"FCC", "2.4G", "20M", "CCK", "1T", "13", "26", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "13", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "14", "63", 
 	"ETSI", "2.4G", "20M", "CCK", "1T", "14", "63", 
@@ -3652,10 +3664,10 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8821A_SAR_5mm[] = {
 	"FCC", "2.4G", "20M", "OFDM", "1T", "11", "30", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "11", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "OFDM", "1T", "12", "63", 
+	"FCC", "2.4G", "20M", "OFDM", "1T", "12", "26", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "12", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "63", 
+	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "24", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "13", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "OFDM", "1T", "14", "63", 
@@ -3691,7 +3703,7 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8821A_SAR_5mm[] = {
 	"FCC", "2.4G", "20M", "HT", "1T", "10", "26", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "10", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "10", "32",
-	"FCC", "2.4G", "20M", "HT", "1T", "11", "26", 
+	"FCC", "2.4G", "20M", "HT", "1T", "11", "24", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "11", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "11", "32",
 	"FCC", "2.4G", "20M", "HT", "1T", "12", "63", 
@@ -3772,18 +3784,18 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8821A_SAR_5mm[] = {
 	"FCC", "2.4G", "40M", "HT", "1T", "09", "26", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "09", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "09", "32",
-	"FCC", "2.4G", "40M", "HT", "1T", "10", "26", 
+	"FCC", "2.4G", "40M", "HT", "1T", "10", "24", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "10", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "10", "32",
-	"FCC", "2.4G", "40M", "HT", "1T", "11", "26", 
+	"FCC", "2.4G", "40M", "HT", "1T", "11", "22", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "11", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "11", "32",
 	"FCC", "2.4G", "40M", "HT", "1T", "12", "63", 
-	"ETSI", "2.4G", "40M", "HT", "1T", "12", "32", 
-	"MKK", "2.4G", "40M", "HT", "1T", "12", "32",
+	"ETSI", "2.4G", "40M", "HT", "1T", "12", "63", 
+	"MKK", "2.4G", "40M", "HT", "1T", "12", "63",
 	"FCC", "2.4G", "40M", "HT", "1T", "13", "63", 
-	"ETSI", "2.4G", "40M", "HT", "1T", "13", "32", 
-	"MKK", "2.4G", "40M", "HT", "1T", "13", "32",
+	"ETSI", "2.4G", "40M", "HT", "1T", "13", "63", 
+	"MKK", "2.4G", "40M", "HT", "1T", "13", "63",
 	"FCC", "2.4G", "40M", "HT", "1T", "14", "63", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "14", "63", 
 	"MKK", "2.4G", "40M", "HT", "1T", "14", "63",
@@ -4150,7 +4162,7 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_5mm(
 {
 	u4Byte     i           = 0;
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8821A_SAR_5mm)/sizeof(pu1Byte);
-	pu1Byte    *Array      = Array_MP_8821A_TXPWR_LMT_8821A_SAR_5mm;
+	pu1Byte    *Array      = (pu1Byte *)Array_MP_8821A_TXPWR_LMT_8821A_SAR_5mm;
 
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_5mm\n"));
 
@@ -4172,45 +4184,45 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_5mm(
 *                           TXPWR_LMT_8821A_SAR_8mm.TXT
 ******************************************************************************/
 
-pu1Byte Array_MP_8821A_TXPWR_LMT_8821A_SAR_8mm[] = { 
+const char *Array_MP_8821A_TXPWR_LMT_8821A_SAR_8mm[] = { 
 	"FCC", "2.4G", "20M", "CCK", "1T", "01", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "01", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "01", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "01", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "02", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "02", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "02", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "02", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "03", "36", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "03", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "03", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "03", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "04", "36", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "04", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "04", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "04", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "05", "36", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "05", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "05", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "05", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "06", "36", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "06", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "06", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "06", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "07", "36", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "07", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "07", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "07", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "08", "36", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "08", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "08", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "08", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "09", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "09", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "09", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "09", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "10", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "10", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "10", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "10", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "11", "32", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "11", "32", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "11", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "CCK", "1T", "12", "63", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "12", "32", 
+	"FCC", "2.4G", "20M", "CCK", "1T", "12", "28", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "12", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "CCK", "1T", "13", "63", 
-	"ETSI", "2.4G", "20M", "CCK", "1T", "13", "32", 
+	"FCC", "2.4G", "20M", "CCK", "1T", "13", "26", 
+	"ETSI", "2.4G", "20M", "CCK", "1T", "13", "28", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "CCK", "1T", "14", "63", 
 	"ETSI", "2.4G", "20M", "CCK", "1T", "14", "63", 
@@ -4248,10 +4260,10 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8821A_SAR_8mm[] = {
 	"FCC", "2.4G", "20M", "OFDM", "1T", "11", "30", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "11", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "OFDM", "1T", "12", "63", 
+	"FCC", "2.4G", "20M", "OFDM", "1T", "12", "26", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "12", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "63", 
+	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "24", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "13", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "OFDM", "1T", "14", "63", 
@@ -4290,10 +4302,10 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8821A_SAR_8mm[] = {
 	"FCC", "2.4G", "20M", "HT", "1T", "11", "26", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "11", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "11", "32",
-	"FCC", "2.4G", "20M", "HT", "1T", "12", "63", 
+	"FCC", "2.4G", "20M", "HT", "1T", "12", "26", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "12", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "12", "32",
-	"FCC", "2.4G", "20M", "HT", "1T", "13", "63", 
+	"FCC", "2.4G", "20M", "HT", "1T", "13", "24", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "13", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "HT", "1T", "14", "63", 
@@ -4368,18 +4380,18 @@ pu1Byte Array_MP_8821A_TXPWR_LMT_8821A_SAR_8mm[] = {
 	"FCC", "2.4G", "40M", "HT", "1T", "09", "26", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "09", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "09", "32",
-	"FCC", "2.4G", "40M", "HT", "1T", "10", "26", 
+	"FCC", "2.4G", "40M", "HT", "1T", "10", "24", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "10", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "10", "32",
-	"FCC", "2.4G", "40M", "HT", "1T", "11", "26", 
+	"FCC", "2.4G", "40M", "HT", "1T", "11", "22", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "11", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "11", "32",
 	"FCC", "2.4G", "40M", "HT", "1T", "12", "63", 
-	"ETSI", "2.4G", "40M", "HT", "1T", "12", "32", 
-	"MKK", "2.4G", "40M", "HT", "1T", "12", "32",
+	"ETSI", "2.4G", "40M", "HT", "1T", "12", "63", 
+	"MKK", "2.4G", "40M", "HT", "1T", "12", "63",
 	"FCC", "2.4G", "40M", "HT", "1T", "13", "63", 
-	"ETSI", "2.4G", "40M", "HT", "1T", "13", "32", 
-	"MKK", "2.4G", "40M", "HT", "1T", "13", "32",
+	"ETSI", "2.4G", "40M", "HT", "1T", "13", "63", 
+	"MKK", "2.4G", "40M", "HT", "1T", "13", "63",
 	"FCC", "2.4G", "40M", "HT", "1T", "14", "63", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "14", "63", 
 	"MKK", "2.4G", "40M", "HT", "1T", "14", "63",
@@ -4746,7 +4758,7 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_8mm(
 {
 	u4Byte     i           = 0;
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8821A_SAR_8mm)/sizeof(pu1Byte);
-	pu1Byte    *Array      = Array_MP_8821A_TXPWR_LMT_8821A_SAR_8mm;
+	pu1Byte    *Array      = (pu1Byte *)Array_MP_8821A_TXPWR_LMT_8821A_SAR_8mm;
 
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_8mm\n"));
 

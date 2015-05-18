@@ -368,6 +368,15 @@ ssize_t proc_set_roam_tgt_addr(struct file *file, const char __user *buffer, siz
 int proc_get_qos_option(struct seq_file *m, void *v);
 int proc_get_ht_option(struct seq_file *m, void *v);
 int proc_get_rf_info(struct seq_file *m, void *v);
+int proc_get_scan_param(struct seq_file *m, void *v);
+ssize_t proc_set_scan_param(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
+int proc_get_scan_abort(struct seq_file *m, void *v);
+#ifdef CONFIG_SCAN_BACKOP
+int proc_get_backop_flags_sta(struct seq_file *m, void *v);
+ssize_t proc_set_backop_flags_sta(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
+int proc_get_backop_flags_ap(struct seq_file *m, void *v);
+ssize_t proc_set_backop_flags_ap(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
+#endif /* CONFIG_SCAN_BACKOP */
 int proc_get_survey_info(struct seq_file *m, void *v);
 ssize_t proc_set_survey_info(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
 int proc_get_ap_info(struct seq_file *m, void *v);
@@ -475,6 +484,12 @@ int proc_get_int_logs(struct seq_file *m, void *v);
 int proc_get_rx_ring(struct seq_file *m, void *v);
 int proc_get_tx_ring(struct seq_file *m, void *v);
 #endif
+
+#ifdef CONFIG_GPIO_WAKEUP
+int proc_get_wowlan_gpio_info(struct seq_file *m, void *v);
+ssize_t proc_set_wowlan_gpio_info(struct file *file, const char __user *buffer,
+		size_t count, loff_t *pos, void *data);
+#endif /*CONFIG_GPIO_WAKEUP*/
 
 #ifdef CONFIG_P2P_WOWLAN
 int proc_get_p2p_wowlan_info(struct seq_file *m, void *v);

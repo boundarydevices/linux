@@ -2182,6 +2182,11 @@ _func_enter_;
 	rtw_register_early_suspend(pwrctrlpriv);
 	#endif //CONFIG_HAS_EARLYSUSPEND || CONFIG_ANDROID_POWER
 
+#ifdef CONFIG_GPIO_WAKEUP
+	/*default low active*/
+	pwrctrlpriv->is_high_active = 0;
+#endif /* CONFIG_GPIO_WAKEUP */
+
 #ifdef CONFIG_WOWLAN
 	pwrctrlpriv->wowlan_pattern_idx = 0;
 	pwrctrlpriv->wowlan_from_cmd = _FALSE;
@@ -2192,14 +2197,15 @@ _func_enter_;
 				sizeof(pwrctrlpriv->patterns[i].mask));
 		pwrctrlpriv->patterns[i].len = 0;
 	}
-#endif
+
 #ifdef CONFIG_PNO_SUPPORT
 	pwrctrlpriv->pno_inited = _FALSE;
 	pwrctrlpriv->pnlo_info = NULL;
 	pwrctrlpriv->pscan_info = NULL;
 	pwrctrlpriv->pno_ssid_list = NULL;
 	pwrctrlpriv->pno_in_resume = _TRUE;
-#endif
+#endif /* CONFIG_PNO_SUPPORT */
+#endif /* CONFIG_WOWLAN */
 
 _func_exit_;
 

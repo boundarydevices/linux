@@ -349,11 +349,15 @@ struct pwrctrl_priv
 	u8		wowlan_mode;
 	u8		wowlan_p2p_mode;
 	u8		wowlan_pno_enable;
+#ifdef CONFIG_GPIO_WAKEUP
+	u8		is_high_active;
+#endif /* CONFIG_GPIO_WAKEUP */
 #ifdef CONFIG_WOWLAN
 	u8		wowlan_txpause_status;
 	u8		wowlan_pattern;
 	u8		wowlan_pattern_idx;
 	u8		wowlan_from_cmd;
+	u64		wowlan_fw_iv;
 	struct rtl_priv_pattern	patterns[MAX_WKFM_NUM];
 #ifdef CONFIG_PNO_SUPPORT
 	u8		pno_in_resume;
@@ -361,9 +365,8 @@ struct pwrctrl_priv
 	pno_nlo_info_t	*pnlo_info;
 	pno_scan_info_t	*pscan_info;
 	pno_ssid_list_t	*pno_ssid_list;
-#endif
-	u64		wowlan_fw_iv;
-#endif // CONFIG_WOWLAN
+#endif /* CONFIG_PNO_SUPPORT */
+#endif /* CONFIG_WOWLAN */
 	_timer 	pwr_state_check_timer;
 	int		pwr_state_check_interval;
 	u8		pwr_state_check_cnts;

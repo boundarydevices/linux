@@ -1757,13 +1757,13 @@ void rtw_scan_wait_completed(_adapter *adapter)
 {
 	u32 scan_to = SCANNING_TIMEOUT;
 
-#ifdef CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
+#ifdef CONFIG_SCAN_BACKOP
 	if (IsSupported5G(adapter->registrypriv.wireless_mode) 
 		&& IsSupported24G(adapter->registrypriv.wireless_mode)) /*dual band*/
 		scan_to = CONC_SCANNING_TIMEOUT_DUAL_BAND;
 	else /*single band*/
 		scan_to = CONC_SCANNING_TIMEOUT_SINGLE_BAND;
-#endif /*CONFIG_STA_MODE_SCAN_UNDER_AP_MODE*/
+#endif /* CONFIG_SCAN_BACKOP */
 
 	_rtw_wait_scan_done(adapter, _FALSE, scan_to);
 }

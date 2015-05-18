@@ -1369,8 +1369,7 @@ static void rtw_ap_check_scan(_adapter *padapter)
 	_enter_critical_bh(&(pmlmepriv->scanned_queue.lock), &irqL);
 	phead = get_list_head(queue);
 	if (rtw_end_of_queue_search(phead, get_next(phead)) == _TRUE)
-		if (padapter->registrypriv.wifi_spec)
-			do_scan = _TRUE;	
+		do_scan = _TRUE;	
 	_exit_critical_bh(&(pmlmepriv->scanned_queue.lock), &irqL);
 
 #ifdef CONFIG_AUTO_CHNL_SEL_NHM

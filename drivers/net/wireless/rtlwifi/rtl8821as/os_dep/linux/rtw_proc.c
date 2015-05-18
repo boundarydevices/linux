@@ -888,6 +888,12 @@ const struct rtw_proc_hdl adapter_proc_hdls [] = {
 	{"qos_option", proc_get_qos_option, NULL},
 	{"ht_option", proc_get_ht_option, NULL},
 	{"rf_info", proc_get_rf_info, NULL},
+	{"scan_param", proc_get_scan_param, proc_set_scan_param},
+	{"scan_abort", proc_get_scan_abort, NULL},	
+#ifdef CONFIG_SCAN_BACKOP
+	{"backop_flags_sta", proc_get_backop_flags_sta, proc_set_backop_flags_sta},
+	{"backop_flags_ap", proc_get_backop_flags_ap, proc_set_backop_flags_ap},
+#endif
 	{"survey_info", proc_get_survey_info, proc_set_survey_info},
 	{"ap_info", proc_get_ap_info, NULL},
 	{"trx_info", proc_get_trx_info, proc_reset_trx_info},
@@ -976,6 +982,10 @@ const struct rtw_proc_hdl adapter_proc_hdls [] = {
 #ifdef CONFIG_PCI_HCI
 	{"rx_ring", proc_get_rx_ring, NULL},
 	{"tx_ring", proc_get_tx_ring, NULL},
+#endif
+#ifdef CONFIG_GPIO_WAKEUP
+	{"wowlan_gpio_info", proc_get_wowlan_gpio_info,
+		proc_set_wowlan_gpio_info},
 #endif
 #ifdef CONFIG_P2P_WOWLAN
 	{"p2p_wowlan_info", proc_get_p2p_wowlan_info, NULL},

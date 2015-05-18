@@ -375,6 +375,11 @@ ODM_SW_AntDiv_WorkitemCallback(
 #elif (DM_ODM_SUPPORT_TYPE == ODM_CE)
 
 VOID
+ODM_SW_AntDiv_WorkitemCallback(
+	IN PVOID	pContext
+);
+
+VOID
 ODM_SW_AntDiv_Callback(
 	void 		*FunctionContext
 	);
