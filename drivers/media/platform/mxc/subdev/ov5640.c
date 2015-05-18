@@ -1650,6 +1650,24 @@ static int ov5640_enum_frameintervals(struct v4l2_subdev *sd,
 	return -EINVAL;
 }
 
+static int ov5640_set_clk_rate(void)
+{
+	u32 tgt_xclk;	/* target xclk */
+	int ret;
+
+	/* mclk */
+	tgt_xclk = ov5640_data.mclk;
+	tgt_xclk = min(tgt_xclk, (u32)OV5640_XCLK_MAX);
+	tgt_xclk = max(tgt_xclk, (u32)OV5640_XCLK_MIN);
+	ov5640_data.mclk = tgt_xclk;
+
+	pr_debug("   Setting mclk to %d MHz\n", tgt_xclk / 1000000);
+	ret = clk_set_rate(ov5640_data.sensor_clk, ov5640_data.mclk);
+	if (ret < 0)
+		pr_debug("set rate filed, rate=%d\n", ov5640_data.mclk);
+	return ret;
+}
+
 /*!
  * dev_init - V4L2 sensor init
  * @s: pointer to standard V4L2 device structure
@@ -1666,12 +1684,6 @@ static int init_device(void)
 
 	/* mclk */
 	tgt_xclk = ov5640_data.mclk;
-	tgt_xclk = min(tgt_xclk, (u32)OV5640_XCLK_MAX);
-	tgt_xclk = max(tgt_xclk, (u32)OV5640_XCLK_MIN);
-	ov5640_data.mclk = tgt_xclk;
-
-	pr_debug("   Setting mclk to %d MHz\n", tgt_xclk / 1000000);
-	clk_set_rate(ov5640_data.sensor_clk, ov5640_data.mclk);
 
 	/* Default camera frame rate is set in probe */
 	tgt_fps = ov5640_data.streamcap.timeperframe.denominator /
@@ -1785,6 +1797,9 @@ static int ov5640_probe(struct i2c_client *client,
 		dev_err(dev, "csi_id invalid\n");
 		return retval;
 	}
+
+	/* Set mclk rate before clk on */
+	ov5640_set_clk_rate();
 
 	clk_prepare_enable(ov5640_data.sensor_clk);
 
