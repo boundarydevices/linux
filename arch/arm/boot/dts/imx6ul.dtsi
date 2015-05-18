@@ -870,15 +870,16 @@
 				status = "disabled";
                         };
 
-			adc2: adc@0219c000 {
-				compatible = "fsl,imx6ul-adc", "fsl,vf610-adc";
-				reg = <0x0219c000 0x4000>;
-				interrupts = <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX6UL_CLK_DUMMY>;
-				num-channels = <4>;
-				clock-names = "adc";
+			tsc: tsc@02040000 {
+				compatible = "fsl,imx6ul-tsc";
+				reg = <0x02040000 0x4000>, <0x0219c000 0x4000>;
+				interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
+					     <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX6UL_CLK_IPG>,
+					 <&clks IMX6UL_CLK_ADC2>;
+				clock-names = "tsc", "adc";
 				status = "disabled";
-                        };
+			};
 
 			i2c1: i2c@021a0000 {
 				#address-cells = <1>;
