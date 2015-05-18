@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 ARM Limited
  * Copyright (C) 2000 Deep Blue Solutions Ltd
- * Copyright 2006-2015 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2006-2015 Freescale Semiconductor, Inc.
  * Copyright 2008 Juergen Beisert, kernel@pengutronix.de
  * Copyright 2009 Ilya Yanok, Emcraft Systems Ltd, yanok@emcraft.com
  *
@@ -57,7 +57,8 @@ void mxc_restart(enum reboot_mode mode, const char *cmd)
 	 * workaround qspi-nor reboot issue whatever ldo-bypass or not.
 	 */
 	else if ((wdog_source == 2 && (cpu_is_imx6q() || cpu_is_imx6dl() ||
-			cpu_is_imx6sl())) || cpu_is_imx6sx() || cpu_is_imx7d())
+			cpu_is_imx6sl())) || cpu_is_imx6sx() || cpu_is_imx7d()
+			|| cpu_is_imx6ul())
 		wcr_enable = 0x14;
 	else
 		wcr_enable = (1 << 2);

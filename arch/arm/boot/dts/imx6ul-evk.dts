@@ -331,7 +331,15 @@
 };
 
 &iomuxc {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hog_1>;
 	imx6ul-evk {
+		pinctrl_hog_1: hoggrp-1 {
+			fsl,pins = <
+				MX6UL_PAD_LCD_RESET__WDOG1_WDOG_ANY    0x30b0
+			>;
+		};
+
 		pinctrl_enet1: enet1grp {
 			fsl,pins = <
 				MX6UL_PAD_ENET1_RX_EN__ENET1_RX_EN	0x1b0b0
