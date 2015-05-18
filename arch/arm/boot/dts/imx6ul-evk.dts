@@ -231,6 +231,18 @@
 	status = "okay";
 };
 
+&sim2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sim2_1>;
+	assigned-clocks = <&clks IMX6UL_CLK_SIM_SEL>;
+	assigned-clock-parents = <&clks IMX6UL_CLK_SIM_PODF>;
+	assigned-clock-rates = <240000000>;
+	pinctrl-assert-gpios = <&gpio4 23 GPIO_ACTIVE_LOW>;
+	port = <1>;
+	sven_low_active;
+	status = "okay";
+};
+
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
@@ -405,6 +417,17 @@
 		pinctrl_pwm1: pwm1grp {
 			fsl,pins = <
 				MX6UL_PAD_GPIO1_IO08__PWM1_OUT   0x110b0
+			>;
+		};
+
+		pinctrl_sim2_1: sim2grp-1 {
+			fsl,pins = <
+				MX6UL_PAD_CSI_DATA03__SIM2_PORT1_PD		0xb808
+				MX6UL_PAD_CSI_DATA04__SIM2_PORT1_CLK		0x31
+				MX6UL_PAD_CSI_DATA05__SIM2_PORT1_RST_B		0xb808
+				MX6UL_PAD_CSI_DATA06__SIM2_PORT1_SVEN		0xb808
+				MX6UL_PAD_CSI_DATA07__SIM2_PORT1_TRXD		0xb809
+				MX6UL_PAD_CSI_DATA02__GPIO4_IO23		0x3008
 			>;
 		};
 
