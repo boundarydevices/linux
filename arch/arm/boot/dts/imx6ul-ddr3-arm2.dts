@@ -425,6 +425,15 @@
 			>;
 		};
 
+		pinctrl_tsc: tscgrp {
+			fsl,pin = <
+				MX6UL_PAD_GPIO1_IO01__GPIO1_IO01	0xb0
+				MX6UL_PAD_GPIO1_IO02__GPIO1_IO02	0xb0
+				MX6UL_PAD_GPIO1_IO03__GPIO1_IO03	0xb0
+				MX6UL_PAD_GPIO1_IO04__GPIO1_IO04	0xb0
+			>;
+		};
+
 		pinctrl_i2c1: i2c1grp {
 			fsl,pin = <
 				MX6UL_PAD_GPIO1_IO03__I2C1_SDA	0x4001b8b1
