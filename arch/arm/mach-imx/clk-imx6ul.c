@@ -379,8 +379,8 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	clks[IMX6UL_CLK_USBOH3]		= imx_clk_gate2("usboh3",	"ipg",		 base + 0x80,	0);
 	clks[IMX6UL_CLK_USDHC1]		= imx_clk_gate2("usdhc1",	"usdhc1_podf",	 base + 0x80,	2);
 	clks[IMX6UL_CLK_USDHC2]		= imx_clk_gate2("usdhc2",	"usdhc2_podf",	 base + 0x80,	4);
-	clks[IMX6UL_CLK_BCH]		= imx_clk_gate2("bch",		"bch_podf",	 base + 0x80,	6);
-	clks[IMX6UL_CLK_GPMI]		= imx_clk_gate2("gpmi",		"gpmi_podf",	 base + 0x80,	8);
+	clks[IMX6UL_CLK_SIM1]		= imx_clk_gate2("sim1",		"sim_sel",	 base + 0x80,	6);
+	clks[IMX6UL_CLK_SIM2]		= imx_clk_gate2("sim2",		"sim_sel",	 base + 0x80,	8);
 	clks[IMX6UL_CLK_EIM]		= imx_clk_gate2("eim",		"eim_slow_podf", base + 0x80,	10);
 	clks[IMX6UL_CLK_PWM8]		= imx_clk_gate2("pwm8",		"perclk",	 base + 0x80,	16);
 	clks[IMX6UL_CLK_WDOG3]		= imx_clk_gate2("wdog3",	"ipg",		 base + 0x80,	20);
@@ -414,6 +414,7 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	}
 
 	imx_clk_set_parent(clks[IMX6UL_CLK_CAN_SEL], clks[IMX6UL_CLK_PLL3_60M]);
+	imx_clk_set_parent(clks[IMX6UL_CLK_SIM_PRE_SEL], clks[IMX6UL_CLK_PLL3_USB_OTG]);
 
 	/* Set initial power mode */
 	imx6q_set_lpm(WAIT_CLOCKED);
