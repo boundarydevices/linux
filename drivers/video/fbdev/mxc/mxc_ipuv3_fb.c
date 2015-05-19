@@ -3768,6 +3768,7 @@ static int mxcfb_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto init_fbinfo_failed;
 	}
+	bpp_to_var(plat_data->default_bpp, &fbi->var);
 
 	ret = mxcfb_option_setup(pdev, fbi);
 	if (ret)
