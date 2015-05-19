@@ -308,15 +308,17 @@ static void det_worker(struct work_struct *work)
 		dev_dbg(&sii902x.client->dev, "EVENT=plugin\n");
 		sprintf(event_string, "EVENT=plugin");
 		sii902x_cable_connected();
-
+#ifdef CONFIG_SWITCH
 		switch_set_state(&sii902x.sdev_audio, 1);
-
+#endif
 	} else {
 		sii902x.cable_plugin = 0;
 		dev_dbg(&sii902x.client->dev, "EVENT=plugout\n");
 		sprintf(event_string, "EVENT=plugout");
 		/* Power off sii902x */
+#ifdef CONFIG_SWITCH
 		switch_set_state(&sii902x.sdev_audio, 0);
+#endif
 		sii902x_poweroff();
 	}
 	kobject_uevent_env(&sii902x.client->dev.kobj, KOBJ_CHANGE, envp);
@@ -479,15 +481,17 @@ static int sii902x_probe(struct i2c_client *client,
 	fb_register_client(&nb);
 
 	sii902x.sdev_audio.name = "hdmi_audio";
+#ifdef CONFIG_SWITCH
 	switch_dev_register(&sii902x.sdev_audio);
-
+#endif
 	return 0;
 }
 
 static int sii902x_remove(struct i2c_client *client)
 {
+#ifdef CONFIG_SWITCH
 	switch_dev_unregister(&sii902x.sdev_audio);
-
+#endif
 	fb_unregister_client(&nb);
 	sii902x_poweroff();
 

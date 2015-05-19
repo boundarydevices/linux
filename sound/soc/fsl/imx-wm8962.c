@@ -111,13 +111,17 @@ static int hpjack_status_check(void)
 
 	if (hp_status != priv->hp_active_low) {
 		snprintf(buf, 32, "STATE=%d", 2);
+#ifdef CONFIG_SWITCH
 		switch_set_state(&priv->sdev, 2);
+#endif
 		snd_soc_dapm_disable_pin(&priv->codec->dapm, "Ext Spk");
 		ret = imx_hp_jack_gpio.report;
 		snd_kctl_jack_report(priv->snd_card, priv->headphone_kctl, 1);
 	} else {
 		snprintf(buf, 32, "STATE=%d", 0);
+#ifdef CONFIG_SWITCH
 		switch_set_state(&priv->sdev, 0);
+#endif
 		snd_soc_dapm_enable_pin(&priv->codec->dapm, "Ext Spk");
 		ret = 0;
 		snd_kctl_jack_report(priv->snd_card, priv->headphone_kctl, 0);
@@ -632,7 +636,9 @@ audmux_bypass:
 	snd_soc_card_set_drvdata(&data->card, data);
 
 	priv->sdev.name = "h2w";
+#ifdef CONFIG_SWITCH
 	ret = switch_dev_register(&priv->sdev);
+#endif
 	if (ret < 0) {
 		ret = -EINVAL;
 		goto fail;
@@ -689,8 +695,9 @@ static int imx_wm8962_remove(struct platform_device *pdev)
 
 	driver_remove_file(pdev->dev.driver, &driver_attr_microphone);
 	driver_remove_file(pdev->dev.driver, &driver_attr_headphone);
-
+#ifdef CONFIG_SWITCH
 	switch_dev_unregister(&priv->sdev);
+#endif
 	return 0;
 }
 

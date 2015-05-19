@@ -2671,7 +2671,6 @@ static int mxcfb_suspend(struct platform_device *pdev, pm_message_t state)
 #ifdef CONFIG_FB_MXC_LOW_PWR_DISPLAY
 	void *fbmem;
 #endif
-
 	if (mxc_fbi->ovfbi) {
 		struct mxcfb_info *mxc_fbi_fg =
 			(struct mxcfb_info *)mxc_fbi->ovfbi->par;
