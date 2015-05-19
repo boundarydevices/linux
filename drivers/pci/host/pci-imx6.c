@@ -46,6 +46,7 @@
 static u32 ddr_test_region = 0, test_region_size = SZ_2M;
 
 struct imx6_pcie {
+	int			dis_gpio;
 	int			reset_gpio;
 	int			power_on_gpio;
 	struct clk		*pcie_bus;
@@ -1261,6 +1262,16 @@ static int __init imx6_pcie_probe(struct platform_device *pdev)
 		return PTR_ERR(pp->dbi_base);
 
 	/* Fetch GPIOs */
+	imx6_pcie->dis_gpio = of_get_named_gpio(np, "disable-gpio", 0);
+	if (gpio_is_valid(imx6_pcie->dis_gpio)) {
+		ret = devm_gpio_request_one(&pdev->dev, imx6_pcie->dis_gpio,
+					    GPIOF_OUT_INIT_HIGH, "PCIe DIS");
+		if (ret) {
+			dev_err(&pdev->dev, "unable to get disable gpio\n");
+			return ret;
+		}
+	}
+
 	imx6_pcie->reset_gpio = of_get_named_gpio(np, "reset-gpio", 0);
 	if (gpio_is_valid(imx6_pcie->reset_gpio)) {
 		ret = devm_gpio_request_one(&pdev->dev, imx6_pcie->reset_gpio,
