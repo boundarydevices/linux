@@ -1067,6 +1067,12 @@ static void dma_rx_callback(void *data)
 		return;
 	}
 
+	if (readl(sport->port.membase + USR2) & USR2_IDLE) {
+		/* In condition [3] the SDMA counted up too early */
+		count--;
+		writel(USR2_IDLE, sport->port.membase + USR2);
+	}
+
 	count = RX_BUF_SIZE - state.residue;
 	sport->rx_buf.buf_info[sport->rx_buf.cur_idx].filled = true;
 	sport->rx_buf.buf_info[sport->rx_buf.cur_idx].rx_bytes = count;
