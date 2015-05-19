@@ -37,15 +37,15 @@
 	};
 };
 
-&mxcfb1 {
+&lcd_display {
 	status = "okay";
 };
 
-&mxcfb2 {
+&hdmi_display {
 	status = "okay";
 };
 
-&mxcfb3 {
+&lvds_display {
 	status = "okay";
 };
 
