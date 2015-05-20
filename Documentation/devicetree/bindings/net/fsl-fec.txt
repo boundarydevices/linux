@@ -47,6 +47,9 @@ Optional properties:
   For imx6sx, "int0" handles all 3 queues and ENET_MII. "pps" is for the pulse
   per second interrupt associated with 1588 precision time protocol(PTP).
 
+- fsl,wakeup_irq : The property define the wakeup irq index in enet irq source.
+- stop-mode : If present, indicates soc need to set gpr bit to request stop
+  mode.
 
 Optional subnodes:
 - mdio : specifies the mdio bus in the FEC, used as a container for phy nodes
