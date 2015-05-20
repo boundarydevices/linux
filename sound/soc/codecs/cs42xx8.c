@@ -1,7 +1,7 @@
 /*
  * Cirrus Logic CS42448/CS42888 Audio CODEC Digital Audio Interface (DAI) driver
  *
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  *
  * Author: Nicolin Chen <Guangyu.Chen@freescale.com>
  *
@@ -664,6 +664,7 @@ static int cs42xx8_runtime_suspend(struct device *dev)
 {
 	struct cs42xx8_priv *cs42xx8 = dev_get_drvdata(dev);
 
+	regcache_mark_dirty(cs42xx8->regmap);
 	regcache_cache_only(cs42xx8->regmap, true);
 
 	regulator_bulk_disable(ARRAY_SIZE(cs42xx8->supplies),
