@@ -504,8 +504,11 @@
 					 <&clks IMX6UL_CLK_ENET2_REF_125M>;
 				clock-names = "ipg", "ahb", "ptp",
 					      "enet_clk_ref", "enet_out";
+				stop-mode = <&gpr 0x10 4>;
 				fsl,num-tx-queues=<1>;
 				fsl,num-rx-queues=<1>;
+				fsl,magic-packet;
+				fsl,wakeup_irq = <0>;
 				status = "disabled";
 			};
 
@@ -668,7 +671,7 @@
 				compatible = "fsl,imx6ul-gpc", "fsl,imx6q-gpc";
 				reg = <0x020dc000 0x4000>;
 				interrupts = <GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>;
-				fsl,mf-mix-wakeup-irq = <0x7c00000 0x3d00 0x0 0x400240>;
+				fsl,mf-mix-wakeup-irq = <0x7c00000 0x3d00 0x0 0x1400240>;
 				#power-domain-cells = <1>;
 			};
 
@@ -818,8 +821,11 @@
 					 <&clks IMX6UL_CLK_ENET_REF>;
 				clock-names = "ipg", "ahb", "ptp",
 					      "enet_clk_ref", "enet_out";
+				stop-mode = <&gpr 0x10 3>;
 				fsl,num-tx-queues=<1>;
 				fsl,num-rx-queues=<1>;
+				fsl,magic-packet;
+				fsl,wakeup_irq = <0>;
 				status = "disabled";
                         };
 
