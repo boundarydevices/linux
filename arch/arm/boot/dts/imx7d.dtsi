@@ -1095,6 +1095,7 @@
 				clocks = <&clks IMX7D_USB_CTRL_CLK>;
 				fsl,usbphy = <&usbphy_nop1>;
 				fsl,usbmisc = <&usbmisc1 0>;
+				phy-clkgate-delay-us = <400>;
 				status = "disabled";
 			};
 
@@ -1105,6 +1106,7 @@
 				clocks = <&clks IMX7D_USB_CTRL_CLK>;
 				fsl,usbphy = <&usbphy_nop2>;
 				fsl,usbmisc = <&usbmisc2 0>;
+				phy-clkgate-delay-us = <400>;
 				status = "disabled";
 			};
 
@@ -1117,6 +1119,7 @@
 				fsl,usbmisc = <&usbmisc3 0>;
 				phy_type = "hsic";
 				dr_mode = "host";
+				phy-clkgate-delay-us = <400>;
 				status = "disabled";
 			};
 
