@@ -23,6 +23,9 @@
 #include "clk.h"
 #include "common.h"
 
+#define BM_CCM_CCDR_MMDC_CH0_MASK	(0x2 << 16)
+#define CCDR	0x4
+
 static const char *pll_bypass_src_sels[] = { "osc", "dummy", };
 static const char *pll1_bypass_sels[] = { "pll1", "pll1_bypass_src", };
 static const char *pll2_bypass_sels[] = { "pll2", "pll2_bypass_src", };
@@ -343,9 +346,9 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	clks[IMX6UL_CLK_LCDIF_PIX]	= imx_clk_gate2("lcdif_pix",	"lcdif_podf",	base + 0x74,	10);
 	clks[IMX6UL_CLK_QSPI]		= imx_clk_gate2("qspi1",	"qspi1_podf",	base + 0x74,	14);
 	clks[IMX6UL_CLK_WDOG1]		= imx_clk_gate2("wdog1",	"ipg",		base + 0x74,	16);
-	clks[IMX6UL_CLK_MMDC_P0_FAST]	= imx_clk_gate2("mmdc_p0_fast",	"mmdc_podf",	base + 0x74,	20);
+	clks[IMX6UL_CLK_MMDC_P0_FAST]	= imx_clk_busy_gate("mmdc_p0_fast", "mmdc_podf", base + 0x74,	20);
 	clks[IMX6UL_CLK_MMDC_P0_IPG]	= imx_clk_gate2("mmdc_p0_ipg",	"ipg",		base + 0x74,	24);
-	clks[IMX6UL_CLK_AXI]		= imx_clk_gate2("axi",		"axi_podf",	base + 0x74,	28);
+	clks[IMX6UL_CLK_AXI]		= imx_clk_busy_gate("axi",	"axi_podf",	base + 0x74,	28);
 
 	/* CCGR4 */
 	clks[IMX6UL_CLK_PWM1]		= imx_clk_gate2("pwm1",		"perclk",	base + 0x78,	16);
@@ -388,6 +391,9 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	clks[IMX6UL_CLK_PWM5]		= imx_clk_gate2("pwm5",		"perclk",	 base + 0x80,	26);
 	clks[IMX6UL_CLK_PWM6]		= imx_clk_gate2("pwm6",		"perclk",	 base +	0x80,	28);
 	clks[IMX6UL_CLK_PWM7]		= imx_clk_gate2("Pwm7",		"perclk",	 base + 0x80,	30);
+
+	/* mask handshake of mmdc */
+	writel_relaxed(BM_CCM_CCDR_MMDC_CH0_MASK, base + CCDR);
 
 	for (i = 0; i < ARRAY_SIZE(clks); i++)
 		if (IS_ERR(clks[i]))
