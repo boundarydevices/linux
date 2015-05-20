@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,8 +15,8 @@
 #include <linux/linkage.h>
 #include "hardware.h"
 
-.globl imx6sx_ddr3_freq_change_start
-.globl imx6sx_ddr3_freq_change_end
+.globl imx6_up_ddr3_freq_change_start
+.globl imx6_up_ddr3_freq_change_end
 
 #define MMDC0_MDPDC		0x4
 #define MMDC0_MDCF0		0xc
@@ -46,6 +46,18 @@
 .extern iram_tlb_phys_addr
 
 	.align 3
+
+	/* Check if the cpu is cortex-a7 */
+	.macro is_ca7
+
+	/* Read the primary cpu number is MPIDR */
+	mrc	p15, 0, r7, c0, c0, 0
+	ldr	r8, =0xfff0
+	and	r7, r7, r8
+	ldr	r8, =0xc070
+	cmp	r7, r8
+
+	.endm
 
 	.macro do_delay
 
@@ -160,15 +172,16 @@ skip_periph2_clk2_switch_50m:
 	.endm
 
 /*
- *  imx6sx_ddr3_freq_change
+ *  imx6_up_ddr3_freq_change
+ *  Below code can be used by i.MX6SX and i.MX6UL.
  *
  *  idle the processor (eg, wait for interrupt).
  *  make sure DDR is in self-refresh.
  *  IRQs are already disabled.
  */
-ENTRY(imx6sx_ddr3_freq_change)
+ENTRY(imx6_up_ddr3_freq_change)
 
-imx6sx_ddr3_freq_change_start:
+imx6_up_ddr3_freq_change_start:
 	stmfd	sp!, {r4 - r11}
 
 	ldr	r1, [r0, #BUSFREQ_INFO_DDR_SETTINGS_OFFSET]
@@ -230,6 +243,9 @@ imx6sx_ddr3_freq_change_start:
 	ldr	r5, =IMX_IO_P2V(MX6Q_CCM_BASE_ADDR)
 	ldr	r6, =IMX_IO_P2V(MX6Q_IOMUXC_BASE_ADDR)
 
+	is_ca7
+	beq	skip_disable_l2
+
 #ifdef CONFIG_CACHE_L2X0
 	/*
 	 * make sure the L2 buffers are drained,
@@ -258,6 +274,7 @@ wait_for_l2_to_idle:
 	isb
 #endif
 
+skip_disable_l2:
 	/* disable automatic power saving. */
 	ldr	r8, [r4, #MMDC0_MAPSR]
 	orr	r8, r8, #0x1
@@ -660,6 +677,9 @@ done:
 	bic	r8, r8, #0x01
 	str	r8, [r4, #MMDC0_MAPSR]
 
+	is_ca7
+	beq	skip_enable_l2
+
 #ifdef CONFIG_CACHE_L2X0
 	/* Enable L2. */
 	ldr	r8, =IMX_IO_P2V(MX6Q_L2_BASE_ADDR)
@@ -667,6 +687,7 @@ done:
 	str	r7, [r8, #0x100]
 #endif
 
+skip_enable_l2:
 	/* Enable L1 data cache. */
 	mrc	p15, 0, r7, c1, c0, 0
 	orr	r7, r7, #0x4
@@ -710,5 +731,5 @@ done:
 	 * within the text space.
 	 */
 	.ltorg
-imx6sx_ddr3_freq_change_end:
-ENDPROC(imx6sx_ddr3_freq_change)
+imx6_up_ddr3_freq_change_end:
+ENDPROC(imx6_up_ddr3_freq_change)

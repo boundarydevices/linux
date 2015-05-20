@@ -70,10 +70,10 @@ extern int unsigned long iram_tlb_base_addr;
 
 extern int init_mmdc_lpddr2_settings(struct platform_device *dev);
 extern int init_mmdc_ddr3_settings_imx6q(struct platform_device *dev);
-extern int init_mmdc_ddr3_settings_imx6sx(struct platform_device *dev);
+extern int init_mmdc_ddr3_settings_imx6_up(struct platform_device *dev);
 extern int init_ddrc_ddr_settings(struct platform_device *dev);
 extern int update_ddr_freq_imx_smp(int ddr_rate);
-extern int update_ddr_freq_imx6sx(int ddr_rate);
+extern int update_ddr_freq_imx6_up(int ddr_rate);
 extern int update_lpddr2_freq(int ddr_rate);
 
 DEFINE_MUTEX(bus_freq_mutex);
@@ -199,9 +199,13 @@ static void exit_lpm_imx7d(void)
 	clk_set_parent(dram_root, pll_dram);
 }
 
-static void enter_lpm_imx6sx(void)
+/*
+ * enter_lpm_imx6_up and exit_lpm_imx6_up is used by
+ * i.MX6SX/i.MX6UL for entering and exiting lpm mode.
+ */
+static void enter_lpm_imx6_up(void)
 {
-	if (imx_src_is_m4_enabled())
+	if (cpu_is_imx6sx() && imx_src_is_m4_enabled())
 		if (!check_m4_sleep())
 			pr_err("M4 is NOT in sleep!!!\n");
 
@@ -216,7 +220,7 @@ static void enter_lpm_imx6sx(void)
 		/* Need to ensure that PLL2_PFD_400M is kept ON. */
 		clk_prepare_enable(pll2_400);
 		if (ddr_type == MMDC_MDMISC_DDR_TYPE_DDR3)
-			update_ddr_freq_imx6sx(LOW_AUDIO_CLK);
+			update_ddr_freq_imx6_up(LOW_AUDIO_CLK);
 		else if (ddr_type == MMDC_MDMISC_DDR_TYPE_LPDDR2)
 			update_lpddr2_freq(HIGH_AUDIO_CLK);
 		imx_clk_set_parent(periph2_clk2_sel, pll3);
@@ -242,7 +246,7 @@ static void enter_lpm_imx6sx(void)
 		cur_bus_freq_mode = BUS_FREQ_AUDIO;
 	} else {
 		if (ddr_type == MMDC_MDMISC_DDR_TYPE_DDR3)
-			update_ddr_freq_imx6sx(LPAPM_CLK);
+			update_ddr_freq_imx6_up(LPAPM_CLK);
 		else if (ddr_type == MMDC_MDMISC_DDR_TYPE_LPDDR2)
 			update_lpddr2_freq(LPAPM_CLK);
 		imx_clk_set_parent(periph2_clk2_sel, osc_clk);
@@ -256,7 +260,7 @@ static void enter_lpm_imx6sx(void)
 	}
 }
 
-static void exit_lpm_imx6sx(void)
+static void exit_lpm_imx6_up(void)
 {
 	clk_prepare_enable(pll2_400);
 
@@ -273,7 +277,7 @@ static void exit_lpm_imx6sx(void)
 	imx_clk_set_parent(periph_clk, periph_pre_clk);
 
 	if (ddr_type == MMDC_MDMISC_DDR_TYPE_DDR3)
-		update_ddr_freq_imx6sx(ddr_normal_rate);
+		update_ddr_freq_imx6_up(ddr_normal_rate);
 	else if (ddr_type == MMDC_MDMISC_DDR_TYPE_LPDDR2)
 		update_lpddr2_freq(ddr_normal_rate);
 	/* correct parent info after ddr freq change in asm code */
@@ -486,8 +490,8 @@ static void reduce_bus_freq(void)
 		enter_lpm_imx7d();
 	else if (cpu_is_imx6sl())
 		enter_lpm_imx6sl();
-	else if (cpu_is_imx6sx())
-		enter_lpm_imx6sx();
+	else if (cpu_is_imx6sx() || cpu_is_imx6ul())
+		enter_lpm_imx6_up();
 	else {
 		if (cpu_is_imx6dl())
 			/* Set axi to periph_clk */
@@ -612,8 +616,8 @@ static int set_high_bus_freq(int high_bus_freq)
 		exit_lpm_imx7d();
 	else if (cpu_is_imx6sl())
 		exit_lpm_imx6sl();
-	else if (cpu_is_imx6sx())
-		exit_lpm_imx6sx();
+	else if (cpu_is_imx6sx() || cpu_is_imx6ul())
+		exit_lpm_imx6_up();
 	else {
 		if (high_bus_freq) {
 			clk_prepare_enable(pll2_400);
@@ -1057,7 +1061,7 @@ static int busfreq_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (cpu_is_imx6sl() || cpu_is_imx6sx()) {
+	if (cpu_is_imx6sl() || cpu_is_imx6sx() || cpu_is_imx6ul()) {
 		ahb_clk = devm_clk_get(&pdev->dev, "ahb");
 		if (IS_ERR(ahb_clk)) {
 			dev_err(busfreq_dev, "%s: failed to get ahb_clk\n",
@@ -1168,7 +1172,7 @@ static int busfreq_probe(struct platform_device *pdev)
 			return PTR_ERR(pll2_bypass);
 		}
 	}
-	if (cpu_is_imx6sx()) {
+	if (cpu_is_imx6sx() || cpu_is_imx6ul()) {
 		mmdc_clk = devm_clk_get(&pdev->dev, "mmdc");
 		if (IS_ERR(mmdc_clk)) {
 			dev_err(busfreq_dev,
@@ -1176,6 +1180,8 @@ static int busfreq_probe(struct platform_device *pdev)
 				__func__);
 			return PTR_ERR(mmdc_clk);
 		}
+	}
+	if (cpu_is_imx6sx()) {
 		m4_clk = devm_clk_get(&pdev->dev, "m4");
 		if (IS_ERR(m4_clk)) {
 			dev_err(busfreq_dev,
@@ -1268,19 +1274,22 @@ static int busfreq_probe(struct platform_device *pdev)
 		err = init_ddrc_ddr_settings(pdev);
 	} else if (cpu_is_imx6sl()) {
 		err = init_mmdc_lpddr2_settings(pdev);
-	} else if (cpu_is_imx6sx()) {
+	} else if (cpu_is_imx6sx() || cpu_is_imx6ul()) {
 		ddr_type = imx_mmdc_get_ddr_type();
 		/* check whether it is a DDR3 or LPDDR2 board */
 		if (ddr_type == MMDC_MDMISC_DDR_TYPE_DDR3)
-			err = init_mmdc_ddr3_settings_imx6sx(pdev);
+			err = init_mmdc_ddr3_settings_imx6_up(pdev);
 		else if (ddr_type == MMDC_MDMISC_DDR_TYPE_LPDDR2)
 			err = init_mmdc_lpddr2_settings(pdev);
+	} else {
+		err = init_mmdc_ddr3_settings_imx6q(pdev);
+	}
+
+	if (cpu_is_imx6sx()) {
 		/* if M4 is enabled and rate > 24MHz, add high bus count */
 		if (imx_src_is_m4_enabled() &&
 			(clk_get_rate(m4_clk) > LPAPM_CLK))
 			high_bus_count++;
-	} else {
-		err = init_mmdc_ddr3_settings_imx6q(pdev);
 	}
 
 	if (err) {
