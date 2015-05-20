@@ -104,6 +104,9 @@ static void __init imx6ul_map_io(void)
 {
 	debug_ll_io_init();
 	imx6_pm_map_io();
+#ifdef CONFIG_CPU_FREQ
+	imx_busfreq_map_io();
+#endif
 }
 
 DT_MACHINE_START(IMX6UL, "Freescale i.MX6 UltraLite (Device Tree)")
