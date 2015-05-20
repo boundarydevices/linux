@@ -49,6 +49,7 @@ struct ci_hdrc_platform_data {
 	bool			tpl_support;
 	u32			ahbburst_config;
 	u32			burst_length;
+	u32			phy_clkgate_delay_us;
 };
 
 /* Default offset of capability registers */
