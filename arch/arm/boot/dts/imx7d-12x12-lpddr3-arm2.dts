@@ -41,6 +41,7 @@
 		};
 	};
 
+
 	pxp_v4l2_out {
 		compatible = "fsl,imx7d-pxp-v4l2", "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
 		status = "okay";
@@ -128,6 +129,13 @@
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 			gpio = <&gpio1 11 GPIO_ACTIVE_LOW>;
+		};
+
+		reg_mipi_dsi_pwr_on: mipi_dsi_pwr_on {
+			compatible = "regulator-fixed";
+			regulator-name = "mipi_dsi_pwr_on";
+			gpio = <&gpio4 16 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
 		};
 	};
 
@@ -263,6 +271,9 @@
 				MX7D_PAD_SD2_WP__GPIO5_IO10       0x59
 				MX7D_PAD_SD2_RESET_B__GPIO5_IO11  0x59
 				MX7D_PAD_GPIO1_IO12__SD2_VSELECT  0x59
+
+				MX7D_PAD_ECSPI1_SCLK__GPIO4_IO16  0x59
+				MX7D_PAD_ECSPI1_MOSI__GPIO4_IO17  0x59
 			>;
 		};
 		pinctrl_hog: hoggrp {
