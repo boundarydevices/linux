@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,18 @@
 #define MMDC0_MDPDC	0x4
 #define MMDC0_MAPSR	0x404
 #define MMDC0_MADPCR0	0x410
+
+	/* Check if the cpu is cortex-a7 */
+	.macro is_ca7
+
+	/* Read the primary cpu number is MPIDR */
+	mrc	p15, 0, r6, c0, c0, 0
+	ldr	r7, =0xfff0
+	and	r6, r6, r7
+	ldr	r7, =0xc070
+	cmp	r6, r7
+
+	.endm
 
 	.macro	wait_for_ccm_handshake
 
@@ -201,7 +213,11 @@ force_measure1:
 	.endm
 
 	.align 3
-ENTRY(imx6sx_lpddr2_freq_change)
+/*
+ * Below code can be used by i.MX6SX and i.MX6UL when changing the
+ * frequency of MMDC. the MMDC is the same on these two SOCs.
+ */
+ENTRY(imx6_up_lpddr2_freq_change)
 
 	push	{r2 - r8}
 
@@ -255,6 +271,9 @@ ENTRY(imx6sx_lpddr2_freq_change)
 	dsb
 	isb
 
+	is_ca7
+	beq	skip_disable_l2
+
 #ifdef CONFIG_CACHE_L2X0
 	/*
 	 * Need to make sure the buffers in L2 are drained.
@@ -275,6 +294,7 @@ ENTRY(imx6sx_lpddr2_freq_change)
 	str	r6, [r7, #0x100]
 #endif
 
+skip_disable_l2:
 	ldr	r2, =IMX_IO_P2V(MX6Q_CCM_BASE_ADDR)
 	ldr	r3, =IMX_IO_P2V(MX6Q_ANATOP_BASE_ADDR)
 	ldr	r5, =IMX_IO_P2V(MX6Q_MMDC_P0_BASE_ADDR)
@@ -375,6 +395,8 @@ skip_power_down:
 	bic	r6, r6, #0x100
 	str	r6, [r5, #MMDC0_MADPCR0]
 
+	is_ca7
+	beq	skip_enable_l2
 
 #ifdef CONFIG_CACHE_L2X0
 	/* Enable L2. */
@@ -383,6 +405,7 @@ skip_power_down:
 	str	r6, [r7, #0x100]
 #endif
 
+skip_enable_l2:
 	/* Enable L1 data cache. */
 	mrc	p15, 0, r6, c1, c0, 0
 	orr	r6, r6, #0x4
