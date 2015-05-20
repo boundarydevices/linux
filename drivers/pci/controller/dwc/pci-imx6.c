@@ -772,6 +772,12 @@ static void imx6_pcie_clk_disable(struct imx6_pcie *imx6_pcie)
 	clk_disable_unprepare(imx6_pcie->pcie_phy);
 }
 
+#define GPC_CNTR 0
+#define reg32_write(addr, val) __raw_writel(val, addr)
+#define reg32_read(addr)       __raw_readl(addr)
+#define reg32setbit(addr, bitpos) \
+        reg32_write((addr), (reg32_read((addr)) | (1<<(bitpos))))
+
 static void imx6_pcie_assert_core_reset(struct imx6_pcie *imx6_pcie)
 {
 	switch (imx6_pcie->drvdata->variant) {
@@ -789,6 +795,10 @@ static void imx6_pcie_assert_core_reset(struct imx6_pcie *imx6_pcie)
 		break;
 	case IMX6SX:
 	case IMX6SX_EP:
+	{
+		struct device_node *gpc_np;
+		void __iomem *gpc_reg;
+
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
 				   IMX6SX_GPR12_PCIE_TEST_POWERDOWN,
 				   IMX6SX_GPR12_PCIE_TEST_POWERDOWN);
@@ -796,7 +806,17 @@ static void imx6_pcie_assert_core_reset(struct imx6_pcie *imx6_pcie)
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR5,
 				   IMX6SX_GPR5_PCIE_BTNRST_RESET,
 				   IMX6SX_GPR5_PCIE_BTNRST_RESET);
+		/* map GPC register  */
+		gpc_np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-gpc");
+		gpc_reg = of_iomap(gpc_np, 0);
+		if (gpc_reg)
+			reg32setbit(gpc_reg + GPC_CNTR, 7);
+		else
+			dev_err(imx6_pcie->pci->dev,
+				"ioremap failed with gpc base\n");
+		iounmap(gpc_reg);
 		break;
+	}
 	case IMX6QP:
 	case IMX6QP_EP:
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
