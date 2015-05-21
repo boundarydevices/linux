@@ -605,6 +605,7 @@ static int imx6_pcie_start_link(struct pcie_port *pp)
 		if (count-- == 0) {
 			dev_err(pp->dev, "Speed change timeout\n");
 			ret = -EINVAL;
+			ret = imx6_pcie_wait_for_link(pp);
 			break;
 		}
 		udelay(10);
