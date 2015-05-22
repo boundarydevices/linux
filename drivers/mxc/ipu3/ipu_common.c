@@ -86,11 +86,6 @@ static inline int _ipu_is_dmfc_chan(uint32_t dma_chan)
 	return ((dma_chan >= 23) && (dma_chan <= 29));
 }
 
-static inline int _ipu_is_smfc_chan(uint32_t dma_chan)
-{
-	return ((dma_chan >= 0) && (dma_chan <= 3));
-}
-
 static inline int _ipu_is_trb_chan(struct ipu_soc *ipu, uint32_t dma_chan)
 {
 	return (((dma_chan == 8) || (dma_chan == 9) ||
