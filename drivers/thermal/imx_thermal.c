@@ -106,6 +106,7 @@ struct imx_thermal_data {
 	bool irq_enabled;
 	int irq;
 	struct clk *thermal_clk;
+	struct mutex mutex;
 	const struct thermal_soc_data *socdata;
 };
 
@@ -144,6 +145,7 @@ static int imx_get_temp(struct thermal_zone_device *tz, unsigned long *temp)
 	bool wait;
 	u32 val;
 
+	mutex_lock(&data->mutex);
 	if (data->mode == THERMAL_DEVICE_ENABLED) {
 		/* Check if a measurement is currently in progress */
 		regmap_read(map, TEMPSENSE0, &val);
@@ -178,6 +180,7 @@ static int imx_get_temp(struct thermal_zone_device *tz, unsigned long *temp)
 
 	if ((val & TEMPSENSE0_FINISHED) == 0) {
 		dev_dbg(&tz->device, "temp measurement never finished\n");
+		mutex_unlock(&data->mutex);
 		return -EAGAIN;
 	}
 
@@ -205,6 +208,7 @@ static int imx_get_temp(struct thermal_zone_device *tz, unsigned long *temp)
 		data->irq_enabled = true;
 		enable_irq(data->irq);
 	}
+	mutex_unlock(&data->mutex);
 
 	return 0;
 }
@@ -480,6 +484,8 @@ static int thermal_notifier_event(struct notifier_block *this,
 {
 	struct regmap *map = imx_thermal_data->tempmon;
 
+	mutex_lock(&imx_thermal_data->mutex);
+
 	switch (event) {
 	/*
 	 * In low_bus_freq_mode, the thermal sensor auto measurement
@@ -505,6 +511,8 @@ static int thermal_notifier_event(struct notifier_block *this,
 	default:
 		break;
 	}
+	mutex_unlock(&imx_thermal_data->mutex);
+
 	return NOTIFY_OK;
 }
 
@@ -553,6 +561,7 @@ static int imx_thermal_probe(struct platform_device *pdev)
 			dev_warn(&pdev->dev, "failed to enable thermal clk: %d\n", ret);
 	}
 
+	mutex_init(&data->mutex);
 	/* make sure the IRQ flag is clear before enable irq */
 	regmap_write(map, MISC1 + REG_CLR, MISC1_IRQ_TEMPHIGH);
 	if (data->socdata->version == TEMPMON_V2) {
