@@ -646,6 +646,7 @@
 				fsl,mf-mix-wakeup-irq = <0x54010000 0xc00 0x0 0x1000040>;
 				#power-domain-cells = <1>;
 				pcie-phy-supply = <&reg_1p0d>;
+				mipi-phy-supply = <&reg_1p0d>;
 			};
 		};
 
