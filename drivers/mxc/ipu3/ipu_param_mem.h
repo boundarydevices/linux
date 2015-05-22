@@ -253,6 +253,7 @@ static inline void _ipu_ch_param_init(struct ipu_soc *ipu, int ch,
 {
 	uint32_t u_offset = 0;
 	uint32_t v_offset = 0;
+	uint32_t bs = 0;
 	int32_t sub_ch = 0;
 	struct ipu_ch_param params;
 
@@ -405,7 +406,12 @@ static inline void _ipu_ch_param_init(struct ipu_soc *ipu, int ch,
 			ipu_ch_param_set_field(&params, 1, 78, 7, 15);  /* burst size */
 			uv_stride = uv_stride*2;
 		} else {
-			ipu_ch_param_set_field(&params, 1, 78, 7, 31);  /* burst size */
+			if (_ipu_is_smfc_chan(ch) &&
+				ipu->smfc_idmac_12bit_3planar_bs_fixup)
+				bs = 15;
+			else
+				bs = 31;
+			ipu_ch_param_set_field(&params, 1, 78, 7, bs);  /* burst size */
 		}
 		break;
 	case IPU_PIX_FMT_YVU420P:
@@ -420,7 +426,12 @@ static inline void _ipu_ch_param_init(struct ipu_soc *ipu, int ch,
 			ipu_ch_param_set_field(&params, 1, 78, 7, 15);  /* burst size */
 			uv_stride = uv_stride*2;
 		} else {
-			ipu_ch_param_set_field(&params, 1, 78, 7, 31);  /* burst size */
+			if (_ipu_is_smfc_chan(ch) &&
+				ipu->smfc_idmac_12bit_3planar_bs_fixup)
+				bs = 15;
+			else
+				bs = 31;
+			ipu_ch_param_set_field(&params, 1, 78, 7, bs);  /* burst size */
 		}
 		break;
 	case IPU_PIX_FMT_YVU422P:
