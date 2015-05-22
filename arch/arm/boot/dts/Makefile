@@ -235,6 +235,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx7d-sdb-gpmi-weim.dtb \
 	imx7d-sdb-qspi.dtb \
 	imx7d-sdb-sim.dtb \
+	imx7d-sdb-touch.dtb \
 	imx7d-sdb-m4.dtb
 dtb-$(CONFIG_ARCH_MXS) += imx23-evk.dtb \
 	imx23-olinuxino.dtb \
