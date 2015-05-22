@@ -598,7 +598,8 @@ static int imx_gpc_genpd_init(struct device *dev, struct regulator *pu_reg)
 	imx6s_display_domain.num_clks = k;
 
 	is_off = IS_ENABLED(CONFIG_PM_RUNTIME);
-	if (is_off)
+	if (is_off && !(cpu_is_imx6q() &&
+		imx_get_soc_revision() == IMX_CHIP_REVISION_2_0))
 		imx6q_pm_pu_power_off(&imx6q_pu_domain.base);
 
 	pm_genpd_init(&imx6q_pu_domain.base, NULL, is_off);
