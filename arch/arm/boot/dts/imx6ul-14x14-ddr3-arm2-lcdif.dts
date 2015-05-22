@@ -6,7 +6,7 @@
  * published by the Free Software Foundation.
  */
 
-#include "imx6ul-ddr3-arm2.dts"
+#include "imx6ul-14x14-ddr3-arm2.dts"
 
 / {
 	backlight {
