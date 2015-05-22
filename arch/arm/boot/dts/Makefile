@@ -208,13 +208,13 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6sx-sabreauto.dtb \
 	imx6sx-sabreauto-m4.dtb \
 	imx6sx-sdb-lcdif1.dtb \
-	imx6ul-ddr3-arm2.dtb \
-	imx6ul-ddr3-arm2-flexcan2.dtb \
-	imx6ul-ddr3-arm2-lcdif.dtb \
-	imx6ul-ddr3-arm2-mqs.dtb \
-	imx6ul-ddr3-arm2-spdif.dtb \
-	imx6ul-ddr3-arm2-wm8958.dtb \
-	imx6ul-evk.dtb \
+	imx6ul-14x14-ddr3-arm2.dtb \
+	imx6ul-14x14-ddr3-arm2-flexcan2.dtb \
+	imx6ul-14x14-ddr3-arm2-lcdif.dtb \
+	imx6ul-14x14-ddr3-arm2-mqs.dtb \
+	imx6ul-14x14-ddr3-arm2-spdif.dtb \
+	imx6ul-14x14-ddr3-arm2-wm8958.dtb \
+	imx6ul-14x14-evk.dtb \
 	vf610-cosmic.dtb \
 	imx6sx-sdb-emmc.dtb \
 	imx6sx-sdb-m4.dtb \
