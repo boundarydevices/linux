@@ -148,6 +148,8 @@ struct ipu_soc {
 	unsigned int ch27_axi;
 	unsigned int ch28_axi;
 	unsigned int normal_axi;
+
+	bool smfc_idmac_12bit_3planar_bs_fixup;	/* workaround little stripes */
 };
 
 struct ipu_channel {
