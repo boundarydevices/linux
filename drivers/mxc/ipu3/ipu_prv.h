@@ -164,6 +164,11 @@ enum ipu_dmfc_type {
 	DMFC_HIGH_RESOLUTION_ONLY_DP,
 };
 
+static inline int _ipu_is_smfc_chan(uint32_t dma_chan)
+{
+	return ((dma_chan >= 0) && (dma_chan <= 3));
+}
+
 static inline u32 ipu_cm_read(struct ipu_soc *ipu, unsigned offset)
 {
 	return readl(ipu->cm_reg + offset);
