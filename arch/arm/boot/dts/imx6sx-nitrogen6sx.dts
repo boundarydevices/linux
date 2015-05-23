@@ -583,8 +583,8 @@
 		pinctrl-0 = <&pinctrl_sgtl5000>;
 		reg = <0x0a>;
 		clocks = <&clks IMX6SX_CLK_CKO>;
-		VDDA-supply = <&reg_2p5v>;
-		VDDIO-supply = <&reg_3p3v>;
+		VDDA-supply = <&reg_1p8v>;
+		VDDIO-supply = <&reg_1p8v>;
 		assigned-clocks = <&clks IMX6SX_CLK_CKO>,
 				  <&clks IMX6SX_CLK_CKO1_SEL>,
 				  <&clks IMX6SX_CLK_CKO2_SEL>,
