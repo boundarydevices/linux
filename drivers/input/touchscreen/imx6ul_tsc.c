@@ -226,9 +226,6 @@ static irqreturn_t tsc_irq(int irq, void *dev_id)
 		x = (tsc->value >> 16) & 0x0fff;
 		y = tsc->value & 0x0fff;
 
-		input_report_abs(tsc->input, ABS_X, x);
-		input_report_abs(tsc->input, ABS_Y, y);
-
 		/*
 		 * Delay some time(max 2ms), wait the pre-charge done.
 		 * After the pre-change mode, TSC go into detect mode.
@@ -251,9 +248,11 @@ static irqreturn_t tsc_irq(int irq, void *dev_id)
 
 		xnur = gpio_get_value(tsc->xnur_gpio);
 touch_event:
-		if (xnur == 0)
+		if (xnur == 0) {
 			input_report_key(tsc->input, BTN_TOUCH, 1);
-		else
+			input_report_abs(tsc->input, ABS_X, x);
+			input_report_abs(tsc->input, ABS_Y, y);
+		} else
 			input_report_key(tsc->input, BTN_TOUCH, 0);
 
 		input_sync(tsc->input);
