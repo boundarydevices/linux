@@ -309,7 +309,8 @@ static void det_worker(struct work_struct *work)
 		sprintf(event_string, "EVENT=plugin");
 		sii902x_cable_connected();
 #ifdef CONFIG_SWITCH
-		switch_set_state(&sii902x.sdev_audio, 1);
+		if (sii902x.edid_cfg.hdmi_cap)
+			switch_set_state(&sii902x.sdev_audio, 1);
 #endif
 	} else {
 		sii902x.cable_plugin = 0;
