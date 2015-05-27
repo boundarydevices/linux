@@ -19,6 +19,7 @@
 #include <asm/setup.h>
 
 #include "common.h"
+#include "cpuidle.h"
 
 static int ar8031_phy_fixup(struct phy_device *dev)
 {
@@ -117,6 +118,7 @@ static void __init imx7d_init_late(void)
 	if (IS_ENABLED(CONFIG_ARM_IMX7D_CPUFREQ)) {
 		platform_device_register_simple("imx7d-cpufreq", -1, NULL, 0);
 	}
+	imx7d_cpuidle_init();
 }
 
 static const char *imx7d_dt_compat[] __initconst = {

@@ -86,11 +86,6 @@ static inline int _ipu_is_dmfc_chan(uint32_t dma_chan)
 	return ((dma_chan >= 23) && (dma_chan <= 29));
 }
 
-static inline int _ipu_is_smfc_chan(uint32_t dma_chan)
-{
-	return ((dma_chan >= 0) && (dma_chan <= 3));
-}
-
 static inline int _ipu_is_trb_chan(struct ipu_soc *ipu, uint32_t dma_chan)
 {
 	return (((dma_chan == 8) || (dma_chan == 9) ||
@@ -317,6 +312,7 @@ struct ipu_platform_type {
 	unsigned int ch27_axi;
 	unsigned int ch28_axi;
 	unsigned int normal_axi;
+	bool smfc_idmac_12bit_3planar_bs_fixup;	/* workaround little stripes */
 	bool idmac_used_bufs_en_r;
 	bool idmac_used_bufs_en_w;
 	unsigned int idmac_used_bufs_max_r;
@@ -350,6 +346,7 @@ static struct ipu_platform_type ipu_type_imx51 = {
 	.ch27_axi = 1,
 	.ch28_axi = 1,
 	.normal_axi = 0,
+	.smfc_idmac_12bit_3planar_bs_fixup = false,
 };
 
 static struct ipu_platform_type ipu_type_imx53 = {
@@ -380,6 +377,7 @@ static struct ipu_platform_type ipu_type_imx53 = {
 	.normal_axi = 0,
 	.idmac_used_bufs_en_r = false,
 	.idmac_used_bufs_en_w = false,
+	.smfc_idmac_12bit_3planar_bs_fixup = false,
 };
 
 static struct ipu_platform_type ipu_type_imx6q = {
@@ -410,6 +408,7 @@ static struct ipu_platform_type ipu_type_imx6q = {
 	.normal_axi = 1,
 	.idmac_used_bufs_en_r = false,
 	.idmac_used_bufs_en_w = false,
+	.smfc_idmac_12bit_3planar_bs_fixup = false,
 };
 
 static struct ipu_platform_type ipu_type_imx6qp = {
@@ -442,6 +441,7 @@ static struct ipu_platform_type ipu_type_imx6qp = {
 	.idmac_used_bufs_en_w = true,
 	.idmac_used_bufs_max_r = 0x3,
 	.idmac_used_bufs_max_w = 0x3,
+	.smfc_idmac_12bit_3planar_bs_fixup = true,
  };
 
 static const struct of_device_id imx_ipuv3_dt_ids[] = {
@@ -500,6 +500,8 @@ static int ipu_probe(struct platform_device *pdev)
 	ipu->ch27_axi = iputype->ch27_axi;
 	ipu->ch28_axi = iputype->ch28_axi;
 	ipu->normal_axi = iputype->normal_axi;
+	ipu->smfc_idmac_12bit_3planar_bs_fixup =
+			iputype->smfc_idmac_12bit_3planar_bs_fixup;
 	spin_lock_init(&ipu->int_reg_spin_lock);
 	spin_lock_init(&ipu->rdy_reg_spin_lock);
 	mutex_init(&ipu->mutex_lock);

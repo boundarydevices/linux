@@ -74,15 +74,15 @@
 
 #define MX7_SRC_GPR1	0x74
 #define MX7_SRC_GPR2	0x78
-#define MX7_ANATOP_CORE	0x140
+#define GPC_PGC_FM	0xa00
 #define ANADIG_SNVS_MISC_CTRL	0x380
 #define DDRC_STAT	0x4
 #define DDRC_PWRCTL	0x30
 #define DDRC_PSTAT	0x3fc
 #define DDRC_PCTRL_0	0x490
-#define DDR_DFIMISC	0x1b0
-#define DDR_SWCTL	0x320
-#define DDR_SWSTAT	0x324
+#define DDRC_DFIMISC	0x1b0
+#define DDRC_SWCTL	0x320
+#define DDRC_SWSTAT	0x324
 #define DDRPHY_LP_CON0	0x18
 
 	.align 3
@@ -187,8 +187,9 @@
 
 	.endm
 
-	/* r11 must be DDRC base address */
 	.macro ddrc_enter_self_refresh
+
+	ldr	r11, [r0, #PM_INFO_MX7_DDRC_V_OFFSET]
 
 	/* let DDR out of self-refresh */
 	ldr	r7, =0x0
@@ -224,8 +225,11 @@
 
 	.endm
 
-	/* r11 must be DDRC base address */
 	.macro ddrc_exit_self_refresh
+
+	cmp	r5, #0x0
+	ldreq	r11, [r0, #PM_INFO_MX7_DDRC_V_OFFSET]
+	ldrne	r11, [r0, #PM_INFO_MX7_DDRC_P_OFFSET]
 
 	/* let DDR out of self-refresh */
 	ldr	r7, =0x0
@@ -253,6 +257,8 @@
 	.endm
 
 	.macro ddr_enter_retention
+
+	ldr	r11, [r0, #PM_INFO_MX7_DDRC_V_OFFSET]
 
 	/* let DDR out of self-refresh */
 	ldr	r7, =0x0
@@ -355,7 +361,7 @@
 	ldr	r7, =0x20
 	str	r7, [r3, #DDRC_PWRCTL]
 	ldr	r7, =0x0
-	str	r7, [r3, #DDR_DFIMISC]
+	str	r7, [r3, #DDRC_DFIMISC]
 
 	/* do PHY, clear ddr_phy reset */
 	ldr	r6, =0x1000
@@ -403,13 +409,13 @@
 	cmp	r7, #0x3
 	bne	11b
 	ldr	r7, =0x0
-	str	r7, [r3, #DDR_SWCTL]
+	str	r7, [r3, #DDRC_SWCTL]
 	ldr	r7, =0x1
-	str	r7, [r3, #DDR_DFIMISC]
+	str	r7, [r3, #DDRC_DFIMISC]
 	ldr	r7, =0x1
-	str	r7, [r3, #DDR_SWCTL]
+	str	r7, [r3, #DDRC_SWCTL]
 12:
-	ldr	r7, [r3, #DDR_SWSTAT]
+	ldr	r7, [r3, #DDRC_SWSTAT]
 	and	r7, r7, #0x1
 	cmp	r7, #0x1
 	bne	12b
@@ -470,10 +476,9 @@ ENTRY(imx7_suspend)
 
 	store_ttbr1
 
-	ldr	r11, [r0, #PM_INFO_MX7_DDRC_V_OFFSET]
-	ldr	r10, [r0, #PM_INFO_MX7_GPC_V_OFFSET]
-	ldr	r5, [r10, #0xa00]
-	cmp	r5, #0
+	ldr	r11, [r0, #PM_INFO_MX7_GPC_V_OFFSET]
+	ldr	r7, [r11, #GPC_PGC_FM]
+	cmp	r7, #0
 	beq	ddr_only_self_refresh
 
 	ddr_enter_retention
@@ -490,7 +495,17 @@ ddr_retention_enter_out:
 	nop
 
 	mov	r5, #0x0
+
+	ldr	r11, [r0, #PM_INFO_MX7_GPC_V_OFFSET]
+	ldr	r7, [r11, #GPC_PGC_FM]
+	cmp	r7, #0
+	beq	wfi_ddr_self_refresh_out
+
 	ddr_exit_retention
+	b	wfi_ddr_retention_out
+wfi_ddr_self_refresh_out:
+	ddrc_exit_self_refresh
+wfi_ddr_retention_out:
 
 	restore_ttbr1
 
@@ -516,18 +531,18 @@ resume:
 	str	r7, [r11, #MX7_SRC_GPR1]
 	str	r7, [r11, #MX7_SRC_GPR2]
 
-	ldr	r11, [r0, #PM_INFO_MX7_DDRC_P_OFFSET]
-	ldr	r10, [r0, #PM_INFO_MX7_GPC_P_OFFSET]
-	ldr	r5, [r10, #0xa00]
-	cmp	r5, #0
-	beq	ddr_only_self_refresh_out
-
 	mov	r5, #0x1
+
+	ldr	r11, [r0, #PM_INFO_MX7_GPC_P_OFFSET]
+	ldr	r7, [r11, #GPC_PGC_FM]
+	cmp	r7, #0
+	beq	dsm_ddr_self_refresh_out
+
 	ddr_exit_retention
-	b	ddr_retention_exit_out
-ddr_only_self_refresh_out:
+	b	dsm_ddr_retention_out
+dsm_ddr_self_refresh_out:
 	ddrc_exit_self_refresh
-ddr_retention_exit_out:
+dsm_ddr_retention_out:
 
 	mov	pc, lr
 ENDPROC(imx7_suspend)

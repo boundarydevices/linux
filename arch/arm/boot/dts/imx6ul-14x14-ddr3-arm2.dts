@@ -78,6 +78,12 @@
 	};
 };
 
+&cpu0 {
+	arm-supply = <&sw1a_reg>;
+	soc-supply = <&sw1a_reg>;
+	fsl,arm-soc-shared = <1>;
+};
+
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1>;
@@ -416,6 +422,15 @@
 			fsl,pins = <
 				MX6UL_PAD_GPIO1_IO08__SPDIF_OUT       0x1b0b0
 				MX6UL_PAD_GPIO1_IO09__SPDIF_IN        0x1b0b0
+			>;
+		};
+
+		pinctrl_tsc: tscgrp {
+			fsl,pin = <
+				MX6UL_PAD_GPIO1_IO01__GPIO1_IO01	0xb0
+				MX6UL_PAD_GPIO1_IO02__GPIO1_IO02	0xb0
+				MX6UL_PAD_GPIO1_IO03__GPIO1_IO03	0xb0
+				MX6UL_PAD_GPIO1_IO04__GPIO1_IO04	0xb0
 			>;
 		};
 

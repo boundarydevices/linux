@@ -311,7 +311,7 @@ int imx_gpc_mf_power_on(unsigned int irq, unsigned int on)
 
 int imx_gpc_mf_request_on(unsigned int irq, unsigned int on)
 {
-	if (cpu_is_imx6sx())
+	if (cpu_is_imx6sx() || cpu_is_imx6ul())
 		return imx_gpc_mf_power_on(irq, on);
 	else if (cpu_is_imx7d())
 		return imx_gpcv2_mf_power_on(irq, on);
@@ -334,7 +334,7 @@ void __init imx_gpc_init(void)
 		writel_relaxed(~0, gpc_base + GPC_IMR1 + i * 4);
 
 	/* Read supported wakeup source in M/F domain */
-	if (cpu_is_imx6sx()) {
+	if (cpu_is_imx6sx() || cpu_is_imx6ul()) {
 		of_property_read_u32_index(np, "fsl,mf-mix-wakeup-irq", 0,
 			&gpc_mf_irqs[0]);
 		of_property_read_u32_index(np, "fsl,mf-mix-wakeup-irq", 1,
@@ -598,7 +598,8 @@ static int imx_gpc_genpd_init(struct device *dev, struct regulator *pu_reg)
 	imx6s_display_domain.num_clks = k;
 
 	is_off = IS_ENABLED(CONFIG_PM_RUNTIME);
-	if (is_off)
+	if (is_off && !(cpu_is_imx6q() &&
+		imx_get_soc_revision() == IMX_CHIP_REVISION_2_0))
 		imx6q_pm_pu_power_off(&imx6q_pu_domain.base);
 
 	pm_genpd_init(&imx6q_pu_domain.base, NULL, is_off);

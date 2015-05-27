@@ -52,6 +52,31 @@
 			device_type = "cpu";
 			reg = <0>;
 			clock-latency = <61036>; /* two CLK32 periods */
+			operating-points = <
+				/* kHz	uV */
+				528000	1250000
+				396000	1150000
+				198000	1150000
+			>;
+			fsl,soc-operating-points = <
+				/* KHz	uV */
+				528000	1250000
+				396000	1150000
+				198000	1150000
+			>;
+			clocks = <&clks IMX6UL_CLK_ARM>,
+				 <&clks IMX6UL_CLK_PLL2_BUS>,
+				 <&clks IMX6UL_CLK_PLL2_PFD2>,
+				 <&clks IMX6UL_CA7_SECONDARY_SEL>,
+				 <&clks IMX6UL_CLK_STEP>,
+				 <&clks IMX6UL_CLK_PLL1_SW>,
+				 <&clks IMX6UL_CLK_PLL1_SYS>,
+				 <&clks IMX6UL_PLL1_BYPASS>,
+				 <&clks IMX6UL_CLK_PLL1>,
+				 <&clks IMX6UL_PLL1_BYPASS_SRC>,
+				 <&clks IMX6UL_CLK_OSC>;
+			clock-names = "arm", "pll2_bus",  "pll2_pfd2_396m", "secondary_sel", "step",
+				      "pll1_sw", "pll1_sys", "pll1_bypass", "pll1", "pll1_bypass_src", "osc";
 		};
 	};
 
@@ -126,6 +151,11 @@
 		ocram: sram@00905000 {
 			compatible = "mmio-sram";
 			reg = <0x00905000 0x1B000>;
+		};
+
+		caam_sm: caam-sm@00100000 {
+			 compatible = "fsl,imx7d-caam-sm", "fsl,imx6q-caam-sm";
+			 reg = <0x00100000 0x3fff>;
 		};
 
 		aips1: aips-bus@02000000 {
@@ -479,8 +509,11 @@
 					 <&clks IMX6UL_CLK_ENET2_REF_125M>;
 				clock-names = "ipg", "ahb", "ptp",
 					      "enet_clk_ref", "enet_out";
+				stop-mode = <&gpr 0x10 4>;
 				fsl,num-tx-queues=<1>;
 				fsl,num-rx-queues=<1>;
+				fsl,magic-packet;
+				fsl,wakeup_irq = <0>;
 				status = "disabled";
 			};
 
@@ -537,6 +570,40 @@
 					anatop-min-voltage = <2625000>;
 					anatop-max-voltage = <3400000>;
 					anatop-enable-bit = <0>;
+				};
+
+				reg_arm: regulator-vddcore@140 {
+					compatible = "fsl,anatop-regulator";
+					regulator-name = "cpu";
+					regulator-min-microvolt = <725000>;
+					regulator-max-microvolt = <1450000>;
+					regulator-always-on;
+					anatop-reg-offset = <0x140>;
+					anatop-vol-bit-shift = <0>;
+					anatop-vol-bit-width = <5>;
+					anatop-delay-reg-offset = <0x170>;
+					anatop-delay-bit-shift = <24>;
+					anatop-delay-bit-width = <2>;
+					anatop-min-bit-val = <1>;
+					anatop-min-voltage = <725000>;
+					anatop-max-voltage = <1450000>;
+				};
+
+				reg_soc: regulator-vddsoc@140 {
+					compatible = "fsl,anatop-regulator";
+					regulator-name = "vddsoc";
+					regulator-min-microvolt = <725000>;
+					regulator-max-microvolt = <1450000>;
+					regulator-always-on;
+					anatop-reg-offset = <0x140>;
+					anatop-vol-bit-shift = <18>;
+					anatop-vol-bit-width = <5>;
+					anatop-delay-reg-offset = <0x170>;
+					anatop-delay-bit-shift = <28>;
+					anatop-delay-bit-width = <2>;
+					anatop-min-bit-val = <1>;
+					anatop-min-voltage = <725000>;
+					anatop-max-voltage = <1450000>;
 				};
 			};
 
@@ -609,7 +676,7 @@
 				compatible = "fsl,imx6ul-gpc", "fsl,imx6q-gpc";
 				reg = <0x020dc000 0x4000>;
 				interrupts = <GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>;
-				fsl,mf-mix-wakeup-irq = <0x7c00000 0x3d00 0x0 0x400240>;
+				fsl,mf-mix-wakeup-irq = <0x7c00000 0x3d00 0x0 0x1400240>;
 				#power-domain-cells = <1>;
 			};
 
@@ -633,7 +700,7 @@
 			};
 
 			sdma: sdma@020ec000 {
-				compatible = "fsl,imx6ul-sdma", "fsl,imx35-sdma";
+				compatible = "fsl,imx6sx-sdma", "fsl,imx35-sdma";
 				reg = <0x020ec000 0x4000>;
 				interrupts = <GIC_SPI 2 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6UL_CLK_SDMA>,
@@ -692,31 +759,26 @@
 			ranges;
 
 			crypto: caam@2140000 {
-				compatible = "fsl,sec-v4.0";
+				compatible = "fsl,imx6ul-caam", "fsl,sec-v4.0";
 				#address-cells = <1>;
 				#size-cells = <1>;
 				reg = <0x2140000 0x3c000>;
 				ranges = <0 0x2140000 0x3c000>;
-				interrupt-parent = <&intc>; /* interrupts = <0 92 0x4>; */
-				clocks = <&clks IMX6UL_CLK_DUMMY>, <&clks IMX6UL_CLK_DUMMY>,
-					 <&clks IMX6UL_CLK_DUMMY> ,<&clks IMX6UL_CLK_DUMMY>;
-				clock-names = "caam_mem", "caam_aclk", "caam_ipg", "caam_emi_slow";
-				status = "disabled";
+				interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX6UL_CLK_CAAM_IPG>, <&clks IMX6UL_CLK_CAAM_ACLK>,
+				       	 <&clks IMX6UL_CLK_CAAM_MEM>;
+				clock-names = "caam_ipg", "caam_aclk", "caam_mem";
 
 				sec_jr0: jr0@1000 {
 					compatible = "fsl,sec-v4.0-job-ring";
 					reg = <0x1000 0x1000>;
-					interrupt-parent = <&intc>;
-					interrupts = <0 105 0x4>;
-					status = "disabled";
+					interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
 				};
 
 				sec_jr1: jr1@2000 {
 					compatible = "fsl,sec-v4.0-job-ring";
 					reg = <0x2000 0x1000>;
-					interrupt-parent = <&intc>;
-					interrupts = <0 106 0x4>;
-					status = "disabled";
+					interrupts = <GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH>;
 				};
 			};
 
@@ -759,8 +821,11 @@
 					 <&clks IMX6UL_CLK_ENET_REF>;
 				clock-names = "ipg", "ahb", "ptp",
 					      "enet_clk_ref", "enet_out";
+				stop-mode = <&gpr 0x10 3>;
 				fsl,num-tx-queues=<1>;
 				fsl,num-rx-queues=<1>;
+				fsl,magic-packet;
+				fsl,wakeup_irq = <0>;
 				status = "disabled";
                         };
 
@@ -772,7 +837,7 @@
 			};
 
 			usdhc1: usdhc@02190000 {
-				compatible = "fsl,imx6ul-usdhc", "fsl,imx6sl-usdhc";
+				compatible = "fsl,imx6ul-usdhc", "fsl,imx6sx-usdhc";
 				reg = <0x02190000 0x4000>;
 				interrupts = <GIC_SPI 22 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6UL_CLK_USDHC1>,
@@ -784,7 +849,7 @@
 			};
 
 			usdhc2: usdhc@02194000 {
-				compatible = "fsl,imx6ul-usdhc", "fsl,imx6sl-usdhc";
+				compatible = "fsl,imx6ul-usdhc", "fsl,imx6sx-usdhc";
 				reg = <0x02194000 0x4000>;
 				interrupts = <GIC_SPI 23 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6UL_CLK_USDHC2>,
@@ -805,15 +870,16 @@
 				status = "disabled";
                         };
 
-			adc2: adc@0219c000 {
-				compatible = "fsl,imx6ul-adc", "fsl,vf610-adc";
-				reg = <0x0219c000 0x4000>;
-				interrupts = <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX6UL_CLK_DUMMY>;
-				num-channels = <4>;
-				clock-names = "adc";
+			tsc: tsc@02040000 {
+				compatible = "fsl,imx6ul-tsc";
+				reg = <0x02040000 0x4000>, <0x0219c000 0x4000>;
+				interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
+					     <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX6UL_CLK_IPG>,
+					 <&clks IMX6UL_CLK_ADC2>;
+				clock-names = "tsc", "adc";
 				status = "disabled";
-                        };
+			};
 
 			i2c1: i2c@021a0000 {
 				#address-cells = <1>;
@@ -859,6 +925,8 @@
 				compatible = "fsl,imx6ul-sim";
 				reg = <0x021b4000 0x4000>;
 				interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX6UL_CLK_SIM2>;
+				clock-names = "sim";
 				status = "disabled";
 			};
 

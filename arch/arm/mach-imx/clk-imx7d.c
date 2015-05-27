@@ -363,13 +363,11 @@ static const char *pll_audio_bypass_sel[] = { "pll_audio_main", "pll_audio_main_
 static const char *pll_video_bypass_sel[] = { "pll_video_main", "pll_video_main_src", };
 
 static int const clks_init_on[] __initconst = {
-	IMX7D_ARM_A7_ROOT_CLK, IMX7D_MAIN_AXI_ROOT_CLK, IMX7D_PLL_ARM_MAIN_CLK,
-	IMX7D_PLL_SYS_MAIN_480M_CLK, IMX7D_PLL_SYS_MAIN_240M_CLK, IMX7D_PLL_SYS_MAIN_120M_CLK,
-	IMX7D_PLL_SYS_PFD0_196M_CLK, IMX7D_PLL_SYS_PFD1_166M_CLK, IMX7D_PLL_SYS_PFD3_CLK,
-	IMX7D_PLL_SYS_PFD4_CLK, IMX7D_PLL_SYS_PFD5_CLK, IMX7D_PLL_SYS_PFD6_CLK,
-	IMX7D_PLL_SYS_PFD7_CLK, IMX7D_DRAM_PHYM_ROOT_CLK, IMX7D_DRAM_ROOT_CLK,
+	IMX7D_ARM_A7_ROOT_CLK, IMX7D_MAIN_AXI_ROOT_CLK,
+	IMX7D_PLL_SYS_MAIN_480M_CLK, IMX7D_NAND_USDHC_BUS_ROOT_CLK,
+	IMX7D_DRAM_PHYM_ROOT_CLK, IMX7D_DRAM_ROOT_CLK,
 	IMX7D_DRAM_PHYM_ALT_ROOT_CLK, IMX7D_DRAM_ALT_ROOT_CLK,
-	IMX7D_AHB_CHANNEL_ROOT_CLK, IMX7D_NAND_USDHC_BUS_ROOT_CLK,
+	IMX7D_AHB_CHANNEL_ROOT_CLK,
 	};
 
 static struct clk_onecell_data clk_data;
@@ -713,7 +711,7 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	clks[IMX7D_MAIN_AXI_ROOT_DIV] = imx_clk_divider_flags("axi_post_div", "axi_pre_div", base + 0x8800, 0, 6, CLK_SET_PARENT_ON);
 	clks[IMX7D_DISP_AXI_ROOT_DIV] = imx_clk_divider2("disp_axi_post_div", "disp_axi_pre_div", base + 0x8880, 0, 6);
 	clks[IMX7D_ENET_AXI_ROOT_DIV] = imx_clk_divider2("enet_axi_post_div", "enet_axi_pre_div", base + 0x8900, 0, 6);
-	clks[IMX7D_NAND_USDHC_BUS_ROOT_DIV] = imx_clk_divider2("nand_usdhc_post_div", "nand_usdhc_pre_div", base + 0x8980, 0, 6);
+	clks[IMX7D_NAND_USDHC_BUS_ROOT_CLK] = imx_clk_divider2("nand_usdhc_root_clk", "nand_usdhc_pre_div", base + 0x8980, 0, 6);
 	clks[IMX7D_AHB_CHANNEL_ROOT_DIV] = imx_clk_divider_flags("ahb_post_div", "ahb_pre_div", base + 0x9000, 0, 6, CLK_SET_PARENT_ON);
 	clks[IMX7D_DRAM_ROOT_DIV] = imx_clk_divider2("dram_post_div", "dram_cg", base + 0x9880, 0, 3);
 	clks[IMX7D_DRAM_PHYM_ALT_ROOT_DIV] = imx_clk_divider2("dram_phym_alt_post_div", "dram_phym_alt_pre_div", base + 0xa000, 0, 3);
@@ -787,8 +785,8 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	clks[IMX7D_ENET_AXI_ROOT_CLK] = imx_clk_gate4("enet_axi_root_clk", "enet_axi_post_div", base + 0x4060, 0);
 	clks[IMX7D_OCRAM_CLK] = imx_clk_gate4("ocram_clk", "axi_post_div", base + 0x4110, 0);
 	clks[IMX7D_OCRAM_S_CLK] = imx_clk_gate4("ocram_s_clk", "ahb_post_div", base + 0x4120, 0);
-	clks[IMX7D_NAND_USDHC_BUS_ROOT_CLK] = imx_clk_gate4("nand_usdhc_root_clk", "nand_usdhc_post_div", base + 0x4130, 0);
 	clks[IMX7D_AHB_CHANNEL_ROOT_CLK] = imx_clk_gate4("ahb_root_clk", "ahb_post_div", base + 0x4200, 0);
+	clks[IMX7D_CAAM_CLK] = imx_clk_gate4("caam_clk", "ipg_root_clk", base + 0x4240, 0);
 	clks[IMX7D_DRAM_ROOT_CLK] = imx_clk_gate4("dram_root_clk", "dram_post_div", base + 0x4130, 0);
 	clks[IMX7D_DRAM_PHYM_ROOT_CLK] = imx_clk_gate4("dram_phym_root_clk", "dram_phym_cg", base + 0x4130, 0);
 	clks[IMX7D_DRAM_PHYM_ALT_ROOT_CLK] = imx_clk_gate4("dram_phym_alt_root_clk", "dram_phym_alt_post_div", base + 0x4130, 0);
@@ -899,10 +897,6 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	imx_clk_set_parent(clks[IMX7D_ENET_AXI_ROOT_SRC], clks[IMX7D_PLL_ENET_MAIN_250M_CLK]);
 	imx_clk_set_rate(clks[IMX7D_ENET_AXI_ROOT_CLK], 267000000);
 	imx_clk_set_parent(clks[IMX7D_ENET_PHY_REF_ROOT_SRC], clks[IMX7D_PLL_ENET_MAIN_25M_CLK]);
-
-	/* set uart module clock's parent clock source that must be great then 80Mhz */
-	if (uart_from_osc)
-		imx_clk_set_parent(clks[IMX7D_UART1_ROOT_SRC], clks[IMX7D_OSC_24M_CLK]);
 
 	/* set pcie root's parent clk source */
 	imx_clk_set_parent(clks[IMX7D_PCIE_CTRL_ROOT_SRC], clks[IMX7D_PLL_ENET_MAIN_250M_CLK]);
