@@ -763,8 +763,9 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 			if (!mxc_fbi->on_the_fly) {
 				retval = ipu_init_channel_buffer(mxc_fbi->ipu,
 								 mxc_fbi->ipu_ch, IPU_INPUT_BUFFER,
-								 mxc_fbi->on_the_fly ? mxc_fbi->final_pfmt :
-								 fbi_to_pixfmt(fbi, false),
+								 fbi_to_pixfmt(fbi,
+									!ipu_pixel_format_is_pre_yuv(fbi_to_pixfmt(fbi, true)) &&
+									!ipu_pixel_format_is_gpu_tile(fbi_to_pixfmt(fbi, true))),
 								 fbi->var.xres, fbi->var.yres,
 								 ipu_stride,
 								 fbi->var.rotate,
@@ -1354,7 +1355,9 @@ static int mxcfb_set_par(struct fb_info *fbi)
 
 	mxc_fbi->cur_var = fbi->var;
 	mxc_fbi->cur_ipu_pfmt = on_the_fly ? mxc_fbi->final_pfmt :
-					     fbi_to_pixfmt(fbi, false);
+		fbi_to_pixfmt(fbi,
+			!ipu_pixel_format_is_pre_yuv(fbi_to_pixfmt(fbi, true)) &&
+			!ipu_pixel_format_is_gpu_tile(fbi_to_pixfmt(fbi, true)));
 	mxc_fbi->cur_fb_pfmt = fbi_to_pixfmt(fbi, true);
 	mxc_fbi->cur_prefetch = mxc_fbi->prefetch;
 
