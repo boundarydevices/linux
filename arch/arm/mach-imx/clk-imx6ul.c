@@ -352,10 +352,10 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	clks[IMX6UL_CLK_PWM2]		= imx_clk_gate2("pwm2",		"perclk",	base + 0x78,	18);
 	clks[IMX6UL_CLK_PWM3]		= imx_clk_gate2("pwm3",		"perclk",	base + 0x78,	20);
 	clks[IMX6UL_CLK_PWM4]		= imx_clk_gate2("pwm4",		"perclk",	base + 0x78,	22);
-	clks[IMX6UL_CLK_GPMI_BCH_APB]	= imx_clk_gate2("gpmi_bch_apb",	"bch",		base + 0x78,	24);
-	clks[IMX6UL_CLK_GPMI_BCH]	= imx_clk_gate2("gpmi_bch",	"gpmi",		base + 0x78,	26);
+	clks[IMX6UL_CLK_GPMI_BCH_APB]	= imx_clk_gate2("gpmi_bch_apb",	"bch_podf",	base + 0x78,	24);
+	clks[IMX6UL_CLK_GPMI_BCH]	= imx_clk_gate2("gpmi_bch",	"gpmi_podf",	base + 0x78,	26);
 	clks[IMX6UL_CLK_GPMI_IO]	= imx_clk_gate2("gpmi_io",	"enfc_podf",	base + 0x78,	28);
-	clks[IMX6UL_CLK_GPMI_APB]	= imx_clk_gate2("gpmi_apb",	"bch",		base + 0x78,	30);
+	clks[IMX6UL_CLK_GPMI_APB]	= imx_clk_gate2("gpmi_apb",	"bch_podf",	base + 0x78,	30);
 
 	/* CCGR5 */
 	clks[IMX6UL_CLK_ROM]		= imx_clk_gate2("rom",		"ahb",		base + 0x7c,	0);
@@ -415,6 +415,8 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 
 	imx_clk_set_parent(clks[IMX6UL_CLK_CAN_SEL], clks[IMX6UL_CLK_PLL3_60M]);
 	imx_clk_set_parent(clks[IMX6UL_CLK_SIM_PRE_SEL], clks[IMX6UL_CLK_PLL3_USB_OTG]);
+
+	imx_clk_set_parent(clks[IMX6UL_CLK_ENFC_SEL], clks[IMX6UL_CLK_PLL2_PFD2]);
 
 	/* Set initial power mode */
 	imx6q_set_lpm(WAIT_CLOCKED);
