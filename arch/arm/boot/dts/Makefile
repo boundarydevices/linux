@@ -210,6 +210,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6sx-sdb-lcdif1.dtb \
 	imx6ul-14x14-ddr3-arm2.dtb \
 	imx6ul-14x14-ddr3-arm2-flexcan2.dtb \
+	imx6ul-14x14-ddr3-arm2-gpmi-weim.dtb \
 	imx6ul-14x14-ddr3-arm2-lcdif.dtb \
 	imx6ul-14x14-ddr3-arm2-mqs.dtb \
 	imx6ul-14x14-ddr3-arm2-spdif.dtb \
