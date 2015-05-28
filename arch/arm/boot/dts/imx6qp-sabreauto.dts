@@ -9,6 +9,10 @@
 #include "imx6q-sabreauto.dts"
 #include "imx6qp.dtsi"
 
+/ {
+	model = "Freescale i.MX6 Quad Plus SABRE Automotive Board";
+};
+
 &mxcfb1 {
 	prefetch;
 };
