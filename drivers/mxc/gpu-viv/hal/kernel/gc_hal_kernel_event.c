@@ -1728,14 +1728,6 @@ gckEVENT_Submit(
             /* Determine cache needed to flush. */
             gcmkVERIFY_OK(_QueryFlush(Event, Event->queues[id].head, &flush));
 
-#if gcdINTERRUPT_STATISTIC
-            gcmkVERIFY_OK(gckOS_AtomIncrement(
-                Event->os,
-                Event->interruptCount,
-                &oldValue
-                ));
-#endif
-
 #if gcdNULL_DRIVER
             /* Notify immediately on infinite hardware. */
             gcmkONERROR(gckEVENT_Interrupt(Event, 1 << id));
@@ -1835,6 +1827,14 @@ gckEVENT_Submit(
             gcmkONERROR(gckCOMMAND_Execute(command, executeBytes));
 #endif
 #endif
+#if gcdINTERRUPT_STATISTIC
+            gcmkVERIFY_OK(gckOS_AtomIncrement(
+                Event->os,
+                Event->interruptCount,
+                &oldValue
+                ));
+#endif
+
         }
 
         /* Release the command queue. */
