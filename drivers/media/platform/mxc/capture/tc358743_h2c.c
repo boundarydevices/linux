@@ -2791,7 +2791,7 @@ static int imxpac_tc358743_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 #if 1
-// clear SSI_SRCR_RXBIT0 and SSI_SRCR_RSHFD in order to push Right-justified MSB data fro 
+// clear SSI_SRCR_RXBIT0 and SSI_SRCR_RSHFD in order to push Right-justified MSB data from
 	{
 		struct imx_ssi *ssi = snd_soc_dai_get_drvdata(cpu_dai);
 		u32 scr = 0, srcr = 0, stccr = 0, srccr = 0;
@@ -2826,8 +2826,6 @@ static int imxpac_tc358743_hw_params(struct snd_pcm_substream *substream,
 }
 
 
-
-
 static struct snd_soc_ops imxpac_tc358743_snd_ops = {
 	.hw_params	= imxpac_tc358743_hw_params,
 };
@@ -2838,7 +2836,6 @@ static struct snd_soc_dai_link imxpac_tc358743_dai = {
 	.codec_dai_name	= "tc358743-hifi",
 	.platform_name	= "imx-pcm-audio.2",
 	.codec_name	= "imx-tc358743.0",
-	.cpu_dai_name	= "imx-ssi.2",
 	.ops		= &imxpac_tc358743_snd_ops,
 };
 
@@ -2849,7 +2846,7 @@ static const struct snd_soc_dapm_route audio_map_a[] = {
 };
 
 static struct snd_soc_card imxpac_tc358743 = {
-	.name		= "cpuimx-audio_hdmi_in",
+	.name		= "imx-audio_hdmi_in",
 	.dai_link	= &imxpac_tc358743_dai,
 	.num_links	= 1,
 	.dapm_widgets	= imx_3stack_dapm_widgets_a,
@@ -2861,6 +2858,7 @@ static struct snd_soc_card imxpac_tc358743 = {
 static int imx_audmux_config(int slave, int master)
 {
 	unsigned int ptcr, pdcr;
+	int ret;
 	slave = slave - 1;
 	master = master - 1;
 
@@ -2869,18 +2867,19 @@ static int imx_audmux_config(int slave, int master)
 		IMX_AUDMUX_V2_PTCR_TFSDIR |
 		IMX_AUDMUX_V2_PTCR_TFSEL(master | 0x8) |
 		IMX_AUDMUX_V2_PTCR_TCLKDIR |
-	IMX_AUDMUX_V2_PTCR_RFSDIR |
-	IMX_AUDMUX_V2_PTCR_RFSEL(master | 0x8) |
-	IMX_AUDMUX_V2_PTCR_RCLKDIR |
-	IMX_AUDMUX_V2_PTCR_RCSEL(master | 0x8) |
+		IMX_AUDMUX_V2_PTCR_RFSDIR |
+		IMX_AUDMUX_V2_PTCR_RFSEL(master | 0x8) |
+		IMX_AUDMUX_V2_PTCR_RCLKDIR |
+		IMX_AUDMUX_V2_PTCR_RCSEL(master | 0x8) |
 		IMX_AUDMUX_V2_PTCR_TCSEL(master | 0x8);
 	pdcr = IMX_AUDMUX_V2_PDCR_RXDSEL(master);
-	imx_audmux_v2_configure_port(slave, ptcr, pdcr);
+	ret = imx_audmux_v2_configure_port(slave, ptcr, pdcr);
+	if (ret)
+		return ret;
 
 	ptcr = IMX_AUDMUX_V2_PTCR_SYN;
 	pdcr = IMX_AUDMUX_V2_PDCR_RXDSEL(master);
-	imx_audmux_v2_configure_port(master, ptcr, pdcr);
-	return 0;
+	return imx_audmux_v2_configure_port(master, ptcr, pdcr);
 }
 
 static struct snd_soc_dai_driver tc358743_dai;
@@ -2889,26 +2888,57 @@ static struct snd_soc_codec_driver soc_codec_dev_tc358743;
 static int imx_tc358743_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	int int_port = 7;
-	int ext_port = 5;
+	struct device_node *cpu_np;
+	struct snd_soc_dai_link *link = imxpac_tc358743.dai_link;
+	struct device_node *np = pdev->dev.of_node;
+	int int_port, ext_port;
 	int ret = 0;
 
-	pr_info("%s: %s entry\n", __func__, pdev->name);
 	if (!g_td)
 		return -EPROBE_DEFER;
+
+	cpu_np = of_parse_phandle(np, "cpu-dai", 0);
+	if (!cpu_np) {
+		dev_err(dev, "cpu-dai missing or invalid\n");
+		return -EINVAL;
+	}
+	link->cpu_of_node = cpu_np;
+	link->platform_of_node = cpu_np;
+
+	/* codec and card node are the same */
+	link->codec_of_node = np;
+
+	ret = of_property_read_u32(np, "mux-int-port", &int_port);
+	if (ret) {
+		dev_err(dev, "mux-int-port missing or invalid\n");
+		return ret;
+	}
+
+	ret = of_property_read_u32(np, "mux-ext-port", &ext_port);
+	if (ret) {
+		dev_err(dev, "mux-ext-port missing or invalid\n");
+		return ret;
+	}
 
 	ret = snd_soc_register_codec(dev, &soc_codec_dev_tc358743,
 			&tc358743_dai, 1);
 	if (ret) {
-		pr_err("%s:  register failed, error=%d\n",
+		dev_err(dev, "%s:  register failed, error=%d\n",
 			__func__, ret);
 		return ret;
 	}
 
-
-	imx_audmux_config(int_port, ext_port);
+	ret = imx_audmux_config(int_port, ext_port);
+	if (ret) {
+		dev_err(dev, "audmux port setup failed\n");
+		return ret;
+	}
 
 	imxpac_tc358743.dev = dev;
+
+	/* update card name if provided in device tree */
+	snd_soc_of_parse_card_name(&imxpac_tc358743, "model");
+
 	ret = snd_soc_register_card(&imxpac_tc358743);
 	if (ret)
 		dev_err(dev, "snd_soc_register_card() failed: %d\n", ret);
@@ -2919,19 +2949,26 @@ static int imx_tc358743_probe(struct platform_device *pdev)
 
 static int imx_tc358743_remove(struct platform_device *pdev)
 {
-/* Audio breakdown */
+	/* Audio breakdown */
 	snd_soc_unregister_card(&imxpac_tc358743);
 
 	snd_soc_unregister_codec(&pdev->dev);
 	return 0;
 }
 
+static const struct of_device_id imx_tc358743_dt_ids[] = {
+	{ .compatible = "fsl,imx-audio-tc358743", },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, imx_tc358743_dt_ids);
+
 static struct platform_driver imx_tc358743_audio1_driver = {
 	.probe = imx_tc358743_probe,
 	.remove = imx_tc358743_remove,
 	.driver = {
-		   .name = "imx-tc358743",
-		   },
+		.name = "imx-tc358743",
+		.of_match_table = imx_tc358743_dt_ids,
+	},
 };
 
 
