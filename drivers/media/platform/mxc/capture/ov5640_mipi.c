@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -663,7 +663,7 @@ static s32 ov5640_read_reg(u16 reg, u8 *val);
 static s32 ov5640_write_reg(u16 reg, u8 val);
 
 static const struct i2c_device_id ov5640_id[] = {
-	{"ov5640_mipi", 0},
+	{"ov564x_mipi", 0},
 	{},
 };
 
@@ -672,7 +672,7 @@ MODULE_DEVICE_TABLE(i2c, ov5640_id);
 static struct i2c_driver ov5640_i2c_driver = {
 	.driver = {
 		  .owner = THIS_MODULE,
-		  .name  = "ov5640_mipi",
+		  .name  = "ov564x_mipi",
 		  },
 	.probe  = ov5640_probe,
 	.remove = ov5640_remove,
@@ -1962,7 +1962,7 @@ static struct v4l2_int_slave ov5640_slave = {
 
 static struct v4l2_int_device ov5640_int_device = {
 	.module = THIS_MODULE,
-	.name = "ov5640",
+	.name = "ov564x",
 	.type = v4l2_int_type_slave,
 	.u = {
 		.slave = &ov5640_slave,
