@@ -880,22 +880,21 @@ static u32 _HalInit(PADAPTER padapter)
 		goto exit;
 	}
 
-	// Check if MAC has already power on. by tynli. 2011.05.27.
-	val8 = rtw_read8(padapter, REG_SYS_CLKR+1);
-	val8_CR = rtw_read8(padapter, REG_CR);
-	DBG_8192C("%s: REG_SYS_CLKR 0x09=0x%02x REG_CR 0x100=0x%02x\n", __FUNCTION__, val8, val8_CR);
-	if ((val8&BIT(3))  && ((val8_CR != 0) && (val8_CR != 0xEA)))
-	{
-		//pHalData->bMACFuncEnable = TRUE;
-		DBG_8192C("%s: MAC has already power on\n", __FUNCTION__);
-	}
-	else
-	{
-		//pHalData->bMACFuncEnable = FALSE;
-		// Set FwPSState to ALL_ON mode to prevent from the I/O be return because of 32k
-		// state which is set before sleep under wowlan mode. 2012.01.04. by tynli.
-		//pHalData->FwPSState = FW_PS_STATE_ALL_ON_88E;
-		DBG_871X("%s: MAC has not been powered on yet\n", __FUNCTION__);
+	if (rtw_read8(padapter, REG_MCUFWDL) & BIT7) {
+		u8 bMacPwrCtrlOn = _TRUE;
+		u8 rpwm = 0;
+
+		DBG_871X("FW exist before power on!!\n");
+
+		rtw_hal_set_hwreg(padapter, HW_VAR_APFM_ON_MAC, &bMacPwrCtrlOn);
+
+		/* set rpwm to leave 32k */
+		rtw_hal_set_hwreg(padapter, HW_VAR_SET_RPWM, &rpwm);
+		rpwm += 0x80;
+		rtw_hal_set_hwreg(padapter, HW_VAR_SET_RPWM, &rpwm);
+
+		/* power off */
+		rtw_hal_power_off(padapter);
 	}
 
 	ret = _InitPowerOn_8812AS(padapter);
@@ -1412,7 +1411,15 @@ _func_enter_;
 				rtw_write8(padapter, SDIO_LOCAL_BASE|SDIO_REG_HRPWM1, val8);
 			}
 			break;
-
+		case HW_VAR_SET_REQ_FW_PS:
+		/* 1. driver write 0x8f[4]=1  //request fw ps state (only can write bit4) */
+		{
+			u8 req_fw_ps = 0;
+			req_fw_ps = rtw_read8(padapter, 0x8f);
+			req_fw_ps |= 0x10;
+			rtw_write8(padapter, 0x8f, req_fw_ps);
+		}
+			break;
 		case HW_VAR_RXDMA_AGG_PG_TH:
 			val8 = *pval;
 
@@ -1450,6 +1457,10 @@ _func_enter_;
 
 	switch (variable)
 	{
+		case HW_VAR_FW_PS_STATE:
+			/* 3. read dword 0x88 //driver read fw ps state */
+			*((u16 *)val) = rtw_read16(padapter, 0x88);
+			break;
 		default:
 			GetHwReg8812A(padapter, variable, val);
 			break;
