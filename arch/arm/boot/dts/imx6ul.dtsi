@@ -864,8 +864,8 @@
 				compatible = "fsl,imx6ul-adc", "fsl,vf610-adc";
 				reg = <0x02198000 0x4000>;
 				interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX6UL_CLK_DUMMY>;
-				num-channels = <4>;
+				clocks = <&clks IMX6UL_CLK_ADC1>;
+				num-channels = <2>;
 				clock-names = "adc";
 				status = "disabled";
                         };
