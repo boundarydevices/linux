@@ -134,6 +134,13 @@
 		hdmi-controller = <&hdmi_audio>;
 	};
 
+	sound-hdmi-input {
+		compatible = "fsl,imx-audio-tc358743";
+		model = "imx-audio-tc358743";
+		mux-int-port = <7>;
+		mux-ext-port = <5>;
+	};
+
 	lvds_display: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
@@ -652,6 +659,11 @@
 };
 
 &ssi1 {
+	fsl,mode = "i2s-slave";
+	status = "okay";
+};
+
+&ssi2 {
 	fsl,mode = "i2s-slave";
 	status = "okay";
 };
