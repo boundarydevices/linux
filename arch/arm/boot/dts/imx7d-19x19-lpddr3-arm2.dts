@@ -102,7 +102,6 @@
 				MX7D_PAD_SD1_CD_B__GPIO5_IO0 		0x59
 				MX7D_PAD_SD1_WP__GPIO5_IO1 			0x59
 				MX7D_PAD_SD1_RESET_B__GPIO5_IO2 	0x59
-				MX7D_PAD_GPIO1_IO08__SD1_VSELECT   	0x59
 
 				MX7D_PAD_GPIO1_IO14__GPIO1_IO14    	0x59
 				MX7D_PAD_GPIO1_IO15__GPIO1_IO15    	0x59
@@ -164,15 +163,13 @@
 };
 
 &usdhc1 {
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc1>;
-	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
-	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
 	cd-gpios = <&gpio5 0 0>;
 	wp-gpios = <&gpio5 1 0>;
+	no-1-8-v;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
-	tuning-step = <2>;
 	vmmc-supply = <&reg_sd1_vmmc>;
 	status = "okay";
 };
