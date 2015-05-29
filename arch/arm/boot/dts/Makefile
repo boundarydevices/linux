@@ -242,6 +242,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx7d-19x19-ddr3-arm2.dtb \
 	imx7d-19x19-ddr3-arm2-csi.dtb \
 	imx7d-19x19-ddr3-arm2-sai.dtb \
+	imx7d-19x19-ddr3-arm2-mipi.dtb \
 	imx7d-sdb.dtb \
 	imx7d-sdb-enet.dtb \
 	imx7d-sdb-epdc.dtb \

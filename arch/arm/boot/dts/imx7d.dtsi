@@ -831,6 +831,13 @@
 			mipi_csi: mipi-csi@30750000 {
 				compatible = "fsl,imx7d-mipi-csi";
 				reg = <0x30750000 0x10000>;
+				interrupts = <GIC_SPI 25 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX7D_MIPI_CSI_ROOT_CLK>,
+						<&clks IMX7D_MIPI_DPHY_ROOT_CLK>;
+				clock-names = "mipi_clk", "phy_clk";
+				mipi-phy-supply = <&reg_1p0d>;
+				csis-phy-reset = <&src 0x28 1>;
+				bus-width = <4>;
 				status = "disabled";
 			};
 

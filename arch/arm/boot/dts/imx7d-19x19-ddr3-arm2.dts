@@ -146,16 +146,6 @@
 	arm-supply = <&sw1a_reg>;
 };
 
-&csi1 {
-	status = "okay";
-
-	port {
-		csi1_ep: endpoint {
-			remote-endpoint = <&ov5640_ep>;
-		};
-	};
-};
-
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1>;
@@ -206,8 +196,6 @@
 	hog {
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
-				MX7D_PAD_I2C4_SCL__GPIO4_IO14	   0x80000000
-
 				MX7D_PAD_GPIO1_IO12__SD2_VSELECT   0x59
 				MX7D_PAD_SD2_CD_B__GPIO5_IO9       0x59
 				MX7D_PAD_SD2_WP__GPIO5_IO10        0x59
@@ -216,6 +204,9 @@
 				MX7D_PAD_GPIO1_IO14__GPIO1_IO14    0x59
 				MX7D_PAD_GPIO1_IO15__GPIO1_IO15    0x59
 				MX7D_PAD_SD3_STROBE__GPIO6_IO10    0x59
+
+				MX7D_PAD_I2C4_SCL__GPIO4_IO14	  0x7F
+				MX7D_PAD_I2C4_SDA__GPIO4_IO15     0x7F
 			>;
 		};
 
@@ -256,6 +247,14 @@
 			fsl,pins = <
 				MX7D_PAD_GPIO1_IO03__GPIO1_IO3 0x80000000
 				MX7D_PAD_GPIO1_IO07__GPIO1_IO7 0x80000000
+			>;
+		};
+	};
+
+	mipi_csi {
+		pinctrl_mipi_csi: mipicsigrp-1 {
+			fsl,pins = <
+				MX7D_PAD_GPIO1_IO01__ANATOP_24M_OUT 0x3
 			>;
 		};
 	};
@@ -689,35 +688,6 @@
 		};
 	};
 };
-
-&i2c2 {
-	clock-frequency = <100000>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_i2c2_1>;
-	status = "okay";
-
-	ov5640: ov5640@3c {
-		compatible = "ovti,ov5640";
-		reg = <0x3c>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_csi>;
-		clocks = <&clks IMX7D_CSI_MCLK_ROOT_CLK>;
-		clock-names = "csi_mclk";
-		pwn-gpios = <&gpio3 8 1>;
-		rst-gpios = <&gpio3 7 0>;
-		csi_id = <0>;
-		mclk = <24000000>;
-		mclk_source = <0>;
-		status = "disabled";
-		port {
-			ov5640_ep: endpoint {
-				remote-endpoint = <&csi1_ep>;
-			};
-		};
-	};
-
-};
-
 
 &sdma {
 	status = "okay";
