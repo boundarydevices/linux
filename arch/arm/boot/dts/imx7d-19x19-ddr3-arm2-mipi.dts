@@ -1,0 +1,59 @@
+/*
+ * Copyright (C) 2015 Freescale Semiconductor, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include "imx7d-19x19-ddr3-arm2.dts"
+
+&csi1 {
+	csi-mux-mipi = <&gpr 0x14 4>;
+	status = "okay";
+
+	port {
+		csi_ep: endpoint {
+			remote-endpoint = <&csi_mipi_ep>;
+		};
+	};
+};
+
+&mipi_csi {
+	clock-frequency = <240000000>;
+	status = "okay";
+	port {
+		mipi_sensor_ep: endpoint1 {
+			remote-endpoint = <&ov5640_mipi_ep>;
+			data-lanes = <2>;
+			csis-hs-settle = <13>;
+			csis-wclk;
+		};
+
+		csi_mipi_ep: endpoint2 {
+			remote-endpoint = <&csi_ep>;
+		};
+	};
+};
+
+&i2c2 {
+	ov5640_mipi: ov5640_mipi@3c {
+		compatible = "ovti,ov5640_mipi";
+		reg = <0x3c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_mipi_csi>;
+		clocks = <&clks IMX7D_OSC_24M_CLK>;
+		clock-names = "csi_mclk";
+		pwn-gpios = <&gpio4 14 0>;
+		rst-gpios = <&gpio4 15 1>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+		port {
+			ov5640_mipi_ep: endpoint {
+				remote-endpoint = <&mipi_sensor_ep>;
+			};
+		};
+	};
+};
+

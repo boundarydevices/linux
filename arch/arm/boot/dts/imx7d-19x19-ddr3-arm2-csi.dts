@@ -8,9 +8,35 @@
 
 #include "imx7d-19x19-ddr3-arm2.dts"
 
+&csi1 {
+	status = "okay";
+
+	port {
+		csi1_ep: endpoint {
+			remote-endpoint = <&ov5640_ep>;
+		};
+	};
+};
+
 &i2c2 {
 	ov5640: ov5640@3c {
+		compatible = "ovti,ov5640";
+		reg = <0x3c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_csi>;
+		clocks = <&clks IMX7D_CSI_MCLK_ROOT_CLK>;
+		clock-names = "csi_mclk";
+		pwn-gpios = <&gpio3 8 1>;
+		rst-gpios = <&gpio3 7 0>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
 		status = "okay";
+		port {
+			ov5640_ep: endpoint {
+				remote-endpoint = <&csi1_ep>;
+			};
+		};
 	};
 };
 
