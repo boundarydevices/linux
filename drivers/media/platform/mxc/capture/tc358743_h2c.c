@@ -133,9 +133,6 @@ struct tc_data {
 #define REGULATOR_ANALOG	3
 #define REGULATOR_CNT		4
 	struct regulator *regulator[REGULATOR_CNT];
-#ifdef CONFIG_TC358743_AUDIO
-	struct platform_device *snd_device;
-#endif
 	u32 lock;
 	u32 bounce;
 	enum tc358743_mode mode;
@@ -2815,63 +2812,6 @@ static int imxpac_tc358743_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-
-
-/* imx_3stack card dapm widgets */
-static const struct snd_soc_dapm_widget imx_3stack_dapm_widgets_a[] = {
-};
-
-
-
-static const struct snd_kcontrol_new tc358743_machine_controls_a[] = {
-};
-
-/* imx_3stack machine connections to the codec pins */
-static const struct snd_soc_dapm_route audio_map_a[] = {
-};
-
-static int imx_3stack_tc358743_init(struct snd_soc_pcm_runtime *rtd)
-{
-	struct snd_soc_codec *codec = rtd->codec;
-	int ret;
-
-	const struct snd_soc_dapm_widget *imx_3stack_dapm_widgets;
-	int imx_3stack_dapm_widgets_size;
-	const struct snd_kcontrol_new *tc358743_machine_controls;
-	int tc358743_machine_controls_size;
-	const struct snd_soc_dapm_route *audio_map;
-	int audio_map_size;
-	int gpio_num = -1;
-	char *gpio_name;
-
-	pr_debug("%s started\n", __func__);
-
-	imx_3stack_dapm_widgets = imx_3stack_dapm_widgets_a;
-	imx_3stack_dapm_widgets_size = ARRAY_SIZE(imx_3stack_dapm_widgets_a);
-	tc358743_machine_controls = tc358743_machine_controls_a;
-	tc358743_machine_controls_size = ARRAY_SIZE(tc358743_machine_controls_a);
-	audio_map = audio_map_a;
-	audio_map_size = ARRAY_SIZE(audio_map_a);
-	gpio_num = -1; //card_a_gpio_num;
-	gpio_name = NULL;
-
-	ret = snd_soc_add_codec_controls(codec, tc358743_machine_controls,
-			tc358743_machine_controls_size);
-	if (ret) {
-		pr_err("%s: snd_soc_add_codec_controls failed. err = %d\n", __func__, ret);
-		return ret;
-	}
-	/* Add imx_3stack specific widgets */
-	snd_soc_dapm_new_controls(&codec->dapm, imx_3stack_dapm_widgets,
-				  imx_3stack_dapm_widgets_size);
-
-	/* Set up imx_3stack specific audio path audio_map */
-	snd_soc_dapm_add_routes(&codec->dapm, audio_map, audio_map_size);
-	snd_soc_dapm_sync(&codec->dapm);
-	return 0;
-}
-
-
 static struct snd_soc_ops imxpac_tc358743_snd_ops = {
 	.hw_params	= imxpac_tc358743_hw_params,
 };
@@ -2881,16 +2821,25 @@ static struct snd_soc_dai_link imxpac_tc358743_dai = {
 	.stream_name	= "TC358743",
 	.codec_dai_name	= "tc358743-hifi",
 	.platform_name	= "imx-pcm-audio.2",
-	.codec_name	= "tc358743_mipi.1-000f",
-	.cpu_dai_name	= "imx-ssi.2",
-	.init		= imx_3stack_tc358743_init,
+	.codec_name	= "imx-tc358743.0",
+	.cpu_dai_name	= "fsl-ssi-dai.2",
 	.ops		= &imxpac_tc358743_snd_ops,
+};
+
+static const struct snd_soc_dapm_widget imx_3stack_dapm_widgets_a[] = {
+};
+
+static const struct snd_soc_dapm_route audio_map_a[] = {
 };
 
 static struct snd_soc_card imxpac_tc358743 = {
 	.name		= "imx-audio_hdmi_in",
 	.dai_link	= &imxpac_tc358743_dai,
 	.num_links	= 1,
+	.dapm_widgets	= imx_3stack_dapm_widgets_a,
+	.num_dapm_widgets = ARRAY_SIZE(imx_3stack_dapm_widgets_a),
+	.dapm_routes	= audio_map_a,
+	.num_dapm_routes = ARRAY_SIZE(audio_map_a),
 };
 
 static int imx_audmux_config(int slave, int master)
@@ -2924,36 +2873,63 @@ static int imx_audmux_config(int slave, int master)
 	return 0;
 }
 
+static struct snd_soc_dai_driver tc358743_dai;
+static struct snd_soc_codec_driver soc_codec_dev_tc358743;
+
 static int imx_tc358743_probe(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
 	struct device_node *np = pdev->dev.of_node;
 	int int_port, ext_port;
 	int ret = 0;
 
+	pr_info("%s: %s entry\n", __func__, pdev->name);
+	if (!g_td)
+		return -EPROBE_DEFER;
+
+	ret = snd_soc_register_codec(dev, &soc_codec_dev_tc358743,
+			&tc358743_dai, 1);
+	if (ret) {
+		pr_err("%s:  register failed, error=%d\n",
+			__func__, ret);
+		return ret;
+	}
+
 	ret = of_property_read_u32(np, "mux-int-port", &int_port);
 	if (ret) {
 		dev_err(&pdev->dev, "mux-int-port missing or invalid\n");
-		return ret;
+		goto exit;
 	}
 
 	ret = of_property_read_u32(np, "mux-ext-port", &ext_port);
 	if (ret) {
 		dev_err(&pdev->dev, "mux-ext-port missing or invalid\n");
-		return ret;
+		goto exit;
 	}
 
 	ret = imx_audmux_config(int_port, ext_port);
 	if (ret) {
 		dev_err(&pdev->dev, "audmux port setup failed\n");
-		return ret;
+		goto exit;
 	}
 
-	return 0;
+	imxpac_tc358743.dev = dev;
+	ret = snd_soc_register_card(&imxpac_tc358743);
+	if (ret)
+		dev_err(dev, "snd_soc_register_card() failed: %d\n", ret);
+exit:
+	if (ret)
+		snd_soc_unregister_codec(dev);
+
+	return ret;
 }
 
 static int imx_tc358743_remove(struct platform_device *pdev)
 {
-	// TODO
+	/* Audio breakdown */
+	snd_soc_unregister_card(&imxpac_tc358743);
+	snd_soc_unregister_codec(&pdev->dev);
+
 	return 0;
 }
 
@@ -3506,54 +3482,9 @@ static int tc358743_probe(struct i2c_client *client,
 	if (!g_td)
 		g_td = td;
 
-#ifdef CONFIG_TC358743_AUDIO
-	retval = device_create_file(&client->dev, &dev_attr_audio);
-#endif
-	retval = device_create_file(&client->dev, &dev_attr_fps);
-	retval = device_create_file(&client->dev, &dev_attr_hdmirx);
-	retval = device_create_file(&client->dev, &dev_attr_hpd);
-	retval = device_create_file(&client->dev, &dev_attr_regoffs);
-	retval = device_create_file(&client->dev, &dev_attr_regdump);
-
-	if (retval) {
-		pr_err("%s:  create bin file failed, error=%d\n",
-			__func__, retval);
-		goto err4;
-	}
-
-#ifdef CONFIG_TC358743_AUDIO
-/* Audio setup */
-	retval = snd_soc_register_codec(&client->dev,
-			&soc_codec_dev_tc358743, &tc358743_dai, 1);
-	if (retval) {
-		pr_err("%s:  register failed, error=%d\n",
-			__func__, retval);
-		goto err4;
-	}
-
-	retval = platform_driver_register(&imx_tc358743_audio1_driver);
-	if (retval) {
-		pr_err("%s: Platform driver register failed, error=%d\n",
-			__func__, retval);
-		goto err4;
-	}
-
-	td->snd_device = platform_device_alloc("soc-audio", 5);
-	if (!td->snd_device) {
-		pr_err("%s: Platform device allocation failed, error=%d\n",
-			__func__, retval);
-		goto err4;
-	}
-
-	platform_set_drvdata(td->snd_device, &imxpac_tc358743);
-	retval = snd_soc_register_card(&imxpac_tc358743);
-	if (retval) {
-		pr_err("%s: Platform device add failed, error=%d\n",
-			__func__, retval);
-		platform_device_put(td->snd_device);
-		goto err4;
-	}
-#endif
+	tc358743_int_device.priv = td;
+	if (!g_td)
+		g_td = td;
 
 #if 1
 	INIT_DELAYED_WORK(&td->det_work, tc_det_worker);
@@ -3583,10 +3514,34 @@ static int tc358743_probe(struct i2c_client *client,
 		goto err4;
 	}
 	power_control(td, 0);
+
+#ifdef CONFIG_TC358743_AUDIO
+	retval = device_create_file(&client->dev, &dev_attr_audio);
+#endif
+	retval |= device_create_file(dev, &dev_attr_fps);
+	retval |= device_create_file(dev, &dev_attr_hdmirx);
+	retval |= device_create_file(dev, &dev_attr_hpd);
+	retval |= device_create_file(dev, &dev_attr_regoffs);
+	retval |= device_create_file(dev, &dev_attr_regdump);
+	if (retval) {
+		pr_err("%s:  create bin file failed, error=%d\n",
+			__func__, retval);
+		goto err3;
+	}
+
 	mutex_unlock(&td->access_lock);
 	pr_debug("%s: finished, error=%d\n", __func__, retval);
 	return retval;
 
+err3:
+#ifdef CONFIG_TC358743_AUDIO
+	device_remove_file(dev, &dev_attr_audio);
+#endif
+	device_remove_file(dev, &dev_attr_fps);
+	device_remove_file(dev, &dev_attr_hdmirx);
+	device_remove_file(dev, &dev_attr_hpd);
+	device_remove_file(dev, &dev_attr_regoffs);
+	device_remove_file(dev, &dev_attr_regdump);
 err4:
 	power_control(td, 0);
 	mutex_unlock(&td->access_lock);
@@ -3620,12 +3575,6 @@ static int tc358743_remove(struct i2c_client *client)
 		free_irq(sensor->i2c_client->irq,  sensor);
 	}
 
-#ifdef CONFIG_TC358743_AUDIO
-/* Audio breakdown */
-	snd_soc_unregister_codec(&client->dev);
-	platform_driver_unregister(&imx_tc358743_audio1_driver);
-	platform_device_unregister(td->snd_device);
-#endif
 	/*Remove sysfs entries*/
 #ifdef CONFIG_TC358743_AUDIO
 	device_remove_file(&client->dev, &dev_attr_audio);
@@ -3665,7 +3614,14 @@ static __init int tc358743_init(void)
 	if (err != 0)
 		pr_err("%s:driver registration failed, error=%d\n",
 			__func__, err);
-
+#ifdef CONFIG_TC358743_AUDIO
+/* Audio setup */
+	err = platform_driver_register(&imx_tc358743_audio1_driver);
+	if (err) {
+		pr_err("%s: Platform driver register failed, error=%d\n",
+			__func__, err);
+	}
+#endif
 	return err;
 }
 
@@ -3677,6 +3633,10 @@ static __init int tc358743_init(void)
  */
 static void __exit tc358743_clean(void)
 {
+#ifdef CONFIG_TC358743_AUDIO
+	/* Audio breakdown */
+	platform_driver_unregister(&imx_tc358743_audio1_driver);
+#endif
 	i2c_del_driver(&tc358743_i2c_driver);
 }
 
