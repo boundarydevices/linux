@@ -88,6 +88,19 @@ end device by:
 	echo 1 or 0 > /sys/bus/platform/devices/ci_hdrc.0/inputs/hnp_enable
 If this input is 0, only OTG role switch by ID pin detection can be supported.
 
+1.6 Enable and test USB OTG ADP
+----------------------
+Enable:
+1) Enable OTG FSM as 1.1
+2) Add "adp-support" properity in dts for your hardware
+
+Test sequence:
+1) Connect 2 OTG devices, enable HNP by enable hnp_enable at 2 boards
+	echo 1 > /sys/bus/platform/devices/ci_hdrc.0/inputs/hnp_enable
+2) After A-device ends session(remove B-device and wait 10s, or a_bus_drop)
+3) Remove B-device, B-device will show "OTG device detached".
+4) Insert B-device, A-device will enumerate B-device.
+
 2. How to enable USB as system wakeup source
 -----------------------------------
 Below is the example for how to enable USB as system wakeup source
