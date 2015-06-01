@@ -2,8 +2,12 @@ menu "Rpmsg drivers"
 
 # RPMSG always gets selected by whoever wants it
 config RPMSG
-	tristate
+	tristate "RPMSG bus driver"
 	select VIRTIO
 	select VIRTUALIZATION
+
+config IMX_RPMSG_PINGPONG
+	tristate "IMX RPMSG pingpong driver"
+	depends on RPMSG
 
 endmenu
