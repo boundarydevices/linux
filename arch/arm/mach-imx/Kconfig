@@ -75,6 +75,9 @@ config HAVE_IMX_DDRC
 config HAVE_IMX_SRC
 	def_bool y if SMP
 
+config HAVE_IMX_RPMSG
+	bool
+
 config HAVE_IMX_MCC
 	select IMX_SEMA4
 	bool
@@ -875,6 +878,8 @@ config SOC_IMX7D
 	select PCI_DOMAINS if PCI
 	select SOC_IMX7
 	select PINCTRL_IMX7D
+	select HAVE_IMX_RPMSG
+	select RPMSG
 
 	help
 	  This enables support for Freescale i.MX7 Dual processor.
