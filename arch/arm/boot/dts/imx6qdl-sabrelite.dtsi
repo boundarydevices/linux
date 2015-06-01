@@ -136,7 +136,8 @@
 
 	sound-hdmi-input {
 		compatible = "fsl,imx-audio-tc358743";
-		model = "imx-audio-tc358743";
+		model = "tc358743-audio";
+		cpu-dai = <&ssi3>;
 		mux-int-port = <7>;
 		mux-ext-port = <5>;
 	};
@@ -663,7 +664,7 @@
 	status = "okay";
 };
 
-&ssi2 {
+&ssi3 {
 	fsl,mode = "i2s-slave";
 	status = "okay";
 };

@@ -2818,11 +2818,8 @@ static struct snd_soc_ops imxpac_tc358743_snd_ops = {
 
 static struct snd_soc_dai_link imxpac_tc358743_dai = {
 	.name		= "tc358743",
-	.stream_name	= "TC358743",
+	.stream_name	= "tc358743",
 	.codec_dai_name	= "tc358743-hifi",
-	.platform_name	= "imx-pcm-audio.2",
-	.codec_name	= "imx-tc358743.0",
-	.cpu_dai_name	= "fsl-ssi-dai.2",
 	.ops		= &imxpac_tc358743_snd_ops,
 };
 
@@ -2833,7 +2830,7 @@ static const struct snd_soc_dapm_route audio_map_a[] = {
 };
 
 static struct snd_soc_card imxpac_tc358743 = {
-	.name		= "imx-audio_hdmi_in",
+	.name		= "tc358743-audio",
 	.dai_link	= &imxpac_tc358743_dai,
 	.num_links	= 1,
 	.dapm_widgets	= imx_3stack_dapm_widgets_a,
@@ -2879,6 +2876,8 @@ static struct snd_soc_codec_driver soc_codec_dev_tc358743;
 static int imx_tc358743_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
+	struct device_node *cpu_np, *codec_np;
+	struct snd_soc_dai_link *link = imxpac_tc358743.dai_link;
 	struct device_node *np = pdev->dev.of_node;
 	int int_port, ext_port;
 	int ret = 0;
@@ -2895,25 +2894,45 @@ static int imx_tc358743_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	cpu_np = of_parse_phandle(pdev->dev.of_node, "cpu-dai", 0);
+	if (!cpu_np) {
+		dev_err(&pdev->dev, "cpu-dai missing or invalid\n");
+		ret = -EINVAL;
+		goto exit;
+	}
+	link->cpu_of_node = cpu_np;
+	link->platform_of_node = cpu_np;
+
+	/* codec and card node are the same */
+	codec_np = pdev->dev.of_node;
+	link->codec_of_node = codec_np;
+
 	ret = of_property_read_u32(np, "mux-int-port", &int_port);
 	if (ret) {
 		dev_err(&pdev->dev, "mux-int-port missing or invalid\n");
+		ret = -EINVAL;
 		goto exit;
 	}
 
 	ret = of_property_read_u32(np, "mux-ext-port", &ext_port);
 	if (ret) {
 		dev_err(&pdev->dev, "mux-ext-port missing or invalid\n");
+		ret = -EINVAL;
 		goto exit;
 	}
 
 	ret = imx_audmux_config(int_port, ext_port);
 	if (ret) {
 		dev_err(&pdev->dev, "audmux port setup failed\n");
+		ret = -EINVAL;
 		goto exit;
 	}
 
 	imxpac_tc358743.dev = dev;
+
+	/* update card name if provided in device tree */
+	snd_soc_of_parse_card_name(&imxpac_tc358743, "model");
+
 	ret = snd_soc_register_card(&imxpac_tc358743);
 	if (ret)
 		dev_err(dev, "snd_soc_register_card() failed: %d\n", ret);
