@@ -1141,6 +1141,11 @@
 				status = "disabled";
 			};
 
+			rpmsg: rpmsg{
+				compatible = "fsl,imx7d-rpmsg";
+				status = "disabled";
+			};
+
 			sema4: sema4@30ac0000 {
 				compatible = "fsl,imx7d-sema4";
 				reg = <0x30ac0000 0x10000>;

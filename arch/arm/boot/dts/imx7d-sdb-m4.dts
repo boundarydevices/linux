@@ -35,6 +35,10 @@
 	status = "okay";
 };
 
+&rpmsg{
+	status = "okay";
+};
+
 &iomuxc {
 	uart2 {
 		pinctrl_uart2_1: uart2grp-1 {
