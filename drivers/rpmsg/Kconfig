@@ -10,4 +10,8 @@ config IMX_RPMSG_PINGPONG
 	tristate "IMX RPMSG pingpong driver"
 	depends on RPMSG
 
+config IMX_RPMSG_TTY
+	tristate "IMX RPMSG tty driver"
+	depends on RPMSG
+
 endmenu
