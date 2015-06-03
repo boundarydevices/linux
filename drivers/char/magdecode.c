@@ -71,7 +71,7 @@ struct mag_dev {
 	struct platform_device *pdev;
 	wait_queue_head_t queue;
 	spinlock_t lock; /* only one IRQ at a time */
-	struct timer_list timer;
+	struct timer_list data_timer, front_timer, rear_timer;
 	int open_count;
 
 	/*
@@ -136,7 +136,7 @@ static void flush_data(struct mag_dev *dev)
 	}
 }
 
-static void mag_timer(unsigned long arg)
+static void data_timer(unsigned long arg)
 {
 	unsigned long flags;
 	struct mag_dev *dev = (struct mag_dev *)arg;
@@ -160,8 +160,6 @@ static void check_pin(struct mag_dev *dev,
 	else
 		dev->last_rear = event = 'R' | (level << 5);
 
-	flush_data(dev);
-
 	/* Add to event queue */
 	dev->events[dev->e_add].type = event;
 
@@ -170,28 +168,50 @@ static void check_pin(struct mag_dev *dev,
 	wake_up(&dev->queue);
 }
 
-static irqreturn_t mag_switch_handler(int irq, void *dev_id,
-				      int pin, int active_high)
+static void mag_switch_handler(struct mag_dev *dev,
+			       int pin, int active_high)
 {
-	struct mag_dev *dev = dev_id;
-
 	check_pin(dev, pin, active_high);
-	return IRQ_HANDLED;
+}
+
+static void front_timer(unsigned long arg)
+{
+	unsigned long flags;
+	struct mag_dev *dev = (struct mag_dev *)arg;
+
+	spin_lock_irqsave(&dev->lock, flags);
+
+	mag_switch_handler(dev, dev->front_pin,
+			   dev->front_pin_close_high);
+
+	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
 static irqreturn_t front_switch_handler(int irq, void *dev_id)
 {
 	struct mag_dev *dev = dev_id;
-	return mag_switch_handler(irq, dev_id,
-				  dev->front_pin,
-				  dev->front_pin_close_high);
+	mod_timer(&dev->front_timer, jiffies + dev->timeout);
+	return IRQ_HANDLED;
+}
+
+static void rear_timer(unsigned long arg)
+{
+	unsigned long flags;
+	struct mag_dev *dev = (struct mag_dev *)arg;
+
+	spin_lock_irqsave(&dev->lock, flags);
+
+	mag_switch_handler(dev, dev->rear_pin,
+			   dev->rear_pin_close_high);
+
+	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
 static irqreturn_t rear_switch_handler(int irq, void *dev_id)
 {
 	struct mag_dev *dev = dev_id;
-	return mag_switch_handler(irq, dev_id, dev->rear_pin,
-				  dev->rear_pin_close_high);
+	mod_timer(&dev->rear_timer, jiffies + dev->timeout);
+	return IRQ_HANDLED;
 }
 
 static irqreturn_t mag_clock_handler(int irq, void *dev_id)
@@ -208,8 +228,8 @@ static irqreturn_t mag_clock_handler(int irq, void *dev_id)
 	/* advance d_add */
 	dev->d_add = (dev->d_add + 1) & DATABITMASK;
 
-	/* (re)start timer */
-	mod_timer(&dev->timer, jiffies + (HZ / 10) * dev->timeout);
+	/* (re)start data_timer */
+	mod_timer(&dev->data_timer, jiffies + dev->timeout);
 
 	return IRQ_HANDLED;
 }
@@ -227,9 +247,17 @@ static int mag_open(struct inode *inode, struct file *file)
 		/* init wait queue and spinlock */
 		init_waitqueue_head(&dev->queue);
 		spin_lock_init(&dev->lock);
-		init_timer(&dev->timer);
-		dev->timer.function = mag_timer;
-		dev->timer.data = (unsigned long) dev;
+		init_timer(&dev->data_timer);
+		dev->data_timer.function = data_timer;
+		dev->data_timer.data = (unsigned long) dev;
+
+		init_timer(&dev->front_timer);
+		dev->front_timer.function = front_timer;
+		dev->front_timer.data = (unsigned long) dev;
+
+		init_timer(&dev->rear_timer);
+		dev->rear_timer.function = rear_timer;
+		dev->rear_timer.data = (unsigned long) dev;
 
 		check_pin(dev, dev->rear_pin, dev->rear_pin_close_high);
 		check_pin(dev, dev->front_pin, dev->front_pin_close_high);
@@ -443,11 +471,13 @@ static ssize_t mag_read
 			/* determine direction of card swipe */
 			char temp[2] = { event, '\n' };
 
-			/* Lower case f = front switch closed */
-			if (event == 'f')
+			if (event == 'F')		/* F = front switch closed */
 				dev->dd = INSERT;
-			/* Upper case R = rear switch open */
-			else if (event == 'R')
+			else if (event == 'f')		/* f = front switch open */
+				dev->dd = REMOVE;
+			else if (event == 'R')		/* R = rear switch closed */
+				dev->dd = INSERT;
+			else if (event == 'r')		/* r = rear switch open */
 				dev->dd = REMOVE;
 
 			result = 2;
