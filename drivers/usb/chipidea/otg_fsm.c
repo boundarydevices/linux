@@ -941,6 +941,7 @@ void ci_hdrc_otg_fsm_remove(struct ci_hdrc *ci)
 		otg_drv_vbus(&ci->fsm, 0);
 
 	sysfs_remove_group(&ci->dev->kobj, &inputs_attr_group);
+	ci->fsm.otg->state = OTG_STATE_UNDEFINED;
 }
 
 /* Restart OTG fsm if resume from power lost */
