@@ -1676,6 +1676,8 @@ static int max77823_charger_resume(struct device *dev)
 
 static void max77823_charger_shutdown(struct device *dev)
 {
+/*  No need to turn off charging when device is going to poweroff */
+#if 0
 	struct max77823_charger_data *charger =
 				dev_get_drvdata(dev);
 	u8 reg_data;
@@ -1697,6 +1699,7 @@ static void max77823_charger_shutdown(struct device *dev)
 	reg_data = 0x67;
 	max77823_write_reg(charger->i2c,
 		MAX77823_CHG_CNFG_12, reg_data);
+#endif
 	pr_info("func:%s \n", __func__);
 }
 
