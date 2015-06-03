@@ -16,6 +16,7 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/battery/fuelgauge/max77823_fuelgauge.h>
+#include <linux/math64.h>
 
 #define MV_TO_UV(mv) (mv * 1000)
 
@@ -1401,6 +1402,10 @@ bool max77823_fg_init(struct max77823_fuelgauge_data *fuelgauge)
 	max77823_write_word(fuelgauge->i2c, MAX77823_REG_CONFIG,
 		(fuelgauge->pdata->thermal_source != SEC_BATTERY_THERMAL_SOURCE_FG) ? 0x2154 : 0x2254);
 
+	max77823_write_word(fuelgauge->i2c, MAX77823_REG_TGAIN, (u16)fuelgauge->pdata->tgain);
+	max77823_write_word(fuelgauge->i2c, MAX77823_REG_TOFF, (u16)fuelgauge->pdata->toff);
+	max77823_write_word(fuelgauge->i2c, MAX77823_REG_TCURVE, (u16)fuelgauge->pdata->tcurve);
+
 	ret = max77823_read_word(fuelgauge->i2c, MAX77823_REG_STATUS);
 	if ((ret < 0) || !(ret & 2))
 		return true;
@@ -2047,6 +2052,210 @@ static const struct file_operations max77823_fuelgauge_debugfs_fops = {
 };
 
 #ifdef CONFIG_OF
+#define TFRAC_BITS 11
+static int calc_temp(int ain, int toff, int tgain, int tcurve)
+{
+	int x1;
+	int x = (toff << (TFRAC_BITS - 7)) + ((ain * tgain) >> (16 + 6 - TFRAC_BITS));
+	s64 t64;
+	int t;
+
+	x1 = x - (20 << TFRAC_BITS);
+	t64 = (tcurve * x1);
+	t = (t64 * x1) >> (10 + TFRAC_BITS + TFRAC_BITS - TFRAC_BITS);
+	if (x1 >= 0)
+		t = x + t;
+	else
+		t = x - t;
+	return t;
+}
+
+struct best_s {
+	u64 sum;
+	int tcurve;
+	int toff;
+	int tgain;
+};
+
+static u64 calc_error(int tcurve, int tgain, int toff, u32 *pairs, int length)
+{
+	u64 sum = 0;
+	int i;
+
+	/* calculate sum of error**2 */
+	for (i = 0; i < length; i += 2) {
+		int temp = pairs[i] << (TFRAC_BITS - 8);
+		int ain = pairs[i + 1];
+		int c = calc_temp(ain, toff, tgain, tcurve);
+		int err = temp - c;
+		u64 lerr;
+
+		if (err < 0)
+			err = -err;
+		lerr = err;
+		lerr = lerr * err;
+		sum += lerr;
+	}
+//	pr_info("%s: tcurve=%d, tgain=%d, toff=%d, sum=%lld\n", __func__, tcurve, tgain, toff, sum);
+	return sum;
+}
+
+static void get_best_toff(struct best_s *best, int tgain, u32 *pairs, int length)
+{
+	int toff1 = best->toff;
+	int toff = toff1;
+	int best_toff = best->toff;
+	u64 best_sum = 0xffffffffffffffffL;
+	int change = -32;
+
+	while (1) {
+		u64 sum = calc_error(best->tcurve, tgain, toff, pairs, length);
+
+		if (best_sum >= sum) {
+			best_sum = sum;
+			best_toff = toff;
+		} else {
+			toff = best_toff;
+			if (change == -1) {
+				change = 16;
+			} else {
+				change >>= 1;
+				if (!change)
+					break;
+			}
+		}
+		toff += change;
+		if (change > 0) {
+			if (toff >= 32768) {
+				toff = 32767;
+				change = toff - best_toff;
+				if (!change)
+					break;
+			}
+		} else {
+			if (toff < -32768) {
+				toff = -32768;
+				change = toff - best_toff;
+				if (!change)
+					change = 16;
+			}
+		}
+	}
+
+	if (best->sum >= best_sum) {
+		best->sum = best_sum;
+		best->toff = best_toff;
+		best->tgain = tgain;
+		pr_info("%s: tcurve=%d, tgain=%d, toff=%d, sum=%lld\n",
+			__func__, best->tcurve, tgain, best_toff, best_sum);
+	}
+}
+
+static void get_best_tgain(struct best_s *best, u32 *pairs, int length)
+{
+	int tgain = best->tgain;
+	int change = -32;
+
+	while (1) {
+		get_best_toff(best, tgain, pairs, length);
+
+		if (tgain != best->tgain) {
+			tgain = best->tgain;
+			if (change == -1) {
+				change = 16;
+			} else {
+				change >>= 1;
+				if (!change)
+					break;
+			}
+		}
+		tgain += change;
+		if (change > 0) {
+			if (tgain >= 32768) {
+				tgain = 32767;
+				change = tgain - best->tgain;
+				if (!change)
+					break;
+			}
+		} else {
+			if (tgain < -32768) {
+				tgain = -32768;
+				change = tgain - best->tgain;
+				if (!change)
+					change = 16;
+			}
+		}
+	}
+}
+
+static void calibrate_temp(struct sec_battery_platform_data *pdata, u32 *pairs, int length)
+{
+	int i;
+	struct best_s best;
+	int tcurve = 0;
+	int sx = 0;
+	int sy = 0;
+	s64 sxx = 0;
+	s64 sxy = 0;
+	s64 t;
+	s64 s;
+	int d;
+	int len = length >> 1;
+
+	for (i = 0; i < length; i += 2) {
+		int y = pairs[i];
+		int x = pairs[i + 1];
+
+		y = (y << 8) / 10;
+		sx += x;
+		sy += y;
+		sxx += x * x;
+		sxy += x * y;
+		pairs[i] = y;
+	}
+	t = sx;
+	t *= sy;
+	s = (sxy * len - t);		/* 24 fraction bits */
+	t = sx;
+	t *= sx;
+	d = (sxx * len - t) >> 16;	/* 16 fraction bits */
+	s = div64_s64(s, d); 		/* 8 fraction bits */
+	best.tcurve = 0;
+	best.tgain = s >> 2;	/* units 1/64, not 1/256*/
+	/* toff is units 1/128 not 1/256 */
+	best.toff = ((sy - (int)((best.tgain * (s64)sx) >> (6 + 16 - 8))) / len) >> 1;
+	best.sum = calc_error(best.tcurve, best.tgain, best.toff, pairs, length);
+	pr_info("%s: tcurve=%d, tgain=%d, toff=%d, sum=%lld\n",
+		__func__, best.tcurve, best.tgain, best.toff, best.sum);
+
+	for (tcurve = 0; tcurve < 256; tcurve++) {
+		struct best_s b;
+
+		b.tcurve = tcurve;
+		b.tgain = best.tgain;
+		b.toff = best.toff;
+		b.sum = 0xffffffffffffffffL;
+		get_best_tgain(&b, pairs, length);
+
+		if (best.sum < b.sum)
+			break;
+		best = b;
+		pr_info("%s: tcurve=%d, tgain=%d, toff=%d, sum=%lld\n",
+			__func__, best.tcurve, best.tgain, best.toff, best.sum);
+	}
+	pdata->tcurve = best.tcurve;
+	pdata->tgain = best.tgain;
+	pdata->toff = best.toff;
+
+	for (i = 0; i < length; i += 2) {
+		unsigned temp = (pairs[i] * 10) >> 8;
+		unsigned ain = pairs[i + 1];
+		unsigned c = calc_temp(ain, best.toff, best.tgain, best.tcurve);
+
+		pr_info("%s: %d, 0x%x, %d\n", __func__, temp, ain,
+				(c * 10) >> TFRAC_BITS);
+	}
+}
 
 struct dt_data {
 	const char* const field;
@@ -2068,9 +2277,12 @@ static int max77823_fuelgauge_parse_dt(
 		struct max77823_fuelgauge_data *fuelgauge,
 		struct device_node *np)
 {
-	sec_battery_platform_data_t *pdata = fuelgauge->pdata;
+	struct sec_battery_platform_data *pdata = fuelgauge->pdata;
 	int ret;
 	const struct dt_data *dtd = dt_fields;
+	struct property *prop;
+	int length;
+	u32 pairs[64];
 
 	/* reset, irq gpio info */
 	if (np == NULL) {
@@ -2094,6 +2306,32 @@ static int max77823_fuelgauge_parse_dt(
 			__func__, pdata->fg_irq,
 			pdata->repeated_fuelalert);
 
+	ret = of_property_read_u32_array(np, "temp-calibration", pairs, 3);
+	if (ret >= 0) {
+		pdata->tcurve = pairs[0];
+		pdata->tgain = pairs[1];
+		pdata->toff = pairs[2];
+		pr_info("%s: tcurve:%d, tgain:%d toff:%d\n",
+				__func__, pdata->tcurve, pdata->tgain, pdata->toff);
+		return 0;
+	}
+	pr_err("%s: error reading temp-calibration %d\n", __func__, ret);
+
+	prop = of_find_property(np, "temp-calibration-data", &length);
+	if (!prop) {
+		pr_err("%s: error reading temp-calibration-data\n", __func__);
+		return 0;
+	}
+	length >>= 2;
+	length &= ~1;
+	if (length > ARRAY_SIZE(pairs))
+		length = ARRAY_SIZE(pairs);
+	ret = of_property_read_u32_array(np, "temp-calibration-data", pairs, length);
+	if (ret < 0) {
+		pr_err("%s: error reading temp-calibration-data %d\n", __func__, ret);
+		return 0;
+	}
+	calibrate_temp(pdata, pairs, length);
 	return 0;
 }
 #endif
