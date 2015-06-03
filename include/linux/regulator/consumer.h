@@ -122,6 +122,7 @@ struct regmap;
 #define REGULATOR_EVENT_PRE_DO_ENABLE		0x1000
 #define REGULATOR_EVENT_PRE_DO_DISABLE		0x2000
 #define REGULATOR_EVENT_AFT_DO_ENABLE		0x4000
+#define REGULATOR_EVENT_ENABLE			0x8000
 
 /**
  * struct pre_voltage_change_data - Data sent with PRE_VOLTAGE_CHANGE event
