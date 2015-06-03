@@ -33,6 +33,7 @@ obj-$(CONFIG_SOC_IMX5) += cpuidle-imx5.o
 obj-$(CONFIG_SOC_IMX6Q) += cpuidle-imx6q.o
 obj-$(CONFIG_SOC_IMX6SL) += cpuidle-imx6sl.o
 obj-$(CONFIG_SOC_IMX6SX) += cpuidle-imx6sx.o
+obj-$(CONFIG_SOC_IMX6UL) += cpuidle-imx6ul.o
 obj-$(CONFIG_SOC_IMX7D) += cpuidle-imx7d.o
 endif
 
@@ -131,6 +132,8 @@ AFLAGS_lpddr2_freq_imx6sx.o :=-Wa,-march=armv7-a
 AFLAGS_ddr3_freq_imx6sx.o :=-Wa,-march=armv7-a
 AFLAGS_imx6sx_low_power_idle.o :=-Wa,-march=armv7-a
 obj-$(CONFIG_SOC_IMX6SX) += ddr3_freq_imx6sx.o lpddr2_freq_imx6sx.o imx6sx_low_power_idle.o
+AFLAGS_imx6ul_low_power_idle.o :=-Wa,-march=armv7-a
+obj-$(CONFIG_SOC_IMX6UL) += imx6ul_low_power_idle.o
 AFLAGS_ddr3_freq_imx7d.o :=-Wa,-march=armv7-a
 AFLAGS_smp_wfe.o :=-Wa,-march=armv7-a
 obj-y += smp_wfe.o
