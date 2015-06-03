@@ -155,7 +155,7 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	imx_clk_set_parent(clks[IMX6UL_PLL6_BYPASS], clks[IMX6UL_CLK_PLL6]);
 	imx_clk_set_parent(clks[IMX6UL_PLL7_BYPASS], clks[IMX6UL_CLK_PLL7]);
 
-	clks[IMX6UL_CLK_PLL1_SYS]	= imx_clk_gate("pll1_sys", 	"pll1_bypass", base + 0x00, 13);
+	clks[IMX6UL_CLK_PLL1_SYS]	= imx_clk_fixed_factor("pll1_sys",	"pll1_bypass", 1, 1);
 	clks[IMX6UL_CLK_PLL2_BUS]	= imx_clk_gate("pll2_bus", 	"pll2_bypass", base + 0x30, 13);
 	clks[IMX6UL_CLK_PLL3_USB_OTG]	= imx_clk_gate("pll3_usb_otg", 	"pll3_bypass", base + 0x10, 13);
 	clks[IMX6UL_CLK_PLL4_AUDIO]	= imx_clk_gate("pll4_audio", 	"pll4_bypass", base + 0x70, 13);
@@ -406,6 +406,15 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	clk_register_clkdev(clks[IMX6UL_CLK_GPT1_BUS], "ipg",	"imx-gpt.0");
 	clk_register_clkdev(clks[IMX6UL_CLK_GPT1_SERIAL], "per", "imx-gpt.0");
 	clk_register_clkdev(clks[IMX6UL_CLK_GPT_3M], "gpt_3m", "imx-gpt.0");
+
+	/* set perclk to from OSC */
+	imx_clk_set_parent(clks[IMX6UL_CLK_PERCLK_SEL], clks[IMX6UL_CLK_OSC]);
+
+	/* Set the UART parent iif needed */
+	if (uart_from_osc)
+		imx_clk_set_parent(clks[IMX6UL_CLK_UART_SEL], clks[IMX6UL_CLK_OSC]);
+	else
+		imx_clk_set_parent(clks[IMX6UL_CLK_UART_SEL], clks[IMX6UL_CLK_PLL3_80M]);
 
 	imx_clk_set_rate(clks[IMX6UL_CLK_ENET_REF], 50000000);
 	imx_clk_set_rate(clks[IMX6UL_CLK_ENET2_REF], 50000000);
