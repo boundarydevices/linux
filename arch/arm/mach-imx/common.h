@@ -219,4 +219,5 @@ static inline void imx_init_l2cache(void) {}
 
 extern struct smp_operations imx_smp_ops;
 extern void imx6sl_low_power_wfi(void __iomem *base);
+extern void imx6ul_low_power_idle(void __iomem *base);
 #endif
