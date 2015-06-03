@@ -509,9 +509,9 @@ poll_conreq_set_1:
 	cmp	r0, #(0x4 << 12)
 	bne	poll_conreq_set_1
 
-	ldr	r0, =0x00008010
+	ldr	r0, =0x00008050
 	str	r0, [r5, #MMDC0_MDSCR]
-	ldr	r0, =0x00008018
+	ldr	r0, =0x00008058
 	str	r0, [r5, #MMDC0_MDSCR]
 
 	/*
@@ -635,7 +635,7 @@ cont_1:
 	orr	r0, r0, #0x4
 	str	r0, [r5, #MMDC0_MDCF1]
 
-	ldr	r0, =0x00091680
+	ldr	r0, =0x00011680
 	str	r0, [r5, #MMDC0_MDMISC]
 
 	/* enable dqs pull down in the IOMUX. */
@@ -824,14 +824,14 @@ update_iomux1:
 	add	r8, r8, #8
 
 	/* update MISC register: WALAT, RALAT */
-	ldr	r0, =0x00081740
+	ldr	r0, =0x00001740
 	str	r0, [r5, #MMDC0_MDMISC]
 
 	/* configure ddr devices to dll on, odt. */
-	ldr	r0, =0x00028031
+	ldr	r0, =0x00048031
 	str	r0, [r5, #MMDC0_MDSCR]
 
-	ldr	r0, =0x00028039
+	ldr	r0, =0x00048039
 	str	r0, [r5, #MMDC0_MDSCR]
 
 	/* delay for while. */
@@ -848,10 +848,10 @@ cont7:
 	bgt	delay7
 
 	/* reset dll. */
-	ldr	r0, =0x09208030
+	ldr	r0, =0x09408030
 	str	r0, [r5, #MMDC0_MDSCR]
 
-	ldr	r0, =0x09208038
+	ldr	r0, =0x09408038
 	str	r0, [r5, #MMDC0_MDSCR]
 
 	/* delay for while. */
@@ -907,7 +907,7 @@ cont8:
 	add	r8, r8, #8
 
 	ldr	r2, =0x4818
-	str	r0, [r5, r2]
+	str	r3, [r5, r2]
 
 	/* delay for while. */
 	ldr	r1, =40
