@@ -86,6 +86,8 @@ struct mag_dev {
 	int data_pin;
 	int data_pin_active_high;
 	char edge;
+	char last_front;
+	char last_rear;
 	int timeout;
 
 	/*
@@ -111,6 +113,13 @@ struct mag_dev {
 	 * events into the event buffer
 	 */
 	u8 dd; /* Swipe direction (INSERT or REMOVE) */
+
+	/*
+	 * Used for sysfs entries
+	 */
+	u8 take_start;
+	u8 take_end;
+	u8 take_dd;
 };
 
 static void flush_data(struct mag_dev *dev)
@@ -147,9 +156,9 @@ static void check_pin(struct mag_dev *dev,
 
 	/* Determine which switch it was, and whether it was opened or closed */
 	if (pin == dev->front_pin)
-		event = 'F' | (level << 5);
+		dev->last_front = event = 'F' | (level << 5);
 	else
-		event = 'R' | (level << 5);
+		dev->last_rear = event = 'R' | (level << 5);
 
 	flush_data(dev);
 
@@ -334,7 +343,11 @@ static int mag_decode(struct mag_dev *dev, char *buf)
 	char dd = dev->dd;
 	int bitcount, scale, bi, starti, endi, i, sc, bc;
 
-	bitcount = (dev->events[dev->e_take].ptr - dev->d_take) & DATABITMASK;
+	dev->take_end = dev->events[dev->e_take].ptr;
+	dev->take_start = dev->d_take;
+	dev->take_dd = dd;
+
+	bitcount = (dev->take_end - dev->take_start) & DATABITMASK;
 	if (dd == INSERT) {
 		scale = 1;
 		bi = dev->d_take;
@@ -389,8 +402,14 @@ static int mag_decode(struct mag_dev *dev, char *buf)
 
 	/* Return an empty line on faulty output */
 	if (starti < 0 || endi < 0) {
+		dev_dbg(dev->chrdev, "decode err(%d) dir(%d) at [%d..%d]\n",
+			i, dev->take_dd, dev->take_start, dev->take_end);
+		dev_dbg(dev->chrdev, "starti %d, endi %d\n", starti, endi);
 		i = 0;
 		buf[i] = '\n';
+	} else {
+		dev_dbg(dev->chrdev, "decode(%d) dir(%d) at [%d..%d]\n",
+			i, dev->take_dd, dev->take_start, dev->take_end);
 	}
 	return i + 1;
 }
@@ -471,6 +490,88 @@ struct gpio_def {
 	int	*active_high;
 };
 
+static ssize_t show_front(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct mag_dev *mag = dev_get_drvdata(dev);
+	return sprintf(buf, "%d\n",
+		       (0 != gpio_get_value(mag->front_pin))
+			^ mag->front_pin_close_high);
+}
+
+static struct kobj_attribute front =
+__ATTR(front, 0644, (void *)show_front, NULL);
+
+static ssize_t show_rear(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct mag_dev *mag = dev_get_drvdata(dev);
+	return sprintf(buf, "%d\n",
+		       (0 != gpio_get_value(mag->rear_pin))
+			^ mag->rear_pin_close_high);
+}
+
+static struct kobj_attribute rear =
+__ATTR(rear, 0644, (void *)show_rear, NULL);
+
+static ssize_t show_last_front(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct mag_dev *mag = dev_get_drvdata(dev);
+	return sprintf(buf, "%c\n", mag->last_front);
+}
+
+static struct kobj_attribute last_front =
+__ATTR(last_front, 0644, (void *)show_last_front, NULL);
+
+static ssize_t show_last_rear(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct mag_dev *mag = dev_get_drvdata(dev);
+	return sprintf(buf, "%c\n", mag->last_rear);
+}
+
+static struct kobj_attribute last_rear =
+__ATTR(last_rear, 0644, (void *)show_last_rear, NULL);
+
+static ssize_t show_raw(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct mag_dev *mag = dev_get_drvdata(dev);
+	int const max = PAGE_SIZE - 20;
+	int i = 0;
+	int count;
+	u8 next = mag->take_start;
+	buf += sprintf(buf, "%d:%d-%d:", mag->take_dd, mag->take_start, mag->take_end);
+	count = (mag->take_end - next + DATASIZE) & DATABITMASK;
+	if (count > max)
+		count = max;
+
+	for (i=0; i < count; i++) {
+		char bit = (0 != (mag->data[next/8] & (1 << (next&7))));
+		*buf++ = '0' + bit;
+		next = (next + 1) & DATABITMASK;
+	}
+	*buf = '\n';
+	return i+1;
+}
+
+static struct kobj_attribute raw =
+__ATTR(raw, 0644, (void *)show_raw, NULL);
+
+static struct attribute *mag_attrs[] = {
+	&front.attr,
+	&rear.attr,
+	&last_front.attr,
+	&last_rear.attr,
+	&raw.attr,
+	NULL,
+};
+
+static struct attribute_group mag_attr_grp = {
+	.attrs = mag_attrs,
+};
+
 static int mag_of_probe(struct platform_device *pdev,
 			struct device_node *np,
 			struct mag_dev *dev)
@@ -518,6 +619,7 @@ static int mag_of_probe(struct platform_device *pdev,
 			i--;
 		}
 	}
+
 	return (i == ARRAY_SIZE(pins)) ? 0 : -EINVAL;
 }
 
@@ -560,6 +662,10 @@ static int mag_probe(struct platform_device *pdev)
 				    devnum, 0, "%s", DRIVER_NAME);
 	platform_set_drvdata(pdev, dev);
 
+	result = sysfs_create_group(&pdev->dev.kobj, &mag_attr_grp);
+	if (result)
+		dev_err(&pdev->dev, "failed to create sysfs entries");
+
 	return 0;
 
 fail_cdevadd:
@@ -580,6 +686,7 @@ static int mag_remove(struct platform_device *pdev)
 			dev->data_pin,
 		};
 
+		sysfs_remove_group(&pdev->dev.kobj, &mag_attr_grp);
 		if (!IS_ERR(dev->chrdev)) {
 			device_destroy(magdecode_class, devnum);
 			dev->chrdev = 0;
