@@ -161,9 +161,9 @@
 			reg = <0x00900000 0x4000>;
 		};
 
-		ocrams_ddr: sram@00901000 {
+		ocrams_ddr: sram@00904000 {
 			compatible = "fsl,ddr-lpm-sram";
-			reg = <0x00901000 0x1000>;
+			reg = <0x00904000 0x1000>;
 		};
 
 		ocram: sram@00905000 {
@@ -449,8 +449,8 @@
 				compatible = "fsl,imx6ul-gpt", "fsl,imx31-gpt";
 				reg = <0x02098000 0x4000>;
 				interrupts = <GIC_SPI 55 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX6UL_CLK_DUMMY>,
-					 <&clks IMX6UL_CLK_DUMMY>;
+				clocks = <&clks IMX6UL_CLK_GPT1_BUS>,
+					 <&clks IMX6UL_CLK_GPT1_SERIAL>;
 				clock-names = "ipg", "per";
 			};
 
