@@ -330,7 +330,8 @@ int update_ddr_freq_imx_smp(int ddr_rate)
 
 		iram_ddr_settings[0][0] = ddr_settings_size;
 		iram_iomux_settings[0][0] = iomux_settings_size;
-		if (ddr_rate == ddr_med_rate && cpu_is_imx6q()) {
+		if (ddr_rate == ddr_med_rate && cpu_is_imx6q() &&
+			ddr_med_rate != ddr_normal_rate) {
 			for (i = 0; i < ARRAY_SIZE(ddr3_dll_mx6q); i++) {
 				iram_ddr_settings[i + 1][0] =
 						normal_mmdc_settings[i][0];
