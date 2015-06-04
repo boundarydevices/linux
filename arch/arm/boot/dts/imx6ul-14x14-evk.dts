@@ -132,6 +132,16 @@
 	assigned-clock-rates = <786432000>;
 };
 
+&csi {
+	status = "disabled";
+
+	port {
+		csi1_ep: endpoint {
+			remote-endpoint = <&ov5640_ep>;
+		};
+	};
+};
+
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1>;
@@ -344,6 +354,25 @@
 		clock-names = "mclk";
 		wlf,shared-lrclk;
 	};
+
+	ov5640: ov5640@3c {
+		compatible = "ovti,ov5640";
+		reg = <0x3c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_csi1>;
+		clocks = <&clks IMX6UL_CLK_CSI>;
+		clock-names = "csi_mclk";
+		pwn-gpios = <&gpio_spi 6 1>;
+		rst-gpios = <&gpio_spi 5 0>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+		port {
+			ov5640_ep: endpoint {
+				remote-endpoint = <&csi1_ep>;
+			};
+		};
+	};
 };
 
 &qspi {
@@ -372,6 +401,23 @@
 				MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0x17059 /* SD1 CD */
 				MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT	0x17059 /* SD1 VSELECT */
 				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059 /* SD1 RESET */
+			>;
+		};
+
+		pinctrl_csi1: csi1grp {
+			fsl,pins = <
+				MX6UL_PAD_CSI_MCLK__CSI_MCLK		0x1b088
+				MX6UL_PAD_CSI_PIXCLK__CSI_PIXCLK	0x1b088
+				MX6UL_PAD_CSI_VSYNC__CSI_VSYNC		0x1b088
+				MX6UL_PAD_CSI_HSYNC__CSI_HSYNC		0x1b088
+				MX6UL_PAD_CSI_DATA00__CSI_DATA02	0x1b088
+				MX6UL_PAD_CSI_DATA01__CSI_DATA03	0x1b088
+				MX6UL_PAD_CSI_DATA02__CSI_DATA04	0x1b088
+				MX6UL_PAD_CSI_DATA03__CSI_DATA05	0x1b088
+				MX6UL_PAD_CSI_DATA04__CSI_DATA06	0x1b088
+				MX6UL_PAD_CSI_DATA05__CSI_DATA07	0x1b088
+				MX6UL_PAD_CSI_DATA06__CSI_DATA08	0x1b088
+				MX6UL_PAD_CSI_DATA07__CSI_DATA09	0x1b088
 			>;
 		};
 
