@@ -98,6 +98,25 @@
 #define MX7D_USB_VBUS_WAKEUP_SOURCE_BVALID	MX7D_USB_VBUS_WAKEUP_SOURCE(2)
 #define MX7D_USB_VBUS_WAKEUP_SOURCE_SESS_END	MX7D_USB_VBUS_WAKEUP_SOURCE(3)
 
+#define OTG_DRVVBUS0			BIT(16)
+#define OTG_ADP_PRBENB0			BIT(13)
+#define USB_OTG_PHY_CFG2		0x34
+
+#define OTG_ADP_PRB_EN			BIT(23)
+#define OTG_ADP_PRB_INT_EN		BIT(22)
+#define OTG_ADP_SNS_INT_EN		BIT(21)
+#define USB_OTG_ADP_CFG1		0x50
+
+#define ADP_CHRG_SWCMP			BIT(7)
+#define ADP_CHRG_SWTIME_MASK		(0xff << 8)
+#define USB_OTG_ADP_CFG2		0x54
+
+#define OTG_ADP_PRB_INT_STS		BIT(27)
+#define OTG_ADP_SNS_INT_STS		BIT(26)
+#define OTG_ADP_PRB_TIMER		BIT(0)
+#define USB_OTG_ADP_STS			0x58
+
+#define OTG_ADP_CHRG_DELTA		0xC
 struct usbmisc_ops {
 	/* It's called once when probe a usb device */
 	int (*init)(struct imx_usbmisc_data *data);
@@ -111,6 +130,20 @@ struct usbmisc_ops {
 	int (*hsic_set_connect)(struct imx_usbmisc_data *data);
 	/* It's called during suspend/resume */
 	int (*hsic_set_clk)(struct imx_usbmisc_data *data, bool enabled);
+	/* USB OTG ADP probe enable */
+	void (*adp_probe_enable)(struct imx_usbmisc_data *data, bool on);
+	/* USB OTG ADP probe start */
+	void (*adp_probe_start)(struct imx_usbmisc_data *data);
+	/* USB OTG ADP sense enable */
+	void (*adp_sense_enable)(struct imx_usbmisc_data *data, bool on);
+	/* Check if usb OTG ADP probe irq */
+	bool (*is_probe_int)(struct imx_usbmisc_data *data);
+	/* Check if usb OTG ADP sense irq */
+	bool (*is_sense_int)(struct imx_usbmisc_data *data);
+	/* Check if usb OTG ADP sense probe is on-going by A-dev */
+	bool (*adp_sense_connection)(struct imx_usbmisc_data *data);
+	/* Check if it's a device attach or dettach event */
+	bool (*adp_attach_event)(struct imx_usbmisc_data *data);
 };
 
 struct imx_usbmisc {
@@ -460,6 +493,175 @@ static int usbmisc_imx6sx_power_lost_check(struct imx_usbmisc_data *data)
 		return 0;
 }
 
+static void usbmisc_otg_adp_update_charge_time(struct imx_usbmisc *usbmisc)
+{
+	u32 reg;
+
+	/* ADP_CHRG_SWTIME to be 0, force to generate probe irq */
+	reg = readl(usbmisc->base + USB_OTG_ADP_CFG2);
+	reg = reg & ~ADP_CHRG_SWTIME_MASK;
+
+	/* Use ADP_CHRG_SWCMP */
+	reg = reg | ADP_CHRG_SWCMP;
+	writel(reg, usbmisc->base + USB_OTG_ADP_CFG2);
+}
+
+static void usbmisc_otg_adp_prb_int(struct imx_usbmisc *usbmisc, bool on)
+{
+	u32 reg;
+
+	reg = readl(usbmisc->base + USB_OTG_ADP_CFG1);
+	if (on)
+		writel(reg | OTG_ADP_PRB_INT_EN,
+					usbmisc->base + USB_OTG_ADP_CFG1);
+	else
+		writel(reg & ~OTG_ADP_PRB_INT_EN,
+					usbmisc->base + USB_OTG_ADP_CFG1);
+}
+
+static void usbmisc_otg_adp_probe_enable(struct imx_usbmisc_data *data, bool on)
+{
+	struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
+	unsigned long flags;
+	u32 reg;
+
+	spin_lock_irqsave(&usbmisc->lock, flags);
+
+	/* Disable probe irq */
+	if (!on)
+		usbmisc_otg_adp_prb_int(usbmisc, false);
+
+	/* Disable DRVVBUS */
+	reg = readl(usbmisc->base + USB_OTG_PHY_CFG2);
+	if (on)
+		writel(reg & ~OTG_DRVVBUS0, usbmisc->base + USB_OTG_PHY_CFG2);
+	else
+		writel(reg | OTG_DRVVBUS0, usbmisc->base + USB_OTG_PHY_CFG2);
+
+	reg = readl(usbmisc->base + USB_OTG_ADP_CFG1);
+
+	if (on) {
+		usbmisc_otg_adp_update_charge_time(usbmisc);
+		writel(reg | OTG_ADP_PRB_EN, usbmisc->base + USB_OTG_ADP_CFG1);
+	} else {
+		writel(reg & ~OTG_ADP_PRB_EN, usbmisc->base + USB_OTG_ADP_CFG1);
+	}
+
+	/* Enable probe irq */
+	if (on)
+		usbmisc_otg_adp_prb_int(usbmisc, true);
+
+	spin_unlock_irqrestore(&usbmisc->lock, flags);
+}
+
+static void usbmisc_otg_adp_probe_start(struct imx_usbmisc_data *data)
+{
+	data->adp_prb_n2 = 0;
+	data->adp_prb_n1 = 0;
+	data->adp_prb_n = 0;
+	usbmisc_otg_adp_probe_enable(data, true);
+}
+
+static u32 usbmisc_otg_adp_charge_time(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
+
+	return readl(usbmisc->base + USB_OTG_ADP_STS) & 0xff;
+}
+
+static bool usbmisc_otg_adp_is_probe_int(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
+
+	if (readl(usbmisc->base + USB_OTG_ADP_STS) & OTG_ADP_PRB_INT_STS) {
+		usbmisc_otg_adp_probe_enable(data, false);
+		return true;
+	} else {
+		return false;
+	}
+}
+
+static bool usbmisc_otg_adp_is_attach_event(struct imx_usbmisc_data *data)
+{
+	u32 adp_delta;
+
+	if (data->adp_prb_n2) {
+		data->adp_prb_n2 = data->adp_prb_n1;
+		data->adp_prb_n1 = data->adp_prb_n;
+	}
+	data->adp_prb_n = usbmisc_otg_adp_charge_time(data);
+
+	/* First probe charge n2==n1==0 */
+	if (data->adp_prb_n1 == 0) {
+		data->adp_prb_n1 = data->adp_prb_n;
+		data->adp_prb_n2 = data->adp_prb_n1;
+	}
+
+	dev_dbg(data->dev, "ADP the charge time is %x:%x:%x!\n",
+						data->adp_prb_n2,
+						data->adp_prb_n1,
+						data->adp_prb_n);
+
+	if (data->adp_prb_n2 > data->adp_prb_n)
+		adp_delta = data->adp_prb_n2 > data->adp_prb_n;
+	else
+		adp_delta = data->adp_prb_n - data->adp_prb_n2;
+
+	if (adp_delta > OTG_ADP_CHRG_DELTA) {
+		dev_dbg(data->dev, "ADP probe event charge delta: %x!\n",
+								adp_delta);
+		return true;
+	}
+
+	return false;
+}
+
+static void usbmisc_otg_adp_sense_enable(struct imx_usbmisc_data *data, bool on)
+{
+	struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
+	unsigned long flags;
+	u32 reg;
+
+	spin_lock_irqsave(&usbmisc->lock, flags);
+	reg = readl(usbmisc->base + USB_OTG_ADP_CFG1);
+	if (on)
+		/* Enable OTG ADP sense irq */
+		writel(reg | OTG_ADP_SNS_INT_EN,
+				usbmisc->base + USB_OTG_ADP_CFG1);
+	else
+		writel(reg & ~OTG_ADP_SNS_INT_EN,
+				usbmisc->base + USB_OTG_ADP_CFG1);
+	spin_unlock_irqrestore(&usbmisc->lock, flags);
+}
+
+static bool usbmisc_otg_adp_is_sense_int(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
+
+	if (readl(usbmisc->base + USB_OTG_ADP_STS) & OTG_ADP_SNS_INT_STS) {
+		usbmisc_otg_adp_sense_enable(data, false);
+		return true;
+	} else {
+		return false;
+	}
+}
+
+static bool usbmisc_otg_adp_sense_connection(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
+
+	/* Judge if A-dev probes by checking if sense irq is enabled */
+	if (readl(usbmisc->base + USB_OTG_ADP_CFG1) & OTG_ADP_SNS_INT_EN) {
+		/* Disable sense int */
+		usbmisc_otg_adp_sense_enable(data, false);
+		dev_info(data->dev, "OTG device detached\n");
+		return false;
+	} else {
+		usbmisc_otg_adp_sense_enable(data, true);
+		return true;
+	}
+}
+
 static int usbmisc_imx7d_set_wakeup
 	(struct imx_usbmisc_data *data, bool enabled)
 {
@@ -570,6 +772,13 @@ static const struct usbmisc_ops imx7d_usbmisc_ops = {
 	.init = usbmisc_imx7d_init,
 	.set_wakeup = usbmisc_imx7d_set_wakeup,
 	.power_lost_check = usbmisc_imx7d_power_lost_check,
+	.adp_probe_enable = usbmisc_otg_adp_probe_enable,
+	.adp_probe_start = usbmisc_otg_adp_probe_start,
+	.adp_sense_enable = usbmisc_otg_adp_sense_enable,
+	.is_probe_int = usbmisc_otg_adp_is_probe_int,
+	.is_sense_int = usbmisc_otg_adp_is_sense_int,
+	.adp_sense_connection = usbmisc_otg_adp_sense_connection,
+	.adp_attach_event = usbmisc_otg_adp_is_attach_event,
 };
 
 int imx_usbmisc_init(struct imx_usbmisc_data *data)
@@ -655,6 +864,104 @@ int imx_usbmisc_hsic_set_clk(struct imx_usbmisc_data *data, bool on)
 	return usbmisc->ops->hsic_set_clk(data, on);
 }
 EXPORT_SYMBOL_GPL(imx_usbmisc_hsic_set_clk);
+
+void imx_usbmisc_adp_probe_enable(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc;
+
+	if (!data)
+		return;
+
+	usbmisc = dev_get_drvdata(data->dev);
+	if (!usbmisc->ops->adp_probe_enable)
+		return;
+	usbmisc->ops->adp_probe_enable(data, true);
+}
+EXPORT_SYMBOL_GPL(imx_usbmisc_adp_probe_enable);
+
+void imx_usbmisc_adp_probe_start(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc;
+
+	if (!data)
+		return;
+
+	usbmisc = dev_get_drvdata(data->dev);
+	if (!usbmisc->ops->adp_probe_start)
+		return;
+	usbmisc->ops->adp_probe_start(data);
+}
+EXPORT_SYMBOL_GPL(imx_usbmisc_adp_probe_start);
+
+void imx_usbmisc_adp_sense_enable(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc;
+
+	if (!data)
+		return;
+
+	usbmisc = dev_get_drvdata(data->dev);
+	if (!usbmisc->ops->adp_sense_enable)
+		return;
+	usbmisc->ops->adp_sense_enable(data, true);
+}
+EXPORT_SYMBOL_GPL(imx_usbmisc_adp_sense_enable);
+
+bool imx_usbmisc_adp_is_probe_int(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc;
+
+	if (!data)
+		return 0;
+
+	usbmisc = dev_get_drvdata(data->dev);
+	if (!usbmisc->ops->is_probe_int)
+		return 0;
+	return usbmisc->ops->is_probe_int(data);
+}
+EXPORT_SYMBOL_GPL(imx_usbmisc_adp_is_probe_int);
+
+bool imx_usbmisc_adp_is_sense_int(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc;
+
+	if (!data)
+		return 0;
+
+	usbmisc = dev_get_drvdata(data->dev);
+	if (!usbmisc->ops->is_sense_int)
+		return 0;
+	return usbmisc->ops->is_sense_int(data);
+}
+EXPORT_SYMBOL_GPL(imx_usbmisc_adp_is_sense_int);
+
+bool imx_usbmisc_adp_sense_connection(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc;
+
+	if (!data)
+		return 0;
+
+	usbmisc = dev_get_drvdata(data->dev);
+	if (!usbmisc->ops->adp_sense_connection)
+		return 0;
+	return usbmisc->ops->adp_sense_connection(data);
+}
+EXPORT_SYMBOL_GPL(imx_usbmisc_adp_sense_connection);
+
+bool imx_usbmisc_adp_attach_event(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc;
+
+	if (!data)
+		return 0;
+
+	usbmisc = dev_get_drvdata(data->dev);
+	if (!usbmisc->ops->adp_attach_event)
+		return 0;
+	return usbmisc->ops->adp_attach_event(data);
+}
+EXPORT_SYMBOL_GPL(imx_usbmisc_adp_attach_event);
 
 static const struct of_device_id usbmisc_imx_dt_ids[] = {
 	{
