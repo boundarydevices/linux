@@ -680,7 +680,7 @@
 				compatible = "fsl,imx7d-adc";
 				reg = <0x30610000 0x10000>;
 				interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>;
+				clocks = <&clks IMX7D_ADC_ROOT_CLK>;
 				num-channels = <4>;
 				clock-names = "adc";
 				status = "disabled";
@@ -690,7 +690,7 @@
 				compatible = "fsl,imx7d-adc";
 				reg = <0x30620000 0x10000>;
 				interrupts = <GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>;
+				clocks = <&clks IMX7D_ADC_ROOT_CLK>;
 				num-channels = <4>;
 				clock-names = "adc";
 				status = "disabled";
