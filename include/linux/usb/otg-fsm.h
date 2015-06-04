@@ -68,6 +68,9 @@ enum otg_fsm_timer {
 	A_TST_MAINT,
 	B_SRP_REQD,
 	B_TST_SUSP,
+	A_ADP_PRB,
+	B_ADP_PRB,
+	B_ADP_SNS,
 	HNP_POLLING,
 
 	NUM_OTG_FSM_TIMERS,
