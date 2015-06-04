@@ -795,6 +795,7 @@ static int pxp_set_scaling(struct pxps *pxp)
 	struct pxp_proc_data *proc_data = &pxp->pxp_conf_state.proc_data;
 	struct pxp_config_data *pxp_conf = &pxp->pxp_conf_state;
 	struct pxp_layer_param *s0_params = &pxp_conf->s0_param;
+	struct pxp_layer_param *out_params = &pxp_conf->out_param;
 
 	proc_data->scaling = 1;
 	decx = proc_data->srect.width / proc_data->drect.width;
@@ -814,6 +815,8 @@ static int pxp_set_scaling(struct pxps *pxp)
 			 (proc_data->drect.width * decx);
 	} else {
 		if (!is_yuv(s0_params->pixel_fmt) ||
+		    (is_yuv(s0_params->pixel_fmt) ==
+		     is_yuv(out_params->pixel_fmt)) ||
 		    (s0_params->pixel_fmt == PXP_PIX_FMT_GREY) ||
 		    (s0_params->pixel_fmt == PXP_PIX_FMT_GY04) ||
 		    (s0_params->pixel_fmt == PXP_PIX_FMT_VUY444)) {
