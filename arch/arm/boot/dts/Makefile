@@ -196,8 +196,13 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6sx-17x17-arm2-ecspi.dtb \
 	imx6sx-17x17-arm2-gpmi-weim.dtb \
 	imx6sx-17x17-arm2-mlb.dtb \
+	imx6sx-17x17-arm2-sai.dtb \
+	imx6sx-17x17-arm2-spdif.dtb \
+	imx6sx-17x17-arm2-ssi.dtb \
 	imx6sx-19x19-arm2.dtb \
 	imx6sx-19x19-arm2-ldo.dtb \
+	imx6sx-19x19-arm2-mqs.dtb \
+	imx6sx-19x19-arm2-sai.dtb \
 	imx6sx-19x19-arm2-csi.dtb \
 	imx6sx-19x19-arm2-lcdif1.dtb \
 	imx6sx-19x19-arm2-gpmi-weim.dtb \
@@ -205,6 +210,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6sx-sdb-ldo.dtb \
 	imx6sx-sdb-reva.dtb \
 	imx6sx-sdb-reva-ldo.dtb \
+	imx6sx-sdb-sai.dtb \
 	imx6sx-sabreauto.dtb \
 	imx6sx-sabreauto-m4.dtb \
 	imx6sx-sdb-lcdif1.dtb \
@@ -225,20 +231,25 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx7d-12x12-lpddr3-arm2-enet.dtb \
 	imx7d-12x12-lpddr3-arm2-flexcan.dtb \
 	imx7d-12x12-lpddr3-arm2-qspi.dtb \
+	imx7d-12x12-lpddr3-arm2-sai.dtb \
 	imx7d-12x12-lpddr3-arm2-sim.dtb \
 	imx7d-12x12-lpddr3-arm2-m4.dtb \
 	imx7d-12x12-lpddr3-arm2-pcie.dtb \
 	imx7d-12x12-lpddr3-arm2-mipi_dsi.dtb \
+	imx7d-12x12-lpddr3-arm2-mqs.dtb \
 	imx7d-19x19-lpddr3-arm2.dtb \
 	imx7d-19x19-ddr3-arm2.dtb \
 	imx7d-19x19-ddr3-arm2-csi.dtb \
+	imx7d-19x19-ddr3-arm2-sai.dtb \
 	imx7d-sdb.dtb \
 	imx7d-sdb-enet.dtb \
 	imx7d-sdb-epdc.dtb \
 	imx7d-sdb-gpmi-weim.dtb \
+	imx7d-sdb-hdmi-audio.dtb \
 	imx7d-sdb-qspi.dtb \
 	imx7d-sdb-sim.dtb \
 	imx7d-sdb-touch.dtb \
+	imx7d-sdb-wm8960.dtb \
 	imx7d-sdb-m4.dtb
 dtb-$(CONFIG_ARCH_MXS) += imx23-evk.dtb \
 	imx23-olinuxino.dtb \
