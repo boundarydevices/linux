@@ -1115,9 +1115,10 @@
 			clocks = <&clks IMX6UL_CLK_GPMI_IO>,
 				 <&clks IMX6UL_CLK_GPMI_APB>,
 				 <&clks IMX6UL_CLK_GPMI_BCH>,
-				 <&clks IMX6UL_CLK_GPMI_BCH_APB>;
+				 <&clks IMX6UL_CLK_GPMI_BCH_APB>,
+				 <&clks IMX6UL_CLK_PER_BCH>;
 			clock-names = "gpmi_io", "gpmi_apb", "gpmi_bch",
-				      "gpmi_bch_apb";
+				      "gpmi_bch_apb", "per1_bch";
 			dmas = <&dma_apbh 0>;
 			dma-names = "rx-tx";
 			status = "disabled";
