@@ -1594,7 +1594,7 @@ static irqreturn_t pxp_irq(int irq, void *dev_id)
 	struct pxp_tx_desc *desc;
 	dma_async_tx_callback callback;
 	void *callback_param;
-	unsigned long flags;
+	unsigned long flags, flags0;
 	u32 hist_status;
 	int pxp_irq_status = 0;
 
@@ -1657,12 +1657,14 @@ static irqreturn_t pxp_irq(int irq, void *dev_id)
 	}
 
 	pxp_chan = list_entry(head.next, struct pxp_channel, list);
+	spin_lock_irqsave(&pxp_chan->lock, flags0);
 	list_del_init(&pxp_chan->list);
 
 	if (list_empty(&pxp_chan->active_list)) {
 		pr_debug("PXP_IRQ pxp_chan->active_list empty. chan_id %d\n",
 			 pxp_chan->dma_chan.chan_id);
 		pxp->pxp_ongoing = 0;
+		spin_unlock_irqrestore(&pxp_chan->lock, flags0);
 		spin_unlock_irqrestore(&pxp->lock, flags);
 		return IRQ_NONE;
 	}
@@ -1685,6 +1687,7 @@ static irqreturn_t pxp_irq(int irq, void *dev_id)
 
 	list_splice_init(&desc->tx_list, &pxp_chan->free_list);
 	list_move(&desc->list, &pxp_chan->free_list);
+	spin_unlock_irqrestore(&pxp_chan->lock, flags0);
 
 	mutex_unlock(&hard_lock);
 	pxp->pxp_ongoing = 0;
