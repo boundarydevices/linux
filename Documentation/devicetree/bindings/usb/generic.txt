@@ -11,7 +11,9 @@ Optional properties:
 			"peripheral" and "otg". In case this attribute isn't
 			passed via DT, USB DRD controllers should default to
 			OTG.
-
+ - adp-support: tells OTG USB controllers that ADP is enabled. In case this
+			attribute isn't passed via DT, ADP should not be
+			supported.
 This is an attribute to a USB controller such as:
 
 dwc3@4a030000 {
@@ -21,4 +23,5 @@ dwc3@4a030000 {
 	usb-phy = <&usb2_phy>, <&usb3,phy>;
 	maximum-speed = "super-speed";
 	dr_mode = "otg";
+	adp-support;
 };
