@@ -378,18 +378,10 @@ static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static u32 imx_wm8960_rates[] = {
-	8000, 16000, 32000, 48000, 64000, 96000
-};
+static u32 imx_wm8960_rates[] = { 8000, 16000, 32000, 48000 };
 static struct snd_pcm_hw_constraint_list imx_wm8960_rate_constraints = {
 	.count = ARRAY_SIZE(imx_wm8960_rates),
 	.list = imx_wm8960_rates,
-};
-
-static u32 imx_wm8960_formats[] = {16, 32};
-static struct snd_pcm_hw_constraint_list imx_wm8960_format_constraints = {
-	.count = ARRAY_SIZE(imx_wm8960_formats),
-	.list = imx_wm8960_formats,
 };
 
 static int imx_hifi_startup(struct snd_pcm_substream *substream)
@@ -413,11 +405,6 @@ static int imx_hifi_startup(struct snd_pcm_substream *substream)
 	if (!data->is_codec_master) {
 		ret = snd_pcm_hw_constraint_list(substream->runtime, 0,
 				SNDRV_PCM_HW_PARAM_RATE, &imx_wm8960_rate_constraints);
-		if (ret)
-			return ret;
-
-		ret = snd_pcm_hw_constraint_list(substream->runtime, 0,
-				SNDRV_PCM_HW_PARAM_SAMPLE_BITS, &imx_wm8960_format_constraints);
 		if (ret)
 			return ret;
 	}
