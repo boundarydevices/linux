@@ -70,13 +70,6 @@
 	};
 };
 
-&adc1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_adc1>;
-	vref-supply = <&reg_vref_3v3>;
-	status = "okay";
-};
-
 &ecspi1 {
 	fsl,spi-num-chipselects = <1>;
 	cs-gpios = <&gpio4 26 0>;
