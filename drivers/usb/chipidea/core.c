@@ -623,6 +623,12 @@ static int ci_get_platdata(struct device *dev,
 				of_usb_host_tpl_support(dev->of_node);
 	}
 
+	if (platdata->dr_mode == USB_DR_MODE_OTG) {
+		if (!platdata->adp_support)
+			platdata->adp_support =
+				of_usb_otg_adp_support(dev->of_node);
+	}
+
 	if (of_usb_get_maximum_speed(dev->of_node) == USB_SPEED_FULL)
 		platdata->flags |= CI_HDRC_FORCE_FULLSPEED;
 
