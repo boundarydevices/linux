@@ -74,6 +74,7 @@
 
 #define MX7_SRC_GPR1	0x74
 #define MX7_SRC_GPR2	0x78
+#define GPC_PGC_C0	0x800
 #define GPC_PGC_FM	0xa00
 #define ANADIG_SNVS_MISC_CTRL	0x380
 #define DDRC_STAT	0x4
@@ -448,6 +449,13 @@
 
 ENTRY(imx7_suspend)
 	push	{r4-r12}
+
+	/* check whether it is a standby mode */
+	ldr	r11, [r0, #PM_INFO_MX7_GPC_V_OFFSET]
+	ldr	r7, [r11, #GPC_PGC_C0]
+	cmp	r7, #0
+	beq	ddr_only_self_refresh
+
 	/*
 	 * The value of r0 is mapped the same in origin table and IRAM table,
 	 * thus no need to care r0 here.
@@ -507,8 +515,14 @@ wfi_ddr_self_refresh_out:
 	ddrc_exit_self_refresh
 wfi_ddr_retention_out:
 
-	restore_ttbr1
+	/* check whether it is a standby mode */
+	ldr	r11, [r0, #PM_INFO_MX7_GPC_V_OFFSET]
+	ldr	r7, [r11, #GPC_PGC_C0]
+	cmp	r7, #0
+	beq	standby_out
 
+	restore_ttbr1
+standby_out:
 	pop	{r4-r12}
 	/* return to suspend finish */
 	mov	pc, lr
