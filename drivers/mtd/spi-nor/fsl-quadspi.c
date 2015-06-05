@@ -780,11 +780,6 @@ static int fsl_qspi_nor_setup(struct fsl_qspi *q)
 	if (ret)
 		return ret;
 
-	/* clear the DDR_EN bit */
-	reg = readl(base + QUADSPI_MCR);
-	writel(~(QUADSPI_MCR_DDR_EN_MASK) & reg, base + QUADSPI_MCR);
-	udelay(1);
-
 	/* Reset the module */
 	writel(QUADSPI_MCR_SWRSTSD_MASK | QUADSPI_MCR_SWRSTHD_MASK,
 		base + QUADSPI_MCR);
