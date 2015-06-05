@@ -88,10 +88,10 @@
 	pinctrl-0 = <&pinctrl_ecspi1_1 &pinctrl_ecspi1_cs_1>;
 	status = "okay";
 
-	flash: m25p80@0 {
+	flash: n25q032@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "st,m25p32";
+		compatible = "st,n25q032";
 		spi-max-frequency = <20000000>;
 		reg = <0>;
 	};
