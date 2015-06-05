@@ -21,12 +21,12 @@
 	};
 };
 
-&pinctrl_hog_1{
-	/* Pin conflict with SAI */
-	fsl,pins = <
-			MX7D_PAD_GPIO1_IO12__GPIO1_IO12  0x59
-			MX7D_PAD_GPIO1_IO13__GPIO1_IO13  0x59
-		>;
+&iomuxc {
+	pinctrl-0 = <&pinctrl_hog_1 &pinctrl_hog>;
+};
+
+&usdhc2 {
+	no-1-8-v;
 };
 
 &sai1 {
