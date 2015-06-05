@@ -201,7 +201,7 @@
 
 &iomuxc {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hog_1>;
+	pinctrl-0 = <&pinctrl_hog_1 &pinctrl_hog_sd3_vselect>;
 
 	hog {
 		pinctrl_hog_1: hoggrp-1 {
@@ -213,10 +213,15 @@
 				MX7D_PAD_SD2_WP__GPIO5_IO10        0x59
 				MX7D_PAD_SD2_RESET_B__GPIO5_IO11   0x59
 				MX7D_PAD_SD3_RESET_B__GPIO6_IO11   0x59
-				MX7D_PAD_GPIO1_IO13__SD3_VSELECT   0x59
 				MX7D_PAD_GPIO1_IO14__GPIO1_IO14    0x59
 				MX7D_PAD_GPIO1_IO15__GPIO1_IO15    0x59
 				MX7D_PAD_SD3_STROBE__GPIO6_IO10    0x59
+			>;
+		};
+
+		pinctrl_hog_sd3_vselect: hoggrp_sd3vselect {
+			fsl,pins = <
+				MX7D_PAD_GPIO1_IO13__SD3_VSELECT   0x59
 			>;
 		};
 	};
@@ -551,6 +556,7 @@
 				MX7D_PAD_SAI2_TX_SYNC__SAI2_TX_SYNC     0x1f
 				MX7D_PAD_SAI2_RX_DATA__SAI2_RX_DATA0    0x1f
 				MX7D_PAD_SAI2_TX_DATA__SAI2_TX_DATA0    0
+				MX7D_PAD_GPIO1_IO13__GPIO1_IO13		0x59
 			>;
 		};
 	};
