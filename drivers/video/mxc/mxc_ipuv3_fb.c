@@ -295,28 +295,19 @@ static int check_var_pixfmt(struct fb_var_screeninfo *var)
 static uint32_t fb_to_store_pixfmt(uint32_t fb_pixfmt)
 {
 	switch (fb_pixfmt) {
-	case IPU_PIX_FMT_GPU32_SB_ST:
-	case IPU_PIX_FMT_GPU32_SB_SRT:
-	case IPU_PIX_FMT_GPU32_ST:
-	case IPU_PIX_FMT_GPU32_SRT:
 	case IPU_PIX_FMT_RGB32:
 	case IPU_PIX_FMT_BGR32:
 	case IPU_PIX_FMT_ABGR32:
-		return IPU_PIX_FMT_BGR32;
 	case IPU_PIX_FMT_RGB24:
-		return IPU_PIX_FMT_RGB24;
 	case IPU_PIX_FMT_BGR24:
-		return IPU_PIX_FMT_BGR24;
-	case IPU_PIX_FMT_GPU16_SB_ST:
-	case IPU_PIX_FMT_GPU16_SB_SRT:
-	case IPU_PIX_FMT_GPU16_ST:
-	case IPU_PIX_FMT_GPU16_SRT:
 	case IPU_PIX_FMT_RGB565:
-		return IPU_PIX_FMT_RGB565;
 	case IPU_PIX_FMT_BGRA4444:
-		return IPU_PIX_FMT_BGRA4444;
 	case IPU_PIX_FMT_BGRA5551:
-		return IPU_PIX_FMT_BGRA5551;
+	case IPU_PIX_FMT_UYVY:
+	case IPU_PIX_FMT_YUYV:
+	case IPU_PIX_FMT_YUV444:
+	case IPU_PIX_FMT_AYUV:
+		return fb_pixfmt;
 	case IPU_PIX_FMT_YUV422P:
 	case IPU_PIX_FMT_YVU422P:
 	case IPU_PIX_FMT_YUV420P2:
@@ -326,14 +317,8 @@ static uint32_t fb_to_store_pixfmt(uint32_t fb_pixfmt)
 	case IPU_PIX_FMT_NV16:
 	case PRE_PIX_FMT_NV61:
 	case IPU_PIX_FMT_YUV420P:
-	case IPU_PIX_FMT_UYVY:
 		return IPU_PIX_FMT_UYVY;
-	case IPU_PIX_FMT_YUYV:
-		return IPU_PIX_FMT_YUYV;
-	case IPU_PIX_FMT_YUV444:
-		return IPU_PIX_FMT_YUV444;
 	case IPU_PIX_FMT_YUV444P:
-	case IPU_PIX_FMT_AYUV:
 		return IPU_PIX_FMT_AYUV;
 	default:
 		return 0;
@@ -348,8 +333,7 @@ static uint32_t fbi_to_pixfmt(struct fb_info *fbi, bool original_fb)
 
 	if (fbi->var.nonstd) {
 		if (mxc_fbi->prefetch && !original_fb) {
-			if (ipu_pixel_format_is_gpu_tile(fbi->var.nonstd) &&
-			    bytes_per_pixel(fbi->var.nonstd) == 2)
+			if (ipu_pixel_format_is_gpu_tile(fbi->var.nonstd))
 				goto next;
 
 			return fb_to_store_pixfmt(fbi->var.nonstd);
@@ -368,9 +352,6 @@ next:
 			break;
 		}
 	}
-
-	if (mxc_fbi->prefetch && !original_fb)
-		pixfmt = fb_to_store_pixfmt(pixfmt);
 
 	if (pixfmt == 0)
 		dev_err(fbi->device, "cannot get pixel format\n");
@@ -763,7 +744,6 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 			if (!mxc_fbi->on_the_fly) {
 				retval = ipu_init_channel_buffer(mxc_fbi->ipu,
 								 mxc_fbi->ipu_ch, IPU_INPUT_BUFFER,
-								 mxc_fbi->on_the_fly ? mxc_fbi->final_pfmt :
 								 fbi_to_pixfmt(fbi, false),
 								 fbi->var.xres, fbi->var.yres,
 								 ipu_stride,
