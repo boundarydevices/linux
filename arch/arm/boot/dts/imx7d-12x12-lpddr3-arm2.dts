@@ -665,8 +665,8 @@
 	mqs {
 		pinctrl_mqs: mqsgrp {
 			fsl,pins = <
-				MX7D_PAD_SAI1_RX_SYNC__MQS_RIGHT     0x4000007f
-				MX7D_PAD_SAI1_RX_BCLK__MQS_LEFT      0x4000007f
+				MX7D_PAD_SAI1_RX_SYNC__MQS_RIGHT     0x0
+				MX7D_PAD_SAI1_RX_BCLK__MQS_LEFT      0x0
 			>;
 		};
 	};

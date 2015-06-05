@@ -529,8 +529,8 @@
 
 		pinctrl_mqs: mqsgrp {
 			fsl,pins = <
-				MX6UL_PAD_JTAG_TDI__MQS_LEFT         0x4000007f
-				MX6UL_PAD_JTAG_TDO__MQS_RIGHT        0x4000007f
+				MX6UL_PAD_JTAG_TDI__MQS_LEFT         0x11088
+				MX6UL_PAD_JTAG_TDO__MQS_RIGHT        0x11088
 			>;
 		};
 
