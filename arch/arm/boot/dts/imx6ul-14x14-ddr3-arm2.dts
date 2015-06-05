@@ -344,7 +344,7 @@
 
 &iomuxc {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hog &pinctrl_hog1>;
+	pinctrl-0 = <&pinctrl_hog &pinctrl_hog1 &pinctrl_hog_sd>;
 
 	imx6ul-ddr3-arm2 {
 		pinctrl_hog: hoggrp {
@@ -352,16 +352,21 @@
 				MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0x17059	/* SD1 CD */
 				MX6UL_PAD_UART1_CTS_B__GPIO1_IO18	0x17059	/* SD1 WP */
 				MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT	0x17059	/* SD1 VSELECT */
-				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09 	0x17059	/* SD1 RESECT */
 				MX6UL_PAD_CSI_MCLK__GPIO4_IO17		0x17059	/* SD2 CD */
 				MX6UL_PAD_CSI_PIXCLK__GPIO4_IO18	0x17059	/* SD2 WP */
-				MX6UL_PAD_GPIO1_IO08__USDHC2_VSELECT	0x17059	/* SD2 VSELECT */
 			>;
 		};
 
 		pinctrl_hog1: hoggrp1 {
 			fsl,pins = <
 				MX6UL_PAD_NAND_ALE__GPIO4_IO10          0x17059 /* SD2 RESECT */
+			>;
+		};
+
+		pinctrl_hog_sd: hoggrp_sd {
+			fsl,pins = <
+				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059 /* SD1 RESET */
+				MX6UL_PAD_GPIO1_IO08__USDHC2_VSELECT    0x17059 /* SD2 VSELECT */
 			>;
 		};
 

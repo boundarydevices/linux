@@ -18,19 +18,17 @@
 	};
 };
 
-&pinctrl_hog {
-	/* Pin conflict with SPDIF */
-	fsl,pins = <
-		MX6UL_PAD_UART1_RTS_B__GPIO1_IO19       0x17059 /* SD1 CD */
-		MX6UL_PAD_UART1_CTS_B__GPIO1_IO18       0x17059 /* SD1 WP */
-		MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT    0x17059 /* SD1 VSELECT */
-		MX6UL_PAD_CSI_MCLK__GPIO4_IO17          0x17059 /* SD2 CD */
-		MX6UL_PAD_CSI_PIXCLK__GPIO4_IO18        0x17059 /* SD2 WP */
-		MX6UL_PAD_NAND_ALE__GPIO4_IO10          0x17059 /* SD2 RESECT */
+&iomuxc {
+	pinctrl-0 = <&pinctrl_hog &pinctrl_hog1>;
+};
 
-		MX6UL_PAD_GPIO1_IO08__SPDIF_OUT		0x1b0b0 /* SPDIF OUT */
-		MX6UL_PAD_GPIO1_IO09__SPDIF_IN		0x1b0b0 /* SPDIF IN */
-	>;
+&usdhc1 {
+	no-1-8-v;
+	vmmc-supply = <>;
+};
+
+&usdhc2 {
+	no-1-8-v;
 };
 
 &spdif {
