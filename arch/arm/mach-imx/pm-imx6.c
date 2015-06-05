@@ -573,9 +573,7 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode)
 	case STOP_POWER_OFF:
 		val |= 0x2 << BP_CLPCR_LPM;
 		val |= 0x3 << BP_CLPCR_STBY_COUNT;
-		/* i.MX6UL has an design issue, can NOT assert VSTBY */
-		if (!cpu_is_imx6ul())
-			val |= BM_CLPCR_VSTBY;
+		val |= BM_CLPCR_VSTBY;
 		val |= BM_CLPCR_SBYOS;
 		if (cpu_is_imx6sl())
 			val |= BM_CLPCR_BYPASS_PMIC_READY;
