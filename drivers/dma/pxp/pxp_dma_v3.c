@@ -34,6 +34,7 @@
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/semaphore.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/dmaengine.h>
@@ -79,7 +80,6 @@ void __iomem *pinctrl_base;
 static LIST_HEAD(head);
 static int timeout_in_ms = 600;
 static unsigned int block_size;
-static struct mutex hard_lock;
 static struct pxp_collision_info col_info;
 
 struct pxp_dma {
@@ -110,6 +110,7 @@ struct pxps {
 
 	/* to turn clock off when pxp is inactive */
 	struct timer_list clk_timer;
+	struct semaphore sema;
 };
 
 #define to_pxp_dma(d) container_of(d, struct pxp_dma, dma)
@@ -1692,7 +1693,7 @@ static irqreturn_t pxp_irq(int irq, void *dev_id)
 	list_move(&desc->list, &pxp_chan->free_list);
 	spin_unlock_irqrestore(&pxp_chan->lock, flags0);
 
-	mutex_unlock(&hard_lock);
+	up(&pxp->sema);
 	pxp->pxp_ongoing = 0;
 	mod_timer(&pxp->clk_timer, jiffies + msecs_to_jiffies(timeout_in_ms));
 
@@ -1825,7 +1826,7 @@ static void pxp_issue_pending(struct dma_chan *chan)
 	spin_unlock_irqrestore(&pxp->lock, flags0);
 
 	pxp_clk_enable(pxp);
-	mutex_lock(&hard_lock);
+	down(&pxp->sema);
 
 	spin_lock_irqsave(&pxp->lock, flags);
 	pxp->pxp_ongoing = 1;
@@ -4308,7 +4309,7 @@ static int pxp_probe(struct platform_device *pdev)
 
 	spin_lock_init(&pxp->lock);
 	mutex_init(&pxp->clk_mutex);
-	mutex_init(&hard_lock);
+	sema_init(&pxp->sema, 1);
 
 	pxp->base = devm_request_and_ioremap(&pdev->dev, res);
 	if (pxp->base == NULL) {
