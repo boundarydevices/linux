@@ -483,7 +483,11 @@ static int imx_pinctrl_parse_groups(struct device_node *np,
 		else
 			conf_reg = be32_to_cpu(*list++);
 
-		pin_id = mux_reg ? mux_reg / 4 : conf_reg / 4;
+		if (info->flags & ZERO_OFFSET_VALID)
+			pin_id = mux_reg / 4;
+		else
+			pin_id = mux_reg ? mux_reg / 4 : conf_reg / 4;
+
 		pin_reg = &info->pin_regs[pin_id];
 		pin->pin = pin_id;
 		grp->pin_ids[i] = pin_id;
@@ -499,7 +503,7 @@ static int imx_pinctrl_parse_groups(struct device_node *np,
 			pin->mux_mode |= IOMUXC_CONFIG_SION;
 		pin->config = config & ~IMX_PAD_SION;
 
-		dev_dbg(info->dev, "%s: %d 0x%08lx", info->pins[i].name,
+		dev_dbg(info->dev, "%s: %d 0x%08lx", info->pins[pin_id].name,
 				pin->mux_mode, pin->config);
 	}
 
