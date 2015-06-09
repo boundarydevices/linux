@@ -637,7 +637,7 @@ static const struct ov5640_datafmt
 
 static inline void ov5640_power_down(int enable)
 {
-	gpio_set_value(pwn_gpio, enable);
+	gpio_set_value_cansleep(pwn_gpio, enable);
 
 	msleep(2);
 }
@@ -645,18 +645,18 @@ static inline void ov5640_power_down(int enable)
 static inline void ov5640_reset(void)
 {
 	/* camera reset */
-	gpio_set_value(rst_gpio, 1);
+	gpio_set_value_cansleep(rst_gpio, 1);
 
 	/* camera power down */
-	gpio_set_value(pwn_gpio, 1);
+	gpio_set_value_cansleep(pwn_gpio, 1);
 	msleep(5);
-	gpio_set_value(pwn_gpio, 0);
+	gpio_set_value_cansleep(pwn_gpio, 0);
 	msleep(5);
-	gpio_set_value(rst_gpio, 0);
+	gpio_set_value_cansleep(rst_gpio, 0);
 	msleep(1);
-	gpio_set_value(rst_gpio, 1);
+	gpio_set_value_cansleep(rst_gpio, 1);
 	msleep(5);
-	gpio_set_value(pwn_gpio, 1);
+	gpio_set_value_cansleep(pwn_gpio, 1);
 }
 
 static int ov5640_regulator_enable(struct device *dev)
