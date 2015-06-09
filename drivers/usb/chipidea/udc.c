@@ -1734,8 +1734,14 @@ static int ci_udc_start(struct usb_gadget *gadget,
 		return retval;
 	}
 
-	if (ci->vbus_active)
-		ci_hdrc_gadget_connect(&ci->gadget, 1);
+	if (ci->vbus_active) {
+		pm_runtime_get_sync(&gadget->dev);
+		hw_device_reset(ci);
+		hw_write(ci, OP_ENDPTLISTADDR, ~0, ci->ep0out->qh.dma);
+		/* interrupt, error, port change, reset, sleep/suspend */
+		hw_write(ci, OP_USBINTR, ~0,
+			USBi_UI|USBi_UEI|USBi_PCI|USBi_URI|USBi_SLI);
+	}
 
 	return retval;
 }
