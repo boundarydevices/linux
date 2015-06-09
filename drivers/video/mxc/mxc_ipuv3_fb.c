@@ -2314,17 +2314,6 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	int i;
 	int ret;
 
-	if (mxc_fbi->resolve) {
-		fmt_to_tile_block(info->var.nonstd, &bw, &bh);
-
-		if (mxc_fbi->cur_var.xoffset % bw != var->xoffset % bw ||
-		    mxc_fbi->cur_var.yoffset % bh != var->yoffset % bh) {
-			dev_err(info->device, "do not support panning "
-				"with tile crop settings changed\n");
-			return -EINVAL;
-		}
-	}
-
 	/* no pan display during fb blank */
 	if (mxc_fbi->ipu_ch == MEM_FG_SYNC) {
 		struct mxcfb_info *bg_mxcfbi = NULL;
@@ -2340,6 +2329,17 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	}
 	if (mxc_fbi->cur_blank != FB_BLANK_UNBLANK)
 		return -EINVAL;
+
+	if (mxc_fbi->resolve) {
+		fmt_to_tile_block(info->var.nonstd, &bw, &bh);
+
+		if (mxc_fbi->cur_var.xoffset % bw != var->xoffset % bw ||
+		    mxc_fbi->cur_var.yoffset % bh != var->yoffset % bh) {
+			dev_err(info->device, "do not support panning "
+				"with tile crop settings changed\n");
+			return -EINVAL;
+		}
+	}
 
 	y_bottom = var->yoffset;
 
