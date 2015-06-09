@@ -813,12 +813,16 @@
 
 	pinctrl_uart5: uart5grp {
 		fsl,pins = <
-			MX6QDL_PAD_KEY_ROW1__UART5_RX_DATA	0x130b1
-			MX6QDL_PAD_KEY_COL1__UART5_TX_DATA	0x030b1
-			MX6QDL_PAD_NANDF_RB0__GPIO6_IO10	0x1b0b1		/* RS485 RX Enable: pull up */
-			MX6QDL_PAD_NANDF_CLE__GPIO6_IO07	0x030b1		/* RS485 DEN: pull down */
-			MX6QDL_PAD_EIM_CS1__GPIO2_IO24		0x030b1		/* RS485/!RS232 Select: pull down (rs232) */
-			MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x030b1		/* ON: pull down */
+			MX6QDL_PAD_KEY_ROW1__UART5_RX_DATA	0x1b0b1
+			MX6QDL_PAD_KEY_COL1__UART5_TX_DATA	0x0b0b1
+#define GP_UART5_RX_EN	<&gpio6 10 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_RB0__GPIO6_IO10	0x030b0		/* RS485 RX Enable: pull down */
+#define GP_UART5_TX_EN	<&gpio6 7 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_CLE__GPIO6_IO07	0x030b0		/* RS485 DEN: pull down */
+#define GP_UART5_RS485_EN <&gpio2 24 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_CS1__GPIO2_IO24		0x030b0		/* RS485/!RS232 Select: pull down (rs232) */
+#define GP_UART5_AON	<&gpio6 8 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x030b0		/* ON: pull down */
 		>;
 	};
 
@@ -1035,7 +1039,22 @@
 &uart5 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart5>;
-	fsl,uart-has-rtscts;
+	control-gpios = GP_UART5_RX_EN, GP_UART5_TX_EN, GP_UART5_RS485_EN, GP_UART5_AON;
+#define M_RX_EN         1
+#define M_TX_EN         2
+#define M_RS485         4
+#define M_AON           8
+	off_levels = <0>;
+	rxact_mask = <0>;
+	rxact_levels = <0>;
+	rs232_levels = <M_RX_EN>;
+	rs232_txen_mask = <0>;
+	rs232_txen_levels = <0>;
+	rs485_levels = <0xd>;
+	rs485_txen_mask = <0x3>;
+	rs485_txen_levels = <M_TX_EN>;
+	uart-has-rs485-half-duplex;
+	rs485-mode = <1>;	/* 1 to enable */
 	status = "okay";
 };
 
