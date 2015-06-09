@@ -97,6 +97,7 @@ struct imx_pcie {
 	struct regulator	*pcie_phy_regulator;
 	struct regulator	*pcie_bus_regulator;
 	struct regulator	*epdev_on;
+	int			force_detect_state;
 };
 
 /* Parameters for the waiting for PCIe PHY PLL to lock on i.MX7 */
@@ -498,7 +499,7 @@ static int imx_pcie_abort_handler(unsigned long addr,
 static void imx_pcie_assert_core_reset(struct imx_pcie *imx_pcie)
 {
 	struct device *dev = imx_pcie->pci->dev;
-	u32 val;
+	u32 val, gpr1, gpr12;
 	int i;
 
 	switch (imx_pcie->variant) {
@@ -530,6 +531,29 @@ static void imx_pcie_assert_core_reset(struct imx_pcie *imx_pcie)
 				   IMX6Q_GPR1_PCIE_SW_RST);
 		break;
 	case IMX6Q:
+		/*
+		 * If the bootloader already enabled the link we need some
+		 * special handling to get the core back into a state where
+		 * it is safe to touch it for configuration.  As there is
+		 * no dedicated reset signal wired up for MX6QDL, we need
+		 * to manually force LTSSM into "detect" state before
+		 * completely disabling LTSSM, which is a prerequisite for
+		 * core configuration.
+		 *
+		 * If both LTSSM_ENABLE and REF_SSP_ENABLE are active we
+		 * have a strong indication that the bootloader activated
+		 * the link.
+		 */
+		regmap_read(imx_pcie->iomuxc_gpr, IOMUXC_GPR1, &gpr1);
+		regmap_read(imx_pcie->iomuxc_gpr, IOMUXC_GPR12, &gpr12);
+
+		if ((gpr1 & IMX6Q_GPR1_PCIE_REF_CLK_EN) &&
+		    (gpr12 & IMX6Q_GPR12_PCIE_CTL_2)) {
+			imx_pcie->force_detect_state = 1;
+			regmap_update_bits(imx_pcie->iomuxc_gpr, IOMUXC_GPR12,
+					   IMX6Q_GPR12_PCIE_CTL_2, 0 << 10);
+		}
+
 		regmap_update_bits(imx_pcie->iomuxc_gpr, IOMUXC_GPR1,
 				   IMX6Q_GPR1_PCIE_TEST_PD, 1 << 18);
 		regmap_update_bits(imx_pcie->iomuxc_gpr, IOMUXC_GPR1,
@@ -1013,6 +1037,15 @@ static int imx_pcie_deassert_core_reset(struct imx_pcie *imx_pcie)
 	if (imx_pcie->reset_gpios[0])
 		mdelay(20);
 	deactivate_reset(imx_pcie);
+
+	if (imx_pcie->force_detect_state) {
+		imx_pcie->force_detect_state = 0;
+		val = dw_pcie_readl_rc(pp, PCIE_PL_PFLR);
+		val &= ~PCIE_PL_PFLR_LINK_STATE_MASK;
+		val |= PCIE_PL_PFLR_FORCE_LINK;
+		dw_pcie_writel_rc(pp, PCIE_PL_PFLR, val);
+	}
+
 	if (ret == 0)
 		return ret;
 
