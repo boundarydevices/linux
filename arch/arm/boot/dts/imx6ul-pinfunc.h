@@ -866,7 +866,7 @@
 #define	MX6UL_PAD_CSI_HSYNC__PWM8_OUT                            	0x01E0 0x046C 0x0000 6 0
 #define	MX6UL_PAD_CSI_HSYNC__UART6_DCE_CTS                       	0x01E0 0x046C 0x0000 8 0
 #define	MX6UL_PAD_CSI_HSYNC__UART6_DTE_RTS                       	0x01E0 0x046C 0x0648 8 1
-#define	MX6UL_PAD_CSI_DATA00__CSI_DATA02                         	0x01E4 0x0470 0x0000 0 0
+#define	MX6UL_PAD_CSI_DATA00__CSI_DATA02                         	0x01E4 0x0470 0x04C4 0 0
 #define	MX6UL_PAD_CSI_DATA00__USDHC2_DATA0                       	0x01E4 0x0470 0x067C 1 0
 #define	MX6UL_PAD_CSI_DATA00__SIM1_PORT1_RST_B                   	0x01E4 0x0470 0x0000 2 0
 #define	MX6UL_PAD_CSI_DATA00__ECSPI2_SCLK                        	0x01E4 0x0470 0x0544 3 0
@@ -875,7 +875,7 @@
 #define	MX6UL_PAD_CSI_DATA00__SRC_INT_BOOT                       	0x01E4 0x0470 0x0000 6 0
 #define	MX6UL_PAD_CSI_DATA00__UART5_DCE_TX                           	0x01E4 0x0470 0x0000 8 0
 #define	MX6UL_PAD_CSI_DATA00__UART5_DTE_RX                           	0x01E4 0x0470 0x0644 8 0
-#define	MX6UL_PAD_CSI_DATA01__CSI_DATA03                         	0x01E8 0x0474 0x0000 0 0
+#define	MX6UL_PAD_CSI_DATA01__CSI_DATA03                         	0x01E8 0x0474 0x04C8 0 0
 #define	MX6UL_PAD_CSI_DATA01__USDHC2_DATA1                       	0x01E8 0x0474 0x0680 1 0
 #define	MX6UL_PAD_CSI_DATA01__SIM1_PORT1_SVEN                    	0x01E8 0x0474 0x0000 2 0
 #define	MX6UL_PAD_CSI_DATA01__ECSPI2_SS0                         	0x01E8 0x0474 0x0000 3 0
@@ -884,7 +884,7 @@
 #define	MX6UL_PAD_CSI_DATA01__SAI1_MCLK                          	0x01E8 0x0474 0x0000 6 0
 #define	MX6UL_PAD_CSI_DATA01__UART5_DCE_RX                           	0x01E8 0x0474 0x0644 8 1
 #define	MX6UL_PAD_CSI_DATA01__UART5_DTE_TX                           	0x01E8 0x0474 0x0000 8 0
-#define	MX6UL_PAD_CSI_DATA02__CSI_DATA04                         	0x01EC 0x0478 0x0000 0 0
+#define	MX6UL_PAD_CSI_DATA02__CSI_DATA04                         	0x01EC 0x0478 0x04D8 0 1
 #define	MX6UL_PAD_CSI_DATA02__USDHC2_DATA2                       	0x01EC 0x0478 0x0684 1 2
 #define	MX6UL_PAD_CSI_DATA02__SIM1_PORT1_TRXD                    	0x01EC 0x0478 0x0000 2 0
 #define	MX6UL_PAD_CSI_DATA02__ECSPI2_MOSI                        	0x01EC 0x0478 0x054C 3 1
@@ -893,7 +893,7 @@
 #define	MX6UL_PAD_CSI_DATA02__SAI1_RX_SYNC                       	0x01EC 0x0478 0x0000 6 0
 #define	MX6UL_PAD_CSI_DATA02__UART5_DCE_RTS                      	0x01EC 0x0478 0x0640 8 5
 #define	MX6UL_PAD_CSI_DATA02__UART5_DTE_CTS                      	0x01EC 0x0478 0x0000 8 0
-#define	MX6UL_PAD_CSI_DATA03__CSI_DATA05                         	0x01F0 0x047C 0x0000 0 0
+#define	MX6UL_PAD_CSI_DATA03__CSI_DATA05                         	0x01F0 0x047C 0x04CC 0 0
 #define	MX6UL_PAD_CSI_DATA03__USDHC2_DATA3                       	0x01F0 0x047C 0x0688 1 0
 #define	MX6UL_PAD_CSI_DATA03__SIM2_PORT1_PD                      	0x01F0 0x047C 0x0000 2 0
 #define	MX6UL_PAD_CSI_DATA03__ECSPI2_MISO                        	0x01F0 0x047C 0x0548 3 0
@@ -902,7 +902,7 @@
 #define	MX6UL_PAD_CSI_DATA03__SAI1_RX_BCLK                       	0x01F0 0x047C 0x0000 6 0
 #define	MX6UL_PAD_CSI_DATA03__UART5_DCE_CTS                      	0x01F0 0x047C 0x0000 8 0
 #define	MX6UL_PAD_CSI_DATA03__UART5_DTE_RTS                      	0x01F0 0x047C 0x0640 8 0
-#define	MX6UL_PAD_CSI_DATA04__CSI_DATA06                         	0x01F4 0x0480 0x0000 0 0
+#define	MX6UL_PAD_CSI_DATA04__CSI_DATA06                         	0x01F4 0x0480 0x04DC 0 1
 #define	MX6UL_PAD_CSI_DATA04__USDHC2_DATA4                       	0x01F4 0x0480 0x068C 1 2
 #define	MX6UL_PAD_CSI_DATA04__SIM2_PORT1_CLK                     	0x01F4 0x0480 0x0000 2 0
 #define	MX6UL_PAD_CSI_DATA04__ECSPI1_SCLK                        	0x01F4 0x0480 0x0534 3 1
@@ -910,7 +910,7 @@
 #define	MX6UL_PAD_CSI_DATA04__GPIO4_IO25                         	0x01F4 0x0480 0x0000 5 0
 #define	MX6UL_PAD_CSI_DATA04__SAI1_TX_SYNC                       	0x01F4 0x0480 0x05EC 6 1
 #define	MX6UL_PAD_CSI_DATA04__USDHC1_WP                          	0x01F4 0x0480 0x0000 8 0
-#define	MX6UL_PAD_CSI_DATA05__CSI_DATA07                         	0x01F8 0x0484 0x0000 0 0
+#define	MX6UL_PAD_CSI_DATA05__CSI_DATA07                         	0x01F8 0x0484 0x04E0 0 1
 #define	MX6UL_PAD_CSI_DATA05__USDHC2_DATA5                       	0x01F8 0x0484 0x0690 1 2
 #define	MX6UL_PAD_CSI_DATA05__SIM2_PORT1_RST_B                   	0x01F8 0x0484 0x0000 2 0
 #define	MX6UL_PAD_CSI_DATA05__ECSPI1_SS0                         	0x01F8 0x0484 0x0000 3 0
@@ -918,7 +918,7 @@
 #define	MX6UL_PAD_CSI_DATA05__GPIO4_IO26                         	0x01F8 0x0484 0x0000 5 0
 #define	MX6UL_PAD_CSI_DATA05__SAI1_TX_BCLK                       	0x01F8 0x0484 0x05E8 6 1
 #define	MX6UL_PAD_CSI_DATA05__USDHC1_CD_B                        	0x01F8 0x0484 0x0000 8 0
-#define	MX6UL_PAD_CSI_DATA06__CSI_DATA08                         	0x01FC 0x0488 0x0000 0 0
+#define	MX6UL_PAD_CSI_DATA06__CSI_DATA08                         	0x01FC 0x0488 0x04E4 0 1
 #define	MX6UL_PAD_CSI_DATA06__USDHC2_DATA6                       	0x01FC 0x0488 0x0694 1 2
 #define	MX6UL_PAD_CSI_DATA06__SIM2_PORT1_SVEN                    	0x01FC 0x0488 0x0000 2 0
 #define	MX6UL_PAD_CSI_DATA06__ECSPI1_MOSI                        	0x01FC 0x0488 0x053C 3 1
@@ -926,7 +926,7 @@
 #define	MX6UL_PAD_CSI_DATA06__GPIO4_IO27                         	0x01FC 0x0488 0x0000 5 0
 #define	MX6UL_PAD_CSI_DATA06__SAI1_RX_DATA                       	0x01FC 0x0488 0x0000 6 0
 #define	MX6UL_PAD_CSI_DATA06__USDHC1_RESET_B                     	0x01FC 0x0488 0x0000 8 0
-#define	MX6UL_PAD_CSI_DATA07__CSI_DATA09                         	0x0200 0x048C 0x0000 0 0
+#define	MX6UL_PAD_CSI_DATA07__CSI_DATA09                         	0x0200 0x048C 0x04E8 0 1
 #define	MX6UL_PAD_CSI_DATA07__USDHC2_DATA7                       	0x0200 0x048C 0x0698 1 2
 #define	MX6UL_PAD_CSI_DATA07__SIM2_PORT1_TRXD                    	0x0200 0x048C 0x0000 2 0
 #define	MX6UL_PAD_CSI_DATA07__ECSPI1_MISO                        	0x0200 0x048C 0x0538 3 1
