@@ -415,26 +415,19 @@ static void imx_set_gpios(struct imx_port *sport, unsigned mask, unsigned levels
 static void imx_stop_tx(struct uart_port *port)
 {
 	struct imx_port *sport = (struct imx_port *)port;
-	unsigned long temp;
+	unsigned long ucr1, ucr2, ucr4;
 
-	/*
-	 * We are maybe in the SMP context, so if the DMA TX thread is running
-	 * on other cpu, we have to wait for it to finish.
-	 */
-	if (sport->dma_is_enabled && sport->dma_is_txing)
-		return;
-
-	temp = readl(port->membase + UCR1);
-	writel(temp & ~UCR1_TXMPTYEN, port->membase + UCR1);
+	ucr1 = readl(port->membase + UCR1);
+	ucr4 = readl(port->membase + UCR4);
+	ucr1 &= ~(UCR1_TXMPTYEN | UCR1_TDMAEN);
 
 	/* in rs485 mode disable transmitter if shifter is empty */
 	if (port->rs485.flags & SER_RS485_ENABLED) {
-		if (!(readl(port->membase + USR2) & USR2_TXDC))
+		if (!(readl(port->membase + USR2) & USR2_TXDC)) {
+			writel(ucr1, port->membase + UCR1);
+			writel(ucr4 | UCR4_TCEN, port->membase + UCR4);
 			return;
-
-		temp = readl(port->membase + UCR4);
-		temp &= ~UCR4_TCEN;
-		writel(temp, port->membase + UCR4);
+		}
 		if (sport->half_duplex) {
 			/*
 			 * half duplex - reactivate receive mode,
@@ -446,22 +439,20 @@ static void imx_stop_tx(struct uart_port *port)
 			       URXD_CHARRDY)
 				barrier();
 
-			temp = readl(sport->port.membase + UCR1);
-			temp |= UCR1_RRDYEN;
-			writel(temp, sport->port.membase + UCR1);
-
-			temp = readl(sport->port.membase + UCR4);
-			temp |= UCR4_DREN;
-			writel(temp, sport->port.membase + UCR4);
+			ucr1 |= UCR1_RRDYEN;
+			ucr4 |= UCR4_DREN;
 		}
-		temp = readl(port->membase + UCR2);
+		ucr2 = readl(port->membase + UCR2);
 		if (port->rs485.flags & SER_RS485_RTS_AFTER_SEND)
-			imx_port_rts_inactive(sport, &temp);
+			imx_port_rts_inactive(sport, &ucr2);
 		else
-			imx_port_rts_active(sport, &temp);
-		temp |= UCR2_RXEN;
-		writel(temp, port->membase + UCR2);
+			imx_port_rts_active(sport, &ucr2);
+		ucr2 |= UCR2_RXEN;
+		writel(ucr2, port->membase + UCR2);
 	}
+	ucr4 &= ~UCR4_TCEN;
+	writel(ucr1, port->membase + UCR1);
+	writel(ucr4, port->membase + UCR4);
 
 	if (sport->txing) {
 		sport->txing = 0;
@@ -518,14 +509,12 @@ static inline void imx_transmit_buffer(struct imx_port *sport)
 		writel(sport->port.x_char, sport->port.membase + URTX0);
 		sport->port.icount.tx++;
 		sport->port.x_char = 0;
-		return;
 	}
 
 	if (uart_circ_empty(xmit) || uart_tx_stopped(&sport->port)) {
 		imx_stop_tx(&sport->port);
 		return;
 	}
-
 	if (sport->dma_is_enabled) {
 		/*
 		 * We've just sent a X-char Ensure the TX DMA is enabled
@@ -533,14 +522,14 @@ static inline void imx_transmit_buffer(struct imx_port *sport)
 		 **/
 		temp = readl(sport->port.membase + UCR1);
 		temp &= ~UCR1_TXMPTYEN;
-		if (sport->dma_is_txing) {
-			temp |= UCR1_TDMAEN;
-			writel(temp, sport->port.membase + UCR1);
-			return;
-		} else {
-			writel(temp, sport->port.membase + UCR1);
+		temp |= UCR1_TDMAEN;
+		writel(temp, sport->port.membase + UCR1);
+		temp = readl(sport->port.membase + UCR4);
+		temp &= ~UCR4_TCEN;
+		writel(temp, sport->port.membase + UCR4);
+		if (!sport->dma_is_txing)
 			schedule_work(&sport->tsk_dma_tx);
-		}
+		return;
 	}
 
 	while (!uart_circ_empty(xmit) &&
@@ -626,6 +615,8 @@ static void dma_tx_work(struct work_struct *w)
 	sport->tx_bytes = uart_circ_chars_pending(xmit);
 
 	if (sport->tx_bytes > 0) {
+		if (uart_tx_stopped(&sport->port))
+			goto out2;
 		if (xmit->tail > xmit->head && xmit->head > 0) {
 			sport->dma_tx_nents = 2;
 			sg_init_table(sgl, 2);
@@ -636,18 +627,23 @@ static void dma_tx_work(struct work_struct *w)
 			sport->dma_tx_nents = 1;
 			sg_init_one(sgl, xmit->buf + xmit->tail, sport->tx_bytes);
 		}
+		sport->dma_is_txing = 1;
 		spin_unlock_irqrestore(&sport->port.lock, flags);
 
 		ret = dma_map_sg(dev, sgl, sport->dma_tx_nents, DMA_TO_DEVICE);
 		if (ret == 0) {
 			dev_err(dev, "DMA mapping error for TX.\n");
-			goto err_out;
+			sport->dma_is_txing = 0;
+			spin_lock_irqsave(&sport->port.lock, flags);
+			goto out1;
 		}
 		desc = dmaengine_prep_slave_sg(chan, sgl, sport->dma_tx_nents,
 						DMA_MEM_TO_DEV, DMA_PREP_INTERRUPT);
 		if (!desc) {
 			dev_err(dev, "We cannot prepare for the TX slave dma!\n");
-			goto err_out;
+			sport->dma_is_txing = 0;
+			spin_lock_irqsave(&sport->port.lock, flags);
+			goto out1;
 		}
 		desc->callback = dma_tx_callback;
 		desc->callback_param = sport;
@@ -655,20 +651,26 @@ static void dma_tx_work(struct work_struct *w)
 		dev_dbg(dev, "TX: prepare to send %lu bytes by DMA.\n",
 				uart_circ_chars_pending(xmit));
 		/* fire it */
-		sport->dma_is_txing = 1;
 		dmaengine_submit(desc);
 		dma_async_issue_pending(chan);
 
+		spin_lock_irqsave(&sport->port.lock, flags);
 		temp = readl(sport->port.membase + UCR1);
 		temp |= UCR1_TDMAEN;
 		writel(temp, sport->port.membase + UCR1);
+		spin_unlock_irqrestore(&sport->port.lock, flags);
 		return;
 	}
+out2:
+	if ((sport->port.rs485.flags & SER_RS485_ENABLED) && sport->txing) {
+		temp = readl(sport->port.membase + UCR4);
+		temp |= UCR4_TCEN;
+		writel(temp, sport->port.membase + UCR4);
+	}
 out1:
-	spin_unlock_irqrestore(&sport->port.lock, flags);
-err_out:
 	clear_bit(DMA_TX_IS_WORKING, &sport->flags);
 	smp_mb__after_atomic();
+	spin_unlock_irqrestore(&sport->port.lock, flags);
 }
 
 /*
@@ -704,16 +706,6 @@ static void imx_start_tx(struct uart_port *port)
 		if (!(port->rs485.flags & SER_RS485_RX_DURING_TX))
 			temp &= ~UCR2_RXEN;
 		writel(temp, port->membase + UCR2);
-
-		/* enable transmitter and shifter empty irq */
-		temp = readl(port->membase + UCR4);
-		temp |= UCR4_TCEN;
-		writel(temp, port->membase + UCR4);
-	}
-
-	if (!sport->dma_is_enabled) {
-		temp = readl(sport->port.membase + UCR1);
-		writel(temp | UCR1_TXMPTYEN, sport->port.membase + UCR1);
 	}
 
 	if (sport->dma_is_enabled) {
@@ -730,7 +722,9 @@ static void imx_start_tx(struct uart_port *port)
 		if (!uart_circ_empty(&port->state->xmit) &&
 		    !uart_tx_stopped(port))
 			schedule_work(&sport->tsk_dma_tx);
-		return;
+	} else {
+		temp = readl(sport->port.membase + UCR1);
+		writel(temp | UCR1_TXMPTYEN, sport->port.membase + UCR1);
 	}
 }
 
