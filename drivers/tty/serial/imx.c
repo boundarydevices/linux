@@ -476,15 +476,17 @@ static void imx_uart_stop_tx(struct uart_port *port)
 		return;
 
 	ucr1 = imx_uart_readl(sport, UCR1);
-	imx_uart_writel(sport, ucr1 & ~UCR1_TRDYEN, UCR1);
+	ucr4 = imx_uart_readl(sport, UCR4);
+	ucr1 &= ~(UCR1_TRDYEN | UCR1_TXMPTYEN | UCR1_TXDMAEN);
 
 	usr2 = imx_uart_readl(sport, USR2);
 	if (!(usr2 & USR2_TXDC)) {
 		/* The shifter is still busy, so retry once TC triggers */
+		imx_uart_writel(sport, ucr1, UCR1);
+		imx_uart_writel(sport, ucr4 | UCR4_TCEN, UCR4);
 		return;
 	}
 
-	ucr4 = imx_uart_readl(sport, UCR4);
 	ucr4 &= ~UCR4_TCEN;
 	imx_uart_writel(sport, ucr4, UCR4);
 
@@ -499,13 +501,8 @@ static void imx_uart_stop_tx(struct uart_port *port)
 			       URXD_CHARRDY)
 				barrier();
 
-			ucr1 = imx_uart_readl(sport, UCR1);
 			ucr1 |= UCR1_RRDYEN;
-			imx_uart_writel(sport, ucr1, UCR1);
-
-			ucr4 = imx_uart_readl(sport, UCR4);
 			ucr4 |= UCR4_DREN;
-			imx_uart_writel(sport, ucr4, UCR4);
 		}
 		if (sport->tx_state == SEND) {
 			sport->tx_state = WAIT_AFTER_SEND;
@@ -527,9 +524,10 @@ static void imx_uart_stop_tx(struct uart_port *port)
 
 			ucr2 = imx_uart_readl(sport, UCR2);
 			if (port->rs485.flags & SER_RS485_RTS_AFTER_SEND)
-				imx_uart_rts_active(sport, &ucr2);
-			else
 				imx_uart_rts_inactive(sport, &ucr2);
+			else
+				imx_uart_rts_active(sport, &ucr2);
+			ucr2 |= UCR2_RXEN;
 			imx_uart_writel(sport, ucr2, UCR2);
 
 			imx_uart_start_rx(port);
@@ -539,6 +537,9 @@ static void imx_uart_stop_tx(struct uart_port *port)
 	} else {
 		sport->tx_state = OFF;
 	}
+	ucr4 &= ~UCR4_TCEN;
+	imx_uart_writel(sport, ucr1, UCR1);
+	imx_uart_writel(sport, ucr4, UCR4);
 
 	if (sport->txing) {
 		sport->txing = 0;
@@ -592,31 +593,27 @@ static inline void imx_uart_transmit_buffer(struct imx_port *sport)
 		imx_uart_writel(sport, sport->port.x_char, URTX0);
 		sport->port.icount.tx++;
 		sport->port.x_char = 0;
-		return;
 	}
 
 	if (uart_circ_empty(xmit) || uart_tx_stopped(&sport->port)) {
 		imx_uart_stop_tx(&sport->port);
 		return;
 	}
-
 	if (sport->dma_is_enabled) {
-		u32 ucr1;
+		u32 ucr1, ucr4;
 		/*
 		 * We've just sent a X-char Ensure the TX DMA is enabled
 		 * and the TX IRQ is disabled.
 		 **/
 		ucr1 = imx_uart_readl(sport, UCR1);
-		ucr1 &= ~UCR1_TRDYEN;
-		if (sport->dma_is_txing) {
-			ucr1 |= UCR1_TXDMAEN;
-			imx_uart_writel(sport, ucr1, UCR1);
-			return;
-		} else {
-			imx_uart_writel(sport, ucr1, UCR1);
+		ucr1 &= ~(UCR1_TRDYEN | UCR1_TXMPTYEN);
+		ucr1 |= UCR1_TXDMAEN;
+		imx_uart_writel(sport, ucr1, UCR1);
+		ucr4 = imx_uart_readl(sport, UCR4);
+		ucr4 &= ~UCR4_TCEN;
+		imx_uart_writel(sport, ucr4, UCR4);
+		if (!sport->dma_is_txing)
 			imx_uart_dma_tx(sport);
-		}
-
 		return;
 	}
 
@@ -688,12 +685,22 @@ static void imx_uart_dma_tx(struct imx_port *sport)
 	if (sport->dma_is_txing)
 		return;
 
+	sport->dma_is_txing = 1;
 	ucr4 = imx_uart_readl(sport, UCR4);
 	ucr4 &= ~UCR4_TCEN;
 	imx_uart_writel(sport, ucr4, UCR4);
 
 	sport->tx_bytes = uart_circ_chars_pending(xmit);
 
+	if (uart_tx_stopped(&sport->port)) {
+		sport->dma_is_txing = 0;
+		if ((sport->port.rs485.flags & SER_RS485_ENABLED) && sport->txing) {
+			ucr4 = imx_uart_readl(sport, UCR4);
+			ucr4 |= UCR4_TCEN;
+			imx_uart_writel(sport, ucr4, UCR4);
+		}
+		return;
+	}
 	if (xmit->tail < xmit->head || xmit->head == 0) {
 		sport->dma_tx_nents = 1;
 		sg_init_one(sgl, xmit->buf + xmit->tail, sport->tx_bytes);
@@ -707,12 +714,14 @@ static void imx_uart_dma_tx(struct imx_port *sport)
 
 	ret = dma_map_sg(dev, sgl, sport->dma_tx_nents, DMA_TO_DEVICE);
 	if (ret == 0) {
+		sport->dma_is_txing = 0;
 		dev_err(dev, "DMA mapping error for TX.\n");
 		return;
 	}
 	desc = dmaengine_prep_slave_sg(chan, sgl, ret,
 					DMA_MEM_TO_DEV, DMA_PREP_INTERRUPT);
 	if (!desc) {
+		sport->dma_is_txing = 0;
 		dma_unmap_sg(dev, sgl, sport->dma_tx_nents,
 			     DMA_TO_DEVICE);
 		dev_err(dev, "We cannot prepare for the TX slave dma!\n");
@@ -729,7 +738,6 @@ static void imx_uart_dma_tx(struct imx_port *sport)
 	imx_uart_writel(sport, ucr1, UCR1);
 
 	/* fire it */
-	sport->dma_is_txing = 1;
 	dmaengine_submit(desc);
 	dma_async_issue_pending(chan);
 	return;
@@ -792,27 +800,10 @@ static void imx_uart_start_tx(struct uart_port *port)
 		    || sport->tx_state == WAIT_AFTER_RTS) {
 
 			hrtimer_try_to_cancel(&sport->trigger_stop_tx);
-
-			/*
-			 * Enable transmitter and shifter empty irq only if DMA
-			 * is off.  In the DMA case this is done in the
-			 * tx-callback.
-			 */
-			if (!sport->dma_is_enabled) {
-				u32 ucr4 = imx_uart_readl(sport, UCR4);
-				ucr4 |= UCR4_TCEN;
-				imx_uart_writel(sport, ucr4, UCR4);
-			}
-
 			sport->tx_state = SEND;
 		}
 	} else {
 		sport->tx_state = SEND;
-	}
-
-	if (!sport->dma_is_enabled) {
-		ucr1 = imx_uart_readl(sport, UCR1);
-		imx_uart_writel(sport, ucr1 | UCR1_TRDYEN, UCR1);
 	}
 
 	if (sport->dma_is_enabled) {
@@ -829,7 +820,9 @@ static void imx_uart_start_tx(struct uart_port *port)
 		if (!uart_circ_empty(&port->state->xmit) &&
 		    !uart_tx_stopped(port))
 			imx_uart_dma_tx(sport);
-		return;
+	} else {
+		ucr1 = imx_uart_readl(sport, UCR1);
+		imx_uart_writel(sport, ucr1 | UCR1_TRDYEN, UCR1);
 	}
 }
 
