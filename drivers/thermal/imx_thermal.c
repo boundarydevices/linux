@@ -65,8 +65,9 @@
 #define IMX_PASSIVE_DELAY		1000
 
 #define FACTOR0				10000000
-#define FACTOR1				15976
-#define FACTOR2				4297157
+#define FACTOR1				15423
+#define FACTOR2				4148468
+#define OFFSET				3580661
 
 #define TEMPMON_V1			1
 #define TEMPMON_V2			2
@@ -492,23 +493,26 @@ static inline void imx6_calibrate_data(struct imx_thermal_data *data, u32 val)
 	 * Derived from linear interpolation:
 	 * slope = 0.4297157 - (0.0015976 * 25C fuse)
 	 * slope = (FACTOR2 - FACTOR1 * n1) / FACTOR0
+	 * offset = OFFSET / 1000000
 	 * (Nmeas - n1) / (Tmeas - t1) = slope
 	 * We want to reduce this down to the minimum computation necessary
 	 * for each temperature read.  Also, we want Tmeas in millicelsius
 	 * and we don't want to lose precision from integer division. So...
-	 * Tmeas = (Nmeas - n1) / slope + t1
-	 * milli_Tmeas = 1000 * (Nmeas - n1) / slope + 1000 * t1
-	 * milli_Tmeas = -1000 * (n1 - Nmeas) / slope + 1000 * t1
+	 * Tmeas = (Nmeas - n1) / slope + t1 + offset
+	 * milli_Tmeas = 1000 * (Nmeas - n1) / slope + 1000 * t1 + OFFSET / 1000
+	 * milli_Tmeas = -1000 * (n1 - Nmeas) / slope + 1000 * t1 + OFFSET /1000
 	 * Let constant c1 = (-1000 / slope)
-	 * milli_Tmeas = (n1 - Nmeas) * c1 + 1000 * t1
-	 * Let constant c2 = n1 *c1 + 1000 * t1
+	 * milli_Tmeas = (n1 - Nmeas) * c1 + 1000 * t1 + OFFSET / 1000
+	 * Let constant c2 = n1 *c1 + 1000 * t1 + OFFSET / 1000
 	 * milli_Tmeas = c2 - Nmeas * c1
 	 */
 	temp64 = FACTOR0;
 	temp64 *= 1000;
 	do_div(temp64, FACTOR1 * n1 - FACTOR2);
 	data->c1 = temp64;
-	data->c2 = n1 * data->c1 + 1000 * t1;
+	temp64 = OFFSET;
+	do_div(temp64, 1000);
+	data->c2 = n1 * data->c1 + 1000 * t1 + temp64;
 }
 
 /*
