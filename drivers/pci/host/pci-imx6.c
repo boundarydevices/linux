@@ -56,6 +56,7 @@ struct imx6_pcie {
 	struct regmap		*iomuxc_gpr;
 	struct regulator	*pcie_phy_regulator;
 	void __iomem		*mem_base;
+	int			force_detect_state;
 };
 
 /* PCIe Root Complex registers (memory-mapped) */
@@ -242,7 +243,7 @@ static int imx6q_pcie_abort_handler(unsigned long addr,
 static int imx6_pcie_assert_core_reset(struct pcie_port *pp)
 {
 	struct imx6_pcie *imx6_pcie = to_imx6_pcie(pp);
-	u32 val, gpr1, gpr12;
+	u32 gpr1, gpr12;
 
 	if (is_imx6sx_pcie(imx6_pcie)) {
 		struct device_node *gpc_np;
@@ -286,11 +287,7 @@ static int imx6_pcie_assert_core_reset(struct pcie_port *pp)
 
 		if ((gpr1 & IMX6Q_GPR1_PCIE_REF_CLK_EN) &&
 		    (gpr12 & IMX6Q_GPR12_PCIE_CTL_2)) {
-			val = readl(pp->dbi_base + PCIE_PL_PFLR);
-			val &= ~PCIE_PL_PFLR_LINK_STATE_MASK;
-			val |= PCIE_PL_PFLR_FORCE_LINK;
-			writel(val, pp->dbi_base + PCIE_PL_PFLR);
-
+			imx6_pcie->force_detect_state = 1;
 			regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
 					IMX6Q_GPR12_PCIE_CTL_2, 0);
 		}
@@ -374,6 +371,15 @@ static int imx6_pcie_deassert_core_reset(struct pcie_port *pp)
 		gpio_set_value_cansleep(imx6_pcie->reset_gpio, 1);
 	}
 
+	if (imx6_pcie->force_detect_state) {
+		u32 val;
+
+		imx6_pcie->force_detect_state = 0;
+		val = readl(pp->dbi_base + PCIE_PL_PFLR);
+		val &= ~PCIE_PL_PFLR_LINK_STATE_MASK;
+		val |= PCIE_PL_PFLR_FORCE_LINK;
+		writel(val, pp->dbi_base + PCIE_PL_PFLR);
+	}
 	/*
 	 * Release the PCIe PHY reset here, that we have set in
 	 * imx6_pcie_init_phy() now
