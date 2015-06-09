@@ -93,6 +93,7 @@ struct imx6_pcie {
 	struct regulator	*pcie_phy_regulator;
 	struct regulator	*pcie_bus_regulator;
 	struct regulator	*epdev_on;
+	int			force_detect_state;
 };
 
 /* PCIe Root Complex registers (memory-mapped) */
@@ -480,11 +481,7 @@ static void imx6_pcie_assert_core_reset(struct imx6_pcie *imx6_pcie)
 
 		if ((gpr1 & IMX6Q_GPR1_PCIE_REF_CLK_EN) &&
 		    (gpr12 & IMX6Q_GPR12_PCIE_CTL_2)) {
-			val = dw_pcie_readl_rc(pp, PCIE_PL_PFLR);
-			val &= ~PCIE_PL_PFLR_LINK_STATE_MASK;
-			val |= PCIE_PL_PFLR_FORCE_LINK;
-			dw_pcie_writel_rc(pp, PCIE_PL_PFLR, val);
-
+			imx6_pcie->force_detect_state = 1;
 			regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
 					   IMX6Q_GPR12_PCIE_CTL_2, 0 << 10);
 		}
@@ -893,6 +890,14 @@ static int imx6_pcie_deassert_core_reset(struct imx6_pcie *imx6_pcie)
 	if (imx6_pcie->reset_gpios[0])
 		mdelay(20);
 	deactivate_reset(imx6_pcie);
+
+	if (imx6_pcie->force_detect_state) {
+		imx6_pcie->force_detect_state = 0;
+		val = dw_pcie_readl_rc(pp, PCIE_PL_PFLR);
+		val &= ~PCIE_PL_PFLR_LINK_STATE_MASK;
+		val |= PCIE_PL_PFLR_FORCE_LINK;
+		dw_pcie_writel_rc(pp, PCIE_PL_PFLR, val);
+	}
 
 	if (ret == 0)
 		return ret;
