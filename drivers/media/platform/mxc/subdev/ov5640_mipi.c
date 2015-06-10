@@ -861,18 +861,18 @@ static s32 ov5640_read_reg(u16 reg, u8 *val)
 static int prev_sysclk, prev_HTS;
 static int AE_low, AE_high, AE_Target = 52;
 
-void OV5640_stream_on(void)
+static void OV5640_stream_on(void)
 {
 	ov5640_write_reg(0x4202, 0x00);
 }
 
-void OV5640_stream_off(void)
+static void OV5640_stream_off(void)
 {
 	ov5640_write_reg(0x4202, 0x0f);
 }
 
 
-int OV5640_get_sysclk(void)
+static int OV5640_get_sysclk(void)
 {
 	 /* calculate sysclk */
 	int xvclk = ov5640_data.mclk / 10000;
@@ -911,7 +911,7 @@ int OV5640_get_sysclk(void)
 	return sysclk;
 }
 
-void OV5640_set_night_mode(void)
+static void OV5640_set_night_mode(void)
 {
 	 /* read HTS from register settings */
 	u8 mode;
@@ -921,7 +921,7 @@ void OV5640_set_night_mode(void)
 	ov5640_write_reg(0x3a00, mode);
 }
 
-int OV5640_get_HTS(void)
+static int OV5640_get_HTS(void)
 {
 	 /* read HTS from register settings */
 	int HTS;
@@ -933,7 +933,7 @@ int OV5640_get_HTS(void)
 	return HTS;
 }
 
-int OV5640_get_VTS(void)
+static int OV5640_get_VTS(void)
 {
 	 /* read VTS from register settings */
 	int VTS;
@@ -947,7 +947,7 @@ int OV5640_get_VTS(void)
 	return VTS;
 }
 
-int OV5640_set_VTS(int VTS)
+static int OV5640_set_VTS(int VTS)
 {
 	 /* write VTS to registers */
 	 int temp;
@@ -961,7 +961,7 @@ int OV5640_set_VTS(int VTS)
 	 return 0;
 }
 
-int OV5640_get_shutter(void)
+static int OV5640_get_shutter(void)
 {
 	 /* read shutter, in number of line period */
 	int shutter;
@@ -974,7 +974,7 @@ int OV5640_get_shutter(void)
 	 return shutter;
 }
 
-int OV5640_set_shutter(int shutter)
+static int OV5640_set_shutter(int shutter)
 {
 	 /* write shutter, in number of line period */
 	 int temp;
@@ -995,7 +995,7 @@ int OV5640_set_shutter(int shutter)
 	 return 0;
 }
 
-int OV5640_get_gain16(void)
+static int OV5640_get_gain16(void)
 {
 	 /* read gain, 16 = 1x */
 	int gain16;
@@ -1007,7 +1007,7 @@ int OV5640_get_gain16(void)
 	return gain16;
 }
 
-int OV5640_set_gain16(int gain16)
+static int OV5640_set_gain16(int gain16)
 {
 	/* write gain, 16 = 1x */
 	u8 temp;
@@ -1022,7 +1022,7 @@ int OV5640_set_gain16(int gain16)
 	return 0;
 }
 
-int OV5640_get_light_freq(void)
+static int OV5640_get_light_freq(void)
 {
 	/* get banding filter value */
 	int temp, temp1, light_freq = 0;
@@ -1053,7 +1053,7 @@ int OV5640_get_light_freq(void)
 	return light_freq;
 }
 
-void OV5640_set_bandingfilter(void)
+static void OV5640_set_bandingfilter(void)
 {
 	int prev_VTS;
 	int band_step60, max_band60, band_step50, max_band50;
@@ -1084,7 +1084,7 @@ void OV5640_set_bandingfilter(void)
 	ov5640_write_reg(0x3a0e, max_band50);
 }
 
-int OV5640_set_AE_target(int target)
+static int OV5640_set_AE_target(int target)
 {
 	/* stable in high */
 	int fast_high, fast_low;
@@ -1107,7 +1107,7 @@ int OV5640_set_AE_target(int target)
 	return 0;
 }
 
-void OV5640_turn_on_AE_AG(int enable)
+static void OV5640_turn_on_AE_AG(int enable)
 {
 	u8 ae_ag_ctrl;
 
@@ -1122,7 +1122,7 @@ void OV5640_turn_on_AE_AG(int enable)
 	ov5640_write_reg(0x3503, ae_ag_ctrl);
 }
 
-bool binning_on(void)
+static bool binning_on(void)
 {
 	u8 temp;
 	ov5640_read_reg(0x3821, &temp);
