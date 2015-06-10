@@ -545,8 +545,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 			mxc_fbi->pre_num = ipu_pre_alloc(mxc_fbi->ipu_id,
 							 mxc_fbi->ipu_ch);
 			if (mxc_fbi->pre_num < 0) {
-				dev_err(fbi->device,
-					"failed to alloc PRE\n");
+				dev_dbg(fbi->device, "failed to alloc PRE\n");
 				mxc_fbi->prefetch = mxc_fbi->cur_prefetch;
 				mxc_fbi->resolve = false;
 				if (!mxc_fbi->on_the_fly)
