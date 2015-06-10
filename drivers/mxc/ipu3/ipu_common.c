@@ -307,7 +307,7 @@ struct ipu_devtype {
 
 struct ipu_platform_type {
 	struct ipu_devtype devtype;
-	unsigned int ch0_axi;
+	unsigned int ch0123_axi;
 	unsigned int ch23_axi;
 	unsigned int ch27_axi;
 	unsigned int ch28_axi;
@@ -340,7 +340,7 @@ static struct ipu_platform_type ipu_type_imx51 = {
 		.type =		IPUv3EX,
 		.idmac_used_bufs_present = false,
 	},
-	.ch0_axi = 1,
+	.ch0123_axi = 1,
 	.ch23_axi = 1,
 	.ch23_axi = 1,
 	.ch27_axi = 1,
@@ -370,7 +370,7 @@ static struct ipu_platform_type ipu_type_imx53 = {
 		.type =		IPUv3M,
 		.idmac_used_bufs_present = true,
 	},
-	.ch0_axi = 1,
+	.ch0123_axi = 1,
 	.ch23_axi = 1,
 	.ch27_axi = 1,
 	.ch28_axi = 1,
@@ -401,7 +401,7 @@ static struct ipu_platform_type ipu_type_imx6q = {
 		.type =		IPUv3H,
 		.idmac_used_bufs_present = true,
 	},
-	.ch0_axi = 0,
+	.ch0123_axi = 0,
 	.ch23_axi = 0,
 	.ch27_axi = 0,
 	.ch28_axi = 0,
@@ -432,7 +432,7 @@ static struct ipu_platform_type ipu_type_imx6qp = {
 		.type =		IPUv3H,
 		.idmac_used_bufs_present = true,
 	},
-	.ch0_axi = 0,
+	.ch0123_axi = 0,
 	.ch23_axi = 0,
 	.ch27_axi = 2,
 	.ch28_axi = 3,
@@ -495,7 +495,7 @@ static int ipu_probe(struct platform_device *pdev)
 	ipu->dev = &pdev->dev;
 	ipu->id = id;
 	ipu->devtype = devtype->type;
-	ipu->ch0_axi = iputype->ch0_axi;
+	ipu->ch0123_axi = iputype->ch0123_axi;
 	ipu->ch23_axi = iputype->ch23_axi;
 	ipu->ch27_axi = iputype->ch27_axi;
 	ipu->ch28_axi = iputype->ch28_axi;
@@ -1501,7 +1501,10 @@ int32_t ipu_init_channel_buffer(struct ipu_soc *ipu, ipu_channel_t channel,
 
 	switch (dma_chan) {
 	case 0:
-		_ipu_ch_param_set_axi_id(ipu, dma_chan, ipu->ch0_axi);
+	case 1:
+	case 2:
+	case 3:
+		_ipu_ch_param_set_axi_id(ipu, dma_chan, ipu->ch0123_axi);
 		break;
 	case 23:
 		_ipu_ch_param_set_axi_id(ipu, dma_chan, ipu->ch23_axi);
