@@ -143,7 +143,7 @@ struct ipu_soc {
 	 */
 	bool bypass_reset;
 
-	unsigned int ch0_axi;
+	unsigned int ch0123_axi;
 	unsigned int ch23_axi;
 	unsigned int ch27_axi;
 	unsigned int ch28_axi;
