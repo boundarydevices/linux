@@ -50,15 +50,15 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 	struct rfkill_gpio_data *rfkill = data;
 
 	if (blocked) {
-		gpiod_set_value(rfkill->shutdown_gpio, 0);
-		gpiod_set_value(rfkill->reset_gpio, 0);
+		gpiod_set_value(rfkill->shutdown_gpio, 1);
+		gpiod_set_value(rfkill->reset_gpio, 1);
 		if (!IS_ERR(rfkill->clk) && rfkill->clk_enabled)
 			clk_disable(rfkill->clk);
 	} else {
 		if (!IS_ERR(rfkill->clk) && !rfkill->clk_enabled)
 			clk_enable(rfkill->clk);
-		gpiod_set_value(rfkill->reset_gpio, 1);
-		gpiod_set_value(rfkill->shutdown_gpio, 1);
+		gpiod_set_value(rfkill->reset_gpio, 0);
+		gpiod_set_value(rfkill->shutdown_gpio, 0);
 	}
 
 	rfkill->clk_enabled = blocked;
@@ -140,22 +140,22 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 	if (!rfkill->shutdown_name)
 		return -ENOMEM;
 
-	snprintf(rfkill->reset_name, len + 6 , "%s_reset", rfkill->name);
-	snprintf(rfkill->shutdown_name, len + 9, "%s_shutdown", rfkill->name);
+	snprintf(rfkill->reset_name, len + 7 , "%s_reset", rfkill->name);
+	snprintf(rfkill->shutdown_name, len + 10, "%s_shutdown", rfkill->name);
 
 	rfkill->clk = devm_clk_get(&pdev->dev, clk_name);
 
 	gpio = devm_gpiod_get_index(&pdev->dev, rfkill->reset_name, 0);
 	if (!IS_ERR(gpio)) {
-		ret = gpiod_direction_output(gpio, 0);
+		ret = gpiod_direction_output(gpio, 1);
 		if (ret)
 			return ret;
 		rfkill->reset_gpio = gpio;
 	}
 
-	gpio = devm_gpiod_get_index(&pdev->dev, rfkill->shutdown_name, 1);
+	gpio = devm_gpiod_get_index(&pdev->dev, rfkill->shutdown_name, 0);
 	if (!IS_ERR(gpio)) {
-		ret = gpiod_direction_output(gpio, 0);
+		ret = gpiod_direction_output(gpio, 1);
 		if (ret)
 			return ret;
 		rfkill->shutdown_gpio = gpio;
