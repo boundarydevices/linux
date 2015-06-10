@@ -84,6 +84,15 @@
 			enable-active-high;
 		};
 
+		reg_sd1_vmmc: regulator@5 {
+			compatible = "regulator-fixed";
+			regulator-name = "VDD_SD1";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio5 2 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
+
 		wlreg_on: fixedregulator@100 {
 			compatible = "regulator-fixed";
 			regulator-min-microvolt = <5000000>;
@@ -1010,6 +1019,7 @@
 	cd-gpios = <&gpio5 0 0>;
 	wp-gpios = <&gpio5 1 0>;
 	tuning-step = <2>;
+	vmmc-supply = <&reg_sd1_vmmc>;
 	enable-sdio-wakeup;
 	keep-power-in-suspend;
 	status = "okay";
