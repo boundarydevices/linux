@@ -394,7 +394,9 @@
 			interrupt-names = "gpmi0", "gpmi1", "gpmi2", "gpmi3";
 			#dma-cells = <1>;
 			dma-channels = <4>;
-			clocks = <&clks IMX7D_NAND_ROOT_CLK>;
+			clocks = <&clks IMX7D_NAND_USDHC_BUS_ROOT_CLK>,
+				<&clks IMX7D_NAND_ROOT_CLK>;
+			clock-names = "dma_apbh_bch", "dma_apbh_io";
 		};
 
         gpmi: gpmi-nand@33002000{
@@ -599,7 +601,13 @@
 			ocotp: ocotp-ctrl@30350000 {
 				compatible = "syscon";
 				reg = <0x30350000 0x10000>;
-				clocks = <&clks IMX7D_CLK_DUMMY>;
+				clocks = <&clks IMX7D_OCOTP_CLK>;
+			};
+
+			ocotp-fuse@30350000 {
+				compatible = "fsl,imx7d-ocotp";
+				reg = <0x30350000 0x10000>;
+				clocks = <&clks IMX7D_OCOTP_CLK>;
 			};
 
 			anatop: anatop@30360000 {
@@ -693,7 +701,7 @@
 				compatible = "fsl,imx7d-adc";
 				reg = <0x30610000 0x10000>;
 				interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>;
+				clocks = <&clks IMX7D_ADC_ROOT_CLK>;
 				num-channels = <4>;
 				clock-names = "adc";
 				status = "disabled";
@@ -703,7 +711,7 @@
 				compatible = "fsl,imx7d-adc";
 				reg = <0x30620000 0x10000>;
 				interrupts = <GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CLK_DUMMY>;
+				clocks = <&clks IMX7D_ADC_ROOT_CLK>;
 				num-channels = <4>;
 				clock-names = "adc";
 				status = "disabled";
@@ -844,12 +852,24 @@
 			mipi_csi: mipi-csi@30750000 {
 				compatible = "fsl,imx7d-mipi-csi";
 				reg = <0x30750000 0x10000>;
+				interrupts = <GIC_SPI 25 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX7D_MIPI_CSI_ROOT_CLK>,
+						<&clks IMX7D_MIPI_DPHY_ROOT_CLK>;
+				clock-names = "mipi_clk", "phy_clk";
+				mipi-phy-supply = <&reg_1p0d>;
+				csis-phy-reset = <&src 0x28 1>;
+				bus-width = <4>;
 				status = "disabled";
 			};
 
 			mipi_dsi: mipi-dsi@30760000 {
 				compatible = "fsl,imx7d-mipi-dsi";
 				reg = <0x30760000 0x10000>;
+				interrupts = <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX7D_MIPI_DSI_ROOT_CLK>,
+					<&clks IMX7D_MIPI_DPHY_ROOT_CLK>;
+				clock-names = "mipi_cfg_clk", "mipi_pllref_clk";
+				mipi-phy-supply = <&reg_1p0d>;
 				status = "disabled";
 			};
 
@@ -954,8 +974,9 @@
 				reg = <0x30900000 0x40000>;
 				ranges = <0 0x30900000 0x40000>;
 				interrupts = <GIC_SPI 91 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_CAAM_CLK>;
-				clock-names = "caam_ipg";
+				clocks = <&clks IMX7D_CAAM_CLK>,
+					<&clks IMX7D_AHB_CHANNEL_ROOT_CLK>;
+				clock-names = "caam_ipg", "caam_aclk";
 
 				sec_jr0: jr0@1000 {
 					 compatible = "fsl,sec-v4.0-job-ring";
@@ -1148,6 +1169,11 @@
 				status = "disabled";
 			};
 
+			rpmsg: rpmsg{
+				compatible = "fsl,imx7d-rpmsg";
+				status = "disabled";
+			};
+
 			sema4: sema4@30ac0000 {
 				compatible = "fsl,imx7d-sema4";
 				reg = <0x30ac0000 0x10000>;
@@ -1319,7 +1345,7 @@
 				interrupts = <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_ENET_AXI_ROOT_CLK>,
+				clocks = <&clks IMX7D_IPG_ROOT_CLK>,
 					<&clks IMX7D_ENET_AXI_ROOT_CLK>,
 					<&clks IMX7D_ENET1_TIME_ROOT_CLK>,
 					<&clks IMX7D_PLL_ENET_MAIN_125M_CLK>,
@@ -1339,7 +1365,7 @@
 				interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clks IMX7D_ENET_AXI_ROOT_CLK>,
+				clocks = <&clks IMX7D_IPG_ROOT_CLK>,
 					<&clks IMX7D_ENET_AXI_ROOT_CLK>,
 					<&clks IMX7D_ENET2_TIME_ROOT_CLK>,
 					<&clks IMX7D_PLL_ENET_MAIN_125M_CLK>,

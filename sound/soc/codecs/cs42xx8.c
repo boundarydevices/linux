@@ -1,7 +1,7 @@
 /*
  * Cirrus Logic CS42448/CS42888 Audio CODEC Digital Audio Interface (DAI) driver
  *
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  *
  * Author: Nicolin Chen <Guangyu.Chen@freescale.com>
  *
@@ -128,7 +128,6 @@ static const struct snd_soc_dapm_widget cs42xx8_dapm_widgets[] = {
 	SND_SOC_DAPM_INPUT("AIN2L"),
 	SND_SOC_DAPM_INPUT("AIN2R"),
 
-	SND_SOC_DAPM_PGA_E("PWR", CS42XX8_PWRCTL, 0, 1, NULL, 0, NULL, 0),
 };
 
 static const struct snd_soc_dapm_widget cs42xx8_adc3_dapm_widgets[] = {
@@ -140,49 +139,30 @@ static const struct snd_soc_dapm_widget cs42xx8_adc3_dapm_widgets[] = {
 
 static const struct snd_soc_dapm_route cs42xx8_dapm_routes[] = {
 	/* Playback */
-	{ "PWR", NULL, "DAC1" },
-	{ "PWR", NULL, "DAC1" },
+	{ "AOUT1L", NULL, "DAC1" },
+	{ "AOUT1R", NULL, "DAC1" },
 
-	{ "PWR", NULL, "DAC2" },
-	{ "PWR", NULL, "DAC2" },
+	{ "AOUT2L", NULL, "DAC2" },
+	{ "AOUT2R", NULL, "DAC2" },
 
-	{ "PWR", NULL, "DAC3" },
-	{ "PWR", NULL, "DAC3" },
+	{ "AOUT3L", NULL, "DAC3" },
+	{ "AOUT3R", NULL, "DAC3" },
 
-	{ "PWR", NULL, "DAC4" },
-	{ "PWR", NULL, "DAC4" },
-
-	{ "AOUT1L", NULL, "PWR" },
-	{ "AOUT1R", NULL, "PWR" },
-
-	{ "AOUT2L", NULL, "PWR" },
-	{ "AOUT2R", NULL, "PWR" },
-
-	{ "AOUT3L", NULL, "PWR" },
-	{ "AOUT3R", NULL, "PWR" },
-
-	{ "AOUT4L", NULL, "PWR" },
-	{ "AOUT4R", NULL, "PWR" },
+	{ "AOUT4L", NULL, "DAC4" },
+	{ "AOUT4R", NULL, "DAC4" },
 
 	/* Capture */
-	{ "PWR", NULL, "AIN1L" },
-	{ "PWR", NULL, "AIN1R" },
+	{ "ADC1", NULL, "AIN1L" },
+	{ "ADC1", NULL, "AIN1R" },
 
-	{ "PWR", NULL, "AIN2L" },
-	{ "PWR", NULL, "AIN2R" },
-
-	{ "ADC1", NULL, "PWR" },
-	{ "ADC1", NULL, "PWR" },
-
-	{ "ADC2", NULL, "PWR" },
-	{ "ADC2", NULL, "PWR" },
+	{ "ADC2", NULL, "AIN2L" },
+	{ "ADC2", NULL, "AIN2R" },
 };
 
 static const struct snd_soc_dapm_route cs42xx8_adc3_dapm_routes[] = {
 	/* Capture */
 	{ "ADC3", NULL, "AIN3L" },
 	{ "ADC3", NULL, "AIN3R" },
-	{ "ADC3", NULL, "PWR" },
 };
 
 struct cs42xx8_ratios {
@@ -479,7 +459,8 @@ static int cs42xx8_codec_probe(struct snd_soc_codec *codec)
 
 	/* Mute all DAC channels */
 	regmap_write(cs42xx8->regmap, CS42XX8_DACMUTE, CS42XX8_DACMUTE_ALL);
-
+	regmap_update_bits(cs42xx8->regmap, CS42XX8_PWRCTL,
+			CS42XX8_PWRCTL_PDN_MASK, 0);
 	return 0;
 }
 
@@ -664,6 +645,7 @@ static int cs42xx8_runtime_suspend(struct device *dev)
 {
 	struct cs42xx8_priv *cs42xx8 = dev_get_drvdata(dev);
 
+	regcache_mark_dirty(cs42xx8->regmap);
 	regcache_cache_only(cs42xx8->regmap, true);
 
 	regulator_bulk_disable(ARRAY_SIZE(cs42xx8->supplies),

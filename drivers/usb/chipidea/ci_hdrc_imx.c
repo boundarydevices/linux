@@ -262,6 +262,31 @@ static int ci_hdrc_imx_notify_event(struct ci_hdrc *ci, unsigned event)
 			return ret;
 		}
 		break;
+	case CI_HDRC_IMX_ADP_PROBE_ENABLE:
+		if (data->usbmisc_data)
+			imx_usbmisc_adp_probe_enable(data->usbmisc_data);
+		break;
+	case CI_HDRC_IMX_ADP_PROBE_START:
+		if (data->usbmisc_data)
+			imx_usbmisc_adp_probe_start(data->usbmisc_data);
+		break;
+	case CI_HDRC_IMX_ADP_SENSE_ENABLE:
+		if (data->usbmisc_data)
+			imx_usbmisc_adp_sense_enable(data->usbmisc_data);
+		break;
+	case CI_HDRC_IMX_ADP_IS_PROBE_INT:
+		if (data->usbmisc_data)
+			return imx_usbmisc_adp_is_probe_int(data->usbmisc_data);
+	case CI_HDRC_IMX_ADP_IS_SENSE_INT:
+		if (data->usbmisc_data)
+			return imx_usbmisc_adp_is_sense_int(data->usbmisc_data);
+	case CI_HDRC_IMX_ADP_SENSE_CONNECTION:
+		if (data->usbmisc_data)
+			return imx_usbmisc_adp_sense_connection(
+						data->usbmisc_data);
+	case CI_HDRC_IMX_ADP_ATTACH_EVENT:
+		if (data->usbmisc_data)
+			return imx_usbmisc_adp_attach_event(data->usbmisc_data);
 	default:
 		dev_dbg(dev, "unknown event\n");
 	}

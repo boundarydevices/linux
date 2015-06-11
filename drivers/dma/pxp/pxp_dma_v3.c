@@ -34,6 +34,7 @@
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/semaphore.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/dmaengine.h>
@@ -79,7 +80,6 @@ void __iomem *pinctrl_base;
 static LIST_HEAD(head);
 static int timeout_in_ms = 600;
 static unsigned int block_size;
-static struct mutex hard_lock;
 static struct pxp_collision_info col_info;
 
 struct pxp_dma {
@@ -110,6 +110,7 @@ struct pxps {
 
 	/* to turn clock off when pxp is inactive */
 	struct timer_list clk_timer;
+	struct semaphore sema;
 };
 
 #define to_pxp_dma(d) container_of(d, struct pxp_dma, dma)
@@ -795,6 +796,7 @@ static int pxp_set_scaling(struct pxps *pxp)
 	struct pxp_proc_data *proc_data = &pxp->pxp_conf_state.proc_data;
 	struct pxp_config_data *pxp_conf = &pxp->pxp_conf_state;
 	struct pxp_layer_param *s0_params = &pxp_conf->s0_param;
+	struct pxp_layer_param *out_params = &pxp_conf->out_param;
 
 	proc_data->scaling = 1;
 	decx = proc_data->srect.width / proc_data->drect.width;
@@ -814,6 +816,8 @@ static int pxp_set_scaling(struct pxps *pxp)
 			 (proc_data->drect.width * decx);
 	} else {
 		if (!is_yuv(s0_params->pixel_fmt) ||
+		    (is_yuv(s0_params->pixel_fmt) ==
+		     is_yuv(out_params->pixel_fmt)) ||
 		    (s0_params->pixel_fmt == PXP_PIX_FMT_GREY) ||
 		    (s0_params->pixel_fmt == PXP_PIX_FMT_GY04) ||
 		    (s0_params->pixel_fmt == PXP_PIX_FMT_VUY444)) {
@@ -1594,7 +1598,7 @@ static irqreturn_t pxp_irq(int irq, void *dev_id)
 	struct pxp_tx_desc *desc;
 	dma_async_tx_callback callback;
 	void *callback_param;
-	unsigned long flags;
+	unsigned long flags, flags0;
 	u32 hist_status;
 	int pxp_irq_status = 0;
 
@@ -1657,12 +1661,14 @@ static irqreturn_t pxp_irq(int irq, void *dev_id)
 	}
 
 	pxp_chan = list_entry(head.next, struct pxp_channel, list);
+	spin_lock_irqsave(&pxp_chan->lock, flags0);
 	list_del_init(&pxp_chan->list);
 
 	if (list_empty(&pxp_chan->active_list)) {
 		pr_debug("PXP_IRQ pxp_chan->active_list empty. chan_id %d\n",
 			 pxp_chan->dma_chan.chan_id);
 		pxp->pxp_ongoing = 0;
+		spin_unlock_irqrestore(&pxp_chan->lock, flags0);
 		spin_unlock_irqrestore(&pxp->lock, flags);
 		return IRQ_NONE;
 	}
@@ -1685,8 +1691,9 @@ static irqreturn_t pxp_irq(int irq, void *dev_id)
 
 	list_splice_init(&desc->tx_list, &pxp_chan->free_list);
 	list_move(&desc->list, &pxp_chan->free_list);
+	spin_unlock_irqrestore(&pxp_chan->lock, flags0);
 
-	mutex_unlock(&hard_lock);
+	up(&pxp->sema);
 	pxp->pxp_ongoing = 0;
 	mod_timer(&pxp->clk_timer, jiffies + msecs_to_jiffies(timeout_in_ms));
 
@@ -1819,7 +1826,7 @@ static void pxp_issue_pending(struct dma_chan *chan)
 	spin_unlock_irqrestore(&pxp->lock, flags0);
 
 	pxp_clk_enable(pxp);
-	mutex_lock(&hard_lock);
+	down(&pxp->sema);
 
 	spin_lock_irqsave(&pxp->lock, flags);
 	pxp->pxp_ongoing = 1;
@@ -4302,7 +4309,7 @@ static int pxp_probe(struct platform_device *pdev)
 
 	spin_lock_init(&pxp->lock);
 	mutex_init(&pxp->clk_mutex);
-	mutex_init(&hard_lock);
+	sema_init(&pxp->sema, 1);
 
 	pxp->base = devm_request_and_ioremap(&pdev->dev, res);
 	if (pxp->base == NULL) {

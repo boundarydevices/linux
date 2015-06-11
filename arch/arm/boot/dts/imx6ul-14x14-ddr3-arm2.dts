@@ -59,6 +59,25 @@
 			regulator-max-microvolt = <3300000>;
 			gpio = <&gpio1 15 GPIO_ACTIVE_LOW>;
 		};
+
+		reg_vref_3v3: regulator@1 {
+			compatible = "regulator-fixed";
+			regulator-name = "vref-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
+
+		reg_usb_otg1_vbus: regulator@2 {
+			compatible = "regulator-fixed";
+			reg = <2>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_usb_otg1>;
+			regulator-name = "usb_otg1_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio1 4 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
 	};
 };
 
@@ -69,10 +88,10 @@
 	pinctrl-0 = <&pinctrl_ecspi1_1 &pinctrl_ecspi1_cs_1>;
 	status = "okay";
 
-	flash: m25p80@0 {
+	flash: n25q032@0 {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "st,m25p32";
+		compatible = "st,n25q032";
 		spi-max-frequency = <20000000>;
 		reg = <0>;
 	};
@@ -119,7 +138,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan2>;
 	xceiver-supply = <&reg_can2_3v3>;
-	status = "okay";
+	status = "disabled";
 };
 
 &gpc {
@@ -290,6 +309,13 @@
 	status = "okay";
 };
 
+&usbotg1 {
+	vbus-supply = <&reg_usb_otg1_vbus>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usb_otg1_id>;
+	status = "okay";
+};
+
 &usdhc1 {
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc1>;
@@ -318,7 +344,7 @@
 
 &iomuxc {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hog &pinctrl_hog1>;
+	pinctrl-0 = <&pinctrl_hog &pinctrl_hog1 &pinctrl_hog_sd>;
 
 	imx6ul-ddr3-arm2 {
 		pinctrl_hog: hoggrp {
@@ -326,16 +352,21 @@
 				MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0x17059	/* SD1 CD */
 				MX6UL_PAD_UART1_CTS_B__GPIO1_IO18	0x17059	/* SD1 WP */
 				MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT	0x17059	/* SD1 VSELECT */
-				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09 	0x17059	/* SD1 RESECT */
 				MX6UL_PAD_CSI_MCLK__GPIO4_IO17		0x17059	/* SD2 CD */
 				MX6UL_PAD_CSI_PIXCLK__GPIO4_IO18	0x17059	/* SD2 WP */
-				MX6UL_PAD_GPIO1_IO08__USDHC2_VSELECT	0x17059	/* SD2 VSELECT */
 			>;
 		};
 
 		pinctrl_hog1: hoggrp1 {
 			fsl,pins = <
 				MX6UL_PAD_NAND_ALE__GPIO4_IO10          0x17059 /* SD2 RESECT */
+			>;
+		};
+
+		pinctrl_hog_sd: hoggrp_sd {
+			fsl,pins = <
+				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059 /* SD1 RESET */
+				MX6UL_PAD_GPIO1_IO08__USDHC2_VSELECT    0x17059 /* SD2 VSELECT */
 			>;
 		};
 
@@ -498,8 +529,8 @@
 
 		pinctrl_mqs: mqsgrp {
 			fsl,pins = <
-				MX6UL_PAD_JTAG_TDI__MQS_LEFT         0x4000007f
-				MX6UL_PAD_JTAG_TDO__MQS_RIGHT        0x4000007f
+				MX6UL_PAD_JTAG_TDI__MQS_LEFT         0x11088
+				MX6UL_PAD_JTAG_TDO__MQS_RIGHT        0x11088
 			>;
 		};
 
@@ -527,6 +558,13 @@
 				MX6UL_PAD_GPIO1_IO02__GPIO1_IO02	0xb0
 				MX6UL_PAD_GPIO1_IO03__GPIO1_IO03	0xb0
 				MX6UL_PAD_GPIO1_IO04__GPIO1_IO04	0xb0
+			>;
+		};
+
+		pinctrl_adc1: adc1grp {
+			fsl,pin = <
+				MX6UL_PAD_GPIO1_IO00__GPIO1_IO00        0xb0
+				MX6UL_PAD_GPIO1_IO01__GPIO1_IO01        0xb0
 			>;
 		};
 
@@ -559,6 +597,18 @@
 				MX6UL_PAD_UART2_RX_DATA__UART2_DTE_TX 0x1b0b1
 				MX6UL_PAD_UART2_CTS_B__UART2_DTE_RTS  0x1b0b1
 				MX6UL_PAD_UART2_RTS_B__UART2_DTE_CTS  0x1b0b1
+			>;
+		};
+
+		pinctrl_usb_otg1_id: usbotg1idgrp {
+			fsl,pins = <
+				MX6UL_PAD_GPIO1_IO00__ANATOP_OTG1_ID	0x17059
+			>;
+		};
+
+		pinctrl_usb_otg1: usbotg1grp {
+			fsl,pins = <
+				MX6UL_PAD_GPIO1_IO04__GPIO1_IO04        0x10b0
 			>;
 		};
 

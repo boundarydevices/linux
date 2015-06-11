@@ -324,7 +324,7 @@ static int imx7_pm_enter(suspend_state_t state)
 		imx_gpcv2_pre_suspend(false);
 
 		/* Zzz ... */
-		cpu_do_idle();
+		imx7_suspend_in_ocram_fn(suspend_ocram_base);
 
 		imx_anatop_post_resume();
 		imx_gpcv2_post_resume();

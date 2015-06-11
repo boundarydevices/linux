@@ -515,6 +515,7 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 				"dispdrv:%s\n", host->dispdrv->drv->name);
 			return;
 		}
+		host->sync = fb_info->var.sync;
 	}
 
 	if (host->reg_lcd) {
@@ -917,9 +918,10 @@ static int mxsfb_blank(int blank, struct fb_info *fb_info)
 	case FB_BLANK_UNBLANK:
 		fb_info->var.activate = (fb_info->var.activate & ~FB_ACTIVATE_MASK) |
 				FB_ACTIVATE_NOW | FB_ACTIVATE_FORCE;
-		if (!host->enabled)
+		if (!host->enabled) {
+			mxsfb_set_par(&host->fb_info);
 			mxsfb_enable_controller(fb_info);
-		mxsfb_set_par(&host->fb_info);
+		}
 		break;
 	}
 	return 0;
@@ -1272,6 +1274,7 @@ static void mxsfb_dispdrv_init(struct platform_device *pdev,
 	struct device *dev = &pdev->dev;
 	char disp_dev[32];
 
+	memset(&setting, 0x0, sizeof(setting));
 	setting.fbi = fbi;
 	memcpy(disp_dev, host->disp_dev, strlen(host->disp_dev));
 	disp_dev[strlen(host->disp_dev)] = '\0';

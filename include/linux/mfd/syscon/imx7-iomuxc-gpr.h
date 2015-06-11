@@ -44,4 +44,6 @@
 #define IMX7D_GPR1_ENET2_CLK_DIR_MASK		(0x1 << 18)
 #define IMX7D_GPR1_ENET_CLK_DIR_MASK		(0x3 << 17)
 
+#define IMX7D_GPR5_CSI_MUX_CONTROL_MIPI		(0x1 << 4)
+
 #endif /* __LINUX_IMX7_IOMUXC_GPR_H */

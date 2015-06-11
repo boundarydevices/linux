@@ -98,12 +98,17 @@ static const char *imx6ul_dt_compat[] __initdata = {
 static void __init imx6ul_init_late(void)
 {
 	platform_device_register_simple("imx6q-cpufreq", -1, NULL, 0);
+
+	imx6ul_cpuidle_init();
 }
 
 static void __init imx6ul_map_io(void)
 {
 	debug_ll_io_init();
 	imx6_pm_map_io();
+#ifdef CONFIG_CPU_FREQ
+	imx_busfreq_map_io();
+#endif
 }
 
 DT_MACHINE_START(IMX6UL, "Freescale i.MX6 UltraLite (Device Tree)")

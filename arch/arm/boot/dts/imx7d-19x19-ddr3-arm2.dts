@@ -127,6 +127,11 @@
 		};
 	};
 
+	pxp_v4l2_out {
+		compatible = "fsl,imx7d-pxp-v4l2", "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
+		status = "okay";
+	};
+
 	memory {
 		reg = <0x80000000 0x80000000>;
 	};
@@ -144,16 +149,6 @@
 
 &cpu0 {
 	arm-supply = <&sw1a_reg>;
-};
-
-&csi1 {
-	status = "okay";
-
-	port {
-		csi1_ep: endpoint {
-			remote-endpoint = <&ov5640_ep>;
-		};
-	};
 };
 
 &fec1 {
@@ -201,22 +196,28 @@
 
 &iomuxc {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hog_1>;
+	pinctrl-0 = <&pinctrl_hog_1 &pinctrl_hog_sd3_vselect>;
 
 	hog {
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
-				MX7D_PAD_I2C4_SCL__GPIO4_IO14	   0x80000000
-
 				MX7D_PAD_GPIO1_IO12__SD2_VSELECT   0x59
 				MX7D_PAD_SD2_CD_B__GPIO5_IO9       0x59
 				MX7D_PAD_SD2_WP__GPIO5_IO10        0x59
 				MX7D_PAD_SD2_RESET_B__GPIO5_IO11   0x59
 				MX7D_PAD_SD3_RESET_B__GPIO6_IO11   0x59
-				MX7D_PAD_GPIO1_IO13__SD3_VSELECT   0x59
 				MX7D_PAD_GPIO1_IO14__GPIO1_IO14    0x59
 				MX7D_PAD_GPIO1_IO15__GPIO1_IO15    0x59
 				MX7D_PAD_SD3_STROBE__GPIO6_IO10    0x59
+
+				MX7D_PAD_I2C4_SCL__GPIO4_IO14	  0x7F
+				MX7D_PAD_I2C4_SDA__GPIO4_IO15     0x7F
+			>;
+		};
+
+		pinctrl_hog_sd3_vselect: hoggrp_sd3vselect {
+			fsl,pins = <
+				MX7D_PAD_GPIO1_IO13__SD3_VSELECT   0x59
 			>;
 		};
 	};
@@ -251,6 +252,14 @@
 			fsl,pins = <
 				MX7D_PAD_GPIO1_IO03__GPIO1_IO3 0x80000000
 				MX7D_PAD_GPIO1_IO07__GPIO1_IO7 0x80000000
+			>;
+		};
+	};
+
+	mipi_csi {
+		pinctrl_mipi_csi: mipicsigrp-1 {
+			fsl,pins = <
+				MX7D_PAD_GPIO1_IO01__ANATOP_24M_OUT 0x3
 			>;
 		};
 	};
@@ -313,6 +322,47 @@
 			>;
 		};
 	};
+
+	lcdif {
+		pinctrl_lcdif_dat: lcdifdatgrp {
+			fsl,pins = <
+				MX7D_PAD_LCD_DATA00__LCD_DATA0	0x79
+				MX7D_PAD_LCD_DATA01__LCD_DATA1	0x79
+				MX7D_PAD_LCD_DATA02__LCD_DATA2	0x79
+				MX7D_PAD_LCD_DATA03__LCD_DATA3	0x79
+				MX7D_PAD_LCD_DATA04__LCD_DATA4	0x79
+				MX7D_PAD_LCD_DATA05__LCD_DATA5	0x79
+				MX7D_PAD_LCD_DATA06__LCD_DATA6	0x79
+				MX7D_PAD_LCD_DATA07__LCD_DATA7	0x79
+				MX7D_PAD_LCD_DATA08__LCD_DATA8	0x79
+				MX7D_PAD_LCD_DATA09__LCD_DATA9	0x79
+				MX7D_PAD_LCD_DATA10__LCD_DATA10	0x79
+				MX7D_PAD_LCD_DATA11__LCD_DATA11	0x79
+				MX7D_PAD_LCD_DATA12__LCD_DATA12	0x79
+				MX7D_PAD_LCD_DATA13__LCD_DATA13	0x79
+				MX7D_PAD_LCD_DATA14__LCD_DATA14	0x79
+				MX7D_PAD_LCD_DATA15__LCD_DATA15	0x79
+				MX7D_PAD_LCD_DATA16__LCD_DATA16	0x79
+				MX7D_PAD_LCD_DATA17__LCD_DATA17	0x79
+				MX7D_PAD_LCD_DATA18__LCD_DATA18	0x79
+				MX7D_PAD_LCD_DATA19__LCD_DATA19	0x79
+				MX7D_PAD_LCD_DATA20__LCD_DATA20	0x79
+				MX7D_PAD_LCD_DATA21__LCD_DATA21	0x79
+				MX7D_PAD_LCD_DATA22__LCD_DATA22	0x79
+				MX7D_PAD_LCD_DATA23__LCD_DATA23	0x79
+			>;
+		};
+
+		pinctrl_lcdif_ctrl: lcdifctrlgrp {
+			fsl,pins = <
+				MX7D_PAD_LCD_CLK__LCD_CLK	0x79
+				MX7D_PAD_LCD_ENABLE__LCD_ENABLE	0x79
+				MX7D_PAD_LCD_VSYNC__LCD_VSYNC	0x79
+				MX7D_PAD_LCD_HSYNC__LCD_HSYNC	0x79
+			>;
+		};
+	};
+
 
 	enet1 {
 		pinctrl_enet1: enet1grp {
@@ -551,6 +601,7 @@
 				MX7D_PAD_SAI2_TX_SYNC__SAI2_TX_SYNC     0x1f
 				MX7D_PAD_SAI2_RX_DATA__SAI2_RX_DATA0    0x1f
 				MX7D_PAD_SAI2_TX_DATA__SAI2_TX_DATA0    0
+				MX7D_PAD_GPIO1_IO13__GPIO1_IO13		0x59
 			>;
 		};
 	};
@@ -684,35 +735,6 @@
 	};
 };
 
-&i2c2 {
-	clock-frequency = <100000>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_i2c2_1>;
-	status = "okay";
-
-	ov5640: ov5640@3c {
-		compatible = "ovti,ov5640";
-		reg = <0x3c>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_csi>;
-		clocks = <&clks IMX7D_CSI_MCLK_ROOT_CLK>;
-		clock-names = "csi_mclk";
-		pwn-gpios = <&gpio3 8 1>;
-		rst-gpios = <&gpio3 7 0>;
-		csi_id = <0>;
-		mclk = <24000000>;
-		mclk_source = <0>;
-		status = "disabled";
-		port {
-			ov5640_ep: endpoint {
-				remote-endpoint = <&csi1_ep>;
-			};
-		};
-	};
-
-};
-
-
 &sdma {
 	status = "okay";
 };
@@ -771,4 +793,36 @@
 	        spi-max-frequency = <20000000>;
 	        reg = <0>;
 	    };
+};
+
+&lcdif {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_lcdif_dat
+		     &pinctrl_lcdif_ctrl>;
+	display = <&display0>;
+	status = "okay";
+
+	display0: display {
+		bits-per-pixel = <16>;
+		bus-width = <24>;
+
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: timing0 {
+				clock-frequency = <33500000>;
+				hactive = <800>;
+				vactive = <480>;
+				hback-porch = <89>;
+				hfront-porch = <164>;
+				vback-porch = <23>;
+				vfront-porch = <10>;
+				hsync-len = <10>;
+				vsync-len = <10>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <1>;
+				pixelclk-active = <0>;
+			};
+		};
+	};
 };

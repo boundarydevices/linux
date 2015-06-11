@@ -27,6 +27,7 @@ static struct usb_device_id whitelist_table [] = {
 #define TEST_HS_HOST_PORT_SUSPEND_RESUME	0x0106
 #define TEST_SINGLE_STEP_GET_DEV_DESC		0x0107
 #define TEST_SINGLE_STEP_SET_FEATURE		0x0108
+#define TEST_OTG_TEST_DEVICE_SUPPORT		0x0200
 { USB_DEVICE(0x1a0a, TEST_SE0_NAK_PID) },
 { USB_DEVICE(0x1a0a, TEST_J_PID) },
 { USB_DEVICE(0x1a0a, TEST_K_PID) },
@@ -34,6 +35,7 @@ static struct usb_device_id whitelist_table [] = {
 { USB_DEVICE(0x1a0a, TEST_HS_HOST_PORT_SUSPEND_RESUME) },
 { USB_DEVICE(0x1a0a, TEST_SINGLE_STEP_GET_DEV_DESC) },
 { USB_DEVICE(0x1a0a, TEST_SINGLE_STEP_SET_FEATURE) },
+{ USB_DEVICE(0x1a0a, TEST_OTG_TEST_DEVICE_SUPPORT) },
 #endif
 
 #define USB_INTERFACE_CLASS_INFO(cl) \
@@ -81,6 +83,19 @@ static int is_targeted(struct usb_device *dev)
 	if ((le16_to_cpu(dev->descriptor.idVendor) == 0x1a0a &&
 	     le16_to_cpu(dev->descriptor.idProduct) == 0xbadd))
 		return 0;
+
+	/* Unknown Device Not Supporting HNP */
+	if ((le16_to_cpu(dev->descriptor.idVendor) == 0x1a0a &&
+		le16_to_cpu(dev->descriptor.idProduct) == 0x0201)) {
+		dev_warn(&dev->dev, "Unsupported Device\n");
+		return 0;
+	}
+	/* Unknown Device Supporting HNP */
+	if ((le16_to_cpu(dev->descriptor.idVendor) == 0x1a0a &&
+		le16_to_cpu(dev->descriptor.idProduct) == 0x0202)) {
+		dev_warn(&dev->dev, "Device no Responding\n");
+		return 0;
+	}
 
 	/* NOTE: can't use usb_match_id() since interface caches
 	 * aren't set up yet. this is cut/paste from that code.

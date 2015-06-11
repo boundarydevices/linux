@@ -44,9 +44,17 @@ struct ci_hdrc_platform_data {
 #define CI_HDRC_CONTROLLER_CHARGER_POST_EVENT	4
 #define CI_HDRC_IMX_HSIC_ACTIVE_EVENT		5
 #define CI_HDRC_IMX_HSIC_SUSPEND_EVENT		6
+#define CI_HDRC_IMX_ADP_PROBE_ENABLE		7
+#define CI_HDRC_IMX_ADP_PROBE_START		8
+#define CI_HDRC_IMX_ADP_SENSE_ENABLE		9
+#define CI_HDRC_IMX_ADP_IS_PROBE_INT		10
+#define CI_HDRC_IMX_ADP_IS_SENSE_INT		11
+#define CI_HDRC_IMX_ADP_SENSE_CONNECTION	12
+#define CI_HDRC_IMX_ADP_ATTACH_EVENT		13
 	int	(*notify_event)(struct ci_hdrc *ci, unsigned event);
 	struct regulator	*reg_vbus;
 	bool			tpl_support;
+	bool			adp_support;
 	u32			ahbburst_config;
 	u32			burst_length;
 	u32			phy_clkgate_delay_us;

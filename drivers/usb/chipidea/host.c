@@ -121,6 +121,38 @@ static int ci_imx_ehci_bus_resume(struct usb_hcd *hcd)
 	return 0;
 }
 
+#ifdef CONFIG_USB_OTG
+
+static int ci_start_port_reset(struct usb_hcd *hcd, unsigned port)
+{
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	u32 __iomem *reg;
+	u32 status;
+
+	if (!port)
+		return -EINVAL;
+	port--;
+	/* start port reset before HNP protocol time out */
+	reg = &ehci->regs->port_status[port];
+	status = ehci_readl(ehci, reg);
+	if (!(status & PORT_CONNECT))
+		return -ENODEV;
+
+	/* khubd will finish the reset later */
+	if (ehci_is_TDI(ehci))
+		ehci_writel(ehci, status | (PORT_RESET & ~PORT_RWC_BITS), reg);
+	else
+		ehci_writel(ehci, status | PORT_RESET, reg);
+
+	return 0;
+}
+
+#else
+
+#define ci_start_port_reset    NULL
+
+#endif
+
 /* The below code is based on tegra ehci driver */
 static int ci_imx_ehci_hub_control(
 	struct usb_hcd	*hcd,
@@ -266,6 +298,13 @@ static int host_start(struct ci_hdrc *ci)
 		}
 	}
 
+	if (ci_otg_is_fsm_mode(ci)) {
+		if (ci->fsm.id && ci->fsm.otg->state <= OTG_STATE_B_HOST)
+			hcd->self.is_b_host = 1;
+		else
+			hcd->self.is_b_host = 0;
+	}
+
 	ret = usb_add_hcd(hcd, 0, 0);
 	if (ret) {
 		goto disable_reg;
@@ -316,6 +355,8 @@ static void host_stop(struct ci_hdrc *ci)
 		if (ci->platdata->reg_vbus && !ci_otg_is_fsm_mode(ci) &&
 			(ci->platdata->flags & CI_HDRC_IMX_VBUS_EARLY_ON))
 				regulator_disable(ci->platdata->reg_vbus);
+		if (hcd->self.is_b_host)
+			hcd->self.is_b_host = 0;
 	}
 	ci->hcd = NULL;
 }
@@ -510,6 +551,7 @@ int ci_hdrc_host_init(struct ci_hdrc *ci)
 		ci_ehci_hc_driver.bus_resume = ci_imx_ehci_bus_resume;
 		ci_ehci_hc_driver.hub_control = ci_imx_ehci_hub_control;
 	}
+	ci_ehci_hc_driver.start_port_reset = ci_start_port_reset;
 
 	return 0;
 }

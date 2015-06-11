@@ -96,18 +96,30 @@
 			enable-active-high;
 		};
 
+		reg_sd1_vmmc: regulator@5 {
+			compatible = "regulator-fixed";
+			regulator-name = "VDD_SD1";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&gpio5 2 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
+
 		wlreg_on: fixedregulator@100 {
 			compatible = "regulator-fixed";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 			regulator-name = "wlreg_on";
 			gpio = <&gpio4 21 GPIO_ACTIVE_HIGH>;
+			startup-delay-us = <100>; /* WL_REG_ON needs 61 usec delay */
 			enable-active-high;
 		};
 	};
 
 	bcmdhd_wlan_0: bcmdhd_wlan@0 {
 		compatible = "android,bcmdhd_wlan";
+		/* OOB_IRQ: ECSPI2_SCLK (gpio4 20) */
+		gpios = <&gpio4 20 0>;
 		wlreg_on-supply = <&wlreg_on>;
 	};
 
@@ -839,7 +851,8 @@
 				MX7D_PAD_SD2_DATA1__SD2_DATA1   0x59
 				MX7D_PAD_SD2_DATA2__SD2_DATA2   0x59
 				MX7D_PAD_SD2_DATA3__SD2_DATA3   0x59
-				MX7D_PAD_ECSPI2_MOSI__GPIO4_IO21	0x59 /* WL_REG_ON */
+				MX7D_PAD_ECSPI2_MOSI__GPIO4_IO21	0x19 /* WL_REG_ON */
+				MX7D_PAD_ECSPI2_SCLK__GPIO4_IO20	0x19 /* WL OOB */
 			>;
 		};
 
@@ -981,7 +994,7 @@
 	assigned-clocks = <&clks IMX7D_SAI1_ROOT_SRC>,
 			  <&clks IMX7D_SAI1_ROOT_CLK>;
 	assigned-clock-parents = <&clks IMX7D_PLL_AUDIO_POST_DIV>;
-	assigned-clock-rates = <0>, <18432000>;
+	assigned-clock-rates = <0>, <36864000>;
 	status = "okay";
 };
 
@@ -1045,6 +1058,7 @@
 	cd-gpios = <&gpio5 0 0>;
 	wp-gpios = <&gpio5 1 0>;
 	tuning-step = <2>;
+	vmmc-supply = <&reg_sd1_vmmc>;
 	enable-sdio-wakeup;
 	keep-power-in-suspend;
 	status = "okay";

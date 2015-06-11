@@ -18,4 +18,15 @@ config MXC_VADC
 	---help---
 		If you plan to use the VADC with your MXC system, say Y here.
 
+config MXC_MIPI_CSI
+	tristate "mxc mipi csi driver"
+	depends on VIDEO_MXC_CAPTURE && VIDEO_V4L2
+	---help---
+	  This is a V4L2 driver for i.MX7D SoC MIPI-CSI2 receiver devices.
+
+config MXC_CAMERA_OV5640_MIPI
+	tristate "OmniVision ov5640 camera support using mipi"
+	depends on MXC_MIPI_CSI && I2C
+	---help---
+	  If you plan to use the ov5640 Camera with mipi interface in your MXC system, say Y here.
 endif
