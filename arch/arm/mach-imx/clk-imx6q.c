@@ -867,6 +867,9 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	if (IS_ENABLED(CONFIG_PCI_IMX6))
 		imx_clk_set_parent(clk[IMX6QDL_CLK_LVDS1_SEL], clk[IMX6QDL_CLK_SATA_REF]);
 
+	/* set eim_slow to 132Mhz */
+	imx_clk_set_rate(clk[IMX6QDL_CLK_EIM_SLOW], 132000000);
+
 	/*
 	 * Enable clocks only after both parent and rate are all initialized
 	 * as needed
