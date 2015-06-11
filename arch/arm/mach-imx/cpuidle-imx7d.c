@@ -159,12 +159,65 @@ static struct cpuidle_driver imx7d_cpuidle_driver = {
 	.safe_state_index = 0,
 };
 
-int __init imx7d_cpuidle_init(void)
+int imx7d_enable_rcosc(void)
 {
 	void __iomem *anatop_base =
 		(void __iomem *)IMX_IO_P2V(MX7D_ANATOP_BASE_ADDR);
 	u32 val;
 
+	imx_gpcv2_set_lpm_mode(WAIT_CLOCKED);
+	/* set RC-OSC freq and turn it on */
+	writel_relaxed(0x1 << XTALOSC_CTRL_24M_RC_OSC_EN_SHIFT,
+		anatop_base + XTALOSC_CTRL_24M + REG_SET);
+	/*
+	 * config RC-OSC freq
+	 * tune_enable = 1;tune_start = 1;hyst_plus = 0;hyst_minus = 0;
+	 * osc_prog = 0xa7;
+	 */
+	writel_relaxed(
+		0x4 << XTALOSC24M_OSC_CONFIG0_RC_OSC_PROG_CUR_SHIFT |
+		0xa7 << XTALOSC24M_OSC_CONFIG0_RC_OSC_PROG_SHIFT |
+		0x1 << XTALOSC24M_OSC_CONFIG0_ENABLE_SHIFT |
+		0x1 << XTALOSC24M_OSC_CONFIG0_START_SHIFT,
+		anatop_base + XTALOSC24M_OSC_CONFIG0);
+	/* set count_trg = 0x2dc */
+	writel_relaxed(
+		0x40 << XTALOSC24M_OSC_CONFIG1_COUNT_RC_CUR_SHIFT |
+		0x2dc << XTALOSC24M_OSC_CONFIG1_COUNT_RC_TRG_SHIFT,
+		anatop_base + XTALOSC24M_OSC_CONFIG1);
+	/* wait at least 4ms according to hardware design */
+	mdelay(6);
+	/*
+	 * now add some hysteresis, hyst_plus=3, hyst_minus=3
+	 * (the minimum hysteresis that looks good is 2)
+	 */
+	val = readl_relaxed(anatop_base + XTALOSC24M_OSC_CONFIG0);
+	val &= ~((XTALOSC24M_OSC_CONFIG0_HYST_MINUS_MASK <<
+		XTALOSC24M_OSC_CONFIG0_HYST_MINUS_SHIFT) |
+		(XTALOSC24M_OSC_CONFIG0_HYST_PLUS_MASK <<
+		XTALOSC24M_OSC_CONFIG0_HYST_PLUS_SHIFT));
+	val |= (0x3 << XTALOSC24M_OSC_CONFIG0_HYST_MINUS_SHIFT) |
+		(0x3 << XTALOSC24M_OSC_CONFIG0_HYST_PLUS_SHIFT);
+	writel_relaxed(val, anatop_base + XTALOSC24M_OSC_CONFIG0);
+	/* set the count_1m_trg = 0x2d7 */
+	val = readl_relaxed(anatop_base + XTALOSC24M_OSC_CONFIG2);
+	val &= ~(XTALOSC24M_OSC_CONFIG2_COUNT_1M_TRG_MASK <<
+		XTALOSC24M_OSC_CONFIG2_COUNT_1M_TRG_SHIFT);
+	val |= 0x2d7 << XTALOSC24M_OSC_CONFIG2_COUNT_1M_TRG_SHIFT;
+	writel_relaxed(val, anatop_base + XTALOSC24M_OSC_CONFIG2);
+	/*
+	 * hardware design require to write XTALOSC24M_OSC_CONFIG0 or
+	 * XTALOSC24M_OSC_CONFIG1 to
+	 * make XTALOSC24M_OSC_CONFIG2 write work
+	 */
+	val = readl_relaxed(anatop_base + XTALOSC24M_OSC_CONFIG1);
+	writel_relaxed(val, anatop_base + XTALOSC24M_OSC_CONFIG1);
+
+	return 0;
+}
+
+int __init imx7d_cpuidle_init(void)
+{
 	wfi_iram_base_phys = (void *)(iram_tlb_phys_addr +
 		MX7_CPUIDLE_OCRAM_ADDR_OFFSET);
 
@@ -206,55 +259,6 @@ int __init imx7d_cpuidle_init(void)
 		sizeof(*cpuidle_pm_info),
 		&imx7d_low_power_idle,
 		MX7_CPUIDLE_OCRAM_SIZE - sizeof(*cpuidle_pm_info));
-
-	imx_gpcv2_set_lpm_mode(WAIT_CLOCKED);
-
-	/* set RC-OSC freq and turn it on */
-	writel_relaxed(0x1 << XTALOSC_CTRL_24M_RC_OSC_EN_SHIFT,
-		anatop_base + XTALOSC_CTRL_24M + REG_SET);
-	/*
-	 * config RC-OSC freq
-	 * tune_enable = 1;tune_start = 1;hyst_plus = 0;hyst_minus = 0;
-	 * osc_prog = 0xa7;
-	 */
-	writel_relaxed(
-		0x4 << XTALOSC24M_OSC_CONFIG0_RC_OSC_PROG_CUR_SHIFT |
-		0xa7 << XTALOSC24M_OSC_CONFIG0_RC_OSC_PROG_SHIFT |
-		0x1 << XTALOSC24M_OSC_CONFIG0_ENABLE_SHIFT |
-		0x1 << XTALOSC24M_OSC_CONFIG0_START_SHIFT,
-		anatop_base + XTALOSC24M_OSC_CONFIG0);
-	/* set count_trg = 0x2dc */
-	writel_relaxed(
-		0x40 << XTALOSC24M_OSC_CONFIG1_COUNT_RC_CUR_SHIFT |
-		0x2dc << XTALOSC24M_OSC_CONFIG1_COUNT_RC_TRG_SHIFT,
-		anatop_base + XTALOSC24M_OSC_CONFIG1);
-	/* wait 4ms according to hardware design, kernel needs > 20ms */
-	msleep(20);
-	/*
-	 * now add some hysteresis, hyst_plus=3, hyst_minus=3
-	 * (the minimum hysteresis that looks good is 2)
-	 */
-	val = readl_relaxed(anatop_base + XTALOSC24M_OSC_CONFIG0);
-	val &= ~((XTALOSC24M_OSC_CONFIG0_HYST_MINUS_MASK <<
-		XTALOSC24M_OSC_CONFIG0_HYST_MINUS_SHIFT) |
-		(XTALOSC24M_OSC_CONFIG0_HYST_PLUS_MASK <<
-		XTALOSC24M_OSC_CONFIG0_HYST_PLUS_SHIFT));
-	val |= (0x3 << XTALOSC24M_OSC_CONFIG0_HYST_MINUS_SHIFT) |
-		(0x3 << XTALOSC24M_OSC_CONFIG0_HYST_PLUS_SHIFT);
-	writel_relaxed(val, anatop_base + XTALOSC24M_OSC_CONFIG0);
-	/* set the count_1m_trg = 0x2d7 */
-	val = readl_relaxed(anatop_base + XTALOSC24M_OSC_CONFIG2);
-	val &= ~(XTALOSC24M_OSC_CONFIG2_COUNT_1M_TRG_MASK <<
-		XTALOSC24M_OSC_CONFIG2_COUNT_1M_TRG_SHIFT);
-	val |= 0x2d7 << XTALOSC24M_OSC_CONFIG2_COUNT_1M_TRG_SHIFT;
-	writel_relaxed(val, anatop_base + XTALOSC24M_OSC_CONFIG2);
-	/*
-	 * hardware design require to write XTALOSC24M_OSC_CONFIG0 or
-	 * XTALOSC24M_OSC_CONFIG1 to
-	 * make XTALOSC24M_OSC_CONFIG2 write work
-	 */
-	val = readl_relaxed(anatop_base + XTALOSC24M_OSC_CONFIG1);
-	writel_relaxed(val, anatop_base + XTALOSC24M_OSC_CONFIG1);
 
 	return cpuidle_register(&imx7d_cpuidle_driver, NULL);
 }
