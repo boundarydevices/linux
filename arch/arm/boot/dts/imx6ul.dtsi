@@ -701,7 +701,6 @@
 				reg = <0x020dc000 0x4000>;
 				interrupts = <GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>;
 				fsl,mf-mix-wakeup-irq = <0x7c00000 0x3d00 0x0 0x1400240>;
-				#power-domain-cells = <1>;
 			};
 
 			iomuxc: iomuxc@020e0000 {
