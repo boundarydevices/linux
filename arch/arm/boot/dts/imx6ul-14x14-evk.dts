@@ -193,7 +193,7 @@
 	fsl,cpu_pdnscr_iso2sw = <0x1>;
 	fsl,cpu_pdnscr_iso = <0x1>;
 	fsl,wdog-reset = <1>; /* watchdog select of reset source */
-	fsl,ldo-bypass = <1>; /* use ldo-bypass, u-boot will check it and configure */
+	fsl,ldo-bypass = <0>; /* DCDC, ldo-enable */
 };
 
 &lcdif {
