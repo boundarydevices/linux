@@ -281,8 +281,8 @@ struct mxcfb_waveform_data_file {
 	u32 *data;	/* Temperature Range Table + Waveform Data */
 };
 
-static struct fb_videomode ed060xc8mode = {
-	.name = "ED060XC8",
+static struct fb_videomode ed060xh2c1mode = {
+	.name = "ED060XH2C1",
 	.refresh = 85,
 	.xres = 1024,
 	.yres = 758,
@@ -368,7 +368,7 @@ static struct fb_videomode e97_v110_mode = {
 
 static struct imx_epdc_fb_mode panel_modes[] = {
 	{
-		&ed060xc8mode, 	/* struct fb_videomode *mode */
+		&ed060xh2c1mode,	/* struct fb_videomode *mode */
 		4, 	/* vscan_holdoff */
 		10, 	/* sdoed_width */
 		20, 	/* sdoed_delay */
