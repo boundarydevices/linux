@@ -559,6 +559,10 @@ static int imx_gpc_genpd_init(struct device *dev, struct regulator *pu_reg)
 	int pu_clks, disp_clks, ipg_clks = 1;
 	int i = 0, k = 0;
 
+	/* No pu and display misc on i.mx6ul */
+	if (cpu_is_imx6ul())
+		return 0;
+
 	imx6q_pu_domain.base.of_node = dev->of_node;
 	imx6q_pu_domain.reg = pu_reg;
 
