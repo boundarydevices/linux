@@ -257,6 +257,13 @@ void __init imx_init_l2cache(void)
 	if (((cache_id & L2X0_CACHE_ID_PART_MASK) == L2X0_CACHE_ID_PART_L310)
 	    && ((cache_id & L2X0_CACHE_ID_RTL_MASK) < L2X0_CACHE_ID_RTL_R3P2))
 		val &= ~(1 << 30);
+
+	/* To 6DQP, double linefill leads to system unstable. Disable
+	 * double linefill on these platform.
+	 */
+	if (cpu_is_imx6q() || imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)
+		val &= ~(1 << 30);
+
 	writel_relaxed(val, l2x0_base + L2X0_PREFETCH_CTRL);
 	val = L2X0_DYNAMIC_CLK_GATING_EN | L2X0_STNDBY_MODE_EN;
 	writel_relaxed(val, l2x0_base + L2X0_POWER_CTRL);
