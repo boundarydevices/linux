@@ -57,12 +57,15 @@ static int bcm54220_phy_fixup(struct phy_device *dev)
 
 #define PHY_ID_AR8031   0x004dd074
 #define PHY_ID_BCM54220	0x600d8589
+#define PHY_ID_BCM5422x	0x600d8599
 static void __init imx7d_enet_phy_init(void)
 {
 	if (IS_BUILTIN(CONFIG_PHYLIB)) {
 		phy_register_fixup_for_uid(PHY_ID_AR8031, 0xffffffff,
 					   ar8031_phy_fixup);
 		phy_register_fixup_for_uid(PHY_ID_BCM54220, 0xffffffff,
+					   bcm54220_phy_fixup);
+		phy_register_fixup_for_uid(PHY_ID_BCM5422x, 0xffffffff,
 					   bcm54220_phy_fixup);
 	}
 }
