@@ -25,8 +25,9 @@
 
 	gpio-keys {
 		compatible = "gpio-keys";
-		pinctrl-names = "default";
+		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&pinctrl_gpio_keys>;
+		pinctrl-1 = <&pinctrl_gpio_keys_sleep>;
 
 		volume-up {
 			label = "Volume Up";
@@ -621,6 +622,13 @@
 			fsl,pins = <
 				MX7D_PAD_GPIO1_IO14__GPIO1_IO14 0x32
 				MX7D_PAD_GPIO1_IO15__GPIO1_IO15 0x32
+			>;
+		};
+
+		pinctrl_gpio_keys_sleep: gpio_keysgrp_sleep {
+			fsl,pins = <
+				MX7D_PAD_GPIO1_IO14__GPIO1_IO14 0x14
+				MX7D_PAD_GPIO1_IO15__GPIO1_IO15 0x14
 			>;
 		};
 
