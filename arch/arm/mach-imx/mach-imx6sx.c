@@ -15,6 +15,7 @@
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
 #include <linux/micrel_phy.h>
+#include <soc/imx/revision.h>
 
 #include "common.h"
 #include "cpuidle.h"
@@ -122,8 +123,13 @@ static void __init imx6sx_init_irq(void)
 	imx6_pm_ccm_init("fsl,imx6sx-ccm");
 }
 
+extern unsigned int system_rev;
+
 static void __init imx6sx_init_late(void)
 {
+	if (!system_rev) {
+		system_rev = 0x60000 | imx_get_soc_revision();
+	}
 	if (IS_ENABLED(CONFIG_ARM_IMX6Q_CPUFREQ))
 		platform_device_register_simple("imx6q-cpufreq", -1, NULL, 0);
 
