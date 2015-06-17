@@ -11,6 +11,7 @@
 #include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
+#include <soc/imx/revision.h>
 
 #include "common.h"
 #include "cpuidle.h"
@@ -62,8 +63,13 @@ static void __init imx6sx_map_io(void)
 	imx_busfreq_map_io();
 }
 
+extern unsigned int system_rev;
+
 static void __init imx6sx_init_late(void)
 {
+	if (!system_rev) {
+		system_rev = 0x60000 | imx_get_soc_revision();
+	}
 	imx6sx_cpuidle_init();
 
 	if (IS_ENABLED(CONFIG_ARM_IMX6Q_CPUFREQ))
