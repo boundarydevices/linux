@@ -169,6 +169,34 @@ bool of_usb_otg_adp_support(struct device_node *np)
 	return false;
 }
 EXPORT_SYMBOL_GPL(of_usb_otg_adp_support);
+
+/**
+ * of_usb_set_otg_caps - to set usb otg capabilities according to
+ * the passed properties in DT.
+ * @np: Pointer to the given device_node
+ * @otg_caps: Pointer to the target usb_otg_caps to be set
+ *
+ * The function gets and sets the otg capabilities
+ */
+void of_usb_set_otg_caps(struct device_node *np, struct usb_otg_caps *otg_caps)
+{
+	u32 otg_rev;
+
+	if (!otg_caps)
+		return;
+
+	if (!of_property_read_u32(np, "otg-rev", &otg_rev))
+		otg_caps->otg_rev = otg_rev;
+	if (of_find_property(np, "hnp-disable", NULL))
+		otg_caps->hnp_support = false;
+	if (of_find_property(np, "srp-disable", NULL))
+		otg_caps->srp_support = false;
+	if (of_find_property(np, "adp-disable", NULL) ||
+				(otg_caps->otg_rev < 0x0200))
+		otg_caps->adp_support = false;
+}
+EXPORT_SYMBOL_GPL(of_usb_set_otg_caps);
+
 #endif
 
 MODULE_LICENSE("GPL");
