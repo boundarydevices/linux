@@ -1023,6 +1023,15 @@ void rtw_os_ndev_unregister(_adapter *adapter)
 
 	netdev = adapter->pnetdev;
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)) \
+                   && defined(CONFIG_IOCTL_CFG80211)
+    if (adapter->rtw_wdev->current_bss) {
+        DBG_871X(FUNC_ADPT_FMT" clear current_bss by cfg80211_disconnected\n",
+                FUNC_ADPT_ARG(adapter));
+        cfg80211_disconnected(adapter->pnetdev, 0, NULL, 0, GFP_ATOMIC);
+    }
+#endif
+
 	if ((adapter->DriverState != DRIVER_DISAPPEAR) && netdev)
 		unregister_netdev(netdev); /* will call netdev_close() */
 

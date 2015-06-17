@@ -3340,7 +3340,6 @@ static int cfg80211_rtw_disconnect(struct wiphy *wiphy, struct net_device *ndev,
 	}
 
 	padapter->mlmepriv.not_indic_disco = _FALSE;
-    cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0, GFP_ATOMIC);
 
 	DBG_871X(FUNC_NDEV_FMT" return 0\n", FUNC_NDEV_ARG(ndev));
 	return 0;
