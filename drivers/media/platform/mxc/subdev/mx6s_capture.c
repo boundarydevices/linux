@@ -1273,8 +1273,8 @@ static int mx6s_vidioc_g_input(struct file *file, void *priv, unsigned int *i)
 
 static int mx6s_vidioc_s_input(struct file *file, void *priv, unsigned int i)
 {
-	if (i > 0)
-		return -EINVAL;
+//	if (i > 0)
+//		return -EINVAL;
 
 	return 0;
 }
@@ -1419,7 +1419,6 @@ static int mx6s_vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 
 	pix->sizeimage = fmt->bpp * pix->height * pix->width;
 	pix->bytesperline = fmt->bpp * pix->width;
-
 	return ret;
 }
 
@@ -1431,14 +1430,31 @@ static int mx6s_vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 				    struct v4l2_format *f)
 {
 	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
+	struct v4l2_subdev *sd = csi_dev->sd;
 	int ret;
+	struct v4l2_subdev_frame_size_enum fse;
+
+
+	memset(&fse, 0, sizeof(fse));
+	v4l2_subdev_call(sd, pad, enum_frame_size, NULL, &fse);
+	if (!f->fmt.pix.width)
+		f->fmt.pix.width = fse.min_width;
+	if (!f->fmt.pix.height)
+		f->fmt.pix.height = fse.min_height;
 
 	ret = mx6s_vidioc_try_fmt_vid_cap(file, csi_dev, f);
-	if (ret < 0)
-		return ret;
+	if (ret < 0) {
+//		f->fmt.pix.pixelformat = fse.pixel_format;
+		f->fmt.pix.width = fse.min_width;
+		f->fmt.pix.height = fse.min_height;
+		ret = mx6s_vidioc_try_fmt_vid_cap(file, csi_dev, f);
+		if (ret < 0)
+			return -EINVAL;
+	}
 
 	csi_dev->fmt           = format_by_fourcc(f->fmt.pix.pixelformat);
 	csi_dev->mbus_code     = csi_dev->fmt->mbus_code;
+	csi_dev->pix.pixelformat = f->fmt.pix.pixelformat;
 	csi_dev->pix.width     = f->fmt.pix.width;
 	csi_dev->pix.height    = f->fmt.pix.height;
 	csi_dev->pix.sizeimage = f->fmt.pix.sizeimage;
