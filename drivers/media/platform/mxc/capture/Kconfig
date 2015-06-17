@@ -48,6 +48,12 @@ config MXC_CAMERA_OV5642
 	help
 	  If you plan to use the ov5642 Camera with your MXC system, say Y here.
 
+config MXC_CAMERA_OV5642_V2
+	tristate "OmniVision ov5642 camera support"
+	depends on VIDEO_MXC_CAPTURE && I2C
+	---help---
+	  If you plan to use the ov5642 Camera with your MXC system, say Y here.
+
 config MXC_CAMERA_OV5645_MIPI_V2
         tristate "OmniVision ov5645 camera support using mipi"
         depends on MXC_MIPI_CSI && I2C
