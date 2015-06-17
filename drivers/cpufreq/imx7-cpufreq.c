@@ -15,7 +15,7 @@
 #include <linux/pm_opp.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
-
+#include <linux/suspend.h>
 static struct clk *arm_clk;
 static struct clk *pll_arm;
 static struct clk *arm_src;
@@ -40,9 +40,6 @@ static int imx7d_set_target(struct cpufreq_policy *policy, unsigned int index)
 	new_freq = freq_table[index].frequency;
 	freq_hz = new_freq * 1000;
 	old_freq = clk_get_rate(arm_clk) / 1000;
-
-	if (new_freq == old_freq)
-		return 0;
 
 	rcu_read_lock();
 	opp = dev_pm_opp_find_freq_ceil(cpu_dev, &freq_hz);
@@ -124,6 +121,40 @@ static struct cpufreq_driver imx7d_cpufreq_driver = {
 	.exit = cpufreq_generic_exit,
 	.name = "imx7d-cpufreq",
 	.attr = cpufreq_generic_attr,
+};
+
+static int imx7_cpufreq_pm_notify(struct notifier_block *nb,
+	unsigned long event, void *dummy)
+{
+	struct cpufreq_policy *data = cpufreq_cpu_get(0);
+	static u32 cpufreq_policy_min_pre_suspend;
+
+	/*
+	 * During suspend/resume, when cpufreq driver try to increase
+	 * voltage/freq, it needs to control I2C/SPI to communicate
+	 * with external PMIC to adjust voltage, but these I2C/SPI
+	 * devices may be already suspended, to avoid such scenario,
+	 * we just increase cpufreq to highest setpoint before suspend.
+	 */
+	switch (event) {
+	case PM_SUSPEND_PREPARE:
+		cpufreq_policy_min_pre_suspend = data->user_policy.min;
+		data->user_policy.min = data->user_policy.max;
+		break;
+	case PM_POST_SUSPEND:
+		data->user_policy.min = cpufreq_policy_min_pre_suspend;
+		break;
+	default:
+		break;
+	}
+
+	cpufreq_update_policy(0);
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block imx7_cpufreq_pm_notifier = {
+	.notifier_call = imx7_cpufreq_pm_notify,
 };
 
 static int imx7d_cpufreq_probe(struct platform_device *pdev)
@@ -216,6 +247,7 @@ static int imx7d_cpufreq_probe(struct platform_device *pdev)
 
 	mutex_init(&set_cpufreq_lock);
 
+	register_pm_notifier(&imx7_cpufreq_pm_notifier);
 	of_node_put(np);
 	return 0;
 
