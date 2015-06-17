@@ -519,9 +519,9 @@
 
 	pinctrl_wlan_bt_rfkill: wlan_bt_rfkillgrp {
 		fsl,pins = <
-#define GP_BRM_BT_RESET			<&gpio6 8 GPIO_ACTIVE_HIGH>
+#define GP_BRM_BT_RESET			<&gpio6 8 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x0b0b0		/* BT reset(Broadcom) */
-#define GP_BRM_BT_EN			<&gpio6 15 GPIO_ACTIVE_HIGH>
+#define GP_BRM_BT_SHUTDOWN		<&gpio6 15 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x030b0		/* BT reg en(Broadcom) */
 #define GP_BRM_BT_WAKE_IRQ		<&gpio2 7 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x1b0b0
@@ -999,5 +999,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_wlan_bt_rfkill>;
 	type = <2>;     /* bluetooth */
-	gpios = GP_BRM_BT_EN, GP_BRM_BT_RESET;
+	bt_rfkill_reset-gpios = GP_BRM_BT_RESET;
+	bt_rfkill_shutdown-gpios = GP_BRM_BT_SHUTDOWN;
 };
