@@ -26,6 +26,7 @@
 		ti,y-max = <4800>;
 		ti,pressure-max = <255>;
 		ti,x-plat-ohms = <40>;
+		ti,yx_swap_en;
 		linux,wakeup;
 	};
 };
