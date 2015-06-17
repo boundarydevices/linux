@@ -452,9 +452,9 @@
 		fsl,pins = <
 #define GP_BRM_BT_WAKE		<&gpio2 2 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_D2__GPIO2_IO02		0x1b0b0		/* BT wake(Broadcom) */
-#define GP_BRM_BT_RESET		<&gpio6 8 GPIO_ACTIVE_HIGH>
+#define GP_BRM_BT_RESET		<&gpio6 8 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x0b0b0		/* BT reset(Broadcom) */
-#define GP_BRM_BT_EN		<&gpio6 15 GPIO_ACTIVE_HIGH>
+#define GP_BRM_BT_SHUTDOWN	<&gpio6 15 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x1b0b0		/* BT reg en(Broadcom) */
 			MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x100b0		/* BT host wake irq(Broadcom) */
 		>;
@@ -796,5 +796,6 @@
 &bt_rfkill {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_bt_rfkill>;
-	gpios = GP_BRM_BT_RESET;
+	bt_rfkill_reset-gpios = GP_BRM_BT_RESET;
+	bt_rfkill_shutdown-gpios = GP_BRM_BT_SHUTDOWN;
 };
