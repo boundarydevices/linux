@@ -290,8 +290,13 @@ static struct platform_device imx6sx_cpufreq_pdev = {
 	.name = "imx6q-cpufreq",
 };
 
+extern unsigned int system_rev;
+
 static void __init imx6sx_init_late(void)
 {
+	if (!system_rev) {
+		system_rev = 0x60000 | imx_get_soc_revision();
+	}
 	if (IS_ENABLED(CONFIG_ARM_IMX6Q_CPUFREQ)) {
 		imx6sx_opp_init(&imx6sx_cpufreq_pdev.dev);
 		platform_device_register(&imx6sx_cpufreq_pdev);
