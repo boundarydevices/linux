@@ -452,6 +452,14 @@ static int vadc_g_std(struct v4l2_subdev *sd, v4l2_std_id *std)
 	return 0;
 }
 
+static int vadc_s_std(struct v4l2_subdev *sd, v4l2_std_id std)
+{
+	struct vadc_state *state = to_state(sd);
+
+//	state->fmt->v4l2_std = std;
+	return 0;
+}
+
 /*!
  * Return attributes of current video standard.
  * Since this device autodetects the current standard, this function also
@@ -521,9 +529,12 @@ static int vadc_enum_framesizes(struct v4l2_subdev *sd,
 		struct v4l2_frmsizeenum *fsize)
 {
 	struct vadc_state *state = to_state(sd);
+
+	pr_info("%s:%d\n", __func__, fsize->index);
 	if (fsize->index >= 1)
 		return -EINVAL;
 
+	fsize->pixel_format = V4L2_PIX_FMT_YUYV;
 	fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
 	fsize->discrete.width = state->fmt->active_width;
 	fsize->discrete.height  = state->fmt->active_height;
@@ -574,6 +585,7 @@ static const struct v4l2_subdev_video_ops vadc_video_ops = {
 
 static const struct v4l2_subdev_core_ops vadc_core_ops = {
 	.g_std = vadc_g_std,
+	.s_std = vadc_s_std,
 };
 
 static const struct v4l2_subdev_ops vadc_ops = {
