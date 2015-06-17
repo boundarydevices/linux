@@ -97,8 +97,13 @@ static void __init imx6sx_init_irq(void)
 	irqchip_init();
 }
 
+extern unsigned int system_rev;
+
 static void __init imx6sx_init_late(void)
 {
+	if (!system_rev) {
+		system_rev = 0x60000 | imx_get_soc_revision();
+	}
 	if (IS_ENABLED(CONFIG_ARM_IMX6Q_CPUFREQ))
 		platform_device_register_simple("imx6q-cpufreq", -1, NULL, 0);
 
