@@ -10,102 +10,6 @@
 
 #include "imx6sx.dtsi"
 
-/ {
-	model = "Freescale i.MX6 SoloX Nitrogen6sx Board";
-	compatible = "fsl,imx6sx-nitrogen6sx", "fsl,imx6sx";
-
-	backlight_rgb {
-		compatible = "pwm-backlight";
-		pwms = <&pwm2 0 5000000>;
-		brightness-levels = <0 4 8 16 32 64 128 255>;
-		default-brightness-level = <6>;
-		fb-names = "mxs-lcdif1";
-		power-supply = <&reg_3p3v>;
-	};
-
-	backlight_lvds {
-		compatible = "pwm-backlight";
-		pwms = <&pwm4 0 5000000>;
-		brightness-levels = <0 4 8 16 32 64 128 255>;
-		default-brightness-level = <6>;
-		fb-names = "mxs-lcdif2";
-		power-supply = <&reg_3p3v>;
-	};
-
-	clocks {
-	        codec_osc: anaclk2 {
-		        #clock-cells = <0>;
-		        compatible = "fixed-clock";
-		        clock-frequency = <24576000>;
-		};
-	};
-
-	memory {
-		reg = <0x80000000 0x40000000>;
-	};
-
-	pxp_v4l2_out {
-		compatible = "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
-		status = "okay";
-	};
-
-	regulators {
-		compatible = "simple-bus";
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		reg_1p8v: regulator@0 {
-			compatible = "regulator-fixed";
-			reg = <0>;
-			regulator-name = "1P8V";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			regulator-always-on;
-		};
-
-		reg_2p5v: regulator@1 {
-			compatible = "regulator-fixed";
-			reg = <1>;
-			regulator-name = "2P5V";
-			regulator-min-microvolt = <2500000>;
-			regulator-max-microvolt = <2500000>;
-			regulator-always-on;
-		};
-
-		reg_3p3v: regulator@2 {
-			compatible = "regulator-fixed";
-			reg = <2>;
-			regulator-name = "3P3V";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-always-on;
-		};
-
-		reg_usb_otg1_vbus: regulator@3 {
-			compatible = "regulator-fixed";
-			reg = <3>;
-			regulator-name = "usb_otg1_vbus";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-		};
-	};
-
-	sound_sgtl5000: sound_sgtl5000 {
-		compatible = "fsl,imx6sx-nitrogen6sx-sgtl5000",
-			     "fsl,imx-audio-sgtl5000";
-		model = "imx6sx-nitrogen6sx-sgtl5000";
-		cpu-dai = <&ssi1>;
-		audio-codec = <&codec>;
-		audio-routing =
-			"MIC_IN", "Mic Jack",
-			"Mic Jack", "Mic Bias",
-			"Headphone Jack", "HP_OUT",
-			"Line Out Jack", "LINE_OUT";
-		mux-int-port = <1>;
-		mux-ext-port = <5>;
-	};
-};
-
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
@@ -125,19 +29,32 @@
 		>;
 	};
 
-	pinctrl_csi: csigrp {
+	pinctrl_bt_rfkill: bt-rfkillgrp {
 		fsl,pins = <
-			MX6SX_PAD_CSI_MCLK__CSI1_MCLK		0x10
-			MX6SX_PAD_CSI_PIXCLK__CSI1_PIXCLK	0x10
-			MX6SX_PAD_CSI_VSYNC__CSI1_VSYNC		0x10
-			MX6SX_PAD_CSI_DATA00__CSI1_DATA_2	0x10
-			MX6SX_PAD_CSI_DATA01__CSI1_DATA_3	0x10
-			MX6SX_PAD_CSI_DATA02__CSI1_DATA_4	0x10
-			MX6SX_PAD_CSI_DATA03__CSI1_DATA_5	0x10
-			MX6SX_PAD_CSI_DATA04__CSI1_DATA_6	0x10
-			MX6SX_PAD_CSI_DATA05__CSI1_DATA_7	0x10
-			MX6SX_PAD_CSI_DATA06__CSI1_DATA_8	0x10
-			MX6SX_PAD_CSI_DATA07__CSI1_DATA_9	0x10
+#define GP_BT_RFKILL_RESET	<&gpio2 17 GPIO_ACTIVE_LOW>
+			MX6SX_PAD_KEY_ROW2__GPIO2_IO_17		0x1b0b0
+		>;
+	};
+
+	pinctrl_csi_ov5642: csi-ov5642grp {
+		fsl,pins = <
+			MX6SX_PAD_CSI_MCLK__CSI1_MCLK		0x110b0
+			MX6SX_PAD_CSI_PIXCLK__CSI1_PIXCLK	0x110b0
+			MX6SX_PAD_CSI_HSYNC__CSI1_HSYNC		0x110b0
+			MX6SX_PAD_CSI_VSYNC__CSI1_VSYNC		0x110b0
+			MX6SX_PAD_CSI_DATA00__CSI1_DATA_2	0x110b0
+			MX6SX_PAD_CSI_DATA01__CSI1_DATA_3	0x110b0
+			MX6SX_PAD_CSI_DATA02__CSI1_DATA_4	0x110b0
+			MX6SX_PAD_CSI_DATA03__CSI1_DATA_5	0x110b0
+			MX6SX_PAD_CSI_DATA04__CSI1_DATA_6	0x110b0
+			MX6SX_PAD_CSI_DATA05__CSI1_DATA_7	0x110b0
+			MX6SX_PAD_CSI_DATA06__CSI1_DATA_8	0x110b0
+			MX6SX_PAD_CSI_DATA07__CSI1_DATA_9	0x110b0
+
+#define GP_OV5642_RESET		<&gpio4 2 GPIO_ACTIVE_LOW>
+			MX6SX_PAD_NAND_CE1_B__GPIO4_IO_2	0x30b0
+#define GP_OV5642_POWER_DOWN	<&gpio4 0 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_NAND_ALE__GPIO4_IO_0		0xb0b0
 		>;
 	};
 
@@ -229,8 +146,6 @@
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 			MX6SX_PAD_NAND_CE0_B__GPIO4_IO_1	0x1b0b0
-			MX6SX_PAD_NAND_CE1_B__GPIO4_IO_2	0x1b0b0
-			MX6SX_PAD_NAND_ALE__GPIO4_IO_0		0x1b0b0
 			MX6SX_PAD_NAND_CLE__GPIO4_IO_3		0x1b0b0
 			MX6SX_PAD_NAND_RE_B__GPIO4_IO_12	0x1b0b0
 			MX6SX_PAD_NAND_WE_B__GPIO4_IO_14	0x1b0b0
@@ -337,6 +252,13 @@
 		>;
 	};
 
+	pinctrl_reg_wlan: reg-wlangrp {
+		fsl,pins = <
+#define GP_WLAN_EN	<&gpio7 6 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_SD3_DATA4__GPIO7_IO_6		0x1b0b0
+		>;
+	};
+
 	pinctrl_sgtl5000: sgtl5000grp {
 		fsl,pins = <
 			MX6SX_PAD_SD1_CMD__CCM_CLKO1		0x000b0
@@ -374,6 +296,8 @@
 		fsl,pins = <
 			MX6SX_PAD_KEY_COL3__UART5_TX		0x1b0b1
 			MX6SX_PAD_KEY_ROW3__UART5_RX		0x1b0b1
+			MX6SX_PAD_SD3_DATA6__UART3_RTS_B	0x1b0b1
+			MX6SX_PAD_SD3_DATA7__UART3_CTS_B	0x1b0b1
 		>;
 	};
 
@@ -408,6 +332,17 @@
 			MX6SX_PAD_SD2_DATA3__USDHC2_DATA3	0x1f071
 #define GP_USDHC2_CD			<&gpio2 12 GPIO_ACTIVE_HIGH>
 			MX6SX_PAD_KEY_COL2__GPIO2_IO_12		0x1b0b0
+		>;
+	};
+
+	pinctrl_usdhc3_50mhz: usdhc3-50mhzgrp {
+		fsl,pins = <
+			MX6SX_PAD_SD3_CLK__USDHC3_CLK		0x100f9
+			MX6SX_PAD_SD3_CMD__USDHC3_CMD		0x170f9
+			MX6SX_PAD_SD3_DATA0__USDHC3_DATA0	0x170f9
+			MX6SX_PAD_SD3_DATA1__USDHC3_DATA1	0x170f9
+			MX6SX_PAD_SD3_DATA2__USDHC3_DATA2	0x170f9
+			MX6SX_PAD_SD3_DATA3__USDHC3_DATA3	0x170f9
 		>;
 	};
 
@@ -455,6 +390,154 @@
 			MX6SX_PAD_SD4_DATA7__USDHC4_DATA7	0x170f9
 		>;
 	};
+
+	pinctrl_wlan:wlangrp {
+		fsl,pins = <
+#define GP_WLAN_INT 	<&gpio7 7 IRQ_TYPE_LEVEL_HIGH>
+			MX6SX_PAD_SD3_DATA5__GPIO7_IO_7		0x1b0b0
+		>;
+	};
+};
+
+/ {
+	model = "Freescale i.MX6 SoloX Nitrogen6sx Board";
+	compatible = "fsl,imx6sx-nitrogen6sx", "fsl,imx6sx";
+
+	backlight_rgb {
+		compatible = "pwm-backlight";
+		pwms = <&pwm2 0 5000000>;
+		brightness-levels = <0 4 8 16 32 64 128 255>;
+		default-brightness-level = <6>;
+		fb-names = "mxs-lcdif1";
+		power-supply = <&reg_3p3v>;
+	};
+
+	backlight_lvds {
+		compatible = "pwm-backlight";
+		pwms = <&pwm4 0 5000000>;
+		brightness-levels = <0 4 8 16 32 64 128 255>;
+		default-brightness-level = <6>;
+		fb-names = "mxs-lcdif2";
+		power-supply = <&reg_3p3v>;
+	};
+
+	bt_rfkill {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_bt_rfkill>;
+		compatible = "net,rfkill-gpio";
+		name = "bt_rfkill";
+		type = <2>;     /* bluetooth */
+		bt_rfkill_reset-gpios = GP_BT_RFKILL_RESET;
+		status = "okay";
+	};
+
+	clocks {
+	        codec_osc: anaclk2 {
+		        #clock-cells = <0>;
+		        compatible = "fixed-clock";
+		        clock-frequency = <24576000>;
+		};
+	};
+
+	memory {
+		reg = <0x80000000 0x40000000>;
+	};
+
+	pxp_v4l2_out {
+		compatible = "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
+		status = "okay";
+	};
+
+	regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		reg_1p8v: regulator@0 {
+			compatible = "regulator-fixed";
+			reg = <0>;
+			regulator-name = "1P8V";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+		};
+
+		reg_2p5v: regulator@1 {
+			compatible = "regulator-fixed";
+			reg = <1>;
+			regulator-name = "2P5V";
+			regulator-min-microvolt = <2500000>;
+			regulator-max-microvolt = <2500000>;
+			regulator-always-on;
+		};
+
+		reg_3p3v: regulator@2 {
+			compatible = "regulator-fixed";
+			reg = <2>;
+			regulator-name = "3P3V";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
+
+		reg_usb_otg1_vbus: regulator@3 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_usbotg1_vbus>;
+			compatible = "regulator-fixed";
+			reg = <3>;
+			regulator-name = "usb_otg1_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = GP_USB_OTG1_PWR;
+			enable-active-high;
+		};
+
+		reg_wlan_en: regulator@4 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_reg_wlan>;
+			compatible = "regulator-fixed";
+			reg = <4>;
+			regulator-name = "wlan-en";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			startup-delay-us = <70000>;
+			gpio = GP_WLAN_EN;
+			enable-active-high;
+			debug;
+		};
+	};
+
+	sound_sgtl5000 {
+		compatible = "fsl,imx6sx-nitrogen6sx-sgtl5000",
+			     "fsl,imx-audio-sgtl5000";
+		model = "imx6sx-nitrogen6sx-sgtl5000";
+		cpu-dai = <&ssi1>;
+		audio-codec = <&codec>;
+		audio-routing =
+			"MIC_IN", "Mic Jack",
+			"Mic Jack", "Mic Bias",
+			"Headphone Jack", "HP_OUT",
+			"Line Out Jack", "LINE_OUT";
+		mux-int-port = <1>;
+		mux-ext-port = <5>;
+		line-out-mute-gpios = GP_SGTL5000_MUTE;
+	};
+
+	wlan {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_wlan>;
+		compatible = "ti,wilink6";
+		clocks = <&refclock>;
+		clock-names = "refclock";
+		interrupts-extended = GP_WLAN_INT;
+		status = "okay";
+
+		refclock: refclock {
+			compatible = "ti,wilink-clock";
+			#clock-cells = <0>;
+			clock-frequency = <38400000>;
+		};
+	};
 };
 
 &audmux {
@@ -470,6 +553,25 @@
 	assigned-clock-parents = <&clks IMX6SX_CLK_LVDS2_IN>,
 				<&clks IMX6SX_PLL4_BYPASS_SRC>;
 	assigned-clock-rates = <0>, <0>, <24576000>;
+};
+
+&csi1 {
+	status = "okay";
+
+	port {
+		csi1_ep: endpoint {
+			remote-endpoint = <&ov5642_ep>;
+		};
+	};
+};
+
+&csi2 {
+	status = "okay";
+	port {
+		csi2_ep: endpoint {
+			remote-endpoint = <&vadc_ep>;
+		};
+	};
 };
 
 &dcic1 {
@@ -609,6 +711,28 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
+	ov5642: ov5642@3c {
+		compatible = "ovti,ov5642";
+		reg = <0x3c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_csi_ov5642>;
+		clocks = <&clks IMX6SX_CLK_CSI>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&reg_1p8v>;
+		AVDD-supply = <&reg_2p5v>;
+		DVDD-supply = <&reg_1p8v>;
+		pwn-gpios = GP_OV5642_POWER_DOWN;
+		rst-gpios = GP_OV5642_RESET;
+		ipu_id = <0>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+		port {
+			ov5642_ep: endpoint {
+				remote-endpoint = <&csi1_ep>;
+			};
+		};
+	};
 };
 
 &lcdif1 {
@@ -715,17 +839,6 @@
 	status = "okay";
 };
 
-&reg_usb_otg1_vbus {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usbotg1_vbus>;
-	gpio = GP_USB_OTG1_PWR;
-	enable-active-high;
-};
-
-&sound_sgtl5000 {
-	line-out-mute-gpios = GP_SGTL5000_MUTE;
-};
-
 &ssi1 {
 	fsl,mode = "i2s-master";
 	status = "okay";
@@ -743,16 +856,16 @@
 	status = "okay";
 };
 
-&uart3 {
+&uart3 { /* for bluetooth */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
+	fsl,uart-has-rtscts;
 	status = "okay";
 };
 
-&uart5 { /* for bluetooth */
+&uart5 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart5>;
-	fsl,uart-has-rtscts;
 	status = "okay";
 };
 
@@ -783,6 +896,19 @@
 	status = "okay";
 };
 
+/* TiWi or broadcom */
+&usdhc3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usdhc3_50mhz>;
+	bus-width = <4>;
+	non-removable;
+	keep-power-in-suspend;
+	vmmc-supply = <&reg_wlan_en>;
+	cap-power-off-card;
+	vqmmc-1-8-v;
+	status = "okay";
+};
+
 &usdhc4 {
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc4_50mhz>;
@@ -794,4 +920,15 @@
 	vmmc-supply = <&reg_1p8v>;
 	keep-power-in-suspend;
 	status = "okay";
+};
+
+&vadc {
+	vadc_in = <0>;
+	csi_id = <1>;
+	status = "okay";
+	port {
+		vadc_ep: endpoint {
+			remote-endpoint = <&csi2_ep>;
+		};
+	};
 };
