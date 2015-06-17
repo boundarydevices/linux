@@ -2196,7 +2196,7 @@ static int serial_imx_probe(struct platform_device *pdev)
 {
 	struct imx_port *sport;
 	void __iomem *base;
-	int ret = 0;
+	int ret = 0, reg;
 	struct resource *res;
 	int txirq, rxirq, rtsirq;
 
@@ -2259,6 +2259,19 @@ static int serial_imx_probe(struct platform_device *pdev)
 		}
 	}
 	sport->port.uartclk = clk_get_rate(sport->clk_per);
+
+	/* For register access, we only need to enable the ipg clock. */
+	ret = clk_prepare_enable(sport->clk_ipg);
+	if (ret)
+		return ret;
+
+	/* Disable interrupts before requesting them */
+	reg = readl_relaxed(sport->port.membase + UCR1);
+	reg &= ~(UCR1_ADEN | UCR1_TRDYEN | UCR1_IDEN | UCR1_RRDYEN |
+		 UCR1_TXMPTYEN | UCR1_RTSDEN);
+	writel_relaxed(reg, sport->port.membase + UCR1);
+
+	clk_disable_unprepare(sport->clk_ipg);
 
 	/*
 	 * Allocate the IRQ(s) i.MX1 has three interrupts whereas later
