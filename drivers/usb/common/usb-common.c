@@ -156,21 +156,6 @@ bool of_usb_host_tpl_support(struct device_node *np)
 EXPORT_SYMBOL_GPL(of_usb_host_tpl_support);
 
 /**
- * of_usb_otg_adp_support -  to get if otg adp is supported by the otg controller
- * @np: Pointer to the given device_node
- *
- * The function gets if the otg port support ADP
- */
-bool of_usb_otg_adp_support(struct device_node *np)
-{
-	if (of_find_property(np, "adp-support", NULL))
-		return true;
-
-	return false;
-}
-EXPORT_SYMBOL_GPL(of_usb_otg_adp_support);
-
-/**
  * of_usb_set_otg_caps - to set usb otg capabilities according to
  * the passed properties in DT.
  * @np: Pointer to the given device_node
