@@ -1608,7 +1608,7 @@ static void imx_uart_shutdown(struct uart_port *port)
 
 	spin_lock_irqsave(&sport->port.lock, flags);
 	ucr2 = imx_uart_readl(sport, UCR2);
-	ucr2 &= ~(UCR2_TXEN | UCR2_ATEN);
+	ucr2 &= ~(UCR2_TXEN | UCR2_ATEN | UCR2_CTS | UCR2_CTSC);
 	imx_uart_writel(sport, ucr2, UCR2);
 
 	ucr4 = imx_uart_readl(sport, UCR4);
