@@ -38,6 +38,7 @@
 #include <linux/dmaengine.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_address.h>
 #include <linux/of_dma.h>
 
 #include <asm/irq.h>
@@ -348,6 +349,8 @@ struct sdma_engine {
 	struct sdma_script_start_addrs	*script_addrs;
 	const struct sdma_driver_data	*drvdata;
 	struct gen_pool 		*iram_pool;
+	u32                             spba_start_addr;
+	u32                             spba_end_addr;
 };
 
 static struct sdma_driver_data sdma_imx31 = {
@@ -953,6 +956,8 @@ static void sdma_disable_channel(struct sdma_channel *sdmac)
 
 static void sdma_set_watermarklevel_for_p2p(struct sdma_channel *sdmac)
 {
+	struct sdma_engine *sdma = sdmac->sdma;
+
 	int lwml = sdmac->watermark_level & 0xff;
 	int hwml = (sdmac->watermark_level >> 16) & 0xff;
 
@@ -992,12 +997,18 @@ static void sdma_set_watermarklevel_for_p2p(struct sdma_channel *sdmac)
 	 * 1 : Source on SPBA
 	 * 0 : Source on AIPS
 	 */
-	__set_bit(11, &sdmac->watermark_level);
+	if (sdmac->per_address >= sdma->spba_start_addr &&
+			sdmac->per_address <= sdma->spba_end_addr)
+		__set_bit(11, &sdmac->watermark_level);
+
 	/* BIT 12:
 	 * 1 : Destination on SPBA
 	 * 0 : Destination on AIPS
 	 */
-	__set_bit(12, &sdmac->watermark_level);
+	if (sdmac->per_address2 >= sdma->spba_start_addr &&
+			sdmac->per_address2 <= sdma->spba_end_addr)
+		__set_bit(12, &sdmac->watermark_level);
+
 	__set_bit(31, &sdmac->watermark_level);
 	/* BIT 31:
 	 * 1 : Amount of samples to be transferred is
@@ -1881,10 +1892,12 @@ static int __init sdma_probe(struct platform_device *pdev)
 	const struct of_device_id *of_id =
 			of_match_device(sdma_dt_ids, &pdev->dev);
 	struct device_node *np = pdev->dev.of_node;
+	struct device_node *spba_bus;
 	const char *fw_name;
 	int ret;
 	int irq;
 	struct resource *iores;
+	struct resource spba_res;
 	struct sdma_platform_data *pdata = dev_get_platdata(&pdev->dev);
 	int i;
 	struct sdma_engine *sdma;
@@ -2056,6 +2069,14 @@ static int __init sdma_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "failed to register controller\n");
 			goto err_register;
 		}
+
+		spba_bus = of_find_compatible_node(NULL, NULL, "fsl,spba-bus");
+		ret = of_address_to_resource(spba_bus, 0, &spba_res);
+		if (!ret) {
+			sdma->spba_start_addr = spba_res.start;
+			sdma->spba_end_addr = spba_res.end;
+		}
+		of_node_put(spba_bus);
 	}
 
 	platform_set_drvdata(pdev, sdma);
