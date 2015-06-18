@@ -744,7 +744,7 @@ static void ci_otg_start_adp_prb(struct otg_fsm *fsm)
 {
 	struct ci_hdrc  *ci = container_of(fsm, struct ci_hdrc, fsm);
 
-	if (!ci->platdata->adp_support || !ci->hnp_enable)
+	if (!ci->platdata->ci_otg_caps.adp_support || !ci->hnp_enable)
 		return;
 
 	if (ci->platdata->notify_event)
@@ -757,7 +757,8 @@ static void ci_otg_start_adp_sns(struct otg_fsm *fsm)
 {
 	struct ci_hdrc  *ci = container_of(fsm, struct ci_hdrc, fsm);
 
-	if (!ci->platdata->adp_support || !ci->hnp_enable || !ci->driver)
+	if (!ci->platdata->ci_otg_caps.adp_support ||
+			!ci->hnp_enable || !ci->driver)
 		return;
 
 	/* TODO If power_up and vbus is off, do one ADP probe before SRP */
@@ -795,7 +796,8 @@ static int ci_otg_fsm_adp_work(struct ci_hdrc *ci)
 {
 	struct otg_fsm *fsm = &ci->fsm;
 
-	if (!ci->platdata->notify_event || !ci->platdata->adp_support)
+	if (!ci->platdata->notify_event ||
+		!ci->platdata->ci_otg_caps.adp_support)
 		return -ENOTSUPP;
 
 	if (ci->adp_probe_event) {
@@ -999,7 +1001,8 @@ static irqreturn_t ci_otg_fsm_adp_int(struct ci_hdrc *ci)
 	irqreturn_t retval =  IRQ_NONE;
 	bool adp_int = false;
 
-	if (!ci->platdata->notify_event || !ci->platdata->adp_support)
+	if (!ci->platdata->notify_event ||
+		!ci->platdata->ci_otg_caps.adp_support)
 		return retval;
 
 	adp_int = ci->platdata->notify_event(ci,
