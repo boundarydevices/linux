@@ -55,7 +55,6 @@ struct ci_hdrc_platform_data {
 	struct regulator	*reg_vbus;
 	struct usb_otg_caps	ci_otg_caps;
 	bool			tpl_support;
-	bool			adp_support;
 	u32			ahbburst_config;
 	u32			burst_length;
 	u32			phy_clkgate_delay_us;
