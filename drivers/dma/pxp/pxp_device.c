@@ -326,6 +326,7 @@ static int pxp_ioc_config_chan(struct pxp_file *priv, unsigned long arg)
 	int i, length, ret;
 	struct dma_chan *chan;
 	struct pxp_chan_obj *obj;
+	int sg_len;
 
 	ret = copy_from_user(&pxp_conf,
 			     (struct pxp_config_data *)arg,
@@ -340,10 +341,11 @@ static int pxp_ioc_config_chan(struct pxp_file *priv, unsigned long arg)
 	chan = obj->chan;
 	chan_id = chan->chan_id;
 
-	sg_init_table(sg, 3);
+	sg_len = pxp_conf.ol_param[0].pixel_fmt ? 3 : 2;
+	sg_init_table(sg, sg_len);
 
 	txd = chan->device->device_prep_slave_sg(chan,
-						 sg, 3,
+						 sg, sg_len,
 						 DMA_TO_DEVICE,
 						 DMA_PREP_INTERRUPT,
 						 NULL);
