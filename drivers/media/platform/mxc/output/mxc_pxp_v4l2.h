@@ -83,6 +83,7 @@ struct pxp_data_format {
 	unsigned int bpp;
 	u32 fourcc;
 	enum v4l2_colorspace colorspace;
+	u32 pxp_fmt;
 };
 
 #endif
