@@ -721,7 +721,8 @@ int ci_otg_fsm_work(struct ci_hdrc *ci)
 				ci->id_event = false;
 		} else if (ci->fsm.otg->state == OTG_STATE_B_IDLE) {
 			ci->fsm.b_sess_vld = hw_read_otgsc(ci, OTGSC_BSV);
-		} else if (ci->fsm.otg->state == OTG_STATE_A_HOST) {
+		} else if (ci->fsm.otg->state == OTG_STATE_A_HOST ||
+			ci->fsm.otg->state == OTG_STATE_A_WAIT_VFALL) {
 			pm_runtime_mark_last_busy(ci->dev);
 			pm_runtime_put_autosuspend(ci->dev);
 			return 0;
