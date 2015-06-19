@@ -36,6 +36,8 @@
 #include <linux/uaccess.h>
 #include <linux/timer.h>
 #include <linux/jiffies.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
 
 #define DRIVER_NAME "imx2-wdt"
 
@@ -67,6 +69,11 @@
 #define IMX2_WDT_STATUS_STARTED	1
 #define IMX2_WDT_EXPECT_CLOSE	2
 
+enum imx_wdt_type{
+	IMX21,
+	IMX7D,
+};
+
 static struct {
 	struct clk *clk;
 	void __iomem *base;
@@ -74,6 +81,8 @@ static struct {
 	unsigned pretimeout;
 	unsigned long status;
 	struct timer_list timer;	/* Pings the watchdog when closed */
+	enum imx_wdt_type wdt_type;
+	u16 wdt_wcr;
 } imx2_wdt;
 
 static struct miscdevice imx2_wdt_miscdev;
@@ -307,11 +316,36 @@ static struct miscdevice imx2_wdt_miscdev = {
 	.fops = &imx2_wdt_fops,
 };
 
+static struct platform_device_id wdt_devtypes[] = {
+	{
+		.name = "imx21-wdt",
+		.driver_data = IMX21,
+	}, {
+		.name = "imx7d-wdt",
+		.driver_data = IMX7D,
+	}, {
+		/* sentinel */
+	}
+};
+
+static const struct of_device_id imx2_wdt_dt_ids[] = {
+	{ .compatible = "fsl,imx21-wdt", .data = &wdt_devtypes[IMX21], },
+	{ .compatible = "fsl,imx7d-wdt", .data = &wdt_devtypes[IMX7D], },
+	{ /* sentinel */ }
+};
+
+MODULE_DEVICE_TABLE(of, imx2_wdt_dt_ids);
 static int __init imx2_wdt_probe(struct platform_device *pdev)
 {
 	int ret;
 	int irq;
 	struct resource *res;
+	const struct of_device_id *of_id =
+			of_match_device(imx2_wdt_dt_ids, &pdev->dev);
+
+	if (of_id)
+		pdev->id_entry = of_id->data;
+	imx2_wdt.wdt_type = pdev->id_entry->driver_data;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	imx2_wdt.base = devm_ioremap_resource(&pdev->dev, res);
@@ -388,11 +422,31 @@ static void imx2_wdt_shutdown(struct platform_device *pdev)
 	}
 }
 
-static const struct of_device_id imx2_wdt_dt_ids[] = {
-	{ .compatible = "fsl,imx21-wdt", },
-	{ /* sentinel */ }
+static int imx2_wdt_suspend(struct device *dev)
+{
+	if (imx2_wdt.wdt_type == IMX7D) {
+		clk_prepare_enable(imx2_wdt.clk);
+		imx2_wdt.wdt_wcr = __raw_readw(imx2_wdt.base + IMX2_WDT_WCR);
+		clk_disable_unprepare(imx2_wdt.clk);
+	}
+
+	return 0;
+}
+
+static int imx2_wdt_resume(struct device *dev)
+{
+	if (imx2_wdt.wdt_type == IMX7D) {
+		clk_prepare_enable(imx2_wdt.clk);
+		__raw_writew(imx2_wdt.wdt_wcr, imx2_wdt.base + IMX2_WDT_WCR);
+		clk_disable_unprepare(imx2_wdt.clk);
+	}
+
+	return 0;
+}
+
+static const struct dev_pm_ops imx2_wdt_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(imx2_wdt_suspend, imx2_wdt_resume)
 };
-MODULE_DEVICE_TABLE(of, imx2_wdt_dt_ids);
 
 static struct platform_driver imx2_wdt_driver = {
 	.remove		= __exit_p(imx2_wdt_remove),
@@ -401,6 +455,7 @@ static struct platform_driver imx2_wdt_driver = {
 		.name	= DRIVER_NAME,
 		.owner	= THIS_MODULE,
 		.of_match_table = imx2_wdt_dt_ids,
+		.pm = &imx2_wdt_pm_ops,
 	},
 };
 
