@@ -1210,7 +1210,6 @@ static int mx6s_vidioc_g_input(struct file *file, void *priv, unsigned int *i)
 
 static int mx6s_vidioc_s_input(struct file *file, void *priv, unsigned int i)
 {
-	pr_info("%s: i=%d\n", __func__, i);
 //	if (i > 0)
 //		return -EINVAL;
 
@@ -1264,7 +1263,7 @@ static int mx6s_vidioc_querybuf(struct file *file, void *priv,
 	if (!ret) {
 		/* return physical address */
 		struct vb2_buffer *vb = csi_dev->vb2_vidq.bufs[p->index];
-		if (p->flags & V4L2_BUF_FLAG_MAPPED)
+//		if (p->flags & V4L2_BUF_FLAG_MAPPED)
 			p->m.offset = vb2_dma_contig_plane_dma_addr(vb, 0);
 	}
 	return ret;
@@ -1347,7 +1346,6 @@ static int mx6s_vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 
 	pix->sizeimage = fmt->bpp * pix->height * pix->width;
 	pix->bytesperline = fmt->bpp * pix->width;
-
 	return ret;
 }
 
@@ -1367,7 +1365,7 @@ static int mx6s_vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	v4l2_subdev_call(sd, video, enum_framesizes, &fsize);
 	if (!f->fmt.pix.width)
 		f->fmt.pix.width = fsize.discrete.width;
-	if (!f->fmt.pix.width)
+	if (!f->fmt.pix.height)
 		f->fmt.pix.height = fsize.discrete.height;
 
 	ret = mx6s_vidioc_try_fmt_vid_cap(file, csi_dev, f);
@@ -1381,12 +1379,12 @@ static int mx6s_vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	}
 
 	csi_dev->fmt           = format_by_fourcc(f->fmt.pix.pixelformat);
+	csi_dev->pix.pixelformat = f->fmt.pix.pixelformat;
 	csi_dev->pix.width     = f->fmt.pix.width;
 	csi_dev->pix.height    = f->fmt.pix.height;
 	csi_dev->pix.sizeimage = f->fmt.pix.sizeimage;
 	csi_dev->pix.field     = f->fmt.pix.field;
 	csi_dev->type          = f->type;
-	pr_info("%s: %dx%d 0x%x\n", __func__, f->fmt.pix.width, f->fmt.pix.height, f->fmt.pix.sizeimage);
 	dev_dbg(csi_dev->dev, "set to pixelformat '%4.6s'\n",
 			(char *)&csi_dev->fmt->name);
 
