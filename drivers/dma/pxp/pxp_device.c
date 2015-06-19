@@ -348,7 +348,7 @@ static int pxp_ioc_config_chan(struct pxp_file *priv, unsigned long arg)
 	chan = obj->chan;
 	chan_id = chan->chan_id;
 
-	sg_len = 3;
+	sg_len = pxp_conf->ol_param[0].pixel_fmt ? 3 : 2;
 	if (pxp_conf->proc_data.engine_enable & PXP_ENABLE_WFE_A)
 		sg_len += 4;
 	if (pxp_conf->proc_data.engine_enable & PXP_ENABLE_WFE_B)
