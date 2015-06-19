@@ -1067,6 +1067,8 @@ static void pxp_set_s0buf(struct pxps *pxp)
  */
 static int pxp_config(struct pxps *pxp, struct pxp_channel *pxp_chan)
 {
+	struct pxp_config_data *pxp_conf_data = &pxp->pxp_conf_state;
+
 	/* Configure PxP regs */
 	pxp_set_ctrl(pxp);
 	pxp_set_s0param(pxp);
@@ -1074,9 +1076,14 @@ static int pxp_config(struct pxps *pxp, struct pxp_channel *pxp_chan)
 	pxp_set_scaling(pxp);
 	pxp_set_s0colorkey(pxp);
 
-	pxp_set_oln(0, pxp);
-	pxp_set_olparam(0, pxp);
-	pxp_set_olcolorkey(0, pxp);
+	if (pxp_conf_data->layer_nr > 2) {
+		pxp_set_oln(0, pxp);
+		pxp_set_olparam(0, pxp);
+		pxp_set_olcolorkey(0, pxp);
+	} else {
+		__raw_writel(0xffffffff, pxp->base + HW_PXP_OUT_AS_ULC);
+		__raw_writel(0x0, pxp->base + HW_PXP_OUT_AS_LRC);
+	}
 
 	pxp_set_csc(pxp);
 	pxp_set_bg(pxp);
@@ -1164,10 +1171,10 @@ static void __pxpdma_dostart(struct pxp_channel *pxp_chan)
 	struct pxp_tx_desc *child;
 	int i = 0;
 
-	memset(&pxp->pxp_conf_state.s0_param, 0,  sizeof(struct pxp_layer_param));
+//	memset(&pxp->pxp_conf_state.s0_param, 0,  sizeof(struct pxp_layer_param));
 	memset(&pxp->pxp_conf_state.out_param, 0,  sizeof(struct pxp_layer_param));
 	memset(pxp->pxp_conf_state.ol_param, 0,  sizeof(struct pxp_layer_param) * 8);
-	memset(&pxp->pxp_conf_state.proc_data, 0,  sizeof(struct pxp_proc_data));
+//	memset(&pxp->pxp_conf_state.proc_data, 0,  sizeof(struct pxp_proc_data));
 	/* S0 */
 	desc = list_first_entry(&head, struct pxp_tx_desc, list);
 	memcpy(&pxp->pxp_conf_state.s0_param,
