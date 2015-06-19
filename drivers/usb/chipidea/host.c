@@ -26,6 +26,7 @@
 #include <linux/usb/chipidea.h>
 #include <linux/regulator/consumer.h>
 #include <linux/imx_gpc.h>
+#include <linux/platform_device.h>
 
 #include "../host/ehci.h"
 
@@ -33,7 +34,8 @@
 #include "bits.h"
 #include "host.h"
 
-static struct hc_driver __read_mostly ci_ehci_hc_driver;
+#define MAX_CI_NUM	8
+static struct hc_driver __read_mostly ci_ehci_hc_driver[MAX_CI_NUM];
 static int (*orig_bus_suspend)(struct usb_hcd *hcd);
 static int (*orig_bus_resume)(struct usb_hcd *hcd);
 static int (*orig_hub_control)(struct usb_hcd *hcd,
@@ -254,11 +256,13 @@ static int host_start(struct ci_hdrc *ci)
 	struct ehci_hcd *ehci;
 	struct ehci_ci_priv *priv;
 	int ret;
+	struct platform_device *pdev = to_platform_device(ci->dev);
 
 	if (usb_disabled())
 		return -ENODEV;
 
-	hcd = usb_create_hcd(&ci_ehci_hc_driver, ci->dev, dev_name(ci->dev));
+	hcd = usb_create_hcd(&ci_ehci_hc_driver[pdev->id],
+			ci->dev, dev_name(ci->dev));
 	if (!hcd)
 		return -ENOMEM;
 
@@ -525,6 +529,8 @@ static int ci_ehci_bus_suspend(struct usb_hcd *hcd)
 int ci_hdrc_host_init(struct ci_hdrc *ci)
 {
 	struct ci_role_driver *rdrv;
+	struct platform_device *pdev = to_platform_device(ci->dev);
+	struct hc_driver *ci_ehci_driver = &ci_ehci_hc_driver[pdev->id];
 
 	if (!hw_read(ci, CAP_DCCPARAMS, DCCPARAMS_HC))
 		return -ENXIO;
@@ -541,17 +547,17 @@ int ci_hdrc_host_init(struct ci_hdrc *ci)
 	rdrv->name	= "host";
 	ci->roles[CI_ROLE_HOST] = rdrv;
 
-	ehci_init_driver(&ci_ehci_hc_driver, &ehci_ci_overrides);
-	orig_bus_suspend = ci_ehci_hc_driver.bus_suspend;
-	orig_bus_resume = ci_ehci_hc_driver.bus_resume;
-	orig_hub_control = ci_ehci_hc_driver.hub_control;
+	ehci_init_driver(ci_ehci_driver, &ehci_ci_overrides);
+	orig_bus_suspend = ci_ehci_driver->bus_suspend;
+	orig_bus_resume = ci_ehci_driver->bus_resume;
+	orig_hub_control = ci_ehci_driver->hub_control;
 
-	ci_ehci_hc_driver.bus_suspend = ci_ehci_bus_suspend;
+	ci_ehci_driver->bus_suspend = ci_ehci_bus_suspend;
 	if (ci->platdata->flags & CI_HDRC_IMX_EHCI_QUIRK) {
-		ci_ehci_hc_driver.bus_resume = ci_imx_ehci_bus_resume;
-		ci_ehci_hc_driver.hub_control = ci_imx_ehci_hub_control;
+		ci_ehci_driver->bus_resume = ci_imx_ehci_bus_resume;
+		ci_ehci_driver->hub_control = ci_imx_ehci_hub_control;
 	}
-	ci_ehci_hc_driver.start_port_reset = ci_start_port_reset;
+	ci_ehci_driver->start_port_reset = ci_start_port_reset;
 
 	return 0;
 }
