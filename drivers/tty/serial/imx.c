@@ -850,7 +850,6 @@ static irqreturn_t imx_int(int irq, void *dev_id)
 		writel(sts, sport->port.membase + USR1);
 
 	if (sts2 & USR2_ORE) {
-		dev_err(sport->port.dev, "Rx FIFO overrun\n");
 		sport->port.icount.overrun++;
 		writel(USR2_ORE, sport->port.membase + USR2);
 	}
