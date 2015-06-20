@@ -337,12 +337,12 @@
 
 	pinctrl_usdhc3_50mhz: usdhc3-50mhzgrp {
 		fsl,pins = <
-			MX6SX_PAD_SD3_CLK__USDHC3_CLK		0x100f9
-			MX6SX_PAD_SD3_CMD__USDHC3_CMD		0x170f9
-			MX6SX_PAD_SD3_DATA0__USDHC3_DATA0	0x170f9
-			MX6SX_PAD_SD3_DATA1__USDHC3_DATA1	0x170f9
-			MX6SX_PAD_SD3_DATA2__USDHC3_DATA2	0x170f9
-			MX6SX_PAD_SD3_DATA3__USDHC3_DATA3	0x170f9
+			MX6SX_PAD_SD3_CLK__USDHC3_CLK		0x10071
+			MX6SX_PAD_SD3_CMD__USDHC3_CMD		0x17071
+			MX6SX_PAD_SD3_DATA0__USDHC3_DATA0	0x17071
+			MX6SX_PAD_SD3_DATA1__USDHC3_DATA1	0x17071
+			MX6SX_PAD_SD3_DATA2__USDHC3_DATA2	0x17071
+			MX6SX_PAD_SD3_DATA3__USDHC3_DATA3	0x17071
 		>;
 	};
 
@@ -403,12 +403,11 @@
 	model = "Freescale i.MX6 SoloX Nitrogen6sx Board";
 	compatible = "fsl,imx6sx-nitrogen6sx", "fsl,imx6sx";
 
-	backlight_rgb {
+	slow_clock {
 		compatible = "pwm-backlight";
-		pwms = <&pwm2 0 5000000>;
-		brightness-levels = <0 4 8 16 32 64 128 255>;
-		default-brightness-level = <6>;
-		fb-names = "mxs-lcdif1";
+		pwms = <&pwm2 0 30518>;
+		brightness-levels = <0 128 256>;
+		default-brightness-level = <1>;
 		power-supply = <&reg_3p3v>;
 	};
 
@@ -687,6 +686,7 @@
 		clocks = <&clks IMX6SX_CLK_CKO>;
 		VDDA-supply = <&reg_1p8v>;
 		VDDIO-supply = <&reg_1p8v>;
+		VDDD-supply = <&reg_1p8v>;
 		assigned-clocks = <&clks IMX6SX_CLK_CKO>,
 				  <&clks IMX6SX_CLK_CKO1_SEL>,
 				  <&clks IMX6SX_CLK_CKO2_SEL>,
@@ -905,6 +905,7 @@
 	keep-power-in-suspend;
 	vmmc-supply = <&reg_wlan_en>;
 	cap-power-off-card;
+	cap-sdio-irq;
 	vqmmc-1-8-v;
 	status = "okay";
 };
