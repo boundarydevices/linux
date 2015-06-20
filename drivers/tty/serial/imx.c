@@ -1357,7 +1357,6 @@ static void imx_shutdown(struct uart_port *port)
 		imx_disable_dma(sport);
 		spin_unlock_irqrestore(&sport->port.lock, flags);
 		imx_uart_dma_exit(sport);
-		spin_unlock_irqrestore(&sport->port.lock, flags);
 	}
 
 	spin_lock_irqsave(&sport->port.lock, flags);
