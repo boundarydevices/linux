@@ -204,7 +204,6 @@ struct hw_bank {
  * @in_lpm: if the core in low power mode
  * @wakeup_int: if wakeup interrupt occur
  * @rev: The revision number for controller
- * @hnp_enable: indicates if OTG full HNP is enabled
  * @adp_probe_event: indicates to enable adp probe
  * @adp_sense_event: indicates to enable adp sense
  */
@@ -271,7 +270,6 @@ struct ci_hdrc {
 	u32				pm_portsc;
 	u32				pm_usbmode;
 	struct work_struct		power_lost_work;
-	bool				hnp_enable;
 	bool				adp_probe_event;
 	bool				adp_sense_event;
 };

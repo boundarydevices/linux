@@ -148,12 +148,6 @@ set_b_bus_req(struct device *dev, struct device_attribute *attr,
 	if (count > 2)
 		return -1;
 
-	if (!ci->hnp_enable) {
-		dev_warn(ci->dev,
-			"Can't do this because HNP is not enabled!\n");
-		return -1;
-	}
-
 	mutex_lock(&ci->fsm.lock);
 	if (buf[0] == '0')
 		ci->fsm.b_bus_req = 0;
@@ -193,57 +187,11 @@ set_a_clr_err(struct device *dev, struct device_attribute *attr,
 }
 static DEVICE_ATTR(a_clr_err, S_IWUSR, NULL, set_a_clr_err);
 
-static ssize_t
-get_hnp_enable(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	char		*next;
-	unsigned	size, t;
-	struct ci_hdrc	*ci = dev_get_drvdata(dev);
-
-	next = buf;
-	size = PAGE_SIZE;
-	t = scnprintf(next, size, "%d\n", ci->hnp_enable);
-	size -= t;
-	next += t;
-
-	return PAGE_SIZE - size;
-}
-
-static ssize_t
-set_hnp_enable(struct device *dev, struct device_attribute *attr,
-					const char *buf, size_t count)
-{
-	struct ci_hdrc	*ci = dev_get_drvdata(dev);
-	unsigned long flags;
-
-	if (count > 2)
-		return -1;
-
-	spin_lock_irqsave(&ci->lock, flags);
-	if (buf[0] == '1') {
-		ci->hnp_enable = 1;
-	} else if (buf[0] == '0') {
-		if ((ci->fsm.otg->state == OTG_STATE_B_WAIT_ACON) ||
-			(ci->fsm.otg->state == OTG_STATE_B_HOST) ||
-			(ci->fsm.otg->state == OTG_STATE_A_PERIPHERAL))
-			dev_warn(ci->dev,
-				"Can't disable HNP while role switch!\n");
-		else
-			ci->hnp_enable = 0;
-	}
-	spin_unlock_irqrestore(&ci->lock, flags);
-
-	return count;
-}
-static DEVICE_ATTR(hnp_enable, S_IRUGO | S_IWUSR, get_hnp_enable,
-							set_hnp_enable);
-
 static struct attribute *inputs_attrs[] = {
 	&dev_attr_a_bus_req.attr,
 	&dev_attr_a_bus_drop.attr,
 	&dev_attr_b_bus_req.attr,
 	&dev_attr_a_clr_err.attr,
-	&dev_attr_hnp_enable.attr,
 	NULL,
 };
 
@@ -604,9 +552,6 @@ static void ci_otg_fsm_add_timer(struct otg_fsm *fsm, enum otg_fsm_timer t)
 	struct ci_hdrc	*ci = container_of(fsm, struct ci_hdrc, fsm);
 
 	if (t < NUM_OTG_FSM_TIMERS) {
-		if ((!ci->hnp_enable) && ((t == HNP_POLLING) ||
-						(t == A_WAIT_BCON)))
-			return;
 		if (t == HNP_POLLING)
 			ci_otg_add_hnp_polling_timer(ci);
 		else
@@ -744,7 +689,7 @@ static void ci_otg_start_adp_prb(struct otg_fsm *fsm)
 {
 	struct ci_hdrc  *ci = container_of(fsm, struct ci_hdrc, fsm);
 
-	if (!ci->platdata->ci_otg_caps.adp_support || !ci->hnp_enable)
+	if (!ci->platdata->ci_otg_caps.adp_support)
 		return;
 
 	if (ci->platdata->notify_event)
@@ -757,8 +702,7 @@ static void ci_otg_start_adp_sns(struct otg_fsm *fsm)
 {
 	struct ci_hdrc  *ci = container_of(fsm, struct ci_hdrc, fsm);
 
-	if (!ci->platdata->ci_otg_caps.adp_support ||
-			!ci->hnp_enable || !ci->driver)
+	if (!ci->platdata->ci_otg_caps.adp_support || !ci->driver)
 		return;
 
 	/* TODO If power_up and vbus is off, do one ADP probe before SRP */
