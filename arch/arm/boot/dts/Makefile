@@ -173,6 +173,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6dl-wandboard.dtb \
 	imx6q-arm2.dtb \
 	imx6q-bt.dtb \
+	imx6q-cob.dtb \
 	imx6q-cubox-i.dtb \
 	imx6q-eo.dtb \
 	imx6q-phytec-pbab01.dtb \
