@@ -57,7 +57,7 @@
 #define MX6S_CAM_VERSION "0.0.1"
 #define MX6S_CAM_DRIVER_DESCRIPTION "i.MX6S_CSI"
 
-#define MAX_VIDEO_MEM 32
+#define MAX_VIDEO_MEM 64
 
 /* reset values */
 #define CSICR1_RESET_VAL	0x40000800
@@ -137,6 +137,7 @@
 /* csi control reg 18 */
 #define BIT_CSI_ENABLE			(0x1 << 31)
 #define BIT_MIPI_DATA_FORMAT_RAW8		(0x2a << 25)
+#define BIT_MIPI_DATA_FORMAT_RAW10		(0x2b << 25)
 #define BIT_MIPI_DATA_FORMAT_YUV422_8B	(0x1e << 25)
 #define BIT_MIPI_DATA_FORMAT_MASK	(0x3F << 25)
 #define BIT_MIPI_DATA_FORMAT_OFFSET	25
@@ -266,6 +267,12 @@ static struct mx6s_fmt formats[] = {
 		.pixelformat	= V4L2_PIX_FMT_YUV32,
 		.mbus_code	= V4L2_MBUS_FMT_AYUV8_1X32,
 		.bpp		= 4,
+	}, {
+		.name		= "RAWRGB8 (SBGGR8)",
+		.fourcc		= V4L2_PIX_FMT_SBGGR8,
+		.pixelformat	= V4L2_PIX_FMT_SBGGR8,
+		.mbus_code	= V4L2_MBUS_FMT_SBGGR8_1X8,
+		.bpp		= 1,
 	}
 };
 
@@ -607,6 +614,19 @@ static void csi_set_16bit_imagpara(struct mx6s_csi_dev *csi,
 	__raw_writel(cr3 | BIT_DMA_REFLASH_RFF, csi->regbase + CSI_CSICR3);
 }
 
+static void csi_set_8bit_imagpara(struct mx6s_csi_dev *csi,
+					int width, int height)
+{
+	int imag_para = 0;
+	unsigned long cr3 = __raw_readl(csi->regbase + CSI_CSICR3);
+
+	imag_para = (width << 16) | height;
+	__raw_writel(imag_para, csi->regbase + CSI_CSIIMAG_PARA);
+
+	/* reflash the embeded DMA controller */
+	__raw_writel(cr3 | BIT_DMA_REFLASH_RFF, csi->regbase + CSI_CSICR3);
+}
+
 /*
  *  Videobuf operations
  */
@@ -816,6 +836,9 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 	case V4L2_PIX_FMT_YUYV:
 		csi_set_16bit_imagpara(csi_dev, pix->width, pix->height);
 		break;
+	case V4L2_PIX_FMT_SBGGR8:
+		csi_set_8bit_imagpara(csi_dev, pix->width, pix->height);
+		break;
 	default:
 		pr_debug("   case not supported\n");
 		return -EINVAL;
@@ -827,12 +850,16 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 		csi_write(csi_dev, cr1, CSI_CSICR1);
 
 		cr18 = csi_read(csi_dev, CSI_CSICR18);
+		cr18 &= BIT_MIPI_DATA_FORMAT_MASK;
 		cr18 |= BIT_DATA_FROM_MIPI;
 
 		switch (csi_dev->fmt->pixelformat) {
 		case V4L2_PIX_FMT_UYVY:
 		case V4L2_PIX_FMT_YUYV:
 			cr18 |= BIT_MIPI_DATA_FORMAT_YUV422_8B;
+			break;
+		case V4L2_PIX_FMT_SBGGR8:
+			cr18 |= BIT_MIPI_DATA_FORMAT_RAW8;
 			break;
 		default:
 			pr_debug("   fmt not supported\n");
