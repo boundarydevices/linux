@@ -324,6 +324,10 @@ static const struct csis_pix_format mipi_csis_formats[] = {
 		.code = V4L2_MBUS_FMT_VYUY8_2X8,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_YCBCR422_8BIT,
 		.data_alignment = 16,
+	}, {
+		.code = V4L2_MBUS_FMT_SBGGR8_1X8,
+		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW8,
+		.data_alignment = 8,
 	}
 };
 
@@ -493,7 +497,7 @@ static void mipi_csis_set_params(struct csi_state *state)
 	val = mipi_csis_read(state, MIPI_CSIS_ISPCONFIG_CH0);
 	if (state->csis_fmt->data_alignment == 32)
 		val |= MIPI_CSIS_ISPCFG_ALIGN_32BIT;
-	else /* 24-bits */
+	else /* Normal output */
 		val &= ~MIPI_CSIS_ISPCFG_ALIGN_32BIT;
 	mipi_csis_write(state, MIPI_CSIS_ISPCONFIG_CH0, val);
 
