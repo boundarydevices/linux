@@ -792,7 +792,7 @@ static irqreturn_t crtouch_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int crtouch_resume(struct i2c_client *client)
+static int crtouch_resume(struct device *dev)
 {
 	gpio_set_value(PIN_WAKE, GND);
 	udelay(10);
@@ -800,17 +800,17 @@ static int crtouch_resume(struct i2c_client *client)
 	return 0;
 }
 
-static int crtouch_suspend(struct i2c_client *client, pm_message_t mesg)
+static int crtouch_suspend(struct device *dev)
 {
 	s32 data_to_read;
 
 	data_to_read = i2c_smbus_read_byte_data(client_public, CONFIGURATION);
 	data_to_read |= SHUTDOWN_CRTOUCH;
-	i2c_smbus_write_byte_data(client, CONFIGURATION , data_to_read);
+	i2c_smbus_write_byte_data(crtouch->client, CONFIGURATION , data_to_read);
 	return 0;
 }
 
-static int __devinit crtouch_probe(struct i2c_client *client,
+static int crtouch_probe(struct i2c_client *client,
 				 const struct i2c_device_id *id)
 {
 
@@ -998,7 +998,7 @@ err_free_mem:
 	return result;
 }
 
-static int __devexit crtouch_remove(struct i2c_client *client)
+static int crtouch_remove(struct i2c_client *client)
 {
 	cancel_work_sync(&crtouch->work);
 	destroy_workqueue(crtouch->workqueue);
@@ -1019,17 +1019,23 @@ static const struct i2c_device_id crtouch_idtable[] = {
 	{}
 };
 
+static const struct dev_pm_ops crtouch_pm_ops = {
+#ifdef CONFIG_PM_SLEEP
+	.suspend = crtouch_suspend,
+	.resume = crtouch_resume,
+#endif
+};
+
 static struct i2c_driver crtouch_fops = {
 
 	.driver = {
 		   .owner = THIS_MODULE,
-		   .name = "crtouch_drv",
+		   .name = "crtouch",
+		   .pm	 = &crtouch_pm_ops,
 	},
-	.id_table	= 	crtouch_idtable,
-	.probe	= 	crtouch_probe,
-	.resume	=	crtouch_resume,
-	.suspend	= crtouch_suspend,
-	.remove 	= __devexit_p(crtouch_remove),
+	.id_table	= crtouch_idtable,
+	.probe		= crtouch_probe,
+	.remove 	= crtouch_remove,
 
 };
 
