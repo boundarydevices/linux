@@ -221,6 +221,15 @@ config TOUCHSCREEN_CHIPONE_ICN8505
 	  To compile this driver as a module, choose M here: the
 	  module will be called chipone_icn8505.
 
+config TOUCHSCREEN_CR_MULTI
+	tristate "CRTOUCH multitouch"
+	depends on I2C
+	help
+	  Say Y here if you have a CRTOUCH device.
+	  If unsure, say N.
+	  To compile this driver as a module, choose M here: the
+	  module will be called crtouch_mt.
+
 config TOUCHSCREEN_CY8CTMA140
 	tristate "cy8ctma140 touchscreen"
 	depends on I2C
