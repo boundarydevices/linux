@@ -602,6 +602,19 @@ static void esdhc_writeb_le(struct sdhci_host *host, u8 val, int reg)
 		mask = 0xffff & ~(ESDHC_CTRL_BUSWIDTH_MASK | ESDHC_CTRL_D3CD);
 
 		esdhc_clrset_le(host, mask, new_val, reg);
+
+		/*
+		 * The imx6q ROM code will change the default watermark
+		 * level setting to something insane.  Change it back here.
+		 */
+		if (esdhc_is_usdhc(imx_data)) {
+			if (is_imx7d_usdhc(imx_data))
+				writel(0x10401040,
+					host->ioaddr + ESDHC_WTMK_LVL);
+			else
+				writel(0x08100810,
+					host->ioaddr + ESDHC_WTMK_LVL);
+		}
 		return;
 	}
 	esdhc_clrset_le(host, 0xff, val, reg);
@@ -1143,16 +1156,7 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		host->quirks |= SDHCI_QUIRK_NO_MULTIBLOCK
 			| SDHCI_QUIRK_BROKEN_ADMA;
 
-	/*
-	 * The imx6q ROM code will change the default watermark level setting
-	 * to something insane.  Change it back here.
-	 */
 	if (esdhc_is_usdhc(imx_data)) {
-		if (is_imx7d_usdhc(imx_data))
-			writel(0x10401040, host->ioaddr + ESDHC_WTMK_LVL);
-		else
-			writel(0x08100810, host->ioaddr + ESDHC_WTMK_LVL);
-
 		/*
 		 * ROM code will change the burst_length_enable setting to
 		 * zero if this usdhc is choosed to boot system. Change it
