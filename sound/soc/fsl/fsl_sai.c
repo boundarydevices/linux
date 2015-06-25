@@ -734,10 +734,9 @@ static int fsl_sai_probe(struct platform_device *pdev)
 
 	sai->pdev = pdev;
 
-	if (of_device_is_compatible(pdev->dev.of_node, "fsl,imx6sx-sai"))
-		sai->sai_on_imx = true;
-
-	if (of_device_is_compatible(pdev->dev.of_node, "fsl,imx7d-sai"))
+	if (of_device_is_compatible(pdev->dev.of_node, "fsl,imx6sx-sai") ||
+	    of_device_is_compatible(pdev->dev.of_node, "fsl,imx6ul-sai") ||
+	    of_device_is_compatible(pdev->dev.of_node, "fsl,imx7d-sai"))
 		sai->sai_on_imx = true;
 
 	sai->is_lsb_first = of_property_read_bool(np, "lsb-first");
