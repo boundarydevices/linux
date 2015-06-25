@@ -347,7 +347,6 @@
 			compatible = "mmio-sram";
 			reg = <0x00901000 0x1f000>;
 			clocks = <&clks IMX7D_OCRAM_CLK>;
-			status = "disabled";
 		};
 
 		ocrams: sram@00180000 {
