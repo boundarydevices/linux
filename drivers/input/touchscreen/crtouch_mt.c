@@ -810,7 +810,7 @@ static int crtouch_suspend(struct i2c_client *client, pm_message_t mesg)
 	return 0;
 }
 
-static int __devinit crtouch_probe(struct i2c_client *client,
+static int crtouch_probe(struct i2c_client *client,
 				 const struct i2c_device_id *id)
 {
 
@@ -998,7 +998,7 @@ err_free_mem:
 	return result;
 }
 
-static int __devexit crtouch_remove(struct i2c_client *client)
+static int crtouch_remove(struct i2c_client *client)
 {
 	cancel_work_sync(&crtouch->work);
 	destroy_workqueue(crtouch->workqueue);
@@ -1029,7 +1029,7 @@ static struct i2c_driver crtouch_fops = {
 	.probe	= 	crtouch_probe,
 	.resume	=	crtouch_resume,
 	.suspend	= crtouch_suspend,
-	.remove 	= __devexit_p(crtouch_remove),
+	.remove 	= crtouch_remove,
 
 };
 
