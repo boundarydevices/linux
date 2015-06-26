@@ -16,28 +16,6 @@
  *
  */
 
-#include <linux/init.h>
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/slab.h>
-#include <linux/fs.h>
-#include <linux/errno.h>
-#include <linux/types.h>
-#include <asm/uaccess.h>
-#include <linux/input.h>
-#include <linux/delay.h>
-#include <linux/i2c.h>
-#include <linux/interrupt.h>
-#include <linux/irq.h>
-#include <linux/workqueue.h>
-#include <linux/sysfs.h>
-#include <linux/string.h>
-#include <linux/ctype.h>
-#include <linux/ioctl.h>
-#include <linux/gpio.h>
-#include <linux/syscalls.h>
-#include <linux/cdev.h>
-#include <linux/device.h>
 
 /*keys reported to input device
 --capacitive--
@@ -183,10 +161,8 @@ slide:
 #define READ_AND_WRITE 				0666
 #define KEY_NUMBER 				0x03
 #define EV_TYPE					0x80
-#define LEN_RESOLUTION_BYTES			0x04
 #define LEN_XY					0x04
 #define MAX_ZOOM_CRTOUCH			0xFF
-#define SIZE_OF_SIN_COS				0xB4
 #define TRIGGUER_TOUCH_RELEASE			0x83
 
 #define CRTOUCH_TOUCHED				0x01
@@ -196,12 +172,6 @@ slide:
 #define SET_MULTITOUCH				0x0C
 
 #define IRQ_NAME	"CRTOUCH_IRQ"
-
-#define GND		0
-#define VCC		1
-#define PIN_WAKE	(0 * 32 + 6) /*(bank 1 + 32 bits + pin 6)*/
-#define GPIO_IRQ	(6 * 32 + 7) /*(bank 7 + 32 bits + pin 7)*/
-
 #define DEV_NAME 	"crtouch_dev"
 
 #define XMIN	0
@@ -219,66 +189,23 @@ struct crtouch_data {
 	struct work_struct 	work;
 	struct input_dev 	*input_dev;
 	struct i2c_client 	*client;
-};
-
-	int xmax = 0;
-	int ymax = 0;
-
-	u8 data_configuration = 0;
-
-	struct crtouch_data *crtouch;
-	struct i2c_client *client_public;
+	u8 data_configuration;
+	struct cdev cdev;
+	int xmax;
+	int ymax;
 	struct class *crtouch_class;
 	dev_t dev_number;
-	static struct cdev crtouch_cdev;
-	bool status_pressed = 0;
-	
-	s32 rotate_angle = 0;
-	int rotate_state = 0;
-	int last_angle = 0;
-
-	s32 zoom_size = 0;
-	int zoom_state = 0;
-	int last_zoom = 0;
-
-	int sin_data[SIZE_OF_SIN_COS] = 	{
-					1143,  2287,  3429,  4571,  5711,  6850,  7986,  9120,  10252, 11380, 
-				    	12504, 13625, 14742, 15854, 16961, 18064, 19160, 20251, 21336, 22414,
-				    	23486, 24550, 25606, 26655, 27696, 28729, 29752, 30767, 31772, 32768,
-				    	33753, 34728, 35693, 36647, 37589, 38521, 39440, 40347, 41243, 42125,
-				    	42995, 43852, 44695, 45525, 46340, 47142, 47929, 48702, 49460, 50203,
-				    	50931, 51643, 52339, 53019, 53683, 54331, 54963, 55577, 56175, 56755,
-				    	57319, 57864, 58393, 58903, 59395, 59870, 60326, 60763, 61183, 61583,
-				    	61965, 62328, 62672, 62997, 63302, 63589, 63856, 64103, 64331, 64540,
-				    	64729, 64898, 65047, 65176, 65286, 65376, 65446, 65496, 65526, 65535,
-				    	65526, 65496, 65446, 65376, 65286, 65176, 65047, 64898, 64729, 64540,
-				    	64331, 64103, 63856, 63589, 63302, 62997, 62672, 62328, 61965, 61583,
-				    	61183, 60763, 60326, 59870, 59395, 58903, 58393, 57864, 57319, 56755,
-				    	56175, 55577, 54963, 54331, 53683, 53019, 52339, 51643, 50931, 50203,
-				    	49460, 48702, 47929, 47142, 46340, 45525, 44695, 43852, 42995, 42125,
-				    	41243, 40347, 39440, 38521, 37589, 36647, 35693, 34728, 33753, 32768,
-				    	31772, 30767, 29752, 28798, 27696, 26655, 25606, 24550, 23486, 22414,
-				    	21336, 20251, 19160, 18064, 16961, 15854, 14742, 13625, 12504, 11380,
-				    	10252, 9120,  7986,  6850,  5711,  4571,  3429,  2287,  1143,  65,
-					};
-
-	int cos_data[SIZE_OF_SIN_COS] = 	{
-					65526, 65496, 65446, 65376, 65286, 65176, 65047, 64898, 64729, 64540,
-					64331, 64103, 63856, 63589, 63302, 62997, 62672, 62328, 61965, 61583,
-					61183, 60763, 60326, 59870, 59395, 58903, 58393, 57864, 57319, 56755,
-					56175, 55577, 54963, 54331, 53683, 53019, 52339, 51643, 50931, 50203,
-					49460, 48702, 47929, 47142, 46340, 45525, 44695, 43852, 42995, 42125,
-				    	41243, 40347, 39440, 38521, 37589, 36647, 35693, 34728, 33753, 32768,
-				    	31772, 30767, 29752, 28798, 27696, 26655, 25606, 24550, 23486, 22414,
-				    	21336, 20251, 19160, 18064, 16961, 15854, 14742, 13625, 12504, 11380,
-				    	10252, 9120,  7986,  6850,  5711,  4571,  3429,  2287,  1143,  65,
-					-1143, -2287, -3429, -4571, -5711, -6850, -7986, -9120, -10252, -11380,
-					-12504, -13625, -14742, -15854, -16961, -18064, -19160, -20251, -21336, -22414,
-					-23486, -24550, -25606, -26655, -27696, -28729, -29752, -30767, -31772, -32768,
-					-33753, -34728, -35693, -36647, -37589, -38521, -39440, -40347, -41243, -42125,
-					-42995, -43852, -44695, -45525, -46340, -47142, -47929, -48702, -49460, -50203,
-					-50931, -51643, -52339, -53019, -53683, -54331, -54963, -55577, -56175, -56755,
-					-57319, -57864, -58393, -58903, -59395, -59870, -60326, -60763, -61183, -61583,
-					-61965, -62328, -62672, -62997, -63302, -63589, -63856, -64103, -64331, -64540,
-					-64729, -64898, -65047, -65176, -65286, -65376, -65446, -65496, -65526, -65535,  
-					};
+	bool status_pressed;
+	s32 rotate_angle;
+	int rotate_state;
+	int last_angle;
+	s32 zoom_size;
+	int zoom_state;
+	int last_zoom;
+	int reset_gpio;
+	int reset_active_low;
+	int irq_gpio;
+	int irq;
+	int wake_gpio;
+	int wake_active_low;
+};
