@@ -117,6 +117,7 @@
 	mov	pc, r7
 	pop	{r0 - r12, lr}
 
+#ifdef CONFIG_SMP
 	clrex
 
 	/* Turn off SMP bit. */
@@ -126,6 +127,7 @@
 
 	isb
 	dsb
+#endif
 
 	.endm
 
@@ -625,12 +627,14 @@ skip_lpi_flow:
 
 	tlb_back_to_ddr
 
+#ifdef CONFIG_SMP
 	/* Turn on SMP bit. */
 	mrc	p15, 0, r7, c1, c0, 1
 	orr	r7, r7, #0x40
 	mcr	p15, 0, r7, c1, c0, 1
 
 	isb
+#endif
 
 	/* enable d-cache */
 	mrc	p15, 0, r7, c1, c0, 0
