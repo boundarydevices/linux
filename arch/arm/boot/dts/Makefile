@@ -406,6 +406,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-cubox-i.dtb \
 	imx6q-dfi-fs700-m60.dtb \
 	imx6q-dmo-edmqmx6.dtb \
+	imx6q-eo.dtb \
 	imx6q-evi.dtb \
 	imx6q-gk802.dtb \
 	imx6q-gw51xx.dtb \
