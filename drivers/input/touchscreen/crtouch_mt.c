@@ -18,10 +18,33 @@
 /*
  *   Copyright 2011-2012 Freescale Semiconductor, Inc. All Rights Reserved.
  */
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/slab.h>
+#include <linux/fs.h>
+#include <linux/errno.h>
+#include <linux/types.h>
+#include <asm/uaccess.h>
+#include <linux/input.h>
+#include <linux/delay.h>
+#include <linux/i2c.h>
+#include <linux/interrupt.h>
+#include <linux/irq.h>
+#include <linux/workqueue.h>
+#include <linux/sysfs.h>
+#include <linux/string.h>
+#include <linux/ctype.h>
+#include <linux/ioctl.h>
+#include <linux/gpio.h>
+#include <linux/syscalls.h>
+#include <linux/cdev.h>
+#include <linux/device.h>
+#include <linux/of_gpio.h>
 
 #include "crtouch_mt.h"
 
-void report_single_touch(void)
+void report_single_touch(struct crtouch_data *crtouch)
 {
 	input_report_abs(crtouch->input_dev, ABS_MT_POSITION_X, crtouch->x1);
 	input_report_abs(crtouch->input_dev, ABS_MT_POSITION_Y, crtouch->y1);
@@ -33,10 +56,10 @@ void report_single_touch(void)
 	input_report_abs(crtouch->input_dev, ABS_PRESSURE, 1);
 	input_sync(crtouch->input_dev);
 
-	status_pressed = CRTOUCH_TOUCHED;
+	crtouch->status_pressed = CRTOUCH_TOUCHED;
 }
 
-void report_multi_touch(void)
+void report_multi_touch(struct crtouch_data *crtouch)
 {
 
 	input_report_key(crtouch->input_dev, ABS_MT_TRACKING_ID, 0);
@@ -53,10 +76,10 @@ void report_multi_touch(void)
 
 	input_sync(crtouch->input_dev);
 
-	status_pressed = CRTOUCH_TOUCHED;
+	crtouch->status_pressed = CRTOUCH_TOUCHED;
 }
 
-void free_touch(void)
+void free_touch(struct crtouch_data *crtouch)
 {
 	input_event(crtouch->input_dev, EV_ABS, ABS_MT_TOUCH_MAJOR, 0);
 	input_mt_sync(crtouch->input_dev);
@@ -64,10 +87,10 @@ void free_touch(void)
 	input_report_abs(crtouch->input_dev, ABS_PRESSURE, 0);
 	input_sync(crtouch->input_dev);
 
-	status_pressed = CRTOUCH_RELEASED;
+	crtouch->status_pressed = CRTOUCH_RELEASED;
 }
 
-void free_two_touch(void){
+void free_two_touch(struct crtouch_data *crtouch){
 
 	input_event(crtouch->input_dev, EV_ABS, ABS_MT_TOUCH_MAJOR, 0);
 	input_mt_sync(crtouch->input_dev);
@@ -75,29 +98,40 @@ void free_two_touch(void){
 
 }
 
-int read_resolution(void)
+int read_resolution(struct crtouch_data *crtouch)
 {
-	char resolution[LEN_RESOLUTION_BYTES];
-	int horizontal, vertical, ret;
+	char resolution[4];
+	int ret;
 
-	ret = i2c_smbus_read_i2c_block_data(client_public,
-		HORIZONTAL_RESOLUTION_MBS, LEN_RESOLUTION_BYTES, resolution);
+	ret = i2c_smbus_read_i2c_block_data(crtouch->client,
+		HORIZONTAL_RESOLUTION_MBS, 4, resolution);
 
 	if (ret < 0)
 		return ret;
 
-	horizontal = resolution[1];
-	horizontal |= resolution[0] << 8;
-	vertical = resolution[3];
-	vertical |= resolution[2] << 8;
-
-	xmax = horizontal;
-	ymax = vertical;
-
-	printk(KERN_DEBUG "calibration values XMAX:%i YMAX:%i", xmax, ymax);
-
+	crtouch->xmax = (resolution[0] << 8) | resolution[1];
+	crtouch->ymax = (resolution[2] << 8) | resolution[3];
+	pr_info("calibration values XMAX:%i YMAX:%i", crtouch->xmax, crtouch->ymax);
+	if (!crtouch->xmax || !crtouch->ymax) {
+		crtouch->xmax = 0x1000;
+		crtouch->ymax = 0x1000;
+		pr_info("changing to XMAX:%i YMAX:%i", crtouch->xmax, crtouch->ymax);
+	}
 	return 0;
 }
+
+const int sin_data[] = 	{
+	0,
+	1143,  2287,  3429,  4571,  5711,  6850,  7986,  9120,  10252, 11380,
+	12504, 13625, 14742, 15854, 16961, 18064, 19160, 20251, 21336, 22414,
+	23486, 24550, 25606, 26655, 27696, 28729, 29752, 30767, 31772, 32768,
+	33753, 34728, 35693, 36647, 37589, 38521, 39440, 40347, 41243, 42125,
+	42995, 43852, 44695, 45525, 46340, 47142, 47929, 48702, 49460, 50203,
+	50931, 51643, 52339, 53019, 53683, 54331, 54963, 55577, 56175, 56755,
+	57319, 57864, 58393, 58903, 59395, 59870, 60326, 60763, 61183, 61583,
+	61965, 62328, 62672, 62997, 63302, 63589, 63856, 64103, 64331, 64540,
+	64729, 64898, 65047, 65176, 65286, 65376, 65446, 65496, 65526, 65536,
+};
 
 static void report_MT(struct work_struct *work)
 {
@@ -115,6 +149,8 @@ static void report_MT(struct work_struct *work)
 	int degrees = 0;
 	int zoom_value_moved = 0;
 	int value_to_zoom = 0;
+	const int xmax = crtouch->xmax;
+	const int ymax = crtouch->ymax;
 	char xy[LEN_XY];
 
 	status_register_1 = i2c_smbus_read_byte_data(client, STATUS_REGISTER_1);
@@ -124,7 +160,7 @@ static void report_MT(struct work_struct *work)
 
 		status_register_2 = i2c_smbus_read_byte_data(client, STATUS_REGISTER_2);
 
-		zoom_size = i2c_smbus_read_byte_data(client, ZOOM_SIZE);
+		crtouch->zoom_size = i2c_smbus_read_byte_data(client, ZOOM_SIZE);
 
 		if ((status_register_2 & MASK_ZOOM_DIRECTION) == MASK_ZOOM_DIRECTION) {
 			command = ZOOM_OUT;
@@ -132,52 +168,52 @@ static void report_MT(struct work_struct *work)
 			command = ZOOM_IN;
 		}
 
-		if(command == zoom_state){
-			zoom_size = zoom_size - last_zoom;
-			last_zoom = zoom_size;
+		if(command == crtouch->zoom_state){
+			crtouch->zoom_size = crtouch->zoom_size - crtouch->last_zoom;
+			crtouch->last_zoom = crtouch->zoom_size;
 		}
 		else{
-			last_zoom = 0;
-			zoom_state = command;
+			crtouch->last_zoom = 0;
+			crtouch->zoom_state = command;
 		}	
 
-		value_to_zoom = ((zoom_size * xmax) / MAX_ZOOM_CRTOUCH); 		
+		value_to_zoom = ((crtouch->zoom_size * xmax) / MAX_ZOOM_CRTOUCH);
 
 
 	/*check rotate resistive*/
 	} else if ((status_register_1 & MASK_EVENTS_ROTATE_R) == MASK_EVENTS_ROTATE_R  && (status_register_1 & TWO_TOUCH)) {
 
 		status_register_2 = i2c_smbus_read_byte_data(client, STATUS_REGISTER_2);
-		rotate_angle = i2c_smbus_read_byte_data(client, ROTATE_ANGLE);
+		crtouch->rotate_angle = i2c_smbus_read_byte_data(client, ROTATE_ANGLE);
 		
-		//printk(KERN_ALERT "Rotate Angle Complete: %d", rotate_angle);
+		//printk(KERN_ALERT "Rotate Angle Complete: %d", crtouch->rotate_angle);
 
-		rotate_angle_help = rotate_angle;
+		rotate_angle_help = crtouch->rotate_angle;
 
 		if ((status_register_2 & MASK_ROTATE_DIRECTION) == MASK_ROTATE_DIRECTION) {
 
 			command = ROTATE_COUNTER_CLK;
 
-			if (rotate_state == ROTATE_CLK)
-				last_angle = 0;
+			if (crtouch->rotate_state == ROTATE_CLK)
+				crtouch->last_angle = 0;
 
-			rotate_state = ROTATE_COUNTER_CLK;
-			rotate_angle -= last_angle;
-			last_angle += rotate_angle;
+			crtouch->rotate_state = ROTATE_COUNTER_CLK;
+			crtouch->rotate_angle -= crtouch->last_angle;
+			crtouch->last_angle += crtouch->rotate_angle;
 
 		} else {
 
 			command = ROTATE_CLK;
 
-			if (rotate_state == ROTATE_COUNTER_CLK)
-				last_angle = 0;
+			if (crtouch->rotate_state == ROTATE_COUNTER_CLK)
+				crtouch->last_angle = 0;
 
-			rotate_state = ROTATE_CLK;
-			rotate_angle -= last_angle;
-			last_angle += rotate_angle;
+			crtouch->rotate_state = ROTATE_CLK;
+			crtouch->rotate_angle -= crtouch->last_angle;
+			crtouch->last_angle += crtouch->rotate_angle;
 		}
 
-		//printk(KERN_ALERT "Rotate Angle New: %d", rotate_angle);
+		//printk(KERN_ALERT "Rotate Angle New: %d", crtouch->rotate_angle);
 	}
 
 	/*check slide resistive*/
@@ -209,7 +245,7 @@ static void report_MT(struct work_struct *work)
 	if ((status_register_1 & MASK_EVENTS_CAPACITIVE) == MASK_EVENTS_CAPACITIVE) {
 
 		/*capacitive keypad*/
-		if ((data_configuration & MASK_KEYPAD_CONF) == MASK_KEYPAD_CONF) {
+		if ((crtouch->data_configuration & MASK_KEYPAD_CONF) == MASK_KEYPAD_CONF) {
 
 			while ((fifo_capacitive = i2c_smbus_read_byte_data(client, CAPACITIVE_ELECTRODES_FIFO)) < 0xFF) {
 
@@ -259,7 +295,7 @@ static void report_MT(struct work_struct *work)
 
 		}
 		/*capacitive slide*/
-		else if ((data_configuration & MASK_SLIDE_CONF) == MASK_SLIDE_CONF) {
+		else if ((crtouch->data_configuration & MASK_SLIDE_CONF) == MASK_SLIDE_CONF) {
 			dynamic_status = i2c_smbus_read_byte_data(client, DYNAMIC_STATUS);
 
 			if (dynamic_status & MASK_DYNAMIC_FLAG) {
@@ -276,7 +312,7 @@ static void report_MT(struct work_struct *work)
 			}
 		}
 		/*capacitive rotate*/
-		else if ((data_configuration & MASK_ROTARY_CONF) == MASK_ROTARY_CONF) {
+		else if ((crtouch->data_configuration & MASK_ROTARY_CONF) == MASK_ROTARY_CONF) {
 
 			dynamic_status = i2c_smbus_read_byte_data(client, DYNAMIC_STATUS);
 
@@ -300,15 +336,15 @@ static void report_MT(struct work_struct *work)
 	if ((status_register_1 & MASK_RESISTIVE_SAMPLE) == MASK_RESISTIVE_SAMPLE && !(status_register_1 & TWO_TOUCH)) {
 
 		/*clean zoom/rotate data when release 2touch*/
-		last_angle = 0;
-		rotate_state = 0;
-		last_zoom = 0;
-		zoom_state = 0;
+		crtouch->last_angle = 0;
+		crtouch->rotate_state = 0;
+		crtouch->last_zoom = 0;
+		crtouch->zoom_state = 0;
 
 		if (!(status_register_1 & MASK_PRESSED)) {
 
-			if (status_pressed)
-				free_touch();
+			if (crtouch->status_pressed)
+				free_touch(crtouch);
 		} else {
 			result = i2c_smbus_read_i2c_block_data(client, X_COORDINATE_MSB, LEN_XY, xy);
 
@@ -327,7 +363,7 @@ static void report_MT(struct work_struct *work)
 
 					crtouch->x1_old = crtouch->x1;
 					crtouch->y1_old = crtouch->y1;
-					report_single_touch();
+					report_single_touch(crtouch);
 				}
 
 			}
@@ -341,7 +377,7 @@ static void report_MT(struct work_struct *work)
 
 		if (command == ZOOM_IN || command == ZOOM_OUT) {
 
-			free_two_touch();
+			free_two_touch(crtouch);
 
 			switch (command) {
 
@@ -353,17 +389,17 @@ static void report_MT(struct work_struct *work)
 				crtouch->x2 = (xmax/2) + (xmax/20);
 				crtouch->y1 = ymax/2;
 				crtouch->y2 = ymax/2;
-				report_multi_touch();
+				report_multi_touch(crtouch);
 
 				/* to zoom the crtouch size reported
 				msleep(1);
-				crtouch->x1 -= zoom_size/4;
-				crtouch->x2 += zoom_size/4;
-				report_multi_touch();
+				crtouch->x1 -= crtouch->zoom_size/4;
+				crtouch->x2 += crtouch->zoom_size/4;
+				report_multi_touch(crtouch);
 				msleep(1);
-				crtouch->x1 -= zoom_size/4;
-				crtouch->x2 += zoom_size/4;
-				report_multi_touch();
+				crtouch->x1 -= crtouch->zoom_size/4;
+				crtouch->x2 += crtouch->zoom_size/4;
+				report_multi_touch(crtouch);
 				*/
 
 				zoom_value_moved = (xmax/100);
@@ -372,21 +408,21 @@ static void report_MT(struct work_struct *work)
 					msleep(1);
 					crtouch->x1 -= zoom_value_moved;
 					crtouch->x2 += zoom_value_moved;
-					report_multi_touch();
+					report_multi_touch(crtouch);
 					msleep(1);
 					crtouch->x1 -= zoom_value_moved;
 					crtouch->x2 += zoom_value_moved;
-					report_multi_touch();
+					report_multi_touch(crtouch);
 
 				} else {
 					msleep(1);
 					crtouch->x1 -= 5;
 					crtouch->x2 += 5;
-					report_multi_touch();
+					report_multi_touch(crtouch);
 					msleep(1);
 					crtouch->x1 -= 5;
 					crtouch->x2 += 5;
-					report_multi_touch();
+					report_multi_touch(crtouch);
 				}
 				break;
 
@@ -397,7 +433,7 @@ static void report_MT(struct work_struct *work)
 				crtouch->x2 = ((xmax * 57) / 100);
 				crtouch->y1 = ymax/2;
 				crtouch->y2 = ymax/2;
-				report_multi_touch();
+				report_multi_touch(crtouch);
 
 
 				/* to zoom the crtouch size reported
@@ -408,17 +444,17 @@ static void report_MT(struct work_struct *work)
 				crtouch->x2 = ((xmax * 80) / 100);
 				crtouch->y1 = ymax/2;
 				crtouch->y2 = ymax/2;
-				report_multi_touch();
+				report_multi_touch(crtouch);
 
 
 				msleep(1);
-				crtouch->x1 += zoom_size/4;
-				crtouch->x2 -= zoom_size/4;
-				report_multi_touch();
+				crtouch->x1 += crtouch->zoom_size/4;
+				crtouch->x2 -= crtouch->zoom_size/4;
+				report_multi_touch(crtouch);
 				msleep(1);
-				crtouch->x1 += zoom_size/4;
-				crtouch->x2 -= zoom_size/4;
-				report_multi_touch();*/
+				crtouch->x1 += crtouch->zoom_size/4;
+				crtouch->x2 -= crtouch->zoom_size/4;
+				report_multi_touch(crtouch);*/
 				
 
 				zoom_value_moved = (xmax / 100);
@@ -427,21 +463,21 @@ static void report_MT(struct work_struct *work)
 					msleep(1);
 					crtouch->x1 += zoom_value_moved;
 					crtouch->x2 -= zoom_value_moved;
-					report_multi_touch();
+					report_multi_touch(crtouch);
 					msleep(1);
 					crtouch->x1 += zoom_value_moved;
 					crtouch->x2 -= zoom_value_moved;
-					report_multi_touch();
+					report_multi_touch(crtouch);
 
 				} else {
 					msleep(1);
 					crtouch->x1 += 5;
 					crtouch->x2 -= 5;
-					report_multi_touch();
+					report_multi_touch(crtouch);
 					msleep(1);
 					crtouch->x1 += 5;
 					crtouch->x2 -= 5;
-					report_multi_touch();
+					report_multi_touch(crtouch);
 				}
 				break;
 			}
@@ -449,18 +485,21 @@ static void report_MT(struct work_struct *work)
 		}
 
 		else if (command == ROTATE_CLK || command == ROTATE_COUNTER_CLK) {
+			int angle;
+			int scale = (xmax > ymax) ? xmax : ymax;
+			int invert = 0;
+			int xcos, ysin;
 
-			free_two_touch();
+			free_two_touch(crtouch);
 
 			/*get radians from crtouch and change them to degrees*/
-			degrees = ((rotate_angle * 360) / (64 * 3));
+			degrees = ((crtouch->rotate_angle * 360) / (64 * 3));
 			//printk(KERN_ALERT "Degrees calculated: %d", degrees);
 
 			if (degrees < 0) {
-
-				/*fix if negative values appear, because of time sincronization*/
+				/*fix if negative values appear, because of time synchronization*/
 				degrees = rotate_angle_help;
-				last_angle = rotate_angle_help;
+				crtouch->last_angle = rotate_angle_help;
 			}
 
 			/*simulate initial points*/
@@ -468,81 +507,36 @@ static void report_MT(struct work_struct *work)
 			crtouch->y1 = ymax/2;
 			crtouch->x2 = (xmax/2) + (xmax);
 			crtouch->y2 = (ymax/2);
-			report_multi_touch();
+			report_multi_touch(crtouch);
 
 			/*printk(KERN_ALERT "X1: %d", crtouch->x1);
 			printk(KERN_ALERT "X2: %d", crtouch->x2);
 			printk(KERN_ALERT "Y1: %d", crtouch->y1);
 			printk(KERN_ALERT "Y2: %d", crtouch->y2);*/
+			angle = degrees % 360;
 
-			if (command == ROTATE_CLK) {
-
-				if (degrees <= 180) {
-					if(xmax > ymax){
-					crtouch->x2 = (xmax/2) + ((cos_data[degrees-1]*(xmax))/65536);
-					crtouch->y2 = (ymax/2) + ((sin_data[degrees-1]*(xmax))/65536);
-					}
-					else{
-					crtouch->x2 = (xmax/2) + ((cos_data[degrees-1]*(ymax))/65536);
-					crtouch->y2 = (ymax/2) + ((sin_data[degrees-1]*(ymax))/65536);
-					}
-
-				} else if (degrees <= 360) {
-					if(xmax > ymax){
-					crtouch->x2 = (xmax/2) + (((~cos_data[(degrees-181)])*(xmax))/65536);
-					crtouch->y2 = (ymax/2) + (((~sin_data[(degrees-181)])*(xmax))/65536);
-					}
-					else{
-					crtouch->x2 = (xmax/2) + (((~cos_data[(degrees-181)])*(ymax))/65536);
-					crtouch->y2 = (ymax/2) + (((~sin_data[(degrees-181)])*(ymax))/65536);
-					}
-
-				} else if (degrees <= 540) {
-					if(xmax > ymax){
-					crtouch->x2 = (xmax/2) + ((cos_data[degrees-361]*(xmax))/65536);
-					crtouch->y2 = (ymax/2) + ((sin_data[degrees-361]*(xmax))/65536);
-					}
-					else{
-					crtouch->x2 = (xmax/2) + ((cos_data[degrees-361]*(ymax))/65536);
-					crtouch->y2 = (ymax/2) + ((sin_data[degrees-361]*(ymax))/65536);
-					}
-				}
-				report_multi_touch();
-
-			} else if (command == ROTATE_COUNTER_CLK) {
-
-				if (degrees <= 180) {
-					if(xmax > ymax){
-					crtouch->x2 = (xmax/2) - ((cos_data[180 - degrees]*(xmax))/65536);
-					crtouch->y2 = (ymax/2) - ((sin_data[180 - degrees]*(xmax))/65536);
-					}
-					else{
-					crtouch->x2 = (xmax/2) - ((cos_data[180 - degrees]*(ymax))/65536);
-					crtouch->y2 = (ymax/2) - ((sin_data[180 - degrees]*(ymax))/65536);
-					}
-
-				} else if (degrees <= 360) {
-					if(xmax > ymax){
-					crtouch->x2 = (xmax/2) - (((~cos_data[360 - degrees]*(xmax))/65536));
-					crtouch->y2 = (ymax/2) - (((~sin_data[360 - degrees]*(xmax))/65536));
-					}
-					else{
-					crtouch->x2 = (xmax/2) - (((~cos_data[360 - degrees]*(ymax))/65536));
-					crtouch->y2 = (ymax/2) - (((~sin_data[360 - degrees]*(ymax))/65536));
-					}
-
-				} else if (degrees <= 540) {
-					if(xmax > ymax){
-					crtouch->x2 = (xmax/2) - ((cos_data[540 - degrees]*(xmax))/65536);
-					crtouch->y2 = (ymax/2) - ((sin_data[540 - degrees]*(xmax))/65536);
-					}
-					else{
-					crtouch->x2 = (xmax/2) - ((cos_data[540 - degrees]*(ymax))/65536);
-					crtouch->y2 = (ymax/2) - ((sin_data[540 - degrees]*(ymax))/65536);
-					}
-				}
-				report_multi_touch();
+			if (angle >= 180) {
+				angle -= 180;
+				invert = 3;
 			}
+			if (angle > 90) {
+				angle = 180 - angle;
+				invert ^= 1;
+			}
+			xcos = (sin_data[90 - angle] * scale) >> 16;
+			ysin = (sin_data[angle] * scale) >> 16;
+
+			if (command == ROTATE_COUNTER_CLK)
+				invert ^= 3;
+
+			if (invert & 1)
+				xcos = -xcos;
+			if (invert & 2)
+				ysin = -ysin;
+
+			crtouch->x2 = (xmax/2) + xcos;
+			crtouch->y2 = (ymax/2) + ysin;
+			report_multi_touch(crtouch);
 
 			/*printk(KERN_ALERT "X1: %d", crtouch->x1);
 			printk(KERN_ALERT "X2: %d", crtouch->x2);
@@ -560,8 +554,9 @@ static void report_MT(struct work_struct *work)
 
 int crtouch_open(struct inode *inode, struct file *filp)
 {
-	/*Do nothing*/
+	struct crtouch_data *crtouch = container_of(inode->i_cdev, struct crtouch_data, cdev);;
 
+	filp->private_data = crtouch;
 	return 0;
 }
 
@@ -569,7 +564,7 @@ int crtouch_open(struct inode *inode, struct file *filp)
 static ssize_t crtouch_read(struct file *filep,
 			char *buf, size_t count, loff_t *fpos)
 {
-
+	struct crtouch_data *crtouch = filep->private_data;
 	s32 data_to_read;
 
 	if (buf != NULL) {
@@ -648,7 +643,7 @@ static ssize_t crtouch_read(struct file *filep,
 		case AUTO_REPEAT_START:
 		case MAX_TOUCHES:
 
-			data_to_read = i2c_smbus_read_byte_data(client_public, *buf);
+			data_to_read = i2c_smbus_read_byte_data(crtouch->client, *buf);
 
 			if (data_to_read >= 0 && copy_to_user(buf, &data_to_read, 1))
 				printk(KERN_DEBUG "error reading from userspace\n");
@@ -668,7 +663,7 @@ static ssize_t crtouch_read(struct file *filep,
 /*write crtouch register to configure*/
 static ssize_t crtouch_write(struct file *filep, const char __user *buf, size_t size, loff_t *fpos)
 {
-
+	struct crtouch_data *crtouch = filep->private_data;
 	const unsigned char *data_to_write = NULL;
 
 	data_to_write = buf;
@@ -681,7 +676,7 @@ static ssize_t crtouch_write(struct file *filep, const char __user *buf, size_t 
 	/*update driver variable*/
 	if (*data_to_write == CONFIGURATION)	{
 			if ((*(data_to_write + 1) >= 0x00) && (*(data_to_write + 1) <= 0xFF))
-				data_configuration = *(data_to_write + 1);
+				crtouch->data_configuration = *(data_to_write + 1);
 	}
 
 	switch (*data_to_write) {
@@ -709,7 +704,7 @@ static ssize_t crtouch_write(struct file *filep, const char __user *buf, size_t 
 	case TRIGGER_EVENTS:
 
 		if ((*(data_to_write + 1) >= 0x00) && (*(data_to_write + 1) <= 0xFF))
-			i2c_smbus_write_byte_data(client_public,
+			i2c_smbus_write_byte_data(crtouch->client,
 					*data_to_write, *(data_to_write + 1));
 		else
 			printk(KERN_DEBUG "invalid range of data\n");
@@ -720,7 +715,7 @@ static ssize_t crtouch_write(struct file *filep, const char __user *buf, size_t 
 	case RESPONSE_TIME:
 
 		if ((*(data_to_write + 1) >= 0x00) && (*(data_to_write + 1) <= 0x3F))
-			i2c_smbus_write_byte_data(client_public,
+			i2c_smbus_write_byte_data(crtouch->client,
 					*data_to_write, *(data_to_write+1));
 		else
 			printk(KERN_DEBUG "invalid range of data\n");
@@ -728,7 +723,7 @@ static ssize_t crtouch_write(struct file *filep, const char __user *buf, size_t 
 
 	case FIFO_SETUP:
 		if ((*(data_to_write + 1) >= 0x00) && (*(data_to_write + 1) <= 0x1F))
-			i2c_smbus_write_byte_data(client_public,
+			i2c_smbus_write_byte_data(crtouch->client,
 					*data_to_write, *(data_to_write+1));
 		else
 			printk(KERN_DEBUG "invalid range of data\n");
@@ -736,7 +731,7 @@ static ssize_t crtouch_write(struct file *filep, const char __user *buf, size_t 
 
 	case SAMPLING_X_Y:
 		if ((*(data_to_write + 1) >= 0x05) && (*(data_to_write + 1) <= 0x64))
-			i2c_smbus_write_byte_data(client_public,
+			i2c_smbus_write_byte_data(crtouch->client,
 					*data_to_write, *(data_to_write+1));
 		else
 			printk(KERN_DEBUG "invalid range of data\n");
@@ -748,7 +743,7 @@ static ssize_t crtouch_write(struct file *filep, const char __user *buf, size_t 
 	case E2_SENSITIVITY:
 	case E3_SENSITIVITY:
 		if ((*(data_to_write+1) >= 0x02) && (*(data_to_write+1) <= 0x7F))
-			i2c_smbus_write_byte_data(client_public,
+			i2c_smbus_write_byte_data(crtouch->client,
 					*data_to_write, *(data_to_write+1));
 		else
 			printk(KERN_DEBUG "invalid range of data\n");
@@ -760,7 +755,7 @@ static ssize_t crtouch_write(struct file *filep, const char __user *buf, size_t 
 	case LOW_POWER_ELECTRODE:
 	case MAX_TOUCHES:
 		if ((*(data_to_write+1) >= 0x00) && (*(data_to_write+1) <= 0x0F))
-			i2c_smbus_write_byte_data(client_public,
+			i2c_smbus_write_byte_data(crtouch->client,
 					*data_to_write, *(data_to_write+1));
 		else
 			printk(KERN_DEBUG "invalid range of data\n");
@@ -778,50 +773,126 @@ static ssize_t crtouch_write(struct file *filep, const char __user *buf, size_t 
 }
 
 struct file_operations file_ops_crtouch = {
-
 open:	crtouch_open,
 write :	crtouch_write,
 read :	crtouch_read,
-
 };
 
 
 static irqreturn_t crtouch_irq(int irq, void *dev_id)
 {
+	struct crtouch_data *crtouch = dev_id;
 	queue_work(crtouch->workqueue, &crtouch->work);
 	return IRQ_HANDLED;
 }
 
 static int crtouch_resume(struct device *dev)
 {
-	gpio_set_value(PIN_WAKE, GND);
-	udelay(10);
-	gpio_set_value(PIN_WAKE, VCC);
+	struct crtouch_data *crtouch = dev_get_drvdata(dev);
+	int gpio = crtouch->wake_gpio;
+	int active = crtouch->wake_active_low ? 0 : 1;
+
+	if (!gpio_is_valid(gpio)) {
+		gpio = crtouch->reset_gpio;
+		active = crtouch->reset_active_low ? 0 : 1;
+		if (!gpio_is_valid(gpio))
+			return 0;
+	}
+	gpio_set_value(gpio, active);
+	udelay(12);
+	gpio_set_value(gpio, !active);
 	return 0;
 }
 
 static int crtouch_suspend(struct device *dev)
 {
+	struct crtouch_data *crtouch = dev_get_drvdata(dev);
 	s32 data_to_read;
 
-	data_to_read = i2c_smbus_read_byte_data(client_public, CONFIGURATION);
+	data_to_read = i2c_smbus_read_byte_data(crtouch->client, CONFIGURATION);
 	data_to_read |= SHUTDOWN_CRTOUCH;
 	i2c_smbus_write_byte_data(crtouch->client, CONFIGURATION , data_to_read);
 	return 0;
 }
 
+static int setup_wake_gpio(struct i2c_client *client, struct crtouch_data *crtouch)
+{
+	int err = 0;
+	int gpio;
+	enum of_gpio_flags flags;
+	struct device_node *np = client->dev.of_node;
+
+	crtouch->wake_gpio = -1;
+	gpio = of_get_named_gpio_flags(np, "wake-gpios", 0, &flags);
+	pr_info("%s:%d\n", __func__, gpio);
+	if (!gpio_is_valid(gpio))
+		return 0;
+
+	crtouch->wake_active_low = flags & OF_GPIO_ACTIVE_LOW;
+	err = devm_gpio_request_one(&client->dev, gpio, crtouch->wake_active_low ?
+			GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW,
+			"crtouch_wake_gpio");
+	if (err)
+		dev_err(&client->dev, "can't request wake gpio %d", gpio);
+	crtouch->wake_gpio = gpio;
+	return err;
+}
+
+static int setup_reset_gpio(struct i2c_client *client, struct crtouch_data *crtouch)
+{
+	int err = 0;
+	int gpio;
+	enum of_gpio_flags flags;
+	struct device_node *np = client->dev.of_node;
+
+	crtouch->reset_gpio = -1;
+	gpio = of_get_named_gpio_flags(np, "reset-gpios", 0, &flags);
+	pr_info("%s:%d\n", __func__, gpio);
+	if (!gpio_is_valid(gpio))
+		return 0;
+
+	crtouch->reset_active_low = flags & OF_GPIO_ACTIVE_LOW;
+	err = devm_gpio_request_one(&client->dev, gpio, crtouch->reset_active_low ?
+			GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW,
+			"crtouch_reset_gpio");
+	if (err)
+		dev_err(&client->dev, "can't request reset gpio %d", gpio);
+	crtouch->reset_gpio = gpio;
+	return err;
+}
+
+static int setup_irq_gpio(struct i2c_client *client, struct crtouch_data *crtouch)
+{
+	int err = 0;
+	int gpio;
+	struct device_node *np = client->dev.of_node;
+
+	crtouch->irq_gpio = -1;
+	gpio = of_get_named_gpio(np, "interrupts-extended", 0);
+	pr_info("%s:%d\n", __func__, gpio);
+	if (!gpio_is_valid(gpio))
+		return 0;
+
+	err = devm_gpio_request_one(&client->dev, gpio, GPIOF_DIR_IN,
+			"crtouch_irq");
+	if (err) {
+		dev_err(&client->dev, "can't request irq gpio %d", gpio);
+		return err;
+	}
+	crtouch->irq_gpio = gpio;
+	return err;
+}
+
 static int crtouch_probe(struct i2c_client *client,
 				 const struct i2c_device_id *id)
 {
-
+	struct crtouch_data *crtouch;
 	int result;
 	struct input_dev *input_dev;
-	int error = 0;
 	s32 mask_trigger = 0;
 
 
-	/*to be able to communicate by i2c with crtouch (dev)*/
-	client_public = client;
+	pr_info("%s\n", __func__);
 
 	crtouch = kzalloc(sizeof(struct crtouch_data), GFP_KERNEL);
 
@@ -834,10 +905,15 @@ static int crtouch_probe(struct i2c_client *client,
 		goto err_free_mem;
 	}
 
+	crtouch->irq = client->irq;
 	crtouch->input_dev = input_dev;
 	crtouch->client = client;
 	crtouch->workqueue = create_singlethread_workqueue("crtouch");
 	INIT_WORK(&crtouch->work, report_MT);
+
+	setup_reset_gpio(client, crtouch);
+	setup_wake_gpio(client, crtouch);
+	setup_irq_gpio(client, crtouch);
 
 	if (crtouch->workqueue == NULL) {
 		printk(KERN_DEBUG "couldn't create workqueue\n");
@@ -845,17 +921,16 @@ static int crtouch_probe(struct i2c_client *client,
 		goto err_wqueue;
 	}
 
-	error = read_resolution();
-	if (error < 0) {
-		printk(KERN_DEBUG "couldn't read size of screen");
-		result = -EIO;
+	result = read_resolution(crtouch);
+	if (result < 0) {
+		pr_err("couldn't read size of screen %d\n", result);
 		goto err_free_wq;
 	}
 
-	data_configuration = i2c_smbus_read_byte_data(client, CONFIGURATION);
-	data_configuration &= CLEAN_SLIDE_EVENTS;
-	data_configuration |= SET_MULTITOUCH;
-	i2c_smbus_write_byte_data(client, CONFIGURATION, data_configuration);
+	crtouch->data_configuration = i2c_smbus_read_byte_data(client, CONFIGURATION);
+	crtouch->data_configuration &= CLEAN_SLIDE_EVENTS;
+	crtouch->data_configuration |= SET_MULTITOUCH;
+	i2c_smbus_write_byte_data(client, CONFIGURATION, crtouch->data_configuration);
 
 	mask_trigger = i2c_smbus_read_byte_data(client, TRIGGER_EVENTS);
 	mask_trigger |= SET_TRIGGER_RESISTIVE;
@@ -888,105 +963,69 @@ static int crtouch_probe(struct i2c_client *client,
 	__set_bit(KEY_K, crtouch->input_dev->keybit);
 	__set_bit(KEY_L, crtouch->input_dev->keybit);
 
-	input_set_abs_params(crtouch->input_dev, ABS_X, XMIN, xmax, 0, 0);
-	input_set_abs_params(crtouch->input_dev, ABS_Y, YMIN, ymax, 0, 0);
+	input_set_abs_params(crtouch->input_dev, ABS_X, XMIN, crtouch->xmax, 0, 0);
+	input_set_abs_params(crtouch->input_dev, ABS_Y, YMIN, crtouch->ymax, 0, 0);
 	input_set_abs_params(crtouch->input_dev, ABS_MT_POSITION_X,
-				XMIN, xmax, 0, 0);
+				XMIN, crtouch->xmax, 0, 0);
 	input_set_abs_params(crtouch->input_dev, ABS_MT_POSITION_Y,
-				YMIN, ymax, 0, 0);
+				YMIN, crtouch->ymax, 0, 0);
 	input_set_abs_params(crtouch->input_dev, ABS_MT_TOUCH_MAJOR, 0, 1, 0, 0);
 	input_set_abs_params(crtouch->input_dev, ABS_MT_TRACKING_ID, 0, 1, 0, 0);
 
 	input_set_abs_params(crtouch->input_dev, ABS_PRESSURE, 0, 1, 0, 0);
-	printk(KERN_DEBUG "CR-TOUCH max values X: %d Y: %d\n", xmax, ymax);
+	printk(KERN_DEBUG "CR-TOUCH max values X: %d Y: %d\n", crtouch->xmax, crtouch->ymax);
 
 	result = input_register_device(crtouch->input_dev);
 	if (result)
 		goto err_free_wq;
 
-	if (alloc_chrdev_region(&dev_number, 0, 2, DEV_NAME) < 0) {
+	if (alloc_chrdev_region(&crtouch->dev_number, 0, 2, DEV_NAME) < 0) {
 		printk(KERN_DEBUG "couldn't allocate cr-touch device with dev");
 		goto err_unr_dev;
 	}
 
-	cdev_init(&crtouch_cdev , &file_ops_crtouch);
+	cdev_init(&crtouch->cdev , &file_ops_crtouch);
 
-	if (cdev_add(&crtouch_cdev, dev_number, 1)) {
+	if (cdev_add(&crtouch->cdev, crtouch->dev_number, 1)) {
 		printk(KERN_DEBUG "couldn't register cr-touch device with dev\n");
 		goto err_unr_chrdev;
 	}
 
-	crtouch_class = class_create(THIS_MODULE, DEV_NAME);
+	crtouch->crtouch_class = class_create(THIS_MODULE, DEV_NAME);
 
-	if (crtouch_class == NULL) {
+	if (crtouch->crtouch_class == NULL) {
 		printk(KERN_DEBUG "unable to create a class");
-		goto err_unr_createdev;
-	}
-
-	if (device_create(crtouch_class, NULL, dev_number,
-				NULL, DEV_NAME) == NULL) {
-		printk(KERN_DEBUG "unable to create a device");
 		goto err_unr_cdev;
 	}
 
-	result = gpio_request(PIN_WAKE, "GPIO_WAKE_CRTOUCH");
-
-	if (result != 0) {
-		printk(KERN_DEBUG "error requesting GPIO %d", result);
+	if (device_create(crtouch->crtouch_class, NULL, crtouch->dev_number,
+				NULL, DEV_NAME) == NULL) {
+		printk(KERN_DEBUG "unable to create a device");
 		goto err_unr_class;
 	}
 
-	result = gpio_direction_output(PIN_WAKE, GPIOF_OUT_INIT_HIGH);
-
-	if (result != 0) {
-		printk(KERN_DEBUG "error config GPIO PIN direction %d", result);
-		goto err_free_pin;
-	}
-
-	gpio_set_value(PIN_WAKE, VCC);
-
-
-	/*request gpio to used as interrupt*/
-	result = gpio_request(GPIO_IRQ, "GPIO_INTERRUPT_CRTOUCH");
-
-	if (result != 0) {
-		printk(KERN_DEBUG "error requesting GPIO for IRQ %d", result);
-		goto err_free_pin;
-	}
-
-	result = gpio_direction_input(GPIO_IRQ);
-
-	if (result != 0) {
-		printk(KERN_DEBUG "error config IRQ PIN direction %d", result);
-		goto err_free_pinIrq;
-	}
-
 	/* request irq trigger falling */
-	result = request_irq(gpio_to_irq(GPIO_IRQ), crtouch_irq,
-				IRQF_TRIGGER_FALLING, IRQ_NAME, crtouch_irq);
+	result = request_irq(crtouch->irq, crtouch_irq,
+			IRQF_TRIGGER_FALLING, IRQ_NAME, crtouch);
 
 	if (result < 0) {
 		printk(KERN_DEBUG "unable to request IRQ\n");
-		goto err_free_pinIrq;
+		goto err_unr_createdev;
 	}
 
 	/*clean interrupt pin*/
 	i2c_smbus_read_byte_data(client, STATUS_REGISTER_1);
-
+	i2c_set_clientdata(client, crtouch);
 	return 0;
 
-err_free_pinIrq:
-	gpio_free(GPIO_IRQ);
-err_free_pin:
-	gpio_free(PIN_WAKE);
-err_unr_class:
-	class_destroy(crtouch_class);
 err_unr_createdev:
-	device_destroy(crtouch_class, dev_number);
+	device_destroy(crtouch->crtouch_class, crtouch->dev_number);
+err_unr_class:
+	class_destroy(crtouch->crtouch_class);
 err_unr_cdev:
-	cdev_del(&crtouch_cdev);
+	cdev_del(&crtouch->cdev);
 err_unr_chrdev:
-	unregister_chrdev_region(dev_number, 1);
+	unregister_chrdev_region(crtouch->dev_number, 1);
 err_unr_dev:
 	input_unregister_device(crtouch->input_dev);
 err_free_wq:
@@ -1000,22 +1039,25 @@ err_free_mem:
 
 static int crtouch_remove(struct i2c_client *client)
 {
-	cancel_work_sync(&crtouch->work);
-	destroy_workqueue(crtouch->workqueue);
-	class_destroy(crtouch_class);
-	input_unregister_device(crtouch->input_dev);
-	input_free_device(crtouch->input_dev);
-	unregister_chrdev_region(dev_number, 1);
-	free_irq(gpio_to_irq(GPIO_IRQ), crtouch_irq);
-	gpio_free(PIN_WAKE);
-	gpio_free(GPIO_IRQ);
-	kfree(crtouch);
+	struct crtouch_data *crtouch = i2c_get_clientdata(client);
 
+	cancel_work_sync(&crtouch->work);
+
+	device_destroy(crtouch->crtouch_class, crtouch->dev_number);
+	class_destroy(crtouch->crtouch_class);
+	cdev_del(&crtouch->cdev);
+	unregister_chrdev_region(crtouch->dev_number, 1);
+	input_unregister_device(crtouch->input_dev);
+	destroy_workqueue(crtouch->workqueue);
+	input_free_device(crtouch->input_dev);
+	if (gpio_is_valid(crtouch->reset_gpio))
+		gpio_set_value(crtouch->reset_gpio, crtouch->reset_active_low ? 0 : 1);
+	kfree(crtouch);
 	return 0;
 }
 
 static const struct i2c_device_id crtouch_idtable[] = {
-	{"crtouchId", 0},
+	{"crtouch", 0},
 	{}
 };
 
