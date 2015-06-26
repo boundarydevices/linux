@@ -83,6 +83,14 @@ static enum clock_event_mode clockevent_mode = CLOCK_EVT_MODE_UNUSED;
 
 static void __iomem *timer_base;
 
+#ifndef CONFIG_SMP
+static struct property device_disabled = {
+	.name = "status",
+	.length = sizeof("disabled"),
+	.value = "disabled",
+};
+#endif
+
 static inline void gpt_irq_disable(void)
 {
 	unsigned int tmp;
@@ -366,6 +374,15 @@ void __init mxc_timer_init_dt(struct device_node *np)
 {
 	void __iomem *base;
 	int irq;
+#ifndef CONFIG_SMP
+	struct device_node *node;
+
+	node = of_find_compatible_node(NULL, NULL, "arm,armv7-timer");
+	if (node) {
+		pr_info("disable arm arch timer for nosmp!\n");
+		of_add_property(node, &device_disabled);
+	}
+#endif
 
 	base = of_iomap(np, 0);
 	WARN_ON(!base);
