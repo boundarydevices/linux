@@ -393,7 +393,7 @@ static int imx_set_trip_temp(struct thermal_zone_device *tz, int trip,
 
 	if (trip == IMX_TRIP_CRITICAL) {
 		data->temp_critical = temp;
-		if (data->socdata->version != TEMPMON_V1)
+		if (data->socdata->version == TEMPMON_V2)
 			imx_set_panic_temp(data, temp);
 	}
 
@@ -756,8 +756,7 @@ static int imx_thermal_probe(struct platform_device *pdev)
 
 	/* Enable measurements at ~ 10 Hz */
 	measure_freq = DIV_ROUND_UP(32768, 10); /* 10 Hz */
-	if (data->socdata->version != TEMPMON_V3)
-		regmap_field_write(data->measure_freq, measure_freq);
+	regmap_field_write(data->measure_freq, measure_freq);
 	imx_set_alarm_temp(data, data->temp_passive);
 
 	if (data->socdata->version == TEMPMON_V2)
