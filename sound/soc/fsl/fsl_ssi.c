@@ -1297,6 +1297,7 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 {
 	struct device *dev = &pdev->dev;
 	int ret;
+	u32 buffer_size;
 
 	/* Backward compatible for a DT without ipg clock name assigned */
 	if (ssi->has_ipg_clk_name)
@@ -1335,7 +1336,11 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 		ssi->dma_params_rx.maxburst &= ~0x1;
 	}
 
-	if (!ssi->use_dma) {
+	if (of_property_read_u32(np, "fsl,dma-buffer-size", &buffer_size))
+		buffer_size = IMX_SSI_DMABUF_SIZE;
+
+	if (!ssi_private->use_dma) {
+
 		/*
 		 * Some boards use an incompatible codec. Use imx-fiq-pcm-audio
 		 * to get it working, as DMA is not possible in this situation.
@@ -1349,7 +1354,7 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 		if (ret)
 			goto error_pcm;
 	} else {
-		ret = imx_pcm_dma_init(pdev, IMX_SSI_DMABUF_SIZE);
+		ret = imx_pcm_dma_init(pdev, buffer_size);
 		if (ret)
 			goto error_pcm;
 	}
