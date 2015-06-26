@@ -130,6 +130,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6dl-sp.dtb \
 	imx6dl-wandboard.dtb \
 	imx6q-arm2.dtb \
+	imx6q-eo.dtb \
 	imx6q-nitrogen6_max.dtb \
 	imx6q-nitrogen6_max-nolcd.dtb \
 	imx6q-nitrogen6x.dtb \
