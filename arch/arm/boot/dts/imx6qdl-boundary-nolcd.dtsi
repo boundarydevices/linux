@@ -177,6 +177,14 @@
 			>;
 		};
 	};
+
+	pwm2 {
+		pinctrl_pwm2_1: pwm2grp-1 {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT9__PWM2_OUT 0x1b0b1
+			>;
+		};
+	};
 };
 
 &pwm2 {

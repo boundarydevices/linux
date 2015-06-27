@@ -26,19 +26,11 @@
 	ipu_id = <1>;
 };
 
-&mxcfb1 {
+&lvds_display {
 	status = "okay";
 };
 
-&mxcfb2 {
-	status = "okay";
-};
-
-&mxcfb3 {
-	status = "okay";
-};
-
-&mxcfb4 {
+&hdmi_display {
 	status = "okay";
 };
 
