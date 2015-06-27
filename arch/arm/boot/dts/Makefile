@@ -131,12 +131,15 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6dl-wandboard.dtb \
 	imx6q-arm2.dtb \
 	imx6q-nitrogen6_max.dtb \
+	imx6q-nitrogen6_max-nolcd.dtb \
 	imx6q-nitrogen6x.dtb \
+	imx6q-nitrogen6x-nolcd.dtb \
 	imx6q-sabreauto.dtb \
 	imx6q-sabreauto-ecspi.dtb \
 	imx6q-sabreauto-flexcan1.dtb \
 	imx6q-sabreauto-gpmi-weim.dtb \
 	imx6q-sabrelite.dtb \
+	imx6q-sabrelite-nolcd.dtb \
 	imx6q-sabresd.dtb \
 	imx6q-sabresd-enetirq.dtb \
 	imx6q-sabresd-uart.dtb \
