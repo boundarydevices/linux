@@ -884,7 +884,8 @@ int ci_otg_fsm_work(struct ci_hdrc *ci)
 				ci->id_event = false;
 		} else if (ci->fsm.otg->state == OTG_STATE_B_IDLE) {
 			ci->fsm.b_sess_vld = hw_read_otgsc(ci, OTGSC_BSV);
-		} else if (ci->fsm.otg->state == OTG_STATE_A_HOST) {
+		} else if (ci->fsm.otg->state == OTG_STATE_A_HOST ||
+			ci->fsm.otg->state == OTG_STATE_A_WAIT_VFALL) {
 			pm_runtime_mark_last_busy(ci->dev);
 			pm_runtime_put_autosuspend(ci->dev);
 			return 0;
@@ -1169,7 +1170,7 @@ void ci_hdrc_otg_fsm_remove(struct ci_hdrc *ci)
 	ci->enabled_otg_timer_bits = 0;
 
 	/* Turn off vbus if vbus is on */
-	if (ci->fsm.a_vbus_vld)
+	if (ci->fsm.drv_vbus)
 		otg_drv_vbus(&ci->fsm, 0);
 
 	sysfs_remove_group(&ci->dev->kobj, &inputs_attr_group);
