@@ -1446,8 +1446,6 @@ static int ov5640_s_power(struct v4l2_subdev *sd, int on)
 		if (analog_regulator)
 			if (regulator_enable(analog_regulator) != 0)
 				return -EIO;
-		/* Make sure power on */
-		ov5640_power_down(0);
 	} else if (!on && sensor->on) {
 		if (analog_regulator)
 			regulator_disable(analog_regulator);
@@ -1457,8 +1455,6 @@ static int ov5640_s_power(struct v4l2_subdev *sd, int on)
 			regulator_disable(io_regulator);
 		if (gpo_regulator)
 			regulator_disable(gpo_regulator);
-
-		ov5640_power_down(1);
 	}
 
 	sensor->on = on;
@@ -1528,9 +1524,6 @@ static int ov5640_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 	enum ov5640_frame_rate frame_rate;
 	enum ov5640_mode orig_mode;
 	int ret = 0;
-
-	/* Make sure power on */
-	ov5640_power_down(0);
 
 	switch (a->type) {
 	/* This is the only case currently handled. */
