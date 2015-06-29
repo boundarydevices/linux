@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2015 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014  Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -60,7 +94,7 @@ typedef struct _DFBPixmap *  HALNativePixmapType;
 /* Wayland platform. */
 #include <wayland-egl.h>
 
-#define WL_EGL_NUM_BACKBUFFERS 2
+#define WL_COMPOSITOR_SIGNATURE (0x31415926)
 
 typedef struct _gcsWL_VIV_BUFFER
 {
@@ -86,6 +120,7 @@ typedef struct _gcsWL_EGL_BUFFER_INFO
    gctINT32 height;
    gctINT32 stride;
    gceSURF_FORMAT format;
+   gceSURF_TYPE   type;
    gcuVIDMEM_NODE_PTR node;
    gcePOOL pool;
    gctUINT bytes;
@@ -99,6 +134,7 @@ typedef struct _gcsWL_EGL_BUFFER
 {
    struct wl_buffer* wl_buffer;
    gcsWL_EGL_BUFFER_INFO info;
+   struct wl_callback* frame_callback;
 } gcsWL_EGL_BUFFER;
 
 typedef struct _gcsWL_EGL_WINDOW_INFO
@@ -107,20 +143,21 @@ typedef struct _gcsWL_EGL_WINDOW_INFO
    gctINT32 dy;
    gctUINT width;
    gctUINT height;
-   gctINT32 attached_width;
-   gctINT32 attached_height;
    gceSURF_FORMAT format;
    gctUINT bpp;
+   gctINT  bufferCount;
+   gctUINT current;
 } gcsWL_EGL_WINDOW_INFO;
 
 struct wl_egl_window
 {
    gcsWL_EGL_DISPLAY* display;
-   gcsWL_EGL_BUFFER backbuffers[WL_EGL_NUM_BACKBUFFERS];
-   gcsWL_EGL_WINDOW_INFO info;
-   gctUINT current;
+   gcsWL_EGL_BUFFER **backbuffers;
+   gcsWL_EGL_WINDOW_INFO* info;
+   gctINT  noResolve;
+   gctINT32 attached_width;
+   gctINT32 attached_height;
    struct wl_surface* surface;
-   struct wl_callback* frame_callback;
 };
 
 typedef void*   HALNativeDisplayType;
@@ -390,6 +427,14 @@ gcoOS_GetWindowInfo(
     );
 
 gceSTATUS
+gcoOS_SetWindowFormat(
+    IN HALNativeDisplayType Display,
+    IN HALNativeWindowType Window,
+    IN gceTILING Tiling,
+    IN gceSURF_FORMAT Format
+    );
+
+gceSTATUS
 gcoOS_DestroyWindow(
     IN HALNativeDisplayType Display,
     IN HALNativeWindowType Window
@@ -637,6 +682,12 @@ gcoOS_ResizeWindow(
 
 #ifdef USE_FREESCALE_EGL_ACCEL
 gceSTATUS
+gcoOS_CreateDrawableEx(
+    IN gctPOINTER localDisplay,
+    IN HALNativeWindowType Drawable,
+    IN gctBOOL linear);
+
+gceSTATUS
 gcoOS_SwapBuffersGeneric_Async(
     IN gctPOINTER localDisplay,
     IN HALNativeWindowType Drawable,
@@ -645,7 +696,8 @@ gcoOS_SwapBuffersGeneric_Async(
     IN gctPOINTER ResolveBits,
     OUT gctUINT *Width,
     OUT gctUINT *Height,
-    IN void * resolveRect
+    IN void * resolveRect,
+    OUT gcoSURF *nextSurf
     );
 
 gceSTATUS
