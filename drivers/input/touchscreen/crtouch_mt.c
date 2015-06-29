@@ -44,58 +44,125 @@
 
 #include "crtouch_mt.h"
 
+static int calibration[7] = {
+#if 0
+	65536,0,0,
+	0,65536,0,
+	0
+#else
+	-80, -14442, 55506584,
+	-10706, -297, 37997460,
+	65536
+#endif
+};
+module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
+
+static int screenres[2] = {800, 480};
+module_param_array(screenres, int, NULL, S_IRUGO | S_IWUSR);
+
+static void translate(int *px, int *py)
+{
+	int x, y, x1, y1;
+	if (calibration[6]) {
+		x1 = *px;
+		y1 = *py;
+
+		x = calibration[0] * x1 +
+			calibration[1] * y1 +
+			calibration[2];
+		x /= calibration[6];
+		if (x < 0)
+			x = 0;
+		y = calibration[3] * x1 +
+			calibration[4] * y1 +
+			calibration[5];
+		y /= calibration[6];
+		if (y < 0)
+			y = 0;
+		*px = x ;
+		*py = y ;
+	}
+}
+
+
+
 void report_single_touch(struct crtouch_data *crtouch)
 {
-	input_report_abs(crtouch->input_dev, ABS_MT_POSITION_X, crtouch->x1);
-	input_report_abs(crtouch->input_dev, ABS_MT_POSITION_Y, crtouch->y1);
+//#define USE_ABS_MT
+	int x1 = crtouch->x1;
+	int y1 = crtouch->y1;
+
+	translate(&x1, &y1);
+#ifdef USE_ABS_MT
+	input_report_abs(crtouch->input_dev, ABS_MT_POSITION_X, x1);
+	input_report_abs(crtouch->input_dev, ABS_MT_POSITION_Y, y1);
 	input_report_abs(crtouch->input_dev, ABS_MT_TOUCH_MAJOR, 1);
 	input_mt_sync(crtouch->input_dev);
-	input_event(crtouch->input_dev, EV_ABS, ABS_X, crtouch->x1);
-	input_event(crtouch->input_dev, EV_ABS, ABS_Y, crtouch->y1);
-	input_event(crtouch->input_dev, EV_KEY, BTN_TOUCH, 1);
+#else
+	input_report_abs(crtouch->input_dev, ABS_X, x1);
+	input_report_abs(crtouch->input_dev, ABS_Y, y1);
 	input_report_abs(crtouch->input_dev, ABS_PRESSURE, 1);
+	input_report_key(crtouch->input_dev, BTN_TOUCH, 1);
 	input_sync(crtouch->input_dev);
-
+#endif
 	crtouch->status_pressed = CRTOUCH_TOUCHED;
 }
 
 void report_multi_touch(struct crtouch_data *crtouch)
 {
+	int x1 = crtouch->x1;
+	int y1 = crtouch->y1;
 
-	input_report_key(crtouch->input_dev, ABS_MT_TRACKING_ID, 0);
-	input_report_abs(crtouch->input_dev, ABS_MT_TOUCH_MAJOR, 1);
-	input_report_abs(crtouch->input_dev, ABS_MT_POSITION_X, crtouch->x1);
-	input_report_abs(crtouch->input_dev, ABS_MT_POSITION_Y, crtouch->y1);
-	input_mt_sync(crtouch->input_dev);
+	translate(&x1, &y1);
 
-	input_report_key(crtouch->input_dev, ABS_MT_TRACKING_ID, 1);
-	input_report_abs(crtouch->input_dev, ABS_MT_TOUCH_MAJOR, 1);
-	input_report_abs(crtouch->input_dev, ABS_MT_POSITION_X, crtouch->x2);
-	input_report_abs(crtouch->input_dev, ABS_MT_POSITION_Y, crtouch->y2);
-	input_mt_sync(crtouch->input_dev);
+#ifdef USE_ABS_MT
+	{
+		int x2 = crtouch->x2;
+		int y2 = crtouch->y2;
+		translate(&x2, &y2);
+		input_report_key(crtouch->input_dev, ABS_MT_TRACKING_ID, 0);
+		input_report_abs(crtouch->input_dev, ABS_MT_TOUCH_MAJOR, 1);
+		input_report_abs(crtouch->input_dev, ABS_MT_POSITION_X, x1);
+		input_report_abs(crtouch->input_dev, ABS_MT_POSITION_Y, y1);
+		input_mt_sync(crtouch->input_dev);
 
+		input_report_key(crtouch->input_dev, ABS_MT_TRACKING_ID, 1);
+		input_report_abs(crtouch->input_dev, ABS_MT_TOUCH_MAJOR, 1);
+		input_report_abs(crtouch->input_dev, ABS_MT_POSITION_X, x2);
+		input_report_abs(crtouch->input_dev, ABS_MT_POSITION_Y, y2);
+		input_mt_sync(crtouch->input_dev);
+		input_sync(crtouch->input_dev);
+	}
+#else
+	input_report_abs(crtouch->input_dev, ABS_X, x1);
+	input_report_abs(crtouch->input_dev, ABS_Y, y1);
+	input_report_abs(crtouch->input_dev, ABS_PRESSURE, 1);
+	input_report_key(crtouch->input_dev, BTN_TOUCH, 1);
 	input_sync(crtouch->input_dev);
-
+#endif
 	crtouch->status_pressed = CRTOUCH_TOUCHED;
 }
 
 void free_touch(struct crtouch_data *crtouch)
 {
+#ifdef USE_ABS_MT
 	input_event(crtouch->input_dev, EV_ABS, ABS_MT_TOUCH_MAJOR, 0);
 	input_mt_sync(crtouch->input_dev);
-	input_event(crtouch->input_dev, EV_KEY, BTN_TOUCH, 0);
+#else
 	input_report_abs(crtouch->input_dev, ABS_PRESSURE, 0);
+	input_report_key(crtouch->input_dev, BTN_TOUCH, 0);
 	input_sync(crtouch->input_dev);
+#endif
 
 	crtouch->status_pressed = CRTOUCH_RELEASED;
 }
 
 void free_two_touch(struct crtouch_data *crtouch){
 
+#ifdef USE_ABS_MT
 	input_event(crtouch->input_dev, EV_ABS, ABS_MT_TOUCH_MAJOR, 0);
 	input_mt_sync(crtouch->input_dev);
-	input_sync(crtouch->input_dev);
-
+#endif
 }
 
 int read_resolution(struct crtouch_data *crtouch)
@@ -890,6 +957,7 @@ static int crtouch_probe(struct i2c_client *client,
 	int result;
 	struct input_dev *input_dev;
 	s32 mask_trigger = 0;
+	int max_x, max_y;
 
 
 	pr_info("%s\n", __func__);
@@ -963,17 +1031,27 @@ static int crtouch_probe(struct i2c_client *client,
 	__set_bit(KEY_K, crtouch->input_dev->keybit);
 	__set_bit(KEY_L, crtouch->input_dev->keybit);
 
-	input_set_abs_params(crtouch->input_dev, ABS_X, XMIN, crtouch->xmax, 0, 0);
-	input_set_abs_params(crtouch->input_dev, ABS_Y, YMIN, crtouch->ymax, 0, 0);
-	input_set_abs_params(crtouch->input_dev, ABS_MT_POSITION_X,
-				XMIN, crtouch->xmax, 0, 0);
-	input_set_abs_params(crtouch->input_dev, ABS_MT_POSITION_Y,
-				YMIN, crtouch->ymax, 0, 0);
-	input_set_abs_params(crtouch->input_dev, ABS_MT_TOUCH_MAJOR, 0, 1, 0, 0);
+	if (calibration[6]) {
+		max_x = screenres[0] - 1;
+		max_y = screenres[1] - 1;
+	} else {
+		max_x = crtouch->xmax - 1;
+		max_y = crtouch->ymax - 1;
+	}
+#ifdef USE_ABS_MT
+	input_set_abs_params(crtouch->input_dev, ABS_MT_POSITION_X, XMIN, max_x, 0, 0);
+	input_set_abs_params(crtouch->input_dev, ABS_MT_POSITION_Y, YMIN, max_y, 0, 0);
 	input_set_abs_params(crtouch->input_dev, ABS_MT_TRACKING_ID, 0, 1, 0, 0);
 
+	input_set_abs_params(crtouch->input_dev, ABS_X, XMIN, max_x, 0, 0);
+	input_set_abs_params(crtouch->input_dev, ABS_Y, YMIN, max_y, 0, 0);
+
+	input_set_abs_params(crtouch->input_dev, ABS_MT_TOUCH_MAJOR, 0, 1, 0, 0);
+#else
+	input_set_abs_params(crtouch->input_dev, ABS_X, XMIN, max_x, 0, 0);
+	input_set_abs_params(crtouch->input_dev, ABS_Y, YMIN, max_y, 0, 0);
 	input_set_abs_params(crtouch->input_dev, ABS_PRESSURE, 0, 1, 0, 0);
-	printk(KERN_DEBUG "CR-TOUCH max values X: %d Y: %d\n", crtouch->xmax, crtouch->ymax);
+#endif
 
 	result = input_register_device(crtouch->input_dev);
 	if (result)
