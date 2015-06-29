@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2015 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014  Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -67,7 +101,7 @@ typedef struct _gcsCONTEXT_MAP *        gcsCONTEXT_MAP_PTR;
 typedef void *                          gcoVG;
 #endif
 
-#if GC355_PROFILER
+#if gcdGC355_PROFILER
 typedef struct _gcsPROFILERFUNCData * gcsPROFILERFUNCData_PTR;
 typedef struct _gcsPROFILERFUNCNODE * gcsPROFILERFUNCNODE_PTR;
 #endif
@@ -76,6 +110,8 @@ typedef struct _gcsPROFILERFUNCNODE * gcsPROFILERFUNCNODE_PTR;
 typedef struct _gcoFENCE *              gcoFENCE;
 typedef struct _gcsSYNC_CONTEXT *       gcsSYNC_CONTEXT_PTR;
 #endif
+
+typedef struct _gcsUSER_MEMORY_DESC *   gcsUSER_MEMORY_DESC_PTR;
 
 /******************************************************************************\
 ********************* Share obj lock/unlock macros. ****************************
@@ -202,15 +238,27 @@ typedef enum _gcePATCH_ID
     gcvPATCH_OES30SFT,
     gcvPATCH_BASEMARKOSIICN,
     gcvPATCH_FRUITNINJA,
+    gcvPATCH_ANDROID_WEBGL,
 #if defined(ANDROID)
     gcePATCH_ANDROID_CTS_MEDIA_PRESENTATIONTIME,
 #endif
     gcvPATCH_ANDROID_COMPOSITOR,
     gcvPATCH_CTS_TEXTUREVIEW,
     gcvPATCH_WATER2_CHUKONG,
+    gcvPATCH_GOOGLEEARTH,
+    gcvPATCH_LEANBACK,
+    gcvPATCH_ANGRYBIRDS,
+    gcvPATCH_REALRACING,
+    gcvPATCH_CLASHOFCLAN,
+    gcvPATCH_TEMPLERUN,
+    gcvPATCH_SBROWSER,
 
     gcvPATCH_COUNT
 } gcePATCH_ID;
+#endif /* gcdENABLE_3D */
+
+#if gcdENABLE_3D
+#define gcdPROC_IS_WEBGL(patchId) ((patchId) == gcvPATCH_CHROME || (patchId) == gcvPATCH_FIREFOX || (patchId) == gcvPATCH_ANDROID_WEBGL)
 #endif /* gcdENABLE_3D */
 
 typedef void (* gctPLS_DESTRUCTOR) (
@@ -534,7 +582,7 @@ typedef struct _gcsCONTAINER
 }
 gcsCONTAINER;
 
-#if GC355_PROFILER
+#if gcdGC355_PROFILER
 /*------------------------GC355_PROFILER function node structure--------------*/
 typedef struct _gcsPROFILERFUNCData
 {
@@ -1124,6 +1172,12 @@ gcoHAL_QueryTargetCaps(
     );
 #endif
 
+gceSTATUS
+gcoHAL_WrapUserMemory(
+    IN gcsUSER_MEMORY_DESC_PTR UserMemoryDesc,
+    OUT gctUINT32_PTR Node
+    );
+
 /******************************************************************************\
 ********************************** gcoOS Object *********************************
 \******************************************************************************/
@@ -1331,6 +1385,8 @@ gcoOS_FreeNonPagedMemory(
 #define gcmkOS_SAFE_FREE(os, mem) \
     gckOS_Free(os, mem); \
     mem = gcvNULL
+
+#define gcdMAX_PATH 512
 
 typedef enum _gceFILE_MODE
 {
@@ -1685,11 +1741,10 @@ gcoOS_QueryVideoMemory(
     OUT gctSIZE_T * ContiguousSize
     );
 
-/* Detect if the process is the executable specified. */
 gceSTATUS
-gcoOS_DetectProcessByNamePid(
-    IN gctCONST_STRING Name,
-    IN gctHANDLE Pid
+gcoOS_QueryCurrentProcessName(
+    OUT gctSTRING Name,
+    IN gctSIZE_T Size
     );
 
 /* Detect if the current process is the executable specified. */
@@ -1944,7 +1999,15 @@ gcoOS_CreateNativeFence(
     OUT gctINT * FenceFD
     );
 
-/* Wait on native fence. */
+/* (CPU) Wait on native fence. */
+gceSTATUS
+gcoOS_ClientWaitNativeFence(
+    IN gcoOS Os,
+    IN gctINT FenceFD,
+    IN gctUINT32 Timeout
+    );
+
+/* (GPU) Wait on native fence. */
 gceSTATUS
 gcoOS_WaitNativeFence(
     IN gcoOS Os,
@@ -2813,6 +2876,19 @@ gcoSURF_CPUCacheOperation(
     IN gceCACHEOPERATION Operation
     );
 
+gceSTATUS
+gcoSURF_WrapUserMultiBuffer(
+    IN gcoHAL Hal,
+    IN gctUINT Width,
+    IN gctUINT Height,
+    IN gceSURF_TYPE Type,
+    IN gceSURF_FORMAT Format,
+    IN gctUINT Stride[3],
+    IN gctUINT32 Handle[3],
+    IN gctUINT BufferOffset[3],
+    IN gctUINT32 Flag,
+    OUT gcoSURF * Surface
+    );
 
 gceSTATUS
 gcoSURF_Swap(
@@ -2893,7 +2969,27 @@ gcoSURF_GetSamples(
     IN gcoSURF Surface,
     OUT gctUINT_PTR Samples
     );
+
+/* Append tile status buffer. */
+gceSTATUS
+gcoSURF_AttachTileStatus(
+    IN gcoSURF Surface
+    );
 #endif
+
+gceSTATUS
+gcoSURF_WrapUserMemory(
+    IN gcoHAL Hal,
+    IN gctUINT Width,
+    IN gctUINT Height,
+    IN gctUINT Stride,
+    IN gctUINT Depth,
+    IN gceSURF_TYPE Type,
+    IN gceSURF_FORMAT Format,
+    IN gctUINT32 Handle,
+    IN gctUINT32 Flag,
+    OUT gcoSURF * Surface
+    );
 
 /******************************************************************************\
 ********************************* gcoDUMP Object ********************************
@@ -3305,6 +3401,7 @@ gcoOS_DebugTrace(
 #define gcvZONE_DATABASE        (1 << 11)
 #define gcvZONE_INTERRUPT       (1 << 12)
 #define gcvZONE_POWER           (1 << 13)
+#define gcvZONE_ALLOCATOR       (1 << 14)
 
 /* User zones. */
 #define gcvZONE_HAL             (1 << 3)

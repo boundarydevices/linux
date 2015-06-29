@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2015 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014  Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -343,11 +377,40 @@ gc_db_show(struct seq_file *m, void *data)
 static int
 gc_version_show(struct seq_file *m, void *data)
 {
-    seq_printf(m, "%s\n",  gcvVERSION_STRING);
+    gcsINFO_NODE *node = m->private;
+    gckGALDEVICE device = node->device;
+    gcsPLATFORM * platform = device->platform;
+    gctCONST_STRING name;
+
+    seq_printf(m, "%s built at %s\n",  gcvVERSION_STRING, HOST);
+
+    if (platform->ops->name)
+    {
+        platform->ops->name(platform, &name);
+        seq_printf(m, "Platform path: %s\n", name);
+    }
+    else
+    {
+        seq_printf(m, "Code path: %s\n", __FILE__);
+    }
 
     return 0 ;
 }
 
+/*******************************************************************************
+**
+** Show PM state timer.
+**
+** Entry is called as 'idle' for compatible reason, it shows more information
+** than idle actually.
+**
+**  Start: Start time of this counting period.
+**  End: End time of this counting peroid.
+**  On: Time GPU stays in gcvPOWER_0N.
+**  Off: Time GPU stays in gcvPOWER_0FF.
+**  Idle: Time GPU stays in gcvPOWER_IDLE.
+**  Suspend: Time GPU stays in gcvPOWER_SUSPEND.
+*/
 static int
 gc_idle_show(struct seq_file *m, void *data)
 {
@@ -355,24 +418,22 @@ gc_idle_show(struct seq_file *m, void *data)
     gckGALDEVICE device = node->device;
     gckKERNEL kernel = _GetValidKernel(device);
 
-    static gctUINT64 idleTime = 0;
+    gctUINT64 start;
+    gctUINT64 end;
+    gctUINT64 on;
+    gctUINT64 off;
+    gctUINT64 idle;
+    gctUINT64 suspend;
 
-    /* Acquire the database mutex. */
-    gcmkVERIFY_OK(
-        gckOS_AcquireMutex(kernel->os, kernel->db->dbMutex, gcvINFINITE));
-
-    if (kernel->db->idleTime)
-    {
-        /* Record idle time if DB upated. */
-        idleTime = kernel->db->idleTime;
-        kernel->db->idleTime = 0;
-    }
+    gckHARDWARE_QueryStateTimer(kernel->hardware, &start, &end, &on, &off, &idle, &suspend);
 
     /* Idle time since last call */
-    seq_printf(m, "GPU Idle: %llu ns\n",  idleTime);
-
-    /* Release the database mutex. */
-    gcmkVERIFY_OK(gckOS_ReleaseMutex(kernel->os, kernel->db->dbMutex));
+    seq_printf(m, "Start:   %llu ns\n",  start);
+    seq_printf(m, "End:     %llu ns\n",  end);
+    seq_printf(m, "On:      %llu ns\n",  on);
+    seq_printf(m, "Off:     %llu ns\n",  off);
+    seq_printf(m, "Idle:    %llu ns\n",  idle);
+    seq_printf(m, "Suspend: %llu ns\n",  suspend);
 
     return 0 ;
 }
@@ -1082,6 +1143,13 @@ gckGALDEVICE_Construct(
         device->requestedRegisterMemBases[gcvCORE_VG] = RegisterMemBaseVG;
         device->requestedRegisterMemSizes[gcvCORE_VG] = RegisterMemSizeVG;
     }
+#if gcdENABLE_DEC_COMPRESSION
+    {
+        device->requestedRegisterMemBases[gcvCORE_DEC] = Args->registerMemBaseDEC300;
+        device->requestedRegisterMemSizes[gcvCORE_DEC] = Args->registerMemSizeDEC300;
+    }
+#endif
+
 
     device->requestedContiguousBase  = 0;
     device->requestedContiguousSize  = 0;

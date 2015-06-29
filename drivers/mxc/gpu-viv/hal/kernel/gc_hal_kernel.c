@@ -1,25 +1,63 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2015 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014  Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
 
 #include "gc_hal_kernel_precomp.h"
+
+#if gcdENABLE_DEC_COMPRESSION && gcdDEC_ENABLE_AHB
+#include "viv_dec300_main.h"
+#endif
 
 #define _GC_OBJ_ZONE    gcvZONE_KERNEL
 
@@ -170,6 +208,7 @@ _MonitorTimerFunction(
             if (kernel->eventObj->lastCommitStamp == kernel->lastCommitStamp
              && kernel->hardware->lastWaitLink    == kernel->restoreAddress
              && mask                              == kernel->restoreMask
+             && kernel->hardware->chipPowerState  == gcvPOWER_ON
             )
             {
                 /* GPU state is not changed, accumlate timeout. */
@@ -426,7 +465,7 @@ gckKERNEL_Construct(
 
         /* Initialize virtual command buffer. */
         /* TODO: Remove platform limitation after porting. */
-#if (defined(LINUX) || defined(__QNXNTO__))
+#if (defined(LINUX) || defined(__QNXNTO__)) && !gcdALLOC_CMD_FROM_RESERVE
         kernel->virtualCommandBuffer = gcvTRUE;
 #else
         kernel->virtualCommandBuffer = gcvFALSE;
@@ -477,7 +516,7 @@ gckKERNEL_Construct(
 #endif
 
     kernel->recovery      = gcvTRUE;
-    kernel->stuckDump     = 1;
+    kernel->stuckDump     = gcvSTUCK_DUMP_NONE;
 
     kernel->virtualBufferHead =
     kernel->virtualBufferTail = gcvNULL;
@@ -1446,11 +1485,71 @@ gckKERNEL_ConfigPowerManagement(
 
     gcmkONERROR(gckHARDWARE_SetPowerManagement(Kernel->hardware, enable));
 
-    if (enable == gcvTRUE)
+    if (enable == gcvFALSE)
     {
         gcmkONERROR(
             gckHARDWARE_SetPowerManagementState(Kernel->hardware, gcvPOWER_ON));
     }
+
+    gcmkFOOTER_NO();
+    return gcvSTATUS_OK;
+
+OnError:
+    gcmkFOOTER();
+    return status;
+}
+
+gceSTATUS
+gckKERNEL_WrapUserMemory(
+    IN gckKERNEL Kernel,
+    IN gctUINT32 ProcessID,
+    IN gcsUSER_MEMORY_DESC_PTR Desc,
+    OUT gctUINT32 * Node
+    )
+{
+    gceSTATUS status;
+    gcuVIDMEM_NODE_PTR node = gcvNULL;
+    gctUINT32 handle;
+    gceDATABASE_TYPE databaseRecordType;
+
+    gcmkHEADER_ARG("Kernel=0x%X Desc=%x", Kernel, Desc);
+
+    gcmkONERROR(gckVIDMEM_ConstructVirtualFromUserMemory(
+        Kernel,
+        Desc,
+        &node
+        ));
+
+    /* Allocate handle for this video memory. */
+    gcmkONERROR(gckVIDMEM_NODE_Allocate(
+        Kernel,
+        node,
+        gcvSURF_BITMAP,
+        gcvPOOL_VIRTUAL,
+        &handle
+        ));
+
+    /* Wrapped node is treated as gcvPOOL_VIRTUAL, but in statistic view,
+    *  it is gcvPOOL_USER.
+    */
+    databaseRecordType
+        = gcvDB_VIDEO_MEMORY
+        | (gcvSURF_BITMAP << gcdDB_VIDEO_MEMORY_TYPE_SHIFT)
+        | (gcvPOOL_USER << gcdDB_VIDEO_MEMORY_POOL_SHIFT)
+        ;
+
+    /* Record in process db. */
+    gcmkONERROR(gckKERNEL_AddProcessDB(
+        Kernel,
+        ProcessID,
+        databaseRecordType,
+        gcmINT2PTR(handle),
+        gcvNULL,
+        node->Virtual.bytes
+        ));
+
+    /* Return handle of the node. */
+    *Node = handle;
 
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;
@@ -2042,7 +2141,7 @@ gckKERNEL_Dispatch(
             gctUINT32 coreId = 0;
             gctUINT32 coreSelect = Interface->u.ReadRegisterDataEx.coreSelect;
 
-            gcmkONERROR(gckOS_AcquireMutex(Kernel->os, Kernel->hardware->powerMutex, gcvINFINITE));
+            gckOS_AcquireMutex(Kernel->os, Kernel->hardware->powerMutex, gcvINFINITE);
             powerMutexAcquired = gcvTRUE;
             gcmkONERROR(gckHARDWARE_QueryPowerManagementState(Kernel->hardware,
                     &power));
@@ -2215,6 +2314,11 @@ gckKERNEL_Dispatch(
         if(Kernel->hardware->gpuProfiler)
         {
             Kernel->profileEnable = Interface->u.SetProfileSetting.enable;
+
+            if ((Kernel->hardware->identity.chipModel == gcv1500 && Kernel->hardware->identity.chipRevision == 0x5246) ||
+                 (Kernel->hardware->identity.chipModel == gcv3000 && Kernel->hardware->identity.chipRevision == 0x5450))
+                gcmkONERROR(gckHARDWARE_InitProfiler(Kernel->hardware));
+
 #if VIVANTE_PROFILER_NEW
             if (Kernel->profileEnable)
                 gckHARDWARE_InitProfiler(Kernel->hardware);
@@ -2438,9 +2542,10 @@ gckKERNEL_Dispatch(
             gckCOMMAND_Attach(Kernel->command,
                               &context,
                               &bytes,
+                              &Interface->u.Attach.numStates,
                               processID));
 
-        Interface->u.Attach.stateCount = bytes;
+        Interface->u.Attach.maxState = bytes;
         Interface->u.Attach.context = gcmPTR_TO_NAME(context);
 
         if (Interface->u.Attach.map == gcvTRUE)
@@ -2625,6 +2730,22 @@ gckKERNEL_Dispatch(
             Interface->u.CreateNativeFence.fenceFD = fenceFD;
         }
         break;
+
+    case gcvHAL_WAIT_NATIVE_FENCE:
+        {
+            gctINT fenceFD;
+            gctUINT32 timeout;
+
+            fenceFD = Interface->u.WaitNativeFence.fenceFD;
+            timeout = Interface->u.WaitNativeFence.timeout;
+
+            gcmkONERROR(
+                gckOS_WaitNativeFence(Kernel->os,
+                                      Kernel->timeline,
+                                      fenceFD,
+                                      timeout));
+        }
+        break;
 #endif
 
     case gcvHAL_SHBUF:
@@ -2717,6 +2838,52 @@ gckKERNEL_Dispatch(
     case gcvHAL_CONFIG_POWER_MANAGEMENT:
         gcmkONERROR(gckKERNEL_ConfigPowerManagement(Kernel, Interface));
         break;
+
+    case gcvHAL_WRAP_USER_MEMORY:
+        gcmkONERROR(gckKERNEL_WrapUserMemory(
+            Kernel,
+            processID,
+           &Interface->u.WrapUserMemory.desc,
+           &Interface->u.WrapUserMemory.node
+            ));
+        break;
+
+#if gcdENABLE_DEC_COMPRESSION && gcdDEC_ENABLE_AHB
+    case gcvHAL_DEC300_READ:
+        gcmkONERROR(viv_dec300_read(
+            Interface->u.DEC300Read.enable,
+            Interface->u.DEC300Read.readId,
+            Interface->u.DEC300Read.format,
+            Interface->u.DEC300Read.strides,
+            Interface->u.DEC300Read.is3D,
+            Interface->u.DEC300Read.isMSAA,
+            Interface->u.DEC300Read.clearValue,
+            Interface->u.DEC300Read.isTPC,
+            Interface->u.DEC300Read.isTPCCompressed,
+            Interface->u.DEC300Read.surfAddrs,
+            Interface->u.DEC300Read.tileAddrs
+            ));
+        break;
+
+    case gcvHAL_DEC300_WRITE:
+        gcmkONERROR(viv_dec300_write(
+            Interface->u.DEC300Write.enable,
+            Interface->u.DEC300Write.readId,
+            Interface->u.DEC300Write.writeId,
+            Interface->u.DEC300Write.format,
+            Interface->u.DEC300Write.surfAddr,
+            Interface->u.DEC300Write.tileAddr
+            ));
+        break;
+
+    case gcvHAL_DEC300_FLUSH:
+        gcmkONERROR(viv_dec300_flush(0));
+        break;
+
+    case gcvHAL_DEC300_FLUSH_WAIT:
+        gcmkONERROR(viv_dec300_flush_done(&Interface->u.DEC300FlushWait.done));
+        break;
+#endif
 
     default:
         /* Invalid command. */
@@ -4530,7 +4697,6 @@ gckKERNEL_SetRecovery(
     return gcvSTATUS_OK;
 }
 
-
 /*******************************************************************************
 ***** Shared Buffer ************************************************************
 *******************************************************************************/
@@ -5012,6 +5178,77 @@ OnError:
     return status;
 }
 
+/*******************************************************************************\
+********************************* Fence *****************************************
+\*******************************************************************************/
+
+gceSTATUS
+gckFENCE_Create(
+    IN gckOS Os,
+    IN gckKERNEL Kernel,
+    OUT gckFENCE * Fence
+    )
+{
+    gceSTATUS status;
+    gckFENCE fence = gcvNULL;
+    gctSIZE_T pageSize = 4096;
+
+    gcmkONERROR(gckOS_Allocate(Os, gcmSIZEOF(gcsFENCE), (gctPOINTER *)&fence));
+
+    gcmkONERROR(gckOS_CreateMutex(Os, (gctPOINTER *)&fence->mutex));
+
+    gcmkONERROR(gckOS_AllocateNonPagedMemory(
+        Os,
+        gcvFALSE,
+        &pageSize,
+        &fence->physical,
+        &fence->logical
+        ));
+
+    gcmkONERROR(gckHARDWARE_ConvertLogical(
+        Kernel->hardware,
+        fence->logical,
+        gcvFALSE,
+        &fence->address
+        ));
+
+    *Fence = fence;
+
+    return gcvSTATUS_OK;
+OnError:
+    if (fence)
+    {
+        gckFENCE_Destory(Os, fence);
+    }
+
+    return status;
+}
+
+gceSTATUS
+gckFENCE_Destory(
+    IN gckOS Os,
+    OUT gckFENCE Fence
+    )
+{
+    if (Fence->mutex)
+    {
+        gcmkVERIFY_OK(gckOS_DeleteMutex(Os, Fence->mutex));
+    }
+
+    if (Fence->logical)
+    {
+        gcmkVERIFY_OK(gckOS_FreeNonPagedMemory(
+            Os,
+            4096,
+            Fence->physical,
+            Fence->logical
+            ));
+    }
+
+    gcmkOS_SAFE_FREE(Os, Fence);
+
+    return gcvSTATUS_OK;
+}
 
 /*******************************************************************************
 ***** Test Code ****************************************************************
