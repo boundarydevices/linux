@@ -248,8 +248,6 @@ static void rpmsg_work_handler(struct work_struct *work)
 	blocking_notifier_call_chain(&(mu_rpmsg_box.notifier), 4,
 						(void *)m4_message);
 	m4_message = 0;
-	writel_relaxed(readl_relaxed(mu_base + MU_ACR) | BIT(26),
-		mu_base + MU_ACR);
 }
 
 /*!
@@ -452,8 +450,6 @@ static irqreturn_t imx_mu_isr(int irq, void *param)
 	if (irqs & (1 << 26)) {
 		/* get message from receive buffer */
 		m4_message = readl_relaxed(mu_base + MU_ARR1_OFFSET);
-		writel_relaxed(readl_relaxed(mu_base + MU_ACR) & (~BIT(26)),
-			mu_base + MU_ACR);
 		schedule_delayed_work(&rpmsg_work, 0);
 	}
 
