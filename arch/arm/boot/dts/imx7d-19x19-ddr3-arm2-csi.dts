@@ -8,6 +8,10 @@
 
 #include "imx7d-19x19-ddr3-arm2.dts"
 
+&lcdif {
+	status = "disabled";
+};
+
 &csi1 {
 	status = "okay";
 
