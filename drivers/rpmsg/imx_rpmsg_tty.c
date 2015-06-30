@@ -51,6 +51,12 @@ static void rpmsg_tty_cb(struct rpmsg_channel *rpdev, void *data, int len,
 		       data, len,  true);
 	rx_count++;
 
+	/* samples should not live forever */
+	if (rx_count >= MSG_LIMIT) {
+		dev_info(&rpdev->dev, "goodbye!\n");
+		return;
+	}
+
 	/* flush the recv-ed none-zero data to tty node */
 	if (strlen((unsigned char *)data) == 0)
 		return;
@@ -67,12 +73,6 @@ static void rpmsg_tty_cb(struct rpmsg_channel *rpdev, void *data, int len,
 	memcpy(cbuf, data, strlen(data));
 	tty_flip_buffer_push(&cport->port);
 	spin_unlock_bh(&cport->rx_lock);
-
-	/* samples should not live forever */
-	if (rx_count >= MSG_LIMIT) {
-		dev_info(&rpdev->dev, "goodbye!\n");
-		return;
-	}
 }
 
 static struct tty_port_operations  rpmsgtty_port_ops = { };
