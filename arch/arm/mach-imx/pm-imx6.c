@@ -479,7 +479,8 @@ void imx6q_set_int_mem_clk_lpm(bool enable)
 	if ((cpu_is_imx6q() && imx_get_soc_revision() >
 		IMX_CHIP_REVISION_1_1) ||
 		(cpu_is_imx6dl() && imx_get_soc_revision() >
-		IMX_CHIP_REVISION_1_0) || cpu_is_imx6sx()) {
+		IMX_CHIP_REVISION_1_0) || cpu_is_imx6sx() ||
+		cpu_is_imx6ul()) {
 		u32 val;
 
 		val = readl_relaxed(ccm_base + CGPR);
