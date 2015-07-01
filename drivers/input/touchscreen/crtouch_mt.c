@@ -45,7 +45,7 @@
 #include "crtouch_mt.h"
 
 static int calibration[7] = {
-#if 0
+#if 1
 	65536,0,0,
 	0,65536,0,
 	0
