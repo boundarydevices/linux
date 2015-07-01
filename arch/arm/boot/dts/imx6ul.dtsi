@@ -178,6 +178,11 @@
 			 reg = <0x00100000 0x3fff>;
 		};
 
+		irq_sec_vio: caam_secvio {
+			     compatible = "fsl,imx7d-caam-secvio", "fsl,imx6q-caam-secvio";
+			     interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
 		aips1: aips-bus@02000000 {
 			compatible = "fsl,aips-bus", "simple-bus";
 			#address-cells = <1>;
@@ -655,6 +660,11 @@
 				fsl,tempmon = <&anatop>;
 				fsl,tempmon-data = <&ocotp>;
 				clocks = <&clks IMX6UL_CLK_PLL3_USB_OTG>;
+			};
+
+			caam_snvs: caam-snvs@020cc000 {
+				compatible = "fsl,imx6q-caam-snvs";
+				reg = <0x020cc000 0x4000>;
 			};
 
 			snvs: snvs@020cc000 {
