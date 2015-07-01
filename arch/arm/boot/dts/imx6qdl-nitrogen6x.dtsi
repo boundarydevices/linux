@@ -324,7 +324,8 @@
 &flexcan1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan1>;
-	trx-stby-gpio = <&gpio1 2 GPIO_ACTIVE_LOW>;
+#define GP_FLEXCAN1_STANDBY	<&gpio1 2 GPIO_ACTIVE_HIGH>
+	trx-stby-gpio = GP_FLEXCAN1_STANDBY;
 	status = "okay";
 };
 
@@ -558,8 +559,10 @@
 
 	pinctrl_flexcan1: flexcan1grp {
 		fsl,pins = <
-			MX6QDL_PAD_KEY_ROW2__FLEXCAN1_RX	0x80000000
-			MX6QDL_PAD_KEY_COL2__FLEXCAN1_TX	0x80000000
+			MX6QDL_PAD_KEY_ROW2__FLEXCAN1_RX	0x1b0b0
+			MX6QDL_PAD_KEY_COL2__FLEXCAN1_TX	0x1b0b0
+#define GP_FLEXCAN1_STANDBY	<&gpio1 2 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x0b0b0
 		>;
 	};
 
