@@ -65,6 +65,10 @@ Optional properties:
 - dma-names:	    Two dmas have to be defined, "tx" and "rx", if fsl,imx-fiq
 		    is not defined.
 
+- fsl,dma-buffer-size: It specify the audio buffer size of playback and
+  capture. If this property is absent, using the default value of audio buffer
+  size.
+
 Child 'codec' node required properties:
 - compatible:       Compatible list, contains the name of the codec
 

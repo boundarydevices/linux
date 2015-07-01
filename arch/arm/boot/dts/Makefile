@@ -208,6 +208,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6sx-19x19-arm2-gpmi-weim.dtb \
 	imx6sx-sdb.dtb \
 	imx6sx-sdb-ldo.dtb \
+	imx6sx-sdb-mqs.dtb \
 	imx6sx-sdb-reva.dtb \
 	imx6sx-sdb-reva-ldo.dtb \
 	imx6sx-sdb-sai.dtb \

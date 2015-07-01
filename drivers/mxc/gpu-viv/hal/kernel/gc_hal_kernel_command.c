@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2015 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014  Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -428,7 +462,7 @@ _DumpBuffer(
 
     for (i = 0; i < line; i++)
     {
-        gcmkPRINT("%X : %08X %08X %08X %08X %08X %08X %08X %08X ",
+        gcmkPRINT("%08X : %08X %08X %08X %08X %08X %08X %08X %08X",
                   GpuAddress, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
         data += 8;
         GpuAddress += 8 * 4;
@@ -437,31 +471,31 @@ _DumpBuffer(
     switch(left)
     {
         case 28:
-            gcmkPRINT("%X : %08X %08X %08X %08X %08X %08X %08X ",
+            gcmkPRINT("%08X : %08X %08X %08X %08X %08X %08X %08X",
                       GpuAddress, data[0], data[1], data[2], data[3], data[4], data[5], data[6]);
             break;
         case 24:
-            gcmkPRINT("%X : %08X %08X %08X %08X %08X %08X ",
+            gcmkPRINT("%08X : %08X %08X %08X %08X %08X %08X",
                       GpuAddress, data[0], data[1], data[2], data[3], data[4], data[5]);
             break;
         case 20:
-            gcmkPRINT("%X : %08X %08X %08X %08X %08X ",
+            gcmkPRINT("%08X : %08X %08X %08X %08X %08X",
                       GpuAddress, data[0], data[1], data[2], data[3], data[4]);
             break;
         case 16:
-            gcmkPRINT("%X : %08X %08X %08X %08X ",
+            gcmkPRINT("%08X : %08X %08X %08X %08X",
                       GpuAddress, data[0], data[1], data[2], data[3]);
             break;
         case 12:
-            gcmkPRINT("%X : %08X %08X %08X ",
+            gcmkPRINT("%08X : %08X %08X %08X",
                       GpuAddress, data[0], data[1], data[2]);
             break;
         case 8:
-            gcmkPRINT("%X : %08X %08X ",
+            gcmkPRINT("%08X : %08X %08X",
                       GpuAddress, data[0], data[1]);
             break;
         case 4:
-            gcmkPRINT("%X : %08X ",
+            gcmkPRINT("%08X : %08X",
                       GpuAddress, data[0]);
             break;
         default:
@@ -615,6 +649,10 @@ gckCOMMAND_Construct(
     gcmkONERROR(gckRECORDER_Construct(os, Kernel->hardware, &command->recorder));
 #endif
 
+    gcmkONERROR(gckFENCE_Create(
+        os, Kernel, &command->fence
+        ));
+
     /* No command queue in use yet. */
     command->index    = -1;
     command->logical  = gcvNULL;
@@ -647,54 +685,7 @@ OnError:
     /* Roll back. */
     if (command != gcvNULL)
     {
-        if (command->atomCommit != gcvNULL)
-        {
-            gcmkVERIFY_OK(gckOS_AtomDestroy(os, command->atomCommit));
-        }
-
-        if (command->powerSemaphore != gcvNULL)
-        {
-            gcmkVERIFY_OK(gckOS_DestroySemaphore(os, command->powerSemaphore));
-        }
-
-        if (command->mutexContext != gcvNULL)
-        {
-            gcmkVERIFY_OK(gckOS_DeleteMutex(os, command->mutexContext));
-        }
-
-#if VIVANTE_PROFILER_CONTEXT
-        if (command->mutexContextSeq != gcvNULL)
-        {
-            gcmkVERIFY_OK(gckOS_DeleteMutex(os, command->mutexContextSeq));
-        }
-#endif
-
-        if (command->mutexQueue != gcvNULL)
-        {
-            gcmkVERIFY_OK(gckOS_DeleteMutex(os, command->mutexQueue));
-        }
-
-        for (i = 0; i < gcdCOMMAND_QUEUES; ++i)
-        {
-            if (command->queues[i].signal != gcvNULL)
-            {
-                gcmkVERIFY_OK(gckOS_DestroySignal(
-                    os, command->queues[i].signal
-                    ));
-            }
-
-            if (command->queues[i].logical != gcvNULL)
-            {
-                gcmkVERIFY_OK(gckOS_FreeNonPagedMemory(
-                    os,
-                    command->pageSize,
-                    command->queues[i].physical,
-                    command->queues[i].logical
-                    ));
-            }
-        }
-
-        gcmkVERIFY_OK(gcmkOS_SAFE_FREE(os, command));
+        gcmkVERIFY_OK(gckCOMMAND_Destroy(command));
     }
 
     /* Return the status. */
@@ -734,18 +725,22 @@ gckCOMMAND_Destroy(
 
     for (i = 0; i < gcdCOMMAND_QUEUES; ++i)
     {
-        gcmkASSERT(Command->queues[i].signal != gcvNULL);
-        gcmkVERIFY_OK(gckOS_DestroySignal(
-            Command->os, Command->queues[i].signal
-            ));
+        if (Command->queues[i].signal)
+        {
+            gcmkVERIFY_OK(gckOS_DestroySignal(
+                Command->os, Command->queues[i].signal
+                ));
+        }
 
-        gcmkASSERT(Command->queues[i].logical != gcvNULL);
-        gcmkVERIFY_OK(gckOS_FreeNonPagedMemory(
-            Command->os,
-            Command->pageSize,
-            Command->queues[i].physical,
-            Command->queues[i].logical
-            ));
+        if (Command->queues[i].logical)
+        {
+            gcmkVERIFY_OK(gckOS_FreeNonPagedMemory(
+                Command->os,
+                Command->pageSize,
+                Command->queues[i].physical,
+                Command->queues[i].logical
+                ));
+        }
     }
 
     /* END event signal. */
@@ -756,22 +751,34 @@ gckCOMMAND_Destroy(
             ));
     }
 
-    /* Delete the context switching mutex. */
-    gcmkVERIFY_OK(gckOS_DeleteMutex(Command->os, Command->mutexContext));
+    if (Command->mutexContext)
+    {
+        /* Delete the context switching mutex. */
+        gcmkVERIFY_OK(gckOS_DeleteMutex(Command->os, Command->mutexContext));
+    }
 
 #if VIVANTE_PROFILER_CONTEXT
     if (Command->mutexContextSeq != gcvNULL)
         gcmkVERIFY_OK(gckOS_DeleteMutex(Command->os, Command->mutexContextSeq));
 #endif
 
-    /* Delete the command queue mutex. */
-    gcmkVERIFY_OK(gckOS_DeleteMutex(Command->os, Command->mutexQueue));
+    if (Command->mutexQueue)
+    {
+        /* Delete the command queue mutex. */
+        gcmkVERIFY_OK(gckOS_DeleteMutex(Command->os, Command->mutexQueue));
+    }
 
-    /* Destroy the power management semaphore. */
-    gcmkVERIFY_OK(gckOS_DestroySemaphore(Command->os, Command->powerSemaphore));
+    if (Command->powerSemaphore)
+    {
+        /* Destroy the power management semaphore. */
+        gcmkVERIFY_OK(gckOS_DestroySemaphore(Command->os, Command->powerSemaphore));
+    }
 
-    /* Destroy the commit atom. */
-    gcmkVERIFY_OK(gckOS_AtomDestroy(Command->os, Command->atomCommit));
+    if (Command->atomCommit)
+    {
+        /* Destroy the commit atom. */
+        gcmkVERIFY_OK(gckOS_AtomDestroy(Command->os, Command->atomCommit));
+    }
 
 #if gcdSECURE_USER
     /* Free state array. */
@@ -785,6 +792,16 @@ gckCOMMAND_Destroy(
 #if gcdRECORD_COMMAND
     gckRECORDER_Destory(Command->os, Command->recorder);
 #endif
+
+    if (Command->stateMap)
+    {
+        gcmkOS_SAFE_FREE(Command->os, Command->stateMap);
+    }
+
+    if (Command->fence)
+    {
+        gcmkVERIFY_OK(gckFENCE_Destory(Command->os, Command->fence));
+    }
 
     /* Mark object as unknown. */
     Command->object.type = gcvOBJ_UNKNOWN;
@@ -2290,8 +2307,6 @@ gckCOMMAND_Commit(
         );
 
     gckRECORDER_AdvanceIndex(Command->recorder, Command->commitStamp);
-
-    Command->commitStamp++;
 #endif
 
 #if gcdSECURITY
@@ -3116,7 +3131,8 @@ gceSTATUS
 gckCOMMAND_Attach(
     IN gckCOMMAND Command,
     OUT gckCONTEXT * Context,
-    OUT gctSIZE_T * StateCount,
+    OUT gctSIZE_T * MaxState,
+    OUT gctUINT32 * NumStates,
     IN gctUINT32 ProcessID
     )
 {
@@ -3143,7 +3159,8 @@ gckCOMMAND_Attach(
         ));
 
     /* Return the number of states in the context. */
-    * StateCount = (* Context)->stateCount;
+    * MaxState  = (* Context)->maxState;
+    * NumStates = (* Context)->numStates;
 
     /* Release the context switching mutex. */
     gcmkONERROR(gckOS_ReleaseMutex(Command->os, Command->mutexContext));
@@ -3265,16 +3282,21 @@ gckCOMMAND_DumpExecutingBuffer(
     gckOS os = Command->os;
     gckKERNEL kernel = Command->kernel;
     gctUINT32 i;
-    gctUINT32 dumpFront, dumpRear;
+    gctUINT32 dumpRear;
     gckLINKQUEUE queue = &kernel->hardware->linkQueue;
     gctSIZE_T bytes;
     gckLINKDATA linkData;
     gctUINT32 offset;
     gctPOINTER entryDump;
+    gctUINT32 pid;
+    gctUINT8 processName[24] = {0};
 
     gcmkPRINT("**************************\n");
     gcmkPRINT("**** COMMAND BUF DUMP ****\n");
     gcmkPRINT("**************************\n");
+
+    gcmkPRINT("  Submitted commit stamp = %lld", Command->commitStamp - 1);
+    gcmkPRINT("  Executed commit stamp  = %lld", *(gctUINT64_PTR)Command->fence->logical);
 
     gcmkVERIFY_OK(gckOS_ReadRegisterEx(os, kernel->core, 0x664, &gpuAddress));
 
@@ -3342,21 +3364,24 @@ gckCOMMAND_DumpExecutingBuffer(
     }
 
     /* Dump link queue. */
-    if (Command->kernel->stuckDump >= gcvSTUCK_DUMP_USER_COMMAND)
+    if (queue->count)
     {
-        gcmkPRINT("Dump Level is %d, dump link queue:",
-                  Command->kernel->stuckDump);
+        gcmkPRINT("Dump Level is %d, dump %d valid record in link queue:",
+                  Command->kernel->stuckDump, queue->count);
 
-        dumpRear  = gcdLINK_QUEUE_SIZE - 1;
-        dumpFront = 0;
+        dumpRear  = queue->count;
 
-        for (i = dumpFront; i <= dumpRear; i++)
+        for (i = 0; i < dumpRear; i++)
         {
             gckLINKQUEUE_GetData(queue, i, &linkData);
 
             /* Get gpu address of this command buffer. */
             gpuAddress = linkData->start;
             bytes = linkData->end - gpuAddress;
+
+            pid = linkData->pid;
+
+            gckOS_GetProcessNameByPid(pid, 16, processName);
 
             if (kernel->virtualCommandBuffer)
             {
@@ -3373,10 +3398,16 @@ gckCOMMAND_DumpExecutingBuffer(
 
                     if (gcmIS_ERROR(status))
                     {
-                        gcmkPRINT("Buffer [%08X - %08X] not found, may be freed",
-                                  linkData->start,
-                                  linkData->end);
-                        continue;
+                        status = gckHARDWARE_AddressInHardwareFuncions(
+                                 kernel->hardware, gpuAddress, &entry);
+
+                        if (gcmIS_ERROR(status))
+                        {
+                            gcmkPRINT("Buffer [%08X - %08X] not found, may be freed",
+                                      linkData->start,
+                                      linkData->end);
+                            continue;
+                        }
                     }
 
                     offset = 0;
@@ -3389,7 +3420,8 @@ gckCOMMAND_DumpExecutingBuffer(
                     {
                         /* Get kernel logical directly if it is a context buffer. */
                         entry = buffer->kernelLogical;
-                        gcmkPRINT("Context Buffer: %08X, %08X", linkData->linkLow, linkData->linkHigh);
+                        gcmkPRINT("Context Buffer: %08X, %08X PID:%d %s",
+                                  linkData->linkLow, linkData->linkHigh, linkData->pid, processName);
                     }
                     else
                     {
@@ -3400,7 +3432,8 @@ gckCOMMAND_DumpExecutingBuffer(
                                                              buffer->bytes,
                                                              &entry,
                                                              &pageCount));
-                         gcmkPRINT("User Command Buffer: %08X, %08X", linkData->linkLow, linkData->linkHigh);
+                         gcmkPRINT("User Command Buffer: %08X, %08X PID:%d %s",
+                                   linkData->linkLow, linkData->linkHigh, linkData->pid, processName);
                     }
 
                     offset = gpuAddress - buffer->gpuAddress;
@@ -3423,7 +3456,8 @@ gckCOMMAND_DumpExecutingBuffer(
             {
                 gcmkVERIFY_OK(gckOS_MapPhysical(os, gpuAddress, bytes, &entry));
 
-                gcmkPRINT("Command Buffer: %08X, %08X", linkData->linkLow, linkData->linkHigh);
+                gcmkPRINT("Command Buffer: %08X, %08X PID:%d %s",
+                          linkData->linkLow, linkData->linkHigh, linkData->pid, processName);
 
                 _DumpBuffer((gctUINT8_PTR)entry, gpuAddress, bytes);
 
