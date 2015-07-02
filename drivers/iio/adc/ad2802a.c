@@ -375,7 +375,7 @@ static int ad2802_adc_reg_access(struct iio_dev *indio_dev,
 {
 	struct ad2802_adc *info = iio_priv(indio_dev);
 	if ((readval == NULL) ||
-		(!(reg % 4) || (reg > REG_ADC_ADC_CFG)))
+		((reg % 4) || (reg > REG_ADC_ADC_CFG)))
 		return -EINVAL;
 
 	*readval = readl(info->regs + reg);
