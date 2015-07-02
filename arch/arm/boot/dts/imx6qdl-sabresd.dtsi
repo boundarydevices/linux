@@ -304,6 +304,10 @@
 		status = "okay";
 	};
 
+	caam_keyblob {
+		compatible = "fsl,sec-v4.0-keyblob";
+	};
+
 	v4l2_cap_0 {
 		compatible = "fsl,imx6q-v4l2-capture";
 		ipu_id = <0>;
