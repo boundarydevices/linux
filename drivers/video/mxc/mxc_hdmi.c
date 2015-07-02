@@ -1894,8 +1894,10 @@ static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi)
 		return;
 	}
 
-	/* If video mode same as previous, init HDMI again */
-	if (fb_mode_is_equal(&hdmi->previous_non_vga_mode, mode)) {
+	/* If both video mode and work mode same as previous,
+	 * init HDMI again */
+	if (fb_mode_is_equal(&hdmi->previous_non_vga_mode, mode) &&
+		(hdmi->edid_cfg.hdmi_cap != hdmi->hdmi_data.video_mode.mDVI)) {
 		dev_dbg(&hdmi->pdev->dev,
 				"%s: Video mode same as previous\n", __func__);
 		/* update fbi mode in case modelist is updated */
