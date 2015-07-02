@@ -1,7 +1,7 @@
 /*
  * Freescale Vybrid vf610 ADC driver
  *
- * Copyright 2013-2014 Freescale Semiconductor, Inc.
+ * Copyright 2013-2015 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -524,7 +524,7 @@ static int vf610_adc_reg_access(struct iio_dev *indio_dev,
 	struct vf610_adc *info = iio_priv(indio_dev);
 
 	if ((readval == NULL) ||
-		(!(reg % 4) || (reg > VF610_REG_ADC_PCTL)))
+		((reg % 4) || (reg > VF610_REG_ADC_PCTL)))
 		return -EINVAL;
 
 	*readval = readl(info->regs + reg);
