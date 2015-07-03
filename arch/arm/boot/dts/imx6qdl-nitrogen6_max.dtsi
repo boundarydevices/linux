@@ -44,7 +44,7 @@
 			MX6QDL_PAD_EIM_D18__ECSPI1_MOSI		0x100b1
 			MX6QDL_PAD_EIM_D16__ECSPI1_SCLK		0x100b1
 #define GP_ECSPI1_NOR_CS	<&gpio3 19 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_D19__GPIO3_IO19		0x000b1
+			MX6QDL_PAD_EIM_D19__GPIO3_IO19		0x0b0b1
 		>;
 	};
 
@@ -116,7 +116,7 @@
 
 	pinctrl_i2c1_rv4162: i2c1-rv4162grp {
 		fsl,pins = <
-#define GP_RTC_RV4162_IRQ	<&gpio4 6 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_RTC_RV4162	<&gpio4 6 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x1b0b0
 		>;
 	};
@@ -824,7 +824,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_rv4162>;
 		reg = <0x68>;
-		interrupts-extended = GP_RTC_RV4162_IRQ;
+		interrupts-extended = GPIRQ_RTC_RV4162;
 	};
 };
 
