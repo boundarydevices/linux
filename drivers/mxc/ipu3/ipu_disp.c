@@ -50,6 +50,22 @@ struct dp_csc_param_t {
 #define DC_DISP_ID_ASYNC	3
 
 /* DC microcode address */
+#define DC_MCODE_DI1_I			1
+#define DC_MCODE_DI1_NL			2
+#define DC_MCODE_DI1_EOL		3
+#define DC_MCODE_DI1_NEW_DATA		1
+#define DC_MCODE_DI1_EVEN_UGDE		8
+#define DC_MCODE_DI1_ODD_UGDE		9
+
+#define DC_MCODE_DI0_I			0
+#define DC_MCODE_DI0_NL			5
+#define DC_MCODE_DI0_EOL		6
+#define DC_MCODE_DI0_NEW_DATA		12
+#define DC_MCODE_DI0_EVEN_UGDE		10
+#define DC_MCODE_DI0_ODD_UGDE		11
+
+#define DC_MCODE_ASYNC_NEW_DATA		0x64
+
 #define DC_MCODE_BT656_START			101
 #define DC_MCODE_BT656_VSYNC_FF		141
 #define DC_MCODE_BT656_EOFIELD		167
@@ -666,51 +682,51 @@ void _ipu_dc_init(struct ipu_soc *ipu, int dc_chan, int di, bool interlaced, uin
 				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, DC_MCODE_BT656_DATA_W, 0);
 			} else {
 				if (di) {
-					_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NL, 1, 3);
-					_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOL, 1, 2);
-					_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, 1, 1);
+					_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NL, DC_MCODE_DI1_I, 3);
+					_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOL, DC_MCODE_DI1_I, 2);
+					_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, DC_MCODE_DI1_I, 1);
 					if ((pixel_fmt == IPU_PIX_FMT_YUYV) ||
 					(pixel_fmt == IPU_PIX_FMT_UYVY) ||
 					(pixel_fmt == IPU_PIX_FMT_YVYU) ||
 					(pixel_fmt == IPU_PIX_FMT_VYUY)) {
-						_ipu_dc_link_event(ipu, dc_chan, DC_ODD_UGDE1, 9, 5);
-						_ipu_dc_link_event(ipu, dc_chan, DC_EVEN_UGDE1, 8, 5);
+						_ipu_dc_link_event(ipu, dc_chan, DC_EVEN_UGDE1, DC_MCODE_DI1_EVEN_UGDE, 5);
+						_ipu_dc_link_event(ipu, dc_chan, DC_ODD_UGDE1, DC_MCODE_DI1_ODD_UGDE, 5);
 					}
 				} else {
-					_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NL, 0, 3);
-					_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOL, 0, 2);
-					_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, 0, 1);
+					_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NL, DC_MCODE_DI0_I, 3);
+					_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOL, DC_MCODE_DI0_I, 2);
+					_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, DC_MCODE_DI0_I, 1);
 					if ((pixel_fmt == IPU_PIX_FMT_YUYV) ||
 					(pixel_fmt == IPU_PIX_FMT_UYVY) ||
 					(pixel_fmt == IPU_PIX_FMT_YVYU) ||
 					(pixel_fmt == IPU_PIX_FMT_VYUY)) {
-						_ipu_dc_link_event(ipu, dc_chan, DC_ODD_UGDE0, 10, 5);
-						_ipu_dc_link_event(ipu, dc_chan, DC_EVEN_UGDE0, 11, 5);
+						_ipu_dc_link_event(ipu, dc_chan, DC_EVEN_UGDE0, DC_MCODE_DI0_EVEN_UGDE, 5);
+						_ipu_dc_link_event(ipu, dc_chan, DC_ODD_UGDE0, DC_MCODE_DI0_ODD_UGDE, 5);
 					}
 				}
 			}
 		} else {
 			if (di) {
-				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NL, 2, 3);
-				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOL, 3, 2);
-				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, 1, 1);
+				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NL, DC_MCODE_DI1_NL, 3);
+				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOL, DC_MCODE_DI1_EOL, 2);
+				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, DC_MCODE_DI1_NEW_DATA, 1);
 				if ((pixel_fmt == IPU_PIX_FMT_YUYV) ||
 				(pixel_fmt == IPU_PIX_FMT_UYVY) ||
 				(pixel_fmt == IPU_PIX_FMT_YVYU) ||
 				(pixel_fmt == IPU_PIX_FMT_VYUY)) {
-					_ipu_dc_link_event(ipu, dc_chan, DC_ODD_UGDE1, 9, 5);
-					_ipu_dc_link_event(ipu, dc_chan, DC_EVEN_UGDE1, 8, 5);
+					_ipu_dc_link_event(ipu, dc_chan, DC_EVEN_UGDE1, DC_MCODE_DI1_EVEN_UGDE, 5);
+					_ipu_dc_link_event(ipu, dc_chan, DC_ODD_UGDE1, DC_MCODE_DI1_ODD_UGDE, 5);
 				}
 			} else {
-				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NL, 5, 3);
-				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOL, 6, 2);
-				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, 12, 1);
+				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NL, DC_MCODE_DI0_NL, 3);
+				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_EOL, DC_MCODE_DI0_EOL, 2);
+				_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA, DC_MCODE_DI0_NEW_DATA, 1);
 				if ((pixel_fmt == IPU_PIX_FMT_YUYV) ||
 				(pixel_fmt == IPU_PIX_FMT_UYVY) ||
 				(pixel_fmt == IPU_PIX_FMT_YVYU) ||
 				(pixel_fmt == IPU_PIX_FMT_VYUY)) {
-					_ipu_dc_link_event(ipu, dc_chan, DC_ODD_UGDE0, 10, 5);
-					_ipu_dc_link_event(ipu, dc_chan, DC_EVEN_UGDE0, 11, 5);
+					_ipu_dc_link_event(ipu, dc_chan, DC_EVEN_UGDE0, DC_MCODE_DI0_EVEN_UGDE, 5);
+					_ipu_dc_link_event(ipu, dc_chan, DC_ODD_UGDE0, DC_MCODE_DI0_ODD_UGDE, 5);
 				}
 			}
 		}
@@ -750,8 +766,8 @@ void _ipu_dc_init(struct ipu_soc *ipu, int dc_chan, int di, bool interlaced, uin
 			reg |= DC_WR_CH_CONF_FIELD_MODE;
 	} else if ((dc_chan == 8) || (dc_chan == 9)) {
 		/* async channels */
-		_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA_W_0, 0x64, 1);
-		_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA_W_1, 0x64, 1);
+		_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA_W_0, DC_MCODE_ASYNC_NEW_DATA, 1);
+		_ipu_dc_link_event(ipu, dc_chan, DC_EVT_NEW_DATA_W_1, DC_MCODE_ASYNC_NEW_DATA, 1);
 
 		reg = 0x3;
 		reg |= DC_DISP_ID_SERIAL << DC_WR_CH_CONF_PROG_DISP_ID_OFFSET;
@@ -1031,9 +1047,9 @@ void _ipu_init_dc_mappings(struct ipu_soc *ipu)
 
 	/* IPU_PIX_FMT_YUYV 16bit width */
 	_ipu_dc_map_clear(ipu, 9);
-	_ipu_dc_map_link(ipu, 9, 5, 2, 5, 1, 5, 0);
+	_ipu_dc_map_link(ipu, 9, 5, 1, 5, 2, 5, 0);
 	_ipu_dc_map_clear(ipu, 10);
-	_ipu_dc_map_link(ipu, 10, 5, 1, 5, 2, 5, 0);
+	_ipu_dc_map_link(ipu, 10, 5, 2, 5, 1, 5, 0);
 
 	/* IPU_PIX_FMT_YVYU 16bit width */
 	_ipu_dc_map_clear(ipu, 11);
@@ -2323,24 +2339,24 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 		} else {
 			/* Init template microcode */
 			if (disp) {
-				_ipu_dc_write_tmpl(ipu, 1, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
+				_ipu_dc_write_tmpl(ipu, DC_MCODE_DI1_I, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
 				if ((pixel_fmt == IPU_PIX_FMT_YUYV) ||
 					(pixel_fmt == IPU_PIX_FMT_UYVY) ||
 					(pixel_fmt == IPU_PIX_FMT_YVYU) ||
 					(pixel_fmt == IPU_PIX_FMT_VYUY)) {
-					_ipu_dc_write_tmpl(ipu, 8, WROD, 0, (map - 1), SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
-					_ipu_dc_write_tmpl(ipu, 9, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
+					_ipu_dc_write_tmpl(ipu, DC_MCODE_DI1_EVEN_UGDE, WROD, 0, (map - 1), SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
+					_ipu_dc_write_tmpl(ipu, DC_MCODE_DI1_ODD_UGDE, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
 					/* configure user events according to DISP NUM */
 					ipu_dc_write(ipu, (width - 1), DC_UGDE_3(disp));
 				}
 			} else {
-				_ipu_dc_write_tmpl(ipu, 0, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
+				_ipu_dc_write_tmpl(ipu, DC_MCODE_DI0_I, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
 				if ((pixel_fmt == IPU_PIX_FMT_YUYV) ||
 					(pixel_fmt == IPU_PIX_FMT_UYVY) ||
 					(pixel_fmt == IPU_PIX_FMT_YVYU) ||
 					(pixel_fmt == IPU_PIX_FMT_VYUY)) {
-					_ipu_dc_write_tmpl(ipu, 10, WROD, 0, (map - 1), SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
-					_ipu_dc_write_tmpl(ipu, 11, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
+					_ipu_dc_write_tmpl(ipu, DC_MCODE_DI0_EVEN_UGDE, WROD, 0, (map - 1), SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
+					_ipu_dc_write_tmpl(ipu, DC_MCODE_DI0_ODD_UGDE, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
 					/* configure user events according to DISP NUM */
 					ipu_dc_write(ipu, width - 1, DC_UGDE_3(disp));
 				}
@@ -2418,30 +2434,30 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 				(pixel_fmt == IPU_PIX_FMT_UYVY) ||
 				(pixel_fmt == IPU_PIX_FMT_YVYU) ||
 				(pixel_fmt == IPU_PIX_FMT_VYUY)) {
-				_ipu_dc_write_tmpl(ipu, 8, WROD, 0, (map - 1), SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
-				_ipu_dc_write_tmpl(ipu, 9, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
+				_ipu_dc_write_tmpl(ipu, DC_MCODE_DI1_EVEN_UGDE, WROD, 0, (map - 1), SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
+				_ipu_dc_write_tmpl(ipu, DC_MCODE_DI1_ODD_UGDE, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
 				/* configure user events according to DISP NUM */
 				ipu_dc_write(ipu, (width - 1), DC_UGDE_3(disp));
 			}
-			_ipu_dc_write_tmpl(ipu, 2, WROD, 0, map, SYNC_WAVE, 8, DI_SYNC_APIXEL, 1, 0, 0);
-			_ipu_dc_write_tmpl(ipu, 3, WROD, 0, map, SYNC_WAVE, 4, DI_SYNC_APIXEL, 0, 0, 0);
+			_ipu_dc_write_tmpl(ipu, DC_MCODE_DI1_NL, WROD, 0, map, SYNC_WAVE, 8, DI_SYNC_APIXEL, 1, 0, 0);
+			_ipu_dc_write_tmpl(ipu, DC_MCODE_DI1_EOL, WROD, 0, map, SYNC_WAVE, 4, DI_SYNC_APIXEL, 0, 0, 0);
 			_ipu_dc_write_tmpl(ipu, 4, WRG, 0, map, NULL_WAVE, 0, DI_SYNC_CLK, 1, 0, 0);
-			_ipu_dc_write_tmpl(ipu, 1, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
+			_ipu_dc_write_tmpl(ipu, DC_MCODE_DI1_NEW_DATA, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
 
 		} else {
 			if ((pixel_fmt == IPU_PIX_FMT_YUYV) ||
 				(pixel_fmt == IPU_PIX_FMT_UYVY) ||
 				(pixel_fmt == IPU_PIX_FMT_YVYU) ||
 				(pixel_fmt == IPU_PIX_FMT_VYUY)) {
-				_ipu_dc_write_tmpl(ipu, 10, WROD, 0, (map - 1), SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
-				_ipu_dc_write_tmpl(ipu, 11, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
+				_ipu_dc_write_tmpl(ipu, DC_MCODE_DI0_EVEN_UGDE, WROD, 0, (map - 1), SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
+				_ipu_dc_write_tmpl(ipu, DC_MCODE_DI0_ODD_UGDE, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
 				/* configure user events according to DISP NUM */
 				ipu_dc_write(ipu, width - 1, DC_UGDE_3(disp));
 			}
-		   _ipu_dc_write_tmpl(ipu, 5, WROD, 0, map, SYNC_WAVE, 8, DI_SYNC_APIXEL, 1, 0, 0);
-		   _ipu_dc_write_tmpl(ipu, 6, WROD, 0, map, SYNC_WAVE, 4, DI_SYNC_APIXEL, 0, 0, 0);
+		   _ipu_dc_write_tmpl(ipu, DC_MCODE_DI0_NL, WROD, 0, map, SYNC_WAVE, 8, DI_SYNC_APIXEL, 1, 0, 0);
+		   _ipu_dc_write_tmpl(ipu, DC_MCODE_DI0_EOL, WROD, 0, map, SYNC_WAVE, 4, DI_SYNC_APIXEL, 0, 0, 0);
 		   _ipu_dc_write_tmpl(ipu, 7, WRG, 0, map, NULL_WAVE, 0, DI_SYNC_CLK, 1, 0, 0);
-		   _ipu_dc_write_tmpl(ipu, 12, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
+		   _ipu_dc_write_tmpl(ipu, DC_MCODE_DI0_NEW_DATA, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
 		}
 
 		if (sig.Hsync_pol) {
@@ -2546,7 +2562,7 @@ int ipu_init_async_panel(struct ipu_soc *ipu, int disp, int type, uint32_t cycle
 		_ipu_di_data_pin_config(ipu, disp, ASYNC_SER_WAVE, DI_PIN_SER_RS,
 					2, 0, 0);
 
-		_ipu_dc_write_tmpl(ipu, 0x64, WROD, 0, map, ASYNC_SER_WAVE, 0, 0, 1, 0, 0);
+		_ipu_dc_write_tmpl(ipu, DC_MCODE_ASYNC_NEW_DATA, WROD, 0, map, ASYNC_SER_WAVE, 0, 0, 1, 0, 0);
 
 		/* Configure DC for serial panel */
 		ipu_dc_write(ipu, 0x14, DC_DISP_CONF1(DC_DISP_ID_SERIAL));
