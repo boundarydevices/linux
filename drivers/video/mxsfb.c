@@ -405,6 +405,8 @@ static irqreturn_t mxsfb_irq_handler(int irq, void *dev_id)
 	acked_status = (enable & status) << CTRL1_IRQ_STATUS_SHIFT;
 
 	if ((acked_status & CTRL1_VSYNC_EDGE_IRQ) && host->wait4vsync) {
+		writel(CTRL1_VSYNC_EDGE_IRQ,
+				host->base + LCDC_CTRL1 + REG_CLR);
 		writel(CTRL1_VSYNC_EDGE_IRQ_EN,
 			     host->base + LCDC_CTRL1 + REG_CLR);
 		host->wait4vsync = 0;
@@ -412,6 +414,8 @@ static irqreturn_t mxsfb_irq_handler(int irq, void *dev_id)
 	}
 
 	if (acked_status & CTRL1_CUR_FRAME_DONE_IRQ) {
+		writel(CTRL1_CUR_FRAME_DONE_IRQ,
+				host->base + LCDC_CTRL1 + REG_CLR);
 		writel(CTRL1_CUR_FRAME_DONE_IRQ_EN,
 			     host->base + LCDC_CTRL1 + REG_CLR);
 		up(&host->flip_sem);
@@ -816,8 +820,6 @@ static int mxsfb_wait_for_vsync(struct fb_info *fb_info)
 
 	init_completion(&host->vsync_complete);
 
-	writel(CTRL1_VSYNC_EDGE_IRQ,
-		host->base + LCDC_CTRL1 + REG_CLR);
 	host->wait4vsync = 1;
 	writel(CTRL1_VSYNC_EDGE_IRQ_EN,
 		host->base + LCDC_CTRL1 + REG_SET);
@@ -915,8 +917,6 @@ static int mxsfb_pan_display(struct fb_var_screeninfo *var,
 	writel(fb_info->fix.smem_start + offset,
 			host->base + host->devdata->next_buf);
 
-	writel(CTRL1_CUR_FRAME_DONE_IRQ,
-		host->base + LCDC_CTRL1 + REG_CLR);
 	writel(CTRL1_CUR_FRAME_DONE_IRQ_EN,
 		host->base + LCDC_CTRL1 + REG_SET);
 
