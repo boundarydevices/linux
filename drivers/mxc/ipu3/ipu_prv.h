@@ -108,6 +108,11 @@ struct ipu_soc {
 	uint32_t channel_init_mask;
 	uint32_t channel_enable_mask;
 
+#define DC_MAPPING_PTR_MAX	29
+	unsigned long mapping_bitmap;	/* 0 - 29 are valid */
+#define DC_MAPPING_VAL_MAX	23
+	unsigned long offset_mask_bitmap;	/* 0 - 23 are valid */
+
 	/*use count*/
 	int dc_use_count;
 	int dp_use_count;
