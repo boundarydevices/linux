@@ -318,6 +318,7 @@
 		hannstar = &hannstar ;
 		lg1280x800 = &lg1280x800;
 		okaya1024x600 = &okaya1024x600;
+		vga_lvds = &vga_lvds;
 	};
 
 	memory {
@@ -813,6 +814,17 @@
 				vfront-porch = <7>;
 				hsync-len = <60>;
 				vsync-len = <10>;
+			};
+			vga_lvds: vga {
+				clock-frequency = <25175000>;
+				hactive = <640>;
+				vactive = <480>;
+				hback-porch = <48>;
+				hfront-porch = <16>;
+				vback-porch = <33>;
+				vfront-porch = <10>;
+				hsync-len = <96>;
+				vsync-len = <2>;
 			};
 		};
 	};
