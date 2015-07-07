@@ -153,6 +153,8 @@ struct imx_ahci_priv {
 	u32 ext_osc;
 };
 
+void *sg_io_buffer_hack;
+
 static int ahci_imx_hotplug;
 module_param_named(hotplug, ahci_imx_hotplug, int, 0644);
 MODULE_PARM_DESC(hotplug, "AHCI IMX hot-plug support (0=Don't support, 1=support)");
@@ -1592,6 +1594,24 @@ static int imx_ahci_probe(struct platform_device *pdev)
 			ret = -EINVAL;
 		dev_info(dev, "Register AHCI SATA BIST sysfile callback.\n");
 	} else {
+		/*
+		 * Due to IP bug on the Synopsis 3.00 SATA version,
+		 * which is present on mx6q, and not on mx53,
+		 * we should use sg_tablesize = 1 for reliable operation
+		 */
+		if (imxpriv->type == AHCI_IMX6Q || imxpriv->type == AHCI_IMX6QP) {
+			dma_addr_t dma;
+
+			ahci_platform_sht.sg_tablesize = 1;
+
+			sg_io_buffer_hack = dma_alloc_coherent(dev, 0x10000,
+					&dma, GFP_KERNEL);
+			if (!sg_io_buffer_hack) {
+				ret = -ENOMEM;
+				goto disable_sata;
+			}
+		}
+
 		ret = ahci_platform_init_host(pdev, hpriv, &ahci_imx_port_info,
 					      &ahci_platform_sht);
 		if (ret)
