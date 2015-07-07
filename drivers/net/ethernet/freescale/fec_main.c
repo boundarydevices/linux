@@ -1138,7 +1138,7 @@ fec_timeout(struct net_device *ndev)
 	pr_err("%s: last=%x %x, mask %x\n", __func__, last_ievents, readl(fep->hwp + FEC_IEVENT), readl(fep->hwp + FEC_IMASK));
 	fec_dump(ndev);
 
-	for (i = 0; i < FEC_ENET_MAX_TX_QS; i++) {
+	for (i = 0; i < fep->num_tx_queues; i++) {
 		struct fec_enet_priv_tx_q *txq = fep->tx_queue[i];
 		bdp = txq->dirty_tx;
 		bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
@@ -1162,7 +1162,7 @@ fec_timeout(struct net_device *ndev)
 	}
 	/* Disable all interrupts */
 	writel(0, fep->hwp + FEC_IMASK);
-	for (i = 0; i < FEC_ENET_MAX_TX_QS; i++) {
+	for (i = 0; i < fep->num_tx_queues; i++) {
 		struct fec_enet_priv_tx_q *txq = fep->tx_queue[i];
 		bdp = txq->dirty_tx;
 		bdp1 = bdp;
