@@ -1902,6 +1902,7 @@ static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi)
 				"%s: Video mode same as previous\n", __func__);
 		/* update fbi mode in case modelist is updated */
 		hdmi->fbi->mode = (struct fb_videomode *)mode;
+		fb_videomode_to_var(&hdmi->fbi->var, mode);
 		/* update hdmi setting in case EDID data updated  */
 		mxc_hdmi_setup(hdmi, 0);
 	} else {
