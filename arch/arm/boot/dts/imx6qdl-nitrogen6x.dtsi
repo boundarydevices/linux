@@ -263,6 +263,11 @@
 		flow_cntrl = <1>;
 		baud_rate = <3000000>;
 	};
+
+	fake_poweroff {
+		compatible = "fake-poweroff";
+		gpios = <&gpio2 3 GPIO_ACTIVE_LOW>;
+	};
 };
 
 &audmux {
