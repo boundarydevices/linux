@@ -12,6 +12,14 @@ config POWER_RESET_AS3722
 	help
 	  This driver supports turning off board via a ams AS3722 power-off.
 
+config POWER_RESET_FAKE
+	bool "Fake power-off driver"
+	depends on OF_GPIO && POWER_RESET
+	help
+	  This driver is faking the board power off by blanking the displays.
+	  It also provides a reboot capability depending on a GPIO toggle which
+	  you can specify in your devicetree.
+
 config POWER_RESET_GPIO
 	bool "GPIO power-off driver"
 	depends on OF_GPIO && POWER_RESET
