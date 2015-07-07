@@ -561,6 +561,12 @@
 		compatible = "fsl,mxc_v4l2_output";
 		status = "okay";
 	};
+
+	fake_poweroff {
+		compatible = "fake-poweroff";
+		gpios = <&gpio2 3 GPIO_ACTIVE_LOW>;
+		watchdog = <&wdog1>;
+	};
 };
 
 &audmux {
