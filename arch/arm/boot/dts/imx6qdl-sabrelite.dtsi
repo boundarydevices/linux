@@ -394,6 +394,12 @@
 		};
 	};
 
+	fake_poweroff {
+		compatible = "fake-poweroff";
+		gpios = <&gpio2 3 GPIO_ACTIVE_LOW>;
+		watchdog = <&wdog1>;
+	};
+
 	fb_lvds: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
