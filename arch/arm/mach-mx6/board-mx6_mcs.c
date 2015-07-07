@@ -95,8 +95,6 @@
 
 #define GP_KEY_ONOFF		IMX_GPIO_NR(4, 15)
 
-#define GP_USB_OTG_PWR		IMX_GPIO_NR(1, 1)
-
 #include "pads-mx6_mcs.h"
 #define FOR_DL_SOLO
 #include "pads-mx6_mcs.h"
@@ -450,7 +448,7 @@ static void __init fixup_mxc_board(struct machine_desc *desc, struct tag *tags,
 
 static const struct imx_pcie_platform_data pcie_data  __initconst = {
 	.pcie_pwr_en	= -EINVAL,
-	.pcie_rst	= -EINVAL,
+	.pcie_rst	= GP_PCIE_RESET,
 	.pcie_wake_up	= -EINVAL,
 	.pcie_dis	= -EINVAL,
 };

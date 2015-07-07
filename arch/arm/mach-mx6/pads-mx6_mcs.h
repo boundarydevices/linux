@@ -60,6 +60,7 @@
 #define WEAK_PULLUP		(PAD_CTL_HYS | PAD_CTL_PKE | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_LOW | PAD_CTL_DSE_40ohm)
 #define WEAK (PAD_CTL_PUE | PAD_CTL_PUS_100K_UP | PAD_CTL_DSE_240ohm | PAD_CTL_SPEED_LOW)
 #define WEAK_IRQ (WEAK | PAD_CTL_PKE | PAD_CTL_HYS)
+#define OUTPUT_40OHM	(PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm)
 
 #define WEAK_PD (PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN | PAD_CTL_DSE_240ohm | PAD_CTL_SPEED_LOW)
 
@@ -109,7 +110,8 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	MX6PAD(SD3_DAT4__GPIO_7_1), 		/* AR1021 4/5 wire select */
 
 	/* PCIE */
-	NEW_PAD_CTRL(MX6PAD(EIM_D22__GPIO_3_22), WEAK),		/* Reset - active low */
+#define GP_PCIE_RESET          IMX_GPIO_NR(6, 31)
+	NEW_PAD_CTRL(MX6PAD(EIM_BCLK__GPIO_6_31), OUTPUT_40OHM),
 
 	/* Real Time Clock-  RTC(I2C1) */
 	NEW_PAD_CTRL(MX6PAD(EIM_CS0__GPIO_2_23), WEAK), 	/* RTC_I2C_EN - high active (I2C1) */
@@ -161,6 +163,8 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 
 	/* USB OTG */
 	MX6PAD(GPIO_1__USBOTG_ID),
+#define GP_USB_OTG_PWR		IMX_GPIO_NR(3, 22)
+	NEW_PAD_CTRL(MX6PAD(EIM_D22__GPIO_3_22), WEAK),	/* usbotg power */
 
 	NEW_PAD_CTRL(MX6PAD(NANDF_D7__GPIO_2_7), WEAK), /* NC: labelled SD4_WP */
 
