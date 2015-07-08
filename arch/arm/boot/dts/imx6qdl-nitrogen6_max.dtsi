@@ -364,7 +364,7 @@
 			MX6QDL_PAD_SD3_DAT3__SD3_DATA3		0x17059
 			MX6QDL_PAD_NANDF_CS1__SD3_VSELECT	0x100b0		/* sd3 voltage select */
 #define GP_USDHC3_CD	<&gpio7 0 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_SD3_DAT5__GPIO7_IO00		0x80000000
+			MX6QDL_PAD_SD3_DAT5__GPIO7_IO00		0x1b0b0
 		>;
 	};
 
@@ -393,27 +393,26 @@
 
 / {
 	aliases {
-                mxcfb0 = &hdmi_display;
-                mxcfb1 = &lvds_display;
-                mxcfb2 = &lcd_display;
-                mxcfb3 = &lvds_display_2;
-		hdmi_display = &hdmi_display;
-		lvds_display = &lvds_display;
-		lcd_display = &lcd_display;
+		fb_hdmi = &fb_hdmi;
+		fb_lcd = &fb_lcd;
+		fb_lvds = &fb_lvds;
+		fb_lvds2 = &fb_lvds2;
 		hannstar = &hannstar ;
-		lg1280x800 = &lg1280x800;
-		lvds1080p = &lvds1080p;
-		okaya1024x600 = &okaya1024x600;
-
-		lvds_display_2 = &lvds_display_2;
 		hannstar_2 = &hannstar_2 ;
-		lg1280x800_2 = &lg1280x800_2;
-		okaya1024x600_2 = &okaya1024x600_2;
+		hdmi_display = &fb_hdmi;
+		lcd_display = &fb_lcd;
 		ldb = &ldb;
-	};
-
-	memory {
-		reg = <0x10000000 0x40000000>;
+		lg1280x800 = &lg1280x800;
+		lg1280x800_2 = &lg1280x800_2;
+		lvds_display = &fb_lvds;
+		lvds_display_2 = &fb_lvds2;
+		lvds1080p = &lvds1080p;
+		mxcfb0 = &fb_hdmi;
+		mxcfb1 = &fb_lvds;
+		mxcfb2 = &fb_lcd;
+		mxcfb3 = &fb_lvds;
+		okaya1024x600 = &okaya1024x600;
+		okaya1024x600_2 = &okaya1024x600_2;
 	};
 
 	clocks {
@@ -422,6 +421,53 @@
 			#clock-cells = <0>;
 			clock-frequency = <24000000>;
 		};
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys>;
+
+		back {
+			label = "Back";
+			gpios = GP_GPIOKEY_BACK;
+			linux,code = <KEY_BACK>;
+		};
+
+		home {
+			label = "Home";
+			gpios = GP_GPIOKEY_HOME;
+			linux,code = <KEY_HOME>;
+		};
+
+		menu {
+			label = "Menu";
+			gpios = GP_GPIOKEY_MENU;
+			linux,code = <KEY_MENU>;
+		};
+
+		power {
+			label = "Power Button";
+			gpios = GP_GPIOKEY_POWER;
+			linux,code = <KEY_POWER>;	/* or KEY_SEARCH */
+			gpio-key,wakeup;
+		};
+
+		volume-down {
+			label = "Volume Down";
+			gpios = GP_GPIOKEY_VOL_DN;
+			linux,code = <KEY_VOLUMEDOWN>;
+		};
+
+		volume-up {
+			label = "Volume Up";
+			gpios = GP_GPIOKEY_VOL_UP;
+			linux,code = <KEY_VOLUMEUP>;
+		};
+	};
+
+	memory {
+		reg = <0x10000000 0x40000000>;
 	};
 
 	regulators {
@@ -479,53 +525,10 @@
 			gpio = GP_REG_WLAN_EN;
 			startup-delay-us = <70000>;
 			enable-active-high;
-			debug;
 		};
 	};
 
-	gpio-keys {
-		compatible = "gpio-keys";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_gpio_keys>;
-		power {
-			label = "Power Button";
-			gpios = GP_GPIOKEY_POWER;
-			linux,code = <KEY_POWER>;	/* or KEY_SEARCH */
-			gpio-key,wakeup;
-		};
-
-		menu {
-			label = "Menu";
-			gpios = GP_GPIOKEY_MENU;
-			linux,code = <KEY_MENU>;
-		};
-
-		home {
-			label = "Home";
-			gpios = GP_GPIOKEY_HOME;
-			linux,code = <KEY_HOME>;
-		};
-
-		back {
-			label = "Back";
-			gpios = GP_GPIOKEY_BACK;
-			linux,code = <KEY_BACK>;
-		};
-
-		volume-up {
-			label = "Volume Up";
-			gpios = GP_GPIOKEY_VOL_UP;
-			linux,code = <KEY_VOLUMEUP>;
-		};
-
-		volume-down {
-			label = "Volume Down";
-			gpios = GP_GPIOKEY_VOL_DN;
-			linux,code = <KEY_VOLUMEDOWN>;
-		};
-	};
-
-	sound_sgtl5000: sound_sgtl5000 {
+	sound {
 		compatible = "fsl,imx6q-nitrogen6_max-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";
 		model = "imx6q-nitrogen6_max-sgtl5000";
@@ -547,7 +550,7 @@
 		hdmi-controller = <&hdmi_audio>;
 	};
 
-	hdmi_display: fb@0 {
+	fb_hdmi: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "hdmi";
 		interface_pix_fmt = "RGB24";
@@ -558,17 +561,7 @@
 		status = "disabled";
 	};
 
-	lvds_display: fb@1 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "ldb";
-		interface_pix_fmt = "RGB666";
-		default_bpp = <16>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	lcd_display: fb@2 {
+	fb_lcd: fb@1 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "lcd";
 		interface_pix_fmt = "RGB666";
@@ -578,7 +571,17 @@
 		status = "disabled";
 	};
 
-	lvds_display_2: fb@3 {
+	fb_lvds: fb@2 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "ldb";
+		interface_pix_fmt = "RGB666";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	fb_lvds2: fb@3 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
