@@ -204,7 +204,6 @@ struct hw_bank {
  * @in_lpm: if the core in low power mode
  * @wakeup_int: if wakeup interrupt occur
  * @rev: The revision number for controller
- * @hnp_enable: indicates if OTG full HNP is enabled
  * @adp_probe_event: indicates to enable adp probe
  * @adp_sense_event: indicates to enable adp sense
  */
@@ -271,7 +270,6 @@ struct ci_hdrc {
 	u32				pm_portsc;
 	u32				pm_usbmode;
 	struct work_struct		power_lost_work;
-	bool				hnp_enable;
 	bool				adp_probe_event;
 	bool				adp_sense_event;
 };
@@ -434,8 +432,11 @@ static inline u32 hw_test_and_write(struct ci_hdrc *ci, enum ci_hw_regs reg,
 static inline bool ci_otg_is_fsm_mode(struct ci_hdrc *ci)
 {
 #ifdef CONFIG_USB_OTG_FSM
+	struct usb_otg_caps *otg_caps = &ci->platdata->ci_otg_caps;
+
 	return ci->is_otg && ci->roles[CI_ROLE_HOST] &&
-					ci->roles[CI_ROLE_GADGET];
+		ci->roles[CI_ROLE_GADGET] && (otg_caps->hnp_support ||
+			otg_caps->srp_support || otg_caps->adp_support);
 #else
 	return false;
 #endif

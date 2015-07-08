@@ -156,19 +156,32 @@ bool of_usb_host_tpl_support(struct device_node *np)
 EXPORT_SYMBOL_GPL(of_usb_host_tpl_support);
 
 /**
- * of_usb_otg_adp_support -  to get if otg adp is supported by the otg controller
+ * of_usb_set_otg_caps - to set usb otg capabilities according to
+ * the passed properties in DT.
  * @np: Pointer to the given device_node
+ * @otg_caps: Pointer to the target usb_otg_caps to be set
  *
- * The function gets if the otg port support ADP
+ * The function gets and sets the otg capabilities
  */
-bool of_usb_otg_adp_support(struct device_node *np)
+void of_usb_set_otg_caps(struct device_node *np, struct usb_otg_caps *otg_caps)
 {
-	if (of_find_property(np, "adp-support", NULL))
-		return true;
+	u32 otg_rev;
 
-	return false;
+	if (!otg_caps)
+		return;
+
+	if (!of_property_read_u32(np, "otg-rev", &otg_rev))
+		otg_caps->otg_rev = otg_rev;
+	if (of_find_property(np, "hnp-disable", NULL))
+		otg_caps->hnp_support = false;
+	if (of_find_property(np, "srp-disable", NULL))
+		otg_caps->srp_support = false;
+	if (of_find_property(np, "adp-disable", NULL) ||
+				(otg_caps->otg_rev < 0x0200))
+		otg_caps->adp_support = false;
 }
-EXPORT_SYMBOL_GPL(of_usb_otg_adp_support);
+EXPORT_SYMBOL_GPL(of_usb_set_otg_caps);
+
 #endif
 
 MODULE_LICENSE("GPL");

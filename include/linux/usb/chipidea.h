@@ -53,8 +53,8 @@ struct ci_hdrc_platform_data {
 #define CI_HDRC_IMX_ADP_ATTACH_EVENT		13
 	int	(*notify_event)(struct ci_hdrc *ci, unsigned event);
 	struct regulator	*reg_vbus;
+	struct usb_otg_caps	ci_otg_caps;
 	bool			tpl_support;
-	bool			adp_support;
 	u32			ahbburst_config;
 	u32			burst_length;
 	u32			phy_clkgate_delay_us;

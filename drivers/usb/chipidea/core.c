@@ -624,9 +624,11 @@ static int ci_get_platdata(struct device *dev,
 	}
 
 	if (platdata->dr_mode == USB_DR_MODE_OTG) {
-		if (!platdata->adp_support)
-			platdata->adp_support =
-				of_usb_otg_adp_support(dev->of_node);
+		/* We can support HNP and SRP */
+		platdata->ci_otg_caps.hnp_support = true;
+		platdata->ci_otg_caps.srp_support = true;
+		/* Update otg capabilities by DT properties */
+		of_usb_set_otg_caps(dev->of_node, &platdata->ci_otg_caps);
 	}
 
 	if (of_usb_get_maximum_speed(dev->of_node) == USB_SPEED_FULL)
