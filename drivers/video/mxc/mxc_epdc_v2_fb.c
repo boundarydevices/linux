@@ -185,6 +185,7 @@ struct mxc_epdc_fb_data {
 	u8 *temp_range_bounds;
 	struct mxcfb_waveform_modes wv_modes;
 	bool wv_modes_update;
+	bool waveform_is_advanced;
 	u32 *waveform_buffer_virt;
 	u32 waveform_buffer_phys;
 	u32 waveform_buffer_size;
@@ -280,6 +281,8 @@ struct mxcfb_waveform_data_file {
 	struct waveform_data_header wdh;
 	u32 *data;	/* Temperature Range Table + Waveform Data */
 };
+
+#define WAVEFORM_HDR_LUT_ADVANCED_ALGO_MASK 0xc
 
 static struct fb_videomode ed060xh2c1mode = {
 	.name = "ED060XH2C1",
@@ -694,6 +697,36 @@ static void dump_all_updates(struct mxc_epdc_fb_data *fb_data)
 	else
 		dump_update_data(fb_data->dev, fb_data->cur_update);
 }
+
+static void dump_fw_header(struct device *dev,
+			   struct mxcfb_waveform_data_file *fw)
+{
+	dev_dbg(dev, "Firmware Header:\n");
+	dev_dbg(dev, "wi0         0x%08x\n", fw->wdh.wi0);
+	dev_dbg(dev, "wi1         0x%08x\n", fw->wdh.wi1);
+	dev_dbg(dev, "wi2         0x%08x\n", fw->wdh.wi2);
+	dev_dbg(dev, "wi3         0x%08x\n", fw->wdh.wi3);
+	dev_dbg(dev, "wi4         0x%08x\n", fw->wdh.wi4);
+	dev_dbg(dev, "wi5         0x%08x\n", fw->wdh.wi5);
+	dev_dbg(dev, "wi6         0x%08x\n", fw->wdh.wi6);
+	dev_dbg(dev, "xwia:24     0x%06x\n", fw->wdh.xwia);
+	dev_dbg(dev, "cs1:8       0x%02x\n", fw->wdh.cs1);
+	dev_dbg(dev, "wmta:24     0x%06x\n", fw->wdh.wmta);
+	dev_dbg(dev, "fvsn:8      0x%02x\n", fw->wdh.fvsn);
+	dev_dbg(dev, "luts:8      0x%02x\n", fw->wdh.luts);
+	dev_dbg(dev, "mc:8        0x%02x\n", fw->wdh.mc);
+	dev_dbg(dev, "trc:8       0x%02x\n", fw->wdh.trc);
+	dev_dbg(dev, "reserved0_0 0x%02x\n", fw->wdh.reserved0_0);
+	dev_dbg(dev, "eb:8        0x%02x\n", fw->wdh.eb);
+	dev_dbg(dev, "sb:8        0x%02x\n", fw->wdh.sb);
+	dev_dbg(dev, "reserved0_1 0x%02x\n", fw->wdh.reserved0_1);
+	dev_dbg(dev, "reserved0_2 0x%02x\n", fw->wdh.reserved0_2);
+	dev_dbg(dev, "reserved0_3 0x%02x\n", fw->wdh.reserved0_3);
+	dev_dbg(dev, "reserved0_4 0x%02x\n", fw->wdh.reserved0_4);
+	dev_dbg(dev, "reserved0_5 0x%02x\n", fw->wdh.reserved0_5);
+	dev_dbg(dev, "cs2:8       0x%02x\n", fw->wdh.cs2);
+}
+
 #else
 static inline void dump_pxp_config(struct mxc_epdc_fb_data *fb_data,
 				   struct pxp_config_data *pxp_conf) {}
@@ -704,6 +737,8 @@ static inline void dump_collision_list(struct mxc_epdc_fb_data *fb_data) {}
 static inline void dump_free_list(struct mxc_epdc_fb_data *fb_data) {}
 static inline void dump_queue(struct mxc_epdc_fb_data *fb_data) {}
 static inline void dump_all_updates(struct mxc_epdc_fb_data *fb_data) {}
+static void dump_fw_header(struct device *dev,
+			   struct mxcfb_waveform_data_file *fw) {}
 
 #endif
 
@@ -894,7 +929,7 @@ static void epdc_submit_update(u32 lut_num, u32 waveform_mode, u32 update_mode,
 
 	epdc_set_used_lut(lut_num);
 #endif
-
+	dump_epdc_reg();
 	__raw_writel(reg_val, EPDC_UPD_CTRL);
 }
 
@@ -1208,15 +1243,18 @@ static void epdc_init_settings(struct mxc_epdc_fb_data *fb_data)
 	__raw_writel(reg_val, EPDC_FORMAT);
 
 #ifdef	EPDC_STANDARD_MODE
-	reg_val =
-	    ((EPDC_WB_FIELD_USAGE_PTS << EPDC_WB_FIELD_USAGE_OFFSET) &
-	      EPDC_WB_FIELD_USAGE_MASK)
-	    | ((0x8 << EPDC_WB_FIELD_FROM_OFFSET) &
-	      EPDC_WB_FIELD_FROM_MASK)
-	    | ((0x8 << EPDC_WB_FIELD_TO_OFFSET) &
-	      EPDC_WB_FIELD_TO_MASK)
-	    | ((0x1 << EPDC_WB_FIELD_LEN_OFFSET) &
-	      EPDC_WB_FIELD_LEN_MASK);
+	reg_val = 0;
+	if (fb_data->waveform_is_advanced) {
+		reg_val =
+		    ((EPDC_WB_FIELD_USAGE_PTS << EPDC_WB_FIELD_USAGE_OFFSET) &
+		      EPDC_WB_FIELD_USAGE_MASK)
+		    | ((0x8 << EPDC_WB_FIELD_FROM_OFFSET) &
+		      EPDC_WB_FIELD_FROM_MASK)
+		    | ((0x8 << EPDC_WB_FIELD_TO_OFFSET) &
+		      EPDC_WB_FIELD_TO_MASK)
+		    | ((0x1 << EPDC_WB_FIELD_LEN_OFFSET) &
+		      EPDC_WB_FIELD_LEN_MASK);
+	}
 	__raw_writel(reg_val, EPDC_WB_FIELD3);
 #endif
 
@@ -4667,6 +4705,8 @@ static void mxc_epdc_fb_fw_handler(const struct firmware *fw,
 
 	wv_file = (struct mxcfb_waveform_data_file *)fw->data;
 
+	dump_fw_header(fb_data->dev, wv_file);
+
 	/* Get size and allocate temperature range table */
 	fb_data->trt_entries = wv_file->wdh.trc + 1;
 	fb_data->temp_range_bounds = kzalloc(fb_data->trt_entries, GFP_KERNEL);
@@ -4696,6 +4736,17 @@ static void mxc_epdc_fb_fw_handler(const struct firmware *fw,
 
 	memcpy(fb_data->waveform_buffer_virt, (u8 *)(fw->data) + wv_data_offs,
 		fb_data->waveform_buffer_size);
+
+	/* Check for advanced algorithms */
+	if ((wv_file->wdh.luts & WAVEFORM_HDR_LUT_ADVANCED_ALGO_MASK) != 0) {
+		dev_dbg(fb_data->dev,
+			"Waveform file supports advanced algorithms\n");
+			fb_data->waveform_is_advanced = true;
+	} else {
+		dev_dbg(fb_data->dev,
+			"Waveform file does not support advanced algorithms\n");
+		fb_data->waveform_is_advanced = false;
+	}
 
 	release_firmware(fw);
 
