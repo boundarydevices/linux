@@ -562,7 +562,7 @@ static int __init ts_init(void)
 		printk(KERN_WARNING "%s: i2c_add_driver failed\n", client_name);
 		return res;
 	}
-	printk(KERN_INFO "%s: " __DATE__ "\n", client_name);
+	printk(KERN_INFO "%s: ts_init\n", client_name);
 	return 0;
 }
 
