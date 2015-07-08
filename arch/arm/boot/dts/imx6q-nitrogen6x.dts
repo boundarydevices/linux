@@ -22,20 +22,20 @@
 	compatible = "fsl,imx6q-nitrogen6x", "fsl,imx6q";
 };
 
+&fb_hdmi {
+	status = "okay";
+};
+
+&fb_lcd {
+	status = "okay";
+};
+
+&fb_lvds {
+	status = "okay";
+};
+
 &hdmi_core {
 	ipu_id = <1>;
-};
-
-&lvds_display {
-	status = "okay";
-};
-
-&hdmi_display {
-	status = "okay";
-};
-
-&lcd_display {
-	status = "okay";
 };
 
 &ov5640 {
