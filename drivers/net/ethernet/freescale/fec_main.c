@@ -1222,11 +1222,12 @@ static void fec_enet_work(struct work_struct *work)
 static void fec_enet_tx(struct net_device *ndev, struct fec_enet_private *fep,
 		struct fec_enet_priv_tx_q *txq)
 {
-	struct bufdesc *bdp;
+	struct bufdesc *bdp, *bdp_t;
 	unsigned short status;
 	struct	sk_buff	*skb;
 	struct netdev_queue *nq;
 	int	index = 0;
+	int	i, bdnum;
 	int	entries_free;
 
 
@@ -1259,17 +1260,28 @@ static void fec_enet_tx(struct net_device *ndev, struct fec_enet_private *fep,
 		}
 		bdp->cbd_sc = (bdp == txq->bd.last) ? BD_SC_WRAP : 0;
 
-		index = fec_enet_get_bd_index(bdp, &txq->bd);
-
+		bdp_t = bdp;
+		bdnum = 1;
+		index = fec_enet_get_bd_index(bdp_t, &txq->bd);
 		skb = txq->tx_skbuff[index];
-		if (!IS_TSO_HEADER(txq, bdp->cbd_bufaddr) && bdp->cbd_bufaddr)
-			dma_unmap_single(&fep->pdev->dev, bdp->cbd_bufaddr,
-					bdp->cbd_datlen, DMA_TO_DEVICE);
-		bdp->cbd_bufaddr = 0;
-		if (!skb) {
-			bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
-			continue;
+		while (!skb) {
+			bdp_t = fec_enet_get_nextdesc(bdp_t, &txq->bd);
+			index = fec_enet_get_bd_index(bdp_t, &txq->bd);
+			skb = txq->tx_skbuff[index];
+			bdnum++;
 		}
+		if ((status = bdp_t->cbd_sc) & BD_ENET_TX_READY)
+			break;
+
+		for (i = 0; i < bdnum; i++) {
+			if (!IS_TSO_HEADER(txq, bdp->cbd_bufaddr))
+				dma_unmap_single(&fep->pdev->dev, bdp->cbd_bufaddr,
+						 bdp->cbd_datlen, DMA_TO_DEVICE);
+			bdp->cbd_bufaddr = 0;
+			if (i < bdnum - 1)
+				bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
+		}
+		txq->tx_skbuff[index] = NULL;
 
 		/* Check for errors. */
 		if (status & (BD_ENET_TX_HB | BD_ENET_TX_LC |
