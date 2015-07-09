@@ -20,6 +20,7 @@
 		hdmi_display = &hdmi_display;
 		lvds_display = &lvds_display;
 		lcd_display = &lcd_display;
+		AA065VE11 = &AA065VE11;
 		hannstar = &hannstar ;
 		lg1280x800 = &lg1280x800;
 		okaya1024x600 = &okaya1024x600;
@@ -749,6 +750,17 @@
 				vfront-porch = <7>;
 				hsync-len = <60>;
 				vsync-len = <10>;
+			};
+			AA065VE11: AA065VE11 {
+				clock-frequency = <43748359>;
+				hactive = <640>;
+				vactive = <480>;
+				hback-porch = <148>;
+				hfront-porch = <116>;
+				vback-porch = <83>;
+				vfront-porch = <60>;
+				hsync-len = <96>;
+				vsync-len = <2>;
 			};
 			vga_lvds: vga {
 				clock-frequency = <25175000>;
