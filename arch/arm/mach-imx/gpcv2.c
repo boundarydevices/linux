@@ -106,7 +106,7 @@ static u32 gpcv2_saved_imrs[IMR_NUM];
 static u32 gpcv2_mf_irqs[IMR_NUM];
 static u32 gpcv2_mf_request_on[IMR_NUM];
 static DEFINE_SPINLOCK(gpcv2_lock);
-static struct notifier_block nb_pcie, nb_mipi;
+static struct notifier_block nb_pcie, nb_mipi, nb_usb_hsic;
 
 void imx_gpcv2_set_slot_ack(u32 index, enum imx_gpc_slot m_core,
 				bool mode, bool ack)
@@ -513,6 +513,40 @@ void imx_gpcv2_restore_all(void)
 		writel_relaxed(gpcv2_saved_imrs[i], reg_imr1 + i * 4);
 }
 
+static int imx_usb_hsic_regulator_notify(struct notifier_block *nb,
+					unsigned long event,
+					void *ignored)
+{
+	u32 val = 0;
+
+	switch (event) {
+	case REGULATOR_EVENT_PRE_ENABLE:
+		val = readl_relaxed(gpc_base + GPC_PGC_CPU_MAPPING);
+		writel_relaxed(val | BIT(6), gpc_base + GPC_PGC_CPU_MAPPING);
+
+		val = readl_relaxed(gpc_base + GPC_PGC_USB_HSIC_PHY);
+		writel_relaxed(val | BIT(0), gpc_base + GPC_PGC_USB_HSIC_PHY);
+
+		val = readl_relaxed(gpc_base + GPC_PU_PGC_SW_PUP_REQ);
+		writel_relaxed(val | BIT(4), gpc_base + GPC_PU_PGC_SW_PUP_REQ);
+
+		break;
+	case REGULATOR_EVENT_PRE_DISABLE:
+		val = readl_relaxed(gpc_base + GPC_PU_PGC_SW_PDN_REQ);
+		writel_relaxed(val | BIT(4), gpc_base + GPC_PU_PGC_SW_PDN_REQ);
+
+		val = readl_relaxed(gpc_base + GPC_PGC_USB_HSIC_PHY);
+		writel_relaxed(val | BIT(0), gpc_base + GPC_PGC_USB_HSIC_PHY);
+
+		val = readl_relaxed(gpc_base + GPC_PGC_CPU_MAPPING);
+		writel_relaxed(val & ~BIT(6), gpc_base + GPC_PGC_CPU_MAPPING);
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
 static int imx_pcie_regulator_notify(struct notifier_block *nb,
 					unsigned long event,
 					void *ignored)
@@ -647,7 +681,7 @@ void __init imx_gpcv2_init(void)
 static int imx_gpcv2_probe(struct platform_device *pdev)
 {
 	int ret;
-	struct regulator *pcie_reg, *mipi_reg;
+	struct regulator *pcie_reg, *mipi_reg, *usb_hsic_reg;
 
 	if (cpu_is_imx7d()) {
 		pcie_reg = devm_regulator_get(&pdev->dev, "pcie-phy");
@@ -677,6 +711,21 @@ static int imx_gpcv2_probe(struct platform_device *pdev)
 		if (ret) {
 			dev_err(&pdev->dev,
 				"mipi regulator notifier request failed.\n");
+			return ret;
+		}
+
+		usb_hsic_reg = devm_regulator_get(&pdev->dev, "vcc");
+		if (IS_ERR(usb_hsic_reg)) {
+			ret = PTR_ERR(usb_hsic_reg);
+			dev_err(&pdev->dev, "usb hsic regulator not ready.\n");
+			return ret;
+		}
+		nb_usb_hsic.notifier_call = &imx_usb_hsic_regulator_notify;
+
+		ret = regulator_register_notifier(usb_hsic_reg, &nb_usb_hsic);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"usb hsic regulator notifier request failed\n");
 			return ret;
 		}
 	}
