@@ -665,6 +665,14 @@ static int mxsfb_set_par(struct fb_info *fb_info)
 	clk_enable_pix(host);
 
 	dev_dbg(&host->pdev->dev, "%s\n", __func__);
+
+	/* If fb is in blank mode, it is
+	 * unnecessary to really set par here.
+	 * It can be delayed when unblank fb
+	 */
+	if (host->cur_blank != FB_BLANK_UNBLANK)
+		return 0;
+
 	/*
 	 * It seems, you can't re-program the controller if it is still running.
 	 * This may lead into shifted pictures (FIFO issue?).
