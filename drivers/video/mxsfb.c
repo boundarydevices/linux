@@ -551,12 +551,6 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 	}
 	clk_enable_pix(host);
 
-	/* Clean soft reset and clock gate bit if it was enabled  */
-	writel(CTRL_SFTRST | CTRL_CLKGATE, host->base + LCDC_CTRL + REG_CLR);
-
-	/* reconfigure the lcdif after */
-	mxsfb_set_par(&host->fb_info);
-
 	writel(CTRL2_OUTSTANDING_REQS__REQ_16,
 		host->base + LCDC_V4_CTRL2 + REG_SET);
 
@@ -872,6 +866,11 @@ static int mxsfb_blank(int blank, struct fb_info *fb_info)
 
 	case FB_BLANK_UNBLANK:
 		if (!host->enabled) {
+			clk_enable_pix(host);
+			clk_enable_axi(host);
+			clk_enable_disp_axi(host);
+
+			writel(0, host->base + LCDC_CTRL);
 			mxsfb_set_par(&host->fb_info);
 			mxsfb_enable_controller(fb_info);
 		}
