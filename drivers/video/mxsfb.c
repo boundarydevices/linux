@@ -531,9 +531,6 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 
 	pm_runtime_get_sync(&host->pdev->dev);
 
-	clk_enable_axi(host);
-	clk_enable_disp_axi(host);
-
 	/* the pixel clock should be disabled before
 	 * trying to set its clock rate successfully.
 	 */
@@ -594,8 +591,6 @@ static void mxsfb_disable_controller(struct fb_info *fb_info)
 	if (host->dispdrv && host->dispdrv->drv->disable)
 		host->dispdrv->drv->disable(host->dispdrv, fb_info);
 
-	clk_enable_axi(host);
-	clk_enable_disp_axi(host);
 	/*
 	 * Even if we disable the controller here, it will still continue
 	 * until its FIFOs are running out of data
@@ -659,10 +654,6 @@ static int mxsfb_set_par(struct fb_info *fb_info)
 	/* If parameter no change, don't reconfigure. */
 	if (mxsfb_par_equal(fb_info, host))
 		return 0;
-
-	clk_enable_axi(host);
-	clk_enable_disp_axi(host);
-	clk_enable_pix(host);
 
 	dev_dbg(&host->pdev->dev, "%s\n", __func__);
 
@@ -955,10 +946,6 @@ static int mxsfb_pan_display(struct fb_var_screeninfo *var,
 		dev_err(fb_info->device, "y panning exceeds\n");
 		return -EINVAL;
 	}
-
-	clk_enable_axi(host);
-	clk_enable_disp_axi(host);
-	clk_enable_pix(host);
 
 	offset = fb_info->fix.line_length * var->yoffset;
 
@@ -1541,16 +1528,14 @@ static void mxsfb_shutdown(struct platform_device *pdev)
 	struct fb_info *fb_info = platform_get_drvdata(pdev);
 	struct mxsfb_info *host = to_imxfb_host(fb_info);
 
-	clk_enable_axi(host);
-	clk_enable_disp_axi(host);
 	/*
 	 * Force stop the LCD controller as keeping it running during reboot
 	 * might interfere with the BootROM's boot mode pads sampling.
 	 */
-	writel(CTRL_RUN, host->base + LCDC_CTRL + REG_CLR);
-	writel(CTRL_MASTER, host->base + LCDC_CTRL + REG_CLR);
-	clk_disable_disp_axi(host);
-	clk_disable_axi(host);
+	if (host->cur_blank == FB_BLANK_UNBLANK) {
+		writel(CTRL_RUN, host->base + LCDC_CTRL + REG_CLR);
+		writel(CTRL_MASTER, host->base + LCDC_CTRL + REG_CLR);
+	}
 }
 
 #ifdef CONFIG_PM_RUNTIME
