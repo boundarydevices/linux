@@ -64,7 +64,7 @@ static struct pxp_data_format pxp_s0_formats[] = {
 		.colorspace = V4L2_COLORSPACE_SRGB,
 	}, {
 		.name = "24-bit RGB",
-		.bpp = 4,
+		.bpp = 3,
 		.fourcc = V4L2_PIX_FMT_RGB24,
 		.colorspace = V4L2_COLORSPACE_SRGB,
 	}, {
@@ -310,6 +310,8 @@ static int pxp_set_fbinfo(struct pxps *pxp)
 	pxp->pxp_conf.out_param.stride = pxp->fbi->var.xres;
 	if (pxp->fbi->var.bits_per_pixel == 16)
 		fb->fmt.pixelformat = V4L2_PIX_FMT_RGB565;
+	else if (pxp->fbi->var.bits_per_pixel == 32)
+		fb->fmt.pixelformat = V4L2_PIX_FMT_RGB32;
 	else
 		fb->fmt.pixelformat = V4L2_PIX_FMT_RGB24;
 
@@ -459,9 +461,10 @@ static int pxp_s_output(struct file *file, void *fh,
 
 	/* Output buffer is same format as fbdev */
 	if (fmt->pixelformat == V4L2_PIX_FMT_RGB32  ||
-		fmt->pixelformat == V4L2_PIX_FMT_RGB24  ||
 		fmt->pixelformat == V4L2_PIX_FMT_YUV32)
 		bpp = 4;
+	else if (fmt->pixelformat == V4L2_PIX_FMT_RGB24)
+		bpp = 3;
 	else
 		bpp = 2;
 

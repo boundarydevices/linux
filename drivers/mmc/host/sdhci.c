@@ -827,7 +827,7 @@ static void sdhci_prepare_data(struct sdhci_host *host, struct mmc_command *cmd)
 			int sg_cnt;
 
 			sg_cnt = sdhci_pre_dma_transfer(host, data, NULL);
-			if (sg_cnt == 0) {
+			if (sg_cnt <= 0) {
 				/*
 				 * This only happens when someone fed
 				 * us an invalid request.
@@ -2353,7 +2353,20 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 		host->cmd->error = -EILSEQ;
 
 	if (host->cmd->error) {
-		tasklet_schedule(&host->finish_tasklet);
+		if (!host->cmd->data || host->data_early) {
+			tasklet_schedule(&host->finish_tasklet);
+		} else {
+			/*
+			 * data may be still in transferring, wait for data
+			 * interrupts to handle errors to avoid reset
+			 * during data transfer which may cause unpridicable
+			 * issues due to controller internal state wrong.
+			 *
+			 * Need clear host->cmd to avoid wrongly set data_early
+			 * in the later sdhci_data_irq.
+			 */
+			host->cmd = NULL;
+		}
 		return;
 	}
 

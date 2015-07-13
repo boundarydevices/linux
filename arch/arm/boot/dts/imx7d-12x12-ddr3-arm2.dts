@@ -269,6 +269,7 @@
 			fsl,pins = <
 				MX7D_PAD_GPIO1_IO02__GPIO1_IO2 	0x59 /* flexcan stby1 */
 				MX7D_PAD_GPIO1_IO03__GPIO1_IO3  0x59 /* flexcan stby2 */
+				MX7D_PAD_GPIO1_IO01__ANATOP_24M_OUT 0x80000000
 			>;
 		};
 	};
@@ -290,6 +291,10 @@
 			>;
 		};
 	};
+};
+
+&usbh {
+	status = "okay";
 };
 
 &usbotg1 {
