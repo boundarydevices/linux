@@ -1105,6 +1105,7 @@ static int mxsfb_restore_mode(struct mxsfb_info *host)
 
 	line_count = fb_info->fix.smem_len / fb_info->fix.line_length;
 	fb_info->fix.ypanstep = 1;
+	fb_info->fix.ywrapstep = 1;
 
 	host->enabled = 1;
 
@@ -1223,6 +1224,7 @@ static int mxsfb_init_fbinfo(struct mxsfb_info *host)
 	fb_info->flags = FBINFO_FLAG_DEFAULT | FBINFO_READS_FAST;
 	fb_info->fix.type = FB_TYPE_PACKED_PIXELS;
 	fb_info->fix.ypanstep = 1;
+	fb_info->fix.ywrapstep = 1;
 	fb_info->fix.visual = FB_VISUAL_TRUECOLOR,
 	fb_info->fix.accel = FB_ACCEL_NONE;
 
