@@ -566,6 +566,7 @@ static const struct v4l2_subdev_video_ops vadc_video_ops = {
 	.enum_mbus_fmt         = vadc_enum_mbus_fmt,
 	.try_mbus_fmt          = vadc_mbus_fmt,
 	.g_mbus_fmt            = vadc_mbus_fmt,
+	.s_mbus_fmt            = vadc_mbus_fmt,
 	.enum_framesizes       = vadc_enum_framesizes,
 	.enum_frameintervals   = vadc_enum_frameintervals,
 	.s_parm                = vadc_s_parm,
