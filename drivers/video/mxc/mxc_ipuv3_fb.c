@@ -2765,6 +2765,7 @@ static struct fb_info *mxcfb_init_fbinfo(struct device *dev, struct fb_ops *ops)
 {
 	struct fb_info *fbi;
 	struct mxcfb_info *mxcfbi;
+	struct ipuv3_fb_platform_data *plat_data = dev->platform_data;
 
 	/*
 	 * Allocate sufficient memory for the fb structure
@@ -2776,6 +2777,8 @@ static struct fb_info *mxcfb_init_fbinfo(struct device *dev, struct fb_ops *ops)
 	mxcfbi = (struct mxcfb_info *)fbi->par;
 
 	fbi->var.activate = FB_ACTIVATE_NOW;
+
+	bpp_to_var(plat_data->default_bpp, &fbi->var);
 
 	fbi->fbops = ops;
 	fbi->flags = FBINFO_FLAG_DEFAULT;
