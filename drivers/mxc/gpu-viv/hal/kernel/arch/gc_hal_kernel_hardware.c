@@ -7335,6 +7335,10 @@ gckHARDWARE_IsFeatureAvailable(
         available = ((((gctUINT32) (Hardware->identity.chipMinorFeatures5)) >> (0 ? 14:14) & ((gctUINT32) ((((1 ? 14:14) - (0 ? 14:14) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 14:14) - (0 ? 14:14) + 1)))))) == (0x1 & ((gctUINT32) ((((1 ? 14:14) - (0 ? 14:14) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 14:14) - (0 ? 14:14) + 1)))))));
         break;
 
+    case gcvFEATURE_MMU:
+        available= ((((gctUINT32) (Hardware->identity.chipMinorFeatures1)) >> (0 ? 28:28) & ((gctUINT32) ((((1 ? 28:28) - (0 ? 28:28) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 28:28) - (0 ? 28:28) + 1)))))) == (0x1 & ((gctUINT32) ((((1 ? 28:28) - (0 ? 28:28) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 28:28) - (0 ? 28:28) + 1)))))));
+	break;
+
     default:
         gcmkFATAL("Invalid feature has been requested.");
         available = gcvFALSE;
