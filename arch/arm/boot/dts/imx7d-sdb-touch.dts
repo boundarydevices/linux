@@ -27,7 +27,8 @@
 		ti,pressure-max = /bits/ 16 <0>;
 		ti,x-plat-ohms = /bits/ 16 <400>;
 		ti,yx_swap_en;
-		linux,wakeup;
+		/* comment out wakeup for android requirement */
+		/* linux,wakeup;*/
 	};
 };
 
