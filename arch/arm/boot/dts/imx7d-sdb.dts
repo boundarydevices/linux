@@ -1171,6 +1171,7 @@
 	enable-sdio-wakeup;
 	keep-power-in-suspend;
 	wifi-host;
+	pm-ignore-notify;
 	status = "okay";
 };
 

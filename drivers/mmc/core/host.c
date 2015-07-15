@@ -649,7 +649,7 @@ int mmc_add_host(struct mmc_host *host)
 	mmc_host_clk_sysfs_init(host);
 
 	mmc_start_host(host);
-	if (!(host->pm_flags & MMC_PM_IGNORE_PM_NOTIFY))
+	if (!(host->pm_caps & MMC_PM_IGNORE_PM_NOTIFY))
 		register_pm_notifier(&host->pm_notify);
 
 	return 0;
@@ -667,7 +667,7 @@ EXPORT_SYMBOL(mmc_add_host);
  */
 void mmc_remove_host(struct mmc_host *host)
 {
-	if (!(host->pm_flags & MMC_PM_IGNORE_PM_NOTIFY))
+	if (!(host->pm_caps & MMC_PM_IGNORE_PM_NOTIFY))
 		unregister_pm_notifier(&host->pm_notify);
 
 	mmc_stop_host(host);
