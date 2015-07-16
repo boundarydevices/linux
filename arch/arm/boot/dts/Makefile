@@ -176,6 +176,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-cob.dtb \
 	imx6q-cubox-i.dtb \
 	imx6q-eo.dtb \
+	imx6q-ioc.dtb \
 	imx6q-phytec-pbab01.dtb \
 	imx6q-nitrogen6_max.dtb \
 	imx6qp-nitrogen6_max.dtb \
