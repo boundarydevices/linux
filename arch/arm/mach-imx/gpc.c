@@ -35,6 +35,12 @@
 #define GPC_PGC_GPU_PUPSCR	0x264
 #define GPC_PGC_GPU_PDNSCR	0x268
 #define GPC_PGC_CPU_PDN		0x2a0
+#define GPC_PGC_CPU_PUPSCR	0x2a4
+#define GPC_PGC_CPU_PDNSCR	0x2a8
+#define GPC_PGC_CPU_SW_SHIFT		0
+#define GPC_PGC_CPU_SW_MASK		0x3f
+#define GPC_PGC_CPU_SW2ISO_SHIFT	8
+#define GPC_PGC_CPU_SW2ISO_MASK		0x3f
 #define GPC_PGC_DISP_PGCR_OFFSET	0x240
 #define GPC_PGC_DISP_PUPSCR_OFFSET	0x244
 #define GPC_PGC_DISP_PDNSCR_OFFSET	0x248
@@ -324,6 +330,9 @@ void __init imx_gpc_init(void)
 {
 	struct device_node *np;
 	int i;
+	u32 val;
+	u32 cpu_pupscr_sw2iso, cpu_pupscr_sw;
+	u32 cpu_pdnscr_iso2sw, cpu_pdnscr_iso;
 
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-gpc");
 	gpc_base = of_iomap(np, 0);
@@ -352,6 +361,41 @@ void __init imx_gpc_init(void)
 	gic_arch_extn.irq_mask = imx_gpc_irq_mask;
 	gic_arch_extn.irq_unmask = imx_gpc_irq_unmask;
 	gic_arch_extn.irq_set_wake = imx_gpc_irq_set_wake;
+
+	/*
+	 * If there are CPU isolation timing settings in dts,
+	 * update them according to dts, otherwise, keep them
+	 * with default value in registers.
+	 */
+	cpu_pupscr_sw2iso = cpu_pupscr_sw =
+		cpu_pdnscr_iso2sw = cpu_pdnscr_iso = 0;
+
+	/* Read CPU isolation setting for GPC */
+	of_property_read_u32(np, "fsl,cpu_pupscr_sw2iso", &cpu_pupscr_sw2iso);
+	of_property_read_u32(np, "fsl,cpu_pupscr_sw", &cpu_pupscr_sw);
+	of_property_read_u32(np, "fsl,cpu_pdnscr_iso2sw", &cpu_pdnscr_iso2sw);
+	of_property_read_u32(np, "fsl,cpu_pdnscr_iso", &cpu_pdnscr_iso);
+
+	/* Return if no property found in dtb */
+	if ((cpu_pupscr_sw2iso | cpu_pupscr_sw
+		| cpu_pdnscr_iso2sw | cpu_pdnscr_iso) == 0)
+		return;
+
+	/* Update CPU PUPSCR timing if it is defined in dts */
+	val = readl_relaxed(gpc_base + GPC_PGC_CPU_PUPSCR);
+	val &= ~(GPC_PGC_CPU_SW2ISO_MASK << GPC_PGC_CPU_SW2ISO_SHIFT);
+	val &= ~(GPC_PGC_CPU_SW_MASK << GPC_PGC_CPU_SW_SHIFT);
+	val |= cpu_pupscr_sw2iso << GPC_PGC_CPU_SW2ISO_SHIFT;
+	val |= cpu_pupscr_sw << GPC_PGC_CPU_SW_SHIFT;
+	writel_relaxed(val, gpc_base + GPC_PGC_CPU_PUPSCR);
+
+	/* Update CPU PDNSCR timing if it is defined in dts */
+	val = readl_relaxed(gpc_base + GPC_PGC_CPU_PDNSCR);
+	val &= ~(GPC_PGC_CPU_SW2ISO_MASK << GPC_PGC_CPU_SW2ISO_SHIFT);
+	val &= ~(GPC_PGC_CPU_SW_MASK << GPC_PGC_CPU_SW_SHIFT);
+	val |= cpu_pdnscr_iso2sw << GPC_PGC_CPU_SW2ISO_SHIFT;
+	val |= cpu_pdnscr_iso << GPC_PGC_CPU_SW_SHIFT;
+	writel_relaxed(val, gpc_base + GPC_PGC_CPU_PDNSCR);
 }
 
 #ifdef CONFIG_PM
