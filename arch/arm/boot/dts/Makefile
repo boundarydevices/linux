@@ -738,6 +738,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-h4.dtb \
 	imx6q-hp.dtb \
 	imx6q-insp.dtb \
+	imx6q-ioc.dtb \
 
 dtb-$(CONFIG_SOC_IMX6SL) += \
 	imx6sl-evk.dtb \
