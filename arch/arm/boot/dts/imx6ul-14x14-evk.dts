@@ -59,6 +59,17 @@
 			enable-active-high;
 		};
 
+		reg_gpio_dvfs: regulator-gpio {
+			compatible = "regulator-gpio";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_dvfs>;
+			regulator-min-microvolt = <1300000>;
+			regulator-max-microvolt = <1400000>;
+			regulator-name = "gpio_dvfs";
+			regulator-type = "voltage";
+			gpios = <&gpio5 3 GPIO_ACTIVE_HIGH>;
+			states = <1300000 0x1 1400000 0x0>;
+		};
 	};
 
 	sound {
@@ -125,6 +136,7 @@
 &cpu0 {
 	arm-supply = <&reg_arm>;
 	soc-supply = <&reg_soc>;
+	dc-supply = <&reg_gpio_dvfs>;
 };
 
 &clks {
@@ -642,6 +654,12 @@
 				MX6UL_PAD_BOOT_MODE1__GPIO5_IO11	0x70a1
 				MX6UL_PAD_SNVS_TAMPER7__GPIO5_IO07	0x70a1
 				MX6UL_PAD_SNVS_TAMPER8__GPIO5_IO08	0x80000000
+			>;
+		};
+
+		pinctrl_dvfs: dvfsgrp {
+			fsl,pins = <
+				MX6UL_PAD_SNVS_TAMPER3__GPIO5_IO03	0x79
 			>;
 		};
 	};
