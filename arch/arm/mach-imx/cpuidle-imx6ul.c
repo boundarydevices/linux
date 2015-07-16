@@ -131,12 +131,12 @@ static struct cpuidle_driver imx6ul_cpuidle_driver = {
 		/* LOW POWER IDLE */
 		{
 			/*
-			 * RBC 31us + ARM gating 93us + RBC clear 65us
+			 * RBC 130us + ARM gating 1370us + RBC clear 65us
 			 * + PLL2 relock 450us and some margin, here set
-			 * it to 650us.
+			 * it to 2100us.
 			 */
-			.exit_latency = 650,
-			.target_residency = 1000,
+			.exit_latency = 2100,
+			.target_residency = 2500,
 			.flags = CPUIDLE_FLAG_TIME_VALID,
 			.enter = imx6ul_enter_wait,
 			.name = "LOW-POWER-IDLE",
