@@ -138,7 +138,6 @@ MODULE_DEVICE_TABLE(i2c, adxl34x_id);
 static struct i2c_driver adxl34x_driver = {
 	.driver = {
 		.name = "adxl34x",
-		.owner = THIS_MODULE,
 		.pm = &adxl34x_i2c_pm,
 	},
 	.probe    = adxl34x_i2c_probe,
