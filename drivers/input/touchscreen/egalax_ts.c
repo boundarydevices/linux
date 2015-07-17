@@ -353,7 +353,6 @@ static const struct of_device_id egalax_ts_dt_ids[] = {
 static struct i2c_driver egalax_ts_driver = {
 	.driver = {
 		.name	= "egalax_ts",
-		.owner	= THIS_MODULE,
 		.of_match_table	= of_match_ptr(egalax_ts_dt_ids),
 	},
 	.id_table	= egalax_ts_id,
