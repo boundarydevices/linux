@@ -829,7 +829,7 @@ EXPORT_SYMBOL_GPL(wm97xx_unregister_mach_ops);
 static struct device_driver wm97xx_driver = {
 	.name =		"wm97xx-ts",
 	.bus =		&ac97_bus_type,
-	.owner =	THIS_MODULE,
+
 	.probe =	wm97xx_probe,
 	.remove =	wm97xx_remove,
 	.pm =		&wm97xx_pm_ops,
