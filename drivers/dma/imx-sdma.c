@@ -282,6 +282,8 @@ struct sdma_channel {
 	unsigned int			chn_real_count;
 	struct tasklet_struct		tasklet;
 	struct imx_dma_data		data;
+	bool				src_dualfifo;
+	bool				dst_dualfifo;
 };
 
 #define IMX_DMA_SG_LOOP		BIT(0)
@@ -1009,6 +1011,11 @@ static void sdma_set_watermarklevel_for_p2p(struct sdma_channel *sdmac)
 			sdmac->per_address2 <= sdma->spba_end_addr)
 		__set_bit(12, &sdmac->watermark_level);
 
+	if (sdmac->src_dualfifo)
+		__set_bit(13, &sdmac->watermark_level);
+	if (sdmac->dst_dualfifo)
+		__set_bit(14, &sdmac->watermark_level);
+
 	__set_bit(31, &sdmac->watermark_level);
 	/* BIT 31:
 	 * 1 : Amount of samples to be transferred is
@@ -1180,6 +1187,8 @@ static int sdma_alloc_chan_resources(struct dma_chan *chan)
 	sdmac->peripheral_type = data->peripheral_type;
 	sdmac->event_id0 = data->dma_request;
 	sdmac->event_id1 = data->dma_request2;
+	sdmac->src_dualfifo = data->src_dualfifo;
+	sdmac->dst_dualfifo = data->dst_dualfifo;
 
 	clk_enable(sdmac->sdma->clk_ipg);
 	clk_enable(sdmac->sdma->clk_ahb);
@@ -1871,18 +1880,11 @@ static struct dma_chan *sdma_xlate(struct of_phandle_args *dma_spec,
 	if (dma_spec->args_count != 3)
 		return NULL;
 
+	memset(&data, 0, sizeof(data));
+
 	data.dma_request = dma_spec->args[0];
 	data.peripheral_type = dma_spec->args[1];
 	data.priority = dma_spec->args[2];
-
-	/*
-	 * init dma_request2 to zero, which is not used by the dts.
-	 * For P2P, dma_request2 is init from dma_request_channel(),
-	 * chan->private will point to the imx_dma_data, and in
-	 * device_alloc_chan_resources(), imx_dma_data.dma_request2 will
-	 * be set to sdmac->event_id1.
-	 */
-	data.dma_request2 = 0;
 
 	return dma_request_channel(mask, sdma_filter_fn, &data);
 }
