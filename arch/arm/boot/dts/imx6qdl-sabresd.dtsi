@@ -144,6 +144,7 @@
 		model = "wm8962-audio";
 		cpu-dai = <&ssi2>;
 		audio-codec = <&codec>;
+		asrc-controller = <&asrc>;
 		audio-routing =
 			"Headphone Jack", "HPOUTL",
 			"Headphone Jack", "HPOUTR",
@@ -152,7 +153,11 @@
 			"MICBIAS", "AMIC",
 			"IN3R", "MICBIAS",
 			"DMIC", "MICBIAS",
-			"DMICDAT", "DMIC";
+			"DMICDAT", "DMIC",
+			"CPU-Playback", "ASRC-Playback",
+			"Playback", "CPU-Playback",
+			"ASRC-Capture", "CPU-Capture",
+			"CPU-Capture", "Capture";
 		mux-int-port = <2>;
 		mux-ext-port = <3>;
 		hp-det-gpios = <&gpio7 8 1>;
