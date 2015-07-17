@@ -33,9 +33,7 @@ struct rpmsgtty_port {
 
 static struct rpmsgtty_port rpmsg_tty_port;
 
-#define MSG_LIMIT		100
 #define RPMSG_MAX_SIZE		(512 - sizeof(struct rpmsg_hdr))
-static int rx_count;
 
 static void rpmsg_tty_cb(struct rpmsg_channel *rpdev, void *data, int len,
 						void *priv, u32 src)
@@ -44,33 +42,24 @@ static void rpmsg_tty_cb(struct rpmsg_channel *rpdev, void *data, int len,
 	unsigned char *cbuf;
 	struct rpmsgtty_port *cport = &rpmsg_tty_port;
 
-	dev_info(&rpdev->dev, "msg(<- src 0x%x) %s len %d\n",
-			src, (unsigned char *)data, len);
+	/* flush the recv-ed none-zero data to tty node */
+	if (len == 0)
+		return;
+
+	dev_dbg(&rpdev->dev, "msg(<- src 0x%x) len %d\n", src, len);
 
 	print_hex_dump(KERN_DEBUG, __func__, DUMP_PREFIX_NONE, 16, 1,
-		       data, len,  true);
-	rx_count++;
-
-	/* samples should not live forever */
-	if (rx_count >= MSG_LIMIT) {
-		dev_info(&rpdev->dev, "goodbye!\n");
-		return;
-	}
-
-	/* flush the recv-ed none-zero data to tty node */
-	if (strlen((unsigned char *)data) == 0)
-		return;
+			data, len,  true);
 
 	spin_lock_bh(&cport->rx_lock);
-	space = tty_prepare_flip_string(&cport->port, &cbuf,
-					strlen((unsigned char *)data));
+	space = tty_prepare_flip_string(&cport->port, &cbuf, len);
 	if (space <= 0) {
 		dev_err(&rpdev->dev, "No memory for tty_prepare_flip_string\n");
 		spin_unlock_bh(&cport->rx_lock);
 		return;
 	}
 
-	memcpy(cbuf, data, strlen(data));
+	memcpy(cbuf, data, len);
 	tty_flip_buffer_push(&cport->port);
 	spin_unlock_bh(&cport->rx_lock);
 }
@@ -120,8 +109,10 @@ static int rpmsgtty_write(struct tty_struct *tty, const unsigned char *buf,
 		if (count > RPMSG_MAX_SIZE) {
 			count -= RPMSG_MAX_SIZE;
 			tbuf += RPMSG_MAX_SIZE;
+		} else {
+			count = 0;
 		}
-	} while (count > RPMSG_MAX_SIZE);
+	} while (count > 0);
 
 	return total;
 }
@@ -149,11 +140,8 @@ static int rpmsg_tty_probe(struct rpmsg_channel *rpdev)
 
 	dev_info(&rpdev->dev, "new channel: 0x%x -> 0x%x!\n",
 			rpdev->src, rpdev->dst);
-	rx_count = 0;
 
-	rpmsgtty_driver = tty_alloc_driver(1,
-			TTY_DRIVER_RESET_TERMIOS |
-			TTY_DRIVER_UNNUMBERED_NODE);
+	rpmsgtty_driver = tty_alloc_driver(1, TTY_DRIVER_UNNUMBERED_NODE);
 	if (IS_ERR(rpmsgtty_driver))
 		return PTR_ERR(rpmsgtty_driver);
 
@@ -163,7 +151,6 @@ static int rpmsg_tty_probe(struct rpmsg_channel *rpdev)
 	rpmsgtty_driver->minor_start = 3;
 	rpmsgtty_driver->type = TTY_DRIVER_TYPE_CONSOLE;
 	rpmsgtty_driver->init_termios = tty_std_termios;
-	rpmsgtty_driver->init_termios.c_cflag |= CLOCAL;
 
 	tty_set_operations(rpmsgtty_driver, &imxrpmsgtty_ops);
 
