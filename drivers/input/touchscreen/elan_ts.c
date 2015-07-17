@@ -446,7 +446,7 @@ static struct i2c_driver elan_touch_driver = {
 	.id_table = elan_touch_id,
 	.driver = {
 		   .name = "elan-touch",
-		   .owner = THIS_MODULE,
+
 		   .of_match_table = elan_dt_ids,
 #ifdef CONFIG_PM
 		   .pm = &elan_dev_pm_ops,

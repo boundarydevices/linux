@@ -482,7 +482,7 @@ static struct i2c_driver vtl_ts_driver  = {
 	.remove     = vtl_ts_remove,
 	.id_table   = vtl_ts_id,
 	.driver = {
-		.owner  = THIS_MODULE,
+
 		.name   = DRIVER_NAME,
 		.pm     = &vtl_ts_pm_ops,
 		.of_match_table = of_match_ptr(vtl_ts_dt_ids),
