@@ -369,7 +369,7 @@ MODULE_DEVICE_TABLE(of, max11801_ts_dt_ids);
 static struct i2c_driver max11801_ts_driver = {
 	.driver = {
 		.name	= "max11801_ts",
-		.owner	= THIS_MODULE,
+
 		.of_match_table = max11801_ts_dt_ids,
 	},
 	.id_table	= max11801_ts_id,

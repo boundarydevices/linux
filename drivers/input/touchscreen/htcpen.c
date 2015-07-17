@@ -214,7 +214,7 @@ static struct isa_driver htcpen_isa_driver = {
 	.resume		= htcpen_isa_resume,
 #endif
 	.driver = {
-		.owner	= THIS_MODULE,
+
 		.name	= "htcpen",
 	}
 };

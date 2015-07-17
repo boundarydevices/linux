@@ -453,7 +453,7 @@ static int ad7879_gpio_add(struct ad7879 *ts,
 		ts->gc.base = pdata->gpio_base;
 		ts->gc.ngpio = 1;
 		ts->gc.label = "AD7879-GPIO";
-		ts->gc.owner = THIS_MODULE;
+
 		ts->gc.parent = ts->dev;
 
 		ret = gpiochip_add_data(&ts->gc, ts);
