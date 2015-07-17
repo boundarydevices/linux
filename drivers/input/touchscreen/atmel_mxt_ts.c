@@ -258,7 +258,7 @@ enum v4l_dbg_inputs {
 };
 
 static const struct v4l2_file_operations mxt_video_fops = {
-	.owner = THIS_MODULE,
+
 	.open = v4l2_fh_open,
 	.release = vb2_fop_release,
 	.unlocked_ioctl = video_ioctl2,
