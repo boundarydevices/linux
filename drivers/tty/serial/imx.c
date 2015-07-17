@@ -481,6 +481,15 @@ static void imx_uart_stop_rx(struct uart_port *port)
 
 	ucr2 &= ~UCR2_RXEN;
 	imx_uart_writel(sport, ucr2, UCR2);
+
+	/* disable the Receiver Ready and overrun Interrupt */
+	temp = readl(sport->port.membase + UCR1);
+	writel(temp & ~UCR1_RRDYEN, sport->port.membase + UCR1);
+	temp = readl(sport->port.membase + UCR4);
+	writel(temp & ~UCR4_OREN, sport->port.membase + UCR4);
+
+	temp = readl(sport->port.membase + UCR2);
+	writel(temp & ~UCR2_RXEN, sport->port.membase + UCR2);
 }
 
 /* called with port.lock taken and irqs off */
