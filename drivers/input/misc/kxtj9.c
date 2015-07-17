@@ -660,7 +660,6 @@ MODULE_DEVICE_TABLE(i2c, kxtj9_id);
 static struct i2c_driver kxtj9_driver = {
 	.driver = {
 		.name	= NAME,
-		.owner	= THIS_MODULE,
 		.pm	= &kxtj9_pm_ops,
 	},
 	.probe		= kxtj9_probe,

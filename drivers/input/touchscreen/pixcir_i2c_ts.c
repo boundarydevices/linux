@@ -214,7 +214,6 @@ MODULE_DEVICE_TABLE(i2c, pixcir_i2c_ts_id);
 
 static struct i2c_driver pixcir_i2c_ts_driver = {
 	.driver = {
-		.owner	= THIS_MODULE,
 		.name	= "pixcir_ts",
 		.pm	= &pixcir_dev_pm_ops,
 	},

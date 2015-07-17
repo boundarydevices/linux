@@ -857,7 +857,6 @@ MODULE_DEVICE_TABLE(i2c, edt_ft5x06_ts_id);
 
 static struct i2c_driver edt_ft5x06_ts_driver = {
 	.driver = {
-		.owner = THIS_MODULE,
 		.name = "edt_ft5x06",
 		.pm = &edt_ft5x06_ts_pm_ops,
 	},

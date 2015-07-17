@@ -397,7 +397,6 @@ MODULE_DEVICE_TABLE(of, tca8418_dt_ids);
 static struct i2c_driver tca8418_keypad_driver = {
 	.driver = {
 		.name	= TCA8418_NAME,
-		.owner	= THIS_MODULE,
 		.of_match_table = of_match_ptr(tca8418_dt_ids),
 	},
 	.probe		= tca8418_keypad_probe,

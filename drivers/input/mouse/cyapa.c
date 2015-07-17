@@ -957,7 +957,6 @@ MODULE_DEVICE_TABLE(i2c, cyapa_id_table);
 static struct i2c_driver cyapa_driver = {
 	.driver = {
 		.name = "cyapa",
-		.owner = THIS_MODULE,
 		.pm = &cyapa_pm_ops,
 	},
 
