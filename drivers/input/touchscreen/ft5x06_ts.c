@@ -640,6 +640,7 @@ MODULE_DEVICE_TABLE(of, ft5x06_dt_ids);
 
 static struct i2c_driver ts_driver = {
 	.driver = {
+
 		.name		= "ft5x06-ts",
 		.of_match_table = ft5x06_dt_ids,
 	},

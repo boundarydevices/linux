@@ -1204,7 +1204,7 @@ static const struct dev_pm_ops crtouch_pm_ops = {
 static struct i2c_driver crtouch_fops = {
 
 	.driver = {
-		   .owner = THIS_MODULE,
+
 		   .name = "crtouch",
 		   .pm	 = &crtouch_pm_ops,
 	},

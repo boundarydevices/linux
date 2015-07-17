@@ -929,7 +929,7 @@ static const struct vb2_queue sur40_queue = {
 };
 
 static const struct v4l2_file_operations sur40_video_fops = {
-	.owner = THIS_MODULE,
+
 	.open = v4l2_fh_open,
 	.release = vb2_fop_release,
 	.unlocked_ioctl = video_ioctl2,
