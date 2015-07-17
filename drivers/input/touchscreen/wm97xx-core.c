@@ -866,7 +866,6 @@ static struct device_driver wm97xx_driver = {
 #ifdef CONFIG_AC97_BUS
 	.bus =		&ac97_bus_type,
 #endif
-	.owner =	THIS_MODULE,
 	.probe =	wm97xx_probe,
 	.remove =	wm97xx_remove,
 	.pm =		&wm97xx_pm_ops,
