@@ -3341,12 +3341,12 @@ fec_suspend(struct device *dev)
 	if (netif_running(ndev)) {
 		if (fep->wol_flag & FEC_WOL_FLAG_ENABLE)
 			fep->wol_flag |= FEC_WOL_FLAG_SLEEP_ON;
+		phy_stop(fep->phy_dev);
 		fec_stop(ndev);
 		netif_device_detach(ndev);
 		if (!(fep->wol_flag & FEC_WOL_FLAG_ENABLE))
 			fec_enet_clk_enable(ndev, false);
 		pinctrl_pm_select_sleep_state(&fep->pdev->dev);
-		phy_stop(fep->phy_dev);
 	} else if (fep->mii_bus_share && !fep->phy_dev) {
 		fec_enet_clk_enable(ndev, false);
 		pinctrl_pm_select_sleep_state(&fep->pdev->dev);
@@ -3395,8 +3395,8 @@ fec_resume(struct device *dev)
 		}
 
 		fec_restart(ndev, fep->full_duplex);
-		phy_start(fep->phy_dev);
 		netif_device_attach(ndev);
+		phy_start(fep->phy_dev);
 	} else if (fep->mii_bus_share && !fep->phy_dev) {
 		pinctrl_pm_select_default_state(&fep->pdev->dev);
 		fec_restore_mii_bus(ndev);
