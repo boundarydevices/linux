@@ -1498,6 +1498,8 @@ static const struct i2c_device_id sc16is7xx_idtable[] = {
 	{ }
 };
 
+MODULE_DEVICE_TABLE(i2c, sc16is7xx_idtable);
+
 static struct i2c_driver sc16is7xx_driver = {
 	.driver = {
 		.owner		= THIS_MODULE,
