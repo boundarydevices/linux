@@ -397,6 +397,15 @@
 		mclk_source = <0>;
 		pwms = <&pwm3 0 45>;
 	};
+
+	sc16is7xx_uart@49 {
+		compatible = "nxp,sc16is7xx-uart";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_sc16is7xx>;
+		reg = <0x49>;
+#define GPIRQ_SC16IS7XX  <&gpio5 20 IRQ_TYPE_LEVEL_LOW>
+		interrupts-extended = GPIRQ_SC16IS7XX;
+	};
 };
 
 &i2c3 {
@@ -529,11 +538,18 @@
 			>;
 		};
 
-		pinctrl_i2c1_ar1020: touchint {
+		pinctrl_i2c1_ar1020: i2c1_ar1020grp {
 			fsl,pins = <
 #define GP_AR1020_IRQ	<&gpio1 9 GPIO_ACTIVE_HIGH>
 #define GPIRQ_AR1020	<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
-				MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x100b0
+				MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x10030
+			>;
+		};
+
+		pinctrl_i2c2_sc16is7xx: i2c2_sc16is7xxgrp {
+			fsl,pins = <
+#define GPIRQ_SC16IS7XX  <&gpio5 20 IRQ_TYPE_LEVEL_LOW>
+				MX6QDL_PAD_CSI0_DATA_EN__GPIO5_IO20	0x100b0
 			>;
 		};
 
