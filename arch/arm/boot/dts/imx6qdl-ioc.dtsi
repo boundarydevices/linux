@@ -483,8 +483,6 @@
 				MX6QDL_PAD_EIM_D22__GPIO3_IO22		0x80000000	/* otg power en */
 				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27	0x0f0b0		/* ethernet phy reset */
 				MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28	0x1b0b0		/* ethernet phy interrupt */
-				MX6QDL_PAD_SD3_DAT5__GPIO7_IO00		0x80000000	/* USDHC3 CD */
-				MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1f0b0		/* Spare */
 				MX6QDL_PAD_NANDF_D6__GPIO2_IO06		0x80000000	/* uSDHC4 CD */
 				MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x80000000	/* Spare */
 				MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0		/* SGTL5000 sys_mclk */
@@ -579,6 +577,10 @@
 				MX6QDL_PAD_SD3_DAT1__SD3_DATA1		0x17061
 				MX6QDL_PAD_SD3_DAT2__SD3_DATA2		0x17061
 				MX6QDL_PAD_SD3_DAT3__SD3_DATA3		0x17061
+				MX6QDL_PAD_SD3_DAT4__SD3_DATA4		0x17061
+				MX6QDL_PAD_SD3_DAT5__SD3_DATA5		0x17061
+				MX6QDL_PAD_SD3_DAT6__SD3_DATA6		0x17061
+				MX6QDL_PAD_SD3_DAT7__SD3_DATA7		0x17061
 			>;
 		};
 
@@ -641,15 +643,6 @@
 		pinctrl_pwm4_2: pwm4grp-2 {
 			fsl,pins = <
 				MX6QDL_PAD_SD1_CMD__PWM4_OUT 0x1b0b1
-			>;
-		};
-	};
-
-	uart1 {
-		pinctrl_uart1_2: uart1grp-2 {
-			fsl,pins = <
-				MX6QDL_PAD_SD3_DAT7__UART1_TX_DATA 0x1b0b1
-				MX6QDL_PAD_SD3_DAT6__UART1_RX_DATA 0x1b0b1
 			>;
 		};
 	};
@@ -768,12 +761,6 @@
 	status = "okay";
 };
 
-&uart1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart1_2>;
-	status = "okay";
-};
-
 &uart2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2_1>;
@@ -811,11 +798,14 @@
 	status = "okay";
 };
 
+/* eMMC */
 &usdhc3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc3>;
-	cd-gpios = <&gpio7 0 0>;
 	vmmc-supply = <&reg_3p3v>;
+	bus-width = <8>;
+	non-removable;
+	keep-power-in-suspend;
 	status = "okay";
 };
 
