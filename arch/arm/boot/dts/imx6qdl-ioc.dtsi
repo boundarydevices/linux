@@ -547,7 +547,7 @@
 		pinctrl_i2c2_sc16is7xx: i2c2_sc16is7xxgrp {
 			fsl,pins = <
 #define GPIRQ_SC16IS7XX  <&gpio5 20 IRQ_TYPE_LEVEL_LOW>
-				MX6QDL_PAD_CSI0_DATA_EN__GPIO5_IO20	0x100b0
+				MX6QDL_PAD_CSI0_DATA_EN__GPIO5_IO20	0x1b0b0
 			>;
 		};
 
