@@ -65,7 +65,7 @@ int imx_ddrc_get_ddr_type(void)
 	return ddr_type;
 }
 
-static struct of_device_id imx_ddrc_dt_ids[] = {
+static const struct of_device_id imx_ddrc_dt_ids[] = {
 	{ .compatible = "fsl,imx7-ddrc", },
 	{ /* sentinel */ }
 };
