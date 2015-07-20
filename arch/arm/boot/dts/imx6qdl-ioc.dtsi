@@ -570,6 +570,28 @@
 				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x000b0		/* wl12xx_wl_en */
 			>;
 		};
+
+		pinctrl_usdhc3: usdhc3grp {
+			fsl,pins = <
+				MX6QDL_PAD_SD3_CLK__SD3_CLK		0x10061
+				MX6QDL_PAD_SD3_CMD__SD3_CMD		0x17061
+				MX6QDL_PAD_SD3_DAT0__SD3_DATA0		0x17061
+				MX6QDL_PAD_SD3_DAT1__SD3_DATA1		0x17061
+				MX6QDL_PAD_SD3_DAT2__SD3_DATA2		0x17061
+				MX6QDL_PAD_SD3_DAT3__SD3_DATA3		0x17061
+			>;
+		};
+
+		pinctrl_usdhc4: usdhc4grp {
+			fsl,pins = <
+				MX6QDL_PAD_SD4_CLK__SD4_CLK		0x10061
+				MX6QDL_PAD_SD4_CMD__SD4_CMD		0x17061
+				MX6QDL_PAD_SD4_DAT0__SD4_DATA0		0x17061
+				MX6QDL_PAD_SD4_DAT1__SD4_DATA1		0x17061
+				MX6QDL_PAD_SD4_DAT2__SD4_DATA2		0x17061
+				MX6QDL_PAD_SD4_DAT3__SD4_DATA3		0x17061
+			>;
+		};
 	};
 
 	ipu1 {
@@ -791,7 +813,7 @@
 
 &usdhc3 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usdhc3_2>;
+	pinctrl-0 = <&pinctrl_usdhc3>;
 	cd-gpios = <&gpio7 0 0>;
 	vmmc-supply = <&reg_3p3v>;
 	status = "okay";
@@ -799,7 +821,7 @@
 
 &usdhc4 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usdhc4_2>;
+	pinctrl-0 = <&pinctrl_usdhc4>;
 	cd-gpios = <&gpio2 6 0>;
 	vmmc-supply = <&reg_3p3v>;
 	status = "okay";
