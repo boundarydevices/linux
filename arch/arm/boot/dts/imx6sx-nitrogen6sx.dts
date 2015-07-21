@@ -155,6 +155,7 @@
 			MX6SX_PAD_QSPI1A_DATA1__GPIO4_IO_17	0x1b0b0
 			MX6SX_PAD_QSPI1A_DATA2__GPIO4_IO_18	0x1b0b0
 			MX6SX_PAD_QSPI1A_DATA3__GPIO4_IO_19	0x1b0b0
+			MX6SX_PAD_SD1_CMD__CCM_CLKO1		0x000b0
 			/* Test points */
 			MX6SX_PAD_NAND_DATA04__GPIO4_IO_8	0x1b0b0
 			MX6SX_PAD_QSPI1B_DATA1__GPIO4_IO_25	0x1b0b0
@@ -234,18 +235,6 @@
 		>;
 	};
 
-	pinctrl_pwm2: pwm2grp {
-		fsl,pins = <
-			MX6SX_PAD_GPIO1_IO11__PWM2_OUT		0x110b0
-		>;
-	};
-
-	pinctrl_pwm3: pwm3grp {
-		fsl,pins = <
-			MX6SX_PAD_GPIO1_IO12__PWM3_OUT		0x110b0
-		>;
-	};
-
 	pinctrl_pwm4: pwm4grp {
 		fsl,pins = <
 			MX6SX_PAD_GPIO1_IO13__PWM4_OUT		0x110b0
@@ -256,12 +245,13 @@
 		fsl,pins = <
 #define GP_WLAN_EN	<&gpio7 6 GPIO_ACTIVE_HIGH>
 			MX6SX_PAD_SD3_DATA4__GPIO7_IO_6		0x1b0b0
+			MX6SX_PAD_GPIO1_IO11__CCM_CLKO1		0x000b0
 		>;
 	};
 
 	pinctrl_sgtl5000: sgtl5000grp {
 		fsl,pins = <
-			MX6SX_PAD_SD1_CMD__CCM_CLKO1		0x000b0
+			MX6SX_PAD_GPIO1_IO12__CCM_CLKO2		0x000b0
 #define GP_SGTL5000_HP_DETECT		<&gpio2 0 GPIO_ACTIVE_LOW>
 			MX6SX_PAD_ENET1_COL__GPIO2_IO_0		0x1b0b0
 #define GP_SGTL5000_MIC_DETECT		<&gpio2 1 GPIO_ACTIVE_LOW>
@@ -403,14 +393,6 @@
 	model = "Freescale i.MX6 SoloX Nitrogen6sx Board";
 	compatible = "fsl,imx6sx-nitrogen6sx", "fsl,imx6sx";
 
-	slow_clock {
-		compatible = "pwm-backlight";
-		pwms = <&pwm2 0 30518>;
-		brightness-levels = <0 128 256>;
-		default-brightness-level = <1>;
-		power-supply = <&reg_3p3v>;
-	};
-
 	backlight_lvds {
 		compatible = "pwm-backlight";
 		pwms = <&pwm4 0 5000000>;
@@ -495,6 +477,8 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_reg_wlan>;
 			compatible = "regulator-fixed";
+			clocks = <&clks IMX6SX_CLK_CKO>;
+			clock-names = "slow";
 			reg = <4>;
 			regulator-name = "wlan-en";
 			regulator-min-microvolt = <3300000>;
@@ -502,7 +486,6 @@
 			startup-delay-us = <70000>;
 			gpio = GP_WLAN_EN;
 			enable-active-high;
-			debug;
 		};
 	};
 
@@ -548,10 +531,14 @@
 &clks {
 	assigned-clocks = <&clks IMX6SX_PLL4_BYPASS_SRC>,
 			  <&clks IMX6SX_PLL4_BYPASS>,
+			  <&clks IMX6SX_CLK_CKO>,
+			  <&clks IMX6SX_CLK_CKO1_SEL>,
 			  <&clks IMX6SX_CLK_PLL4_POST_DIV>;
 	assigned-clock-parents = <&clks IMX6SX_CLK_LVDS2_IN>,
-				<&clks IMX6SX_PLL4_BYPASS_SRC>;
-	assigned-clock-rates = <0>, <0>, <24576000>;
+				 <&clks IMX6SX_PLL4_BYPASS_SRC>,
+				 <&clks IMX6SX_CLK_CKO1>,
+				 <&clks IMX6SX_CLK_CKIL>;
+	assigned-clock-rates = <0>, <0>, <0>, <0>, <24576000>;
 };
 
 &csi1 {
@@ -683,18 +670,14 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sgtl5000>;
 		reg = <0x0a>;
-		clocks = <&clks IMX6SX_CLK_CKO>;
+		clocks = <&clks IMX6SX_CLK_CKO2>;
 		VDDA-supply = <&reg_1p8v>;
 		VDDIO-supply = <&reg_1p8v>;
 		VDDD-supply = <&reg_1p8v>;
-		assigned-clocks = <&clks IMX6SX_CLK_CKO>,
-				  <&clks IMX6SX_CLK_CKO1_SEL>,
-				  <&clks IMX6SX_CLK_CKO2_SEL>,
+		assigned-clocks = <&clks IMX6SX_CLK_CKO2_SEL>,
 				  <&clks IMX6SX_CLK_CKO2>;
-		assigned-clock-parents = <&clks IMX6SX_CLK_CKO2>,
-					<&clks IMX6SX_CLK_CKIL>,
-					<&clks IMX6SX_CLK_OSC>;
-		assigned-clock-rates = <0>, <0>, <0>, <24000000>;
+		assigned-clock-parents = <&clks IMX6SX_CLK_OSC>;
+		assigned-clock-rates = <0>, <24000000>;
 	};
 };
 
@@ -820,12 +803,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
 	reset-gpio = GP_PCIE_RESET;
-	status = "okay";
-};
-
-&pwm2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm2>;
 	status = "okay";
 };
 
