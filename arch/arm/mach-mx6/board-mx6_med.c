@@ -77,9 +77,6 @@
 #define USB_HUB_RESET	IMX_GPIO_NR(7, 12)
 #define ENET_PHY_INT	IMX_GPIO_NR(1, 28)
 
-#define WEAK_PULLUP	(PAD_CTL_HYS | PAD_CTL_PKE \
-			 | PAD_CTL_PUE | PAD_CTL_PUS_100K_UP)
-
 #define N6_IRQ_PADCFG		(PAD_CTL_PUE | PAD_CTL_PUS_100K_DOWN | PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 #define N6_IRQ_TEST_PADCFG	(PAD_CTL_PKE | N6_IRQ_PADCFG)
 #define N6_EN_PADCFG		(PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm)
@@ -154,18 +151,15 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 
 /* SD card */
 static struct esdhc_platform_data sd4_data = {
-	.cd_gpio = -1,
-	.wp_gpio = -1,
+	.cd_gpio = GP_USDHC4_CD,
+	.wp_gpio = GP_USDHC4_WP,
 	.keep_power_at_suspend = 1,
 };
 
 static struct esdhc_platform_data sd3_data = {
-	.cd_gpio = -1,
-	.wp_gpio = -1,
-	.always_present = 1,
+	.cd_gpio = GP_USDHC3_CD,
+	.wp_gpio = GP_USDHC3_WP,
 	.keep_power_at_suspend = 1,
-	.support_18v = 1,
-	.support_8bit = 1,
 	.platform_pad_change = plt_sd_pad_change,
 };
 
