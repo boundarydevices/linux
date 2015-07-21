@@ -258,40 +258,6 @@ void imx_gpcv2_set_core1_pdn_pup_by_software(bool pdn)
 	imx_gpcv2_set_m_core_pgc(false, GPC_PGC_C1);
 }
 
-void imx_gpcv2_set_cpu_power_gate_by_wfi(u32 cpu, bool pdn)
-{
-	unsigned long flags;
-	u32 val;
-
-	spin_lock_irqsave(&gpcv2_lock, flags);
-	val = readl_relaxed(gpc_base + GPC_LPCR_A7_AD);
-
-	if (cpu == 0) {
-		if (pdn) {
-			imx_gpcv2_set_m_core_pgc(true, GPC_PGC_C0);
-			val |= BM_LPCR_A7_AD_EN_C0_WFI_PDN |
-				BM_LPCR_A7_AD_EN_C0_IRQ_PUP;
-		} else {
-			imx_gpcv2_set_m_core_pgc(false, GPC_PGC_C0);
-			val &= ~(BM_LPCR_A7_AD_EN_C0_WFI_PDN |
-				BM_LPCR_A7_AD_EN_C0_IRQ_PUP);
-		}
-	}
-	if (cpu == 1) {
-		if (pdn) {
-			imx_gpcv2_set_m_core_pgc(true, GPC_PGC_C1);
-			val |= BM_LPCR_A7_AD_EN_C1_WFI_PDN |
-				BM_LPCR_A7_AD_EN_C1_IRQ_PUP;
-		} else {
-			imx_gpcv2_set_m_core_pgc(false, GPC_PGC_C1);
-			val &= ~(BM_LPCR_A7_AD_EN_C1_WFI_PDN |
-				BM_LPCR_A7_AD_EN_C1_IRQ_PUP);
-		}
-	}
-	writel_relaxed(val, gpc_base + GPC_LPCR_A7_AD);
-	spin_unlock_irqrestore(&gpcv2_lock, flags);
-}
-
 void imx_gpcv2_set_cpu_power_gate_by_lpm(u32 cpu, bool pdn)
 {
 	unsigned long flags;
