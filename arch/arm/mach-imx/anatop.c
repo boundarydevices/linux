@@ -49,6 +49,8 @@
 #define BP_ANADIG_ANA_MISC2_REG1_STEP_TIME	(26)
 /* Below MISC0_DISCON_HIGH_SNVS is only for i.MX6SL */
 #define BM_ANADIG_ANA_MISC0_DISCON_HIGH_SNVS	0x2000
+/* i.MX6SX DISCON_HIGH_SNVS is changed to bit 12 */
+#define BM_ANADIG_ANA_MISC0_V2_DISCON_HIGH_SNVS	0x1000
 #define BM_ANADIG_USB_CHRG_DETECT_CHK_CHRG_B	0x80000
 #define BM_ANADIG_USB_CHRG_DETECT_EN_B		0x100000
 
@@ -84,8 +86,14 @@ static inline void imx_anatop_enable_2p5_pulldown(bool enable)
 
 static inline void imx_anatop_disconnect_high_snvs(bool enable)
 {
-	regmap_write(anatop, ANADIG_ANA_MISC0 + (enable ? REG_SET : REG_CLR),
-		BM_ANADIG_ANA_MISC0_DISCON_HIGH_SNVS);
+	if (cpu_is_imx6sx())
+		regmap_write(anatop, ANADIG_ANA_MISC0 +
+			(enable ? REG_SET : REG_CLR),
+			BM_ANADIG_ANA_MISC0_V2_DISCON_HIGH_SNVS);
+	else
+		regmap_write(anatop, ANADIG_ANA_MISC0 +
+			(enable ? REG_SET : REG_CLR),
+			BM_ANADIG_ANA_MISC0_DISCON_HIGH_SNVS);
 }
 
 static void imx_anatop_disable_pu(bool off)
@@ -136,7 +144,7 @@ void imx_anatop_pre_suspend(void)
 
 	imx_anatop_enable_fet_odrive(true);
 
-	if (cpu_is_imx6sl())
+	if (cpu_is_imx6sl() || cpu_is_imx6sx())
 		imx_anatop_disconnect_high_snvs(true);
 }
 
@@ -163,7 +171,7 @@ void imx_anatop_post_resume(void)
 
 	imx_anatop_enable_fet_odrive(false);
 
-	if (cpu_is_imx6sl())
+	if (cpu_is_imx6sl() || cpu_is_imx6sx())
 		imx_anatop_disconnect_high_snvs(false);
 
 }
