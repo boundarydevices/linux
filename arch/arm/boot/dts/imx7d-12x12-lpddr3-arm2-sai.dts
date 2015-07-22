@@ -25,10 +25,10 @@
 	pinctrl-0 = <&pinctrl_hog_1 &pinctrl_hog>;
 };
 
-&usdhc2 {
-	no-1-8-v;
-};
-
 &sai1 {
 	status = "okay";
+};
+
+&usdhc2 {
+	no-1-8-v;
 };

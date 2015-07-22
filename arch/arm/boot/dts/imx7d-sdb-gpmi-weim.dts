@@ -8,6 +8,10 @@
 
 #include "imx7d-sdb.dts"
 
+&gpmi{
+	status = "okay";
+};
+
 &sai1{
 	status = "disabled";
 };
@@ -18,8 +22,4 @@
 
 &uart5{
 	status = "disabled";
-};
-
-&gpmi{
-	status = "okay";
 };

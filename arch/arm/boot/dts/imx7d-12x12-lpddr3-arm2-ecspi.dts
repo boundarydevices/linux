@@ -8,6 +8,14 @@
 
 #include "imx7d-12x12-lpddr3-arm2.dts"
 
+&epdc {
+        status = "disabled";
+};
+
+&ecspi1{
+        status = "okay";
+};
+
 /*
  * pin conflict with ecspi1
  * default hog setting conflicts with ECSPI1 MOSI and MISO
@@ -15,12 +23,4 @@
  */
 &iomuxc {
 	pinctrl-0 = <&pinctrl_hog_1>;
-};
-
-&epdc {
-        status = "disabled";
-};
-
-&ecspi1{
-        status = "okay";
 };

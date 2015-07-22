@@ -33,14 +33,14 @@
 	status = "okay";
 };
 
+&sdma {
+	status = "okay";
+};
+
 &mqs {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_mqs>;
 	clocks = <&clks IMX7D_SAI1_ROOT_CLK>;
 	clock-names = "mclk";
-	status = "okay";
-};
-
-&sdma {
 	status = "okay";
 };

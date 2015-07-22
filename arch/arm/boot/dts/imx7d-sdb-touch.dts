@@ -1,9 +1,5 @@
 #include "imx7d-sdb.dts"
 
-&sii902x {
-	status = "disabled";
-};
-
 &ecspi3 {
 	fsl,spi-num-chipselects = <1>;
 	pinctrl-names = "default";
@@ -30,3 +26,6 @@
 	};
 };
 
+&sii902x {
+	status = "disabled";
+};

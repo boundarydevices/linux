@@ -8,16 +8,16 @@
 
 #include "imx7d-sdb.dts"
 
+&epdc {
+        status = "okay";
+};
+
 &fec1 {
 	status = "disabled";
 };
 
 &fec2 {
 	status = "disabled";
-};
-
-&epdc {
-        status = "okay";
 };
 
 &max17135 {

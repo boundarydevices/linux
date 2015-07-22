@@ -160,8 +160,34 @@
 	};
 };
 
+&adc1 {
+	vref-supply = <&reg_vref_1v8>;
+	status = "okay";
+};
+
+&adc2 {
+	vref-supply = <&reg_vref_1v8>;
+	status = "okay";
+};
+
+&clks {
+	assigned-clocks = <&clks IMX7D_PLL_AUDIO_POST_DIV>;
+	assigned-clock-rates = <884736000>;
+};
+
 &cpu0 {
 	arm-supply = <&sw1a_reg>;
+};
+
+&csi1 {
+	csi-mux-mipi = <&gpr 0x14 4>;
+	status = "okay";
+
+	port {
+		csi_ep: endpoint {
+			remote-endpoint = <&csi_mipi_ep>;
+		};
+	};
 };
 
 &epdc {
@@ -177,28 +203,6 @@
 &epxp {
 	status = "okay";
 };
-
-&adc1 {
-	vref-supply = <&reg_vref_1v8>;
-	status = "okay";
-};
-
-&adc2 {
-	vref-supply = <&reg_vref_1v8>;
-	status = "okay";
-};
-
-&csi1 {
-	csi-mux-mipi = <&gpr 0x14 4>;
-	status = "okay";
-
-	port {
-		csi_ep: endpoint {
-			remote-endpoint = <&csi_mipi_ep>;
-		};
-	};
-};
-
 
 &fec1 {
 	pinctrl-names = "default";
@@ -511,46 +515,6 @@
 			};
 		};
 	};
-};
-
-&lcdif {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_lcdif_dat
-		     &pinctrl_lcdif_ctrl>;
-	pinctrl-assert-gpios = <&gpio_spi 7 GPIO_ACTIVE_HIGH>;
-	display = <&display0>;
-	status = "okay";
-
-	display0: display {
-		bits-per-pixel = <16>;
-		bus-width = <24>;
-
-		display-timings {
-			native-mode = <&timing0>;
-			timing0: timing0 {
-			clock-frequency = <9200000>;
-			hactive = <480>;
-			vactive = <272>;
-			hfront-porch = <8>;
-			hback-porch = <4>;
-			hsync-len = <41>;
-			vback-porch = <2>;
-			vfront-porch = <4>;
-			vsync-len = <10>;
-
-			hsync-active = <0>;
-			vsync-active = <0>;
-			de-active = <1>;
-			pixelclk-active = <0>;
-			};
-		};
-	};
-};
-
-&pwm1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm1>;
-	status = "okay";
 };
 
 &iomuxc {
@@ -881,7 +845,6 @@
 			>;
 		};
 
-
 		pinctrl_usdhc3: usdhc3grp {
 			fsl,pins = <
 				MX7D_PAD_SD3_CMD__SD3_CMD	0x59
@@ -971,10 +934,45 @@
 				MX7D_PAD_GPIO1_IO00__WDOD1_WDOG_B 0x74
 			>;
 		};
+
 		pinctrl_pwm1: pwm1grp {
 			fsl,pins = <
 				MX7D_PAD_GPIO1_IO01__PWM1_OUT	0x110b0
 			>;
+		};
+	};
+};
+
+&lcdif {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_lcdif_dat
+		     &pinctrl_lcdif_ctrl>;
+	pinctrl-assert-gpios = <&gpio_spi 7 GPIO_ACTIVE_HIGH>;
+	display = <&display0>;
+	status = "okay";
+
+	display0: display {
+		bits-per-pixel = <16>;
+		bus-width = <24>;
+
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: timing0 {
+			clock-frequency = <9200000>;
+			hactive = <480>;
+			vactive = <272>;
+			hfront-porch = <8>;
+			hback-porch = <4>;
+			hsync-len = <41>;
+			vback-porch = <2>;
+			vfront-porch = <4>;
+			vsync-len = <10>;
+
+			hsync-active = <0>;
+			vsync-active = <0>;
+			de-active = <1>;
+			pixelclk-active = <0>;
+			};
 		};
 	};
 };
@@ -986,9 +984,10 @@
 	status = "okay";
 };
 
-&clks {
-	assigned-clocks = <&clks IMX7D_PLL_AUDIO_POST_DIV>;
-	assigned-clock-rates = <884736000>;
+&pwm1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm1>;
+	status = "okay";
 };
 
 &sai1 {

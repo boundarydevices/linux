@@ -15,16 +15,27 @@
 	};
 };
 
-&flexcan2 {
-	status = "disabled";
-};
-
 &adc1 {
 	status = "disabled";
 };
 
 &adc2 {
 	status = "disabled";
+};
+
+&flexcan2 {
+	status = "disabled";
+};
+
+&iomuxc {
+	imx7d-sdb {
+		pinctrl_uart2_1: uart2grp-1 {
+			fsl,pins = <
+				MX7D_PAD_UART2_RX_DATA__UART2_DCE_RX    0x79
+				MX7D_PAD_UART2_TX_DATA__UART2_DCE_TX    0x79
+			>;
+		};
+	};
 };
 
 &mcctest{
@@ -37,17 +48,6 @@
 
 &rpmsg{
 	status = "okay";
-};
-
-&iomuxc {
-	uart2 {
-		pinctrl_uart2_1: uart2grp-1 {
-			fsl,pins = <
-				MX7D_PAD_UART2_RX_DATA__UART2_DCE_RX    0x79
-				MX7D_PAD_UART2_TX_DATA__UART2_DCE_TX    0x79
-			>;
-		};
-	};
 };
 
 &uart2 {
