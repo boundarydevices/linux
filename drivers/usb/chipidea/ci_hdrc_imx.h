@@ -45,5 +45,7 @@ bool imx_usbmisc_adp_is_probe_int(struct imx_usbmisc_data *data);
 bool imx_usbmisc_adp_is_sense_int(struct imx_usbmisc_data *data);
 bool imx_usbmisc_adp_sense_connection(struct imx_usbmisc_data *data);
 bool imx_usbmisc_adp_attach_event(struct imx_usbmisc_data *data);
+int imx_usbmisc_term_select_override(struct imx_usbmisc_data *data,
+						bool enable, int val);
 
 #endif /* __DRIVER_USB_CHIPIDEA_CI_HDRC_IMX_H */

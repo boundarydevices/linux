@@ -97,6 +97,8 @@
 #define MX7D_USB_VBUS_WAKEUP_SOURCE_AVALID	MX7D_USB_VBUS_WAKEUP_SOURCE(1)
 #define MX7D_USB_VBUS_WAKEUP_SOURCE_BVALID	MX7D_USB_VBUS_WAKEUP_SOURCE(2)
 #define MX7D_USB_VBUS_WAKEUP_SOURCE_SESS_END	MX7D_USB_VBUS_WAKEUP_SOURCE(3)
+#define MX7D_USB_TERMSEL_OVERRIDE	BIT(4)
+#define MX7D_USB_TERMSEL_OVERRIDE_EN	BIT(5)
 
 #define OTG_DRVVBUS0			BIT(16)
 #define OTG_ADP_PRBENB0			BIT(13)
@@ -144,6 +146,9 @@ struct usbmisc_ops {
 	bool (*adp_sense_connection)(struct imx_usbmisc_data *data);
 	/* Check if it's a device attach or dettach event */
 	bool (*adp_attach_event)(struct imx_usbmisc_data *data);
+	/* override UTMI termination select */
+	int (*term_select_override)(struct imx_usbmisc_data *data,
+						bool enable, int val);
 };
 
 struct imx_usbmisc {
@@ -736,6 +741,37 @@ static int usbmisc_imx7d_power_lost_check(struct imx_usbmisc_data *data)
 		return 0;
 }
 
+static int usbmisc_term_select_override(struct imx_usbmisc_data *data,
+						bool enable, int val)
+{
+	struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
+	unsigned long flags;
+	u32 reg;
+
+	spin_lock_irqsave(&usbmisc->lock, flags);
+
+	reg = readl(usbmisc->base + MX7D_USBNC_USB_CTRL2);
+	if (enable) {
+		if (val)
+			writel(reg | MX7D_USB_TERMSEL_OVERRIDE,
+				usbmisc->base + MX7D_USBNC_USB_CTRL2);
+		else
+			writel(reg & ~MX7D_USB_TERMSEL_OVERRIDE,
+				usbmisc->base + MX7D_USBNC_USB_CTRL2);
+
+		reg = readl(usbmisc->base + MX7D_USBNC_USB_CTRL2);
+		writel(reg | MX7D_USB_TERMSEL_OVERRIDE_EN,
+			usbmisc->base + MX7D_USBNC_USB_CTRL2);
+	} else {
+		writel(reg & ~MX7D_USB_TERMSEL_OVERRIDE_EN,
+			usbmisc->base + MX7D_USBNC_USB_CTRL2);
+	}
+
+	spin_unlock_irqrestore(&usbmisc->lock, flags);
+
+	return 0;
+}
+
 static const struct usbmisc_ops imx25_usbmisc_ops = {
 	.init = usbmisc_imx25_init,
 	.post = usbmisc_imx25_post,
@@ -779,6 +815,7 @@ static const struct usbmisc_ops imx7d_usbmisc_ops = {
 	.is_sense_int = usbmisc_otg_adp_is_sense_int,
 	.adp_sense_connection = usbmisc_otg_adp_sense_connection,
 	.adp_attach_event = usbmisc_otg_adp_is_attach_event,
+	.term_select_override = usbmisc_term_select_override,
 };
 
 int imx_usbmisc_init(struct imx_usbmisc_data *data)
@@ -962,6 +999,21 @@ bool imx_usbmisc_adp_attach_event(struct imx_usbmisc_data *data)
 	return usbmisc->ops->adp_attach_event(data);
 }
 EXPORT_SYMBOL_GPL(imx_usbmisc_adp_attach_event);
+
+int imx_usbmisc_term_select_override(struct imx_usbmisc_data *data,
+						bool enable, int val)
+{
+	struct imx_usbmisc *usbmisc;
+
+	if (!data)
+		return 0;
+
+	usbmisc = dev_get_drvdata(data->dev);
+	if (!usbmisc->ops->term_select_override)
+		return 0;
+	return usbmisc->ops->term_select_override(data, enable, val);
+}
+EXPORT_SYMBOL_GPL(imx_usbmisc_term_select_override);
 
 static const struct of_device_id usbmisc_imx_dt_ids[] = {
 	{
