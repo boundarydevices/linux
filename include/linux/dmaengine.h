@@ -681,6 +681,7 @@ struct dma_device {
 	int (*device_control)(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
 		unsigned long arg);
 
+	enum dma_status (*device_wait_tasklet)(struct dma_chan *chan);
 	enum dma_status (*device_tx_status)(struct dma_chan *chan,
 					    dma_cookie_t cookie,
 					    struct dma_tx_state *txstate);
@@ -1061,6 +1062,8 @@ dma_set_tx_state(struct dma_tx_state *st, dma_cookie_t last, dma_cookie_t used, 
 		st->residue = residue;
 	}
 }
+
+enum dma_status dma_sync_wait_tasklet(struct dma_chan *chan);
 
 #ifdef CONFIG_DMA_ENGINE
 struct dma_chan *dma_find_channel(enum dma_transaction_type tx_type);

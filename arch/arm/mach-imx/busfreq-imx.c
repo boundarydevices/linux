@@ -268,12 +268,19 @@ static void exit_lpm_imx6_up(void)
 	 * lower ahb/ocram's freq first to avoid too high
 	 * freq during parent switch from OSC to pll3.
 	 */
-	imx_clk_set_rate(ahb_clk, LPAPM_CLK / 3);
+	if (cpu_is_imx6ul())
+		imx_clk_set_rate(ahb_clk, LPAPM_CLK / 4);
+	else
+		imx_clk_set_rate(ahb_clk, LPAPM_CLK / 3);
 	imx_clk_set_rate(ocram_clk, LPAPM_CLK / 2);
 	/* set periph_clk2 to pll3 */
 	imx_clk_set_parent(periph_clk2_sel, pll3);
+	/* set periph clk to from pll2_bus on i.MX6UL */
+	if (cpu_is_imx6ul())
+		imx_clk_set_parent(periph_pre_clk, pll2_bus);
 	/* set periph clk to from pll2_400 */
-	imx_clk_set_parent(periph_pre_clk, pll2_400);
+	else
+		imx_clk_set_parent(periph_pre_clk, pll2_400);
 	imx_clk_set_parent(periph_clk, periph_pre_clk);
 
 	if (ddr_type == MMDC_MDMISC_DDR_TYPE_DDR3)

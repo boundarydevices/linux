@@ -98,6 +98,24 @@
 };
 
 &cpu0 {
+	/*
+	 * on i.MX6UL, no seperated VDD_ARM_IN and VDD_SOC_IN,
+	 * to align with other platform and use the same cpufreq
+	 * driver, still use the seperated OPP define for arm
+	 * and soc.
+	 */
+	operating-points = <
+		/* kHz	uV */
+		528000	1175000
+		396000	1175000
+		198000	1175000
+	>;
+	fsl,soc-operating-points = <
+		/* KHz	uV */
+		528000	1175000
+		396000	1175000
+		198000	1175000
+	>;
 	arm-supply = <&sw1a_reg>;
 	soc-supply = <&sw1a_reg>;
 	fsl,arm-soc-shared = <1>;
@@ -142,8 +160,8 @@
 };
 
 &gpc {
-	fsl,cpu_pupscr_sw2iso = <0x2>;
-	fsl,cpu_pupscr_sw = <0x1>;
+	fsl,cpu_pupscr_sw2iso = <0x1>;
+	fsl,cpu_pupscr_sw = <0x0>;
 	fsl,cpu_pdnscr_iso2sw = <0x1>;
 	fsl,cpu_pdnscr_iso = <0x1>;
 	fsl,wdog-reset = <1>; /* watchdog select of reset source */

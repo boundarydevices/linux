@@ -700,8 +700,10 @@ static int imx_thermal_probe(struct platform_device *pdev)
 	}
 
 	data->irq = platform_get_irq(pdev, 0);
-	if (data->irq < 0)
-		return data->irq;
+	if (data->irq < 0) {
+		ret = data->irq;
+		goto out;
+	}
 
 	platform_set_drvdata(pdev, data);
 
@@ -711,7 +713,7 @@ static int imx_thermal_probe(struct platform_device *pdev)
 	ret = imx_get_sensor_data(pdev);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to get sensor data\n");
-		return ret;
+		goto out;
 	}
 
 	/* Make sure sensor is in known good state for measurements */
@@ -728,7 +730,7 @@ static int imx_thermal_probe(struct platform_device *pdev)
 		ret = PTR_ERR(data->cdev[0]);
 		dev_err(&pdev->dev,
 			"failed to register cpufreq cooling device: %d\n", ret);
-		return ret;
+		goto out;
 	}
 
 	data->cdev[1] = devfreq_cooling_register();
@@ -736,7 +738,7 @@ static int imx_thermal_probe(struct platform_device *pdev)
 		ret = PTR_ERR(data->cdev[1]);
 		dev_err(&pdev->dev,
 			"failed to register devfreq cooling device: %d\n", ret);
-		return ret;
+		goto out;
 	}
 
 	data->tz = thermal_zone_device_register("imx_thermal_zone",
@@ -751,7 +753,7 @@ static int imx_thermal_probe(struct platform_device *pdev)
 			"failed to register thermal zone device %d\n", ret);
 		cpufreq_cooling_unregister(data->cdev[0]);
 		devfreq_cooling_unregister(data->cdev[1]);
-		return ret;
+		goto out;
 	}
 
 	/* Enable measurements at ~ 10 Hz */
@@ -770,7 +772,7 @@ static int imx_thermal_probe(struct platform_device *pdev)
 			0, "imx_thermal", data);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to request alarm irq: %d\n", ret);
-		return ret;
+		goto out;
 	}
 	data->irq_enabled = true;
 
@@ -781,6 +783,9 @@ static int imx_thermal_probe(struct platform_device *pdev)
 		register_busfreq_notifier(&thermal_notifier);
 
 	return 0;
+out:
+	clk_disable_unprepare(data->thermal_clk);
+	return ret;
 }
 
 static int imx_thermal_remove(struct platform_device *pdev)

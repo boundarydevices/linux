@@ -4694,7 +4694,7 @@ static void mxc_epdc_fb_fw_handler(const struct firmware *fw,
 			"Can't find firmware. Trying fallback fw\n");
 		fb_data->fw_default_load = true;
 		ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
-			"imx/epdc.fw", fb_data->dev, GFP_KERNEL, fb_data,
+			"imx/epdc/epdc.fw", fb_data->dev, GFP_KERNEL, fb_data,
 			mxc_epdc_fb_fw_handler);
 		if (ret)
 			dev_err(fb_data->dev,
@@ -4832,10 +4832,10 @@ static int mxc_epdc_fb_init_hw(struct fb_info *info)
 
 	/*
 	 * Create fw search string based on ID string in selected videomode.
-	 * Format is "imx/epdc_[panel string].fw"
+	 * Format is "imx/epdc/epdc_[panel string].fw"
 	 */
 	if (fb_data->cur_mode) {
-		strcat(fb_data->fw_str, "imx/epdc_");
+		strcat(fb_data->fw_str, "imx/epdc/epdc_");
 		strcat(fb_data->fw_str, fb_data->cur_mode->vmode->name);
 		strcat(fb_data->fw_str, ".fw");
 	}
