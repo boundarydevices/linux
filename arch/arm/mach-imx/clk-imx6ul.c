@@ -416,7 +416,7 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	/* set perclk to from OSC */
 	imx_clk_set_parent(clks[IMX6UL_CLK_PERCLK_SEL], clks[IMX6UL_CLK_OSC]);
 
-	/* Set the UART parent iif needed */
+	/* Set the UART parent if needed */
 	if (uart_from_osc)
 		imx_clk_set_parent(clks[IMX6UL_CLK_UART_SEL], clks[IMX6UL_CLK_OSC]);
 	else
@@ -426,7 +426,6 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	imx_clk_set_rate(clks[IMX6UL_CLK_ENET2_REF], 50000000);
 	imx_clk_set_rate(clks[IMX6UL_CLK_CSI], 24000000);
 
-	/* keep all the clks on just for bringup */
 	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 		imx_clk_prepare_enable(clks[clks_init_on[i]]);
 
