@@ -18,6 +18,7 @@
  * systems with no controllable regulators.
  */
 
+#include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/mutex.h>
 #include <linux/module.h>
@@ -116,6 +117,7 @@ static int reg_fixed_voltage_probe(struct platform_device *pdev)
 	struct fixed_voltage_data *drvdata;
 	struct regulator_config cfg = { };
 	int ret;
+	struct clk *clk_slow;
 
 	if (pdev->dev.of_node) {
 		config = of_get_fixed_voltage_config(&pdev->dev);
@@ -135,6 +137,10 @@ static int reg_fixed_voltage_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
+
+	clk_slow = devm_clk_get(&pdev->dev, "slow");
+	if (!IS_ERR(clk_slow))
+		clk_prepare_enable(clk_slow);
 
 	drvdata->desc.name = kstrdup(config->supply_name, GFP_KERNEL);
 	if (drvdata->desc.name == NULL) {
