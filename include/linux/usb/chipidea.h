@@ -51,6 +51,8 @@ struct ci_hdrc_platform_data {
 #define CI_HDRC_IMX_ADP_IS_SENSE_INT		11
 #define CI_HDRC_IMX_ADP_SENSE_CONNECTION	12
 #define CI_HDRC_IMX_ADP_ATTACH_EVENT		13
+#define CI_HDRC_IMX_TERM_SELECT_OVERRIDE_FS	14
+#define CI_HDRC_IMX_TERM_SELECT_OVERRIDE_OFF	15
 	int	(*notify_event)(struct ci_hdrc *ci, unsigned event);
 	struct regulator	*reg_vbus;
 	struct usb_otg_caps	ci_otg_caps;
