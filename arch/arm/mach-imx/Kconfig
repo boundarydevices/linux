@@ -849,6 +849,8 @@ config SOC_IMX6SX
 	select MIGHT_HAVE_PCI
 	select PCI_DOMAINS if PCI
 	select SOC_IMX6
+	select HAVE_IMX_RPMSG
+	select RPMSG
 
 	help
 	  This enables support for Freescale i.MX6 SoloX processor.
