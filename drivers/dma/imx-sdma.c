@@ -46,6 +46,9 @@
 #include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 #include <linux/platform_data/dma-imx-sdma.h>
 #include <linux/platform_data/dma-imx.h>
+#include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
+#include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 
 #include "dmaengine.h"
 #include "virt-dma.h"
@@ -1937,7 +1940,7 @@ err_firmware:
 
 #define EVENT_REMAP_CELLS 3
 
-static int sdma_event_remap(struct sdma_engine *sdma)
+static int __init sdma_event_remap(struct sdma_engine *sdma)
 {
 	struct device_node *np = sdma->dev->of_node;
 	struct device_node *gpr_np = of_parse_phandle(np, "gpr", 0);
