@@ -107,7 +107,8 @@ static iomux_v3_cfg_t MX6NAME(common_pads)[] = {
 	 */
 	MX6PAD(GPIO_5__I2C3_SCL),		/* GPIO1[5] */
 	MX6PAD(GPIO_16__I2C3_SDA),		/* GPIO7[11] */
-	MX6PAD(SD3_DAT4__GPIO_7_1), 		/* AR1021 4/5 wire select */
+	MX6PAD(EIM_A25__GPIO_5_2), 		/* AR1021 4/5 wire select */
+	MX6PAD(SD3_DAT4__GPIO_7_1),		/* unused */
 
 	/* PCIE */
 #define GP_PCIE_RESET          IMX_GPIO_NR(6, 31)

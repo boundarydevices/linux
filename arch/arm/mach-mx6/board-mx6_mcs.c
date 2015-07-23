@@ -91,7 +91,7 @@
 
 #define USB_HUB_RESET		IMX_GPIO_NR(7, 12)	/* GPIO_17 - active low */
 
-#define AR1021_5WIRE		IMX_GPIO_NR(7, 1)	/* SD3_DAT4 - low is 4-wire */
+#define AR1021_5WIRE		IMX_GPIO_NR(5, 2)	/* EIM_A25 - low is 4-wire */
 
 #define GP_KEY_ONOFF		IMX_GPIO_NR(4, 15)
 
@@ -132,7 +132,7 @@ struct gpio init_gpios[] __initdata = {
 	{.label = "touch_reset",	.gpio = TOUCH_RESET,	.flags = GPIOF_HIGH},	/* GPIO1[4]: GPIO_4 - active low */
 	{.label = "touch_irq",		.gpio = TOUCH_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO1[9]: GPIO_9 - active low */
 	{.label = "usb_hub_reset",	.gpio = USB_HUB_RESET,	.flags = 0},		/* GPIO7[12]: GPIO_17 - active low */
-	{.label = "ar1021_5wire",	.gpio = AR1021_5WIRE,	.flags = GPIOF_DIR_IN},	/* GPIO7[1]: SD3_DAT4 - 1 == 5-wire */
+	{.label = "ar1021_5wire",	.gpio = AR1021_5WIRE,	.flags = GPIOF_DIR_IN},	/* GPIO5[2]: EIM_A25 - 1 == 5-wire */
 };
 
 
