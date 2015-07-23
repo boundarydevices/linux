@@ -377,12 +377,19 @@ MODULE_PARM_DESC(rtw_TxBBSwing_5G, "default init value:0xFF");
 
 uint rtw_OffEfuseMask = 0;
 module_param(rtw_OffEfuseMask, uint, 0644);
-MODULE_PARM_DESC(rtw_OffEfuseMask, "default open Efuse Mask vaule:0");
+MODULE_PARM_DESC(rtw_OffEfuseMask, "default open Efuse Mask value:0");
 
 uint rtw_FileMaskEfuse = 0;
 module_param(rtw_FileMaskEfuse, uint, 0644);
-MODULE_PARM_DESC(rtw_FileMaskEfuse, "default drv Mask Efuse vaule:0");
+MODULE_PARM_DESC(rtw_FileMaskEfuse, "default drv Mask Efuse value:0");
 
+uint rtw_kfree = 0;
+module_param(rtw_kfree, uint, 0644);
+MODULE_PARM_DESC(rtw_kfree, "default kfree config value:0");
+
+uint rtw_pll_ref_clk_sel = CONFIG_RTW_PLL_REF_CLK_SEL;
+module_param(rtw_pll_ref_clk_sel, uint, 0644);
+MODULE_PARM_DESC(rtw_pll_ref_clk_sel, "force pll_ref_clk_sel, 0xF:use autoload value");
 
 #if defined(CONFIG_CALIBRATE_TX_POWER_BY_REGULATORY) //eFuse: Regulatory selection=1
 int rtw_tx_pwr_lmt_enable = 1;
@@ -587,6 +594,8 @@ _func_enter_;
 	registry_par->ext_iface_num = (u8)rtw_ext_iface_num;
 #endif //CONFIG_MULTI_VIR_IFACES
 
+	registry_par->pll_ref_clk_sel = (u8)rtw_pll_ref_clk_sel;
+
 	registry_par->RegEnableTxPowerLimit = (u8)rtw_tx_pwr_lmt_enable;
 	registry_par->RegEnableTxPowerByRate = (u8)rtw_tx_pwr_by_rate;
 
@@ -613,7 +622,7 @@ _func_enter_;
 
 	registry_par->boffefusemask = (u8)rtw_OffEfuseMask;
 	registry_par->bFileMaskEfuse = (u8)rtw_FileMaskEfuse;
-	
+	registry_par->kfree_config = (u8)rtw_kfree;
 #ifdef CONFIG_AUTO_CHNL_SEL_NHM
 	registry_par->acs_mode = (u8)rtw_acs_mode;
 	registry_par->acs_auto_scan = (u8)rtw_acs_auto_scan;
@@ -623,21 +632,69 @@ _func_exit_;
 	return status;
 }
 
-static int rtw_net_set_mac_address(struct net_device *pnetdev, void *p)
+/**
+ * rtw_net_set_mac_address
+ * This callback function is used for the Media Access Control address
+ * of each net_device needs to be changed.
+ *
+ * Arguments:
+ * @pnetdev: net_device pointer.
+ * @addr: new MAC address.
+ *
+ * Return:
+ * ret = 0: Permit to change net_device's MAC address.
+ * ret = -1 (Default): Operation not permitted.
+ *
+ * Auther: Arvin Liu
+ * Date: 2015/05/29
+ */
+static int rtw_net_set_mac_address(struct net_device *pnetdev, void *addr)
 {
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(pnetdev);
-	struct sockaddr *addr = p;
+	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
+	struct sockaddr *sa = (struct sockaddr *)addr;
+	int ret = -1;
 
-	if(padapter->bup == _FALSE)
-	{
-		//DBG_871X("r8711_net_set_mac_address(), MAC=%x:%x:%x:%x:%x:%x\n", addr->sa_data[0], addr->sa_data[1], addr->sa_data[2], addr->sa_data[3],
-		//addr->sa_data[4], addr->sa_data[5]);
-		_rtw_memcpy(adapter_mac_addr(padapter), addr->sa_data, ETH_ALEN);
-		//_rtw_memcpy(pnetdev->dev_addr, addr->sa_data, ETH_ALEN);
-		//padapter->bset_hwaddr = _TRUE;
+	/* only the net_device is in down state to permit modifying mac addr */
+	if ((pnetdev->flags & IFF_UP) == _TRUE) {
+		DBG_871X(FUNC_ADPT_FMT": The net_device's is not in down state\n"
+			, FUNC_ADPT_ARG(padapter));
+
+		return ret;
 	}
 
-	return 0;
+	/* if the net_device is linked, it's not permit to modify mac addr */
+	if (check_fwstate(pmlmepriv, _FW_UNDER_LINKING) ||
+		check_fwstate(pmlmepriv, _FW_LINKED) ||
+		check_fwstate(pmlmepriv, _FW_UNDER_SURVEY)) {
+		DBG_871X(FUNC_ADPT_FMT": The net_device's is not idle currently\n"
+			, FUNC_ADPT_ARG(padapter));
+
+		return ret;
+	}
+
+	/* check whether the input mac address is valid to permit modifying mac addr */
+	if (rtw_check_invalid_mac_address(sa->sa_data, _FALSE) == _TRUE) {
+		DBG_871X(FUNC_ADPT_FMT": Invalid Mac Addr for "MAC_FMT"\n"
+			, FUNC_ADPT_ARG(padapter), MAC_ARG(sa->sa_data));
+
+		return ret;
+	}
+
+	_rtw_memcpy(adapter_mac_addr(padapter), sa->sa_data, ETH_ALEN); /* set mac addr to adapter */
+	_rtw_memcpy(pnetdev->dev_addr, sa->sa_data, ETH_ALEN); /* set mac addr to net_device */
+
+	rtw_ps_deny(padapter, PS_DENY_IOCTL);
+	LeaveAllPowerSaveModeDirect(padapter); /* leave PS mode for guaranteeing to access hw register successfully */
+	rtw_hal_set_hwreg(padapter, HW_VAR_MAC_ADDR, sa->sa_data); /* set mac addr to mac register */
+	rtw_ps_deny_cancel(padapter, PS_DENY_IOCTL);
+
+	DBG_871X(FUNC_ADPT_FMT": Set Mac Addr to "MAC_FMT" Successfully\n"
+		, FUNC_ADPT_ARG(padapter), MAC_ARG(sa->sa_data));
+
+	ret = 0;
+
+	return ret;
 }
 
 static struct net_device_stats *rtw_net_get_stats(struct net_device *pnetdev)
@@ -1004,8 +1061,12 @@ int rtw_os_ndev_register(_adapter *adapter, char *name)
 	}
 
 #if defined(CONFIG_IOCTL_CFG80211)
-	if (ret != _SUCCESS)
+	if (ret != _SUCCESS) {
 		rtw_cfg80211_ndev_res_unregister(adapter);
+		#if !defined(RTW_SINGLE_WIPHY)
+		rtw_wiphy_unregister(adapter_to_wiphy(adapter));
+		#endif
+	}
 #endif
 
 exit:
@@ -1023,20 +1084,15 @@ void rtw_os_ndev_unregister(_adapter *adapter)
 
 	netdev = adapter->pnetdev;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)) \
-                   && defined(CONFIG_IOCTL_CFG80211)
-    if (adapter->rtw_wdev->current_bss) {
-        DBG_871X(FUNC_ADPT_FMT" clear current_bss by cfg80211_disconnected\n",
-                FUNC_ADPT_ARG(adapter));
-        cfg80211_disconnected(adapter->pnetdev, 0, NULL, 0, GFP_ATOMIC);
-    }
+#if defined(CONFIG_IOCTL_CFG80211)
+	rtw_cfg80211_ndev_res_unregister(adapter);
 #endif
 
 	if ((adapter->DriverState != DRIVER_DISAPPEAR) && netdev)
 		unregister_netdev(netdev); /* will call netdev_close() */
 
-#if defined(CONFIG_IOCTL_CFG80211)
-	rtw_cfg80211_ndev_res_unregister(adapter);
+#if defined(CONFIG_IOCTL_CFG80211) && !defined(RTW_SINGLE_WIPHY)
+	rtw_wiphy_unregister(adapter_to_wiphy(adapter));
 #endif
 
 	adapter->ndev_unregistering = 0;
@@ -1342,6 +1398,7 @@ struct dvobj_priv *devobj_init(void)
 
 	rtw_macid_ctl_init(&pdvobj->macid_ctl);
 	_rtw_spinlock_init(&pdvobj->cam_ctl.lock);
+	_rtw_mutex_init(&pdvobj->cam_ctl.sec_cam_access_mutex);
 
 	return pdvobj;
 
@@ -1367,6 +1424,7 @@ void devobj_deinit(struct dvobj_priv *pdvobj)
 
 	rtw_macid_ctl_deinit(&pdvobj->macid_ctl);
 	_rtw_spinlock_free(&pdvobj->cam_ctl.lock);
+	_rtw_mutex_free(&pdvobj->cam_ctl.sec_cam_access_mutex);
 
 	rtw_mfree((u8*)pdvobj, sizeof(*pdvobj));
 }	
@@ -1798,6 +1856,7 @@ static int netdev_vir_if_close(struct net_device *pnetdev)
 
 #ifdef CONFIG_IOCTL_CFG80211
 	rtw_scan_abort(padapter);
+	rtw_cfg80211_wait_scan_req_empty(padapter, 200);
 	adapter_wdev_data(padapter)->bandroid_scan = _FALSE;
 #endif
 
@@ -1825,6 +1884,7 @@ void rtw_hook_vir_if_ops(struct net_device *ndev)
 #else
 	ndev->open = netdev_vir_if_open;
 	ndev->stop = netdev_vir_if_close;
+	ndev->set_mac_address = rtw_net_set_mac_address;
 #endif
 }
 
@@ -2131,6 +2191,7 @@ static int netdev_if2_close(struct net_device *pnetdev)
 
 #ifdef CONFIG_IOCTL_CFG80211
 	rtw_scan_abort(padapter);
+	rtw_cfg80211_wait_scan_req_empty(padapter, 200);
 	adapter_wdev_data(padapter)->bandroid_scan = _FALSE;
 #endif
 
@@ -2162,6 +2223,7 @@ void rtw_hook_if2_ops(struct net_device *ndev)
 	ndev->uninit = rtw_ndev_uninit;
 	ndev->open = netdev_if2_open;
 	ndev->stop = netdev_if2_close;
+	ndev->set_mac_address = rtw_net_set_mac_address;
 #endif
 }
 
@@ -2811,6 +2873,7 @@ static int netdev_close(struct net_device *pnetdev)
 
 #ifdef CONFIG_IOCTL_CFG80211
 	rtw_scan_abort(padapter);
+	rtw_cfg80211_wait_scan_req_empty(padapter, 200);
 	adapter_wdev_data(padapter)->bandroid_scan = _FALSE;
 	//padapter->rtw_wdev->iftype = NL80211_IFTYPE_MONITOR; //set this at the end
 #endif //CONFIG_IOCTL_CFG80211
@@ -2833,6 +2896,9 @@ static int netdev_close(struct net_device *pnetdev)
 	}
 
 	rtw_scan_abort(padapter); // stop scanning process before wifi is going to down
+	#ifdef CONFIG_IOCTL_CFG80211
+	rtw_cfg80211_wait_scan_req_empty(padapter, 200);
+	#endif
 
 	DBG_871X("netdev_close, bips_processing=%d\n", pwrctl->bips_processing);
 	while (pwrctl->bips_processing == _TRUE) // waiting for ips_processing done before call rtw_dev_unload()
@@ -2956,7 +3022,7 @@ static int route_dump(u32 *gw_addr ,int* gw_index)
 	err = sock_sendmsg(sock, &msg, sizeof(req));
 	set_fs(oldfs);
 
-	if (size < 0)
+	if (err < 0)
 		goto out_sock;
 
 	pg = (char *) __get_free_page(GFP_KERNEL);
@@ -3128,11 +3194,6 @@ int	rtw_gw_addr_query(_adapter *padapter)
 	int i;
 	int res;
 
-	if (pwrctl->wowlan_from_cmd == _TRUE) {
-		DBG_871X("%s: return cuz wowlan_from_cmd\n", __func__);
-		return 0;
-	}
-
 	res = get_defaultgw(&gw_addr, gw_mac);
 	if(!res)
 	{
@@ -3284,8 +3345,11 @@ int rtw_suspend_free_assoc_resource(_adapter *padapter)
 #endif
 		rtw_free_network_queue(padapter, _TRUE);
 
-	if(check_fwstate(pmlmepriv, _FW_UNDER_SURVEY))
+	if (check_fwstate(pmlmepriv, _FW_UNDER_SURVEY)) {
+		DBG_871X_LEVEL(_drv_always_, "%s: fw_under_survey\n", __func__);
 		rtw_indicate_scan_done(padapter, 1);
+		clr_fwstate(pmlmepriv, _FW_UNDER_SURVEY);
+	}
 
 	if (check_fwstate(pmlmepriv, _FW_UNDER_LINKING) == _TRUE)
 	{

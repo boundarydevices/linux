@@ -39,11 +39,24 @@
  *	Description:
  *		Turn on LED according to LedPin specified.
  */
-static void SwLedOn8812AS(PADAPTER padapter, PLED_SDIO pLed)
+static void SwLedOn_8821AS(PADAPTER padapter, PLED_SDIO pLed)
 {
-	if (RTW_CANNOT_RUN(padapter))
-		return;
+	u8 LedCfg;
 
+	if (RTW_CANNOT_RUN(padapter))
+		goto exit;
+
+	LedCfg = rtw_read8(padapter, REG_LEDCFG2);
+	switch (pLed->LedPin) {	
+	case LED_PIN_LED2:
+		rtw_write8(padapter, REG_LEDCFG2, (LedCfg & 0xc0) | BIT5 | BIT4 | BIT3);
+		break;
+
+	default:
+		break;
+	}
+
+exit:
 	pLed->bLedOn = _TRUE;
 }
 
@@ -51,14 +64,25 @@ static void SwLedOn8812AS(PADAPTER padapter, PLED_SDIO pLed)
  *	Description:
  *		Turn off LED according to LedPin specified.
  */
-static void SwLedOff8821AS(PADAPTER padapter, PLED_SDIO pLed)
+static void SwLedOff_8821AS(PADAPTER padapter, PLED_SDIO pLed)
 {
+	u8 LedCfg;
+
 	if (RTW_CANNOT_RUN(padapter))
 		goto exit;
 
+	LedCfg = rtw_read8(padapter, REG_LEDCFG2);
+	switch (pLed->LedPin) { 
+	case LED_PIN_LED2:
+		rtw_write8(padapter, REG_LEDCFG2, (LedCfg & 0xc0) | BIT5 | BIT4);
+		break;
+
+	default:
+		break;
+	}
+
 exit:
 	pLed->bLedOn = _FALSE;
-
 }
 
 //================================================================================
@@ -69,15 +93,27 @@ exit:
  *	Description:
  *		Initialize all LED_871x objects.
  */
-void InitSwLeds8821AS(PADAPTER padapter)
+void rtl8821as_InitSwLeds(PADAPTER padapter)
 {
+	struct led_priv *pledpriv = &(padapter->ledpriv);
+
+	pledpriv->LedControlHandler = LedControlSDIO;
+	pledpriv->SwLedOn = SwLedOn_8821AS;
+	pledpriv->SwLedOff = SwLedOff_8821AS;
+
+	InitLed(padapter, &(pledpriv->SwLed0), LED_PIN_LED2);
+	InitLed(padapter, &(pledpriv->SwLed1), LED_PIN_LED1);
 }
 
 /*
  *	Description:
  *		DeInitialize all LED_819xUsb objects.
  */
-void DeInitSwLeds8821AS(PADAPTER padapter)
+void rtl8821as_DeInitSwLeds(PADAPTER padapter)
 {
+	struct led_priv	*ledpriv = &padapter->ledpriv;
+
+	DeInitLed(&ledpriv->SwLed0);
+	DeInitLed(&ledpriv->SwLed1);
 }
 

@@ -334,9 +334,7 @@ s32 c2h_handler_8703b(PADAPTER padapter, u8 *pC2hEvent);
 u8 MRateToHwRate8703B(u8  rate);
 u8 HwRateToMRate8703B(u8	 rate);
 
-#ifdef CONFIG_RF_GAIN_OFFSET
 void Hal_ReadRFGainOffset(PADAPTER pAdapter,u8* hwinfo,BOOLEAN AutoLoadFail);
-#endif //CONFIG_RF_GAIN_OFFSET
 
 #ifdef CONFIG_PCI_HCI
 BOOLEAN	InterruptRecognized8703BE(PADAPTER Adapter);

@@ -30,7 +30,21 @@ void rtw_hal_chip_configure(_adapter *padapter)
 
 void rtw_hal_read_chip_info(_adapter *padapter)
 {
+	u8 hci_type = rtw_get_intf_type(padapter);
+	u32 start = rtw_get_current_time();
+
+	/*  before access eFuse, make sure card enable has been called */
+	if ((hci_type == RTW_SDIO || hci_type == RTW_GSPI)
+		&& !rtw_is_hw_init_completed(padapter))
+		rtw_hal_power_on(padapter);
+
 	padapter->HalFunc.read_adapter_info(padapter);
+
+	if ((hci_type == RTW_SDIO || hci_type == RTW_GSPI)
+		&& !rtw_is_hw_init_completed(padapter))
+		rtw_hal_power_off(padapter);
+
+	DBG_871X("%s in %d ms\n", __func__, rtw_get_passing_time_ms(start));
 }
 
 void rtw_hal_read_chip_version(_adapter *padapter)
@@ -53,6 +67,7 @@ void rtw_hal_def_value_init(_adapter *padapter)
 			dvobj->macid_ctl.num = rtw_min(hal_data->macid_num, MACID_NUM_SW_LIMIT);
 
 			dvobj->cam_ctl.sec_cap = hal_data->sec_cap;
+			dvobj->cam_ctl.num = rtw_min(hal_data->sec_cam_ent_num, SEC_CAM_ENT_NUM_SW_LIMIT);
 		}
 	}
 }
@@ -341,30 +356,40 @@ s32	rtw_hal_xmit(_adapter *padapter, struct xmit_frame *pxmitframe)
 s32	rtw_hal_mgnt_xmit(_adapter *padapter, struct xmit_frame *pmgntframe)
 {
 	s32 ret = _FAIL;
-	unsigned char	*pframe;
+	u8	*pframe, subtype;
 	struct rtw_ieee80211_hdr	*pwlanhdr;
+	struct sta_info	*psta;
+	struct sta_priv		*pstapriv = &padapter->stapriv;
+	
 	update_mgntframe_attrib_addr(padapter, pmgntframe);
-	//pframe = (u8 *)(pmgntframe->buf_addr) + TXDESC_OFFSET;
+	pframe = (u8 *)(pmgntframe->buf_addr) + TXDESC_OFFSET;
+	subtype = GetFrameSubType(pframe); /* bit(7)~bit(2) */
+	
 	//pwlanhdr = (struct rtw_ieee80211_hdr *)pframe;
 	//_rtw_memcpy(pmgntframe->attrib.ra, pwlanhdr->addr1, ETH_ALEN);
 
 #ifdef CONFIG_IEEE80211W
-	if(padapter->securitypriv.binstallBIPkey == _TRUE)
+	if (padapter->securitypriv.binstallBIPkey == _TRUE && (subtype == WIFI_DEAUTH || subtype == WIFI_DISASSOC ||
+			subtype == WIFI_ACTION))
 	{
-		if(IS_MCAST(pmgntframe->attrib.ra))
-		{
+		if (IS_MCAST(pmgntframe->attrib.ra) && pmgntframe->attrib.key_type != IEEE80211W_NO_KEY) {
 			pmgntframe->attrib.encrypt = _BIP_;
-			//pmgntframe->attrib.bswenc = _TRUE;
-		}	
-		else
-		{
-			pmgntframe->attrib.encrypt = _AES_;
-			pmgntframe->attrib.bswenc = _TRUE;
+			/* pmgntframe->attrib.bswenc = _TRUE; */
+		} else if (pmgntframe->attrib.key_type != IEEE80211W_NO_KEY) {
+			psta = rtw_get_stainfo(pstapriv, pmgntframe->attrib.ra);
+			if (psta && psta->bpairwise_key_installed == _TRUE) {
+				pmgntframe->attrib.encrypt = _AES_;
+				pmgntframe->attrib.bswenc = _TRUE;
+			} else {
+				DBG_871X("%s, %d, bpairwise_key_installed is FALSE\n", __func__, __LINE__);
+				goto no_mgmt_coalesce;
+			}
 		}
+		DBG_871X("encrypt=%d, bswenc=%d\n", pmgntframe->attrib.encrypt, pmgntframe->attrib.bswenc);
 		rtw_mgmt_xmitframe_coalesce(padapter, pmgntframe->pkt, pmgntframe);
 	}
 #endif //CONFIG_IEEE80211W
-	
+no_mgmt_coalesce:
 	ret = padapter->HalFunc.mgnt_xmit(padapter, pmgntframe);
 	return ret;
 }
@@ -555,10 +580,19 @@ void rtw_hal_bcn_related_reg_setting(_adapter *padapter)
 
 #ifdef CONFIG_ANTENNA_DIVERSITY
 u8	rtw_hal_antdiv_before_linked(_adapter *padapter)
-{	
-	if(padapter->HalFunc.AntDivBeforeLinkHandler)
-		return padapter->HalFunc.AntDivBeforeLinkHandler(padapter);
-	return _FALSE;		
+{
+	struct dvobj_priv *dvobj = adapter_to_dvobj(padapter);
+	int i;
+
+	if (!padapter->HalFunc.AntDivBeforeLinkHandler)
+		return _FALSE;
+
+	for (i = 0; i < dvobj->iface_nums; i++) {
+		if (rtw_linked_check(dvobj->padapters[i]))
+			return _FALSE;
+	}
+
+	return padapter->HalFunc.AntDivBeforeLinkHandler(padapter);
 }
 void	rtw_hal_antdiv_rssi_compared(_adapter *padapter, WLAN_BSSID_EX *dst, WLAN_BSSID_EX *src)
 {
@@ -737,7 +771,14 @@ s32 rtw_hal_macid_wakeup(PADAPTER padapter, u8 macid)
 
 s32 rtw_hal_fill_h2c_cmd(PADAPTER padapter, u8 ElementID, u32 CmdLen, u8 *pCmdBuffer)
 {
-	return padapter->HalFunc.fill_h2c_cmd(padapter, ElementID, CmdLen, pCmdBuffer);	
+	_adapter *pri_adapter = GET_PRIMARY_ADAPTER(padapter);
+
+	if (pri_adapter->bFWReady == _TRUE)
+		return padapter->HalFunc.fill_h2c_cmd(padapter, ElementID, CmdLen, pCmdBuffer);
+	else if (padapter->registrypriv.mp_mode == 0)
+		DBG_871X_LEVEL(_drv_always_, FUNC_ADPT_FMT" FW doesn't exit when no MP mode, by pass H2C id:0x%02x\n"
+			, FUNC_ADPT_ARG(padapter), ElementID);
+	return _FAIL;
 }
 
 void rtw_hal_fill_fake_txdesc(_adapter* padapter, u8* pDesc, u32 BufferLen,

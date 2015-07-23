@@ -494,7 +494,6 @@ PHY_BBConfig8812(
 	int	rtStatus = _SUCCESS;
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
 	u8	TmpU1B=0;
-	u8	CrystalCap;
 
 	phy_InitBBRFRegisterDefinition(Adapter);
 
@@ -522,18 +521,7 @@ PHY_BBConfig8812(
 	//
 	rtStatus = phy_BB8812_Config_ParaFile(Adapter);
 
-	if(IS_HARDWARE_TYPE_8812(Adapter))
-	{
-		// write 0x2C[30:25] = 0x2C[24:19] = CrystalCap
-		CrystalCap = pHalData->CrystalCap & 0x3F;
-		PHY_SetBBReg(Adapter, REG_MAC_PHY_CTRL, 0x7FF80000, (CrystalCap | (CrystalCap << 6)));
-	}
-	else if (IS_HARDWARE_TYPE_8821(Adapter))
-	{
-		// 0x2C[23:18] = 0x2C[17:12] = CrystalCap
-		CrystalCap = pHalData->CrystalCap & 0x3F;
-		PHY_SetBBReg(Adapter, REG_MAC_PHY_CTRL, 0xFFF000, (CrystalCap | (CrystalCap << 6)));	
-	}
+	hal_set_crystal_cap(Adapter, pHalData->CrystalCap);
 
 	if(IS_HARDWARE_TYPE_JAGUAR(Adapter))
 	{
@@ -1501,7 +1489,7 @@ phy_GetSecondaryChnl_8812(
 		else if(pHalData->nCur80MhzPrimeSC == HAL_PRIME_CHNL_OFFSET_UPPER)
 			SCSettingOf40 = VHT_DATA_SC_40_UPPER_OF_80MHZ;
 		else
-			DBG_871X("SCMapping: Not Correct Primary80MHz Setting \n");
+			DBG_871X("SCMapping: DONOT CARE Mode Setting\n");
 		
 		if((pHalData->nCur40MhzPrimeSC == HAL_PRIME_CHNL_OFFSET_LOWER) && (pHalData->nCur80MhzPrimeSC == HAL_PRIME_CHNL_OFFSET_LOWER))
 			SCSettingOf20 = VHT_DATA_SC_20_LOWEST_OF_80MHZ;
@@ -1512,7 +1500,7 @@ phy_GetSecondaryChnl_8812(
 		else if((pHalData->nCur40MhzPrimeSC == HAL_PRIME_CHNL_OFFSET_UPPER) && (pHalData->nCur80MhzPrimeSC == HAL_PRIME_CHNL_OFFSET_UPPER))
 			SCSettingOf20 = VHT_DATA_SC_20_UPPERST_OF_80MHZ;
 		else
-			DBG_871X("SCMapping: Not Correct Primary80MHz Setting \n");
+			DBG_871X("SCMapping: DONOT CARE Mode Setting\n");
 	}
 	else if(pHalData->CurrentChannelBW == CHANNEL_WIDTH_40)
 	{
@@ -1523,10 +1511,10 @@ phy_GetSecondaryChnl_8812(
 		else if(pHalData->nCur40MhzPrimeSC == HAL_PRIME_CHNL_OFFSET_LOWER)
 			SCSettingOf20 = VHT_DATA_SC_20_LOWER_OF_80MHZ;
 		else
-			DBG_871X("SCMapping: Not Correct Primary40MHz Setting \n");
+			DBG_871X("SCMapping: DONOT CARE Mode Setting\n");
 	}
 
-	//DBG_871X("SCMapping: SC Value %x \n", ( (SCSettingOf40 << 4) | SCSettingOf20));
+	/*DBG_871X("SCMapping: SC Value %x\n", ((SCSettingOf40 << 4) | SCSettingOf20));*/
 	return  ( (SCSettingOf40 << 4) | SCSettingOf20);
 }
 

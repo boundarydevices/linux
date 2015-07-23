@@ -18,7 +18,7 @@
 * 
 ******************************************************************************/
 
-/*Image2HeaderVersion: 2.12*/
+/*Image2HeaderVersion: 2.14*/
 #include "mp_precomp.h"
 #include "../phydm_precomp.h"
 
@@ -398,24 +398,27 @@ ODM_ReadAndConfig_MP_8821A_AGC_TAB(
 				if (cCond == COND_ENDIF) {/*end*/
 					bMatched = TRUE;
 					bSkipped = FALSE;
-				} else if (cCond == COND_ELSE) /*else*/
+					ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("ENDIF\n"));
+				} else if (cCond == COND_ELSE) { /*else*/
 					bMatched = bSkipped?FALSE:TRUE;
+					ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("ELSE\n"));
+				}
 				else {/*if , else if*/
-					if (bSkipped)
-						bMatched = FALSE;
-					else {
-						pre_v1 = v1;
-						pre_v2 = v2;
-					}
+					pre_v1 = v1;
+					pre_v2 = v2;
+					ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("IF or ELSE IF\n"));
 				}
 			} else if (v1 & BIT30) { /*negative condition*/
-				if (CheckPositive(pDM_Odm, pre_v1, pre_v2, v1, v2)) {
-					bMatched = TRUE;
-					bSkipped = TRUE;
-				} else {
+				if (bSkipped == FALSE) {
+					if (CheckPositive(pDM_Odm, pre_v1, pre_v2, v1, v2)) {
+						bMatched = TRUE;
+						bSkipped = TRUE;
+					} else {
+						bMatched = FALSE;
+						bSkipped = FALSE;
+					}
+				} else
 					bMatched = FALSE;
-					bSkipped = FALSE;
-				}
 			}
 		} else {
 			if (bMatched)
@@ -428,7 +431,7 @@ ODM_ReadAndConfig_MP_8821A_AGC_TAB(
 u4Byte
 ODM_GetVersion_MP_8821A_AGC_TAB(void)
 {
-	   return 52;
+	   return 54;
 }
 
 /******************************************************************************
@@ -636,24 +639,27 @@ ODM_ReadAndConfig_MP_8821A_PHY_REG(
 				if (cCond == COND_ENDIF) {/*end*/
 					bMatched = TRUE;
 					bSkipped = FALSE;
-				} else if (cCond == COND_ELSE) /*else*/
+					ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("ENDIF\n"));
+				} else if (cCond == COND_ELSE) { /*else*/
 					bMatched = bSkipped?FALSE:TRUE;
+					ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("ELSE\n"));
+				}
 				else {/*if , else if*/
-					if (bSkipped)
-						bMatched = FALSE;
-					else {
-						pre_v1 = v1;
-						pre_v2 = v2;
-					}
+					pre_v1 = v1;
+					pre_v2 = v2;
+					ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("IF or ELSE IF\n"));
 				}
 			} else if (v1 & BIT30) { /*negative condition*/
-				if (CheckPositive(pDM_Odm, pre_v1, pre_v2, v1, v2)) {
-					bMatched = TRUE;
-					bSkipped = TRUE;
-				} else {
+				if (bSkipped == FALSE) {
+					if (CheckPositive(pDM_Odm, pre_v1, pre_v2, v1, v2)) {
+						bMatched = TRUE;
+						bSkipped = TRUE;
+					} else {
+						bMatched = FALSE;
+						bSkipped = FALSE;
+					}
+				} else
 					bMatched = FALSE;
-					bSkipped = FALSE;
-				}
 			}
 		} else {
 			if (bMatched)
@@ -666,7 +672,7 @@ ODM_ReadAndConfig_MP_8821A_PHY_REG(
 u4Byte
 ODM_GetVersion_MP_8821A_PHY_REG(void)
 {
-	   return 52;
+	   return 54;
 }
 
 /******************************************************************************
@@ -700,6 +706,14 @@ ODM_ReadAndConfig_MP_8821A_PHY_REG_PG(
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_PHY_REG_PG)/sizeof(u4Byte);
 	pu4Byte    Array       = Array_MP_8821A_PHY_REG_PG;
 
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+	PADAPTER		Adapter = pDM_Odm->Adapter;
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
+
+	PlatformZeroMemory(pHalData->BufOfLinesPwrByRate, MAX_LINES_HWCONFIG_TXT*MAX_BYTES_LINE_HWCONFIG_TXT);
+	pHalData->nLinesReadPwrByRate = ArrayLen/6;
+#endif
+
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8821A_PHY_REG_PG\n"));
 
 	pDM_Odm->PhyRegPgVersion = 1;
@@ -714,6 +728,11 @@ ODM_ReadAndConfig_MP_8821A_PHY_REG_PG(
 		u4Byte v6 = Array[i+5];
 
 	    odm_ConfigBB_PHY_REG_PG_8821A(pDM_Odm, v1, v2, v3, v4, v5, v6);
+
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+	rsprintf(pHalData->BufOfLinesPwrByRate[i/6], 100, "%s, %s, %s, 0x%X, 0x%08X, 0x%08X,",
+		(v1 == 0?"2.4G":"  5G"), (v2 == 0?"A":"B"), (v3 == 0?"1Tx":"2Tx"), v4, v5, v6);
+#endif
 	}
 }
 

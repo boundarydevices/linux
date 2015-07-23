@@ -633,6 +633,6 @@ So the following defines for 92C is not entire!!!!!!
 #define LAST_ENTRY_OF_TX_PKT_BUFFER_8814A       2048-1	//20130415 KaiYuan add for 8814
 
 #define MACID_NUM_8814A 128
-#define CAM_ENTRY_NUM_8814A 64
+#define SEC_CAM_ENT_NUM_8814A 64
 
 #endif //__RTL8814A_SPEC_H__

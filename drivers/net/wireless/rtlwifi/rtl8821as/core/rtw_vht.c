@@ -38,10 +38,10 @@ const u16 VHT_MCS_DATA_RATE[3][2][30] =
 			90, 180, 270, 360, 540, 720, 810, 900, 1080, 1200}},		// Short GI, 40MHz
 		{	{59, 117,  176, 234, 351, 468, 527, 585, 702, 780,
 			117, 234, 351, 468, 702, 936, 1053, 1170, 1404, 1560,
-			176, 351, 527, 702, 1053, 1404, 1580, 1755, 2106, 2106}, 	// Long GI, 80MHz
+			176, 351, 527, 702, 1053, 1404, 1580, 1755, 2106, 2340},	/* Long GI, 80MHz */
 			{65, 130, 195, 260, 390, 520, 585, 650, 780, 867, 
 			130, 260, 390, 520, 780, 1040, 1170, 1300, 1560,1734,
-			195, 390, 585, 780, 1170, 1560, 1755, 1950, 2340, 2340}	}	// Short GI, 80MHz
+			195, 390, 585, 780, 1170, 1560, 1755, 1950, 2340, 2600}	}	/* Short GI, 80MHz */
 	};
 
 u8	rtw_get_vht_highest_rate(u8 *pvht_mcs_map)
@@ -625,7 +625,7 @@ u32	rtw_build_vht_cap_ie(_adapter *padapter, u8 *pbuf)
 	{
 		rtw_hal_get_hwreg(padapter, HW_VAR_RF_TYPE, (u8 *)(&rf_type));
 		if ((rf_type == RF_2T2R) || (rf_type == RF_1T2R)) {
-			SET_VHT_CAPABILITY_ELE_RX_STBC(pcap, 2);
+			SET_VHT_CAPABILITY_ELE_RX_STBC(pcap, 1);
 		}
 		else if (rf_type == RF_1T1R) {
 			SET_VHT_CAPABILITY_ELE_RX_STBC(pcap, 1);

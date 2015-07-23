@@ -21,7 +21,15 @@
 #ifndef __HAL_PG_H__
 #define __HAL_PG_H__
 
- 
+#define PPG_BB_GAIN_2G_TX_OFFSET_MASK	0x0F
+#define PPG_BB_GAIN_2G_TXB_OFFSET_MASK	0xF0
+
+#define PPG_BB_GAIN_5G_TX_OFFSET_MASK	0x1F
+#define PPG_THERMAL_OFFSET_MASK			0x1F
+#define KFREE_BB_GAIN_2G_TX_OFFSET(_ppg_v) (((_ppg_v) == PPG_BB_GAIN_2G_TX_OFFSET_MASK) ? 0 : (((_ppg_v) & 0x01) ? ((_ppg_v) >> 1) : (-((_ppg_v) >> 1))))
+#define KFREE_BB_GAIN_5G_TX_OFFSET(_ppg_v) (((_ppg_v) == PPG_BB_GAIN_5G_TX_OFFSET_MASK) ? 0 : (((_ppg_v) & 0x01) ? ((_ppg_v) >> 1) : (-((_ppg_v) >> 1))))
+#define KFREE_THERMAL_OFFSET(_ppg_v) (((_ppg_v) == PPG_THERMAL_OFFSET_MASK) ? 0 : (((_ppg_v) & 0x01) ? ((_ppg_v) >> 1) : (-((_ppg_v) >> 1))))
+
 //====================================================
 //			EEPROM/Efuse PG Offset for 88EE/88EU/88ES
 //====================================================
@@ -58,6 +66,12 @@
 //====================================================
 //			EEPROM/Efuse PG Offset for 8192EE/8192EU/8192ES
 //====================================================
+#define GET_PG_KFREE_ON_8192E(_pg_m)			LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC1, 4, 1)
+#define GET_PG_KFREE_THERMAL_K_ON_8192E(_pg_m)	LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC8, 5, 1)
+
+#define PPG_BB_GAIN_2G_TXA_OFFSET_8192E	0x1F6
+#define PPG_THERMAL_OFFSET_8192E		0x1F5
+
 // 0x10 ~ 0x63 = TX power area.
 #define	EEPROM_TX_PWR_INX_8192E				0x10
 
@@ -180,6 +194,18 @@
 //====================================================
 //			EEPROM/Efuse PG Offset for 8821AE/8821AU/8821AS
 //====================================================
+
+#define GET_PG_KFREE_ON_8821A(_pg_m)			LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC8, 4, 1)
+#define GET_PG_KFREE_THERMAL_K_ON_8821A(_pg_m)	LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC8, 5, 1)
+
+#define PPG_BB_GAIN_2G_TXA_OFFSET_8821A		0x1F6
+#define PPG_THERMAL_OFFSET_8821A			0x1F5
+#define PPG_BB_GAIN_5GLB1_TXA_OFFSET_8821A	0x1F4
+#define PPG_BB_GAIN_5GLB2_TXA_OFFSET_8821A	0x1F3
+#define PPG_BB_GAIN_5GMB1_TXA_OFFSET_8821A	0x1F2
+#define PPG_BB_GAIN_5GMB2_TXA_OFFSET_8821A	0x1F1
+#define PPG_BB_GAIN_5GHB_TXA_OFFSET_8821A	0x1F0
+
 #define EEPROM_TX_PWR_INX_8821				0x10
 
 #define EEPROM_ChannelPlan_8821				0xB8
@@ -242,6 +268,13 @@
 	EEPROM/Efuse PG Offset for 8188FE/8188FU/8188FS
    ====================================================
  */
+
+#define GET_PG_KFREE_ON_8188F(_pg_m)			LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC1, 4, 1)
+#define GET_PG_KFREE_THERMAL_K_ON_8188F(_pg_m)	LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC8, 5, 1)
+
+#define PPG_BB_GAIN_2G_TXA_OFFSET_8188F	0xEE
+#define PPG_THERMAL_OFFSET_8188F		0xEF
+
 /* 0x10 ~ 0x63 = TX power area. */
 #define	EEPROM_TX_PWR_INX_8188F				0x10
 
@@ -323,6 +356,12 @@
 //====================================================
 //			EEPROM/Efuse PG Offset for 8703BS
 //====================================================
+#define GET_PG_KFREE_ON_8703B(_pg_m)			LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC1, 4, 1)
+#define GET_PG_KFREE_THERMAL_K_ON_8703B(_pg_m)	LE_BITS_TO_1BYTE(((u8 *)(_pg_m)) + 0xC8, 5, 1)
+
+#define PPG_BB_GAIN_2G_TXA_OFFSET_8703B	0xEE
+#define PPG_THERMAL_OFFSET_8703B		0xEF
+
 #define	EEPROM_TX_PWR_INX_8703B				0x10
 
 #define	EEPROM_ChannelPlan_8703B				0xB8
@@ -454,7 +493,7 @@
 #define EEPROM_DEFAULT_DIFF				0XFE
 #define EEPROM_DEFAULT_CHANNEL_PLAN		0x7F
 #define EEPROM_DEFAULT_BOARD_OPTION		0x00
-#define EEPROM_DEFAULT_RFE_OPTION_8192E 0x03
+#define EEPROM_DEFAULT_RFE_OPTION_8192E 0xFF
 #define EEPROM_DEFAULT_RFE_OPTION		0x04
 #define EEPROM_DEFAULT_FEATURE_OPTION	0x00
 #define EEPROM_DEFAULT_BT_OPTION			0x10

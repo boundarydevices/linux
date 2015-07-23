@@ -2098,6 +2098,7 @@ void rtw_init_pwrctrl_priv(PADAPTER padapter)
 {
 	struct pwrctrl_priv *pwrctrlpriv = adapter_to_pwrctl(padapter);
 	int i = 0;
+	u8 val8 = 0;
 
 #if defined(CONFIG_CONCURRENT_MODE)
 	if (padapter->adapter_type != PRIMARY_ADAPTER)
@@ -2184,12 +2185,15 @@ _func_enter_;
 
 #ifdef CONFIG_GPIO_WAKEUP
 	/*default low active*/
-	pwrctrlpriv->is_high_active = 0;
+	pwrctrlpriv->is_high_active = HIGH_ACTIVE;
+	val8 = (pwrctrlpriv->is_high_active == 0) ? 1 : 0;
+	rtw_hal_set_output_gpio(padapter, WAKEUP_GPIO_IDX, val8);
+	DBG_871X("%s: set GPIO_%d %d as default.\n",
+		 __func__, WAKEUP_GPIO_IDX, val8);
 #endif /* CONFIG_GPIO_WAKEUP */
 
 #ifdef CONFIG_WOWLAN
 	pwrctrlpriv->wowlan_pattern_idx = 0;
-	pwrctrlpriv->wowlan_from_cmd = _FALSE;
 	for (i = 0 ; i < MAX_WKFM_NUM; i++) {
 		_rtw_memset(pwrctrlpriv->patterns[i].content, '\0',
 				sizeof(pwrctrlpriv->patterns[i].content));

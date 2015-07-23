@@ -250,6 +250,8 @@ hal_com_config_channel_plan(
 	IN	BOOLEAN		AutoLoadFail
 	);
 
+int hal_config_macaddr(_adapter *adapter, bool autoload_fail);
+
 BOOLEAN
 HAL_IsLegalChannel(
 	IN	PADAPTER	Adapter,
@@ -282,6 +284,13 @@ s32 c2h_evt_read_88xx(_adapter *adapter, u8 *buf);
 u8  rtw_hal_networktype_to_raid(_adapter *adapter, struct sta_info *psta);
 u8 rtw_get_mgntframe_raid(_adapter *adapter,unsigned char network_type);
 void rtw_hal_update_sta_rate_mask(PADAPTER padapter, struct sta_info *psta);
+
+/* access HW only */
+u32 rtw_sec_read_cam(_adapter *adapter, u8 addr);
+void rtw_sec_write_cam(_adapter *adapter, u8 addr, u32 wdata);
+void rtw_sec_read_cam_ent(_adapter *adapter, u8 id, u8 *ctrl, u8 *mac, u8 *key);
+void rtw_sec_write_cam_ent(_adapter *adapter, u8 id, u16 ctrl, u8 *mac, u8 *key);
+bool rtw_sec_read_cam_is_gk(_adapter *adapter, u8 id);
 
 void hw_var_port_switch(_adapter *adapter);
 
@@ -360,13 +369,13 @@ void rtw_dump_raw_rssi_info(_adapter *padapter);
 #define		HWSET_MAX_SIZE			512
 #ifdef CONFIG_EFUSE_CONFIG_FILE
 #define		EFUSE_FILE_COLUMN_NUM		16
-u32 Hal_readPGDataFromConfigFile(PADAPTER padapter, struct file *fp);
-void Hal_ReadMACAddrFromFile(PADAPTER padapter, struct file *fp);
-void Hal_GetPhyEfuseMACAddr(PADAPTER padapter, u8* mac_addr);
-int check_phy_efuse_macaddr_info_valid(PADAPTER padapter);
-#endif //CONFIG_EFUSE_CONFIG_FILE
+u32 Hal_readPGDataFromConfigFile(PADAPTER padapter);
+u32 Hal_ReadMACAddrFromFile(PADAPTER padapter, u8 *mac_addr);
+#endif /* CONFIG_EFUSE_CONFIG_FILE */
 
 int check_phy_efuse_tx_power_info_valid(PADAPTER padapter);
+int hal_efuse_macaddr_offset(_adapter *adapter);
+int Hal_GetPhyEfuseMACAddr(PADAPTER padapter, u8 *mac_addr);
 
 #ifdef CONFIG_RF_GAIN_OFFSET
 void rtw_bb_rf_gain_offset(_adapter *padapter);
@@ -405,6 +414,10 @@ int rtw_hal_set_gpio_output_value(_adapter* adapter, u8 gpio_num, bool isHigh);
 int rtw_hal_config_gpio(_adapter* adapter, u8 gpio_num, bool isOutput);
 int rtw_hal_register_gpio_interrupt(_adapter* adapter, int gpio_num, void(*callback)(u8 level));
 int rtw_hal_disable_gpio_interrupt(_adapter* adapter, int gpio_num);
+#endif
+
+#ifdef CONFIG_GPIO_WAKEUP
+void rtw_hal_set_output_gpio(_adapter *padapter, u8 index, u8 outputval);
 #endif
 
 typedef enum _HAL_PHYDM_OPS {
@@ -460,6 +473,8 @@ void update_IOT_info(_adapter *padapter);
 #ifdef CONFIG_AUTO_CHNL_SEL_NHM
 void rtw_acs_start(_adapter *padapter, bool bStart);
 #endif
+
+void hal_set_crystal_cap(_adapter *adapter, u8 crystal_cap);
 
 #endif //__HAL_COMMON_H__
 

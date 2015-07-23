@@ -18,7 +18,7 @@
 * 
 ******************************************************************************/
 
-/*Image2HeaderVersion: 2.12*/
+/*Image2HeaderVersion: 2.14*/
 #include "mp_precomp.h"
 #include "../phydm_precomp.h"
 
@@ -246,24 +246,27 @@ ODM_ReadAndConfig_MP_8821A_MAC_REG(
 				if (cCond == COND_ENDIF) {/*end*/
 					bMatched = TRUE;
 					bSkipped = FALSE;
-				} else if (cCond == COND_ELSE) /*else*/
+					ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("ENDIF\n"));
+				} else if (cCond == COND_ELSE) { /*else*/
 					bMatched = bSkipped?FALSE:TRUE;
+					ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("ELSE\n"));
+				}
 				else {/*if , else if*/
-					if (bSkipped)
-						bMatched = FALSE;
-					else {
-						pre_v1 = v1;
-						pre_v2 = v2;
-					}
+					pre_v1 = v1;
+					pre_v2 = v2;
+					ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("IF or ELSE IF\n"));
 				}
 			} else if (v1 & BIT30) { /*negative condition*/
-				if (CheckPositive(pDM_Odm, pre_v1, pre_v2, v1, v2)) {
-					bMatched = TRUE;
-					bSkipped = TRUE;
-				} else {
+				if (bSkipped == FALSE) {
+					if (CheckPositive(pDM_Odm, pre_v1, pre_v2, v1, v2)) {
+						bMatched = TRUE;
+						bSkipped = TRUE;
+					} else {
+						bMatched = FALSE;
+						bSkipped = FALSE;
+					}
+				} else
 					bMatched = FALSE;
-					bSkipped = FALSE;
-				}
 			}
 		} else {
 			if (bMatched)
@@ -276,7 +279,7 @@ ODM_ReadAndConfig_MP_8821A_MAC_REG(
 u4Byte
 ODM_GetVersion_MP_8821A_MAC_REG(void)
 {
-	   return 52;
+	   return 54;
 }
 
 #endif /* end of HWIMG_SUPPORT*/

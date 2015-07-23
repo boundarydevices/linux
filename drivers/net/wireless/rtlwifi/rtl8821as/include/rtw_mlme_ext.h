@@ -601,9 +601,7 @@ struct mlme_ext_priv
                                                      //for ap mode, network includes ap's cap_info
 	_timer		survey_timer;
 	_timer		link_timer;
-#ifdef CONFIG_IEEE80211W
-	_timer		sa_query_timer;
-#endif //CONFIG_IEEE80211W
+
 	//_timer		ADDBA_timer;
 	u32 last_scan_time;
 	u8	scan_abort;
@@ -738,11 +736,6 @@ void SetBWMode(_adapter *padapter, unsigned short bwmode, unsigned char channel_
 
 unsigned int decide_wait_for_beacon_timeout(unsigned int bcn_interval);
 
-void read_cam(_adapter *padapter ,u8 entry, u8 *get_key);
-void dump_cam_table(_adapter *padapter);
-
-/* modify HW only */
-void _write_cam(_adapter *padapter, u8 entry, u16 ctrl, u8 *mac, u8 *key);
 void _clear_cam_entry(_adapter *padapter, u8 entry);
 void write_cam_from_cache(_adapter *adapter, u8 id);
 
@@ -828,12 +821,16 @@ void rtw_camctl_set_flags(_adapter *adapter, u32 flags);
 void _rtw_camctl_clr_flags(_adapter *adapter, u32 flags);
 void rtw_camctl_clr_flags(_adapter *adapter, u32 flags);
 bool _rtw_camctl_chk_flags(_adapter *adapter, u32 flags);
+
+struct sec_cam_bmp;
+void dump_sec_cam_map(void *sel, struct sec_cam_bmp *map, u8 max_num);
+void rtw_sec_cam_map_clr_all(struct sec_cam_bmp *map);
+
 bool _rtw_camid_is_gk(_adapter *adapter, u8 cam_id);
 bool rtw_camid_is_gk(_adapter *adapter, u8 cam_id);
 s16 rtw_camid_search(_adapter *adapter, u8 *addr, s16 kid, s8 gk);
 s16 rtw_camid_alloc(_adapter *adapter, struct sta_info *sta, u8 kid, bool *used);
 void rtw_camid_free(_adapter *adapter, u8 cam_id);
-bool read_phy_cam_is_gtk(_adapter *padapter, u8 entry);
 
 struct macid_bmp;
 struct macid_ctl_t;
@@ -896,7 +893,9 @@ void issue_del_ba(_adapter *adapter, unsigned char *ra, u8 tid, u16 reason, u8 i
 int issue_del_ba_ex(_adapter *adapter, unsigned char *ra, u8 tid, u16 reason, u8 initiator, int try_cnt, int wait_ms);
 
 #ifdef CONFIG_IEEE80211W
-void issue_action_SA_Query(_adapter *padapter, unsigned char *raddr, unsigned char action, unsigned short tid);
+void issue_action_SA_Query(_adapter *padapter, unsigned char *raddr, unsigned char action, unsigned short tid, u8 key_type);
+int issue_deauth_11w(_adapter *padapter, unsigned char *da, unsigned short reason, u8 key_type);
+extern void init_dot11w_expire_timer(_adapter *padapter, struct sta_info *psta);
 #endif //CONFIG_IEEE80211W
 int issue_action_SM_PS(_adapter *padapter ,  unsigned char *raddr , u8 NewMimoPsMode);
 int issue_action_SM_PS_wait_ack(_adapter *padapter, unsigned char *raddr, u8 NewMimoPsMode, int try_cnt, int wait_ms);
@@ -968,7 +967,7 @@ void survey_timer_hdl (_adapter *padapter);
 void link_timer_hdl (_adapter *padapter);
 void addba_timer_hdl(struct sta_info *psta);
 #ifdef CONFIG_IEEE80211W
-void sa_query_timer_hdl(_adapter *padapter);
+void sa_query_timer_hdl(struct sta_info *psta);
 #endif //CONFIG_IEEE80211W
 //void reauth_timer_hdl(_adapter *padapter);
 //void reassoc_timer_hdl(_adapter *padapter);
@@ -984,13 +983,7 @@ void sa_query_timer_hdl(_adapter *padapter);
 		/*DBG_871X("%s set_link_timer(%p, %d)\n", __FUNCTION__, (mlmeext), (ms));*/ \
 		_set_timer(&(mlmeext)->link_timer, (ms)); \
 	} while(0)
-#ifdef CONFIG_IEEE80211W
-#define set_sa_query_timer(mlmeext, ms) \
-	do { \
-		DBG_871X("%s set_sa_query_timer(%p, %d)\n", __FUNCTION__, (mlmeext), (ms)); \
-		_set_timer(&(mlmeext)->sa_query_timer, (ms)); \
-	} while(0)
-#endif //CONFIG_IEEE80211W
+
 extern int cckrates_included(unsigned char *rate, int ratelen);
 extern int cckratesonly_included(unsigned char *rate, int ratelen);
 
@@ -1192,6 +1185,9 @@ enum rtw_c2h_event
 	GEN_EVT_CODE(_ReportPwrState),		//filen: only for PCIE, USB	
 	GEN_EVT_CODE(_CloseRF),				//filen: only for PCIE, work around ASPM
 	GEN_EVT_CODE(_WMM),					/*25*/
+#ifdef CONFIG_IEEE80211W
+	GEN_EVT_CODE(_TimeoutSTA),
+#endif /* CONFIG_IEEE80211W */
  	MAX_C2HEVT
 };
 
@@ -1226,7 +1222,10 @@ static struct fwevent wlanevents[] =
 	{0, NULL},
 	{0, &rtw_cpwm_event_callback},
 	{0, NULL},
-	{0, &rtw_wmm_event_callback},
+	{0, &rtw_wmm_event_callback}, /*25*/
+#ifdef CONFIG_IEEE80211W
+	{sizeof(struct stadel_event), &rtw_sta_timeout_event_callback},
+#endif /* CONFIG_IEEE80211W */
 
 };
 

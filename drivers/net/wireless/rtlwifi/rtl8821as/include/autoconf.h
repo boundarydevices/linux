@@ -72,13 +72,13 @@
 // ==============================
 #define CONFIG_80211N_HT
 #define CONFIG_80211AC_VHT
-#define CONFIG_IOCTL_CFG80211
+//#define CONFIG_IOCTL_CFG80211
 #define CONFIG_NEW_SIGNAL_STAT_PROCESS
 #define CONFIG_80211D
 #define CONFIG_DFS
 #define CONFIG_AP_MODE
 #define CONFIG_P2P
-#define CONFIG_CONCURRENT_MODE
+//#define CONFIG_CONCURRENT_MODE
 
 #define CONFIG_LAYER2_ROAMING
 #define CONFIG_LAYER2_ROAMING_RESUME
@@ -99,13 +99,13 @@
  * Debug Related Config
  *
  ***********************************************************/
-/* #define CONFIG_DEBUG */ /* DBG_871X, etc... */
+#define CONFIG_DEBUG /* DBG_871X, etc... */
 //#define CONFIG_DEBUG_RTL871X /* RT_TRACE, RT_PRINT_DATA, _func_enter_, _func_exit_ */
-/* #define CONFIG_PROC_DEBUG */
-/* #define DBG_CONFIG_ERROR_DETECT */
+#define CONFIG_PROC_DEBUG
+#define DBG_CONFIG_ERROR_DETECT
 //#define DBG_CONFIG_ERROR_RESET
 
-#define DBG 0
+#define DBG 1
 
 //#define DBG_IO
 //#define DBG_DELAY_OS
@@ -173,11 +173,10 @@
 // ==============================
 
 #ifdef CONFIG_IOCTL_CFG80211
-	#define RTW_USE_CFG80211_STA_EVENT /* Indecate new sta asoc through cfg80211_new_sta */
+//	#define RTW_USE_CFG80211_STA_EVENT /* Indecate new sta asoc through cfg80211_new_sta */
 	#define CONFIG_CFG80211_FORCE_COMPATIBLE_2_6_37_UNDER
 //	#define CONFIG_DEBUG_CFG80211
 	#define CONFIG_SET_SCAN_DENY_TIMER
-	#define CONFIG_IEEE80211_BAND_5GHZ
 #endif
 
 #ifdef CONFIG_CONCURRENT_MODE
@@ -187,7 +186,7 @@
 	//#define CONFIG_HWPORT_SWAP				//Port0->Sec , Port1 -> Pri
 	#define CONFIG_RUNTIME_PORT_SWITCH
 	//#define DBG_RUNTIME_PORT_SWITCH
-	#define CONFIG_STA_MODE_SCAN_UNDER_AP_MODE
+	#define CONFIG_SCAN_BACKOP
 #endif
 
 #ifdef CONFIG_AP_MODE
@@ -217,7 +216,7 @@
 //	#define CONFIG_DBG_P2P
 
 	#define CONFIG_P2P_PS
-	#define CONFIG_P2P_IPS
+//	#define CONFIG_P2P_IPS
 	#define CONFIG_P2P_OP_CHK_SOCIAL_CH
 	#define CONFIG_CFG80211_ONECHANNEL_UNDER_CONCURRENT  //replace CONFIG_P2P_CHK_INVITE_CH_LIST flag
 	#define CONFIG_P2P_INVITE_IOT
@@ -280,13 +279,6 @@
 #else // !CONFIG_MP_INCLUDED
 	#define MP_DRIVER		0
 #endif // !CONFIG_MP_INCLUDED
-
-#ifdef CONFIG_EFUSE_CONFIG_FILE
-	#define EFUSE_FILE_PATH			"/system/etc/wifi/wifi_efuse.map"
-	#define MAC_ADDRESS_FILE_PATH	"/data/wifimac.txt"
-#endif
-
-
 
 #ifdef CONFIG_TX_EARLY_MODE
 	#define	RTL8188E_EARLY_MODE_PKT_NUM_10	0

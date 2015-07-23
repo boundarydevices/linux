@@ -693,6 +693,10 @@ void InitializeFirmwareVars8812(PADAPTER padapter)
 
 	// Init Fw LPS related.
 	pwrpriv->bFwCurrentInPSMode = _FALSE;
+
+	/* Init H2C cmd. */
+	rtw_write8(padapter, REG_HMETFR, 0x0f);
+
 	// Init H2C counter. by tynli. 2009.12.09.
 	pHalData->LastHMEBoxNum = 0;
 }
@@ -1601,11 +1605,6 @@ Hal_ReadTxPowerInfo8812A(
 	TxPowerInfo24G	pwrInfo24G;
 	TxPowerInfo5G	pwrInfo5G;
 	u8	rfPath, ch, group, TxCount;
-	u8	channel5G[CHANNEL_MAX_NUMBER_5G] = 
-			{36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,100,102,104,106,108,110,112,
-			114,116,118,120,122,124,126,128,130,132,134,136,138,140,142,144,149,151,
-			153,155,157,159,161,163,165,167,168,169,171,173,175,177};
-	u8	channel5G_80M[CHANNEL_MAX_NUMBER_5G_80M] = {42, 58, 106, 122, 138, 155, 171};
 
 	hal_ReadPowerValueFromPROM8812A(Adapter, &pwrInfo24G,&pwrInfo5G, PROMContent, AutoLoadFail);
 
@@ -1935,10 +1934,11 @@ hal_ReadPAType_8812A(
 		{
 			pHalData->PAType_5G = EF1Byte( *(u8 *)&PROMContent[EEPROM_PA_TYPE_8812AU] );
 			pHalData->LNAType_5G = EF1Byte( *(u8 *)&PROMContent[EEPROM_LNA_TYPE_5G_8812AU] );
-			if (pHalData->PAType_5G == 0xFF && pHalData->LNAType_5G == 0xFF) {
+			if (pHalData->PAType_5G == 0xFF)
 				pHalData->PAType_5G = 0;
+			if (pHalData->LNAType_5G == 0xFF)
 				pHalData->LNAType_5G = 0;
-			}
+
 			pHalData->ExternalPA_5G = ((pHalData->PAType_5G & BIT1) && (pHalData->PAType_5G & BIT0)) ? 1 : 0;
 			pHalData->ExternalLNA_5G = ((pHalData->LNAType_5G & BIT7) && (pHalData->LNAType_5G & BIT3)) ? 1 : 0;
 		}
@@ -2053,10 +2053,11 @@ Hal_ReadPAType_8821A(
 		{
 			pHalData->PAType_5G = EF1Byte( *(u8 *)&PROMContent[EEPROM_PA_TYPE_8812AU] );
 			pHalData->LNAType_5G = EF1Byte( *(u8 *)&PROMContent[EEPROM_LNA_TYPE_5G_8812AU] );
-			if (pHalData->PAType_5G == 0xFF && pHalData->LNAType_5G == 0xFF) {
+			if (pHalData->PAType_5G == 0xFF)
 				pHalData->PAType_5G = 0;
+			if (pHalData->LNAType_5G == 0xFF)
 				pHalData->LNAType_5G = 0;
-			}
+
 			pHalData->ExternalPA_5G = (pHalData->PAType_5G & BIT0) ? 1 : 0;
 			pHalData->ExternalLNA_5G = (pHalData->LNAType_5G & BIT3) ? 1 : 0;
 		}
@@ -2178,6 +2179,68 @@ Hal_ReadRFEType_8812A(
 	}
 
 	DBG_871X("RFE Type: 0x%2x\n", pHalData->RFEType);
+}
+
+void Hal_EfuseParseKFreeData_8821A(
+	IN		PADAPTER	Adapter,
+	IN		u8		*PROMContent,
+	IN		BOOLEAN		AutoloadFail)
+{
+#ifdef CONFIG_RF_GAIN_OFFSET
+
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
+	struct kfree_data_t *kfree_data = &pHalData->kfree_data;
+
+	if ((Adapter->registrypriv.kfree_config == 1) || !AutoloadFail) {
+		kfree_data->bb_gain[BB_GAIN_2G][RF_PATH_A]
+			= KFREE_BB_GAIN_2G_TX_OFFSET(EFUSE_Read1Byte(Adapter, PPG_BB_GAIN_2G_TXA_OFFSET_8821A) & PPG_BB_GAIN_2G_TX_OFFSET_MASK);
+		kfree_data->bb_gain[BB_GAIN_5GLB1][RF_PATH_A]
+			= KFREE_BB_GAIN_5G_TX_OFFSET(EFUSE_Read1Byte(Adapter, PPG_BB_GAIN_5GLB1_TXA_OFFSET_8821A) & PPG_BB_GAIN_5G_TX_OFFSET_MASK);
+		kfree_data->bb_gain[BB_GAIN_5GLB2][RF_PATH_A]
+			= KFREE_BB_GAIN_5G_TX_OFFSET(EFUSE_Read1Byte(Adapter, PPG_BB_GAIN_5GLB2_TXA_OFFSET_8821A) & PPG_BB_GAIN_5G_TX_OFFSET_MASK);
+		kfree_data->bb_gain[BB_GAIN_5GMB1][RF_PATH_A]
+			= KFREE_BB_GAIN_5G_TX_OFFSET(EFUSE_Read1Byte(Adapter, PPG_BB_GAIN_5GMB1_TXA_OFFSET_8821A) & PPG_BB_GAIN_5G_TX_OFFSET_MASK);
+		kfree_data->bb_gain[BB_GAIN_5GMB2][RF_PATH_A]
+			= KFREE_BB_GAIN_5G_TX_OFFSET(EFUSE_Read1Byte(Adapter, PPG_BB_GAIN_5GMB2_TXA_OFFSET_8821A) & PPG_BB_GAIN_5G_TX_OFFSET_MASK);
+		kfree_data->bb_gain[BB_GAIN_5GHB][RF_PATH_A]
+			= KFREE_BB_GAIN_5G_TX_OFFSET(EFUSE_Read1Byte(Adapter, PPG_BB_GAIN_5GHB_TXA_OFFSET_8821A) & PPG_BB_GAIN_5G_TX_OFFSET_MASK);
+		kfree_data->thermal
+			= KFREE_THERMAL_OFFSET(EFUSE_Read1Byte(Adapter, PPG_THERMAL_OFFSET_8821A) & PPG_THERMAL_OFFSET_MASK);
+	}
+
+	if (!AutoloadFail) {
+		if (GET_PG_KFREE_ON_8821A(PROMContent))
+			kfree_data->flag |= KFREE_FLAG_ON;
+		if (GET_PG_KFREE_THERMAL_K_ON_8821A(PROMContent))
+			kfree_data->flag |= KFREE_FLAG_THERMAL_K_ON;
+	} else {
+		if (!kfree_data_is_bb_gain_empty(kfree_data))
+			kfree_data->flag |= KFREE_FLAG_ON;
+		if (kfree_data->thermal != 0)
+			kfree_data->flag |= KFREE_FLAG_THERMAL_K_ON;
+	}
+
+	if (Adapter->registrypriv.kfree_config == 1) {
+				kfree_data->flag |= KFREE_FLAG_ON;
+				kfree_data->flag |= KFREE_FLAG_THERMAL_K_ON;
+	}
+
+	if (kfree_data->flag & KFREE_FLAG_THERMAL_K_ON)
+		pHalData->EEPROMThermalMeter += kfree_data->thermal;
+
+	DBG_871X("kfree flag:0x%02x\n", kfree_data->flag);
+	if (Adapter->registrypriv.kfree_config || kfree_data->flag & KFREE_FLAG_ON) {
+		int i;
+
+		DBG_871X_SEL_NL(RTW_DBGDUMP, "bb_gain:");
+		for (i = 0; i < BB_GAIN_NUM; i++)
+			DBG_871X_SEL(RTW_DBGDUMP, "%d ", kfree_data->bb_gain[i][RF_PATH_A]);
+		DBG_871X_SEL(RTW_DBGDUMP, "\n");
+	}
+	if (Adapter->registrypriv.kfree_config || kfree_data->flag & KFREE_FLAG_THERMAL_K_ON)
+		DBG_871X("thermal:%d\n", kfree_data->thermal);
+
+#endif /*CONFIG_RF_GAIN_OFFSET */
 }
 
 //
@@ -3513,128 +3576,6 @@ rtl8812_Efuse_PgPacketWrite(IN	PADAPTER	pAdapter,
 	return ret;
 }
 
-#ifdef CONFIG_EFUSE_CONFIG_FILE
-static s32 _halReadPGDataFromFile(PADAPTER padapter, u8 *pbuf)
-{
-	u32 i;
-	struct file *fp;
-	mm_segment_t fs;
-	u8 temp[3];
-	loff_t pos = 0;
-	PHAL_DATA_TYPE pHalData = GET_HAL_DATA(padapter);
-
-	temp[2] = 0; // add end of string '\0'
-
-	DBG_8192C("%s: Read Efuse from file [%s]\n", __FUNCTION__, EFUSE_MAP_PATH);
-	fp = filp_open(EFUSE_MAP_PATH, O_RDONLY,  0);
-	if (IS_ERR(fp)) {
-		DBG_8192C("%s: Error, Read Efuse configure file FAIL!\n", __FUNCTION__);
-		pHalData->bloadfile_fail_flag = _TRUE;
-		return _FAIL;
-	}
-
-	fs = get_fs();
-	set_fs(KERNEL_DS);
-	for (i=0; i<HWSET_MAX_SIZE_JAGUAR; i++)
-	{
-		vfs_read(fp, temp, 2, &pos);
-		pbuf[i] = simple_strtoul(temp, NULL, 16);
-		pos += 1; // Filter the space character
-	}
-	set_fs(fs);
-	filp_close(fp, NULL);
-
-#ifdef CONFIG_DEBUG
-	DBG_8192C("Efuse configure file:\n");
-	for (i=0; i<HWSET_MAX_SIZE_JAGUAR; i++)
-	{
-		if (i % 16 == 0)
-			printk("\n");
-
-		printk("%02X ", pbuf[i]);
-	}
-	printk("\n");
-	DBG_8192C("\n");
-#endif
-
-	pHalData->bloadfile_fail_flag = _FALSE;
-	return _SUCCESS;
-}
-
-static s32 _halReadMACAddrFromFile(PADAPTER padapter, u8 *pbuf)
-{
-	struct file *fp;
-	mm_segment_t fs;
-	loff_t pos = 0;
-	u8 source_addr[18];
-	u8 *head, *end;
-	u32	curtime;
-	u32 i;
-	s32 ret = _SUCCESS;
-
-	u8 null_mac_addr[ETH_ALEN] = {0, 0, 0, 0, 0, 0};
-	u8 multi_mac_addr[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-
-
-	curtime = rtw_get_current_time();
-
-	_rtw_memset(source_addr, 0, 18);
-	_rtw_memset(pbuf, 0, ETH_ALEN);
-
-	fp = filp_open(WIFIMAC_PATH, O_RDONLY,  0);
-	if (IS_ERR(fp))
-	{
-		ret = _FAIL;
-		DBG_8192C("%s: Error, Read MAC address file FAIL!\n", __FUNCTION__);
-	}
-	else
-	{
-		fs = get_fs();
-		set_fs(KERNEL_DS);
-
-		vfs_read(fp, source_addr, 18, &pos);
-		source_addr[17] = ':';
-
-		head = end = source_addr;
-		for (i=0; i<ETH_ALEN; i++)
-		{
-			while (end && (*end != ':') )
-				end++;
-
-			if (end && (*end == ':') )
-				*end = '\0';
-
-			pbuf[i] = simple_strtoul(head, NULL, 16 );
-
-			if (end) {
-				end++;
-				head = end;
-			}
-		}
-		set_fs(fs);
-		filp_close(fp, NULL);
-
-		DBG_8192C("%s: Read MAC address from file [%s]\n", __FUNCTION__, WIFIMAC_PATH);
-		DBG_8192C("WiFi MAC address: " MAC_FMT "\n", MAC_ARG(pbuf));
-	}
-
-	if (_rtw_memcmp(pbuf, null_mac_addr, ETH_ALEN) ||
-		_rtw_memcmp(pbuf, multi_mac_addr, ETH_ALEN))
-	{
-		pbuf[0] = 0x00;
-		pbuf[1] = 0xe0;
-		pbuf[2] = 0x4c;
-		pbuf[3] = (u8)(curtime & 0xff) ;
-		pbuf[4] = (u8)((curtime>>8) & 0xff) ;
-		pbuf[5] = (u8)((curtime>>16) & 0xff) ;
-	}
-
-	DBG_8192C("%s: Permanent Address = " MAC_FMT "\n", __FUNCTION__, MAC_ARG(pbuf));
-
-	return ret;
-}
-#endif // CONFIG_EFUSE_CONFIG_FILE
-
 void InitRDGSetting8812A(PADAPTER padapter)
 {
 	rtw_write8(padapter, REG_RD_CTRL, 0xFF);
@@ -3728,33 +3669,6 @@ void InitPGData8812A(PADAPTER padapter)
 	u32 i;
 	u16 val16;
 	PHAL_DATA_TYPE pHalData = GET_HAL_DATA(padapter);
-	
-#ifdef CONFIG_EFUSE_CONFIG_FILE
-	{
-		s32 tmp;
-		u32 addr;
-
-		tmp = _halReadPGDataFromFile(padapter, pHalData->efuse_eeprom_data);
-		pHalData->bloadfile_fail_flag = ((tmp==_FAIL) ? _TRUE : _FALSE);
-		tmp = _halReadMACAddrFromFile(padapter, pHalData->mac_addr);
-		pHalData->bloadmac_fail_flag = ((tmp==_FAIL) ? _TRUE : _FALSE);
-
-#ifdef CONFIG_SDIO_HCI
-		addr = EEPROM_MAC_ADDR_8821AS;
-#elif defined(CONFIG_USB_HCI)
-		if (IS_HARDWARE_TYPE_8812AU(padapter))
-			addr = EEPROM_MAC_ADDR_8812AU;
-		else
-			addr = EEPROM_MAC_ADDR_8821AU;
-#elif defined(CONFIG_PCI_HCI)
-		if (IS_HARDWARE_TYPE_8812E(padapter))
-			addr = EEPROM_MAC_ADDR_8812AE;
-		else
-			addr = EEPROM_MAC_ADDR_8821AE;
-#endif // CONFIG_PCI_HCI
-		_rtw_memcpy(&pHalData->efuse_eeprom_data[addr], pHalData->EEPROMMACAddr, ETH_ALEN);
-	}
-#else // !CONFIG_EFUSE_CONFIG_FILE
 
 	if (_FALSE == pHalData->bautoload_fail_flag)
 	{
@@ -3780,7 +3694,12 @@ void InitPGData8812A(PADAPTER padapter)
 		if (!is_boot_from_eeprom(padapter))
 			EFUSE_ShadowMapUpdate(padapter, EFUSE_WIFI, _FALSE);
 	}
-#endif // !CONFIG_EFUSE_CONFIG_FILE
+#ifdef CONFIG_EFUSE_CONFIG_FILE
+	if (check_phy_efuse_tx_power_info_valid(padapter) == _FALSE) {
+		if (Hal_readPGDataFromConfigFile(padapter) != _SUCCESS)
+			DBG_871X_LEVEL(_drv_err_, "invalid phy efuse and read from file fail, will use driver default!!\n");
+	}
+#endif
 }
 
 static void read_chip_version_8812a(PADAPTER Adapter)
@@ -3952,12 +3871,12 @@ void InitDefaultValue8821A(PADAPTER padapter)
 	#ifdef CONFIG_RTL8821A
 	if(IS_HARDWARE_TYPE_8821(padapter)) {
 		pHalData->macid_num = MACID_NUM_8821A;
-		pHalData->cam_entry_num = CAM_ENTRY_NUM_8821A;
+		pHalData->sec_cam_ent_num = SEC_CAM_ENT_NUM_8821A;
 	} else
 	#endif
 	{
 		pHalData->macid_num = MACID_NUM_8812A;
-		pHalData->cam_entry_num = CAM_ENTRY_NUM_8812A;
+		pHalData->sec_cam_ent_num = SEC_CAM_ENT_NUM_8812A;
 	}
 
 	// init dm default value
@@ -5692,21 +5611,6 @@ _func_enter_;
 		case HW_VAR_CAM_INVALID_ALL:
 			val32 = BIT(31) | BIT(30);
 			rtw_write32(padapter, RWCAM, val32);
-			break;
-
-		case HW_VAR_CAM_WRITE:
-			{
-				u32 cmd;
-				u32 *cam_val = (u32*)pval;
-
-				rtw_write32(padapter, WCAMI, cam_val[0]);
-
-				cmd = CAM_POLLINIG | CAM_WRITE | cam_val[1];
-				rtw_write32(padapter, RWCAM, cmd);
-			}
-			break;
-
-		case HW_VAR_CAM_READ:
 			break;
 
 		case HW_VAR_AC_PARAM_VO:

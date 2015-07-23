@@ -302,6 +302,9 @@ struct registry_priv
 	u8 force_igi;//0 normal
 #endif
 
+	/* for pll reference clock selction */
+	u8 pll_ref_clk_sel;
+
 	//define for tx power adjust
 	u8	RegEnableTxPowerLimit;
 	u8	RegEnableTxPowerByRate;
@@ -334,6 +337,7 @@ struct registry_priv
 	u8 adaptivity_dc_backoff;
 	u8 boffefusemask;
 	BOOLEAN bFileMaskEfuse;
+	u8 kfree_config;
 #ifdef CONFIG_AUTO_CHNL_SEL_NHM
 	u8 acs_mode;
 	u8 acs_auto_scan;
@@ -581,14 +585,32 @@ struct rtw_traffic_statistics {
 
 #define SEC_STATUS_STA_PK_GK_CONFLICT_DIS_BMC_SEARCH	BIT0
 
-struct cam_ctl_t {
-	_lock lock;
-	u8 sec_cap;
-	u32 flags;
-	u64 bitmap;
+struct sec_cam_bmp {
+	u32 m0;
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 32)
+	u32 m1;
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 64)
+	u32 m2;
+#endif
+#if (SEC_CAM_ENT_NUM_SW_LIMIT > 96)
+	u32 m3;
+#endif
 };
 
-struct cam_entry_cache {
+struct cam_ctl_t {
+	_lock lock;
+
+	u8 sec_cap;
+	u32 flags;
+
+	u8 num;
+	struct sec_cam_bmp used;
+
+	_mutex sec_cam_access_mutex;
+};
+
+struct sec_cam_ent {
 	u16 ctrl;
 	u8 mac[ETH_ALEN];
 	u8 key[16];
@@ -682,7 +704,7 @@ struct dvobj_priv
 	struct macid_ctl_t macid_ctl;
 
 	struct cam_ctl_t cam_ctl;
-	struct cam_entry_cache cam_cache[TOTAL_CAM_ENTRY];
+	struct sec_cam_ent cam_cache[SEC_CAM_ENT_NUM_SW_LIMIT];
 
 	struct rf_ctl_t rf_ctl;
 

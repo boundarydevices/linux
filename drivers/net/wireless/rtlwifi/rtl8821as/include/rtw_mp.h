@@ -273,7 +273,7 @@ typedef struct _MPT_CONTEXT
 
 #if defined(CONFIG_RTL8814A)
 #define EFUSE_MAX_SIZE		1024
-#elif defined(CONFIG_RTL8188E) || defined(CONFIG_RTL8188F)
+#elif defined(CONFIG_RTL8188E) || defined(CONFIG_RTL8188F) || defined(CONFIG_RTL8703B)
 #define EFUSE_MAX_SIZE		256
 #else
 #define EFUSE_MAX_SIZE		512
@@ -316,6 +316,8 @@ enum {
 	MP_MON,
 	EFUSE_MASK,
 	EFUSE_FILE,
+	MP_TX,
+	MP_RX,
 #ifdef CONFIG_WOWLAN
 	MP_WOW_ENABLE,
 	MP_WOW_SET_PATTERN,
@@ -737,8 +739,6 @@ void hal_mpt_SetCarrierSuppressionTx(PADAPTER pAdapter, u8 bStart);
 void hal_mpt_SetCCKContinuousTx(PADAPTER pAdapter, u8 bStart);
 void hal_mpt_SetOFDMContinuousTx(PADAPTER pAdapter, u8 bStart);
 
-
-void Hal_ProSetCrystalCap(PADAPTER pAdapter , u32 CrystalCapVal);
 void MP_PHY_SetRFPathSwitch(PADAPTER pAdapter , BOOLEAN bMain);
 ULONG mpt_ProQueryCalTxPower(PADAPTER	pAdapter, u8 RfPath);
 void MPT_PwrCtlDM(PADAPTER padapter, u32 bstart);
@@ -846,6 +846,13 @@ int rtw_efuse_file_map(struct net_device *dev,
 			struct iw_request_info *info,
 			union iwreq_data *wrqu, char *extra);
 int rtw_mp_SetBT(struct net_device *dev,
+			struct iw_request_info *info,
+			union iwreq_data *wrqu, char *extra);
+int rtw_mp_pretx_proc(PADAPTER padapter, u8 bStartTest, char *extra);
+int rtw_mp_tx(struct net_device *dev,
+			struct iw_request_info *info,
+			union iwreq_data *wrqu, char *extra);
+int rtw_mp_rx(struct net_device *dev,
 			struct iw_request_info *info,
 			union iwreq_data *wrqu, char *extra);
 

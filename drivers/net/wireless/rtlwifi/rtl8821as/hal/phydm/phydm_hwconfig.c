@@ -1111,10 +1111,10 @@ odm_RxPhyStatus92CSeries_Parsing(
 		// 2012/01/12 MH Use customeris signal strength from HalComRxdDesc.c/	
 		pPhyInfo->SignalStrength = SignalScaleProc(pDM_Odm->Adapter, PWDB_ALL, TRUE, TRUE);
 #else
-	#ifdef CONFIG_SKIP_SIGNAL_SCALE_MAPPING
-		pPhyInfo->SignalStrength = (u1Byte)PWDB_ALL;
-	#else
+	#ifdef CONFIG_SIGNAL_SCALE_MAPPING
 		pPhyInfo->SignalStrength = (u1Byte)(odm_SignalScaleMapping(pDM_Odm, PWDB_ALL));//PWDB_ALL;
+	#else
+		pPhyInfo->SignalStrength = (u1Byte)PWDB_ALL;
 	#endif
 #endif /*#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)*/
 	}
@@ -1126,11 +1126,11 @@ odm_RxPhyStatus92CSeries_Parsing(
 			// 2012/01/12 MH Use customeris signal strength from HalComRxdDesc.c/	
 			pPhyInfo->SignalStrength = SignalScaleProc(pDM_Odm->Adapter, (total_rssi/=rf_rx_num), TRUE, FALSE);
 		#else
-			#ifdef CONFIG_SKIP_SIGNAL_SCALE_MAPPING
+			#ifdef CONFIG_SIGNAL_SCALE_MAPPING
+			pPhyInfo->SignalStrength = (u1Byte)(odm_SignalScaleMapping(pDM_Odm, total_rssi/=rf_rx_num));
+			#else
 			total_rssi/=rf_rx_num;
 			pPhyInfo->SignalStrength = (u1Byte)total_rssi;
-			#else
-			pPhyInfo->SignalStrength = (u1Byte)(odm_SignalScaleMapping(pDM_Odm, total_rssi/=rf_rx_num));
 			#endif
 		#endif
 		}
@@ -2742,14 +2742,10 @@ ODM_ConfigFWWithHeaderFile(
 			READ_FIRMWARE_MP(8188F, _FW_NIC);
 		else if (ConfigType == CONFIG_FW_WoWLAN)
 			READ_FIRMWARE_MP(8188F, _FW_WoWLAN);
-#ifdef CONFIG_AP_WOWLAN
-		else if (ConfigType == CONFIG_FW_AP_WoWLAN) 
-			READ_FIRMWARE(8188F, _FW_AP_WoWLAN);
-#endif
-		else if (ConfigType == CONFIG_FW_BT)
-			READ_FIRMWARE_MP(8188F, _FW_BT);
-		else if (ConfigType == CONFIG_FW_MP)
-			READ_FIRMWARE_MP(8188F, _FW_MP);
+		#ifdef CONFIG_AP_WOWLAN
+		else if (ConfigType == CONFIG_FW_AP)
+			READ_FIRMWARE_MP(8188F,_FW_AP);
+		#endif
 	}
 #endif
 

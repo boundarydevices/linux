@@ -89,9 +89,11 @@ struct beamforming_entry {
 	u16	sound_period;
 	BEAMFORMING_CAP	beamforming_entry_cap;
 	BEAMFORMING_ENTRY_STATE	beamforming_entry_state;
-	u8	LogSeq;
-	u8	LogRetryCnt;
-	u8	LogSuccessCnt;
+	u8				ClockResetTimes;			/*Modified by Jeffery @2015-04-10*/
+	u8				PreLogSeq;				/*Modified by Jeffery @2015-03-30*/
+	u8				LogSeq;					/*Modified by Jeffery @2014-10-29*/
+	u16				LogRetryCnt:3;			/*Modified by Jeffery @2014-10-29*/
+	u16				LogSuccess:2;			/*Modified by Jeffery @2014-10-29*/
 	u8	LogStatusFailCnt;
 	u8	PreCsiReport[327];
 	u8	DefaultCsiCnt;

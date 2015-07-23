@@ -40,7 +40,7 @@
 #elif defined (CONFIG_USB_HCI)
 
 #ifdef CONFIG_USB_TX_AGGREGATION
-	#if defined(CONFIG_PLATFORM_ARM_SUNxI) || defined(CONFIG_PLATFORM_ARM_SUN6I) || defined(CONFIG_PLATFORM_ARM_SUN7I) || defined(CONFIG_PLATFORM_ARM_SUN8I)
+	#if defined(CONFIG_PLATFORM_ARM_SUNxI) || defined(CONFIG_PLATFORM_ARM_SUN6I) || defined(CONFIG_PLATFORM_ARM_SUN7I) || defined(CONFIG_PLATFORM_ARM_SUN8I) || defined(CONFIG_PLATFORM_ARM_SUN50IW1P1)
 		#define MAX_XMITBUF_SZ (12288)  //12k 1536*8
 	#elif defined (CONFIG_PLATFORM_MSTAR)
 		#define MAX_XMITBUF_SZ	7680	// 7.5k
@@ -162,24 +162,10 @@ do{\
 #endif
 #endif
 
-#if defined(CONFIG_RTL8812A) || defined(CONFIG_RTL8821A) || defined(CONFIG_RTL8723B) || defined(CONFIG_RTL8703B) || defined(CONFIG_RTL8188F)
+#if defined(CONFIG_RTL8812A) || defined(CONFIG_RTL8821A) || defined(CONFIG_RTL8723B) || defined(CONFIG_RTL8192E) || defined(CONFIG_RTL8814A) || defined(CONFIG_RTL8703B) || defined(CONFIG_RTL8188F)
 #define TXDESC_SIZE 40
-#elif defined(CONFIG_RTL8192E) /* this section is defined for buffer descriptor ring architecture */
-	#ifdef CONFIG_PCI_HCI
-		#define TXDESC_SIZE ((TX_BUFFER_SEG_NUM ==0)?16: ((TX_BUFFER_SEG_NUM ==1)? 32:64) )
-		#define TX_WIFI_INFO_SIZE 40  
-	#else	/* USB or SDIO */
-		#define TXDESC_SIZE 40
-	#endif
-#elif defined(CONFIG_RTL8814A) /* this section is defined for buffer descriptor ring architecture */
-	#ifdef CONFIG_PCI_HCI
-		#define TXDESC_SIZE 40
-		#define TX_WIFI_INFO_SIZE 40  
-	#else	/* USB or SDIO */
-		#define TXDESC_SIZE 40
-	#endif
 #else
-#define TXDESC_SIZE 32
+#define TXDESC_SIZE 32 /* old IC (ex: 8188E) */
 #endif
 
 #ifdef CONFIG_TX_EARLY_MODE
@@ -201,13 +187,18 @@ do{\
 #endif
 
 #ifdef CONFIG_PCI_HCI
-#if defined(CONFIG_RTL8192E) || defined(CONFIG_RTL8814A) /* this section is defined for buffer descriptor ring architecture */
-#define TXDESC_OFFSET TX_WIFI_INFO_SIZE
+#if defined(CONFIG_RTL8192E) || defined(CONFIG_RTL8814A)
+/* this section is defined for buffer descriptor ring architecture */
+#define TX_WIFI_INFO_SIZE (TXDESC_SIZE) /* it may add 802.11 hdr or others... */
+/* tx desc and payload are in the same buf */
+#define TXDESC_OFFSET (TX_WIFI_INFO_SIZE)
 #else
-#define TXDESC_OFFSET 0
-#endif 
+/* tx desc and payload are NOT in the same buf */
+#define TXDESC_OFFSET (0)
+/* 8188ee/8723be/8812ae/8821ae has extra PCI DMA info in tx desc */
 #define TX_DESC_NEXT_DESC_OFFSET	(TXDESC_SIZE + 8)
-#endif //CONFIG_PCI_HCI
+#endif
+#endif /* CONFIG_PCI_HCI */
 
 enum TXDESC_SC{
 	SC_DONT_CARE = 0x00,
@@ -411,7 +402,7 @@ struct pkt_attrib
 	u8 direct_link;
 	struct sta_info *ptdls_sta;
 #endif //CONFIG_TDLS
-
+	u8 key_type;
 	u8 icmp_pkt;
 	
 };

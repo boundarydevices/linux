@@ -327,6 +327,7 @@ extern void rtl871x_cedbg(const char *fmt, ...);
 
 void dump_drv_version(void *sel);
 void dump_log_level(void *sel);
+void dump_drv_cfg(void *sel);
 
 #ifdef CONFIG_SDIO_HCI
 void sd_f0_reg_dump(void *sel, _adapter *adapter);
@@ -349,6 +350,11 @@ void sta_rx_reorder_ctl_dump(void *sel, struct sta_info *sta);
 
 struct dvobj_priv;
 void dump_adapters_status(void *sel, struct dvobj_priv *dvobj);
+
+struct sec_cam_ent;
+void dump_sec_cam_ent(void *sel, struct sec_cam_ent *ent, int id);
+void dump_sec_cam_ent_title(void *sel, u8 has_id);
+void dump_sec_cam(void *sel, _adapter *adapter);
 
 #ifdef CONFIG_PROC_DEBUG
 ssize_t proc_set_write_reg(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
@@ -514,7 +520,19 @@ ssize_t proc_set_monitor(struct file *file, const char __user *buffer, size_t co
 int proc_get_rtkm_info(struct seq_file *m, void *v);
 #endif /* CONFIG_PREALLOC_RX_SKB_BUFFER */
 
+#ifdef CONFIG_IEEE80211W
+ssize_t proc_set_tx_sa_query(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
+int proc_get_tx_sa_query(struct seq_file *m, void *v);
+ssize_t proc_set_tx_deauth(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
+int proc_get_tx_deauth(struct seq_file *m, void *v);
+ssize_t proc_set_tx_auth(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
+int proc_get_tx_auth(struct seq_file *m, void *v);
+#endif /* CONFIG_IEEE80211W */
+
 #endif /* CONFIG_PROC_DEBUG */
+
+int proc_get_efuse_map(struct seq_file *m, void *v);
+ssize_t proc_set_efuse_map(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
 
 #endif	//__RTW_DEBUG_H__
 

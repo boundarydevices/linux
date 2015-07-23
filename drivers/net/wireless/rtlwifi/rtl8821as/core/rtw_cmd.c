@@ -492,10 +492,8 @@ void rtw_free_cmd_obj(struct cmd_obj *pcmd)
 _func_enter_;
 
 	if (pcmd->parmbuf != NULL) {
-		if (pcmd->cmdcode != _JoinBss_CMD_) {
-			/* free parmbuf in cmd_obj */
-			rtw_mfree((unsigned char*)pcmd->parmbuf, pcmd->cmdsz);
-		}	
+		/* free parmbuf in cmd_obj */
+		rtw_mfree((unsigned char *)pcmd->parmbuf, pcmd->cmdsz);
 	}
 	if(pcmd->rsp!=NULL)
 	{
@@ -1409,7 +1407,11 @@ _func_enter_;
 
 	pmlmeinfo->assoc_AP_vendor = check_assoc_AP(pnetwork->network.IEs, pnetwork->network.IELength);
 
-	psecnetwork=(WLAN_BSSID_EX *)&psecuritypriv->sec_bss;
+	/* 
+		Modified by Arvin 2015/05/13
+		Solution for allocating a new WLAN_BSSID_EX to avoid race condition issue between disconnect and joinbss 
+	*/
+	psecnetwork = (WLAN_BSSID_EX *)rtw_zmalloc(sizeof(WLAN_BSSID_EX));
 	if(psecnetwork==NULL)
 	{
 		if(pcmd !=NULL)
@@ -1514,7 +1516,7 @@ _func_enter_;
 	}
 	#endif
 	
-	pcmd->cmdsz = get_WLAN_BSSID_EX_sz(psecnetwork);//get cmdsz before endian conversion
+	pcmd->cmdsz = sizeof(WLAN_BSSID_EX);
 
 #ifdef CONFIG_RTL8712
 	//wlan_network endian conversion	

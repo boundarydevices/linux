@@ -802,18 +802,18 @@ static inline char *  iwe_stream_rssi_process(_adapter *padapter,
 	
 	
 	#ifdef CONFIG_SIGNAL_DISPLAY_DBM
-	iwe->u.qual.level = (u8) translate_percentage_to_dbm(ss);//dbm
+	iwe->u.qual.level = (u8) translate_percentage_to_dbm(ss); /* dbm */
 	#else
-	#ifdef CONFIG_SKIP_SIGNAL_SCALE_MAPPING
+	#ifdef CONFIG_SIGNAL_SCALE_MAPPING
+	iwe->u.qual.level = (u8)ss; /* % */
+	#else
 	{
 		/* Do signal scale mapping when using percentage as the unit of signal strength, since the scale mapping is skipped in odm */
 		
 		HAL_DATA_TYPE *pHal = GET_HAL_DATA(padapter);
 		
 		iwe->u.qual.level = (u8)odm_SignalScaleMapping(&pHal->odmpriv, ss);
-	}
-	#else
-	iwe->u.qual.level = (u8)ss;//%
+	}	
 	#endif
 	#endif
 	
@@ -1252,9 +1252,11 @@ static char *translate_scan(_adapter *padapter,
 	
 	
 	#ifdef CONFIG_SIGNAL_DISPLAY_DBM
-	iwe.u.qual.level = (u8) translate_percentage_to_dbm(ss);//dbm
+	iwe.u.qual.level = (u8) translate_percentage_to_dbm(ss); /* dbm */
 	#else
-	#ifdef CONFIG_SKIP_SIGNAL_SCALE_MAPPING
+	#ifdef CONFIG_SIGNAL_SCALE_MAPPING
+	iwe.u.qual.level = (u8)ss; /* % */
+	#else
 	{
 		/* Do signal scale mapping when using percentage as the unit of signal strength, since the scale mapping is skipped in odm */
 		
@@ -1262,8 +1264,6 @@ static char *translate_scan(_adapter *padapter,
 		
 		iwe.u.qual.level = (u8)odm_SignalScaleMapping(&pHal->odmpriv, ss);
 	}
-	#else
-	iwe.u.qual.level = (u8)ss;//%
 	#endif
 	#endif
 	
@@ -1531,6 +1531,9 @@ _func_enter_;
 					DBG_871X(" ~~~~set sta key:unicastkey\n");
 					
 					rtw_setstakey_cmd(padapter, psta, UNICAST_KEY, _TRUE);
+					
+					psta->bpairwise_key_installed = _TRUE;
+					
 				}
 				else//group key
 				{ 					
@@ -2312,18 +2315,52 @@ static int rtw_wx_get_range(struct net_device *dev,
 
 	/* signal level threshold range */
 
+	/* Quality of link & SNR stuff */
+	/* Quality range (link, level, noise)
+	 * If the quality is absolute, it will be in the range [0 ; max_qual],
+	 * if the quality is dBm, it will be in the range [max_qual ; 0].
+	 * Don't forget that we use 8 bit arithmetics...
+	 *
+	 * If percentage range is 0~100
+	 * Signal strength dbm range logical is -100 ~ 0
+	 * but usually value is -90 ~ -20
+	 * When CONFIG_SIGNAL_SCALE_MAPPING is defined, dbm range is -95 ~ -45
+	 */
+	range->max_qual.qual = 100;
+#ifdef CONFIG_SIGNAL_DISPLAY_DBM
+	range->max_qual.level = (u8)-100;
+	range->max_qual.noise = (u8)-100;
+	range->max_qual.updated = IW_QUAL_ALL_UPDATED; /* Updated all three */
+	range->max_qual.updated |= IW_QUAL_DBM;
+#else /* !CONFIG_SIGNAL_DISPLAY_DBM */
 	//percent values between 0 and 100.
-	range->max_qual.qual = 100;	
 	range->max_qual.level = 100;
 	range->max_qual.noise = 100;
-	range->max_qual.updated = 7; /* Updated all three */
+	range->max_qual.updated = IW_QUAL_ALL_UPDATED; /* Updated all three */
+#endif /* !CONFIG_SIGNAL_DISPLAY_DBM */
 
-
+	/* This should contain the average/typical values of the quality
+	 * indicator. This should be the threshold between a "good" and
+	 * a "bad" link (example : monitor going from green to orange).
+	 * Currently, user space apps like quality monitors don't have any
+	 * way to calibrate the measurement. With this, they can split
+	 * the range between 0 and max_qual in different quality level
+	 * (using a geometric subdivision centered on the average).
+	 * I expect that people doing the user space apps will feedback
+	 * us on which value we need to put in each driver... */
 	range->avg_qual.qual = 92; /* > 8% missed beacons is 'bad' */
-	/* TODO: Find real 'good' to 'bad' threshol value for RSSI */
-	range->avg_qual.level = 20 + -98;
+#ifdef CONFIG_SIGNAL_DISPLAY_DBM
+	/* TODO: Find real 'good' to 'bad' threshold value for RSSI */
+	range->avg_qual.level = (u8)-70;
 	range->avg_qual.noise = 0;
-	range->avg_qual.updated = 7; /* Updated all three */
+	range->avg_qual.updated = IW_QUAL_ALL_UPDATED; /* Updated all three */
+	range->avg_qual.updated |= IW_QUAL_DBM;
+#else /* !CONFIG_SIGNAL_DISPLAY_DBM */
+	/* TODO: Find real 'good' to 'bad' threshol value for RSSI */
+	range->avg_qual.level = 30;
+	range->avg_qual.noise = 100;
+	range->avg_qual.updated = IW_QUAL_ALL_UPDATED; /* Updated all three */
+#endif /* !CONFIG_SIGNAL_DISPLAY_DBM */
 
 	range->num_bitrates = RATE_COUNT;
 
@@ -5804,7 +5841,15 @@ static int rtw_p2p_connect(struct net_device *dev,
 		pnetwork = LIST_CONTAINOR(plist, struct wlan_network, list);
 		if ( _rtw_memcmp( pnetwork->network.MacAddress, peerMAC, ETH_ALEN ) )
 		{
-			uintPeerChannel = pnetwork->network.Configuration.DSConfig;
+			if (pnetwork->network.Configuration.DSConfig != 0)
+				uintPeerChannel = pnetwork->network.Configuration.DSConfig;
+			else if (pwdinfo->nego_req_info.peer_ch != 0)
+				uintPeerChannel = pnetwork->network.Configuration.DSConfig = pwdinfo->nego_req_info.peer_ch;
+			else{
+				/* Unexpected case */
+				uintPeerChannel = 0;
+				DBG_871X("%s  uintPeerChannel = 0\n", __func__);
+			}
 			break;
 		}
 
@@ -7657,17 +7702,6 @@ static int rtw_dbg_port(struct net_device *dev,
 						}
 					}
 					break;
-#if 0				
-				case 0x0d://dump cam
-					{
-						//u8 entry = (u8) extra_arg;
-						u8 entry=0;
-						//dump cam
-						for(entry=0;entry<32;entry++)
-							read_cam(padapter,entry);
-					}				
-					break;
-#endif
 				case 0x0e:
 					{
 						if(arg == 0){
@@ -8290,7 +8324,11 @@ static int rtw_set_encryption(struct net_device *dev, struct ieee_param *param, 
 	    param->sta_addr[2] == 0xff && param->sta_addr[3] == 0xff &&
 	    param->sta_addr[4] == 0xff && param->sta_addr[5] == 0xff) 
 	{
-		if (param->u.crypt.idx >= WEP_KEYS)
+		if (param->u.crypt.idx >= WEP_KEYS
+#ifdef CONFIG_IEEE80211W
+			&& param->u.crypt.idx > BIP_MAX_KEYID
+#endif /* CONFIG_IEEE80211W */
+			)
 		{
 			ret = -EINVAL;
 			goto exit;
@@ -8443,6 +8481,23 @@ static int rtw_set_encryption(struct net_device *dev, struct ieee_param *param, 
 
 				_rtw_memcpy(psecuritypriv->dot118021XGrpKey[param->u.crypt.idx].skey,  param->u.crypt.key, (param->u.crypt.key_len>16 ?16:param->u.crypt.key_len));
 			}
+#ifdef CONFIG_IEEE80211W
+			else if (strcmp(param->u.crypt.alg, "BIP") == 0) {
+				int no;
+				
+				DBG_871X("BIP key_len=%d , index=%d\n", param->u.crypt.key_len, param->u.crypt.idx);
+				/* save the IGTK key, length 16 bytes */
+				_rtw_memcpy(padapter->securitypriv.dot11wBIPKey[param->u.crypt.idx].skey, param->u.crypt.key, (param->u.crypt.key_len > 16 ? 16:param->u.crypt.key_len));
+				/* DBG_871X("IGTK key below:\n");
+				for(no=0;no<16;no++)
+					printk(" %02x ", padapter->securitypriv.dot11wBIPKey[param->u.crypt.idx].skey[no]);
+				DBG_871X("\n"); */
+				padapter->securitypriv.dot11wBIPKeyid = param->u.crypt.idx;
+				padapter->securitypriv.binstallBIPkey = _TRUE;
+				DBG_871X(" ~~~~set sta key:IGKT\n");
+				goto exit;
+			}
+#endif /* CONFIG_IEEE80211W */
 			else
 			{
 				DBG_871X("%s, set group_key, none\n", __FUNCTION__);
@@ -8520,6 +8575,8 @@ static int rtw_set_encryption(struct net_device *dev, struct ieee_param *param, 
 				rtw_ap_set_pairwise_key(padapter, psta);
 					
 				psta->ieee8021x_blocked = _FALSE;
+				
+				psta->bpairwise_key_installed = _TRUE;
 					
 			}			
 			else//group key???
@@ -9523,8 +9580,6 @@ static int rtw_wowlan_ctrl(struct net_device *dev,
 
 		padapter->registrypriv.mp_mode = 1;
 
-		pwrctrlpriv->wowlan_from_cmd = _TRUE;
-
 		rtw_suspend_common(padapter);
 
 	} else if (_rtw_memcmp(extra, "disable", 7)) {
@@ -9533,8 +9588,6 @@ static int rtw_wowlan_ctrl(struct net_device *dev,
 		RTW_ENABLE_FUNC(padapter, DF_TX_BIT);
 #endif
 		rtw_resume_common(padapter);
-
-		pwrctrlpriv->wowlan_from_cmd = _FALSE;
 
 #ifdef CONFIG_PNO_SUPPORT
 		pwrctrlpriv->wowlan_pno_enable = _FALSE;
@@ -9864,8 +9917,10 @@ static int rtw_mp_efuse_get(struct net_device *dev,
 	#endif
 	
 	if(strcmp(tmp[0], "status") == 0){
-		sprintf(extra, "Load File efuse=%s,Load File MAC=%s",(pHalData->bloadfile_fail_flag? "FAIL" : "OK"),(pHalData->bloadmac_fail_flag? "FAIL" : "OK"));
-
+		sprintf(extra, "Load File efuse=%s,Load File MAC=%s"
+			, pHalData->efuse_file_status == EFUSE_FILE_FAILED ? "FAIL" : "OK"
+			, pHalData->macaddr_file_status == MACADDR_FILE_FAILED ? "FAIL" : "OK"
+		);
 		  goto exit;
 	}
 	else if (strcmp(tmp[0], "drvmap") == 0)
@@ -10037,56 +10092,12 @@ static int rtw_mp_efuse_get(struct net_device *dev,
 	}
 	else if (strcmp(tmp[0], "mac") == 0)
 	{		
-		#ifdef CONFIG_RTL8188E
-			#ifdef CONFIG_USB_HCI
-			addr = EEPROM_MAC_ADDR_88EU;
-			#endif
-			#ifdef CONFIG_SDIO_HCI
-			addr = EEPROM_MAC_ADDR_88ES;
-			#endif
-			#ifdef CONFIG_PCI_HCI
-			addr = EEPROM_MAC_ADDR_88EE;
-			#endif
-		#endif // CONFIG_RTL8188E
+		if (hal_efuse_macaddr_offset(padapter) == -1) {
+			err = -EFAULT;
+			goto exit;
+		}
 
-		#ifdef CONFIG_RTL8192E
-			#ifdef CONFIG_USB_HCI
-			addr = EEPROM_MAC_ADDR_8192EU;
-			#endif
-			#ifdef CONFIG_SDIO_HCI
-			addr = EEPROM_MAC_ADDR_8192ES;
-			#endif
-			#ifdef CONFIG_PCI_HCI
-			addr = EEPROM_MAC_ADDR_8192EE;
-			#endif
-		#endif
-		#ifdef CONFIG_RTL8723B
-		#ifdef CONFIG_SDIO_HCI
-		addr = EEPROM_MAC_ADDR_8723BS;
-		#endif
-		#ifdef CONFIG_GSPI_HCI
-		addr = EEPROM_MAC_ADDR_8723BS;
-		#endif
-		#ifdef CONFIG_USB_HCI
-		addr = EEPROM_MAC_ADDR_8723BU;
-		#endif
-		#endif // CONFIG_RTL8723B
-
-		#ifdef CONFIG_RTL8703B
-		#ifdef CONFIG_SDIO_HCI
-		addr = EEPROM_MAC_ADDR_8703BS;
-		#endif
-		#endif /* CONFIG_RTL8703B */
-
-		#ifdef CONFIG_RTL8188F
-			#ifdef CONFIG_USB_HCI
-			addr = EEPROM_MAC_ADDR_8188FU;
-			#endif
-			#ifdef CONFIG_SDIO_HCI
-			addr = EEPROM_MAC_ADDR_8188FS;
-			#endif
-		#endif /* CONFIG_RTL8188F */
-
+		addr = hal_efuse_macaddr_offset(padapter);
 		cnts = 6;
 
 		EFUSE_GetEfuseDefinition(padapter, EFUSE_WIFI, TYPE_AVAILABLE_EFUSE_BYTES_TOTAL, (PVOID)&max_available_size, _FALSE);
@@ -10663,70 +10674,12 @@ static int rtw_mp_efuse_set(struct net_device *dev,
 
 		//mac,00e04c871200
 		
-		#ifdef CONFIG_RTL8188E
-			#ifdef CONFIG_USB_HCI
-			addr = EEPROM_MAC_ADDR_88EU;
-			#endif
-			#ifdef CONFIG_SDIO_HCI
-			addr = EEPROM_MAC_ADDR_88ES;
-			#endif
-			#ifdef CONFIG_PCI_HCI
-			addr = EEPROM_MAC_ADDR_88EE;
-			#endif
-		#endif //#ifdef CONFIG_RTL8188E
+		if (hal_efuse_macaddr_offset(padapter) == -1) {
+			err = -EFAULT;
+			goto exit;
+		}
 
-		#ifdef CONFIG_RTL8192E
-			#ifdef CONFIG_USB_HCI
-			addr = EEPROM_MAC_ADDR_8192EU;
-			#endif
-			#ifdef CONFIG_SDIO_HCI
-			addr = EEPROM_MAC_ADDR_8192ES;
-			#endif
-			#ifdef CONFIG_PCI_HCI
-			addr = EEPROM_MAC_ADDR_8192EE;
-			#endif
-		#endif //#ifdef CONFIG_RTL8192E
-		
-		#ifdef CONFIG_RTL8723B
-		#ifdef CONFIG_SDIO_HCI
-		addr = EEPROM_MAC_ADDR_8723BS;
-		#endif
-		#ifdef CONFIG_GSPI_HCI
-		addr = EEPROM_MAC_ADDR_8723BS;
-		#endif
-		#ifdef CONFIG_USB_HCI
-		addr = EEPROM_MAC_ADDR_8723BU;
-		#endif
-		#endif // CONFIG_RTL8723B
-
-		#ifdef CONFIG_RTL8188F
-			#ifdef CONFIG_USB_HCI
-			addr = EEPROM_MAC_ADDR_8188FU;
-			#endif
-			#ifdef CONFIG_SDIO_HCI
-			addr = EEPROM_MAC_ADDR_8188FS;
-			#endif
-		#endif /* CONFIG_RTL8188F */
-		
-		#ifdef CONFIG_RTL8703B
-		#ifdef CONFIG_SDIO_HCI
-		addr = EEPROM_MAC_ADDR_8703BS;
-		#endif
-		#endif /* CONFIG_RTL8703B */
-		
-		#if defined(CONFIG_RTL8812A) || defined(CONFIG_RTL8821A)
-		#ifdef CONFIG_SDIO_HCI
-				addr = EEPROM_MAC_ADDR_8821AS;
-		#endif
-		#ifdef CONFIG_PCI_HCI
-				addr = EEPROM_MAC_ADDR_8821AE;
-		#endif
-		#ifdef CONFIG_USB_HCI
-				addr = EEPROM_MAC_ADDR_8821AU;
-		#endif
-		
-		#endif // CONFIG_RTL8812A/CONFIG_RTL8821A
-		
+		addr = hal_efuse_macaddr_offset(padapter);
 		cnts = strlen(tmp[1]);
 		if (cnts%2)
 		{
@@ -11429,133 +11382,138 @@ static int rtw_mp_get(struct net_device *dev,
 		return -ENETDOWN;
        }
 	
-	if (extra == NULL)
-	{
+	if (extra == NULL) {
 		wrqu->length = 0;
 		return -EIO;
 	}
 	
-	switch(subcmd)
-	{
-	case WRITE_REG :
-			rtw_mp_write_reg (dev,info,wrqu,extra);
+	switch (subcmd) {
+	case WRITE_REG:
+			rtw_mp_write_reg(dev, info, wrqu, extra);
 			 break;
 			 
 	case WRITE_RF:
-			rtw_mp_write_rf (dev,info,wrqu,extra);
+			rtw_mp_write_rf(dev, info, wrqu, extra);
 			 break; 
 			 
 	case MP_PHYPARA:
-			DBG_871X("mp_get  MP_PHYPARA \n");
-			rtw_mp_phypara(dev,info,wrqu,extra);	
+			DBG_871X("mp_get  MP_PHYPARA\n");
+			rtw_mp_phypara(dev, info, wrqu, extra);
 			break;
 
 	case MP_CHANNEL:
-			DBG_871X("set case mp_channel \n");
-			rtw_mp_channel (dev,info,wrqu,extra);
+			DBG_871X("set case mp_channel\n");
+			rtw_mp_channel(dev , info, wrqu, extra);
 			break;
 			
 	case READ_REG:
-			DBG_871X("mp_get  READ_REG \n");
-			rtw_mp_read_reg (dev,info,wrqu,extra);
+			DBG_871X("mp_get  READ_REG\n");
+			rtw_mp_read_reg(dev, info, wrqu, extra);
 			 break; 
 	case READ_RF:
-			DBG_871X("mp_get  READ_RF \n");
-			rtw_mp_read_rf (dev,info,wrqu,extra);
+			DBG_871X("mp_get  READ_RF\n");
+			rtw_mp_read_rf(dev, info, wrqu, extra);
 			break; 
 			
 	case MP_RATE:
-			DBG_871X("set case mp_rate \n");
-			rtw_mp_rate (dev,info,wrqu,extra);
+			DBG_871X("set case mp_rate\n");
+			rtw_mp_rate(dev, info, wrqu, extra);
 			break;
 			
 	case MP_TXPOWER:
-			DBG_871X("set case MP_TXPOWER \n");
-			rtw_mp_txpower (dev,info,wrqu,extra);
+			DBG_871X("set case MP_TXPOWER\n");
+			rtw_mp_txpower(dev, info, wrqu, extra);
 			break;
 			
 	case MP_ANT_TX:
-			DBG_871X("set case MP_ANT_TX \n");
-			rtw_mp_ant_tx (dev,info,wrqu,extra);
+			DBG_871X("set case MP_ANT_TX\n");
+			rtw_mp_ant_tx(dev, info, wrqu, extra);
 			break;
 			
 	case MP_ANT_RX:
-			DBG_871X("set case MP_ANT_RX \n");
-			rtw_mp_ant_rx (dev,info,wrqu,extra);
+			DBG_871X("set case MP_ANT_RX\n");
+			rtw_mp_ant_rx(dev, info, wrqu, extra);
 			break;
 			
 	case MP_QUERY:
-			//DBG_871X("mp_get mp_query MP_QUERY \n");
-			rtw_mp_trx_query(dev,info,wrqu,extra);
+			rtw_mp_trx_query(dev, info, wrqu, extra);
 			break;
 					
 	case MP_CTX:
-			DBG_871X("set case MP_CTX \n");
-			rtw_mp_ctx (dev,info,wrqu,extra);
+			DBG_871X("set case MP_CTX\n");
+			rtw_mp_ctx(dev, info, wrqu, extra);
 			break;
 					
 	case MP_ARX:
-			DBG_871X("set case MP_ARX \n");
-			rtw_mp_arx (dev,info,wrqu,extra);
+			DBG_871X("set case MP_ARX\n");
+			rtw_mp_arx(dev, info, wrqu, extra);
 			break;
 			
 	case EFUSE_GET:
-			DBG_871X("efuse get EFUSE_GET \n");
-			rtw_mp_efuse_get(dev,info,wdata,extra);
+			DBG_871X("efuse get EFUSE_GET\n");
+			rtw_mp_efuse_get(dev, info, wdata, extra);
 		 break; 
 		 
 	case MP_DUMP:
-			DBG_871X("set case MP_DUMP \n");
-			rtw_mp_dump (dev,info,wrqu,extra);
+			DBG_871X("set case MP_DUMP\n");
+			rtw_mp_dump(dev, info, wrqu, extra);
 		 break; 
 	case MP_PSD:
-			DBG_871X("set case MP_PSD \n");
-			rtw_mp_psd (dev,info,wrqu,extra);
+			DBG_871X("set case MP_PSD\n");
+			rtw_mp_psd(dev, info, wrqu, extra);
 		 break;
 	case MP_THER:
-			DBG_871X("set case MP_THER \n");
-			rtw_mp_thermal (dev,info,wrqu,extra);
+			DBG_871X("set case MP_THER\n");
+			rtw_mp_thermal(dev, info, wrqu, extra);
 		break;
 	case MP_PwrCtlDM:
 			DBG_871X("set MP_PwrCtlDM\n");
-			rtw_mp_PwrCtlDM (dev,info,wrqu,extra);
+			rtw_mp_PwrCtlDM(dev, info, wrqu, extra);
 		break;
 	case MP_QueryDrvStats:		
-			DBG_871X("mp_get MP_QueryDrvStats \n");
-			rtw_mp_QueryDrv(dev,info,wdata,extra);
+			DBG_871X("mp_get MP_QueryDrvStats\n");
+			rtw_mp_QueryDrv(dev, info, wdata, extra);
 			break;
-		case MP_PWRTRK:
-			DBG_871X("set case MP_PWRTRK \n");
-			rtw_mp_pwrtrk(dev,info,wrqu,extra);
+	case MP_PWRTRK:
+			DBG_871X("set case MP_PWRTRK\n");
+			rtw_mp_pwrtrk(dev, info, wrqu, extra);
 			break;			 
 	case EFUSE_SET:
-			DBG_871X("set case efuse set \n");
-			rtw_mp_efuse_set(dev,info,wdata,extra);
+			DBG_871X("set case efuse set\n");
+			rtw_mp_efuse_set(dev, info, wdata, extra);
 			break;			 
 	case MP_GET_TXPOWER_INX:
-			DBG_871X("mp_get MP_GET_TXPOWER_INX \n");
-			rtw_mp_txpower_index(dev,info,wrqu,extra);
+			DBG_871X("mp_get MP_GET_TXPOWER_INX\n");
+			rtw_mp_txpower_index(dev, info, wrqu, extra);
 			break;
 	case MP_GETVER:
-			DBG_871X("mp_get MP_GETVER \n");
-			rtw_mp_getver(dev,info,wdata,extra);
+			DBG_871X("mp_get MP_GETVER\n");
+			rtw_mp_getver(dev, info, wdata, extra);
 			break;
-	case  MP_MON:
-			DBG_871X("mp_get MP_MON \n");
-			rtw_mp_mon(dev,info,wdata,extra);
- 			break;
- 	case  EFUSE_MASK:
+	case MP_MON:
+			DBG_871X("mp_get MP_MON\n");
+			rtw_mp_mon(dev, info, wdata, extra);
+			break;
+	case EFUSE_MASK:
 			DBG_871X("mp_get EFUSE_MASK\n");
-			rtw_efuse_mask_file(dev,info,wdata,extra);
- 			break;
- 	 case  EFUSE_FILE:
+			rtw_efuse_mask_file(dev, info, wdata, extra);
+			break;
+	case  EFUSE_FILE:
 			DBG_871X("mp_get EFUSE_FILE\n");
-			rtw_efuse_file_map(dev,info,wdata,extra);
- 			break;		
+			rtw_efuse_file_map(dev, info, wdata, extra);
+			break;
+	case  MP_TX:
+			DBG_871X("mp_get MP_TX\n");
+			rtw_mp_tx(dev, info, wdata, extra);
+			break;
+	case  MP_RX:
+			DBG_871X("mp_get MP_RX\n");
+			rtw_mp_rx(dev, info, wdata, extra);
+			break;
 #if defined(CONFIG_RTL8723B)
 	case MP_SetBT:		
-			DBG_871X("set MP_SetBT \n");
-			rtw_mp_SetBT(dev,info,wdata,extra);
+			DBG_871X("set MP_SetBT\n");
+			rtw_mp_SetBT(dev, info, wdata, extra);
 			break;		 
 #endif
 #ifdef CONFIG_SDIO_INDIRECT_ACCESS
@@ -13360,6 +13318,8 @@ static const struct iw_priv_args rtw_private_args[] = {
 		{ MP_MON, IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "mp_mon" },
 		{ EFUSE_MASK, IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "efuse_mask" },
 		{ EFUSE_FILE, IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "efuse_file" },
+		{ MP_TX, IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "mp_tx" },
+		{ MP_RX, IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "mp_rx" },
 #if defined(CONFIG_RTL8723B)
 		{ MP_SetBT, IW_PRIV_TYPE_CHAR | 1024, IW_PRIV_TYPE_CHAR | IW_PRIV_SIZE_MASK, "mp_setbt" },
         { MP_DISABLE_BT_COEXIST, IW_PRIV_TYPE_CHAR | 1024, 0, "mp_disa_btcoex"},
@@ -13459,7 +13419,9 @@ static struct iw_statistics *rtw_get_wireless_stats(struct net_device *dev)
 		#ifdef CONFIG_SIGNAL_DISPLAY_DBM
 		tmp_level = translate_percentage_to_dbm(padapter->recvpriv.signal_strength); 
 		#else
-		#ifdef CONFIG_SKIP_SIGNAL_SCALE_MAPPING
+		#ifdef CONFIG_SIGNAL_SCALE_MAPPING
+		tmp_level = padapter->recvpriv.signal_strength;
+		#else
 		{
 			/* Do signal scale mapping when using percentage as the unit of signal strength, since the scale mapping is skipped in odm */
 			
@@ -13467,8 +13429,6 @@ static struct iw_statistics *rtw_get_wireless_stats(struct net_device *dev)
 			
 			tmp_level = (u8)odm_SignalScaleMapping(&pHal->odmpriv, padapter->recvpriv.signal_strength);
 		}
-		#else
-		tmp_level = padapter->recvpriv.signal_strength;
 		#endif
 		#endif
 		

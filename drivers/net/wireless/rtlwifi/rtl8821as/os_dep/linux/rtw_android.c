@@ -33,10 +33,16 @@
 #endif
 #endif /* defined(RTW_ENABLE_WIFI_CONTROL_FUNC) */
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0))
+#define strnicmp	strncasecmp
+#endif /* Linux kernel >= 4.0.0 */
+
 #ifdef CONFIG_GPIO_WAKEUP
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #endif
+
+#include "rtw_version.h"
 
 extern void macstr2num(u8 *dst, u8 *src);
 
@@ -91,7 +97,8 @@ const char *android_wifi_cmd_str[ANDROID_WIFI_CMD_MAX] = {
 	"GTK_REKEY_OFFLOAD",
 #endif //CONFIG_GTK_OL
 /*	Private command for	P2P disable*/
-	"P2P_DISABLE"
+	"P2P_DISABLE",
+	"DRIVER_VERSION"
 };
 
 #ifdef CONFIG_PNO_SUPPORT
@@ -565,6 +572,10 @@ int rtw_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		ret = -EINVAL;
 		goto exit;
 	}
+	if (padapter->registrypriv.mp_mode == 1) {
+			ret = -EINVAL;
+			goto exit;
+	}
 #ifdef CONFIG_COMPAT
 	if (is_compat_task()) {
 		/* User space is 32-bit, use compat ioctl */
@@ -587,7 +598,7 @@ int rtw_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		ret = -EFAULT;
 		goto exit;
 	}
-	//DBG_871X("%s priv_cmd.buf=%p priv_cmd.total_len=%d  priv_cmd.used_len=%d\n",__func__,priv_cmd.buf,priv_cmd.total_len,priv_cmd.used_len);
+	/*DBG_871X("%s priv_cmd.buf=%p priv_cmd.total_len=%d  priv_cmd.used_len=%d\n",__func__,priv_cmd.buf,priv_cmd.total_len,priv_cmd.used_len);*/
 	command = rtw_zmalloc(priv_cmd.total_len);
 	if (!command)
 	{
@@ -861,6 +872,12 @@ int rtw_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 
 		rtw_p2p_enable(padapter, P2P_ROLE_DISABLE);
 #endif // CONFIG_P2P
+		break;
+	}
+	case ANDROID_WIFI_CMD_DRIVERVERSION:
+	{
+		bytes_written = strlen(DRIVERVERSION);
+		snprintf(command, bytes_written+1, DRIVERVERSION);
 		break;
 	}
 	default:

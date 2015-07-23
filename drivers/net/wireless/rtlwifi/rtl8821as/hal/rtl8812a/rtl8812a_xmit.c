@@ -500,7 +500,7 @@ SCMapping_8812(
 			else if(pHalData->nCur80MhzPrimeSC == HAL_PRIME_CHNL_OFFSET_UPPER)
 				SCSettingOfDesc = VHT_DATA_SC_40_UPPER_OF_80MHZ;
 			else
-				DBG_871X("SCMapping: Not Correct Primary40MHz Setting \n");
+				DBG_871X("SCMapping: DONOT CARE Mode Setting\n");
 		}
 		else
 		{
@@ -513,7 +513,7 @@ SCMapping_8812(
 			else if((pHalData->nCur40MhzPrimeSC == HAL_PRIME_CHNL_OFFSET_UPPER) && (pHalData->nCur80MhzPrimeSC == HAL_PRIME_CHNL_OFFSET_UPPER))
 				SCSettingOfDesc = VHT_DATA_SC_20_UPPERST_OF_80MHZ;
 			else
-				DBG_871X("SCMapping: Not Correct Primary40MHz Setting \n");
+				DBG_871X("SCMapping: DONOT CARE Mode Setting\n");
 		}
 	}
 	else if(pHalData->CurrentChannelBW== CHANNEL_WIDTH_40)

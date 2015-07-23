@@ -227,15 +227,6 @@
 //	0x0600h ~ 0x07FFh	WMAC Configuration
 //
 //-----------------------------------------------------
-#ifdef CONFIG_RF_GAIN_OFFSET
-
-#ifdef CONFIG_RTL8188F
-#define EEPROM_RF_GAIN_OFFSET			0xC1
-#endif
-
-#define EEPROM_RF_GAIN_VAL				0x1F6
-#endif //CONFIG_RF_GAIN_OFFSET
-
 
 //----------------------------------------------------------------------------
 //       8195 IMR/ISR bits						(offset 0xB0,  8bits)
@@ -302,7 +293,7 @@
 //========================================================
 
 #define MACID_NUM_8188F 16
-#define CAM_ENTRY_NUM_8188F 16
+#define SEC_CAM_ENT_NUM_8188F 16
 
 #endif /* __RTL8188F_SPEC_H__ */
 

@@ -17,6 +17,8 @@
 #include "HalBtc8821a2Ant.tmh"
 #endif
 
+#if (RTL8821A_SUPPORT == 1)
+
 #if(BT_30_SUPPORT == 1)
 //============================================================
 // Global variables, these are static variables
@@ -32,9 +34,11 @@ const char *const GLBtInfoSrc8821a2Ant[]={
 	"BT Info[bt auto report]",
 };
 
-u4Byte	GLCoexVerDate8821a2Ant=20150128;
-u4Byte	GLCoexVer8821a2Ant=0x51;
-
+u4Byte	GLCoexVerDate8821a2Ant=20150702;
+u4Byte	GLCoexVer8821a2Ant=0x56;
+//modify 20140903v43 a2dpandhid tdmaonoff a2dp glitch _ tdma off 778=3(case1)->778=1(case0)
+//and to improve tp while a2dphid case23->case25 , case123->case125 for asus spec
+//and modify for asus bt WHQL test _ tdma off_ 778=3->1_
 //============================================================
 // local function proto type if needed
 //============================================================
@@ -935,9 +939,12 @@ halbtc8821a2ant_SetSwPenaltyTxRateAdaptive(
 	{
 		H2C_Parameter[1] |= BIT0;
 		H2C_Parameter[2] = 0x00;  //normal rate except MCS7/6/5, OFDM54/48/36
-		H2C_Parameter[3] = 0xf7;  //MCS7 or OFDM54
-		H2C_Parameter[4] = 0xf8;  //MCS6 or OFDM48
-		H2C_Parameter[5] = 0xf9;	//MCS5 or OFDM36	
+                H2C_Parameter[3] = 0xf5;  //MCS7 or OFDM54
+		H2C_Parameter[4] = 0xa0;  //MCS6 or OFDM48
+		H2C_Parameter[5] = 0xa0;	//MCS5 or OFDM36
+		//H2C_Parameter[3] = 0xf7;  //MCS7 or OFDM54
+		//H2C_Parameter[4] = 0xf8;  //MCS6 or OFDM48
+		//H2C_Parameter[5] = 0xf9;	//MCS5 or OFDM36	
 	}
 
 	RT_TRACE(COMP_COEX, DBG_TRACE, ("[BTCoex], set WiFi Low-Penalty Retry: %s", 
@@ -1455,7 +1462,7 @@ halbtc8821a2ant_SetAntPath(
 		pBtCoexist->fBtcWrite4Byte(pBtCoexist, 0x4c, u4Tmp);
 
 		pBtCoexist->fBtcWrite4Byte(pBtCoexist, 0x974, 0x3ff);
-		pBtCoexist->fBtcWrite1Byte(pBtCoexist, 0xcb4, 0x77);
+		//pBtCoexist->fBtcWrite1Byte(pBtCoexist, 0xcb4, 0x77);
 
 		if(pBoardInfo->btdmAntPos == BTC_ANTENNA_AT_MAIN_PORT) 
 		{
@@ -1598,7 +1605,7 @@ halbtc8821a2ant_PsTdma(
 				halbtc8821a2ant_SetFwPstdma(pBtCoexist, 0xe3, 0x15, 0x03, 0x70, 0x90);
 				break;	
 			case 23:
-				halbtc8821a2ant_SetFwPstdma(pBtCoexist, 0xe3, 0x1c, 0x03, 0xf1, 0x10);
+				halbtc8821a2ant_SetFwPstdma(pBtCoexist, 0xe3, 0x1e, 0x03, 0xf0, 0x14);
 				break;
 			case 24:
 			case 124:
@@ -1646,7 +1653,7 @@ halbtc8821a2ant_PsTdma(
 				halbtc8821a2ant_SetFwPstdma(pBtCoexist, 0xe3, 0x35, 0x03, 0x71, 0x11);
 				break;
 			case 123:
-				halbtc8821a2ant_SetFwPstdma(pBtCoexist, 0xd3, 0x1c, 0x03, 0x70, 0x50);
+				halbtc8821a2ant_SetFwPstdma(pBtCoexist, 0xd3, 0x1c, 0x03, 0x70, 0x54);
 				break;
 		}
 	}
@@ -3106,7 +3113,8 @@ halbtc8821a2ant_ActionA2dp(
 		halbtc8821a2ant_CoexTableWithType(pBtCoexist, NORMAL_EXEC, 0);
 
 		halbtc8821a2ant_PowerSaveState(pBtCoexist, BTC_PS_WIFI_NATIVE, 0x0, 0x0);		
-		halbtc8821a2ant_PsTdma(pBtCoexist, NORMAL_EXEC, FALSE, 1);
+		//halbtc8821a2ant_PsTdma(pBtCoexist, NORMAL_EXEC, FALSE, 1);
+		halbtc8821a2ant_PsTdma(pBtCoexist, NORMAL_EXEC, TRUE, 23);
 
 		// sw mechanism
 		pBtCoexist->fBtcGet(pBtCoexist, BTC_GET_U4_WIFI_BW, &wifiBw);
@@ -3150,11 +3158,13 @@ halbtc8821a2ant_ActionA2dp(
 	if( (btRssiState == BTC_RSSI_STATE_HIGH) ||
 		(btRssiState == BTC_RSSI_STATE_STAY_HIGH) )
 	{
-		halbtc8821a2ant_TdmaDurationAdjust(pBtCoexist, FALSE, FALSE, 1);
+		//halbtc8821a2ant_TdmaDurationAdjust(pBtCoexist, FALSE, FALSE, 1);
+		halbtc8821a2ant_PsTdma(pBtCoexist, NORMAL_EXEC, TRUE, 23);
 	}
 	else
 	{
-		halbtc8821a2ant_TdmaDurationAdjust(pBtCoexist, FALSE, TRUE, 1);
+		//halbtc8821a2ant_TdmaDurationAdjust(pBtCoexist, FALSE, TRUE, 1);
+		halbtc8821a2ant_PsTdma(pBtCoexist, NORMAL_EXEC, TRUE, 23);
 	}
 
 	// sw mechanism
@@ -3294,7 +3304,7 @@ halbtc8821a2ant_ActionPanEdr(
 	if( (btRssiState == BTC_RSSI_STATE_HIGH) ||
 		(btRssiState == BTC_RSSI_STATE_STAY_HIGH) )
 	{
-		halbtc8821a2ant_PsTdma(pBtCoexist, NORMAL_EXEC, TRUE, 3);	//1->3 for TENCENT spp profile delay time
+		halbtc8821a2ant_PsTdma(pBtCoexist, NORMAL_EXEC, TRUE, 1);	
 	}
 	else
 	{
@@ -4738,3 +4748,75 @@ EXhalbtc8821a2ant_Periodical(
 
 #endif
 
+#else	// #if (RTL8821A_SUPPORT == 1)
+VOID
+EXhalbtc8821a2ant_PowerOnSetting(
+	IN	PBTC_COEXIST		pBtCoexist
+	){}
+VOID
+EXhalbtc8821a2ant_PreLoadFirmware(
+	IN	PBTC_COEXIST		pBtCoexist
+	){}
+VOID
+EXhalbtc8821a2ant_InitHwConfig(
+	IN	PBTC_COEXIST		pBtCoexist,
+	IN	BOOLEAN				bWifiOnly
+	){}
+VOID
+EXhalbtc8821a2ant_InitCoexDm(
+	IN	PBTC_COEXIST		pBtCoexist
+	){}
+VOID
+EXhalbtc8821a2ant_IpsNotify(
+	IN	PBTC_COEXIST		pBtCoexist,
+	IN	u1Byte			type
+	){}
+VOID
+EXhalbtc8821a2ant_LpsNotify(
+	IN	PBTC_COEXIST		pBtCoexist,
+	IN	u1Byte			type
+	){}
+VOID
+EXhalbtc8821a2ant_ScanNotify(
+	IN	PBTC_COEXIST		pBtCoexist,
+	IN	u1Byte			type
+	){}
+VOID
+EXhalbtc8821a2ant_ConnectNotify(
+	IN	PBTC_COEXIST		pBtCoexist,
+	IN	u1Byte			type
+	){}
+VOID
+EXhalbtc8821a2ant_MediaStatusNotify(
+	IN	PBTC_COEXIST			pBtCoexist,
+	IN	u1Byte				type
+	){}
+VOID
+EXhalbtc8821a2ant_SpecialPacketNotify(
+	IN	PBTC_COEXIST			pBtCoexist,
+	IN	u1Byte				type
+	){}
+VOID
+EXhalbtc8821a2ant_BtInfoNotify(
+	IN	PBTC_COEXIST		pBtCoexist,
+	IN	pu1Byte			tmpBuf,
+	IN	u1Byte			length
+	){}
+VOID
+EXhalbtc8821a2ant_HaltNotify(
+	IN	PBTC_COEXIST			pBtCoexist
+	){}
+VOID
+EXhalbtc8821a2ant_PnpNotify(
+	IN	PBTC_COEXIST			pBtCoexist,
+	IN	u1Byte				pnpState
+	){}
+VOID
+EXhalbtc8821a2ant_Periodical(
+	IN	PBTC_COEXIST			pBtCoexist
+	){}
+VOID
+EXhalbtc8821a2ant_DisplayCoexInfo(
+	IN	PBTC_COEXIST		pBtCoexist
+	){}
+#endif	// #if (RTL8821A_SUPPORT == 1)

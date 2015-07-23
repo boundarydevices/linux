@@ -181,6 +181,7 @@ enum WIFI_STATUS_CODE {
 	_STATS_AUTH_TIMEOUT_		= 16,
 	_STATS_UNABLE_HANDLE_STA_	= 17,
 	_STATS_RATE_FAIL_			= 18,
+	_STATS_REFUSED_TEMPORARILY_ = 30,
 	_STATS_DECLINE_REQ_			= 37,
 	_STATS_INVALID_PARAMETERS_	= 38,
 	_STATS_INVALID_RSNIE_			= 72,
@@ -673,6 +674,7 @@ typedef	enum _ELEMENT_ID{
 	EID_WAPI					= 68,
 	EID_VHTCapability 			= 191, // Based on 802.11ac D2.0
 	EID_VHTOperation 			= 192, // Based on 802.11ac D2.0
+	EID_AID						= 197, /* Based on 802.11ac D4.0 */
 	EID_OpModeNotification		= 199, // Based on 802.11ac D3.0
 }ELEMENT_ID, *PELEMENT_ID;
 

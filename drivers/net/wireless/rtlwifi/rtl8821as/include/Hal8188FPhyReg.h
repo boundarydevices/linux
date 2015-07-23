@@ -455,6 +455,8 @@
 #define 	RF_WE_LUT					0xEF	
 #define 	RF_S0S1 					0xB0
 
+#define RF_TX_GAIN_OFFSET_8188F(_val) (abs((_val)) | (((_val) > 0) ? BIT5 : 0))
+
 //
 //Bit Mask
 //

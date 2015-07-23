@@ -193,28 +193,29 @@
 //
 //-----------------------------------------------------
 #define REG_PCIE_CTRL_REG				0x0300
-#define REG_INT_MIG						0x0304	// Interrupt Migration 
-#define REG_BCNQ_DESA					0x0308	// TX Beacon Descriptor Address
-#define REG_HQ_DESA					0x0310	// TX High Queue Descriptor Address
-#define REG_MGQ_DESA					0x0318	// TX Manage Queue Descriptor Address
-#define REG_VOQ_DESA					0x0320	// TX VO Queue Descriptor Address
-#define REG_VIQ_DESA					0x0328	// TX VI Queue Descriptor Address
-#define REG_BEQ_DESA					0x0330	// TX BE Queue Descriptor Address
-#define REG_BKQ_DESA					0x0338	// TX BK Queue Descriptor Address
-#define REG_RX_DESA						0x0340	// RX Queue	Descriptor Address
+#define REG_INT_MIG					0x0304	/* Interrupt Migration */
+#define REG_BCNQ_DESA					0x0308	/* TX Beacon Descriptor Address */
+#define REG_HQ_DESA					0x0310	/* TX High Queue Descriptor Address */
+#define REG_MGQ_DESA					0x0318	/* TX Manage Queue Descriptor Address */
+#define REG_VOQ_DESA					0x0320	/* TX VO Queue Descriptor Address */
+#define REG_VIQ_DESA					0x0328	/* TX VI Queue Descriptor Address */
+#define REG_BEQ_DESA					0x0330	/* TX BE Queue Descriptor Address */
+#define REG_BKQ_DESA					0x0338	/* TX BK Queue Descriptor Address */
+#define REG_RX_DESA					0x0340	/* RX Queue Descriptor Address */
 //sherry added for DBI Read/Write  20091126
-#define REG_DBI_WDATA					0x0348	// Backdoor REG for Access Configuration
-#define REG_DBI_RDATA                         	0x034C	//Backdoor REG for Access Configuration
-#define REG_DBI_CTRL                      		0x0350	//Backdoor REG for Access Configuration
-#define REG_DBI_FLAG                      		0x0352	//Backdoor REG for Access Configuration
-#define REG_MDIO						0x0354	// MDIO for Access PCIE PHY
-#define REG_DBG_SEL						0x0360	// Debug Selection Register
-#define REG_PCIE_HRPWM					0x0361	//PCIe RPWM
-#define REG_PCIE_HCPWM					0x0363	//PCIe CPWM
+#define REG_DBI_WDATA					0x0348	/*  Backdoor REG for Access Configuration */
+#define REG_DBI_RDATA					0x034C	/* Backdoor REG for Access Configuration */
+#define REG_DBI_CTRL					0x0350	/* Backdoor REG for Access Configuration */
+#define REG_DBI_FLAG					0x0352	/* Backdoor REG for Access Configuration */
+#define REG_MDIO					0x0354	/* MDIO for Access PCIE PHY */
+#define REG_DBG_SEL					0x0360	/* Debug Selection Register */
+#define REG_PCIE_HRPWM					0x0361	/* PCIe RPWM */
+#define REG_PCIE_HCPWM					0x0363	/* PCIe CPWM */
 #define REG_WATCH_DOG					0x0368
+#define REG_RX_RXBD_NUM					0x0382
 
 // RTL8723 series -------------------------------
-#define REG_PCIE_HISR_EN				0x0394	//PCIE Local Interrupt Enable Register
+#define REG_PCIE_HISR_EN				0x0394	/* PCIE Local Interrupt Enable Register */
 #define REG_PCIE_HISR					0x03A0
 #define REG_PCIE_HISRE					0x03A4
 #define REG_PCIE_HIMR					0x03A8

@@ -18,6 +18,7 @@
 * 
 ******************************************************************************/
 
+/*Image2HeaderVersion: 2.11*/
 #if (RTL8812A_SUPPORT == 1)
 #ifndef __INC_MP_FW_HW_IMG_8812A_H
 #define __INC_MP_FW_HW_IMG_8812A_H
@@ -29,11 +30,10 @@
 
 void
 ODM_ReadFirmware_MP_8812A_FW_AP(
-     IN   PDM_ODM_T    pDM_Odm,
-     OUT  u1Byte       *pFirmware,
-     OUT  u4Byte       *pFirmwareSize
+	IN   PDM_ODM_T    pDM_Odm,
+	OUT  u1Byte       *pFirmware,
+	OUT  u4Byte       *pFirmwareSize
 );
-u4Byte ODM_GetVersion_MP_8812A_FW_AP(void);
 
 /******************************************************************************
 *                           FW_NIC.TXT
@@ -41,11 +41,10 @@ u4Byte ODM_GetVersion_MP_8812A_FW_AP(void);
 
 void
 ODM_ReadFirmware_MP_8812A_FW_NIC(
-     IN   PDM_ODM_T    pDM_Odm,
-     OUT  u1Byte       *pFirmware,
-     OUT  u4Byte       *pFirmwareSize
+	IN   PDM_ODM_T    pDM_Odm,
+	OUT  u1Byte       *pFirmware,
+	OUT  u4Byte       *pFirmwareSize
 );
-u4Byte ODM_GetVersion_MP_8812A_FW_NIC(void);
 
 /******************************************************************************
 *                           FW_NIC_BT.TXT
@@ -53,11 +52,10 @@ u4Byte ODM_GetVersion_MP_8812A_FW_NIC(void);
 
 void
 ODM_ReadFirmware_MP_8812A_FW_NIC_BT(
-     IN   PDM_ODM_T    pDM_Odm,
-     OUT  u1Byte       *pFirmware,
-     OUT  u4Byte       *pFirmwareSize
+	IN   PDM_ODM_T    pDM_Odm,
+	OUT  u1Byte       *pFirmware,
+	OUT  u4Byte       *pFirmwareSize
 );
-u4Byte ODM_GetVersion_MP_8812A_FW_NIC_BT(void);
 
 /******************************************************************************
 *                           FW_WoWLAN.TXT
@@ -65,12 +63,11 @@ u4Byte ODM_GetVersion_MP_8812A_FW_NIC_BT(void);
 
 void
 ODM_ReadFirmware_MP_8812A_FW_WoWLAN(
-     IN   PDM_ODM_T    pDM_Odm,
-     OUT  u1Byte       *pFirmware,
-     OUT  u4Byte       *pFirmwareSize
+	IN   PDM_ODM_T    pDM_Odm,
+	OUT  u1Byte       *pFirmware,
+	OUT  u4Byte       *pFirmwareSize
 );
-u4Byte ODM_GetVersion_MP_8812A_FW_WoWLAN(void);
 
 #endif
-#endif // end of HWIMG_SUPPORT
+#endif /* end of HWIMG_SUPPORT*/
 

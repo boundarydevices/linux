@@ -246,15 +246,6 @@ typedef struct _C2H_EVT_HDR
 	u8	CmdSeq;
 } __attribute__((__packed__)) C2H_EVT_HDR, *PC2H_EVT_HDR;
 
-typedef enum tag_Package_Definition
-{
-    PACKAGE_DEFAULT,
-    PACKAGE_QFN68,
-    PACKAGE_TFBGA90,
-    PACKAGE_TFBGA80,
-    PACKAGE_TFBGA79
-}PACKAGE_TYPE_E;
-
 #define INCLUDE_MULTI_FUNC_BT(_Adapter)		(GET_HAL_DATA(_Adapter)->MultiFunc & RT_MULTI_FUNC_BT)
 #define INCLUDE_MULTI_FUNC_GPS(_Adapter)	(GET_HAL_DATA(_Adapter)->MultiFunc & RT_MULTI_FUNC_GPS)
 
@@ -286,7 +277,8 @@ void Hal_EfuseParsePowerSavingMode_8188F(PADAPTER pAdapter, u8 *hwinfo, BOOLEAN 
 void Hal_EfuseParseAntennaDiversity_8188F(PADAPTER padapter, u8 *hwinfo, BOOLEAN AutoLoadFail);
 void Hal_EfuseParseXtal_8188F(PADAPTER pAdapter, u8 *hwinfo, u8 AutoLoadFail);
 void Hal_EfuseParseThermalMeter_8188F(PADAPTER padapter, u8 *hwinfo, u8 AutoLoadFail);
-VOID Hal_EfuseParsePackageType_8188F(PADAPTER pAdapter,u8* hwinfo,BOOLEAN AutoLoadFail);
+void Hal_EfuseParseKFreeData_8188F(PADAPTER pAdapter, u8 *hwinfo, BOOLEAN AutoLoadFail);
+VOID Hal_EfuseParseMacHidden_8188F(PADAPTER pAdapter, u8 *hwinfo, BOOLEAN AutoLoadFail);
 
 #if 0 /* Do not need for rtl8188f */
 VOID Hal_EfuseParseVoltage_8188F(PADAPTER pAdapter,u8* hwinfo,BOOLEAN 	AutoLoadFail); 
@@ -296,6 +288,7 @@ VOID Hal_EfuseParseVoltage_8188F(PADAPTER pAdapter,u8* hwinfo,BOOLEAN 	AutoLoadF
 void rtl8188f_c2h_packet_handler(PADAPTER padapter, u8 *pbuf, u16 length);
 #endif
 
+void rtl8188f_set_pll_ref_clk_sel(_adapter *adapter, u8 sel);
 
 void rtl8188f_set_hal_ops(struct hal_ops *pHalFunc);
 void SetHwReg8188F(PADAPTER padapter, u8 variable, u8 *val);
@@ -339,10 +332,6 @@ s32 c2h_id_filter_ccx_8188f(u8 *buf);
 s32 c2h_handler_8188f(PADAPTER padapter, u8 *pC2hEvent);
 u8 MRateToHwRate8188F(u8  rate);
 u8 HwRateToMRate8188F(u8	 rate);
-
-#ifdef CONFIG_RF_GAIN_OFFSET
-void Hal_ReadRFGainOffset(PADAPTER pAdapter,u8* hwinfo,BOOLEAN AutoLoadFail);
-#endif //CONFIG_RF_GAIN_OFFSET
 
 #ifdef CONFIG_PCI_HCI
 BOOLEAN	InterruptRecognized8188FE(PADAPTER Adapter);

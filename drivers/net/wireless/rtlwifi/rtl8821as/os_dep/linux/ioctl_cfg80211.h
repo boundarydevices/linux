@@ -101,6 +101,9 @@ struct rtw_wdev_priv
 	bool block_scan;
 	bool power_mgmt;
 
+	/* report mgmt_frame registered */
+	u16 report_mgmt;
+
 #ifdef CONFIG_CONCURRENT_MODE
 	ATOMIC_T ro_ch_to;
 	ATOMIC_T switch_ch_to;	
@@ -118,6 +121,9 @@ struct rtw_wdev_priv
 #define WIPHY_ARG(wiphy) wiphy_name(wiphy)
 #define FUNC_WIPHY_FMT "%s("WIPHY_FMT")"
 #define FUNC_WIPHY_ARG(wiphy) __func__, WIPHY_ARG(wiphy)
+
+#define SET_CFG80211_REPORT_MGMT(w, t, v) (w->report_mgmt |= (v?BIT(t >> 4):0))
+#define GET_CFG80211_REPORT_MGMT(w, t) ((w->report_mgmt & BIT(t >> 4)) > 0)
 
 struct wiphy *rtw_wiphy_alloc(_adapter *padapter, struct device *dev);
 void rtw_wiphy_free(struct wiphy *wiphy);
@@ -148,6 +154,7 @@ void rtw_cfg80211_ibss_indicate_connect(_adapter *padapter);
 void rtw_cfg80211_indicate_connect(_adapter *padapter);
 void rtw_cfg80211_indicate_disconnect(_adapter *padapter);
 void rtw_cfg80211_indicate_scan_done(_adapter *adapter, bool aborted);
+u32 rtw_cfg80211_wait_scan_req_empty(_adapter *adapter, u32 timeout_ms);
 
 #ifdef CONFIG_AP_MODE
 void rtw_cfg80211_indicate_sta_assoc(_adapter *padapter, u8 *pmgmt_frame, uint frame_len);
@@ -158,6 +165,7 @@ void rtw_cfg80211_issue_p2p_provision_request(_adapter *padapter, const u8 *buf,
 void rtw_cfg80211_rx_p2p_action_public(_adapter *padapter, u8 *pmgmt_frame, uint frame_len);
 void rtw_cfg80211_rx_action_p2p(_adapter *padapter, u8 *pmgmt_frame, uint frame_len);
 void rtw_cfg80211_rx_action(_adapter *adapter, u8 *frame, uint frame_len, const char*msg);
+void rtw_cfg80211_rx_probe_request(_adapter *padapter, u8 *pmgmt_frame, uint frame_len);
 
 int rtw_cfg80211_set_mgnt_wpsp2pie(struct net_device *net, char *buf, int len, int type);
 

@@ -18,7 +18,7 @@
 * 
 ******************************************************************************/
 
-/*Image2HeaderVersion: 2.12*/
+/*Image2HeaderVersion: 2.14*/
 #include "mp_precomp.h"
 #include "../phydm_precomp.h"
 
@@ -915,24 +915,27 @@ ODM_ReadAndConfig_MP_8821A_RadioA(
 				if (cCond == COND_ENDIF) {/*end*/
 					bMatched = TRUE;
 					bSkipped = FALSE;
-				} else if (cCond == COND_ELSE) /*else*/
+					ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("ENDIF\n"));
+				} else if (cCond == COND_ELSE) { /*else*/
 					bMatched = bSkipped?FALSE:TRUE;
+					ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("ELSE\n"));
+				}
 				else {/*if , else if*/
-					if (bSkipped)
-						bMatched = FALSE;
-					else {
-						pre_v1 = v1;
-						pre_v2 = v2;
-					}
+					pre_v1 = v1;
+					pre_v2 = v2;
+					ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("IF or ELSE IF\n"));
 				}
 			} else if (v1 & BIT30) { /*negative condition*/
-				if (CheckPositive(pDM_Odm, pre_v1, pre_v2, v1, v2)) {
-					bMatched = TRUE;
-					bSkipped = TRUE;
-				} else {
+				if (bSkipped == FALSE) {
+					if (CheckPositive(pDM_Odm, pre_v1, pre_v2, v1, v2)) {
+						bMatched = TRUE;
+						bSkipped = TRUE;
+					} else {
+						bMatched = FALSE;
+						bSkipped = FALSE;
+					}
+				} else
 					bMatched = FALSE;
-					bSkipped = FALSE;
-				}
 			}
 		} else {
 			if (bMatched)
@@ -945,7 +948,7 @@ ODM_ReadAndConfig_MP_8821A_RadioA(
 u4Byte
 ODM_GetVersion_MP_8821A_RadioA(void)
 {
-	   return 52;
+	   return 54;
 }
 
 /******************************************************************************
@@ -1780,6 +1783,14 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_FEM(
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8811AU_FEM)/sizeof(pu1Byte);
 	pu1Byte    *Array      = (pu1Byte *)Array_MP_8821A_TXPWR_LMT_8811AU_FEM;
 
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+	PADAPTER		Adapter = pDM_Odm->Adapter;
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
+
+	PlatformZeroMemory(pHalData->BufOfLinesPwrLmt, MAX_LINES_HWCONFIG_TXT*MAX_BYTES_LINE_HWCONFIG_TXT);
+	pHalData->nLinesReadPwrLmt = ArrayLen/7;
+#endif
+
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_FEM\n"));
 
 	for (i = 0; i < ArrayLen; i += 7) {
@@ -1792,6 +1803,10 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_FEM(
 		pu1Byte val = Array[i+6];
 	
 		odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+		rsprintf(pHalData->BufOfLinesPwrLmt[i/7], 100, "\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\",",
+			regulation, band, bandwidth, rate, rfPath, chnl, val);
+#endif
 	}
 
 }
@@ -2376,6 +2391,14 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_IPA(
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8811AU_IPA)/sizeof(pu1Byte);
 	pu1Byte    *Array      = (pu1Byte *)Array_MP_8821A_TXPWR_LMT_8811AU_IPA;
 
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+	PADAPTER		Adapter = pDM_Odm->Adapter;
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
+
+	PlatformZeroMemory(pHalData->BufOfLinesPwrLmt, MAX_LINES_HWCONFIG_TXT*MAX_BYTES_LINE_HWCONFIG_TXT);
+	pHalData->nLinesReadPwrLmt = ArrayLen/7;
+#endif
+
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_IPA\n"));
 
 	for (i = 0; i < ArrayLen; i += 7) {
@@ -2388,6 +2411,10 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8811AU_IPA(
 		pu1Byte val = Array[i+6];
 	
 		odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+		rsprintf(pHalData->BufOfLinesPwrLmt[i/7], 100, "\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\",",
+			regulation, band, bandwidth, rate, rfPath, chnl, val);
+#endif
 	}
 
 }
@@ -2440,7 +2467,7 @@ const char *Array_MP_8821A_TXPWR_LMT_8821A[] = {
 	"ETSI", "2.4G", "20M", "CCK", "1T", "14", "63", 
 	"MKK", "2.4G", "20M", "CCK", "1T", "14", "32",
 	"FCC", "2.4G", "20M", "OFDM", "1T", "01", "30", 
-	"ETSI", "2.4G", "20M", "OFDM", "1T", "01", "32", 
+	"ETSI", "2.4G", "20M", "OFDM", "1T", "01", "30", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "01", "32",
 	"FCC", "2.4G", "20M", "OFDM", "1T", "02", "30", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "02", "32", 
@@ -2476,13 +2503,13 @@ const char *Array_MP_8821A_TXPWR_LMT_8821A[] = {
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "12", "32", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "12", "32",
 	"FCC", "2.4G", "20M", "OFDM", "1T", "13", "24", 
-	"ETSI", "2.4G", "20M", "OFDM", "1T", "13", "32", 
+	"ETSI", "2.4G", "20M", "OFDM", "1T", "13", "30", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "OFDM", "1T", "14", "63", 
 	"ETSI", "2.4G", "20M", "OFDM", "1T", "14", "63", 
 	"MKK", "2.4G", "20M", "OFDM", "1T", "14", "63",
 	"FCC", "2.4G", "20M", "HT", "1T", "01", "26", 
-	"ETSI", "2.4G", "20M", "HT", "1T", "01", "32", 
+	"ETSI", "2.4G", "20M", "HT", "1T", "01", "26", 
 	"MKK", "2.4G", "20M", "HT", "1T", "01", "32",
 	"FCC", "2.4G", "20M", "HT", "1T", "02", "26", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "02", "32", 
@@ -2518,7 +2545,7 @@ const char *Array_MP_8821A_TXPWR_LMT_8821A[] = {
 	"ETSI", "2.4G", "20M", "HT", "1T", "12", "32", 
 	"MKK", "2.4G", "20M", "HT", "1T", "12", "32",
 	"FCC", "2.4G", "20M", "HT", "1T", "13", "24", 
-	"ETSI", "2.4G", "20M", "HT", "1T", "13", "32", 
+	"ETSI", "2.4G", "20M", "HT", "1T", "13", "26", 
 	"MKK", "2.4G", "20M", "HT", "1T", "13", "32",
 	"FCC", "2.4G", "20M", "HT", "1T", "14", "63", 
 	"ETSI", "2.4G", "20M", "HT", "1T", "14", "63", 
@@ -2572,7 +2599,7 @@ const char *Array_MP_8821A_TXPWR_LMT_8821A[] = {
 	"ETSI", "2.4G", "40M", "HT", "1T", "02", "63", 
 	"MKK", "2.4G", "40M", "HT", "1T", "02", "63",
 	"FCC", "2.4G", "40M", "HT", "1T", "03", "26", 
-	"ETSI", "2.4G", "40M", "HT", "1T", "03", "32", 
+	"ETSI", "2.4G", "40M", "HT", "1T", "03", "26", 
 	"MKK", "2.4G", "40M", "HT", "1T", "03", "32",
 	"FCC", "2.4G", "40M", "HT", "1T", "04", "26", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "04", "32", 
@@ -2596,7 +2623,7 @@ const char *Array_MP_8821A_TXPWR_LMT_8821A[] = {
 	"ETSI", "2.4G", "40M", "HT", "1T", "10", "32", 
 	"MKK", "2.4G", "40M", "HT", "1T", "10", "32",
 	"FCC", "2.4G", "40M", "HT", "1T", "11", "22", 
-	"ETSI", "2.4G", "40M", "HT", "1T", "11", "32", 
+	"ETSI", "2.4G", "40M", "HT", "1T", "11", "26", 
 	"MKK", "2.4G", "40M", "HT", "1T", "11", "32",
 	"FCC", "2.4G", "40M", "HT", "1T", "12", "63", 
 	"ETSI", "2.4G", "40M", "HT", "1T", "12", "63", 
@@ -2972,6 +2999,14 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A(
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8821A)/sizeof(pu1Byte);
 	pu1Byte    *Array      = (pu1Byte *)Array_MP_8821A_TXPWR_LMT_8821A;
 
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+	PADAPTER		Adapter = pDM_Odm->Adapter;
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
+
+	PlatformZeroMemory(pHalData->BufOfLinesPwrLmt, MAX_LINES_HWCONFIG_TXT*MAX_BYTES_LINE_HWCONFIG_TXT);
+	pHalData->nLinesReadPwrLmt = ArrayLen/7;
+#endif
+
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A\n"));
 
 	for (i = 0; i < ArrayLen; i += 7) {
@@ -2984,6 +3019,10 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A(
 		pu1Byte val = Array[i+6];
 	
 		odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+		rsprintf(pHalData->BufOfLinesPwrLmt[i/7], 100, "\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\",",
+			regulation, band, bandwidth, rate, rfPath, chnl, val);
+#endif
 	}
 
 }
@@ -3568,6 +3607,14 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm(
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm)/sizeof(pu1Byte);
 	pu1Byte    *Array      = (pu1Byte *)Array_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm;
 
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+	PADAPTER		Adapter = pDM_Odm->Adapter;
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
+
+	PlatformZeroMemory(pHalData->BufOfLinesPwrLmt, MAX_LINES_HWCONFIG_TXT*MAX_BYTES_LINE_HWCONFIG_TXT);
+	pHalData->nLinesReadPwrLmt = ArrayLen/7;
+#endif
+
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm\n"));
 
 	for (i = 0; i < ArrayLen; i += 7) {
@@ -3580,6 +3627,10 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_13dBm(
 		pu1Byte val = Array[i+6];
 	
 		odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+		rsprintf(pHalData->BufOfLinesPwrLmt[i/7], 100, "\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\",",
+			regulation, band, bandwidth, rate, rfPath, chnl, val);
+#endif
 	}
 
 }
@@ -4164,6 +4215,14 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_5mm(
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8821A_SAR_5mm)/sizeof(pu1Byte);
 	pu1Byte    *Array      = (pu1Byte *)Array_MP_8821A_TXPWR_LMT_8821A_SAR_5mm;
 
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+	PADAPTER		Adapter = pDM_Odm->Adapter;
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
+
+	PlatformZeroMemory(pHalData->BufOfLinesPwrLmt, MAX_LINES_HWCONFIG_TXT*MAX_BYTES_LINE_HWCONFIG_TXT);
+	pHalData->nLinesReadPwrLmt = ArrayLen/7;
+#endif
+
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_5mm\n"));
 
 	for (i = 0; i < ArrayLen; i += 7) {
@@ -4176,6 +4235,10 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_5mm(
 		pu1Byte val = Array[i+6];
 	
 		odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+		rsprintf(pHalData->BufOfLinesPwrLmt[i/7], 100, "\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\",",
+			regulation, band, bandwidth, rate, rfPath, chnl, val);
+#endif
 	}
 
 }
@@ -4760,6 +4823,14 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_8mm(
 	u4Byte     ArrayLen    = sizeof(Array_MP_8821A_TXPWR_LMT_8821A_SAR_8mm)/sizeof(pu1Byte);
 	pu1Byte    *Array      = (pu1Byte *)Array_MP_8821A_TXPWR_LMT_8821A_SAR_8mm;
 
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+	PADAPTER		Adapter = pDM_Odm->Adapter;
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
+
+	PlatformZeroMemory(pHalData->BufOfLinesPwrLmt, MAX_LINES_HWCONFIG_TXT*MAX_BYTES_LINE_HWCONFIG_TXT);
+	pHalData->nLinesReadPwrLmt = ArrayLen/7;
+#endif
+
 	ODM_RT_TRACE(pDM_Odm, ODM_COMP_INIT, ODM_DBG_LOUD, ("===> ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_8mm\n"));
 
 	for (i = 0; i < ArrayLen; i += 7) {
@@ -4772,6 +4843,10 @@ ODM_ReadAndConfig_MP_8821A_TXPWR_LMT_8821A_SAR_8mm(
 		pu1Byte val = Array[i+6];
 	
 		odm_ConfigBB_TXPWR_LMT_8821A(pDM_Odm, regulation, band, bandwidth, rate, rfPath, chnl, val);
+#if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
+		rsprintf(pHalData->BufOfLinesPwrLmt[i/7], 100, "\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\",",
+			regulation, band, bandwidth, rate, rfPath, chnl, val);
+#endif
 	}
 
 }

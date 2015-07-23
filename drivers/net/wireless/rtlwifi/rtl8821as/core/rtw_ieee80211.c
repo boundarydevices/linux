@@ -67,6 +67,20 @@ static u8 	WIFI_OFDMRATES[] =
  IEEE80211_OFDM_RATE_54MB};
 
 
+/*CHANNEL_MAX_NUMBER_5G: 49*/
+u8 channel5G[] = {
+		 36, 38, 40, 42, 44, 46, 48,		/* Band 1 */
+		 52, 54, 56, 58, 60, 62, 64,		/* Band 2 */
+		100, 102, 104, 106, 108, 110, 112,	/* Band 3 */
+		116, 118, 120, 122, 124, 126, 128,	/* Band 3 */
+		132, 134, 136, 138, 140, 142, 144,	/* Band 3 */
+		149, 151, 153, 155, 157, 159, 161,	/* Band 4 */
+		165, 167, 169, 171, 173, 175, 177};	/* Band 4 */
+
+/*CHANNEL_MAX_NUMBER_5G_80M: 7*/
+u8 channel5G_80M[] = {42, 58, 106, 122, 138, 155, 171};
+
+
 int rtw_get_bit_value_from_ieee_value(u8 val)
 {
 	unsigned char dot11_rate_table[]={2,4,11,22,12,18,24,36,48,72,96,108,0}; // last element must be zero!!
@@ -1414,6 +1428,7 @@ int rtw_get_mac_addr_intel(unsigned char *buf)
  *
  * Input:
  * adapter: mac_address pointer.
+ * check_local_bit: check locally bit or not.
  *
  * Output:
  * _TRUE: The mac address is invalid.
@@ -1421,7 +1436,7 @@ int rtw_get_mac_addr_intel(unsigned char *buf)
  *
  * Auther: Isaac.Li
  */
-u8 rtw_check_invalid_mac_address(u8 *mac_addr)
+u8 rtw_check_invalid_mac_address(u8 *mac_addr, u8 check_local_bit)
 {
 	u8 null_mac_addr[ETH_ALEN] = {0, 0, 0, 0, 0, 0};
 	u8 multi_mac_addr[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
@@ -1442,9 +1457,11 @@ u8 rtw_check_invalid_mac_address(u8 *mac_addr)
 		goto func_exit;
 	}
 
-	if (mac_addr[0] & BIT1) {
-		res = _TRUE;
-		goto func_exit;
+	if (check_local_bit == _TRUE) {
+		if (mac_addr[0] & BIT1) {
+			res = _TRUE;
+			goto func_exit;
+		}
 	}
 
 func_exit:
@@ -1459,6 +1476,7 @@ extern char* rtw_initmac;
  */
 void rtw_macaddr_cfg(u8 *out, const u8 *hw_mac_addr)
 {
+#define DEFAULT_RANDOM_MACADDR 1
 	u8 mac[ETH_ALEN];
 
 	if (out == NULL) {
@@ -1476,6 +1494,7 @@ void rtw_macaddr_cfg(u8 *out, const u8 *hw_mac_addr)
 		goto err_chk;
 	}
 
+	/* platform specified */
 #ifdef CONFIG_PLATFORM_INTEL_BYT
 	if (rtw_get_mac_addr_intel(mac) == 0)
 		goto err_chk;
@@ -1488,16 +1507,22 @@ void rtw_macaddr_cfg(u8 *out, const u8 *hw_mac_addr)
 	}
 
 err_chk:
-	if (rtw_check_invalid_mac_address(mac) == _TRUE) {
-		DBG_871X_LEVEL(_drv_err_, "invalid mac addr:"MAC_FMT", assign default one!!!\n", MAC_ARG(mac));
-
-		/* use default mac address */
+	if (rtw_check_invalid_mac_address(mac, _TRUE) == _TRUE) {
+		#if DEFAULT_RANDOM_MACADDR
+		DBG_871X_LEVEL(_drv_err_, "invalid mac addr:"MAC_FMT", assign random MAC\n", MAC_ARG(mac));
+		*((u32 *)(&mac[2])) = rtw_random32();
+		mac[0] = 0x00;
+		mac[1] = 0xe0;
+		mac[2] = 0x4c;
+		#else
+		DBG_871X_LEVEL(_drv_err_, "invalid mac addr:"MAC_FMT", assign default one\n", MAC_ARG(mac));
 		mac[0] = 0x00;
 		mac[1] = 0xe0;
 		mac[2] = 0x4c;
 		mac[3] = 0x87;
 		mac[4] = 0x00;
 		mac[5] = 0x00;
+		#endif
 	}
 
 	_rtw_memcpy(out, mac, ETH_ALEN);
@@ -2441,30 +2466,26 @@ u8	rtw_ht_mcsset_to_nss(u8 *supp_mcs_set)
 u16 rtw_mcs_rate(u8 rf_type, u8 bw_40MHz, u8 short_GI, unsigned char * MCS_rate)
 {
 	u16 max_rate = 0;
-	
-	if(rf_type == RF_1T1R)
-	{
-		if(MCS_rate[0] & BIT(7))
-			max_rate = (bw_40MHz) ? ((short_GI)?1500:1350):((short_GI)?722:650);
-		else if(MCS_rate[0] & BIT(6))
+
+	/*MCS_rate[2] = 3T3R , MCS_rate[1] = 2T2R , MCS_rate[0] = 1T1R*/
+	if (MCS_rate[2]) {
+		if (MCS_rate[2] & BIT(7))
+			max_rate = (bw_40MHz) ? ((short_GI)?4500:4050):((short_GI)?2167:1950);
+		else if (MCS_rate[2] & BIT(6))
+			max_rate = (bw_40MHz) ? ((short_GI)?4050:3645):((short_GI)?1950:1750);
+		else if (MCS_rate[2] & BIT(5))
+			max_rate = (bw_40MHz) ? ((short_GI)?3600:3240):((short_GI)?1733:1560);
+		else if (MCS_rate[2] & BIT(4))
+			max_rate = (bw_40MHz) ? ((short_GI)?2700:2430):((short_GI)?1300:1170);
+		else if (MCS_rate[2] & BIT(3))
+			max_rate = (bw_40MHz) ? ((short_GI)?1800:1620):((short_GI)?867:780);
+		else if (MCS_rate[2] & BIT(2))
 			max_rate = (bw_40MHz) ? ((short_GI)?1350:1215):((short_GI)?650:585);
-		else if(MCS_rate[0] & BIT(5))
-			max_rate = (bw_40MHz) ? ((short_GI)?1200:1080):((short_GI)?578:520);
-		else if(MCS_rate[0] & BIT(4))
+		else if (MCS_rate[2] & BIT(1))
 			max_rate = (bw_40MHz) ? ((short_GI)?900:810):((short_GI)?433:390);
-		else if(MCS_rate[0] & BIT(3))
-			max_rate = (bw_40MHz) ? ((short_GI)?600:540):((short_GI)?289:260);
-		else if(MCS_rate[0] & BIT(2))
+		else if (MCS_rate[2] & BIT(0))
 			max_rate = (bw_40MHz) ? ((short_GI)?450:405):((short_GI)?217:195);
-		else if(MCS_rate[0] & BIT(1))
-			max_rate = (bw_40MHz) ? ((short_GI)?300:270):((short_GI)?144:130);
-		else if(MCS_rate[0] & BIT(0))
-			max_rate = (bw_40MHz) ? ((short_GI)?150:135):((short_GI)?72:65);
-	}
-	else
-	{
-		if(MCS_rate[1])
-		{
+	} else if (MCS_rate[1]) {
 			if(MCS_rate[1] & BIT(7))
 				max_rate = (bw_40MHz) ? ((short_GI)?3000:2700):((short_GI)?1444:1300);
 			else if(MCS_rate[1] & BIT(6))
@@ -2481,9 +2502,7 @@ u16 rtw_mcs_rate(u8 rf_type, u8 bw_40MHz, u8 short_GI, unsigned char * MCS_rate)
 				max_rate = (bw_40MHz) ? ((short_GI)?600:540):((short_GI)?289:260);
 			else if(MCS_rate[1] & BIT(0))
 				max_rate = (bw_40MHz) ? ((short_GI)?300:270):((short_GI)?144:130);
-		}
-		else
-		{
+	} else {
 			if(MCS_rate[0] & BIT(7))
 				max_rate = (bw_40MHz) ? ((short_GI)?1500:1350):((short_GI)?722:650);
 			else if(MCS_rate[0] & BIT(6))
@@ -2501,7 +2520,7 @@ u16 rtw_mcs_rate(u8 rf_type, u8 bw_40MHz, u8 short_GI, unsigned char * MCS_rate)
 			else if(MCS_rate[0] & BIT(0))
 				max_rate = (bw_40MHz) ? ((short_GI)?150:135):((short_GI)?72:65);
 		}
-	}
+
 	return max_rate;
 }
 

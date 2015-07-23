@@ -814,12 +814,7 @@ u32 mp_join(PADAPTER padapter,u8 mode)
 	rtw_update_registrypriv_dev_network(padapter);
 	_rtw_memcpy(&tgt_network->network,&padapter->registrypriv.dev_network, padapter->registrypriv.dev_network.Length);
 	_rtw_memcpy(pnetwork,&padapter->registrypriv.dev_network, padapter->registrypriv.dev_network.Length);
-	
-	if (rtw_create_ibss_cmd(padapter, 0) != _SUCCESS) {
-		DBG_871X("mp_join: rtw_create_ibss_cmd status FAIL***\n");
-		res =  _FALSE;
-		return res;
-	}
+
 	rtw_indicate_connect(padapter);
 	_clr_fwstate_(pmlmepriv, _FW_UNDER_LINKING);
 	set_fwstate(pmlmepriv,_FW_LINKED);
@@ -1466,15 +1461,11 @@ void fill_tx_desc_8192e(PADAPTER padapter)
 	offset = TXDESC_SIZE + OFFSET_SZ;		
 	
 	SET_TX_DESC_OFFSET_92E(pDesc, offset);
+	#if defined(CONFIG_PCI_HCI) /* 8192EE */
 
-	#if defined(CONFIG_PCI_HCI) //8192EE
-		SET_TX_DESC_OFFSET_92E(pDesc, offset+8); //work around
-		SET_TX_DESC_PKT_OFFSET_92E(pDesc, 0); /* 8192EE pkt_offset is 0 */
-	#elif  defined(CONFIG_SDIO_HCI)
-		SET_TX_DESC_OFFSET_92E(pDesc, offset);
-	#else //8192EU
-		SET_TX_DESC_OFFSET_92E(pDesc, offset);
-		SET_TX_DESC_PKT_OFFSET_92E(pDesc, 1);
+	SET_TX_DESC_PKT_OFFSET_92E(pDesc, 0); /* 8192EE pkt_offset is 0 */
+	#else /* 8192EU 8192ES */
+	SET_TX_DESC_PKT_OFFSET_92E(pDesc, 1);
 	#endif
 		
 	if (bmcast) {
@@ -2573,31 +2564,6 @@ ULONG mpt_ProQueryCalTxPower(
 	hal_mpt_SetTxPower(pAdapter);
 
 	return TxPower;
-}
-
-
-void Hal_ProSetCrystalCap (PADAPTER pAdapter , u32 CrystalCap)
-{
-	HAL_DATA_TYPE		*pHalData	= GET_HAL_DATA(pAdapter);
-
-	CrystalCap = CrystalCap & 0x3F;
-
-	if (IS_HARDWARE_TYPE_8188E(pAdapter) || IS_HARDWARE_TYPE_8188F(pAdapter)) {
-		/* write 0x24[16:11] = 0x24[22:17] = CrystalCap*/
-		PHY_SetBBReg(pAdapter, REG_AFE_XTAL_CTRL, 0x7FF800, (CrystalCap | (CrystalCap << 6)));
-	} else if (IS_HARDWARE_TYPE_8812(pAdapter)) {
-		/* write 0x2C[30:25] = 0x2C[24:19] = CrystalCap*/
-		PHY_SetBBReg(pAdapter, REG_MAC_PHY_CTRL, 0x7FF80000, (CrystalCap | (CrystalCap << 6)));
-	} else if (IS_HARDWARE_TYPE_8821(pAdapter) || IS_HARDWARE_TYPE_8192E(pAdapter) || 
-				IS_HARDWARE_TYPE_8723B(pAdapter) || IS_HARDWARE_TYPE_8703B(pAdapter)) {
-		/* write 0x2C[23:18] = 0x2C[17:12] = CrystalCap*/
-		PHY_SetBBReg(pAdapter, REG_MAC_PHY_CTRL, 0xFFF000, (CrystalCap | (CrystalCap << 6)));	
-	} else if (IS_HARDWARE_TYPE_8814A(pAdapter)) {
-		/* write 0x2C[26:21] = 0x2C[20:15] = CrystalCap*/
-		PHY_SetBBReg(pAdapter, REG_MAC_PHY_CTRL, 0x07FF8000, (CrystalCap | (CrystalCap << 6)));
-	} else
-		DBG_871X("%s ,unknown HARDWARE_TYPE\n", __func__);
-
 }
 #endif
 

@@ -30,6 +30,8 @@
 #define	DELTA_SWINGIDX_SIZE     30
 #define	BAND_NUM 				3
 #define	MAX_RF_PATH	4
+#define	CCK_TABLE_SIZE_88F	21
+
 
 #define	dm_CheckTXPowerTracking 	ODM_TXPowerTrackingCheck
 
@@ -52,6 +54,7 @@ extern	u1Byte CCKSwingTable_Ch14 [CCK_TABLE_SIZE][8];
 extern	u4Byte OFDMSwingTable_New[OFDM_TABLE_SIZE];
 extern	u1Byte CCKSwingTable_Ch1_Ch13_New[CCK_TABLE_SIZE][8];
 extern	u1Byte CCKSwingTable_Ch14_New [CCK_TABLE_SIZE][8];
+extern	u1Byte CCKSwingTable_Ch1_Ch14_88F[CCK_TABLE_SIZE_88F][16];
 
 extern  u4Byte TxScalingTable_Jaguar[TXSCALE_TABLE_SIZE];
 
@@ -115,7 +118,6 @@ typedef struct ODM_RF_Calibration_Structure
 	s4Byte 	RegE9C;
 	s4Byte	RegEB4;
 	s4Byte	RegEBC;	
-
 	//u1Byte bTXPowerTracking;
 	u1Byte  	TXPowercount;
 	BOOLEAN bTXPowerTrackingInit; 
@@ -229,13 +231,15 @@ typedef struct ODM_RF_Calibration_Structure
 	u4Byte	IQK_BB_backup[IQK_BB_REG_NUM];	
 	u4Byte	TxIQC_8723B[2][3][2]; /* { {S1: 0xc94, 0xc80, 0xc4c} , {S0: 0xc9c, 0xc88, 0xc4c}} */
 	u4Byte	RxIQC_8723B[2][2][2]; /* { {S1: 0xc14, 0xca0} ,           {S0: 0xc14, 0xca0}} */
-	u4Byte	TxIQC_8703B[2][3][2]; /* { {S1: 0xc94, 0xc80, 0xc4c} , {S0: 0xc9c, 0xc88, 0xc4c}} */
-	u4Byte	RxIQC_8703B[2][2][2]; /* { {S1: 0xc14, 0xca0} ,           {S0: 0xc14, 0xca0}} */
+	u4Byte	TxIQC_8703B[3][2];	/* { {S1: 0xc94, 0xc80, 0xc4c} , {S0: 0xc9c, 0xc88, 0xc4c}}*/
+	u4Byte	RxIQC_8703B[2][2];	/* { {S1: 0xc14, 0xca0} ,           {S0: 0xc14, 0xca0}}*/
+	
 	
 
 	// <James> IQK time measurement 
 	u8Byte	IQK_StartTime;
 	u8Byte	IQK_ProgressingTime;
+	u4Byte  LOK_Result;
 
 	//for APK
 	u4Byte 	APKoutput[2][2]; //path A/B; output1_1a/output1_2a
@@ -247,9 +251,14 @@ typedef struct ODM_RF_Calibration_Structure
 	u1Byte 	bDPdone;
 	u1Byte 	bDPPathAOK;
 	u1Byte 	bDPPathBOK;
+
+	u4Byte	TxLOK[2];
 	u4Byte  DpkTxAGC;
 	s4Byte  DpkGain;
 	u4Byte  DpkThermal[2];	
+
+	s1Byte Modify_TxAGC_Value_OFDM;
+	s1Byte Modify_TxAGC_Value_CCK;
 }ODM_RF_CAL_T,*PODM_RF_CAL_T;
 
 

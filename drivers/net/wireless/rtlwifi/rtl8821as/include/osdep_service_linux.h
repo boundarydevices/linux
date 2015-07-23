@@ -98,7 +98,7 @@
 
 #ifdef CONFIG_EFUSE_CONFIG_FILE
 	#include <linux/fs.h>
-#endif //CONFIG_EFUSE_CONFIG_FILE
+#endif
 
 #ifdef CONFIG_USB_HCI
 	#include <linux/usb.h>

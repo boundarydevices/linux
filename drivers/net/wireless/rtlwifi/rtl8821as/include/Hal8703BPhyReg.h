@@ -142,6 +142,7 @@
 #define	rDPDT_control				0x92c
 #define	rfe_ctrl_anta_src				0x930
 #define	rS0S1_PathSwitch   			0x948
+#define	rBBrx_DFIR					0x954
 
 //
 // 5. PageA(0xA00)
@@ -534,6 +535,7 @@
 #define		bOFDMTxStatus					0x2
 
 #define 		IS_BB_REG_OFFSET_92S(_Offset)		((_Offset >= 0x800) && (_Offset <= 0xfff))
+#define	RF_TX_GAIN_OFFSET_8703B(_val) (abs((_val)) | (((_val) > 0) ? BIT5 : 0))
 
 // 2. Page8(0x800)
 #define		bRFMOD							0x1	// Reg 0x800 rFPGA0_RFMOD

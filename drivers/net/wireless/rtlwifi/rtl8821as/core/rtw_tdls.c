@@ -195,6 +195,12 @@ exit:
 	return ret;
 
 }
+
+/*
+ *wait_ms == 0 means that there is no need to wait ack through C2H_CCX_TX_RPT
+ *wait_ms > 0 means you want to wait ack through C2H_CCX_TX_RPT, and the value of wait_ms means the interval between each TX
+ *try_cnt means the maximal TX count to try
+ */
 int issue_nulldata_to_TDLS_peer_STA(_adapter *padapter, unsigned char *da, unsigned int power_mode, int try_cnt, int wait_ms)
 {
 	int ret;
@@ -290,8 +296,16 @@ void rtw_tdls_set_key(_adapter *padapter, struct sta_info *ptdls_sta)
 	rtw_setstakey_cmd(padapter, ptdls_sta, TDLS_KEY, _TRUE);
 }
 
+#ifdef CONFIG_80211N_HT
 void rtw_tdls_process_ht_cap(_adapter *padapter, struct sta_info *ptdls_sta, u8 *data, u8 Length)
 {
+	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
+	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
+	struct mlme_priv		*pmlmepriv = &padapter->mlmepriv;
+	struct ht_priv			*phtpriv = &pmlmepriv->htpriv;
+	u8	max_AMPDU_len, min_MPDU_spacing;
+	u8	cur_ldpc_cap = 0, cur_stbc_cap = 0, cur_beamform_cap = 0;
+	
 	/* Save HT capabilities in the sta object */
 	_rtw_memset(&ptdls_sta->htpriv.ht_cap, 0, sizeof(struct rtw_ieee80211_ht_cap));
 	if (data && Length >= sizeof(struct rtw_ieee80211_ht_cap)) {
@@ -318,6 +332,19 @@ void rtw_tdls_process_ht_cap(_adapter *padapter, struct sta_info *ptdls_sta, u8 
 		if (padapter->registrypriv.ampdu_enable == 1)
 			ptdls_sta->htpriv.ampdu_enable = _TRUE;
 
+		/* AMPDU Parameters field */
+		/* Get MIN of MAX AMPDU Length Exp */
+		if ((pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x3) > (data[2] & 0x3))
+			max_AMPDU_len = (data[2] & 0x3);
+		else
+			max_AMPDU_len = (pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x3);
+		/* Get MAX of MIN MPDU Start Spacing */
+		if ((pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x1c) > (data[2] & 0x1c))
+			min_MPDU_spacing = (pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x1c);
+		else
+			min_MPDU_spacing = (data[2] & 0x1c);
+		ptdls_sta->htpriv.rx_ampdu_min_spacing = max_AMPDU_len | min_MPDU_spacing;
+
 		/* Check if sta support s Short GI 20M */
 		if (ptdls_sta->htpriv.ht_cap.cap_info & cpu_to_le16(IEEE80211_HT_CAP_SGI_20))
 			ptdls_sta->htpriv.sgi_20m = _TRUE;
@@ -332,6 +359,36 @@ void rtw_tdls_process_ht_cap(_adapter *padapter, struct sta_info *ptdls_sta, u8 
 				ptdls_sta->bw_mode = CHANNEL_WIDTH_40;
 			ptdls_sta->htpriv.ch_offset = padapter->mlmeextpriv.cur_ch_offset;
 		}
+
+		/* Config LDPC Coding Capability */
+		if (TEST_FLAG(phtpriv->ldpc_cap, LDPC_HT_ENABLE_TX) && GET_HT_CAP_ELE_LDPC_CAP(data)) {
+			SET_FLAG(cur_ldpc_cap, (LDPC_HT_ENABLE_TX | LDPC_HT_CAP_TX));
+			DBG_871X("Enable HT Tx LDPC!\n");
+		}
+		ptdls_sta->htpriv.ldpc_cap = cur_ldpc_cap;
+
+		/* Config STBC setting */
+		if (TEST_FLAG(phtpriv->stbc_cap, STBC_HT_ENABLE_TX) && GET_HT_CAP_ELE_RX_STBC(data)) {
+			SET_FLAG(cur_stbc_cap, (STBC_HT_ENABLE_TX | STBC_HT_CAP_TX));
+			DBG_871X("Enable HT Tx STBC!\n");
+		}
+		ptdls_sta->htpriv.stbc_cap = cur_stbc_cap;
+
+#ifdef CONFIG_BEAMFORMING
+		/* Config Tx beamforming setting */
+		if (TEST_FLAG(phtpriv->beamform_cap, BEAMFORMING_HT_BEAMFORMEE_ENABLE) && 
+			GET_HT_CAP_TXBF_EXPLICIT_COMP_STEERING_CAP(data)) {
+			SET_FLAG(cur_beamform_cap, BEAMFORMING_HT_BEAMFORMER_ENABLE);
+		}
+
+		if (TEST_FLAG(phtpriv->beamform_cap, BEAMFORMING_HT_BEAMFORMER_ENABLE) &&
+			GET_HT_CAP_TXBF_EXPLICIT_COMP_FEEDBACK_CAP(data)) {
+			SET_FLAG(cur_beamform_cap, BEAMFORMING_HT_BEAMFORMEE_ENABLE);
+		}
+		ptdls_sta->htpriv.beamform_cap = cur_beamform_cap;
+		if (cur_beamform_cap)
+			DBG_871X("Client HT Beamforming Cap = 0x%02X\n", cur_beamform_cap);
+#endif /* CONFIG_BEAMFORMING */
 	}
 
 }
@@ -344,39 +401,150 @@ u8 *rtw_tdls_set_ht_cap(_adapter *padapter, u8 *pframe, struct pkt_attrib *pattr
 
 	return pframe + pattrib->pktlen;
 }
+#endif
+
+#ifdef CONFIG_80211AC_VHT
+void rtw_tdls_process_vht_cap(_adapter *padapter, struct sta_info *ptdls_sta, u8 *data, u8 Length)
+{
+	struct mlme_priv		*pmlmepriv = &padapter->mlmepriv;
+	struct vht_priv			*pvhtpriv = &pmlmepriv->vhtpriv;
+	u8	cur_ldpc_cap = 0, cur_stbc_cap = 0, cur_beamform_cap = 0, rf_type = RF_1T1R;
+	u8	*pcap_mcs;
+	u8	vht_mcs[2];
+	
+	_rtw_memset(&ptdls_sta->vhtpriv, 0, sizeof(struct vht_priv));
+	if (data && Length == 12) {
+		ptdls_sta->flags |= WLAN_STA_VHT;
+
+		_rtw_memcpy(ptdls_sta->vhtpriv.vht_cap, data, 12);
+
+#if 0
+		if (elems.vht_op_mode_notify && elems.vht_op_mode_notify_len == 1) {
+			_rtw_memcpy(&pstat->vhtpriv.vht_op_mode_notify, elems.vht_op_mode_notify, 1);
+		} else /* for Frame without Operating Mode notify ie; default: 80M */ {
+			pstat->vhtpriv.vht_op_mode_notify = CHANNEL_WIDTH_80;
+		}
+#else
+		ptdls_sta->vhtpriv.vht_op_mode_notify = CHANNEL_WIDTH_80;
+#endif
+	} else
+		ptdls_sta->flags &= ~WLAN_STA_VHT;
+
+	if (ptdls_sta->flags & WLAN_STA_VHT) {
+		if (padapter->registrypriv.vht_enable == _TRUE)
+			ptdls_sta->vhtpriv.vht_option = _TRUE;
+		else 
+			ptdls_sta->vhtpriv.vht_option = _FALSE;
+	}
+
+	/* B4 Rx LDPC */
+	if (TEST_FLAG(pvhtpriv->ldpc_cap, LDPC_VHT_ENABLE_TX) && 
+		GET_VHT_CAPABILITY_ELE_RX_LDPC(data)) {
+		SET_FLAG(cur_ldpc_cap, (LDPC_VHT_ENABLE_TX | LDPC_VHT_CAP_TX));
+		DBG_871X("Current VHT LDPC Setting = %02X\n", cur_ldpc_cap);
+	}
+	ptdls_sta->vhtpriv.ldpc_cap = cur_ldpc_cap;
+
+	/* B5 Short GI for 80 MHz */
+	ptdls_sta->vhtpriv.sgi_80m = (GET_VHT_CAPABILITY_ELE_SHORT_GI80M(data) & pvhtpriv->sgi_80m) ? _TRUE : _FALSE;
+
+	/* B8 B9 B10 Rx STBC */
+	if (TEST_FLAG(pvhtpriv->stbc_cap, STBC_VHT_ENABLE_TX) && 
+		GET_VHT_CAPABILITY_ELE_RX_STBC(data)) {
+		SET_FLAG(cur_stbc_cap, (STBC_VHT_ENABLE_TX | STBC_VHT_CAP_TX));	
+		DBG_871X("Current VHT STBC Setting = %02X\n", cur_stbc_cap);
+	}
+	ptdls_sta->vhtpriv.stbc_cap = cur_stbc_cap;
+
+	/* B11 SU Beamformer Capable, the target supports Beamformer and we are Beamformee */
+	if (TEST_FLAG(pvhtpriv->beamform_cap, BEAMFORMING_VHT_BEAMFORMER_ENABLE) && 
+		GET_VHT_CAPABILITY_ELE_SU_BFEE(data)) {
+		SET_FLAG(cur_beamform_cap, BEAMFORMING_VHT_BEAMFORMEE_ENABLE);
+	}
+
+	/* B12 SU Beamformee Capable, the target supports Beamformee and we are Beamformer */
+	if (TEST_FLAG(pvhtpriv->beamform_cap, BEAMFORMING_VHT_BEAMFORMEE_ENABLE) &&
+		GET_VHT_CAPABILITY_ELE_SU_BFER(data)) {
+		SET_FLAG(cur_beamform_cap, BEAMFORMING_VHT_BEAMFORMER_ENABLE);
+	}
+	ptdls_sta->vhtpriv.beamform_cap = cur_beamform_cap;
+	if (cur_beamform_cap)
+		DBG_871X("Current VHT Beamforming Setting = %02X\n", cur_beamform_cap);
+
+	/* B23 B24 B25 Maximum A-MPDU Length Exponent */
+	ptdls_sta->vhtpriv.ampdu_len = GET_VHT_CAPABILITY_ELE_MAX_RXAMPDU_FACTOR(data);
+
+	pcap_mcs = GET_VHT_CAPABILITY_ELE_RX_MCS(data);
+	_rtw_memcpy(vht_mcs, pcap_mcs, 2);
+
+	rtw_hal_get_hwreg(padapter, HW_VAR_RF_TYPE, (u8 *)(&rf_type));
+	if ((rf_type == RF_1T1R) || (rf_type == RF_1T2R))
+		vht_mcs[0] |= 0xfc;
+	else if (rf_type == RF_2T2R)
+		vht_mcs[0] |= 0xf0;
+	else if (rf_type == RF_3T3R)
+		vht_mcs[0] |= 0xc0;
+
+	_rtw_memcpy(ptdls_sta->vhtpriv.vht_mcs_map, vht_mcs, 2);
+
+	ptdls_sta->vhtpriv.vht_highest_rate = rtw_get_vht_highest_rate(ptdls_sta->vhtpriv.vht_mcs_map);
+}
+
+u8 *rtw_tdls_set_aid(_adapter *padapter, u8 *pframe, struct pkt_attrib *pattrib)
+{
+	return rtw_set_ie(pframe, EID_AID, 2, (u8 *)&(padapter->mlmepriv.cur_network.aid), &(pattrib->pktlen));
+}
+
+u8 *rtw_tdls_set_vht_cap(_adapter *padapter, u8 *pframe, struct pkt_attrib *pattrib)
+{
+	u32 ie_len = 0;
+	
+	rtw_vht_use_default_setting(padapter);
+
+	ie_len = rtw_build_vht_cap_ie(padapter, pframe);
+	pattrib->pktlen += ie_len;
+	
+	return pframe + ie_len;
+}
+
+u8 *rtw_tdls_set_vht_operation(_adapter *padapter, u8 *pframe, struct pkt_attrib *pattrib, u8 channel)
+{
+	u32 ie_len = 0;
+
+	ie_len = rtw_build_vht_operation_ie(padapter, pframe, channel);
+	pattrib->pktlen += ie_len;
+	
+	return pframe + ie_len;
+}
+
+u8 *rtw_tdls_set_vht_op_mode_notify(_adapter *padapter, u8 *pframe, struct pkt_attrib *pattrib, u8 bw)
+{
+	u32 ie_len = 0;
+	
+	ie_len = rtw_build_vht_op_mode_notify_ie(padapter, pframe, bw);
+	pattrib->pktlen += ie_len;
+
+	return pframe + ie_len;
+}
+#endif
+
 
 u8 *rtw_tdls_set_sup_ch(struct mlme_ext_priv *pmlmeext, u8 *pframe, struct pkt_attrib *pattrib)
 {
-	u8 sup_ch[ 30 * 2 ] = { 0x00 }, ch_set_idx = 0;	//For supported channel
-	u8 ch_24g = 0, b1 = 0, b4 = 0;
-	u8 bit_table = 0, sup_ch_idx = 0;
+	u8 sup_ch[30 * 2] = {0x00}, ch_set_idx = 0, sup_ch_idx = 2;	
 
 	do {
-		if (pmlmeext->channel_set[ch_set_idx].ChannelNum >= 1 &&
-			pmlmeext->channel_set[ch_set_idx].ChannelNum <= 14)
-			ch_24g = 1;	/* 2.4 G channels */
-		else if (pmlmeext->channel_set[ch_set_idx].ChannelNum >= 36 && 
-			pmlmeext->channel_set[ch_set_idx].ChannelNum <= 48)
-			b1 = 1;	/* 5 G band1 */
-		else if (pmlmeext->channel_set[ch_set_idx].ChannelNum >= 149 && 
-			pmlmeext->channel_set[ch_set_idx].ChannelNum <= 165)
-			b4 = 1;	/* 5 G band4 */
-		else {
-			ch_set_idx++;	/* We don't support DFS channels. */
-			continue;
+		if (pmlmeext->channel_set[ch_set_idx].ChannelNum <= 14) {
+			sup_ch[0] = 1;	/* First channel number */
+			sup_ch[1] = pmlmeext->channel_set[ch_set_idx].ChannelNum;	/* Number of channel */
+		} else {
+			sup_ch[sup_ch_idx++] = pmlmeext->channel_set[ch_set_idx].ChannelNum;
+			sup_ch[sup_ch_idx++] = 1;
 		}
-
-		sup_ch_idx = (ch_24g + b1 + b4 - 1) * 2;
-		if (sup_ch_idx >= 0) {
-			if (sup_ch[sup_ch_idx] == 0)
-				sup_ch[sup_ch_idx] = pmlmeext->channel_set[ch_set_idx].ChannelNum;
-			sup_ch[sup_ch_idx+1]++;	//Number of channel
-		}
-
 		ch_set_idx++;
 	} while (pmlmeext->channel_set[ch_set_idx].ChannelNum != 0 && ch_set_idx < MAX_CHANNEL_NUM);
 
-	return(rtw_set_ie(pframe, _SUPPORTED_CH_IE_, sup_ch_idx+2, sup_ch, &(pattrib->pktlen)));
+	return rtw_set_ie(pframe, _SUPPORTED_CH_IE_, sup_ch_idx, sup_ch, &(pattrib->pktlen));
 }
 
 u8 *rtw_tdls_set_rsnie(struct tdls_txmgmt *ptxmgmt, u8 *pframe, struct pkt_attrib *pattrib,  int init, struct sta_info *ptdls_sta)
@@ -515,7 +683,7 @@ u8 *rtw_tdls_set_supported_rate(_adapter *padapter, u8 *pframe, struct pkt_attri
  	int bssrate_len = 0;
 	u8 more_supportedrates = 0;
 
-	rtw_set_supported_rate(bssrate, padapter->registrypriv.wireless_mode);
+	rtw_set_supported_rate(bssrate, (padapter->registrypriv.wireless_mode == WIRELESS_MODE_MAX) ? padapter->mlmeextpriv.cur_wireless_mode : padapter->registrypriv.wireless_mode); 
 	bssrate_len = rtw_get_rateset_len(bssrate);
 
 	if (bssrate_len > 8) {
@@ -1259,14 +1427,13 @@ int On_TDLS_Dis_Rsp(_adapter *padapter, union recv_frame *precv_frame)
 	/* WFDTDLS: for sigma test, not to setup direct link automatically */
 	ptdlsinfo->dev_discovered = _TRUE;
 
-#ifdef CONFIG_TDLS_AUTOSETUP
-
 	psa = get_sa(ptr);
 	ptdls_sta = rtw_get_stainfo(&(padapter->stapriv), psa);
+	if (ptdls_sta != NULL)
+		ptdls_sta->sta_stats.rx_tdls_disc_rsp_pkts++;
 
+#ifdef CONFIG_TDLS_AUTOSETUP
 	if (ptdls_sta != NULL) {
-		ptdls_sta->tdls_sta_state |= TDLS_ALIVE_STATE;
-
 		/* Record the tdls sta with lowest signal strength */
 		if (ptdlsinfo->sta_maximum == _TRUE && ptdls_sta->alive_count >= 1 ) {
 			if (_rtw_memcmp(ptdlsinfo->ss_record.macaddr, empty_addr, ETH_ALEN)) {
@@ -1438,9 +1605,18 @@ sint On_TDLS_Setup_Req(_adapter *padapter, union recv_frame *precv_frame)
 				break;
 			case _RIC_Descriptor_IE_:
 				break;
+#ifdef CONFIG_80211N_HT				
 			case _HT_CAPABILITY_IE_:
 				rtw_tdls_process_ht_cap(padapter, ptdls_sta, pIE->data, pIE->Length);
 				break;
+#endif	
+#ifdef CONFIG_80211AC_VHT				
+			case EID_AID:
+				break;
+			case EID_VHTCapability:
+				rtw_tdls_process_vht_cap(padapter, ptdls_sta, pIE->data, pIE->Length);
+				break;
+#endif
 			case EID_BSSCoexistence:
 				break;
 			case _LINK_ID_IE_:
@@ -1617,9 +1793,22 @@ int On_TDLS_Setup_Rsp(_adapter *padapter, union recv_frame *precv_frame)
 			break;
 		case _RIC_Descriptor_IE_:
 			break;
+#ifdef CONFIG_80211N_HT			
 		case _HT_CAPABILITY_IE_:
 			rtw_tdls_process_ht_cap(padapter, ptdls_sta, pIE->data, pIE->Length);
 			break;
+#endif			
+#ifdef CONFIG_80211AC_VHT
+		case EID_AID:
+			/* todo in the future if necessary */
+			break;
+		case EID_VHTCapability:
+			rtw_tdls_process_vht_cap(padapter, ptdls_sta, pIE->data, pIE->Length);
+			break;
+		case EID_OpModeNotification:
+			rtw_process_vht_op_mode_notify(padapter, pIE->data, ptdls_sta);
+			break;	
+#endif
 		case EID_BSSCoexistence:
 			break;
 		case _LINK_ID_IE_:
@@ -1742,15 +1931,14 @@ int On_TDLS_Setup_Cfm(_adapter *padapter, union recv_frame *precv_frame)
 		goto exit;
 	}
 
-	if (prx_pkt_attrib->encrypt) {
-		/* Parsing information element */
-		for(j=FIXED_IE; j<parsing_length;) {
+	/* Parsing information element */
+	for (j = FIXED_IE; j < parsing_length;) {
 
-			pIE = (PNDIS_802_11_VARIABLE_IEs)(ptr+ j);
+		pIE = (PNDIS_802_11_VARIABLE_IEs)(ptr + j);
 
-			switch (pIE->ElementID) {
+		switch (pIE->ElementID) {
 			case _RSN_IE_2_:
-				prsnie=(u8*)pIE;
+				prsnie = (u8 *)pIE;
 				break;
 			case _VENDOR_SPECIFIC_IE_:
 				if (_rtw_memcmp((u8 *)pIE + 2, WMM_PARA_OUI, 6) == _TRUE) {	
@@ -1758,25 +1946,35 @@ int On_TDLS_Setup_Cfm(_adapter *padapter, union recv_frame *precv_frame)
 					ptdls_sta->qos_option = _TRUE;
 				}
 				break;				
- 			case _FTIE_:
-				pftie=(u8*)pIE;
+			case _FTIE_:
+				pftie = (u8 *)pIE;
 				break;
 			case _TIMEOUT_ITVL_IE_:
-				ptimeout_ie=(u8*)pIE;
+				ptimeout_ie = (u8 *)pIE;
 				break;
+#ifdef CONFIG_80211N_HT				
 			case _HT_EXTRA_INFO_IE_:
 				break;
- 			case _LINK_ID_IE_:
-				plinkid_ie=(u8*)pIE;
+#endif
+#ifdef CONFIG_80211AC_VHT
+			case EID_VHTOperation:
+				break;
+			case EID_OpModeNotification:
+				rtw_process_vht_op_mode_notify(padapter, pIE->data, ptdls_sta);
+				break;	
+#endif
+			case _LINK_ID_IE_:
+				plinkid_ie = (u8 *)pIE;
 				break;
 			default:
 				break;
-			}
-
-			j += (pIE->Length + 2);
-			
 		}
 
+		j += (pIE->Length + 2);
+		
+	}
+
+	if (prx_pkt_attrib->encrypt) {
 		/* Verify mic in FTIE MIC field */
 		if (rtw_tdls_is_driver_setup(padapter) &&
 			(tdls_verify_mic(ptdls_sta->tpk.kck, 3, plinkid_ie, prsnie, ptimeout_ie, pftie) == _FAIL)) {
@@ -1784,7 +1982,6 @@ int On_TDLS_Setup_Cfm(_adapter *padapter, union recv_frame *precv_frame)
 			ret = _FAIL;
 			goto exit;
 		}
-
 	}
 
 	if (rtw_tdls_is_driver_setup(padapter)) {
@@ -2263,6 +2460,7 @@ void wfd_ie_tdls(_adapter * padapter, u8 *pframe, u32 *pktlen )
 void rtw_build_tdls_setup_req_ies(_adapter * padapter, struct xmit_frame * pxmitframe, u8 *pframe, struct tdls_txmgmt *ptxmgmt)
 {
 	struct registry_priv	*pregistrypriv = &padapter->registrypriv;
+	struct mlme_ext_priv	*pmlmeext = &(padapter->mlmeextpriv);
 	struct pkt_attrib	*pattrib = &pxmitframe->attrib;
 	struct sta_info *ptdls_sta=rtw_get_stainfo( (&padapter->stapriv) , pattrib->dst);
 
@@ -2305,9 +2503,11 @@ void rtw_build_tdls_setup_req_ies(_adapter * padapter, struct xmit_frame * pxmit
 		pframe = rtw_tdls_set_timeout_interval(ptxmgmt, pframe, pattrib, _TRUE, ptdls_sta);
 	}
 
+#ifdef CONFIG_80211N_HT
 	/* Sup_reg_classes(optional) */
 	if (pregistrypriv->ht_enable == _TRUE)
 		pframe = rtw_tdls_set_ht_cap(padapter, pframe_head, pattrib);
+#endif
 
 	pframe = rtw_tdls_set_bss_coexist(padapter, pframe, pattrib);
 
@@ -2315,6 +2515,13 @@ void rtw_build_tdls_setup_req_ies(_adapter * padapter, struct xmit_frame * pxmit
 
 	if ((pregistrypriv->wmm_enable == _TRUE) || (padapter->mlmepriv.htpriv.ht_option == _TRUE))
 		pframe = rtw_tdls_set_qos_cap(pframe, pattrib);
+
+#ifdef CONFIG_80211AC_VHT
+	if ((padapter->mlmepriv.htpriv.ht_option == _TRUE) && (pregistrypriv->vht_enable == _TRUE) && (pmlmeext->cur_channel > 14)) {
+		pframe = rtw_tdls_set_aid(padapter, pframe, pattrib);
+		pframe = rtw_tdls_set_vht_cap(padapter, pframe, pattrib);
+	}
+#endif
 
 #ifdef CONFIG_WFD
 	wfd_ie_tdls( padapter, pframe, &(pattrib->pktlen) );
@@ -2325,6 +2532,7 @@ void rtw_build_tdls_setup_req_ies(_adapter * padapter, struct xmit_frame * pxmit
 void rtw_build_tdls_setup_rsp_ies(_adapter * padapter, struct xmit_frame * pxmitframe, u8 *pframe, struct tdls_txmgmt *ptxmgmt)
 {
 	struct registry_priv	*pregistrypriv = &padapter->registrypriv;
+	struct mlme_ext_priv	*pmlmeext = &(padapter->mlmeextpriv);
 	struct pkt_attrib	*pattrib = &pxmitframe->attrib;
 	struct sta_info *ptdls_sta;
 	u8 k; /* for random ANonce */
@@ -2385,10 +2593,12 @@ void rtw_build_tdls_setup_rsp_ies(_adapter * padapter, struct xmit_frame * pxmit
 		pframe = rtw_tdls_set_timeout_interval(ptxmgmt, pframe, pattrib, _FALSE, ptdls_sta);
 	}
 
+#ifdef CONFIG_80211N_HT
 	/* Sup_reg_classes(optional) */
 	if (pregistrypriv->ht_enable == _TRUE)
 		pframe = rtw_tdls_set_ht_cap(padapter, pframe_head, pattrib);
-	
+#endif
+
 	pframe = rtw_tdls_set_bss_coexist(padapter, pframe, pattrib);
 
 	plinkid_ie = pframe;
@@ -2401,6 +2611,14 @@ void rtw_build_tdls_setup_rsp_ies(_adapter * padapter, struct xmit_frame * pxmit
 	if ((pregistrypriv->wmm_enable == _TRUE) || (padapter->mlmepriv.htpriv.ht_option == _TRUE))
 		pframe = rtw_tdls_set_qos_cap(pframe, pattrib);
 
+#ifdef CONFIG_80211AC_VHT
+	if ((padapter->mlmepriv.htpriv.ht_option == _TRUE) && (pregistrypriv->vht_enable == _TRUE) && (pmlmeext->cur_channel > 14)) {
+		pframe = rtw_tdls_set_aid(padapter, pframe, pattrib);
+		pframe = rtw_tdls_set_vht_cap(padapter, pframe, pattrib);
+		pframe = rtw_tdls_set_vht_op_mode_notify(padapter, pframe, pattrib, pmlmeext->cur_bwmode);
+	}
+#endif
+
 #ifdef CONFIG_WFD
 	wfd_ie_tdls( padapter, pframe, &(pattrib->pktlen) );
 #endif /* CONFIG_WFD */
@@ -2409,7 +2627,7 @@ void rtw_build_tdls_setup_rsp_ies(_adapter * padapter, struct xmit_frame * pxmit
 
 void rtw_build_tdls_setup_cfm_ies(_adapter * padapter, struct xmit_frame * pxmitframe, u8 *pframe, struct tdls_txmgmt *ptxmgmt)
 {
-
+	struct registry_priv	*pregistrypriv = &padapter->registrypriv;
 	struct mlme_ext_priv	*pmlmeext = &(padapter->mlmeextpriv);
 	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
 	struct pkt_attrib	*pattrib = &pxmitframe->attrib;
@@ -2454,6 +2672,7 @@ void rtw_build_tdls_setup_cfm_ies(_adapter * padapter, struct xmit_frame * pxmit
 	}
 
 	/* HT operation; todo */
+	
 	plinkid_ie = pframe;
 	pframe = rtw_tdls_set_linkid(pframe, pattrib, _TRUE);
 
@@ -2462,6 +2681,14 @@ void rtw_build_tdls_setup_cfm_ies(_adapter * padapter, struct xmit_frame * pxmit
 
 	if (ptdls_sta->qos_option == _TRUE)
 		pframe = rtw_tdls_set_wmm_params(padapter, pframe, pattrib);
+
+#ifdef CONFIG_80211AC_VHT
+	if ((padapter->mlmepriv.htpriv.ht_option == _TRUE) && (pregistrypriv->vht_enable == _TRUE) 
+		&& (ptdls_sta->vhtpriv.vht_option == _TRUE) && (pmlmeext->cur_channel > 14)) {
+		pframe = rtw_tdls_set_vht_operation(padapter, pframe, pattrib, pmlmeext->cur_channel);
+		pframe = rtw_tdls_set_vht_op_mode_notify(padapter, pframe, pattrib, pmlmeext->cur_bwmode);
+	}
+#endif
 }
 
 void rtw_build_tdls_teardown_ies(_adapter * padapter, struct xmit_frame * pxmitframe, u8 *pframe, struct tdls_txmgmt *ptxmgmt)
@@ -2536,9 +2763,11 @@ void rtw_build_tdls_dis_rsp_ies(_adapter * padapter, struct xmit_frame * pxmitfr
 		pframe = rtw_tdls_set_timeout_interval(ptxmgmt, pframe, pattrib,  _TRUE, NULL);
 	}
 
+#ifdef CONFIG_80211N_HT
 	if (pregistrypriv->ht_enable == _TRUE)
 		pframe = rtw_tdls_set_ht_cap(padapter, pframe_head - pktlen_index, pattrib);
-	
+#endif
+
 	pframe = rtw_tdls_set_bss_coexist(padapter, pframe, pattrib);
 	pframe = rtw_tdls_set_linkid(pframe, pattrib, _FALSE);
 

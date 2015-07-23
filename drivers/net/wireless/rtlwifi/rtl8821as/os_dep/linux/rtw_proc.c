@@ -99,6 +99,12 @@ static int proc_get_log_level(struct seq_file *m, void *v)
 	return 0;
 }
 
+static int proc_get_drv_cfg(struct seq_file *m, void *v)
+{
+	dump_drv_cfg(m);
+	return 0;
+}
+
 static ssize_t proc_set_log_level(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
 {
 	char tmp[32];
@@ -149,6 +155,7 @@ static int proc_get_ch_plan_test(struct seq_file *m, void *v)
 const struct rtw_proc_hdl drv_proc_hdls [] = {
 	{"ver_info", proc_get_drv_version, NULL},
 	{"log_level", proc_get_log_level, proc_set_log_level},
+	{"drv_cfg", proc_get_drv_cfg, NULL},
 #ifdef DBG_MEM_ALLOC
 	{"mstat", proc_get_mstat, NULL},
 #endif /* DBG_MEM_ALLOC */
@@ -666,27 +673,39 @@ static int proc_get_macid_info(struct seq_file *m, void *v)
 	return 0;
 }
 
-static int proc_get_cam(struct seq_file *m, void *v)
+static int proc_get_sec_cam(struct seq_file *m, void *v)
 {
 	struct net_device *dev = m->private;
 	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
-	u8 i;
+	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
+	struct cam_ctl_t *cam_ctl = &dvobj->cam_ctl;
+
+	DBG_871X_SEL_NL(m, "sec_cap:0x%02x\n", cam_ctl->sec_cap);
+	DBG_871X_SEL_NL(m, "flags:0x%08x\n", cam_ctl->flags);
+	DBG_871X_SEL_NL(m, "\n");
+
+	DBG_871X_SEL_NL(m, "max_num:%u\n", cam_ctl->num);
+	DBG_871X_SEL_NL(m, "used:\n");
+	dump_sec_cam_map(m, &cam_ctl->used, cam_ctl->num);
+	DBG_871X_SEL_NL(m, "\n");
+
+	DBG_871X_SEL_NL(m, "reg_scr:0x%04x\n", rtw_read16(adapter, 0x680));
+	DBG_871X_SEL_NL(m, "\n");
+
+	dump_sec_cam(m, adapter);
 
 	return 0;
 }
 
-static ssize_t proc_set_cam(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+static ssize_t proc_set_sec_cam(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
 {
 	struct net_device *dev = data;
-	_adapter *adapter;
-
-	char tmp[32];
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
+	struct cam_ctl_t *cam_ctl = &dvobj->cam_ctl;
+	char tmp[32] = {0};
 	char cmd[4];
 	u8 id;
-
-	adapter = (_adapter *)rtw_netdev_priv(dev);
-	if (!adapter)
-		return -EFAULT;
 
 	if (count > sizeof(tmp)) {
 		rtw_warn_on(1);
@@ -703,7 +722,7 @@ static ssize_t proc_set_cam(struct file *file, const char __user *buffer, size_t
 		if (num < 2)
 			return count;
 
-		if (id >= CAM_ENTRY_NUM_SW_LIMIT) {
+		if (id >= cam_ctl->num) {
 			DBG_871X_LEVEL(_drv_err_, FUNC_ADPT_FMT" invalid id:%u\n", FUNC_ADPT_ARG(adapter), id);
 			return count;
 		}
@@ -717,6 +736,24 @@ static ssize_t proc_set_cam(struct file *file, const char __user *buffer, size_t
 	}
 
 	return count;
+}
+
+static int proc_get_sec_cam_cache(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
+	struct cam_ctl_t *cam_ctl = &dvobj->cam_ctl;
+	u8 i;
+
+	DBG_871X_SEL_NL(m, "SW sec cam cache:\n");
+	dump_sec_cam_ent_title(m, 1);
+	for (i = 0; i < cam_ctl->num; i++) {
+		if (dvobj->cam_cache[i].ctrl != 0)
+			dump_sec_cam_ent(m, &dvobj->cam_cache[i], i);
+	}
+
+	return 0;
 }
 
 static ssize_t proc_set_change_bss_chbw(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
@@ -751,47 +788,178 @@ exit:
 	return count;
 }
 
-static int proc_get_cam_cache(struct seq_file *m, void *v)
+#ifdef CONFIG_RF_GAIN_OFFSET
+static int proc_get_kfree_flag(struct seq_file *m, void *v)
 {
 	struct net_device *dev = m->private;
 	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
-	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
-	u8 i;
+	struct kfree_data_t *kfree_data = GET_KFREE_DATA(adapter);
 
-	DBG_871X_SEL_NL(m, "cam_ctl.sec_cap:0x%02x\n", dvobj->cam_ctl.sec_cap);
-	DBG_871X_SEL_NL(m, "cam_ctl.flags:0x%08x\n", dvobj->cam_ctl.flags);
-	DBG_871X_SEL_NL(m, "cam bitmap:0x%016llx\n", dvobj->cam_ctl.bitmap);
-	DBG_871X_SEL_NL(m, "reg_scr:0x%04x\n", rtw_read16(adapter, 0x680));
-	DBG_871X_SEL_NL(m, "\n");
+	DBG_871X_SEL_NL(m, "0x%02x\n", kfree_data->flag);
 
-	DBG_871X_SEL_NL(m, "%-2s %-6s %-17s %-32s %-3s %-7s %-2s %-2s"
-		/*" %-4s %-5s"*/
-		"\n"
-		, "id", "ctrl", "addr", "key", "kid", "type", "MK", "GK"
-		/*, "MFB", "valid"*/
-	);
+	return 0;
+}
 
-	for (i=0;i<32;i++) {
-		if (dvobj->cam_cache[i].ctrl != 0)
-			DBG_871X_SEL_NL(m, "%2u 0x%04x "MAC_FMT" "KEY_FMT" %3u %-7s %2u %2u"
-				/*" 0x%02x %5u"*/
-				"\n", i
-				, dvobj->cam_cache[i].ctrl
-				, MAC_ARG(dvobj->cam_cache[i].mac)
-				, KEY_ARG(dvobj->cam_cache[i].key)
-				, (dvobj->cam_cache[i].ctrl)&0x03
-				, security_type_str(((dvobj->cam_cache[i].ctrl)>>2)&0x07)
-				, ((dvobj->cam_cache[i].ctrl)>>5)&0x01
-				, ((dvobj->cam_cache[i].ctrl)>>6)&0x01
-				/*
-				, ((dvobj->cam_cache[i].ctrl)>>8)&0x7f
-				, ((dvobj->cam_cache[i].ctrl)>>15)&0x01
-				*/
-			);
+static ssize_t proc_set_kfree_flag(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct kfree_data_t *kfree_data = GET_KFREE_DATA(adapter);
+	char tmp[32] = {0};
+	u8 flag;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		int num = sscanf(tmp, "%hhx", &flag);
+
+		if (num < 1)
+			return count;
+
+		kfree_data->flag = flag;
+	}
+
+	return count;
+}
+
+static int proc_get_kfree_bb_gain(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	HAL_DATA_TYPE *hal_data = GET_HAL_DATA(adapter);
+	struct kfree_data_t *kfree_data = GET_KFREE_DATA(adapter);
+	u8 i, j;
+
+	for (j = 0; j < hal_data->NumTotalRFPath; j++) {
+		for (i = 0; i < BB_GAIN_NUM; i++)
+			DBG_871X_SEL(m, "%d ", kfree_data->bb_gain[i][j]);
+		DBG_871X_SEL(m, "\n");
 	}
 
 	return 0;
 }
+
+static ssize_t proc_set_kfree_bb_gain(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	HAL_DATA_TYPE *hal_data = GET_HAL_DATA(adapter);
+	struct kfree_data_t *kfree_data = GET_KFREE_DATA(adapter);
+	char tmp[3 * BB_GAIN_NUM] = {0};
+	u8 path;
+	s8 bb_gain[BB_GAIN_NUM];
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+		char *c, *next;
+		int i;
+
+		next = tmp;
+		c = strsep(&next, " \t");
+
+		if (c == NULL || sscanf(c, "%hhu", &path) != 1)
+			return count;
+
+		if (path >= hal_data->NumTotalRFPath || path >= RF_PATH_MAX)
+			return count;
+
+		c = strsep(&next, " \t");
+
+		for (i = 0; i < BB_GAIN_NUM; i++) {
+			if (c == NULL)
+				break;
+
+			if (sscanf(c, "%hhd", &bb_gain[i]) != 1)
+				break;
+
+			c = strsep(&next, " \t");
+		}
+
+		i--;
+		for (; i >= 0; i--)
+			kfree_data->bb_gain[i][path] = bb_gain[i];
+
+	}
+
+	return count;
+}
+
+static int proc_get_kfree_thermal(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct kfree_data_t *kfree_data = GET_KFREE_DATA(adapter);
+
+	DBG_871X_SEL(m, "%d\n", kfree_data->thermal);
+
+	return 0;
+}
+
+static ssize_t proc_set_kfree_thermal(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	struct kfree_data_t *kfree_data = GET_KFREE_DATA(adapter);
+	char tmp[32] = {0};
+	s8 thermal;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		int num = sscanf(tmp, "%hhd", &thermal);
+
+		if (num < 1)
+			return count;
+
+		kfree_data->thermal = thermal;
+	}
+
+	return count;
+}
+
+static ssize_t proc_set_tx_gain_offset(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *adapter;
+	char tmp[32] = {0};
+	u8 rf_path;
+	s8 offset;
+
+	adapter = (_adapter *)rtw_netdev_priv(dev);
+	if (!adapter)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+		u8 write_value;
+		int num = sscanf(tmp, "%hhu %hhd", &rf_path, &offset);
+
+		if (num < 2)
+			return count;
+
+		DBG_871X("write rf_path:%u tx gain offset:%d\n", rf_path, offset);
+		rtw_rf_set_tx_gain_offset(adapter, rf_path, offset);
+	}
+
+	return count;
+}
+#endif /* CONFIG_RF_GAIN_OFFSET */
 
 #ifdef CONFIG_BT_COEXIST
 ssize_t proc_set_btinfo_evt(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
@@ -901,8 +1069,8 @@ const struct rtw_proc_hdl adapter_proc_hdls [] = {
 	{"dis_pwt_ctl", proc_get_dis_pwt, proc_set_dis_pwt},
 	{"mac_qinfo", proc_get_mac_qinfo, NULL},
 	{"macid_info", proc_get_macid_info, NULL},
-	{"cam", proc_get_cam, proc_set_cam},
-	{"cam_cache", proc_get_cam_cache, NULL},
+	{"sec_cam", proc_get_sec_cam, proc_set_sec_cam},
+	{"sec_cam_cache", proc_get_sec_cam_cache, NULL},
 	{"suspend_info", proc_get_suspend_resume_info, NULL},
 	{"wifi_spec",proc_get_wifi_spec,NULL},
 #ifdef CONFIG_LAYER2_ROAMING
@@ -1002,6 +1170,12 @@ const struct rtw_proc_hdl adapter_proc_hdls [] = {
 	{"dump_rx_cnt_mode",proc_get_rx_cnt_dump,proc_set_rx_cnt_dump},
 #endif	
 	{"change_bss_chbw", NULL, proc_set_change_bss_chbw},
+#ifdef CONFIG_RF_GAIN_OFFSET
+	{"tx_gain_offset", proc_get_dummy, proc_set_tx_gain_offset},
+	{"kfree_flag", proc_get_kfree_flag, proc_set_kfree_flag},
+	{"kfree_bb_gain", proc_get_kfree_bb_gain, proc_set_kfree_bb_gain},
+	{"kfree_thermal", proc_get_kfree_thermal, proc_set_kfree_thermal},
+#endif
 #ifdef CONFIG_POWER_SAVING
 	{"ps_info",proc_get_ps_info, NULL},
 #endif
@@ -1016,6 +1190,12 @@ const struct rtw_proc_hdl adapter_proc_hdls [] = {
 #ifdef CONFIG_PREALLOC_RX_SKB_BUFFER
 	{"rtkm_info", proc_get_rtkm_info, NULL}
 #endif
+	{"efuse_map", proc_get_efuse_map, NULL},
+#ifdef CONFIG_IEEE80211W
+	{"11w_tx_sa_query", proc_get_tx_sa_query, proc_set_tx_sa_query},
+	{"11w_tx_deauth", proc_get_tx_deauth, proc_set_tx_deauth},
+	{"11w_tx_auth", proc_get_tx_auth, proc_set_tx_auth},
+#endif /* CONFIG_IEEE80211W */
 };
 
 const int adapter_proc_hdls_num = sizeof(adapter_proc_hdls) / sizeof(struct rtw_proc_hdl);

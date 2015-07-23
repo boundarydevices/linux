@@ -1284,10 +1284,6 @@ phy_GetChnlIndex(
 	OUT u8*	ChannelIdx
 	)
 {
-	u8 	channel5G[CHANNEL_MAX_NUMBER_5G] = 
-				 {36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,100,102,104,106,108,110,112,
-				114,116,118,120,122,124,126,128,130,132,134,136,138,140,142,144,149,151,
-				153,155,157,159,161,163,165,167,168,169,171,173,175,177};
 	u8  i = 0;
 	BOOLEAN bIn24G=_TRUE;
 
@@ -1300,7 +1296,7 @@ phy_GetChnlIndex(
 	{
 		bIn24G = _FALSE;	
 
-		for (i = 0; i < sizeof(channel5G)/sizeof(u8); ++i)
+		for (i = 0; i < CHANNEL_MAX_NUMBER_5G; ++i)
 		{
 			if ( channel5G[i] == Channel) {
 				*ChannelIdx = i;
@@ -1468,8 +1464,7 @@ PHY_GetTxPowerIndexBase(
 		else if (BandWidth== CHANNEL_WIDTH_80)
 		{
 			// <20121220, Kordan> Get the index of array "Index5G_BW80_Base".
-			u8	channel5G_80M[CHANNEL_MAX_NUMBER_5G_80M] = {42, 58, 106, 122, 138, 155, 171};
-			for (i = 0; i < sizeof(channel5G_80M)/sizeof(u8); ++i)
+			for (i = 0; i < CHANNEL_MAX_NUMBER_5G_80M; ++i)
 				if ( channel5G_80M[i] == Channel) 
 					chnlIdx = i;
 
@@ -1783,10 +1778,6 @@ phy_GetChannelIndexOfTxPowerLimit(
 	)
 {
 	s8	channelIndex = -1;
-	u8	channel5G[CHANNEL_MAX_NUMBER_5G] = 
-				 {36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,100,102,104,106,108,110,112,
-				114,116,118,120,122,124,126,128,130,132,134,136,138,140,142,144,149,151,
-				153,155,157,159,161,163,165,167,168,169,171,173,175,177};
 	u8	i = 0;
 	if ( Band == BAND_ON_2_4G )
 	{
@@ -1794,7 +1785,7 @@ phy_GetChannelIndexOfTxPowerLimit(
 	}
 	else if ( Band == BAND_ON_5G )
 	{
-		for ( i = 0; i < sizeof(channel5G)/sizeof(u8); ++i )
+		for (i = 0; i < CHANNEL_MAX_NUMBER_5G; ++i)
 		{
 			if ( channel5G[i] == Channel )
 				channelIndex = i;

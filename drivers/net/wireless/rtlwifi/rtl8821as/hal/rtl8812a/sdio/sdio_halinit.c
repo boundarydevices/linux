@@ -224,7 +224,8 @@ static void hal_poweroff_8812as(PADAPTER padapter)
 	
 	bMacPwrCtrlOn = _FALSE;
 	rtw_hal_set_hwreg(padapter, HW_VAR_APFM_ON_MAC, &bMacPwrCtrlOn);
-	
+
+	padapter->bFWReady = _FALSE;
 }
 
 /*
@@ -748,14 +749,6 @@ void _InitInterrupt(PADAPTER padapter)
 	InitInterrupt8821AS(padapter);
 }
 
-#if (MP_DRIVER == 1)
-static void _InitRxSetting(PADAPTER padapter)
-{
-	rtw_write32(padapter, REG_MACID, 0x87654321);
-	rtw_write32(padapter, 0x0700, 0x87654321);
-}
-#endif // (MP_DRIVER == 1)
-
 #if 0
 // Set CCK and OFDM Block "ON"
 static void _BBTurnOnBlock(PADAPTER padapter)
@@ -880,21 +873,22 @@ static u32 _HalInit(PADAPTER padapter)
 		goto exit;
 	}
 
-	if (rtw_read8(padapter, REG_MCUFWDL) & BIT7) {
-		u8 bMacPwrCtrlOn = _TRUE;
-		u8 rpwm = 0;
-
-		DBG_871X("FW exist before power on!!\n");
-
-		rtw_hal_set_hwreg(padapter, HW_VAR_APFM_ON_MAC, &bMacPwrCtrlOn);
-
-		/* set rpwm to leave 32k */
-		rtw_hal_set_hwreg(padapter, HW_VAR_SET_RPWM, &rpwm);
-		rpwm += 0x80;
-		rtw_hal_set_hwreg(padapter, HW_VAR_SET_RPWM, &rpwm);
-
-		/* power off */
-		rtw_hal_power_off(padapter);
+	// Check if MAC has already power on. by tynli. 2011.05.27.
+	val8 = rtw_read8(padapter, REG_SYS_CLKR+1);
+	val8_CR = rtw_read8(padapter, REG_CR);
+	DBG_8192C("%s: REG_SYS_CLKR 0x09=0x%02x REG_CR 0x100=0x%02x\n", __FUNCTION__, val8, val8_CR);
+	if ((val8&BIT(3))  && ((val8_CR != 0) && (val8_CR != 0xEA)))
+	{
+		//pHalData->bMACFuncEnable = TRUE;
+		DBG_8192C("%s: MAC has already power on\n", __FUNCTION__);
+	}
+	else
+	{
+		//pHalData->bMACFuncEnable = FALSE;
+		// Set FwPSState to ALL_ON mode to prevent from the I/O be return because of 32k
+		// state which is set before sleep under wowlan mode. 2012.01.04. by tynli.
+		//pHalData->FwPSState = FW_PS_STATE_ALL_ON_88E;
+		DBG_871X("%s: MAC has not been powered on yet\n", __FUNCTION__);
 	}
 
 	ret = _InitPowerOn_8812AS(padapter);
@@ -923,14 +917,7 @@ static u32 _HalInit(PADAPTER padapter)
 		return _FAIL;
 	}
 
-#if (MP_DRIVER == 1)
-	if (padapter->registrypriv.mp_mode == 1)
-	{
-		_InitRxSetting(padapter);
-	}
-	else
-#endif
-	{
+	if (padapter->registrypriv.mp_mode == 0) {
 		ret = FirmwareDownload8812(padapter, _FALSE);
 		if (ret != _SUCCESS) {
 			DBG_8192C("%s: Download Firmware failed!!\n", __FUNCTION__);
@@ -1026,11 +1013,6 @@ static u32 _HalInit(PADAPTER padapter)
 	rtw_write16(padapter, REG_PKT_BE_BK_LIFE_TIME, 0x3000);	// unit: 256us. 3s
 #endif	// CONFIG_TX_MCAST2UNI
 #endif	// CONFIG_CONCURRENT_MODE || CONFIG_TX_MCAST2UNI
-
-
-#ifdef CONFIG_LED
-	_InitHWLed(padapter);
-#endif // CONFIG_LED
 
 	//
 	// Initialize BB related configurations.
@@ -1225,34 +1207,26 @@ static void _InterfaceConfigure(PADAPTER padapter)
 	pHalData->SdioRxFIFOCnt = 0;
 }
 
-static void
-_EfuseParseMACAddr(PADAPTER padapter, u8 *hwinfo)
+static VOID
+ReadLEDSetting_8812AS(
+	IN	PADAPTER	Adapter,
+	IN	u8		*PROMContent,
+	IN	BOOLEAN		AutoloadFail
+	)
 {
-	u16 i, usValue;
-	PHAL_DATA_TYPE pHalData = GET_HAL_DATA(padapter);
+	struct led_priv *pledpriv = &(Adapter->ledpriv);
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
+#ifdef CONFIG_SW_LED
+	pledpriv->bRegUseLed = _TRUE;
 
-#ifdef CONFIG_RTL8821A
-	u8 sMacAddr[6] = {0x00, 0xE0, 0x4C, 0x88, 0x21, 0x00};
-#else // CONFIG_RTL8812A
-	u8 sMacAddr[6] = {0x00, 0xE0, 0x4C, 0x88, 0x12, 0x00};
-#endif // CONFIG_RTL8812A
-
-	if(!hwinfo)
-		return;
-
-	if (pHalData->bautoload_fail_flag)
-	{
-//		sMacAddr[5] = (u1Byte)GetRandomNumber(1, 254);
-		for (i=0; i<6; i++)
-			pHalData->EEPROMMACAddr[i] = sMacAddr[i];
+	switch (pHalData->CustomerID) {
+	default:
+		pledpriv->LedStrategy = SW_LED_MODE1;
+		break;
 	}
-	else
-	{
-		_rtw_memcpy(pHalData->EEPROMMACAddr, &hwinfo[EEPROM_MAC_ADDR_8821AS], ETH_ALEN);
-	}
-
-	DBG_8192C("%s: Permanent Address=" MAC_FMT "\n",
-		  __FUNCTION__, MAC_ARG(pHalData->EEPROMMACAddr));
+#else
+	pledpriv->LedStrategy = HW_LED;
+#endif
 }
 
 static void _ParsePROMContent(PADAPTER padapter)
@@ -1277,11 +1251,13 @@ static void _ParsePROMContent(PADAPTER padapter)
 
 	balfail = pHalData->bautoload_fail_flag;
 	Hal_ReadPROMVersion8812A(padapter, hwinfo, balfail);
+	hal_config_macaddr(padapter, balfail);
 	Hal_ReadTxPowerInfo8812A(padapter, hwinfo, balfail);
 	Hal_ReadBoardType8812A(padapter, hwinfo, balfail);
 	Hal_ReadChannelPlan8812A(padapter, hwinfo, balfail);
 	Hal_EfuseParseXtal_8812A(padapter, hwinfo, balfail);
 	Hal_ReadThermalMeter_8812A(padapter, hwinfo, balfail);
+	Hal_EfuseParseKFreeData_8821A(padapter, hwinfo, balfail);
 	Hal_ReadAntennaDiversity8812A(padapter, hwinfo, balfail);
 	if(IS_HARDWARE_TYPE_8821(padapter)) {
 		Hal_ReadPAType_8821A(padapter, hwinfo, balfail);
@@ -1295,10 +1271,7 @@ static void _ParsePROMContent(PADAPTER padapter)
 	//
 	Hal_EfuseParseBTCoexistInfo8812A(padapter, hwinfo, balfail);
 
-	//
-	// Parse the eeprom/efuse interface content
-	//
-	_EfuseParseMACAddr(padapter, hwinfo);
+	ReadLEDSetting_8812AS(padapter, hwinfo, balfail);
 
 	//
 	// The following part initialize some vars by PG info.
@@ -1314,10 +1287,6 @@ static void _ReadPROMContent(PADAPTER padapter)
 	_ParsePROMContent(padapter);
 }
 
-static void _InitOtherVariable(PADAPTER padapter)
-{
-}
-
 /*
  * Description:
  * 	Read HW adapter information by E-Fuse or EEPROM according CR9346 reported.
@@ -1325,28 +1294,13 @@ static void _InitOtherVariable(PADAPTER padapter)
  * Assumption:
  * 	PASSIVE_LEVEL (SDIO interface)
  */
-static void _ReadAdapterInfo(PADAPTER padapter)
+static void ReadAdapterInfo8812AS(PADAPTER padapter)
 {
-	u32 start;
-
-
-//	DBG_8192C("+%s\n", __FUNCTION__);
-
-	// Read EEPROM size before call any EEPROM function
+	/* Read EEPROM size before call any EEPROM function */
 	padapter->EepromAddressSize = GetEEPROMSize8812A(padapter);
 
-	// before access eFuse, make sure card enable has been called
-	_CardEnable(padapter);
-
-	start = rtw_get_current_time();
-
-	_ReadPROMContent(padapter);
-
 	ReadRFType8812A(padapter);
-
-	_InitOtherVariable(padapter);
-
-	DBG_8192C("-%s: cost %d ms\n", __FUNCTION__, rtw_get_passing_time_ms(start));
+	_ReadPROMContent(padapter);
 }
 
 static void _startThread8821AS(PADAPTER padapter)
@@ -1411,15 +1365,7 @@ _func_enter_;
 				rtw_write8(padapter, SDIO_LOCAL_BASE|SDIO_REG_HRPWM1, val8);
 			}
 			break;
-		case HW_VAR_SET_REQ_FW_PS:
-		/* 1. driver write 0x8f[4]=1  //request fw ps state (only can write bit4) */
-		{
-			u8 req_fw_ps = 0;
-			req_fw_ps = rtw_read8(padapter, 0x8f);
-			req_fw_ps |= 0x10;
-			rtw_write8(padapter, 0x8f, req_fw_ps);
-		}
-			break;
+
 		case HW_VAR_RXDMA_AGG_PG_TH:
 			val8 = *pval;
 
@@ -1457,10 +1403,6 @@ _func_enter_;
 
 	switch (variable)
 	{
-		case HW_VAR_FW_PS_STATE:
-			/* 3. read dword 0x88 //driver read fw ps state */
-			*((u16 *)val) = rtw_read16(padapter, 0x88);
-			break;
 		default:
 			GetHwReg8812A(padapter, variable, val);
 			break;
@@ -1557,8 +1499,8 @@ _func_enter_;
 	pHalFunc->free_recv_priv = &FreeRecvPriv8821AS;
 
 #ifdef CONFIG_SW_LED
-	pHalFunc->InitSwLeds = &rtl8812s_InitSwLeds;
-	pHalFunc->DeInitSwLeds = &rtl8812s_DeInitSwLeds;
+	pHalFunc->InitSwLeds = &rtl8821as_InitSwLeds;
+	pHalFunc->DeInitSwLeds = &rtl8821as_DeInitSwLeds;
 #else // !CONFIG_SW_LED, case of hw led or no led
 	pHalFunc->InitSwLeds = NULL;
 	pHalFunc->DeInitSwLeds = NULL;
@@ -1566,7 +1508,7 @@ _func_enter_;
 
 	pHalFunc->init_default_value = &InitDefaultValue8821A;
 	pHalFunc->intf_chip_configure = &_InterfaceConfigure;
-	pHalFunc->read_adapter_info = &_ReadAdapterInfo;
+	pHalFunc->read_adapter_info = &ReadAdapterInfo8812AS;
 
 	pHalFunc->enable_interrupt = &EnableInterrupt8821AS;
 	pHalFunc->disable_interrupt = &DisableInterrupt8821AS;

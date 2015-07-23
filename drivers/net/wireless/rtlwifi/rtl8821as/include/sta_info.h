@@ -93,6 +93,10 @@ struct	stainfo_stats	{
 	u64	last_rx_ctrl_pkts;
 	u64	last_rx_data_pkts;
 	u64 last_rx_data_qos_pkts[TID_NUM];
+#ifdef CONFIG_TDLS
+	u64 rx_tdls_disc_rsp_pkts;
+	u64 last_rx_tdls_disc_rsp_pkts;
+#endif
 	u64	rx_bytes;
 	u64	rx_drops;
 
@@ -144,6 +148,7 @@ struct sta_info {
 #endif //CONFIG_GTK_OL
 #ifdef CONFIG_IEEE80211W
 	union pn48		dot11wtxpn;			// PN48 used for Unicast mgmt xmit.
+	_timer dot11w_expire_timer;
 #endif //CONFIG_IEEE80211W
 	union pn48		dot11rxpn;			// PN48 used for Unicast recv.
 

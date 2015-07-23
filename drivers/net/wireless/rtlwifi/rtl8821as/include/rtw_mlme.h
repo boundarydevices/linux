@@ -250,6 +250,7 @@ struct tx_nego_req_info{
 	u16					peer_channel_num[2];		//	The channel number which the receiver stands.
 	u8					peerDevAddr[ ETH_ALEN ];		//	Peer device address
 	u8					benable;					//	This negoitation request frame is trigger to send or not
+	u8					peer_ch;		                   /*   The listen channel for peer P2P device    */
 };
 
 struct group_id_info{
@@ -520,6 +521,7 @@ struct mlme_priv {
 
 #ifdef CONFIG_ARP_KEEP_ALIVE
 	// for arp offload keep alive
+	u8 bGetGateway;
 	u8	gw_mac_addr[6];
 	u8	gw_ip[4];
 #endif
@@ -765,7 +767,9 @@ extern void rtw_stadel_event_callback(_adapter *adapter, u8 *pbuf);
 extern void rtw_atimdone_event_callback(_adapter *adapter, u8 *pbuf);
 extern void rtw_cpwm_event_callback(_adapter *adapter, u8 *pbuf);
 extern void rtw_wmm_event_callback(PADAPTER padapter, u8 *pbuf);
-
+#ifdef CONFIG_IEEE80211W
+void rtw_sta_timeout_event_callback(_adapter *adapter, u8 *pbuf);
+#endif /* CONFIG_IEEE80211W */
 extern void rtw_join_timeout_handler(RTW_TIMER_HDL_ARGS);
 extern void _rtw_scan_timeout_handler(RTW_TIMER_HDL_ARGS);
 

@@ -44,7 +44,7 @@ u8 signal_stat_calc_profile[SIGNAL_STAT_CALC_PROFILE_MAX][2] = {
 };
 
 #ifndef RTW_SIGNAL_STATE_CALC_PROFILE	
-#define RTW_SIGNAL_STATE_CALC_PROFILE SIGNAL_STAT_CALC_PROFILE_0
+#define RTW_SIGNAL_STATE_CALC_PROFILE SIGNAL_STAT_CALC_PROFILE_1
 #endif
 
 #endif //CONFIG_NEW_SIGNAL_STAT_PROCESS
@@ -2086,15 +2086,15 @@ static sint validate_80211w_mgmt(_adapter *adapter, union recv_frame *precv_fram
 	struct mlme_priv *pmlmepriv = &adapter->mlmepriv;
 	struct rx_pkt_attrib *pattrib = & precv_frame->u.hdr.attrib;
 	u8 *ptr = precv_frame->u.hdr.rx_data;
+	struct sta_info	*psta;
+	struct sta_priv		*pstapriv = &adapter->stapriv;
 	u8 type;
 	u8 subtype;
 			
 	type =  GetFrameType(ptr);
 	subtype = GetFrameSubType(ptr); //bit(7)~bit(2)
 			
-	//only support station mode
-	if(check_fwstate(pmlmepriv, WIFI_STATION_STATE) && check_fwstate(pmlmepriv, _FW_LINKED) 
-		&& adapter->securitypriv.binstallBIPkey == _TRUE)
+	if (adapter->securitypriv.binstallBIPkey == _TRUE)
 	{
 		//unicast management frame decrypt
 		if(pattrib->privacy && !(IS_MCAST(GetAddr1Ptr(ptr))) && 
@@ -2165,14 +2165,15 @@ static sint validate_80211w_mgmt(_adapter *adapter, union recv_frame *precv_fram
 			{
 				DBG_871X("802.11w recv none protected packet\n");
 				//drop pkt, don't issue sa query request
-				//issue_action_SA_Query(adapter, NULL, 0, 0);
+				/* issue_action_SA_Query(adapter, NULL, 0, 0, 0); */
 				goto validate_80211w_fail;
 			}
 		}//802.11w protect
 		else
 		{
-			if(subtype == WIFI_ACTION)
-			{
+			psta = rtw_get_stainfo(pstapriv, GetAddr2Ptr(ptr));
+			
+			if (subtype == WIFI_ACTION && psta && psta->bpairwise_key_installed == _TRUE) {
 				//according 802.11-2012 standard, these five types are not robust types
 				if( ptr[WLAN_HDR_A3_LEN] != RTW_WLAN_CATEGORY_PUBLIC          &&
 					ptr[WLAN_HDR_A3_LEN] != RTW_WLAN_CATEGORY_HT              &&
@@ -2192,7 +2193,7 @@ static sint validate_80211w_mgmt(_adapter *adapter, union recv_frame *precv_fram
 				if(reason == 6 || reason == 7)
 				{
 					//issue sa query request
-					issue_action_SA_Query(adapter, NULL, 0, 0);
+					issue_action_SA_Query(adapter, NULL, 0, 0, IEEE80211W_RIGHT_KEY);
 				}
 				goto validate_80211w_fail;
 			}

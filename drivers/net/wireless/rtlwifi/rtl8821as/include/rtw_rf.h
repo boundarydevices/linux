@@ -174,6 +174,25 @@ int rtw_ch2freq(int chan);
 int rtw_freq2ch(int freq);
 bool rtw_chbw_to_freq_range(u8 ch, u8 bw, u8 offset, u32 *hi, u32 *lo);
 
+#define BB_GAIN_2G 0
+#ifdef CONFIG_IEEE80211_BAND_5GHZ
+#define BB_GAIN_5GLB1 1
+#define BB_GAIN_5GLB2 2
+#define BB_GAIN_5GMB1 3
+#define BB_GAIN_5GMB2 4
+#define BB_GAIN_5GHB 5
+#endif
+
+#ifdef CONFIG_IEEE80211_BAND_5GHZ
+#define BB_GAIN_NUM 6
+#else
+#define BB_GAIN_NUM 1
+#endif
+
+int rtw_ch_to_bb_gain_sel(int ch);
+void rtw_rf_set_tx_gain_offset(_adapter *adapter, u8 path, s8 offset);
+void rtw_rf_apply_tx_gain_offset(_adapter *adapter, u8 ch);
+
 bool rtw_is_dfs_range(u32 hi, u32 lo);
 bool rtw_is_dfs_ch(u8 ch, u8 bw, u8 offset);
 bool rtw_is_long_cac_range(u32 hi, u32 lo);

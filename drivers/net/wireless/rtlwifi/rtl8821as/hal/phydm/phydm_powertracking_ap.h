@@ -58,6 +58,9 @@
 #define	OFDM_TABLE_SIZE_92D 	43
 #define	OFDM_TABLE_SIZE 	37
 #define	CCK_TABLE_SIZE		33
+#define	CCK_TABLE_SIZE_88F	21
+
+
 
 //#define	OFDM_TABLE_SIZE_92E 	54
 //#define 	CCK_TABLE_SIZE_92E     	54
@@ -65,9 +68,12 @@ extern	u4Byte OFDMSwingTable[OFDM_TABLE_SIZE_92D];
 extern	u1Byte CCKSwingTable_Ch1_Ch13[CCK_TABLE_SIZE][8];
 extern	u1Byte CCKSwingTable_Ch14 [CCK_TABLE_SIZE][8];
 
+
 extern	u4Byte OFDMSwingTable_New[OFDM_TABLE_SIZE_92D];
 extern	u1Byte CCKSwingTable_Ch1_Ch13_New[CCK_TABLE_SIZE][8];
 extern	u1Byte CCKSwingTable_Ch14_New [CCK_TABLE_SIZE][8];
+extern	u1Byte CCKSwingTable_Ch1_Ch14_88F[CCK_TABLE_SIZE_88F][16];
+
 #endif
 
 #define	ODM_OFDM_TABLE_SIZE 	37

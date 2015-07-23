@@ -2257,9 +2257,6 @@ _func_enter_;
 			
 	_enter_critical_bh(&padapter->security_key_mutex, &irqL);
 	
-	//only support station mode
-	if(!check_fwstate(pmlmepriv, WIFI_STATION_STATE) || !check_fwstate(pmlmepriv, _FW_LINKED))
-		goto xmitframe_coalesce_success;
 	
 	//IGTK key is not install, it may not support 802.11w
 	if(padapter->securitypriv.binstallBIPkey != _TRUE)
@@ -2356,9 +2353,8 @@ _func_enter_;
 				goto xmitframe_coalesce_fail;
 			}
 		
-			if(!(psta->state & _FW_LINKED) || pxmitframe->buf_addr==NULL)
-			{
-				DBG_871X("%s, not _FW_LINKED or addr null\n", __func__);
+			if (pxmitframe->buf_addr == NULL) {
+				DBG_871X("%s, pxmitframe->buf_addr\n", __func__);
 				goto xmitframe_coalesce_fail;
 			}
 			
@@ -2381,6 +2377,13 @@ _func_enter_;
 			}*/
 			if(pattrib->encrypt>0)
 				_rtw_memcpy(pattrib->dot118021x_UncstKey.skey, psta->dot118021x_UncstKey.skey, 16);
+			
+			/* To use wrong key */
+			if (pattrib->key_type == IEEE80211W_WRONG_KEY) {
+				DBG_871X("use wrong key\n");
+				pattrib->dot118021x_UncstKey.skey[0] = 0xff;
+			}
+			
 			//bakeup original management packet
 			_rtw_memcpy(tmp_buf, pframe, pattrib->pktlen);
 			//move to data portion

@@ -1369,7 +1369,8 @@ static void rtw_ap_check_scan(_adapter *padapter)
 	_enter_critical_bh(&(pmlmepriv->scanned_queue.lock), &irqL);
 	phead = get_list_head(queue);
 	if (rtw_end_of_queue_search(phead, get_next(phead)) == _TRUE)
-		do_scan = _TRUE;	
+		if (padapter->registrypriv.wifi_spec)
+			do_scan = _TRUE;
 	_exit_critical_bh(&(pmlmepriv->scanned_queue.lock), &irqL);
 
 #ifdef CONFIG_AUTO_CHNL_SEL_NHM
@@ -1645,7 +1646,8 @@ change_chbw:
 	}
 
 	/*Set EDCA param reg after update cur_wireless_mode & update_capinfo*/
-	rtw_set_hw_wmm_param(padapter);
+	if (pregpriv->wifi_spec == 1)
+		rtw_set_hw_wmm_param(padapter);
 	
 	/*pmlmeext->bstart_bss = _TRUE;*/
 }
@@ -2709,7 +2711,7 @@ static void update_bcn_htinfo_ie(_adapter *padapter)
 		pht_info = (struct HT_info_element *)(p + 2);		
 
 		/* for STA Channel Width/Secondary Channel Offset*/
-		if (pmlmepriv->sw_to_20mhz == 0) {
+		if ((pmlmepriv->sw_to_20mhz == 0) && (pmlmeext->cur_channel <= 14)) {
 			if ((pmlmepriv->num_sta_40mhz_intolerant > 0) || (pmlmepriv->ht_20mhz_width_req == _TRUE) 
 				|| (pmlmepriv->ht_intolerant_ch_reported == _TRUE) || (pmlmepriv->olbc == _TRUE)) {
 				SET_HT_OP_ELE_2ND_CHL_OFFSET(pht_info, 0);

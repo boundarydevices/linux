@@ -468,7 +468,7 @@
 //========================================================
 
 #define MACID_NUM_8703B 128
-#define CAM_ENTRY_NUM_8703B 16
+#define SEC_CAM_ENT_NUM_8703B 16
 
 #endif /* __RTL8703B_SPEC_H__ */
 

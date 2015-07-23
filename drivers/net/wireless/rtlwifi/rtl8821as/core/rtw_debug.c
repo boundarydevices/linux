@@ -71,6 +71,110 @@ void dump_drv_version(void *sel)
 	DBG_871X_SEL_NL(sel, "build time: %s %s\n", __DATE__, __TIME__);
 }
 
+void dump_drv_cfg(void *sel)
+{
+	char *kernel_version = utsname()->release;
+	
+	DBG_871X_SEL_NL(sel, "\nKernel Version: %s\n", kernel_version);
+	DBG_871X_SEL_NL(sel, "Driver Version: %s\n", DRIVERVERSION);
+	DBG_871X_SEL_NL(sel, "------------------------------------------------\n");
+#ifdef CONFIG_IOCTL_CFG80211
+	DBG_871X_SEL_NL(sel, "CFG80211\n");
+	#ifdef RTW_USE_CFG80211_STA_EVENT
+	DBG_871X_SEL_NL(sel, "RTW_USE_CFG80211_STA_EVENT\n");
+	#endif
+#else
+	DBG_871X_SEL_NL(sel, "WEXT\n");
+#endif
+
+	DBG_871X_SEL_NL(sel, "DBG:%d\n", DBG);
+#ifdef CONFIG_DEBUG
+	DBG_871X_SEL_NL(sel, "CONFIG_DEBUG\n");
+#endif
+
+#ifdef CONFIG_CONCURRENT_MODE
+	DBG_871X_SEL_NL(sel, "CONFIG_CONCURRENT_MODE\n");
+#endif
+
+#ifdef CONFIG_POWER_SAVING
+	DBG_871X_SEL_NL(sel, "CONFIG_POWER_SAVING\n");
+#endif
+
+#ifdef CONFIG_LOAD_PHY_PARA_FROM_FILE
+	DBG_871X_SEL_NL(sel, "LOAD_PHY_PARA_FROM_FILE - REALTEK_CONFIG_PATH=%s\n", REALTEK_CONFIG_PATH);
+	#ifdef CONFIG_CALIBRATE_TX_POWER_BY_REGULATORY
+	DBG_871X_SEL_NL(sel, "CONFIG_CALIBRATE_TX_POWER_BY_REGULATORY\n");
+	#endif
+	#ifdef CONFIG_CALIBRATE_TX_POWER_TO_MAX
+	DBG_871X_SEL_NL(sel, "CONFIG_CALIBRATE_TX_POWER_TO_MAX\n");
+	#endif
+#endif
+
+#ifdef CONFIG_DISABLE_ODM
+	DBG_871X_SEL_NL(sel, "CONFIG_DISABLE_ODM\n");
+#endif
+
+#ifdef CONFIG_MINIMAL_MEMORY_USAGE
+	DBG_871X_SEL_NL(sel, "CONFIG_MINIMAL_MEMORY_USAGE\n");
+#endif
+
+	DBG_871X_SEL_NL(sel, "CONFIG_RTW_ADAPTIVITY_EN = %d\n", CONFIG_RTW_ADAPTIVITY_EN);
+#if (CONFIG_RTW_ADAPTIVITY_EN)
+	DBG_871X_SEL_NL(sel, "ADAPTIVITY_MODE = %s\n", (CONFIG_RTW_ADAPTIVITY_MODE) ? "carrier_sense" : "normal");
+#endif
+
+#ifdef CONFIG_WOWLAN
+	DBG_871X_SEL_NL(sel, "CONFIG_WOWLAN - ");
+
+	#ifdef CONFIG_GPIO_WAKEUP
+	DBG_871X_SEL_NL(sel, "CONFIG_GPIO_WAKEUP - WAKEUP_GPIO_IDX:%d\n", WAKEUP_GPIO_IDX);
+	#endif
+#endif	
+
+#ifdef CONFIG_USB_HCI
+	#ifdef CONFIG_SUPPORT_USB_INT	
+	DBG_871X_SEL_NL(sel, "CONFIG_SUPPORT_USB_INT\n");
+	#endif
+	#ifdef CONFIG_USB_INTERRUPT_IN_PIPE		
+	DBG_871X_SEL_NL(sel, "CONFIG_USB_INTERRUPT_IN_PIPE\n");
+	#endif
+	#ifdef CONFIG_USB_TX_AGGREGATION
+	DBG_871X_SEL_NL(sel, "CONFIG_USB_TX_AGGREGATION\n");
+	#endif
+	#ifdef CONFIG_USB_RX_AGGREGATION
+	DBG_871X_SEL_NL(sel, "CONFIG_USB_RX_AGGREGATION\n");
+	#endif
+	#ifdef CONFIG_USE_USB_BUFFER_ALLOC_TX
+	DBG_871X_SEL_NL(sel, "CONFIG_USE_USB_BUFFER_ALLOC_TX\n");
+	#endif
+	#ifdef CONFIG_USE_USB_BUFFER_ALLOC_RX
+	DBG_871X_SEL_NL(sel, "CONFIG_USE_USB_BUFFER_ALLOC_RX\n");
+	#endif	
+	#ifdef CONFIG_PREALLOC_RECV_SKB
+	DBG_871X_SEL_NL(sel, "CONFIG_PREALLOC_RECV_SKB\n");
+	#endif
+	#ifdef CONFIG_FIX_NR_BULKIN_BUFFER
+	DBG_871X_SEL_NL(sel, "CONFIG_FIX_NR_BULKIN_BUFFER\n");
+	#endif
+#endif /*CONFIG_USB_HCI*/
+	
+#ifdef CONFIG_SDIO_HCI
+	#ifdef CONFIG_TX_AGGREGATION
+	DBG_871X_SEL_NL(sel, "CONFIG_TX_AGGREGATION\n");
+	#endif
+	#ifdef CONFIG_RX_AGGREGATION
+	DBG_871X_SEL_NL(sel, "CONFIG_RX_AGGREGATION\n");
+	#endif
+#endif /*CONFIG_SDIO_HCI*/
+
+#ifdef CONFIG_PCI_HCI
+#endif
+	
+	DBG_871X_SEL_NL(sel, "MAX_XMITBUF_SZ = %d\n", MAX_XMITBUF_SZ);
+	DBG_871X_SEL_NL(sel, "MAX_RECVBUF_SZ = %d\n", MAX_RECVBUF_SZ);
+	
+}
+
 void dump_log_level(void *sel)
 {
 	DBG_871X_SEL_NL(sel, "log_level:%d\n", GlobalDebugLevel);
@@ -261,16 +365,17 @@ void dump_adapters_status(void *sel, struct dvobj_priv *dvobj)
 	_adapter *iface;
 	u8 u_ch, u_bw, u_offset;
 
-	DBG_871X_SEL_NL(sel, "%-2s %-8s %-4s %-7s %s\n"
-		, "id", "ifname", "port", "ch", "status");
+	DBG_871X_SEL_NL(sel, "%-2s %-8s %-17s %-4s %-7s %s\n"
+		, "id", "ifname", "macaddr", "port", "ch", "status");
 
-	DBG_871X_SEL_NL(sel, "------------------------\n");
+	DBG_871X_SEL_NL(sel, "------------------------------------------\n");
 
 	for (i = 0; i < dvobj->iface_nums; i++) {
 		iface = dvobj->padapters[i];
 		if (iface) {
-			DBG_871X_SEL_NL(sel, "%2d %-8s %4hhu %3u,%u,%u "MLME_STATE_FMT" %s%s\n"
+			DBG_871X_SEL_NL(sel, "%2d %-8s "MAC_FMT" %4hhu %3u,%u,%u "MLME_STATE_FMT" %s%s\n"
 				, i, ADPT_ARG(iface)
+				, MAC_ARG(adapter_mac_addr(iface))
 				, get_iface_type(iface)
 				, iface->mlmeextpriv.cur_channel
 				, iface->mlmeextpriv.cur_bwmode
@@ -282,15 +387,15 @@ void dump_adapters_status(void *sel, struct dvobj_priv *dvobj)
 		}
 	}
 
-	DBG_871X_SEL_NL(sel, "------------------------\n");
+	DBG_871X_SEL_NL(sel, "------------------------------------------\n");
 
 	rtw_get_ch_setting_union(dvobj->padapters[IFACE_ID0], &u_ch, &u_bw, &u_offset);
-	DBG_871X_SEL_NL(sel, "%16s %3u,%u,%u\n"
+	DBG_871X_SEL_NL(sel, "%34s %3u,%u,%u\n"
 		, "union:"
 		, u_ch, u_bw, u_offset
 	);
 
-	DBG_871X_SEL_NL(sel, "%16s %3u,%u,%u\n"
+	DBG_871X_SEL_NL(sel, "%34s %3u,%u,%u\n"
 		, "oper:"
 		, dvobj->oper_channel
 		, dvobj->oper_bwmode
@@ -299,7 +404,7 @@ void dump_adapters_status(void *sel, struct dvobj_priv *dvobj)
 
 	#ifdef CONFIG_DFS_MASTER
 	if (rfctl->radar_detect_ch != 0) {
-		DBG_871X_SEL_NL(sel, "%16s %3u,%u,%u"
+		DBG_871X_SEL_NL(sel, "%34s %3u,%u,%u"
 			, "radar_detect:"
 			, rfctl->radar_detect_ch
 			, rfctl->radar_detect_bw
@@ -312,6 +417,59 @@ void dump_adapters_status(void *sel, struct dvobj_priv *dvobj)
 			DBG_871X_SEL(sel, "\n");
 	}
 	#endif
+}
+
+#define SEC_CAM_ENT_ID_TITLE_FMT "%-2s"
+#define SEC_CAM_ENT_ID_TITLE_ARG "id"
+#define SEC_CAM_ENT_ID_VALUE_FMT "%2u"
+#define SEC_CAM_ENT_ID_VALUE_ARG(id) (id)
+
+#define SEC_CAM_ENT_TITLE_FMT "%-6s %-17s %-32s %-3s %-7s %-2s %-2s %-5s"
+#define SEC_CAM_ENT_TITLE_ARG "ctrl", "addr", "key", "kid", "type", "MK", "GK", "valid"
+#define SEC_CAM_ENT_VALUE_FMT "0x%04x "MAC_FMT" "KEY_FMT" %3u %-7s %2u %2u %5u"
+#define SEC_CAM_ENT_VALUE_ARG(ent) \
+	(ent)->ctrl \
+	, MAC_ARG((ent)->mac) \
+	, KEY_ARG((ent)->key) \
+	, ((ent)->ctrl) & 0x03 \
+	, security_type_str((((ent)->ctrl) >> 2) & 0x07) \
+	, (((ent)->ctrl) >> 5) & 0x01 \
+	, (((ent)->ctrl) >> 6) & 0x01 \
+	, (((ent)->ctrl) >> 15) & 0x01
+
+void dump_sec_cam_ent(void *sel, struct sec_cam_ent *ent, int id)
+{
+	if (id >= 0) {
+		DBG_871X_SEL_NL(sel, SEC_CAM_ENT_ID_VALUE_FMT " " SEC_CAM_ENT_VALUE_FMT"\n"
+			, SEC_CAM_ENT_ID_VALUE_ARG(id), SEC_CAM_ENT_VALUE_ARG(ent));
+	} else {
+		DBG_871X_SEL_NL(sel, SEC_CAM_ENT_VALUE_FMT"\n", SEC_CAM_ENT_VALUE_ARG(ent));
+	}
+}
+
+void dump_sec_cam_ent_title(void *sel, u8 has_id)
+{
+	if (has_id) {
+		DBG_871X_SEL_NL(sel, SEC_CAM_ENT_ID_TITLE_FMT " " SEC_CAM_ENT_TITLE_FMT"\n"
+			, SEC_CAM_ENT_ID_TITLE_ARG, SEC_CAM_ENT_TITLE_ARG);
+	} else {
+		DBG_871X_SEL_NL(sel, SEC_CAM_ENT_TITLE_FMT"\n", SEC_CAM_ENT_TITLE_ARG);
+	}
+}
+
+void dump_sec_cam(void *sel, _adapter *adapter)
+{
+	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
+	struct cam_ctl_t *cam_ctl = &dvobj->cam_ctl;
+	struct sec_cam_ent ent;
+	int i;
+
+	DBG_871X_SEL_NL(sel, "HW sec cam:\n");
+	dump_sec_cam_ent_title(sel, 1);
+	for (i = 0; i < cam_ctl->num; i++) {
+		rtw_sec_read_cam_ent(adapter, i, (u8 *)(&ent.ctrl), ent.mac, ent.key);
+		dump_sec_cam_ent(sel , &ent, i);
+	}
 }
 
 #ifdef CONFIG_PROC_DEBUG
@@ -1682,8 +1840,15 @@ int proc_get_hw_status(struct seq_file *m, void *v)
 	struct dvobj_priv *dvobj = padapter->dvobj;
 	struct debug_priv *pdbgpriv = &dvobj->drv_dbg;
 
-	DBG_871X_SEL_NL(m, "RX FIFO full count: last_time=%lld, current_time=%lld, differential=%lld\n"
-	, pdbgpriv->dbg_rx_fifo_last_overflow, pdbgpriv->dbg_rx_fifo_curr_overflow, pdbgpriv->dbg_rx_fifo_diff_overflow);
+	if (pdbgpriv->dbg_rx_fifo_last_overflow == 1
+		&& pdbgpriv->dbg_rx_fifo_curr_overflow == 1
+		&& pdbgpriv->dbg_rx_fifo_diff_overflow == 1
+	) {
+		DBG_871X_SEL_NL(m, "RX FIFO full count: no implementation\n");
+	} else {
+		DBG_871X_SEL_NL(m, "RX FIFO full count: last_time=%llu, current_time=%llu, differential=%llu\n"
+			, pdbgpriv->dbg_rx_fifo_last_overflow, pdbgpriv->dbg_rx_fifo_curr_overflow, pdbgpriv->dbg_rx_fifo_diff_overflow);
+	}
 
 	return 0;
 }
@@ -2721,6 +2886,7 @@ ssize_t proc_set_wowlan_gpio_info(struct file *file, const char __user *buffer,
 	char tmp[32] = {0};
 	int num = 0;
 	u32 is_high_active = 0;
+	u8 val8 = 0;
 
 	if (count < 1)
 		return -EFAULT;
@@ -2738,8 +2904,16 @@ ssize_t proc_set_wowlan_gpio_info(struct file *file, const char __user *buffer,
 
 		pwrpriv->is_high_active = is_high_active;
 
+		rtw_ps_deny(padapter, PS_DENY_IOCTL);
+		LeaveAllPowerSaveModeDirect(padapter);
+		val8 = (pwrpriv->is_high_active == 0) ? 1 : 0;
+		rtw_hal_set_output_gpio(padapter, WAKEUP_GPIO_IDX, val8);
+		rtw_ps_deny_cancel(padapter, PS_DENY_IOCTL);
+
 		DBG_871X("set %s %d\n", "gpio_high_active",
 				pwrpriv->is_high_active);
+		DBG_871X("%s: set GPIO_%d %d as default.\n",
+			 __func__, WAKEUP_GPIO_IDX, val8);
 	}
 	
 	return count;
@@ -3347,5 +3521,327 @@ ssize_t proc_set_monitor(struct file *file, const char __user *buffer, size_t co
 	return count;
 }
 
-#endif
+#include <hal_data.h>
+int proc_get_efuse_map(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	PHAL_DATA_TYPE pHalData = GET_HAL_DATA(padapter);
+	struct pwrctrl_priv *pwrctrlpriv  = adapter_to_pwrctl(padapter);
+	PEFUSE_HAL pEfuseHal = &pHalData->EfuseHal;
+	int i, j;
+	u8 ips_mode = IPS_NUM; 
+	int mapLen = EFUSE_MAP_SIZE;
+
+	ips_mode = pwrctrlpriv->ips_mode;
+	rtw_pm_set_ips(padapter, IPS_NONE);
+	if (rtw_efuse_map_read(padapter, EFUSE_WIFI, mapLen, pEfuseHal->fakeEfuseInitMap) == _FAIL)
+		DBG_871X_SEL_NL(m, "WARN - Read Realmap Failed\n");	
+	
+	DBG_871X_SEL_NL(m, "\n");
+	for (i = 0; i < EFUSE_MAP_SIZE; i += 16) {
+		DBG_871X_SEL_NL(m, "0x%02x\t", i);
+		for (j = 0; j < 8; j++) 
+			DBG_871X_SEL_NL(m, "%02X ", pEfuseHal->fakeEfuseInitMap[i+j]);
+		
+		DBG_871X_SEL_NL(m, "\t");
+				
+		for (; j < 16; j++)
+			DBG_871X_SEL_NL(m, "%02X ", pEfuseHal->fakeEfuseInitMap[i+j]);
+		
+		DBG_871X_SEL_NL(m, "\n");
+				
+	}
+	rtw_pm_set_ips(padapter, ips_mode);
+	return 0;
+}
+
+ssize_t proc_set_efuse_map(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+#if 0
+	char tmp[256] = {0};
+	u32 addr, cnts;
+	u8 efuse_data;
+	
+	int jj, kk;
+
+	struct net_device *dev = data;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	struct pwrctrl_priv *pwrctrlpriv  = adapter_to_pwrctl(padapter);
+	u8 ips_mode = IPS_NUM;
+	
+	if (count < 3) {
+		DBG_871X("argument size is less than 3\n");
+		return -EFAULT;
+	}
+	
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+	
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		int num = sscanf(tmp, "%x %d %x", &addr, &cnts, &efuse_data);
+	
+		if (num != 3) {
+			DBG_871X("invalid write_reg parameter!\n");
+			return count;
+		}
+	}
+	ips_mode = pwrctrlpriv->ips_mode;
+	rtw_pm_set_ips(padapter, IPS_NONE);
+	if (rtw_efuse_map_write(padapter, addr, cnts, &efuse_data) == _FAIL) 
+		DBG_871X("WARN - rtw_efuse_map_write error!!\n");		
+	rtw_pm_set_ips(padapter, ips_mode);
+#endif	
+	return count;
+}
+
+#ifdef CONFIG_IEEE80211W
+ssize_t proc_set_tx_sa_query(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
+	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
+	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
+	struct	sta_priv *pstapriv = &padapter->stapriv;
+	struct dvobj_priv *dvobj = adapter_to_dvobj(padapter);
+	struct macid_ctl_t *macid_ctl = dvobj_to_macidctl(dvobj);
+	struct sta_info *psta;
+	_list	*plist, *phead;
+	_irqL	 irqL;
+	char tmp[16];
+	u8	mac_addr[NUM_STA][ETH_ALEN];
+	u32 key_type;
+	u8 index;
+
+	if (count > 2) {
+		DBG_871X("argument size is more than 2\n");
+		return -EFAULT;
+	}	
+
+	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+
+		int num = sscanf(tmp, "%x", &key_type);
+
+		if (num !=  1) {
+			DBG_871X("invalid read_reg parameter!\n");
+			return count;
+		}
+		DBG_871X("0: set sa query request , key_type=%d\n", key_type);
+	}
+	
+	if ((check_fwstate(pmlmepriv, WIFI_STATION_STATE) == _TRUE)
+		&& (check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE) && padapter->securitypriv.binstallBIPkey == _TRUE) {
+		DBG_871X("STA:"MAC_FMT"\n", MAC_ARG(get_my_bssid(&(pmlmeinfo->network))));
+		/* TX unicast sa_query to AP */
+		issue_action_SA_Query(padapter, get_my_bssid(&(pmlmeinfo->network)), 0, 0, (u8)key_type);
+	} else if (check_fwstate(pmlmepriv, WIFI_AP_STATE) == _TRUE && padapter->securitypriv.binstallBIPkey == _TRUE) {
+		/* TX unicast sa_query to every client STA */
+		_enter_critical_bh(&pstapriv->sta_hash_lock, &irqL);
+		for (index = 0; index < NUM_STA; index++) {
+			psta = NULL;
+			
+			phead = &(pstapriv->sta_hash[index]);
+			plist = get_next(phead);
+			
+			while ((rtw_end_of_queue_search(phead, plist)) == _FALSE) {
+				psta = LIST_CONTAINOR(plist, struct sta_info, hash_list);
+				plist = get_next(plist);
+				_rtw_memcpy(&mac_addr[psta->mac_id][0], psta->hwaddr, ETH_ALEN);
+			}
+		}
+		_exit_critical_bh(&pstapriv->sta_hash_lock, &irqL);
+		
+		for (index = 0; index < macid_ctl->num && index < NUM_STA; index++) {
+			if (rtw_macid_is_used(macid_ctl, index) && !rtw_macid_is_bmc(macid_ctl, index)) {
+				if (!_rtw_memcmp(get_my_bssid(&(pmlmeinfo->network)), &mac_addr[index][0], ETH_ALEN) 
+					&& !IS_MCAST(&mac_addr[index][0])) {
+					issue_action_SA_Query(padapter, &mac_addr[index][0], 0, 0, (u8)key_type);
+					DBG_871X("STA[%u]:"MAC_FMT"\n", index , MAC_ARG(&mac_addr[index][0]));
+				}
+			}
+		}
+	}
+	
+	return count;
+}
+
+int proc_get_tx_sa_query(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	
+	DBG_871X_SEL_NL(m, "%s\n", __func__);
+	return 0;
+}
+
+ssize_t proc_set_tx_deauth(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
+	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
+	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
+	struct	sta_priv *pstapriv = &padapter->stapriv;
+	struct dvobj_priv *dvobj = adapter_to_dvobj(padapter);
+	struct macid_ctl_t *macid_ctl = dvobj_to_macidctl(dvobj);
+	struct sta_info *psta;
+	_list	*plist, *phead;
+	_irqL	 irqL;
+	char tmp[16];
+	u8	mac_addr[NUM_STA][ETH_ALEN];
+	u8 bc_addr[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+	u32 key_type;
+	u8 index;
+	
+
+	if (count > 2) {
+		DBG_871X("argument size is more than 2\n");
+		return -EFAULT;
+	}	
+
+	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+
+		int num = sscanf(tmp, "%x", &key_type);
+
+		if (num !=  1) {
+			DBG_871X("invalid read_reg parameter!\n");
+			return count;
+		}
+		DBG_871X("key_type=%d\n", key_type);
+	}
+	if (key_type < 0 || key_type > 4)
+		return count;
+	
+	if ((check_fwstate(pmlmepriv, WIFI_STATION_STATE) == _TRUE)
+		&& (check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE)) {
+		if (key_type == 3) /* key_type 3 only for AP mode */
+			return count;
+		/* TX unicast deauth to AP */
+		issue_deauth_11w(padapter, get_my_bssid(&(pmlmeinfo->network)), 0, (u8)key_type);
+	} else if (check_fwstate(pmlmepriv, WIFI_AP_STATE) == _TRUE) {
+		
+		if (key_type == 3)
+			issue_deauth_11w(padapter, bc_addr, 0, IEEE80211W_RIGHT_KEY);
+		
+		/* TX unicast deauth to every client STA */
+		_enter_critical_bh(&pstapriv->sta_hash_lock, &irqL);
+		for (index = 0; index < NUM_STA; index++) {
+			psta = NULL;
+			
+			phead = &(pstapriv->sta_hash[index]);
+			plist = get_next(phead);
+			
+			while ((rtw_end_of_queue_search(phead, plist)) == _FALSE) {
+				psta = LIST_CONTAINOR(plist, struct sta_info, hash_list);
+				plist = get_next(plist);
+				_rtw_memcpy(&mac_addr[psta->mac_id][0], psta->hwaddr, ETH_ALEN);
+			}
+		}
+		_exit_critical_bh(&pstapriv->sta_hash_lock, &irqL);
+		
+		for (index = 0; index < macid_ctl->num && index < NUM_STA; index++) {
+			if (rtw_macid_is_used(macid_ctl, index) && !rtw_macid_is_bmc(macid_ctl, index)) {
+				if (!_rtw_memcmp(get_my_bssid(&(pmlmeinfo->network)), &mac_addr[index][0], ETH_ALEN)) {
+					if (key_type != 3)
+						issue_deauth_11w(padapter, &mac_addr[index][0], 0, (u8)key_type);
+					
+					psta = rtw_get_stainfo(pstapriv, &mac_addr[index][0]);	
+					if (psta && key_type != IEEE80211W_WRONG_KEY && key_type != IEEE80211W_NO_KEY) {
+						u8 updated = _FALSE;
+					
+						_enter_critical_bh(&pstapriv->asoc_list_lock, &irqL);
+						if (rtw_is_list_empty(&psta->asoc_list) == _FALSE) {			
+							rtw_list_delete(&psta->asoc_list);
+							pstapriv->asoc_list_cnt--;
+							updated = ap_free_sta(padapter, psta, _FALSE, WLAN_REASON_PREV_AUTH_NOT_VALID, _TRUE);
+			
+						}
+						_exit_critical_bh(&pstapriv->asoc_list_lock, &irqL);
+			
+						associated_clients_update(padapter, updated, STA_INFO_UPDATE_ALL);
+					}
+					
+					DBG_871X("STA[%u]:"MAC_FMT"\n", index , MAC_ARG(&mac_addr[index][0]));
+				}
+			}
+		}
+	}
+	
+	return count;
+}
+
+int proc_get_tx_deauth(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	
+	DBG_871X_SEL_NL(m, "%s\n", __func__);
+	return 0;
+}
+
+ssize_t proc_set_tx_auth(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
+	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
+	struct mlme_priv *pmlmepriv = &(padapter->mlmepriv);
+	struct	sta_priv *pstapriv = &padapter->stapriv;
+	struct dvobj_priv *dvobj = adapter_to_dvobj(padapter);
+	struct macid_ctl_t *macid_ctl = dvobj_to_macidctl(dvobj);
+	struct sta_info *psta;
+	_list	*plist, *phead;
+	_irqL	 irqL;
+	char tmp[16];
+	u8	mac_addr[NUM_STA][ETH_ALEN];
+	u8 bc_addr[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+	u32 tx_auth;
+	u8 index;
+	
+
+	if (count > 2) {
+		DBG_871X("argument size is more than 2\n");
+		return -EFAULT;
+	}	
+
+	if (buffer && !copy_from_user(tmp, buffer, sizeof(tmp))) {		
+
+		int num = sscanf(tmp, "%x", &tx_auth);
+
+		if (num !=  1) {
+			DBG_871X("invalid read_reg parameter!\n");
+			return count;
+		}
+		DBG_871X("1: setnd auth, 2: send assoc request. tx_auth=%d\n", tx_auth);
+	}
+	
+	if ((check_fwstate(pmlmepriv, WIFI_STATION_STATE) == _TRUE)
+		&& (check_fwstate(pmlmepriv, _FW_LINKED) == _TRUE)) {
+		if (tx_auth == 1) {
+			/* TX unicast auth to AP */
+			issue_auth(padapter, NULL, 0);
+		} else if (tx_auth == 2) {
+			/* TX unicast auth to AP */
+			issue_assocreq(padapter);
+		}
+	} 
+	
+	return count;
+}
+
+int proc_get_tx_auth(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	
+	DBG_871X_SEL_NL(m, "%s\n", __func__);
+	return 0;
+}
+#endif /* CONFIG_IEEE80211W */
+
+#endif /* CONFIG_PROC_DEBUG */
 

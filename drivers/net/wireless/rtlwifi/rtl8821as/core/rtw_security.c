@@ -2214,8 +2214,7 @@ u32	rtw_BIP_verify(_adapter *padapter, u8 *precvframe)
 		_rtw_memcpy(&temp_ipn, p+4, 6);
 		temp_ipn = le64_to_cpu(temp_ipn);
 		//BIP packet number should bigger than previous BIP packet
-		if(temp_ipn <= pmlmeext->mgnt_80211w_IPN_rx)
-		{
+		if (temp_ipn < pmlmeext->mgnt_80211w_IPN_rx) {
 			DBG_871X("replay BIP packet\n");
 			goto BIP_exit;
 		}

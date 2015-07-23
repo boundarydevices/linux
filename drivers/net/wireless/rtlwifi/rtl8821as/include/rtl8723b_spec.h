@@ -286,7 +286,7 @@
 //========================================================
 
 #define MACID_NUM_8723B 128
-#define CAM_ENTRY_NUM_8723B 64
+#define SEC_CAM_ENT_NUM_8723B 64
 
 #endif /* __RTL8723B_SPEC_H__ */
 

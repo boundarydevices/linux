@@ -88,7 +88,7 @@ typedef enum _RT_AMPDU_BRUST_MODE{
 
 #define CHANNEL_MAX_NUMBER			14+24+21	// 14 is the max channel number
 #define CHANNEL_MAX_NUMBER_2G		14
-#define CHANNEL_MAX_NUMBER_5G		54			// Please refer to "phy_GetChnlGroup8812A" and "Hal_ReadTxPowerInfo8812A"
+#define CHANNEL_MAX_NUMBER_5G		49			/* 28 + 14 + 7 = 49 */
 #define CHANNEL_MAX_NUMBER_5G_80M	7			
 #define CHANNEL_GROUP_MAX				3+9	// ch1~3, ch4~9, ch10~14 total three groups
 #define MAX_PG_GROUP					13
@@ -165,6 +165,29 @@ struct auto_chan_sel {
 };
 #endif /*CONFIG_AUTO_CHNL_SEL_NHM*/
 
+#define EFUSE_FILE_UNUSED 0
+#define EFUSE_FILE_FAILED 1
+#define EFUSE_FILE_LOADED 2
+
+#define MACADDR_FILE_UNUSED 0
+#define MACADDR_FILE_FAILED 1
+#define MACADDR_FILE_LOADED 2
+
+#define KFREE_FLAG_ON				BIT0
+#define KFREE_FLAG_THERMAL_K_ON		BIT1
+
+struct kfree_data_t {
+	u8 flag;
+	s8 bb_gain[BB_GAIN_NUM][RF_PATH_MAX];
+#ifdef CONFIG_RTL8814A
+	s8 pa_bias_5g[RF_PATH_MAX];
+	s8 pad_bias_5g[RF_PATH_MAX];
+#endif
+	s8 thermal;
+};
+
+bool kfree_data_is_bb_gain_empty(struct kfree_data_t *data);
+
 typedef struct hal_com_data
 {
 	HAL_VERSION			VersionID;
@@ -217,8 +240,8 @@ typedef struct hal_com_data
 	
 	/****** EEPROM setting.******/	
 	u8	bautoload_fail_flag;
-	u8	bloadfile_fail_flag;
-	u8	bloadmac_fail_flag;
+	u8	efuse_file_status;
+	u8	macaddr_file_status;
 	u8	EepromOrEfuse;
 	u8	efuse_eeprom_data[EEPROM_MAX_SIZE]; /*92C:256bytes, 88E:512bytes, we use union set (512bytes)*/
 	u8	InterfaceSel; /* board type kept in eFuse */
@@ -251,6 +274,7 @@ typedef struct hal_com_data
 #ifdef CONFIG_RF_GAIN_OFFSET
 	u8	EEPROMRFGainOffset;
 	u8	EEPROMRFGainVal;
+	struct kfree_data_t kfree_data;
 #endif /*CONFIG_RF_GAIN_OFFSET*/
 
 #if defined(CONFIG_RTL8723B) || defined(CONFIG_RTL8703B)
@@ -263,15 +287,15 @@ typedef struct hal_com_data
 
 	/*---------------------------------------------------------------------------------*/
 	//3 [2.4G]
-	u8	Index24G_CCK_Base[MAX_RF_PATH][CHANNEL_MAX_NUMBER];
-	u8	Index24G_BW40_Base[MAX_RF_PATH][CHANNEL_MAX_NUMBER];
+	u8	Index24G_CCK_Base[MAX_RF_PATH][CHANNEL_MAX_NUMBER_2G];
+	u8	Index24G_BW40_Base[MAX_RF_PATH][CHANNEL_MAX_NUMBER_2G];
 	//If only one tx, only BW20 and OFDM are used.
 	s8	CCK_24G_Diff[MAX_RF_PATH][MAX_TX_COUNT];	
 	s8	OFDM_24G_Diff[MAX_RF_PATH][MAX_TX_COUNT];
 	s8	BW20_24G_Diff[MAX_RF_PATH][MAX_TX_COUNT];
 	s8	BW40_24G_Diff[MAX_RF_PATH][MAX_TX_COUNT];
 	//3 [5G]
-	u8	Index5G_BW40_Base[MAX_RF_PATH][CHANNEL_MAX_NUMBER];
+	u8	Index5G_BW40_Base[MAX_RF_PATH][CHANNEL_MAX_NUMBER_5G];
 	u8	Index5G_BW80_Base[MAX_RF_PATH][CHANNEL_MAX_NUMBER_5G_80M];		
 	s8	OFDM_5G_Diff[MAX_RF_PATH][MAX_TX_COUNT];
 	s8	BW20_5G_Diff[MAX_RF_PATH][MAX_TX_COUNT];
@@ -300,12 +324,14 @@ typedef struct hal_com_data
 						 [TX_PWR_BY_RATE_NUM_RATE];
 	//---------------------------------------------------------------------------------//
 
+	/*
 	//2 Power Limit Table 
 	u8	TxPwrLevelCck[RF_PATH_MAX_92C_88E][CHANNEL_MAX_NUMBER];
 	u8	TxPwrLevelHT40_1S[RF_PATH_MAX_92C_88E][CHANNEL_MAX_NUMBER];	// For HT 40MHZ pwr
 	u8	TxPwrLevelHT40_2S[RF_PATH_MAX_92C_88E][CHANNEL_MAX_NUMBER];	// For HT 40MHZ pwr
 	s8	TxPwrHt20Diff[RF_PATH_MAX_92C_88E][CHANNEL_MAX_NUMBER];// HT 20<->40 Pwr diff
 	u8	TxPwrLegacyHtDiff[RF_PATH_MAX_92C_88E][CHANNEL_MAX_NUMBER];// For HT<->legacy pwr diff
+	*/
 
 	// Power Limit Table for 2.4G
 	s8	TxPwrLimit_2_4G[MAX_REGULATION_NUM]
@@ -331,8 +357,10 @@ typedef struct hal_com_data
 						[MAX_BASE_NUM_IN_PHY_REG_PG_5G];
 
 	// For power group
+	/*
 	u8	PwrGroupHT20[RF_PATH_MAX_92C_88E][CHANNEL_MAX_NUMBER];
 	u8	PwrGroupHT40[RF_PATH_MAX_92C_88E][CHANNEL_MAX_NUMBER];
+	*/
 	u8	PGMaxGroup;
 	
 	// The current Tx Power Level
@@ -559,12 +587,12 @@ typedef struct hal_com_data
 	s16 noise[ODM_MAX_CHANNEL_NUM];
 #endif
 
-	u8 	macid_num;
-	u8 	cam_entry_num;
+	u8 macid_num;
+	u8 sec_cam_ent_num;
 	u8 sec_cap;
 	u8	RfKFreeEnable;
 	BOOLEAN				bCCKinCH14;
-	BB_INIT_REGISTER	BBRegForRecover[6];
+	BB_INIT_REGISTER	RegForRecover[5];
 
 } HAL_DATA_COMMON, *PHAL_DATA_COMMON;
 
@@ -576,6 +604,7 @@ typedef struct hal_com_data HAL_DATA_TYPE, *PHAL_DATA_TYPE;
 #define GET_HAL_RFPATH_NUM(__pAdapter)		(((HAL_DATA_TYPE *)((__pAdapter)->HalData))->NumTotalRFPath )
 #define RT_GetInterfaceSelection(_Adapter) 		(GET_HAL_DATA(_Adapter)->InterfaceSel)
 #define GET_RF_TYPE(__pAdapter)				(GET_HAL_DATA(__pAdapter)->rf_type)
+#define GET_KFREE_DATA(_adapter) (&(GET_HAL_DATA((_adapter))->kfree_data))
 
 #define	SUPPORT_HW_RADIO_DETECT(Adapter)	(	RT_GetInterfaceSelection(Adapter) == INTF_SEL2_MINICARD ||\
 												RT_GetInterfaceSelection(Adapter) == INTF_SEL3_USB_Solo ||\

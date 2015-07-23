@@ -524,19 +524,19 @@ void rtw_reset_continual_io_error(struct dvobj_priv *dvobj)
 
 #ifdef DBG_IO
 
-u16 read_sniff_ranges[][2] = {
+u32 read_sniff_ranges[][2] = {
 	//{0x520, 0x523},
 }; 
 
-u16 write_sniff_ranges[][2] = {
+u32 write_sniff_ranges[][2] = {
 	//{0x520, 0x523},
 	//{0x4c, 0x4c},
 }; 
 
-int read_sniff_num = sizeof(read_sniff_ranges)/sizeof(u16)/2;
-int write_sniff_num = sizeof(write_sniff_ranges)/sizeof(u16)/2;
+int read_sniff_num = sizeof(read_sniff_ranges)/sizeof(u32)/2;
+int write_sniff_num = sizeof(write_sniff_ranges)/sizeof(u32)/2;
 
-bool match_read_sniff_ranges(u16 addr, u16 len)
+bool match_read_sniff_ranges(u32 addr, u16 len)
 {
 	int i;
 	for (i = 0; i<read_sniff_num; i++) {
@@ -547,7 +547,7 @@ bool match_read_sniff_ranges(u16 addr, u16 len)
 	return _FALSE;
 }
 
-bool match_write_sniff_ranges(u16 addr, u16 len)
+bool match_write_sniff_ranges(u32 addr, u16 len)
 {
 	int i;
 	for (i = 0; i<write_sniff_num; i++) {

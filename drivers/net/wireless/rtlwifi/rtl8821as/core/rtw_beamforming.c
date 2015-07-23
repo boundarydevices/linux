@@ -113,9 +113,12 @@ struct beamforming_entry	*beamforming_add_entry(PADAPTER adapter, u8* ra, u16 ai
 		pEntry->beamforming_entry_cap = beamfrom_cap;
 		pEntry->beamforming_entry_state = BEAMFORMING_ENTRY_STATE_UNINITIALIZE;
 
-		pEntry->LogSeq = 0xff;
-		pEntry->LogRetryCnt = 0;
-		pEntry->LogSuccessCnt = 0;
+
+		pEntry->PreLogSeq = 0;	/*Modified by Jeffery @2015-04-13*/
+		pEntry->LogSeq = 0;		/*Modified by Jeffery @2014-10-29*/
+		pEntry->LogRetryCnt = 0;	/*Modified by Jeffery @2014-10-29*/
+		pEntry->LogSuccess = 0;	/*LogSuccess is NOT needed to be accumulated, so  LogSuccessCnt->LogSuccess, 2015-04-13, Jeffery*/
+		pEntry->ClockResetTimes = 0;	/*Modified by Jeffery @2015-04-13*/
 		pEntry->LogStatusFailCnt = 0;
 
 		return pEntry;
@@ -280,30 +283,43 @@ void	beamforming_get_ndpa_frame(PADAPTER	 Adapter, union recv_frame *precv_frame
 		return;
 	else if(!(pBeamformEntry->beamforming_entry_cap & BEAMFORMEE_CAP_VHT_SU))
 		return;
-	else if(pBeamformEntry->LogSuccessCnt > 1)
+	/*LogSuccess: As long as 8812A receive NDPA and feedback CSI succeed once, clock reset is NO LONGER needed !2015-04-10, Jeffery*/
+	/*ClockResetTimes: While BFer entry always doesn't receive our CSI, clock will reset again and again.So ClockResetTimes is limited to 5 times.2015-04-13, Jeffery*/
+	else if ((pBeamformEntry->LogSuccess == 1) || (pBeamformEntry->ClockResetTimes == 5)) {
+		DBG_871X("[%s] LogSeq=%d, PreLogSeq=%d\n", __func__, pBeamformEntry->LogSeq, pBeamformEntry->PreLogSeq);
 		return;
-
-	Sequence = (pframe[16]) >> 2;
-
-	if(pBeamformEntry->LogSeq != Sequence)
-	{
-		/* Previous frame doesn't retry when meet new sequence number */
-		if(pBeamformEntry->LogSeq != 0xff && pBeamformEntry->LogRetryCnt == 0)
-			pBeamformEntry->LogSuccessCnt++;
-		
-		pBeamformEntry->LogSeq = Sequence;
-		pBeamformEntry->LogRetryCnt = 0;
-	}	
-	else
-	{
-		if(pBeamformEntry->LogRetryCnt == 3)
-			beamforming_wk_cmd(Adapter, BEAMFORMING_CTRL_SOUNDING_CLK, NULL, 0, 1);
-
-		pBeamformEntry->LogRetryCnt++;
 	}
 
-	DBG_871X("%s LogSeq %d LogRetryCnt %d LogSuccessCnt %d\n", 
-			__FUNCTION__, pBeamformEntry->LogSeq, pBeamformEntry->LogRetryCnt, pBeamformEntry->LogSuccessCnt);
+	Sequence = (pframe[16]) >> 2;
+	DBG_871X("[%s] Start, Sequence=%d, LogSeq=%d, PreLogSeq=%d, LogRetryCnt=%d, ClockResetTimes=%d, LogSuccess=%d\n", 
+		__func__, Sequence, pBeamformEntry->LogSeq, pBeamformEntry->PreLogSeq, pBeamformEntry->LogRetryCnt, pBeamformEntry->ClockResetTimes, pBeamformEntry->LogSuccess);
+
+	if ((pBeamformEntry->LogSeq != 0) && (pBeamformEntry->PreLogSeq != 0)) {
+		/*Success condition*/
+		if ((pBeamformEntry->LogSeq != Sequence) && (pBeamformEntry->PreLogSeq != pBeamformEntry->LogSeq)) {
+			/* break option for clcok reset, 2015-03-30, Jeffery */
+			pBeamformEntry->LogRetryCnt = 0;
+			/*As long as 8812A receive NDPA and feedback CSI succeed once, clock reset is no longer needed.*/
+			/*That is, LogSuccess is NOT needed to be reset to zero, 2015-04-13, Jeffery*/
+			pBeamformEntry->LogSuccess = 1;
+		
+		} else {/*Fail condition*/
+
+			if (pBeamformEntry->LogRetryCnt == 5) {
+				pBeamformEntry->ClockResetTimes++;
+		pBeamformEntry->LogRetryCnt = 0;
+
+				DBG_871X("[%s] Clock Reset!!! ClockResetTimes=%d\n",  __func__, pBeamformEntry->ClockResetTimes);
+			beamforming_wk_cmd(Adapter, BEAMFORMING_CTRL_SOUNDING_CLK, NULL, 0, 1);
+
+			} else
+		pBeamformEntry->LogRetryCnt++;
+	}
+	}
+
+	/*Update LogSeq & PreLogSeq*/
+	pBeamformEntry->PreLogSeq = pBeamformEntry->LogSeq;
+	pBeamformEntry->LogSeq = Sequence;
 }
 
 BOOLEAN	issue_ht_ndpa_packet(PADAPTER Adapter, u8 *ra, CHANNEL_WIDTH bw, u8 qidx)

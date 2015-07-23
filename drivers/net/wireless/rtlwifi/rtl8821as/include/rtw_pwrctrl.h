@@ -356,7 +356,6 @@ struct pwrctrl_priv
 	u8		wowlan_txpause_status;
 	u8		wowlan_pattern;
 	u8		wowlan_pattern_idx;
-	u8		wowlan_from_cmd;
 	u64		wowlan_fw_iv;
 	struct rtl_priv_pattern	patterns[MAX_WKFM_NUM];
 #ifdef CONFIG_PNO_SUPPORT

@@ -122,8 +122,16 @@
 	#define CONFIG_RTW_GLNA_TYPE 0
 #endif
 
+#ifndef CONFIG_RTW_PLL_REF_CLK_SEL
+	#define CONFIG_RTW_PLL_REF_CLK_SEL 0x0F
+#endif
+
 #define MACID_NUM_SW_LIMIT 32
-#define CAM_ENTRY_NUM_SW_LIMIT 32
+#define SEC_CAM_ENT_NUM_SW_LIMIT 32
+
+#if defined(CONFIG_RTL8812A) || defined(CONFIG_RTL8821A) || defined(CONFIG_RTL8814A)
+	#define CONFIG_IEEE80211_BAND_5GHZ
+#endif
 
 /*#define CONFIG_WEXT_DONT_JOIN_BYSSID	*/
 //#include <rtl871x_byteorder.h>

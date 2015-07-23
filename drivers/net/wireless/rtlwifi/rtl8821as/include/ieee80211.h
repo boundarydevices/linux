@@ -36,6 +36,9 @@
 #define ETH_TYPE_LEN		2
 #define PAYLOAD_TYPE_LEN	1
 
+extern u8 channel5G[];		/* defined in rtw_ieee80211.c*/
+extern u8 channel5G_80M[];	/* defined in rtw_ieee80211.c*/
+
 #ifdef CONFIG_AP_MODE
 
 #define RTL_IOCTL_HOSTAPD (SIOCIWFIRSTPRIV + 28)
@@ -1734,7 +1737,7 @@ int rtw_check_network_type(unsigned char *rate, int ratelen, int channel);
 
 void rtw_get_bcn_info(struct wlan_network *pnetwork);
 
-u8 rtw_check_invalid_mac_address(u8 *mac_addr);
+u8 rtw_check_invalid_mac_address(u8 *mac_addr, u8 check_local_bit);
 void rtw_macaddr_cfg(u8 *out, const u8 *hw_mac_addr);
 
 u16 rtw_mcs_rate(u8 rf_type, u8 bw_40MHz, u8 short_GI, unsigned char * MCS_rate);

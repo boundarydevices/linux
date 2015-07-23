@@ -318,7 +318,7 @@
 //========================================================
 
 #define MACID_NUM_8192E 128
-#define CAM_ENTRY_NUM_8192E 64
+#define SEC_CAM_ENT_NUM_8192E 64
 
 #endif //__RTL8192E_SPEC_H__
 

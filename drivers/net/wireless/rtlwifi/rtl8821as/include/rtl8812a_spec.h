@@ -254,7 +254,7 @@
 //========================================================
 
 #define MACID_NUM_8812A 128
-#define CAM_ENTRY_NUM_8812A 64
+#define SEC_CAM_ENT_NUM_8812A 64
 
 #endif /* __RTL8812A_SPEC_H__ */
 

@@ -105,7 +105,7 @@ enum h2c_cmd{
 #define H2C_PWRMODE_LEN			7
 #define H2C_PSTUNEPARAM_LEN			4
 #define H2C_MACID_CFG_LEN	 	7
-#define H2C_BTMP_OPER_LEN			4
+#define H2C_BTMP_OPER_LEN			5
 #define H2C_WOWLAN_LEN			5
 #define H2C_REMOTE_WAKE_CTRL_LEN	3
 #define H2C_AOAC_GLOBAL_INFO_LEN	2
