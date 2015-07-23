@@ -4262,6 +4262,9 @@ int rtw_resume_common(_adapter *padapter)
 	DBG_871X_LEVEL(_drv_always_, "resume start\n");
 	DBG_871X("==> %s (%s:%d)\n",__FUNCTION__, current->comm, current->pid);	
 
+    cfg80211_disconnected(padapter->pnetdev, 0, NULL, 0,
+            GFP_ATOMIC);
+    rtw_lock_ext_suspend_timeout(10000);
 	if (check_fwstate(pmlmepriv,WIFI_STATION_STATE) == _TRUE
 #ifdef CONFIG_CONCURRENT_MODE
 		&& check_buddy_fwstate(padapter, WIFI_AP_STATE) == _FALSE
