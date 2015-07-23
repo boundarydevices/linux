@@ -24,6 +24,14 @@
  * The flollowing modules are conflicting with M4, disable them when m4
  * is running.
  */
+&adc1 {
+        status = "disabled";
+};
+
+&adc2 {
+        status = "disabled";
+};
+
 &flexcan1 {
 	status = "disabled";
 };
@@ -44,16 +52,8 @@
 	status = "okay";
 };
 
-&uart2 {
-	status = "disabled";
-};
-
-&adc1 {
-        status = "disabled";
-};
-
-&adc2 {
-        status = "disabled";
+&ocram {
+	reg = <0x00901000 0x1E000>;
 };
 
 &qspi2 {
@@ -64,8 +64,12 @@
 	status = "okay";
 };
 
-&ocram {
-	reg = <0x00901000 0x1E000>;
+&rpmsg{
+	status = "okay";
+};
+
+&uart2 {
+	status = "disabled";
 };
 
 &clks {
