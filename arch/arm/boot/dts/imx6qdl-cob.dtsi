@@ -439,7 +439,7 @@
 	status = "okay";
 
 	ads1000@49 {
-		compatible = "ads1000";
+		compatible = "ti,ads1000";
 		reg = <0x49>;
 	};
 };
