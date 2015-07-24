@@ -144,7 +144,7 @@ static struct reg_value ov5642_rot_none_VGA[] = {
 };
 
 static struct reg_value ov5642_rot_vert_flip_VGA[] = {
-	{0x3818, 0x20, 0xbf, 0x00}, {0x3621, 0x20, 0xff, 0x00},
+	{0x3818, 0x20, 0x60, 0x00}, {0x3621, 0x20, 0x20, 0x00},
 };
 
 static struct reg_value ov5642_rot_horiz_flip_VGA[] = {
@@ -152,7 +152,7 @@ static struct reg_value ov5642_rot_horiz_flip_VGA[] = {
 };
 
 static struct reg_value ov5642_rot_180_VGA[] = {
-	{0x3818, 0x60, 0xff, 0x00}, {0x3621, 0x00, 0xdf, 0x00},
+	{0x3818, 0x60, 0x60, 0x00}, {0x3621, 0x00, 0x20, 0x00},
 };
 
 
@@ -161,7 +161,7 @@ static struct reg_value ov5642_rot_none_FULL[] = {
 };
 
 static struct reg_value ov5642_rot_vert_flip_FULL[] = {
-	{0x3818, 0x20, 0xbf, 0x01}, {0x3621, 0x20, 0xff, 0x00},
+	{0x3818, 0x20, 0x60, 0x01}, {0x3621, 0x20, 0x20, 0x00},
 };
 
 static struct reg_value ov5642_rot_horiz_flip_FULL[] = {
@@ -169,7 +169,7 @@ static struct reg_value ov5642_rot_horiz_flip_FULL[] = {
 };
 
 static struct reg_value ov5642_rot_180_FULL[] = {
-	{0x3818, 0x60, 0xff, 0x00}, {0x3621, 0x00, 0xdf, 0x00},
+	{0x3818, 0x60, 0x60, 0x00}, {0x3621, 0x00, 0x20, 0x00},
 };
 
 
@@ -5166,46 +5166,45 @@ static int ov5642_config_auto_focus(void){
 	return 0;
 }
 
-static int ov5642_set_rot_mode(struct reg_value *rot_mode)
+static int ov5642_apply_settings(const struct reg_value *regv, int cnt)
 {
-	s32 i = 0;
-	s32 iModeSettingArySize = 2;
-	register u32 Delay_ms = 0;
-	register u16 RegAddr = 0;
-	register u8 Mask = 0;
-	register u8 Val = 0;
-	u8 RegVal = 0;
+	int i = 0;
 	int retval = 0;
-	for (i = 0; i < iModeSettingArySize; ++i, ++rot_mode) {
-		Delay_ms = rot_mode->u32Delay_ms;
-		RegAddr = rot_mode->u16RegAddr;
-		Val = rot_mode->u8Val;
-		Mask = rot_mode->u8Mask;
 
-		if (Mask) {
-			retval = ov5642_read_reg(RegAddr, &RegVal);
+	for (i = 0; i < cnt; ++i, ++regv) {
+		u32 delay_ms = regv->u32Delay_ms;
+		u16 reg_addr = regv->u16RegAddr;
+		u8 val = regv->u8Val;
+		u8 mask = regv->u8Mask;
+		u8 orig_val = 0;
+
+		if (mask) {
+			retval = ov5642_read_reg(reg_addr, &orig_val);
 			if (retval < 0) {
 				pr_err("%s, read reg 0x%x failed\n",
-						__func__, RegAddr);
-				goto err;
+						__func__, reg_addr);
+				return retval;
 			}
 
-			Val |= RegVal;
-			Val &= Mask;
+			val = (val & mask) | (orig_val & ~mask);
 		}
 
-		retval = ov5642_write_reg(RegAddr, Val);
+		retval = ov5642_write_reg(reg_addr, val);
 		if (retval < 0) {
-			pr_err("%s, write reg 0x%x failed\n",
-					__func__, RegAddr);
-			goto err;
+			pr_err("%s, write reg 0x%x failed\n", __func__,
+					reg_addr);
+			return retval;
 		}
 
-		if (Delay_ms)
-			mdelay(Delay_ms);
+		if (delay_ms)
+			mdelay(delay_ms);
 	}
-err:
 	return retval;
+}
+
+static int ov5642_set_rot_mode(struct reg_value *rot_mode)
+{
+	return ov5642_apply_settings(rot_mode, 2);
 }
 
 static int ov5642_auto_focus_start(void) {
@@ -5240,13 +5239,7 @@ static int ov5642_change_mode(enum ov5642_frame_rate new_frame_rate,
 		enum ov5642_mode orig_mode)
 {
 	struct reg_value *pModeSetting = NULL;
-	s32 i = 0;
 	s32 iModeSettingArySize = 0;
-	register u32 Delay_ms = 0;
-	register u16 RegAddr = 0;
-	register u8 Mask = 0;
-	register u8 Val = 0;
-	u8 RegVal = 0;
 	int retval = 0;
 
 	if (new_mode > ov5642_mode_MAX || new_mode < ov5642_mode_MIN) {
@@ -5270,55 +5263,21 @@ static int ov5642_change_mode(enum ov5642_frame_rate new_frame_rate,
 		ov5642_data.pix.height = 240;
 	} else {
 		retval = ov5642_write_snapshot_para(new_frame_rate, new_mode);
-		goto err;
+		return retval;
 	}
 
 	if (ov5642_data.pix.width == 0 || ov5642_data.pix.height == 0 ||
 			pModeSetting == NULL || iModeSettingArySize == 0)
 		return -EINVAL;
 
-	for (i = 0; i < iModeSettingArySize; ++i, ++pModeSetting) {
-		Delay_ms = pModeSetting->u32Delay_ms;
-		RegAddr = pModeSetting->u16RegAddr;
-		Val = pModeSetting->u8Val;
-		Mask = pModeSetting->u8Mask;
-
-		if (Mask) {
-			retval = ov5642_read_reg(RegAddr, &RegVal);
-			if (retval < 0) {
-				pr_err("read reg error addr=0x%x", RegAddr);
-				goto err;
-			}
-
-			RegVal &= ~(u8)Mask;
-			Val &= Mask;
-			Val |= RegVal;
-		}
-
-		retval = ov5642_write_reg(RegAddr, Val);
-		if (retval < 0) {
-			pr_err("write reg error addr=0x%x", RegAddr);
-			goto err;
-		}
-
-		if (Delay_ms)
-			msleep(Delay_ms);
-	}
-err:
-	return retval;
+	return ov5642_apply_settings(pModeSetting, iModeSettingArySize);
 }
+
 static int ov5642_init_mode(enum ov5642_frame_rate frame_rate,
 			    enum ov5642_mode mode)
 {
 	struct reg_value *pModeSetting = NULL;
-	s32 i = 0;
 	s32 iModeSettingArySize = 0;
-	register u32 Delay_ms = 0;
-	register u16 RegAddr = 0;
-	register u8 Mask = 0;
-	register u8 Val = 0;
-	u8 RegVal = 0;
-	int retval = 0;
 
 	if (mode > ov5642_mode_MAX || mode < ov5642_mode_MIN) {
 		pr_err("Wrong ov5642 mode detected!\n");
@@ -5336,35 +5295,7 @@ static int ov5642_init_mode(enum ov5642_frame_rate frame_rate,
 	    pModeSetting == NULL || iModeSettingArySize == 0)
 		return -EINVAL;
 
-	for (i = 0; i < iModeSettingArySize; ++i, ++pModeSetting) {
-		Delay_ms = pModeSetting->u32Delay_ms;
-		RegAddr = pModeSetting->u16RegAddr;
-		Val = pModeSetting->u8Val;
-		Mask = pModeSetting->u8Mask;
-
-		if (Mask) {
-			retval = ov5642_read_reg(RegAddr, &RegVal);
-			if (retval < 0) {
-				pr_err("read reg error addr=0x%x", RegAddr);
-				goto err;
-			}
-
-			RegVal &= ~(u8)Mask;
-			Val &= Mask;
-			Val |= RegVal;
-		}
-
-		retval = ov5642_write_reg(RegAddr, Val);
-		if (retval < 0) {
-			pr_err("write reg error addr=0x%x", RegAddr);
-			goto err;
-		}
-
-		if (Delay_ms)
-			msleep(Delay_ms);
-	}
-err:
-	return retval;
+	return ov5642_apply_settings(pModeSetting, iModeSettingArySize);
 }
 
 static int ov5642_write_snapshot_para(enum ov5642_frame_rate frame_rate,
@@ -6058,14 +5989,7 @@ static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
 static int ioctl_dev_init(struct v4l2_int_device *s)
 {
 	struct reg_value *pModeSetting = NULL;
-	s32 i = 0;
 	s32 iModeSettingArySize = 0;
-	register u32 Delay_ms = 0;
-	register u16 RegAddr = 0;
-	register u8 Mask = 0;
-	register u8 Val = 0;
-	u8 RegVal = 0;
-	int retval = 0;
 
 	struct sensor_data *sensor = s->priv;
 	u32 tgt_xclk;	/* target xclk */
@@ -6096,30 +6020,7 @@ static int ioctl_dev_init(struct v4l2_int_device *s)
 	pModeSetting = ov5642_initial_setting;
 	iModeSettingArySize = ARRAY_SIZE(ov5642_initial_setting);
 
-	for (i = 0; i < iModeSettingArySize; ++i, ++pModeSetting) {
-		Delay_ms = pModeSetting->u32Delay_ms;
-		RegAddr = pModeSetting->u16RegAddr;
-		Val = pModeSetting->u8Val;
-		Mask = pModeSetting->u8Mask;
-		if (Mask) {
-			retval = ov5642_read_reg(RegAddr, &RegVal);
-			if (retval < 0)
-				goto err;
-
-			RegVal &= ~(u8)Mask;
-			Val &= Mask;
-			Val |= RegVal;
-		}
-
-		retval = ov5642_write_reg(RegAddr, Val);
-		if (retval < 0)
-			goto err;
-
-		if (Delay_ms)
-			msleep(Delay_ms);
-	}
-err:
-	return retval;
+	return ov5642_apply_settings(pModeSetting, iModeSettingArySize);
 }
 
 /*!
