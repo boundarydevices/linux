@@ -861,6 +861,7 @@ config SOC_IMX6UL
 	select MIGHT_HAVE_PCI
 	select PCI_DOMAINS if PCI
 	select SOC_IMX6
+	select ARM_ERRATA_814220
 
 	help
 	  This enables support for Freescale i.MX6 UltraLite processor.
@@ -871,6 +872,7 @@ config SOC_IMX7
 	select ARM_GIC
 	select HAVE_SMP
 	select HAVE_IMX_DDRC
+	select ARM_ERRATA_814220
 
 config SOC_IMX7D
 	bool "i.MX7 Dual support"
