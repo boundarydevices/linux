@@ -1894,12 +1894,12 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 #if !defined(CONFIG_M5272)
 		phy_dev->supported |= SUPPORTED_Pause;
 #endif
+		phy_dev->supported &= ~SUPPORTED_1000baseT_Half;
+		phy_dev->advertising = phy_dev->supported;
+	} else {
+		phy_dev->advertising = phy_dev->supported & PHY_BASIC_FEATURES;
 	}
-	else
-		phy_dev->supported &= PHY_BASIC_FEATURES;
-	phy_dev->supported &= ~SUPPORTED_1000baseT_Half;
 
-	phy_dev->advertising = phy_dev->supported;
 
 	fep->phy_dev = phy_dev;
 	fep->link = 0;
