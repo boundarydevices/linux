@@ -11,7 +11,7 @@ DHDCFLAGS += -Wall -Wstrict-prototypes -Dlinux -DLINUX -DBCMDRIVER            \
 	-DEMBEDDED_PLATFORM -DPNO_SUPPORT                                     \
 	-DDHD_DONOT_FORWARD_BCMEVENT_AS_NETWORK_PKT                           \
 	-DCUSTOMER_HW2 -DGET_CUSTOM_MAC_ENABLE	\
-	-DCONFIG_DTS
+	-DCONFIG_DTS -DENABLE_INSMOD_NO_FW_LOAD
 
 #################
 # Common feature
