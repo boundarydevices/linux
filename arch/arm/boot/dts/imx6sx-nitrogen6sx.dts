@@ -695,7 +695,7 @@
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 	ov5642: ov5642@3c {
-		compatible = "ovti,ov5642";
+		compatible = "ovti,ov5642subdev";
 		reg = <0x3c>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_csi_ov5642>;
