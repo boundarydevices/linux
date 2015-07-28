@@ -40,12 +40,14 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/v4l2-int-device.h>
 #include <sound/core.h>
+#include <sound/dmaengine_pcm.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
 #include <sound/soc-dapm.h>
 #include <asm/mach-types.h>
 #include "../../../../../sound/soc/fsl/imx-audmux.h"
+#include "../../../../../sound/soc/fsl/fsl_ssi.h"
 #include <linux/slab.h>
 #include "mxc_v4l2_capture.h"
 
@@ -2700,43 +2702,74 @@ static struct v4l2_int_device tc358743_int_device = {
 
 
 #ifdef CONFIG_TC358743_AUDIO
-struct imx_ssi {
-	struct platform_device *ac97_dev;
 
-	struct snd_soc_dai *imx_ac97;
+#define NUM_OF_SSI_REG (sizeof(struct ccsr_ssi) / sizeof(__be32))
+
+/**
+ * fsl_ssi_private: per-SSI private data
+ *
+ * copied from sound/soc/fsl/fsl_ssi.c
+ *
+ * @ssi: pointer to the SSI's registers
+ * @ssi_phys: physical address of the SSI registers
+ * @irq: IRQ of this SSI
+ * @playback: the number of playback streams opened
+ * @capture: the number of capture streams opened
+ * @cpu_dai: the CPU DAI for this device
+ * @dev_attr: the sysfs device attribute structure
+ * @stats: SSI statistics
+ * @name: name for this device
+ */
+struct fsl_ssi_private {
+	struct ccsr_ssi __iomem *ssi;
+	dma_addr_t ssi_phys;
+	unsigned int irq;
+	unsigned int fifo_depth;
+	struct snd_soc_dai_driver cpu_dai_drv;
+	struct device_attribute dev_attr;
+	struct platform_device *pdev;
+
+	bool new_binding;
+	bool ssi_on_imx;
+	bool use_dual_fifo;
+	bool baudclk_locked;
+	u8 i2s_mode;
+	spinlock_t baudclk_lock;
+	struct clk *coreclk;
 	struct clk *clk;
-	void __iomem *base;
-	int irq;
-	int fiq_enable;
-	unsigned int offset;
+	unsigned int bitclk_freq;
+	unsigned int baudclk_streams;
+	struct snd_dmaengine_dai_dma_data dma_params_tx;
+	struct snd_dmaengine_dai_dma_data dma_params_rx;
 
-	unsigned int flags;
+	struct {
+		unsigned int rfrc;
+		unsigned int tfrc;
+		unsigned int cmdau;
+		unsigned int cmddu;
+		unsigned int rxt;
+		unsigned int rdr1;
+		unsigned int rdr0;
+		unsigned int tde1;
+		unsigned int tde0;
+		unsigned int roe1;
+		unsigned int roe0;
+		unsigned int tue1;
+		unsigned int tue0;
+		unsigned int tfs;
+		unsigned int rfs;
+		unsigned int tls;
+		unsigned int rls;
+		unsigned int rff1;
+		unsigned int rff0;
+		unsigned int tfe1;
+		unsigned int tfe0;
+	} stats;
 
-	void (*ac97_reset) (struct snd_ac97 *ac97);
-	void (*ac97_warm_reset)(struct snd_ac97 *ac97);
-
-	int enabled;
-
-	struct platform_device *soc_platform_pdev;
-	struct platform_device *soc_platform_pdev_fiq;
+	u32 regcache[NUM_OF_SSI_REG];
+	char name[1];
 };
-#define SSI_SCR			0x10
-#define SSI_SRCR		0x20
-#define SSI_STCCR		0x24
-#define SSI_SRCCR		0x28
-#define SSI_SCR_I2S_MODE_NORM	(0 << 5)
-#define SSI_SCR_I2S_MODE_MSTR	(1 << 5)
-#define SSI_SCR_I2S_MODE_SLAVE	(2 << 5)
-#define SSI_I2S_MODE_MASK	(3 << 5)
-#define SSI_SCR_SYN		(1 << 4)
-#define SSI_SRCR_RSHFD		(1 << 4)
-#define SSI_SRCR_RSCKP		(1 << 3)
-#define SSI_SRCR_RFSI		(1 << 2)
-#define SSI_SRCR_REFS		(1 << 0)
-#define SSI_STCCR_WL(x)		((((x) - 2) >> 1) << 13)
-#define SSI_STCCR_WL_MASK	(0xf << 13)
-#define SSI_SRCCR_WL(x)		((((x) - 2) >> 1) << 13)
-#define SSI_SRCCR_WL_MASK	(0xf << 13)
+
 /* Audio setup */
 
 static int imxpac_tc358743_hw_params(struct snd_pcm_substream *substream,
@@ -2780,33 +2813,23 @@ static int imxpac_tc358743_hw_params(struct snd_pcm_substream *substream,
 #if 1
 // clear SSI_SRCR_RXBIT0 and SSI_SRCR_RSHFD in order to push Right-justified MSB data from
 	{
-		struct imx_ssi *ssi = snd_soc_dai_get_drvdata(cpu_dai);
-		u32 scr = 0, srcr = 0, stccr = 0, srccr = 0;
+		struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(cpu_dai);
+		struct ccsr_ssi __iomem *ssi = ssi_private->ssi;
+		u32 reg = 0;
 
-		pr_debug("%s: base %p\n", __func__, (void *)ssi->base);
-		scr = readl(ssi->base + SSI_SCR);
-		pr_debug("%s: SSI_SCR before:   %p\n", __func__, (void *)scr);
-		writel(scr, ssi->base + SSI_SCR);
-		pr_debug("%s: SSI_SCR after:    %p\n", __func__, (void *)scr);
+		reg = readl(&ssi->stccr);
+		pr_debug("%s: SSI_STCCR before: %p\n", __func__, (void *)reg);
+		reg &= ~CCSR_SSI_SxCCR_WL_MASK;
+		reg |= CCSR_SSI_SxCCR_WL(16);
+		writel(reg, &ssi->stccr);
+		pr_debug("%s: SSI_STCCR after:  %p\n", __func__, (void *)reg);
 
-		srcr = readl(ssi->base + SSI_SRCR);
-		pr_debug("%s: SSI_SRCR before:  %p\n", __func__, (void *)srcr);
-		writel(srcr, ssi->base + SSI_SRCR);
-		pr_debug("%s: SSI_SRCR after:   %p\n", __func__, (void *)srcr);
-
-		stccr = readl(ssi->base + SSI_STCCR);
-		pr_debug("%s: SSI_STCCR before: %p\n", __func__, (void *)stccr);
-		stccr &= ~SSI_STCCR_WL_MASK;
-		stccr |= SSI_STCCR_WL(16);
-		writel(stccr, ssi->base + SSI_STCCR);
-		pr_debug("%s: SSI_STCCR after:  %p\n", __func__, (void *)stccr);
-
-		srccr = readl(ssi->base + SSI_SRCCR);
-		pr_debug("%s: SSI_SRCCR before: %p\n", __func__, (void *)srccr);
-		srccr &= ~SSI_SRCCR_WL_MASK;
-		srccr |= SSI_SRCCR_WL(16);
-		writel(srccr, ssi->base + SSI_SRCCR);
-		pr_debug("%s: SSI_SRCCR after:  %p\n", __func__, (void *)srccr);
+		reg = readl(&ssi->srccr);
+		pr_debug("%s: SSI_SRCCR before: %p\n", __func__, (void *)reg);
+		reg &= ~CCSR_SSI_SxCCR_WL_MASK;
+		reg |= CCSR_SSI_SxCCR_WL(16);
+		writel(reg, &ssi->srccr);
+		pr_debug("%s: SSI_SRCCR after:  %p\n", __func__, (void *)reg);
 	}
 #endif
 	return 0;
