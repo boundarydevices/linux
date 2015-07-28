@@ -4962,8 +4962,7 @@ static s32 ov5642_read_reg(u16 reg, u8 *val);
 static s32 ov5642_write_reg(u16 reg, u8 val);
 
 static const struct i2c_device_id ov5642_id[] = {
-	{"ov5642", 0},
-	{"ov564x", 0},
+	{"ov5642subdev", 0},
 	{},
 };
 
@@ -4972,7 +4971,7 @@ MODULE_DEVICE_TABLE(i2c, ov5642_id);
 static struct i2c_driver ov5642_i2c_driver = {
 	.driver = {
 		  .owner = THIS_MODULE,
-		  .name  = "ov5642",
+		  .name  = "ov5642subdev",
 		  },
 	.probe  = ov5642_probe,
 	.remove = ov5642_remove,
