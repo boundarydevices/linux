@@ -64,6 +64,7 @@ struct sii902x_data {
 	const char *mode_str;
 	int bits_per_pixel;
 	struct switch_dev sdev_audio;
+	u32 yres_virtual;
 } sii902x;
 
 static void sii902x_poweron(void);
@@ -279,6 +280,8 @@ static void sii902x_cable_connected(void)
 			sii902x.fbi->mode = (struct fb_videomode *)mode;
 
 			fb_videomode_to_var(&sii902x.fbi->var, mode);
+			if (sii902x.yres_virtual > 0)
+				sii902x.fbi->var.yres_virtual = sii902x.yres_virtual;
 
 			sii902x.fbi->var.activate |= FB_ACTIVATE_FORCE;
 			console_lock();
@@ -356,6 +359,8 @@ static int sii902x_fb_event(struct notifier_block *nb, unsigned long val, void *
 
 		break;
 	case FB_EVENT_MODE_CHANGE:
+		if (sii902x.fbi != NULL)
+			sii902x.yres_virtual = sii902x.fbi->var.yres_virtual;
 		sii902x_setup(fbi);
 		break;
 	case FB_EVENT_BLANK:
