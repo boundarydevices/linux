@@ -53,6 +53,7 @@ struct dp_csc_param_t {
 #define DC_MCODE_DI1_I			1
 #define DC_MCODE_DI1_NL			2
 #define DC_MCODE_DI1_EOL		3
+#define DC_MCODE_DI1_EOL2		4
 #define DC_MCODE_DI1_NEW_DATA		1
 #define DC_MCODE_DI1_EVEN_UGDE		8
 #define DC_MCODE_DI1_ODD_UGDE		9
@@ -60,6 +61,7 @@ struct dp_csc_param_t {
 #define DC_MCODE_DI0_I			0
 #define DC_MCODE_DI0_NL			5
 #define DC_MCODE_DI0_EOL		6
+#define DC_MCODE_DI0_EOL2		7
 #define DC_MCODE_DI0_NEW_DATA		12
 #define DC_MCODE_DI0_EVEN_UGDE		10
 #define DC_MCODE_DI0_ODD_UGDE		11
@@ -2441,7 +2443,7 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 			}
 			_ipu_dc_write_tmpl(ipu, DC_MCODE_DI1_NL, WROD, 0, map, SYNC_WAVE, 8, DI_SYNC_APIXEL, 1, 0, 0);
 			_ipu_dc_write_tmpl(ipu, DC_MCODE_DI1_EOL, WROD, 0, map, SYNC_WAVE, 4, DI_SYNC_APIXEL, 0, 0, 0);
-			_ipu_dc_write_tmpl(ipu, 4, WRG, 0, map, NULL_WAVE, 0, DI_SYNC_CLK, 1, 0, 0);
+			_ipu_dc_write_tmpl(ipu, DC_MCODE_DI1_EOL2, WRG, 0, map, NULL_WAVE, 0, DI_SYNC_CLK, 1, 0, 0);
 			_ipu_dc_write_tmpl(ipu, DC_MCODE_DI1_NEW_DATA, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
 
 		} else {
@@ -2456,7 +2458,7 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 			}
 		   _ipu_dc_write_tmpl(ipu, DC_MCODE_DI0_NL, WROD, 0, map, SYNC_WAVE, 8, DI_SYNC_APIXEL, 1, 0, 0);
 		   _ipu_dc_write_tmpl(ipu, DC_MCODE_DI0_EOL, WROD, 0, map, SYNC_WAVE, 4, DI_SYNC_APIXEL, 0, 0, 0);
-		   _ipu_dc_write_tmpl(ipu, 7, WRG, 0, map, NULL_WAVE, 0, DI_SYNC_CLK, 1, 0, 0);
+		   _ipu_dc_write_tmpl(ipu, DC_MCODE_DI0_EOL2, WRG, 0, map, NULL_WAVE, 0, DI_SYNC_CLK, 1, 0, 0);
 		   _ipu_dc_write_tmpl(ipu, DC_MCODE_DI0_NEW_DATA, WROD, 0, map, SYNC_WAVE, 0, DI_SYNC_APIXEL, 1, 0, 0);
 		}
 
