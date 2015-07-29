@@ -237,7 +237,7 @@
 		compatible = "fsl,mxc_v4l2_output";
 		status = "okay";
 	};
-
+#ifdef CONFIG_WL_TI
 	wlan {
 		compatible = "ti,wilink6";
 		interrupt-parent = <&gpio6>;
@@ -263,7 +263,14 @@
 		flow_cntrl = <1>;
 		baud_rate = <3000000>;
 	};
-
+#else
+	bt_rfkill: bt_rfkill {
+		compatible = "net,rfkill-gpio";
+		name = "bt_rfkill";
+		gpios = <&gpio6 16 0>;
+		type = <2>;     /* bluetooth */
+	};
+#endif
 	fake_poweroff {
 		compatible = "fake-poweroff";
 		gpios = <&gpio2 3 GPIO_ACTIVE_LOW>;
@@ -566,6 +573,18 @@
 				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x000b0		/* wl12xx_wl_en */
 			>;
 		};
+
+		pinctrl_usdhc2_50mhz: usdhc2_50mhzgrp {
+			fsl,pins = <
+				MX6QDL_PAD_SD2_CMD__SD2_CMD		0x17059
+				MX6QDL_PAD_SD2_CLK__SD2_CLK		0x10059
+				MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x17059
+				MX6QDL_PAD_SD2_DAT1__SD2_DATA1		0x17059
+				MX6QDL_PAD_SD2_DAT2__SD2_DATA2		0x17059
+				MX6QDL_PAD_SD2_DAT3__SD2_DATA3		0x17059
+				MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x000b0		/* bcm_wl_en */
+			>;
+		};
 	};
 
 	ipu1 {
@@ -753,12 +772,19 @@
 
 &usdhc2 {	/* uSDHC2, TiWi wl1271 */
 	pinctrl-names = "default";
+#ifdef CONFIG_WL_TI
 	pinctrl-0 = <&pinctrl_usdhc2>;
+	vmmc-supply = <&wlan_en_reg>;
+	ocr-limit = <0x80>;     /* 1.65v - 1.95v */
+#else
+	pinctrl-0 = <&pinctrl_usdhc2_50mhz>;
+	vmmc-supply = <&reg_3p3v>;
+	vqmmc-supply = <&wlan_en_reg>;
+	ocr-limit = <0x180>;     /* 1.65v - 2.1v */
+#endif
 	bus-width = <4>;
 	non-removable;
-	vmmc-supply = <&wlan_en_reg>;
 	vqmmc-1-8-v;
-	ocr-limit = <0x80>;     /* 1.65v - 1.95v */
 	cap-power-off-card;
 	keep-power-in-suspend;
 	status = "okay";
