@@ -744,8 +744,16 @@ static void rtl_unlock_config_regs(struct rtl8169_private *tp)
 
 static void rtl_tx_performance_tweak(struct rtl8169_private *tp, u16 force)
 {
+	u16 ctl;
+
+	pcie_capability_read_word(tp->pci_dev, PCI_EXP_DEVCTL, &ctl);
+	dev_info(&tp->pci_dev->dev, "MRRS = %d, MPS = %d\n",
+		 128 << ((ctl & PCI_EXP_DEVCTL_READRQ) >> 12),
+		 128 << ((ctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5));
+#if 0	
 	pcie_capability_clear_and_set_word(tp->pci_dev, PCI_EXP_DEVCTL,
 					   PCI_EXP_DEVCTL_READRQ, force);
+#endif
 }
 
 static bool rtl_is_8125(struct rtl8169_private *tp)
