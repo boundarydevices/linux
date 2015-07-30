@@ -536,10 +536,8 @@ fec_enet_txq_put_data_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 	unsigned short status;
 	unsigned int estatus = 0;
 
-	status = bdp->cbd_sc;
-	status &= ~BD_ENET_TX_STATS;
-
-	status |= (BD_ENET_TX_TC | BD_ENET_TX_READY);
+	status = (BD_ENET_TX_TC | BD_ENET_TX_READY) |
+			((bdp == txq->bd.last) ? BD_SC_WRAP : 0);
 	bdp->cbd_datlen = size;
 
 	if (!(id_entry->driver_data & FEC_QUIRK_HAS_AVB) &&
@@ -599,10 +597,8 @@ fec_enet_txq_put_hdr_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 	unsigned short status;
 	unsigned int estatus = 0;
 
-	status = bdp->cbd_sc;
-	status &= ~BD_ENET_TX_STATS;
-	status |= (BD_ENET_TX_TC | BD_ENET_TX_READY);
-
+	status = (BD_ENET_TX_TC | BD_ENET_TX_READY) |
+			((bdp == txq->bd.last) ? BD_SC_WRAP : 0);
 	bufaddr = txq->tso_hdrs + index * TSO_HEADER_SIZE;
 	dmabuf = txq->tso_hdrs_dma + index * TSO_HEADER_SIZE;
 	if (!(id_entry->driver_data & FEC_QUIRK_HAS_AVB) &&
