@@ -27,6 +27,7 @@
 #include <linux/mtd/partitions.h>
 #include <linux/mtd/spi-nor.h>
 #include <linux/mutex.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/pm_qos.h>
 #include <linux/sizes.h>
 
@@ -1194,6 +1195,7 @@ static int fsl_qspi_remove(struct platform_device *pdev)
 
 static int fsl_qspi_suspend(struct platform_device *pdev, pm_message_t state)
 {
+	pinctrl_pm_select_sleep_state(&pdev->dev);
 	return 0;
 }
 
@@ -1201,6 +1203,8 @@ static int fsl_qspi_resume(struct platform_device *pdev)
 {
 	int ret;
 	struct fsl_qspi *q = platform_get_drvdata(pdev);
+
+	pinctrl_pm_select_default_state(&pdev->dev);
 
 	ret = fsl_qspi_clk_prep_enable(q);
 	if (ret)
