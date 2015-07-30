@@ -1345,8 +1345,12 @@ static int sdma_alloc_chan_resources(struct dma_chan *chan)
 	struct imx_dma_data default_data;
 	int prio, ret;
 
-	clk_enable(sdmac->sdma->clk_ipg);
-	clk_enable(sdmac->sdma->clk_ahb);
+	ret = clk_enable(sdmac->sdma->clk_ipg);
+	if (ret)
+		return ret;
+	ret = clk_enable(sdmac->sdma->clk_ahb);
+	if (ret)
+		goto disable_clk_ipg;
 
 	/*
 	 * dmatest(memcpy) will never call slave_config before prep, so we need
@@ -1386,16 +1390,16 @@ static int sdma_alloc_chan_resources(struct dma_chan *chan)
 
 	ret = sdma_set_channel_priority(sdmac, prio);
 	if (ret)
-		goto err_out;
+		goto disable_clk_ahb;
 
 	sdmac->bd_size_sum = 0;
 
 	return 0;
 
-err_out:
-	clk_disable(sdmac->sdma->clk_ipg);
+disable_clk_ahb:
 	clk_disable(sdmac->sdma->clk_ahb);
-
+disable_clk_ipg:
+	clk_disable(sdmac->sdma->clk_ipg);
 	return ret;
 }
 
@@ -2021,8 +2025,12 @@ static int sdma_init(struct sdma_engine *sdma)
 	int i, ret, ccbsize;
 	dma_addr_t ccb_phys;
 
-	clk_enable(sdma->clk_ipg);
-	clk_enable(sdma->clk_ahb);
+	ret = clk_enable(sdma->clk_ipg);
+	if (ret)
+		return ret;
+	ret = clk_enable(sdma->clk_ahb);
+	if (ret)
+		goto disable_clk_ipg;
 
 	/* Be sure SDMA has not started yet */
 	writel_relaxed(0, sdma->regs + SDMA_H_C0PTR);
@@ -2081,8 +2089,9 @@ static int sdma_init(struct sdma_engine *sdma)
 	return 0;
 
 err_dma_alloc:
-	clk_disable(sdma->clk_ipg);
 	clk_disable(sdma->clk_ahb);
+disable_clk_ipg:
+	clk_disable(sdma->clk_ipg);
 	dev_err(sdma->dev, "initialisation failed with %d\n", ret);
 	return ret;
 }
