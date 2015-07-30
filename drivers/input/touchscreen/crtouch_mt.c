@@ -169,12 +169,20 @@ int read_resolution(struct crtouch_data *crtouch)
 {
 	char resolution[4];
 	int ret;
+	int i = 0;
 
-	ret = i2c_smbus_read_i2c_block_data(crtouch->client,
-		HORIZONTAL_RESOLUTION_MBS, 4, resolution);
-
-	if (ret < 0)
-		return ret;
+	while (1) {
+		msleep(10);
+		ret = i2c_smbus_read_i2c_block_data(crtouch->client,
+				HORIZONTAL_RESOLUTION_MBS, 4, resolution);
+		if (ret >= 0)
+			break;
+		i++;
+		if (i >= 3) {
+			pr_err("i2c read failed ret=%d", ret);
+			return ret;
+		}
+	}
 
 	crtouch->xmax = (resolution[0] << 8) | resolution[1];
 	crtouch->ymax = (resolution[2] << 8) | resolution[3];
