@@ -1215,6 +1215,24 @@ static void fec_enet_work(struct work_struct *work)
 	}
 }
 
+static void err006358_test(struct fec_enet_private *fep, struct fec_enet_priv_tx_q *txq)
+{
+	/* Test for ERR006358 workaround */
+	if (readl(fep->hwp + FEC_X_DES_ACTIVE(txq->bd.index))) {
+		const struct platform_device_id *id_entry =
+			platform_get_device_id(fep->pdev);
+		if (id_entry->driver_data & FEC_QUIRK_ERR006358) {
+			fep->delay_work.trig_tx = true;
+			schedule_delayed_work(
+				&fep->delay_work.delay_work,
+				msecs_to_jiffies(1) + 1);
+		}
+	} else {
+		/* ERR006358 has hit, restart tx */
+		writel(0, fep->hwp + FEC_X_DES_ACTIVE(txq->bd.index));
+	}
+}
+
 static void fec_enet_tx(struct net_device *ndev, struct fec_enet_private *fep,
 		struct fec_enet_priv_tx_q *txq)
 {
@@ -1238,20 +1256,7 @@ static void fec_enet_tx(struct net_device *ndev, struct fec_enet_private *fep,
 	while (bdp != txq->bd.cur) {
 		status = bdp->cbd_sc;
 		if (status & BD_ENET_TX_READY) {
-			/* Test for ERR006358 workaround */
-			if (readl(fep->hwp + FEC_X_DES_ACTIVE(txq->bd.index))) {
-				const struct platform_device_id *id_entry =
-					platform_get_device_id(fep->pdev);
-				if (id_entry->driver_data & FEC_QUIRK_ERR006358) {
-					fep->delay_work.trig_tx = true;
-					schedule_delayed_work(
-						&fep->delay_work.delay_work,
-						msecs_to_jiffies(1) + 1);
-				}
-			} else {
-				/* ERR006358 has hit, restart tx */
-				writel(0, fep->hwp + FEC_X_DES_ACTIVE(txq->bd.index));
-			}
+			err006358_test(fep, txq);
 			break;
 		}
 		bdp->cbd_sc = (bdp == txq->bd.last) ? BD_SC_WRAP : 0;
@@ -1266,8 +1271,10 @@ static void fec_enet_tx(struct net_device *ndev, struct fec_enet_private *fep,
 			skb = txq->tx_skbuff[index];
 			bdnum++;
 		}
-		if ((status = bdp_t->cbd_sc) & BD_ENET_TX_READY)
+		if ((status = bdp_t->cbd_sc) & BD_ENET_TX_READY) {
+			err006358_test(fep, txq);
 			break;
+		}
 
 		for (i = 0; i < bdnum; i++) {
 			if (!IS_TSO_HEADER(txq, bdp->cbd_bufaddr))
