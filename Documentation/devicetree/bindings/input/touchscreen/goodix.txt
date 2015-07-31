@@ -12,6 +12,8 @@ Required properties:
  - reg			: I2C address of the chip. Should be 0x5d or 0x14
  - interrupt-parent	: Interrupt controller to which the chip is connected
  - interrupts		: Interrupt to which the chip is connected
+ - gpios		: GPIOS the chip is connected to: first one is the
+			  interrupt gpio and second one the reset gpio.
 
 Example:
 
@@ -23,6 +25,9 @@ Example:
 			reg = <0x5d>;
 			interrupt-parent = <&gpio>;
 			interrupts = <0 0>;
+
+			gpios = <&gpio1 0 0>, /* INT */
+				<&gpio1 1 0>; /* RST */
 		};
 
 		/* ... */
