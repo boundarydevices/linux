@@ -540,12 +540,35 @@ static ssize_t goodix_esd_timeout_store(struct device *dev,
 	return count;
 }
 
+static ssize_t goodix_dump_config_show(struct device *dev,
+				       struct device_attribute *attr, char *buf)
+{
+	struct goodix_ts_data *ts = dev_get_drvdata(dev);
+	u8 config[GOODIX_CONFIG_MAX_LENGTH];
+	int error, count = 0, i;
+
+	error = goodix_i2c_read(ts->client, GOODIX_REG_CONFIG_DATA,
+				config, ts->cfg_len);
+	if (error) {
+		dev_warn(&ts->client->dev,
+			 "Error reading config (%d)\n",  error);
+		return error;
+	}
+
+	for (i = 0; i < ts->cfg_len; i++)
+		count += scnprintf(buf + count, PAGE_SIZE - count, "%02x ",
+				   config[i]);
+	return count;
+}
+
 /* ESD timeout in ms. Default disabled (0). Recommended 2000 ms. */
 static DEVICE_ATTR(esd_timeout, S_IRUGO | S_IWUSR, goodix_esd_timeout_show,
 		   goodix_esd_timeout_store);
+static DEVICE_ATTR(dump_config, S_IRUGO, goodix_dump_config_show, NULL);
 
 static struct attribute *goodix_attrs[] = {
 	&dev_attr_esd_timeout.attr,
+	&dev_attr_dump_config.attr,
 	NULL
 };
 
