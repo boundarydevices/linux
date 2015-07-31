@@ -25,6 +25,7 @@
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/acpi.h>
+#include <linux/gpio.h>
 #include <linux/of.h>
 #include <asm/unaligned.h>
 
@@ -36,6 +37,8 @@ struct goodix_ts_data {
 	unsigned int max_touch_num;
 	unsigned int int_trigger_type;
 	bool rotated_screen;
+	struct gpio_desc *gpiod_int;
+	struct gpio_desc *gpiod_rst;
 };
 
 #define GOODIX_MAX_HEIGHT		4096
@@ -67,6 +70,30 @@ static const unsigned long goodix_irq_flags[] = {
  * of the tablet, as if rotated 180 degrees
  */
 static const struct dmi_system_id rotated_screen[] = {
+#if defined(CONFIG_DMI) && defined(CONFIG_X86)
+	{
+		.ident = "WinBook TW100",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "WinBook"),
+			DMI_MATCH(DMI_PRODUCT_NAME, "TW100")
+		}
+	},
+	{
+		.ident = "WinBook TW700",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "WinBook"),
+			DMI_MATCH(DMI_PRODUCT_NAME, "TW700")
+		},
+	},
+#endif
+	{}
+};
+
+/*
+ * ACPI table specifies gpio pins in this order: first rst pin and
+ * then interrupt pin.
+ */
+static const struct dmi_system_id goodix_rst_pin_first[] = {
 #if defined(CONFIG_DMI) && defined(CONFIG_X86)
 	{
 		.ident = "WinBook TW100",
@@ -225,6 +252,102 @@ static irqreturn_t goodix_ts_irq_handler(int irq, void *dev_id)
 		dev_err(&ts->client->dev, "I2C write end_cmd error\n");
 
 	return IRQ_HANDLED;
+}
+
+static int goodix_int_sync(struct goodix_ts_data *ts)
+{
+	int ret;
+
+	ret = gpiod_direction_output(ts->gpiod_int, 0);
+	if (ret)
+		return ret;
+	msleep(50);				/* T5: 50ms */
+
+	return gpiod_direction_input(ts->gpiod_int);
+}
+
+/**
+ * goodix_reset - Reset device during power on
+ *
+ * @ts: goodix_ts_data pointer
+ */
+static int goodix_reset(struct goodix_ts_data *ts)
+{
+	int ret;
+
+	/* begin select I2C slave addr */
+	ret = gpiod_direction_output(ts->gpiod_rst, 0);
+	if (ret)
+		return ret;
+	msleep(20);				/* T2: > 10ms */
+	/* HIGH: 0x28/0x29, LOW: 0xBA/0xBB */
+	ret = gpiod_direction_output(ts->gpiod_int, ts->client->addr == 0x14);
+	if (ret)
+		return ret;
+	usleep_range(100, 2000);		/* T3: > 100us */
+	ret = gpiod_direction_output(ts->gpiod_rst, 1);
+	if (ret)
+		return ret;
+	usleep_range(6000, 10000);		/* T4: > 5ms */
+	/* end select I2C slave addr */
+	ret = gpiod_direction_input(ts->gpiod_rst);
+	if (ret)
+		return ret;
+	return goodix_int_sync(ts);
+}
+
+/**
+ * goodix_get_gpio_config - Get GPIO config from ACPI/DT
+ *
+ * @ts: goodix_ts_data pointer
+ */
+static int goodix_get_gpio_config(struct goodix_ts_data *ts,
+				  const struct i2c_device_id *i2c_id)
+{
+	int ret;
+	struct device *dev;
+	struct gpio_desc *gpiod;
+	/* Default gpio pin order: irq, rst */
+	int irq_idx = 0, rst_idx = 1;
+
+	if (!ts->client)
+		return -EINVAL;
+	dev = &ts->client->dev;
+
+	if (dmi_check_system(goodix_rst_pin_first)) {
+		dev_dbg(&ts->client->dev,
+			"Applying 'reverse gpio pin order' quirk\n");
+		rst_idx = 0;
+		irq_idx = 1;
+	}
+
+	/* Get interrupt GPIO pin number */
+	gpiod = devm_gpiod_get_index(dev, NULL, irq_idx);
+	if (IS_ERR(gpiod)) {
+		ret = PTR_ERR(gpiod);
+		if (ret != -EPROBE_DEFER)
+			dev_warn(dev, "Failed to get GPIO %d: %d\n",
+				 irq_idx, ret);
+		if (ret == -ENOENT)
+			return 0;
+		return ret;
+	}
+	ts->gpiod_int = gpiod;
+
+	/* Get the reset line GPIO pin number */
+	gpiod = devm_gpiod_get_index(dev, NULL, rst_idx);
+	if (IS_ERR(gpiod)) {
+		ret = PTR_ERR(gpiod);
+		if (ret != -EPROBE_DEFER)
+			dev_warn(dev, "Failed to get GPIO %d: %d\n",
+				 rst_idx, ret);
+		if (ret == -ENOENT)
+			return 0;
+		return ret;
+	}
+	ts->gpiod_rst = gpiod;
+
+	return 0;
 }
 
 /**
@@ -413,6 +536,19 @@ static int goodix_ts_probe(struct i2c_client *client,
 	if (error) {
 		dev_err(&client->dev, "Read version failed.\n");
 		return error;
+	}
+
+	error = goodix_get_gpio_config(ts, id);
+	if (error)
+		return error;
+
+	if (ts->gpiod_int && ts->gpiod_rst) {
+		/* reset the controller */
+		error = goodix_reset(ts);
+		if (error) {
+			dev_err(&client->dev, "Controller reset failed.\n");
+			return error;
+		}
 	}
 
 	goodix_read_config(ts);
