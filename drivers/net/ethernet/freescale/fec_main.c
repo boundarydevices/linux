@@ -1158,12 +1158,22 @@ fec_timeout(struct net_device *ndev)
 	pr_err("%s: last=%x %x, mask %x\n", __func__, last_ievents, readl(fep->hwp + FEC_IEVENT), readl(fep->hwp + FEC_IMASK));
 	for (i = 0; i < fep->num_tx_queues; i++) {
 		struct fec_enet_priv_tx_q *txq = fep->tx_queue[i];
+		int index;
+		struct sk_buff *skb = NULL;
+
 		bdp = txq->dirty_tx;
-		bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
-		status = bdp->cbd_sc;
-		if ((status & BD_ENET_TX_READY) == 0) {
-			if (bdp != txq->bd.cur) {
-				events |= txint_flags[i];
+		while (1) {
+			bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
+			if (bdp == txq->bd.cur)
+				break;
+			index = fec_enet_get_bd_index(bdp, &txq->bd);
+			skb = txq->tx_skbuff[index];
+			if (skb) {
+				status = bdp->cbd_sc;
+				if ((status & BD_ENET_TX_READY) == 0) {
+					events |= txint_flags[i];
+				}
+				break;
 			}
 		}
 	}
