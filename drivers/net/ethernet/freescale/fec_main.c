@@ -602,14 +602,14 @@ fec_enet_txq_put_hdr_tso(struct fec_enet_priv_tx_q *txq,
 	struct bufdesc_ex *ebdp = container_of(bdp, struct bufdesc_ex, desc);
 	unsigned short queue = skb_get_queue_mapping(skb);
 	void *bufaddr;
-	unsigned long dmabuf;
+	dma_addr_t addr;
 	unsigned short status;
 	unsigned int estatus = 0;
 
 	status = (BD_ENET_TX_TC | BD_ENET_TX_READY) |
 			((bdp == txq->bd.last) ? BD_SC_WRAP : 0);
 	bufaddr = txq->tso_hdrs + index * TSO_HEADER_SIZE;
-	dmabuf = txq->tso_hdrs_dma + index * TSO_HEADER_SIZE;
+	addr = txq->tso_hdrs_dma + index * TSO_HEADER_SIZE;
 	if (((unsigned long)bufaddr) & fep->tx_align ||
 		fep->quirks & FEC_QUIRK_SWAP_FRAME) {
 		memcpy(txq->tx_bounce[index], skb->data, hdr_len);
@@ -618,9 +618,9 @@ fec_enet_txq_put_hdr_tso(struct fec_enet_priv_tx_q *txq,
 		if (fep->quirks & FEC_QUIRK_SWAP_FRAME)
 			swap_buffer(bufaddr, hdr_len);
 
-		dmabuf = dma_map_single(&fep->pdev->dev, bufaddr,
-					hdr_len, DMA_TO_DEVICE);
-		if (dma_mapping_error(&fep->pdev->dev, dmabuf)) {
+		addr = dma_map_single(&fep->pdev->dev, bufaddr, hdr_len,
+				DMA_TO_DEVICE);
+		if (dma_mapping_error(&fep->pdev->dev, addr)) {
 			dev_kfree_skb_any(skb);
 			if (net_ratelimit())
 				netdev_err(ndev, "Tx DMA memory map failed\n");
@@ -628,7 +628,7 @@ fec_enet_txq_put_hdr_tso(struct fec_enet_priv_tx_q *txq,
 		}
 	}
 
-	bdp->cbd_bufaddr = dmabuf;
+	bdp->cbd_bufaddr = addr;
 	bdp->cbd_datlen = hdr_len;
 
 	if (fep->bufdesc_ex) {
@@ -1353,19 +1353,21 @@ fec_enet_new_rxbdp(struct net_device *ndev, struct bufdesc *bdp, struct sk_buff 
 {
 	struct  fec_enet_private *fep = netdev_priv(ndev);
 	int off;
+	dma_addr_t addr;
 
 	off = ((unsigned long)skb->data) & fep->rx_align;
 	if (off)
 		skb_reserve(skb, fep->rx_align + 1 - off);
 
-	bdp->cbd_bufaddr = dma_map_single(&fep->pdev->dev, skb->data,
-					  FEC_ENET_RX_FRSIZE - fep->rx_align,
-					  DMA_FROM_DEVICE);
-	if (dma_mapping_error(&fep->pdev->dev, bdp->cbd_bufaddr)) {
+	addr = dma_map_single(&fep->pdev->dev, skb->data,
+			      FEC_ENET_RX_FRSIZE - fep->rx_align,
+			      DMA_FROM_DEVICE);
+	if (dma_mapping_error(&fep->pdev->dev, addr)) {
 		if (net_ratelimit())
 			netdev_err(ndev, "Rx DMA memory map failed\n");
 		return -ENOMEM;
 	}
+	bdp->cbd_bufaddr = addr;
 
 	return 0;
 }
