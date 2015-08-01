@@ -307,6 +307,7 @@ static int fec_enet_txq_submit_frag_skb(struct fec_enet_priv_tx_q *txq,
 	unsigned int index;
 	void *bufaddr;
 	int i;
+	dma_addr_t dma_addr;
 
 	for (frag = 0; frag < nr_frags; frag++) {
 		this_frag = &skb_shinfo(skb)->frags[frag];
@@ -351,14 +352,15 @@ static int fec_enet_txq_submit_frag_skb(struct fec_enet_priv_tx_q *txq,
 				swap_buffer(bufaddr, frag_len);
 		}
 
-		bdp->cbd_bufaddr = dma_map_single(&fep->pdev->dev, bufaddr,
+		dma_addr = dma_map_single(&fep->pdev->dev, bufaddr,
 						frag_len, DMA_TO_DEVICE);
-		if (dma_mapping_error(&fep->pdev->dev, bdp->cbd_bufaddr)) {
+		if (dma_mapping_error(&fep->pdev->dev, dma_addr)) {
 			dev_kfree_skb_any(skb);
 			if (net_ratelimit())
 				netdev_err(ndev, "Tx DMA memory map failed\n");
 			goto dma_mapping_error;
 		}
+		bdp->cbd_bufaddr = dma_addr;
 
 		bdp->cbd_datlen = frag_len;
 		mb();
@@ -397,6 +399,7 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 	unsigned int index;
 	int entries_free;
 	int ret;
+	dma_addr_t dma_addr;
 
 	entries_free = fec_enet_get_free_txdesc_num(txq);
 	if (entries_free < MAX_SKB_FRAGS + 1) {
@@ -435,14 +438,15 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 	/* Push the data cache so the CPM does not get stale memory
 	 * data.
 	 */
-	bdp->cbd_bufaddr = dma_map_single(&fep->pdev->dev, bufaddr,
-					buflen, DMA_TO_DEVICE);
-	if (dma_mapping_error(&fep->pdev->dev, bdp->cbd_bufaddr)) {
+	dma_addr = dma_map_single(&fep->pdev->dev, bufaddr,
+			buflen, DMA_TO_DEVICE);
+	if (dma_mapping_error(&fep->pdev->dev, dma_addr)) {
 		dev_kfree_skb_any(skb);
 		if (net_ratelimit())
 			netdev_err(ndev, "Tx DMA memory map failed\n");
 		return NETDEV_TX_OK;
 	}
+	bdp->cbd_bufaddr = dma_addr;
 
 	status = (BD_ENET_TX_TC | BD_ENET_TX_READY) |
 			((bdp == txq->bd.last) ? BD_SC_WRAP : 0);
@@ -537,6 +541,7 @@ fec_enet_txq_put_data_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 	unsigned short queue = skb_get_queue_mapping(skb);
 	unsigned short status;
 	unsigned int estatus = 0;
+	dma_addr_t dma_addr;
 
 	status = (BD_ENET_TX_TC | BD_ENET_TX_READY) |
 			((bdp == txq->bd.last) ? BD_SC_WRAP : 0);
@@ -552,14 +557,15 @@ fec_enet_txq_put_data_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 			swap_buffer(data, size);
 	}
 
-	bdp->cbd_bufaddr = dma_map_single(&fep->pdev->dev, data,
+	dma_addr = dma_map_single(&fep->pdev->dev, data,
 					size, DMA_TO_DEVICE);
-	if (dma_mapping_error(&fep->pdev->dev, bdp->cbd_bufaddr)) {
+	if (dma_mapping_error(&fep->pdev->dev, dma_addr)) {
 		dev_kfree_skb_any(skb);
 		if (net_ratelimit())
 			netdev_err(ndev, "Tx DMA memory map failed\n");
 		return NETDEV_TX_BUSY;
 	}
+	bdp->cbd_bufaddr = dma_addr;
 
 	if (fep->bufdesc_ex) {
 		if (id_entry->driver_data & FEC_QUIRK_HAS_AVB)
@@ -595,14 +601,14 @@ fec_enet_txq_put_hdr_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 	struct bufdesc_ex *ebdp = (struct bufdesc_ex *)bdp;
 	unsigned short queue = skb_get_queue_mapping(skb);
 	void *bufaddr;
-	unsigned long dmabuf;
+	dma_addr_t dma_addr;
 	unsigned short status;
 	unsigned int estatus = 0;
 
 	status = (BD_ENET_TX_TC | BD_ENET_TX_READY) |
 			((bdp == txq->bd.last) ? BD_SC_WRAP : 0);
 	bufaddr = txq->tso_hdrs + index * TSO_HEADER_SIZE;
-	dmabuf = txq->tso_hdrs_dma + index * TSO_HEADER_SIZE;
+	dma_addr = txq->tso_hdrs_dma + index * TSO_HEADER_SIZE;
 	if (!(id_entry->driver_data & FEC_QUIRK_HAS_AVB) &&
 		(((unsigned long) bufaddr) & FEC_ALIGNMENT ||
 		id_entry->driver_data & FEC_QUIRK_SWAP_FRAME)) {
@@ -612,9 +618,9 @@ fec_enet_txq_put_hdr_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 		if (id_entry->driver_data & FEC_QUIRK_SWAP_FRAME)
 			swap_buffer(bufaddr, hdr_len);
 
-		dmabuf = dma_map_single(&fep->pdev->dev, bufaddr,
+		dma_addr = dma_map_single(&fep->pdev->dev, bufaddr,
 					hdr_len, DMA_TO_DEVICE);
-		if (dma_mapping_error(&fep->pdev->dev, dmabuf)) {
+		if (dma_mapping_error(&fep->pdev->dev, dma_addr)) {
 			dev_kfree_skb_any(skb);
 			if (net_ratelimit())
 				netdev_err(ndev, "Tx DMA memory map failed\n");
@@ -622,7 +628,7 @@ fec_enet_txq_put_hdr_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 		}
 	}
 
-	bdp->cbd_bufaddr = dmabuf;
+	bdp->cbd_bufaddr = dma_addr;
 	bdp->cbd_datlen = hdr_len;
 
 	if (fep->bufdesc_ex) {
@@ -1372,17 +1378,19 @@ fec_new_rxbdp(struct net_device *ndev, struct bufdesc *bdp, struct sk_buff *skb)
 {
 	struct  fec_enet_private *fep = netdev_priv(ndev);
 	int off;
+	dma_addr_t dma_addr;
 
 	off = ((unsigned long)skb->data) & FEC_ALIGNMENT;
 	if (off)
 		skb_reserve(skb, FEC_ALIGNMENT + 1 - off);
 
-	bdp->cbd_bufaddr = dma_map_single(&fep->pdev->dev, skb->data,
+	dma_addr = dma_map_single(&fep->pdev->dev, skb->data,
 		FEC_ENET_RX_FRSIZE - FEC_ALIGNMENT, DMA_FROM_DEVICE);
-	if (dma_mapping_error(&fep->pdev->dev, bdp->cbd_bufaddr)) {
+	if (dma_mapping_error(&fep->pdev->dev, dma_addr)) {
 		netdev_err(ndev, "Rx DMA memory map failed\n");
 		return -ENOMEM;
 	}
+	bdp->cbd_bufaddr = dma_addr;
 
 	return 0;
 }
