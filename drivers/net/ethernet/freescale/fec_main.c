@@ -749,7 +749,7 @@ fec_enet_txq_put_hdr_tso(struct fec_enet_priv_tx_q *txq,
 	int hdr_len = skb_tcp_all_headers(skb);
 	struct bufdesc_ex *ebdp = container_of(bdp, struct bufdesc_ex, desc);
 	void *bufaddr;
-	unsigned long dmabuf;
+	dma_addr_t dmabuf;
 	unsigned int estatus = 0;
 
 	bufaddr = txq->tso_hdrs + index * TSO_HEADER_SIZE;
@@ -1514,10 +1514,12 @@ static void fec_enet_update_cbd(struct fec_enet_priv_rx_q *rxq,
 	dma_addr_t phys_addr;
 
 	new_page = page_pool_dev_alloc_pages(rxq->page_pool);
-	WARN_ON(!new_page);
 	rxq->rx_skb_info[index].page = new_page;
-
 	rxq->rx_skb_info[index].offset = FEC_ENET_XDP_HEADROOM;
+	if (WARN_ON(!new_page)) {
+		bdp->cbd_bufaddr = 0;
+		return;
+	}
 	phys_addr = page_pool_get_dma_addr(new_page) + FEC_ENET_XDP_HEADROOM;
 	bdp->cbd_bufaddr = cpu_to_fec32(phys_addr);
 }
