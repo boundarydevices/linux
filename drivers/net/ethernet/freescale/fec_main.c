@@ -558,6 +558,7 @@ dma_mapping_error:
 		bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
 		dma_unmap_single(&fep->pdev->dev, fec32_to_cpu(bdp->cbd_bufaddr),
 				 fec16_to_cpu(bdp->cbd_datlen), DMA_TO_DEVICE);
+		bdp->cbd_bufaddr = cpu_to_fec32(0);
 	}
 	return ERR_PTR(-ENOMEM);
 }
