@@ -361,6 +361,7 @@ static int fec_enet_txq_submit_frag_skb(struct fec_enet_priv_tx_q *txq,
 		}
 
 		bdp->cbd_datlen = frag_len;
+		mb();
 		bdp->cbd_sc = status;
 	}
 
@@ -374,6 +375,7 @@ dma_mapping_error:
 		bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
 		dma_unmap_single(&fep->pdev->dev, bdp->cbd_bufaddr,
 				bdp->cbd_datlen, DMA_TO_DEVICE);
+		bdp->cbd_bufaddr = 0;
 	}
 	return NETDEV_TX_OK;
 }
@@ -808,11 +810,17 @@ static void fec_enet_bd_init(struct net_device *dev)
 
 			/* Initialize the BD for every fragment in the page. */
 			bdp->cbd_sc = 0;
-			if (bdp->cbd_bufaddr && tx_queue->tx_skbuff[i]) {
-				dev_kfree_skb_any(tx_queue->tx_skbuff[i]);
-				tx_queue->tx_skbuff[i] = NULL;
+			if (bdp->cbd_bufaddr) {
+				if (!IS_TSO_HEADER(tx_queue, bdp->cbd_bufaddr))
+					dma_unmap_single(&fep->pdev->dev,
+						bdp->cbd_bufaddr,
+						bdp->cbd_datlen, DMA_TO_DEVICE);
+				bdp->cbd_bufaddr = 0;
+				if (tx_queue->tx_skbuff[i]) {
+					dev_kfree_skb_any(tx_queue->tx_skbuff[i]);
+					tx_queue->tx_skbuff[i] = NULL;
+				}
 			}
-			bdp->cbd_bufaddr = 0;
 			bdp = fec_enet_get_nextdesc(bdp, &tx_queue->bd);
 		}
 
@@ -2490,10 +2498,12 @@ static void fec_enet_free_buffers(struct net_device *ndev)
 		for (i = 0; i < rx_queue->bd.ring_size; i++) {
 			skb = rx_queue->rx_skbuff[i];
 
-			if (bdp->cbd_bufaddr)
+			if (bdp->cbd_bufaddr) {
 				dma_unmap_single(&fep->pdev->dev, bdp->cbd_bufaddr,
 						FEC_ENET_RX_FRSIZE - FEC_ALIGNMENT,
 						DMA_FROM_DEVICE);
+				bdp->cbd_bufaddr = 0;
+			}
 			if (skb)
 				dev_kfree_skb(skb);
 			bdp = fec_enet_get_nextdesc(bdp, &rx_queue->bd);
@@ -2503,8 +2513,22 @@ static void fec_enet_free_buffers(struct net_device *ndev)
 	for (j = 0; j < fep->num_tx_queues; j++) {
 		tx_queue = fep->tx_queue[j];
 		bdp = tx_queue->bd.base;
-		for (i = 0; i < tx_queue->bd.ring_size; i++)
+		for (i = 0; i < tx_queue->bd.ring_size; i++) {
+			if (bdp->cbd_bufaddr){
+				if (!IS_TSO_HEADER(tx_queue, bdp->cbd_bufaddr))
+					dma_unmap_single(&fep->pdev->dev,
+						bdp->cbd_bufaddr,
+						bdp->cbd_datlen, DMA_TO_DEVICE);
+				bdp->cbd_bufaddr = 0;
+			}
+			skb = tx_queue->tx_skbuff[i];
+			if (skb) {
+				tx_queue->tx_skbuff[i] = NULL;
+				dev_kfree_skb_any(skb);
+			}
 			kfree(tx_queue->tx_bounce[i]);
+			bdp = fec_enet_get_nextdesc(bdp, &tx_queue->bd);
+		}
 	}
 }
 
