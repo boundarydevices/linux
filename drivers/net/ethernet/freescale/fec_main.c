@@ -541,27 +541,24 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 	index = fec_enet_get_bd_index(last_bdp, &txq->bd);
 	/* Save skb pointer */
 	txq->tx_skbuff[index] = skb;
+	last_bdp = fec_enet_get_nextdesc(last_bdp, &txq->bd);
+	skb_tx_timestamp(skb);
 
 	/* Make sure the updates to rest of the descriptor are performed before
 	 * transferring ownership.
 	 */
 	wmb();
 
-	/* Send it on its way.  Tell FEC it's ready, interrupt when done,
-	 * it's the last BD of the frame, and to put the CRC on the end.
+	/* Send it on its way.  Transfer ownership
+	 * Make sure the update to bdp and tx_skbuff are performed before
+	 * the update to txq->bd.cur.
+	 * Keep window for interrupt between the next 3 lines as small as
+	 * possible, to avoid "tx int lost" in case no more tx interrupts
+	 * happen within 2 seconds.
 	 */
 	bdp->cbd_sc = cpu_to_fec16(status);
-
-	/* If this was the last BD in the ring, start at the beginning again. */
-	bdp = fec_enet_get_nextdesc(last_bdp, &txq->bd);
-
-	skb_tx_timestamp(skb);
-
-	/* Make sure the update to bdp and tx_skbuff are performed before
-	 * txq->bd.cur.
-	 */
 	wmb();
-	txq->bd.cur = bdp;
+	txq->bd.cur = last_bdp;
 
 	/* Trigger transmission start */
 	writel(0, txq->bd.reg_desc_active);
@@ -746,12 +743,12 @@ static int fec_enet_txq_submit_tso(struct fec_enet_priv_tx_q *txq,
 	 * transferring ownership.
 	 */
 	wmb();
-	/* Send it on its way.  Tell FEC it's ready, interrupt when done,
+	/* Send it on its way.  Transfer ownership
+	 * Keep window for interrupt between the next 3 lines as small as
+	 * possible, to avoid "tx int lost" in case no more tx interrupts
+	 * happen within 2 seconds.
 	 */
 	first_bdp->cbd_sc = cbd_sc;	/* cpu_to_fec16 already done */
-	/* Make sure ownership is transferred before the
-	 * update to txq->bd.cur.
-	 */
 	wmb();
 	txq->bd.cur = bdp;
 
