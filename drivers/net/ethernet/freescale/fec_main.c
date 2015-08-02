@@ -695,9 +695,8 @@ static int fec_enet_txq_submit_tso(struct fec_enet_priv_tx_q *txq,
 			bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
 			index = fec_enet_get_bd_index(bdp, &txq->bd);
 			ret = fec_enet_txq_put_data_tso(txq, skb, ndev, bdp,
-							index, tso.data, size,
-							size == data_left,
-							total_len == 0);
+				index, tso.data, size, size == data_left,
+				(total_len == 0) && (size == data_left));
 			if (ret)
 				goto err_release;
 
