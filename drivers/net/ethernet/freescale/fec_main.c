@@ -591,7 +591,8 @@ fec_enet_txq_put_data_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 
 static int
 fec_enet_txq_put_hdr_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
-			struct net_device *ndev, struct bufdesc *bdp, int index)
+			struct net_device *ndev, struct bufdesc *bdp, int index,
+			unsigned short * pstatus)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	const struct platform_device_id *id_entry =
@@ -638,8 +639,10 @@ fec_enet_txq_put_hdr_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 		ebdp->cbd_esc = estatus;
 	}
 	mb();
-	bdp->cbd_sc = status;
-
+	if (pstatus)
+		*pstatus = status;
+	else
+		bdp->cbd_sc = status;
 	return 0;
 }
 
@@ -652,9 +655,12 @@ static int fec_enet_txq_submit_tso(struct fec_enet_priv_tx_q *txq,
 	int hdr_len = skb_transport_offset(skb) + tcp_hdrlen(skb);
 	int total_len, data_left;
 	struct bufdesc *bdp = txq->bd.cur;
+	struct bufdesc *first_bdp = bdp;
 	unsigned short queue = skb_get_queue_mapping(skb);
 	struct tso_t tso;
 	unsigned short prev_status;
+	unsigned short status = 0;
+	unsigned short *pstatus = &status;
 	unsigned int index = 0;
 	int ret;
 
@@ -684,7 +690,8 @@ static int fec_enet_txq_submit_tso(struct fec_enet_priv_tx_q *txq,
 		/* prepare packet headers: MAC + IP + TCP */
 		hdr = txq->tso_hdrs + index * TSO_HEADER_SIZE;
 		tso_build_hdr(skb, hdr, &tso, data_left, total_len == 0);
-		ret = fec_enet_txq_put_hdr_tso(txq, skb, ndev, bdp, index);
+		ret = fec_enet_txq_put_hdr_tso(txq, skb, ndev, bdp, index, pstatus);
+		pstatus = NULL;
 		if (ret)
 			goto err_release;
 
@@ -708,7 +715,12 @@ static int fec_enet_txq_submit_tso(struct fec_enet_priv_tx_q *txq,
 	}
 
 	mb();
-	prev_status = fec_enet_get_prevdesc(bdp, &txq->bd)->cbd_sc;
+	/*
+	 * Send it on its way.  Tell FEC it's ready, interrupt when done,
+	 */
+	first_bdp->cbd_sc = status;
+	mb();
+	prev_status = fec_enet_get_prevdesc(first_bdp, &txq->bd)->cbd_sc;
 
 	skb_tx_timestamp(skb);
 	txq->bd.cur = bdp;
