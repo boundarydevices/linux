@@ -573,6 +573,8 @@ fec_enet_txq_put_data_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 			estatus |= FEC_TX_BD_FTYPE(queue);
 		if (skb->ip_summed == CHECKSUM_PARTIAL)
 			estatus |= BD_ENET_TX_PINS | BD_ENET_TX_IINS;
+		if (is_last)
+			estatus |= BD_ENET_TX_INT;
 		ebdp->cbd_bdu = 0;
 		ebdp->cbd_esc = estatus;
 	}
@@ -580,11 +582,8 @@ fec_enet_txq_put_data_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 	/* Handle the last BD specially */
 	if (last_tcp)
 		status |= (BD_ENET_TX_LAST | BD_ENET_TX_TC);
-	if (is_last) {
+	if (is_last)
 		status |= BD_ENET_TX_INTR;
-		if (fep->bufdesc_ex)
-			ebdp->cbd_esc |= BD_ENET_TX_INT;
-	}
 	mb();
 	bdp->cbd_sc = status;
 
