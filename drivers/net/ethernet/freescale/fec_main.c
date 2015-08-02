@@ -494,22 +494,22 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 	/* Save skb pointer */
 	txq->tx_skbuff[index] = skb;
 
-	dmb();
-
-	/* Send it on its way.  Tell FEC it's ready, interrupt when done,
-	 * it's the last BD of the frame, and to put the CRC on the end.
-	 */
-	bdp->cbd_sc = status;
-
-	mb();
-	prev_status = fec_enet_get_prevdesc(bdp, &txq->bd)->cbd_sc;
-
-	/* If this was the last BD in the ring, start at the beginning again. */
-	bdp = fec_enet_get_nextdesc(last_bdp, &txq->bd);
-
 	skb_tx_timestamp(skb);
 
-	txq->bd.cur = bdp;
+	last_bdp = fec_enet_get_nextdesc(last_bdp, &txq->bd);
+
+	dmb();
+	/*
+	 * Send it on its way.  Transfer ownership
+	 * Keep window for interrupt between the next 3 lines as small as
+	 * possible, to avoid "tx int lost" in case no more tx interrupts
+	 * happen within 2 seconds.
+	 */
+	bdp->cbd_sc = status;
+	mb();
+	txq->bd.cur = last_bdp;
+
+	prev_status = fec_enet_get_prevdesc(bdp, &txq->bd)->cbd_sc;
 
 	if (!(prev_status & BD_ENET_TX_READY)) {
 		const struct platform_device_id *id_entry =
@@ -720,17 +720,19 @@ static int fec_enet_txq_submit_tso(struct fec_enet_priv_tx_q *txq,
 		bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
 	}
 
+	skb_tx_timestamp(skb);
 	mb();
 	/*
-	 * Send it on its way.  Tell FEC it's ready, interrupt when done,
+	 * Send it on its way.  Transfer ownership
+	 * Keep window for interrupt between the next 3 lines as small as
+	 * possible, to avoid "tx int lost" in case no more tx interrupts
+	 * happen within 2 seconds.
 	 */
 	first_bdp->cbd_sc = status;
 	mb();
-	prev_status = fec_enet_get_prevdesc(first_bdp, &txq->bd)->cbd_sc;
-
-	skb_tx_timestamp(skb);
 	txq->bd.cur = bdp;
 
+	prev_status = fec_enet_get_prevdesc(first_bdp, &txq->bd)->cbd_sc;
 	if (!(prev_status & BD_ENET_TX_READY)) {
 		const struct platform_device_id *id_entry =
 				platform_get_device_id(fep->pdev);
