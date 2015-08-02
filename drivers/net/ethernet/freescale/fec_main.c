@@ -585,7 +585,6 @@ fec_enet_txq_put_data_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 
 	addr = dma_map_single(&fep->pdev->dev, data, size, DMA_TO_DEVICE);
 	if (dma_mapping_error(&fep->pdev->dev, addr)) {
-		dev_kfree_skb_any(skb);
 		if (net_ratelimit())
 			netdev_err(ndev, "Tx DMA memory map failed\n");
 		return NETDEV_TX_BUSY;
@@ -642,7 +641,6 @@ fec_enet_txq_put_hdr_tso(struct fec_enet_priv_tx_q *txq,
 		dmabuf = dma_map_single(&fep->pdev->dev, bufaddr,
 					hdr_len, DMA_TO_DEVICE);
 		if (dma_mapping_error(&fep->pdev->dev, dmabuf)) {
-			dev_kfree_skb_any(skb);
 			if (net_ratelimit())
 				netdev_err(ndev, "Tx DMA memory map failed\n");
 			return NETDEV_TX_BUSY;
