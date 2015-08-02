@@ -582,8 +582,11 @@ fec_enet_txq_put_data_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 	/* Handle the last BD specially */
 	if (last_tcp)
 		status |= (BD_ENET_TX_LAST | BD_ENET_TX_TC);
-	if (is_last)
+	if (is_last) {
+		/* Save skb pointer */
+		txq->tx_skbuff[index] = skb;
 		status |= BD_ENET_TX_INTR;
+	}
 	mb();
 	bdp->cbd_sc = status;
 
@@ -707,9 +710,6 @@ static int fec_enet_txq_submit_tso(struct fec_enet_priv_tx_q *txq,
 
 		bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
 	}
-
-	/* Save skb pointer */
-	txq->tx_skbuff[index] = skb;
 
 	skb_tx_timestamp(skb);
 	txq->bd.cur = bdp;
