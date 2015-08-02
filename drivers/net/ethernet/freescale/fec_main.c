@@ -487,7 +487,6 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 
 	/* Fill in a Tx ring entry */
 	bdp = txq->bd.cur;
-	last_bdp = bdp;
 
 	/* Set buffer length and buffer pointer */
 	bufaddr = skb->data;
@@ -523,6 +522,7 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 			return NETDEV_TX_OK;
 		}
 	} else {
+		last_bdp = bdp;
 		status |= (BD_ENET_TX_INTR | BD_ENET_TX_LAST);
 		if (fep->bufdesc_ex) {
 			estatus = BD_ENET_TX_INT;
