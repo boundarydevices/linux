@@ -1281,6 +1281,10 @@ static void fec_enet_tx_queue(struct net_device *ndev,
 		skb = txq->tx_skbuff[index];
 		while (!skb) {
 			bdp_t = fec_enet_get_nextdesc(bdp_t, &txq->bd);
+			if (bdp_t == txq->bd.cur) {
+				pr_err("%s: bug\n", __func__);
+				return;
+			}
 			index = fec_enet_get_bd_index(bdp_t, &txq->bd);
 			skb = txq->tx_skbuff[index];
 			bdnum++;
