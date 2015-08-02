@@ -328,7 +328,7 @@ fec_enet_clear_csum(struct sk_buff *skb, struct net_device *ndev)
 	return 0;
 }
 
-static int fec_enet_txq_submit_frag_skb(struct fec_enet_priv_tx_q *txq,
+static struct bufdesc *fec_enet_txq_submit_frag_skb(struct fec_enet_priv_tx_q *txq,
 		struct sk_buff *skb, struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
@@ -399,10 +399,7 @@ static int fec_enet_txq_submit_frag_skb(struct fec_enet_priv_tx_q *txq,
 		mb();
 		bdp->cbd_sc = status;
 	}
-
-	txq->bd.cur = bdp;
-
-	return 0;
+	return bdp;
 
 dma_mapping_error:
 	bdp = txq->bd.cur;
@@ -412,7 +409,7 @@ dma_mapping_error:
 				bdp->cbd_datlen, DMA_TO_DEVICE);
 		bdp->cbd_bufaddr = 0;
 	}
-	return -EINVAL;
+	return NULL;
 }
 
 static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
@@ -429,7 +426,6 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 	unsigned int estatus = 0;
 	unsigned int index;
 	int entries_free;
-	int ret;
 
 	entries_free = fec_enet_get_free_txdesc_num(txq);
 	if (entries_free < MAX_SKB_FRAGS + 1) {
@@ -474,14 +470,15 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 	status = (BD_ENET_TX_TC | BD_ENET_TX_READY) |
 			((bdp == txq->bd.last) ? BD_SC_WRAP : 0);
 	if (nr_frags) {
-		ret = fec_enet_txq_submit_frag_skb(txq, skb, ndev);
-		if (ret) {
+		last_bdp = fec_enet_txq_submit_frag_skb(txq, skb, ndev);
+		if (!last_bdp) {
 			dma_unmap_single(&fep->pdev->dev, addr,
 					buflen, DMA_TO_DEVICE);
 			dev_kfree_skb_any(skb);
 			return NETDEV_TX_OK;
 		}
 	} else {
+		last_bdp = bdp;
 		status |= (BD_ENET_TX_INTR | BD_ENET_TX_LAST);
 		if (fep->bufdesc_ex) {
 			estatus = BD_ENET_TX_INT;
@@ -511,7 +508,6 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 		ebdp->cbd_esc = estatus;
 	}
 
-	last_bdp = txq->bd.cur;
 	index = fec_enet_get_bd_index(last_bdp, &txq->bd);
 	/* Save skb pointer */
 	txq->tx_skbuff[index] = skb;
