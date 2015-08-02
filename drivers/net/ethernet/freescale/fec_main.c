@@ -378,7 +378,6 @@ dma_mapping_error:
 				bdp->cbd_datlen, DMA_TO_DEVICE);
 		bdp->cbd_bufaddr = 0;
 	}
-	dev_kfree_skb_any(skb);
 	return -EINVAL;
 }
 
@@ -445,14 +444,17 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 			netdev_err(ndev, "Tx DMA memory map failed\n");
 		return NETDEV_TX_OK;
 	}
-	bdp->cbd_bufaddr = dma_addr;
 
 	status = (BD_ENET_TX_TC | BD_ENET_TX_READY) |
 			((bdp == txq->bd.last) ? BD_SC_WRAP : 0);
 	if (nr_frags) {
 		ret = fec_enet_txq_submit_frag_skb(txq, skb, ndev);
-		if (ret)
+		if (ret) {
+			dma_unmap_single(&fep->pdev->dev, dma_addr,
+					buflen, DMA_TO_DEVICE);
+			dev_kfree_skb_any(skb);
 			return NETDEV_TX_OK;
+		}
 	} else {
 		status |= (BD_ENET_TX_INTR | BD_ENET_TX_LAST);
 		if (fep->bufdesc_ex) {
@@ -463,6 +465,8 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 				estatus |= BD_ENET_TX_TS;
 		}
 	}
+	bdp->cbd_bufaddr = dma_addr;
+	bdp->cbd_datlen = buflen;
 
 	if (fep->bufdesc_ex) {
 
@@ -488,7 +492,6 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 	/* Save skb pointer */
 	txq->tx_skbuff[index] = skb;
 
-	bdp->cbd_datlen = buflen;
 	dmb();
 
 	/* Send it on its way.  Tell FEC it's ready, interrupt when done,
