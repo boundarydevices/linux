@@ -917,7 +917,6 @@ static void epdc_submit_update(u32 lut_num, u32 waveform_mode, u32 update_mode,
 		reg_val |= ((waveform_mode <<
 				EPDC_UPD_CTRL_WAVEFORM_MODE_OFFSET) &
 				EPDC_UPD_CTRL_WAVEFORM_MODE_MASK);
-		reg_val &= ~EPDC_UPD_CTRL_AUTOWV;
 
 	reg_val |= (use_dry_run ? EPDC_UPD_CTRL_DRY_RUN : 0) |
 	    ((lut_num << EPDC_UPD_CTRL_LUT_SEL_OFFSET) &
