@@ -455,8 +455,10 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_crtouch>;
 		reg = <0x49>;
+#if 0
 		interrupts-extended = GPIRQ_I2C3_CRTOUCH;
 		wakeup-gpios = GP_I2C3_CRTOUCH;
+#endif
 		reset-gpios = GP_I2C3_CRTOUCH_RESET;
 		wake-gpios = GP_I2C3_CRTOUCH_WAKE;
 	};
