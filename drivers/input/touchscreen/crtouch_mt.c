@@ -208,13 +208,10 @@ const int sin_data[] = 	{
 	64729, 64898, 65047, 65176, 65286, 65376, 65446, 65496, 65526, 65536,
 };
 
-static void report_MT(struct work_struct *work)
+static void process_data(struct crtouch_data *crtouch, s32 status_register_1)
 {
-
-	struct crtouch_data *crtouch = container_of(work, struct crtouch_data, work);
 	struct i2c_client *client = crtouch->client;
 
-	s32 status_register_1 = 0;
 	s32 status_register_2 = 0;
 	s32 dynamic_status = 0;
 	s32 fifo_capacitive = 0;
@@ -227,8 +224,6 @@ static void report_MT(struct work_struct *work)
 	const int xmax = crtouch->xmax;
 	const int ymax = crtouch->ymax;
 	char xy[LEN_XY];
-
-	status_register_1 = i2c_smbus_read_byte_data(client, STATUS_REGISTER_1);
 
 	/*check zoom resistive*/
 	if ((status_register_1 & MASK_EVENTS_ZOOM_R) == MASK_EVENTS_ZOOM_R && (status_register_1 & TWO_TOUCH)) {
@@ -627,6 +622,42 @@ static void report_MT(struct work_struct *work)
 
 }
 
+static int check_for_work(struct crtouch_data *crtouch)
+{
+	struct i2c_client *client = crtouch->client;
+	s32 status1 = 0;
+	int i = 0;
+
+	while (i < 10) {
+		status1 = i2c_smbus_read_byte_data(client, STATUS_REGISTER_1);
+		if (status1 >= 0)
+			break;
+		msleep(1);
+		i++;
+	}
+	if (status1 & (TWO_TOUCH | MASK_RESISTIVE_SAMPLE | MASK_EVENTS_CAPACITIVE)) {
+		process_data(crtouch, status1);
+		return 1;
+	}
+	return 0;
+}
+
+static void report_MT_poll(struct work_struct *work)
+{
+	struct crtouch_data *crtouch = container_of(work, struct crtouch_data, work);
+
+	check_for_work(crtouch);
+	mod_timer(&crtouch->timer, jiffies + msecs_to_jiffies(
+		(crtouch->status_pressed == CRTOUCH_TOUCHED) ? 10 : 100));
+}
+
+static void report_MT_irq(struct work_struct *work)
+{
+	struct crtouch_data *crtouch = container_of(work, struct crtouch_data, work);
+
+	check_for_work(crtouch);
+}
+
 int crtouch_open(struct inode *inode, struct file *filp)
 {
 	struct crtouch_data *crtouch = container_of(inode->i_cdev, struct crtouch_data, cdev);;
@@ -854,6 +885,13 @@ read :	crtouch_read,
 };
 
 
+static void crtouch_timer(unsigned long handle)
+{
+	struct crtouch_data *crtouch = (void *)handle;
+
+	queue_work(crtouch->workqueue, &crtouch->work);
+}
+
 static irqreturn_t crtouch_irq(int irq, void *dev_id)
 {
 	struct crtouch_data *crtouch = dev_id;
@@ -985,7 +1023,10 @@ static int crtouch_probe(struct i2c_client *client,
 	crtouch->input_dev = input_dev;
 	crtouch->client = client;
 	crtouch->workqueue = create_singlethread_workqueue("crtouch");
-	INIT_WORK(&crtouch->work, report_MT);
+
+	INIT_WORK(&crtouch->work, (crtouch->irq) ?
+			report_MT_irq : report_MT_poll);
+
 
 	setup_reset_gpio(client, crtouch);
 	setup_wake_gpio(client, crtouch);
@@ -1090,15 +1131,20 @@ static int crtouch_probe(struct i2c_client *client,
 		goto err_unr_class;
 	}
 
-	/* request irq trigger falling */
-	result = request_irq(crtouch->irq, crtouch_irq,
-			IRQF_TRIGGER_FALLING, IRQ_NAME, crtouch);
+	setup_timer(&crtouch->timer, crtouch_timer, (unsigned long)crtouch);
+	if (crtouch->irq) {
+		/* request irq trigger falling */
+		result = request_irq(crtouch->irq, crtouch_irq,
+				IRQF_TRIGGER_FALLING, IRQ_NAME, crtouch);
 
-	if (result < 0) {
-		printk(KERN_DEBUG "unable to request IRQ\n");
-		goto err_unr_createdev;
+		if (result < 0) {
+			printk(KERN_DEBUG "unable to request IRQ\n");
+			goto err_unr_createdev;
+		}
+	} else {
+		mod_timer(&crtouch->timer, jiffies + msecs_to_jiffies(500));
+		pr_info("%s:polling instead of irq\n", __func__);
 	}
-
 	/*clean interrupt pin*/
 	i2c_smbus_read_byte_data(client, STATUS_REGISTER_1);
 	i2c_set_clientdata(client, crtouch);
@@ -1127,6 +1173,7 @@ static int crtouch_remove(struct i2c_client *client)
 {
 	struct crtouch_data *crtouch = i2c_get_clientdata(client);
 
+	del_timer_sync(&crtouch->timer);
 	cancel_work_sync(&crtouch->work);
 
 	device_destroy(crtouch->crtouch_class, crtouch->dev_number);
