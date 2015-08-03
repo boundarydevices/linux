@@ -18,6 +18,11 @@
 	};
 };
 
+&reg_usb_otg1_vbus {
+	pinctrl-0 = < >;
+	gpio = < >;
+};
+
 &fec1{
        status = "disabled";
 };
@@ -61,6 +66,10 @@
 };
 
 &i2c1 {
+	status = "disabled";
+};
+
+&usbotg1 {
 	status = "disabled";
 };
 

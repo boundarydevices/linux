@@ -19,23 +19,6 @@
 	};
 };
 
-&mipi_csi {
-	clock-frequency = <240000000>;
-	status = "okay";
-	port {
-		mipi_sensor_ep: endpoint1 {
-			remote-endpoint = <&ov5640_mipi_ep>;
-			data-lanes = <2>;
-			csis-hs-settle = <13>;
-			csis-wclk;
-		};
-
-		csi_mipi_ep: endpoint2 {
-			remote-endpoint = <&csi_ep>;
-		};
-	};
-};
-
 &i2c2 {
 	ov5640_mipi: ov5640_mipi@3c {
 		compatible = "ovti,ov5640_mipi";
@@ -53,6 +36,23 @@
 			ov5640_mipi_ep: endpoint {
 				remote-endpoint = <&mipi_sensor_ep>;
 			};
+		};
+	};
+};
+
+&mipi_csi {
+	clock-frequency = <240000000>;
+	status = "okay";
+	port {
+		mipi_sensor_ep: endpoint1 {
+			remote-endpoint = <&ov5640_mipi_ep>;
+			data-lanes = <2>;
+			csis-hs-settle = <13>;
+			csis-wclk;
+		};
+
+		csi_mipi_ep: endpoint2 {
+			remote-endpoint = <&csi_ep>;
 		};
 	};
 };

@@ -8,10 +8,6 @@
 
 #include "imx7d-12x12-lpddr3-arm2.dts"
 
-&sai1 {
-	status = "disabled";
-};
-
 &fec1 {
 	status = "disabled";
 };
@@ -22,4 +18,8 @@
 
 &flexcan2 {
 	status = "okay";
+};
+
+&sai1 {
+	status = "disabled";
 };
