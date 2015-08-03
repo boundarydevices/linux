@@ -5957,7 +5957,7 @@ static int pxp_clear_wb_work_func(struct mxc_epdc_fb_data *fb_data)
 	unsigned int hist_stat;
 	int ret;
 
-	dev_info(fb_data->dev, "PxP WFE_B to clear working buffer.\n");
+	dev_dbg(fb_data->dev, "PxP WFE_B to clear working buffer.\n");
 
 	ret = pxp_wfe_b_process_clear_workingbuffer(fb_data, fb_data->cur_mode->vmode->xres, fb_data->cur_mode->vmode->yres);
 	if (ret) {
