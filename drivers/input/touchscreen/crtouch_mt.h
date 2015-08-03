@@ -208,4 +208,5 @@ struct crtouch_data {
 	int irq;
 	int wake_gpio;
 	int wake_active_low;
+	struct timer_list timer;
 };
