@@ -2270,7 +2270,6 @@ struct video_device TW68_video_template = {
 	.ioctl_ops			= &video_ioctl_ops,
 	.minor				= -1,
 	.tvnorms			= TW68_NORMS,
-	.current_norm			= V4L2_STD_NTSC,
 };
 
 void TW68_video_variable_init(struct TW68_dev *dev)
