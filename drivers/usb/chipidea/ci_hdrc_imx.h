@@ -13,6 +13,30 @@
 #define __DRIVER_USB_CHIPIDEA_CI_HDRC_IMX_H
 
 #include <linux/usb/otg.h>
+#include <linux/power_supply.h>
+
+enum battery_charging_spec {
+	BATTERY_CHARGING_SPEC_NONE = 0,
+	BATTERY_CHARGING_SPEC_UNKNOWN,
+	BATTERY_CHARGING_SPEC_1_0,
+	BATTERY_CHARGING_SPEC_1_1,
+	BATTERY_CHARGING_SPEC_1_2,
+};
+
+struct usb_charger {
+	/* USB controller */
+	struct device		*dev;
+	struct power_supply	psy;
+	struct mutex		lock;
+
+	/* Compliant with Battery Charging Specification version (if any) */
+	enum battery_charging_spec	bc;
+
+	/* properties */
+	unsigned		present:1;
+	unsigned		online:1;
+	unsigned		max_current;
+};
 
 struct imx_usbmisc_data {
 	struct device *dev;
@@ -29,6 +53,7 @@ struct imx_usbmisc_data {
 	 */
 	unsigned int osc_clkgate_delay;
 	struct regmap *anatop;
+	struct usb_charger *charger;
 	enum usb_dr_mode available_role;
 };
 
@@ -47,5 +72,7 @@ bool imx_usbmisc_adp_sense_connection(struct imx_usbmisc_data *data);
 bool imx_usbmisc_adp_attach_event(struct imx_usbmisc_data *data);
 int imx_usbmisc_term_select_override(struct imx_usbmisc_data *data,
 						bool enable, int val);
+int imx_usbmisc_charger_detection(struct imx_usbmisc_data *data, bool connect);
+int imx_usbmisc_charger_secondary_detection(struct imx_usbmisc_data *data);
 
 #endif /* __DRIVER_USB_CHIPIDEA_CI_HDRC_IMX_H */
