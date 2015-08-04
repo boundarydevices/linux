@@ -18,7 +18,7 @@ Optional properties:
 - vbus-supply: regulator for vbus
 - disable-over-current: disable over current detect
 - external-vbus-divider: enables off-chip resistor divider for Vbus
-- imx6-usb-charger-detection: enable imx6 usb charger detect function,
+- imx-usb-charger-detection: enable imx usb charger detect function,
   only set it when the user wants SoC usb charger detection capabilities.
   If the user wants to use charger IC's usb charger detection capabilities,
   please do not set it.
@@ -44,7 +44,7 @@ usb@02184000 { /* USB OTG */
 	fsl,usbmisc = <&usbmisc 0>;
 	disable-over-current;
 	external-vbus-divider;
-	imx6-usb-charger-detection;
+	imx-usb-charger-detection;
 	fsl,anatop = <&anatop>;
 	pinctrl-names = "idle", "active";
 	pinctrl-0 = <&pinctrl_usbh2_1>;
