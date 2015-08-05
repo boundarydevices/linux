@@ -393,6 +393,12 @@
 	model = "Freescale i.MX6 SoloX Nitrogen6sx Board";
 	compatible = "fsl,imx6sx-nitrogen6sx", "fsl,imx6sx";
 
+	aliases {
+		mmc0 = &usdhc2;
+		mmc1 = &usdhc4;
+		mmc2 = &usdhc3;
+	};
+
 	backlight_lvds {
 		compatible = "pwm-backlight";
 		pwms = <&pwm4 0 5000000>;
