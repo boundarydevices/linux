@@ -256,6 +256,7 @@
 
 / {
 	aliases {
+		mmc0 = &usdhc4;
                 mxcfb0 = &lcd_display;
 		lcd_display = &lcd_display;
 	};
