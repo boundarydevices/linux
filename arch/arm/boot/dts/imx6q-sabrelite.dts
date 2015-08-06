@@ -22,20 +22,20 @@
 	compatible = "fsl,imx6q-sabrelite", "fsl,imx6q";
 };
 
+&fb_hdmi {
+	status = "okay";
+};
+
+&fb_lcd {
+	status = "okay";
+};
+
+&fb_lvds {
+	status = "okay";
+};
+
 &hdmi_core {
 	ipu_id = <1>;
-};
-
-&lvds_display {
-	status = "okay";
-};
-
-&hdmi_display {
-	status = "okay";
-};
-
-&lcd_display {
-	status = "okay";
 };
 
 &ov5640 {
@@ -47,7 +47,7 @@
 	csi_id = <0>;
 };
 
-&pinctrl_ov5640 { /* parallel camera */
+&pinctrl_i2c3_ov5640 { /* parallel camera */
 	fsl,pins = <
 		MX6QDL_PAD_EIM_A17__IPU2_CSI1_DATA12	0xb0b1
 		MX6QDL_PAD_EIM_A18__IPU2_CSI1_DATA13	0xb0b1
