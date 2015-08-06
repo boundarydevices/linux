@@ -178,7 +178,7 @@
 		/* parallel camera on CSI1, pins differ for iMX6Q/iMX6DL */
 	};
 
-	pinctrl_i2c3_ov5640_gpios: i2c3-ov5640-gpios {
+	pinctrl_i2c3_ov5640_gpios: i2c3-ov5640-gpiosgrp {
 		fsl,pins = <
 #define GP_OV5640_POWER_DOWN	<&gpio3 13 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x0b0b0
@@ -521,8 +521,7 @@
 	fb_lcd: fb@2 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "lcd";
-		interface_pix_fmt = "YUYV16";
-		mode_str ="A030JN01_YUV720";
+		interface_pix_fmt = "RGB666";
 		default_bpp = <16>;
 		int_clk = <0>;
 		late_init = <0>;
@@ -533,7 +532,7 @@
 		compatible = "fsl,lcd";
 		ipu_id = <0>;
 		disp_id = <0>;
-		default_ifmt = "YUYV16";
+		default_ifmt = "RGB666";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_lcd0>;
 		status = "okay";
