@@ -428,8 +428,8 @@
 	fb_lvds: fb@1 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
-		interface_pix_fmt = "RGB666";
-		default_bpp = <16>;
+		interface_pix_fmt = "RGB24";
+		default_bpp = <32>;
 		int_clk = <0>;
 		late_init = <0>;
 		status = "disabled";
@@ -631,6 +631,12 @@
 	status = "okay";
 };
 
+&clks {
+	assigned-clocks = <&clks IMX6QDL_CLK_LDB_DI0_SEL>;
+	assigned-clock-parents = <&clks IMX6QDL_CLK_PLL2_PFD0_352M>;
+/*	assigned-clock-parents = <&clks IMX6QDL_CLK_PLL5_VIDEO_DIV>; */
+};
+
 &ecspi1 {
 	fsl,spi-num-chipselects = <1>;
 	cs-gpios = <&gpio3 19 0>;
@@ -812,11 +818,22 @@
 	lvds_channel0: lvds-channel@0 {
 		crtc = "ipu1-di1";
 		fsl,data-mapping = "spwg";
-		fsl,data-width = <18>;
+		fsl,data-width = <24>;
 		status = "okay";
 		primary;
 
 		display-timings {
+			AA065VE11: AA065VE11 {
+				clock-frequency = <43748359>;
+				hactive = <640>;
+				vactive = <480>;
+				hback-porch = <148>;
+				hfront-porch = <116>;
+				vback-porch = <83>;
+				vfront-porch = <60>;
+				hsync-len = <96>;
+				vsync-len = <2>;
+			};
 			lg1280x800: lp101wx1 {
 				clock-frequency = <72000000>;
 				hactive = <1280>;
@@ -849,17 +866,6 @@
 				vfront-porch = <7>;
 				hsync-len = <60>;
 				vsync-len = <10>;
-			};
-			AA065VE11: AA065VE11 {
-				clock-frequency = <43748359>;
-				hactive = <640>;
-				vactive = <480>;
-				hback-porch = <148>;
-				hfront-porch = <116>;
-				vback-porch = <83>;
-				vfront-porch = <60>;
-				hsync-len = <96>;
-				vsync-len = <2>;
 			};
 			vga_lvds: vga {
 				clock-frequency = <25175000>;
