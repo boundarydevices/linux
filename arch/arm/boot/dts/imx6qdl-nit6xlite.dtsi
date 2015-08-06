@@ -13,6 +13,8 @@
 
 / {
 	aliases {
+		mmc0 = &usdhc3;
+		mmc1 = &usdhc2;
                 mxcfb0 = &hdmi_display;
                 mxcfb1 = &lvds_display;
                 mxcfb2 = &lcd_display;
