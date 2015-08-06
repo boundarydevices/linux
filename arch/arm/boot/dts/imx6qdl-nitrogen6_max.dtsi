@@ -407,6 +407,9 @@
 		lvds_display = &fb_lvds;
 		lvds_display_2 = &fb_lvds2;
 		lvds1080p = &lvds1080p;
+		mmc0 = &usdhc3;
+		mmc1 = &usdhc4;
+		mmc2 = &usdhc2;
 		mxcfb0 = &fb_hdmi;
 		mxcfb1 = &fb_lvds;
 		mxcfb2 = &fb_lcd;
