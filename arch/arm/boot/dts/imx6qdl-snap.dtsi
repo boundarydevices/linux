@@ -13,6 +13,11 @@
 #include <dt-bindings/input/input.h>
 
 / {
+	aliases {
+		mmc0 = &usdhc3;
+		mmc1 = &usdhc4;
+	};
+
 	gpio_keys: gpio-keys {
 		compatible = "gpio-keys";
 	};
