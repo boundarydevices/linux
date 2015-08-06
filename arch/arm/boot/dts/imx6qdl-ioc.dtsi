@@ -154,7 +154,7 @@
 
 	pinctrl_i2c2_sc16is7xx: i2c2_sc16is7xxgrp {
 		fsl,pins = <
-#define GPIRQ_SC16IS7XX  <&gpio5 20 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_SC16IS7XX		<&gpio5 20 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_CSI0_DATA_EN__GPIO5_IO20	0x1b0b0
 		>;
 	};
@@ -177,9 +177,9 @@
 			MX6QDL_PAD_CSI0_DAT18__IPU1_CSI0_DATA18	0xb0b1
 			MX6QDL_PAD_CSI0_DAT19__IPU1_CSI0_DATA19	0xb0b1
 			MX6QDL_PAD_CSI0_PIXCLK__IPU1_CSI0_PIXCLK	0xb0b1
-#define GP_ADV7180_RESET       <&gpio2 25 GPIO_ACTIVE_LOW>
+#define GP_ADV7180_RESET	<&gpio2 25 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_OE__GPIO2_IO25		0x000b0
-#define GPIRQ_ADV7180         <&gpio2 26 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_ADV7180		<&gpio2 26 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x1b0b0
 		>;
 	};
@@ -775,7 +775,6 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_sc16is7xx>;
 		reg = <0x49>;
-#define GPIRQ_SC16IS7XX  <&gpio5 20 IRQ_TYPE_LEVEL_LOW>
 		interrupts-extended = GPIRQ_SC16IS7XX;
 	};
 };
@@ -798,8 +797,6 @@
 		AVDD-supply = <&reg_3p3v>;  /* 1.8v */
 		DVDD-supply = <&reg_3p3v>;  /* 1.8v */
 		PVDD-supply = <&reg_3p3v>;  /* 1.8v */
-#define GP_ADV7180_RESET	<&gpio2 25 GPIO_ACTIVE_LOW>
-#define GPIRQ_ADV7180		<&gpio2 26 IRQ_TYPE_LEVEL_LOW>
 		rst-gpios = GP_ADV7180_RESET;
 		interrupts-extended = GPIRQ_ADV7180;
 		ipu_id = <0>;
