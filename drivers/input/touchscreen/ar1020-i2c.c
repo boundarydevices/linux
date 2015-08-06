@@ -320,6 +320,7 @@ static irqreturn_t touch_irq_handler_func(int irq, void *dev_id)
 	translate(&x, &y);
 	input_report_abs(priv->input, ABS_X, x);
 	input_report_abs(priv->input, ABS_Y, y);
+	input_report_abs(priv->input, ABS_PRESSURE, button);
 	input_report_key(priv->input, BTN_TOUCH, button);
 	input_sync(priv->input);
 	return IRQ_HANDLED;
@@ -406,8 +407,14 @@ static int ar1020_i2c_probe(struct i2c_client *client,
 	input_dev->open = ar1020_i2c_open;
 	input_dev->close = ar1020_i2c_close;
 
-	input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
-	input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
+	__set_bit(EV_ABS, input_dev->evbit);
+	__set_bit(EV_KEY, input_dev->evbit);
+	__set_bit(BTN_TOUCH, input_dev->keybit);
+	__set_bit(ABS_X, input_dev->absbit);
+	__set_bit(ABS_Y, input_dev->absbit);
+	__set_bit(ABS_PRESSURE, input_dev->absbit);
+	__set_bit(EV_SYN, input_dev->evbit);
+
 
 	if ((0 != calibration[CALIBRATION_XRES])
 	    &&
@@ -420,6 +427,8 @@ static int ar1020_i2c_probe(struct i2c_client *client,
 		input_set_abs_params(input_dev, ABS_X, 0, 4095, 0, 0);
 		input_set_abs_params(input_dev, ABS_Y, 0, 4095, 0, 0);
 	}
+	input_set_abs_params(input_dev, ABS_PRESSURE, 0, 1, 0, 0);
+
 	input_set_drvdata(input_dev, priv);
 	err = input_register_device(input_dev);
 	if (err) {
