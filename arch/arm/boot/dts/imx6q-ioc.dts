@@ -27,11 +27,11 @@
 };
 
 &fb_hdmi {
-	status = "okay";
+	status = "disabled";
 };
 
 &fb_lcd {
-	status = "okay";
+	status = "disabled";
 };
 
 &fb_lvds {
