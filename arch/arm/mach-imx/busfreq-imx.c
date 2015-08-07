@@ -1261,6 +1261,10 @@ static int busfreq_probe(struct platform_device *pdev)
 	register_pm_notifier(&imx_bus_freq_pm_notifier);
 	register_reboot_notifier(&imx_busfreq_reboot_notifier);
 
+	/* enter low bus mode if no high speed device enabled */
+	schedule_delayed_work(&bus_freq_daemon,
+		msecs_to_jiffies(10000));
+
 	/*
 	 * Need to make sure to an entry for the ddr freq change code address in the IRAM page table.
 	 * This is only required if the DDR freq code and suspend/idle code are in different OCRAM spaces.
