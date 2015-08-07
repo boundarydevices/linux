@@ -254,6 +254,8 @@ int __init imx7d_cpuidle_init(void)
 	cpuidle_pm_info->src_base.vbase =
 		(void __iomem *)IMX_IO_P2V(MX7D_SRC_BASE_ADDR);
 
+	imx7d_enable_rcosc();
+
 	/* code size should include cpuidle_pm_info size */
 	imx7d_wfi_in_iram_fn = (void *)fncpy(wfi_iram_base +
 		sizeof(*cpuidle_pm_info),
