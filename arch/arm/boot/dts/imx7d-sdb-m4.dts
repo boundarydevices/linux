@@ -27,6 +27,10 @@
 	status = "disabled";
 };
 
+&i2c2 {
+	status = "disabled";
+};
+
 &iomuxc {
 	imx7d-sdb {
 		pinctrl_uart2_1: uart2grp-1 {
@@ -36,6 +40,14 @@
 			>;
 		};
 	};
+};
+
+&gpt3 {
+	status = "disabled";
+};
+
+&gpt4 {
+	status = "disabled";
 };
 
 &mcctest{
@@ -56,4 +68,8 @@
 	assigned-clocks = <&clks IMX7D_UART2_ROOT_SRC>;
 	assigned-clock-parents = <&clks IMX7D_OSC_24M_CLK>;
 	status = "okay";
+};
+
+&wdog3{
+	status = "disabled";
 };
