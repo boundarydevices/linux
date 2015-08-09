@@ -1289,43 +1289,45 @@ _NeedVirtualMapping(
         }
         else
 #endif
-        /* Convert logical address into a physical address. */
-        gcmkONERROR(gckOS_UserLogicalToPhysical(
-		Kernel->os, Node->Virtual.logical, &phys
-		));
-
-        gcmkSAFECASTPHYSADDRT(address, phys);
-
-        gcmkONERROR(gckOS_GetBaseAddress(Kernel->os, &baseAddress));
-
-        gcmkASSERT(phys >= baseAddress);
-
-        /* Subtract baseAddress to get a GPU address used for programming. */
-        address -= baseAddress;
-
-        /* If part of region is belong to gcvPOOL_VIRTUAL,
-        ** whole region has to be mapped. */
-
-        gcmkSAFECASTSIZET(bytes, Node->Virtual.bytes);
-
-        end = address + bytes - 1;
-
-        if (!gckHARDWARE_IsFeatureAvailable(Kernel->hardware, gcvFEATURE_MMU))
         {
-            gcmkONERROR(gckHARDWARE_SplitMemory(
-                        Kernel->hardware, end, &pool, &offset
-                        ));
+            /* Convert logical address into a physical address. */
+            gcmkONERROR(gckOS_UserLogicalToPhysical(
+                Kernel->os, Node->Virtual.logical, &phys
+            ));
 
-            *NeedMapping = (pool == gcvPOOL_VIRTUAL);
-        }
-        else
-        {
-            /* TODO: Check whether physical address in flat mapping. */
-            gctUINT32 dynamicMappingStart = Kernel->mmu->dynamicMappingStart;
-            if( end < (dynamicMappingStart << gcdMMU_MTLB_SHIFT))
-                *NeedMapping = gcvFALSE;
+            gcmkSAFECASTPHYSADDRT(address, phys);
+
+            gcmkONERROR(gckOS_GetBaseAddress(Kernel->os, &baseAddress));
+
+            gcmkASSERT(phys >= baseAddress);
+
+            /* Subtract baseAddress to get a GPU address used for programming. */
+            address -= baseAddress;
+
+            /* If part of region is belong to gcvPOOL_VIRTUAL,
+            ** whole region has to be mapped. */
+
+            gcmkSAFECASTSIZET(bytes, Node->Virtual.bytes);
+
+            end = address + bytes - 1;
+
+            if (!gckHARDWARE_IsFeatureAvailable(Kernel->hardware, gcvFEATURE_MMU))
+            {
+                gcmkONERROR(gckHARDWARE_SplitMemory(
+                            Kernel->hardware, end, &pool, &offset
+                            ));
+
+                *NeedMapping = (pool == gcvPOOL_VIRTUAL);
+            }
             else
-                *NeedMapping = gcvTRUE;
+            {
+                /* TODO: Check whether physical address in flat mapping. */
+                gctUINT32 dynamicMappingStart = Kernel->mmu->dynamicMappingStart;
+                if( end < (dynamicMappingStart << gcdMMU_MTLB_SHIFT))
+                    *NeedMapping = gcvFALSE;
+                else
+                    *NeedMapping = gcvTRUE;
+            }
         }
     }
     else
