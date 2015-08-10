@@ -221,24 +221,27 @@ static inline int tsc2004_write_cmd(struct tsc2004 *tsc, u8 value)
 	return i2c_smbus_write_byte(tsc->client, value);
 }
 
+static int tsc2004_reset(struct i2c_client *client)
+{
+	int err;
+	int retries = 0;
+
+	/* Reset the TSC, configure for 12 bit */
+	do {
+		/* Reset the TSC, configure for 12 bit */
+		int cmd = TSC2004_CMD1(MEAS_X_Y_Z1_Z2, MODE_12BIT, SWRST_TRUE);
+
+		err = i2c_smbus_write_byte(client, cmd);
+		if (err < 0)
+			pr_err("%s: write_cmd %d\n", __func__, err);
+	} while ( (err < 0) && (3 < retries++) );
+	return err;
+}
+
 static int tsc2004_prepare_for_reading(struct tsc2004 *ts)
 {
 	int err;
 	int cmd, data;
-	int retries ;
-
-	/* Reset the TSC, configure for 12 bit */
-	retries = 0 ;
-	do {
-                /* Reset the TSC, configure for 12 bit */
-                cmd = TSC2004_CMD1(MEAS_X_Y_Z1_Z2, MODE_12BIT, SWRST_TRUE);
-                err = tsc2004_write_cmd(ts, cmd);
-                if (err < 0)
-                        printk (KERN_ERR "%s: write_cmd %d\n", __func__, err );
-	} while ( (err < 0) && (3 < retries++) );
-
-	if (err < 0)
-		return err ;
 
 	/* Enable interrupt for PENIRQ and DAV */
 	cmd = TSC2004_CMD0(CFR2_REG, PND0_FALSE, WRITE_REG);
@@ -268,6 +271,7 @@ static int tsc2004_prepare_for_reading(struct tsc2004 *ts)
 static void tsc2004_read_values(struct tsc2004 *tsc, struct ts_event *tc)
 {
 	int cmd;
+	int err;
 
 	/* Read X Measurement */
 	cmd = TSC2004_CMD0(X_REG, PND0_FALSE, READ_REG);
@@ -292,6 +296,11 @@ static void tsc2004_read_values(struct tsc2004 *tsc, struct ts_event *tc)
 	tc->z2 &= MEAS_MASK;
 
 	/* Prepare for touch readings */
+	err = tsc2004_reset(tsc->client);
+	if (err < 0) {
+		dev_dbg(&tsc->client->dev, "Failed to reset TSC, %d\n", err);
+		return;
+	}
 	if (tsc2004_prepare_for_reading(tsc) < 0)
 		dev_dbg(&tsc->client->dev, "Failed to prepare TSC for next"
 				"reading\n");
@@ -483,6 +492,11 @@ static int tsc2004_probe(struct i2c_client *client,
 				     I2C_FUNC_SMBUS_READ_WORD_DATA))
 		return -EIO;
 
+	err = tsc2004_reset(client);
+	if (err < 0) {
+		dev_err(&client->dev, "Failed to reset TSC %d\n", err);
+		return err;
+	}
 	ts = kzalloc(sizeof(struct tsc2004), GFP_KERNEL);
 
 	input_dev = input_allocate_device();
