@@ -171,6 +171,19 @@ static int egalax_ts_probe(struct i2c_client *client,
 	struct input_dev *input_dev;
 	int error;
 
+	/* controller may be in sleep, wake it up. */
+	error = egalax_wake_up_device(client);
+	if (error) {
+		dev_err(&client->dev, "Failed to wake up the controller\n");
+		return error;
+	}
+
+	error = egalax_firmware_version(client);
+	if (error < 0) {
+		dev_err(&client->dev, "Failed to read firmware version\n");
+		return error;
+	}
+
 	ts = devm_kzalloc(&client->dev, sizeof(struct egalax_ts), GFP_KERNEL);
 	if (!ts) {
 		dev_err(&client->dev, "Failed to allocate memory\n");
@@ -185,19 +198,6 @@ static int egalax_ts_probe(struct i2c_client *client,
 
 	ts->client = client;
 	ts->input_dev = input_dev;
-
-	/* controller may be in sleep, wake it up. */
-	error = egalax_wake_up_device(client);
-	if (error) {
-		dev_err(&client->dev, "Failed to wake up the controller\n");
-		return error;
-	}
-
-	error = egalax_firmware_version(client);
-	if (error < 0) {
-		dev_err(&client->dev, "Failed to read firmware version\n");
-		return error;
-	}
 
 	input_dev->name = "EETI eGalax Touch Screen";
 	input_dev->id.bustype = BUS_I2C;
