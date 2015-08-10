@@ -241,22 +241,6 @@ static int egalax_ts_probe(struct i2c_client *client,
 	int ret;
 	int error;
 
-	ts = kzalloc(sizeof(struct egalax_ts), GFP_KERNEL);
-	if (!ts) {
-		dev_err(&client->dev, "Failed to allocate memory\n");
-		return -ENOMEM;
-	}
-
-	input_dev = input_allocate_device();
-	if (!input_dev) {
-		dev_err(&client->dev, "Failed to allocate memory\n");
-		error = -ENOMEM;
-		goto err_free_ts;
-	}
-
-	ts->client = client;
-	ts->input_dev = input_dev;
-
 	/* HannStar (HSD100PXN1 Rev: 1-A00C11 F/W:0634) LVDS touch
 	 * screen needs to trigger I2C event to device FW at booting
 	 * first, and then the FW can switch to I2C interface.
@@ -283,9 +267,23 @@ static int egalax_ts_probe(struct i2c_client *client,
 	ret = egalax_firmware_version(client);
 	if (ret < 0) {
 		dev_err(&client->dev, "Failed to read firmware version\n");
-		error = -EIO;
-		goto err_free_dev;
+		return -EIO;
 	}
+
+	ts = devm_kzalloc(&client->dev, sizeof(struct egalax_ts), GFP_KERNEL);
+	if (!ts) {
+		dev_err(&client->dev, "Failed to allocate memory\n");
+		return -ENOMEM;
+	}
+
+	input_dev = devm_input_allocate_device(&client->dev);
+	if (!input_dev) {
+		dev_err(&client->dev, "Failed to allocate memory\n");
+		return -ENOMEM;
+	}
+
+	ts->client = client;
+	ts->input_dev = input_dev;
 
 	input_dev->name = "eGalax Touch Screen";
 	input_dev->id.bustype = BUS_I2C;
@@ -305,7 +303,7 @@ static int egalax_ts_probe(struct i2c_client *client,
 
 	error = egalax_irq_request(ts);
 	if (error < 0) {
-		goto err_free_dev;
+		return error;
 	}
 
 	error = input_register_device(ts->input_dev);
@@ -316,10 +314,6 @@ static int egalax_ts_probe(struct i2c_client *client,
 
 err_free_irq:
 	free_irq(client->irq, ts);
-err_free_dev:
-	input_free_device(input_dev);
-err_free_ts:
-	kfree(ts);
 
 	return error;
 }
