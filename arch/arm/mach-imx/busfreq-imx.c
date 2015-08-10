@@ -59,7 +59,7 @@ static unsigned int ddr_low_rate;
 static int cur_bus_freq_mode;
 
 extern unsigned long iram_tlb_phys_addr;
-extern int unsigned long iram_tlb_base_addr;
+extern unsigned long iram_tlb_base_addr;
 
 extern int init_ddrc_ddr_settings(struct platform_device *dev);
 extern int update_ddr_freq_imx_smp(int ddr_rate);

@@ -20,19 +20,19 @@ enum busfreq_event {
 };
 
 /*
-  * This enumerates the system bus and ddr frequencies in various modes.
-  * BUS_FREQ_HIGH - DDR @ 528MHz, AHB @ 132MHz.
-  * BUS_FREQ_MED - DDR @ 400MHz, AHB @ 132MHz
-  * BUS_FREQ_AUDIO - DDR @ 50MHz/100MHz, AHB @ 24MHz.
-  * BUS_FREQ_LOW  - DDR @ 24MHz, AHB @ 24MHz.
-  * BUS_FREQ_ULTRA_LOW - DDR @ 1MHz, AHB - 3MHz.
-  *
-  * Drivers need to request/release the bus/ddr frequencies based on
-  * their performance requirements. Drivers cannot request/release
-  * BUS_FREQ_ULTRA_LOW mode as this mode is automatically entered from
-  * either BUS_FREQ_AUDIO or BUS_FREQ_LOW
-  * modes.
-  */
+ * This enumerates the system bus and ddr frequencies in various modes.
+ * BUS_FREQ_HIGH - DDR @ 528MHz, AHB @ 132MHz.
+ * BUS_FREQ_MED - DDR @ 400MHz, AHB @ 132MHz
+ * BUS_FREQ_AUDIO - DDR @ 50MHz/100MHz, AHB @ 24MHz.
+ * BUS_FREQ_LOW  - DDR @ 24MHz, AHB @ 24MHz.
+ * BUS_FREQ_ULTRA_LOW - DDR @ 1MHz, AHB - 3MHz.
+ *
+ * Drivers need to request/release the bus/ddr frequencies based on
+ * their performance requirements. Drivers cannot request/release
+ * BUS_FREQ_ULTRA_LOW mode as this mode is automatically entered from
+ * either BUS_FREQ_AUDIO or BUS_FREQ_LOW
+ * modes.
+ */
 enum bus_freq_mode {
 	BUS_FREQ_HIGH,
 	BUS_FREQ_MED,
