@@ -90,7 +90,26 @@
 #define ANADIG_ANA_MISC0_SET		0x154
 #define ANADIG_ANA_MISC0_CLK_DELAY(x)	((x >> 26) & 0x7)
 
+#define ANADIG_USB1_CHRG_DETECT_SET	0x1b4
+#define ANADIG_USB1_CHRG_DETECT_CLR	0x1b8
+#define ANADIG_USB1_CHRG_DETECT_EN_B		BIT(20)
+#define ANADIG_USB1_CHRG_DETECT_CHK_CHRG_B	BIT(19)
+#define ANADIG_USB1_CHRG_DETECT_CHK_CONTACT	BIT(18)
+
+#define ANADIG_USB1_VBUS_DET_STAT	0x1c0
+#define ANADIG_USB1_VBUS_DET_STAT_VBUS_VALID	BIT(3)
+
+#define ANADIG_USB1_CHRG_DET_STAT	0x1d0
+#define ANADIG_USB1_CHRG_DET_STAT_DM_STATE	BIT(2)
+#define ANADIG_USB1_CHRG_DET_STAT_CHRG_DETECTED	BIT(1)
+#define ANADIG_USB1_CHRG_DET_STAT_PLUG_CONTACT	BIT(0)
+
 #define MX7D_USBNC_USB_CTRL2		0x4
+#define MX7D_USBNC_USB_CTRL2_OPMODE_OVERRIDE_EN		BIT(8)
+#define MX7D_USBNC_USB_CTRL2_OPMODE_OVERRIDE_MASK	(BIT(7) | BIT(6))
+#define MX7D_USBNC_USB_CTRL2_OPMODE(v)			(v << 6)
+#define MX7D_USBNC_USB_CTRL2_OPMODE_NON_DRIVING	MX7D_USBNC_USB_CTRL2_OPMODE(1)
+
 #define MX7D_USB_VBUS_WAKEUP_SOURCE_MASK	0x3
 #define MX7D_USB_VBUS_WAKEUP_SOURCE(v)		(v << 0)
 #define MX7D_USB_VBUS_WAKEUP_SOURCE_VBUS	MX7D_USB_VBUS_WAKEUP_SOURCE(0)
@@ -102,7 +121,17 @@
 
 #define OTG_DRVVBUS0			BIT(16)
 #define OTG_ADP_PRBENB0			BIT(13)
+#define MX7D_USB_OTG_PHY_CFG2_CHRG_DCDENB	BIT(3)
+#define MX7D_USB_OTG_PHY_CFG2_CHRG_VDATSRCENB0	BIT(2)
+#define MX7D_USB_OTG_PHY_CFG2_CHRG_VDATDETENB0	BIT(1)
+#define MX7D_USB_OTG_PHY_CFG2_CHRG_CHRGSEL	BIT(0)
 #define USB_OTG_PHY_CFG2		0x34
+
+#define MX7D_USB_OTG_PHY_STATUS		0x3c
+#define MX7D_USB_OTG_PHY_STATUS_CHRGDET		BIT(29)
+#define MX7D_USB_OTG_PHY_STATUS_VBUS_VLD	BIT(3)
+#define MX7D_USB_OTG_PHY_STATUS_LINE_STATE1	BIT(1)
+#define MX7D_USB_OTG_PHY_STATUS_LINE_STATE0	BIT(0)
 
 #define OTG_ADP_PRB_EN			BIT(23)
 #define OTG_ADP_PRB_INT_EN		BIT(22)
@@ -149,6 +178,10 @@ struct usbmisc_ops {
 	/* override UTMI termination select */
 	int (*term_select_override)(struct imx_usbmisc_data *data,
 						bool enable, int val);
+	/* usb charger contact and primary detection */
+	int (*charger_primary_detection)(struct imx_usbmisc_data *data);
+	/* usb charger secondary detection */
+	int (*charger_secondary_detection)(struct imx_usbmisc_data *data);
 };
 
 struct imx_usbmisc {
@@ -772,6 +805,301 @@ static int usbmisc_term_select_override(struct imx_usbmisc_data *data,
 	return 0;
 }
 
+/***************************************************************************/
+/*                         imx usb charger detecton                        */
+/***************************************************************************/
+static void usb_charger_is_present(struct usb_charger *charger, bool present)
+{
+	if (present)
+		charger->present = 1;
+	else
+		charger->present = 0;
+
+	power_supply_changed(&charger->psy);
+	sysfs_notify(&charger->psy.dev->kobj, NULL, "present");
+}
+
+static void imx6_disable_charger_detector(struct imx_usbmisc_data *data)
+{
+	struct regmap *regmap = data->anatop;
+
+	regmap_write(regmap, ANADIG_USB1_CHRG_DETECT_SET,
+				ANADIG_USB1_CHRG_DETECT_EN_B |
+				ANADIG_USB1_CHRG_DETECT_CHK_CHRG_B);
+}
+
+static int imx6_charger_data_contact_detect(struct imx_usbmisc_data *data)
+{
+	struct regmap *regmap = data->anatop;
+	struct usb_charger *charger = data->charger;
+	u32 val;
+	int i, data_pin_contact_count = 0;
+
+	/* check if vbus is valid */
+	regmap_read(regmap, ANADIG_USB1_VBUS_DET_STAT, &val);
+	if (!(val & ANADIG_USB1_VBUS_DET_STAT_VBUS_VALID)) {
+		dev_err(charger->dev, "vbus is error\n");
+		return -EINVAL;
+	}
+
+	/* Enable charger detector */
+	regmap_write(regmap, ANADIG_USB1_CHRG_DETECT_CLR,
+				ANADIG_USB1_CHRG_DETECT_EN_B);
+	/*
+	 * - Do not check whether a charger is connected to the USB port
+	 * - Check whether the USB plug has been in contact with each other
+	 */
+	regmap_write(regmap, ANADIG_USB1_CHRG_DETECT_SET,
+			ANADIG_USB1_CHRG_DETECT_CHK_CONTACT |
+			ANADIG_USB1_CHRG_DETECT_CHK_CHRG_B);
+
+	/* Check if plug is connected */
+	for (i = 0; i < 100; i = i + 1) {
+		regmap_read(regmap, ANADIG_USB1_CHRG_DET_STAT, &val);
+		if (val & ANADIG_USB1_CHRG_DET_STAT_PLUG_CONTACT) {
+			data_pin_contact_count++;
+			if (data_pin_contact_count > 5)
+				/* Data pin makes contact */
+				break;
+			else
+				usleep_range(5000, 10000);
+		} else {
+			data_pin_contact_count = 0;
+			usleep_range(5000, 6000);
+		}
+	}
+
+	if (i == 100) {
+		dev_err(charger->dev,
+			"VBUS is coming from a dedicated power supply.\n");
+		imx6_disable_charger_detector(data);
+		return -ENXIO;
+	}
+
+	return 0;
+}
+
+static int imx6_charger_primary_detection(struct imx_usbmisc_data *data)
+{
+	struct regmap *regmap = data->anatop;
+	struct usb_charger *charger = data->charger;
+	u32 val;
+	int ret;
+
+	ret = imx6_charger_data_contact_detect(data);
+	if (ret)
+		return ret;
+
+	/*
+	 * - Do check whether a charger is connected to the USB port
+	 * - Do not Check whether the USB plug has been in contact with
+	 * each other
+	 */
+	regmap_write(regmap, ANADIG_USB1_CHRG_DETECT_CLR,
+			ANADIG_USB1_CHRG_DETECT_CHK_CONTACT |
+			ANADIG_USB1_CHRG_DETECT_CHK_CHRG_B);
+
+	msleep(100);
+
+	/* Check if it is a charger */
+	regmap_read(regmap, ANADIG_USB1_CHRG_DET_STAT, &val);
+	if (!(val & ANADIG_USB1_CHRG_DET_STAT_CHRG_DETECTED)) {
+		dev_dbg(charger->dev, "It is a stardard downstream port\n");
+		charger->psy.type = POWER_SUPPLY_TYPE_USB;
+		charger->max_current = 500;
+	}
+
+	imx6_disable_charger_detector(data);
+	return 0;
+}
+
+/*
+ * It must be called after dp is pulled up (from USB controller driver),
+ * That is used to differentiate DCP and CDP
+ */
+int imx6_charger_secondary_detection(struct imx_usbmisc_data *data)
+{
+	struct regmap *regmap = data->anatop;
+	struct usb_charger *charger = data->charger;
+	int val;
+
+	msleep(80);
+
+	mutex_lock(&charger->lock);
+	regmap_read(regmap, ANADIG_USB1_CHRG_DET_STAT, &val);
+	if (val & ANADIG_USB1_CHRG_DET_STAT_DM_STATE) {
+		dev_dbg(charger->dev, "It is a dedicate charging port\n");
+		charger->psy.type = POWER_SUPPLY_TYPE_USB_DCP;
+		charger->max_current = 1500;
+	} else {
+		dev_dbg(charger->dev, "It is a charging downstream port\n");
+		charger->psy.type = POWER_SUPPLY_TYPE_USB_CDP;
+		charger->max_current = 900;
+	}
+
+	usb_charger_is_present(charger, true);
+	mutex_unlock(&charger->lock);
+
+	return 0;
+}
+
+static void imx7_disable_charger_detector(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
+	unsigned long flags;
+	u32 val;
+
+	spin_lock_irqsave(&usbmisc->lock, flags);
+	val = readl(usbmisc->base + USB_OTG_PHY_CFG2);
+	val &= ~(MX7D_USB_OTG_PHY_CFG2_CHRG_DCDENB |
+			MX7D_USB_OTG_PHY_CFG2_CHRG_VDATSRCENB0 |
+			MX7D_USB_OTG_PHY_CFG2_CHRG_VDATDETENB0 |
+			MX7D_USB_OTG_PHY_CFG2_CHRG_CHRGSEL);
+	writel(val, usbmisc->base + USB_OTG_PHY_CFG2);
+
+	/* Set OPMODE to be 2'b00 and disable its override */
+	val = readl(usbmisc->base + MX7D_USBNC_USB_CTRL2);
+	val &= ~MX7D_USBNC_USB_CTRL2_OPMODE_OVERRIDE_MASK;
+	writel(val, usbmisc->base + MX7D_USBNC_USB_CTRL2);
+
+	val = readl(usbmisc->base + MX7D_USBNC_USB_CTRL2);
+	writel(val & ~MX7D_USBNC_USB_CTRL2_OPMODE_OVERRIDE_EN,
+			usbmisc->base + MX7D_USBNC_USB_CTRL2);
+	spin_unlock_irqrestore(&usbmisc->lock, flags);
+}
+
+static int imx7d_charger_data_contact_detect(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
+	struct usb_charger *charger = data->charger;
+	unsigned long flags;
+	u32 val;
+	int i, data_pin_contact_count = 0;
+
+	spin_lock_irqsave(&usbmisc->lock, flags);
+
+	/* check if vbus is valid */
+	val = readl(usbmisc->base + MX7D_USB_OTG_PHY_STATUS);
+	if (!(val & MX7D_USB_OTG_PHY_STATUS_VBUS_VLD)) {
+		dev_err(charger->dev, "vbus is error\n");
+		spin_unlock_irqrestore(&usbmisc->lock, flags);
+		return -EINVAL;
+	}
+
+	/*
+	 * - Do not check whether a charger is connected to the USB port
+	 * - Check whether the USB plug has been in contact with each other
+	 */
+	val = readl(usbmisc->base + USB_OTG_PHY_CFG2);
+	writel(val | MX7D_USB_OTG_PHY_CFG2_CHRG_DCDENB,
+			usbmisc->base + USB_OTG_PHY_CFG2);
+
+	spin_unlock_irqrestore(&usbmisc->lock, flags);
+
+	/* Check if plug is connected */
+	for (i = 0; i < 100; i = i + 1) {
+		val = readl(usbmisc->base + MX7D_USB_OTG_PHY_STATUS);
+		if (!(val & MX7D_USB_OTG_PHY_STATUS_LINE_STATE0)) {
+			if (data_pin_contact_count++ > 5)
+				/* Data pin makes contact */
+				break;
+			else
+				usleep_range(5000, 10000);
+		} else {
+			data_pin_contact_count = 0;
+			usleep_range(5000, 6000);
+		}
+	}
+
+	if (i == 100) {
+		dev_err(charger->dev,
+			"VBUS is coming from a dedicated power supply.\n");
+		imx7_disable_charger_detector(data);
+		return -ENXIO;
+	}
+
+	return 0;
+}
+
+static int imx7d_charger_primary_detection(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
+	struct usb_charger *charger = data->charger;
+	unsigned long flags;
+	u32 val;
+	int ret;
+
+	ret = imx7d_charger_data_contact_detect(data);
+	if (ret)
+		return ret;
+
+	spin_lock_irqsave(&usbmisc->lock, flags);
+	/* Set OPMODE to be non-driving mode */
+	val = readl(usbmisc->base + MX7D_USBNC_USB_CTRL2);
+	val &= ~MX7D_USBNC_USB_CTRL2_OPMODE_OVERRIDE_MASK;
+	val |= MX7D_USBNC_USB_CTRL2_OPMODE_NON_DRIVING;
+	writel(val, usbmisc->base + MX7D_USBNC_USB_CTRL2);
+
+	val = readl(usbmisc->base + MX7D_USBNC_USB_CTRL2);
+	writel(val | MX7D_USBNC_USB_CTRL2_OPMODE_OVERRIDE_EN,
+			usbmisc->base + MX7D_USBNC_USB_CTRL2);
+
+	/*
+	 * - Do check whether a charger is connected to the USB port
+	 * - Do not Check whether the USB plug has been in contact with
+	 * each other
+	 */
+	val = readl(usbmisc->base + USB_OTG_PHY_CFG2);
+	writel(val | MX7D_USB_OTG_PHY_CFG2_CHRG_VDATSRCENB0 |
+			MX7D_USB_OTG_PHY_CFG2_CHRG_VDATDETENB0,
+				usbmisc->base + USB_OTG_PHY_CFG2);
+	spin_unlock_irqrestore(&usbmisc->lock, flags);
+
+	usleep_range(1000, 2000);
+
+	/* Check if it is a charger */
+	val = readl(usbmisc->base + MX7D_USB_OTG_PHY_STATUS);
+	if (!(val & MX7D_USB_OTG_PHY_STATUS_CHRGDET)) {
+		dev_dbg(charger->dev, "It is a stardard downstream port\n");
+		charger->psy.type = POWER_SUPPLY_TYPE_USB;
+		charger->max_current = 500;
+	}
+
+	imx7_disable_charger_detector(data);
+
+	return 0;
+}
+
+/*
+ * It must be called after dp is pulled up (from USB controller driver),
+ * That is used to differentiate DCP and CDP
+ */
+int imx7d_charger_secondary_detection(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
+	struct usb_charger *charger = data->charger;
+	int val;
+
+	msleep(80);
+
+	mutex_lock(&charger->lock);
+	val = readl(usbmisc->base + MX7D_USB_OTG_PHY_STATUS);
+	if (val & MX7D_USB_OTG_PHY_STATUS_LINE_STATE1) {
+		dev_dbg(charger->dev, "It is a dedicate charging port\n");
+		charger->psy.type = POWER_SUPPLY_TYPE_USB_DCP;
+		charger->max_current = 1500;
+	} else {
+		dev_dbg(charger->dev, "It is a charging downstream port\n");
+		charger->psy.type = POWER_SUPPLY_TYPE_USB_CDP;
+		charger->max_current = 900;
+	}
+
+	usb_charger_is_present(charger, true);
+	mutex_unlock(&charger->lock);
+
+	return 0;
+}
+
 static const struct usbmisc_ops imx25_usbmisc_ops = {
 	.init = usbmisc_imx25_init,
 	.post = usbmisc_imx25_post,
@@ -790,6 +1118,8 @@ static const struct usbmisc_ops imx6q_usbmisc_ops = {
 	.init = usbmisc_imx6q_init,
 	.hsic_set_connect = usbmisc_imx6_hsic_set_connect,
 	.hsic_set_clk   = usbmisc_imx6_hsic_set_clk,
+	.charger_primary_detection = imx6_charger_primary_detection,
+	.charger_secondary_detection = imx6_charger_secondary_detection,
 };
 
 static const struct usbmisc_ops vf610_usbmisc_ops = {
@@ -802,6 +1132,8 @@ static const struct usbmisc_ops imx6sx_usbmisc_ops = {
 	.power_lost_check = usbmisc_imx6sx_power_lost_check,
 	.hsic_set_connect = usbmisc_imx6_hsic_set_connect,
 	.hsic_set_clk = usbmisc_imx6_hsic_set_clk,
+	.charger_primary_detection = imx6_charger_primary_detection,
+	.charger_secondary_detection = imx6_charger_secondary_detection,
 };
 
 static const struct usbmisc_ops imx7d_usbmisc_ops = {
@@ -816,6 +1148,8 @@ static const struct usbmisc_ops imx7d_usbmisc_ops = {
 	.adp_sense_connection = usbmisc_otg_adp_sense_connection,
 	.adp_attach_event = usbmisc_otg_adp_is_attach_event,
 	.term_select_override = usbmisc_term_select_override,
+	.charger_primary_detection = imx7d_charger_primary_detection,
+	.charger_secondary_detection = imx7d_charger_secondary_detection,
 };
 
 int imx_usbmisc_init(struct imx_usbmisc_data *data)
@@ -1014,6 +1348,57 @@ int imx_usbmisc_term_select_override(struct imx_usbmisc_data *data,
 	return usbmisc->ops->term_select_override(data, enable, val);
 }
 EXPORT_SYMBOL_GPL(imx_usbmisc_term_select_override);
+
+int imx_usbmisc_charger_detection(struct imx_usbmisc_data *data, bool connect)
+{
+	struct imx_usbmisc *usbmisc;
+	struct usb_charger *charger = data->charger;
+	int ret = 0;
+
+	if (!data)
+		return -EINVAL;
+
+	usbmisc = dev_get_drvdata(data->dev);
+	if (!usbmisc->ops->charger_primary_detection)
+		return -ENOTSUPP;
+
+	mutex_lock(&charger->lock);
+	if (connect) {
+		charger->online = 1;
+		ret = usbmisc->ops->charger_primary_detection(data);
+		if (ret) {
+			dev_err(charger->dev,
+					"Error occurs during detection: %d\n",
+					ret);
+		} else {
+			if (charger->psy.type == POWER_SUPPLY_TYPE_USB)
+				usb_charger_is_present(charger, true);
+		}
+	} else {
+		charger->online = 0;
+		charger->max_current = 0;
+		charger->psy.type = POWER_SUPPLY_TYPE_MAINS;
+
+		usb_charger_is_present(charger, false);
+	}
+	mutex_unlock(&charger->lock);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(imx_usbmisc_charger_detection);
+
+int imx_usbmisc_charger_secondary_detection(struct imx_usbmisc_data *data)
+{
+	struct imx_usbmisc *usbmisc;
+
+	if (!data)
+		return 0;
+
+	usbmisc = dev_get_drvdata(data->dev);
+	if (!usbmisc->ops->charger_secondary_detection)
+		return 0;
+	return usbmisc->ops->charger_secondary_detection(data);
+}
+EXPORT_SYMBOL_GPL(imx_usbmisc_charger_secondary_detection);
 
 static const struct of_device_id usbmisc_imx_dt_ids[] = {
 	{

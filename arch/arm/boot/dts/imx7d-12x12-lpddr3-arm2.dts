@@ -20,13 +20,14 @@
 		pwms = <&pwm1 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
 		default-brightness-level = <6>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	gpio-keys {
 		compatible = "gpio-keys";
-		pinctrl-names = "default";
+		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&pinctrl_gpio_keys>;
+		pinctrl-1 = <&pinctrl_gpio_keys_sleep>;
 
 		volume-up {
 			label = "Volume Up";
@@ -44,7 +45,7 @@
 
 	pxp_v4l2_out {
 		compatible = "fsl,imx7d-pxp-v4l2", "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
-		status = "okay";
+		status = "disabled";
 	};
 
 	regulators {
@@ -146,7 +147,7 @@
 
 &adc1 {
 	vref-supply = <&reg_vref_1v8>;
-	status = "okay";
+	status = "disabled";
 };
 
 &cpu0 {
@@ -191,16 +192,17 @@
         V3P3-supply = <&V3P3_reg>;
         VCOM-supply = <&VCOM_reg>;
         DISPLAY-supply = <&DISPLAY_reg>;
-        status = "okay";
+        status = "disabled";
 };
 
 &epxp {
-	status = "okay";
+	status = "disabled";
 };
 
 &fec1 {
-	pinctrl-names = "default";
+	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_enet1>;
+	pinctrl-1 = <&pinctrl_enet1>;
 	assigned-clocks = <&clks IMX7D_ENET1_TIME_ROOT_SRC>,
 			  <&clks IMX7D_ENET1_TIME_ROOT_CLK>;
 	assigned-clock-parents = <&clks IMX7D_PLL_ENET_MAIN_100M_CLK>;
@@ -227,8 +229,9 @@
 };
 
 &fec2 {
-	pinctrl-names = "default";
+	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_enet2>;
+	pinctrl-1 = <&pinctrl_enet2>;
 	pinctrl-assert-gpios = <&max7322 0 GPIO_ACTIVE_HIGH>;
 	assigned-clocks = <&clks IMX7D_ENET2_TIME_ROOT_SRC>,
 			  <&clks IMX7D_ENET2_TIME_ROOT_CLK>;
@@ -237,7 +240,7 @@
 	phy-mode = "rgmii";
 	phy-handle = <&ethphy0>;
 	fsl,magic-packet;
-	status = "disabled";
+	status = "okay";
 };
 
 &flexcan1 {
@@ -258,7 +261,7 @@
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c1_1>;
-	status = "okay";
+	status = "disabled";
 
 	pmic: pfuze3000@08 {
 		compatible = "fsl,pfuze3000";
@@ -354,7 +357,7 @@
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c3_1>;
-	status = "okay";
+	status = "disabled";
 
 	tsc2007@49 {
 		compatible = "ti,tsc2007";
@@ -624,6 +627,13 @@
 			>;
 		};
 
+		pinctrl_gpio_keys_sleep: gpio_keysgrp_sleep {
+			fsl,pins = <
+				MX7D_PAD_GPIO1_IO14__GPIO1_IO14 0x14
+				MX7D_PAD_GPIO1_IO15__GPIO1_IO15 0x14
+			>;
+		};
+
 		pinctrl_i2c1_1: i2c1grp-1 {
 			fsl,pins = <
 				MX7D_PAD_I2C1_SDA__I2C1_SDA          0x4000007f
@@ -887,7 +897,7 @@
 	pinctrl-0 = <&pinctrl_lcdif_dat
 		     &pinctrl_lcdif_ctrl>;
 	display = <&display0>;
-	status = "okay";
+	status = "disabled";
 
 	display0: display {
 		bits-per-pixel = <16>;
@@ -914,6 +924,10 @@
 	};
 };
 
+&ocrams {
+	fsl,enable-lpsr;
+};
+
 &pcie {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
@@ -924,7 +938,7 @@
 &pwm1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm1>;
-	status = "okay";
+	status = "disabled";
 };
 
 &sai1 {
@@ -940,7 +954,7 @@
 };
 
 &sdma {
-	status = "okay";
+	status = "disabled";
 };
 
 &sim1 {
@@ -963,7 +977,7 @@
 	fsl,uart-has-rtscts;
 	assigned-clocks = <&clks IMX7D_UART3_ROOT_SRC>;
 	assigned-clock-parents = <&clks IMX7D_PLL_SYS_MAIN_240M_CLK>;
-	status = "okay";
+	status = "disabled";
 	/* for DTE mode, add below change */
 	/* fsl,dte-mode;*/
 	/* pinctrl-0 = <&pinctrl_uart3dte_1>; */
@@ -974,7 +988,7 @@
 	srp-disable;
 	hnp-disable;
 	adp-disable;
-	status = "okay";
+	status = "disabled";
 };
 
 &usbotg2 {
@@ -982,7 +996,7 @@
 	srp-disable;
 	hnp-disable;
 	adp-disable;
-	status = "okay";
+	status = "disabled";
 };
 
 &usdhc1 {
@@ -994,7 +1008,7 @@
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
 	vmmc-supply = <&reg_sd1_vmmc>;
-	status = "okay";
+	status = "disabled";
 };
 
 &usdhc2 {
@@ -1008,7 +1022,7 @@
 	enable-sdio-wakeup;
 	tuning-step = <2>;
 	vmmc-supply = <&reg_sd2_vmmc>;
-	status = "okay";
+	status = "disabled";
 };
 
 &usdhc3 {
@@ -1022,5 +1036,5 @@
 	tuning-step = <2>;
 	non-removable;
 	keep-power-in-suspend;
-	status = "okay";
+	status = "disabled";
 };

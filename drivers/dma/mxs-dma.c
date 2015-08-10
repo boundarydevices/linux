@@ -28,7 +28,6 @@
 #include <linux/of_device.h>
 #include <linux/of_dma.h>
 #include <linux/list.h>
-#include <linux/pm_runtime.h>
 #include <asm/irq.h>
 
 #include "dmaengine.h"
@@ -741,12 +740,12 @@ static int mxs_dma_init(struct mxs_dma_engine *mxs_dma)
 	if (mxs_dma->dev_id == IMX7D_DMA) {
 		ret = clk_prepare_enable(mxs_dma->clk_io);
 		if (ret)
-			goto err_out;
+			goto err_clk_bch;
 	}
 
 	ret = stmp_reset_block(mxs_dma->base);
 	if (ret)
-		goto err_out;
+		goto err_clk_io;
 
 	/* enable apbh burst */
 	if (dma_is_apbh(mxs_dma)) {
@@ -760,7 +759,10 @@ static int mxs_dma_init(struct mxs_dma_engine *mxs_dma)
 	writel(MXS_DMA_CHANNELS_MASK << MXS_DMA_CHANNELS,
 		mxs_dma->base + HW_APBHX_CTRL1 + STMP_OFFSET_REG_SET);
 
-err_out:
+err_clk_io:
+	if (mxs_dma->dev_id == IMX7D_DMA)
+		clk_disable_unprepare(mxs_dma->clk_io);
+err_clk_bch:
 	clk_disable_unprepare(mxs_dma->clk);
 	return ret;
 }
@@ -920,39 +922,6 @@ static int __init mxs_dma_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int mxs_dma_runtime_suspend(struct device *dev)
-{
-	struct mxs_dma_engine *mxs_dma = dev_get_drvdata(dev);
-
-	if (mxs_dma->dev_id == IMX7D_DMA)
-		clk_disable(mxs_dma->clk_io);
-
-	clk_disable(mxs_dma->clk);
-	return 0;
-}
-
-static int mxs_dma_runtime_resume(struct device *dev)
-{
-	struct mxs_dma_engine *mxs_dma = dev_get_drvdata(dev);
-	int ret;
-
-	ret = clk_enable(mxs_dma->clk);
-	if (ret < 0)
-		goto err_out;
-
-	if (mxs_dma->dev_id == IMX7D_DMA) {
-		ret = clk_enable(mxs_dma->clk_io);
-		if (ret < 0)
-			goto err_out;
-	}
-
-	return 0;
-
-err_out:
-	dev_err(dev, "clk_enable failed: %d\n", ret);
-	return ret;
-}
-
 static int mxs_dma_pm_suspend(struct device *dev)
 {
 	/*
@@ -974,7 +943,6 @@ static int mxs_dma_pm_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops mxs_dma_pm_ops = {
-	SET_RUNTIME_PM_OPS(mxs_dma_runtime_suspend, mxs_dma_runtime_resume, NULL)
 	SET_SYSTEM_SLEEP_PM_OPS(mxs_dma_pm_suspend, mxs_dma_pm_resume)
 };
 
