@@ -244,22 +244,6 @@ static int egalax_ts_probe(struct i2c_client *client,
 	int ret;
 	int error;
 
-	ts = kzalloc(sizeof(struct egalax_ts), GFP_KERNEL);
-	if (!ts) {
-		dev_err(&client->dev, "Failed to allocate memory\n");
-		return -ENOMEM;
-	}
-
-	input_dev = input_allocate_device();
-	if (!input_dev) {
-		dev_err(&client->dev, "Failed to allocate memory\n");
-		error = -ENOMEM;
-		goto err_free_ts;
-	}
-
-	ts->client = client;
-	ts->input_dev = input_dev;
-
 	/* HannStar (HSD100PXN1 Rev: 1-A00C11 F/W:0634) LVDS touch
 	 * screen needs to trigger I2C event to device FW at booting
 	 * first, and then the FW can switch to I2C interface.
@@ -271,7 +255,7 @@ static int egalax_ts_probe(struct i2c_client *client,
 	error = egalax_firmware_version(client);
 	if (error) {
 		dev_err(&client->dev, "Failed to switch to I2C interface\n");
-		return error;
+		goto exit1;
 	}
 
 	/* controller may be in sleep, wake it up. */
@@ -287,10 +271,27 @@ static int egalax_ts_probe(struct i2c_client *client,
 	if (ret < 0) {
 		dev_err(&client->dev, "Failed to read firmware version\n");
 		error = -EIO;
-		goto err_free_dev;
+		goto exit1;
 	}
 
-	input_dev->name = "eGalax Touch Screen";
+	ts = devm_kzalloc(&client->dev, sizeof(struct egalax_ts), GFP_KERNEL);
+	if (!ts) {
+		dev_err(&client->dev, "Failed to allocate memory\n");
+		error = -ENOMEM;
+		goto exit1;
+	}
+
+	input_dev = devm_input_allocate_device(&client->dev);
+	if (!input_dev) {
+		dev_err(&client->dev, "Failed to allocate memory\n");
+		error = -ENOMEM;
+		goto exit1;
+	}
+
+	ts->client = client;
+	ts->input_dev = input_dev;
+
+	input_dev->name = "EETI eGalax Touch Screen";
 	input_dev->id.bustype = BUS_I2C;
 	input_dev->dev.parent = &client->dev;
 
@@ -307,36 +308,25 @@ static int egalax_ts_probe(struct i2c_client *client,
 			     MAX_SUPPORT_POINTS - 1, 0, 0);
 
 	error = egalax_irq_request(ts);
-	if (error < 0) {
-		goto err_free_dev;
-	}
+	if (error < 0)
+		goto exit1;
 
 	error = input_register_device(ts->input_dev);
 	if (error)
-		goto err_free_irq;
+		goto exit1;
 
 	return 0;
 
-err_free_irq:
-	free_irq(client->irq, ts);
-err_free_dev:
-	input_free_device(input_dev);
-err_free_ts:
-	kfree(ts);
-
+exit1:
 	return error;
 }
 
 static int egalax_ts_remove(struct i2c_client *client)
 {
 	struct egalax_ts *ts = i2c_get_clientdata(client);
-	free_irq(client->irq, ts);
-	input_free_device(ts->input_dev);
+
 	input_unregister_device(ts->input_dev);
-	kfree(ts);
-
 	i2c_set_clientdata(client, ts);
-
 	return 0;
 }
 
