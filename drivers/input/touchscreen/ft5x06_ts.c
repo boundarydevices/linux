@@ -164,17 +164,19 @@ static inline int ts_register(struct ft5x06_ts *ts)
 
 	__set_bit(EV_ABS, idev->evbit);
 	__set_bit(EV_KEY, idev->evbit);
-	__set_bit(BTN_TOUCH, idev->keybit);
+	__set_bit(EV_SYN, idev->evbit);
 
 #ifdef USE_ABS_MT
 	input_set_abs_params(idev, ABS_MT_POSITION_X, 0, screenres[0]-1, 0, 0);
 	input_set_abs_params(idev, ABS_MT_POSITION_Y, 0, screenres[1]-1, 0, 0);
 	input_set_abs_params(idev, ABS_MT_TRACKING_ID, 0, MAX_TOUCHES, 0, 0);
-	input_set_abs_params(idev, ABS_X, 0, screenres[0]-1, 0, 0);
-	input_set_abs_params(idev, ABS_Y, 0, screenres[1]-1, 0, 0);
 	input_set_abs_params(idev, ABS_MT_TOUCH_MAJOR, 0, 1, 0, 0);
 #else
-	__set_bit(EV_SYN, idev->evbit);
+	__set_bit(ABS_X, idev->absbit);
+	__set_bit(ABS_Y, idev->absbit);
+	__set_bit(ABS_PRESSURE, idev->absbit);
+	__set_bit(BTN_TOUCH, idev->keybit);
+
 	input_set_abs_params(idev, ABS_X, 0, screenres[0]-1, 0, 0);
 	input_set_abs_params(idev, ABS_Y, 0, screenres[1]-1, 0, 0);
 	input_set_abs_params(idev, ABS_PRESSURE, 0, 1, 0, 0);
