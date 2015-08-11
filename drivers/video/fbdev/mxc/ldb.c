@@ -103,6 +103,7 @@ struct ldb_data {
 	struct clk *div_3_5_clk[2];
 	struct clk *div_7_clk[2];
 	struct clk *div_sel_clk[2];
+	struct clk *clk_ldb_di_choices[4];
 };
 
 static const struct crtc_mux imx6q_lvds0_crtc_mux[] = {
@@ -402,6 +403,10 @@ static int ldb_setup(struct mxc_dispdrv_handle *mddh,
 	int ret = 0, id = 0, chno, other_chno;
 	unsigned long serial_clk;
 	u32 mux_val;
+	int i;
+	unsigned long best_diff = ~0;
+	struct clk *best_parent = NULL;
+	int best_i = 0;
 
 	ret = find_ldb_chno(ldb, fbi, &chno);
 	if (ret < 0)
@@ -456,7 +461,38 @@ static int ldb_setup(struct mxc_dispdrv_handle *mddh,
 	ldb_di_sel_parent = clk_get_parent(ldb_di_sel);
 	serial_clk = ldb->spl_mode ? chan.vm.pixelclock * 7 / 2 :
 			chan.vm.pixelclock * 7;
-	clk_set_rate(ldb_di_sel_parent, serial_clk);
+	for (i = 0; i < ARRAY_SIZE(ldb->clk_ldb_di_choices); i++) {
+		long rate;
+		unsigned long diff;
+		struct clk *parent;
+
+		parent = ldb->clk_ldb_di_choices[i];
+		if (!parent)
+			continue;
+		if (i <= 1) {
+			rate = clk_round_rate(parent, serial_clk);
+			pr_debug("%s: round rate=%ld\n", __func__, rate);
+		} else {
+			rate = clk_get_rate(parent);
+			pr_debug("%s: get rate=%ld\n", __func__, rate);
+		}
+		if (rate > serial_clk)
+			diff = rate - serial_clk;
+		else
+			diff = serial_clk - rate;
+		if (best_diff > diff) {
+			best_diff = diff;
+			best_parent = parent;
+			best_i = i;
+		}
+	}
+
+	if (best_parent && (best_parent != ldb_di_sel_parent)) {
+		clk_set_parent(ldb_di_sel, best_parent);
+		ldb_di_sel_parent = best_parent;
+	}
+	if (best_i <= 1)
+		clk_set_rate(ldb_di_sel_parent, serial_clk);
 
 	/*
 	 * split mode or dual mode:
@@ -865,6 +901,15 @@ static int ldb_probe(struct platform_device *pdev)
 		if (IS_ERR(ldb->div_sel_clk[i])) {
 			dev_err(dev, "failed to get clk %s\n", clkname);
 			return PTR_ERR(ldb->div_sel_clk[i]);
+		}
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ldb->clk_ldb_di_choices); i++) {
+		sprintf(clkname, "choice%d", i);
+		ldb->clk_ldb_di_choices[i] = devm_clk_get(dev, clkname);
+		if (IS_ERR(ldb->clk_ldb_di_choices[i])) {
+			dev_warn(dev, "failed to get clk %s\n", clkname);
+			ldb->clk_ldb_di_choices[i] = NULL;
 		}
 	}
 
