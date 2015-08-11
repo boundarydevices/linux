@@ -2319,11 +2319,22 @@ static void serial_imx_save_context(struct imx_port *sport)
 	sport->context_saved = true;
 }
 
+static void serial_imx_enable_wakeup(struct imx_port *sport, bool on)
+{
+	unsigned int val;
+
+	val = readl(sport->port.membase + UCR3);
+	if (on)
+		val |= UCR3_AWAKEN;
+	else
+		val &= ~UCR3_AWAKEN;
+	writel(val, sport->port.membase + UCR3);
+}
+
 static int imx_serial_port_suspend_noirq(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct imx_port *sport = platform_get_drvdata(pdev);
-	unsigned int val;
 	int ret;
 
 	ret = clk_enable(sport->clk_ipg);
@@ -2331,9 +2342,7 @@ static int imx_serial_port_suspend_noirq(struct device *dev)
 		return ret;
 
 	/* enable wakeup from i.MX UART */
-	val = readl(sport->port.membase + UCR3);
-	val |= UCR3_AWAKEN;
-	writel(val, sport->port.membase + UCR3);
+	serial_imx_enable_wakeup(sport, true);
 
 	serial_imx_save_context(sport);
 
@@ -2348,7 +2357,6 @@ static int imx_serial_port_resume_noirq(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct imx_port *sport = platform_get_drvdata(pdev);
-	unsigned int val;
 	int ret;
 
 	pinctrl_pm_select_default_state(dev);
@@ -2360,9 +2368,7 @@ static int imx_serial_port_resume_noirq(struct device *dev)
 	serial_imx_restore_context(sport);
 
 	/* disable wakeup from i.MX UART */
-	val = readl(sport->port.membase + UCR3);
-	val &= ~UCR3_AWAKEN;
-	writel(val, sport->port.membase + UCR3);
+	serial_imx_enable_wakeup(sport, false);
 
 	clk_disable(sport->clk_ipg);
 
