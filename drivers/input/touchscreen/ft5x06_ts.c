@@ -39,11 +39,11 @@
 static int calibration[7] = {
 	65536,0,0,
 	0,65536,0,
-	65536
+	0
 };
 module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
 
-static int screenres[2] = {1024, 600};
+static int screenres[2] = {0x800, 0x800};
 module_param_array(screenres, int, NULL, S_IRUGO | S_IWUSR);
 
 #define MAX_TOUCHES 12
