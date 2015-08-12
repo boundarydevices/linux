@@ -160,10 +160,7 @@ static struct esdhc_platform_data sd4_data = {
 static struct esdhc_platform_data sd3_data = {
 	.cd_gpio = GP_USDHC3_CD,
 	.wp_gpio = GP_USDHC3_WP,
-	.always_present = 1,
 	.keep_power_at_suspend = 1,
-	.support_18v = 1,
-	.support_8bit = 1,
 	.platform_pad_change = plt_sd_pad_change,
 };
 
