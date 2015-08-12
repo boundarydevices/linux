@@ -955,7 +955,7 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 
 	ret = dbg_create_files(ci);
 	ci->wq_ready = 1;
-	if (ci->is_otg)
+	if (ci->is_otg && ci->wq)
 		ci_otg_queue_work(ci);
 	if (!ret)
 		return 0;
