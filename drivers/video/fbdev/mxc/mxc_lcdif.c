@@ -151,6 +151,20 @@ static struct fb_videomode lcdif_modedb[] = {
 	 .sync = FB_SYNC_CLK_LAT_FALL,
 	 .vmode = FB_VMODE_NONINTERLACED,
 	 .flag = 0,},
+	{
+	 /*
+	  * AT035GT-07ET3 320x240
+	  * vsync = 60
+	  * hsync = 260 * vsync = 15.6 Khz
+	  * pixclk = 800 * hsync = 12.48 MHz
+	  */
+	 "AT035GT-07ET3", 60, 320, 240, 1000000000000ULL / (320+40+18+30) / (240+10+9+3) / 60,	//80128, (12.48 MHz)
+	 .left_margin = 40, .right_margin = 18,
+	 .upper_margin = 10, .lower_margin = 9,
+	 .hsync_len = 30, .vsync_len = 3,
+	 .sync = 0,
+	 .vmode = FB_VMODE_NONINTERLACED,
+	 .flag = 0,},
 };
 static int lcdif_modedb_sz = ARRAY_SIZE(lcdif_modedb);
 
