@@ -12,96 +12,6 @@
  */
 #include <dt-bindings/input/input.h>
 
-/ {
-	aliases {
-		mxcfb0 = &mxcfb1;
-		mxcfb1 = &mxcfb2;
-	};
-
-	memory {
-		reg = <0x10000000 0x40000000>;
-	};
-
-	clocks {
-		clk24m: clk24m {
-			compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <24000000>;
-		};
-	};
-
-	regulators {
-		compatible = "simple-bus";
-
-		reg_1p8v: 1p8v {
-			compatible = "regulator-fixed";
-			regulator-name = "1P8V";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			regulator-always-on;
-		};
-
-		reg_2p5v: 2p5v {
-			compatible = "regulator-fixed";
-			regulator-name = "2P5V";
-			regulator-min-microvolt = <2500000>;
-			regulator-max-microvolt = <2500000>;
-			regulator-always-on;
-		};
-
-		reg_3p3v: 3p3v {
-			compatible = "regulator-fixed";
-			regulator-name = "3P3V";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-always-on;
-		};
-
-		reg_usb_otg_vbus: usb_otg_vbus {
-		};
-	};
-
-	sound-hdmi {
-		compatible = "fsl,imx6q-audio-hdmi",
-			     "fsl,imx-audio-hdmi";
-		model = "imx-audio-hdmi";
-		hdmi-controller = <&hdmi_audio>;
-	};
-
-	mxcfb1: fb@0 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "hdmi";
-		interface_pix_fmt = "RGB24";
-		mode_str ="1280x720M@60";
-		default_bpp = <16>;
-		int_clk = <0>;
-		late_init = <0>;
-	};
-
-	mxcfb2: fb@1 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "adv739x";
-		interface_pix_fmt = "BT656";
-		mode_str ="BT656-NTSC";
-		default_bpp = <16>;
-		int_clk = <0>;
-		late_init = <0>;
-	};
-
-	v4l2_cap_0: v4l2_cap_0 {
-		/* gs2971 */
-		compatible = "fsl,imx6q-v4l2-capture";
-		csi_id = <1>;
-		mclk_source = <0>;
-		status = "okay";
-	};
-
-	v4l2_out {
-		compatible = "fsl,mxc_v4l2_output";
-		status = "okay";
-	};
-};
-
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
@@ -521,6 +431,104 @@
 
 };
 
+/ {
+	aliases {
+		mxcfb0 = &mxcfb1;
+		mxcfb1 = &mxcfb2;
+	};
+
+	memory {
+		reg = <0x10000000 0x40000000>;
+	};
+
+	clocks {
+		clk24m: clk24m {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <24000000>;
+		};
+	};
+
+	regulators {
+		compatible = "simple-bus";
+
+		reg_1p8v: 1p8v {
+			compatible = "regulator-fixed";
+			regulator-name = "1P8V";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+		};
+
+		reg_2p5v: 2p5v {
+			compatible = "regulator-fixed";
+			regulator-name = "2P5V";
+			regulator-min-microvolt = <2500000>;
+			regulator-max-microvolt = <2500000>;
+			regulator-always-on;
+		};
+
+		reg_3p3v: 3p3v {
+			compatible = "regulator-fixed";
+			regulator-name = "3P3V";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
+
+		reg_usb_otg_vbus: usb_otg_vbus {
+			compatible = "regulator-fixed";
+			regulator-name = "usb_otg_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = GP_USB_OTG_PWR;
+			enable-active-high;
+		};
+
+	};
+
+	sound-hdmi {
+		compatible = "fsl,imx6q-audio-hdmi",
+			     "fsl,imx-audio-hdmi";
+		model = "imx-audio-hdmi";
+		hdmi-controller = <&hdmi_audio>;
+	};
+
+	mxcfb1: fb@0 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "hdmi";
+		interface_pix_fmt = "RGB24";
+		mode_str ="1280x720M@60";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+	};
+
+	mxcfb2: fb@1 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "adv739x";
+		interface_pix_fmt = "BT656";
+		mode_str ="BT656-NTSC";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+	};
+
+	v4l2_cap_0: v4l2_cap_0 {
+		/* gs2971 */
+		compatible = "fsl,imx6q-v4l2-capture";
+		csi_id = <1>;
+		mclk_source = <0>;
+		status = "okay";
+	};
+
+	v4l2_out {
+		compatible = "fsl,mxc_v4l2_output";
+		status = "okay";
+	};
+};
+
+
 &audmux {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_audmux>;
@@ -683,15 +691,6 @@
 	pinctrl-0 = <&pinctrl_pcie>;
 	reset-gpio = GP_PCIE_RESET;
 	status = "okay";
-};
-
-&reg_usb_otg_vbus {
-	compatible = "regulator-fixed";
-	regulator-name = "usb_otg_vbus";
-	regulator-min-microvolt = <5000000>;
-	regulator-max-microvolt = <5000000>;
-	gpio = GP_USB_OTG_PWR;
-	enable-active-high;
 };
 
 &ssi1 {
