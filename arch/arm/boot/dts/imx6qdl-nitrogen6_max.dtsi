@@ -408,6 +408,7 @@
 		mxcfb2 = &fb_lcd;
 		mxcfb3 = &fb_lvds2;
 		t_lvds = &t_lvds;
+		t_lvds2 = &t_lvds2;
 	};
 
 	clocks {
@@ -1004,7 +1005,8 @@
 		status = "okay";
 
 		display-timings {
-			lg1280x800_2: lp101wx1_2 {
+			t_lvds2: t_lvds2_default {
+				/* lg1280x800 values may be changed in bootscript */
 				clock-frequency = <72000000>;
 				hactive = <1280>;
 				vactive = <800>;
