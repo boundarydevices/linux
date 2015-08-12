@@ -608,6 +608,7 @@ _ShrinkMemory(
     )
 {
     gcsPLATFORM * platform;
+    gceSTATUS status = gcvSTATUS_OK;
 
     gcmkHEADER_ARG("Os=0x%X", Os);
     gcmkVERIFY_OBJECT(Os, gcvOBJ_OS);
@@ -616,7 +617,7 @@ _ShrinkMemory(
 
     if (platform && platform->ops->shrinkMemory)
     {
-        platform->ops->shrinkMemory(platform);
+        status = platform->ops->shrinkMemory(platform);
     }
     else
     {
@@ -625,7 +626,7 @@ _ShrinkMemory(
     }
 
     gcmkFOOTER_NO();
-    return gcvSTATUS_OK;
+    return status;
 }
 
 /*******************************************************************************

@@ -207,7 +207,7 @@ static int force_contiguous_lowmem_shrink(IN gckKERNEL Kernel)
 		selected_tasksize = tasksize;
 		selected_oom_adj = oom_adj;
 	}
-	if (selected) {
+	if (selected && selected_oom_adj > 0) {
 		gckOS_Print("<gpu> send sigkill to %d (%s), adj %d, size %d\n",
 			     selected->pid, selected->comm,
 			     selected_oom_adj, selected_tasksize);
@@ -233,6 +233,7 @@ _ShrinkMemory(
     struct platform_device *pdev;
     gckGALDEVICE galDevice;
     gckKERNEL kernel;
+    gceSTATUS status = gcvSTATUS_OK;
 
     pdev = Platform->device;
 
@@ -242,14 +243,15 @@ _ShrinkMemory(
 
     if (kernel != gcvNULL)
     {
-        force_contiguous_lowmem_shrink(kernel);
+        if (force_contiguous_lowmem_shrink(kernel) != 0)
+            status = gcvSTATUS_OUT_OF_MEMORY;
     }
     else
     {
         gcmkPRINT("%s(%d) can't find kernel! ", __FUNCTION__, __LINE__);
     }
 
-    return gcvSTATUS_OK;
+    return status;
 }
 #endif
 
