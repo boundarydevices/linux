@@ -762,8 +762,9 @@ int __init arm_add_memory(u64 start, u64 size)
 	}
 
 	if (aligned_start + size > ULONG_MAX) {
-		pr_crit("Truncating memory at 0x%08llx to fit in 32-bit physical address space\n",
-			(long long)start);
+		if (aligned_start + size != (1ULL << 32))
+			pr_crit("Truncating memory at 0x%08llx to fit in 32-bit physical address space\n",
+					(long long)start);
 		/*
 		 * To ensure bank->start + bank->size is representable in
 		 * 32 bits, we use ULONG_MAX as the upper limit rather than 4GB.
