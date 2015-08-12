@@ -344,25 +344,19 @@
 
 / {
 	aliases {
-		AA065VE11 = &AA065VE11;
 		fb_hdmi = &fb_hdmi;
 		fb_lcd = &fb_lcd;
 		fb_lvds = &fb_lvds;
-		hannstar = &hannstar ;
-		hdmi_display = &fb_hdmi;
-		lcd_display = &fb_lcd;
+		junk = &junk;
+		lcd = &lcd;
 		ldb = &ldb;
-		lg1280x800 = &lg1280x800;
-		lvds_display = &fb_lvds;
-		lvds_channel0 = &lvds_channel0;
 		mmc0 = &usdhc3;
 		mmc1 = &usdhc4;
 		mmc2 = &usdhc2;
 		mxcfb0 = &fb_hdmi;
 		mxcfb1 = &fb_lvds;
 		mxcfb2 = &fb_lcd;
-		okaya1024x600 = &okaya1024x600;
-		vga_lvds = &vga_lvds;
+		t_lvds = &t_lvds;
 	};
 
 	clocks {
@@ -412,6 +406,10 @@
 			gpios = GP_GPIOKEY_VOL_UP;
 			linux,code = <KEY_VOLUMEUP>;
 		};
+	};
+
+	junk: junk {
+		reserve_some_space = "_______________________________________";
 	};
 
 	memory {
@@ -528,7 +526,7 @@
 		status = "disabled";
 	};
 
-	lcd0: lcd@0 {
+	lcd: lcd@0 {
 		compatible = "fsl,lcd";
 		ipu_id = <0>;
 		disp_id = <0>;
@@ -821,7 +819,7 @@
 &ldb {
 	status = "okay";
 
-	lvds_channel0: lvds-channel@0 {
+	lvds-channel@0 {
 		crtc = "ipu1-di1";
 		fsl,data-mapping = "spwg";
 		fsl,data-width = <18>;
@@ -829,7 +827,8 @@
 		primary;
 
 		display-timings {
-			lg1280x800: lp101wx1 {
+			t_lvds: t_lvds_default {
+				/* lg1280x800 values may be changed in bootscript */
 				clock-frequency = <72000000>;
 				hactive = <1280>;
 				vactive = <800>;
