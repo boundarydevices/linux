@@ -10,8 +10,9 @@ config MXC_SIM
 	help
 	Say Y to get MXC SIM support.
 
-source "drivers/mxc/vpu/Kconfig"
+source "drivers/mxc/mlb/Kconfig"
 source "drivers/mxc/sim/Kconfig"
+source "drivers/mxc/vpu/Kconfig"
 
 config MXC_IPU
 	bool "Image Processing Unit Driver"
