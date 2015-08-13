@@ -2889,7 +2889,7 @@ DECLARE_PCI_FIXUP_CLASS_EARLY(PCI_VENDOR_ID_TI, 0xb800,
 static void fixup_tw6869_class(struct pci_dev* dev)
 {
 	dev_info(&dev->dev, "Setting PCI class for tw6869 PCIe device\n");
-	dev->class = PCI_CLASS_MULTIMEDIA_VIDEO;
+	dev->class = PCI_CLASS_MULTIMEDIA_VIDEO << 8;
 }
 DECLARE_PCI_FIXUP_CLASS_EARLY(0x1797, 0x6869,
 				PCI_CLASS_NOT_DEFINED, 0, fixup_tw6869_class);
