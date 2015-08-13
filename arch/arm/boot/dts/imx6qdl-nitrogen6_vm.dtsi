@@ -318,17 +318,16 @@
 
 / {
 	aliases {
+		fb_hdmi = &fb_hdmi;
+		fb_lcd = &fb_lcd;
+		fb_lvds = &fb_lvds;
+		lcd = &lcd;
 		mmc0 = &usdhc3;
 		mmc1 = &usdhc4;
-		mxcfb0 = &lcd_display;
-		mxcfb1 = &hdmi_display;
-		mxcfb2 = &lvds_display;
-		hdmi_display = &hdmi_display;
-		lvds_display = &lvds_display;
-		lcd_display = &lcd_display;
-		hannstar = &hannstar ;
-		lg1280x800 = &lg1280x800;
-		okaya1024x600 = &okaya1024x600;
+		mxcfb0 = &fb_lcd;
+		mxcfb1 = &fb_hdmi;
+		mxcfb2 = &fb_lvds;
+		t_lvds = &t_lvds;
 	};
 
 	memory {
@@ -409,7 +408,7 @@
 		hdmi-controller = <&hdmi_audio>;
 	};
 
-	lcd_display: fb@0 {
+	fb_lcd: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "lcd";
 		interface_pix_fmt = "RGB666";
@@ -420,7 +419,7 @@
 		status = "disabled";
 	};
 
-	hdmi_display: fb@1 {
+	fb_hdmi: fb@1 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "hdmi";
 		interface_pix_fmt = "RGB24";
@@ -431,7 +430,7 @@
 		status = "disabled";
 	};
 
-	lvds_display: fb@2 {
+	fb_lvds: fb@2 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
@@ -441,7 +440,7 @@
 		status = "disabled";
 	};
 
-	lcd@0 {
+	lcd: lcd@0 {
 		compatible = "fsl,lcd";
 		ipu_id = <0>;
 		disp_id = <0>;
@@ -627,7 +626,8 @@
 		primary;
 
 		display-timings {
-			lg1280x800: lp101wx1 {
+			t_lvds: t_lvds_default {
+				/* lg1280x800 values may be changed in bootscript */
 				clock-frequency = <72000000>;
 				hactive = <1280>;
 				vactive = <800>;
