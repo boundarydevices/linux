@@ -11,164 +11,6 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
-/ {
-	aliases {
-		mmc0 = &usdhc3;
-		mmc1 = &usdhc2;
-                mxcfb0 = &hdmi_display;
-                mxcfb1 = &lvds_display;
-                mxcfb2 = &lcd_display;
-		hdmi_display = &hdmi_display;
-		lvds_display = &lvds_display;
-		lcd_display = &lcd_display;
-		hannstar = &hannstar ;
-		lg1280x800 = &lg1280x800;
-		okaya1024x600 = &okaya1024x600;
-	};
-
-	memory {
-		reg = <0x10000000 0x20000000>;
-	};
-
-	leds: leds {
-		compatible = "gpio-leds";
-	};
-
-	regulators {
-		compatible = "simple-bus";
-
-		reg_1p8v: 1p8v {
-			compatible = "regulator-fixed";
-			regulator-name = "1P8V";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			regulator-always-on;
-		};
-
-		reg_2p5v: 2p5v {
-			compatible = "regulator-fixed";
-			regulator-name = "2P5V";
-			regulator-min-microvolt = <2500000>;
-			regulator-max-microvolt = <2500000>;
-			regulator-always-on;
-		};
-
-		reg_3p3v: 3p3v {
-			compatible = "regulator-fixed";
-			regulator-name = "3P3V";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-always-on;
-		};
-
-		reg_usbotg_vbus: usbotg_vbus {
-			compatible = "regulator-fixed";
-			regulator-name = "usbotg_vbus";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-		};
-
-		reg_brm_wifi: brm_wlan {
-			compatible = "regulator-fixed";
-			regulator-name = "reg_brm_wifi";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-		};
-	};
-
-	gpio_keys: gpio-keys {
-		compatible = "gpio-keys";
-	};
-
-	sound_sgtl5000: sound_sgtl5000 {
-		compatible = "fsl,imx6dl-nit6xlite-sgtl5000",
-			     "fsl,imx-audio-sgtl5000";
-		model = "imx6dl-nit6xlite-sgtl5000";
-		cpu-dai = <&ssi1>;
-		audio-codec = <&codec>;
-		audio-routing =
-			"MIC_IN", "Mic Jack",
-			"Mic Jack", "Mic Bias",
-			"Headphone Jack", "HP_OUT";
-		mux-int-port = <1>;
-		mux-ext-port = <3>;
-	};
-
-	sound-hdmi {
-		compatible = "fsl,imx6dl-audio-hdmi",
-			     "fsl,imx-audio-hdmi";
-		model = "imx-audio-hdmi";
-		hdmi-controller = <&hdmi_audio>;
-	};
-
-	hdmi_display: fb@0 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "hdmi";
-		interface_pix_fmt = "RGB24";
-		mode_str ="1280x720M@60";
-		default_bpp = <32>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	lvds_display: fb@1 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "ldb";
-		interface_pix_fmt = "RGB666";
-		default_bpp = <16>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	lcd_display: fb@2 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "lcd";
-		interface_pix_fmt = "RGB24";
-		mode_str = "okaya_480x272";
-		default_bpp = <16>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	lcd0: lcd@0 {
-		compatible = "fsl,lcd";
-		ipu_id = <0>;
-		disp_id = <0>;
-		default_ifmt = "RGB24";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ipu1_di0>;
-		status = "okay";
-	};
-
-	backlight_lcd: backlight_lcd {
-		compatible = "pwm-backlight";
-		pwms = <&pwm3 0 5000000>;
-		brightness-levels = <0 4 8 16 32 64 128 255>;
-		default-brightness-level = <7>;
-	};
-
-	backlight_lvds {
-		compatible = "pwm-backlight";
-		pwms = <&pwm4 0 5000000>;
-		brightness-levels = <0 4 8 16 32 64 128 255>;
-		default-brightness-level = <7>;
-	};
-
-	v4l2_out {
-		compatible = "fsl,mxc_v4l2_output";
-		status = "okay";
-	};
-
-	bt_rfkill: bt_rfkill {
-		compatible = "net,rfkill-gpio";
-		name = "bt_rfkill";
-		type = <2>;     /* bluetooth */
-	};
-};
-
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
@@ -463,6 +305,221 @@
 	};
 };
 
+/ {
+	aliases {
+		mmc0 = &usdhc3;
+		mmc1 = &usdhc2;
+                mxcfb0 = &hdmi_display;
+                mxcfb1 = &lvds_display;
+                mxcfb2 = &lcd_display;
+		hdmi_display = &hdmi_display;
+		lvds_display = &lvds_display;
+		lcd_display = &lcd_display;
+		hannstar = &hannstar ;
+		lg1280x800 = &lg1280x800;
+		okaya1024x600 = &okaya1024x600;
+	};
+
+	bt_rfkill {
+		compatible = "net,rfkill-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_bt_rfkill>;
+		name = "bt_rfkill";
+		type = <2>;     /* bluetooth */
+		bt_rfkill_reset-gpios = GP_BRM_BT_RESET;
+		bt_rfkill_shutdown-gpios = GP_BRM_BT_SHUTDOWN;
+	};
+
+	memory {
+		reg = <0x10000000 0x20000000>;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_leds>;
+		j14-pin1 {
+			gpios = GP_LED_GREEN;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		j14-pin3 {
+			gpios = GP_LED_RED;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		j14-pins8-9 {
+			gpios = GP_J14_POWER_ON;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		j46-pin2 {
+			gpios = GP_J46_PIN2_I;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		j46-pin3 {
+			gpios = GP_J46_PIN3_I;
+			retain-state-suspended;
+			default-state = "off";
+		};
+	};
+
+	regulators {
+		compatible = "simple-bus";
+
+		reg_1p8v: 1p8v {
+			compatible = "regulator-fixed";
+			regulator-name = "1P8V";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+		};
+
+		reg_2p5v: 2p5v {
+			compatible = "regulator-fixed";
+			regulator-name = "2P5V";
+			regulator-min-microvolt = <2500000>;
+			regulator-max-microvolt = <2500000>;
+			regulator-always-on;
+		};
+
+		reg_3p3v: 3p3v {
+			compatible = "regulator-fixed";
+			regulator-name = "3P3V";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
+
+		reg_usbotg_vbus: usbotg_vbus {
+			compatible = "regulator-fixed";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_usbotg_vbus>;
+			regulator-name = "usbotg_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = GP_USB_OTG_PWR;
+			enable-active-high;
+		};
+
+		reg_brm_wifi: brm_wlan {
+			compatible = "regulator-fixed";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_reg_brm_wifi>;
+			regulator-name = "reg_brm_wifi";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = GP_BRM_WL_EN;
+			startup-delay-us = <70000>;
+			enable-active-high;
+		};
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys>;
+		home {
+			label = "Home";
+			gpios = GP_HOME;
+			linux,code = <102>; /* KEY_HOME */
+		};
+
+		back {
+			label = "Back";
+			gpios = GP_BACK;
+			linux,code = <158>; /* KEY_BACK */
+		};
+	};
+
+	sound_sgtl5000: sound_sgtl5000 {
+		compatible = "fsl,imx6dl-nit6xlite-sgtl5000",
+			     "fsl,imx-audio-sgtl5000";
+		model = "imx6dl-nit6xlite-sgtl5000";
+		cpu-dai = <&ssi1>;
+		audio-codec = <&codec>;
+		audio-routing =
+			"MIC_IN", "Mic Jack",
+			"Mic Jack", "Mic Bias",
+			"Headphone Jack", "HP_OUT";
+		mux-int-port = <1>;
+		mux-ext-port = <3>;
+	};
+
+	sound-hdmi {
+		compatible = "fsl,imx6dl-audio-hdmi",
+			     "fsl,imx-audio-hdmi";
+		model = "imx-audio-hdmi";
+		hdmi-controller = <&hdmi_audio>;
+	};
+
+	hdmi_display: fb@0 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "hdmi";
+		interface_pix_fmt = "RGB24";
+		mode_str ="1280x720M@60";
+		default_bpp = <32>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	lvds_display: fb@1 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "ldb";
+		interface_pix_fmt = "RGB666";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	lcd_display: fb@2 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "lcd";
+		interface_pix_fmt = "RGB24";
+		mode_str = "okaya_480x272";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	lcd0: lcd@0 {
+		compatible = "fsl,lcd";
+		ipu_id = <0>;
+		disp_id = <0>;
+		default_ifmt = "RGB24";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu1_di0>;
+		status = "okay";
+	};
+
+	backlight_lcd: backlight_lcd {
+		compatible = "pwm-backlight";
+		pwms = <&pwm3 0 5000000>;
+		brightness-levels = <0 4 8 16 32 64 128 255>;
+		default-brightness-level = <7>;
+	};
+
+	backlight_lvds {
+		compatible = "pwm-backlight";
+		pwms = <&pwm4 0 5000000>;
+		brightness-levels = <0 4 8 16 32 64 128 255>;
+		default-brightness-level = <7>;
+	};
+
+	v4l2_out {
+		compatible = "fsl,mxc_v4l2_output";
+		status = "okay";
+	};
+};
+
 &audmux {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_audmux3>;
@@ -514,22 +571,6 @@
 	phy_int {
 		reg = <0x6>;
 		interrupts-extended = GP_ENET_PHY_INT;
-	};
-};
-
-&gpio_keys {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_gpio_keys>;
-	home {
-		label = "Home";
-		gpios = GP_HOME;
-		linux,code = <102>; /* KEY_HOME */
-	};
-
-	back {
-		label = "Back";
-		gpios = GP_BACK;
-		linux,code = <158>; /* KEY_BACK */
 	};
 };
 
@@ -665,40 +706,6 @@
 	};
 };
 
-&leds {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_leds>;
-	j14-pin1 {
-		gpios = GP_LED_GREEN;
-		retain-state-suspended;
-		default-state = "off";
-	};
-
-	j14-pin3 {
-		gpios = GP_LED_RED;
-		retain-state-suspended;
-		default-state = "off";
-	};
-
-	j14-pins8-9 {
-		gpios = GP_J14_POWER_ON;
-		retain-state-suspended;
-		default-state = "off";
-	};
-
-	j46-pin2 {
-		gpios = GP_J46_PIN2_I;
-		retain-state-suspended;
-		default-state = "off";
-	};
-
-	j46-pin3 {
-		gpios = GP_J46_PIN3_I;
-		retain-state-suspended;
-		default-state = "off";
-	};
-};
-
 &pcie {
 	status = "okay";
 };
@@ -722,21 +729,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm4>;
 	status = "okay";
-};
-
-&reg_brm_wifi {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_reg_brm_wifi>;
-	gpio = GP_BRM_WL_EN;
-	startup-delay-us = <70000>;
-	enable-active-high;
-};
-
-&reg_usbotg_vbus {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usbotg_vbus>;
-	gpio = GP_USB_OTG_PWR;
-	enable-active-high;
 };
 
 &ssi1 {
@@ -793,11 +785,4 @@
 	cd-gpios = GP_SD3_CD;
 	vmmc-supply = <&reg_3p3v>;
 	status = "okay";
-};
-
-&bt_rfkill {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_bt_rfkill>;
-	bt_rfkill_reset-gpios = GP_BRM_BT_RESET;
-	bt_rfkill_shutdown-gpios = GP_BRM_BT_SHUTDOWN;
 };
