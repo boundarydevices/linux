@@ -181,112 +181,6 @@
 
 	.endm
 
-	.macro store_ttbr1
-
-	/* Store TTBR1 to pm_info->ttbr1 */
-	mrc	p15, 0, r7, c2, c0, 1
-	str	r7, [r0, #PM_INFO_MX6Q_TTBR1_V_OFFSET]
-
-	/* Disable Branch Prediction, Z bit in SCTLR. */
-	mrc	p15, 0, r6, c1, c0, 0
-	bic	r6, r6, #0x800
-	mcr	p15, 0, r6, c1, c0, 0
-
-	/* Flush the BTAC. */
-	ldr	r6, =0x0
-	mcr	p15, 0, r6, c7, c1, 6
-
-	ldr	r6, =iram_tlb_phys_addr
-	ldr	r6, [r6]
-	dsb
-	isb
-
-	/* Store the IRAM table in TTBR1 */
-	mcr	p15, 0, r6, c2, c0, 1
-	/* Read TTBCR and set PD0=1, N = 1 */
-	mrc	p15, 0, r6, c2, c0, 2
-	orr	r6, r6, #0x11
-	mcr	p15, 0, r6, c2, c0, 2
-
-	dsb
-	isb
-
-	/* flush the TLB */
-	ldr	r6, =0x0
-	mcr	p15, 0, r6, c8, c3, 0
-
-	/* Disable L1 data cache. */
-	mrc	p15, 0, r6, c1, c0, 0
-	bic	r6, r6, #0x4
-	mcr	p15, 0, r6, c1, c0, 0
-
-	dsb
-	isb
-
-	is_cortex_a7
-	beq	14f
-
-#ifdef CONFIG_CACHE_L2X0
-	ldr	r8, [r0, #PM_INFO_MX6Q_L2_V_OFFSET]
-	mov	r6, #0x0
-	str	r6, [r8, #0x100]
-
-	dsb
-	isb
-#endif
-14:
-	.endm
-
-	.macro restore_ttbr1
-
-	is_cortex_a7
-	beq	15f
-
-#ifdef CONFIG_CACHE_L2X0
-	/* Enable L2. */
-	ldr	r8, [r0, #PM_INFO_MX6Q_L2_V_OFFSET]
-	ldr	r7, =0x1
-	str	r7, [r8, #0x100]
-#endif
-
-15:
-	/* Enable L1 data cache. */
-	mrc	p15, 0, r6, c1, c0, 0
-	orr	r6, r6, #0x4
-	mcr	p15, 0, r6, c1, c0, 0
-
-	dsb
-	isb
-
-	/* Restore TTBCR */
-	/* Read TTBCR and set PD0=0, N = 0 */
-	mrc	p15, 0, r6, c2, c0, 2
-	bic	r6, r6, #0x11
-	mcr	p15, 0, r6, c2, c0, 2
-	dsb
-	isb
-
-	/* flush the TLB */
-	ldr	r6, =0x0
-	mcr	p15, 0, r6, c8, c3, 0
-
-	/* Enable Branch Prediction, Z bit in SCTLR. */
-	mrc	p15, 0, r6, c1, c0, 0
-	orr	r6, r6, #0x800
-	mcr	p15, 0, r6, c1, c0, 0
-
-	/* Flush the Branch Target Address Cache (BTAC) */
-	ldr	r6, =0x0
-	mcr	p15, 0, r6, c7, c1, 6
-
-	/* Restore TTBR1, get the origin ttbr1 from pm info */
-	ldr	r7, [r0, #PM_INFO_MX6Q_TTBR1_V_OFFSET]
-	mcr	p15, 0, r7, c2, c0, 1
-
-	.endm
-
-
-ENTRY(imx6_suspend)
 	/* r10 must be iomuxc base address */
 	.macro resume_iomuxc_gpr
 
@@ -407,6 +301,112 @@ ENTRY(imx6_suspend)
 
 	.endm
 
+	.macro store_ttbr1
+
+	/* Store TTBR1 to pm_info->ttbr1 */
+	mrc	p15, 0, r7, c2, c0, 1
+	str	r7, [r0, #PM_INFO_MX6Q_TTBR1_V_OFFSET]
+
+	/* Disable Branch Prediction, Z bit in SCTLR. */
+	mrc	p15, 0, r6, c1, c0, 0
+	bic	r6, r6, #0x800
+	mcr	p15, 0, r6, c1, c0, 0
+
+	/* Flush the BTAC. */
+	ldr	r6, =0x0
+	mcr	p15, 0, r6, c7, c1, 6
+
+	ldr	r6, =iram_tlb_phys_addr
+	ldr	r6, [r6]
+	dsb
+	isb
+
+	/* Store the IRAM table in TTBR1 */
+	mcr	p15, 0, r6, c2, c0, 1
+	/* Read TTBCR and set PD0=1, N = 1 */
+	mrc	p15, 0, r6, c2, c0, 2
+	orr	r6, r6, #0x11
+	mcr	p15, 0, r6, c2, c0, 2
+
+	dsb
+	isb
+
+	/* flush the TLB */
+	ldr	r6, =0x0
+	mcr	p15, 0, r6, c8, c3, 0
+
+	/* Disable L1 data cache. */
+	mrc	p15, 0, r6, c1, c0, 0
+	bic	r6, r6, #0x4
+	mcr	p15, 0, r6, c1, c0, 0
+
+	dsb
+	isb
+
+	is_cortex_a7
+	beq	14f
+
+#ifdef CONFIG_CACHE_L2X0
+	ldr	r8, [r0, #PM_INFO_MX6Q_L2_V_OFFSET]
+	mov	r6, #0x0
+	str	r6, [r8, #0x100]
+
+	dsb
+	isb
+#endif
+14:
+	.endm
+
+	.macro restore_ttbr1
+
+	is_cortex_a7
+	beq	15f
+
+#ifdef CONFIG_CACHE_L2X0
+	/* Enable L2. */
+	ldr	r8, [r0, #PM_INFO_MX6Q_L2_V_OFFSET]
+	ldr	r7, =0x1
+	str	r7, [r8, #0x100]
+#endif
+
+15:
+	/* Enable L1 data cache. */
+	mrc	p15, 0, r6, c1, c0, 0
+	orr	r6, r6, #0x4
+	mcr	p15, 0, r6, c1, c0, 0
+
+	dsb
+	isb
+
+	/* Restore TTBCR */
+	/* Read TTBCR and set PD0=0, N = 0 */
+	mrc	p15, 0, r6, c2, c0, 2
+	bic	r6, r6, #0x11
+	mcr	p15, 0, r6, c2, c0, 2
+	dsb
+	isb
+
+	/* flush the TLB */
+	ldr	r6, =0x0
+	mcr	p15, 0, r6, c8, c3, 0
+
+	/* Enable Branch Prediction, Z bit in SCTLR. */
+	mrc	p15, 0, r6, c1, c0, 0
+	orr	r6, r6, #0x800
+	mcr	p15, 0, r6, c1, c0, 0
+
+	/* Flush the Branch Target Address Cache (BTAC) */
+	ldr	r6, =0x0
+	mcr	p15, 0, r6, c7, c1, 6
+
+	/* Restore TTBR1, get the origin ttbr1 from pm info */
+	ldr	r7, [r0, #PM_INFO_MX6Q_TTBR1_V_OFFSET]
+	mcr	p15, 0, r7, c2, c0, 1
+
+	.endm
+
+
+ENTRY(imx6_suspend)
 	ldr	r1, [r0, #PM_INFO_PBASE_OFFSET]
 	ldr	r2, [r0, #PM_INFO_RESUME_ADDR_OFFSET]
 	ldr	r3, [r0, #PM_INFO_DDR_TYPE_OFFSET]
@@ -604,6 +604,7 @@ rbc_loop:
 only_resume_io:
 	resume_io
 resume_mmdc_done:
+
 	restore_ttbr1
 
 	/* return to suspend finish */
