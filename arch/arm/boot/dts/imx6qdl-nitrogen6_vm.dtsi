@@ -11,156 +11,6 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
-/ {
-	aliases {
-		mmc0 = &usdhc3;
-		mmc1 = &usdhc4;
-		mxcfb0 = &lcd_display;
-		mxcfb1 = &hdmi_display;
-		mxcfb2 = &lvds_display;
-		hdmi_display = &hdmi_display;
-		lvds_display = &lvds_display;
-		lcd_display = &lcd_display;
-		hannstar = &hannstar ;
-		lg1280x800 = &lg1280x800;
-		okaya1024x600 = &okaya1024x600;
-	};
-
-	memory {
-		reg = <0x10000000 0x20000000>;
-	};
-
-	leds: leds {
-		compatible = "gpio-leds";
-	};
-
-	regulators {
-		compatible = "simple-bus";
-
-		reg_1p8v: 1p8v {
-			compatible = "regulator-fixed";
-			regulator-name = "1P8V";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			regulator-always-on;
-		};
-
-		reg_2p5v: 2p5v {
-			compatible = "regulator-fixed";
-			regulator-name = "2P5V";
-			regulator-min-microvolt = <2500000>;
-			regulator-max-microvolt = <2500000>;
-			regulator-always-on;
-		};
-
-		reg_3p3v: 3p3v {
-			compatible = "regulator-fixed";
-			regulator-name = "3P3V";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-always-on;
-		};
-
-		reg_usbotg_vbus: usbotg_vbus {
-			compatible = "regulator-fixed";
-			regulator-name = "usbotg_vbus";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-		};
-	};
-
-	magstripe: mag-stripe {
-		compatible = "boundary,magdecode";
-		data_pin = <&gpio4 6 GPIO_ACTIVE_HIGH>;
-		clock_pin = <&gpio4 7 GPIO_ACTIVE_LOW>;
-		rear_pin = <&gpio4 8 GPIO_ACTIVE_LOW>;
-		front_pin = <&gpio4 9 GPIO_ACTIVE_LOW>;
-		status = "disabled";
-	};
-
-	sound_sgtl5000: sound_sgtl5000 {
-		compatible = "fsl,imx6dl-nitrogen6_vm-sgtl5000",
-			     "fsl,imx-audio-sgtl5000";
-		model = "imx6dl-nitrogen6_vm-sgtl5000";
-		cpu-dai = <&ssi1>;
-		audio-codec = <&codec>;
-		audio-routing =
-			"MIC_IN", "Mic Jack",
-			"Mic Jack", "Mic Bias",
-			"Headphone Jack", "HP_OUT";
-		mux-int-port = <1>;
-		mux-ext-port = <3>;
-	};
-
-	sound-hdmi {
-		compatible = "fsl,imx6dl-audio-hdmi",
-			     "fsl,imx-audio-hdmi";
-		model = "imx-audio-hdmi";
-		hdmi-controller = <&hdmi_audio>;
-	};
-
-	lcd_display: fb@0 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "lcd";
-		interface_pix_fmt = "RGB666";
-		mode_str ="hitachi_hvga";
-		default_bpp = <16>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	hdmi_display: fb@1 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "hdmi";
-		interface_pix_fmt = "RGB24";
-		mode_str ="1280x720M@60";
-		default_bpp = <32>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	lvds_display: fb@2 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "ldb";
-		interface_pix_fmt = "RGB666";
-		default_bpp = <16>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	lcd@0 {
-		compatible = "fsl,lcd";
-		ipu_id = <0>;
-		disp_id = <0>;
-		default_ifmt = "RGB565";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ipu1_di0>;
-		status = "okay";
-	};
-
-	backlight_lcd {
-		compatible = "pwm-backlight";
-		pwms = <&pwm3 0 5000000>;
-		brightness-levels = <0 70 75 80 85 90 95 100>;
-		default-brightness-level = <7>;
-	};
-
-	backlight_lvds {
-		compatible = "pwm-backlight";
-		pwms = <&pwm4 0 5000000>;
-		brightness-levels = <0 4 8 16 32 64 128 255>;
-		default-brightness-level = <7>;
-	};
-
-	v4l2_out {
-		compatible = "fsl,mxc_v4l2_output";
-		status = "okay";
-	};
-};
-
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
@@ -466,6 +316,161 @@
 	};
 };
 
+/ {
+	aliases {
+		mmc0 = &usdhc3;
+		mmc1 = &usdhc4;
+		mxcfb0 = &lcd_display;
+		mxcfb1 = &hdmi_display;
+		mxcfb2 = &lvds_display;
+		hdmi_display = &hdmi_display;
+		lvds_display = &lvds_display;
+		lcd_display = &lcd_display;
+		hannstar = &hannstar ;
+		lg1280x800 = &lg1280x800;
+		okaya1024x600 = &okaya1024x600;
+	};
+
+	memory {
+		reg = <0x10000000 0x20000000>;
+	};
+
+	leds: leds {
+		compatible = "gpio-leds";
+	};
+
+	regulators {
+		compatible = "simple-bus";
+
+		reg_1p8v: 1p8v {
+			compatible = "regulator-fixed";
+			regulator-name = "1P8V";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+		};
+
+		reg_2p5v: 2p5v {
+			compatible = "regulator-fixed";
+			regulator-name = "2P5V";
+			regulator-min-microvolt = <2500000>;
+			regulator-max-microvolt = <2500000>;
+			regulator-always-on;
+		};
+
+		reg_3p3v: 3p3v {
+			compatible = "regulator-fixed";
+			regulator-name = "3P3V";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
+
+		reg_usbotg_vbus: usbotg_vbus {
+			compatible = "regulator-fixed";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_usbotg_vbus>;
+			regulator-name = "usbotg_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = GP_USB_OTG_PWR;
+			enable-active-high;
+		};
+	};
+
+	magstripe: mag-stripe {
+		compatible = "boundary,magdecode";
+		data_pin = <&gpio4 6 GPIO_ACTIVE_HIGH>;
+		clock_pin = <&gpio4 7 GPIO_ACTIVE_LOW>;
+		rear_pin = <&gpio4 8 GPIO_ACTIVE_LOW>;
+		front_pin = <&gpio4 9 GPIO_ACTIVE_LOW>;
+		status = "disabled";
+	};
+
+	sound_sgtl5000 {
+		compatible = "fsl,imx6dl-nitrogen6_vm-sgtl5000",
+			     "fsl,imx-audio-sgtl5000";
+		model = "imx6dl-nitrogen6_vm-sgtl5000";
+		cpu-dai = <&ssi1>;
+		audio-codec = <&codec>;
+		audio-routing =
+			"MIC_IN", "Mic Jack",
+			"Mic Jack", "Mic Bias",
+			"Headphone Jack", "HP_OUT";
+		mux-int-port = <1>;
+		mux-ext-port = <3>;
+		mute-gpios = GP_SGTL5000_MUTE;
+	};
+
+	sound-hdmi {
+		compatible = "fsl,imx6dl-audio-hdmi",
+			     "fsl,imx-audio-hdmi";
+		model = "imx-audio-hdmi";
+		hdmi-controller = <&hdmi_audio>;
+	};
+
+	lcd_display: fb@0 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "lcd";
+		interface_pix_fmt = "RGB666";
+		mode_str ="hitachi_hvga";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	hdmi_display: fb@1 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "hdmi";
+		interface_pix_fmt = "RGB24";
+		mode_str ="1280x720M@60";
+		default_bpp = <32>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	lvds_display: fb@2 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "ldb";
+		interface_pix_fmt = "RGB666";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	lcd@0 {
+		compatible = "fsl,lcd";
+		ipu_id = <0>;
+		disp_id = <0>;
+		default_ifmt = "RGB565";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu1_di0>;
+		status = "okay";
+	};
+
+	backlight_lcd {
+		compatible = "pwm-backlight";
+		pwms = <&pwm3 0 5000000>;
+		brightness-levels = <0 70 75 80 85 90 95 100>;
+		default-brightness-level = <7>;
+	};
+
+	backlight_lvds {
+		compatible = "pwm-backlight";
+		pwms = <&pwm4 0 5000000>;
+		brightness-levels = <0 4 8 16 32 64 128 255>;
+		default-brightness-level = <7>;
+	};
+
+	v4l2_out {
+		compatible = "fsl,mxc_v4l2_output";
+		status = "okay";
+	};
+};
+
 &audmux {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_audmux3>;
@@ -685,17 +690,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm4>;
 	status = "okay";
-};
-
-&reg_usbotg_vbus {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usbotg_vbus>;
-	gpio = GP_USB_OTG_PWR;
-	enable-active-high;
-};
-
-&sound_sgtl5000 {
-	mute-gpios = GP_SGTL5000_MUTE;
 };
 
 &ssi1 {
