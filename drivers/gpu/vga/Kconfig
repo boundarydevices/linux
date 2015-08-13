@@ -1,6 +1,6 @@
 config VGA_ARB
 	bool "VGA Arbitration" if EXPERT
-	default y
+	default n
 	depends on (PCI && !S390)
 	help
 	  Some "legacy" VGA devices implemented on PCI typically have the same
