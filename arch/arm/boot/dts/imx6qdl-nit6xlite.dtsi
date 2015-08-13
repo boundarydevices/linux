@@ -307,17 +307,16 @@
 
 / {
 	aliases {
+		fb_hdmi = &fb_hdmi;
+		fb_lvds = &fb_lvds;
+		fb_lcd = &fb_lcd;
+		lcd = &lcd;
 		mmc0 = &usdhc3;
 		mmc1 = &usdhc2;
-                mxcfb0 = &hdmi_display;
-                mxcfb1 = &lvds_display;
-                mxcfb2 = &lcd_display;
-		hdmi_display = &hdmi_display;
-		lvds_display = &lvds_display;
-		lcd_display = &lcd_display;
-		hannstar = &hannstar ;
-		lg1280x800 = &lg1280x800;
-		okaya1024x600 = &okaya1024x600;
+		mxcfb0 = &fb_hdmi;
+		mxcfb1 = &fb_lvds;
+		mxcfb2 = &fb_lcd;
+		t_lvds = &t_lvds;
 	};
 
 	bt_rfkill {
@@ -328,10 +327,6 @@
 		type = <2>;     /* bluetooth */
 		bt_rfkill_reset-gpios = GP_BRM_BT_RESET;
 		bt_rfkill_shutdown-gpios = GP_BRM_BT_SHUTDOWN;
-	};
-
-	memory {
-		reg = <0x10000000 0x20000000>;
 	};
 
 	leds {
@@ -367,6 +362,10 @@
 			retain-state-suspended;
 			default-state = "off";
 		};
+	};
+
+	memory {
+		reg = <0x10000000 0x20000000>;
 	};
 
 	regulators {
@@ -458,7 +457,7 @@
 		hdmi-controller = <&hdmi_audio>;
 	};
 
-	hdmi_display: fb@0 {
+	fb_hdmi: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "hdmi";
 		interface_pix_fmt = "RGB24";
@@ -469,7 +468,7 @@
 		status = "disabled";
 	};
 
-	lvds_display: fb@1 {
+	fb_lvds: fb@1 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
@@ -479,7 +478,7 @@
 		status = "disabled";
 	};
 
-	lcd_display: fb@2 {
+	fb_lcd: fb@2 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "lcd";
 		interface_pix_fmt = "RGB24";
@@ -490,7 +489,7 @@
 		status = "disabled";
 	};
 
-	lcd0: lcd@0 {
+	lcd: lcd@0 {
 		compatible = "fsl,lcd";
 		ipu_id = <0>;
 		disp_id = <0>;
@@ -669,7 +668,8 @@
 		primary;
 
 		display-timings {
-			lg1280x800: lp101wx1 {
+			t_lvds: t_lvds_default {
+				/* lg1280x800 values may be changed in bootscript */
 				clock-frequency = <72000000>;
 				hactive = <1280>;
 				vactive = <800>;
