@@ -16,6 +16,11 @@ Required SoC Specific Properties:
 
 - fsl,wakeup: Button can wake-up the system
 
+Optional properties:
+- clocks: phandle to the source clock for snvs register access. If i.MX clk driver
+  defines the clock node, it needs user to specify the clocks in device tree for
+  all modules with snvs LP/HP registers access.
+
 Example:
 snvs-pwrkey@0x020cc000 {
 	compatible = "fsl,imx6sx-snvs-pwrkey";
