@@ -29,10 +29,12 @@
 #include <linux/of_gpio.h>
 #include <linux/proc_fs.h>
 #include <linux/delay.h>
-#include <linux/input.h>
+#include <linux/input/mt.h>
 
 #ifdef CONFIG_TOUCHSCREEN_FT5X06_SINGLE_TOUCH
+#define USE_ABS_SINGLE
 #else
+#define USE_ABS_SINGLE
 #define USE_ABS_MT
 #endif
 
@@ -86,6 +88,7 @@ struct ft5x06_ts {
 	int			irq;
 	unsigned		gp;
 	struct proc_dir_entry  *procentry;
+	unsigned		down_mask;
 };
 static const char *client_name = "ft5x06";
 
@@ -99,42 +102,61 @@ static int ts_startup(struct ft5x06_ts *ts);
 static void ts_shutdown(struct ft5x06_ts *ts);
 
 /*-----------------------------------------------------------------------*/
+static void release_slots(struct ft5x06_ts *ts, unsigned mask)
+{
+	struct input_dev *idev = ts->idev;
+
+	while (mask) {
+		int slot = __ffs(mask);
+
+		mask &= ~(1 << slot);
+		input_mt_slot(idev, slot);
+		input_mt_report_slot_state(idev,  MT_TOOL_FINGER, 0);
+	}
+}
+
 static inline void ts_evt_add(struct ft5x06_ts *ts,
 			      unsigned buttons, struct point *p)
 {
 	struct input_dev *idev = ts->idev;
+	unsigned down_mask = 0;
+	unsigned tmp;
 	int i;
 	if (!buttons) {
 		/* send release to user space. */
 #ifdef USE_ABS_MT
-		input_event(idev, EV_ABS, ABS_MT_TOUCH_MAJOR, 0);
-		input_mt_sync(idev);
-#else
+		tmp = ts->down_mask;
+		ts->down_mask = 0;
+		release_slots(ts, tmp);
+#endif
+#ifdef USE_ABS_SINGLE
 		input_report_abs(idev, ABS_PRESSURE, 0);
 		input_report_key(idev, BTN_TOUCH, 0);
-		input_sync(idev);
 #endif
 	} else {
+#ifdef USE_ABS_MT
 		for (i = 0; i < buttons; i++) {
 			translate(&p[i].x, &p[i].y);
-#ifdef USE_ABS_MT
-			input_event(idev, EV_ABS, ABS_MT_POSITION_X, p[i].x);
-			input_event(idev, EV_ABS, ABS_MT_POSITION_Y, p[i].y);
-			input_event(idev, EV_ABS, ABS_MT_TRACKING_ID, p[i].id);
-			input_event(idev, EV_ABS, ABS_MT_TOUCH_MAJOR, 1);
-			input_mt_sync(idev);
-#else
-			input_report_abs(idev, ABS_X, p[i].x);
-			input_report_abs(idev, ABS_Y, p[i].y);
-			input_report_abs(idev, ABS_PRESSURE, 1);
-			input_report_key(idev, BTN_TOUCH, 1);
-			input_sync(idev);
-#endif
+			input_mt_slot(idev, p[i].id);
+			input_mt_report_slot_state(idev,  MT_TOOL_FINGER, 1);
+			down_mask |= 1 << p[i].id;
+			input_report_abs(idev, ABS_MT_POSITION_X, p[i].x);
+			input_report_abs(idev, ABS_MT_POSITION_Y, p[i].y);
 		}
-	}
-#ifdef USE_ABS_MT
-	input_sync(idev);
+		tmp = ts->down_mask & ~down_mask;
+		ts->down_mask = down_mask;
+		release_slots(ts, tmp);
+#else
+		translate(&p[0].x, &p[0].y);
 #endif
+#ifdef USE_ABS_SINGLE
+		input_report_abs(idev, ABS_X, p[0].x);
+		input_report_abs(idev, ABS_Y, p[0].y);
+		input_report_abs(idev, ABS_PRESSURE, 1);
+		input_report_key(idev, BTN_TOUCH, 1);
+#endif
+	}
+	input_sync(idev);
 }
 
 static int ts_open(struct input_dev *idev)
@@ -158,6 +180,7 @@ static inline int ts_register(struct ft5x06_ts *ts)
 
 	ts->idev = idev;
 	idev->name      = procentryname ;
+	idev->id.bustype = BUS_I2C;
 	idev->id.product = ts->client->addr;
 	idev->open      = ts_open;
 	idev->close     = ts_close;
@@ -167,16 +190,13 @@ static inline int ts_register(struct ft5x06_ts *ts)
 	__set_bit(EV_SYN, idev->evbit);
 
 #ifdef USE_ABS_MT
+	input_mt_init_slots(idev, 16, 0);
 	input_set_abs_params(idev, ABS_MT_POSITION_X, 0, screenres[0]-1, 0, 0);
 	input_set_abs_params(idev, ABS_MT_POSITION_Y, 0, screenres[1]-1, 0, 0);
 	input_set_abs_params(idev, ABS_MT_TRACKING_ID, 0, MAX_TOUCHES, 0, 0);
-	input_set_abs_params(idev, ABS_MT_TOUCH_MAJOR, 0, 1, 0, 0);
-#else
-	__set_bit(ABS_X, idev->absbit);
-	__set_bit(ABS_Y, idev->absbit);
-	__set_bit(ABS_PRESSURE, idev->absbit);
+#endif
+#ifdef USE_ABS_SINGLE
 	__set_bit(BTN_TOUCH, idev->keybit);
-
 	input_set_abs_params(idev, ABS_X, 0, screenres[0]-1, 0, 0);
 	input_set_abs_params(idev, ABS_Y, 0, screenres[1]-1, 0, 0);
 	input_set_abs_params(idev, ABS_PRESSURE, 0, 1, 0, 0);
