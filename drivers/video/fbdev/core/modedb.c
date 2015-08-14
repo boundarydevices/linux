@@ -15,6 +15,7 @@
 #include <linux/slab.h>
 #include <linux/fb.h>
 #include <linux/kernel.h>
+#include <linux/mxcfb.h>
 
 #undef DEBUG
 
@@ -963,7 +964,8 @@ int fb_mode_is_equal(const struct fb_videomode *mode1,
 		mode1->right_margin == mode2->right_margin &&
 		mode1->upper_margin == mode2->upper_margin &&
 		mode1->lower_margin == mode2->lower_margin &&
-		mode1->sync         == mode2->sync &&
+		(mode1->sync & ~FB_SYNC_CLK_LAT_FALL) ==
+		(mode2->sync & ~FB_SYNC_CLK_LAT_FALL) &&
 		mode1->vmode        == mode2->vmode);
 }
 
