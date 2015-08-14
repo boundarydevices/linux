@@ -39,6 +39,7 @@
  * the required value in the imx_fb_videomode structure.
  */
 
+#include <linux/busfreq-imx.h>
 #include <linux/console.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -1539,6 +1540,7 @@ static void mxsfb_shutdown(struct platform_device *pdev)
 #ifdef CONFIG_PM_RUNTIME
 static int mxsfb_runtime_suspend(struct device *dev)
 {
+	release_bus_freq(BUS_FREQ_HIGH);
 	dev_dbg(dev, "mxsfb busfreq high release.\n");
 
 	return 0;
@@ -1546,6 +1548,7 @@ static int mxsfb_runtime_suspend(struct device *dev)
 
 static int mxsfb_runtime_resume(struct device *dev)
 {
+	request_bus_freq(BUS_FREQ_HIGH);
 	dev_dbg(dev, "mxsfb busfreq high request.\n");
 
 	return 0;
