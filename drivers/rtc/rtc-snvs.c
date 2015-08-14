@@ -16,6 +16,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
+#include <linux/clk.h>
 #include <linux/rtc.h>
 
 /* These register offsets are relative to LP (Low Power) range */
@@ -37,6 +38,7 @@
 struct snvs_rtc_data {
 	struct rtc_device *rtc;
 	void __iomem *ioaddr;
+	struct clk *clk;
 	int irq;
 	spinlock_t lock;
 };
@@ -121,9 +123,12 @@ static int snvs_rtc_enable(struct snvs_rtc_data *data, bool enable)
 static int snvs_rtc_read_time(struct device *dev, struct rtc_time *tm)
 {
 	struct snvs_rtc_data *data = dev_get_drvdata(dev);
-	unsigned long time = rtc_read_lp_counter(data->ioaddr);
+	unsigned long time;
 
+	clk_enable(data->clk);
+	time = rtc_read_lp_counter(data->ioaddr);
 	rtc_time_to_tm(time, tm);
+	clk_disable(data->clk);
 
 	return 0;
 }
@@ -133,6 +138,7 @@ static int snvs_rtc_set_time(struct device *dev, struct rtc_time *tm)
 	struct snvs_rtc_data *data = dev_get_drvdata(dev);
 	unsigned long time;
 
+	clk_enable(data->clk);
 	rtc_tm_to_time(tm, &time);
 
 	/* Disable RTC first */
@@ -144,6 +150,7 @@ static int snvs_rtc_set_time(struct device *dev, struct rtc_time *tm)
 
 	/* Enable RTC again */
 	snvs_rtc_enable(data, true);
+	clk_disable(data->clk);
 
 	return 0;
 }
@@ -153,11 +160,13 @@ static int snvs_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	struct snvs_rtc_data *data = dev_get_drvdata(dev);
 	u32 lptar, lpsr;
 
+	clk_enable(data->clk);
 	lptar = readl(data->ioaddr + SNVS_LPTAR);
 	rtc_time_to_tm(lptar, &alrm->time);
 
 	lpsr = readl(data->ioaddr + SNVS_LPSR);
 	alrm->pending = (lpsr & SNVS_LPSR_LPTA) ? 1 : 0;
+	clk_disable(data->clk);
 
 	return 0;
 }
@@ -168,6 +177,7 @@ static int snvs_rtc_alarm_irq_enable(struct device *dev, unsigned int enable)
 	u32 lpcr;
 	unsigned long flags;
 
+	clk_enable(data->clk);
 	spin_lock_irqsave(&data->lock, flags);
 
 	lpcr = readl(data->ioaddr + SNVS_LPCR);
@@ -180,6 +190,7 @@ static int snvs_rtc_alarm_irq_enable(struct device *dev, unsigned int enable)
 	spin_unlock_irqrestore(&data->lock, flags);
 
 	rtc_write_sync_lp(data->ioaddr);
+	clk_disable(data->clk);
 
 	return 0;
 }
@@ -194,6 +205,7 @@ static int snvs_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 
 	rtc_tm_to_time(alrm_tm, &time);
 
+	clk_enable(data->clk);
 	spin_lock_irqsave(&data->lock, flags);
 
 	/* Have to clear LPTA_EN before programming new alarm time in LPTAR */
@@ -207,6 +219,7 @@ static int snvs_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 
 	/* Clear alarm interrupt status bit */
 	writel(SNVS_LPSR_LPTA, data->ioaddr + SNVS_LPSR);
+	clk_disable(data->clk);
 
 	return snvs_rtc_alarm_irq_enable(dev, alrm->enabled);
 }
@@ -226,6 +239,7 @@ static irqreturn_t snvs_rtc_irq_handler(int irq, void *dev_id)
 	u32 lpsr;
 	u32 events = 0;
 
+	clk_enable(data->clk);
 	lpsr = readl(data->ioaddr + SNVS_LPSR);
 
 	if (lpsr & SNVS_LPSR_LPTA) {
@@ -239,6 +253,7 @@ static irqreturn_t snvs_rtc_irq_handler(int irq, void *dev_id)
 
 	/* clear interrupt status */
 	writel(lpsr, data->ioaddr + SNVS_LPSR);
+	clk_disable(data->clk);
 
 	return events ? IRQ_HANDLED : IRQ_NONE;
 }
@@ -246,10 +261,14 @@ static irqreturn_t snvs_rtc_irq_handler(int irq, void *dev_id)
 static void snvs_poweroff(void)
 {
 	u32 value;
+	struct snvs_rtc_data *data = container_of(snvs_base, struct snvs_rtc_data,
+						  ioaddr);
 
+	clk_enable(data->clk);
 	value = readl(snvs_base + SNVS_LPCR);
 	/* set TOP and DP_EN bit */
 	writel(value | 0x60, snvs_base + SNVS_LPCR);
+	clk_disable(data->clk);
 }
 
 static int snvs_rtc_probe(struct platform_device *pdev)
@@ -267,6 +286,12 @@ static int snvs_rtc_probe(struct platform_device *pdev)
 	if (IS_ERR(data->ioaddr))
 		return PTR_ERR(data->ioaddr);
 
+	data->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(data->clk)) {
+		dev_err(&pdev->dev, "can't get snvs-rtc clock\n");
+		data->clk = NULL;
+	}
+
 	data->irq = platform_get_irq(pdev, 0);
 	if (data->irq < 0)
 		return data->irq;
@@ -274,6 +299,12 @@ static int snvs_rtc_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, data);
 
 	spin_lock_init(&data->lock);
+
+	ret = clk_prepare_enable(data->clk);
+	if (ret) {
+		dev_err(&pdev->dev, "can't enable snvs-rtc clock\n");
+		return ret;
+	}
 
 	/* Initialize glitch detect */
 	writel(SNVS_LPPGDR_INIT, data->ioaddr + SNVS_LPPGDR);
@@ -293,7 +324,7 @@ static int snvs_rtc_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev, "failed to request irq %d: %d\n",
 			data->irq, ret);
-		return ret;
+		goto err_rtc;
 	}
 
 	data->rtc = devm_rtc_device_register(&pdev->dev, pdev->name,
@@ -301,7 +332,7 @@ static int snvs_rtc_probe(struct platform_device *pdev)
 	if (IS_ERR(data->rtc)) {
 		ret = PTR_ERR(data->rtc);
 		dev_err(&pdev->dev, "failed to register rtc: %d\n", ret);
-		return ret;
+		goto err_rtc;
 	}
 	/*
 	 * if no specific power off function in board file, power off system by
@@ -310,7 +341,13 @@ static int snvs_rtc_probe(struct platform_device *pdev)
 	if (!pm_power_off)
 		pm_power_off = snvs_poweroff;
 
+	clk_disable(data->clk);
+
 	return 0;
+
+err_rtc:
+	clk_disable_unprepare(data->clk);
+	return ret;
 }
 
 #ifdef CONFIG_PM_SLEEP
