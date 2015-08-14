@@ -1329,27 +1329,27 @@ static int sdma_alloc_chan_resources(struct dma_chan *chan)
 {
 	struct sdma_channel *sdmac = to_sdma_chan(chan);
 	struct imx_dma_data *data = chan->private;
-	struct imx_dma_data mem_data;
+	struct imx_dma_data default_data;
 	int prio, ret;
 
+	clk_enable(sdmac->sdma->clk_ipg);
+	clk_enable(sdmac->sdma->clk_ahb);
+
 	/*
-	 * MEMCPY may never setup chan->private by filter function such as
-	 * dmatest, thus create 'struct imx_dma_data mem_data' for this case.
-	 * Please note in any other slave case, you have to setup chan->private
-	 * with 'struct imx_dma_data' in your own filter function if you want to
-	 * request dma channel by dma_request_channel() rather than
-	 * dma_request_slave_channel(). Othwise, 'MEMCPY in case?' will appear
-	 * to warn you to correct your filter function.
+	 * dmatest(memcpy) will never call slave_config before prep, so we need
+	 * do some job in slave_config in this case.
 	 */
 	if (!data) {
-		dev_dbg(sdmac->sdma->dev, "MEMCPY in case?\n");
-		mem_data.priority = 2;
-		mem_data.peripheral_type = IMX_DMATYPE_MEMORY;
-		mem_data.dma_request = 0;
-		mem_data.dma_request2 = 0;
-		data = &mem_data;
+		sdmac->word_size  =  sdmac->sdma->dma_device.copy_align;
+		default_data.priority = 2;
+		default_data.peripheral_type = IMX_DMATYPE_MEMORY;
+		default_data.dma_request = 0;
+		default_data.dma_request2 = 0;
+		data = &default_data;
 
+		sdma_config_ownership(sdmac, false, true, false);
 		sdma_get_pc(sdmac, IMX_DMATYPE_MEMORY);
+		sdma_load_context(sdmac);
 	}
 
 	switch (data->priority) {
@@ -2263,7 +2263,8 @@ static int sdma_probe(struct platform_device *pdev)
 	sdma->dma_device.device_prep_dma_memcpy = sdma_prep_memcpy;
 	sdma->dma_device.device_issue_pending = sdma_issue_pending;
 	sdma->dma_device.dev->dma_parms = &sdma->dma_parms;
-	dma_set_max_seg_size(sdma->dma_device.dev, SDMA_BD_MAX_CNT);
+	sdma->dma_device.copy_align = 2;
+	dma_set_max_seg_size(sdma->dma_device.dev, 65535);
 
 	platform_set_drvdata(pdev, sdma);
 
