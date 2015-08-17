@@ -227,6 +227,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6ul-14x14-ddr3-arm2-wm8958.dtb \
 	imx6ul-14x14-evk.dtb \
 	imx6ul-14x14-evk-csi.dtb \
+	imx6ul-9x9-evk.dtb \
 	vf610-cosmic.dtb \
 	imx6sx-sdb-emmc.dtb \
 	imx6sx-sdb-m4.dtb \
