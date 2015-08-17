@@ -597,7 +597,11 @@
 		};
 		partition@C2000 {
 			label = "Kernel";
-			reg = <0xC2000 0x13e000>;
+			reg = <0xC2000 0x11e000>;
+		};
+		partition@1E0000 {
+			label = "M4";
+			reg = <0x1E0000 0x20000>;
 		};
 	};
 };
