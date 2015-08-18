@@ -158,7 +158,6 @@
 			MX6SX_PAD_SD1_CMD__CCM_CLKO1		0x000b0
 			/* Test points */
 			MX6SX_PAD_NAND_DATA04__GPIO4_IO_8	0x1b0b0
-			MX6SX_PAD_QSPI1B_DATA1__GPIO4_IO_25	0x1b0b0
 		>;
 	};
 
@@ -180,6 +179,9 @@
 		fsl,pins = <
 			MX6SX_PAD_KEY_COL4__I2C3_SCL		0x4001b8b1
 			MX6SX_PAD_KEY_ROW4__I2C3_SDA		0x4001b8b1
+#define GPIRQ_I2C3_J18	<&gpio4 25 IRQ_TYPE_EDGE_FALLING>
+#define GP_I2C3_J18	<&gpio4 25 GPIO_ACTIVE_LOW>
+			MX6SX_PAD_QSPI1B_DATA1__GPIO4_IO_25	0x1b0b0
 		>;
 	};
 
@@ -710,6 +712,14 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
+
+	ft5x06_ts@38 {
+		compatible = "ft5x06-ts,ft5x06-ts";
+		reg = <0x38>;
+                interrupts-extended = GPIRQ_I2C3_J18;
+		wakeup-gpios = GP_I2C3_J18;
+	};
+
 	ov5642: ov5642@3c {
 		compatible = "ovti,ov5642subdev";
 		reg = <0x3c>;
