@@ -358,17 +358,15 @@
 		fb_hdmi = &fb_hdmi;
 		fb_lcd = &fb_lcd;
 		fb_lvds = &fb_lvds;
-		hannstar = &hannstar;
-		lg1280x800 = &lg1280x800;
-		lvds_channel0 = &lvds_channel0;
+		lcd = &lcd;
+		ldb = &ldb;
 		mmc0 = &usdhc3;
 		mmc1 = &usdhc4;
 		mmc2 = &usdhc2;
                 mxcfb0 = &fb_hdmi;
                 mxcfb1 = &fb_lvds;
                 mxcfb2 = &fb_lcd;
-		okaya1024x600 = &okaya1024x600;
-		vga_lvds = &vga_lvds;
+		t_lvds = &t_lvds;
 	};
 
 	backlight_lcd: backlight_lcd {
@@ -476,7 +474,7 @@
 		};
 	};
 
-	lcd0: lcd@0 {
+	lcd: lcd@0 {
 		compatible = "fsl,lcd";
 		ipu_id = <0>;
 		disp_id = <0>;
@@ -818,7 +816,8 @@
 		primary;
 
 		display-timings {
-			AA065VE11: AA065VE11 {
+			t_lvds: t_lvds_default {
+				/* AA065VE11 values may be changed in bootscript */
 				clock-frequency = <43748359>;
 				hactive = <640>;
 				vactive = <480>;
