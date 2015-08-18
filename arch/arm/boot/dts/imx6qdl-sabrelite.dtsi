@@ -299,7 +299,6 @@
 		fb_hdmi = &fb_hdmi;
 		fb_lcd = &fb_lcd;
 		fb_lvds = &fb_lvds;
-		junk = &junk;
 		lcd = &lcd;
 		ldb = &ldb;
 		mmc0 = &usdhc3;
@@ -358,10 +357,6 @@
 			gpios = GP_GPIOKEY_VOL_UP;
 			linux,code = <KEY_VOLUMEUP>;
 		};
-	};
-
-	junk: junk {
-		reserve_some_space = "_______________________________________";
 	};
 
 	memory {
