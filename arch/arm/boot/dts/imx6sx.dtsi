@@ -1122,7 +1122,7 @@
 			ocotp: ocotp@21bc000 {
 				#address-cells = <1>;
 				#size-cells = <1>;
-				compatible = "fsl,imx6sx-ocotp", "syscon";
+				compatible = "fsl,imx6sx-ocotp", "fsl,imx6q-ocotp", "syscon";
 				reg = <0x021bc000 0x4000>;
 				clocks = <&clks IMX6SX_CLK_OCOTP>;
 
