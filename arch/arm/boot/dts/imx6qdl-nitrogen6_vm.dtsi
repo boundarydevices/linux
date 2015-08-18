@@ -322,6 +322,7 @@
 		fb_lcd = &fb_lcd;
 		fb_lvds = &fb_lvds;
 		lcd = &lcd;
+		ldb = &ldb;
 		mmc0 = &usdhc3;
 		mmc1 = &usdhc4;
 		mxcfb0 = &fb_lcd;
