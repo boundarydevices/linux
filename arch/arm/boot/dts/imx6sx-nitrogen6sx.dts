@@ -394,9 +394,15 @@
 	compatible = "fsl,imx6sx-nitrogen6sx", "fsl,imx6sx";
 
 	aliases {
+		fb_lcd = &lcdif1;
+		fb_lvds = &lcdif2;
+		lcd = &display0;
+		ldb = &ldb;
 		mmc0 = &usdhc2;
 		mmc1 = &usdhc4;
 		mmc2 = &usdhc3;
+		t_lcd = &t_lcd;
+		t_lvds = &t_lvds;
 	};
 
 	backlight_lvds {
@@ -740,17 +746,17 @@
 		bus-width = <24>;
 
 		display-timings {
-			native-mode = <&timing0>;
-			timing0: timing0 {
-				clock-frequency = <33500000>;
-				hactive = <800>;
-				vactive = <480>;
-				hback-porch = <89>;
-				hfront-porch = <164>;
-				vback-porch = <23>;
-				vfront-porch = <10>;
-				hsync-len = <10>;
-				vsync-len = <10>;
+			t_lcd: t_lcd_default {
+				/* 720p values may be changed in bootscript */
+				clock-frequency = <74160000>;
+				hactive = <1280>;
+				vactive = <720>;
+				hback-porch = <220>;
+				hfront-porch = <110>;
+				vback-porch = <20>;
+				vfront-porch = <5>;
+				hsync-len = <40>;
+				vsync-len = <5>;
 				hsync-active = <0>;
 				vsync-active = <0>;
 				de-active = <1>;
@@ -782,8 +788,8 @@
 		status = "okay";
 
 		display-timings {
-			native-mode = <&timing1>;
-			timing1: t1 {
+			t_lvds: t_lvds_default {
+				/* values may be changed in bootscript */
 				clock-frequency = <73404600>;
 				hactive = <1280>;
 				vactive = <800>;
