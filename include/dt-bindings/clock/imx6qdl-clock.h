@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2015 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -271,15 +271,15 @@
 #define IMX6QDL_CLK_PRE_AXI			258
 #define IMX6QDL_CLK_MLB_SEL			259
 #define IMX6QDL_CLK_MLB_PODF			260
-#define IMX6QDL_CLK_EPIT1                      261
-#define IMX6QDL_CLK_EPIT2                      262
-#define IMX6QDL_CLK_AXI_ALT_SEL        	       263
-#define IMX6QDL_CLK_LDB_DI0_DIV_7              264
-#define IMX6QDL_CLK_LDB_DI1_DIV_7              265
-#define IMX6QDL_CLK_LDB_DI0_DIV_SEL            266
-#define IMX6QDL_CLK_LDB_DI1_DIV_SEL            267
-#define IMX6QDL_CLK_DCIC1                      268
-#define IMX6QDL_CLK_DCIC2                      269
-#define IMX6QDL_CLK_END                        270
+#define IMX6QDL_CLK_EPIT1			261
+#define IMX6QDL_CLK_EPIT2			262
+#define IMX6QDL_CLK_AXI_ALT_SEL			263
+#define IMX6QDL_CLK_LDB_DI0_DIV_7		264
+#define IMX6QDL_CLK_LDB_DI1_DIV_7		265
+#define IMX6QDL_CLK_LDB_DI0_DIV_SEL		266
+#define IMX6QDL_CLK_LDB_DI1_DIV_SEL		267
+#define IMX6QDL_CLK_DCIC1			268
+#define IMX6QDL_CLK_DCIC2			269
+#define IMX6QDL_CLK_END				270
 
 #endif /* __DT_BINDINGS_CLOCK_IMX6QDL_H */
