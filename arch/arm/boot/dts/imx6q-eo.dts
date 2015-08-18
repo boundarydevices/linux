@@ -20,6 +20,6 @@
 	compatible = "fsl,imx6q-eo", "fsl,imx6q";
 };
 
-&lvds_display {
+&fb_lvds {
 	status = "okay";
 };

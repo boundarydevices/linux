@@ -235,21 +235,16 @@
 
 / {
 	aliases {
+		fb_lvds = &fb_lvds;
+		fb_lvds2 = &fb_lvds2;
+		ldb = &ldb;
 		mmc0 = &usdhc3;
 		mmc1 = &usdhc4;
 		mmc2 = &usdhc2;
-                mxcfb1 = &lvds_display;
-                mxcfb3 = &lvds_display_2;
-		lvds_display = &lvds_display;
-		lvds_display_2 = &lvds_display_2;
-		hannstar = &hannstar ;
-		lg1280x800 = &lg1280x800;
-		lvds1080p = &lvds1080p;
-		okaya1024x600 = &okaya1024x600;
-		hannstar_2 = &hannstar_2 ;
-		lg1280x800_2 = &lg1280x800_2;
-		okaya1024x600_2 = &okaya1024x600_2;
-		ldb = &ldb;
+                mxcfb1 = &fb_lvds;
+                mxcfb3 = &fb_lvds2;
+		t_lvds = &t_lvds;
+		t_lvds2 = &t_lvds2;
 	};
 
 	memory {
@@ -323,7 +318,7 @@
 		};
 	};
 
-	lvds_display: fb@1 {
+	fb_lvds: fb@1 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB24";
@@ -333,7 +328,7 @@
 		status = "disabled";
 	};
 
-	lvds_display_2: fb@3 {
+	fb_lvds2: fb@3 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
@@ -539,7 +534,8 @@
 		primary;
 
 		display-timings {
-			lvds1080p: lvds1080p {
+			t_lvds: t_lvds_default {
+				/* lvds1080p values may be changed in bootscript */
 				clock-frequency = <148500000>;
 				hactive = <1920>;
 				vactive = <1080>;
@@ -593,7 +589,8 @@
 		status = "okay";
 
 		display-timings {
-			lg1280x800_2: lp101wx1_2 {
+			t_lvds2: t_lvds2_default {
+				/* lg1280x800_2 values may be changed in bootscript */
 				clock-frequency = <72000000>;
 				hactive = <1280>;
 				vactive = <800>;
