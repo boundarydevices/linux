@@ -22,10 +22,10 @@
 	compatible = "fsl,imx6q-vp", "fsl,imx6q";
 };
 
-&mxcfb1 {
+&fb_hdmi {
 	status = "okay";
 };
 
-&mxcfb2 {
+&fb_lcd {
 	status = "okay";
 };

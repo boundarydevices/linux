@@ -14,11 +14,14 @@
 
 / {
 	aliases {
+		fb_hdmi = &fb_hdmi;
+		fb_lcd = &fb_lcd;
+		lcd = &lcd;
 		mmc0 = &usdhc3;
 		mmc1 = &usdhc4;
 		mmc2 = &usdhc2;
-		mxcfb0 = &mxcfb1;
-		mxcfb1 = &mxcfb2;
+		mxcfb0 = &fb_hdmi;
+		mxcfb1 = &fb_lcd;
 	};
 
 	memory {
@@ -101,7 +104,7 @@
 		hdmi-controller = <&hdmi_audio>;
 	};
 
-	mxcfb1: fb@0 {
+	fb_hdmi: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "hdmi";
 		interface_pix_fmt = "RGB24";
@@ -112,7 +115,7 @@
 		status = "disabled";
 	};
 
-	mxcfb2: fb@1 {
+	fb_lcd: fb@1 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "lcd";
 		interface_pix_fmt = "RGB24";
@@ -123,7 +126,7 @@
 		status = "disabled";
 	};
 
-	lcd@0 {
+	lcd: lcd@0 {
 		compatible = "fsl,lcd";
 		ipu_id = <0>;
 		disp_id = <0>;
