@@ -22,6 +22,6 @@
 	compatible = "fsl,imx6q-cob", "fsl,imx6q";
 };
 
-&lcd_display {
+&fb_lcd {
 	status = "okay";
 };

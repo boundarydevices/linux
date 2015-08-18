@@ -256,9 +256,10 @@
 
 / {
 	aliases {
+		fb_lcd = &fb_lcd;
+		lcd = &lcd;
 		mmc0 = &usdhc4;
-                mxcfb0 = &lcd_display;
-		lcd_display = &lcd_display;
+		mxcfb0 = &fb_lcd;
 	};
 
 	backlight_lcd_day {
@@ -320,7 +321,7 @@
 		};
 	};
 
-	lcd_display: fb@0 {
+	fb_lcd: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "lcd";
 		interface_pix_fmt = "RGB24";
@@ -331,7 +332,7 @@
 		status = "disabled";
 	};
 
-	lcd0: lcd@0 {
+	lcd: lcd@0 {
 		compatible = "fsl,lcd";
 		ipu_id = <0>;
 		disp_id = <0>;
