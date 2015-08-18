@@ -14,9 +14,12 @@
 
 / {
 	aliases {
+		fb_lvds = &fb_lvds;
+		ldb = &ldb;
 		mmc0 = &usdhc3;
 		mmc1 = &usdhc4;
-		mxcfb0 = &mxcfb1;
+		mxcfb0 = &fb_lvds;
+		t_lvds = &t_lvds;
 	};
 
 	backlight_lvds0 {
@@ -42,7 +45,7 @@
 		reg = <0x10000000 0x80000000>;
 	};
 
-	mxcfb1: fb@0 {
+	fb_lvds: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
@@ -516,8 +519,8 @@
 		crtc = "ipu1-di0";
 
 		display-timings {
-			native-mode = <&timing0>;
-			timing0: hsd100pxn1 {
+			t_lvds: t_lvds_default {
+				/* values may be changed in bootscript */
 				clock-frequency = <75000000>;
 				hactive = <1280>;
 				vactive = <800>;
