@@ -22,6 +22,6 @@
 	compatible = "fsl,imx6q-ta", "fsl,imx6q";
 };
 
-&mxcfb1 {
+&fb_lvds {
 	status = "okay";
 };
