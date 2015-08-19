@@ -1961,6 +1961,7 @@ static int serial_imx_suspend(struct platform_device *dev, pm_message_t state)
 	writel(val, sport->port.membase + UCR3);
 
 	uart_suspend_port(&imx_reg, &sport->port);
+	disable_irq(sport->port.irq);
 
 	/* Save necessary regs */
 	clk_prepare_enable(sport->clk_ipg);
@@ -2010,6 +2011,7 @@ static int serial_imx_resume(struct platform_device *dev)
 	clk_disable_unprepare(sport->clk_ipg);
 
 	uart_resume_port(&imx_reg, &sport->port);
+	enable_irq(sport->port.irq);
 
 	return 0;
 }
