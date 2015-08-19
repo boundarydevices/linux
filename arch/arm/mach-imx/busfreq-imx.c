@@ -71,7 +71,9 @@ extern int unsigned long iram_tlb_base_addr;
 extern int init_mmdc_lpddr2_settings(struct platform_device *dev);
 extern int init_mmdc_ddr3_settings_imx6q(struct platform_device *dev);
 extern int init_mmdc_ddr3_settings_imx6sx(struct platform_device *dev);
+#ifdef CONFIG_HAVE_IMX_DDRC
 extern int init_ddrc_ddr_settings(struct platform_device *dev);
+#endif
 extern int update_ddr_freq_imx_smp(int ddr_rate);
 extern int update_ddr_freq_imx6sx(int ddr_rate);
 extern int update_lpddr2_freq(int ddr_rate);
@@ -1265,7 +1267,9 @@ static int busfreq_probe(struct platform_device *pdev)
 	}
 
 	if (cpu_is_imx7d()) {
+#ifdef CONFIG_HAVE_IMX_DDRC
 		err = init_ddrc_ddr_settings(pdev);
+#endif
 	} else if (cpu_is_imx6sl()) {
 		err = init_mmdc_lpddr2_settings(pdev);
 	} else if (cpu_is_imx6sx()) {
