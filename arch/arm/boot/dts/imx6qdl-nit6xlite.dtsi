@@ -447,7 +447,7 @@
 	sound_sgtl5000: sound_sgtl5000 {
 		compatible = "fsl,imx6dl-nit6xlite-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";
-		model = "imx6dl-nit6xlite-sgtl5000";
+		model = "sgtl5000-audio";
 		cpu-dai = <&ssi1>;
 		audio-codec = <&codec>;
 		audio-routing =
