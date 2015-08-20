@@ -680,13 +680,18 @@
 		};
 	};
 
-	bt_rfkill {
-		compatible = "net,rfkill-gpio";
+	btwilink {
+		compatible = "btwilink";
+	};
+
+	kim {
+		compatible = "kim";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_bt_rfkill>;
-		name = "bt_rfkill";
-		type = <2>;     /* bluetooth */
-		bt_rfkill_reset-gpios = GP_BT_RFKILL_RESET;
+		nshutdown_gpio = GP_BT_RFKILL_RESET;
+		dev_name = "/dev/ttymxc2";
+		flow_cntrl = <1>;
+		baud_rate = <115200>;
 	};
 
 	i2cmux@2 {
