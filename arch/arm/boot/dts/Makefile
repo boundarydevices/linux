@@ -244,6 +244,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx7d-12x12-lpddr3-arm2-pcie.dtb \
 	imx7d-12x12-lpddr3-arm2-mipi_dsi.dtb \
 	imx7d-12x12-lpddr3-arm2-mqs.dtb \
+	imx7d-19x19-lpddr2-arm2.dtb \
 	imx7d-19x19-lpddr3-arm2.dtb \
 	imx7d-19x19-ddr3-arm2.dtb \
 	imx7d-19x19-ddr3-arm2-csi.dtb \
