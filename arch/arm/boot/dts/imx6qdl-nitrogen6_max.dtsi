@@ -443,6 +443,8 @@
 		backlight_lcd = &backlight_lcd;
 		backlight_lvds = &backlight_lvds;
 		backlight_lvds2 = &backlight_lvds2;
+		bt_rfkill = &bt_rfkill;
+		bt_kim = &bt_kim;
 		fb_hdmi = &fb_hdmi;
 		fb_lcd = &fb_lcd;
 		fb_lvds = &fb_lvds;
@@ -487,13 +489,29 @@
 		pwms = <&pwm2 0 5000000>;
 	};
 
-	bt_rfkill {
+	btwilink {
+		compatible = "btwilink";
+	};
+
+	bt_kim: bt_kim {
+		compatible = "kim";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_bt_rfkill>;
+		nshutdown_gpio = GP_BT_RFKILL_RESET;
+		dev_name = "/dev/ttymxc2";
+		flow_cntrl = <1>;
+		baud_rate = <3000000>;
+		status = "okay";
+	};
+
+	bt_rfkill: bt_rfkill {
 		compatible = "net,rfkill-gpio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_bt_rfkill>;
 		name = "bt_rfkill";
 		type = <2>;	/* bluetooth */
 		reset-gpios = GP_BT_RFKILL_RESET;
+		status = "disabled";
 	};
 
 	clocks {
