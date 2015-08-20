@@ -159,6 +159,34 @@
 		>;
 	};
 
+	pinctrl_i2c3_adv7180_gpios: i2c3-adv7180_gpiosgrp {
+		fsl,pins = <
+			/* No data enable pin, make sure it is not selected */
+			MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0x0b0b1
+#define GP_ADV7180_PWN         <&gpio3 13 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x0b0b0
+#define GP_ADV7180_RESET       <&gpio3 14 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x030b0
+#define GPIRQ_ADV7180         <&gpio5 0 IRQ_TYPE_LEVEL_LOW>
+			MX6QDL_PAD_EIM_WAIT__GPIO5_IO00		0x1b0b0
+		>;
+	};
+
+	pinctrl_i2c3_adv7180: i2c3-adv7180grp {
+		/* parallel camera on CSI1, pins differ for iMX6Q/iMX6DL */
+	};
+
+	pinctrl_i2c3_adv7180_cea861: i2c3-adv7180_cea861grp {
+		/* parallel camera on CSI1, pins differ for iMX6Q/iMX6DL */
+	};
+
+	pinctrl_i2c3_adv7180_no_cea861: i2c3-adv7180_no_cea861grp {
+		fsl,pins = <
+			MX6QDL_PAD_EIM_DA11__GPIO3_IO11		0xb0b1  /* Hsync */
+			MX6QDL_PAD_EIM_DA12__GPIO3_IO12		0xb0b1  /* Vsync */
+		>;
+	};
+
 	pinctrl_i2c3_ov5640: i2c3-ov5640grp {
 		/* parallel camera on CSI1, pins differ for iMX6Q/iMX6DL */
 	};
@@ -670,6 +698,27 @@
         pinctrl-names = "default";
         pinctrl-0 = <&pinctrl_i2c3>;
         status = "okay";
+
+	adv7180: adv7180@20 {
+		compatible = "adv,adv7180";
+		reg = <0x20>;
+		pinctrl-names = "default", "no_cea861", "cea861";
+		pinctrl-0 = <&pinctrl_i2c3_adv7180 &pinctrl_i2c3_adv7180_gpios>;
+		pinctrl-1 = <&pinctrl_i2c3_adv7180_no_cea861>;
+		pinctrl-2 = <&pinctrl_i2c3_adv7180_cea861>;
+		cea861 = <0>;
+		DOVDD-supply = <&reg_3p3v>; /* 3.3v, enabled via 2.8 VGEN6 */
+		AVDD-supply = <&reg_3p3v>;  /* 1.8v */
+		DVDD-supply = <&reg_3p3v>;  /* 1.8v */
+		PVDD-supply = <&reg_3p3v>;  /* 1.8v */
+		rst-gpios = GP_ADV7180_RESET;
+		pwn-gpios = GP_ADV7180_PWN;
+		interrupts-extended = GPIRQ_ADV7180;
+		csi_id = <1>;
+		mclk = <28636300>;
+		mclk_source = <0>;
+		cvbs = <1>;
+        };
 
         egalax_ts@04 {
                 compatible = "eeti,egalax_ts";
