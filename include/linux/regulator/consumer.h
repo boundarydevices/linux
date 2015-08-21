@@ -129,6 +129,8 @@ struct regulator_dev;
 #define REGULATOR_EVENT_OVER_VOLTAGE_WARN	0x8000
 #define REGULATOR_EVENT_OVER_TEMP_WARN		0x10000
 #define REGULATOR_EVENT_WARN_MASK		0x1E000
+#define REGULATOR_EVENT_PRE_DO_ENABLE		0x20000
+#define REGULATOR_EVENT_PRE_DO_DISABLE		0x40000
 
 /*
  * Regulator errors that can be queried using regulator_get_error_flags
