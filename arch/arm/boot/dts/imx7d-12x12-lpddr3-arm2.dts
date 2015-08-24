@@ -173,9 +173,10 @@
 &ecspi3 {
 	fsl,spi-num-chipselects = <1>;
 	cs-gpios = <&gpio6 22 0>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_ecspi3_1 &pinctrl_ecspi3_cs_1>;
-	status = "disabled";
+	pinctrl-1 = <&pinctrl_ecspi3_1 &pinctrl_ecspi3_cs_1>;
+	status = "okay";
 
 	spi_flash3: m25p80@0 {
 		#address-cells = <1>;
