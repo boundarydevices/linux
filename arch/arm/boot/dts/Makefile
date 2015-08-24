@@ -191,6 +191,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6sl-evk-ldo.dtb \
 	imx6sl-evk-pf200.dtb \
 	imx6sl-evk-uart.dtb \
+	imx6sx-14x14-arm2.dtb \
 	imx6sx-17x17-arm2.dtb \
 	imx6sx-17x17-arm2-ldo.dtb \
 	imx6sx-17x17-arm2-ecspi.dtb \
@@ -227,6 +228,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6ul-14x14-ddr3-arm2-wm8958.dtb \
 	imx6ul-14x14-evk.dtb \
 	imx6ul-14x14-evk-csi.dtb \
+	imx6ul-9x9-evk.dtb \
 	vf610-cosmic.dtb \
 	imx6sx-sdb-emmc.dtb \
 	imx6sx-sdb-m4.dtb \
@@ -243,6 +245,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx7d-12x12-lpddr3-arm2-pcie.dtb \
 	imx7d-12x12-lpddr3-arm2-mipi_dsi.dtb \
 	imx7d-12x12-lpddr3-arm2-mqs.dtb \
+	imx7d-19x19-lpddr2-arm2.dtb \
 	imx7d-19x19-lpddr3-arm2.dtb \
 	imx7d-19x19-ddr3-arm2.dtb \
 	imx7d-19x19-ddr3-arm2-csi.dtb \

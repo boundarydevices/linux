@@ -71,7 +71,7 @@ static int imx6sl_enter_wait(struct cpuidle_device *dev,
 	imx6q_set_lpm(WAIT_UNCLOCKED);
 	if ((mode == BUS_FREQ_AUDIO) || (mode == BUS_FREQ_ULTRA_LOW)) {
 		imx6sl_wfi_in_iram_fn(wfi_iram_base, (mode == BUS_FREQ_AUDIO) ? 1 : 0 ,
-			regulator_is_enabled(vbus_ldo));
+			ldo2p5_dummy_enable);
 	} else {
 		/*
 		 * Software workaround for ERR005311, see function

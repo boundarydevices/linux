@@ -271,6 +271,7 @@ static struct imx_rpmsg_vproc imx_rpmsg_vprocs[] = {
 };
 
 static const struct of_device_id imx_rpmsg_dt_ids[] = {
+	{ .compatible = "fsl,imx6sx-rpmsg", },
 	{ .compatible = "fsl,imx7d-rpmsg", },
 	{ /* sentinel */ }
 };
@@ -286,6 +287,7 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 
 		if (!strcmp(rpdev->rproc_name, "m4")) {
 			ret = of_device_is_compatible(np, "fsl,imx7d-rpmsg");
+			ret |= of_device_is_compatible(np, "fsl,imx6sx-rpmsg");
 			if (ret) {
 				/* hardcodes here now. */
 				rpdev->vring[0] = 0xBFFF0000;

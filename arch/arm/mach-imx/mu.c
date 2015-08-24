@@ -560,11 +560,6 @@ static int imx_mu_probe(struct platform_device *pdev)
 		/* enable the bit31(GIE3) of MU_ACR, used for MCC */
 		writel_relaxed(readl_relaxed(mu_base + MU_ACR) | BIT(31),
 			mu_base + MU_ACR);
-
-		INIT_DELAYED_WORK(&rpmsg_work, rpmsg_work_handler);
-		/* enable the bit26(RIE1) of MU_ACR */
-		writel_relaxed(readl_relaxed(mu_base + MU_ACR) | BIT(26),
-			mu_base + MU_ACR);
 	} else {
 		INIT_DELAYED_WORK(&mu_work, mu_work_handler);
 
@@ -579,6 +574,10 @@ static int imx_mu_probe(struct platform_device *pdev)
 		imx_gpc_add_m4_wake_up_irq(irq, true);
 	}
 
+	INIT_DELAYED_WORK(&rpmsg_work, rpmsg_work_handler);
+	/* enable the bit26(RIE1) of MU_ACR */
+	writel_relaxed(readl_relaxed(mu_base + MU_ACR) | BIT(26),
+			mu_base + MU_ACR);
 	BLOCKING_INIT_NOTIFIER_HEAD(&(mu_rpmsg_box.notifier));
 
 	pr_info("MU is ready for cross core communication!\n");
