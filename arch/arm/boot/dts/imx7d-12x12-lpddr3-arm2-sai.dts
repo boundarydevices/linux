@@ -22,7 +22,7 @@
 };
 
 &iomuxc {
-	pinctrl-0 = <&pinctrl_hog_1 &pinctrl_hog>;
+	pinctrl-0 = <&pinctrl_hog_1>;
 };
 
 &sai1 {
