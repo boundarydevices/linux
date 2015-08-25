@@ -29,6 +29,10 @@
 	status = "okay";
 };
 
+&sdma {
+	status = "okay";
+};
+
 &usdhc2 {
 	no-1-8-v;
 };
