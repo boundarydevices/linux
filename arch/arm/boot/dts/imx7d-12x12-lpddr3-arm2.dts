@@ -469,8 +469,8 @@
 
 &iomuxc {
 	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&pinctrl_hog_1 &pinctrl_hog &pinctrl_hog_sd2_vselect &pinctrl_hog_mipi>;
-	pinctrl-1 = <&pinctrl_hog_1 &pinctrl_hog &pinctrl_hog_sd2_vselect &pinctrl_hog_mipi>;
+	pinctrl-0 = <&pinctrl_hog_1 &pinctrl_hog_sd2_vselect &pinctrl_hog_mipi>;
+	pinctrl-1 = <&pinctrl_hog_1 &pinctrl_hog_sd2_vselect &pinctrl_hog_mipi>;
 
 	imx7d-12x12-lpddr3-arm2 {
 		pinctrl_hog_1: hoggrp-1 {
@@ -495,13 +495,6 @@
 			fsl,pins = <
 				MX7D_PAD_ECSPI1_SCLK__GPIO4_IO16  0x59
 				MX7D_PAD_ECSPI1_MOSI__GPIO4_IO17  0x59
-			>;
-		};
-
-		pinctrl_hog: hoggrp {
-			fsl,pins = <
-				MX7D_PAD_ECSPI1_MISO__GPIO4_IO18  0x80000000  /* pwr int */
-				MX7D_PAD_ECSPI1_MOSI__GPIO4_IO17  0x80000000
 			>;
 		};
 
@@ -607,6 +600,7 @@
 				MX7D_PAD_EPDC_GDSP__EPDC_GDSP     0x2
 				MX7D_PAD_EPDC_BDR0__EPDC_BDR0     0x2
 				MX7D_PAD_EPDC_BDR1__EPDC_BDR1     0x2
+				MX7D_PAD_ECSPI1_MISO__GPIO4_IO18  0x80000000  /* pwr int */
 			>;
 		};
 
