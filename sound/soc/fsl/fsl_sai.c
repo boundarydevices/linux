@@ -874,12 +874,15 @@ static int fsl_sai_suspend(struct device *dev)
 	regcache_cache_only(sai->regmap, true);
 	regcache_mark_dirty(sai->regmap);
 
+	pinctrl_pm_select_sleep_state(dev);
 	return 0;
 }
 
 static int fsl_sai_resume(struct device *dev)
 {
 	struct fsl_sai *sai = dev_get_drvdata(dev);
+
+	pinctrl_pm_select_default_state(dev);
 
 	regcache_cache_only(sai->regmap, false);
 	regmap_write(sai->regmap, FSL_SAI_TCSR, FSL_SAI_CSR_SR);
