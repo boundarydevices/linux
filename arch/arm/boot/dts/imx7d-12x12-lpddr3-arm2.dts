@@ -962,7 +962,7 @@
 };
 
 &sdma {
-	status = "disabled";
+	status = "okay";
 };
 
 &sim1 {
