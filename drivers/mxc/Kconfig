@@ -10,6 +10,7 @@ config MXC_SIM
 	help
 	Say Y to get MXC SIM support.
 
+source "drivers/mxc/vpu/Kconfig"
 source "drivers/mxc/sim/Kconfig"
 
 endmenu
