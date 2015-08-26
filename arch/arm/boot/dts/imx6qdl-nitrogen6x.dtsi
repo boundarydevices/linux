@@ -824,6 +824,7 @@
 		reg = <0x38>;
                 interrupts-extended = GPIRQ_I2C3_J7;
 		wakeup-gpios = GP_I2C3_J7;
+		screen-size = <1280 800>;
 	};
 
         ili210x@41 {
