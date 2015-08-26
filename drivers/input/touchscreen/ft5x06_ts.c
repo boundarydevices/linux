@@ -484,6 +484,7 @@ static int ts_detect(struct i2c_client *client,
 static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int err = 0;
+	int val[ARRAY_SIZE(screenres)];
 	struct ft5x06_ts *ts;
 	struct device *dev = &client->dev;
         struct device_node *np = client->dev.of_node;
@@ -516,8 +517,13 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		return err;
 	}
 
-	printk(KERN_INFO "%s: %s touchscreen irq=%i, gp=%i\n", __func__,
-	       client_name, ts->irq, ts->gp);
+	if (of_property_read_u32_array(np, "screen-size", val,
+				       ARRAY_SIZE(screenres)) == 0) {
+		memcpy(screenres, val, sizeof(screenres));
+	}
+
+	printk(KERN_INFO "%s: %s irq=%i, gp=%i, screen=%dx%d\n", __func__,
+	       client_name, ts->irq, ts->gp, screenres[0], screenres[1]);
 	i2c_set_clientdata(client, ts);
 	err = ts_register(ts);
 	if (err == 0) {
