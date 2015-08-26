@@ -411,10 +411,10 @@
 		mmc0 = &usdhc3;
 		mmc1 = &usdhc4;
 		mmc2 = &usdhc2;
-		mxcfb0 = &fb_hdmi;
-		mxcfb1 = &fb_lvds;
-		mxcfb2 = &fb_lcd;
-		mxcfb3 = &fb_lvds2;
+		mxcfb0 = &fb_lvds;
+		mxcfb1 = &fb_lcd;
+		mxcfb2 = &fb_lvds2;
+		mxcfb3 = &fb_hdmi;
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
 	};
@@ -554,12 +554,11 @@
 		hdmi-controller = <&hdmi_audio>;
 	};
 
-	fb_hdmi: fb@0 {
+	fb_lvds: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "hdmi";
-		interface_pix_fmt = "RGB24";
-		mode_str ="1280x720M@60";
-		default_bpp = <32>;
+		disp_dev = "ldb";
+		interface_pix_fmt = "RGB666";
+		default_bpp = <16>;
 		int_clk = <0>;
 		late_init = <0>;
 		status = "disabled";
@@ -575,7 +574,7 @@
 		status = "disabled";
 	};
 
-	fb_lvds: fb@2 {
+	fb_lvds2: fb@2 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB666";
@@ -585,11 +584,12 @@
 		status = "disabled";
 	};
 
-	fb_lvds2: fb@3 {
+	fb_hdmi: fb@3 {
 		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "ldb";
-		interface_pix_fmt = "RGB666";
-		default_bpp = <16>;
+		disp_dev = "hdmi";
+		interface_pix_fmt = "RGB24";
+		mode_str ="1280x720M@60";
+		default_bpp = <32>;
 		int_clk = <0>;
 		late_init = <0>;
 		status = "disabled";
