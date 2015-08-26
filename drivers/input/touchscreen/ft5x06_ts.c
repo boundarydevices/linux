@@ -584,6 +584,8 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct device *dev = &client->dev;
 	struct gpio_desc *gp;
 	int retry = 0;
+	int val[ARRAY_SIZE(screenres)];
+	struct device_node *np = client->dev.of_node;
 	struct gpio_desc *wakeup_gpio;
 
 	if (gts) {
@@ -631,6 +633,10 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 			goto exit1;
 		}
 	} while (1);
+
+	if (of_property_read_u32_array(np, "screen-size", val,
+				       ARRAY_SIZE(val)) == 0)
+		memcpy(screenres, val, sizeof(screenres));
 
 	ts->regmap = devm_regmap_init_i2c(client, &ft5x06_regmap);
 	if (IS_ERR(ts->regmap)) {
