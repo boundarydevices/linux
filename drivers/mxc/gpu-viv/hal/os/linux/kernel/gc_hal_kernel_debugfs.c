@@ -559,7 +559,11 @@ _DebugFSRead (
     caddr_t data_to_return ;
     gcsDEBUGFS_Node* node ;
     /* get the metadata about this emlog */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
     if ( ( node = _GetNodeInfo ( file->f_dentry->d_inode ) ) == NULL )
+#else
+    if ( ( node = _GetNodeInfo ( file_inode(file) ) ) == NULL )
+#endif
     {
         printk ( "debugfs_read: record not found\n" ) ;
         return - EIO ;
@@ -626,7 +630,11 @@ _DebugFSWrite (
     gcsDEBUGFS_Node*node ;
 
     /* get the metadata about this log */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
     if ( ( node = _GetNodeInfo ( file->f_dentry->d_inode ) ) == NULL )
+#else
+    if ( ( node = _GetNodeInfo ( file_inode(file) ) ) == NULL )
+#endif    
     {
         return - EIO ;
     }
