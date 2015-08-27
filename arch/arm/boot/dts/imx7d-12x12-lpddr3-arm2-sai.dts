@@ -22,7 +22,9 @@
 };
 
 &iomuxc {
+	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_hog_1>;
+	pinctrl-1 = <&pinctrl_hog_1>;
 };
 
 &sai1 {
