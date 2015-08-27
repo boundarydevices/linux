@@ -204,12 +204,29 @@ static int fsl_mqs_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if CONFIG_PM_SLEEP
+static int fsl_mqs_suspend(struct device *dev)
+{
+	pinctrl_pm_select_sleep_state(dev);
+	return 0;
+}
+
+static int fsl_mqs_resume(struct device *dev)
+{
+	pinctrl_pm_select_default_state(dev);
+	return 0;
+}
+#endif /* CONFIG_PM_SLEEP */
+
+static const struct dev_pm_ops fsl_mqs_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(fsl_mqs_suspend, fsl_mqs_resume)
+};
+
 static const struct of_device_id fsl_mqs_dt_ids[] = {
 	{ .compatible = "fsl,imx6sx-mqs", },
 	{}
 };
 MODULE_DEVICE_TABLE(of, fsl_mqs_dt_ids);
-
 
 static struct platform_driver fsl_mqs_driver = {
 	.probe		= fsl_mqs_probe,
@@ -218,6 +235,7 @@ static struct platform_driver fsl_mqs_driver = {
 		.name	= "fsl-mqs",
 		.owner	= THIS_MODULE,
 		.of_match_table = fsl_mqs_dt_ids,
+		.pm = &fsl_mqs_pm_ops,
 	},
 };
 
