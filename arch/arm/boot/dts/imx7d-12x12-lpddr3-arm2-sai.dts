@@ -28,6 +28,9 @@
 };
 
 &sai1 {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_sai1>;
+	pinctrl-1 = <&pinctrl_sai1>;
 	status = "okay";
 };
 
