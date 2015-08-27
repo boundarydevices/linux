@@ -156,6 +156,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6dl-bt.dtb \
 	imx6dl-cubox-i.dtb \
 	imx6dl-hummingboard.dtb \
+	imx6dl-mcs.dtb \
 	imx6dl-mtp.dtb \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nitrogen6_vm.dtb \
@@ -181,6 +182,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-insp.dtb \
 	imx6q-ioc.dtb \
 	imx6q-ls.dtb \
+	imx6q-mcs.dtb \
 	imx6q-mtp.dtb \
 	imx6q-phytec-pbab01.dtb \
 	imx6q-nitrogen6_max.dtb \
