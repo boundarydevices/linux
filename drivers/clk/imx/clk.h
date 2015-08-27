@@ -295,7 +295,7 @@ static inline struct clk_hw *imx_clk_hw_mux_ldb(const char *name, void __iomem *
 {
 	return clk_hw_register_mux(NULL, name, parents, num_parents,
 			CLK_SET_RATE_NO_REPARENT | CLK_SET_RATE_PARENT, reg,
-			shift, width, CLK_MUX_READ_ONLY, &imx_ccm_lock);
+			shift, width, 0, &imx_ccm_lock);
 }
 
 static inline struct clk_hw *imx_clk_hw_fixed_factor(const char *name,
