@@ -5676,16 +5676,21 @@ static int mxc_epdc_fb_suspend(struct device *dev)
 
 	data->pwrdown_delay = FB_POWERDOWN_DISABLE;
 	ret = mxc_epdc_fb_blank(FB_BLANK_POWERDOWN, &data->info);
+
 	if (ret)
 		goto out;
 
 out:
+	pinctrl_pm_select_sleep_state(dev);
+
 	return ret;
 }
 
 static int mxc_epdc_fb_resume(struct device *dev)
 {
 	struct mxc_epdc_fb_data *data = dev_get_drvdata(dev);
+
+	pinctrl_pm_select_default_state(dev);
 
 	mxc_epdc_fb_blank(FB_BLANK_UNBLANK, &data->info);
 	epdc_init_settings(data);
