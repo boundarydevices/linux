@@ -189,8 +189,9 @@
 };
 
 &epdc {
-        pinctrl-names = "default";
+        pinctrl-names = "default", "sleep";
         pinctrl-0 = <&pinctrl_epdc_0>;
+        pinctrl-1 = <&pinctrl_epdc_0>;
         V3P3-supply = <&V3P3_reg>;
         VCOM-supply = <&VCOM_reg>;
         DISPLAY-supply = <&DISPLAY_reg>;
