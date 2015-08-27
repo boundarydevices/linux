@@ -943,19 +943,6 @@
 	status = "disabled";
 };
 
-&sai1 {
-	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&pinctrl_sai1>;
-	pinctrl-1 = <&pinctrl_sai1>;
-	status = "disabled";
-};
-
-&sai2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_sai2>;
-	status = "disabled";
-};
-
 &sdma {
 	status = "okay";
 };
