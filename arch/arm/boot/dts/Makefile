@@ -387,6 +387,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-icore-rqs.dtb \
 	imx6dl-lshore.dtb \
 	imx6dl-lshore-r0.dtb \
+	imx6dl-mcs.dtb \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nitrogen6x.dtb \
 	imx6dl-phytec-pbab01.dtb \
@@ -480,6 +481,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-ltch.dtb \
 	imx6q-marsboard.dtb \
 	imx6q-mccmon6.dtb \
+	imx6q-mcs.dtb \
 	imx6q-nitrogen6x.dtb \
 	imx6q-nitrogen6_max.dtb \
 	imx6q-nitrogen6_som2.dtb \
