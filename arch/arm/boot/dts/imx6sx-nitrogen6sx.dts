@@ -146,8 +146,6 @@
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 			MX6SX_PAD_NAND_CE0_B__GPIO4_IO_1	0x1b0b0
-			MX6SX_PAD_NAND_CLE__GPIO4_IO_3		0x1b0b0
-			MX6SX_PAD_NAND_RE_B__GPIO4_IO_12	0x1b0b0
 			MX6SX_PAD_NAND_WE_B__GPIO4_IO_14	0x1b0b0
 			MX6SX_PAD_NAND_WP_B__GPIO4_IO_15	0x1b0b0
 			MX6SX_PAD_NAND_READY_B__GPIO4_IO_13	0x1b0b0
@@ -172,6 +170,15 @@
 		fsl,pins = <
 			MX6SX_PAD_GPIO1_IO02__I2C2_SCL		0x4001b8b1
 			MX6SX_PAD_GPIO1_IO03__I2C2_SDA		0x4001b8b1
+		>;
+	};
+
+	pinctrl_i2c2_tfp410: i2c2-tfp410grp {
+		fsl,pins = <
+#define GPIRQ_I2C2_TFP410	<&gpio4 3 IRQ_TYPE_EDGE_FALLING>
+			MX6SX_PAD_NAND_CLE__GPIO4_IO_3		0x1b0b0
+#define GP_I2C2_TFP410_I2C_SEL  <&gpio4 12 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_NAND_RE_B__GPIO4_IO_12	0x1b0b0
 		>;
 	};
 
@@ -704,6 +711,16 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
+	tfp410@38 {
+		compatible = "tfp410";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_tfp410>;
+		reg = <0x38>;
+		interrupts-extended = GPIRQ_I2C2_TFP410;
+		i2c_sel-gpios = GP_I2C2_TFP410_I2C_SEL;
+		display_id = "mxs-lcdif";
+	};
+
 	/* pcie i2c */
 };
 
