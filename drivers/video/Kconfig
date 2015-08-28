@@ -30,6 +30,11 @@ config VGASTATE
        tristate
        default n
 
+config DVI_TFP410
+	tristate "tfp410 - Lowlevel DVI output control"
+	help
+	  This initializes the tfp410 i2c for output.
+
 config VIDEOMODE_HELPERS
 	bool
 
