@@ -17,6 +17,7 @@ obj-$(CONFIG_VT)		  += console/
 obj-$(CONFIG_LOGO)		  += logo/
 obj-y				  += backlight/
 
+obj-$(CONFIG_DVI_TFP410)	  += tfp410.o
 obj-$(CONFIG_EXYNOS_VIDEO)     += exynos/
 
 obj-$(CONFIG_FB_CFB_FILLRECT)  += cfbfillrect.o
