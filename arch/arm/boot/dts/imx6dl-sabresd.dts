@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 //
-// Copyright (C) 2013 Freescale Semiconductor, Inc.
+// Copyright (C) 2013-2015 Freescale Semiconductor, Inc.
 
 /dts-v1/;
 
@@ -15,4 +15,22 @@
 &ipu1_csi1_from_ipu1_csi1_mux {
 	clock-lanes = <0>;
 	data-lanes = <1 2>;
+};
+
+&ldb {
+	lvds-channel@0 {
+		crtc = "ipu1-di0";
+	};
+
+	lvds-channel@1 {
+		crtc = "ipu1-di1";
+	};
+};
+
+&mxcfb1 {
+	status = "okay";
+};
+
+&mxcfb2 {
+	status = "okay";
 };
