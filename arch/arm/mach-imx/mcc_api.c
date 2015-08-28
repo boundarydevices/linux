@@ -715,6 +715,7 @@ int mcc_recv_nocopy(MCC_ENDPOINT *src_endpoint, MCC_ENDPOINT *dest_endpoint, voi
     *recv_size = (MCC_MEM_SIZE)(list->head->data_len);
 
     /* Dequeue the buffer from the endpoint list */
+    list->head = (MCC_RECEIVE_BUFFER*)MCC_MEM_VIRT_TO_PHYS(list->head);
     mcc_dequeue_buffer(list);
 
     /* Semaphore-protected section end */
@@ -831,11 +832,11 @@ int mcc_msgs_available(MCC_ENDPOINT *endpoint, unsigned int *num_msgs)
         return MCC_ERR_ENDPOINT;
     }
 
-    buf = list->head;
+    buf = MCC_MEM_PHYS_TO_VIRT(list->head);
     while(buf != (MCC_RECEIVE_BUFFER*)0) {
         count++;
         MCC_DCACHE_INVALIDATE_MLINES((void*)&buf->next, sizeof(MCC_RECEIVE_BUFFER*));
-        buf = (MCC_RECEIVE_BUFFER*)buf->next;
+        buf = (MCC_RECEIVE_BUFFER*)MCC_MEM_PHYS_TO_VIRT(buf->next);
     }
     *num_msgs = count;
 
