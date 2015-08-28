@@ -195,7 +195,7 @@
         V3P3-supply = <&V3P3_reg>;
         VCOM-supply = <&VCOM_reg>;
         DISPLAY-supply = <&DISPLAY_reg>;
-        status = "disabled";
+        status = "okay";
 };
 
 &epxp {
@@ -243,7 +243,7 @@
 	phy-mode = "rgmii";
 	phy-handle = <&ethphy0>;
 	fsl,magic-packet;
-	status = "okay";
+	status = "disabled";
 };
 
 &flexcan1 {
