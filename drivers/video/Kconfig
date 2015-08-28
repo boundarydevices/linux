@@ -33,6 +33,11 @@ config VIDEO_OUTPUT_CONTROL
 	  This framework adds support for low-level control of the video 
 	  output switch.
 
+config DVI_TFP410
+	tristate "tfp410 - Lowlevel DVI output control"
+	help
+	  This initializes the tfp410 i2c for output.
+
 config VIDEOMODE_HELPERS
 	bool
 
