@@ -956,6 +956,49 @@ static void sdma_disable_channel(struct sdma_channel *sdmac)
 	writel_relaxed(BIT(channel), sdma->regs + SDMA_H_STATSTOP);
 }
 
+static int sdma_pause_channel(struct sdma_channel *sdmac)
+{
+	struct sdma_engine *sdma = sdmac->sdma;
+	int channel = sdmac->channel;
+	unsigned long flags;
+
+	if (!(sdmac->flags & IMX_DMA_SG_LOOP))
+		return -EINVAL;
+
+	writel_relaxed(BIT(channel), sdma->regs + SDMA_H_STATSTOP);
+
+	spin_lock_irqsave(&sdmac->lock, flags);
+	sdmac->status = DMA_PAUSED;
+	spin_unlock_irqrestore(&sdmac->lock, flags);
+
+	return 0;
+}
+
+static int sdma_resume_channel(struct sdma_channel *sdmac)
+{
+	struct sdma_engine *sdma = sdmac->sdma;
+	unsigned long flags;
+
+	if (!(sdmac->flags & IMX_DMA_SG_LOOP))
+		return -EINVAL;
+	/*
+	 * restore back context since context may loss if mega/fast OFF
+	 */
+	if (!readl_relaxed(sdma->regs + SDMA_H_C0PTR)) {
+		if (sdma_load_context(sdmac)) {
+			dev_err(sdmac->sdma->dev, "context load failed.\n");
+			return -EINVAL;
+		}
+	}
+
+	sdma_enable_channel(sdmac->sdma, sdmac->channel);
+	spin_lock_irqsave(&sdmac->lock, flags);
+	sdmac->status = DMA_IN_PROGRESS;
+	spin_unlock_irqrestore(&sdmac->lock, flags);
+
+	return 0;
+}
+
 static void sdma_set_watermarklevel_for_p2p(struct sdma_channel *sdmac)
 {
 	struct sdma_engine *sdma = sdmac->sdma;
@@ -1557,6 +1600,13 @@ static int sdma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
 	case DMA_TERMINATE_ALL:
 		sdma_disable_channel(sdmac);
 		return 0;
+	/* only support pause/resume on cyclic mode */
+	case DMA_PAUSE:
+		return sdma_pause_channel(sdmac);
+
+	case DMA_RESUME:
+		return sdma_resume_channel(sdmac);
+
 	case DMA_SLAVE_CONFIG:
 		if (dmaengine_cfg->direction == DMA_DEV_TO_MEM) {
 			sdmac->per_address = dmaengine_cfg->src_addr;
