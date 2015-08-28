@@ -195,6 +195,11 @@
 	dma-names = "rx", "tx";
 };
 
+&ecspi1 {
+	dmas = <&sdma 3 7 1>, <&sdma 4 7 2>;
+	dma-names = "rx", "tx";
+};
+
 &ldb {
 	compatible = "fsl,imx6dl-ldb", "fsl,imx53-ldb";
 
