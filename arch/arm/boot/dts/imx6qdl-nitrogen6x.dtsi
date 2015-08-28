@@ -612,6 +612,7 @@
 		status = "okay";
 	};
 
+#ifdef CONFIG_WL_TI
 	wl1271 {
 		compatible = "ti,wilink6";
 		pinctrl-names = "default";
@@ -640,6 +641,16 @@
 		flow_cntrl = <1>;
 		baud_rate = <115200>;
 	};
+#else
+	bt_rfkill: bt_rfkill {
+		compatible = "net,rfkill-gpio";
+		name = "bt_rfkill";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_bt_rfkill>;
+		bt_rfkill_reset-gpios = GP_BT_RFKILL_RESET;
+		type = <2>;
+	};
+#endif
 
 	fake_poweroff {
 		compatible = "fake-poweroff";
