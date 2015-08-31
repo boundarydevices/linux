@@ -481,7 +481,6 @@
 				MX7D_PAD_ECSPI2_SCLK__GPIO4_IO20  0x80000000  /* v3p3 */
 				MX7D_PAD_ECSPI2_MOSI__GPIO4_IO21  0x80000000  /* pwrctrl1 */
 				MX7D_PAD_ECSPI2_MISO__GPIO4_IO22  0x80000000  /* pwrctrl2 */
-				MX7D_PAD_ENET1_CRS__GPIO7_IO14    0x80000000  /* BT REG on */
 				MX7D_PAD_SD1_RESET_B__GPIO5_IO2   0x59
 				MX7D_PAD_SD1_CD_B__GPIO5_IO0      0x59
 				MX7D_PAD_SD1_WP__GPIO5_IO1        0x59
@@ -501,6 +500,12 @@
 		pinctrl_hog_sd2_vselect: hoggrp_sd2vselect {
 			fsl,pins = <
 				MX7D_PAD_GPIO1_IO12__SD2_VSELECT  0x59
+			>;
+		};
+
+		pinctrl_bt: btgrp-1 {
+			fsl,pins = <
+				MX7D_PAD_ENET1_CRS__GPIO7_IO14    0x80000000  /* BT REG on */
 			>;
 		};
 
@@ -955,20 +960,24 @@
 };
 
 &uart1 {
-	pinctrl-names = "default";
+	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_uart1_1>;
+	pinctrl-1 = <&pinctrl_uart1_1>;
 	assigned-clocks = <&clks IMX7D_UART1_ROOT_SRC>;
 	assigned-clock-parents = <&clks IMX7D_OSC_24M_CLK>;
 	status = "okay";
 };
 
 &uart3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart3_1>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_uart3_1
+		     &pinctrl_bt>;
+	pinctrl-1 = <&pinctrl_uart3_1
+		     &pinctrl_bt>;
 	fsl,uart-has-rtscts;
 	assigned-clocks = <&clks IMX7D_UART3_ROOT_SRC>;
 	assigned-clock-parents = <&clks IMX7D_PLL_SYS_MAIN_240M_CLK>;
-	status = "disabled";
+	status = "okay";
 	/* for DTE mode, add below change */
 	/* fsl,dte-mode;*/
 	/* pinctrl-0 = <&pinctrl_uart3dte_1>; */
