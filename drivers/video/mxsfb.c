@@ -608,6 +608,8 @@ static void mxsfb_disable_controller(struct fb_info *fb_info)
 	reg = readl(host->base + LCDC_VDCTRL4);
 	writel(reg & ~VDCTRL4_SYNC_SIGNALS_ON, host->base + LCDC_VDCTRL4);
 
+	clk_disable_pix(host);
+
 	host->enabled = 0;
 
 	if (host->reg_lcd) {
