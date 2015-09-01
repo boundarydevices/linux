@@ -26,31 +26,41 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 
-static int calibration[9];
-module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
-
-#define CALIBRATION_XRES 7
-#define CALIBRATION_YRES 8
+static int calibration[12];
+module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR | S_IWGRP);
 
 static void translate(int *px, int *py)
 {
-	int x, y, x1, y1;
-	if (calibration[6]) {
-		x1 = *px;
-		y1 = *py;
+	if (calibration[0] || calibration[1] || calibration[2]) {
+		int x = *px;
+		int y = *py;
+		u32 s[6];
+		s64 xsum, ysum;
+		int i;
 
-		x = calibration[0] * x1 +
-			calibration[1] * y1 +
-			calibration[2];
-		x /= calibration[6];
+		s[0] = 1 << 16;
+		s[1] = x << (16 - 12);
+		s[2] = y << (16 - 12);
+		s[3] = (s[1] * s[2]) >> 16;
+		s[4] = (s[1] * s[1]) >> 16;
+		s[5] = (s[2] * s[2]) >> 16;
+
+		xsum = 0;
+		ysum = 0;
+		for (i = 0; i < 6 ; i++) {
+			xsum += (calibration[i] * (s64)s[i]);
+			ysum += (calibration[i + 6] * (s64)s[i]);
+		}
+		x = (s32)(xsum >> (32 - 12));
+		y = (s32)(ysum >> (32 - 12));
 		if (x < 0)
 			x = 0;
-		y = calibration[3] * x1 +
-			calibration[4] * y1 +
-			calibration[5];
-		y /= calibration[6];
 		if (y < 0)
 			y = 0;
+		if (x > 4095)
+			x = 4095;
+		if (y > 4095)
+			y = 4095;
 		*px = x ;
 		*py = y ;
 	}
@@ -416,17 +426,8 @@ static int ar1020_i2c_probe(struct i2c_client *client,
 	__set_bit(EV_SYN, input_dev->evbit);
 
 
-	if ((0 != calibration[CALIBRATION_XRES])
-	    &&
-	    (0 != calibration[CALIBRATION_YRES])) {
-		input_set_abs_params(input_dev, ABS_X, 0,
-				     calibration[CALIBRATION_XRES], 0, 0);
-		input_set_abs_params(input_dev, ABS_Y, 0,
-				     calibration[CALIBRATION_YRES], 0, 0);
-	} else {
-		input_set_abs_params(input_dev, ABS_X, 0, 4095, 0, 0);
-		input_set_abs_params(input_dev, ABS_Y, 0, 4095, 0, 0);
-	}
+	input_set_abs_params(input_dev, ABS_X, 0, 4095, 0, 0);
+	input_set_abs_params(input_dev, ABS_Y, 0, 4095, 0, 0);
 	input_set_abs_params(input_dev, ABS_PRESSURE, 0, 1, 0, 0);
 
 	input_set_drvdata(input_dev, priv);
