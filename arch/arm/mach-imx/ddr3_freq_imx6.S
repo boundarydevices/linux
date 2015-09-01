@@ -523,6 +523,14 @@ poll_conreq_set_1:
 	cmp	r0, #(0x4 << 12)
 	bne	poll_conreq_set_1
 
+	/*
+	 * if requested frequency is great than
+	 * 300MHz, skip setting bypass adopt mode.
+	 */
+	ldr	r1, =300000000
+	cmp	r4, r1
+	bge	1f
+
 	is_mx6qp
 	bne	1f
 	/* Switch to adopt mode, set MMDC0_MAARCR bit25~26 to 2b'01 */
@@ -728,17 +736,6 @@ continue_dll_off_3:
 	bic	r0, r0, #(0x1 << 8)
 	str	r0, [r5, #MMDC0_MADPCR0]
 
-	is_mx6qp
-	bne	2f
-	/*
-	 * Switch back to adopt_bp mode, set MMDC0_MAARCR
-	 * bit25~26 to 2b'10.
-	 */
-	ldr	r0, [r5, #MMDC0_MAARCR]
-	bic	r0, r0, #(0x3 << 25)
-	orr	r0, r0, #(0x2 << 25)
-	str	r0, [r5, #MMDC0_MAARCR]
-2:
 	mov	r0, #0x0
 	str	r0, [r5, #MMDC0_MDSCR]
 poll_conreq_clear_1:

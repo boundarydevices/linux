@@ -28,8 +28,6 @@
 			  <&clks IMX7D_SAI1_ROOT_CLK>;
 	assigned-clock-parents = <&clks IMX7D_PLL_AUDIO_POST_DIV>;
 	assigned-clock-rates = <0>, <24576000>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_sai1>;
 	status = "okay";
 };
 
@@ -38,8 +36,9 @@
 };
 
 &mqs {
-	pinctrl-names = "default";
+	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_mqs>;
+	pinctrl-1 = <&pinctrl_mqs>;
 	clocks = <&clks IMX7D_SAI1_ROOT_CLK>;
 	clock-names = "mclk";
 	status = "okay";
