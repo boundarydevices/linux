@@ -118,6 +118,14 @@
 		gpios = <&gpio2 6 GPIO_ACTIVE_LOW>;
 	};
 
+	reg_vref_3v3: regulator@7 {
+		compatible = "regulator-fixed";
+		reg = <7>;
+		regulator-name = "vref-3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+	};
+
 	reg_pcie_gpio: regulator-pcie-gpio {
 		compatible = "regulator-fixed";
 		pinctrl-names = "default";
@@ -164,6 +172,16 @@
 			};
 		};
 	};
+};
+
+&adc1 {
+	vref-supply = <&reg_vref_3v3>;
+	status = "okay";
+};
+
+&adc2 {
+	vref-supply = <&reg_vref_3v3>;
+	status = "okay";
 };
 
 &audmux {
