@@ -285,10 +285,10 @@ int ipu_calc_stripes_sizes(const unsigned int input_frame_width,
 	if ((input_frame_width < 4) || (output_frame_width < 4))
 		return 1;
 
-	irr_opt = div_u64((((u64)(input_frame_width - 1)) << 32),
-			  (output_frame_width - 1));
-	rr_opt = div_u64((((u64)(output_frame_width - 1)) << 32),
-			 (input_frame_width - 1));
+	irr_opt = div_u64((((u64)(input_frame_width)) << 32),
+			  (output_frame_width));
+	rr_opt = div_u64((((u64)(output_frame_width)) << 32),
+			  input_frame_width);
 
 	if ((input_m == 0) || (output_m == 0) || (input_f == 0) || (output_f == 0)
 	    || (input_frame_width < (2 * input_f))
@@ -351,7 +351,7 @@ int ipu_calc_stripes_sizes(const unsigned int input_frame_width,
 				       (right->input_width - 1)), (right->output_width - 1));
 			left->irr = right->irr = truncate(0, div, 1);
 		} else { /* with overlap */
-			onw = truncate(0, (((u64)output_frame_width - 1) << 32) >> 1,
+			onw = truncate(0, (((u64)output_frame_width) << 32) >> 1,
 				       output_f);
 			inw = truncate(0, onw * irr_opt, input_f);
 			/* this is the maximal inw which allows the same resizing ratio */
@@ -402,7 +402,7 @@ int ipu_calc_stripes_sizes(const unsigned int input_frame_width,
 			 right->input_width, right->input_column,
 			 right->output_width,
 			 right->output_column, difwr, left->irr);
-		} else { /* independent stripes */
+	} else { /* independent stripes */
 		onw_min = output_frame_width - maximal_stripe_width;
 		/* onw is a multiple of output_f, in the range */
 		/* [max(output_f,output_frame_width-maximal_stripe_width),*/
