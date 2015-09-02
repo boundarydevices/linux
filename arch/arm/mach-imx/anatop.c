@@ -137,7 +137,8 @@ void imx_anatop_pre_suspend(void)
 	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)
 		imx_anatop_disable_pu(true);
 
-	if (imx_mmdc_get_ddr_type() == IMX_DDR_TYPE_LPDDR2)
+	if ((imx_mmdc_get_ddr_type() == IMX_DDR_TYPE_LPDDR2) &&
+		!imx_gpc_usb_wakeup_enabled())
 		imx_anatop_enable_2p5_pulldown(true);
 	else
 		imx_anatop_enable_weak2p5(true);
@@ -164,7 +165,8 @@ void imx_anatop_post_resume(void)
 	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)
 		imx_anatop_disable_pu(false);
 
-	if (imx_mmdc_get_ddr_type() == IMX_DDR_TYPE_LPDDR2)
+	if ((imx_mmdc_get_ddr_type() == IMX_DDR_TYPE_LPDDR2) &&
+		!imx_gpc_usb_wakeup_enabled())
 		imx_anatop_enable_2p5_pulldown(false);
 	else
 		imx_anatop_enable_weak2p5(false);

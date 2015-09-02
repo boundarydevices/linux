@@ -62,6 +62,9 @@
 #define DEFAULT_IPG_RATE		66000000
 #define GPC_PU_UP_DELAY_MARGIN		2
 
+/* for irq #74 and #75 */
+#define GPC_USB_VBUS_WAKEUP_IRQ_MASK		0xc00
+
 struct pu_domain {
 	struct generic_pm_domain base;
 	struct regulator *reg;
@@ -146,6 +149,24 @@ unsigned int imx_gpc_is_m4_sleeping(void)
 		return 1;
 
 	return 0;
+}
+
+bool imx_gpc_usb_wakeup_enabled(void)
+{
+	if (!(cpu_is_imx6sx() || cpu_is_imx6ul()))
+		return false;
+
+	/*
+	 * for SoC later than i.MX6SX, USB vbus wakeup
+	 * only needs weak 2P5 on, stop_mode_config is
+	 * NOT needed, so we check if is USB vbus wakeup
+	 * is enabled(assume irq #74 and #75) to decide
+	 * if to keep weak 2P5 on.
+	 */
+	if (gpc_wake_irqs[1] & GPC_USB_VBUS_WAKEUP_IRQ_MASK)
+		return true;
+
+	return false;
 }
 
 unsigned int imx_gpc_is_mf_mix_off(void)
