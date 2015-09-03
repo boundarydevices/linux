@@ -1047,6 +1047,7 @@ static int init_sata(struct device *dev, void __iomem *addr)
 	tmpdata = readl(IOMUXC_GPR13);
 	writel(((tmpdata & ~0x2) | 0x2), IOMUXC_GPR13);
 
+	usleep_range(100, 200);
 	/* Get the AHB clock rate, and configure the TIMER1MS reg later */
 	clk = clk_get(NULL, "ahb");
 	if (IS_ERR(clk)) {
