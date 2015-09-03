@@ -142,6 +142,7 @@ int sata_init(void __iomem *addr, unsigned long timer1ms)
 	u32 tmpdata;
 	int iterations = 20;
 
+	usleep_range(100, 200);
 	/*
 	 * Make sure that SATA PHY is enabled
 	 * The PDDQ mode is disabled.
