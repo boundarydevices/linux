@@ -1195,6 +1195,8 @@ static int start_rx_dma(struct imx_port *sport)
 
 #define TXTL_DEFAULT 2 /* reset default */
 #define RXTL_DEFAULT ((uart_console(&sport->port)) ? 1 : 16) /* reset default */
+#define TXTL_DMA 8 /* DMA burst setting */
+#define RXTL_DMA 9 /* DMA burst setting */
 
 static void imx_setup_ufcr(struct imx_port *sport,
 			  unsigned char txwl, unsigned char rxwl)
@@ -1249,7 +1251,8 @@ static int imx_uart_dma_init(struct imx_port *sport)
 	slave_config.direction = DMA_DEV_TO_MEM;
 	slave_config.src_addr = sport->port.mapbase + URXD0;
 	slave_config.src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
-	slave_config.src_maxburst = RXTL_DEFAULT;
+	/* one byte less than the watermark level to enable the aging timer */
+	slave_config.src_maxburst = RXTL_DMA - 1;
 	ret = dmaengine_slave_config(sport->dma_chan_rx, &slave_config);
 	if (ret) {
 		dev_err(dev, "error in RX dma configuration.\n");
@@ -1280,7 +1283,7 @@ static int imx_uart_dma_init(struct imx_port *sport)
 	slave_config.direction = DMA_MEM_TO_DEV;
 	slave_config.dst_addr = sport->port.mapbase + URTX0;
 	slave_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
-	slave_config.dst_maxburst = TXTL_DEFAULT;
+	slave_config.dst_maxburst = TXTL_DMA;
 	ret = dmaengine_slave_config(sport->dma_chan_tx, &slave_config);
 	if (ret) {
 		dev_err(dev, "error in TX dma configuration.");
@@ -1315,6 +1318,8 @@ static void imx_enable_dma(struct imx_port *sport)
 	temp |= UCR4_IDDMAEN;
 	writel(temp, sport->port.membase + UCR4);
 
+	imx_setup_ufcr(sport, TXTL_DMA, RXTL_DMA);
+
 	sport->dma_is_enabled = 1;
 }
 
@@ -1336,6 +1341,8 @@ static void imx_disable_dma(struct imx_port *sport)
 	temp = readl(sport->port.membase + UCR4);
 	temp &= ~UCR4_IDDMAEN;
 	writel(temp, sport->port.membase + UCR4);
+
+	imx_setup_ufcr(sport, TXTL_DEFAULT, RXTL_DEFAULT);
 
 	sport->dma_is_enabled = 0;
 }
