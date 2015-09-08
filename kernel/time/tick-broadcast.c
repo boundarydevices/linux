@@ -597,7 +597,7 @@ again:
 	 * Sanity check. Catch the case where we try to broadcast to
 	 * offline cpus.
 	 */
-	if (WARN_ON_ONCE(!cpumask_subset(tmpmask, cpu_online_mask)))
+	if (!cpumask_subset(tmpmask, cpu_online_mask))
 		cpumask_and(tmpmask, tmpmask, cpu_online_mask);
 
 	/*
