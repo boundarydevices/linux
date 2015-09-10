@@ -38,7 +38,7 @@
 #include <linux/mutex.h>
 #include <linux/mipi_csi2.h>
 #include <media/v4l2-chip-ident.h>
-#include <media/v4l2-int-device.h>
+#include "v4l2-int-device.h"
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
