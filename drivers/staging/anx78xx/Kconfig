@@ -1,0 +1,7 @@
+config DRM_ANX78XX
+	tristate "Analogix ANX78XX bridge"
+	help
+       	ANX78XX is a HD video transmitter chip over micro-USB
+		connector for smartphone device.
+
+
