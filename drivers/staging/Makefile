@@ -1,6 +1,7 @@
 # Makefile for staging directory
 
 obj-y				+= media/
+obj-$(CONFIG_DRM_ANX78XX)	+= anx78xx/
 obj-$(CONFIG_SLICOSS)		+= slicoss/
 obj-y				+= typec/
 obj-$(CONFIG_PRISM2_USB)	+= wlan-ng/
