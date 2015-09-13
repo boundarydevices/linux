@@ -164,6 +164,8 @@
 			MX6QDL_PAD_DISP0_DAT20__GPIO5_IO14	0x1b0b0		/* NC */
 			MX6QDL_PAD_DISP0_DAT21__GPIO5_IO15	0x1b0b0		/* NC */
 			MX6QDL_PAD_DISP0_DAT22__GPIO5_IO16	0x1b0b0		/* NC */
+#define GP_ANX7738_RESET	<&gpio2 0 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_NANDF_D0__GPIO2_IO00		0x130b0		/* I_HDMI_RESET_N */
 		>;
 	};
 
@@ -187,14 +189,27 @@
 
 	pinctrl_i2c1mux: i2c1muxgrp {
 		fsl,pins = <
-#define GP_I2C1_MUX_TC3587	 <&gpio6 16 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x030b0
 #define GP_I2C1_MUX_KL04	<&gpio5 27 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_CSI0_DAT9__GPIO5_IO27	0x030b0
 #define GP_I2C1_MUX_ANX7814	<&gpio1 10 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_SD2_CLK__GPIO1_IO10		0x030b0
 #define GP_I2C1_MUX_AX7738	<&gpio2 1 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_D1__GPIO2_IO01		0x030b0
+#define GP_I2C1_MUX_TC3587	 <&gpio6 16 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x030b0
+		>;
+	};
+
+	pinctrl_i2c1c_anx7814: i2c2a_anx7814grp {
+		fsl,pins = <
+#define GP_ANX7814_P_DWN       <&gpio1 13 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_SD2_DAT2__GPIO1_IO13		0x1b0b0		/* O_HDMI_PD */
+#define GP_ANX7814_RESET       <&gpio2 5 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x130b0		/* O_HDMI_RESET_N */
+#define GP_ANX7814_CBL_DET     <&gpio2 3 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_D3__GPIO2_IO03		0x130b0		/* O_HDMI_MYDP_DET_INTR */
+#define GP_ANX7814_HDMI_INTR   <&gpio1 14 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_SD2_DAT1__GPIO1_IO14		0x1b0b0		/* O_HDMI_INTR */
 		>;
 	};
 
@@ -415,15 +430,10 @@
 		pinctrl-0 = <&pinctrl_i2c1mux>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		mux-gpios = GP_I2C1_MUX_TC3587, GP_I2C1_MUX_KL04, GP_I2C1_MUX_ANX7814, GP_I2C1_MUX_AX7738;
+		mux-gpios = GP_I2C1_MUX_KL04, GP_I2C1_MUX_ANX7814, GP_I2C1_MUX_AX7738, GP_I2C1_MUX_TC3587;
 		i2c-parent = <&i2c1>;
 		idle-state = <0>;
 
-		i2c1@0 {
-			reg = <0>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
 		i2c1a: i2c1@1 {
 			reg = <1>;
 			#address-cells = <1>;
@@ -434,28 +444,8 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
-		i2c1@3 {
-			reg = <3>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
 		i2c1c: i2c1@4 {
 			reg = <4>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
-		i2c1@5 {
-			reg = <5>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
-		i2c1@6 {
-			reg = <6>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
-		i2c1@7 {
-			reg = <7>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
@@ -476,12 +466,6 @@
 		i2c-parent = <&i2c2>;
 		idle-state = <0>;
 
-		i2c2@0 {
-			reg = <0>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
-
 		i2c2a: i2c2@1 {
 			reg = <1>;
 			#address-cells = <1>;
@@ -495,41 +479,57 @@
 
 	regulators {
 		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
 
-		reg_1p8v: 1p8v {
+		reg_1p0v: regulator@0 {
 			compatible = "regulator-fixed";
+			reg = <0>;
+			regulator-name = "1P0V";
+			regulator-min-microvolt = <1000000>;
+			regulator-max-microvolt = <1000000>;
+			regulator-always-on;
+		};
+
+		reg_1p8v: regulator@1 {
+			compatible = "regulator-fixed";
+			reg = <1>;
 			regulator-name = "1P8V";
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
 			regulator-always-on;
 		};
 
-		reg_2p5v: 2p5v {
+		reg_2p5v: regulator@2 {
 			compatible = "regulator-fixed";
+			reg = <2>;
 			regulator-name = "2P5V";
 			regulator-min-microvolt = <2500000>;
 			regulator-max-microvolt = <2500000>;
 			regulator-always-on;
 		};
 
-		reg_3p3v: 3p3v {
+		reg_3p3v: regulator@3 {
 			compatible = "regulator-fixed";
+			reg = <3>;
 			regulator-name = "3P3V";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 			regulator-always-on;
 		};
 
-		reg_5v: 5v {
+		reg_5v: regulator@4 {
 			compatible = "regulator-fixed";
+			reg = <4>;
 			regulator-name = "5V";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 			regulator-always-on;
 		};
 
-		reg_usb_otg_vbus: usb_otg_vbus {
+		reg_usb_otg_vbus: regulator@5 {
 			compatible = "regulator-fixed";
+			reg = <5>;
 			regulator-name = "usb_otg_vbus";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
@@ -726,7 +726,7 @@
 };
 
 &i2c1 {
-	clock-frequency = <100000>;
+	clock-frequency = <50000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c1>;
 	status = "okay";
@@ -734,7 +734,38 @@
 	/* microcontroller KL04Z32TFK4 */
 };
 
-&i2c1a {
+&i2c1b {
+	anx7814: anx7814@38 {
+#if 1
+		compatible = "analogix,anx7814";
+		/* uses many addresses: 0x38,0x39,0x3d,0x3f,0x40*/
+		reg = <0x38>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c1c_anx7814>;
+		pd-gpios = GP_ANX7814_P_DWN;
+		reset-gpios = GP_ANX7814_RESET;
+		analogix,cbl-det-gpio = GP_ANX7814_CBL_DET;
+		analogix,external-ldo-control= <0>;
+		analogix,v10-ctrl-gpio = <&reg_1p0v>;
+		analogix,v33-ctrl-gpio = <&reg_3p3v>;
+#else
+		compatible = "anx7816";
+		/* uses many addresses: 0x38,0x39,0x3d,0x3f,0x40*/
+		reg = <0x38>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c1c_anx7814>;
+		analogix,p-dwn-gpio = GP_ANX7814_P_DWN;
+		analogix,reset-gpio = GP_ANX7814_RESET;
+		analogix,cbl-det-gpio = GP_ANX7814_CBL_DET;
+		analogix,external-ldo-control= <0>;
+		analogix,v10-ctrl-gpio = <&reg_1p0v>;
+		analogix,v33-ctrl-gpio = <&reg_3p3v>;
+#endif
+
+	};
+};
+
+&i2c1d {
 	tc358743_mipi: tc358743_mipi@0f {
 		compatible = "tc358743_mipi";
 		reg = <0x0f>;
