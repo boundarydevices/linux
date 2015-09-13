@@ -624,12 +624,6 @@
 		i2c-parent = <&i2c2>;
 		idle-state = <0>;
 
-		i2c2@0 {
-			reg = <0>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
-
 		i2c2a: i2c2@1 {
 			reg = <1>;
 			#address-cells = <1>;
@@ -638,12 +632,6 @@
 
 		i2c2b: i2c2@2 {
 			reg = <2>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
-
-		i2c2@3 {
-			reg = <3>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
@@ -666,12 +654,6 @@
 
 		i2c-parent = <&i2c3>;
 		idle-state = <0>;
-
-		i2c3@0 {
-			reg = <0>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
 
 		i2c3a: i2c3@1 {
 			reg = <1>;
