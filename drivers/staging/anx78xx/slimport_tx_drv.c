@@ -2285,30 +2285,30 @@ static void sp_state_process(struct anx78xx *anx78xx)
 /******************Start INT process********************/
 static void sp_tx_int_rec(struct anx78xx *anx78xx)
 {
-	sp_read_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1,
-		&sp.common_int_status.common_int[0]);
-	sp_write_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1,
-		sp.common_int_status.common_int[0]);
+	struct device *dev = &anx78xx->client->dev;
+	u8 *p = sp.common_int_status.common_int;
 
-	sp_read_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 1,
-		&sp.common_int_status.common_int[1]);
-	sp_write_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 1,
-		sp.common_int_status.common_int[1]);
+	sp_read_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1, &p[0]);
+	sp_write_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1, p[0]);
 
-	sp_read_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 2,
-		&sp.common_int_status.common_int[2]);
-	sp_write_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 2,
-		sp.common_int_status.common_int[2]);
+	sp_read_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 1, &p[1]);
+	sp_write_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 1, p[1]);
 
-	sp_read_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 3,
-		&sp.common_int_status.common_int[3]);
-	sp_write_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 3,
-		sp.common_int_status.common_int[3]);
+	sp_read_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 2, &p[2]);
+	sp_write_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 2, p[2]);
 
-	sp_read_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 6,
-		&sp.common_int_status.common_int[4]);
-	sp_write_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 6,
-		sp.common_int_status.common_int[4]);
+	sp_read_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 3, &p[3]);
+	sp_write_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 3, p[3]);
+
+	sp_read_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 6, &p[4]);
+	sp_write_reg(anx78xx, TX_P2, SP_COMMON_INT_STATUS1 + 6, p[4]);
+	if (p[0] | p[1] | p[2] | p[3] | p[4])
+		dev_dbg(dev, "%s: status1: %02x %02x %02x %02x %02x\n", __func__,
+			p[0], p[1], p[2], p[3], p[4]);
+	if (anx78xx->first_time) {
+		anx78xx->first_time = 0;
+		p[3] |= PLUG;
+	}
 }
 
 static void sp_hdmi_rx_int_rec(struct anx78xx *anx78xx)
