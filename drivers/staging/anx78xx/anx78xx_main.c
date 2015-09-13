@@ -30,13 +30,13 @@ void anx78xx_poweron(struct anx78xx *anx78xx)
 	struct device *dev = &anx78xx->client->dev;
 	struct anx78xx_platform_data *pdata = anx78xx->pdata;
 
-	gpiod_set_value_cansleep(pdata->gpiod_reset, 0);
+	gpiod_set_value_cansleep(pdata->gpiod_reset, 1);
 	usleep_range(1000, 2000);
 
 	gpiod_set_value_cansleep(pdata->gpiod_pd, 0);
 	usleep_range(1000, 2000);
 
-	gpiod_set_value_cansleep(pdata->gpiod_reset, 1);
+	gpiod_set_value_cansleep(pdata->gpiod_reset, 0);
 
 	dev_dbg(dev, "power on\n");
 }
@@ -46,7 +46,7 @@ void anx78xx_poweroff(struct anx78xx *anx78xx)
 	struct device *dev = &anx78xx->client->dev;
 	struct anx78xx_platform_data *pdata = anx78xx->pdata;
 
-	gpiod_set_value_cansleep(pdata->gpiod_reset, 0);
+	gpiod_set_value_cansleep(pdata->gpiod_reset, 1);
 	usleep_range(1000, 2000);
 
 	gpiod_set_value_cansleep(pdata->gpiod_pd, 1);
@@ -153,6 +153,7 @@ static int anx78xx_i2c_probe(struct i2c_client *client,
 
 	INIT_DELAYED_WORK(&anx78xx->work, anx78xx_work_func);
 
+	anx78xx->first_time = 1;
 	anx78xx->workqueue = create_singlethread_workqueue("anx78xx_work");
 	if (anx78xx->workqueue == NULL) {
 		dev_err(&client->dev, "failed to create work queue\n");
