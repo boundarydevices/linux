@@ -772,7 +772,6 @@
 	phy-mode = "rgmii";
 #if 0
 	phy-reset-gpios = GP_ENET_PHY_RESET;
-	status = "okay";
 #endif
 	interrupts-extended = GPIRQ_ENET,
 			      <&intc 0 119 IRQ_TYPE_LEVEL_HIGH>;
