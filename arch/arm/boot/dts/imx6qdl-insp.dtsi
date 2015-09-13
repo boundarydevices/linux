@@ -481,12 +481,6 @@
 		i2c-parent = <&i2c2>;
 		idle-state = <0>;
 
-		i2c3@0 {
-			reg = <0>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
-
 		i2c3@1 {
 			/* J6 */
 			reg = <1>;
