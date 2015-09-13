@@ -36,6 +36,7 @@ struct anx78xx {
 	struct delayed_work work;
 	struct workqueue_struct *workqueue;
 	struct mutex lock;
+	int	first_time;
 };
 
 void anx78xx_poweron(struct anx78xx *data);
