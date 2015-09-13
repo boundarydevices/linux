@@ -553,7 +553,7 @@
 		reg = <0>;
 		#address-cells = <1>;
 		#size-cells = <1>;
-		mtd0@00000000 {
+		mtd@00000000 {
 			label = "U-Boot";
 			reg = <0x0 0xC0000>;
 		};
