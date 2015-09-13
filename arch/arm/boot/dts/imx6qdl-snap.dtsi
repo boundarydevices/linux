@@ -400,12 +400,6 @@
 	i2c-parent = <&i2c3>;
 	idle-state = <0>;
 
-	i2c3@0 {
-		reg = <0>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-	};
-
 	i2c3a: i2c3@1 {
 		reg = <1>;
 		#address-cells = <1>;
