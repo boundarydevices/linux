@@ -16,9 +16,9 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
-        iomuxc_imx6q_nitrogen6_max: iomuxc-imx6q-nitrogen6-maxgrp {
-                status = "okay";
-        };
+	iomuxc_imx6q_nitrogen6_max: iomuxc-imx6q-nitrogen6-maxgrp {
+		status = "okay";
+	};
 };
 
 &iomuxc_imx6q_nitrogen6_max {
@@ -905,29 +905,29 @@
 };
 
 &i2c3 {
-        clock-frequency = <100000>;
-        pinctrl-names = "default";
-        pinctrl-0 = <&pinctrl_i2c3>;
-        status = "okay";
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c3>;
+	status = "okay";
 
-        egalax_ts@04 {
-                compatible = "eeti,egalax_ts";
-                reg = <0x04>;
-                interrupts-extended = GPIRQ_I2C3_J7;
-                wakeup-gpios = GP_I2C3_J7;
-        };
-
-        ft5x06_ts@38 {
-		compatible = "ft5x06-ts,ft5x06-ts";
-		reg = <0x38>;
-                interrupts-extended = GPIRQ_I2C3_J7;
+	egalax_ts@04 {
+		compatible = "eeti,egalax_ts";
+		reg = <0x04>;
+		interrupts-extended = GPIRQ_I2C3_J7;
 		wakeup-gpios = GP_I2C3_J7;
 	};
 
-        ili210x@41 {
+	ft5x06_ts@38 {
+		compatible = "ft5x06-ts,ft5x06-ts";
+		reg = <0x38>;
+		interrupts-extended = GPIRQ_I2C3_J7;
+		wakeup-gpios = GP_I2C3_J7;
+	};
+
+	ili210x@41 {
 		compatible = "ili210x";
 		reg = <0x41>;
-                interrupts-extended = GPIRQ_I2C3_J7;
+		interrupts-extended = GPIRQ_I2C3_J7;
 		wakeup-gpios = GP_I2C3_J7;
 	};
 
@@ -1129,10 +1129,10 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart5>;
 	control-gpios = GP_UART5_RX_EN, GP_UART5_TX_EN, GP_UART5_RS485_EN, GP_UART5_AON;
-#define M_RX_EN         1
-#define M_TX_EN         2
-#define M_RS485         4
-#define M_AON           8
+#define M_RX_EN		1
+#define M_TX_EN		2
+#define M_RS485		4
+#define M_AON		8
 	off_levels = <0>;
 	rxact_mask = <0>;
 	rxact_levels = <0>;
