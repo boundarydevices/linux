@@ -286,6 +286,7 @@
 			MX6QDL_PAD_SD1_CMD__PWM4_OUT		0x1b0b1
 		>;
 	};
+
 	pinctrl_reg_usbotg_vbus: reg-usbotg-vbusgrp {
 		fsl,pins = <
 #define GP_REG_USBOTG	<&gpio3 22 GPIO_ACTIVE_HIGH>
@@ -419,12 +420,83 @@
 		t_lvds2 = &t_lvds2;
 	};
 
+	backlight_lcd: backlight_lcd {
+		compatible = "pwm-backlight";
+		pwms = <&pwm1 0 5000000>;
+		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
+		default-brightness-level = <10>;
+	};
+
+	backlight_lvds0 {
+		compatible = "pwm-backlight";
+		pwms = <&pwm4 0 5000000>;
+		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
+		default-brightness-level = <10>;
+	};
+
+	backlight_lvds1: backlight_lvds1 {
+		compatible = "pwm-backlight";
+		pwms = <&pwm2 0 5000000>;
+		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
+		default-brightness-level = <10>;
+	};
+
+	bt_rfkill {
+		compatible = "net,rfkill-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_bt_rfkill>;
+		name = "bt_rfkill";
+		type = <2>;	/* bluetooth */
+		bt_rfkill_reset-gpios = GP_BT_RFKILL_RESET;
+	};
+
 	clocks {
 		clk24m: clk24m {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
 			clock-frequency = <24000000>;
 		};
+	};
+
+	fb_hdmi: fb@0 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "hdmi";
+		interface_pix_fmt = "RGB24";
+		mode_str ="1280x720M@60";
+		default_bpp = <32>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	fb_lcd: fb@1 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "lcd";
+		interface_pix_fmt = "RGB666";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	fb_lvds: fb@2 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "ldb";
+		interface_pix_fmt = "RGB666";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	fb_lvds2: fb@3 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "ldb";
+		interface_pix_fmt = "RGB666";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
 	};
 
 	gpio-keys {
@@ -468,6 +540,56 @@
 			gpios = GP_GPIOKEY_VOL_UP;
 			linux,code = <KEY_VOLUMEUP>;
 		};
+	};
+
+	i2cmux@2 {
+		compatible = "i2c-mux-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2mux>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		mux-gpios = GP_I2C2MUX_A, GP_I2C2MUX_B;
+		i2c-parent = <&i2c2>;
+		idle-state = <0>;
+
+		i2c2a: i2c2@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c2b: i2c2@2 {
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+
+	i2cmux@3 {
+		compatible = "i2c-mux-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3mux>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		mux-gpios = GP_I2C3MUX_A;
+		i2c-parent = <&i2c3>;
+		idle-state = <0>;
+
+		i2c3a: i2c3@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+
+	lcd: lcd@0 {
+		compatible = "fsl,lcd";
+		ipu_id = <0>;
+		disp_id = <0>;
+		default_ifmt = "RGB666";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_lcd>;
+		status = "okay";
 	};
 
 	memory {
@@ -554,78 +676,6 @@
 		hdmi-controller = <&hdmi_audio>;
 	};
 
-	fb_hdmi: fb@0 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "hdmi";
-		interface_pix_fmt = "RGB24";
-		mode_str ="1280x720M@60";
-		default_bpp = <32>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	fb_lcd: fb@1 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "lcd";
-		interface_pix_fmt = "RGB666";
-		default_bpp = <16>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	fb_lvds: fb@2 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "ldb";
-		interface_pix_fmt = "RGB666";
-		default_bpp = <16>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	fb_lvds2: fb@3 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "ldb";
-		interface_pix_fmt = "RGB666";
-		default_bpp = <16>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	lcd: lcd@0 {
-		compatible = "fsl,lcd";
-		ipu_id = <0>;
-		disp_id = <0>;
-		default_ifmt = "RGB666";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_lcd>;
-		status = "okay";
-	};
-
-	backlight_lcd: backlight_lcd {
-		compatible = "pwm-backlight";
-		pwms = <&pwm1 0 5000000>;
-		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
-		default-brightness-level = <10>;
-	};
-
-	backlight_lvds0 {
-		compatible = "pwm-backlight";
-		pwms = <&pwm4 0 5000000>;
-		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
-		default-brightness-level = <10>;
-	};
-
-	backlight_lvds1: backlight_lvds1 {
-		compatible = "pwm-backlight";
-		pwms = <&pwm2 0 5000000>;
-		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
-		default-brightness-level = <10>;
-	};
-
 	v4l2_cap_0 {
 		compatible = "fsl,imx6q-v4l2-capture";
 		ipu_id = <0>;
@@ -677,55 +727,6 @@
 			compatible = "ti,wilink-clock";
 			#clock-cells = <0>;
 			clock-frequency = <38400000>;
-		};
-	};
-
-	bt_rfkill {
-		compatible = "net,rfkill-gpio";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_bt_rfkill>;
-		name = "bt_rfkill";
-		type = <2>;     /* bluetooth */
-		bt_rfkill_reset-gpios = GP_BT_RFKILL_RESET;
-	};
-
-	i2cmux@2 {
-		compatible = "i2c-mux-gpio";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c2mux>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		mux-gpios = GP_I2C2MUX_A, GP_I2C2MUX_B;
-		i2c-parent = <&i2c2>;
-		idle-state = <0>;
-
-		i2c2a: i2c2@1 {
-			reg = <1>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
-
-		i2c2b: i2c2@2 {
-			reg = <2>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
-	};
-
-	i2cmux@3 {
-		compatible = "i2c-mux-gpio";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c3mux>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		mux-gpios = GP_I2C3MUX_A;
-		i2c-parent = <&i2c3>;
-		idle-state = <0>;
-
-		i2c3a: i2c3@1 {
-			reg = <1>;
-			#address-cells = <1>;
-			#size-cells = <0>;
 		};
 	};
 };
