@@ -847,9 +847,9 @@
 };
 
 &i2c2a {
-	ov5642: ov5642@3d {
+	ov5642: ov5642@3c {
 		compatible = "ovti,ov5642";
-		reg = <0x3d>;
+		reg = <0x3c>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2a_ov5642>;
 		clocks = <&clks 200>;
@@ -867,9 +867,9 @@
 };
 
 &i2c2b {
-	ov5640_mipi: ov5640_mipi@3e {
+	ov5640_mipi: ov5640_mipi@3c {
 		compatible = "ovti,ov5640_mipi";
-		reg = <0x3e>;
+		reg = <0x3c>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2b_ov5640_mipi>;
 		clocks = <&clks 147>;
