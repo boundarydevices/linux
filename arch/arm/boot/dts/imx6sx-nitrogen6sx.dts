@@ -730,6 +730,13 @@
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 
+        egalax_ts@04 {
+                compatible = "eeti,egalax_ts";
+                reg = <0x04>;
+                interrupts-extended = GPIRQ_I2C3_J18;
+                wakeup-gpios = GP_I2C3_J18;
+        };
+
 	ft5x06_ts@38 {
 		compatible = "ft5x06-ts,ft5x06-ts";
 		reg = <0x38>;
