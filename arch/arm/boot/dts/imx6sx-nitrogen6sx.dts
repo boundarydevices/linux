@@ -406,6 +406,7 @@
 		fb_lcd = &lcdif1;
 		fb_lvds = &lcdif2;
 		lcd = &display0;
+		lvds = &display1;
 		ldb = &ldb;
 		mmc0 = &usdhc2;
 		mmc1 = &usdhc4;
