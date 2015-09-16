@@ -58,6 +58,15 @@ static struct fb_videomode lcdif_modedb[] = {
 	.vmode = FB_VMODE_NONINTERLACED,
 	.flag = 0,},
 	{
+	/* ASIT500MA6F5D 800x480 */
+	"ASIT500MA6F5D", 60, 800, 480, 1000000000000ULL / (800+88+40+48) / (480+32+13+3) / 60,
+	.left_margin = 88, .right_margin = 40,
+	.upper_margin = 32, .lower_margin = 13,
+	.hsync_len = 48, .vsync_len = 3,
+	.sync = FB_SYNC_CLK_LAT_FALL,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,},
+	{
 	/* Cevians wvga 800x480 */
 	"DC050WX", 60, 800, 480, 1000000000/960 * 1000 /525/60,
 	.left_margin = 96, .right_margin = 24,
