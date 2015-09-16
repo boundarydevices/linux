@@ -595,6 +595,7 @@ dtb-$(CONFIG_SOC_IMX7D) += \
 	imx7d-pico-pi.dtb \
 	imx7d-sbc-imx7.dtb \
 	imx7d-sdb.dtb \
+	imx7d-sdb-epdc.dtb \
 	imx7d-sdb-m4.dtb \
 	imx7d-sdb-sht11.dtb \
 	imx7s-colibri-eval-v3.dtb \
