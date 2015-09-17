@@ -1948,15 +1948,42 @@ gckCONTEXT_Update(
             recordArrayMap = &Context->recordArrayMap[i];
 
             /* Allocate the buffer. */
-            gcmkONERROR(gckOS_Allocate(
+            status = gckOS_Allocate(
                 Context->os,
                 Context->recordArraySize,
                 (gctPOINTER *) &recordArrayMap->kData
-                ));
+                );
+
+            if (gcmIS_ERROR(status))
+            {
+                break;
+            }
 
             /* Initialize fields. */
             recordArrayMap->key  = 0;
             recordArrayMap->next = &Context->recordArrayMap[n];
+        }
+
+        if (gcmIS_ERROR(status))
+        {
+            /* Error roll back. */
+            for (i = 0; i < gcdCONTEXT_BUFFER_COUNT; i++)
+            {
+                recordArrayMap = &Context->recordArrayMap[i];
+
+                if (recordArrayMap->kData)
+                {
+                    /* Free allocated recordArray. */
+                    gcmkOS_SAFE_FREE(Context->os, recordArrayMap->kData);
+                    recordArrayMap->kData = gcvNULL;
+                }
+            }
+
+            /* Free recordArray map. */
+            gcmkOS_SAFE_FREE(Context->os, Context->recordArrayMap);
+            Context->recordArrayMap = gcvNULL;
+
+            gcmONERROR(status);
         }
     }
 #else
