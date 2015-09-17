@@ -652,6 +652,12 @@
 		wakeup-gpios = GP_TOUCH_IRQ;
 		screen-size = <1280 800>;
 	};
+	gslx680_ts@40 {
+		compatible = "gslx680";
+		reg = <0x40>;
+		interrupts-extended = GP_TOUCH_IRQ;
+		wakeup-gpios = GP_TOUCH_IRQ;
+	};
 	ili210x@41 {
 		compatible = "ili210x";
 		reg = <0x41>;
