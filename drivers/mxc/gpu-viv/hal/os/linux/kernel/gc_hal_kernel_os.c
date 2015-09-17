@@ -175,7 +175,7 @@ _CreateMdlMap(
 
     gcmkHEADER_ARG("Mdl=0x%X ProcessID=%d", Mdl, ProcessID);
 
-    mdlMap = (PLINUX_MDL_MAP)kmalloc(sizeof(struct _LINUX_MDL_MAP), GFP_KERNEL | gcdNOWARN);
+    mdlMap = (PLINUX_MDL_MAP)kmalloc(sizeof(struct _LINUX_MDL_MAP), gcdNOWARN | GFP_ATOMIC);
     if (mdlMap == gcvNULL)
     {
         gcmkFOOTER_NO();
@@ -185,7 +185,8 @@ _CreateMdlMap(
     mdlMap->pid     = ProcessID;
     mdlMap->vmaAddr = gcvNULL;
     mdlMap->vma     = gcvNULL;
-    mdlMap->count   = 0;
+
+    atomic_set(&mdlMap->count, 0);
 
     mdlMap->next    = Mdl->maps;
     Mdl->maps       = mdlMap;
@@ -1230,6 +1231,8 @@ gckOS_MapMemory(
         }
     }
 
+    MEMORY_UNLOCK(Os);
+
     if (mdlMap->vmaAddr == gcvNULL)
     {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 4, 0)
@@ -1270,8 +1273,6 @@ gckOS_MapMemory(
 
             mdlMap->vmaAddr = gcvNULL;
 
-            MEMORY_UNLOCK(Os);
-
             gcmkFOOTER_ARG("status=%d", gcvSTATUS_OUT_OF_MEMORY);
             return gcvSTATUS_OUT_OF_MEMORY;
         }
@@ -1291,8 +1292,6 @@ gckOS_MapMemory(
             mdlMap->vmaAddr = gcvNULL;
 
             up_write(&current->mm->mmap_sem);
-
-            MEMORY_UNLOCK(Os);
 
             gcmkFOOTER_ARG("status=%d", gcvSTATUS_OUT_OF_RESOURCES);
             return gcvSTATUS_OUT_OF_RESOURCES;
@@ -1314,8 +1313,6 @@ gckOS_MapMemory(
                 );
 
             mdlMap->vmaAddr = gcvNULL;
-
-            MEMORY_UNLOCK(Os);
 
             gcmkFOOTER_ARG("status=%d", gcvSTATUS_OUT_OF_RESOURCES);
             return gcvSTATUS_OUT_OF_RESOURCES;
@@ -1343,8 +1340,6 @@ gckOS_MapMemory(
 
             mdlMap->vmaAddr = gcvNULL;
 
-            MEMORY_UNLOCK(Os);
-
             gcmkFOOTER_ARG("status=%d", gcvSTATUS_OUT_OF_RESOURCES);
             return gcvSTATUS_OUT_OF_RESOURCES;
         }
@@ -1352,8 +1347,6 @@ gckOS_MapMemory(
 
         up_write(&current->mm->mmap_sem);
     }
-
-    MEMORY_UNLOCK(Os);
 
     *Logical = mdlMap->vmaAddr;
 
@@ -1448,6 +1441,7 @@ gckOS_UnmapMemoryEx(
 {
     PLINUX_MDL_MAP          mdlMap;
     PLINUX_MDL              mdl = (PLINUX_MDL)Physical;
+    gctPOINTER              pointer = gcvNULL;
 
     gcmkHEADER_ARG("Os=0x%X Physical=0x%X Bytes=%lu Logical=0x%X PID=%d",
                    Os, Physical, Bytes, Logical, PID);
@@ -1473,12 +1467,17 @@ gckOS_UnmapMemoryEx(
             return gcvSTATUS_INVALID_ARGUMENT;
         }
 
-        _UnmapUserLogical(mdlMap->vmaAddr, mdl->numPages * PAGE_SIZE);
+        pointer = mdlMap->vmaAddr;
 
         gcmkVERIFY_OK(_DestroyMdlMap(mdl, mdlMap));
     }
 
     MEMORY_UNLOCK(Os);
+
+    if (pointer)
+    {
+        _UnmapUserLogical(pointer, mdl->numPages * PAGE_SIZE);
+    }
 
     /* Success. */
     gcmkFOOTER_NO();
@@ -1584,7 +1583,6 @@ gckOS_AllocateNonPagedMemory(
     long size, order;
     gctPOINTER vaddr;
 #endif
-    gctBOOL locked = gcvFALSE;
     gceSTATUS status;
 
     gcmkHEADER_ARG("Os=0x%X InUserSpace=%d *Bytes=%lu",
@@ -1612,9 +1610,6 @@ gckOS_AllocateNonPagedMemory(
 
     mdl->pagedMem = 0;
     mdl->numPages = numPages;
-
-    MEMORY_LOCK(Os);
-    locked = gcvTRUE;
 
 #ifndef NO_DMA_COHERENT
 #ifdef CONFIG_ARM64
@@ -1805,6 +1800,7 @@ gckOS_AllocateNonPagedMemory(
      * Will be used by get physical address
      * and mapuser pointer functions.
      */
+    MEMORY_LOCK(Os);
 
     if (!Os->mdlHead)
     {
@@ -1841,12 +1837,6 @@ OnError:
     {
         /* Free LINUX_MDL. */
         gcmkVERIFY_OK(_DestroyMdl(mdl));
-    }
-
-    if (locked)
-    {
-        /* Unlock memory. */
-        MEMORY_UNLOCK(Os);
     }
 
     /* Return the status. */
@@ -1904,8 +1894,6 @@ gceSTATUS gckOS_FreeNonPagedMemory(
     /* Convert physical address into a pointer to a MDL. */
     mdl = (PLINUX_MDL) Physical;
 
-    MEMORY_LOCK(Os);
-
 #ifndef NO_DMA_COHERENT
 #ifdef CONFIG_ARM64
     dma_free_coherent(gcvNULL,
@@ -1931,6 +1919,8 @@ gceSTATUS gckOS_FreeNonPagedMemory(
 
     _DestoryKernelVirtualMapping(mdl->addr);
 #endif /* NO_DMA_COHERENT */
+
+    MEMORY_LOCK(Os);
 
     mdlMap = mdl->maps;
 
@@ -3884,20 +3874,20 @@ gckOS_LockPages(
         }
     }
 
-    if (mdlMap->vmaAddr == gcvNULL)
+    MEMORY_UNLOCK(Os);
+
+    if (atomic_inc_return(&mdlMap->count) == 1)
     {
+        gcmkASSERT(mdlMap->vmaAddr == gcvNULL);
+
         status = allocator->ops->MapUser(allocator, mdl, mdlMap, Cacheable);
 
         if (gcmIS_ERROR(status))
         {
-            MEMORY_UNLOCK(Os);
-
             gcmkFOOTER_ARG("*status=%d", status);
             return status;
         }
     }
-
-    mdlMap->count++;
 
     /* Convert pointer to MDL. */
     *Logical = mdlMap->vmaAddr;
@@ -3907,8 +3897,6 @@ gckOS_LockPages(
     gcmkASSERT((PAGE_SIZE / 4096) >= 1);
 
     *PageCount = mdl->numPages * (PAGE_SIZE / 4096);
-
-    MEMORY_UNLOCK(Os);
 
     gcmkVERIFY_OK(gckOS_CacheFlush(
         Os,
@@ -4186,6 +4174,7 @@ gckOS_UnlockPages(
     PLINUX_MDL_MAP          mdlMap;
     PLINUX_MDL              mdl = (PLINUX_MDL)Physical;
     gckALLOCATOR            allocator = mdl->allocator;
+    gctPOINTER              pointer = gcvNULL;
 
     gcmkHEADER_ARG("Os=0x%X Physical=0x%X Bytes=%u Logical=0x%X",
                    Os, Physical, Bytes, Logical);
@@ -4203,21 +4192,26 @@ gckOS_UnlockPages(
     {
         if ((mdlMap->vmaAddr != gcvNULL) && (_GetProcessID() == mdlMap->pid))
         {
-            if (--mdlMap->count == 0)
+            if (atomic_dec_and_test(&mdlMap->count))
             {
-                allocator->ops->UnmapUser(
-                    allocator,
-                    mdlMap->vmaAddr,
-                    mdl->numPages * PAGE_SIZE);
-
+                /* User virtual address to be unmap. */
+                pointer = mdlMap->vmaAddr;
                 mdlMap->vmaAddr = gcvNULL;
             }
+
+            /* There is only one map for one process.*/
+            break;
         }
 
         mdlMap = mdlMap->next;
     }
 
     MEMORY_UNLOCK(Os);
+
+    if (pointer)
+    {
+        allocator->ops->UnmapUser(allocator, pointer, mdl->numPages * PAGE_SIZE);
+    }
 
     /* Success. */
     gcmkFOOTER_NO();
