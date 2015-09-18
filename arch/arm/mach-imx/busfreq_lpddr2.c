@@ -41,8 +41,8 @@
 #include <linux/sched.h>
 #include <linux/smp.h>
 
+#include "common.h"
 #include "hardware.h"
-
 
 static struct device *busfreq_dev;
 static int curr_ddr_rate;
@@ -53,8 +53,6 @@ void (*mx6_change_lpddr2_freq)(u32 ddr_freq, int bus_freq_mode) = NULL;
 extern unsigned int ddr_normal_rate;
 extern void mx6_lpddr2_freq_change(u32 freq, int bus_freq_mode);
 extern void imx6_up_lpddr2_freq_change(u32 freq, int bus_freq_mode);
-extern unsigned long save_ttbr1(void);
-extern void restore_ttbr1(unsigned long ttbr1);
 extern unsigned long ddr_freq_change_iram_base;
 extern unsigned long imx6_lpddr2_freq_change_start asm("imx6_lpddr2_freq_change_start");
 extern unsigned long imx6_lpddr2_freq_change_end asm("imx6_lpddr2_freq_change_end");

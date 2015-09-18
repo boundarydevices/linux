@@ -66,6 +66,10 @@ config HAVE_IMX_GPC
 	bool
 	select PM_GENERIC_DOMAINS if PM
 
+config HAVE_IMX_GPCV2
+	bool
+	select PM_GENERIC_DOMAINS if PM
+
 config HAVE_IMX_MMDC
 	bool
 
@@ -816,18 +820,19 @@ config SOC_IMX6
 	select HAVE_IMX_SRC
 	select HAVE_SMP
 	select MFD_SYSCON
+	select HAVE_ARM_SCU if SMP
+	select HAVE_ARM_TWD if SMP
 	select PL310_ERRATA_769419 if CACHE_PL310
 
 config SOC_IMX6Q
 	bool "i.MX6 Quad/DualLite support"
 	select ARM_ERRATA_764369 if SMP
-	select HAVE_ARM_SCU if SMP
-	select HAVE_ARM_TWD if SMP
 	select MIGHT_HAVE_PCI
 	select PCI_DOMAINS if PCI
 	select PINCTRL_IMX6Q
 	select SOC_IMX6
 	select ZONE_DMA
+	select MXC_MLB150
 
 	help
 	  This enables support for Freescale i.MX6 Quad processor.
@@ -851,6 +856,8 @@ config SOC_IMX6SX
 	select SOC_IMX6
 	select HAVE_IMX_RPMSG
 	select RPMSG
+	select MXC_MLB150
+	select KEYBOARD_SNVS_PWRKEY
 
 	help
 	  This enables support for Freescale i.MX6 SoloX processor.
@@ -858,12 +865,11 @@ config SOC_IMX6SX
 config SOC_IMX6UL
 	bool "i.MX6 UltraLite support"
 	select PINCTRL_IMX6UL
-	select HAVE_IMX_AMP
-	select HAVE_IMX_MCC
 	select MIGHT_HAVE_PCI
 	select PCI_DOMAINS if PCI
 	select SOC_IMX6
 	select ARM_ERRATA_814220
+	select KEYBOARD_SNVS_PWRKEY
 
 	help
 	  This enables support for Freescale i.MX6 UltraLite processor.
@@ -873,7 +879,10 @@ config SOC_IMX7
 	select CPU_V7
 	select ARM_GIC
 	select HAVE_SMP
+	select HAVE_IMX_ANATOP
+	select HAVE_IMX_SRC
 	select HAVE_IMX_DDRC
+	select HAVE_IMX_GPCV2
 	select ARM_ERRATA_814220
 
 config SOC_IMX7D
@@ -884,6 +893,7 @@ config SOC_IMX7D
 	select PINCTRL_IMX7D
 	select HAVE_IMX_RPMSG
 	select RPMSG
+	select KEYBOARD_SNVS_PWRKEY
 
 	help
 	  This enables support for Freescale i.MX7 Dual processor.
