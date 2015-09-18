@@ -60,8 +60,27 @@ extern struct imx_sema4_mutex *mcc_shm_ptr;
 
 struct imx_sema4_mutex *
 	imx_sema4_mutex_create(u32 dev_num, u32 mutex_num);
+#ifdef CONFIG_IMX_SEMA4
 int imx_sema4_mutex_destroy(struct imx_sema4_mutex *mutex_ptr);
 int imx_sema4_mutex_trylock(struct imx_sema4_mutex *mutex_ptr);
 int imx_sema4_mutex_lock(struct imx_sema4_mutex *mutex_ptr);
 int imx_sema4_mutex_unlock(struct imx_sema4_mutex *mutex_ptr);
+#else
+static inline int imx_sema4_mutex_destroy(struct imx_sema4_mutex *mutex_ptr)
+{
+	return 0;
+}
+static inline int imx_sema4_mutex_trylock(struct imx_sema4_mutex *mutex_ptr)
+{
+	return 0;
+}
+static inline int imx_sema4_mutex_lock(struct imx_sema4_mutex *mutex_ptr)
+{
+	return 0;
+}
+static inline int imx_sema4_mutex_unlock(struct imx_sema4_mutex *mutex_ptr)
+{
+	return 0;
+}
+#endif
 #endif /* __LINUX_IMX_SEMA4_H__ */
