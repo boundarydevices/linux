@@ -518,3 +518,22 @@
 	pinctrl-0 = <&pinctrl_wdog>;
 	fsl,ext-reset-output;
 };
+&csi2 {
+	status = "okay";
+	port {
+		csi2_ep: endpoint {
+			remote-endpoint = <&vadc_ep>;
+		};
+	};
+};
+
+&vadc {
+	vadc_in = <0>;
+	csi_id = <1>;
+	status = "okay";
+	port {
+		vadc_ep: endpoint {
+			remote-endpoint = <&csi2_ep>;
+		};
+	};
+};
