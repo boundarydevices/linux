@@ -1581,6 +1581,16 @@ gckCONTEXT_Construct(
         = gcmSIZEOF(gcsSTATE_DELTA_RECORD) * (gctUINT)context->numStates;
 #endif
 
+#ifdef CONFIG_ANDROID
+    if (!((context->hardware->identity.chipModel == gcv3000)
+     && (context->hardware->identity.chipRevision == 0x5450)
+     && (context->hardware->identity.chipFlags & gcvCHIP_FLAG_GC2000_R2))
+    )
+    {
+        context->recordArraySize
+            = gcmSIZEOF(gcsSTATE_DELTA_RECORD) * (gctUINT)context->numStates;
+    }
+#endif
 
     if (context->maxState > 0)
     {
