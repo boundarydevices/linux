@@ -147,7 +147,7 @@
 
 &adc1 {
 	vref-supply = <&reg_vref_1v8>;
-	status = "disabled";
+	status = "okay";
 };
 
 &cpu0 {
