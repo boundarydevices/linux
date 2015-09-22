@@ -305,6 +305,14 @@
         pinctrl-0 = <&pinctrl_i2c3_3>;
         status = "okay";
 
+	nfc@28 {
+		compatible = "nxp,pn547";
+		reg = <0x28>;
+		clock-frequency = <400000>;
+		interrupt-gpios = <&gpio2 2 IRQ_TYPE_NONE>;
+		enable-gpios = <&gpio2 1 GPIO_ACTIVE_HIGH>;
+	};
+
         touchscreen@4c {
                 compatible = "atmel,maxtouch";
                 reg = <0x4c>;
