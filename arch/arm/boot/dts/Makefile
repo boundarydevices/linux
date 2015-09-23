@@ -553,6 +553,7 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 	imx6sx-sdb-sai.dtb \
 	imx6sx-sdb.dtb \
 	imx6sx-softing-vining-2000.dtb \
+	imx6sx-sdb-lcdif1.dtb \
 	imx6sx-sdb-ldo.dtb \
 	imx6sx-19x19-arm2.dtb \
 	imx6sx-19x19-arm2-ldo.dtb \
