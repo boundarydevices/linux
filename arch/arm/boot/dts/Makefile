@@ -307,6 +307,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-gw5400-a.dtb \
 	imx6q-gw54xx.dtb \
 	imx6q-gw552x.dtb \
+	imx6q-h4.dtb \
 	imx6q-hummingboard.dtb \
 	imx6q-nitrogen6x.dtb \
 	imx6q-phytec-pbab01.dtb \
