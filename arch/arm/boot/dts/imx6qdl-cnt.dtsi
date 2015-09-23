@@ -305,6 +305,15 @@
         pinctrl-0 = <&pinctrl_i2c3_3>;
         status = "okay";
 
+	accelerometer@1d {
+		compatible = "fsl,mma8653";
+		reg = <0x1d>;
+		position = <0>;
+		interrupt-parent = <&gpio2>;
+		interrupts = <3 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-route = <1>;
+	};
+
 	nfc@28 {
 		compatible = "nxp,pn547";
 		reg = <0x28>;
