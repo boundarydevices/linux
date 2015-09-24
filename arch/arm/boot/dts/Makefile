@@ -128,6 +128,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6dl-sabresd-pf200.dtb \
 	imx6dl-wandboard.dtb \
 	imx6q-arm2.dtb \
+	imx6q-cnt.dtb \
 	imx6q-ls.dtb \
 	imx6q-nitrogen6_max.dtb \
 	imx6q-nitrogen6x.dtb \
