@@ -25,6 +25,7 @@
 #include <linux/mfd/syscon.h>
 #include "../codecs/wm8960.h"
 #include "fsl_sai.h"
+#include "imx-audmux.h"
 
 #define DAI_NAME_SIZE	32
 
@@ -220,6 +221,10 @@ static void wm8960_init(struct snd_soc_dai *codec_dai)
 	 */
 	snd_soc_update_bits(codec, WM8960_ADDCTL4, 7<<4, 3<<4);
 
+	if (data->hp_det[0] > 3) {
+		snd_soc_dapm_enable_pin(&codec->dapm, "Ext Spk");
+		return;
+	}
 	/*
 	 * Enable headphone jack detect
 	 */
@@ -319,7 +324,7 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	for (i = 0; i < ARRAY_SIZE(sysclk_divs); ++i) {
 		if (sysclk_divs[i] == -1)
 			continue;
-		sysclk /= sysclk_divs[i];
+		sysclk = data->clk_frequency / sysclk_divs[i];
 		for (j = 0; j < ARRAY_SIZE(dac_divs); ++j) {
 			if (sysclk == sample_rate * dac_divs[j]) {
 				for (k = 0; k < ARRAY_SIZE(bclk_divs); ++k)
@@ -388,11 +393,11 @@ static int imx_hifi_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+//	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_card *card = codec_dai->codec->card;
 	struct imx_wm8960_data *data = snd_soc_card_get_drvdata(card);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
-	struct fsl_sai *sai = dev_get_drvdata(cpu_dai->dev);
+//	struct fsl_sai *sai = dev_get_drvdata(cpu_dai->dev);
 	int ret = 0;
 
 	data->is_stream_opened[tx] = true;
@@ -507,6 +512,48 @@ static struct snd_soc_dai_link imx_wm8960_dai[] = {
 	},
 };
 
+static int setup_audmux(struct device *dev)
+{
+	struct device_node *np = dev->of_node;
+	int int_port, ext_port;
+	int ret;
+
+	ret = of_property_read_u32(np, "mux-int-port", &int_port);
+	if (ret) {
+		dev_err(dev, "mux-int-port missing or invalid\n");
+		return ret;
+	}
+	ret = of_property_read_u32(np, "mux-ext-port", &ext_port);
+	if (ret) {
+		dev_err(dev, "mux-ext-port missing or invalid\n");
+		return ret;
+	}
+
+	/*
+	 * The port numbering in the hardware manual starts at 1, while
+	 * the audmux API expects it starts at 0.
+	 */
+	int_port--;
+	ext_port--;
+	ret = imx_audmux_v2_configure_port(int_port,
+			IMX_AUDMUX_V2_PTCR_SYN |
+			IMX_AUDMUX_V2_PTCR_TFSEL(ext_port) |
+			IMX_AUDMUX_V2_PTCR_TCSEL(ext_port) |
+			IMX_AUDMUX_V2_PTCR_TFSDIR |
+			IMX_AUDMUX_V2_PTCR_TCLKDIR,
+			IMX_AUDMUX_V2_PDCR_RXDSEL(ext_port));
+	if (ret) {
+		dev_err(dev, "audmux internal port setup failed\n");
+		return ret;
+	}
+	imx_audmux_v2_configure_port(ext_port,
+			IMX_AUDMUX_V2_PTCR_SYN,
+			IMX_AUDMUX_V2_PDCR_RXDSEL(int_port));
+	if (ret)
+		dev_err(dev, "audmux external port setup failed\n");
+	return ret;
+}
+
 static int imx_wm8960_probe(struct platform_device *pdev)
 {
 	struct device_node *cpu_np, *codec_np, *gpr_np;
@@ -528,6 +575,12 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+	if (strstr(cpu_np->name, "ssi")) {
+		ret = setup_audmux(&pdev->dev);
+		if (ret)
+			return ret;
+	}
+
 	codec_np = of_parse_phandle(pdev->dev.of_node, "audio-codec", 0);
 	if (!codec_np) {
 		dev_err(&pdev->dev, "phandle missing or invalid\n");
@@ -537,15 +590,15 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 
 	cpu_pdev = of_find_device_by_node(cpu_np);
 	if (!cpu_pdev) {
-		dev_err(&pdev->dev, "failed to find SAI platform device\n");
-		ret = -EINVAL;
+		dev_err(&pdev->dev, "failed to find SSI/SAI platform device\n");
+		ret = -EPROBE_DEFER;
 		goto fail;
 	}
 
 	codec_dev = of_find_i2c_device_by_node(codec_np);
 	if (!codec_dev || !codec_dev->dev.driver) {
 		dev_err(&pdev->dev, "failed to find codec platform device\n");
-		ret = -EINVAL;
+		ret = -EPROBE_DEFER;
 		goto fail;
 	}
 
@@ -645,7 +698,7 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 	priv->hp_set_gpio = of_get_named_gpio_flags(pdev->dev.of_node, "hp-det-gpios", 0,
 			(enum of_gpio_flags *)&priv->hp_active_low);
 	if (IS_ERR(ERR_PTR(priv->hp_set_gpio)))
-		goto fail;
+		goto skip_hp_detect;
 
 	priv->headset_kctl = snd_kctl_jack_new("Headset", 0, NULL);
 	ret = snd_ctl_add(data->card.snd_card, priv->headset_kctl);
@@ -666,6 +719,7 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 			goto fail;
 		}
 	}
+skip_hp_detect:
 fail:
 	if (cpu_np)
 		of_node_put(cpu_np);
