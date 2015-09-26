@@ -3940,6 +3940,31 @@ static int sec_bat_read_u32_index_dt(const struct device_node *np,
 	return 0;
 }
 
+static int check_for_deferral(struct device_node *np)
+{
+	struct power_supply *psy;
+	char *charger_name;
+	char *fuelgauge_name;
+	int ret;
+
+	ret = of_property_read_string(np,
+		"battery,charger_name", (char const **)&charger_name);
+	if (ret)
+		return 0;
+	psy = get_power_supply_by_name(charger_name);
+	if (!psy)
+		return -EPROBE_DEFER;
+
+	ret = of_property_read_string(np,
+		"battery,fuelgauge_name", (char const **)&fuelgauge_name);
+	if (ret)
+		return 0;
+	psy = get_power_supply_by_name(fuelgauge_name);
+	if (!psy)
+		return -EPROBE_DEFER;
+	return 0;
+}
+
 static int sec_bat_parse_dt(struct device *dev,
 		struct sec_battery_info *battery)
 {
@@ -4264,6 +4289,10 @@ static int sec_battery_probe(struct platform_device *pdev)
 #if defined(CONFIG_TMM_CHG_CTRL)
 	tuner_running_status=TUNER_IS_OFF;
 #endif
+
+	ret = check_for_deferral(pdev->dev.of_node);
+	if (ret)
+		return ret;
 
 	dev_dbg(&pdev->dev,
 		"%s: SEC Battery Driver Loading\n", __func__);
