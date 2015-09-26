@@ -25,6 +25,7 @@
 #include <linux/mfd/syscon.h>
 #include "../codecs/wm8960.h"
 #include "fsl_sai.h"
+#include "imx-audmux.h"
 
 struct imx_wm8960_data {
 	enum of_gpio_flags hp_active_low;
@@ -331,6 +332,10 @@ static int imx_wm8960_late_probe(struct snd_soc_card *card)
 	/* GPIO1 used as headphone detect output */
 	snd_soc_component_update_bits(codec_dai->component, WM8960_ADDCTL4, 7<<4, 3<<4);
 
+	if (data->hp_det[0] > 3) {
+		snd_soc_dapm_enable_pin(&card->dapm, "Ext Spk");
+		return 0;
+	}
 	/* Enable headphone jack detect */
 	snd_soc_component_update_bits(codec_dai->component, WM8960_ADDCTL2, 1<<6, 1<<6);
 	snd_soc_component_update_bits(codec_dai->component, WM8960_ADDCTL2, 1<<5, data->hp_det[1]<<5);
@@ -406,6 +411,48 @@ static int of_parse_gpr(struct platform_device *pdev,
 	return 0;
 }
 
+static int setup_audmux(struct device *dev)
+{
+	struct device_node *np = dev->of_node;
+	int int_port, ext_port;
+	int ret;
+
+	ret = of_property_read_u32(np, "mux-int-port", &int_port);
+	if (ret) {
+		dev_err(dev, "mux-int-port missing or invalid\n");
+		return ret;
+	}
+	ret = of_property_read_u32(np, "mux-ext-port", &ext_port);
+	if (ret) {
+		dev_err(dev, "mux-ext-port missing or invalid\n");
+		return ret;
+	}
+
+	/*
+	 * The port numbering in the hardware manual starts at 1, while
+	 * the audmux API expects it starts at 0.
+	 */
+	int_port--;
+	ext_port--;
+	ret = imx_audmux_v2_configure_port(int_port,
+			IMX_AUDMUX_V2_PTCR_SYN |
+			IMX_AUDMUX_V2_PTCR_TFSEL(ext_port) |
+			IMX_AUDMUX_V2_PTCR_TCSEL(ext_port) |
+			IMX_AUDMUX_V2_PTCR_TFSDIR |
+			IMX_AUDMUX_V2_PTCR_TCLKDIR,
+			IMX_AUDMUX_V2_PDCR_RXDSEL(ext_port));
+	if (ret) {
+		dev_err(dev, "audmux internal port setup failed\n");
+		return ret;
+	}
+	imx_audmux_v2_configure_port(ext_port,
+			IMX_AUDMUX_V2_PTCR_SYN,
+			IMX_AUDMUX_V2_PDCR_RXDSEL(int_port));
+	if (ret)
+		dev_err(dev, "audmux external port setup failed\n");
+	return ret;
+}
+
 static int imx_wm8960_probe(struct platform_device *pdev)
 {
 	struct device_node *cpu_np = NULL, *codec_np = NULL;
@@ -449,10 +496,16 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+	if (strstr(cpu_np->name, "ssi")) {
+		ret = setup_audmux(&pdev->dev);
+		if (ret)
+			return ret;
+	}
+
 	cpu_pdev = of_find_device_by_node(cpu_np);
 	if (!cpu_pdev) {
-		dev_err(&pdev->dev, "failed to find SAI platform device\n");
-		ret = -EINVAL;
+		dev_err(&pdev->dev, "failed to find SSI/SAI platform device\n");
+		ret = -EPROBE_DEFER;
 		goto fail;
 	}
 
@@ -469,7 +522,7 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 		codec_dev = of_find_device_by_node(codec_np);
 		if (!codec_dev || !codec_dev->dev.driver) {
 			dev_err(&pdev->dev, "failed to find codec platform device\n");
-			ret = -EINVAL;
+			ret = -EPROBE_DEFER;
 			goto fail;
 		}
 
