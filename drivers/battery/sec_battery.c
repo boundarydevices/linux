@@ -1102,6 +1102,10 @@ static bool sec_bat_temperature_check(
 	case SEC_BATTERY_TEMP_CHECK_TEMP:
 		temp_value = battery->temperature;
 		break;
+	case SEC_BATTERY_TEMP_CHECK_NONE:
+		temp_value = battery->temp_high_recovery;
+		break;
+
 	default:
 		dev_err(battery->dev,
 			"%s: Invalid Temp Check Type\n", __func__);
