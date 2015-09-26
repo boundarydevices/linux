@@ -240,6 +240,8 @@ static int max77823_get_temperature(struct max77823_fuelgauge_data *fuelgauge)
 {
 	int ret;
 
+	if (fuelgauge->pdata->temp_disabled)
+		return 200;
 	ret = max77823_read_word(fuelgauge->i2c, MAX77823_REG_TEMPERATURE);
 	if (ret < 0)
 		return -ERANGE;
@@ -464,6 +466,8 @@ static int fg_read_temp(struct max77823_fuelgauge_data *fuelgauge)
 	int temper = 200;	/* 20.0 C */
 	int ret;
 
+	if (fuelgauge->pdata->temp_disabled)
+		return 200;
 	if (fg_check_battery_present(fuelgauge)) {
 		ret = max77823_read_word(fuelgauge->i2c, MAX77823_REG_TEMPERATURE);
 		if (ret < 0) {
@@ -2305,6 +2309,9 @@ static int max77823_fuelgauge_parse_dt(
 	pr_info("%s: fg_irq: %d, repeated_fuelalert: %d\n",
 			__func__, pdata->fg_irq,
 			pdata->repeated_fuelalert);
+
+	prop = of_find_property(np, "temp-disabled", &length);
+	pdata->temp_disabled = prop ? 1 : 0;
 
 	ret = of_property_read_u32_array(np, "temp-calibration", pairs, 3);
 	if (ret >= 0) {
