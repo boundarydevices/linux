@@ -11,11 +11,11 @@
  */
 #include <linux/battery/sec_battery.h>
 
-#if defined(CONFIG_FUELGAUGE_MAX17048)
+#if IS_ENABLED(CONFIG_FUELGAUGE_MAX17048)
 #include <linux/battery/fuelgauge/max17048_fuelgauge.h>
 #endif
 
-#if defined(CONFIG_FUELGAUGE_MAX77823) || defined(CONFIG_FUELGAUGE_MAX77843)
+#if IS_ENABLED(CONFIG_FUELGAUGE_MAX77823) || IS_ENABLED(CONFIG_FUELGAUGE_MAX77843)
 #include <linux/battery/fuelgauge/max77823_fuelgauge.h>
 #endif
 
@@ -36,7 +36,7 @@ extern unsigned int system_rev;
 #if defined(CONFIG_BATTERY_SAMSUNG_DATA)
 #include CONFIG_BATTERY_SAMSUNG_DATA_FILE
 #else //CONFIG_BATTERY_SAMSUNG_DATA
-#if defined(CONFIG_FUELGAUGE_MAX17048)
+#if IS_ENABLED(CONFIG_FUELGAUGE_MAX17048)
 static struct max17048_fuelgauge_battery_data_t max17048_battery_data[] = {
 	/* SDI battery data (High voltage 4.35V) */
 	{
@@ -50,7 +50,7 @@ static struct max17048_fuelgauge_battery_data_t max17048_battery_data[] = {
 };
 #endif
 
-#if defined(CONFIG_FUELGAUGE_MAX77823) || defined(CONFIG_FUELGAUGE_MAX77843)
+#if IS_ENABLED(CONFIG_FUELGAUGE_MAX77823) || IS_ENABLED(CONFIG_FUELGAUGE_MAX77843)
 static struct max77823_fuelgauge_battery_data_t max77823_battery_data[] = {
 	/* SDI battery data (High voltage 4.4V) */
 	{
@@ -442,7 +442,7 @@ void board_battery_init(struct platform_device *pdev, struct sec_battery_info *b
 
 void board_fuelgauge_init(void *data)
 {
-#if defined(CONFIG_FUELGAUGE_MAX17048)
+#if IS_ENABLED(CONFIG_FUELGAUGE_MAX17048)
 #if defined(CONFIG_SEC_LENTIS_PROJECT)
 	if (system_rev >= 0x06) {
 #endif
@@ -475,7 +475,7 @@ void board_fuelgauge_init(void *data)
 		}
 	}
 #endif
-#elif defined(CONFIG_FUELGAUGE_MAX77823) || defined(CONFIG_FUELGAUGE_MAX77843)
+#elif IS_ENABLED(CONFIG_FUELGAUGE_MAX77823) || IS_ENABLED(CONFIG_FUELGAUGE_MAX77843)
 	struct max77823_fuelgauge_data *fuelgauge =
 		(struct max77823_fuelgauge_data *)data;
 
