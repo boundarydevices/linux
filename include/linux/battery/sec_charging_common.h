@@ -451,6 +451,7 @@ struct sec_battery_platform_data {
 
 	sec_battery_temp_check_t temp_check_type;
 	unsigned int temp_check_count;
+	int temp_disabled;
 	/*
 	 * limit can be ADC value or Temperature
 	 * depending on temp_check_type
