@@ -666,7 +666,7 @@
 		reg = <0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_wm5102>;
-		clocks = <&clks 200>, <&clks 1>;
+		clocks = <&clks IMX6QDL_CLK_CKO2>, <&clks IMX6QDL_CLK_CKIL>;
 		clock-names = "mclk1", "mclk2";
 		interrupts-extended = GPIRQ_WM5102;
 		wlf,reset = GP_WM5102_RESET;
@@ -683,6 +683,8 @@
 		CPVDD-supply = <&reg_1p8v>;
 		SPKVDDL-supply = <&reg_5v>;
 		SPKVDDR-supply = <&reg_5v>;
+		assigned-clocks        = <&clks IMX6QDL_CLK_CKO2_SEL>;
+		assigned-clock-parents = <&clks IMX6QDL_CLK_OSC>;
 	};
 };
 
