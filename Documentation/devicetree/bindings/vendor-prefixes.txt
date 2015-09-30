@@ -18,6 +18,7 @@ atmel	Atmel Corporation
 auo	AU Optronics Corporation
 avago	Avago Technologies
 bosch	Bosch Sensortec GmbH
+boundary	Boundary Devices Inc.
 brcm	Broadcom Corporation
 capella	Capella Microsystems, Inc
 cavium	Cavium, Inc.
