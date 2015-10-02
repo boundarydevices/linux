@@ -13,6 +13,7 @@
 #include <linux/of_platform.h>
 #include <linux/i2c.h>
 #include <linux/of_gpio.h>
+#include <linux/of_i2c.h>
 #include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/clk.h>
@@ -495,8 +496,6 @@ static struct snd_soc_dai_link imx_wm8960_dai[] = {
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.dynamic = 1,
 		.ignore_pmdown_time = 1,
-		.dpcm_playback = 1,
-		.dpcm_capture = 1,
 	},
 	{
 		.name = "HiFi-ASRC-BE",
@@ -505,8 +504,6 @@ static struct snd_soc_dai_link imx_wm8960_dai[] = {
 		.platform_name = "snd-soc-dummy",
 		.no_pcm = 1,
 		.ignore_pmdown_time = 1,
-		.dpcm_playback = 1,
-		.dpcm_capture = 1,
 		.ops = &imx_hifi_ops,
 		.be_hw_params_fixup = be_hw_params_fixup,
 	},
