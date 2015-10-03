@@ -2315,7 +2315,6 @@ static int sdma_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, sdma);
-	dev_info(sdma->dev, "initialized\n");
 
 	return 0;
 
@@ -2342,7 +2341,6 @@ static int sdma_remove(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, NULL);
-	dev_info(&pdev->dev, "Removed...\n");
 	return 0;
 }
 
