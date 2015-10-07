@@ -61,7 +61,7 @@
 #define	SHOW_RESET		0x80  	// Indicates reset has occurrd
 
 // Bit definitions - ControlSettings0
-#define	EVENT_MODE		0x01  	// 0= no event mode / 1=event mode active
+#define	EVENT_MODE		0x01  	// 0 = no event mode / 1 = event mode active
 #define	TRACKPAD_RESEED		0x02  	// Reseed all the normal mode channels
 #define	AUTO_ATI		0x04  	// Perform AutoATI routine (depend on Mode selected)
 #define	MODE_SELECT		0x08  	// 0 = Normal Mode  /  1 = ProxMode
@@ -71,23 +71,23 @@
 #define	ACK_RESET		0x80  	// clear the SHOW_RESET flag
 
 // Bit definitions - ControlSettings1
-#define	SNAP_EN			0x01  	// 0= snaps calculated / 1=not calculated
-#define	LOW_POWER		0x02  	// 0= normal power charging 1=low power charging
-#define	SLEEP_EN		0x04  	// 0= no sleep added / 1=permanent sleep time added
-#define	REVERSE_EN		0x08  	// 0= disabled (conventional prox detection) / 1=enabled (prox trips both ways)
+#define	SNAP_EN			0x01  	// 0 = snaps calculated / 1 = not calculated
+#define	LOW_POWER		0x02  	// 0 = normal power charging 1 = low power charging
+#define	SLEEP_EN		0x04  	// 0 = no sleep added / 1 = permanent sleep time added
+#define	REVERSE_EN		0x08  	// 0 = disabled (conventional prox detection) / 1=enabled (prox trips both ways)
 #define	DIS_PMPROX_EVENT	0x10  	// 0 = PMProx event enabled / 1 = enabled for EventMode
 #define	DIS_SNAP_EVENT		0x20  	// 0 = Snap event enabled / 1 = disabled for EventMode
 #define	DIS_TOUCH_EVENT		0x40  	// 0 = Touch event enabled / 1 = disabled for EventMode
 
 // Bit definitions - FilterSettings0
-#define	DIS_TOUCH_FILTER	0x01  	// 0=enabled    1=disabled
-#define	DIS_HOVER_FILTER	0x02  	// 0=enabled    1=disabled
-#define	SELECT_TOUCH_FILTER	0x04  	// 0=Dynamic filter  1=fixed beta
-#define	DIS_PM_FILTER		0x08  	// 0 = CS filtered in PM 1= CS raw in PM
-#define	DIS_NM_FILTER		0x10  	// 0 = CS filtered in NM 1= CS raw in NM
+#define	DIS_TOUCH_FILTER	0x01  	// 0 = enabled 1 = disabled
+#define	DIS_HOVER_FILTER	0x02  	// 0 = enabled 1 = disabled
+#define	SELECT_TOUCH_FILTER	0x04  	// 0 = Dynamic filter 1 = fixed beta
+#define	DIS_PM_FILTER		0x08  	// 0 = CS filtered in PM 1 = CS raw in PM
+#define	DIS_NM_FILTER		0x10  	// 0 = CS filtered in NM 1 = CS raw in NM
 
 // Bit definitions - PMSetup0
-#define	RX_SELECT0		0x01  	//   Decimal value selects an INDIVIDUAL Rx for ProxMode
+#define	RX_SELECT0		0x01  	// Decimal value selects an INDIVIDUAL Rx for ProxMode
 #define	RX_SELECT1		0x02  	//
 #define	RX_SELECT2		0x04  	//
 #define	RX_SELECT3		0x08  	//
