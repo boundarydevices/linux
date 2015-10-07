@@ -301,6 +301,13 @@ config TOUCHSCREEN_ILI210X
 	  To compile this driver as a module, choose M here: the
 	  module will be called ili210x.
 
+config TOUCHSCREEN_IQS5XX
+	tristate "Azoteq IQS5xx Touchscreen"
+	depends on I2C
+	help
+	  This enables the Azoteq IQS5xx range of touchscreen controllers
+	  to be used in Android I2C based touchscreens.
+
 config TOUCHSCREEN_S3C2410
 	tristate "Samsung S3C2410/generic touchscreen input driver"
 	depends on ARCH_S3C24XX || SAMSUNG_DEV_TS
