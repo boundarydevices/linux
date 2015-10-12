@@ -51,3 +51,7 @@
 &mxcfb4 {
 	status = "okay";
 };
+
+&sata {
+	status = "okay";
+};

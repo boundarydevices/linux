@@ -273,8 +273,6 @@ static void exit_lpm_imx6_up(void)
 	else
 		imx_clk_set_rate(ahb_clk, LPAPM_CLK / 3);
 	imx_clk_set_rate(ocram_clk, LPAPM_CLK / 2);
-	/* set periph_clk2 to pll3 */
-	imx_clk_set_parent(periph_clk2_sel, pll3);
 	/* set periph clk to from pll2_bus on i.MX6UL */
 	if (cpu_is_imx6ul())
 		imx_clk_set_parent(periph_pre_clk, pll2_bus);
@@ -282,6 +280,8 @@ static void exit_lpm_imx6_up(void)
 	else
 		imx_clk_set_parent(periph_pre_clk, pll2_400);
 	imx_clk_set_parent(periph_clk, periph_pre_clk);
+	/* set periph_clk2 to pll3 */
+	imx_clk_set_parent(periph_clk2_sel, pll3);
 
 	if (ddr_type == MMDC_MDMISC_DDR_TYPE_DDR3)
 		update_ddr_freq_imx6_up(ddr_normal_rate);

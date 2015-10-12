@@ -44,6 +44,7 @@ struct snvs_rtc_data {
 };
 
 static void __iomem *snvs_base;
+static struct clk *clk_snvs;
 
 static u32 rtc_read_lp_counter(void __iomem *ioaddr)
 {
@@ -261,14 +262,12 @@ static irqreturn_t snvs_rtc_irq_handler(int irq, void *dev_id)
 static void snvs_poweroff(void)
 {
 	u32 value;
-	struct snvs_rtc_data *data = container_of(snvs_base, struct snvs_rtc_data,
-						  ioaddr);
 
-	clk_enable(data->clk);
+	clk_enable(clk_snvs);
 	value = readl(snvs_base + SNVS_LPCR);
 	/* set TOP and DP_EN bit */
 	writel(value | 0x60, snvs_base + SNVS_LPCR);
-	clk_disable(data->clk);
+	clk_disable(clk_snvs);
 }
 
 static int snvs_rtc_probe(struct platform_device *pdev)
@@ -291,6 +290,7 @@ static int snvs_rtc_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "can't get snvs-rtc clock\n");
 		data->clk = NULL;
 	}
+	clk_snvs = data->clk;
 
 	data->irq = platform_get_irq(pdev, 0);
 	if (data->irq < 0)

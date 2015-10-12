@@ -36,7 +36,6 @@
 			100
 			>;
 		default-brightness-level = <94>;
-
 	};
 
 	pxp_v4l2_out {
@@ -102,7 +101,7 @@
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 			gpio = <&gpio5 2 GPIO_ACTIVE_HIGH>;
-			startup-delay-us = <1000000>;
+			startup-delay-us = <200000>;
 			enable-active-high;
 		};
 

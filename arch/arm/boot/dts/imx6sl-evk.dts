@@ -198,11 +198,6 @@
 	soc-supply = <&sw1c_reg>;
 };
 
-&cpu0 {
-	arm-supply = <&sw1a_reg>;
-	soc-supply = <&sw1c_reg>;
-};
-
 &ecspi1 {
 	fsl,spi-num-chipselects = <1>;
 	cs-gpios = <&gpio4 11 0>;

@@ -2775,7 +2775,9 @@ static void skb_update_prio(struct sk_buff *skb)
 #define skb_update_prio(skb)
 #endif
 
-static DEFINE_PER_CPU(int, xmit_recursion);
+DEFINE_PER_CPU(int, xmit_recursion);
+EXPORT_SYMBOL(xmit_recursion);
+
 #define RECURSION_LIMIT 10
 
 /**
@@ -4901,7 +4903,7 @@ static int __netdev_upper_dev_link(struct net_device *dev,
 	if (__netdev_find_adj(upper_dev, dev, &upper_dev->all_adj_list.upper))
 		return -EBUSY;
 
-	if (__netdev_find_adj(dev, upper_dev, &dev->all_adj_list.upper))
+	if (__netdev_find_adj(dev, upper_dev, &dev->adj_list.upper))
 		return -EEXIST;
 
 	if (master && netdev_master_upper_dev_get(dev))

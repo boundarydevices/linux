@@ -2708,6 +2708,9 @@ static int btrfs_extent_same(struct inode *src, u64 loff, u64 len,
 	if (src == dst)
 		return -EINVAL;
 
+	if (len == 0)
+		return 0;
+
 	btrfs_double_lock(src, loff, dst, dst_loff, len);
 
 	ret = extent_same_check_offsets(src, loff, len);
@@ -2740,7 +2743,7 @@ out_unlock:
 static long btrfs_ioctl_file_extent_same(struct file *file,
 			struct btrfs_ioctl_same_args __user *argp)
 {
-	struct btrfs_ioctl_same_args *same;
+	struct btrfs_ioctl_same_args *same = NULL;
 	struct btrfs_ioctl_same_extent_info *info;
 	struct inode *src = file_inode(file);
 	u64 off;
@@ -2770,6 +2773,7 @@ static long btrfs_ioctl_file_extent_same(struct file *file,
 
 	if (IS_ERR(same)) {
 		ret = PTR_ERR(same);
+		same = NULL;
 		goto out;
 	}
 
@@ -2840,6 +2844,7 @@ static long btrfs_ioctl_file_extent_same(struct file *file,
 
 out:
 	mnt_drop_write_file(file);
+	kfree(same);
 	return ret;
 }
 
@@ -3225,6 +3230,11 @@ static noinline long btrfs_ioctl_clone(struct file *file, unsigned long srcfd,
 	/* if we extend to eof, continue to block boundary */
 	if (off + len == src->i_size)
 		len = ALIGN(src->i_size, bs) - off;
+
+	if (len == 0) {
+		ret = 0;
+		goto out_unlock;
+	}
 
 	/* verify the end result is block aligned */
 	if (!IS_ALIGNED(off, bs) || !IS_ALIGNED(off + len, bs) ||

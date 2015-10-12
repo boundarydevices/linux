@@ -266,9 +266,6 @@ struct qspi_regs qspi_regs_imx6sx[] = {
 	{QSPI_MCR, 0, QSPI_RETRIEVED},
 };
 
-unsigned long iram_tlb_base_addr;
-unsigned long iram_tlb_phys_addr;
-
 static unsigned int *ocram_saved_in_ddr;
 static void __iomem *ocram_base;
 static void __iomem *console_base;
@@ -279,6 +276,8 @@ static void __iomem *suspend_ocram_base;
 static void __iomem *gpc_mem_base;
 static void (*imx6_suspend_in_ocram_fn)(void __iomem *ocram_vbase);
 struct regmap *romcp;
+extern unsigned long iram_tlb_base_addr;
+extern unsigned long iram_tlb_phys_addr;
 /*
  * suspend ocram space layout:
  * ======================== high address ======================
@@ -520,26 +519,6 @@ struct imx6_cpu_pm_info {
 	u32 mmdc_val[MX6_MAX_MMDC_NUM][2]; /* To save offset and value */
 } __aligned(8);
 
-unsigned long save_ttbr1(void)
-{
-	unsigned long lttbr1;
-	asm volatile(
-		".align 4\n"
-		"mrc p15, 0, %0, c2, c0, 1\n"
-		: "=r" (lttbr1)
-	);
-	return lttbr1;
-}
-
-void restore_ttbr1(unsigned long ttbr1)
-{
-	asm volatile(
-		".align 4\n"
-		"mcr p15, 0, %0, c2, c0, 1\n"
-		: : "r" (ttbr1)
-	);
-}
-
 void imx6q_set_int_mem_clk_lpm(bool enable)
 {
 	if ((cpu_is_imx6q() && imx_get_soc_revision() >
@@ -757,6 +736,8 @@ static int imx6q_pm_enter(suspend_state_t state)
 #ifdef CONFIG_SUSPEND
 	u32 imr[4], isr[4], i, irq_num, gpc_isr;
 #endif
+
+#ifdef CONFIG_SOC_IMX6SX
 	if (imx_src_is_m4_enabled()) {
 		if (imx_gpc_is_m4_sleeping() && imx_mu_is_m4_in_low_freq()) {
 			imx_gpc_hold_m4_in_sleep();
@@ -774,6 +755,7 @@ static int imx6q_pm_enter(suspend_state_t state)
 			return 0;
 		}
 	}
+#endif
 
 	if (!iram_tlb_base_addr) {
 		pr_warn("No IRAM/OCRAM memory allocated for suspend/resume \
@@ -787,12 +769,16 @@ static int imx6q_pm_enter(suspend_state_t state)
 		imx6q_set_lpm(STOP_POWER_ON);
 		imx6q_set_int_mem_clk_lpm(true);
 		imx_gpc_pre_suspend(false);
+#ifdef CONFIG_SOC_IMX6SL
 		if (cpu_is_imx6sl())
 			imx6sl_set_wait_clk(true);
+#endif
 		/* Zzz ... */
 		cpu_do_idle();
+#ifdef CONFIG_SOC_IMX6SL
 		if (cpu_is_imx6sl())
 			imx6sl_set_wait_clk(false);
+#endif
 		imx_gpc_post_resume();
 		imx6q_set_lpm(WAIT_CLOCKED);
 		break;
@@ -879,10 +865,12 @@ static int imx6q_pm_enter(suspend_state_t state)
 	}
 #endif
 
+#ifdef CONFIG_SOC_IMX6SX
 	if (imx_src_is_m4_enabled()) {
 		imx_mu_enable_m4_irqs_in_gic(false);
 		imx_gpc_release_m4_in_sleep();
 	}
+#endif
 
 	return 0;
 }

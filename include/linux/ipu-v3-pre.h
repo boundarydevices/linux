@@ -20,6 +20,7 @@
 
 #define IPU_PRE_MAX_WIDTH	1920
 #define IPU_PRE_MAX_BPP		4
+#define IPU_PRE_SMALL_LINE	9	/* to workaround errata ERR009624*/
 
 struct ipu_rect {
 	int left;
@@ -73,15 +74,32 @@ struct ipu_pre_context {
 	unsigned long store_addr;
 };
 
+/*
+ * In order to workaround the PRE SoC bug recorded by errata ERR009624,
+ * the software cannot write the PRE_CTRL register when the PRE writes
+ * the PRE_CTRL register automatically to set the ENABLE bit(bit0) to 1
+ * in the PRE repeat mode.
+ * The software mechanism to set the PRE_CTRL register is different for
+ * PRE Y resolution higher than 9 lines and lower or equal to 9 lines.
+ * Use this helper to check the Y resolution.
+ */
+static inline bool ipu_pre_yres_is_small(unsigned int yres)
+{
+	return yres <= IPU_PRE_SMALL_LINE;
+}
+
 #ifdef CONFIG_MXC_IPU_V3_PRE
 int ipu_pre_alloc(int ipu_id, ipu_channel_t ipu_ch);
 void ipu_pre_free(unsigned int *id);
 unsigned long ipu_pre_alloc_double_buffer(unsigned int id, unsigned int size);
 void ipu_pre_free_double_buffer(unsigned int id);
 int ipu_pre_config(int id, struct ipu_pre_context *config);
+int ipu_pre_set_ctrl(unsigned int id, struct ipu_pre_context *config);
 int ipu_pre_enable(int id);
 void ipu_pre_disable(int id);
-int ipu_pre_set_fb_buffer(int id, unsigned long fb_paddr,
+int ipu_pre_set_fb_buffer(int id, bool resolve,
+			  unsigned long fb_paddr,
+			  unsigned int y_res,
 			  unsigned int x_crop,
 			  unsigned int y_crop,
 			  unsigned int sec_buf_off,
@@ -111,6 +129,11 @@ int ipu_pre_config(int id, struct ipu_pre_context *config)
 	return -ENODEV;
 }
 
+int ipu_pre_set_ctrl(unsigned int id, struct ipu_pre_context *config)
+{
+	return -ENODEV;
+}
+
 int ipu_pre_enable(int id)
 {
 	return -ENODEV;
@@ -121,7 +144,9 @@ void ipu_pre_disable(int id)
 	return;
 }
 
-int ipu_pre_set_fb_buffer(int id, unsigned long fb_paddr,
+int ipu_pre_set_fb_buffer(int id, bool resolve,
+			  unsigned long fb_paddr,
+			  unsigned int y_res,
 			  unsigned int x_crop,
 			  unsigned int y_crop,
 			  unsigned int sec_buf_off,

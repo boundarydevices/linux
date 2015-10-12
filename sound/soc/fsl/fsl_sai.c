@@ -36,6 +36,27 @@ static u32 fsl_sai_rates[] = {
 	88200, 96000, 176400, 192000
 };
 
+static struct reg_default fsl_sai_reg[] = {
+	{0x0, 0},	/*TCSR */
+	{0x4, 0},	/*TCR1 */
+	{0x8, 0},	/*TCR2 */
+	{0xc, 0},	/*TCR3 */
+	{0x10, 0},	/*TCR4 */
+	{0x14, 0},	/*TCR5 */
+	{0x20, 0},	/*TDR */
+	{0x40, 0},	/*TFR */
+	{0x60, 0},	/*TMR */
+	{0x80, 0},	/*RCSR */
+	{0x84, 0},	/*RCR1 */
+	{0x88, 0},	/*RCR2 */
+	{0x8c, 0},	/*RCR3 */
+	{0x90, 0},	/*RCR4 */
+	{0x94, 0},	/*RCR5 */
+	{0xa0, 0},	/*RDR */
+	{0xc0, 0},	/*RFR */
+	{0xe0, 0},	/*RMR */
+};
+
 static struct snd_pcm_hw_constraint_list fsl_sai_rate_constraints = {
 	.count = ARRAY_SIZE(fsl_sai_rates),
 	.list = fsl_sai_rates,
@@ -714,6 +735,8 @@ static const struct regmap_config fsl_sai_regmap_config = {
 	.val_bits = 32,
 
 	.max_register = FSL_SAI_RMR,
+	.reg_defaults = fsl_sai_reg,
+	.num_reg_defaults = ARRAY_SIZE(fsl_sai_reg),
 	.readable_reg = fsl_sai_readable_reg,
 	.volatile_reg = fsl_sai_volatile_reg,
 	.writeable_reg = fsl_sai_writeable_reg,

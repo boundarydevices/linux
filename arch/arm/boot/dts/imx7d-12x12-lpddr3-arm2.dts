@@ -20,7 +20,7 @@
 		pwms = <&pwm1 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
 		default-brightness-level = <6>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	gpio-keys {
@@ -45,7 +45,7 @@
 
 	pxp_v4l2_out {
 		compatible = "fsl,imx7d-pxp-v4l2", "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
-		status = "disabled";
+		status = "okay";
 	};
 
 	regulators {
@@ -147,7 +147,7 @@
 
 &adc1 {
 	vref-supply = <&reg_vref_1v8>;
-	status = "disabled";
+	status = "okay";
 };
 
 &cpu0 {
@@ -189,16 +189,17 @@
 };
 
 &epdc {
-        pinctrl-names = "default";
+        pinctrl-names = "default", "sleep";
         pinctrl-0 = <&pinctrl_epdc_0>;
+        pinctrl-1 = <&pinctrl_epdc_0>;
         V3P3-supply = <&V3P3_reg>;
         VCOM-supply = <&VCOM_reg>;
         DISPLAY-supply = <&DISPLAY_reg>;
-        status = "disabled";
+        status = "okay";
 };
 
 &epxp {
-	status = "disabled";
+	status = "okay";
 };
 
 &fec1 {
@@ -242,7 +243,7 @@
 	phy-mode = "rgmii";
 	phy-handle = <&ethphy0>;
 	fsl,magic-packet;
-	status = "okay";
+	status = "disabled";
 };
 
 &flexcan1 {
@@ -269,6 +270,7 @@
 	pmic: pfuze3000@08 {
 		compatible = "fsl,pfuze3000";
 		reg = <0x08>;
+		fsl,lpsr-mode;
 
 		regulators {
 			sw1a_reg: sw1a {
@@ -481,7 +483,6 @@
 				MX7D_PAD_ECSPI2_SCLK__GPIO4_IO20  0x80000000  /* v3p3 */
 				MX7D_PAD_ECSPI2_MOSI__GPIO4_IO21  0x80000000  /* pwrctrl1 */
 				MX7D_PAD_ECSPI2_MISO__GPIO4_IO22  0x80000000  /* pwrctrl2 */
-				MX7D_PAD_ENET1_CRS__GPIO7_IO14    0x80000000  /* BT REG on */
 				MX7D_PAD_SD1_RESET_B__GPIO5_IO2   0x59
 				MX7D_PAD_SD1_CD_B__GPIO5_IO0      0x59
 				MX7D_PAD_SD1_WP__GPIO5_IO1        0x59
@@ -501,6 +502,12 @@
 		pinctrl_hog_sd2_vselect: hoggrp_sd2vselect {
 			fsl,pins = <
 				MX7D_PAD_GPIO1_IO12__SD2_VSELECT  0x59
+			>;
+		};
+
+		pinctrl_bt: btgrp-1 {
+			fsl,pins = <
+				MX7D_PAD_ENET1_CRS__GPIO7_IO14    0x80000000  /* BT REG on */
 			>;
 		};
 
@@ -894,11 +901,13 @@
 };
 
 &lcdif {
-	pinctrl-names = "default";
+	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_lcdif_dat
 		     &pinctrl_lcdif_ctrl>;
+	pinctrl-1 = <&pinctrl_lcdif_dat
+		     &pinctrl_lcdif_ctrl>;
 	display = <&display0>;
-	status = "disabled";
+	status = "okay";
 
 	display0: display {
 		bits-per-pixel = <16>;
@@ -940,7 +949,7 @@
 &pwm1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm1>;
-	status = "disabled";
+	status = "okay";
 };
 
 &sdma {
@@ -955,20 +964,24 @@
 };
 
 &uart1 {
-	pinctrl-names = "default";
+	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_uart1_1>;
+	pinctrl-1 = <&pinctrl_uart1_1>;
 	assigned-clocks = <&clks IMX7D_UART1_ROOT_SRC>;
 	assigned-clock-parents = <&clks IMX7D_OSC_24M_CLK>;
 	status = "okay";
 };
 
 &uart3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart3_1>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_uart3_1
+		     &pinctrl_bt>;
+	pinctrl-1 = <&pinctrl_uart3_1
+		     &pinctrl_bt>;
 	fsl,uart-has-rtscts;
 	assigned-clocks = <&clks IMX7D_UART3_ROOT_SRC>;
 	assigned-clock-parents = <&clks IMX7D_PLL_SYS_MAIN_240M_CLK>;
-	status = "disabled";
+	status = "okay";
 	/* for DTE mode, add below change */
 	/* fsl,dte-mode;*/
 	/* pinctrl-0 = <&pinctrl_uart3dte_1>; */
@@ -991,41 +1004,44 @@
 };
 
 &usdhc1 {
-	pinctrl-names = "default";
+	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_usdhc1_1>;
+	pinctrl-1 = <&pinctrl_usdhc1_1>;
 	cd-gpios = <&gpio5 0 0>;
 	wp-gpios = <&gpio5 1 0>;
 	no-1-8-v;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
 	vmmc-supply = <&reg_sd1_vmmc>;
-	status = "disabled";
+	status = "okay";
 };
 
 &usdhc2 {
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-names = "default", "state_100mhz", "state_200mhz", "sleep";
 	pinctrl-0 = <&pinctrl_usdhc2_1>;
 	pinctrl-1 = <&pinctrl_usdhc2_1_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc2_1_200mhz>;
+	pinctrl-3 = <&pinctrl_usdhc2_1>;
 	cd-gpios = <&gpio5 9 0>;
 	wp-gpios = <&gpio5 10 0>;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
 	tuning-step = <2>;
 	vmmc-supply = <&reg_sd2_vmmc>;
-	status = "disabled";
+	status = "okay";
 };
 
 &usdhc3 {
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-names = "default", "state_100mhz", "state_200mhz", "sleep";
 	pinctrl-0 = <&pinctrl_usdhc3_1>;
 	pinctrl-1 = <&pinctrl_usdhc3_1_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc3_1_200mhz>;
+	pinctrl-3 = <&pinctrl_usdhc3_1>;
 	assigned-clocks = <&clks IMX7D_USDHC3_ROOT_CLK>;
 	assigned-clock-rates = <400000000>;
 	bus-width = <8>;
 	tuning-step = <2>;
 	non-removable;
 	keep-power-in-suspend;
-	status = "disabled";
+	status = "okay";
 };

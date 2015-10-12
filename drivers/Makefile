@@ -114,7 +114,7 @@ obj-y				+= mmc/
 obj-$(CONFIG_ARCH_MXC)		+= mxc/
 obj-$(CONFIG_MEMSTICK)		+= memstick/
 obj-y				+= leds/
-obj-$(CONFIG_SWITCH)		+= switch/
+obj-$(CONFIG_SWITCH)           += switch/
 obj-$(CONFIG_INFINIBAND)	+= infiniband/
 obj-$(CONFIG_SGI_SN)		+= sn/
 obj-y				+= firmware/
@@ -157,5 +157,4 @@ obj-$(CONFIG_IPACK_BUS)		+= ipack/
 obj-$(CONFIG_NTB)		+= ntb/
 obj-$(CONFIG_FMC)		+= fmc/
 obj-$(CONFIG_POWERCAP)		+= powercap/
-
 obj-$(CONFIG_CORESIGHT)		+= coresight/

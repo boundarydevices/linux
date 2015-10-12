@@ -57,7 +57,7 @@ struct imx_priv {
 	struct platform_device *asrc_pdev;
 	u32 asrc_rate;
 	u32 asrc_format;
-    	struct switch_dev sdev;
+	struct switch_dev sdev;
 };
 static struct imx_priv card_priv;
 
@@ -576,7 +576,7 @@ static int imx_wm8962_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "audmux internal port setup failed\n");
 		return ret;
 	}
-	imx_audmux_v2_configure_port(ext_port,
+	ret = imx_audmux_v2_configure_port(ext_port,
 			IMX_AUDMUX_V2_PTCR_SYN,
 			IMX_AUDMUX_V2_PDCR_RXDSEL(int_port));
 	if (ret) {
@@ -773,9 +773,9 @@ static int imx_wm8962_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct imx_priv *priv = &card_priv;
-
 	driver_remove_file(pdev->dev.driver, &driver_attr_microphone);
 	driver_remove_file(pdev->dev.driver, &driver_attr_headphone);
+
 #ifdef CONFIG_SWITCH
 	switch_dev_unregister(&priv->sdev);
 #endif

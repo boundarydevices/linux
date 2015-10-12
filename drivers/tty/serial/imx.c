@@ -970,6 +970,14 @@ static void dma_rx_callback(void *data)
 
 	status = dmaengine_tx_status(chan, (dma_cookie_t)0, &state);
 	count = RX_BUF_SIZE - state.residue;
+
+	if (readl(sport->port.membase + USR2) & USR2_IDLE) {
+		/* In condition [3] the SDMA counted up too early */
+		count--;
+
+		writel(USR2_IDLE, sport->port.membase + USR2);
+	}
+
 	sport->rx_buf.buf_info[sport->rx_buf.cur_idx].filled = true;
 	sport->rx_buf.buf_info[sport->rx_buf.cur_idx].rx_bytes = count;
 	sport->rx_buf.cur_idx++;
@@ -1966,6 +1974,8 @@ static int serial_imx_suspend(struct platform_device *dev, pm_message_t state)
 	sport->saved_reg[9] = readl(sport->port.membase + IMX21_UTS);
 	clk_disable_unprepare(sport->clk_ipg);
 
+	pinctrl_pm_select_sleep_state(&dev->dev);
+
 	return 0;
 }
 
@@ -1973,6 +1983,8 @@ static int serial_imx_resume(struct platform_device *dev)
 {
 	struct imx_port *sport = platform_get_drvdata(dev);
 	unsigned int val;
+
+	pinctrl_pm_select_default_state(&dev->dev);
 
 	clk_prepare_enable(sport->clk_ipg);
 	writel(sport->saved_reg[4], sport->port.membase + UFCR);

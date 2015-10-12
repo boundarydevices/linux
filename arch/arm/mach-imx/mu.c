@@ -165,14 +165,18 @@ static void mu_work_handler(struct work_struct *work)
 	switch (m4_message) {
 	case MU_LPM_M4_REQUEST_HIGH_BUS:
 		request_bus_freq(BUS_FREQ_HIGH);
+#ifdef CONFIG_SOC_IMX6SX
 		imx6sx_set_m4_highfreq(true);
+#endif
 		imx_mu_send_message(MU_LPM_HANDSHAKE_INDEX,
 			MU_LPM_BUS_HIGH_READY_FOR_M4);
 		m4_freq_low = false;
 		break;
 	case MU_LPM_M4_RELEASE_HIGH_BUS:
 		release_bus_freq(BUS_FREQ_HIGH);
+#ifdef CONFIG_SOC_IMX6SX
 		imx6sx_set_m4_highfreq(false);
+#endif
 		imx_mu_send_message(MU_LPM_HANDSHAKE_INDEX,
 			MU_LPM_M4_FREQ_CHANGE_READY);
 		m4_freq_low = true;
@@ -334,6 +338,7 @@ int imx_mcc_bsp_int_enable(void)
 	return 0;
 }
 
+#ifdef CONFIG_HAVE_IMX_MCC
 int mcc_wait_for_buffer_freed(MCC_RECEIVE_BUFFER **buffer, unsigned int timeout)
 {
     int return_value;
@@ -430,6 +435,7 @@ int mcc_wait_for_buffer_queued(MCC_ENDPOINT *endpoint, unsigned int timeout)
 
 	return MCC_SUCCESS;
 }
+#endif
 
 static irqreturn_t imx_mu_isr(int irq, void *param)
 {

@@ -800,6 +800,7 @@ static struct class gpio_class = {
  */
 int gpiod_export(struct gpio_desc *desc, bool direction_may_change)
 {
+	struct gpio_chip	*chip;
 	unsigned long		flags;
 	int			status;
 	const char		*ioname = NULL;
@@ -817,7 +818,15 @@ int gpiod_export(struct gpio_desc *desc, bool direction_may_change)
 		return -EINVAL;
 	}
 
+	chip = desc->chip;
+
 	mutex_lock(&sysfs_lock);
+
+	/* check if chip is being removed */
+	if (!chip || !chip->exported) {
+		status = -ENODEV;
+		goto fail_unlock;
+	}
 
 	spin_lock_irqsave(&gpio_lock, flags);
 	if (!test_bit(FLAG_REQUESTED, &desc->flags) ||
@@ -1057,12 +1066,15 @@ static void gpiochip_unexport(struct gpio_chip *chip)
 {
 	int			status;
 	struct device		*dev;
+	struct gpio_desc *desc;
+	unsigned int i;
 
 	mutex_lock(&sysfs_lock);
 	dev = class_find_device(&gpio_class, NULL, chip, match_export);
 	if (dev) {
 		put_device(dev);
 		device_unregister(dev);
+		/* prevent further gpiod exports */
 		chip->exported = false;
 		status = 0;
 	} else
@@ -1071,6 +1083,13 @@ static void gpiochip_unexport(struct gpio_chip *chip)
 
 	if (status)
 		chip_dbg(chip, "%s: status %d\n", __func__, status);
+
+	/* unregister gpiod class devices owned by sysfs */
+	for (i = 0; i < chip->ngpio; i++) {
+		desc = &chip->desc[i];
+		if (test_and_clear_bit(FLAG_SYSFS, &desc->flags))
+			gpiod_free(desc);
+	}
 }
 
 static int __init gpiolib_sysfs_init(void)
@@ -1265,6 +1284,8 @@ int gpiochip_remove(struct gpio_chip *chip)
 	int		status = 0;
 	unsigned	id;
 
+	gpiochip_unexport(chip);
+
 	spin_lock_irqsave(&gpio_lock, flags);
 
 	gpiochip_remove_pin_ranges(chip);
@@ -1285,9 +1306,6 @@ int gpiochip_remove(struct gpio_chip *chip)
 	}
 
 	spin_unlock_irqrestore(&gpio_lock, flags);
-
-	if (status == 0)
-		gpiochip_unexport(chip);
 
 	return status;
 }
@@ -1928,15 +1946,15 @@ EXPORT_SYMBOL_GPL(gpiod_is_active_low);
  * that the GPIO was actually requested.
  */
 
-static int _gpiod_get_raw_value(const struct gpio_desc *desc)
+static bool _gpiod_get_raw_value(const struct gpio_desc *desc)
 {
 	struct gpio_chip	*chip;
-	int value;
+	bool value;
 	int offset;
 
 	chip = desc->chip;
 	offset = gpio_chip_hwgpio(desc);
-	value = chip->get ? chip->get(chip, offset) : 0;
+	value = chip->get ? chip->get(chip, offset) : false;
 	trace_gpio_value(desc_to_gpio(desc), 1, value);
 	return value;
 }
@@ -1992,7 +2010,7 @@ EXPORT_SYMBOL_GPL(gpiod_get_value);
  * @desc: gpio descriptor whose state need to be set.
  * @value: Non-zero for setting it HIGH otherise it will set to LOW.
  */
-static void _gpio_set_open_drain_value(struct gpio_desc *desc, int value)
+static void _gpio_set_open_drain_value(struct gpio_desc *desc, bool value)
 {
 	int err = 0;
 	struct gpio_chip *chip = desc->chip;
@@ -2019,7 +2037,7 @@ static void _gpio_set_open_drain_value(struct gpio_desc *desc, int value)
  * @desc: gpio descriptor whose state need to be set.
  * @value: Non-zero for setting it HIGH otherise it will set to LOW.
  */
-static void _gpio_set_open_source_value(struct gpio_desc *desc, int value)
+static void _gpio_set_open_source_value(struct gpio_desc *desc, bool value)
 {
 	int err = 0;
 	struct gpio_chip *chip = desc->chip;
@@ -2041,7 +2059,7 @@ static void _gpio_set_open_source_value(struct gpio_desc *desc, int value)
 			  __func__, err);
 }
 
-static void _gpiod_set_raw_value(struct gpio_desc *desc, int value)
+static void _gpiod_set_raw_value(struct gpio_desc *desc, bool value)
 {
 	struct gpio_chip	*chip;
 
