@@ -47,6 +47,7 @@
 
 	leds {
 		compatible = "gpio-leds";
+		status = "disabled";
 
 		charger-led {
 			gpios = <&gpio1 2 0>;
@@ -281,7 +282,7 @@
 	cs-gpios = <&gpio4 9 0>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi1>;
-	status = "okay";
+	status = "disabled";
 
 	flash: m25p80@0 {
 		#address-cells = <1>;
@@ -921,6 +922,16 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
 	status = "okay";
+};
+
+&uart5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart5_1>;
+	fsl,uart-has-rtscts;
+	status = "okay";
+	/* for DTE mode, add below change */
+	/* fsl,dte-mode; */
+	/* pinctrl-0 = <&pinctrl_uart5dte_1>; */
 };
 
 &usbh1 {

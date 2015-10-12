@@ -430,6 +430,14 @@
 	status = "okay";
 };
 
+&uart3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart3
+		     &pinctrl_bt>;
+	fsl,uart-has-rtscts;
+	status = "okay";
+};
+
 &uart5 { /* for bluetooth */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart5>;
@@ -467,7 +475,7 @@
 &usdhc2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc2>;
-	non-removable;
+	bus-width = <1>;  /* MUX SDIO for 1-bit only. */
 	no-1-8-v;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
@@ -485,7 +493,7 @@
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
 	vmmc-supply = <&vcc_sd3>;
-	status = "okay";
+	status = "disabled";
 };
 
 &usdhc4 {
@@ -729,6 +737,12 @@
 				MX6SX_PAD_CSI_HSYNC__AUDMUX_AUD6_TXD    0x120b0
 				MX6SX_PAD_CSI_VSYNC__AUDMUX_AUD6_RXD    0x130b0
 				MX6SX_PAD_CSI_PIXCLK__AUDMUX_MCLK       0x130b0
+			>;
+		};
+
+		pinctrl_bt: btgrp {
+			fsl,pins = <
+				MX6SX_PAD_SD2_DATA3__GPIO6_IO_11	0x13069 /* BT_REG_ON */
 			>;
 		};
 
@@ -984,6 +998,15 @@
 			>;
 		};
 
+		pinctrl_uart3: uart3grp {
+			fsl,pins = <
+				MX6SX_PAD_SD3_DATA4__UART3_RX		0x1b0b1
+				MX6SX_PAD_SD3_DATA5__UART3_TX		0x1b0b1
+				MX6SX_PAD_SD3_DATA7__UART3_CTS_B	0x1b0b1
+				MX6SX_PAD_SD3_DATA6__UART3_RTS_B	0x1b0b1
+			>;
+		};
+
 		pinctrl_uart5: uart5grp {
 			fsl,pins = <
 				MX6SX_PAD_KEY_ROW3__UART5_RX		0x1b0b1
@@ -1025,9 +1048,6 @@
 				MX6SX_PAD_SD2_CMD__USDHC2_CMD		0x17059
 				MX6SX_PAD_SD2_CLK__USDHC2_CLK		0x10059
 				MX6SX_PAD_SD2_DATA0__USDHC2_DATA0	0x17059
-				MX6SX_PAD_SD2_DATA1__USDHC2_DATA1	0x17059
-				MX6SX_PAD_SD2_DATA2__USDHC2_DATA2	0x17059
-				MX6SX_PAD_SD2_DATA3__USDHC2_DATA3	0x17059
 			>;
 		};
 
