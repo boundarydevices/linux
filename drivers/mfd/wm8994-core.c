@@ -672,7 +672,6 @@ MODULE_DEVICE_TABLE(i2c, wm8994_i2c_id);
 
 static const struct dev_pm_ops wm8994_pm_ops = {
 	SET_RUNTIME_PM_OPS(wm8994_suspend, wm8994_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(wm8994_suspend, wm8994_resume)
 };
 
 static struct i2c_driver wm8994_i2c_driver = {
