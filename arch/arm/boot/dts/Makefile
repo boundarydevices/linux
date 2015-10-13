@@ -180,6 +180,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6qp-sabresd.dtb \
 	imx6qp-sabresd-ecspi1.dtb \
 	imx6qp-sabresd-ldo.dtb \
+	imx6qp-sabresd-hdcp.dtb \
 	imx6q-sabrelite.dtb \
 	imx6q-sabresd.dtb \
 	imx6q-sabresd-ecspi1.dtb \
