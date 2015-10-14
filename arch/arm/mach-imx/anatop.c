@@ -45,6 +45,8 @@
 #define BM_ANADIG_REG_CORE_REG2			(0x1f << 18)
 #define BP_ANADIG_REG_CORE_REG2			(18)
 #define BM_ANADIG_ANA_MISC0_STOP_MODE_CONFIG	0x1000
+#define BM_ANADIG_ANA_MISC0_V2_STOP_MODE_CONFIG	0x800
+#define BM_ANADIG_ANA_MISC0_V3_STOP_MODE_CONFIG	0xc00
 #define BM_ANADIG_ANA_MISC2_REG1_STEP_TIME	(0x3 << 26)
 #define BP_ANADIG_ANA_MISC2_REG1_STEP_TIME	(26)
 /* Below MISC0_DISCON_HIGH_SNVS is only for i.MX6SL */
@@ -61,14 +63,20 @@ static struct regmap *anatop;
 
 static void imx_anatop_enable_weak2p5(bool enable)
 {
-	u32 reg, val;
+	u32 reg, val, mask;
 
 	regmap_read(anatop, ANADIG_ANA_MISC0, &val);
 
+	if (cpu_is_imx6sx() || cpu_is_imx6ul())
+		mask = BM_ANADIG_ANA_MISC0_V3_STOP_MODE_CONFIG;
+	else if (cpu_is_imx6sl())
+		mask = BM_ANADIG_ANA_MISC0_V2_STOP_MODE_CONFIG;
+	else
+		mask = BM_ANADIG_ANA_MISC0_STOP_MODE_CONFIG;
+
 	/* can only be enabled when stop_mode_config is clear. */
 	reg = ANADIG_REG_2P5;
-	reg += (enable && (val & BM_ANADIG_ANA_MISC0_STOP_MODE_CONFIG) == 0) ?
-		REG_SET : REG_CLR;
+	reg += (enable && (val & mask) == 0) ? REG_SET : REG_CLR;
 	regmap_write(anatop, reg, BM_ANADIG_REG_2P5_ENABLE_WEAK_LINREG);
 }
 
