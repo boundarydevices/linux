@@ -877,6 +877,7 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 
 	clk_register_clkdev(clks[IMX7D_GPT1_ROOT_CLK], "ipg", "imx-gpt.0");
 	clk_register_clkdev(clks[IMX7D_GPT_3M_CLK], "gpt_3m", "imx-gpt.0");
+	clk_register_clkdev(clks[IMX7D_SNVS_ROOT_CLK], "snvs", "imx-snvs.0");
 
 	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 		clk_prepare_enable(clks[clks_init_on[i]]);

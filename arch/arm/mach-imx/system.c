@@ -61,6 +61,7 @@ void do_switch_recovery(void)
 {
 	u32 reg;
 	void *addr;
+	struct clk *snvs_root;
 	if(cpu_is_imx6()){
 		addr = ioremap(MX6_SNVS_BASE_ADDR, MX6_SNVS_SIZE);
 		if (!addr) {
@@ -71,14 +72,17 @@ void do_switch_recovery(void)
 		reg |= ANDROID_RECOVERY_BOOT;
 		__raw_writel(reg, (addr + MX6_SNVS_LPGPR));
 	}else{
+		snvs_root = clk_get_sys("imx-snvs.0", "snvs");
 		addr = ioremap(MX7_SNVS_BASE_ADDR, MX7_SNVS_SIZE);	
 		if (!addr) {
 			pr_warn("SNVS ioremap failed!\n");
 			return;
 		}
+		clk_enable(snvs_root);
 		reg = __raw_readl(addr + MX7_SNVS_LPGPR);
 		reg |= ANDROID_RECOVERY_BOOT;
 		__raw_writel(reg, (addr + MX7_SNVS_LPGPR));
+		clk_disable(snvs_root);
 	}
 	iounmap(addr);
 }
@@ -87,6 +91,7 @@ void do_switch_fastboot(void)
 {
 	u32 reg;
 	void *addr;
+	struct clk *snvs_root;
 	if(cpu_is_imx6()){
 		addr = ioremap(MX6_SNVS_BASE_ADDR, MX6_SNVS_SIZE);
 		if (!addr) {
@@ -97,14 +102,17 @@ void do_switch_fastboot(void)
 		reg |= ANDROID_FASTBOOT_BOOT;
 		__raw_writel(reg, addr + MX6_SNVS_LPGPR);
 	}else{
+		snvs_root = clk_get_sys("imx-snvs.0", "snvs");
 		addr = ioremap(MX7_SNVS_BASE_ADDR, MX7_SNVS_SIZE);	
 		if (!addr) {
 			pr_warn("SNVS ioremap failed!\n");
 			return;
 		}
+		clk_enable(snvs_root);
 		reg = __raw_readl(addr + MX7_SNVS_LPGPR);
 		reg |= ANDROID_FASTBOOT_BOOT;
 		__raw_writel(reg, addr + MX7_SNVS_LPGPR);
+		clk_disable(snvs_root);
 	}
 	iounmap(addr);
 }
