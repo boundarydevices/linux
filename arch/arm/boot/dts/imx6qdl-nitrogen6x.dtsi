@@ -142,15 +142,6 @@
 		>;
 	};
 
-	pinctrl_i2c2_tc358743_mipi: i2c2-tc358743_mipigrp {
-		fsl,pins = <
-#define GP_TC3587_RESET	<&gpio6 9 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x030b0
-#define GPIRQ_TC3587	<&gpio2 5 IRQ_TYPE_LEVEL_LOW>
-			MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x0b0b0
-		>;
-	};
-
 	pinctrl_i2c2_ov5642: i2c2-ov5642grp { /* parallel camera */
 		fsl,pins = <
 			MX6QDL_PAD_CSI0_DAT12__IPU1_CSI0_DATA12		0x1b0b0
@@ -170,6 +161,15 @@
 			MX6QDL_PAD_GPIO_6__GPIO1_IO06			0x000b0
 #define GP_OV5642_RESET		<&gpio1 8 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_8__GPIO1_IO08			0x000b0
+		>;
+	};
+
+	pinctrl_i2c2_tc358743_mipi: i2c2-tc358743_mipigrp {
+		fsl,pins = <
+#define GP_TC3587_RESET	<&gpio6 9 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x030b0
+#define GPIRQ_TC3587	<&gpio2 5 IRQ_TYPE_LEVEL_LOW>
+			MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x0b0b0
 		>;
 	};
 
