@@ -2982,6 +2982,7 @@ fec_enet_close(struct net_device *ndev)
 	}
 
 	phy_disconnect(fep->phy_dev);
+	fep->phy_dev = NULL;
 
 	fec_enet_clk_enable(ndev, false);
 	pm_qos_remove_request(&fep->pm_qos_req);
