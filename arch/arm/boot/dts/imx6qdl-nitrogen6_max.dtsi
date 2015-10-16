@@ -899,7 +899,6 @@
 		csi_id = <0>;
 		mclk = <22000000>;
 		mclk_source = <0>;
-		pwms = <&pwm3 0 45>;
 	};
 };
 
