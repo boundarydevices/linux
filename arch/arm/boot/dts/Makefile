@@ -161,7 +161,6 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6dl-sabreauto-gpmi-weim.dtb \
 	imx6dl-sabresd.dtb \
 	imx6dl-sabresd-btwifi.dtb \
-	imx6dl-sabresd-ecspi1.dtb \
 	imx6dl-sabresd-enetirq.dtb \
 	imx6dl-sabresd-ldo.dtb \
 	imx6dl-sabresd-pf200.dtb \
@@ -180,17 +179,16 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6qp-sabreauto-gpmi-weim.dtb \
 	imx6qp-sabresd.dtb \
 	imx6qp-sabresd-btwifi.dtb \
-	imx6qp-sabresd-ecspi1.dtb \
 	imx6qp-sabresd-ldo.dtb \
 	imx6qp-sabresd-hdcp.dtb \
+	imx6qp-sabresd-uart.dtb \
 	imx6q-sabrelite.dtb \
 	imx6q-sabresd.dtb \
 	imx6q-sabresd-btwifi.dtb \
-	imx6q-sabresd-ecspi1.dtb \
 	imx6q-sabresd-enetirq.dtb \
 	imx6q-sabresd-ldo.dtb \
 	imx6q-sabresd-hdcp.dtb \
-	imx6q-sabresd-ldo.dtb \
+	imx6q-sabresd-uart.dtb \
 	imx6q-sbc6x.dtb \
 	imx6q-udoo.dtb \
 	imx6q-wandboard.dtb \
