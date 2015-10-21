@@ -267,7 +267,11 @@ static void snvs_poweroff(void)
 	value = readl(snvs_base + SNVS_LPCR);
 	/* set TOP and DP_EN bit */
 	writel(value | 0x60, snvs_base + SNVS_LPCR);
-	clk_disable(clk_snvs);
+	/*
+	 * Do not turn off snvs clock otherwise PMIC_ON_REQ can't be pulled
+	 * high by press ONOFF. This is design limitation.
+	 */
+	/* clk_disable(clk_snvs); */
 }
 
 static int snvs_rtc_probe(struct platform_device *pdev)

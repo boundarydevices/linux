@@ -216,7 +216,6 @@ struct mxsfb_info {
 	struct regulator *reg_lcd;
 	bool wait4vsync;
 	struct completion vsync_complete;
-	ktime_t vsync_nf_timestamp;
 	struct completion flip_complete;
 	int cur_blank;
 	int restore_blank;
@@ -413,7 +412,6 @@ static irqreturn_t mxsfb_irq_handler(int irq, void *dev_id)
 		writel(CTRL1_VSYNC_EDGE_IRQ_EN,
 			     host->base + LCDC_CTRL1 + REG_CLR);
 		host->wait4vsync = 0;
-		host->vsync_nf_timestamp = ktime_get();
 		complete(&host->vsync_complete);
 	}
 
@@ -870,16 +868,7 @@ static int mxsfb_ioctl(struct fb_info *fb_info, unsigned int cmd,
 
 	switch (cmd) {
 	case MXCFB_WAIT_FOR_VSYNC:
-		{
-			long long timestamp;
-			struct mxsfb_info *host = to_imxfb_host(fb_info);
-			ret = mxsfb_wait_for_vsync(fb_info);
-			timestamp = ktime_to_ns(host->vsync_nf_timestamp);
-			if ((ret == 0) && copy_to_user((void *)arg,
-				&timestamp, sizeof(timestamp))) {
-			    ret = -EFAULT;
-			}
-		}
+		ret = mxsfb_wait_for_vsync(fb_info);
 		break;
 	default:
 		break;
@@ -963,13 +952,13 @@ static int mxsfb_pan_display(struct fb_var_screeninfo *var,
 		host->base + LCDC_CTRL1 + REG_SET);
 
 	ret = wait_for_completion_timeout(&host->flip_complete, HZ / 2);
-	if (ret < 0) {
+	if (!ret) {
 		dev_err(fb_info->device,
 			"mxs wait for pan flip timeout\n");
-		ret = -ETIMEDOUT;
+		return -ETIMEDOUT;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int mxsfb_mmap(struct fb_info *info, struct vm_area_struct *vma)

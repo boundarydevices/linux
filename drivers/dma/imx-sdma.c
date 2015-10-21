@@ -353,6 +353,7 @@ struct sdma_engine {
 	struct gen_pool 		*iram_pool;
 	u32                             spba_start_addr;
 	u32                             spba_end_addr;
+	bool				suspend_off;
 };
 
 static struct sdma_driver_data sdma_imx31 = {
@@ -984,7 +985,7 @@ static int sdma_resume_channel(struct sdma_channel *sdmac)
 	/*
 	 * restore back context since context may loss if mega/fast OFF
 	 */
-	if (!readl_relaxed(sdma->regs + SDMA_H_C0PTR)) {
+	if (sdma->suspend_off) {
 		if (sdma_load_context(sdmac)) {
 			dev_err(sdmac->sdma->dev, "context load failed.\n");
 			return -EINVAL;
@@ -2175,6 +2176,8 @@ static int sdma_suspend(struct device *dev)
 	struct sdma_engine *sdma = platform_get_drvdata(pdev);
 	int i;
 
+	sdma->suspend_off = false;
+
 	/* Do nothing if not i.MX6SX or i.MX7D*/
 	if (sdma->drvdata != &sdma_imx6sx && sdma->drvdata != &sdma_imx7d)
 		return 0;
@@ -2219,6 +2222,9 @@ static int sdma_resume(struct device *dev)
 		clk_disable(sdma->clk_ahb);
 		return 0;
 	}
+
+	sdma->suspend_off = true;
+
 	/* restore regs and load firmware */
 	for (i = 0; i < MXC_SDMA_SAVED_REG_NUM; i++) {
 		/*
