@@ -125,6 +125,13 @@
 			gpio = <&gpio6 10 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
 		};
+
+		reg_mipi_dsi_pwr_on: mipi_dsi_pwr_on {
+			compatible = "regulator-fixed";
+			regulator-name = "mipi_dsi_pwr_on";
+			gpio = <&gpio4 16 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
 	};
 
 	pxp_v4l2_out {

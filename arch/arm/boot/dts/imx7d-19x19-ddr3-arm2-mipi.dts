@@ -8,6 +8,26 @@
 
 #include "imx7d-19x19-ddr3-arm2.dts"
 
+/ {
+	mipi_dsi_reset: mipi-dsi-reset {
+		compatible = "gpio-reset";
+		reset-gpios = <&gpio4 17 GPIO_ACTIVE_LOW>;
+		reset-delay-us = <50>;
+		#reset-cells = <0>;
+	};
+};
+
+&lcdif {
+	disp-dev = "mipi_dsi_samsung";
+};
+
+&mipi_dsi {
+	lcd_panel = "TRULY-WVGA";
+	disp-power-on-supply = <&reg_mipi_dsi_pwr_on>;
+	resets = <&mipi_dsi_reset>;
+	status = "okay";
+};
+
 &csi1 {
 	csi-mux-mipi = <&gpr 0x14 4>;
 	status = "okay";
