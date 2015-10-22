@@ -106,6 +106,16 @@
 		>;
 	};
 
+	pinctrl_i2c3_gslx680: i2c3_gslx680grp {
+		fsl,pins = <
+#define GPIRQ_GSLX680			<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
+#define GP_GSLX680_IRQ			<&gpio1 9 GPIO_ACTIVE_LOW>
+/*			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x130b0		*/
+#define GP_GSLX680_SHUTDOWN		<&gpio1 21 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_SD1_DAT3__GPIO1_IO21		0x1b0b0
+		>;
+	};
+
 	pinctrl_ipu1_di0: ipu1_di0grp {
 		fsl,pins = <
 			MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK 0x10
@@ -512,6 +522,7 @@
 		pwms = <&pwm1 0 5000000>;
 		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
 		default-brightness-level = <10>;
+		status = "disabled";
 	};
 
 	backlight_lcd {
@@ -653,9 +664,12 @@
 	};
 	gslx680_ts@40 {
 		compatible = "gslx680";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_gslx680>;
 		reg = <0x40>;
-		interrupts-extended = GP_TOUCH_IRQ;
-		wakeup-gpios = GP_TOUCH_IRQ;
+		interrupts-extended = GPIRQ_GSLX680;
+		wakeup-gpios = GP_GSLX680_IRQ;
+		shutdown-gpios = GP_GSLX680_SHUTDOWN;
 	};
 	ili210x@41 {
 		compatible = "ili210x";
@@ -735,7 +749,7 @@
 &pwm1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm1>;
-	status = "okay";
+	status = "disabled";
 };
 
 /* LCD(J33) backlight */
