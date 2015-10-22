@@ -14,6 +14,7 @@
 
 / {
 	aliases {
+		AA065VE11 = &AA065VE11;
                 mxcfb0 = &hdmi_display;
                 mxcfb1 = &lvds_display;
                 mxcfb2 = &lcd_display;
@@ -670,6 +671,17 @@
 		primary;
 
 		display-timings {
+			AA065VE11: AA065VE11 {
+				clock-frequency = <43748359>;
+				hactive = <640>;
+				vactive = <480>;
+				hback-porch = <148>;
+				hfront-porch = <116>;
+				vback-porch = <83>;
+				vfront-porch = <60>;
+				hsync-len = <96>;
+				vsync-len = <2>;
+			};
 			lg1280x800: lp101wx1 {
 				clock-frequency = <72000000>;
 				hactive = <1280>;
@@ -702,17 +714,6 @@
 				vfront-porch = <7>;
 				hsync-len = <60>;
 				vsync-len = <10>;
-			};
-			AA065VE11: AA065VE11 {
-				clock-frequency = <43748359>;
-				hactive = <640>;
-				vactive = <480>;
-				hback-porch = <148>;
-				hfront-porch = <116>;
-				vback-porch = <83>;
-				vfront-porch = <60>;
-				hsync-len = <96>;
-				vsync-len = <2>;
 			};
 			vga_lvds: vga {
 				clock-frequency = <25175000>;
