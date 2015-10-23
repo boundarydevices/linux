@@ -1542,6 +1542,7 @@ struct _reg_size
 static const struct _reg_size tc358743_read_reg_size[] =
 {
 	{0x0000, 0x005a, 2},
+	{0x0100, 0x0110, 4},
 	{0x0140, 0x0150, 4},
 	{0x0204, 0x0238, 4},
 	{0x040c, 0x0418, 4},
@@ -3181,7 +3182,9 @@ static void tc_det_worker(struct work_struct *work)
 		if (ret < 0) {
 			pr_err("%s: Error reading mode\n", __func__);
 		}
-//		pr_info("%s: 8521=%x\n", __func__, u32val);
+		pr_info("%s: lost hdmi_detect 8521=%x\n", __func__, u32val);
+//		if (u32val)
+//			mode = tc358743_mode_list[u32val].mode;
 	}
 	if (td->mode != mode) {
 		td->det_work_timeout = DET_WORK_TIMEOUT_DEFAULT;
@@ -3230,6 +3233,27 @@ static irqreturn_t tc358743_detect_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+static	u16 regoffs = 0;
+
+static ssize_t tc358743_store_regdump(struct device *device,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct tc_data *td = g_td;
+	struct sensor_data *sensor = &td->sensor;
+	u32 val;
+	int retval;
+	int size;
+
+	retval = sscanf(buf, "%x", &val);
+	if (retval == 1) {
+		size = get_reg_size(regoffs, 0);
+		retval = tc358743_write_reg(sensor, regoffs, val, size);
+		if (retval < 0)
+			pr_info("%s: err %d\n", __func__, retval);
+	}
+	return count;
+}
 
 /*!
  * tc358743 I2C probe function
@@ -3238,7 +3262,6 @@ static irqreturn_t tc358743_detect_handler(int irq, void *data)
  * @return  Error code indicating success or failure
  */
 #define DUMP_LENGTH 256
-static	u16 regoffs = 0;
 
 static ssize_t tc358743_show_regdump(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -3282,7 +3305,7 @@ static ssize_t tc358743_show_regdump(struct device *dev,
 	return len;
 }
 
-static DEVICE_ATTR(regdump, S_IRUGO, tc358743_show_regdump, NULL);
+static DEVICE_ATTR(regdump, S_IRUGO|S_IWUSR, tc358743_show_regdump, tc358743_store_regdump);
 
 static ssize_t tc358743_store_regoffs(struct device *device,
 				struct device_attribute *attr,
