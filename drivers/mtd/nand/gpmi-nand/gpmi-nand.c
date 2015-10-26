@@ -2099,7 +2099,7 @@ static const struct of_device_id gpmi_nand_id_table[] = {
 	}, {
 		.compatible = "fsl,imx7d-gpmi-nand",
 		.data = (void *)&gpmi_devdata_imx7d,
-	}
+	}, { /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, gpmi_nand_id_table);
 
