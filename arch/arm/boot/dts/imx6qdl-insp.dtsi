@@ -613,7 +613,7 @@
 		compatible = "fsl,imx6q-insp-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";
 		model = "imx6q-insp-sgtl5000";
-		ssi-controller = <&ssi1>;
+		cpu-dai = <&ssi1>;
 		audio-codec = <&sgtl5000>;
 		audio-routing =
 			"MIC_IN", "Mic Jack",
