@@ -26,18 +26,6 @@
 	ipu_id = <1>;
 };
 
-&lvds_display {
-	status = "okay";
-};
-
-&hdmi_display {
-	status = "okay";
-};
-
-&lcd_display {
-	status = "okay";
-};
-
 &ov5640_mipi {
 	ipu_id = <1>;
 	csi_id = <0>;
