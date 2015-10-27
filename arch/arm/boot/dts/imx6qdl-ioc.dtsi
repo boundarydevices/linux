@@ -161,11 +161,11 @@
 	lvds_display: fb@1 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
-		interface_pix_fmt = "RGB666";
-		default_bpp = <16>;
+		interface_pix_fmt = "RGB24";
+		default_bpp = <32>;
 		int_clk = <0>;
 		late_init = <0>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	lcd_display: fb@2 {
@@ -666,7 +666,7 @@
 	lvds_channel0: lvds-channel@0 {
 		crtc = "ipu1-di1";
 		fsl,data-mapping = "spwg";
-		fsl,data-width = <18>;
+		fsl,data-width = <24>;
 		status = "okay";
 		primary;
 
