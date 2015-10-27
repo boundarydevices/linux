@@ -256,7 +256,6 @@ struct imx_port {
 	unsigned int		tx_bytes;
 	unsigned int		dma_tx_nents;
 	struct delayed_work	tsk_dma_tx;
-	struct work_struct	tsk_dma_rx;
 	wait_queue_head_t	dma_wait;
 	unsigned int            saved_reg[11];
 };
@@ -927,11 +926,9 @@ static void imx_break_ctl(struct uart_port *port, int break_state)
 }
 
 #define RX_BUF_SIZE	(PAGE_SIZE)
-static int start_rx_dma(struct imx_port *sport);
 
-static void dma_rx_work(struct work_struct *w)
+static void dma_rx_work(struct imx_port *sport)
 {
-	struct imx_port *sport = container_of(w, struct imx_port, tsk_dma_rx);
 	unsigned int i = sport->rx_buf.pending_idx;
 	unsigned int end = sport->rx_buf.cur_idx;
 	struct tty_port *port = &sport->port.state->port;
@@ -1000,7 +997,7 @@ static void dma_rx_callback(void *data)
 	if (i == sport->rx_buf.pending_idx)
 		dev_err(sport->port.dev, "overwrite!\n");
 
-	schedule_work(&sport->tsk_dma_rx);
+	dma_rx_work(sport);
 }
 
 static int start_rx_dma(struct imx_port *sport)
@@ -1228,10 +1225,8 @@ static int imx_startup(struct uart_port *port)
 	    !sport->dma_is_inited)
 		imx_uart_dma_init(sport);
 
-	if (sport->dma_is_inited) {
+	if (sport->dma_is_inited)
 		INIT_DELAYED_WORK(&sport->tsk_dma_tx, dma_tx_work);
-		INIT_WORK(&sport->tsk_dma_rx, dma_rx_work);
-	}
 
 	spin_lock_irqsave(&sport->port.lock, flags);
 	/* Reset fifo's and state machines */
