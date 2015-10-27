@@ -2527,6 +2527,7 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 	struct fb_videomode m;
 	struct mxc_hdmi *hdmi = mxc_dispdrv_getdata(disp);
 	int irq = platform_get_irq(hdmi->pdev, 0);
+	int edid_status = HDMI_EDID_FAIL;
 
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
 
@@ -2638,18 +2639,28 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 		     hdmi->dft_mode_str, NULL, 0, NULL,
 		     hdmi->default_bpp);
 
-	console_lock();
+	if (hdmi->override_edid)
+		edid_status = mxc_hdmi_read_edid(hdmi);
+	switch (edid_status) {
+	case HDMI_EDID_SUCCESS:
+	case HDMI_EDID_SAME:
+		mxc_hdmi_edid_rebuild_modelist(hdmi);
+		break;
+	default:
+		console_lock();
 
-	fb_destroy_modelist(&hdmi->fbi->modelist);
+		fb_destroy_modelist(&hdmi->fbi->modelist);
 
-	/*Add all no interlaced CEA mode to default modelist */
-	for (i = 0; i < ARRAY_SIZE(mxc_cea_mode); i++) {
-		mode = &mxc_cea_mode[i];
-		if (!(mode->vmode & FB_VMODE_INTERLACED) && (mode->xres != 0))
-			fb_add_videomode(mode, &hdmi->fbi->modelist);
+		/*Add all no interlaced CEA mode to default modelist */
+		for (i = 0; i < ARRAY_SIZE(mxc_cea_mode); i++) {
+			mode = &mxc_cea_mode[i];
+			if (!(mode->vmode & FB_VMODE_INTERLACED) && (mode->xres != 0))
+				fb_add_videomode(mode, &hdmi->fbi->modelist);
+		}
+
+		console_unlock();
 	}
 
-	console_unlock();
 
 	/* Find a nearest mode in default modelist */
 	fb_var_to_videomode(&m, &hdmi->fbi->var);
