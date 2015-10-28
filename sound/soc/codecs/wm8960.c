@@ -1122,7 +1122,7 @@ static int wm8960_probe(struct snd_soc_codec *codec)
 static struct snd_soc_codec_driver soc_codec_dev_wm8960 = {
 	.probe =	wm8960_probe,
 	.set_bias_level = wm8960_set_bias_level,
-	.idle_bias_off = true,
+	.suspend_bias_off = true,
 };
 
 static const struct regmap_config wm8960_regmap = {
