@@ -525,8 +525,8 @@
 };
 
 &clks {
-	assigned-clocks        = <&clks 31>, <&clks 75>, <&clks 199>, <&clks 198>;
-	assigned-clock-parents = <&clks 8>, <&clks 31>, <&clks 198>, <&clks 130>;
+	assigned-clocks        = <&clks 32>, <&clks 76>, <&clks 199>, <&clks 198>;
+	assigned-clock-parents = <&clks 8>, <&clks 32>, <&clks 198>, <&clks 133>;
 	assigned-clock-rates = <0>, <135000000>, <27000000>;
 };
 
