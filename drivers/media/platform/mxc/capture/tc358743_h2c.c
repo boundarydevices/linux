@@ -3142,16 +3142,14 @@ static void tc_det_worker(struct work_struct *work)
 		td->det_work_timeout = DET_WORK_TIMEOUT_DEFERRED;
 		goto out;
 	}
-//	pr_info("%s: 852f=%x\n", __func__, u32val);
 	if (u852f & TC3587430_HDMI_DETECT) {
-		pr_info("%s: hdmi detect %x\n", __func__, u852f);
 		td->lock = u852f & TC3587430_HDMI_DETECT;
 		u32val = 0;
 		ret = tc358743_read_reg(sensor, 0x8521, &u32val);
 		if (ret < 0) {
 			pr_err("%s: Error reading mode\n", __func__);
 		}
-		pr_info("%s: detect 8521=%x\n", __func__, u32val);
+		pr_info("%s: detect 8521=%x 852f=%x\n", __func__, u32val, u852f);
 		u32val &= 0x0f;
 		td->fps = tc358743_60_fps;
 		if (!u32val) {
@@ -3182,7 +3180,7 @@ static void tc_det_worker(struct work_struct *work)
 		if (ret < 0) {
 			pr_err("%s: Error reading mode\n", __func__);
 		}
-		pr_info("%s: lost hdmi_detect 8521=%x\n", __func__, u32val);
+		pr_info("%s: lost hdmi_detect 8521=%x 852f=%x\n", __func__, u32val, u852f);
 //		if (u32val)
 //			mode = tc358743_mode_list[u32val].mode;
 	}
