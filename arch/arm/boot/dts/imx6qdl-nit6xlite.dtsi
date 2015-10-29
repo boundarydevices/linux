@@ -111,8 +111,8 @@
 #define GPIRQ_GSLX680			<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
 #define GP_GSLX680_IRQ			<&gpio1 9 GPIO_ACTIVE_LOW>
 /*			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x130b0		*/
-#define GP_GSLX680_SHUTDOWN		<&gpio1 21 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_SD1_DAT3__GPIO1_IO21		0x1b0b0
+#define GP_GSLX680_SHUTDOWN		<&gpio7 12 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x1b0b0
 		>;
 	};
 
@@ -522,7 +522,6 @@
 		pwms = <&pwm1 0 5000000>;
 		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
 		default-brightness-level = <10>;
-		status = "disabled";
 	};
 
 	backlight_lcd {
@@ -749,7 +748,7 @@
 &pwm1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm1>;
-	status = "disabled";
+	status = "okay";
 };
 
 /* LCD(J33) backlight */
