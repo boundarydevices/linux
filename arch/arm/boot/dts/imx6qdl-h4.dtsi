@@ -122,9 +122,9 @@
 			MX6QDL_PAD_CSI0_DAT15__GPIO6_IO01	0x030b0
 #define GPIRQ_TC3587		<&gpio6 0 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_CSI0_DAT14__GPIO6_IO00	0x0b0b0
-			MX6QDL_PAD_GPIO_3__CCM_CLKO2		0x000b0
 #define GP_HDMI_POWER_DET	<&gpio4 8 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_KEY_COL1__GPIO4_IO08		0x1b0b0
+			MX6QDL_PAD_GPIO_3__CCM_CLKO2		0x000b0
 		>;
 	};
 
@@ -514,8 +514,8 @@
 };
 
 &clks {
-	assigned-clocks        = <&clks IMX6QDL_CLK_IPU1_SEL>,      <&clks IMX6QDL_CLK_IPU1_PODF>, <&clks IMX6QDL_CLK_CKO2_PODF>, <&clks IMX6QDL_CLK_CKO2_SEL>;
-	assigned-clock-parents = <&clks IMX6QDL_CLK_PLL3_PFD1_540M>, <&clks IMX6QDL_CLK_IPU1_SEL>, <&clks IMX6QDL_CLK_CKO2_SEL>, <&clks IMX6QDL_CLK_IPU1>;
+	assigned-clocks        = <&clks IMX6QDL_CLK_IPU2_SEL>,      <&clks IMX6QDL_CLK_IPU2_PODF>, <&clks IMX6QDL_CLK_CKO2_PODF>, <&clks IMX6QDL_CLK_CKO2_SEL>;
+	assigned-clock-parents = <&clks IMX6QDL_CLK_PLL3_PFD1_540M>, <&clks IMX6QDL_CLK_IPU2_SEL>, <&clks IMX6QDL_CLK_CKO2_SEL>, <&clks IMX6QDL_CLK_IPU2>;
 	assigned-clock-rates = <0>, <135000000>, <27000000>;
 };
 
@@ -559,9 +559,9 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_wm8960>;
 		reg = <0x1a>;
-		clocks = <&clks IMX6QDL_CLK_CKO>;
 		clock-names = "mclk";
 		wlf,shared-lrclk;
+		clocks = <&clks IMX6QDL_CLK_CKO>;
 		assigned-clocks =        <&clks IMX6QDL_CLK_CKO1_SEL>,  <&clks IMX6QDL_CLK_CKO1_PODF>, <&clks IMX6QDL_CLK_CKO>;
 		assigned-clock-parents = <&clks IMX6QDL_CLK_PLL4_AUDIO_DIV>, <&clks IMX6QDL_CLK_CKO1_SEL>, <&clks IMX6QDL_CLK_CKO1>;
 		assigned-clock-rates = <0>, <12000000>;
