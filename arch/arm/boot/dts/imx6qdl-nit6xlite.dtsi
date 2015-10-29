@@ -108,8 +108,8 @@
 
 	pinctrl_i2c3_gslx680: i2c3_gslx680grp {
 		fsl,pins = <
-#define GPIRQ_GSLX680			<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
-#define GP_GSLX680_IRQ			<&gpio1 9 GPIO_ACTIVE_LOW>
+#define GPIRQ_GSLX680			<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
+#define GP_GSLX680_IRQ			<&gpio1 9 GPIO_ACTIVE_HIGH>
 /*			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x130b0		*/
 #define GP_GSLX680_SHUTDOWN		<&gpio7 12 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x1b0b0
