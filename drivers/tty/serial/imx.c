@@ -246,7 +246,6 @@ struct imx_port {
 	unsigned int		tx_bytes;
 	unsigned int		dma_tx_nents;
 	struct delayed_work	tsk_dma_tx;
-	struct work_struct	tsk_dma_rx;
 	wait_queue_head_t	dma_wait;
 	unsigned int            saved_reg[10];
 #define DMA_TX_IS_WORKING 1
@@ -896,7 +895,6 @@ static int imx_setup_ufcr(struct imx_port *sport, unsigned int mode)
 }
 
 #define RX_BUF_SIZE	(PAGE_SIZE)
-static int start_rx_dma(struct imx_port *sport);
 
 static void dma_rx_push_data(struct imx_port *sport, struct tty_struct *tty,
 				unsigned int start, unsigned int end)
@@ -917,9 +915,8 @@ static void dma_rx_push_data(struct imx_port *sport, struct tty_struct *tty,
 	}
 }
 
-static void dma_rx_work(struct work_struct *w)
+static void dma_rx_work(struct imx_port *sport)
 {
-	struct imx_port *sport = container_of(w, struct imx_port, tsk_dma_rx);
 	struct tty_struct *tty = sport->port.state->port.tty;
 	unsigned int cur_idx = sport->rx_buf.cur_idx;
 
@@ -970,14 +967,6 @@ static void dma_rx_callback(void *data)
 
 	status = dmaengine_tx_status(chan, (dma_cookie_t)0, &state);
 	count = RX_BUF_SIZE - state.residue;
-
-	if (readl(sport->port.membase + USR2) & USR2_IDLE) {
-		/* In condition [3] the SDMA counted up too early */
-		count--;
-
-		writel(USR2_IDLE, sport->port.membase + USR2);
-	}
-
 	sport->rx_buf.buf_info[sport->rx_buf.cur_idx].filled = true;
 	sport->rx_buf.buf_info[sport->rx_buf.cur_idx].rx_bytes = count;
 	sport->rx_buf.cur_idx++;
@@ -988,7 +977,7 @@ static void dma_rx_callback(void *data)
 		dev_err(sport->port.dev, "overwrite!\n");
 
 	if (count)
-		schedule_work(&sport->tsk_dma_rx);
+		dma_rx_work(sport);
 }
 
 static int start_rx_dma(struct imx_port *sport)
@@ -1227,10 +1216,8 @@ static int imx_startup(struct uart_port *port)
 		&& !sport->dma_is_inited)
 		imx_uart_dma_init(sport);
 
-	if (sport->dma_is_inited) {
+	if (sport->dma_is_inited)
 		INIT_DELAYED_WORK(&sport->tsk_dma_tx, dma_tx_work);
-		INIT_WORK(&sport->tsk_dma_rx, dma_rx_work);
-	}
 
 	spin_lock_irqsave(&sport->port.lock, flags);
 	/*
