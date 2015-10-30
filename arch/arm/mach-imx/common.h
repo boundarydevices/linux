@@ -101,6 +101,8 @@ bool imx_src_is_m4_enabled(void);
 void mcc_receive_from_mu_buffer(unsigned int index, unsigned int *data);
 void mcc_send_via_mu_buffer(unsigned int index, unsigned int data);
 bool imx_mu_is_m4_in_low_freq(void);
+bool imx_mu_is_m4_in_stop(void);
+int imx_mu_lpm_ready(bool ready);
 unsigned int imx_gpcv2_is_mf_mix_off(void);
 int imx_gpc_mf_power_on(unsigned int irq, unsigned int on);
 #ifdef CONFIG_HAVE_IMX_GPCV2
