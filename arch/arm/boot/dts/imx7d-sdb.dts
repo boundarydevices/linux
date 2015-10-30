@@ -63,7 +63,7 @@
 			regulator-name = "can2-3v3";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			gpio = <&gpio1 7 GPIO_ACTIVE_LOW>;
+			gpio = <&gpio2 14 GPIO_ACTIVE_LOW>;
 		};
 
 		reg_vref_1v8: regulator@3 {
@@ -930,7 +930,7 @@
 		pinctrl_hog_2: hoggrp-2 {
 			fsl,pins = <
 				MX7D_PAD_GPIO1_IO05__GPIO1_IO5	0x14
-				MX7D_PAD_GPIO1_IO07__GPIO1_IO7	0x59  /* CAN_STBY */
+				MX7D_PAD_EPDC_DATA14__GPIO2_IO14 0x59  /* CAN_STBY */
 				MX7D_PAD_GPIO1_IO00__WDOD1_WDOG_B 0x74
 			>;
 		};
