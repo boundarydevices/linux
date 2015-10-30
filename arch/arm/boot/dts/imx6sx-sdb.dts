@@ -105,6 +105,7 @@
 			regulator-max-microvolt = <3000000>;
 			gpio = <&gpio2 11 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
+			regulator-always-on;
 		};
 
 		reg_psu_5v: regulator@1 {
