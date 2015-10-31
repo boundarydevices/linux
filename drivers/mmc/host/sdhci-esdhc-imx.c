@@ -990,11 +990,6 @@ static int esdhc_set_uhs_signaling(struct sdhci_host *host, unsigned int uhs)
 	return esdhc_change_pinstate(host, uhs);
 }
 
-static unsigned int esdhc_get_max_timeout_counter(struct sdhci_host *host)
-{
-	return 1 << 28;
-}
-
 static struct sdhci_ops sdhci_esdhc_ops = {
 	.read_l = esdhc_readl_le,
 	.read_w = esdhc_readw_le,
@@ -1166,9 +1161,7 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		writel(readl(host->ioaddr + SDHCI_HOST_CONTROL)
 			| ESDHC_BURST_LEN_EN_INCR,
 			host->ioaddr + SDHCI_HOST_CONTROL);
-
-		host->quirks2 |= SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
-					SDHCI_QUIRK2_NOSTD_TIMEOUT_COUNTER;
+		host->quirks2 |= SDHCI_QUIRK2_PRESET_VALUE_BROKEN;
 		host->mmc->caps |= MMC_CAP_1_8V_DDR;
 
 		/*
@@ -1176,8 +1169,6 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		 * TO1.1, it's harmless for MX6SL
 		 */
 		writel(readl(host->ioaddr + 0x6c) | BIT(7), host->ioaddr + 0x6c);
-		sdhci_esdhc_ops.get_max_timeout_counter =
-					esdhc_get_max_timeout_counter;
 	}
 
 	if (imx_data->socdata->flags & ESDHC_FLAG_MAN_TUNING)
