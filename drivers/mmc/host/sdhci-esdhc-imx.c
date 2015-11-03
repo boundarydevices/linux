@@ -990,9 +990,22 @@ static int esdhc_set_uhs_signaling(struct sdhci_host *host, unsigned int uhs)
 	return esdhc_change_pinstate(host, uhs);
 }
 
-static unsigned int esdhc_get_max_timeout_counter(struct sdhci_host *host)
+static unsigned int esdhc_get_max_timeout_count(struct sdhci_host *host)
 {
-	return 1 << 28;
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct pltfm_imx_data *imx_data = pltfm_host->priv;
+
+	return esdhc_is_usdhc(imx_data) ? 1 << 28 : 1 << 27;
+}
+
+static void esdhc_set_timeout(struct sdhci_host *host, struct mmc_command *cmd)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct pltfm_imx_data *imx_data = pltfm_host->priv;
+
+	/* use maximum timeout counter */
+	sdhci_writeb(host, esdhc_is_usdhc(imx_data) ? 0xF : 0xE,
+			SDHCI_TIMEOUT_CONTROL);
 }
 
 static struct sdhci_ops sdhci_esdhc_ops = {
@@ -1004,8 +1017,10 @@ static struct sdhci_ops sdhci_esdhc_ops = {
 	.set_clock = esdhc_pltfm_set_clock,
 	.get_max_clock = esdhc_pltfm_get_max_clock,
 	.get_min_clock = esdhc_pltfm_get_min_clock,
+	.get_max_timeout_count = esdhc_get_max_timeout_count,
 	.get_ro = esdhc_pltfm_get_ro,
 	.platform_bus_width = esdhc_pltfm_bus_width,
+	.set_timeout = esdhc_set_timeout,
 	.set_uhs_signaling = esdhc_set_uhs_signaling,
 };
 
@@ -1170,9 +1185,7 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		writel(readl(host->ioaddr + SDHCI_HOST_CONTROL)
 			| ESDHC_BURST_LEN_EN_INCR,
 			host->ioaddr + SDHCI_HOST_CONTROL);
-
-		host->quirks2 |= SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
-					SDHCI_QUIRK2_NOSTD_TIMEOUT_COUNTER;
+		host->quirks2 |= SDHCI_QUIRK2_PRESET_VALUE_BROKEN;
 		host->mmc->caps |= MMC_CAP_1_8V_DDR;
 
 		/*
@@ -1180,8 +1193,6 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		 * TO1.1, it's harmless for MX6SL
 		 */
 		writel(readl(host->ioaddr + 0x6c) | BIT(7), host->ioaddr + 0x6c);
-		sdhci_esdhc_ops.get_max_timeout_counter =
-					esdhc_get_max_timeout_counter;
 	}
 
 	if (imx_data->socdata->flags & ESDHC_FLAG_MAN_TUNING)
