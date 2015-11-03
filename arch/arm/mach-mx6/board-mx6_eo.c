@@ -678,9 +678,15 @@ static void __init board_init(void)
 	imx6q_add_imx_uart(0, NULL);
 	imx6q_add_imx_uart(1, NULL);
 	imx6q_add_imx_uart(2, &ttymxc2_data);
+	if (!cpu_is_mx6q()) {
+		ldb_data.ipu_id = 0;
+		ldb_data.sec_ipu_id = 0;
+	}
 
 	imx6q_add_ipuv3(0, &ipu_data[0]);
-        imx6q_add_ipuv3(1, &ipu_data[1]);
+	if (cpu_is_mx6q()) {
+		imx6q_add_ipuv3(1, &ipu_data[1]);
+	}
 	imx6q_add_ipuv3fb(0, &fb_data);
 	imx6q_add_ipuv3fb(1, &fb_data);
 
