@@ -4,9 +4,17 @@ linux-imx6
 Boundary Devices Kernel tree for i.MX6.
 
 This repository contains kernel source trees for Boundary Devices'
-i.MX6 based boards: the [SABRE Lite][sabrelite], [Nitrogen6X][nitrogen6x],
-[Nitrogen6X SOM][nitrogen6x-som] and [Nitrogen6 Lite][nitrogen6-lite]
-based largely on Freescale's kernel trees at [git.freescale.com][freescale].
+i.MX6 based boards:
+
+* [BD-SL-i.MX6 (SABRE Lite)][sabrelite]
+* [Nitrogen6X][nitrogen6x]
+* [Nitrogen6X SOM][nitrogen6x-som]
+* [Nitrogen6 Lite][nitrogen6-lite]
+* [Nitrogen6 MAX][nitrogen6-max]
+* [Nitrogen6 VM][nitrogen6-vm]
+* [Nitrogen6 SoloX][nitrogen6-sx]
+
+It is based largely on Freescale's kernel trees at [git.freescale.com][freescale].
 
 Latest kernel releases:
 
@@ -32,6 +40,9 @@ These branches are based on Freescale releases of the same name (minus the 'boun
 [nitrogen6x]:http://boundarydevices.com/nitrogen6x-board-imx6-arm-cortex-a9-sbc "Nitrogen6X product page"
 [nitrogen6x-som]:http://boundarydevices.com/products/nitrogen6x-som "Nitrogen6X SOM product page"
 [nitrogen6-lite]:http://boundarydevices.com/products/nitrogen6_lite "Nitrogen6_Lite product page"
+[nitrogen6-max]:http://boundarydevices.com/product/nitrogen6max "Nitrogen6_MAX product page"
+[nitrogen6-vm]:http://boundarydevices.com/product/nitrogen6_vm_imx6 "Nitrogen6_VM product page"
+[nitrogen6-sx]:http://boundarydevices.com/product/nit6_solox-imx6 "Nit6_SoloX product page"
 [latest-jellybean]:http://github.com/boundarydevices/linux-imx6/tree/boundary-jb4.3_1.0.0-ga "Boundary Jellybean kernel tree"
 [latest-kitkat]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-kk4.4.3_2.0.0-ga "Boundary KitKat kernel tree"
 [latest-lollipop]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-l5.0.0_1.0.0-ga "Boundary Lollipop kernel tree"
