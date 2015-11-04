@@ -22,7 +22,7 @@ Non-Android
 ------------------
 The latest 3.0.35 kernel is in branch [boundary-imx\_3.0.35\_4.1.0][latest-3.0.35]
 
-The latest 3.10.53 kernel is in branch [boundary-imx\_3.10.53\_1.1.1\_ga][latest-3.10.53]
+The latest 3.14.28 kernel is in branch [boundary-imx\_3.14.28\_1.0.0\_ga][latest-3.14.28]
 
 These branches are based on Freescale releases of the same name (minus the 'boundary').
 
@@ -36,5 +36,5 @@ These branches are based on Freescale releases of the same name (minus the 'boun
 [latest-kitkat]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-kk4.4.3_2.0.0-ga "Boundary KitKat kernel tree"
 [latest-lollipop]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-l5.0.0_1.0.0-ga "Boundary Lollipop kernel tree"
 [latest-3.0.35]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.0.35_4.1.0 "Boundary 3.0.35 4.1.0 kernel tree"
-[latest-3.10.53]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.10.53_1.1.1_ga "Boundary 3.10.53 kernel tree"
+[latest-3.14.28]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.14.28_1.0.0_ga "Boundary 3.14.28-1.0.0 GA kernel tree"
 
