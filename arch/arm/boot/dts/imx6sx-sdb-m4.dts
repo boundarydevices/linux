@@ -61,7 +61,6 @@
 };
 
 &qspi_m4 {
-	reg = <0x021e0000 0x4000>;
 	status = "okay";
 };
 
