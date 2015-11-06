@@ -516,17 +516,17 @@
 
 &iomuxc {
 	imx6x-sabreauto {
-		pinctrl_egalax_int: egalax-intgrp {
-			fsl,pins = <
-				MX6SX_PAD_SD4_RESET_B__GPIO6_IO_22      0x10b0
-				>;
-		};
-
 		pinctrl_audmux_3: audmux-3 {
 			fsl,pins = <
 				MX6SX_PAD_SD1_CMD__AUDMUX_AUD5_RXC    0x130b0
 				MX6SX_PAD_SD1_CLK__AUDMUX_AUD5_RXFS   0x130b0
 				MX6SX_PAD_SD1_DATA3__AUDMUX_AUD5_RXD  0x130b0
+			>;
+		};
+
+		pinctrl_egalax_int: egalax_intgrp {
+			fsl,pins = <
+				MX6SX_PAD_SD4_RESET_B__GPIO6_IO_22      0x80000000
 			>;
 		};
 
