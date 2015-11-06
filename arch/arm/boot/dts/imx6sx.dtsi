@@ -1442,6 +1442,11 @@
 				status = "okay";
 			};
 
+			rpmsg: rpmsg{
+				compatible = "fsl,imx6sx-rpmsg";
+				status = "disabled";
+			};
+
 			uart6: serial@22a0000 {
 				compatible = "fsl,imx6sx-uart",
 					     "fsl,imx6q-uart", "fsl,imx21-uart";
