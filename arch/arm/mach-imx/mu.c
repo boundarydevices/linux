@@ -47,6 +47,11 @@
 #define MU_LPM_M4_WAKEUP_ENABLE_MASK	0xF
 #define MU_LPM_M4_WAKEUP_ENABLE_SHIFT	0x0
 
+#define MU_LPM_M4_A7_READY              0xFFFFAAAA
+#define MU_LPM_M4_RUN_MODE	        0x5A5A0001
+#define MU_LPM_M4_WAIT_MODE	        0x5A5A0002
+#define MU_LPM_M4_STOP_MODE	        0x5A5A0003
+
 struct imx_mu_rpmsg_box {
 	const char *name;
 	struct blocking_notifier_head notifier;
@@ -62,6 +67,7 @@ static u32 m4_message;
 static struct delayed_work mu_work, rpmsg_work;
 static u32 m4_wake_irqs[4];
 static bool m4_freq_low;
+static bool m4_in_stop;
 
 struct imx_sema4_mutex *mcc_shm_ptr;
 unsigned int imx_mcc_buffer_freed = 0, imx_mcc_buffer_queued = 0;
@@ -69,6 +75,11 @@ unsigned int imx_mcc_buffer_freed = 0, imx_mcc_buffer_queued = 0;
 static DECLARE_WAIT_QUEUE_HEAD(buffer_freed_wait_queue);
 /* Used for blocking recv */
 static DECLARE_WAIT_QUEUE_HEAD(buffer_queued_wait_queue);
+
+bool imx_mu_is_m4_in_stop(void)
+{
+	return m4_in_stop;
+}
 
 bool imx_mu_is_m4_in_low_freq(void)
 {
@@ -163,10 +174,18 @@ static void mu_work_handler(struct work_struct *work)
 	pr_debug("receive M4 message 0x%x\n", m4_message);
 
 	switch (m4_message) {
+	case MU_LPM_M4_RUN_MODE:
+	case MU_LPM_M4_WAIT_MODE:
+		m4_in_stop = false;
+		break;
+	case MU_LPM_M4_STOP_MODE:
+		m4_in_stop = true;
+		break;
 	case MU_LPM_M4_REQUEST_HIGH_BUS:
 		request_bus_freq(BUS_FREQ_HIGH);
 #ifdef CONFIG_SOC_IMX6SX
-		imx6sx_set_m4_highfreq(true);
+		if (cpu_is_imx6sx())
+			imx6sx_set_m4_highfreq(true);
 #endif
 		imx_mu_send_message(MU_LPM_HANDSHAKE_INDEX,
 			MU_LPM_BUS_HIGH_READY_FOR_M4);
@@ -175,10 +194,12 @@ static void mu_work_handler(struct work_struct *work)
 	case MU_LPM_M4_RELEASE_HIGH_BUS:
 		release_bus_freq(BUS_FREQ_HIGH);
 #ifdef CONFIG_SOC_IMX6SX
-		imx6sx_set_m4_highfreq(false);
+		if (cpu_is_imx6sx()) {
+			imx6sx_set_m4_highfreq(false);
+			imx_mu_send_message(MU_LPM_HANDSHAKE_INDEX,
+				MU_LPM_M4_FREQ_CHANGE_READY);
+		}
 #endif
-		imx_mu_send_message(MU_LPM_HANDSHAKE_INDEX,
-			MU_LPM_M4_FREQ_CHANGE_READY);
 		m4_freq_low = true;
 		break;
 	default:
@@ -217,6 +238,18 @@ static void mu_work_handler(struct work_struct *work)
 int imx_mu_rpmsg_send(unsigned int rpmsg)
 {
 	return imx_mu_send_message(MU_RPMSG_HANDSHAKE_INDEX, rpmsg);
+}
+
+int imx_mu_lpm_ready(bool ready)
+{
+	u32 val;
+
+	val = readl_relaxed(mu_base + MU_ACR);
+	if (ready)
+		writel_relaxed(val | BIT(0), mu_base + MU_ACR);
+	else
+		writel_relaxed(val & ~BIT(0), mu_base + MU_ACR);
+	return 0;
 }
 
 int imx_mu_rpmsg_register_nb(const char *name, struct notifier_block *nb)
@@ -566,6 +599,12 @@ static int imx_mu_probe(struct platform_device *pdev)
 		/* enable the bit31(GIE3) of MU_ACR, used for MCC */
 		writel_relaxed(readl_relaxed(mu_base + MU_ACR) | BIT(31),
 			mu_base + MU_ACR);
+		INIT_DELAYED_WORK(&mu_work, mu_work_handler);
+		INIT_DELAYED_WORK(&rpmsg_work, rpmsg_work_handler);
+		/* enable the bit26(RIE1) of MU_ACR */
+		writel_relaxed(readl_relaxed(mu_base + MU_ACR) |
+			BIT(26) | BIT(27), mu_base + MU_ACR);
+		imx_mu_lpm_ready(true);
 	} else {
 		INIT_DELAYED_WORK(&mu_work, mu_work_handler);
 

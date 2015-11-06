@@ -551,6 +551,12 @@ wfi_ddr_retention_out:
 
 	restore_ttbr1
 standby_out:
+	/* make sure SNVS clk is disabled */
+	ldr	r11, [r0, #PM_INFO_MX7_CCM_V_OFFSET]
+	add	r11, r11, #0x4000
+	ldr	r7, =0x0
+	str	r7, [r11, #CCM_SNVS_LPCG]
+
 	pop	{r4-r12}
 	/* return to suspend finish */
 	mov	pc, lr
@@ -585,6 +591,11 @@ resume:
 dsm_ddr_self_refresh_out:
 	ddrc_exit_self_refresh
 dsm_ddr_retention_out:
+	/* make sure SNVS clk is disabled */
+	ldr	r11, [r0, #PM_INFO_MX7_CCM_P_OFFSET]
+	add	r11, r11, #0x4000
+	ldr	r7, =0x0
+	str	r7, [r11, #CCM_SNVS_LPCG]
 
 	mov	pc, lr
 ENDPROC(imx7_suspend)

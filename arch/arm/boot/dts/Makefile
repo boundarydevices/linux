@@ -236,6 +236,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6ul-14x14-evk-btwifi.dtb \
 	imx6ul-14x14-evk-csi.dtb \
 	imx6ul-9x9-evk.dtb \
+	imx6ul-9x9-evk-btwifi.dtb \
 	imx6ul-9x9-evk-ldo.dtb \
 	imx6ul-9x9-evk-csi.dtb \
 	vf610-cosmic.dtb \
