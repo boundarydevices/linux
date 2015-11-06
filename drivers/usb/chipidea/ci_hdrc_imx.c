@@ -18,6 +18,7 @@
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
 #include <linux/regulator/consumer.h>
+#include <linux/busfreq-imx.h>
 
 #include "ci.h"
 #include "ci_hdrc_imx.h"
@@ -503,9 +504,10 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
+	request_bus_freq(BUS_FREQ_HIGH);
 	ret = imx_prepare_enable_clks(&pdev->dev);
 	if (ret)
-		return ret;
+		goto err_bus_freq;
 
 	data->phy = devm_usb_get_phy_by_phandle(&pdev->dev, "fsl,usbphy", 0);
 	if (IS_ERR(data->phy)) {
@@ -633,6 +635,8 @@ disable_hsic_regulator:
 		ret = regulator_disable(data->hsic_pad_regulator);
 err_clk:
 	imx_disable_unprepare_clks(&pdev->dev);
+err_bus_freq:
+	release_bus_freq(BUS_FREQ_HIGH);
 	return ret;
 }
 
@@ -649,6 +653,7 @@ static int ci_hdrc_imx_remove(struct platform_device *pdev)
 	if (data->override_phy_control)
 		usb_phy_shutdown(data->phy);
 	imx_disable_unprepare_clks(&pdev->dev);
+	release_bus_freq(BUS_FREQ_HIGH);
 	if (data->hsic_pad_regulator)
 		regulator_disable(data->hsic_pad_regulator);
 
@@ -678,6 +683,7 @@ static int imx_controller_suspend(struct device *dev)
 	}
 
 	imx_disable_unprepare_clks(dev);
+	release_bus_freq(BUS_FREQ_HIGH);
 	data->in_lpm = true;
 
 	return 0;
@@ -695,6 +701,7 @@ static int imx_controller_resume(struct device *dev)
 		return 0;
 	}
 
+	request_bus_freq(BUS_FREQ_HIGH);
 	ret = imx_prepare_enable_clks(dev);
 	if (ret)
 		return ret;
