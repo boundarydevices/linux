@@ -2548,12 +2548,15 @@ static unsigned int mxc_poll(struct file *file, struct poll_table_struct *wait)
 	struct video_device *dev = video_devdata(file);
 	cam_data *cam = video_get_drvdata(dev);
 	wait_queue_head_t *queue = NULL;
-	int res = POLLIN | POLLRDNORM;
+	int res = 0;
 
 	pr_debug("%s\n", __func__);
 
 	if (down_interruptible(&cam->busy_lock))
 		return -EINTR;
+	
+	if( cam->enc_counter != 0 )
+		res = POLLIN | POLLRDNORM;
 
 	queue = &cam->enc_queue;
 	poll_wait(file, queue, wait);
