@@ -1141,6 +1141,11 @@
 				};
 			};
 
+			romcp@021ac000 {
+					compatible = "fsl,imx6sx-romcp", "syscon";
+					reg = <0x021ac000 0x4000>;
+			};
+
 			sai1: sai@21d4000 {
 				compatible = "fsl,imx6sx-sai";
 				reg = <0x021d4000 0x4000>;
