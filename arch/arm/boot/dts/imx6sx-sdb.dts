@@ -73,7 +73,7 @@
 		compatible = "hannstar,cabc";
 
 		lvds0 {
-			gpios = <&gpio4 26 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpio4 18 GPIO_ACTIVE_HIGH>;
 		};
 	};
 
