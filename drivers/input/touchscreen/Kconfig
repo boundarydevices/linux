@@ -327,6 +327,20 @@ config TOUCHSCREEN_FUJITSU
 	  To compile this driver as a module, choose M here: the
 	  module will be called fujitsu-ts.
 
+config TOUCHSCREEN_GOODIX
+	tristate "Goodix I2C touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have the Goodix touchscreen (such as one
+	  installed in Onda v975w tablets) connected to your
+	  system. It also supports 5-finger chip models, which can be
+	  found on ARM tablets, like Wexler TAB7200 and MSI Primo73.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called goodix.
+
 config TOUCHSCREEN_GSLX680
 	tristate "gslx680 touchscreen"
 	select I2C
