@@ -161,7 +161,7 @@
 			MX6QDL_PAD_EIM_D18__ECSPI1_MOSI		0x100b1
 			MX6QDL_PAD_EIM_D16__ECSPI1_SCLK		0x100b1
 #define GP_ECSPI1_NOR_CS		<&gpio3 19 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_D19__GPIO3_IO19		0x000b1
+			MX6QDL_PAD_EIM_D19__GPIO3_IO19		0x0b0b1
 		>;
 	};
 
@@ -343,10 +343,10 @@
 };
 
 &ecspi1 {
-	fsl,spi-num-chipselects = <1>;
-	cs-gpios = GP_ECSPI1_NOR_CS;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi1>;
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = GP_ECSPI1_NOR_CS;
 	status = "okay";
 
 	flash: m25p80@0 {
@@ -355,18 +355,17 @@
 		reg = <0>;
 		#address-cells = <1>;
 		#size-cells = <1>;
-		partition@0 {
+		mtd@00000000 {
 			label = "U-Boot";
 			reg = <0x0 0xC0000>;
-			read-only;
 		};
-		partition@C0000 {
+
+		mtd@000C0000 {
 			label = "env";
 			reg = <0xC0000 0x2000>;
-			read-only;
 		};
-		partition@C2000 {
-			label = "Kernel";
+		mtd@000C2000 {
+			label = "splash";
 			reg = <0xC2000 0x13e000>;
 		};
 	};
