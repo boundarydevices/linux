@@ -759,8 +759,8 @@
 		DOVDD-supply = <&reg_1p8v>;
 		AVDD-supply = <&reg_2p5v>;
 		DVDD-supply = <&reg_1p8v>;
-		pwn-gpios = <&gpio6 9 1>;
-		rst-gpios = <&gpio2 5 0>;
+		pwn-gpios = GP_OV5640_MIPI_POWER_DOWN;
+		rst-gpios = GP_OV5640_MIPI_RESET;
 		ipu_id = <0>;
 		csi_id = <1>;
 		mclk = <22000000>;
