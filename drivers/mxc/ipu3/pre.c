@@ -51,7 +51,7 @@ struct ipu_pre_data {
 };
 
 static LIST_HEAD(pre_list);
-static DEFINE_MUTEX(pre_list_lock);
+static DEFINE_SPINLOCK(pre_list_lock);
 
 static inline void pre_write(struct ipu_pre_data *pre,
 			u32 value, unsigned int offset)
@@ -67,15 +67,16 @@ static inline u32 pre_read(struct ipu_pre_data *pre, unsigned offset)
 static struct ipu_pre_data *get_pre(unsigned int id)
 {
 	struct ipu_pre_data *pre;
+	unsigned long lock_flags;
 
-	mutex_lock(&pre_list_lock);
+	spin_lock_irqsave(&pre_list_lock, lock_flags);
 	list_for_each_entry(pre, &pre_list, list) {
 		if (pre->id == id) {
-			mutex_unlock(&pre_list_lock);
+			spin_unlock_irqrestore(&pre_list_lock, lock_flags);
 			return pre;
 		}
 	}
-	mutex_unlock(&pre_list_lock);
+	spin_unlock_irqrestore(&pre_list_lock, lock_flags);
 
 	return NULL;
 }
@@ -893,6 +894,7 @@ static int ipu_pre_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct ipu_pre_data *pre;
 	struct resource *res;
+	unsigned long lock_flags;
 	int id, irq, err;
 
 	pre = devm_kzalloc(&pdev->dev, sizeof(*pre), GFP_KERNEL);
@@ -935,9 +937,9 @@ static int ipu_pre_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	mutex_lock(&pre_list_lock);
+	spin_lock_irqsave(&pre_list_lock, lock_flags);
 	list_add_tail(&pre->list, &pre_list);
-	mutex_unlock(&pre_list_lock);
+	spin_unlock_irqrestore(&pre_list_lock, lock_flags);
 
 	ipu_pre_alloc_double_buffer(pre->id, IPU_PRE_MAX_WIDTH * 8 * IPU_PRE_MAX_BPP);
 
@@ -958,6 +960,7 @@ static int ipu_pre_probe(struct platform_device *pdev)
 static int ipu_pre_remove(struct platform_device *pdev)
 {
 	struct ipu_pre_data *pre = platform_get_drvdata(pdev);
+	unsigned long lock_flags;
 
 	if (pre->iram_pool && pre->double_buffer_base) {
 		gen_pool_free(pre->iram_pool,
@@ -965,9 +968,9 @@ static int ipu_pre_remove(struct platform_device *pdev)
 			      pre->double_buffer_size);
 	}
 
-	mutex_lock(&pre_list_lock);
+	spin_lock_irqsave(&pre_list_lock, lock_flags);
 	list_del(&pre->list);
-	mutex_unlock(&pre_list_lock);
+	spin_unlock_irqrestore(&pre_list_lock, lock_flags);
 
 	return 0;
 }
