@@ -206,7 +206,7 @@ static void of_assigned_ldb_sels(struct device_node *node,
 	}
 }
 
-static void __init mmdc_ch1_handshake(bool enable)
+static void mmdc_ch1_handshake(bool enable)
 {
 	unsigned int reg;
 
