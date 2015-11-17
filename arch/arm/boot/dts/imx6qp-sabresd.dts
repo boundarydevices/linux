@@ -83,6 +83,12 @@
 	};
 };
 
+&i2c1 {
+	mma8451@1c {
+		position = <1>;
+	};
+};
+
 &mxcfb1 {
 	prefetch;
 	status = "okay";
