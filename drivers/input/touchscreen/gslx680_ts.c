@@ -55,8 +55,8 @@ struct gsl_ts {
 	u8 irq_enable_needed;
 	unsigned down_mask;
 	int irq;
-	struct gpio_desc *gpiod_irq;
-	struct gpio_desc *gpiod_shutdown;
+	int gpio_irq;
+	int gpio_shutdown;
 	u8 touch_data[TOUCH_DATA_SIZE];
 	unsigned x[MAX_CONTACTS];
 	unsigned y[MAX_CONTACTS];
@@ -65,8 +65,8 @@ struct gsl_ts {
 static void gslX680_shutdown(struct gsl_ts *ts, int active)
 {
 	pr_info("%s:active=%d\n", __func__, active);
-	if (!IS_ERR(ts->gpiod_shutdown))
-		gpiod_set_value(ts->gpiod_shutdown, active);
+	if (gpio_is_valid(ts->gpio_shutdown))
+		gpio_set_value(ts->gpio_shutdown, active);
 }
 
 static int gsl_ts_write(struct i2c_client *client, u8 reg, u8 *pdata, unsigned datalen)
@@ -455,7 +455,7 @@ static void gsl_ts_worker(struct work_struct *work)
 		ts->irq_enable_needed = true;
 		return;
 	}
-	if (!gpiod_get_value(ts->gpiod_irq)) {
+	if (!gpio_get_value(ts->gpio_irq)) {
 		/* No interrrupt pending */
 		goto schedule1;
 	}
@@ -495,7 +495,7 @@ static void gsl_ts_worker(struct work_struct *work)
 	}
 
 schedule:
-	if (gpiod_get_value(ts->gpiod_irq)) {
+	if (gpio_get_value(ts->gpio_irq)) {
 		/* Sleep if irq is still pending */
 		msleep(1000);
 	}
@@ -603,6 +603,8 @@ static int gslx680_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	int rc;
 	struct gsl_ts *ts;
 	struct device *dev = &client->dev;
+	enum of_gpio_flags flags;
+	struct device_node *np = client->dev.of_node;
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		dev_err(dev, "I2C functionality not supported\n");
@@ -617,19 +619,19 @@ static int gslx680_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	i2c_set_clientdata(client, ts);
 
 	ts->irq = client->irq;
-	ts->gpiod_shutdown = devm_gpiod_get(dev, "shutdown");
-	if (IS_ERR(ts->gpiod_shutdown))
+	ts->gpio_shutdown = of_get_named_gpio(np, "shutdown", 0);
+	if (!gpio_is_valid(ts->gpio_shutdown))
 		dev_warn(dev, "unable to claim shutdown gpio\n");
 	else
-		gpiod_direction_output(ts->gpiod_shutdown, 0);
+		gpio_direction_output(ts->gpio_shutdown, 0);
 
-	ts->gpiod_irq = devm_gpiod_get(dev, "wakeup");
-	if (IS_ERR(ts->gpiod_irq)) {
+	ts->gpio_irq = of_get_named_gpio_flags(np, "wakeup", 0, &flags);
+	if (!gpio_is_valid(ts->gpio_irq)) {
 		dev_err(dev, "unable to claim irq gpio\n");
-		rc = PTR_ERR(ts->gpiod_irq);
+		rc = -ENODEV;
 		goto err_wakeup;
 	}
-	gpiod_direction_input(ts->gpiod_irq);
+	gpio_direction_input(ts->gpio_irq);
 
 	gslX680_shutdown(ts, 0);
 	msleep(30);
@@ -651,7 +653,7 @@ static int gslx680_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	queue_work(ts->wq, &ts->mt_set_nice_work);
 
 	rc = request_irq(client->irq, gsl_ts_irq,
-			gpiod_is_active_low(ts->gpiod_irq) ? IRQF_TRIGGER_LOW :
+			 (flags & OF_GPIO_ACTIVE_LOW) ? IRQF_TRIGGER_LOW :
 					IRQF_TRIGGER_HIGH, "gslx680", ts);
 	if (rc < 0) {
 		dev_err(dev, "gslx680_ts probe: request irq failed\n");
