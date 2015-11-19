@@ -425,15 +425,10 @@ static int goodix_reset(struct goodix_ts_data *ts)
 	usleep_range(6000, 10000);		/* T4: > 5ms */
 
 	/* end select I2C slave addr */
-	error = gpiod_direction_input(ts->gpiod_rst);
+	error = gpiod_direction_input(ts->gpiod_int);
 	if (error)
 		return error;
-
-	error = goodix_int_sync(ts);
-	if (error)
-		return error;
-
-	return 0;
+	return goodix_int_sync(ts);
 }
 
 static void goodix_disable_esd(struct goodix_ts_data *ts)
