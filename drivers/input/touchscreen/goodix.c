@@ -436,7 +436,7 @@ static int goodix_reset(struct goodix_ts_data *ts)
 		return ret;
 	usleep_range(6000, 10000);		/* T4: > 5ms */
 	/* end select I2C slave addr */
-	ret = gpiod_direction_input(ts->gpiod_rst);
+	ret = gpiod_direction_input(ts->gpiod_int);
 	if (ret)
 		return ret;
 	return goodix_int_sync(ts);
@@ -855,6 +855,19 @@ static int goodix_ts_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, ts);
 	INIT_DELAYED_WORK(&ts->esd_work, goodix_esd_work);
 
+	error = goodix_get_gpio_config(ts, id);
+	if (error)
+		return error;
+
+	if (ts->gpiod_int && ts->gpiod_rst) {
+		/* reset the controller */
+		error = goodix_reset(ts);
+		if (error) {
+			dev_err(&client->dev, "Controller reset failed.\n");
+			return error;
+		}
+	}
+
 	error = goodix_i2c_test(client);
 	if (error) {
 		dev_err(&client->dev, "I2C communication failure: %d\n", error);
@@ -869,17 +882,7 @@ static int goodix_ts_probe(struct i2c_client *client,
 
 	ts->cfg_len = goodix_get_cfg_len(ts->id);
 
-	error = goodix_get_gpio_config(ts, id);
-	if (error)
-		return error;
-
 	if (ts->gpiod_int && ts->gpiod_rst) {
-		/* reset the controller */
-		error = goodix_reset(ts);
-		if (error) {
-			dev_err(&client->dev, "Controller reset failed.\n");
-			return error;
-		}
 #if 0
 		error = device_property_read_u32(&ts->client->dev,
 					GOODIX_DEVICE_ESD_TIMEOUT_PROPERTY,
