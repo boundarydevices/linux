@@ -57,6 +57,7 @@ struct gsl_ts {
 	int irq;
 	int gpio_irq;
 	int gpio_shutdown;
+	int gpio_shutdown_flags;
 	u8 touch_data[TOUCH_DATA_SIZE];
 	unsigned x[MAX_CONTACTS];
 	unsigned y[MAX_CONTACTS];
@@ -65,6 +66,8 @@ struct gsl_ts {
 static void gslX680_shutdown(struct gsl_ts *ts, int active)
 {
 	pr_info("%s:active=%d\n", __func__, active);
+	if (ts->gpio_shutdown_flags & OF_GPIO_ACTIVE_LOW)
+		active = !active;
 	if (gpio_is_valid(ts->gpio_shutdown))
 		gpio_set_value(ts->gpio_shutdown, active);
 }
@@ -601,6 +604,7 @@ static void gp_mt_set_nice_work(struct work_struct *work)
 static int gslx680_ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int rc;
+	int err;
 	struct gsl_ts *ts;
 	struct device *dev = &client->dev;
 	enum of_gpio_flags flags;
@@ -619,19 +623,37 @@ static int gslx680_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	i2c_set_clientdata(client, ts);
 
 	ts->irq = client->irq;
-	ts->gpio_shutdown = of_get_named_gpio(np, "shutdown", 0);
-	if (!gpio_is_valid(ts->gpio_shutdown))
+	ts->gpio_shutdown = of_get_named_gpio_flags(np, "shutdown-gpios",
+						    0, &flags);
+	if (!gpio_is_valid(ts->gpio_shutdown)) {
 		dev_warn(dev, "unable to claim shutdown gpio\n");
-	else
-		gpio_direction_output(ts->gpio_shutdown, 0);
+	} else {
+		ts->gpio_shutdown_flags = flags;
+		err = devm_gpio_request_one(&client->dev, ts->gpio_shutdown,
+					    GPIOF_OUT_INIT_LOW,
+					    "gslx680_shutdown_gpio");
+		if (err) {
+			dev_err(&client->dev, "can't request reset gpio %d",
+				ts->gpio_shutdown);
+			ts->gpio_shutdown = -1;
+		}
+	}
 
-	ts->gpio_irq = of_get_named_gpio_flags(np, "wakeup", 0, &flags);
+	ts->gpio_irq = of_get_named_gpio_flags(np, "wakeup-gpios", 0, &flags);
 	if (!gpio_is_valid(ts->gpio_irq)) {
 		dev_err(dev, "unable to claim irq gpio\n");
 		rc = -ENODEV;
 		goto err_wakeup;
 	}
-	gpio_direction_input(ts->gpio_irq);
+
+	err = devm_gpio_request_one(&client->dev, ts->gpio_irq, GPIOF_DIR_IN,
+				    "gslx680_wakeup_gpio");
+	if (err) {
+		dev_err(&client->dev, "can't request reset gpio %d",
+			ts->gpio_irq);
+		rc = -ENODEV;
+		goto err_wakeup;
+	}
 
 	gslX680_shutdown(ts, 0);
 	msleep(30);
