@@ -12,10 +12,12 @@ Required properties:
  - reg			: I2C address of the chip. Should be 0x5d or 0x14
  - interrupt-parent	: Interrupt controller to which the chip is connected
  - interrupts		: Interrupt to which the chip is connected
- - gpios		: GPIOS the chip is connected to: first one is the
-			  interrupt gpio and second one the reset gpio.
+
 Optional properties:
 
+ - irq-gpios		: GPIO pin used for IRQ. The driver uses the
+			  interrupt gpio pin as output to reset the device.
+ - reset-gpios		: GPIO pin used for reset
  - esd-recovery-timeout-ms : ESD poll time (in milli seconds) for the driver to
                             check if ESD occurred and in that case reset the
                             device. ESD is disabled if this property is not set
@@ -32,8 +34,8 @@ Example:
 			interrupt-parent = <&gpio>;
 			interrupts = <0 0>;
 
-			gpios = <&gpio1 0 0>, /* INT */
-				<&gpio1 1 0>; /* RST */
+			irq-gpios = <&gpio1 0 0>;
+			reset-gpios = <&gpio1 1 0>;
 		};
 
 		/* ... */
