@@ -1766,7 +1766,6 @@ static int ci_udc_start(struct usb_gadget *gadget,
 			ci_hdrc_otg_fsm_start(ci);
 		return retval;
 	}
-
 	if (ci->vbus_active) {
 		pm_runtime_get_sync(&gadget->dev);
 		hw_device_reset(ci);
@@ -1774,8 +1773,9 @@ static int ci_udc_start(struct usb_gadget *gadget,
 		/* interrupt, error, port change, reset, sleep/suspend */
 		hw_write(ci, OP_USBINTR, ~0,
 			USBi_UI|USBi_UEI|USBi_PCI|USBi_URI|USBi_SLI);
+		if (IS_ENABLED(CONFIG_FSL_UTP))
+			hw_write(ci, OP_USBCMD, USBCMD_RS, USBCMD_RS);
 	}
-
 	return retval;
 }
 
