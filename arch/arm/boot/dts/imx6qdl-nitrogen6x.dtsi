@@ -863,11 +863,11 @@
 		wakeup-gpios = GP_I2C3_J7;
 	};
 
-	gt911@5d {
+	gt911@14 {
 		compatible = "goodix,gt911";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_gt911>;
-		reg = <0x5d>;
+		reg = <0x14>;
 		esd-recovery-timeout-ms = <2000>;
 		interrupts-extended = GPIRQ_GT911;
 		irq-gpios = GP_GT911_IRQ;
