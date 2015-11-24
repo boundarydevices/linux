@@ -493,7 +493,7 @@
         };
 
         ft5x06_ts@38 {
-		compatible = "ft5x06-ts,ft5x06-ts";
+		compatible = "ft5x06-ts";
 		reg = <0x38>;
 		interrupts-extended = GP_I2C3_TOUCH_IRQ_FALLING;
 		wakeup-gpios = GP_I2C3_TOUCH_IRQ_FALLING;
