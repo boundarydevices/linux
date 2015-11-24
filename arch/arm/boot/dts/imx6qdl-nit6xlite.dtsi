@@ -656,7 +656,7 @@
 		wakeup-gpios = GP_TOUCH_IRQ;
 	};
 	ft5x06_ts@38 {
-		compatible = "ft5x06-ts,ft5x06-ts";
+		compatible = "ft5x06-ts";
 		reg = <0x38>;
 		interrupts-extended = GP_TOUCH_IRQ;
 		wakeup-gpios = GP_TOUCH_IRQ;
