@@ -87,6 +87,16 @@
         wlreg_on-supply = <&wlreg_on>;
     };
 
+	led_group_0: led_group@0 {
+		pinctrl-0= <&pinctrl_ledgpio>;
+		compatible = "gpio-leds";
+		led-0 {
+			label = "led0";
+			gpios = <&gpio1 3 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "timer";
+		};
+	};
+
 	sound {
 		compatible = "fsl,imx6ul-evk-wm8960",
 			   "fsl,imx-audio-wm8960";
@@ -297,7 +307,7 @@
 &tsc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_tsc>;
-	status = "okay";
+	status = "disabled";
 	xnur-gpio = <&gpio1 3 0>;
 	measure_delay_time = <0xffff>;
 	pre_charge_time = <0xfff>;
@@ -686,6 +696,11 @@
 		pinctrl_dvfs: dvfsgrp {
 			fsl,pins = <
 				MX6UL_PAD_SNVS_TAMPER3__GPIO5_IO03	0x79
+			>;
+		};
+		pinctrl_ledgpio: ledgpiogrp {
+			fsl,pins = <
+				MX6UL_PAD_GPIO1_IO03__GPIO1_IO03	0x80000000
 			>;
 		};
 	};
