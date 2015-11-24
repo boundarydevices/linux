@@ -555,6 +555,7 @@ static const struct i2c_device_id ts_idtable[] = {
 	{ "ft5x06-ts", 0 },
 	{ }
 };
+MODULE_DEVICE_TABLE(i2c, ts_idtable);
 
 static const struct of_device_id ft5x06_dt_ids[] = {
        {
