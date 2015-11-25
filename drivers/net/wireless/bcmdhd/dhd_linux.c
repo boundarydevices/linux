@@ -2147,6 +2147,9 @@ dhd_txcomplete(dhd_pub_t *dhdp, void *txp, bool success)
 #ifdef PROP_TXSTATUS
 	if (dhdp->wlfc_state && (dhdp->proptxstatus_mode != WLFC_FCMODE_NONE)) {
 		dhd_if_t *ifp = dhd->iflist[DHD_PKTTAG_IF(PKTTAG(txp))];
+		/* if the interface is released somewhere just return */
+		if (ifp == NULL)
+			return;
 		uint datalen  = PKTLEN(dhd->pub.osh, txp);
 
 		if (success) {
