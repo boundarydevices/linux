@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -43,7 +43,7 @@
 int _ipu_csi_mclk_set(struct ipu_soc *ipu, uint32_t pixel_clk, uint32_t csi)
 {
 	uint32_t temp;
-	uint32_t div_ratio;
+	int32_t div_ratio;
 
 	div_ratio = (clk_get_rate(ipu->ipu_clk) / pixel_clk) - 1;
 
