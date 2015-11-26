@@ -254,7 +254,7 @@ static int mxs_phy_hw_init(struct mxs_phy *mxs_phy)
 /* Return true if the vbus is there */
 static bool mxs_phy_get_vbus_status(struct mxs_phy *mxs_phy)
 {
-	unsigned int vbus_value;
+	unsigned int vbus_value = 0;
 
 	if (mxs_phy->port_id == 0)
 		regmap_read(mxs_phy->regmap_anatop,
