@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2014 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2008-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -106,7 +106,7 @@ static int imx_si476x_probe(struct platform_device *pdev)
 	struct device_node *ssi_np, *np = pdev->dev.of_node;
 	struct platform_device *ssi_pdev;
 	struct i2c_client *fm_dev;
-	struct device_node *fm_np;
+	struct device_node *fm_np = NULL;
 	int int_port, ext_port, ret;
 
 	ret = of_property_read_u32(np, "mux-int-port", &int_port);
