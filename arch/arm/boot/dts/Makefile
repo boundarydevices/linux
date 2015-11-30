@@ -484,6 +484,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-pico-pi.dtb \
 	imx6dl-prtrvt.dtb \
 	imx6dl-prtvt7.dtb \
+	imx6dl-rc.dtb \
 	imx6dl-rex-basic.dtb \
 	imx6dl-riotboard.dtb \
 	imx6dl-sabreauto.dtb \
