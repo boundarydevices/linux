@@ -48,6 +48,25 @@
 		>;
 	};
 
+	pinctrl_ecspi2: ecspi2grp {
+		fsl,pins = <
+			MX6QDL_PAD_CSI0_DAT10__ECSPI2_MISO	0x100b1
+			MX6QDL_PAD_CSI0_DAT9__ECSPI2_MOSI	0x100b1
+			MX6QDL_PAD_CSI0_DAT8__ECSPI2_SCLK	0x100b1
+#define GP_ECSPI2_CS		<&gpio5 29 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_CSI0_DAT11__GPIO5_IO29	0x0b0b1
+		>;
+	};
+
+	pinctrl_ecspi2_mcp2515: ecspi2_mcp2515grp {
+		fsl,pins = <
+#define GP_MCP2515_RESET	<&gpio3 1 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_DA1__GPIO3_IO01		0x0b0b0
+#define GPIRQ_MCP2515		<&gpio3 3 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_DA3__GPIO3_IO03		0x0b0b1
+		>;
+	};
+
 	pinctrl_enet: enetgrp {
 		fsl,pins = <
 			MX6QDL_PAD_ENET_MDIO__ENET_MDIO		0x1b0b0
@@ -393,10 +412,10 @@
 	};
 
 	clocks {
-		clk24m: clk24m {
+		clk20m: clk20m {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
-			clock-frequency = <24000000>;
+			clock-frequency = <20000000>;
 		};
 	};
 
@@ -659,6 +678,26 @@
 			label = "splash";
 			reg = <0xC2000 0x13e000>;
 		};
+	};
+};
+
+&ecspi2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi2>;
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = GP_ECSPI2_CS;
+	status = "okay";
+	/* can bus */
+	mcp2515: mcp2515@0 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ecspi2_mcp2515>;
+		compatible = "microchip,mcp2515";
+		clocks = <&clk20m>;
+		interrupts-extended = GPIRQ_MCP2515;
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
 	};
 };
 
