@@ -692,6 +692,7 @@ static int at803x_ack_interrupt(struct phy_device *phydev)
 {
 	int err;
 
+	/* bit[7..0] int status, which is a read and clear register. */
 	err = phy_read(phydev, AT803X_INTR_STATUS);
 
 	return (err < 0) ? err : 0;
@@ -703,18 +704,21 @@ static int at803x_config_intr(struct phy_device *phydev)
 	int value;
 
 	value = phy_read(phydev, AT803X_INTR_ENABLE);
+	if (value < 0)
+		value = 0;
 
-	if (phydev->interrupts == PHY_INTERRUPT_ENABLED) {
-		value |= AT803X_INTR_ENABLE_AUTONEG_ERR;
-		value |= AT803X_INTR_ENABLE_SPEED_CHANGED;
-		value |= AT803X_INTR_ENABLE_DUPLEX_CHANGED;
-		value |= AT803X_INTR_ENABLE_LINK_FAIL;
-		value |= AT803X_INTR_ENABLE_LINK_SUCCESS;
+#define INT_CONDITIONS (AT803X_INTR_ENABLE_AUTONEG_ERR | \
+			AT803X_INTR_ENABLE_SPEED_CHANGED | \
+			AT803X_INTR_ENABLE_DUPLEX_CHANGED | \
+			AT803X_INTR_ENABLE_LINK_FAIL | \
+			AT803X_INTR_ENABLE_LINK_SUCCESS)
 
-		err = phy_write(phydev, AT803X_INTR_ENABLE, value);
-	}
+	if (phydev->interrupts == PHY_INTERRUPT_ENABLED)
+		value |= INT_CONDITIONS;
 	else
-		err = phy_write(phydev, AT803X_INTR_ENABLE, 0);
+		value &= ~INT_CONDITIONS;
+
+	err = phy_write(phydev, AT803X_INTR_ENABLE, value);
 
 	return err;
 }
@@ -1191,8 +1195,8 @@ static struct phy_driver at803x_driver[] = {
 	/* PHY_GBIT_FEATURES */
 	.read_status		= at803x_read_status,
 	.aneg_done		= at803x_aneg_done,
-	.ack_interrupt		= &at803x_ack_interrupt,
-	.config_intr		= &at803x_config_intr,
+	.ack_interrupt		= at803x_ack_interrupt,
+	.config_intr		= at803x_config_intr,
 	.get_tunable		= at803x_get_tunable,
 	.set_tunable		= at803x_set_tunable,
 	.cable_test_start	= at803x_cable_test_start,
