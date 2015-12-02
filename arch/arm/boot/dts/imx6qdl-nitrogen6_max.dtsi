@@ -846,6 +846,13 @@
 };
 
 &i2c2a {
+	ft5x06_ts@38 {
+		compatible = "ft5x06-ts";
+		reg = <0x38>;
+		interrupts-extended = GPIRQ_I2C3_J7;
+		wakeup-gpios = GP_I2C3_J7;
+	};
+
 	ov5642: ov5642@3c {
 		compatible = "ovti,ov5642";
 		reg = <0x3c>;
