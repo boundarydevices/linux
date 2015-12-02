@@ -74,6 +74,12 @@
 		>;
 	};
 
+	pinctrl_hdmi_cec: hdmi_cecgrp {
+		fsl,pins = <
+			MX6QDL_PAD_EIM_A25__HDMI_TX_CEC_LINE	0x1f8b0
+		>;
+	};
+
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 #define GP_HOG_TP68	<&gpio2 0 GPIO_ACTIVE_LOW>
@@ -456,6 +462,12 @@
 };
 
 &hdmi_audio {
+	status = "okay";
+};
+
+&hdmi_cec {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hdmi_cec>;
 	status = "okay";
 };
 
