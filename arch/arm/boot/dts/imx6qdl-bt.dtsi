@@ -522,6 +522,7 @@
 		/* gs2971 */
 		compatible = "fsl,imx6q-v4l2-capture";
 		csi_id = <1>;
+		device_id = <8>;
 		mclk_source = <0>;
 		status = "okay";
 	};
