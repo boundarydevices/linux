@@ -1840,7 +1840,9 @@ static int TW68_hwinit1(struct TW68_dev *dev)
 	//pr_debug("2864 init CSR_REG 0x%x]=  I2C 2864   val1:0X%x  %x\n", CSR_REG,  val1 );
 
 	// device data structure initialization
-	TW68_video_init1(dev);
+	ret = TW68_video_init1(dev);
+	if (ret)
+		return ret;
 
 	// decoder parameter setup
 	TW68_video_init2(dev);   // set TV param
