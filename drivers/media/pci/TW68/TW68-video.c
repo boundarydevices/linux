@@ -2301,7 +2301,11 @@ int TW68_video_init1(struct TW68_dev *dev)
 			cpu = pci_alloc_consistent(dev->pci, 800*300*2, &dma_addr);   // 8* 4096 contiguous  //*2
 			dev->BDbuf[n][m].cpu = cpu;
 			dev->BDbuf[n][m].dma_addr = dma_addr;
-			//pr_debug("%s: n:%dm:%d  cpu:%x    dma:%x   \n", __func__, n, m, cpu, dma_addr);
+			if (!cpu) {
+				pr_info("!!!!%s: pci_alloc_consistent failed for n:%d,m:%d\n", __func__, n, m);
+				return -ENOMEM;
+			}
+			//pr_debug("%s: n:%d m:%d  cpu:%x    dma:%x   \n", __func__, n, m, cpu, dma_addr);
 			// assume aways successful   480k each field   total 32  <16MB
 		}
 	}
