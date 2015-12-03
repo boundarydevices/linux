@@ -2919,6 +2919,10 @@ static DEVICE_ATTR(fsl_csi_property, S_IRUGO, show_csi, NULL);
  */
 static int mxc_v4l2_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
+	int device_id = -1;
+	int ret;
+
 	/* Create cam and initialize it. */
 	cam_data *cam = kmalloc(sizeof(cam_data), GFP_KERNEL);
 	if (cam == NULL) {
@@ -2933,9 +2937,13 @@ static int mxc_v4l2_probe(struct platform_device *pdev)
 	cam->self->priv = cam;
 	v4l2_int_device_register(cam->self);
 
+	ret = of_property_read_u32(np, "device_id", &device_id);
+	if (ret)
+		device_id = -1;
+
 	/* register v4l video device */
-	if (video_register_device(cam->video_dev, VFL_TYPE_GRABBER, video_nr)
-		< 0) {
+	if (video_register_device(cam->video_dev, VFL_TYPE_GRABBER,
+			(device_id >= 0) ? device_id : video_nr) < 0) {
 		kfree(cam);
 		cam = NULL;
 		pr_err("ERROR: v4l2 capture: video_register_device failed\n");
