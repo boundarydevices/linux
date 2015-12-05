@@ -109,9 +109,7 @@ struct spi_imx_data {
 	unsigned int dma_is_inited;
 	unsigned int dma_finished;
 	bool usedma;
-	u32 rx_wml;
-	u32 tx_wml;
-	u32 rxt_wml;
+	u32 wml;
 	u32 prev_bpw;
 	struct completion dma_rx_completion;
 	struct completion dma_tx_completion;
@@ -413,10 +411,12 @@ static int __maybe_unused mx51_ecspi_config(struct spi_imx_data *spi_imx,
 	 * and enable DMA request.
 	 */
 	if (spi_imx->dma_is_inited) {
+		int tx_wml = spi_imx->wml;
+
 		if (spi_imx->devtype_data->devtype != IMX6UL_ECSPI)
-			spi_imx->tx_wml = 1;
-		dma = (spi_imx->rx_wml - 1) << MX51_ECSPI_DMA_RX_WML_OFFSET
-		      | (spi_imx->tx_wml - 1) << MX51_ECSPI_DMA_TX_WML_OFFSET
+			tx_wml = 1;
+		dma = (spi_imx->wml - 1) << MX51_ECSPI_DMA_RX_WML_OFFSET
+		      | (tx_wml - 1) << MX51_ECSPI_DMA_TX_WML_OFFSET
 		      | (1 << MX51_ECSPI_DMA_TEDEN_OFFSET)
 		      | (1 << MX51_ECSPI_DMA_RXDEN_OFFSET);
 		writel(dma, spi_imx->base + MX51_ECSPI_DMA);
@@ -924,6 +924,8 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 {
 	int ret;
 
+	spi_imx->wml = spi_imx_get_fifosize(spi_imx) / 2;
+
 	/* Prepare for TX DMA: */
 	master->dma_tx = dma_request_slave_channel_reason(dev, "tx");
 	if (IS_ERR(master->dma_tx)) {
@@ -937,7 +939,7 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 
 	spi_imx->tx_config.direction = DMA_MEM_TO_DEV;
 	spi_imx->tx_config.dst_addr = res->start + MXC_CSPITXDATA;
-	spi_imx->tx_config.dst_maxburst = spi_imx_get_fifosize(spi_imx) / 4;
+	spi_imx->tx_config.dst_maxburst = spi_imx->wml;
 	/* Prepare for RX : */
 	master->dma_rx = dma_request_slave_channel(dev, "rx");
 	if (IS_ERR(master->dma_rx)) {
@@ -949,15 +951,13 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 
 	spi_imx->rx_config.direction = DMA_DEV_TO_MEM;
 	spi_imx->rx_config.src_addr = res->start + MXC_CSPIRXDATA;
-	spi_imx->rx_config.src_maxburst = spi_imx_get_fifosize(spi_imx) / 2;
+	spi_imx->rx_config.src_maxburst = spi_imx->wml;
 	init_completion(&spi_imx->dma_rx_completion);
 	init_completion(&spi_imx->dma_tx_completion);
 	master->can_dma = spi_imx_can_dma;
 	master->max_dma_len = MAX_SDMA_BD_BYTES;
 	spi_imx->bitbang.master->flags = SPI_MASTER_MUST_RX |
 					 SPI_MASTER_MUST_TX;
-	spi_imx->rx_wml = spi_imx->rx_config.src_maxburst;
-	spi_imx->tx_wml = spi_imx->tx_config.dst_maxburst;
 	spi_imx->dma_is_inited = 1;
 
 	return 0;
@@ -1025,7 +1025,7 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 		 * some tail data, use PIO read to get the tail data since DMA
 		 * sometimes miss the last tail interrupt.
 		 */
-		left = rem = transfer->len % (spi_imx->rx_wml * bpw);
+		left = rem = transfer->len % (spi_imx->wml * bpw);
 		while (rem) {
 			struct scatterlist *sgl_last = &rx->sgl[nents - 1];
 
