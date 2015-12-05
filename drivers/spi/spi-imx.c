@@ -1081,6 +1081,7 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 			dev_driver_string(&master->dev),
 			dev_name(&master->dev), transfer->len);
 		dmaengine_terminate_all(master->dma_tx);
+		dmaengine_terminate_all(master->dma_rx);
 	} else {
 		ret = wait_for_completion_timeout(&spi_imx->dma_rx_completion,
 				IMX_DMA_TIMEOUT(transfer->len));
