@@ -1004,10 +1004,18 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 
 	/* Trigger the cspi module. */
 	spi_imx->dma_finished = 0;
+	/*
+	 * Set these order to avoid potential RX overflow. The overflow may
+	 * happen if we enable SPI HW before starting RX DMA due to rescheduling
+	 * for another task and/or interrupt.
+	 * So RX DMA enabled first to make sure data would be read out from FIFO
+	 * ASAP. TX DMA enabled next to start filling TX FIFO with new data.
+	 * And finaly SPI HW enabled to start actual data transfer.
+	 */
+	dma_async_issue_pending(master->dma_rx);
+	dma_async_issue_pending(master->dma_tx);
 	spi_imx->devtype_data->trigger(spi_imx);
 
-	dma_async_issue_pending(master->dma_tx);
-	dma_async_issue_pending(master->dma_rx);
 	/* Wait SDMA to finish the data transfer.*/
 	ret = wait_for_completion_timeout(&spi_imx->dma_tx_completion,
 					  IMX_DMA_TIMEOUT(transfer->len));
