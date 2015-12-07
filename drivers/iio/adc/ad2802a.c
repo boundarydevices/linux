@@ -295,7 +295,7 @@ static int ad2802_read_raw(struct iio_dev *indio_dev,
 	struct ad2802_adc *info = iio_priv(indio_dev);
 
 	u32 channel;
-	unsigned long ret;
+	long ret;
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
