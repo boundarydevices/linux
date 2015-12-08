@@ -898,7 +898,7 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 		master->dma_tx = NULL;
 		if (ret == -EPROBE_DEFER)
 			return ret;
-		dev_err(dev, "cannot get the TX DMA channel!\n");
+		dev_dbg(dev, "can't get the TX DMA channel, error %d!\n", ret);
 		goto err;
 	}
 
@@ -913,9 +913,9 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 	}
 
 	/* Prepare for RX : */
-	master->dma_rx = dma_request_slave_channel(dev, "rx");
+	master->dma_rx = dma_request_slave_channel_reason(dev, "rx");
 	if (IS_ERR(master->dma_rx)) {
-		dev_dbg(dev, "cannot get the DMA channel.\n");
+		dev_dbg(dev, "can't get the RX DMA channel, error %d\n", ret);
 		master->dma_rx = NULL;
 		ret = -EINVAL;
 		goto err;
@@ -1313,10 +1313,11 @@ static int spi_imx_probe(struct platform_device *pdev)
 	if (is_imx51_ecspi(spi_imx)
 	    || is_imx6ul_ecspi(spi_imx)) {
 		ret = spi_imx_sdma_init(&pdev->dev, spi_imx, master, res);
-		if (ret) {
+		if (ret < 0) {
 			if (ret == -EPROBE_DEFER)
 				goto out_clk_put;
-			dev_err(&pdev->dev, "dma setup error,use pio instead\n");
+			dev_err(&pdev->dev, "dma setup error %d, use pio\n",
+				ret);
 		}
 	}
 
