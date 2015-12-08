@@ -945,7 +945,7 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 		if (ret == -EPROBE_DEFER)
 			return ret;
 		dev_err(dev, "can't get the TX DMA channel, error %d!\n", ret);
-		goto err;
+		return ret;
 	}
 
 	spi_imx->tx_config.direction = DMA_MEM_TO_DEV;
@@ -1368,12 +1368,12 @@ static int spi_imx_probe(struct platform_device *pdev)
 	 */
 	if (is_imx51_ecspi(spi_imx) || is_imx6ul_ecspi(spi_imx)) {
 		ret = spi_imx_sdma_init(&pdev->dev, spi_imx, master, res);
-		if (ret < 0) {
-			if (ret == -EPROBE_DEFER)
-				goto out_clk_put;
+		if (ret == -EPROBE_DEFER)
+			goto out_clk_put;
+
+		if (ret < 0)
 			dev_err(&pdev->dev, "dma setup error %d, use pio\n",
 				ret);
-		}
 	}
 
 	spi_imx->devtype_data->reset(spi_imx);
