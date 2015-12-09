@@ -657,12 +657,12 @@ static int imx_gpc_genpd_init(struct device *dev, struct regulator *pu_reg)
 	ipg = of_clk_get(dev->of_node, pu_clks);
 
 	/* Get disp domain clks */
-	for (k = 0, i = pu_clks + ipg_clks; i < pu_clks + ipg_clks + disp_clks;
-		i++, k++) {
+	for (i = pu_clks + ipg_clks; i < pu_clks + ipg_clks + disp_clks;
+		i++) {
 		clk = of_clk_get(dev->of_node, i);
 		if (IS_ERR(clk))
 			break;
-		imx6s_display_domain.clk[k] = clk;
+		imx6s_display_domain.clk[k++] = clk;
 	}
 	imx6s_display_domain.num_clks = k;
 
@@ -691,7 +691,10 @@ static int imx_gpc_probe(struct platform_device *pdev)
 	struct regulator *pu_reg;
 	int ret;
 
-	of_property_read_u32(pdev->dev.of_node, "fsl,ldo-bypass", &bypass);
+	if (of_property_read_u32(pdev->dev.of_node, "fsl,ldo-bypass", &bypass))
+		dev_warn(&pdev->dev,
+			"no fsl,ldo-bypass found!\n");
+
 	pu_reg = devm_regulator_get(&pdev->dev, "pu");
 	if (!IS_ERR(pu_reg)) {
 		/* The regulator is initially enabled */
