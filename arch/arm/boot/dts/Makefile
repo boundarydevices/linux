@@ -518,6 +518,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-nit6xlite-access.dtb \
 	imx6dl-nit6xlite-sci.dtb \
 	imx6dl-nitrogen6_max.dtb \
+	imx6dl-nitrogen6_som2.dtb \
 	imx6dl-nitrogen6x.dtb \
 	imx6dl-phytec-mira-rdk-nand.dtb \
 	imx6dl-phytec-pbab01.dtb \
