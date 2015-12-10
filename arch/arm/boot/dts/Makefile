@@ -189,6 +189,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-mtp.dtb \
 	imx6q-phytec-pbab01.dtb \
 	imx6q-nitrogen6_max.dtb \
+	imx6q-nitrogen6_som2.dtb \
 	imx6q-nitrogen6x.dtb \
 	imx6q-per.dtb \
 	imx6q-sabreauto.dtb \
