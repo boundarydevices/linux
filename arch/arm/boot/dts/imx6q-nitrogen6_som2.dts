@@ -40,6 +40,7 @@
  */
 /dts-v1/;
 
+#include <dt-bindings/interrupt-controller/irq.h>
 #include "imx6q.dtsi"
 #include "imx6qdl-nitrogen6_som2.dtsi"
 
@@ -50,4 +51,8 @@
 
 &sata {
 	status = "okay";
+};
+
+&v4l2_cap_2 {
+	ipu_id = <1>;
 };
