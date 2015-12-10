@@ -355,6 +355,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nit6xlite-access.dtb \
 	imx6dl-nitrogen6_max.dtb \
+	imx6dl-nitrogen6_som2.dtb \
 	imx6dl-nitrogen6x.dtb \
 	imx6dl-phytec-pbab01.dtb \
 	imx6dl-rex-basic.dtb \
@@ -444,6 +445,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-nitrogen6_max-apex.dtb \
 	imx6q-nitrogen6_max-lantech.dtb \
 	imx6q-nitrogen6_max-st7789.dtb \
+	imx6q-nitrogen6_som2.dtb \
 	imx6q-novena.dtb \
 	imx6q-phytec-pbab01.dtb \
 	imx6q-rex-pro.dtb \
@@ -474,6 +476,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-wandboard-revb1.dtb \
 	imx6qp-mtp.dtb \
 	imx6qp-nitrogen6_max.dtb \
+	imx6qp-nitrogen6_som2.dtb \
 	imx6qp-sabreauto.dtb \
 	imx6qp-sabreauto-ecspi.dtb \
 	imx6qp-sabreauto-flexcan1.dtb \
