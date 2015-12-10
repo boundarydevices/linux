@@ -1,0 +1,76 @@
+/*
+ * Copyright 2016 Boundary Devices
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "imx6q.dtsi"
+#include "imx6qp.dtsi"
+#include "imx6qdl-nitrogen6_som2.dtsi"
+
+/ {
+	model = "Freescale i.MX6 Quad Plus Nitrogen6 som2 Board";
+	compatible = "fsl,imx6qp-nitrogen6_som2", "fsl,imx6q";
+
+	memory: memory {
+		reg = <0x10000000 0x80000000>;
+	};
+};
+
+&fb_lvds {
+	prefetch;
+};
+
+&fb_lvds2 {
+	prefetch;
+};
+
+&fb_lcd {
+	prefetch;
+};
+
+&fb_hdmi {
+	prefetch;
+};
+
+&sata {
+	status = "okay";
+};
+
+&v4l2_cap_2 {
+	ipu_id = <1>;
+};
+
+&pre1 {
+	status = "okay";
+};
+
+&pre2 {
+	status = "okay";
+};
+
+&pre3 {
+	status = "okay";
+};
+
+&pre4 {
+	status = "okay";
+};
+
+&prg1 {
+	memory-region = <&memory>;
+	status = "okay";
+};
+
+&prg2 {
+	memory-region = <&memory>;
+	status = "okay";
+};
