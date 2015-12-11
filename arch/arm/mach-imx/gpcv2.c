@@ -466,7 +466,7 @@ void imx_gpcv2_post_resume(void)
 	imx_gpcv2_set_m_core_pgc(false, GPC_PGC_FM);
 	for (i = 0; i < MAX_SLOT_NUMBER; i++)
 	{
-		if (i==1||i==4) /* skip slts m4 uses */
+		if (i == 1 || i == 5) /* skip slots m4 uses */
 			continue;
 		writel_relaxed(0x0, gpc_base + GPC_SLOT0_CFG + i * 0x4);
         }
