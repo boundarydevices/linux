@@ -46,6 +46,8 @@
 #include <linux/platform_data/serial-imx.h>
 #include <linux/platform_data/dma-imx.h>
 
+#include "serial_mctrl_gpio.h"
+
 /* Register definitions */
 #define URXD0 0x0  /* Receiver Register */
 #define URTX0 0x40 /* Transmitter Register */
@@ -226,6 +228,8 @@ struct imx_port {
 	struct clk		*clk_per;
 	const struct imx_uart_data *devdata;
 
+	struct mctrl_gpios *gpios;
+
 	unsigned		txen_mask;
 	unsigned		txen_levels;
 	unsigned		txing;
@@ -347,6 +351,26 @@ static void imx_port_ucrs_restore(struct uart_port *port,
 }
 #endif
 
+static void imx_port_rts_active(struct imx_port *sport, unsigned long *ucr2)
+{
+	*ucr2 &= ~UCR2_CTSC;
+	*ucr2 |= UCR2_CTS;
+
+	mctrl_gpio_set(sport->gpios, sport->port.mctrl | TIOCM_RTS);
+}
+
+static void imx_port_rts_inactive(struct imx_port *sport, unsigned long *ucr2)
+{
+	*ucr2 &= ~(UCR2_CTSC | UCR2_CTS);
+
+	mctrl_gpio_set(sport->gpios, sport->port.mctrl & ~TIOCM_RTS);
+}
+
+static void imx_port_rts_auto(struct imx_port *sport, unsigned long *ucr2)
+{
+	*ucr2 |= UCR2_CTSC;
+}
+
 static void imx_set_gpios(struct imx_port *sport, unsigned mask, unsigned levels, unsigned ascending)
 {
 	unsigned *gpios = sport->act_gpios;
@@ -394,9 +418,9 @@ static void imx_stop_tx(struct uart_port *port)
 		}
 		ucr2 = readl(port->membase + UCR2);
 		if (port->rs485.flags & SER_RS485_RTS_AFTER_SEND)
-			ucr2 &= ~UCR2_CTS;
+			imx_port_rts_inactive(sport, &ucr2);
 		else
-			ucr2 |= UCR2_CTS;
+			imx_port_rts_active(sport, &ucr2);
 		writel(ucr2, port->membase + UCR2);
 	}
 	ucr4 &= ~UCR4_TCEN;
@@ -444,6 +468,8 @@ static void imx_enable_ms(struct uart_port *port)
 	struct imx_port *sport = (struct imx_port *)port;
 
 	mod_timer(&sport->timer, jiffies);
+
+	mctrl_gpio_enable_ms(sport->gpios);
 }
 
 static inline int imx_transmit_buffer(struct imx_port *sport)
@@ -664,12 +690,11 @@ static void imx_start_tx(struct uart_port *port)
 	}
 
 	if (port->rs485.flags & SER_RS485_ENABLED) {
-		/* enable transmitter and shifter empty irq */
 		temp = readl(port->membase + UCR2);
 		if (port->rs485.flags & SER_RS485_RTS_ON_SEND)
-			temp &= ~UCR2_CTS;
+			imx_port_rts_inactive(sport, &temp);
 		else
-			temp |= UCR2_CTS;
+			imx_port_rts_active(sport, &temp);
 		writel(temp, port->membase + UCR2);
 	}
 
@@ -869,9 +894,8 @@ static unsigned int imx_tx_empty(struct uart_port *port)
 /*
  * We have a modem side uart, so the meanings of RTS and CTS are inverted.
  */
-static unsigned int imx_get_mctrl(struct uart_port *port)
+static unsigned int imx_get_hwmctrl(struct imx_port *sport)
 {
-	struct imx_port *sport = (struct imx_port *)port;
 	unsigned int tmp = TIOCM_DSR;
 	unsigned usr1 = readl(sport->port.membase + USR1);
 
@@ -887,6 +911,16 @@ static unsigned int imx_get_mctrl(struct uart_port *port)
 		tmp |= TIOCM_RI;
 
 	return tmp;
+}
+
+static unsigned int imx_get_mctrl(struct uart_port *port)
+{
+	struct imx_port *sport = (struct imx_port *)port;
+	unsigned int ret = imx_get_hwmctrl(sport);
+
+	mctrl_gpio_get(sport->gpios, &ret);
+
+	return ret;
 }
 
 static void imx_set_mctrl(struct uart_port *port, unsigned int mctrl)
@@ -911,6 +945,8 @@ static void imx_set_mctrl(struct uart_port *port, unsigned int mctrl)
 	if (mctrl & TIOCM_LOOP)
 		temp |= UTS_LOOP;
 	writel(temp, sport->port.membase + uts_reg(sport));
+
+	mctrl_gpio_set(sport->gpios, mctrl);
 }
 
 /*
@@ -940,7 +976,7 @@ static void imx_mctrl_check(struct imx_port *sport)
 {
 	unsigned int status, changed;
 
-	status = imx_get_mctrl(&sport->port);
+	status = imx_get_hwmctrl(sport);
 	changed = status ^ sport->old_status;
 
 	if (changed == 0)
@@ -1406,6 +1442,8 @@ static void imx_shutdown(struct uart_port *port)
 		imx_uart_dma_exit(sport);
 	}
 
+	mctrl_gpio_disable_ms(sport->gpios);
+
 	spin_lock_irqsave(&sport->port.lock, flags);
 	temp = readl(sport->port.membase + UCR2);
 	temp &= ~(UCR2_TXEN | UCR2_CTS | UCR2_CTSC);
@@ -1484,9 +1522,10 @@ imx_set_termios(struct uart_port *port, struct ktermios *termios,
 {
 	struct imx_port *sport = (struct imx_port *)port;
 	unsigned long flags;
-	unsigned int ucr2, old_ucr1, old_ucr2, baud, quot;
+	unsigned long ucr2, old_ucr1, old_ucr2;
+	unsigned int baud, quot;
 	unsigned int old_csize = old ? old->c_cflag & CSIZE : CS8;
-	unsigned int div, ufcr;
+	unsigned long div, ufcr;
 	unsigned long num, denom;
 	uint64_t tdiv64;
 
@@ -1515,19 +1554,25 @@ imx_set_termios(struct uart_port *port, struct ktermios *termios,
 				 * it under manual control and keep transmitter
 				 * disabled.
 				 */
-				if (!(port->rs485.flags &
-				      SER_RS485_RTS_AFTER_SEND))
-					ucr2 |= UCR2_CTS;
+				if (port->rs485.flags &
+				    SER_RS485_RTS_AFTER_SEND)
+					imx_port_rts_inactive(sport, &ucr2);
+				else
+					imx_port_rts_active(sport, &ucr2);
 			} else {
-				ucr2 |= UCR2_CTSC;
+				imx_port_rts_auto(sport, &ucr2);
 			}
 		} else {
 			termios->c_cflag &= ~CRTSCTS;
 		}
-	} else if (port->rs485.flags & SER_RS485_ENABLED)
+	} else if (port->rs485.flags & SER_RS485_ENABLED) {
 		/* disable transmitter */
-		if (!(port->rs485.flags & SER_RS485_RTS_AFTER_SEND))
-			ucr2 |= UCR2_CTS;
+		if (port->rs485.flags & SER_RS485_RTS_AFTER_SEND)
+			imx_port_rts_inactive(sport, &ucr2);
+		else
+			imx_port_rts_active(sport, &ucr2);
+	}
+
 
 	if (termios->c_cflag & CSTOPB)
 		ucr2 |= UCR2_STPB;
@@ -1778,11 +1823,10 @@ static int imx_rs485_config(struct uart_port *port,
 
 		/* disable transmitter */
 		temp = readl(sport->port.membase + UCR2);
-		temp &= ~UCR2_CTSC;
 		if (rs485conf->flags & SER_RS485_RTS_AFTER_SEND)
-			temp &= ~UCR2_CTS;
+			imx_port_rts_inactive(sport, &temp);
 		else
-			temp |= UCR2_CTS;
+			imx_port_rts_active(sport, &temp);
 		writel(temp, sport->port.membase + UCR2);
 	}
 
@@ -2245,6 +2289,10 @@ static int serial_imx_probe(struct platform_device *pdev)
 	sport->timer.function = imx_timeout;
 	sport->timer.data     = (unsigned long)sport;
 	INIT_DELAYED_WORK(&sport->rxact_work, rxact_work_func);
+
+	sport->gpios = mctrl_gpio_init(&sport->port, 0);
+	if (IS_ERR(sport->gpios))
+		return PTR_ERR(sport->gpios);
 
 	sport->clk_ipg = devm_clk_get(&pdev->dev, "ipg");
 	if (IS_ERR(sport->clk_ipg)) {
