@@ -38,6 +38,9 @@
 #define USE_ABS_MT
 #endif
 
+#define WORK_MODE	0
+#define FACTORY_MODE	4
+
 static int calibration[7] = {
 	65536,0,0,
 	0,65536,0,
@@ -104,6 +107,29 @@ static int ts_startup(struct ft5x06_ts *ts);
 static void ts_shutdown(struct ft5x06_ts *ts);
 
 /*-----------------------------------------------------------------------*/
+static void write_reg(struct ft5x06_ts *ts, int regnum, int value)
+{
+	u8 regnval[] = {
+		regnum,
+		value
+	};
+	struct i2c_msg pkt = {
+		ts->client->addr, 0, sizeof(regnval), regnval
+	};
+	int ret = i2c_transfer(ts->client->adapter, &pkt, 1);
+	if (ret != 1)
+		printk(KERN_WARNING "%s: i2c_transfer failed\n", __func__);
+	else
+		printk(KERN_DEBUG "%s: set register 0x%02x to 0x%02x\n",
+		       __func__, regnum, value);
+}
+
+static void set_mode(struct ft5x06_ts *ts, int mode)
+{
+	write_reg(ts, 0, (mode&7)<<4);
+	printk(KERN_DEBUG "%s: changed mode to 0x%02x\n", __func__, mode);
+}
+
 static void release_slots(struct ft5x06_ts *ts, unsigned mask)
 {
 	struct input_dev *idev = ts->idev;
@@ -242,32 +268,6 @@ static void printHex(u8 const *buf, unsigned len)
 	printk(KERN_ERR "%s\n", hex);
 }
 #endif
-
-static void write_reg(struct ft5x06_ts *ts, int regnum, int value)
-{
-	u8 regnval[] = {
-		regnum,
-		value
-	};
-	struct i2c_msg pkt = {
-		ts->client->addr, 0, sizeof(regnval), regnval
-	};
-	int ret = i2c_transfer(ts->client->adapter, &pkt, 1);
-	if (ret != 1)
-		printk(KERN_WARNING "%s: i2c_transfer failed\n", __func__);
-	else
-		printk(KERN_DEBUG "%s: set register 0x%02x to 0x%02x\n",
-		       __func__, regnum, value);
-}
-
-static void set_mode(struct ft5x06_ts *ts, int mode)
-{
-	write_reg(ts, 0, (mode&7)<<4);
-	printk(KERN_DEBUG "%s: changed mode to 0x%02x\n", __func__, mode);
-}
-
-#define WORK_MODE 0
-#define FACTORY_MODE 4
 
 static int proc_regnum = 0;
 static int ft5x06_proc_read
