@@ -45,7 +45,7 @@ static int calibration[7] = {
 };
 module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
 
-static int screenres[2] = {0x800, 0x800};
+static int screenres[2];
 module_param_array(screenres, int, NULL, S_IRUGO | S_IWUSR);
 
 #define MAX_TOUCHES 12
@@ -89,6 +89,8 @@ struct ft5x06_ts {
 	unsigned		gp;
 	struct proc_dir_entry  *procentry;
 	unsigned		down_mask;
+	unsigned		max_x;
+	unsigned		max_y;
 };
 static const char *client_name = "ft5x06";
 
@@ -178,6 +180,14 @@ static inline int ts_register(struct ft5x06_ts *ts)
 	if (idev == NULL)
 		return -ENOMEM;
 
+	ts->max_x = 0x7ff;
+	ts->max_y = 0x7ff;
+	if (screenres[0])
+		ts->max_x = screenres[0] - 1;
+	if (screenres[1])
+		ts->max_y = screenres[1] - 1;
+
+	pr_info("%s resolution is %dx%d\n", client_name, ts->max_x + 1, ts->max_y + 1);
 	ts->idev = idev;
 	idev->name      = procentryname ;
 	idev->id.bustype = BUS_I2C;
@@ -191,14 +201,14 @@ static inline int ts_register(struct ft5x06_ts *ts)
 
 #ifdef USE_ABS_MT
 	input_mt_init_slots(idev, 16, 0);
-	input_set_abs_params(idev, ABS_MT_POSITION_X, 0, screenres[0]-1, 0, 0);
-	input_set_abs_params(idev, ABS_MT_POSITION_Y, 0, screenres[1]-1, 0, 0);
+	input_set_abs_params(idev, ABS_MT_POSITION_X, 0, ts->max_x, 0, 0);
+	input_set_abs_params(idev, ABS_MT_POSITION_Y, 0, ts->max_y, 0, 0);
 	input_set_abs_params(idev, ABS_MT_TRACKING_ID, 0, MAX_TOUCHES, 0, 0);
 #endif
 #ifdef USE_ABS_SINGLE
 	__set_bit(BTN_TOUCH, idev->keybit);
-	input_set_abs_params(idev, ABS_X, 0, screenres[0]-1, 0, 0);
-	input_set_abs_params(idev, ABS_Y, 0, screenres[1]-1, 0, 0);
+	input_set_abs_params(idev, ABS_X, 0, ts->max_x, 0, 0);
+	input_set_abs_params(idev, ABS_Y, 0, ts->max_y, 0, 0);
 	input_set_abs_params(idev, ABS_PRESSURE, 0, 1, 0, 0);
 #endif
 
@@ -344,6 +354,10 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 					points[i].id = (p[2]>>4);
 					points[i].y = (((p[2] & 0x0f) << 8)
 						       | p[3]) & 0x7ff;
+					if (points[i].x > ts->max_x)
+						points[i].x = ts->max_x;
+					if (points[i].y > ts->max_y)
+						points[i].x = ts->max_y;
 					p += 6;
 				}
 			}
