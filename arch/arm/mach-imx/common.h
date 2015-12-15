@@ -104,6 +104,8 @@ bool imx_mu_is_m4_in_low_freq(void);
 bool imx_mu_is_m4_in_stop(void);
 int imx_mu_lpm_ready(bool ready);
 unsigned int imx_gpcv2_is_mf_mix_off(void);
+void imx_gpcv2_enable_wakeup_for_m4(void);
+void imx_gpcv2_disable_wakeup_for_m4(void);
 int imx_gpc_mf_power_on(unsigned int irq, unsigned int on);
 #ifdef CONFIG_HAVE_IMX_GPCV2
 int imx_gpcv2_mf_power_on(unsigned int irq, unsigned int on);
