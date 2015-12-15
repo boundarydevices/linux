@@ -53,15 +53,15 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 		gpiod_set_value(rfkill->shutdown_gpio, 1);
 		gpiod_set_value(rfkill->reset_gpio, 1);
 		if (!IS_ERR(rfkill->clk) && rfkill->clk_enabled)
-			clk_disable(rfkill->clk);
+			clk_disable_unprepare(rfkill->clk);
 	} else {
 		if (!IS_ERR(rfkill->clk) && !rfkill->clk_enabled)
-			clk_enable(rfkill->clk);
+			clk_prepare_enable(rfkill->clk);
 		gpiod_set_value(rfkill->reset_gpio, 0);
 		gpiod_set_value(rfkill->shutdown_gpio, 0);
 	}
 
-	rfkill->clk_enabled = blocked;
+	rfkill->clk_enabled = !blocked;
 
 	return 0;
 }
