@@ -48,7 +48,7 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 	struct rfkill_gpio_data *rfkill = data;
 
 	if (!blocked && !IS_ERR(rfkill->clk) && !rfkill->clk_enabled)
-		clk_enable(rfkill->clk);
+		clk_prepare_enable(rfkill->clk);
 
 	if (blocked) {
 		gpiod_set_value_cansleep(rfkill->shutdown_gpio, 1);
@@ -59,7 +59,7 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 	}
 
 	if (blocked && !IS_ERR(rfkill->clk) && rfkill->clk_enabled)
-		clk_disable(rfkill->clk);
+		clk_disable_unprepare(rfkill->clk);
 
 	rfkill->clk_enabled = !blocked;
 
