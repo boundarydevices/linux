@@ -24,6 +24,7 @@
 #include <linux/can/dev.h>
 #include <linux/can/error.h>
 #include <linux/can/led.h>
+#include <linux/can/platform/flexcan.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/if_arp.h>
@@ -32,11 +33,14 @@
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
+#include <linux/mfd/syscon.h>
+#include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
+#include <linux/regmap.h>
 
 #define DRV_NAME			"flexcan"
 
@@ -143,7 +147,8 @@
 	(FLEXCAN_ESR_ERR_BUS | FLEXCAN_ESR_ERR_STATE)
 #define FLEXCAN_ESR_ALL_INT \
 	(FLEXCAN_ESR_TWRN_INT | FLEXCAN_ESR_RWRN_INT | \
-	 FLEXCAN_ESR_BOFF_INT | FLEXCAN_ESR_ERR_INT)
+	 FLEXCAN_ESR_BOFF_INT | FLEXCAN_ESR_ERR_INT | \
+	 FLEXCAN_ESR_WAK_INT)
 
 /* FLEXCAN interrupt flag register (IFLAG) bits */
 /* Errata ERR005829 step7: Reserve first valid MB */
@@ -245,6 +250,13 @@ struct flexcan_devtype_data {
 	u32 features;	/* hardware controller features */
 };
 
+struct flexcan_stop_mode {
+	struct regmap *gpr;
+	u8 req_gpr;
+	u8 req_bit;
+	u8 ack_gpr;
+	u8 ack_bit;
+};
 struct flexcan_priv {
 	struct can_priv can;
 	struct napi_struct napi;
@@ -258,6 +270,8 @@ struct flexcan_priv {
 	struct flexcan_platform_data *pdata;
 	const struct flexcan_devtype_data *devtype_data;
 	struct regulator *reg_xceiver;
+	struct flexcan_stop_mode stm;
+	int id;
 };
 
 static struct flexcan_devtype_data fsl_p1010_devtype_data = {
@@ -311,8 +325,29 @@ static inline void flexcan_write(u32 val, void __iomem *addr)
 }
 #endif
 
+static inline void flexcan_enter_stop_mode(struct flexcan_priv *priv)
+{
+	/* enable stop request */
+	if (priv->devtype_data->features & FLEXCAN_HAS_V10_FEATURES)
+		regmap_update_bits(priv->stm.gpr, priv->stm.req_gpr,
+			1 << priv->stm.req_bit, 1 << priv->stm.req_bit);
+}
+
+static inline void flexcan_exit_stop_mode(struct flexcan_priv *priv)
+{
+	/* remove stop request */
+	if (priv->devtype_data->features & FLEXCAN_HAS_V10_FEATURES)
+		regmap_update_bits(priv->stm.gpr, priv->stm.req_gpr,
+			1 << priv->stm.req_bit, 0);
+}
+
 static inline int flexcan_transceiver_enable(const struct flexcan_priv *priv)
 {
+	if (priv->pdata && priv->pdata->transceiver_switch) {
+		priv->pdata->transceiver_switch(1);
+		return 0;
+	}
+
 	if (!priv->reg_xceiver)
 		return 0;
 
@@ -321,6 +356,11 @@ static inline int flexcan_transceiver_enable(const struct flexcan_priv *priv)
 
 static inline int flexcan_transceiver_disable(const struct flexcan_priv *priv)
 {
+	if (priv->pdata && priv->pdata->transceiver_switch) {
+		priv->pdata->transceiver_switch(0);
+		return 0;
+	}
+
 	if (!priv->reg_xceiver)
 		return 0;
 
@@ -724,6 +764,9 @@ static irqreturn_t flexcan_irq(int irq, void *dev_id)
 	if (reg_esr & FLEXCAN_ESR_ALL_INT)
 		flexcan_write(reg_esr & FLEXCAN_ESR_ALL_INT, &regs->esr);
 
+	if (reg_esr & FLEXCAN_ESR_WAK_INT)
+		flexcan_exit_stop_mode(priv);
+
 	/*
 	 * schedule NAPI in case of:
 	 * - rx IRQ
@@ -840,13 +883,14 @@ static int flexcan_chip_start(struct net_device *dev)
 	 * enable warning int
 	 * choose format C
 	 * disable local echo
-	 *
+	 * enable self wakeup
 	 */
 	reg_mcr = flexcan_read(&regs->mcr);
 	reg_mcr &= ~FLEXCAN_MCR_MAXMB(0xff);
 	reg_mcr |= FLEXCAN_MCR_FRZ | FLEXCAN_MCR_FEN | FLEXCAN_MCR_HALT |
 		FLEXCAN_MCR_SUPV | FLEXCAN_MCR_WRN_EN |
 		FLEXCAN_MCR_IDAM_C | FLEXCAN_MCR_SRX_DIS |
+		FLEXCAN_MCR_WAK_MSK | FLEXCAN_MCR_SLF_WAK |
 		FLEXCAN_MCR_MAXMB(FLEXCAN_TX_BUF_ID);
 	netdev_dbg(dev, "%s: writing mcr=0x%08x", __func__, reg_mcr);
 	flexcan_write(reg_mcr, &regs->mcr);
@@ -1136,6 +1180,56 @@ static void unregister_flexcandev(struct net_device *dev)
 	unregister_candev(dev);
 }
 
+static int flexcan_of_parse_stop_mode(struct platform_device *pdev)
+{
+	struct net_device *dev = platform_get_drvdata(pdev);
+	struct device_node *np = pdev->dev.of_node;
+	struct device_node *node;
+	struct flexcan_priv *priv;
+	phandle phandle;
+	u32 out_val[5];
+	int ret;
+
+	if (!np)
+		return -EINVAL;
+	/*
+	 * stop mode property format is:
+	 * <&gpr req_gpr req_bit ack_gpr ack_bit>.
+	 */
+	ret = of_property_read_u32_array(np, "stop-mode", out_val, 5);
+	if (ret) {
+		dev_dbg(&pdev->dev, "no stop-mode property\n");
+		return ret;
+	}
+	phandle = *out_val;
+
+	node = of_find_node_by_phandle(phandle);
+	if (!node) {
+		dev_dbg(&pdev->dev, "could not find gpr node by phandle\n");
+		return PTR_ERR(node);
+	}
+
+	priv = netdev_priv(dev);
+	priv->stm.gpr = syscon_node_to_regmap(node);
+	if (IS_ERR(priv->stm.gpr)) {
+		dev_dbg(&pdev->dev, "could not find gpr regmap\n");
+		return PTR_ERR(priv->stm.gpr);
+	}
+
+	of_node_put(node);
+
+	priv->stm.req_gpr = out_val[1];
+	priv->stm.req_bit = out_val[2];
+	priv->stm.ack_gpr = out_val[3];
+	priv->stm.ack_bit = out_val[4];
+
+	dev_dbg(&pdev->dev, "gpr %s req_gpr 0x%x req_bit %u ack_gpr 0x%x ack_bit %u\n",
+			node->full_name, priv->stm.req_gpr,
+			priv->stm.req_bit, priv->stm.ack_gpr,
+			priv->stm.ack_bit);
+	return 0;
+}
+
 static const struct of_device_id flexcan_of_match[] = {
 	{ .compatible = "fsl,imx6q-flexcan", .data = &fsl_imx6q_devtype_data, },
 	{ .compatible = "fsl,imx28-flexcan", .data = &fsl_imx28_devtype_data, },
@@ -1163,6 +1257,7 @@ static int flexcan_probe(struct platform_device *pdev)
 	void __iomem *base;
 	int err, irq;
 	u32 clock_freq = 0;
+	int wakeup = 1;
 
 	reg_xceiver = devm_regulator_get(&pdev->dev, "xceiver");
 	if (PTR_ERR(reg_xceiver) == -EPROBE_DEFER)
@@ -1245,6 +1340,16 @@ static int flexcan_probe(struct platform_device *pdev)
 
 	devm_can_led_init(dev);
 
+	if (priv->devtype_data->features & FLEXCAN_HAS_V10_FEATURES) {
+		err = flexcan_of_parse_stop_mode(pdev);
+		if (err) {
+			wakeup = 0;
+			dev_dbg(&pdev->dev, "failed to parse stop-mode\n");
+		}
+	}
+
+	device_set_wakeup_capable(&pdev->dev, wakeup);
+
 	dev_info(&pdev->dev, "device registered (reg_base=%p, irq=%d)\n",
 		 priv->base, dev->irq);
 
@@ -1271,32 +1376,47 @@ static int __maybe_unused flexcan_suspend(struct device *device)
 {
 	struct net_device *dev = dev_get_drvdata(device);
 	struct flexcan_priv *priv = netdev_priv(dev);
-	int err;
-
-	err = flexcan_chip_disable(priv);
-	if (err)
-		return err;
+	int err = 0;
 
 	if (netif_running(dev)) {
 		netif_stop_queue(dev);
 		netif_device_detach(dev);
+		/*
+		* if wakeup is enabled, enter stop mode
+		* else enter disabled mode.
+		*/
+		if (device_may_wakeup(device)) {
+			enable_irq_wake(dev->irq);
+			flexcan_enter_stop_mode(priv);
+		} else {
+			err = flexcan_chip_disable(priv);
+		}
 	}
 	priv->can.state = CAN_STATE_SLEEPING;
 
-	return 0;
+	return err;
 }
 
 static int __maybe_unused flexcan_resume(struct device *device)
 {
 	struct net_device *dev = dev_get_drvdata(device);
 	struct flexcan_priv *priv = netdev_priv(dev);
+	int err = 0;
 
 	priv->can.state = CAN_STATE_ERROR_ACTIVE;
 	if (netif_running(dev)) {
 		netif_device_attach(dev);
 		netif_start_queue(dev);
+
+		if (device_may_wakeup(device)) {
+			disable_irq_wake(dev->irq);
+			flexcan_exit_stop_mode(priv);
+		} else {
+			err = flexcan_chip_enable(priv);
+		}
 	}
-	return flexcan_chip_enable(priv);
+
+	return err;
 }
 
 static SIMPLE_DEV_PM_OPS(flexcan_pm_ops, flexcan_suspend, flexcan_resume);

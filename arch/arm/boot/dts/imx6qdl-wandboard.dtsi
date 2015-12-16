@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Freescale Semiconductor, Inc.
+ * Copyright 2013-2015 Freescale Semiconductor, Inc.
  *
  * Author: Fabio Estevam <fabio.estevam@freescale.com>
  *
@@ -8,6 +8,8 @@
  * published by the Free Software Foundation.
  *
  */
+
+#include <dt-bindings/gpio/gpio.h>
 
 / {
 	regulators {
@@ -59,11 +61,6 @@
 &audmux {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_audmux>;
-	status = "okay";
-};
-
-&hdmi {
-	ddc-i2c-bus = <&i2c1>;
 	status = "okay";
 };
 
@@ -250,13 +247,13 @@
 &usdhc1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc1>;
-	cd-gpios = <&gpio1 2 0>;
+	cd-gpios = <&gpio1 2 GPIO_ACTIVE_LOW>;
 	status = "okay";
 };
 
 &usdhc3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc3>;
-	cd-gpios = <&gpio3 9 0>;
+	cd-gpios = <&gpio3 9 GPIO_ACTIVE_LOW>;
 	status = "okay";
 };

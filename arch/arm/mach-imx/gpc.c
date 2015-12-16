@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2013 Freescale Semiconductor, Inc.
+ * Copyright 2011-2015 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -25,7 +25,12 @@
 #include "hardware.h"
 
 #define GPC_CNTR		0x000
+#define GPC_CNTR_PCIE_PHY_PDU_SHIFT	0x7
+#define GPC_CNTR_PCIE_PHY_PDN_SHIFT	0x6
+#define PGC_PCIE_PHY_CTRL		0x200
+#define PGC_PCIE_PHY_PDN_EN		0x1
 #define GPC_IMR1		0x008
+#define GPC_PGC_MF_PDN		0x220
 #define GPC_PGC_GPU_PDN		0x260
 #define GPC_PGC_GPU_PUPSCR	0x264
 #define GPC_PGC_GPU_PDNSCR	0x268
@@ -34,6 +39,22 @@
 #define GPC_PGC_CPU_PDNSCR	0x2a8
 #define GPC_PGC_SW2ISO_SHIFT	0x8
 #define GPC_PGC_SW_SHIFT	0x0
+#define GPC_PGC_DISP_PGCR_OFFSET	0x240
+#define GPC_PGC_DISP_PUPSCR_OFFSET	0x244
+#define GPC_PGC_DISP_PDNSCR_OFFSET	0x248
+#define GPC_PGC_DISP_SR_OFFSET		0x24c
+#define GPC_M4_LPSR		0x2c
+#define GPC_M4_LPSR_M4_SLEEPING_SHIFT	4
+#define GPC_M4_LPSR_M4_SLEEPING_MASK	0x1
+#define GPC_M4_LPSR_M4_SLEEP_HOLD_REQ_MASK	0x1
+#define GPC_M4_LPSR_M4_SLEEP_HOLD_REQ_SHIFT	0
+#define GPC_M4_LPSR_M4_SLEEP_HOLD_ACK_MASK	0x1
+#define GPC_M4_LPSR_M4_SLEEP_HOLD_ACK_SHIFT	1
+
+#define GPC_PGC_CPU_SW_SHIFT		0
+#define GPC_PGC_CPU_SW_MASK		0x3f
+#define GPC_PGC_CPU_SW2ISO_SHIFT	8
+#define GPC_PGC_CPU_SW2ISO_MASK		0x3f
 
 #define IMR_NUM			4
 #define GPC_MAX_IRQS		(IMR_NUM * 32)
@@ -41,7 +62,9 @@
 #define GPU_VPU_PUP_REQ		BIT(1)
 #define GPU_VPU_PDN_REQ		BIT(0)
 
-#define GPC_CLK_MAX		6
+#define GPC_CLK_MAX		10
+#define DEFAULT_IPG_RATE		66000000
+#define GPC_PU_UP_DELAY_MARGIN		2
 
 struct pu_domain {
 	struct generic_pm_domain base;
@@ -50,9 +73,103 @@ struct pu_domain {
 	int num_clks;
 };
 
+struct disp_domain {
+	struct generic_pm_domain base;
+	struct clk *clk[GPC_CLK_MAX];
+	int num_clks;
+};
+
 static void __iomem *gpc_base;
 static u32 gpc_wake_irqs[IMR_NUM];
 static u32 gpc_saved_imrs[IMR_NUM];
+static u32 gpc_mf_irqs[IMR_NUM];
+static u32 gpc_mf_request_on[IMR_NUM];
+static DEFINE_SPINLOCK(gpc_lock);
+static struct notifier_block nb_pcie;
+static struct pu_domain imx6q_pu_domain;
+static bool pu_on;      /* keep always on i.mx6qp */
+static void _imx6q_pm_pu_power_off(struct generic_pm_domain *genpd);
+static void _imx6q_pm_pu_power_on(struct generic_pm_domain *genpd);
+static struct clk *ipg;
+
+void imx_gpc_add_m4_wake_up_irq(u32 hwirq, bool enable)
+{
+	unsigned int idx = hwirq / 32;
+	unsigned long flags;
+	u32 mask;
+
+	/* Sanity check for SPI irq */
+	if (hwirq < 32)
+		return;
+
+	mask = 1 << hwirq % 32;
+	spin_lock_irqsave(&gpc_lock, flags);
+	gpc_wake_irqs[idx] = enable ? gpc_wake_irqs[idx] | mask :
+		gpc_wake_irqs[idx] & ~mask;
+	spin_unlock_irqrestore(&gpc_lock, flags);
+}
+
+void imx_gpc_hold_m4_in_sleep(void)
+{
+	int val;
+	unsigned long timeout = jiffies + msecs_to_jiffies(500);
+
+	/* wait M4 in wfi before asserting hold request */
+	while (!imx_gpc_is_m4_sleeping())
+		if (time_after(jiffies, timeout))
+			pr_err("M4 is NOT in expected sleep!\n");
+
+	val = readl_relaxed(gpc_base + GPC_M4_LPSR);
+	val &= ~(GPC_M4_LPSR_M4_SLEEP_HOLD_REQ_MASK <<
+		GPC_M4_LPSR_M4_SLEEP_HOLD_REQ_SHIFT);
+	writel_relaxed(val, gpc_base + GPC_M4_LPSR);
+
+	timeout = jiffies + msecs_to_jiffies(500);
+	while (readl_relaxed(gpc_base + GPC_M4_LPSR)
+		& (GPC_M4_LPSR_M4_SLEEP_HOLD_ACK_MASK <<
+		GPC_M4_LPSR_M4_SLEEP_HOLD_ACK_SHIFT))
+		if (time_after(jiffies, timeout))
+			pr_err("Wait M4 hold ack timeout!\n");
+}
+
+void imx_gpc_release_m4_in_sleep(void)
+{
+	int val;
+
+	val = readl_relaxed(gpc_base + GPC_M4_LPSR);
+	val |= GPC_M4_LPSR_M4_SLEEP_HOLD_REQ_MASK <<
+		GPC_M4_LPSR_M4_SLEEP_HOLD_REQ_SHIFT;
+	writel_relaxed(val, gpc_base + GPC_M4_LPSR);
+}
+
+unsigned int imx_gpc_is_m4_sleeping(void)
+{
+	if (readl_relaxed(gpc_base + GPC_M4_LPSR) &
+		(GPC_M4_LPSR_M4_SLEEPING_MASK <<
+		GPC_M4_LPSR_M4_SLEEPING_SHIFT))
+		return 1;
+
+	return 0;
+}
+
+unsigned int imx_gpc_is_mf_mix_off(void)
+{
+	return readl_relaxed(gpc_base + GPC_PGC_MF_PDN);
+}
+
+static void imx_gpc_mf_mix_off(void)
+{
+	int i;
+
+	for (i = 0; i < IMR_NUM; i++)
+		if (((gpc_wake_irqs[i] | gpc_mf_request_on[i]) &
+						gpc_mf_irqs[i]) != 0)
+			return;
+
+	pr_info("Turn off M/F mix!\n");
+	/* turn off mega/fast mix */
+	writel_relaxed(0x1, gpc_base + GPC_PGC_MF_PDN);
+}
 
 void imx_gpc_set_arm_power_up_timing(u32 sw2iso, u32 sw)
 {
@@ -76,6 +193,13 @@ void imx_gpc_pre_suspend(bool arm_power_off)
 	void __iomem *reg_imr1 = gpc_base + GPC_IMR1;
 	int i;
 
+	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)
+		_imx6q_pm_pu_power_off(&imx6q_pu_domain.base);
+
+	/* power down the mega-fast power domain */
+	if ((cpu_is_imx6sx() || cpu_is_imx6ul()) && arm_power_off)
+		imx_gpc_mf_mix_off();
+
 	/* Tell GPC to power off ARM core when suspend */
 	if (arm_power_off)
 		imx_gpc_set_arm_power_in_lpm(arm_power_off);
@@ -91,8 +215,14 @@ void imx_gpc_post_resume(void)
 	void __iomem *reg_imr1 = gpc_base + GPC_IMR1;
 	int i;
 
+	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)
+		_imx6q_pm_pu_power_on(&imx6q_pu_domain.base);
+
 	/* Keep ARM core powered on for other low-power modes */
 	imx_gpc_set_arm_power_in_lpm(false);
+	/* Keep M/F mix powered on for other low-power modes */
+	if (cpu_is_imx6sx() || cpu_is_imx6ul())
+		writel_relaxed(0x0, gpc_base + GPC_PGC_MF_PDN);
 
 	for (i = 0; i < IMR_NUM; i++)
 		writel_relaxed(gpc_saved_imrs[i], reg_imr1 + i * 4);
@@ -101,11 +231,14 @@ void imx_gpc_post_resume(void)
 static int imx_gpc_irq_set_wake(struct irq_data *d, unsigned int on)
 {
 	unsigned int idx = d->hwirq / 32;
+	unsigned long flags;
 	u32 mask;
 
 	mask = 1 << d->hwirq % 32;
+	spin_lock_irqsave(&gpc_lock, flags);
 	gpc_wake_irqs[idx] = on ? gpc_wake_irqs[idx] | mask :
 				  gpc_wake_irqs[idx] & ~mask;
+	spin_unlock_irqrestore(&gpc_lock, flags);
 
 	/*
 	 * Do *not* call into the parent, as the GIC doesn't have any
@@ -176,6 +309,7 @@ static struct irq_chip imx_gpc_chip = {
 	.irq_unmask		= imx_gpc_irq_unmask,
 	.irq_retrigger		= irq_chip_retrigger_hierarchy,
 	.irq_set_wake		= imx_gpc_irq_set_wake,
+	.irq_set_type           = irq_chip_set_type_parent,
 #ifdef CONFIG_SMP
 	.irq_set_affinity	= irq_chip_set_affinity_parent,
 #endif
@@ -233,11 +367,65 @@ static struct irq_domain_ops imx_gpc_domain_ops = {
 	.free	= irq_domain_free_irqs_common,
 };
 
+int imx_gpc_mf_power_on(unsigned int irq, unsigned int on)
+{
+	struct irq_desc *d = irq_to_desc(irq);
+	unsigned int idx = d->irq_data.hwirq / 32;
+	unsigned long flags;
+	u32 mask;
+
+	mask = 1 << (d->irq_data.hwirq % 32);
+	spin_lock_irqsave(&gpc_lock, flags);
+	gpc_mf_request_on[idx] = on ? gpc_mf_request_on[idx] | mask :
+				  gpc_mf_request_on[idx] & ~mask;
+	spin_unlock_irqrestore(&gpc_lock, flags);
+
+	return 0;
+}
+
+int imx_gpc_mf_request_on(unsigned int irq, unsigned int on)
+{
+	if (cpu_is_imx6sx() || cpu_is_imx6ul())
+		return imx_gpc_mf_power_on(irq, on);
+	else if (cpu_is_imx7d())
+		return imx_gpcv2_mf_power_on(irq, on);
+	else
+		return 0;
+}
+EXPORT_SYMBOL_GPL(imx_gpc_mf_request_on);
+
+static int imx_pcie_regulator_notify(struct notifier_block *nb,
+					unsigned long event,
+					void *ignored)
+{
+	u32 value = readl_relaxed(gpc_base + GPC_CNTR);
+
+	switch (event) {
+	case REGULATOR_EVENT_PRE_DO_ENABLE:
+		value |= 1 << GPC_CNTR_PCIE_PHY_PDU_SHIFT;
+		writel_relaxed(value, gpc_base + GPC_CNTR);
+		break;
+	case REGULATOR_EVENT_PRE_DO_DISABLE:
+		value |= 1 << GPC_CNTR_PCIE_PHY_PDN_SHIFT;
+		writel_relaxed(value, gpc_base + GPC_CNTR);
+		writel_relaxed(PGC_PCIE_PHY_PDN_EN,
+				gpc_base + PGC_PCIE_PHY_CTRL);
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
 static int __init imx_gpc_init(struct device_node *node,
 			       struct device_node *parent)
 {
 	struct irq_domain *parent_domain, *domain;
 	int i;
+	u32 val;
+	u32 cpu_pupscr_sw2iso, cpu_pupscr_sw;
+	u32 cpu_pdnscr_iso2sw, cpu_pdnscr_iso;
 
 	if (!parent) {
 		pr_err("%s: no parent, giving up\n", node->full_name);
@@ -266,6 +454,56 @@ static int __init imx_gpc_init(struct device_node *node,
 	for (i = 0; i < IMR_NUM; i++)
 		writel_relaxed(~0, gpc_base + GPC_IMR1 + i * 4);
 
+	/* Read supported wakeup source in M/F domain */
+	if (cpu_is_imx6sx() || cpu_is_imx6ul()) {
+		of_property_read_u32_index(node, "fsl,mf-mix-wakeup-irq", 0,
+			&gpc_mf_irqs[0]);
+		of_property_read_u32_index(node, "fsl,mf-mix-wakeup-irq", 1,
+			&gpc_mf_irqs[1]);
+		of_property_read_u32_index(node, "fsl,mf-mix-wakeup-irq", 2,
+			&gpc_mf_irqs[2]);
+		of_property_read_u32_index(node, "fsl,mf-mix-wakeup-irq", 3,
+			&gpc_mf_irqs[3]);
+		if (!(gpc_mf_irqs[0] | gpc_mf_irqs[1] |
+			gpc_mf_irqs[2] | gpc_mf_irqs[3]))
+			pr_info("No wakeup source in Mega/Fast domain found!\n");
+	}
+
+	/*
+	 * If there are CPU isolation timing settings in dts,
+	 * update them according to dts, otherwise, keep them
+	 * with default value in registers.
+	 */
+	cpu_pupscr_sw2iso = cpu_pupscr_sw =
+		cpu_pdnscr_iso2sw = cpu_pdnscr_iso = 0;
+
+	/* Read CPU isolation setting for GPC */
+	of_property_read_u32(node, "fsl,cpu_pupscr_sw2iso", &cpu_pupscr_sw2iso);
+	of_property_read_u32(node, "fsl,cpu_pupscr_sw", &cpu_pupscr_sw);
+	of_property_read_u32(node, "fsl,cpu_pdnscr_iso2sw", &cpu_pdnscr_iso2sw);
+	of_property_read_u32(node, "fsl,cpu_pdnscr_iso", &cpu_pdnscr_iso);
+
+	/* Return if no property found in dtb */
+	if ((cpu_pupscr_sw2iso | cpu_pupscr_sw
+		| cpu_pdnscr_iso2sw | cpu_pdnscr_iso) == 0)
+		return 0;
+
+	/* Update CPU PUPSCR timing if it is defined in dts */
+	val = readl_relaxed(gpc_base + GPC_PGC_CPU_PUPSCR);
+	val &= ~(GPC_PGC_CPU_SW2ISO_MASK << GPC_PGC_CPU_SW2ISO_SHIFT);
+	val &= ~(GPC_PGC_CPU_SW_MASK << GPC_PGC_CPU_SW_SHIFT);
+	val |= cpu_pupscr_sw2iso << GPC_PGC_CPU_SW2ISO_SHIFT;
+	val |= cpu_pupscr_sw << GPC_PGC_CPU_SW_SHIFT;
+	writel_relaxed(val, gpc_base + GPC_PGC_CPU_PUPSCR);
+
+	/* Update CPU PDNSCR timing if it is defined in dts */
+	val = readl_relaxed(gpc_base + GPC_PGC_CPU_PDNSCR);
+	val &= ~(GPC_PGC_CPU_SW2ISO_MASK << GPC_PGC_CPU_SW2ISO_SHIFT);
+	val &= ~(GPC_PGC_CPU_SW_MASK << GPC_PGC_CPU_SW_SHIFT);
+	val |= cpu_pdnscr_iso2sw << GPC_PGC_CPU_SW2ISO_SHIFT;
+	val |= cpu_pdnscr_iso << GPC_PGC_CPU_SW_SHIFT;
+	writel_relaxed(val, gpc_base + GPC_PGC_CPU_PDNSCR);
+
 	return 0;
 }
 
@@ -290,8 +528,6 @@ void __init imx_gpc_check_dt(void)
 		gpc_base = of_iomap(np, 0);
 	}
 }
-
-#ifdef CONFIG_PM_GENERIC_DOMAINS
 
 static void _imx6q_pm_pu_power_off(struct generic_pm_domain *genpd)
 {
@@ -319,6 +555,10 @@ static int imx6q_pm_pu_power_off(struct generic_pm_domain *genpd)
 {
 	struct pu_domain *pu = container_of(genpd, struct pu_domain, base);
 
+	if (&imx6q_pu_domain == pu && pu_on && cpu_is_imx6q() &&
+		imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)
+		return 0;
+
 	_imx6q_pm_pu_power_off(genpd);
 
 	if (pu->reg)
@@ -327,18 +567,11 @@ static int imx6q_pm_pu_power_off(struct generic_pm_domain *genpd)
 	return 0;
 }
 
-static int imx6q_pm_pu_power_on(struct generic_pm_domain *genpd)
+static void _imx6q_pm_pu_power_on(struct generic_pm_domain *genpd)
 {
 	struct pu_domain *pu = container_of(genpd, struct pu_domain, base);
-	int i, ret, sw, sw2iso;
+	int i, sw, sw2iso;
 	u32 val;
-
-	if (pu->reg)
-		ret = regulator_enable(pu->reg);
-	if (pu->reg && ret) {
-		pr_err("%s: failed to enable regulator: %d\n", __func__, ret);
-		return ret;
-	}
 
 	/* Enable reset clocks for all devices in the PU domain */
 	for (i = 0; i < pu->num_clks; i++)
@@ -363,7 +596,91 @@ static int imx6q_pm_pu_power_on(struct generic_pm_domain *genpd)
 	/* Disable reset clocks for all devices in the PU domain */
 	for (i = 0; i < pu->num_clks; i++)
 		clk_disable_unprepare(pu->clk[i]);
+}
 
+static int imx6q_pm_pu_power_on(struct generic_pm_domain *genpd)
+{
+	struct pu_domain *pu = container_of(genpd, struct pu_domain, base);
+	int ret;
+
+	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0
+		&& &imx6q_pu_domain == pu) {
+		if (!pu_on)
+			pu_on = true;
+		else
+			return 0;
+	}
+
+	if (pu->reg)
+		ret = regulator_enable(pu->reg);
+	if (pu->reg && ret) {
+		pr_err("%s: failed to enable regulator: %d\n", __func__, ret);
+		return ret;
+	}
+
+	_imx6q_pm_pu_power_on(genpd);
+
+	return 0;
+}
+
+static int imx_pm_dispmix_on(struct generic_pm_domain *genpd)
+{
+	struct disp_domain *disp = container_of(genpd, struct disp_domain, base);
+	u32 val = readl_relaxed(gpc_base + GPC_CNTR);
+	int i;
+	u32 ipg_rate = clk_get_rate(ipg);
+
+	if ((cpu_is_imx6sl() &&
+		imx_get_soc_revision() >= IMX_CHIP_REVISION_1_2) || cpu_is_imx6sx()) {
+
+		/* Enable reset clocks for all devices in the disp domain */
+		for (i = 0; i < disp->num_clks; i++)
+			clk_prepare_enable(disp->clk[i]);
+
+		writel_relaxed(0x0, gpc_base + GPC_PGC_DISP_PGCR_OFFSET);
+		writel_relaxed(0x20 | val, gpc_base + GPC_CNTR);
+		while (readl_relaxed(gpc_base + GPC_CNTR) & 0x20)
+			;
+
+		writel_relaxed(0x1, gpc_base + GPC_PGC_DISP_SR_OFFSET);
+
+		/* Wait power switch done */
+		udelay(2 * DEFAULT_IPG_RATE / ipg_rate +
+			GPC_PU_UP_DELAY_MARGIN);
+
+		/* Disable reset clocks for all devices in the disp domain */
+		for (i = 0; i < disp->num_clks; i++)
+			clk_disable_unprepare(disp->clk[i]);
+	}
+	return 0;
+}
+
+static int imx_pm_dispmix_off(struct generic_pm_domain *genpd)
+{
+	struct disp_domain *disp = container_of(genpd, struct disp_domain, base);
+	u32 val = readl_relaxed(gpc_base + GPC_CNTR);
+	int i;
+
+	if ((cpu_is_imx6sl() &&
+		imx_get_soc_revision() >= IMX_CHIP_REVISION_1_2) || cpu_is_imx6sx()) {
+
+		/* Enable reset clocks for all devices in the disp domain */
+		for (i = 0; i < disp->num_clks; i++)
+			clk_prepare_enable(disp->clk[i]);
+
+		writel_relaxed(0xFFFFFFFF,
+				gpc_base + GPC_PGC_DISP_PUPSCR_OFFSET);
+		writel_relaxed(0xFFFFFFFF,
+				gpc_base + GPC_PGC_DISP_PDNSCR_OFFSET);
+		writel_relaxed(0x1, gpc_base + GPC_PGC_DISP_PGCR_OFFSET);
+		writel_relaxed(0x10 | val, gpc_base + GPC_CNTR);
+		while (readl_relaxed(gpc_base + GPC_CNTR) & 0x10)
+			;
+
+		/* Disable reset clocks for all devices in the disp domain */
+		for (i = 0; i < disp->num_clks; i++)
+			clk_disable_unprepare(disp->clk[i]);
+	}
 	return 0;
 }
 
@@ -381,14 +698,18 @@ static struct pu_domain imx6q_pu_domain = {
 	},
 };
 
-static struct generic_pm_domain imx6sl_display_domain = {
-	.name = "DISPLAY",
+static struct disp_domain imx6s_display_domain = {
+	.base = {
+		.name = "DISPLAY",
+		.power_off = imx_pm_dispmix_off,
+		.power_on = imx_pm_dispmix_on,
+	},
 };
 
 static struct generic_pm_domain *imx_gpc_domains[] = {
 	&imx6q_arm_domain,
 	&imx6q_pu_domain.base,
-	&imx6sl_display_domain,
+	&imx6s_display_domain.base,
 };
 
 static struct genpd_onecell_data imx_gpc_onecell_data = {
@@ -400,24 +721,47 @@ static int imx_gpc_genpd_init(struct device *dev, struct regulator *pu_reg)
 {
 	struct clk *clk;
 	bool is_off;
-	int i;
+	int pu_clks, disp_clks, ipg_clks = 1;
+	int i = 0, k = 0;
 
 	imx6q_pu_domain.reg = pu_reg;
 
-	for (i = 0; ; i++) {
+	if ((cpu_is_imx6sl() &&
+			imx_get_soc_revision() >= IMX_CHIP_REVISION_1_2)) {
+		pu_clks = 2 ;
+		disp_clks = 5;
+	} else if (cpu_is_imx6sx()) {
+		pu_clks = 1;
+		disp_clks = 7;
+	} else {
+		pu_clks = 6;
+		disp_clks = 0;
+	}
+
+	/* Get pu domain clks */
+	for (i = 0; i < pu_clks ; i++) {
 		clk = of_clk_get(dev->of_node, i);
 		if (IS_ERR(clk))
 			break;
-		if (i >= GPC_CLK_MAX) {
-			dev_err(dev, "more than %d clocks\n", GPC_CLK_MAX);
-			goto clk_err;
-		}
 		imx6q_pu_domain.clk[i] = clk;
 	}
 	imx6q_pu_domain.num_clks = i;
 
+	ipg = of_clk_get(dev->of_node, pu_clks);
+
+	/* Get disp domain clks */
+	for (i = pu_clks + ipg_clks; i < pu_clks + ipg_clks + disp_clks;
+		i++) {
+		clk = of_clk_get(dev->of_node, i);
+		if (IS_ERR(clk))
+			break;
+		imx6s_display_domain.clk[k++] = clk;
+	}
+	imx6s_display_domain.num_clks = k;
+
 	is_off = IS_ENABLED(CONFIG_PM);
-	if (is_off) {
+	if (is_off && !(cpu_is_imx6q() &&
+		imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)) {
 		_imx6q_pm_pu_power_off(&imx6q_pu_domain.base);
 	} else {
 		/*
@@ -428,26 +772,17 @@ static int imx_gpc_genpd_init(struct device *dev, struct regulator *pu_reg)
 	}
 
 	pm_genpd_init(&imx6q_pu_domain.base, NULL, is_off);
+	pm_genpd_init(&imx6s_display_domain.base, NULL, is_off);
+
 	return of_genpd_add_provider_onecell(dev->of_node,
 					     &imx_gpc_onecell_data);
-
-clk_err:
-	while (i--)
-		clk_put(imx6q_pu_domain.clk[i]);
-	return -EINVAL;
 }
-
-#else
-static inline int imx_gpc_genpd_init(struct device *dev, struct regulator *reg)
-{
-	return 0;
-}
-#endif /* CONFIG_PM_GENERIC_DOMAINS */
 
 static int imx_gpc_probe(struct platform_device *pdev)
 {
 	struct regulator *pu_reg;
 	int ret;
+	u32 bypass = 0;
 
 	/* bail out if DT too old and doesn't provide the necessary info */
 	if (!of_property_read_bool(pdev->dev.of_node, "#power-domain-cells"))
@@ -460,6 +795,32 @@ static int imx_gpc_probe(struct platform_device *pdev)
 		ret = PTR_ERR(pu_reg);
 		dev_err(&pdev->dev, "failed to get pu regulator: %d\n", ret);
 		return ret;
+	}
+
+	if (of_property_read_u32(pdev->dev.of_node, "fsl,ldo-bypass", &bypass))
+		dev_warn(&pdev->dev,
+			"no fsl,ldo-bypass found!\n");
+	/* We only bypass pu since arm and soc has been set in u-boot */
+	if (pu_reg && bypass)
+		regulator_allow_bypass(pu_reg, true);
+
+	if (cpu_is_imx6sx()) {
+		struct regulator *pcie_reg;
+
+		pcie_reg = devm_regulator_get(&pdev->dev, "pcie-phy");
+		if (IS_ERR(pcie_reg)) {
+			ret = PTR_ERR(pcie_reg);
+			dev_info(&pdev->dev, "pcie regulator not ready.\n");
+			return ret;
+		}
+		nb_pcie.notifier_call = &imx_pcie_regulator_notify;
+
+		ret = regulator_register_notifier(pcie_reg, &nb_pcie);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"pcie regulator notifier request failed\n");
+			return ret;
+		}
 	}
 
 	return imx_gpc_genpd_init(&pdev->dev, pu_reg);

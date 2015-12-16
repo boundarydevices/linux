@@ -1,7 +1,7 @@
 /*
  * Freescale ASRC ALSA SoC Platform (DMA) driver
  *
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  *
  * Author: Nicolin Chen <nicoleotsuka@gmail.com>
  *
@@ -50,12 +50,19 @@ static void fsl_asrc_dma_complete(void *arg)
 	struct snd_pcm_substream *substream = arg;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct fsl_asrc_pair *pair = runtime->private_data;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_dmaengine_dai_dma_data *dma_data;
 
 	pair->pos += snd_pcm_lib_period_bytes(substream);
 	if (pair->pos >= snd_pcm_lib_buffer_bytes(substream))
 		pair->pos = 0;
 
 	snd_pcm_period_elapsed(substream);
+
+	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+	if (dma_data->check_xrun && dma_data->check_xrun(substream))
+		dma_data->device_reset(substream, 1);
+
 }
 
 static int fsl_asrc_dma_prepare_and_submit(struct snd_pcm_substream *substream)
@@ -150,6 +157,7 @@ static int fsl_asrc_dma_hw_params(struct snd_pcm_substream *substream,
 	struct device *dev_be;
 	u8 dir = tx ? OUT : IN;
 	dma_cap_mask_t mask;
+	enum sdma_peripheral_type be_peripheral_type;
 	int ret;
 
 	/* Fetch the Back-End dma_data from DPCM */
@@ -205,6 +213,7 @@ static int fsl_asrc_dma_hw_params(struct snd_pcm_substream *substream,
 	tmp_chan = dma_request_slave_channel(dev_be, tx ? "tx" : "rx");
 	tmp_data = tmp_chan->private;
 	pair->dma_data.dma_request = tmp_data->dma_request;
+	be_peripheral_type = tmp_data->peripheral_type;
 	dma_release_channel(tmp_chan);
 
 	/* Get DMA request of Front-End */
@@ -214,6 +223,11 @@ static int fsl_asrc_dma_hw_params(struct snd_pcm_substream *substream,
 	pair->dma_data.peripheral_type = tmp_data->peripheral_type;
 	pair->dma_data.priority = tmp_data->priority;
 	dma_release_channel(tmp_chan);
+
+	if (tx && be_peripheral_type == IMX_DMATYPE_SSI_DUAL)
+		pair->dma_data.dst_dualfifo = true;
+	if (!tx && be_peripheral_type == IMX_DMATYPE_SSI_DUAL)
+		pair->dma_data.src_dualfifo = true;
 
 	pair->dma_chan[dir] = dma_request_channel(mask, filter, &pair->dma_data);
 	if (!pair->dma_chan[dir]) {
@@ -225,6 +239,8 @@ static int fsl_asrc_dma_hw_params(struct snd_pcm_substream *substream,
 		buswidth = DMA_SLAVE_BUSWIDTH_2_BYTES;
 	else
 		buswidth = DMA_SLAVE_BUSWIDTH_4_BYTES;
+
+	memset(&config_be, 0, sizeof(config_be));
 
 	config_be.direction = DMA_DEV_TO_DEV;
 	config_be.src_addr_width = buswidth;
@@ -277,6 +293,7 @@ static int fsl_asrc_dma_startup(struct snd_pcm_substream *substream)
 	struct device *dev = rtd->platform->dev;
 	struct fsl_asrc *asrc_priv = dev_get_drvdata(dev);
 	struct fsl_asrc_pair *pair;
+	int ret;
 
 	pair = kzalloc(sizeof(struct fsl_asrc_pair), GFP_KERNEL);
 	if (!pair) {
@@ -288,8 +305,12 @@ static int fsl_asrc_dma_startup(struct snd_pcm_substream *substream)
 
 	runtime->private_data = pair;
 
-	snd_pcm_hw_constraint_integer(substream->runtime,
-				      SNDRV_PCM_HW_PARAM_PERIODS);
+	ret = snd_pcm_hw_constraint_integer(substream->runtime,
+			SNDRV_PCM_HW_PARAM_PERIODS);
+	if (ret < 0) {
+		dev_err(dev, "failed to set pcm hw params periods\n");
+		return ret;
+	}
 	snd_soc_set_runtime_hwparams(substream, &snd_imx_hardware);
 
 	return 0;

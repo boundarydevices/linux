@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Freescale Semiconductor, Inc.
+ * Copyright 2014-2015 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -25,6 +25,14 @@ static int ar8031_phy_fixup(struct phy_device *dev)
 	/* Set RGMII IO voltage to 1.8V */
 	phy_write(dev, 0x1d, 0x1f);
 	phy_write(dev, 0x1e, 0x8);
+
+	/* disable phy AR8031 SmartEEE function. */
+	phy_write(dev, 0xd, 0x3);
+	phy_write(dev, 0xe, 0x805d);
+	phy_write(dev, 0xd, 0x4003);
+	val = phy_read(dev, 0xe);
+	val &= ~(0x1 << 8);
+	phy_write(dev, 0xe, val);
 
 	/* introduce tx clock delay */
 	phy_write(dev, 0x1d, 0x5);
@@ -60,6 +68,7 @@ static void __init imx6sx_enet_clk_sel(void)
 
 static inline void imx6sx_enet_init(void)
 {
+	imx6_enet_mac_init("fsl,imx6sx-fec", "fsl,imx6sx-ocotp");
 	imx6sx_enet_phy_init();
 	imx6sx_enet_clk_sel();
 }
@@ -90,10 +99,17 @@ static void __init imx6sx_init_irq(void)
 
 static void __init imx6sx_init_late(void)
 {
-	imx6sx_cpuidle_init();
-
 	if (IS_ENABLED(CONFIG_ARM_IMX6Q_CPUFREQ))
 		platform_device_register_simple("imx6q-cpufreq", -1, NULL, 0);
+
+	imx6sx_cpuidle_init();
+}
+
+static void __init imx6sx_map_io(void)
+{
+	debug_ll_io_init();
+	imx6_pm_map_io();
+	imx_busfreq_map_io();
 }
 
 static const char * const imx6sx_dt_compat[] __initconst = {
@@ -102,6 +118,7 @@ static const char * const imx6sx_dt_compat[] __initconst = {
 };
 
 DT_MACHINE_START(IMX6SX, "Freescale i.MX6 SoloX (Device Tree)")
+	.map_io		= imx6sx_map_io,
 	.init_irq	= imx6sx_init_irq,
 	.init_machine	= imx6sx_init_machine,
 	.dt_compat	= imx6sx_dt_compat,

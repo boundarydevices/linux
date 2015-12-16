@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Freescale Semiconductor, Inc.
+ * Copyright 2014-2015 Freescale Semiconductor, Inc.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -59,8 +59,14 @@
 #define PM_INFO_MX6Q_GPC_V_OFFSET		0x34
 #define PM_INFO_MX6Q_L2_P_OFFSET		0x38
 #define PM_INFO_MX6Q_L2_V_OFFSET		0x3C
-#define PM_INFO_MMDC_IO_NUM_OFFSET		0x40
-#define PM_INFO_MMDC_IO_VAL_OFFSET		0x44
+#define PM_INFO_MX6Q_ANATOP_P_OFFSET		0x40
+#define PM_INFO_MX6Q_ANATOP_V_OFFSET		0x44
+#define	PM_INFO_MX6Q_TTBR1_V_OFFSET		0x48
+#define PM_INFO_MMDC_IO_NUM_OFFSET		0x4c
+#define PM_INFO_MMDC_IO_VAL_OFFSET		0x50
+/* below offsets depends on MX6_MAX_MMDC_IO_NUM(33) definition */
+#define PM_INFO_MMDC_NUM_OFFSET			0x158
+#define PM_INFO_MMDC_VAL_OFFSET			0x15c
 
 #define MX6Q_SRC_GPR1	0x20
 #define MX6Q_SRC_GPR2	0x24
@@ -71,8 +77,48 @@
 #define MX6Q_GPC_IMR3	0x10
 #define MX6Q_GPC_IMR4	0x14
 #define MX6Q_CCM_CCR	0x0
+#define MX6Q_ANATOP_CORE	0x140
 
 	.align 3
+
+	/* Check if the cpu is cortex-a7 */
+	.macro is_cortex_a7
+
+	/* Read the primary cpu number is MPIDR */
+	mrc     p15, 0, r5, c0, c0, 0
+	ldr     r6, =0xfff0
+	and     r5, r5, r6
+	ldr     r6, =0xc070
+	cmp     r5, r6
+
+	.endm
+
+	.macro  disable_l1_cache
+
+	/*
+	 * Flush all data from the L1 data cache before disabling
+	 * SCTLR.C bit.
+	 */
+	push    {r0 - r10, lr}
+	ldr     r7, =v7_flush_dcache_all
+	mov     lr, pc
+	mov     pc, r7
+	pop     {r0 - r10, lr}
+
+	/* disable d-cache */
+	mrc     p15, 0, r7, c1, c0, 0
+	bic     r7, r7, #(1 << 2)
+	mcr     p15, 0, r7, c1, c0, 0
+	dsb
+	isb
+
+	push    {r0 -r10, lr}
+	ldr     r7, = v7_flush_dcache_all
+	mov     lr, pc
+	mov     pc , r7
+	pop     {r0 -r10, lr}
+
+	.endm
 
 	.macro  sync_l2_cache
 
@@ -89,29 +135,8 @@
 
 	.endm
 
-	.macro	resume_mmdc
-
-	/* restore MMDC IO */
-	cmp	r5, #0x0
-	ldreq	r11, [r0, #PM_INFO_MX6Q_IOMUXC_V_OFFSET]
-	ldrne	r11, [r0, #PM_INFO_MX6Q_IOMUXC_P_OFFSET]
-
-	ldr	r6, [r0, #PM_INFO_MMDC_IO_NUM_OFFSET]
-	ldr	r7, =PM_INFO_MMDC_IO_VAL_OFFSET
-	add	r7, r7, r0
-1:
-	ldr	r8, [r7], #0x4
-	ldr	r9, [r7], #0x4
-	str	r9, [r11, r8]
-	subs	r6, r6, #0x1
-	bne	1b
-
-	cmp	r5, #0x0
-	ldreq	r11, [r0, #PM_INFO_MX6Q_MMDC_V_OFFSET]
-	ldrne	r11, [r0, #PM_INFO_MX6Q_MMDC_P_OFFSET]
-
-	cmp	r3, #IMX_DDR_TYPE_LPDDR2
-	bne	4f
+	/* r11 must be MMDC base address */
+	.macro reset_read_fifo
 
 	/* reset read FIFO, RST_RD_FIFO */
 	ldr	r7, =MX6Q_MMDC_MPDGCTRL0
@@ -131,15 +156,20 @@
 	ldr	r6, [r11, r7]
 	ands	r6, r6, #(1 << 31)
 	bne	3b
-4:
+
+	.endm
+
+	/* r11 must be MMDC base address */
+	.macro mmdc_out_and_auto_self_refresh
+
 	/* let DDR out of self-refresh */
 	ldr	r7, [r11, #MX6Q_MMDC_MAPSR]
 	bic	r7, r7, #(1 << 21)
 	str	r7, [r11, #MX6Q_MMDC_MAPSR]
-5:
+4:
 	ldr	r7, [r11, #MX6Q_MMDC_MAPSR]
 	ands	r7, r7, #(1 << 25)
-	bne	5b
+	bne	4b
 
 	/* enable DDR auto power saving */
 	ldr	r7, [r11, #MX6Q_MMDC_MAPSR]
@@ -147,6 +177,231 @@
 	str	r7, [r11, #MX6Q_MMDC_MAPSR]
 
 	.endm
+
+	/* r10 must be iomuxc base address */
+	.macro resume_iomuxc_gpr
+
+	add	r10, r10, #0x4000
+	/* IOMUXC GPR DRAM_RESET_BYPASS */
+	ldr	r4, [r10, #0x8]
+	bic	r4, r4, #(0x1 << 27)
+	str	r4, [r10, #0x8]
+	/* IOMUXC GPR DRAM_CKE_BYPASS */
+	ldr	r4, [r10, #0x8]
+	bic	r4, r4, #(0x1 << 31)
+	str	r4, [r10, #0x8]
+
+	.endm
+
+	.macro	resume_io
+
+	/* restore MMDC IO */
+	cmp	r5, #0x0
+	ldreq	r10, [r0, #PM_INFO_MX6Q_IOMUXC_V_OFFSET]
+	ldrne	r10, [r0, #PM_INFO_MX6Q_IOMUXC_P_OFFSET]
+
+	ldr	r6, [r0, #PM_INFO_MMDC_IO_NUM_OFFSET]
+	ldr	r7, =PM_INFO_MMDC_IO_VAL_OFFSET
+	add	r7, r7, r0
+5:
+	ldr	r8, [r7], #0x4
+	ldr	r9, [r7], #0x4
+	str	r9, [r10, r8]
+	subs	r6, r6, #0x1
+	bne	5b
+
+	cmp	r5, #0x0
+	/* Here only MMDC0 is set */
+	ldreq	r11, [r0, #PM_INFO_MX6Q_MMDC_V_OFFSET]
+	ldrne	r11, [r0, #PM_INFO_MX6Q_MMDC_P_OFFSET]
+
+	cmp     r3, #IMX_DDR_TYPE_LPDDR2
+	bne     6f
+
+	reset_read_fifo
+6:
+	mmdc_out_and_auto_self_refresh
+
+	.endm
+
+	.macro	resume_mmdc_io
+
+	cmp	r5, #0x0
+	ldreq	r10, [r0, #PM_INFO_MX6Q_IOMUXC_V_OFFSET]
+	ldrne	r10, [r0, #PM_INFO_MX6Q_IOMUXC_P_OFFSET]
+	ldreq	r11, [r0, #PM_INFO_MX6Q_MMDC_V_OFFSET]
+	ldrne	r11, [r0, #PM_INFO_MX6Q_MMDC_P_OFFSET]
+
+	/* resume mmdc iomuxc settings */
+	ldr	r6, [r0, #PM_INFO_MMDC_IO_NUM_OFFSET]
+	ldr	r7, =PM_INFO_MMDC_IO_VAL_OFFSET
+	add	r7, r7, r0
+7:
+	ldr	r8, [r7], #0x4
+	ldr	r9, [r7], #0x4
+	str	r9, [r10, r8]
+	subs	r6, r6, #0x1
+	bne	7b
+
+	/* check whether we need to restore MMDC */
+	cmp	r5, #0x0
+	beq	8f
+
+	/* check whether last suspend is with M/F mix off */
+	ldr	r9, [r0, #PM_INFO_MX6Q_GPC_P_OFFSET]
+	ldr	r6, [r9, #0x220]
+	cmp	r6, #0x0
+	bne	9f
+8:
+	resume_iomuxc_gpr
+
+	b	13f
+9:
+	/* restore MMDC settings */
+	ldr	r6, [r0, #PM_INFO_MMDC_NUM_OFFSET]
+	ldr	r7, =PM_INFO_MMDC_VAL_OFFSET
+	add	r7, r7, r0
+10:
+	ldr	r8, [r7], #0x4
+	ldr	r9, [r7], #0x4
+	str	r9, [r11, r8]
+	subs	r6, r6, #0x1
+	bne	10b
+
+	/* let DDR enter self-refresh */
+	ldr	r7, [r11, #MX6Q_MMDC_MAPSR]
+	orr	r7, r7, #(1 << 20)
+	str	r7, [r11, #MX6Q_MMDC_MAPSR]
+11:
+	ldr	r7, [r11, #MX6Q_MMDC_MAPSR]
+	ands	r7, r7, #(1 << 24)
+	beq	11b
+
+	resume_iomuxc_gpr
+
+	reset_read_fifo
+
+	/* let DDR out of self-refresh */
+	ldr	r7, [r11, #MX6Q_MMDC_MAPSR]
+	bic	r7, r7, #(1 << 20)
+	str	r7, [r11, #MX6Q_MMDC_MAPSR]
+12:
+	ldr	r7, [r11, #MX6Q_MMDC_MAPSR]
+	ands	r7, r7, #(1 << 24)
+	bne	12b
+
+	/* kick off MMDC */
+	ldr	r4, =0x0
+	str	r4, [r11, #0x1c]
+13:
+	mmdc_out_and_auto_self_refresh
+
+	.endm
+
+	.macro store_ttbr1
+
+	/* Store TTBR1 to pm_info->ttbr1 */
+	mrc	p15, 0, r7, c2, c0, 1
+	str	r7, [r0, #PM_INFO_MX6Q_TTBR1_V_OFFSET]
+
+	/* Disable Branch Prediction, Z bit in SCTLR. */
+	mrc	p15, 0, r6, c1, c0, 0
+	bic	r6, r6, #0x800
+	mcr	p15, 0, r6, c1, c0, 0
+
+	/* Flush the BTAC. */
+	ldr	r6, =0x0
+	mcr	p15, 0, r6, c7, c1, 6
+
+	ldr	r6, =iram_tlb_phys_addr
+	ldr	r6, [r6]
+	dsb
+	isb
+
+	/* Store the IRAM table in TTBR1 */
+	mcr	p15, 0, r6, c2, c0, 1
+	/* Read TTBCR and set PD0=1, N = 1 */
+	mrc	p15, 0, r6, c2, c0, 2
+	orr	r6, r6, #0x11
+	mcr	p15, 0, r6, c2, c0, 2
+
+	dsb
+	isb
+
+	/* flush the TLB */
+	ldr	r6, =0x0
+	mcr	p15, 0, r6, c8, c3, 0
+
+	/* Disable L1 data cache. */
+	mrc	p15, 0, r6, c1, c0, 0
+	bic	r6, r6, #0x4
+	mcr	p15, 0, r6, c1, c0, 0
+
+	dsb
+	isb
+
+	is_cortex_a7
+	beq	14f
+
+#ifdef CONFIG_CACHE_L2X0
+	ldr	r8, [r0, #PM_INFO_MX6Q_L2_V_OFFSET]
+	mov	r6, #0x0
+	str	r6, [r8, #0x100]
+
+	dsb
+	isb
+#endif
+14:
+	.endm
+
+	.macro restore_ttbr1
+
+	is_cortex_a7
+	beq	15f
+
+#ifdef CONFIG_CACHE_L2X0
+	/* Enable L2. */
+	ldr	r8, [r0, #PM_INFO_MX6Q_L2_V_OFFSET]
+	ldr	r7, =0x1
+	str	r7, [r8, #0x100]
+#endif
+
+15:
+	/* Enable L1 data cache. */
+	mrc	p15, 0, r6, c1, c0, 0
+	orr	r6, r6, #0x4
+	mcr	p15, 0, r6, c1, c0, 0
+
+	dsb
+	isb
+
+	/* Restore TTBCR */
+	/* Read TTBCR and set PD0=0, N = 0 */
+	mrc	p15, 0, r6, c2, c0, 2
+	bic	r6, r6, #0x11
+	mcr	p15, 0, r6, c2, c0, 2
+	dsb
+	isb
+
+	/* flush the TLB */
+	ldr	r6, =0x0
+	mcr	p15, 0, r6, c8, c3, 0
+
+	/* Enable Branch Prediction, Z bit in SCTLR. */
+	mrc	p15, 0, r6, c1, c0, 0
+	orr	r6, r6, #0x800
+	mcr	p15, 0, r6, c1, c0, 0
+
+	/* Flush the Branch Target Address Cache (BTAC) */
+	ldr	r6, =0x0
+	mcr	p15, 0, r6, c7, c1, 6
+
+	/* Restore TTBR1, get the origin ttbr1 from pm info */
+	ldr	r7, [r0, #PM_INFO_MX6Q_TTBR1_V_OFFSET]
+	mcr	p15, 0, r7, c2, c0, 1
+
+	.endm
+
 
 ENTRY(imx6_suspend)
 	ldr	r1, [r0, #PM_INFO_PBASE_OFFSET]
@@ -182,8 +437,22 @@ ENTRY(imx6_suspend)
 	str	r9, [r11, #MX6Q_SRC_GPR1]
 	str	r1, [r11, #MX6Q_SRC_GPR2]
 
+	/*
+	 * Check if the cpu is Cortex-A7, for Cortex-A7
+	 * the cache implementation is not the same as
+	 * Cortex-A9, so the cache maintenance operation
+	 * is different.
+	 */
+	is_cortex_a7
+	beq	a7_dache_flush
+
 	/* need to sync L2 cache before DSM. */
 	sync_l2_cache
+	b	ttbr_store
+a7_dache_flush:
+	disable_l1_cache
+ttbr_store:
+	store_ttbr1
 
 	ldr	r11, [r0, #PM_INFO_MX6Q_MMDC_V_OFFSET]
 	/*
@@ -229,6 +498,28 @@ set_mmdc_io_lpm:
 	ldr	r9, [r8]
 	str	r6, [r11, r9]
 set_mmdc_io_lpm_done:
+
+	/* check whether it supports Mega/Fast off */
+	ldr	r6, [r0, #PM_INFO_MMDC_NUM_OFFSET]
+	cmp	r6, #0x0
+	beq	set_mmdc_lpm_done
+
+	/* IOMUXC GPR DRAM_RESET */
+	add	r11, r11, #0x4000
+	ldr	r6, [r11, #0x8]
+	orr	r6, r6, #(0x1 << 28)
+	str	r6, [r11, #0x8]
+
+	/* IOMUXC GPR DRAM_RESET_BYPASS */
+	ldr	r6, [r11, #0x8]
+	orr	r6, r6, #(0x1 << 27)
+	str	r6, [r11, #0x8]
+
+	/* IOMUXC GPR DRAM_CKE_BYPASS */
+	ldr	r6, [r11, #0x8]
+	orr	r6, r6, #(0x1 << 31)
+	str	r6, [r11, #0x8]
+set_mmdc_lpm_done:
 
 	/*
 	 * mask all GPC interrupts before
@@ -288,6 +579,27 @@ rbc_loop:
 	subs	r6, r6, #0x1
 	bne	rbc_loop
 
+	/*
+	 * ERR005852 Analog: Transition from Deep Sleep Mode to
+	 * LDO Bypass Mode may cause the slow response of the
+	 * VDDARM_CAP output.
+	 *
+	 * Software workaround:
+	 * if internal ldo(VDDARM) bypassed, switch to analog bypass
+	 * mode (0x1E), prio to entering DSM, and then, revert to the
+	 * normal bypass mode, when exiting from DSM.
+	 */
+	ldr	r11, [r0, #PM_INFO_MX6Q_ANATOP_V_OFFSET]
+	ldr	r10, [r11, #MX6Q_ANATOP_CORE]
+	and	r10, r10, #0x1f
+	cmp	r10, #0x1f
+	bne	ldo_check_done1
+ldo_analog_bypass:
+	ldr	r10, [r11, #MX6Q_ANATOP_CORE]
+	bic	r10, r10, #0x1f
+	orr	r10, r10, #0x1e
+	str	r10, [r11, #MX6Q_ANATOP_CORE]
+ldo_check_done1:
 	/* Zzz, enter stop mode */
 	wfi
 	nop
@@ -300,8 +612,28 @@ rbc_loop:
 	 * wakeup source, system should auto
 	 * resume, we need to restore MMDC IO first
 	 */
+	/* restore it with 0x1f if use ldo bypass mode.*/
+	ldr	r10, [r11, #MX6Q_ANATOP_CORE]
+	and	r10, r10, #0x1f
+	cmp	r10, #0x1e
+	bne	ldo_check_done2
+ldo_bypass_restore:
+	ldr	r10, [r11, #MX6Q_ANATOP_CORE]
+	orr	r10, r10, #0x1f
+	str	r10, [r11, #MX6Q_ANATOP_CORE]
+ldo_check_done2:
 	mov	r5, #0x0
-	resume_mmdc
+	/* check whether it supports Mega/Fast off */
+	ldr	r6, [r0, #PM_INFO_MMDC_NUM_OFFSET]
+	cmp	r6, #0x0
+	beq	only_resume_io
+	resume_mmdc_io
+	b	resume_mmdc_done
+only_resume_io:
+	resume_io
+resume_mmdc_done:
+
+	restore_ttbr1
 
 	/* return to suspend finish */
 	ret	lr
@@ -316,6 +648,16 @@ resume:
 	mcr     p15, 0, r6, c1, c0, 0
 	isb
 
+	/* restore it with 0x1f if use ldo bypass mode.*/
+	ldr	r11, [r0, #PM_INFO_MX6Q_ANATOP_P_OFFSET]
+	ldr	r7, [r11, #MX6Q_ANATOP_CORE]
+	and	r7, r7, #0x1f
+	cmp	r7, #0x1e
+	bne	ldo_check_done3
+	ldr	r7, [r11, #MX6Q_ANATOP_CORE]
+	orr	r7, r7, #0x1f
+	str	r7, [r11, #MX6Q_ANATOP_CORE]
+ldo_check_done3:
 	/* get physical resume address from pm_info. */
 	ldr	lr, [r0, #PM_INFO_RESUME_ADDR_OFFSET]
 	/* clear core0's entry and parameter */
@@ -326,7 +668,16 @@ resume:
 
 	ldr	r3, [r0, #PM_INFO_DDR_TYPE_OFFSET]
 	mov	r5, #0x1
-	resume_mmdc
+	/* check whether it supports Mega/Fast off */
+	ldr	r6, [r0, #PM_INFO_MMDC_NUM_OFFSET]
+	cmp	r6, #0x0
+	beq	dsm_only_resume_io
+	resume_mmdc_io
+	b	dsm_resume_mmdc_done
+dsm_only_resume_io:
+	ldr	r3, [r0, #PM_INFO_DDR_TYPE_OFFSET]
+	resume_io
+dsm_resume_mmdc_done:
 
 	ret	lr
 ENDPROC(imx6_suspend)
@@ -339,8 +690,11 @@ ENDPROC(imx6_suspend)
 
 ENTRY(v7_cpu_resume)
 	bl	v7_invalidate_l1
+	is_cortex_a7
+	beq	done
 #ifdef CONFIG_CACHE_L2X0
 	bl	l2c310_early_resume
 #endif
+done:
 	b	cpu_resume
 ENDPROC(v7_cpu_resume)

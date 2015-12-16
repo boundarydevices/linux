@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Freescale Semiconductor, Inc.
+ * Copyright 2011-2015 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -170,11 +170,6 @@
 	txd3-skew-ps = <0>;
 	interrupts-extended = <&gpio1 6 IRQ_TYPE_LEVEL_HIGH>,
 			      <&intc 0 119 IRQ_TYPE_LEVEL_HIGH>;
-	status = "okay";
-};
-
-&hdmi {
-	ddc-i2c-bus = <&i2c2>;
 	status = "okay";
 };
 
@@ -438,14 +433,17 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg>;
 	disable-over-current;
+	srp-disable;
+	hnp-disable;
+	adp-disable;
 	status = "okay";
 };
 
 &usdhc3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc3>;
-	cd-gpios = <&gpio7 0 0>;
-	wp-gpios = <&gpio7 1 0>;
+	cd-gpios = <&gpio7 0 GPIO_ACTIVE_LOW>;
+	wp-gpios = <&gpio7 1 GPIO_ACTIVE_HIGH>;
 	vmmc-supply = <&reg_3p3v>;
 	status = "okay";
 };
@@ -453,7 +451,7 @@
 &usdhc4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc4>;
-	cd-gpios = <&gpio2 6 0>;
+	cd-gpios = <&gpio2 6 GPIO_ACTIVE_LOW>;
 	vmmc-supply = <&reg_3p3v>;
 	status = "okay";
 };

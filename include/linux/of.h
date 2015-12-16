@@ -336,6 +336,7 @@ extern int of_count_phandle_with_args(const struct device_node *np,
 extern void of_alias_scan(void * (*dt_alloc)(u64 size, u64 align));
 extern int of_alias_get_id(struct device_node *np, const char *stem);
 extern int of_alias_get_highest_id(const char *stem);
+extern int of_alias_max_index(const char *stem);
 
 extern int of_machine_is_compatible(const char *compat);
 
@@ -612,6 +613,11 @@ static inline int of_alias_get_highest_id(const char *stem)
 	return -ENOSYS;
 }
 
+static inline int of_alias_max_index(const char *stem)
+{
+	return -ENODEV;
+}
+
 static inline int of_machine_is_compatible(const char *compat)
 {
 	return 0;
@@ -673,7 +679,10 @@ static inline void of_property_clear_flag(struct property *p, unsigned long flag
 #if defined(CONFIG_OF) && defined(CONFIG_NUMA)
 extern int of_node_to_nid(struct device_node *np);
 #else
-static inline int of_node_to_nid(struct device_node *device) { return 0; }
+static inline int of_node_to_nid(struct device_node *device)
+{
+	return NUMA_NO_NODE;
+}
 #endif
 
 static inline struct device_node *of_find_matching_node(

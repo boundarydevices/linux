@@ -1,7 +1,7 @@
 /*
  * Core driver for the imx pin controller
  *
- * Copyright (C) 2012 Freescale Semiconductor, Inc.
+ * Copyright (C) 2012-2015 Freescale Semiconductor, Inc.
  * Copyright (C) 2012 Linaro Ltd.
  *
  * Author: Dong Aisheng <dong.aisheng@linaro.org>
@@ -18,6 +18,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_address.h>
 #include <linux/pinctrl/machine.h>
 #include <linux/pinctrl/pinconf.h>
 #include <linux/pinctrl/pinctrl.h>
@@ -39,6 +40,7 @@ struct imx_pinctrl {
 	struct device *dev;
 	struct pinctrl_dev *pctl;
 	void __iomem *base;
+	void __iomem *input_sel_base;
 	const struct imx_pinctrl_soc_info *info;
 };
 
@@ -254,7 +256,12 @@ static int imx_pmx_set(struct pinctrl_dev *pctldev, unsigned selector,
 			 * Regular select input register can never be at offset
 			 * 0, and we only print register value for regular case.
 			 */
-			writel(pin->input_val, ipctl->base + pin->input_reg);
+			if (ipctl->input_sel_base)
+				writel(pin->input_val, ipctl->input_sel_base +
+						pin->input_reg);
+			else
+				writel(pin->input_val, ipctl->base +
+						pin->input_reg);
 			dev_dbg(ipctl->dev,
 				"==>select_input: offset 0x%x val 0x%x\n",
 				pin->input_reg, pin->input_val);
@@ -542,15 +549,18 @@ static int imx_pinctrl_parse_groups(struct device_node *np,
 		struct imx_pin_reg *pin_reg;
 		struct imx_pin *pin = &grp->pins[i];
 
+		if (!(info->flags & ZERO_OFFSET_VALID) && !mux_reg)
+			mux_reg = -1;
+
 		if (info->flags & SHARE_MUX_CONF_REG) {
 			conf_reg = mux_reg;
 		} else {
 			conf_reg = be32_to_cpu(*list++);
-			if (!conf_reg)
+			if (!(info->flags & ZERO_OFFSET_VALID) && !conf_reg)
 				conf_reg = -1;
 		}
 
-		pin_id = mux_reg ? mux_reg / 4 : conf_reg / 4;
+		pin_id = (mux_reg != -1) ? mux_reg / 4 : conf_reg / 4;
 		pin_reg = &info->pin_regs[pin_id];
 		pin->pin = pin_id;
 		grp->pin_ids[i] = pin_id;
@@ -580,7 +590,6 @@ static int imx_pinctrl_parse_functions(struct device_node *np,
 	struct device_node *child;
 	struct imx_pmx_func *func;
 	struct imx_pin_group *grp;
-	static u32 grp_index;
 	u32 i = 0;
 
 	dev_dbg(info->dev, "parse function(%d): %s\n", index, np->name);
@@ -599,7 +608,7 @@ static int imx_pinctrl_parse_functions(struct device_node *np,
 
 	for_each_child_of_node(np, child) {
 		func->groups[i] = child->name;
-		grp = &info->groups[grp_index++];
+		grp = &info->groups[info->grp_index++];
 		imx_pinctrl_parse_groups(child, grp, info, i++);
 	}
 
@@ -646,6 +655,8 @@ static int imx_pinctrl_probe_dt(struct platform_device *pdev,
 int imx_pinctrl_probe(struct platform_device *pdev,
 		      struct imx_pinctrl_soc_info *info)
 {
+	struct device_node *dev_np = pdev->dev.of_node;
+	struct device_node *np;
 	struct imx_pinctrl *ipctl;
 	struct resource *res;
 	int ret, i;
@@ -676,6 +687,23 @@ int imx_pinctrl_probe(struct platform_device *pdev,
 	if (IS_ERR(ipctl->base))
 		return PTR_ERR(ipctl->base);
 
+	if (of_property_read_bool(dev_np, "fsl,input-sel")) {
+		np = of_parse_phandle(dev_np, "fsl,input-sel", 0);
+		if (np) {
+			ipctl->input_sel_base = of_iomap(np, 0);
+			if (IS_ERR(ipctl->input_sel_base)) {
+				of_node_put(np);
+				dev_err(&pdev->dev,
+					"iomuxc input select base address not found\n");
+				return PTR_ERR(ipctl->input_sel_base);
+			}
+		} else {
+			dev_err(&pdev->dev, "iomuxc fsl,input-sel property not found\n");
+			return -EINVAL;
+		}
+		of_node_put(np);
+	}
+
 	imx_pinctrl_desc.name = dev_name(&pdev->dev);
 	imx_pinctrl_desc.pins = info->pins;
 	imx_pinctrl_desc.npins = info->npins;
@@ -698,6 +726,26 @@ int imx_pinctrl_probe(struct platform_device *pdev,
 	dev_info(&pdev->dev, "initialized IMX pinctrl driver\n");
 
 	return 0;
+}
+
+int imx_pinctrl_suspend(struct device *dev)
+{
+       struct imx_pinctrl *ipctl = dev_get_drvdata(dev);
+
+       if (!ipctl)
+               return -EINVAL;
+
+       return pinctrl_force_sleep(ipctl->pctl);
+}
+
+int imx_pinctrl_resume(struct device *dev)
+{
+       struct imx_pinctrl *ipctl = dev_get_drvdata(dev);
+
+       if (!ipctl)
+               return -EINVAL;
+
+       return pinctrl_force_default(ipctl->pctl);
 }
 
 int imx_pinctrl_remove(struct platform_device *pdev)

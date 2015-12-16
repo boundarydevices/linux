@@ -1,7 +1,7 @@
 /*
  * Freescale GPMI NAND Flash Driver
  *
- * Copyright (C) 2010-2011 Freescale Semiconductor, Inc.
+ * Copyright (C) 2010-2015 Freescale Semiconductor, Inc.
  * Copyright (C) 2008 Embedded Alley Solutions, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -39,9 +39,9 @@ struct resources {
  * @page_size:                The size, in bytes, of a physical page, including
  *                            both data and OOB.
  * @metadata_size:            The size, in bytes, of the metadata.
- * @ecc_chunk_size:           The size, in bytes, of a single ECC chunk. Note
- *                            the first chunk in the page includes both data and
- *                            metadata, so it's a bit larger than this value.
+ * @ecc_chunk0_size:          The size, in bytes, of a first ECC chunk.
+ * @ecc_chunkn_size:          The size, in bytes, of a single ECC chunk after
+ *                            the first chunk in the page.
  * @ecc_chunk_count:          The number of ECC chunks in the page,
  * @payload_size:             The size, in bytes, of the payload buffer.
  * @auxiliary_size:           The size, in bytes, of the auxiliary buffer.
@@ -51,19 +51,23 @@ struct resources {
  *                            which the underlying physical block mark appears.
  * @block_mark_bit_offset:    The bit offset into the ECC-based page view at
  *                            which the underlying physical block mark appears.
+ * @ecc_for_meta:             The flag to indicate if there is a dedicate ecc
+ *                            for meta.
  */
 struct bch_geometry {
 	unsigned int  gf_len;
 	unsigned int  ecc_strength;
 	unsigned int  page_size;
 	unsigned int  metadata_size;
-	unsigned int  ecc_chunk_size;
+	unsigned int  ecc_chunk0_size;
+	unsigned int  ecc_chunkn_size;
 	unsigned int  ecc_chunk_count;
 	unsigned int  payload_size;
 	unsigned int  auxiliary_size;
 	unsigned int  auxiliary_status_offset;
 	unsigned int  block_mark_byte_offset;
 	unsigned int  block_mark_bit_offset;
+	unsigned int  ecc_for_meta; /* ECC for meta data */
 };
 
 /**
@@ -123,7 +127,10 @@ enum gpmi_type {
 	IS_MX23,
 	IS_MX28,
 	IS_MX6Q,
-	IS_MX6SX
+	IS_MX6QP,
+	IS_MX6SX,
+	IS_MX7D,
+	IS_MX6UL
 };
 
 struct gpmi_devdata {
@@ -276,10 +283,12 @@ extern int start_dma_with_bch_irq(struct gpmi_nand_data *,
 				struct dma_async_tx_descriptor *);
 
 /* GPMI-NAND helper function library */
+extern int __gpmi_enable_clk(struct gpmi_nand_data *, bool v);
 extern int gpmi_init(struct gpmi_nand_data *);
 extern int gpmi_extra_init(struct gpmi_nand_data *);
 extern void gpmi_clear_bch(struct gpmi_nand_data *);
 extern void gpmi_dump_info(struct gpmi_nand_data *);
+extern int bch_save_geometry(struct gpmi_nand_data *);
 extern int bch_set_geometry(struct gpmi_nand_data *);
 extern int gpmi_is_ready(struct gpmi_nand_data *, unsigned chip);
 extern int gpmi_send_command(struct gpmi_nand_data *);
@@ -305,7 +314,12 @@ void gpmi_copy_bits(u8 *dst, size_t dst_bit_off,
 #define GPMI_IS_MX23(x)		((x)->devdata->type == IS_MX23)
 #define GPMI_IS_MX28(x)		((x)->devdata->type == IS_MX28)
 #define GPMI_IS_MX6Q(x)		((x)->devdata->type == IS_MX6Q)
+#define GPMI_IS_MX6QP(x)	((x)->devdata->type == IS_MX6QP)
 #define GPMI_IS_MX6SX(x)	((x)->devdata->type == IS_MX6SX)
+#define GPMI_IS_MX7D(x)		((x)->devdata->type == IS_MX7D)
+#define GPMI_IS_MX6UL(x)	((x)->devdata->type == IS_MX6UL)
 
-#define GPMI_IS_MX6(x)		(GPMI_IS_MX6Q(x) || GPMI_IS_MX6SX(x))
+#define GPMI_IS_MX6(x)		(GPMI_IS_MX6Q(x) || GPMI_IS_MX6QP(x)\
+	   || GPMI_IS_MX6SX(x) || GPMI_IS_MX6UL(x))
+#define GPMI_IS_MX7(x)		(GPMI_IS_MX7D(x))
 #endif

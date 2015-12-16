@@ -26,7 +26,6 @@
 #include <linux/blkdev.h>
 #include <linux/delay.h>
 #include <linux/jiffies.h>
-#include <asm/unaligned.h>
 
 #include <scsi/scsi.h>
 #include <scsi/scsi_cmnd.h>
@@ -58,10 +57,21 @@ static int scsi_eh_try_stu(struct scsi_cmnd *scmd);
 static int scsi_try_to_abort_cmd(struct scsi_host_template *,
 				 struct scsi_cmnd *);
 
+#ifdef CONFIG_AHCI_IMX
+extern void *sg_io_buffer_hack;
+#else
+#define sg_io_buffer_hack NULL
+#endif
+
 /* called with shost->host_lock held */
 void scsi_eh_wakeup(struct Scsi_Host *shost)
 {
 	if (atomic_read(&shost->host_busy) == shost->host_failed) {
+		trace_scsi_eh_wakeup(shost);
+		wake_up_process(shost->ehandler);
+		SCSI_LOG_ERROR_RECOVERY(5, shost_printk(KERN_INFO, shost,
+			"Waking error handler thread\n"));
+	} else if ((shost->host_failed > 0) || (sg_io_buffer_hack != NULL)) {
 		trace_scsi_eh_wakeup(shost);
 		wake_up_process(shost->ehandler);
 		SCSI_LOG_ERROR_RECOVERY(5, shost_printk(KERN_INFO, shost,
@@ -944,7 +954,7 @@ void scsi_eh_prep_cmnd(struct scsi_cmnd *scmd, struct scsi_eh_save *ses,
 			    scmd->sdb.length);
 		scmd->sdb.table.sgl = &ses->sense_sgl;
 		scmd->sc_data_direction = DMA_FROM_DEVICE;
-		scmd->sdb.table.nents = 1;
+		scmd->sdb.table.nents = scmd->sdb.table.orig_nents = 1;
 		scmd->cmnd[0] = REQUEST_SENSE;
 		scmd->cmnd[4] = scmd->sdb.length;
 		scmd->cmd_len = COMMAND_SIZE(scmd->cmnd[0]);
@@ -2172,8 +2182,15 @@ int scsi_error_handler(void *data)
 	 */
 	while (!kthread_should_stop()) {
 		set_current_state(TASK_INTERRUPTIBLE);
+		/*
+		 * Do not go to sleep, when there is host_failed when the
+		 * one-PRD per command workaroud is tiggered.
+		 * Because that ata/scsi subsystem maybe hang, when CD_ROM
+		 * and HDD are accessed simultaneously.
+		 */
 		if ((shost->host_failed == 0 && shost->host_eh_scheduled == 0) ||
-		    shost->host_failed != atomic_read(&shost->host_busy)) {
+		    ((shost->host_failed != atomic_read(&shost->host_busy)) &&
+		    (sg_io_buffer_hack == NULL) && (shost->host_failed > 0))) {
 			SCSI_LOG_ERROR_RECOVERY(1,
 				shost_printk(KERN_INFO, shost,
 					     "scsi_eh_%d: sleeping\n",
@@ -2587,33 +2604,3 @@ void scsi_build_sense_buffer(int desc, u8 *buf, u8 key, u8 asc, u8 ascq)
 	}
 }
 EXPORT_SYMBOL(scsi_build_sense_buffer);
-
-/**
- * scsi_set_sense_information - set the information field in a
- *		formatted sense data buffer
- * @buf:	Where to build sense data
- * @info:	64-bit information value to be set
- *
- **/
-void scsi_set_sense_information(u8 *buf, u64 info)
-{
-	if ((buf[0] & 0x7f) == 0x72) {
-		u8 *ucp, len;
-
-		len = buf[7];
-		ucp = (char *)scsi_sense_desc_find(buf, len + 8, 0);
-		if (!ucp) {
-			buf[7] = len + 0xa;
-			ucp = buf + 8 + len;
-		}
-		ucp[0] = 0;
-		ucp[1] = 0xa;
-		ucp[2] = 0x80; /* Valid bit */
-		ucp[3] = 0;
-		put_unaligned_be64(info, &ucp[4]);
-	} else if ((buf[0] & 0x7f) == 0x70) {
-		buf[0] |= 0x80;
-		put_unaligned_be64(info, &buf[3]);
-	}
-}
-EXPORT_SYMBOL(scsi_set_sense_information);

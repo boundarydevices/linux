@@ -143,6 +143,8 @@ config MV_XOR
 	---help---
 	  Enable support for the Marvell XOR engine.
 
+source "drivers/dma/pxp/Kconfig"
+
 config MX3_IPU
 	bool "MX3x Image Processing Unit support"
 	depends on ARCH_MXC
@@ -275,6 +277,7 @@ config IMX_SDMA
 	tristate "i.MX SDMA support"
 	depends on ARCH_MXC
 	select DMA_ENGINE
+	select DMA_VIRTUAL_CHANNELS
 	help
 	  Support the i.MX SDMA engine. This engine is integrated into
 	  Freescale i.MX25/31/35/51/53/6 chips.
@@ -289,7 +292,7 @@ config IMX_DMA
 
 config MXS_DMA
 	bool "MXS DMA support"
-	depends on SOC_IMX23 || SOC_IMX28 || SOC_IMX6Q
+	depends on SOC_IMX23 || SOC_IMX28 || SOC_IMX6
 	select STMP_DEVICE
 	select DMA_ENGINE
 	help

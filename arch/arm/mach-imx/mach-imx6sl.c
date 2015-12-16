@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Freescale Semiconductor, Inc.
+ * Copyright 2013-2015 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -19,7 +19,7 @@
 #include "common.h"
 #include "cpuidle.h"
 
-static void __init imx6sl_fec_init(void)
+static void __init imx6sl_fec_clk_init(void)
 {
 	struct regmap *gpr;
 
@@ -30,9 +30,14 @@ static void __init imx6sl_fec_init(void)
 			IMX6SL_GPR1_FEC_CLOCK_MUX2_SEL_MASK, 0);
 		regmap_update_bits(gpr, IOMUXC_GPR1,
 			IMX6SL_GPR1_FEC_CLOCK_MUX1_SEL_MASK, 0);
-	} else {
+	} else
 		pr_err("failed to find fsl,imx6sl-iomux-gpr regmap\n");
-	}
+}
+
+static inline void imx6sl_fec_init(void)
+{
+	imx6sl_fec_clk_init();
+	imx6_enet_mac_init("fsl,imx6sl-fec", "fsl,imx6sl-ocotp");
 }
 
 static void __init imx6sl_init_late(void)
@@ -68,12 +73,22 @@ static void __init imx6sl_init_irq(void)
 	irqchip_init();
 }
 
+static void __init imx6sl_map_io(void)
+{
+	debug_ll_io_init();
+	imx6_pm_map_io();
+#ifdef CONFIG_CPU_FREQ
+	imx_busfreq_map_io();
+#endif
+}
+
 static const char * const imx6sl_dt_compat[] __initconst = {
 	"fsl,imx6sl",
 	NULL,
 };
 
 DT_MACHINE_START(IMX6SL, "Freescale i.MX6 SoloLite (Device Tree)")
+	.map_io		= imx6sl_map_io,
 	.init_irq	= imx6sl_init_irq,
 	.init_machine	= imx6sl_init_machine,
 	.init_late      = imx6sl_init_late,

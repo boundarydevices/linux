@@ -97,6 +97,7 @@ struct mmc_ext_csd {
 	u8			raw_erased_mem_count;	/* 181 */
 	u8			raw_ext_csd_structure;	/* 194 */
 	u8			raw_card_type;		/* 196 */
+	u8			raw_driver_strength;	/* 197 */
 	u8			out_of_int_time;	/* 198 */
 	u8			raw_pwr_cl_52_195;	/* 200 */
 	u8			raw_pwr_cl_26_195;	/* 201 */
@@ -282,6 +283,7 @@ struct mmc_card {
 	unsigned int		erase_size;	/* erase size in sectors */
  	unsigned int		erase_shift;	/* if erase unit is power 2 */
  	unsigned int		pref_erase;	/* in sectors */
+	unsigned int		eg_boundary;	/* don't cross erase-group boundaries */
  	u8			erased_byte;	/* value of erased bytes */
 
 	u32			raw_cid[4];	/* raw card CID */
@@ -305,6 +307,7 @@ struct mmc_card {
 
 	unsigned int		sd_bus_speed;	/* Bus Speed Mode set for the card */
 	unsigned int		mmc_avail_type;	/* supported device type by both host and card */
+	unsigned int		drive_strength;	/* for UHS-I, HS200 or HS400 */
 
 	struct dentry		*debugfs_root;
 	struct mmc_part	part[MMC_NUM_PHY_PARTITION]; /* physical partitions */

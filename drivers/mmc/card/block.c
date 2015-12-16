@@ -50,10 +50,13 @@
 #include "queue.h"
 
 MODULE_ALIAS("mmc:block");
+
+#ifdef KERNEL
 #ifdef MODULE_PARAM_PREFIX
 #undef MODULE_PARAM_PREFIX
 #endif
 #define MODULE_PARAM_PREFIX "mmcblk."
+#endif
 
 #define INAND_CMD38_ARG_EXT_CSD  113
 #define INAND_CMD38_ARG_ERASE    0x00
@@ -206,6 +209,8 @@ static ssize_t power_ro_lock_show(struct device *dev,
 		locked = 1;
 
 	ret = snprintf(buf, PAGE_SIZE, "%d\n", locked);
+
+	mmc_blk_put(md);
 
 	return ret;
 }
@@ -918,6 +923,9 @@ static int mmc_blk_cmd_recovery(struct mmc_card *card, struct request *req,
 		if (!err)
 			break;
 
+		/* Re-tune if needed */
+		mmc_retune_recheck(card->host);
+
 		prev_cmd_status_valid = false;
 		pr_err("%s: error %d sending status command, %sing\n",
 		       req->rq_disk->disk_name, err, retry ? "retry" : "abort");
@@ -1209,6 +1217,7 @@ static int mmc_blk_err_check(struct mmc_card *card,
 						    mmc_active);
 	struct mmc_blk_request *brq = &mq_mrq->brq;
 	struct request *req = mq_mrq->req;
+	int need_retune = card->host->need_retune;
 	int ecc_err = 0, gen_err = 0;
 
 	/*
@@ -1276,6 +1285,12 @@ static int mmc_blk_err_check(struct mmc_card *card,
 	}
 
 	if (brq->data.error) {
+		if (need_retune && !brq->retune_retry_done) {
+			pr_info("%s: retrying because a re-tune was needed\n",
+				req->rq_disk->disk_name);
+			brq->retune_retry_done = 1;
+			return MMC_BLK_RETRY;
+		}
 		pr_err("%s: error %d transferring data, sector %u, nr %u, cmd response %#x, card status %#x\n",
 		       req->rq_disk->disk_name, brq->data.error,
 		       (unsigned)blk_rq_pos(req),
@@ -1835,7 +1850,7 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 	struct mmc_blk_data *md = mq->data;
 	struct mmc_card *card = md->queue.card;
 	struct mmc_blk_request *brq = &mq->mqrq_cur->brq;
-	int ret = 1, disable_multi = 0, retry = 0, type;
+	int ret = 1, disable_multi = 0, retry = 0, type, retune_retry_done = 0;
 	enum mmc_blk_status status;
 	struct mmc_queue_req *mq_rq;
 	struct request *req = rqc;
@@ -1915,10 +1930,13 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 			break;
 		case MMC_BLK_CMD_ERR:
 			ret = mmc_blk_cmd_err(md, card, brq, req, ret);
-			if (!mmc_blk_reset(md, card->host, type))
-				break;
-			goto cmd_abort;
+			if (mmc_blk_reset(md, card->host, type))
+				goto cmd_abort;
+			if (!ret)
+				goto start_new_req;
+			break;
 		case MMC_BLK_RETRY:
+			retune_retry_done = brq->retune_retry_done;
 			if (retry++ < 5)
 				break;
 			/* Fall through */
@@ -1981,6 +1999,7 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 				mmc_start_req(card->host,
 						&mq_rq->mmc_active, NULL);
 			}
+			mq_rq->brq.retune_retry_done = retune_retry_done;
 		}
 	} while (ret);
 
@@ -2110,7 +2129,15 @@ static struct mmc_blk_data *mmc_blk_alloc_req(struct mmc_card *card,
 	 * index anymore so we keep track of a name index.
 	 */
 	if (!subname) {
-		md->name_idx = find_first_zero_bit(name_use, max_devices);
+		int idx;
+
+		idx = mmc_get_reserved_index(card->host);
+		if (idx >= 0 && !test_bit(idx, name_use))
+			md->name_idx = idx;
+		else
+			md->name_idx = find_next_zero_bit(name_use, max_devices,
+					mmc_first_nonreserved_index());
+
 		__set_bit(md->name_idx, name_use);
 	} else
 		md->name_idx = ((struct mmc_blk_data *)
@@ -2223,7 +2250,8 @@ static struct mmc_blk_data *mmc_blk_alloc(struct mmc_card *card)
 		 * The CSD capacity field is in units of read_blkbits.
 		 * set_capacity takes units of 512 bytes.
 		 */
-		size = card->csd.capacity << (card->csd.read_blkbits - 9);
+		size = (typeof(sector_t))card->csd.capacity
+			<< (card->csd.read_blkbits - 9);
 	}
 
 	return mmc_blk_alloc_req(card, &card->dev, size, false, NULL,
@@ -2397,6 +2425,10 @@ static const struct mmc_fixup blk_fixups[] =
 	 *
 	 * N.B. This doesn't affect SD cards.
 	 */
+	MMC_FIXUP("SDMB-32", CID_MANFID_SANDISK, CID_OEMID_ANY, add_quirk_mmc,
+		  MMC_QUIRK_BLK_NO_CMD23),
+	MMC_FIXUP("SDM032", CID_MANFID_SANDISK, CID_OEMID_ANY, add_quirk_mmc,
+		  MMC_QUIRK_BLK_NO_CMD23),
 	MMC_FIXUP("MMC08G", CID_MANFID_TOSHIBA, CID_OEMID_ANY, add_quirk_mmc,
 		  MMC_QUIRK_BLK_NO_CMD23),
 	MMC_FIXUP("MMC16G", CID_MANFID_TOSHIBA, CID_OEMID_ANY, add_quirk_mmc,

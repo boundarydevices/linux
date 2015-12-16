@@ -11,6 +11,7 @@
  */
 
 /dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
 #include "imx6q.dtsi"
 
 / {
@@ -61,6 +62,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_gpmi_nand>;
 	status = "disabled"; /* gpmi nand conflicts with SD */
+	nand-on-flash-bbt;
 };
 
 &iomuxc {
@@ -139,6 +141,32 @@
 			>;
 		};
 
+		pinctrl_usbh2_1: usbh2grp-1 {
+			fsl,pins = <
+				MX6QDL_PAD_RGMII_TXC__USB_H2_DATA      0x40013030
+				MX6QDL_PAD_RGMII_TX_CTL__USB_H2_STROBE 0x40013030
+			>;
+		};
+
+		pinctrl_usbh2_2: usbh2grp-2 {
+			fsl,pins = <
+				MX6QDL_PAD_RGMII_TX_CTL__USB_H2_STROBE 0x40017030
+			>;
+		};
+
+		pinctrl_usbh3_1: usbh3grp-1 {
+			fsl,pins = <
+				MX6QDL_PAD_RGMII_RX_CTL__USB_H3_DATA 0x40013030
+				MX6QDL_PAD_RGMII_RXC__USB_H3_STROBE  0x40013030
+			>;
+		};
+
+		pinctrl_usbh3_2: usbh3grp-2 {
+			fsl,pins = <
+				MX6QDL_PAD_RGMII_RXC__USB_H3_STROBE 0x40017030
+			>;
+		};
+
 		pinctrl_usdhc3: usdhc3grp {
 			fsl,pins = <
 				MX6QDL_PAD_SD3_CMD__SD3_CMD		0x17059
@@ -192,12 +220,15 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg>;
 	disable-over-current;
+	srp-disable;
+	hnp-disable;
+	adp-disable;
 	status = "okay";
 };
 
 &usdhc3 {
-	cd-gpios = <&gpio6 11 0>;
-	wp-gpios = <&gpio6 14 0>;
+	cd-gpios = <&gpio6 11 GPIO_ACTIVE_LOW>;
+	wp-gpios = <&gpio6 14 GPIO_ACTIVE_HIGH>;
 	vmmc-supply = <&reg_3p3v>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc3

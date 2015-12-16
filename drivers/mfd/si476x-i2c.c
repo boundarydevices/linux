@@ -303,7 +303,7 @@ int si476x_core_set_power_state(struct si476x_core *core,
 			 */
 			udelay(100);
 
-			err = si476x_core_start(core, false);
+			err = si476x_core_start(core, true);
 			if (err < 0)
 				goto disable_regulators;
 
@@ -312,7 +312,7 @@ int si476x_core_set_power_state(struct si476x_core *core,
 
 		case SI476X_POWER_DOWN:
 			core->power_state = next_state;
-			err = si476x_core_stop(core, false);
+			err = si476x_core_stop(core, true);
 			if (err < 0)
 				core->power_state = SI476X_POWER_INCONSISTENT;
 disable_regulators:
@@ -740,8 +740,15 @@ static int si476x_core_probe(struct i2c_client *client,
 		memcpy(&core->pinmux, &pdata->pinmux,
 		       sizeof(struct si476x_pinmux));
 	} else {
-		dev_err(&client->dev, "No platform data provided\n");
-		return -EINVAL;
+		dev_warn(&client->dev, "Using default platform data.\n");
+		core->power_up_parameters.xcload = 0x28;
+		core->power_up_parameters.func = SI476X_FUNC_FM_RECEIVER;
+		core->power_up_parameters.freq = SI476X_FREQ_37P209375_MHZ;
+		core->diversity_mode = SI476X_PHDIV_DISABLED;
+		core->pinmux.dclk = SI476X_DCLK_DAUDIO;
+		core->pinmux.dfs  = SI476X_DFS_DAUDIO;
+		core->pinmux.dout = SI476X_DOUT_I2S_OUTPUT;
+		core->pinmux.xout = SI476X_XOUT_TRISTATE;
 	}
 
 	core->supplies[0].supply = "vd";
@@ -799,11 +806,18 @@ static int si476x_core_probe(struct i2c_client *client,
 
 	core->chip_id = id->driver_data;
 
+	/* Power down si476x first */
+	core->power_state = SI476X_POWER_UP_FULL;
+	si476x_core_set_power_state(core, SI476X_POWER_DOWN);
+
 	rval = si476x_core_get_revision_info(core);
 	if (rval < 0) {
 		rval = -ENODEV;
 		goto free_kfifo;
 	}
+
+	if (of_property_read_bool(client->dev.of_node, "revision-a10"))
+		core->revision = SI476X_REVISION_A10;
 
 	cell_num = 0;
 
@@ -820,6 +834,7 @@ static int si476x_core_probe(struct i2c_client *client,
 	    core->pinmux.xout == SI476X_XOUT_TRISTATE) {
 		cell = &core->cells[SI476X_CODEC_CELL];
 		cell->name          = "si476x-codec";
+		cell->of_compatible = "si476x-codec";
 		cell_num++;
 	}
 #endif

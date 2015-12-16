@@ -93,7 +93,7 @@ module_param (log2_irq_thresh, int, S_IRUGO);
 MODULE_PARM_DESC (log2_irq_thresh, "log2 IRQ latency, 1-64 microframes");
 
 /* initial park setting:  slower than hw default */
-static unsigned park = 0;
+static unsigned park = 3;
 module_param (park, uint, S_IRUGO);
 MODULE_PARM_DESC (park, "park setting; 1-3 back-to-back async packets");
 
@@ -331,7 +331,9 @@ static void ehci_turn_off_all_ports(struct ehci_hcd *ehci)
 	int	port = HCS_N_PORTS(ehci->hcs_params);
 
 	while (port--) {
-		ehci_writel(ehci, PORT_RWC_BITS,
+		u32 portsc = ehci_readl(ehci, &ehci->regs->port_status[port]);
+
+		ehci_writel(ehci, portsc,
 				&ehci->regs->port_status[port]);
 		spin_unlock_irq(&ehci->lock);
 		ehci_port_power(ehci, port, false);

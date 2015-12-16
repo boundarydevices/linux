@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2013 Freescale Semiconductor, Inc.
+ * Copyright 2011-2015 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
  *
  * The code contained herein is licensed under the GNU General Public
@@ -31,6 +31,7 @@
 #include <linux/micrel_phy.h>
 #include <linux/mfd/syscon.h>
 #include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
+#include <linux/of_net.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
 #include <asm/system_misc.h>
@@ -112,6 +113,18 @@ static int ar8031_phy_fixup(struct phy_device *dev)
 {
 	u16 val;
 
+	/* Set RGMII IO voltage to 1.8V */
+	phy_write(dev, 0x1d, 0x1f);
+	phy_write(dev, 0x1e, 0x8);
+
+	/* disable phy AR8031 SmartEEE function. */
+	phy_write(dev, 0xd, 0x3);
+	phy_write(dev, 0xe, 0x805d);
+	phy_write(dev, 0xd, 0x4003);
+	val = phy_read(dev, 0xe);
+	val &= ~(0x1 << 8);
+	phy_write(dev, 0xe, val);
+
 	/* To enable AR8031 output a 125MHz clk from CLK_25M */
 	phy_write(dev, 0xd, 0x7);
 	phy_write(dev, 0xe, 0x8016);
@@ -184,9 +197,7 @@ static void __init imx6q_1588_init(void)
 {
 	struct device_node *np;
 	struct clk *ptp_clk;
-	struct clk *enet_ref;
 	struct regmap *gpr;
-	u32 clksel;
 
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-fec");
 	if (!np) {
@@ -200,33 +211,51 @@ static void __init imx6q_1588_init(void)
 		goto put_node;
 	}
 
-	enet_ref = clk_get_sys(NULL, "enet_ref");
-	if (IS_ERR(enet_ref)) {
-		pr_warn("%s: failed to get enet clock\n", __func__);
-		goto put_ptp_clk;
-	}
-
 	/*
 	 * If enet_ref from ANATOP/CCM is the PTP clock source, we need to
 	 * set bit IOMUXC_GPR1[21].  Or the PTP clock must be from pad
 	 * (external OSC), and we need to clear the bit.
 	 */
-	clksel = clk_is_match(ptp_clk, enet_ref) ?
-				IMX6Q_GPR1_ENET_CLK_SEL_ANATOP :
-				IMX6Q_GPR1_ENET_CLK_SEL_PAD;
 	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
 	if (!IS_ERR(gpr))
 		regmap_update_bits(gpr, IOMUXC_GPR1,
 				IMX6Q_GPR1_ENET_CLK_SEL_MASK,
-				clksel);
+				IMX6Q_GPR1_ENET_CLK_SEL_ANATOP);
 	else
 		pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
 
-	clk_put(enet_ref);
-put_ptp_clk:
 	clk_put(ptp_clk);
 put_node:
 	of_node_put(np);
+}
+
+static void __init imx6q_csi_mux_init(void)
+{
+	/*
+	 * MX6Q SabreSD board:
+	 * IPU1 CSI0 connects to parallel interface.
+	 * Set GPR1 bit 19 to 0x1.
+	 *
+	 * MX6DL SabreSD board:
+	 * IPU1 CSI0 connects to parallel interface.
+	 * Set GPR13 bit 0-2 to 0x4.
+	 * IPU1 CSI1 connects to MIPI CSI2 virtual channel 1.
+	 * Set GPR13 bit 3-5 to 0x1.
+	 */
+	struct regmap *gpr;
+
+	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
+	if (!IS_ERR(gpr)) {
+		if (of_machine_is_compatible("fsl,imx6q-sabresd") ||
+			of_machine_is_compatible("fsl,imx6q-sabreauto"))
+			regmap_update_bits(gpr, IOMUXC_GPR1, 1 << 19, 1 << 19);
+		else if (of_machine_is_compatible("fsl,imx6dl-sabresd") ||
+			 of_machine_is_compatible("fsl,imx6dl-sabreauto"))
+			regmap_update_bits(gpr, IOMUXC_GPR13, 0x3F, 0x0C);
+	} else {
+		pr_err("%s(): failed to find fsl,imx6q-iomux-gpr regmap\n",
+		       __func__);
+	}
 }
 
 static void __init imx6q_axi_init(void)
@@ -262,24 +291,47 @@ static void __init imx6q_axi_init(void)
 	}
 }
 
+static void __init imx6q_enet_clk_sel(void)
+{
+	struct regmap *gpr;
+
+	gpr = syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
+	if (!IS_ERR(gpr))
+		regmap_update_bits(gpr, IOMUXC_GPR5,
+				   IMX6Q_GPR5_ENET_TX_CLK_SEL, IMX6Q_GPR5_ENET_TX_CLK_SEL);
+	else
+		pr_err("failed to find fsl,imx6q-iomux-gpr regmap\n");
+}
+
+static inline void imx6q_enet_init(void)
+{
+	imx6_enet_mac_init("fsl,imx6q-fec", "fsl,imx6q-ocotp");
+	imx6q_enet_phy_init();
+	imx6q_1588_init();
+	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)
+		imx6q_enet_clk_sel();
+}
+
 static void __init imx6q_init_machine(void)
 {
 	struct device *parent;
 
-	imx_print_silicon_rev(cpu_is_imx6dl() ? "i.MX6DL" : "i.MX6Q",
-			      imx_get_soc_revision());
+	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)
+		imx_print_silicon_rev("i.MX6QP", IMX_CHIP_REVISION_1_0);
+	else
+		imx_print_silicon_rev(cpu_is_imx6dl() ? "i.MX6DL" : "i.MX6Q",
+				 imx_get_soc_revision());
 
 	parent = imx_soc_device_init();
 	if (parent == NULL)
 		pr_warn("failed to initialize soc device\n");
 
-	imx6q_enet_phy_init();
-
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, parent);
 
+	imx6q_enet_init();
 	imx_anatop_init();
+	imx6q_csi_mux_init();
 	cpu_is_imx6q() ?  imx6q_pm_init() : imx6dl_pm_init();
-	imx6q_1588_init();
 	imx6q_axi_init();
 }
 
@@ -331,6 +383,13 @@ static void __init imx6q_opp_check_speed_grading(struct device *cpu_dev)
 				pr_warn("failed to disable 852 MHz OPP\n");
 	}
 	iounmap(base);
+
+	if (IS_ENABLED(CONFIG_MX6_VPU_352M)) {
+		if (dev_pm_opp_disable(cpu_dev, 396000000))
+			pr_warn("failed to disable 396MHz OPP\n");
+		pr_info("remove 396MHz OPP for VPU running at 352MHz!\n");
+	}
+
 put_node:
 	of_node_put(np);
 }
@@ -384,6 +443,8 @@ static void __init imx6q_map_io(void)
 {
 	debug_ll_io_init();
 	imx_scu_map_io();
+	imx6_pm_map_io();
+	imx_busfreq_map_io();
 }
 
 static void __init imx6q_init_irq(void)

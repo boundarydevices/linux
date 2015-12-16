@@ -1,7 +1,7 @@
 /*
  * Freescale GPMI NAND Flash Driver
  *
- * Copyright 2008-2011 Freescale Semiconductor, Inc.
+ * Copyright 2008-2015 Freescale Semiconductor, Inc.
  * Copyright 2008 Embedded Alley Solutions, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -30,7 +30,13 @@
 #define BM_BCH_CTRL_COMPLETE_IRQ		(1 << 0)
 
 #define HW_BCH_STATUS0				0x00000010
+
 #define HW_BCH_MODE				0x00000020
+#define BP_BCH_MODE_ERASE_THRESHOLD		0
+#define BM_BCH_MODE_ERASE_THRESHOLD	(0xff << BP_BCH_MODE_ERASE_THRESHOLD)
+#define BF_BCH_MODE_ERASE_THRESHOLD(v)		\
+	(((v) << BP_BCH_MODE_ERASE_THRESHOLD) & BM_BCH_MODE_ERASE_THRESHOLD)
+
 #define HW_BCH_ENCODEPTR			0x00000030
 #define HW_BCH_DATAPTR				0x00000040
 #define HW_BCH_METAPTR				0x00000050
@@ -54,7 +60,7 @@
 #define MX6Q_BP_BCH_FLASH0LAYOUT0_ECC0		11
 #define MX6Q_BM_BCH_FLASH0LAYOUT0_ECC0	(0x1f << MX6Q_BP_BCH_FLASH0LAYOUT0_ECC0)
 #define BF_BCH_FLASH0LAYOUT0_ECC0(v, x)				\
-	(GPMI_IS_MX6(x)					\
+	((GPMI_IS_MX6(x) || GPMI_IS_MX7(x))				\
 		? (((v) << MX6Q_BP_BCH_FLASH0LAYOUT0_ECC0)	\
 			& MX6Q_BM_BCH_FLASH0LAYOUT0_ECC0)	\
 		: (((v) << BP_BCH_FLASH0LAYOUT0_ECC0)		\
@@ -65,7 +71,7 @@
 #define MX6Q_BM_BCH_FLASH0LAYOUT0_GF_13_14			\
 				(0x1 << MX6Q_BP_BCH_FLASH0LAYOUT0_GF_13_14)
 #define BF_BCH_FLASH0LAYOUT0_GF(v, x)				\
-	((GPMI_IS_MX6(x) && ((v) == 14))			\
+	(((GPMI_IS_MX6(x) || GPMI_IS_MX7(x)) && ((v) == 14))\
 		? (((1) << MX6Q_BP_BCH_FLASH0LAYOUT0_GF_13_14)	\
 			& MX6Q_BM_BCH_FLASH0LAYOUT0_GF_13_14)	\
 		: 0						\
@@ -77,7 +83,7 @@
 #define MX6Q_BM_BCH_FLASH0LAYOUT0_DATA0_SIZE	\
 			(0x3ff << BP_BCH_FLASH0LAYOUT0_DATA0_SIZE)
 #define BF_BCH_FLASH0LAYOUT0_DATA0_SIZE(v, x)				\
-	(GPMI_IS_MX6(x)						\
+	((GPMI_IS_MX6(x) || GPMI_IS_MX7(x))	\
 		? (((v) >> 2) & MX6Q_BM_BCH_FLASH0LAYOUT0_DATA0_SIZE)	\
 		: ((v) & BM_BCH_FLASH0LAYOUT0_DATA0_SIZE)		\
 	)
@@ -96,7 +102,7 @@
 #define MX6Q_BP_BCH_FLASH0LAYOUT1_ECCN		11
 #define MX6Q_BM_BCH_FLASH0LAYOUT1_ECCN	(0x1f << MX6Q_BP_BCH_FLASH0LAYOUT1_ECCN)
 #define BF_BCH_FLASH0LAYOUT1_ECCN(v, x)				\
-	(GPMI_IS_MX6(x)					\
+	((GPMI_IS_MX6(x) || GPMI_IS_MX7(x))				\
 		? (((v) << MX6Q_BP_BCH_FLASH0LAYOUT1_ECCN)	\
 			& MX6Q_BM_BCH_FLASH0LAYOUT1_ECCN)	\
 		: (((v) << BP_BCH_FLASH0LAYOUT1_ECCN)		\
@@ -107,7 +113,7 @@
 #define MX6Q_BM_BCH_FLASH0LAYOUT1_GF_13_14			\
 				(0x1 << MX6Q_BP_BCH_FLASH0LAYOUT1_GF_13_14)
 #define BF_BCH_FLASH0LAYOUT1_GF(v, x)				\
-	((GPMI_IS_MX6(x) && ((v) == 14))			\
+	(((GPMI_IS_MX6(x) || GPMI_IS_MX7(x)) && ((v) == 14))\
 		? (((1) << MX6Q_BP_BCH_FLASH0LAYOUT1_GF_13_14)	\
 			& MX6Q_BM_BCH_FLASH0LAYOUT1_GF_13_14)	\
 		: 0						\
@@ -119,10 +125,14 @@
 #define MX6Q_BM_BCH_FLASH0LAYOUT1_DATAN_SIZE	\
 			(0x3ff << BP_BCH_FLASH0LAYOUT1_DATAN_SIZE)
 #define BF_BCH_FLASH0LAYOUT1_DATAN_SIZE(v, x)				\
-	(GPMI_IS_MX6(x)						\
+	((GPMI_IS_MX6(x) || GPMI_IS_MX7(x))	\
 		? (((v) >> 2) & MX6Q_BM_BCH_FLASH0LAYOUT1_DATAN_SIZE)	\
 		: ((v) & BM_BCH_FLASH0LAYOUT1_DATAN_SIZE)		\
 	)
 
 #define HW_BCH_VERSION				0x00000160
+#define HW_BCH_DEBUG1				0x00000170
+#define BP_BCH_DEBUG1_ERASED_ZERO_COUNT	0
+#define BM_BCH_DEBUG1_ERASED_ZERO_COUNT		\
+		(0x1ff << BP_BCH_DEBUG1_ERASED_ZERO_COUNT)
 #endif

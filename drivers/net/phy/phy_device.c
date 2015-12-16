@@ -127,7 +127,7 @@ static int phy_needs_fixup(struct phy_device *phydev, struct phy_fixup *fixup)
 }
 
 /* Runs any matching fixups for this phydev */
-static int phy_scan_fixups(struct phy_device *phydev)
+int phy_scan_fixups(struct phy_device *phydev)
 {
 	struct phy_fixup *fixup;
 
@@ -147,6 +147,7 @@ static int phy_scan_fixups(struct phy_device *phydev)
 
 	return 0;
 }
+EXPORT_SYMBOL(phy_scan_fixups);
 
 struct phy_device *phy_device_create(struct mii_bus *bus, int addr, int phy_id,
 				     bool is_c45,
@@ -796,9 +797,10 @@ static int genphy_config_advert(struct phy_device *phydev)
 	if (phydev->supported & (SUPPORTED_1000baseT_Half |
 				 SUPPORTED_1000baseT_Full)) {
 		adv |= ethtool_adv_to_mii_ctrl1000_t(advertise);
-		if (adv != oldadv)
-			changed = 1;
 	}
+
+	if (adv != oldadv)
+		changed = 1;
 
 	err = phy_write(phydev, MII_CTRL1000, adv);
 	if (err < 0)

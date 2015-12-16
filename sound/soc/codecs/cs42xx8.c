@@ -1,7 +1,7 @@
 /*
  * Cirrus Logic CS42448/CS42888 Audio CODEC Digital Audio Interface (DAI) driver
  *
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  *
  * Author: Nicolin Chen <Guangyu.Chen@freescale.com>
  *
@@ -44,6 +44,7 @@ struct cs42xx8_priv {
 
 	bool slave_mode;
 	unsigned long sysclk;
+	int rate[2];
 };
 
 /* -127.5dB to 0dB with step of 0.5dB */
@@ -127,7 +128,6 @@ static const struct snd_soc_dapm_widget cs42xx8_dapm_widgets[] = {
 	SND_SOC_DAPM_INPUT("AIN2L"),
 	SND_SOC_DAPM_INPUT("AIN2R"),
 
-	SND_SOC_DAPM_SUPPLY("PWR", CS42XX8_PWRCTL, 0, 1, NULL, 0),
 };
 
 static const struct snd_soc_dapm_widget cs42xx8_adc3_dapm_widgets[] = {
@@ -141,53 +141,43 @@ static const struct snd_soc_dapm_route cs42xx8_dapm_routes[] = {
 	/* Playback */
 	{ "AOUT1L", NULL, "DAC1" },
 	{ "AOUT1R", NULL, "DAC1" },
-	{ "DAC1", NULL, "PWR" },
 
 	{ "AOUT2L", NULL, "DAC2" },
 	{ "AOUT2R", NULL, "DAC2" },
-	{ "DAC2", NULL, "PWR" },
 
 	{ "AOUT3L", NULL, "DAC3" },
 	{ "AOUT3R", NULL, "DAC3" },
-	{ "DAC3", NULL, "PWR" },
 
 	{ "AOUT4L", NULL, "DAC4" },
 	{ "AOUT4R", NULL, "DAC4" },
-	{ "DAC4", NULL, "PWR" },
 
 	/* Capture */
 	{ "ADC1", NULL, "AIN1L" },
 	{ "ADC1", NULL, "AIN1R" },
-	{ "ADC1", NULL, "PWR" },
 
 	{ "ADC2", NULL, "AIN2L" },
 	{ "ADC2", NULL, "AIN2R" },
-	{ "ADC2", NULL, "PWR" },
 };
 
 static const struct snd_soc_dapm_route cs42xx8_adc3_dapm_routes[] = {
 	/* Capture */
 	{ "ADC3", NULL, "AIN3L" },
 	{ "ADC3", NULL, "AIN3R" },
-	{ "ADC3", NULL, "PWR" },
 };
 
 struct cs42xx8_ratios {
-	unsigned int ratio;
-	unsigned char speed;
-	unsigned char mclk;
+	unsigned int mfreq;
+	unsigned int min_mclk;
+	unsigned int max_mclk;
+	unsigned int ratio[3];
 };
 
 static const struct cs42xx8_ratios cs42xx8_ratios[] = {
-	{ 64, CS42XX8_FM_QUAD, CS42XX8_FUNCMOD_MFREQ_256(4) },
-	{ 96, CS42XX8_FM_QUAD, CS42XX8_FUNCMOD_MFREQ_384(4) },
-	{ 128, CS42XX8_FM_QUAD, CS42XX8_FUNCMOD_MFREQ_512(4) },
-	{ 192, CS42XX8_FM_QUAD, CS42XX8_FUNCMOD_MFREQ_768(4) },
-	{ 256, CS42XX8_FM_SINGLE, CS42XX8_FUNCMOD_MFREQ_256(1) },
-	{ 384, CS42XX8_FM_SINGLE, CS42XX8_FUNCMOD_MFREQ_384(1) },
-	{ 512, CS42XX8_FM_SINGLE, CS42XX8_FUNCMOD_MFREQ_512(1) },
-	{ 768, CS42XX8_FM_SINGLE, CS42XX8_FUNCMOD_MFREQ_768(1) },
-	{ 1024, CS42XX8_FM_SINGLE, CS42XX8_FUNCMOD_MFREQ_1024(1) }
+	{ 0, 1029000, 12800000, {256, 128, 64} },
+	{ 2, 1536000, 19200000, {384, 192, 96} },
+	{ 4, 2048000, 25600000, {512, 256, 128} },
+	{ 6, 3072000, 38400000, {768, 384, 192} },
+	{ 8, 4096000, 51200000, {1024, 512, 256} },
 };
 
 static int cs42xx8_set_dai_sysclk(struct snd_soc_dai *codec_dai,
@@ -254,12 +244,67 @@ static int cs42xx8_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = dai->codec;
 	struct cs42xx8_priv *cs42xx8 = snd_soc_codec_get_drvdata(codec);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
-	u32 ratio = cs42xx8->sysclk / params_rate(params);
+	u32 rate = params_rate(params);
+	u32 ratio_tx, ratio_rx;
+	u32 rate_tx, rate_rx;
+	u32 fm_tx, fm_rx;
 	u32 i, fm, val, mask;
 
-	for (i = 0; i < ARRAY_SIZE(cs42xx8_ratios); i++) {
-		if (cs42xx8_ratios[i].ratio == ratio)
-			break;
+	rate_tx = tx ? rate : cs42xx8->rate[0];
+	rate_rx = tx ? cs42xx8->rate[1] : rate;
+
+	ratio_tx = rate_tx > 0 ? cs42xx8->sysclk / rate_tx : 0;
+	ratio_rx = rate_rx > 0 ? cs42xx8->sysclk / rate_rx : 0;
+
+	if (cs42xx8->slave_mode) {
+		fm_rx = CS42XX8_FM_AUTO;
+		fm_tx = CS42XX8_FM_AUTO;
+	} else {
+		if (rate_tx < 50000)
+			fm_tx = CS42XX8_FM_SINGLE;
+		else if (rate_tx > 50000 && rate_tx < 100000)
+			fm_tx = CS42XX8_FM_DOUBLE;
+		else if (rate_tx > 100000 && rate_tx < 200000)
+			fm_tx = CS42XX8_FM_QUAD;
+		else {
+			dev_err(codec->dev, "unsupported sample rate or rate combine\n");
+			return -EINVAL;
+		}
+
+		if (rate_rx < 50000)
+			fm_rx = CS42XX8_FM_SINGLE;
+		else if (rate_rx > 50000 && rate_rx < 100000)
+			fm_rx = CS42XX8_FM_DOUBLE;
+		else if (rate_rx > 100000 && rate_rx < 200000)
+			fm_rx = CS42XX8_FM_QUAD;
+		else {
+			dev_err(codec->dev, "unsupported sample rate or rate combine\n");
+			return -EINVAL;
+		}
+	}
+
+	fm = tx ? fm_tx : fm_rx;
+
+	if (fm == CS42XX8_FM_AUTO) {
+		for (i = 0; i < ARRAY_SIZE(cs42xx8_ratios); i++) {
+			if ((ratio_tx > 0 ? (cs42xx8_ratios[i].ratio[0] == ratio_tx ||
+				cs42xx8_ratios[i].ratio[1] == ratio_tx ||
+				cs42xx8_ratios[i].ratio[2] == ratio_tx) : true) &&
+			    (ratio_rx > 0 ? (cs42xx8_ratios[i].ratio[0] == ratio_rx ||
+				cs42xx8_ratios[i].ratio[1] == ratio_rx ||
+				cs42xx8_ratios[i].ratio[2] == ratio_rx) : true) &&
+			    cs42xx8->sysclk >= cs42xx8_ratios[i].min_mclk &&
+			    cs42xx8->sysclk <= cs42xx8_ratios[i].max_mclk)
+				break;
+		}
+	} else {
+		for (i = 0; i < ARRAY_SIZE(cs42xx8_ratios); i++) {
+			if ((ratio_tx > 0 ? (cs42xx8_ratios[i].ratio[fm_tx] == ratio_tx) : true) &&
+				(ratio_rx > 0 ? (cs42xx8_ratios[i].ratio[fm_rx] == ratio_rx) : true) &&
+				cs42xx8->sysclk >= cs42xx8_ratios[i].min_mclk &&
+				cs42xx8->sysclk <= cs42xx8_ratios[i].max_mclk)
+				break;
+		}
 	}
 
 	if (i == ARRAY_SIZE(cs42xx8_ratios)) {
@@ -267,15 +312,31 @@ static int cs42xx8_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	mask = CS42XX8_FUNCMOD_MFREQ_MASK;
-	val = cs42xx8_ratios[i].mclk;
+	cs42xx8->rate[substream->stream] = rate;
 
-	fm = cs42xx8->slave_mode ? CS42XX8_FM_AUTO : cs42xx8_ratios[i].speed;
+	mask = CS42XX8_FUNCMOD_MFREQ_MASK;
+	val = cs42xx8_ratios[i].mfreq;
 
 	regmap_update_bits(cs42xx8->regmap, CS42XX8_FUNCMOD,
 			   CS42XX8_FUNCMOD_xC_FM_MASK(tx) | mask,
 			   CS42XX8_FUNCMOD_xC_FM(tx, fm) | val);
 
+	return 0;
+}
+
+static int cs42xx8_hw_free(struct snd_pcm_substream *substream,
+			     struct snd_soc_dai *dai)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_codec *codec = rtd->codec;
+	struct cs42xx8_priv *cs42xx8 = snd_soc_codec_get_drvdata(codec);
+	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+
+	cs42xx8->rate[substream->stream] = 0;
+
+	regmap_update_bits(cs42xx8->regmap, CS42XX8_FUNCMOD,
+			   CS42XX8_FUNCMOD_xC_FM_MASK(tx),
+			   CS42XX8_FUNCMOD_xC_FM(tx, CS42XX8_FM_AUTO));
 	return 0;
 }
 
@@ -294,6 +355,7 @@ static const struct snd_soc_dai_ops cs42xx8_dai_ops = {
 	.set_fmt	= cs42xx8_set_dai_fmt,
 	.set_sysclk	= cs42xx8_set_dai_sysclk,
 	.hw_params	= cs42xx8_hw_params,
+	.hw_free	= cs42xx8_hw_free,
 	.digital_mute	= cs42xx8_digital_mute,
 };
 
@@ -315,7 +377,6 @@ static struct snd_soc_dai_driver cs42xx8_dai = {
 };
 
 static const struct reg_default cs42xx8_reg[] = {
-	{ 0x01, 0x01 },   /* Chip I.D. and Revision Register */
 	{ 0x02, 0x00 },   /* Power Control */
 	{ 0x03, 0xF0 },   /* Functional Mode */
 	{ 0x04, 0x46 },   /* Interface Formats */
@@ -397,7 +458,8 @@ static int cs42xx8_codec_probe(struct snd_soc_codec *codec)
 
 	/* Mute all DAC channels */
 	regmap_write(cs42xx8->regmap, CS42XX8_DACMUTE, CS42XX8_DACMUTE_ALL);
-
+	regmap_update_bits(cs42xx8->regmap, CS42XX8_PWRCTL,
+			CS42XX8_PWRCTL_PDN_MASK, 0);
 	return 0;
 }
 
@@ -556,8 +618,13 @@ static int cs42xx8_runtime_resume(struct device *dev)
 		goto err_clk;
 	}
 
+	regmap_update_bits(cs42xx8->regmap, CS42XX8_PWRCTL,
+				CS42XX8_PWRCTL_PDN_MASK, 1);
 	/* Make sure hardware reset done */
 	msleep(5);
+
+	regmap_update_bits(cs42xx8->regmap, CS42XX8_PWRCTL,
+				CS42XX8_PWRCTL_PDN_MASK, 0);
 
 	regcache_cache_only(cs42xx8->regmap, false);
 

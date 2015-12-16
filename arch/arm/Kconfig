@@ -538,6 +538,7 @@ config ARCH_ORION5X
 	select MVEBU_MBUS
 	select PCI
 	select PLAT_ORION_LEGACY
+	select MULTI_IRQ_HANDLER
 	help
 	  Support for the following Marvell Orion 5x series SoCs:
 	  Orion-1 (5181), Orion-VoIP (5181L), Orion-NAS (5182),
@@ -1229,6 +1230,16 @@ config ARM_ERRATA_773022
 	  loop buffer may deliver incorrect instructions. This
 	  workaround disables the loop buffer to avoid the erratum.
 
+config ARM_ERRATA_814220
+	bool "ARM errata: Cache maintenance by set/way operations can execute out of order"
+	depends on CPU_V7
+	help
+	  The v7 ARM states that all cache and branch predictor maintenance operations
+	  that do not specify an address execute, relative to each other, in program order.
+	  However, because of this erratum, an L2 set/way cache maintenance operation can
+	  overtake an L1 set/way cache maintenance operation. This ERRATA only affected the
+	  Cortex-A7 and present in r0p2, r0p3, r0p4, r0p5.
+
 endmenu
 
 source "arch/arm/common/Kconfig"
@@ -1688,6 +1699,7 @@ config FORCE_MAX_ZONEORDER
 	range 11 64 if ARCH_SHMOBILE_LEGACY
 	default "12" if SOC_AM33XX
 	default "9" if SA1111 || ARCH_EFM32
+	default "14" if ARCH_MXC
 	default "11"
 	help
 	  The kernel memory allocator divides physically contiguous memory

@@ -3,7 +3,7 @@
  *
  * Author: Timur Tabi <timur@freescale.com>
  *
- * Copyright 2007-2010 Freescale Semiconductor, Inc.
+ * Copyright 2007-2015 Freescale Semiconductor, Inc.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -43,6 +43,8 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/pm_runtime.h>
+#include <linux/busfreq-imx.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -111,12 +113,75 @@ struct fsl_ssi_rxtx_reg_val {
 	struct fsl_ssi_reg_val rx;
 	struct fsl_ssi_reg_val tx;
 };
+
+static const struct reg_default fsl_ssi_reg_defaults[] = {
+	{CCSR_SSI_SCR,     0x00000000},
+	{CCSR_SSI_SIER,    0x00003003},
+	{CCSR_SSI_STCR,    0x00000200},
+	{CCSR_SSI_SRCR,    0x00000200},
+	{CCSR_SSI_STCCR,   0x00040000},
+	{CCSR_SSI_SRCCR,   0x00040000},
+	{CCSR_SSI_SACNT,   0x00000000},
+	{CCSR_SSI_STMSK,   0x00000000},
+	{CCSR_SSI_SRMSK,   0x00000000},
+	{CCSR_SSI_SACCEN,  0x00000000},
+	{CCSR_SSI_SACCDIS, 0x00000000},
+};
+
+static bool fsl_ssi_readable_reg(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case CCSR_SSI_SACCEN:
+	case CCSR_SSI_SACCDIS:
+		return false;
+	default:
+		return true;
+	}
+}
+
+static bool fsl_ssi_volatile_reg(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case CCSR_SSI_STX0:
+	case CCSR_SSI_STX1:
+	case CCSR_SSI_SRX0:
+	case CCSR_SSI_SRX1:
+	case CCSR_SSI_SISR:
+	case CCSR_SSI_SFCSR:
+	case CCSR_SSI_SACADD:
+	case CCSR_SSI_SACDAT:
+	case CCSR_SSI_SATAG:
+	case CCSR_SSI_SACCST:
+		return true;
+	default:
+		return false;
+	}
+}
+
+static bool fsl_ssi_writeable_reg(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case CCSR_SSI_SRX0:
+	case CCSR_SSI_SRX1:
+	case CCSR_SSI_SACCST:
+		return false;
+	default:
+		return true;
+	}
+}
+
 static const struct regmap_config fsl_ssi_regconfig = {
 	.max_register = CCSR_SSI_SACCDIS,
 	.reg_bits = 32,
 	.val_bits = 32,
 	.reg_stride = 4,
 	.val_format_endian = REGMAP_ENDIAN_NATIVE,
+	.reg_defaults = fsl_ssi_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(fsl_ssi_reg_defaults),
+	.readable_reg = fsl_ssi_readable_reg,
+	.volatile_reg = fsl_ssi_volatile_reg,
+	.writeable_reg = fsl_ssi_writeable_reg,
+	.cache_type = REGCACHE_RBTREE,
 };
 
 struct fsl_ssi_soc_data {
@@ -175,6 +240,9 @@ struct fsl_ssi_private {
 	struct clk *baudclk;
 	unsigned int baudclk_streams;
 	unsigned int bitclk_freq;
+
+	/*regcache for SFCSR*/
+	u32 regcache_sfcsr;
 
 	/* DMA params */
 	struct snd_dmaengine_dai_dma_data dma_params_tx;
@@ -535,6 +603,8 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 	if (ret)
 		return ret;
 
+	pm_runtime_get_sync(dai->dev);
+
 	/* When using dual fifo mode, it is safer to ensure an even period
 	 * size. If appearing to an odd number while DMA always starts its
 	 * task from fifo0, fifo1 would be neglected at the end of each
@@ -557,6 +627,8 @@ static void fsl_ssi_shutdown(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct fsl_ssi_private *ssi_private =
 		snd_soc_dai_get_drvdata(rtd->cpu_dai);
+
+	pm_runtime_put_sync(dai->dev);
 
 	clk_disable_unprepare(ssi_private->clk);
 
@@ -610,15 +682,15 @@ static int fsl_ssi_set_bclk(struct snd_pcm_substream *substream,
 		else
 			clkrate = clk_round_rate(ssi_private->baudclk, tmprate);
 
+		clkrate /= factor;
+		afreq = clkrate / (i + 1);
+
 		/*
 		 * Hardware limitation: The bclk rate must be
 		 * never greater than 1/5 IPG clock rate
 		 */
-		if (clkrate * 5 > clk_get_rate(ssi_private->clk))
+		if (afreq * 5 > clk_get_rate(ssi_private->clk))
 			continue;
-
-		clkrate /= factor;
-		afreq = clkrate / (i + 1);
 
 		if (freq == afreq)
 			sub = 0;
@@ -633,7 +705,7 @@ static int fsl_ssi_set_bclk(struct snd_pcm_substream *substream,
 		sub *= 100000;
 		do_div(sub, freq);
 
-		if (sub < savesub) {
+		if (sub < savesub && !(i == 0 && psr == 0 && div2 == 0)) {
 			baudrate = tmprate;
 			savesub = sub;
 			pm = i;
@@ -700,8 +772,7 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(cpu_dai);
 	struct regmap *regs = ssi_private->regs;
 	unsigned int channels = params_channels(hw_params);
-	unsigned int sample_size =
-		snd_pcm_format_width(params_format(hw_params));
+	unsigned int sample_size = params_width(hw_params);
 	u32 wl = CCSR_SSI_SxCCR_WL(sample_size);
 	int ret;
 	u32 scr_val;
@@ -1066,7 +1137,7 @@ static int fsl_ssi_dai_probe(struct snd_soc_dai *dai)
 
 static const struct snd_soc_dai_ops fsl_ssi_dai_ops = {
 	.startup	= fsl_ssi_startup,
-	.shutdown       = fsl_ssi_shutdown,
+	.shutdown	= fsl_ssi_shutdown,
 	.hw_params	= fsl_ssi_hw_params,
 	.hw_free	= fsl_ssi_hw_free,
 	.set_fmt	= fsl_ssi_set_dai_fmt,
@@ -1191,6 +1262,7 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 	struct device_node *np = pdev->dev.of_node;
 	u32 dmas[4];
 	int ret;
+	u32 buffer_size;
 
 	if (ssi_private->has_ipg_clk_name)
 		ssi_private->clk = devm_clk_get(&pdev->dev, "ipg");
@@ -1237,6 +1309,9 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 		ssi_private->dma_params_rx.maxburst &= ~0x1;
 	}
 
+	if (of_property_read_u32(np, "fsl,dma-buffer-size", &buffer_size))
+		buffer_size = IMX_SSI_DMABUF_SIZE;
+
 	if (!ssi_private->use_dma) {
 
 		/*
@@ -1257,7 +1332,7 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 		if (ret)
 			goto error_pcm;
 	} else {
-		ret = imx_pcm_dma_init(pdev);
+		ret = imx_pcm_dma_init(pdev, buffer_size);
 		if (ret)
 			goto error_pcm;
 	}
@@ -1377,6 +1452,8 @@ static int fsl_ssi_probe(struct platform_device *pdev)
                 /* Older 8610 DTs didn't have the fifo-depth property */
 		ssi_private->fifo_depth = 8;
 
+	pm_runtime_enable(&pdev->dev);
+
 	dev_set_drvdata(&pdev->dev, ssi_private);
 
 	if (ssi_private->soc->imx) {
@@ -1468,10 +1545,65 @@ static int fsl_ssi_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int fsl_ssi_runtime_resume(struct device *dev)
+{
+	request_bus_freq(BUS_FREQ_AUDIO);
+	return 0;
+}
+
+static int fsl_ssi_runtime_suspend(struct device *dev)
+{
+	release_bus_freq(BUS_FREQ_AUDIO);
+	return 0;
+}
+#endif
+
+#ifdef CONFIG_PM_SLEEP
+static int fsl_ssi_suspend(struct device *dev)
+{
+	struct fsl_ssi_private *ssi_private = dev_get_drvdata(dev);
+	struct regmap *regs = ssi_private->regs;
+
+	regmap_read(regs, CCSR_SSI_SFCSR,
+			&ssi_private->regcache_sfcsr);
+
+	regcache_cache_only(regs, true);
+	regcache_mark_dirty(regs);
+
+	return 0;
+}
+
+static int fsl_ssi_resume(struct device *dev)
+{
+	struct fsl_ssi_private *ssi_private = dev_get_drvdata(dev);
+	struct regmap *regs = ssi_private->regs;
+
+	regcache_cache_only(regs, false);
+
+	regmap_update_bits(regs, CCSR_SSI_SFCSR,
+			CCSR_SSI_SFCSR_RFWM1_MASK | CCSR_SSI_SFCSR_TFWM1_MASK |
+			CCSR_SSI_SFCSR_RFWM0_MASK | CCSR_SSI_SFCSR_TFWM0_MASK,
+			ssi_private->regcache_sfcsr);
+
+	return regcache_sync(regs);
+}
+#endif /* CONFIG_PM_SLEEP */
+
+static const struct dev_pm_ops fsl_ssi_pm = {
+#ifdef CONFIG_PM
+	SET_RUNTIME_PM_OPS(fsl_ssi_runtime_suspend,
+			fsl_ssi_runtime_resume,
+			NULL)
+#endif
+	SET_SYSTEM_SLEEP_PM_OPS(fsl_ssi_suspend, fsl_ssi_resume)
+};
+
 static struct platform_driver fsl_ssi_driver = {
 	.driver = {
 		.name = "fsl-ssi-dai",
 		.of_match_table = fsl_ssi_ids,
+		.pm = &fsl_ssi_pm,
 	},
 	.probe = fsl_ssi_probe,
 	.remove = fsl_ssi_remove,

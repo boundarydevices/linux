@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -13,6 +13,7 @@
 #include <linux/clk.h>
 #include <linux/clkdev.h>
 #include <linux/err.h>
+#include <linux/imx_sema4.h>
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/of.h>
@@ -22,7 +23,9 @@
 
 #include "clk.h"
 #include "common.h"
+#include "hardware.h"
 
+#define CCM_CCGR_OFFSET(index)		(index * 2)
 #define CCDR    0x4
 #define BM_CCM_CCDR_MMDC_CH0_MASK       (0x2 << 16)
 
@@ -81,7 +84,7 @@ static const char *lvds_sels[]	= {
 	"arm", "pll1_sys", "dummy", "dummy", "dummy", "dummy", "dummy", "pll5_video_div",
 	"dummy", "dummy", "pcie_ref_125m", "dummy", "usbphy1", "usbphy2",
 };
-static const char *pll_bypass_src_sels[] = { "osc", "lvds1_in", };
+static const char *pll_bypass_src_sels[] = { "osc", "lvds1_in", "lvds2_in", "dummy", };
 static const char *pll1_bypass_sels[] = { "pll1", "pll1_bypass_src", };
 static const char *pll2_bypass_sels[] = { "pll2", "pll2_bypass_src", };
 static const char *pll3_bypass_sels[] = { "pll3", "pll3_bypass_src", };
@@ -92,18 +95,19 @@ static const char *pll7_bypass_sels[] = { "pll7", "pll7_bypass_src", };
 
 static struct clk *clks[IMX6SX_CLK_CLK_END];
 static struct clk_onecell_data clk_data;
+struct imx_sema4_mutex *amp_power_mutex;
+
+static int clks_shared[MAX_SHARED_CLK_NUMBER];
+
+struct imx_shared_mem *shared_mem;
+static unsigned int shared_mem_paddr, shared_mem_size;
 
 static int const clks_init_on[] __initconst = {
 	IMX6SX_CLK_AIPS_TZ1, IMX6SX_CLK_AIPS_TZ2, IMX6SX_CLK_AIPS_TZ3,
 	IMX6SX_CLK_IPMUX1, IMX6SX_CLK_IPMUX2, IMX6SX_CLK_IPMUX3,
 	IMX6SX_CLK_WAKEUP, IMX6SX_CLK_MMDC_P0_FAST, IMX6SX_CLK_MMDC_P0_IPG,
 	IMX6SX_CLK_ROM, IMX6SX_CLK_ARM, IMX6SX_CLK_IPG, IMX6SX_CLK_OCRAM,
-	IMX6SX_CLK_PER2_MAIN, IMX6SX_CLK_PERCLK, IMX6SX_CLK_M4,
-	IMX6SX_CLK_QSPI1, IMX6SX_CLK_QSPI2, IMX6SX_CLK_UART_IPG,
-	IMX6SX_CLK_UART_SERIAL, IMX6SX_CLK_I2C3, IMX6SX_CLK_ECSPI5,
-	IMX6SX_CLK_CAN1_IPG, IMX6SX_CLK_CAN1_SERIAL, IMX6SX_CLK_CAN2_IPG,
-	IMX6SX_CLK_CAN2_SERIAL, IMX6SX_CLK_CANFD, IMX6SX_CLK_EPIT1,
-	IMX6SX_CLK_EPIT2,
+	IMX6SX_CLK_PER2_MAIN, IMX6SX_CLK_PERCLK,
 };
 
 static struct clk_div_table clk_enet_ref_table[] = {
@@ -135,6 +139,40 @@ static u32 share_count_esai;
 static u32 share_count_ssi1;
 static u32 share_count_ssi2;
 static u32 share_count_ssi3;
+static u32 share_count_sai1;
+static u32 share_count_sai2;
+
+/*
+ * As IMX6SX_CLK_M4_PRE_SEL is NOT a glitchless MUX, so when
+ * M4 is trying to change its clk parent, need to ask A9 to
+ * help do it, and M4 must be hold in wfi. To avoid glitch
+ * occur, need to gate M4 clk first before switching its parent.
+ */
+void imx6sx_set_m4_highfreq(bool high_freq)
+{
+	static struct clk *m4_high_freq_sel;
+
+	imx_gpc_hold_m4_in_sleep();
+
+	clk_disable_unprepare(clks[IMX6SX_CLK_M4]);
+	imx_clk_set_parent(clks[IMX6SX_CLK_M4_SEL],
+		clks[IMX6SX_CLK_LDB_DI0]);
+
+	if (high_freq) {
+		imx_clk_set_parent(clks[IMX6SX_CLK_M4_PRE_SEL],
+			m4_high_freq_sel);
+	} else {
+		m4_high_freq_sel = clk_get_parent(clks[IMX6SX_CLK_M4_PRE_SEL]);
+		imx_clk_set_parent(clks[IMX6SX_CLK_M4_PRE_SEL],
+			clks[IMX6SX_CLK_OSC]);
+	}
+
+	imx_clk_set_parent(clks[IMX6SX_CLK_M4_SEL],
+		clks[IMX6SX_CLK_M4_PRE_SEL]);
+	clk_prepare_enable(clks[IMX6SX_CLK_M4]);
+
+	imx_gpc_release_m4_in_sleep();
+}
 
 static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 {
@@ -153,6 +191,7 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 
 	/* Clock source from external clock via CLK1 PAD */
 	clks[IMX6SX_CLK_ANACLK1] = imx_obtain_fixed_clock("anaclk1", 0);
+	clks[IMX6SX_CLK_ANACLK2] = imx_obtain_fixed_clock("anaclk2", 0);
 
 	np = of_find_compatible_node(NULL, NULL, "fsl,imx6sx-anatop");
 	base = of_iomap(np, 0);
@@ -184,15 +223,15 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SX_PLL7_BYPASS] = imx_clk_mux_flags("pll7_bypass", base + 0x20, 16, 1, pll7_bypass_sels, ARRAY_SIZE(pll7_bypass_sels), CLK_SET_RATE_PARENT);
 
 	/* Do not bypass PLLs initially */
-	clk_set_parent(clks[IMX6SX_PLL1_BYPASS], clks[IMX6SX_CLK_PLL1]);
-	clk_set_parent(clks[IMX6SX_PLL2_BYPASS], clks[IMX6SX_CLK_PLL2]);
-	clk_set_parent(clks[IMX6SX_PLL3_BYPASS], clks[IMX6SX_CLK_PLL3]);
-	clk_set_parent(clks[IMX6SX_PLL4_BYPASS], clks[IMX6SX_CLK_PLL4]);
-	clk_set_parent(clks[IMX6SX_PLL5_BYPASS], clks[IMX6SX_CLK_PLL5]);
-	clk_set_parent(clks[IMX6SX_PLL6_BYPASS], clks[IMX6SX_CLK_PLL6]);
-	clk_set_parent(clks[IMX6SX_PLL7_BYPASS], clks[IMX6SX_CLK_PLL7]);
+	imx_clk_set_parent(clks[IMX6SX_PLL1_BYPASS], clks[IMX6SX_CLK_PLL1]);
+	imx_clk_set_parent(clks[IMX6SX_PLL2_BYPASS], clks[IMX6SX_CLK_PLL2]);
+	imx_clk_set_parent(clks[IMX6SX_PLL3_BYPASS], clks[IMX6SX_CLK_PLL3]);
+	imx_clk_set_parent(clks[IMX6SX_PLL4_BYPASS], clks[IMX6SX_CLK_PLL4]);
+	imx_clk_set_parent(clks[IMX6SX_PLL5_BYPASS], clks[IMX6SX_CLK_PLL5]);
+	imx_clk_set_parent(clks[IMX6SX_PLL6_BYPASS], clks[IMX6SX_CLK_PLL6]);
+	imx_clk_set_parent(clks[IMX6SX_PLL7_BYPASS], clks[IMX6SX_CLK_PLL7]);
 
-	clks[IMX6SX_CLK_PLL1_SYS]      = imx_clk_gate("pll1_sys",      "pll1_bypass", base + 0x00, 13);
+	clks[IMX6SX_CLK_PLL1_SYS]	= imx_clk_fixed_factor("pll1_sys",	"pll1_bypass", 1, 1);
 	clks[IMX6SX_CLK_PLL2_BUS]      = imx_clk_gate("pll2_bus",      "pll2_bypass", base + 0x30, 13);
 	clks[IMX6SX_CLK_PLL3_USB_OTG]  = imx_clk_gate("pll3_usb_otg",  "pll3_bypass", base + 0x10, 13);
 	clks[IMX6SX_CLK_PLL4_AUDIO]    = imx_clk_gate("pll4_audio",    "pll4_bypass", base + 0x70, 13);
@@ -221,7 +260,9 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SX_CLK_PCIE_REF_125M] = imx_clk_gate("pcie_ref_125m", "pcie_ref", base + 0xe0, 19);
 
 	clks[IMX6SX_CLK_LVDS1_OUT] = imx_clk_gate_exclusive("lvds1_out", "lvds1_sel", base + 0x160, 10, BIT(12));
+	clks[IMX6SX_CLK_LVDS2_OUT] = imx_clk_gate_exclusive("lvds2_out", "lvds2_sel", base + 0x160, 11, BIT(13));
 	clks[IMX6SX_CLK_LVDS1_IN]  = imx_clk_gate_exclusive("lvds1_in",  "anaclk1",   base + 0x160, 12, BIT(10));
+	clks[IMX6SX_CLK_LVDS2_IN]  = imx_clk_gate_exclusive("lvds2_in",  "anaclk2",   base + 0x160, 13, BIT(11));
 
 	clks[IMX6SX_CLK_ENET_REF] = clk_register_divider_table(NULL, "enet_ref", "pll6_enet", 0,
 			base + 0xe0, 0, 2, 0, clk_enet_ref_table,
@@ -263,6 +304,7 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 
 	/*                                                name                reg           shift   width   parent_names       num_parents */
 	clks[IMX6SX_CLK_LVDS1_SEL]          = imx_clk_mux("lvds1_sel",        base + 0x160, 0,      5,      lvds_sels,         ARRAY_SIZE(lvds_sels));
+	clks[IMX6SX_CLK_LVDS2_SEL]          = imx_clk_mux("lvds2_sel",        base + 0x160, 5,      5,      lvds_sels,         ARRAY_SIZE(lvds_sels));
 
 	np = ccm_node;
 	base = of_iomap(np, 0);
@@ -272,12 +314,12 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 
 	/*                                                name                reg           shift   width   parent_names       num_parents */
 	clks[IMX6SX_CLK_STEP]               = imx_clk_mux("step",             base + 0xc,   8,      1,      step_sels,         ARRAY_SIZE(step_sels));
-	clks[IMX6SX_CLK_PLL1_SW]            = imx_clk_mux("pll1_sw",          base + 0xc,   2,      1,      pll1_sw_sels,      ARRAY_SIZE(pll1_sw_sels));
+	clks[IMX6SX_CLK_PLL1_SW]            = imx_clk_mux_glitchless("pll1_sw",          base + 0xc,   2,      1,      pll1_sw_sels,      ARRAY_SIZE(pll1_sw_sels));
 	clks[IMX6SX_CLK_OCRAM_SEL]          = imx_clk_mux("ocram_sel",        base + 0x14,  6,      2,      ocram_sels,        ARRAY_SIZE(ocram_sels));
-	clks[IMX6SX_CLK_PERIPH_PRE]         = imx_clk_mux("periph_pre",       base + 0x18,  18,     2,      periph_pre_sels,   ARRAY_SIZE(periph_pre_sels));
-	clks[IMX6SX_CLK_PERIPH2_PRE]        = imx_clk_mux("periph2_pre",      base + 0x18,  21,     2,      periph2_pre_sels,   ARRAY_SIZE(periph2_pre_sels));
-	clks[IMX6SX_CLK_PERIPH_CLK2_SEL]    = imx_clk_mux("periph_clk2_sel",  base + 0x18,  12,     2,      periph_clk2_sels,  ARRAY_SIZE(periph_clk2_sels));
-	clks[IMX6SX_CLK_PERIPH2_CLK2_SEL]   = imx_clk_mux("periph2_clk2_sel", base + 0x18,  20,     1,      periph2_clk2_sels, ARRAY_SIZE(periph2_clk2_sels));
+	clks[IMX6SX_CLK_PERIPH_PRE]         = imx_clk_mux_bus("periph_pre",       base + 0x18,  18,     2,      periph_pre_sels,   ARRAY_SIZE(periph_pre_sels));
+	clks[IMX6SX_CLK_PERIPH2_PRE]        = imx_clk_mux_bus("periph2_pre",      base + 0x18,  21,     2,      periph2_pre_sels,   ARRAY_SIZE(periph2_pre_sels));
+	clks[IMX6SX_CLK_PERIPH_CLK2_SEL]    = imx_clk_mux_bus("periph_clk2_sel",  base + 0x18,  12,     2,      periph_clk2_sels,  ARRAY_SIZE(periph_clk2_sels));
+	clks[IMX6SX_CLK_PERIPH2_CLK2_SEL]   = imx_clk_mux_bus("periph2_clk2_sel", base + 0x18,  20,     1,      periph2_clk2_sels, ARRAY_SIZE(periph2_clk2_sels));
 	clks[IMX6SX_CLK_PCIE_AXI_SEL]       = imx_clk_mux("pcie_axi_sel",     base + 0x18,  10,     1,      pcie_axi_sels,     ARRAY_SIZE(pcie_axi_sels));
 	clks[IMX6SX_CLK_GPU_AXI_SEL]        = imx_clk_mux("gpu_axi_sel",      base + 0x18,  8,      2,      gpu_axi_sels,      ARRAY_SIZE(gpu_axi_sels));
 	clks[IMX6SX_CLK_GPU_CORE_SEL]       = imx_clk_mux("gpu_core_sel",     base + 0x18,  4,      2,      gpu_core_sels,     ARRAY_SIZE(gpu_core_sels));
@@ -289,13 +331,13 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SX_CLK_SSI3_SEL]           = imx_clk_mux("ssi3_sel",         base + 0x1c,  14,     2,      ssi_sels,          ARRAY_SIZE(ssi_sels));
 	clks[IMX6SX_CLK_SSI2_SEL]           = imx_clk_mux("ssi2_sel",         base + 0x1c,  12,     2,      ssi_sels,          ARRAY_SIZE(ssi_sels));
 	clks[IMX6SX_CLK_SSI1_SEL]           = imx_clk_mux("ssi1_sel",         base + 0x1c,  10,     2,      ssi_sels,          ARRAY_SIZE(ssi_sels));
-	clks[IMX6SX_CLK_QSPI1_SEL]          = imx_clk_mux_flags("qspi1_sel", base + 0x1c,  7, 3, qspi1_sels, ARRAY_SIZE(qspi1_sels), CLK_SET_RATE_PARENT);
+	clks[IMX6SX_CLK_QSPI1_SEL]          = imx_clk_mux("qspi1_sel",        base + 0x1c,  7,      3,      qspi1_sels,        ARRAY_SIZE(qspi1_sels));
 	clks[IMX6SX_CLK_PERCLK_SEL]         = imx_clk_mux("perclk_sel",       base + 0x1c,  6,      1,      perclk_sels,       ARRAY_SIZE(perclk_sels));
 	clks[IMX6SX_CLK_VID_SEL]            = imx_clk_mux("vid_sel",          base + 0x20,  21,     3,      vid_sels,          ARRAY_SIZE(vid_sels));
 	clks[IMX6SX_CLK_ESAI_SEL]           = imx_clk_mux("esai_sel",         base + 0x20,  19,     2,      audio_sels,        ARRAY_SIZE(audio_sels));
 	clks[IMX6SX_CLK_CAN_SEL]            = imx_clk_mux("can_sel",          base + 0x20,  8,      2,      can_sels,          ARRAY_SIZE(can_sels));
 	clks[IMX6SX_CLK_UART_SEL]           = imx_clk_mux("uart_sel",         base + 0x24,  6,      1,      uart_sels,         ARRAY_SIZE(uart_sels));
-	clks[IMX6SX_CLK_QSPI2_SEL]          = imx_clk_mux_flags("qspi2_sel", base + 0x2c, 15, 3, qspi2_sels, ARRAY_SIZE(qspi2_sels), CLK_SET_RATE_PARENT);
+	clks[IMX6SX_CLK_QSPI2_SEL]          = imx_clk_mux("qspi2_sel",        base + 0x2c,  15,     3,      qspi2_sels,        ARRAY_SIZE(qspi2_sels));
 	clks[IMX6SX_CLK_SPDIF_SEL]          = imx_clk_mux("spdif_sel",        base + 0x30,  20,     2,      audio_sels,        ARRAY_SIZE(audio_sels));
 	clks[IMX6SX_CLK_AUDIO_SEL]          = imx_clk_mux("audio_sel",        base + 0x30,  7,      2,      audio_sels,        ARRAY_SIZE(audio_sels));
 	clks[IMX6SX_CLK_ENET_PRE_SEL]       = imx_clk_mux("enet_pre_sel",     base + 0x34,  15,     3,      enet_pre_sels,     ARRAY_SIZE(enet_pre_sels));
@@ -457,6 +499,7 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SX_CLK_SPBA]         = imx_clk_gate2("spba",          "ipg",               base + 0x7c, 12);
 	clks[IMX6SX_CLK_AUDIO]        = imx_clk_gate2_shared("audio",  "audio_podf",        base + 0x7c, 14, &share_count_audio);
 	clks[IMX6SX_CLK_SPDIF]        = imx_clk_gate2_shared("spdif",  "spdif_podf",        base + 0x7c, 14, &share_count_audio);
+	clks[IMX6SX_CLK_SPDIF_GCLK]   = imx_clk_gate2_shared("spdif_gclk",    "ipg",        base + 0x7c, 14, &share_count_audio);
 	clks[IMX6SX_CLK_SSI1_IPG]     = imx_clk_gate2_shared("ssi1_ipg",      "ipg",        base + 0x7c, 18, &share_count_ssi1);
 	clks[IMX6SX_CLK_SSI2_IPG]     = imx_clk_gate2_shared("ssi2_ipg",      "ipg",        base + 0x7c, 20, &share_count_ssi2);
 	clks[IMX6SX_CLK_SSI3_IPG]     = imx_clk_gate2_shared("ssi3_ipg",      "ipg",        base + 0x7c, 22, &share_count_ssi3);
@@ -465,10 +508,10 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SX_CLK_SSI3]         = imx_clk_gate2_shared("ssi3",          "ssi3_podf",  base + 0x7c, 22, &share_count_ssi3);
 	clks[IMX6SX_CLK_UART_IPG]     = imx_clk_gate2("uart_ipg",      "ipg",               base + 0x7c, 24);
 	clks[IMX6SX_CLK_UART_SERIAL]  = imx_clk_gate2("uart_serial",   "uart_podf",         base + 0x7c, 26);
-	clks[IMX6SX_CLK_SAI1_IPG]     = imx_clk_gate2("sai1_ipg",      "ipg",               base + 0x7c, 28);
-	clks[IMX6SX_CLK_SAI2_IPG]     = imx_clk_gate2("sai2_ipg",      "ipg",               base + 0x7c, 30);
-	clks[IMX6SX_CLK_SAI1]         = imx_clk_gate2("sai1",          "ssi1_podf",         base + 0x7c, 28);
-	clks[IMX6SX_CLK_SAI2]         = imx_clk_gate2("sai2",          "ssi2_podf",         base + 0x7c, 30);
+	clks[IMX6SX_CLK_SAI1_IPG]     = imx_clk_gate2_shared("sai1_ipg",   "ipg",           base + 0x7c, 28, &share_count_sai1);
+	clks[IMX6SX_CLK_SAI2_IPG]     = imx_clk_gate2_shared("sai2_ipg",   "ipg",           base + 0x7c, 30, &share_count_sai2);
+	clks[IMX6SX_CLK_SAI1]         = imx_clk_gate2_shared("sai1",       "ssi1_podf",     base + 0x7c, 28, &share_count_sai1);
+	clks[IMX6SX_CLK_SAI2]         = imx_clk_gate2_shared("sai2",       "ssi2_podf",     base + 0x7c, 30, &share_count_sai2);
 
 	/* CCGR6 */
 	clks[IMX6SX_CLK_USBOH3]       = imx_clk_gate2("usboh3",        "ipg",               base + 0x80, 0);
@@ -488,80 +531,193 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SX_CLK_CKO1]         = imx_clk_gate("cko1",           "cko1_podf",         base + 0x60, 7);
 	clks[IMX6SX_CLK_CKO2]         = imx_clk_gate("cko2",           "cko2_podf",         base + 0x60, 24);
 
+	/* get those shared clk nodes if M4 is active */
+	if (imx_src_is_m4_enabled()) {
+		u32 num;
+
+		of_property_read_u32(np, "fsl,shared-clks-number", &num);
+		if (num > MAX_SHARED_CLK_NUMBER)
+			pr_err("clk: shared clk nodes exceed the max number!\n");
+		of_property_read_u32_array(np, "fsl,shared-clks-index",
+			clks_shared, num);
+		if (of_property_read_u32(np, "fsl,shared-mem-addr",
+			&shared_mem_paddr))
+			pr_err("clk: fsl,shared-mem-addr NOT found!\n");
+		if (of_property_read_u32(np, "fsl,shared-mem-size",
+			&shared_mem_size))
+			pr_err("clk: fsl,shared-mem-size NOT found!\n");
+	}
+
 	/* mask handshake of mmdc */
 	writel_relaxed(BM_CCM_CCDR_MMDC_CH0_MASK, base + CCDR);
 
 	imx_check_clocks(clks, ARRAY_SIZE(clks));
 
+	/*
+	 * QSPI2/GPMI_IO share the same clock source but with the
+	 * different gate, need explicitely gate the QSPI2 & GPMI_IO
+	 * during the clock init phase according to the SOC design.
+	 */
+	if (!imx_src_is_m4_enabled()) {
+		writel_relaxed(readl_relaxed(base + 0x78) &
+			~(3 << CCM_CCGR_OFFSET(5)), base + 0x78);
+		writel_relaxed(readl_relaxed(base + 0x78) &
+			~(3 << CCM_CCGR_OFFSET(14)), base + 0x78);
+	}
+
 	clk_data.clks = clks;
 	clk_data.clk_num = ARRAY_SIZE(clks);
 	of_clk_add_provider(np, of_clk_src_onecell_get, &clk_data);
 
-	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
-		clk_prepare_enable(clks[clks_init_on[i]]);
+	/*
+	 * As some of the modules need to access ocotp in MSL,
+	 * need to make sure ocotp clk(CCM_CCGR2_CG6) is enabled
+	 * during MSL, as on i.MX6SX, accessing OCOTP registers
+	 * needs its clk on, it will be disabled by clk late
+	 * init and managed by ocotp driver.
+	 */
+	writel_relaxed(readl_relaxed(base + 0x70) | 1 << 12, base + 0x70);
+
+	/* maintain M4 usecount */
+	if (imx_src_is_m4_enabled())
+		imx_clk_prepare_enable(clks[IMX6SX_CLK_M4]);
+
+	/* set perclk to from OSC */
+	imx_clk_set_parent(clks[IMX6SX_CLK_PERCLK_SEL], clks[IMX6SX_CLK_OSC]);
 
 	if (IS_ENABLED(CONFIG_USB_MXS_PHY)) {
-		clk_prepare_enable(clks[IMX6SX_CLK_USBPHY1_GATE]);
-		clk_prepare_enable(clks[IMX6SX_CLK_USBPHY2_GATE]);
+		imx_clk_prepare_enable(clks[IMX6SX_CLK_USBPHY1_GATE]);
+		imx_clk_prepare_enable(clks[IMX6SX_CLK_USBPHY2_GATE]);
 	}
 
 	/* Set the default 132MHz for EIM module */
-	clk_set_parent(clks[IMX6SX_CLK_EIM_SLOW_SEL], clks[IMX6SX_CLK_PLL2_PFD2]);
-	clk_set_rate(clks[IMX6SX_CLK_EIM_SLOW], 132000000);
+	imx_clk_set_parent(clks[IMX6SX_CLK_EIM_SLOW_SEL], clks[IMX6SX_CLK_PLL2_PFD2]);
+	imx_clk_set_rate(clks[IMX6SX_CLK_EIM_SLOW], 132000000);
 
 	/* set parent clock for LCDIF1 pixel clock */
-	clk_set_parent(clks[IMX6SX_CLK_LCDIF1_PRE_SEL], clks[IMX6SX_CLK_PLL5_VIDEO_DIV]);
-	clk_set_parent(clks[IMX6SX_CLK_LCDIF1_SEL], clks[IMX6SX_CLK_LCDIF1_PODF]);
+	imx_clk_set_parent(clks[IMX6SX_CLK_LCDIF1_PRE_SEL], clks[IMX6SX_CLK_PLL5_VIDEO_DIV]);
+	imx_clk_set_parent(clks[IMX6SX_CLK_LCDIF1_SEL], clks[IMX6SX_CLK_LCDIF1_PODF]);
 
 	/* Set the parent clks of PCIe lvds1 and pcie_axi to be pcie ref, axi */
-	if (clk_set_parent(clks[IMX6SX_CLK_LVDS1_SEL], clks[IMX6SX_CLK_PCIE_REF_125M]))
-		pr_err("Failed to set pcie bus parent clk.\n");
-	if (clk_set_parent(clks[IMX6SX_CLK_PCIE_AXI_SEL], clks[IMX6SX_CLK_AXI]))
-		pr_err("Failed to set pcie parent clk.\n");
+	imx_clk_set_parent(clks[IMX6SX_CLK_LVDS1_SEL], clks[IMX6SX_CLK_PCIE_REF_125M]);
+	imx_clk_set_parent(clks[IMX6SX_CLK_PCIE_AXI_SEL], clks[IMX6SX_CLK_AXI]);
 
 	/*
 	 * Init enet system AHB clock, set to 200Mhz
 	 * pll2_pfd2_396m-> ENET_PODF-> ENET_AHB
 	 */
-	clk_set_parent(clks[IMX6SX_CLK_ENET_PRE_SEL], clks[IMX6SX_CLK_PLL2_PFD2]);
-	clk_set_parent(clks[IMX6SX_CLK_ENET_SEL], clks[IMX6SX_CLK_ENET_PODF]);
-	clk_set_rate(clks[IMX6SX_CLK_ENET_PODF], 200000000);
-	clk_set_rate(clks[IMX6SX_CLK_ENET_REF], 125000000);
-	clk_set_rate(clks[IMX6SX_CLK_ENET2_REF], 125000000);
+	imx_clk_set_parent(clks[IMX6SX_CLK_ENET_PRE_SEL], clks[IMX6SX_CLK_PLL2_PFD2]);
+	imx_clk_set_parent(clks[IMX6SX_CLK_ENET_SEL], clks[IMX6SX_CLK_ENET_PODF]);
+	imx_clk_set_rate(clks[IMX6SX_CLK_ENET_PODF], 200000000);
+	imx_clk_set_rate(clks[IMX6SX_CLK_ENET_REF], 125000000);
+	imx_clk_set_rate(clks[IMX6SX_CLK_ENET2_REF], 125000000);
 
 	/* Audio clocks */
-	clk_set_rate(clks[IMX6SX_CLK_PLL4_AUDIO_DIV], 393216000);
+	imx_clk_set_rate(clks[IMX6SX_CLK_PLL4_AUDIO_DIV], 393216000);
 
-	clk_set_parent(clks[IMX6SX_CLK_SPDIF_SEL], clks[IMX6SX_CLK_PLL4_AUDIO_DIV]);
-	clk_set_rate(clks[IMX6SX_CLK_SPDIF_PODF], 98304000);
+	imx_clk_set_parent(clks[IMX6SX_CLK_SPDIF_SEL], clks[IMX6SX_CLK_PLL4_AUDIO_DIV]);
+	imx_clk_set_rate(clks[IMX6SX_CLK_SPDIF_PODF], 98304000);
 
-	clk_set_parent(clks[IMX6SX_CLK_AUDIO_SEL], clks[IMX6SX_CLK_PLL3_USB_OTG]);
-	clk_set_rate(clks[IMX6SX_CLK_AUDIO_PODF], 24000000);
+	imx_clk_set_parent(clks[IMX6SX_CLK_AUDIO_SEL], clks[IMX6SX_CLK_PLL3_USB_OTG]);
+	imx_clk_set_rate(clks[IMX6SX_CLK_AUDIO_PODF], 24000000);
 
-	clk_set_parent(clks[IMX6SX_CLK_SSI1_SEL], clks[IMX6SX_CLK_PLL4_AUDIO_DIV]);
-	clk_set_parent(clks[IMX6SX_CLK_SSI2_SEL], clks[IMX6SX_CLK_PLL4_AUDIO_DIV]);
-	clk_set_parent(clks[IMX6SX_CLK_SSI3_SEL], clks[IMX6SX_CLK_PLL4_AUDIO_DIV]);
-	clk_set_rate(clks[IMX6SX_CLK_SSI1_PODF], 24576000);
-	clk_set_rate(clks[IMX6SX_CLK_SSI2_PODF], 24576000);
-	clk_set_rate(clks[IMX6SX_CLK_SSI3_PODF], 24576000);
+	imx_clk_set_parent(clks[IMX6SX_CLK_SSI1_SEL], clks[IMX6SX_CLK_PLL4_AUDIO_DIV]);
+	imx_clk_set_parent(clks[IMX6SX_CLK_SSI2_SEL], clks[IMX6SX_CLK_PLL4_AUDIO_DIV]);
+	imx_clk_set_parent(clks[IMX6SX_CLK_SSI3_SEL], clks[IMX6SX_CLK_PLL4_AUDIO_DIV]);
+	imx_clk_set_rate(clks[IMX6SX_CLK_SSI1_PODF], 24576000);
+	imx_clk_set_rate(clks[IMX6SX_CLK_SSI2_PODF], 24576000);
+	imx_clk_set_rate(clks[IMX6SX_CLK_SSI3_PODF], 24576000);
 
-	clk_set_parent(clks[IMX6SX_CLK_ESAI_SEL], clks[IMX6SX_CLK_PLL4_AUDIO_DIV]);
-	clk_set_rate(clks[IMX6SX_CLK_ESAI_PODF], 24576000);
+	imx_clk_set_parent(clks[IMX6SX_CLK_ESAI_SEL], clks[IMX6SX_CLK_PLL4_AUDIO_DIV]);
+	imx_clk_set_rate(clks[IMX6SX_CLK_ESAI_PODF], 24576000);
+
+        /* Set the UART parent if needed. */
+        if (uart_from_osc)
+		clk_set_parent(clks[IMX6SX_CLK_UART_SEL], clks[IMX6SX_CLK_OSC]);
+        else
+		clk_set_parent(clks[IMX6SX_CLK_UART_SEL], clks[IMX6SX_CLK_PLL3_80M]);
 
 	/* Set parent clock for vadc */
-	clk_set_parent(clks[IMX6SX_CLK_VID_SEL], clks[IMX6SX_CLK_PLL3_USB_OTG]);
+	imx_clk_set_parent(clks[IMX6SX_CLK_VID_SEL], clks[IMX6SX_CLK_PLL3_USB_OTG]);
 
 	/* default parent of can_sel clock is invalid, manually set it here */
-	clk_set_parent(clks[IMX6SX_CLK_CAN_SEL], clks[IMX6SX_CLK_PLL3_60M]);
+	imx_clk_set_parent(clks[IMX6SX_CLK_CAN_SEL], clks[IMX6SX_CLK_PLL3_60M]);
 
 	/* Update gpu clock from default 528M to 720M */
-	clk_set_parent(clks[IMX6SX_CLK_GPU_CORE_SEL], clks[IMX6SX_CLK_PLL3_PFD0]);
-	clk_set_parent(clks[IMX6SX_CLK_GPU_AXI_SEL], clks[IMX6SX_CLK_PLL3_PFD0]);
+	imx_clk_set_parent(clks[IMX6SX_CLK_GPU_CORE_SEL], clks[IMX6SX_CLK_PLL3_PFD0]);
+	imx_clk_set_parent(clks[IMX6SX_CLK_GPU_AXI_SEL], clks[IMX6SX_CLK_PLL3_PFD0]);
 
-	clk_set_parent(clks[IMX6SX_CLK_QSPI1_SEL], clks[IMX6SX_CLK_PLL2_BUS]);
-	clk_set_parent(clks[IMX6SX_CLK_QSPI2_SEL], clks[IMX6SX_CLK_PLL2_BUS]);
+	imx_clk_set_parent(clks[IMX6SX_CLK_QSPI1_SEL], clks[IMX6SX_CLK_PLL2_BUS]);
+	imx_clk_set_parent(clks[IMX6SX_CLK_QSPI2_SEL], clks[IMX6SX_CLK_PLL2_BUS]);
+	/* Set the UART parent if needed. */
+	if (uart_from_osc)
+		imx_clk_set_parent(clks[IMX6SX_CLK_UART_SEL], clks[IMX6SX_CLK_OSC]);
+
+	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
+		imx_clk_prepare_enable(clks[clks_init_on[i]]);
 
 	/* Set initial power mode */
 	imx6q_set_lpm(WAIT_CLOCKED);
 }
 CLK_OF_DECLARE(imx6sx, "fsl,imx6sx-ccm", imx6sx_clocks_init);
+
+int imx_update_shared_mem(struct clk_hw *hw, bool enable)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(clks_shared); i++) {
+		if (shared_mem->imx_clk[i].self == hw->clk)
+			break;
+	}
+
+	if (i >= ARRAY_SIZE(clks_shared))
+		return 1;
+
+	/* update ca9 clk status in shared memory */
+	if (enable)
+		shared_mem->imx_clk[i].ca9_enabled = 1;
+	else
+		shared_mem->imx_clk[i].ca9_enabled = 0;
+
+	if (shared_mem->imx_clk[i].cm4_enabled == 0)
+		return 1;
+
+	return 0;
+}
+
+static int __init imx_amp_power_init(void)
+{
+	int i;
+	void __iomem *shared_mem_base;
+
+	if (!(imx_src_is_m4_enabled() && cpu_is_imx6sx()))
+		return 0;
+
+	amp_power_mutex = imx_sema4_mutex_create(0, MCC_POWER_SHMEM_NUMBER);
+
+	shared_mem_base = ioremap_nocache(shared_mem_paddr, shared_mem_size);
+
+	if (!amp_power_mutex) {
+		pr_err("Failed to create sema4 mutex!\n");
+		return 0;
+	}
+
+	shared_mem = (struct imx_shared_mem *)shared_mem_base;
+
+	for (i = 0; i < ARRAY_SIZE(clks_shared); i++) {
+		shared_mem->imx_clk[i].self = clks[clks_shared[i]];
+		shared_mem->imx_clk[i].ca9_enabled = 1;
+		pr_debug("%d: name %s, addr 0x%x\n", i,
+			__clk_get_name(shared_mem->imx_clk[i].self),
+			(u32)&(shared_mem->imx_clk[i]));
+	}
+	/* enable amp power management */
+	shared_mem->ca9_valid = SHARED_MEM_MAGIC_NUMBER;
+
+	pr_info("A9-M4 sema4 num %d, A9-M4 magic number 0x%x - 0x%x.\n",
+		amp_power_mutex->gate_num, shared_mem->ca9_valid,
+		shared_mem->cm4_valid);
+
+	return 0;
+}
+late_initcall(imx_amp_power_init);

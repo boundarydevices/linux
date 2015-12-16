@@ -35,6 +35,15 @@
 #define PFUZE100_STANDBY_OFFSET	1
 #define PFUZE100_MODE_OFFSET	3
 #define PFUZE100_CONF_OFFSET	4
+/*
+ * below regs will lost after exit from LPSR mode(PFUZE3000), need to be saved
+ * and restored:
+ * 0x20~0x40: 33
+ * 0x66~0x71: 12
+ * 0x7f: 1
+ * total 46 registers.
+ */
+#define PFUZE100_REG_SAVED_NUM (33 + 12 + 1)
 
 #define PFUZE100_DEVICEID	0x0
 #define PFUZE100_REVID		0x3
@@ -68,6 +77,8 @@ struct pfuze_chip {
 	int	chip_id;
 	struct regmap *regmap;
 	struct device *dev;
+	bool need_restore;
+	unsigned int reg_save_array[PFUZE100_REG_SAVED_NUM];
 	struct pfuze_regulator regulator_descs[PFUZE100_MAX_REGULATOR];
 	struct regulator_dev *regulators[PFUZE100_MAX_REGULATOR];
 };
@@ -78,6 +89,13 @@ static const int pfuze100_swbst[] = {
 
 static const int pfuze100_vsnvs[] = {
 	1000000, 1100000, 1200000, 1300000, 1500000, 1800000, 3000000,
+};
+
+static const int pfuze3000_sw1a[] = {
+	700000, 725000, 750000, 775000, 800000, 825000, 850000, 875000,
+	900000, 925000, 950000, 975000, 1000000, 1025000, 1050000, 1075000,
+	1100000, 1125000, 1150000, 1175000, 1200000, 1225000, 1250000, 1275000,
+	1300000, 1325000, 1350000, 1375000, 1400000, 1425000, 1800000, 3300000,
 };
 
 static const int pfuze3000_sw2lo[] = {
@@ -319,7 +337,7 @@ static struct pfuze_regulator pfuze200_regulators[] = {
 };
 
 static struct pfuze_regulator pfuze3000_regulators[] = {
-	PFUZE100_SW_REG(PFUZE3000, SW1A, PFUZE100_SW1ABVOL, 700000, 1475000, 25000),
+	PFUZE100_SWB_REG(PFUZE3000, SW1A, PFUZE100_SW1ABVOL, 0x1f, pfuze3000_sw1a),
 	PFUZE100_SW_REG(PFUZE3000, SW1B, PFUZE100_SW1CVOL, 700000, 1475000, 25000),
 	PFUZE100_SWB_REG(PFUZE3000, SW2, PFUZE100_SW2VOL, 0x7, pfuze3000_sw2lo),
 	PFUZE3000_SW3_REG(PFUZE3000, SW3, PFUZE100_SW3AVOL, 900000, 1650000, 50000),
@@ -636,8 +654,88 @@ static int pfuze100_regulator_probe(struct i2c_client *client,
 		}
 	}
 
+
+	if (of_get_property(client->dev.of_node, "fsl,lpsr-mode", NULL))
+		pfuze_chip->need_restore = true;
+
 	return 0;
 }
+
+static int pfuze_reg_save_restore(struct pfuze_chip *pfuze_chip, int start,
+				  int end, int index, bool save)
+{
+	int i, ret;
+
+	for (i = 0; i < end - start + 1; i++) {
+		if (save)
+			ret = regmap_read(pfuze_chip->regmap, start + i,
+					&pfuze_chip->reg_save_array[index + i]);
+		else
+			ret = regmap_write(pfuze_chip->regmap, start + i,
+					pfuze_chip->reg_save_array[index + i]);
+
+		if (ret)
+			return ret;
+	}
+
+	return index + i;
+}
+
+static int pfuze_suspend(struct device *dev)
+{
+	struct pfuze_chip *pfuze_chip = i2c_get_clientdata(to_i2c_client(dev));
+	int index = 0;
+
+	if (pfuze_chip->need_restore) {
+		/* 0x20~0x40 */
+		index = pfuze_reg_save_restore(pfuze_chip, 0x20, 0x40, index, true);
+		if (index < 0)
+			goto err_ret;
+		/* 0x66~0x71 */
+		index = pfuze_reg_save_restore(pfuze_chip, 0x66, 0x71, ++index, true);
+		if (index < 0)
+			goto err_ret;
+		/* 0x7f */
+		index = pfuze_reg_save_restore(pfuze_chip, 0x7f, 0x7f, ++index, true);
+		if (index < 0)
+			goto err_ret;
+	}
+
+	return 0;
+
+err_ret:
+	return index;
+}
+
+static int pfuze_resume(struct device *dev)
+{
+	struct pfuze_chip *pfuze_chip = i2c_get_clientdata(to_i2c_client(dev));
+	int index = 0;
+
+	if (pfuze_chip->need_restore) {
+		/* 0x20~0x40 */
+		index = pfuze_reg_save_restore(pfuze_chip, 0x20, 0x40, index, false);
+		if (index < 0)
+			goto err_ret;
+		/* 0x66~0x71 */
+		index = pfuze_reg_save_restore(pfuze_chip, 0x66, 0x71, ++index, false);
+		if (index < 0)
+			goto err_ret;
+		/* 0x7f */
+		index = pfuze_reg_save_restore(pfuze_chip, 0x7f, 0x7f, ++index, false);
+		if (index < 0)
+			goto err_ret;
+	}
+
+	return 0;
+
+err_ret:
+	return index;
+}
+
+static const struct dev_pm_ops pfuze_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(pfuze_suspend, pfuze_resume)
+};
 
 static struct i2c_driver pfuze_driver = {
 	.id_table = pfuze_device_id,
@@ -645,6 +743,7 @@ static struct i2c_driver pfuze_driver = {
 		.name = "pfuze100-regulator",
 		.owner = THIS_MODULE,
 		.of_match_table = pfuze_dt_ids,
+		.pm = &pfuze_pm_ops,
 	},
 	.probe = pfuze100_regulator_probe,
 };

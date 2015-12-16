@@ -26,9 +26,22 @@ config PCI_EXYNOS
 
 config PCI_IMX6
 	bool "Freescale i.MX6 PCIe controller"
-	depends on SOC_IMX6Q
+	depends on SOC_IMX6Q || SOC_IMX6SX || SOC_IMX7D
 	select PCIEPORTBUS
 	select PCIE_DW
+
+config EP_MODE_IN_EP_RC_SYS
+	bool "PCI Express EP mode in the IMX6 RC/EP interconnection system"
+	depends on PCI_IMX6
+
+config RC_MODE_IN_EP_RC_SYS
+	bool "PCI Express RC mode in the IMX6 RC/EP interconnection system"
+	depends on PCI_IMX6 && EP_MODE_IN_EP_RC_SYS!=y
+
+config PCI_IMX_EP_DRV
+	bool "i.MX6 PCI Express EP skeleton driver"
+	depends on RC_MODE_IN_EP_RC_SYS
+	default y
 
 config PCI_TEGRA
 	bool "NVIDIA Tegra PCIe controller"

@@ -121,6 +121,7 @@ struct mmc_data {
 	struct mmc_request	*mrq;		/* associated request */
 
 	unsigned int		sg_len;		/* size of scatter list */
+	int			sg_count;	/* mapped sg entries */
 	struct scatterlist	*sg;		/* I/O scatter list */
 	s32			host_cookie;	/* host private data */
 };
@@ -196,6 +197,9 @@ extern void mmc_put_card(struct mmc_card *card);
 extern int mmc_flush_cache(struct mmc_card *);
 
 extern int mmc_detect_card_removed(struct mmc_host *host);
+
+int mmc_first_nonreserved_index(void);
+int mmc_get_reserved_index(struct mmc_host *host);
 
 /**
  *	mmc_claim_host - exclusively claim a host
