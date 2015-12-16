@@ -759,8 +759,10 @@ static int imx7_pm_enter(suspend_state_t state)
 				/* kick m4 to enable */
 				writel(M4_RCR_GO,
 					pm_info->src_base.vbase + M4RCR);
-                                /* offset high bus count for m4 image */
-                                request_bus_freq(BUS_FREQ_HIGH);
+				/* offset high bus count for m4 image */
+				request_bus_freq(BUS_FREQ_HIGH);
+				/* restore M4 to run mode */
+				imx_mu_set_m4_run_mode();
 				/* gpc wakeup */
 				imx_mu_lpm_ready(true);
 			}
