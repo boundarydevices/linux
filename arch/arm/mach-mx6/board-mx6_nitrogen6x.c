@@ -1613,6 +1613,7 @@ struct gpio initial_gpios[] __initdata = {
 	{.label = "gs2971_csi1_pwdn",	.gpio = GP_GS2971_PWN,	.flags = GPIOF_HIGH},
 	{.label = "gs2971_csi1_reset",	.gpio = GP_GS2971_RST,	.flags = 0},
 #endif
+	{.label = "usb_hub_rest",	.gpio = GP_USB_HUB_RESET, .flags = 0},
 };
 
 void rcu_cpu_stall_reset(void);
