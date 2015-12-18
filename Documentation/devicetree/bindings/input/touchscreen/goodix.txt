@@ -23,6 +23,11 @@ Optional properties:
                             device. ESD is disabled if this property is not set
                             or is set to 0.
 
+ - touchscreen-inverted-x  : X axis is inverted (boolean)
+ - touchscreen-inverted-y  : Y axis is inverted (boolean)
+ - touchscreen-swapped-x-y : X and Y axis are swapped (boolean)
+                             (swapping is done after inverting the axis)
+
 Example:
 
 	i2c@00000000 {
