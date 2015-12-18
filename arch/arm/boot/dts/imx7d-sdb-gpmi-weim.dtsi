@@ -6,12 +6,18 @@
  * published by the Free Software Foundation.
  */
 
-#include "imx7d-sdb.dts"
-/* disable epdc, conflict with sim1 */
-&epdc {
-        status = "disabled";
+&gpmi{
+	status = "okay";
 };
 
-&sim1 {
-	status = "okay";
+&sai1{
+	status = "disabled";
+};
+
+&usdhc3{
+	status = "disabled";
+};
+
+&uart5{
+	status = "disabled";
 };
