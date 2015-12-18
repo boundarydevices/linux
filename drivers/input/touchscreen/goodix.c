@@ -42,7 +42,6 @@ struct goodix_ts_data {
 	bool inverted_y;
 	unsigned int max_touch_num;
 	unsigned int int_trigger_type;
-	bool rotated_screen;
 	int cfg_len;
 	int substitute_i2c_address;
 	struct gpio_desc *gpiod_int;
@@ -267,11 +266,6 @@ static void goodix_ts_report_touch(struct goodix_ts_data *ts, u8 *coor_data)
 	int input_x = get_unaligned_le16(&coor_data[1]);
 	int input_y = get_unaligned_le16(&coor_data[3]);
 	int input_w = get_unaligned_le16(&coor_data[5]);
-
-	if (ts->rotated_screen) {
-		input_x = ts->abs_x_max - 1 - input_x;
-		input_y = ts->abs_y_max - 1 - input_y;
-	}
 
 	input_report_abs(ts->input_dev, ABS_X, input_x);
 	input_report_abs(ts->input_dev, ABS_Y, input_y);
@@ -804,10 +798,12 @@ static void goodix_read_config(struct goodix_ts_data *ts)
 		ts->max_touch_num = GOODIX_MAX_CONTACTS;
 	}
 
-	ts->rotated_screen = dmi_check_system(rotated_screen);
-	if (ts->rotated_screen)
+	if (dmi_check_system(rotated_screen)) {
+		ts->inverted_x = true;
+		ts->inverted_y = true;
 		dev_dbg(&ts->client->dev,
 			 "Applying '180 degrees rotated screen' quirk\n");
+	}
 }
 
 /**
