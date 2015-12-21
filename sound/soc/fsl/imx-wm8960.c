@@ -30,8 +30,6 @@
 
 struct imx_wm8960_data {
 	struct snd_soc_card card;
-	char codec_dai_name[DAI_NAME_SIZE];
-	char platform_name[DAI_NAME_SIZE];
 	struct clk *codec_clk;
 	unsigned int clk_frequency;
 	bool is_codec_master;
@@ -234,18 +232,6 @@ static void wm8960_init(struct snd_soc_dai *codec_dai)
 	snd_soc_update_bits(codec, WM8960_ADDCTL1, 3<<2, 1<<2);
 }
 
-/* -1 for reserved value */
-static const int sysclk_divs[] = { 1, -1, 2, -1 };
-
-/* Multiply 256 for internal 256 div */
-static const int dac_divs[] = { 256, 384, 512, 768, 1024, 1408, 1536 };
-
-/* Multiply 10 to eliminate decimials */
-static const int bclk_divs[] = {
-	10, 15, 20, 30, 40, 55, 60, 80, 110,
-	120, 160, 220, 240, 320, 320, 320
-};
-
 static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 				     struct snd_pcm_hw_params *params)
 {
@@ -257,13 +243,9 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
 	struct device *dev = card->dev;
 	unsigned int sample_rate = params_rate(params);
-	unsigned int sysclk, pll_out;
-	int i, j, k, ret = 0;
-	int bclk = snd_soc_params_to_bclk(params);
 	unsigned int fmt;
-
-	if (params_channels(params) == 1)
-		bclk *= 2;
+	unsigned int pll_out;
+	int ret;
 
 	data->is_stream_in_use[tx] = true;
 
@@ -313,54 +295,18 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 
 	data->clk_frequency = clk_get_rate(data->codec_clk);
 
-	/* Use MCLK to provide sysclk directly*/
-	sysclk = data->clk_frequency;
+	/* Set codec pll */
+	if (params_width(params) == 24)
+		pll_out = sample_rate * 768;
+	else
+		pll_out = sample_rate * 512;
 
-	for (i = 0; i < ARRAY_SIZE(sysclk_divs); ++i) {
-		if (sysclk_divs[i] == -1)
-			continue;
-		sysclk /= sysclk_divs[i];
-		for (j = 0; j < ARRAY_SIZE(dac_divs); ++j) {
-			if (sysclk == sample_rate * dac_divs[j]) {
-				for (k = 0; k < ARRAY_SIZE(bclk_divs); ++k)
-					if (sysclk == bclk * bclk_divs[k] / 10) {
-						ret = snd_soc_dai_set_sysclk(codec_dai, WM8960_SYSCLK_MCLK, sysclk, 0);
-						if (ret)
-							continue;
-						snd_soc_dai_set_clkdiv(codec_dai, WM8960_SYSCLKDIV, i << 1);
-						return 0;
-					}
-			}
-		}
-	}
+	ret = snd_soc_dai_set_pll(codec_dai, WM8960_SYSCLK_AUTO, 0, data->clk_frequency, pll_out);
+	if (ret)
+		return ret;
+	ret = snd_soc_dai_set_sysclk(codec_dai, WM8960_SYSCLK_AUTO, pll_out, 0);
 
-	/* Use PLL to provide sysclk */
-	for (i = 0; i < ARRAY_SIZE(sysclk_divs); ++i) {
-		if (sysclk_divs[i] == -1)
-			continue;
-		for (j = 0; j < ARRAY_SIZE(dac_divs); ++j) {
-			sysclk = sample_rate * dac_divs[j];
-			pll_out = sysclk * sysclk_divs[i];
-
-			for (k = 0; k < ARRAY_SIZE(bclk_divs); ++k) {
-				if (sysclk == bclk * bclk_divs[k] / 10) {
-					/* Set codec pll */
-					ret = snd_soc_dai_set_pll(codec_dai, 0, 0, data->clk_frequency, pll_out);
-					if (ret)
-						continue;
-					/* Set codec sysclk */
-					ret = snd_soc_dai_set_sysclk(codec_dai, WM8960_SYSCLK_PLL, sysclk, 0);
-					if (ret)
-						continue;
-					snd_soc_dai_set_clkdiv(codec_dai, WM8960_SYSCLKDIV, i << 1);
-					return 0;
-				}
-			}
-		}
-	}
-
-	dev_err(dev, "failed to configure system clock");
-	return -EINVAL;
+	return ret;
 }
 
 static int imx_hifi_hw_free(struct snd_pcm_substream *substream)
