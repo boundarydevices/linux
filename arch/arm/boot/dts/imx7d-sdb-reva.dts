@@ -38,7 +38,7 @@
 
 &fec2 {
 	pinctrl-0 = <&pinctrl_enet2>;
-	pinctrl-assert-gpios = <&gpio_spi 5 GPIO_ACTIVE_HIGH>;
+	pinctrl-assert-gpios = <>;
 };
 
 &i2c4 {
