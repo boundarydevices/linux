@@ -270,6 +270,8 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-riotboard.dtb \
 	imx6dl-sabreauto.dtb \
 	imx6dl-sabreauto-ecspi.dtb \
+	imx6dl-sabreauto-enetirq.dtb \
+	imx6dl-sabreauto-flexcan1.dtb \
 	imx6dl-sabreauto-gpmi-weim.dtb \
 	imx6dl-sabrelite.dtb \
 	imx6dl-sabresd.dtb \
@@ -301,13 +303,17 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-rex-pro.dtb \
 	imx6q-sabreauto.dtb \
 	imx6q-sabreauto-ecspi.dtb \
+	imx6q-sabreauto-enetirq.dtb \
+	imx6q-sabreauto-flexcan1.dtb \
 	imx6q-sabreauto-gpmi-weim.dtb \
 	imx6qp-sabreauto.dtb \
 	imx6qp-sabreauto-ecspi.dtb \
+	imx6qp-sabreauto-flexcan1.dtb \
 	imx6qp-sabreauto-gpmi-weim.dtb \
 	imx6qp-sabresd.dtb \
 	imx6qp-sabresd-btwifi.dtb \
 	imx6qp-sabresd-hdcp.dtb \
+	imx6qp-sabresd-ldo.dtb \
 	imx6q-sabrelite.dtb \
 	imx6q-sabresd.dtb \
 	imx6q-sabresd-btwifi.dtb \
@@ -347,8 +353,8 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 	imx6sx-sdb-sai.dtb \
 	imx6sx-19x19-arm2.dtb \
 	imx6sx-19x19-arm2-ldo.dtb \
-	imx6sx-19x19-arm2-csi.dtb
-	imx6sx-19x19-arm2-gpmi-weim.dtb \
+	imx6sx-19x19-arm2-csi.dtb \
+	imx6sx-19x19-arm2-gpmi-weim.dtb
 dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-14x14-ddr3-arm2.dtb \
 	imx6ul-14x14-ddr3-arm2-emmc.dtb	\
@@ -377,13 +383,19 @@ dtb-$(CONFIG_SOC_IMX7D) += \
 	imx7d-12x12-lpddr3-arm2-mqs.dtb \
 	imx7d-19x19-lpddr2-arm2.dtb \
 	imx7d-sdb.dtb \
-	imx7d-sdb-wm8960.dtb \
-	imx7d-sdb-hdmi-audio.dtb \
 	imx7d-sdb-epdc.dtb \
 	imx7d-sdb-gpmi-weim.dtb \
+	imx7d-sdb-m4.dtb \
 	imx7d-sdb-qspi.dtb \
-	imx7d-sdb-touch.dtb \
-	imx7d-sdb-m4.dtb
+	imx7d-sdb-reva.dtb \
+	imx7d-sdb-reva-epdc.dtb \
+	imx7d-sdb-reva-gpmi-weim.dtb \
+	imx7d-sdb-reva-hdmi-audio.dtb \
+	imx7d-sdb-reva-m4.dtb \
+	imx7d-sdb-reva-qspi.dtb \
+	imx7d-sdb-reva-touch.dtb \
+	imx7d-sdb-reva-wm8960.dtb \
+	imx7d-sdb-touch.dtb
 dtb-$(CONFIG_SOC_LS1021A) += \
 	ls1021a-qds.dtb \
 	ls1021a-twr.dtb
