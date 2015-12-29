@@ -107,7 +107,7 @@ struct ci_hdrc_imx_data {
 	struct pinctrl_state *pinctrl_hsic_active;
 	struct regulator *hsic_pad_regulator;
 	const struct ci_hdrc_imx_platform_flag *data;
-	struct gpio_desc reset_gpios[2];
+	struct gpio_desc reset_gpios[5];
 };
 
 static inline bool is_imx6q_con(struct ci_hdrc_imx_data *imx_data)
