@@ -126,7 +126,7 @@ struct ci_hdrc_imx_data {
 	struct clk *clk_per;
 	/* --------------------------------- */
 	struct pm_qos_request pm_qos_req;
-	struct gpio_desc reset_gpios[2];
+	struct gpio_desc reset_gpios[5];
 };
 
 static char *imx_usb_charger_supplied_to[] = {
