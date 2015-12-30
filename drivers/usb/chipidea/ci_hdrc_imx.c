@@ -474,6 +474,8 @@ static int setup_reset_gpios(struct platform_device *pdev, struct ci_hdrc_imx_da
 	struct device_node *np = dev->of_node;
 
 	for (i = 0 ; i < ARRAY_SIZE(data->reset_gpios); i++) {
+		if (i)
+			msleep(3);
 		data->reset_gpios[i].gpio = -1;
 		gpio = of_get_named_gpio_flags(np, "reset-gpios", i, &flags);
 		pr_info("%s:%d, flags %d\n", __func__, gpio, flags & OF_GPIO_ACTIVE_LOW);
