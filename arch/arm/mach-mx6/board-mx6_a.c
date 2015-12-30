@@ -74,6 +74,9 @@
 #define GP_EMMC_RESET		IMX_GPIO_NR(2, 0)	/* NANDF_D0 - active low */
 #define GP_EMMC_RESET_REV0	IMX_GPIO_NR(2, 24)	/* EIM_CS1 - active low */
 #define GP_ECSPI1_CS1		IMX_GPIO_NR(3, 19)	/* EIM_D19 - active low */
+
+#define GP_USBH1_HUB_RESET	IMX_GPIO_NR(7, 12)
+#define GP_AX88772A_RESET	IMX_GPIO_NR(2, 25)
 #define GP_MODEM_ONOFF		IMX_GPIO_NR(2, 5)
 #define GP_MODEM_RESET		IMX_GPIO_NR(2, 6)
 #define GP_MODEM_WAKEUP_IN	IMX_GPIO_NR(6, 10)
@@ -119,6 +122,8 @@ struct gpio mx6_init_gpios[] __initdata = {
 	{.label = "Modem_onoff",	.gpio = GP_MODEM_ONOFF,		.flags = GPIOF_HIGH},
 	{.label = "Modem sleep enable!",.gpio = GP_MODEM_WAKEUP_IN,	.flags = GPIOF_HIGH},
 	{.label = "usb-pwr",		.gpio = GP_USB_OTG_PWR,		.flags = 0},
+	{.label = "usbh1-hub-reset",	.gpio = GP_USBH1_HUB_RESET,	.flags = 0},
+	{.label = "AX88772A-reset",	.gpio = GP_AX88772A_RESET,	.flags = 0},
 //	{.label = "factory_default",	.gpio = IMX_GPIO_NR(4, 6),	.flags = GPIOF_DIR_IN},
 	{.label = "flexcan1-stby",	.gpio = GP_CAN1_STBY,		.flags = GPIOF_HIGH},
 
@@ -563,6 +568,8 @@ static void __init mx6_board_init(void)
 	imx6q_add_perfmon(0);
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
+	gpio_set_value(GP_USBH1_HUB_RESET, 1);
+	gpio_set_value(GP_AX88772A_RESET, 1);
 //	regulator_has_full_constraints();
 }
 
