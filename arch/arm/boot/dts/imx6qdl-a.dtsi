@@ -401,7 +401,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbh1>;
 	disable-over-current;
-	reset-gpios = GP_USBH1_HUB_RESET, GP_AX88772A_RESET, GP_MODEM_RESET, GP_MODEM_OFF;
+	reset-gpios = GP_USBH1_HUB_RESET, GP_AX88772A_RESET, GP_MODEM_RESET;
 	status = "okay";
 };
 
