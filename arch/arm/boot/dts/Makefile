@@ -523,6 +523,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-cid2.dtb \
 	imx6q-cid_tab.dtb \
 	imx6q-cm-fx6.dtb \
+	imx6q-cnt.dtb \
 	imx6q-cubox-i.dtb \
 	imx6q-cubox-i-emmc-som-v15.dtb \
 	imx6q-cubox-i-som-v15.dtb \
