@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2013-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -238,7 +238,7 @@ struct clk *clk_register_div_pix_clk(struct device *dev, const char *name,
 
 	clk = clk_register(dev, &di_div->hw);
 	if (IS_ERR(clk))
-		kfree(clk);
+		kfree(di_div);
 
 	return clk;
 }
@@ -311,7 +311,7 @@ struct clk *clk_register_gate_pix_clk(struct device *dev, const char *name,
 
 	clk = clk_register(dev, &gate->hw);
 	if (IS_ERR(clk))
-		kfree(clk);
+		kfree(gate);
 
 	return clk;
 }

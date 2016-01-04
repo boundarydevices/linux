@@ -29,7 +29,7 @@ enum {
 	SEMA4_CP1NTF	= 0x88,
 };
 
-static const unsigned int idx_sema4[16] = {
+static const unsigned int idx_sema4[SEMA4_NUM_GATES] = {
 	1 << 7, 1 << 6, 1 << 5, 1 << 4,
 	1 << 3, 1 << 2, 1 << 1, 1 << 0,
 	1 << 15, 1 << 14, 1 << 13, 1 << 12,
@@ -53,7 +53,7 @@ struct imx_sema4_mutex_device {
 	struct clk		*clk;
 
 	unsigned short		alloced;
-	struct imx_sema4_mutex	*mutex_ptr[16];
+	struct imx_sema4_mutex	*mutex_ptr[SEMA4_NUM_GATES];
 };
 
 extern struct imx_sema4_mutex *mcc_shm_ptr;

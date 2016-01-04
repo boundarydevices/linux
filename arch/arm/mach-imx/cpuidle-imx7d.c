@@ -73,6 +73,7 @@ struct imx7_cpuidle_pm_info {
 	struct imx7_pm_base ccm_base;
 	struct imx7_pm_base anatop_base;
 	struct imx7_pm_base src_base;
+	struct imx7_pm_base iomuxc_gpr_base;
 } __aligned(8);
 
 static atomic_t master_lpi = ATOMIC_INIT(0);
@@ -146,8 +147,8 @@ static struct cpuidle_driver imx7d_cpuidle_driver = {
 		},
 		/* LOW POWER IDLE */
 		{
-			.exit_latency = 100,
-			.target_residency = 200,
+			.exit_latency = 300,
+			.target_residency = 500,
 			.flags = CPUIDLE_FLAG_TIME_VALID |
 				CPUIDLE_FLAG_TIMER_STOP,
 			.enter = imx7d_enter_low_power_idle,
@@ -158,6 +159,26 @@ static struct cpuidle_driver imx7d_cpuidle_driver = {
 	.state_count = 3,
 	.safe_state_index = 0,
 };
+
+#ifdef CONFIG_HOTPLUG_CPU
+static int cpu_hotplug_notify(struct notifier_block *self,
+				  unsigned long action, void *hcpu)
+{
+	switch (action) {
+	case CPU_UP_PREPARE:
+		cpuidle_pm_info->cpu1_wfi = 0;
+		break;
+	case CPU_DEAD:
+		cpuidle_pm_info->cpu1_wfi = 1;
+		break;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block __refdata cpu_hotplug_notifier = {
+	.notifier_call = cpu_hotplug_notify,
+};
+#endif
 
 int imx7d_enable_rcosc(void)
 {
@@ -233,7 +254,10 @@ int __init imx7d_cpuidle_init(void)
 	cpuidle_pm_info->pbase = (phys_addr_t) wfi_iram_base_phys;
 	cpuidle_pm_info->pm_info_size = sizeof(*cpuidle_pm_info);
 	cpuidle_pm_info->resume_addr = virt_to_phys(ca7_cpu_resume);
-	cpuidle_pm_info->cpu1_wfi = 0;
+	if (num_online_cpus() == 1)
+		cpuidle_pm_info->cpu1_wfi = 1;
+	else
+		cpuidle_pm_info->cpu1_wfi = 0;
 	cpuidle_pm_info->lpi_enter = 0;
 	/* initialize the last cpu id to invalid here */
 	cpuidle_pm_info->last_cpu = -1;
@@ -254,8 +278,15 @@ int __init imx7d_cpuidle_init(void)
 	cpuidle_pm_info->src_base.vbase =
 		(void __iomem *)IMX_IO_P2V(MX7D_SRC_BASE_ADDR);
 
+	cpuidle_pm_info->iomuxc_gpr_base.pbase = MX7D_IOMUXC_GPR_BASE_ADDR;
+	cpuidle_pm_info->iomuxc_gpr_base.vbase =
+		(void __iomem *)IMX_IO_P2V(MX7D_IOMUXC_GPR_BASE_ADDR);
+
 	imx7d_enable_rcosc();
 
+#ifdef CONFIG_HOTPLUG_CPU
+	register_hotcpu_notifier(&cpu_hotplug_notifier);
+#endif
 	/* code size should include cpuidle_pm_info size */
 	imx7d_wfi_in_iram_fn = (void *)fncpy(wfi_iram_base +
 		sizeof(*cpuidle_pm_info),

@@ -1,7 +1,7 @@
 /*
  * Freescale ASRC Memory to Memory (M2M) driver
  *
- * Copyright (C) 2014 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2. This program is licensed "as is" without any warranty of any
@@ -273,8 +273,9 @@ static int fsl_asrc_prepare_io_buffer(struct fsl_asrc_pair *pair,
 	else
 		word_size = 2;
 
-	if (buf_len < word_size * pair->channels * wm) {
-		pair_err("%sput buffer size is too small: [%d]\n",
+	if (buf_len < word_size * pair->channels * wm ||
+	    buf_len > ASRC_DMA_BUFFER_SIZE) {
+		pair_err("%sput buffer size is error: [%d]\n",
 				DIR_STR(dir), buf_len);
 		return -EINVAL;
 	}
@@ -824,9 +825,10 @@ static int fsl_asrc_open(struct inode *inode, struct file *file)
 	}
 
 	m2m = kzalloc(sizeof(struct fsl_asrc_m2m), GFP_KERNEL);
-	if (!pair) {
+	if (!m2m) {
 		dev_err(dev, "failed to allocate m2m resource\n");
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto out;
 	}
 
 	pair->private = m2m;
@@ -842,6 +844,10 @@ static int fsl_asrc_open(struct inode *inode, struct file *file)
 	pm_runtime_get_sync(dev);
 
 	return 0;
+out:
+	kfree(pair);
+
+	return ret;
 }
 
 static int fsl_asrc_close(struct inode *inode, struct file *file)
@@ -852,9 +858,6 @@ static int fsl_asrc_close(struct inode *inode, struct file *file)
 	struct device *dev = &asrc_priv->pdev->dev;
 	unsigned long lock_flags;
 	int i;
-
-	if (!pair)
-		goto out;
 
 	/* Make sure we have clear the pointer */
 	spin_lock_irqsave(&asrc_priv->lock, lock_flags);
@@ -897,7 +900,6 @@ static int fsl_asrc_close(struct inode *inode, struct file *file)
 	spin_unlock_irqrestore(&asrc_priv->lock, lock_flags);
 	file->private_data = NULL;
 
-out:
 	pm_runtime_put_sync(dev);
 
 	return 0;

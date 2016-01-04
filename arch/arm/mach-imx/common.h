@@ -102,8 +102,11 @@ void mcc_receive_from_mu_buffer(unsigned int index, unsigned int *data);
 void mcc_send_via_mu_buffer(unsigned int index, unsigned int data);
 bool imx_mu_is_m4_in_low_freq(void);
 bool imx_mu_is_m4_in_stop(void);
+void imx_mu_set_m4_run_mode(void);
 int imx_mu_lpm_ready(bool ready);
 unsigned int imx_gpcv2_is_mf_mix_off(void);
+void imx_gpcv2_enable_wakeup_for_m4(void);
+void imx_gpcv2_disable_wakeup_for_m4(void);
 int imx_gpc_mf_power_on(unsigned int irq, unsigned int on);
 #ifdef CONFIG_HAVE_IMX_GPCV2
 int imx_gpcv2_mf_power_on(unsigned int irq, unsigned int on);
@@ -181,12 +184,12 @@ int imx6q_set_lpm(enum mxc_cpu_pwr_mode mode);
 void imx6q_set_int_mem_clk_lpm(bool enable);
 void imx6sl_set_wait_clk(bool enter);
 void imx6_enet_mac_init(const char *compatible);
-#ifdef CONFIG_HAVE_MMDC
+#ifdef CONFIG_HAVE_IMX_MMDC
 int imx_mmdc_get_ddr_type(void);
 #else
 static inline int imx_mmdc_get_ddr_type(void) { return 0; }
 #endif
-#ifdef CONFIG_HAVE_DDRC
+#ifdef CONFIG_HAVE_IMX_DDRC
 int imx_ddrc_get_ddr_type(void);
 #else
 static inline int imx_ddrc_get_ddr_type(void) { return 0; }

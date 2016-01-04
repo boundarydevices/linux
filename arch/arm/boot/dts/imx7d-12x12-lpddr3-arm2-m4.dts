@@ -3,11 +3,18 @@
 
 / {
 	memory {
-		linux,usable-memory = <0x80000000 0x3ff00000>;
+		linux,usable-memory = <0x80000000 0x1ff00000>,
+				<0xa0000000 0x1ff00000>,
+				<0xc0000000 0x40000000>;
 	};
 
 	gpio-keys {
 		status = "disabled";
+	};
+
+	m4_tcm: tcml@007f8000 {
+		compatible = "fsl, m4_tcml";
+		reg = <0x007f8000 0x8000>;
 	};
 };
 
@@ -33,6 +40,10 @@
 
 &mcctty{
 	status = "okay";
+};
+
+&ocram {
+	reg = <0x00901000 0xf000>;
 };
 
 &rpmsg{

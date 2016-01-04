@@ -48,25 +48,45 @@ static int imx_cs42888_surround_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct imx_priv *priv = &card_priv;
+	struct device *dev = &priv->pdev->dev;
 	u32 dai_format = 0;
+	int ret = 0;
 
 	dai_format = SND_SOC_DAIFMT_LEFT_J | SND_SOC_DAIFMT_NB_NF |
 		     SND_SOC_DAIFMT_CBS_CFS;
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		snd_soc_dai_set_sysclk(cpu_dai, ESAI_HCKT_EXTAL,
+		ret = snd_soc_dai_set_sysclk(cpu_dai, ESAI_HCKT_EXTAL,
 			       priv->mclk_freq, SND_SOC_CLOCK_OUT);
 	else
-		snd_soc_dai_set_sysclk(cpu_dai, ESAI_HCKR_EXTAL,
+		ret = snd_soc_dai_set_sysclk(cpu_dai, ESAI_HCKR_EXTAL,
 			       priv->mclk_freq, SND_SOC_CLOCK_OUT);
-	snd_soc_dai_set_sysclk(codec_dai, 0, priv->mclk_freq, SND_SOC_CLOCK_IN);
+	if (ret) {
+		dev_err(dev, "failed to set cpu sysclk: %d\n", ret);
+		return ret;
+	}
+
+	ret = snd_soc_dai_set_sysclk(codec_dai, 0,
+				priv->mclk_freq, SND_SOC_CLOCK_IN);
+	if (ret) {
+		dev_err(dev, "failed to set codec sysclk: %d\n", ret);
+		return ret;
+	}
 
 	/* set cpu DAI configuration */
-	snd_soc_dai_set_fmt(cpu_dai, dai_format);
+	ret = snd_soc_dai_set_fmt(cpu_dai, dai_format);
+	if (ret) {
+		dev_err(dev, "failed to set cpu dai fmt: %d\n", ret);
+		return ret;
+	}
 	/* set i.MX active slot mask */
 	snd_soc_dai_set_tdm_slot(cpu_dai, 0x3, 0x3, 2, 32);
 
 	/* set codec DAI configuration */
-	snd_soc_dai_set_fmt(codec_dai, dai_format);
+	ret = snd_soc_dai_set_fmt(codec_dai, dai_format);
+	if (ret) {
+		dev_err(dev, "failed to set codec dai fmt: %d\n", ret);
+		return ret;
+	}
 	return 0;
 }
 
@@ -205,7 +225,7 @@ static struct snd_soc_card snd_soc_card_imx_cs42888 = {
 static int imx_cs42888_probe(struct platform_device *pdev)
 {
 	struct device_node *esai_np, *codec_np;
-	struct device_node *asrc_np;
+	struct device_node *asrc_np = NULL;
 	struct platform_device *esai_pdev;
 	struct platform_device *asrc_pdev = NULL;
 	struct i2c_client *codec_dev;

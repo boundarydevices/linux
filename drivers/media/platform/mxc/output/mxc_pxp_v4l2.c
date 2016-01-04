@@ -37,6 +37,7 @@
 #include <linux/delay.h>
 #include <linux/console.h>
 #include <linux/mxcfb.h>
+#include <linux/platform_data/dma-imx.h>
 
 #include <media/videobuf-dma-contig.h>
 #include <media/v4l2-common.h>
@@ -115,8 +116,6 @@ static unsigned int v4l2_fmt_to_pxp_fmt(u32 v4l2_pix_fmt)
 		pxp_fmt = PXP_PIX_FMT_RGB24;
 	else if (v4l2_pix_fmt == V4L2_PIX_FMT_RGB565)
 		pxp_fmt = PXP_PIX_FMT_RGB565;
-	else if (v4l2_pix_fmt == V4L2_PIX_FMT_RGB555)
-		pxp_fmt = PXP_PIX_FMT_RGB555;
 	else if (v4l2_pix_fmt == V4L2_PIX_FMT_RGB555)
 		pxp_fmt = PXP_PIX_FMT_RGB555;
 	else if (v4l2_pix_fmt == V4L2_PIX_FMT_YUV420)
@@ -251,6 +250,14 @@ static void video_dma_done(void *arg)
 	spin_unlock(&pxp->lock);
 }
 
+static bool chan_filter(struct dma_chan *chan, void *arg)
+{
+	if (imx_dma_is_pxp(chan))
+		return true;
+	else
+		return false;
+}
+
 static int acquire_dma_channel(struct pxps *pxp)
 {
 	dma_cap_mask_t mask;
@@ -272,7 +279,7 @@ static int acquire_dma_channel(struct pxps *pxp)
 	dma_cap_zero(mask);
 	dma_cap_set(DMA_SLAVE, mask);
 	dma_cap_set(DMA_PRIVATE, mask);
-	chan = dma_request_channel(mask, NULL, NULL);
+	chan = dma_request_channel(mask, chan_filter, NULL);
 	if (!chan)
 		return -EBUSY;
 
@@ -420,7 +427,7 @@ static int pxp_enumoutput(struct file *file, void *fh,
 {
 	struct pxps *pxp = video_get_drvdata(video_devdata(file));
 
-	if ((o->index < 0) || (o->index > 1))
+	if (o->index > 1)
 		return -EINVAL;
 
 	memset(o, 0, sizeof(struct v4l2_output));
@@ -456,7 +463,7 @@ static int pxp_s_output(struct file *file, void *fh,
 	u32 size;
 	int ret, bpp;
 
-	if ((i < 0) || (i > 1))
+	if (i > 1)
 		return -EINVAL;
 
 	/* Output buffer is same format as fbdev */
@@ -495,9 +502,9 @@ static int pxp_enum_fmt_video_output(struct file *file, void *fh,
 				struct v4l2_fmtdesc *fmt)
 {
 	enum v4l2_buf_type type = fmt->type;
-	int index = fmt->index;
+	unsigned int index = fmt->index;
 
-	if ((fmt->index < 0) || (fmt->index >= ARRAY_SIZE(pxp_s0_formats)))
+	if (fmt->index >= ARRAY_SIZE(pxp_s0_formats))
 		return -EINVAL;
 
 	memset(fmt, 0, sizeof(struct v4l2_fmtdesc));

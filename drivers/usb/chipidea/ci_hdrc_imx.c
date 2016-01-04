@@ -293,24 +293,30 @@ static int ci_hdrc_imx_notify_event(struct ci_hdrc *ci, unsigned event)
 	case CI_HDRC_IMX_ADP_IS_PROBE_INT:
 		if (data->usbmisc_data)
 			return imx_usbmisc_adp_is_probe_int(data->usbmisc_data);
+		break;
 	case CI_HDRC_IMX_ADP_IS_SENSE_INT:
 		if (data->usbmisc_data)
 			return imx_usbmisc_adp_is_sense_int(data->usbmisc_data);
+		break;
 	case CI_HDRC_IMX_ADP_SENSE_CONNECTION:
 		if (data->usbmisc_data)
 			return imx_usbmisc_adp_sense_connection(
 						data->usbmisc_data);
+		break;
 	case CI_HDRC_IMX_ADP_ATTACH_EVENT:
 		if (data->usbmisc_data)
 			return imx_usbmisc_adp_attach_event(data->usbmisc_data);
+		break;
 	case CI_HDRC_IMX_TERM_SELECT_OVERRIDE_FS:
 		if (data->usbmisc_data)
 			return imx_usbmisc_term_select_override(
 					data->usbmisc_data, true, 1);
+		break;
 	case CI_HDRC_IMX_TERM_SELECT_OVERRIDE_OFF:
 		if (data->usbmisc_data)
 			return imx_usbmisc_term_select_override(
 					data->usbmisc_data, false, 0);
+		break;
 	default:
 		dev_dbg(dev, "unknown event\n");
 	}

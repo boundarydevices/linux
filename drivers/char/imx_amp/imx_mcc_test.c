@@ -214,10 +214,7 @@ static ssize_t imx_mcc_pingpong_en(struct device *dev,
 		pr_info("imx mcc test end after %08d times tests.\n", i/2);
 	}
 
-	if (ret)
-		return ret;
-	else
-		return count;
+	return count;
 }
 
 static DEVICE_ATTR(pingpong_en, S_IWUGO, NULL, imx_mcc_pingpong_en);
