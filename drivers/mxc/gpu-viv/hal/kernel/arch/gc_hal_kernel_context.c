@@ -2,7 +2,7 @@
 *
 *    The MIT License (MIT)
 *
-*    Copyright (c) 2014 Vivante Corporation
+*    Copyright (c) 2014 - 2015 Vivante Corporation
 *
 *    Permission is hereby granted, free of charge, to any person obtaining a
 *    copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,7 @@
 *
 *    The GPL License (GPL)
 *
-*    Copyright (C) 2014  Vivante Corporation
+*    Copyright (C) 2014 - 2015 Vivante Corporation
 *
 *    This program is free software; you can redistribute it and/or
 *    modify it under the terms of the GNU General Public License
@@ -1143,17 +1143,14 @@ _InitializeContextBuffer(
     /* Composition states. */
     index += _State(Context, index, 0x03008 >> 2, 0x00000000, 1, gcvFALSE, gcvFALSE);
 
+	index += _State(Context, index, (0x01460 >> 2) + (0 << 3), 0x00000000, Context->hardware->identity.pixelPipes, gcvFALSE, gcvTRUE);
+
     if (Context->hardware->identity.pixelPipes == 1)
     {
-        index += _State(Context, index, 0x01460 >> 2, 0x00000000, 8, gcvFALSE, gcvTRUE);
-
         index += _State(Context, index, 0x01430 >> 2, 0x00000000, 1, gcvFALSE, gcvTRUE);
         index += _State(Context, index, 0x01410 >> 2, 0x00000000, 1, gcvFALSE, gcvTRUE);
     }
-    else
-    {
-        index += _State(Context, index, (0x01460 >> 2) + (0 << 3), 0x00000000, Context->hardware->identity.pixelPipes, gcvFALSE, gcvTRUE);
-    }
+
 
     if (Context->hardware->identity.pixelPipes > 1 || halti0)
     {
@@ -1998,7 +1995,7 @@ gckCONTEXT_Update(
             gcmkOS_SAFE_FREE(Context->os, Context->recordArrayMap);
             Context->recordArrayMap = gcvNULL;
 
-            gcmONERROR(status);
+            gcmkONERROR(status);
         }
     }
 #else
