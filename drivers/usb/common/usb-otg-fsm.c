@@ -1,7 +1,7 @@
 /*
  * OTG Finite State Machine from OTG spec
  *
- * Copyright (C) 2007-2015 Freescale Semiconductor, Inc.
+ * Copyright (C) 2007-2016 Freescale Semiconductor, Inc.
  *
  * Author:	Li Yang <LeoLi@freescale.com>
  *		Jerry Huang <Chang-Ming.Huang@freescale.com>
@@ -399,13 +399,8 @@ static int otg_handle_role_switch(struct otg_fsm *fsm, struct usb_device *udev)
 				USB_DEVICE_B_HNP_ENABLE,
 				0, NULL, 0,
 				USB_CTRL_SET_TIMEOUT);
-			if (err < 0) {
-				/* Continue polling */
-				otg_add_timer(fsm, HNP_POLLING);
-				return 0;
-			} else {
+			if (err >= 0)
 				fsm->a_set_b_hnp_en = 1;
-			}
 		}
 		fsm->a_bus_req = 0;
 		if (fsm->tst_maint) {
