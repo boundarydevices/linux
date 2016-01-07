@@ -4959,7 +4959,7 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 	}
 
 	if (of_find_property(np, "en-gpios", NULL)) {
-		enable_gpio = of_get_named_gpio(np, "en-gpios", 0);
+		enable_gpio = of_get_named_gpio_flags(np, "en-gpios", 0, &flag);
 		if (enable_gpio == -EPROBE_DEFER) {
 			dev_info(&pdev->dev, "GPIO requested is not"
 				"here yet, deferring the probe\n");
@@ -4971,7 +4971,9 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 
 			ret = devm_gpio_request_one(&pdev->dev,
 						    enable_gpio,
-						    GPIOF_OUT_INIT_LOW,
+						    (flag & OF_GPIO_ACTIVE_LOW)
+						    ? GPIOF_OUT_INIT_LOW :
+						    GPIOF_OUT_INIT_HIGH,
 						    "en_pins");
 			if (ret) {
 				dev_err(&pdev->dev, "failed to request gpio"
