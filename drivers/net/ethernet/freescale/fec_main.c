@@ -1373,23 +1373,18 @@ fec_enet_hwtstamp(struct fec_enet_private *fep, unsigned ts,
 	hwtstamps->hwtstamp = ns_to_ktime(ns);
 }
 
-static void
-fec_enet_tx_queue(struct net_device *ndev, u16 queue_id)
+static void fec_txq(struct net_device *ndev, struct fec_enet_priv_tx_q *txq)
 {
-	struct	fec_enet_private *fep;
+	struct  fec_enet_private *fep = netdev_priv(ndev);
 	struct bufdesc *bdp;
 	unsigned short status;
 	struct	sk_buff	*skb;
-	struct fec_enet_priv_tx_q *txq;
 	struct netdev_queue *nq;
 	int	index = 0;
 	int	entries_free;
 
-	fep = netdev_priv(ndev);
-
-	txq = fep->tx_queue[queue_id];
 	/* get next bdp of dirty_tx */
-	nq = netdev_get_tx_queue(ndev, queue_id);
+	nq = netdev_get_tx_queue(ndev, txq->bd.qid);
 	bdp = txq->dirty_tx;
 
 	/* get next bdp of dirty_tx */
@@ -1489,7 +1484,7 @@ static void fec_enet_tx(struct net_device *ndev)
 
 	/* Make sure that AVB queues are processed first. */
 	for (i = fep->num_tx_queues - 1; i >= 0; i--)
-		fec_enet_tx_queue(ndev, i);
+		fec_txq(ndev, fep->tx_queue[i]);
 }
 
 static void fec_enet_update_cbd(struct fec_enet_priv_rx_q *rxq,
@@ -1568,11 +1563,10 @@ fec_enet_run_xdp(struct fec_enet_private *fep, struct bpf_prog *prog,
  * not been given to the system, we just set the empty indicator,
  * effectively tossing the packet.
  */
-static int
-fec_enet_rx_queue(struct net_device *ndev, int budget, u16 queue_id)
+static int fec_rxq(struct net_device *ndev, struct fec_enet_priv_rx_q *rxq,
+		   int budget)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
-	struct fec_enet_priv_rx_q *rxq;
 	struct bufdesc *bdp;
 	unsigned short status;
 	struct  sk_buff *skb;
@@ -1604,7 +1598,6 @@ fec_enet_rx_queue(struct net_device *ndev, int budget, u16 queue_id)
 #ifdef CONFIG_M532x
 	flush_cache_all();
 #endif
-	rxq = fep->rx_queue[queue_id];
 
 	/* First, grab all of the stats for the incoming packet.
 	 * These get messed up if we get called due to a busy condition.
@@ -1618,7 +1611,7 @@ fec_enet_rx_queue(struct net_device *ndev, int budget, u16 queue_id)
 			break;
 		pkt_received++;
 
-		writel(FEC_ENET_RXF_GET(queue_id), fep->hwp + FEC_IEVENT);
+		writel(FEC_ENET_RXF_GET(rxq->bd.qid), fep->hwp + FEC_IEVENT);
 
 		/* Check for errors. */
 		status ^= BD_ENET_RX_LAST;
@@ -1740,7 +1733,7 @@ fec_enet_rx_queue(struct net_device *ndev, int budget, u16 queue_id)
 					       htons(ETH_P_8021Q),
 					       vlan_tag);
 
-		skb_record_rx_queue(skb, queue_id);
+		skb_record_rx_queue(skb, rxq->bd.qid);
 		napi_gro_receive(&fep->napi, skb);
 
 rx_processing_done:
@@ -1787,7 +1780,7 @@ static int fec_enet_rx(struct net_device *ndev, int budget)
 
 	/* Make sure that AVB queues are processed first. */
 	for (i = fep->num_rx_queues - 1; i >= 0; i--)
-		done += fec_enet_rx_queue(ndev, budget - done, i);
+		done += fec_rxq(ndev, fep->rx_queue[i], budget - done);
 
 	return done;
 }
