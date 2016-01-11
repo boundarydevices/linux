@@ -1218,6 +1218,8 @@ static void fec_txq(struct net_device *ndev, struct fec_enet_priv_tx_q *txq)
 			}
 			break;
 		}
+		bdp->cbd_sc = cpu_to_fec16((bdp == txq->bd.last) ?
+					   BD_SC_WRAP : 0);
 
 		index = fec_enet_get_bd_index(bdp, &txq->bd);
 
