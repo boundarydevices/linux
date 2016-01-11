@@ -1,0 +1,22 @@
+config NANOHUB
+	tristate "Nanohub"
+	select IIO
+	default N
+	help
+	  Enable support for the nanohub sensorhub driver.
+
+	  This driver supports the android nanohub sensorhub.
+
+	  If in doubt, say N here.
+
+if NANOHUB
+
+config NANOHUB_SPI
+	bool "Nanohub SPI"
+	default Y
+	help
+	  Enable nanohub SPI support.
+
+	  If in doubt, say Y here.
+
+endif # NANOHUB
