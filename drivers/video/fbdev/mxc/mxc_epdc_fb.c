@@ -1,5 +1,4 @@
 /*
- * Copyright (C) 2010-2016 Freescale Semiconductor, Inc.
  * Copyright 2017 NXP
  *
  * This program is free software; you can redistribute it and/or modify
@@ -402,12 +401,14 @@ static void draw_mode0(struct mxc_epdc_fb_data *fb_data);
 static bool is_free_list_full(struct mxc_epdc_fb_data *fb_data);
 
 static void do_dithering_processing_Y1_v1_0(
-		unsigned char *update_region_ptr,
+		unsigned char *update_region_virt_ptr,
+		dma_addr_t update_region_phys_ptr,
 		struct mxcfb_rect *update_region,
 		unsigned long update_region_stride,
 		int *err_dist);
 static void do_dithering_processing_Y4_v1_0(
-		unsigned char *update_region_ptr,
+		unsigned char *update_region_virt_ptr,
+		dma_addr_t update_region_phys_ptr,
 		struct mxcfb_rect *update_region,
 		unsigned long update_region_stride,
 		int *err_dist);
@@ -2643,6 +2644,8 @@ static void epdc_submit_work_func(struct work_struct *work)
 		do_dithering_processing_Y1_v1_0(
 				(uint8_t *)(upd_data_list->virt_addr +
 				upd_data_list->update_desc->epdc_offs),
+				upd_data_list->phys_addr +
+				upd_data_list->update_desc->epdc_offs,
 				&adj_update_region,
 				(fb_data->rev < 20) ?
 				ALIGN(adj_update_region.width, 8) :
@@ -2660,6 +2663,8 @@ static void epdc_submit_work_func(struct work_struct *work)
 		do_dithering_processing_Y4_v1_0(
 				(uint8_t *)(upd_data_list->virt_addr +
 				upd_data_list->update_desc->epdc_offs),
+				upd_data_list->phys_addr +
+				upd_data_list->update_desc->epdc_offs,
 				&adj_update_region,
 				(fb_data->rev < 20) ?
 				ALIGN(adj_update_region.width, 8) :
@@ -3328,7 +3333,9 @@ static int mxc_epdc_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			struct mxc_epdc_fb_data *fb_data = info ?
 				(struct mxc_epdc_fb_data *)info:g_fb_data;
 			flush_cache_all();
-			outer_flush_all();
+			outer_flush_range(fb_data->working_buffer_phys,
+				fb_data->working_buffer_phys +
+				fb_data->working_buffer_size);
 			if (copy_to_user((void __user *)arg,
 				(const void *) fb_data->working_buffer_virt,
 				fb_data->working_buffer_size))
@@ -3336,7 +3343,9 @@ static int mxc_epdc_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			else
 				ret = 0;
 			flush_cache_all();
-			outer_flush_all();
+			outer_flush_range(fb_data->working_buffer_phys,
+				fb_data->working_buffer_phys +
+				fb_data->working_buffer_size);
 			break;
 		}
 
@@ -5460,7 +5469,8 @@ static int pxp_complete_update(struct mxc_epdc_fb_data *fb_data, u32 *hist_stat)
  * Dithering algorithm implementation - Y8->Y1 version 1.0 for i.MX
  */
 static void do_dithering_processing_Y1_v1_0(
-		unsigned char *update_region_ptr,
+		unsigned char *update_region_virt_ptr,
+		dma_addr_t update_region_phys_ptr,
 		struct mxcfb_rect *update_region,
 		unsigned long update_region_stride,
 		int *err_dist)
@@ -5482,7 +5492,7 @@ static void do_dithering_processing_Y1_v1_0(
 		err_dist_l1 = err_dist + (width_3) * ((y + 1) % 3);
 		err_dist_l2 = err_dist + (width_3) * ((y + 2) % 3);
 
-		y8buf = update_region_ptr + x_offset;
+		y8buf = update_region_virt_ptr + x_offset;
 
 		/* scan the line and convert the Y8 to BW */
 		for (col = 1; col <= update_region->width; col++) {
@@ -5508,7 +5518,8 @@ static void do_dithering_processing_Y1_v1_0(
 	}
 
 	flush_cache_all();
-	outer_flush_all();
+	outer_flush_range(update_region_phys_ptr, update_region_phys_ptr +
+			update_region->height * update_region->width);
 }
 
 /*
@@ -5516,7 +5527,8 @@ static void do_dithering_processing_Y1_v1_0(
  */
 
 static void do_dithering_processing_Y4_v1_0(
-		unsigned char *update_region_ptr,
+		unsigned char *update_region_virt_ptr,
+		dma_addr_t update_region_phys_ptr,
 		struct mxcfb_rect *update_region,
 		unsigned long update_region_stride,
 		int *err_dist)
@@ -5538,7 +5550,7 @@ static void do_dithering_processing_Y4_v1_0(
 		err_dist_l1 = err_dist + (width_3) * ((y + 1) % 3);
 		err_dist_l2 = err_dist + (width_3) * ((y + 2) % 3);
 
-		y8buf = update_region_ptr + x_offset;
+		y8buf = update_region_virt_ptr + x_offset;
 
 		/* scan the line and convert the Y8 to Y4 */
 		for (col = 1; col <= update_region->width; col++) {
@@ -5565,7 +5577,8 @@ static void do_dithering_processing_Y4_v1_0(
 	}
 
 	flush_cache_all();
-	outer_flush_all();
+	outer_flush_range(update_region_phys_ptr, update_region_phys_ptr +
+			update_region->height * update_region->width);
 }
 
 static int __init mxc_epdc_fb_init(void)
