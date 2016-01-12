@@ -309,7 +309,7 @@ static int at25_np_to_chip(struct device *dev,
 	u32 val;
 
 	memset(chip, 0, sizeof(*chip));
-	strncpy(chip->name, np->name, sizeof(chip->name));
+	strlcpy(chip->name, np->name, sizeof(chip->name));
 
 	if (of_property_read_u32(np, "size", &val) == 0 ||
 	    of_property_read_u32(np, "at25,byte-len", &val) == 0) {
