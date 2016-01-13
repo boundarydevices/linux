@@ -1008,6 +1008,8 @@
 					      "enet_clk_ref", "enet_out";
 				fsl,num-tx-queues=<3>;
 				fsl,num-rx-queues=<3>;
+				stop-mode = <&gpr 0x10 3>;
+				fsl,wakeup_irq = <0>;
 				status = "disabled";
 			};
 
@@ -1121,6 +1123,8 @@
 					      "enet_clk_ref", "enet_out";
 				fsl,num-tx-queues=<3>;
 				fsl,num-rx-queues=<3>;
+				stop-mode = <&gpr 0x10 4>;
+				fsl,wakeup_irq = <0>;
 				status = "disabled";
 			};
 
