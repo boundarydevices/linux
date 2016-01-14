@@ -1,0 +1,9 @@
+config VIDEO_TW6869
+	tristate "Techwell tw6869 Video For Linux"
+	depends on VIDEO_DEV && PCI && VIDEO_V4L2
+	select VIDEOBUF2_DMA_SG
+	---help---
+	  Support for Techwell tw6869 based frame grabber boards.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called tw6869.
