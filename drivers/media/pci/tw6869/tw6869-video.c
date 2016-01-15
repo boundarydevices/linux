@@ -174,22 +174,65 @@ static void tw6869_vch_frame_period(struct tw6869_vch *vch,
 	}
 }
 
+struct active_window {
+	unsigned short hactive;
+	unsigned short hdelay;
+	unsigned short vactive;
+	unsigned short vdelay;
+	unsigned short f2vdelay;
+};
+
+const struct active_window ntsc_window = {.hactive = 720, .hdelay = 15, .vactive = 240, .vdelay = 22, .f2vdelay = 22};
+
+void setup_window(struct tw6869_dma *dma, struct v4l2_pix_format *pix, const struct active_window *w)
+{
+	unsigned cfg;
+	unsigned scale;
+
+	cfg = (w->hactive >> 8) | ((w->hdelay >> 8) << 2) |
+	      ((w->vactive >> 8) << 4) | ((w->vdelay >> 8) << 6);
+	tw_write(dma->dev, R8_CROPPING_CONTROL(dma->id), cfg);
+	tw_write(dma->dev, R8_VERTICAL_DELAY(dma->id), w->vdelay & 0xff);
+	tw_write(dma->dev, R8_VERTICAL_ACTIVE(dma->id), w->vactive & 0xff);
+	tw_write(dma->dev, R8_HORIZONTAL_DELAY(dma->id), w->hdelay & 0xff);
+	tw_write(dma->dev, R8_HORIZONTAL_ACTIVE(dma->id), w->hactive & 0xff);
+
+	scale = 720 * 256 / pix->width;
+	tw_write(dma->dev, R8_SCALING_HIGH(dma->id), ((scale >> 8) & 0x0F) | 0x10);
+	tw_write(dma->dev, R8_HORIZONTAL_SCALING(dma->id), scale & 0xFF);
+
+	tw_write(dma->dev, R8_F2CNT(dma->id), w->vdelay == w->f2vdelay ? 0 : 1);
+	if (w->vdelay == w->f2vdelay)
+		return;
+
+	cfg = (w->hactive >> 8) | ((w->hdelay >> 8) << 2) |
+	      ((w->vactive >> 8) << 4) | ((w->f2vdelay >> 8) << 6);
+	tw_write(dma->dev, R8_F2CROPPING_CONTROL(dma->id), cfg);
+	tw_write(dma->dev, R8_F2VERTICAL_DELAY(dma->id), w->f2vdelay & 0xff);
+	tw_write(dma->dev, R8_F2VERTICAL_ACTIVE(dma->id), w->vactive & 0xff);
+	tw_write(dma->dev, R8_F2HORIZONTAL_DELAY(dma->id), w->hdelay & 0xff);
+	tw_write(dma->dev, R8_F2HORIZONTAL_ACTIVE(dma->id), w->hactive & 0xff);
+
+	tw_write(dma->dev, R8_F2SCALING_HIGH(dma->id), ((scale >> 8) & 0x0F) | 0x10);
+	tw_write(dma->dev, R8_F2HORIZONTAL_SCALING(dma->id), scale & 0xFF);
+}
+
 static void tw6869_vch_dma_cfg(struct tw6869_dma *dma)
 {
 	struct tw6869_vch *vch = container_of(dma, struct tw6869_vch, dma);
 	struct v4l2_pix_format *pix = &vch->format;
 	unsigned int cfg;
+	const struct active_window *w = (vch->std & V4L2_STD_625_50) ?
+			NULL : &ntsc_window;
 
 	BUG_ON(!pix->width);
 
+	if (w)
+		setup_window(dma, pix, w);
 	cfg = BIT(31);
 	cfg |= ((vch->std & V4L2_STD_625_50 ? 288 : 240) & 0x1FF) << 16;
 	cfg |= (pix->width & 0x7FF);
 	tw_write(dma->dev, R32_VIDEO_SIZE(dma->id), cfg);
-
-	cfg = 720 * 256 / pix->width;
-	tw_write(dma->dev, R8_SCALING_HIGH(dma->id), ((cfg >> 8) & 0x0F) | 0x10);
-	tw_write(dma->dev, R8_HORIZONTAL_SCALING(dma->id), cfg & 0xFF);
 
 	cfg = 13 + ID2CH(dma->id);
 	if (vch->std & V4L2_STD_625_50)
