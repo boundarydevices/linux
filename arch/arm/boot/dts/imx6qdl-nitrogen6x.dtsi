@@ -271,6 +271,7 @@
 &fec {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet>;
+	phy-handle = <&ethphy>;
 	phy-mode = "rgmii";
 	phy-reset-gpios = <&gpio1 27 0>;
 	txen-skew-ps = <0>;
@@ -289,6 +290,16 @@
 			      <&intc 0 119 IRQ_TYPE_LEVEL_HIGH>;
 	fsl,err006687-workaround-present;
 	status = "okay";
+
+	mdio {
+		#address-cells = <0>;
+		#size-cells = <1>;
+
+		ethphy: ethernet-phy@6 {
+			reg = <6>;
+			interrupts-extended = <&gpio1 28 IRQ_TYPE_LEVEL_LOW>;
+		};
+	};
 };
 
 &hdmi {
@@ -409,6 +420,8 @@
 				MX6QDL_PAD_RGMII_RX_CTL__RGMII_RX_CTL	0x1b0b0
 				/* Phy reset */
 				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27	0x000b0
+				/* ethernet phy interrupt */
+				MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28	0x1b0b0
 				MX6QDL_PAD_GPIO_6__ENET_IRQ		0x000b1
 			>;
 		};
