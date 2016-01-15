@@ -148,6 +148,17 @@
 #define R8_VERTICAL_SCALING(id)    RADDR(0x144 + GROUP(id) + ID2SC(id) * 0x10)
 #define R8_SCALING_HIGH(id)        RADDR(0x145 + GROUP(id) + ID2SC(id) * 0x10)
 #define R8_HORIZONTAL_SCALING(id)  RADDR(0x146 + GROUP(id) + ID2SC(id) * 0x10)
+
+#define R8_F2CROPPING_CONTROL(id)    RADDR(0x147 + GROUP(id) + ID2SC(id) * 0x10)
+#define R8_F2VERTICAL_DELAY(id)      RADDR(0x148 + GROUP(id) + ID2SC(id) * 0x10)
+#define R8_F2VERTICAL_ACTIVE(id)     RADDR(0x149 + GROUP(id) + ID2SC(id) * 0x10)
+#define R8_F2HORIZONTAL_DELAY(id)    RADDR(0x14A + GROUP(id) + ID2SC(id) * 0x10)
+#define R8_F2HORIZONTAL_ACTIVE(id)   RADDR(0x14B + GROUP(id) + ID2SC(id) * 0x10)
+#define R8_F2VERTICAL_SCALING(id)    RADDR(0x14C + GROUP(id) + ID2SC(id) * 0x10)
+#define R8_F2SCALING_HIGH(id)        RADDR(0x14D + GROUP(id) + ID2SC(id) * 0x10)
+#define R8_F2HORIZONTAL_SCALING(id)  RADDR(0x14E + GROUP(id) + ID2SC(id) * 0x10)
+#define R8_F2CNT(id)		     RADDR(0x14F + GROUP(id) + ID2SC(id) * 0x10)
+
 #define R8_AVSRST(id)              RADDR(0x180 + GROUP(id))
 #define R8_VERTICAL_CONTROL1(id)   RADDR(0x18F + GROUP(id))
 #define R8_MISC_CONTROL1(id)       RADDR(0x194 + GROUP(id))
