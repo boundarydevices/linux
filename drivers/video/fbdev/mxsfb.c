@@ -467,7 +467,7 @@ static int mxsfb_check_var(struct fb_var_screeninfo *var,
 		switch (host->ld_intf_width) {
 		case STMLCDIF_8BIT:
 			pr_debug("Unsupported LCD bus width mapping\n");
-			break;
+			return -EINVAL;
 		case STMLCDIF_16BIT:
 			/* 24 bit to 18 bit mapping */
 			rgb = def_rgb666;
@@ -1035,6 +1035,8 @@ static int mxsfb_restore_mode(struct mxsfb_info *host)
 	if (!(ctrl & CTRL_RUN))
 		return -EINVAL;
 
+	memset(&vmode, 0, sizeof(vmode));
+
 	vdctrl0 = readl(host->base + LCDC_VDCTRL0);
 	vdctrl2 = readl(host->base + LCDC_VDCTRL2);
 	vdctrl3 = readl(host->base + LCDC_VDCTRL3);
@@ -1119,7 +1121,7 @@ static int mxsfb_init_fbinfo_dt(struct mxsfb_info *host)
 	struct device_node *np = host->pdev->dev.of_node;
 	struct device_node *display_np;
 	struct device_node *timings_np;
-	struct display_timings *timings;
+	struct display_timings *timings = NULL;
 	const char *disp_dev;
 	u32 width;
 	int i;
@@ -1208,6 +1210,8 @@ static int mxsfb_init_fbinfo_dt(struct mxsfb_info *host)
 put_timings_node:
 	of_node_put(timings_np);
 put_display_node:
+	if (timings)
+		kfree(timings);
 	of_node_put(display_np);
 	return ret;
 }

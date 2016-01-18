@@ -260,21 +260,23 @@ static ssize_t gadget_dev_desc_bcdUSB_store(struct gadget_info *gi,
 
 static ssize_t gadget_dev_desc_UDC_show(struct gadget_info *gi, char *page)
 {
-	return sprintf(page, "%s\n", gi->udc_name ?: "");
+	char *udc_name = gi->composite.gadget_driver.udc_name;
+
+	return sprintf(page, "%s\n", udc_name ?: "");
 }
 
 static int unregister_gadget(struct gadget_info *gi)
 {
 	int ret;
 
-	if (!gi->udc_name)
+	if (!gi->composite.gadget_driver.udc_name)
 		return -ENODEV;
 
 	ret = usb_gadget_unregister_driver(&gi->composite.gadget_driver);
 	if (ret)
 		return ret;
-	kfree(gi->udc_name);
-	gi->udc_name = NULL;
+	kfree(gi->composite.gadget_driver.udc_name);
+	gi->composite.gadget_driver.udc_name = NULL;
 	return 0;
 }
 
@@ -297,14 +299,16 @@ static ssize_t gadget_dev_desc_UDC_store(struct gadget_info *gi,
 		if (ret)
 			goto err;
 	} else {
-		if (gi->udc_name) {
+		if (gi->composite.gadget_driver.udc_name) {
 			ret = -EBUSY;
 			goto err;
 		}
-		ret = usb_udc_attach_driver(name, &gi->composite.gadget_driver);
-		if (ret)
+		gi->composite.gadget_driver.udc_name = name;
+		ret = usb_gadget_probe_driver(&gi->composite.gadget_driver);
+		if (ret) {
+			gi->composite.gadget_driver.udc_name = NULL;
 			goto err;
-		gi->udc_name = name;
+		}
 	}
 	mutex_unlock(&gi->lock);
 	return len;
@@ -473,9 +477,9 @@ static int config_usb_cfg_unlink(
 	 * remove the function.
 	 */
 	mutex_lock(&gi->lock);
-	if (gi->udc_name)
+	if (gi->composite.gadget_driver.udc_name)
 		unregister_gadget(gi);
-	WARN_ON(gi->udc_name);
+	WARN_ON(gi->composite.gadget_driver.udc_name);
 
 	list_for_each_entry(f, &cfg->func_list, list) {
 		if (f->fi == fi) {
@@ -952,10 +956,10 @@ static int os_desc_unlink(struct config_item *os_desc_ci,
 	struct usb_composite_dev *cdev = &gi->cdev;
 
 	mutex_lock(&gi->lock);
-	if (gi->udc_name)
+	if (gi->composite.gadget_driver.udc_name)
 		unregister_gadget(gi);
 	cdev->os_desc_config = NULL;
-	WARN_ON(gi->udc_name);
+	WARN_ON(gi->composite.gadget_driver.udc_name);
 	mutex_unlock(&gi->lock);
 	return 0;
 }

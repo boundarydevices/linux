@@ -374,7 +374,7 @@ fec_enet_clear_csum(struct sk_buff *skb, struct net_device *ndev)
 	return 0;
 }
 
-static int
+static struct bufdesc *
 fec_enet_txq_submit_frag_skb(struct fec_enet_priv_tx_q *txq,
 			     struct sk_buff *skb,
 			     struct net_device *ndev)
@@ -449,10 +449,7 @@ fec_enet_txq_submit_frag_skb(struct fec_enet_priv_tx_q *txq,
 		bdp->cbd_sc = status;
 	}
 
-	txq->cur_tx = bdp;
-
-	return 0;
-
+	return bdp;
 dma_mapping_error:
 	bdp = txq->cur_tx;
 	for (i = 0; i < frag; i++) {
@@ -460,7 +457,7 @@ dma_mapping_error:
 		dma_unmap_single(&fep->pdev->dev, bdp->cbd_bufaddr,
 				bdp->cbd_datlen, DMA_TO_DEVICE);
 	}
-	return NETDEV_TX_OK;
+	return ERR_PTR(-ENOMEM);
 }
 
 static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
@@ -477,7 +474,6 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 	unsigned int estatus = 0;
 	unsigned int index;
 	int entries_free;
-	int ret;
 
 	entries_free = fec_enet_get_free_txdesc_num(fep, txq);
 	if (entries_free < MAX_SKB_FRAGS + 1) {
@@ -495,6 +491,7 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 
 	/* Fill in a Tx ring entry */
 	bdp = txq->cur_tx;
+	last_bdp = bdp;
 	status = bdp->cbd_sc;
 	status &= ~BD_ENET_TX_STATS;
 
@@ -523,9 +520,9 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 	}
 
 	if (nr_frags) {
-		ret = fec_enet_txq_submit_frag_skb(txq, skb, ndev);
-		if (ret)
-			return ret;
+		last_bdp = fec_enet_txq_submit_frag_skb(txq, skb, ndev);
+		if (IS_ERR(last_bdp))
+			return NETDEV_TX_OK;
 	} else {
 		status |= (BD_ENET_TX_INTR | BD_ENET_TX_LAST);
 		if (fep->bufdesc_ex) {
@@ -554,7 +551,6 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 		ebdp->cbd_esc = estatus;
 	}
 
-	last_bdp = txq->cur_tx;
 	index = fec_enet_get_bd_index(txq->tx_bd_base, last_bdp, fep);
 	/* Save skb pointer */
 	txq->tx_skbuff[index] = skb;
@@ -573,6 +569,10 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 
 	skb_tx_timestamp(skb);
 
+	/* Make sure the update to bdp and tx_skbuff are performed before
+	 * cur_tx.
+	 */
+	wmb();
 	txq->cur_tx = bdp;
 
 	/* Trigger transmission start */
@@ -1131,6 +1131,13 @@ static int fec_enet_stop_mode(struct fec_enet_private *fep, bool enabled)
 	return 0;
 }
 
+static inline void fec_irqs_disable(struct net_device *ndev)
+{
+	struct fec_enet_private *fep = netdev_priv(ndev);
+
+	writel(0, fep->hwp + FEC_IMASK);
+}
+
 static void
 fec_stop(struct net_device *ndev)
 {
@@ -1157,9 +1164,9 @@ fec_stop(struct net_device *ndev)
 			writel(1, fep->hwp + FEC_ECNTRL);
 			udelay(10);
 		}
-		writel(FEC_TIMER_DISABLED_IMASK, fep->hwp + FEC_IMASK);
+		writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
 	} else {
-		writel(FEC_TIMER_DISABLED_IMASK | FEC_ENET_WAKEUP, fep->hwp + FEC_IMASK);
+		writel(FEC_ENET_MII | FEC_ENET_WAKEUP, fep->hwp + FEC_IMASK);
 		val = readl(fep->hwp + FEC_ECNTRL);
 		val |= (FEC_ECR_MAGICEN | FEC_ECR_SLEEP);
 		writel(val, fep->hwp + FEC_ECNTRL);
@@ -1247,10 +1254,11 @@ fec_enet_tx_queue(struct net_device *ndev, u16 queue_id)
 	/* get next bdp of dirty_tx */
 	bdp = fec_enet_get_nextdesc(bdp, fep, queue_id);
 
-	while (((status = bdp->cbd_sc) & BD_ENET_TX_READY) == 0) {
-
-		/* current queue is empty */
-		if (bdp == txq->cur_tx)
+	while (bdp != READ_ONCE(txq->cur_tx)) {
+		/* Order the load of cur_tx and cbd_sc */
+		rmb();
+		status = READ_ONCE(bdp->cbd_sc);
+		if (status & BD_ENET_TX_READY)
 			break;
 
 		bdp_t = bdp;
@@ -1314,6 +1322,10 @@ fec_enet_tx_queue(struct net_device *ndev, u16 queue_id)
 		/* Free the sk buffer associated with this last transmit */
 		dev_kfree_skb_any(skb);
 
+		/* Make sure the update to bdp and tx_skbuff are performed
+		 * before dirty_tx
+		 */
+		wmb();
 		txq->dirty_tx = bdp;
 
 		/* Update pointer to next buffer descriptor to be transmitted */
@@ -1441,6 +1453,7 @@ fec_enet_rx_queue(struct net_device *ndev, int budget, u16 queue_id)
 		if ((status & BD_ENET_RX_LAST) == 0)
 			netdev_err(ndev, "rcv is not +last\n");
 
+		writel(FEC_ENET_RXF, fep->hwp + FEC_IEVENT);
 
 		/* Check for errors. */
 		if (status & (BD_ENET_RX_LG | BD_ENET_RX_SH | BD_ENET_RX_NO |
@@ -3328,9 +3341,9 @@ static void fec_reset_phy(struct platform_device *pdev)
 	if (!np)
 		return;
 
-	of_property_read_u32(np, "phy-reset-duration", &msec);
+	err = of_property_read_u32(np, "phy-reset-duration", &msec);
 	/* A sane reset duration should not be longer than 1s */
-	if (msec > 1000)
+	if (!err && msec > 1000)
 		msec = 1;
 
 	phy_reset = of_get_named_gpio(np, "phy-reset-gpios", 0);
@@ -3672,6 +3685,7 @@ static int __maybe_unused fec_suspend(struct device *dev)
 		netif_tx_unlock_bh(ndev);
 		fec_stop(ndev);
 		if (!(fep->wol_flag & FEC_WOL_FLAG_ENABLE)) {
+			fec_irqs_disable(ndev);
 			pinctrl_pm_select_sleep_state(&fep->pdev->dev);
 		} else {
 			disable_irq(fep->wake_irq);

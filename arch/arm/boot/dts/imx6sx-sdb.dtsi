@@ -43,6 +43,7 @@
 		default-brightness-level = <94>;
 		fb-names = "mxs-lcdif0";
 	};
+
 	backlight2 {
 		compatible = "pwm-backlight";
 		pwms = <&pwm4 0 5000000>;
@@ -72,7 +73,7 @@
 	hannstar_cabc {
 		compatible = "hannstar,cabc";
 		lvds0 {
-			gpios = <&gpio4 18 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpio4 26 GPIO_ACTIVE_HIGH>;
 		};
 	};
 

@@ -944,6 +944,14 @@
 	status = "okay";
 };
 
+&usbphy1 {
+	tx-d-cal = <0x5>;
+};
+
+&usbphy2 {
+	tx-d-cal = <0x5>;
+};
+
 &usdhc1 {
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc1>;
@@ -952,6 +960,8 @@
 	bus-width = <8>;
 	cd-gpios = <&gpio4 7 GPIO_ACTIVE_LOW>;
 	wp-gpios = <&gpio4 6 GPIO_ACTIVE_HIGH>;
+	keep-power-in-suspend;
+	enable-sdio-wakeup;
 	status = "okay";
 };
 
@@ -962,6 +972,8 @@
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
 	cd-gpios = <&gpio5 0 GPIO_ACTIVE_LOW>;
 	wp-gpios = <&gpio4 29 GPIO_ACTIVE_HIGH>;
+	keep-power-in-suspend;
+	enable-sdio-wakeup;
 	status = "okay";
 };
 
@@ -971,5 +983,7 @@
 	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
 	cd-gpios = <&gpio3 22 GPIO_ACTIVE_LOW>;
+	keep-power-in-suspend;
+	enable-sdio-wakeup;
 	status = "okay";
 };

@@ -372,6 +372,8 @@ struct bufdesc_ex {
 
 #define FEC_ENET_ETHEREN	((uint)0x00000002)
 
+#define FEC_ENET_ETHEREN	((uint)0x00000002)
+
 /* ENET interrupt coalescing macro define */
 #define FEC_ITR_CLK_SEL		(0x1 << 30)
 #define FEC_ITR_EN		(0x1 << 31)

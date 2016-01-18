@@ -43,6 +43,7 @@
  */
 #include "imx6qdl-microsom.dtsi"
 #include "imx6qdl-microsom-ar8035.dtsi"
+#include <dt-bindings/gpio/gpio.h>
 
 / {
 	aliases {

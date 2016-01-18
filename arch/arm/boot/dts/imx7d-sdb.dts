@@ -36,7 +36,7 @@
 			100
 			>;
 		default-brightness-level = <94>;
-
+		status = "okay";
 	};
 
 	bcmdhd_wlan_0: bcmdhd_wlan@0 {
@@ -210,6 +210,32 @@
 
 &epxp {
 	status = "okay";
+};
+
+&ecspi3 {
+	fsl,spi-num-chipselects = <1>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi3 &pinctrl_ecspi3_cs>;
+	cs-gpios = <&gpio5 9 0>;
+	status = "okay";
+
+	tsc2046 {
+		compatible = "ti,tsc2046";
+		reg = <0>;
+		spi-max-frequency = <1000000>;
+		pinctrl-names ="default";
+		pinctrl-0 = <&pinctrl_tsc2046_pendown>;
+		interrupt-parent = <&gpio2>;
+		interrupts = <29 0>;
+		pendown-gpio = <&gpio2 29 0>;
+		ti,x-min = /bits/ 16 <0>;
+		ti,x-max = /bits/ 16 <0>;
+		ti,y-min = /bits/ 16 <0>;
+		ti,y-max = /bits/ 16 <0>;
+		ti,pressure-max = /bits/ 16 <0>;
+		ti,x-plat-ohms = /bits/ 16 <400>;
+		linux,wakeup;
+	};
 };
 
 &fec1 {
@@ -538,6 +564,14 @@
 			>;
 		};
 
+		pinctrl_epdc_elan_touch: epdc_elan_touch_grp {
+			fsl,pins = <
+				MX7D_PAD_SAI1_RX_DATA__GPIO6_IO12 0x59
+				MX7D_PAD_SAI1_TX_DATA__GPIO6_IO15 0x1b
+				MX7D_PAD_SAI1_TX_BCLK__GPIO6_IO13 0x80000000
+			>;
+		};
+
 		pinctrl_ecspi3_cs: ecspi3_cs_grp {
 			fsl,pins = <
 				MX7D_PAD_SD2_CD_B__GPIO5_IO9	0x80000000
@@ -551,12 +585,13 @@
 				MX7D_PAD_SAI2_RX_DATA__ECSPI3_SCLK	0x2
 			>;
 		};
+
 		pinctrl_gpio_keys: gpio_keysgrp {
 			fsl,pins = <
-				MX7D_PAD_SD2_RESET_B__GPIO5_IO11	0x59
-				MX7D_PAD_SD2_WP__GPIO5_IO10  		0x59
-                        >;
-                };
+				MX7D_PAD_SD2_RESET_B__GPIO5_IO11        0x59
+				MX7D_PAD_SD2_WP__GPIO5_IO10             0x59
+			>;
+		};
 
 		pinctrl_enet1: enet1grp {
 			fsl,pins = <
@@ -594,13 +629,7 @@
 			>;
 		};
 
-		pinctrl_enet2_epdc0_en: enet2_epdc0_grp {
-			fsl,pins = <
-				MX7D_PAD_GPIO1_IO04__GPIO1_IO4		0x59
-			>;
-		};
-
-                pinctrl_epdc0: epdcgrp0 {
+        pinctrl_epdc0: epdcgrp0 {
                         fsl,pins = <
 				MX7D_PAD_EPDC_DATA00__EPDC_DATA0  0x2
 				MX7D_PAD_EPDC_DATA01__EPDC_DATA1  0x2
@@ -758,7 +787,6 @@
 
 		pinctrl_sai3: sai3grp {
 			fsl,pins = <
-				MX7D_PAD_GPIO1_IO03__SAI3_MCLK         0x1f
 				MX7D_PAD_UART3_TX_DATA__SAI3_TX_BCLK   0x1f
 				MX7D_PAD_UART3_CTS_B__SAI3_TX_SYNC     0x1f
 				MX7D_PAD_UART3_RTS_B__SAI3_TX_DATA0    0x30
@@ -1010,7 +1038,7 @@
 
 &sai3 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_sai3>;
+	pinctrl-0 = <&pinctrl_sai3 &pinctrl_sai3_mclk>;
 	assigned-clocks = <&clks IMX7D_SAI3_ROOT_SRC>,
 			  <&clks IMX7D_SAI3_ROOT_CLK>;
 	assigned-clock-parents = <&clks IMX7D_PLL_AUDIO_POST_DIV>;
@@ -1057,6 +1085,17 @@
 			>;
 		};
 
+		pinctrl_enet2_epdc0_en: enet2_epdc0_grp {
+			fsl,pins = <
+				MX7D_PAD_GPIO1_IO04__GPIO1_IO4		0x59
+			>;
+		};
+
+		pinctrl_sai3_mclk: sai3grp_mclk {
+			fsl,pins = <
+				MX7D_PAD_GPIO1_IO03__SAI3_MCLK         0x1f
+			>;
+		};
 	};
 };
 

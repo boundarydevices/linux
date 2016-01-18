@@ -43,7 +43,7 @@
 		/* Reconfig to power key in Android*/
 		power {
 			label = "Power Button";
-			gpios = <&gpio2 12 1>;
+			gpios = <&gpio2 12 GPIO_ACTIVE_LOW>;
 			linux,code = <116>; /* KEY_POWER */
 			gpio-key,wakeup;
 		};
@@ -163,6 +163,7 @@
 			regulator-max-microvolt = <3300000>;
 			gpio = <&gpio7 8 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
+			/* remove below line to enable this regulator */
 			status = "disabled";
 		};
 
@@ -297,6 +298,7 @@
 			100
 			>;
 		default-brightness-level = <94>;
+		status = "okay";
 	};
 
 	v4l2_cap_0 {
@@ -1116,6 +1118,20 @@
 	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
 	cd-gpios = <&gpio6 15 GPIO_ACTIVE_LOW>;
 	wp-gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;
+	/*
+	 * Due to board issue, we can not use external regulator for card slot
+	 * by default since the card power is shared with card detect pullup.
+	 * Disabling the vmmc regulator will cause unexpected card detect
+	 * interrupts.
+	 * HW rework is needed to fix this isssue. Remove R695 first, then you
+	 * can open below line to enable the using of external regulator.
+	 * Then you will be able to power off the card during suspend. This is
+	 * especially needed for a SD3.0 card re-enumeration working on UHS mode
+	 * Note: reg_sd3_vmmc is also need to be enabled
+	 */
+	/* vmmc-supply = <&reg_sd3_vmmc>; */
+	keep-power-in-suspend;
+	enable-sdio-wakeup;
 	status = "okay";
 };
 

@@ -120,7 +120,7 @@ static inline void mipi_dsi_write_register(struct mipi_dsi_info *mipi_dsi,
 			reg, val);
 }
 
-int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,
+static int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,
 				u8 data_type, const u32 *buf, int len)
 {
 	u32 val;
@@ -198,7 +198,7 @@ int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,
 	return 0;
 }
 
-int mipi_dsi_pkt_read(struct mipi_dsi_info *mipi_dsi,
+static int mipi_dsi_pkt_read(struct mipi_dsi_info *mipi_dsi,
 				u8 data_type, u32 *buf, int len)
 {
 	u32		val;
@@ -259,7 +259,7 @@ int mipi_dsi_pkt_read(struct mipi_dsi_info *mipi_dsi,
 	}
 }
 
-int mipi_dsi_dcs_cmd(struct mipi_dsi_info *mipi_dsi,
+static int mipi_dsi_dcs_cmd(struct mipi_dsi_info *mipi_dsi,
 				u8 cmd, const u32 *param, int num)
 {
 	int err = 0;
@@ -334,7 +334,7 @@ static void mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi,
 static void mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi,
 				bool init)
 {
-	u32		val;
+	u32		val = 0;
 	u32		lane_byte_clk_period;
 	struct  fb_videomode *mode = mipi_dsi->mode;
 	struct  mipi_lcd_config *lcd_config = mipi_dsi->lcd_config;
@@ -790,7 +790,7 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 	struct resource *res;
 	u32 dev_id, disp_id;
 	const char *lcd_panel;
-	unsigned int mux;
+	int mux;
 	int ret = 0;
 
 	mipi_dsi = devm_kzalloc(&pdev->dev, sizeof(*mipi_dsi), GFP_KERNEL);
@@ -889,7 +889,7 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 	mux = mipi_dsi->bus_mux->get_mux(dev_id, disp_id);
 	if (mux >= 0)
 		regmap_update_bits(mipi_dsi->regmap, mipi_dsi->bus_mux->reg,
-				   mipi_dsi->bus_mux->mask, mux);
+				   mipi_dsi->bus_mux->mask, (unsigned int)mux);
 	else
 		dev_warn(&pdev->dev, "invalid dev_id or disp_id muxing\n");
 
@@ -907,6 +907,10 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 		ret = PTR_ERR(mipi_dsi->disp_mipi);
 		goto dispdrv_reg_fail;
 	}
+
+	mipi_dsi->mipi_dsi_pkt_read  = mipi_dsi_pkt_read;
+	mipi_dsi->mipi_dsi_pkt_write = mipi_dsi_pkt_write;
+	mipi_dsi->mipi_dsi_dcs_cmd   = mipi_dsi_dcs_cmd;
 
 	mxc_dispdrv_setdata(mipi_dsi->disp_mipi, mipi_dsi);
 	dev_set_drvdata(&pdev->dev, mipi_dsi);
