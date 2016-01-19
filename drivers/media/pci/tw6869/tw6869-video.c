@@ -227,6 +227,11 @@ static void tw6869_vch_dma_cfg(struct tw6869_dma *dma)
 
 	BUG_ON(!pix->width);
 
+	/*
+	 * Enable pre-determined output value indicated by CCS when video loss
+	 * is detected (blue screen)
+	 */
+	tw_write(dma->dev, R8_MISC_CONTROL2(dma->id), 0xe7);
 	if (w)
 		setup_window(dma, pix, w);
 	cfg = BIT(31);
