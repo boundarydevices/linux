@@ -151,7 +151,7 @@ static irqreturn_t tw6869_irq(int irq, void *dev_id)
 		pars = tw_read(dev, R32_VIDEO_PARSER_STATUS);
 		cmd = tw_read(dev, R32_DMA_CMD);
 
-		errs = (ints >> 24 | errs >> 24 | errs >> 16 | errs) & TW_VID;
+		errs = (ints >> 24 | errs >> 24 | errs >> 16) & TW_VID;
 		ints = (ints | errs) & cmd;
 
 		for_each_set_bit(id, &ints, TW_ID_MAX) {
