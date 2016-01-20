@@ -254,13 +254,6 @@ static struct bufdesc *fec_enet_get_nextdesc(struct bufdesc *bdp,
 			: (struct bufdesc *)(((void *)bdp) + bd->dsize);
 }
 
-static struct bufdesc *fec_enet_get_prevdesc(struct bufdesc *bdp,
-					     struct bufdesc_prop *bd)
-{
-	return (bdp <= bd->base) ? bd->last
-			: (struct bufdesc *)(((void *)bdp) - bd->dsize);
-}
-
 static int fec_enet_get_bd_index(struct bufdesc *bdp,
 				 struct bufdesc_prop *bd)
 {
@@ -271,7 +264,7 @@ static int fec_enet_get_free_txdesc_num(struct fec_enet_priv_tx_q *txq)
 {
 	int entries;
 
-	entries = (((const char *)txq->dirty_tx -
+	entries = (((const char *)txq->pending_tx -
 			(const char *)txq->bd.cur) >> txq->bd.dsize_log2) - 1;
 
 	return entries >= 0 ? entries : entries + txq->bd.ring_size;
@@ -316,7 +309,7 @@ static void fec_dump(struct net_device *ndev)
 			pr_info("%3u %c%c 0x%04x 0x%08x %4u %p\n",
 				index,
 				bdp == txq->bd.cur ? 'S' : ' ',
-				bdp == txq->dirty_tx ? 'H' : ' ',
+				bdp == txq->pending_tx ? 'H' : ' ',
 				fec16_to_cpu(bdp->cbd_sc),
 				fec32_to_cpu(bdp->cbd_bufaddr),
 				fec16_to_cpu(bdp->cbd_datlen),
@@ -803,6 +796,8 @@ static void reset_tx_queue(struct fec_enet_private *fep,
 	unsigned int i;
 
 	txq->bd.cur = bdp;
+	txq->pending_tx = bdp;
+
 	for (i = 0; i < txq->bd.ring_size; i++) {
 		/* Initialize the BD for every fragment in the page. */
 		if (bdp->cbd_bufaddr) {
@@ -821,8 +816,6 @@ static void reset_tx_queue(struct fec_enet_private *fep,
 					   BD_SC_WRAP : 0);
 		bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
 	}
-	bdp = fec_enet_get_prevdesc(bdp, &txq->bd);
-	txq->dirty_tx = bdp;
 }
 
 /* Init RX & TX buffer descriptors
@@ -1192,11 +1185,8 @@ fec_timeout(struct net_device *ndev)
 		int index;
 		struct sk_buff *skb = NULL;
 
-		bdp = txq->dirty_tx;
-		while (1) {
-			bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
-			if (bdp == txq->bd.cur)
-				break;
+		bdp = txq->pending_tx;
+		while (bdp != txq->bd.cur) {
 			index = fec_enet_get_bd_index(bdp, &txq->bd);
 			skb = txq->tx_skbuff[index];
 			if (skb) {
@@ -1205,6 +1195,7 @@ fec_timeout(struct net_device *ndev)
 					events |= txint_flags[i];
 				break;
 			}
+			bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
 		}
 	}
 	if (events) {
@@ -1266,12 +1257,8 @@ static void fec_txq(struct net_device *ndev, struct fec_enet_priv_tx_q *txq)
 	int	index = 0;
 	int	entries_free;
 
-	/* get next bdp of dirty_tx */
 	nq = netdev_get_tx_queue(ndev, txq->bd.qid);
-	bdp = txq->dirty_tx;
-
-	/* get next bdp of dirty_tx */
-	bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
+	bdp = txq->pending_tx;
 
 	while (bdp != READ_ONCE(txq->bd.cur)) {
 		/* Order the load of bd.cur and cbd_sc */
@@ -1338,14 +1325,14 @@ static void fec_txq(struct net_device *ndev, struct fec_enet_priv_tx_q *txq)
 		/* Free the sk buffer associated with this last transmit */
 		dev_kfree_skb_any(skb);
 skb_done:
-		/* Make sure the update to bdp and tx_skbuff are performed
-		 * before dirty_tx
-		 */
-		wmb();
-		txq->dirty_tx = bdp;
-
 		/* Update pointer to next buffer descriptor to be transmitted */
 		bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
+
+		/* Make sure the update to bdp and tx_skbuff are performed
+		 * before pending_tx
+		 */
+		wmb();
+		txq->pending_tx = bdp;
 
 		/* Since we have freed up a buffer, the ring is no longer full
 		 */
