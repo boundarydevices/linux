@@ -481,6 +481,10 @@ struct fec_enet_stop_mode {
 	u8 req_bit;
 };
 
+/* bd.cur points to the currently available buffer.
+ * pending_tx tracks the current buffer that is being sent by the
+ * controller.  When bd.cur and pending_tx are equal, nothing is pending.
+ */
 struct fec_enet_priv_tx_q {
 	struct bufdesc_prop bd;
 	unsigned char *tx_bounce[TX_RING_SIZE];
@@ -489,7 +493,7 @@ struct fec_enet_priv_tx_q {
 	unsigned short tx_stop_threshold;
 	unsigned short tx_wake_threshold;
 
-	struct bufdesc	*dirty_tx;
+	struct bufdesc	*pending_tx;
 	char *tso_hdrs;
 	dma_addr_t tso_hdrs_dma;
 };
@@ -499,13 +503,7 @@ struct fec_enet_priv_rx_q {
 	struct  sk_buff *rx_skbuff[RX_RING_SIZE];
 };
 
-/* The FEC buffer descriptors track the ring buffers.  The rx_bd_base and
- * tx_bd_base always point to the base of the buffer descriptors.  The
- * cur_rx and cur_tx point to the currently available buffer.
- * The dirty_tx tracks the current buffer that is being sent by the
- * controller.  The cur_tx and dirty_tx are equal under both completely
- * empty and completely full conditions.  The empty/ready indicator in
- * the buffer descriptor determines the actual condition.
+/* The FEC buffer descriptors track the ring buffers.
  */
 struct fec_enet_private {
 	/* Hardware registers of the FEC device */
