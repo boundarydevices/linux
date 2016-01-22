@@ -725,8 +725,7 @@ static const struct ov5640_datafmt
 
 static inline void ov5640_power_down(int enable)
 {
-	/* 19x19 pwdn pin invert by mipi daughter card */
-	if (!enable)
+	if (enable)
 		gpio_set_value(pwn_gpio, 1);
 	else
 		gpio_set_value(pwn_gpio, 0);
