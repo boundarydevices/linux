@@ -293,12 +293,6 @@ struct bufdesc_ex {
 #define FEC_R_BUFF_SIZE(X)	(((X) == 1) ? FEC_R_BUFF_SIZE_1 : \
 				(((X) == 2) ? \
 					FEC_R_BUFF_SIZE_2 : FEC_R_BUFF_SIZE_0))
-#define FEC_R_DES_ACTIVE(X)	((X == 1) ? FEC_R_DES_ACTIVE_1 : \
-				((X == 2) ? \
-				   FEC_R_DES_ACTIVE_2 : FEC_R_DES_ACTIVE_0))
-#define FEC_X_DES_ACTIVE(X)	((X == 1) ? FEC_X_DES_ACTIVE_1 : \
-				((X == 2) ? \
-				   FEC_X_DES_ACTIVE_2 : FEC_X_DES_ACTIVE_0))
 
 #define FEC_DMA_CFG(X)		((X == 2) ? FEC_DMA_CFG_2 : FEC_DMA_CFG_1)
 
@@ -364,7 +358,8 @@ struct bufdesc_ex {
 #define FEC_ENET_TS_AVAIL       ((uint)0x00010000)
 #define FEC_ENET_TS_TIMER       ((uint)0x00008000)
 
-#define FEC_DEFAULT_IMASK (FEC_ENET_TXF | FEC_ENET_RXF | FEC_ENET_MII)
+#define FEC_DEFAULT_IMASK (FEC_ENET_TXF | FEC_ENET_RXF | FEC_ENET_MII | FEC_ENET_TS_TIMER)
+#define FEC_NAPI_IMASK	(FEC_ENET_MII | FEC_ENET_TS_TIMER)
 #define FEC_RX_DISABLED_IMASK (FEC_DEFAULT_IMASK & (~FEC_ENET_RXF))
 #define FEC_TIMER_DISABLED_IMASK (FEC_DEFAULT_IMASK & (~FEC_ENET_TS_TIMER))
 
@@ -442,16 +437,22 @@ struct fec_enet_stop_mode {
 };
 
 struct bufdesc_prop {
-	int index;
+	int qid;
 	/* Address of Rx and Tx buffers */
 	struct bufdesc	*base;
 	struct bufdesc	*last;
 	struct bufdesc	*cur;
+	void __iomem	*reg_desc_active;
 	dma_addr_t	dma;
 	unsigned short ring_size;
-	unsigned short desc_size;
+	unsigned char dsize;
+	unsigned char dsize_log2;
 };
 
+/* bd.cur points to the currently available buffer.
+ * pending_tx tracks the current buffer that is being sent by the
+ * controller.  When bd.cur and pending_tx are equal, nothing is pending.
+ */
 struct fec_enet_priv_tx_q {
 	struct bufdesc_prop bd;
 	unsigned char *tx_bounce[TX_RING_SIZE];
@@ -460,7 +461,7 @@ struct fec_enet_priv_tx_q {
 	unsigned short tx_stop_threshold;
 	unsigned short tx_wake_threshold;
 
-	struct bufdesc	*dirty_tx;
+	struct bufdesc	*pending_tx;
 	char *tso_hdrs;
 	dma_addr_t tso_hdrs_dma;
 };
@@ -470,13 +471,7 @@ struct fec_enet_priv_rx_q {
 	struct  sk_buff *rx_skbuff[RX_RING_SIZE];
 };
 
-/* The FEC buffer descriptors track the ring buffers.  The rx_bd_base and
- * tx_bd_base always point to the base of the buffer descriptors.  The
- * cur_rx and cur_tx point to the currently available buffer.
- * The dirty_tx tracks the current buffer that is being sent by the
- * controller.  The cur_tx and dirty_tx are equal under both completely
- * empty and completely full conditions.  The empty/ready indicator in
- * the buffer descriptor determines the actual condition.
+/* The FEC buffer descriptors track the ring buffers.
  */
 struct fec_enet_private {
 	/* Hardware registers of the FEC device */
@@ -502,8 +497,7 @@ struct fec_enet_private {
 	unsigned int total_tx_ring_size;
 	unsigned int total_rx_ring_size;
 	uint	events;
-
-	unsigned short bufdesc_size;
+	uint	last_ievents;
 
 	struct	platform_device *pdev;
 
