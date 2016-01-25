@@ -214,7 +214,7 @@ struct imx_i2c_struct {
 	struct imx_i2c_dma	*dma;
 };
 
-static const struct imx_i2c_hwdata imx1_i2c_hwdata  = {
+static const struct imx_i2c_hwdata imx1_i2c_hwdata = {
 	.devtype		= IMX1_I2C,
 	.regshift		= IMX_I2C_REGSHIFT,
 	.clk_div		= imx_i2c_clk_div,
@@ -224,7 +224,7 @@ static const struct imx_i2c_hwdata imx1_i2c_hwdata  = {
 
 };
 
-static const struct imx_i2c_hwdata imx21_i2c_hwdata  = {
+static const struct imx_i2c_hwdata imx21_i2c_hwdata = {
 	.devtype		= IMX21_I2C,
 	.regshift		= IMX_I2C_REGSHIFT,
 	.clk_div		= imx_i2c_clk_div,
@@ -878,7 +878,7 @@ static int i2c_imx_read(struct imx_i2c_struct *i2c_imx, struct i2c_msg *msgs, bo
 		if ((!i) && block_data)
 			msgs->buf[0] = len;
 		else
-			msgs->buf[i] =  imx_i2c_read_reg(i2c_imx, IMX_I2C_I2DR);
+			msgs->buf[i] = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2DR);
 		dev_dbg(&i2c_imx->adapter.dev,
 			"<%s> read byte: B%d=0x%X\n",
 			__func__, i, msgs->buf[i]);
@@ -923,7 +923,7 @@ static int i2c_imx_xfer(struct i2c_adapter *adapter,
 			temp = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2CR);
 			temp |= I2CR_RSTA;
 			imx_i2c_write_reg(temp, i2c_imx, IMX_I2C_I2CR);
-			result =  i2c_imx_bus_busy(i2c_imx, 1);
+			result = i2c_imx_bus_busy(i2c_imx, 1);
 			if (result)
 				goto fail0;
 		}
