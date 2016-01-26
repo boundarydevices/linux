@@ -4342,6 +4342,52 @@ out:
 	return ret;
 }
 
+static ssize_t fec_show_events(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+	struct net_device *ndev = dev_get_drvdata(dev);
+	struct fec_enet_private *fep = netdev_priv(ndev);
+	int qid;
+	int complete_cnt[] = {0, 0, 0};
+
+	for (qid = 0; qid < fep->num_rx_queues; qid++) {
+		struct fec_enet_priv_rx_q *rxq = fep->rx_queue[qid];
+		struct bufdesc *bdp = rxq->bd.cur;
+
+		do {
+			unsigned status = fec16_to_cpu(bdp->cbd_sc);
+
+			if (status & BD_ENET_RX_EMPTY)
+				break;
+			complete_cnt[qid]++;
+			bdp = fec_enet_get_nextdesc(bdp, &rxq->bd);
+		} while (bdp != rxq->bd.cur);
+	}
+	return sprintf(buf, "%08x %08x %08x %d %d %d\n", fep->events,
+			readl(fep->hwp + FEC_IEVENT),
+			readl(fep->hwp + FEC_IMASK),
+			complete_cnt[0], complete_cnt[1], complete_cnt[2]);
+}
+
+static ssize_t fec_set_events(struct device *dev,
+			      struct device_attribute *attr,
+			      const char *buf, size_t count)
+{
+	struct net_device *ndev = dev_get_drvdata(dev);
+	struct fec_enet_private *fep = netdev_priv(ndev);
+	unsigned long events;
+
+	/* Disable the RX/TX interrupt */
+	writel(0, fep->hwp + FEC_IMASK);
+	if (!kstrtoul(buf, 16, &events))
+		fep->events |= events;
+	napi_schedule(&fep->napi);
+	netif_wake_queue(fep->netdev);
+	return count;
+}
+
+static DEVICE_ATTR(events, 0644, fec_show_events, fec_set_events);
+
 static int
 fec_probe(struct platform_device *pdev)
 {
@@ -4623,6 +4669,9 @@ fec_probe(struct platform_device *pdev)
 
 	ndev->max_mtu = PKT_MAXBUF_SIZE - ETH_HLEN - ETH_FCS_LEN;
 
+	ret = device_create_file(&pdev->dev, &dev_attr_events);
+	if (ret)
+		dev_err(&pdev->dev, "Error creating fec sysfs file(%d)\n", ret);
 	ret = register_netdev(ndev);
 	if (ret)
 		goto failed_register;
@@ -4642,6 +4691,7 @@ fec_probe(struct platform_device *pdev)
 	return 0;
 
 failed_register:
+	device_remove_file(&pdev->dev, &dev_attr_events);
 	fec_enet_mii_remove(fep);
 failed_mii_init:
 failed_irq:
@@ -4686,6 +4736,7 @@ fec_drv_remove(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
+	device_remove_file(&pdev->dev, &dev_attr_events);
 	cancel_work_sync(&fep->tx_timeout_work);
 	fec_ptp_stop(pdev);
 	unregister_netdev(ndev);
