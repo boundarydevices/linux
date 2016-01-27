@@ -114,6 +114,16 @@
 			enable-active-high;
 		};
 
+		reg_hdmi: regulator@5 {
+			compatible = "regulator-fixed";
+			reg = <5>;
+			regulator-name = "hdmi-5v-supply";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			enable-active-high;
+			hdmi-5v-supply = <&swbst_reg>;
+		};
+
 		reg_mipi_dsi_pwr_on: mipi_dsi_pwr_on {
 			compatible = "regulator-fixed";
 			regulator-name = "mipi_dsi_pwr_on";
@@ -398,6 +408,7 @@
 &hdmi_video {
 	fsl,phy_reg_vlev = <0x0294>;
 	fsl,phy_reg_cksymtx = <0x800d>;
+	HDMI-supply = <&reg_hdmi>;
 	status = "okay";
 };
 
