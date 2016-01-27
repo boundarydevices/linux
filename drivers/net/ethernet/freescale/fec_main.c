@@ -1679,9 +1679,10 @@ static int fec_enet_napi_q1(struct napi_struct *napi, int budget)
 		}
 
 		writel(events, fep->hwp + FEC_IEVENT);
-		if (events & FEC_ENET_RXF_0)
-			pkts += fec_rxq(ndev, fep->rx_queue[0],
-					budget - pkts);
+		/* don't check FEC_ENET_RXF_0, to recover from a full queue
+		 * but bit clear condition
+		 */
+		pkts += fec_rxq(ndev, fep->rx_queue[0], budget - pkts);
 		if (events & FEC_ENET_TXF_0)
 			fec_txq(ndev, fep->tx_queue[0]);
 	} while (pkts < budget);
