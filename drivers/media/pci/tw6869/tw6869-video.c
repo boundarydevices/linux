@@ -240,10 +240,13 @@ static void tw6869_vch_dma_cfg(struct tw6869_dma *dma)
 	tw_write(dma->dev, R32_VIDEO_SIZE(dma->id), cfg);
 
 	cfg = 13 + ID2CH(dma->id);
-	if (vch->std & V4L2_STD_625_50)
+	if (vch->std & V4L2_STD_625_50) {
 		tw_set(dma->dev, R32_VIDEO_CONTROL1, BIT(cfg));
-	else
+		tw_write(dma->dev, R8_VERTICAL_DELAY(dma->id), 0x18);
+	} else {
 		tw_clear(dma->dev, R32_VIDEO_CONTROL1, BIT(cfg));
+		tw_write(dma->dev, R8_VERTICAL_DELAY(dma->id), 0x16);
+	}
 
 	cfg = 16 + ID2CH(dma->id) * 2;
 	if (tw_vch_frame_mode(vch)) {
