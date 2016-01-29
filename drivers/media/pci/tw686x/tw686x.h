@@ -18,10 +18,16 @@
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
-#include <media/videobuf2-v4l2.h>
+#include <media/videobuf2-core.h>
 #include <sound/pcm.h>
 
 #include "tw686x-regs.h"
+#define PCI_VENDOR_ID_TECHWELL	0x1797
+#define to_vb2_v4l2_buffer(vb) \
+        container_of(vb, struct vb2_v4l2_buffer, vb2_buf)
+struct vb2_v4l2_buffer {
+	struct vb2_buffer	vb2_buf;
+};
 
 #define TYPE_MAX_CHANNELS	0x0F
 #define TYPE_SECOND_GEN		0x10
