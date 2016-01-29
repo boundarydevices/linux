@@ -149,6 +149,15 @@
 		>;
 	};
 
+	pinctrl_i2c2_tc358743_mipi: i2c2-tc358743_mipigrp {
+		fsl,pins = <
+#define GP_TC3587_RESET	<&gpio6 9 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x030b0
+#define GPIRQ_TC3587	<&gpio2 5 IRQ_TYPE_LEVEL_LOW>
+			MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x0b0b0
+		>;
+	};
+
 	pinctrl_i2c3: i2c3grp {
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_5__I2C3_SCL		0x4001b8b1
@@ -692,6 +701,22 @@
 		mclk = <22000000>;
 		mclk_source = <0>;
 		pwms = <&pwm3 0 45>;
+	};
+
+	tc358743_mipi: tc358743_mipi@0f {
+		compatible = "tc358743_mipi";
+		reg = <0x0f>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_tc358743_mipi>;
+		DOVDD-supply = <&reg_1p8v>;
+		AVDD-supply = <&reg_2p5v>;
+		DVDD-supply = <&reg_1p8v>;
+		rst-gpios = GP_TC3587_RESET;
+		interrupts-extended = GPIRQ_TC3587;
+		ipu_id = <0>;
+		csi_id = <0>;
+		mclk = <22000000>;
+		mclk_source = <0>;
 	};
 };
 
