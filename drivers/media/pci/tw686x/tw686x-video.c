@@ -95,7 +95,7 @@ static const struct tw686x_format *format_by_fourcc(unsigned fourcc)
 	return NULL;
 }
 
-static int tw686x_queue_setup(struct vb2_queue *vq,
+static int tw686x_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 			      unsigned int *nbuffers, unsigned int *nplanes,
 			      unsigned int sizes[], void *alloc_ctxs[])
 {
@@ -247,6 +247,11 @@ static int tw686x_start_streaming(struct vb2_queue *vq, unsigned int count)
 	spin_unlock_irqrestore(&dev->lock, flags);
 	if (!pci_dev)
 		return -ENODEV;
+
+	if (count < 2) {
+		v4l2_err(&dev->v4l2_dev, "no enough buffers queued\n");
+		return -ENOBUFS;
+	}
 
 	spin_lock_irqsave(&vc->qlock, flags);
 
@@ -741,11 +746,11 @@ static void tw686x_buffer_copy(struct tw686x_video_channel *vc,
 	struct tw686x_dma_desc *desc = &vc->dma_descs[pb];
 	struct vb2_buffer *vb2_buf = &vb->vb2_buf;
 
-	vb->field = V4L2_FIELD_INTERLACED;
-	vb->sequence = vc->sequence++;
+	vb->vb2_buf.v4l2_buf.field = V4L2_FIELD_INTERLACED;
+	vb->vb2_buf.v4l2_buf.sequence = vc->sequence++;
 
 	memcpy(vb2_plane_vaddr(vb2_buf, 0), desc->virt, desc->size);
-	vb2_buf->timestamp = ktime_get_ns();
+	v4l2_get_timestamp(&vb2_buf->v4l2_buf.timestamp);
 	vb2_buffer_done(vb2_buf, VB2_BUF_STATE_DONE);
 }
 
