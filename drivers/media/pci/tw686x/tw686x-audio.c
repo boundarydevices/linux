@@ -334,7 +334,7 @@ int tw686x_audio_init(struct tw686x_dev *dev)
 	 */
 	reg_write(dev, AUDIO_CONTROL1, 0x80000001);
 
-	err = snd_card_new(&pci_dev->dev, SNDRV_DEFAULT_IDX1,
+	err = snd_card_create(SNDRV_DEFAULT_IDX1,
 			   SNDRV_DEFAULT_STR1,
 			   THIS_MODULE, 0, &card);
 	if (err < 0)
