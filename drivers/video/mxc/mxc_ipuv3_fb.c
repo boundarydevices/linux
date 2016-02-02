@@ -1,5 +1,6 @@
 /*
  * Copyright 2004-2015 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2015 Jerome Pouiller <j.pouiller@sysmic.fr>. All Rights Reserved.
  */
 
 /*
@@ -61,6 +62,14 @@
 /*!
  * Structure containing the MXC specific framebuffer information.
  */
+
+struct rotate_buf {
+	dma_addr_t phy_addr;
+	void *virt_addr;
+};
+#define need_xy_swap(mxc_fbi, fbi) (mxc_fbi->ipu_ch == MEM_BG_SYNC && fbi->var.rotate >= IPU_ROTATE_90_RIGHT)
+#define double_buf(fbi) (fbi->var.accel_flags & FB_ACCEL_DOUBLE_FLAG)
+
 struct mxcfb_info {
 	int default_bpp;
 	int cur_blank;
@@ -75,11 +84,15 @@ struct mxcfb_info {
 	bool alpha_chan_en;
 	bool late_init;
 	bool first_set_par;
+	bool rotate_channel_enabled;
 	dma_addr_t alpha_phy_addr0;
 	dma_addr_t alpha_phy_addr1;
 	void *alpha_virt_addr0;
 	void *alpha_virt_addr1;
 	uint32_t alpha_mem_len;
+	struct rotate_buf bg_rotate[2];
+	uint32_t cur_ipu_rot_buf;
+	uint32_t bg_mem_len;
 	uint32_t ipu_ch_irq;
 	uint32_t ipu_ch_nf_irq;
 	uint32_t ipu_alp_ch_irq;
@@ -326,6 +339,8 @@ static int _setup_disp_channel1(struct fb_info *fbi)
 			params.mem_dp_bg_sync.alpha_chan_en = true;
 	}
 	ipu_init_channel(mxc_fbi->ipu, mxc_fbi->ipu_ch, &params);
+	if (need_xy_swap(mxc_fbi, fbi))
+		ipu_init_channel(mxc_fbi->ipu, MEM_ROT_VF_MEM, NULL);
 
 	return 0;
 }
@@ -337,6 +352,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	int fb_stride;
 	unsigned long base;
 	unsigned int fr_xoff, fr_yoff, fr_w, fr_h;
+	ipu_channel_t ipu_ch;
 
 	switch (FB_PIX(fbi, mxc_fbi)) {
 	case IPU_PIX_FMT_YUV420P2:
@@ -368,8 +384,49 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	}
 	base += fr_yoff * fb_stride + fr_xoff;
 
-	mxc_fbi->cur_ipu_buf = 2;
+	mxc_fbi->cur_ipu_buf = double_buf(fbi) ? 1 : 2;
 	init_completion(&mxc_fbi->flip_complete);
+	if (mxc_fbi->alpha_chan_en) {
+		mxc_fbi->cur_ipu_alpha_buf = 1;
+		init_completion(&mxc_fbi->alpha_flip_complete);
+	}
+
+	if (need_xy_swap(mxc_fbi, fbi)) {
+		mxc_fbi->cur_ipu_rot_buf = 0;
+		fbi->var.accel_flags |= FB_ACCEL_DOUBLE_FLAG;
+		/* MEM_ROT_VF_MEM does not support triple buffering */
+		retval = ipu_init_channel_buffer(mxc_fbi->ipu,
+				MEM_ROT_VF_MEM, IPU_OUTPUT_BUFFER,
+				fbi_to_pixfmt(fbi, mxc_fbi),
+				fbi->var.yres, fbi->var.xres,
+				fbi->var.yres,
+				IPU_ROTATE_NONE,
+				mxc_fbi->bg_rotate[0].phy_addr,
+				mxc_fbi->bg_rotate[1].phy_addr,
+				0,
+				0, 0);
+		if (retval) {
+			dev_err(fbi->device, "ipu_init_channel_buffer error %d\n", retval);
+			return retval;
+		}
+		retval = ipu_init_channel_buffer(mxc_fbi->ipu,
+				mxc_fbi->ipu_ch, IPU_INPUT_BUFFER,
+				fbi_to_pixfmt(fbi, mxc_fbi),
+				fbi->var.yres, fbi->var.xres,
+				fbi->var.yres,
+				IPU_ROTATE_NONE,
+				mxc_fbi->bg_rotate[0].phy_addr,
+				mxc_fbi->bg_rotate[1].phy_addr,
+				0,
+				0, 0);
+		if (retval) {
+			dev_err(fbi->device, "ipu_init_channel_buffer error %d\n", retval);
+			return retval;
+		}
+		ipu_ch = MEM_ROT_VF_MEM;
+	} else {
+		ipu_ch = mxc_fbi->ipu_ch;
+	}
 	/*
 	 * We don't need to wait for vsync at the first time
 	 * we do pan display after fb is initialized, as IPU will
@@ -379,21 +436,18 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	 */
 	complete(&mxc_fbi->flip_complete);
 	if (mxc_fbi->alpha_chan_en) {
-		mxc_fbi->cur_ipu_alpha_buf = 1;
-		init_completion(&mxc_fbi->alpha_flip_complete);
 		complete(&mxc_fbi->alpha_flip_complete);
 	}
 
 	retval = ipu_init_channel_buffer(mxc_fbi->ipu,
-					 mxc_fbi->ipu_ch, IPU_INPUT_BUFFER,
+					 ipu_ch, IPU_INPUT_BUFFER,
 					 FB_PIX(fbi, mxc_fbi),
 					 fbi->var.xres, fbi->var.yres,
 					 fb_stride,
 					 fbi->var.rotate,
 					 base,
 					 base,
-					 fbi->var.accel_flags &
-						FB_ACCEL_DOUBLE_FLAG ? 0 : base,
+					 double_buf(fbi) ? 0 : base,
 					 0, 0);
 	if (retval) {
 		dev_err(fbi->device,
@@ -402,7 +456,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 	}
 
 	/* update u/v offset */
-	ipu_update_channel_offset(mxc_fbi->ipu, mxc_fbi->ipu_ch,
+	ipu_update_channel_offset(mxc_fbi->ipu, ipu_ch,
 			IPU_INPUT_BUFFER,
 			FB_PIX(fbi, mxc_fbi),
 			fr_w,
@@ -419,7 +473,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 						 IPU_PIX_FMT_GENERIC,
 						 fbi->var.xres, fbi->var.yres,
 						 fbi->var.xres,
-						 fbi->var.rotate,
+						 need_xy_swap(mxc_fbi, fbi) ? IPU_ROTATE_NONE : fbi->var.rotate,
 						 mxc_fbi->alpha_phy_addr1,
 						 mxc_fbi->alpha_phy_addr0,
 						 0,
@@ -527,6 +581,14 @@ static int mxcfb_set_par(struct fb_info *fbi)
 	ipu_disable_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
 	ipu_clear_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_nf_irq);
 	ipu_disable_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_nf_irq);
+	if (mxc_fbi->ipu_ch == MEM_BG_SYNC) {
+		if (mxc_fbi->rotate_channel_enabled) {
+			ipu_unlink_channels(mxc_fbi->ipu, MEM_ROT_VF_MEM, mxc_fbi->ipu_ch);
+			mxc_fbi->rotate_channel_enabled = false;
+			ipu_disable_channel(mxc_fbi->ipu, MEM_ROT_VF_MEM, true);
+			ipu_uninit_channel(mxc_fbi->ipu, MEM_ROT_VF_MEM, NULL);
+		}
+	}
 	ipu_disable_channel(mxc_fbi->ipu, mxc_fbi->ipu_ch, true);
 	ipu_uninit_channel(mxc_fbi->ipu, mxc_fbi->ipu_ch, &params);
 
@@ -659,7 +721,8 @@ static int mxcfb_set_par(struct fb_info *fbi)
 
 		if (ipu_init_sync_panel(mxc_fbi->ipu, mxc_fbi->ipu_di,
 					(PICOS2KHZ(fbi->var.pixclock)) * 1000UL,
-					fbi->var.xres, fbi->var.yres,
+					need_xy_swap(mxc_fbi, fbi) ? fbi->var.yres : fbi->var.xres,
+					need_xy_swap(mxc_fbi, fbi) ? fbi->var.xres : fbi->var.yres,
 					out_pixel_fmt,
 					fbi->var.left_margin,
 					fbi->var.hsync_len,
@@ -697,6 +760,26 @@ static int mxcfb_set_par(struct fb_info *fbi)
 			ipu_uninit_channel(mxc_fbi->ipu, mxc_fbi->ipu_ch, &params);
 			return retval;
 		}
+	}
+
+	if (need_xy_swap(mxc_fbi, fbi)) {
+		int i;
+
+		ipu_clear_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
+		ipu_enable_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
+		retval = ipu_link_channels(mxc_fbi->ipu, MEM_ROT_VF_MEM, mxc_fbi->ipu_ch);
+		if (retval)
+			dev_err(fbi->device, "ipu_link_channel error %d\n", retval);
+		mxc_fbi->rotate_channel_enabled = true;
+		retval = ipu_enable_channel(mxc_fbi->ipu, MEM_ROT_VF_MEM);
+		if (retval)
+			dev_err(fbi->device, "ipu_enable_channel error %d\n", retval);
+		mxc_fbi->cur_ipu_rot_buf = 0;
+		for (i = 0; i < 2; i++)
+			ipu_select_buffer(mxc_fbi->ipu, MEM_ROT_VF_MEM, IPU_INPUT_BUFFER, i);
+		for (i = 0; i < 2; i++)
+			ipu_select_buffer(mxc_fbi->ipu, MEM_ROT_VF_MEM, IPU_OUTPUT_BUFFER, i);
+		ipu_select_buffer(mxc_fbi->ipu, mxc_fbi->ipu_ch, IPU_INPUT_BUFFER, mxc_fbi->cur_ipu_rot_buf);
 	}
 
 	ipu_enable_channel(mxc_fbi->ipu, mxc_fbi->ipu_ch);
@@ -848,7 +931,7 @@ static int swap_channels(struct fb_info *fbi_from)
 	}
 
 	if (ipu_request_irq(mxc_fbi_from->ipu, mxc_fbi_from->ipu_ch_irq,
-		mxcfb_irq_handler, IPU_IRQF_ONESHOT,
+		mxcfb_irq_handler, need_xy_swap(mxc_fbi_from, fbi_from) ? 0 : IPU_IRQF_ONESHOT,
 		MXCFB_NAME, fbi_from) != 0) {
 		dev_err(fbi_from->device, "Error registering irq %d\n",
 			mxc_fbi_from->ipu_ch_irq);
@@ -856,7 +939,7 @@ static int swap_channels(struct fb_info *fbi_from)
 	}
 	ipu_disable_irq(mxc_fbi_from->ipu, mxc_fbi_from->ipu_ch_irq);
 	if (ipu_request_irq(mxc_fbi_to->ipu, mxc_fbi_to->ipu_ch_irq,
-		mxcfb_irq_handler, IPU_IRQF_ONESHOT,
+		mxcfb_irq_handler, need_xy_swap(mxc_fbi_to, fbi_to) ? 0 : IPU_IRQF_ONESHOT,
 		MXCFB_NAME, fbi_to) != 0) {
 		dev_err(fbi_to->device, "Error registering irq %d\n",
 			mxc_fbi_to->ipu_ch_irq);
@@ -923,7 +1006,7 @@ static int mxcfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 			var->yres = bg_yres - pos_y;
 	}
 
-	if (var->rotate > IPU_ROTATE_VERT_FLIP)
+	if (var->rotate > IPU_ROTATE_90_LEFT)
 		var->rotate = IPU_ROTATE_NONE;
 
 	if (var->xres_virtual < var->xres)
@@ -1505,6 +1588,7 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 	int fb_stride;
 	int i;
 	int ret;
+	ipu_channel_t ipu_ch;
 
 	/* no pan display during fb blank */
 	if (mxc_fbi->ipu_ch == MEM_FG_SYNC) {
@@ -1591,14 +1675,23 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 		return -ETIMEDOUT;
 	}
 
-	++mxc_fbi->cur_ipu_buf;
-	mxc_fbi->cur_ipu_buf %= 3;
+	if (double_buf(info)) {
+		mxc_fbi->cur_ipu_buf ^= 1;
+	} else {
+		mxc_fbi->cur_ipu_buf = (mxc_fbi->cur_ipu_buf + 1) % 3;
+	}
 	mxc_fbi->cur_ipu_alpha_buf = !mxc_fbi->cur_ipu_alpha_buf;
+
+	if (need_xy_swap(mxc_fbi, info)) {
+		ipu_ch = MEM_ROT_VF_MEM;
+	} else {
+		ipu_ch = mxc_fbi->ipu_ch;
+	}
 
 	dev_dbg(info->device, "Updating SDC %s buf %d address=0x%08lX\n",
 		info->fix.id, mxc_fbi->cur_ipu_buf, base);
 
-	if (ipu_update_channel_buffer(mxc_fbi->ipu, mxc_fbi->ipu_ch, IPU_INPUT_BUFFER,
+	if (ipu_update_channel_buffer(mxc_fbi->ipu, ipu_ch, IPU_INPUT_BUFFER,
 				      mxc_fbi->cur_ipu_buf, base) == 0) {
 		/* Update the DP local alpha buffer only for graphic plane */
 		if (loc_alpha_en && mxc_graphic_fbi == mxc_fbi &&
@@ -1612,7 +1705,7 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 		}
 
 		/* update u/v offset */
-		ipu_update_channel_offset(mxc_fbi->ipu, mxc_fbi->ipu_ch,
+		ipu_update_channel_offset(mxc_fbi->ipu, ipu_ch,
 				IPU_INPUT_BUFFER,
 				FB_PIX(info, mxc_fbi),
 				fr_w,
@@ -1622,27 +1715,28 @@ mxcfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 				fr_yoff,
 				fr_xoff);
 
-		ipu_select_buffer(mxc_fbi->ipu, mxc_fbi->ipu_ch, IPU_INPUT_BUFFER,
-				  mxc_fbi->cur_ipu_buf);
-		ipu_clear_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
-		ipu_enable_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
+		if (ipu_ch != MEM_ROT_VF_MEM) {
+			ipu_select_buffer(mxc_fbi->ipu, ipu_ch, IPU_INPUT_BUFFER,
+					  mxc_fbi->cur_ipu_buf);
+			ipu_clear_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
+			ipu_enable_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
+		}
 	} else {
 		dev_err(info->device,
 			"Error updating SDC buf %d to address=0x%08lX, "
 			"current buf %d, buf0 ready %d, buf1 ready %d, "
 			"buf2 ready %d\n", mxc_fbi->cur_ipu_buf, base,
-			ipu_get_cur_buffer_idx(mxc_fbi->ipu, mxc_fbi->ipu_ch,
+			ipu_get_cur_buffer_idx(mxc_fbi->ipu, ipu_ch,
 					       IPU_INPUT_BUFFER),
-			ipu_check_buffer_ready(mxc_fbi->ipu, mxc_fbi->ipu_ch,
+			ipu_check_buffer_ready(mxc_fbi->ipu, ipu_ch,
 					       IPU_INPUT_BUFFER, 0),
-			ipu_check_buffer_ready(mxc_fbi->ipu, mxc_fbi->ipu_ch,
+			ipu_check_buffer_ready(mxc_fbi->ipu, ipu_ch,
 					       IPU_INPUT_BUFFER, 1),
-			ipu_check_buffer_ready(mxc_fbi->ipu, mxc_fbi->ipu_ch,
+			ipu_check_buffer_ready(mxc_fbi->ipu, ipu_ch,
 					       IPU_INPUT_BUFFER, 2));
-		++mxc_fbi->cur_ipu_buf;
-		mxc_fbi->cur_ipu_buf %= 3;
-		++mxc_fbi->cur_ipu_buf;
-		mxc_fbi->cur_ipu_buf %= 3;
+		if (!double_buf(info)) {
+			mxc_fbi->cur_ipu_buf = (mxc_fbi->cur_ipu_buf + 2) % 3;
+		}
 		mxc_fbi->cur_ipu_alpha_buf = !mxc_fbi->cur_ipu_alpha_buf;
 		ipu_clear_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
 		ipu_enable_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_irq);
@@ -1734,6 +1828,12 @@ static irqreturn_t mxcfb_irq_handler(int irq, void *dev_id)
 	struct fb_info *fbi = dev_id;
 	struct mxcfb_info *mxc_fbi = fbi->par;
 
+	if (mxc_fbi->rotate_channel_enabled) {
+		ipu_select_buffer(mxc_fbi->ipu, MEM_ROT_VF_MEM, IPU_OUTPUT_BUFFER, mxc_fbi->cur_ipu_rot_buf);
+		ipu_select_buffer(mxc_fbi->ipu, MEM_ROT_VF_MEM, IPU_INPUT_BUFFER, mxc_fbi->cur_ipu_rot_buf);
+		mxc_fbi->cur_ipu_rot_buf ^= 1;
+		ipu_select_buffer(mxc_fbi->ipu, mxc_fbi->ipu_ch, IPU_INPUT_BUFFER, mxc_fbi->cur_ipu_rot_buf);
+	}
 	complete(&mxc_fbi->flip_complete);
 	return IRQ_HANDLED;
 }
@@ -1831,6 +1931,8 @@ static int mxcfb_resume(struct platform_device *pdev)
  */
 static int mxcfb_map_video_memory(struct fb_info *fbi)
 {
+	struct mxcfb_info *mxcfbi = (struct mxcfb_info *)fbi->par;
+
 	if (fbi->fix.smem_len < fbi->var.yres_virtual * fbi->fix.line_length)
 		fbi->fix.smem_len = fbi->var.yres_virtual *
 				    fbi->fix.line_length;
@@ -1851,6 +1953,23 @@ static int mxcfb_map_video_memory(struct fb_info *fbi)
 
 	fbi->screen_size = fbi->fix.smem_len;
 
+	if (need_xy_swap(mxcfbi, fbi)) {
+		int i;
+
+		mxcfbi->bg_mem_len = fbi->var.yres_virtual * fbi->fix.line_length ;
+		for (i = 0; i < 2; i++) {
+			mxcfbi->bg_rotate[i].virt_addr = dma_alloc_writecombine(fbi->device,
+				mxcfbi->bg_mem_len,
+				&mxcfbi->bg_rotate[i].phy_addr,
+				GFP_DMA | GFP_KERNEL);
+			if (mxcfbi->bg_rotate[i].virt_addr == 0) {
+				dev_err(fbi->device, "Unable to allocate framebuffer memory\n");
+				return -EBUSY;
+			}
+			dev_dbg(fbi->device, "allocated fb @ paddr=0x%08X, size=%d.\n", mxcfbi->bg_rotate[i].phy_addr, mxcfbi->bg_mem_len);
+		}
+	}
+
 	/* Clear the screen */
 	memset((char *)fbi->screen_base, 0, fbi->fix.smem_len);
 
@@ -1866,6 +1985,18 @@ static int mxcfb_map_video_memory(struct fb_info *fbi)
  */
 static int mxcfb_unmap_video_memory(struct fb_info *fbi)
 {
+	struct mxcfb_info *mxcfbi = (struct mxcfb_info *)fbi->par;
+	int i;
+
+	for (i = 0; i < 2; i++) {
+		if (mxcfbi->bg_rotate[i].virt_addr) {
+			dma_free_writecombine(fbi->device,  mxcfbi->bg_mem_len, mxcfbi->bg_rotate[i].virt_addr, mxcfbi->bg_rotate[i].phy_addr);
+			mxcfbi->bg_rotate[i].virt_addr = 0;
+			mxcfbi->bg_rotate[i].phy_addr = 0;
+		}
+	}
+	mxcfbi->bg_mem_len = 0;
+
 	dma_free_writecombine(fbi->device, fbi->fix.smem_len,
 			      fbi->screen_base, fbi->fix.smem_start);
 	fbi->screen_base = 0;
@@ -2333,6 +2464,15 @@ static int mxcfb_option_setup(struct platform_device *pdev, struct fb_info *fbi)
 			fb_pix_fmt = bpp_to_pixfmt(pdata->default_bpp);
 			if (fb_pix_fmt)
 				pixfmt_to_var(fb_pix_fmt, &fbi->var);
+		} else if (!strncmp(opt, "rotate=", 7)) {
+			// Note you can rotate display during runtime using:
+			//     vinfo.rotate = 4;
+			//     vinfo.xres = 240;
+			//     vinfo.yres = 320;
+			//     vinfo.xres_virtual = vinfo.xres;
+			//     vinfo.yres_virtual = vinfo.yres;
+			//     ioctl(fbfd, FBIOPUT_VSCREENINFO, &vinfo);
+			fbi->var.rotate = simple_strtoul(opt + 7, NULL, 0);
 		} else
 			fb_mode_str = opt;
 	}
@@ -2379,7 +2519,7 @@ static int mxcfb_register(struct fb_info *fbi)
 	fb_add_videomode(&m, &fbi->modelist);
 
 	if (ipu_request_irq(mxcfbi->ipu, mxcfbi->ipu_ch_irq,
-		mxcfb_irq_handler, IPU_IRQF_ONESHOT, MXCFB_NAME, fbi) != 0) {
+		mxcfb_irq_handler, need_xy_swap(mxcfbi, fbi) ? 0 : IPU_IRQF_ONESHOT, MXCFB_NAME, fbi) != 0) {
 		dev_err(fbi->device, "Error registering EOF irq handler.\n");
 		ret = -EBUSY;
 		goto err0;
@@ -2656,6 +2796,8 @@ static int mxcfb_probe(struct platform_device *pdev)
 	struct mxcfb_info *mxcfbi;
 	struct resource *res;
 	int ret = 0;
+	int tmp;
+	u32 rotation = 0;
 
 	dev_dbg(&pdev->dev, "%s enter\n", __func__);
 	pdev->id = of_alias_get_id(pdev->dev.of_node, "mxcfb");
@@ -2693,9 +2835,30 @@ static int mxcfb_probe(struct platform_device *pdev)
 	mxcfbi->late_init = plat_data->late_init;
 	mxcfbi->fb_pix_fmt = plat_data->fb_pix_fmt;
 	mxcfbi->first_set_par = true;
+
+	if (!fbi->var.rotate) {
+		int err = of_property_read_u32(pdev->dev.of_node, "rotation", &rotation);
+
+		if (err) {
+			dev_dbg(&pdev->dev, "get of property rotation fail\n");
+		} else {
+			fbi->var.rotate = rotation;
+		}
+	}
 	ret = mxcfb_dispdrv_init(pdev, fbi);
 	if (ret < 0)
 		goto init_dispdrv_failed;
+
+	if (fbi->var.rotate >= IPU_ROTATE_90_RIGHT) {
+		if (fbi->var.xres > 1024 ||  fbi->var.yres > 1024)
+			dev_err(&pdev->dev, "Rotate resolution > 1024x1024 is not yet supported");
+		tmp = fbi->var.xres;
+		fbi->var.xres = fbi->var.yres;
+		fbi->var.yres = tmp;
+		tmp = fbi->var.xres_virtual;
+		fbi->var.xres_virtual = fbi->var.yres_virtual;
+		fbi->var.yres_virtual = tmp;
+	}
 
 	ret = ipu_test_set_usage(mxcfbi->ipu_id, mxcfbi->ipu_di);
 	if (ret < 0) {
