@@ -1,7 +1,7 @@
 /*
  * otg.c - ChipIdea USB IP core OTG driver
  *
- * Copyright (C) 2013-2015 Freescale Semiconductor, Inc.
+ * Copyright (C) 2013-2016 Freescale Semiconductor, Inc.
  *
  * Author: Peter Chen
  *
@@ -209,6 +209,7 @@ static int hw_wait_vbus_lower_bsv(struct ci_hdrc *ci)
 void ci_handle_id_switch(struct ci_hdrc *ci)
 {
 	enum ci_role role = ci_otg_role(ci);
+	int ret = 0;
 
 	if (role != ci->role) {
 		dev_dbg(ci->dev, "switching from %s to %s\n",
@@ -227,9 +228,17 @@ void ci_handle_id_switch(struct ci_hdrc *ci)
 			 * wait vbus lower than OTGSC_BSV before connecting
 			 * to host
 			 */
-			hw_wait_vbus_lower_bsv(ci);
+			ret = hw_wait_vbus_lower_bsv(ci);
 
 		ci_role_start(ci, role);
+		/*
+		 * If the role switch happens(e.g. during system
+		 * sleep) and vbus keeps on afterwards, we connect
+		 * gadget as vbus connect event lost.
+		 */
+		if (ret == -ETIMEDOUT)
+			usb_gadget_vbus_connect(&ci->gadget);
+
 	}
 }
 
