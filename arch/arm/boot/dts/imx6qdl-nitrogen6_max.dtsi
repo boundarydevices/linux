@@ -256,6 +256,15 @@
 		status = "okay";
 	};
 
+	v4l2_cap_3 {
+		compatible = "fsl,imx6q-v4l2-capture";
+		ipu_id = <0>;
+		csi_id = <0>;
+		mipi_camera = <1>;
+		mclk_source = <0>;
+		status = "okay";
+	};
+
 	v4l2_out {
 		compatible = "fsl,mxc_v4l2_output";
 		status = "okay";
@@ -502,6 +511,8 @@
 		reg = <0x3e>;
 		clocks = <&clks 147>;
 		clock-names = "csi_mclk";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ov5640_mipi>;
 		DOVDD-supply = <&reg_1p8v>;
 		AVDD-supply = <&reg_2p5v>;
 		DVDD-supply = <&reg_1p8v>;
@@ -512,6 +523,24 @@
 		mclk = <22000000>;
 		mclk_source = <0>;
 		pwms = <&pwm3 0 45>;
+	};
+
+	tc358743_mipi: tc358743_mipi@0f {
+		compatible = "tc358743_mipi";
+		reg = <0x0f>;
+		clocks = <&clks 147>;
+		clock-names = "csi_mclk";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_tc358743_mipi>;
+		DOVDD-supply = <&reg_1p8v>;
+		AVDD-supply = <&reg_2p5v>;
+		DVDD-supply = <&reg_1p8v>;
+		rst-gpios = <&gpio6 9 GPIO_ACTIVE_LOW>;
+		interrupts-extended = <&gpio2 5 IRQ_TYPE_LEVEL_LOW>;
+		ipu_id = <0>;
+		csi_id = <0>;
+		mclk = <22000000>;
+		mclk_source = <0>;
 	};
 };
 
@@ -630,8 +659,6 @@
 				MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x80000000	/* CAN standby */
 				MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x80000000	/* I2C3 touch screen interrupt */
 				MX6QDL_PAD_DI0_PIN4__GPIO4_IO20		0x1b0b0		/* tsc2004 interrupt */
-				MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x0b0b0		/* ov5640 mipi powerdown */
-				MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x000b0		/* ov5640 mipi reset */
 				MX6QDL_PAD_GPIO_3__CCM_CLKO2		0x000b0		/* ov5642 mclk */
 				MX6QDL_PAD_EIM_D29__GPIO3_IO29		0x000b0		/* ov5642 Power Down */
 				MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x000b0		/* ov5642 Reset */
@@ -656,6 +683,20 @@
 			>;
 		};
 
+		pinctrl_ov5640_mipi: ov5640_mipigrp {
+			fsl,pins = <
+				MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x0b0b0		/* ov5640 mipi powerdown */
+				MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x000b0		/* ov5640 mipi reset */
+			>;
+		};
+
+		pinctrl_tc358743_mipi: tc358743_mipigrp {
+			fsl,pins = <
+				MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x030b0
+				MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x0b0b0
+			>;
+		};
+
 		pinctrl_uart5: uart5grp {
 			fsl,pins = <
 				MX6QDL_PAD_KEY_ROW1__UART5_RX_DATA	0x130b1
@@ -673,6 +714,7 @@
 				MX6QDL_PAD_KEY_ROW4__GPIO4_IO15		0x000b0		/* ov5640_mipi camera i2c enable */
 			>;
 		};
+
 		pinctrl_i2c3mux: i2c3muxgrp {
 			fsl,pins = <
 				MX6QDL_PAD_EIM_OE__GPIO2_IO25		0x000b0		/* pcie i2c enable */
