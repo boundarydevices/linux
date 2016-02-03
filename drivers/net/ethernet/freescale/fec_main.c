@@ -780,12 +780,33 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	return NETDEV_TX_OK;
 }
 
+static void reset_tx_queue(struct fec_enet_private *fep,
+			   struct fec_enet_priv_tx_q *txq)
+{
+	struct bufdesc *bdp = txq->bd.base;
+	unsigned int i;
+
+	txq->bd.cur = bdp;
+	for (i = 0; i < txq->bd.ring_size; i++) {
+		/* Initialize the BD for every fragment in the page. */
+		if (txq->tx_skbuff[i]) {
+			dev_kfree_skb_any(txq->tx_skbuff[i]);
+			txq->tx_skbuff[i] = NULL;
+		}
+		bdp->cbd_bufaddr = cpu_to_fec32(0);
+		bdp->cbd_sc = cpu_to_fec16((bdp == txq->bd.last) ?
+					   BD_SC_WRAP : 0);
+		bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
+	}
+	bdp = fec_enet_get_prevdesc(bdp, &txq->bd);
+	txq->dirty_tx = bdp;
+}
+
 /* Init RX & TX buffer descriptors
  */
 static void fec_enet_bd_init(struct net_device *dev)
 {
 	struct fec_enet_private *fep = netdev_priv(dev);
-	struct fec_enet_priv_tx_q *txq;
 	struct fec_enet_priv_rx_q *rxq;
 	struct bufdesc *bdp;
 	unsigned int i;
@@ -808,26 +829,8 @@ static void fec_enet_bd_init(struct net_device *dev)
 		rxq->bd.cur = rxq->bd.base;
 	}
 
-	for (q = 0; q < fep->num_tx_queues; q++) {
-		/* ...and the same for transmit */
-		txq = fep->tx_queue[q];
-		bdp = txq->bd.base;
-		txq->bd.cur = bdp;
-
-		for (i = 0; i < txq->bd.ring_size; i++) {
-			/* Initialize the BD for every fragment in the page. */
-			if (txq->tx_skbuff[i]) {
-				dev_kfree_skb_any(txq->tx_skbuff[i]);
-				txq->tx_skbuff[i] = NULL;
-			}
-			bdp->cbd_bufaddr = cpu_to_fec32(0);
-			bdp->cbd_sc = cpu_to_fec16((bdp == txq->bd.last) ?
-					BD_SC_WRAP : 0);
-			bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
-		}
-		bdp = fec_enet_get_prevdesc(bdp, &txq->bd);
-		txq->dirty_tx = bdp;
-	}
+	for (q = 0; q < fep->num_tx_queues; q++)
+		reset_tx_queue(fep, fep->tx_queue[q]);
 }
 
 static void fec_enet_active_rxring(struct net_device *ndev)
@@ -2710,13 +2713,10 @@ static void fec_enet_free_buffers(struct net_device *ndev)
 
 	for (q = 0; q < fep->num_tx_queues; q++) {
 		txq = fep->tx_queue[q];
-		bdp = txq->bd.base;
+		reset_tx_queue(fep, txq);
 		for (i = 0; i < txq->bd.ring_size; i++) {
 			kfree(txq->tx_bounce[i]);
 			txq->tx_bounce[i] = NULL;
-			skb = txq->tx_skbuff[i];
-			txq->tx_skbuff[i] = NULL;
-			dev_kfree_skb(skb);
 		}
 	}
 }
