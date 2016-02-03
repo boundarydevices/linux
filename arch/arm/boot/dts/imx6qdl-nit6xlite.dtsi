@@ -254,6 +254,8 @@
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_5__I2C3_SCL		0x4001b8b1
 			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
+#define GPIRQ_GSLX680			<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
+#define GP_GSLX680_IRQ			<&gpio1 9 GPIO_ACTIVE_HIGH>
 #define GP_TOUCH_IRQ			<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		/* J7 pin 4 - I2C3 */
 #define GP_TS2004_IRQ			<&gpio2 27 IRQ_TYPE_LEVEL_LOW>
@@ -593,6 +595,12 @@
 		reg = <0x38>;
 		interrupts-extended = GP_TOUCH_IRQ;
 		wakeup-gpios = GP_TOUCH_IRQ;
+	};
+	gslx680_ts@40 {
+		compatible = "gslx680";
+		reg = <0x40>;
+		interrupts-extended = GPIRQ_GSLX680;
+		wakeup-gpios = GP_GSLX680_IRQ;
 	};
 	ili210x@41 {
 		compatible = "ili210x";
