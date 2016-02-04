@@ -2,7 +2,7 @@
 //
 // Freescale ALSA SoC Digital Audio Interface (SAI) driver.
 //
-// Copyright 2012-2015 Freescale Semiconductor, Inc.
+// Copyright 2012-2016 Freescale Semiconductor, Inc.
 
 #include <linux/busfreq-imx.h>
 #include <linux/clk.h>
@@ -64,10 +64,10 @@ static irqreturn_t fsl_sai_isr(int irq, void *devid)
 		dev_dbg(dev, "isr: Start of Tx word detected\n");
 
 	if (flags & FSL_SAI_CSR_SEF)
-		dev_warn(dev, "isr: Tx Frame sync error detected\n");
+		dev_dbg(dev, "isr: Tx Frame sync error detected\n");
 
 	if (flags & FSL_SAI_CSR_FEF) {
-		dev_warn(dev, "isr: Transmit underrun detected\n");
+		dev_dbg(dev, "isr: Transmit underrun detected\n");
 		/* FIFO reset for safety */
 		xcsr |= FSL_SAI_CSR_FR;
 	}
@@ -98,10 +98,10 @@ irq_rx:
 		dev_dbg(dev, "isr: Start of Rx word detected\n");
 
 	if (flags & FSL_SAI_CSR_SEF)
-		dev_warn(dev, "isr: Rx Frame sync error detected\n");
+		dev_dbg(dev, "isr: Rx Frame sync error detected\n");
 
 	if (flags & FSL_SAI_CSR_FEF) {
-		dev_warn(dev, "isr: Receive overflow detected\n");
+		dev_dbg(dev, "isr: Receive overflow detected\n");
 		/* FIFO reset for safety */
 		xcsr |= FSL_SAI_CSR_FR;
 	}
