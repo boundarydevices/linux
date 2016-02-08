@@ -32,6 +32,9 @@ struct imx_sgtl5000_data {
 	unsigned int clk_frequency;
 	struct gpio_desc *mute_hp;
 	struct gpio_desc *mute_lo;
+	struct gpio_desc *amp_standby;
+	struct gpio_desc *amp_gain[2];
+	int amp_gain_value;
 };
 
 static int imx_sgtl5000_dai_init(struct snd_soc_pcm_runtime *rtd)
@@ -89,6 +92,72 @@ static const struct snd_soc_dapm_widget imx_sgtl5000_dapm_widgets[] = {
 	SND_SOC_DAPM_SPK("Ext Spk", NULL),
 };
 
+static int imx_sgtl_startup(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct imx_sgtl5000_data *data = snd_soc_card_get_drvdata(rtd->card);
+
+	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) &&
+			data->amp_standby)
+		gpiod_set_value(data->amp_standby, 0);
+	return 0;
+}
+
+static void imx_sgtl_shutdown(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct imx_sgtl5000_data *data = snd_soc_card_get_drvdata(rtd->card);
+
+	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) &&
+			data->amp_standby)
+		gpiod_set_value(data->amp_standby, 1);
+}
+
+static struct snd_soc_ops imx_sgtl_ops = {
+	.startup	= imx_sgtl_startup,
+	.shutdown	= imx_sgtl_shutdown,
+};
+
+
+static int amp_gain_set(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+	int value = ucontrol->value.integer.value[0];
+	int i;
+
+	if (value > 3)
+		return -EINVAL;
+
+	data->amp_gain_value = value;
+	for (i = 0; i < 2; i++) {
+		struct gpio_desc *gd = data->amp_gain[i];
+
+		if (gd)
+			gpiod_set_value(gd, value & 1);
+		value >>= 1;
+	}
+	return 0;
+}
+
+static int amp_gain_get(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+
+	ucontrol->value.integer.value[0] = data->amp_gain_value;
+	return 0;
+}
+
+static const struct snd_kcontrol_new more_controls[] = {
+	SOC_SINGLE_EXT("amp_gain", 0, 0, 3, 0,
+		       amp_gain_get, amp_gain_set),
+};
+
 static int imx_sgtl5000_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -99,6 +168,7 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	struct gpio_desc *gd = NULL;
 	int int_port, ext_port;
 	int ret;
+	int i;
 
 	ret = of_property_read_u32(np, "mux-int-port", &int_port);
 	if (ret) {
@@ -177,6 +247,7 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	data->dai.cpu_of_node = ssi_np;
 	data->dai.platform_of_node = ssi_np;
 	data->dai.init = &imx_sgtl5000_dai_init;
+	data->dai.ops = &imx_sgtl_ops;
 	data->dai.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 			    SND_SOC_DAIFMT_CBM_CFM;
 
@@ -190,6 +261,18 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 		gpiod_direction_output(gd, 1);
 		data->mute_lo = gd;
 	}
+	gd = devm_gpiod_get_index(&pdev->dev, "amp-standby", 0);
+	if (!IS_ERR(gd)) {
+		gpiod_direction_output(gd, 1);
+		data->amp_standby = gd;
+	}
+	for (i = 0; i < 2; i++) {
+		gd = devm_gpiod_get_index(&pdev->dev, "amp-gain", i);
+		if (!IS_ERR(gd)) {
+			gpiod_direction_output(gd, 0);
+			data->amp_gain[i] = gd;
+		}
+	}
 
 	data->card.dev = &pdev->dev;
 	ret = snd_soc_of_parse_card_name(&data->card, "model");
@@ -200,6 +283,10 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 		goto fail;
 	data->card.num_links = 1;
 	data->card.owner = THIS_MODULE;
+	if (data->amp_gain[0]) {
+		data->card.controls	 = more_controls;
+		data->card.num_controls  = ARRAY_SIZE(more_controls);
+	}
 	data->card.dai_link = &data->dai;
 	data->card.dapm_widgets = imx_sgtl5000_dapm_widgets;
 	data->card.num_dapm_widgets = ARRAY_SIZE(imx_sgtl5000_dapm_widgets);
@@ -231,7 +318,20 @@ static int imx_sgtl5000_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct imx_sgtl5000_data *data = snd_soc_card_get_drvdata(card);
+	int i;
 
+	if (data->amp_standby)
+		gpiod_set_value(data->amp_standby, 1);
+	if (data->mute_lo)
+		gpiod_set_value(data->mute_lo, 1);
+	if (data->mute_hp)
+		gpiod_set_value(data->mute_hp, 1);
+	for (i = 0; i < 2; i++) {
+		struct gpio_desc *gd = data->amp_gain[i];
+
+		if (gd)
+			gpiod_set_value(gd, 0);
+	}
 	clk_put(data->codec_clk);
 
 	return 0;
