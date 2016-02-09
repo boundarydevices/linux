@@ -595,7 +595,7 @@
 	status = "okay";
 
 	ar1020_i2c@4d {
-		compatible = "ar1020_i2c,ar1020_i2c";
+		compatible = "ar1020_i2c";
 		reg = <0x4d>;
 		interrupts-extended = GP_TOUCH_IRQ;
 		wakeup-gpios = GP_TOUCH_IRQ;
