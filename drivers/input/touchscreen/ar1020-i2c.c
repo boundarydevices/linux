@@ -484,6 +484,7 @@ static const struct i2c_device_id ar1020_i2c_id[] = {
 	{ "ar1020_i2c", 0 },
 	{ }
 };
+MODULE_DEVICE_TABLE(i2c, ar1020_i2c_id);
 
 /*
  * This is the initial set of information the kernel has
