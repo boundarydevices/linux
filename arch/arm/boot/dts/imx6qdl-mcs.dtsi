@@ -421,7 +421,7 @@
         status = "okay";
 
 	ar1020_i2c@4d {
-		compatible = "ar1020_i2c,ar1020_i2c";
+		compatible = "ar1020_i2c";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_ar1021>;
 		reg = <0x4d>;
