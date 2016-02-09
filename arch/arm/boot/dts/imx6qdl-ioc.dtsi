@@ -752,7 +752,7 @@
 	ar1020_i2c@4d {
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_ar1020>;
-		compatible = "ar1020_i2c,ar1020_i2c";
+		compatible = "ar1020_i2c";
 		reg = <0x4d>;
 		interrupts-extended = GPIRQ_AR1020;
 		wakeup-gpios = GP_AR1020_IRQ;
