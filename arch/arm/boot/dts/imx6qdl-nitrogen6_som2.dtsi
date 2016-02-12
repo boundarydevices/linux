@@ -659,6 +659,12 @@
 			clock-frequency = <38400000>;
 		};
 	};
+
+	fake_poweroff {
+		compatible = "fake-poweroff";
+		gpios = <&gpio2 3 GPIO_ACTIVE_LOW>;
+		watchdog = <&wdog1>;
+	};
 };
 
 &audmux {
