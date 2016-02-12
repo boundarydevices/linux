@@ -21,6 +21,7 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/i2c.h>
+#include <linux/fb.h>
 #include <linux/slab.h>
 #include <linux/interrupt.h>
 #include <linux/wait.h>
@@ -210,8 +211,12 @@ static inline int ts_register(struct ft5x06_ts *ts)
 	ts->max_y = 0x7ff;
 	if (screenres[0])
 		ts->max_x = screenres[0] - 1;
+	else if (num_registered_fb > 0)
+		ts->max_x = registered_fb[0]->var.xres - 1;
 	if (screenres[1])
 		ts->max_y = screenres[1] - 1;
+	else if (num_registered_fb > 0)
+		ts->max_y = registered_fb[0]->var.yres - 1;
 
 	pr_info("%s resolution is %dx%d\n", client_name, ts->max_x + 1, ts->max_y + 1);
 	ts->idev = idev;
