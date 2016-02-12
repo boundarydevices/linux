@@ -189,7 +189,7 @@ int gs2971_write_register(struct spi_device *spi, u16 offset, u16 value)
 	pr_debug("--> Writing to address (%x) : %x\n", offset, value);
 	return gs2971_write_buffer(spi, offset, &value, 1);
 }
-const char *gpio_names[] = {
+static const char *gpio_names[] = {
 [GPIO_STANDBY] = "standby-gpios",
 [GPIO_RESET] = "rst-gpios",
 [GPIO_TIM_861] = "tim_861-gpios",
