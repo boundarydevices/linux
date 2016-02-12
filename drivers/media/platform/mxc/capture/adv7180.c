@@ -190,7 +190,7 @@ static struct v4l2_queryctrl adv7180_qctrl[] = {
 	}
 };
 
-const char *gpio_names[] = {
+static const char *gpio_names[] = {
 [GPIO_STANDBY] = "pwn-gpios",
 [GPIO_RESET] = "rst-gpios",
 };
