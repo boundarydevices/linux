@@ -1,7 +1,7 @@
 /*
  * CAAM hardware register-level view
  *
- * Copyright 2008-2011 Freescale Semiconductor, Inc.
+ * Copyright (C) 2008-2015 Freescale Semiconductor, Inc.
  */
 
 #ifndef REGS_H
@@ -74,30 +74,23 @@
 #endif
 #else
 #ifdef __LITTLE_ENDIAN
-#define wr_reg32(reg, data) __raw_writel(data, reg)
-#define rd_reg32(reg) __raw_readl(reg)
+#define wr_reg32(reg, data) writel(data, reg)
+#define rd_reg32(reg) readl(reg)
 #ifdef CONFIG_64BIT
-#define wr_reg64(reg, data) __raw_writeq(data, reg)
-#define rd_reg64(reg) __raw_readq(reg)
+#define wr_reg64(reg, data) writeq(data, reg)
+#define rd_reg64(reg) readq(reg)
 #endif
 #endif
+#endif
+
+#ifdef CONFIG_ARM
+/* These are common macros for Power, put here for ARMs */
+#define setbits32(_addr, _v) writel((readl(_addr) | (_v)), (_addr))
+#define clrbits32(_addr, _v) writel((readl(_addr) & ~(_v)), (_addr))
 #endif
 
 #ifndef CONFIG_64BIT
 #ifdef __BIG_ENDIAN
-static inline void wr_reg64(u64 __iomem *reg, u64 data)
-{
-	wr_reg32((u32 __iomem *)reg, (data & 0xffffffff00000000ull) >> 32);
-	wr_reg32((u32 __iomem *)reg + 1, data & 0x00000000ffffffffull);
-}
-
-static inline u64 rd_reg64(u64 __iomem *reg)
-{
-	return (((u64)rd_reg32((u32 __iomem *)reg)) << 32) |
-		((u64)rd_reg32((u32 __iomem *)reg + 1));
-}
-#else
-#ifdef __LITTLE_ENDIAN
 static inline void wr_reg64(u64 __iomem *reg, u64 data)
 {
 	wr_reg32((u32 __iomem *)reg + 1, (data & 0xffffffff00000000ull) >> 32);
@@ -108,6 +101,19 @@ static inline u64 rd_reg64(u64 __iomem *reg)
 {
 	return (((u64)rd_reg32((u32 __iomem *)reg + 1)) << 32) |
 		((u64)rd_reg32((u32 __iomem *)reg));
+}
+#else
+#ifdef __LITTLE_ENDIAN
+static inline void wr_reg64(u64 __iomem *reg, u64 data)
+{
+	wr_reg32((u32 __iomem *)reg, (data & 0xffffffff00000000ull) >> 32);
+	wr_reg32((u32 __iomem *)reg + 1, data & 0x00000000ffffffffull);
+}
+
+static inline u64 rd_reg64(u64 __iomem *reg)
+{
+	return (((u64)rd_reg32((u32 __iomem *)reg)) << 32) |
+		((u64)rd_reg32((u32 __iomem *)reg + 1));
 }
 #endif
 #endif
@@ -123,6 +129,101 @@ struct jr_outentry {
 } __packed;
 
 /*
+ * CHA version ID / instantiation bitfields
+ * Defined for use within cha_id in perfmon
+ * Note that the same shift/mask selectors can be used to pull out number
+ * of instantiated blocks within cha_num in perfmon, the locations are
+ * the same.
+ */
+
+/* Job Ring */
+#define CHA_ID_MS_JR_SHIFT	28
+#define CHA_ID_MS_JR_MASK	(0xfull << CHA_ID_MS_JR_SHIFT)
+
+/* DEscriptor COntroller */
+#define CHA_ID_MS_DECO_SHIFT	24
+#define CHA_ID_MS_DECO_MASK	(0xfull << CHA_ID_MS_DECO_SHIFT)
+#define CHA_NUM_DECONUM_SHIFT	56 /* legacy definition */
+#define CHA_NUM_DECONUM_MASK	(0xfull << CHA_NUM_DECONUM_SHIFT)
+
+/* Number of DECOs */
+#define CHA_NUM_MS_DECONUM_SHIFT	24
+#define CHA_NUM_MS_DECONUM_MASK	(0xfull << CHA_NUM_MS_DECONUM_SHIFT)
+
+/*
+ * AES Blockcipher + Combo Mode Accelerator
+ * LP = Low Power (includes ECB/CBC/CFB128/OFB/CTR/CCM/CMAC/XCBC-MAC)
+ * HP = High Power (LP + CBCXCBC/CTRXCBC/XTS/GCM)
+ * DIFFPWR = ORed in if differential-power-analysis resistance implemented
+ */
+#define CHA_ID_LS_AES_SHIFT	0
+#define CHA_ID_LS_AES_MASK	(0xfull << CHA_ID_LS_AES_SHIFT)
+#define CHA_ID_LS_AES_LP	(0x3ull << CHA_ID_LS_AES_SHIFT)
+#define CHA_ID_LS_AES_HP	(0x4ull << CHA_ID_LS_AES_SHIFT)
+#define CHA_ID_LS_AES_DIFFPWR	(0x1ull << CHA_ID_LS_AES_SHIFT)
+
+/* DES Blockcipher Accelerator */
+#define CHA_ID_LS_DES_SHIFT	4
+#define CHA_ID_LS_DES_MASK		(0xfull << CHA_ID_LS_DES_SHIFT)
+
+/* ARC4 Streamcipher */
+#define CHA_ID_LS_ARC4_SHIFT	8
+#define CHA_ID_LS_ARC4_MASK	(0xfull << CHA_ID_LS_ARC4_SHIFT)
+#define CHA_ID_LS_ARC4_LP	(0x0ull << CHA_ID_LS_ARC4_SHIFT)
+#define CHA_ID_LS_ARC4_HP	(0x1ull << CHA_ID_LS_ARC4_SHIFT)
+
+/*
+ * Message Digest
+ * LP256 = Low Power (MD5/SHA1/SHA224/SHA256 + HMAC)
+ * LP512 = Low Power (LP256 + SHA384/SHA512)
+ * HP    = High Power (LP512 + SMAC)
+ */
+#define CHA_ID_LS_MD_SHIFT	12
+#define CHA_ID_LS_MD_MASK	(0xfull << CHA_ID_LS_MD_SHIFT)
+#define CHA_ID_LS_MD_LP256	(0x0ull << CHA_ID_LS_MD_SHIFT)
+#define CHA_ID_LS_MD_LP512	(0x1ull << CHA_ID_LS_MD_SHIFT)
+#define CHA_ID_LS_MD_HP		(0x2ull << CHA_ID_LS_MD_SHIFT)
+
+/*
+ * Random Generator
+ * RNG4 = FIPS-verification-compliant, requires init kickstart for use
+ */
+#define CHA_ID_LS_RNG_SHIFT	16
+#define CHA_ID_LS_RNG_MASK	(0xfull << CHA_ID_LS_RNG_SHIFT)
+#define CHA_ID_LS_RNG_A		(0x1ull << CHA_ID_LS_RNG_SHIFT)
+#define CHA_ID_LS_RNG_B		(0x2ull << CHA_ID_LS_RNG_SHIFT)
+#define CHA_ID_LS_RNG_C		(0x3ull << CHA_ID_LS_RNG_SHIFT)
+#define CHA_ID_LS_RNG_4		(0x4ull << CHA_ID_LS_RNG_SHIFT)
+
+/* ZUC-Authentication */
+#define CHA_ID_MS_ZA_SHIFT	12
+#define CHA_ID_MS_ZA_MASK	(0xfull << CHA_ID_MS_ZA_SHIFT)
+
+/* ZUC-Encryption */
+#define CHA_ID_MS_ZE_SHIFT	8
+#define CHA_ID_MS_ZE_MASK	(0xfull << CHA_ID_MS_ZE_SHIFT)
+
+/* SNOW f8 */
+#define CHA_ID_LS_SNW8_SHIFT	20
+#define CHA_ID_LS_SNW8_MASK	(0xfull << CHA_ID_LS_SNW8_SHIFT)
+
+/* Kasumi */
+#define CHA_ID_LS_KAS_SHIFT	24
+#define CHA_ID_LS_KAS_MASK	(0xfull << CHA_ID_LS_KAS_SHIFT)
+
+/* Public Key */
+#define CHA_ID_LS_PK_SHIFT	28
+#define CHA_ID_LS_PK_MASK	(0xfull << CHA_ID_LS_PK_SHIFT)
+
+/* CRC */
+#define CHA_ID_MS_CRC_SHIFT	0
+#define CHA_ID_MS_CRC_MASK	(0xfull << CHA_ID_MS_CRC_SHIFT)
+
+/* SNOW f9 */
+#define CHA_ID_MS_SNW9_SHIFT	4
+#define CHA_ID_MS_SNW9_MASK	(0xfull << CHA_ID_MS_SNW9_SHIFT)
+
+/*
  * caam_perfmon - Performance Monitor/Secure Memory Status/
  *                CAAM Global Status/Component Version IDs
  *
@@ -130,51 +231,18 @@ struct jr_outentry {
  */
 
 /* Number of DECOs */
-#define CHA_NUM_MS_DECONUM_SHIFT	24
-#define CHA_NUM_MS_DECONUM_MASK	(0xfull << CHA_NUM_MS_DECONUM_SHIFT)
-
-/* CHA Version IDs */
-#define CHA_ID_LS_AES_SHIFT	0
-#define CHA_ID_LS_AES_MASK		(0xfull << CHA_ID_LS_AES_SHIFT)
-
-#define CHA_ID_LS_DES_SHIFT	4
-#define CHA_ID_LS_DES_MASK		(0xfull << CHA_ID_LS_DES_SHIFT)
-
-#define CHA_ID_LS_ARC4_SHIFT	8
-#define CHA_ID_LS_ARC4_MASK	(0xfull << CHA_ID_LS_ARC4_SHIFT)
-
-#define CHA_ID_LS_MD_SHIFT	12
-#define CHA_ID_LS_MD_MASK	(0xfull << CHA_ID_LS_MD_SHIFT)
-
-#define CHA_ID_LS_RNG_SHIFT	16
-#define CHA_ID_LS_RNG_MASK	(0xfull << CHA_ID_LS_RNG_SHIFT)
-
-#define CHA_ID_LS_SNW8_SHIFT	20
-#define CHA_ID_LS_SNW8_MASK	(0xfull << CHA_ID_LS_SNW8_SHIFT)
-
-#define CHA_ID_LS_KAS_SHIFT	24
-#define CHA_ID_LS_KAS_MASK	(0xfull << CHA_ID_LS_KAS_SHIFT)
-
-#define CHA_ID_LS_PK_SHIFT	28
-#define CHA_ID_LS_PK_MASK	(0xfull << CHA_ID_LS_PK_SHIFT)
-
-#define CHA_ID_MS_CRC_SHIFT	0
-#define CHA_ID_MS_CRC_MASK	(0xfull << CHA_ID_MS_CRC_SHIFT)
-
-#define CHA_ID_MS_SNW9_SHIFT	4
-#define CHA_ID_MS_SNW9_MASK	(0xfull << CHA_ID_MS_SNW9_SHIFT)
-
-#define CHA_ID_MS_DECO_SHIFT	24
-#define CHA_ID_MS_DECO_MASK	(0xfull << CHA_ID_MS_DECO_SHIFT)
-
-#define CHA_ID_MS_JR_SHIFT	28
-#define CHA_ID_MS_JR_MASK	(0xfull << CHA_ID_MS_JR_SHIFT)
+#define CHA_NUM_DECONUM_SHIFT	56
+#define CHA_NUM_DECONUM_MASK	(0xfull << CHA_NUM_DECONUM_SHIFT)
 
 struct sec_vid {
 	u16 ip_id;
 	u8 maj_rev;
 	u8 min_rev;
 };
+
+#define SEC_VID_IPID_SHIFT      16
+#define SEC_VID_MAJ_SHIFT       8
+#define SEC_VID_MAJ_MASK        0xFF00
 
 struct caam_perfmon {
 	/* Performance Monitor Registers			f00-f9f */
@@ -198,15 +266,20 @@ struct caam_perfmon {
 #define CTPR_MS_PG_SZ_SHIFT	4
 	u32 comp_parms_ms;	/* CTPR - Compile Parameters Register	*/
 	u32 comp_parms_ls;	/* CTPR - Compile Parameters Register	*/
-	u64 rsvd1[2];
+	/* Secure Memory State Visibility */
+	u32 rsvd1;
+	u32 smstatus;	/* Secure memory status */
+	u32 rsvd2;
+	u32 smpartown;	/* Secure memory partition owner */
 
 	/* CAAM Global Status					fc0-fdf */
 	u64 faultaddr;	/* FAR  - Fault Address		*/
 	u32 faultliodn;	/* FALR - Fault Address LIODN	*/
 	u32 faultdetail;	/* FADR - Fault Addr Detail	*/
-	u32 rsvd2;
+	u32 rsvd3;
 	u32 status;		/* CSTA - CAAM Status */
-	u64 rsvd3;
+	u32 smpart;		/* Secure Memory Partition Parameters */
+	u32 smvid;		/* Secure Memory Version ID */
 
 	/* Component Instantiation Parameters			fe0-fff */
 	u32 rtic_id;		/* RVID - RTIC Version ID	*/
@@ -218,6 +291,62 @@ struct caam_perfmon {
 	u32 caam_id_ms;		/* CAAMVID - CAAM Version ID MS	*/
 	u32 caam_id_ls;		/* CAAMVID - CAAM Version ID LS	*/
 };
+
+#define SMSTATUS_PART_SHIFT	28
+#define SMSTATUS_PART_MASK	(0xf << SMSTATUS_PART_SHIFT)
+#define SMSTATUS_PAGE_SHIFT	16
+#define SMSTATUS_PAGE_MASK	(0x7ff << SMSTATUS_PAGE_SHIFT)
+#define SMSTATUS_MID_SHIFT	8
+#define SMSTATUS_MID_MASK	(0x3f << SMSTATUS_MID_SHIFT)
+#define SMSTATUS_ACCERR_SHIFT	4
+#define SMSTATUS_ACCERR_MASK	(0xf << SMSTATUS_ACCERR_SHIFT)
+#define SMSTATUS_ACCERR_NONE	0
+#define SMSTATUS_ACCERR_ALLOC	1	/* Page not allocated */
+#define SMSTATUS_ACCESS_ID	2	/* Not granted by ID */
+#define SMSTATUS_ACCESS_WRITE	3	/* Writes not allowed */
+#define SMSTATUS_ACCESS_READ	4	/* Reads not allowed */
+#define SMSTATUS_ACCESS_NONKEY	6	/* Non-key reads not allowed */
+#define SMSTATUS_ACCESS_BLOB	9	/* Blob access not allowed */
+#define SMSTATUS_ACCESS_DESCB	10	/* Descriptor Blob access spans pages */
+#define SMSTATUS_ACCESS_NON_SM	11	/* Outside Secure Memory range */
+#define SMSTATUS_ACCESS_XPAGE	12	/* Access crosses pages */
+#define SMSTATUS_ACCESS_INITPG	13	/* Page still initializing */
+#define SMSTATUS_STATE_SHIFT	0
+#define SMSTATUS_STATE_MASK	(0xf << SMSTATUS_STATE_SHIFT)
+#define SMSTATUS_STATE_RESET	0
+#define SMSTATUS_STATE_INIT	1
+#define SMSTATUS_STATE_NORMAL	2
+#define SMSTATUS_STATE_FAIL	3
+
+/* up to 15 rings, 2 bits shifted by ring number */
+#define SMPARTOWN_RING_SHIFT	2
+#define SMPARTOWN_RING_MASK	3
+#define SMPARTOWN_AVAILABLE	0
+#define SMPARTOWN_NOEXIST	1
+#define SMPARTOWN_UNAVAILABLE	2
+#define SMPARTOWN_OURS		3
+
+/* Maximum number of pages possible */
+#define SMPART_MAX_NUMPG_SHIFT	16
+#define SMPART_MAX_NUMPG_MASK	(0x3f << SMPART_MAX_NUMPG_SHIFT)
+
+/* Maximum partition number */
+#define SMPART_MAX_PNUM_SHIFT	12
+#define SMPART_MAX_PNUM_MASK	(0xf << SMPART_MAX_PNUM_SHIFT)
+
+/* Highest possible page number */
+#define SMPART_MAX_PG_SHIFT	0
+#define SMPART_MAX_PG_MASK	(0x3f << SMPART_MAX_PG_SHIFT)
+
+/* Max size of a page */
+#define SMVID_PG_SIZE_SHIFT	16
+#define SMVID_PG_SIZE_MASK	(0x7 << SMVID_PG_SIZE_SHIFT)
+
+/* Major/Minor Version ID */
+#define SMVID_MAJ_VERS_SHIFT	8
+#define SMVID_MAJ_VERS		(0xf << SMVID_MAJ_VERS_SHIFT)
+#define SMVID_MIN_VERS_SHIFT	0
+#define SMVID_MIN_VERS		(0xf << SMVID_MIN_VERS_SHIFT)
 
 /* LIODN programming for DMA configuration */
 #define MSTRID_LOCK_LIODN	0x80000000
@@ -413,6 +542,35 @@ struct caam_ctrl {
 #define JRSTART_JR2_START       0x00000004 /* Start Job ring 2 */
 #define JRSTART_JR3_START       0x00000008 /* Start Job ring 3 */
 
+/* Secure Memory Configuration - if you have it */
+/* Secure Memory Register Offset from JR Base Reg*/
+#define SM_V1_OFFSET 0x0f4
+#define SM_V2_OFFSET 0xa00
+
+/* Minimum SM Version ID requiring v2 SM register mapping */
+#define SMVID_V2 0x20105
+
+struct caam_secure_mem_v1 {
+	u32 sm_cmd;	/* SMCJRx - Secure memory command */
+	u32 rsvd1;
+	u32 sm_status;	/* SMCSJRx - Secure memory status */
+    u32 rsvd2;
+
+	u32 sm_perm;	/* SMAPJRx - Secure memory access perms */
+	u32 sm_group2;	/* SMAP2JRx - Secure memory access group 2 */
+	u32 sm_group1;	/* SMAP1JRx - Secure memory access group 1 */
+};
+
+struct caam_secure_mem_v2 {
+	u32 sm_perm;	/* SMAPJRx - Secure memory access perms */
+	u32 sm_group2;	/* SMAP2JRx - Secure memory access group 2 */
+	u32 sm_group1;	/* SMAP1JRx - Secure memory access group 1 */
+	u32 rsvd1[118];
+	u32 sm_cmd;	/* SMCJRx - Secure memory command */
+	u32 rsvd2;
+	u32 sm_status;	/* SMCSJRx - Secure memory status */
+};
+
 /*
  * caam_job_ring - direct job ring setup
  * 1-4 possible per instantiation, base + 1000/2000/3000/4000
@@ -454,8 +612,7 @@ struct caam_job_ring {
 	/* Command/control */
 	u32 rsvd11;
 	u32 jrcommand;	/* JRCRx - JobR command */
-
-	u32 rsvd12[932];
+	u32 rsvd12[931];
 
 	/* Performance Monitor                                  f00-fff */
 	struct caam_perfmon perfmon;
@@ -577,6 +734,62 @@ struct caam_job_ring {
 #define JRCFG_ICTT_SHIFT	16
 
 #define JRCR_RESET                  0x01
+
+/* secure memory command */
+#define SMC_PAGE_SHIFT	16
+#define SMC_PAGE_MASK	(0xffff << SMC_PAGE_SHIFT)
+#define SMC_PART_SHIFT	8
+#define SMC_PART_MASK	(0x0f << SMC_PART_SHIFT)
+#define SMC_CMD_SHIFT	0
+#define SMC_CMD_MASK	(0x0f << SMC_CMD_SHIFT)
+
+#define SMC_CMD_ALLOC_PAGE	0x01	/* allocate page to this partition */
+#define SMC_CMD_DEALLOC_PAGE	0x02	/* deallocate page from partition */
+#define SMC_CMD_DEALLOC_PART	0x03	/* deallocate partition */
+#define SMC_CMD_PAGE_INQUIRY	0x05	/* find partition associate with page */
+
+/* secure memory (command) status */
+#define SMCS_PAGE_SHIFT		16
+#define SMCS_PAGE_MASK		(0x0fff << SMCS_PAGE_SHIFT)
+#define SMCS_CMDERR_SHIFT	14
+#define SMCS_CMDERR_MASK	(3 << SMCS_CMDERR_SHIFT)
+#define SMCS_ALCERR_SHIFT	12
+#define SMCS_ALCERR_MASK	(3 << SMCS_ALCERR_SHIFT)
+#define SMCS_PGOWN_SHIFT	6
+#define SMCS_PGWON_MASK		(3 << SMCS_PGOWN_SHIFT)
+#define SMCS_PART_SHIFT		0
+#define SMCS_PART_MASK		(0xf << SMCS_PART_SHIFT)
+
+#define SMCS_CMDERR_NONE	0
+#define SMCS_CMDERR_INCOMP	1	/* Command not yet complete */
+#define SMCS_CMDERR_SECFAIL	2	/* Security failure occurred */
+#define SMCS_CMDERR_OVERFLOW	3	/* Command overflow */
+
+#define SMCS_ALCERR_NONE	0
+#define SMCS_ALCERR_PSPERR	1	/* Partion marked PSP (dealloc only) */
+#define SMCS_ALCERR_PAGEAVAIL	2	/* Page not available */
+#define SMCS_ALCERR_PARTOWN	3	/* Partition ownership error */
+
+#define SMCS_PGOWN_AVAIL	0	/* Page is available */
+#define SMCS_PGOWN_NOEXIST	1	/* Page initializing or nonexistent */
+#define SMCS_PGOWN_NOOWN	2	/* Page owned by another processor */
+#define SMCS_PGOWN_OWNED	3	/* Page belongs to this processor */
+
+/* secure memory access permissions */
+#define SMCS_PERM_KEYMOD_SHIFT	16
+#define SMCA_PERM_KEYMOD_MASK	(0xff << SMCS_PERM_KEYMOD_SHIFT)
+#define SMCA_PERM_CSP_ZERO	0x8000	/* Zero when deallocated or released */
+#define SMCA_PERM_PSP_LOCK	0x4000	/* Part./pages can't be deallocated */
+#define SMCA_PERM_PERM_LOCK	0x2000	/* Lock permissions */
+#define SMCA_PERM_GRP_LOCK	0x1000	/* Lock access groups */
+#define SMCA_PERM_RINGID_SHIFT	10
+#define SMCA_PERM_RINGID_MASK	(3 << SMCA_PERM_RINGID_SHIFT)
+#define SMCA_PERM_G2_BLOB	0x0080	/* Group 2 blob import/export */
+#define SMCA_PERM_G2_WRITE	0x0020	/* Group 2 write */
+#define SMCA_PERM_G2_READ	0x0010	/* Group 2 read */
+#define SMCA_PERM_G1_BLOB	0x0008	/* Group 1... */
+#define SMCA_PERM_G1_WRITE	0x0002
+#define SMCA_PERM_G1_READ	0x0001
 
 /*
  * caam_assurance - Assurance Controller View

@@ -1,7 +1,7 @@
 /*
  * Freescale ASRC Memory to Memory (M2M) driver
  *
- * Copyright (C) 2014-2015 Freescale Semiconductor, Inc.
+ * Copyright (C) 2014-2016 Freescale Semiconductor, Inc.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2. This program is licensed "as is" without any warranty of any
@@ -329,8 +329,6 @@ int fsl_asrc_process_buffer_pre(struct completion *complete,
 		return -EBUSY;
 	}
 
-	init_completion(complete);
-
 	return 0;
 }
 
@@ -351,14 +349,14 @@ int fsl_asrc_process_buffer(struct fsl_asrc_pair *pair,
 	int ret;
 
 	/* Check input task first */
-	ret = fsl_asrc_process_buffer_pre(&m2m->complete[IN], index, OUT);
+	ret = fsl_asrc_process_buffer_pre(&m2m->complete[IN], index, IN);
 	if (ret) {
 		mxc_asrc_dma_umap(m2m);
 		return ret;
 	}
 
 	/* ...then output task*/
-	ret = fsl_asrc_process_buffer_pre(&m2m->complete[OUT], index, IN);
+	ret = fsl_asrc_process_buffer_pre(&m2m->complete[OUT], index, OUT);
 	if (ret) {
 		mxc_asrc_dma_umap(m2m);
 		return ret;
@@ -631,6 +629,7 @@ static long fsl_asrc_ioctl_release_pair(struct fsl_asrc_pair *pair,
 static long fsl_asrc_ioctl_convert(struct fsl_asrc_pair *pair,
 				   void __user *user)
 {
+	struct fsl_asrc_m2m *m2m = pair->private;
 	struct fsl_asrc *asrc_priv = pair->asrc_priv;
 	enum asrc_pair_index index = pair->index;
 	struct asrc_convert_buffer buf;
@@ -647,6 +646,9 @@ static long fsl_asrc_ioctl_convert(struct fsl_asrc_pair *pair,
 		pair_err("failed to prepare buffer: %ld\n", ret);
 		return ret;
 	}
+
+	init_completion(&m2m->complete[IN]);
+	init_completion(&m2m->complete[OUT]);
 
 #ifdef ASRC_POLLING_WITHOUT_DMA
 	fsl_asrc_polling_debug(pair);
@@ -738,12 +740,8 @@ static long fsl_asrc_ioctl_status(struct fsl_asrc_pair *pair, void __user *user)
 
 static long fsl_asrc_ioctl_flush(struct fsl_asrc_pair *pair, void __user *user)
 {
-	struct fsl_asrc_m2m *m2m = pair->private;
 	struct fsl_asrc *asrc_priv = pair->asrc_priv;
 	enum asrc_pair_index index = pair->index;
-
-	init_completion(&m2m->complete[IN]);
-	init_completion(&m2m->complete[OUT]);
 
 	/* Release DMA and request again */
 	dma_release_channel(pair->dma_chan[IN]);
@@ -833,9 +831,6 @@ static int fsl_asrc_open(struct inode *inode, struct file *file)
 
 	pair->private = m2m;
 	pair->asrc_priv = asrc_priv;
-
-	init_completion(&m2m->complete[IN]);
-	init_completion(&m2m->complete[OUT]);
 
 	spin_lock_init(&m2m->lock);
 

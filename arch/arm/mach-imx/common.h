@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2015 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2004-2016 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
 /*
@@ -89,6 +89,9 @@ bool imx_src_is_m4_enabled(void);
 void mcc_receive_from_mu_buffer(unsigned int index, unsigned int *data);
 void mcc_send_via_mu_buffer(unsigned int index, unsigned int data);
 bool imx_mu_is_m4_in_low_freq(void);
+bool imx_mu_is_m4_in_stop(void);
+void imx_mu_set_m4_run_mode(void);
+int imx_mu_lpm_ready(bool ready);
 
 enum mxc_cpu_pwr_mode {
 	WAIT_CLOCKED,		/* wfi only */
@@ -129,6 +132,8 @@ unsigned int imx_gpc_is_mf_mix_off(void);
 void imx_gpcv2_pre_suspend(bool arm_power_off);
 void imx_gpcv2_post_resume(void);
 unsigned int imx_gpcv2_is_mf_mix_off(void);
+void imx_gpcv2_enable_wakeup_for_m4(void);
+void imx_gpcv2_disable_wakeup_for_m4(void);
 int imx_gpc_mf_power_on(unsigned int irq, unsigned int on);
 #ifdef CONFIG_HAVE_IMX_GPCV2
 int imx_gpcv2_mf_power_on(unsigned int irq, unsigned int on);
@@ -140,6 +145,7 @@ static inline void imx_gpcv2_set_core1_pdn_pup_by_software(bool pdn) {}
 void __init imx_gpcv2_check_dt(void);
 void imx_gpcv2_set_lpm_mode(enum mxc_cpu_pwr_mode mode);
 void imx_gpcv2_set_cpu_power_gate_in_idle(bool pdn);
+void imx_gpcv2_enable_rbc(bool enable);
 unsigned long save_ttbr1(void);
 void restore_ttbr1(unsigned long ttbr1);
 void imx_gpc_mask_all(void);
@@ -170,6 +176,7 @@ void imx7d_low_power_idle(void);
 void imx6sx_low_power_idle(void);
 void imx6ul_low_power_idle(void);
 void imx6sl_low_power_idle(void);
+bool imx_gpc_usb_wakeup_enabled(void);
 
 #ifdef CONFIG_SUSPEND
 void v7_cpu_resume(void);

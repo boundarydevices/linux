@@ -2,19 +2,35 @@
  * CAAM descriptor composition header
  * Definitions to support CAAM descriptor instruction generation
  *
- * Copyright 2008-2011 Freescale Semiconductor, Inc.
+ * Copyright (C) 2008-2015 Freescale Semiconductor, Inc.
  */
 
 #ifndef DESC_H
 #define DESC_H
 
+/*
+ * 16-byte hardware scatter/gather table
+ * An 8-byte table exists in the hardware spec, but has never been
+ * implemented to date. The 8/16 option is selected at RTL-compile-time.
+ * and this selection is visible in the Compile Time Parameters Register
+ */
+
+#define SEC4_SG_LEN_EXT		0x80000000	/* Entry points to table */
+#define SEC4_SG_LEN_FIN		0x40000000	/* Last ent in table */
+#define SEC4_SG_BPID_MASK	0x000000ff
+#define SEC4_SG_BPID_SHIFT	16
+#define SEC4_SG_LEN_MASK	0x3fffffff	/* Excludes EXT and FINAL */
+#define SEC4_SG_OFFS_MASK	0x00001fff
+
 struct sec4_sg_entry {
+#ifdef CONFIG_64BIT
 	u64 ptr;
-#define SEC4_SG_LEN_FIN 0x40000000
-#define SEC4_SG_LEN_EXT 0x80000000
+#else
+	u32 reserved;
+	u32 ptr;
+#endif
 	u32 len;
-	u8 reserved;
-	u8 buf_pool_id;
+	u16 buf_pool_id;
 	u16 offset;
 };
 
@@ -390,7 +406,10 @@ struct sec4_sg_entry {
 #define FIFOST_TYPE_PKHA_N	 (0x08 << FIFOST_TYPE_SHIFT)
 #define FIFOST_TYPE_PKHA_A	 (0x0c << FIFOST_TYPE_SHIFT)
 #define FIFOST_TYPE_PKHA_B	 (0x0d << FIFOST_TYPE_SHIFT)
-#define FIFOST_TYPE_AF_SBOX_JKEK (0x10 << FIFOST_TYPE_SHIFT)
+#define FIFOST_TYPE_AF_SBOX_CCM_JKEK	(0x10 << FIFOST_TYPE_SHIFT)
+#define FIFOST_TYPE_AF_SBOX_CCM_TKEK	(0x11 << FIFOST_TYPE_SHIFT)
+#define FIFOST_TYPE_KEY_CCM_JKEK	(0x14 << FIFOST_TYPE_SHIFT)
+#define FIFOST_TYPE_KEY_CCM_TKEK	(0x15 << FIFOST_TYPE_SHIFT)
 #define FIFOST_TYPE_AF_SBOX_TKEK (0x21 << FIFOST_TYPE_SHIFT)
 #define FIFOST_TYPE_PKHA_E_JKEK	 (0x22 << FIFOST_TYPE_SHIFT)
 #define FIFOST_TYPE_PKHA_E_TKEK	 (0x23 << FIFOST_TYPE_SHIFT)
@@ -1092,6 +1111,23 @@ struct sec4_sg_entry {
 #define OP_PCL_PKPROT_ECC			 0x0002
 #define OP_PCL_PKPROT_F2M			 0x0001
 
+/* Blob protocol protinfo bits */
+#define OP_PCL_BLOB_TK			0x0200
+#define OP_PCL_BLOB_EKT			0x0100
+
+#define OP_PCL_BLOB_K2KR_MEM		0x0000
+#define OP_PCL_BLOB_K2KR_C1KR		0x0010
+#define OP_PCL_BLOB_K2KR_C2KR		0x0030
+#define OP_PCL_BLOB_K2KR_AFHAS		0x0050
+#define OP_PCL_BLOB_K2KR_C2KR_SPLIT	0x0070
+
+#define OP_PCL_BLOB_PTXT_SECMEM		0x0008
+#define OP_PCL_BLOB_BLACK		0x0004
+
+#define OP_PCL_BLOB_FMT_NORMAL		0x0000
+#define OP_PCL_BLOB_FMT_MSTR		0x0002
+#define OP_PCL_BLOB_FMT_TEST		0x0003
+
 /* For non-protocol/alg-only op commands */
 #define OP_ALG_TYPE_SHIFT	24
 #define OP_ALG_TYPE_MASK	(0x7 << OP_ALG_TYPE_SHIFT)
@@ -1617,5 +1653,13 @@ struct sec4_sg_entry {
 
 /* Frame Descriptor Command for Replacement Job Descriptor */
 #define FD_CMD_REPLACE_JOB_DESC				0x20000000
+
+#define ARC4_BLOCK_SIZE       1
+#define ARC4_MAX_KEY_SIZE     256
+#define ARC4_MIN_KEY_SIZE     1
+
+#define XCBC_MAC_DIGEST_SIZE  16
+#define XCBC_MAC_BLOCK_WORDS  16
+
 
 #endif /* DESC_H */
