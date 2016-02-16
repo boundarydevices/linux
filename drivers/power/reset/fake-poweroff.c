@@ -15,6 +15,7 @@
 #include <linux/fb.h>
 #include <linux/gpio.h>
 #include <linux/init.h>
+#include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of_platform.h>
@@ -28,11 +29,22 @@
  */
 static int gpio_num = -1;
 static int gpio_active_low;
+static struct platform_device *wdg_pdev = NULL;
+
+/*
+ * Copied from drivers/watchdog/imx2_wdt.c
+ * Necessary for watchdog feeding
+ */
+#define IMX2_WDT_WSR		0x02		/* Service Register */
+#define IMX2_WDT_SEQ1		0x5555		/* -> service sequence 1 */
+#define IMX2_WDT_SEQ2		0xAAAA		/* -> service sequence 2 */
 
 static void fake_poweroff_do_poweroff(void)
 {
 	int i;
 	int waspressed = 0;
+	struct resource *res;
+	void __iomem *base = NULL;
 
 	pr_info("%s\n", __func__);
 
@@ -40,6 +52,15 @@ static void fake_poweroff_do_poweroff(void)
 	for (i = 0; i < num_registered_fb; i++) {
 		if (registered_fb[i])
 			fb_blank(registered_fb[i], FB_BLANK_POWERDOWN);
+	}
+
+	if (wdg_pdev) {
+		res = platform_get_resource(wdg_pdev, IORESOURCE_MEM, 0);
+		base = devm_ioremap(&wdg_pdev->dev, res->start,
+				    resource_size(res));
+		if (IS_ERR(base))
+			pr_err("%s: couldn't allocate wdog resource\n",
+			       __func__);
 	}
 
 	while (1) {
@@ -53,6 +74,11 @@ static void fake_poweroff_do_poweroff(void)
 				waspressed = pressed;
 		}
 		mdelay(100);
+		/* Feed watchdog every second */
+		if ((i++ % 10) && !IS_ERR(base)) {
+			__raw_writew(IMX2_WDT_SEQ1, base + IMX2_WDT_WSR);
+			__raw_writew(IMX2_WDT_SEQ2, base + IMX2_WDT_WSR);
+		}
 	}
 
 	machine_restart(NULL);
@@ -61,10 +87,11 @@ static void fake_poweroff_do_poweroff(void)
 static int fake_poweroff_probe(struct platform_device *pdev)
 {
 	enum of_gpio_flags flags;
+	struct device_node *of_wdg;
 
 	/* If a pm_power_off function has already been added: force */
 	if (pm_power_off != NULL)
-		pr_info("%s: forcing pm_power_off as already registered",
+		pr_info("%s: forcing pm_power_off as already registered\n",
 			__func__);
 
 	gpio_num = of_get_gpio_flags(pdev->dev.of_node, 0, &flags);
@@ -72,6 +99,16 @@ static int fake_poweroff_probe(struct platform_device *pdev)
 		pr_info("%s: gpio field not valid: discard\n", __func__);
 	else
 		gpio_active_low = flags & OF_GPIO_ACTIVE_LOW;
+
+	of_wdg = of_parse_phandle(pdev->dev.of_node, "watchdog", 0);
+	if (!of_wdg) {
+		pr_info("%s: no watchdog device found\n", __func__);
+	} else {
+		wdg_pdev = of_find_device_by_node(of_wdg);
+		if (wdg_pdev)
+			pr_info("%s: found watchdog %s\n",
+				__func__, wdg_pdev->name);
+	}
 
 	/* Force pm_power_off to be fake */
 	pm_power_off = &fake_poweroff_do_poweroff;
