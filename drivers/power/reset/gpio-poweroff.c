@@ -53,13 +53,6 @@ static int gpio_poweroff_probe(struct platform_device *pdev)
 	bool input = false;
 	int ret;
 
-	/* If a pm_power_off function has already been added, leave it alone */
-	if (pm_power_off != NULL) {
-		pr_err("%s: pm_power_off function already registered",
-		       __func__);
-		return -EBUSY;
-	}
-
 	gpio_num = of_get_gpio_flags(pdev->dev.of_node, 0, &flags);
 	if (!gpio_is_valid(gpio_num))
 		return gpio_num;
@@ -86,6 +79,11 @@ static int gpio_poweroff_probe(struct platform_device *pdev)
 		}
 	}
 
+	/* If a pm_power_off function has already been added, steal it */
+	if (pm_power_off != NULL) {
+		pr_warn("%s: overriding pm_power_off function",
+		       __func__);
+	}
 	pm_power_off = &gpio_poweroff_do_poweroff;
 	return 0;
 
