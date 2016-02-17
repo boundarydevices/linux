@@ -661,25 +661,33 @@ static s32 ov5640_write_reg(struct ov5640 *sensor, u16 reg, u8 val)
 static s32 ov5640_read_reg(struct ov5640 *sensor, u16 reg, u8 *val)
 {
 	struct device *dev = &sensor->i2c_client->dev;
-	u8 au8RegBuf[2] = {0};
-	u8 u8RdVal = 0;
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msgs[2];
+	u8 buf[2];
+	int ret;
 
-	au8RegBuf[0] = reg >> 8;
-	au8RegBuf[1] = reg & 0xff;
+	buf[0] = reg >> 8;
+	buf[1] = reg & 0xff;
+	msgs[0].addr = client->addr;
+	msgs[0].flags = 0;
+	msgs[0].len = 2;
+	msgs[0].buf = buf;
 
-	if (i2c_master_send(sensor->i2c_client, au8RegBuf, 2) != 2) {
-		dev_err(dev, "Read reg error: reg=%x\n", reg);
+	msgs[1].addr = client->addr;
+	msgs[1].flags = I2C_M_RD;
+	msgs[1].len = 1;
+	msgs[1].buf = buf;
+
+	ret = i2c_transfer(client->adapter, msgs, 2);
+	if (ret < 0) {
+		dev_err(dev, "%s: reg=%x ret=%d\n", __func__, reg, ret);
 		return -1;
 	}
 
-	if (i2c_master_recv(sensor->i2c_client, &u8RdVal, 1) != 1) {
-		dev_err(dev, "Read reg error: reg=%x, val=%x\n", reg, u8RdVal);
-		return -1;
-	}
+	*val = buf[0];
+	dev_dbg(dev, "%s: reg=%x, val=%x\n", __func__, reg, buf[0]);
 
-	*val = u8RdVal;
-
-	return u8RdVal;
+	return buf[0];
 }
 
 static int prev_sysclk, prev_HTS;
