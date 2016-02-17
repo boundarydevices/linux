@@ -528,7 +528,7 @@ static s32 ov5640_write_reg(u16 reg, u8 val)
 	au8Buf[2] = val;
 
 	if (i2c_master_send(ov5640_data.i2c_client, au8Buf, 3) < 0) {
-		pr_err("%s:write reg error:reg=%x,val=%x\n",
+		pr_err("%s(mipi):write reg error:reg=%x,val=%x\n",
 			__func__, reg, val);
 		return -1;
 	}
@@ -545,13 +545,13 @@ static s32 ov5640_read_reg(u16 reg, u8 *val)
 	au8RegBuf[1] = reg & 0xff;
 
 	if (2 != i2c_master_send(ov5640_data.i2c_client, au8RegBuf, 2)) {
-		pr_err("%s:write reg error:reg=%x\n",
+		pr_err("%s(mipi):write reg error:reg=%x\n",
 				__func__, reg);
 		return -1;
 	}
 
 	if (1 != i2c_master_recv(ov5640_data.i2c_client, &u8RdVal, 1)) {
-		pr_err("%s:read reg error:reg=%x,val=%x\n",
+		pr_err("%s(mipi):read reg error:reg=%x,val=%x\n",
 				__func__, reg, u8RdVal);
 		return -1;
 	}
