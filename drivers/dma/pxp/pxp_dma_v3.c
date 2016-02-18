@@ -1245,13 +1245,18 @@ static int pxp_config(struct pxps *pxp, struct pxp_channel *pxp_chan)
 	pxp_set_s0crop(pxp);
 	pxp_set_scaling(pxp);
 	ol_nr = pxp_conf_data->layer_nr - 2;
-	while (ol_nr > 0) {
-		i = pxp_conf_data->layer_nr - 2 - ol_nr;
-		pxp_set_oln(i, pxp);
-		pxp_set_olparam(i, pxp);
-		/* only the color key in higher overlay will take effect. */
-		pxp_set_olcolorkey(i, pxp);
-		ol_nr--;
+	if (ol_nr > 0) {
+		while (ol_nr > 0) {
+			i = pxp_conf_data->layer_nr - 2 - ol_nr;
+			pxp_set_oln(i, pxp);
+			pxp_set_olparam(i, pxp);
+			/* only the color key in higher overlay will take effect. */
+			pxp_set_olcolorkey(i, pxp);
+			ol_nr--;
+		}
+	} else {
+		__raw_writel(0xffffffff, pxp->base + HW_PXP_OUT_AS_ULC);
+		__raw_writel(0x0, pxp->base + HW_PXP_OUT_AS_LRC);
 	}
 	pxp_set_s0colorkey(pxp);
 	pxp_set_csc(pxp);
