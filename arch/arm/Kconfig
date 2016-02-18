@@ -93,6 +93,9 @@ config ARM_HAS_SG_CHAIN
 	select ARCH_HAS_SG_CHAIN
 	bool
 
+config MXC_REBOOT_ANDROID_CMD
+	bool "Android reboot setting"
+
 config NEED_SG_DMA_LENGTH
 	bool
 

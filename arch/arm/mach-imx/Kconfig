@@ -19,6 +19,9 @@ config MXC_TZIC
 config MXC_AVIC
 	bool
 
+config BCB_SUPPORT
+	bool "Android MISC partition support"
+
 config MXC_DEBUG_BOARD
 	bool "Enable MXC debug board(for 3-stack)"
 	depends on MACH_MX27_3DS || MACH_MX31_3DS || MACH_MX35_3DS

@@ -76,6 +76,7 @@ obj-$(CONFIG_MACH_KZM_ARM11_01) += mach-kzm_arm11_01.o
 obj-$(CONFIG_MACH_BUG) += mach-bug.o
 obj-$(CONFIG_MACH_IMX31_DT) += imx31-dt.o
 
+obj-$(CONFIG_BCB_SUPPORT) += bcb.o
 # i.MX35 based machines
 obj-$(CONFIG_MACH_PCM043) += mach-pcm043.o
 obj-$(CONFIG_MACH_MX35_3DS) += mach-mx35_3ds.o

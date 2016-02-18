@@ -10,11 +10,68 @@
 #include <linux/cpu.h>
 #include <linux/delay.h>
 #include <linux/reboot.h>
-
+#ifdef CONFIG_MXC_REBOOT_ANDROID_CMD
+#include <linux/clk.h>
+#include <linux/io.h>
+#endif
 #include <asm/cacheflush.h>
 #include <asm/idmap.h>
 
 #include "reboot.h"
+
+#ifdef CONFIG_MXC_REBOOT_ANDROID_CMD
+#define ANDROID_RECOVERY_BOOT  (1 << 7)
+#define ANDROID_FASTBOOT_BOOT  (1 << 8)
+
+#define AIPS1_ARB_BASE_ADDR            0x02000000
+#define ATZ1_BASE_ADDR                 AIPS1_ARB_BASE_ADDR
+#define AIPS1_OFF_BASE_ADDR            (ATZ1_BASE_ADDR + 0x80000)
+#define MX6_SNVS_BASE_ADDR             (AIPS1_OFF_BASE_ADDR + 0x4C000)
+#define SNVS_LPGPR                             0x68
+#define SNVS_SIZE                              (1024*16)
+void do_switch_recovery(void)
+{
+       u32 reg;
+       void *addr;
+       addr = ioremap(MX6_SNVS_BASE_ADDR, SNVS_SIZE);
+       if (!addr) {
+               pr_warn("SNVS ioremap failed!\n");
+               return;
+       }
+       reg = __raw_readl(addr + SNVS_LPGPR);
+       reg |= ANDROID_RECOVERY_BOOT;
+       __raw_writel(reg, (addr + SNVS_LPGPR));
+
+       iounmap(addr);
+}
+
+void do_switch_fastboot(void)
+{
+       u32 reg;
+       void *addr;
+
+       addr = ioremap(MX6_SNVS_BASE_ADDR, SNVS_SIZE);
+       if (!addr) {
+               pr_warn("SNVS ioremap failed!\n");
+               return;
+       }
+
+       reg = __raw_readl(addr + SNVS_LPGPR);
+       reg |= ANDROID_FASTBOOT_BOOT;
+       __raw_writel(reg, addr + SNVS_LPGPR);
+
+       iounmap(addr);
+}
+
+static void arch_reset_special_mode(const char *cmd)
+{
+       if (cmd && strcmp(cmd, "recovery") == 0)
+               do_switch_recovery();
+       else if (cmd && strcmp(cmd, "bootloader") == 0)
+               do_switch_fastboot();
+}
+
+#endif
 
 typedef void (*phys_reset_t)(unsigned long);
 
@@ -164,6 +221,9 @@ void arm_machine_flush_console(void)
 void machine_restart(char *cmd)
 {
 	local_irq_disable();
+#ifdef CONFIG_MXC_REBOOT_ANDROID_CMD
+	arch_reset_special_mode(cmd);
+#endif
 	smp_send_stop();
 
 	/* Flush the console to make sure all the relevant messages make it
