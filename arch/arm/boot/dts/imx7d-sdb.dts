@@ -166,6 +166,12 @@
 			enable-active-high;
 		};
 	};
+
+	bt_rfkill {
+		compatible = "fsl,mxc_bt_rfkill";
+		bt-power-gpios = <&gpio4 23 0>;
+		status ="okay";
+	};
 };
 
 &adc1 {
