@@ -3565,6 +3565,10 @@ static int pxp_config(struct pxps *pxp, struct pxp_channel *pxp_chan)
 		pr_err("Invalid pxp operation type passed\n");
 		break;
 	}
+	if (pxp_conf_data->layer_nr <= 2) {
+		__raw_writel(0xffffffff, pxp->base + HW_PXP_OUT_AS_ULC);
+		__raw_writel(0x0, pxp->base + HW_PXP_OUT_AS_LRC);
+	}
 
 	return ret;
 }
