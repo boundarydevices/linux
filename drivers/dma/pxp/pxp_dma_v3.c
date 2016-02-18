@@ -798,6 +798,16 @@ static int pxp_set_scaling(struct pxps *pxp)
 	struct pxp_layer_param *s0_params = &pxp_conf->s0_param;
 	struct pxp_layer_param *out_params = &pxp_conf->out_param;
 
+	if (!proc_data->drect.width || !proc_data->drect.height) {
+		pr_err("%s:wxh=%d x %d\n", __func__, proc_data->drect.width, proc_data->drect.height);
+		__raw_writel(0, pxp->base + HW_PXP_PS_CTRL);
+		s0scale = BF_PXP_PS_SCALE_YSCALE(0x1000) |
+			BF_PXP_PS_SCALE_XSCALE(0x1000);
+		__raw_writel(s0scale, pxp->base + HW_PXP_PS_SCALE);
+
+		pxp_set_ctrl(pxp);
+		return -EINVAL;
+	}
 	proc_data->scaling = 1;
 	decx = proc_data->srect.width / proc_data->drect.width;
 	decy = proc_data->srect.height / proc_data->drect.height;
@@ -1487,6 +1497,10 @@ static dma_cookie_t pxp_tx_submit(struct dma_async_tx_descriptor *tx)
 	dma_cookie_t cookie;
 	unsigned long flags;
 
+	if (!desc->proc_data.drect.width || !desc->proc_data.drect.height)
+		pr_info("%s:wxh=%d x %d\n", __func__,
+			desc->proc_data.drect.width,
+			desc->proc_data.drect.height);
 	dev_dbg(&pxp_chan->dma_chan.dev->device, "received TX\n");
 
 	mutex_lock(&pxp_chan->chan_mutex);
