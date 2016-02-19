@@ -57,10 +57,6 @@
 
 /* The maximum  bytes that a sdma BD can transfer.*/
 #define MAX_SDMA_BD_BYTES  (1 << 15)
-/* 3 Sec for 1MB or less than 1MB, else change with the transfer length */
-#define IMX_DEFAULT_DMA_TIMEOUT (msecs_to_jiffies(3000))
-#define IMX_DMA_TIMEOUT(len) ((len < 0x100000) ? IMX_DEFAULT_DMA_TIMEOUT : \
-				len * IMX_DEFAULT_DMA_TIMEOUT / 0x100000)
 struct spi_imx_config {
 	unsigned int speed_hz;
 	unsigned int bpw;
@@ -98,6 +94,7 @@ struct spi_imx_data {
 	struct clk *clk_per;
 	struct clk *clk_ipg;
 	unsigned long spi_clk;
+	unsigned int spi_bus_clk;
 
 	unsigned int count;
 	void (*tx)(struct spi_imx_data *);
@@ -372,6 +369,7 @@ static int __maybe_unused mx51_ecspi_config(struct spi_imx_data *spi_imx,
 
 	/* set clock speed */
 	ctrl |= mx51_ecspi_clkdiv(spi_imx, config->speed_hz, &clk);
+	spi_imx->spi_bus_clk = clk;
 
 	/* set chip select to use */
 	ctrl |= MX51_ECSPI_CTRL_CS(config->cs);
@@ -1014,11 +1012,26 @@ static void spi_imx_tail_pio_set(struct spi_imx_data *spi_imx, int left)
 	spi_imx->txfifo = left / spi_imx->rx_config.src_addr_width;
 }
 
+static int spi_imx_calculate_timeout(struct spi_imx_data *spi_imx, int size)
+{
+	unsigned long timeout = 0;
+
+	/* Time with actual data transfer and CS change delay related to HW */
+	timeout = (8 + 4) * size / spi_imx->spi_bus_clk;
+
+	/* Add extra second for scheduler related activities */
+	timeout += 1;
+
+	/* Double calculated timeout */
+	return msecs_to_jiffies(2 * timeout * MSEC_PER_SEC);
+}
+
 static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 				struct spi_transfer *transfer)
 {
 	struct dma_async_tx_descriptor *desc_tx = NULL, *desc_rx = NULL;
 	int ret;
+	unsigned long transfer_timeout;
 	int left = 0;
 	struct spi_master *master = spi_imx->bitbang.master;
 	struct sg_table *tx = &transfer->tx_sg, *rx = &transfer->rx_sg;
@@ -1086,9 +1099,11 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	dma_async_issue_pending(master->dma_tx);
 	spi_imx->devtype_data->trigger(spi_imx);
 
+	transfer_timeout = spi_imx_calculate_timeout(spi_imx, transfer->len);
+
 	/* Wait SDMA to finish the data transfer.*/
 	ret = wait_for_completion_timeout(&spi_imx->dma_tx_completion,
-					  IMX_DMA_TIMEOUT(transfer->len));
+					  transfer_timeout);
 	if (!ret) {
 		dev_err(spi_imx->dev, "I/O Error in DMA TX:%x\n",
 				transfer->len);
@@ -1096,7 +1111,7 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 		dmaengine_terminate_all(master->dma_rx);
 	} else {
 		ret = wait_for_completion_timeout(&spi_imx->dma_rx_completion,
-				IMX_DMA_TIMEOUT(transfer->len));
+				transfer_timeout);
 		if (!ret) {
 			dev_err(spi_imx->dev, "I/O Error in DMA RX:%x %x %x\n",
 				transfer->len,
@@ -1117,12 +1132,9 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 			spi_imx->devtype_data->intctrl(spi_imx, MXC_INT_TCEN);
 
 			ret = wait_for_completion_timeout(&spi_imx->xfer_done,
-						IMX_DMA_TIMEOUT(transfer->len));
-			if (!ret) {
-				pr_warn("%s %s: I/O Error in RX tail\n",
-					dev_driver_string(&master->dev),
-					dev_name(&master->dev));
-			}
+						transfer_timeout);
+			if (!ret)
+				dev_err(spi_imx->dev, "I/O Error in RX tail\n");
 		}
 	}
 
