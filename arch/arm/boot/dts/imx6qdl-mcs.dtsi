@@ -126,7 +126,7 @@
 	pinctrl_pwm4: pwm4grp {
 		fsl,pins = <
 			MX6QDL_PAD_SD1_CMD__PWM4_OUT		0x130b1
-#define GP_LVDS_DE_15_4	IMX_GPIO_NR(4, 7)
+#define GP_LVDS_DE_15_4	<&gpio4 9 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_KEY_ROW1__GPIO4_IO09		0x1b0b1
 		>;
 	};
