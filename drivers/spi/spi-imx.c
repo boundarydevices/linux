@@ -1067,8 +1067,10 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 		desc_rx = dmaengine_prep_slave_sg(master->dma_rx,
 					rx->sgl, rx->nents, DMA_DEV_TO_MEM,
 					DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
-		if (!desc_rx)
-			goto rx_nodma;
+		if (!desc_rx) {
+			dmaengine_terminate_all(master->dma_tx);
+			return -EINVAL;
+		}
 
 		desc_rx->callback = spi_imx_dma_rx_callback;
 		desc_rx->callback_param = (void *)spi_imx;
@@ -1079,8 +1081,10 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 		desc_tx = dmaengine_prep_slave_sg(master->dma_tx,
 					tx->sgl, tx->nents, DMA_MEM_TO_DEV,
 					DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
-		if (!desc_tx)
-			goto tx_nodma;
+		if (!desc_tx) {
+			dmaengine_terminate_all(master->dma_rx);
+			return -EINVAL;
+		}
 
 		desc_tx->callback = spi_imx_dma_tx_callback;
 		desc_tx->callback_param = (void *)spi_imx;
@@ -1148,12 +1152,6 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 		ret = transfer->len;
 
 	return ret;
-
-rx_nodma:
-	dmaengine_terminate_all(master->dma_tx);
-tx_nodma:
-	dev_warn_once(spi_imx->dev, "DMA not available, falling back to PIO\n");
-	return -EAGAIN;
 }
 
 static int spi_imx_pio_transfer(struct spi_device *spi,
@@ -1188,8 +1186,7 @@ static int spi_imx_transfer(struct spi_device *spi,
 		spi_imx->usedma = true;
 		ret = spi_imx_dma_transfer(spi_imx, transfer);
 		spi_imx->usedma = false; /* clear the dma flag */
-		if (ret != -EAGAIN)
-			return ret;
+		return ret;
 	}
 	spi_imx->usedma = false;
 
