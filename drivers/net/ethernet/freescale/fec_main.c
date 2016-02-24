@@ -317,7 +317,7 @@ static int fec_trigger_tx(struct fec_enet_priv_tx_q *txq, __fec16 cbd_sc,
 	/* Make sure the updates to rest of the descriptor are performed before
 	 * transferring ownership.
 	 */
-	wmb();
+	dma_wmb();
 	/* Send it on its way.  Transfer ownership
 	 * Keep window for interrupt between the next 3 lines as small as
 	 * possible, to avoid "tx int lost" in case no more tx interrupts
@@ -1629,7 +1629,7 @@ rx_processing_done:
 		/* Make sure the updates to rest of the descriptor are
 		 * performed before transferring ownership.
 		 */
-		wmb();
+		dma_wmb();
 		bdp->cbd_sc = cpu_to_fec16(status);
 
 		/* Update BD pointer to next entry */
