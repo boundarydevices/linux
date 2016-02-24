@@ -448,10 +448,7 @@ fec_enet_txq_submit_frag_skb(struct fec_enet_priv_tx_q *txq,
 
 		bdp->cbd_bufaddr = cpu_to_fec32(addr);
 		bdp->cbd_datlen = cpu_to_fec16(frag_len);
-		/* Make sure the updates to rest of the descriptor are
-		 * performed before transferring ownership.
-		 */
-		wmb();
+		/* ownership is NOT being transferred */
 		bdp->cbd_sc = cpu_to_fec16(status);
 	}
 
