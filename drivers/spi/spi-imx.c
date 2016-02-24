@@ -104,7 +104,6 @@ struct spi_imx_data {
 	unsigned int txfifo; /* number of words pushed in tx FIFO */
 
 	/* DMA */
-	unsigned int dma_finished;
 	bool usedma;
 	u32 wml;
 	struct completion dma_rx_completion;
@@ -330,18 +329,10 @@ static void mx51_ecspi_intctrl(struct spi_imx_data *spi_imx, int enable)
 
 static void mx51_ecspi_trigger(struct spi_imx_data *spi_imx)
 {
-	u32 reg = readl(spi_imx->base + MX51_ECSPI_CTRL);
-	/*
-	 * To workaround ERR008517, SDMA script need use XCH instead of SMC
-	 * just like PIO mode and it fix on i.mx6ul
-	 */
-	if (!spi_imx->usedma)
-		reg |= MX51_ECSPI_CTRL_XCH;
-	else if (!spi_imx->dma_finished &&
-		 spi_imx->devtype_data->devtype == IMX6UL_ECSPI)
-		reg |= MX51_ECSPI_CTRL_SMC;
-	else
-		reg &= ~MX51_ECSPI_CTRL_SMC;
+	u32 reg;
+
+	reg = readl(spi_imx->base + MX51_ECSPI_CTRL);
+	reg |= MX51_ECSPI_CTRL_XCH;
 	writel(reg, spi_imx->base + MX51_ECSPI_CTRL);
 }
 
@@ -413,6 +404,13 @@ static int mx51_ecspi_config(struct spi_device *spi)
 		cfg |= MX51_ECSPI_CONFIG_SSBPOL(spi->chip_select);
 	else
 		cfg &= ~MX51_ECSPI_CONFIG_SSBPOL(spi->chip_select);
+
+	/*
+	 * To workaround ERR009165, SDMA script needs to use XCH instead of SMC
+	 * just like PIO mode and it is fixed on i.mx6ul
+	 */
+	if (spi_imx->usedma && is_imx6ul_ecspi(spi_imx))
+		ctrl |= MX51_ECSPI_CTRL_SMC;
 
 	/* CTRL register always go first to bring out controller from reset */
 	writel(ctrl, spi_imx->base + MX51_ECSPI_CTRL);
@@ -1125,9 +1123,6 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	int rem;
 	u32 bpw;
 
-	/* Trigger the cspi module. */
-	spi_imx->dma_finished = 0;
-
 	nents = rx->nents;
 	bpw = spi_imx->tx_config.dst_addr_width;
 	/*
@@ -1177,7 +1172,6 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 
 	dmaengine_submit(desc_tx);
 	dma_async_issue_pending(master->dma_tx);
-	spi_imx->devtype_data->trigger(spi_imx);
 
 	transfer_timeout = spi_imx_calculate_timeout(spi_imx, transfer->len);
 
@@ -1227,10 +1221,6 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 			return -ETIMEDOUT;
 		}
 	}
-
-	spi_imx->dma_finished = 1;
-	if (is_imx6ul_ecspi(spi_imx))
-		spi_imx->devtype_data->trigger(spi_imx);
 
 	return transfer->len;
 }
