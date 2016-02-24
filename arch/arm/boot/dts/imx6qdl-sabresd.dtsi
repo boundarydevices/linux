@@ -645,7 +645,7 @@
 	mag3110@e {
 		compatible = "fsl,mag3110";
 		reg = <0xe>;
-		position = <2>;
+		position = <1>;
 		vdd-supply = <&reg_sensor>;
 		vddio-supply = <&reg_sensor>;
 		interrupt-parent = <&gpio3>;
