@@ -907,6 +907,11 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 		}
 	}
 
+	if (spi_imx_can_dma(spi_imx->bitbang.master, spi, t))
+		spi_imx->usedma = 1;
+	else
+		spi_imx->usedma = 0;
+
 	spi_imx->devtype_data->config(spi_imx, &config);
 
 	return 0;
@@ -1178,19 +1183,12 @@ static int spi_imx_pio_transfer(struct spi_device *spi,
 static int spi_imx_transfer(struct spi_device *spi,
 				struct spi_transfer *transfer)
 {
-	int ret;
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
 
-	if (spi_imx->bitbang.master->can_dma &&
-	    spi_imx_can_dma(spi_imx->bitbang.master, spi, transfer)) {
-		spi_imx->usedma = true;
-		ret = spi_imx_dma_transfer(spi_imx, transfer);
-		spi_imx->usedma = false; /* clear the dma flag */
-		return ret;
-	}
-	spi_imx->usedma = false;
-
-	return spi_imx_pio_transfer(spi, transfer);
+	if (spi_imx->usedma)
+		return spi_imx_dma_transfer(spi_imx, transfer);
+	else
+		return spi_imx_pio_transfer(spi, transfer);
 }
 
 static int spi_imx_setup(struct spi_device *spi)
