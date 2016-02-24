@@ -104,7 +104,6 @@ struct spi_imx_data {
 	unsigned int txfifo; /* number of words pushed in tx FIFO */
 
 	/* DMA */
-	unsigned int dma_is_inited;
 	unsigned int dma_finished;
 	bool usedma;
 	u32 wml;
@@ -230,8 +229,8 @@ static bool spi_imx_can_dma(struct spi_master *master, struct spi_device *spi,
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(master);
 	u32 bpw = get_bytes_per_word(spi, transfer);
 
-	if (transfer && spi_imx->dma_is_inited &&
-		(transfer->len > spi_imx_get_fifosize(spi_imx) * bpw))
+	if (transfer && master->dma_rx &&
+			(transfer->len > spi_imx_get_fifosize(spi_imx) * bpw))
 		return true;
 	return false;
 }
@@ -883,7 +882,12 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 		spi_imx->rx_config.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 	}
 
-	if (spi_imx->dma_is_inited && (spi_imx->prev_bpw != config.bpw)) {
+	if (spi_imx_can_dma(spi_imx->bitbang.master, spi, t))
+		spi_imx->usedma = 1;
+	else
+		spi_imx->usedma = 0;
+
+	if (spi_imx->bitbang.master->dma_rx && (spi_imx->prev_bpw != config.bpw)) {
 		spi_imx->prev_bpw = config.bpw;
 
 		ret = dmaengine_slave_config(spi_imx->bitbang.master->dma_tx,
@@ -899,11 +903,6 @@ static int spi_imx_setupxfer(struct spi_device *spi,
 			return ret;
 		}
 	}
-
-	if (spi_imx_can_dma(spi_imx->bitbang.master, spi, t))
-		spi_imx->usedma = 1;
-	else
-		spi_imx->usedma = 0;
 
 	spi_imx->devtype_data->config(spi_imx, &config);
 
@@ -923,8 +922,6 @@ static void spi_imx_sdma_exit(struct spi_imx_data *spi_imx)
 		dma_release_channel(master->dma_tx);
 		master->dma_tx = NULL;
 	}
-
-	spi_imx->dma_is_inited = 0;
 }
 
 static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
@@ -967,7 +964,6 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 	master->max_dma_len = MAX_SDMA_BD_BYTES;
 	spi_imx->bitbang.master->flags = SPI_MASTER_MUST_RX |
 					 SPI_MASTER_MUST_TX;
-	spi_imx->dma_is_inited = 1;
 
 	return 0;
 err:
