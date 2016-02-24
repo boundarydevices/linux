@@ -266,9 +266,9 @@ static bool spi_imx_can_dma(struct spi_master *master, struct spi_device *spi,
 #define MX51_ECSPI_DMA_RXT_WML_OFFSET	24
 #define MX51_ECSPI_DMA_RXT_WML_MASK	(0x3F << 24)
 
-#define MX51_ECSPI_DMA_TEDEN_OFFSET	7
-#define MX51_ECSPI_DMA_RXDEN_OFFSET	23
-#define MX51_ECSPI_DMA_RXTDEN_OFFSET	31
+#define MX51_ECSPI_DMA_TEDEN		(1 << 7)
+#define MX51_ECSPI_DMA_RXDEN		(1 << 23)
+#define MX51_ECSPI_DMA_RXTDEN		(1 << 31)
 
 #define MX51_ECSPI_STAT		0x18
 #define MX51_ECSPI_STAT_RR		(1 <<  3)
@@ -353,10 +353,9 @@ static void __maybe_unused mx51_ecspi_trigger(struct spi_imx_data *spi_imx)
 static int __maybe_unused mx51_ecspi_config(struct spi_imx_data *spi_imx,
 		struct spi_imx_config *config)
 {
-	u32 ctrl = MX51_ECSPI_CTRL_ENABLE;
-	u32 dma = 0;
+	u32 ctrl = MX51_ECSPI_CTRL_ENABLE, cfg = 0;
 	u32 clk = config->speed_hz, delay, reg;
-	u32 cfg = 0;
+	int tx_wml = is_imx6ul_ecspi(spi_imx) ? spi_imx->wml : 1;
 
 	/*
 	 * The hardware seems to have a race condition when changing modes. The
@@ -421,17 +420,11 @@ static int __maybe_unused mx51_ecspi_config(struct spi_imx_data *spi_imx,
 	 * Configure the DMA register: setup the watermark
 	 * and enable DMA request.
 	 */
-	if (spi_imx->dma_is_inited) {
-		int tx_wml = spi_imx->wml;
 
-		if (spi_imx->devtype_data->devtype != IMX6UL_ECSPI)
-			tx_wml = 1;
-		dma = (spi_imx->wml - 1) << MX51_ECSPI_DMA_RX_WML_OFFSET
-		      | (tx_wml - 1) << MX51_ECSPI_DMA_TX_WML_OFFSET
-		      | (1 << MX51_ECSPI_DMA_TEDEN_OFFSET)
-		      | (1 << MX51_ECSPI_DMA_RXDEN_OFFSET);
-		writel(dma, spi_imx->base + MX51_ECSPI_DMA);
-	}
+	writel((spi_imx->wml - 1) << MX51_ECSPI_DMA_RX_WML_OFFSET |
+		(tx_wml - 1) << MX51_ECSPI_DMA_TX_WML_OFFSET |
+		MX51_ECSPI_DMA_TEDEN | MX51_ECSPI_DMA_RXDEN,
+		spi_imx->base + MX51_ECSPI_DMA);
 
 	return 0;
 }
