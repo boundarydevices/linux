@@ -1020,77 +1020,67 @@ static int spi_imx_calculate_timeout(struct spi_imx_data *spi_imx, int size)
 static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 				struct spi_transfer *transfer)
 {
-	struct dma_async_tx_descriptor *desc_tx = NULL, *desc_rx = NULL;
+	struct dma_async_tx_descriptor *desc_tx, *desc_rx;
 	int ret;
 	unsigned long transfer_timeout;
 	int left = 0;
 	struct spi_master *master = spi_imx->bitbang.master;
 	struct sg_table *tx = &transfer->tx_sg, *rx = &transfer->rx_sg;
-
-	reinit_completion(&spi_imx->dma_rx_completion);
-	reinit_completion(&spi_imx->dma_tx_completion);
+	unsigned nents;
+	int rem;
+	u32 bpw;
 
 	/* Trigger the cspi module. */
 	spi_imx->dma_finished = 0;
 
-	if (rx) {
-		unsigned nents = rx->nents;
-		int rem;
-		u32 bpw = spi_imx->rx_config.src_addr_width;
-		/*
-		 * Adjust the transfer lenth of the last scattlist if there are
-		 * some tail data, use PIO read to get the tail data since DMA
-		 * sometimes miss the last tail interrupt.
-		 */
-		left = rem = transfer->len % (spi_imx->wml * bpw);
-		while (rem) {
-			struct scatterlist *sgl_last = &rx->sgl[nents - 1];
-
-			if (sgl_last->length > rem) {
-				sgl_last->length -= rem;
-				break;
-			}
-			rem -= sgl_last->length;
-			sgl_last->length = 0;
-			nents--;
-			rx->nents--;
-		}
-		desc_rx = dmaengine_prep_slave_sg(master->dma_rx,
-					rx->sgl, rx->nents, DMA_DEV_TO_MEM,
-					DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
-		if (!desc_rx) {
-			dmaengine_terminate_all(master->dma_tx);
-			return -EINVAL;
-		}
-
-		desc_rx->callback = spi_imx_dma_rx_callback;
-		desc_rx->callback_param = (void *)spi_imx;
-		dmaengine_submit(desc_rx);
-	}
-
-	if (tx) {
-		desc_tx = dmaengine_prep_slave_sg(master->dma_tx,
-					tx->sgl, tx->nents, DMA_MEM_TO_DEV,
-					DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
-		if (!desc_tx) {
-			dmaengine_terminate_all(master->dma_rx);
-			return -EINVAL;
-		}
-
-		desc_tx->callback = spi_imx_dma_tx_callback;
-		desc_tx->callback_param = (void *)spi_imx;
-		dmaengine_submit(desc_tx);
-	}
-
+	nents = rx->nents;
+	bpw = spi_imx->rx_config.src_addr_width;
 	/*
-	 * Set these order to avoid potential RX overflow. The overflow may
-	 * happen if we enable SPI HW before starting RX DMA due to rescheduling
-	 * for another task and/or interrupt.
-	 * So RX DMA enabled first to make sure data would be read out from FIFO
-	 * ASAP. TX DMA enabled next to start filling TX FIFO with new data.
-	 * And finaly SPI HW enabled to start actual data transfer.
+	 * Adjust the transfer lenth of the last scattlist if there are
+	 * some tail data, use PIO read to get the tail data since DMA
+	 * sometimes miss the last tail interrupt.
 	 */
+	left = rem = transfer->len % (spi_imx->wml * bpw);
+	while (rem) {
+		struct scatterlist *sgl_last = &rx->sgl[nents - 1];
+
+		if (sgl_last->length > rem) {
+			sgl_last->length -= rem;
+			break;
+		}
+		rem -= sgl_last->length;
+		sgl_last->length = 0;
+		nents--;
+		rx->nents--;
+	}
+	/*
+	 * The TX DMA setup starts the transfer, so make sure RX is configured
+	 * before TX.
+	 */
+	desc_rx = dmaengine_prep_slave_sg(master->dma_rx,
+				rx->sgl, rx->nents, DMA_DEV_TO_MEM,
+				DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+	if (!desc_rx)
+		return -EINVAL;
+
+	desc_rx->callback = spi_imx_dma_rx_callback;
+	desc_rx->callback_param = (void *)spi_imx;
+	reinit_completion(&spi_imx->dma_rx_completion);
+
+	desc_tx = dmaengine_prep_slave_sg(master->dma_tx,
+				tx->sgl, tx->nents, DMA_MEM_TO_DEV,
+				DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+	if (!desc_tx)
+		return -EINVAL;
+
+	desc_tx->callback = spi_imx_dma_tx_callback;
+	desc_tx->callback_param = (void *)spi_imx;
+	reinit_completion(&spi_imx->dma_tx_completion);
+
+	dmaengine_submit(desc_rx);
 	dma_async_issue_pending(master->dma_rx);
+
+	dmaengine_submit(desc_tx);
 	dma_async_issue_pending(master->dma_tx);
 	spi_imx->devtype_data->trigger(spi_imx);
 
@@ -1104,45 +1094,46 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 				transfer->len);
 		dmaengine_terminate_all(master->dma_tx);
 		dmaengine_terminate_all(master->dma_rx);
-	} else {
-		ret = wait_for_completion_timeout(&spi_imx->dma_rx_completion,
-				transfer_timeout);
+		return -ETIMEDOUT;
+	}
+
+	ret = wait_for_completion_timeout(&spi_imx->dma_rx_completion,
+			transfer_timeout);
+	if (!ret) {
+		dev_err(spi_imx->dev, "I/O Error in DMA RX:%x %x %x\n",
+			transfer->len,
+			readl(spi_imx->base + MX51_ECSPI_STAT),
+			readl(spi_imx->base + MX51_ECSPI_TESTREG));
+		spi_imx->devtype_data->reset(spi_imx);
+		dmaengine_terminate_all(master->dma_rx);
+		return -ETIMEDOUT;
+	}
+
+	if (left) {
+		/* read the tail data by PIO */
+		dma_sync_sg_for_cpu(master->dma_rx->device->dev,
+				    &rx->sgl[rx->nents - 1], 1,
+				    DMA_FROM_DEVICE);
+		spi_imx->rx_buf = transfer->rx_buf
+					+ (transfer->len - left);
+		spi_imx_tail_pio_set(spi_imx, left);
+		reinit_completion(&spi_imx->xfer_done);
+
+		spi_imx->devtype_data->intctrl(spi_imx, MXC_INT_TCEN);
+
+		ret = wait_for_completion_timeout(&spi_imx->xfer_done,
+					transfer_timeout);
 		if (!ret) {
-			dev_err(spi_imx->dev, "I/O Error in DMA RX:%x %x %x\n",
-				transfer->len,
-				readl(spi_imx->base + MX51_ECSPI_STAT),
-				readl(spi_imx->base + MX51_ECSPI_TESTREG));
-			spi_imx->devtype_data->reset(spi_imx);
-			dmaengine_terminate_all(master->dma_rx);
-		} else if (left) {
-			/* read the tail data by PIO */
-			dma_sync_sg_for_cpu(master->dma_rx->device->dev,
-					    &rx->sgl[rx->nents - 1], 1,
-					    DMA_FROM_DEVICE);
-			spi_imx->rx_buf = transfer->rx_buf
-						+ (transfer->len - left);
-			spi_imx_tail_pio_set(spi_imx, left);
-			reinit_completion(&spi_imx->xfer_done);
-
-			spi_imx->devtype_data->intctrl(spi_imx, MXC_INT_TCEN);
-
-			ret = wait_for_completion_timeout(&spi_imx->xfer_done,
-						transfer_timeout);
-			if (!ret)
-				dev_err(spi_imx->dev, "I/O Error in RX tail\n");
+			dev_err(spi_imx->dev, "I/O Error in RX tail\n");
+			return -ETIMEDOUT;
 		}
 	}
 
 	spi_imx->dma_finished = 1;
-	if (spi_imx->devtype_data->devtype == IMX6UL_ECSPI)
+	if (is_imx6ul_ecspi(spi_imx))
 		spi_imx->devtype_data->trigger(spi_imx);
 
-	if (!ret)
-		ret = -ETIMEDOUT;
-	else if (ret > 0)
-		ret = transfer->len;
-
-	return ret;
+	return transfer->len;
 }
 
 static int spi_imx_pio_transfer(struct spi_device *spi,
