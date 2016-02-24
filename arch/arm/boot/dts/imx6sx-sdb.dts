@@ -19,7 +19,7 @@
 	};
 	bt_rfkill {
 		compatible = "fsl,mxc_bt_rfkill";
-		bt-power-gpios = <&gpio4 10 0>;
+		bt-power-gpios = <&gpio6 11 0>;
 		status = "okay";
 	};
 };
@@ -76,4 +76,26 @@
 
 &usbphy2 {
 	tx-d-cal = <0x5>;
+};
+
+&usdhc3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_wifi_sdio>;
+	bus-width = <4>;
+	cd-gpios = <&gpio2 10 GPIO_ACTIVE_LOW>;
+	wp-gpios = <&gpio2 15 GPIO_ACTIVE_HIGH>;
+	keep-power-in-suspend;
+	enable-sdio-wakeup;
+	vmmc-supply = <&vcc_sd3>;
+	no-1-8-v;       /* force 3.3V VIO */
+	wifi-host;      /* pull in card detect mechanism for BCMDHD driver */
+	pm-ignore-notify;
+	status = "okay";
+};
+
+&uart3 { /* ttymxc2 for Murata BCM4339 V1 Bluetooth. */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_bt_uart>;
+	fsl,uart-has-rtscts;
+	status = "okay";
 };
