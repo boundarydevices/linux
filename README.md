@@ -13,6 +13,7 @@ i.MX6 based boards:
 * [Nitrogen6 MAX][nitrogen6-max]
 * [Nitrogen6 VM][nitrogen6-vm]
 * [Nitrogen6 SoloX][nitrogen6-sx]
+* [Nitrogen7][nitrogen7]
 
 It is based largely on Freescale's kernel trees at [git.freescale.com][freescale].
 
@@ -24,7 +25,7 @@ Latest Jellybean sources are in branch [boundary-jb4.3\_1.0.0-ga][latest-jellybe
 
 Latest KitKat sources are in branch [boundary-imx-kk4.4.3\_2.0.0-ga][latest-kitkat]
 
-Latest Lollipop sources are in branch [boundary-imx-l5.0.0\_1.0.0-ga][latest-lollipop]
+Latest Lollipop sources are in branch [boundary-imx-l5.1.1\_2.1.0-ga][latest-lollipop]
 
 Non-Android
 ------------------
@@ -43,9 +44,10 @@ These branches are based on Freescale releases of the same name (minus the 'boun
 [nitrogen6-max]:http://boundarydevices.com/product/nitrogen6max "Nitrogen6_MAX product page"
 [nitrogen6-vm]:http://boundarydevices.com/product/nitrogen6_vm_imx6 "Nitrogen6_VM product page"
 [nitrogen6-sx]:http://boundarydevices.com/product/nit6_solox-imx6 "Nit6_SoloX product page"
+[nitrogen7]:https://boundarydevices.com/product/nitrogen7 "Nitrogen7 product page"
 [latest-jellybean]:http://github.com/boundarydevices/linux-imx6/tree/boundary-jb4.3_1.0.0-ga "Boundary Jellybean kernel tree"
 [latest-kitkat]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-kk4.4.3_2.0.0-ga "Boundary KitKat kernel tree"
-[latest-lollipop]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-l5.0.0_1.0.0-ga "Boundary Lollipop kernel tree"
+[latest-lollipop]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-l5.1.1_2.1.0-ga "Boundary Lollipop kernel tree"
 [latest-3.0.35]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.0.35_4.1.0 "Boundary 3.0.35 4.1.0 kernel tree"
 [latest-3.14.28]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.14.28_1.0.0_ga "Boundary 3.14.28-1.0.0 GA kernel tree"
 
