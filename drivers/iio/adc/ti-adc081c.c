@@ -310,7 +310,7 @@ static int adc081c_probe(struct i2c_client *client,
 	int cycle;
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_WORD_DATA))
-		return -ENODEV;
+		return -EOPNOTSUPP;
 
 	err = of_property_read_u32(np, "samples-per-sec", &sps);
 	if (err)
