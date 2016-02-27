@@ -1334,59 +1334,25 @@ static int gs2971_remove(struct spi_device *spi)
 	return 0;
 }
 
-static const struct of_device_id gs2971_dt_ids[] = {
-	{
-		.compatible = "gn,gs2971",
-	}, {
-		/* sentinel */
-	}
+static const struct spi_device_id gs2971_spi_ids[] = {
+	{ "gs2971", 0},
+	{}
 };
-MODULE_DEVICE_TABLE(of, gs2971_dt_ids);
+MODULE_DEVICE_TABLE(spi, gs2971_spi_ids);
 
-static struct spi_driver gs2971_spi = {
+static struct spi_driver gs2971_spi_driver = {
 	.driver = {
 		   .name = DRIVER_NAME,
 		   .bus = &spi_bus_type,
 		   .owner = THIS_MODULE,
-		   .of_match_table = gs2971_dt_ids,
 		   },
+	.id_table = gs2971_spi_ids,
 	.probe = gs2971_probe,
 	.remove = gs2971_remove,
 };
 
-/*!
- * gs2971 init function.
- * Called on insmod.
- *
- * @return    Error code indicating success or failure.
- */
-static int __init gs2971_init(void)
-{
-	int ret;
+module_spi_driver(gs2971_spi_driver);
 
-	pr_debug("-> In function %s\n", __func__);
-
-	ret = spi_register_driver(&gs2971_spi);
-
-	return ret;
-}
-
-/*!
- * gs2971 cleanup function.
- * Called on rmmod.
- *
- * @return   Error code indicating success or failure.
- */
-static void __exit gs2971_exit(void)
-{
-	pr_debug("-> In function %s\n", __func__);
-
-	spi_unregister_driver(&gs2971_spi);
-}
-
-module_init(gs2971_init);
-module_exit(gs2971_exit);
 MODULE_DESCRIPTION("gs2971 video input Driver");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("1.0");
-MODULE_ALIAS("CSI");
