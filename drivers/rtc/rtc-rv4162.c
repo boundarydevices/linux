@@ -24,6 +24,8 @@
 
 static struct i2c_driver rv4162_driver;
 
+static int clkout;
+
 /* block read */
 static int rv4162_i2c_read_regs(struct i2c_client *client, u8 reg, u8 buf[],
 		unsigned len)
@@ -143,7 +145,7 @@ static int rv4162_i2c_set_time(struct i2c_client *client, struct rtc_time *tm)
 	buf[2] = bin2bcd(tm->tm_sec);
 	buf[3] = bin2bcd(tm->tm_min);
 	buf[4] = bin2bcd(tm->tm_hour);
-	buf[5] = tm->tm_wday+1;
+	buf[5] = (tm->tm_wday + 1) | clkout;
 	buf[6] = bin2bcd(tm->tm_mday);
 	buf[7] = bin2bcd(tm->tm_mon+1) | ((tm->tm_year/100)<<6);
 	buf[8] = bin2bcd(tm->tm_year%100);
@@ -243,7 +245,7 @@ static int rv4162_i2c_set_alarm(struct i2c_client *client,
 	}
 
 	/* Program the alarm and enable it for each setting */
-	regs[0x0a] = bin2bcd(alarm_tm->tm_mon + 1);
+	regs[0x0a] = bin2bcd(alarm_tm->tm_mon + 1) | (clkout ? 0x40 : 0);
 	regs[0x0b] = bin2bcd(alarm_tm->tm_mday);
 	regs[0x0c] = bin2bcd(alarm_tm->tm_hour);
 	regs[0x0d] = bin2bcd(alarm_tm->tm_min);
@@ -406,6 +408,18 @@ static int rv4162_probe(struct i2c_client *client,
 				client->irq);
 			client->irq = 0;
 		}
+	}
+
+	of_property_read_u32(client->dev.of_node, "clkout", &clkout);
+	if (clkout) {
+		int max = 8192;
+		int i = 1;
+		while (clkout <= max) {
+			max >>= 1;
+			i++;
+		}
+		pr_info("%s:clkout=%d index=%d\n", __func__, clkout, i);
+		clkout = i << 4;
 	}
 
 	rtc = rtc_device_register(rv4162_driver.driver.name, &client->dev,
