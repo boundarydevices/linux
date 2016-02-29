@@ -45,6 +45,7 @@
 #define  ESDHC_MIX_CTRL_AC23EN		(1 << 7)
 #define  ESDHC_MIX_CTRL_EXE_TUNE	(1 << 22)
 #define  ESDHC_MIX_CTRL_SMPCLK_SEL	(1 << 23)
+#define  ESDHC_MIX_CTRL_AUTO_TUNE_EN	(1 << 24)
 #define  ESDHC_MIX_CTRL_FBCLK_SEL	(1 << 25)
 #define  ESDHC_MIX_CTRL_HS400_EN	(1 << 26)
 /* Bits 3 and 6 are not SDHCI standard definitions */
@@ -67,6 +68,7 @@
 #define ESDHC_STROBE_DLL_CTRL		0x70
 #define ESDHC_STROBE_DLL_CTRL_ENABLE	(1 << 0)
 #define ESDHC_STROBE_DLL_CTRL_RESET	(1 << 1)
+#define ESDHC_STROBE_DLL_CTRL_SLV_DLY_TARGET	0x7
 #define ESDHC_STROBE_DLL_CTRL_SLV_DLY_TARGET_SHIFT	3
 
 #define ESDHC_STROBE_DLL_STATUS		0x74
@@ -145,10 +147,13 @@
 #define ESDHC_STROBE_DLL_CLK_FREQ	100000000
 
 static struct mmc_host *wifi_mmc_host;
-void wifi_card_detect(void)
+void wifi_card_detect(bool on)
 {
 	WARN_ON(!wifi_mmc_host);
-	mmc_detect_change(wifi_mmc_host, 0);
+	if (on)
+		mmc_detect_change(wifi_mmc_host, 0);
+	else
+		mmc_sdio_force_remove(wifi_mmc_host);
 }
 EXPORT_SYMBOL(wifi_card_detect);
 
@@ -311,7 +316,8 @@ static u32 esdhc_readl_le(struct sdhci_host *host, int reg)
 				/* imx6q/dl does not have cap_1 register, fake one */
 				val = SDHCI_SUPPORT_DDR50 | SDHCI_SUPPORT_SDR104
 					| SDHCI_SUPPORT_SDR50
-					| SDHCI_USE_SDR50_TUNING;
+					| SDHCI_USE_SDR50_TUNING
+					| (SDHCI_TUNING_MODE_3 << SDHCI_RETUNING_MODE_SHIFT);
 
 			if (imx_data->socdata->flags & ESDHC_FLAG_HS400)
 				val |= SDHCI_SUPPORT_HS400;
@@ -481,10 +487,13 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
 		writel(new_val, host->ioaddr + ESDHC_VENDOR_SPEC);
 		if (imx_data->socdata->flags & ESDHC_FLAG_MAN_TUNING) {
 			new_val = readl(host->ioaddr + ESDHC_MIX_CTRL);
-			if (val & SDHCI_CTRL_TUNED_CLK)
+			if (val & SDHCI_CTRL_TUNED_CLK) {
 				new_val |= ESDHC_MIX_CTRL_SMPCLK_SEL;
-			else
+				new_val |= ESDHC_MIX_CTRL_AUTO_TUNE_EN;
+			} else {
 				new_val &= ~ESDHC_MIX_CTRL_SMPCLK_SEL;
+				new_val &= ~ESDHC_MIX_CTRL_AUTO_TUNE_EN;
+			}
 			writel(new_val , host->ioaddr + ESDHC_MIX_CTRL);
 		} else if (imx_data->socdata->flags & ESDHC_FLAG_STD_TUNING) {
 			u32 v = readl(host->ioaddr + SDHCI_ACMD12_ERR);
@@ -495,11 +504,13 @@ static void esdhc_writew_le(struct sdhci_host *host, u16 val, int reg)
 			} else {
 				v &= ~ESDHC_MIX_CTRL_SMPCLK_SEL;
 				m &= ~ESDHC_MIX_CTRL_FBCLK_SEL;
+				m &= ~ESDHC_MIX_CTRL_AUTO_TUNE_EN;
 			}
 
 			if (val & SDHCI_CTRL_EXEC_TUNING) {
 				v |= ESDHC_MIX_CTRL_EXE_TUNE;
 				m |= ESDHC_MIX_CTRL_FBCLK_SEL;
+				m |= ESDHC_MIX_CTRL_AUTO_TUNE_EN;
 				tuning_ctrl = readl(host->ioaddr + ESDHC_TUNING_CTRL);
 				tuning_ctrl |= ESDHC_STD_TUNING_EN | ESDHC_TUNING_START_TAP_DEFAULT;
 				if (imx_data->boarddata.tuning_start_tap) {
@@ -775,6 +786,7 @@ static void esdhc_post_tuning(struct sdhci_host *host)
 
 	reg = readl(host->ioaddr + ESDHC_MIX_CTRL);
 	reg &= ~ESDHC_MIX_CTRL_EXE_TUNE;
+	reg |= ESDHC_MIX_CTRL_AUTO_TUNE_EN;
 	writel(reg, host->ioaddr + ESDHC_MIX_CTRL);
 }
 
@@ -863,6 +875,11 @@ static void esdhc_set_strobe_dll(struct sdhci_host *host)
 	u32 v;
 
 	if (host->mmc->actual_clock > ESDHC_STROBE_DLL_CLK_FREQ) {
+		/* disable clock before enabling strobe dll */
+		writel(readl(host->ioaddr + ESDHC_VENDOR_SPEC) &
+		       (~ESDHC_VENDOR_SPEC_FRC_SDCLK_ON),
+		       host->ioaddr + ESDHC_VENDOR_SPEC);
+
 		/* force a reset on strobe dll */
 		writel(ESDHC_STROBE_DLL_CTRL_RESET,
 			host->ioaddr + ESDHC_STROBE_DLL_CTRL);
@@ -871,7 +888,8 @@ static void esdhc_set_strobe_dll(struct sdhci_host *host)
 		 * for the uSDHC loopback read clock
 		 */
 		v = ESDHC_STROBE_DLL_CTRL_ENABLE |
-			(7 << ESDHC_STROBE_DLL_CTRL_SLV_DLY_TARGET_SHIFT);
+			(ESDHC_STROBE_DLL_CTRL_SLV_DLY_TARGET
+			 << ESDHC_STROBE_DLL_CTRL_SLV_DLY_TARGET_SHIFT);
 		writel(v, host->ioaddr + ESDHC_STROBE_DLL_CTRL);
 		/* wait 1us to make sure strobe dll status register stable */
 		udelay(1);
@@ -924,6 +942,8 @@ static void esdhc_set_uhs_signaling(struct sdhci_host *host, unsigned timing)
 		m |= ESDHC_MIX_CTRL_DDREN | ESDHC_MIX_CTRL_HS400_EN;
 		writel(m, host->ioaddr + ESDHC_MIX_CTRL);
 		imx_data->is_ddr = 1;
+		/* update clock after enable DDR for strobe DLL lock */
+		host->ops->set_clock(host, host->clock);
 		esdhc_set_strobe_dll(host);
 		break;
 	}
@@ -937,6 +957,30 @@ static void esdhc_reset(struct sdhci_host *host, u8 mask)
 
 	sdhci_writel(host, host->ier, SDHCI_INT_ENABLE);
 	sdhci_writel(host, host->ier, SDHCI_SIGNAL_ENABLE);
+}
+
+static void esdhc_hw_reset(struct sdhci_host *host)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct pltfm_imx_data *imx_data = pltfm_host->priv;
+	u16 ctrl;
+
+	sdhci_reset(host, SDHCI_RESET_ALL);
+
+	/* Rest the tuning circurt */
+	if (esdhc_is_usdhc(imx_data)) {
+		if (imx_data->socdata->flags & ESDHC_FLAG_MAN_TUNING) {
+			ctrl = readl(host->ioaddr + ESDHC_MIX_CTRL);
+			ctrl &= ~ESDHC_MIX_CTRL_SMPCLK_SEL;
+			ctrl &= ~ESDHC_MIX_CTRL_FBCLK_SEL;
+			writel(ctrl, host->ioaddr + ESDHC_MIX_CTRL);
+			writel(0 << 8, host->ioaddr + ESDHC_TUNE_CTRL_STATUS);
+		} else if (imx_data->socdata->flags & ESDHC_FLAG_STD_TUNING) {
+			ctrl = readl(host->ioaddr + SDHCI_ACMD12_ERR);
+			ctrl &= ~ESDHC_MIX_CTRL_SMPCLK_SEL;
+			writel(ctrl, host->ioaddr + SDHCI_ACMD12_ERR);
+		}
+	}
 }
 
 static unsigned int esdhc_get_max_timeout_count(struct sdhci_host *host)
@@ -972,6 +1016,7 @@ static struct sdhci_ops sdhci_esdhc_ops = {
 	.set_bus_width = esdhc_pltfm_set_bus_width,
 	.set_uhs_signaling = esdhc_set_uhs_signaling,
 	.reset = esdhc_reset,
+	.hw_reset = esdhc_hw_reset,
 };
 
 static const struct sdhci_pltfm_data sdhci_esdhc_imx_pdata = {
@@ -1043,6 +1088,7 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 
 	if (of_get_property(np, "wifi-host", NULL)) {
 		wifi_mmc_host = host->mmc;
+		host->quirks2 |= SDHCI_QUIRK2_SDIO_IRQ_THREAD;
 		dev_info(mmc_dev(host->mmc), "assigned as wifi host\n");
 	}
 
@@ -1200,7 +1246,7 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 
 	if (esdhc_is_usdhc(imx_data)) {
 		host->quirks2 |= SDHCI_QUIRK2_PRESET_VALUE_BROKEN;
-		host->mmc->caps |= MMC_CAP_1_8V_DDR;
+		host->mmc->caps |= MMC_CAP_1_8V_DDR | MMC_CAP_HW_RESET;
 
 		/*
 		 * ROM code will change the bit burst_length_enable setting

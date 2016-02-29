@@ -240,6 +240,9 @@ static void sdhci_init(struct sdhci_host *host, int soft)
 		    SDHCI_INT_TIMEOUT | SDHCI_INT_DATA_END |
 		    SDHCI_INT_RESPONSE;
 
+	if (host->tuning_mode == SDHCI_TUNING_MODE_3)
+		host->ier |= SDHCI_INT_RETUNE;
+
 	sdhci_writel(host, host->ier, SDHCI_INT_ENABLE);
 	sdhci_writel(host, host->ier, SDHCI_SIGNAL_ENABLE);
 
@@ -1720,7 +1723,8 @@ static void sdhci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 	struct sdhci_host *host = mmc_priv(mmc);
 	unsigned long flags;
 
-	sdhci_runtime_pm_get(host);
+	if (enable)
+		sdhci_runtime_pm_get(host);
 
 	spin_lock_irqsave(&host->lock, flags);
 	if (enable)
@@ -1731,7 +1735,8 @@ static void sdhci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 	sdhci_enable_sdio_irq_nolock(host, enable);
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	sdhci_runtime_pm_put(host);
+	if (!enable)
+		sdhci_runtime_pm_put(host);
 }
 
 static int sdhci_do_start_signal_voltage_switch(struct sdhci_host *host,
@@ -2532,6 +2537,7 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 	struct sdhci_host *host = dev_id;
 	u32 intmask, mask, unexpected = 0;
 	int max_loops = 16;
+	int cardint = 0;
 
 	spin_lock(&host->lock);
 
@@ -2596,10 +2602,17 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 			pr_err("%s: Card is consuming too much power!\n",
 				mmc_hostname(host->mmc));
 
+		if (intmask & SDHCI_INT_RETUNE)
+			mmc_retune_needed(host->mmc);
+
 		if (intmask & SDHCI_INT_CARD_INT) {
-			sdhci_enable_sdio_irq_nolock(host, false);
-			host->thread_isr |= SDHCI_INT_CARD_INT;
-			result = IRQ_WAKE_THREAD;
+			if (host->mmc->caps2 & MMC_CAP2_SDIO_IRQ_NOTHREAD) {
+				sdhci_enable_sdio_irq_nolock(host, false);
+				host->thread_isr |= SDHCI_INT_CARD_INT;
+				result = IRQ_WAKE_THREAD;
+			} else {
+				cardint = 1;
+			}
 		}
 
 		intmask &= ~(SDHCI_INT_CARD_INSERT | SDHCI_INT_CARD_REMOVE |
@@ -2626,6 +2639,9 @@ out:
 		sdhci_dumpregs(host);
 	}
 
+	if (cardint && host->mmc->sdio_irqs)
+		mmc_signal_sdio_irq(host->mmc);
+
 	return result;
 }
 
@@ -2646,12 +2662,13 @@ static irqreturn_t sdhci_thread_irq(int irq, void *dev_id)
 	}
 
 	if (isr & SDHCI_INT_CARD_INT) {
-		sdio_run_irqs(host->mmc);
-
-		spin_lock_irqsave(&host->lock, flags);
-		if (host->flags & SDHCI_SDIO_IRQ_ENABLED)
-			sdhci_enable_sdio_irq_nolock(host, true);
-		spin_unlock_irqrestore(&host->lock, flags);
+		if (host->mmc->caps2 & MMC_CAP2_SDIO_IRQ_NOTHREAD) {
+			sdio_run_irqs(host->mmc);
+			spin_lock_irqsave(&host->lock, flags);
+			if (host->flags & SDHCI_SDIO_IRQ_ENABLED)
+				sdhci_enable_sdio_irq_nolock(host, true);
+			spin_unlock_irqrestore(&host->lock, flags);
+		}
 	}
 
 	return isr ? IRQ_HANDLED : IRQ_NONE;
@@ -2696,14 +2713,16 @@ int sdhci_suspend_host(struct sdhci_host *host)
 {
 	sdhci_disable_card_detection(host);
 
-	mmc_retune_timer_stop(host->mmc);
-	mmc_retune_needed(host->mmc);
+	if (host->tuning_mode == SDHCI_TUNING_MODE_1) {
+		mmc_retune_timer_stop(host->mmc);
+		mmc_retune_needed(host->mmc);
+	}
 
 	if (!device_may_wakeup(mmc_dev(host->mmc))) {
 		host->ier = 0;
 		sdhci_writel(host, 0, SDHCI_INT_ENABLE);
 		sdhci_writel(host, 0, SDHCI_SIGNAL_ENABLE);
-		free_irq(host->irq, host);
+		disable_irq(host->irq);
 	} else {
 		sdhci_enable_irq_wakeups(host);
 		enable_irq_wake(host->irq);
@@ -2715,8 +2734,6 @@ EXPORT_SYMBOL_GPL(sdhci_suspend_host);
 
 int sdhci_resume_host(struct sdhci_host *host)
 {
-	int ret = 0;
-
 	if (host->flags & (SDHCI_USE_SDMA | SDHCI_USE_ADMA)) {
 		if (host->ops->enable_dma)
 			host->ops->enable_dma(host);
@@ -2735,11 +2752,7 @@ int sdhci_resume_host(struct sdhci_host *host)
 	}
 
 	if (!device_may_wakeup(mmc_dev(host->mmc))) {
-		ret = request_threaded_irq(host->irq, sdhci_irq,
-					   sdhci_thread_irq, IRQF_SHARED,
-					   mmc_hostname(host->mmc), host);
-		if (ret)
-			return ret;
+		enable_irq(host->irq);
 	} else {
 		sdhci_disable_irq_wakeups(host);
 		disable_irq_wake(host->irq);
@@ -2747,7 +2760,7 @@ int sdhci_resume_host(struct sdhci_host *host)
 
 	sdhci_enable_card_detection(host);
 
-	return ret;
+	return 0;
 }
 
 EXPORT_SYMBOL_GPL(sdhci_resume_host);
@@ -2783,8 +2796,10 @@ int sdhci_runtime_suspend_host(struct sdhci_host *host)
 {
 	unsigned long flags;
 
-	mmc_retune_timer_stop(host->mmc);
-	mmc_retune_needed(host->mmc);
+	if (host->tuning_mode == SDHCI_TUNING_MODE_1) {
+		mmc_retune_timer_stop(host->mmc);
+		mmc_retune_needed(host->mmc);
+	}
 
 	spin_lock_irqsave(&host->lock, flags);
 	host->ier &= SDHCI_INT_CARD_INT;
@@ -3105,7 +3120,8 @@ int sdhci_add_host(struct sdhci_host *host)
 		host->timeout_clk = override_timeout_clk;
 
 	mmc->caps |= MMC_CAP_SDIO_IRQ | MMC_CAP_ERASE | MMC_CAP_CMD23;
-	mmc->caps2 |= MMC_CAP2_SDIO_IRQ_NOTHREAD;
+	if (!(host->quirks2 & SDHCI_QUIRK2_SDIO_IRQ_THREAD))
+		mmc->caps2 |= MMC_CAP2_SDIO_IRQ_NOTHREAD;
 
 	if (host->quirks & SDHCI_QUIRK_MULTIBLOCK_READ_ACMD12)
 		host->flags |= SDHCI_AUTO_CMD12;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2016 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -229,7 +229,7 @@ static void enter_lpm_imx6_smp(void)
 		if (ddr_type == MMDC_MDMISC_DDR_TYPE_DDR3)
 			update_ddr_freq_imx_smp(LOW_AUDIO_CLK);
 		else if (ddr_type == MMDC_MDMISC_DDR_TYPE_LPDDR2)
-			update_lpddr2_freq(LOW_AUDIO_CLK);
+			update_lpddr2_freq_smp(HIGH_AUDIO_CLK);
 		/* Make sure periph clk's parent also got updated */
 		imx_clk_set_parent(periph_clk2_sel_clk, pll3_clk);
 		imx_clk_set_parent(periph_pre_clk, pll2_200_clk);
@@ -367,6 +367,12 @@ static void enter_lpm_imx6sl(void)
 			 */
 			imx_clk_set_parent(step_clk, pll2_400_clk);
 			imx_clk_set_parent(pll1_sw_clk, step_clk);
+
+			/*
+			 * Need to ensure that PLL1 is bypassed and enabled
+			 * before ARM-PODF is set.
+			 */
+			clk_set_parent(pll1_bypass_clk, pll1_bypass_src_clk);
 
 			/*
 			 * Ensure that the clock will be
