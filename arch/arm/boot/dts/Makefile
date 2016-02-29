@@ -396,6 +396,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-b850v3.dtb \
 	imx6q-pop-arm2.dtb \
 	imx6q-bt.dtb \
+	imx6q-bt2.dtb \
 	imx6q-cm-fx6.dtb \
 	imx6q-cubox-i.dtb \
 	imx6q-dfi-fs700-m60.dtb \
