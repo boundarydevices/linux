@@ -2,7 +2,7 @@
 *
 *    The MIT License (MIT)
 *
-*    Copyright (c) 2014 - 2015 Vivante Corporation
+*    Copyright (c) 2014 - 2016 Vivante Corporation
 *
 *    Permission is hereby granted, free of charge, to any person obtaining a
 *    copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,7 @@
 *
 *    The GPL License (GPL)
 *
-*    Copyright (C) 2014 - 2015 Vivante Corporation
+*    Copyright (C) 2014 - 2016 Vivante Corporation
 *
 *    This program is free software; you can redistribute it and/or
 *    modify it under the terms of the GNU General Public License
@@ -68,6 +68,7 @@ typedef enum {
     gcvHARDWARE_FUNCTION_MMU,
     gcvHARDWARE_FUNCTION_FLUSH,
 
+    gcvHARDWARE_FUNCTION_DUMMY_DRAW,
     gcvHARDWARE_FUNCTION_NUM,
 }
 gceHARDWARE_FUNCTION;
@@ -204,6 +205,14 @@ gceSTATUS
 gckHARDWARE_GetFrameInfo(
     IN gckHARDWARE Hardware,
     OUT gcsHAL_FRAME_INFO * FrameInfo
+    );
+
+gceSTATUS
+gckHARDWARE_DummyDraw(
+    IN gckHARDWARE Hardware,
+    IN gctPOINTER Logical,
+    IN gctUINT32 Address,
+    IN OUT gctUINT32 * Bytes
     );
 
 #ifdef __cplusplus

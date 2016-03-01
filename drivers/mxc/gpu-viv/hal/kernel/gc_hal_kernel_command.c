@@ -2,7 +2,7 @@
 *
 *    The MIT License (MIT)
 *
-*    Copyright (c) 2014 - 2015 Vivante Corporation
+*    Copyright (c) 2014 - 2016 Vivante Corporation
 *
 *    Permission is hereby granted, free of charge, to any person obtaining a
 *    copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,7 @@
 *
 *    The GPL License (GPL)
 *
-*    Copyright (C) 2014 - 2015 Vivante Corporation
+*    Copyright (C) 2014 - 2016 Vivante Corporation
 *
 *    This program is free software; you can redistribute it and/or
 *    modify it under the terms of the GNU General Public License
@@ -440,6 +440,42 @@ _FlushMMU(
 
         gcmkONERROR(gckCOMMAND_Execute(Command, executeBytes));
     }
+
+    return gcvSTATUS_OK;
+OnError:
+    return status;
+#endif
+}
+
+static gceSTATUS
+_DummyDraw(
+    IN gckCOMMAND Command
+    )
+{
+#if gcdSECURITY
+    return gcvSTATUS_OK;
+#else
+    gceSTATUS status;
+    gckHARDWARE hardware = Command->kernel->hardware;
+
+    gctUINT8_PTR pointer;
+    gctUINT32 bufferSize;
+
+    gctUINT32 dummyDrawBytes;
+
+    gckHARDWARE_DummyDraw(hardware, gcvNULL, Command->queues[0].address, &dummyDrawBytes);
+
+    /* Reserve space. */
+    gcmkONERROR(gckCOMMAND_Reserve(
+        Command,
+        dummyDrawBytes,
+        (gctPOINTER *)&pointer,
+        &bufferSize
+        ));
+
+    gckHARDWARE_DummyDraw(hardware, pointer, Command->queues[0].address, &dummyDrawBytes);
+
+    gcmkONERROR(gckCOMMAND_Execute(Command, dummyDrawBytes));
 
     return gcvSTATUS_OK;
 OnError:
@@ -1479,6 +1515,11 @@ gckCOMMAND_Commit(
         - commandBufferObject->startOffset;
 
     gcmkONERROR(_FlushMMU(Command));
+
+    if (gckHARDWARE_IsFeatureAvailable(hardware, gcvFEATURE_FE_NEED_DUMMYDRAW) && Command->currContext == gcvNULL)
+    {
+        gcmkONERROR(_DummyDraw(Command));
+    }
 
     /* Get the current offset. */
     offset = Command->offset;
