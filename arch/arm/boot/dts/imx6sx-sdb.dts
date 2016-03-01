@@ -22,6 +22,14 @@
 		bt-power-gpios = <&gpio6 11 0>;
 		status = "okay";
 	};
+	ramoops_device {
+		compatible = "fsl,mxc_ramoops";
+		record_size = <524288>; /*512K*/
+		console_size= <262144>; /*256K*/
+		ftrace_size= <262144>;  /*256K*/
+		dump_oops = <1>;
+		status = "okay";
+	};
 };
 
 &cpu0 {
