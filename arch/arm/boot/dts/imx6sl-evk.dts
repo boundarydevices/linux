@@ -965,6 +965,8 @@
 	enable-sdio-wakeup;
 	wifi-host;
 	pm-ignore-notify;
+	non-removable;
+	cd-post;
 	status = "okay";
 };
 
