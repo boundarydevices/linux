@@ -98,6 +98,8 @@
 	no-1-8-v;       /* force 3.3V VIO */
 	wifi-host;      /* pull in card detect mechanism for BCMDHD driver */
 	pm-ignore-notify;
+	non-removable;
+	cd-post;
 	status = "okay";
 };
 
