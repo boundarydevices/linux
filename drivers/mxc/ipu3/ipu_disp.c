@@ -69,6 +69,8 @@ struct dp_csc_param_t {
 #define DC_MCODE_BT656_DATA_W		173
 #define DC_MCODE_BT656_NL				179
 
+#define VYUY_IF_DI_MSB			23
+#define BT1120_IF_DI_MSB		23
 #define BT656_IF_DI_MSB			23  /* For 8 bits BT656: 23 for DISP_DAT23 ~ DISP_DAT16; 7 for DISP_DAT7 ~ DISP_DAT0 */
 								      /* For 16 bits BT1120: 23 for DISP_DAT23 ~ DISP_DAT8; 15 for DISP_DAT15 ~ DISP_DAT0 */
 
@@ -958,11 +960,11 @@ static struct f_mapping fmt_mappings[] = {
 			/* V		U		Y */
 [I_IPU_PIX_FMT_YUV444] = {{{23, 0xFF}, {15, 0xFF}, {7, 0xFF}}},
 
-[I_IPU_PIX_FMT_VYUYa_1] = {{{BT656_IF_DI_MSB - 8, 0xFF}, {0, 0x0}, {BT656_IF_DI_MSB, 0xFF}}},
-[I_IPU_PIX_FMT_VYUYa_2] = {{{0, 0x0}, {BT656_IF_DI_MSB - 8, 0xFF}, {BT656_IF_DI_MSB, 0xFF}}},
+[I_IPU_PIX_FMT_VYUYa_1] = {{{VYUY_IF_DI_MSB - 8, 0xFF}, {0, 0x0}, {VYUY_IF_DI_MSB, 0xFF}}},
+[I_IPU_PIX_FMT_VYUYa_2] = {{{0, 0x0}, {VYUY_IF_DI_MSB - 8, 0xFF}, {VYUY_IF_DI_MSB, 0xFF}}},
 /* 16bit width for BT1120 */
-[I_IPU_PIX_FMT_BT1120_1] = {{{0, 0x0}, {BT656_IF_DI_MSB - 8, 0xFF}, {BT656_IF_DI_MSB, 0xFF}}},
-[I_IPU_PIX_FMT_BT1120_2] = {{{BT656_IF_DI_MSB - 8, 0xFF}, {0, 0x0}, {BT656_IF_DI_MSB, 0xFF}}},
+[I_IPU_PIX_FMT_BT1120_1] = {{{0, 0x0}, {BT1120_IF_DI_MSB - 8, 0xFF}, {BT1120_IF_DI_MSB, 0xFF}}},
+[I_IPU_PIX_FMT_BT1120_2] = {{{BT1120_IF_DI_MSB - 8, 0xFF}, {0, 0x0}, {BT1120_IF_DI_MSB, 0xFF}}},
 
 			/* V		U		Y */
 [I_IPU_PIX_FMT_VYUY_1] = {{{7, 0xFF}, {0, 0x0}, {15, 0xFF}}},
