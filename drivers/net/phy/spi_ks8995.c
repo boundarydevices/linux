@@ -142,6 +142,7 @@ static const struct ks8995_chip_params ks8995_chip[] = {
 
 struct ks8995_pdata {
 	struct gpio_desc	*reset_gpio;
+	struct gpio_desc	*power_down_gpio;
 };
 
 struct ks8995_switch {
@@ -409,12 +410,19 @@ static int ks8995_parse_dt(struct ks8995_switch *ks)
 
 	if (!np) {
 		pdata->reset_gpio = ERR_PTR(-ENODEV);
+		pdata->power_down_gpio = ERR_PTR(-ENODEV);
 		return 0;
 	}
 
 	pdata->reset_gpio = devm_gpiod_get_index(&ks->spi->dev, "reset", 0);
 	if (!IS_ERR(pdata->reset_gpio)) {
 		ret = gpiod_direction_output(pdata->reset_gpio, 1);
+		if (ret)
+			return ret;
+	}
+	pdata->power_down_gpio = devm_gpiod_get_index(&ks->spi->dev, "power-down", 0);
+	if (!IS_ERR(pdata->power_down_gpio)) {
+		ret = gpiod_direction_output(pdata->power_down_gpio, 1);
 		if (ret)
 			return ret;
 	}
@@ -465,6 +473,8 @@ static int ks8995_probe(struct spi_device *spi)
 
 	/* de-assert switch reset */
 	if (ks->pdata) {
+		if (!IS_ERR(ks->pdata->power_down_gpio))
+			gpiod_set_value(ks->pdata->power_down_gpio, 0);
 		if (!IS_ERR(ks->pdata->reset_gpio)) {
 			gpiod_set_value(ks->pdata->reset_gpio, 1);
 			msleep(1);
@@ -516,6 +526,8 @@ static int ks8995_remove(struct spi_device *spi)
 
 	/* assert reset */
 	if (ks->pdata) {
+		if (!IS_ERR(ks->pdata->power_down_gpio))
+			gpiod_set_value(ks->pdata->power_down_gpio, 1);
 		if (!IS_ERR(ks->pdata->reset_gpio))
 			gpiod_set_value(ks->pdata->reset_gpio, 1);
 	}
