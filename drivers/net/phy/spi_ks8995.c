@@ -141,8 +141,7 @@ static const struct ks8995_chip_params ks8995_chip[] = {
 };
 
 struct ks8995_pdata {
-	int reset_gpio;
-	enum of_gpio_flags reset_gpio_flags;
+	struct gpio_desc	*reset_gpio;
 };
 
 struct ks8995_switch {
@@ -402,16 +401,24 @@ err_out:
  * Parses supported DT properties and sets up platform data
  * accordingly.
  */
-static void ks8995_parse_dt(struct ks8995_switch *ks)
+static int ks8995_parse_dt(struct ks8995_switch *ks)
 {
 	struct device_node *np = ks->spi->dev.of_node;
 	struct ks8995_pdata *pdata = ks->pdata;
+	int ret;
 
-	if (!np)
-		return;
+	if (!np) {
+		pdata->reset_gpio = ERR_PTR(-ENODEV);
+		return 0;
+	}
 
-	pdata->reset_gpio = of_get_named_gpio_flags(np, "reset-gpios", 0,
-		&pdata->reset_gpio_flags);
+	pdata->reset_gpio = devm_gpiod_get_index(&ks->spi->dev, "reset", 0);
+	if (!IS_ERR(pdata->reset_gpio)) {
+		ret = gpiod_direction_output(pdata->reset_gpio, 1);
+		if (ret)
+			return ret;
+	}
+	return 0;
 }
 
 static const struct bin_attribute ks8995_registers_attr = {
@@ -450,8 +457,6 @@ static int ks8995_probe(struct spi_device *spi)
 		if (!ks->pdata)
 			return -ENOMEM;
 
-		ks->pdata->reset_gpio = -1;
-
 		ks8995_parse_dt(ks);
 	}
 
@@ -459,23 +464,15 @@ static int ks8995_probe(struct spi_device *spi)
 		ks->pdata = spi->dev.platform_data;
 
 	/* de-assert switch reset */
-	if (ks->pdata && gpio_is_valid(ks->pdata->reset_gpio)) {
-		unsigned long flags;
-
-		flags = (ks->pdata->reset_gpio_flags == OF_GPIO_ACTIVE_LOW ?
-			 GPIOF_ACTIVE_LOW : 0);
-
-		err = devm_gpio_request_one(&spi->dev,
-					    ks->pdata->reset_gpio,
-					    flags, "switch-reset");
-		if (err) {
-			dev_err(&spi->dev,
-				"failed to get reset-gpios: %d\n", err);
-			return -EIO;
+	if (ks->pdata) {
+		if (!IS_ERR(ks->pdata->reset_gpio)) {
+			gpiod_set_value(ks->pdata->reset_gpio, 1);
+			msleep(1);
+			gpiod_set_value(ks->pdata->reset_gpio, 0);
+			msleep(1);
 		}
-
-		gpiod_set_value(gpio_to_desc(ks->pdata->reset_gpio), 0);
 	}
+
 
 	spi_set_drvdata(spi, ks);
 
@@ -518,8 +515,10 @@ static int ks8995_remove(struct spi_device *spi)
 	sysfs_remove_bin_file(&spi->dev.kobj, &ks->regs_attr);
 
 	/* assert reset */
-	if (ks->pdata && gpio_is_valid(ks->pdata->reset_gpio))
-		gpiod_set_value(gpio_to_desc(ks->pdata->reset_gpio), 1);
+	if (ks->pdata) {
+		if (!IS_ERR(ks->pdata->reset_gpio))
+			gpiod_set_value(ks->pdata->reset_gpio, 1);
+	}
 
 	return 0;
 }
