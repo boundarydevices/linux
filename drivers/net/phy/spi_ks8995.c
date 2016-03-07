@@ -140,6 +140,7 @@ struct ks8995_switch {
 	struct spi_device	*spi;
 	struct mutex		lock;
 	struct gpio_desc	*reset_gpio;
+	struct gpio_desc	*power_down_gpio;
 	struct bin_attribute	regs_attr;
 	const struct ks8995_chip_params	*chip;
 	int			revision_id;
@@ -438,9 +439,20 @@ static int ks8995_probe(struct spi_device *spi)
 	if (err)
 		return err;
 
+	ks->power_down_gpio = devm_gpiod_get_optional(&ks->spi->dev, "power-down", GPIOD_OUT_HIGH);
+	err = PTR_ERR_OR_ZERO(ks->power_down_gpio);
+	if (err) {
+		dev_err(&spi->dev, "failed to get power-down gpio: %d\n", err);
+		return err;
+	}
+
 	if (ks->reset_gpio) {
 		gpiod_set_value_cansleep(ks->reset_gpio, 1);
 		msleep(1);
+	}
+	if (ks->power_down_gpio)
+		gpiod_set_value_cansleep(ks->power_down_gpio, 0);
+	if (ks->reset_gpio) {
 		/* de-assert switch reset */
 		gpiod_set_value_cansleep(ks->reset_gpio, 0);
 		msleep(1);
@@ -487,6 +499,7 @@ static void ks8995_remove(struct spi_device *spi)
 
 	sysfs_remove_bin_file(&spi->dev.kobj, &ks->regs_attr);
 
+	gpiod_set_value_cansleep(ks->power_down_gpio, 1);
 	/* assert reset */
 	gpiod_set_value_cansleep(ks->reset_gpio, 1);
 }
