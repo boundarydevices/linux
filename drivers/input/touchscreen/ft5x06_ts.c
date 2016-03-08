@@ -91,6 +91,7 @@ struct ft5x06_ts {
 	int			bReady;
 	int			irq;
 	struct gpio_desc	*wakeup_gpio;
+	struct gpio_desc	*reset_gpio;
 	struct proc_dir_entry  *procentry;
 	unsigned		down_mask;
 	unsigned		max_x;
@@ -505,16 +506,12 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	int err = 0;
 	struct ft5x06_ts *ts;
 	struct device *dev = &client->dev;
+	struct gpio_desc *gp;
 
 	if (gts) {
 		printk(KERN_ERR "%s: Error gts is already allocated\n",
 		       client_name);
 		return -ENOMEM;
-	}
-	if (detect_ft5x06(client) != 0) {
-		dev_err(dev, "%s: Could not detect touch screen.\n",
-			client_name);
-		return -ENODEV;
 	}
 	ts = kzalloc(sizeof(struct ft5x06_ts), GFP_KERNEL);
 	if (!ts) {
@@ -524,8 +521,27 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	ts->client = client;
 	ts->irq = client->irq ;
 	ts->wakeup_gpio = devm_gpiod_get_index(dev, "wakeup", 0);
+	pr_info("%s: wakeup %p\n", __func__, ts->wakeup_gpio);
 	if (IS_ERR(ts->wakeup_gpio))
-		return -ENODEV;
+		err = -ENODEV;
+
+	gp = devm_gpiod_get_index(dev, "reset", 0);
+	pr_info("%s: reset %p\n", __func__, gp);
+	if (!IS_ERR(gp)) {
+		/* release reset */
+		ts->reset_gpio = gp;
+		err = gpiod_direction_output(gp, 1);	/* doesn't use active_low flag */
+		if (err)
+			goto exit1;
+		gpiod_set_value(gp, 0);
+		msleep(1);
+	}
+	err = detect_ft5x06(client);
+	if (err) {
+		dev_err(dev, "%s: Could not detect touch screen %d.\n",
+			client_name, err);
+		goto exit1;
+	}
 
 	printk(KERN_INFO "%s: %s touchscreen irq=%i, wakeup_irq=%i\n", __func__,
 	       client_name, ts->irq, gpiod_to_irq(ts->wakeup_gpio));
@@ -540,6 +556,7 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	printk(KERN_WARNING "%s: ts_register failed\n", client_name);
 	ts_deregister(ts);
+exit1:
 	kfree(ts);
 	return err;
 }
@@ -554,6 +571,8 @@ static int ts_remove(struct i2c_client *client)
 	} else {
 		printk(KERN_ERR "%s: Error ts!=gts\n", client_name);
 	}
+	if (ts->reset_gpio)
+		gpiod_set_value(ts->reset_gpio, 1);
 	kfree(ts);
 	return 0;
 }
