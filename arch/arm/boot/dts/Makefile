@@ -362,6 +362,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-tx6q-1020-comtft.dtb \
 	imx6q-tx6q-1110.dtb \
 	imx6q-udoo.dtb \
+	imx6q-usd.dtb \
 	imx6q-wandboard.dtb \
 	imx6q-wandboard-revb1.dtb
 dtb-$(CONFIG_SOC_IMX6SL) += \
