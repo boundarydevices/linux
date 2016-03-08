@@ -90,7 +90,7 @@ struct ft5x06_ts {
 	int			use_count;
 	int			bReady;
 	int			irq;
-	unsigned		gp;
+	struct gpio_desc	*wakeup_gpio;
 	struct proc_dir_entry  *procentry;
 	unsigned		down_mask;
 	unsigned		max_x;
@@ -329,7 +329,7 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 	};
 	int buttons = 0 ;
 
-	while (0 == gpio_get_value(ts->gp)) {
+	while (gpiod_get_value(ts->wakeup_gpio)) {
 		ts->bReady = 0;
 		ret = i2c_transfer(ts->client->adapter, readpkt,
 				   ARRAY_SIZE(readpkt));
@@ -345,7 +345,7 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 #endif
 			buttons = buf[2];
 			if (buttons > MAX_TOUCHES) {
-				int interrupting = (0 == gpio_get_value(ts->gp));
+				int interrupting = gpiod_get_value(ts->wakeup_gpio);
 				if (interrupting) {
 					printk(KERN_ERR
 					       "%s: invalid button count 0x%02x\n",
@@ -505,7 +505,7 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	int err = 0;
 	struct ft5x06_ts *ts;
 	struct device *dev = &client->dev;
-        struct device_node *np = client->dev.of_node;
+
 	if (gts) {
 		printk(KERN_ERR "%s: Error gts is already allocated\n",
 		       client_name);
@@ -523,20 +523,12 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 	ts->client = client;
 	ts->irq = client->irq ;
-	ts->gp = of_get_named_gpio(np, "wakeup-gpios", 0);
-	if (!gpio_is_valid(ts->gp))
+	ts->wakeup_gpio = devm_gpiod_get_index(dev, "wakeup", 0);
+	if (IS_ERR(ts->wakeup_gpio))
 		return -ENODEV;
 
-	err = gpio_request(ts->gp, "ft5x06_irq");
-	if (err < 0) {
-		dev_err(&client->dev,
-			"request gpio failed, cannot wake up controller: %d\n",
-			err);
-		return err;
-	}
-
-	printk(KERN_INFO "%s: %s touchscreen irq=%i, gp=%i\n", __func__,
-	       client_name, ts->irq, ts->gp);
+	printk(KERN_INFO "%s: %s touchscreen irq=%i, wakeup_irq=%i\n", __func__,
+	       client_name, ts->irq, gpiod_to_irq(ts->wakeup_gpio));
 	i2c_set_clientdata(client, ts);
 	err = ts_register(ts);
 	if (err == 0) {
@@ -558,7 +550,6 @@ static int ts_remove(struct i2c_client *client)
 	remove_proc_entry(procentryname, 0);
 	if (ts == gts) {
 		gts = NULL;
-		gpio_free(ts->gp);
 		ts_deregister(ts);
 	} else {
 		printk(KERN_ERR "%s: Error ts!=gts\n", client_name);
