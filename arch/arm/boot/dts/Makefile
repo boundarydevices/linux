@@ -218,6 +218,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-snap.dtb \
 	imx6q-ta.dtb \
 	imx6q-udoo.dtb \
+	imx6q-usd.dtb \
 	imx6q-utc.dtb \
 	imx6q-vp.dtb \
 	imx6q-wandboard.dtb \
