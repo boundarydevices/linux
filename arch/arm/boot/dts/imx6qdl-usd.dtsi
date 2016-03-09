@@ -31,6 +31,13 @@
 		>;
 	};
 
+	pinctrl_backlight_lvds: backlight-lvdsgrp {
+		fsl,pins = <
+#define GP_LVDS_J5_PIN36	<&gpio1 2 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x030b0
+		>;
+	};
+
 	pinctrl_ecspi1: ecspi1grp {
 		fsl,pins = <
 			MX6QDL_PAD_EIM_D17__ECSPI1_MISO		0x100b1
@@ -191,8 +198,6 @@
 	pinctrl_pwm4: pwm4grp {
 		fsl,pins = <
 			MX6QDL_PAD_SD1_CMD__PWM4_OUT		0x0b0b1
-#define GP_LVDS_J5_PIN36	<&gpio1 2 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x030b0
 		>;
 	};
 
@@ -283,10 +288,13 @@
 	};
 
 	backlight_lvds0 {
-		compatible = "pwm-backlight";
-		pwms = <&pwm4 0 200000>;
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
 		default-brightness-level = <9>;
+		enable-gpios = GP_LVDS_J5_PIN36;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_backlight_lvds>;
+		pwms = <&pwm4 0 200000>;
 	};
 
 	fb_hdmi: fb@0 {
