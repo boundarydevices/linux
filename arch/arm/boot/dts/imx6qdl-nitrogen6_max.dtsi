@@ -690,7 +690,7 @@
 		status = "okay";
 	};
 
-	v4l2_cap_1 {
+	v4l2_cap_1: v4l2_cap_1 {
 		compatible = "fsl,imx6q-v4l2-capture";
 		ipu_id = <0>;
 		csi_id = <1>;
@@ -707,7 +707,7 @@
 		status = "okay";
 	};
 
-	v4l2_cap_3 {
+	v4l2_cap_3: v4l2_cap_3 {
 		compatible = "fsl,imx6q-v4l2-capture";
 		ipu_id = <0>;
 		csi_id = <0>;
