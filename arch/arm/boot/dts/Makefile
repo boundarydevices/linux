@@ -774,6 +774,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-nitrogen6x-careview.dtb \
 	imx6q-nitrogen6x-st7789.dtb \
 	imx6q-per.dtb \
+	imx6q-s.dtb \
 
 dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6qp-mtp.dtb \
