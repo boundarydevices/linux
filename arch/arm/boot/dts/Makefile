@@ -195,6 +195,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-nitrogen6_som2.dtb \
 	imx6q-nitrogen6x.dtb \
 	imx6q-per.dtb \
+	imx6q-s.dtb \
 	imx6q-sabreauto.dtb \
 	imx6q-sabreauto-flexcan1.dtb \
 	imx6q-sabreauto-ecspi.dtb \
