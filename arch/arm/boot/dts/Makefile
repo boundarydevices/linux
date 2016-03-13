@@ -571,6 +571,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-icore-rqs.dtb \
 	imx6q-insp.dtb \
 	imx6q-ioc.dtb \
+	imx6q-jlm.dtb \
 	imx6q-kp-tpc.dtb \
 	imx6q-logicpd.dtb \
 	imx6q-marsboard.dtb \
