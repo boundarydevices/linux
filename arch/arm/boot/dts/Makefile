@@ -187,6 +187,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-h4.dtb \
 	imx6q-insp.dtb \
 	imx6q-ioc.dtb \
+	imx6q-jlm.dtb \
 	imx6q-ls.dtb \
 	imx6q-mcs.dtb \
 	imx6q-mtp.dtb \
