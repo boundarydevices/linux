@@ -1854,10 +1854,9 @@ static int mxc_v4l_close(struct file *file)
 	}
 
 	if (--cam->open_count == 0) {
-		if (cam->capture_pid == current->pid) {
-			err |= mxc_streamoff(cam);
-			wake_up_interruptible(&cam->enc_queue);
-		}
+		err |= mxc_streamoff(cam);
+		wake_up_interruptible(&cam->enc_queue);
+
 		if (!IS_ERR(sensor->sensor_clk))
 			clk_disable_unprepare(sensor->sensor_clk);
 		wait_event_interruptible(cam->power_queue,
