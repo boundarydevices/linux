@@ -3501,6 +3501,7 @@ static int mxcfb_probe(struct platform_device *pdev)
 	struct ipuv3_fb_platform_data *plat_data;
 	struct fb_info *fbi;
 	struct mxcfb_info *mxcfbi;
+	struct device *disp_dev;
 	struct resource *res;
 	int ret = 0;
 
