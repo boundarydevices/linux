@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 Freescale Semiconductor, Inc.
+ * Copyright (C) 2011-2016 Freescale Semiconductor, Inc.
  *
  * The code contained herein is licensed under the GNU General Public
  * License. You may obtain a copy of the GNU General Public License
@@ -2295,6 +2295,7 @@ static int mxc_hdmi_fb_event(struct notifier_block *nb,
 {
 	struct fb_event *event = v;
 	struct mxc_hdmi *hdmi = container_of(nb, struct mxc_hdmi, nb);
+	struct fb_videomode *mode;
 
 	if (strcmp(event->info->fix.id, hdmi->fbi->fix.id))
 		return 0;
@@ -2314,7 +2315,9 @@ static int mxc_hdmi_fb_event(struct notifier_block *nb,
 
 	case FB_EVENT_MODE_CHANGE:
 		dev_dbg(&hdmi->pdev->dev, "event=FB_EVENT_MODE_CHANGE\n");
-		if (hdmi->fb_reg)
+		mode = (struct fb_videomode *)event->data;
+		if ((hdmi->fb_reg) && (mode != NULL) &&
+			!fb_mode_is_equal(&hdmi->previous_non_vga_mode, mode))
 			mxc_hdmi_setup(hdmi, val);
 		break;
 
