@@ -208,6 +208,16 @@
 		>;
 	};
 
+	pinctrl_i2c3_gt911: i2c3_gt911grp {
+		fsl,pins = <
+#define GPIRQ_GT911			<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
+#define GP_GT911_IRQ			<&gpio1 9 GPIO_ACTIVE_LOW>
+/*			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		*/
+#define GP_GT911_RESET		<&gpio2 7 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x030b0
+		>;
+	};
+
 	pinctrl_i2c3_ov5640: i2c3-ov5640grp {
 		/* parallel camera on CSI1, pins differ for iMX6Q/iMX6DL */
 	};
@@ -938,6 +948,28 @@
 		reg = <0x38>;
 		interrupts-extended = GPIRQ_I2C3_J7;
 		wakeup-gpios = GP_I2C3_J7;
+	};
+
+	gt911@14 {
+		compatible = "goodix,gt911";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_gt911>;
+		reg = <0x14>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		reset-gpios = GP_GT911_RESET;
+	};
+
+	gt911@5d {
+		compatible = "goodix,gt911";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_gt911>;
+		reg = <0x5d>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		reset-gpios = GP_GT911_RESET;
 	};
 
 	ili210x@41 {
