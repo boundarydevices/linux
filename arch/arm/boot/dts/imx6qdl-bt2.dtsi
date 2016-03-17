@@ -239,11 +239,13 @@
 #define GP_GPS_RESET		<&gpio4 10 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x030b0
 
-			MX6QDL_PAD_CSI0_DAT12__GPIO5_IO30	0x1b0b0
-			MX6QDL_PAD_CSI0_DAT13__GPIO5_IO31	0x1b0b0
-#define GP_GPS_HEART_BEAT	<&gpio2 30 GPIO_ACTIVE_LOW>
+#define GP_GPS_RXD		<&gpio5 30 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_CSI0_DAT12__GPIO5_IO30	0x1b0b0		/* imx6 uart4 tx */
+#define GP_GPS_TXD		<&gpio5 31 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_CSI0_DAT13__GPIO5_IO31	0x1b0b0		/* imx6 uart4 rx */
+#define GP_GPS_TIMEPULSE	<&gpio2 30 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_EB2__GPIO2_IO30		0x1b0b0
-#define GPIRQ_GPS		<&gpio2 31 GPIO_ACTIVE_LOW>
+#define GP_GPS_EXTINT		<&gpio2 31 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_EB3__GPIO2_IO31		0x1b0b0
 		>;
 	};
@@ -681,7 +683,18 @@
 		reg = <0x42>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_max_7w>; 
-		rst-gpios = GP_GPS_RESET;
+		reset-gpios = GP_GPS_RESET;
+		/*
+		 * TXD		- 6
+		 * RXD		- 7
+		 * TIMEPULSE	- 11
+		 * EXTINT	- 13
+		 * ANT_ON	- 16
+		 * SDA		- 9
+		 * SCL		- 8
+		 */
+		int-pio = <13>;
+		interrupts-extended = GP_GPS_EXTINT; 
         };
 };
 
