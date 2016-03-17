@@ -47,6 +47,7 @@ obj-$(CONFIG_SERIAL_MPC52xx) += mpc52xx_uart.o
 obj-$(CONFIG_SERIAL_ICOM) += icom.o
 obj-$(CONFIG_SERIAL_MESON) += meson_uart.o
 obj-$(CONFIG_SERIAL_SB1250_DUART) += sb1250-duart.o
+obj-$(CONFIG_SERIAL_GPS_MAX7W) += gps_max7w.o
 obj-$(CONFIG_SERIAL_SCCNXP) += sccnxp.o
 obj-$(CONFIG_SERIAL_SC16IS7XX_CORE) += sc16is7xx.o
 obj-$(CONFIG_SERIAL_JSM) += jsm/
