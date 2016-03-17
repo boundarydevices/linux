@@ -46,6 +46,7 @@
 
 #include <linux/console.h>
 #include <linux/types.h>
+#include <linux/switch.h>
 
 #include "../edid.h"
 #include <video/mxc_edid.h>
@@ -169,7 +170,10 @@ struct mxc_hdmi {
 	struct fb_videomode default_mode;
 	struct fb_videomode previous_non_vga_mode;
 	bool requesting_vga_for_initialization;
-
+#ifdef CONFIG_SWITCH
+	struct switch_dev sdev_audio;
+	struct switch_dev sdev_display;
+#endif
 	int *gpr_base;
 	int *gpr_hdmi_base;
 	int *gpr_sdma_base;
@@ -2020,7 +2024,11 @@ static void hotplug_worker(struct work_struct *work)
 			hdmi_writeb(val, HDMI_PHY_POL0);
 
 			hdmi_set_cable_state(1);
-
+#ifdef CONFIG_SWITCH
+			if (!hdmi->hdmi_data.video_mode.mDVI)
+				switch_set_state(&hdmi->sdev_audio, 1);
+			switch_set_state(&hdmi->sdev_display, 1);
+#endif
 			sprintf(event_string, "EVENT=plugin");
 			kobject_uevent_env(&hdmi->pdev->dev.kobj, KOBJ_CHANGE, envp);
 #ifdef CONFIG_MXC_HDMI_CEC
@@ -2028,6 +2036,10 @@ static void hotplug_worker(struct work_struct *work)
 #endif
 		} else if (!(phy_int_pol & HDMI_PHY_HPD)) {
 			/* Plugout event */
+#ifdef CONFIG_SWITCH
+			switch_set_state(&hdmi->sdev_audio, 0);
+			switch_set_state(&hdmi->sdev_display, 0);
+#endif
 			dev_dbg(&hdmi->pdev->dev, "EVENT=plugout\n");
 			hdmi_set_cable_state(0);
 			mxc_hdmi_abort_stream();
@@ -2833,6 +2845,12 @@ static int mxc_hdmi_probe(struct platform_device *pdev)
 		ret = (int)hdmi->disp_mxc_hdmi;
 		goto edispdrv;
 	}
+#ifdef CONFIG_SWITCH
+	hdmi->sdev_audio.name = "hdmi_audio";
+	hdmi->sdev_display.name = "hdmi";
+	switch_dev_register(&hdmi->sdev_audio);
+	switch_dev_register(&hdmi->sdev_display);
+#endif
 	mxc_dispdrv_setdata(hdmi->disp_mxc_hdmi, hdmi);
 
 	platform_set_drvdata(pdev, hdmi);
@@ -2860,7 +2878,10 @@ static int mxc_hdmi_remove(struct platform_device *pdev)
 	int irq = platform_get_irq(pdev, 0);
 
 	fb_unregister_client(&hdmi->nb);
-
+#ifdef CONFIG_SWITCH
+	switch_dev_unregister(&hdmi->sdev_audio);
+	switch_dev_unregister(&hdmi->sdev_display);
+#endif
 	mxc_dispdrv_puthandle(hdmi->disp_mxc_hdmi);
 	mxc_dispdrv_unregister(hdmi->disp_mxc_hdmi);
 	iounmap(hdmi->gpr_base);
