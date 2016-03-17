@@ -885,7 +885,7 @@ break_done:
 		rxlvl -= cnt;
 		max_count -= cnt;
 		total += cnt;
-		if (max_count < 0)
+		if (max_count <= 0)
 			break;
 	}
 	if (ch->port.state->port.tty)
