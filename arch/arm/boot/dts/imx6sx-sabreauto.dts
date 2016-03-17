@@ -293,7 +293,28 @@
 		wakeup-gpios = <&gpio6 22 GPIO_ACTIVE_HIGH>;
 	};
 
-	pfuze100: pmic@8 {
+	si4763: si4763@63 {
+		compatible = "si4761";
+		reg = <0x63>;
+		va-supply = <&si4763_va>;
+		vd-supply = <&si4763_vd>;
+		vio1-supply = <&si4763_vio1>;
+		vio2-supply = <&si4763_vio2>;
+		revision-a10; /* set to default A10 compatible command set */
+
+		si476x_codec: si476x-codec {
+			compatible = "si476x-codec";
+		};
+	};
+
+	max7322: gpio@68 {
+		compatible = "maxim,max7322";
+		reg = <0x68>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+	pmic: pfuze100@08 {
 		compatible = "fsl,pfuze100";
 		reg = <0x08>;
 
@@ -338,7 +359,6 @@
 			sw4_reg: sw4 {
 				regulator-min-microvolt = <800000>;
 				regulator-max-microvolt = <3300000>;
-				regulator-always-on;
 			};
 
 			swbst_reg: swbst {
@@ -393,27 +413,6 @@
 				regulator-always-on;
 			};
 		};
-	};
-
-	si4763: si4763@63 {
-		compatible = "si4761";
-		reg = <0x63>;
-		va-supply = <&si4763_va>;
-		vd-supply = <&si4763_vd>;
-		vio1-supply = <&si4763_vio1>;
-		vio2-supply = <&si4763_vio2>;
-		revision-a10; /* set to default A10 compatible command set */
-
-		si476x_codec: si476x-codec {
-			compatible = "si476x-codec";
-		};
-	};
-
-	max7322: gpio@68 {
-		compatible = "maxim,max7322";
-		reg = <0x68>;
-		gpio-controller;
-		#gpio-cells = <2>;
 	};
 };
 
