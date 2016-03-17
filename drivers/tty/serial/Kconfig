@@ -1145,6 +1145,13 @@ config SERIAL_QE
 	  This driver supports the QE serial ports on Freescale embedded
 	  PowerPC that contain a QUICC Engine.
 
+config SERIAL_GPS_MAX7W
+	tristate "i2c serial port gps max7w support"
+	select SERIAL_CORE
+	help
+	  If you have a max7w gps chip using I2C interface you
+	  can enable it with this option.
+
 config SERIAL_SC16IS7XX
 	tristate "i2c serial port sc16is7xx support"
 	select SERIAL_CORE
