@@ -9,7 +9,7 @@ i.MX6 based boards:
 * [BD-SL-i.MX6 (SABRE Lite)][sabrelite]
 * [Nitrogen6X][nitrogen6x]
 * [Nitrogen6X SOM][nitrogen6x-som]
-* [Nitrogen6X SOM v2][nitrogen6-somv2]
+* [Nitrogen6X SOM v2][nitrogen6x-somv2]
 * [Nitrogen6 Lite][nitrogen6-lite]
 * [Nitrogen6 MAX][nitrogen6-max]
 * [Nitrogen6 VM][nitrogen6-vm]
@@ -41,6 +41,7 @@ These branches are based on Freescale releases of the same name (minus the 'boun
 [sabrelite]:http://boundarydevices.com/sabre-lite-imx6-sbc "SABRE Lite product page"
 [nitrogen6x]:http://boundarydevices.com/nitrogen6x-board-imx6-arm-cortex-a9-sbc "Nitrogen6X product page"
 [nitrogen6x-som]:http://boundarydevices.com/products/nitrogen6x-som "Nitrogen6X SOM product page"
+[nitrogen6x-somv2]:http://boundarydevices.com/product/nit6x-som-v2/ "Nitrogen6X SOM v2 product page"
 [nitrogen6-lite]:http://boundarydevices.com/products/nitrogen6_lite "Nitrogen6_Lite product page"
 [nitrogen6-max]:http://boundarydevices.com/product/nitrogen6max "Nitrogen6_MAX product page"
 [nitrogen6-vm]:http://boundarydevices.com/product/nitrogen6_vm_imx6 "Nitrogen6_VM product page"
