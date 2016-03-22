@@ -119,6 +119,7 @@ struct platform_device *pdevice;
 #    include <linux/mm.h>
 #    include <linux/oom.h>
 #    include <linux/sched.h>
+#    include <linux/profile.h>
 
 struct task_struct *lowmem_deathpending;
 
@@ -489,7 +490,11 @@ _AllocPriv(
     Platform->priv = &imxPriv;
 
 #ifdef CONFIG_GPU_LOW_MEMORY_KILLER
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
     task_free_register(&task_nb);
+#else
+    task_handoff_register(&task_nb);
+#endif
 #endif
 
     return gcvSTATUS_OK;
@@ -501,7 +506,11 @@ _FreePriv(
     )
 {
 #ifdef CONFIG_GPU_LOW_MEMORY_KILLER
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
     task_free_unregister(&task_nb);
+#else
+    task_handoff_unregister(&task_nb);
+#endif
 #endif
 
     return gcvSTATUS_OK;
