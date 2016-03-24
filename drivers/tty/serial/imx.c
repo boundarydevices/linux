@@ -206,7 +206,6 @@ struct imx_uart_data {
 };
 
 struct imx_dma_bufinfo {
-	bool filled;
 	unsigned int rx_bytes;
 };
 
@@ -218,7 +217,7 @@ struct imx_dma_rxbuf {
 	void			*buf;
 	dma_addr_t		dmaaddr;
 	unsigned int		cur_idx;
-	unsigned int		last_completed_idx;
+	unsigned int		pending_idx;
 	dma_cookie_t		cookie;
 	struct imx_dma_bufinfo	buf_info[IMX_RXBD_NUM];
 };
@@ -1017,39 +1016,23 @@ static void imx_break_ctl(struct uart_port *port, int break_state)
 }
 
 #define RX_BUF_SIZE	(PAGE_SIZE)
-static void dma_rx_push_data(struct imx_port *sport, struct tty_struct *tty,
-				unsigned int start, unsigned int end)
+static void dma_rx_work(struct imx_port *sport)
 {
-	unsigned int i;
+	unsigned int i = sport->rx_buf.pending_idx;
+	unsigned int end = sport->rx_buf.cur_idx;
 	struct tty_port *port = &sport->port.state->port;
 
-	for (i = start; i < end; i++) {
-		if (sport->rx_buf.buf_info[i].filled) {
+	while (i != end) {
+		int count = sport->rx_buf.buf_info[i].rx_bytes;
+		if (count) {
 			if (!(sport->port.ignore_status_mask & URXD_DUMMY_READ))
 				tty_insert_flip_string(port, sport->rx_buf.buf + (i
 					* RX_BUF_SIZE), sport->rx_buf.buf_info[i].rx_bytes);
 			tty_flip_buffer_push(port);
-			sport->rx_buf.buf_info[i].filled = false;
-			sport->rx_buf.last_completed_idx++;
-			sport->rx_buf.last_completed_idx %= IMX_RXBD_NUM;
-			sport->port.icount.rx += sport->rx_buf.buf_info[i].rx_bytes;
+			sport->port.icount.rx += count;
 		}
-	}
-}
-
-static void dma_rx_work(struct imx_port *sport)
-{
-	struct tty_struct *tty = sport->port.state->port.tty;
-	unsigned int cur_idx = sport->rx_buf.cur_idx;
-
-	if (sport->rx_buf.last_completed_idx < cur_idx) {
-		dma_rx_push_data(sport, tty, sport->rx_buf.last_completed_idx + 1, cur_idx);
-	} else if (sport->rx_buf.last_completed_idx == (IMX_RXBD_NUM - 1)) {
-		dma_rx_push_data(sport, tty, 0, cur_idx);
-	} else {
-		dma_rx_push_data(sport, tty, sport->rx_buf.last_completed_idx + 1,
-					IMX_RXBD_NUM);
-		dma_rx_push_data(sport, tty, 0, cur_idx);
+		i = (i + 1) % IMX_RXBD_NUM;
+		sport->rx_buf.pending_idx = i;
 	}
 }
 
@@ -1123,6 +1106,7 @@ static void dma_rx_callback(void *data)
 	struct dma_tx_state state;
 	enum dma_status status;
 	unsigned int count;
+	unsigned int i;
 
 	/* If we have finish the reading. we will not accept any more data. */
 	if (tty->closing) {
@@ -1144,17 +1128,16 @@ static void dma_rx_callback(void *data)
 	}
 
 	count = RX_BUF_SIZE - state.residue;
-	sport->rx_buf.buf_info[sport->rx_buf.cur_idx].filled = true;
-	sport->rx_buf.buf_info[sport->rx_buf.cur_idx].rx_bytes = count;
-	sport->rx_buf.cur_idx++;
-	sport->rx_buf.cur_idx %= IMX_RXBD_NUM;
+	i = sport->rx_buf.cur_idx;
+	sport->rx_buf.buf_info[i++].rx_bytes = count;
+	i %= IMX_RXBD_NUM;
+	sport->rx_buf.cur_idx = i;
 	dev_dbg(sport->port.dev, "We get %d bytes.\n", count);
 
-	if (sport->rx_buf.cur_idx == sport->rx_buf.last_completed_idx)
+	if (i == sport->rx_buf.pending_idx)
 		dev_err(sport->port.dev, "overwrite!\n");
 
-	if (count)
-		dma_rx_work(sport);
+	dma_rx_work(sport);
 }
 
 static int start_rx_dma(struct imx_port *sport)
@@ -1166,7 +1149,7 @@ static int start_rx_dma(struct imx_port *sport)
 	sport->rx_buf.period_len = RX_BUF_SIZE;
 	sport->rx_buf.buf_len = IMX_RXBD_NUM * RX_BUF_SIZE;
 	sport->rx_buf.cur_idx = 0;
-	sport->rx_buf.last_completed_idx = -1;
+	sport->rx_buf.pending_idx = 0;
 	desc = dmaengine_prep_dma_cyclic(chan, sport->rx_buf.dmaaddr,
 		sport->rx_buf.buf_len, sport->rx_buf.period_len,
 		DMA_DEV_TO_MEM, DMA_PREP_INTERRUPT);
@@ -1259,7 +1242,6 @@ static int imx_uart_dma_init(struct imx_port *sport)
 
 	for (i = 0; i < IMX_RXBD_NUM; i++) {
 		sport->rx_buf.buf_info[i].rx_bytes = 0;
-		sport->rx_buf.buf_info[i].filled = false;
 	}
 
 	/* Prepare for TX : */
