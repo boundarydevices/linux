@@ -584,6 +584,8 @@ static void dma_tx_work(struct work_struct *w)
 	unsigned long temp;
 	int ret;
 
+	if (sport->dma_is_txing)
+		return;
 	spin_lock_irqsave(&sport->port.lock, flags);
 	if (sport->port.x_char) {
 		/* We have X-char to send, so enable TX IRQ and
@@ -688,7 +690,8 @@ static void imx_start_tx(struct uart_port *port)
 	}
 
 	if (sport->dma_is_enabled) {
-		schedule_delayed_work(&sport->tsk_dma_tx, 0);
+		if (!sport->dma_is_txing)
+			schedule_delayed_work(&sport->tsk_dma_tx, 0);
 	} else {
 		temp = readl(sport->port.membase + UCR1);
 		writel(temp | UCR1_TXMPTYEN, sport->port.membase + UCR1);
