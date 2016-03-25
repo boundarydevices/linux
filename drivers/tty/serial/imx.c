@@ -259,8 +259,6 @@ struct imx_port {
 	struct work_struct	tsk_dma_rx;
 	wait_queue_head_t	dma_wait;
 	unsigned int            saved_reg[11];
-#define DMA_TX_IS_WORKING 1
-	unsigned long		flags;
 };
 
 struct imx_port_ucrs {
@@ -557,8 +555,6 @@ static void dma_tx_callback(void *data)
 
 	dev_dbg(sport->port.dev, "we finish the TX DMA.\n");
 
-	clear_bit(DMA_TX_IS_WORKING, &sport->flags);
-	smp_mb__after_clear_bit();
 	sport->dma_is_txing = 0;
 
 	spin_unlock_irqrestore(&sport->port.lock, flags);
@@ -587,9 +583,6 @@ static void dma_tx_work(struct work_struct *w)
 	unsigned long flags;
 	unsigned long temp;
 	int ret;
-
-	if (test_and_set_bit(DMA_TX_IS_WORKING, &sport->flags))
-		return;
 
 	spin_lock_irqsave(&sport->port.lock, flags);
 	if (sport->port.x_char) {
@@ -657,8 +650,6 @@ out2:
 		writel(temp, sport->port.membase + UCR4);
 	}
 out1:
-	clear_bit(DMA_TX_IS_WORKING, &sport->flags);
-	smp_mb__after_clear_bit();
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 }
 
@@ -1142,7 +1133,6 @@ static void imx_enable_dma(struct imx_port *sport)
 	unsigned long temp;
 
 	init_waitqueue_head(&sport->dma_wait);
-	sport->flags = 0;
 
 	/* set UCR1 */
 	temp = readl(sport->port.membase + UCR1);
@@ -1370,7 +1360,9 @@ static void imx_flush_buffer(struct uart_port *port)
 
 	if (sport->dma_is_enabled) {
 		sport->tx_bytes = 0;
+		sport->dma_is_txing = 0;
 		dmaengine_terminate_all(sport->dma_chan_tx);
+		return;
 	}
 
 	/* For console port, it is not necessary flush buffer and reset FIFO */
