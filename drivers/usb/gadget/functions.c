@@ -80,7 +80,7 @@ EXPORT_SYMBOL_GPL(usb_put_function_instance);
 
 void usb_put_function(struct usb_function *f)
 {
-	if (!f || !f->free_func)
+	if (!f)
 		return;
 
 	f->free_func(f);
