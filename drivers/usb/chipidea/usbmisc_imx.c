@@ -66,6 +66,7 @@
 #define MX6_BM_OVER_CUR_POLARITY	BIT(8)
 #define MX6_BM_PWR_POLARITY		BIT(9)
 #define MX6_BM_WAKEUP_ENABLE		BIT(10)
+#define MX6_BM_UTMI_SUSPEND		BIT(12)
 #define MX6_BM_UTMI_ON_CLOCK		BIT(13)
 #define MX6_BM_ID_WAKEUP		BIT(16)
 #define MX6_BM_VBUS_WAKEUP		BIT(17)
@@ -416,13 +417,14 @@ static int usbmisc_imx6q_init(struct imx_usbmisc_data *data)
 	struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
 	unsigned long flags;
 	u32 reg;
+	unsigned index = data->index;
 
-	if (data->index > 3)
+	if (index > 3)
 		return -EINVAL;
 
 	spin_lock_irqsave(&usbmisc->lock, flags);
 
-	reg = readl(usbmisc->base + data->index * 4);
+	reg = readl(usbmisc->base + index * 4);
 	if (data->disable_oc) {
 		reg |= MX6_BM_OVER_CUR_DIS;
 	} else {
@@ -440,23 +442,23 @@ static int usbmisc_imx6q_init(struct imx_usbmisc_data *data)
 	/* If the polarity is not set keep it as setup by the bootlader */
 	if (data->pwr_pol == 1)
 		reg |= MX6_BM_PWR_POLARITY;
-	writel(reg, usbmisc->base + data->index * 4);
+	writel(reg, usbmisc->base + index * 4);
 
 	/* SoC non-burst setting */
-	reg = readl(usbmisc->base + data->index * 4);
+	reg = readl(usbmisc->base + index * 4);
 	writel(reg | MX6_BM_NON_BURST_SETTING,
-			usbmisc->base + data->index * 4);
+			usbmisc->base + index * 4);
 
 	/* For HSIC controller */
 	if (data->hsic) {
-		reg = readl(usbmisc->base + data->index * 4);
-		writel(reg | MX6_BM_UTMI_ON_CLOCK,
-			usbmisc->base + data->index * 4);
+		reg = readl(usbmisc->base + index * 4);
+		writel(reg | MX6_BM_UTMI_ON_CLOCK | MX6_BM_UTMI_SUSPEND,
+			usbmisc->base + index * 4);
 		reg = readl(usbmisc->base + MX6_USB_HSIC_CTRL_OFFSET
-			+ (data->index - 2) * 4);
+			+ (index - 2) * 4);
 		reg |= MX6_BM_HSIC_EN | MX6_BM_HSIC_CLK_ON;
 		writel(reg, usbmisc->base + MX6_USB_HSIC_CTRL_OFFSET
-			+ (data->index - 2) * 4);
+			+ (index - 2) * 4);
 	}
 
 	spin_unlock_irqrestore(&usbmisc->lock, flags);
