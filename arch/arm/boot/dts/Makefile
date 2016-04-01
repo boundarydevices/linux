@@ -467,6 +467,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-vp.dtb \
 	imx6q-wandboard.dtb \
 	imx6q-wandboard-revb1.dtb \
+	imx6qp-mtp.dtb \
 	imx6qp-nitrogen6_max.dtb \
 	imx6qp-sabreauto.dtb \
 	imx6qp-sabreauto-ecspi.dtb \
