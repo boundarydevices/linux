@@ -330,10 +330,6 @@ static int buffer_init(struct vb2_buffer *vb)
 
 	buf->dma_addr = vb2_dma_contig_plane_dma_addr(vb, 0);
 	INIT_LIST_HEAD(&buf->list);
-	{	/* pass the buffer physical address */
-		unsigned int *cpu = vb2_plane_vaddr(vb, 0);
-		*cpu = buf->dma_addr;
-	}
 	return 0;
 }
 
