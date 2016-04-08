@@ -374,11 +374,59 @@ void tw686x_audio_free(struct tw686x_dev *dev)
 	dev->snd_card = NULL;
 }
 
+/* 7 bits, 0 : .5, 127 : 2.484375, n : .5 + n/64 */
+static int gain_info(struct snd_kcontrol *ctl,
+			    struct snd_ctl_elem_info *info)
+{
+	info->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	info->count = 1;
+	info->value.integer.min = 0;
+	info->value.integer.max = 127;
+	return 0;
+}
+
+static int gain_get(struct snd_kcontrol *ctl,
+			   struct snd_ctl_elem_value *ucontrol)
+{
+	struct tw686x_dev *dev = ctl->private_data;
+	int chan = snd_ctl_get_ioffidx(ctl, &ucontrol->id);
+	u32 gain;
+
+	gain = reg_read(dev, AIGAIN[chan]);
+	ucontrol->value.integer.value[0] = gain;
+	return 0;
+}
+
+static int gain_put(struct snd_kcontrol *ctl,
+			   struct snd_ctl_elem_value *ucontrol)
+{
+	struct tw686x_dev *dev = ctl->private_data;
+	int chan = snd_ctl_get_ioffidx(ctl, &ucontrol->id);
+	u32 gain;
+
+	gain = ucontrol->value.integer.value[0];
+	if (gain < 0 || gain > 127)
+		return -EINVAL;
+	reg_write(dev, AIGAIN[chan], gain);
+	return 0;
+}
+
+static struct snd_kcontrol_new gain_control = {
+	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+	.name = "Mic Capture Volume",
+	.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
+	.info = gain_info,
+	.get = gain_get,
+	.put = gain_put,
+	.count = 8,
+};
+
 int tw686x_audio_init(struct tw686x_dev *dev)
 {
 	struct pci_dev *pci_dev = dev->pci_dev;
 	struct snd_card *card;
 	int err, ch;
+	struct snd_kcontrol *ctl;
 
 	/* Enable external audio */
 	reg_write(dev, AUDIO_CONTROL1, BIT(0));
@@ -394,6 +442,12 @@ int tw686x_audio_init(struct tw686x_dev *dev)
 	strlcpy(card->shortname, "tw686x", sizeof(card->shortname));
 	strlcpy(card->longname, pci_name(pci_dev), sizeof(card->longname));
 	snd_card_set_dev(card, &pci_dev->dev);
+
+	gain_control.count = max_channels(dev);
+	ctl = snd_ctl_new1(&gain_control, dev);
+	err = snd_ctl_add(card, ctl);
+	if (err < 0)
+		goto err_cleanup2;
 
 	for (ch = 0; ch < max_channels(dev); ch++) {
 		struct tw686x_audio_channel *ac;
@@ -422,6 +476,7 @@ err_cleanup:
 			continue;
 		tw686x_audio_dma_free(dev, &dev->audio_channels[ch]);
 	}
+err_cleanup2:
 	snd_card_free(card);
 	dev->snd_card = NULL;
 	return err;
