@@ -37,6 +37,7 @@ struct imx_sgtl5000_data {
 	unsigned int clk_frequency;
 	struct gpio_data mute_hp;
 	struct gpio_data mute_lo;
+	bool limit_16bit_samples;
 };
 
 static int imx_sgtl5000_dai_init(struct snd_soc_pcm_runtime *rtd)
@@ -162,6 +163,22 @@ static int imx_sgtl5000_audmux_config(struct platform_device *pdev)
 	return 0;
 }
 
+static int imx_sgtl_startup(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct imx_sgtl5000_data *data = snd_soc_card_get_drvdata(rtd->card);
+
+	if (data->limit_16bit_samples) {
+		snd_pcm_hw_constraint_minmax(substream->runtime,
+			SNDRV_PCM_HW_PARAM_SAMPLE_BITS, 16, 16);
+	}
+	return 0;
+}
+
+static struct snd_soc_ops imx_sgtl_ops = {
+	.startup	= imx_sgtl_startup,
+};
+
 static int imx_sgtl5000_probe(struct platform_device *pdev)
 {
 	struct device_node *cpu_np, *codec_np;
@@ -217,8 +234,10 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	data->dai.cpu_of_node = cpu_np;
 	data->dai.platform_of_node = cpu_np;
 	data->dai.init = &imx_sgtl5000_dai_init;
+	data->dai.ops = &imx_sgtl_ops;
 	data->dai.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 			    SND_SOC_DAIFMT_CBM_CFM;
+	data->limit_16bit_samples = of_property_read_bool(pdev->dev.of_node, "limit-to-16-bit-samples");
 	init_gpio_data(&pdev->dev, pdev->dev.of_node,
 			&data->mute_hp, "mute-gpios");
 	init_gpio_data(&pdev->dev, pdev->dev.of_node,
