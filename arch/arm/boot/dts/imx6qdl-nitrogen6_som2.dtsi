@@ -744,7 +744,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_sgtl5000>;
 		reg = <0x0a>;
-		clocks = <&clks 201>;
+		clocks = <&clks IMX6QDL_CLK_CKO>;
 		VDDA-supply = <&reg_2p5v>;
 		VDDIO-supply = <&reg_3p3v>;
 	};
@@ -773,7 +773,7 @@
 		reg = <0x3d>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_ov5640_mipi>;
-		clocks = <&clks 147>;
+		clocks = <&clks IMX6QDL_CLK_PWM3>;
 		clock-names = "csi_mclk";
 		DOVDD-supply = <&reg_1p8v>;
 		AVDD-supply = <&reg_2p5v>;
@@ -792,7 +792,7 @@
 		reg = <0x3e>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_ov5642>;
-		clocks = <&clks 200>;
+		clocks = <&clks IMX6QDL_CLK_CKO2>;
 		clock-names = "csi_mclk";
 		DOVDD-supply = <&reg_1p8v>;
 		AVDD-supply = <&reg_2p5v>;
