@@ -28,6 +28,7 @@ struct imx_sgtl5000_data {
 	struct gpio_desc *amp_standby;
 	struct gpio_desc *amp_gain[2];
 	int amp_gain_value;
+	bool limit_16bit_samples;
 };
 
 static int imx_sgtl5000_dai_init(struct snd_soc_pcm_runtime *rtd)
@@ -90,6 +91,10 @@ static int imx_sgtl_startup(struct snd_pcm_substream *substream)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct imx_sgtl5000_data *data = snd_soc_card_get_drvdata(rtd->card);
 
+	if (data->limit_16bit_samples) {
+		snd_pcm_hw_constraint_minmax(substream->runtime,
+			SNDRV_PCM_HW_PARAM_SAMPLE_BITS, 16, 16);
+	}
 	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) &&
 			data->amp_standby)
 		gpiod_set_value(data->amp_standby, 0);
@@ -261,6 +266,7 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	data->dai.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
 			    SND_SOC_DAIFMT_CBP_CFP;
 
+	data->limit_16bit_samples = of_property_read_bool(pdev->dev.of_node, "limit-to-16-bit-samples");
 	gd = devm_gpiod_get_index_optional(&pdev->dev, "mute", 0, GPIOD_OUT_HIGH);
 	if (IS_ERR(gd)) {
 		ret = PTR_ERR(gd);
