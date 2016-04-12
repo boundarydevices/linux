@@ -26,6 +26,8 @@ struct gpio_backlight {
 
 	struct gpio_desc *gpiod;
 	int def_value;
+	int			disp_cnt;
+	struct device_node	*disp_node[4];
 };
 
 static int gpio_backlight_update_status(struct backlight_device *bl)
@@ -48,6 +50,16 @@ static int gpio_backlight_check_fb(struct backlight_device *bl,
 {
 	struct gpio_backlight *gbl = bl_get_data(bl);
 
+	if (gbl->disp_cnt) {
+		struct device_node *np = info->device->of_node;
+		int i;
+
+		for (i = 0 ; i < gbl->disp_cnt; i++) {
+			if (np == gbl->disp_node[i])
+				return 1;
+		}
+		return 0;
+	}
 	return gbl->fbdev == NULL || gbl->fbdev == info->dev;
 }
 
@@ -64,6 +76,7 @@ static int gpio_backlight_probe_dt(struct platform_device *pdev,
 	struct device_node *np = dev->of_node;
 	enum gpiod_flags flags;
 	int ret;
+	int i;
 
 	gbl->def_value = of_property_read_bool(np, "default-on");
 	flags = gbl->def_value ? GPIOD_OUT_HIGH : GPIOD_OUT_LOW;
@@ -79,6 +92,12 @@ static int gpio_backlight_probe_dt(struct platform_device *pdev,
 		return ret;
 	}
 
+	for (i = 0 ; i < ARRAY_SIZE(gbl->disp_node); i++) {
+		gbl->disp_node[i] = of_parse_phandle(np, "display", i);
+		if (!gbl->disp_node[i])
+			break;
+	}
+	gbl->disp_cnt = i;
 	return 0;
 }
 
