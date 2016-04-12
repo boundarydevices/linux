@@ -3527,17 +3527,6 @@ static int mxcfb_register(struct fb_info *fbi)
 		} else {
 			fbcon_update_vcs(fbi, fbi->var.activate & FB_ACTIVATE_ALL);
 		}
-
-		if (mxcfbi->next_blank == FB_BLANK_UNBLANK) {
-			console_lock();
-			ret = fb_blank(fbi, FB_BLANK_UNBLANK);
-			console_unlock();
-			if (ret < 0) {
-				dev_err(fbi->device,
-					"Error fb_blank ret:%d\n", ret);
-				goto err4;
-			}
-		}
 	} else {
 		/*
 		 * Setup the channel again though bootloader
@@ -3557,6 +3546,19 @@ static int mxcfb_register(struct fb_info *fbi)
 	if (ret < 0)
 		goto err5;
 
+	if (!mxcfbi->late_init) {
+		if (mxcfbi->next_blank == FB_BLANK_UNBLANK) {
+			console_lock();
+			ret = fb_blank(fbi, FB_BLANK_UNBLANK);
+			console_unlock();
+			if (ret < 0) {
+				dev_err(fbi->device,
+					"Error fb_blank ret:%d\n", ret);
+				unregister_framebuffer(fbi);
+				goto err5;
+			}
+		}
+	}
 	return ret;
 err5:
 	if (mxcfbi->next_blank == FB_BLANK_UNBLANK) {
@@ -3575,7 +3577,6 @@ err5:
 		}
 		console_unlock();
 	}
-err4:
 err3:
 	if (mxcfbi->ipu_alp_ch_irq != -1)
 		ipu_free_irq(mxcfbi->ipu, mxcfbi->ipu_alp_ch_irq, fbi);
