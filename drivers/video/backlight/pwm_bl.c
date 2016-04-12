@@ -35,6 +35,8 @@ struct pwm_bl_data {
 	struct gpio_desc	*enable_gpio;
 	unsigned int		scale;
 	bool			legacy;
+	int			disp_cnt;
+	struct device_node	*disp_node[4];
 	int			(*notify)(struct device *,
 					  int brightness);
 	void			(*notify_after)(struct device *,
@@ -121,6 +123,16 @@ static int pwm_backlight_check_fb(struct backlight_device *bl,
 {
 	struct pwm_bl_data *pb = bl_get_data(bl);
 
+	if (pb->disp_cnt) {
+		struct device_node *np = info->device->of_node;
+		int i;
+
+		for (i = 0 ; i < pb->disp_cnt; i++) {
+			if (np == pb->disp_node[i])
+				return 1;
+		}
+		return 0;
+	}
 	return !pb->check_fb || pb->check_fb(pb->dev, info);
 }
 
@@ -131,13 +143,15 @@ static const struct backlight_ops pwm_backlight_ops = {
 
 #ifdef CONFIG_OF
 static int pwm_backlight_parse_dt(struct device *dev,
-				  struct platform_pwm_backlight_data *data)
+				  struct platform_pwm_backlight_data *data,
+				  struct pwm_bl_data *pb)
 {
 	struct device_node *node = dev->of_node;
 	struct property *prop;
 	int length;
 	u32 value;
 	int ret;
+	int i;
 
 	if (!node)
 		return -ENODEV;
@@ -175,6 +189,12 @@ static int pwm_backlight_parse_dt(struct device *dev,
 	}
 
 	data->enable_gpio = -EINVAL;
+	for (i = 0 ; i < ARRAY_SIZE(pb->disp_node); i++) {
+		pb->disp_node[i] = of_parse_phandle(node, "display", i);
+		if (!pb->disp_node[i])
+			break;
+	}
+	pb->disp_cnt = i;
 	return 0;
 }
 
@@ -186,7 +206,8 @@ static struct of_device_id pwm_backlight_of_match[] = {
 MODULE_DEVICE_TABLE(of, pwm_backlight_of_match);
 #else
 static int pwm_backlight_parse_dt(struct device *dev,
-				  struct platform_pwm_backlight_data *data)
+				  struct platform_pwm_backlight_data *data,
+				  struct pwm_bl_data *pb)
 {
 	return -ENODEV;
 }
@@ -204,8 +225,12 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	struct pwm_args pargs;
 	int ret;
 
+	pb = devm_kzalloc(&pdev->dev, sizeof(*pb), GFP_KERNEL);
+	if (!pb)
+		return -ENOMEM;
+
 	if (!data) {
-		ret = pwm_backlight_parse_dt(&pdev->dev, &defdata);
+		ret = pwm_backlight_parse_dt(&pdev->dev, &defdata, pb);
 		if (ret < 0) {
 			dev_err(&pdev->dev, "failed to find platform data\n");
 			return ret;
@@ -218,12 +243,6 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		ret = data->init(&pdev->dev);
 		if (ret < 0)
 			return ret;
-	}
-
-	pb = devm_kzalloc(&pdev->dev, sizeof(*pb), GFP_KERNEL);
-	if (!pb) {
-		ret = -ENOMEM;
-		goto err_alloc;
 	}
 
 	if (data->levels) {
