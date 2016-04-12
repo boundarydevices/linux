@@ -31,13 +31,14 @@ struct pwm_bl_data {
 	bool			legacy;
 	unsigned int		post_pwm_on_delay;
 	unsigned int		pwm_off_delay;
+	int			disp_cnt;
+	struct device_node	*disp_node[4];
 	int			(*notify)(struct device *,
 					  int brightness);
 	void			(*notify_after)(struct device *,
 					int brightness);
 	int			(*check_fb)(struct device *, struct fb_info *);
 	void			(*exit)(struct device *);
-	char			fb_id[16];
 };
 
 static void pwm_backlight_power_on(struct pwm_bl_data *pb)
@@ -137,6 +138,16 @@ static int pwm_backlight_check_fb(struct backlight_device *bl,
 {
 	struct pwm_bl_data *pb = bl_get_data(bl);
 
+	if (pb->disp_cnt) {
+		struct device_node *np = info->device->of_node;
+		int i;
+
+		for (i = 0 ; i < pb->disp_cnt; i++) {
+			if (np == pb->disp_node[i])
+				return 1;
+		}
+		return 0;
+	}
 	return !pb->check_fb || pb->check_fb(pb->dev, info);
 }
 
@@ -229,19 +240,9 @@ int pwm_backlight_brightness_default(struct device *dev,
 	return 0;
 }
 
-static int pwm_backlight_check_fb_name(struct device *dev, struct fb_info *info)
-{
-	struct backlight_device *bl = dev_get_drvdata(dev);
-	struct pwm_bl_data *pb = bl_get_data(bl);
-
-	if (strcmp(info->fix.id, pb->fb_id) == 0)
-		return true;
-
-	return false;
-}
-
 static int pwm_backlight_parse_dt(struct device *dev,
-				  struct platform_pwm_backlight_data *data)
+				  struct platform_pwm_backlight_data *data,
+				  struct pwm_bl_data *pb)
 {
 	struct device_node *node = dev->of_node;
 	unsigned int num_levels;
@@ -251,17 +252,12 @@ static int pwm_backlight_parse_dt(struct device *dev,
 	int length;
 	u32 value;
 	int ret;
-	const char *names;
+	int i;
 
 	if (!node)
 		return -ENODEV;
 
 	memset(data, 0, sizeof(*data));
-
-	if (!of_property_read_string(node, "fb-names", &names)) {
-		strncpy(data->fb_id, names, sizeof(data->fb_id));
-		data->check_fb = &pwm_backlight_check_fb_name;
-	}
 
 	/*
 	 * These values are optional and set as 0 by default, the out values
@@ -374,6 +370,13 @@ static int pwm_backlight_parse_dt(struct device *dev,
 
 		data->max_brightness = num_levels - 1;
 	}
+
+	for (i = 0 ; i < ARRAY_SIZE(pb->disp_node); i++) {
+		pb->disp_node[i] = of_parse_phandle(node, "display", i);
+		if (!pb->disp_node[i])
+			break;
+	}
+	pb->disp_cnt = i;
 	return 0;
 }
 
@@ -385,7 +388,8 @@ static const struct of_device_id pwm_backlight_of_match[] = {
 MODULE_DEVICE_TABLE(of, pwm_backlight_of_match);
 #else
 static int pwm_backlight_parse_dt(struct device *dev,
-				  struct platform_pwm_backlight_data *data)
+				  struct platform_pwm_backlight_data *data,
+				  struct pwm_bl_data *pb)
 {
 	return -ENODEV;
 }
@@ -480,8 +484,12 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	unsigned int i;
 	int ret;
 
+	pb = devm_kzalloc(&pdev->dev, sizeof(*pb), GFP_KERNEL);
+	if (!pb)
+		return -ENOMEM;
+
 	if (!data) {
-		ret = pwm_backlight_parse_dt(&pdev->dev, &defdata);
+		ret = pwm_backlight_parse_dt(&pdev->dev, &defdata, pb);
 		if (ret < 0) {
 			dev_err(&pdev->dev, "failed to find platform data\n");
 			return ret;
@@ -496,12 +504,6 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 			return ret;
 	}
 
-	pb = devm_kzalloc(&pdev->dev, sizeof(*pb), GFP_KERNEL);
-	if (!pb) {
-		ret = -ENOMEM;
-		goto err_alloc;
-	}
-
 	pb->notify = data->notify;
 	pb->notify_after = data->notify_after;
 	pb->check_fb = data->check_fb;
@@ -510,7 +512,6 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	pb->enabled = false;
 	pb->post_pwm_on_delay = data->post_pwm_on_delay;
 	pb->pwm_off_delay = data->pwm_off_delay;
-	strcpy(pb->fb_id, data->fb_id);
 
 	pb->enable_gpio = devm_gpiod_get_optional(&pdev->dev, "enable",
 						  GPIOD_ASIS);
