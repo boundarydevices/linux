@@ -501,6 +501,7 @@ static void __init imx6ul_clocks_init(struct device_node *ccm_node)
 	clk_set_rate(clks[IMX6UL_CLK_ENET_REF], 50000000);
 	clk_set_rate(clks[IMX6UL_CLK_ENET2_REF], 50000000);
 	clk_set_rate(clks[IMX6UL_CLK_CSI], 24000000);
+	clk_set_rate(clks[IMX6UL_CLK_PLL3_PFD2], 320000000);
 
 	if (clk_on_imx6ull())
 		clk_prepare_enable(clks[IMX6UL_CLK_AIPSTZ3]);
