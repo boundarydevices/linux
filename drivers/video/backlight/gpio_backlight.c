@@ -19,6 +19,8 @@
 struct gpio_backlight {
 	struct device *fbdev;
 	struct gpio_desc *gpiod;
+	int			disp_cnt;
+	struct device_node	*disp_node[4];
 };
 
 static int gpio_backlight_update_status(struct backlight_device *bl)
@@ -35,6 +37,16 @@ static int gpio_backlight_check_fb(struct backlight_device *bl,
 {
 	struct gpio_backlight *gbl = bl_get_data(bl);
 
+	if (gbl->disp_cnt) {
+		struct device_node *np = info->device->of_node;
+		int i;
+
+		for (i = 0 ; i < gbl->disp_cnt; i++) {
+			if (np == gbl->disp_node[i])
+				return 1;
+		}
+		return 0;
+	}
 	return gbl->fbdev == NULL || gbl->fbdev == info->dev;
 }
 
@@ -53,6 +65,7 @@ static int gpio_backlight_probe(struct platform_device *pdev)
 	struct backlight_device *bl;
 	struct gpio_backlight *gbl;
 	int ret, init_brightness, def_value;
+	int i;
 
 	gbl = devm_kzalloc(dev, sizeof(*gbl), GFP_KERNEL);
 	if (gbl == NULL)
@@ -71,6 +84,12 @@ static int gpio_backlight_probe(struct platform_device *pdev)
 				"Error: The gpios parameter is missing or invalid.\n");
 		return ret;
 	}
+	for (i = 0 ; i < ARRAY_SIZE(gbl->disp_node); i++) {
+		gbl->disp_node[i] = of_parse_phandle(dev->of_node, "display", i);
+		if (!gbl->disp_node[i])
+			break;
+	}
+	gbl->disp_cnt = i;
 
 	memset(&props, 0, sizeof(props));
 	props.type = BACKLIGHT_RAW;
