@@ -1,5 +1,6 @@
 obj-y := time.o cpu.o system.o irq-common.o common.o
 
+obj-$(CONFIG_MXC_REBOOT_ANDROID_CMD) += reboot.o
 obj-$(CONFIG_SOC_IMX1) += clk-imx1.o mm-imx1.o
 obj-$(CONFIG_SOC_IMX21) += clk-imx21.o mm-imx21.o
 
