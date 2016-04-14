@@ -2729,9 +2729,6 @@ struct imx_ssi {
 	void (*ac97_reset) (struct snd_ac97 *ac97);
 	void (*ac97_warm_reset)(struct snd_ac97 *ac97);
 
-	struct imx_pcm_dma_params	dma_params_rx;
-	struct imx_pcm_dma_params	dma_params_tx;
-
 	int enabled;
 
 	struct platform_device *soc_platform_pdev;
@@ -2743,13 +2740,7 @@ struct imx_ssi {
 #define SSI_SRCCR		0x28
 #define SSI_SCR_I2S_MODE_NORM	(0 << 5)
 #define SSI_SCR_I2S_MODE_MSTR	(1 << 5)
-#define SSI_SCR_I2S_MODE_SLAVE	(2 << 5)
 #define SSI_I2S_MODE_MASK	(3 << 5)
-#define SSI_SCR_SYN		(1 << 4)
-#define SSI_SRCR_RSHFD		(1 << 4)
-#define SSI_SRCR_RSCKP		(1 << 3)
-#define SSI_SRCR_RFSI		(1 << 2)
-#define SSI_SRCR_REFS		(1 << 0)
 #define SSI_STCCR_WL(x)		((((x) - 2) >> 1) << 13)
 #define SSI_STCCR_WL_MASK	(0xf << 13)
 #define SSI_SRCCR_WL(x)		((((x) - 2) >> 1) << 13)
@@ -2869,38 +2860,39 @@ static int imx_audmux_config(int slave, int master)
 	master = master - 1;
 
 	/* SSI0 mastered by port 5 */
-	ptcr = MXC_AUDMUX_V2_PTCR_SYN |
-		MXC_AUDMUX_V2_PTCR_TFSDIR |
-		MXC_AUDMUX_V2_PTCR_TFSEL(master | 0x8) |
-		MXC_AUDMUX_V2_PTCR_TCLKDIR |
-	MXC_AUDMUX_V2_PTCR_RFSDIR |
-	MXC_AUDMUX_V2_PTCR_RFSEL(master | 0x8) |
-	MXC_AUDMUX_V2_PTCR_RCLKDIR |
-	MXC_AUDMUX_V2_PTCR_RCSEL(master | 0x8) |
-		MXC_AUDMUX_V2_PTCR_TCSEL(master | 0x8);
-	pdcr = MXC_AUDMUX_V2_PDCR_RXDSEL(master);
-	mxc_audmux_v2_configure_port(slave, ptcr, pdcr);
+	ptcr = IMX_AUDMUX_V2_PTCR_SYN |
+		IMX_AUDMUX_V2_PTCR_TFSDIR |
+		IMX_AUDMUX_V2_PTCR_TFSEL(master | 0x8) |
+		IMX_AUDMUX_V2_PTCR_TCLKDIR |
+	IMX_AUDMUX_V2_PTCR_RFSDIR |
+	IMX_AUDMUX_V2_PTCR_RFSEL(master | 0x8) |
+	IMX_AUDMUX_V2_PTCR_RCLKDIR |
+	IMX_AUDMUX_V2_PTCR_RCSEL(master | 0x8) |
+		IMX_AUDMUX_V2_PTCR_TCSEL(master | 0x8);
+	pdcr = IMX_AUDMUX_V2_PDCR_RXDSEL(master);
+	imx_audmux_v2_configure_port(slave, ptcr, pdcr);
 
-	ptcr = MXC_AUDMUX_V2_PTCR_SYN;
-	pdcr = MXC_AUDMUX_V2_PDCR_RXDSEL(master);
-	mxc_audmux_v2_configure_port(master, ptcr, pdcr);
+	ptcr = IMX_AUDMUX_V2_PTCR_SYN;
+	pdcr = IMX_AUDMUX_V2_PDCR_RXDSEL(master);
+	imx_audmux_v2_configure_port(master, ptcr, pdcr);
 	return 0;
 }
 
 static struct snd_soc_dai_driver tc358743_dai;
-static struct snd_soc_codec_driver soc_codec_dev_tc358743;
+static struct snd_soc_component_driver soc_component_dev_tc358743;
 
-static int __devinit imx_tc358743_probe(struct platform_device *pdev)
+static int imx_tc358743_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;
+	int int_port = 7;
+	int ext_port = 5;
 	int ret = 0;
 
 	pr_info("%s: %s entry\n", __func__, pdev->name);
 	if (!g_td)
 		return -EPROBE_DEFER;
 
-	ret = snd_soc_register_codec(dev, &soc_codec_dev_tc358743,
+	ret = devm_snd_soc_register_component(dev, &soc_component_dev_tc358743,
 			&tc358743_dai, 1);
 	if (ret) {
 		pr_err("%s:  register failed, error=%d\n",
@@ -2909,34 +2901,19 @@ static int __devinit imx_tc358743_probe(struct platform_device *pdev)
 	}
 
 
-	imx_audmux_config(plat->src_port, plat->ext_port);
-
-	ret = -EINVAL;
-	if (plat->init && plat->init())
-		goto exit;
+	imx_audmux_config(int_port, ext_port);
 
 	imxpac_tc358743.dev = dev;
 	ret = snd_soc_register_card(&imxpac_tc358743);
 	if (ret)
 		dev_err(dev, "snd_soc_register_card() failed: %d\n", ret);
-exit:
-	if (ret)
-		snd_soc_unregister_codec(dev);
-
 	return ret;
 }
 
 static int imx_tc358743_remove(struct platform_device *pdev)
 {
-	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;
-
 /* Audio breakdown */
 	snd_soc_unregister_card(&imxpac_tc358743);
-
-	snd_soc_unregister_codec(&pdev->dev);
-	if (plat->finit)
-		plat->finit();
-
 	return 0;
 }
 
@@ -2950,29 +2927,28 @@ static struct platform_driver imx_tc358743_audio1_driver = {
 
 
 /* Codec setup */
-static int tc358743_codec_probe(struct snd_soc_codec *codec)
+static int tc358743_codec_probe(struct snd_soc_component *component)
 {
 	return 0;
 }
 
-static int tc358743_codec_remove(struct snd_soc_codec *codec)
+static void tc358743_codec_remove(struct snd_soc_component *component)
 {
-	return 0;
 }
 
-static int tc358743_codec_suspend(struct snd_soc_codec *codec)
+static int tc358743_codec_suspend(struct snd_soc_component *component)
 {
 //	tc358743_set_bias_level(codec, SND_SOC_BIAS_OFF);
 	return 0;
 }
 
-static int tc358743_codec_resume(struct snd_soc_codec *codec)
+static int tc358743_codec_resume(struct snd_soc_component *component)
 {
 //	tc358743_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 	return 0;
 }
 
-static int tc358743_set_bias_level(struct snd_soc_codec *codec,
+static int tc358743_set_bias_level(struct snd_soc_component *component,
 				enum snd_soc_bias_level level)
 {
 	return 0;
@@ -2981,15 +2957,16 @@ static int tc358743_set_bias_level(struct snd_soc_codec *codec,
 static const u8 tc358743_reg[0] = {
 };
 
-static struct snd_soc_codec_driver soc_codec_dev_tc358743 = {
+static struct snd_soc_component_driver soc_component_dev_tc358743 = {
 	.set_bias_level = tc358743_set_bias_level,
-	.reg_cache_size = ARRAY_SIZE(tc358743_reg),
-	.reg_word_size = sizeof(u8),
-	.reg_cache_default = tc358743_reg,
 	.probe = tc358743_codec_probe,
 	.remove = tc358743_codec_remove,
 	.suspend = tc358743_codec_suspend,
 	.resume = tc358743_codec_resume,
+	.idle_bias_on		= 1,
+	.use_pmdown_time	= 1,
+	.endianness		= 1,
+	.non_legacy_dai_naming	= 1,
 };
 
 #define AIC3X_RATES	SNDRV_PCM_RATE_8000_96000
