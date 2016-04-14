@@ -45,7 +45,7 @@
 #include <sound/jack.h>
 #include <sound/soc-dapm.h>
 #include <asm/mach-types.h>
-//#include <mach/audmux.h>
+#include "../../../../../sound/soc/fsl/imx-audmux.h"
 #include <linux/slab.h>
 #include "mxc_v4l2_capture.h"
 
@@ -2728,9 +2728,6 @@ struct imx_ssi {
 	void (*ac97_reset) (struct snd_ac97 *ac97);
 	void (*ac97_warm_reset)(struct snd_ac97 *ac97);
 
-	struct imx_pcm_dma_params	dma_params_rx;
-	struct imx_pcm_dma_params	dma_params_tx;
-
 	int enabled;
 
 	struct platform_device *soc_platform_pdev;
@@ -2868,31 +2865,32 @@ static int imx_audmux_config(int slave, int master)
 	master = master - 1;
 
 	/* SSI0 mastered by port 5 */
-	ptcr = MXC_AUDMUX_V2_PTCR_SYN |
-		MXC_AUDMUX_V2_PTCR_TFSDIR |
-		MXC_AUDMUX_V2_PTCR_TFSEL(master | 0x8) |
-		MXC_AUDMUX_V2_PTCR_TCLKDIR |
-	MXC_AUDMUX_V2_PTCR_RFSDIR |
-	MXC_AUDMUX_V2_PTCR_RFSEL(master | 0x8) |
-	MXC_AUDMUX_V2_PTCR_RCLKDIR |
-	MXC_AUDMUX_V2_PTCR_RCSEL(master | 0x8) |
-		MXC_AUDMUX_V2_PTCR_TCSEL(master | 0x8);
-	pdcr = MXC_AUDMUX_V2_PDCR_RXDSEL(master);
-	mxc_audmux_v2_configure_port(slave, ptcr, pdcr);
+	ptcr = IMX_AUDMUX_V2_PTCR_SYN |
+		IMX_AUDMUX_V2_PTCR_TFSDIR |
+		IMX_AUDMUX_V2_PTCR_TFSEL(master | 0x8) |
+		IMX_AUDMUX_V2_PTCR_TCLKDIR |
+	IMX_AUDMUX_V2_PTCR_RFSDIR |
+	IMX_AUDMUX_V2_PTCR_RFSEL(master | 0x8) |
+	IMX_AUDMUX_V2_PTCR_RCLKDIR |
+	IMX_AUDMUX_V2_PTCR_RCSEL(master | 0x8) |
+		IMX_AUDMUX_V2_PTCR_TCSEL(master | 0x8);
+	pdcr = IMX_AUDMUX_V2_PDCR_RXDSEL(master);
+	imx_audmux_v2_configure_port(slave, ptcr, pdcr);
 
-	ptcr = MXC_AUDMUX_V2_PTCR_SYN;
-	pdcr = MXC_AUDMUX_V2_PDCR_RXDSEL(master);
-	mxc_audmux_v2_configure_port(master, ptcr, pdcr);
+	ptcr = IMX_AUDMUX_V2_PTCR_SYN;
+	pdcr = IMX_AUDMUX_V2_PDCR_RXDSEL(master);
+	imx_audmux_v2_configure_port(master, ptcr, pdcr);
 	return 0;
 }
 
 static struct snd_soc_dai_driver tc358743_dai;
 static struct snd_soc_codec_driver soc_codec_dev_tc358743;
 
-static int __devinit imx_tc358743_probe(struct platform_device *pdev)
+static int imx_tc358743_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;
+	int int_port = 7;
+	int ext_port = 5;
 	int ret = 0;
 
 	pr_info("%s: %s entry\n", __func__, pdev->name);
@@ -2908,34 +2906,23 @@ static int __devinit imx_tc358743_probe(struct platform_device *pdev)
 	}
 
 
-	imx_audmux_config(plat->src_port, plat->ext_port);
-
-	ret = -EINVAL;
-	if (plat->init && plat->init())
-		goto exit;
+	imx_audmux_config(int_port, ext_port);
 
 	imxpac_tc358743.dev = dev;
 	ret = snd_soc_register_card(&imxpac_tc358743);
 	if (ret)
 		dev_err(dev, "snd_soc_register_card() failed: %d\n", ret);
-exit:
 	if (ret)
 		snd_soc_unregister_codec(dev);
-
 	return ret;
 }
 
 static int imx_tc358743_remove(struct platform_device *pdev)
 {
-	struct mxc_audio_platform_data *plat = pdev->dev.platform_data;
-
 /* Audio breakdown */
 	snd_soc_unregister_card(&imxpac_tc358743);
 
 	snd_soc_unregister_codec(&pdev->dev);
-	if (plat->finit)
-		plat->finit();
-
 	return 0;
 }
 
