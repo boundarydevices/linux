@@ -31,6 +31,14 @@
 		>;
 	};
 
+	pinctrl_audmux_tc358743: audmux-tc358743grp {
+		fsl,pins = <
+			MX6QDL_PAD_DISP0_DAT13__AUD5_RXFS       0x80000000
+			MX6QDL_PAD_DISP0_DAT14__AUD5_RXC        0x80000000
+			MX6QDL_PAD_DISP0_DAT19__AUD5_RXD        0x80000000
+		>;
+	};
+
 	pinctrl_ecspi1: ecspi1grp {
 		fsl,pins = <
 			MX6QDL_PAD_EIM_D17__ECSPI1_MISO		0x100b1
@@ -468,6 +476,16 @@
 		hdmi-controller = <&hdmi_audio>;
 	};
 
+	sound-hdmi-input {
+		compatible = "fsl,imx-audio-tc358743";
+		cpu-dai = <&ssi2>;
+		model = "imx-audio-tc358743";
+		mux-int-port = <2>;
+		mux-ext-port = <5>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_audmux_tc358743>;
+	};
+
 	fb_hdmi: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "hdmi";
@@ -894,6 +912,11 @@
 };
 
 &ssi1 {
+	fsl,mode = "i2s-slave";
+	status = "okay";
+};
+
+&ssi2 {
 	fsl,mode = "i2s-slave";
 	status = "okay";
 };
