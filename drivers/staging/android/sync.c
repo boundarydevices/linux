@@ -430,7 +430,7 @@ static void android_fence_release(struct fence *fence)
 
 	spin_lock_irqsave(fence->lock, flags);
 	list_del(&pt->child_list);
-	if (WARN_ON_ONCE(!list_empty(&pt->active_list)))
+	if (!list_empty(&pt->active_list))
 		list_del(&pt->active_list);
 	spin_unlock_irqrestore(fence->lock, flags);
 
