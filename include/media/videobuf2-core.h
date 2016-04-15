@@ -18,7 +18,6 @@
 #include <linux/videodev2.h>
 #include <linux/dma-buf.h>
 
-struct vb2_alloc_ctx;
 struct vb2_fileio_data;
 struct vb2_threadio_data;
 
@@ -82,8 +81,8 @@ struct vb2_threadio_data;
  *				  unmap_dmabuf.
  */
 struct vb2_mem_ops {
-	void		*(*alloc)(void *alloc_ctx, unsigned long size,
-				  enum dma_data_direction dma_dir,
+	void		*(*alloc)(void *alloc_ctx, const struct dma_attrs *attrs,
+				  unsigned long size, enum dma_data_direction dma_dir,
 				  gfp_t gfp_flags);
 	void		(*put)(void *buf_priv);
 	struct dma_buf *(*get_dmabuf)(void *buf_priv, unsigned long flags);
@@ -337,6 +336,7 @@ struct v4l2_fh;
  * @io_modes:	supported io methods (see vb2_io_modes enum)
  * @dev:	device to use for the default allocation context if the driver
  *		doesn't fill in the @alloc_ctx array.
+ * @dma_attrs:	DMA attributes to use for the DMA. May be NULL.
  * @fileio_read_once:		report EOF after reading the first buffer
  * @fileio_write_immediately:	queue buffer after each write() call
  * @allow_zero_bytesused:	allow bytesused == 0 to be passed to the driver
@@ -390,6 +390,7 @@ struct vb2_queue {
 	enum v4l2_buf_type		type;
 	unsigned int			io_modes;
 	struct device			*dev;
+	const struct dma_attrs		*dma_attrs;
 	unsigned			fileio_read_once:1;
 	unsigned			fileio_write_immediately:1;
 	unsigned			allow_zero_bytesused:1;
