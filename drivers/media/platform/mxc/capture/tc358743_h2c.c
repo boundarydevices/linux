@@ -46,6 +46,7 @@
 #include <sound/soc-dapm.h>
 #include <asm/mach-types.h>
 #include "../../../../../sound/soc/fsl/imx-audmux.h"
+#include "../../../../../sound/soc/fsl/fsl_ssi.h"
 #include <linux/slab.h>
 #include "mxc_v4l2_capture.h"
 
@@ -2713,43 +2714,18 @@ static struct v4l2_int_device tc358743_int_device = {
 
 
 #ifdef CONFIG_TC358743_AUDIO
-struct imx_ssi {
-	struct platform_device *ac97_dev;
+/* FIXME, we can get a regmap pointer ourselves, no need to steal */
+/**
+ * fsl_ssi_private: per-SSI private data
+ *
+ * copied from sound/soc/fsl/fsl_ssi.c
+ */
 
-	struct snd_soc_dai *imx_ac97;
-	struct clk *clk;
-	void __iomem *base;
-	int irq;
-	int fiq_enable;
-	unsigned int offset;
-
-	unsigned int flags;
-
-	void (*ac97_reset) (struct snd_ac97 *ac97);
-	void (*ac97_warm_reset)(struct snd_ac97 *ac97);
-
-	int enabled;
-
-	struct platform_device *soc_platform_pdev;
-	struct platform_device *soc_platform_pdev_fiq;
+struct fsl_ssi_private {
+	struct regmap *regs;
+	/* more that I don't need to know about */
 };
-#define SSI_SCR			0x10
-#define SSI_SRCR		0x20
-#define SSI_STCCR		0x24
-#define SSI_SRCCR		0x28
-#define SSI_SCR_I2S_MODE_NORM	(0 << 5)
-#define SSI_SCR_I2S_MODE_MSTR	(1 << 5)
-#define SSI_SCR_I2S_MODE_SLAVE	(2 << 5)
-#define SSI_I2S_MODE_MASK	(3 << 5)
-#define SSI_SCR_SYN		(1 << 4)
-#define SSI_SRCR_RSHFD		(1 << 4)
-#define SSI_SRCR_RSCKP		(1 << 3)
-#define SSI_SRCR_RFSI		(1 << 2)
-#define SSI_SRCR_REFS		(1 << 0)
-#define SSI_STCCR_WL(x)		((((x) - 2) >> 1) << 13)
-#define SSI_STCCR_WL_MASK	(0xf << 13)
-#define SSI_SRCCR_WL(x)		((((x) - 2) >> 1) << 13)
-#define SSI_SRCCR_WL_MASK	(0xf << 13)
+
 /* Audio setup */
 
 static int imxpac_tc358743_hw_params(struct snd_pcm_substream *substream,
@@ -2791,35 +2767,13 @@ static int imxpac_tc358743_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 #if 1
-// clear SSI_SRCR_RXBIT0 and SSI_SRCR_RSHFD in order to push Right-justified MSB data from
+	// clear SSI_SRCR_RXBIT0 and SSI_SRCR_RSHFD in order to push Right-justified MSB data from
 	{
-		struct imx_ssi *ssi = snd_soc_dai_get_drvdata(cpu_dai);
-		u32 scr = 0, srcr = 0, stccr = 0, srccr = 0;
+		struct fsl_ssi_private *ssi_private = snd_soc_dai_get_drvdata(cpu_dai);
+		struct regmap *regs = ssi_private->regs;
 
-		pr_debug("%s: base %p\n", __func__, (void *)ssi->base);
-		scr = readl(ssi->base + SSI_SCR);
-		pr_debug("%s: SSI_SCR before:   %p\n", __func__, (void *)scr);
-		writel(scr, ssi->base + SSI_SCR);
-		pr_debug("%s: SSI_SCR after:    %p\n", __func__, (void *)scr);
-
-		srcr = readl(ssi->base + SSI_SRCR);
-		pr_debug("%s: SSI_SRCR before:  %p\n", __func__, (void *)srcr);
-		writel(srcr, ssi->base + SSI_SRCR);
-		pr_debug("%s: SSI_SRCR after:   %p\n", __func__, (void *)srcr);
-
-		stccr = readl(ssi->base + SSI_STCCR);
-		pr_debug("%s: SSI_STCCR before: %p\n", __func__, (void *)stccr);
-		stccr &= ~SSI_STCCR_WL_MASK;
-		stccr |= SSI_STCCR_WL(16);
-		writel(stccr, ssi->base + SSI_STCCR);
-		pr_debug("%s: SSI_STCCR after:  %p\n", __func__, (void *)stccr);
-
-		srccr = readl(ssi->base + SSI_SRCCR);
-		pr_debug("%s: SSI_SRCCR before: %p\n", __func__, (void *)srccr);
-		srccr &= ~SSI_SRCCR_WL_MASK;
-		srccr |= SSI_SRCCR_WL(16);
-		writel(srccr, ssi->base + SSI_SRCCR);
-		pr_debug("%s: SSI_SRCCR after:  %p\n", __func__, (void *)srccr);
+		regmap_update_bits(regs, CCSR_SSI_STCCR, CCSR_SSI_SxCCR_WL_MASK, CCSR_SSI_SxCCR_WL(16));
+		regmap_update_bits(regs, CCSR_SSI_SRCCR, CCSR_SSI_SxCCR_WL_MASK, CCSR_SSI_SxCCR_WL(16));
 	}
 #endif
 	return 0;
@@ -2832,10 +2786,8 @@ static struct snd_soc_ops imxpac_tc358743_snd_ops = {
 
 static struct snd_soc_dai_link imxpac_tc358743_dai = {
 	.name		= "tc358743",
-	.stream_name	= "TC358743",
+	.stream_name	= "tc358743",
 	.codec_dai_name	= "tc358743-hifi",
-	.platform_name	= "imx-pcm-audio.2",
-	.codec_name	= "imx-tc358743.0",
 	.ops		= &imxpac_tc358743_snd_ops,
 };
 
