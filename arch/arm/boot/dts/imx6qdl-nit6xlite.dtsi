@@ -444,13 +444,13 @@
 		home {
 			label = "Home";
 			gpios = GP_HOME;
-			linux,code = <102>; /* KEY_HOME */
+			linux,code = <KEY_HOMEPAGE>;
 		};
 
 		back {
 			label = "Back";
 			gpios = GP_BACK;
-			linux,code = <158>; /* KEY_BACK */
+			linux,code = <KEY_BACK>;
 		};
 	};
 
