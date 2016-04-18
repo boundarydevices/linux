@@ -484,6 +484,7 @@
 		mux-ext-port = <5>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_audmux_tc358743>;
+		status = "disabled";
 	};
 
 	fb_hdmi: fb@0 {
