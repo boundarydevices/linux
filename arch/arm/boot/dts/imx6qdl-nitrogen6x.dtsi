@@ -433,7 +433,7 @@
 		home {
 			label = "Home";
 			gpios = GP_GPIOKEY_HOME;
-			linux,code = <KEY_HOME>;
+			linux,code = <KEY_HOMEPAGE>;
 		};
 
 		menu {
