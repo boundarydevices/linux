@@ -343,17 +343,19 @@
 	};
 
 	backlight_lcd: backlight_lcd {
-		compatible = "pwm-backlight";
-		pwms = <&pwm1 0 5000000>;
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
 		default-brightness-level = <8>;
+		display = <&fb_lcd>;
+		pwms = <&pwm1 0 5000000>;
 	};
 
 	backlight_lvds0 {
-		compatible = "pwm-backlight";
-		pwms = <&pwm4 0 200000>;
 		brightness-levels = <10 9 8 7 6 5 4 3 2 1 0>;
+		compatible = "pwm-backlight";
 		default-brightness-level = <9>;
+		display = <&fb_lvds>;
+		pwms = <&pwm4 0 200000>;
 	};
 
 	fb_hdmi: fb@0 {
