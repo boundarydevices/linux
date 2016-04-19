@@ -168,7 +168,7 @@
 
 	pinctrl_i2c3mux: i2c3muxgrp {
 		fsl,pins = <
-#define GP_I2C3_EN_SATA			<&gpio3 30 GPIO_ACTIVE_HIGH>
+#define GP_I2C3_EN_SATA			<&gpio3 0 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_DA0__GPIO3_IO00		0x000b0
 		>;
 	};
