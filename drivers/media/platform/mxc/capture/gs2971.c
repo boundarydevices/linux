@@ -287,6 +287,14 @@ static s32 power_control(struct gs2971_priv *gs, int on)
 	return ret;
 }
 
+static void temp_power_on(struct gs2971_priv *gs)
+{
+	/* Make sure power is on */
+	cancel_delayed_work_sync(&gs->power_work);
+	power_control(gs, 1);
+	schedule_delayed_work(&gs->power_work, msecs_to_jiffies(1000));
+}
+
 static struct spi_device *gs2971_get_spi(struct gs2971_spidata *spidata)
 {
 	if (!spidata)
@@ -792,6 +800,7 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 
 	pr_debug("-> In function %s\n", __func__);
 
+	gs->ioctl_power_on = on;
 	if (on && !sensor->on) {
 		power_control(gs, 1);
 	} else if (!on && sensor->on) {
@@ -862,7 +871,7 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	pr_debug("-> In function %s\n", __func__);
 
 	/* Make sure power on */
-	power_control(gs, 1);
+	temp_power_on(gs);
 
 	switch (a->type) {
 		/* This is the only case currently handled. */
@@ -923,7 +932,7 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 
 	pr_debug("-> In function %s\n", __func__);
 
-	power_control(gs, 1);
+	temp_power_on(gs);
 	switch (f->type) {
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
 		get_std(s, &std);
@@ -1027,7 +1036,7 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	pr_debug("-> In function %s\n", __func__);
 
 	///* Make sure power on */
-	power_control(gs, 1);
+	temp_power_on(gs);
 
 	switch (vc->id) {
 	case V4L2_CID_BRIGHTNESS:
@@ -1208,6 +1217,38 @@ static struct v4l2_int_device gs2971_int_device = {
 	      },
 };
 
+static void gs2971_power_worker(struct work_struct *work)
+{
+	struct gs2971_priv *gs = container_of(work, struct gs2971_priv, power_work.work);
+
+	if (!gs->ioctl_power_on)
+		power_control(gs, 0);
+}
+
+static ssize_t gs2971_show_video_lock(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct gs2971_priv *gs = gs2971_int_device.priv;
+	int len = 0;
+
+	if (!gs)
+		return -ENODEV;
+	temp_power_on(gs);
+	len += sprintf(buf+len, "%d\n", gs->video_lock);
+	return len;
+}
+
+static DEVICE_ATTR(video_lock, S_IRUGO, gs2971_show_video_lock, NULL);
+
+static irqreturn_t lock_detect_handler(int irq, void *data)
+{
+	struct gs2971_priv *gs = data;
+	int level = gpiod_get_value(gs->gpios[GPIO_DVI_LOCK]);
+
+	gs->video_lock = level;
+	return IRQ_HANDLED;
+}
+
 /*!
  * GS2971 SPI probe function.
  * Function set in spi_driver struct.
@@ -1223,6 +1264,7 @@ static int gs2971_probe(struct spi_device *spi)
 	struct gs2971_priv *gs;
 	struct sensor_data *sensor;
 	struct pinctrl_state *pins;
+	int irq = 0;
 
 	int ret = 0;
 
@@ -1231,6 +1273,8 @@ static int gs2971_probe(struct spi_device *spi)
 	gs = kzalloc(sizeof(*gs), GFP_KERNEL);
 	if (!gs)
 		return -ENOMEM;
+
+	INIT_DELAYED_WORK(&gs->power_work, gs2971_power_worker);
 
 	/* Allocate driver data */
 	spidata = kzalloc(sizeof(*spidata), GFP_KERNEL);
@@ -1243,8 +1287,6 @@ static int gs2971_probe(struct spi_device *spi)
 	mutex_init(&spidata->buf_lock);
 	sensor = &gs->sensor;
 
-	/* Set initial values for the sensor struct. */
-	memset(gs, 0, sizeof(*gs));
 	ret = of_property_read_u32(dev->of_node, "mclk", &sensor->mclk);
 	if (ret) {
 		dev_err(dev, "mclk missing or invalid\n");
@@ -1301,17 +1343,30 @@ static int gs2971_probe(struct spi_device *spi)
 	if (ret)
 		goto exit;
 
-	power_control(gs, 1);
+	temp_power_on(gs);
 	gs2971_int_device.priv = gs;
 
 	ret = gs2971_initialize(gs, spi);
 	if (ret)
 		goto exit;
-	power_control(gs, 0);
+
+	irq = gpiod_to_irq(gs->gpios[GPIO_DVI_LOCK]);
+	ret = request_irq(irq,
+			lock_detect_handler,
+			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+			"lock_det", gs);
+	if (ret < 0)
+		dev_warn(dev, "could not request irq %d ret=%d\n", irq, ret);
+
+	ret = device_create_file(dev, &dev_attr_video_lock);
+	if (ret < 0)
+		dev_warn(dev, "could not create lock file ret=%d\n", ret);
 
 	ret = v4l2_int_device_register(&gs2971_int_device);
  exit:
 	if (ret) {
+		if (irq)
+			free_irq(irq,  gs);
 		kfree(spidata);
 		kfree(gs);
 		pr_err("gs2971_probe returns %d\n", ret);
@@ -1322,10 +1377,16 @@ static int gs2971_probe(struct spi_device *spi)
 
 static int gs2971_remove(struct spi_device *spi)
 {
+	struct gs2971_priv *gs = dev_get_drvdata(&spi->dev);
+	int irq = gpiod_to_irq(gs->gpios[GPIO_DVI_LOCK]);
+
 	pr_debug("-> In function %s\n", __func__);
+
+	v4l2_int_device_unregister(&gs2971_int_device);
+	if (irq)
+		free_irq(irq,  gs);
 	kfree(gs2971_int_device.priv);
 	kfree(spidata);
-	v4l2_int_device_unregister(&gs2971_int_device);
 	return 0;
 }
 
