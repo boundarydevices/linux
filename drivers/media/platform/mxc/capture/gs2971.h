@@ -316,8 +316,10 @@ struct gs2971_priv {
 #define GPIO_LB_CONT		11	/* in */
 #define GPIO_Y_1ANC		12	/* in */
 #define GPIO_CNT		13
-	int	gpios[GPIO_CNT];
-	enum of_gpio_flags gpio_flags[GPIO_CNT];
+	struct gpio_desc *gpios[GPIO_CNT];
+	int video_lock;
+	struct delayed_work power_work;
+	int ioctl_power_on;
 };
 
 #endif
