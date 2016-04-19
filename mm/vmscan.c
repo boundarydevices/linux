@@ -196,16 +196,21 @@ static int debug_shrinker_show(struct seq_file *s, void *unused)
 {
 	struct shrinker *shrinker;
 	struct shrink_control sc;
+	int nid = 0;
 
 	sc.gfp_mask = -1;
 	sc.nr_to_scan = 0;
 
 	down_read(&shrinker_rwsem);
-	list_for_each_entry(shrinker, &shrinker_list, list) {
-		int num_objs;
+	for_each_node(nid) {
+		sc.nid = nid;
 
-		num_objs = shrinker->count_objects(shrinker, &sc);
-		seq_printf(s, "%pf %d\n", shrinker->scan_objects, num_objs);
+		list_for_each_entry(shrinker, &shrinker_list, list) {
+			int num_objs;
+
+			num_objs = shrinker->count_objects(shrinker, &sc);
+			seq_printf(s, "%pf %d\n", shrinker->scan_objects, num_objs);
+		}
 	}
 	up_read(&shrinker_rwsem);
 	return 0;
