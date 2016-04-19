@@ -347,17 +347,18 @@
 	};
 
 	backlight_tps: backlight_tps {
-		compatible = "pwm-backlight";
-		pwms = <&pwm1 0 5000000>;
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
 		default-brightness-level = <10>;
+		pwms = <&pwm1 0 5000000>;
 	};
 
 	backlight_lvds0 {
-		compatible = "pwm-backlight";
-		pwms = <&pwm4 0 5000000>;
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
 		default-brightness-level = <5>;
+		display = <&fb_lvds>;
+		pwms = <&pwm4 0 5000000>;
 	};
 
 	bt_rfkill {
