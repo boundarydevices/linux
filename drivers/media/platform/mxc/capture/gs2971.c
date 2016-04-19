@@ -35,6 +35,7 @@
 #include <linux/types.h>
 #include <linux/delay.h>
 #include <linux/device.h>
+#include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/of_gpio.h>
 #include <linux/videodev2.h>
@@ -189,30 +190,28 @@ int gs2971_write_register(struct spi_device *spi, u16 offset, u16 value)
 	pr_debug("--> Writing to address (%x) : %x\n", offset, value);
 	return gs2971_write_buffer(spi, offset, &value, 1);
 }
-const char *gpio_names[] = {
-[GPIO_STANDBY] = "standby-gpios",
-[GPIO_RESET] = "rst-gpios",
-[GPIO_TIM_861] = "tim_861-gpios",
-[GPIO_IOPROC_EN] = "ioproc_en-gpios",
-[GPIO_SW_EN] = "sw_en-gpios",
-[GPIO_RC_BYPASS] = "rc_bypass-gpios",
-[GPIO_AUDIO_EN] = "audio_en-gpios",
-[GPIO_DVB_ASI] = "dvb_asi-gpios",
-[GPIO_SMPTE_BYPASS] = "smpte_bypass-gpios",
-[GPIO_DVI_LOCK] = "dvi_lock-gpios",
-[GPIO_DATA_ERR] = "data_err-gpios",
-[GPIO_LB_CONT] = "lb_cont-gpios",
-[GPIO_Y_1ANC] = "y_1anc-gpios",
+
+static const char *gpio_names[] = {
+[GPIO_STANDBY] = "standby",
+[GPIO_RESET] = "rst",
+[GPIO_TIM_861] = "tim_861",
+[GPIO_IOPROC_EN] = "ioproc_en",
+[GPIO_SW_EN] = "sw_en",
+[GPIO_RC_BYPASS] = "rc_bypass",
+[GPIO_AUDIO_EN] = "audio_en",
+[GPIO_DVB_ASI] = "dvb_asi",
+[GPIO_SMPTE_BYPASS] = "smpte_bypass",
+[GPIO_DVI_LOCK] = "dvi_lock",
+[GPIO_DATA_ERR] = "data_err",
+[GPIO_LB_CONT] = "lb_cont",
+[GPIO_Y_1ANC] = "y_1anc",
 };
 
 void gs2971_gpio_state(struct gs2971_priv *gs, int index, int active)
 {
-	if (gpio_is_valid(gs->gpios[index])) {
-		int state = (gs->gpio_flags[index] & OF_GPIO_ACTIVE_LOW) ? 1 : 0;
-
-		state ^= active;
-		gpio_set_value(gs->gpios[index], state);
-		pr_info("%s: active=%d, %s(%d)=0x%x\n", __func__, active, gpio_names[index], gs->gpios[index], state);
+	if (gs->gpios[index]) {
+		gpiod_set_value(gs->gpios[index], active);
+		pr_debug("%s: active=%d, %s\n", __func__, active, gpio_names[index]);
 	}
 }
 
@@ -228,27 +227,25 @@ static void gs2971_change_gpio_state(struct gs2971_priv *gs, int on)
 static int gs2971_get_gpios(struct gs2971_priv *gs, struct device *dev)
 {
 	int i;
-	int ret;
-	enum of_gpio_flags flags;
 
 	for (i = 0; i < GPIO_CNT; i++) {
-		gs->gpios[i] = of_get_named_gpio_flags(dev->of_node, gpio_names[i], 0, &flags);
-		if (!gpio_is_valid(gs->gpios[i])) {
+		struct gpio_desc *gd = devm_gpiod_get(dev, gpio_names[i]);
+
+		if (IS_ERR(gd)) {
 			pr_info("%s: gpio %s not available\n", __func__, gpio_names[i]);
 		} else {
-			int gflags = (flags & OF_GPIO_ACTIVE_LOW) ? GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW;
+			int active = ((i == GPIO_STANDBY) || (i == GPIO_RESET)) ? 1 : 0;
 
-			if ((i == GPIO_STANDBY) || (i == GPIO_RESET))
-				gflags ^= GPIOF_INIT_HIGH;
-			if (flags == 2)
-				gflags = GPIOF_IN;
-
-			gs->gpio_flags[i] = flags;
-			pr_info("%s: %s flags(%d -> %d)\n", __func__, gpio_names[i], flags, gflags);
-			ret = devm_gpio_request_one(dev, gs->gpios[i], gflags, gpio_names[i]);
-			if (ret < 0) {
-				pr_info("%s: request of %s failed(%d)\n", __func__, gpio_names[i], ret);
-				return ret;
+			gs->gpios[i] = gd;
+			if (i >= GPIO_DVB_ASI) {
+				gpiod_direction_input(gd);
+				pr_info("%s: gpio %s input\n", __func__, gpio_names[i]);
+			} else {
+				if (gpiod_is_active_low(gd))
+					active ^= 1;
+				gpiod_direction_output(gd, active);
+				pr_info("%s: gpio %s output, state=%d, active_low=%d\n",
+						__func__, gpio_names[i], active, gpiod_is_active_low(gd) ? 1 : 0);
 			}
 		}
 	}
@@ -290,6 +287,14 @@ static s32 power_control(struct gs2971_priv *gs, int on)
 		}
 	}
 	return ret;
+}
+
+static void temp_power_on(struct gs2971_priv *gs)
+{
+	/* Make sure power is on */
+	cancel_delayed_work_sync(&gs->power_work);
+	power_control(gs, 1);
+	schedule_delayed_work(&gs->power_work, msecs_to_jiffies(1000));
 }
 
 static struct spi_device *gs2971_get_spi(struct gs2971_spidata *spidata)
@@ -797,6 +802,7 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 
 	pr_debug("-> In function %s\n", __func__);
 
+	gs->ioctl_power_on = on;
 	if (on && !sensor->on) {
 		power_control(gs, 1);
 	} else if (!on && sensor->on) {
@@ -867,7 +873,7 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	pr_debug("-> In function %s\n", __func__);
 
 	/* Make sure power on */
-	power_control(gs, 1);
+	temp_power_on(gs);
 
 	switch (a->type) {
 		/* This is the only case currently handled. */
@@ -928,7 +934,7 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 
 	pr_debug("-> In function %s\n", __func__);
 
-	power_control(gs, 1);
+	temp_power_on(gs);
 	switch (f->type) {
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
 		get_std(s, &std);
@@ -1032,7 +1038,7 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	pr_debug("-> In function %s\n", __func__);
 
 	///* Make sure power on */
-	power_control(gs, 1);
+	temp_power_on(gs);
 
 	switch (vc->id) {
 	case V4L2_CID_BRIGHTNESS:
@@ -1213,6 +1219,38 @@ static struct v4l2_int_device gs2971_int_device = {
 	      },
 };
 
+static void gs2971_power_worker(struct work_struct *work)
+{
+	struct gs2971_priv *gs = container_of(work, struct gs2971_priv, power_work.work);
+
+	if (!gs->ioctl_power_on)
+		power_control(gs, 0);
+}
+
+static ssize_t gs2971_show_video_lock(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct gs2971_priv *gs = gs2971_int_device.priv;
+	int len = 0;
+
+	if (!gs)
+		return -ENODEV;
+	temp_power_on(gs);
+	len += sprintf(buf+len, "%d\n", gs->video_lock);
+	return len;
+}
+
+static DEVICE_ATTR(video_lock, S_IRUGO, gs2971_show_video_lock, NULL);
+
+static irqreturn_t lock_detect_handler(int irq, void *data)
+{
+	struct gs2971_priv *gs = data;
+	int level = gpiod_get_value(gs->gpios[GPIO_DVI_LOCK]);
+
+	gs->video_lock = level;
+	return IRQ_HANDLED;
+}
+
 /*!
  * GS2971 SPI probe function.
  * Function set in spi_driver struct.
@@ -1228,6 +1266,7 @@ static int gs2971_probe(struct spi_device *spi)
 	struct gs2971_priv *gs;
 	struct sensor_data *sensor;
 	struct pinctrl_state *pins;
+	int irq = 0;
 
 	int ret = 0;
 
@@ -1236,6 +1275,8 @@ static int gs2971_probe(struct spi_device *spi)
 	gs = kzalloc(sizeof(*gs), GFP_KERNEL);
 	if (!gs)
 		return -ENOMEM;
+
+	INIT_DELAYED_WORK(&gs->power_work, gs2971_power_worker);
 
 	/* Allocate driver data */
 	spidata = kzalloc(sizeof(*spidata), GFP_KERNEL);
@@ -1248,8 +1289,6 @@ static int gs2971_probe(struct spi_device *spi)
 	mutex_init(&spidata->buf_lock);
 	sensor = &gs->sensor;
 
-	/* Set initial values for the sensor struct. */
-	memset(gs, 0, sizeof(*gs));
 	ret = of_property_read_u32(dev->of_node, "mclk", &sensor->mclk);
 	if (ret) {
 		dev_err(dev, "mclk missing or invalid\n");
@@ -1306,17 +1345,30 @@ static int gs2971_probe(struct spi_device *spi)
 	if (ret)
 		goto exit;
 
-	power_control(gs, 1);
+	temp_power_on(gs);
 	gs2971_int_device.priv = gs;
 
 	ret = gs2971_initialize(gs, spi);
 	if (ret)
 		goto exit;
-	power_control(gs, 0);
+
+	irq = gpiod_to_irq(gs->gpios[GPIO_DVI_LOCK]);
+	ret = request_irq(irq,
+			lock_detect_handler,
+			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+			"lock_det", gs);
+	if (ret < 0)
+		dev_warn(dev, "could not request irq %d ret=%d\n", irq, ret);
+
+	ret = device_create_file(dev, &dev_attr_video_lock);
+	if (ret < 0)
+		dev_warn(dev, "could not create lock file ret=%d\n", ret);
 
 	ret = v4l2_int_device_register(&gs2971_int_device);
  exit:
 	if (ret) {
+		if (irq)
+			free_irq(irq,  gs);
 		kfree(spidata);
 		kfree(gs);
 		pr_err("gs2971_probe returns %d\n", ret);
@@ -1327,10 +1379,16 @@ static int gs2971_probe(struct spi_device *spi)
 
 static int gs2971_remove(struct spi_device *spi)
 {
+	struct gs2971_priv *gs = dev_get_drvdata(&spi->dev);
+	int irq = gpiod_to_irq(gs->gpios[GPIO_DVI_LOCK]);
+
 	pr_debug("-> In function %s\n", __func__);
+
+	v4l2_int_device_unregister(&gs2971_int_device);
+	if (irq)
+		free_irq(irq,  gs);
 	kfree(gs2971_int_device.priv);
 	kfree(spidata);
-	v4l2_int_device_unregister(&gs2971_int_device);
 	return 0;
 }
 
