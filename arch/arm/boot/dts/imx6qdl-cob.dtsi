@@ -263,17 +263,19 @@
 	};
 
 	backlight_lcd_day {
-		compatible = "pwm-backlight";
-		pwms = <&pwm1 0 3333333>;
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		default-brightness-level = <5>;
+		compatible = "pwm-backlight";
+		display = <&fb_lcd>;
+		pwms = <&pwm1 0 3333333>;
 	};
 
 	backlight_lcd_night {
-		compatible = "pwm-backlight";
-		pwms = <&pwm2 0 3333333>;
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		default-brightness-level = <0>;
+		compatible = "pwm-backlight";
+		display = <&fb_lcd>;
+		pwms = <&pwm2 0 3333333>;
 	};
 
 	gpio-keys {
