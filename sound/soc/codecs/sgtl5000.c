@@ -164,6 +164,12 @@ static int power_vag_event(struct snd_soc_dapm_widget *w,
 
 	case SND_SOC_DAPM_PRE_PMD:
 		/*
+		 * Keep VAG powered if Line In is selected (codec bypass mode)
+		 */
+		if (snd_soc_read(codec, SGTL5000_CHIP_ANA_CTRL) &
+				SGTL5000_HP_SEL_MASK)
+			break;
+		/*
 		 * Don't clear VAG_POWERUP, when both DAC and ADC are
 		 * operational to prevent inadvertently starving the
 		 * other one of them.
@@ -199,12 +205,33 @@ static const char *dac_mux_text[] = {
 	"DAC", "LINE_IN"
 };
 
+static int sgtl5000_hp_select(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_kcontrol_codec(kcontrol);
+	unsigned int val = 0;
+
+	const u32 mask = SGTL5000_DAC_POWERUP | SGTL5000_ADC_POWERUP;
+
+	if (ucontrol->value.enumerated.item[0])
+		val = SGTL5000_VAG_POWERUP;
+
+	if (val || !(snd_soc_read(codec, SGTL5000_CHIP_ANA_POWER)
+			& mask)) {
+		snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
+				SGTL5000_VAG_POWERUP, val);
+	}
+	return snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
+}
+
 static SOC_ENUM_SINGLE_DECL(dac_enum,
 			    SGTL5000_CHIP_ANA_CTRL, 6,
 			    dac_mux_text);
 
 static const struct snd_kcontrol_new dac_mux =
-SOC_DAPM_ENUM("Headphone Mux", dac_enum);
+	SOC_DAPM_ENUM_EXT("Headphone Mux", dac_enum,
+			snd_soc_dapm_get_enum_double,
+			sgtl5000_hp_select);
 
 static const struct snd_soc_dapm_widget sgtl5000_dapm_widgets[] = {
 	SND_SOC_DAPM_INPUT("LINE_IN"),
