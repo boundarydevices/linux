@@ -318,6 +318,12 @@ static int vag_and_mute_control(struct snd_soc_component *component,
 			       sgtl5000->mute_state[event_source]);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
+		/*
+		 * Keep VAG powered if Line In is selected (codec bypass mode)
+		 */
+		if (snd_soc_component_read(component, SGTL5000_CHIP_ANA_CTRL) &
+				SGTL5000_HP_SEL_MASK)
+			break;
 		sgtl5000->mute_state[event_source] =
 			mute_output(component, mute_mask[event_source]);
 		vag_power_off(component, event_source);
@@ -397,12 +403,33 @@ static const char *dac_mux_text[] = {
 	"ADC", "I2S", "Rsvrd", "DAP"
 };
 
+static int sgtl5000_hp_select(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
+	unsigned int val = 0;
+
+	const u32 mask = SGTL5000_DAC_POWERUP | SGTL5000_ADC_POWERUP;
+
+	if (ucontrol->value.enumerated.item[0])
+		val = SGTL5000_VAG_POWERUP;
+
+	if (val || !(snd_soc_component_read(component, SGTL5000_CHIP_ANA_POWER)
+			& mask)) {
+		snd_soc_component_update_bits(component, SGTL5000_CHIP_ANA_POWER,
+				SGTL5000_VAG_POWERUP, val);
+	}
+	return snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
+}
+
 static SOC_ENUM_SINGLE_DECL(dac_enum,
 			    SGTL5000_CHIP_SSS_CTRL, SGTL5000_DAC_SEL_SHIFT,
 			    dac_mux_text);
 
 static const struct snd_kcontrol_new dac_mux =
-SOC_DAPM_ENUM("Digital Input Mux", dac_enum);
+	SOC_DAPM_ENUM_EXT("Digital Input Mux", dac_enum,
+		snd_soc_dapm_get_enum_double,
+		sgtl5000_hp_select);
 
 /* input sources for DAP */
 static const char *dap_mux_text[] = {
