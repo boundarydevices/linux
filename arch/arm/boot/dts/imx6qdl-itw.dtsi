@@ -189,23 +189,23 @@
 #define GP_TP94				<&gpio1 13 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_SD2_DAT2__GPIO1_IO13		0x1b0b0
 
-#define GP_LVDS1_LINK1			<&gpio6 16 GPIO_ACTIVE_HIGH>
+#define GP_SW_LINK1			<&gpio6 16 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x1b0b0
-#define GP_LVDS1_LINK2			<&gpio6 7 GPIO_ACTIVE_HIGH>
+#define GP_SW_LINK2			<&gpio6 7 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_CLE__GPIO6_IO07	0x1b0b0
-#define GP_LVDS1_LINK3			<&gpio2 2 GPIO_ACTIVE_HIGH>
+#define GP_SW_LINK3			<&gpio2 2 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_D2__GPIO2_IO02		0x1b0b0
-#define GP_LVDS1_LINK4			<&gpio2 1 GPIO_ACTIVE_HIGH>
+#define GP_SW_LINK4			<&gpio2 1 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_D1__GPIO2_IO01	0x1b0b0
-#define GP_LVDS1_LINK5			<&gpio6 10 GPIO_ACTIVE_HIGH>
+#define GP_SW_LINK5			<&gpio6 10 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_RB0__GPIO6_IO10	0x1b0b0
-#define GP_LVDS1_LINK6			<&gpio6 15 GPIO_ACTIVE_HIGH>
+#define GP_SW_LINK6			<&gpio6 15 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x1b0b0
-#define GP_LVDS1_LINK7			<&gpio6 14 GPIO_ACTIVE_HIGH>
+#define GP_SW_LINK7			<&gpio6 14 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_CS1__GPIO6_IO14	0x1b0b0
-#define GP_LVDS1_LINK8			<&gpio6 11 GPIO_ACTIVE_HIGH>
+#define GP_SW_LINK8			<&gpio6 11 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_CS0__GPIO6_IO11	0x1b0b0
-#define GP_LVDS1_LINK9			<&gpio6 8 GPIO_ACTIVE_HIGH>
+#define GP_SW_LINK9			<&gpio6 8 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_ALE__GPIO6_IO08	0x1b0b0
 
 #define GP_LVDS2_LINK6			<&gpio2 3 GPIO_ACTIVE_HIGH>
@@ -710,8 +710,28 @@
 			reg = <0xC0000 0x2000>;
 		};
 		mtd@000C2000 {
-			label = "splash";
-			reg = <0xC2000 0x13e000>;
+			label = "spare";
+			reg = <0xC2000 0x3e000>;
+		};
+		mtd@00100000 {
+			label = "mfgSection";
+			reg = <0x100000 0x10000>;
+		};
+		mtd@00110000 {
+			label = "scaleHWConfig";
+			reg = <0x110000 0x10000>;
+		};
+		mtd@00120000 {
+			label = "scaleSWConfig";
+			reg = <0x120000 0x40000>;
+		};
+		mtd@00160000 {
+			label = "scaleKeys";
+			reg = <0x160000 0x80000>;
+		};
+		mtd@001E0000 {
+			label = "scale_unused";
+			reg = <0x1e0000 0x20000>;
 		};
 	};
 };
