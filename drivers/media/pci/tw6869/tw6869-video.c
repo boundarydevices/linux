@@ -738,29 +738,33 @@ static int fsl_querybuf(struct file *file, void *priv,
 		struct v4l2_buffer *b)
 {
 	struct tw6869_vch *vch = video_drvdata(file);
-	struct vb2_buffer *vb = vch->queue.bufs[b->index];
+	dma_addr_t userptr_dma_addr = b->m.userptr;
+	struct vb2_buffer *vb;
+	struct tw6869_buf *buf;
 	int ret;
-
-	if (b->memory == V4L2_MEMORY_USERPTR) {
-		struct tw6869_buf *buf = container_of(vb, struct tw6869_buf, vb);
-
-		if (!b->m.userptr) {
-			tw_err(vch->dma.dev,
-				"m.userptr shall contain physical address\n");
-			return -EINVAL;
-		}
-		buf->dma_addr = b->m.userptr;
-	}
 
 	ret = vb2_querybuf(&vch->queue, b);
 	if (ret)
 		return ret;
 
-	if (b->memory == V4L2_MEMORY_MMAP &&
-		b->flags & V4L2_BUF_FLAG_MAPPED) {
-		/* return physical address */
-		b->m.offset = vb2_dma_contig_plane_dma_addr(vb, 0);
+	vb = vch->queue.bufs[b->index];
+
+	switch (b->memory) {
+	case V4L2_MEMORY_USERPTR:
+		if (!userptr_dma_addr) {
+			tw_err(vch->dma.dev,
+				"m.userptr shall contain physical address\n");
+			return -EINVAL;
+		}
+		buf = container_of(vb, struct tw6869_buf, vb);
+		buf->dma_addr = userptr_dma_addr;
+		break;
+	case V4L2_MEMORY_MMAP:
+		if (b->flags & V4L2_BUF_FLAG_MAPPED) /* return physical address */
+			b->m.offset = vb2_dma_contig_plane_dma_addr(vb, 0);
+		break;
 	}
+
 	return 0;
 }
 #endif
