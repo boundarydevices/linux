@@ -34,12 +34,6 @@ static const struct pci_device_id tw6869_pci_tbl[] = {
 
 MODULE_DEVICE_TABLE(pci, tw6869_pci_tbl);
 
-static int tw6869_dummy_dma_locked(struct tw6869_dma *dma)
-{
-	tw_err(dma->dev, "DMA %u\n", dma->id);
-	return 0;
-}
-
 static void tw6869_dummy_dma_srst(struct tw6869_dma *dma)
 {
 	tw_err(dma->dev, "DMA %u\n", dma->id);
@@ -68,16 +62,12 @@ static void tw6869_delayed_dma_on(struct work_struct *work)
 
 	spin_lock_irqsave(&dma->dev->rlock, flags);
 	if (tw_dma_active(dma) && !dma->low_power) {
-		if ((*dma->locked)(dma)) {
-			tw_set(dma->dev, R32_DMA_CHANNEL_ENABLE, BIT(dma->id));
-			tw_set(dma->dev, R32_DMA_CMD, BIT(31) | BIT(dma->id));
-			dma->fld = 0;
-			dma->pb = 0;
-			if (!tw_dma_is_on(dma))
-				tw_err(dma->dev, "DMA %u: failed ON\n", dma->id);
-		} else { /* reschedule itself */
-			mod_delayed_work(system_wq, &dma->hw_on, dma->delay);
-		}
+		tw_set(dma->dev, R32_DMA_CHANNEL_ENABLE, BIT(dma->id));
+		tw_set(dma->dev, R32_DMA_CMD, BIT(31) | BIT(dma->id));
+		dma->fld = 0;
+		dma->pb = 0;
+		if (!tw_dma_is_on(dma))
+			tw_err(dma->dev, "DMA %u: failed ON\n", dma->id);
 	}
 	spin_unlock_irqrestore(&dma->dev->rlock, flags);
 }
@@ -105,7 +95,6 @@ static void tw6869_dma_init(struct tw6869_dev *dev)
 		}
 		dma->id = id;
 		dma->dev = dev;
-		dma->locked = tw6869_dummy_dma_locked;
 		dma->srst = tw6869_dummy_dma_srst;
 		dma->ctrl = tw6869_dummy_dma_ctrl;
 		dma->cfg = tw6869_dummy_dma_cfg;
@@ -145,30 +134,34 @@ static irqreturn_t tw6869_irq(int irq, void *dev_id)
 	unsigned long ints = tw_read(dev, R32_INT_STATUS);
 
 	if (ints) {
-		unsigned int pbs, errs, pars, cmd, id;
+		unsigned int pbs, errs, pars, losts, cmd, id;
 
 		pbs = tw_read(dev, R32_PB_STATUS);
 		errs = tw_read(dev, R32_FIFO_STATUS);
 		pars = tw_read(dev, R32_VIDEO_PARSER_STATUS);
 		cmd = tw_read(dev, R32_DMA_CMD);
 
+		losts = errs & TW_VID;
 		errs = (ints >> 24 | errs >> 24 | errs >> 16) & TW_VID;
 		ints = (ints | errs) & cmd;
 
 		for_each_set_bit(id, &ints, TW_ID_MAX) {
 			struct tw6869_dma *dma = dev->dma[id];
 			unsigned int err = (errs >> id) & 0x1;
+			unsigned int lost = (losts >> id) & 0x1;
 			unsigned int fld = ((pbs >> 24) >> id) & 0x1;
 			unsigned int pb = (pbs >> id) & 0x1;
 
-			if (!err && dma->fld == fld && dma->pb == pb) {
-				dma->err = 0;
-				(*dma->isr)(dma);
-			} else {
+			if (err || (dma->lost && !lost) ||
+					dma->fld != fld || dma->pb != pb) {
 				spin_lock(&dev->rlock);
 				tw6869_dma_reset(dma);
 				spin_unlock(&dev->rlock);
+			} else {
+				dma->err = 0;
+				(*dma->isr)(dma);
 			}
+			dma->lost = lost;
 		}
 		return IRQ_HANDLED;
 	}
@@ -207,6 +200,10 @@ static void tw6869_reset(struct tw6869_dev *dev)
 	tw_write(dev, R8_VERTICAL_CONTROL1(0x4), 0xFF);
 	tw_write(dev, R8_MISC_CONTROL1(0x0), 0x56);
 	tw_write(dev, R8_MISC_CONTROL1(0x4), 0x56);
+
+	/* Show blue background if no signal */
+	tw_write(dev, R8_MISC_CONTROL2(0x0), 0xE7);
+	tw_write(dev, R8_MISC_CONTROL2(0x4), 0xE7);
 
 	/* Audio DMA 4096 bytes, sampling frequency reference 48 kHz */
 	tw_write(dev, R32_AUDIO_CONTROL1, 0x80000001 | (0x0A2C << 5));
