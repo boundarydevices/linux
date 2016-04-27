@@ -24,13 +24,6 @@
 /**
  * tw6869 internals
  */
-static int tw6869_vch_dma_locked(struct tw6869_dma *dma)
-{
-	unsigned int vs = tw_read(dma->dev, R8_VIDEO_STATUS(dma->id));
-
-	return TW_VS_LOCK_MASK == (vs & TW_VS_LOCK_MASK);
-}
-
 static void tw6869_vch_dma_srst(struct tw6869_dma *dma)
 {
 	tw_set(dma->dev, R8_AVSRST(dma->id), BIT(ID2SC(dma->id)));
@@ -1003,7 +996,6 @@ int tw6869_video_register(struct tw6869_dev *dev)
 			return ret;
 		}
 
-		vch->dma.locked = tw6869_vch_dma_locked;
 		vch->dma.srst = tw6869_vch_dma_srst;
 		vch->dma.ctrl = tw6869_vch_dma_ctrl;
 		vch->dma.cfg = tw6869_vch_dma_cfg;

@@ -24,11 +24,6 @@
 /**
  * tw6869 internals
  */
-static int tw6869_ach_dma_locked(struct tw6869_dma *dma)
-{
-	return 1;
-}
-
 static void tw6869_ach_dma_srst(struct tw6869_dma *dma)
 {
 	/* tw_set(dma->dev, R8_AVSRST(dma->id), BIT(4)); */
@@ -390,7 +385,6 @@ int tw6869_audio_register(struct tw6869_dev *dev)
 			return ret;
 		}
 
-		ach->dma.locked = tw6869_ach_dma_locked;
 		ach->dma.srst = tw6869_ach_dma_srst;
 		ach->dma.ctrl = tw6869_ach_dma_ctrl;
 		ach->dma.cfg = tw6869_ach_dma_cfg;
