@@ -48,7 +48,7 @@
 #define FSL_G_CHIP_IDENT
 #define FSL_QUERYBUF
 
-#define TW_DMA_ERR_MAX   5
+#define TW_DMA_ERR_MAX   30
 #define TW_APAGE_MAX     16
 #define TW_VBUF_ALLOC    6
 
@@ -166,8 +166,6 @@
 #define R8_ANALOG_PWR_DOWN(id)     RADDR(0x1CE + GROUP(id))
 #define R8_AIGAIN_CTRL(id)         RADDR(0x1D0 + GROUP(id) + ID2SC(id))
 
-#define TW_VS_LOCK_MASK            (BIT(6) | BIT(5) | BIT(3))
-
 /**
  * struct tw6869_buf - instance of one DMA buffer
  */
@@ -189,9 +187,9 @@ struct tw6869_buf {
  * @pb: P-buffer | B-buffer ping-pong state
  * @delay: delay in jiffies before switching DMA ON
  * @is_on: DMA channel status
+ * @lost: video (audio) signal lost
  * @low_power: channel in a low-power state
  * @err: DMA errors counter
- * @locked: logic is locked to the incoming video (audio) source
  * @srst: software reset the video (audio) portion
  * @ctrl: restore control state
  * @cfg: configure the DMA channel
@@ -208,9 +206,9 @@ struct tw6869_dma {
 	unsigned int pb;
 	unsigned int delay;
 	unsigned int is_on;
+	unsigned int lost;
 	unsigned int low_power;
 	unsigned int err;
-	int (*locked)(struct tw6869_dma *);
 	void (*srst)(struct tw6869_dma *);
 	void (*ctrl)(struct tw6869_dma *);
 	void (*cfg)(struct tw6869_dma *);
@@ -367,6 +365,7 @@ static inline void tw_dma_enable(struct tw6869_dma *dma)
 	dma->fld = 0;
 	dma->pb = 0;
 	dma->err = 0;
+	dma->lost = 0;
 	dma->low_power = 0;
 	dma->is_on = tw_dma_is_on(dma);
 	tw_dbg(dma->dev, "DMA %u\n", dma->id);
