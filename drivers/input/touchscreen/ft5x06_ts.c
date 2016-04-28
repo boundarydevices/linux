@@ -522,7 +522,7 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	ts->irq = client->irq ;
 
 	gp = devm_gpiod_get_index(dev, "reset", 0);
-	pr_info("%s: reset %p\n", __func__, gp);
+	dev_info(dev, "reset %p\n", gp);
 	if (!IS_ERR(gp)) {
 		/* release reset */
 		ts->reset_gpio = gp;
