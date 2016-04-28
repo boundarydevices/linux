@@ -923,12 +923,6 @@ static void rndis_free_inst(struct usb_function_instance *f)
 	struct f_rndis_opts *opts;
 
 	opts = container_of(f, struct f_rndis_opts, func_inst);
-	if (!opts->borrowed_net) {
-		if (opts->bound)
-			gether_cleanup(netdev_priv(opts->net));
-		else
-			free_netdev(opts->net);
-	}
 
 	kfree(opts->rndis_os_desc.group.default_groups); /* single VLA chunk */
 	kfree(opts);
@@ -947,7 +941,6 @@ static struct usb_function_instance *rndis_alloc_inst(void)
 
 	mutex_init(&opts->lock);
 	opts->func_inst.free_func_inst = rndis_free_inst;
-	opts->net = gether_setup_default();
 	if (IS_ERR(opts->net)) {
 		struct net_device *net = opts->net;
 		kfree(opts);
@@ -976,6 +969,13 @@ static void rndis_free(struct usb_function *f)
 	kfree(rndis);
 	mutex_lock(&opts->lock);
 	opts->refcnt--;
+	if (!opts->borrowed_net) {
+		if (opts->bound) {
+			gether_cleanup(netdev_priv(opts->net));
+			opts->bound = false;
+		} else
+			free_netdev(opts->net);
+	}
 	mutex_unlock(&opts->lock);
 }
 
@@ -1004,6 +1004,7 @@ static struct usb_function *rndis_alloc(struct usb_function_instance *fi)
 
 	opts = container_of(fi, struct f_rndis_opts, func_inst);
 	mutex_lock(&opts->lock);
+	opts->net = gether_setup_default();
 	opts->refcnt++;
 
 	gether_get_host_addr_u8(opts->net, rndis->ethaddr);
