@@ -520,10 +520,6 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 	ts->client = client;
 	ts->irq = client->irq ;
-	ts->wakeup_gpio = devm_gpiod_get_index(dev, "wakeup", 0);
-	pr_info("%s: wakeup %p\n", __func__, ts->wakeup_gpio);
-	if (IS_ERR(ts->wakeup_gpio))
-		err = -ENODEV;
 
 	gp = devm_gpiod_get_index(dev, "reset", 0);
 	pr_info("%s: reset %p\n", __func__, gp);
@@ -538,8 +534,13 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 	err = detect_ft5x06(client);
 	if (err) {
-		dev_err(dev, "%s: Could not detect touch screen %d.\n",
-			client_name, err);
+		dev_err(dev, "Could not detect touch screen %d.\n", err);
+		goto exit1;
+	}
+	ts->wakeup_gpio = devm_gpiod_get_index(dev, "wakeup", 0);
+	pr_info("%s: wakeup %p\n", __func__, ts->wakeup_gpio);
+	if (IS_ERR(ts->wakeup_gpio)) {
+		err = -ENODEV;
 		goto exit1;
 	}
 
