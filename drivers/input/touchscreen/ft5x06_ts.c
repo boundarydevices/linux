@@ -608,25 +608,8 @@ static struct i2c_driver ts_driver = {
 	.detect		= ts_detect,
 };
 
-static int __init ts_init(void)
-{
-	int res = i2c_add_driver(&ts_driver);
-	if (res) {
-		printk(KERN_WARNING "%s: i2c_add_driver failed\n", client_name);
-		return res;
-	}
-	printk(KERN_INFO "%s: ts_init\n", client_name);
-	return 0;
-}
-
-static void __exit ts_exit(void)
-{
-	i2c_del_driver(&ts_driver);
-}
+module_i2c_driver(ts_driver);
 
 MODULE_AUTHOR("Boundary Devices <info@boundarydevices.com>");
 MODULE_DESCRIPTION("I2C interface for FocalTech ft5x06 touch screen controller.");
 MODULE_LICENSE("GPL");
-
-module_init(ts_init)
-module_exit(ts_exit)
