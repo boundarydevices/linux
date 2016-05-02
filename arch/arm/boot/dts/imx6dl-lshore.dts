@@ -26,10 +26,6 @@
 	status = "okay";
 };
 
-&hdmi_display {
-	status = "okay";
-};
-
 &lcd_display {
 	status = "okay";
 };
