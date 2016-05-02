@@ -264,8 +264,18 @@
 
 	pinctrl_uart1: uart1grp {
 		fsl,pins = <
-			MX6QDL_PAD_SD3_DAT7__UART1_TX_DATA	0x1b0b1
+			MX6QDL_PAD_SD3_DAT7__UART1_TX_DATA	0x0b0b1
 			MX6QDL_PAD_SD3_DAT6__UART1_RX_DATA	0x1b0b1
+#define GP_UART1_RX_EN			<&gpio3 14 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x030b0		/* RS485 RX Enable: pull down */
+#define GP_UART1_TX_EN			<&gpio3 15 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA15__GPIO3_IO15		0x030b0		/* RS485 DEN: pull down */
+#define GP_UART1_RS485_EN		<&gpio3 13 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x030b0		/* RS485/!RS232 Select: pull down (rs232) */
+#define GP_UART1_AON			<&gpio3 12 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA12__GPIO3_IO12		0x030b0		/* ON: pull down */
+#define GP_UART1_RS485_TERM		<&gpio4 5 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x030b0		/* pull down */
 		>;
 	};
 
@@ -796,8 +806,26 @@
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
+	control-gpios = GP_UART1_RX_EN, GP_UART1_TX_EN, GP_UART1_RS485_EN, GP_UART1_AON, GP_UART1_RS485_TERM;
+#define M_RX_EN		1
+#define M_TX_EN		2
+#define M_RS485		4
+#define M_AON		8
+#define M_TERM		0x10
+	off_levels = <0>;
+	rxact_mask = <0>;
+	rxact_levels = <0>;
+	rs232_levels = <M_RX_EN>;
+	rs232_txen_mask = <0>;
+	rs232_txen_levels = <0>;
+	rs485_levels = <0x0d>;	/* 0x1d to enable termination */
+	rs485_txen_mask = <0x3>;
+	rs485_txen_levels = <M_TX_EN>;
+	uart-has-rs485-half-duplex;
+	rs485-mode = <0>;	/* 1 to enable */
 	status = "okay";
 };
+
 
 &uart2 {
 	pinctrl-names = "default";
