@@ -152,6 +152,11 @@ static irqreturn_t tw6869_irq(int irq, void *dev_id)
 			unsigned int fld = ((pbs >> 24) >> id) & 0x1;
 			unsigned int pb = (pbs >> id) & 0x1;
 
+			if (dma->lost != lost) {
+				tw_info(dev, "ch%d: signal %s\n", dma->id,
+					lost ? "lost" : "recovered");
+			}
+
 			if (err || (dma->lost && !lost) ||
 					dma->fld != fld || dma->pb != pb) {
 				spin_lock(&dev->rlock);
