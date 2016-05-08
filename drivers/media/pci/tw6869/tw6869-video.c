@@ -55,6 +55,57 @@ static int to_tw6869_pixformat(unsigned int pixelformat)
 	}
 }
 
+static int to_tw6869_std(v4l2_std_id std)
+{
+	if (std & V4L2_STD_NTSC)
+		return TW_STD_NTSC_M;
+	if (std & V4L2_STD_PAL)
+		return TW_STD_PAL;
+	if (std & V4L2_STD_SECAM)
+		return TW_STD_SECAM;
+	if (std & V4L2_STD_NTSC_443)
+		return TW_STD_NTSC_443;
+	if (std & V4L2_STD_PAL_M)
+		return TW_STD_PAL_M;
+	if (std & V4L2_STD_PAL_Nc)
+		return TW_STD_PAL_CN;
+	if (std & V4L2_STD_PAL_60)
+		return TW_STD_PAL_60;
+	return -EINVAL;
+}
+
+static const char* tw6869_vch_std_str(v4l2_std_id std)
+{
+	const char *std_str[] = {
+		"NTSC", "PAL", "SECAM", "NTSC 443", "PAL M", "PAL CN", "PAL 60",
+	};
+	int i = to_tw6869_std(std);
+
+	return (i < 0) ? "unknown" : std_str[i];
+}
+
+static v4l2_std_id to_v4l2_std(unsigned int tw_std)
+{
+	switch (tw_std) {
+	case TW_STD_NTSC_M:
+		return V4L2_STD_NTSC;
+	case TW_STD_PAL:
+		return V4L2_STD_PAL;
+	case TW_STD_SECAM:
+		return V4L2_STD_SECAM;
+	case TW_STD_NTSC_443:
+		return V4L2_STD_NTSC_443;
+	case TW_STD_PAL_M:
+		return V4L2_STD_PAL_M;
+	case TW_STD_PAL_CN:
+		return V4L2_STD_PAL_Nc;
+	case TW_STD_PAL_60:
+		return V4L2_STD_PAL_60;
+	default:
+		return V4L2_STD_UNKNOWN;
+	}
+}
+
 static inline int tw_vch_frame_mode(struct tw6869_vch *vch)
 {
 	return vch->format.height > 288;
@@ -80,6 +131,7 @@ static void tw6869_vch_dma_frame_isr(struct tw6869_dma *dma)
 		tw_write(dma->dev, dma->reg[i], next->dma_addr);
 		v4l2_get_timestamp(&done->vb.v4l2_buf.timestamp);
 		done->vb.v4l2_buf.sequence = vch->sequence++;
+		done->vb.v4l2_buf.field = V4L2_FIELD_INTERLACED;
 		vb2_buffer_done(&done->vb, VB2_BUF_STATE_DONE);
 	} else {
 		tw_err(dma->dev, "vch%u NOBUF seq=%u dcount=%u\n",
@@ -218,7 +270,11 @@ static void tw6869_vch_dma_cfg(struct tw6869_dma *dma)
 	const struct active_window *w = (vch->std & V4L2_STD_625_50) ?
 			NULL : &ntsc_window;
 
+	BUG_ON(to_tw6869_std(vch->std) < 0);
+	BUG_ON(to_tw6869_pixformat(pix->pixelformat) < 0);
 	BUG_ON(!pix->width);
+
+	tw_write(dma->dev, R8_STANDARD_SELECTION(dma->id), vch->std);
 
 	/*
 	 * Enable pre-determined output value indicated by CCS when video loss
@@ -236,9 +292,13 @@ static void tw6869_vch_dma_cfg(struct tw6869_dma *dma)
 	if (vch->std & V4L2_STD_625_50) {
 		tw_set(dma->dev, R32_VIDEO_CONTROL1, BIT(cfg));
 		tw_write(dma->dev, R8_VERTICAL_DELAY(dma->id), 0x18);
+		tw_write(dma->dev, R8_VERTICAL_ACTIVE(dma->id), 0x20);
+		tw_write(dma->dev, R8_CROPPING_CONTROL(dma->id), 0x12);
 	} else {
 		tw_clear(dma->dev, R32_VIDEO_CONTROL1, BIT(cfg));
 		tw_write(dma->dev, R8_VERTICAL_DELAY(dma->id), 0x14);
+		tw_write(dma->dev, R8_VERTICAL_ACTIVE(dma->id), 0xF0);
+		tw_write(dma->dev, R8_CROPPING_CONTROL(dma->id), 0x02);
 	}
 
 	cfg = 16 + ID2CH(dma->id) * 2;
@@ -538,43 +598,50 @@ static int tw6869_enum_fmt_vid_cap(struct file *file, void *priv,
 static int tw6869_querystd(struct file *file, void *priv, v4l2_std_id *std)
 {
 	struct tw6869_vch *vch = video_drvdata(file);
-	unsigned int std_now;
+	struct tw6869_dma *dma = &vch->dma;
+	int count = 5;
+	unsigned int ssel, vs;
 
-	std_now = tw_read(vch->dma.dev, R8_STANDARD_SELECTION(vch->dma.id));
-	std_now = (std_now >> 4) & 0x07;
+	if (vb2_is_streaming(&vch->queue))
+		return -EBUSY;
 
-	switch (std_now) {
-	case TW_STD_PAL_M:
-	case TW_STD_PAL_60:
-	case TW_STD_NTSC_M:
-	case TW_STD_NTSC_443:
-		*std = V4L2_STD_525_60;
-		break;
-	case TW_STD_PAL:
-	case TW_STD_PAL_CN:
-	case TW_STD_SECAM:
-		*std = V4L2_STD_625_50;
-		break;
-	default:
-		*std = V4L2_STD_UNKNOWN;
+	/* Enable and start standard detection */
+	tw_write(dma->dev, R8_STANDARD_SELECTION(dma->id), 0x7);
+	tw_write(dma->dev, R8_STANDARD_RECOGNIT(dma->id), 0xff);
+
+	while (--count >= 0) {
+		msleep(100);
+		ssel = tw_read(dma->dev, R8_STANDARD_SELECTION(dma->id));
+		if (!(ssel & BIT(7)))
+			break;
 	}
+
+	vs = tw_read(dma->dev, R8_VIDEO_STATUS(dma->id));
+	if ((vs | ssel) & BIT(7))
+		*std = V4L2_STD_UNKNOWN;
+	else
+		*std = to_v4l2_std((ssel >> 4) & 0x07);
+
+	tw_dbg(dma->dev, "vch%u: %s std detected\n",
+		ID2CH(dma->id), tw6869_vch_std_str(*std));
 	return 0;
 }
 
 static int tw6869_s_std(struct file *file, void *priv, v4l2_std_id std)
 {
 	struct tw6869_vch *vch = video_drvdata(file);
-	v4l2_std_id new_std = (std & V4L2_STD_625_50) ?
-				V4L2_STD_625_50 : V4L2_STD_525_60;
 
-	if (new_std == vch->std)
+	if (std == vch->std)
 		return 0;
 
 	if (vb2_is_busy(&vch->queue))
 		return -EBUSY;
 
-	vch->std = new_std;
-	vch->fps = (new_std & V4L2_STD_625_50) ? 25 : 30;
+	if (to_tw6869_std(std) < 0)
+		return -EINVAL;
+
+	vch->std = std;
+	vch->fps = (std & V4L2_STD_625_50) ? 25 : 30;
 	tw6869_vch_fill_pix_format(vch, &vch->format);
 	return 0;
 }
@@ -590,6 +657,9 @@ static int tw6869_g_std(struct file *file, void *priv, v4l2_std_id *std)
 
 	vch->fps = (vch->std & V4L2_STD_625_50) ? 25 : 30;
 	*std = vch->std;
+
+	tw_dbg(vch->dma.dev, "vch%u: %s video standard\n",
+		ID2CH(vch->dma.id), tw6869_vch_std_str(vch->std));
 	return 0;
 }
 
@@ -888,10 +958,9 @@ static int tw6869_vch_register(struct tw6869_vch *vch)
 	}
 	v4l2_ctrl_handler_setup(hdl);
 
-	/* Default settings (NTSC) */
-	vch->fps = 30;
-	vch->std = V4L2_STD_525_60;
-	tw_write(vch->dma.dev, R8_STANDARD_SELECTION(vch->dma.id), 0);
+	/* Default settings */
+	vch->std = TW_DEFAULT_V4L2_STD;
+	vch->fps = (vch->std & V4L2_STD_625_50) ? 25 : 30;
 	vch->format.pixelformat = V4L2_PIX_FMT_UYVY;
 	tw6869_vch_fill_pix_format(vch, &vch->format);
 
