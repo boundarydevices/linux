@@ -291,13 +291,9 @@ static void tw6869_vch_dma_cfg(struct tw6869_dma *dma)
 	if (vch->std & V4L2_STD_625_50) {
 		tw_set(dma->dev, R32_VIDEO_CONTROL1, BIT(cfg));
 		tw_write(dma->dev, R8_VERTICAL_DELAY(dma->id), 0x18);
-		tw_write(dma->dev, R8_VERTICAL_ACTIVE(dma->id), 0x20);
-		tw_write(dma->dev, R8_CROPPING_CONTROL(dma->id), 0x12);
 	} else {
 		tw_clear(dma->dev, R32_VIDEO_CONTROL1, BIT(cfg));
 		tw_write(dma->dev, R8_VERTICAL_DELAY(dma->id), 0x14);
-		tw_write(dma->dev, R8_VERTICAL_ACTIVE(dma->id), 0xF0);
-		tw_write(dma->dev, R8_CROPPING_CONTROL(dma->id), 0x02);
 	}
 
 	cfg = 16 + ID2CH(dma->id) * 2;
