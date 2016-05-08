@@ -55,29 +55,33 @@ static int to_tw6869_pixformat(unsigned int pixelformat)
 	}
 }
 
-static int to_tw6869_std(v4l2_std_id std)
+static int to_tw6869_std(v4l2_std_id v4l2_std)
 {
-	if (std & V4L2_STD_NTSC)
-		return TW_STD_NTSC_M;
-	if (std & V4L2_STD_PAL)
+	switch (v4l2_std) {
+	case V4L2_STD_NTSC:
+		return TW_STD_NTSC;
+	case V4L2_STD_PAL:
 		return TW_STD_PAL;
-	if (std & V4L2_STD_SECAM)
+	case V4L2_STD_SECAM:
 		return TW_STD_SECAM;
-	if (std & V4L2_STD_NTSC_443)
+	case V4L2_STD_NTSC_443:
 		return TW_STD_NTSC_443;
-	if (std & V4L2_STD_PAL_M)
+	case V4L2_STD_PAL_M:
 		return TW_STD_PAL_M;
-	if (std & V4L2_STD_PAL_Nc)
-		return TW_STD_PAL_CN;
-	if (std & V4L2_STD_PAL_60)
+	case V4L2_STD_PAL_Nc:
+		return TW_STD_PAL_Nc;
+	case V4L2_STD_PAL_60:
 		return TW_STD_PAL_60;
-	return -EINVAL;
+	default:
+		return -EINVAL;
+	}
 }
 
 static const char* tw6869_vch_std_str(v4l2_std_id std)
 {
 	const char *std_str[] = {
-		"NTSC", "PAL", "SECAM", "NTSC 443", "PAL M", "PAL CN", "PAL 60",
+		"NTSC", "PAL BGDKHI", "SECAM", "NTSC 443",
+		"PAL M", "PAL Nc", "PAL 60",
 	};
 	int i = to_tw6869_std(std);
 
@@ -87,7 +91,7 @@ static const char* tw6869_vch_std_str(v4l2_std_id std)
 static v4l2_std_id to_v4l2_std(unsigned int tw_std)
 {
 	switch (tw_std) {
-	case TW_STD_NTSC_M:
+	case TW_STD_NTSC:
 		return V4L2_STD_NTSC;
 	case TW_STD_PAL:
 		return V4L2_STD_PAL;
@@ -97,7 +101,7 @@ static v4l2_std_id to_v4l2_std(unsigned int tw_std)
 		return V4L2_STD_NTSC_443;
 	case TW_STD_PAL_M:
 		return V4L2_STD_PAL_M;
-	case TW_STD_PAL_CN:
+	case TW_STD_PAL_Nc:
 		return V4L2_STD_PAL_Nc;
 	case TW_STD_PAL_60:
 		return V4L2_STD_PAL_60;
