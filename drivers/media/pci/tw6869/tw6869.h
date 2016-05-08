@@ -47,7 +47,7 @@
 
 #define FSL_G_CHIP_IDENT
 #define FSL_QUERYBUF
-#define TW_DEFAULT_V4L2_STD        V4L2_STD_NTSC /* V4L2_STD_PAL */
+#define TW_DEFAULT_V4L2_STD        /* V4L2_STD_NTSC */ V4L2_STD_PAL
 
 #define TW_DMA_ERR_MAX             30
 #define TW_APAGE_MAX               16
@@ -72,12 +72,12 @@
 #define TW_MMIO_BAR                0
 #define TW_PAGE_SIZE               4096
 
-#define TW_STD_NTSC_M              0
+#define TW_STD_NTSC                0
 #define TW_STD_PAL                 1
 #define TW_STD_SECAM               2
 #define TW_STD_NTSC_443            3
 #define TW_STD_PAL_M               4
-#define TW_STD_PAL_CN              5
+#define TW_STD_PAL_Nc              5
 #define TW_STD_PAL_60              6
 
 #define TW_FMT_UYVY                0
