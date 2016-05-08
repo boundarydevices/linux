@@ -270,11 +270,10 @@ static void tw6869_vch_dma_cfg(struct tw6869_dma *dma)
 	const struct active_window *w = (vch->std & V4L2_STD_625_50) ?
 			NULL : &ntsc_window;
 
-	BUG_ON(to_tw6869_std(vch->std) < 0);
-	BUG_ON(to_tw6869_pixformat(pix->pixelformat) < 0);
 	BUG_ON(!pix->width);
 
-	tw_write(dma->dev, R8_STANDARD_SELECTION(dma->id), vch->std);
+	cfg = to_tw6869_std(vch->std);
+	tw_write(dma->dev, R8_STANDARD_SELECTION(dma->id), cfg);
 
 	/*
 	 * Enable pre-determined output value indicated by CCS when video loss
