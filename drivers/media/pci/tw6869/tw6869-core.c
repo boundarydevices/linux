@@ -84,7 +84,7 @@ static void tw6869_dma_init(struct tw6869_dev *dev)
 			dma->reg[1] = R32_VDMA_B_ADDR(id);
 			dma->reg[2] = R32_VDMA_F2_P_ADDR(id);
 			dma->reg[3] = R32_VDMA_F2_B_ADDR(id);
-			dma->delay = HZ / 10;
+			dma->delay = HZ / 5;
 		} else {
 			dma = &dev->ach[ID2CH(id)].dma;
 			dma->reg[0] = R32_ADMA_P_ADDR(id);
@@ -157,7 +157,7 @@ static irqreturn_t tw6869_irq(int irq, void *dev_id)
 					lost ? "lost" : "recovered");
 			}
 
-			if (err || (dma->lost && !lost) ||
+			if (err || dma->lost != lost ||
 					dma->fld != fld || dma->pb != pb) {
 				spin_lock(&dev->rlock);
 				tw6869_dma_reset(dma);
