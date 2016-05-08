@@ -47,12 +47,13 @@
 
 #define FSL_G_CHIP_IDENT
 #define FSL_QUERYBUF
+#define TW_DEFAULT_V4L2_STD        V4L2_STD_NTSC /* V4L2_STD_PAL */
 
-#define TW_DMA_ERR_MAX   30
-#define TW_APAGE_MAX     16
-#define TW_VBUF_ALLOC    6
+#define TW_DMA_ERR_MAX             30
+#define TW_APAGE_MAX               16
+#define TW_VBUF_ALLOC              6
 
-#define TW_DEBUG         1
+#define TW_DEBUG                   1
 
 #define tw_dbg(twdev, fmt, arg...) \
 	do { if (TW_DEBUG) dev_info(&twdev->pdev->dev, \
@@ -145,6 +146,7 @@
 #define R8_HORIZONTAL_DELAY(id)    RADDR(0x10A + GROUP(id) + ID2SC(id) * 0x10)
 #define R8_HORIZONTAL_ACTIVE(id)   RADDR(0x10B + GROUP(id) + ID2SC(id) * 0x10)
 #define R8_STANDARD_SELECTION(id)  RADDR(0x10E + GROUP(id) + ID2SC(id) * 0x10)
+#define R8_STANDARD_RECOGNIT(id)   RADDR(0x10F + GROUP(id) + ID2SC(id) * 0x10)
 #define R8_VERTICAL_SCALING(id)    RADDR(0x144 + GROUP(id) + ID2SC(id) * 0x10)
 #define R8_SCALING_HIGH(id)        RADDR(0x145 + GROUP(id) + ID2SC(id) * 0x10)
 #define R8_HORIZONTAL_SCALING(id)  RADDR(0x146 + GROUP(id) + ID2SC(id) * 0x10)
