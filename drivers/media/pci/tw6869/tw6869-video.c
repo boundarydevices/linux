@@ -619,7 +619,7 @@ static int tw6869_querystd(struct file *file, void *priv, v4l2_std_id *std)
 	if ((vs | ssel) & BIT(7))
 		*std = V4L2_STD_UNKNOWN;
 	else
-		*std = to_v4l2_std((ssel >> 4) & 0x07);
+		*std &= to_v4l2_std((ssel >> 4) & 0x07);
 
 	tw_dbg(dma->dev, "vch%u: %s std detected\n",
 		ID2CH(dma->id), tw6869_vch_std_str(*std));
@@ -648,7 +648,7 @@ static int tw6869_s_std(struct file *file, void *priv, v4l2_std_id std)
 static int tw6869_g_std(struct file *file, void *priv, v4l2_std_id *std)
 {
 	struct tw6869_vch *vch = video_drvdata(file);
-	v4l2_std_id new_std = 0;
+	v4l2_std_id new_std = V4L2_STD_ALL;
 
 	tw6869_querystd(file, priv, &new_std);
 	if (new_std)
