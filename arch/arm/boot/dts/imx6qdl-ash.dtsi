@@ -393,7 +393,7 @@
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
 		interface_pix_fmt = "RGB24";
-		default_bpp = <24>;
+		default_bpp = <32>;
 		int_clk = <0>;
 		late_init = <0>;
 		status = "okay";
