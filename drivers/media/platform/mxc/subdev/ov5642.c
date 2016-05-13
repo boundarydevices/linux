@@ -4999,10 +4999,11 @@ static const struct ov5642_datafmt *ov5642_find_datafmt(int code)
 	return NULL;
 }
 
-static void ov5642_standby(s32 enable)
+static void ov5642_standby(s32 standby)
 {
-	gpio_set_value(pwn_gpio, enable);
-	msleep(2);
+	gpio_set_value(pwn_gpio, standby);
+	if (!standby)
+		msleep(10);
 }
 
 static s32 update_device_addr(struct ov5642 *sensor)
@@ -5148,27 +5149,32 @@ static s32 ov5642_write_reg(u16 reg, u8 val)
 
 static s32 ov5642_read_reg(u16 reg, u8 *val)
 {
-	u8 au8RegBuf[2] = {0};
-	u8 u8RdVal = 0;
+	struct ov5642 *sensor = &ov5642_data;
+	struct i2c_client *client = sensor->i2c_client;
+	struct i2c_msg msgs[2];
+	u8 buf[2];
+	int ret;
 
-	au8RegBuf[0] = reg >> 8;
-	au8RegBuf[1] = reg & 0xff;
+	buf[0] = reg >> 8;
+	buf[1] = reg & 0xff;
+	msgs[0].addr = client->addr;
+	msgs[0].flags = 0;
+	msgs[0].len = 2;
+	msgs[0].buf = buf;
 
-	if (2 != i2c_master_send(ov5642_data.i2c_client, au8RegBuf, 2)) {
-		pr_err("%s:write reg error:reg=%x\n",
-				__func__, reg);
-		return -1;
+	msgs[1].addr = client->addr;
+	msgs[1].flags = I2C_M_RD;
+	msgs[1].len = 1;
+	msgs[1].buf = buf;
+
+	ret = i2c_transfer(client->adapter, msgs, 2);
+	if (ret < 0) {
+		pr_err("%s:reg=%x ret=%d\n", __func__, reg, ret);
+		return ret;
 	}
-
-	if (1 != i2c_master_recv(ov5642_data.i2c_client, &u8RdVal, 1)) {
-		pr_err("%s:read reg error:reg=%x,val=%x\n",
-				__func__, reg, u8RdVal);
-		return -1;
-	}
-
-	*val = u8RdVal;
-
-	return u8RdVal;
+	*val = buf[0];
+	pr_debug("%s:reg=%x,val=%x\n", __func__, reg, buf[0]);
+	return buf[0];
 }
 
 #ifdef CONFIG_VIDEO_ADV_DEBUG
