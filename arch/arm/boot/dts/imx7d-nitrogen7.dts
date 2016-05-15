@@ -461,6 +461,10 @@
 			>;
 		};
 
+		pinctrl_gpio_keys: gpio_keysgrp {
+			fsl,pins = < >;
+                };
+
 		pinctrl_bt_rfkill: btrfkillgrp {
 			fsl,pins = <
 				MX7D_PAD_ECSPI2_SS0__GPIO4_IO23		0x7d
