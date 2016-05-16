@@ -44,12 +44,9 @@ static void tw6869_vch_dma_ctrl(struct tw6869_dma *dma)
 static int to_tw6869_pixformat(unsigned int pixelformat)
 {
 	switch (pixelformat) {
-	case V4L2_PIX_FMT_UYVY:
-		return TW_FMT_UYVY;
-	case V4L2_PIX_FMT_YUYV:
-		return TW_FMT_YUYV;
-	case V4L2_PIX_FMT_RGB565:
-		return TW_FMT_RGB565;
+	case V4L2_PIX_FMT_UYVY:   return TW_FMT_UYVY;
+	case V4L2_PIX_FMT_YUYV:   return TW_FMT_YUYV;
+	case V4L2_PIX_FMT_RGB565: return TW_FMT_RGB565;
 	default:
 		return -EINVAL;
 	}
@@ -58,20 +55,13 @@ static int to_tw6869_pixformat(unsigned int pixelformat)
 static int to_tw6869_std(v4l2_std_id v4l2_std)
 {
 	switch (v4l2_std) {
-	case V4L2_STD_NTSC:
-		return TW_STD_NTSC;
-	case V4L2_STD_PAL:
-		return TW_STD_PAL;
-	case V4L2_STD_SECAM:
-		return TW_STD_SECAM;
-	case V4L2_STD_NTSC_443:
-		return TW_STD_NTSC_443;
-	case V4L2_STD_PAL_M:
-		return TW_STD_PAL_M;
-	case V4L2_STD_PAL_Nc:
-		return TW_STD_PAL_Nc;
-	case V4L2_STD_PAL_60:
-		return TW_STD_PAL_60;
+	case V4L2_STD_NTSC:     return TW_STD_NTSC;
+	case V4L2_STD_PAL:      return TW_STD_PAL;
+	case V4L2_STD_SECAM:    return TW_STD_SECAM;
+	case V4L2_STD_NTSC_443: return TW_STD_NTSC_443;
+	case V4L2_STD_PAL_M:    return TW_STD_PAL_M;
+	case V4L2_STD_PAL_Nc:   return TW_STD_PAL_Nc;
+	case V4L2_STD_PAL_60:   return TW_STD_PAL_60;
 	default:
 		return -EINVAL;
 	}
@@ -80,20 +70,13 @@ static int to_tw6869_std(v4l2_std_id v4l2_std)
 static inline const char *to_std_str(v4l2_std_id v4l2_std)
 {
 	switch (v4l2_std) {
-	case V4L2_STD_NTSC:
-		return "NTSC";
-	case V4L2_STD_PAL:
-		return "PAL";
-	case V4L2_STD_SECAM:
-		return "SECAM";
-	case V4L2_STD_NTSC_443:
-		return "NTSC 443";
-	case V4L2_STD_PAL_M:
-		return "PAL M";
-	case V4L2_STD_PAL_Nc:
-		return "PAL Nc";
-	case V4L2_STD_PAL_60:
-		return "PAL 60";
+	case V4L2_STD_NTSC:     return "NTSC";
+	case V4L2_STD_PAL:      return "PAL";
+	case V4L2_STD_SECAM:    return "SECAM";
+	case V4L2_STD_NTSC_443: return "NTSC 443";
+	case V4L2_STD_PAL_M:    return "PAL M";
+	case V4L2_STD_PAL_Nc:   return "PAL Nc";
+	case V4L2_STD_PAL_60:   return "PAL 60";
 	default:
 		return "unknown";
 	}
@@ -102,20 +85,13 @@ static inline const char *to_std_str(v4l2_std_id v4l2_std)
 static v4l2_std_id to_v4l2_std(unsigned int tw_std)
 {
 	switch (tw_std) {
-	case TW_STD_NTSC:
-		return V4L2_STD_NTSC;
-	case TW_STD_PAL:
-		return V4L2_STD_PAL;
-	case TW_STD_SECAM:
-		return V4L2_STD_SECAM;
-	case TW_STD_NTSC_443:
-		return V4L2_STD_NTSC_443;
-	case TW_STD_PAL_M:
-		return V4L2_STD_PAL_M;
-	case TW_STD_PAL_Nc:
-		return V4L2_STD_PAL_Nc;
-	case TW_STD_PAL_60:
-		return V4L2_STD_PAL_60;
+	case TW_STD_NTSC:     return V4L2_STD_NTSC;
+	case TW_STD_PAL:      return V4L2_STD_PAL;
+	case TW_STD_SECAM:    return V4L2_STD_SECAM;
+	case TW_STD_NTSC_443: return V4L2_STD_NTSC_443;
+	case TW_STD_PAL_M:    return V4L2_STD_PAL_M;
+	case TW_STD_PAL_Nc:   return V4L2_STD_PAL_Nc;
+	case TW_STD_PAL_60:   return V4L2_STD_PAL_60;
 	default:
 		return V4L2_STD_UNKNOWN;
 	}
