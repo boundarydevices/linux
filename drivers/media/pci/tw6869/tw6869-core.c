@@ -24,7 +24,7 @@
 MODULE_DESCRIPTION("tw6869/65 media bridge driver");
 MODULE_AUTHOR("starterkit <info@starterkit.ru>");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.5.1");
+MODULE_VERSION("0.5.2");
 
 static const struct pci_device_id tw6869_pci_tbl[] = {
 	{PCI_DEVICE(PCI_VENDOR_ID_TECHWELL, PCI_DEVICE_ID_6869)},
