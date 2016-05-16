@@ -331,10 +331,18 @@ static const struct of_device_id imx6ul_pinctrl_of_match[] = {
 static int imx6ul_pinctrl_probe(struct platform_device *pdev)
 {
 	const struct imx_pinctrl_soc_info *pinctrl_info;
+	const struct of_device_id *match;
 
 	pinctrl_info = of_device_get_match_data(&pdev->dev);
 	if (!pinctrl_info)
 		return -ENODEV;
+
+	match = of_match_device(imx6ul_pinctrl_of_match, &pdev->dev);
+
+	if (!match)
+		return -ENODEV;
+
+	pinctrl_info = (struct imx_pinctrl_soc_info *) match->data;
 
 	return imx_pinctrl_probe(pdev, pinctrl_info);
 }
