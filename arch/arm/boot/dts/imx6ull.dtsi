@@ -1143,7 +1143,11 @@
 				/* epdc-ram = <&gpr 0x4 30>; */
 				status = "disabled";
 			};
-			/* SNVS_GPR and IOMUXC_SNVS not added */
+
+			snvs_gpr: snvs-gpr@0x02294000 {
+				compatible = "fsl, imx6ull-snvs-gpr";
+				reg = <0x02294000 0x10000>;
+			};
 		};
 	};
 };
