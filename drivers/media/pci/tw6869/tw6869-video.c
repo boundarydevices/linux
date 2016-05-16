@@ -543,11 +543,9 @@ static int tw6869_try_fmt_vid_cap(struct file *file, void *priv,
 {
 	struct tw6869_vch *vch = video_drvdata(file);
 	struct v4l2_pix_format *pix = &f->fmt.pix;
-	int ret;
 
-	ret = to_tw6869_pixformat(pix->pixelformat);
-	if (ret < 0)
-		return ret;
+	if (to_tw6869_pixformat(pix->pixelformat) < 0)
+		return -EINVAL;
 
 	tw6869_vch_fill_pix_format(vch, pix);
 	return 0;
@@ -557,11 +555,9 @@ static int tw6869_s_fmt_vid_cap(struct file *file, void *priv,
 		struct v4l2_format *f)
 {
 	struct tw6869_vch *vch = video_drvdata(file);
-	int ret;
 
-	ret = tw6869_try_fmt_vid_cap(file, priv, f);
-	if (ret)
-		return ret;
+	if (tw6869_try_fmt_vid_cap(file, priv, f) < 0)
+		return -EINVAL;
 
 	if (vb2_is_busy(&vch->queue))
 		return -EBUSY;
