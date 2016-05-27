@@ -1930,7 +1930,7 @@ static int mxt_initialize_input_device(struct mxt_data *data)
 	input_dev->open = mxt_input_open;
 	input_dev->close = mxt_input_close;
 
-	input_set_capability(input_dev, EV_KEY, BTN_TOUCH);
+	input_set_capability(input_dev, EV_KEY | EV_ABS, BTN_TOUCH);
 
 	/* For single touch */
 	input_set_abs_params(input_dev, ABS_X, 0, data->max_x, 0, 0);
