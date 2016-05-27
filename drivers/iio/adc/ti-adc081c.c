@@ -23,6 +23,7 @@
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/acpi.h>
 
 #include <linux/iio/events.h>
 #include <linux/iio/iio.h>
@@ -62,6 +63,7 @@ static enum iio_event_direction ev_type[] = {
 	IIO_EV_DIR_EITHER, IIO_EV_DIR_FALLING,
 	IIO_EV_DIR_RISING, IIO_EV_DIR_EITHER
 };
+
 static irqreturn_t adc081c_event_handler(int irq, void *private)
 {
 	struct iio_dev *iio = private;
@@ -385,13 +387,25 @@ static int adc081c_probe(struct i2c_client *client,
 	struct device_node *np = client->dev.of_node;
 	struct iio_dev *iio;
 	struct adc081c *adc;
-	struct adcxx1c_model *model = &adcxx1c_models[id->driver_data];
+	struct adcxx1c_model *model;
 	int err;
 	int sps = 400;
 	int cycle;
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_WORD_DATA))
 		return -ENODEV;
+
+	if (ACPI_COMPANION(&client->dev)) {
+		const struct acpi_device_id *ad_id;
+
+		ad_id = acpi_match_device(client->dev.driver->acpi_match_table,
+					  &client->dev);
+		if (!ad_id)
+			return -ENODEV;
+		model = &adcxx1c_models[ad_id->driver_data];
+	} else {
+		model = &adcxx1c_models[id->driver_data];
+	}
 
 	err = of_property_read_u32(np, "samples-per-sec", &sps);
 	if (err)
@@ -508,11 +522,22 @@ static const struct of_device_id adc081c_of_match[] = {
 MODULE_DEVICE_TABLE(of, adc081c_of_match);
 #endif
 
+#ifdef CONFIG_ACPI
+static const struct acpi_device_id adc081c_acpi_match[] = {
+	{ "ADC081C", ADC081C },
+	{ "ADC101C", ADC101C },
+	{ "ADC121C", ADC121C },
+	{ }
+};
+MODULE_DEVICE_TABLE(acpi, adc081c_acpi_match);
+#endif
+
 static struct i2c_driver adc081c_driver = {
 	.driver = {
 		.name = "adc081c",
 		.owner = THIS_MODULE,
 		.of_match_table = of_match_ptr(adc081c_of_match),
+		.acpi_match_table = ACPI_PTR(adc081c_acpi_match),
 	},
 	.probe = adc081c_probe,
 	.remove = adc081c_remove,
