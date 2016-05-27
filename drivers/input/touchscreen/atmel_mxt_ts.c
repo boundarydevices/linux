@@ -3128,6 +3128,24 @@ static const struct dmi_system_id chromebook_T9_suspend_dmi[] = {
 	{ }
 };
 
+/* Return 0 if detection is successful, -ENODEV otherwise */
+static int detect_device(struct i2c_client *client)
+{
+	struct i2c_adapter *adapter = client->adapter;
+	char buffer;
+	struct i2c_msg pkt = {
+		client->addr,
+		I2C_M_RD,
+		sizeof(buffer),
+		&buffer
+	};
+	if (!i2c_check_functionality(adapter, I2C_FUNC_I2C))
+		return -ENODEV;
+	if (i2c_transfer(adapter, &pkt, 1) != 1)
+		return -ENODEV;
+	return 0;
+}
+
 static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct mxt_data *data;
@@ -3158,6 +3176,11 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (ACPI_COMPANION(&client->dev) && client->addr < 0x40)
 		return -ENXIO;
 
+	error = detect_device(client);
+	if (error) {
+		dev_err(&client->dev, "not detected\n");
+		return error;
+	}
 	data = devm_kzalloc(&client->dev, sizeof(struct mxt_data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
