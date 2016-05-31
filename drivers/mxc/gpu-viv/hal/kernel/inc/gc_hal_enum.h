@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -146,6 +180,7 @@ typedef enum _gceFEATURE
     gcvFEATURE_TEX_COMPRRESSION_SUPERTILED,
     gcvFEATURE_FAST_MSAA,
     gcvFEATURE_BUG_FIXED_INDEXED_TRIANGLE_STRIP,
+    gcvFEATURE_INDEX_FETCH_FIX,
     gcvFEATURE_TEXTURE_TILE_STATUS_READ,
     gcvFEATURE_DEPTH_BIAS_FIX,
     gcvFEATURE_RECT_PRIMITIVE,
@@ -181,6 +216,7 @@ typedef enum _gceFEATURE
     gcvFEATURE_HALTI2,
     gcvFEATURE_2D_MIRROR_EXTENSION,
     gcvFEATURE_TEXTURE_ASTC,
+    gcvFEATURE_TEXTURE_ASTC_FIX,
     gcvFEATURE_2D_SUPER_TILE_V1,
     gcvFEATURE_2D_SUPER_TILE_V2,
     gcvFEATURE_2D_SUPER_TILE_V3,
@@ -194,13 +230,21 @@ typedef enum _gceFEATURE
     gcvFEATURE_BRANCH_ON_IMMEDIATE_REG,
     gcvFEATURE_2D_COMPRESSION,
     gcvFEATURE_TPC_COMPRESSION,
+    gcvFEATURE_DEC_COMPRESSION,
+    gcvFEATURE_DEC_TPC_COMPRESSION,
+    gcvFEATURE_DEC_COMPRESSION_TILE_NV12_8BIT,
+    gcvFEATURE_DEC_COMPRESSION_TILE_NV12_10BIT,
     gcvFEATURE_2D_OPF_YUV_OUTPUT,
     gcvFEATURE_2D_FILTERBLIT_A8_ALPHA,
     gcvFEATURE_2D_MULTI_SRC_BLT_TO_UNIFIED_DST_RECT,
+    gcvFEATURE_2D_MULTI_SRC_BLT_BILINEAR_FILTER,
     gcvFEATURE_V2_COMPRESSION_Z16_FIX,
 
     gcvFEATURE_VERTEX_INST_ID_AS_INTEGER,
     gcvFEATURE_2D_YUV_MODE,
+    gcvFEATURE_2D_CACHE_128B256BPERLINE,
+    gcvFEATURE_2D_MAJOR_SUPER_TILE,
+    gcvFEATURE_2D_V4COMPRESSION,
     gcvFEATURE_ACE,
     gcvFEATURE_COLOR_COMPRESSION,
 
@@ -225,6 +269,7 @@ typedef enum _gceFEATURE
 
     gcvFEATURE_HALTI3,
     gcvFEATURE_EEZ,
+    gcvFEATURE_INTEGER_SIGNEXT_FIX,
     gcvFEATURE_INTEGER_PIPE_FIX,
     gcvFEATURE_PSOUTPUT_MAPPING,
     gcvFEATURE_8K_RT_FIX,
@@ -267,7 +312,20 @@ typedef enum _gceFEATURE
     gcvFEATURE_SEPARATE_SRC_DST,
 
     gcvFEATURE_FE_START_VERTEX_SUPPORT,
+    gcvFEATURE_FE_RESET_VERTEX_ID,
     gcvFEATURE_RS_DEPTHSTENCIL_NATIVE_SUPPORT,
+
+    gcvFEATURE_HALTI4,
+    gcvFEATURE_MSAA_FRAGMENT_OPERATION,
+    gcvFEATURE_ZERO_ATTRIB_SUPPORT,
+    gcvFEATURE_TEX_CACHE_FLUSH_FIX,
+    gcvFEATURE_PE_DITHER_FIX2,
+    gcvFEATURE_LOD_FIX_FOR_BASELEVEL,
+
+    gcvFEATURE_MSAA_OQ_FIX,
+
+    gcvFEATURE_PE_ENHANCEMENTS2,
+    gcvFEATURE_FE_NEED_DUMMYDRAW,
 
     /* Insert features above this comment only. */
     gcvFEATURE_COUNT                /* Not a feature. */
@@ -288,7 +346,7 @@ gceSWWA;
 
 
 /* Option Set*/
-typedef enum _gceOPITON
+typedef enum _gceOPTION
 {
     /* HW setting we take PREFER */
     gcvOPTION_PREFER_MULTIPIPE_RS = 0,
@@ -323,7 +381,6 @@ typedef enum _gceFRAMEINFO_OP
     gcvFRAMEINFO_OP_DEC       = 1,
     gcvFRAMEINFO_OP_ZERO      = 2,
     gcvFRAMEINFO_OP_GET       = 3,
-
 
     gcvFRAMEINFO_OP_COUNT,
 }
@@ -487,6 +544,8 @@ typedef enum _gceSURF_FLAG
     gcvSURF_FLAG_CONTENT_PROTECTED   = 0x8,
     /* surface is contiguous. */
     gcvSURF_FLAG_CONTIGUOUS          = (1 << 4),
+    /* surface has multiple nodes */
+    gcvSURF_FLAG_MULTI_NODE          = (1 << 5),
 }
 gceSURF_FLAG;
 
@@ -835,6 +894,28 @@ typedef enum _gceSURF_FORMAT
 }
 gceSURF_FORMAT;
 
+typedef enum _gceSURF_YUV_COLOR_SPACE
+{
+    gcvSURF_ITU_REC601,
+    gcvSURF_ITU_REC709,
+    gcvSURF_ITU_REC2020,
+}
+gceSURF_YUV_COLOR_SPACE;
+
+typedef enum _gceSURF_YUV_CHROMA_SITING
+{
+    gcvSURF_YUV_CHROMA_SITING_0,
+    gcvSURF_YUV_CHROMA_SITING_0_5,
+}
+gceSURF_YUV_CHROMA_SITING;
+
+typedef enum _gceSURF_YUV_SAMPLE_RANGE
+{
+    gcvSURF_YUV_FULL_RANGE,
+    gcvSURF_YUV_NARROW_RANGE,
+}
+gceSURF_YUV_SAMPLE_RANGE;
+
 /* Format modifiers. */
 typedef enum _gceSURF_FORMAT_MODE
 {
@@ -1023,6 +1104,19 @@ typedef enum _gce2D_YUV_COLOR_MODE
 }
 gce2D_YUV_COLOR_MODE;
 
+/* Nature rotation rules. */
+typedef enum _gce2D_NATURE_ROTATION
+{
+    gcvNR_0_DEGREE = 0,
+    gcvNR_LEFT_90_DEGREE,
+    gcvNR_RIGHT_90_DEGREE,
+    gcvNR_180_DEGREE,
+    gcvNR_FLIP_X,
+    gcvNR_FLIP_Y,
+    gcvNR_TOTAL_RULE,
+}
+gce2D_NATURE_ROTATION;
+
 typedef enum _gce2D_COMMAND
 {
     gcv2D_CLEAR = 0,
@@ -1044,6 +1138,16 @@ typedef enum _gce2D_TILE_STATUS_CONFIG
     gcv2D_TSC_DOWN_SAMPLER  = 0x00000004,
     gcv2D_TSC_2D_COMPRESSED = 0x00000008,
     gcv2D_TSC_TPC_COMPRESSED = 0x00000010,
+
+    gcv2D_TSC_DEC_COMPRESSED = 0x00000020,
+    gcv2D_TSC_DEC_TPC        = 0x00000040,
+    gcv2D_TSC_DEC_TPC_COMPRESSED = 0x00000080,
+
+    gcv2D_TSC_V4_COMPRESSED      = 0x00000100,
+    gcv2D_TSC_V4_COMPRESSED_256B = 0x00000200 | gcv2D_TSC_V4_COMPRESSED,
+
+    gcv2D_TSC_DEC_TPC_TILED  = gcv2D_TSC_DEC_COMPRESSED | gcv2D_TSC_DEC_TPC,
+    gcv2D_TSC_DEC_TPC_TILED_COMPRESSED = gcv2D_TSC_DEC_TPC_TILED | gcv2D_TSC_DEC_TPC_COMPRESSED,
 }
 gce2D_TILE_STATUS_CONFIG;
 
@@ -1071,6 +1175,7 @@ typedef enum _gce2D_STATE
     gcv2D_STATE_EN_GAMMA,
     gcv2D_STATE_DE_GAMMA,
     gcv2D_STATE_MULTI_SRC_BLIT_UNIFIED_DST_RECT,
+    gcv2D_STATE_MULTI_SRC_BLIT_BILINEAR_FILTER,
     gcv2D_STATE_PROFILE_ENABLE,
     gcv2D_STATE_XRGB_ENABLE,
 
@@ -1078,6 +1183,10 @@ typedef enum _gce2D_STATE
     gcv2D_STATE_ARRAY_DE_GAMMA,
     gcv2D_STATE_ARRAY_CSC_YUV_TO_RGB,
     gcv2D_STATE_ARRAY_CSC_RGB_TO_YUV,
+
+    gcv2D_STATE_DEC_TPC_NV12_10BIT              = 0x20001,
+    gcv2D_STATE_ARRAY_YUV_SRC_TILE_STATUS_ADDR,
+    gcv2D_STATE_ARRAY_YUV_DST_TILE_STATUS_ADDR,
 }
 gce2D_STATE;
 
@@ -1178,6 +1287,7 @@ typedef enum _gceTILING
 
     /* Tiling special layouts. */
     gcvTILING_SPLIT_BUFFER = 0x100,
+    gcvTILING_Y_MAJOR      = 0x200,
 
     /* Tiling combination layouts. */
     gcvMULTI_TILED      = gcvTILED
@@ -1185,6 +1295,9 @@ typedef enum _gceTILING
 
     gcvMULTI_SUPERTILED = gcvSUPERTILED
                         | gcvTILING_SPLIT_BUFFER,
+
+    gcvYMAJOR_SUPERTILED = gcvSUPERTILED
+                        | gcvTILING_Y_MAJOR,
 }
 gceTILING;
 
@@ -1227,7 +1340,7 @@ typedef enum _gceHARDWARE_TYPE
 #if gcdMULTI_GPU_AFFINITY
     gcvHARDWARE_OCL     = 0x05,
 #endif
-    gcvHARDWARE_3D2D    = gcvHARDWARE_3D | gcvHARDWARE_2D
+    gcvHARDWARE_3D2D    = gcvHARDWARE_3D | gcvHARDWARE_2D,
 }
 gceHARDWARE_TYPE;
 
@@ -1545,6 +1658,24 @@ typedef enum _gceHAL_ARG_VERSION
 gceHAL_ARG_VERSION;
 
 
+typedef enum _gceCMDBUF_TYPE
+{
+    /* Contiguous command buffer. */
+    gcvCMDBUF_CONTIGUOUS,
+    /* Virtual command buffer. */
+    gcvCMDBUF_VIRTUAL,
+    /* Command buffer allocated from reserved memory. */
+    gcvCMDBUF_RESERVED,
+}
+gceCMDBUF_SOURCE;
+
+typedef enum _gceCHIP_FALG
+{
+    gcvCHIP_FLAG_MSAA_COHERENCEY_ECO_FIX = 1 << 0,
+    gcvCHIP_FLAG_GC2000_R2               = 1 << 1,
+}
+gceCHIP_FLAG;
+
 /*
 * Bit of a requirment is 1 means requirement is a must, 0 means requirement can
 * be ignored.
@@ -1553,7 +1684,9 @@ gceHAL_ARG_VERSION;
 #define gcvALLOC_FLAG_CACHEABLE_BIT         1
 #define gcvALLOC_FLAG_SECURITY_BIT          2
 #define gcvALLOC_FLAG_NON_CONTIGUOUS_BIT    3
-#define gcvALLOC_FLAG_MEMLIMIT_BIT    4
+#define gcvALLOC_FLAG_MEMLIMIT_BIT          4
+#define gcvALLOC_FLAG_DMABUF_BIT            5
+#define gcvALLOC_FLAG_USERMEMORY_BIT        6
 
 /* No special needs. */
 #define gcvALLOC_FLAG_NONE              (0)
@@ -1565,7 +1698,13 @@ gceHAL_ARG_VERSION;
 #define gcvALLOC_FLAG_SECURITY          (1 << gcvALLOC_FLAG_SECURITY_BIT)
 /* Physical non contiguous. */
 #define gcvALLOC_FLAG_NON_CONTIGUOUS    (1 << gcvALLOC_FLAG_NON_CONTIGUOUS_BIT)
-#define gcvALLOC_FLAG_MEMLIMIT    (1 << gcvALLOC_FLAG_MEMLIMIT_BIT)
+
+#define gcvALLOC_FLAG_MEMLIMIT          (1 << gcvALLOC_FLAG_MEMLIMIT_BIT)
+
+/* Import DMABUF. */
+#define gcvALLOC_FLAG_DMABUF            (1 << gcvALLOC_FLAG_DMABUF_BIT)
+/* Import USERMEMORY. */
+#define gcvALLOC_FLAG_USERMEMORY        (1 << gcvALLOC_FLAG_USERMEMORY_BIT)
 
 /* GL_VIV internal usage */
 #ifndef GL_MAP_BUFFER_OBJ_VIV

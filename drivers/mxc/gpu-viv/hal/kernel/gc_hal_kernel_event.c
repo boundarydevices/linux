@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -1494,12 +1528,15 @@ gckEVENT_Signal(
     /* Mark the event as a signal. */
     iface.command            = gcvHAL_SIGNAL;
     iface.u.Signal.signal    = gcmPTR_TO_UINT64(Signal);
+    iface.u.Signal.auxSignal = 0;
+    iface.u.Signal.process   = 0;
+
 #ifdef __QNXNTO__
     iface.u.Signal.coid      = 0;
     iface.u.Signal.rcvid     = 0;
+
+    gcmkONERROR(gckOS_SignalPending(Event->os, Signal));
 #endif
-    iface.u.Signal.auxSignal = 0;
-    iface.u.Signal.process   = 0;
 
     /* Append it to the queue. */
     gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE, gcvTRUE));
@@ -1664,6 +1701,7 @@ gckEVENT_Submit(
     gckHARDWARE hardware;
 
     gceKERNEL_FLUSH flush = gcvFALSE;
+    gctUINT64 commitStamp;
 
     gcmkHEADER_ARG("Event=0x%x Wait=%d", Event, Wait);
 
@@ -1681,6 +1719,14 @@ gckEVENT_Submit(
         /* Acquire the command queue. */
         gcmkONERROR(gckCOMMAND_EnterCommit(command, FromPower));
         commitEntered = gcvTRUE;
+
+        /* Get current commit stamp. */
+        commitStamp = Event->kernel->command->commitStamp;
+
+        if (commitStamp)
+        {
+            commitStamp -= 1;
+        }
 
         /* Process all queues. */
         while (Event->queueHead != gcvNULL)
@@ -1704,6 +1750,9 @@ gckEVENT_Submit(
             /* Copy event list to event ID queue. */
             Event->queues[id].head   = queue->head;
 
+            /* Update current commit stamp. */
+            Event->queues[id].commitStamp = commitStamp;
+
             /* Remove the top queue from the list. */
             if (Event->queueHead == Event->queueTail)
             {
@@ -1725,6 +1774,7 @@ gckEVENT_Submit(
             /* Determine cache needed to flush. */
             gcmkVERIFY_OK(_QueryFlush(Event, Event->queues[id].head, &flush));
 
+#if gcdNULL_DRIVER
 #if gcdINTERRUPT_STATISTIC
             gcmkVERIFY_OK(gckOS_AtomIncrement(
                 Event->os,
@@ -1733,7 +1783,6 @@ gckEVENT_Submit(
                 ));
 #endif
 
-#if gcdNULL_DRIVER
             /* Notify immediately on infinite hardware. */
             gcmkONERROR(gckEVENT_Interrupt(Event, 1 << id));
 
@@ -1818,6 +1867,14 @@ gckEVENT_Submit(
                 buffer,
                 gcvCORE_3D_ALL_MASK,
                 &chipEnableBytes
+                ));
+#endif
+
+#if gcdINTERRUPT_STATISTIC
+            gcmkVERIFY_OK(gckOS_AtomIncrement(
+                Event->os,
+                Event->interruptCount,
+                &oldValue
                 ));
 #endif
 
@@ -2171,7 +2228,7 @@ gckEVENT_Interrupt(
         Data &= ~0x20000000;
 
 #if gcdMULTI_GPU
-        if (Event->kernel->core == gcvCORE_MAJOR)
+        if (CoreId == gcvCORE_3D_0_ID)
 #endif
         {
             /* Get first entry information. */
@@ -2188,6 +2245,20 @@ gckEVENT_Interrupt(
                     &idle));
             }
             while (idle != 0x7FFFFFFF);
+
+#if gcdMULTI_GPU
+            /* Make sure FE of another GPU is idle. */
+            do
+            {
+                gcmkVERIFY_OK(gckOS_ReadRegisterByCoreId(
+                    Event->os,
+                    Event->kernel->core,
+                    gcvCORE_3D_1_ID,
+                    0x4,
+                    &idle));
+            }
+            while (idle != 0x7FFFFFFF);
+#endif
 
             /* Start Command Parser. */
             gcmkVERIFY_OK(gckHARDWARE_Execute(
@@ -2246,6 +2317,9 @@ gckEVENT_Interrupt(
 #endif
 
 #if gcdINTERRUPT_STATISTIC
+#if gcdMULTI_GPU
+    if (CoreId == gcvCORE_3D_0_ID)
+#endif
     {
         gctINT j = 0;
         gctINT32 oldValue;
@@ -2448,16 +2522,16 @@ gckEVENT_Notify(
 
         if (pending & 0x80000000)
         {
-            gctUINT32 AQAxiStatus = 0;
-            gckOS_ReadRegisterEx(Event->os, Event->kernel->hardware->core, 0xC, &AQAxiStatus);
-
-            gcmkPRINT("GPU[%d]: AXI BUS ERROR, AQAxiStatus=0x%x\n", Event->kernel->hardware->core, AQAxiStatus);
+            gcmkPRINT("[galcore]: AXI BUS ERROR");
+            gckHARDWARE_DumpGPUState(Event->kernel->hardware);
             pending &= 0x7FFFFFFF;
         }
 
         if (pending & 0x40000000)
         {
             gckHARDWARE_DumpMMUException(Event->kernel->hardware);
+
+            gckHARDWARE_DumpGPUState(Event->kernel->hardware);
 
             pending &= 0xBFFFFFFF;
         }
@@ -2684,6 +2758,8 @@ gckEVENT_Notify(
         gcmkONERROR(gckOS_ResumeInterruptEx(Event->os, Event->kernel->core));
         suspended = gcvFALSE;
 #endif
+        /* Write out commit stamp.*/
+        *(gctUINT64 *)(Event->kernel->command->fence->logical) = queue->commitStamp;
 
         /* Grab the event head. */
         record = queue->head;
@@ -2882,9 +2958,8 @@ gckEVENT_Notify(
                 {
                     /* Kernel signal. */
                     gcmkERR_BREAK(
-                        gckOS_Signal(Event->os,
-                                     signal,
-                                     gcvTRUE));
+                        gckOS_SignalPulse(Event->os,
+                                          signal));
                 }
                 else
                 {
@@ -3231,7 +3306,7 @@ gceSTATUS
 gckEVENT_Stop(
     IN gckEVENT Event,
     IN gctUINT32 ProcessID,
-    IN gctPHYS_ADDR Handle,
+    IN gctUINT32 Handle,
     IN gctPOINTER Logical,
     IN gctSIGNAL Signal,
     IN OUT gctUINT32 * waitSize

@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -59,8 +93,14 @@ typedef struct _DFBPixmap *  HALNativePixmapType;
 
 /* Wayland platform. */
 #include <wayland-egl.h>
+#include <pthread.h>
 
-#define WL_EGL_NUM_BACKBUFFERS 3
+
+#define WL_COMPOSITOR_SIGNATURE (0x31415926)
+
+#define WL_CLIENT_SIGNATURE     (0x27182818)
+
+#define WL_LOCAL_DISPLAY_SIGNATURE      (0x27182991)
 
 typedef struct _gcsWL_VIV_BUFFER
 {
@@ -75,8 +115,16 @@ typedef struct _gcsWL_EGL_DISPLAY
    struct wl_viv* wl_viv;
    struct wl_registry *registry;
    struct wl_event_queue    *wl_queue;
+   struct wl_event_queue    *wl_swap_queue;
    gctINT swapInterval;
+   gctINT file;
 } gcsWL_EGL_DISPLAY;
+
+typedef struct _gcsWL_LOCAL_DISPLAY
+{
+   gctUINT wl_signature;
+   gctPOINTER localInfo;
+} gcsWL_LOCAL_DISPLAY;
 
 typedef struct _gcsWL_EGL_BUFFER_INFO
 {
@@ -84,19 +132,22 @@ typedef struct _gcsWL_EGL_BUFFER_INFO
    gctINT32 height;
    gctINT32 stride;
    gceSURF_FORMAT format;
+   gceSURF_TYPE   type;
    gcuVIDMEM_NODE_PTR node;
    gcePOOL pool;
    gctUINT bytes;
    gcoSURF surface;
-   gcoSURF attached_surface;
    gctINT32 invalidate;
    gctBOOL locked;
 } gcsWL_EGL_BUFFER_INFO;
 
 typedef struct _gcsWL_EGL_BUFFER
 {
-   struct wl_buffer* wl_buffer;
+   gctUINT wl_signature;
    gcsWL_EGL_BUFFER_INFO info;
+   struct wl_buffer* wl_buffer;
+   struct wl_callback* frame_callback;
+   struct wl_list link;
 } gcsWL_EGL_BUFFER;
 
 typedef struct _gcsWL_EGL_WINDOW_INFO
@@ -105,20 +156,25 @@ typedef struct _gcsWL_EGL_WINDOW_INFO
    gctINT32 dy;
    gctUINT width;
    gctUINT height;
-   gctINT32 attached_width;
-   gctINT32 attached_height;
    gceSURF_FORMAT format;
    gctUINT bpp;
+   gctINT  bufferCount;
+   gctUINT current;
 } gcsWL_EGL_WINDOW_INFO;
 
 struct wl_egl_window
 {
+   gctUINT wl_signature;
    gcsWL_EGL_DISPLAY* display;
-   gcsWL_EGL_BUFFER backbuffers[WL_EGL_NUM_BACKBUFFERS];
-   gcsWL_EGL_WINDOW_INFO info;
-   gctUINT current;
+   gcsWL_EGL_BUFFER **backbuffers;
+   gcsWL_EGL_WINDOW_INFO* info;
+   gctINT  noResolve;
+   gctINT32 attached_width;
+   gctINT32 attached_height;
+   gcsATOM_PTR reference;
+   pthread_mutex_t window_mutex;
    struct wl_surface* surface;
-   struct wl_callback* frame_callback;
+   struct wl_list link;
 };
 
 typedef void*   HALNativeDisplayType;
@@ -236,15 +292,6 @@ gcoOS_GetDisplayInfo(
 
 gceSTATUS
 gcoOS_GetDisplayInfoEx(
-    IN HALNativeDisplayType Display,
-    IN HALNativeWindowType Window,
-    IN gctUINT DisplayInfoSize,
-    OUT halDISPLAY_INFO * DisplayInfo
-    );
-
-gceSTATUS
-gcoOS_GetNextDisplayInfoExByIndex(
-    IN gctINT Index,
     IN HALNativeDisplayType Display,
     IN HALNativeWindowType Window,
     IN gctUINT DisplayInfoSize,
@@ -394,6 +441,14 @@ gcoOS_GetWindowInfo(
     OUT gctINT * Height,
     OUT gctINT * BitsPerPixel,
     OUT gctUINT * Offset
+    );
+
+gceSTATUS
+gcoOS_SetWindowFormat(
+    IN HALNativeDisplayType Display,
+    IN HALNativeWindowType Window,
+    IN gceTILING Tiling,
+    IN gceSURF_FORMAT Format
     );
 
 gceSTATUS
@@ -639,10 +694,16 @@ gcoOS_ResizeWindow(
     IN gctPOINTER localDisplay,
     IN HALNativeWindowType Drawable,
     IN gctUINT Width,
-    IN gctUINT Height)
-    ;
+    IN gctUINT Height
+    );
 
 #ifdef USE_FREESCALE_EGL_ACCEL
+gceSTATUS
+gcoOS_CreateDrawableEx(
+    IN gctPOINTER localDisplay,
+    IN HALNativeWindowType Drawable,
+    IN gctBOOL linear);
+
 gceSTATUS
 gcoOS_SwapBuffersGeneric_Async(
     IN gctPOINTER localDisplay,
@@ -652,7 +713,8 @@ gcoOS_SwapBuffersGeneric_Async(
     IN gctPOINTER ResolveBits,
     OUT gctUINT *Width,
     OUT gctUINT *Height,
-    IN void * resolveRect
+    IN void * resolveRect,
+    OUT gcoSURF *nextSurf
     );
 
 gceSTATUS

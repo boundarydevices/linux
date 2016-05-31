@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -974,6 +1008,7 @@ gckKERNEL_AddProcessDB(
         /* Adjust counters. */
         count->totalBytes += Size;
         count->bytes      += Size;
+        count->allocCount++;
 
         if (count->bytes > count->maxBytes)
         {
@@ -988,6 +1023,7 @@ gckKERNEL_AddProcessDB(
         /* Adjust counters. */
         count->totalBytes += Size;
         count->bytes      += Size;
+        count->allocCount++;
 
         if (count->bytes > count->maxBytes)
         {
@@ -999,6 +1035,7 @@ gckKERNEL_AddProcessDB(
         /* Adjust counters. */
         count->totalBytes += Size;
         count->bytes      += Size;
+        count->allocCount++;
 
         if (count->bytes > count->maxBytes)
         {
@@ -1082,28 +1119,36 @@ gckKERNEL_RemoveProcessDB(
     {
     case gcvDB_VIDEO_MEMORY:
         database->vidMem.bytes -= bytes;
+        database->vidMem.freeCount++;
         database->vidMemType[vidMemType].bytes -= bytes;
+        database->vidMemType[vidMemType].freeCount++;
         database->vidMemPool[vidMempool].bytes -= bytes;
+        database->vidMemPool[vidMempool].freeCount++;
         break;
 
     case gcvDB_NON_PAGED:
         database->nonPaged.bytes -= bytes;
+        database->nonPaged.freeCount++;
         break;
 
     case gcvDB_CONTIGUOUS:
         database->contiguous.bytes -= bytes;
+        database->contiguous.freeCount++;
         break;
 
     case gcvDB_MAP_MEMORY:
         database->mapMemory.bytes -= bytes;
+        database->mapMemory.freeCount++;
         break;
 
     case gcvDB_MAP_USER_MEMORY:
         database->mapUserMemory.bytes -= bytes;
+        database->mapUserMemory.freeCount++;
         break;
 
     case gcvDB_COMMAND_BUFFER:
         database->virtualCommandBuffer.bytes -= bytes;
+        database->virtualCommandBuffer.freeCount++;
         break;
 
     default:
@@ -1558,72 +1603,71 @@ gckKERNEL_QueryProcessDB(
     Type &= gcdDATABASE_TYPE_MASK;
 
     /* Find the database. */
-    if(Type != gcvDB_IDLE)
+    gcmkONERROR(
+        gckKERNEL_FindDatabase(Kernel, ProcessID, LastProcessID, &database));
+
+
+    gcmkVERIFY_OK(gckOS_AcquireMutex(Kernel->os, database->counterMutex, gcvINFINITE));
+
+    /* Get pointer to counters. */
+    switch (Type)
     {
-        gcmkONERROR(
-            gckKERNEL_FindDatabase(Kernel, ProcessID, LastProcessID, &database));
-
-        gcmkVERIFY_OK(gckOS_AcquireMutex(Kernel->os, database->counterMutex, gcvINFINITE));
-
-        /* Get pointer to counters. */
-        switch (Type)
+    case gcvDB_VIDEO_MEMORY:
+        if (vidMemPool != gcvPOOL_UNKNOWN)
         {
-        case gcvDB_VIDEO_MEMORY:
-            if (vidMemPool != gcvPOOL_UNKNOWN)
-            {
-                gckOS_MemCopy(&Info->counters,
-                              &database->vidMemPool[vidMemPool],
-                              gcmSIZEOF(database->vidMemPool[vidMemPool]));
-            }
-            else
-            {
-                gckOS_MemCopy(&Info->counters,
-                              &database->vidMem,
-                              gcmSIZEOF(database->vidMem));
-            }
-            break;
-
-        case gcvDB_NON_PAGED:
             gckOS_MemCopy(&Info->counters,
-                                      &database->nonPaged,
-                                      gcmSIZEOF(database->vidMem));
-            break;
-
-        case gcvDB_CONTIGUOUS:
-            gckOS_MemCopy(&Info->counters,
-                                      &database->contiguous,
-                                      gcmSIZEOF(database->vidMem));
-            break;
-
-        case gcvDB_MAP_MEMORY:
-            gckOS_MemCopy(&Info->counters,
-                                      &database->mapMemory,
-                                      gcmSIZEOF(database->mapMemory));
-            break;
-
-        case gcvDB_MAP_USER_MEMORY:
-            gckOS_MemCopy(&Info->counters,
-                                      &database->mapUserMemory,
-                                      gcmSIZEOF(database->mapUserMemory));
-            break;
-
-        case gcvDB_COMMAND_BUFFER:
-            gckOS_MemCopy(&Info->counters,
-                                      &database->virtualCommandBuffer,
-                                      gcmSIZEOF(database->virtualCommandBuffer));
-            break;
-
-        default:
-            break;
+                          &database->vidMemPool[vidMemPool],
+                          gcmSIZEOF(database->vidMemPool[vidMemPool]));
         }
+        else
+        {
+            gckOS_MemCopy(&Info->counters,
+                          &database->vidMem,
+                          gcmSIZEOF(database->vidMem));
+        }
+        break;
 
-        gcmkVERIFY_OK(gckOS_ReleaseMutex(Kernel->os, database->counterMutex));
-    }
-    else
-    {
+    case gcvDB_NON_PAGED:
+        gckOS_MemCopy(&Info->counters,
+                                  &database->nonPaged,
+                                  gcmSIZEOF(database->vidMem));
+        break;
+
+    case gcvDB_CONTIGUOUS:
+        gckOS_MemCopy(&Info->counters,
+                                  &database->contiguous,
+                                  gcmSIZEOF(database->vidMem));
+        break;
+
+    case gcvDB_IDLE:
         Info->time           = Kernel->db->idleTime;
         Kernel->db->idleTime = 0;
+        break;
+
+    case gcvDB_MAP_MEMORY:
+        gckOS_MemCopy(&Info->counters,
+                                  &database->mapMemory,
+                                  gcmSIZEOF(database->mapMemory));
+        break;
+
+    case gcvDB_MAP_USER_MEMORY:
+        gckOS_MemCopy(&Info->counters,
+                                  &database->mapUserMemory,
+                                  gcmSIZEOF(database->mapUserMemory));
+        break;
+
+    case gcvDB_COMMAND_BUFFER:
+        gckOS_MemCopy(&Info->counters,
+                                  &database->virtualCommandBuffer,
+                                  gcmSIZEOF(database->virtualCommandBuffer));
+        break;
+
+    default:
+        break;
     }
+
+    gcmkVERIFY_OK(gckOS_ReleaseMutex(Kernel->os, database->counterMutex));
+
     /* Success. */
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;

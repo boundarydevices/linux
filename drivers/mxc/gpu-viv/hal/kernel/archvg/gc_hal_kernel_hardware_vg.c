@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -1060,6 +1094,7 @@ gckVGHARDWARE_ConvertLogical(
     OUT gctUINT32 * Address
     )
 {
+    gctPHYS_ADDR_T physical;
     gctUINT32 address;
     gceSTATUS status;
 
@@ -1077,15 +1112,17 @@ gckVGHARDWARE_ConvertLogical(
         if (InUserSpace)
         {
             gcmkERR_BREAK(gckOS_UserLogicalToPhysical(
-                Hardware->os, Logical, &address
+                Hardware->os, Logical, &physical
                 ));
         }
         else
         {
             gcmkERR_BREAK(gckOS_GetPhysicalAddress(
-                Hardware->os, Logical, &address
+                Hardware->os, Logical, &physical
                 ));
         }
+
+        gcmkSAFECASTPHYSADDRT(address, physical);
 
         /* Return hardware specific address. */
         *Address = ((((gctUINT32) (address)) & ~(((gctUINT32) (((gctUINT32) ((((1 ? 1:0) - (0 ? 1:0) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 1:0) - (0 ? 1:0) + 1))))))) << (0 ? 1:0))) | (((gctUINT32) (0x0 & ((gctUINT32) ((((1 ? 1:0) - (0 ? 1:0) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 1:0) - (0 ? 1:0) + 1))))))) << (0 ? 1:0)));
@@ -1272,6 +1309,11 @@ gceSTATUS gckVGHARDWARE_FlushMMU(
             | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ? 2:2) - (0 ? 2:2) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 2:2) - (0 ? 2:2) + 1))))))) << (0 ? 2:2))) | (((gctUINT32) (0x1 & ((gctUINT32) ((((1 ? 2:2) - (0 ? 2:2) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 2:2) - (0 ? 2:2) + 1))))))) << (0 ? 2:2)))
             | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ? 3:3) - (0 ? 3:3) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 3:3) - (0 ? 3:3) + 1))))))) << (0 ? 3:3))) | (((gctUINT32) (0x1 & ((gctUINT32) ((((1 ? 3:3) - (0 ? 3:3) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 3:3) - (0 ? 3:3) + 1))))))) << (0 ? 3:3)))
             | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ? 4:4) - (0 ? 4:4) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 4:4) - (0 ? 4:4) + 1))))))) << (0 ? 4:4))) | (((gctUINT32) (0x1 & ((gctUINT32) ((((1 ? 4:4) - (0 ? 4:4) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 4:4) - (0 ? 4:4) + 1))))))) << (0 ? 4:4)));
+
+        gcmkERR_BREAK(gckVGCOMMAND_Execute(
+            command,
+            commandBuffer
+            ));
     }
     while(gcvFALSE);
 
@@ -1458,6 +1500,63 @@ static gceSTATUS _CommandStall(
 
     gcmkFOOTER();
     /* Return the status. */
+    return status;
+}
+
+static gceSTATUS
+_IsGPUPresent(
+    IN gckVGHARDWARE Hardware
+    )
+{
+    gceSTATUS status;
+    gceCHIPMODEL chipModel;
+    gctUINT32 chipRev, chipFeatures, chipMinorFeatures, chipMinorFeatures2;
+    /*gcsHAL_QUERY_CHIP_IDENTITY identity;*/
+    gctUINT32 control;
+
+    gcmkHEADER_ARG("Hardware=0x%x", Hardware);
+
+    /* Verify the arguments. */
+    gcmkVERIFY_OBJECT(Hardware, gcvOBJ_HARDWARE);
+
+    gcmkONERROR(gckOS_ReadRegisterEx(Hardware->os,
+                                     gcvCORE_VG,
+                                     0x00000,
+                                     &control));
+
+    control = ((((gctUINT32) (control)) & ~(((gctUINT32) (((gctUINT32) ((((1 ? 1:1) - (0 ? 1:1) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 1:1) - (0 ? 1:1) + 1))))))) << (0 ? 1:1))) | (((gctUINT32) ((gctUINT32) (0) & ((gctUINT32) ((((1 ? 1:1) - (0 ? 1:1) + 1) == 32) ? ~0 : (~(~0 << ((1 ? 1:1) - (0 ? 1:1) + 1))))))) << (0 ? 1:1)));
+
+    gcmkONERROR(gckOS_WriteRegisterEx(Hardware->os,
+                                      gcvCORE_VG,
+                                      0x00000,
+                                      control));
+
+    /* Identify the hardware. */
+    gcmkONERROR(_IdentifyHardware(Hardware->os,
+                                  &chipModel, &chipRev,
+                                  &chipFeatures,
+                                  &chipMinorFeatures,
+                                  &chipMinorFeatures2
+                                  ));
+    /* Check if these are the same values as saved before. */
+    if ((Hardware->chipModel          != chipModel)
+    ||  (Hardware->chipRevision       != chipRev)
+    ||  (Hardware->chipFeatures       != chipFeatures)
+    ||  (Hardware->chipMinorFeatures  != chipMinorFeatures)
+    ||  (Hardware->chipMinorFeatures2 != chipMinorFeatures2)
+    )
+    {
+        gcmkPRINT("[galcore]: GPU is not present.");
+        gcmkONERROR(gcvSTATUS_GPU_NOT_RESPONDING);
+    }
+
+    /* Success. */
+    gcmkFOOTER_NO();
+    return gcvSTATUS_OK;
+
+OnError:
+    /* Return the error. */
+    gcmkFOOTER();
     return status;
 }
 
@@ -1785,6 +1884,44 @@ gckVGHARDWARE_SetPowerManagementState(
         Hardware->clockState = gcvTRUE;
         Hardware->powerState = gcvTRUE;
     }
+
+    for (;;)
+    {
+        /* Check if GPU is present and awake. */
+        status = _IsGPUPresent(Hardware);
+
+        /* Check if the GPU is not responding. */
+        if (status == gcvSTATUS_GPU_NOT_RESPONDING)
+        {
+            /* Turn off the power and clock. */
+            gcmkONERROR(gckOS_SetGPUPower(os, gcvCORE_VG, gcvFALSE, gcvFALSE));
+
+            Hardware->clockState = gcvFALSE;
+            Hardware->powerState = gcvFALSE;
+
+            /* Wait a little. */
+            gckOS_Delay(os, 1);
+
+            /* Turn on the power and clock. */
+            gcmkONERROR(gckOS_SetGPUPower(os, gcvCORE_VG, gcvTRUE, gcvTRUE));
+
+            Hardware->clockState = gcvTRUE;
+            Hardware->powerState = gcvTRUE;
+
+            /* We need to initialize the hardware and start the command
+                * processor. */
+            flag |= gcvPOWER_FLAG_INITIALIZE | gcvPOWER_FLAG_START;
+        }
+        else
+        {
+            /* Test for error. */
+            gcmkONERROR(status);
+
+            /* Break out of loop. */
+            break;
+        }
+    }
+
 
     /* Get time until powered on. */
     gcmkPROFILE_QUERY(time, onTime);

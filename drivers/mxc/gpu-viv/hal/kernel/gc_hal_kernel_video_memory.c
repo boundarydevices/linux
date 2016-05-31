@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -1230,7 +1264,8 @@ _NeedVirtualMapping(
 )
 {
     gceSTATUS status;
-    gctUINT32 phys;
+    gctPHYS_ADDR_T phys;
+    gctUINT32 address;
     gctUINT32 end;
     gcePOOL pool;
     gctUINT32 offset;
@@ -1257,26 +1292,42 @@ _NeedVirtualMapping(
         {
             /* Convert logical address into a physical address. */
             gcmkONERROR(gckOS_UserLogicalToPhysical(
-                        Kernel->os, Node->Virtual.logical, &phys
-                        ));
+                Kernel->os, Node->Virtual.logical, &phys
+            ));
+
+            gcmkSAFECASTPHYSADDRT(address, phys);
 
             gcmkONERROR(gckOS_GetBaseAddress(Kernel->os, &baseAddress));
 
             gcmkASSERT(phys >= baseAddress);
 
             /* Subtract baseAddress to get a GPU address used for programming. */
-            phys -= baseAddress;
+            address -= baseAddress;
 
             /* If part of region is belong to gcvPOOL_VIRTUAL,
             ** whole region has to be mapped. */
+
             gcmkSAFECASTSIZET(bytes, Node->Virtual.bytes);
-            end = phys + bytes - 1;
 
-            gcmkONERROR(gckHARDWARE_SplitMemory(
-                        Kernel->hardware, end, &pool, &offset
-                        ));
+            end = address + bytes - 1;
 
-            *NeedMapping = (pool == gcvPOOL_VIRTUAL);
+            if (!gckHARDWARE_IsFeatureAvailable(Kernel->hardware, gcvFEATURE_MMU))
+            {
+                gcmkONERROR(gckHARDWARE_SplitMemory(
+                            Kernel->hardware, end, &pool, &offset
+                            ));
+
+                *NeedMapping = (pool == gcvPOOL_VIRTUAL);
+            }
+            else
+            {
+                /* TODO: Check whether physical address in flat mapping. */
+                gctUINT32 dynamicMappingStart = Kernel->mmu->dynamicMappingStart;
+                if( end < (dynamicMappingStart << gcdMMU_MTLB_SHIFT))
+                    *NeedMapping = gcvFALSE;
+                else
+                    *NeedMapping = gcvTRUE;
+            }
         }
     }
     else
@@ -1427,8 +1478,9 @@ gckVIDMEM_Lock(
     gctBOOL needMapping = gcvFALSE;
 #endif
     gctUINT32 baseAddress;
-    gctUINT32 physicalAddress;
+    gctUINT64 physicalAddress;
     gcuVIDMEM_NODE_PTR node = Node->node;
+    gctPHYS_ADDR_T physical;
 
     gcmkHEADER_ARG("Node=0x%x", Node);
 
@@ -1492,8 +1544,10 @@ gckVIDMEM_Lock(
         gcmkVERIFY_OK(gckOS_CPUPhysicalToGPUPhysical(
             Kernel->os,
             *Address,
-            Address
+            &physical
             ));
+
+        gcmkSAFECASTSIZET(*Address, physical);
 
         gcmkTRACE_ZONE(gcvLEVEL_INFO, gcvZONE_VIDMEM,
                       "Locked node 0x%x (%d) @ 0x%08X",
@@ -1522,7 +1576,7 @@ gckVIDMEM_Lock(
                             &node->Virtual.logical,
                             &node->Virtual.pageCount));
 
-        gcmkONERROR(gckOS_GetPhysicalAddress(
+        gcmkONERROR(gckOS_UserLogicalToPhysical(
             os,
             node->Virtual.logical,
             &physicalAddress
@@ -2805,3 +2859,59 @@ OnError:
     return status;
 }
 
+gceSTATUS
+gckVIDMEM_ConstructVirtualFromUserMemory(
+    IN gckKERNEL Kernel,
+    IN gcsUSER_MEMORY_DESC_PTR Desc,
+    OUT gcuVIDMEM_NODE_PTR * Node
+    )
+{
+    gckOS os;
+    gceSTATUS status;
+    gcuVIDMEM_NODE_PTR node = gcvNULL;
+    gctPOINTER pointer = gcvNULL;
+
+    gcmkHEADER_ARG("Kernel=0x%x", Kernel);
+
+    /* Verify the arguments. */
+    gcmkVERIFY_OBJECT(Kernel, gcvOBJ_KERNEL);
+    gcmkVERIFY_ARGUMENT(Node != gcvNULL);
+
+    /* Extract the gckOS object pointer. */
+    os = Kernel->os;
+    gcmkVERIFY_OBJECT(os, gcvOBJ_OS);
+
+    /* Allocate an gcuVIDMEM_NODE union. */
+    gcmkONERROR(gckOS_Allocate(os, gcmSIZEOF(gcuVIDMEM_NODE), &pointer));
+
+    gckOS_ZeroMemory(pointer, gcmSIZEOF(gcuVIDMEM_NODE));
+
+    node = pointer;
+
+    /* Initialize gcuVIDMEM_NODE union for virtual memory. */
+    node->Virtual.kernel     = Kernel;
+    node->Virtual.contiguous = gcvFALSE;
+
+    /* Wrap Memory. */
+    gcmkONERROR(gckOS_WrapMemory(
+        os, Desc, &node->Virtual.bytes, &node->Virtual.physical));
+
+    /* Return pointer to the gcuVIDMEM_NODE union. */
+    *Node = node;
+
+    /* Success. */
+    gcmkFOOTER_ARG("*Node=0x%x", *Node);
+    return gcvSTATUS_OK;
+
+OnError:
+    /* Roll back. */
+    if (node != gcvNULL)
+    {
+        /* Free the structure. */
+        gcmkVERIFY_OK(gcmkOS_SAFE_FREE(os, node));
+    }
+
+    /* Return the status. */
+    gcmkFOOTER();
+    return status;
+}

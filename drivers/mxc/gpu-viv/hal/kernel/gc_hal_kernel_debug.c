@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -1285,7 +1319,7 @@ _AppendPrefix(
     item->prefixData = prefixData;
 
     /* Copy argument value. */
-    memcpy(prefixData, Data, gcdPREFIX_SIZE);
+    gcmkMEMCPY(prefixData, Data, gcdPREFIX_SIZE);
 
 #if gcdALIGNBYSIZE
     /* Compute the actual node size. */
@@ -1347,7 +1381,7 @@ _AppendString(
     /* Copy argument value. */
     if (ArgumentSize != 0)
     {
-        memcpy(messageData, Data, ArgumentSize);
+        gcmkMEMCPY(messageData, Data, ArgumentSize);
     }
 
 #if gcdALIGNBYSIZE
@@ -1422,12 +1456,12 @@ _AppendCopy(
     item->messageDataSize = ArgumentSize;
 
     /* Copy the message. */
-    memcpy((gctPOINTER) message, Message, messageLength);
+    gcmkMEMCPY((gctPOINTER) message, Message, messageLength);
 
     /* Copy argument value. */
     if (ArgumentSize != 0)
     {
-        memcpy(messageData, Data, ArgumentSize);
+        gcmkMEMCPY(messageData, Data, ArgumentSize);
     }
 
 #if gcdALIGNBYSIZE
@@ -1505,13 +1539,13 @@ _AppendBuffer(
 #endif
 
     /* Copy prefix data. */
-    memcpy(prefixData, PrefixData, gcdPREFIX_SIZE);
+    gcmkMEMCPY(prefixData, PrefixData, gcdPREFIX_SIZE);
 
     /* Compute the data pointer. */
     data = prefixData + gcdPREFIX_SIZE;
 
     /* Copy argument value. */
-    memcpy(data, Data, DataSize);
+    gcmkMEMCPY(data, Data, DataSize);
 
 #if gcdALIGNBYSIZE
     /* Compute the actual node size. */
@@ -1548,7 +1582,7 @@ _AppendBuffer(
     item->address  = Address;
 
     /* Copy argument value. */
-    memcpy(item + 1, Data, DataSize);
+    gcmkMEMCPY(item + 1, Data, DataSize);
 #endif
 }
 #endif
@@ -1940,6 +1974,7 @@ gckOS_DumpBuffer(
     IN gctBOOL CopyMessage
     )
 {
+    gctPHYS_ADDR_T physical;
     gctUINT32 address                   = 0;
     gcsBUFFERED_OUTPUT_PTR outputBuffer = gcvNULL;
     static gctBOOL userLocked;
@@ -1984,7 +2019,8 @@ gckOS_DumpBuffer(
         /* Get the physical address of the buffer. */
         if (Type != gceDUMP_BUFFER_FROM_USER)
         {
-            gcmkVERIFY_OK(gckOS_GetPhysicalAddress(Os, Buffer, &address));
+            gcmkVERIFY_OK(gckOS_GetPhysicalAddress(Os, Buffer, &physical));
+            gcmkSAFECASTPHYSADDRT(address, physical);
         }
         else
         {

@@ -53,43 +53,37 @@
 *****************************************************************************/
 
 
-#ifndef __gc_hal_kernel_allocator_array_h_
-#define __gc_hal_kernel_allocator_array_h_
+#ifndef _gc_hal_kernel_mutex_h_
+#define _gc_hal_kernel_mutex_h_
 
-extern gceSTATUS
-_DefaultAlloctorInit(
-    IN gckOS Os,
-    OUT gckALLOCATOR * Allocator
-    );
+#include "gc_hal.h"
+#include <linux/mutex.h>
 
-#if LINUX_CMA_FSL
-extern gceSTATUS
-_CMAFSLAlloctorInit(
-    IN gckOS Os,
-    OUT gckALLOCATOR * Allocator
-    );
-#endif
-
-#ifdef CONFIG_DMA_SHARED_BUFFER
-extern gceSTATUS
-_DmabufAlloctorInit(
-    IN gckOS Os,
-    OUT gckALLOCATOR * Allocator
-    );
-#endif
-
-gcsALLOCATOR_DESC allocatorArray[] =
-{
-#if LINUX_CMA_FSL
-    gcmkDEFINE_ALLOCATOR_DESC("cmafsl", _CMAFSLAlloctorInit),
-#endif
-    /* Default allocator. */
-    gcmkDEFINE_ALLOCATOR_DESC("default", _DefaultAlloctorInit),
-
-#ifdef CONFIG_DMA_SHARED_BUFFER
-    /* Dmabuf allocator. */
-    gcmkDEFINE_ALLOCATOR_DESC("dmabuf", _DmabufAlloctorInit),
-#endif
-};
+/* Create a new mutex. */
+#define gckOS_CreateMutex(Os, Mutex)                                \
+({                                                                  \
+    gceSTATUS _status;                                              \
+    gcmkHEADER_ARG("Os=0x%X", Os);                                  \
+                                                                    \
+    /* Validate the arguments. */                                   \
+    gcmkVERIFY_OBJECT(Os, gcvOBJ_OS);                               \
+    gcmkVERIFY_ARGUMENT(Mutex != gcvNULL);                          \
+                                                                    \
+    /* Allocate the mutex structure. */                             \
+    _status = gckOS_Allocate(Os, gcmSIZEOF(struct mutex), Mutex);   \
+                                                                    \
+    if (gcmIS_SUCCESS(_status))                                     \
+    {                                                               \
+        /* Initialize the mutex. */                                 \
+        mutex_init(*(struct mutex **)Mutex);                        \
+    }                                                               \
+                                                                    \
+    /* Return status. */                                            \
+    gcmkFOOTER_ARG("*Mutex=0x%X", *(struct mutex **)Mutex);         \
+    _status;                                                        \
+})
 
 #endif
+
+
+

@@ -1,20 +1,54 @@
 ##############################################################################
 #
-#    Copyright (C) 2005 - 2014 by Vivante Corp.
+#    The MIT License (MIT)
 #
-#    This program is free software; you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation; either version 2 of the license, or
-#    (at your option) any later version.
+#    Copyright (c) 2014 - 2016 Vivante Corporation
+#
+#    Permission is hereby granted, free of charge, to any person obtaining a
+#    copy of this software and associated documentation files (the "Software"),
+#    to deal in the Software without restriction, including without limitation
+#    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+#    and/or sell copies of the Software, and to permit persons to whom the
+#    Software is furnished to do so, subject to the following conditions:
+#
+#    The above copyright notice and this permission notice shall be included in
+#    all copies or substantial portions of the Software.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+#    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+#    DEALINGS IN THE SOFTWARE.
+#
+##############################################################################
+#
+#    The GPL License (GPL)
+#
+#    Copyright (C) 2014 - 2016 Vivante Corporation
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of the GNU General Public License
+#    as published by the Free Software Foundation; either version 2
+#    of the License, or (at your option) any later version.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with this program; if not write to the Free Software
-#    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#    along with this program; if not, write to the Free Software Foundation,
+#    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+##############################################################################
+#
+#    Note: This software is released under dual MIT and GPL licenses. A
+#    recipient may use this file under the terms of either the MIT license or
+#    GPL License. If you wish to use only one license not the other, you can
+#    indicate your decision by deleting one of the above license notices in your
+#    version of this file.
 #
 ##############################################################################
 
@@ -22,7 +56,6 @@
 #
 # Linux build file for kernel HAL driver.
 #
-
 AQROOT := $(srctree)/drivers/mxc/gpu-viv
 
 include $(AQROOT)/config
@@ -33,6 +66,7 @@ OS_KERNEL_DIR   := hal/os/linux/kernel
 ARCH_KERNEL_DIR := hal/kernel/arch
 ARCH_VG_KERNEL_DIR := hal/kernel/archvg
 HAL_KERNEL_DIR  := hal/kernel
+HOST := $(shell hostname)
 
 # Check and include platform config.
 ifneq ($(PLATFORM),)
@@ -62,6 +96,10 @@ OBJS := $(OS_KERNEL_DIR)/gc_hal_kernel_device.o \
         $(OS_KERNEL_DIR)/gc_hal_kernel_os.o \
         $(OS_KERNEL_DIR)/gc_hal_kernel_debugfs.o \
         $(OS_KERNEL_DIR)/gc_hal_kernel_allocator.o \
+
+ifneq ($(CONFIG_DMA_SHARED_BUFFER),)
+OBJS += $(OS_KERNEL_DIR)/allocator/default/gc_hal_kernel_allocator_dmabuf.o
+endif
 
 ifneq ($(CONFIG_IOMMU_SUPPORT),)
 OBJS += $(OS_KERNEL_DIR)/gc_hal_kernel_iommu.o
@@ -122,15 +160,16 @@ ifeq ($(KERNELRELEASE), )
 
 # Define targets.
 all:
-	@make V=$(V) ARCH=$(ARCH_TYPE) -C $(KERNEL_DIR) SUBDIRS=`pwd` modules
+	@$(MAKE) V=$(V) ARCH=$(ARCH_TYPE) -C $(KERNEL_DIR) SUBDIRS=`pwd` modules
 
 clean:
 	@rm -rf $(OBJS)
-	@rm -rf modules.order Module.symvers
+	@rm -rf modules.order Module.symvers .tmp_versions
 	@find $(AQROOT) -name ".gc_*.cmd" | xargs rm -f
 
 install: all
 	@mkdir -p $(SDK_DIR)/drivers
+	@cp $(MODULE_NAME).ko $(SDK_DIR)/drivers
 
 else
 
@@ -265,8 +304,10 @@ ifeq ($(VIVANTE_ENABLE_VG), 1)
 EXTRA_CFLAGS += -I$(AQROOT)/hal/kernel/archvg
 endif
 
-obj-$(CONFIG_MXC_GPU_VIV) += galcore.o
+EXTRA_CFLAGS += -DHOST=\"$(HOST)\"
 
-galcore-objs  := $(OBJS)
+obj-$(CONFIG_MXC_GPU_VIV) = $(MODULE_NAME).o
+
+$(MODULE_NAME)-objs  = $(OBJS)
 
 endif

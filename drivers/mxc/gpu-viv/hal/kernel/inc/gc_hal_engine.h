@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -80,20 +114,16 @@ gcePROGRAM_STAGE_BIT;
 
 gceSTATUS
 gcoHAL_QueryShaderCaps(
-    IN gcoHAL Hal,
-    OUT gctUINT * VertexUniforms,
-    OUT gctUINT * FragmentUniforms,
-    OUT gctUINT * Varyings
+    IN  gcoHAL    Hal,
+    OUT gctUINT * UnifiedUniforms,
+    OUT gctUINT * VertUniforms,
+    OUT gctUINT * FragUniforms,
+    OUT gctUINT * Varyings,
+    OUT gctUINT * ShaderCoreCount,
+    OUT gctUINT * ThreadCount,
+    OUT gctUINT * VertInstructionCount,
+    OUT gctUINT * FragInstructionCount
     );
-
-gceSTATUS
-gcoHAL_QueryShaderCapsEx(
-                         IN gcoHAL Hal,
-                         OUT gctUINT * ShaderCoreCount,
-                         OUT gctUINT * ThreadCount,
-                         OUT gctUINT * VertexInstructionCount,
-                         OUT gctUINT * FragmentInstructionCount
-                         );
 
 gceSTATUS
 gcoHAL_QuerySamplerBase(
@@ -106,10 +136,10 @@ gcoHAL_QuerySamplerBase(
 
 gceSTATUS
 gcoHAL_QueryUniformBase(
-					    IN  gcoHAL Hal,
-					    OUT gctUINT32 * VertexBase,
-					    OUT gctUINT32 * FragmentBase
-					    );
+                        IN  gcoHAL Hal,
+                         OUT gctUINT32 * VertexBase,
+                         OUT gctUINT32 * FragmentBase
+                        );
 
 gceSTATUS
 gcoHAL_QueryTextureCaps(
@@ -446,6 +476,12 @@ gcoSURF_IsFormatRenderableAsRT(
     );
 
 gceSTATUS
+gcoSURF_SetSharedLock(
+    IN gcoSURF Surface,
+    IN gctPOINTER sharedLock
+    );
+
+gceSTATUS
 gcoSURF_GetFence(
     IN gcoSURF Surface
     );
@@ -517,6 +553,11 @@ gcoSURF_3DBlitCopy(
 /******************************************************************************\
 ******************************** gcoINDEX Object *******************************
 \******************************************************************************/
+gceSTATUS
+gcoINDEX_SetSharedLock(
+    IN gcoINDEX Index,
+    IN gctPOINTER sharedLock
+    );
 
 /* Construct a new gcoINDEX object. */
 gceSTATUS
@@ -1231,6 +1272,9 @@ gco3D_DrawInstancedPrimitives(
     IN gctSIZE_T StartIndex,
     IN gctSIZE_T PrimitiveCount,
     IN gctSIZE_T VertexCount,
+    IN gctBOOL SpilitDraw,
+    IN gctSIZE_T SpilitCount,
+    IN gcePRIMITIVE SpilitType,
     IN gctSIZE_T InstanceCount
     );
 
@@ -1260,7 +1304,10 @@ gco3D_DrawIndexedPrimitives(
     IN gcePRIMITIVE Type,
     IN gctSIZE_T BaseVertex,
     IN gctSIZE_T StartIndex,
-    IN gctSIZE_T PrimitiveCount
+    IN gctSIZE_T PrimitiveCount,
+    IN gctBOOL SpilitDraw,
+    IN gctSIZE_T SpilitCount,
+    IN gcePRIMITIVE SpilitType
     );
 
 /* Draw a number of indexed primitives using offsets. */
@@ -2005,6 +2052,12 @@ typedef enum _gceATTRIB_SCHEME
 } gceATTRIB_SCHEME;
 
 gceSTATUS
+gcoSTREAM_SetSharedLock(
+    IN gcoSTREAM Stream,
+    IN gctPOINTER sharedLock
+    );
+
+gceSTATUS
 gcoSTREAM_Construct(
     IN gcoHAL Hal,
     OUT gcoSTREAM * Stream
@@ -2273,18 +2326,29 @@ gcoVERTEXARRAY_Destroy(
     );
 
 gceSTATUS
+gcoVERTEXARRAY_IndexUpdate(
+    IN gctSIZE_T * Count,
+    IN gceINDEX_TYPE IndexType,
+    IN gcoBUFOBJ IndexObject,
+    IN gctPOINTER IndexMemory
+    );
+
+gceSTATUS
 gcoVERTEXARRAY_Bind_Ex(
     IN gcoVERTEXARRAY Vertex,
     IN gctUINT32 EnableBits,
     IN gcsVERTEXARRAY_PTR VertexArray,
     IN gctUINT First,
-    IN gctSIZE_T Count,
+    IN gctSIZE_T * Count,
     IN gctBOOL DrawArraysInstanced,
     IN gctSIZE_T InstanceCount,
     IN gceINDEX_TYPE IndexType,
     IN gcoINDEX IndexObject,
     IN gctPOINTER IndexMemory,
     IN OUT gcePRIMITIVE * PrimitiveType,
+    IN OUT gctBOOL * SpilitDraw,
+    IN OUT gctSIZE_T * SpilitCount,
+    IN OUT gcePRIMITIVE * SpilitPrimitiveType,
 #if gcdUSE_WCLIP_PATCH
     IN OUT gctUINT * PrimitiveCount,
     IN OUT gctFLOAT * wLimitRms,
@@ -2300,13 +2364,17 @@ gcoVERTEXARRAY_Bind_Ex2(
     IN gctUINT32 EnableBits,
     IN gcsATTRIBUTE_PTR VertexArray,
     IN gctSIZE_T First,
-    IN gctSIZE_T Count,
+    IN gctSIZE_T * Count,
     IN gctBOOL DrawArraysInstanced,
     IN gctSIZE_T InstanceCount,
     IN gceINDEX_TYPE IndexType,
     IN gcoBUFOBJ IndexObject,
     IN gctPOINTER IndexMemory,
+    IN gctBOOL PrimtiveRestart,
     IN OUT gcePRIMITIVE * PrimitiveType,
+    IN OUT gctBOOL * SpilitDraw,
+    IN OUT gctSIZE_T * SpilitCount,
+    IN OUT gcePRIMITIVE * SpilitPrimitiveType,
 #if gcdUSE_WCLIP_PATCH
     IN OUT gctSIZE_T * PrimitiveCount,
     IN OUT gctFLOAT * wLimitRms,
@@ -2323,11 +2391,14 @@ gcoVERTEXARRAY_Bind(
     IN gctUINT32 EnableBits,
     IN gcsVERTEXARRAY_PTR VertexArray,
     IN gctUINT First,
-    IN gctSIZE_T Count,
+    IN gctSIZE_T * Count,
     IN gceINDEX_TYPE IndexType,
     IN gcoINDEX IndexObject,
     IN gctPOINTER IndexMemory,
     IN OUT gcePRIMITIVE * PrimitiveType,
+    IN OUT gctBOOL * SpilitDraw,
+    IN OUT gctSIZE_T * SpilitCount,
+    IN OUT gcePRIMITIVE * SpilitPrimitiveType,
 #if gcdUSE_WCLIP_PATCH
     IN OUT gctUINT * PrimitiveCount,
     IN OUT gctFLOAT * wLimitRms,
@@ -2449,6 +2520,10 @@ typedef enum _gceBUFOBJ_USAGE
     gcvBUFOBJ_USAGE_DYNAMIC_READ,
     gcvBUFOBJ_USAGE_DYNAMIC_COPY,
 
+    /* special patch for optimaize performance,
+    ** no fence and duplicate stream to ensure data correct
+    */
+    gcvBUFOBJ_USAGE_DISABLE_FENCE_DYNAMIC_STREAM = 256
 } gceBUFOBJ_USAGE;
 
 /* Construct a new gcoBUFOBJ object. */

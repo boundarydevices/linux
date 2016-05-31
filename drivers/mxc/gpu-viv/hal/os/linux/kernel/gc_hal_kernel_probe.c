@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -97,6 +131,14 @@ module_param(registerMemBaseVG, ulong, 0644);
 static ulong registerMemSizeVG = 2 << 10;
 module_param(registerMemSizeVG, ulong, 0644);
 
+#if gcdENABLE_DEC_COMPRESSION
+static ulong registerMemBaseDEC300 = 0x00000000;
+module_param(registerMemBaseDEC300, ulong, 0644);
+
+static ulong registerMemSizeDEC300 = 2 << 10;
+module_param(registerMemSizeDEC300, ulong, 0644);
+#endif
+
 #ifndef gcdDEFAULT_CONTIGUOUS_SIZE
 #define gcdDEFAULT_CONTIGUOUS_SIZE (4 << 20)
 #endif
@@ -138,7 +180,7 @@ module_param(recovery, uint, 0644);
 MODULE_PARM_DESC(recovery, "Recover GPU from stuck (1: Enable, 0: Disable)");
 
 /* Middle needs about 40KB buffer, Maximal may need more than 200KB buffer. */
-static uint stuckDump = 1;
+static uint stuckDump = 0;
 module_param(stuckDump, uint, 0644);
 MODULE_PARM_DESC(stuckDump, "Level of stuck dump content (1: Minimal, 2: Middle, 3: Maximal)");
 
@@ -151,6 +193,10 @@ module_param(mmu, int, 0644);
 static int gpu3DMinClock = 1;
 
 static int contiguousRequested = 0;
+
+
+static gctBOOL registerMemMapped = gcvFALSE;
+static gctPOINTER registerMemAddress = gcvNULL;
 
 static int drv_open(
     struct inode* inode,
@@ -199,9 +245,11 @@ _UpdateModuleParam(
     irqLine2D         = Param->irqLine2D      ;
     registerMemBase2D = Param->registerMemBase2D;
     registerMemSize2D = Param->registerMemSize2D;
+#if gcdENABLE_VG
     irqLineVG         = Param->irqLineVG;
     registerMemBaseVG = Param->registerMemBaseVG;
     registerMemSizeVG = Param->registerMemSizeVG;
+#endif
     contiguousSize    = Param->contiguousSize;
     contiguousBase    = Param->contiguousBase;
     bankSize          = Param->bankSize;
@@ -218,6 +266,8 @@ _UpdateModuleParam(
     showArgs          = Param->showArgs;
     contiguousRequested = Param->contiguousRequested;
     gpu3DMinClock     = Param->gpu3DMinClock;
+    registerMemMapped    = Param->registerMemMapped;
+    registerMemAddress    = Param->registerMemAddress;
 }
 
 void
@@ -256,6 +306,11 @@ gckOS_DumpParam(
         printk("  registerMemBaseVG = 0x%08lX\n", registerMemBaseVG);
         printk("  registerMemSizeVG = 0x%08lX\n", registerMemSizeVG);
     }
+
+#if gcdENABLE_DEC_COMPRESSION
+    printk("  registerMemBaseDEC300 = 0x%08lX\n", registerMemBaseDEC300);
+    printk("  registerMemSizeDEC300 = 0x%08lX\n", registerMemSizeDEC300);
+#endif
 
     printk("  contiguousSize    = %ld\n",     contiguousSize);
     printk("  contiguousBase    = 0x%08lX\n", contiguousBase);
@@ -815,6 +870,12 @@ static int drv_init(void)
         .contiguousRequested = contiguousRequested,
         .platform           = &platform,
         .mmu                = mmu,
+        .registerMemMapped = registerMemMapped,
+        .registerMemAddress = registerMemAddress,
+#if gcdENABLE_DEC_COMPRESSION
+        .registerMemBaseDEC300 = registerMemBaseDEC300,
+        .registerMemSizeDEC300 = registerMemSizeDEC300,
+#endif
     };
 
     gcmkHEADER();
@@ -904,7 +965,7 @@ static int drv_init(void)
     }
 
     /* Create the device class. */
-    device_class = class_create(THIS_MODULE, "gpu_class");
+    device_class = class_create(THIS_MODULE, CLASS_NAME);
 
     if (IS_ERR(device_class))
     {
@@ -1029,6 +1090,7 @@ static int __devinit gpu_probe(struct platform_device *pdev)
         .stuckDump          = stuckDump,
         .showArgs           = showArgs,
         .gpu3DMinClock      = gpu3DMinClock,
+        .registerMemMapped    = registerMemMapped,
     };
 
     gcmkHEADER();
@@ -1249,6 +1311,7 @@ static struct platform_driver gpu_driver = {
     .resume     = gpu_resume,
 
     .driver     = {
+        .owner = THIS_MODULE,
         .name   = DEVICE_NAME,
 #if defined(CONFIG_PM) && LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30)
         .pm     = &gpu_pm_ops,

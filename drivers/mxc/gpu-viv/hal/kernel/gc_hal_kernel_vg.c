@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -103,7 +137,7 @@ gceSTATUS gckVGKERNEL_Construct(
 
         /* Construct the gckVGMMU object. */
         gcmkERR_BREAK(gckVGMMU_Construct(
-            kernel, gcmKB2BYTES(32), &kernel->mmu
+            kernel, gcmKB2BYTES(gcdGC355_VGMMU_MEMORY_SIZE_KB), &kernel->mmu
             ));
 
         /* Return pointer to the gckKERNEL object. */
@@ -529,6 +563,24 @@ gceSTATUS gckVGKERNEL_Dispatch(
             Kernel, processID,
             (gctUINT32)kernelInterface->u.ReleaseVideoMemory.node
             ));
+    {
+        gckVIDMEM_NODE nodeObject;
+
+        /* Remove record from process db. */
+        gcmkERR_BREAK(
+            gckKERNEL_RemoveProcessDB(Kernel, processID,
+                                      gcvDB_VIDEO_MEMORY_LOCKED,
+                                      (gctPOINTER)kernelInterface->u.ReleaseVideoMemory.node));
+
+        gcmkERR_BREAK(
+            gckVIDMEM_HANDLE_Lookup(Kernel, processID,
+                                    (gctUINT32)kernelInterface->u.ReleaseVideoMemory.node, &nodeObject));
+
+        gckVIDMEM_HANDLE_Dereference(Kernel, processID,(gctUINT32)Interface->u.ReleaseVideoMemory.node);
+
+        gckVIDMEM_NODE_Dereference(Kernel, nodeObject);
+    }
+
 
         break;
 
@@ -778,6 +830,39 @@ gceSTATUS gckVGKERNEL_Dispatch(
             }
         }
         break;
+    case gcvHAL_READ_REGISTER:
+#if gcdREGISTER_ACCESS_FROM_USER
+        /* Read a register. */
+        gcmkONERROR(gckOS_ReadRegisterEx(
+            Kernel->os,
+            Kernel->core,
+            Interface->u.ReadRegisterData.address,
+            &Interface->u.ReadRegisterData.data));
+#else
+        /* No access from user land to read registers. */
+        Interface->u.ReadRegisterData.data = 0;
+        status = gcvSTATUS_NOT_SUPPORTED;
+#endif
+        break;
+
+    case gcvHAL_WRITE_REGISTER:
+#if gcdREGISTER_ACCESS_FROM_USER
+        /* Write a register. */
+        gcmkONERROR(
+            gckOS_WriteRegisterEx(Kernel->os,
+                                  Kernel->core,
+                                  Interface->u.WriteRegisterData.address,
+                                  Interface->u.WriteRegisterData.data));
+#else
+        /* No access from user land to write registers. */
+        status = gcvSTATUS_NOT_SUPPORTED;
+#endif
+        break;
+
+    case gcvHAL_EVENT_COMMIT:
+        gcmkERR_BREAK(gcvSTATUS_NOT_SUPPORTED);
+        break;
+
     default:
         /* Invalid command. */
         status = gcvSTATUS_INVALID_ARGUMENT;

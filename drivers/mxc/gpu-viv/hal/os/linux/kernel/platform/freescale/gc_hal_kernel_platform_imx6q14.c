@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -24,6 +58,11 @@
 #include "gc_hal_kernel_device.h"
 #include "gc_hal_driver.h"
 #include <linux/slab.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#include <linux/of_platform.h>
+#include <linux/of_gpio.h>
+#include <linux/of_address.h>
+#endif
 
 #if USE_PLATFORM_DRIVER
 #   include <linux/platform_device.h>
@@ -35,8 +74,11 @@
 #include <linux/pm_runtime.h>
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
 #include <mach/busfreq.h>
-#else
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 29)
 #include <linux/busfreq-imx6.h>
+#include <linux/reset.h>
+#else
+#include <linux/busfreq-imx.h>
 #include <linux/reset.h>
 #endif
 #endif
@@ -50,6 +92,7 @@
 
 #include <linux/regulator/consumer.h>
 
+#ifdef CONFIG_DEVICE_THERMAL
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 #include <linux/device_cooling.h>
 #define REG_THERMAL_NOTIFIER(a) register_devfreq_cooling_notifier(a);
@@ -59,6 +102,11 @@ extern int register_thermal_notifier(struct notifier_block *nb);
 extern int unregister_thermal_notifier(struct notifier_block *nb);
 #define REG_THERMAL_NOTIFIER(a) register_thermal_notifier(a);
 #define UNREG_THERMAL_NOTIFIER(a) unregister_thermal_notifier(a);
+#endif
+#endif
+
+#ifndef gcdFSL_CONTIGUOUS_SIZE
+#define gcdFSL_CONTIGUOUS_SIZE (4 << 20)
 #endif
 
 static int initgpu3DMinClock = 1;
@@ -71,6 +119,7 @@ struct platform_device *pdevice;
 #    include <linux/mm.h>
 #    include <linux/oom.h>
 #    include <linux/sched.h>
+#    include <linux/profile.h>
 
 struct task_struct *lowmem_deathpending;
 
@@ -89,7 +138,7 @@ task_notify_func(struct notifier_block *self, unsigned long val, void *data)
 	if (task == lowmem_deathpending)
 		lowmem_deathpending = NULL;
 
-	return NOTIFY_OK;
+	return NOTIFY_DONE;
 }
 
 extern struct task_struct *lowmem_deathpending;
@@ -165,7 +214,7 @@ static int force_contiguous_lowmem_shrink(IN gckKERNEL Kernel)
 		selected_tasksize = tasksize;
 		selected_oom_adj = oom_adj;
 	}
-	if (selected) {
+    if (selected && selected_oom_adj > 0) {
 		gckOS_Print("<gpu> send sigkill to %d (%s), adj %d, size %d\n",
 			     selected->pid, selected->comm,
 			     selected_oom_adj, selected_tasksize);
@@ -178,10 +227,10 @@ static int force_contiguous_lowmem_shrink(IN gckKERNEL Kernel)
 	return ret;
 }
 
-gckKERNEL
+extern gckKERNEL
 _GetValidKernel(
-    gckGALDEVICE Device
-    );
+  gckGALDEVICE Device
+  );
 
 gceSTATUS
 _ShrinkMemory(
@@ -191,6 +240,7 @@ _ShrinkMemory(
     struct platform_device *pdev;
     gckGALDEVICE galDevice;
     gckKERNEL kernel;
+    gceSTATUS status = gcvSTATUS_OK;
 
     pdev = Platform->device;
 
@@ -200,18 +250,19 @@ _ShrinkMemory(
 
     if (kernel != gcvNULL)
     {
-        force_contiguous_lowmem_shrink(kernel);
+        if (force_contiguous_lowmem_shrink(kernel) != 0)
+            status = gcvSTATUS_OUT_OF_MEMORY;
     }
     else
     {
         gcmkPRINT("%s(%d) can't find kernel! ", __FUNCTION__, __LINE__);
     }
 
-    return gcvSTATUS_OK;
+    return status;
 }
 #endif
 
-#if gcdENABLE_FSCALE_VAL_ADJUST
+#if gcdENABLE_FSCALE_VAL_ADJUST && defined(CONFIG_DEVICE_THERMAL)
 static int thermal_hot_pm_notify(struct notifier_block *nb, unsigned long event,
        void *dummy)
 {
@@ -393,7 +444,16 @@ gckPLATFORM_AdjustParam(
         Args->registerMemSizeVG = res->end - res->start + 1;
     }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,1,0)
+    res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "contiguous_mem");
+    if (res)
+    {
+        if( Args->contiguousBase == 0 )
+           Args->contiguousBase = res->start;
+        if( Args->contiguousSize == ~0U )
+           Args->contiguousSize = res->end - res->start + 1;
+    }
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
        Args->contiguousBase = 0;
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
        prop = of_get_property(dn, "contiguousbase", NULL);
@@ -407,10 +467,17 @@ gckPLATFORM_AdjustParam(
        Args->contiguousSize = pdata->reserved_mem_size;
      }
 #endif
-    if (Args->contiguousSize == 0)
+    if (Args->contiguousSize == ~0U)
+    {
        gckOS_Print("Warning: No contiguous memory is reserverd for gpu.!\n ");
+       gckOS_Print("Warning: Will use default value(%d) for the reserved memory!\n ",gcdFSL_CONTIGUOUS_SIZE);
+       Args->contiguousSize = gcdFSL_CONTIGUOUS_SIZE;
+    }
 
     Args->gpu3DMinClock = initgpu3DMinClock;
+
+  if(Args->physSize == 0)
+    Args->physSize = 0x80000000;
 
     return gcvSTATUS_OK;
 }
@@ -423,7 +490,11 @@ _AllocPriv(
     Platform->priv = &imxPriv;
 
 #ifdef CONFIG_GPU_LOW_MEMORY_KILLER
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
     task_free_register(&task_nb);
+#else
+    task_handoff_register(&task_nb);
+#endif
 #endif
 
     return gcvSTATUS_OK;
@@ -435,11 +506,45 @@ _FreePriv(
     )
 {
 #ifdef CONFIG_GPU_LOW_MEMORY_KILLER
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,1,0)
     task_free_unregister(&task_nb);
+#else
+    task_handoff_unregister(&task_nb);
+#endif
 #endif
 
     return gcvSTATUS_OK;
 }
+
+gceSTATUS
+_SetClock(
+    IN gckPLATFORM Platform,
+    IN gceCORE GPU,
+    IN gctBOOL Enable
+    );
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+static void imx6sx_optimize_qosc_for_GPU(IN gckPLATFORM Platform)
+{
+	struct device_node *np;
+	void __iomem *src_base;
+
+	np = of_find_compatible_node(NULL, NULL, "fsl,imx6sx-qosc");
+	if (!np)
+		return;
+
+	src_base = of_iomap(np, 0);
+	WARN_ON(!src_base);
+    	_SetClock(Platform, gcvCORE_MAJOR, gcvTRUE);
+	writel_relaxed(0, src_base); /* Disable clkgate & soft_rst */
+	writel_relaxed(0, src_base+0x60); /* Enable all masters */
+	writel_relaxed(0, src_base+0x1400); /* Disable clkgate & soft_rst for gpu */
+	writel_relaxed(0x0f000222, src_base+0x1400+0xd0); /* Set Write QoS 2 for gpu */
+	writel_relaxed(0x0f000822, src_base+0x1400+0xe0); /* Set Read QoS 8 for gpu */
+    	_SetClock(Platform, gcvCORE_MAJOR, gcvFALSE);
+	return;
+}
+#endif
 
 gceSTATUS
 _GetPower(
@@ -543,6 +648,9 @@ _GetPower(
     }
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+    imx6sx_optimize_qosc_for_GPU(Platform);
+#endif
     return gcvSTATUS_OK;
 }
 
@@ -805,7 +913,7 @@ _AdjustDriver(
     memcpy(&gpu_pm_ops, driver->driver.pm, sizeof(struct dev_pm_ops));
 
     /* Add runtime PM callback. */
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
     gpu_pm_ops.runtime_suspend = gpu_runtime_suspend;
     gpu_pm_ops.runtime_resume = gpu_runtime_resume;
     gpu_pm_ops.runtime_idle = NULL;
@@ -859,6 +967,8 @@ _Reset(
     return gcvSTATUS_OK;
 }
 
+gcmkPLATFROM_Name
+
 gcsPLATFORM_OPERATIONS platformOperations = {
     .adjustParam  = gckPLATFORM_AdjustParam,
     .allocPriv    = _AllocPriv,
@@ -872,6 +982,7 @@ gcsPLATFORM_OPERATIONS platformOperations = {
 #ifdef CONFIG_GPU_LOW_MEMORY_KILLER
     .shrinkMemory = _ShrinkMemory,
 #endif
+    .name          = _Name,
 };
 
 void

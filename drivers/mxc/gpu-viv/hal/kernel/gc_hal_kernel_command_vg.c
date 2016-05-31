@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -26,6 +60,16 @@
 #include "gc_hal_kernel_hardware_command_vg.h"
 
 #define _GC_OBJ_ZONE            gcvZONE_COMMAND
+
+#ifdef __QNXNTO__
+extern gceSTATUS
+drv_signal_mgr_add(
+    gctUINT32 Pid,
+    gctINT32 Coid,
+    gctINT32 Rcvid,
+    gctUINT64 Signal,
+    gctPOINTER *Handle);
+#endif
 
 /******************************************************************************\
 *********************************** Debugging **********************************
@@ -854,18 +898,33 @@ _ScheduleTasks(
                         userTask->size
                         );
 
-#ifdef __QNXNTO__
-                    if (taskHeader->id == gcvTASK_SIGNAL)
-                    {
-                        ((gcsTASK_SIGNAL_PTR)taskHeader)->coid  = TaskTable->coid;
-                        ((gcsTASK_SIGNAL_PTR)taskHeader)->rcvid = TaskTable->rcvid;
-                    }
-#endif
-
                     /* Copy the task data. */
                     gcmkVERIFY_OK(gckOS_MemCopy(
                         kernelTask, taskHeader, userTask->size
                         ));
+
+#ifdef __QNXNTO__
+                    if (taskHeader->id == gcvTASK_SIGNAL)
+                    {
+                        gcsTASK_SIGNAL_PTR taskSignal = (gcsTASK_SIGNAL_PTR)kernelTask;
+                        gctPOINTER signal;
+                        gctUINT32 pid;
+
+                        gcmkVERIFY_OK(gckOS_GetProcessID(&pid));
+
+                        taskSignal->coid  = TaskTable->coid;
+                        taskSignal->rcvid = TaskTable->rcvid;
+
+                        gcmkERR_BREAK(drv_signal_mgr_add(
+                            pid,
+                            taskSignal->coid,
+                            taskSignal->rcvid,
+                            gcmPTR_TO_UINT64(taskSignal->signal),
+                            &signal));
+
+                        taskSignal->signal = signal;
+                    }
+#endif
 
                     /* Advance to the next task. */
                     kernelTask += userTask->size;
@@ -974,7 +1033,7 @@ _HardwareToKernel(
     }
     else
     {
-        nodePhysical = Node->Virtual.physicalAddress;
+        gcmkSAFECASTPHYSADDRT(nodePhysical, Node->Virtual.physicalAddress);
         bytes = Node->Virtual.bytes;
         logical = &Node->Virtual.kernelVirtual;
     }
@@ -1074,6 +1133,7 @@ _AllocateLinear(
     gctPHYS_ADDR physical;
     gctUINT32 address;
     gctSIZE_T size = Size;
+    gctPHYS_ADDR_T paddr;
 
     do
     {
@@ -1085,7 +1145,9 @@ _AllocateLinear(
             &logical
             ));
 
-        gcmkERR_BREAK(gckOS_GetPhysicalAddress(Command->os, logical, &address));
+        gcmkERR_BREAK(gckOS_GetPhysicalAddress(Command->os, logical, &paddr));
+
+        gcmkSAFECASTPHYSADDRT(address, paddr);
 
         /* Set return values. */
         * Node    = physical;
@@ -3549,15 +3611,16 @@ gckVGCOMMAND_Commit(
                 /* Set the signal to avoid user waiting. */
 #ifdef __QNXNTO__
                 gcmkERR_BREAK(gckOS_UserSignal(
-                    Command->os, Context->signal, Context->rcvid, Context->coid
+                    Command->os,
+                    Context->userSignal,
+                    Context->rcvid,
+                    Context->coid
                     ));
 #else
                 gcmkERR_BREAK(gckOS_UserSignal(
                     Command->os, Context->signal, Context->process
                     ));
-
-#endif /* __QNXNTO__ */
-
+#endif
             }
             else
             {

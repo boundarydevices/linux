@@ -1,22 +1,57 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
+
 
 #ifndef __gc_hal_base_h_
 #define __gc_hal_base_h_
@@ -66,180 +101,38 @@ typedef struct _gcsCONTEXT_MAP *        gcsCONTEXT_MAP_PTR;
 typedef void *                          gcoVG;
 #endif
 
+#if gcdGC355_PROFILER
+typedef struct _gcsPROFILERFUNCData * gcsPROFILERFUNCData_PTR;
+typedef struct _gcsPROFILERFUNCNODE * gcsPROFILERFUNCNODE_PTR;
+#endif
+
 #if gcdSYNC
 typedef struct _gcoFENCE *              gcoFENCE;
 typedef struct _gcsSYNC_CONTEXT *       gcsSYNC_CONTEXT_PTR;
 #endif
 
-#if defined(ANDROID)
-typedef struct _gcoOS_SymbolsList gcoOS_SymbolsList;
-#endif
+typedef struct _gcsUSER_MEMORY_DESC *   gcsUSER_MEMORY_DESC_PTR;
 
 /******************************************************************************\
-******************************* Process local storage *************************
+********************* Share obj lock/unlock macros. ****************************
 \******************************************************************************/
-
-typedef struct _gcsPLS * gcsPLS_PTR;
-
-#if gcdENABLE_3D
-/******************************************************************************
-**
-** Patch defines which should be moved to dedicate file later
-**
-** !!! ALWAYS ADD new ID in the TAIL, otherwise will break exising TRACE FILE
-*******************************************************************************/
-typedef enum _gcePATCH_ID
-{
-    gcvPATCH_NOTINIT = -1,
-    gcvPATCH_INVALID = 0,
-
-#if gcdDEBUG_OPTION
-    gcvPATCH_DEBUG,
-#endif
-
-    gcvPATCH_GTFES30,
-    gcvPATCH_CTGL11,
-    gcvPATCH_CTGL20,
-    gcvPATCH_GLBM11,
-    gcvPATCH_GLBM21,
-    gcvPATCH_GLBM25,
-    gcvPATCH_GLBM27,
-    gcvPATCH_GLBMGUI,
-    gcvPATCH_GFXBENCH,
-    gcvPATCH_ANTUTU,        /* Antutu 3.x */
-    gcvPATCH_ANTUTU4X,      /* Antutu 4.x */
-    gcvPATCH_QUADRANT,
-    gcvPATCH_GPUBENCH,
-    gcvPATCH_DUOKAN,
-    gcvPATCH_GLOFTSXHM,
-    gcvPATCH_XRUNNER,
-    gcvPATCH_BUSPARKING3D,
-    gcvPATCH_SIEGECRAFT,
-    gcvPATCH_PREMIUM,
-    gcvPATCH_RACEILLEGAL,
-    gcvPATCH_MEGARUN,
-    gcvPATCH_BMGUI,
-    gcvPATCH_NENAMARK,
-    gcvPATCH_NENAMARK2,
-    gcvPATCH_FISHNOODLE,
-    gcvPATCH_MM06,
-    gcvPATCH_MM07,
-    gcvPATCH_BM21,
-    gcvPATCH_SMARTBENCH,
-    gcvPATCH_JPCT,
-    gcvPATCH_NEOCORE,
-    gcvPATCH_RTESTVA,
-    gcvPATCH_NBA2013,
-    gcvPATCH_BARDTALE,
-    gcvPATCH_F18,
-    gcvPATCH_CARPARK,
-    gcvPATCH_CARCHALLENGE,
-    gcvPATCH_HEROESCALL,
-    gcvPATCH_GLOFTF3HM,
-    gcvPATCH_CRAZYRACING,
-    gcvPATCH_FIREFOX,
-    gcvPATCH_CHROME,
-    gcvPATCH_MONOPOLY,
-    gcvPATCH_SNOWCOLD,
-    gcvPATCH_BM3,
-    gcvPATCH_BASEMARKX,
-    gcvPATCH_DEQP,
-    gcvPATCH_SF4,
-    gcePATCH_MGOHEAVEN2,
-    gcePATCH_SILIBILI,
-    gcePATCH_ELEMENTSDEF,
-    gcePATCH_GLOFTKRHM,
-    gcvPATCH_OCLCTS,
-    gcvPATCH_A8HP,
-    gcvPATCH_A8CN,
-    gcvPATCH_WISTONESG,
-    gcvPATCH_SPEEDRACE,
-    gcvPATCH_FSBHAWAIIF,
-    gcvPATCH_AIRNAVY,
-    gcvPATCH_F18NEW,
-    gcvPATCH_CKZOMBIES2,
-    gcvPATCH_EADGKEEPER,
-    gcvPATCH_BASEMARK2V2,
-    gcvPATCH_RIPTIDEGP2,
-    gcvPATCH_OESCTS,
-    gcvPATCH_GANGSTAR,
-    gcvPATCH_WHRKYZIXOVAN,
-    gcvPATCH_NAMESGAS,
-    gcvPATCH_AFTERBURNER,
-    gcvPATCH_UIMARK,
-    gcvPATCH_FM_OES_PLAYER,
-    gcvPATCH_SUMSUNG_BENCH,
-    gcvPATCH_ROCKSTAR_MAXPAYNE,
-    gcvPATCH_TITANPACKING,
-    gcvPATCH_BASEMARKOSIICN,
-    gcvPATCH_FRUITNINJA,
-#if defined(ANDROID)
-    gcePATCH_ANDROID_CTS_MEDIA_PRESENTATIONTIME,
-#endif
-    gcvPATCH_ANDROID_COMPOSITOR,
-    gcvPATCH_CTS_TEXTUREVIEW,
-    gcvPATCH_WATER2_CHUKONG,
-
-    gcvPATCH_COUNT
-} gcePATCH_ID;
-#endif /* gcdENABLE_3D */
-
-typedef void (* gctPLS_DESTRUCTOR) (
-    gcsPLS_PTR
-    );
-
-typedef struct _gcsPLS
-{
-    /* Global objects. */
-    gcoOS                       os;
-    gcoHAL                      hal;
-
-    /* Internal memory pool. */
-    gctSIZE_T                   internalSize;
-    gctPHYS_ADDR                internalPhysical;
-    gctPOINTER                  internalLogical;
-
-    /* External memory pool. */
-    gctSIZE_T                   externalSize;
-    gctPHYS_ADDR                externalPhysical;
-    gctPOINTER                  externalLogical;
-
-    /* Contiguous memory pool. */
-    gctSIZE_T                   contiguousSize;
-    gctPHYS_ADDR                contiguousPhysical;
-    gctPOINTER                  contiguousLogical;
-
-    /* EGL-specific process-wide objects. */
-    gctPOINTER                  eglDisplayInfo;
-    gctPOINTER                  eglSurfaceInfo;
-    gceSURF_FORMAT              eglConfigFormat;
-
-    /* PLS reference count */
-    gcsATOM_PTR                 reference;
-
-    /* PorcessID of the constrcutor process */
-    gctUINT32                   processID;
-
-    /* ThreadID of the constrcutor process. */
-    gctSIZE_T                   threadID;
-    /* Flag for calling module destructor. */
-    gctBOOL                     exiting;
-
-    gctBOOL                     bNeedSupportNP2Texture;
-
-    gctPLS_DESTRUCTOR           destructor;
-    /* Mutex to guard PLS access. currently it's for EGL.
-    ** We can use this mutex for every PLS access.
-    */
-    gctPOINTER                  accessLock;
-#if gcdENABLE_3D
-    /* Global patchID to overwrite the detection */
-    gcePATCH_ID                 patchID;
-#endif
+#define gcmLOCK_SHARE_OBJ(Obj) \
+{ \
+    if(Obj->sharedLock != gcvNULL)\
+    {\
+        (gcoOS_AcquireMutex( \
+                     gcvNULL, Obj->sharedLock, gcvINFINITE));\
+    }\
 }
-gcsPLS;
 
-extern gcsPLS gcPLS;
+
+#define gcmUNLOCK_SHARE_OBJ(Obj)\
+{\
+    if(Obj->sharedLock != gcvNULL)\
+    {\
+        (gcoOS_ReleaseMutex(gcvNULL, Obj->sharedLock));\
+    }\
+}
 
 #if gcdENABLE_3D
 #define gcPLS_INITIALIZER \
@@ -504,6 +397,31 @@ typedef struct _gcsCONTAINER
     gcsCONTAINER_RECORD             allocList;
 }
 gcsCONTAINER;
+
+#if gcdGC355_PROFILER
+/*------------------------GC355_PROFILER function node structure--------------*/
+typedef struct _gcsPROFILERFUNCData
+{
+    gctSTRING funcName;
+    gctSTRING Tag;
+    gctUINT   TreeDepth;
+    gctUINT   saveLayerTreeDepth;
+    gctUINT   varTreeDepth;
+    gctUINT64 elapsedTime;
+    gctUINT64 cpuTime;
+    gctUINT64 gpuTime;
+}gcsPROFILERFUNCData;
+
+
+typedef struct _gcsPROFILERFUNCNODE
+{
+    gcsPROFILERFUNCData_PTR data;
+    gcsPROFILERFUNCNODE_PTR pre;
+    gcsPROFILERFUNCNODE_PTR next;
+}gcsPROFILERFUNCNODE;
+/*----------------------------------------------------------------------------*/
+#endif
+
 
 gceSTATUS
 gcsCONTAINER_Construct(
@@ -865,26 +783,6 @@ gcoHAL_GetDump(
     OUT gcoDUMP * Dump
     );
 
-#if gcdENABLE_3D
-gceSTATUS
-gcoHAL_SetPatchID(
-    IN  gcoHAL Hal,
-    IN  gcePATCH_ID PatchID
-    );
-
-/* Get Patch ID based on process name */
-gceSTATUS
-gcoHAL_GetPatchID(
-    IN  gcoHAL Hal,
-    OUT gcePATCH_ID * PatchID
-    );
-
-gceSTATUS
-gcoHAL_SetGlobalPatchID(
-    IN  gcoHAL Hal,
-    IN  gcePATCH_ID PatchID
-    );
-#endif /* gcdENABLE_3D */
 /* Call the kernel HAL layer. */
 gceSTATUS
 gcoHAL_Call(
@@ -1029,6 +927,35 @@ gcoHAL_ConfigPowerManagement(
     IN gctBOOL Enable
     );
 
+gceSTATUS
+gcoHAL_AllocateVideoMemory(
+    IN gctUINT Alignment,
+    IN gceSURF_TYPE Type,
+    IN gctUINT32 Flag,
+    IN gcePOOL Pool,
+    IN OUT gctSIZE_T * Bytes,
+    OUT gctUINT32_PTR Node
+    );
+
+gceSTATUS
+gcoHAL_LockVideoMemory(
+    IN gctUINT32 Node,
+    IN gctBOOL Cacheable,
+    OUT gctUINT32 * Physical,
+    OUT gctPOINTER * Logical
+    );
+
+gceSTATUS
+gcoHAL_UnlockVideoMemory(
+    IN gctUINT32 Node,
+    IN gceSURF_TYPE Type
+    );
+
+gceSTATUS
+    gcoHAL_ReleaseVideoMemory(
+    IN gctUINT32 Node
+    );
+
 #if gcdENABLE_3D || gcdENABLE_VG
 /* Query the target capabilities. */
 gceSTATUS
@@ -1040,6 +967,12 @@ gcoHAL_QueryTargetCaps(
     OUT gctUINT * MaxSamples
     );
 #endif
+
+gceSTATUS
+gcoHAL_WrapUserMemory(
+    IN gcsUSER_MEMORY_DESC_PTR UserMemoryDesc,
+    OUT gctUINT32_PTR Node
+    );
 
 /******************************************************************************\
 ********************************** gcoOS Object *********************************
@@ -1249,6 +1182,8 @@ gcoOS_FreeNonPagedMemory(
     gckOS_Free(os, mem); \
     mem = gcvNULL
 
+#define gcdMAX_PATH 512
+
 typedef enum _gceFILE_MODE
 {
     gcvFILE_CREATE          = 0,
@@ -1307,6 +1242,15 @@ gceSTATUS
 gcoOS_CloseFD(
     IN gcoOS Os,
     IN gctINT FD
+    );
+
+/* Scan a file. */
+gceSTATUS
+gcoOS_FscanfI(
+    IN gcoOS Os,
+    IN gctFILE File,
+    IN gctCONST_STRING Format,
+    OUT gctUINT *result
     );
 
 /* Dup file descriptor to another. */
@@ -1593,30 +1537,11 @@ gcoOS_QueryVideoMemory(
     OUT gctSIZE_T * ContiguousSize
     );
 
-/* Detect if the process is the executable specified. */
 gceSTATUS
-gcoOS_DetectProcessByNamePid(
-    IN gctCONST_STRING Name,
-    IN gctHANDLE Pid
+gcoOS_QueryCurrentProcessName(
+    OUT gctSTRING Name,
+    IN gctSIZE_T Size
     );
-
-/* Detect if the current process is the executable specified. */
-gceSTATUS
-gcoOS_DetectProcessByName(
-    IN gctCONST_STRING Name
-    );
-
-gceSTATUS
-gcoOS_DetectProcessByEncryptedName(
-    IN gctCONST_STRING Name
-    );
-
-#if defined(ANDROID)
-gceSTATUS
-gcoOS_DetectProgrameByEncryptedSymbols(
-    IN gcoOS_SymbolsList Symbols
-    );
-#endif
 
 /*----------------------------------------------------------------------------*/
 /*----- Atoms ----------------------------------------------------------------*/
@@ -1852,7 +1777,15 @@ gcoOS_CreateNativeFence(
     OUT gctINT * FenceFD
     );
 
-/* Wait on native fence. */
+/* (CPU) Wait on native fence. */
+gceSTATUS
+gcoOS_ClientWaitNativeFence(
+    IN gcoOS Os,
+    IN gctINT FenceFD,
+    IN gctUINT32 Timeout
+    );
+
+/* (GPU) Wait on native fence. */
 gceSTATUS
 gcoOS_WaitNativeFence(
     IN gcoOS Os,
@@ -2529,6 +2462,14 @@ gcoSURF_Lock(
     IN OUT gctPOINTER * Memory
     );
 
+gceSTATUS
+gcoSURF_LockEx(
+    IN gcoSURF Surface,
+    OPTIONAL OUT gctUINT32 * Address,
+    OPTIONAL OUT gctPOINTER * Memory,
+    OPTIONAL OUT gctPHYS_ADDR_T *BusAddress
+    );
+
 /* Unlock the surface. */
 gceSTATUS
 gcoSURF_Unlock(
@@ -2721,6 +2662,19 @@ gcoSURF_CPUCacheOperation(
     IN gceCACHEOPERATION Operation
     );
 
+gceSTATUS
+gcoSURF_WrapUserMultiBuffer(
+    IN gcoHAL Hal,
+    IN gctUINT Width,
+    IN gctUINT Height,
+    IN gceSURF_TYPE Type,
+    IN gceSURF_FORMAT Format,
+    IN gctUINT Stride[3],
+    IN gctUINT32 Handle[3],
+    IN gctUINT BufferOffset[3],
+    IN gctUINT32 Flag,
+    OUT gcoSURF * Surface
+    );
 
 gceSTATUS
 gcoSURF_Swap(
@@ -2801,7 +2755,27 @@ gcoSURF_GetSamples(
     IN gcoSURF Surface,
     OUT gctUINT_PTR Samples
     );
+
+/* Append tile status buffer. */
+gceSTATUS
+gcoSURF_AttachTileStatus(
+    IN gcoSURF Surface
+    );
 #endif
+
+gceSTATUS
+gcoSURF_WrapUserMemory(
+    IN gcoHAL Hal,
+    IN gctUINT Width,
+    IN gctUINT Height,
+    IN gctUINT Stride,
+    IN gctUINT Depth,
+    IN gceSURF_TYPE Type,
+    IN gceSURF_FORMAT Format,
+    IN gctUINT32 Handle,
+    IN gctUINT32 Flag,
+    OUT gcoSURF * Surface
+    );
 
 /******************************************************************************\
 ********************************* gcoDUMP Object ********************************
@@ -3213,6 +3187,7 @@ gcoOS_DebugTrace(
 #define gcvZONE_DATABASE        (1 << 11)
 #define gcvZONE_INTERRUPT       (1 << 12)
 #define gcvZONE_POWER           (1 << 13)
+#define gcvZONE_ALLOCATOR       (1 << 14)
 
 /* User zones. */
 #define gcvZONE_HAL             (1 << 3)
@@ -3757,9 +3732,9 @@ gcoOS_Print(
 #   define gcmkPRINT_VERSION()      _gcmPRINT_VERSION(gcmk)
 #   define _gcmPRINT_VERSION(prefix) \
         prefix##TRACE(gcvLEVEL_ERROR, \
-                      "Vivante HAL version %d.%d.%d build %d  %s  %s", \
-                      gcvVERSION_MAJOR, gcvVERSION_MINOR, gcvVERSION_PATCH, \
-                      gcvVERSION_BUILD, gcvVERSION_DATE, gcvVERSION_TIME )
+                      "Vivante HAL version %d.%d.%d build %d", \
+                      gcvVERSION_MAJOR, gcvVERSION_MINOR, \
+                      gcvVERSION_PATCH, gcvVERSION_BUILD)
 #else
 #   define gcmPRINT_VERSION()       do { gcmSTACK_DUMP(); } while (gcvFALSE)
 #   define gcmkPRINT_VERSION()      do { } while (gcvFALSE)
@@ -4536,6 +4511,34 @@ gckOS_DebugStatus2Name(
 
 /*******************************************************************************
 **
+**  gcmkSAFECASTPHYSADDRT
+**
+**      Check whether value of a gctPHYS_ADDR_T variable beyond the capability
+**      of 32bits GPU hardware.
+**
+**  ASSUMPTIONS:
+**
+**
+**
+**  ARGUMENTS:
+**
+**      x   A gctUINT32 variable
+**      y   A gctSIZE_T variable
+*/
+#define gcmkSAFECASTPHYSADDRT(x, y) \
+    do \
+    { \
+    gctUINT32 tmp = (gctUINT32)(y); \
+    if (gcmSIZEOF(gctPHYS_ADDR_T) > gcmSIZEOF(gctUINT32)) \
+    { \
+    gcmkASSERT(tmp <= gcvMAXUINT32); \
+    } \
+    (x) = tmp; \
+    } \
+    while (gcvFALSE)
+
+/*******************************************************************************
+**
 **  gcmVERIFY_LOCK
 **
 **      Verifies whether the surface is locked.
@@ -4732,15 +4735,6 @@ gcGetUserDebugOption(
     void
     );
 
-#if defined(ANDROID)
-struct _gcoOS_SymbolsList
-{
-#if gcdENABLE_3D
-    gcePATCH_ID patchId;
-#endif
-    const char * symList[10];
-};
-#endif
 
 #if gcdHAS_ELLIPSIS
 #define gcmUSER_DEBUG_MSG(level, ...) \
@@ -5476,9 +5470,9 @@ struct _gcoOS_SymbolsList
         UnifiedConst = gcvTRUE; \
         VsConstBase  = gcregSHUniformsRegAddrs; \
         PsConstBase  = gcregSHUniformsRegAddrs; \
+        VsConstMax   = gcmMIN(512, NumConstants - 64); \
+        PsConstMax   = gcmMIN(512, NumConstants - 64); \
         ConstMax     = NumConstants; \
-        VsConstMax   = 256; \
-        PsConstMax   = ConstMax - VsConstMax; \
     } \
     else if (NumConstants == 256) \
     { \

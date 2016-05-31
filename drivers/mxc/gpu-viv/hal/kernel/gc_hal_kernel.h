@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -25,6 +59,8 @@
 #include "gc_hal.h"
 #include "gc_hal_kernel_hardware.h"
 #include "gc_hal_driver.h"
+
+#include "gc_hal_kernel_mutex.h"
 
 #if gcdENABLE_VG
 #include "gc_hal_kernel_vg.h"
@@ -37,7 +73,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /*******************************************************************************
 ***** New MMU Defination *******************************************************/
@@ -83,9 +118,21 @@ extern "C" {
 /*******************************************************************************
 ***** Stuck Dump Level ********************************************************/
 
-#define gcdSTUCK_DUMP_MINIMAL       1
-#define gcdSTUCK_DUMP_MIDDLE        2
-#define gcdSTUCK_DUMP_MAXIMAL       3
+/* Dump nonthing when stuck happens. */
+#define gcvSTUCK_DUMP_NONE          0
+
+/* Dump GPU state and memory near stuck point. */
+#define gcvSTUCK_DUMP_NEARBY_MEMORY 1
+
+/* Beside gcvSTUCK_DUMP_NEARBY_MEMORY, dump context buffer and user command buffer. */
+#define gcvSTUCK_DUMP_USER_COMMAND  2
+
+/* Beside gcvSTUCK_DUMP_USER_COMMAND, commit will be stall
+** to make sure command causing stuck isn't missed. */
+#define gcvSTUCK_DUMP_STALL_COMMAND 3
+
+/* Beside gcvSTUCK_DUMP_USER_COMMAND, dump kernel command buffer. */
+#define gcvSTUCK_DUMP_ALL_COMMAND   4
 
 /*******************************************************************************
 ***** Process Secure Cache ****************************************************/
@@ -596,6 +643,18 @@ struct _gckDVFS
     struct _FrequencyHistory    frequencyHistory[16];
 };
 
+typedef struct _gcsFENCE * gckFENCE;
+typedef struct _gcsFENCE
+{
+    /* Fence location. */
+    gctPHYS_ADDR                physical;
+    gctPOINTER                  logical;
+    gctUINT32                   address;
+
+    gctPOINTER                  mutex;
+}
+gcsFENCE;
+
 /* gckCOMMAND object. */
 struct _gckCOMMAND
 {
@@ -643,7 +702,7 @@ struct _gckCOMMAND
     }
     queues[gcdCOMMAND_QUEUES];
 
-    gctPHYS_ADDR                physical;
+    gctUINT32                   physical;
     gctPOINTER                  logical;
     gctUINT32                   address;
     gctUINT32                   offset;
@@ -657,9 +716,10 @@ struct _gckCOMMAND
 
     /* Context management. */
     gckCONTEXT                  currContext;
+    gctPOINTER                  stateMap;
 
     /* Pointer to last WAIT command. */
-    gctPHYS_ADDR                waitPhysical;
+    gctUINT32                   waitPhysical;
     gctPOINTER                  waitLogical;
     gctUINT32                   waitSize;
 
@@ -688,6 +748,8 @@ struct _gckCOMMAND
     gckMMU                      currentMmu;
 #endif
     struct _gckENTRYQUEUE       queue;
+
+    gckFENCE                    fence;
 };
 
 typedef struct _gcsEVENT *      gcsEVENT_PTR;
@@ -736,6 +798,9 @@ typedef struct _gcsEVENT_QUEUE
 
     /* Next list of events. */
     gcsEVENT_QUEUE_PTR          next;
+
+    /* Current commit stamp. */
+    gctUINT64                   commitStamp;
 }
 gcsEVENT_QUEUE;
 
@@ -829,7 +894,7 @@ gceSTATUS
 gckEVENT_Stop(
     IN gckEVENT Event,
     IN gctUINT32 ProcessID,
-    IN gctPHYS_ADDR Handle,
+    IN gctUINT32 Handle,
     IN gctPOINTER Logical,
     IN gctSIGNAL Signal,
     IN OUT gctUINT32 * waitSize
@@ -916,7 +981,7 @@ typedef union _gcuVIDMEM_NODE
 
 #if gcdENABLE_VG
         /* Physical address of this node, only meaningful when it is contiguous. */
-        gctUINT32               physicalAddress;
+        gctUINT64               physicalAddress;
 
         /* Kernel logical of this node. */
         gctPOINTER              kernelVirtual;
@@ -1118,6 +1183,13 @@ gckVIDMEM_NODE_GetFd(
     OUT gctINT * Fd
     );
 
+gceSTATUS
+gckVIDMEM_ConstructVirtualFromUserMemory(
+    IN gckKERNEL Kernel,
+    IN gcsUSER_MEMORY_DESC_PTR Desc,
+    OUT gcuVIDMEM_NODE_PTR * Node
+    );
+
 #if gcdPROCESS_ADDRESS_SPACE
 gceSTATUS
 gckEVENT_DestroyMmu(
@@ -1233,6 +1305,7 @@ gckKERNEL_GetGPUAddress(
     IN gckKERNEL Kernel,
     IN gctPOINTER Logical,
     IN gctBOOL InUserSpace,
+    IN gckVIRTUAL_COMMAND_BUFFER_PTR Buffer,
     OUT gctUINT32 * Address
     );
 
@@ -1277,6 +1350,13 @@ gceSTATUS
 gckHARDWARE_QueryIdle(
     IN gckHARDWARE Hardware,
     OUT gctBOOL_PTR IsIdle
+    );
+
+gceSTATUS
+gckHARDWARE_AddressInHardwareFuncions(
+    IN gckHARDWARE Hardware,
+    IN gctUINT32 Address,
+    OUT gctPOINTER *Pointer
     );
 
 #if gcdSECURITY
@@ -1414,7 +1494,9 @@ void
 gckLINKQUEUE_Enqueue(
     IN gckLINKQUEUE LinkQueue,
     IN gctUINT32 start,
-    IN gctUINT32 end
+    IN gctUINT32 end,
+    IN gctUINT32 LinkLow,
+    IN gctUINT32 LinkHigh
     );
 
 void
@@ -1480,6 +1562,19 @@ gckRECORDER_UpdateMirror(
     gckRECORDER Recorder,
     gctUINT32 State,
     gctUINT32 Data
+    );
+
+gceSTATUS
+gckFENCE_Create(
+    IN gckOS Os,
+    IN gckKERNEL Kernel,
+    OUT gckFENCE * Fence
+    );
+
+gceSTATUS
+gckFENCE_Destory(
+    IN gckOS Os,
+    OUT gckFENCE Fence
     );
 
 #ifdef __cplusplus

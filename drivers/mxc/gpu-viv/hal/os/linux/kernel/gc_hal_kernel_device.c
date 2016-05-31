@@ -1,20 +1,54 @@
 /****************************************************************************
 *
-*    Copyright (C) 2005 - 2014 by Vivante Corp.
+*    The MIT License (MIT)
 *
-*    This program is free software; you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation; either version 2 of the license, or
-*    (at your option) any later version.
+*    Copyright (c) 2014 - 2016 Vivante Corporation
+*
+*    Permission is hereby granted, free of charge, to any person obtaining a
+*    copy of this software and associated documentation files (the "Software"),
+*    to deal in the Software without restriction, including without limitation
+*    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+*    and/or sell copies of the Software, and to permit persons to whom the
+*    Software is furnished to do so, subject to the following conditions:
+*
+*    The above copyright notice and this permission notice shall be included in
+*    all copies or substantial portions of the Software.
+*
+*    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+*    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+*    DEALINGS IN THE SOFTWARE.
+*
+*****************************************************************************
+*
+*    The GPL License (GPL)
+*
+*    Copyright (C) 2014 - 2016 Vivante Corporation
+*
+*    This program is free software; you can redistribute it and/or
+*    modify it under the terms of the GNU General Public License
+*    as published by the Free Software Foundation; either version 2
+*    of the License, or (at your option) any later version.
 *
 *    This program is distributed in the hope that it will be useful,
 *    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 *    GNU General Public License for more details.
 *
 *    You should have received a copy of the GNU General Public License
-*    along with this program; if not write to the Free Software
-*    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*    along with this program; if not, write to the Free Software Foundation,
+*    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+*
+*****************************************************************************
+*
+*    Note: This software is released under dual MIT and GPL licenses. A
+*    recipient may use this file under the terms of either the MIT license or
+*    GPL License. If you wish to use only one license not the other, you can
+*    indicate your decision by deleting one of the above license notices in your
+*    version of this file.
 *
 *****************************************************************************/
 
@@ -30,35 +64,11 @@
 #define DEBUG_FILE          "galcore_trace"
 #define PARENT_FILE         "gpu"
 
+#define gcdDEBUG_FS_WARN    "Experimental debug entry, may be removed in future release, do NOT rely on it!\n"
 
 #ifdef FLAREON
     static struct dove_gpio_irq_handler gc500_handle;
 #endif
-
-gckKERNEL
-_GetValidKernel(
-    gckGALDEVICE Device
-    )
-{
-    if (Device->kernels[gcvCORE_MAJOR])
-    {
-        return Device->kernels[gcvCORE_MAJOR];
-    }
-    else
-    if (Device->kernels[gcvCORE_2D])
-    {
-        return Device->kernels[gcvCORE_2D];
-    }
-    else
-    if (Device->kernels[gcvCORE_VG])
-    {
-        return Device->kernels[gcvCORE_VG];
-    }
-    else
-    {
-        return gcvNULL;
-    }
-}
 
 /******************************************************************************\
 ******************************** Debugfs Support *******************************
@@ -323,14 +333,21 @@ _ShowProcesses(
 {
     gcsDATABASE_PTR database;
     gctINT i;
+    static gctUINT64 idleTime = 0;
 
     /* Acquire the database mutex. */
     gcmkVERIFY_OK(
         gckOS_AcquireMutex(Kernel->os, Kernel->db->dbMutex, gcvINFINITE));
 
+    if (Kernel->db->idleTime)
+    {
+        /* Record idle time if DB upated. */
+        idleTime = Kernel->db->idleTime;
+        Kernel->db->idleTime = 0;
+    }
+
     /* Idle time since last call */
-    seq_printf(file, "GPU Idle: %llu ns\n",  Kernel->db->idleTime);
-    Kernel->db->idleTime = 0;
+    seq_printf(file, "GPU Idle: %llu ns\n",  idleTime);
 
     /* Walk the databases. */
     for (i = 0; i < gcmCOUNTOF(Kernel->db->db); ++i)
@@ -360,21 +377,91 @@ gc_db_show(struct seq_file *m, void *data)
 static int
 gc_version_show(struct seq_file *m, void *data)
 {
-    seq_printf(m, "%s\n",  gcvVERSION_STRING);
+    gcsINFO_NODE *node = m->private;
+    gckGALDEVICE device = node->device;
+    gcsPLATFORM * platform = device->platform;
+    gctCONST_STRING name;
+
+    seq_printf(m, "%s built at %s\n",  gcvVERSION_STRING, HOST);
+
+    if (platform->ops->name)
+    {
+        platform->ops->name(platform, &name);
+        seq_printf(m, "Platform path: %s\n", name);
+    }
+    else
+    {
+        seq_printf(m, "Code path: %s\n", __FILE__);
+    }
 
     return 0 ;
 }
 
-int gc_idle_show(struct seq_file* m, void* data)
+/*******************************************************************************
+**
+** Show PM state timer.
+**
+** Entry is called as 'idle' for compatible reason, it shows more information
+** than idle actually.
+**
+**  Start: Start time of this counting period.
+**  End: End time of this counting peroid.
+**  On: Time GPU stays in gcvPOWER_0N.
+**  Off: Time GPU stays in gcvPOWER_0FF.
+**  Idle: Time GPU stays in gcvPOWER_IDLE.
+**  Suspend: Time GPU stays in gcvPOWER_SUSPEND.
+*/
+static int
+gc_idle_show(struct seq_file *m, void *data)
 {
     gcsINFO_NODE *node = m->private;
     gckGALDEVICE device = node->device;
     gckKERNEL kernel = _GetValidKernel(device);
-    gcuDATABASE_INFO info;
 
-    gckKERNEL_QueryProcessDB(kernel, 0, gcvFALSE, gcvDB_IDLE, &info);
+    gctUINT64 start;
+    gctUINT64 end;
+    gctUINT64 on;
+    gctUINT64 off;
+    gctUINT64 idle;
+    gctUINT64 suspend;
 
-    seq_printf(m, "GPU idle time since last query: %llu ns\n", info.time);
+    gckHARDWARE_QueryStateTimer(kernel->hardware, &start, &end, &on, &off, &idle, &suspend);
+
+    /* Idle time since last call */
+    seq_printf(m, "Start:   %llu ns\n",  start);
+    seq_printf(m, "End:     %llu ns\n",  end);
+    seq_printf(m, "On:      %llu ns\n",  on);
+    seq_printf(m, "Off:     %llu ns\n",  off);
+    seq_printf(m, "Idle:    %llu ns\n",  idle);
+    seq_printf(m, "Suspend: %llu ns\n",  suspend);
+
+    return 0 ;
+}
+
+extern void
+_DumpState(
+    IN gckKERNEL Kernel
+    );
+
+static int
+gc_dump_trigger_show(struct seq_file *m, void *data)
+{
+#if gcdENABLE_3D || gcdENABLE_2D
+    gcsINFO_NODE *node = m->private;
+    gckGALDEVICE device = node->device;
+    gckKERNEL kernel = _GetValidKernel(device);
+#endif
+
+    seq_printf(m, gcdDEBUG_FS_WARN);
+
+#if gcdENABLE_3D || gcdENABLE_2D
+    seq_printf(m, "Get dump from /proc/kmsg or /sys/kernel/debug/gc/galcore_trace\n");
+
+    if (kernel->hardware->powerManagement == gcvFALSE)
+    {
+        _DumpState(kernel);
+    }
+#endif
 
     return 0;
 }
@@ -387,6 +474,7 @@ static gcsINFO InfoList[] =
     {"idle", gc_idle_show},
     {"database", gc_db_show},
     {"version", gc_version_show},
+    {"dump_trigger", gc_dump_trigger_show},
 };
 
 static gceSTATUS
@@ -992,6 +1080,9 @@ gckGALDEVICE_Construct(
 
     device->platform = Args->platform;
 
+    /* set up the contiguous memory */
+    device->contiguousSize = ContiguousSize;
+
     gcmkONERROR(_DebugfsInit(device));
 
     if (gckDEBUGFS_CreateNode(
@@ -1052,6 +1143,13 @@ gckGALDEVICE_Construct(
         device->requestedRegisterMemBases[gcvCORE_VG] = RegisterMemBaseVG;
         device->requestedRegisterMemSizes[gcvCORE_VG] = RegisterMemSizeVG;
     }
+#if gcdENABLE_DEC_COMPRESSION
+    {
+        device->requestedRegisterMemBases[gcvCORE_DEC] = Args->registerMemBaseDEC300;
+        device->requestedRegisterMemSizes[gcvCORE_DEC] = Args->registerMemSizeDEC300;
+    }
+#endif
+
 
     device->requestedContiguousBase  = 0;
     device->requestedContiguousSize  = 0;
@@ -1115,38 +1213,48 @@ gckGALDEVICE_Construct(
             /* Set up register memory region. */
             if (physical != 0)
             {
-                mem_region = request_mem_region(physical,
-                        device->requestedRegisterMemSizes[i],
-                        "galcore register region");
 
-                if (mem_region == gcvNULL)
+                if ( Args->registerMemMapped )
                 {
-                    gcmkTRACE_ZONE(
-                            gcvLEVEL_ERROR, gcvZONE_DRIVER,
-                            "%s(%d): Failed to claim %lu bytes @ 0x%08X\n",
-                            __FUNCTION__, __LINE__,
-                            physical, device->requestedRegisterMemSizes[i]
-                    );
+                    device->registerBases[i] = Args->registerMemAddress;
+                    device->requestedRegisterMemBases[i] = 0;
+
+                } else {
+
+                    mem_region = request_mem_region(physical,
+                            device->requestedRegisterMemSizes[i],
+                            "galcore register region");
+
+                    if (mem_region == gcvNULL)
+                    {
+                        gcmkTRACE_ZONE(
+                                gcvLEVEL_ERROR, gcvZONE_DRIVER,
+                                "%s(%d): Failed to claim %lu bytes @ 0x%08X\n",
+                                __FUNCTION__, __LINE__,
+                                physical, device->requestedRegisterMemSizes[i]
+                         );
 
                     gcmkONERROR(gcvSTATUS_OUT_OF_RESOURCES);
-                }
+                    }
 
-                device->registerBases[i] = (gctPOINTER) ioremap_nocache(
-                        physical, device->requestedRegisterMemSizes[i]);
+                    device->registerBases[i] = (gctPOINTER) ioremap_nocache(
+                            physical, device->requestedRegisterMemSizes[i]);
 
-                if (device->registerBases[i] == gcvNULL)
-                {
-                    gcmkTRACE_ZONE(
-                            gcvLEVEL_ERROR, gcvZONE_DRIVER,
-                            "%s(%d): Unable to map %ld bytes @ 0x%08X\n",
-                            __FUNCTION__, __LINE__,
-                            physical, device->requestedRegisterMemSizes[i]
-                    );
+                    if (device->registerBases[i] == gcvNULL)
+                    {
+                        gcmkTRACE_ZONE(
+                                gcvLEVEL_ERROR, gcvZONE_DRIVER,
+                                "%s(%d): Unable to map %ld bytes @ 0x%08X\n",
+                                __FUNCTION__, __LINE__,
+                                physical, device->requestedRegisterMemSizes[i]
+                        );
 
-                    gcmkONERROR(gcvSTATUS_OUT_OF_RESOURCES);
+                        gcmkONERROR(gcvSTATUS_OUT_OF_RESOURCES);
+                    }
                 }
 
                 physical += device->requestedRegisterMemSizes[i];
+
             }
         }
     }
@@ -1920,7 +2028,9 @@ gckGALDEVICE_Destroy(
                 if (Device->registerBases[i] != gcvNULL)
                 {
                     /* Unmap register memory. */
-                    iounmap(Device->registerBases[i]);
+                    if (Device->requestedRegisterMemBases[i] != 0)
+                        iounmap(Device->registerBases[i]);
+
                     if (Device->requestedRegisterMemBases[i] != 0)
                     {
                         release_mem_region(Device->requestedRegisterMemBases[i],
@@ -2004,7 +2114,7 @@ gckGALDEVICE_Setup_ISR(
 #else
 #if gcdMULTI_GPU
     ret = request_irq(
-        Device->irqLine3D[gcvCORE_3D_0_ID], isrRoutine3D0, IRQF_DISABLED,
+        Device->irqLine3D[gcvCORE_3D_0_ID], isrRoutine3D0, gcdIRQF_FLAG,
         "galcore_3d_0", Device
         );
 
@@ -2025,7 +2135,7 @@ gckGALDEVICE_Setup_ISR(
 
 #if gcdMULTI_GPU > 1
     ret = request_irq(
-        Device->irqLine3D[gcvCORE_3D_1_ID], isrRoutine3D1, IRQF_DISABLED,
+        Device->irqLine3D[gcvCORE_3D_1_ID], isrRoutine3D1, gcdIRQF_FLAG,
         "galcore_3d_1", Device
         );
 
@@ -2046,7 +2156,7 @@ gckGALDEVICE_Setup_ISR(
 #endif
 #elif gcdMULTI_GPU_AFFINITY
     ret = request_irq(
-        Device->irqLines[gcvCORE_MAJOR], isrRoutine3D0, IRQF_DISABLED,
+        Device->irqLines[gcvCORE_MAJOR], isrRoutine3D0, gcdIRQF_FLAG,
         "galcore_3d_0", Device
         );
 
@@ -2066,7 +2176,7 @@ gckGALDEVICE_Setup_ISR(
     Device->isrInitializeds[gcvCORE_MAJOR] = gcvTRUE;
 
     ret = request_irq(
-        Device->irqLines[gcvCORE_OCL], isrRoutine3D1, IRQF_DISABLED,
+        Device->irqLines[gcvCORE_OCL], isrRoutine3D1, gcdIRQF_FLAG,
         "galcore_3d_1", Device
         );
 
@@ -2086,7 +2196,7 @@ gckGALDEVICE_Setup_ISR(
     Device->isrInitializeds[gcvCORE_OCL] = gcvTRUE;
 #else
     ret = request_irq(
-        Device->irqLines[gcvCORE_MAJOR], isrRoutine, IRQF_DISABLED,
+        Device->irqLines[gcvCORE_MAJOR], isrRoutine, gcdIRQF_FLAG,
         "galcore interrupt service", Device
         );
 
@@ -2145,7 +2255,7 @@ gckGALDEVICE_Setup_ISR_2D(
         );
 #else
     ret = request_irq(
-        Device->irqLines[gcvCORE_2D], isrRoutine2D, IRQF_DISABLED,
+        Device->irqLines[gcvCORE_2D], isrRoutine2D, gcdIRQF_FLAG,
         "galcore interrupt service for 2D", Device
         );
 #endif
@@ -2203,7 +2313,7 @@ gckGALDEVICE_Setup_ISR_VG(
         );
 #else
     ret = request_irq(
-        Device->irqLines[gcvCORE_VG], isrRoutineVG, IRQF_DISABLED,
+        Device->irqLines[gcvCORE_VG], isrRoutineVG, gcdIRQF_FLAG,
         "galcore interrupt service for 2D", Device
         );
 #endif
