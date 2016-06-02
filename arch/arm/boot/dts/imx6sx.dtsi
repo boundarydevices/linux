@@ -225,6 +225,10 @@
 			compatible = "fsl,imx6q-caam-secvio";
 			interrupts = <0 20 0x04>;
 			secvio_src = <0x8000001d>;
+			jtag-tamper = "disabled";
+			watchdog-tamper = "enabled";
+			internal-boot-tamper = "enabled";
+			external-pin-tamper = "disabled";
 		};
 
 		gpu: gpu@01800000 {
@@ -1132,9 +1136,10 @@
 				reg = <0x021d4000 0x4000>;
 				interrupts = <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6SX_CLK_SAI1_IPG>,
+					 <&clks IMX6SX_CLK_DUMMY>,
 					 <&clks IMX6SX_CLK_SAI1>,
 					 <&clks 0>, <&clks 0>;
-				clock-names = "bus", "mclk1", "mclk2", "mclk3";
+				clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 				dma-names = "rx", "tx";
 				dmas = <&sdma 31 24 0>, <&sdma 32 24 0>;
 				dma-source = <&gpr 0 15 0 16>;
@@ -1152,9 +1157,10 @@
 				reg = <0x021dc000 0x4000>;
 				interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6SX_CLK_SAI2_IPG>,
+					 <&clks IMX6SX_CLK_DUMMY>,
 					 <&clks IMX6SX_CLK_SAI2>,
 					 <&clks 0>, <&clks 0>;
-				clock-names = "bus", "mclk1", "mclk2", "mclk3";
+				clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 				dma-names = "rx", "tx";
 				dmas = <&sdma 33 23 0>, <&sdma 34 23 0>;
 				dma-source = <&gpr 0 17 0 18>;

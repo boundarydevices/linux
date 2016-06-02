@@ -161,13 +161,17 @@
 		};
 
 		caam_sm: caam-sm@00100000 {
-			 compatible = "fsl,imx7d-caam-sm", "fsl,imx6q-caam-sm";
-			 reg = <0x00100000 0x3fff>;
+			compatible = "fsl,imx7d-caam-sm", "fsl,imx6q-caam-sm";
+			reg = <0x00100000 0x3fff>;
 		};
 
 		irq_sec_vio: caam_secvio {
-			     compatible = "fsl,imx7d-caam-secvio", "fsl,imx6q-caam-secvio";
-			     interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
+			compatible = "fsl,imx7d-caam-secvio", "fsl,imx6q-caam-secvio";
+			interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
+			jtag-tamper = "disabled";
+			watchdog-tamper = "enabled";
+			internal-boot-tamper = "enabled";
+			external-pin-tamper = "disabled";
 		};
 
 		ocrams: sram@00900000 {
@@ -353,9 +357,10 @@
 					reg = <0x02028000 0x4000>;
 					interrupts = <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>;
 					clocks = <&clks IMX6UL_CLK_SAI1_IPG>,
+						 <&clks IMX6UL_CLK_DUMMY>,
 						 <&clks IMX6UL_CLK_SAI1>,
 						 <&clks 0>, <&clks 0>;
-					clock-names = "bus", "mclk1", "mclk2", "mclk3";
+					clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 					dma-names = "rx", "tx";
 					dmas = <&sdma 35 24 0>, <&sdma 36 24 0>;
 					status = "disabled";
@@ -367,9 +372,10 @@
 					reg = <0x0202c000 0x4000>;
 					interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
 					clocks = <&clks IMX6UL_CLK_SAI2_IPG>,
+						 <&clks IMX6UL_CLK_DUMMY>,
 						 <&clks IMX6UL_CLK_SAI2>,
 						 <&clks 0>, <&clks 0>;
-					clock-names = "bus", "mclk1", "mclk2", "mclk3";
+					clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 					dma-names = "rx", "tx";
 					dmas = <&sdma 37 24 0>, <&sdma 38 24 0>;
 					status = "disabled";
@@ -380,10 +386,13 @@
 						     "fsl,imx6sx-sai";
 					reg = <0x02030000 0x4000>;
 					interrupts = <GIC_SPI 24 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&clks IMX6UL_CLK_DUMMY>,
+					clocks = <&clks IMX6UL_CLK_SAI3_IPG>,
 						 <&clks IMX6UL_CLK_DUMMY>,
+						 <&clks IMX6UL_CLK_SAI3>,
 						 <&clks 0>, <&clks 0>;
-					clock-names = "bus", "mclk1", "mclk2", "mclk3";
+					clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
+					dma-names = "rx", "tx";
+					dmas = <&sdma 39 24 0>, <&sdma 40 24 0>;
 					status = "disabled";
 				};
 

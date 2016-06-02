@@ -364,8 +364,12 @@
 		};
 
 		irq_sec_vio: caam_secvio {
-			     compatible = "fsl,imx7d-caam-secvio", "fsl,imx6q-caam-secvio";
-			     interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
+			compatible = "fsl,imx7d-caam-secvio", "fsl,imx6q-caam-secvio";
+			interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
+			jtag-tamper = "disabled";
+			watchdog-tamper = "enabled";
+			internal-boot-tamper = "enabled";
+			external-pin-tamper = "disabled";
 		};
 
 		pmu {
@@ -865,8 +869,8 @@
 				interrupts = <GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 46 IRQ_TYPE_LEVEL_HIGH>;
 				reg = <0x30700000 0x10000>;
-				clocks = <&clks IMX7D_CLK_DUMMY>;
-				clock-names = "pxp-axi";
+				clocks = <&clks IMX7D_PXP_IPG_CLK>, <&clks IMX7D_PXP_AXI_CLK>;
+				clock-names = "pxp_ipg", "pxp_axi";
 				status = "disabled";
 			};
 
@@ -1023,9 +1027,10 @@
 					reg = <0x308a0000 0x10000>;
 					interrupts = <GIC_SPI 95 IRQ_TYPE_LEVEL_HIGH>;
 					clocks = <&clks IMX7D_SAI1_IPG_CLK>,
+						<&clks IMX7D_CLK_DUMMY>,
 						<&clks IMX7D_SAI1_ROOT_CLK>,
 						<&clks IMX7D_CLK_DUMMY>, <&clks IMX7D_CLK_DUMMY>;
-					clock-names = "bus", "mclk1", "mclk2", "mclk3";
+					clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 					dma-names = "rx", "tx";
 					dmas = <&sdma 8 24 0>, <&sdma 9 24 0>;
 					status = "disabled";
@@ -1037,9 +1042,10 @@
 					reg = <0x308b0000 0x10000>;
 					interrupts = <GIC_SPI 96 IRQ_TYPE_LEVEL_HIGH>;
 					clocks = <&clks IMX7D_SAI2_IPG_CLK>,
+						<&clks IMX7D_CLK_DUMMY>,
 						<&clks IMX7D_SAI2_ROOT_CLK>,
 						<&clks IMX7D_CLK_DUMMY>, <&clks IMX7D_CLK_DUMMY>;
-					clock-names = "bus", "mclk1", "mclk2", "mclk3";
+					clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 					dma-names = "rx", "tx";
 					dmas = <&sdma 10 24 0>, <&sdma 11 24 0>;
 					status = "disabled";
@@ -1051,9 +1057,10 @@
 					reg = <0x308c0000 0x10000>;
 					interrupts = <GIC_SPI 50 IRQ_TYPE_LEVEL_HIGH>;
 					clocks = <&clks IMX7D_SAI3_IPG_CLK>,
+						<&clks IMX7D_CLK_DUMMY>,
 						<&clks IMX7D_SAI3_ROOT_CLK>,
 						<&clks IMX7D_CLK_DUMMY>, <&clks IMX7D_CLK_DUMMY>;
-					clock-names = "bus", "mclk1", "mclk2", "mclk3";
+					clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 					dma-names = "rx", "tx";
 					dmas = <&sdma 12 24 0>, <&sdma 13 24 0>;
 					status = "disabled";

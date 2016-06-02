@@ -3861,6 +3861,11 @@ wl_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev,
 	cfg80211_disconnected(dev, reason_code, NULL, 0, GFP_KERNEL);
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)) */
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
+	/* cfg80211 expects disconnect event from DHD to release wdev->current_bss */
+	cfg80211_disconnected(dev, reason_code, NULL, 0, GFP_KERNEL);
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)) */
+
 	return err;
 }
 
@@ -8282,8 +8287,8 @@ wl_notify_connect_status(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 						MAC2STRDBG(curbssid), MAC2STRDBG((u8*)(&e->addr))));
 					return 0;
 				}
-
 				wl_clr_drv_status(cfg, CONNECTED, ndev);
+
 				if (! wl_get_drv_status(cfg, DISCONNECTING, ndev)) {
 					/* To make sure disconnect, explictly send dissassoc
 					*  for BSSID 00:00:00:00:00:00 issue

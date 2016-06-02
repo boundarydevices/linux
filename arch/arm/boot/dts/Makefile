@@ -286,6 +286,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-wandboard.dtb \
 	imx6dl-wandboard-revb1.dtb \
 	imx6q-arm2.dtb \
+	imx6q-arm2-hsic.dtb \
 	imx6q-pop-arm2.dtb \
 	imx6q-cm-fx6.dtb \
 	imx6q-cubox-i.dtb \
@@ -366,12 +367,29 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-14x14-evk.dtb \
 	imx6ul-14x14-evk-btwifi.dtb \
 	imx6ul-14x14-evk-csi.dtb \
+	imx6ul-14x14-evk-gpmi-weim.dtb \
 	imx6ul-14x14-evk-usb-certi.dtb \
 	imx6ul-14x14-lpddr2-arm2.dtb \
 	imx6ul-9x9-evk.dtb \
 	imx6ul-9x9-evk-btwifi.dtb \
 	imx6ul-9x9-evk-csi.dtb \
 	imx6ul-9x9-evk-ldo.dtb
+dtb-$(CONFIG_SOC_IMX6ULL) += \
+	imx6ull-14x14-ddr3-arm2.dtb \
+	imx6ull-14x14-ddr3-arm2-adc.dtb \
+	imx6ull-14x14-ddr3-arm2-cs42888.dtb \
+	imx6ull-14x14-ddr3-arm2-ecspi.dtb \
+	imx6ull-14x14-ddr3-arm2-emmc.dtb \
+	imx6ull-14x14-ddr3-arm2-epdc.dtb \
+	imx6ull-14x14-ddr3-arm2-flexcan2.dtb \
+	imx6ull-14x14-ddr3-arm2-gpmi-weim.dtb \
+	imx6ull-14x14-ddr3-arm2-lcdif.dtb \
+	imx6ull-14x14-ddr3-arm2-ldo.dtb \
+	imx6ull-14x14-ddr3-arm2-qspi.dtb \
+	imx6ull-14x14-ddr3-arm2-tsc.dtb \
+	imx6ull-14x14-ddr3-arm2-uart2.dtb \
+	imx6ull-14x14-ddr3-arm2-usb.dtb \
+	imx6ull-14x14-ddr3-arm2-wm8958.dtb
 dtb-$(CONFIG_SOC_IMX7D) += \
 	imx7d-12x12-lpddr3-arm2.dtb \
 	imx7d-12x12-lpddr3-arm2-m4.dtb \
@@ -388,6 +406,7 @@ dtb-$(CONFIG_SOC_IMX7D) += \
 	imx7d-sdb-gpmi-weim.dtb \
 	imx7d-sdb-m4.dtb \
 	imx7d-sdb-qspi.dtb \
+	imx7d-sdb-mipi-dsi.dtb \
 	imx7d-sdb-reva.dtb \
 	imx7d-sdb-reva-epdc.dtb \
 	imx7d-sdb-reva-gpmi-weim.dtb \

@@ -1,0 +1,158 @@
+/*
+ * Copyright (C) 2016 Freescale Semiconductor, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include "imx6ull-14x14-ddr3-arm2-lcdif.dts"
+
+/ {
+	clocks {
+		codec_osc: anaclk2 {
+			#clock-cells = <0>;
+			compatible = "fixed-clock";
+			clock-frequency = <24576000>;
+		};
+	};
+
+	regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		reg_audio: cs42888_supply {
+			compatible = "regulator-fixed";
+			regulator-name = "cs42888_supply";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
+
+		reg_codec_5v: codec_5v {
+			compatible = "regulator-fixed";
+			regulator-name = "CODEC_5V";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			enable-active-high;
+		};
+
+		reg_aud_3v3: aud_3v3 {
+			compatible = "regulator-fixed";
+			regulator-name = "AUD_3V3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			enable-active-high;
+		};
+
+		reg_aud_1v8: aud_1v8 {
+			compatible = "regulator-fixed";
+			regulator-name = "AUD_1V8";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			enable-active-high;
+		};
+	};
+
+	sound-cs42888 {
+		compatible = "fsl,imx6-sabreauto-cs42888",
+			   "fsl,imx-audio-cs42888";
+		model = "imx-cs42888";
+		esai-controller = <&esai>;
+		asrc-controller = <&asrc>;
+		audio-codec = <&codec_a>;
+		codec-master;
+	};
+
+	sound-wm8958 {
+		compatible = "fsl,imx6ul-ddr3-arm2-wm8958",
+			   "fsl,imx-audio-wm8958";
+		model = "wm8958-audio";
+		cpu-dai = <&sai2>;
+		audio-codec = <&codec_b>;
+		codec-master;
+		gpr = <&gpr>;
+		hp-det-gpios = <&gpio5 0 1>;
+	};
+};
+
+&clks {
+	assigned-clocks = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
+	assigned-clock-rates = <786432000>;
+};
+
+&esai {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_esai>;
+	assigned-clocks = <&clks IMX6UL_CLK_ESAI_SEL>,
+		          <&clks IMX6UL_CLK_ESAI_EXTAL>;
+	assigned-clock-parents = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
+	assigned-clock-rates = <0>, <24576000>;
+	status = "okay";
+};
+
+&i2c4 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c4>;
+	status = "okay";
+
+	codec_a: cs42888@048 {
+		compatible = "cirrus,cs42888";
+		reg = <0x048>;
+		clocks = <&codec_osc 0>;
+		clock-names = "mclk";
+		VA-supply = <&reg_audio>;
+		VD-supply = <&reg_audio>;
+		VLS-supply = <&reg_audio>;
+		VLC-supply = <&reg_audio>;
+	};
+
+	codec_b: wm8958@1a {
+		compatible = "wlf,wm8958";
+		reg = <0x1a>;
+		clocks = <&clks IMX6UL_CLK_SAI2>,
+		       <&clks IMX6UL_CLK_DUMMY>;
+		clock-names = "mclk1", "mclk2";
+
+		DBVDD1-supply = <&reg_aud_1v8>;
+		DBVDD2-supply = <&reg_aud_1v8>;
+		DBVDD3-supply = <&reg_aud_3v3>;
+		AVDD2-supply = <&reg_aud_1v8>;
+		CPVDD-supply = <&reg_aud_1v8>;
+		SPKVDD1-supply = <&reg_codec_5v>;
+		SPKVDD2-supply = <&reg_codec_5v>;
+
+		wlf,ldo1ena;
+		wlf,ldo2ena;
+	};
+};
+
+&ov5640 {
+	status = "disabled";
+};
+
+&sai2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai2 &pinctrl_sai2_hp_det_b>;
+	assigned-clocks = <&clks IMX6UL_CLK_SAI2_SEL>,
+			<&clks IMX6UL_CLK_SAI2>;
+	assigned-clock-parents = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
+	assigned-clock-rates = <0>, <24576000>;
+	status = "okay";
+};
+
+&sdma {
+        gpr = <&gpr>;
+        /* SDMA event remap for ESAI */
+        fsl,sdma-event-remap = <0 14 1>, <0 15 1>;
+};
+
+&uart2 {
+	status = "disabled";
+};
+
+&usdhc1 {
+	status = "disabled";
+};
