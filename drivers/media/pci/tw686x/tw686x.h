@@ -40,6 +40,7 @@ struct vb2_v4l2_buffer {
 
 #define TW686X_DMA_MODE_MEMCPY		0
 #define TW686X_DMA_MODE_CONTIG		1
+#define TW686X_DMA_MODE_SG		2
 
 struct tw686x_format {
 	char *name;
@@ -52,6 +53,12 @@ struct tw686x_dma_desc {
 	dma_addr_t phys;
 	void *virt;
 	unsigned int size;
+};
+
+struct tw686x_sg_desc {
+	/* 3 MSBits for flags, 13 LSBits for length */
+	__le32 flags_length;
+	__le32 phys;
 };
 
 struct tw686x_audio_buf {
@@ -86,6 +93,7 @@ struct tw686x_video_channel {
 	struct video_device *device;
 	struct tw686x_v4l2_buf *curr_bufs[2];
 	struct tw686x_dma_desc dma_descs[2];
+	struct tw686x_sg_desc *sg_descs[2];
 
 	struct v4l2_ctrl_handler ctrl_handler;
 	const struct tw686x_format *format;
@@ -158,6 +166,12 @@ static inline void reg_write(struct tw686x_dev *dev, unsigned int reg,
 static inline unsigned int max_channels(struct tw686x_dev *dev)
 {
 	return dev->type & TYPE_MAX_CHANNELS; /* 4 or 8 channels */
+}
+
+static inline unsigned is_second_gen(struct tw686x_dev *dev)
+{
+	/* each channel has its own DMA SG table */
+	return dev->type & TYPE_SECOND_GEN;
 }
 
 void tw686x_enable_channel(struct tw686x_dev *dev, unsigned int channel);
