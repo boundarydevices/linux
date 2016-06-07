@@ -26,6 +26,11 @@ config USB_XHCI_HCD
 
 if USB_XHCI_HCD
 
+config USB_XHCI_RENESAS_FW_LOADING
+       tristate "xHCI support for Renesas uPD720201/uPD720202 firmware loading"
+       depends on PCI && USB_XHCI_HCD
+       default y
+
 config USB_XHCI_PLATFORM
 	tristate
 
