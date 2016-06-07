@@ -17,6 +17,7 @@
 #include "xhci.h"
 #include "xhci-trace.h"
 #include "xhci-pci.h"
+#include "xhci-renesas.h"
 
 #define SSIC_PORT_NUM		2
 #define SSIC_PORT_CFG2		0x880c
@@ -410,6 +411,13 @@ static int xhci_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 		return PTR_ERR(reset);
 	reset_control_reset(reset);
 
+	if (IS_ENABLED(CONFIG_USB_XHCI_RENESAS_FW_LOADING)) {
+		/* Check if this device is a RENESAS uPD720201/2 device. */
+		retval = renesas_check_if_fw_dl_is_needed(dev);
+		if (retval)
+			return retval;
+	}
+
 	/* Prevent runtime suspending between USB-2 and USB-3 initialization */
 	pm_runtime_get_noresume(&dev->dev);
 
@@ -617,6 +625,13 @@ static int xhci_pci_resume(struct usb_hcd *hcd, bool hibernated)
 
 	if (xhci->quirks & XHCI_PME_STUCK_QUIRK)
 		xhci_pme_quirk(hcd);
+
+	if (IS_ENABLED(CONFIG_USB_XHCI_RENESAS_FW_LOADING)) {
+		/* Check if this device is a RENESAS uPD720201/2 device. */
+		retval = renesas_check_if_fw_dl_is_needed(pdev);
+		if (retval)
+			return retval;
+	}
 
 	retval = xhci_resume(xhci, hibernated);
 	return retval;
