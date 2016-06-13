@@ -2861,12 +2861,13 @@ static int ov5640_init_mode(struct ov5640 *sensor,
 	ov5640_set_virtual_channel(sensor, sensor->virtual_channel);
 
 	/* add delay to wait for sensor stable */
-	if (frame_rate == ov5640_15_fps) {
-		/* dump the first two frames: 1/15*2 */
-		msec_wait4stable = 133;
-	} else if (frame_rate == ov5640_30_fps) {
-		/* dump the first two frames: 1/30*2 */
-		msec_wait4stable = 67;
+	if (mode == ov5640_mode_QSXGA_2592_1944) {
+		/* dump the first two frames: 1/7.5*2
+		 * the frame rate of QSXGA is 7.5fps */
+		msec_wait4stable = 267;
+	} else {
+		/* dump the first 9/18 frames: 9/15 (15 fps), 18/30 (30 fps)  */
+		msec_wait4stable = 600;
 	}
 	msleep(msec_wait4stable);
 
