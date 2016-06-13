@@ -347,6 +347,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-gw553x.dtb \
 	imx6dl-hummingboard.dtb \
 	imx6dl-hl.dtb \
+	imx6dl-hp.dtb \
 	imx6dl-nit6xlite.dtb \
 	imx6dl-nitrogen6x.dtb \
 	imx6dl-phytec-pbab01.dtb \
@@ -420,6 +421,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-gw553x.dtb \
 	imx6q-h100.dtb \
 	imx6q-h4.dtb \
+	imx6q-hp.dtb \
 	imx6q-hummingboard.dtb \
 	imx6q-icore-rqs.dtb \
 	imx6q-marsboard.dtb \
