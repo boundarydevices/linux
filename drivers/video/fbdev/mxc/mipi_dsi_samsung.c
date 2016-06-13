@@ -220,6 +220,7 @@ int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,
 			return -ETIMEDOUT;
 		}
 	}
+	mdelay(10);
 
 	return 0;
 }
