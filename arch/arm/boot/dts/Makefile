@@ -721,6 +721,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-ash2.dtb \
 	imx6dl-bt.dtb \
 	imx6dl-hl.dtb \
+	imx6dl-hp.dtb \
 
 dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-acl.dtb \
@@ -735,6 +736,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-cob2.dtb \
 	imx6q-eo.dtb \
 	imx6q-h4.dtb \
+	imx6q-hp.dtb \
 
 dtb-$(CONFIG_SOC_IMX6SL) += \
 	imx6sl-evk.dtb \
