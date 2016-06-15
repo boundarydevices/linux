@@ -17,6 +17,7 @@
 
 #include <linux/acpi.h>
 #include <linux/dmi.h>
+#include <linux/gpio.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/completion.h>
@@ -325,6 +326,7 @@ struct mxt_data {
 
 	/* for config update handling */
 	struct completion crc_completion;
+	struct gpio_desc *reset_gpio;
 };
 
 struct mxt_vb2_buffer {
@@ -3176,11 +3178,17 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct mxt_data *data;
 	const struct mxt_platform_data *pdata;
 	int error;
+	struct gpio_desc *gpio;
 
 	pdata = mxt_get_platform_data(client);
 	if (IS_ERR(pdata))
 		return PTR_ERR(pdata);
 
+	gpio = devm_gpiod_get_index(&client->dev, "reset", 0, GPIOD_OUT_HIGH);
+	if (!IS_ERR(gpio)) {
+		gpiod_set_value(gpio, 0);	/* inactive */
+		msleep(80);	/* 70 fails, 75 works */
+	}
 	error = detect_device(client);
 	if (error) {
 		dev_err(&client->dev, "not detected\n");
@@ -3189,6 +3197,8 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	data = devm_kzalloc(&client->dev, sizeof(struct mxt_data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
+	if (!IS_ERR(gpio))
+		data->reset_gpio = gpio;
 
 	snprintf(data->phys, sizeof(data->phys), "i2c-%u-%04x/input0",
 		 client->adapter->nr, client->addr);
@@ -3249,6 +3259,8 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 err_free_object:
 	mxt_free_input_device(data);
 	mxt_free_object_table(data);
+	if (data->reset_gpio)
+		gpiod_set_value(data->reset_gpio, 1);	/* Set active */
 	return error;
 }
 
@@ -3257,6 +3269,8 @@ static int mxt_remove(struct i2c_client *client)
 	struct mxt_data *data = i2c_get_clientdata(client);
 
 	disable_irq(data->irq);
+	if (data->reset_gpio)
+		gpiod_set_value(data->reset_gpio, 1);	/* Set active */
 	sysfs_remove_group(&client->dev.kobj, &mxt_attr_group);
 	mxt_free_input_device(data);
 	mxt_free_object_table(data);
