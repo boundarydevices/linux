@@ -12,6 +12,7 @@
 
 #include <linux/acpi.h>
 #include <linux/dmi.h>
+#include <linux/gpio.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/completion.h>
@@ -3260,6 +3261,7 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	if (data->reset_gpio) {
 		/* Wait a while and then de-assert the RESET GPIO line */
+		msleep(100);	/* 70 fails, 75 works */
 		msleep(MXT_RESET_GPIO_TIME);
 		gpiod_set_value(data->reset_gpio, 0);
 		msleep(MXT_RESET_INVALID_CHG);
@@ -3303,6 +3305,8 @@ err_free_object:
 err_disable_regulators:
 	regulator_bulk_disable(ARRAY_SIZE(data->regulators),
 			       data->regulators);
+	if (data->reset_gpio)
+		gpiod_set_value(data->reset_gpio, 1);	/* Set active */
 	return error;
 }
 
@@ -3311,6 +3315,8 @@ static void mxt_remove(struct i2c_client *client)
 	struct mxt_data *data = i2c_get_clientdata(client);
 
 	disable_irq(data->irq);
+	if (data->reset_gpio)
+		gpiod_set_value(data->reset_gpio, 1);	/* Set active */
 	sysfs_remove_group(&client->dev.kobj, &mxt_attr_group);
 	mxt_free_input_device(data);
 	mxt_free_object_table(data);
