@@ -100,9 +100,10 @@
 			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
 #define GP_TOUCH_IRQ			<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		/* J7 pin 4 - I2C3 */
-#define GP_TS2004_IRQ			<&gpio2 27 IRQ_TYPE_LEVEL_LOW>
+#define GP_TSC2004_IRQ			<&gpio2 27 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_EIM_LBA__GPIO2_IO27		0x1b0b0		/* tsc2004(I2C3) irq */
-			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x0b0b0		/* tsc2004(I2C3) *reset */
+#define GP_TSC2004_RESET		<&gpio4 10 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x030b0
 		>;
 	};
 
@@ -213,7 +214,7 @@
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0		/* sys_mclk */
 #define GP_SGTL5000_MUTE		<&gpio5 2 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_A25__GPIO5_IO02		0x1b0b0
+			MX6QDL_PAD_EIM_A25__GPIO5_IO02		0x030b0
 		>;
 	};
 
@@ -466,6 +467,7 @@
 			"Headphone Jack", "HP_OUT";
 		mux-int-port = <1>;
 		mux-ext-port = <3>;
+		mute-gpios = GP_SGTL5000_MUTE;
 	};
 
 	sound-hdmi {
@@ -681,8 +683,9 @@
 	tsc2004@48 {
 		compatible = "tsc2004,tsc2004";
 		reg = <0x48>;
-		interrupts-extended = GP_TS2004_IRQ;
-		wakeup-gpios = GP_TS2004_IRQ;
+		interrupts-extended = GP_TSC2004_IRQ;
+		wakeup-gpios = GP_TSC2004_IRQ;
+		reset-gpios = GP_TSC2004_RESET;
 	};
 	isl1208@6f {
 		compatible = "isl,isl1208";
