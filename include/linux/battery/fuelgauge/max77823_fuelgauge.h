@@ -179,7 +179,7 @@ struct max77823_fuelgauge_data {
 #endif
 	sec_battery_platform_data_t *pdata;
 	struct max77823_fuelgauge_battery_data_t *battery_data;
-	struct power_supply		psy_fg;
+	struct power_supply	*psy_fg;
 	struct power_supply	*psy_ref[PS_MAX];
 	struct delayed_work isr_work;
 
