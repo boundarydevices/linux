@@ -66,8 +66,8 @@ static int psy_get_prop(struct max77823_fuelgauge_data *fuelgauge, enum ps_id id
 			msleep(1);
 		} while (1);
 	}
-	if (psy->get_property) {
-		ret = psy->get_property(psy, property, value);
+	if (psy->desc->get_property) {
+		ret = psy->desc->get_property(psy, property, value);
 		if (ret < 0)
 			pr_err("%s: fuel Fail to get %s(%d=>%d)\n", __func__, psy_names[id], property, ret);
 	}
@@ -94,8 +94,8 @@ static int psy_set_prop(struct max77823_fuelgauge_data *fuelgauge, enum ps_id id
 			msleep(1);
 		} while (1);
 	}
-	if (psy->set_property) {
-		ret = psy->set_property(psy, property, value);
+	if (psy->desc->set_property) {
+		ret = psy->desc->set_property(psy, property, value);
 		if (ret < 0)
 			pr_err("%s: fuel Fail to set %s(%d=>%d)\n", __func__, psy_names[id], property, ret);
 	}
@@ -1778,8 +1778,7 @@ static int max77823_fg_get_property(struct power_supply *psy,
 			     union power_supply_propval *val)
 {
 	int ret;
-	struct max77823_fuelgauge_data *fuelgauge =
-		container_of(psy, struct max77823_fuelgauge_data, psy_fg);
+	struct max77823_fuelgauge_data *fuelgauge = psy->drv_data;
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -1911,8 +1910,7 @@ static int max77823_fg_set_property(struct power_supply *psy,
 			     enum power_supply_property psp,
 			     const union power_supply_propval *val)
 {
-	struct max77823_fuelgauge_data *fuelgauge =
-		container_of(psy, struct max77823_fuelgauge_data, psy_fg);
+	struct max77823_fuelgauge_data *fuelgauge = psy->drv_data;
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -2343,6 +2341,19 @@ static int max77823_fuelgauge_parse_dt(
 }
 #endif
 
+const struct power_supply_desc psy_fg_desc = {
+	.name = "max77823-fuelgauge",
+	.type = POWER_SUPPLY_TYPE_UNKNOWN,
+	.properties = max77823_fuelgauge_props,
+	.num_properties = ARRAY_SIZE(max77823_fuelgauge_props),
+	.get_property = max77823_fg_get_property,
+	.set_property = max77823_fg_set_property,
+	.property_is_writeable  = max77823_fg_property_is_writeable,
+};
+
+struct power_supply_config psy_fg_config = {
+};
+
 static int max77823_fuelgauge_probe(struct platform_device *pdev)
 {
 	struct max77823_dev *max77823 = dev_get_drvdata(pdev->dev.parent);
@@ -2381,14 +2392,6 @@ static int max77823_fuelgauge_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, fuelgauge);
 
-	fuelgauge->psy_fg.name		= "max77823-fuelgauge";
-	fuelgauge->psy_fg.type		= POWER_SUPPLY_TYPE_UNKNOWN;
-	fuelgauge->psy_fg.get_property	= max77823_fg_get_property;
-	fuelgauge->psy_fg.set_property	= max77823_fg_set_property;
-	fuelgauge->psy_fg.properties	= max77823_fuelgauge_props;
-	fuelgauge->psy_fg.num_properties =
-		ARRAY_SIZE(max77823_fuelgauge_props);
-	fuelgauge->psy_fg.property_is_writeable  = max77823_fg_property_is_writeable;
 	fuelgauge->capacity_max = fuelgauge->pdata->capacity_max;
 #ifdef CONFIG_FUELGAUGE_MAX77823_VOLTAGE_TRACKING
 	raw_soc_val.intval = max77823_get_soc(fuelgauge) / 10;
@@ -2407,9 +2410,11 @@ static int max77823_fuelgauge_probe(struct platform_device *pdev)
 		goto err_free;
 	}
 
-	ret = power_supply_register(&pdev->dev, &fuelgauge->psy_fg);
-	if (ret) {
+	psy_fg_config.drv_data = fuelgauge;
+	fuelgauge->psy_fg = power_supply_register(&pdev->dev, &psy_fg_desc, &psy_fg_config);
+	if (IS_ERR(fuelgauge->psy_fg)) {
 		pr_err("%s: Failed to Register psy_fg\n", __func__);
+		ret = PTR_ERR(fuelgauge->psy_fg);
 		goto err_free;
 	}
 
@@ -2453,7 +2458,7 @@ err_irq:
 	if (fuelgauge->fg_irq)
 		free_irq(fuelgauge->fg_irq, fuelgauge);
 err_supply_unreg:
-	power_supply_unregister(&fuelgauge->psy_fg);
+	power_supply_unregister(fuelgauge->psy_fg);
 err_free:
 	mutex_destroy(&fuelgauge->fg_lock);
 	kfree(pdata->fuelgauge_data);
