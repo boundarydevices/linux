@@ -74,8 +74,8 @@ static int psy_get_prop(struct max77823_charger_data *charger, enum ps_id id, en
 			msleep(1);
 		} while (1);
 	}
-	if (psy->get_property) {
-		ret = psy->get_property(psy, property, value);
+	if (psy->desc->get_property) {
+		ret = psy->desc->get_property(psy, property, value);
 		if (ret < 0)
 			pr_err("%s: charger Fail to get %s(%d=>%d)\n", __func__, psy_names[id], property, ret);
 	}
@@ -102,8 +102,8 @@ static int psy_set_prop(struct max77823_charger_data *charger, enum ps_id id, en
 			msleep(1);
 		} while (1);
 	}
-	if (psy->set_property) {
-		ret = psy->set_property(psy, property, value);
+	if (psy->desc->set_property) {
+		ret = psy->desc->set_property(psy, property, value);
 		if (ret < 0)
 			pr_err("%s: charger Fail to set %s(%d=>%d)\n", __func__, psy_names[id], property, ret);
 	}
@@ -752,8 +752,7 @@ static int max77823_chg_get_property(struct power_supply *psy,
 			      enum power_supply_property psp,
 			      union power_supply_propval *val)
 {
-	struct max77823_charger_data *charger =
-		container_of(psy, struct max77823_charger_data, psy_chg);
+	struct max77823_charger_data *charger = psy->drv_data;
 	u8 reg_data;
 
 	switch (psp) {
@@ -830,7 +829,7 @@ static int max77823_otg_regulator_nb(struct notifier_block *nb, unsigned long ev
 {
 	struct max77823_charger_data *charger = container_of(nb, struct max77823_charger_data, otg_regulator_nb);
 
-	if (event & (REGULATOR_EVENT_DISABLE | REGULATOR_EVENT_ENABLE | REGULATOR_EVENT_PRE_ENABLE)) {
+	if (event & (REGULATOR_EVENT_DISABLE | REGULATOR_EVENT_AFT_DO_ENABLE | REGULATOR_EVENT_PRE_DO_ENABLE)) {
 		max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_12,
 			(event & REGULATOR_EVENT_DISABLE) ? 0x20 : 0, 0x20);
 		if (event & REGULATOR_EVENT_DISABLE)
@@ -858,8 +857,7 @@ static int max77823_chg_set_property(struct power_supply *psy,
 			  enum power_supply_property psp,
 			  const union power_supply_propval *val)
 {
-	struct max77823_charger_data *charger =
-		container_of(psy, struct max77823_charger_data, psy_chg);
+	struct max77823_charger_data *charger = psy->drv_data;
 	int set_charging_current_max;
 	const int usb_charging_current = get_charging_info(charger, POWER_SUPPLY_TYPE_USB)->fast_charging_current;
 
@@ -945,8 +943,7 @@ static int max77823_otg_get_property(struct power_supply *psy,
 				enum power_supply_property psp,
 				union power_supply_propval *val)
 {
-	struct max77823_charger_data *charger =
-		container_of(psy, struct max77823_charger_data, psy_otg);
+	struct max77823_charger_data *charger = psy->drv_data;
 	u8 data;
 
 	val->intval = 0;
@@ -965,8 +962,7 @@ static int max77823_otg_set_property(struct power_supply *psy,
 				enum power_supply_property psp,
 				const union power_supply_propval *val)
 {
-	struct max77823_charger_data *charger =
-		container_of(psy, struct max77823_charger_data, psy_otg);
+	struct max77823_charger_data *charger = psy->drv_data;
 	static u8 chg_int_state;
 	u8 chg_cnfg_00;
 
@@ -1473,6 +1469,31 @@ static int max77823_charger_parse_dt(struct max77823_charger_data *charger, stru
 }
 #endif
 
+const struct power_supply_desc psy_chg_desc = {
+	.name = "max77823-charger",
+	.type = POWER_SUPPLY_TYPE_UNKNOWN,
+	.properties = max77823_charger_props,
+	.num_properties = ARRAY_SIZE(max77823_charger_props),
+	.get_property = max77823_chg_get_property,
+	.set_property = max77823_chg_set_property,
+	.property_is_writeable  = max77823_chg_property_is_writeable,
+};
+
+struct power_supply_config psy_chg_config = {
+};
+
+const struct power_supply_desc psy_otg_desc = {
+	.name = "otg",
+	.type = POWER_SUPPLY_TYPE_OTG,
+	.properties = max77823_otg_props,
+	.num_properties = ARRAY_SIZE(max77823_otg_props),
+	.get_property = max77823_otg_get_property,
+	.set_property = max77823_otg_set_property,
+};
+
+struct power_supply_config psy_otg_config = {
+};
+
 static int max77823_charger_probe(struct platform_device *pdev)
 {
 	struct max77823_dev *max77823 = dev_get_drvdata(pdev->dev.parent);
@@ -1531,21 +1552,6 @@ static int max77823_charger_probe(struct platform_device *pdev)
 		}
 	}
 
-	charger->psy_chg.name		= "max77823-charger";
-	charger->psy_chg.type		= POWER_SUPPLY_TYPE_UNKNOWN;
-	charger->psy_chg.get_property	= max77823_chg_get_property;
-	charger->psy_chg.set_property	= max77823_chg_set_property;
-	charger->psy_chg.properties	= max77823_charger_props;
-	charger->psy_chg.num_properties	= ARRAY_SIZE(max77823_charger_props);
-	charger->psy_chg.property_is_writeable  = max77823_chg_property_is_writeable;
-
-	charger->psy_otg.name		= "otg";
-	charger->psy_otg.type		= POWER_SUPPLY_TYPE_OTG;
-	charger->psy_otg.get_property	= max77823_otg_get_property;
-	charger->psy_otg.set_property	= max77823_otg_set_property;
-	charger->psy_otg.properties		= max77823_otg_props;
-	charger->psy_otg.num_properties	= ARRAY_SIZE(max77823_otg_props);
-
 	max77823_charger_initialize(charger);
 
 	(void) debugfs_create_file("max77823-regs",
@@ -1567,14 +1573,18 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	wake_lock_init(&charger->wpc_wake_lock, WAKE_LOCK_SUSPEND,
 					       "charger-wpc");
 	INIT_DELAYED_WORK(&charger->wpc_work, wpc_detect_work);
-	ret = power_supply_register(&pdev->dev, &charger->psy_otg);
-	if (ret) {
+	psy_otg_config.drv_data = charger;
+	charger->psy_otg = power_supply_register(&pdev->dev, &psy_otg_desc, &psy_otg_config);
+	if (IS_ERR(charger->psy_otg)) {
 		pr_err("%s: Failed to Register psy_otg\n", __func__);
+		ret = PTR_ERR(charger->psy_otg);
 		goto err_workqueue;
 	}
-	ret = power_supply_register(&pdev->dev, &charger->psy_chg);
-	if (ret) {
+	psy_chg_config.drv_data = charger;
+	charger->psy_chg = power_supply_register(&pdev->dev, &psy_chg_desc, &psy_chg_config);
+	if (IS_ERR(charger->psy_chg)) {
 		pr_err("%s: Failed to Register psy_chg\n", __func__);
+		ret = PTR_ERR(charger->psy_chg);
 		goto err_psy_unreg_otg;
 	}
 
@@ -1631,9 +1641,9 @@ err_wc_irq:
 	if (charger->pdata->chg_irq)
 		free_irq(charger->pdata->chg_irq, NULL);
 err_irq:
-	power_supply_unregister(&charger->psy_chg);
+	power_supply_unregister(charger->psy_chg);
 err_psy_unreg_otg:
-	power_supply_unregister(&charger->psy_otg);
+	power_supply_unregister(charger->psy_otg);
 err_workqueue:
 	destroy_workqueue(charger->wqueue);
 err_free:
@@ -1651,7 +1661,8 @@ static int max77823_charger_remove(struct platform_device *pdev)
 	destroy_workqueue(charger->wqueue);
 	free_irq(charger->wc_w_irq, NULL);
 	free_irq(charger->pdata->chg_irq, NULL);
-	power_supply_unregister(&charger->psy_chg);
+	power_supply_unregister(charger->psy_chg);
+	power_supply_unregister(charger->psy_otg);
 //	for (i = 0; i < ARRAY_SIZE(charger->psy_ref); i++)
 //		power_supply_put(charger->psy_ref[i]);
 	kfree(charger);
