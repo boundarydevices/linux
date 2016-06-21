@@ -149,8 +149,8 @@ struct max77823_charger_data {
 	struct i2c_client       *pmic_i2c;
 	struct mutex            charger_mutex;
 
-	struct power_supply	psy_chg;
-	struct power_supply	psy_otg;
+	struct power_supply	*psy_chg;
+	struct power_supply	*psy_otg;
 	struct power_supply	*psy_ref[PS_MAX];
 
 	struct workqueue_struct *wqueue;
