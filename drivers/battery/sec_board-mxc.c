@@ -317,7 +317,7 @@ bool sec_bat_check_callback(struct sec_battery_info *battery)
 		value.intval = 1;
 	} else {
 		int ret;
-		ret = psy->get_property(psy, POWER_SUPPLY_PROP_PRESENT, &(value));
+		ret = psy->desc->get_property(psy, POWER_SUPPLY_PROP_PRESENT, &(value));
 		if (ret < 0) {
 			pr_err("%s: Fail to sec-charger get_property (%d=>%d)\n",
 					__func__, POWER_SUPPLY_PROP_PRESENT, ret);
