@@ -690,33 +690,33 @@ static int gslx680_ts_remove(struct i2c_client *client)
 	return 0;
 }
 
-static int gsl_ts_suspend(struct i2c_client *client, pm_message_t mesg)
+static int gsl_ts_suspend(struct device *dev)
 {
-	struct gsl_ts *ts = i2c_get_clientdata(client);
+	struct gsl_ts *ts = dev_get_drvdata(dev);
 
 	pr_info("%s: Enter\n", __func__);
 	ts->is_suspended = true;
 
 	disable_irq(ts->irq);
 
-	reset_chip(client);
+	reset_chip(ts->client);
 	gslX680_shutdown(ts, 1);
 	msleep(10);
 
 	return 0;
 }
 
-static int gsl_ts_resume(struct i2c_client *client)
+static int gsl_ts_resume(struct device *dev)
 {
-	struct gsl_ts *ts = i2c_get_clientdata(client);
+	struct gsl_ts *ts = dev_get_drvdata(dev);
 
 	pr_info("%s: Enter\n", __func__);
 
 	gslX680_shutdown(ts, 0);
 	msleep(20);
-	reset_chip(client);
-	startup_chip(client);
-	check_mem_data(ts, client);
+	reset_chip(ts->client);
+	startup_chip(ts->client);
+	check_mem_data(ts, ts->client);
 
 	enable_irq(ts->irq);
 	ts->is_suspended = false;
@@ -731,6 +731,13 @@ static const struct i2c_device_id gslx680_ts_id[] = {
 
 MODULE_DEVICE_TABLE(i2c, gslx680_ts_id);
 
+static const struct dev_pm_ops gslx680_pm_ops = {
+#ifdef CONFIG_PM_SLEEP
+	.suspend = gsl_ts_suspend,
+	.resume = gsl_ts_resume,
+#endif
+};
+
 static struct i2c_driver gslx680_ts_driver = {
 	.class	  = I2C_CLASS_HWMON,
 	.probe	  = gslx680_ts_probe,
@@ -739,9 +746,8 @@ static struct i2c_driver gslx680_ts_driver = {
 	.driver = {
 		.name   = GSLX680_I2C_NAME,
 		.owner  = THIS_MODULE,
+		.pm	= &gslx680_pm_ops,
 	},
-	.suspend = gsl_ts_suspend,
-	.resume = gsl_ts_resume,
 };
 
 static int gslx680_ts_init(void)
