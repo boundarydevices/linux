@@ -282,8 +282,9 @@
 		fsl,pins = <
 			MX6QDL_PAD_SD3_DAT7__UART1_TX_DATA	0x1b0b1
 			MX6QDL_PAD_SD3_DAT6__UART1_RX_DATA	0x1b0b1
-			MX6QDL_PAD_SD3_DAT0__UART1_CTS_B	0x1b0b1
-			MX6QDL_PAD_SD3_DAT1__UART1_RTS_B	0x1b0b1
+			MX6QDL_PAD_SD3_DAT0__GPIO7_IO04		0x1b0b1
+#define GP_UART1_TX_EN	<&gpio7 5 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_SD3_DAT1__GPIO7_IO05		0x030b1
 		>;
 	};
 
@@ -300,8 +301,9 @@
 		fsl,pins = <
 			MX6QDL_PAD_EIM_D24__UART3_TX_DATA	0x1b0b1
 			MX6QDL_PAD_EIM_D25__UART3_RX_DATA	0x1b0b1
-			MX6QDL_PAD_EIM_D23__UART3_CTS_B		0x1b0b1
-			MX6QDL_PAD_EIM_D31__UART3_RTS_B		0x1b0b1
+			MX6QDL_PAD_EIM_D23__GPIO3_IO23		0x1b0b1
+#define GP_UART3_TX_EN	<&gpio3 31 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_D31__GPIO3_IO31		0x030b1
 		>;
 	};
 
@@ -309,8 +311,9 @@
 		fsl,pins = <
 			MX6QDL_PAD_CSI0_DAT12__UART4_TX_DATA	0x1b0b1
 			MX6QDL_PAD_CSI0_DAT13__UART4_RX_DATA	0x1b0b1
-			MX6QDL_PAD_CSI0_DAT17__UART4_CTS_B	0x1b0b1
-			MX6QDL_PAD_CSI0_DAT16__UART4_RTS_B	0x1b0b1
+			MX6QDL_PAD_CSI0_DAT17__GPIO6_IO03	0x1b0b1
+#define GP_UART4_TX_EN	<&gpio6 2 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT16__GPIO6_IO02	0x030b1
 		>;
 	};
 
@@ -318,8 +321,9 @@
 		fsl,pins = <
 			MX6QDL_PAD_CSI0_DAT14__UART5_TX_DATA	0x0b0b1
 			MX6QDL_PAD_CSI0_DAT15__UART5_RX_DATA	0x1b0b1
-			MX6QDL_PAD_CSI0_DAT19__UART5_CTS_B	0x1b0b1
-			MX6QDL_PAD_CSI0_DAT18__UART5_RTS_B	0x1b0b1
+			MX6QDL_PAD_CSI0_DAT19__GPIO6_IO05	0x1b0b1
+#define GP_UART5_TX_EN	<&gpio6 4 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT18__GPIO6_IO04	0x030b1
 		>;
 	};
 
@@ -901,7 +905,18 @@
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
-	fsl,uart-has-rtscts;
+	control-gpios = GP_UART1_TX_EN;
+#define M_TX_EN		1
+	off_levels = <0>;
+	rxact_mask = <0>;
+	rxact_levels = <0>;
+	rs232_levels = <0>;
+	rs232_txen_mask = <M_TX_EN>;
+	rs232_txen_levels = <M_TX_EN>;
+	rs485_levels = <0>;
+	rs485_txen_mask = <M_TX_EN>;
+	rs485_txen_levels = <M_TX_EN>;
+	rs485-mode = <1>;
 	status = "okay";
 };
 
@@ -915,21 +930,51 @@
 &uart3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
-	fsl,uart-has-rtscts;
+	control-gpios = GP_UART3_TX_EN;
+	off_levels = <0>;
+	rxact_mask = <0>;
+	rxact_levels = <0>;
+	rs232_levels = <0>;
+	rs232_txen_mask = <M_TX_EN>;
+	rs232_txen_levels = <M_TX_EN>;
+	rs485_levels = <0>;
+	rs485_txen_mask = <M_TX_EN>;
+	rs485_txen_levels = <M_TX_EN>;
+	rs485-mode = <1>;
 	status = "okay";
 };
 
 &uart4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4>;
-	fsl,uart-has-rtscts;
+	control-gpios = GP_UART4_TX_EN;
+	off_levels = <0>;
+	rxact_mask = <0>;
+	rxact_levels = <0>;
+	rs232_levels = <0>;
+	rs232_txen_mask = <M_TX_EN>;
+	rs232_txen_levels = <M_TX_EN>;
+	rs485_levels = <0>;
+	rs485_txen_mask = <M_TX_EN>;
+	rs485_txen_levels = <M_TX_EN>;
+	rs485-mode = <1>;
 	status = "okay";
 };
 
 &uart5 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart5>;
-	fsl,uart-has-rtscts;
+	control-gpios = GP_UART5_TX_EN;
+	off_levels = <0>;
+	rxact_mask = <0>;
+	rxact_levels = <0>;
+	rs232_levels = <0>;
+	rs232_txen_mask = <M_TX_EN>;
+	rs232_txen_levels = <M_TX_EN>;
+	rs485_levels = <0>;
+	rs485_txen_mask = <M_TX_EN>;
+	rs485_txen_levels = <M_TX_EN>;
+	rs485-mode = <1>;
 	status = "okay";
 };
 
