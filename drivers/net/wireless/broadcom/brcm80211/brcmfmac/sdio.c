@@ -23,6 +23,7 @@
 #include <linux/netdevice.h>
 #include <linux/interrupt.h>
 #include <linux/sched.h>
+#include <linux/mmc/host.h>
 #include <linux/mmc/sdio.h>
 #include <linux/mmc/sdio_ids.h>
 #include <linux/mmc/sdio_func.h>
