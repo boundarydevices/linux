@@ -22,11 +22,11 @@
 #include <linux/sched.h>
 #include <linux/completion.h>
 #include <linux/scatterlist.h>
+#include <linux/mmc/host.h>
 #include <linux/mmc/sdio.h>
 #include <linux/mmc/core.h>
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/card.h>
-#include <linux/mmc/host.h>
 #include <linux/platform_device.h>
 #include <linux/platform_data/brcmfmac-sdio.h>
 #include <linux/pm_runtime.h>
