@@ -96,7 +96,7 @@
 			MX6SX_PAD_RGMII1_RXC__ENET1_RX_CLK	0x3081
 #define GP_RGMII1_PHY_RESET		<&gpio2 7 GPIO_ACTIVE_LOW>
 			MX6SX_PAD_ENET2_CRS__GPIO2_IO_7		0xb0b0
-#define GP_RGMII1_PHY_INT		<&gpio2 4 GPIO_ACTIVE_LOW>
+#define GPIRQ_RGMII1_PHY		<&gpio2 4 IRQ_TYPE_LEVEL_LOW>
 			MX6SX_PAD_ENET1_RX_CLK__GPIO2_IO_4	0xb0b0
 			MX6SX_PAD_ENET1_TX_CLK__GPIO2_IO_5	0xb0b0
 		>;
@@ -118,7 +118,7 @@
 			MX6SX_PAD_RGMII2_RXC__ENET2_RX_CLK	0x3081
 #define GP_RGMII2_PHY_RESET		<&gpio2 6 GPIO_ACTIVE_LOW>
 			MX6SX_PAD_ENET2_COL__GPIO2_IO_6		0xb0b0
-#define GP_RGMII2_PHY_INT		<&gpio2 8 GPIO_ACTIVE_LOW>
+#define GPIRQ_RGMII2_PHY		<&gpio2 8 IRQ_TYPE_LEVEL_LOW>
 			MX6SX_PAD_ENET2_RX_CLK__GPIO2_IO_8	0xb0b0
 			MX6SX_PAD_ENET2_TX_CLK__GPIO2_IO_9	0xb0b0
 		>;
@@ -643,13 +643,13 @@
 		ethphy1: ethernet-phy@4 {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <4>;
-			interrupts-extended = GP_RGMII1_PHY_INT;
+			interrupts-extended = GPIRQ_RGMII1_PHY;
 		};
 
 		ethphy2: ethernet-phy@5 {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <5>;
-			interrupts-extended = GP_RGMII2_PHY_INT;
+			interrupts-extended = GPIRQ_RGMII2_PHY;
 		};
 	};
 };
