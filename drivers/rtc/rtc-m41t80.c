@@ -337,6 +337,31 @@ static struct rtc_class_ops m41t80_rtc_ops = {
 	.proc = m41t80_rtc_proc,
 };
 
+#ifdef CONFIG_PM_SLEEP
+static int m41t80_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+
+	if (client->irq >= 0 && device_may_wakeup(dev))
+		enable_irq_wake(client->irq);
+
+	return 0;
+}
+
+static int m41t80_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+
+	if (client->irq >= 0 && device_may_wakeup(dev))
+		disable_irq_wake(client->irq);
+
+	return 0;
+}
+#endif
+
+static SIMPLE_DEV_PM_OPS(m41t80_pm, m41t80_suspend, m41t80_resume);
+
+
 #if defined(CONFIG_RTC_INTF_SYSFS) || defined(CONFIG_RTC_INTF_SYSFS_MODULE)
 static ssize_t m41t80_sysfs_show_flags(struct device *dev,
 				struct device_attribute *attr, char *buf)
