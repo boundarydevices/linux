@@ -144,8 +144,9 @@
 			MX6QDL_PAD_RGMII_RX_CTL__RGMII_RX_CTL	0x1b0b0
 #define GP_ENET_PHY_RESET		<&gpio1 27 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_ENET_RXD0__GPIO1_IO27	0x0f0b0
-#define GP_ENET_PHY_INT			<&gpio1 28 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_ENET_PHY			<&gpio1 28 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28	0x1b0b0
+#define GPIRQ_ENET		<&gpio1 6 IRQ_TYPE_LEVEL_HIGH>
 			MX6QDL_PAD_GPIO_6__ENET_IRQ		0x000b1
 		>;
 	};
@@ -203,7 +204,7 @@
 
 	pinctrl_rv4162: rv4162grp {
 		fsl,pins = <
-#define GP_RTC_RV4162_IRQ		<&gpio4 6 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_RTC_RV4162		<&gpio4 6 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x1b0b0
 		>;
 	};
@@ -328,7 +329,7 @@
 #if 0
 	phy-reset-gpios = GP_ENET_PHY_RESET;
 #endif
-	interrupts-extended = <&gpio1 6 IRQ_TYPE_LEVEL_HIGH>,
+	interrupts-extended = GPIRQ_ENET,
 			      <&intc 0 119 IRQ_TYPE_LEVEL_HIGH>;
 	status = "okay";
 
@@ -336,7 +337,7 @@
 	#size-cells = <1>;
 	phy_int {
 		reg = <0x6>;
-		interrupts-extended = GP_ENET_PHY_INT;
+		interrupts-extended = GPIRQ_ENET_PHY;
 	};
 };
 
@@ -351,7 +352,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_rv4162>;
 		reg = <0x68>;
-		interrupts-extended = GP_RTC_RV4162_IRQ;
+		interrupts-extended = GPIRQ_RTC_RV4162;
 	};
 };
 
