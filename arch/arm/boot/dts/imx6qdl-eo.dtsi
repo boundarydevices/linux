@@ -81,7 +81,7 @@
 
 	pinctrl_i2c1_rv4162: i2c1-rv4162grp {
 		fsl,pins = <
-#define GP_RTC_RV4162_IRQ	<&gpio4 6 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_RTC_RV4162	<&gpio4 6 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x1b0b0
 		>;
 	};
@@ -468,7 +468,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_rv4162>;
 		reg = <0x68>;
-		interrupts-extended = GP_RTC_RV4162_IRQ;
+		interrupts-extended = GPIRQ_RTC_RV4162;
 	};
 };
 
