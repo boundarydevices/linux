@@ -391,7 +391,7 @@
 
 	pinctrl_wlan:wlangrp {
 		fsl,pins = <
-#define GP_WLAN_INT 	<&gpio7 7 IRQ_TYPE_LEVEL_HIGH>
+#define GPIRQ_WLAN 	<&gpio7 7 IRQ_TYPE_LEVEL_HIGH>
 			MX6SX_PAD_SD3_DATA5__GPIO7_IO_7		0x1b0b0
 		>;
 	};
@@ -532,7 +532,7 @@
 		compatible = "ti,wilink6";
 		clocks = <&refclock>;
 		clock-names = "refclock";
-		interrupts-extended = GP_WLAN_INT;
+		interrupts-extended = GPIRQ_WLAN;
 		status = "okay";
 
 		refclock: refclock {
