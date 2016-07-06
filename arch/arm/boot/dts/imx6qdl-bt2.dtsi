@@ -245,7 +245,7 @@
 			MX6QDL_PAD_CSI0_DAT13__GPIO5_IO31	0x1b0b0		/* imx6 uart4 rx */
 #define GP_GPS_TIMEPULSE	<&gpio2 30 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_EB2__GPIO2_IO30		0x1b0b0
-#define GP_GPS_EXTINT		<&gpio2 31 GPIO_ACTIVE_LOW>
+#define GPIRQ_GPS_EXT		<&gpio2 31 GPIO_ACTIVE_LOW>	/* don't use IRQ_LEVEL without code change to gps_max7w */
 			MX6QDL_PAD_EIM_EB3__GPIO2_IO31		0x1b0b0
 		>;
 	};
@@ -607,7 +607,7 @@
 	#size-cells = <1>;
 	phy_int {
 		reg = <0x6>;
-		interrupts-extended = GPIRQ_ENET_PHY; 
+		interrupts-extended = GPIRQ_ENET_PHY;
 	};
 };
 
@@ -645,7 +645,7 @@
 		pinctrl-0 = <&pinctrl_i2c1_rv4162>;
 		reg = <0x68>;
 		clkout = <32768>;
-		interrupts-extended = GPIRQ_RTC_RV4162; 
+		interrupts-extended = GPIRQ_RTC_RV4162;
 	};
 };
 
@@ -682,7 +682,7 @@
 		compatible = "ublox,max-7w";
 		reg = <0x42>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c3_max_7w>; 
+		pinctrl-0 = <&pinctrl_i2c3_max_7w>;
 		reset-gpios = GP_GPS_RESET;
 		/*
 		 * TXD		- 6
@@ -694,7 +694,7 @@
 		 * SCL		- 8
 		 */
 		int-pio = <13>;
-		interrupts-extended = GP_GPS_EXTINT; 
+		interrupts-extended = GPIRQ_GPS_EXT;
         };
 };
 
