@@ -65,8 +65,9 @@
 			MX6QDL_PAD_RGMII_RX_CTL__RGMII_RX_CTL	0x1b0b0
 #define GP_ENET_PHY_RESET		<&gpio1 27 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_ENET_RXD0__GPIO1_IO27	0x0f0b0
-#define GP_ENET_PHY_INT			<&gpio1 28 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_ENET_PHY			<&gpio1 28 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28	0x1b0b0
+#define GPIRQ_ENET		<&gpio1 6 IRQ_TYPE_LEVEL_HIGH>
 			MX6QDL_PAD_GPIO_6__ENET_IRQ		0x000b1
 		>;
 	};
@@ -98,9 +99,9 @@
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_5__I2C3_SCL		0x4001b8b1
 			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
-#define GP_TOUCH_IRQ			<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_TOUCH			<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		/* J7 pin 4 - I2C3 */
-#define GP_TSC2004_IRQ			<&gpio2 27 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_TSC2004			<&gpio2 27 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_EIM_LBA__GPIO2_IO27		0x1b0b0		/* tsc2004(I2C3) irq */
 #define GP_TSC2004_RESET		<&gpio4 10 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x030b0
@@ -205,7 +206,7 @@
 
 	pinctrl_rtc: rtcgrp {
 		fsl,pins = <
-#define GP_RTC_IRQ			<&gpio2 26 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_RTC_ISL1208			<&gpio2 26 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x1b0b0
 		>;
 	};
@@ -590,7 +591,7 @@
 #if 0
 	phy-reset-gpios = GP_ENET_PHY_RESET;
 #endif
-	interrupts-extended = <&gpio1 6 IRQ_TYPE_LEVEL_HIGH>,
+	interrupts-extended = GPIRQ_ENET,
 			      <&intc 0 119 IRQ_TYPE_LEVEL_HIGH>;
 	status = "okay";
 
@@ -598,7 +599,7 @@
 	#size-cells = <1>;
 	phy_int {
 		reg = <0x6>;
-		interrupts-extended = GP_ENET_PHY_INT;
+		interrupts-extended = GPIRQ_ENET_PHY;
 	};
 };
 
@@ -656,14 +657,14 @@
 	egalax_ts@04 {
 		compatible = "eeti,egalax_ts";
 		reg = <0x04>;
-		interrupts-extended = GP_TOUCH_IRQ;
-		wakeup-gpios = GP_TOUCH_IRQ;
+		interrupts-extended = GPIRQ_TOUCH;
+		wakeup-gpios = GPIRQ_TOUCH;
 	};
 	ft5x06_ts@38 {
 		compatible = "ft5x06-ts";
 		reg = <0x38>;
-		interrupts-extended = GP_TOUCH_IRQ;
-		wakeup-gpios = GP_TOUCH_IRQ;
+		interrupts-extended = GPIRQ_TOUCH;
+		wakeup-gpios = GPIRQ_TOUCH;
 	};
 	gslx680_ts@40 {
 		compatible = "gslx680";
@@ -677,14 +678,14 @@
 	ili210x@41 {
 		compatible = "ili210x";
 		reg = <0x41>;
-		interrupts-extended = GP_TOUCH_IRQ;
-		wakeup-gpios = GP_TOUCH_IRQ;
+		interrupts-extended = GPIRQ_TOUCH;
+		wakeup-gpios = GPIRQ_TOUCH;
 	};
 	tsc2004@48 {
 		compatible = "tsc2004,tsc2004";
 		reg = <0x48>;
-		interrupts-extended = GP_TSC2004_IRQ;
-		wakeup-gpios = GP_TSC2004_IRQ;
+		interrupts-extended = GPIRQ_TSC2004;
+		wakeup-gpios = GPIRQ_TSC2004;
 		reset-gpios = GP_TSC2004_RESET;
 	};
 	isl1208@6f {
@@ -692,7 +693,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_rtc>;
 		reg = <0x6f>;
-		interrupts-extended = GP_RTC_IRQ;
+		interrupts-extended = GPIRQ_RTC_ISL1208;
 	};
 };
 
