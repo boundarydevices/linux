@@ -258,11 +258,11 @@
 
 	pinctrl_i2c3_max77818: i2c3_max77818grp {
 		fsl,pins = <
-#define GP_MAX77818_INOKB		<&gpio3 4 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_MAX77818_INOKB		<&gpio3 4 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_EIM_DA4__GPIO3_IO04		0x1b0b0
-#define GP_MAX77818_WCINOKB		<&gpio3 5 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_MAX77818_WCINOKB		<&gpio3 5 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_EIM_DA5__GPIO3_IO05		0x1b0b0
-#define GP_MAX77818_INTB		<&gpio3 6 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_MAX77818_INTB		<&gpio3 6 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_EIM_DA6__GPIO3_IO06		0x1b0b0
 		>;
 	};
@@ -271,7 +271,7 @@
 		fsl,pins = <
 #define GP_TOUCH_RESET	<&gpio2 22 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_A16__GPIO2_IO22		0x0b0b0
-#define GP_TOUCH_IRQ			<&gpio2 27 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_TOUCH			<&gpio2 27 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_EIM_LBA__GPIO2_IO27		0x1b0b0
 		>;
 	};
@@ -325,7 +325,7 @@
 
 	pinctrl_rv4162: rv4162grp {
 		fsl,pins = <
-#define GP_RTC_RV4162_IRQ		<&gpio4 6 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_RTC_RV4162		<&gpio4 6 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x1b0b0
 		>;
 	};
@@ -662,7 +662,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_rv4162>;
 		reg = <0x68>;
-		interrupts-extended = GP_RTC_RV4162_IRQ; 
+		interrupts-extended = GPIRQ_RTC_RV4162;
 	};
 };
 
@@ -687,22 +687,22 @@
         egalax_ts@04 {
                 compatible = "eeti,egalax_ts";
                 reg = <0x04>;
-		interrupts-extended = GP_TOUCH_IRQ; 
-                wakeup-gpios = GP_TOUCH_IRQ;
+		interrupts-extended = GPIRQ_TOUCH;
+		wakeup-gpios = GPIRQ_TOUCH;
         };
 
         ft5x06_ts@38 {
 		compatible = "ft5x06-ts";
 		reg = <0x38>;
-		interrupts-extended = GP_TOUCH_IRQ; 
-                wakeup-gpios = GP_TOUCH_IRQ;
+		interrupts-extended = GPIRQ_TOUCH;
+		wakeup-gpios = GPIRQ_TOUCH;
 	};
 
         ili210x@41 {
 		compatible = "ili210x";
 		reg = <0x41>;
-		interrupts-extended = GP_TOUCH_IRQ; 
-                wakeup-gpios = GP_TOUCH_IRQ;
+		interrupts-extended = GPIRQ_TOUCH;
+		wakeup-gpios = GPIRQ_TOUCH;
 	};
 };
 
@@ -738,8 +738,8 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_max77818>;
 		reg = <0x66>;
-		interrupts-extended = GP_MAX77818_INTB;
-		max77823,irq-gpio = GP_MAX77818_INTB;
+		interrupts-extended = GPIRQ_MAX77818_INTB;
+		max77823,irq-gpio = GPIRQ_MAX77818_INTB;
 		max77823,wakeup = <1>;
 		max77823_battery: battery {
 			compatible = "samsung,sec-battery";
@@ -943,7 +943,7 @@
 &uart4_gps_rfkill {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4_gps_rfkill>;
-	type = <6>;     /* gps */
+	type = <6>;	/* gps */
 	gpios = GP_GPS_RESET;
 };
 
@@ -999,7 +999,7 @@
 &wlan_bt_rfkill {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_wlan_bt_rfkill>;
-	type = <2>;     /* bluetooth */
+	type = <2>;	/* bluetooth */
 	bt_rfkill_reset-gpios = GP_BRM_BT_RESET;
 	bt_rfkill_shutdown-gpios = GP_BRM_BT_SHUTDOWN;
 };
