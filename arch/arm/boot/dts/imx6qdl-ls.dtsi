@@ -271,12 +271,12 @@
 	/* ends with B(active low) */
 	pinctrl_max77818: max77818grp {
 		fsl,pins = <
-#define GP_MAX77818_INOKB		<&gpio4 26 GPIO_ACTIVE_LOW>	/* C5 */
+#define GPIRQ_MAX77818_INOKB		<&gpio4 26 IRQ_TYPE_LEVEL_LOW>	/* C5 */
 			MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26	0x1b0b0
-#define GP_MAX77818_INTB		<&gpio5 6 GPIO_ACTIVE_LOW>	/* C3 */
-			MX6QDL_PAD_DISP0_DAT12__GPIO5_IO06	0x1b0b0
-#define GP_MAX77818_WCINOKB		<&gpio5 7 GPIO_ACTIVE_LOW>	/* A5 */
+#define GPIRQ_MAX77818_WCINOKB		<&gpio5 7 IRQ_TYPE_LEVEL_LOW>	/* A5 */
 			MX6QDL_PAD_DISP0_DAT13__GPIO5_IO07	0x1b0b0
+#define GPIRQ_MAX77818_INTB		<&gpio5 6 IRQ_TYPE_LEVEL_LOW>	/* C3 */
+			MX6QDL_PAD_DISP0_DAT12__GPIO5_IO06	0x1b0b0
 		>;
 	};
 
@@ -1053,8 +1053,8 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_max77818>;
 		reg = <0x66>;
-		interrupts-extended = GP_MAX77818_INTB;
-		max77823,irq-gpio = GP_MAX77818_INTB;
+		interrupts-extended = GPIRQ_MAX77818_INTB;
+		max77823,irq-gpio = GPIRQ_MAX77818_INTB;
 		max77823,wakeup = <1>;
 		max77823_battery: battery {
 			compatible = "samsung,sec-battery";
