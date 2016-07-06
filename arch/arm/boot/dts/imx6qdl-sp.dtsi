@@ -187,11 +187,12 @@
 
 	ar1020_i2c@4d {
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_touchint>;
+		pinctrl-0 = <&pinctrl_i2c1_ar1020>;
 		compatible = "ar1020_i2c";
 		reg = <0x4d>;
-		interrupts-extended = <&gpio7 1 IRQ_TYPE_LEVEL_HIGH>;
-		wakeup-gpios = <&gpio7 1 IRQ_TYPE_LEVEL_HIGH>;
+#define GPIRQ_AR1020	<&gpio7 1 IRQ_TYPE_LEVEL_HIGH>
+		interrupts-extended = GPIRQ_AR1020;
+		wakeup-gpios = GPIRQ_AR1020;
 	};
 	ads1000@49 {
 		compatible = "ads1000,ads1000";
@@ -212,7 +213,8 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_rtc>;
 		reg = <0x6f>;
-		interrupts-extended = <&gpio2 26 IRQ_TYPE_EDGE_FALLING>;
+#define GPIRQ_RTC_ISL1208	<&gpio2 26 IRQ_TYPE_EDGE_FALLING>
+		interrupts-extended = GPIRQ_RTC_ISL1208;
 	};
 };
 
@@ -252,6 +254,12 @@
 		fsl,pins = <
 			MX6QDL_PAD_EIM_D21__I2C1_SCL		0x4001b8b1
 			MX6QDL_PAD_EIM_D28__I2C1_SDA		0x4001b8b1
+		>;
+	};
+
+	pinctrl_i2c1_ar1020: i2c1_ar1020grp {
+		fsl,pins = <
+			MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x100b0
 		>;
 	};
 
@@ -333,12 +341,6 @@
 	pinctrl_rtc: rtcgrp {
 		fsl,pins = <
 			MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x1b0b0
-		>;
-	};
-
-	pinctrl_touchint: touchint {
-		fsl,pins = <
-			MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x100b0
 		>;
 	};
 
