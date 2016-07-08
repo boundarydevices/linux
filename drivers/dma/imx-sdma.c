@@ -1148,8 +1148,6 @@ static int sdma_config_channel(struct dma_chan *chan)
 			__set_bit(sdmac->event_id0, sdmac->event_mask);
 		}
 
-		/* Watermark Level */
-		sdmac->watermark_level |= sdmac->watermark_level;
 		/* Address */
 		sdmac->shp_addr = sdmac->per_address;
 		sdmac->per_addr = sdmac->per_address2;
