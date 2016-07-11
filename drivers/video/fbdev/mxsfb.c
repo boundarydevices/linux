@@ -1479,8 +1479,6 @@ static int mxsfb_probe(struct platform_device *pdev)
 		}
 	}
 
-	platform_set_drvdata(pdev, fb_info);
-
 	if (!host->enabled) {
 		writel(0, host->base + LCDC_CTRL);
 		mxsfb_set_par(fb_info);
@@ -1522,8 +1520,8 @@ fb_release:
 
 static int mxsfb_remove(struct platform_device *pdev)
 {
-	struct fb_info *fb_info = platform_get_drvdata(pdev);
-	struct mxsfb_info *host = fb_info->par;
+	struct mxsfb_info *host = platform_get_drvdata(pdev);
+	struct fb_info *fb_info = &host->fb_info;
 
 	if (host->enabled)
 		mxsfb_disable_controller(fb_info);
@@ -1541,8 +1539,7 @@ static int mxsfb_remove(struct platform_device *pdev)
 
 static void mxsfb_shutdown(struct platform_device *pdev)
 {
-	struct fb_info *fb_info = platform_get_drvdata(pdev);
-	struct mxsfb_info *host = fb_info->par;
+	struct mxsfb_info *host = platform_get_drvdata(pdev);
 
 	/*
 	 * Force stop the LCD controller as keeping it running during reboot
@@ -1573,8 +1570,8 @@ static int mxsfb_runtime_resume(struct device *dev)
 
 static int mxsfb_suspend(struct device *pdev)
 {
-	struct fb_info *fb_info = dev_get_drvdata(pdev);
-	struct mxsfb_info *host = to_imxfb_host(fb_info);
+	struct mxsfb_info *host = dev_get_drvdata(pdev);
+	struct fb_info *fb_info = &host->fb_info;
 	int saved_blank;
 
 	console_lock();
@@ -1588,8 +1585,8 @@ static int mxsfb_suspend(struct device *pdev)
 
 static int mxsfb_resume(struct device *pdev)
 {
-	struct fb_info *fb_info = dev_get_drvdata(pdev);
-	struct mxsfb_info *host = to_imxfb_host(fb_info);
+	struct mxsfb_info *host = dev_get_drvdata(pdev);
+	struct fb_info *fb_info = &host->fb_info;
 
 	console_lock();
 	mxsfb_blank(host->restore_blank, fb_info);
