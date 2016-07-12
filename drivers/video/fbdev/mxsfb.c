@@ -1519,6 +1519,7 @@ fb_destroy:
 	fb_destroy_modelist(&fb_info->modelist);
 fb_pm_runtime_disable:
 	pm_runtime_disable(&host->pdev->dev);
+	devm_kfree(&pdev->dev, fb_info->pseudo_palette);
 fb_release:
 	framebuffer_release(fb_info);
 	devm_kfree(&pdev->dev, host);
@@ -1540,6 +1541,7 @@ static int mxsfb_remove(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, NULL);
 
+	devm_kfree(&pdev->dev, fb_info->pseudo_palette);
 	framebuffer_release(fb_info);
 	devm_kfree(&pdev->dev, host);
 
