@@ -411,8 +411,9 @@ static const DECLARE_TLV_DB_RANGE(mic_gain_tlv,
 
 /* tlv for hp volume, -51.5db to 12.0db, step .5db */
 static const DECLARE_TLV_DB_SCALE(headphone_volume, -5150, 50, 0);
-/* tlv for lineout volume, -12.5db to 3.0db, step .5db */
-static const DECLARE_TLV_DB_SCALE(lineout_volume, -1250, 50, 0);
+
+/* tlv for lineout volume, 31 steps of .5db each */
+static const DECLARE_TLV_DB_SCALE(lineout_volume, -1550, 50, 0);
 
 static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 	/* SOC_DOUBLE_S8_TLV with invert */
@@ -440,14 +441,15 @@ static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 	SOC_SINGLE("Headphone Playback ZC Switch", SGTL5000_CHIP_ANA_CTRL,
 			5, 1, 0),
 
-	SOC_DOUBLE_TLV("Lineout Playback Volume",
-			SGTL5000_CHIP_LINE_OUT_VOL,
-			0, 8,
-			0x1f, 1,
-			lineout_volume),
-
 	SOC_SINGLE_TLV("Mic Volume", SGTL5000_CHIP_MIC_CTRL,
 			0, 3, 0, mic_gain_tlv),
+
+	SOC_DOUBLE_TLV("Lineout Playback Volume",
+			SGTL5000_CHIP_LINE_OUT_VOL,
+			SGTL5000_LINE_OUT_VOL_LEFT_SHIFT,
+			SGTL5000_LINE_OUT_VOL_RIGHT_SHIFT,
+			0x1f, 1,
+			lineout_volume),
 };
 
 /* mute the codec used by alsa core */
