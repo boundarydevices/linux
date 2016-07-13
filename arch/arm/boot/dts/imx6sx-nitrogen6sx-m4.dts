@@ -19,26 +19,6 @@
  * The flollowing modules are conflicting with M4, disable them when m4
  * is running.
  */
-&flexcan1 {
-	status = "disabled";
-};
-
-&flexcan2 {
-	status = "disabled";
-};
-
-&mcctest{
-	status = "okay";
-};
-
-&mcctty{
-	status = "okay";
-};
-
-&uart2 {
-	status = "disabled";
-};
-
 &adc1 {
         status = "disabled";
 };
@@ -47,11 +27,27 @@
         status = "disabled";
 };
 
+&flexcan1 {
+	status = "disabled";
+};
+
+&flexcan2 {
+	status = "disabled";
+};
+
 &ocram {
 	/* 0x00900000 - 0x0090FFFF = M4 FW (64k)
 	 * 0x0091F000 - 0x0091FFFF = Shared mem (4k)
 	 */
 	reg = <0x00910000 0xF000>;
+};
+
+&rpmsg{
+	status = "okay";
+};
+
+&uart2 {
+	status = "disabled";
 };
 
 &clks {
@@ -65,7 +61,7 @@
 			IMX6SX_CLK_CAN1_IPG IMX6SX_CLK_CAN2_SERIAL
 			IMX6SX_CLK_CAN2_IPG IMX6SX_CLK_CANFD
 			IMX6SX_CLK_UART_SERIAL IMX6SX_CLK_UART_IPG
-			IMX6SX_CLK_PERIPH_CLK2_SEL IMX6SX_CLK_OCRAM_ALT_SEL
+			IMX6SX_CLK_PERIPH_CLK2_SEL IMX6SX_CLK_DUMMY
 			IMX6SX_CLK_EPIT1 IMX6SX_CLK_EPIT2>;
 	fsl,shared-mem-addr = <0x91F000>;
 	fsl,shared-mem-size = <0x1000>;
