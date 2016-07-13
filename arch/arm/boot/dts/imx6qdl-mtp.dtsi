@@ -157,17 +157,39 @@
 		>;
 	};
 
-	pinctrl_usdhc2_50mhz: usdhc2_50mhzgrp {
+	pinctrl_usdhc2_50mhz: usdhc2-50mhzgrp {
 		fsl,pins = <
-			MX6QDL_PAD_SD2_CLK__SD2_CLK		0x10071
-			MX6QDL_PAD_SD2_CMD__SD2_CMD		0x17071
-			MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x17071
-			MX6QDL_PAD_SD2_DAT1__SD2_DATA1		0x17071
-			MX6QDL_PAD_SD2_DAT2__SD2_DATA2		0x17071
-			MX6QDL_PAD_SD2_DAT3__SD2_DATA3		0x17071
+			MX6QDL_PAD_SD2_CLK__SD2_CLK		0x10031
+			MX6QDL_PAD_SD2_CMD__SD2_CMD		0x17031
+			MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x17031
+			MX6QDL_PAD_SD2_DAT1__SD2_DATA1		0x17031
+			MX6QDL_PAD_SD2_DAT2__SD2_DATA2		0x17031
+			MX6QDL_PAD_SD2_DAT3__SD2_DATA3		0x17031
 			MX6QDL_PAD_SD1_CLK__OSC32K_32K_OUT	0x000b0		/* TiWi slow clock */
 #define GPIRQ_WL1271	<&gpio6 14 IRQ_TYPE_LEVEL_HIGH>
 			MX6QDL_PAD_NANDF_CS1__GPIO6_IO14	0x100b0
+		>;
+	};
+
+	pinctrl_usdhc2_100mhz: usdhc2-100mhzgrp {
+		fsl,pins = <
+			MX6QDL_PAD_SD2_CMD__SD2_CMD		0x170B9
+			MX6QDL_PAD_SD2_CLK__SD2_CLK		0x100B9
+			MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x170B9
+			MX6QDL_PAD_SD2_DAT1__SD2_DATA1 		0x170B9
+			MX6QDL_PAD_SD2_DAT2__SD2_DATA2 		0x170B9
+			MX6QDL_PAD_SD2_DAT3__SD2_DATA3 		0x170B9
+		>;
+	};
+
+	pinctrl_usdhc2_200mhz: usdhc2-200mhzgrp {
+		fsl,pins = <
+			MX6QDL_PAD_SD2_CMD__SD2_CMD		0x170F9
+			MX6QDL_PAD_SD2_CLK__SD2_CLK 		0x100F9
+			MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x170F9
+			MX6QDL_PAD_SD2_DAT1__SD2_DATA1 		0x170F9
+			MX6QDL_PAD_SD2_DAT2__SD2_DATA2 		0x170F9
+			MX6QDL_PAD_SD2_DAT3__SD2_DATA3 		0x170F9
 		>;
 	};
 
@@ -450,9 +472,11 @@
 	status = "okay";
 };
 
-&usdhc2 {	/* uSDHC2, TiWi wl1271 */
-	pinctrl-names = "default";
+&usdhc2 {	/* uSDHC2, silex/TiWi wl1271 */
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc2_50mhz>;
+	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
 	bus-width = <4>;
 	non-removable;
 	vmmc-supply = <&reg_wlan_en>;
