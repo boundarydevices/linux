@@ -442,7 +442,7 @@
 		compatible = "pwm-backlight";
 		default-brightness-level = <8>;
 		display = <&fb_lvds>;
-		pwms = <&pwm2 0 5000000>;
+		pwms = <&pwm2 0 1667>;
 	};
 
 	bt_rfkill {
