@@ -14,6 +14,11 @@
 
 / {
 	aliases {
+		fb_hdmi = &mxcfb2;
+		fb_lcd = &mxcfb3;
+		fb_lvds = &mxcfb1;
+		lcd = &lcd0;
+		ldb = &ldb;
 		mxcfb0 = &mxcfb1;
 		mxcfb1 = &mxcfb2;
 		mxcfb2 = &mxcfb3;
