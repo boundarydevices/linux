@@ -97,3 +97,4 @@ obj-$(CONFIG_SERIAL_SPRD) += sprd_serial.o
 
 # GPIOLIB helpers for modem control lines
 obj-$(CONFIG_SERIAL_MCTRL_GPIO)	+= serial_mctrl_gpio.o
+obj-$(CONFIG_SERIAL_XR20M117X) += xrm117x.o
