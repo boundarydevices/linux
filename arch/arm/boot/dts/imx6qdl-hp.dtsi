@@ -122,38 +122,38 @@
 
 	pinctrl_gpio_keys: gpio-keysgrp {
 		fsl,pins = <
-#define GP_GPI_1	<&gpio3 8 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA8__GPIO3_IO08		0x1b0b0
-#define GP_GPI_2	<&gpio3 9 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA9__GPIO3_IO09		0x1b0b0
-#define GP_GPI_3	<&gpio3 10 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0x1b0b0
-#define GP_GPI_4	<&gpio3 11 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA11__GPIO3_IO11		0x1b0b0
-#define GP_GPI_5	<&gpio3 12 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA12__GPIO3_IO12		0x1b0b0
-#define GP_GPI_6	<&gpio3 13 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x1b0b0
-#define GP_GPI_7	<&gpio3 14 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x1b0b0
-#define GP_GPI_8	<&gpio3 15 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_DA15__GPIO3_IO15		0x1b0b0
-#define GP_GPI_9	<&gpio4 15 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_KEY_ROW4__GPIO4_IO15		0x1b0b0
-#define GP_GPI_10	<&gpio4 14 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_KEY_COL4__GPIO4_IO14		0x1b0b0
-#define GP_GPI_11	<&gpio1 4 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x1b0b0
-#define GP_GPI_12	<&gpio4 7 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_KEY_ROW0__GPIO4_IO07		0x1b0b0
-#define GP_GPI_13	<&gpio1 7 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_7__GPIO1_IO07		0x1b0b0
-#define GP_GPI_14	<&gpio3 29 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_D29__GPIO3_IO29		0x1b0b0
-#define GP_GPI_15	<&gpio2 25 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_OE__GPIO2_IO25		0x1b0b0
-#define GP_GPI_16	<&gpio2 26 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x1b0b0
+#define GP_GPI_1	<&gpio3 8 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA8__GPIO3_IO08		0x100b0
+#define GP_GPI_2	<&gpio3 9 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA9__GPIO3_IO09		0x100b0
+#define GP_GPI_3	<&gpio3 10 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0x100b0
+#define GP_GPI_4	<&gpio3 11 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA11__GPIO3_IO11		0x100b0
+#define GP_GPI_5	<&gpio3 12 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA12__GPIO3_IO12		0x100b0
+#define GP_GPI_6	<&gpio3 13 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x100b0
+#define GP_GPI_7	<&gpio3 14 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x100b0
+#define GP_GPI_8	<&gpio3 15 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA15__GPIO3_IO15		0x100b0
+#define GP_GPI_9	<&gpio4 15 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_KEY_ROW4__GPIO4_IO15		0x100b0
+#define GP_GPI_10	<&gpio4 14 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_KEY_COL4__GPIO4_IO14		0x100b0
+#define GP_GPI_11	<&gpio1 4 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x100b0
+#define GP_GPI_12	<&gpio4 7 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_KEY_ROW0__GPIO4_IO07		0x100b0
+#define GP_GPI_13	<&gpio1 7 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_7__GPIO1_IO07		0x100b0
+#define GP_GPI_14	<&gpio3 29 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_D29__GPIO3_IO29		0x100b0
+#define GP_GPI_15	<&gpio2 25 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_OE__GPIO2_IO25		0x100b0
+#define GP_GPI_16	<&gpio2 26 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x100b0
 #define GP_GPI_EN_N	<&gpio2 31 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_EB3__GPIO2_IO31		0x1b0b0
 		>;
@@ -430,11 +430,12 @@
 		t_lvds = &t_lvds;
 	};
 
-	backlight_j55: backlight_lcd {
+	backlight_j55 {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <8>;
 		pwms = <&pwm1 0 5000000>;
+		status = "disabled";
 	};
 
 	backlight_lvds {
@@ -474,6 +475,7 @@
 
 	gpio-keys {
 		compatible = "gpio-keys";
+		enable-gpios = GP_GPI_EN_N;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_gpio_keys>;
 
@@ -572,12 +574,6 @@
 			gpios = GP_GPI_16;
 			linux,code = <KEY_F16>;
 		};
-
-		gpi_en_n {
-			label = "gpi_en_n";
-			gpios = GP_GPI_EN_N;
-			linux,code = <KEY_F17>;
-		};
 	};
 
 	memory {
@@ -675,6 +671,12 @@
 	status = "okay";
 };
 
+&clks {
+	assigned-clocks        = <&clks IMX6QDL_CLK_CKO2_PODF>, <&clks IMX6QDL_CLK_CKO2_SEL>, <&clks IMX6QDL_CLK_CKO>;
+	assigned-clock-parents = <&clks IMX6QDL_CLK_CKO2_SEL>, <&clks IMX6QDL_CLK_UART_SERIAL>, <&clks IMX6QDL_CLK_CKO1>;
+	assigned-clock-rates = <40000000>;
+};
+
 &ecspi1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi1>;
@@ -701,6 +703,25 @@
 			label = "splash";
 			reg = <0xC2000 0x13e000>;
 		};
+	};
+};
+
+&ecspi3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi3>;
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = GP_ECSPI3_UART;
+	status = "okay";
+
+	xrm1170@0 {
+		clocks = <&clks IMX6QDL_CLK_CKO2>;
+		compatible = "exar,xrm1170";
+		spi-max-frequency = <8000000>;
+		reg = <0>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		interrupts-extended = GPIRQ_SPI_UART;
+		reset-gpios = GP_SPI_UART_RESET;
 	};
 };
 
@@ -878,7 +899,7 @@
 &pwm1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm1>;
-	status = "okay";
+	status = "disable";
 };
 
 &pwm2 {
