@@ -47,6 +47,7 @@ struct gpio_button_data {
 struct gpio_keys_drvdata {
 	const struct gpio_keys_platform_data *pdata;
 	struct input_dev *input;
+	struct gpio_desc *enable_gpio;
 	struct mutex disable_lock;
 	struct gpio_button_data data[0];
 };
@@ -546,6 +547,8 @@ static int gpio_keys_open(struct input_dev *input)
 		if (error)
 			return error;
 	}
+	if (ddata->enable_gpio)
+		gpiod_set_value(ddata->enable_gpio, 1);
 
 	/* Report current state of buttons that are connected to GPIOs */
 	gpio_keys_report_state(ddata);
@@ -558,6 +561,8 @@ static void gpio_keys_close(struct input_dev *input)
 	struct gpio_keys_drvdata *ddata = input_get_drvdata(input);
 	const struct gpio_keys_platform_data *pdata = ddata->pdata;
 
+	if (ddata->enable_gpio)
+		gpiod_set_value(ddata->enable_gpio, 0);
 	if (pdata->disable)
 		pdata->disable(input->dev.parent);
 }
@@ -696,6 +701,7 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	struct input_dev *input;
 	int i, error;
 	int wakeup = 0;
+	struct gpio_desc *enable_gpio = NULL;
 
 	if (!pdata) {
 		pdata = gpio_keys_get_devtree_pdata(dev);
@@ -703,15 +709,31 @@ static int gpio_keys_probe(struct platform_device *pdev)
 			return PTR_ERR(pdata);
 	}
 
+#ifdef CONFIG_OF
+	enable_gpio = devm_gpiod_get_index(&pdev->dev, "enable", 0);
+	if (!IS_ERR(enable_gpio)) {
+		/* disable (active low) */
+		error = gpiod_direction_output(enable_gpio, 1);
+		if (error)
+			goto fail0;
+		gpiod_set_value(enable_gpio, 0);	/* disable */
+	}
+#endif
+
 	ddata = kzalloc(sizeof(struct gpio_keys_drvdata) +
 			pdata->nbuttons * sizeof(struct gpio_button_data),
 			GFP_KERNEL);
+
+	if (!IS_ERR(enable_gpio))
+		ddata->enable_gpio = enable_gpio;
+
 	input = input_allocate_device();
 	if (!ddata || !input) {
 		dev_err(dev, "failed to allocate state\n");
 		error = -ENOMEM;
 		goto fail1;
 	}
+
 
 	ddata->pdata = pdata;
 	ddata->input = input;
@@ -774,6 +796,7 @@ static int gpio_keys_probe(struct platform_device *pdev)
  fail1:
 	input_free_device(input);
 	kfree(ddata);
+ fail0:
 	/* If we have no platform data, we allocated pdata dynamically. */
 	if (!dev_get_platdata(&pdev->dev))
 		kfree(pdata);
