@@ -985,6 +985,19 @@ static struct f_mapping fmt_mappings[] = {
 [I_IPU_PIX_FMT_BT656_3] = {{{BT656_IF_DI_MSB, 0xFF}, {0, 0x0}, {0, 0x0}}},	/* V */
 };
 
+static int g_di_msb = BT656_IF_DI_MSB;
+
+int ipu_update_bt656_mapping(int di_msb)
+{
+	struct f_mapping *fm = fmt_mappings;
+
+	fm[I_IPU_PIX_FMT_BT656_1].om[1].offset = di_msb;
+	fm[I_IPU_PIX_FMT_BT656_2].om[2].offset = di_msb;
+	fm[I_IPU_PIX_FMT_BT656_3].om[0].offset = di_msb;
+	g_di_msb = di_msb;
+	return 0;
+}
+
 static int find_field(struct ipu_soc *ipu, u32 val, u32 reg_offset, unsigned long* bitmap, int max)
 {
 	int i = 0;
@@ -2296,12 +2309,12 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 		if((pixel_fmt == IPU_PIX_FMT_BT656) || (pixel_fmt == IPU_PIX_FMT_BT1120)) {
 			/* Init template microcode */
 			if(pixel_fmt == IPU_PIX_FMT_BT656) {
-				_ipu_dc_setup_bt656_interlaced(ipu, map[0], map[1], map[2], 0, BT656_IF_DI_MSB,
+				_ipu_dc_setup_bt656_interlaced(ipu, map[0], map[1], map[2], 0, g_di_msb,
 						bt656_h_start_width, 
 						bt656_v_start_width_field0, bt656_v_end_width_field0, 
 						bt656_v_start_width_field1, bt656_v_end_width_field1);
 			} else {
-				_ipu_dc_setup_bt656_interlaced(ipu, map[0], map[1], map[2], 1, BT656_IF_DI_MSB,
+				_ipu_dc_setup_bt656_interlaced(ipu, map[0], map[1], map[2], 1, g_di_msb,
 						bt656_h_start_width, 
 						bt656_v_start_width_field0, bt656_v_end_width_field0, 
 						bt656_v_start_width_field1, bt656_v_end_width_field1);
