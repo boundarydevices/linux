@@ -38,7 +38,7 @@
 
 struct dp_csc_param_t {
 	int mode;
-	void *coeff;
+	const void *coeff;
 };
 
 #define SYNC_WAVE 0
