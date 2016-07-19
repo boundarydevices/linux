@@ -56,6 +56,7 @@ struct gpio_button_data {
 struct gpio_keys_drvdata {
 	const struct gpio_keys_platform_data *pdata;
 	struct input_dev *input;
+	struct gpio_desc *enable_gpio;
 	struct mutex disable_lock;
 	unsigned short *keymap;
 	struct gpio_button_data data[];
@@ -702,6 +703,8 @@ static int gpio_keys_open(struct input_dev *input)
 		if (error)
 			return error;
 	}
+	if (ddata->enable_gpio)
+		gpiod_set_value(ddata->enable_gpio, 1);
 
 	/* Report current state of buttons that are connected to GPIOs */
 	gpio_keys_report_state(ddata);
@@ -714,6 +717,8 @@ static void gpio_keys_close(struct input_dev *input)
 	struct gpio_keys_drvdata *ddata = input_get_drvdata(input);
 	const struct gpio_keys_platform_data *pdata = ddata->pdata;
 
+	if (ddata->enable_gpio)
+		gpiod_set_value(ddata->enable_gpio, 0);
 	if (pdata->disable)
 		pdata->disable(input->dev.parent);
 }
@@ -806,6 +811,7 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	struct input_dev *input;
 	int i, error;
 	int wakeup = 0;
+	struct gpio_desc *enable_gpio = NULL;
 
 	if (!pdata) {
 		pdata = gpio_keys_get_devtree_pdata(dev);
@@ -813,12 +819,21 @@ static int gpio_keys_probe(struct platform_device *pdev)
 			return PTR_ERR(pdata);
 	}
 
+#ifdef CONFIG_OF
+	enable_gpio = devm_gpiod_get_index(&pdev->dev, "enable", 0,
+					   GPIOD_OUT_HIGH);
+	if (!IS_ERR(enable_gpio)) {
+		gpiod_set_value(enable_gpio, 0);	/* disable */
+	}
+#endif
 	ddata = devm_kzalloc(dev, struct_size(ddata, data, pdata->nbuttons),
 			     GFP_KERNEL);
 	if (!ddata) {
 		dev_err(dev, "failed to allocate state\n");
 		return -ENOMEM;
 	}
+	if (!IS_ERR(enable_gpio))
+		ddata->enable_gpio = enable_gpio;
 
 	ddata->keymap = devm_kcalloc(dev,
 				     pdata->nbuttons, sizeof(ddata->keymap[0]),
