@@ -602,6 +602,7 @@ static inline bool ipu_can_rotate_in_place(ipu_rotate_mode_t rot)
 	return (rot < IPU_ROTATE_90_RIGHT);
 #endif
 }
+int ipu_update_bt656_mapping(int di_msb);
 
 int32_t ipu_init_channel_buffer(struct ipu_soc *ipu, ipu_channel_t channel, ipu_buffer_t type,
 				uint32_t pixel_fmt,
