@@ -3677,6 +3677,7 @@ static int mxcfb_get_of_property(struct platform_device *pdev,
 	int fmt;
 	u32 bpp, int_clk;
 	u32 late_init;
+	u32 di_msb;
 
 	err = of_property_read_string(np, "disp_dev", &disp_dev);
 	if (err < 0) {
@@ -3708,6 +3709,9 @@ static int mxcfb_get_of_property(struct platform_device *pdev,
 	}
 
 	plat_data->prefetch = of_property_read_bool(np, "prefetch");
+	err = of_property_read_u32(np, "di_msb", &di_msb);
+	if (!err)
+		ipu_update_bt656_mapping(di_msb);
 
 	fmt = get_interface_pix_fmt(pixfmt);
 
@@ -3725,7 +3729,7 @@ static int mxcfb_get_of_property(struct platform_device *pdev,
 	plat_data->default_bpp = bpp;
 	plat_data->int_clk = (bool)int_clk;
 	plat_data->late_init = (bool)late_init;
-	return err;
+	return 0;
 }
 
 /*!
