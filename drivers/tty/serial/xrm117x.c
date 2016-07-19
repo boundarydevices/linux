@@ -39,21 +39,8 @@
 #define PORT_SC16IS7XX   128
 #endif
 
-//#define USE_SPI_MODE    0 
-#define USE_OK335Dx_PLATFORM
-
-
-/**
- * enum uart_pm_state - power states for UARTs
- * @UART_PM_STATE_ON: UART is powered, up and operational
- * @UART_PM_STATE_OFF: UART is powered off
- * @UART_PM_STATE_UNDEFINED: sentinel
- */
-enum uart_pm_state {
-	UART_PM_STATE_ON = 0,
-	UART_PM_STATE_OFF = 3, /* number taken from ACPI */
-	UART_PM_STATE_UNDEFINED,
-};
+#define USE_SPI_MODE    1
+//#define USE_OK335Dx_PLATFORM
 
 
 #define XRM117XX_NAME			"xrm117x"
@@ -343,7 +330,7 @@ struct xrm117x_one {
 
 struct xrm117x_port {
 	struct uart_driver		uart;
-	struct xrm117x_devtype	*devtype;
+	const struct xrm117x_devtype	*devtype;
 	struct mutex			mutex;
 	struct mutex			mutex_bus_access;
 	struct clk			*clk;
@@ -380,10 +367,11 @@ static void xrm117x_port_write(struct uart_port *port, u8 reg, u8 val)
 {
 	struct xrm117x_port *s = dev_get_drvdata(port->dev);
 	unsigned char spi_buf[2];
+	ssize_t		status;
+
 	mutex_lock(&s->mutex_bus_access);
 	spi_buf[0] = ((reg<<3) | (port->line << 1));
 	spi_buf[1] =  val;
-    ssize_t		status;
 	status = spi_write(spi_dev, spi_buf, 2);
 	if(status < 0)
 	{
@@ -629,6 +617,12 @@ static const struct xrm117x_devtype xrm117x_devtype = {
 	.nr_gpio	= 0,
 	.nr_uart	= 2,
 };
+
+static const struct xrm117x_devtype xrm1170_devtype = {
+	.name		= "XRM1170",
+	.nr_gpio	= 0,
+	.nr_uart	= 1,
+};
 static int xrm117x_set_baud(struct uart_port *port, int baud)
 {
 	u8 lcr,tmp;
@@ -672,6 +666,7 @@ static int xrm117x_set_baud(struct uart_port *port, int baud)
 	return DIV_ROUND_CLOSEST(clk / 16, div);
 }
 
+#if 0
 static int xrm117x_dump_register(struct uart_port *port)
 {
 	u8 lcr;
@@ -697,6 +692,7 @@ static int xrm117x_dump_register(struct uart_port *port)
 	xrm117x_port_write(port, XRM117XX_LCR_REG, lcr);
 	return 0;
 }
+#endif
 
 static void xrm117x_handle_rx(struct uart_port *port, unsigned int rxlen,
 				unsigned int iir)
@@ -793,8 +789,8 @@ static void xrm117x_handle_rx(struct uart_port *port, unsigned int rxlen,
 		rxlen -= bytes_read;
 	}
 	
-      tty_flip_buffer_push(port->state->port.tty);
-	  //tty_flip_buffer_push(&port->state->port);
+	//tty_flip_buffer_push(port->state->port.tty);
+	tty_flip_buffer_push(&port->state->port);
 }
 
 static void xrm117x_handle_tx(struct uart_port *port)
@@ -1120,12 +1116,12 @@ static void xrm117x_set_termios(struct uart_port *port,
 	{
 		flow |= XRM117XX_EFR_AUTOCTS_BIT | XRM117XX_EFR_AUTORTS_BIT;
 	}
-	
+
 	if (termios->c_iflag & IXON)
 		flow |= XRM117XX_EFR_SWFLOW3_BIT;
 	if (termios->c_iflag & IXOFF)
 		flow |= XRM117XX_EFR_SWFLOW1_BIT;
-	
+
 	xrm117x_port_write(port, XRM117XX_EFR_REG, flow);
 	//printk("xrm117x_set_termios write EFR = 0x%02x\n",flow);
    	
@@ -1392,12 +1388,13 @@ static int xrm117x_gpio_direction_output(struct gpio_chip *chip,
 //#define	GPIO_XR117X_IRQ	GPIO_TO_PIN(2,1)
 #endif
 static int xrm117x_probe(struct device *dev,
-			   struct xrm117x_devtype *devtype,
+			   const struct xrm117x_devtype *devtype,
 			   int irq, unsigned long flags)
 {
 	unsigned long freq;
 	int i, ret;
 	struct xrm117x_port *s;
+	struct gpio_desc *reset_gpio = NULL;
 	
 	/* Alloc port structure */
 	s = devm_kzalloc(dev, sizeof(*s) +
@@ -1407,19 +1404,13 @@ static int xrm117x_probe(struct device *dev,
 		dev_err(dev, "Error allocating port structure\n");
 		return -ENOMEM;
 	}
-    #if 0
 	s->clk = devm_clk_get(dev, NULL);
 	if (IS_ERR(s->clk)) {
-		if (pfreq)
-			freq = *pfreq;
-		else
-			return PTR_ERR(s->clk);
+		freq = 14745600;	/* Fixed clk freq */
 	} else {
 		freq = clk_get_rate(s->clk);
+		pr_info("%s: %ld\n", __func__, freq);
 	}
-	#else
-    freq = 14745600;//Fixed the clk freq 
-	#endif
 	s->devtype = devtype;
 	dev_set_drvdata(dev, s);
 	/* Register UART driver */
@@ -1450,6 +1441,19 @@ static int xrm117x_probe(struct device *dev,
 			goto out_uart;
 	}
 #endif
+	reset_gpio = devm_gpiod_get_index(dev, "reset", 0);
+	if (!IS_ERR(reset_gpio)) {
+		/* release reset */
+		ret = gpiod_direction_output(reset_gpio, 1);
+		if (ret)
+			pr_warn("%s: could not release reset\n", __func__);
+		gpiod_set_value(reset_gpio, 1);        /* assert */
+		udelay(1);
+		gpiod_set_value(reset_gpio, 0);        /* release */
+		msleep(2);
+	} else {
+		pr_warn("%s: could not find reset\n", __func__);
+	}
 
 	mutex_init(&s->mutex);
 	mutex_init(&s->mutex_bus_access);
@@ -1479,7 +1483,7 @@ static int xrm117x_probe(struct device *dev,
 		/* Initialize queue for changing mode */
 		INIT_WORK(&s->p[i].md_work, xrm117x_md_proc);
 
-        INIT_WORK(&s->p[i].stop_rx_work, xrm117x_stop_rx_work_proc);
+		INIT_WORK(&s->p[i].stop_rx_work, xrm117x_stop_rx_work_proc);
 		INIT_WORK(&s->p[i].stop_tx_work, xrm117x_stop_tx_work_proc);
 				
 		/* Register port */
@@ -1497,8 +1501,6 @@ static int xrm117x_probe(struct device *dev,
 	ret = devm_request_threaded_irq(dev, irq, NULL, xrm117x_ist,
 					IRQF_ONESHOT | IRQF_TRIGGER_FALLING | IRQF_SHARED | flags, dev_name(dev), s);
 		
-	printk("xrm117x_probe~ devm_request_threaded_irq =%d result:%d\n",irq, ret);
-	
 	if (!ret)
 		return 0;
 
@@ -1558,15 +1560,14 @@ MODULE_DEVICE_TABLE(of, xrm117x_dt_ids);
 #ifdef USE_SPI_MODE
 static int xrm117x_spi_probe(struct spi_device *spi)
 {
-	struct xrm117x_devtype *devtype = &xrm117x_devtype;
+	const struct spi_device_id *id = spi_get_device_id(spi);
+	const struct xrm117x_devtype *devtype = (const struct xrm117x_devtype *)id->driver_data;
 	unsigned long flags = 0;
-
 	int ret;
 	
 	spi_dev =spi;
 		
 	ret = xrm117x_probe(&spi->dev, devtype,spi->irq, flags);
-	
 	return ret;
 }
 
@@ -1577,15 +1578,24 @@ static int xrm117x_spi_remove(struct spi_device *spi)
       return xrm117x_remove(&spi->dev);
 }
 
+static const struct spi_device_id xrm117x_spi_ids[] = {
+	{ "xrm1170",	(kernel_ulong_t)&xrm1170_devtype, },
+	{ "xrm117x",	(kernel_ulong_t)&xrm117x_devtype, },
+	{ },
+};
+
+MODULE_DEVICE_TABLE(spi, xrm117x_spi_ids);
+
 static struct spi_driver xrm117x_spi_uart_driver = {
        .driver = {
                .name   = XRM117XX_NAME_SPI,
                .bus    = &spi_bus_type,
                .owner  = THIS_MODULE,
+               .of_match_table	= of_match_ptr(xrm117x_dt_ids),
        },
        .probe          = xrm117x_spi_probe,
-       .remove         = __devexit_p(xrm117x_spi_remove),
-     
+       .remove         = xrm117x_spi_remove,
+       .id_table	= xrm117x_spi_ids,
 };
 
 module_spi_driver(xrm117x_spi_uart_driver);
@@ -1619,6 +1629,7 @@ static int xrm117x_i2c_remove(struct i2c_client *client)
 
 
 static const struct i2c_device_id xrm117x_i2c_id_table[] = {
+	{ "xrm1170",	(kernel_ulong_t)&xrm1170_devtype, },
 	{ "xrm117x",	(kernel_ulong_t)&xrm117x_devtype, },
 	{ }
 };
@@ -1652,21 +1663,6 @@ static void __exit xrm117x_exit(void)
 }
 module_exit(xrm117x_exit);
 
-#endif
-
-
-#ifdef USE_SPI_MODE
-static int __init xrm117x_init(void)
-{
-	return spi_register_driver(&xrm117x_spi_uart_driver);
-}
-module_init(xrm117x_init);
-
-static void __exit xrm117x_exit(void)
-{
-	spi_unregister_driver(&xrm117x_spi_uart_driver);
-}
-module_exit(xrm117x_exit);
 #endif
 
 MODULE_LICENSE("GPL");
