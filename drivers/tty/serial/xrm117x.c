@@ -46,48 +46,110 @@
 #define XRM117XX_NAME			"xrm117x"
 #define XRM117XX_NAME_SPI		"xrm117x_spi"
 
+enum sc_reg {
+	SC_LCR = 0,
+	SC_RHR,
+	SC_THR,
+	SC_IER,
+	SC_DLL,
+	SC_DLH,
+	SC_DLD,
+	SC_IIR,
+	SC_FCR,
+	SC_MCR,
+	SC_LSR,
+	SC_TXLVL,
+	SC_RXLVL,
+	SC_EFCR,
+	SC_MSR,
+	SC_SPR,
+	SC_TCR,
+	SC_TLR,
+	SC_EFR,
+	SC_XON1,
+	SC_XON2,
+	SC_XOFF1,
+	SC_XOFF2,
+	SC_CHAN_REG_CNT,
+/*
+ *  keep IOSTATE before IODIR, so that it's write will occur before direction
+ *  changes.
+ */
+	SC_IOSTATE_R = SC_CHAN_REG_CNT,
+	SC_IOSTATE_W,
+	SC_IODIR,
+	SC_IOINTENA,
+	SC_IOCONTROL,
+	SC_REG_CNT,
+};
+
+/*
+ * 7 6543  21 0
+ * |   |   |  |
+ * |   |   |  unused
+ * |   |   00 channel A
+ * |   |   01 channel B
+ * |   |   1x reserved
+ * | internal register select
+ * unused
+ */
+
+#define MAKE_SUBADDRESS(port, reg) (unsigned char)(((reg & 0x0f) << 3) | (port << 1))
+
+#define SP_0xBF		0		/* LCR==0xbf, LCR!=0xbf matters */
+#define SP_DLAB		1		/* LCR[7] */
+#define SP_MCR2		2		/* MCR[2] */
+
+#define A_TYPEV(bit) (1 << ((bit) + 4))
+#define A_TYPE(bit, val) ((0x10 | (val)) << ((bit) + 4))
+#define _RO		0x1000		/* Read-only */
+#define _WO		0x2000		/* Write-only */
+#define _V		0x4000		/* Volatile */
+
+static const unsigned short reg_map[] = {
+/* always accessible */
+[SC_LCR] =	3,
+/* LCR != 0xBF, DLAB = 0 */
+[SC_RHR] =	(0 + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 0) + _RO + _V),
+[SC_THR] =	(0 + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 0) + _WO + _V),
+[SC_IER] =	(1 + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 0)),
+[SC_IIR] =	(2 + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 0) + _RO + _V),	/* ISR */
+[SC_FCR] =	(2 + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 0) + _WO + _V),
+[SC_TXLVL] =	(8 + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 0) + _RO + _V),
+[SC_RXLVL] =	(9 + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 0) + _RO + _V),
+[SC_IODIR] =	 (0x0A + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 0)),
+[SC_IOSTATE_R] = (0x0B + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 0) + _RO + _V),
+[SC_IOSTATE_W] = (0x0B + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 0) + _WO),
+[SC_IOINTENA] =  (0x0C + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 0)),
+[SC_IOCONTROL] = (0x0E + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 0)),
+[SC_EFCR] =	 (0x0F + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 0)),
+
+/* LCR != 0xBF, DLAB = 1 */
+[SC_DLL] =	(0 + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 1)),
+[SC_DLH] =	(1 + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 1)),
+[SC_DLD] =	(2 + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_DLAB, 1)),
+
+/* LCR != 0xBF */
+[SC_MCR] =	(4 + A_TYPE(SP_0xBF, 0)),
+[SC_LSR] =	(5 + A_TYPE(SP_0xBF, 0) + _RO + _V),
+
+/*  LCR != 0xBF,  EFR[4]=0 ||  MCR[2]=0 */
+[SC_MSR] =	(6 + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_MCR2, 0) + _RO + _V),
+[SC_SPR] =	(7 + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_MCR2, 0)),
+
+/*  LCR != 0xBF,  EFR[4]=1 &&  MCR[2]=1 */
+[SC_TCR] =	(6 + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_MCR2, 1)),
+[SC_TLR] =	(7 + A_TYPE(SP_0xBF, 0) + A_TYPE(SP_MCR2, 1)),
+
+/* LCR == 0xBF */
+[SC_EFR] =	(2 + A_TYPE(SP_0xBF, 1)),
+[SC_XON1] =	(4 + A_TYPE(SP_0xBF, 1)),
+[SC_XON2] =	(5 + A_TYPE(SP_0xBF, 1)),
+[SC_XOFF1] =	(6 + A_TYPE(SP_0xBF, 1)),
+[SC_XOFF2] =	(7 + A_TYPE(SP_0xBF, 1)),
+};
 
 /* XRM117XX register definitions */
-#define XRM117XX_RHR_REG		(0x00) /* RX FIFO */
-#define XRM117XX_THR_REG		(0x00) /* TX FIFO */
-#define XRM117XX_IER_REG		(0x01) /* Interrupt enable */
-#define XRM117XX_IIR_REG		(0x02) /* Interrupt Identification */
-#define XRM117XX_FCR_REG		(0x02) /* FIFO control */
-#define XRM117XX_LCR_REG		(0x03) /* Line Control */
-#define XRM117XX_MCR_REG		(0x04) /* Modem Control */
-#define XRM117XX_LSR_REG		(0x05) /* Line Status */
-#define XRM117XX_MSR_REG		(0x06) /* Modem Status */
-#define XRM117XX_SPR_REG		(0x07) /* Scratch Pad */
-#define XRM117XX_TXLVL_REG		(0x08) /* TX FIFO level */
-#define XRM117XX_RXLVL_REG		(0x09) /* RX FIFO level */
-#define XRM117XX_IODIR_REG		(0x0a) /* I/O Direction
-						* - only on 75x/76x
-						*/
-#define XRM117XX_IOSTATE_REG		(0x0b) /* I/O State
-						* - only on 75x/76x
-						*/
-#define XRM117XX_IOINTENA_REG		(0x0c) /* I/O Interrupt Enable
-						* - only on 75x/76x
-						*/
-#define XRM117XX_IOCONTROL_REG		(0x0e) /* I/O Control
-						* - only on 75x/76x
-						*/
-#define XRM117XX_EFCR_REG		(0x0f) /* Extra Features Control */
-
-/* TCR/TLR Register set: Only if ((MCR[2] == 1) && (EFR[4] == 1)) */
-#define XRM117XX_TCR_REG		(0x06) /* Transmit control */
-#define XRM117XX_TLR_REG		(0x07) /* Trigger level */
-
-/* Special Register set: Only if ((LCR[7] == 1) && (LCR != 0xBF)) */
-#define XRM117XX_DLL_REG		(0x00) /* Divisor Latch Low */
-#define XRM117XX_DLH_REG		(0x01) /* Divisor Latch High */
-
-/* Enhanced Register set: Only if (LCR == 0xBF) */
-#define XRM117XX_EFR_REG		(0x02) /* Enhanced Features */
-#define XRM117XX_XON1_REG		(0x04) /* Xon1 word */
-#define XRM117XX_XON2_REG		(0x05) /* Xon2 word */
-#define XRM117XX_XOFF1_REG		(0x06) /* Xoff1 word */
-#define XRM117XX_XOFF2_REG		(0x07) /* Xoff2 word */
 
 /* IER register bits */
 #define XRM117XX_IER_RDI_BIT		(1 << 0) /* Enable RX data interrupt */
@@ -161,8 +223,6 @@
 #define XRM117XX_LCR_WORD_LEN_7	(0x02)
 #define XRM117XX_LCR_WORD_LEN_8	(0x03)
 #define XRM117XX_LCR_CONF_MODE_A	XRM117XX_LCR_DLAB_BIT /* Special
-								* reg set */
-#define XRM117XX_LCR_CONF_MODE_B	0xBF                   /* Enhanced
 								* reg set */
 
 /* MCR register bits */
@@ -318,14 +378,26 @@ struct xrm117x_devtype {
 	int	nr_uart;
 };
 
-struct xrm117x_one {
-	struct uart_port		port;
-	struct work_struct		tx_work;
-	struct work_struct		md_work;
-    struct work_struct      stop_rx_work;
+struct xrm117x_port;
+
+struct xrm117x_ch {
+	struct uart_port	port;
+	struct xrm117x_port	*xr;
+	unsigned char		channel_no;
+	unsigned char		actual_lcr;
+	unsigned char		actual_mcr;
+	unsigned char		actual_efr;
+	unsigned char		actual_ier;
+	unsigned char		new_ier;
+	unsigned char		tx_empty;
+	struct work_struct	tx_work;
+	struct work_struct	md_work;
+	struct work_struct      stop_rx_work;
 	struct work_struct      stop_tx_work;
-	struct serial_rs485		rs485;
+	struct serial_rs485	rs485;
 	unsigned char           msr_reg;
+	unsigned		reg_valid;
+	unsigned char		reg_cache[SC_CHAN_REG_CNT];
 };
 
 struct xrm117x_port {
@@ -333,282 +405,335 @@ struct xrm117x_port {
 	const struct xrm117x_devtype	*devtype;
 	struct mutex			mutex;
 	struct mutex			mutex_bus_access;
+	struct spi_device		*spi_dev;
+	struct i2c_client 		*i2c_client;
 	struct clk			*clk;
+	unsigned			r_valid;
+	unsigned char			dev_cache[SC_REG_CNT - SC_CHAN_REG_CNT];
 
 #ifdef CONFIG_GPIOLIB
 	struct gpio_chip		gpio;
 #endif
+
 	unsigned char			buf[XRM117XX_FIFO_SIZE];
-	struct xrm117x_one		p[0];
+	struct xrm117x_ch		p[0];
 };
 
-#define to_xrm117x_one(p,e)	((container_of((p), struct xrm117x_one, e)))
-#ifdef USE_SPI_MODE 
-static struct spi_device *spi_dev = NULL; 
-static u8 xrm117x_port_read(struct uart_port *port, u8 reg)
+/*
+ * ------------------------------------------------------------------
+ */
+int xrm_write_byte_data(struct xrm117x_port *xr, u8 reg, u8 val)
 {
-	struct xrm117x_port *s = dev_get_drvdata(port->dev);
-	unsigned char cmd;
-    ssize_t		status;
-	u8			result; 
-	mutex_lock(&s->mutex_bus_access);
-	cmd = (0x80 | (reg<<3) | (port->line << 1)); 
-	status = spi_write_then_read(spi_dev, &cmd, 1, &result, 1);
-	mutex_unlock(&s->mutex_bus_access);
-	if(status < 0)
-	{
-	    printk("Failed to xrm117x_port_read error code %d\n",status);
-	}
-	return result;
-		
-}
-
-static void xrm117x_port_write(struct uart_port *port, u8 reg, u8 val)
-{
-	struct xrm117x_port *s = dev_get_drvdata(port->dev);
-	unsigned char spi_buf[2];
-	ssize_t		status;
-
-	mutex_lock(&s->mutex_bus_access);
-	spi_buf[0] = ((reg<<3) | (port->line << 1));
-	spi_buf[1] =  val;
-	status = spi_write(spi_dev, spi_buf, 2);
-	if(status < 0)
-	{
-	    printk("Failed to xrm117x_port_write Err_code %d\n",status);
-	}
-	mutex_unlock(&s->mutex_bus_access);
-	   
-}
-static void xrm117x_port_update(struct uart_port *port, u8 reg,
-				  u8 mask, u8 val)
-{
-    unsigned int tmp;
-	tmp = xrm117x_port_read(port,reg);
-	tmp &= ~mask;
-    tmp |= val & mask;
-	xrm117x_port_write(port,reg,tmp); 
-}
-
-
-void xrm117x_raw_write(struct uart_port *port,const void *reg,unsigned char *buf,int len)
-{
-    struct xrm117x_port *s = dev_get_drvdata(port->dev);
-	ssize_t		status;
-  	struct spi_message m;
-	struct spi_transfer t[2] = { { .tx_buf = reg, .len = 1, },
-				     { .tx_buf = buf, .len = len, }, };
-	mutex_lock(&s->mutex_bus_access);		
-	spi_message_init(&m);
-	spi_message_add_tail(&t[0], &m);
-	spi_message_add_tail(&t[1], &m);
-	status = spi_sync(spi_dev, &m);
-	if(status < 0)
-	{
-	    printk("Failed to xrm117x_raw_write Err_code %d\n",status);
-	}
-	mutex_unlock(&s->mutex_bus_access);
-
-}
-void xrm117x_raw_read(struct uart_port *port,unsigned char *buf,int len)
-{
-    struct xrm117x_port *s = dev_get_drvdata(port->dev);
-  	unsigned char cmd;
-    ssize_t		status;
-	mutex_lock(&s->mutex_bus_access);	
-	cmd = 0x80 | (XRM117XX_RHR_REG << 3) | (port->line << 1) ; 
-	status = spi_write_then_read(spi_dev, &cmd, 1, buf, len);
-	mutex_unlock(&s->mutex_bus_access);
-	if(status < 0)
-	{
-	    printk("Failed to xrm117x_raw_read Err_code %d\n",status);
-		
-	}
- 
-}
-#else
-static struct i2c_client *xrm117x_i2c_client = NULL;
-
-static u8 xrm117x_port_read(struct uart_port *port, u8 reg)
-{
-	struct xrm117x_port *s = dev_get_drvdata(port->dev);
-    struct i2c_msg xfer[2];
-	u8 reg_value = 0;
-	u8 cmd = (reg <<3)|(port->line << 1);
-	int ret; 
-	
-	mutex_lock(&s->mutex_bus_access);
-	xfer[0].addr = xrm117x_i2c_client->addr;
-	xfer[0].flags = 0;
-	xfer[0].len = 1;
-	xfer[0].buf = (void *)&cmd;
-
-	xfer[1].addr = xrm117x_i2c_client->addr;
-	xfer[1].flags = I2C_M_RD;
-	xfer[1].len = 1;
-	xfer[1].buf = &reg_value;
-   	
-	ret = i2c_transfer(xrm117x_i2c_client->adapter, xfer, 2);
-	mutex_unlock(&s->mutex_bus_access);
-	if (ret == 2)
-	{
-	  return reg_value;
-	}
-	else if (ret < 0)
-	{
-	    printk("Failed to xrm117x_port_read <%d>\n",ret);
-		return ret;
-	}
-	else
-	{
-		return -EIO;
-	}	
-		
-		
-}
-
-static int xrm117x_port_write(struct uart_port *port, u8 reg, u8 val)
-{
-	struct xrm117x_port *s = dev_get_drvdata(port->dev);
-	unsigned char i2c_buf[2];
-	int		ret;
-	i2c_buf[0] = ((reg<<3) | (port->line << 1));
-	i2c_buf[1] = val;
-	mutex_lock(&s->mutex_bus_access);
-	ret = i2c_master_send(xrm117x_i2c_client, i2c_buf, 2);
-	mutex_unlock(&s->mutex_bus_access);
-	if (ret == 2)
-		return 0;
-	else if (ret < 0)
-	{
-	    printk("Failed to xrm117x_port_write <%d>\n",ret);
-		return ret;
-	}
-	else
-	{
-		return -EIO;
-	}	
-	   
-}
-
-static int xrm117x_port_fifo_write(struct uart_port *port, const void *val, size_t val_len)
-{
-	unsigned char *buf;
-	int		ret;
-	buf = (unsigned char *)kmalloc(val_len + 1, GFP_KERNEL);
-	if (!buf)
-			return -ENOMEM;
-	buf[0] = ((port->line) << 1);
-	memcpy(buf + 1, val, val_len);
-	ret = i2c_master_send(xrm117x_i2c_client, buf, val_len + 1);
-	kfree(buf);
-	if (ret == val_len + 1)
-		return 0;
-	else if (ret < 0)
-	{
-	    printk("Failed to xrm117x_port_fifo_write <%d>\n",ret);
-		return ret;
-	}
-	else
-	{
-		return -EIO;
-	}	
-	   
-}
-
-static void xrm117x_port_update(struct uart_port *port, u8 reg,
-				  u8 mask, u8 val)
-{
-    unsigned int tmp;
-	tmp = xrm117x_port_read(port,reg);
-	tmp &= ~mask;
-    tmp |= val & mask;
-	xrm117x_port_write(port,reg,tmp); 
-}
-
-static int xrm117x_raw_write(struct uart_port *port,const void *reg,unsigned char *buf,int len)
-{
-    struct xrm117x_port *s = dev_get_drvdata(port->dev);
-	struct i2c_msg xfer[2];
 	int ret;
-  	mutex_lock(&s->mutex_bus_access);
-  
-    /* If the I2C controller can't do a gather tell the core, it
-	 * will substitute in a linear write for us.
-	 */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 3, 0)	 
-	if (!i2c_check_functionality(xrm117x_i2c_client->adapter, I2C_FUNC_PROTOCOL_MANGLING))
-#else		
-	if (!i2c_check_functionality(xrm117x_i2c_client->adapter, I2C_FUNC_NOSTART))
-#endif		
-	{/* If that didn't work fall back on linearising by hand. */
-	 	ret = xrm117x_port_fifo_write(port,buf,len);
-		mutex_unlock(&s->mutex_bus_access);
-		return ret;
-	}
-	
-	xfer[0].addr = xrm117x_i2c_client->addr;
-	xfer[0].flags = 0;
-	xfer[0].len = 1;
-	xfer[0].buf = (void *)reg;
 
-	xfer[1].addr = xrm117x_i2c_client->addr;
-	xfer[1].flags = I2C_M_NOSTART;
-	xfer[1].len = len;
-	xfer[1].buf = (void *)buf;
-	ret = i2c_transfer(xrm117x_i2c_client->adapter, xfer, 2);
-	mutex_unlock(&s->mutex_bus_access);
-	if (ret == 2)
-		return 0;
-	else if (ret < 0)
-	{
-	    printk("Failed to xrm117x_raw_write <%d>\n",ret);
-		return ret;
-	}
-	else
-		return -EIO;
+	if (xr->i2c_client) {
+		ret = i2c_smbus_write_byte_data(xr->i2c_client, reg, val);
+	} else {
+		unsigned char spi_buf[2];
 
+		spi_buf[0] = reg;
+		spi_buf[1] =  val;
+		ret = spi_write(xr->spi_dev, spi_buf, 2);
+	}
+	if (ret < 0)
+		printk("%s: reg=%x, val=%x, Failed %d\n", __func__, reg, val, ret);
+	pr_info("%s: (%02x) = 0x%02x\n", __func__, reg, val);
+	return ret;
 }
-static int xrm117x_raw_read(struct uart_port *port,unsigned char *buf,int len)
+
+int xrm_write_block_data(struct xrm117x_port *xr, u8 reg, int count, u8* buf)
 {
-    struct xrm117x_port *s = dev_get_drvdata(port->dev);
-  	struct i2c_msg xfer[2];
-	unsigned char cmd = (XRM117XX_RHR_REG << 3) | (port->line << 1);
 	int ret;
-	mutex_lock(&s->mutex_bus_access);
-    xfer[0].addr = xrm117x_i2c_client->addr;
-	xfer[0].flags = 0;
-	xfer[0].len = 1;
-	xfer[0].buf = (void *)&cmd;
 
-	xfer[1].addr = xrm117x_i2c_client->addr;
-	xfer[1].flags = I2C_M_RD;
-	xfer[1].len = len;
-	xfer[1].buf = buf;
-
-	ret = i2c_transfer(xrm117x_i2c_client->adapter, xfer, 2);
-	mutex_unlock(&s->mutex_bus_access);
-	if (ret == 2)
-	{
-	  return 0;
+	if (xr->i2c_client) {
+		ret = i2c_smbus_write_i2c_block_data(xr->i2c_client,
+				reg, count, buf);
+	} else {
+		struct spi_message m;
+		struct spi_transfer t[2] = { { .tx_buf = &reg, .len = 1, },
+					     { .tx_buf = buf, .len = count, }, };
+		spi_message_init(&m);
+		spi_message_add_tail(&t[0], &m);
+		spi_message_add_tail(&t[1], &m);
+		ret = spi_sync(xr->spi_dev, &m);
 	}
-	else if (ret < 0)
-	{
-	    printk("Failed to xrm117x_raw_read <%d>\n",ret);
-		return ret;
-	}
-	else
-		return -EIO;
-	
-	
- 
+	if (ret < 0)
+		printk("%s: reg=%x, cnt=%x, Failed %d\n", __func__, reg, count, ret);
+	return ret;
 }
 
-#endif
-static void xrm117x_power(struct uart_port *port, int on)
+int xrm_read_block_data(struct xrm117x_port *xr, u8 reg, int count, u8* buf)
 {
-	xrm117x_port_update(port, XRM117XX_IER_REG,
-			      XRM117XX_IER_SLEEP_BIT,
+	int ret;
+
+	if (xr->i2c_client) {
+		ret = i2c_smbus_read_i2c_block_data(xr->i2c_client,
+				reg, count, buf);
+	} else {
+		u8 reg1 = reg | 0x80;
+		ret = spi_write_then_read(xr->spi_dev, &reg1, 1, buf, count);
+		if (ret >= 0)
+			ret = count;
+	}
+	if (ret < 0)
+		printk("%s: reg=%x, cnt=%x, Failed %d\n", __func__, reg, count, ret);
+	if (count == 1)
+		pr_info("%s: (%02x) = 0x%02x\n", __func__, reg, buf[0]);
+	return ret;
+}
+/*
+ * ------------------------------------------------------------------
+ */
+static int _sc_select(struct xrm117x_ch *ch, enum sc_reg reg)
+{
+	int ret = 0;
+	unsigned mreg;
+	if (reg > ARRAY_SIZE(reg_map))
+		return -EINVAL;
+	mreg = reg_map[reg];
+	if (mreg & A_TYPE(SP_0xBF, 1)) {
+		/* LCR ==  or != 0xbf matters */
+		unsigned char lcr;
+		unsigned char mcr;
+		unsigned char efr;
+		if (mreg & A_TYPEV(SP_MCR2)) {
+			/* efr[4] should be 1 as well */
+			efr = ch->reg_cache[SC_EFR] | 0x10;
+			if (ch->actual_efr != efr) {
+				ret = _sc_select(ch, SC_EFR);
+				if (ret)
+					return ret;
+				ret = xrm_write_byte_data(ch->xr,
+					MAKE_SUBADDRESS(ch->channel_no, UART_EFR),
+					efr);
+				if (ret)
+					return ret;
+				ch->actual_efr = efr;
+			}
+		}
+		if (mreg & A_TYPE(SP_MCR2, 1)) {
+			/* mcr[2] matters */
+			mcr = ch->reg_cache[SC_MCR] & ~0x4;
+			if (mreg & A_TYPEV(SP_MCR2))
+				mcr |= 4;
+			if (ch->actual_mcr != mcr) {
+				ret = _sc_select(ch, SC_MCR);
+				if (ret)
+					return ret;
+				ret = xrm_write_byte_data(ch->xr,
+					MAKE_SUBADDRESS(ch->channel_no, UART_MCR),
+					mcr);
+				if (ret)
+					return ret;
+				ch->actual_mcr = mcr;
+			}
+		}
+		lcr = (mreg & A_TYPEV(SP_0xBF)) ? 0xbf : ch->reg_cache[SC_LCR];
+		if (mreg & A_TYPE(SP_DLAB, 1)) {
+			if (mreg & A_TYPEV(SP_DLAB))
+				lcr |= 0x80;
+			else
+				lcr &= ~0x80;
+		}
+		if (ch->actual_lcr != lcr) {
+			ret = xrm_write_byte_data(ch->xr,
+				MAKE_SUBADDRESS(ch->channel_no, UART_LCR),
+				lcr);
+			if (ret)
+				return ret;
+			ch->actual_lcr = lcr;
+		}
+	}
+	return ret;
+}
+
+static int _sc_serial_out_cnt(struct xrm117x_ch *ch, enum sc_reg reg, unsigned char* buf, int count)
+{
+	int ret;
+	unsigned sub_address;
+	unsigned char value = buf[count - 1];
+	unsigned mreg;
+	int retry = 0;
+	if (reg > ARRAY_SIZE(reg_map))
+		return -EINVAL;
+	mreg = reg_map[reg];
+	sub_address = MAKE_SUBADDRESS(ch->channel_no, mreg);
+	do {
+		ret = _sc_select(ch, reg);
+		if (!ret) {
+			ret = xrm_write_block_data(ch->xr,
+					sub_address, count, buf);
+			if (!ret)
+				break;
+		}
+	} while (retry++ < 3);
+
+	if (ret) {
+		pr_info("%s: error %i\n", __func__, ret);
+		return ret;
+	}
+	if (reg < SC_CHAN_REG_CNT) {
+		ch->reg_cache[reg] = value;
+		ch->reg_valid |= BIT(reg);
+		if (reg == SC_LCR)
+			ch->actual_lcr = value;
+		if (reg == SC_MCR)
+			ch->actual_mcr = value;
+		if (reg == SC_EFR)
+			ch->actual_efr = value;
+	} else {
+		ch->xr->dev_cache[reg - SC_CHAN_REG_CNT] = value;
+		ch->xr->r_valid |= BIT(reg - SC_CHAN_REG_CNT);
+	}
+	return ret;
+}
+
+static int _sc_serial_in_cnt(struct xrm117x_ch *ch, enum sc_reg reg,
+		unsigned char * buf, int count)
+{
+	unsigned sub_address;
+	int val = 0;
+	int ret = 0;
+	int retry = 0;
+	if (reg > ARRAY_SIZE(reg_map))
+		return -EINVAL;
+	sub_address = MAKE_SUBADDRESS(ch->channel_no, reg_map[reg]);
+	do {
+		ret = _sc_select(ch, reg);
+		if (!ret) {
+			ret = xrm_read_block_data(ch->xr,
+					sub_address, count, buf);
+			if (ret == count)
+				break;
+			if (ret > 0) {
+				pr_info("%s: error %i of %i bytes read\n",
+						__func__, ret, count);
+				if (ret > count)
+					ret = count;
+				break;
+			}
+		}
+	} while (retry++ < 3);
+
+	if (ret <= 0) {
+		pr_info("%s: error %i, count=%i\n", __func__, ret, count);
+		return ret;
+	}
+
+	val = buf[ret - 1];
+	if (reg == SC_LCR) {
+		ch->actual_lcr = val;
+		if (val == 0xbf)
+			return ret;	/* don't update reg_cache */
+	} else if (reg == SC_MCR)
+		ch->actual_mcr = val;
+	else if (reg == SC_EFR)
+		ch->actual_efr = val;
+	else if (reg == SC_LSR)
+		ch->tx_empty = val & UART_LSR_TEMT;
+
+	if (reg < SC_CHAN_REG_CNT) {
+		ch->reg_cache[reg] = val;
+		ch->reg_valid |= BIT(reg);
+	} else {
+		ch->xr->dev_cache[reg - SC_CHAN_REG_CNT] = val;
+		ch->xr->r_valid |= BIT(reg - SC_CHAN_REG_CNT);
+	}
+	return ret;
+}
+
+static int _sc_serial_in_always(struct xrm117x_ch *ch, enum sc_reg reg)
+{
+	unsigned char buf[4];
+	int ret = _sc_serial_in_cnt(ch, reg, buf, 1);
+	if (ret <= 0)
+		return ret;
+	return buf[0];
+}
+
+static int _sc_serial_in(struct xrm117x_ch *ch, enum sc_reg reg)
+{
+	if (reg > ARRAY_SIZE(reg_map))
+		return -EINVAL;
+	if (reg_map[reg] & _V)
+		return _sc_serial_in_always(ch, reg);
+
+	if (reg < SC_CHAN_REG_CNT) {
+		if (ch->reg_valid & BIT(reg))
+			return _sc_serial_in_always(ch, reg);
+		return ch->reg_cache[reg];
+	}
+	if (ch->xr->r_valid & BIT(reg - SC_CHAN_REG_CNT))
+		return _sc_serial_in_always(ch, reg);
+	return ch->xr->dev_cache[reg - SC_CHAN_REG_CNT];
+}
+
+static int _sc_serial_modify(struct xrm117x_ch *ch, enum sc_reg reg, u8 mask, u8 value)
+{
+	int ret = _sc_serial_in(ch, reg);
+
+	if (ret < 0)
+		return ret;
+	value |= (u8)(ret & ~mask);
+	return _sc_serial_out_cnt(ch, reg, &value, 1);
+}
+
+/*
+ * ------------------------------------------------------------------
+ */
+static int sc_serial_out_cnt(struct xrm117x_ch *ch, enum sc_reg reg, unsigned char* buf, int count)
+{
+	int ret;
+
+	mutex_lock(&ch->xr->mutex_bus_access);
+	ret = _sc_serial_out_cnt(ch, reg, buf, count);
+	mutex_unlock(&ch->xr->mutex_bus_access);
+	return ret;
+}
+
+static int sc_serial_out(struct xrm117x_ch *ch, enum sc_reg reg, unsigned char value)
+{
+	return sc_serial_out_cnt(ch, reg, &value, 1);
+}
+
+static int sc_serial_in_cnt(struct xrm117x_ch *ch, enum sc_reg reg,
+		unsigned char * buf, int count)
+{
+	int ret;
+
+	mutex_lock(&ch->xr->mutex_bus_access);
+	ret = _sc_serial_in_cnt(ch, reg, buf, count);
+	mutex_unlock(&ch->xr->mutex_bus_access);
+	return ret;
+}
+
+static int sc_serial_in(struct xrm117x_ch *ch, enum sc_reg reg)
+{
+	int ret;
+
+	mutex_lock(&ch->xr->mutex_bus_access);
+	ret = _sc_serial_in(ch, reg);
+	mutex_unlock(&ch->xr->mutex_bus_access);
+	return ret;
+}
+
+static int sc_serial_modify(struct xrm117x_ch *ch, enum sc_reg reg, u8 mask, u8 value)
+{
+	int ret;
+
+	mutex_lock(&ch->xr->mutex_bus_access);
+	ret = _sc_serial_modify(ch, reg, mask, value);
+	mutex_unlock(&ch->xr->mutex_bus_access);
+	return ret;
+}
+
+/*
+ * ------------------------------------------------------------------
+ */
+
+static void xrm117x_power(struct xrm117x_ch *ch, int on)
+{
+	sc_serial_modify(ch, SC_IER, XRM117XX_IER_SLEEP_BIT,
 			      on ? 0 : XRM117XX_IER_SLEEP_BIT);
 }
 
@@ -623,94 +748,88 @@ static const struct xrm117x_devtype xrm1170_devtype = {
 	.nr_gpio	= 0,
 	.nr_uart	= 1,
 };
-static int xrm117x_set_baud(struct uart_port *port, int baud)
+static int xrm117x_set_baud(struct xrm117x_ch *ch, int baud)
 {
-	u8 lcr,tmp;
+	u8 lcr;
 	u8 prescaler = 0;
-	unsigned long clk = port->uartclk, div = clk / 16 / baud;
- 	if (div > 0xffff) {
+	unsigned long clk = ch->port.uartclk;
+	unsigned long div = (clk << 1) / baud;
+
+	if (div & 1)
+		div++;
+	div >>= 1;
+	if (div > 0xfffff) {
 		prescaler = XRM117XX_MCR_CLKSEL_BIT;
 		div /= 4;
+		if (div > 0xfffff)
+			div = 0xfffff;
 	}
 
-	lcr = xrm117x_port_read(port, XRM117XX_LCR_REG);
-
-	/* Open the LCR divisors for configuration */
-	xrm117x_port_write(port, XRM117XX_LCR_REG,
-			     XRM117XX_LCR_CONF_MODE_B);
+	lcr = sc_serial_in(ch, SC_LCR);
 
 	/* Enable enhanced features */
-	tmp = xrm117x_port_read(port, XRM117XX_EFR_REG);
-	
-	xrm117x_port_write(port, XRM117XX_EFR_REG,
-			     tmp | XRM117XX_EFR_ENABLE_BIT);
+	sc_serial_modify(ch, SC_EFR,
+			XRM117XX_EFR_ENABLE_BIT, XRM117XX_EFR_ENABLE_BIT);
 
-	/* Put LCR back to the normal mode */
-	xrm117x_port_write(port, XRM117XX_LCR_REG, lcr);
-
-	xrm117x_port_update(port, XRM117XX_MCR_REG,
+	sc_serial_modify(ch, SC_MCR,
 			      XRM117XX_MCR_CLKSEL_BIT,
 			      prescaler);
 
-	/* Open the LCR divisors for configuration */
-	xrm117x_port_write(port, XRM117XX_LCR_REG,
-			     XRM117XX_LCR_CONF_MODE_A);
-
 	/* Write the new divisor */
-	xrm117x_port_write(port, XRM117XX_DLH_REG, div / 256);
-	xrm117x_port_write(port, XRM117XX_DLL_REG, div % 256);
-	
+	sc_serial_out(ch, SC_DLH, div >> 12);
+	sc_serial_out(ch, SC_DLL, (div >> 4) & 0xff);
+	sc_serial_out(ch, SC_DLD, div & 0x0f);
 	/* Put LCR back to the normal mode */
-	xrm117x_port_write(port, XRM117XX_LCR_REG, lcr);
+	sc_serial_out(ch, SC_LCR, lcr);
 
-	return DIV_ROUND_CLOSEST(clk / 16, div);
+	return DIV_ROUND_CLOSEST(clk, div);
 }
 
 #if 0
-static int xrm117x_dump_register(struct uart_port *port)
+static int xrm117x_dump_register(struct xrm117x_ch *ch)
 {
 	u8 lcr;
 	u8 i,reg;
-	lcr = xrm117x_port_read(port, XRM117XX_LCR_REG);
-    xrm117x_port_write(port, XRM117XX_LCR_REG, 0x03);
+	lcr = sc_serial_in(ch, SC_LCR);
+	sc_serial_out(ch, SC_LCR, 0x03);
 	printk("******Dump register at LCR=0x03\n");
 	for(i=0;i<16;i++)
 	{
-		reg = xrm117x_port_read(port, i);
+		reg = sc_serial_in(ch, i);
 		printk("Reg[0x%02x] = 0x%02x\n",i,reg);
 	}
 	
-	xrm117x_port_write(port, XRM117XX_LCR_REG, 0xBF);
+	sc_serial_out(ch, SC_LCR, 0xBF);
 	printk("******Dump register at LCR=0xBF\n");
 	for(i=0;i<16;i++)
 	{
-		reg = xrm117x_port_read(port, i);
+		reg = sc_serial_in(ch, i);
 		printk("Reg[0x%02x] = 0x%02x\n",i,reg);
 	}
 	
 	/* Put LCR back to the normal mode */
-	xrm117x_port_write(port, XRM117XX_LCR_REG, lcr);
+	sc_serial_out(ch, SC_LCR, lcr);
 	return 0;
 }
 #endif
 
-static void xrm117x_handle_rx(struct uart_port *port, unsigned int rxlen,
+static void xrm117x_handle_rx(struct xrm117x_ch *ch, unsigned int rxlen,
 				unsigned int iir)
 {
-	struct xrm117x_port *s = dev_get_drvdata(port->dev);
-	unsigned int lsr = 0, ch, flag, bytes_read, i;
+	struct xrm117x_port *xr = ch->xr;
+	unsigned int lsr = 0, flag, bytes_read, i;
 	bool read_lsr = (iir == XRM117XX_IIR_RLSE_SRC) ? true : false;
  
-	if (unlikely(rxlen >= sizeof(s->buf)))
+	if (unlikely(rxlen >= sizeof(xr->buf)))
 	{
 	    /*
 		dev_warn(port->dev,
 				     "Port %i: Possible RX FIFO overrun: %d\n",
 				     port->line, rxlen);
 		*/
-		port->icount.buf_overrun++;
+		ch->port.icount.buf_overrun++;
 		/* Ensure sanity of RX level */
-		rxlen = sizeof(s->buf);
+		rxlen = sizeof(xr->buf);
 	}
     
 	while (rxlen)
@@ -718,53 +837,46 @@ static void xrm117x_handle_rx(struct uart_port *port, unsigned int rxlen,
 		/* Only read lsr if there are possible errors in FIFO */
 		if (read_lsr)
 		{
-			lsr = xrm117x_port_read(port, XRM117XX_LSR_REG);
+			lsr = sc_serial_in(ch, SC_LSR);
 			if (!(lsr & XRM117XX_LSR_FIFOE_BIT))
 				read_lsr = false; /* No errors left in FIFO */
 		} 
 		else
 			lsr = 0;
 
-		if (read_lsr) 
-		{
-			s->buf[0] = xrm117x_port_read(port, XRM117XX_RHR_REG);
+		if (read_lsr) {
+			xr->buf[0] = sc_serial_in(ch, SC_RHR);
 			bytes_read = 1;
-		} 
-		else
-		{
-		    if(rxlen < 64)
-		    {
-		      //printk("xrm117x_handle_rx rxlen:%d\n",rxlen);
-	    	  xrm117x_raw_read(port,s->buf,rxlen);
-		    }
-			else
-			{
-			  rxlen = 64;//split into two spi transfer
-			  xrm117x_raw_read(port,s->buf,32);
-			  xrm117x_raw_read(port,s->buf+32,32);
-			  //printk("xrm117x_handle_rx rxlen >= 64\n");
+		} else {
+			if(rxlen < 64) {
+				sc_serial_in_cnt(ch, SC_RHR, xr->buf, rxlen);
+			} else {
+				rxlen = 64;//split into two spi transfer
+				sc_serial_in_cnt(ch, SC_RHR, xr->buf, 32);
+				sc_serial_in_cnt(ch, SC_RHR, xr->buf + 32, 32);
+				//printk("xrm117x_handle_rx rxlen >= 64\n");
 			}
 			bytes_read = rxlen;
 		}
 
 		lsr &= XRM117XX_LSR_BRK_ERROR_MASK;
 
-		port->icount.rx++;
+		ch->port.icount.rx++;
 		flag = TTY_NORMAL;
 
 		if (unlikely(lsr)) {
 			if (lsr & XRM117XX_LSR_BI_BIT) {
-				port->icount.brk++;
-				if (uart_handle_break(port))
+				ch->port.icount.brk++;
+				if (uart_handle_break(&ch->port))
 					continue;
 			} else if (lsr & XRM117XX_LSR_PE_BIT)
-				port->icount.parity++;
+				ch->port.icount.parity++;
 			else if (lsr & XRM117XX_LSR_FE_BIT)
-				port->icount.frame++;
+				ch->port.icount.frame++;
 			else if (lsr & XRM117XX_LSR_OE_BIT)
-				port->icount.overrun++;
+				ch->port.icount.overrun++;
 
-			lsr &= port->read_status_mask;
+			lsr &= ch->port.read_status_mask;
 			if (lsr & XRM117XX_LSR_BI_BIT)
 				flag = TTY_BREAK;
 			else if (lsr & XRM117XX_LSR_PE_BIT)
@@ -776,37 +888,36 @@ static void xrm117x_handle_rx(struct uart_port *port, unsigned int rxlen,
 		}
 
 		for (i = 0; i < bytes_read; ++i) {
-			ch = s->buf[i];
-			if (uart_handle_sysrq_char(port, ch))
+			if (uart_handle_sysrq_char(&ch->port, xr->buf[i]))
 				continue;
 
-			if (lsr & port->ignore_status_mask)
+			if (lsr & ch->port.ignore_status_mask)
 				continue;
 
-			uart_insert_char(port, lsr, XRM117XX_LSR_OE_BIT, ch,
-					 flag);
+			uart_insert_char(&ch->port, lsr, XRM117XX_LSR_OE_BIT,
+					 xr->buf[i], flag);
 		}
 		rxlen -= bytes_read;
 	}
 	
-	//tty_flip_buffer_push(port->state->port.tty);
-	tty_flip_buffer_push(&port->state->port);
+	//tty_flip_buffer_push(ch->port.state->port.tty);
+	tty_flip_buffer_push(&ch->port.state->port);
 }
 
-static void xrm117x_handle_tx(struct uart_port *port)
+static void xrm117x_handle_tx(struct xrm117x_ch *ch)
 {
-	struct xrm117x_port *s = dev_get_drvdata(port->dev);
-	struct circ_buf *xmit = &port->state->xmit;
+	struct xrm117x_port *xr = ch->xr;
+	struct circ_buf *xmit = &ch->port.state->xmit;
 	unsigned int txlen, to_send, i;
-	unsigned char thr_reg;
- 	if (unlikely(port->x_char))
+
+	if (unlikely(ch->port.x_char))
 	{
-		xrm117x_port_write(port, XRM117XX_THR_REG, port->x_char);
-		port->icount.tx++;
-		port->x_char = 0;
+		sc_serial_out_cnt(ch, SC_THR, &ch->port.x_char, 1);
+		ch->port.icount.tx++;
+		ch->port.x_char = 0;
 		return;
 	}
-  	if (uart_circ_empty(xmit)|| uart_tx_stopped(port)) 
+	if (uart_circ_empty(xmit)|| uart_tx_stopped(&ch->port))
 	{
 	    //printk("xrm117x_handle_tx stopped\n");
 	    return;
@@ -818,45 +929,40 @@ static void xrm117x_handle_tx(struct uart_port *port)
 	if (likely(to_send)) 
 	{
 		/* Limit to size of TX FIFO */
-		txlen = xrm117x_port_read(port, XRM117XX_TXLVL_REG);
+		txlen = sc_serial_in(ch, SC_TXLVL);
 		to_send = (to_send > txlen) ? txlen : to_send;
 
 		/* Add data to send */
-		port->icount.tx += to_send;
+		ch->port.icount.tx += to_send;
 
 		/* Convert to linear buffer */
 		for (i = 0; i < to_send; ++i) 
 		{
-			s->buf[i] = xmit->buf[xmit->tail];
+			xr->buf[i] = xmit->buf[xmit->tail];
 			xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
 		}
-		//printk("xrm117x_handle_tx %d bytes\n",to_send);
-		thr_reg = (XRM117XX_THR_REG | (port->line << 1));
-		xrm117x_raw_write(port,&thr_reg,s->buf,to_send);
+		sc_serial_out_cnt(ch, SC_THR, xr->buf, to_send);
 
 	}
 
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
-		uart_write_wakeup(port);
+		uart_write_wakeup(&ch->port);
 
 }
 
-static void xrm117x_port_irq(struct xrm117x_port *s, int portno)
+static void xrm117x_port_irq(struct xrm117x_ch *ch)
 {
-	struct uart_port *port = &s->p[portno].port;
 	do {
 		unsigned int iir, msr, rxlen;
-		unsigned char lsr;
-        lsr = xrm117x_port_read(port, XRM117XX_LSR_REG);
-		if(lsr & 0x02)
-		{
-		
-		    /*dev_err(port->dev,
-					    "Port %i:Rx Overrun lsr =0x%02x",port->line, lsr);*/
-		    dev_err(port->dev,"Rx Overrun portno=%d\n",portno);
+		unsigned char lsr = sc_serial_in(ch, SC_LSR);
+
+		if (lsr & 0x02) {
+			/*dev_err(ch->port.dev,
+					    "Port %i:Rx Overrun lsr =0x%02x",ch->port.line, lsr);*/
+			dev_err(ch->port.dev,"Rx Overrun channel_no=%d\n", ch->channel_no);
 		   
 		}
-		iir = xrm117x_port_read(port, XRM117XX_IIR_REG);
+		iir = sc_serial_in(ch, SC_IIR);
 				
 		if (iir & XRM117XX_IIR_NO_INT_BIT)
 			break;
@@ -868,32 +974,32 @@ static void xrm117x_port_irq(struct xrm117x_port *s, int portno)
 		case XRM117XX_IIR_RLSE_SRC:
 		case XRM117XX_IIR_RTOI_SRC:
 		case XRM117XX_IIR_XOFFI_SRC:
-			rxlen = xrm117x_port_read(port, XRM117XX_RXLVL_REG);
+			rxlen = sc_serial_in(ch, SC_RXLVL);
 			if (rxlen)
-				xrm117x_handle_rx(port, rxlen, iir);
+				xrm117x_handle_rx(ch, rxlen, iir);
 			break;
 
 		case XRM117XX_IIR_CTSRTS_SRC:
-			msr = xrm117x_port_read(port, XRM117XX_MSR_REG);
-			uart_handle_cts_change(port,
+			msr = sc_serial_in(ch, SC_MSR);
+			uart_handle_cts_change(&ch->port,
 					       !!(msr & XRM117XX_MSR_CTS_BIT));
-			s->p[portno].msr_reg = msr; 
+			ch->msr_reg = msr;
 			//printk("uart_handle_cts_change =0x%02x\n",msr);
 			break;
 		case XRM117XX_IIR_THRI_SRC:
-			mutex_lock(&s->mutex);
-			xrm117x_handle_tx(port);
-			mutex_unlock(&s->mutex);
+			mutex_lock(&ch->xr->mutex);
+			xrm117x_handle_tx(ch);
+			mutex_unlock(&ch->xr->mutex);
 			break;
 		#if 1	
 		case XRM117XX_IIR_MSI_SRC:
-			msr = xrm117x_port_read(port, XRM117XX_MSR_REG);
+			msr = sc_serial_in(ch, SC_MSR);
 			break; 
 		#endif	
 		default:
-			dev_err(port->dev,
+			dev_err(ch->port.dev,
 					    "Port %i: Unexpected interrupt: %x",
-					    port->line, iir);
+					    ch->port.line, iir);
 			break;
 		}
 	} while (1);
@@ -901,109 +1007,102 @@ static void xrm117x_port_irq(struct xrm117x_port *s, int portno)
 
 static irqreturn_t xrm117x_ist(int irq, void *dev_id)
 {
-	struct xrm117x_port *s = (struct xrm117x_port *)dev_id;
+	struct xrm117x_port *xr = (struct xrm117x_port *)dev_id;
 	int i;
 
-	for (i = 0; i < s->uart.nr; ++i)
-		xrm117x_port_irq(s, i);
+	for (i = 0; i < xr->uart.nr; ++i)
+		xrm117x_port_irq(&xr->p[i]);
 
 	return IRQ_HANDLED;
 }
 
+#define to_xrm117x_ch(p,e)	((container_of((p), struct xrm117x_ch, e)))
+
 static void xrm117x_wq_proc(struct work_struct *ws)
 {
-	struct xrm117x_one *one = to_xrm117x_one(ws, tx_work);
-	struct xrm117x_port *s = dev_get_drvdata(one->port.dev);
-	mutex_lock(&s->mutex);
-	xrm117x_handle_tx(&one->port);
-	mutex_unlock(&s->mutex);
+	struct xrm117x_ch *ch = to_xrm117x_ch(ws, tx_work);
+	struct xrm117x_port *xr = ch->xr;
+	mutex_lock(&xr->mutex);
+	xrm117x_handle_tx(ch);
+	mutex_unlock(&xr->mutex);
 }
 
 static void xrm117x_stop_tx(struct uart_port* port)
 {
-    struct xrm117x_one *one = to_xrm117x_one(port, port);
-	schedule_work(&one->stop_tx_work);
-	
-	
+	struct xrm117x_ch *ch = to_xrm117x_ch(port, port);
+
+	schedule_work(&ch->stop_tx_work);
 }
 
 static void xrm117x_stop_rx(struct uart_port* port)
 {
-    struct xrm117x_one *one = to_xrm117x_one(port, port);
-	schedule_work(&one->stop_rx_work);
+	struct xrm117x_ch *ch = to_xrm117x_ch(port, port);
 
-	
+	schedule_work(&ch->stop_rx_work);
 }
 
 static void xrm117x_start_tx(struct uart_port *port)
 {
-	struct xrm117x_one *one = to_xrm117x_one(port, port);
+	struct xrm117x_ch *ch = to_xrm117x_ch(port, port);
 	/* handle rs485 */
-	if ((one->rs485.flags & SER_RS485_ENABLED) &&
-	    (one->rs485.delay_rts_before_send > 0)) {
-		mdelay(one->rs485.delay_rts_before_send);
+	if ((ch->rs485.flags & SER_RS485_ENABLED) &&
+	    (ch->rs485.delay_rts_before_send > 0)) {
+		mdelay(ch->rs485.delay_rts_before_send);
 	}
-    if (!work_pending(&one->tx_work))
-    {
-		schedule_work(&one->tx_work);
-    }
-	
+	if (!work_pending(&ch->tx_work))
+		schedule_work(&ch->tx_work);
 }
+
 static void xrm117x_stop_rx_work_proc(struct work_struct *ws)
 {
-    struct xrm117x_one *one = to_xrm117x_one(ws, stop_rx_work);
-	struct xrm117x_port *s = dev_get_drvdata(one->port.dev);
-	mutex_lock(&s->mutex);
-    one->port.read_status_mask &= ~XRM117XX_LSR_DR_BIT;
-		xrm117x_port_update(&one->port, XRM117XX_IER_REG,
-					  XRM117XX_LSR_DR_BIT,
-					  0);
-	mutex_unlock(&s->mutex);
-	
+	struct xrm117x_ch *ch = to_xrm117x_ch(ws, stop_rx_work);
+
+	ch->port.read_status_mask &= ~XRM117XX_LSR_DR_BIT;
+	sc_serial_modify(ch, SC_LSR, XRM117XX_LSR_DR_BIT, 0);
 }
+
 static void xrm117x_stop_tx_work_proc(struct work_struct *ws)
 {
-	struct xrm117x_one *one = to_xrm117x_one(ws, stop_tx_work);
-	struct xrm117x_port *s = dev_get_drvdata(one->port.dev);
-	struct circ_buf *xmit = &one->port.state->xmit;
+	struct xrm117x_ch *ch = to_xrm117x_ch(ws, stop_tx_work);
+	struct xrm117x_port *xr = ch->xr;
+	struct circ_buf *xmit = &ch->port.state->xmit;
 	
-	mutex_lock(&s->mutex);
+	mutex_lock(&xr->mutex);
 	/* handle rs485 */
-	if (one->rs485.flags & SER_RS485_ENABLED)
+	if (ch->rs485.flags & SER_RS485_ENABLED)
 	{
 		/* do nothing if current tx not yet completed */
-		int lsr = xrm117x_port_read(&one->port, XRM117XX_LSR_REG);
+		int lsr = sc_serial_in(ch, SC_LSR);
 		if (!(lsr & XRM117XX_LSR_TEMT_BIT))
 			return;
 
 		if (uart_circ_empty(xmit) &&
-			(one->rs485.delay_rts_after_send > 0))
-			mdelay(one->rs485.delay_rts_after_send);
+			(ch->rs485.delay_rts_after_send > 0))
+			mdelay(ch->rs485.delay_rts_after_send);
 	}
 
-	xrm117x_port_update(&one->port, XRM117XX_IER_REG,
-				  XRM117XX_IER_THRI_BIT,
-				  0);
-	mutex_unlock(&s->mutex);
-	
-
+	sc_serial_modify(ch, SC_IER, XRM117XX_IER_THRI_BIT, 0);
+	mutex_unlock(&xr->mutex);
 }
 
 static unsigned int xrm117x_tx_empty(struct uart_port *port)
 {
+	struct xrm117x_ch *ch = to_xrm117x_ch(port, port);
 	unsigned int lsr;
-    unsigned int result;
-	lsr = xrm117x_port_read(port, XRM117XX_LSR_REG);
-    result = (lsr & XRM117XX_LSR_THRE_BIT)  ? TIOCSER_TEMT : 0; 
+	unsigned int result;
+
+	lsr = sc_serial_in(ch, SC_LSR);
+	result = (lsr & XRM117XX_LSR_THRE_BIT)  ? TIOCSER_TEMT : 0;
 	return result;
 }
 
 static unsigned int xrm117x_get_mctrl(struct uart_port *port)
 {
-    unsigned int status,ret;
-	struct xrm117x_port *s = dev_get_drvdata(port->dev);
-	//status = xrm117x_port_read(port, XRM117XX_MSR_REG);
-	status = s->p[port->line].msr_reg;
+	unsigned int status,ret;
+	struct xrm117x_ch *ch = to_xrm117x_ch(port, port);
+
+	//status = sc_serial_in(ch, SC_MSR);
+	status = ch->msr_reg;
 	ret = 0;
 	if (status & UART_MSR_DCD)
 		ret |= TIOCM_CAR;
@@ -1019,8 +1118,8 @@ static unsigned int xrm117x_get_mctrl(struct uart_port *port)
 
 static void xrm117x_md_proc(struct work_struct *ws)
 {
-	struct xrm117x_one *one = to_xrm117x_one(ws, md_work);
-	unsigned int mctrl = one->port.mctrl;
+	struct xrm117x_ch *ch = to_xrm117x_ch(ws, md_work);
+	unsigned int mctrl = ch->port.mctrl;
 	unsigned char mcr = 0;
 	if (mctrl & TIOCM_RTS)
 		mcr |= UART_MCR_RTS;
@@ -1032,19 +1131,21 @@ static void xrm117x_md_proc(struct work_struct *ws)
 		mcr |= UART_MCR_OUT2;
 	if (mctrl & TIOCM_LOOP)
 		mcr |= UART_MCR_LOOP;
-	xrm117x_port_write(&one->port, XRM117XX_MCR_REG, mcr);
-	//xrm117x_port_update(&one->port, XRM117XX_MCR_REG,XRM117XX_MCR_LOOP_BIT,(one->port.mctrl & TIOCM_LOOP) ?XRM117XX_MCR_LOOP_BIT : 0);
+	sc_serial_out(ch, SC_MCR, mcr);
+	//sc_serial_modify(ch, SC_MCR,XRM117XX_MCR_LOOP_BIT,(ch->port.mctrl & TIOCM_LOOP) ?XRM117XX_MCR_LOOP_BIT : 0);
 }
 
 static void xrm117x_set_mctrl(struct uart_port *port, unsigned int mctrl)
 {
-	struct xrm117x_one *one = to_xrm117x_one(port, port);
-	schedule_work(&one->md_work);
+	struct xrm117x_ch *ch = to_xrm117x_ch(port, port);
+	schedule_work(&ch->md_work);
 }
 
 static void xrm117x_break_ctl(struct uart_port *port, int break_state)
 {
-	xrm117x_port_update(port, XRM117XX_LCR_REG,
+	struct xrm117x_ch *ch = to_xrm117x_ch(port, port);
+
+	sc_serial_modify(ch, SC_LCR,
 			      XRM117XX_LCR_TXBREAK_BIT,
 			      break_state ? XRM117XX_LCR_TXBREAK_BIT : 0);
 }
@@ -1053,6 +1154,7 @@ static void xrm117x_set_termios(struct uart_port *port,
 				  struct ktermios *termios,
 				  struct ktermios *old)
 {
+	struct xrm117x_ch *ch = to_xrm117x_ch(port, port);
 	unsigned int lcr, flow = 0;
 	int baud;
 
@@ -1106,12 +1208,10 @@ static void xrm117x_set_termios(struct uart_port *port,
 	if (!(termios->c_cflag & CREAD))
 		port->ignore_status_mask |= XRM117XX_LSR_BRK_ERROR_MASK;
 
-	xrm117x_port_write(port, XRM117XX_LCR_REG,
-			     XRM117XX_LCR_CONF_MODE_B);
-
 	/* Configure flow control */
-	xrm117x_port_write(port, XRM117XX_XON1_REG, termios->c_cc[VSTART]);
-	xrm117x_port_write(port, XRM117XX_XOFF1_REG, termios->c_cc[VSTOP]);
+	sc_serial_out(ch, SC_XON1, termios->c_cc[VSTART]);
+	sc_serial_out(ch, SC_XOFF1, termios->c_cc[VSTOP]);
+
 	if (termios->c_cflag & CRTSCTS)
 	{
 		flow |= XRM117XX_EFR_AUTOCTS_BIT | XRM117XX_EFR_AUTORTS_BIT;
@@ -1122,50 +1222,47 @@ static void xrm117x_set_termios(struct uart_port *port,
 	if (termios->c_iflag & IXOFF)
 		flow |= XRM117XX_EFR_SWFLOW1_BIT;
 
-	xrm117x_port_write(port, XRM117XX_EFR_REG, flow);
+	sc_serial_out(ch, SC_EFR, flow);
 	//printk("xrm117x_set_termios write EFR = 0x%02x\n",flow);
    	
 	/* Update LCR register */
-	xrm117x_port_write(port, XRM117XX_LCR_REG, lcr);
+	sc_serial_out(ch, SC_LCR, lcr);
 	
 	if (termios->c_cflag & CRTSCTS)
 	{
-	    //printk("xrm117x_set_termios enable rts/cts\n");
-		xrm117x_port_update(port, XRM117XX_MCR_REG,XRM117XX_MCR_RTS_BIT,XRM117XX_MCR_RTS_BIT);
+		//printk("xrm117x_set_termios enable rts/cts\n");
+		sc_serial_modify(ch, SC_MCR, XRM117XX_MCR_RTS_BIT, XRM117XX_MCR_RTS_BIT);
+	} else {
+		//printk("xrm117x_set_termios disable rts/cts\n");
+		sc_serial_modify(ch, SC_MCR, XRM117XX_MCR_RTS_BIT,0);
 	}
-    else
-    {
-        //printk("xrm117x_set_termios disable rts/cts\n");
-        xrm117x_port_update(port, XRM117XX_MCR_REG,XRM117XX_MCR_RTS_BIT,0);
-    }
-	//xrm117x_port_write(port, XRM117XX_IOCONTROL_REG, io_control);//configure GPIO  to GPIO or Modem control mode
-	
+	//sc_serial_out(ch, SC_IOCONTROL, io_control);//configure GPIO  to GPIO or Modem control mode
+
 	/* Get baud rate generator configuration */
 	baud = uart_get_baud_rate(port, termios, old,
 				  port->uartclk / 16 / 4 / 0xffff,
 				  port->uartclk / 16);
-    /* Setup baudrate generator */
-	baud = xrm117x_set_baud(port, baud);
+	/* Setup baudrate generator */
+	baud = xrm117x_set_baud(ch, baud);
 	/* Update timeout according to new baud rate */
 	uart_update_timeout(port, termios->c_cflag, baud);
-	//xrm117x_dump_register(port);
-	
-	
+	//xrm117x_dump_register(ch);
 }
 
 #if defined(TIOCSRS485) && defined(TIOCGRS485)
 static void xrm117x_config_rs485(struct uart_port *port,
 				   struct serial_rs485 *rs485)
 {
-	struct xrm117x_one *one = to_xrm117x_one(port, port);
-	one->rs485 = *rs485;
+	struct xrm117x_ch *ch = to_xrm117x_ch(port, port);
 
-	if (one->rs485.flags & SER_RS485_ENABLED) {
-		xrm117x_port_update(port, XRM117XX_EFCR_REG,
+	ch->rs485 = *rs485;
+
+	if (ch->rs485.flags & SER_RS485_ENABLED) {
+		sc_serial_modify(ch, SC_EFCR,
 				      XRM117XX_EFCR_AUTO_RS485_BIT,
 				      XRM117XX_EFCR_AUTO_RS485_BIT);
 	} else {
-		xrm117x_port_update(port, XRM117XX_EFCR_REG,
+		sc_serial_modify(ch, SC_EFCR,
 				      XRM117XX_EFCR_AUTO_RS485_BIT,
 				      0);
 	}
@@ -1188,7 +1285,7 @@ static int xrm117x_ioctl(struct uart_port *port, unsigned int cmd,
 		return 0;
 	case TIOCGRS485:
 		if (copy_to_user((void __user *)arg,
-				 &(to_xrm117x_one(port, port)->rs485),
+				 &(to_xrm117x_ch(port, port)->rs485),
 				 sizeof(rs485)))
 			return -EFAULT;
 		return 0;
@@ -1202,40 +1299,41 @@ static int xrm117x_ioctl(struct uart_port *port, unsigned int cmd,
 
 static int xrm117x_startup(struct uart_port *port)
 {
+	struct xrm117x_ch *ch = to_xrm117x_ch(port, port);
 	unsigned int val;
-   	xrm117x_power(port, 1);
+
+	if (!IS_ERR(ch->xr->clk)) {
+		int ret = clk_prepare_enable(ch->xr->clk);
+		if (ret)
+			pr_info("%s: clk prepare failed %d\n", __func__, ret);
+	}
+	xrm117x_power(ch, 1);
 	/* Reset FIFOs*/
 	val =  XRM117XX_FCR_RXRESET_BIT | XRM117XX_FCR_TXRESET_BIT;
-	xrm117x_port_write(port, XRM117XX_FCR_REG, val);
+	sc_serial_out(ch, SC_FCR, val);
 	udelay(5);
-	xrm117x_port_write(port, XRM117XX_FCR_REG,
-			     XRM117XX_FCR_FIFO_BIT);
-
-	/* Enable EFR */
-	xrm117x_port_write(port, XRM117XX_LCR_REG,
-			     XRM117XX_LCR_CONF_MODE_B);
+	sc_serial_out(ch, SC_FCR, XRM117XX_FCR_FIFO_BIT);
 
 	/* Enable write access to enhanced features and internal clock div */
-	xrm117x_port_write(port, XRM117XX_EFR_REG,
-			     XRM117XX_EFR_ENABLE_BIT);
+	sc_serial_out(ch, SC_EFR, XRM117XX_EFR_ENABLE_BIT);
 
 	/* Enable TCR/TLR */
-	xrm117x_port_update(port, XRM117XX_MCR_REG,
+	sc_serial_modify(ch, SC_MCR,
 			      XRM117XX_MCR_TCRTLR_BIT,
 			      XRM117XX_MCR_TCRTLR_BIT);
 
 	/* Configure flow control levels */
 	/* Flow control halt level 48, resume level 24 */
-	xrm117x_port_write(port, XRM117XX_TCR_REG,
+	sc_serial_out(ch, SC_TCR,
 			     XRM117XX_TCR_RX_RESUME(24) |
 			     XRM117XX_TCR_RX_HALT(48));
 
 
 	/* Now, initialize the UART */
-	xrm117x_port_write(port, XRM117XX_LCR_REG, XRM117XX_LCR_WORD_LEN_8);
+	sc_serial_out(ch, SC_LCR, ch->reg_cache[SC_LCR]);
 
 	/* Enable the Rx and Tx FIFO */
-	xrm117x_port_update(port, XRM117XX_EFCR_REG,
+	sc_serial_modify(ch, SC_EFCR,
 			      XRM117XX_EFCR_RXDISABLE_BIT |
 			      XRM117XX_EFCR_TXDISABLE_BIT,
 			      0);
@@ -1243,7 +1341,7 @@ static int xrm117x_startup(struct uart_port *port)
 	/* Enable RX, TX, CTS change interrupts */
 	//val = XRM117XX_IER_RDI_BIT | XRM117XX_IER_THRI_BIT | XRM117XX_IER_CTSI_BIT;
 	val = XRM117XX_IER_RDI_BIT | XRM117XX_IER_THRI_BIT | XRM117XX_IER_CTSI_BIT;	
-	xrm117x_port_write(port, XRM117XX_IER_REG, val);
+	sc_serial_out(ch, SC_IER, val);
 
 	
 	return 0;
@@ -1251,24 +1349,27 @@ static int xrm117x_startup(struct uart_port *port)
 
 static void xrm117x_shutdown(struct uart_port *port)
 {
-    //printk("xrm117x_shutdown...\n");
+	struct xrm117x_ch *ch = to_xrm117x_ch(port, port);
+
+	//printk("xrm117x_shutdown...\n");
 	/* Disable all interrupts */
-	xrm117x_port_write(port, XRM117XX_IER_REG, 0);
+	sc_serial_out(ch, SC_IER, 0);
 	
 	/* Disable TX/RX */
-	xrm117x_port_write(port, XRM117XX_EFCR_REG,
+	sc_serial_out(ch, SC_EFCR,
 			     XRM117XX_EFCR_RXDISABLE_BIT |
 			     XRM117XX_EFCR_TXDISABLE_BIT);
 
-	xrm117x_power(port, 0);
-	
-		
+	xrm117x_power(ch, 0);
+	if (!IS_ERR(ch->xr->clk))
+		clk_disable_unprepare(ch->xr->clk);
 }
 
 static const char *xrm117x_type(struct uart_port *port)
 {
-	struct xrm117x_port *s = dev_get_drvdata(port->dev);
-	return (port->type == PORT_SC16IS7XX) ? s->devtype->name : NULL;
+	struct xrm117x_ch *ch = to_xrm117x_ch(port, port);
+	struct xrm117x_port *xr = ch->xr;
+	return (port->type == PORT_SC16IS7XX) ? xr->devtype->name : NULL;
 }
 
 
@@ -1298,7 +1399,9 @@ static int xrm117x_verify_port(struct uart_port *port,
 static void xrm117x_pm(struct uart_port *port, unsigned int state,
 			 unsigned int oldstate)
 {
-	xrm117x_power(port, (state == UART_PM_STATE_ON) ? 1 : 0);
+	struct xrm117x_ch *ch = to_xrm117x_ch(port, port);
+
+	xrm117x_power(ch, (state == UART_PM_STATE_ON) ? 1 : 0);
 }
 
 static void xrm117x_null_void(struct uart_port *port)
@@ -1335,33 +1438,31 @@ static const struct uart_ops xrm117x_ops = {
 static int xrm117x_gpio_get(struct gpio_chip *chip, unsigned offset)
 {
 	unsigned int val;
-	struct xrm117x_port *s = container_of(chip, struct xrm117x_port,
-						gpio);
-	struct uart_port *port = &s->p[0].port;
+	struct xrm117x_port *xr = container_of(chip, struct xrm117x_port, gpio);
+	struct xrm117x_ch *ch = &xr->p[0];
 
-	val = xrm117x_port_read(port, XRM117XX_IOSTATE_REG);
+	val = sc_serial_in(ch, SC_IOSTATE_R);
 
 	return !!(val & BIT(offset));
 }
 
 static void xrm117x_gpio_set(struct gpio_chip *chip, unsigned offset, int val)
 {
-	struct xrm117x_port *s = container_of(chip, struct xrm117x_port,
+	struct xrm117x_port *xr = container_of(chip, struct xrm117x_port,
 						gpio);
-	struct uart_port *port = &s->p[0].port;
+	struct xrm117x_ch *ch = &xr->p[0];
 
-	xrm117x_port_update(port, XRM117XX_IOSTATE_REG, BIT(offset),
+	sc_serial_modify(ch, SC_IOSTATE_W, BIT(offset),
 			      val ? BIT(offset) : 0);
 }
 
 static int xrm117x_gpio_direction_input(struct gpio_chip *chip,
 					  unsigned offset)
 {
-	struct xrm117x_port *s = container_of(chip, struct xrm117x_port,
-						gpio);
-	struct uart_port *port = &s->p[0].port;
+	struct xrm117x_port *xr = container_of(chip, struct xrm117x_port, gpio);
+	struct xrm117x_ch *ch = &xr->p[0];
 
-	xrm117x_port_update(port, XRM117XX_IODIR_REG, BIT(offset), 0);
+	sc_serial_modify(ch, SC_IODIR, BIT(offset), 0);
 
 	return 0;
 }
@@ -1369,13 +1470,12 @@ static int xrm117x_gpio_direction_input(struct gpio_chip *chip,
 static int xrm117x_gpio_direction_output(struct gpio_chip *chip,
 					   unsigned offset, int val)
 {
-	struct xrm117x_port *s = container_of(chip, struct xrm117x_port,
-						gpio);
-	struct uart_port *port = &s->p[0].port;
+	struct xrm117x_port *xr = container_of(chip, struct xrm117x_port, gpio);
+	struct xrm117x_ch *ch = &xr->p[0];
 
-	xrm117x_port_update(port, XRM117XX_IOSTATE_REG, BIT(offset),
+	sc_serial_modify(ch, SC_IOSTATE_W, BIT(offset),
 			      val ? BIT(offset) : 0);
-	xrm117x_port_update(port, XRM117XX_IODIR_REG, BIT(offset),
+	sc_serial_modify(ch, SC_IODIR, BIT(offset),
 			      BIT(offset));
 
 	return 0;
@@ -1387,37 +1487,124 @@ static int xrm117x_gpio_direction_output(struct gpio_chip *chip,
 #define	GPIO_XR117X_IRQ	GPIO_TO_PIN(0,19)
 //#define	GPIO_XR117X_IRQ	GPIO_TO_PIN(2,1)
 #endif
-static int xrm117x_probe(struct device *dev,
+
+
+static const char *reg_names[] = {
+[SC_LCR] = "LCR",
+[SC_RHR] = "RHR",
+[SC_THR] = "THR",
+[SC_IER] = "IER",
+[SC_DLL] = "DLL",
+[SC_DLH] = "DLH",
+[SC_DLD] = "DLD",
+[SC_IIR] = "IIR",
+[SC_FCR] = "FCR",
+[SC_MCR] = "MCR",
+[SC_LSR] = "LSR",
+[SC_TXLVL] = "TXLVL",
+[SC_RXLVL] = "RXLVL",
+[SC_EFCR] = "EFCR",
+[SC_MSR] = "MSR",
+[SC_SPR] = "SPR",
+[SC_TCR] = "TCR",
+[SC_TLR] = "TLR",
+[SC_EFR] = "EFR",
+[SC_XON1] = "XON1",
+[SC_XON2] = "XON2",
+[SC_XOFF1] = "XOFF1",
+[SC_XOFF2] = "XOFF2",
+[SC_IOSTATE_R] = "IOSTATE_R",
+[SC_IOSTATE_W] = "IOSTATE_W",
+[SC_IODIR] = "IODIR",
+[SC_IOINTENA] = "IOINTENA",
+[SC_IOCONTROL] = "IOCONTROL",
+};
+
+static struct xrm117x_port *serial_xrm117x_xr;
+
+static ssize_t xrm117x_reg_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct xrm117x_port *xr = serial_xrm117x_xr;
+	struct xrm117x_ch *ch;
+	int total = 0;
+	int cnt;
+	int reg;
+	int i;
+	if (!xr)
+		return -ENODEV;
+
+	for (i = 0; i < xr->uart.nr; i++) {
+		ch = &xr->p[i];
+		cnt = sprintf(buf, "Channel %i:\n", i);
+		total += cnt;
+		buf += cnt;
+		for (reg = 0; reg < SC_CHAN_REG_CNT; reg++) {
+			if (ch->reg_valid & BIT(reg))
+				cnt = sprintf(buf, "%s=%02x\n", reg_names[reg], ch->reg_cache[reg]);
+			else
+				cnt = sprintf(buf, "%s=??\n", reg_names[reg]);
+			total += cnt;
+			buf += cnt;
+		}
+		cnt = sprintf(buf, "\n");
+		total += cnt;
+		buf += cnt;
+	}
+	cnt = sprintf(buf, "IO_Regs:\n");
+	total += cnt;
+	buf += cnt;
+	for (reg = SC_CHAN_REG_CNT; reg < SC_REG_CNT; reg++) {
+		if (xr->r_valid & BIT(reg - SC_CHAN_REG_CNT))
+			cnt = sprintf(buf, "%s=%02x\n", reg_names[reg], xr->dev_cache[reg - SC_CHAN_REG_CNT]);
+		else
+			cnt = sprintf(buf, "%s=??\n", reg_names[reg]);
+		total += cnt;
+		buf += cnt;
+	}
+	cnt = sprintf(buf, "\n");
+	total += cnt;
+	return total;
+}
+
+static DEVICE_ATTR(xrm117x_reg, 0444, xrm117x_reg_show, NULL);
+
+static int xrm117x_probe_common(struct device *dev,
 			   const struct xrm117x_devtype *devtype,
-			   int irq, unsigned long flags)
+			   int irq, unsigned long flags,
+			   struct spi_device *spi,
+			   struct i2c_client *i2c)
 {
 	unsigned long freq;
 	int i, ret;
-	struct xrm117x_port *s;
+	struct xrm117x_port *xr;
 	struct gpio_desc *reset_gpio = NULL;
 	
 	/* Alloc port structure */
-	s = devm_kzalloc(dev, sizeof(*s) +
-			 sizeof(struct xrm117x_one) * devtype->nr_uart,
+	xr = devm_kzalloc(dev, sizeof(*xr) +
+			 sizeof(struct xrm117x_ch) * devtype->nr_uart,
 			 GFP_KERNEL);
-	if (!s) {
+	if (!xr) {
 		dev_err(dev, "Error allocating port structure\n");
 		return -ENOMEM;
 	}
-	s->clk = devm_clk_get(dev, NULL);
-	if (IS_ERR(s->clk)) {
+	xr->spi_dev = spi;
+	xr->i2c_client = i2c;
+	xr->clk = devm_clk_get(dev, NULL);
+	if (IS_ERR(xr->clk)) {
 		freq = 14745600;	/* Fixed clk freq */
 	} else {
-		freq = clk_get_rate(s->clk);
+		freq = clk_get_rate(xr->clk);
 		pr_info("%s: %ld\n", __func__, freq);
 	}
-	s->devtype = devtype;
-	dev_set_drvdata(dev, s);
+	xr->devtype = devtype;
+
+	dev_set_drvdata(dev, xr);
 	/* Register UART driver */
-	s->uart.owner		= THIS_MODULE;
-	s->uart.dev_name	= "ttyXRM";
-	s->uart.nr		= devtype->nr_uart;
-	ret = uart_register_driver(&s->uart);
+	xr->uart.owner		= THIS_MODULE;
+	xr->uart.dev_name	= "ttyXRM";
+	xr->uart.nr		= devtype->nr_uart;
+	ret = uart_register_driver(&xr->uart);
 	if (ret) {
 		dev_err(dev, "Registering UART driver failed\n");
 		goto out_clk;
@@ -1426,17 +1613,17 @@ static int xrm117x_probe(struct device *dev,
 #ifdef CONFIG_GPIOLIB
 	if (devtype->nr_gpio) {
 		/* Setup GPIO cotroller */
-		s->gpio.owner		 = THIS_MODULE;
-		s->gpio.dev		 = dev;
-		s->gpio.label		 = dev_name(dev);
-		s->gpio.direction_input	 = xrm117x_gpio_direction_input;
-		s->gpio.get		 = xrm117x_gpio_get;
-		s->gpio.direction_output = xrm117x_gpio_direction_output;
-		s->gpio.set		 = xrm117x_gpio_set;
-		s->gpio.base		 = -1;
-		s->gpio.ngpio		 = devtype->nr_gpio;
-		s->gpio.can_sleep	 = 1;
-		ret = gpiochip_add(&s->gpio);
+		xr->gpio.owner		 = THIS_MODULE;
+		xr->gpio.dev		 = dev;
+		xr->gpio.label		 = dev_name(dev);
+		xr->gpio.direction_input = xrm117x_gpio_direction_input;
+		xr->gpio.get		 = xrm117x_gpio_get;
+		xr->gpio.direction_output = xrm117x_gpio_direction_output;
+		xr->gpio.set		 = xrm117x_gpio_set;
+		xr->gpio.base		 = -1;
+		xr->gpio.ngpio		 = devtype->nr_gpio;
+		xr->gpio.can_sleep	 = 1;
+		ret = gpiochip_add(&xr->gpio);
 		if (ret)
 			goto out_uart;
 	}
@@ -1455,41 +1642,42 @@ static int xrm117x_probe(struct device *dev,
 		pr_warn("%s: could not find reset\n", __func__);
 	}
 
-	mutex_init(&s->mutex);
-	mutex_init(&s->mutex_bus_access);
+	mutex_init(&xr->mutex);
+	mutex_init(&xr->mutex_bus_access);
 	//I2C_Bus_init();
 	for (i = 0; i < devtype->nr_uart; ++i) {
 		/* Initialize port data */
-		s->p[i].port.line	= i;
-		s->p[i].port.dev	= dev;
-		s->p[i].port.irq	= irq;
-		s->p[i].port.type	= PORT_SC16IS7XX;
-		s->p[i].port.fifosize	= XRM117XX_FIFO_SIZE;
-		s->p[i].port.flags	= UPF_FIXED_TYPE | UPF_LOW_LATENCY;
-		s->p[i].port.iotype	= UPIO_PORT;
-		s->p[i].port.uartclk	= freq;
-		s->p[i].port.ops	= &xrm117x_ops;
+		xr->p[i].port.line	= i;
+		xr->p[i].port.dev	= dev;
+		xr->p[i].port.irq	= irq;
+		xr->p[i].port.type	= PORT_SC16IS7XX;
+		xr->p[i].port.fifosize	= XRM117XX_FIFO_SIZE;
+		xr->p[i].port.flags	= UPF_FIXED_TYPE | UPF_LOW_LATENCY;
+		xr->p[i].port.iotype	= UPIO_PORT;
+		xr->p[i].port.uartclk	= freq;
+		xr->p[i].port.ops	= &xrm117x_ops;
+		xr->p[i].xr		= xr;
 		/* Disable all interrupts */
-		xrm117x_port_write(&s->p[i].port, XRM117XX_IER_REG, 0);
+		sc_serial_out(&xr->p[i], SC_IER, 0);
 		/* Disable TX/RX */
-		xrm117x_port_write(&s->p[i].port, XRM117XX_EFCR_REG,
+		sc_serial_out(&xr->p[i], SC_EFCR,
 				     XRM117XX_EFCR_RXDISABLE_BIT |
 				     XRM117XX_EFCR_TXDISABLE_BIT);
 		
-		s->p[i].msr_reg = xrm117x_port_read(&s->p[i].port, XRM117XX_MSR_REG);
+		xr->p[i].msr_reg = sc_serial_in(&xr->p[i], SC_MSR);
 		
 		/* Initialize queue for start TX */
-		INIT_WORK(&s->p[i].tx_work, xrm117x_wq_proc);
+		INIT_WORK(&xr->p[i].tx_work, xrm117x_wq_proc);
 		/* Initialize queue for changing mode */
-		INIT_WORK(&s->p[i].md_work, xrm117x_md_proc);
+		INIT_WORK(&xr->p[i].md_work, xrm117x_md_proc);
 
-		INIT_WORK(&s->p[i].stop_rx_work, xrm117x_stop_rx_work_proc);
-		INIT_WORK(&s->p[i].stop_tx_work, xrm117x_stop_tx_work_proc);
+		INIT_WORK(&xr->p[i].stop_rx_work, xrm117x_stop_rx_work_proc);
+		INIT_WORK(&xr->p[i].stop_tx_work, xrm117x_stop_tx_work_proc);
 				
 		/* Register port */
-		uart_add_one_port(&s->uart, &s->p[i].port);
+		uart_add_one_port(&xr->uart, &xr->p[i].port);
 		/* Go to suspend mode */
-		xrm117x_power(&s->p[i].port, 0);
+		xrm117x_power(&xr->p[i], 0);
 	}
 
 #ifdef USE_OK335Dx_PLATFORM	
@@ -1499,24 +1687,31 @@ static int xrm117x_probe(struct device *dev,
 	irq = gpio_to_irq(GPIO_XR117X_IRQ);
 #endif	
 	ret = devm_request_threaded_irq(dev, irq, NULL, xrm117x_ist,
-					IRQF_ONESHOT | IRQF_TRIGGER_FALLING | IRQF_SHARED | flags, dev_name(dev), s);
-		
-	if (!ret)
-		return 0;
+					IRQF_ONESHOT | IRQF_TRIGGER_FALLING | IRQF_SHARED | flags, dev_name(dev), xr);
+	if (ret < 0)
+		goto irq_fail;
 
-	mutex_destroy(&s->mutex);
+	serial_xrm117x_xr = xr;
+	ret = device_create_file(dev, &dev_attr_xrm117x_reg);
+	if (ret < 0)
+		printk(KERN_WARNING "failed to add xrm117x sysfs files\n");
+
+	return 0;
+
+irq_fail:
+	mutex_destroy(&xr->mutex);
 
 #ifdef CONFIG_GPIOLIB
 	if (devtype->nr_gpio)
-		gpiochip_remove(&s->gpio);
+		gpiochip_remove(&xr->gpio);
 
 out_uart:
 #endif
-	uart_unregister_driver(&s->uart);
+	uart_unregister_driver(&xr->uart);
 
 out_clk:
-	if (!IS_ERR(s->clk))
-		/*clk_disable_unprepare(s->clk)*/;
+	if (!IS_ERR(xr->clk))
+		/*clk_disable_unprepare(xr->clk)*/;
 
 	return ret;
 }
@@ -1525,27 +1720,27 @@ out_clk:
 
 static int xrm117x_remove(struct device *dev)
 {
-	struct xrm117x_port *s = dev_get_drvdata(dev);
+	struct xrm117x_port *xr = dev_get_drvdata(dev);
 	int i;
 #ifdef CONFIG_GPIOLIB
-	if (s->devtype->nr_gpio)
-		gpiochip_remove(&s->gpio);
+	if (xr->devtype->nr_gpio)
+		gpiochip_remove(&xr->gpio);
 #endif
 
-	for (i = 0; i < s->uart.nr; i++) {
-		cancel_work_sync(&s->p[i].tx_work);
-		cancel_work_sync(&s->p[i].md_work);
-		cancel_work_sync(&s->p[i].stop_rx_work);
-		cancel_work_sync(&s->p[i].stop_tx_work);
-		uart_remove_one_port(&s->uart, &s->p[i].port);
-		xrm117x_power(&s->p[i].port, 0);
+	for (i = 0; i < xr->uart.nr; i++) {
+		cancel_work_sync(&xr->p[i].tx_work);
+		cancel_work_sync(&xr->p[i].md_work);
+		cancel_work_sync(&xr->p[i].stop_rx_work);
+		cancel_work_sync(&xr->p[i].stop_tx_work);
+		uart_remove_one_port(&xr->uart, &xr->p[i].port);
+		xrm117x_power(&xr->p[i], 0);
 	}
 
-	mutex_destroy(&s->mutex);
-	mutex_destroy(&s->mutex_bus_access);
-	uart_unregister_driver(&s->uart);
-	if (!IS_ERR(s->clk))
-		/*clk_disable_unprepare(s->clk)*/;
+	mutex_destroy(&xr->mutex);
+	mutex_destroy(&xr->mutex_bus_access);
+	uart_unregister_driver(&xr->uart);
+	if (!IS_ERR(xr->clk))
+		/*clk_disable_unprepare(xr->clk)*/;
 
 	return 0;
 }
@@ -1565,9 +1760,8 @@ static int xrm117x_spi_probe(struct spi_device *spi)
 	unsigned long flags = 0;
 	int ret;
 	
-	spi_dev =spi;
 		
-	ret = xrm117x_probe(&spi->dev, devtype,spi->irq, flags);
+	ret = xrm117x_probe_common(&spi->dev, devtype,spi->irq, flags, spi, NULL);
 	return ret;
 }
 
@@ -1617,8 +1811,7 @@ static int xrm117x_i2c_probe(struct i2c_client *i2c,
 		devtype = (struct xrm117x_devtype *)id->driver_data;
 		flags = IRQF_TRIGGER_FALLING;
 	}
-	xrm117x_i2c_client = i2c; 
-	ret = xrm117x_probe(&i2c->dev, devtype,i2c->irq, flags);
+	ret = xrm117x_probe_common(&i2c->dev, devtype,i2c->irq, flags, NULL, i2c);
 	return ret;
 }
 
