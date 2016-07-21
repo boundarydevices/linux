@@ -55,7 +55,7 @@
 #define IMX_SSP_SYS_CLK		0
 
 #define MIN_FPS 30
-#define MAX_FPS 60
+#define MAX_FPS 75
 #define DEFAULT_FPS 60
 
 #define TC358743_XCLK_MIN 27000000
@@ -72,6 +72,9 @@
 
 #define MAX_COLORBAR	tc358743_mode_INIT6
 #define IS_COLORBAR(a) (a <= MAX_COLORBAR)
+
+#define FV_CNT_LO                             0x85A1 /* Not in REF_01 */
+#define FV_CNT_HI                             0x85A2 /* Not in REF_01 */
 
 enum tc358743_mode {
 	tc358743_mode_INIT,
@@ -93,7 +96,16 @@ enum tc358743_mode {
 enum tc358743_frame_rate {
 	tc358743_60_fps,
 	tc358743_30_fps,
+	tc358743_75_fps,
 	tc358743_max_fps
+};
+
+static char tc358743_fps_list[tc358743_max_fps+1] =
+{
+[tc358743_60_fps] = 60,
+[tc358743_30_fps] = 30,
+[tc358743_75_fps] = 75,
+[tc358743_max_fps] = 0
 };
 
 struct reg_value {
@@ -488,6 +500,88 @@ static const struct reg_value tc358743_setting_YUV422_4lane_1024x768_60fps_125MH
 // Output Control
   {0x0004, 0x00000cf7, 0x00000000, 2, 0},
 
+};
+
+static const struct reg_value tc358743_setting_YUV422_4lane_1024x768_75fps_300MHz[] = {
+  {0x0004, 0x00000084, 0x00000000, 2, 0},
+  {0x0006, 0x00000160, 0x00000000, 2, 0},
+  {0x0014, 0x0000ffff, 0x00000000, 2, 0},
+  {0x0016, 0x000005ff, 0x00000000, 2, 0},
+// Program CSI Tx PLL
+  {0x0020, 0x000080c7, 0x00000000, 2, 0},
+  {0x0022, 0x00000213, 0x00000000, 2, 0},
+// CSI Tx PHY  (32-bit Registers)
+  {0x0140, 0x00000000, 0x00000000, 4, 0},
+  {0x0144, 0x00000000, 0x00000000, 4, 0},
+  {0x0148, 0x00000000, 0x00000000, 4, 0},
+  {0x014c, 0x00000000, 0x00000000, 4, 0},
+  {0x0150, 0x00000000, 0x00000000, 4, 0},
+// CSI Tx PPI  (32-bit Registers)
+  {0x0210, 0x00001e00, 0x00000000, 4, 0},
+  {0x0214, 0x00000003, 0x00000000, 4, 0},
+  {0x0218, 0x00001402, 0x00000000, 4, 0},
+  {0x021c, 0x00000000, 0x00000000, 4, 0},
+  {0x0220, 0x00000003, 0x00000000, 4, 0},
+  {0x0224, 0x00004a00, 0x00000000, 4, 0},
+  {0x0228, 0x00000008, 0x00000000, 4, 0},
+  {0x022c, 0x00000002, 0x00000000, 4, 0},
+  {0x0234, 0x0000001f, 0x00000000, 4, 0},
+  {0x0238, 0x00000001, 0x00000000, 4, 0},
+  {0x0204, 0x00000001, 0x00000000, 4, 0},
+  {0x0518, 0x00000001, 0x00000000, 4, 0},
+  {0x0500, 0xa30080a6, 0x00000000, 4, 0},
+// HDMI Interrupt Mask
+  {0x8502, 0x00000001, 0x00000000, 1, 0},
+  {0x8512, 0x000000fe, 0x00000000, 1, 0},
+  {0x8514, 0x00000000, 0x00000000, 1, 0},
+  {0x8515, 0x00000000, 0x00000000, 1, 0},
+  {0x8516, 0x00000000, 0x00000000, 1, 0},
+// HDMI Audio
+  {0x8531, 0x00000001, 0x00000000, 1, 0},
+  {0x8630, 0x000000b0, 0x00000000, 1, 0},
+  {0x8631, 0x0000001e, 0x00000000, 1, 0},
+  {0x8632, 0x00000004, 0x00000000, 1, 0},
+  {0x8670, 0x00000001, 0x00000000, 1, 0},
+// HDMI PHY
+  {0x8532, 0x00000080, 0x00000000, 1, 0},
+  {0x8536, 0x00000040, 0x00000000, 1, 0},
+  {0x853f, 0x0000000a, 0x00000000, 1, 0},
+// HDMI System
+  {0x8545, 0x00000031, 0x00000000, 1, 0},
+  {0x8546, 0x0000002d, 0x00000000, 1, 0},
+// HDCP Setting
+  {0x85d1, 0x00000001, 0x00000000, 1, 0},
+  {0x8560, 0x00000024, 0x00000000, 1, 0},
+  {0x8563, 0x00000011, 0x00000000, 1, 0},
+  {0x8564, 0x0000000f, 0x00000000, 1, 0},
+// RGB --> YUV Conversion
+  {0x8571, 0x00000002, 0x00000000, 1, 0},
+  {0x8573, 0x000000c1, 0x00000000, 1, 0},
+  {0x8574, 0x00000008, 0x00000000, 1, 0},
+  {0x8576, 0x00000060, 0x00000000, 1, 0},
+// HDMI Audio In Setting
+  {0x8600, 0x00000000, 0x00000000, 1, 0},
+  {0x8602, 0x000000f3, 0x00000000, 1, 0},
+  {0x8603, 0x00000002, 0x00000000, 1, 0},
+  {0x8604, 0x0000000c, 0x00000000, 1, 0},
+  {0x8606, 0x00000005, 0x00000000, 1, 0},
+  {0x8607, 0x00000000, 0x00000000, 1, 0},
+  {0x8620, 0x00000022, 0x00000000, 1, 0},
+  {0x8640, 0x00000001, 0x00000000, 1, 0},
+  {0x8641, 0x00000065, 0x00000000, 1, 0},
+  {0x8642, 0x00000007, 0x00000000, 1, 0},
+  {0x8652, 0x00000002, 0x00000000, 1, 0},
+  {0x8665, 0x00000010, 0x00000000, 1, 0},
+// InfoFrame Extraction
+  {0x8709, 0x000000ff, 0x00000000, 1, 0},
+  {0x870b, 0x0000002c, 0x00000000, 1, 0},
+  {0x870c, 0x00000053, 0x00000000, 1, 0},
+  {0x870d, 0x000000ff, 0x00000000, 1, 0},
+  {0x870e, 0x00000030, 0x00000000, 1, 0},
+  {0x9007, 0x00000010, 0x00000000, 1, 0},
+  {0x854a, 0x00000001, 0x00000000, 1, 0},
+// Output Control
+  {0x0004, 0x00000cf7, 0x00000000, 2, 0},
 };
 
 static const struct reg_value tc358743_setting_YUV422_4lane_720P_60fps_1280_720_133Mhz[] = {
@@ -1340,100 +1434,100 @@ static const struct v4l2_fmtdesc tc358743_formats[] = {
 };
 
 
-static const struct tc358743_mode_info tc358743_mode_info_data[2][tc358743_mode_MAX] = {
+static const struct tc358743_mode_info tc358743_mode_info_data[tc358743_max_fps][tc358743_mode_MAX] = {
 /* Color bar test settings */
-	[1][tc358743_mode_INIT] =
+	[tc358743_30_fps][tc358743_mode_INIT] =
 		{"cb640x480-108MHz@30", tc358743_mode_INIT,  640, 480,
 		6, 1, 2, 108,
 		tc358743_setting_YUV422_2lane_color_bar_640_480_108MHz_cont,
 		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_640_480_108MHz_cont),
 		MIPI_DT_YUV422
 		},
-	[0][tc358743_mode_INIT] =
+	[tc358743_60_fps][tc358743_mode_INIT] =
 		{"cb640x480-108MHz@60", tc358743_mode_INIT,  640, 480,
 		6, 1, 2, 108,
 		tc358743_setting_YUV422_2lane_color_bar_640_480_108MHz_cont,
 		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_640_480_108MHz_cont),
 		MIPI_DT_YUV422
 		},
-	[1][tc358743_mode_INIT4] =
+	[tc358743_30_fps][tc358743_mode_INIT4] =
 		{"cb640x480-174Mhz@30", tc358743_mode_INIT4,  640, 480,
 		6, 1, 2, 174,
 		tc358743_setting_YUV422_2lane_color_bar_640_480_174MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_640_480_174MHz),
 		MIPI_DT_YUV422
 		},
-	[0][tc358743_mode_INIT4] =
+	[tc358743_60_fps][tc358743_mode_INIT4] =
 		{"cb640x480-174MHz@60", tc358743_mode_INIT4,  640, 480,
 		6, 1, 2, 174,
 		tc358743_setting_YUV422_2lane_color_bar_640_480_174MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_640_480_174MHz),
 		MIPI_DT_YUV422
 		},
-	[1][tc358743_mode_INIT3] =
+	[tc358743_30_fps][tc358743_mode_INIT3] =
 		{"cb1024x720-4lane@30", tc358743_mode_INIT3,  1024, 720,
 		6, 1, 4, 300,
 		tc358743_setting_YUV422_4lane_color_bar_1024_720_200MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1024_720_200MHz),
 		MIPI_DT_YUV422
 		},
-	[0][tc358743_mode_INIT3] =
+	[tc358743_60_fps][tc358743_mode_INIT3] =
 		{"cb1024x720-4lane@60", tc358743_mode_INIT3,  1024, 720,
 		6, 1, 4, 300,
 		tc358743_setting_YUV422_4lane_color_bar_1024_720_200MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1024_720_200MHz),
 		MIPI_DT_YUV422
 		},
-	[1][tc358743_mode_INIT1] =
+	[tc358743_30_fps][tc358743_mode_INIT1] =
 		{"cb1280x720-2lane@30", tc358743_mode_INIT1,  1280, 720,
 		12, 0, 2, 125,
 		tc358743_setting_YUV422_2lane_color_bar_1280_720_125MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_1280_720_125MHz),
 		MIPI_DT_YUV422
 		},
-	[0][tc358743_mode_INIT1] =
+	[tc358743_60_fps][tc358743_mode_INIT1] =
 		{"cb1280x720-2lane@60", tc358743_mode_INIT1,  1280, 720,
 		12, 0, 2, 125,
 		tc358743_setting_YUV422_2lane_color_bar_1280_720_125MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_2lane_color_bar_1280_720_125MHz),
 		MIPI_DT_YUV422
 		},
-	[1][tc358743_mode_INIT2] =
+	[tc358743_30_fps][tc358743_mode_INIT2] =
 		{"cb1280x720-4lane-125MHz@30", tc358743_mode_INIT2,  1280, 720,
 		12, 0, 4, 125,
 		tc358743_setting_YUV422_4lane_color_bar_1280_720_125MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1280_720_125MHz),
 		MIPI_DT_YUV422
 		},
-	[0][tc358743_mode_INIT2] =
+	[tc358743_60_fps][tc358743_mode_INIT2] =
 		{"cb1280x720-4lane-125MHz@60", tc358743_mode_INIT2,  1280, 720,
 		12, 0, 4, 125,
 		tc358743_setting_YUV422_4lane_color_bar_1280_720_125MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1280_720_125MHz),
 		MIPI_DT_YUV422
 		},
-	[1][tc358743_mode_INIT5] =
+	[tc358743_30_fps][tc358743_mode_INIT5] =
 		{"cb1280x720-4lane-300MHz@30", tc358743_mode_INIT5,  1280, 720,
 		12, 0, 4, 300,
 		tc358743_setting_YUV422_4lane_color_bar_1280_720_300MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1280_720_300MHz),
 		MIPI_DT_YUV422
 		},
-	[0][tc358743_mode_INIT5] =
+	[tc358743_60_fps][tc358743_mode_INIT5] =
 		{"cb1280x720-4lane-300MHz@60", tc358743_mode_INIT5,  1280, 720,
 		12, 0, 4, 300,
 		tc358743_setting_YUV422_4lane_color_bar_1280_720_300MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1280_720_300MHz),
 		MIPI_DT_YUV422
 		},
-	[1][tc358743_mode_INIT6] =
+	[tc358743_30_fps][tc358743_mode_INIT6] =
 		{"cb1920x1023@30", tc358743_mode_INIT6,  1920, 1023,
 		15, 0, 4, 300,
 		tc358743_setting_YUV422_4lane_color_bar_1920_1023_300MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_4lane_color_bar_1920_1023_300MHz),
 		MIPI_DT_YUV422
 		},
-	[0][tc358743_mode_INIT6] =
+	[tc358743_60_fps][tc358743_mode_INIT6] =
 		{"cb1920x1023@60", tc358743_mode_INIT6,  1920, 1023,
 		15, 0, 4, 300,
 		tc358743_setting_YUV422_4lane_color_bar_1920_1023_300MHz,
@@ -1448,7 +1542,7 @@ static const struct tc358743_mode_info tc358743_mode_info_data[2][tc358743_mode_
 		ARRAY_SIZE(tc358743_setting_YUV422_2lane_60fps_640_480_125Mhz),
 		MIPI_DT_YUV422,
 		},
-	[1][tc358743_mode_480P_720_480] =
+	[tc358743_30_fps][tc358743_mode_480P_720_480] =
 		{"720x480@30", tc358743_mode_480P_720_480,  720, 480,
 		6, (0x02)<<8|(0x00), 2, 125,
 		tc358743_setting_YUV422_2lane_60fps_720_480_125Mhz,
@@ -1469,21 +1563,28 @@ static const struct tc358743_mode_info tc358743_mode_info_data[2][tc358743_mode_
 		ARRAY_SIZE(tc358743_setting_YUV422_4lane_1024x768_60fps_125MHz),
 		MIPI_DT_YUV422
 		},
-	[1][tc358743_mode_720P_1280_720] =
+	[tc358743_75_fps][tc358743_mode_1024x768] =
+		{"1024x768@75", tc358743_mode_1024x768,  1024, 768,
+		16, 75, 4, 125,
+		tc358743_setting_YUV422_4lane_1024x768_75fps_300MHz,
+		ARRAY_SIZE(tc358743_setting_YUV422_4lane_1024x768_75fps_300MHz),
+		MIPI_DT_YUV422
+		},
+	[tc358743_30_fps][tc358743_mode_720P_1280_720] =
 		{"1280x720-2lane@30", tc358743_mode_720P_1280_720,  1280, 720,
 		12, (0x3e)<<8|(0x3c), 2, 125,
 		tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz),
 		MIPI_DT_YUV422,
 		},
-	[0][tc358743_mode_720P_1280_720] =
+	[tc358743_60_fps][tc358743_mode_720P_1280_720] =
 		{"1280x720-2lane@60", tc358743_mode_720P_1280_720,  1280, 720,
 		12, (0x3e)<<8|(0x3c), 2, 125,
 		tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz,
 		ARRAY_SIZE(tc358743_setting_YUV422_2lane_30fps_720P_1280_720_125MHz),
 		MIPI_DT_YUV422,
 		},
-	[1][tc358743_mode_720P_60_1280_720] =
+	[tc358743_30_fps][tc358743_mode_720P_60_1280_720] =
 		{"1280x720-4lane-133Mhz@30", tc358743_mode_720P_60_1280_720,  1280, 720,
 		12, 0, 4, 133,
 		tc358743_setting_YUV422_4lane_720P_60fps_1280_720_133Mhz,
@@ -1497,7 +1598,7 @@ static const struct tc358743_mode_info tc358743_mode_info_data[2][tc358743_mode_
 		ARRAY_SIZE(tc358743_setting_YUV422_4lane_720P_60fps_1280_720_133Mhz),
 		MIPI_DT_YUV422
 		},
-	[1][tc358743_mode_1080P_1920_1080] =
+	[tc358743_30_fps][tc358743_mode_1080P_1920_1080] =
 		{"1920x1080@30", tc358743_mode_1080P_1920_1080,  1920, 1080,
 		15, 0xa, 4, 300,
 		tc358743_setting_YUV422_4lane_1080P_30fps_1920_1080_300MHz,
@@ -1703,6 +1804,44 @@ static s32 tc358743_write_reg(struct sensor_data *sensor, u16 reg, u32 val, int 
 		if (0) pr_debug("%s:reg=%x,val=%x 8543=%02x\n", __func__, reg, val, tc358743_read_reg_val(sensor, 0x8543));
 	}
 	return 0;
+}
+
+static int tc_fps_to_index(int fps)
+{
+	int ret;
+
+	switch (fps) {
+	case 29 ... 31:
+		ret = tc358743_30_fps;
+		break;
+	case 59 ... 61:
+		ret = tc358743_60_fps;
+		break;
+	case 74 ... 76:
+		ret = tc358743_75_fps;
+		break;
+	default:
+		ret = -1;
+	}
+
+	return ret;
+}
+
+static int tc_get_fps(struct sensor_data *sensor)
+{
+	u32 frame_interval;
+	int fps = 0;
+
+	frame_interval = (tc358743_read_reg_val(sensor, FV_CNT_HI) & 0x3) << 8;
+	frame_interval += tc358743_read_reg_val(sensor, FV_CNT_LO);
+
+	if (frame_interval > 0)
+		fps = DIV_ROUND_CLOSEST(10000, frame_interval);
+
+	pr_debug("%s: frame_interval = %d*100us, fps = %d\n",
+		 __func__, frame_interval, fps);
+
+	return fps;
 }
 
 static void tc358743_software_reset(struct sensor_data *sensor)
@@ -2086,10 +2225,11 @@ static int tc358743_minit(struct tc_data *td)
 	u32 tgt_fps = sensor->streamcap.timeperframe.denominator /
 			sensor->streamcap.timeperframe.numerator;
 
-	if (tgt_fps == 60)
-		frame_rate = tc358743_60_fps;
-	else if (tgt_fps == 30)
-		frame_rate = tc358743_30_fps;
+	frame_rate = tc_fps_to_index(tgt_fps);
+	if (frame_rate < 0) {
+		pr_err("%s: unsupported fps: %d\n", __func__, tgt_fps);
+		return -1;
+	}
 
 	pr_debug("%s: capture mode: %d fps: %d\n", __func__,
 		sensor->streamcap.capturemode, tgt_fps);
@@ -2264,11 +2404,8 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 		tgt_fps = timeperframe->denominator /
 			  timeperframe->numerator;
 
-		if (tgt_fps == 60)
-			frame_rate = tc358743_60_fps;
-		else if (tgt_fps == 30)
-			frame_rate = tc358743_30_fps;
-		else {
+		frame_rate = tc_fps_to_index(tgt_fps);
+		if (frame_rate < 0) {
 			pr_err(" The camera frame rate is not supported!\n");
 			ret = -EINVAL;
 			break;
@@ -2283,10 +2420,7 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 		tgt_fps = sensor->streamcap.timeperframe.denominator /
 			  sensor->streamcap.timeperframe.numerator;
 
-		if (tgt_fps == 60)
-			frame_rate_now = tc358743_60_fps;
-		else if (tgt_fps == 30)
-			frame_rate_now = tc358743_30_fps;
+		frame_rate_now = tc_fps_to_index(tgt_fps);
 
 		mode = td->mode;
 		if (IS_COLORBAR(mode)) {
@@ -2294,7 +2428,7 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 		} else {
 			a->parm.capture.capturemode = mode;
 			frame_rate = td->fps;
-			timeperframe->denominator = (frame_rate == tc358743_60_fps) ? 60 : 30;
+			timeperframe->denominator = tc358743_fps_list[frame_rate];
 			timeperframe->numerator = 1;
 		}
 
@@ -2537,7 +2671,6 @@ static int ioctl_try_fmt_cap(struct v4l2_int_device *s,
 	struct sensor_data *sensor = &td->sensor;
 	u32 tgt_fps;	/* target frames per secound */
 	enum tc358743_frame_rate frame_rate;
-//	enum image_size isize;
 	int ret = 0;
 	struct v4l2_pix_format *pix = &f->fmt.pix;
 	int mode;
@@ -2548,12 +2681,11 @@ static int ioctl_try_fmt_cap(struct v4l2_int_device *s,
 	tgt_fps = sensor->streamcap.timeperframe.denominator /
 		  sensor->streamcap.timeperframe.numerator;
 
-	if (tgt_fps == 60) {
-		frame_rate = tc358743_60_fps;
-	} else if (tgt_fps == 30) {
-		frame_rate = tc358743_30_fps;
-	} else {
-		pr_debug("%s: %d fps (%d,%d) is not supported\n", __func__, tgt_fps, sensor->streamcap.timeperframe.denominator,sensor->streamcap.timeperframe.numerator);
+	frame_rate = tc_fps_to_index(tgt_fps);
+	if (frame_rate < 0) {
+		pr_debug("%s: %d fps (%d,%d) is not supported\n", __func__,
+			 tgt_fps, sensor->streamcap.timeperframe.denominator,
+			 sensor->streamcap.timeperframe.numerator);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -3041,13 +3173,6 @@ static const struct tc_mode_list tc358743_mode_list[] =
 	{"1080p", tc358743_mode_1080P_1920_1080},	/* 15 */
 };
 
-static char tc358743_fps_list[tc358743_max_fps+1] =
-{
-[tc358743_60_fps] = 60,
-[tc358743_30_fps] = 30,
-[tc358743_max_fps] = 0
-};
-
 static int tc358743_audio_list[16] =
 {
 	44100,
@@ -3129,7 +3254,7 @@ static void tc_det_worker(struct work_struct *work)
 		u32val &= 0x0f;
 		td->fps = tc358743_60_fps;
 		if (!u32val) {
-			int hsize, vsize;
+			int hsize, vsize, fps;
 
 			hsize = tc358743_read_reg_val16(sensor, 0x8582);
 			vsize = tc358743_read_reg_val16(sensor, 0x8588);
@@ -3140,7 +3265,10 @@ static void tc_det_worker(struct work_struct *work)
 				mode = tc358743_mode_720P_60_1280_720;
 			else if (hsize == 1920)
 				mode = tc358743_mode_1080P_1920_1080;
-			td->fps = tc358743_60_fps;
+
+			fps = tc_get_fps(sensor);
+			if (fps && tc_fps_to_index(fps))
+				td->fps = tc_fps_to_index(fps);
 		} else {
 			mode = tc358743_mode_list[u32val].mode;
 			if (td->mode != mode)
