@@ -437,7 +437,7 @@ int xrm_write_byte_data(struct xrm117x_port *xr, u8 reg, u8 val)
 	}
 	if (ret < 0)
 		printk("%s: reg=%x, val=%x, Failed %d\n", __func__, reg, val, ret);
-	pr_info("%s: (%02x) = 0x%02x\n", __func__, reg, val);
+	pr_debug("%s: (%02x) = 0x%02x\n", __func__, reg, val);
 	return ret;
 }
 
@@ -477,8 +477,7 @@ int xrm_read_block_data(struct xrm117x_port *xr, u8 reg, int count, u8* buf)
 	}
 	if (ret < 0)
 		printk("%s: reg=%x, cnt=%x, Failed %d\n", __func__, reg, count, ret);
-	if (count == 1)
-		pr_info("%s: (%02x) = 0x%02x\n", __func__, reg, buf[0]);
+	pr_debug("%s: (%02x) = 0x%02x\n", __func__, reg, buf[0]);
 	return ret;
 }
 /*
@@ -752,9 +751,16 @@ static int xrm117x_set_baud(struct xrm117x_ch *ch, int baud)
 {
 	u8 lcr;
 	u8 prescaler = 0;
+	int shift = 0;
 	unsigned long clk = ch->port.uartclk;
 	unsigned long div = (clk << 1) / baud;
 
+	if (div < 0x20) {
+		shift = 1;
+		if (div < 0x10)
+			shift = 2;
+		div = (clk << (shift + 1)) / baud;
+	}
 	if (div & 1)
 		div++;
 	div >>= 1;
@@ -778,11 +784,12 @@ static int xrm117x_set_baud(struct xrm117x_ch *ch, int baud)
 	/* Write the new divisor */
 	sc_serial_out(ch, SC_DLH, div >> 12);
 	sc_serial_out(ch, SC_DLL, (div >> 4) & 0xff);
-	sc_serial_out(ch, SC_DLD, div & 0x0f);
+	sc_serial_out(ch, SC_DLD, (shift << 4) | (div & 0x0f));
 	/* Put LCR back to the normal mode */
 	sc_serial_out(ch, SC_LCR, lcr);
 
-	return DIV_ROUND_CLOSEST(clk, div);
+	pr_debug("%s: baud=%d, div = 0x%lx, %d\n", __func__, baud, div, shift);
+	return DIV_ROUND_CLOSEST(clk << shift, div);
 }
 
 #if 0
@@ -1241,7 +1248,7 @@ static void xrm117x_set_termios(struct uart_port *port,
 	/* Get baud rate generator configuration */
 	baud = uart_get_baud_rate(port, termios, old,
 				  port->uartclk / 16 / 4 / 0xffff,
-				  port->uartclk / 16);
+				  port->uartclk / 4);
 	/* Setup baudrate generator */
 	baud = xrm117x_set_baud(ch, baud);
 	/* Update timeout according to new baud rate */
