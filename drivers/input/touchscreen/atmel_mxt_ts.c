@@ -689,10 +689,10 @@ retry:
 		retried = true;
 		goto retry;
 	} else {
+		dev_err(&client->dev, "%s: i2c transfer failed (%d) reg=0x%x len=%d\n",
+			__func__, ret, reg, len);
 		if (ret >= 0)
 			ret = -EIO;
-		dev_err(&client->dev, "%s: i2c transfer failed (%d)\n",
-			__func__, ret);
 	}
 
 	return ret;
@@ -723,10 +723,10 @@ retry:
 		retried = true;
 		goto retry;
 	} else {
+		dev_err(&client->dev, "%s: i2c send failed (%d) reg=0x%x len=%d val=%x\n",
+			__func__, ret, reg, len, buf[2]);
 		if (ret >= 0)
 			ret = -EIO;
-		dev_err(&client->dev, "%s: i2c send failed (%d)\n",
-			__func__, ret);
 	}
 
 	kfree(buf);
