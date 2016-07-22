@@ -631,10 +631,10 @@ static int __mxt_read_reg(struct i2c_client *client,
 	if (ret == 2) {
 		ret = 0;
 	} else {
+		dev_err(&client->dev, "%s: i2c transfer failed (%d) reg=0x%x len=%d\n",
+			__func__, ret, reg, len);
 		if (ret >= 0)
 			ret = -EIO;
-		dev_err(&client->dev, "%s: i2c transfer failed (%d)\n",
-			__func__, ret);
 	}
 
 	return ret;
@@ -660,10 +660,10 @@ static int __mxt_write_reg(struct i2c_client *client, u16 reg, u16 len,
 	if (ret == count) {
 		ret = 0;
 	} else {
+		dev_err(&client->dev, "%s: i2c send failed (%d) reg=0x%x len=%d val=%x\n",
+			__func__, ret, reg, len, buf[2]);
 		if (ret >= 0)
 			ret = -EIO;
-		dev_err(&client->dev, "%s: i2c send failed (%d)\n",
-			__func__, ret);
 	}
 
 	kfree(buf);
