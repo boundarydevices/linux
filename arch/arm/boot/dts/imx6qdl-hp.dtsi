@@ -195,6 +195,8 @@
 			MX6QDL_PAD_EIM_EB2__GPIO2_IO30		0x1b0b0
 #define GP_LVDS_CTRL	<&gpio2 0 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_NANDF_D0__GPIO2_IO00		0x1b0b0
+#define GPIRQ_LIGHT_SENSOR	<&gpio7 6 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_SD3_DAT2__GPIO7_IO06		0x1b0b0
 		>;
 	};
 
@@ -229,18 +231,11 @@
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_5__I2C3_SCL		0x4001b8b1
 			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
-#define GPIRQ_I2C3A_J6		<&gpio7 13 IRQ_TYPE_EDGE_FALLING>
-#define GP_I2C3A_J6		<&gpio7 13 GPIO_ACTIVE_LOW>
+#define GPIRQ_I2C3_J6		<&gpio7 13 IRQ_TYPE_EDGE_FALLING>
+#define GP_I2C3_J6		<&gpio7 13 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x1b0b0
-#define GP_I2C3A_J6_RESET	<&gpio1 8 GPIO_ACTIVE_LOW>
+#define GP_I2C3_J6_RESET	<&gpio1 8 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_8__GPIO1_IO08		0x130b0
-		>;
-	};
-
-	pinctrl_i2c3a_light_sensor: i2c3a-light-sensorgrp {
-		fsl,pins = <
-#define GPIRQ_LIGHT_SENSOR	<&gpio7 6 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_SD3_DAT2__GPIO7_IO06		0x1b0b0
 		>;
 	};
 
@@ -673,8 +668,8 @@
 
 &clks {
 	assigned-clocks        = <&clks IMX6QDL_CLK_CKO2_PODF>, <&clks IMX6QDL_CLK_CKO2_SEL>, <&clks IMX6QDL_CLK_CKO>;
-	assigned-clock-parents = <&clks IMX6QDL_CLK_CKO2_SEL>, <&clks IMX6QDL_CLK_UART_SERIAL>, <&clks IMX6QDL_CLK_CKO1>;
-	assigned-clock-rates = <40000000>;
+	assigned-clock-parents = <&clks IMX6QDL_CLK_CKO2_SEL>, <&clks IMX6QDL_CLK_OSC>, <&clks IMX6QDL_CLK_CKO1>;
+	assigned-clock-rates = <24000000>;
 };
 
 &ecspi1 {
@@ -703,6 +698,26 @@
 			label = "splash";
 			reg = <0xC2000 0x13e000>;
 		};
+	};
+};
+
+&ecspi2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi2>;
+	fsl,spi-num-chipselects = <2>;
+	cs-gpios = GP_ECSPI2_SS0, GP_ECSPI2_SS1;
+	status = "okay";
+
+	spidev@0 {
+		compatible = "spidev";
+		reg = <0>;
+		spi-max-frequency = <2000000>;
+	};
+
+	spidev@1 {
+		compatible = "spidev";
+		reg = <1>;
+		spi-max-frequency = <2000000>;
 	};
 };
 
@@ -778,6 +793,11 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
+
+	apds9300@29 {
+		compatible = "avago,apds9300";
+		reg = <0x29>;
+	};
 };
 
 &i2c3 {
@@ -789,43 +809,23 @@
 	atmel_maxtouch@4a {
 		compatible = "atmel,maxtouch";
 		reg = <0x4a>;
-		interrupts-extended = GPIRQ_I2C3A_J6;
-		wakeup-gpios = GP_I2C3A_J6;
-		reset-gpios = GP_I2C3A_J6_RESET;
+		interrupts-extended = GPIRQ_I2C3_J6;
+		wakeup-gpios = GP_I2C3_J6;
+		reset-gpios = GP_I2C3_J6_RESET;
 	};
 
-	i2c3mux@70 {
-		compatible = "nxp,pca9540";
-		reg = <0x70>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		i2c3a: i2c3@0 {
-			reg = <0>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
-		i2c3b: i2c3@1 {
-			reg = <1>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
-	};
-};
-
-&i2c3a {
 	egalax_ts@04 {
 		compatible = "eeti,egalax_ts";
 		reg = <0x04>;
-		interrupts-extended = GPIRQ_I2C3A_J6;
-		wakeup-gpios = GP_I2C3A_J6;
+		interrupts-extended = GPIRQ_I2C3_J6;
+		wakeup-gpios = GP_I2C3_J6;
 	};
 
 	ft5x06_ts@38 {
 		compatible = "ft5x06-ts";
 		reg = <0x38>;
-		interrupts-extended = GPIRQ_I2C3A_J6;
-		wakeup-gpios = GP_I2C3A_J6;
+		interrupts-extended = GPIRQ_I2C3_J6;
+		wakeup-gpios = GP_I2C3_J6;
 	};
 };
 
