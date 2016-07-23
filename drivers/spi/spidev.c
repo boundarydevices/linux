@@ -701,6 +701,7 @@ MODULE_DEVICE_TABLE(spi, spidev_spi_ids);
  */
 static int spidev_of_check(struct device *dev)
 {
+	return 0;
 	if (device_property_match_string(dev, "compatible", "spidev") < 0)
 		return 0;
 
