@@ -620,6 +620,12 @@
 			>;
 		};
 
+		pinctrl_mipi_dsi_reset: mipi_dsi_reset_grp {
+			fsl,pins = <
+				MX7D_PAD_SAI1_TX_DATA__GPIO6_IO15 0x1b
+			>;
+		};
+
 		pinctrl_ecspi3_cs: ecspi3_cs_grp {
 			fsl,pins = <
 				MX7D_PAD_SD2_CD_B__GPIO5_IO9	0x80000000
@@ -1038,7 +1044,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_lcdif_dat
 		     &pinctrl_lcdif_ctrl>;
-	pinctrl-assert-gpios = <&gpio_spi 7 GPIO_ACTIVE_HIGH>;
+	enable-gpio = <&gpio_spi 7 GPIO_ACTIVE_LOW>;
 	display = <&display0>;
 	status = "okay";
 
@@ -1118,7 +1124,7 @@
 
 		pinctrl_pwm1: pwm1grp {
 			fsl,pins = <
-				MX7D_PAD_GPIO1_IO01__PWM1_OUT	  0x110b0
+				MX7D_PAD_GPIO1_IO01__PWM1_OUT	  0x30
 			>;
 		};
 

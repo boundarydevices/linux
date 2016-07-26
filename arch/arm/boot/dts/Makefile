@@ -386,13 +386,16 @@ dtb-$(CONFIG_SOC_IMX6ULL) += \
 	imx6ull-14x14-ddr3-arm2-lcdif.dtb \
 	imx6ull-14x14-ddr3-arm2-ldo.dtb \
 	imx6ull-14x14-ddr3-arm2-qspi.dtb \
+	imx6ull-14x14-ddr3-arm2-qspi-all.dtb \
 	imx6ull-14x14-ddr3-arm2-tsc.dtb \
 	imx6ull-14x14-ddr3-arm2-uart2.dtb \
 	imx6ull-14x14-ddr3-arm2-usb.dtb \
-	imx6ull-14x14-ddr3-arm2-wm8958.dtb
+	imx6ull-14x14-ddr3-arm2-wm8958.dtb \
+	imx6ull-14x14-evk.dtb
 dtb-$(CONFIG_SOC_IMX7D) += \
 	imx7d-12x12-lpddr3-arm2.dtb \
 	imx7d-12x12-lpddr3-arm2-m4.dtb \
+	imx7d-12x12-ddr3-arm2.dtb \
 	imx7d-12x12-lpddr3-arm2-ecspi.dtb \
 	imx7d-12x12-lpddr3-arm2-enet2.dtb \
 	imx7d-12x12-lpddr3-arm2-flexcan.dtb \
@@ -400,6 +403,7 @@ dtb-$(CONFIG_SOC_IMX7D) += \
 	imx7d-12x12-lpddr3-arm2-qspi.dtb \
 	imx7d-12x12-lpddr3-arm2-sai.dtb \
 	imx7d-12x12-lpddr3-arm2-mqs.dtb \
+	imx7d-12x12-lpddr3-arm2-pcie.dtb \
 	imx7d-19x19-lpddr2-arm2.dtb \
 	imx7d-sdb.dtb \
 	imx7d-sdb-epdc.dtb \
