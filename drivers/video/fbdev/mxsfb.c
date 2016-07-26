@@ -4,7 +4,7 @@
  * This code is based on:
  * Author: Vitaly Wool <vital@embeddedalley.com>
  *
- * Copyright 2008-2015 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2008-2016 Freescale Semiconductor, Inc. All Rights Reserved.
  * Copyright 2008 Embedded Alley Solutions, Inc All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
@@ -867,7 +867,7 @@ static int mxsfb_ioctl(struct fb_info *fb_info, unsigned int cmd,
 	case MXCFB_WAIT_FOR_VSYNC:
 		{
 			long long timestamp;
-			struct mxsfb_info *host = to_imxfb_host(fb_info);
+			struct mxsfb_info *host = fb_info->par;
 			ret = mxsfb_wait_for_vsync(fb_info);
 			timestamp = ktime_to_ns(host->vsync_nf_timestamp);
 			if ((ret == 0) && copy_to_user((void *)arg,
