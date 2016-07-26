@@ -63,6 +63,7 @@ struct egalax_ts {
 	struct i2c_client		*client;
 	struct input_dev		*input_dev;
 	struct gpio_desc		*wakeup_gpio;
+	bool				wakeup;
 };
 
 static irqreturn_t egalax_ts_interrupt(int irq, void *dev_id)
@@ -198,6 +199,7 @@ static int egalax_ts_probe(struct i2c_client *client,
 
 	ts->client = client;
 	ts->input_dev = input_dev;
+	ts->wakeup = of_property_read_bool(client->dev.of_node, "linux,wakeup");
 
 	input_dev->name = "EETI eGalax Touch Screen";
 	input_dev->id.bustype = BUS_I2C;
@@ -230,6 +232,11 @@ static int egalax_ts_probe(struct i2c_client *client,
 		return error;
 
 	i2c_set_clientdata(client, ts);
+
+	error = device_init_wakeup(&client->dev, ts->wakeup);
+	if (error < 0)
+		dev_err(&client->dev, "Failed to register as wakeup source\n");
+
 	return 0;
 }
 
@@ -247,6 +254,12 @@ static int __maybe_unused egalax_ts_suspend(struct device *dev)
 	struct i2c_client *client = to_i2c_client(dev);
 	int ret;
 
+	if (device_may_wakeup(&client->dev)) {
+		dev_info(&client->dev, "skip suspend as wakeup source\n");
+		enable_irq_wake(client->irq);
+		return 0;
+	}
+
 	ret = i2c_master_send(client, suspend_cmd, MAX_I2C_DATA_LEN);
 	return ret > 0 ? 0 : ret;
 }
@@ -255,6 +268,11 @@ static int __maybe_unused egalax_ts_resume(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct egalax_ts *ts = i2c_get_clientdata(client);
+
+	if (device_may_wakeup(&client->dev)) {
+		disable_irq_wake(client->irq);
+		return 0;
+	}
 
 	return egalax_wake_up_device(ts->wakeup_gpio);
 }
