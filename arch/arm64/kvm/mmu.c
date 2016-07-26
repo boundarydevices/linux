@@ -497,13 +497,14 @@ void kvm_free_stage2_pgd(struct kvm_s2_mmu *mmu)
  * @writable:   Whether or not to create a writable mapping
  */
 int kvm_phys_addr_ioremap(struct kvm *kvm, phys_addr_t guest_ipa,
-			  phys_addr_t pa, unsigned long size, bool writable)
+			  phys_addr_t pa, unsigned long size, bool writable,
+			  enum kvm_pgtable_prot prot_device)
 {
 	phys_addr_t addr;
 	int ret = 0;
 	struct kvm_mmu_memory_cache cache = { 0, __GFP_ZERO, NULL, };
 	struct kvm_pgtable *pgt = kvm->arch.mmu.pgt;
-	enum kvm_pgtable_prot prot = KVM_PGTABLE_PROT_DEVICE |
+	enum kvm_pgtable_prot prot = prot_device |
 				     KVM_PGTABLE_PROT_R |
 				     (writable ? KVM_PGTABLE_PROT_W : 0);
 
@@ -1355,7 +1356,7 @@ int kvm_arch_prepare_memory_region(struct kvm *kvm,
 
 			ret = kvm_phys_addr_ioremap(kvm, gpa, pa,
 						    vm_end - vm_start,
-						    writable);
+						    writable, KVM_PGTABLE_PROT_DEVICE);
 			if (ret)
 				break;
 		}
