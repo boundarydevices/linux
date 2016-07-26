@@ -46,6 +46,8 @@
 					 KVM_PTE_LEAF_ATTR_LO_S2_S2AP_W | \
 					 KVM_PTE_LEAF_ATTR_HI_S2_XN)
 
+#define KVM_PTE_LEAF_ATTR_S2_DEVICE     BIT(55)
+
 #define KVM_INVALID_PTE_OWNER_MASK	GENMASK(9, 2)
 #define KVM_MAX_OWNER_ID		1
 
@@ -686,7 +688,8 @@ static int stage2_map_walker_try_leaf(u64 addr, u64 end, u32 level,
 	}
 
 	/* Perform CMOs before installation of the guest stage-2 PTE */
-	if (mm_ops->dcache_clean_inval_poc && stage2_pte_cacheable(pgt, new))
+	if (mm_ops->dcache_clean_inval_poc && stage2_pte_cacheable(pgt, new) &&
+	    !(new & KVM_PTE_LEAF_ATTR_S2_DEVICE))
 		mm_ops->dcache_clean_inval_poc(kvm_pte_follow(new, mm_ops),
 						granule);
 
@@ -1091,7 +1094,8 @@ static int stage2_flush_walker(u64 addr, u64 end, u32 level, kvm_pte_t *ptep,
 	kvm_pte_t pte = *ptep;
 	kvm_pte_t *pte_follow;
 
-	if (!kvm_pte_valid(pte) || !stage2_pte_cacheable(pgt, pte))
+	if (!kvm_pte_valid(pte) || !stage2_pte_cacheable(pgt, pte) ||
+	   (pte & KVM_PTE_LEAF_ATTR_S2_DEVICE))
 		return 0;
 
 	pte_follow = kvm_pte_follow(pte, mm_ops);
