@@ -835,7 +835,15 @@ static int stage2_flush_walker(u64 addr, u64 end, u32 level, kvm_pte_t *ptep,
 	if (!kvm_pte_valid(pte) || !stage2_pte_cacheable(pte))
 		return 0;
 
-	stage2_flush_dcache(kvm_pte_follow(pte), kvm_granule_size(level));
+	if (pfn_valid(__phys_to_pfn(kvm_pte_to_phys(pte)))) {
+		stage2_flush_dcache(kvm_pte_follow(pte), kvm_granule_size(level));
+	} else {
+		void __iomem *va = ioremap_cache_ns(kvm_pte_to_phys(pte), PAGE_SIZE);
+
+		stage2_flush_dcache(va, kvm_granule_size(level));
+		iounmap(va);
+	}
+
 	return 0;
 }
 
