@@ -849,7 +849,7 @@
 		interrupts-extended = GPIRQ_TC3587;
 		ipu_id = <0>;
 		csi_id = <0>;
-		mclk = <22000000>;
+		mclk = <27000000>;
 		mclk_source = <0>;
 	};
 };
