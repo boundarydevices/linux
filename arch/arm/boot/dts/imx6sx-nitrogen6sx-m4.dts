@@ -10,8 +10,8 @@
 
 /{
 	memory {
-		linux,usable-memory = <0x80000000 0x3ff00000>;
-		reg = <0x80000000 0x40000000>;
+		linux,usable-memory = <0x80000000 0x1ff00000>,
+				<0xa0000000 0x1ff00000>;
 	};
 };
 
@@ -36,10 +36,7 @@
 };
 
 &ocram {
-	/* 0x00900000 - 0x0090FFFF = M4 FW (64k)
-	 * 0x0091F000 - 0x0091FFFF = Shared mem (4k)
-	 */
-	reg = <0x00910000 0xF000>;
+	reg = <0x00901000 0xf000>;
 };
 
 &rpmsg{
@@ -66,4 +63,3 @@
 	fsl,shared-mem-addr = <0x91F000>;
 	fsl,shared-mem-size = <0x1000>;
 };
-
