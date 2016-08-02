@@ -998,7 +998,6 @@
 	pinctrl-0 = <&pinctrl_usdhc1>;
 	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
-	tuning-step = <2>;
 	status = "okay";
 	vmmc-supply = <&vgen3_reg>;
 	wakeup-source;
