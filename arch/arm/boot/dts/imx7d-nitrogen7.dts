@@ -967,7 +967,6 @@
 	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
 	bus-width = <4>;
 	cd-gpios = <&gpio5 0 GPIO_ACTIVE_LOW>;
-	tuning-step = <2>;
 	vmmc-supply = <&vgen3_reg>;
 	enable-sdio-wakeup;
 	no-1-8-v;	/* tmp, 1.8V should work*/
@@ -997,7 +996,6 @@
 	assigned-clocks = <&clks IMX7D_USDHC3_ROOT_CLK>;
 	assigned-clock-rates = <400000000>;
 	bus-width = <8>;
-	tuning-step = <2>;
 	non-removable;
 	status = "okay";
 };
