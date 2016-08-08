@@ -746,6 +746,8 @@ static void sdma_event_disable(struct sdma_channel *sdmac, unsigned int event)
 static void sdma_handle_channel_loop(struct sdma_channel *sdmac)
 {
 	struct sdma_buffer_descriptor *bd;
+	int error = 0;
+	enum dma_status	old_status = sdmac->status;
 	struct sdma_desc *desc;
 	unsigned long flags;
 
@@ -761,10 +763,20 @@ static void sdma_handle_channel_loop(struct sdma_channel *sdmac)
 		if (bd->mode.status & BD_DONE)
 			break;
 
-		if (bd->mode.status & BD_RROR)
+		if (bd->mode.status & BD_RROR) {
+			bd->mode.status &= ~BD_RROR;
 			sdmac->status = DMA_ERROR;
+			error = -EIO;
+		}
 
+	       /*
+		* We use bd->mode.count to calculate the residue, since contains
+		* the number of bytes present in the current buffer descriptor.
+		*/
+
+		sdmac->chn_real_count = bd->mode.count;
 		bd->mode.status |= BD_DONE;
+		bd->mode.count = sdmac->period_len;
 		desc->buf_tail++;
 		desc->buf_tail %= desc->num_bd;
 		if (sdmac->peripheral_type == IMX_DMATYPE_UART) {
@@ -776,6 +788,8 @@ static void sdma_handle_channel_loop(struct sdma_channel *sdmac)
 		spin_unlock_irqrestore(&sdmac->vc.lock, flags);
 		desc->vd.tx.callback(desc->vd.tx.callback_param);
 		spin_lock_irqsave(&sdmac->vc.lock, flags);
+		if (error)
+			sdmac->status = old_status;
 	}
 	spin_unlock_irqrestore(&sdmac->vc.lock, flags);
 }
@@ -1833,9 +1847,10 @@ static enum dma_status sdma_tx_status(struct dma_chan *chan,
 
 		if (sdmac->flags & IMX_DMA_SG_LOOP) {
 			if (sdmac->peripheral_type != IMX_DMATYPE_UART) {
-				residue = (desc->num_bd - desc->buf_tail) * sdmac->period_len;
+				residue = (desc->num_bd - desc->buf_tail) *
+					sdmac->period_len - sdmac->chn_real_count;
 			} else {
-				residue = desc->des_count - desc->des_real_count;
+				residue = desc->des_count - sdmac->chn_real_count;
 			}
 			pr_debug("1 residue=%d, num_bd=%d, buf_tail=%d, "
 				"period_len=%d, des_count=%d, des_real_count=%d, "
