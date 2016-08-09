@@ -791,8 +791,6 @@ static int at91_twi_probe(struct platform_device *pdev)
 
 	rc = i2c_add_numbered_adapter(&dev->adapter);
 	if (rc) {
-		dev_err(dev->dev, "Adapter %s registration failed\n",
-			dev->adapter.name);
 		clk_disable_unprepare(dev->clk);
 		return rc;
 	}
