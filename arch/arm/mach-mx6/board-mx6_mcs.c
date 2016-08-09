@@ -128,7 +128,7 @@ struct gpio init_gpios[] __initdata = {
 	{.label = "phy_reset",		.gpio = ENET_PHY_RESET,	.flags = GPIOF_HIGH},	/* GPIO1[27]: ENET_RXD0 - active low */
 	{.label = "rtc_irq",		.gpio = RTC_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO2[24]:* EIM_CS1 - active low */
 	{.label = "emmc_reset",		.gpio = ST_EMMC_RESET,	.flags = GPIOF_HIGH},	/* GPIO2[5]: NANDF_D5 - active low */
-	{.label = "sd3_cd",		.gpio = ST_SD3_CD,	.flags = GPIOF_DIR_IN},	/* GPIO7[0]: SD3_DAT5 - active low */
+//	{.label = "sd3_cd",		.gpio = ST_SD3_CD,	.flags = GPIOF_DIR_IN},	/* GPIO7[0]: SD3_DAT5 - active low */
 	{.label = "touch_reset",	.gpio = TOUCH_RESET,	.flags = GPIOF_HIGH},	/* GPIO1[4]: GPIO_4 - active low */
 	{.label = "touch_irq",		.gpio = TOUCH_IRQ,	.flags = GPIOF_DIR_IN},	/* GPIO1[9]: GPIO_9 - active low */
 	{.label = "usb_hub_reset",	.gpio = USB_HUB_RESET,	.flags = 0},		/* GPIO7[12]: GPIO_17 - active low */
