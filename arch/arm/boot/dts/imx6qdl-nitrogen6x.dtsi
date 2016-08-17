@@ -242,12 +242,12 @@
 		>;
 	};
 
-	pinctrl_lcd0: lcd0grp {
+	pinctrl_lcd0_rgb: lcd0_rgbgrp {
 		fsl,pins = <
 			MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK	0x10
-			MX6QDL_PAD_DI0_PIN15__IPU1_DI0_PIN15		0x10
-			MX6QDL_PAD_DI0_PIN2__IPU1_DI0_PIN02		0x10
-			MX6QDL_PAD_DI0_PIN3__IPU1_DI0_PIN03		0x10
+			MX6QDL_PAD_DI0_PIN15__IPU1_DI0_PIN15		0x10	/* DRDY */
+			MX6QDL_PAD_DI0_PIN2__IPU1_DI0_PIN02		0x10	/* HSYNC */
+			MX6QDL_PAD_DI0_PIN3__IPU1_DI0_PIN03		0x10	/* VSYNC */
 			MX6QDL_PAD_DISP0_DAT0__IPU1_DISP0_DATA00	0x10
 			MX6QDL_PAD_DISP0_DAT1__IPU1_DISP0_DATA01	0x10
 			MX6QDL_PAD_DISP0_DAT2__IPU1_DISP0_DATA02	0x10
@@ -266,6 +266,11 @@
 			MX6QDL_PAD_DISP0_DAT15__IPU1_DISP0_DATA15	0x10
 			MX6QDL_PAD_DISP0_DAT16__IPU1_DISP0_DATA16	0x10
 			MX6QDL_PAD_DISP0_DAT17__IPU1_DISP0_DATA17	0x10
+		>;
+	};
+
+	pinctrl_lcd0_rgb24: lcd0_rgb24grp {
+		fsl,pins = <
 			MX6QDL_PAD_DISP0_DAT18__IPU1_DISP0_DATA18	0x10
 			MX6QDL_PAD_DISP0_DAT19__IPU1_DISP0_DATA19	0x10
 			MX6QDL_PAD_DISP0_DAT20__IPU1_DISP0_DATA20	0x10
@@ -581,8 +586,9 @@
 		ipu_id = <0>;
 		disp_id = <0>;
 		default_ifmt = "RGB666";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_lcd0>;
+		pinctrl-names = "default", "rgb24";
+		pinctrl-0 = <&pinctrl_lcd0_rgb>;
+		pinctrl-1 = <&pinctrl_lcd0_rgb &pinctrl_lcd0_rgb24>;
 		status = "okay";
 	};
 
