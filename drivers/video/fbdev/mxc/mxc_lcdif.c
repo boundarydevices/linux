@@ -31,6 +31,7 @@ struct mxc_lcd_platform_data {
 struct mxc_lcdif_data {
 	struct platform_device *pdev;
 	struct mxc_dispdrv_handle *disp_lcdif;
+	struct pinctrl *pinctrl;
 };
 
 #define DISPDRV_LCD	"lcd"
@@ -184,6 +185,18 @@ static struct fb_videomode lcdif_modedb[] = {
 	 .vmode = FB_VMODE_NONINTERLACED,
 	 .flag = 0,},
 
+	{
+	 /*
+	  * Shenzhen 240x320
+	  */
+	"KD024FM", 60, 240, 320, 1000000000000ULL / ((240+10+38+10)*(320+4+8+4)*60),
+	 .left_margin = 10, .right_margin = 38,
+	 .upper_margin = 4, .lower_margin = 8,
+	 .hsync_len = 10, .vsync_len = 4,
+	 .sync = 0,
+	 .vmode = FB_VMODE_NONINTERLACED,
+	 .flag = 0,},
+
 	/*
 	 * BT656/BT1120 mode
 	 *
@@ -281,6 +294,13 @@ static int lcdif_init(struct mxc_dispdrv_handle *disp,
 	if (!ret) {
 		fb_videomode_to_var(&setting->fbi->var, &modedb[0]);
 		setting->if_fmt = plat_data->default_ifmt;
+	}
+	if (setting->if_fmt != IPU_PIX_FMT_RGB666) {
+		struct pinctrl_state *pins;
+
+		pins = pinctrl_lookup_state(lcdif->pinctrl, "rgb24");
+		if (!IS_ERR(pins))
+			pinctrl_select_state(lcdif->pinctrl, pins);
 	}
 
 	INIT_LIST_HEAD(&setting->fbi->modelist);
@@ -393,6 +413,11 @@ static int mxc_lcdif_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "can't get/select pinctrl\n");
 		return PTR_ERR(pinctrl);
 	}
+
+	pinctrl = devm_pinctrl_get(&pdev->dev);
+	if (IS_ERR(pinctrl))
+		return PTR_ERR(pinctrl);
+	lcdif->pinctrl = pinctrl;
 
 	lcdif->pdev = pdev;
 	lcdif->disp_lcdif = mxc_dispdrv_register(&lcdif_drv);
