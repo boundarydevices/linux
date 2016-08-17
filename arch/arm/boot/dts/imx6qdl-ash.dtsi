@@ -364,7 +364,7 @@
 	backlight_lvds0 {
 		brightness-levels = <10 9 8 7 6 5 4 3 2 1 0>;
 		compatible = "pwm-backlight";
-		default-brightness-level = <9>;
+		default-brightness-level = <10>;
 		display = <&fb_lvds>;
 		pwms = <&pwm4 0 200000>;
 	};
