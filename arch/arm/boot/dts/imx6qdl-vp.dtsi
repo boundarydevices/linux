@@ -15,6 +15,7 @@
 
 / {
 	aliases {
+		backlight_lcd = &backlight_lcd;
 		fb_hdmi = &fb_hdmi;
 		fb_lcd = &fb_lcd;
 		lcd = &lcd;
@@ -23,6 +24,7 @@
 		mmc2 = &usdhc2;
 		mxcfb0 = &fb_hdmi;
 		mxcfb1 = &fb_lcd;
+		pwm_lcd = &pwm1;
 	};
 
 	memory {
@@ -137,7 +139,7 @@
 		status = "okay";
 	};
 
-	backlight_lcd: backlight_lcdgrp {
+	backlight_lcd: backlight_lcd {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <10>;
