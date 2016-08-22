@@ -32,9 +32,9 @@
 		>;
 	};
 
-	pinctrl_backlight_lvds1: backlight-lvds1grp {
+	pinctrl_backlight_lvds2: backlight-lvds2grp {
 		fsl,pins = <
-#define GP_BACKLIGHT_LVDS1	<&gpio2 31 GPIO_ACTIVE_HIGH>
+#define GP_BACKLIGHT_LVDS2	<&gpio2 31 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_EB3__GPIO2_IO31		0x0b0b0
 		>;
 	};
@@ -400,6 +400,9 @@
 
 / {
 	aliases {
+		backlight_lcd = &backlight_lcd;
+		backlight_lvds = &backlight_lvds;
+		backlight_lvds2 = &backlight_lvds2;
 		fb_hdmi = &fb_hdmi;
 		fb_lcd = &fb_lcd;
 		fb_lvds = &fb_lvds;
@@ -413,6 +416,8 @@
 		mxcfb1 = &fb_lcd;
 		mxcfb2 = &fb_lvds2;
 		mxcfb3 = &fb_hdmi;
+		pwm_lcd = &pwm1;
+		pwm_lvds = &pwm4;
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
 	};
@@ -425,7 +430,7 @@
 		pwms = <&pwm1 0 5000000>;
 	};
 
-	backlight_lvds0 {
+	backlight_lvds: backlight_lvds {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <8>;
@@ -433,11 +438,11 @@
 		pwms = <&pwm4 0 5000000>;
 	};
 
-	backlight_lvds1 {
+	backlight_lvds2: backlight_lvds2 {
 		compatible = "gpio-backlight";
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_backlight_lvds1>;
-		gpios = GP_BACKLIGHT_LVDS1;
+		pinctrl-0 = <&pinctrl_backlight_lvds2>;
+		gpios = GP_BACKLIGHT_LVDS2;
 		display = <&fb_lvds2>;
 		default-on;
 	};
