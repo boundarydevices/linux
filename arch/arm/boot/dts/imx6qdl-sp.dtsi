@@ -15,16 +15,18 @@
 
 / {
 	aliases {
+		backlight_lvds = &backlight_lvds;
 		fb_lvds = &fb_lvds;
 		ldb = &ldb;
 		mmc0 = &usdhc3;
 		mmc1 = &usdhc4;
 		mmc2 = &usdhc2;
 		mxcfb0 = &fb_lvds;
+		pwm_lvds = &pwm4;
 		t_lvds = &t_lvds;
 	};
 
-	backlight_lvds {
+	backlight_lvds: backlight_lvds {
 		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <10>;
