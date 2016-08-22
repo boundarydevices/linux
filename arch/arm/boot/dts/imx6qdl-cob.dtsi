@@ -257,13 +257,15 @@
 
 / {
 	aliases {
+		backlight_lcd = &backlight_lcd_day;
 		fb_lcd = &fb_lcd;
 		lcd = &lcd;
 		mmc0 = &usdhc4;
 		mxcfb0 = &fb_lcd;
+		pwm_lcd = &pwm1;
 	};
 
-	backlight_lcd_day {
+	backlight_lcd_day: backlight_lcd_day {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		default-brightness-level = <5>;
 		compatible = "pwm-backlight";
