@@ -231,6 +231,8 @@
 
 / {
 	aliases {
+		backlight_lvds = &backlight_lvds;
+		backlight_lvds2 = &backlight_lvds2;
 		fb_lvds = &fb_lvds;
 		fb_lvds2 = &fb_lvds2;
 		ldb = &ldb;
@@ -239,6 +241,8 @@
 		mmc2 = &usdhc2;
                 mxcfb1 = &fb_lvds;
                 mxcfb3 = &fb_lvds2;
+		pwm_lvds = &pwm4;
+		pwm_lvds2 = &pwm2;
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
 	};
@@ -341,7 +345,7 @@
 		pwms = <&pwm1 0 5000000>;
 	};
 
-	backlight_lvds0 {
+	backlight_lvds: backlight_lvds {
 		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <10>;
@@ -349,7 +353,7 @@
 		pwms = <&pwm4 0 5000000>;
 	};
 
-	backlight_lvds1: backlight_lvds1 {
+	backlight_lvds2: backlight_lvds2 {
 		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <10>;
