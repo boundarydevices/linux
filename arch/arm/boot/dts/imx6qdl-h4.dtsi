@@ -305,11 +305,13 @@
 
 / {
 	aliases {
+		backlight_lcd = &backlight_lcd;
 		fb_lcd = &fb_lcd;
 		lcd = &lcd;
 		mmc0 = &usdhc4;
 		mmc1 = &usdhc2;
 		mxcfb0 = &fb_lcd;
+		pwm_lcd = &pwm1;
 	};
 
 	backlight_lcd: backlight_lcd {
