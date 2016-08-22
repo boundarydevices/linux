@@ -322,6 +322,8 @@
 
 / {
 	aliases {
+		backlight_lcd = &backlight_lcd;
+		backlight_lvds = &backlight_lvds;
 		fb_hdmi = &fb_hdmi;
 		fb_lcd = &fb_lcd;
 		fb_lvds = &fb_lvds;
@@ -332,6 +334,8 @@
 		mxcfb0 = &fb_lcd;
 		mxcfb1 = &fb_hdmi;
 		mxcfb2 = &fb_lvds;
+		pwm_lcd = &pwm3;
+		pwm_lvds = &pwm4;
 		t_lvds = &t_lvds;
 	};
 
@@ -456,7 +460,7 @@
 		status = "okay";
 	};
 
-	backlight_lcd {
+	backlight_lcd: backlight_lcd {
 		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <10>;
@@ -464,7 +468,7 @@
 		pwms = <&pwm3 0 5000000>;
 	};
 
-	backlight_lvds {
+	backlight_lvds: backlight_lvds {
 		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <10>;
