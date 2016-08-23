@@ -87,7 +87,13 @@
 	pinctrl_pcie: pciegrp {
 		fsl,pins = <
 #define GP_PCIE_RESET		<&gpio2 18 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_A20__GPIO2_IO18		0x000b0
+			MX6QDL_PAD_EIM_A20__GPIO2_IO18		0x030b0
+#define GP_PCIE_RESET2		<&gpio7 13 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x030b0
+#define GP_PCIE_PON_RESET	<&gpio1 3 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x030b0
+#define GP_PCIE_WAKE		<&gpio1 2 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x030b0
 		>;
 	};
 
@@ -425,7 +431,7 @@
 &pcie {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
-	reset-gpio = GP_PCIE_RESET;
+	reset-gpio = GP_PCIE_PON_RESET,GP_PCIE_RESET,GP_PCIE_RESET2;
 	status = "okay";
 };
 
