@@ -45,7 +45,7 @@
 
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
-#define GPIRQ_BT	<&gpio6 16 GPIO_ACTIVE_HIGH>
+#define GPIRQ_BT	<&gpio6 16 IRQ_TYPE_LEVEL_HIGH>
 			MX6QDL_PAD_NANDF_CS3__GPIO6_IO16	0x030b0
 #define GP_BT_WAKE	<&gpio2 2 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_D2__GPIO2_IO02		0x0b0b0
