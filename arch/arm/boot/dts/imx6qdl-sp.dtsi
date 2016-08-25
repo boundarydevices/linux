@@ -195,8 +195,9 @@
 		compatible = "ar1020_i2c";
 		reg = <0x4d>;
 #define GPIRQ_AR1020	<&gpio7 1 IRQ_TYPE_LEVEL_HIGH>
+#define GP_AR1020	<&gpio7 1 GPIO_ACTIVE_HIGH>
 		interrupts-extended = GPIRQ_AR1020;
-		wakeup-gpios = GPIRQ_AR1020;
+		wakeup-gpios = GP_AR1020;
 	};
 	ads1000@49 {
 		compatible = "ads1000,ads1000";
