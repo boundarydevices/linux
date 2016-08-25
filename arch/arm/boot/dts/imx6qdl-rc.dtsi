@@ -95,7 +95,7 @@
 			MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x1b0b0
 #define GP_HOG_TP78	<&gpio4 5 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_19__GPIO4_IO05		0x1b0b0
-#define GPIRQ_IR	<&gpio2 30 GPIO_ACTIVE_LOW>
+#define GPIRQ_IR	<&gpio2 30 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_EIM_EB2__GPIO2_IO30		0x1b0b0
 		>;
 	};
@@ -110,9 +110,9 @@
 	pinctrl_i2c1_sgtl5000: i2c1-sgtl5000grp {
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0		/* sys_mclk */
-#define GPIRQ_MIC_DET	<&gpio1 2 GPIO_ACTIVE_LOW>
+#define GPIRQ_MIC_DET	<&gpio1 2 IRQ_TYPE_EDGE_BOTH>
 			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x1b0b0
-#define GPIRQ_HP_DET	<&gpio1 3 GPIO_ACTIVE_LOW>
+#define GPIRQ_HP_DET	<&gpio1 3 IRQ_TYPE_EDGE_BOTH>
 			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x1b0b0
 		>;
 	};
