@@ -275,6 +275,7 @@
 #define GP_TOUCH_RESET	<&gpio2 22 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_A16__GPIO2_IO22		0x0b0b0
 #define GPIRQ_TOUCH			<&gpio2 27 IRQ_TYPE_LEVEL_LOW>
+#define GP_TOUCH			<&gpio2 27 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_LBA__GPIO2_IO27		0x1b0b0
 		>;
 	};
@@ -691,21 +692,21 @@
                 compatible = "eeti,egalax_ts";
                 reg = <0x04>;
 		interrupts-extended = GPIRQ_TOUCH;
-		wakeup-gpios = GPIRQ_TOUCH;
+		wakeup-gpios = GP_TOUCH;
         };
 
         ft5x06_ts@38 {
 		compatible = "ft5x06-ts";
 		reg = <0x38>;
 		interrupts-extended = GPIRQ_TOUCH;
-		wakeup-gpios = GPIRQ_TOUCH;
+		wakeup-gpios = GP_TOUCH;
 	};
 
         ili210x@41 {
 		compatible = "ili210x";
 		reg = <0x41>;
 		interrupts-extended = GPIRQ_TOUCH;
-		wakeup-gpios = GPIRQ_TOUCH;
+		wakeup-gpios = GP_TOUCH;
 	};
 };
 
