@@ -123,6 +123,7 @@
 			MX6QDL_PAD_GPIO_5__I2C3_SCL		0x4001b8b1
 			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
 #define GPIRQ_PCAP_TOUCH	<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
+#define GP_PCAP_TOUCH	<&gpio1 9 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		/* J40 pin 4 - I2C3 and J57 pin 4 */
 #define PCAP_RESETN	<&gpio1 21 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_SD1_DAT3__GPIO1_IO21		0x1b0b0		/* J40 pin 3 */
@@ -622,14 +623,14 @@
 		compatible = "eeti,egalax_ts";
 		reg = <0x04>;
 		interrupts-extended = GPIRQ_PCAP_TOUCH;
-		wakeup-gpios = GPIRQ_PCAP_TOUCH;
+		wakeup-gpios = GP_PCAP_TOUCH;
 	};
 
 	ft5x06_ts@38 {
 		compatible = "ft5x06-ts";
 		reg = <0x38>;
 		interrupts-extended = GPIRQ_PCAP_TOUCH;
-		wakeup-gpios = GPIRQ_PCAP_TOUCH;
+		wakeup-gpios = GP_PCAP_TOUCH;
 	};
 };
 
