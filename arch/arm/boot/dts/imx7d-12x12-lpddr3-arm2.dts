@@ -907,7 +907,7 @@
 &pcie {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
-	reset-gpio = <&gpio6 21 GPIO_ACTIVE_LOW>;
+	reset-gpios = <&gpio6 21 GPIO_ACTIVE_LOW>;
 	power-on-gpio = <&gpio6 19 GPIO_ACTIVE_HIGH>;
 	status = "disabled";
 };
