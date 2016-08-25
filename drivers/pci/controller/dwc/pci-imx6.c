@@ -82,8 +82,7 @@ struct imx6_pcie_drvdata {
 
 struct imx6_pcie {
 	struct dw_pcie		*pci;
-	int			reset_gpio;
-	bool			gpio_active_high;
+	struct gpio_desc	*reset_gpios[5];
 	bool			link_is_up;
 	struct clk		*pcie_bus;
 	struct clk		*pcie_phy;
@@ -350,6 +349,33 @@ static int pcie_phy_write(struct imx6_pcie *imx6_pcie, int addr, u16 data)
 	dw_pcie_writel_dbi(pci, PCIE_PHY_CTRL, 0x0);
 
 	return 0;
+}
+
+void activate_reset(struct imx6_pcie *imx6_pcie)
+{
+	int i;
+
+	for (i = ARRAY_SIZE(imx6_pcie->reset_gpios) - 1; i >= 0; i--) {
+		if (imx6_pcie->reset_gpios[i])
+			gpiod_set_value_cansleep(imx6_pcie->reset_gpios[i], 1);
+	}
+}
+
+void deactivate_reset(struct imx6_pcie *imx6_pcie)
+{
+	int i;
+
+	if (imx6_pcie->reset_gpios[0]) {
+		mdelay(100);
+		for (i = 0; i < ARRAY_SIZE(imx6_pcie->reset_gpios); i++) {
+			if (imx6_pcie->reset_gpios[i])
+				gpiod_set_value_cansleep(imx6_pcie->reset_gpios[i], 0);
+			else
+				break;
+		}
+		/* Wait for 100ms after PERST# deassertion (PCIe r5.0, 6.6.1) */
+		mdelay(100);
+	}
 }
 
 static void imx6_pcie_init_phy(struct imx6_pcie *imx6_pcie)
@@ -780,6 +806,7 @@ static void imx6_pcie_clk_disable(struct imx6_pcie *imx6_pcie)
 
 static void imx6_pcie_assert_core_reset(struct imx6_pcie *imx6_pcie)
 {
+	activate_reset(imx6_pcie);
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX7D:
 	case IMX7D_EP:
@@ -836,11 +863,6 @@ static void imx6_pcie_assert_core_reset(struct imx6_pcie *imx6_pcie)
 	case IMX8QXP_EP:
 		break;
 	}
-
-	/* Some boards don't have PCIe reset GPIO. */
-	if (gpio_is_valid(imx6_pcie->reset_gpio))
-		gpio_set_value_cansleep(imx6_pcie->reset_gpio,
-					imx6_pcie->gpio_active_high);
 }
 
 static int imx6_pcie_deassert_core_reset(struct imx6_pcie *imx6_pcie)
@@ -903,14 +925,7 @@ static int imx6_pcie_deassert_core_reset(struct imx6_pcie *imx6_pcie)
 		break;
 	}
 
-	/* Some boards don't have PCIe reset GPIO. */
-	if (gpio_is_valid(imx6_pcie->reset_gpio)) {
-		msleep(100);
-		gpio_set_value_cansleep(imx6_pcie->reset_gpio,
-					!imx6_pcie->gpio_active_high);
-		/* Wait for 100ms after PERST# deassertion (PCIe r5.0, 6.6.1) */
-		msleep(100);
-	}
+	deactivate_reset(imx6_pcie);
 
 	return 0;
 }
@@ -1162,6 +1177,7 @@ static int imx6_pcie_host_init(struct dw_pcie_rp *pp)
 	struct imx6_pcie *imx6_pcie = to_imx6_pcie(pci);
 	int ret;
 
+	activate_reset(imx6_pcie);
 	if (imx6_pcie->vpcie) {
 		ret = regulator_enable(imx6_pcie->vpcie);
 		if (ret) {
@@ -1528,6 +1544,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 	struct resource *dbi_base;
 	struct device_node *node = dev->of_node;
 	int ret;
+	int i;
 
 	imx6_pcie = devm_kzalloc(dev, sizeof(*imx6_pcie), GFP_KERNEL);
 	if (!imx6_pcie)
@@ -1570,21 +1587,16 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 		imx6_pcie->local_addr = 0;
 
 	/* Fetch GPIOs */
-	imx6_pcie->reset_gpio = of_get_named_gpio(node, "reset-gpio", 0);
-	imx6_pcie->gpio_active_high = of_property_read_bool(node,
-						"reset-gpio-active-high");
-	if (gpio_is_valid(imx6_pcie->reset_gpio)) {
-		ret = devm_gpio_request_one(dev, imx6_pcie->reset_gpio,
-				imx6_pcie->gpio_active_high ?
-					GPIOF_OUT_INIT_HIGH :
-					GPIOF_OUT_INIT_LOW,
-				"PCIe reset");
-		if (ret) {
-			dev_err(dev, "unable to get reset gpio\n");
-			return ret;
-		}
-	} else if (imx6_pcie->reset_gpio == -EPROBE_DEFER) {
-		return imx6_pcie->reset_gpio;
+	for (i = 0; i < ARRAY_SIZE(imx6_pcie->reset_gpios); i++) {
+		struct gpio_desc *gd = devm_gpiod_get_index(&pdev->dev, "reset", i,
+							    GPIOD_OUT_HIGH);
+
+		if (PTR_ERR(gd) == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
+		if (IS_ERR(gd))
+			break;
+		imx6_pcie->reset_gpios[i] = gd;
+		pr_info("%s: reset gp %d\n", __func__, desc_to_gpio(gd));
 	}
 
 	/* Fetch clocks */
