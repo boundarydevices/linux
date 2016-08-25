@@ -527,7 +527,7 @@
 };
 
 &pcie {
-	reset-gpio = <&max7310_b 3 0>;
+	reset-gpios = <&max7310_b 3 0>;
 	status = "okay";
 };
 
