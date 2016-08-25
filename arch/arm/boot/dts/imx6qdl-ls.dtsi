@@ -292,7 +292,7 @@
 		fsl,pins = <
 #define GP_MAIN_ON_OFF			<&gpio3 20 GPIO_ACTIVE_HIGH>	/* input to or gate */
 			MX6QDL_PAD_EIM_D20__GPIO3_IO20		0x0b0b0
-#define GPIRQ_ON_OFF			<&gpio5 11 IRQ_TYPE_LEVEL_HIGH>
+#define GP_ON_OFF			<&gpio5 11 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_DISP0_DAT17__GPIO5_IO11	0x1b0b0
 		>;
 	};
@@ -553,7 +553,7 @@
 		pinctrl-0 = <&pinctrl_power>, <&pinctrl_gpio_keys>;
 		power {
 			label = "Power Button";
-			gpios = GPIRQ_ON_OFF;
+			gpios = GP_ON_OFF;
 			linux,code = <KEY_POWER>;	/* 116(0x74) */
 			gpio-key,wakeup;
 		};
