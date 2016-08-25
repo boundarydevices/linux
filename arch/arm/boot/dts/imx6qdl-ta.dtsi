@@ -243,8 +243,8 @@
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_5__I2C3_SCL		0x4001b8b1
 			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
-#define GP_I2C3_TOUCH_IRQ_LOW		<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
-#define GPIRQ_I2C3_TOUCH_FALLING	<&gpio1 9 IRQ_TYPE_EDGE_FALLING>
+#define GPIRQ_I2C3_TOUCH	<&gpio1 9 IRQ_TYPE_EDGE_FALLING>
+#define GP_I2C3_TOUCH		<&gpio1 9 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0
 		>;
 	};
@@ -497,22 +497,22 @@
         egalax_ts@04 {
                 compatible = "eeti,egalax_ts";
                 reg = <0x04>;
-                interrupts-extended = GPIRQ_I2C3_TOUCH_FALLING;
-                wakeup-gpios = GPIRQ_I2C3_TOUCH_FALLING;
+                interrupts-extended = GPIRQ_I2C3_TOUCH;
+                wakeup-gpios = GP_I2C3_TOUCH;
         };
 
         ft5x06_ts@38 {
 		compatible = "ft5x06-ts";
 		reg = <0x38>;
-		interrupts-extended = GPIRQ_I2C3_TOUCH_FALLING;
-		wakeup-gpios = GPIRQ_I2C3_TOUCH_FALLING;
+		interrupts-extended = GPIRQ_I2C3_TOUCH;
+		wakeup-gpios = GP_I2C3_TOUCH;
 	};
 
         ili210x@41 {
 		compatible = "ili210x";
 		reg = <0x41>;
-		interrupts-extended = GPIRQ_I2C3_TOUCH_FALLING;
-		wakeup-gpios = GPIRQ_I2C3_TOUCH_FALLING;
+		interrupts-extended = GPIRQ_I2C3_TOUCH;
+		wakeup-gpios = GP_I2C3_TOUCH;
 	};
 };
 
