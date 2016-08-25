@@ -431,7 +431,7 @@
 &pcie {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
-	reset-gpio = GP_PCIE_PON_RESET,GP_PCIE_RESET,GP_PCIE_RESET2;
+	reset-gpios = GP_PCIE_PON_RESET,GP_PCIE_RESET,GP_PCIE_RESET2;
 	status = "okay";
 };
 
