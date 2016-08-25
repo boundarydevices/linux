@@ -921,7 +921,7 @@
 &pcie {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
-	reset-gpio = GP_PCIE_RESET;
+	reset-gpios = GP_PCIE_RESET;
 	status = "okay";
 };
 
