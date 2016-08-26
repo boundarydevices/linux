@@ -42,7 +42,7 @@ static int of_get_phy_id(struct device_node *device, u32 *phy_id)
 	return -EINVAL;
 }
 
-static void of_mdiobus_register_phy(struct mii_bus *mdio,
+static int of_mdiobus_register_phy(struct mii_bus *mdio,
 				    struct device_node *child, u32 addr)
 {
 	struct phy_device *phy;
@@ -58,7 +58,7 @@ static void of_mdiobus_register_phy(struct mii_bus *mdio,
 	else
 		phy = get_phy_device(mdio, addr, is_c45);
 	if (IS_ERR(phy))
-		return;
+		return PTR_ERR(phy);
 
 	rc = irq_of_parse_and_map(child, 0);
 	if (rc > 0) {
@@ -82,11 +82,12 @@ static void of_mdiobus_register_phy(struct mii_bus *mdio,
 	if (rc) {
 		phy_device_free(phy);
 		of_node_put(child);
-		return;
+		return rc;
 	}
 
 	dev_dbg(&mdio->dev, "registered phy %s at address %i\n",
 		child->name, addr);
+	return 0;
 }
 
 static void of_mdiobus_register_device(struct mii_bus *mdio,
@@ -254,11 +255,14 @@ int of_mdiobus_register(struct mii_bus *mdio, struct device_node *np)
 				continue;
 
 			/* be noisy to encourage people to set reg property */
-			dev_info(&mdio->dev, "scan phy %s at address %i\n",
+			dev_dbg(&mdio->dev, "scan phy %s at address %i\n",
 				 child->name, addr);
 
-			if (of_mdiobus_child_is_phy(child))
-				of_mdiobus_register_phy(mdio, child, addr);
+			if (of_mdiobus_child_is_phy(child)) {
+				rc = of_mdiobus_register_phy(mdio, child, addr);
+				if (!rc)
+					break;
+			}
 		}
 	}
 
