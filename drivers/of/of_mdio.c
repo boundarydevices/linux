@@ -261,14 +261,15 @@ int of_mdiobus_register(struct mii_bus *mdio, struct device_node *np)
 				continue;
 
 			/* be noisy to encourage people to set reg property */
-			dev_info(&mdio->dev, "scan phy %pOFn at address %i\n",
+			dev_dbg(&mdio->dev, "scan phy %pOFn at address %i\n",
 				 child, addr);
 
 			if (of_mdiobus_child_is_phy(child)) {
 				rc = of_mdiobus_register_phy(mdio, child, addr);
-				if (rc && rc != -ENODEV)
+				if (!rc)
+					break;
+				if (rc != -ENODEV)
 					goto unregister;
-				break;
 			}
 		}
 	}
