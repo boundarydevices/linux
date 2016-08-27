@@ -436,7 +436,7 @@
 &pcie {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
-	reset-gpio = <&gpio4 8 0>;
+	reset-gpios = <&gpio4 8 0>;
 	status = "okay";
 };
 
