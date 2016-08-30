@@ -363,7 +363,7 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 					if (points[i].x > ts->max_x)
 						points[i].x = ts->max_x;
 					if (points[i].y > ts->max_y)
-						points[i].x = ts->max_y;
+						points[i].y = ts->max_y;
 					p += 6;
 				}
 			}
