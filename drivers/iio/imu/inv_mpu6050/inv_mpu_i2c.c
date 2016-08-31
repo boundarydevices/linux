@@ -158,7 +158,7 @@ static int inv_mpu_probe(struct i2c_client *client,
 	st->client = client;
 
 	st->muxc = i2c_mux_alloc(client->adapter, &client->dev,
-				 1, 0, 0,
+				 1, 0, I2C_MUX_GATE,
 				 inv_mpu6050_select_bypass,
 				 inv_mpu6050_deselect_bypass);
 	if (!st->muxc) {
