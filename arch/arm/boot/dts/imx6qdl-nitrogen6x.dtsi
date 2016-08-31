@@ -21,9 +21,11 @@
 		lvds_display = &lvds_display;
 		lvds_channel0 = &lvds_channel0;
 		lcd_display = &lcd_display;
+		AA065VE11 = &AA065VE11;
 		hannstar = &hannstar ;
 		lg1280x800 = &lg1280x800;
 		okaya1024x600 = &okaya1024x600;
+		tm070jdhg30 = &tm070jdhg30;
 		vga_lvds = &vga_lvds;
 	};
 
@@ -703,6 +705,17 @@
 				vfront-porch = <10>;
 				hsync-len = <96>;
 				vsync-len = <2>;
+			};
+			tm070jdhg30: tm070jdhg30 {
+				clock-frequency = <68151480>;
+				hactive = <1280>;
+				vactive = <800>;
+				hback-porch = <5>;
+				hfront-porch = <63>;
+				vback-porch = <2>;
+				vfront-porch = <39>;
+				hsync-len = <1>;
+				vsync-len = <1>;
 			};
 		};
 	};
