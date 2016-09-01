@@ -948,7 +948,7 @@ static void mxs_auart_break_ctl(struct uart_port *u, int ctl)
 			     u->membase + AUART_LINECTRL_CLR);
 }
 
-static struct uart_ops mxs_auart_ops = {
+static const struct uart_ops mxs_auart_ops = {
 	.tx_empty       = mxs_auart_tx_empty,
 	.start_tx       = mxs_auart_start_tx,
 	.stop_tx	= mxs_auart_stop_tx,
