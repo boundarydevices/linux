@@ -55,6 +55,7 @@
 
 #include "gc_hal_kernel_precomp.h"
 #include "gc_hal_kernel_context.h"
+#include <asm/uaccess.h>
 
 #define _GC_OBJ_ZONE            gcvZONE_ASYNC_COMMAND
 
@@ -243,9 +244,12 @@ gckASYNC_COMMAND_Commit(
     gctUINT32       pipeBytes;
     gctUINT32       fenceBytes;
     gctBOOL         needCopy;
+    gctUINT32       __ua_flags;
     gcmkHEADER();
 
+    __ua_flags = uaccess_save_and_enable();
     gckHARDWARE_PipeSelect(Command->hardware, gcvNULL, gcvPIPE_3D, &pipeBytes);
+    uaccess_restore(__ua_flags);
 
     gckOS_QueryNeedCopy(Command->os, 0, &needCopy);
 

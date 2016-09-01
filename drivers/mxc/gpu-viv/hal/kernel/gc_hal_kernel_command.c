@@ -52,7 +52,7 @@
 *
 *****************************************************************************/
 
-
+#include <asm/uaccess.h>
 #include "gc_hal_kernel_precomp.h"
 #include "gc_hal_kernel_context.h"
 
@@ -1560,6 +1560,7 @@ gckCOMMAND_Commit(
 #endif
 
     gctPOINTER pointer = gcvNULL;
+    gctUINT32  __ua_flags;
 
     gcmkHEADER_ARG(
         "Command=0x%x CommandBuffer=0x%x ProcessID=%d",
@@ -1600,7 +1601,9 @@ gckCOMMAND_Commit(
     if ((Context != gcvNULL) && (Command->currContext != Context))
     {
         /* Yes, merge in the deltas. */
+        __ua_flags = uaccess_save_and_enable();
         gckCONTEXT_Update(Context, ProcessID, StateDelta);
+        uaccess_restore(__ua_flags);
 
         /* Update the current context. */
         Command->currContext = Context;
@@ -1642,9 +1645,11 @@ gckCOMMAND_Commit(
         ));
 
     /* Query the size of pipe select command sequence. */
+    __ua_flags = uaccess_save_and_enable();
     gcmkONERROR(gckHARDWARE_PipeSelect(
         hardware, gcvNULL, gcvPIPE_3D, &pipeBytes
         ));
+    uaccess_restore(__ua_flags);
 
     /* Query the size of LINK command. */
     gcmkONERROR(gckHARDWARE_Link(
@@ -1775,12 +1780,14 @@ gckCOMMAND_Commit(
         {
             /* The current hardware and the entry command buffer pipes
             ** are different, switch to the correct pipe. */
+            __ua_flags = uaccess_save_and_enable();
             gcmkONERROR(gckHARDWARE_PipeSelect(
                 Command->kernel->hardware,
                 commandBufferLogical,
                 commandBufferObject->entryPipe,
                 &pipeBytes
                 ));
+            uaccess_restore(__ua_flags);
 
             /* Do not skip pipe switching sequence. */
             offset = 0;
@@ -1806,7 +1813,9 @@ gckCOMMAND_Commit(
         contextBuffer = Context->buffer;
 
         /* Yes, merge in the deltas. */
+        __ua_flags = uaccess_save_and_enable();
         gcmkONERROR(gckCONTEXT_Update(Context, ProcessID, StateDelta));
+        uaccess_restore(__ua_flags);
 
         /***************************************************************
         ** SWITCHING CONTEXT.
@@ -1840,12 +1849,14 @@ gckCOMMAND_Commit(
         {
             /* The current hardware and the initial context pipes are
                 different, switch to the correct pipe. */
+            __ua_flags = uaccess_save_and_enable();
             gcmkONERROR(gckHARDWARE_PipeSelect(
                 Command->kernel->hardware,
                 commandBufferLogical,
                 commandBufferObject->entryPipe,
                 &pipeBytes
                 ));
+            uaccess_restore(__ua_flags);
 
             /* Do not skip pipe switching sequence. */
             offset = 0;
@@ -1916,12 +1927,14 @@ gckCOMMAND_Commit(
         {
             /* The current hardware and the entry command buffer pipes
             ** are different, switch to the correct pipe. */
+            __ua_flags = uaccess_save_and_enable();
             gcmkONERROR(gckHARDWARE_PipeSelect(
                 Command->kernel->hardware,
                 commandBufferLogical,
                 commandBufferObject->entryPipe,
                 &pipeBytes
                 ));
+            uaccess_restore(__ua_flags);
 
             /* Do not skip pipe switching sequence. */
             offset = 0;
