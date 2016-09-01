@@ -194,6 +194,7 @@
 enum imx_uart_type {
 	IMX1_UART,
 	IMX21_UART,
+	IMX53_UART,
 	IMX6Q_UART,
 };
 
@@ -280,6 +281,10 @@ static struct imx_uart_data imx_uart_devdata[] = {
 		.uts_reg = IMX21_UTS,
 		.devtype = IMX21_UART,
 	},
+	[IMX53_UART] = {
+		.uts_reg = IMX21_UTS,
+		.devtype = IMX53_UART,
+	},
 	[IMX6Q_UART] = {
 		.uts_reg = IMX21_UTS,
 		.devtype = IMX6Q_UART,
@@ -294,6 +299,9 @@ static const struct platform_device_id imx_uart_devtype[] = {
 		.name = "imx21-uart",
 		.driver_data = (kernel_ulong_t) &imx_uart_devdata[IMX21_UART],
 	}, {
+		.name = "imx53-uart",
+		.driver_data = (kernel_ulong_t) &imx_uart_devdata[IMX53_UART],
+	}, {
 		.name = "imx6q-uart",
 		.driver_data = (kernel_ulong_t) &imx_uart_devdata[IMX6Q_UART],
 	}, {
@@ -304,6 +312,7 @@ MODULE_DEVICE_TABLE(platform, imx_uart_devtype);
 
 static const struct of_device_id imx_uart_dt_ids[] = {
 	{ .compatible = "fsl,imx6q-uart", .data = &imx_uart_devdata[IMX6Q_UART], },
+	{ .compatible = "fsl,imx53-uart", .data = &imx_uart_devdata[IMX53_UART], },
 	{ .compatible = "fsl,imx1-uart", .data = &imx_uart_devdata[IMX1_UART], },
 	{ .compatible = "fsl,imx21-uart", .data = &imx_uart_devdata[IMX21_UART], },
 	{ /* sentinel */ }
@@ -323,6 +332,11 @@ static inline int is_imx1_uart(struct imx_port *sport)
 static inline int is_imx21_uart(struct imx_port *sport)
 {
 	return sport->devdata->devtype == IMX21_UART;
+}
+
+static inline int is_imx53_uart(struct imx_port *sport)
+{
+	return sport->devdata->devtype == IMX53_UART;
 }
 
 static inline int is_imx6q_uart(struct imx_port *sport)
@@ -1377,8 +1391,7 @@ static int imx_startup(struct uart_port *port)
 	writel(temp & ~UCR4_DREN, sport->port.membase + UCR4);
 
 	/* Can we enable the DMA support? */
-	if (is_imx6q_uart(sport) && !uart_console(port) &&
-	    !sport->dma_is_inited)
+	if (!uart_console(port) && !sport->dma_is_inited)
 		imx_uart_dma_init(sport);
 
 	if (sport->dma_is_inited)
