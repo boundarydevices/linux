@@ -404,12 +404,19 @@ static void acc_hid_close(struct hid_device *hid)
 {
 }
 
+static int acc_hid_raw_request(struct hid_device *hid, unsigned char reportnum,
+	__u8 *buf, size_t len, unsigned char rtype, int reqtype)
+{
+	return 0;
+}
+
 static struct hid_ll_driver acc_hid_ll_driver = {
 	.parse = acc_hid_parse,
 	.start = acc_hid_start,
 	.stop = acc_hid_stop,
 	.open = acc_hid_open,
 	.close = acc_hid_close,
+	.raw_request = acc_hid_raw_request,
 };
 
 static struct acc_hid_dev *acc_hid_new(struct acc_dev *dev,
@@ -514,15 +521,6 @@ static int create_bulk_endpoints(struct acc_dev *dev,
 	DBG(cdev, "usb_ep_autoconfig for ep_in got %s\n", ep->name);
 	ep->driver_data = dev;		/* claim the endpoint */
 	dev->ep_in = ep;
-
-	ep = usb_ep_autoconfig(cdev->gadget, out_desc);
-	if (!ep) {
-		DBG(cdev, "usb_ep_autoconfig for ep_out failed\n");
-		return -ENODEV;
-	}
-	DBG(cdev, "usb_ep_autoconfig for ep_out got %s\n", ep->name);
-	ep->driver_data = dev;		/* claim the endpoint */
-	dev->ep_out = ep;
 
 	ep = usb_ep_autoconfig(cdev->gadget, out_desc);
 	if (!ep) {

@@ -467,8 +467,10 @@ static int tcp_v6_send_synack(struct sock *sk, struct dst_entry *dst,
 			fl6->flowlabel = ip6_flowlabel(ipv6_hdr(ireq->pktopts));
 
 		skb_set_queue_mapping(skb, queue_mapping);
+		rcu_read_lock();
 		err = ip6_xmit(sk, skb, fl6, rcu_dereference(np->opt),
 			       np->tclass);
+		rcu_read_unlock();
 		err = net_xmit_eval(err);
 	}
 
@@ -997,8 +999,8 @@ static struct sock *tcp_v6_syn_recv_sock(struct sock *sk, struct sk_buff *skb,
 {
 	struct inet_request_sock *ireq;
 	struct ipv6_pinfo *newnp, *np = inet6_sk(sk);
-	struct tcp6_sock *newtcp6sk;
 	struct ipv6_txoptions *opt;
+	struct tcp6_sock *newtcp6sk;
 	struct inet_sock *newinet;
 	struct tcp_sock *newtp;
 	struct sock *newsk;
@@ -1874,6 +1876,7 @@ struct proto tcpv6_prot = {
 	.proto_cgroup		= tcp_proto_cgroup,
 #endif
 	.clear_sk		= tcp_v6_clear_sk,
+	.diag_destroy		= tcp_abort,
 };
 
 static const struct inet6_protocol tcpv6_protocol = {

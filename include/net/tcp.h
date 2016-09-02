@@ -1109,6 +1109,8 @@ void tcp_set_state(struct sock *sk, int state);
 
 void tcp_done(struct sock *sk);
 
+int tcp_abort(struct sock *sk, int err);
+
 static inline void tcp_sack_reset(struct tcp_options_received *rx_opt)
 {
 	rx_opt->dsack = 0;
@@ -1604,8 +1606,6 @@ static inline bool tcp_stream_memory_free(const struct sock *sk)
 
 	return notsent_bytes < tcp_notsent_lowat(tp);
 }
-
-extern int tcp_nuke_addr(struct net *net, struct sockaddr *addr);
 
 #ifdef CONFIG_PROC_FS
 int tcp4_proc_init(void);
