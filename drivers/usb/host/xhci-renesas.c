@@ -362,3 +362,6 @@ int renesas_check_if_fw_dl_is_needed(struct pci_dev *pdev)
 }
 
 EXPORT_SYMBOL_GPL(renesas_check_if_fw_dl_is_needed);
+
+MODULE_DESCRIPTION("xHCI PCI Renesas firmware loader");
+MODULE_LICENSE("GPL");
