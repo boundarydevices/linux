@@ -1536,12 +1536,12 @@ fec_enet_interrupt(int irq, void *dev_id)
 {
 	struct net_device *ndev = dev_id;
 	struct fec_enet_private *fep = netdev_priv(ndev);
+	irqreturn_t ret = IRQ_NONE;
 	uint eir = readl(fep->hwp + FEC_IEVENT);
 	uint int_events = eir & readl(fep->hwp + FEC_IMASK);
 
-	if (!int_events)
-		return IRQ_NONE;
-	fep->last_ievents = int_events;
+	if (int_events)
+		fep->last_ievents = int_events;
 
 	if (int_events & (FEC_ENET_RXF | FEC_ENET_TXF)) {
 		if (napi_schedule_prep(&fep->napi)) {
@@ -1549,21 +1549,25 @@ fec_enet_interrupt(int irq, void *dev_id)
 			writel(FEC_NAPI_IMASK, fep->hwp + FEC_IMASK);
 			__napi_schedule(&fep->napi);
 			int_events &= ~(FEC_ENET_RXF | FEC_ENET_TXF);
-			if (!int_events)
-				return IRQ_HANDLED;
+			ret = IRQ_HANDLED;
 		} else {
 			fep->events |= int_events;
-			pr_info("%s: couldn't schedule NAPI\n", __func__);
+			netdev_info(ndev, "couldn't schedule NAPI\n");
 		}
 	}
 
-	writel(int_events, fep->hwp + FEC_IEVENT);
-	if (int_events & FEC_ENET_MII)
-		complete(&fep->mdio_done);
+	if (int_events) {
+		ret = IRQ_HANDLED;
+		writel(int_events, fep->hwp + FEC_IEVENT);
+		if (int_events & FEC_ENET_MII) {
+			complete(&fep->mdio_done);
+		}
+	}
 
-	if ((int_events & FEC_ENET_TS_TIMER) && fep->bufdesc_ex)
-		fec_ptp_check_pps_event(fep);
-	return IRQ_HANDLED;
+	if (fep->ptp_clock)
+		if (fec_ptp_check_pps_event(fep))
+			ret = IRQ_HANDLED;
+	return ret;
 }
 
 static int fec_enet_napi_q3(struct napi_struct *napi, int budget)
