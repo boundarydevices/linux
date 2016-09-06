@@ -426,6 +426,19 @@ static void linflex_shutdown(struct uart_port *port)
 	devm_free_irq(port->dev, port->irq, sport);
 }
 
+static int
+linflex_ldiv_multiplier(struct linflex_port *sport)
+{
+	unsigned int mul = LINFLEX_LDIV_MULTIPLIER;
+	unsigned long cr;
+
+	cr = readl(sport->port.membase + UARTCR);
+	if (cr & LINFLEXD_UARTCR_ROSE)
+		mul = LINFLEXD_UARTCR_OSR(cr);
+
+	return mul;
+}
+
 static void
 linflex_set_termios(struct uart_port *port, struct ktermios *termios,
 		    struct ktermios *old)
@@ -434,7 +447,9 @@ linflex_set_termios(struct uart_port *port, struct ktermios *termios,
 					struct linflex_port, port);
 	unsigned long flags;
 	unsigned long cr, old_cr, cr1;
+	unsigned int  baud;
 	unsigned int old_csize = old ? old->c_cflag & CSIZE : CS8;
+	unsigned long ibr, fbr, divisr, dividr;
 
 	cr = readl(sport->port.membase + UARTCR);
 	old_cr = cr;
@@ -504,6 +519,9 @@ linflex_set_termios(struct uart_port *port, struct ktermios *termios,
 		cr &= ~LINFLEXD_UARTCR_PCE;
 	}
 
+	/* ask the core to calculate the divisor */
+	baud = uart_get_baud_rate(port, termios, old, 50, port->uartclk / 16);
+
 	spin_lock_irqsave(&sport->port.lock, flags);
 
 	sport->port.read_status_mask = 0;
@@ -530,6 +548,22 @@ linflex_set_termios(struct uart_port *port, struct ktermios *termios,
 		if (termios->c_iflag & IGNPAR)
 			sport->port.ignore_status_mask |= LINFLEXD_UARTSR_BOF;
 	}
+
+	/* update the per-port timeout */
+	uart_update_timeout(port, termios->c_cflag, baud);
+
+	/* disable transmit and receive */
+	writel(old_cr & ~(LINFLEXD_UARTCR_RXEN | LINFLEXD_UARTCR_TXEN),
+	       sport->port.membase + UARTCR);
+
+	divisr = sport->port.uartclk;	//freq in Hz
+	dividr = (baud * linflex_ldiv_multiplier(sport));
+
+	ibr = divisr / dividr;
+	fbr = ((divisr % dividr) * 16 / dividr) & 0xF;
+
+	writel(ibr, sport->port.membase + LINIBRR);
+	writel(fbr, sport->port.membase + LINFBRR);
 
 	writel(cr, sport->port.membase + UARTCR);
 
@@ -691,9 +725,11 @@ linflex_console_write(struct console *co, const char *s, unsigned int count)
  * try to determine the current setup.
  */
 static void __init
-linflex_console_get_options(struct linflex_port *sport, int *parity, int *bits)
+linflex_console_get_options(struct linflex_port *sport, int *baud,
+			    int *parity, int *bits)
 {
-	unsigned long cr;
+	unsigned long cr, ibr;
+	unsigned int uartclk, baud_raw;
 
 	cr = readl(sport->port.membase + UARTCR);
 	cr &= LINFLEXD_UARTCR_RXEN | LINFLEXD_UARTCR_TXEN;
@@ -717,6 +753,16 @@ linflex_console_get_options(struct linflex_port *sport, int *parity, int *bits)
 		else
 			*bits = 8;
 	}
+
+	ibr = readl(sport->port.membase + LINIBRR);
+
+	uartclk = clk_get_rate(sport->clk);
+
+	baud_raw = uartclk / (linflex_ldiv_multiplier(sport) * ibr);
+
+	if (*baud != baud_raw)
+		pr_info("Serial: Console linflex rounded baud rate from %d to %d\n",
+			baud_raw, *baud);
 }
 
 static int __init linflex_console_setup(struct console *co, char *options)
@@ -744,7 +790,7 @@ static int __init linflex_console_setup(struct console *co, char *options)
 	if (options)
 		uart_parse_options(options, &baud, &parity, &bits, &flow);
 	else
-		linflex_console_get_options(sport, &parity, &bits);
+		linflex_console_get_options(sport, &baud, &parity, &bits);
 
 	if (earlycon_port && sport->port.mapbase == earlycon_port->mapbase) {
 		linflex_earlycon_same_instance = true;
@@ -887,6 +933,7 @@ static int linflex_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	sport->port.uartclk = clk_get_rate(sport->clk);
 	linflex_ports[sport->port.line] = sport;
 
 	platform_set_drvdata(pdev, &sport->port);
