@@ -162,6 +162,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6dl-mcs.dtb \
 	imx6dl-mtp.dtb \
 	imx6dl-nit6xlite.dtb \
+	imx6dl-nitrogen6_max.dtb \
 	imx6dl-nitrogen6_vm.dtb \
 	imx6dl-nitrogen6_vm-magstripe.dtb \
 	imx6dl-nitrogen6_vm-pt.dtb \
