@@ -48,6 +48,10 @@
 	compatible = "boundary,imx6q-nitrogen6_max", "fsl,imx6q";
 };
 
+&hdmi_core {
+	ipu_id = <1>;
+};
+
 &ov5640 {
 	ipu_id = <1>;
 };
