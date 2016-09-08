@@ -507,6 +507,8 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct ft5x06_ts *ts;
 	struct device *dev = &client->dev;
 	struct gpio_desc *gp;
+	int retry = 0;
+	struct gpio_desc *wakeup_gpio;
 
 	if (gts) {
 		printk(KERN_ERR "%s: Error gts is already allocated\n",
@@ -537,15 +539,27 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		dev_err(dev, "Could not detect touch screen %d.\n", err);
 		goto exit1;
 	}
-	ts->wakeup_gpio = devm_gpiod_get_index(dev, "wakeup", 0);
-	pr_info("%s: wakeup %p\n", __func__, ts->wakeup_gpio);
-	if (IS_ERR(ts->wakeup_gpio)) {
-		err = -ENODEV;
-		goto exit1;
-	}
+	/*
+	 * This is allocated after successful detection to prevent races with other drivers.
+	 * But retry, in case other drivers are not as kind.
+	 */
+	do {
+		wakeup_gpio = devm_gpiod_get_index(dev, "wakeup", 0);
+		if (!IS_ERR(wakeup_gpio))
+			break;
+		msleep(100);
+		retry++;
+		if (retry > 20) {
+			dev_err(dev, "wakeup %ld\n", PTR_ERR(wakeup_gpio));
+			err = -ENODEV;
+			goto exit1;
+		}
+	} while (1);
 
-	printk(KERN_INFO "%s: %s touchscreen irq=%i, wakeup_irq=%i\n", __func__,
-	       client_name, ts->irq, gpiod_to_irq(ts->wakeup_gpio));
+	ts->wakeup_gpio = wakeup_gpio;
+	dev_info(dev, "wakeup %p, retry=%d\n", wakeup_gpio, retry);
+	dev_info(dev, "touchscreen irq=%i, wakeup_irq=%i\n", ts->irq,
+			gpiod_to_irq(ts->wakeup_gpio));
 	i2c_set_clientdata(client, ts);
 	err = ts_register(ts);
 	if (err == 0) {
