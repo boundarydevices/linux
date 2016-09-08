@@ -507,12 +507,27 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct ft5x06_ts *ts;
 	struct device *dev = &client->dev;
 	struct gpio_desc *gp;
+	int retry = 0;
+	struct gpio_desc *wakeup_gpio;
 
 	if (gts) {
 		printk(KERN_ERR "%s: Error gts is already allocated\n",
 		       client_name);
 		return -ENOMEM;
 	}
+	do {
+		wakeup_gpio = devm_gpiod_get_index(dev, "wakeup", 0);
+		if (!IS_ERR(wakeup_gpio))
+			break;
+		msleep(100);
+		retry++;
+		if (retry > 20) {
+			dev_err(dev, "wakeup %p\n", wakeup_gpio);
+			err = -ENODEV;
+			return err;
+		}
+	} while (1);
+
 	ts = kzalloc(sizeof(struct ft5x06_ts), GFP_KERNEL);
 	if (!ts) {
 		dev_err(dev, "Couldn't allocate memory for %s\n", client_name);
@@ -520,6 +535,8 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 	ts->client = client;
 	ts->irq = client->irq ;
+	ts->wakeup_gpio = wakeup_gpio;
+	dev_info(dev, "wakeup %p, retry=%d\n", wakeup_gpio, retry);
 
 	gp = devm_gpiod_get_index(dev, "reset", 0);
 	dev_info(dev, "reset %p\n", gp);
@@ -535,12 +552,6 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	err = detect_ft5x06(client);
 	if (err) {
 		dev_err(dev, "Could not detect touch screen %d.\n", err);
-		goto exit1;
-	}
-	ts->wakeup_gpio = devm_gpiod_get_index(dev, "wakeup", 0);
-	pr_info("%s: wakeup %p\n", __func__, ts->wakeup_gpio);
-	if (IS_ERR(ts->wakeup_gpio)) {
-		err = -ENODEV;
 		goto exit1;
 	}
 
