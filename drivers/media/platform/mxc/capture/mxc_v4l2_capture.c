@@ -2132,6 +2132,10 @@ static long mxc_v4l_do_ioctl(struct file *file,
 		int index = buf->index;
 		pr_debug("   case VIDIOC_QBUF, length=%d\n", buf->length);
 
+		if (index < 0 || index >= FRAME_NUM) {
+			retval = -EINVAL;
+			break;
+		}
 		spin_lock_irqsave(&cam->queue_int_lock, lock_flags);
 		if ((cam->frame[index].buffer.flags & 0x7) ==
 		    V4L2_BUF_FLAG_MAPPED) {
