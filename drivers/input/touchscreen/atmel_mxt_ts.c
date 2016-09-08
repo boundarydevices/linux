@@ -3140,7 +3140,7 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	gpio = devm_gpiod_get_index(&client->dev, "reset", 0, GPIOD_OUT_HIGH);
 	if (!IS_ERR(gpio)) {
 		gpiod_set_value(gpio, 0);	/* inactive */
-		msleep(80);	/* 70 fails, 75 works */
+		msleep(100);	/* 70 fails, 75 works */
 	}
 	error = detect_device(client);
 	if (error) {
