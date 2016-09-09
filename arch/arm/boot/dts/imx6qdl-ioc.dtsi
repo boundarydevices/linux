@@ -19,6 +19,7 @@
                 mxcfb1 = &lvds_display;
                 mxcfb2 = &lcd_display;
 		hdmi_display = &hdmi_display;
+		ldb = &ldb;
 		lvds_display = &lvds_display;
 		lvds_channel0 = &lvds_channel0;
 		lcd_display = &lcd_display;
