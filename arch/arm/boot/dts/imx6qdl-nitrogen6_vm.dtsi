@@ -17,6 +17,7 @@
 		mxcfb1 = &hdmi_display;
 		mxcfb2 = &lvds_display;
 		hdmi_display = &hdmi_display;
+		ldb = &ldb;
 		lvds_display = &lvds_display;
 		lcd_display = &lcd_display;
 		hannstar = &hannstar ;
