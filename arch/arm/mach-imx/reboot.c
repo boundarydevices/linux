@@ -25,10 +25,11 @@
 #define MX7_SNVS_LPGPR				0x68
 #define MX7_SNVS_SIZE				(1024*16)
 
-#define ANDROID_RECOVERY_BOOT  (1 << 7)
-#define ANDROID_FASTBOOT_BOOT  (1 << 8)
+#define ANDROID_NORMAL_BOOT     6
+#define ANDROID_RECOVERY_BOOT   7
+#define ANDROID_FASTBOOT_BOOT   8
 
-void do_switch_mode(bool mode)
+void do_switch_mode(char mode)
 {
 	u32 reg;
 	void *addr;
@@ -50,23 +51,26 @@ void do_switch_mode(bool mode)
 		return;
 	}
 	reg = __raw_readl(addr + snvs_lpgpr);
-	if (mode)
-		reg |= ANDROID_RECOVERY_BOOT;
-	else
-		reg |= ANDROID_FASTBOOT_BOOT;
+	reg |= (1 <<  mode);
 	__raw_writel(reg, (addr + snvs_lpgpr));
 	iounmap(addr);
 }
 
 void do_switch_recovery(void)
 {
-	do_switch_mode(1);
+	do_switch_mode(ANDROID_RECOVERY_BOOT);
 }
 
 void do_switch_fastboot(void)
 {
-	do_switch_mode(0);
+	do_switch_mode(ANDROID_FASTBOOT_BOOT);
 }
+
+void do_switch_normal(void)
+{
+	do_switch_mode(ANDROID_NORMAL_BOOT);
+}
+
 
 static void restart_special_mode(const char *cmd)
 {
@@ -74,6 +78,8 @@ static void restart_special_mode(const char *cmd)
 		do_switch_recovery();
 	else if (cmd && strcmp(cmd, "bootloader") == 0)
 		do_switch_fastboot();
+	else if (cmd && strcmp(cmd, "") == 0)
+		do_switch_normal();
 }
 
 static int imx_reboot_notifier_call(
