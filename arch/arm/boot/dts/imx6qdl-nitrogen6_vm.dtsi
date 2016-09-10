@@ -98,7 +98,7 @@
 	mxcfb1: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "lcd";
-		interface_pix_fmt = "RGB24";
+		interface_pix_fmt = "RGB666";
 		mode_str ="hitachi_hvga";
 		default_bpp = <16>;
 		int_clk = <0>;
