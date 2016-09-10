@@ -105,6 +105,7 @@ static const struct goodix_chip_id goodix_chip_ids[] = {
 	{ .id = "9286", .data = &gt1x_chip_data },
 
 	{ .id = "911", .data = &gt911_chip_data },
+	{ .id = "9157", .data = &gt911_chip_data },
 	{ .id = "9271", .data = &gt911_chip_data },
 	{ .id = "9110", .data = &gt911_chip_data },
 	{ .id = "9111", .data = &gt911_chip_data },
@@ -1836,6 +1837,7 @@ static const struct of_device_id goodix_of_match[] = {
 	{ .compatible = "goodix,gt9110" },
 	{ .compatible = "goodix,gt912" },
 	{ .compatible = "goodix,gt9147" },
+	{ .compatible = "goodix,gt9157" },
 	{ .compatible = "goodix,gt917s" },
 	{ .compatible = "goodix,gt927" },
 	{ .compatible = "goodix,gt9271" },
