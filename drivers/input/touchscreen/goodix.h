@@ -103,6 +103,10 @@ struct goodix_ts_data {
 	unsigned int contact_size;
 	atomic_t esd_timeout;
 	struct delayed_work esd_work;
+	bool suspended;
+	atomic_t open_count;
+	/* Protects power management calls and access to suspended flag */
+	struct mutex mutex;
 	u8 config[GOODIX_CONFIG_MAX_LENGTH];
 	unsigned short keymap[GOODIX_MAX_KEYS];
 	u8 main_clk[GOODIX_MAIN_CLK_LEN];
