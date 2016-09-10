@@ -257,6 +257,7 @@ static const struct goodix_chip_data *goodix_get_chip_data(u16 id)
 	case 911:
 	case 9271:
 	case 9110:
+	case 9157:
 	case 927:
 	case 928:
 		return &gt911_chip_data;
@@ -1357,6 +1358,7 @@ static const struct of_device_id goodix_of_match[] = {
 	{ .compatible = "goodix,gt911" },
 	{ .compatible = "goodix,gt9110" },
 	{ .compatible = "goodix,gt912" },
+	{ .compatible = "goodix,gt9157" },
 	{ .compatible = "goodix,gt927" },
 	{ .compatible = "goodix,gt9271" },
 	{ .compatible = "goodix,gt928" },
