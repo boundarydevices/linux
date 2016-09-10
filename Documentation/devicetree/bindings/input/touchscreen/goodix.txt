@@ -20,6 +20,10 @@ Optional properties:
  - irq-gpios		: GPIO pin used for IRQ. The driver uses the
 			  interrupt gpio pin as output to reset the device.
  - reset-gpios		: GPIO pin used for reset
+ - esd-recovery-timeout-ms : ESD poll time (in milli seconds) for the driver to
+                            check if ESD occurred and in that case reset the
+                            device. ESD is disabled if this property is not set
+                            or is set to 0.
  - AVDD28-supply	: Analog power supply regulator on AVDD28 pin
  - VDDIO-supply		: GPIO power supply regulator on VDDIO pin
  - touchscreen-inverted-x
