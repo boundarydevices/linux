@@ -8,6 +8,7 @@ Required properties:
 				 or "goodix,gt911"
 				 or "goodix,gt9110"
 				 or "goodix,gt912"
+				 or "goodix,gt9157"
 				 or "goodix,gt927"
 				 or "goodix,gt9271"
 				 or "goodix,gt928"
