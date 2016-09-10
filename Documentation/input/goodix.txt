@@ -1,0 +1,84 @@
+Goodix touchscreen driver
+=====================================
+
+How to update configuration firmware
+=====================================
+
+Goodix touchscreen devices have a set of registers that specify configuration
+information for the device. The configuration information has a specific format
+described in the Goodix datasheet. It includes X/Y resolution, maximum
+supported touch points, interrupt flags, various sesitivity factors and
+settings for advanced features (like gesture recognition).
+
+The devices have an initial default configuration that can be read through
+the sysfs interface (/sys/class/input/inputX/device/dump_config). This default
+configuration can be used as a starting point for creating a new configuration
+firmware file. At init, the driver will read the configuration firmware file
+and update the device configuration.
+
+This configuration can be accesed only if both interrupt and reset gpio pins
+are connected and properly configured through ACPI _DSD/DT properties.
+
+Below are instructions on how to generate a valid configuration starting from
+the device default configuration.
+
+1. Dump the default configuration of the device to a file:
+  $ cat /sys/class/input/inputX/device/dump_config > goodix_<model>_cfg
+
+2. Make the needed changes to the configuration (e.g. change resolution of
+x/y axes, maximum reported touch points, switch X,Y axes, etc.). For more
+details check the Goodix datasheet for format of Configuration Registers.
+
+3. Generate a valid configuration starting from  goodix_<model>_cfg.
+After making changes, you need to recompute the checksum of the entire
+configuration data, set Config_Fresh to 1 and generate the binary config
+firmware image. This can be done using a helper script similar to the
+one below:
+
+#!/bin/bash
+
+if [[ $# -lt 1 ]]; then
+    echo "$0 fw_filename"
+    exit 1
+fi
+
+file_in="$1"
+file_out_bin=${file_in}.bin
+
+print_val ()
+{
+    val="$1"
+    printf "0x%.2x" "$val" | xxd -r -p >> ${file_out_bin}
+}
+
+rm -f ${file_out_bin}
+
+size=`cat ${file_in} | wc -w`
+
+checksum=0
+i=1
+for val in `cat ${file_in}`; do
+    val="0x$val"
+    if [[ $i == $size ]]; then
+	# Config_Fresh
+	print_val 0x01
+    elif [[ $i == $((size-1)) ]]; then
+	# Config_Chksum
+	checksum=$(( (~ checksum + 1) & 0xFF))
+	print_val $checksum
+    else
+	checksum=$((checksum + val))
+	print_val $val
+    fi
+    i=$((i+1))
+done
+
+echo "Wrote ${file_out_bin}"
+
+4. Copy the binary config firmware in the appropriate location
+(e.g. /lib/firmware), using the name goodix_<model>_cfg.bin (e.g. for gt911,
+use goodix_911_cfg.bin).
+
+5. Check that the new firmware was successfully written to the device
+after reboot. Config_Fresh is reset to 0 after a successful update of the
+configuration.
