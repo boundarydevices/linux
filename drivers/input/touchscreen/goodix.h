@@ -29,6 +29,8 @@
 
 #define GOODIX_REG_COMMAND			0x8040
 #define GOODIX_CMD_SCREEN_OFF			0x05
+#define GOODIX_CMD_ESD_ENABLED		0xAA
+#define GOODIX_REG_ESD_CHECK		0x8041
 
 #define GOODIX_REG_SW_WDT			0x8041
 
@@ -99,6 +101,8 @@ struct goodix_ts_data {
 	unsigned long irq_flags;
 	enum goodix_irq_pin_access_method irq_pin_access_method;
 	unsigned int contact_size;
+	atomic_t esd_timeout;
+	struct delayed_work esd_work;
 	u8 config[GOODIX_CONFIG_MAX_LENGTH];
 	unsigned short keymap[GOODIX_MAX_KEYS];
 	u8 main_clk[GOODIX_MAIN_CLK_LEN];
