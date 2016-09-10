@@ -930,6 +930,40 @@ static int goodix_add_acpi_gpio_mappings(struct goodix_ts_data *ts)
 }
 #endif /* CONFIG_X86 && CONFIG_ACPI */
 
+static ssize_t goodix_dump_config_show(struct device *dev,
+				       struct device_attribute *attr, char *buf)
+{
+	struct goodix_ts_data *ts = dev_get_drvdata(dev);
+	u8 config[GOODIX_CONFIG_MAX_LENGTH];
+	int error, count = 0, i;
+
+	wait_for_completion(&ts->firmware_loading_complete);
+
+	error = goodix_i2c_read(ts->client, GOODIX_GT9X_REG_CONFIG_DATA,
+				config, ts->chip->config_len);
+	if (error) {
+		dev_warn(&ts->client->dev,
+			 "Error reading config (%d)\n",  error);
+		return error;
+	}
+
+	for (i = 0; i < ts->chip->config_len; i++)
+		count += scnprintf(buf + count, PAGE_SIZE - count, "%02x ",
+				   config[i]);
+	return count;
+}
+
+static DEVICE_ATTR(dump_config, S_IRUGO, goodix_dump_config_show, NULL);
+
+static struct attribute *goodix_attrs[] = {
+	&dev_attr_dump_config.attr,
+	NULL
+};
+
+static const struct attribute_group goodix_attr_group = {
+	.attrs = goodix_attrs,
+};
+
 /**
  * goodix_get_gpio_config - Get GPIO config from ACPI/DT
  *
@@ -1375,6 +1409,16 @@ reset:
 
 	ts->chip = goodix_get_chip_data(ts->id);
 
+	if (ts->gpiod_int && ts->gpiod_rst) {
+		error = sysfs_create_group(&client->dev.kobj,
+					   &goodix_attr_group);
+		if (error) {
+			dev_err(&client->dev,
+				"Failed to create sysfs group: %d\n",
+				error);
+			return error;
+		}
+	}
 	if (ts->load_cfg_from_disk) {
 		/* update device config */
 		error = device_property_read_string(&client->dev,
@@ -1394,7 +1438,7 @@ reset:
 			dev_err(&client->dev,
 				"Failed to invoke firmware loader: %d\n",
 				error);
-			return error;
+			goto err_sysfs_remove_group;
 		}
 
 		return 0;
@@ -1405,6 +1449,11 @@ reset:
 	}
 
 	return 0;
+
+err_sysfs_remove_group:
+	if (ts->gpiod_int && ts->gpiod_rst)
+		sysfs_remove_group(&client->dev.kobj, &goodix_attr_group);
+	return error;
 }
 
 static void goodix_ts_remove(struct i2c_client *client)
@@ -1413,6 +1462,8 @@ static void goodix_ts_remove(struct i2c_client *client)
 
 	if (ts->load_cfg_from_disk)
 		wait_for_completion(&ts->firmware_loading_complete);
+
+	sysfs_remove_group(&client->dev.kobj, &goodix_attr_group);
 }
 
 static int __maybe_unused goodix_suspend(struct device *dev)
