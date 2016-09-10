@@ -13,6 +13,7 @@
 
 / {
 	aliases {
+		ar1020 = &ar1020;
 		mxcfb0 = &mxcfb1;
 		mxcfb1 = &mxcfb2;
 		mxcfb2 = &mxcfb3;
@@ -606,11 +607,12 @@
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 
-	ar1020_i2c@4d {
+	ar1020: ar1020_i2c@4d {
 		compatible = "ar1020_i2c,ar1020_i2c";
 		reg = <0x4d>;
 		interrupts-extended = GP_TOUCH_IRQ;
 		wakeup-gpios = GP_TOUCH_IRQ;
+		status = "okay";
 	};
 
 	ft5x06_ts@38 {
