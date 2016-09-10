@@ -244,9 +244,9 @@
 			MX6QDL_PAD_SD3_DAT1__SD3_DATA1		0x17059
 			MX6QDL_PAD_SD3_DAT2__SD3_DATA2		0x17059
 			MX6QDL_PAD_SD3_DAT3__SD3_DATA3		0x17059
-#define GP_SD3_CD			<&gpio7 0 GPIO_ACTIVE_LOW>
+#define GP_USDHC3_CD			<&gpio7 0 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_SD3_DAT5__GPIO7_IO00		0x1b0b0
-#define GP_SD3_WP			<&gpio7 1 GPIO_ACTIVE_LOW>
+#define GP_USDHC3_WP			<&gpio7 1 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1b0b0
 		>;
 	};
@@ -749,8 +749,8 @@
 &usdhc3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc3_50mhz>;
-	cd-gpios = GP_SD3_CD;
-	wp-gpios = GP_SD3_WP;
+	cd-gpios = GP_USDHC3_CD;
+	wp-gpios = GP_USDHC3_WP;
 	vmmc-supply = <&reg_3p3v>;
 	status = "okay";
 };
