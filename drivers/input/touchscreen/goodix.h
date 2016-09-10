@@ -12,6 +12,8 @@
 /* Register defines */
 #define GOODIX_REG_COMMAND			0x8040
 #define GOODIX_CMD_SCREEN_OFF			0x05
+#define GOODIX_CMD_ESD_ENABLED			0xAA
+#define GOODIX_REG_ESD_CHECK			0x8041
 
 #define GOODIX_GT1X_REG_CONFIG_DATA		0x8050
 #define GOODIX_GT9X_REG_CONFIG_DATA		0x8047
@@ -63,6 +65,8 @@ struct goodix_ts_data {
 	unsigned int contact_size;
 	u8 config[GOODIX_CONFIG_MAX_LENGTH];
 	unsigned short keymap[GOODIX_MAX_KEYS];
+	atomic_t esd_timeout;
+	struct delayed_work esd_work;
 };
 
 int goodix_i2c_read(struct i2c_client *client, u16 reg, u8 *buf, int len);
