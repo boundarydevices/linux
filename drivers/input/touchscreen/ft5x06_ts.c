@@ -329,44 +329,46 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 		{ts->client->addr, I2C_M_RD, sizeof(buf), buf}
 	};
 	int buttons = 0 ;
+	int i;
+	unsigned char *p;
 
 	while (gpiod_get_value(ts->wakeup_gpio)) {
 		ts->bReady = 0;
 		ret = i2c_transfer(ts->client->adapter, readpkt,
 				   ARRAY_SIZE(readpkt));
 		if (ret != ARRAY_SIZE(readpkt)) {
-			printk(KERN_WARNING "%s: i2c_transfer failed\n",
-			       client_name);
+			dev_err(&ts->client->dev,
+				"i2c_transfer failed(%d)\n", ret);
 			msleep(1000);
-		} else {
-			int i;
-			unsigned char *p = buf+3;
+			continue;
+		}
+		p = buf+3;
 #ifdef DEBUG
-			printHex(buf, sizeof(buf));
+		printHex(buf, sizeof(buf));
 #endif
-			buttons = buf[2];
-			if (buttons > MAX_TOUCHES) {
-				int interrupting = gpiod_get_value(ts->wakeup_gpio);
-				if (interrupting) {
-					printk(KERN_ERR
-					       "%s: invalid button count 0x%02x\n",
-					       __func__, buttons);
-				} /* not garbage from POR */
-				buttons = interrupting ? MAX_TOUCHES : 0;
-			} else {
-				for (i = 0; i < buttons; i++) {
-					points[i].x = (((p[0] & 0x0f) << 8)
-						       | p[1]) & 0x7ff;
-					points[i].id = (p[2]>>4);
-					points[i].y = (((p[2] & 0x0f) << 8)
-						       | p[3]) & 0x7ff;
-					if (points[i].x > ts->max_x)
-						points[i].x = ts->max_x;
-					if (points[i].y > ts->max_y)
-						points[i].y = ts->max_y;
-					p += 6;
-				}
+		buttons = buf[2];
+		if (buttons > MAX_TOUCHES) {
+			int interrupting = gpiod_get_value(ts->wakeup_gpio);
+			if (!interrupting) {
+				dev_info(&ts->client->dev,
+					"invalid button count 0x%02x"
+					", irq inactive\n", buttons);
+				break;
 			}
+			/* not garbage from POR */
+			dev_err(&ts->client->dev,
+				"invalid button count 0x%02x\n", buttons);
+			buttons = MAX_TOUCHES;
+		}
+		for (i = 0; i < buttons; i++) {
+			points[i].x = (((p[0] & 0x0f) << 8) | p[1]) & 0x7ff;
+			points[i].id = (p[2]>>4);
+			points[i].y = (((p[2] & 0x0f) << 8) | p[3]) & 0x7ff;
+			if (points[i].x > ts->max_x)
+				points[i].x = ts->max_x;
+			if (points[i].y > ts->max_y)
+				points[i].y = ts->max_y;
+			p += 6;
 		}
 
 #ifdef DEBUG
