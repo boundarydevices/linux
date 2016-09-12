@@ -166,7 +166,6 @@ static inline void ts_evt_add(struct ft5x06_ts *ts,
 		input_report_key(idev, BTN_TOUCH, 0);
 #endif
 	} else {
-		del_timer_sync(&ts->release_timer);
 #ifdef USE_ABS_MT
 		for (i = 0; i < buttons; i++) {
 			translate(&p[i].x, &p[i].y);
@@ -189,8 +188,6 @@ static inline void ts_evt_add(struct ft5x06_ts *ts,
 		input_report_abs(idev, ABS_PRESSURE, 1);
 		input_report_key(idev, BTN_TOUCH, 1);
 #endif
-		mod_timer(&ts->release_timer,
-			  jiffies + msecs_to_jiffies(400));
 	}
 	input_sync(idev);
 }
@@ -348,6 +345,7 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 	int i;
 	unsigned char *p;
 
+	del_timer_sync(&ts->release_timer);
 	while (0 == gpio_get_value(ts->gp)) {
 		ts->bReady = 0;
 		ret = i2c_transfer(ts->client->adapter, readpkt,
@@ -395,6 +393,8 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 #endif
 		ts_evt_add(ts, buttons, points);
 	}
+	if (ts->down_mask)
+		mod_timer(&ts->release_timer, jiffies + msecs_to_jiffies(400));
 	return IRQ_HANDLED;
 }
 
