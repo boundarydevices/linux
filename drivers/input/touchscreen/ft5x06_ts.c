@@ -92,6 +92,7 @@ struct ft5x06_ts {
 	int			irq;
 	unsigned		gp;
 	struct proc_dir_entry  *procentry;
+	struct timer_list	release_timer;
 	unsigned		down_mask;
 	unsigned		max_x;
 	unsigned		max_y;
@@ -157,12 +158,15 @@ static inline void ts_evt_add(struct ft5x06_ts *ts,
 		tmp = ts->down_mask;
 		ts->down_mask = 0;
 		release_slots(ts, tmp);
+#else
+		ts->down_mask = 0;
 #endif
 #ifdef USE_ABS_SINGLE
 		input_report_abs(idev, ABS_PRESSURE, 0);
 		input_report_key(idev, BTN_TOUCH, 0);
 #endif
 	} else {
+		del_timer_sync(&ts->release_timer);
 #ifdef USE_ABS_MT
 		for (i = 0; i < buttons; i++) {
 			translate(&p[i].x, &p[i].y);
@@ -176,6 +180,7 @@ static inline void ts_evt_add(struct ft5x06_ts *ts,
 		ts->down_mask = down_mask;
 		release_slots(ts, tmp);
 #else
+		ts->down_mask = 1;
 		translate(&p[0].x, &p[0].y);
 #endif
 #ifdef USE_ABS_SINGLE
@@ -184,8 +189,20 @@ static inline void ts_evt_add(struct ft5x06_ts *ts,
 		input_report_abs(idev, ABS_PRESSURE, 1);
 		input_report_key(idev, BTN_TOUCH, 1);
 #endif
+		mod_timer(&ts->release_timer,
+			  jiffies + msecs_to_jiffies(400));
 	}
 	input_sync(idev);
+}
+
+static void ts_release_timer(unsigned long data)
+{
+	struct ft5x06_ts *ts = (struct ft5x06_ts *)data;
+
+	if (ts->down_mask) {
+		ts_evt_add(ts, 0, NULL);
+		dev_info(&ts->client->dev, "release firmware bug hit");
+	}
 }
 
 static int ts_open(struct input_dev *idev)
@@ -470,6 +487,7 @@ static void ts_shutdown(struct ft5x06_ts *ts)
 		if (--ts->use_count == 0) {
 			free_irq(ts->irq, ts);
 		}
+		del_timer_sync(&ts->release_timer);
 	}
 }
 /*-----------------------------------------------------------------------*/
@@ -545,6 +563,7 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		gts = ts;
 		ts->procentry = proc_create(procentryname, 0x660, NULL,
 					    &proc_fops);
+		setup_timer(&ts->release_timer, ts_release_timer, (unsigned long)ts);
 		return 0;
 	}
 
