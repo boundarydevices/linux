@@ -21,7 +21,6 @@ static const struct renesas_fw_entry {
 	const char *firmware_name;
 	u16 device;
 	u8 revision;
-	u16 expected_version;
 } renesas_fw_table[] = {
 	/*
 	 * Only the uPD720201K8-711-BAC-A or uPD720202K8-711-BAA-A
@@ -35,9 +34,9 @@ static const struct renesas_fw_entry {
 	 *	- uPD720201 ES 2.1 sample & CS sample & Mass product, ID is 3.
 	 *	- uPD720202 ES 2.0 sample & CS sample & Mass product, ID is 2.
 	 */
-	{ "K2013080.mem", 0x0014, 0x02, 0x2013 },
-	{ "K2013080.mem", 0x0014, 0x03, 0x2013 },
-	{ "K2013080.mem", 0x0015, 0x02, 0x2013 },
+	{ "uPD72020x.mem", 0x0014, 0x02 },
+	{ "uPD72020x.mem", 0x0014, 0x03 },
+	{ "uPD72020x.mem", 0x0015, 0x02 },
 };
 
 static const struct renesas_fw_entry *renesas_needs_fw_dl(struct pci_dev *dev)
@@ -122,9 +121,9 @@ static int renesas_fw_verify(struct pci_dev *dev,
 	 * "6.3 Data Format" R19UH0078EJ0500 Rev.5.00 page 124
 	 */
 
-	/* "Each row is 8 bytes". => firmware size must be a multiple of 8. */
-	if (length % 8 != 0) {
-		dev_err(&dev->dev, "firmware size is not a multipe of 8.");
+	/* "Each row is 4 bytes". => firmware size must be a multiple of 4. */
+	if (length % 4 != 0) {
+		dev_err(&dev->dev, "firmware size is not a multiple of 4.");
 		return -EINVAL;
 	}
 
@@ -152,13 +151,7 @@ static int renesas_fw_verify(struct pci_dev *dev,
 	}
 
 	fw_version = get_unaligned_le16(fw_data + fw_version_pointer);
-	dev_dbg(&dev->dev, "got firmware version: %02x.", fw_version);
-
-	if (fw_version != entry->expected_version) {
-		dev_err(&dev->dev, "firmware version mismatch, expected version: %02x.",
-			 entry->expected_version);
-		return -EINVAL;
-	}
+	dev_info(&dev->dev, "got firmware version: %02x.", fw_version);
 
 	return 0;
 }
