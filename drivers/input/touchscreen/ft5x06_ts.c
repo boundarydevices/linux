@@ -90,7 +90,7 @@ struct ft5x06_ts {
 	int			use_count;
 	int			bReady;
 	int			irq;
-	unsigned		gp;
+	unsigned		wakeup_gpio;
 	struct proc_dir_entry  *procentry;
 	struct timer_list	release_timer;
 	unsigned		down_mask;
@@ -346,7 +346,7 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 	unsigned char *p;
 
 	del_timer_sync(&ts->release_timer);
-	while (0 == gpio_get_value(ts->gp)) {
+	while (0 == gpio_get_value(ts->wakeup_gpio)) {
 		ts->bReady = 0;
 		ret = i2c_transfer(ts->client->adapter, readpkt,
 				   ARRAY_SIZE(readpkt));
@@ -362,7 +362,7 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 #endif
 		buttons = buf[2];
 		if (buttons > MAX_TOUCHES) {
-			int interrupting = (0 == gpio_get_value(ts->gp));
+			int interrupting = (0 == gpio_get_value(ts->wakeup_gpio));
 			if (!interrupting) {
 				dev_info(&ts->client->dev,
 					"invalid button count 0x%02x"
@@ -525,16 +525,14 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	int err = 0;
 	struct ft5x06_ts *ts;
 	struct device *dev = &client->dev;
-        struct device_node *np = client->dev.of_node;
+	int retry = 0;
+	unsigned wakeup_gpio;
+	struct device_node *np = client->dev.of_node;
+
 	if (gts) {
 		printk(KERN_ERR "%s: Error gts is already allocated\n",
 		       client_name);
 		return -ENOMEM;
-	}
-	if (detect_ft5x06(client) != 0) {
-		dev_err(dev, "%s: Could not detect touch screen.\n",
-			client_name);
-		return -ENODEV;
 	}
 	ts = kzalloc(sizeof(struct ft5x06_ts), GFP_KERNEL);
 	if (!ts) {
@@ -543,20 +541,38 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 	ts->client = client;
 	ts->irq = client->irq ;
-	ts->gp = of_get_named_gpio(np, "wakeup-gpios", 0);
-	if (!gpio_is_valid(ts->gp))
-		return -ENODEV;
-
-	err = gpio_request(ts->gp, "ft5x06_irq");
-	if (err < 0) {
-		dev_err(&client->dev,
-			"request gpio failed, cannot wake up controller: %d\n",
-			err);
-		return err;
+	err = detect_ft5x06(client);
+	if (err) {
+		dev_err(dev, "Could not detect touch screen %d.\n", err);
+		goto exit1;;
 	}
+	wakeup_gpio = of_get_named_gpio(np, "wakeup-gpios", 0);
+	if (!gpio_is_valid(wakeup_gpio)) {
+		dev_err(dev, "wakeup invalid %d\n", wakeup_gpio);
+		err = -ENODEV;
+		goto exit1;
+	}
+	/*
+	 * This is allocated after successful detection to prevent races with other drivers.
+	 * But retry, in case other drivers are not as kind.
+	 */
+	do {
+		err = gpio_request(wakeup_gpio, "ft5x06_irq");
+		if (err >= 0)
+			break;
+		msleep(100);
+		retry++;
+		if (retry > 20) {
+			dev_err(dev, "wakeup %d\n", err);
+			err = -ENODEV;
+			goto exit1;
+		}
+	} while (1);
 
-	printk(KERN_INFO "%s: %s touchscreen irq=%i, gp=%i\n", __func__,
-	       client_name, ts->irq, ts->gp);
+	ts->wakeup_gpio = wakeup_gpio;
+	dev_info(dev, "wakeup %d, retry=%d\n", wakeup_gpio, retry);
+	dev_info(dev, "touchscreen irq=%i, wakeup_irq=%i\n", ts->irq,
+			wakeup_gpio);
 	i2c_set_clientdata(client, ts);
 	err = ts_register(ts);
 	if (err == 0) {
@@ -569,6 +585,7 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	printk(KERN_WARNING "%s: ts_register failed\n", client_name);
 	ts_deregister(ts);
+exit1:
 	kfree(ts);
 	return err;
 }
@@ -579,7 +596,7 @@ static int ts_remove(struct i2c_client *client)
 	remove_proc_entry(procentryname, 0);
 	if (ts == gts) {
 		gts = NULL;
-		gpio_free(ts->gp);
+		gpio_free(ts->wakeup_gpio);
 		ts_deregister(ts);
 	} else {
 		printk(KERN_ERR "%s: Error ts!=gts\n", client_name);
