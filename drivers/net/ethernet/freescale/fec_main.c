@@ -183,6 +183,7 @@ MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
 /* FEC receive acceleration */
 #define FEC_RACC_IPDIS		(1 << 1)
 #define FEC_RACC_PRODIS		(1 << 2)
+#define FEC_RACC_SHIFT16	BIT(7)
 #define FEC_RACC_OPTIONS	(FEC_RACC_IPDIS | FEC_RACC_PRODIS)
 
 /*
@@ -928,9 +929,11 @@ fec_restart(struct net_device *ndev)
 
 #if !defined(CONFIG_M5272)
 	if (fep->quirks & FEC_QUIRK_HAS_RACC) {
-		/* set RX checksum */
 		val = readl(fep->hwp + FEC_RACC);
+		/* align IP header */
+		val |= FEC_RACC_SHIFT16;
 		if (fep->csum_flags & FLAG_RX_CSUM_ENABLED)
+			/* set RX checksum */
 			val |= FEC_RACC_OPTIONS;
 		else
 			val &= ~FEC_RACC_OPTIONS;
@@ -1447,6 +1450,12 @@ static int fec_rxq(struct net_device *ndev, struct fec_enet_priv_rx_q *rxq,
 		prefetch(skb->data - NET_IP_ALIGN);
 		skb_put(skb, pkt_len - 4);
 		data = skb->data;
+
+#if !defined(CONFIG_M5272)
+		if (fep->quirks & FEC_QUIRK_HAS_RACC)
+			data = skb_pull_inline(skb, 2);
+#endif
+
 		if (!is_copybreak && need_swap)
 			swap_buffer(data, pkt_len);
 
