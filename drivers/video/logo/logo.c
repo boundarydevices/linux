@@ -36,6 +36,11 @@ static int __init fb_logo_late_init(void)
 
 late_initcall(fb_logo_late_init);
 
+bool fb_logos_freed(void)
+{
+	return logos_freed;
+}
+
 /* logo's are marked __initdata. Use __ref to tell
  * modpost that it is intended that this function uses data
  * marked __initdata.
