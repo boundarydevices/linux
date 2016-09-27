@@ -1143,6 +1143,7 @@ static int mxcfb_set_par(struct fb_info *fbi)
 	struct mxcfb_info *mxc_fbi_fg = NULL;
 	bool ovfbi_enable = false, on_the_fly;
 	ipu_channel_params_t params;
+	int prev_line_length;
 
 	if (ipu_ch_param_bad_alpha_pos(FB_PIX(fbi)) &&
 	    mxc_fbi->alpha_chan_en) {
@@ -1166,6 +1167,7 @@ static int mxcfb_set_par(struct fb_info *fbi)
 	if (fbi->var.xres == 0 || fbi->var.yres == 0)
 		return 0;
 
+	prev_line_length = fbi->fix.line_length;
 	mxcfb_set_fix(fbi);
 
 	mxcfb_check_resolve(fbi);
@@ -1251,6 +1253,11 @@ static int mxcfb_set_par(struct fb_info *fbi)
 
 		if (mxcfb_map_video_memory(fbi) < 0)
 			return -ENOMEM;
+	} else {
+		if (prev_line_length && (prev_line_length != fbi->fix.line_length)) {
+			memset((char *)fbi->screen_base, 0, fbi->fix.smem_len);
+			mxc_fbi->first_set_par = false;
+		}
 	}
 
 	if (mxc_fbi->first_set_par) {
