@@ -68,6 +68,7 @@
 #include <linux/kd.h>
 #include <linux/slab.h>
 #include <linux/fb.h>
+#include <linux/linux_logo.h>
 #include <linux/vt_kern.h>
 #include <linux/selection.h>
 #include <linux/font.h>
@@ -551,6 +552,27 @@ static int do_fbcon_takeover(int show_logo)
 	return err;
 }
 
+static void update_logo_shown(struct vc_data *vc)
+{
+#ifdef CONFIG_LOGO
+	if (!logo_lines || (fg_console != vc->vc_num))
+		return;
+
+	if (fb_logos_freed()) {
+		logo_shown = FBCON_LOGO_CANSHOW;
+		return;
+	}
+
+	if (logo_lines > vc->vc_bottom) {
+		logo_shown = FBCON_LOGO_CANSHOW;
+		pr_info("fbcon_init: boot-logo may be bigger than screen.\n");
+	} else if (logo_shown != FBCON_LOGO_DONTSHOW) {
+		logo_shown = FBCON_LOGO_DRAW;
+		vc->vc_top = logo_lines;
+	}
+#endif
+}
+
 #ifdef MODULE
 static void fbcon_prepare_logo(struct vc_data *vc, struct fb_info *info,
 			       int cols, int rows, int new_cols, int new_rows)
@@ -632,15 +654,7 @@ static void fbcon_prepare_logo(struct vc_data *vc, struct fb_info *info,
 		vc->vc_pos += logo_lines * vc->vc_size_row;
 		kfree(save);
 	}
-
-	if (logo_lines > vc->vc_bottom) {
-		logo_shown = FBCON_LOGO_CANSHOW;
-		printk(KERN_INFO
-		       "fbcon_init: disable boot-logo (boot-logo bigger than screen).\n");
-	} else if (logo_shown != FBCON_LOGO_DONTSHOW) {
-		logo_shown = FBCON_LOGO_DRAW;
-		vc->vc_top = logo_lines;
-	}
+	update_logo_shown(vc);
 }
 #endif /* MODULE */
 
@@ -2182,8 +2196,8 @@ static int fbcon_switch(struct vc_data *vc)
 		if (conp2->vc_top == logo_lines
 		    && conp2->vc_bottom == conp2->vc_rows)
 			conp2->vc_top = 0;
-		logo_shown = FBCON_LOGO_CANSHOW;
 	}
+	update_logo_shown(vc);
 
 	prev_console = ops->currcon;
 	if (prev_console != -1)
