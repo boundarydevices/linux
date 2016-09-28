@@ -97,6 +97,7 @@ struct ft5x06_ts {
 	unsigned		down_mask;
 	unsigned		max_x;
 	unsigned		max_y;
+	unsigned		firmware_bug_hit;
 };
 static const char *client_name = "ft5x06";
 
@@ -199,7 +200,11 @@ static void ts_release_timer(unsigned long data)
 
 	if (ts->down_mask) {
 		ts_evt_add(ts, 0, NULL);
-		dev_info(&ts->client->dev, "release firmware bug hit");
+		ts->firmware_bug_hit++;
+		if ((ts->firmware_bug_hit & 0xff) == 1) {
+			dev_info(&ts->client->dev, "release firmware bug hit("
+					"%d times)\n", ts->firmware_bug_hit);
+		}
 	}
 }
 
@@ -395,7 +400,7 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 		ts_evt_add(ts, buttons, points);
 	}
 	if (ts->down_mask)
-		mod_timer(&ts->release_timer, jiffies + msecs_to_jiffies(400));
+		mod_timer(&ts->release_timer, jiffies + msecs_to_jiffies(100));
 	return IRQ_HANDLED;
 }
 
@@ -521,6 +526,16 @@ static int ts_detect(struct i2c_client *client,
 	return err;
 }
 
+static ssize_t show_missed_releases(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct ft5x06_ts *ts = dev_get_drvdata(dev);
+
+	return sprintf(buf, "0x%x\n", ts ? ts->firmware_bug_hit : 0);
+}
+
+static DEVICE_ATTR(missed_releases, S_IRUGO, show_missed_releases, NULL);
+
 static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int err = 0;
@@ -587,6 +602,8 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		ts->procentry = proc_create(procentryname, 0x660, NULL,
 					    &proc_fops);
 		setup_timer(&ts->release_timer, ts_release_timer, (unsigned long)ts);
+		if (device_create_file(dev, &dev_attr_missed_releases))
+			dev_err(dev, "%s: error creating missed_releases entry\n", __func__);
 		return 0;
 	}
 
@@ -600,6 +617,8 @@ exit1:
 static int ts_remove(struct i2c_client *client)
 {
 	struct ft5x06_ts *ts = i2c_get_clientdata(client);
+
+	device_remove_file(&client->dev, &dev_attr_missed_releases);
 	remove_proc_entry(procentryname, 0);
 	if (ts == gts) {
 		gts = NULL;
