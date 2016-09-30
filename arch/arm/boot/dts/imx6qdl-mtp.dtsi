@@ -135,6 +135,19 @@
 		>;
 	};
 
+	pinctrl_uart5: uart5grp {
+		fsl,pins = <
+			MX6QDL_PAD_CSI0_DAT14__UART5_TX_DATA	0x1b0b1
+			MX6QDL_PAD_CSI0_DAT15__UART5_RX_DATA	0x1b0b1
+#define GP_GPS_HEARTBEAT		<&gpio5 22 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT4__GPIO5_IO22		0x030b0
+#define GPIRQ_GPS			<&gpio5 22 IRQ_TYPE_LEVEL_HIGH>
+			MX6QDL_PAD_CSI0_DAT5__GPIO5_IO23		0x1b0b0
+#define GP_GPS_RESET			<&gpio5 24 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_CSI0_DAT6__GPIO5_IO24		0x0b0b0
+		>;
+	};
+
 	pinctrl_usbh1: usbh1grp {
 		fsl,pins = <
 			MX6QDL_PAD_EIM_D30__USB_H1_OC	0x1b0b0
@@ -452,6 +465,12 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
 	fsl,uart-has-rtscts;
+	status = "okay";
+};
+
+&uart5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart5>;
 	status = "okay";
 };
 
