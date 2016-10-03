@@ -246,7 +246,8 @@
 			MX6QDL_PAD_CSI0_DAT13__GPIO5_IO31	0x1b0b0		/* imx6 uart4 rx */
 #define GP_GPS_TIMEPULSE	<&gpio2 30 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_EB2__GPIO2_IO30		0x1b0b0
-#define GPIRQ_GPS_EXT		<&gpio2 31 GPIO_ACTIVE_LOW>	/* don't use IRQ_LEVEL without code change to gps_max7w */
+#define GPIRQ_GPS_EXT		<&gpio2 31 IRQ_TYPE_EDGE_FALLING>
+#define GP_GPS_EXT		<&gpio2 31 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_EB3__GPIO2_IO31		0x1b0b0
 		>;
 	};
@@ -679,6 +680,7 @@
 		 */
 		int-pio = <13>;
 		interrupts-extended = GPIRQ_GPS_EXT;
+		wakeup-gpios = GP_GPS_EXT;
         };
 };
 
