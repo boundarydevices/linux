@@ -532,7 +532,6 @@ static int max7w_probe(struct i2c_client *client, const struct i2c_device_id *id
         struct device_node *np = client->dev.of_node;
 	struct gpio_desc *reset_gpio;
 	struct gpio_desc *irq_gpio;
-	enum of_gpio_flags flags;
 	unsigned int_pio = 0;
 
 	printk(KERN_ERR "%s: %s version 1.0\n", __func__, client_name);
@@ -551,7 +550,7 @@ static int max7w_probe(struct i2c_client *client, const struct i2c_device_id *id
 	sc->client = client;
 	sc->irq = client->irq ;
 
-	irq_gpio = of_get_named_gpiod_flags(np, "interrupts-extended", 0, &flags);
+	irq_gpio = devm_gpiod_get_index(dev, "wakeup", 0);
 	if (IS_ERR(irq_gpio))
 		irq_gpio = NULL;
 
@@ -562,16 +561,6 @@ static int max7w_probe(struct i2c_client *client, const struct i2c_device_id *id
 			irq_gpio = NULL;
 	}
 	if (irq_gpio) {
-		ret = gpio_request(desc_to_gpio(irq_gpio), "max7w_irq");
-		if (ret < 0) {
-			dev_err(&client->dev, "request max7w_irq failed: %d\n", ret);
-			irq_gpio = NULL;
-			int_pio = 0;
-		}
-	}
-	if (irq_gpio) {
-		if (flags & GPIO_ACTIVE_LOW)
-			gpiod_sysfs_set_active_low(irq_gpio, 1);
 		pr_info("%s:int_pio=%d, irq_gpio=%d active_low=%d\n", __func__,
 			int_pio, desc_to_gpio(irq_gpio),
 			gpiod_is_active_low(irq_gpio));
@@ -644,8 +633,6 @@ out2:
 		gpiod_set_value(reset_gpio, 1);
 	free_irq(sc->irq, sc);
 out1:
-	if (irq_gpio)
-		gpio_free(desc_to_gpio(irq_gpio));
 	pr_err("%s: failed %i\n", __func__, ret);
 	return ret;
 }
@@ -660,8 +647,6 @@ static int max7w_remove(struct i2c_client *client)
 
 	uart_remove_one_port(&serial_max7w_reg, &sc->chan.port);
 	free_irq(sc->irq, sc);
-	if (sc->irq_gpio)
-		gpio_free(desc_to_gpio(sc->irq_gpio));
 	if (sc->reset_gpio)
 		gpiod_set_value(sc->reset_gpio, 1);
 	return 0;
