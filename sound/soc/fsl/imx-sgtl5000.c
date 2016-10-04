@@ -63,8 +63,14 @@ static int event_hp(struct snd_soc_dapm_widget *w,
 	struct snd_soc_card *card = dapm->card;
 	struct imx_sgtl5000_data *data = container_of(card,
 			struct imx_sgtl5000_data, card);
+	int mute = SND_SOC_DAPM_EVENT_ON(event) ? 0 : 1;
 
-	return do_mute(data->mute_hp, SND_SOC_DAPM_EVENT_ON(event) ? 0 : 1);
+	if (mute) {
+		do_mute(data->mute_hp, mute);
+		return do_mute(data->amp_standby, mute);
+	}
+	do_mute(data->amp_standby, mute);
+	return do_mute(data->mute_hp, mute);
 }
 
 static int event_lo(struct snd_soc_dapm_widget *w,
@@ -95,25 +101,12 @@ static int imx_sgtl_startup(struct snd_pcm_substream *substream)
 		snd_pcm_hw_constraint_minmax(substream->runtime,
 			SNDRV_PCM_HW_PARAM_SAMPLE_BITS, 16, 16);
 	}
-	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) &&
-			data->amp_standby)
-		gpiod_set_value(data->amp_standby, 0);
 	return 0;
 }
 
-static void imx_sgtl_shutdown(struct snd_pcm_substream *substream)
-{
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct imx_sgtl5000_data *data = snd_soc_card_get_drvdata(rtd->card);
-
-	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) &&
-			data->amp_standby)
-		gpiod_set_value(data->amp_standby, 1);
-}
 
 static struct snd_soc_ops imx_sgtl_ops = {
 	.startup	= imx_sgtl_startup,
-	.shutdown	= imx_sgtl_shutdown,
 };
 
 
