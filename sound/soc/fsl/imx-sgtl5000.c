@@ -35,6 +35,8 @@ struct imx_sgtl5000_data {
 	struct gpio_desc *amp_standby;
 	struct gpio_desc *amp_gain[2];
 	int amp_gain_value;
+	int mute_hp_value;
+	int hp_disabled;
 	bool limit_16bit_samples;
 };
 
@@ -72,6 +74,7 @@ static int event_hp(struct snd_soc_dapm_widget *w,
 			struct imx_sgtl5000_data, card);
 	int mute = SND_SOC_DAPM_EVENT_ON(event) ? 0 : 1;
 
+	data->hp_disabled = data->mute_hp_value = mute;
 	if (mute) {
 		do_mute(data->mute_hp, mute);
 		return do_mute(data->amp_standby, mute);
@@ -151,9 +154,39 @@ static int amp_gain_get(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int amp_hp_set(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+	int value = ucontrol->value.integer.value[0];
+
+	if (value > 1)
+		return -EINVAL;
+	value = (value ^ 1 ) | data->hp_disabled;
+	data->mute_hp_value = value;
+	if (data->mute_hp)
+		gpiod_set_value(data->mute_hp, value);
+	return 0;
+}
+
+static int amp_hp_get(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct imx_sgtl5000_data *data = container_of(card,
+			struct imx_sgtl5000_data, card);
+
+	ucontrol->value.integer.value[0] = data->mute_hp_value ^ 1;
+	return 0;
+}
+
 static const struct snd_kcontrol_new more_controls[] = {
 	SOC_SINGLE_EXT("amp_gain", 0, 0, 3, 0,
 		       amp_gain_get, amp_gain_set),
+	SOC_SINGLE_EXT("amp_hp", 0, 0, 1, 0,
+		       amp_hp_get, amp_hp_set),
 };
 
 static int imx_sgtl5000_probe(struct platform_device *pdev)
@@ -165,6 +198,8 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 	struct imx_sgtl5000_data *data = NULL;
 	struct gpio_desc *gd = NULL;
 	int int_port, ext_port;
+	const struct snd_kcontrol_new *kcontrols = more_controls;
+	int kcontrols_cnt = ARRAY_SIZE(more_controls);
 	int ret;
 	int i;
 
@@ -261,6 +296,7 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 		gpiod_direction_output(gd, 0);
 		gpiod_set_value(gd, 1);
 		data->mute_lo = gd;
+		data->mute_hp_value = 1;
 	}
 	gd = devm_gpiod_get_index(&pdev->dev, "amp-standby", 0);
 	if (!IS_ERR(gd)) {
@@ -285,9 +321,15 @@ static int imx_sgtl5000_probe(struct platform_device *pdev)
 		goto fail;
 	data->card.num_links = 1;
 	data->card.owner = THIS_MODULE;
-	if (data->amp_gain[0]) {
-		data->card.controls	 = more_controls;
-		data->card.num_controls  = ARRAY_SIZE(more_controls);
+	if (!data->amp_gain[0]) {
+		kcontrols++;
+		kcontrols_cnt--;
+	}
+	if (!data->mute_hp)
+		kcontrols_cnt--;
+	if (kcontrols_cnt) {
+		data->card.controls	 = kcontrols;
+		data->card.num_controls  = kcontrols_cnt;
 	}
 	data->card.dai_link = &data->dai;
 	data->card.dapm_widgets = imx_sgtl5000_dapm_widgets;
