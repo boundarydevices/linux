@@ -611,6 +611,7 @@ static int __mxt_read_reg(struct i2c_client *client,
 	struct i2c_msg xfer[2];
 	u8 buf[2];
 	int ret;
+	int retry = 0;
 
 	buf[0] = reg & 0xff;
 	buf[1] = (reg >> 8) & 0xff;
@@ -627,16 +628,21 @@ static int __mxt_read_reg(struct i2c_client *client,
 	xfer[1].len = len;
 	xfer[1].buf = val;
 
-	ret = i2c_transfer(client->adapter, xfer, 2);
-	if (ret == 2) {
-		ret = 0;
-	} else {
-		dev_err(&client->dev, "%s: i2c transfer failed (%d) reg=0x%x len=%d\n",
-			__func__, ret, reg, len);
-		if (ret >= 0)
-			ret = -EIO;
-	}
+	do {
+		ret = i2c_transfer(client->adapter, xfer, 2);
+		if (ret == 2)
+			return 0;
 
+		if (!retry) {
+			dev_err(&client->dev,
+				"%s: i2c transfer failed (%d) reg=0x%x len=%d\n",
+				__func__, ret, reg, len);
+		}
+		msleep(100);
+	} while (retry++ < 10);
+
+	if (ret >= 0)
+		ret = -EIO;
 	return ret;
 }
 
@@ -646,27 +652,43 @@ static int __mxt_write_reg(struct i2c_client *client, u16 reg, u16 len,
 	u8 *buf;
 	size_t count;
 	int ret;
+	u8 *p;
+	u8 buffer[32];
+	int retry = 0;
 
 	count = len + 2;
-	buf = kmalloc(count, GFP_KERNEL);
-	if (!buf)
-		return -ENOMEM;
+	if (sizeof(buffer) < count) {
+		p = buf = kmalloc(count, GFP_KERNEL);
+		if (!buf)
+			return -ENOMEM;
+	} else {
+		p = NULL;
+		buf = buffer;
+	}
 
 	buf[0] = reg & 0xff;
 	buf[1] = (reg >> 8) & 0xff;
 	memcpy(&buf[2], val, len);
 
-	ret = i2c_master_send(client, buf, count);
-	if (ret == count) {
-		ret = 0;
-	} else {
-		dev_err(&client->dev, "%s: i2c send failed (%d) reg=0x%x len=%d val=%x\n",
-			__func__, ret, reg, len, buf[2]);
+	do {
+		ret = i2c_master_send(client, buf, count);
+		if (ret == count) {
+			ret = 0;
+			break;
+		}
+
+		if (!retry) {
+			dev_err(&client->dev,
+				"%s: i2c send failed (%d) reg=0x%x len=%d val=%x\n",
+				__func__, ret, reg, len, buf[2]);
+		}
 		if (ret >= 0)
 			ret = -EIO;
-	}
+		msleep(100);
+	} while (retry++ < 10);
 
-	kfree(buf);
+	if (p)
+		kfree(p);
 	return ret;
 }
 
