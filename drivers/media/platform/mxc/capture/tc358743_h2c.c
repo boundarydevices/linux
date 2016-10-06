@@ -49,6 +49,7 @@
 #include "../../../../../sound/soc/fsl/fsl_ssi.h"
 #include <linux/slab.h>
 #include "mxc_v4l2_capture.h"
+#include "tc358743_regs.h"
 
 #define CODEC_CLOCK 16500000
 /* SSI clock sources */
@@ -72,9 +73,6 @@
 
 #define MAX_COLORBAR	tc358743_mode_INIT6
 #define IS_COLORBAR(a) (a <= MAX_COLORBAR)
-
-#define FV_CNT_LO                             0x85A1 /* Not in REF_01 */
-#define FV_CNT_HI                             0x85A2 /* Not in REF_01 */
 
 enum tc358743_mode {
 	tc358743_mode_INIT,
