@@ -183,8 +183,9 @@
 		fsl,pins = <
 #define GP_TC3587_RESET	<&gpio6 9 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_NANDF_WP_B__GPIO6_IO09	0x030b0
-#define GPIRQ_TC3587	<&gpio2 5 IRQ_TYPE_LEVEL_LOW>
-			MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x0b0b0
+#define GP_TC3587_IRQ	<&gpio2 5 GPIO_ACTIVE_HIGH>
+#define GPIRQ_TC3587	<&gpio2 5 IRQ_TYPE_LEVEL_HIGH>
+			MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x130b0
 		>;
 	};
 
@@ -850,6 +851,7 @@
 		AVDD-supply = <&reg_2p5v>;
 		DVDD-supply = <&reg_1p8v>;
 		rst-gpios = GP_TC3587_RESET;
+		irq-gpios = GP_TC3587_IRQ;
 		interrupts-extended = GPIRQ_TC3587;
 		ipu_id = <0>;
 		csi_id = <0>;
