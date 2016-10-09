@@ -12,12 +12,15 @@
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/of_irq.h>
+#include <linux/types.h>
 
 #include "clk.h"
 
 #define CCM_ANALOG_PLL_BYPASS		(0x1 << 16)
-#define BM_CCM_CCDR_MMDC_CH0_MASK	(0x2 << 16)
 #define xPLL_CLR(offset)		(offset + 0x8)
+#define BM_CCM_CCDR_MMDC_CH0_MASK	(0x2 << 16)
+#define CCDR	0x4
 
 static const char *pll_bypass_src_sels[] = { "osc", "dummy", };
 static const char *pll1_bypass_sels[] = { "pll1", "pll1_bypass_src", };
@@ -56,6 +59,12 @@ static const char *epdc_sels[] = { "epdc_podf", "ipp_di0", "ipp_di1", "ldb_di0",
 static struct clk *clks[IMX6SLL_CLK_END];
 static struct clk_onecell_data clk_data;
 
+static int const clks_init_on[] __initconst = {
+	IMX6SLL_CLK_AIPSTZ1, IMX6SLL_CLK_AIPSTZ2,
+	IMX6SLL_CLK_OCRAM, IMX6SLL_CLK_ARM, IMX6SLL_CLK_ROM,
+	IMX6SLL_CLK_MMDC_P0_FAST, IMX6SLL_CLK_MMDC_P0_IPG,
+};
+
 static const struct clk_div_table post_div_table[] = {
 	{ .val = 2, .div = 1, },
 	{ .val = 1, .div = 2, },
@@ -80,6 +89,7 @@ static void __init imx6sll_clocks_init(struct device_node *ccm_node)
 {
 	struct device_node *np;
 	void __iomem *base;
+	int i;
 
 	clks[IMX6SLL_CLK_DUMMY] = imx_clk_fixed("dummy", 0);
 
@@ -135,6 +145,15 @@ static void __init imx6sll_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SLL_CLK_PLL5_VIDEO]	= imx_clk_gate("pll5_video",	   "pll5_bypass", base + 0xa0, 13);
 	clks[IMX6SLL_CLK_PLL6_ENET]	= imx_clk_gate("pll6_enet",	   "pll6_bypass", base + 0xe0, 13);
 	clks[IMX6SLL_CLK_PLL7_USB_HOST]	= imx_clk_gate("pll7_usb_host",	   "pll7_bypass", base + 0x20, 13);
+
+	/* Do not bypass PLLs initially */
+	clk_set_parent(clks[IMX6SLL_PLL1_BYPASS], clks[IMX6SLL_CLK_PLL1]);
+	clk_set_parent(clks[IMX6SLL_PLL2_BYPASS], clks[IMX6SLL_CLK_PLL2]);
+	clk_set_parent(clks[IMX6SLL_PLL3_BYPASS], clks[IMX6SLL_CLK_PLL3]);
+	clk_set_parent(clks[IMX6SLL_PLL4_BYPASS], clks[IMX6SLL_CLK_PLL4]);
+	clk_set_parent(clks[IMX6SLL_PLL5_BYPASS], clks[IMX6SLL_CLK_PLL5]);
+	clk_set_parent(clks[IMX6SLL_PLL6_BYPASS], clks[IMX6SLL_CLK_PLL6]);
+	clk_set_parent(clks[IMX6SLL_PLL7_BYPASS], clks[IMX6SLL_CLK_PLL7]);
 
 	/*
 	 * Bit 20 is the reserved and read-only bit, we do this only for:
@@ -325,9 +344,13 @@ static void __init imx6sll_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SLL_CLK_USDHC3]	= imx_clk_gate2("usdhc3", "usdhc3_podf",  base + 0x80,	6);
 
 	/* mask handshake of mmdc */
-	writel_relaxed(BM_CCM_CCDR_MMDC_CH0_MASK, base + 0x4);
+	writel_relaxed(BM_CCM_CCDR_MMDC_CH0_MASK, base + CCDR);
 
 	imx_check_clocks(clks, ARRAY_SIZE(clks));
+
+	for (i = 0; i < ARRAY_SIZE(clks); i++)
+		if (IS_ERR(clks[i]))
+			pr_err("i.MX6SLL clk %d: register failed with %ld\n", i, PTR_ERR(clks[i]));
 
 	clk_data.clks = clks;
 	clk_data.clk_num = ARRAY_SIZE(clks);
