@@ -169,6 +169,14 @@ enum imx6sll_pads {
 	MX6SLL_PAD_GPIO4_IO26 = 152,
 };
 
+enum imx6sll_lpsr_pads {
+	MX6SLL_PAD_SNVS_TAMPER = 0,
+	MX6SLL_PAD_SNVS_PMIC_ON_REQ = 1,
+	MX6SLL_PAD_SNVS_PMIC_STBY_REQ = 2,
+	MX6SLL_PAD_SNVS_BOOT_MODE0 = 3,
+	MX6SLL_PAD_SNVS_BOOT_MODE1 = 4,
+};
+
 /* Pad names for the pinmux subsystem */
 static const struct pinctrl_pin_desc imx6sll_pinctrl_pads[] = {
 	IMX_PINCTRL_PIN(MX6SLL_PAD_RESERVE0),
@@ -332,21 +340,32 @@ static const struct imx_pinctrl_soc_info imx6sll_pinctrl_info = {
 	.gpr_compatible = "fsl,imx6sll-iomuxc-gpr",
 };
 
-static const struct of_device_id imx6sll_pinctrl_of_match[] = {
+static struct of_device_id imx6sll_pinctrl_of_match[] = {
 	{ .compatible = "fsl,imx6sll-iomuxc", .data = &imx6sll_pinctrl_info, },
 	{ /* sentinel */ }
 };
 
 static int imx6sll_pinctrl_probe(struct platform_device *pdev)
 {
-	return imx_pinctrl_probe(pdev, &imx6sll_pinctrl_info);
+	const struct of_device_id *match;
+	struct imx_pinctrl_soc_info *pinctrl_info;
+
+	match = of_match_device(imx6sll_pinctrl_of_match, &pdev->dev);
+
+	if (!match)
+		return -ENODEV;
+
+	pinctrl_info = (struct imx_pinctrl_soc_info *) match->data;
+
+	return imx_pinctrl_probe(pdev, pinctrl_info);
 }
 
 static struct platform_driver imx6sll_pinctrl_driver = {
 	.driver = {
 		.name = "imx6sll-pinctrl",
-		.of_match_table = of_match_ptr(imx6sll_pinctrl_of_match),
 		.suppress_bind_attrs = true,
+		.owner = THIS_MODULE,
+		.of_match_table = of_match_ptr(imx6sll_pinctrl_of_match),
 	},
 	.probe = imx6sll_pinctrl_probe,
 };
@@ -356,3 +375,13 @@ static int __init imx6sll_pinctrl_init(void)
 	return platform_driver_register(&imx6sll_pinctrl_driver);
 }
 arch_initcall(imx6sll_pinctrl_init);
+
+static void __exit imx6sll_pinctrl_exit(void)
+{
+	platform_driver_unregister(&imx6sll_pinctrl_driver);
+}
+module_exit(imx6sll_pinctrl_exit);
+
+MODULE_AUTHOR("Bai Ping <ping.bai@nxp.com>");
+MODULE_DESCRIPTION("Freescale imx6sll pinctrl driver");
+MODULE_LICENSE("GPL v2");
