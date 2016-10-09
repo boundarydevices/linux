@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2015 Freescale Semiconductor, Inc.
+ * Copyright 2013-2016 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -43,6 +43,10 @@ static inline void imx6sl_fec_init(void)
 
 static void __init imx6sl_init_late(void)
 {
+	/* cpufreq and cpuidle will be enabled later for i.MX6SLL */
+	if (cpu_is_imx6sll())
+		return;
+
 	/* imx6sl reuses imx6q cpufreq driver */
 	if (IS_ENABLED(CONFIG_ARM_IMX6Q_CPUFREQ))
 		platform_device_register_simple("imx6q-cpufreq", -1, NULL, 0);
@@ -63,7 +67,7 @@ static void __init imx6sl_init_machine(void)
 
 	of_platform_default_populate(NULL, NULL, parent);
 
-	if (cpu_is_imx6sl())
+	if (!cpu_is_imx6sll())
 		imx6sl_fec_init();
 	imx_anatop_init();
 	imx6sl_pm_init();
