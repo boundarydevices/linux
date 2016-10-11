@@ -1467,6 +1467,10 @@ static struct sdma_desc *sdma_transfer_init(struct sdma_channel *sdmac,
 		goto err_out;
 
 	sdmac->status = DMA_IN_PROGRESS;
+	sdmac->desc->buf_tail = 0;
+	sdmac->desc->buf_ptail = 0;
+	sdmac->desc->chn_real_count = 0;
+	sdmac->flags = 0;
 	sdmac->direction = direction;
 	sdmac->flags = 0;
 
