@@ -596,7 +596,7 @@ struct imx6_cpu_pm_info {
 	struct imx6_pm_base anatop_base;
 	u32 ttbr1; /* Store TTBR1 */
 	u32 mmdc_io_num; /* Number of MMDC IOs which need saved/restored. */
-	u32 mmdc_io_val[MX6_MAX_MMDC_IO_NUM][2]; /* To save offset and value */
+	u32 mmdc_io_val[MX6_MAX_MMDC_IO_NUM][3]; /* To save offset, value, low power settings */
 	u32 mmdc_num; /* Number of MMDC registers which need saved/restored. */
 	u32 mmdc_val[MX6_MAX_MMDC_NUM][2];
 } __aligned(8);
@@ -1117,6 +1117,20 @@ static int __init imx6q_suspend_init(const struct imx6_pm_socdata *socdata)
 		pm_info->mmdc_io_val[i][1] =
 			readl_relaxed(pm_info->iomuxc_base.vbase +
 			mmdc_io_offset_array[i]);
+		pm_info->mmdc_io_val[i][2] = 0;
+	}
+
+	/* i.MX6SLL has no DRAM RESET pin */
+	if (cpu_is_imx6sll()) {
+		pm_info->mmdc_io_val[pm_info->mmdc_io_num - 2][2] = 0x1000;
+		pm_info->mmdc_io_val[pm_info->mmdc_io_num - 1][2] = 0x1000;
+	} else {
+		if (pm_info->ddr_type == IMX_DDR_TYPE_LPDDR2) {
+			/* for LPDDR2, CKE0/1 and RESET pin need special setting */
+			pm_info->mmdc_io_val[pm_info->mmdc_io_num - 3][2] = 0x1000;
+			pm_info->mmdc_io_val[pm_info->mmdc_io_num - 2][2] = 0x1000;
+			pm_info->mmdc_io_val[pm_info->mmdc_io_num - 1][2] = 0x80000;
+		}
 	}
 
 	/* initialize MMDC settings */
