@@ -597,7 +597,28 @@
 				clock-names = "ipg", "ahb";
 				#dma-cells = <3>;
 				iram = <&ocram>;
-				fsl,sdma-ram-script-name = "imx/sdma/sdma-imx6q.bin";
+				fsl,sdma-ram-script-name = "imx/sdma/sdma-imx6q-bin";
+				status = "disabled";
+			};
+
+			pxp: pxp@20f0000 {
+				compatible = "fsl,imx6ull-pxp-dma", "fsl,imx7d-pxp-dma";
+				reg = <0x020f0000 0x4000>;
+				interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX6SLL_CLK_DUMMY>,
+					 <&clks IMX6SLL_CLK_PXP>;
+				clock-names = "pxp_ipg", "pxp_axi";
+				status = "disabled";
+			};
+
+			epdc: epdc@20f4000 {
+				compatible = "fsl,imx6sll-epdc", "fsl,imx7d-epdc";
+				reg = <0x020f4000 0x4000>;
+				interrupts = <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clks IMX6SLL_CLK_EPDC_AXI>, <&clks IMX6SLL_CLK_EPDC_PIX>;
+				clock-names = "epdc_axi", "epdc_pix";
+				status = "disabled";
 			};
 
 			lcdif: lcd-controller@20f8000 {
