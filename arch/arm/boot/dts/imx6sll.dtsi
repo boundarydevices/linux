@@ -270,7 +270,7 @@
 				};
 
 				ssi1: ssi-controller@2028000 {
-					compatible = "fsl,imx6sl-ssi", "fsl,imx51-ssi";
+					compatible = "fsl,imx6sll-ssi", "fsl,imx51-ssi";
 					reg = <0x02028000 0x4000>;
 					interrupts = <GIC_SPI 46 IRQ_TYPE_LEVEL_HIGH>;
 					dmas = <&sdma 37 22 0>, <&sdma 38 22 0>;
@@ -597,8 +597,7 @@
 				clock-names = "ipg", "ahb";
 				#dma-cells = <3>;
 				iram = <&ocram>;
-				fsl,sdma-ram-script-name = "imx/sdma/sdma-imx6q-bin";
-				status = "disabled";
+				fsl,sdma-ram-script-name = "imx/sdma/sdma-imx6q.bin";
 			};
 
 			pxp: pxp@20f0000 {
