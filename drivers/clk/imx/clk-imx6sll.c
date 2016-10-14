@@ -251,7 +251,6 @@ static void __init imx6sll_clocks_init(struct device_node *ccm_node)
 	clks[IMX6SLL_CLK_EPDC_PODF]  = imx_clk_divider("epdc_podf",  "epdc_pre_sel",  base + 0x34, 12, 3);
 	clks[IMX6SLL_CLK_ECSPI_PODF] = imx_clk_divider("ecspi_podf", "ecspi_sel",     base + 0x38, 19, 6);
 	clks[IMX6SLL_CLK_LCDIF_PRED] = imx_clk_divider("lcdif_pred", "lcdif_pre_sel", base + 0x38, 12, 3);
-
 	clks[IMX6SLL_CLK_ARM]		= imx_clk_busy_divider("arm", 	    "pll1_sw",	base +	0x10, 0,  3,  base + 0x48, 16);
 	clks[IMX6SLL_CLK_MMDC_PODF]	= imx_clk_busy_divider("mmdc_podf", "periph2",	base +  0x14, 3,  3,  base + 0x48, 2);
 	clks[IMX6SLL_CLK_AXI_PODF]	= imx_clk_busy_divider("axi",       "axi_sel",	base +  0x14, 16, 3,  base + 0x48, 0);

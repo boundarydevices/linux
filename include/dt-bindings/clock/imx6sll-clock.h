@@ -196,7 +196,6 @@
 #define IMX6SLL_CLK_EXTERN_AUDIO_PRED   170
 #define IMX6SLL_CLK_EXTERN_AUDIO_PODF   171
 #define IMX6SLL_CLK_EXTERN_AUDIO        172
-
 #define IMX6SLL_CLK_GPIO1               173
 #define IMX6SLL_CLK_GPIO2               174
 #define IMX6SLL_CLK_GPIO3               175
