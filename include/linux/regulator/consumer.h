@@ -131,6 +131,7 @@ struct regulator_dev;
 #define REGULATOR_EVENT_WARN_MASK		0x1E000
 #define REGULATOR_EVENT_PRE_DO_ENABLE		0x20000
 #define REGULATOR_EVENT_PRE_DO_DISABLE		0x40000
+#define REGULATOR_EVENT_AFT_DO_ENABLE		0x80000
 
 /*
  * Regulator errors that can be queried using regulator_get_error_flags
