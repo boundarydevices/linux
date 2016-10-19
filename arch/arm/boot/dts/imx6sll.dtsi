@@ -744,7 +744,7 @@
 				status = "disabled";
 			};
 
-			usdhc3: mmc@2198000 {
+			usdhc3: usdhc@2198000 {
 				compatible = "fsl,imx6sll-usdhc", "fsl,imx6sx-usdhc";
 				reg = <0x02198000 0x4000>;
 				interrupts = <GIC_SPI 24 IRQ_TYPE_LEVEL_HIGH>;
