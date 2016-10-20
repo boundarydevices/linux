@@ -699,5 +699,14 @@
 		interrupts = <0 188 1 0 189 1>;
 		reg = <0x0 0xc883e000 0x0 0x28>;
 	};
+
+	saradc: saradc {
+		compatible = "amlogic, saradc";
+		status = "okay";
+		clocks = <&clkc CLKID_SARADC>;
+		clock-names = "saradc_clk";
+		reg = <0x0 0xc1108680 0x0 0x30
+		       0x0 0xc883c3d8 0x0 0x08>;
+	};
 };
 

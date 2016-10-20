@@ -1,0 +1,24 @@
+Amlogic Successive Approximation Register (SAR) A/D Converter bindings
+
+Required properties:
+- compatible: Must be "amlogic, saradc".
+- clocks: The clock provided by the SoC to the device.
+- clock-names: Shall be "saradc_clk" for the device.
+- resets: Shall be "GCLK_IDX_SARADC" for the device.
+- reg: Physical base address of the controller and length of memory mapped
+       region.
+
+Optional properties:
+- status: Shall be "ok" or "okay" if enabled or "disabled" if disabled.
+          Default is "ok".
+
+Example:
+	saradc: saradc {
+		compatible = "amlogic, saradc";
+		status = "okay";
+		clocks = <&clock CLK_XTAL>;
+		clock-names = "saradc_clk";
+		resets = <&clock GCLK_IDX_SARADC>;
+		reg = <0x0 0xc1108680 0x0 0x30
+		0x0 0xc883c3d8 0x0 0x08>;
+	};

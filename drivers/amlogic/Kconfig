@@ -32,5 +32,7 @@ source "drivers/amlogic/clocksource/Kconfig"
 source "drivers/amlogic/clk/Kconfig"
 
 source "drivers/amlogic/crypto/Kconfig"
+
+source "drivers/amlogic/input/Kconfig"
 endmenu
 endif

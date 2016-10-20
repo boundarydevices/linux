@@ -29,3 +29,5 @@ obj-$(CONFIG_AMLOGIC_TIMER)		+= clocksource/
 obj-$(CONFIG_AMLOGIC_CLK)		+= clk/
 
 obj-$(CONFIG_AMLOGIC_CRYPTO)		+= crypto/
+
+obj-$(CONFIG_AMLOGIC_INPUT)		+= input/

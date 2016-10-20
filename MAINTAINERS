@@ -13446,3 +13446,7 @@ F:	scripts/amlogic/configs/
 AMLOGIC CRYPTO DMA
 M:	Matthew Shyu <matthew.shyu@amlogic.com>
 F:	drivers/amlogic/crypto/*
+
+AMLOGIC saradc
+M:	Xingyu Chen <xingyu.chen@amlogic.com>
+F:	drivers/amlogic/input/saradc/*
