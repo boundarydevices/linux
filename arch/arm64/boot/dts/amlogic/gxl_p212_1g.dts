@@ -115,3 +115,7 @@
 		support-sysrq = <0>;	/* 0 not support , 1 support */
 	};
 };
+
+&efuse {
+	status = "ok";
+};

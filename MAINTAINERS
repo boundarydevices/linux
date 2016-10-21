@@ -13454,3 +13454,8 @@ F:	drivers/amlogic/input/saradc/*
 AMLOGIC adc_keypad
 M:	Xingyu Chen <xingyu.chen@amlogic.com>
 F:	drivers/amlogic/input/keyboard/*
+
+AMLOGIC EFUSE DRIVER
+M:	Yun Cai <yum.cai@amlogic.com>
+F:	drivers/amlogic/efuse/*
+F:	include/linux/amlogic/efuse.h

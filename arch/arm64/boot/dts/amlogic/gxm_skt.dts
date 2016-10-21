@@ -13,7 +13,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- */
+*/
 
 /dts-v1/;
 
@@ -57,3 +57,8 @@
 		support-sysrq = <0>;	/* 0 not support , 1 support */
 	};
 };
+
+&efuse {
+	status = "ok";
+};
+

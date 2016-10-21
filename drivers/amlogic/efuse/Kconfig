@@ -1,0 +1,26 @@
+#
+# Amlogic efuse device configuration
+#
+
+menu "EFUSE Support"
+
+config AMLOGIC_EFUSE
+	bool	"amlogic EFUSE Driver"
+	default	n
+	help
+		amlogic EFUSE device driver,
+		not choose by default,
+		if you want to use,
+		choose y.
+
+config	AMLOGIC_EFUSE_WRITE_VERSION_PERMIT
+	depends	on AMLOGIC_EFUSE
+	bool	"efuse write version permit"
+	default	n
+	help
+		efuse version is prohibited writing in kernel default case,
+		if it must be written, enable this config
+		if you don't understand efuse version, please don't enable this config
+
+
+endmenu
