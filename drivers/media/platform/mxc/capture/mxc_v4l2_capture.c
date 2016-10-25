@@ -1644,6 +1644,7 @@ static int mxc_v4l_dqueue(cam_data *cam, struct v4l2_buffer *buf)
 	buf->flags = frame->buffer.flags;
 	buf->m = cam->frame[frame->index].buffer.m;
 	buf->timestamp = cam->frame[frame->index].buffer.timestamp;
+	buf->sequence = cam->frame[frame->index].buffer.sequence;
 	buf->field = cam->frame[frame->index].buffer.field;
 	spin_unlock_irqrestore(&cam->dqueue_int_lock, lock_flags);
 
@@ -1799,6 +1800,7 @@ static int mxc_v4l_open(struct file *file)
 		INIT_LIST_HEAD(&cam->ready_q);
 		INIT_LIST_HEAD(&cam->working_q);
 		INIT_LIST_HEAD(&cam->done_q);
+		cam->sequence = 0;
 		setup_ifparm(cam, 1);
 		if (!IS_ERR(sensor->sensor_clk))
 			clk_prepare_enable(sensor->sensor_clk);
@@ -2667,14 +2669,16 @@ static void camera_callback(u32 mask, void *dev)
 		if (done_frame->ipu_buf_num != cam->local_buf_num)
 			goto next;
 
-		/*
-		 * Set the current time to done frame buffer's
-		 * timestamp. Users can use this information to judge
-		 * the frame's usage.
-		 */
-		done_frame->buffer.timestamp = cur_time;
-
 		if (done_frame->buffer.flags & V4L2_BUF_FLAG_QUEUED) {
+			/*
+			 * Set the current time to done frame buffer's
+			 * timestamp. Users can use this information to judge
+			 * the frame's usage.
+			 */
+			done_frame->buffer.timestamp = cur_time;
+			done_frame->buffer.sequence = cam->sequence;
+			cam->sequence++;
+
 			done_frame->buffer.flags |= V4L2_BUF_FLAG_DONE;
 			done_frame->buffer.flags &= ~V4L2_BUF_FLAG_QUEUED;
 
