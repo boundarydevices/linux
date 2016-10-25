@@ -142,6 +142,8 @@
 /* The IP supports HS400 mode */
 #define ESDHC_FLAG_HS400		BIT(9)
 
+/* need request bus freq during low power */
+#define ESDHC_FLAG_BUSFREQ		BIT(10)
 /* A higher clock ferquency than this rate requires strobell dll control */
 #define ESDHC_STROBE_DLL_CLK_FREQ	100000000
 
@@ -185,18 +187,19 @@ static struct esdhc_soc_data usdhc_imx6q_data = {
 static struct esdhc_soc_data usdhc_imx6sl_data = {
 	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
 			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_ERR004536
-			| ESDHC_FLAG_HS200,
+			| ESDHC_FLAG_HS200 | ESDHC_FLAG_BUSFREQ,
 };
 
 static struct esdhc_soc_data usdhc_imx6sx_data = {
 	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
-			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_HS200,
+			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_HS200
+			| ESDHC_FLAG_BUSFREQ,
 };
 
 static struct esdhc_soc_data usdhc_imx7d_data = {
 	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
 			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_HS200
-			| ESDHC_FLAG_HS400,
+			| ESDHC_FLAG_HS400  | ESDHC_FLAG_BUSFREQ,
 };
 
 struct pltfm_imx_data {
@@ -1217,7 +1220,8 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 	pltfm_host->clk = imx_data->clk_per;
 	pltfm_host->clock = clk_get_rate(pltfm_host->clk);
 
-	request_bus_freq(BUS_FREQ_HIGH);
+	if (imx_data->socdata->flags & ESDHC_FLAG_BUSFREQ)
+		request_bus_freq(BUS_FREQ_HIGH);
 
 	clk_prepare_enable(imx_data->clk_per);
 	clk_prepare_enable(imx_data->clk_ipg);
@@ -1309,7 +1313,8 @@ disable_clk:
 	clk_disable_unprepare(imx_data->clk_per);
 	clk_disable_unprepare(imx_data->clk_ipg);
 	clk_disable_unprepare(imx_data->clk_ahb);
-	release_bus_freq(BUS_FREQ_HIGH);
+	if (imx_data->socdata->flags & ESDHC_FLAG_BUSFREQ)
+		release_bus_freq(BUS_FREQ_HIGH);
 free_sdhci:
 	sdhci_pltfm_free(pdev);
 	return err;
@@ -1353,7 +1358,8 @@ static int sdhci_esdhc_runtime_suspend(struct device *dev)
 	}
 	clk_disable_unprepare(imx_data->clk_ahb);
 
-	release_bus_freq(BUS_FREQ_HIGH);
+	if (imx_data->socdata->flags & ESDHC_FLAG_BUSFREQ)
+		release_bus_freq(BUS_FREQ_HIGH);
 
 	return ret;
 }
@@ -1364,7 +1370,8 @@ static int sdhci_esdhc_runtime_resume(struct device *dev)
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct pltfm_imx_data *imx_data = pltfm_host->priv;
 
-	request_bus_freq(BUS_FREQ_HIGH);
+	if (imx_data->socdata->flags & ESDHC_FLAG_BUSFREQ)
+		request_bus_freq(BUS_FREQ_HIGH);
 
 	if (!sdhci_sdio_irq_enabled(host)) {
 		clk_prepare_enable(imx_data->clk_per);
