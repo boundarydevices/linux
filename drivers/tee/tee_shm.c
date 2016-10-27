@@ -20,6 +20,14 @@
 #include <linux/tee_drv.h>
 #include "tee_private.h"
 
+/* extra references appended to shm object for registered shared memory */
+struct tee_shm_dmabuf_ref {
+	struct tee_shm shm;
+	struct dma_buf *dmabuf;
+	struct dma_buf_attachment *attach;
+	struct sg_table *sgt;
+};
+
 static void tee_shm_release(struct tee_shm *shm)
 {
 	struct tee_device *teedev = shm->teedev;
@@ -30,7 +38,15 @@ static void tee_shm_release(struct tee_shm *shm)
 		list_del(&shm->link);
 	mutex_unlock(&teedev->mutex);
 
-	if (shm->flags & TEE_SHM_POOL) {
+	if (shm->flags & TEE_SHM_EXT_DMA_BUF) {
+		struct tee_shm_dmabuf_ref *ref;
+
+		ref = container_of(shm, struct tee_shm_dmabuf_ref, shm);
+		dma_buf_unmap_attachment(ref->attach, ref->sgt,
+					 DMA_BIDIRECTIONAL);
+		dma_buf_detach(shm->dmabuf, ref->attach);
+		dma_buf_put(ref->dmabuf);
+	} else {
 		struct tee_shm_pool_mgr *poolm;
 
 		if (shm->flags & TEE_SHM_DMA_BUF)
@@ -39,25 +55,9 @@ static void tee_shm_release(struct tee_shm *shm)
 			poolm = teedev->pool->private_mgr;
 
 		poolm->ops->free(poolm, shm);
-	} else if (shm->flags & TEE_SHM_REGISTER) {
-		size_t n;
-		int rc = teedev->desc->ops->shm_unregister(shm->ctx, shm);
-
-		if (rc)
-			dev_err(teedev->dev.parent,
-				"unregister shm %p failed: %d", shm, rc);
-
-		for (n = 0; n < shm->num_pages; n++)
-			put_page(shm->pages[n]);
-
-		kfree(shm->pages);
 	}
 
-	if (shm->ctx)
-		teedev_ctx_put(shm->ctx);
-
 	kfree(shm);
-
 	tee_device_put(teedev);
 }
 
@@ -341,6 +341,100 @@ err:
 	return ret;
 }
 EXPORT_SYMBOL_GPL(tee_shm_register);
+
+struct tee_shm *tee_shm_register_fd(struct tee_context *ctx, int fd)
+{
+	struct tee_shm_dmabuf_ref *ref;
+	void *rc;
+	DEFINE_DMA_BUF_EXPORT_INFO(exp_info);
+
+	if (!tee_device_get(ctx->teedev))
+		return ERR_PTR(-EINVAL);
+
+	ref = kzalloc(sizeof(*ref), GFP_KERNEL);
+	if (!ref) {
+		rc = ERR_PTR(-ENOMEM);
+		goto err;
+	}
+
+	ref->shm.ctx = ctx;
+	ref->shm.teedev = ctx->teedev;
+	ref->shm.id = -1;
+
+	ref->dmabuf = dma_buf_get(fd);
+	if (!ref->dmabuf) {
+		rc = ERR_PTR(-EINVAL);
+		goto err;
+	}
+
+	ref->attach = dma_buf_attach(ref->dmabuf, &ref->shm.teedev->dev);
+	if (IS_ERR_OR_NULL(ref->attach)) {
+		rc = ERR_PTR(-EINVAL);
+		goto err;
+	}
+
+	ref->sgt = dma_buf_map_attachment(ref->attach, DMA_BIDIRECTIONAL);
+	if (IS_ERR_OR_NULL(ref->sgt)) {
+		rc = ERR_PTR(-EINVAL);
+		goto err;
+	}
+
+	if (sg_nents(ref->sgt->sgl) != 1) {
+		rc = ERR_PTR(-EINVAL);
+		goto err;
+	}
+
+	ref->shm.paddr = sg_dma_address(ref->sgt->sgl);
+	ref->shm.size = sg_dma_len(ref->sgt->sgl);
+	ref->shm.flags = TEE_SHM_DMA_BUF | TEE_SHM_EXT_DMA_BUF;
+
+	mutex_lock(&ref->shm.teedev->mutex);
+	ref->shm.id = idr_alloc(&ref->shm.teedev->idr, &ref->shm,
+				1, 0, GFP_KERNEL);
+	mutex_unlock(&ref->shm.teedev->mutex);
+	if (ref->shm.id < 0) {
+		rc = ERR_PTR(ref->shm.id);
+		goto err;
+	}
+
+	/* export a dmabuf to later get a userland ref */
+	exp_info.ops = &tee_shm_dma_buf_ops;
+	exp_info.size = ref->shm.size;
+	exp_info.flags = O_RDWR;
+	exp_info.priv = &ref->shm;
+
+	ref->shm.dmabuf = dma_buf_export(&exp_info);
+	if (IS_ERR(ref->shm.dmabuf)) {
+		rc = ERR_PTR(-EINVAL);
+		goto err;
+	}
+
+	mutex_lock(&ref->shm.teedev->mutex);
+	list_add_tail(&ref->shm.link, &ctx->list_shm);
+	mutex_unlock(&ref->shm.teedev->mutex);
+
+	return &ref->shm;
+
+err:
+	if (ref) {
+		if (ref->shm.id >= 0) {
+			mutex_lock(&ctx->teedev->mutex);
+			idr_remove(&ctx->teedev->idr, ref->shm.id);
+			mutex_unlock(&ctx->teedev->mutex);
+		}
+		if (ref->sgt)
+			dma_buf_unmap_attachment(ref->attach, ref->sgt,
+						 DMA_BIDIRECTIONAL);
+		if (ref->attach)
+			dma_buf_detach(ref->dmabuf, ref->attach);
+		if (ref->dmabuf)
+			dma_buf_put(ref->dmabuf);
+	}
+	kfree(ref);
+	tee_device_put(ctx->teedev);
+	return rc;
+}
+EXPORT_SYMBOL_GPL(tee_shm_register_fd);
 
 /**
  * tee_shm_get_fd() - Increase reference count and return file descriptor
