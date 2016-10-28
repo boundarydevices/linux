@@ -8843,3 +8843,33 @@ const u32 sched_prio_to_wmult[40] = {
  /*  10 */  39045157,  49367440,  61356676,  76695844,  95443717,
  /*  15 */ 119304647, 148102320, 186737708, 238609294, 286331153,
 };
+
+#ifdef CONFIG_AMLOGIC_CPU_HOTPLUG
+int select_cpu_for_hotplug(struct task_struct *p, int cpu,
+	int sd_flags, int wake_flags)
+{
+	cpu = p->sched_class->select_task_rq(p, cpu, sd_flags, wake_flags);
+	/*
+	 * In order not to call set_task_cpu() on a blocking task we need
+	 * to rely on ttwu() to place the task on a valid ->cpus_allowed
+	 * cpu.
+	 *
+	 * Since this is common to all placement strategies, this lives here.
+	 *
+	 * [ this allows ->select_task() to simply return task_cpu(p) and
+	 *   not worry about this generic constraint ]
+	 */
+	if (unlikely(!cpumask_test_cpu(cpu, tsk_cpus_allowed(p)) ||
+		     !cpu_online(cpu)))
+		cpu = select_fallback_rq(task_cpu(p), p);
+	return cpu;
+}
+#else
+static inline int select_cpu_for_hotplug(struct task_struct *p, int cpu,
+	int sd_flags, int wake_flags)
+{
+	return 0;
+}
+
+#endif
+

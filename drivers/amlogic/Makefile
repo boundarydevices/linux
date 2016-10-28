@@ -41,3 +41,4 @@ obj-$(CONFIG_AMLOGIC_REBOOT)		+= reboot/
 
 obj-$(CONFIG_AMLOGIC_INTERNAL_PHY)	+= ethernet/phy/
 
+obj-$(CONFIG_AMLOGIC_CPU_HOTPLUG)	+= cpu_hotplug/

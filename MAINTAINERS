@@ -13499,4 +13499,7 @@ AMLOGIC internal phy driver for ethernet
 M: Yizhou Jiang <yizhou.jiang@amlogic.com
 F: drivers/amlogic/ethernet/*
 
+AMLOGIC CPU hotplug for dvfs and IPA
+M: Jianxin Pan <jianxin.pan@amlogic.com>
+F: drivers/amlogic/cpu_hotplug/*
 
