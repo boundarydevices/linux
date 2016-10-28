@@ -90,6 +90,7 @@ struct ldb_chan {
 	int chno;
 	bool is_used;
 	bool online;
+	int parent_choice_index;
 };
 
 struct ldb_data {
@@ -451,7 +452,7 @@ static int ldb_setup(struct mxc_dispdrv_handle *mddh,
 		parent = ldb->clk_ldb_di_choices[i];
 		if (!parent)
 			continue;
-		if (i <= 1) {
+		if ((i <= 1) && (ldb->chan[other_chno].parent_choice_index != i)) {
 			rate = clk_round_rate(parent, serial_clk);
 			pr_debug("%s: round rate=%ld\n", __func__, rate);
 		} else {
@@ -473,8 +474,9 @@ static int ldb_setup(struct mxc_dispdrv_handle *mddh,
 		clk_set_parent(ldb_di_sel, best_parent);
 		ldb_di_sel_parent = best_parent;
 	}
-	if (best_i <= 1)
+	if ((best_i <= 1) && (ldb->chan[other_chno].parent_choice_index != best_i))
 		clk_set_rate(ldb_di_sel_parent, serial_clk);
+	ldb->chan[chno].parent_choice_index = best_i;
 
 	/*
 	 * split mode or dual mode:
@@ -732,6 +734,8 @@ static int ldb_probe(struct platform_device *pdev)
 	ldb->buses = ldb_info->buses;
 	ldb->ctrl_reg = ldb_info->ctrl_reg;
 	ldb->primary_chno = -1;
+	ldb->chan[0].parent_choice_index = -1;
+	ldb->chan[1].parent_choice_index = -1;
 
 	ext_ref = of_property_read_bool(np, "ext-ref");
 	if (!ext_ref && ldb_info->ext_bgref_cap)
