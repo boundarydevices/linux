@@ -174,7 +174,7 @@ static int ldb_di_sel_by_clock_id(int clock_id)
 /*
  * Read the LDBID[0/1] parents from the device tree.
  * If no entry is found in the device tree, the default
- * parent will be set to IMX6QDL_CLK_PLL2_PFD0_352M
+ * parent will be set to IMX6QDL_CLK_PLL5_VIDEO_DIV
  */
 static void of_assigned_ldb_sels(struct device_node *node,
 				 int *ldb_di0_sel, int *ldb_di1_sel)
@@ -182,27 +182,21 @@ static void of_assigned_ldb_sels(struct device_node *node,
 	struct of_phandle_args clkspec;
 	int index = 0, rc;
 
+	*ldb_di0_sel = 0;	/* IMX6QDL_CLK_PLL5_VIDEO_DIV */
+	*ldb_di1_sel = 0;
 	rc = of_parse_phandle_with_args(node, "fsl,ldb-di0-parent",
 					"#clock-cells", index, &clkspec);
-	if (rc < 0) {
-		/* skip empty (null) phandles */
+	if (rc >= 0) {
+		rc = ldb_di_sel_by_clock_id(clkspec.args[0]);
 		if (rc != -ENOENT)
-			*ldb_di0_sel = IMX6QDL_CLK_PLL2_PFD0_352M;
-	} else {
-		*ldb_di0_sel = ldb_di_sel_by_clock_id(clkspec.args[0]);
-		if (*ldb_di0_sel == -ENOENT)
-			*ldb_di0_sel = IMX6QDL_CLK_PLL2_PFD0_352M;
+			*ldb_di0_sel = rc;
 	}
 	rc = of_parse_phandle_with_args(node, "fsl,ldb-di1-parent",
 					"#clock-cells", index, &clkspec);
-	if (rc < 0) {
-		/* skip empty (null) phandles */
+	if (rc >= 0) {
+		rc = ldb_di_sel_by_clock_id(clkspec.args[0]);
 		if (rc != -ENOENT)
-			*ldb_di1_sel = IMX6QDL_CLK_PLL2_PFD0_352M;
-	} else {
-		*ldb_di1_sel = ldb_di_sel_by_clock_id(clkspec.args[0]);
-		if (*ldb_di1_sel == -ENOENT)
-			*ldb_di1_sel = IMX6QDL_CLK_PLL2_PFD0_352M;
+			*ldb_di1_sel = rc;
 	}
 }
 
@@ -275,8 +269,8 @@ static void mmdc_ch1_reenable(void)
 static void init_ldb_clks(struct device_node *np)
 {
 	unsigned int reg;
-	int ldb_di0_sel[4] = { 0 };
-	int ldb_di1_sel[4] = { 0 };
+	unsigned ldb_di0_sel[4] = { 0 };
+	unsigned ldb_di1_sel[4] = { 0 };
 	int i;
 
 	reg = readl_relaxed(ccm_base + CCM_CS2CDR);
@@ -290,7 +284,9 @@ static void init_ldb_clks(struct device_node *np)
 		return;
 
 	if (ldb_di0_sel[0] != 3 || ldb_di1_sel[0] != 3)
-		pr_warn("ccm: ldb_di_sel already changed from reset value\n");
+		pr_warn("ccm: ldb_di_sel already changed from reset value, %d->%d, %d->%d\n",
+			ldb_di0_sel[0], ldb_di0_sel[3],
+			ldb_di1_sel[0], ldb_di1_sel[3]);
 
 	if (ldb_di0_sel[0] > 3 || ldb_di1_sel[0] > 3 ||
 	    ldb_di0_sel[3] > 3 || ldb_di1_sel[3] > 3) {
@@ -308,13 +304,23 @@ static void init_ldb_clks(struct device_node *np)
 
 	for (i = 1; i < 4; i++) {
 		reg = readl_relaxed(ccm_base + CCM_CS2CDR);
-		reg &= ~((7 << 9) | (7 << 12));
-		reg |= ((ldb_di0_sel[i] << 9) | (ldb_di1_sel[i] << 12));
+		if (ldb_di0_sel[0] != ldb_di0_sel[3]) {
+			reg &= ~(7 << 9);
+			reg |= (ldb_di0_sel[i] << 9);
+		}
+		if (ldb_di1_sel[0] != ldb_di1_sel[3]) {
+			reg &= ~(7 << 12);
+			reg |= (ldb_di1_sel[i] << 12);
+		}
 		writel_relaxed(reg, ccm_base + CCM_CS2CDR);
 	}
 
 	mmdc_ch1_reenable();
-	mmdc_ch1_handshake(true);
+/*
+ * Enabling handshake prevents mmdc_ch1_axi rate from being changed
+ * and it is disabled by imx6q_mmdc_ch1_mask_handshake if this glitch is not being worked around
+ */
+/*	mmdc_ch1_handshake(true); */
 }
 
 static void disable_anatop_clocks(void)
