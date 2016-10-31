@@ -262,7 +262,7 @@
 				};
 
 				uart4: serial@2018000 {
-					compatible = "fsl,imx6sl-uart", "fsl,imx6q-uart",
+					compatible = "fsl,imx6sll-uart", "fsl,imx6q-uart",
 						     "fsl,imx21-uart";
 					reg = <0x02018000 0x4000>;
 					interrupts =<GIC_SPI 29 IRQ_TYPE_LEVEL_HIGH>;
@@ -288,7 +288,7 @@
 				};
 
 				uart2: serial@2024000 {
-					compatible = "fsl,imx6sl-uart", "fsl,imx6q-uart",
+					compatible = "fsl,imx6sll-uart", "fsl,imx6q-uart",
 						     "fsl,imx21-uart";
 					reg = <0x02024000 0x4000>;
 					interrupts = <GIC_SPI 27 IRQ_TYPE_LEVEL_HIGH>;
@@ -340,7 +340,7 @@
 				};
 
 				uart3: serial@2034000 {
-					compatible = "fsl,imx6sl-uart", "fsl,imx6q-uart",
+					compatible = "fsl,imx6sll-uart", "fsl,imx6q-uart",
 						     "fsl,imx21-uart";
 					reg = <0x02034000 0x4000>;
 					interrupts = <GIC_SPI 28 IRQ_TYPE_LEVEL_HIGH>;
