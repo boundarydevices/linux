@@ -51,6 +51,9 @@
 /* for irq #74 and #75 */
 #define GPC_USB_VBUS_WAKEUP_IRQ_MASK		0xc00
 
+/* for irq #150 and #151 */
+#define GPC_ENET_WAKEUP_IRQ_MASK        0xC00000
+
 static void __iomem *gpc_base;
 static u32 gpc_wake_irqs[IMR_NUM];
 static u32 gpc_saved_imrs[IMR_NUM];
@@ -136,6 +139,17 @@ bool imx_gpc_usb_wakeup_enabled(void)
 	 * if to keep weak 2P5 on.
 	 */
 	if (gpc_wake_irqs[1] & GPC_USB_VBUS_WAKEUP_IRQ_MASK)
+		return true;
+
+	return false;
+}
+
+bool imx_gpc_enet_wakeup_enabled(void)
+{
+	if (!cpu_is_imx6q())
+		return false;
+
+	if (gpc_wake_irqs[3] & GPC_ENET_WAKEUP_IRQ_MASK)
 		return true;
 
 	return false;
