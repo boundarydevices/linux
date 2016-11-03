@@ -9,3 +9,9 @@ config MESON_SM
 	depends on ARM64_4K_PAGES
 	help
 	  Say y here to enable the Amlogic secure monitor driver
+
+config MESON_GX_PM
+	bool
+	default ARCH_MESON if ARM64
+	help
+	  Say y here to enable the Amlogic GX SoC Power Management
