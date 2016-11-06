@@ -1678,6 +1678,7 @@ static void uvc_delete(struct uvc_device *dev)
 		usb_driver_release_interface(&uvc_driver.driver,
 			streaming->intf);
 		usb_put_intf(streaming->intf);
+		uvc_video_deinit(streaming);
 		kfree(streaming->format);
 		kfree(streaming->header.bmaControls);
 		kfree(streaming);
@@ -1733,11 +1734,6 @@ static int uvc_register_video(struct uvc_device *dev,
 {
 	struct video_device *vdev = &stream->vdev;
 	int ret;
-
-	/* Initialize the video buffers queue. */
-	ret = uvc_queue_init(&stream->queue, stream->type, !uvc_no_drop_param);
-	if (ret)
-		return ret;
 
 	/* Initialize the streaming interface with default streaming
 	 * parameters.
