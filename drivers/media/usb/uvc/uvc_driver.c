@@ -1641,6 +1641,7 @@ static void uvc_delete(struct uvc_device *dev)
 		usb_driver_release_interface(&uvc_driver.driver,
 			streaming->intf);
 		usb_put_intf(streaming->intf);
+		uvc_video_deinit(streaming);
 		kfree(streaming->format);
 		kfree(streaming->header.bmaControls);
 		kfree(streaming);
