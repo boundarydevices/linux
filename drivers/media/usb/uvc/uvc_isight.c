@@ -59,14 +59,14 @@ static int isight_decode(struct uvc_video_queue *queue, struct uvc_buffer *buf,
 	}
 
 	/* Synchronize to the input stream by waiting for a header packet. */
-	if (buf->state != UVC_BUF_STATE_ACTIVE) {
+	if (!buf->ts) {
 		if (!is_header) {
 			uvc_trace(UVC_TRACE_FRAME, "Dropping packet (out of "
 				  "sync).\n");
 			return 0;
 		}
 
-		buf->state = UVC_BUF_STATE_ACTIVE;
+		buf->ts = 1;
 	}
 
 	/* Mark the buffer as done if we're at the beginning of a new frame.
@@ -75,7 +75,7 @@ static int isight_decode(struct uvc_video_queue *queue, struct uvc_buffer *buf,
 	 * as it doesn't make sense to return an empty buffer.
 	 */
 	if (is_header && buf->bytesused != 0) {
-		buf->state = UVC_BUF_STATE_DONE;
+		buf->ready = 1;
 		return -EAGAIN;
 	}
 
@@ -92,7 +92,7 @@ static int isight_decode(struct uvc_video_queue *queue, struct uvc_buffer *buf,
 		if (len > maxlen || buf->bytesused == buf->length) {
 			uvc_trace(UVC_TRACE_FRAME, "Frame complete "
 				  "(overflow).\n");
-			buf->state = UVC_BUF_STATE_DONE;
+			buf->ready = 1;
 		}
 	}
 
@@ -100,8 +100,10 @@ static int isight_decode(struct uvc_video_queue *queue, struct uvc_buffer *buf,
 }
 
 void uvc_video_decode_isight(struct urb *urb, struct uvc_streaming *stream,
-		struct uvc_buffer *buf)
+		struct uvc_buffer *urb_buf)
 {
+	struct uvc_video_queue *queue = &stream->queue;
+	struct uvc_buffer *buf;
 	int ret, i;
 
 	for (i = 0; i < urb->number_of_packets; ++i) {
@@ -120,6 +122,7 @@ void uvc_video_decode_isight(struct urb *urb, struct uvc_streaming *stream,
 		 * processes the data of the first payload of the new frame.
 		 */
 		do {
+			buf = uvc_get_buffer(queue, urb_buf);
 			ret = isight_decode(&stream->queue, buf,
 					urb->transfer_buffer +
 					urb->iso_frame_desc[i].offset,
@@ -128,10 +131,8 @@ void uvc_video_decode_isight(struct urb *urb, struct uvc_streaming *stream,
 			if (buf == NULL)
 				break;
 
-			if (buf->state == UVC_BUF_STATE_DONE ||
-			    buf->state == UVC_BUF_STATE_ERROR)
-				buf = uvc_queue_next_buffer(&stream->queue,
-							buf);
+			if (buf->ready || buf->error)
+				uvc_put_buffer(&stream->queue);
 		} while (ret == -EAGAIN);
 	}
 }
