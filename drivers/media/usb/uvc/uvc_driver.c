@@ -21,6 +21,8 @@
 #include <linux/vmalloc.h>
 #include <linux/wait.h>
 #include <linux/version.h>
+#include <linux/of.h>
+#include <linux/of_reserved_mem.h>
 #include <asm/unaligned.h>
 
 #include <media/v4l2-common.h>
@@ -1826,6 +1828,7 @@ static void uvc_delete(struct uvc_device *dev)
 		usb_driver_release_interface(&uvc_driver.driver,
 			streaming->intf);
 		usb_put_intf(streaming->intf);
+		uvc_video_deinit(streaming);
 		kfree(streaming->format);
 		kfree(streaming->header.bmaControls);
 		kfree(streaming);
@@ -1881,11 +1884,6 @@ static int uvc_register_video(struct uvc_device *dev,
 {
 	struct video_device *vdev = &stream->vdev;
 	int ret;
-
-	/* Initialize the video buffers queue. */
-	ret = uvc_queue_init(&stream->queue, stream->type, !uvc_no_drop_param);
-	if (ret)
-		return ret;
 
 	/* Initialize the streaming interface with default streaming
 	 * parameters.
@@ -2000,6 +1998,9 @@ static int uvc_probe(struct usb_interface *intf,
 	struct uvc_device *dev;
 	int ret;
 
+	of_reserved_mem_device_init(&udev->dev);
+	of_reserved_mem_device_init(udev->dev.parent);
+
 	if (id->idVendor && id->idProduct)
 		uvc_trace(UVC_TRACE_PROBE, "Probing known UVC device %s "
 				"(%04x:%04x)\n", udev->devpath, id->idVendor,
@@ -2109,6 +2110,7 @@ error:
 static void uvc_disconnect(struct usb_interface *intf)
 {
 	struct uvc_device *dev = usb_get_intfdata(intf);
+	struct usb_device *udev = interface_to_usbdev(intf);
 
 	/* Set the USB interface data to NULL. This can be done outside the
 	 * lock, as there's no other reader.
@@ -2120,6 +2122,8 @@ static void uvc_disconnect(struct usb_interface *intf)
 		return;
 
 	uvc_unregister_video(dev);
+	of_reserved_mem_device_release(&udev->dev);
+	of_reserved_mem_device_release(udev->dev.parent);
 }
 
 static int uvc_suspend(struct usb_interface *intf, pm_message_t message)
