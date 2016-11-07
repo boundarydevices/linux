@@ -705,6 +705,8 @@ dtb-$(CONFIG_SOC_IMX7D) += \
 	imx7d-12x12-lpddr3-arm2-mqs.dtb \
 	imx7d-12x12-lpddr3-arm2-pcie.dtb \
 	imx7d-19x19-lpddr2-arm2.dtb
+dtb-$(CONFIG_SOC_IMX7ULP) += \
+	imx7ulp-evk.dtb
 dtb-$(CONFIG_SOC_LS1021A) += \
 	ls1021a-moxa-uc-8410a.dtb \
 	ls1021a-qds.dtb \
