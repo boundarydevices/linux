@@ -45,6 +45,7 @@ source "drivers/amlogic/media/vout/Kconfig"
 source "drivers/amlogic/media/osd/Kconfig"
 source "drivers/amlogic/media/osd_ext/Kconfig"
 source "drivers/amlogic/media/logo/Kconfig"
+source "drivers/amlogic/media/deinterlace/Kconfig"
 endif
 
 endmenu

@@ -1,0 +1,15 @@
+#
+# Deinterlace driver configuration
+#
+
+menu "Deinterlace driver"
+
+config AMLOGIC_MEDIA_DEINTERLACE
+	tristate "DEINTERLACE driver"
+	default n
+	help
+		Select to enable AMLOGIC DEINTERLACE driver
+		process interlace source need three continueed fields,
+		wave progressive source with two interlace fields from
+		one progreesive fields
+endmenu

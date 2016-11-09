@@ -71,6 +71,15 @@
 #define VFRAME_FLAG_SWITCHING_FENSE     2
 #define VFRAME_FLAG_HIGH_BANDWIDTH	4
 
+#define TB_DETECT_MASK					0x00000040
+#define TB_DETECT_MASK_BIT				6
+#define TB_DETECT_NONE					0
+#define TB_DETECT_INVERT				1
+#define TB_DETECT_NC					0
+#define TB_DETECT_TFF					1
+#define TB_DETECT_BFF					2
+#define TB_DETECT_TBF					3
+
 enum pixel_aspect_ratio_e {
 	PIXEL_ASPECT_RATIO_1_1,
 	PIXEL_ASPECT_RATIO_8_9,

@@ -70,7 +70,8 @@
 
 		di_reserved:linux,di {
 			compatible = "amlogic, di-mem";
-			size = <0x0 0x1e00000>; //10x1920x1088x3/2=30M
+			/** 10x3133440=30M(0x1e) support 8bit **/
+			size = <0x0 0x1e00000>;
 			//no-map;
 		};
 
@@ -604,6 +605,25 @@
 			mask = <4>;
 		};
 	};
+
+	deinterlace {
+		compatible = "amlogic, deinterlace";
+		status = "okay";
+		flag_cma = <0>;/*0:use reserved;1:use cma*/
+		memory-region = <&di_reserved>;
+		interrupts = <0 46 1 0 6 1>;
+		interrupt-names = "de_irq",	"timerc";
+		/*
+		 * nr_size(byte) = 1920*544*2(yuv422 8bit) |
+		 * 1920*544*2*12/8(yuv422 10bit)
+		 * | 1920*544*2*10/8(yuv422 10bit full pack mode)
+		 */
+		/* mtn_size(byte) = 1920*544/2 */
+		/* count_size(byte) = 1920*544/2 */
+		buffer-size = <3133440>;
+		hw-version = <2>;
+	};
+
 };
 &efuse {
 	status = "ok";
