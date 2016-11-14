@@ -45,6 +45,9 @@ struct fence *drm_crtc_create_fence(struct drm_crtc *crtc);
 
 void drm_fb_release(struct drm_file *file_priv);
 
+int drm_crtc_register_all(struct drm_device *dev);
+void drm_crtc_unregister_all(struct drm_device *dev);
+
 /* dumb buffer support IOCTLs */
 int drm_mode_create_dumb_ioctl(struct drm_device *dev,
 			       void *data, struct drm_file *file_priv);
@@ -54,12 +57,28 @@ int drm_mode_destroy_dumb_ioctl(struct drm_device *dev,
 				void *data, struct drm_file *file_priv);
 
 /* IOCTLs */
-int drm_mode_getresources(struct drm_device *dev,
-			  void *data, struct drm_file *file_priv);
 int drm_mode_getcrtc(struct drm_device *dev,
 		     void *data, struct drm_file *file_priv);
 int drm_mode_setcrtc(struct drm_device *dev,
 		     void *data, struct drm_file *file_priv);
+
+/* drm_mode_config.c */
+int drm_modeset_register_all(struct drm_device *dev);
+void drm_modeset_unregister_all(struct drm_device *dev);
+
+/* IOCTLs */
+int drm_mode_getresources(struct drm_device *dev,
+			  void *data, struct drm_file *file_priv);
+
+
+/* drm_dumb_buffers.c */
+/* IOCTLs */
+int drm_mode_create_dumb_ioctl(struct drm_device *dev,
+			       void *data, struct drm_file *file_priv);
+int drm_mode_mmap_dumb_ioctl(struct drm_device *dev,
+			     void *data, struct drm_file *file_priv);
+int drm_mode_destroy_dumb_ioctl(struct drm_device *dev,
+				void *data, struct drm_file *file_priv);
 
 /* drm_color_mgmt.c */
 
@@ -149,6 +168,8 @@ void drm_framebuffer_free(struct kref *kref);
 int drm_framebuffer_check_src_coords(uint32_t src_x, uint32_t src_y,
 				     uint32_t src_w, uint32_t src_h,
 				     const struct drm_framebuffer *fb);
+void drm_fb_release(struct drm_file *file_priv);
+
 
 /* IOCTL */
 int drm_mode_addfb(struct drm_device *dev,
@@ -167,9 +188,6 @@ int drm_atomic_get_property(struct drm_mode_object *obj,
 			    struct drm_property *property, uint64_t *val);
 int drm_mode_atomic_ioctl(struct drm_device *dev,
 			  void *data, struct drm_file *file_priv);
-
-int drm_modeset_register_all(struct drm_device *dev);
-void drm_modeset_unregister_all(struct drm_device *dev);
 
 
 /* drm_plane.c */
