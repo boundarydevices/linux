@@ -29,6 +29,7 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <linux/proc_fs.h>
+#include <linux/regmap.h>
 #include <linux/delay.h>
 #include <linux/input/mt.h>
 
@@ -92,11 +93,12 @@ struct ft5x06_ts {
 	int			irq;
 	struct gpio_desc	*wakeup_gpio;
 	struct gpio_desc	*reset_gpio;
-	struct proc_dir_entry  *procentry;
+	struct proc_dir_entry	*procentry;
 	struct timer_list	release_timer;
 	unsigned		down_mask;
 	unsigned		max_x;
 	unsigned		max_y;
+	struct regmap		*regmap;
 };
 static const char *client_name = "ft5x06";
 
@@ -400,10 +402,30 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 }
 
 #define ID_G_THGROUP		0x80
+#define ID_G_THPEAK		0x81
+#define ID_G_THCAL		0x82
+#define ID_G_THWATER		0x83
+#define ID_G_THTEMP		0x84
+#define ID_G_CTRL		0x86
+#define ID_G_TIME_ENTER_MONITOR	0x87
+#define ID_G_PERIODACTIVE	0x88
 #define ID_G_PERIODMONITOR	0x89
-#define FT5X0X_REG_HEIGHT_B	0x8a
-#define FT5X0X_REG_MAX_FRAME	0x8b
-#define FT5X0X_REG_FEG_FRAME	0x8e
+#define ID_G_AUTO_CLB_MODE	0xa0
+#define ID_G_LIB_VERSION_H	0xa1
+#define ID_G_LIB_VERSION_L	0xa2
+#define ID_G_CIPHER		0xa3
+#define ID_G_MODE		0xa4
+#define ID_G_FIRMID		0xa6
+#define ID_G_FT5201ID		0xa8
+#define ID_G_ERR		0xa9
+#define ID_G_CLB		0xaa
+#define ID_G_B_AREA_TH		0xae
+#define FT5x06_MAX_REG_OFFSET	0xae
+
+/* Undocumented registers */
+#define FT5X0X_REG_HEIGHT_B		0x8a
+#define FT5X0X_REG_MAX_FRAME		0x8b
+#define FT5X0X_REG_FEG_FRAME		0x8e
 #define FT5X0X_REG_LEFT_RIGHT_OFFSET	0x92
 #define FT5X0X_REG_UP_DOWN_OFFSET	0x93
 #define FT5X0X_REG_DISTANCE_LEFT_RIGHT	0x94
@@ -416,29 +438,6 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 #define FT5X0X_REG_K_X_LOW		0x9d
 #define FT5X0X_REG_K_Y_HIGH		0x9e
 #define FT5X0X_REG_K_Y_LOW		0x9f
-
-#define ID_G_AUTO_CLB	0xa0
-#define ID_G_B_AREA_TH	0xae
-
-#ifdef DEBUG
-static void dumpRegs(struct ft5x06_ts *ts, unsigned start, unsigned end)
-{
-	u8 regbuf[512];
-	unsigned char startch[1] = { start };
-	int ret ;
-	struct i2c_msg readpkt[2] = {
-		{ts->client->addr, 0, 1, startch},
-		{ts->client->addr, I2C_M_RD, end-start+1, regbuf}
-	};
-	ret = i2c_transfer(ts->client->adapter, readpkt, ARRAY_SIZE(readpkt));
-	if (ret != ARRAY_SIZE(readpkt)) {
-		printk(KERN_WARNING "%s: i2c_transfer failed\n", client_name);
-	} else {
-		printk(KERN_ERR "registers %02x..%02x\n", start, end);
-		printHex(regbuf, end-start+1);
-	}
-}
-#endif
 
 static int ts_startup(struct ft5x06_ts *ts)
 {
@@ -457,22 +456,7 @@ static int ts_startup(struct ft5x06_ts *ts)
 		goto out;
 	}
 
-#ifdef DEBUG
-	set_mode(ts, FACTORY_MODE);
-	dumpRegs(ts, 0x4c, 0x4C);
-	write_reg(ts, 0x4C, 0x05);
-	dumpRegs(ts, 0, 0x4C);
-#endif
 	set_mode(ts, WORK_MODE);
-#ifdef DEBUG
-	dumpRegs(ts, 0x3b, 0x3b);
-	dumpRegs(ts, 0x6a, 0x6a);
-	dumpRegs(ts, ID_G_THGROUP, ID_G_PERIODMONITOR);
-	dumpRegs(ts, FT5X0X_REG_HEIGHT_B, FT5X0X_REG_K_Y_LOW);
-	dumpRegs(ts, ID_G_AUTO_CLB, ID_G_B_AREA_TH);
-#endif
-	set_mode(ts, WORK_MODE);
-
  out:
 	if (ret)
 		ts->use_count--;
@@ -520,6 +504,63 @@ static int ts_detect(struct i2c_client *client,
 		strlcpy(info->type, "ft5x06-ts", I2C_NAME_SIZE);
 	return err;
 }
+
+static bool ft5x06_readable(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case ID_G_THGROUP:
+	case ID_G_THPEAK:
+	case ID_G_THCAL:
+	case ID_G_THWATER:
+	case ID_G_THTEMP:
+	case ID_G_CTRL:
+	case ID_G_TIME_ENTER_MONITOR:
+	case ID_G_PERIODACTIVE:
+	case ID_G_PERIODMONITOR:
+	case ID_G_AUTO_CLB_MODE:
+	case ID_G_LIB_VERSION_H:
+	case ID_G_LIB_VERSION_L:
+	case ID_G_CIPHER:
+	case ID_G_MODE:
+	case ID_G_FIRMID:
+	case ID_G_FT5201ID:
+	case ID_G_ERR:
+	case ID_G_CLB:
+	case ID_G_B_AREA_TH:
+		return true;
+	default:
+		return false;
+	}
+}
+
+static bool ft5x06_writeable(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+	case ID_G_THGROUP:
+	case ID_G_THPEAK:
+	case ID_G_THCAL:
+	case ID_G_THWATER:
+	case ID_G_THTEMP:
+	case ID_G_CTRL:
+	case ID_G_TIME_ENTER_MONITOR:
+	case ID_G_PERIODACTIVE:
+	case ID_G_PERIODMONITOR:
+	case ID_G_AUTO_CLB_MODE:
+	case ID_G_CLB:
+	case ID_G_B_AREA_TH:
+		return true;
+	default:
+		return false;
+	}
+}
+
+static const struct regmap_config ft5x06_regmap = {
+	.reg_bits = 8,
+	.val_bits = 8,
+	.max_register = FT5x06_MAX_REG_OFFSET,
+	.readable_reg = ft5x06_readable,
+	.writeable_reg = ft5x06_writeable,
+};
 
 static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
@@ -575,6 +616,13 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 			goto exit1;
 		}
 	} while (1);
+
+	ts->regmap = devm_regmap_init_i2c(client, &ft5x06_regmap);
+	if (IS_ERR(ts->regmap)) {
+		err = PTR_ERR(ts->regmap);
+		dev_err(&client->dev, "Failed to allocate regmap: %d\n", err);
+		goto exit1;
+	}
 
 	ts->wakeup_gpio = wakeup_gpio;
 	dev_info(dev, "wakeup %p, retry=%d\n", wakeup_gpio, retry);
