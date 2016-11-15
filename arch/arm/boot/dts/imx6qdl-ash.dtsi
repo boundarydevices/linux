@@ -355,6 +355,7 @@
 		pwm_lcd = &pwm1;
 		pwm_lvds = &pwm4;
 		t_lvds = &t_lvds;
+		uart1 = &uart1;
 	};
 
 	backlight_lcd: backlight_lcd {
