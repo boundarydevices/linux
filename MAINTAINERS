@@ -13450,3 +13450,7 @@ F:	drivers/amlogic/crypto/*
 AMLOGIC saradc
 M:	Xingyu Chen <xingyu.chen@amlogic.com>
 F:	drivers/amlogic/input/saradc/*
+
+AMLOGIC adc_keypad
+M:	Xingyu Chen <xingyu.chen@amlogic.com>
+F:	drivers/amlogic/input/keyboard/*

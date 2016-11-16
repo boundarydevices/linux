@@ -1,0 +1,26 @@
+Device-Tree bindings for input/keyboard/adc_keypad.c keyboard driver
+
+Required properties:
+- compatible: Must be "amlogic, adc_keypad".
+- key_name: Specify the name of different key.
+- key_num:  Specify the quantity of the keys.
+- key_code: Set the function code corresponding to different key.
+- key_chan: Set the channel to detect the key, can be set from 0 to 7.
+- key_val: The adc sampling value of different key, can be set from 0 to 1023.
+- key_tolerance: tolerance of the adc sampling value, recommend maximum value of 40.
+
+Optional properties:
+- status: Shall be "ok" or "okay" if enabled or "disabled" if disabled.
+          Default is "ok".
+
+Example:
+	adc_keypad{
+			compatible = "amlogic, adc_keypad";
+			status = "okay";
+			key_name = "left", "right","up", "down", "enter";
+			key_num = <5>;
+			key_code = <106 105 103 108 28>;
+			key_chan = <2 2 3 3 3>;
+			key_val =  <516 253 516 750 0>; //voltage=0/252/478/692/824mV, val=voltage/1800mV*1023
+			key_tolerance = <40 40 40 40 40>;
+   };

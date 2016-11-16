@@ -1,0 +1,23 @@
+#
+# Kyeboard device configuration
+#
+
+menuconfig AMLOGIC_INPUT_KEYBOARD
+	bool "Keyboards and keypads"
+	default n
+	help
+	  Say Y here, and a list of supported keyboards and keypads will be displayed.
+	  This option doesn't affect the kernel.
+
+	  If unsure, say Y.
+
+if AMLOGIC_INPUT_KEYBOARD
+
+config AMLOGIC_ADC_KEYPADS
+	tristate "Meson ADC keypad support"
+	depends on AMLOGIC_SARADC
+	default n
+	help
+	  Say Y here if you want to use the Meson ADC keypad.
+
+endif # AMLOGIC_INPUT_KEYBOARD

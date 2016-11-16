@@ -10,6 +10,8 @@ menuconfig AMLOGIC_INPUT
 
 if AMLOGIC_INPUT
 
+source "drivers/amlogic/input/keyboard/Kconfig"
+
 source "drivers/amlogic/input/saradc/Kconfig"
 
 endif
