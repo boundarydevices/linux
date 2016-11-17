@@ -1,0 +1,10 @@
+# Amlogic POWER OFF
+config AMLOGIC_REBOOT
+	bool "Amlogic Board level reboot or power off"
+	default n
+    help
+		This is the Amlogic
+		Board reboot
+		or poweroff
+		driver.
+

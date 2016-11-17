@@ -33,3 +33,5 @@ obj-$(CONFIG_AMLOGIC_CRYPTO)		+= crypto/
 obj-$(CONFIG_AMLOGIC_INPUT)		+= input/
 
 obj-$(CONFIG_AMLOGIC_EFUSE)             += efuse/
+
+obj-$(CONFIG_AMLOGIC_REBOOT)		+= reboot/
