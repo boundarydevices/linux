@@ -275,7 +275,7 @@
 				};
 
 				uart1: serial@2020000 {
-					compatible = "fsl,imx6sl-uart", "fsl,imx6q-uart",
+					compatible = "fsl,imx6sll-uart", "fsl,imx6q-uart",
 						     "fsl,imx21-uart";
 					reg = <0x02020000 0x4000>;
 					interrupts = <GIC_SPI 26 IRQ_TYPE_LEVEL_HIGH>;
