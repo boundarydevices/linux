@@ -13438,3 +13438,7 @@ F:	Documentation/devicetree/bindings/clock/amlogic,meson-clkc.txt
 F:	Documentation/devicetree/bindings/reset/amlogic,meson-reset.txt
 F:	include/dt-bindings/clock/amlogic,gxl-clkc.h
 F:	include/dt-bindings/reset/amlogic,gxl-reset.h
+
+AMLOGIC meson64_xxx_defconfigs
+M:	Jianxin Pan <jianxin.pan@amlogic.com>
+F:	scripts/amlogic/configs/
