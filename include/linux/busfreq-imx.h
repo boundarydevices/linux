@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2015 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2012-2016 Freescale Semiconductor, Inc. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -10,6 +10,7 @@
 #define __ASM_ARCH_MXC_BUSFREQ_H__
 
 #include <linux/notifier.h>
+#include <linux/regulator/consumer.h>
 
 /*
  * This enumerates busfreq low power mode entry and exit.
@@ -41,7 +42,9 @@ enum bus_freq_mode {
 	BUS_FREQ_ULTRA_LOW,
 };
 
-#ifdef CONFIG_CPU_FREQ
+#if defined(CONFIG_CPU_FREQ) && !defined(CONFIG_ARM64)
+extern struct regulator *arm_reg;
+extern struct regulator *soc_reg;
 void request_bus_freq(enum bus_freq_mode mode);
 void release_bus_freq(enum bus_freq_mode mode);
 int register_busfreq_notifier(struct notifier_block *nb);

@@ -22,9 +22,10 @@
 #define PU_SOC_VOLTAGE_HIGH	1275000
 #define FREQ_1P2_GHZ		1200000000
 
-static struct regulator *arm_reg;
+struct regulator *arm_reg;
 static struct regulator *pu_reg;
-static struct regulator *soc_reg;
+struct regulator *soc_reg;
+static struct regulator *dc_reg;
 
 enum IMX6_CPUFREQ_CLKS {
 	ARM,
