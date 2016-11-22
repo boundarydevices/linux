@@ -1,0 +1,116 @@
+* Amlogic HW cryptographic accelerators
+
+These are the HW cryptographic accelerators found on Amlogic products.
+
+* Advanced Encryption Standard (AES)
+
+Required properties:
+- compatible : Should be "amlogic,aes".
+- dev_name : Should be "aml_aes"
+- interrupts: Should contain the IRQ line for the AES.
+- resets: Should contain the clock to enable the module
+- reg:  Should contain the base address of regs
+
+Example:
+aml_aes{
+	compatible = "amlogic,aes";
+	dev_name = "aml_aes";
+	interrupts = <0 36 1>;
+	resets = <&clock GCLK_IDX_BLK_MOV>;
+	reg = <0x0 0xc8832000 0x0 0x2c4
+		0x0 0xda832000 0x0 0xe4>;
+};
+
+* Triple Data Encryption Standard (Triple DES)
+
+Required properties:
+- compatible : Should be "amlogic,des,tdes".
+- dev_name : Should be "aml_aes"
+- interrupts: Should contain the IRQ line for the TDES.
+- resets: Should contain the clock to enable the module
+- reg:  Should contain the base address of regs
+
+Example:
+aml_tdes{
+	compatible = "amlogic,des,tdes";
+	dev_name = "aml_tdes";
+	interrupts = <0 36 1>;
+	resets = <&clock GCLK_IDX_BLK_MOV>;
+	reg = <0x0 0xc8832000 0x0 0x2c4
+		0x0 0xda832000 0x0 0xe4>;
+};
+
+* Secure Hash Algorithm (SHA1/SHA224/SHA256)
+
+Required properties:
+- compatible : Should be "amlogic,sha".
+- dev_name : Should be "aml_sha"
+- interrupts: Should contain the IRQ line for the SHA.
+- resets: Should contain the clock to enable the module
+- reg:  Should contain the base address of regs
+
+Example:
+aml_sha{
+	compatible = "amlogic,sha";
+	dev_name = "aml_sha";
+	interrupts = <0 36 1>;
+	resets = <&clock GCLK_IDX_BLK_MOV>;
+	reg = <0x0 0xc8832000 0x0 0x2c4
+		0x0 0xda832000 0x0 0xe4>;
+};
+
+* New DMA for GXL and beyond
+* Advanced Encryption Standard (AES)
+
+Required properties:
+- compatible : Should be "amlogic,aes".
+- dev_name : Should be "aml_aes"
+- interrupts: Should contain the IRQ line for the AES.
+- resets: Should contain the clock to enable the module
+- reg:  Should contain the base address of regs
+
+Example:
+aml_aes{
+	compatible = "amlogic,aes_dma";
+	dev_name = "aml_aes_dma";
+	interrupts = <0 188 1
+		0 189 1>;
+	reg = <0x0 0xc883e000 0x0 0x28>;
+};
+
+
+* Triple Data Encryption Standard (Triple DES)
+
+Required properties:
+- compatible : Should be "amlogic,des,tdes".
+- dev_name : Should be "aml_aes"
+- interrupts: Should contain the IRQ line for the TDES.
+- resets: Should contain the clock to enable the module
+- reg:  Should contain the base address of regs
+
+Example:
+aml_tdes{
+	compatible = "amlogic,des_dma,tdes_dma";
+	dev_name = "aml_tdes_dma";
+	interrupts = <0 188 1
+		0 189 1>;
+	reg = <0x0 0xc883e000 0x0 0x28>;
+};
+* Secure Hash Algorithm (SHA1/SHA224/SHA256/HMAC)
+
+Required properties:
+- compatible : Should be "amlogic,sha".
+- dev_name : Should be "aml_sha"
+- interrupts: Should contain the IRQ line for the SHA.
+- resets: Should contain the clock to enable the module
+- reg:  Should contain the base address of regs
+
+Example:
+aml_sha{
+	compatible = "amlogic,sha_dma";
+	dev_name = "aml_sha_dma";
+	interrupts = <0 188 1
+		0 189 1>;
+	reg = <0x0 0xc883e000 0x0 0x28>;
+};
+

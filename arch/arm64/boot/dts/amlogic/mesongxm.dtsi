@@ -232,6 +232,7 @@
 		clock-output-names = "xtal";
 		#clock-cells = <0>;
 	};
+
 	soc {
 		compatible = "simple-bus";
 		#address-cells = <2>;
@@ -716,6 +717,32 @@
 		compatible = "amlogic,reset";
 		reg = <0x0 0x04404 0x0 0x20>;
 		#reset-cells = <1>;
+	};
+};
+
+/{
+	aml_aes {
+		compatible = "amlogic,aes_dma";
+		dev_name = "aml_aes_dma";
+		status = "okay";
+		interrupts = <0 188 1 0 189 1>;
+		reg = <0x0 0xc883e000 0x0 0x28>;
+	};
+
+	aml_tdes {
+		compatible = "amlogic,des_dma,tdes_dma";
+		dev_name = "aml_tdes_dma";
+		status = "okay";
+		interrupts = <0 188 1 0 189 1>;
+		reg = <0x0 0xc883e000 0x0 0x28>;
+	};
+
+	aml_sha {
+		compatible = "amlogic,sha_dma";
+		dev_name = "aml_sha_dma";
+		status = "okay";
+		interrupts = <0 188 1 0 189 1>;
+		reg = <0x0 0xc883e000 0x0 0x28>;
 	};
 };
 

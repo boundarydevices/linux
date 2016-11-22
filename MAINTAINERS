@@ -13442,3 +13442,7 @@ F:	include/dt-bindings/reset/amlogic,gxl-reset.h
 AMLOGIC meson64_xxx_defconfigs
 M:	Jianxin Pan <jianxin.pan@amlogic.com>
 F:	scripts/amlogic/configs/
+
+AMLOGIC CRYPTO DMA
+M:	Matthew Shyu <matthew.shyu@amlogic.com>
+F:	drivers/amlogic/crypto/*

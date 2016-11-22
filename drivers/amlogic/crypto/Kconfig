@@ -1,0 +1,10 @@
+
+menu "Amlogic Crypto Support"
+
+config AMLOGIC_CRYPTO
+  bool "amlogic HW CRYPTO module"
+	select CRYPTO_ALGAPI
+	select CRYPTO_BLKCIPHER
+	select CRYPTO_HASH
+	default n
+endmenu
