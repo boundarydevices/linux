@@ -179,6 +179,13 @@ static void xhci_pci_quirks(struct device *dev, struct xhci_hcd *xhci)
 	if (xhci->quirks & XHCI_RESET_ON_RESUME)
 		xhci_dbg_trace(xhci, trace_xhci_dbg_quirks,
 				"QUIRK: Resetting on resume");
+
+#define PCI_DEVICE_ID_RENESAS_UPD720202	0x0015
+#define PCI_DEVICE_ID_RENESAS_UPD720201	0x0014
+	if (pdev->vendor == PCI_VENDOR_ID_RENESAS &&
+			((pdev->device == PCI_DEVICE_ID_RENESAS_UPD720202) ||
+			(pdev->device == PCI_DEVICE_ID_RENESAS_UPD720201)))
+		xhci->quirks |= XHCI_TRUST_TX_LENGTH;
 }
 
 #ifdef CONFIG_ACPI
