@@ -255,6 +255,7 @@ dtb-$(CONFIG_SOC_IMX53) += \
 	imx53-voipac-bsb.dtb
 dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-a.dtb \
+	imx6dl-acl.dtb \
 	imx6dl-aristainetos_4.dtb \
 	imx6dl-aristainetos_7.dtb \
 	imx6dl-ash.dtb \
@@ -299,6 +300,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-udoo.dtb \
 	imx6dl-wandboard.dtb \
 	imx6dl-wandboard-revb1.dtb \
+	imx6q-acl.dtb \
 	imx6q-arm2.dtb \
 	imx6q-arm2-hsic.dtb \
 	imx6q-pop-arm2.dtb \
