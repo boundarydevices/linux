@@ -18,6 +18,7 @@
 #include <linux/sched.h>
 #include <linux/sched/rt.h>
 #include <linux/task_work.h>
+#include <linux/highmem.h>
 
 #include "internals.h"
 
@@ -1394,7 +1395,7 @@ static struct irqaction *__free_irq(unsigned int irq, void *dev_id)
 	}
 #endif
 
-	if (action->thread) {
+	if (virt_addr_valid(action->thread)) {
 		kthread_stop(action->thread);
 		put_task_struct(action->thread);
 	}
