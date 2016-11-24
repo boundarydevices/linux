@@ -119,15 +119,6 @@ extern unsigned int vpu_hiu_getb(unsigned int _reg,
 extern void vpu_hiu_set_mask(unsigned int _reg, unsigned int _mask);
 extern void vpu_hiu_clr_mask(unsigned int _reg, unsigned int _mask);
 
-extern unsigned int vpu_cbus_read(unsigned int _reg);
-extern void vpu_cbus_write(unsigned int _reg, unsigned int _value);
-extern void vpu_cbus_setb(unsigned int _reg, unsigned int _value,
-		unsigned int _start, unsigned int _len);
-extern unsigned int vpu_cbus_getb(unsigned int _reg,
-		unsigned int _start, unsigned int _len);
-extern void vpu_cbus_set_mask(unsigned int _reg, unsigned int _mask);
-extern void vpu_cbus_clr_mask(unsigned int _reg, unsigned int _mask);
-
 extern unsigned int vpu_vcbus_read(unsigned int _reg);
 extern void vpu_vcbus_write(unsigned int _reg, unsigned int _value);
 extern void vpu_vcbus_setb(unsigned int _reg, unsigned int _value,

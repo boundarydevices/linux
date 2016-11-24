@@ -21,7 +21,7 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/delay.h>
-#include <linux/amlogic/vpu.h>
+#include <linux/amlogic/media/vpu/vpu.h>
 #include "vpu_reg.h"
 #include "vpu.h"
 #include "vpu_module.h"
@@ -420,7 +420,7 @@ void switch_vpu_clk_gate_vmod(unsigned int vmod, int flag)
 		break;
 	case VPU_VENC_DAC:
 		/* clk for dac(r/w reg) */
-		vpu_vcbus_setb(VPU_CLK_GATE, val, 12, 1);
+		/*vpu_vcbus_setb(VPU_CLK_GATE, val, 12, 1);*/
 		vpu_hiu_setb(HHI_GCLK_OTHER, val, 10, 1); /* dac top clk */
 		break;
 	case VPU_VENCP:

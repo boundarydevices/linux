@@ -24,8 +24,10 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/delay.h>
+#include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/amlogic/cpu_version.h>
-#include <linux/amlogic/vpu.h>
+#include <linux/amlogic/media/vpu/vpu.h>
 #include "vpu_reg.h"
 #include "vpu.h"
 #include "vpu_clk.h"
@@ -137,14 +139,12 @@ static unsigned int get_vpu_clk_level(unsigned int video_clk)
 
 unsigned int get_vpu_clk(void)
 {
-	unsigned int reg;
 	unsigned int clk_freq;
 	unsigned int fclk, clk_source;
 	unsigned int mux, div;
 
-	reg = HHI_VPU_CLK_CNTL;
 	fclk = CLK_FPLL_FREQ * 100; /* 0.01M resolution */
-	mux = vpu_hiu_getb(reg, 9, 3);
+	mux = vpu_hiu_getb(HHI_VPU_CLK_CNTL, 9, 3);
 	switch (mux) {
 	case FCLK_DIV4:
 	case FCLK_DIV3:
@@ -163,7 +163,7 @@ unsigned int get_vpu_clk(void)
 		break;
 	}
 
-	div = vpu_hiu_getb(reg, 0, 7) + 1;
+	div = vpu_hiu_getb(HHI_VPU_CLK_CNTL, 0, 7) + 1;
 	clk_freq = (clk_source / div) * 10 * 1000; /* change to Hz */
 
 	return clk_freq;
@@ -226,7 +226,6 @@ static int adjust_vpu_clk(unsigned int clk_level)
 {
 	unsigned long flags = 0;
 	unsigned int mux, div;
-	unsigned int vpu_clk;
 	int ret = 0;
 
 	ret = vpu_chip_valid_check();
@@ -246,6 +245,7 @@ static int adjust_vpu_clk(unsigned int clk_level)
 	}
 
 	vpu_conf.clk_level = clk_level;
+
 	/* step 1:  switch to 2nd vpu clk patch */
 	mux = vpu_clk_table[0][1];
 	vpu_hiu_setb(HHI_VPU_CLK_CNTL, mux, 25, 3);
@@ -266,15 +266,9 @@ static int adjust_vpu_clk(unsigned int clk_level)
 	vpu_hiu_setb(HHI_VPU_CLK_CNTL, 0, 31, 1);
 	vpu_hiu_setb(HHI_VPU_CLK_CNTL, 0, 24, 1);
 
-	vpu_clk = vpu_clk_table[vpu_conf.clk_level][0];
-	if (vpu_clk >= (VPU_CLKB_MAX * 1000000))
-		div = 2;
-	else
-		div = 1;
-	vpu_hiu_setb(HHI_VPU_CLKB_CNTL, (div - 1), 0, 8);
-
 	VPUPR("set vpu clk: %uHz, readback: %uHz(0x%x)\n",
-		vpu_clk, get_vpu_clk(), (vpu_hiu_read(HHI_VPU_CLK_CNTL)));
+		vpu_clk_table[vpu_conf.clk_level][0],
+		get_vpu_clk(), (vpu_hiu_read(HHI_VPU_CLK_CNTL)));
 
 	spin_unlock_irqrestore(&vpu_lock, flags);
 	return ret;
@@ -283,7 +277,6 @@ static int adjust_vpu_clk(unsigned int clk_level)
 static int set_vpu_clk(unsigned int vclk)
 {
 	int ret = 0;
-	unsigned int reg;
 	unsigned int clk_level, mux, div;
 
 	mutex_lock(&vpu_mutex);
@@ -306,9 +299,8 @@ static int set_vpu_clk(unsigned int vclk)
 #endif
 	}
 
-	reg = HHI_VPU_CLK_CNTL;
-	mux = vpu_hiu_getb(reg, 9, 3);
-	div = vpu_hiu_getb(reg, 0, 7);
+	mux = vpu_hiu_getb(HHI_VPU_CLK_CNTL, 9, 3);
+	div = vpu_hiu_getb(HHI_VPU_CLK_CNTL, 0, 7);
 	if ((mux != vpu_clk_table[clk_level][1])
 		|| (div != vpu_clk_table[clk_level][2])) {
 		ret = adjust_vpu_clk(clk_level);
@@ -340,7 +332,6 @@ set_vpu_clk_limit:
  */
 unsigned int get_vpu_clk_vmod(unsigned int vmod)
 {
-	unsigned int vpu_mod;
 	unsigned int vpu_clk;
 	int ret = 0;
 
@@ -350,9 +341,8 @@ unsigned int get_vpu_clk_vmod(unsigned int vmod)
 
 	mutex_lock(&vpu_mutex);
 
-	vpu_mod = vmod;
-	if (vpu_mod < VPU_MAX) {
-		vpu_clk = clk_vmod[vpu_mod];
+	if (vmod < VPU_MAX) {
+		vpu_clk = clk_vmod[vmod];
 		vpu_clk = vpu_clk_table[vpu_clk][0];
 	} else {
 		vpu_clk = 0;
@@ -387,7 +377,6 @@ int request_vpu_clk_vmod(unsigned int vclk, unsigned int vmod)
 	int ret = 0;
 #ifdef CONFIG_VPU_DYNAMIC_ADJ
 	unsigned int clk_level;
-	unsigned int vpu_mod;
 
 	ret = vpu_chip_valid_check();
 	if (ret)
@@ -406,17 +395,16 @@ int request_vpu_clk_vmod(unsigned int vclk, unsigned int vmod)
 		goto request_vpu_clk_limit;
 	}
 
-	vpu_mod = vmod;
-	if (vpu_mod == VPU_MAX) {
+	if (vmod == VPU_MAX) {
 		ret = 1;
 		VPUERR("unsupport vmod\n");
 		goto request_vpu_clk_limit;
 	}
 
-	clk_vmod[vpu_mod] = clk_level;
+	clk_vmod[vmod] = clk_level;
 	if (vpu_debug_print_flag) {
 		VPUPR("request vpu clk: %s %uHz\n",
-			vpu_mod_table[vpu_mod],
+			vpu_mod_table[vmod],
 			vpu_clk_table[clk_level][0]);
 		dump_stack();
 	}
@@ -454,7 +442,6 @@ int release_vpu_clk_vmod(unsigned int vmod)
 	int ret = 0;
 #ifdef CONFIG_VPU_DYNAMIC_ADJ
 	unsigned int clk_level;
-	unsigned int vpu_mod;
 
 	ret = vpu_chip_valid_check();
 	if (ret)
@@ -463,17 +450,16 @@ int release_vpu_clk_vmod(unsigned int vmod)
 	mutex_lock(&vpu_mutex);
 
 	clk_level = 0;
-	vpu_mod = vmod;
-	if (vpu_mod == VPU_MAX) {
+	if (vmod == VPU_MAX) {
 		ret = 1;
 		VPUERR("unsupport vmod\n");
 		goto release_vpu_clk_limit;
 	}
 
-	clk_vmod[vpu_mod] = clk_level;
+	clk_vmod[vmod] = clk_level;
 	if (vpu_debug_print_flag) {
 		VPUPR("release vpu clk: %s\n",
-			vpu_mod_table[vpu_mod]);
+			vpu_mod_table[vmod]);
 		dump_stack();
 	}
 
@@ -513,8 +499,8 @@ static const char *vpu_usage_str = {
 "	request & release will change vpu clk if the max level in all vmod vpu clk holdings is unequal to current vpu clk level.\n"
 "	vclk both support level(1~10) and frequency value (unit in Hz).\n"
 "	vclk level & frequency:\n"
-"		0: 100M    1: 167M    2: 200M    3: 333M\n"
-"		4: 400M    5: 500M    6: 667M    8: 696M\n"
+"		0: 100M    1: 167M    2: 200M    3: 250M\n"
+"		4: 333M    5: 400M    6: 500M    7: 667M\n"
 "\n"
 "	echo <0|1> > print ; set debug print flag\n"
 };
@@ -561,16 +547,15 @@ static ssize_t vpu_clk_debug(struct class *class, struct class_attribute *attr,
 	case 'd':
 		tmp[0] = VPU_MAX;
 		ret = sscanf(buf, "dump %u", &tmp[0]);
-		tmp[1] = tmp[0];
-		if (tmp[1] == VPU_MAX) {
+		if (tmp[0] == VPU_MAX) {
 			n = get_vpu_clk_level_max_vmod();
 			VPUPR("clk max holdings: %uHz(%u)\n",
 				vpu_clk_table[n][0], n);
 		} else {
 			VPUPR("clk holdings:\n");
-			pr_info("%s:  %uHz(%u)\n", vpu_mod_table[tmp[1]],
-			vpu_clk_table[clk_vmod[tmp[1]]][0],
-			clk_vmod[tmp[1]]);
+			pr_info("%s:  %uHz(%u)\n", vpu_mod_table[tmp[0]],
+			vpu_clk_table[clk_vmod[tmp[0]]][0],
+			clk_vmod[tmp[0]]);
 		}
 		break;
 	default:
@@ -675,10 +660,10 @@ static ssize_t vpu_clk_gate_debug(struct class *class,
 }
 
 static unsigned int vcbus_reg[] = {
-	0x1d00, /* VPP_DUMMY_DATA */
-	0x1702, /* DI_POST_SIZE */
+	0x1b7f, /* VENC_VDAC_TST_VAL */
 	0x1c30, /* ENCP_DVI_HSO_BEGIN */
-	0x1b78, /* VENC_VDAC_DACSEL0 */
+	0x1d00, /* VPP_DUMMY_DATA */
+	0x2730, /* VPU_VPU_PWM_V0 */
 };
 
 static void vcbus_test(void)
@@ -822,6 +807,25 @@ static int get_vpu_config(struct platform_device *pdev)
 	return ret;
 }
 
+static void vpu_clktree_init(struct device *dev)
+{
+	static struct clk *vpu_clktree;
+
+	vpu_clktree = devm_clk_get(dev, "vapb_clk");
+	if (IS_ERR(vpu_clktree))
+		VPUERR("%s: vapb_clk\n", __func__);
+	else
+		clk_prepare_enable(vpu_clktree);
+
+	vpu_clktree = devm_clk_get(dev, "vpu_clk");
+	if (IS_ERR(vpu_clktree))
+		VPUERR("%s: vpu_clk\n", __func__);
+	else
+		clk_prepare_enable(vpu_clktree);
+
+	VPUPR("%s\n", __func__);
+}
+
 static const struct of_device_id vpu_of_table[] = {
 	{
 		.compatible = "amlogic, vpu",
@@ -852,6 +856,7 @@ static int vpu_probe(struct platform_device *pdev)
 	vpu_ctrl_probe();
 
 	set_vpu_clk(vpu_conf.clk_level);
+	vpu_clktree_init(&pdev->dev);
 
 	creat_vpu_debug_class();
 

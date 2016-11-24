@@ -13531,3 +13531,7 @@ F:	drivers/amlogic/media/common/frame_sync/*
 F:	drivers/amlogic/media/common/ge2d/*
 F:	drivers/amlogic/media/common/vpu/*
 
+AMLOGIC VPU driver support
+M: Evoke Zhang <evoke.zhang@amlogic.com>
+F: drivers/amlogic/vpu/*
+F: include/linux/amlogic/vpu.h
