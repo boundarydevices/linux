@@ -1,11 +1,12 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright 2012-2013 Freescale Semiconductor, Inc.
+ * Copyright 2012-2016 Freescale Semiconductor, Inc.
  */
 
 #ifndef __FSL_SAI_H
 #define __FSL_SAI_H
 
+#include <linux/pm_qos.h>
 #include <sound/dmaengine_pcm.h>
 
 #define FSL_SAI_FORMATS (SNDRV_PCM_FMTBIT_S16_LE |\
@@ -216,11 +217,16 @@
 #define FSL_SAI_MAXBURST_TX 6
 #define FSL_SAI_MAXBURST_RX 6
 
+#define SAI_FLAG_PMQOS   BIT(0)
+
 struct fsl_sai_soc_data {
 	bool use_imx_pcm;
 	bool use_edma;
 	unsigned int fifo_depth;
 	unsigned int reg_offset;
+	unsigned int fifos;
+	unsigned int dataline;
+	unsigned int flags;
 };
 
 /**
@@ -259,6 +265,7 @@ struct fsl_sai {
 	bool is_lsb_first;
 	bool is_dsp_mode;
 	bool synchronous[2];
+	unsigned int dataline[2];
 
 	unsigned int mclk_id[2];
 	unsigned int mclk_streams;
@@ -272,6 +279,7 @@ struct fsl_sai {
 	struct snd_dmaengine_dai_dma_data dma_params_tx;
 	struct fsl_sai_verid verid;
 	struct fsl_sai_param param;
+	struct pm_qos_request pm_qos_req;
 };
 
 #define TX 1
