@@ -8,6 +8,7 @@
 #include <linux/delay.h>
 #include <linux/dmaengine.h>
 #include <linux/module.h>
+#include <linux/of_device.h>
 #include <linux/of_address.h>
 #include <linux/of_device.h>
 #include <linux/pm_qos.h>
@@ -15,11 +16,13 @@
 #include <linux/regmap.h>
 #include <linux/slab.h>
 #include <linux/time.h>
+#include <linux/pm_qos.h>
 #include <sound/core.h>
 #include <sound/dmaengine_pcm.h>
 #include <sound/pcm_params.h>
 #include <linux/mfd/syscon.h>
 #include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
+#include <linux/pm_runtime.h>
 
 #include "fsl_sai.h"
 #include "imx-pcm.h"
@@ -171,6 +174,7 @@ static int fsl_sai_set_dai_sysclk_tr(struct snd_soc_dai *cpu_dai,
 {
 	struct fsl_sai *sai = snd_soc_dai_get_drvdata(cpu_dai);
 	unsigned int ofs = sai->soc_data->reg_offset;
+
 	bool tx = fsl_dir == FSL_FMT_TRANSMITTER;
 	u32 val_cr2 = 0;
 
@@ -432,6 +436,12 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
 				   FSL_SAI_CR2_DIV_MASK, savediv - 1);
 	}
 
+	if (sai->verid.major >= 3 && sai->verid.minor >= 1) {
+		/* SAI is in master mode at this point, so enable MCLK */
+		regmap_update_bits(sai->regmap, FSL_SAI_MCTL,
+				FSL_SAI_MCTL_MCLK_EN, FSL_SAI_MCTL_MCLK_EN);
+	}
+
 	dev_dbg(dai->dev, "best fit: clock id=%d, div=%d, deviation =%d\n",
 			sai->mclk_id[tx], savediv, savesub);
 
@@ -456,6 +466,8 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
 
 	if (sai->slots)
 		slots = sai->slots;
+
+	pins = DIV_ROUND_UP(channels, slots);
 
 	if (sai->slot_width)
 		slot_width = sai->slot_width;
@@ -517,9 +529,20 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
 				   FSL_SAI_CR5_FBT_MASK, val_cr5);
 	}
 
+	if (sai->soc_data->dataline != 0x1) {
+		if (sai->dataline[tx] <= 1)
+			regmap_update_bits(sai->regmap, FSL_SAI_xCR4(tx, ofs),
+				FSL_SAI_CR4_FCOMB_MASK, 0);
+		else
+			regmap_update_bits(sai->regmap, FSL_SAI_xCR4(tx, ofs),
+				FSL_SAI_CR4_FCOMB_MASK, FSL_SAI_CR4_FCOMB_SOFT);
+
+	}
+
 	regmap_update_bits(sai->regmap, FSL_SAI_xCR3(tx, ofs),
 			   FSL_SAI_CR3_TRCE_MASK,
-			   FSL_SAI_CR3_TRCE((1 << pins) - 1));
+			   FSL_SAI_CR3_TRCE((sai->dataline[tx] & ((1 << pins) - 1))));
+
 	regmap_update_bits(sai->regmap, FSL_SAI_xCR4(tx, ofs),
 			   FSL_SAI_CR4_SYWD_MASK | FSL_SAI_CR4_FRSZ_MASK |
 			   FSL_SAI_CR4_CHMOD_MASK,
@@ -625,6 +648,8 @@ static int fsl_sai_trigger(struct snd_pcm_substream *substream, int cmd,
 				   FSL_SAI_CSR_FRDE, FSL_SAI_CSR_FRDE);
 		regmap_update_bits(sai->regmap, FSL_SAI_xCSR(tx, ofs),
 				   FSL_SAI_CSR_TERE, FSL_SAI_CSR_TERE);
+		regmap_update_bits(sai->regmap, FSL_SAI_xCSR(tx, ofs),
+				   FSL_SAI_CSR_SE, FSL_SAI_CSR_SE);
 		/*
 		 * Enable the opposite direction for synchronous mode
 		 * 1. Tx sync with Rx: only set RE for Rx; set TE & RE for Tx
@@ -1056,7 +1081,7 @@ static int fsl_sai_probe(struct platform_device *pdev)
 		sai->mclk_clk[i] = devm_clk_get(&pdev->dev, tmp);
 		if (IS_ERR(sai->mclk_clk[i])) {
 			dev_err(&pdev->dev, "failed to get mclk%d clock: %ld\n",
-					i + 1, PTR_ERR(sai->mclk_clk[i]));
+					i, PTR_ERR(sai->mclk_clk[i]));
 			sai->mclk_clk[i] = NULL;
 		}
 	}
@@ -1065,6 +1090,20 @@ static int fsl_sai_probe(struct platform_device *pdev)
 		sai->mclk_clk[0] = sai->mclk_clk[1];
 	else
 		sai->mclk_clk[0] = sai->bus_clk;
+
+	/*dataline mask for rx and tx*/
+	ret = of_property_read_u32_index(np, "fsl,dataline", 0, &sai->dataline[0]);
+	if (ret)
+		sai->dataline[0] = 1;
+
+	ret = of_property_read_u32_index(np, "fsl,dataline", 1, &sai->dataline[1]);
+	if (ret)
+		sai->dataline[1] = 1;
+
+	if ((sai->dataline[0] & (~sai->soc_data->dataline)) || sai->dataline[1] & (~sai->soc_data->dataline)) {
+		dev_err(&pdev->dev, "dataline setting error, Mask is 0x%x\n", sai->soc_data->dataline);
+		return -EINVAL;
+	}
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0)
@@ -1203,6 +1242,8 @@ static const struct fsl_sai_soc_data fsl_sai_vf610_data = {
 	.fifo_depth = 32,
 	.reg_offset = 0,
 	.mclk0_is_mclk1 = false,
+	.dataline = 0x1,
+	.fifos = 1,
 	.flags = 0,
 };
 
@@ -1212,6 +1253,8 @@ static const struct fsl_sai_soc_data fsl_sai_imx6sx_data = {
 	.fifo_depth = 32,
 	.reg_offset = 0,
 	.mclk0_is_mclk1 = true,
+	.dataline = 0x1,
+	.fifos = 1,
 	.flags = 0,
 };
 
@@ -1222,6 +1265,8 @@ static const struct fsl_sai_soc_data fsl_sai_imx7ulp_data = {
 	.reg_offset = 8,
 	.mclk0_is_mclk1 = false,
 	.flags = PMQOS_CPU_LATENCY,
+	.dataline = 0x3,
+	.fifos = 2,
 };
 
 static const struct fsl_sai_soc_data fsl_sai_imx8mq_data = {
@@ -1230,6 +1275,8 @@ static const struct fsl_sai_soc_data fsl_sai_imx8mq_data = {
 	.fifo_depth = 128,
 	.reg_offset = 8,
 	.mclk0_is_mclk1 = false,
+	.dataline = 0xff,
+	.fifos = 8,
 	.flags = 0,
 };
 
@@ -1239,6 +1286,8 @@ static const struct fsl_sai_soc_data fsl_sai_imx8qm_data = {
 	.fifo_depth = 64,
 	.reg_offset = 0,
 	.mclk0_is_mclk1 = false,
+	.dataline = 0xf,
+	.fifos = 1,
 	.flags = 0,
 };
 
