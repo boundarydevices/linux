@@ -762,6 +762,33 @@ config TOUCHSCREEN_UCB1400
 	  To compile this driver as a module, choose M here: the
 	  module will be called ucb1400_ts.
 
+config TOUCHSCREEN_PIC16F616
+	tristate "PIC16F616 I2C Touchscreen controller"
+	depends on I2C
+	help
+	  If you say yes here you get touchscreen support through Boundary Devices 4/5 wire touchscreen card
+	  To compile this driver as a module, choose M here: the
+	  module will be called pic16f616.
+
+config TOUCHSCREEN_PIC16F616_COMBINE
+	int "Number of samples to combine"
+	depends on TOUCHSCREEN_PIC16F616
+	default 64
+	range 8 255
+	help
+	  Select the number of analogue to digital conversions for the
+	  controller to combine into a single sample. Range is 8-255.
+	  Default is 64.
+
+config TOUCHSCREEN_PIC16F616_DROP
+	int "Number of samples to drop"
+	depends on TOUCHSCREEN_PIC16F616
+	default 1
+	range 0 16
+	help
+	  Select the number of sample after a press to ignore.
+	  Range is 0-16. Default is 0.
+
 config TOUCHSCREEN_PIXCIR
 	tristate "PIXCIR I2C touchscreens"
 	depends on I2C
