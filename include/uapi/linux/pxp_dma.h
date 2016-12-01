@@ -311,6 +311,7 @@ struct pxp_proc_data {
 	bool reagl_d_en;	/* enable reagl or reagl-d */
 	bool detection_only;
 	int lut;
+	bool lut_cleanup;
 	unsigned int lut_status_1;
 	unsigned int lut_status_2;
 
