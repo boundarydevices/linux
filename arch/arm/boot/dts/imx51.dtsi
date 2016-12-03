@@ -26,6 +26,7 @@
 		gpio3 = &gpio4;
 		i2c0 = &i2c1;
 		i2c1 = &i2c2;
+		ipu0 = &ipu;
 		mmc0 = &esdhc1;
 		mmc1 = &esdhc2;
 		mmc2 = &esdhc3;
@@ -131,9 +132,12 @@
 			interrupts = <11 10>;
 			clocks = <&clks IMX5_CLK_IPU_GATE>,
 			         <&clks IMX5_CLK_IPU_DI0_GATE>,
-			         <&clks IMX5_CLK_IPU_DI1_GATE>;
-			clock-names = "bus", "di0", "di1";
+			         <&clks IMX5_CLK_IPU_DI1_GATE>,
+				 <&clks IMX5_CLK_IPU_DI0_SEL>,
+				 <&clks IMX5_CLK_IPU_DI1_SEL>;
+			clock-names = "bus", "di0", "di1", "di0_sel", "di1_sel";
 			resets = <&src 2>;
+			bypass_reset = <0>;
 
 			ipu_di0: port@2 {
 				reg = <2>;
@@ -201,6 +205,8 @@
 					#address-cells = <1>;
 					#size-cells = <0>;
 					compatible = "fsl,imx51-ecspi";
+					dmas = <&sdma 6 7 0>, <&sdma 7 7 0>;
+					dma-names = "rx", "tx";
 					reg = <0x70010000 0x4000>;
 					interrupts = <36>;
 					clocks = <&clks IMX5_CLK_ECSPI1_IPG_GATE>,
