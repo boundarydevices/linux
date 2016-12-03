@@ -245,10 +245,10 @@ static void __init mx5_clocks_common_init(void __iomem *ccm_base)
 	clk[IMX5_CLK_EMI_FAST_GATE]	= imx_clk_gate2("emi_fast_gate", "dummy", MXC_CCM_CCGR5, 14);
 	clk[IMX5_CLK_EMI_SLOW_GATE]	= imx_clk_gate2("emi_slow_gate", "emi_slow_podf", MXC_CCM_CCGR5, 16);
 	clk[IMX5_CLK_IPU_SEL]		= imx_clk_mux("ipu_sel", MXC_CCM_CBCMR, 6, 2, ipu_sel, ARRAY_SIZE(ipu_sel));
-	clk[IMX5_CLK_IPU_GATE]		= imx_clk_gate2("ipu_gate", "ipu_sel", MXC_CCM_CCGR5, 10);
+	clk[IMX5_CLK_IPU_GATE]		= imx_clk_gate2("ipu1", "ipu_sel", MXC_CCM_CCGR5, 10);
 	clk[IMX5_CLK_NFC_GATE]		= imx_clk_gate2("nfc_gate", "nfc_podf", MXC_CCM_CCGR5, 20);
-	clk[IMX5_CLK_IPU_DI0_GATE]	= imx_clk_gate2("ipu_di0_gate", "ipu_di0_sel", MXC_CCM_CCGR6, 10);
-	clk[IMX5_CLK_IPU_DI1_GATE]	= imx_clk_gate2("ipu_di1_gate", "ipu_di1_sel", MXC_CCM_CCGR6, 12);
+	clk[IMX5_CLK_IPU_DI0_GATE]	= imx_clk_gate2("ipu1_di0", "ipu_di0_sel", MXC_CCM_CCGR6, 10);
+	clk[IMX5_CLK_IPU_DI1_GATE]	= imx_clk_gate2("ipu1_di1", "ipu_di1_sel", MXC_CCM_CCGR6, 12);
 	clk[IMX5_CLK_GPU3D_SEL]		= imx_clk_mux("gpu3d_sel", MXC_CCM_CBCMR, 4, 2, gpu3d_sel, ARRAY_SIZE(gpu3d_sel));
 	clk[IMX5_CLK_GPU2D_SEL]		= imx_clk_mux("gpu2d_sel", MXC_CCM_CBCMR, 16, 2, gpu2d_sel, ARRAY_SIZE(gpu2d_sel));
 	clk[IMX5_CLK_GPU3D_GATE]	= imx_clk_gate2("gpu3d_gate", "gpu3d_sel", MXC_CCM_CCGR5, 2);
