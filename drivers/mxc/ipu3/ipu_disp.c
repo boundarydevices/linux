@@ -1804,14 +1804,12 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 	uint32_t h_total, v_total;
 	int map[3];
 	int ret;
-	struct clk *ldb_di0_clk, *ldb_di1_clk;
 	struct clk *clk540m;
 	struct clk *di_parent, *dipp;
-	uint32_t clk540m_rate, rem;
 	uint32_t bt656_h_start_width = 0;
 	uint32_t bt656_v_start_width_field0 = 0, bt656_v_end_width_field0 = 0;
 	uint32_t bt656_v_start_width_field1 = 0, bt656_v_end_width_field1 = 0;
-	bool special;
+	bool special = false;
 
 	dev_dbg(ipu->dev, "panel size = %d x %d\n", width, height);
 
@@ -1853,58 +1851,59 @@ int32_t ipu_init_sync_panel(struct ipu_soc *ipu, int disp, uint32_t pixel_clk,
 		return PTR_ERR(dipp);
 	}
 	clk540m = clk_get(ipu->dev, "540m");
-	if (IS_ERR(clk540m)) {
-		dev_err(ipu->dev, "clk_get 540m failed");
-		return PTR_ERR(clk540m);
-	}
-	clk540m_rate = clk_get_rate(clk540m);
-	rem = clk540m_rate % pixel_clk;
-	if (!rem) {
-		int div;
-		ret = clk_set_parent(dipp, clk540m);
-		if (ret) {
-			dev_err(ipu->dev, "set parent error:%d\n", ret);
-			return ret;
+	if (!IS_ERR(clk540m)) {
+		uint32_t clk540m_rate = clk_get_rate(clk540m);
+		uint32_t rem = clk540m_rate % pixel_clk;
+		struct clk *ldb_di0_clk = NULL;
+		struct clk *ldb_di1_clk = NULL;
+
+		if (!rem) {
+			int div;
+			ret = clk_set_parent(dipp, clk540m);
+			if (ret) {
+				dev_err(ipu->dev, "set parent error:%d\n", ret);
+				return ret;
+			}
+			div = clk540m_rate / pixel_clk;
+			if (!(div & 1))
+				div >>= 1;
+			if (!(div & 1))
+				div >>= 1;
+			dev_info(ipu->dev, "%s=%ld\n", __clk_get_name(dipp), clk_get_rate(dipp));
+			ret = clk_set_rate(di_parent, clk540m_rate / div);
+			if (ret) {
+				dev_warn(ipu->dev, "set rate error:%d\n", ret);
+				rem = 1;
+			}
 		}
-		div = clk540m_rate / pixel_clk;
-		if (!(div & 1))
-			div >>= 1;
-		if (!(div & 1))
-			div >>= 1;
-		dev_info(ipu->dev, "%s=%ld\n", __clk_get_name(dipp), clk_get_rate(dipp));
-		ret = clk_set_rate(di_parent, clk540m_rate / div);
-		if (ret) {
-			dev_warn(ipu->dev, "set rate error:%d\n", ret);
-			rem = 1;
+		clk_put(clk540m);
+		if (rem) {
+			struct clk *clk_video = clk_get(ipu->dev, "video_pll");
+			if (IS_ERR(clk_video)) {
+				dev_err(ipu->dev, "clk_get video_pll failed");
+				return PTR_ERR(clk_video);
+			}
+			ret = clk_set_parent(dipp, clk_video);
+			clk_put(clk_video);
 		}
-	}
-	clk_put(clk540m);
-	if (rem) {
-		struct clk *clk_video = clk_get(ipu->dev, "video_pll");
-		if (IS_ERR(clk_video)) {
-			dev_err(ipu->dev, "clk_get video_pll failed");
-			return PTR_ERR(clk_video);
+
+		ldb_di0_clk = clk_get(ipu->dev, "ldb_di0");
+		if (IS_ERR(ldb_di0_clk)) {
+			dev_err(ipu->dev, "clk_get di0 failed");
+			return PTR_ERR(ldb_di0_clk);
 		}
-		ret = clk_set_parent(dipp, clk_video);
-		clk_put(clk_video);
+		ldb_di1_clk = clk_get(ipu->dev, "ldb_di1");
+		if (IS_ERR(ldb_di1_clk)) {
+			dev_err(ipu->dev, "clk_get di1 failed");
+			return PTR_ERR(ldb_di1_clk);
+		}
+		special = !strcmp(__clk_get_name(di_parent), __clk_get_name(ldb_di0_clk)) ||
+			  !strcmp(__clk_get_name(di_parent), __clk_get_name(ldb_di1_clk)) ||
+			  !rem;
+		clk_put(ldb_di0_clk);
+		clk_put(ldb_di1_clk);
 	}
 
-	ldb_di0_clk = clk_get(ipu->dev, "ldb_di0");
-	if (IS_ERR(ldb_di0_clk)) {
-		dev_err(ipu->dev, "clk_get di0 failed");
-		return PTR_ERR(ldb_di0_clk);
-	}
-	ldb_di1_clk = clk_get(ipu->dev, "ldb_di1");
-	if (IS_ERR(ldb_di1_clk)) {
-		dev_err(ipu->dev, "clk_get di1 failed");
-		return PTR_ERR(ldb_di1_clk);
-	}
-
-	special = !strcmp(__clk_get_name(di_parent), __clk_get_name(ldb_di0_clk)) ||
-		  !strcmp(__clk_get_name(di_parent), __clk_get_name(ldb_di1_clk)) ||
-		  !rem;
-	clk_put(ldb_di0_clk);
-	clk_put(ldb_di1_clk);
 	if (special) {
 		/* if di clk parent is tve/ldb, then keep it;*/
 		dev_info(ipu->dev, "use special clk parent\n");
