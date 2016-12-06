@@ -1026,6 +1026,11 @@ static const struct usbmisc_ops imx7d_usbmisc_ops = {
 	.term_select_override = usbmisc_term_select_override,
 };
 
+static const struct usbmisc_ops imx7ulp_usbmisc_ops = {
+	.init = usbmisc_imx7d_init,
+	.set_wakeup = usbmisc_imx7d_set_wakeup,
+};
+
 static inline bool is_imx53_usbmisc(struct imx_usbmisc_data *data)
 {
 	struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
@@ -1224,6 +1229,10 @@ static const struct of_device_id usbmisc_imx_dt_ids[] = {
 	{
 		.compatible = "fsl,imx7d-usbmisc",
 		.data = &imx7d_usbmisc_ops,
+	},
+	{
+		.compatible = "fsl,imx7ulp-usbmisc",
+		.data = &imx7ulp_usbmisc_ops,
 	},
 	{ /* sentinel */ }
 };
