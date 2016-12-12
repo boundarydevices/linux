@@ -253,6 +253,17 @@
 					bus-width = <4>;
 					status = "disabled";
 				};
+
+				hs_i2c1: hs-i2c@70038000 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					compatible = "fsl,imx51-hsi2c";
+					reg = <0x70038000 0x4000>;
+					interrupts = <64>;
+					clocks = <&clks IMX5_CLK_HSI2C_IPG_GATE>, <&clks IMX5_CLK_HSI2C_GATE>;
+					clock-names = "ipg", "serial";
+					status = "disabled";
+				};
 			};
 
 			usbotg: usb@73f80000 {
