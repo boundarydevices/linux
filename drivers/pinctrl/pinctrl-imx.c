@@ -206,11 +206,8 @@ static int imx_pmx_enable(struct pinctrl_dev *pctldev, unsigned selector,
 		pin_id = pin->pin;
 		pin_reg = &info->pin_regs[pin_id];
 
-		if (!(info->flags & ZERO_OFFSET_VALID) && !pin_reg->mux_reg) {
-			dev_err(ipctl->dev, "Pin(%s) does not support mux function\n",
-				info->pins[pin_id].name);
-			return -EINVAL;
-		}
+		if (!(info->flags & ZERO_OFFSET_VALID) && !pin_reg->mux_reg)
+			goto input_mux;
 
 		if (info->flags & SHARE_MUX_CONF_REG) {
 			u32 reg;
@@ -223,7 +220,7 @@ static int imx_pmx_enable(struct pinctrl_dev *pctldev, unsigned selector,
 		}
 		dev_dbg(ipctl->dev, "write: offset 0x%x val 0x%x\n",
 			pin_reg->mux_reg, pin->mux_mode);
-
+input_mux:
 		/*
 		 * If the select input value begins with 0xff, it's a quirky
 		 * select input and the value should be interpreted as below.
