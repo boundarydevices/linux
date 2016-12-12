@@ -129,7 +129,7 @@
 #define GP_HOG_TP27	<&gpio3 17 GPIO_ACTIVE_LOW>
 			MX51_PAD_NANDF_CS1__GPIO3_17		0x1e5
 #define GP_ADC_TRIG	<&gpio4 13 GPIO_ACTIVE_HIGH>
-			MX51_PAD_CSI2_VSYNC__GPIO4_13
+			MX51_PAD_CSI2_VSYNC__GPIO4_13		0x1e5
 		>;
 	};
 
@@ -140,11 +140,25 @@
 		>;
 	};
 
+	pinctrl_hs_i2c1_scl_gpio: hs-i2c1-scl-gpiogrp {
+		fsl,pins = <
+#define	GP_HS_I2C1_SCL <&gpio4 16 GPIO_ACTIVE_HIGH>
+			MX51_PAD_I2C1_CLK__GPIO4_16		0x400001ed
+		>;
+	};
+
+	pinctrl_hs_i2c1_sda_gpio: hs-i2c1-sda-gpiogrp {
+		fsl,pins = <
+#define	GP_HS_I2C1_SDA <&gpio4 17 GPIO_ACTIVE_HIGH>
+			MX51_PAD_I2C1_DAT__GPIO4_17		0x400001ed
+		>;
+	};
+
 	pinctrl_hs_i2c1_pic16f616: hs-i2c1-pic16f616grp {
 		fsl,pins = <
 #define GPIRQ_PIC16F616	<&gpio2 1 IRQ_TYPE_LEVEL_LOW>
 #define GP_PIC16F616	<&gpio2 1 GPIO_ACTIVE_LOW>
-			MX51_PAD_EIM_D17__GPIO2_1		0x1e5
+			MX51_PAD_EIM_D17__GPIO2_1		0x85	/* No pullup option */
 		>;
 	};
 
@@ -199,9 +213,9 @@
 			MX51_PAD_CSI2_D12__GPIO4_9			0x85
 			MX51_PAD_CSI2_D13__GPIO4_10			0x85
 #define GP_OV5642_RESET		<&gpio4 14 GPIO_ACTIVE_LOW>
-			MX51_PAD_CSI2_HSYNC__GPIO4_14
+			MX51_PAD_CSI2_HSYNC__GPIO4_14			0xe5
 #define GP_OV5642_POWER_DOWN	<&gpio4 15 GPIO_ACTIVE_HIGH>
-			MX51_PAD_CSI2_PIXCLK__GPIO4_15
+			MX51_PAD_CSI2_PIXCLK__GPIO4_15			0xe5
 		>;
 	};
 
@@ -489,16 +503,6 @@
 
 	};
 
-	hs_i2c1: hs-i2c@70038000 {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		compatible = "fsl,imx51-hsi2c";
-		reg = <0x70038000 0x4000>;
-		interrupts = <64>;
-		clocks = <&clks IMX5_CLK_HSI2C_GATE>;
-		status = "okay";
-	};
-
 	leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
@@ -585,6 +589,17 @@
 			enable-active-high;
 		};
 #endif
+	};
+
+	sas: sas@73fc0000 {
+		clocks = <&clks 30>, <&clks 31>;
+		clock-names = "ipg", "per";
+	        compatible = "boundary,imx51-sas";
+		interrupt-parent = <&tzic>;
+		interrupts = <32>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_uart2>;
+		reg = <0x73fc0000 0x4000>;
 	};
 
 	sound {
@@ -760,8 +775,13 @@
 };
 
 &hs_i2c1 {
-	pinctrl-names = "default";
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "scl-gpio", "sda-gpio";
 	pinctrl-0 = <&pinctrl_hs_i2c1>;
+	pinctrl-1 = <&pinctrl_hs_i2c1_scl_gpio>;
+	pinctrl-2 = <&pinctrl_hs_i2c1_sda_gpio>;
+	scl-gpios = GP_HS_I2C1_SCL;
+	sda-gpios = GP_HS_I2C1_SDA;
 	status = "okay";
 	
 	mma7660: mma7660@4c {
@@ -778,6 +798,22 @@
 		wakeup-gpios = GP_PIC16F616;
 	};
 
+	/* hs i2c should not use addresses 0x01,0x21,0x41,0x61 */
+	reserve@21 {
+		compatible = "reserve";
+		reg = <0x21>;
+	};
+
+	reserve@41 {
+		compatible = "reserve";
+		reg = <0x41>;
+	};
+
+	reserve@61 {
+		compatible = "reserve";
+		reg = <0x61>;
+	};
+
 	tfp410: tfp410@38 {
 		compatible = "tfp410";
 		display_id = "???lcdif2";
@@ -787,7 +823,6 @@
 		pinctrl-0 = <&pinctrl_hs_i2c1_tfp410>;
 		reg = <0x38>;
 	};
-
 };
 
 &i2c1 {
@@ -834,6 +869,16 @@
 	status = "okay";
 };
 
+&sas {
+        baud = <19200>;
+        flush_on_mark = <0>;
+        interbyte_delay = <5>;
+        maxtxmsg = <512>;
+        rxbufsize = <4096>;
+        status = "okay";
+        txbufsize = <4096>;
+};
+
 &ssi2 {
 	fsl,mode = "i2s-slave";
 	status = "okay";
@@ -842,12 +887,6 @@
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
-	status = "okay";
-};
-
-&uart2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart2>;
 	status = "okay";
 };
 
