@@ -53,6 +53,7 @@
 #include <linux/miscdevice.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 #include <linux/poll.h>
@@ -80,7 +81,6 @@
 #define IMX21_ONEMS 0xb0 /* One Millisecond register */
 #define IMX1_UTS 0xd0 /* UART Test Register on i.mx1 */
 #define IMX21_UTS 0xb4 /* UART Test Register on all other i.mx*/
-#define UMCR  0xb8
 #define UMCR_MDEN 1		/* 9-bit/Multidrop enable */
 #define UMCR_TXB8 (1<<2)	/* parity bit goes here */
 
@@ -201,6 +201,11 @@ struct msg_t {
 	int end;
 };
 
+
+struct imx_sas_devdata {
+	unsigned umcr_reg;
+};
+
 /*
  * Device structure, to keep track of everything device-specific here
  */
@@ -218,6 +223,7 @@ struct sas_dev {
 
 	struct clk *clk_ipg;
 	struct clk *clk_per;
+	unsigned umcr_reg;
 	int irq;
 	int rxirq;
 	int txirq;
@@ -235,6 +241,7 @@ struct sas_dev {
 	struct circ_buf txbuf;
 	u8 *txpbuf; /* parity for outbound characters */
 	u8 last_parity;
+	u8 force_tx_par_err;
 };
 
 #define CIRC_NEXT(index, size) ((index + 1) & (size - 1))
@@ -403,6 +410,16 @@ static void sas_rxint(struct sas_dev *dev)
 		u32 in = readl(dev->base + URXD0);
 		if (!(in & URXD_CHARRDY))
 			break;
+		if (!dev->umcr_reg) {
+                        u32 ch_parity = in;
+
+                        ch_parity ^= ch_parity >> 4;
+                        ch_parity ^= ch_parity >> 2;
+                        ch_parity ^= ch_parity >> 1;
+                        ch_parity &= 1;
+                        /* URXD_PRERR is bit 10 */
+                        in ^= (ch_parity << 10);
+		}
 		if (in & URXD_PRERR) {
 			/*
 			 * if a part of a message is present, terminate it
@@ -446,33 +463,57 @@ static void sas_txint(struct sas_dev *dev)
 			dev->txbuf.tail,
 			dev->txbufsize) &&
 			!(readl(dev->base + IMX21_UTS) & UTS_TXFULL)) {
+		u8 ch = dev->txbuf.buf[dev->txbuf.tail];
 		u8 shift = dev->txbuf.tail & 7;
-		u8 mask = 1 << shift;
-		u8 parity = (dev->txpbuf[dev->txbuf.tail/8] & mask);
-		if (parity != dev->last_parity) {
+		u8 mark_space = (dev->txpbuf[dev->txbuf.tail/8] >> shift) & 1;
+		u8 change_needed;
+
+		if (dev->umcr_reg) {
+			change_needed = mark_space ^ dev->last_parity;
+		} else {
+			unsigned ch_parity = dev->force_tx_par_err ^ mark_space ^ ch;
+	                ch_parity ^= ch_parity >> 4;
+	                ch_parity ^= ch_parity >> 2;
+	                ch_parity ^= ch_parity >> 1;
+	                change_needed = ch_parity & 1;
+		}
+		if (change_needed) {
 			reg = readl(dev->base + USR2);
 			if (!(reg & USR2_TXDC)) {
-				/* wait for shift register empty */
-				reg = readl(dev->base + UCR1);
-				if ((reg & (UCR1_TRDYEN | UCR1_TXMPTYEN))
-					!= (UCR1_TRDYEN | UCR1_TXMPTYEN)) {
-					/* only interrupt on empty */
-					reg &= ~UCR1_TRDYEN;
-					reg |= UCR1_TXMPTYEN;
-					writel(reg, dev->base + UCR1);
+				/*
+				 * must wait until tx complete to change force
+				 * parity error status or
+				 * TXB8 status
+				 */
+				reg = readl(dev->base + UCR4);
+				if (!(reg & UCR4_TCEN)) {
+					reg |= UCR4_TCEN;
+					writel(reg, dev->base + UCR4);
 				}
-				break;
+				reg = readl(dev->base + UCR1);
+				writel(reg & ~(UCR1_TXMPTYEN | UCR1_TRDYEN), dev->base + UCR1);
+				return;
 			}
-			reg = readl(dev->base + UMCR);
-			if (parity)
-				reg |= UMCR_TXB8;
-			else
-				reg &= ~UMCR_TXB8;
-			writel(reg, dev->base + UMCR);
-			dev->last_parity = parity;
-		} /* parity change */
+			if (dev->umcr_reg) {
+				reg = readl(dev->base + dev->umcr_reg);
+				if (mark_space)
+					reg |= UMCR_TXB8;
+				else
+					reg &= ~UMCR_TXB8;
+				writel(reg, dev->base + dev->umcr_reg);
+				dev->last_parity = mark_space;
+			} else {
+	                        reg = readl(dev->base + IMX21_UTS);
+	                        dev->force_tx_par_err ^= 1;
+	                        if (dev->force_tx_par_err)
+	                                reg |= UTS_FRCPERR;
+	                        else
+	                                reg &= ~UTS_FRCPERR;
+	                        writel(reg, dev->base + IMX21_UTS);
+			}
+		}
 
-		writel(dev->txbuf.buf[dev->txbuf.tail], dev->base + URTX0);
+		writel(ch, dev->base + URTX0);
 		dev->txbuf.tail = CIRC_NEXT(dev->txbuf.tail, dev->txbufsize);
 		if (CIRC_SPACE(dev->txbuf.head,
 			       dev->txbuf.tail,
@@ -486,6 +527,11 @@ static void sas_txint(struct sas_dev *dev)
 		if (reg & (UCR1_TRDYEN | UCR1_TXMPTYEN)) {
 			reg &= ~(UCR1_TRDYEN | UCR1_TXMPTYEN);
 			writel(reg, dev->base + UCR1);
+		}
+		reg = readl(dev->base + UCR4);
+		if (reg & UCR4_TCEN) {
+			reg &= ~UCR4_TCEN;
+			writel(reg, dev->base + UCR4);
 		}
 	}
 }
@@ -515,13 +561,15 @@ static irqreturn_t irq_handler(int irq, void *dev_id)
  */
 static void force_address_match(struct sas_dev *dev)
 {
+	if (!dev->umcr_reg)
+		return;
 	writel(UCR1_UARTEN, dev->base + UCR1);
 
 	/* loopback */
 	writel(UTS_LOOP, dev->base + IMX21_UTS);
 
 	/* mark parity */
-	writel(UMCR_TXB8 | UMCR_MDEN, dev->base + UMCR);
+	writel(UMCR_TXB8 | UMCR_MDEN, dev->base + dev->umcr_reg);
 
 	/* transmit a null */
 	writel(0, dev->base + URTX0);
@@ -534,7 +582,7 @@ static void force_address_match(struct sas_dev *dev)
 	writel(0, dev->base + IMX21_UTS);
 
 	/* and space parity */
-	writel(UMCR_MDEN, dev->base + UMCR);
+	writel(UMCR_MDEN, dev->base + dev->umcr_reg);
 }
 
 static int sas_open(struct inode *inode, struct file *file)
@@ -570,12 +618,18 @@ static int sas_open(struct inode *inode, struct file *file)
 			writel(0x002b, dev->base + UESC);
 			writel(0x0, dev->base + UTIM);
 			writel(0x0, dev->base + IMX1_UTS);
+			writel(0, dev->base + IMX21_UTS);
+			dev->force_tx_par_err = 0;
+
 			/* divide input clock by 2, receive fifo 1, txtl 2 */
 			writel((4 << 7) | 0x801, dev->base + UFCR);
 			writel(0xf, dev->base + UBIR);
 			writel(clk_get_rate(dev->clk_per) / (2 * dev->baud),
 			       dev->base + UBMR);
-			writel(UMCR_MDEN, dev->base + UMCR);
+
+			if (dev->umcr_reg) {
+				writel(UMCR_MDEN, dev->base + dev->umcr_reg);
+			}
 			writel(UCR2_WS | UCR2_IRTS
 			       | UCR2_RXEN | UCR2_TXEN
 			       | UCR2_SRST | UCR2_PREN,
@@ -591,7 +645,7 @@ static int sas_open(struct inode *inode, struct file *file)
 			dev->rxmsgadd =
 			dev->rxmsgtake = 0;
 			dev->rxmsgs[0].start = 0;
-			dev->last_parity = 0xff;
+			dev->last_parity = 0;
 		} else {
 			dev_err(&dev->pdev->dev,
 				"Error %d requesting irq %d\n",
@@ -777,8 +831,23 @@ static int sas_of_probe(struct platform_device *pdev,
 	return 0;
 }
 
+static struct imx_sas_devdata imx51_sas_data  = {
+	.umcr_reg = 0,
+};
+
+static struct imx_sas_devdata imx6_sas_data = {
+	.umcr_reg = 0xb8,
+};
+
+static const struct of_device_id sas_ids[] = {
+	{ .compatible = "boundary,imx51-sas", .data = &imx51_sas_data, },
+	{ .compatible = "boundary,sas", .data = &imx6_sas_data },
+	{ /* sentinel */ }
+};
+
 static int sas_probe(struct platform_device *pdev)
 {
+	const struct of_device_id *of_id = of_match_device(sas_ids, &pdev->dev);
 	int result = 0;
 	struct sas_dev *dev;
 	struct device_node *np = pdev->dev.of_node;
@@ -799,6 +868,13 @@ static int sas_probe(struct platform_device *pdev)
 	cdev_init(&dev->cdev, &sas_fops);
 	dev->cdev.owner = THIS_MODULE;
 	dev->cdev.ops = &sas_fops;
+
+	if (of_id) {
+		const struct imx_sas_devdata *pdata = of_id->data;
+
+		if (pdata)
+			dev->umcr_reg = pdata->umcr_reg;
+	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
@@ -933,6 +1009,8 @@ static int sas_probe(struct platform_device *pdev)
 		DRIVER_NAME, dev);
 	dev_dbg(&pdev->dev, "%s: flush_on_mark == %d\n",
 		DRIVER_NAME, dev->flush_on_mark);
+	dev_dbg(&pdev->dev, "%s: umcr_reg == 0x%x\n",
+		DRIVER_NAME, dev->umcr_reg);
 	dev_info(&pdev->dev, "sas driver installed\n");
 	return 0;
 
@@ -956,10 +1034,6 @@ static int sas_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id sas_ids[] = {
-	{ .compatible = "boundary,sas", },
-	{ /* sentinel */ }
-};
 MODULE_DEVICE_TABLE(of, sas_ids);
 
 static struct platform_driver sas_driver = {
