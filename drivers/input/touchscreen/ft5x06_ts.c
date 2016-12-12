@@ -28,7 +28,6 @@
 #include <linux/io.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
-#include <linux/proc_fs.h>
 #include <linux/regmap.h>
 #include <linux/delay.h>
 #include <linux/input/mt.h>
@@ -93,7 +92,6 @@ struct ft5x06_ts {
 	int			irq;
 	struct gpio_desc	*wakeup_gpio;
 	struct gpio_desc	*reset_gpio;
-	struct proc_dir_entry	*procentry;
 	struct timer_list	release_timer;
 	unsigned		down_mask;
 	unsigned		max_x;
@@ -102,12 +100,6 @@ struct ft5x06_ts {
 	struct regmap		*regmap;
 };
 static const char *client_name = "ft5x06";
-
-struct ft5x06_ts *gts;
-
-static char const procentryname[] = {
-   "ft5x06"
-};
 
 static int ts_startup(struct ft5x06_ts *ts);
 static void ts_shutdown(struct ft5x06_ts *ts);
@@ -242,7 +234,7 @@ static inline int ts_register(struct ft5x06_ts *ts)
 
 	pr_info("%s resolution is %dx%d\n", client_name, ts->max_x + 1, ts->max_y + 1);
 	ts->idev = idev;
-	idev->name      = procentryname ;
+	idev->name      = client_name;
 	idev->id.bustype = BUS_I2C;
 	idev->id.product = ts->client->addr;
 	idev->open      = ts_open;
@@ -295,47 +287,6 @@ static void printHex(u8 const *buf, unsigned len)
 	printk(KERN_ERR "%s\n", hex);
 }
 #endif
-
-static int proc_regnum = 0;
-static int ft5x06_proc_read
-	(struct file *f,
-	 char __user *ubuf,
-	 size_t count,
-	 loff_t *off)
-{
-	int ret;
-	unsigned char startch[1] = { (u8)proc_regnum };
-	unsigned char buf[1];
-	struct i2c_msg readpkt[2] = {
-		{gts->client->addr, 0, 1, startch},
-		{gts->client->addr, I2C_M_RD, sizeof(buf), buf}
-	};
-	ret = i2c_transfer(gts->client->adapter, readpkt,
-			   ARRAY_SIZE(readpkt));
-	if (ret != ARRAY_SIZE(readpkt)) {
-		printk(KERN_WARNING "%s: i2c_transfer failed\n",
-		       client_name);
-	} else {
-		printk (KERN_ERR "ft5x06[0x%02x] == 0x%02x\n", (u8)proc_regnum, buf[0]);
-	}
-	return 0 ;
-}
-
-static int
-ft5x06_proc_write
-	(struct file *file,
-	 const char __user *buffer,
-	 size_t count,
-	 loff_t *data)
-{
-	proc_regnum = simple_strtoul(buffer,0,0);
-	return count ;
-}
-
-struct file_operations proc_fops = {
-	.read = ft5x06_proc_read,
-	.write = ft5x06_proc_write,
-};
 
 static irqreturn_t ts_interrupt(int irq, void *id)
 {
@@ -588,11 +539,6 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct device_node *np = client->dev.of_node;
 	struct gpio_desc *wakeup_gpio;
 
-	if (gts) {
-		printk(KERN_ERR "%s: Error gts is already allocated\n",
-		       client_name);
-		return -ENOMEM;
-	}
 	ts = kzalloc(sizeof(struct ft5x06_ts), GFP_KERNEL);
 	if (!ts) {
 		dev_err(dev, "Couldn't allocate memory for %s\n", client_name);
@@ -652,9 +598,6 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	i2c_set_clientdata(client, ts);
 	err = ts_register(ts);
 	if (err == 0) {
-		gts = ts;
-		ts->procentry = proc_create(procentryname, 0x660, NULL,
-					    &proc_fops);
 		setup_timer(&ts->release_timer, ts_release_timer, (unsigned long)ts);
 		if (device_create_file(dev, &dev_attr_missed_releases))
 			dev_err(dev, "%s: error creating missed_releases entry\n", __func__);
@@ -673,13 +616,7 @@ static int ts_remove(struct i2c_client *client)
 	struct ft5x06_ts *ts = i2c_get_clientdata(client);
 
 	device_remove_file(&client->dev, &dev_attr_missed_releases);
-	remove_proc_entry(procentryname, 0);
-	if (ts == gts) {
-		gts = NULL;
-		ts_deregister(ts);
-	} else {
-		printk(KERN_ERR "%s: Error ts!=gts\n", client_name);
-	}
+	ts_deregister(ts);
 	if (ts->reset_gpio)
 		gpiod_set_value(ts->reset_gpio, 1);
 	kfree(ts);
