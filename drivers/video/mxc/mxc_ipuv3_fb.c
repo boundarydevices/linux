@@ -67,7 +67,8 @@ struct rotate_buf {
 	dma_addr_t phy_addr;
 	void *virt_addr;
 };
-#define need_xy_swap(mxc_fbi, fbi) (mxc_fbi->ipu_ch == MEM_BG_SYNC && fbi->var.rotate >= IPU_ROTATE_90_RIGHT)
+#define need_xy_swap(mxc_fbi, fbi) (mxc_fbi->ipu_ch == MEM_BG_SYNC && \
+		ipu_degrees_to_rot_mode(fbi->var.rotate) >= IPU_ROTATE_90_RIGHT)
 #define double_buf(fbi) (fbi->var.accel_flags & FB_ACCEL_DOUBLE_FLAG)
 
 struct mxcfb_info {
@@ -149,6 +150,48 @@ enum {
 
 static bool g_dp_in_use[2];
 LIST_HEAD(fb_alloc_list);
+
+static ipu_rotate_mode_t ipu_degrees_to_rot_mode(int degrees)
+{
+	ipu_rotate_mode_t mode;
+
+	switch (degrees) {
+	case 90:
+		mode = IPU_ROTATE_90_LEFT;
+		break;
+	case 180:
+		mode = IPU_ROTATE_180;
+		break;
+	case 270:
+		mode = IPU_ROTATE_90_RIGHT;
+		break;
+	default:
+		mode = IPU_ROTATE_NONE;
+	}
+
+	return mode;
+}
+
+int ipu_rot_mode_to_degrees(ipu_rotate_mode_t mode)
+{
+	int degrees;
+
+	switch (mode) {
+	case IPU_ROTATE_90_LEFT:
+		degrees = 90;
+		break;
+	case IPU_ROTATE_180:
+		degrees = 180;
+		break;
+	case IPU_ROTATE_90_RIGHT:
+		degrees = 270;
+		break;
+	default:
+		degrees = 0;
+	}
+
+	return degrees;
+}
 
 static bool is_rgb_pixfmt_fb(uint32_t pixfmt)
 {
@@ -444,7 +487,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 					 FB_PIX(fbi, mxc_fbi),
 					 fbi->var.xres, fbi->var.yres,
 					 fb_stride,
-					 fbi->var.rotate,
+					 ipu_degrees_to_rot_mode(fbi->var.rotate),
 					 base,
 					 base,
 					 double_buf(fbi) ? 0 : base,
@@ -473,7 +516,8 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 						 IPU_PIX_FMT_GENERIC,
 						 fbi->var.xres, fbi->var.yres,
 						 fbi->var.xres,
-						 need_xy_swap(mxc_fbi, fbi) ? IPU_ROTATE_NONE : fbi->var.rotate,
+						 need_xy_swap(mxc_fbi, fbi) ? IPU_ROTATE_NONE :
+						 ipu_degrees_to_rot_mode(fbi->var.rotate),
 						 mxc_fbi->alpha_phy_addr1,
 						 mxc_fbi->alpha_phy_addr0,
 						 0,
@@ -1006,8 +1050,8 @@ static int mxcfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 			var->yres = bg_yres - pos_y;
 	}
 
-	if (var->rotate > IPU_ROTATE_90_LEFT)
-		var->rotate = IPU_ROTATE_NONE;
+	if (ipu_degrees_to_rot_mode(var->rotate) > IPU_ROTATE_90_LEFT)
+		var->rotate = 0;
 
 	if (var->xres_virtual < var->xres)
 		var->xres_virtual = var->xres;
@@ -2472,7 +2516,7 @@ static int mxcfb_option_setup(struct platform_device *pdev, struct fb_info *fbi)
 			//     vinfo.xres_virtual = vinfo.xres;
 			//     vinfo.yres_virtual = vinfo.yres;
 			//     ioctl(fbfd, FBIOPUT_VSCREENINFO, &vinfo);
-			fbi->var.rotate = simple_strtoul(opt + 7, NULL, 0);
+			fbi->var.rotate = ipu_rot_mode_to_degrees(simple_strtoul(opt + 7, NULL, 0));
 		} else
 			fb_mode_str = opt;
 	}
@@ -2842,14 +2886,14 @@ static int mxcfb_probe(struct platform_device *pdev)
 		if (err) {
 			dev_dbg(&pdev->dev, "get of property rotation fail\n");
 		} else {
-			fbi->var.rotate = rotation;
+			fbi->var.rotate = ipu_rot_mode_to_degrees(rotation);
 		}
 	}
 	ret = mxcfb_dispdrv_init(pdev, fbi);
 	if (ret < 0)
 		goto init_dispdrv_failed;
 
-	if (fbi->var.rotate >= IPU_ROTATE_90_RIGHT) {
+	if (ipu_degrees_to_rot_mode(fbi->var.rotate) >= IPU_ROTATE_90_RIGHT) {
 		if (fbi->var.xres > 1024 ||  fbi->var.yres > 1024)
 			dev_err(&pdev->dev, "Rotate resolution > 1024x1024 is not yet supported");
 		tmp = fbi->var.xres;
