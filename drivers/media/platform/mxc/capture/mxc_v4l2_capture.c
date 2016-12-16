@@ -2027,8 +2027,17 @@ static long mxc_v4l_do_ioctl(struct file *file,
 				    V4L2_CAP_VIDEO_OVERLAY |
 				    V4L2_CAP_STREAMING |
 				    V4L2_CAP_READWRITE;
-		cap->card[0] = '\0';
-		cap->bus_info[0] = '\0';
+
+		if (cam && cam->sensor)
+			strlcpy(cap->card, cam->sensor->name, sizeof(cap->card));
+		else
+			cap->card[0] = '\0';
+
+		if (dev->v4l2_dev)
+			strlcpy(cap->bus_info, dev->v4l2_dev->name, sizeof(cap->bus_info));
+		else
+			cap->bus_info[0] = '\0';
+
 		break;
 	}
 
