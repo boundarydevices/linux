@@ -20,24 +20,17 @@
  */
 #include <asm/io.h>
 #include <linux/module.h>
+
+#include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/i2c.h>
 #include <linux/init.h>
+#include <linux/input.h>
 #include <linux/interrupt.h>
-#include <linux/slab.h>
-#include <linux/proc_fs.h>
-#include <linux/delay.h>
 #include <linux/of_gpio.h>
+#include <linux/proc_fs.h>
+#include <linux/slab.h>
 #include <linux/wait.h>
-/*
- * Define this if you want to talk to the input layer
- */
-//#undef CONFIG_INPUT
-#ifdef CONFIG_INPUT
-#define USE_INPUT
-#else
-#undef USE_INPUT
-#endif
 
 static char const * const touch_type_names[] = {
    "Unknown"
@@ -48,35 +41,10 @@ static char const * const touch_type_names[] = {
 static int calibration[7] = {0};
 module_param_array(calibration, int, NULL, S_IRUGO | S_IWUSR);
 
-#ifndef USE_INPUT
-#include <linux/fs.h>
-#include <linux/miscdevice.h>
-#include <linux/poll.h>
-struct ts_event {
-	u16		pressure;
-	u16		x;
-	u16		y;
-	u16		pad;
-	struct timeval	stamp;
-};
-#define NR_EVENTS	16
-
-#else
-#include <linux/input.h>
-#endif
 
 struct pic16f616_ts {
 	struct i2c_client *client;
-#ifdef USE_INPUT
 	struct input_dev	*idev;
-#endif
-#ifndef USE_INPUT
-	struct fasync_struct	*fasync;
-	wait_queue_head_t	read_wait;
-	u8			evt_head;
-	u8			evt_tail;
-	struct ts_event		events[NR_EVENTS];
-#endif
 	struct semaphore	sem;
 	int			use_count;
 	int			touch_count ;
@@ -95,6 +63,7 @@ struct pic16f616_ts {
 	unsigned		last_j;
 	unsigned		drop;
 	unsigned char		sumXReg[1];
+	unsigned char		spare[3];
 	struct i2c_msg		readSums[2];
 	unsigned char		buf[32];
 };
@@ -257,167 +226,6 @@ static DEVICE_ATTR(pic16f616_regs, S_IRWXUGO, pic16f616_regs_read, pic16f616_reg
 static DEVICE_ATTR(tstype, S_IRUGO, tstype_read, NULL);
 
 /*-----------------------------------------------------------------------*/
-#ifndef USE_INPUT
-
-#define ts_evt_pending(ts)	((volatile u8)(ts)->evt_head != (ts)->evt_tail)
-#define ts_evt_get(ts)		((ts)->events + (ts)->evt_tail)
-#define ts_evt_pull(ts)		((ts)->evt_tail = ((ts)->evt_tail + 1) & (NR_EVENTS - 1))
-#define ts_evt_clear(ts)	((ts)->evt_head = (ts)->evt_tail = 0)
-
-static inline void ts_evt_add(struct pic16f616_ts *ts, u16 pressure, u16 x, u16 y)
-{
-	int next_head;
-
-	do {
-		rmb();
-		next_head = (ts->evt_head + 1) & (NR_EVENTS - 1);
-		if (next_head != ts->evt_tail) break;
-		wake_up_interruptible(&ts->read_wait);
-		set_current_state(TASK_INTERRUPTIBLE);
-		schedule_timeout(HZ / 20);
-	} while (1);
-
-
-	ts->events[ts->evt_head].pressure = pressure;
-	ts->events[ts->evt_head].x = x;
-	ts->events[ts->evt_head].y = y;
-	do_gettimeofday(&ts->events[ts->evt_head].stamp);
-	ts->evt_head = next_head;
-
-	if (ts->fasync) kill_fasync(&ts->fasync, SIGIO, POLL_IN);
-	wake_up_interruptible(&ts->read_wait);
-}
-
-static inline void ts_event_release(struct pic16f616_ts *ts)
-{
-	ts_evt_add(ts, 0, 0, 0);
-}
-
-/*
- * User space driver interface.
- */
-static ssize_t picts_read(struct file *filp, char *buffer, size_t count,
-		loff_t *ppos)
-{
-	DECLARE_WAITQUEUE(wait, current);
-	struct pic16f616_ts *ts = filp->private_data;
-	char *ptr = buffer;
-	int err = 0;
-
-	add_wait_queue(&ts->read_wait, &wait);
-	while (count >= sizeof(struct ts_event)) {
-		err = -ERESTARTSYS;
-		if (signal_pending(current))
-			break;
-
-		if (ts_evt_pending(ts)) {
-			struct ts_event *evt = ts_evt_get(ts);
-
-			err = copy_to_user(ptr, evt, sizeof(struct ts_event));
-			ts_evt_pull(ts);
-
-			if (err)
-				break;
-
-			ptr += sizeof(struct ts_event);
-			count -= sizeof(struct ts_event);
-			continue;
-		}
-
-		__set_current_state(TASK_INTERRUPTIBLE);
-		if (filp->f_flags & O_NONBLOCK) {
-			err = -EAGAIN;
-			break;
-		}
-		schedule();
-	}
-	__set_current_state(TASK_RUNNING);
-	remove_wait_queue(&ts->read_wait, &wait);
-
-//	pr_err("%s: ts_read finished\n", client_name);
-	return (ptr == buffer)? err : ptr - buffer;
-}
-
-static unsigned int picts_poll(struct file *filp, poll_table *wait)
-{
-	struct pic16f616_ts *ts = filp->private_data;
-	int ret = 0;
-
-	poll_wait(filp, &ts->read_wait, wait);
-	if (ts_evt_pending(ts))
-		ret = POLLIN | POLLRDNORM;
-
-	return ret;
-}
-
-static int picts_fasync(int fd, struct file *filp, int on)
-{
-	struct pic16f616_ts *ts = filp->private_data;
-
-//	pr_err("%s: ts_fasync called\n", client_name);
-	return fasync_helper(fd, filp, on, &ts->fasync);
-}
-
-static int picts_open(struct inode *inode, struct file *filp)
-{
-	struct pic16f616_ts *ts = gts;
-	int ret = 0;
-	ret = ts_startup(ts);
-	if (ret==0) filp->private_data = ts;
-	return ret;
-}
-
-/*
- * Release touchscreen resources.  Disable IRQs.
- */
-static int picts_release(struct inode *inode, struct file *filp)
-{
-	struct pic16f616_ts *ts = filp->private_data;
-	if (ts) {
-		down(&ts->sem);
-		picts_fasync(-1, filp, 0);
-		up(&ts->sem);
-		ts_shutdown(ts);
-	}
-//	pr_err("%s: ts_release finished\n", client_name);
-	return 0;
-}
-
-static struct file_operations pic16f616_ts_fops = {
-	.owner		= THIS_MODULE,
-	.llseek		= no_llseek,
-	.read		= picts_read,
-	.poll		= picts_poll,
-	.open		= picts_open,
-	.release	= picts_release,
-	.fasync		= picts_fasync,
-};
-
-/*
- * The touchscreen is a miscdevice:
- *   10 char        Non-serial mice, misc features
- *   14 = /dev/touchscreen/pic16f616_ts touchscreen
- */
-static struct miscdevice pic16f616_ts_dev = {
-	minor:	14,
-	name:	"pic16f616_ts",
-	fops:	&pic16f616_ts_fops,
-};
-
-static inline int ts_register(struct pic16f616_ts *ts)
-{
-	init_waitqueue_head(&ts->read_wait);
-	return misc_register(&pic16f616_ts_dev);
-}
-
-static inline void ts_deregister(struct pic16f616_ts *ts)
-{
-	misc_deregister(&pic16f616_ts_dev);
-}
-
-/*-----------------------------------------------------------------------*/
-#else
-/*-----------------------------------------------------------------------*/
 
 #define ts_evt_clear(ts)	do { } while (0)
 
@@ -479,7 +287,7 @@ static inline int ts_register(struct pic16f616_ts *ts)
 		return -ENOMEM;
 	}
 	ts->idev = idev;
-	idev->name      = "i2c_touch";
+	idev->name      = "pic16f616";
 	idev->id.product = ts->client->addr;
 	idev->open      = ts_open;
 	idev->close     = ts_close;
@@ -518,7 +326,6 @@ static inline void ts_deregister(struct pic16f616_ts *ts)
 	}
 }
 
-#endif
 /*-----------------------------------------------------------------------*/
 
 static void ts_service(struct pic16f616_ts *ts)
@@ -527,6 +334,7 @@ static void ts_service(struct pic16f616_ts *ts)
 
 	unsigned int i;
 	unsigned int j;
+	int select_sum = (ts->last_j & (1<<22));
 
 
 #ifdef TESTING
@@ -535,13 +343,19 @@ static void ts_service(struct pic16f616_ts *ts)
 //	pr_info("%s: reading from device 0x%x\n",client_name,ts->client.addr);
 	do_gettimeofday(&ts->lastInterruptTime);
 #endif
-	/* For the 1st access and after a release, make sure the initial register address is selected */
-	ret = (ts->last_j & (1<<22))?  (i2c_transfer(ts->client->adapter, ts->readSums, 2)+4) : i2c_master_recv(ts->client, ts->buf,6);
+	/*
+	 * For the 1st access and after a release,
+	 * make sure the initial register address is selected
+	 */
+	ret = select_sum ?
+		(i2c_transfer(ts->client->adapter, ts->readSums, 2) + 4) :
+		i2c_master_recv(ts->client, ts->buf,6);
 	if (ret != 6) {
 		pr_warn("%s: %s failed\n", client_name,
-				(ts->last_j & (1<<22)) ? "i2c_transfer" : "i2c_master_recv");
+			select_sum ? "i2c_transfer" : "i2c_master_recv");
 		i = 0;
 		j = (1<<23)|(1<<22);
+		memset(ts->buf, 0, 6);
 	} else {
 		unsigned char *buf = ts->buf;
 
@@ -551,7 +365,7 @@ static void ts_service(struct pic16f616_ts *ts)
 
 	if (j & (1<<23)) {
 		/* sample is valid */
-#ifdef TESTING
+#if 1 //def TESTING
 		pr_info("%s: i=%06x j=%06x\n",client_name,i,j);
 #endif
 		if (ts->drop) {
@@ -569,7 +383,8 @@ static void ts_service(struct pic16f616_ts *ts)
 			}
 		}
 	} else {
-		pr_warn("%s: sample not valid i=%06x j=%06x\n",client_name,i,j);
+		pr_warn("%s: sample not valid i=%06x j=%06x %s\n", client_name,
+			i, j, select_sum ? "i2c_transfer" : "i2c_master_recv");
 		j = (1<<22);	/* Force register number write to help recovery */
 	}
 
@@ -614,6 +429,7 @@ static int ts_startup(struct pic16f616_ts* ts)
 	if (ts->use_count++ != 0)
 		goto out;
 
+	pr_info("%s: i2c_addr=0x%x, reg sum_x=0x%x\n", __func__, ts->client->addr, SUM_X);
 	ts->last_j = 1 << 22;
 	ts->sumXReg[0] = SUM_X;
 	ts->readSums[0].addr = ts->client->addr;
@@ -649,7 +465,7 @@ static int ts_startup(struct pic16f616_ts* ts)
 	ts->drop = drop_samples;
 
 	ret = request_threaded_irq(ts->irq, NULL, &ts_interrupt,
-			IRQF_TRIGGER_FALLING | IRQF_ONESHOT, client_name, ts);
+			IRQF_ONESHOT, client_name, ts);
 	if (ret)
 		pr_err("%s: request_irq failed, irq:%i\n", client_name,ts->irq);
 
@@ -780,7 +596,7 @@ static int __init save_options(char *args)
         pr_debug("pic16F616-ts options: %s\n", args );
 	return 0;
 }
-__setup("i2c_touch=", save_options);
+__setup("pic16f616=", save_options);
 #endif
 
 /*-----------------------------------------------------------------------*/
@@ -789,11 +605,12 @@ static const struct i2c_device_id ts_idtable[] = {
 	{ "Pic16F616-ts", 0 },
 	{ }
 };
+MODULE_DEVICE_TABLE(i2c, ts_idtable);
 
 static struct i2c_driver ts_driver = {
 	.driver = {
 		.owner		= THIS_MODULE,
-		.name		= "Pic16F616-ts",
+		.name		= "pic16F616",
 	},
 	.id_table	= ts_idtable,
 	.probe		= ts_probe,
@@ -824,3 +641,4 @@ MODULE_LICENSE("GPL");
 
 module_init(ts_init)
 module_exit(ts_exit)
+/* MODULE_ALIAS("i2c:pic16F616"); */
