@@ -47,6 +47,7 @@ struct goodix_ts_data {
 	struct touchscreen_properties prop;
 	unsigned int max_touch_num;
 	unsigned int int_trigger_type;
+	int substitute_i2c_address;
 	struct regulator *avdd28;
 	struct regulator *vddio;
 	struct gpio_desc *gpiod_int;
@@ -67,6 +68,17 @@ struct goodix_ts_data {
 	unsigned short keymap[GOODIX_MAX_KEYS];
 	atomic_t esd_timeout;
 	struct delayed_work esd_work;
+	bool suspended;
+	atomic_t open_count;
+	/* Protects power management calls and access to suspended flag */
+	struct mutex mutex;
+	struct device_node *disp_node;
+	struct notifier_block drmnb;
+	struct mutex irq_enable_mutex;
+	unsigned char irq_active;
+	unsigned char drm_disabled_irq;
+	unsigned char irq_requested;
+	unsigned char wake_irq_requested;
 };
 
 int goodix_i2c_read(struct i2c_client *client, u16 reg, u8 *buf, int len);
