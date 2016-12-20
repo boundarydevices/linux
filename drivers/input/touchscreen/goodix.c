@@ -103,6 +103,7 @@ struct goodix_ts_data {
 	struct touchscreen_properties prop;
 	unsigned int max_touch_num;
 	unsigned int int_trigger_type;
+	int substitute_i2c_address;
 	struct regulator *avdd28;
 	struct regulator *vddio;
 	struct gpio_desc *gpiod_int;
@@ -644,6 +645,24 @@ static int goodix_pin_acpi_output_method(struct goodix_ts_data *ts, int value)
 
 static int goodix_irq_direction_output(struct goodix_ts_data *ts, int value)
 {
+	if (ts->substitute_i2c_address) {
+		struct i2c_msg msg;
+		unsigned char buf[4];
+		int ret;
+
+		/* reg = <0x1d>, 3 - input, 9 - output high, 1 - output low*/
+		buf[0] = 0x1d;
+		buf[1] = value ? 9 : 1;
+
+		msg.flags = 0;
+		msg.addr = ts->substitute_i2c_address;
+		msg.buf = buf;
+		msg.len = 2;
+
+		ret = i2c_transfer(ts->client->adapter, &msg, 1);
+		return ret < 0 ? ret : (ret != 1 ? -EIO : 0);
+	}
+
 	switch (ts->irq_pin_access_method) {
 	case IRQ_PIN_ACCESS_NONE:
 		dev_err(&ts->client->dev,
@@ -667,6 +686,22 @@ static int goodix_irq_direction_output(struct goodix_ts_data *ts, int value)
 
 static int goodix_irq_direction_input(struct goodix_ts_data *ts)
 {
+	if (ts->substitute_i2c_address) {
+		struct i2c_msg msg;
+		unsigned char buf[4];
+		int ret;
+
+		buf[0] = 0x1d;
+		buf[1] = 3;
+
+		msg.flags = 0;
+		msg.addr = ts->substitute_i2c_address;
+		msg.buf = buf;
+		msg.len = 2;
+
+		ret = i2c_transfer(ts->client->adapter, &msg, 1);
+		return ret < 0 ? ret : (ret != 1 ? -EIO : 0);
+	}
 	switch (ts->irq_pin_access_method) {
 	case IRQ_PIN_ACCESS_NONE:
 		dev_err(&ts->client->dev,
@@ -682,6 +717,32 @@ static int goodix_irq_direction_input(struct goodix_ts_data *ts)
 	}
 
 	return -EINVAL; /* Never reached */
+}
+
+static int set_reset_output_val(struct goodix_ts_data *ts, int val)
+{
+	int ret;
+
+	ret = gpiod_direction_output(ts->gpiod_rst, val);
+#if 0
+	if (ts->substitute_i2c_address) {
+		struct i2c_msg msg;
+		unsigned char buf[4];
+
+		/* reg = <0x1f>, 9 - output high, 1 - output low*/
+		buf[0] = 0x1f;
+		buf[1] = val ? 9 : 1;
+
+		msg.flags = 0;
+		msg.addr = ts->substitute_i2c_address;
+		msg.buf = buf;
+		msg.len = 2;
+
+		ret = i2c_transfer(ts->client->adapter, &msg, 1);
+		return ret < 0 ? ret : (ret != 1 ? -EIO : 0);
+	}
+#endif
+	return ret;
 }
 
 static int goodix_int_sync(struct goodix_ts_data *ts)
@@ -711,7 +772,7 @@ static int goodix_reset(struct goodix_ts_data *ts)
 	int error;
 
 	/* begin select I2C slave addr */
-	error = gpiod_direction_output(ts->gpiod_rst, 0);
+	error = set_reset_output_val(ts, 0);
 	if (error)
 		return error;
 
@@ -724,16 +785,11 @@ static int goodix_reset(struct goodix_ts_data *ts)
 
 	usleep_range(100, 2000);		/* T3: > 100us */
 
-	error = gpiod_direction_output(ts->gpiod_rst, 1);
+	error = set_reset_output_val(ts, 1);
 	if (error)
 		return error;
 
 	usleep_range(6000, 10000);		/* T4: > 5ms */
-
-	/* end select I2C slave addr */
-	error = gpiod_direction_input(ts->gpiod_rst);
-	if (error)
-		return error;
 
 	error = goodix_int_sync(ts);
 	if (error)
@@ -1098,6 +1154,20 @@ retry_get_irq_gpio:
 
 	ts->gpiod_rst = gpiod;
 
+	error = of_property_read_u32_index(dev->of_node,
+			"substitute-i2c-address",
+				0, &ts->substitute_i2c_address);
+	if (ts->substitute_i2c_address) {
+		if (goodix_irq_direction_input(ts)) {
+			ts->substitute_i2c_address = 0;
+			dev_info(dev, "disabling substitute_i2c_address\n");
+		} else {
+			dev_info(dev, "substitute_i2c_address=0x%x\n",
+					ts->substitute_i2c_address);
+
+		}
+	}
+
 	switch (ts->irq_pin_access_method) {
 	case IRQ_PIN_ACCESS_ACPI_GPIO:
 		/*
@@ -1116,7 +1186,7 @@ retry_get_irq_gpio:
 			ts->irq_pin_access_method = IRQ_PIN_ACCESS_NONE;
 		break;
 	default:
-		if (ts->gpiod_int && ts->gpiod_rst) {
+		if ((ts->gpiod_int && ts->gpiod_rst) || ts->substitute_i2c_address) {
 			ts->reset_controller_at_probe = true;
 			ts->load_cfg_from_disk = true;
 			ts->irq_pin_access_method = IRQ_PIN_ACCESS_GPIO;
