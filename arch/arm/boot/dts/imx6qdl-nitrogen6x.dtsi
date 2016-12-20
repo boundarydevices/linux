@@ -253,10 +253,10 @@
 
 	pinctrl_i2c3_gt911: i2c3_gt911grp {
 		fsl,pins = <
-#define GPIRQ_GT911			<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
-#define GP_GT911_IRQ			<&gpio1 9 GPIO_ACTIVE_LOW>
+#define GPIRQ_GT911			<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
+#define GP_GT911_IRQ			<&gpio1 9 GPIO_ACTIVE_HIGH>
 /*			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		*/
-#define GP_GT911_RESET		<&gpio2 0 GPIO_ACTIVE_LOW>
+#define GP_GT911_RESET		<&gpio2 0 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_D0__GPIO2_IO00		0x030b0
 		>;
 	};
