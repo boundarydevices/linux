@@ -43,6 +43,7 @@ struct goodix_ts_data {
 	unsigned int max_touch_num;
 	unsigned int int_trigger_type;
 	int cfg_len;
+	int substitute_i2c_address;
 	struct gpio_desc *gpiod_int;
 	struct gpio_desc *gpiod_rst;
 	u16 id;
@@ -408,21 +409,91 @@ static int goodix_send_cfg(struct goodix_ts_data *ts,
 	return 0;
 }
 
+static int set_reset_output_val(struct goodix_ts_data *ts, int val)
+{
+	int ret;
+
+	ret = gpiod_direction_output(ts->gpiod_rst, val);
+#if 0
+	if (ts->substitute_i2c_address) {
+		struct i2c_msg msg;
+		unsigned char buf[4];
+
+		/* reg = <0x1f>, 9 - output high, 1 - output low*/
+		buf[0] = 0x1f;
+		buf[1] = val ? 9 : 1;
+
+		msg.flags = 0;
+		msg.addr = ts->substitute_i2c_address;
+		msg.buf = buf;
+		msg.len = 2;
+
+		ret = i2c_transfer(ts->client->adapter, &msg, 1);
+		return ret < 0 ? ret : (ret != 1 ? -EIO : 0);
+	}
+#endif
+	return ret;
+}
+
+/* reg = <0x1d>, 3 - input, 9 - output high, 1 - output low*/
+
+static int set_int_output_val(struct goodix_ts_data *ts, int val)
+{
+	int ret;
+
+	if (ts->substitute_i2c_address) {
+		struct i2c_msg msg;
+		unsigned char buf[4];
+
+		buf[0] = 0x1d;
+		buf[1] = val ? 9 : 1;
+
+		msg.flags = 0;
+		msg.addr = ts->substitute_i2c_address;
+		msg.buf = buf;
+		msg.len = 2;
+
+		ret = i2c_transfer(ts->client->adapter, &msg, 1);
+		return ret < 0 ? ret : (ret != 1 ? -EIO : 0);
+	}
+	ret = gpiod_direction_output(ts->gpiod_int, val);
+	return ret;
+}
+
+static int set_int_input(struct goodix_ts_data *ts)
+{
+	int ret;
+
+	ret = gpiod_direction_input(ts->gpiod_int);
+	if (ts->substitute_i2c_address) {
+		struct i2c_msg msg;
+		unsigned char buf[4];
+
+		buf[0] = 0x1d;
+		buf[1] = 3;
+
+		msg.flags = 0;
+		msg.addr = ts->substitute_i2c_address;
+		msg.buf = buf;
+		msg.len = 2;
+
+		ret = i2c_transfer(ts->client->adapter, &msg, 1);
+		return ret < 0 ? ret : (ret != 1 ? -EIO : 0);
+	}
+	return ret;
+}
+
 static int goodix_int_sync(struct goodix_ts_data *ts)
 {
 	int error;
 
-	error = gpiod_direction_output(ts->gpiod_int, 0);
+	error = set_int_output_val(ts, 0);
 	if (error)
 		return error;
 
 	msleep(50);				/* T5: 50ms */
 
-	error = gpiod_direction_input(ts->gpiod_int);
-	if (error)
-		return error;
-
-	return 0;
+	return set_int_input(ts);
 }
 
 /**
@@ -435,29 +506,24 @@ static int goodix_reset(struct goodix_ts_data *ts)
 	int error;
 
 	/* begin select I2C slave addr */
-	error = gpiod_direction_output(ts->gpiod_rst, 0);
+	error = set_reset_output_val(ts, 0);
 	if (error)
 		return error;
 
 	msleep(20);				/* T2: > 10ms */
 
 	/* HIGH: 0x28/0x29, LOW: 0xBA/0xBB */
-	error = gpiod_direction_output(ts->gpiod_int, ts->client->addr == 0x14);
+	error = set_int_output_val(ts, ts->client->addr == 0x14);
 	if (error)
 		return error;
 
 	usleep_range(100, 2000);		/* T3: > 100us */
 
-	error = gpiod_direction_output(ts->gpiod_rst, 1);
+	error = set_reset_output_val(ts, 1);
 	if (error)
 		return error;
 
 	usleep_range(6000, 10000);		/* T4: > 5ms */
-
-	/* end select I2C slave addr */
-	error = gpiod_direction_input(ts->gpiod_rst);
-	if (error)
-		return error;
 
 	error = goodix_int_sync(ts);
 	if (error)
@@ -679,6 +745,19 @@ static int goodix_get_gpio_config(struct goodix_ts_data *ts)
 
 	ts->gpiod_rst = gpiod;
 
+	error = of_property_read_u32_index(dev->of_node,
+			"substitute-i2c-address",
+				0, &ts->substitute_i2c_address);
+	if (ts->substitute_i2c_address) {
+		if (set_int_input(ts)) {
+			ts->substitute_i2c_address = 0;
+			dev_info(dev, "disabling substitute_i2c_address\n");
+		} else {
+			dev_info(dev, "substitute_i2c_address=0x%x\n",
+					ts->substitute_i2c_address);
+
+		}
+	}
 	return 0;
 }
 
@@ -1058,7 +1137,7 @@ static int __maybe_unused goodix_sleep(struct device *dev)
 	goodix_free_irq(ts);
 
 	/* Output LOW on the INT pin for 5 ms */
-	error = gpiod_direction_output(ts->gpiod_int, 0);
+	error = set_int_output_val(ts, 0);
 	if (error) {
 		goodix_request_irq(ts);
 		goto out_error;
@@ -1070,7 +1149,7 @@ static int __maybe_unused goodix_sleep(struct device *dev)
 				    GOODIX_CMD_SCREEN_OFF);
 	if (error) {
 		dev_err(&ts->client->dev, "Screen off command failed\n");
-		gpiod_direction_input(ts->gpiod_int);
+		set_int_input(ts);
 		goodix_request_irq(ts);
 		error = -EAGAIN;
 		goto out_error;
@@ -1110,7 +1189,7 @@ static int __maybe_unused goodix_wakeup(struct device *dev)
 	 * Exit sleep mode by outputting HIGH level to INT pin
 	 * for 2ms~5ms.
 	 */
-	error = gpiod_direction_output(ts->gpiod_int, 1);
+	error = set_int_output_val(ts, 1);
 	if (error)
 		goto out_error;
 
