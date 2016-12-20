@@ -1,0 +1,7 @@
+obj-$(CONFIG_AMLOGIC_USBPHY)		+= usbphy.o
+obj-$(CONFIG_AMLOGIC_USBPHY)		+= phy-aml-usb.o
+obj-$(CONFIG_AMLOGIC_USB2PHY)		+= phy-aml-usb2.o
+obj-$(CONFIG_AMLOGIC_USB3PHY)		+= phy-aml-usb3.o
+obj-$(CONFIG_AMLOGIC_USBPHY)		+= phy-aml-new-usb.o
+obj-$(CONFIG_AMLOGIC_USB2PHY)		+= phy-aml-new-usb2.o
+obj-$(CONFIG_AMLOGIC_USB3PHY)		+= phy-aml-new-usb3.o

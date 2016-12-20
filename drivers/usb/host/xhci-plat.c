@@ -19,6 +19,9 @@
 #include <linux/usb/phy.h>
 #include <linux/slab.h>
 #include <linux/acpi.h>
+#ifdef CONFIG_AMLOGIC_USB
+#include <linux/of_device.h>
+#endif
 
 #include "xhci.h"
 #include "xhci-plat.h"
@@ -155,6 +158,10 @@ static int xhci_plat_probe(struct platform_device *pdev)
 	if (irq < 0)
 		return -ENODEV;
 
+#ifdef CONFIG_AMLOGIC_USB
+	of_dma_configure(&pdev->dev, pdev->dev.of_node);
+#endif
+
 	/* Try to set 64-bit DMA first */
 	if (WARN_ON(!pdev->dev.dma_mask))
 		/* Platform did not initialize dma_mask */
@@ -183,6 +190,10 @@ static int xhci_plat_probe(struct platform_device *pdev)
 
 	hcd->rsrc_start = res->start;
 	hcd->rsrc_len = resource_size(res);
+
+#ifdef CONFIG_AMLOGIC_USB
+	set_bit(HCD_FLAG_DWC3, &hcd->flags);
+#endif
 
 	/*
 	 * Not all platforms have a clk so it is not an error if the

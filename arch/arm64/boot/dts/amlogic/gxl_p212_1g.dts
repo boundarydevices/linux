@@ -114,6 +114,54 @@
 		pinctrl-0 = <&ao_uart_pins>;
 		support-sysrq = <0>;	/* 0 not support , 1 support */
 	};
+
+	dwc3: dwc3@c9000000 {
+		compatible = "synopsys, dwc3";
+		reg = <0x0 0xc9000000 0x0 0x100000>;
+		interrupts = <0 30 4>;
+		usb-phy = <&usb2_phy>, <&usb3_phy>;
+		cpu-type = "gxl";
+		clock-src = "usb3.0";
+	};
+
+	usb2_phy: usb2phy@d0078000 {
+		compatible = "amlogic, amlogic-new-usb2";
+		portnum = <3>;
+		reg = <0x0 0xd0078000 0x0 0x80>;
+	};
+
+	usb3_phy: usb3phy@d0078080 {
+		compatible = "amlogic, amlogic-new-usb3";
+		portnum = <0>;
+		reg = <0x0 0xd0078080 0x0 0x20>;
+	};
+
+	dwc2_a {
+		compatible = "amlogic, dwc2";
+		device_name = "dwc2_a";
+		reg = <0x0 0xc9100000 0x0 0x40000>;
+		status = "okay";
+		interrupts = <0 31 4>;
+		pl-periph-id = <0>; /** lm name */
+		clock-src = "usb0"; /** clock src */
+		port-id = <0>;  /** ref to mach/usb.h */
+		port-type = <2>;        /** 0: otg, 1: host, 2: slave */
+		port-speed = <0>; /** 0: default, high, 1: full */
+		port-config = <0>; /** 0: default */
+		port-dma = <0>; /** 0: default ... 6: disable*/
+		port-id-mode = <0>; /** 0: hardware, 1: sw_host, 2: sw_slave*/
+		usb-fifo = <728>;
+		cpu-type = "gxl";
+		controller-type = <2>; /** 0: normal, 1: host, 2: device*/
+		phy-reg = <0xd0078000>;
+		phy-reg-size = <0xa0>;
+		clocks = <&clkc CLKID_USB_GENERAL
+			&clkc CLKID_USB1_TO_DDR
+			&clkc CLKID_USB1>;
+		clock-names = "usb_general",
+						"usb1",
+						"usb1_to_ddr";
+	};
 };
 
 &efuse {

@@ -15,6 +15,7 @@ obj-$(CONFIG_AMLOGIC_PINCTRL)	+= pinctrl/
 obj-$(CONFIG_AMLOGIC_IOMAP)	+= iomap/
 
 obj-$(CONFIG_AMLOGIC_SEC)               += secmon/
+obj-$(CONFIG_AMLOGIC_USB)		+= usb/
 
 obj-$(CONFIG_AMLOGIC_CPU_VERSION)       += cpu_version/
 

@@ -153,6 +153,10 @@
 #define DWC3_OSTS		0xcc10
 
 /* Bit fields */
+#ifdef CONFIG_AMLOGIC_USB
+/* Global User Control Register */
+#define DWC3_GUCTL_USBHSTINAUTORETRYEN	(1 << 14)
+#endif
 
 /* Global Debug Queue/FIFO Space Available Register */
 #define DWC3_GDBGFIFOSPACE_NUM(n)	((n) & 0x1f)

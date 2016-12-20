@@ -1,0 +1,64 @@
+
+menu "USB Support"
+
+config AMLOGIC_USB
+	tristate "Amlogic USB controller support"
+	depends on AMLOGIC_USB_HOST_ELECT_TEST
+	select OF_LM
+	depends on USB
+	help
+	   DWC_OTG
+	   USB
+	   host
+	   controller.
+
+config AMLOGIC_USB_DWC_OTG_HCD
+	tristate "USB Host controller dwc_otg support"
+	depends on AMLOGIC_USB
+	help
+	   USB Host
+	   controller
+	   dwc_otg
+	   support
+config AMLOGIC_USB_HOST_ELECT_TEST
+	bool "USB high speed electric test"
+	help
+	    Enable this config to support USB High speed electric test.
+
+config AMLOGIC_USBPHY
+	bool "Amlogic USB PHY Driver"
+	depends on AMLOGIC_USB
+	help
+	  Enable this to support Amlogic USB phy helper driver for Amlogic SoCs.
+	  This driver provides common interface to interact, for Amlogic USB 2.0 PHY
+	  driver and later for Amlogic USB 3.0 PHY driver.
+
+	  This driver supports GXBABYTV and G9TV.
+
+          To compile this driver as a module, choose M here: the
+          module will be called phy-aml-usb.
+
+config AMLOGIC_USB2PHY
+	bool "Amlogic USB 2.0 PHY controller Driver"
+	depends on AMLOGIC_USBPHY
+	help
+	  Enable this to support Amlogic USB 2.0 (High Speed) PHY controller
+	  for Amlogic SoCs.
+
+	  This driver supports GXBABYTV and G9TV.
+
+	  To compile this driver as a module, choose M here: the
+          module will be called phy-aml-usb.
+
+config AMLOGIC_USB3PHY
+	bool "Amlogic USB 3.0 PHY controller Driver"
+	depends on AMLOGIC_USBPHY
+	help
+	  Enable this to support Amlogic USB 3.0 (Super Speed) phy controller
+	  for Amlogic SoCs.
+
+	  This driver supports GXBABYTV and G9TV.
+
+          To compile this driver as a module, choose M here: the
+          module will be called phy-aml-usb.
+endmenu

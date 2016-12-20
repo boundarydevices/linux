@@ -337,6 +337,11 @@ int usb_submit_urb(struct urb *urb, gfp_t mem_flags)
 		return -EBUSY;
 	}
 
+#ifdef CONFIG_AMLOGIC_USB
+	if (urb->unlinked)
+		urb->unlinked = 0;
+#endif
+
 	dev = urb->dev;
 	if ((!dev) || (dev->state < USB_STATE_UNAUTHENTICATED))
 		return -ENODEV;

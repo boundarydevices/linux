@@ -117,7 +117,10 @@ struct usb_hcd {
 #define HCD_FLAG_DEAD			6	/* controller has died? */
 #define HCD_FLAG_INTF_AUTHORIZED	7	/* authorize interfaces? */
 #define HCD_FLAG_DEV_AUTHORIZED		8	/* authorize devices? */
-
+#ifdef CONFIG_AMLOGIC_USB
+#define HCD_FLAG_DWC_OTG		28  /* dwc_otg controller */
+#define HCD_FLAG_DWC3			27  /* dwc3 controller */
+#endif
 	/* The flags can be tested using these macros; they are likely to
 	 * be slightly faster than test_bit().
 	 */
@@ -127,7 +130,10 @@ struct usb_hcd {
 #define HCD_WAKEUP_PENDING(hcd)	((hcd)->flags & (1U << HCD_FLAG_WAKEUP_PENDING))
 #define HCD_RH_RUNNING(hcd)	((hcd)->flags & (1U << HCD_FLAG_RH_RUNNING))
 #define HCD_DEAD(hcd)		((hcd)->flags & (1U << HCD_FLAG_DEAD))
-
+#ifdef CONFIG_AMLOGIC_USB
+#define HCD_DWC_OTG(hcd)	((hcd)->flags & (1U << HCD_FLAG_DWC_OTG))
+#define HCD_DWC3(hcd)		((hcd)->flags & (1U << HCD_FLAG_DWC3))
+#endif
 	/*
 	 * Specifies if interfaces are authorized by default
 	 * or they require explicit user space authorization; this bit is
