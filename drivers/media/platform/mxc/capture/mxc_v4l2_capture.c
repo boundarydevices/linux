@@ -1059,6 +1059,20 @@ static int mxc_v4l2_g_ctrl(cam_data *cam, struct v4l2_control *c)
 			status = -ENODEV;
 		}
 		break;
+	case V4L2_CID_3A_LOCK:
+	case V4L2_CID_AUTO_FOCUS_RANGE:
+	case V4L2_CID_AUTO_FOCUS_STATUS:
+	case V4L2_CID_FOCUS_ABSOLUTE:
+	case V4L2_CID_FOCUS_AUTO:
+	case V4L2_CID_AUTO_WHITE_BALANCE:
+	case V4L2_CID_COLORFX:
+		if (cam->sensor)
+			status = vidioc_int_g_ctrl(cam->sensor, c);
+		else {
+			pr_err("ERROR: v4l2 capture: slave not found!\n");
+			status = -ENODEV;
+		}
+		break;
 	default:
 		pr_err("ERROR: v4l2 capture: unsupported ioctl: %#08x\n", c->id);
 	}
@@ -1259,17 +1273,22 @@ static int mxc_v4l2_s_ctrl(cam_data *cam, struct v4l2_control *c)
 #endif
 		break;
 
-	case V4L2_CID_AUTO_FOCUS_START: {
-		ret = vidioc_int_s_ctrl(cam->sensor, c);
-		break;
-	}
-
-	case V4L2_CID_AUTO_FOCUS_STOP: {
-		if (vidioc_int_s_ctrl(cam->sensor, c)) {
-			ret = -EINVAL;
+	case V4L2_CID_3A_LOCK:
+	case V4L2_CID_AUTO_FOCUS_RANGE:
+	case V4L2_CID_AUTO_FOCUS_START:
+	case V4L2_CID_AUTO_FOCUS_STOP:
+	case V4L2_CID_FOCUS_ABSOLUTE:
+	case V4L2_CID_FOCUS_AUTO:
+	case V4L2_CID_AUTO_WHITE_BALANCE:
+	case V4L2_CID_DO_WHITE_BALANCE:
+	case V4L2_CID_COLORFX:
+		if (cam->sensor)
+			ret = vidioc_int_s_ctrl(cam->sensor, c);
+		else {
+			pr_err("ERROR: v4l2 capture: slave not found!\n");
+			ret = -ENODEV;
 		}
 		break;
-	}
 
 	case V4L2_CID_MXC_SWITCH_CAM:
 		if (cam->sensor == cam->all_sensors[c->value])
