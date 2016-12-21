@@ -157,6 +157,51 @@ static int pwn_gpio, rst_gpio;
 static int focus_mode = V4L2_CID_AUTO_FOCUS_STOP;
 static int focus_range = V4L2_AUTO_FOCUS_RANGE_NORMAL;
 
+static struct reg_value brightness_neg4[] = {
+	{0x3212, 0x03, 0, 0}, {0x5587, 0x40, 0, 0}, {0x5588, 0x09, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value brightness_neg3[] = {
+	{0x3212, 0x03, 0, 0}, {0x5587, 0x30, 0, 0}, {0x5588, 0x09, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value brightness_neg2[] = {
+	{0x3212, 0x03, 0, 0}, {0x5587, 0x20, 0, 0}, {0x5588, 0x09, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value brightness_neg1[] = {
+	{0x3212, 0x03, 0, 0}, {0x5587, 0x10, 0, 0}, {0x5588, 0x09, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value brightness_zero[] = {
+	{0x3212, 0x03, 0, 0}, {0x5587, 0x00, 0, 0}, {0x5588, 0x01, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value brightness_pos1[] = {
+	{0x3212, 0x03, 0, 0}, {0x5587, 0x10, 0, 0}, {0x5588, 0x01, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value brightness_pos2[] = {
+	{0x3212, 0x03, 0, 0}, {0x5587, 0x20, 0, 0}, {0x5588, 0x01, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value brightness_pos3[] = {
+	{0x3212, 0x03, 0, 0}, {0x5587, 0x30, 0, 0}, {0x5588, 0x01, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value brightness_pos4[] = {
+	{0x3212, 0x03, 0, 0}, {0x5587, 0x40, 0, 0}, {0x5588, 0x01, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
 static uint8_t ov5640_af_firmware[] = {
 	0x02, 0x0f, 0xd6, 0x02, 0x0a, 0x39, 0xc2, 0x01, 0x22, 0x22, 0x00, 0x02,
 	0x0f, 0xb2, 0xe5, 0x1f, 0x70, 0x72, 0xf5, 0x1e, 0xd2, 0x35, 0xff, 0xef,
@@ -1842,6 +1887,63 @@ err:
 	return retval;
 }
 
+static int ov5640_set_brightness(struct v4l2_int_device *s, int value)
+{
+	int ret;
+	struct sensor_data *sensor = s->priv;
+
+	switch (value) {
+	case -4:
+		ret = ov5640_download_firmware(brightness_neg4,
+					       ARRAY_SIZE(brightness_neg4));
+		break;
+	case -3:
+		ret = ov5640_download_firmware(brightness_neg3,
+					       ARRAY_SIZE(brightness_neg3));
+		break;
+	case -2:
+		ret = ov5640_download_firmware(brightness_neg2,
+					       ARRAY_SIZE(brightness_neg2));
+		break;
+	case -1:
+		ret = ov5640_download_firmware(brightness_neg1,
+					       ARRAY_SIZE(brightness_neg1));
+		break;
+	case 0:
+		ret = ov5640_download_firmware(brightness_zero,
+					       ARRAY_SIZE(brightness_zero));
+		break;
+	case 1:
+		ret = ov5640_download_firmware(brightness_pos1,
+					       ARRAY_SIZE(brightness_pos1));
+		break;
+	case 2:
+		ret = ov5640_download_firmware(brightness_pos2,
+					       ARRAY_SIZE(brightness_pos2));
+		break;
+	case 3:
+		ret = ov5640_download_firmware(brightness_pos3,
+					       ARRAY_SIZE(brightness_pos3));
+		break;
+	case 4:
+		ret = ov5640_download_firmware(brightness_pos4,
+					       ARRAY_SIZE(brightness_pos4));
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (ret < 0) {
+		pr_err("%s: error %d\n", __func__, ret);
+		return ret;
+	}
+
+	msleep(10);
+	sensor->brightness = value;
+
+	return 0;
+}
+
 static int ioctl_send_command(struct v4l2_int_device *s, struct v4l2_send_command_control *vc) {
 	int ret = -1;
 	int retval1;
@@ -2528,6 +2630,7 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 
 	switch (vc->id) {
 	case V4L2_CID_BRIGHTNESS:
+		retval = ov5640_set_brightness(s, vc->value);
 		break;
 	case V4L2_CID_3A_LOCK:
 		retval = ov5640_af_set_focus_lock(vc->value);
