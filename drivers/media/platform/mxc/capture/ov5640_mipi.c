@@ -202,6 +202,51 @@ static struct reg_value brightness_pos4[] = {
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
+static struct reg_value contrast_neg4[] = {
+	{0x3212, 0x03, 0, 0}, {0x5586, 0x10, 0, 0}, {0x5585, 0x10, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value contrast_neg3[] = {
+	{0x3212, 0x03, 0, 0}, {0x5586, 0x14, 0, 0}, {0x5585, 0x14, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value contrast_neg2[] = {
+	{0x3212, 0x03, 0, 0}, {0x5586, 0x18, 0, 0}, {0x5585, 0x18, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value contrast_neg1[] = {
+	{0x3212, 0x03, 0, 0}, {0x5586, 0x1c, 0, 0}, {0x5585, 0x1c, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value contrast_zero[] = {
+	{0x3212, 0x03, 0, 0}, {0x5586, 0x20, 0, 0}, {0x5585, 0x00, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value contrast_pos1[] = {
+	{0x3212, 0x03, 0, 0}, {0x5586, 0x24, 0, 0}, {0x5585, 0x10, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value contrast_pos2[] = {
+	{0x3212, 0x03, 0, 0}, {0x5586, 0x28, 0, 0}, {0x5585, 0x18, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value contrast_pos3[] = {
+	{0x3212, 0x03, 0, 0}, {0x5586, 0x2c, 0, 0}, {0x5585, 0x1c, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value contrast_pos4[] = {
+	{0x3212, 0x03, 0, 0}, {0x5586, 0x30, 0, 0}, {0x5585, 0x20, 0, 0},
+	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
+};
+
 static uint8_t ov5640_af_firmware[] = {
 	0x02, 0x0f, 0xd6, 0x02, 0x0a, 0x39, 0xc2, 0x01, 0x22, 0x22, 0x00, 0x02,
 	0x0f, 0xb2, 0xe5, 0x1f, 0x70, 0x72, 0xf5, 0x1e, 0xd2, 0x35, 0xff, 0xef,
@@ -1944,6 +1989,63 @@ static int ov5640_set_brightness(struct v4l2_int_device *s, int value)
 	return 0;
 }
 
+static int ov5640_set_contrast(struct v4l2_int_device *s, int value)
+{
+	int ret;
+	struct sensor_data *sensor = s->priv;
+
+	switch (value) {
+	case -4:
+		ret = ov5640_download_firmware(contrast_neg4,
+					       ARRAY_SIZE(contrast_neg4));
+		break;
+	case -3:
+		ret = ov5640_download_firmware(contrast_neg3,
+					       ARRAY_SIZE(contrast_neg3));
+		break;
+	case -2:
+		ret = ov5640_download_firmware(contrast_neg2,
+					       ARRAY_SIZE(contrast_neg2));
+		break;
+	case -1:
+		ret = ov5640_download_firmware(contrast_neg1,
+					       ARRAY_SIZE(contrast_neg1));
+		break;
+	case 0:
+		ret = ov5640_download_firmware(contrast_zero,
+					       ARRAY_SIZE(contrast_zero));
+		break;
+	case 1:
+		ret = ov5640_download_firmware(contrast_pos1,
+					       ARRAY_SIZE(contrast_pos1));
+		break;
+	case 2:
+		ret = ov5640_download_firmware(contrast_pos2,
+					       ARRAY_SIZE(contrast_pos2));
+		break;
+	case 3:
+		ret = ov5640_download_firmware(contrast_pos3,
+					       ARRAY_SIZE(contrast_pos3));
+		break;
+	case 4:
+		ret = ov5640_download_firmware(contrast_pos4,
+					       ARRAY_SIZE(contrast_pos4));
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (ret < 0) {
+		pr_err("%s: error %d\n", __func__, ret);
+		return ret;
+	}
+
+	msleep(10);
+	sensor->contrast = value;
+
+	return 0;
+}
+
 static int ioctl_send_command(struct v4l2_int_device *s, struct v4l2_send_command_control *vc) {
 	int ret = -1;
 	int retval1;
@@ -2648,6 +2750,7 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 		retval = ov5640_af_set_auto(!!vc->value);
 		break;
 	case V4L2_CID_CONTRAST:
+		retval = ov5640_set_contrast(s, vc->value);
 		break;
 	case V4L2_CID_SATURATION:
 		break;
