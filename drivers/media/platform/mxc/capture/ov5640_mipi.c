@@ -247,6 +247,60 @@ static struct reg_value contrast_pos4[] = {
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
+static struct reg_value saturation_neg4[] = {
+	{0x3212, 0x03, 0, 0}, {0x5583, 0x00, 0, 0}, {0x5584, 0x00, 0, 0},
+	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
+	{0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value saturation_neg3[] = {
+	{0x3212, 0x03, 0, 0}, {0x5583, 0x10, 0, 0}, {0x5584, 0x10, 0, 0},
+	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
+	{0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value saturation_neg2[] = {
+	{0x3212, 0x03, 0, 0}, {0x5583, 0x20, 0, 0}, {0x5584, 0x20, 0, 0},
+	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
+	{0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value saturation_neg1[] = {
+	{0x3212, 0x03, 0, 0}, {0x5583, 0x30, 0, 0}, {0x5584, 0x30, 0, 0},
+	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
+	{0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value saturation_zero[] = {
+	{0x3212, 0x03, 0, 0}, {0x5583, 0x40, 0, 0}, {0x5584, 0x40, 0, 0},
+	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
+	{0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value saturation_pos1[] = {
+	{0x3212, 0x03, 0, 0}, {0x5583, 0x50, 0, 0}, {0x5584, 0x50, 0, 0},
+	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
+	{0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value saturation_pos2[] = {
+	{0x3212, 0x03, 0, 0}, {0x5583, 0x60, 0, 0}, {0x5584, 0x60, 0, 0},
+	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
+	{0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value saturation_pos3[] = {
+	{0x3212, 0x03, 0, 0}, {0x5583, 0x70, 0, 0}, {0x5584, 0x70, 0, 0},
+	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
+	{0x3212, 0xa3, 0, 0}
+};
+
+static struct reg_value saturation_pos4[] = {
+	{0x3212, 0x03, 0, 0}, {0x5583, 0x80, 0, 0}, {0x5584, 0x80, 0, 0},
+	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
+	{0x3212, 0xa3, 0, 0}
+};
+
 static uint8_t ov5640_af_firmware[] = {
 	0x02, 0x0f, 0xd6, 0x02, 0x0a, 0x39, 0xc2, 0x01, 0x22, 0x22, 0x00, 0x02,
 	0x0f, 0xb2, 0xe5, 0x1f, 0x70, 0x72, 0xf5, 0x1e, 0xd2, 0x35, 0xff, 0xef,
@@ -2046,6 +2100,63 @@ static int ov5640_set_contrast(struct v4l2_int_device *s, int value)
 	return 0;
 }
 
+static int ov5640_set_saturation(struct v4l2_int_device *s, int value)
+{
+	int ret;
+	struct sensor_data *sensor = s->priv;
+
+	switch (value) {
+	case -4:
+		ret = ov5640_download_firmware(saturation_neg4,
+					       ARRAY_SIZE(saturation_neg4));
+		break;
+	case -3:
+		ret = ov5640_download_firmware(saturation_neg3,
+					       ARRAY_SIZE(saturation_neg3));
+		break;
+	case -2:
+		ret = ov5640_download_firmware(saturation_neg2,
+					       ARRAY_SIZE(saturation_neg2));
+		break;
+	case -1:
+		ret = ov5640_download_firmware(saturation_neg1,
+					       ARRAY_SIZE(saturation_neg1));
+		break;
+	case 0:
+		ret = ov5640_download_firmware(saturation_zero,
+					       ARRAY_SIZE(saturation_zero));
+		break;
+	case 1:
+		ret = ov5640_download_firmware(saturation_pos1,
+					       ARRAY_SIZE(saturation_pos1));
+		break;
+	case 2:
+		ret = ov5640_download_firmware(saturation_pos2,
+					       ARRAY_SIZE(saturation_pos2));
+		break;
+	case 3:
+		ret = ov5640_download_firmware(saturation_pos3,
+					       ARRAY_SIZE(saturation_pos3));
+		break;
+	case 4:
+		ret = ov5640_download_firmware(saturation_pos4,
+					       ARRAY_SIZE(saturation_pos4));
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (ret < 0) {
+		pr_err("%s: error %d\n", __func__, ret);
+		return ret;
+	}
+
+	msleep(10);
+	sensor->saturation = value;
+
+	return 0;
+}
+
 static int ioctl_send_command(struct v4l2_int_device *s, struct v4l2_send_command_control *vc) {
 	int ret = -1;
 	int retval1;
@@ -2753,6 +2864,7 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 		retval = ov5640_set_contrast(s, vc->value);
 		break;
 	case V4L2_CID_SATURATION:
+		retval = ov5640_set_saturation(s, vc->value);
 		break;
 	case V4L2_CID_HUE:
 		break;
