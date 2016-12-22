@@ -2157,6 +2157,26 @@ static int ov5640_set_saturation(struct v4l2_int_device *s, int value)
 	return 0;
 }
 
+static int ov5640_set_autowb(struct v4l2_int_device *s, int value)
+{
+	int ret;
+	struct sensor_data *sensor = s->priv;
+	u16 reg = 0x3406;
+	u8 val = value ? 0 : 1;
+
+	ret = ov5640_write_reg(reg, val);
+	if (ret < 0) {
+		pr_err("%s: error write %d\n", __func__, ret);
+		return ret;
+	}
+
+	msleep(10);
+	sensor->wb = value ? V4L2_WHITE_BALANCE_AUTO :
+		V4L2_WHITE_BALANCE_MANUAL;
+
+	return 0;
+}
+
 static int ioctl_send_command(struct v4l2_int_device *s, struct v4l2_send_command_control *vc) {
 	int ret = -1;
 	int retval1;
@@ -2818,6 +2838,9 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	case V4L2_CID_FOCUS_AUTO:
 		vc->value = (focus_mode == V4L2_CID_FOCUS_AUTO);
 		break;
+	case V4L2_CID_AUTO_WHITE_BALANCE:
+		vc->value = (ov5640_data.wb == V4L2_WHITE_BALANCE_AUTO) ? 1 : 0;
+		break;
 	default:
 		ret = -EINVAL;
 	}
@@ -2869,6 +2892,7 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	case V4L2_CID_HUE:
 		break;
 	case V4L2_CID_AUTO_WHITE_BALANCE:
+		retval = ov5640_set_autowb(s, vc->value);
 		break;
 	case V4L2_CID_DO_WHITE_BALANCE:
 		break;
