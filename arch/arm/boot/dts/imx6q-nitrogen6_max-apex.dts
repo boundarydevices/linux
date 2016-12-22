@@ -1,0 +1,172 @@
+/*
+ * Copyright 2013 Boundary Devices
+ * Copyright 2012 Freescale Semiconductor, Inc.
+ * Copyright 2011 Linaro Ltd.
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "imx6q.dtsi"
+#include "imx6qdl-nitrogen6_max.dtsi"
+
+/ {
+	model = "Freescale i.MX6 Quad Nitrogen6 Max Board";
+	compatible = "fsl,imx6q-nitrogen6_max", "fsl,imx6q";
+};
+
+&iomuxc_imx6q_nitrogen6_max {
+	pinctrl_i2c2a_gt911: i2c2a_gt911grp {
+		fsl,pins = <
+#define GPIRQ_GT911_2A			<&gpio1 16 IRQ_TYPE_LEVEL_HIGH>
+#define GP_GT911_IRQ_2A			<&gpio1 16 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_SD1_DAT0__GPIO1_IO16		0x1b0b0
+#define GP_GT911_RESET_2A		<&gpio1 19 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_SD1_DAT2__GPIO1_IO19		0x030b0
+		>;
+	};
+
+	pinctrl_i2c2a_lp8860: i2c2a_lp8860grp {
+		fsl,pins = <
+#define GP_LVDS2_LP8860_RESET	<&gpio2 23 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_CS0__GPIO2_IO23		0x030b0
+		>;
+	};
+
+	pinctrl_i2c3_gt911: i2c3_gt911grp {
+		fsl,pins = <
+#define GPIRQ_GT911			<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
+#define GP_GT911_IRQ			<&gpio1 9 GPIO_ACTIVE_HIGH>
+/*			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		*/
+#undef GP_GT911_RESET
+#define GP_GT911_RESET		<&gpio1 18 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_SD1_CMD__GPIO1_IO18		0x030b0
+		>;
+	};
+
+	pinctrl_i2c3_lp8860: i2c3_lp8860grp {
+		fsl,pins = <
+#define GP_LVDS_LP8860_RESET	<&gpio2 0 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_NANDF_D0__GPIO2_IO00		0x030b0
+		>;
+	};
+
+};
+
+&backlight_lvds2 {
+	status = "disabled";
+};
+
+&fb_hdmi {
+	status = "okay";
+};
+
+&fb_lcd {
+	status = "okay";
+};
+
+&fb_lvds {
+	status = "okay";
+};
+
+&i2c2a {
+	/delete-node/ ft5x06_ts@38;
+	gt911@5d {
+		compatible = "goodix,gt911";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2a_gt911>;
+		reg = <0x5d>;
+		substitute-i2c-address = <0x2c>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911_2A;
+		irq-gpios = GP_GT911_IRQ_2A;
+		reset-gpios = GP_GT911_RESET_2A;
+	};
+
+	lp8860_backlight_lvds2@2d {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "lp8860-backlight";
+		default-brightness-level = <10>;
+		display = <&fb_lvds2>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2a_lp8860>;
+		reg = <0x2d>;
+		reset-gpios = GP_LVDS2_LP8860_RESET;
+	};
+
+};
+
+&i2c3 {
+	/delete-node/ atmel_maxtouch@4a;
+	/delete-node/ egalax_ts@04;
+	/delete-node/ ft5x06_ts@38;
+	/delete-node/ gt911@14;
+	/delete-node/ ili210x@41;
+	/delete-node/ tsc2004@48;
+	gt911@5d {
+		compatible = "goodix,gt911";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_gt911>;
+		reg = <0x5d>;
+		substitute-i2c-address = <0x2c>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		reset-gpios = GP_GT911_RESET;
+	};
+
+	lp8860_backlight_lvds@2d {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "lp8860-backlight";
+		default-brightness-level = <10>;
+		display = <&fb_lvds>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_lp8860>;
+		reg = <0x2d>;
+		reset-gpios = GP_LVDS_LP8860_RESET;
+	};
+};
+
+&ov5640 {
+	ipu_id = <1>;
+};
+
+&pinctrl_i2c3_ov5640 { /* parallel camera */
+	fsl,pins = <
+		MX6QDL_PAD_EIM_A17__IPU2_CSI1_DATA12	0xb0b1
+		MX6QDL_PAD_EIM_A18__IPU2_CSI1_DATA13	0xb0b1
+		MX6QDL_PAD_EIM_A19__IPU2_CSI1_DATA14	0xb0b1
+		MX6QDL_PAD_EIM_A20__IPU2_CSI1_DATA15	0xb0b1
+		MX6QDL_PAD_EIM_A21__IPU2_CSI1_DATA16	0xb0b1
+		MX6QDL_PAD_EIM_A22__IPU2_CSI1_DATA17	0xb0b1
+		MX6QDL_PAD_EIM_A23__IPU2_CSI1_DATA18	0xb0b1
+		MX6QDL_PAD_EIM_EB2__IPU2_CSI1_DATA19	0xb0b1
+		MX6QDL_PAD_EIM_DA10__IPU2_CSI1_DATA_EN	0xb0b1
+		MX6QDL_PAD_EIM_A16__IPU2_CSI1_PIXCLK	0xb0b1
+		MX6QDL_PAD_EIM_DA11__IPU2_CSI1_HSYNC	0xb0b1
+		MX6QDL_PAD_EIM_DA12__IPU2_CSI1_VSYNC	0xb0b1
+	>;
+};
+
+&pwm2 {
+	status = "disabled";
+};
+
+&pwm4 {
+	status = "disabled";
+};
+
+&sata {
+	status = "okay";
+};
+
+&v4l2_cap_2 {
+	ipu_id = <1>;
+};
