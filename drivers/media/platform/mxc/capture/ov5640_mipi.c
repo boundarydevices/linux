@@ -301,6 +301,26 @@ static struct reg_value saturation_pos4[] = {
 	{0x3212, 0xa3, 0, 0}
 };
 
+static struct reg_value wb_cloudy[] = {
+	{0x3400, 0x06, 0, 0}, {0x3401, 0x48, 0, 0}, {0x3402, 0x04, 0, 0},
+	{0x3403, 0x00, 0, 0}, {0x3404, 0x04, 0, 0}, {0x3405, 0xd3, 0, 0},
+};
+
+static struct reg_value wb_daylight[] = {
+	{0x3400, 0x06, 0, 0}, {0x3401, 0x1c, 0, 0}, {0x3402, 0x04, 0, 0},
+	{0x3403, 0x00, 0, 0}, {0x3404, 0x04, 0, 0}, {0x3405, 0xf3, 0, 0},
+};
+
+static struct reg_value wb_incandescence[] = {
+	{0x3400, 0x04, 0, 0}, {0x3401, 0x10, 0, 0}, {0x3402, 0x04, 0, 0},
+	{0x3403, 0x00, 0, 0}, {0x3404, 0x08, 0, 0}, {0x3405, 0xb6, 0, 0},
+};
+
+static struct reg_value wb_fluorescent[] = {
+	{0x3400, 0x05, 0, 0}, {0x3401, 0x48, 0, 0}, {0x3402, 0x04, 0, 0},
+	{0x3403, 0x00, 0, 0}, {0x3404, 0x07, 0, 0}, {0x3405, 0xcf, 0, 0},
+};
+
 static uint8_t ov5640_af_firmware[] = {
 	0x02, 0x0f, 0xd6, 0x02, 0x0a, 0x39, 0xc2, 0x01, 0x22, 0x22, 0x00, 0x02,
 	0x0f, 0xb2, 0xe5, 0x1f, 0x70, 0x72, 0xf5, 0x1e, 0xd2, 0x35, 0xff, 0xef,
@@ -2177,6 +2197,56 @@ static int ov5640_set_autowb(struct v4l2_int_device *s, int value)
 	return 0;
 }
 
+static int ov5640_set_wb(struct v4l2_int_device *s, int value)
+{
+	int ret;
+	struct sensor_data *sensor = s->priv;
+
+	if (value == V4L2_WHITE_BALANCE_AUTO) {
+		ret = ov5640_set_autowb(s, 1);
+		return ret;
+	} else {
+		ret = ov5640_set_autowb(s, 0);
+		if (ret < 0)
+			return ret;
+	}
+
+	switch (value) {
+	case V4L2_WHITE_BALANCE_CLOUDY:
+		ret = ov5640_download_firmware(wb_cloudy,
+					       ARRAY_SIZE(wb_cloudy));
+		break;
+	case V4L2_WHITE_BALANCE_DAYLIGHT:
+		ret = ov5640_download_firmware(wb_daylight,
+					       ARRAY_SIZE(wb_daylight));
+		break;
+	case V4L2_WHITE_BALANCE_INCANDESCENT:
+		ret = ov5640_download_firmware(wb_incandescence,
+					       ARRAY_SIZE(wb_incandescence));
+		break;
+	case V4L2_WHITE_BALANCE_FLUORESCENT:
+		ret = ov5640_download_firmware(wb_fluorescent,
+					       ARRAY_SIZE(wb_fluorescent));
+		break;
+	case V4L2_WHITE_BALANCE_FLASH:
+	case V4L2_WHITE_BALANCE_FLUORESCENT_H:
+	case V4L2_WHITE_BALANCE_HORIZON:
+	case V4L2_WHITE_BALANCE_SHADE:
+	default:
+		ret = -EINVAL;
+	}
+
+	if (ret < 0) {
+		pr_err("%s: error %d\n", __func__, ret);
+		return ret;
+	}
+
+	msleep(10);
+	sensor->wb = value;
+
+	return 0;
+}
+
 static int ioctl_send_command(struct v4l2_int_device *s, struct v4l2_send_command_control *vc) {
 	int ret = -1;
 	int retval1;
@@ -2895,6 +2965,7 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 		retval = ov5640_set_autowb(s, vc->value);
 		break;
 	case V4L2_CID_DO_WHITE_BALANCE:
+		retval = ov5640_set_wb(s, vc->value);
 		break;
 	case V4L2_CID_RED_BALANCE:
 		break;
