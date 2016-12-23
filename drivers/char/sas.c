@@ -660,9 +660,21 @@ out:
 
 static int sas_release(struct inode *inode, struct file *file)
 {
+	int loop = 0;
 	unsigned long flags;
 	struct sas_dev *dev = container_of(inode->i_cdev,
 					   struct sas_dev, cdev);
+
+	while (1) {
+		int cnt = CIRC_CNT(dev->txbuf.head,
+				dev->txbuf.tail,
+				dev->txbufsize);
+		if (!cnt)
+			break;
+		if (loop++ > 10)
+			break;
+		msleep(100);
+	}
 	spin_lock_irqsave(&dev->lock, flags);
 	if (0 == --dev->open_count) {
 		writel(0x0, dev->base + UCR1);
