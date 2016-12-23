@@ -365,7 +365,7 @@ static void ts_service(struct pic16f616_ts *ts)
 
 	if (j & (1<<23)) {
 		/* sample is valid */
-#if 1 //def TESTING
+#ifdef TESTING
 		pr_info("%s: i=%06x j=%06x\n",client_name,i,j);
 #endif
 		if (ts->drop) {
