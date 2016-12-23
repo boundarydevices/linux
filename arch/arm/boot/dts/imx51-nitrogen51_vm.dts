@@ -297,6 +297,18 @@
 		>;
 	};
 
+	pinctrl_reg_usbotg: usbotggrp {
+		fsl,pins = <
+			MX51_PAD_EIM_D26__KEY_COL7		0xe5	/* high is off */
+		>;
+	};
+
+	pinctrl_reg_usbotg_enable5v: usbotg-enable5vgrp {
+		fsl,pins = <
+			MX51_PAD_EIM_D26__KEY_COL7		0xc5	/* low is on */
+		>;
+	};
+
 	pinctrl_uart1: uart1grp {
 		fsl,pins = <
 			MX51_PAD_UART1_TXD__UART1_TXD		0x1c5
@@ -334,18 +346,6 @@
 			MX51_PAD_USBH1_DATA7__USBH1_DATA7	0x1e5
 #define GP_USBH1_RESET	<&gpio2 5 GPIO_ACTIVE_LOW>
 			MX51_PAD_EIM_D21__GPIO2_5		0xc5
-		>;
-	};
-
-	pinctrl_usbotg: usbotggrp {
-		fsl,pins = <
-			MX51_PAD_EIM_D26__KEY_COL7		0xe5	/* high is off */
-		>;
-	};
-
-	pinctrl_usbotg_enable5v: usbotg-enable5vgrp {
-		fsl,pins = <
-			MX51_PAD_EIM_D26__KEY_COL7		0xc5	/* low is on */
 		>;
 	};
 };
@@ -583,12 +583,24 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_reg3p3v>;
 			regulator-name = "3P3V";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
 			gpio = GP_REG3P3V_EN;
 			enable-active-high;
+			regulator-always-on;
 		};
 #endif
+		reg_usbotg_vbus: regulator@3 {
+			compatible = "regulator-fixed";
+			reg = <3>;
+			pinctrl-names = "default", "disable", "enable";
+			pinctrl-0 = <&pinctrl_reg_usbotg>;
+			pinctrl-1 = <&pinctrl_reg_usbotg>;
+			pinctrl-2 = <&pinctrl_reg_usbotg_enable5v>;
+			regulator-name = "usbotg_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+		};
 	};
 
 	sas: sas@73fc0000 {
@@ -897,6 +909,7 @@
 };
 
 &usbh1 {
+	fsl,usbphy = <&usbphy0>;
 	phy_type = "ulpi";
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbh1>;
@@ -905,11 +918,9 @@
 };
 
 &usbotg {
-	dr_mode = "otg";
+	dr_mode = "peripheral";
 	disable-over-current;
 	phy_type = "utmi_wide";
-	pinctrl-names = "default", "enable5v";
-	pinctrl-0 = <&pinctrl_usbotg>;
-	pinctrl-1 = <&pinctrl_usbotg_enable5v>;
+	vbus-supply = <&reg_usbotg_vbus>;
 	status = "okay";
 };
