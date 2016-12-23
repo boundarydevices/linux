@@ -156,6 +156,7 @@ static struct sensor_data ov5640_data;
 static int pwn_gpio, rst_gpio;
 static int focus_mode = V4L2_CID_AUTO_FOCUS_STOP;
 static int focus_range = V4L2_AUTO_FOCUS_RANGE_NORMAL;
+static int colorfx = V4L2_COLORFX_NONE;
 
 static struct reg_value brightness_neg4[] = {
 	{0x3212, 0x03, 0, 0}, {0x5587, 0x40, 0, 0}, {0x5588, 0x09, 0, 0},
@@ -319,6 +320,44 @@ static struct reg_value wb_incandescence[] = {
 static struct reg_value wb_fluorescent[] = {
 	{0x3400, 0x05, 0, 0}, {0x3401, 0x48, 0, 0}, {0x3402, 0x04, 0, 0},
 	{0x3403, 0x00, 0, 0}, {0x3404, 0x07, 0, 0}, {0x3405, 0xcf, 0, 0},
+};
+
+static struct reg_value colorfx_none[] = {
+	{0x5001, 0x7f, 0, 0}, {0x5580, 0x04, 0, 0},
+};
+
+static struct reg_value colorfx_bw[] = {
+	{0x5001, 0xff, 0, 0}, {0x5580, 0x18, 0, 0}, {0x5583, 0x80, 0, 0},
+	{0x5584, 0x80, 0, 0},
+};
+
+static struct reg_value colorfx_sepia[] = {
+	{0x5001, 0xff, 0, 0}, {0x5580, 0x18, 0, 0}, {0x5583, 0x40, 0, 0},
+	{0x5584, 0xa0, 0, 0},
+};
+
+static struct reg_value colorfx_negative[] = {
+	{0x5001, 0xff, 0, 0}, {0x5580, 0x40, 0, 0},
+};
+
+static struct reg_value colorfx_emboss[] = {
+	{0x5001, 0xff, 0, 0}, {0x5580, 0x18, 0, 0}, {0x5583, 0x80, 0, 0},
+	{0x5584, 0xc0, 0, 0},
+};
+
+static struct reg_value colorfx_sketch[] = {
+	{0x5001, 0xff, 0, 0}, {0x5580, 0x18, 0, 0}, {0x5583, 0x80, 0, 0},
+	{0x5584, 0xc0, 0, 0},
+};
+
+static struct reg_value colorfx_sky_blue[] = {
+	{0x5001, 0xff, 0, 0}, {0x5580, 0x18, 0, 0}, {0x5583, 0xa0, 0, 0},
+	{0x5584, 0x40, 0, 0},
+};
+
+static struct reg_value colorfx_grass_green[] = {
+	{0x5001, 0xff, 0, 0}, {0x5580, 0x18, 0, 0}, {0x5583, 0x60, 0, 0},
+	{0x5584, 0x60, 0, 0},
 };
 
 static uint8_t ov5640_af_firmware[] = {
@@ -2247,6 +2286,66 @@ static int ov5640_set_wb(struct v4l2_int_device *s, int value)
 	return 0;
 }
 
+static int ov5640_set_colorfx(struct v4l2_int_device *s, int value)
+{
+	int ret;
+
+	switch (value) {
+	case V4L2_COLORFX_NONE:
+		ret = ov5640_download_firmware(colorfx_none,
+					       ARRAY_SIZE(colorfx_none));
+		break;
+	case V4L2_COLORFX_BW:
+		ret = ov5640_download_firmware(colorfx_bw,
+					       ARRAY_SIZE(colorfx_bw));
+		break;
+	case V4L2_COLORFX_SEPIA:
+		ret = ov5640_download_firmware(colorfx_sepia,
+					       ARRAY_SIZE(colorfx_sepia));
+		break;
+	case V4L2_COLORFX_NEGATIVE:
+		ret = ov5640_download_firmware(colorfx_negative,
+					       ARRAY_SIZE(colorfx_negative));
+		break;
+	case V4L2_COLORFX_EMBOSS:
+		ret = ov5640_download_firmware(colorfx_emboss,
+					       ARRAY_SIZE(colorfx_emboss));
+		break;
+	case V4L2_COLORFX_SKETCH:
+		ret = ov5640_download_firmware(colorfx_sketch,
+					       ARRAY_SIZE(colorfx_sketch));
+		break;
+	case V4L2_COLORFX_SKY_BLUE:
+		ret = ov5640_download_firmware(colorfx_sky_blue,
+					       ARRAY_SIZE(colorfx_sky_blue));
+		break;
+	case V4L2_COLORFX_GRASS_GREEN:
+		ret = ov5640_download_firmware(colorfx_grass_green,
+					       ARRAY_SIZE(colorfx_grass_green));
+		break;
+	case V4L2_COLORFX_SKIN_WHITEN:
+	case V4L2_COLORFX_VIVID:
+	case V4L2_COLORFX_AQUA:
+	case V4L2_COLORFX_ART_FREEZE:
+	case V4L2_COLORFX_SILHOUETTE:
+	case V4L2_COLORFX_SOLARIZATION:
+	case V4L2_COLORFX_ANTIQUE:
+	case V4L2_COLORFX_SET_CBCR:
+	default:
+		ret = -EINVAL;
+	}
+
+	if (ret < 0) {
+		pr_err("%s: error %d\n", __func__, ret);
+		return ret;
+	}
+
+	msleep(10);
+	colorfx = value;
+
+	return 0;
+}
+
 static int ioctl_send_command(struct v4l2_int_device *s, struct v4l2_send_command_control *vc) {
 	int ret = -1;
 	int retval1;
@@ -2911,6 +3010,9 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	case V4L2_CID_AUTO_WHITE_BALANCE:
 		vc->value = (ov5640_data.wb == V4L2_WHITE_BALANCE_AUTO) ? 1 : 0;
 		break;
+	case V4L2_CID_COLORFX:
+		vc->value = colorfx;
+		break;
 	default:
 		ret = -EINVAL;
 	}
@@ -2982,6 +3084,9 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	case V4L2_CID_HFLIP:
 		break;
 	case V4L2_CID_VFLIP:
+		break;
+	case V4L2_CID_COLORFX:
+		retval = ov5640_set_colorfx(s, vc->value);
 		break;
 	default:
 		retval = -EPERM;
