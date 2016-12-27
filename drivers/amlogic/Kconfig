@@ -19,6 +19,8 @@ source "drivers/amlogic/pinctrl/Kconfig"
 
 source "drivers/amlogic/usb/Kconfig"
 
+source "drivers/amlogic/i2c/Kconfig"
+
 source "drivers/amlogic/secmon/Kconfig"
 
 source "drivers/amlogic/cpu_version/Kconfig"

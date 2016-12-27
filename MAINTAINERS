@@ -13485,3 +13485,13 @@ F: include/linux/amlogic/usbtype.h
 AMLOGIC scpi cpufreq
 M:  jianxin.pan <jianxin.pan@amlogic.com>
 F:  drivers/amlogic/clk/clk-scpi.c
+
+AMLOGIC driver for i2c
+M: Xuhua Zhang <xuhua.zhang@amlogic.com>
+F: drivers/amlogic/i2c/aml_i2c.c
+F: drivers/amlogic/i2c/aml_i2c.h
+F: drivers/amlogic/i2c/aml_slave.c
+F: drivers/amlogic/i2c/aml_slave.h
+F: drivers/amlogic/i2c/Kconfig
+F: drivers/amlogic/i2c/Makefile
+

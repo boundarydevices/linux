@@ -208,6 +208,82 @@
 		#clock-cells = <0>;
 	};
 
+	i2c_ao: i2c@c8100500{ /*I2C-AO*/
+			compatible = "amlogic, meson-i2c";
+			dev_name = "i2c-AO";
+			status = "disabled";
+			reg = <0x0 0xc8100500 0x0 0x1d>;
+			device_id = <0>;
+			pinctrl-names="default";
+			pinctrl-0=<&ao_i2c_master>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			use_pio = <0>;
+			master_i2c_speed = <300000>;
+			clocks = <&clkc CLKID_AO_I2C>;
+			clock-names = "clk_i2c";
+		};
+		i2c_a: i2c@c1108500{ /*I2C-A*/
+			compatible = "amlogic, meson-i2c";
+			dev_name = "i2c-A";
+			status = "disabled";
+			reg = <0x0 0xc1108500 0x0 0x20>;
+			device_id = <1>;
+			pinctrl-names="default";
+			pinctrl-0=<&a_i2c_master>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			use_pio = <0>;
+			master_i2c_speed = <300000>;
+			clocks = <&clkc CLKID_I2C>;
+			clock-names = "clk_i2c";
+		};
+		i2c_b: i2c@c11087c0{ /*I2C-B*/
+			compatible = "amlogic, meson-i2c";
+			dev_name = "i2c-B";
+			status = "disabled";
+			reg = <0x0 0xc11087c0 0x0 0x20>;
+			device_id = <2>;
+			pinctrl-names="default";
+			pinctrl-0=<&b_i2c_master>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			use_pio = <0>;
+			master_i2c_speed = <300000>;
+			clocks = <&clkc CLKID_I2C>;
+			clock-names = "clk_i2c";
+		};
+		i2c_c: i2c@c11087e0{ /*I2C-C*/
+			compatible = "amlogic, meson-i2c";
+			dev_name = "i2c-C";
+			status = "disabled";
+			reg = <0x0 0xc11087e0 0x0 0x20>;
+			device_id = <3>;
+			pinctrl-names="default";
+			pinctrl-0=<&c_i2c_master>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			use_pio = <0>;
+			master_i2c_speed = <300000>;
+			clocks = <&clkc CLKID_I2C>;
+			clock-names = "clk_i2c";
+		};
+		i2c_d: i2c@c1108d20{ /*I2C-D*/
+			compatible = "amlogic, meson-i2c";
+			dev_name = "i2c-D";
+			status = "disabled";
+			reg = <0x0 0xc1108d20 0x0 0x20>;
+			device_id = <4>;
+			pinctrl-names="default";
+			pinctrl-0=<&d_i2c_master>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			use_pio = <0>;
+			master_i2c_speed = <300000>;
+			clocks = <&clkc CLKID_I2C>;
+			clock-names = "clk_i2c";
+		};
+
 	soc {
 		compatible = "simple-bus";
 		#address-cells = <2>;
@@ -320,6 +396,13 @@
 				groups = "uart_tx_ao_b_0",
 						"uart_rx_ao_b_0";
 				function = "uart_ao_b";
+			};
+		};
+		ao_i2c_master:ao_i2c{
+			mux {
+				groups = "i2c_sda_ao",
+					"i2c_sck_ao";
+				function = "i2c_ao";
 			};
 		};
 
@@ -614,6 +697,13 @@
 				function = "i2c_c";
 			};
 		};
+		c_i2c_master_pin1:c_i2c_pin1{
+			mux {
+				groups = "i2c_sda_c_1",
+					"i2c_scl_c_1";
+				function = "i2c_c";
+			};
+		};
 
 		d_i2c_master:d_i2c {
 			mux {
@@ -789,7 +879,7 @@
 		};
 	};
 
-	aml_reboot {
+	aml_reboot{
 		compatible = "aml, reboot";
 		sys_reset = <0x84000009>;
 		sys_poweroff = <0x84000008>;
