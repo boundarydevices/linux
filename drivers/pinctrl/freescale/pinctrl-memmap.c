@@ -39,22 +39,17 @@ int imx_pmx_set_one_pin_mem(struct imx_pinctrl *ipctl, struct imx_pin *pin)
 	pin_reg = &info->pin_regs[pin_id];
 	pin_memmap = &pin->pin_conf.pin_memmap;
 
-	if (pin_reg->mux_reg == -1) {
-		dev_err(ipctl->dev, "Pin(%s) does not support mux function\n",
-			info->pins[pin_id].name);
-		return 0;
-	}
-
-	if (info->flags & SHARE_MUX_CONF_REG) {
-		u32 reg;
-		reg = readl(ipctl->base + pin_reg->mux_reg);
-		reg &= ~info->mux_mask;
-		reg |= (pin_memmap->mux_mode << info->mux_shift);
-		writel(reg, ipctl->base + pin_reg->mux_reg);
-		dev_dbg(ipctl->dev, "write: offset 0x%x val 0x%x\n",
-			pin_reg->mux_reg, reg);
-	} else {
-		writel(pin_memmap->mux_mode, ipctl->base + pin_reg->mux_reg);
+	if (pin_reg->mux_reg != -1) {
+		if (info->flags & SHARE_MUX_CONF_REG) {
+			u32 reg;
+			reg = readl(ipctl->base + pin_reg->mux_reg);
+			reg &= ~info->mux_mask;
+			reg |= (pin_memmap->mux_mode << info->mux_shift);
+			writel(reg, ipctl->base + pin_reg->mux_reg);
+		} else {
+			writel(pin_memmap->mux_mode,
+			       ipctl->base + pin_reg->mux_reg);
+		}
 		dev_dbg(ipctl->dev, "write: offset 0x%x val 0x%x\n",
 			pin_reg->mux_reg, pin_memmap->mux_mode);
 	}
