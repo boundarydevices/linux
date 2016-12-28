@@ -956,6 +956,8 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 	master->dma_tx = dma_request_slave_channel_reason(dev, "tx");
 	if (IS_ERR(master->dma_tx)) {
 		ret = PTR_ERR(master->dma_tx);
+		if (ret == -EPROBE_DEFER)
+			return ret;
 		dev_dbg(dev, "can't get the TX DMA channel, error %d!\n", ret);
 		master->dma_tx = NULL;
 		goto err;
