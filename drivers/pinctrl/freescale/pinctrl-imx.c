@@ -171,25 +171,21 @@ static int imx_pmx_set_one_pin_mmio(struct imx_pinctrl *ipctl,
 	pin_id = pin->pin;
 	pin_reg = &ipctl->pin_regs[pin_id];
 
-	if (pin_reg->mux_reg == -1) {
-		dev_dbg(ipctl->dev, "Pin(%s) does not support mux function\n",
-			info->pins[pin_id].name);
-		return 0;
-	}
+	if (pin_reg->mux_reg != -1) {
+		if (info->flags & SHARE_MUX_CONF_REG) {
+			u32 reg;
 
-	if (info->flags & SHARE_MUX_CONF_REG) {
-		u32 reg;
-
-		reg = readl(ipctl->base + pin_reg->mux_reg);
-		reg &= ~info->mux_mask;
-		reg |= (pin_mmio->mux_mode << info->mux_shift);
-		writel(reg, ipctl->base + pin_reg->mux_reg);
-		dev_dbg(ipctl->dev, "write: offset 0x%x val 0x%x\n",
-			pin_reg->mux_reg, reg);
-	} else {
-		writel(pin_mmio->mux_mode, ipctl->base + pin_reg->mux_reg);
-		dev_dbg(ipctl->dev, "write: offset 0x%x val 0x%x\n",
-			pin_reg->mux_reg, pin_mmio->mux_mode);
+			reg = readl(ipctl->base + pin_reg->mux_reg);
+			reg &= ~info->mux_mask;
+			reg |= (pin_mmio->mux_mode << info->mux_shift);
+			writel(reg, ipctl->base + pin_reg->mux_reg);
+			dev_dbg(ipctl->dev, "write: offset 0x%x val 0x%x\n",
+				pin_reg->mux_reg, reg);
+		} else {
+			writel(pin_mmio->mux_mode, ipctl->base + pin_reg->mux_reg);
+			dev_dbg(ipctl->dev, "write: offset 0x%x val 0x%x\n",
+				pin_reg->mux_reg, pin_mmio->mux_mode);
+		}
 	}
 
 	/*
