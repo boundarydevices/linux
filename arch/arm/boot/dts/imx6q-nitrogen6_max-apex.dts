@@ -18,7 +18,7 @@
 #include "imx6qdl-nitrogen6_max.dtsi"
 
 / {
-	model = "Freescale i.MX6 Quad Nitrogen6 Max Board";
+	model = "Freescale i.MX6 Quad Nitrogen6 Max-apex Board";
 	compatible = "fsl,imx6q-nitrogen6_max", "fsl,imx6q";
 };
 
