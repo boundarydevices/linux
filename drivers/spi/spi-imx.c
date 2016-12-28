@@ -864,10 +864,12 @@ static int spi_imx_sdma_init(struct device *dev, struct spi_imx_data *spi_imx,
 	int ret;
 
 	/* Prepare for TX DMA: */
-	master->dma_tx = dma_request_slave_channel(dev, "tx");
-	if (!master->dma_tx) {
+	master->dma_tx = dma_request_slave_channel_reason(dev, "tx");
+	if (IS_ERR(master->dma_tx)) {
+		ret = PTR_ERR(master->dma_tx);
+		if (ret == -EPROBE_DEFER)
+			return ret;
 		dev_err(dev, "cannot get the TX DMA channel!\n");
-		ret = -EINVAL;
 		goto err;
 	}
 
@@ -1267,10 +1269,15 @@ static int spi_imx_probe(struct platform_device *pdev)
 	 * Only validated on i.mx6 now, can remove the constrain if validated on
 	 * other chips.
 	 */
-	if ((spi_imx->devtype_data == &imx51_ecspi_devtype_data
-	    || spi_imx->devtype_data == &imx6ul_ecspi_devtype_data)
-	    && spi_imx_sdma_init(&pdev->dev, spi_imx, master, res))
-		dev_err(&pdev->dev, "dma setup error,use pio instead\n");
+	if (spi_imx->devtype_data == &imx51_ecspi_devtype_data
+	    || spi_imx->devtype_data == &imx6ul_ecspi_devtype_data) {
+		ret = spi_imx_sdma_init(&pdev->dev, spi_imx, master, res);
+		if (ret) {
+			if (ret == -EPROBE_DEFER)
+				goto out_clk_put;
+			dev_err(&pdev->dev, "dma setup error,use pio instead\n");
+		}
+	}
 
 	spi_imx->devtype_data->reset(spi_imx);
 
