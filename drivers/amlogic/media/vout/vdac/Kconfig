@@ -1,0 +1,10 @@
+#
+# Video output configuration
+#
+
+config AMLOGIC_VDAC
+	bool "VDAC Module"
+	default n
+	help
+		VDAC config.
+

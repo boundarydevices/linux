@@ -41,6 +41,7 @@ endif
 
 if AMLOGIC_MEDIA_DRIVERS
 source "drivers/amlogic/media/video_sink/Kconfig"
+source "drivers/amlogic/media/vout/Kconfig"
 endif
 
 endmenu

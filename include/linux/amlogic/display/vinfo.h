@@ -1,5 +1,5 @@
 /*
- * include/linux/amlogic/media/vout/vinfo.h
+ * include/linux/amlogic/display/vinfo.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -17,27 +17,20 @@
 
 #ifndef _VINFO_H_
 #define _VINFO_H_
-#include <linux/amlogic/media/vfm/video_common.h>
+#include <linux/amlogic/color_fmt.h>
 
 /* the MSB is represent vmode set by vmode_init */
 #define	VMODE_INIT_BIT_MASK	0x8000
 #define	VMODE_MODE_BIT_MASK	0xff
 
 enum vmode_e {
-	VMODE_HDMI = 0,
+	VMODE_HDMI,
 	VMODE_CVBS,
 	VMODE_LCD,
 	VMODE_NULL, /* null mode is used as temporary witch mode state */
 	VMODE_MAX,
 	VMODE_INIT_NULL,
 	VMODE_MASK = 0xFF,
-};
-
-enum viu_mux_e {
-	VIU_MUX_ENCI = 0,
-	VIU_MUX_ENCP,
-	VIU_MUX_ENCL,
-	VIU_MUX_MAX,
 };
 
 #define SUPPORT_2020	0x01
@@ -66,17 +59,8 @@ struct vinfo_s {
 	u32 sync_duration_den;
 	u32 video_clk;
 	enum color_fmt_e viu_color_fmt;
-	enum viu_mux_e viu_mux;
 	struct master_display_info_s master_display_info;
 	void *vout_device;
 };
 
-#ifdef CONFIG_AMLOGIC_MEDIA_FB
-struct disp_rect_s {
-	int x;
-	int y;
-	int w;
-	int h;
-};
-#endif
 #endif /* _VINFO_H_ */

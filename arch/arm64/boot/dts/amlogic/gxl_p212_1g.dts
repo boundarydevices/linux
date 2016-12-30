@@ -187,6 +187,19 @@
 						"usb1_to_ddr";
 	};
 
+	vout {
+		compatible = "amlogic, vout";
+		dev_name = "vout";
+		status = "okay";
+		fr_auto_policy = <0>;
+	};
+
+	cvbsout {
+		compatible = "amlogic, cvbsout";
+		dev_name = "cvbsout";
+		status = "okay";
+	};
+
 	pwm {
 		compatible = "amlogic, meson-pwm";
 		status = "okay";

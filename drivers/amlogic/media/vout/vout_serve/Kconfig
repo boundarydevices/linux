@@ -1,0 +1,11 @@
+#
+# Amlogic VOUT_SERVE driver configuation
+#
+
+config AMLOGIC_VOUT_SERVE
+	bool "Amlogic Vout_Serve Module"
+	default n
+	help
+		Amlogic Video output Server support.
+		Provide display mode service for all of the display modules.
+

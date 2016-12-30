@@ -1320,7 +1320,8 @@ RESTART:
 			((vf->type_original & VIDTYPE_TYPEMASK)
 				!= VIDTYPE_PROGRESSIVE));
 	/*for gxl cvbs out index*/
-	if ((vinfo->mode == VMODE_576CVBS) &&
+	if ((vinfo->mode == VMODE_CVBS) &&
+		(vinfo->height == 576) &&
 		(filter->vpp_hf_start_phase_step == (1 << 24)))
 		filter->vpp_horz_filter = COEF_BICUBIC_SHARP;
 	filter->vpp_horz_coeff =

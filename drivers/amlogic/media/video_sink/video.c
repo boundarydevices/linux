@@ -2618,18 +2618,14 @@ static int detect_vout_type(void)
 	int vout_type = VOUT_TYPE_PROG;
 
 	if ((vinfo) && (vinfo->field_height != vinfo->height)) {
-		switch (vinfo->mode) {
-		case VMODE_480I:
-		case VMODE_480CVBS:
-		case VMODE_576I:
-		case VMODE_576CVBS:
+		switch (vinfo->viu_mux) {
+		case VIU_MUX_ENCI:
 			vout_type = (READ_VCBUS_REG(ENCI_INFO_READ) &
 				(1 << 29)) ?
 				VOUT_TYPE_BOT_FIELD : VOUT_TYPE_TOP_FIELD;
 			break;
 
-		case VMODE_1080I:
-		case VMODE_1080I_50HZ:
+		case VIU_MUX_ENCP:
 			/*
 			 *vout_type = (((READ_VCBUS_REG(ENCI_INFO_READ)
 			 *>> 16) & 0x1fff) < 562) ?

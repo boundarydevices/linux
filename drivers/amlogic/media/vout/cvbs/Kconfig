@@ -1,0 +1,23 @@
+#
+# Video output configuration
+#
+
+config AMLOGIC_CVBS_OUTPUT
+	bool "CVBS Output Module"
+	default n
+	help
+		Amlogic cvbs output driver support.this is based on
+		display driver as HDMI,LCD.
+		cvbs output mode support:480cvbs 576cvbs.
+		cvbsoutput performance enhancement.cvbs encoding.
+		This driver is based on display driver.
+
+config AMLOGIC_WSS
+	bool "WSS function"
+	default n
+	depends on AMLOGIC_CVBS_OUTPUT
+	help
+		Wide Screen Signalling config.
+		base on amlogic cvbs output driver.
+		function cgms-a,wide screen,closed caption.
+

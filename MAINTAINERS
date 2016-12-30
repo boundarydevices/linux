@@ -13535,3 +13535,8 @@ AMLOGIC VPU driver support
 M: Evoke Zhang <evoke.zhang@amlogic.com>
 F: drivers/amlogic/vpu/*
 F: include/linux/amlogic/vpu.h
+
+AMLOGIC driver for vout
+M: Evoke Zhang <evoke.zhang@amlogic.com>
+F: drivers/amlogic/dispaly/*
+
