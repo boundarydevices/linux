@@ -18,6 +18,9 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/reset/amlogic,gxl-reset.h>
 #include <dt-bindings/clock/amlogic,gxl-clkc.h>
+#include <dt-bindings/gpio/gxl.h>
+#include <dt-bindings/pwm/meson.h>
+
 / {
 	cpus:cpus {
 		#address-cells = <2>;

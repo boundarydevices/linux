@@ -13503,3 +13503,10 @@ AMLOGIC CPU hotplug for dvfs and IPA
 M: Jianxin Pan <jianxin.pan@amlogic.com>
 F: drivers/amlogic/cpu_hotplug/*
 
+AMLOGIC PWM DRIVER
+M: Jian Hu <jian.hu@amlogic.com>
+F: drivers/amlogic/pwm/*
+F: include/linux/amlogic/pwm_meson.h
+F: include/dt-bindings/pwm/meosn.h
+F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
+F: arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts

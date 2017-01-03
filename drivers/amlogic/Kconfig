@@ -47,5 +47,7 @@ source "drivers/amlogic/ethernet/phy/Kconfig"
 
 source "drivers/amlogic/cpu_hotplug/Kconfig"
 
+source "drivers/amlogic/pwm/Kconfig"
+
 endmenu
 endif

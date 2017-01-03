@@ -1,0 +1,12 @@
+#
+# PWM configuration
+#
+
+
+menuconfig AMLOGIC_PWM
+	bool "Amlogic PWM driver"
+	depends on PWM_SYSFS
+	depends on PWM
+	default n
+	help
+	  say y to enable Amlogic PWM driver.
