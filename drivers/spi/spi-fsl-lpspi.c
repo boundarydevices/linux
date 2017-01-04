@@ -15,6 +15,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/spi/spi.h>
@@ -499,10 +500,30 @@ static int fsl_lpspi_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int fsl_lpspi_suspend(struct device *dev)
+{
+	pinctrl_pm_select_sleep_state(dev);
+	return 0;
+}
+
+static int fsl_lpspi_resume(struct device *dev)
+{
+	pinctrl_pm_select_default_state(dev);
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(imx_lpspi_pm, fsl_lpspi_suspend, fsl_lpspi_resume);
+#define IMX_LPSPI_PM	(&imx_lpspi_pm)
+#else
+#define IMX_LPSPI_PM	NULL
+#endif
+
 static struct platform_driver fsl_lpspi_driver = {
 	.driver = {
 		.name = DRIVER_NAME,
 		.of_match_table = fsl_lpspi_dt_ids,
+		.pm = IMX_LPSPI_PM,
 	},
 	.probe = fsl_lpspi_probe,
 	.remove = fsl_lpspi_remove,
