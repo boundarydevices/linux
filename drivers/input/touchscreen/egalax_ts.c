@@ -72,6 +72,7 @@ struct egalax_ts {
 	u32				finger_mask;
 	int				touch_no_wake;
 	struct finger_info		fingers[MAX_SUPPORT_POINTS];
+	struct gpio_desc		*wakeup_gpio;
 };
 
 static void report_input_data(struct egalax_ts *ts)
@@ -185,36 +186,17 @@ static void egalax_free_irq(struct egalax_ts *ts)
 }
 
 /* wake up controller by an falling edge of interrupt gpio.  */
-static int egalax_wake_up_device(struct i2c_client *client)
+static int egalax_wake_up_device(struct gpio_desc *wakeup_gpio)
 {
-	struct device_node *np = client->dev.of_node;
-	int gpio;
 	u8 buf[MAX_I2C_DATA_LEN];
-	int ret, tries = 0;
-
-	if (!np)
-		return -ENODEV;
-
-	gpio = of_get_named_gpio(np, "wakeup-gpios", 0);
-	if (!gpio_is_valid(gpio))
-		return -ENODEV;
-
-	ret = gpio_request(gpio, "egalax_irq");
-	if (ret < 0) {
-		dev_err(&client->dev,
-			"request gpio failed, cannot wake up controller: %d\n",
-			ret);
-		return ret;
-	}
+	int tries = 0;
 
 	/* wake up controller via an falling edge on IRQ gpio. */
-	gpio_direction_output(gpio, 1);
-	gpio_set_value(gpio, 0);
-	gpio_set_value(gpio, 1);
+	gpiod_direction_output(wakeup_gpio, 0);
+	gpiod_set_value(wakeup_gpio, 1);
 
 	/* controller should be waken up, return irq.  */
-	gpio_direction_input(gpio);
-	gpio_free(gpio);
+	gpiod_direction_input(wakeup_gpio);
 
 	/* If the touch controller has some data pending, read it */
 	/* or the INT line will remian low */
@@ -258,8 +240,19 @@ static int egalax_ts_probe(struct i2c_client *client,
 		return error;
 	}
 
+	ts = devm_kzalloc(&client->dev, sizeof(struct egalax_ts), GFP_KERNEL);
+	if (!ts) {
+		dev_err(&client->dev, "Failed to allocate memory\n");
+		return -ENOMEM;
+	}
+
+	ts->wakeup_gpio = devm_gpiod_get_index(&client->dev, "wakeup", 0,
+					       GPIOD_OUT_LOW);
+	if (IS_ERR(ts->wakeup_gpio))
+		return -ENODEV;
+
 	/* controller may be in sleep, wake it up. */
-	error = egalax_wake_up_device(client);
+	error = egalax_wake_up_device(ts->wakeup_gpio);
 	if (error) {
 		dev_err(&client->dev, "Failed to wake up, disable suspend,"
 				"otherwise it can not wake up\n");
@@ -272,12 +265,6 @@ static int egalax_ts_probe(struct i2c_client *client,
 		dev_err(&client->dev, "Failed to read firmware version\n");
 		error = -EIO;
 		goto err_free_dev;
-	}
-
-	ts = devm_kzalloc(&client->dev, sizeof(struct egalax_ts), GFP_KERNEL);
-	if (!ts) {
-		dev_err(&client->dev, "Failed to allocate memory\n");
-		return -ENOMEM;
 	}
 
 	input_dev = devm_input_allocate_device(&client->dev);
@@ -372,7 +359,7 @@ static int __maybe_unused egalax_ts_resume(struct device *dev)
 	if (ts->touch_no_wake)
 		return 0;
 
-	ret = egalax_wake_up_device(client);
+	ret = egalax_wake_up_device(ts->wakeup_gpio);
 	if (!ret)
 		ret = egalax_irq_request(ts);
 
