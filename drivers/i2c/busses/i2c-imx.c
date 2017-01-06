@@ -128,6 +128,8 @@ struct imx_i2c_struct {
 	int			stopped;
 	unsigned int		ifdr; /* IMX_I2C_IFDR */
 	enum imx_i2c_type	devtype;
+	u32			inter_byte_delay;
+	u32			stop_delay;
 
 	unsigned int            cur_clk;
 	unsigned int            bitrate;
@@ -287,6 +289,9 @@ static void i2c_imx_stop(struct imx_i2c_struct *i2c_imx)
 	unsigned int temp = 0;
 
 	if (!i2c_imx->stopped) {
+		if (i2c_imx->stop_delay)
+			udelay(i2c_imx->stop_delay);
+
 		/* Stop I2C transaction */
 		dev_dbg(&i2c_imx->adapter.dev, "<%s>\n", __func__);
 		temp = readb(i2c_imx->base + IMX_I2C_I2CR);
@@ -351,6 +356,8 @@ static int i2c_imx_write(struct imx_i2c_struct *i2c_imx, struct i2c_msg *msgs)
 		dev_dbg(&i2c_imx->adapter.dev,
 			"<%s> write byte: B%d=0x%X\n",
 			__func__, i, msgs->buf[i]);
+		if (i2c_imx->inter_byte_delay)
+			udelay(i2c_imx->inter_byte_delay);
 		writeb(msgs->buf[i], i2c_imx->base + IMX_I2C_I2DR);
 		result = i2c_imx_trx_complete(i2c_imx);
 		if (result)
@@ -542,6 +549,12 @@ static int __init i2c_imx_probe(struct platform_device *pdev)
 	i2c_imx->adapter.nr 		= pdev->id;
 	i2c_imx->adapter.dev.of_node	= pdev->dev.of_node;
 	i2c_imx->base			= base;
+	of_property_read_u32(pdev->dev.of_node, "inter-byte-delay",
+			&i2c_imx->inter_byte_delay);
+	of_property_read_u32(pdev->dev.of_node, "stop-delay",
+			&i2c_imx->stop_delay);
+	dev_info(&pdev->dev, "stop-delay=%d, inter-byte-delay=%d\n",
+			i2c_imx->stop_delay, i2c_imx->inter_byte_delay);
 
 	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
 	if (IS_ERR(pinctrl)) {
