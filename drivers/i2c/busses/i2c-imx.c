@@ -267,6 +267,8 @@ struct imx_i2c_struct {
 	unsigned int		ifdr; /* IMX_I2C_IFDR */
 	unsigned int		cur_clk;
 	unsigned int		bitrate;
+	u32			inter_byte_delay;
+	u32			stop_delay;
 	const struct imx_i2c_hwdata	*hwdata;
 	struct i2c_bus_recovery_info rinfo;
 
@@ -760,6 +762,9 @@ static void i2c_imx_stop(struct imx_i2c_struct *i2c_imx, bool atomic)
 	unsigned int temp = 0;
 
 	if (!i2c_imx->stopped) {
+		if (i2c_imx->stop_delay)
+			udelay(i2c_imx->stop_delay);
+
 		/* Stop I2C transaction */
 		temp = imx_i2c_read_reg(i2c_imx, IMX_I2C_I2CR);
 		if (!(temp & I2CR_MSTA))
@@ -1204,6 +1209,8 @@ static int i2c_imx_write(struct imx_i2c_struct *i2c_imx, struct i2c_msg *msgs,
 		dev_dbg(&i2c_imx->adapter.dev,
 			"<%s> write byte: B%d=0x%X\n",
 			__func__, i, msgs->buf[i]);
+		if (i2c_imx->inter_byte_delay)
+			udelay(i2c_imx->inter_byte_delay);
 		imx_i2c_write_reg(msgs->buf[i], i2c_imx, IMX_I2C_I2DR);
 		result = i2c_imx_trx_complete(i2c_imx, atomic);
 		if (result)
@@ -1715,6 +1722,13 @@ static int i2c_imx_probe(struct platform_device *pdev)
 	i2c_imx->adapter.dev.of_node	= pdev->dev.of_node;
 	i2c_imx->base			= base;
 	ACPI_COMPANION_SET(&i2c_imx->adapter.dev, ACPI_COMPANION(&pdev->dev));
+
+	of_property_read_u32(pdev->dev.of_node, "inter-byte-delay",
+			&i2c_imx->inter_byte_delay);
+	of_property_read_u32(pdev->dev.of_node, "stop-delay",
+			&i2c_imx->stop_delay);
+	dev_info(&pdev->dev, "stop-delay=%d, inter-byte-delay=%d\n",
+			i2c_imx->stop_delay, i2c_imx->inter_byte_delay);
 
 	/* Get I2C clock */
 	i2c_imx->clk = devm_clk_get(&pdev->dev, NULL);
