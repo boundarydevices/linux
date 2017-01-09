@@ -107,6 +107,9 @@
 };
 
 &i2c3 {
+	inter-byte-delay = <170>;
+	stop-delay = <30>;
+
 	ar1020_i2c@4d {
 		compatible = "ar1020_i2c";
 		reg = <0x4d>;
