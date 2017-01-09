@@ -56,18 +56,19 @@ static int uvc_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 	if (*nbuffers > UVC_MAX_VIDEO_BUFFERS)
 		*nbuffers = UVC_MAX_VIDEO_BUFFERS;
 
-//	if (*nbuffers < 6)
-//		*nbuffers = 6;
-
 	*nplanes = 1;
 	psize = stream->psize;
 	sz = stream->ctrl.dwMaxVideoFrameSize;
-	/*
-	 * let the last segment transfer an entire payload
-	 * in case things are not yet synced
-	 */
-	if ((queue->dma_mode == DMA_MODE_CONTIG) && !stream->iso_packets)
-		sz += stream->max_payload_size;
+	if (queue->dma_mode == DMA_MODE_CONTIG) {
+		/*
+		 * let the last segment transfer an entire payload
+		 * in case things are not yet synced
+		 */
+		if (!stream->iso_packets)
+			sz += stream->max_payload_size;
+		if (*nbuffers < 4)
+			*nbuffers = 4;
+	}
 	if (0) pr_info("%s:psize = %x sz=%x\n", __func__, psize, sz);
 	npackets = DIV_ROUND_UP(sz, psize);
 	sz = npackets * psize;
@@ -115,8 +116,8 @@ static int setup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 
 	if ((header_sz != buf->header_sz) ||
 			(repeat_payload != buf->repeat_payload)) {
-		if (0) pr_info("%s: buf=%p mem %p, length %x to setup_done=%x\n", __func__,
-			buf, buf->mem, buf->length, buf->setup_done);
+		if (0) pr_info("%s: buf=%p mem %p, length %x, setup_done=%x\n", __func__,
+				buf, buf->mem, buf->length, buf->setup_done);
 		buf->setup_done = 0;
 	}
 
@@ -202,13 +203,11 @@ static int setup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 			rp -= psize;
 			if (frame_rem <= rp)
 				mps += psize;
-			buf->last_skip_header = 0;
 		} else {
 			if (rem < mps) {
 				pr_err("%s: buf too small\n", __func__);
 				break;
 			}
-			buf->last_skip_header = 1;
 		}
 
 		stream->init_urb(stream, buf->urbs[i++], &buf->buf, mem,
@@ -230,6 +229,8 @@ exit1:
 
 void uvc_buffer_done(struct uvc_buffer *buf, int state, const char *s)
 {
+	if (!buf->mem)
+		return;
 	if (0) pr_info("%s:%s: %p mem=%p from %x to %x, bytesused=%x\n",
 		__func__, s, buf, buf->mem,
 		buf->owner, UVC_OWNER_QUEUE, buf->bytesused);
@@ -247,6 +248,9 @@ static int add_to_available(struct uvc_video_queue *queue, struct uvc_buffer *bu
 	unsigned long flags;
 	int ret = 0;
 
+	if ((buf == queue->in_progress) || (buf->owner == UVC_OWNER_QUEUE)
+			|| !buf->mem)
+		return 0;
 	if (queue->return_buffers) {
 		/* If the device is disconnected return the buffer to userspace
 		 * directly. The next QBUF call will fail with -ENODEV.
@@ -259,15 +263,19 @@ static int add_to_available(struct uvc_video_queue *queue, struct uvc_buffer *bu
 	if (buf->usb_active) {
 		buf->owner = UVC_OWNER_USB_ACTIVE;
 	} else {
-		queue->available |= (1 << buf->buf.v4l2_buf.index);
-		buf->owner = UVC_OWNER_AVAIL;
-		ret = 1;
+		unsigned mask = (1 << buf->buf.v4l2_buf.index);
+
+		if (!(queue->pending & mask)) {
+			queue->available |= mask;
+			buf->owner = UVC_OWNER_AVAIL;
+			ret = 1;
+		}
 	}
 	spin_unlock_irqrestore(&queue->irqlock, flags);
 	return ret;
 }
 
-struct uvc_buffer *uvc_get_available_buffer(struct uvc_video_queue *queue, int even_last)
+static struct uvc_buffer *uvc_get_available_buffer(struct uvc_video_queue *queue, int for_dma)
 {
 	unsigned long flags;
 	struct uvc_buffer *buf = NULL;
@@ -276,15 +284,18 @@ struct uvc_buffer *uvc_get_available_buffer(struct uvc_video_queue *queue, int e
 	if (queue->available) {
 		struct vb2_buffer *vb;
 		int buf_index = __ffs(queue->available);
-		unsigned submitted = queue->submitted;
+		unsigned s = (queue->dma_mode == DMA_MODE_CONTIG) ?
+				queue->submitted : 0xf;
+		int gteq2 = (s != (s & -s));
+
 		/*
-		 * return buffer if <=1 buffers submitted
-		 * or >1 buffers available
-		 * or really needed
+		 * return buffer if
+		 * >1 buffers available
+		 * or < 2 buffers submitted and for_dma
+		 * or >= 2 buffers submitted and !for_dma
 		 */
-		if ((submitted == (submitted & -submitted)) ||
-				(queue->available != (1 << buf_index)) ||
-				even_last) {
+		if ((queue->available != (1 << buf_index)) ||
+				(gteq2 ^ for_dma)) {
 			queue->available &= ~(1 << buf_index);
 			vb = queue->queue.bufs[buf_index];
 			buf = container_of(vb, struct uvc_buffer, buf);
@@ -296,27 +307,36 @@ struct uvc_buffer *uvc_get_available_buffer(struct uvc_video_queue *queue, int e
 		}
 	}
 	spin_unlock_irqrestore(&queue->irqlock, flags);
-	if (0) pr_info("%s: %p, available=%x even_last=%x\n", __func__, buf,
-			queue->available, even_last);
+	if (0) pr_info("%s: %p, available=%x for_dma=%x\n", __func__, buf,
+			queue->available, for_dma);
 	return buf;
 }
 
-static void submit_buffers(struct uvc_video_queue *queue)
+static int submit_buffer(struct uvc_video_queue *queue, struct uvc_streaming *stream)
 {
-	struct uvc_streaming *stream = container_of(queue,
-					struct uvc_streaming, queue);
 	struct uvc_buffer *buf;
 	unsigned long flags;
-	int i = 0;
+	int i;
+	int first;
+	int buf_index;
 
-	if (!queue->streaming)
-		return;
-	if (!stream->sync && stream->header_sz && stream->repeat_payload &&
-			queue->using_headers) {
+	if ((queue->submitted_insert_shift >= 32) || !queue->streaming)
+		return 0;
+	i = 0;
+	if (!stream->sync) {
+		unsigned s = queue->submitted;
+
+		/* Only submit 2 buffers while not sync'ed */
+		if (s != (s & -s))
+			return 0;
+	}
+	if (!stream->sync && stream->header_sz
+			&& stream->repeat_payload
+			&& queue->using_headers) {
 		int sync_index;
 
-		if (queue->submitted & queue->frame_sync_mask)
-			goto next;
+		if (queue->pending & queue->frame_sync_mask)
+			goto no_sync;
 
 		queue->frame_sync_mask = 0;
 
@@ -324,90 +344,147 @@ static void submit_buffers(struct uvc_video_queue *queue)
 		 * Now determine how many payloads are left to fill latest buffer
 		 */
 		sync_index = queue->sync_index;
-		if (!sync_index || (sync_index & 1))
-			goto next;
+		if (!sync_index)
+			goto no_sync;
 
-		buf = uvc_get_available_buffer(queue, 0);
+		buf = uvc_get_available_buffer(queue, 1);
 		if (!buf)
-			return;
+			return 0;
 		setup_buf(stream, buf);
 		queue->sync_index = 0;
 
-		sync_index -= buf->last_skip_header;
 		if (buf->used_urb_cnt > sync_index) {
 			i = buf->used_urb_cnt - sync_index;
 			queue->frame_sync_mask = 1 << buf->buf.v4l2_buf.index;
 			if (0) pr_info("%s: syncing %i\n", __func__, i);
 		}
 	} else {
-		goto next;
+no_sync:
+		buf = uvc_get_available_buffer(queue, 1);
+		if (!buf)
+			return 0;
+		setup_buf(stream, buf);
 	}
 
 	/* Submit the URBs. */
-	while (1) {
-		int first = i;
+	first = i;
+	buf_index = buf->buf.v4l2_buf.index;
 
-		spin_lock_irqsave(&queue->irqlock, flags);
-		queue->submitted |= (1 << buf->buf.v4l2_buf.index);
-		buf->owner = UVC_OWNER_USB_ACTIVE;
-		buf->last_completed_urb = NULL;
-		buf->usb_active = 1;
-		buf->urb_index_of_frame = i;
-		spin_unlock_irqrestore(&queue->irqlock, flags);
-		if (0) pr_info("%s: start %d total %d\n", __func__, i, buf->used_urb_cnt);
+	spin_lock_irqsave(&queue->irqlock, flags);
+	buf->owner = UVC_OWNER_USB_ACTIVE;
+	buf->prev_completed_urb = NULL;
+	buf->last_completed_urb = NULL;
+	buf->usb_active = 1;
+	buf->pending_urb_index = i;
+	queue->submitted_buffers |= buf_index << queue->submitted_insert_shift;
+	queue->submitted_insert_shift += 8;
 
-		while (i < buf->used_urb_cnt) {
-			int ret;
+	queue->submitted |= (1 << buf_index);
+	queue->pending |= (1 << buf_index);
+	spin_unlock_irqrestore(&queue->irqlock, flags);
+	if (0) pr_info("%s: start %d total %d\n", __func__, i, buf->used_urb_cnt);
 
+	while (i < buf->used_urb_cnt) {
+		int ret;
+
+		if (queue->streaming)
+			ret = usb_submit_urb(buf->urbs[i], GFP_KERNEL);
+		else
+			ret = -EINVAL;
+		if (ret < 0) {
 			if (queue->streaming)
-				ret = usb_submit_urb(buf->urbs[i], GFP_KERNEL);
-			else
-				ret = -EINVAL;
-			if (ret < 0) {
-				if (queue->streaming)
-					pr_err("%s: Failed to submit URB "
-						"%u-%u (%d).\n",
-						__func__, first, i, ret);
-				if (i == first) {
-					spin_lock_irqsave(&queue->irqlock, flags);
+				pr_err("%s: Failed to submit URB "
+					"%u-%u (%d).\n",
+					__func__, first, i, ret);
+			if (i == first) {
+				spin_lock_irqsave(&queue->irqlock, flags);
+				queue->submitted &= ~(1 << buf->buf.v4l2_buf.index);
+				queue->pending &= ~(1 << buf->buf.v4l2_buf.index);
+				buf->usb_active = 0;
+				queue->submitted_insert_shift -= 8;
+				queue->submitted_buffers &= ~(0xff << queue->submitted_insert_shift);
+				spin_unlock_irqrestore(&queue->irqlock, flags);
+
+				uvc_buffer_done(buf, VB2_BUF_STATE_ERROR, __func__);
+			} else {
+				spin_lock_irqsave(&queue->irqlock, flags);
+				if (buf->last_completed_urb == buf->urbs[i - 1]) {
 					queue->submitted &= ~(1 << buf->buf.v4l2_buf.index);
+					queue->pending &= ~(1 << buf->buf.v4l2_buf.index);
 					buf->usb_active = 0;
+					queue->submitted_insert_shift -= 8;
+					queue->submitted_buffers &= ~(0xff << queue->submitted_insert_shift);
 					spin_unlock_irqrestore(&queue->irqlock, flags);
 
 					uvc_buffer_done(buf, VB2_BUF_STATE_ERROR, __func__);
 				} else {
-					spin_lock_irqsave(&queue->irqlock, flags);
-					if (buf->last_completed_urb == buf->urbs[i - 1]) {
-						queue->submitted &= ~(1 << buf->buf.v4l2_buf.index);
-						buf->usb_active = 0;
-						spin_unlock_irqrestore(&queue->irqlock, flags);
-
-						uvc_buffer_done(buf, VB2_BUF_STATE_ERROR, __func__);
-					} else {
-						buf->setup_done = 0;
-						buf->used_urb_cnt = i;
-						spin_unlock_irqrestore(&queue->irqlock, flags);
-					}
+					buf->setup_done = 0;
+					buf->used_urb_cnt = i;
+					spin_unlock_irqrestore(&queue->irqlock, flags);
 				}
-				break;
 			}
-			if (0) pr_info("%s:3 %u of %u\n", __func__, i, buf->used_urb_cnt);
-			i++;
+			break;
 		}
-		if (0) pr_info("%s: buf=%p(%i) urbs %u-%u submitted=%x avail=%x\n",
-				__func__, buf, buf->buf.v4l2_buf.index,
-				first, i, queue->submitted, queue->available);
-
-next:
-		if (!queue->streaming)
-			break;
-		buf = uvc_get_available_buffer(queue, 0);
-		if (!buf)
-			break;
-		setup_buf(stream, buf);
-		i = 0;
+		if (0) pr_info("%s:3 %u of %u\n", __func__, i, buf->used_urb_cnt);
+		i++;
 	}
+	if (0) pr_info("%s: buf=%p(%i) urbs %u-%u submitted=%x avail=%x\n",
+			__func__, buf, buf->buf.v4l2_buf.index,
+			first, i, queue->submitted, queue->available);
+	return 1;
+}
+
+static void submit_buffers(struct uvc_video_queue *queue)
+{
+	struct uvc_streaming *stream = container_of(queue,
+					struct uvc_streaming, queue);
+
+	while (submit_buffer(queue, stream))
+		;
 	if (0) pr_info("%s:e submitted=%x avail=%x\n", __func__, queue->submitted, queue->available);
+}
+
+static void uvc_queue_start_work(struct uvc_video_queue *queue, struct uvc_buffer *buf)
+{
+	if (buf)
+		add_to_available(queue, buf);
+
+	if (queue->workqueue && queue->streaming && queue->available
+			&& (queue->submitted_insert_shift < 32))
+		queue_work(queue->workqueue, &queue->work);
+}
+
+struct uvc_buffer *uvc_get_first_pending(struct uvc_video_queue *queue)
+{
+	struct vb2_buffer *vb;
+
+	if (!queue->submitted_insert_shift)
+		return NULL;
+	vb = queue->queue.bufs[queue->submitted_buffers & 0xff];
+	return container_of(vb, struct uvc_buffer, buf);
+}
+
+struct uvc_buffer *uvc_get_next_pending(struct uvc_video_queue *queue)
+{
+	struct vb2_buffer *vb;
+	struct uvc_buffer *buf;
+	int buf_index;
+	unsigned long flags;
+
+	if (!queue->submitted_insert_shift)
+		return NULL;
+
+	spin_lock_irqsave(&queue->irqlock, flags);
+	buf_index = queue->submitted_buffers;
+	queue->submitted_buffers = buf_index >> 8;
+	queue->submitted_insert_shift -= 8;
+	queue->pending &= ~(1 << buf_index);
+	spin_unlock_irqrestore(&queue->irqlock, flags);
+
+	vb = queue->queue.bufs[buf_index & 0xff];
+	buf = container_of(vb, struct uvc_buffer, buf);
+	uvc_queue_start_work(queue, buf);
+	return uvc_get_first_pending(queue);
 }
 
 static void submit_work(struct work_struct *work)
@@ -516,6 +593,10 @@ static int uvc_buffer_prepare(struct vb2_buffer *vb)
 	req_mem = vb2_plane_vaddr(vb, 0);
 	req_length = vb2_plane_size(vb, 0);
 	if ((buf->mem != req_mem) || (buf->length != req_length)) {
+		if (buf->mem || buf->length)
+			pr_info("%s:buf=%p(%i) mem=%p to %p, len=0x%x to 0x%x\n",
+				__func__, buf, buf->buf.v4l2_buf.index,
+				buf->mem, req_mem, buf->length, req_length);
 		buf->mem = req_mem;
 		buf->length = req_length;
 		buf->setup_done = 0;
@@ -538,25 +619,8 @@ static void uvc_buffer_queue(struct vb2_buffer *vb)
 
 	if (0) pr_info("%s: buf=%p(%d)\n", __func__, buf, buf->buf.v4l2_buf.index);
 
-	if (buf->urbs) {
-		if (queue->streaming) {
-			if (add_to_available(queue, buf))
-				queue_work(queue->workqueue, &queue->work);
-		} else {
-			add_to_available(queue, buf);
-		}
-	} else {
-		add_to_available(queue, buf);
-	}
-}
-
-void uvc_queue_start_work(struct uvc_video_queue *queue, struct uvc_buffer *buf)
-{
-	if (buf)
-		add_to_available(queue, buf);
-
-	if (queue->workqueue && queue->streaming)
-		queue_work(queue->workqueue, &queue->work);
+	buf->owner = UVC_OWNER_USB;
+	uvc_queue_start_work(queue, buf);
 }
 
 static int uvc_buffer_finish(struct vb2_buffer *vb)
@@ -634,13 +698,10 @@ static void stop_queue(struct uvc_video_queue *queue)
 static int uvc_start_streaming(struct vb2_queue *vq, unsigned int count)
 {
 	struct uvc_video_queue *queue = vb2_get_drv_priv(vq);
-	struct uvc_buffer *buf;
 
 	if (0) pr_info("%s\n", __func__);
 	queue->streaming = 1;
-	buf = uvc_get_available_buffer(queue, 0);
-	if (buf)
-		uvc_buffer_queue(&buf->buf);
+	uvc_queue_start_work(queue, NULL);
 	return 0;
 }
 
@@ -690,7 +751,8 @@ int uvc_queue_init(struct uvc_video_queue *queue, enum v4l2_buf_type type,
 
 	queue->flags = drop_corrupted ? UVC_QUEUE_DROP_CORRUPTED : 0;
 	if (dma_mode == DMA_MODE_CONTIG) {
-		queue->workqueue = create_singlethread_workqueue("uvc_queue");
+		queue->workqueue = alloc_ordered_workqueue("uvc_queue", WQ_HIGHPRI);
+//		queue->workqueue = create_singlethread_workqueue("uvc_queue");
 		INIT_WORK(&queue->work, submit_work);
 		if (!queue->workqueue)
 			return -ENOMEM;
@@ -920,7 +982,7 @@ void uvc_queue_cancel(struct uvc_video_queue *queue)
 	buf = queue->in_progress;
 	queue->in_progress = NULL;
 	spin_unlock_irqrestore(&queue->irqlock, flags);
-	if (buf && (buf->owner == UVC_OWNER_USB))
+	if (buf && (buf->owner == UVC_OWNER_USB) && buf->mem)
 		uvc_buffer_done(buf, VB2_BUF_STATE_ERROR, __func__);
 }
 
@@ -942,18 +1004,22 @@ void uvc_put_buffer(struct uvc_video_queue *queue)
 	if (0) pr_info("%s:bytesused=%x\n", __func__, buf->bytesused);
 	if (!buf->mem)
 		return;		/* This was fake_buf */
-	if ((queue->flags & UVC_QUEUE_DROP_CORRUPTED) && buf->error) {
-		buf->error = 0;
-		buf->bytesused = 0;
-		buf->ready = 0;
-		buf->ts = 0;
-		vb2_set_plane_payload(&buf->buf, 0, 0);
-		if (add_to_available(queue, buf))
-			if (queue->workqueue && queue->streaming)
-				queue_work(queue->workqueue, &queue->work);
-	} else {
-		uvc_buffer_done(buf, VB2_BUF_STATE_DONE, __func__);
+	if (!buf->error || !(queue->flags & UVC_QUEUE_DROP_CORRUPTED)) {
+		unsigned m = (queue->dma_mode == DMA_MODE_CONTIG) ?
+				queue->available | queue->submitted : 0xf;
+
+		/* Can I queue 2 buffers for dma ? */
+		if (m != (m & -m)) {
+			uvc_buffer_done(buf, VB2_BUF_STATE_DONE, __func__);
+			return;
+		}
 	}
+	buf->error = 0;
+	buf->bytesused = 0;
+	buf->ready = 0;
+	buf->ts = 0;
+	vb2_set_plane_payload(&buf->buf, 0, 0);
+	uvc_queue_start_work(queue, buf);
 }
 
 /* nextbuf is the desired buffer for next */
@@ -961,28 +1027,75 @@ void uvc_put_buffer(struct uvc_video_queue *queue)
 struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 		struct uvc_buffer *nextbuf)
 {
-	if (!queue->streaming) {
-		uvc_put_buffer(queue);
-		return NULL;
-	}
-	if (queue->in_progress)
-		return queue->in_progress;
+	struct uvc_buffer *buf;
 
-	if (nextbuf) {
-		if (nextbuf->owner == UVC_OWNER_USB_ACTIVE) {
+	if (!queue->streaming) {
+		nextbuf = queue->in_progress;
+		if (!nextbuf)
+			goto fake_buf;
+		if (nextbuf->mem) {
+			uvc_put_buffer(queue);
+			nextbuf = NULL;
+			goto fake_buf;
+		}
+		return nextbuf;
+	}
+
+	buf = queue->in_progress;
+	if (!(queue->pending & queue->frame_sync_mask)
+			&& (!buf || !buf->bytesused))
+		queue->sync_index = queue->urb_index_of_frame;
+
+	if (queue->dma_mode == DMA_MODE_CONTIG) {
+		unsigned s =  queue->submitted | queue->available;
+
+		if (s == (s & -s)) {
+			/* Not at least 2 buffers ready for dma */
+			if (!buf) {
+				nextbuf = NULL;
+				goto fake_buf;
+			}
+			if (!buf->mem)
+				return buf;
+			/* Switch to fakebuf, and release for dma work */
+			nextbuf = &queue->fake_buf;
+			nextbuf->error = buf->error;
+			nextbuf->bytesused = buf->bytesused;
+			nextbuf->ready = buf->ready;
+			nextbuf->ts = buf->ts;
+			nextbuf->owner = UVC_OWNER_FAKE;
+			nextbuf->length = 0x7fffffff;
 			queue->in_progress = nextbuf;
-			if (!(queue->submitted & queue->frame_sync_mask))
-				queue->sync_index = queue->urb_index_of_frame;
+
+			uvc_queue_start_work(queue, buf);
 			return nextbuf;
 		}
 	}
-	nextbuf = uvc_get_available_buffer(queue, 1);
+
+	if (buf) {
+		if ((buf == nextbuf) || buf->bytesused || !nextbuf)
+			return buf;
+		queue->in_progress = NULL;
+		uvc_queue_start_work(queue, buf);
+	}
+
+	if (nextbuf) {
+		if ((nextbuf->owner == UVC_OWNER_USB_ACTIVE) ||
+				(nextbuf->owner == UVC_OWNER_USB)) {
+			queue->in_progress = nextbuf;
+			return nextbuf;
+		}
+	}
+	nextbuf = uvc_get_available_buffer(queue, 0);
+fake_buf:
 	if (!nextbuf) {
 		nextbuf = &queue->fake_buf;
 		nextbuf->error = 0;
 		nextbuf->bytesused = 0;
 		nextbuf->ready = 0;
 		nextbuf->ts = 0;
+		nextbuf->owner = UVC_OWNER_FAKE;
+		nextbuf->length = 0x7fffffff;
 		if (0) pr_info("%s:next=%p(%i) mem=%p avail=%x submitted=%x\n", __func__,
 			nextbuf, nextbuf->buf.v4l2_buf.index, nextbuf->mem,
 			queue->available, queue->submitted);
@@ -991,7 +1104,5 @@ struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 	if (0) pr_info("%s:next=%p(%i) mem=%p avail=%x submitted=%x\n", __func__,
 		nextbuf, nextbuf->buf.v4l2_buf.index, nextbuf->mem,
 		queue->available, queue->submitted);
-	if (!(queue->submitted & queue->frame_sync_mask))
-		queue->sync_index = queue->urb_index_of_frame;
 	return nextbuf;
 }

@@ -31,8 +31,8 @@ static const char * const dma_mode_name[] = {
 	"contig",
 };
 
-static unsigned int dma_mode = DMA_MODE_CONTIG;
-//static unsigned int dma_mode = DMA_MODE_MEMCPY;
+//static unsigned int dma_mode = DMA_MODE_CONTIG;
+static unsigned int dma_mode = DMA_MODE_MEMCPY;
 
 static int dma_mode_get(char *buffer, struct kernel_param *kp)
 {
@@ -440,7 +440,7 @@ uvc_video_clock_decode(struct uvc_streaming *stream, struct uvc_buffer *buf,
 	 *   kernel timestamps and store them with the SCR STC and SOF fields
 	 *   in the ring buffer
 	 */
-	if (has_pts && buf != NULL)
+	if (has_pts)
 		buf->pts = get_unaligned_le32(&data[2]);
 
 	if (!has_scr)
@@ -1012,14 +1012,6 @@ static int uvc_video_decode_start(struct uvc_streaming *stream,
 	uvc_video_clock_decode(stream, buf, data, len);
 	uvc_video_stats_decode(stream, data, len);
 
-	/* Store the payload FID bit and return immediately when the buffer is
-	 * NULL.
-	 */
-	if (buf == NULL) {
-		stream->last_fid = fid;
-		return -ENODATA;
-	}
-
 	/* Mark the buffer as bad if the error bit is set. */
 	if (data[1] & UVC_STREAM_ERR) {
 		uvc_trace(UVC_TRACE_FRAME, "Marking buffer as bad (error bit "
@@ -1103,8 +1095,9 @@ static void uvc_video_decode_data(struct uvc_streaming *stream,
 		if (mem != data) {
 			if (len >= stream->psize) {
 				if (stream->sync)
-					if (0) pr_info("%s: copy buf=%p(%i) len=%x nbytes=%x bytesused=%x\n",
-					__func__, buf, buf->buf.v4l2_buf.index, len, nbytes, buf->bytesused);
+					if (1) pr_info("%s: copy buf=%p(%i) len=%x nbytes=%x bytesused=%x mem=%p %p\n",
+					__func__, buf, buf->buf.v4l2_buf.index, len, nbytes, buf->bytesused,
+					mem, data);
 				stream->sync = 0;
 			}
 			/*
@@ -1115,7 +1108,10 @@ static void uvc_video_decode_data(struct uvc_streaming *stream,
 			 */
 			memcpy(mem, data, nbytes);
 		} else {
-			stream->sync = 1;
+			if (!stream->sync) {
+				stream->sync = 1;
+				pr_info("synced\n");
+			}
 		}
 	}
 	buf->bytesused += nbytes;
@@ -1123,6 +1119,7 @@ static void uvc_video_decode_data(struct uvc_streaming *stream,
 	/* Complete the current frame if the buffer size was exceeded. */
 	if (len > maxlen) {
 		uvc_trace(UVC_TRACE_FRAME, "Frame complete (overflow).\n");
+		buf->error = 1;
 		buf->ready = 1;
 	}
 }
@@ -1206,8 +1203,7 @@ static void uvc_video_decode_isoc(struct urb *urb, struct uvc_streaming *stream,
 			uvc_trace(UVC_TRACE_FRAME, "USB isochronous frame "
 				"lost (%d).\n", urb->iso_frame_desc[i].status);
 			/* Mark the buffer as faulty. */
-			if (buf != NULL)
-				buf->error = 1;
+			buf->error = 1;
 			pr_err("USB isochronous frame lost\n");
 			continue;
 		}
@@ -1220,17 +1216,12 @@ static void uvc_video_decode_isoc(struct urb *urb, struct uvc_streaming *stream,
 		if (len == mem[0])
 			continue;
 
-		if (buf) {
-			if (0) pr_info("%s:%p(%i)=%x %x, len=%x, buf=%p(%i)"
-					" bytes_used=%x %x\n",
-					__func__, mem, i, mem[0], mem[1], len,
-					buf, buf->buf.v4l2_buf.index,
-					buf->bytesused,
-					buf->bytesused + len - mem[0]);
-		} else {
-			if (0) pr_info("%s:(%p)=%x %x, len=%x\n",
-					__func__, mem, mem[0], mem[1], len);
-		}
+		if (0) pr_info("%s:%p(%i)=%x %x, len=%x, buf=%p(%i)"
+				" bytes_used=%x %x\n",
+				__func__, mem, i, mem[0], mem[1], len,
+				buf, buf->buf.v4l2_buf.index,
+				buf->bytesused,
+				buf->bytesused + len - mem[0]);
 
 		do {
 			ret = uvc_video_decode_start(stream, buf, mem,
@@ -1312,7 +1303,7 @@ static void uvc_video_decode_bulk(struct urb *urb, struct uvc_streaming *stream,
 	struct uvc_video_queue *queue = &stream->queue;
 	u8 *mem;
 	int len, ret;
-	struct uvc_buffer *buf = NULL;
+	struct uvc_buffer *buf;
 
 	/*
 	 * Ignore ZLPs if they're not part of a frame, otherwise process them
@@ -1327,17 +1318,10 @@ static void uvc_video_decode_bulk(struct urb *urb, struct uvc_streaming *stream,
 
 	buf = uvc_get_buffer(queue, urb_buf);
 
-	if (buf) {
-		if (0) pr_info("%s:urb_buf=%p mem(%p)=%x %x, len=%x, "
+	if (0) pr_info("%s:urb_buf=%p mem(%p)=%x %x, len=%x, "
 				"header_size=%x bytes_used=%x\n",
 			__func__, urb_buf, mem, mem[0], mem[1], len,
 			stream->bulk.header_size, buf->bytesused);
-	} else {
-		if (0) pr_info("%s:urb_buf=%p mem(%p)=%x %x, len=%x, "
-				"header_size=%x\n",
-			__func__, urb_buf, mem, mem[0], mem[1], len,
-			stream->bulk.header_size);
-	}
 
 	/* If the URB is the first of its payload, decode and save the
 	 * header.
@@ -1351,11 +1335,14 @@ static void uvc_video_decode_bulk(struct urb *urb, struct uvc_streaming *stream,
 		}
 
 		/* If an error occurred skip the rest of the payload. */
-		if (ret < 0 || buf == NULL) {
+		if ((ret < 0)  || (ret > 12)) {
+			if (!buf->error) {
+				buf->error = 1;
+				pr_info("%s: error ret=%d mem=%p, bytesused=0x%x\n",
+					__func__, ret, mem, buf->bytesused);
+			}
 			stream->bulk.skip_payload = 1;
-			if (0) pr_info("%s: error ret=%d buf=%p\n", __func__, ret, buf);
 		} else {
-			if (0) pr_info("%s: ret=%d mem=%p\n", __func__, ret, mem);
 			memcpy(stream->bulk.header, mem, ret);
 			if (0) pr_info("%s: aaa ret=%d mem=%p\n", __func__, ret, mem);
 			stream->bulk.header_size = ret;
@@ -1367,22 +1354,20 @@ static void uvc_video_decode_bulk(struct urb *urb, struct uvc_streaming *stream,
 				/* we need to copy to a new buffer */
 				queue->in_progress = NULL;
 				buf = uvc_get_buffer(queue, NULL);
-				if (buf)
-					copy_buffer(buf, urb_buf, bytesused);
+				copy_buffer(buf, urb_buf, bytesused);
 			}
 			if (0) pr_info("%s: bbb ret=%d mem=%p\n", __func__, ret, mem);
+			if ((ret != stream->header_sz) && stream->header_sz)
+				pr_info("%s:%x %x, hdr(%p,%x of %x)=%x %x\n", __func__, ret,
+					stream->header_sz, mem, len, urb->transfer_buffer_length,
+					((u32*)mem)[0], ((u32*)mem)[1]);
 			mem += ret;
 			len -= ret;
 		}
 	}
 
-	/* The buffer queue might have been cancelled while a bulk transfer
-	 * was in progress, so we can reach here with buf equal to NULL. Make
-	 * sure buf is never dereferenced if NULL.
-	 */
-
 	/* Process video data. */
-	if (!stream->bulk.skip_payload && buf != NULL)
+	if (!stream->bulk.skip_payload)
 		uvc_video_decode_data(stream, buf, mem, len);
 
 	/* Detect the payload end by a URB smaller than the maximum size (or
@@ -1390,7 +1375,7 @@ static void uvc_video_decode_bulk(struct urb *urb, struct uvc_streaming *stream,
 	 */
 	if (urb->actual_length < urb->transfer_buffer_length ||
 	    stream->bulk.payload_size >= stream->max_payload_size) {
-		if (!stream->bulk.skip_payload && buf != NULL) {
+		if (!stream->bulk.skip_payload) {
 			uvc_video_decode_end(stream, buf, stream->bulk.header,
 				stream->bulk.payload_size);
 			if (buf->ready) {
@@ -1413,11 +1398,6 @@ static void uvc_video_encode_bulk(struct urb *urb, struct uvc_streaming *stream,
 	u8 *mem = urb->transfer_buffer;
 	int len = stream->urb_size, ret;
 	struct uvc_buffer *buf = uvc_get_buffer(queue, urb_buf);
-
-	if (buf == NULL) {
-		urb->transfer_buffer_length = 0;
-		return;
-	}
 
 	/* If the URB is the first of its payload, add the header. */
 	if (stream->bulk.header_size == 0) {
@@ -1451,19 +1431,11 @@ static void uvc_video_encode_bulk(struct urb *urb, struct uvc_streaming *stream,
 	urb->transfer_buffer_length = stream->urb_size - len;
 }
 
-static void uvc_video_complete(struct urb *urb)
+static void check_status(struct urb *urb, struct uvc_streaming *stream)
 {
-	struct uvc_streaming *stream = urb->context;
-
-	int ret;
-
 	switch (urb->status) {
 	case 0:
 		break;
-
-	default:
-		uvc_printk(KERN_WARNING, "Non-zero status (%d) in video "
-			"completion handler.\n", urb->status);
 
 	case -ENOENT:		/* usb_kill_urb() called. */
 		if (stream->frozen)
@@ -1472,14 +1444,83 @@ static void uvc_video_complete(struct urb *urb)
 	case -ECONNRESET:	/* usb_unlink_urb() called. */
 	case -ESHUTDOWN:	/* The endpoint is being disabled. */
 //		uvc_queue_cancel(queue, urb->status == -ESHUTDOWN);
+		break;
+	default:
+		uvc_printk(KERN_WARNING, "Non-zero status (%d) in video "
+			"completion handler.\n", urb->status);
+
+	}
+	return;
+}
+
+static void uvc_video_complete(struct urb *urb)
+{
+	struct uvc_streaming *stream = urb->context;
+
+	int ret;
+
+	if (urb->status) {
+		check_status(urb, stream);
 		return;
 	}
-
 	stream->decode(urb, stream, NULL);
 
 	if ((ret = usb_submit_urb(urb, GFP_ATOMIC)) < 0) {
 		uvc_printk(KERN_ERR, "Failed to resubmit video URB (%d).\n",
 			ret);
+	}
+}
+
+static void process_urb(struct urb *urb, struct uvc_streaming *stream,
+		struct uvc_buffer *urb_buf,
+		struct uvc_video_queue *queue)
+{
+	if (urb->status) {
+		check_status(urb, stream);
+		return;
+	}
+	if (urb_buf->header_sz)
+		queue->urb_index_of_frame = urb_buf->pending_urb_index;
+	if (0) pr_info("%s:urb_buf=%p, owner=%x\n", __func__, urb_buf, urb_buf->owner);
+	stream->decode(urb, stream, urb_buf);
+}
+
+static void urb_processing_work(struct work_struct *work)
+{
+	struct uvc_streaming *stream = container_of(work, struct uvc_streaming, work);
+	struct uvc_video_queue *queue = &stream->queue;
+	struct uvc_buffer *urb_buf = uvc_get_first_pending(queue);
+	struct urb *urb;
+	struct urb *last;
+
+	while (urb_buf) {
+		int i;
+
+		if (!urb_buf->last_completed_urb)
+			return;
+		i = urb_buf->pending_urb_index;
+
+		while (i < urb_buf->used_urb_cnt) {
+			urb = urb_buf->urbs[i];
+			last = urb_buf->last_completed_urb;
+			if ((urb == last) && urb_buf->usb_active)
+				return;
+			if (urb->status == -EINPROGRESS) {
+				pr_info("%s: error last=%p: %p %p %p active=%d %p\n", __func__,
+					last,
+					(i >= 2) ? urb_buf->urbs[i - 2] : NULL,
+					i ? urb_buf->urbs[i - 1] : NULL,
+					urb, urb_buf->usb_active,
+					urb_buf->prev_completed_urb);
+				return;
+			}
+			process_urb(urb, stream, urb_buf, queue);
+			urb_buf->prev_completed_urb = last;
+
+			urb_buf->pending_urb_index++;
+			i++;
+		}
+		urb_buf = uvc_get_next_pending(queue);
 	}
 }
 
@@ -1493,53 +1534,20 @@ static void uvc_video_complete_contig(struct urb *urb)
 
 	if (0) pr_info("%s: buf=%p(%i) urb=%p %x\n", __func__, urb_buf,
 			vb->v4l2_buf.index, urb, urb_buf->bytesused);
-	switch (urb->status) {
-	case 0:
-		break;
-
-	default:
-		uvc_printk(KERN_WARNING, "Non-zero status (%d) in video "
-			"completion handler.\n", urb->status);
-
-	case -ENOENT:		/* usb_kill_urb() called. */
-		if (stream->frozen)
-			goto exit1;
-
-	case -ECONNRESET:	/* usb_unlink_urb() called. */
-	case -ESHUTDOWN:	/* The endpoint is being disabled. */
-//		uvc_queue_cancel(queue, urb->status == -ESHUTDOWN);
-		goto exit1;
-	}
-
-	if (urb_buf->header_sz)
-		queue->urb_index_of_frame = urb_buf->urb_index_of_frame;
-	if (0) pr_info("%s:urb_buf=%p, owner=%x\n", __func__, urb_buf, urb_buf->owner);
-	stream->decode(urb, stream, urb_buf);
-exit1:
-	urb_buf->urb_index_of_frame++;
+	urb_buf->last_completed_urb = urb;
 	if (urb_buf->used_urb_cnt && urb_buf->urbs &&
 			urb == urb_buf->urbs[urb_buf->used_urb_cnt - 1]) {
 		if (0) pr_info("%s:buf=%p(%i), owner=%x urb=%p submitted=%x\n",
 				__func__, urb_buf, vb->v4l2_buf.index,
 				urb_buf->owner,	urb, queue->submitted);
 		spin_lock_irqsave(&queue->irqlock, flags);
-		urb_buf->last_completed_urb = urb;
 		urb_buf->usb_active = 0;
 		queue->submitted &= ~(1 << vb->v4l2_buf.index);
-		if (urb_buf->owner == UVC_OWNER_USB_ACTIVE) {
-			if (urb_buf->bytesused) {
-				urb_buf->owner = UVC_OWNER_USB;
-				urb_buf = NULL;
-			} else {
-				if (urb_buf == queue->in_progress)
-					queue->in_progress = NULL;
-			}
-		} else {
-			urb_buf = NULL;
-		}
+		if (urb_buf->owner == UVC_OWNER_USB_ACTIVE)
+			urb_buf->owner = UVC_OWNER_USB;
 		spin_unlock_irqrestore(&queue->irqlock, flags);
-		uvc_queue_start_work(queue, urb_buf);
 	}
+	queue_work(stream->workqueue, &stream->work);
 }
 
 /*
@@ -1937,6 +1945,10 @@ int uvc_video_resume(struct uvc_streaming *stream, int reset)
 void uvc_video_deinit(struct uvc_streaming *stream)
 {
 	uvc_queue_deinit(&stream->queue);
+	if (stream->workqueue) {
+		destroy_workqueue(stream->workqueue);
+		stream->workqueue = NULL;
+	}
 }
 
 /* ------------------------------------------------------------------------
@@ -2053,6 +2065,12 @@ int uvc_video_init(struct uvc_streaming *stream)
 	if (ret)
 		return ret;
 
+	if (dma_mode == DMA_MODE_CONTIG) {
+		stream->workqueue = create_singlethread_workqueue("uvc_urb_process");
+		INIT_WORK(&stream->work, urb_processing_work);
+		if (!stream->workqueue)
+			return -ENOMEM;
+	}
 	return 0;
 }
 

@@ -336,6 +336,7 @@ enum uvc_buffer_owner {
 	UVC_OWNER_USB,
 	UVC_OWNER_USB_ACTIVE,
 	UVC_OWNER_QUEUE,
+	UVC_OWNER_FAKE,
 };
 
 struct uvc_buffer {
@@ -353,7 +354,8 @@ struct uvc_buffer {
 	unsigned used_urb_cnt;
 	struct urb **urbs;
 	struct urb *last_completed_urb;
-	unsigned urb_index_of_frame;
+	struct urb *prev_completed_urb;
+	unsigned pending_urb_index;
 	u8 *header_buf;
 	unsigned header_buf_len;
 	dma_addr_t header_phys;
@@ -362,7 +364,6 @@ struct uvc_buffer {
 	u8 ready;
 	u8 ts;
 	u8 setup_done;
-	u8 last_skip_header;
 };
 
 #define UVC_QUEUE_DROP_CORRUPTED	(1 << 1)
@@ -376,7 +377,10 @@ struct uvc_video_queue {
 
 	spinlock_t irqlock;			/* Protects available/submitted */
 	unsigned available;
-	unsigned submitted;
+	unsigned submitted;	/* mask of buffers with active dma */
+	unsigned pending;	/* mask of buffers with data left to copy */
+	unsigned submitted_buffers;
+	unsigned submitted_insert_shift;
 	unsigned frame_sync_mask;
 	struct uvc_buffer *in_progress;
 	struct workqueue_struct *workqueue;
@@ -497,6 +501,8 @@ struct uvc_streaming {
 	struct urb *urb[UVC_URBS];
 	char *urb_buffer[UVC_URBS];
 	dma_addr_t urb_dma[UVC_URBS];
+	struct workqueue_struct *workqueue;
+	struct work_struct 	work;
 	unsigned int urb_size;
 	unsigned int psize;
 	unsigned int npackets;
@@ -656,7 +662,8 @@ extern struct uvc_driver uvc_driver;
 extern struct uvc_entity *uvc_entity_by_id(struct uvc_device *dev, int id);
 
 /* Video buffers queue management. */
-extern void uvc_queue_start_work(struct uvc_video_queue *queue, struct uvc_buffer *buf);
+struct uvc_buffer *uvc_get_first_pending(struct uvc_video_queue *queue);
+struct uvc_buffer *uvc_get_next_pending(struct uvc_video_queue *queue);
 extern void uvc_buffer_done(struct uvc_buffer *buf, int state, const char *s);
 extern int uvc_queue_init(struct uvc_video_queue *queue,
 		enum v4l2_buf_type type, int drop_corrupted,
@@ -677,7 +684,6 @@ extern void uvc_queue_cancel_sync(struct uvc_video_queue *queue);
 extern void uvc_put_buffer(struct uvc_video_queue *queue);
 extern struct uvc_buffer *uvc_get_buffer(struct uvc_video_queue *queue,
 		struct uvc_buffer *nextbuf);
-extern struct uvc_buffer *uvc_get_available_buffer(struct uvc_video_queue *queue, int even_last);
 
 extern int uvc_queue_mmap(struct uvc_video_queue *queue,
 		struct vm_area_struct *vma);
