@@ -1528,12 +1528,6 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 			goto disable_clk;
 	}
 
-	imx_data->max_clock = ~0;
-	if (imx_data->boarddata.max_clock) {
-		imx_data->max_clock = imx_data->boarddata.max_clock;
-		dev_info(mmc_dev(host->mmc),
-			"clock limited to %d\n", imx_data->max_clock);
-	}
 	if (imx_data->boarddata.vqmmc_18v)
 		host->quirks2 |= SDHCI_QUIRK2_VQMMC_1_8_V;
 
@@ -1541,6 +1535,12 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		err = sdhci_esdhc_imx_probe_dt(pdev, host, imx_data);
 	else
 		err = sdhci_esdhc_imx_probe_nondt(pdev, host, imx_data);
+	imx_data->max_clock = ~0;
+	if (imx_data->boarddata.max_clock) {
+		imx_data->max_clock = imx_data->boarddata.max_clock;
+		dev_info(mmc_dev(host->mmc),
+			"clock limited to %d\n", imx_data->max_clock);
+	}
 	if (err)
 		goto disable_clk;
 
