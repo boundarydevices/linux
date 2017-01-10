@@ -508,7 +508,8 @@ unsigned int irq_create_of_mapping(struct of_phandle_args *irq_data)
 
 	/* Set type if specified and different than the current one */
 	if (type != IRQ_TYPE_NONE &&
-	    type != irq_get_trigger_type(virq))
+	    type != irq_get_trigger_type(virq) &&
+	    can_request_irq(virq, IRQF_SHARED))
 		irq_set_irq_type(virq, type);
 	return virq;
 }
