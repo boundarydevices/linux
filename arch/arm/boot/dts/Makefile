@@ -529,6 +529,8 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 	imx6sx-sdb-m4.dtb \
 	imx6sx-sdb-mqs.dtb \
 	imx6sx-sdb-sai.dtb \
+	imx6sx-ys.dtb \
+	imx6sx-ys-m4.dtb \
 	imx6sx-19x19-arm2.dtb \
 	imx6sx-19x19-arm2-ldo.dtb \
 	imx6sx-19x19-arm2-csi.dtb \
