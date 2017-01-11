@@ -1014,6 +1014,7 @@ int caam_sm_startup(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	smpriv->parentdev = ctrldev; /* copy of parent dev is handy */
+	spin_lock_init(&smpriv->kslock);
 
 	/* Create the dev */
 #ifdef CONFIG_OF
