@@ -662,6 +662,7 @@
 		spi-cs-high;
 		reg = <0>;
 		interrupts-extended = GPIRQ_PMIC;
+		fsl,mc13xxx-uses-touch;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_pmic>;
 		
