@@ -61,14 +61,14 @@ static void tw686x_buf_done(struct tw686x_video_channel *vc,
 	if (vc->curr_bufs[pb]) {
 		vb = &vc->curr_bufs[pb]->vb;
 
-		vb->field = dev->dma_ops->field;
-		vb->sequence = vc->sequence++;
+		vb->vb2_buf.v4l2_buf.field = dev->dma_ops->field;
+		vb->vb2_buf.v4l2_buf.sequence = vc->sequence++;
 		vb2_buf = &vb->vb2_buf;
 
 		if (dev->dma_mode == TW686X_DMA_MODE_MEMCPY)
 			memcpy(vb2_plane_vaddr(vb2_buf, 0), desc->virt,
 			       desc->size);
-		vb2_buf->timestamp = ktime_get_ns();
+		v4l2_get_timestamp(&vb2_buf->v4l2_buf.timestamp);
 		vb2_buffer_done(vb2_buf, VB2_BUF_STATE_DONE);
 	}
 
