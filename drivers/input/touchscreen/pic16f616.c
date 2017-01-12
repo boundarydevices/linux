@@ -283,14 +283,16 @@ static inline int ts_register(struct pic16f616_ts *ts)
 	unsigned mask;
 	struct input_dev *idev;
 	idev = input_allocate_device();
-	if (idev==NULL) {
+	if (!idev)
 		return -ENOMEM;
-	}
-	ts->idev = idev;
+	idev->dev.parent = &ts->client->dev;
 	idev->name      = "pic16f616";
+	idev->id.bustype = BUS_I2C;
+	idev->id.vendor = 0xbd;
 	idev->id.product = ts->client->addr;
 	idev->open      = ts_open;
 	idev->close     = ts_close;
+	ts->idev = idev;
 
 	__set_bit(EV_ABS, idev->evbit);
 	__set_bit(ABS_X, idev->absbit);
