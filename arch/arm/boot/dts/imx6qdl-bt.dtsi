@@ -492,6 +492,12 @@
 
 	};
 
+	reserved-memory {
+		linux,cma {
+			size = <0x18000000>;
+		};
+	};
+
 	sound-hdmi {
 		compatible = "fsl,imx6q-audio-hdmi",
 			     "fsl,imx-audio-hdmi";
