@@ -119,8 +119,8 @@ static int gsl_ts_read(struct i2c_client *client, u8 reg, u8 *pdata, unsigned in
 	ret = i2c_master_recv(client, pdata, datalen);
 #ifdef DEBUG
 	pr_info("gslx rx reg: %02x\n", reg);
-#endif
 	print_hex_dump_bytes("gslx rx:", DUMP_PREFIX_NONE, pdata, datalen);
+#endif
 	if (ret < 0) {
 		pr_info("%s: error (%d)\n", __func__, ret);
 	}
