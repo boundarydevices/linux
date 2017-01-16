@@ -603,6 +603,12 @@
 		};
 	};
 
+	reserved-memory {
+		linux,cma {
+			size = <0x2000000>;
+		};
+	};
+
 	sas: sas@73fc0000 {
 		clocks = <&clks 30>, <&clks 31>;
 		clock-names = "ipg", "per";
