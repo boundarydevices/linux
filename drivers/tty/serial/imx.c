@@ -236,7 +236,7 @@ struct imx_port {
 	struct imx_dma_rxbuf	rx_buf;
 	unsigned int		tx_bytes;
 	unsigned int		dma_tx_nents;
-	struct delayed_work	tsk_dma_tx;
+	struct work_struct	tsk_dma_tx;
 	wait_queue_head_t	dma_wait;
 	unsigned int            saved_reg[10];
 #define DMA_TX_IS_WORKING 1
@@ -476,7 +476,7 @@ static inline void imx_transmit_buffer(struct imx_port *sport)
 			writel(temp, sport->port.membase + UCR1);
 		} else {
 			writel(temp, sport->port.membase + UCR1);
-			schedule_delayed_work(&sport->tsk_dma_tx, 0);
+			schedule_work(&sport->tsk_dma_tx);
 		}
 	}
 
@@ -519,7 +519,8 @@ static void dma_tx_callback(void *data)
 	smp_mb__after_atomic();
 	uart_write_wakeup(&sport->port);
 
-	schedule_delayed_work(&sport->tsk_dma_tx, msecs_to_jiffies(1));
+	if (!uart_circ_empty(xmit) && !uart_tx_stopped(&sport->port))
+		schedule_work(&sport->tsk_dma_tx);
 
 	if (waitqueue_active(&sport->dma_wait)) {
 		wake_up(&sport->dma_wait);
@@ -530,8 +531,7 @@ static void dma_tx_callback(void *data)
 
 static void dma_tx_work(struct work_struct *w)
 {
-	struct delayed_work *delay_work = to_delayed_work(w);
-	struct imx_port *sport = container_of(delay_work, struct imx_port, tsk_dma_tx);
+	struct imx_port *sport = container_of(w, struct imx_port, tsk_dma_tx);
 	struct circ_buf *xmit = &sport->port.state->xmit;
 	struct scatterlist *sgl = sport->tx_sgl;
 	struct dma_async_tx_descriptor *desc;
@@ -625,7 +625,7 @@ static void imx_start_tx(struct uart_port *port)
 			return;
 		}
 
-		schedule_delayed_work(&sport->tsk_dma_tx, 0);
+		schedule_work(&sport->tsk_dma_tx);
 		return;
 	}
 }
@@ -1151,7 +1151,7 @@ static int imx_startup(struct uart_port *port)
 		imx_uart_dma_init(sport);
 
 	if (sport->dma_is_inited)
-		INIT_DELAYED_WORK(&sport->tsk_dma_tx, dma_tx_work);
+		INIT_WORK(&sport->tsk_dma_tx, dma_tx_work);
 
 	spin_lock_irqsave(&sport->port.lock, flags);
 
@@ -1214,7 +1214,7 @@ static void imx_shutdown(struct uart_port *port)
 			dmaengine_terminate_all(sport->dma_chan_rx);
 		}
 
-		cancel_delayed_work_sync(&sport->tsk_dma_tx);
+		cancel_work_sync(&sport->tsk_dma_tx);
 
 		spin_lock_irqsave(&sport->port.lock, flags);
 		imx_stop_tx(port);
