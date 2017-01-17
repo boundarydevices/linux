@@ -1,0 +1,6 @@
+config  AMLOGIC_MEDIA_VSYNC_RDMA
+	bool "VSYNC CBUS RDMA"
+	default n
+    depends on AMLOGIC_MEDIA_RDMA
+	help
+		Select to enable VSYNC CBUS RDMA.

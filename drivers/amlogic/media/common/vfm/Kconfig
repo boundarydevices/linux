@@ -1,0 +1,9 @@
+#
+# VFM configuration
+#
+
+config AMLOGIC_MEDIA_VFM
+	bool "Amlogic VFM Support"
+	default n
+	help
+		Select to enable VFM support

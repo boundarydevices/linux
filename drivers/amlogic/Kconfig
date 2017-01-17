@@ -49,5 +49,7 @@ source "drivers/amlogic/cpu_hotplug/Kconfig"
 
 source "drivers/amlogic/pwm/Kconfig"
 
+source "drivers/amlogic/media/Kconfig"
+
 endmenu
 endif

@@ -1,0 +1,46 @@
+#
+# Amlogic multimedia configuration
+#
+
+menu "Amlogic multimedia configuration"
+
+config AMLOGIC_MEDIA_ENABLE
+	bool "Amlgoic Multimedia Support"
+	default n
+	help
+		Amlogic multimedia framework composed of two parts,
+		the first part is common which consists of modules
+		such as arch, codec_mm, vfm, the second is driver
+		part of the media, both of which depends on this
+		configuration options.
+
+config AMLOGIC_MEDIA_COMMON
+	bool "Amlogic the common of the media"
+	depends on AMLOGIC_MEDIA_ENABLE
+	default n
+	help
+		This option is used to configure Amlogic common
+		for media, it as the basis for drivers of the
+		multimedia, mainly on the operation of the
+		registers, memory allocation and the chain of
+		responsibility management of the frame processing.
+
+config AMLOGIC_MEDIA_DRIVERS
+	bool "Amlogic drivers of the media"
+	depends on AMLOGIC_MEDIA_COMMON
+	default n
+	help
+		This option is used to configure Amlogic drivers
+		of the multimedia, which consists of video decoder
+		module, video decoder management module and post
+		processing of the frame.
+
+if AMLOGIC_MEDIA_COMMON
+source "drivers/amlogic/media/common/Kconfig"
+endif
+
+if AMLOGIC_MEDIA_DRIVERS
+source "drivers/amlogic/media/video_sink/Kconfig"
+endif
+
+endmenu

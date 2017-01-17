@@ -1,0 +1,25 @@
+#
+# Amlogic VPU driver configuation
+#
+
+menu "Amlogic VPU Driver Support"
+
+config AMLOGIC_VPU
+	bool "Amlogic VPU driver"
+	default n
+	help
+		Amlogic vpu driver support.
+		Manage vpu domain clock,
+			memory power down,
+			and vpu clock gate.
+		All the video modules work on vpu domain.
+
+config AMLOGIC_VPU_DYNAMIC_ADJ
+	bool "Amlogic VPU Frequency Dynamic Adjust"
+	default n
+	depends on AMLOGIC_VPU
+	help
+		Amlogic vpu frequency dynamic adjust,
+		manage the max frequency what video modules required.
+
+endmenu

@@ -1,0 +1,19 @@
+#
+# RDMA management driver configuration
+#
+
+menu "RDMA management driver"
+
+config AMLOGIC_MEDIA_RDMA
+	bool "Amlogic RDMA management driver"
+	default n
+	help
+		Select to enable RDMA management driver.
+
+	config CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
+	bool "Amlogic RDMA VSYNC"
+	depends on AMLOGIC_MEDIA_RDMA
+	default n
+	help
+		Select to enable RDMA VSYNC.
+endmenu

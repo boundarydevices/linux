@@ -1,0 +1,8 @@
+#
+# GE2D Module
+#
+config  AMLOGIC_GE2D
+	bool "Amlogic GE2D Module"
+	default n
+	help
+		Select to enable GE2D graphic 2D engine.

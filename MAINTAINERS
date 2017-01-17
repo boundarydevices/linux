@@ -13510,3 +13510,24 @@ F: include/linux/amlogic/pwm_meson.h
 F: include/dt-bindings/pwm/meosn.h
 F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
 F: arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
+
+AMLOGIC multimedia
+M:	Nanxin Qin <nanxin.qin@amlogic.com>
+F:	drivers/amlogic/media/common/arch/registers/*
+F:	drivers/amlogic/media/common/canvas/*
+F:	drivers/amlogic/media/common/codec_mm/*
+F:	drivers/amlogic/media/common/vfm/*
+F:	drivers/amlogic/media/Makefile
+F:	include/linux/amlogic/media/canvas/*
+F:	include/linux/amlogic/media/codec_mm/*
+F:	include/linux/amlogic/media/registers/*
+F:	include/linux/amlogic/media/vfm/*
+F:	include/linux/amlogic/media/utils/log.h
+F:	drivers/amlogic/media/Kconfig
+F:	drivers/amlogic/media/common/Kconfig
+F:	include/linux/amlogic/media/frame_sync/*
+F:	include/linux/amlogic/media/video_sink/*
+F:	drivers/amlogic/media/common/frame_sync/*
+F:	drivers/amlogic/media/common/ge2d/*
+F:	drivers/amlogic/media/common/vpu/*
+

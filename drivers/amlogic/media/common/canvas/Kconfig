@@ -1,0 +1,13 @@
+#
+# Canvas management driver configuration
+#
+
+menu "Canvas management driver"
+
+config AMLOGIC_MEDIA_CANVAS
+	bool "Amlogic Canvas management driver"
+	default n
+	help
+		Select to enable Canvas management driver.
+
+endmenu

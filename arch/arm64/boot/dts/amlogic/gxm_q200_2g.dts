@@ -18,8 +18,6 @@
 /dts-v1/;
 
 #include "mesongxm.dtsi"
-#include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/gpio/gxl.h>
 / {
 	model = "Amlogic";
 	amlogic-dt-id = "gxm_q200_2g";
@@ -30,6 +28,11 @@
 
 	aliases {
 		serial0 = &uart_AO;
+	};
+
+	ion_dev {
+		compatible = "amlogic, ion_dev";
+		memory-region = <&ion_reserved>;
 	};
 
 	memory@00000000 {
@@ -129,6 +132,83 @@
 			clocks = <&clkc CLKID_ETH>;
 			clock-names = "ethclk81";
 			internal_phy=<1>;
+	};
+
+	codec_io {
+		compatible = "amlogic, codec_io";
+		#address-cells=<2>;
+		#size-cells=<2>;
+		ranges;
+		io_cbus_base{
+			reg = <0x0 0xC1100000 0x0 0x100000>;
+		};
+		io_dos_base{
+			reg = <0x0 0xc8820000 0x0 0x10000>;
+		};
+		io_hiubus_base{
+			reg = <0x0 0xc883c000 0x0 0x2000>;
+		};
+		io_aobus_base{
+			reg = <0x0 0xc8100000 0x0 0x100000>;
+		};
+		io_vcbus_base{
+			reg = <0x0 0xd0100000 0x0 0x40000>;
+		};
+		io_dmc_base{
+			reg = <0x0 0xc8838000 0x0 0x400>;
+		};
+	};
+
+	codec_mm {
+		compatible = "amlogic, codec, mm";
+		memory-region = <&codec_mm_cma &codec_mm_reserved>;
+		dev_name = "codec_mm";
+		status = "okay";
+	};
+
+	canvas{
+		compatible = "amlogic, meson, canvas";
+		dev_name = "amlogic-canvas";
+		status = "ok";
+		reg = <0x0 0xc8838000 0x0 0x400>;
+	};
+
+	mesonstream {
+		compatible = "amlogic, codec, streambuf";
+		dev_name = "mesonstream";
+		status = "okay";
+		clocks = <&clkc CLKID_DOS_PARSER
+			&clkc CLKID_VPU_INTR
+			&clkc CLKID_DEMUX
+			&clkc CLKID_DOS
+			&clkc CLKID_VDEC_MUX
+			&clkc CLKID_HCODEC_MUX
+			&clkc CLKID_HEVC_MUX>;
+		clock-names = "parser_top",
+			"vpu_intr",
+			"demux",
+			"vdec",
+			"clk_vdec_mux",
+			"clk_hcodec_mux",
+			"clk_hevc_mux";
+	};
+
+	vdec {
+		compatible = "amlogic, vdec";
+		dev_name = "vdec.0";
+		status = "okay";
+		interrupts = <0 3 1
+			0 23 1
+			0 32 1
+			0 43 1
+			0 44 1
+			0 45 1>;
+		interrupt-names = "vsync",
+			"demux",
+			"parser",
+			"mailbox_0",
+			"mailbox_1",
+			"mailbox_2";
 	};
 
 	dwc3: dwc3@c9000000 {
