@@ -1,0 +1,34 @@
+#
+# Multiplexer devices
+#
+
+menuconfig MULTIPLEXER
+	tristate "Multiplexer subsystem"
+	help
+	  Multiplexer controller subsystem. Multiplexers are used in a
+	  variety of settings, and this subsystem abstracts their use
+	  so that the rest of the kernel sees a common interface. When
+	  multiple parallel multiplexers are controlled by one single
+	  multiplexer controller, this subsystem also coordinates the
+	  multiplexer accesses.
+
+	  To compile the subsystem as a module, choose M here: the module will
+	  be called mux-core.
+
+if MULTIPLEXER
+
+config MUX_GPIO
+	tristate "GPIO-controlled Multiplexer"
+	depends on OF && GPIOLIB
+	help
+	  GPIO-controlled Multiplexer controller.
+
+	  The driver builds a single multiplexer controller using a number
+	  of gpio pins. For N pins, there will be 2^N possible multiplexer
+	  states. The GPIO pins can be connected (by the hardware) to several
+	  multiplexers, which in that case will be operated in parallel.
+
+	  To compile the driver as a module, choose M here: the module will
+	  be called mux-gpio.
+
+endif
