@@ -505,6 +505,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_adc081c>;
 		reg = <0x54>;
+		vref-supply = <&reg_3p3v>;
 		interrupts-extended = GPIRQ_PRINT_ALERT;
 	};
 
