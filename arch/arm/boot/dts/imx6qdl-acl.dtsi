@@ -534,11 +534,11 @@
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 
-	adt75_temp@48 {
+	adt75_temp@49 {
 		compatible = "adt75";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_adt75>;
-		reg = <0x48>;
+		reg = <0x49>;
 		interrupts-extended = GPIRQ_TEMP_ALERT;
 	};
 };
