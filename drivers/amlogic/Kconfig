@@ -1,0 +1,19 @@
+#
+# Amlogic driver configuration
+#
+config AMLOGIC_DRIVER
+	bool "Amlogic Peripheral drivers"
+	default n
+	help
+		this option is provided for control amlogic
+		drivers, if you want to use amlogic driver
+		please open it
+if AMLOGIC_DRIVER
+menu "Amlogic Device Drivers"
+
+source "drivers/amlogic/uart/Kconfig"
+
+source "drivers/amlogic/iomap/Kconfig"
+
+endmenu
+endif

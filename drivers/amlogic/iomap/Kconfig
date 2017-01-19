@@ -1,0 +1,7 @@
+# Amlogic iomap driver
+#
+config AMLOGIC_IOMAP
+    bool "Amlogic iomap support"
+    select REGMAP_MMIO
+    help
+      This is the Amlogic Iomap  driver
