@@ -136,6 +136,7 @@ typedef struct _cam_data {
 	void *rot_enc_bufs_vaddr[2];
 	int rot_enc_buf_size[2];
 	enum v4l2_buf_type type;
+	__u32 sequence;
 
 	/* still image capture */
 	wait_queue_head_t still_queue;
