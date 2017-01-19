@@ -261,6 +261,11 @@ void cleanup_srcu_struct(struct srcu_struct *sp)
 {
 	if (WARN_ON(srcu_readers_active(sp)))
 		return; /* Leakage unless caller handles error. */
+	if (WARN_ON(!rcu_all_batches_empty(sp)))
+		return; /* Leakage unless caller handles error. */
+	flush_delayed_work(&sp->work);
+	if (WARN_ON(sp->running))
+		return; /* Caller forgot to stop doing call_srcu()? */
 	free_percpu(sp->per_cpu_ref);
 	sp->per_cpu_ref = NULL;
 }
