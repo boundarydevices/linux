@@ -2659,6 +2659,12 @@ static void camera_callback(u32 mask, void *dev)
 
 	spin_lock(&cam->queue_int_lock);
 	spin_lock(&cam->dqueue_int_lock);
+
+                /* Also count frames when we do not have a buffer, so
+                 * we see when frames are missing
+                 */
+        cam->sequence++;
+
 	if (!list_empty(&cam->working_q)) {
 		do_gettimeofday(&cur_time);
 
@@ -2677,7 +2683,6 @@ static void camera_callback(u32 mask, void *dev)
 			 */
 			done_frame->buffer.timestamp = cur_time;
 			done_frame->buffer.sequence = cam->sequence;
-			cam->sequence++;
 
 			done_frame->buffer.flags |= V4L2_BUF_FLAG_DONE;
 			done_frame->buffer.flags &= ~V4L2_BUF_FLAG_QUEUED;
