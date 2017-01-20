@@ -850,6 +850,12 @@ static int imx7_pm_enter(suspend_state_t state)
 	val |= BM_SYS_COUNTER_CNTCR_FCR0;
 	writel_relaxed(val, system_counter_ctrl_base);
 
+	/* restore system counter's clock to base clock */
+	val = readl_relaxed(system_counter_ctrl_base);
+	val &= ~BM_SYS_COUNTER_CNTCR_FCR1;
+	val |= BM_SYS_COUNTER_CNTCR_FCR0;
+	writel_relaxed(val, system_counter_ctrl_base);
+
 	return 0;
 }
 

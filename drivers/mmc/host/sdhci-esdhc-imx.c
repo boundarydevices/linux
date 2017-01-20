@@ -142,6 +142,8 @@
 /* The IP supports HS400 mode */
 #define ESDHC_FLAG_HS400		BIT(9)
 
+/* need request bus freq during low power */
+#define ESDHC_FLAG_BUSFREQ		BIT(10)
 /* A higher clock ferquency than this rate requires strobell dll control */
 #define ESDHC_STROBE_DLL_CLK_FREQ	100000000
 
@@ -190,13 +192,14 @@ static struct esdhc_soc_data usdhc_imx6sl_data = {
 
 static struct esdhc_soc_data usdhc_imx6sx_data = {
 	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
-			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_HS200,
+			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_HS200
+			| ESDHC_FLAG_BUSFREQ,
 };
 
 static struct esdhc_soc_data usdhc_imx7d_data = {
 	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
 			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_HS200
-			| ESDHC_FLAG_HS400,
+			| ESDHC_FLAG_HS400  | ESDHC_FLAG_BUSFREQ,
 };
 
 struct pltfm_imx_data {
@@ -1335,6 +1338,8 @@ static int sdhci_esdhc_imx_remove(struct platform_device *pdev)
 	clk_disable_unprepare(imx_data->clk_per);
 	clk_disable_unprepare(imx_data->clk_ipg);
 	clk_disable_unprepare(imx_data->clk_ahb);
+	if (imx_data->socdata->flags & ESDHC_FLAG_BUSFREQ)
+		release_bus_freq(BUS_FREQ_HIGH);
 
 	sdhci_pltfm_free(pdev);
 
