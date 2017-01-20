@@ -183,7 +183,9 @@
 
 	pinctrl_i2c3_ads7924: i2c3_ads7924grp {
 		fsl,pins = <
+#define GPIRQ_ADC_INTR		<&gpio3 14 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_EIM_DA14__GPIO3_IO14		0x1b0b0
+#define GP_ADC_RESET		<&gpio3 15 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_DA15__GPIO3_IO15		0x130b0
 		>;
 	};
@@ -571,6 +573,19 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
+
+	ads7924_adc@48 {
+		compatible = "ti,ads7924";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_ads7924>;
+		reg = <0x48>;
+		vref-supply = <&reg_3p3v>;
+		reset-gpios = GP_ADC_RESET;
+		interrupts-extended = GPIRQ_ADC_INTR;
+		adc-irq-mode = /bits/ 8 <0x00>; /* IRQ for alarms */
+		adc-mode = /bits/ 8 <0x3B>; /* Auto Scan w/ Sleep */
+		adc-sleep-ms = <320>;
+	};
 
 	adt75_temp@49 {
 		compatible = "adt75";
