@@ -791,6 +791,12 @@ config PANEL_BOOT_MESSAGE
 	  An empty message will only clear the display at driver init time. Any other
 	  printf()-formatted message is valid with newline and escape codes.
 
+config FTP628
+	tristate "Fujitsu FTP628 Thermal Printer"
+	help
+	  The easy loading FTP-608 MCL Series is ultra compact high speed,
+	  battery driven thermal printer, printing on 2-inch wide paper (58mm)
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
