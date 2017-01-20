@@ -491,6 +491,12 @@ config PVPANIC
 	  a paravirtualized device provided by QEMU; it lets a virtual machine
 	  (guest) communicate panic events to the host.
 
+config FTP628
+	tristate "Fujitsu FTP628 Thermal Printer"
+	help
+	  The easy loading FTP-608 MCL Series is ultra compact high speed,
+	  battery driven thermal printer, printing on 2-inch wide paper (58mm)
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
