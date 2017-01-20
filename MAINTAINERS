@@ -13405,3 +13405,7 @@ T:	git git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 S:	Buried alive in reporters
 F:	*
 F:	*/
+
+AMLOGIC Pinmux
+M: Jianxin Pan <jianxin.pan@amlogic.com>
+F: drivers/amlogic/pinctrl/*

@@ -21,8 +21,8 @@
 #include "mesongxm.dtsi"
 / {
 	model = "Amlogic";
-	compatible = "amlogic, Gxm";
 	amlogic-dt-id = "gxm_q200_2g";
+	compatible = "amlogic, Gxm";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <2>;
@@ -46,6 +46,56 @@
 			reg = <0x0 0x10000000 0x0 0x200000>;
 			no-map;
 		};
+		secos_reserved:linux,secos {
+			status = "disable";
+			compatible = "amlogic, aml_secos_memory";
+			reg = <0x0 0x05300000 0x0 0x2000000>;
+			no-map;
+		};
+		pstore:aml_pstore {
+			compatible = "amlogic, pstore";
+			reg = <0x0 0x07300000 0x0 0x100000>;
+			no-map;
+		};
+
+		di_reserved:linux,di {
+			compatible = "amlogic, di-mem";
+			size = <0x0 0x1e00000>; //10x1920x1088x3/2=30M
+			//no-map;
+		};
+
+		ion_reserved:linux,ion-dev {
+			compatible = "amlogic, idev-mem";
+			size = <0x0 0x4000000>;
+		};
+
+		/*  POST PROCESS MANAGER */
+		ppmgr_reserved:linux,ppmgr {
+			compatible = "amlogic, ppmgr_memory";
+			size = <0x0 0x2000000>;
+		};
+
+		codec_mm_cma:linux,codec_mm_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0xd000000>;
+			alignment = <0x0 0x400000>;
+			linux,contiguous-region;
+		};
+		picdec_cma_reserved:linux,picdec {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x0>;
+			alignment = <0x0 0x0>;
+			linux,contiguous-region;
+		};
+		/* codec shared reserved */
+		codec_mm_reserved:linux,codec_mm_reserved {
+			compatible = "amlogic, codec-mm-reserved";
+			size = <0x0 0x4100000>;
+			alignment = <0x0 0x100000>;
+			//no-map;
+		};
 	};
 
 	uart_AO: serial@c81004c0 {
@@ -55,6 +105,9 @@
 		status = "okay";
 		xtal_tick_en = <1>;
 		fifosize = < 64 >;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ao_uart_pins>;
 		support-sysrq = <0>;	/* 0 not support , 1 support */
 	};
+
 };

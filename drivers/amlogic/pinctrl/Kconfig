@@ -1,0 +1,14 @@
+# Amlogic PINCTRL
+
+
+config AMLOGIC_PINCTRL
+    bool "PINCTRL/GPIO support"
+    select OF
+    select PINCTRL
+    select PINMUX
+    select PINCONF
+    select GENERIC_PINCONF
+    select GPIOLIB
+    select OF_GPIO
+    help
+      This is the Amlogic PINCTRL/GPIO  driver
