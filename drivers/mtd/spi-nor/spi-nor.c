@@ -566,6 +566,10 @@ static const struct spi_device_id spi_nor_ids[] = {
 
 	/* GigaDevice */
 	{
+		"gd25q16", INFO(0xc84015, 0, 64 * 1024,  32,
+			SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ)
+	},
+	{
 		"gd25q32", INFO(0xc84016, 0, 64 * 1024,  64,
 			SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ)
 	},
