@@ -694,8 +694,10 @@ static void stop_queue(struct uvc_video_queue *queue)
 			i++;
 		}
 	}
-	flush_work(&queue->work);
-	flush_work(&stream->work);
+	if (queue->workqueue) {
+		flush_work(&queue->work);
+		flush_work(&stream->work);
+	}
 	queue->return_buffers = 0;
 }
 
