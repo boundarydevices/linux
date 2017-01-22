@@ -660,6 +660,8 @@ static void uvc_wait_finish(struct vb2_queue *vq)
 
 static void stop_queue(struct uvc_video_queue *queue)
 {
+	struct uvc_streaming *stream =
+			container_of(queue, struct uvc_streaming, queue);
 	int i = 0;
 	int retry = 0;
 
@@ -692,6 +694,8 @@ static void stop_queue(struct uvc_video_queue *queue)
 			i++;
 		}
 	}
+	flush_work(&queue->work);
+	flush_work(&stream->work);
 	queue->return_buffers = 0;
 }
 
