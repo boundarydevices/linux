@@ -1,0 +1,126 @@
+/*
+ * Amlogic partition set for normal
+ *
+ * Copyright (c) 2017-2017 Amlogic Ltd
+ *
+ * This file is licensed under a dual GPLv2 or BSD license.
+ *
+ */
+
+#include "firmware_normal.dtsi"
+
+/ {
+    partitions: partitions{
+		parts = <17>;
+		part-0 = <&logo>;
+		part-1 = <&recovery>;
+		part-2 = <&misc>;
+		part-3 = <&dto>;
+		part-4 = <&cri_data>;
+		part-5 = <&param>;
+		part-6 = <&boot>;
+		part-7 = <&rsv>;
+		part-8 = <&metadata>;
+		part-9 = <&vbmeta>;
+		part-10 = <&tee>;
+		part-11 = <&vendor>;
+		part-12 = <&odm>;
+		part-13 = <&system>;
+		part-14 = <&product>;
+		part-15 = <&cache>;
+		part-16 = <&data>;
+
+		logo:logo{
+			pname = "logo";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		recovery:recovery{
+			pname = "recovery";
+			size = <0x0 0x1800000>;
+			mask = <1>;
+		};
+		misc:misc{
+			pname = "misc";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		dto:dto{
+			pname = "dto";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		cri_data:cri_data
+		{
+			pname = "cri_data";
+			size = <0x0 0x800000>;
+			mask = <2>;
+		};
+		rsv:rsv{
+			pname = "rsv";
+			size = <0x0 0x1000000>;
+			mask = <1>;
+		};
+		metadata:metadata{
+			pname = "metadata";
+			size = <0x0 0x1000000>;
+			mask = <1>;
+		};
+		vbmeta:vbmeta{
+			pname = "vbmeta";
+			size = <0x0 0x200000>;
+			mask = <1>;
+		};
+		param:param{
+			pname = "param";
+			size = <0x0 0x1000000>;
+			mask = <2>;
+		};
+		boot:boot
+		{
+			pname = "boot";
+			size = <0x0 0x1000000>;
+			mask = <1>;
+		};
+		tee:tee{
+			pname = "tee";
+			size = <0x0 0x2000000>;
+			mask = <1>;
+		};
+		vendor:vendor
+		{
+			pname = "vendor";
+			size = <0x0 0x10000000>;
+			mask = <1>;
+		};
+		odm:odm
+		{
+			pname = "odm";
+			size = <0x0 0x8000000>;
+			mask = <1>;
+		};
+		system:system
+		{
+			pname = "system";
+			size = <0x0 0x50000000>;
+			mask = <1>;
+		};
+		product:product{
+			pname = "product";
+			size = <0x0 0x8000000>;
+			mask = <1>;
+		};
+		cache:cache
+		{
+			pname = "cache";
+			size = <0x0 0x25000000>;
+			mask = <2>;
+		};
+		data:data
+		{
+			pname = "data";
+			size = <0xffffffff 0xffffffff>;
+			mask = <4>;
+		};
+	};
+};/* end of / */

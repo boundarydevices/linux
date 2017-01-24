@@ -134,7 +134,7 @@
 			compatible = "android,firmware";
 			vbmeta {
 				compatible = "android,vbmeta";
-				parts = "boot,system,vendor";
+				parts = "vbmeta,boot,system,vendor";
 				by_name_prefix="/dev/block";
 			};
 		fstab {
@@ -144,7 +144,7 @@
 				dev = "/dev/block/system";
 				type = "ext4";
 				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
-				fsmgr_flags = "wait,slotselect";
+				fsmgr_flags = "wait,slotselect,avb";
 				};
 
 			vendor {
@@ -152,7 +152,7 @@
 				dev = "/dev/block/vendor";
 				type = "ext4";
 				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
-				fsmgr_flags = "wait,slotselect";
+				fsmgr_flags = "wait,slotselect,avb";
 				};
 
 			odm {

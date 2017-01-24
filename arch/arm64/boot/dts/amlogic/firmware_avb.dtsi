@@ -1,0 +1,52 @@
+/*
+ * Amlogic partition set for normal
+ *
+ * Copyright (c) 2017-2017 Amlogic Ltd
+ *
+ * This file is licensed under a dual GPLv2 or BSD license.
+ *
+ */
+/ {
+	firmware {
+		android {
+			compatible = "android,firmware";
+			vbmeta {
+				compatible = "android,vbmeta";
+				parts = "vbmeta,boot,system,vendor";
+				by_name_prefix="/dev/block";
+			};
+		fstab {
+			compatible = "android,fstab";
+			system {
+				compatible = "android,system";
+				dev = "/dev/block/system";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait,avb";
+				};
+
+			vendor {
+				compatible = "android,vendor";
+				dev = "/dev/block/vendor";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait,avb";
+				};
+			odm {
+				compatible = "android,odm";
+				dev = "/dev/block/odm";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait";
+				};
+			product {
+				compatible = "android,product";
+				dev = "/dev/block/product";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+				fsmgr_flags = "wait";
+				};
+			};
+		};
+	};
+};/* end of / */

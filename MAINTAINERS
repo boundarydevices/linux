@@ -14512,3 +14512,11 @@ F:	arch/arm64/boot/dts/amlogic/mesong12b_skt-panel.dtsi
 AMLOGIC G12B w400 buildroot dts
 M: 	liangzhuo xie <liangzhuo.xie@amlogic.com>
 F:      arch/arm64/boot/dts/amlogic/g12b_a311d_w400_buildroot.dts
+
+AMLOGIC P PARTITION DTSI
+M: Xindong Xu <xindong.xu@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/firmware_avb.dtsi
+F: arch/arm64/boot/dts/amlogic/firmware_normal.dtsi
+F: arch/arm64/boot/dts/amlogic/partition_mbox_normal_P_32.dtsi
+F: arch/arm64/boot/dts/amlogic/partition_mbox_normal_P_64.dtsi
+F: arch/arm64/boot/dts/amlogic/partition_mbox_p241_P.dtsi
