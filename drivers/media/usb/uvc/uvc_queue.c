@@ -26,6 +26,7 @@
 
 #include "uvcvideo.h"
 
+struct dma_attrs uvc_dma_attrs;
 /* ------------------------------------------------------------------------
  * Video buffers queue management.
  *
@@ -52,6 +53,9 @@ static int uvc_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 	unsigned sz;
 	unsigned npackets;
 	unsigned psize;
+
+	dma_set_attr(DMA_ATTR_FORCE_CONTIGUOUS, &uvc_dma_attrs);
+//	dma_set_attr(DMA_ATTR_WRITE_COMBINE, &uvc_dma_attrs);
 
 	if (*nbuffers > UVC_MAX_VIDEO_BUFFERS)
 		*nbuffers = UVC_MAX_VIDEO_BUFFERS;
@@ -102,6 +106,8 @@ static int setup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 	unsigned header_sz = 0;
 	unsigned mps, max_payload_size;
 	unsigned rp;
+	int tf = dma_get_attr(DMA_ATTR_WRITE_COMBINE, &uvc_dma_attrs) ? 0
+			: URB_NO_TRANSFER_DMA_MAP;
 
 	if (!buf->urb_cnt)
 		return 0;
@@ -139,7 +145,9 @@ static int setup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 		while (i < buf->urb_cnt) {
 			if (rem < repeat_payload)
 				break;
-			stream->init_urb(stream, buf->urbs[i], &buf->buf, mem, repeat_payload, phys, 0);
+
+			stream->init_urb(stream, buf->urbs[i], &buf->buf, mem,
+					repeat_payload, phys, tf);
 			if (0) pr_info("%s: init_urb done, urb(%p)=%p len=0x%x\n",
 				__func__, &buf->urbs[i], buf->urbs[i], buf->length);
 			mem += repeat_payload;
@@ -211,7 +219,7 @@ static int setup_buf(struct uvc_streaming *stream, struct uvc_buffer *buf)
 		}
 
 		stream->init_urb(stream, buf->urbs[i++], &buf->buf, mem,
-				mps, phys, 0);
+				mps, phys, tf);
 		if (0) pr_info("%s:(%d) mem=%p len=%x\n", __func__, i-1, mem, mps);
 		if (frame_rem <= rp)
 			break;
@@ -748,6 +756,8 @@ int uvc_queue_init(struct uvc_video_queue *queue, enum v4l2_buf_type type,
 	queue->dma_mode = dma_mode;
 
 	queue->queue.timestamp_type = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
+//	queue->queue.dma_attrs = &uvc_dma_attrs;
+
 	ret = vb2_queue_init(&queue->queue);
 	if (ret)
 		return ret;
